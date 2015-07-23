@@ -122,6 +122,14 @@ bool GWAPI::CMemory::Scan()
 		if (!memcmp(scan, MapIdLocationCode, sizeof(MapIdLocationCode))){
 			MapIDPtr = *(DWORD**)(scan + 0x46);
 		}
+
+		if (agArrayPtr &&
+			CtoGSObjectPtr &&
+			CtoGSSendFunction &&
+			BasePointerLocation &&
+			RenderLoopLocation &&
+			MapIDPtr
+			) return true;
 	}
 	return false;
 }
