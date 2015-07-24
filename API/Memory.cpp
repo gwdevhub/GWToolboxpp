@@ -115,6 +115,7 @@ bool GWAPI::CMemory::Scan()
 			RenderLoopLocation = scan + 0x65;
 			GameLoopLocation = RenderLoopLocation - 0x76;
 			RenderLoopLocation = GameLoopLocation + 0x5D;
+			GameLoopReturn = (BYTE*)Memory.Detour(GameLoopLocation, (BYTE*)gameLoopHook, 5, &GameLoopRestore);
 		}
 
 		// For Map IDs
@@ -123,13 +124,26 @@ bool GWAPI::CMemory::Scan()
 			MapIDPtr = *(DWORD**)(scan + 0x46);
 		}
 
+		const BYTE WriteChatCode[] = { 0x55, 0x8B, 0xEC, 0x51, 0x53, 0x89, 0x4D, 0xFC, 0x8B, 0x4D, 0x08, 0x56, 0x57, 0x8B };
+		if (!memcmp(scan, WriteChatCode, sizeof(WriteChatCode))){
+			WriteChatFunction = (WriteChat_t)scan;
+		}
+
 		if (agArrayPtr &&
 			CtoGSObjectPtr &&
 			CtoGSSendFunction &&
 			BasePointerLocation &&
 			RenderLoopLocation &&
-			MapIDPtr
+			MapIDPtr &&
+			WriteChatFunction
 			) return true;
 	}
 	return false;
 }
+
+GWAPI::AgentArray GWAPI::CMemory::GetAgentArray()
+{
+	return *agArrayPtr;
+}
+
+GWAPI::CMemory GWAPI::Memory = GWAPI::CMemory();

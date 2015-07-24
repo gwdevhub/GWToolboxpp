@@ -1,6 +1,7 @@
 #pragma once
 
-#include "APIMain.h"
+#include "Memory.h"
+
 #include <queue>
 
 /*

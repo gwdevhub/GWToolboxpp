@@ -1,10 +1,17 @@
 #pragma once
 
-#include "APIMain.h"
+#include "APIncludes.h"
+#include "Structures.h"
+#include "GameLoop.h"
 
 namespace GWAPI{
 
+	
 
+	class AgentArray;
+
+	typedef  void(__fastcall *SendCtoGSPacket_t)(DWORD PacketObj,DWORD Size,DWORD* packet);
+	typedef void(__fastcall *WriteChat_t)(DWORD Unk, wchar_t* Name, wchar_t* Message);
 
 	struct CMemory{
 
@@ -32,6 +39,9 @@ namespace GWAPI{
 		BYTE* GameLoopReturn;
 		BYTE* GameLoopRestore;
 
+		// For writing PM's in chat.
+		WriteChat_t WriteChatFunction;
+
 		// Basics
 		bool Scan();
 		void *Detour(BYTE *src, const BYTE *dst, const int len, BYTE** restore = NULL);
@@ -40,14 +50,12 @@ namespace GWAPI{
 
 
 		// Memory Reads.
-
 		inline DWORD GetContextPtr(){ return *(DWORD*)((*(BYTE**)BasePointerLocation) + 0x18); }
-		AgentArray& GetAgentArray()
-		{
-			return *agArrayPtr;
-		}
+		inline DWORD GetCtoSObj(){ return **(DWORD**)(CtoGSObjectPtr - 4); }
+		AgentArray GetAgentArray();
 
 
-	}Memory;
+	};
 
+	extern CMemory Memory;
 }

@@ -27,6 +27,12 @@
     <ClInclude Include="API\StoChandler.h">
       <Filter>API</Filter>
     </ClInclude>
+    <ClInclude Include="API\APIncludes.h">
+      <Filter>API</Filter>
+    </ClInclude>
+    <ClInclude Include="API\GameFunctions.h">
+      <Filter>API</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="API\GameLoop.cpp">
@@ -43,6 +49,9 @@
     </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="API\GameFunctions.cpp">
+      <Filter>API\src</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

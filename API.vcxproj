@@ -77,12 +77,15 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="API\APIMain.h" />
+    <ClInclude Include="API\APIncludes.h" />
+    <ClInclude Include="API\GameFunctions.h" />
     <ClInclude Include="API\GameLoop.h" />
     <ClInclude Include="API\Memory.h" />
     <ClInclude Include="API\StoChandler.h" />
     <ClInclude Include="API\Structures.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="API\GameFunctions.cpp" />
     <ClCompile Include="API\GameLoop.cpp" />
     <ClCompile Include="API\Memory.cpp" />
     <ClCompile Include="API\StoChandler.cpp" />

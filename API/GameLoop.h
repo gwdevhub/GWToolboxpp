@@ -1,7 +1,8 @@
 #pragma once
 
-#include "APIMain.h"
+#include "APIncludes.h"
 
+#include "Memory.h"
 
 #include <vector>
 #include <functional>
@@ -28,33 +29,14 @@ namespace GWAPI{
 		void Enqueue(F&& Func, ArgTypes&&... Args);
 
 
-	}GameThread;
+	};
 
 
-	void __declspec(naked) gameLoopHook();
-	void __declspec(naked) renderHook();
+	void gameLoopHook();
+	void renderHook();
 
-	void ToggleRenderHook()
-	{
-		static bool enabled = false;
-		static BYTE restorebuf[5];
-		static DWORD dwProt;
+	void ToggleRenderHook();
 
-		enabled = !enabled;
-
-		if (enabled)
-		{
-			memcpy(restorebuf, Memory.RenderLoopLocation, 5);
-
-			VirtualProtect(Memory.RenderLoopLocation, 5, PAGE_EXECUTE_READWRITE, &dwProt);
-			Memory.RenderLoopLocation[0] = 0xE9;
-			*(DWORD*)(Memory.RenderLoopLocation) = (DWORD)((BYTE*)renderHook - (Memory.RenderLoopLocation + 5));
-			VirtualProtect(Memory.RenderLoopLocation, 5, dwProt, NULL);
-		}
-		else{
-			VirtualProtect(Memory.RenderLoopLocation, 5, PAGE_EXECUTE_READWRITE, &dwProt);
-			memcpy(Memory.RenderLoopLocation,restorebuf, 5);
-			VirtualProtect(Memory.RenderLoopLocation, 5, dwProt, NULL);
-		}
-	}
+	extern CallQueue GameThread;
 }
+

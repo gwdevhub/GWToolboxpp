@@ -8,6 +8,17 @@ void init(HMODULE hModule){
 	if (Memory.Scan())
 	{
 		// Found all addresses, can do stuff now.
+		char buf[128];
+		AgentArray Agents = Memory.GetAgentArray();
+
+		Agent* player = Agents.GetPlayer();
+
+		if (player == NULL) return;
+
+		sprintf_s(buf, "Player X: %.2f\nPlayer Y: %.2f", player->X, player->Y);
+
+		MessageBoxA(0, buf, 0, 0);
+
 	}else
 	{
 		MessageBoxA(0, "Did not find all addresses.", 0, 0);

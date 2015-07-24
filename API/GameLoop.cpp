@@ -43,3 +43,29 @@ void __declspec(naked) GWAPI::renderHook()
 			RETN
 	}
 }
+
+void GWAPI::ToggleRenderHook()
+{
+	static bool enabled = false;
+	static BYTE restorebuf[5];
+	static DWORD dwProt;
+
+	enabled = !enabled;
+
+	if (enabled)
+	{
+		memcpy(restorebuf, Memory.RenderLoopLocation, 5);
+
+		VirtualProtect(Memory.RenderLoopLocation, 5, PAGE_EXECUTE_READWRITE, &dwProt);
+		Memory.RenderLoopLocation[0] = 0xE9;
+		*(DWORD*)(Memory.RenderLoopLocation) = (DWORD)((BYTE*)renderHook - (Memory.RenderLoopLocation + 5));
+		VirtualProtect(Memory.RenderLoopLocation, 5, dwProt, NULL);
+	}
+	else{
+		VirtualProtect(Memory.RenderLoopLocation, 5, PAGE_EXECUTE_READWRITE, &dwProt);
+		memcpy(Memory.RenderLoopLocation, restorebuf, 5);
+		VirtualProtect(Memory.RenderLoopLocation, 5, dwProt, NULL);
+	}
+}
+
+GWAPI::CallQueue GWAPI::GameThread = GWAPI::CallQueue();
