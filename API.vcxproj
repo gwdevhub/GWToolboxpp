@@ -83,6 +83,7 @@
     <ClInclude Include="API\Memory.h" />
     <ClInclude Include="API\StoChandler.h" />
     <ClInclude Include="API\Structures.h" />
+    <ClInclude Include="SimpleIni.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="API\GameFunctions.cpp" />
