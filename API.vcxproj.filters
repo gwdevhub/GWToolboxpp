@@ -27,6 +27,9 @@
     <ClInclude Include="API\StoChandler.h">
       <Filter>API</Filter>
     </ClInclude>
+    <ClInclude Include="SimpleIni.h">
+      <Filter>Main</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="API\GameLoop.cpp">
