@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Memory.h"
+#include <Windows.h>
 #include <queue>
 
 /*
@@ -77,7 +77,7 @@ namespace GWAPI{
 	private:
 		HANDLE m_Mutex;
 	};
-	class CStoCHandler{
+	class StoCMgr{
 	public:
 		class Exception{
 			char* msg;
@@ -146,9 +146,9 @@ namespace GWAPI{
 			HANDLE m_PacketQueueThread;
 		};
 
-		CStoCHandler(){}
-		void operator=(CStoCHandler const&);
-		CStoCHandler(CStoCHandler const&);
+		StoCMgr(){}
+		void operator=(StoCMgr const&);
+		StoCMgr(StoCMgr const&);
 
 	public:
 

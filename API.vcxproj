@@ -80,21 +80,17 @@
   <ItemGroup>
     <ClInclude Include="API\APIMain.h" />
     <ClInclude Include="API\APIncludes.h" />
-    <ClInclude Include="API\DirectXHook.h" />
-    <ClInclude Include="API\GameFunctions.h" />
-    <ClInclude Include="API\GameLoop.h" />
-    <ClInclude Include="API\Memory.h" />
-    <ClInclude Include="API\StoChandler.h" />
-    <ClInclude Include="API\Structures.h" />
+    <ClInclude Include="API\DirectXMgr.h" />
+    <ClInclude Include="API\GameThreadMgr.h" />
+    <ClInclude Include="API\MemoryMgr.h" />
+    <ClInclude Include="API\StoCMgr.h" />
     <ClInclude Include="SimpleIni.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="API\DirectXHook.cpp" />
-    <ClCompile Include="API\GameFunctions.cpp" />
-    <ClCompile Include="API\GameLoop.cpp" />
-    <ClCompile Include="API\Memory.cpp" />
-    <ClCompile Include="API\StoChandler.cpp" />
-    <ClCompile Include="API\Structures.cpp" />
+    <ClCompile Include="API\DirectXMgr.cpp" />
+    <ClCompile Include="API\GameThreadMgr.cpp" />
+    <ClCompile Include="API\MemoryMgr.cpp" />
+    <ClCompile Include="API\StoCMgr.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

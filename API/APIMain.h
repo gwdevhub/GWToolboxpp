@@ -1,12 +1,10 @@
 #ifndef TOOLBOX_API_H // Did a classic guard here so we can detect if the api is included, might be useful i dunno.
 #define TOOLBOX_API_H
 
-#include "Structures.h"
+#include "MemoryMgr.h"
+#include "GameThreadMgr.h"
 
-#include "Memory.h"
-#include "GameLoop.h"
-
-#include "GameFunctions.h"
-#include "StoChandler.h"
+#include "StoCMgr.h"
+#include "DirectXMgr.h"
 
 #endif

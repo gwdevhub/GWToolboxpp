@@ -1,7 +1,7 @@
-#include "DirectXHook.h"
+#include "DirectXMgr.h"
 
 
-D3DXHook::D3DXHook(EndScene_t _endscene, Reset_t _reset)
+void GWAPI::DirectXMgr::CreateRenderHooks(EndScene_t _endscene, Reset_t _reset)
 {
 	HMODULE hD3D9 = NULL;
 	while (!hD3D9)
@@ -20,7 +20,7 @@ D3DXHook::D3DXHook(EndScene_t _endscene, Reset_t _reset)
 	oReset = (Reset_t)DetourFunction((BYTE*)(VTableStart[16]), (BYTE*)_reset);
 }
 
-D3DXHook::~D3DXHook()
+void GWAPI::DirectXMgr::RestoreRenderHooks()
 {
 	DWORD dwOldProt;
 	VirtualProtect((void*)(VTableStart[42]), 20, PAGE_READWRITE, &dwOldProt);
@@ -31,7 +31,7 @@ D3DXHook::~D3DXHook()
 	VirtualProtect((void*)(VTableStart[16]), 20, dwOldProt, 0);
 }
 
-DWORD D3DXHook::dwFindPattern(DWORD dwAddress, DWORD dwLen, BYTE* bMask, char* szMask)
+DWORD GWAPI::DirectXMgr::dwFindPattern(DWORD dwAddress, DWORD dwLen, BYTE* bMask, char* szMask)
 {
 	for (DWORD i = 0; i < dwLen; i++)
 		if (bDataCompare((BYTE*)(dwAddress + i), bMask, szMask))
@@ -39,7 +39,7 @@ DWORD D3DXHook::dwFindPattern(DWORD dwAddress, DWORD dwLen, BYTE* bMask, char* s
 	return 0;
 }
 
-bool D3DXHook::bDataCompare(const BYTE* pData, const BYTE* bMask, const char* szMask)
+bool GWAPI::DirectXMgr::bDataCompare(const BYTE* pData, const BYTE* bMask, const char* szMask)
 {
 	for (; *szMask; ++szMask, ++pData, ++bMask)
 		if (*szMask == 'x' && *pData != *bMask)

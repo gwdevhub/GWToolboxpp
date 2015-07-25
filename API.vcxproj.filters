@@ -15,49 +15,37 @@
     <ClInclude Include="API\APIMain.h">
       <Filter>API</Filter>
     </ClInclude>
-    <ClInclude Include="API\GameLoop.h">
+    <ClInclude Include="SimpleIni.h" />
+    <ClInclude Include="API\DirectXMgr.h">
       <Filter>API</Filter>
     </ClInclude>
-    <ClInclude Include="API\Structures.h">
+    <ClInclude Include="API\StoCMgr.h">
       <Filter>API</Filter>
     </ClInclude>
-    <ClInclude Include="API\StoChandler.h">
+    <ClInclude Include="API\MemoryMgr.h">
+      <Filter>API</Filter>
+    </ClInclude>
+    <ClInclude Include="API\GameThreadMgr.h">
       <Filter>API</Filter>
     </ClInclude>
     <ClInclude Include="API\APIncludes.h">
       <Filter>API</Filter>
     </ClInclude>
-    <ClInclude Include="API\GameFunctions.h">
-      <Filter>API</Filter>
-    </ClInclude>
-    <ClInclude Include="SimpleIni.h" />
-    <ClInclude Include="API\DirectXHook.h">
-      <Filter>API</Filter>
-    </ClInclude>
-    <ClInclude Include="API\Memory.h">
-      <Filter>API</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="API\GameLoop.cpp">
-      <Filter>API\src</Filter>
-    </ClCompile>
-    <ClCompile Include="API\StoChandler.cpp">
-      <Filter>API\src</Filter>
-    </ClCompile>
-    <ClCompile Include="API\Structures.cpp">
-      <Filter>API\src</Filter>
-    </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>Main</Filter>
     </ClCompile>
-    <ClCompile Include="API\GameFunctions.cpp">
+    <ClCompile Include="API\DirectXMgr.cpp">
       <Filter>API\src</Filter>
     </ClCompile>
-    <ClCompile Include="API\DirectXHook.cpp">
+    <ClCompile Include="API\StoCMgr.cpp">
       <Filter>API\src</Filter>
     </ClCompile>
-    <ClCompile Include="API\Memory.cpp">
+    <ClCompile Include="API\MemoryMgr.cpp">
+      <Filter>API\src</Filter>
+    </ClCompile>
+    <ClCompile Include="API\GameThreadMgr.cpp">
       <Filter>API\src</Filter>
     </ClCompile>
   </ItemGroup>

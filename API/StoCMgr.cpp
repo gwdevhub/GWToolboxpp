@@ -1,13 +1,13 @@
-#include "StoChandler.h"
+#include "StoCMgr.h"
+#include "MemoryMgr.h"
 
 
+std::queue<GWAPI::PacketHandler*> GWAPI::StoCMgr::StoChandler::m_PacketQueue;
+HANDLE GWAPI::StoCMgr::StoChandler::m_PacketQueueMutex;
+GWAPI::handler* GWAPI::StoCMgr::StoChandler::m_OrigLSHandler = NULL;
+GWAPI::handler* GWAPI::StoCMgr::StoChandler::m_OrigGSHandler = NULL;
 
-std::queue<GWAPI::PacketHandler*> GWAPI::CStoCHandler::StoChandler::m_PacketQueue;
-HANDLE GWAPI::CStoCHandler::StoChandler::m_PacketQueueMutex;
-GWAPI::handler* GWAPI::CStoCHandler::StoChandler::m_OrigLSHandler = NULL;
-GWAPI::handler* GWAPI::CStoCHandler::StoChandler::m_OrigGSHandler = NULL;
-
-GWAPI::CStoCHandler::StoChandler::StoChandler(){
+GWAPI::StoCMgr::StoChandler::StoChandler(){
 	BYTE* start = (BYTE*)0x00401000;
 	BYTE* end = (BYTE*)0x00800000;
 
@@ -29,14 +29,14 @@ GWAPI::CStoCHandler::StoChandler::StoChandler(){
 
 
 	if (LSPacketMetadataBase){
-		m_LSPacketMetadata = MemoryMgr::GetInstance()->ReadPtrChain<StoCPacketMetadata*>(*(DWORD*)LSPacketMetadataBase, 0x8, 0x20, 0x14, 0x8, 0x2C);
-		m_LSPacketCount = MemoryMgr::GetInstance()->ReadPtrChain<int>(*(DWORD*)LSPacketMetadataBase, 0x8, 0x20, 0x14, 0x8, 0x34);
+		m_LSPacketMetadata = MemoryMgr::ReadPtrChain<StoCPacketMetadata*>(*(DWORD*)LSPacketMetadataBase, 0x8, 0x20, 0x14, 0x8, 0x2C);
+		m_LSPacketCount = MemoryMgr::ReadPtrChain<int>(*(DWORD*)LSPacketMetadataBase, 0x8, 0x20, 0x14, 0x8, 0x34);
 	}
 	else throw Exception("LSPacketMetadataBase not found.");
 
 	if (GSPacketMetadataBase){
-		m_GSPacketMetadata = MemoryMgr::GetInstance()->ReadPtrChain<StoCPacketMetadata*>(*(DWORD*)GSPacketMetadataBase, 0x8, 0x2C);
-		m_GSPacketCount = MemoryMgr::GetInstance()->ReadPtrChain<int>(*(DWORD*)GSPacketMetadataBase, 0x8, 0x34);
+		m_GSPacketMetadata = MemoryMgr::ReadPtrChain<StoCPacketMetadata*>(*(DWORD*)GSPacketMetadataBase, 0x8, 0x2C);
+		m_GSPacketCount = MemoryMgr::ReadPtrChain<int>(*(DWORD*)GSPacketMetadataBase, 0x8, 0x34);
 	}
 	else throw Exception("GSPacketMetadataBase not found.");
 
@@ -49,7 +49,7 @@ GWAPI::CStoCHandler::StoChandler::StoChandler(){
 	m_PacketQueueThread = CreateThread(0, 0, ProcessPacketThread, 0, 0, 0);
 }
 
-GWAPI::CStoCHandler::StoChandler::~StoChandler(){
+GWAPI::StoCMgr::StoChandler::~StoChandler(){
 	for (int i = 0; i < m_LSPacketCount; i++)
 		if (m_OrigLSHandler[i] != NULL)
 			m_LSPacketMetadata[i].HandlerFunc = m_OrigLSHandler[i];
@@ -65,56 +65,56 @@ GWAPI::CStoCHandler::StoChandler::~StoChandler(){
 	TerminateThread(m_PacketQueueThread, 0);
 }
 
-GWAPI::StoCPacketMetadata* GWAPI::CStoCHandler::StoChandler::GetGSMetaData(){
+GWAPI::StoCPacketMetadata* GWAPI::StoCMgr::StoChandler::GetGSMetaData(){
 	return m_GSPacketMetadata;
 }
 
-GWAPI::StoCPacketMetadata* GWAPI::CStoCHandler::StoChandler::GetLSMetaData(){
+GWAPI::StoCPacketMetadata* GWAPI::StoCMgr::StoChandler::GetLSMetaData(){
 	return m_LSPacketMetadata;
 }
 
-GWAPI::handler GWAPI::CStoCHandler::StoChandler::SetGSPacket(DWORD Header, handler function){
+GWAPI::handler GWAPI::StoCMgr::StoChandler::SetGSPacket(DWORD Header, handler function){
 	m_OrigGSHandler[Header] = m_GSPacketMetadata[Header].HandlerFunc;
 	m_GSPacketMetadata[Header].HandlerFunc = function;
 	return m_OrigGSHandler[Header];
 }
-GWAPI::handler GWAPI::CStoCHandler::StoChandler::SetLSPacket(DWORD Header, handler function){
+GWAPI::handler GWAPI::StoCMgr::StoChandler::SetLSPacket(DWORD Header, handler function){
 	m_OrigLSHandler[Header] = m_LSPacketMetadata[Header].HandlerFunc;
 	m_LSPacketMetadata[Header].HandlerFunc = function;
 	return m_OrigLSHandler[Header];
 }
 
-void GWAPI::CStoCHandler::StoChandler::RestoreGSPacket(DWORD Header){
+void GWAPI::StoCMgr::StoChandler::RestoreGSPacket(DWORD Header){
 	m_GSPacketMetadata[Header].HandlerFunc = m_OrigGSHandler[Header];
 	m_OrigGSHandler[Header] = NULL;
 }
-void GWAPI::CStoCHandler::StoChandler::RestoreLSPacket(DWORD Header){
+void GWAPI::StoCMgr::StoChandler::RestoreLSPacket(DWORD Header){
 	m_LSPacketMetadata[Header].HandlerFunc = m_OrigLSHandler[Header];
 	m_OrigLSHandler[Header] = NULL;
 }
 
-DWORD GWAPI::CStoCHandler::StoChandler::GetLSCount(){
+DWORD GWAPI::StoCMgr::StoChandler::GetLSCount(){
 	return m_LSPacketCount;
 }
-DWORD GWAPI::CStoCHandler::StoChandler::GetGSCount(){
+DWORD GWAPI::StoCMgr::StoChandler::GetGSCount(){
 	return m_GSPacketCount;
 }
 
-template<class T> bool __fastcall GWAPI::CStoCHandler::StoChandler::LSEnqueuePacket(Packet* pack, DWORD unk)
+template<class T> bool __fastcall GWAPI::StoCMgr::StoChandler::LSEnqueuePacket(Packet* pack, DWORD unk)
 {
 	AutoMutex mutex(m_PacketQueueMutex);
 	m_PacketQueue.push(new T(pack));
 	return m_OrigLSHandler[pack->Header](pack, unk);
 }
 
-template<class T> bool __fastcall GWAPI::CStoCHandler::StoChandler::GSEnqueuePacket(Packet* pack, DWORD unk)
+template<class T> bool __fastcall GWAPI::StoCMgr::StoChandler::GSEnqueuePacket(Packet* pack, DWORD unk)
 {
 	AutoMutex mutex(m_PacketQueueMutex);
 	m_PacketQueue.push(new T(pack));
 	return m_OrigGSHandler[pack->Header](pack, unk);
 }
 
-template<class T> void GWAPI::CStoCHandler::StoChandler::AddHandler(DWORD Header, bool Gameserver)
+template<class T> void GWAPI::StoCMgr::StoChandler::AddHandler(DWORD Header, bool Gameserver)
 {
 	if (Gameserver)
 	{
@@ -128,7 +128,7 @@ template<class T> void GWAPI::CStoCHandler::StoChandler::AddHandler(DWORD Header
 	}
 }
 
-DWORD WINAPI GWAPI::CStoCHandler::StoChandler::ProcessPacketThread(LPVOID)
+DWORD WINAPI GWAPI::StoCMgr::StoChandler::ProcessPacketThread(LPVOID)
 {
 	while (true)
 	{
@@ -147,7 +147,7 @@ DWORD WINAPI GWAPI::CStoCHandler::StoChandler::ProcessPacketThread(LPVOID)
 	return -1;
 }
 
-void GWAPI::CStoCHandler::StoChandler::DisplayError(const char* Format, ...)
+void GWAPI::StoCMgr::StoChandler::DisplayError(const char* Format, ...)
 {
 	va_list args;
 	va_start(args, Format);
