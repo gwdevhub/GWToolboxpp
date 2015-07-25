@@ -1,0 +1,34 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Headerdateien">
+      <UniqueIdentifier>{e6547884-1a8d-49cd-b657-12d16273d2e5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Quelldateien">
+      <UniqueIdentifier>{96a7c359-0109-49f3-9492-ddb85a70a6d7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Quelldateien\Direct3D9">
+      <UniqueIdentifier>{ee2b7afd-0625-4204-8256-4eb53d3a4d7b}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\Drawing\Direct3D9\Direct3D9GeometryBuffer.cpp">
+      <Filter>Quelldateien\Direct3D9</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Drawing\Direct3D9\Direct3D9Renderer.cpp">
+      <Filter>Quelldateien\Direct3D9</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Drawing\Direct3D9\Direct3D9Texture.cpp">
+      <Filter>Quelldateien\Direct3D9</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Drawing\Direct3D9\Direct3D9TextureTarget.cpp">
+      <Filter>Quelldateien\Direct3D9</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Drawing\Direct3D9\Direct3D9ViewportTarget.cpp">
+      <Filter>Quelldateien\Direct3D9</Filter>
+    </ClCompile>
+    <ClCompile Include="OSHGui_Sample.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

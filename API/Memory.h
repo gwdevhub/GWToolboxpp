@@ -13,7 +13,7 @@ namespace GWAPI{
 	typedef  void(__fastcall *SendCtoGSPacket_t)(DWORD PacketObj,DWORD Size,DWORD* packet);
 	typedef void(__fastcall *WriteChat_t)(DWORD Unk, wchar_t* Name, wchar_t* Message);
 
-	struct CMemory{
+	struct MemoryMgr{
 
 		// Agent shit
 		AgentArray* agArrayPtr;
@@ -42,20 +42,36 @@ namespace GWAPI{
 		// For writing PM's in chat.
 		WriteChat_t WriteChatFunction;
 
+		// Skill timer for effects.
+		DWORD* SkillTimerPtr;
+
+		// Skill structure array.
+
+		Skill* SkillArray;
+
 		// Basics
 		bool Scan();
 		void *Detour(BYTE *src, const BYTE *dst, const int len, BYTE** restore = NULL);
 		void Retour(BYTE *src, BYTE *restore, const int len);
-		template <typename T>  T ReadPtrChain(DWORD pBase, long pOffset1 = 0, long pOffset2 = 0, long pOffset3 = 0, long pOffset4 = 0, long pOffset5 = 0);
+		template <typename T> T ReadPtrChain(DWORD pBase, long pOffset1 = 0, long pOffset2 = 0, long pOffset3 = 0, long pOffset4 = 0, long pOffset5 = 0);
 
 
 		// Memory Reads.
-		inline DWORD GetContextPtr(){ return *(DWORD*)((*(BYTE**)BasePointerLocation) + 0x18); }
-		inline DWORD GetCtoSObj(){ return **(DWORD**)(CtoGSObjectPtr - 4); }
+		 DWORD GetContextPtr(){ return *(DWORD*)((*(BYTE**)BasePointerLocation) + 0x18); }
+		 DWORD GetCtoSObj(){ return **(DWORD**)(CtoGSObjectPtr - 4); }
+		 DWORD GetSkillTimer(){ return *SkillTimerPtr; }
+		 DWORD GetMapID(){ return *MapIDPtr; }
+
 		AgentArray GetAgentArray();
+		SkillbarArray GetSkillbarArray();
+		Skillbar GetPlayerSkillbar();
+		EffectArray GetPlayerEffectArray();
 
 
+		static MemoryMgr* GetInstance();
+
+	private:
+		MemoryMgr();
+		~MemoryMgr();
 	};
-
-	extern CMemory Memory;
 }

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Memory.h"
-
 #include <queue>
 
 /*

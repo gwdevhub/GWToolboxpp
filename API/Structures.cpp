@@ -19,21 +19,6 @@ T GWAPI::gw_array<T>::GetIndex(DWORD index)
 	return m_array[index];
 }
 
-GWAPI::Agent* GWAPI::AgentArray::operator[](int AgentID)
-{
-	return GetAgent(AgentID);
-}
-
-GWAPI::Agent* GWAPI::AgentArray::GetAgent(int AgentID)
-{
-	if (AgentID > m_sizeCurrent || AgentID < -2) return NULL;
-
-	if (AgentID = -1) return GetTarget();
-	if (AgentID = -2) return GetPlayer();
-
-	return m_array[AgentID];
-}
-
 GWAPI::Agent* GWAPI::AgentArray::GetTarget()
 {
 	if (m_sizeCurrent == 0) return NULL;
@@ -48,10 +33,10 @@ GWAPI::Agent* GWAPI::AgentArray::GetPlayer()
 
 DWORD GWAPI::AgentArray::GetTargetId()
 {
-	return *(Memory.TargetAgentIDPtr);
+	return *(MemoryMgr::GetInstance()->TargetAgentIDPtr);
 }
 
 DWORD GWAPI::AgentArray::GetPlayerId()
 {
-	return *(Memory.PlayerAgentIDPtr);
+	return *(MemoryMgr::GetInstance()->PlayerAgentIDPtr);
 }

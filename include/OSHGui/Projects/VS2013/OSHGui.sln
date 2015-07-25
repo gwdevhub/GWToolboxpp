@@ -1,0 +1,51 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.31101.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OSHGui Static Library", "OSHGui_StaticLibrary.vcxproj", "{296FB7C3-29B9-4111-9243-6EB8CB71D458}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OSHGui DLL", "OSHGui_DLL.vcxproj", "{7420F8DC-8BA0-475B-85EE-DB74184D9F4B}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OSHGui Sample", "OSHGui_Sample.vcxproj", "{704DC77E-4CA3-433D-A694-A56198EEF0D1}"
+	ProjectSection(ProjectDependencies) = postProject
+		{296FB7C3-29B9-4111-9243-6EB8CB71D458} = {296FB7C3-29B9-4111-9243-6EB8CB71D458}
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Debug|x64 = Debug|x64
+		Release|Win32 = Release|Win32
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{296FB7C3-29B9-4111-9243-6EB8CB71D458}.Debug|Win32.ActiveCfg = Debug|Win32
+		{296FB7C3-29B9-4111-9243-6EB8CB71D458}.Debug|Win32.Build.0 = Debug|Win32
+		{296FB7C3-29B9-4111-9243-6EB8CB71D458}.Debug|x64.ActiveCfg = Debug|Win32
+		{296FB7C3-29B9-4111-9243-6EB8CB71D458}.Debug|x64.Build.0 = Debug|Win32
+		{296FB7C3-29B9-4111-9243-6EB8CB71D458}.Release|Win32.ActiveCfg = Release|x64
+		{296FB7C3-29B9-4111-9243-6EB8CB71D458}.Release|Win32.Build.0 = Release|x64
+		{296FB7C3-29B9-4111-9243-6EB8CB71D458}.Release|x64.ActiveCfg = Release|Win32
+		{296FB7C3-29B9-4111-9243-6EB8CB71D458}.Release|x64.Build.0 = Release|Win32
+		{7420F8DC-8BA0-475B-85EE-DB74184D9F4B}.Debug|Win32.ActiveCfg = Debug|Win32
+		{7420F8DC-8BA0-475B-85EE-DB74184D9F4B}.Debug|Win32.Build.0 = Debug|Win32
+		{7420F8DC-8BA0-475B-85EE-DB74184D9F4B}.Debug|x64.ActiveCfg = Debug|x64
+		{7420F8DC-8BA0-475B-85EE-DB74184D9F4B}.Debug|x64.Build.0 = Debug|x64
+		{7420F8DC-8BA0-475B-85EE-DB74184D9F4B}.Release|Win32.ActiveCfg = Release|Win32
+		{7420F8DC-8BA0-475B-85EE-DB74184D9F4B}.Release|Win32.Build.0 = Release|Win32
+		{7420F8DC-8BA0-475B-85EE-DB74184D9F4B}.Release|x64.ActiveCfg = Release|x64
+		{7420F8DC-8BA0-475B-85EE-DB74184D9F4B}.Release|x64.Build.0 = Release|x64
+		{704DC77E-4CA3-433D-A694-A56198EEF0D1}.Debug|Win32.ActiveCfg = Debug|Win32
+		{704DC77E-4CA3-433D-A694-A56198EEF0D1}.Debug|Win32.Build.0 = Debug|Win32
+		{704DC77E-4CA3-433D-A694-A56198EEF0D1}.Debug|x64.ActiveCfg = Debug|x64
+		{704DC77E-4CA3-433D-A694-A56198EEF0D1}.Debug|x64.Build.0 = Debug|x64
+		{704DC77E-4CA3-433D-A694-A56198EEF0D1}.Release|Win32.ActiveCfg = Release|Win32
+		{704DC77E-4CA3-433D-A694-A56198EEF0D1}.Release|Win32.Build.0 = Release|Win32
+		{704DC77E-4CA3-433D-A694-A56198EEF0D1}.Release|x64.ActiveCfg = Release|x64
+		{704DC77E-4CA3-433D-A694-A56198EEF0D1}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

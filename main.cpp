@@ -5,20 +5,54 @@ using namespace GWAPI;
 
 // Do all your startup things here instead.
 void init(HMODULE hModule){
-	if (Memory.Scan())
+	MemoryMgr* mems = MemoryMgr::GetInstance();
+
+	if (mems->Scan())
 	{
-		// Found all addresses, can do stuff now.
-		char buf[128];
-		AgentArray Agents = Memory.GetAgentArray();
+		while (1){
 
-		Agent* player = Agents.GetPlayer();
+			if (GetAsyncKeyState(VK_HOME) & 1){
 
-		if (player == NULL) return;
+				WriteChat(L"Map ID: %d", mems->GetMapID());
+				Sleep(2000);
 
-		sprintf_s(buf, "Player X: %.2f\nPlayer Y: %.2f", player->X, player->Y);
+				AgentArray Agents = mems->GetAgentArray();
 
-		MessageBoxA(0, buf, 0, 0);
+				Agent* player = Agents.GetPlayer();
 
+				if (player == NULL) return;
+
+				WriteChat(L"Player X: %f Y: %f", player->X, player->Y);
+
+				Sleep(2000);
+
+				Skillbar sb = mems->GetPlayerSkillbar();
+
+				WriteChat(L"Skillbar: %d %d %d %d %d %d %d %d",
+					sb.Skills[0].SkillId,
+					sb.Skills[1].SkillId,
+					sb.Skills[2].SkillId,
+					sb.Skills[3].SkillId,
+					sb.Skills[4].SkillId,
+					sb.Skills[5].SkillId,
+					sb.Skills[6].SkillId,
+					sb.Skills[7].SkillId);
+
+				Sleep(2000);
+
+				EffectArray PlayerEffects = mems->GetPlayerEffectArray();
+
+				for (int i = 0; i < PlayerEffects.size(); i++)
+				{
+					WriteChat(L"Effect: EffectID = %d, SkillID = %d, EffectType = %d ", PlayerEffects[i].EffectId, PlayerEffects[i].SkillId, PlayerEffects[i].EffectType);
+				}
+
+				Sleep(2000);
+
+				Dialog(0x86);
+			}
+			Sleep(100);
+		}
 	}else
 	{
 		MessageBoxA(0, "Did not find all addresses.", 0, 0);

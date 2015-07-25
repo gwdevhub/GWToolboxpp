@@ -19,7 +19,9 @@ void GWAPI::SendPacket(DWORD Size, DWORD Header, ...)
 
 	}
 
-	GameThread.Enqueue(Memory.CtoGSSendFunction, Memory.GetCtoSObj(), Size, pak);
+	va_end(vl);
+
+	GameThreadMgr::GetInstance()->Enqueue(MemoryMgr::GetInstance()->CtoGSSendFunction, MemoryMgr::GetInstance()->GetCtoSObj(), Size, pak);
 }
 
 void GWAPI::Dialog(DWORD ID)
@@ -44,26 +46,32 @@ void GWAPI::WriteChat(wchar_t* message, ...)
 	static wchar_t* buf = NULL;
 	if (buf != NULL) delete buf;
 
+	va_start(vl, message);
+
 	size_t strSize = _vscwprintf(message, vl);
 	buf = new wchar_t[strSize + 1];
 
 	vswprintf_s(buf, strSize, message, vl);
 
-	GameThread.Enqueue(Memory.WriteChatFunction, 0, L"GWToolbox++", buf);
+	va_end(vl);
+
+	GameThreadMgr::GetInstance()->Enqueue(MemoryMgr::GetInstance()->WriteChatFunction, 0, L"GWToolbox++", buf);
 }
+
+struct P5E_SendChat{
+	const DWORD header = 0x5E;
+	wchar_t channel;
+	wchar_t message[137];
+};
 
 void GWAPI::SendChat(wchar_t* Message, wchar_t Channel /*= '!'*/)
 {
-	struct P5E_SendChat{
-		const DWORD header = 0x5E;
-		wchar_t channel;
-		wchar_t message[137];
-	};
+	
 	P5E_SendChat* packet = NULL;
 	if (packet != NULL) delete packet;
 
 	packet->channel = Channel;
 	wcscpy_s(packet->message, Message);
 
-	GameThread.Enqueue(Memory.CtoGSSendFunction, Memory.GetCtoSObj(), 0x11C, (DWORD*)packet);
+	GameThreadMgr::GetInstance()->Enqueue(MemoryMgr::GetInstance()->CtoGSSendFunction, MemoryMgr::GetInstance()->GetCtoSObj(), 0x11C, (DWORD*)packet);
 }

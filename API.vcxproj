@@ -41,6 +41,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <IncludePath>include\Microsoft DirectX SDK %28June 2010%29\Include;include\msdetour;$(IncludePath)</IncludePath>
+    <LibraryPath>include\msdetour;include\Microsoft DirectX SDK %28June 2010%29\Lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -78,6 +80,7 @@
   <ItemGroup>
     <ClInclude Include="API\APIMain.h" />
     <ClInclude Include="API\APIncludes.h" />
+    <ClInclude Include="API\DirectXHook.h" />
     <ClInclude Include="API\GameFunctions.h" />
     <ClInclude Include="API\GameLoop.h" />
     <ClInclude Include="API\Memory.h" />
@@ -86,6 +89,7 @@
     <ClInclude Include="SimpleIni.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="API\DirectXHook.cpp" />
     <ClCompile Include="API\GameFunctions.cpp" />
     <ClCompile Include="API\GameLoop.cpp" />
     <ClCompile Include="API\Memory.cpp" />

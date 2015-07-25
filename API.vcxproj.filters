@@ -18,9 +18,6 @@
     <ClInclude Include="API\GameLoop.h">
       <Filter>API</Filter>
     </ClInclude>
-    <ClInclude Include="API\Memory.h">
-      <Filter>API</Filter>
-    </ClInclude>
     <ClInclude Include="API\Structures.h">
       <Filter>API</Filter>
     </ClInclude>
@@ -33,12 +30,16 @@
     <ClInclude Include="API\GameFunctions.h">
       <Filter>API</Filter>
     </ClInclude>
+    <ClInclude Include="SimpleIni.h" />
+    <ClInclude Include="API\DirectXHook.h">
+      <Filter>API</Filter>
+    </ClInclude>
+    <ClInclude Include="API\Memory.h">
+      <Filter>API</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="API\GameLoop.cpp">
-      <Filter>API\src</Filter>
-    </ClCompile>
-    <ClCompile Include="API\Memory.cpp">
       <Filter>API\src</Filter>
     </ClCompile>
     <ClCompile Include="API\StoChandler.cpp">
@@ -51,6 +52,12 @@
       <Filter>Main</Filter>
     </ClCompile>
     <ClCompile Include="API\GameFunctions.cpp">
+      <Filter>API\src</Filter>
+    </ClCompile>
+    <ClCompile Include="API\DirectXHook.cpp">
+      <Filter>API\src</Filter>
+    </ClCompile>
+    <ClCompile Include="API\Memory.cpp">
       <Filter>API\src</Filter>
     </ClCompile>
   </ItemGroup>

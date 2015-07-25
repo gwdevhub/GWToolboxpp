@@ -17,9 +17,12 @@ namespace GWAPI{
 		CallQueue
 		Majority of code by DarthTon @ unknowncheats.me
 	*/
-	class CallQueue{
+	class GameThreadMgr{
 		std::vector<std::function<void(void)> > m_Calls;
 		mutable std::mutex m_CallVecMutex;
+
+		GameThreadMgr();
+		~GameThreadMgr();
 	public:
 		// For use only in gameloop hook.
 		void __stdcall CallFunctions();
@@ -28,15 +31,12 @@ namespace GWAPI{
 		template<typename F, typename... ArgTypes>
 		void Enqueue(F&& Func, ArgTypes&&... Args);
 
-
+		static GameThreadMgr* GetInstance();
 	};
 
 
 	void gameLoopHook();
 	void renderHook();
-
 	void ToggleRenderHook();
-
-	extern CallQueue GameThread;
 }
 

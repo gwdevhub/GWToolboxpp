@@ -7,9 +7,6 @@
 #pragma warning(disable : 4800)
 
 namespace GWAPI{
-
-	struct Item;
-
 	// General Structures for various objects in the game.
 	struct Agent {
 		DWORD* vtable;
@@ -197,6 +194,15 @@ namespace GWAPI{
 		float AoERange;						// 006C
 		float ConstEffect;					// 0070
 		BYTE unknown6[44];					// 0074
+
+		BYTE GetEnergyCost()
+		{
+			switch (EnergyCost){
+			case 11: return 15;
+			case 12: return 25;
+			default: return EnergyCost;
+			}
+		}
 	};
 	struct Effect {							// total : 18 BYTEs
 		DWORD SkillId;						// 0000						skill id of the effect
@@ -205,6 +211,9 @@ namespace GWAPI{
 		DWORD AgentId;						// 000C						non-zero means maintained enchantment - caster id
 		float Duration;						// 0010						non-zero if effect has a duration
 		DWORD TimeStamp;					// 0014						GW-timestamp of when effect was applied - only with duration
+
+		long GetTimeElapsed() const { return MemoryMgr::GetInstance()->GetSkillTimer() - TimeStamp; }
+		long GetTimeRemaining() const { return (long)(Duration * 1000) - GetTimeElapsed(); }
 	};
 	struct Buff {							// total : 10 BYTEs
 		DWORD SkillId;						// 0000						skill id of the buff
@@ -247,13 +256,12 @@ namespace GWAPI{
 			DWORD GetTargetId();
 			Agent* GetPlayer();
 			Agent* GetTarget();
-			Agent* GetAgent(int AgentID);
-			Agent* operator[](int AgentID);
 	};
 
 	// Typedefs to make things more understandable
 	typedef gw_array<Bag*> BagArray;
-
+	typedef gw_array<Skillbar> SkillbarArray;
+	typedef gw_array<Effect> EffectArray;
 
 	
 }

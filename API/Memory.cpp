@@ -3,7 +3,7 @@
 
 
 template <typename T>
-T GWAPI::CMemory::ReadPtrChain(DWORD pBase, long pOffset1 /*= 0*/, long pOffset2 /*= 0*/, long pOffset3 /*= 0*/, long pOffset4 /*= 0*/, long pOffset5 /*= 0*/)
+T GWAPI::MemoryMgr::ReadPtrChain(DWORD pBase, long pOffset1 /*= 0*/, long pOffset2 /*= 0*/, long pOffset3 /*= 0*/, long pOffset4 /*= 0*/, long pOffset5 /*= 0*/)
 {
 	DWORD pRead = pBase;
 	if (pRead == NULL){ return 0; }
@@ -26,7 +26,7 @@ T GWAPI::CMemory::ReadPtrChain(DWORD pBase, long pOffset1 /*= 0*/, long pOffset2
 	return (T)(pRead);
 }
 
-void GWAPI::CMemory::Retour(BYTE *src, BYTE *restore, const int len)
+void GWAPI::MemoryMgr::Retour(BYTE *src, BYTE *restore, const int len)
 {
 	DWORD dwBack;
 
@@ -41,7 +41,7 @@ void GWAPI::CMemory::Retour(BYTE *src, BYTE *restore, const int len)
 	delete[] restore;
 }
 
-void * GWAPI::CMemory::Detour(BYTE *src, const BYTE *dst, const int len, BYTE** restore /*= NULL*/)
+void * GWAPI::MemoryMgr::Detour(BYTE *src, const BYTE *dst, const int len, BYTE** restore /*= NULL*/)
 {
 	if (restore){
 		*restore = new BYTE[len];
@@ -71,7 +71,7 @@ void * GWAPI::CMemory::Detour(BYTE *src, const BYTE *dst, const int len, BYTE** 
 	return (jmp - len);
 }
 
-bool GWAPI::CMemory::Scan()
+bool GWAPI::MemoryMgr::Scan()
 {
 #define SCAN_START (BYTE*)0x401000
 #define SCAN_END (BYTE*)0x900000
@@ -89,13 +89,11 @@ bool GWAPI::CMemory::Scan()
 
 		// Packet Sender Stuff
 		const BYTE CtoGSObjectCode[] = { 0x56, 0x33, 0xF6, 0x3B, 0xCE, 0x74, 0x0E, 0x56, 0x33, 0xD2 };
+		const BYTE CtoGSSendCode[] = { 0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x2C, 0x53, 0x56, 0x57, 0x8B, 0xF9, 0x85 };
 		if (!memcmp(scan, CtoGSObjectCode, sizeof(CtoGSObjectCode)))
 		{
 			CtoGSObjectPtr = (DWORD*)scan;
 		}
-
-		// Actual function.
-		const BYTE CtoGSSendCode[] = { 0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x2C, 0x53, 0x56, 0x57, 0x8B, 0xF9, 0x85 };
 		if (!memcmp(scan, CtoGSSendCode, sizeof(CtoGSSendCode)))
 		{
 			CtoGSSendFunction = (SendCtoGSPacket_t)scan;
@@ -115,7 +113,7 @@ bool GWAPI::CMemory::Scan()
 			RenderLoopLocation = scan + 0x65;
 			GameLoopLocation = RenderLoopLocation - 0x76;
 			RenderLoopLocation = GameLoopLocation + 0x5D;
-			GameLoopReturn = (BYTE*)Memory.Detour(GameLoopLocation, (BYTE*)gameLoopHook, 5, &GameLoopRestore);
+			GameLoopReturn = (BYTE*)MemoryMgr::Detour(GameLoopLocation, (BYTE*)gameLoopHook, 5, &GameLoopRestore);
 		}
 
 		// For Map IDs
@@ -124,9 +122,22 @@ bool GWAPI::CMemory::Scan()
 			MapIDPtr = *(DWORD**)(scan + 0x46);
 		}
 
+		// To write info / Debug as a PM in chat
 		const BYTE WriteChatCode[] = { 0x55, 0x8B, 0xEC, 0x51, 0x53, 0x89, 0x4D, 0xFC, 0x8B, 0x4D, 0x08, 0x56, 0x57, 0x8B };
 		if (!memcmp(scan, WriteChatCode, sizeof(WriteChatCode))){
 			WriteChatFunction = (WriteChat_t)scan;
+		}
+
+		// Skill timer to use for exact effect times.
+		const BYTE SkillTimerCode[] = { 0x85, 0xc9, 0x74, 0x15, 0x8b, 0xd6, 0x2b, 0xd1, 0x83, 0xfa, 0x64 };
+		if (!memcmp(scan, SkillTimerCode, sizeof(SkillTimerCode))){
+			SkillTimerPtr = (DWORD*)(scan - 4);
+		}
+
+		// Skill array.
+		const BYTE SkillArrayCode[] = { 0x8D, 0x04, 0xB6, 0x5E, 0xC1, 0xE0, 0x05, 0x05 };
+		if (!memcmp(scan, SkillArrayCode, sizeof(SkillArrayCode))){
+			SkillArray = *(Skill**)(scan + 8);
 		}
 
 		if (agArrayPtr &&
@@ -135,15 +146,36 @@ bool GWAPI::CMemory::Scan()
 			BasePointerLocation &&
 			RenderLoopLocation &&
 			MapIDPtr &&
-			WriteChatFunction
+			WriteChatFunction &&
+			SkillTimerPtr &&
+			SkillArray
 			) return true;
 	}
 	return false;
 }
 
-GWAPI::AgentArray GWAPI::CMemory::GetAgentArray()
+GWAPI::AgentArray GWAPI::MemoryMgr::GetAgentArray()
 {
 	return *agArrayPtr;
 }
 
-GWAPI::CMemory GWAPI::Memory = GWAPI::CMemory();
+GWAPI::SkillbarArray GWAPI::MemoryMgr::GetSkillbarArray()
+{
+	return *ReadPtrChain<SkillbarArray*>(GetContextPtr(), 0x2C, 0x6F0);
+}
+
+GWAPI::Skillbar GWAPI::MemoryMgr::GetPlayerSkillbar()
+{
+	return *ReadPtrChain<Skillbar*>(GetContextPtr(), 0x2C, 0x6F0);
+}
+
+GWAPI::EffectArray GWAPI::MemoryMgr::GetPlayerEffectArray()
+{
+	return *ReadPtrChain<gw_array<Effect>*>(GetContextPtr(), 0x2C, 0x508, 0x14);
+}
+
+GWAPI::MemoryMgr* GWAPI::MemoryMgr::GetInstance()
+{
+	static MemoryMgr* inst = new MemoryMgr();
+	return inst;
+}
