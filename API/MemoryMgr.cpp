@@ -155,3 +155,16 @@ bool GWAPI::MemoryMgr::Scan()
 	scanCompleted = false;
 	return false;
 }
+
+template <typename T>
+T GWAPI::MemoryMgr::gw_array<T>::operator[](DWORD index)
+{
+	return GetIndex(index);
+}
+
+template <typename T>
+T GWAPI::MemoryMgr::gw_array<T>::GetIndex(DWORD index)
+{
+	if (index > m_currentsize || index < 0) throw 1;
+	return m_array[index];
+}

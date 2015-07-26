@@ -1,6 +1,6 @@
 #pragma once
 
-#include "APIncludes.h"
+#include <Windows.h>
 
 #include <d3d9.h>
 #include <d3dx9.h>
@@ -21,15 +21,7 @@ namespace GWAPI {
 		void CreateRenderHooks(EndScene_t _endscene, Reset_t _reset);
 		void RestoreRenderHooks();
 
-		static DirectXMgr* GetInstance()
-		{
-			static DirectXMgr* inst = new DirectXMgr();
-			return inst;
-		}
-
 	private:
-		DirectXMgr();
-		~DirectXMgr();
 
 		EndScene_t oEndScene = NULL;
 		Reset_t oReset = NULL;

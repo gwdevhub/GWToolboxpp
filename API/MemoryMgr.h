@@ -4,14 +4,19 @@
 
 namespace GWAPI{
 
-	
-
-	class AgentArray;
-
-	typedef  void(__fastcall *SendCtoGSPacket_t)(DWORD PacketObj,DWORD Size,DWORD* packet);
-	typedef void(__fastcall *WriteChat_t)(DWORD Unk, wchar_t* Name, wchar_t* Message);
-
 	struct MemoryMgr{
+
+		template <typename T>
+		class gw_array {
+		protected:
+			T* m_array;
+			DWORD m_allocatedsize;
+			DWORD m_currentsize;
+		public:
+			T GetIndex(DWORD index);
+			T operator[](DWORD index);
+			DWORD size() const { return m_currentsize; }
+		};
 
 		static bool scanCompleted;
 

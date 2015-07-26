@@ -21,17 +21,11 @@ void __stdcall GWAPI::GameThreadMgr::CallFunctions()
 	m_Calls.clear();
 }
 
-GWAPI::GameThreadMgr* GWAPI::GameThreadMgr::GetInstance()
-{
-	static GameThreadMgr* inst = new GameThreadMgr();
-	return inst;
-}
-
 void __declspec(naked) GWAPI::GameThreadMgr::gameLoopHook()
 {
 	_asm PUSHAD
 
-	GameThreadMgr::GetInstance()->CallFunctions();
+	CallFunctions();
 
 	_asm POPAD
 	_asm JMP MemoryMgr::GameLoopReturn
@@ -72,4 +66,10 @@ void GWAPI::GameThreadMgr::ToggleRenderHook()
 		memcpy(MemoryMgr::RenderLoopLocation, restorebuf, 5);
 		VirtualProtect(MemoryMgr::RenderLoopLocation, 5, dwProt, NULL);
 	}
+}
+
+GWAPI::GameThreadMgr::GameThreadMgr(GWAPI::GWAPIMgr* obj) : parent(obj)
+{
+	memcpy(GameLoopRestore, MemoryMgr::GameLoopLocation, 5);
+	MemoryMgr::GameLoopReturn = (BYTE*)MemoryMgr::Detour(MemoryMgr::GameLoopLocation, (BYTE*)gameLoopHook, 5);
 }

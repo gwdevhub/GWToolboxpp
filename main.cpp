@@ -1,10 +1,13 @@
 
 #include "API\APIMain.h"
+#include <stdio.h>
 
-using namespace GWAPI;
 
 // Do all your startup things here instead.
 void init(HMODULE hModule){
+	AllocConsole();
+	FILE* fh;
+	freopen_s(&fh, "CONOUT$", "w", stdout);
 }
 
 // DLL entry point, not safe to stay in this thread for long.

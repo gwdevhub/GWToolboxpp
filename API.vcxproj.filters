@@ -31,6 +31,15 @@
     <ClInclude Include="API\APIncludes.h">
       <Filter>API</Filter>
     </ClInclude>
+    <ClInclude Include="API\CtoSMgr.h">
+      <Filter>API</Filter>
+    </ClInclude>
+    <ClInclude Include="API\AgentMgr.h">
+      <Filter>API</Filter>
+    </ClInclude>
+    <ClInclude Include="API\GWAPIMgr.h">
+      <Filter>API</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -46,6 +55,15 @@
       <Filter>API\src</Filter>
     </ClCompile>
     <ClCompile Include="API\GameThreadMgr.cpp">
+      <Filter>API\src</Filter>
+    </ClCompile>
+    <ClCompile Include="API\CtoSMgr.cpp">
+      <Filter>API\src</Filter>
+    </ClCompile>
+    <ClCompile Include="API\AgentMgr.cpp">
+      <Filter>API\src</Filter>
+    </ClCompile>
+    <ClCompile Include="API\GWAPIMgr.cpp">
       <Filter>API\src</Filter>
     </ClCompile>
   </ItemGroup>

@@ -42,7 +42,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>include\Microsoft DirectX SDK %28June 2010%29\Include;include\msdetour;$(IncludePath)</IncludePath>
-    <LibraryPath>include\msdetour;include\Microsoft DirectX SDK %28June 2010%29\Lib;$(LibraryPath)</LibraryPath>
+    <LibraryPath>include\msdetour;include\Microsoft DirectX SDK %28June 2010%29\Lib\x86;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -78,17 +78,23 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="API\AgentMgr.h" />
     <ClInclude Include="API\APIMain.h" />
     <ClInclude Include="API\APIncludes.h" />
     <ClInclude Include="API\DirectXMgr.h" />
     <ClInclude Include="API\GameThreadMgr.h" />
+    <ClInclude Include="API\GWAPIMgr.h" />
     <ClInclude Include="API\MemoryMgr.h" />
+    <ClInclude Include="API\CtoSMgr.h" />
     <ClInclude Include="API\StoCMgr.h" />
     <ClInclude Include="SimpleIni.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="API\AgentMgr.cpp" />
+    <ClCompile Include="API\CtoSMgr.cpp" />
     <ClCompile Include="API\DirectXMgr.cpp" />
     <ClCompile Include="API\GameThreadMgr.cpp" />
+    <ClCompile Include="API\GWAPIMgr.cpp" />
     <ClCompile Include="API\MemoryMgr.cpp" />
     <ClCompile Include="API\StoCMgr.cpp" />
     <ClCompile Include="main.cpp" />
