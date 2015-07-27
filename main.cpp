@@ -2,12 +2,25 @@
 #include "API\APIMain.h"
 #include <stdio.h>
 
+using namespace GWAPI;
+
+GWAPIMgr* GW;
 
 // Do all your startup things here instead.
 void init(HMODULE hModule){
 	AllocConsole();
 	FILE* fh;
 	freopen_s(&fh, "CONOUT$", "w", stdout);
+
+	GW = GWAPIMgr::GetInstance();
+
+	AgentMgr::AgentArray agents = GW->Agents->GetAgentArray();
+
+	AgentMgr::Agent* player = agents.GetPlayer();
+
+
+	printf("X: %f Y: %f", player->X, player->Y);
+
 }
 
 // DLL entry point, not safe to stay in this thread for long.

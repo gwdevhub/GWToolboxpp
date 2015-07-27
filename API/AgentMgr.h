@@ -1,11 +1,11 @@
 #pragma once
 
-#include "APIncludes.h"
-#include "MemoryMgr.h"
+#include <Windows.h>
 
 namespace GWAPI {
 
 	class AgentMgr {
+		GWAPIMgr* parent;
 	public:
 		struct Agent {
 			DWORD* vtable;
@@ -114,6 +114,11 @@ namespace GWAPI {
 			inline bool GetIsAttacking() { return ModelState == 96 || ModelState == 1088 || ModelState == 1120; }
 		};
 
+		void GoTo(Agent* ag)
+		{
+			parent->CtoS->SendPacket(0xC, 0x33, ag->Id, 0);
+		}
+
 		class AgentArray : public MemoryMgr::gw_array<Agent*> {
 		public:
 			DWORD GetPlayerId();
@@ -124,11 +129,7 @@ namespace GWAPI {
 
 		AgentArray GetAgentArray();
 
-		static AgentMgr* GetInstance();
-
-	private:
-		AgentMgr();
-		~AgentMgr();
+		AgentMgr(GWAPIMgr* obj) : parent(obj){}
 	};
 
 }

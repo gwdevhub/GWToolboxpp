@@ -1,12 +1,5 @@
 #include "AgentMgr.h"
 
-
-GWAPI::AgentMgr* GWAPI::AgentMgr::GetInstance()
-{
-	static AgentMgr* inst = new AgentMgr();
-	return inst;
-}
-
 GWAPI::AgentMgr::AgentArray GWAPI::AgentMgr::GetAgentArray()
 {
 	AgentArray agRet = *(AgentArray*)MemoryMgr::agArrayPtr;

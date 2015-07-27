@@ -25,7 +25,7 @@ void __declspec(naked) GWAPI::GameThreadMgr::gameLoopHook()
 {
 	_asm PUSHAD
 
-	CallFunctions();
+	GWAPIMgr::GetInstance()->GameThread->CallFunctions();
 
 	_asm POPAD
 	_asm JMP MemoryMgr::GameLoopReturn

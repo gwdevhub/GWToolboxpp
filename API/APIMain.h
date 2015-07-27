@@ -3,7 +3,10 @@
 
 #include <Windows.h>
 
-class GWAPI::GWAPIMgr;
+
+namespace GWAPI{
+	class GWAPIMgr;
+}
 
 #include "MemoryMgr.h"
 #include "GameThreadMgr.h"

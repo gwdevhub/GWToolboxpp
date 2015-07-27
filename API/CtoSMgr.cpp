@@ -5,7 +5,7 @@ void GWAPI::CtoSMgr::SendPacket(T* packet)
 {
 	DWORD size = sizeof(T);
 
-	GameThreadMgr::GetInstance()->Enqueue(CtoGSPacketSendFunction, size, (DWORD*)packet);
+	parent->GameThread->Enqueue(CtoGSPacketSendFunction, size, (DWORD*)packet);
 }
 
 void GWAPI::CtoSMgr::SendPacket(DWORD size, ...)
@@ -20,13 +20,12 @@ void GWAPI::CtoSMgr::SendPacket(DWORD size, ...)
 	}
 	va_end(vl);
 
-	GameThreadMgr::GetInstance()->Enqueue(CtoGSPacketSendFunction, size, pak);
+	parent->GameThread->Enqueue(CtoGSPacketSendFunction, size, pak);
 	delete[] pak;
 }
 
-GWAPI::CtoSMgr::CtoSMgr()
+GWAPI::CtoSMgr::CtoSMgr(GWAPIMgr* obj) : parent(obj)
 {
-	if (MemoryMgr::scanCompleted == false) MemoryMgr::Scan();
 	CtoGSPacketSendFunction = (SendCtoGSPacket_t)MemoryMgr::CtoGSSendFunction;
 }
 

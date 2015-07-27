@@ -77,34 +77,31 @@ namespace GWAPI{
 	private:
 		HANDLE m_Mutex;
 	};
-	class StoCMgr{
-	public:
-		class Exception{
-			char* msg;
-			va_list vl;
-			int va_len;
-		public:
-			const char* getMsg(){
-				return msg;
-			}
-			Exception(const char* message, ...){
-				va_start(vl, message);
-				va_len = _vscprintf(message, vl);
-				msg = new char[va_len + 1];
-				vsprintf_s(msg, (va_len + 1) * sizeof(char), message, vl);
-				va_end(vl);
-			}
-			void clear(){
-				delete[] msg;
-			}
-		};
-	private:
-		class StoChandler{
+		class StoCMgr{
+			class Exception{
+				char* msg;
+				va_list vl;
+				int va_len;
+			public:
+				const char* getMsg(){
+					return msg;
+				}
+				Exception(const char* message, ...){
+					va_start(vl, message);
+					va_len = _vscprintf(message, vl);
+					msg = new char[va_len + 1];
+					vsprintf_s(msg, (va_len + 1) * sizeof(char), message, vl);
+					va_end(vl);
+				}
+				void clear(){
+					delete[] msg;
+				}
+			};
 		public:
 			static HANDLE m_PacketQueueMutex;
 
-			StoChandler();
-			~StoChandler();
+			StoCMgr(GWAPIMgr* obj);
+			~StoCMgr();
 
 			StoCPacketMetadata* GetLSMetaData();
 			StoCPacketMetadata* GetGSMetaData();
@@ -135,6 +132,7 @@ namespace GWAPI{
 			static DWORD WINAPI ProcessPacketThread(LPVOID);
 
 		private:
+			GWAPIMgr* parent;
 			DWORD LSPacketMetadataBase = NULL, GSPacketMetadataBase = NULL;
 			StoCPacketMetadata* m_LSPacketMetadata;
 			StoCPacketMetadata* m_GSPacketMetadata;
@@ -145,18 +143,5 @@ namespace GWAPI{
 			//static HANDLE m_PacketQueueMutex;
 			HANDLE m_PacketQueueThread;
 		};
-
-		StoCMgr(){}
-		void operator=(StoCMgr const&);
-		StoCMgr(StoCMgr const&);
-
-	public:
-
-		static StoChandler* GetInstance(){
-			static StoChandler* m_stocobj = new StoChandler();
-			return m_stocobj;
-		}
-
-	};
 
 }
