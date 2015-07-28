@@ -6,6 +6,14 @@
 
 namespace GWAPI{
 	class GWAPIMgr;
+	struct MemoryMgr;
+
+	class GameThreadMgr;
+	class CtoSMgr;
+	class StoCMgr;
+
+	class AgentMgr;
+	class DirectXMgr;
 }
 
 #include "MemoryMgr.h"

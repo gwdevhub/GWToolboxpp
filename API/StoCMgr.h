@@ -3,6 +3,8 @@
 #include <Windows.h>
 #include <queue>
 
+#include "APIMain.h"
+
 /*
 	StoC Packet Handler
 
@@ -132,6 +134,7 @@ namespace GWAPI{
 			static DWORD WINAPI ProcessPacketThread(LPVOID);
 
 		private:
+			friend class GWAPIMgr;
 			GWAPIMgr* parent;
 			DWORD LSPacketMetadataBase = NULL, GSPacketMetadataBase = NULL;
 			StoCPacketMetadata* m_LSPacketMetadata;

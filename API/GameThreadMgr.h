@@ -12,6 +12,8 @@ namespace GWAPI{
 
 	class GameThreadMgr{
 
+		friend class GWAPIMgr;
+
 		GWAPIMgr* parent;
 
 		BYTE GameLoopRestore[5];
@@ -21,18 +23,17 @@ namespace GWAPI{
 
 	public:
 		GameThreadMgr(GWAPIMgr* obj);
-		~GameThreadMgr(){
-			DWORD dwProt;
-			VirtualProtect(MemoryMgr::GameLoopLocation, 5, PAGE_READWRITE, &dwProt);
-			memcpy(MemoryMgr::GameLoopLocation, GameLoopRestore, 5);
-			VirtualProtect(MemoryMgr::GameLoopLocation, 5, dwProt, NULL);
-		}
+		~GameThreadMgr();
 		// For use only in gameloop hook.
 		void __stdcall CallFunctions();
 
 		// Add function to queue.
 		template<typename F, typename... ArgTypes>
-		void Enqueue(F&& Func, ArgTypes&&... Args);
+		void Enqueue(F&& Func, ArgTypes&&... Args)
+		{
+			std::unique_lock<std::mutex> VecLock(m_CallVecMutex);
+			m_Calls.emplace_back(std::bind(std::forward<F>(Func), std::forward<ArgTypes>(Args)...));
+		}
 
 		static void gameLoopHook();
 		static void renderHook();

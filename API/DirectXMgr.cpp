@@ -1,5 +1,10 @@
 #include "DirectXMgr.h"
 
+GWAPI::DirectXMgr::DirectXMgr(GWAPIMgr* obj) : parent(obj)
+{
+
+}
+
 
 void GWAPI::DirectXMgr::CreateRenderHooks(EndScene_t _endscene, Reset_t _reset)
 {

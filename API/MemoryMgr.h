@@ -13,8 +13,17 @@ namespace GWAPI{
 			DWORD m_allocatedsize;
 			DWORD m_currentsize;
 		public:
-			T GetIndex(DWORD index);
-			T operator[](DWORD index);
+			T GetIndex(DWORD index)
+			{
+				if (index > m_currentsize || index < 0) throw 1;
+				return m_array[index];
+			}
+
+			T operator[](DWORD index)
+			{
+				return GetIndex(index);
+			}
+
 			DWORD size() const { return m_currentsize; }
 		};
 
@@ -58,7 +67,29 @@ namespace GWAPI{
 		static bool Scan();
 		static void *Detour(BYTE *src, const BYTE *dst, const int len, BYTE** restore = NULL);
 		static void Retour(BYTE *src, BYTE *restore, const int len);
-		template <typename T> static T ReadPtrChain(DWORD pBase, long pOffset1 = 0, long pOffset2 = 0, long pOffset3 = 0, long pOffset4 = 0, long pOffset5 = 0);
+		template <typename T> static T ReadPtrChain(DWORD pBase, long pOffset1 = -1, long pOffset2 = -1, long pOffset3 = -1, long pOffset4 = -1, long pOffset5 = -1)
+		{
+			DWORD pRead = pBase;
+			if (pRead == NULL){ return 0; }
+
+			if (pOffset1 != -1){ pRead = *(DWORD*)(pRead + pOffset1); }
+			if (pRead == NULL){ return 0; }
+
+			if (pOffset2 != -1){ pRead = *(DWORD*)(pRead + pOffset2); }
+			if (pRead == NULL){ return 0; }
+
+			if (pOffset3 != -1){ pRead = *(DWORD*)(pRead + pOffset3); }
+			if (pRead == NULL){ return 0; }
+
+			if (pOffset4 != -1){ pRead = *(DWORD*)(pRead + pOffset4); }
+			if (pRead == NULL){ return 0; }
+
+			if (pOffset5 != -1){ pRead = *(DWORD*)(pRead + pOffset5); }
+			if (pRead == NULL){ return 0; }
+
+			return (T)(pRead);
+		}
+
 
 
 		// Memory Reads.

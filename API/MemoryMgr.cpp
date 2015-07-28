@@ -1,29 +1,22 @@
 #include "MemoryMgr.h"
 
+bool GWAPI::MemoryMgr::scanCompleted = NULL;
 
-template <typename T>
-T GWAPI::MemoryMgr::ReadPtrChain(DWORD pBase, long pOffset1 /*= 0*/, long pOffset2 /*= 0*/, long pOffset3 /*= 0*/, long pOffset4 /*= 0*/, long pOffset5 /*= 0*/)
-{
-	DWORD pRead = pBase;
-	if (pRead == NULL){ return 0; }
+BYTE* GWAPI::MemoryMgr::SkillArray = NULL;
+BYTE* GWAPI::MemoryMgr::SkillTimerPtr = NULL;
+BYTE* GWAPI::MemoryMgr::WriteChatFunction = NULL;
+BYTE* GWAPI::MemoryMgr::GameLoopRestore = NULL;
+BYTE* GWAPI::MemoryMgr::GameLoopReturn = NULL;
+BYTE* GWAPI::MemoryMgr::GameLoopLocation = NULL;
+BYTE* GWAPI::MemoryMgr::RenderLoopLocation = NULL;
+BYTE* GWAPI::MemoryMgr::BasePointerLocation = NULL;
+BYTE* GWAPI::MemoryMgr::CtoGSSendFunction = NULL;
+BYTE* GWAPI::MemoryMgr::CtoGSObjectPtr = NULL;
+BYTE* GWAPI::MemoryMgr::MapIDPtr = NULL;
+BYTE* GWAPI::MemoryMgr::TargetAgentIDPtr = NULL;
+BYTE* GWAPI::MemoryMgr::PlayerAgentIDPtr = NULL;
+BYTE* GWAPI::MemoryMgr::agArrayPtr = NULL;
 
-	if (pOffset1){ pRead = *(DWORD*)(pRead + pOffset1); }
-	if (pRead == NULL){ return 0; }
-
-	if (pOffset2){ pRead = *(DWORD*)(pRead + pOffset2); }
-	if (pRead == NULL){ return 0; }
-
-	if (pOffset3){ pRead = *(DWORD*)(pRead + pOffset3); }
-	if (pRead == NULL){ return 0; }
-
-	if (pOffset4){ pRead = *(DWORD*)(pRead + pOffset4); }
-	if (pRead == NULL){ return 0; }
-
-	if (pOffset5){ pRead = *(DWORD*)(pRead + pOffset5); }
-	if (pRead == NULL){ return 0; }
-
-	return (T)(pRead);
-}
 
 void GWAPI::MemoryMgr::Retour(BYTE *src, BYTE *restore, const int len)
 {
@@ -154,17 +147,4 @@ bool GWAPI::MemoryMgr::Scan()
 	}
 	scanCompleted = false;
 	return false;
-}
-
-template <typename T>
-T GWAPI::MemoryMgr::gw_array<T>::operator[](DWORD index)
-{
-	return GetIndex(index);
-}
-
-template <typename T>
-T GWAPI::MemoryMgr::gw_array<T>::GetIndex(DWORD index)
-{
-	if (index > m_currentsize || index < 0) throw 1;
-	return m_array[index];
 }

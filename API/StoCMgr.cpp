@@ -1,5 +1,4 @@
 #include "StoCMgr.h"
-#include "MemoryMgr.h"
 
 
 std::queue<GWAPI::PacketHandler*> GWAPI::StoCMgr::m_PacketQueue;

@@ -1,4 +1,6 @@
 #pragma  once
+#include <Windows.h>
+#include "APIMain.h"
 
 namespace GWAPI {
 
@@ -16,18 +18,7 @@ namespace GWAPI {
 	
 		
 
-		GWAPIMgr(){
-			if (MemoryMgr::Scan()){
-				GameThread = new GameThreadMgr(this);
-				CtoS = new CtoSMgr(this);
-				StoC = new StoCMgr(this);
-				Agents = new AgentMgr(this);
-				DirectX = new DirectXMgr(this);
-			}
-			else{
-				MessageBoxA(0, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0);
-			}
-		}
+		GWAPIMgr();
 	public:
 		AgentMgr* Agents;
 		DirectXMgr* DirectX;

@@ -1,12 +1,5 @@
 #include "GameThreadMgr.h"
 
-template<typename F, typename... ArgTypes>
-void GWAPI::GameThreadMgr::Enqueue(F&& Func, ArgTypes&&... Args)
-{
-	std::unique_lock<std::mutex> VecLock(m_CallVecMutex);
-	m_Calls.emplace_back(std::bind(Func, Args...));
-}
-
 void __stdcall GWAPI::GameThreadMgr::CallFunctions()
 {
 
@@ -72,4 +65,12 @@ GWAPI::GameThreadMgr::GameThreadMgr(GWAPI::GWAPIMgr* obj) : parent(obj)
 {
 	memcpy(GameLoopRestore, MemoryMgr::GameLoopLocation, 5);
 	MemoryMgr::GameLoopReturn = (BYTE*)MemoryMgr::Detour(MemoryMgr::GameLoopLocation, (BYTE*)gameLoopHook, 5);
+}
+
+GWAPI::GameThreadMgr::~GameThreadMgr()
+{
+	DWORD dwProt;
+	VirtualProtect(MemoryMgr::GameLoopLocation, 5, PAGE_READWRITE, &dwProt);
+	memcpy(MemoryMgr::GameLoopLocation, GameLoopRestore, 5);
+	VirtualProtect(MemoryMgr::GameLoopLocation, 5, dwProt, NULL);
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Windows.h>
+#include "APIMain.h"
 
 #include <d3d9.h>
 #include <d3dx9.h>
@@ -21,8 +22,11 @@ namespace GWAPI {
 		void CreateRenderHooks(EndScene_t _endscene, Reset_t _reset);
 		void RestoreRenderHooks();
 
-	private:
+		DirectXMgr(GWAPIMgr* obj);
 
+	private:
+		friend class GWAPIMgr;
+		GWAPIMgr* parent;
 		EndScene_t oEndScene = NULL;
 		Reset_t oReset = NULL;
 
