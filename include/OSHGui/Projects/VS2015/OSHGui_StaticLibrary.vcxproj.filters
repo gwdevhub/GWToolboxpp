@@ -71,9 +71,6 @@
     <ClCompile Include="..\..\Misc\TimeSpan.cpp">
       <Filter>Quelldateien\Misc</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Input\Input.cpp">
-      <Filter>Quelldateien\Input</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Input\WindowsMessage.cpp">
       <Filter>Quelldateien\Input</Filter>
     </ClCompile>
@@ -221,6 +218,9 @@
     <ClCompile Include="..\..\Controls\LinkLabel.cpp">
       <Filter>Quelldateien\Controls</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Input\Input.cpp">
+      <Filter>Quelldateien\Input</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Misc\ConcurrendQueue.hpp">
@@ -264,9 +264,6 @@
     </ClInclude>
     <ClInclude Include="..\..\OSHGui.hpp">
       <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Input\Input.hpp">
-      <Filter>Headerdateien\Input</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Input\WindowsMessage.hpp">
       <Filter>Headerdateien\Input</Filter>
@@ -477,6 +474,9 @@
     </ClInclude>
     <ClInclude Include="..\..\Controls\RadioButton.hpp">
       <Filter>Headerdateien\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Input\Input.hpp">
+      <Filter>Headerdateien\Input</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -10,6 +10,7 @@
 #define OSHGUI_DRAWING_DIRECT3D10RENDERER_HPP
 
 #include "../Renderer.hpp"
+#include "Direct3D10StateBlock.hpp"
 
 #include <vector>
 #include <map>
@@ -87,6 +88,8 @@ namespace OSHGui
 			PointF displayDPI;
 			
 			RenderTargetPtr defaultTarget;
+
+			Direct3D10StateBlock stateBlock;
 			
 			ID3D10Effect *effect;
 			ID3D10EffectTechnique *clippedTechnique;

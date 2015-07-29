@@ -31,7 +31,7 @@ namespace OSHGui
 			D3DCAPS9 caps;
 			device->GetDeviceCaps(&caps);
 
-			if (!caps.RasterCaps && D3DPRASTERCAPS_SCISSORTEST)
+			if (!(caps.RasterCaps & D3DPRASTERCAPS_SCISSORTEST))
 			{
 				throw Misc::NotSupportedException();
 			}

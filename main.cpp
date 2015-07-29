@@ -1,4 +1,4 @@
-
+//#define GWAPI_USEDIRECTX
 #include "API\APIMain.h"
 #include <stdio.h>
 

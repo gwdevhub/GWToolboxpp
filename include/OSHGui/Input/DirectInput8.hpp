@@ -57,8 +57,8 @@ namespace OSHGui
 			Drawing::PointI mouseLocation;
 			BYTE lastMouseButtonStates[5];
 
-			static DWORD InitialRepeatTime;
-			static DWORD HoldRepeatTime;
+			static unsigned long long InitialRepeatTime;
+			static unsigned long long HoldRepeatTime;
 			static Key DIKToKeyTable[0xEF];
 			
 			HKL keyLayout;
@@ -67,7 +67,7 @@ namespace OSHGui
 			public:
 				bool KeyHold;
 				BYTE LastState;
-				DWORD LastTime;
+				unsigned long long LastTime;
 			};
 			KeyState keyStates[0xEF];
 			std::array<BYTE, 256> fakeBuffer;

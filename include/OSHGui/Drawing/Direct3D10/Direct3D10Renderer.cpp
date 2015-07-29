@@ -125,7 +125,8 @@ namespace OSHGui
 			  worldMatrixVariable(nullptr),
 			  projectionMatrixVariable(nullptr),
 			  useTextureVariable(nullptr),
-			  defaultTarget(std::make_shared<Direct3D10ViewportTarget>(*this))
+			  defaultTarget(std::make_shared<Direct3D10ViewportTarget>(*this)),
+			  stateBlock(_device)
 		{
 			ID3D10Blob *errors = nullptr;
 			if (FAILED(D3DX10CreateEffectFromMemory(shaderSource, sizeof(shaderSource), 0, 0, 0, "fx_4_0", 0, 0, device, 0, 0, &effect, &errors, 0)))
@@ -288,12 +289,14 @@ namespace OSHGui
 		//---------------------------------------------------------------------------
 		void Direct3D10Renderer::BeginRendering()
 		{
+			stateBlock.Capture();
+
 			device->IASetInputLayout(inputLayout);
 		}
 		//---------------------------------------------------------------------------
 		void Direct3D10Renderer::EndRendering()
 		{
-
+			stateBlock.Apply();
 		}
 		//---------------------------------------------------------------------------
 	}

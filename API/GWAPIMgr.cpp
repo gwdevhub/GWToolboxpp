@@ -14,7 +14,9 @@ GWAPI::GWAPIMgr::GWAPIMgr()
 		CtoS = new CtoSMgr(this);
 		StoC = new StoCMgr(this);
 		Agents = new AgentMgr(this);
+#ifdef GWAPI_USEDIRECTX
 		DirectX = new DirectXMgr(this);
+#endif
 		Skillbar = new SkillbarMgr(this);
 		Effects = new EffectMgr(this);
 	}

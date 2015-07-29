@@ -1,49 +1,47 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Quelldateien">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
     <Filter Include="Headerdateien">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+      <UniqueIdentifier>{fc150dd2-f0c9-43f7-8a38-3d7cff43219c}</UniqueIdentifier>
     </Filter>
     <Filter Include="Headerdateien\Controls">
-      <UniqueIdentifier>{0cc12cc2-d3c0-4caf-964f-f2c510ffb8eb}</UniqueIdentifier>
+      <UniqueIdentifier>{b11383b6-fe43-4fce-a2a2-fb14dcdd2d91}</UniqueIdentifier>
     </Filter>
     <Filter Include="Headerdateien\Drawing">
-      <UniqueIdentifier>{91911dc6-61e2-47d6-9571-45cded2a4484}</UniqueIdentifier>
+      <UniqueIdentifier>{9d4b9fad-9b73-42d4-bb97-2103eb6430d8}</UniqueIdentifier>
     </Filter>
     <Filter Include="Headerdateien\Misc">
-      <UniqueIdentifier>{051ab02c-6b0e-48bf-a6a8-656a9601b3fe}</UniqueIdentifier>
+      <UniqueIdentifier>{d5c0b0ed-983e-4e69-986b-9f002f119fb3}</UniqueIdentifier>
     </Filter>
     <Filter Include="Headerdateien\Input">
-      <UniqueIdentifier>{ee74dda6-2f4c-468a-bf93-d2d18dc0871a}</UniqueIdentifier>
+      <UniqueIdentifier>{b3bb3cbd-972a-468c-8930-5c61ba8a10f4}</UniqueIdentifier>
     </Filter>
     <Filter Include="Headerdateien\Event">
-      <UniqueIdentifier>{63bf4eaa-b6cf-4c51-841e-8236167ee55c}</UniqueIdentifier>
+      <UniqueIdentifier>{38b659e2-96c4-4fbf-aa5c-6a9b04e2e2b2}</UniqueIdentifier>
     </Filter>
     <Filter Include="Headerdateien\Cursor">
-      <UniqueIdentifier>{650cd9c3-da37-49ad-a1b1-ecf844352dd9}</UniqueIdentifier>
+      <UniqueIdentifier>{84bdbd42-e0ec-4897-a62e-c20565eafc9f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Quelldateien">
+      <UniqueIdentifier>{3b029c75-a06a-4db0-b1f6-4e618f2437e6}</UniqueIdentifier>
     </Filter>
     <Filter Include="Quelldateien\Controls">
-      <UniqueIdentifier>{b4e91939-5fc5-4d0b-b459-0616872ec3e8}</UniqueIdentifier>
+      <UniqueIdentifier>{4f35fe07-95a3-4c8a-b0ba-b35b20e740ca}</UniqueIdentifier>
     </Filter>
     <Filter Include="Quelldateien\Cursor">
-      <UniqueIdentifier>{d330fe9c-71f3-44ce-bf19-78d10e6ad72f}</UniqueIdentifier>
+      <UniqueIdentifier>{9cb633f9-b37c-4ddf-b704-2d118733a3f5}</UniqueIdentifier>
     </Filter>
     <Filter Include="Quelldateien\Drawing">
-      <UniqueIdentifier>{08406e09-332e-4034-8c12-dcb078eeaa7e}</UniqueIdentifier>
+      <UniqueIdentifier>{59379978-bc49-4e50-93e5-ce334fb9cca7}</UniqueIdentifier>
     </Filter>
     <Filter Include="Quelldateien\Event">
-      <UniqueIdentifier>{041d73fb-c294-4af7-bf6d-4e5e66da3b22}</UniqueIdentifier>
+      <UniqueIdentifier>{aaa567be-f6df-4318-afe1-bf778d4fba94}</UniqueIdentifier>
     </Filter>
     <Filter Include="Quelldateien\Input">
-      <UniqueIdentifier>{b475d918-a52b-49e0-a8e6-b502f70699ec}</UniqueIdentifier>
+      <UniqueIdentifier>{8fbee1bd-0692-4b8c-b59d-e6f6d497fcb0}</UniqueIdentifier>
     </Filter>
     <Filter Include="Quelldateien\Misc">
-      <UniqueIdentifier>{a0300167-5492-4504-ba3c-a60d925a3ed3}</UniqueIdentifier>
+      <UniqueIdentifier>{7b2f0233-f70f-43c6-a660-c57763970da4}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -88,9 +86,6 @@
     </ClInclude>
     <ClInclude Include="..\..\OSHGui.hpp">
       <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Input\Input.hpp">
-      <Filter>Headerdateien\Input</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Input\WindowsMessage.hpp">
       <Filter>Headerdateien\Input</Filter>
@@ -302,6 +297,9 @@
     <ClInclude Include="..\..\Controls\RadioButton.hpp">
       <Filter>Headerdateien\Controls</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Input\Input.hpp">
+      <Filter>Headerdateien\Input</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Application.cpp">
@@ -327,9 +325,6 @@
     </ClCompile>
     <ClCompile Include="..\..\Misc\TimeSpan.cpp">
       <Filter>Quelldateien\Misc</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Input\Input.cpp">
-      <Filter>Quelldateien\Input</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Input\WindowsMessage.cpp">
       <Filter>Quelldateien\Input</Filter>
@@ -477,6 +472,9 @@
     </ClCompile>
     <ClCompile Include="..\..\Controls\LinkLabel.cpp">
       <Filter>Quelldateien\Controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Input\Input.cpp">
+      <Filter>Quelldateien\Input</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

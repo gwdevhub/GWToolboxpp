@@ -113,8 +113,8 @@ namespace OSHGui
 
 			owner.SetWorldMatrix(matrix);
 
-			auto stride = sizeof(D3DVertex);
-			uint32_t offset = 0;
+			UINT stride = sizeof(D3DVertex);
+			UINT offset = 0;
 			owner.GetDevice().Context->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
 
 			for (int pass = 0; pass < 1; ++pass)

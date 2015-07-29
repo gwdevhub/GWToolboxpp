@@ -19,8 +19,8 @@ namespace OSHGui
 		const int STATE_PRESSED = 0x80;
 		const int STATE_ON = 0x1;
 
-		DWORD DirectInput8::InitialRepeatTime = 300;
-		DWORD DirectInput8::HoldRepeatTime = 40;
+		unsigned long long DirectInput8::InitialRepeatTime = 300;
+		unsigned long long DirectInput8::HoldRepeatTime = 40;
 		Key DirectInput8::DIKToKeyTable[] =
 		{
 			Key::None, /*0x00*/
@@ -518,7 +518,7 @@ namespace OSHGui
 
 			fakeBuffer.fill(0);
 
-			auto time = GetTickCount();
+			auto time = GetTickCount64();
 			
 			if (IsKeyLocked(VK_CAPITAL))
 			{

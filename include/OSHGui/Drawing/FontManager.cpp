@@ -75,6 +75,8 @@ namespace OSHGui
 								char path[MAX_PATH] = { };
 								ExpandEnvironmentStringsA((std::string("%windir%\\fonts\\") + keyValueBuffer).c_str(), path, sizeof(path));
 
+								RegCloseKey(fontKey);
+
 								return LoadFontFromFile(path, pointSize, antiAliased);
 							}
 						}
@@ -82,9 +84,9 @@ namespace OSHGui
 
 					++i;
 				} while (lastError != ERROR_NO_MORE_ITEMS);
-			}
 
-			RegCloseKey(fontKey);
+				RegCloseKey(fontKey);
+			}
 
 			throw Misc::ArgumentException();
 		}

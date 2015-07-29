@@ -125,7 +125,8 @@ namespace OSHGui
 			  worldMatrixVariable(nullptr),
 			  projectionMatrixVariable(nullptr),
 			  useTextureVariable(nullptr),
-			  defaultTarget(std::make_shared<Direct3D11ViewportTarget>(*this))
+			  defaultTarget(std::make_shared<Direct3D11ViewportTarget>(*this)),
+			  stateBlock(_context)
 		{
 			ID3D10Blob *errors = nullptr;
 			ID3D10Blob *blob = nullptr;
@@ -299,13 +300,15 @@ namespace OSHGui
 		//---------------------------------------------------------------------------
 		void Direct3D11Renderer::BeginRendering()
 		{
+			stateBlock.Capture();
+
 			device.Context->IASetInputLayout(inputLayout);
 			device.Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		}
 		//---------------------------------------------------------------------------
 		void Direct3D11Renderer::EndRendering()
 		{
-
+			stateBlock.Apply();
 		}
 		//---------------------------------------------------------------------------
 	}

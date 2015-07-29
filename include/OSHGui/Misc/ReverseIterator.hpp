@@ -1,7 +1,6 @@
-#ifndef OSHGUI_MISC_REVERSEITERATOR_HPP
-#define OSHGUI_MISC_REVERSEITERATOR_HPP
+#pragma once
 
-#include <utility>
+#include <iterator>
 
 template<typename T1, typename T2>
 struct rpair
@@ -18,16 +17,28 @@ struct rpair
 };
 
 template<class T>
-T begin(rpair<T, T> p)
+T begin(rpair<T, T> &p)
 {
 	return p.first;
 }
 template<class T>
-T end(rpair<T, T> p)
+T begin(const rpair<T, T> &p)
+{
+	return p.first;
+}
+
+template<class T>
+T end(rpair<T, T> &p)
+{
+	return p.second;
+}
+template<class T>
+T end(const rpair<T, T> &p)
 {
 	return p.second;
 }
 
+#if _MSC_VER <= 1800
 template<class Iterator>
 std::reverse_iterator<Iterator> make_reverse_iterator(Iterator it)
 {
@@ -37,7 +48,14 @@ std::reverse_iterator<Iterator> make_reverse_iterator(Iterator it)
 template<class Range>
 rpair<std::reverse_iterator<decltype(begin(std::declval<Range>()))>, std::reverse_iterator<decltype(begin(std::declval<Range>()))>> make_reverse_range(Range&& r)
 {
-	return rpair<decltype(make_reverse_iterator(end(r))), decltype(make_reverse_iterator(begin(r)))>(make_reverse_iterator(end(r)), make_reverse_iterator(begin(r)));
+	using type = decltype(make_reverse_iterator(begin(r)));
+	return rpair<type, type>(make_reverse_iterator(end(r)), make_reverse_iterator(begin(r)));
 }
-
+#else
+template<class Range>
+auto make_reverse_range(Range&& r)
+{
+	using type = decltype(make_reverse_iterator(begin(r)));
+	return rpair<type, type>(make_reverse_iterator(end(r)), make_reverse_iterator(std::begin(r)));
+}
 #endif
