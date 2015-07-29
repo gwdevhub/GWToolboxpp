@@ -11,16 +11,18 @@ namespace GWAPI {
 		friend class StoCMgr;
 		friend class AgentMgr;
 		friend class DirectXMgr;
+		friend class SkillbarMgr;
+		friend class EffectMgr;
 
 		GameThreadMgr* GameThread;
 		CtoSMgr* CtoS;
 		StoCMgr* StoC;
 	
-		
-
 		GWAPIMgr();
 	public:
 		AgentMgr* Agents;
+		SkillbarMgr* Skillbar;
+		EffectMgr* Effects;
 		DirectXMgr* DirectX;
 
 		static GWAPIMgr* GetInstance();

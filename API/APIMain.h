@@ -13,6 +13,9 @@ namespace GWAPI{
 	class StoCMgr;
 
 	class AgentMgr;
+	class SkillbarMgr;
+	class EffectMgr;
+
 	class DirectXMgr;
 }
 
@@ -24,6 +27,9 @@ namespace GWAPI{
 
 #include "StoCMgr.h"
 #include "DirectXMgr.h"
+
+#include "SkillbarMgr.h"
+#include "EffectMgr.h"
 
 #include "GWAPIMgr.h"
 

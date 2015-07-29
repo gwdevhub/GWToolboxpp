@@ -40,6 +40,12 @@
     <ClInclude Include="API\GWAPIMgr.h">
       <Filter>API</Filter>
     </ClInclude>
+    <ClInclude Include="API\SkillbarMgr.h">
+      <Filter>API</Filter>
+    </ClInclude>
+    <ClInclude Include="API\EffectMgr.h">
+      <Filter>API</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -64,6 +70,12 @@
       <Filter>API\src</Filter>
     </ClCompile>
     <ClCompile Include="API\GWAPIMgr.cpp">
+      <Filter>API\src</Filter>
+    </ClCompile>
+    <ClCompile Include="API\SkillbarMgr.cpp">
+      <Filter>API\src</Filter>
+    </ClCompile>
+    <ClCompile Include="API\EffectMgr.cpp">
       <Filter>API\src</Filter>
     </ClCompile>
   </ItemGroup>

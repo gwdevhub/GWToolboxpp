@@ -1,21 +1,35 @@
 #include "MemoryMgr.h"
 
-bool GWAPI::MemoryMgr::scanCompleted = NULL;
-
-BYTE* GWAPI::MemoryMgr::SkillArray = NULL;
-BYTE* GWAPI::MemoryMgr::SkillTimerPtr = NULL;
-BYTE* GWAPI::MemoryMgr::WriteChatFunction = NULL;
-BYTE* GWAPI::MemoryMgr::GameLoopRestore = NULL;
-BYTE* GWAPI::MemoryMgr::GameLoopReturn = NULL;
-BYTE* GWAPI::MemoryMgr::GameLoopLocation = NULL;
-BYTE* GWAPI::MemoryMgr::RenderLoopLocation = NULL;
-BYTE* GWAPI::MemoryMgr::BasePointerLocation = NULL;
-BYTE* GWAPI::MemoryMgr::CtoGSSendFunction = NULL;
-BYTE* GWAPI::MemoryMgr::CtoGSObjectPtr = NULL;
-BYTE* GWAPI::MemoryMgr::MapIDPtr = NULL;
-BYTE* GWAPI::MemoryMgr::TargetAgentIDPtr = NULL;
-BYTE* GWAPI::MemoryMgr::PlayerAgentIDPtr = NULL;
+// Agent Array
 BYTE* GWAPI::MemoryMgr::agArrayPtr = NULL;
+BYTE* GWAPI::MemoryMgr::PlayerAgentIDPtr = NULL;
+BYTE* GWAPI::MemoryMgr::TargetAgentIDPtr = NULL;
+
+// Map ID
+BYTE* GWAPI::MemoryMgr::MapIDPtr = NULL;
+
+// Gameserver PacketSend Addresses
+BYTE* GWAPI::MemoryMgr::CtoGSObjectPtr = NULL;
+BYTE* GWAPI::MemoryMgr::CtoGSSendFunction = NULL;
+
+// Base ptr to get context pointer, which houses basically
+BYTE* GWAPI::MemoryMgr::BasePointerLocation = NULL;
+
+// Renderloop / Main Gameloop
+BYTE* GWAPI::MemoryMgr::RenderLoopLocation = NULL;
+BYTE* GWAPI::MemoryMgr::GameLoopLocation = NULL;
+BYTE* GWAPI::MemoryMgr::GameLoopReturn = NULL;
+BYTE* GWAPI::MemoryMgr::GameLoopRestore = NULL;
+
+// Chat function for simple debug/notifications
+BYTE* GWAPI::MemoryMgr::WriteChatFunction = NULL;
+
+// Used to get precise skill recharge times.
+BYTE* GWAPI::MemoryMgr::SkillTimerPtr = NULL;
+
+// Used to get skill information.
+BYTE* GWAPI::MemoryMgr::SkillArray = NULL;
+BYTE* GWAPI::MemoryMgr::UseSkillFunction = NULL;
 
 
 void GWAPI::MemoryMgr::Retour(BYTE *src, BYTE *restore, const int len)
@@ -122,13 +136,19 @@ bool GWAPI::MemoryMgr::Scan()
 		// Skill timer to use for exact effect times.
 		const BYTE SkillTimerCode[] = { 0x85, 0xc9, 0x74, 0x15, 0x8b, 0xd6, 0x2b, 0xd1, 0x83, 0xfa, 0x64 };
 		if (!memcmp(scan, SkillTimerCode, sizeof(SkillTimerCode))){
-			SkillTimerPtr = (BYTE*)(scan - 4);
+			SkillTimerPtr = *(BYTE**)(scan - 4);
 		}
 
 		// Skill array.
 		const BYTE SkillArrayCode[] = { 0x8D, 0x04, 0xB6, 0x5E, 0xC1, 0xE0, 0x05, 0x05 };
 		if (!memcmp(scan, SkillArrayCode, sizeof(SkillArrayCode))){
 			SkillArray = *(BYTE**)(scan + 8);
+		}
+
+		// Use Skill Function.
+		const BYTE UseSkillFunctionCode[] = { 0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x10, 0x53, 0x56, 0x8B, 0xD9, 0x57, 0x8B, 0xF2, 0x89, 0x5D, 0xF0 };
+		if (!memcmp(scan, UseSkillFunctionCode, sizeof(UseSkillFunctionCode))){
+			UseSkillFunction = scan;
 		}
 
 		if (agArrayPtr &&
@@ -139,12 +159,11 @@ bool GWAPI::MemoryMgr::Scan()
 			MapIDPtr &&
 			WriteChatFunction &&
 			SkillTimerPtr &&
-			SkillArray
+			SkillArray &&
+			UseSkillFunction
 			) {
-				scanCompleted = true;
 				return true;
 			}
 	}
-	scanCompleted = false;
 	return false;
 }

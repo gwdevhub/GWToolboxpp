@@ -28,14 +28,14 @@ GWAPI::StoCMgr::StoCMgr(GWAPIMgr* obj) : parent(obj){
 
 
 	if (LSPacketMetadataBase){
-		m_LSPacketMetadata = MemoryMgr::ReadPtrChain<StoCPacketMetadata*>(*(DWORD*)LSPacketMetadataBase, 0x8, 0x20, 0x14, 0x8, 0x2C);
-		m_LSPacketCount = MemoryMgr::ReadPtrChain<int>(*(DWORD*)LSPacketMetadataBase, 0x8, 0x20, 0x14, 0x8, 0x34);
+		m_LSPacketMetadata = *MemoryMgr::ReadPtrChain<StoCPacketMetadata**>(LSPacketMetadataBase, 5, 0x8, 0x20, 0x14, 0x8, 0x2C);
+		m_LSPacketCount = *MemoryMgr::ReadPtrChain<int*>(LSPacketMetadataBase, 5, 0x8, 0x20, 0x14, 0x8, 0x34);
 	}
 	else throw Exception("LSPacketMetadataBase not found.");
 
 	if (GSPacketMetadataBase){
-		m_GSPacketMetadata = MemoryMgr::ReadPtrChain<StoCPacketMetadata*>(*(DWORD*)GSPacketMetadataBase, 0x8, 0x2C);
-		m_GSPacketCount = MemoryMgr::ReadPtrChain<int>(*(DWORD*)GSPacketMetadataBase, 0x8, 0x34);
+		m_GSPacketMetadata = *MemoryMgr::ReadPtrChain<StoCPacketMetadata**>(GSPacketMetadataBase, 2, 0x8, 0x2C);
+		m_GSPacketCount = *MemoryMgr::ReadPtrChain<int*>(GSPacketMetadataBase, 2, 0x8, 0x34);
 	}
 	else throw Exception("GSPacketMetadataBase not found.");
 

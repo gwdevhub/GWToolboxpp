@@ -19,7 +19,25 @@ void init(HMODULE hModule){
 	AgentMgr::Agent* player = agents.GetPlayer();
 
 
-	printf("X: %f Y: %f", player->X, player->Y);
+	printf("X: %f Y: %f\n", player->X, player->Y);
+
+	SkillbarMgr::Skillbar sb = GW->Skillbar->GetPlayerSkillbar();
+
+	printf("Skill 1: %d Skill 2: %d Skill 3: %d Skill 4: %d Skill 5: %d Skill 6: %d Skill 7: %d Skill 8: %d\n", 
+		sb.Skills[0].SkillId, sb.Skills[1].SkillId, sb.Skills[2].SkillId, sb.Skills[3].SkillId, 
+		sb.Skills[4].SkillId, sb.Skills[5].SkillId, sb.Skills[6].SkillId, sb.Skills[7].SkillId);
+
+	EffectMgr::EffectArray effects = GW->Effects->GetPlayerEffectArray();
+
+	for (DWORD i = 0; i < effects.size(); i++)
+		printf("Effect ID: %d Duration: %.2f Type: %d\n", effects[i].SkillId, effects[i].Duration, effects[i].EffectType);
+
+	while (1){
+		Sleep(100);
+		if (GetAsyncKeyState(VK_HOME) & 1){
+			GW->Skillbar->UseSkill(6);
+		}
+	}
 
 }
 

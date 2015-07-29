@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Windows.h>
+#include <stdio.h>
 
 namespace GWAPI{
 
@@ -26,8 +27,6 @@ namespace GWAPI{
 
 			DWORD size() const { return m_currentsize; }
 		};
-
-		static bool scanCompleted;
 
 		// Agent shit
 		static BYTE* agArrayPtr;
@@ -62,37 +61,30 @@ namespace GWAPI{
 		// Skill structure array.
 
 		static BYTE* SkillArray;
+		static BYTE* UseSkillFunction;
 
 		// Basics
 		static bool Scan();
 		static void *Detour(BYTE *src, const BYTE *dst, const int len, BYTE** restore = NULL);
 		static void Retour(BYTE *src, BYTE *restore, const int len);
-		template <typename T> static T ReadPtrChain(DWORD pBase, long pOffset1 = -1, long pOffset2 = -1, long pOffset3 = -1, long pOffset4 = -1, long pOffset5 = -1)
+		template <typename T> static T ReadPtrChain(DWORD pBase,DWORD AmountofOffsets,...)
 		{
-			DWORD pRead = pBase;
-			if (pRead == NULL){ return 0; }
+			va_list vl;
 
-			if (pOffset1 != -1){ pRead = *(DWORD*)(pRead + pOffset1); }
-			if (pRead == NULL){ return 0; }
+			va_start(vl, AmountofOffsets);
+			while (AmountofOffsets--)
+			{
+				pBase = (*(DWORD*)pBase) + va_arg(vl, DWORD);
+			}
+			va_end(vl);
 
-			if (pOffset2 != -1){ pRead = *(DWORD*)(pRead + pOffset2); }
-			if (pRead == NULL){ return 0; }
-
-			if (pOffset3 != -1){ pRead = *(DWORD*)(pRead + pOffset3); }
-			if (pRead == NULL){ return 0; }
-
-			if (pOffset4 != -1){ pRead = *(DWORD*)(pRead + pOffset4); }
-			if (pRead == NULL){ return 0; }
-
-			if (pOffset5 != -1){ pRead = *(DWORD*)(pRead + pOffset5); }
-			if (pRead == NULL){ return 0; }
-
-			return (T)(pRead);
+			return (T)pBase;
 		}
 
 
 
 		// Memory Reads.
-		static DWORD GetContextPtr(){ return *(DWORD*)((*(BYTE**)BasePointerLocation) + 0x18); }
+		static DWORD GetContextPtr(){ return (*(DWORD*)BasePointerLocation) + 0x18; }
+		static DWORD GetSkillTimer(){ return *(DWORD*)SkillTimerPtr; }
 	};
 }
