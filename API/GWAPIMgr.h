@@ -15,6 +15,7 @@ namespace GWAPI {
 #endif
 		friend class SkillbarMgr;
 		friend class EffectMgr;
+		friend class MapMgr;
 
 		GameThreadMgr* GameThread;
 		CtoSMgr* CtoS;
@@ -25,9 +26,11 @@ namespace GWAPI {
 		AgentMgr* Agents;
 		SkillbarMgr* Skillbar;
 		EffectMgr* Effects;
+		MapMgr* Map;
 #ifdef GWAPI_USEDIRECTX
 		DirectXMgr* DirectX;
 #endif
+		void ToggleRendering();
 		static GWAPIMgr* GetInstance();
 	};
 

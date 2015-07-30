@@ -37,6 +37,12 @@ void init(HMODULE hModule){
 		if (GetAsyncKeyState(VK_HOME) & 1){
 			GW->Skillbar->UseSkill(6);
 		}
+		if (GetAsyncKeyState(VK_END) & 1){
+			GW->ToggleRendering();
+		}
+		if (GetAsyncKeyState(VK_INSERT) & 1){
+			GW->Map->Travel(133);
+		}
 	}
 
 }

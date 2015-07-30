@@ -1,16 +1,13 @@
 #include "CtoSMgr.h"
 
-template <class T>
-void GWAPI::CtoSMgr::SendPacket(T* packet)
-{
-	DWORD size = sizeof(T);
-
-	parent->GameThread->Enqueue(CtoGSPacketSendFunction, GetCtoGSObj(), size, (DWORD*)packet);
-}
-
 void GWAPI::CtoSMgr::SendPacket(DWORD size, ...)
 {
-	DWORD* pak = new DWORD[size / 4];
+	static DWORD* pak = NULL;
+
+	if (pak != NULL) delete pak;
+
+	pak = new DWORD[size / 4];
+
 	va_list vl;
 
 	va_start(vl, size);
@@ -21,7 +18,6 @@ void GWAPI::CtoSMgr::SendPacket(DWORD size, ...)
 	va_end(vl);
 
 	parent->GameThread->Enqueue(CtoGSPacketSendFunction, GetCtoGSObj(), size, pak);
-	delete[] pak;
 }
 
 GWAPI::CtoSMgr::CtoSMgr(GWAPIMgr* obj) : parent(obj)
@@ -31,5 +27,5 @@ GWAPI::CtoSMgr::CtoSMgr(GWAPIMgr* obj) : parent(obj)
 
 DWORD GWAPI::CtoSMgr::GetCtoGSObj()
 {
-	return *(DWORD*)(MemoryMgr::CtoGSObjectPtr - 4);
+	return **(DWORD**)(MemoryMgr::CtoGSObjectPtr - 4);
 }

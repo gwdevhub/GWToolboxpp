@@ -16,9 +16,12 @@ void __stdcall GWAPI::GameThreadMgr::CallFunctions()
 
 void __declspec(naked) GWAPI::GameThreadMgr::gameLoopHook()
 {
+	static GWAPIMgr* inst;
 	_asm PUSHAD
 
-	GWAPIMgr::GetInstance()->GameThread->CallFunctions();
+	inst = GWAPIMgr::GetInstance();
+	if (inst != NULL)
+		inst->GameThread->CallFunctions();
 
 	_asm POPAD
 	_asm JMP MemoryMgr::GameLoopReturn
@@ -50,8 +53,8 @@ void GWAPI::GameThreadMgr::ToggleRenderHook()
 		memcpy(restorebuf, MemoryMgr::RenderLoopLocation, 5);
 
 		VirtualProtect(MemoryMgr::RenderLoopLocation, 5, PAGE_EXECUTE_READWRITE, &dwProt);
-		MemoryMgr::RenderLoopLocation[0] = 0xE9;
-		*(DWORD*)(MemoryMgr::RenderLoopLocation) = (DWORD)((BYTE*)renderHook - (MemoryMgr::RenderLoopLocation + 5));
+		memset(MemoryMgr::RenderLoopLocation, 0xE9, 1);
+		*(DWORD*)(MemoryMgr::RenderLoopLocation + 1) = (DWORD)((BYTE*)renderHook - MemoryMgr::RenderLoopLocation) - 5;
 		VirtualProtect(MemoryMgr::RenderLoopLocation, 5, dwProt, NULL);
 	}
 	else{

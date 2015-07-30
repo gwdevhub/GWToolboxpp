@@ -46,6 +46,9 @@
     <ClInclude Include="API\EffectMgr.h">
       <Filter>API</Filter>
     </ClInclude>
+    <ClInclude Include="API\MapMgr.h">
+      <Filter>API</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -76,6 +79,9 @@
       <Filter>API\src</Filter>
     </ClCompile>
     <ClCompile Include="API\EffectMgr.cpp">
+      <Filter>API\src</Filter>
+    </ClCompile>
+    <ClCompile Include="API\MapMgr.cpp">
       <Filter>API\src</Filter>
     </ClCompile>
   </ItemGroup>

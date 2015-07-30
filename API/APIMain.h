@@ -15,6 +15,7 @@ namespace GWAPI{
 	class AgentMgr;
 	class SkillbarMgr;
 	class EffectMgr;
+	class MapMgr;
 
 #ifdef GWAPI_USEDIRECTX
 	class DirectXMgr;
@@ -35,6 +36,8 @@ namespace GWAPI{
 
 #include "SkillbarMgr.h"
 #include "EffectMgr.h"
+
+#include "MapMgr.h"
 
 #include "GWAPIMgr.h"
 

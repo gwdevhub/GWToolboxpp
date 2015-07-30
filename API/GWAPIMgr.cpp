@@ -19,9 +19,15 @@ GWAPI::GWAPIMgr::GWAPIMgr()
 #endif
 		Skillbar = new SkillbarMgr(this);
 		Effects = new EffectMgr(this);
+		Map = new MapMgr(this);
 	}
 	else{
 		MessageBoxA(0, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0);
 	}
+}
+
+void GWAPI::GWAPIMgr::ToggleRendering()
+{
+	GameThread->ToggleRenderHook();
 }
 

@@ -18,7 +18,12 @@ namespace GWAPI {
 		void SendPacket(DWORD size, ...);
 
 		template <class T>
-		void SendPacket(T* packet);
+		void SendPacket(T* packet)
+		{
+			DWORD size = sizeof(T);
+
+			parent->GameThread->Enqueue(CtoGSPacketSendFunction, GetCtoGSObj(), size, (DWORD*)packet);
+		}
 
 	};
 

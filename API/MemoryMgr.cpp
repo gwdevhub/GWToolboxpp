@@ -98,11 +98,11 @@ bool GWAPI::MemoryMgr::Scan()
 		const BYTE CtoGSSendCode[] = { 0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x2C, 0x53, 0x56, 0x57, 0x8B, 0xF9, 0x85 };
 		if (!memcmp(scan, CtoGSObjectCode, sizeof(CtoGSObjectCode)))
 		{
-			CtoGSObjectPtr = (BYTE*)scan;
+			CtoGSObjectPtr = scan;
 		}
 		if (!memcmp(scan, CtoGSSendCode, sizeof(CtoGSSendCode)))
 		{
-			CtoGSSendFunction = (BYTE*)scan;
+			CtoGSSendFunction = scan;
 		}
 
 		// Base pointer, used to get context pointer for game world.
