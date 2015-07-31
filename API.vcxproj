@@ -90,13 +90,13 @@
     <ClInclude Include="API\EffectMgr.h" />
     <ClInclude Include="API\GameThreadMgr.h" />
     <ClInclude Include="API\GWAPIMgr.h" />
+    <ClInclude Include="API\GwConstants.h" />
     <ClInclude Include="API\ItemMgr.h" />
     <ClInclude Include="API\MapMgr.h" />
     <ClInclude Include="API\MemoryMgr.h" />
     <ClInclude Include="API\CtoSMgr.h" />
     <ClInclude Include="API\SkillbarMgr.h" />
     <ClInclude Include="API\StoCMgr.h" />
-    <ClInclude Include="GwConstants.h" />
     <ClInclude Include="GWToolbox\GWToolbox.h" />
     <ClInclude Include="include\OSHGui\Application.hpp" />
     <ClInclude Include="include\OSHGui\Controls\Button.hpp" />

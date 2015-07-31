@@ -76,9 +76,6 @@
     <ClInclude Include="API\MapMgr.h">
       <Filter>API</Filter>
     </ClInclude>
-    <ClInclude Include="GwConstants.h">
-      <Filter>API</Filter>
-    </ClInclude>
     <ClInclude Include="GWToolbox\GWToolbox.h">
       <Filter>Main\GWToolbox</Filter>
     </ClInclude>
@@ -361,6 +358,12 @@
     <ClInclude Include="include\OSHGui\Drawing\Direct3D9\Direct3D9ViewportTarget.hpp">
       <Filter>OSHGui\Drawing\Direct3D9</Filter>
     </ClInclude>
+    <ClInclude Include="API\ItemMgr.h">
+      <Filter>API</Filter>
+    </ClInclude>
+    <ClInclude Include="API\GwConstants.h">
+      <Filter>API</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -590,6 +593,9 @@
     </ClCompile>
     <ClCompile Include="include\OSHGui\Drawing\Direct3D9\Direct3D9ViewportTarget.cpp">
       <Filter>OSHGui\Drawing\Direct3D9</Filter>
+    </ClCompile>
+    <ClCompile Include="API\ItemMgr.cpp">
+      <Filter>API\src</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
