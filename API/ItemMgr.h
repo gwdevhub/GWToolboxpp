@@ -57,9 +57,11 @@ namespace GWAPI {
 
 		ItemArray GetItemArray();
 
-		Bag* GetBagArray();
+		Bag** GetBagArray();
 
 		void UseItem(Item* item);
+
+		bool UseItemByModelId(DWORD modelid, BYTE bagStart = 1,const BYTE bagEnd = 4);
 
 		void EquipItem(Item* item);
 

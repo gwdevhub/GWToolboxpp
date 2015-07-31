@@ -27,3 +27,8 @@ GWAPI::SkillbarMgr::SkillbarArray GWAPI::SkillbarMgr::GetSkillbarArray()
 {
 	return *MemoryMgr::ReadPtrChain<SkillbarArray*>(MemoryMgr::GetContextPtr(), 2, 0x2C, 0x6F0);
 }
+
+void GWAPI::SkillbarMgr::UseSkillByID(DWORD SkillID, DWORD Target /*= 0*/, DWORD CallTarget /*= 0*/)
+{
+	parent->CtoS->SendPacket(0x14, 0x40, SkillID, 0, Target, CallTarget);
+}

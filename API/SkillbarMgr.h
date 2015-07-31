@@ -77,6 +77,9 @@ namespace GWAPI{
 		Skillbar GetPlayerSkillbar();
 		
 		void UseSkill(DWORD Slot, DWORD Target = 0, DWORD CallTarget = 0);
+
+		void UseSkillByID(DWORD SkillID, DWORD Target = 0, DWORD CallTarget = 0);
+
 		Skill GetSkillConstantData(DWORD SkillID);
 		SkillbarMgr(GWAPIMgr* obj);
 	private:
