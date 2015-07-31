@@ -10,6 +10,7 @@ namespace GWAPI {
 		friend class CtoSMgr;
 		friend class StoCMgr;
 		friend class AgentMgr;
+		friend class ItemMgr;
 #ifdef GWAPI_USEDIRECTX
 		friend class DirectXMgr;
 #endif
@@ -24,6 +25,7 @@ namespace GWAPI {
 		GWAPIMgr();
 	public:
 		AgentMgr* Agents;
+		ItemMgr* Items;
 		SkillbarMgr* Skillbar;
 		EffectMgr* Effects;
 		MapMgr* Map;

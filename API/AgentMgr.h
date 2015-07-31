@@ -7,7 +7,8 @@ namespace GWAPI {
 
 	class AgentMgr {
 		GWAPIMgr* parent;
-
+		typedef void(__fastcall *ChangeTarget_t)(DWORD AgentID);
+		ChangeTarget_t _ChangeTarget;
 		friend class GWAPIMgr;
 	public:
 		struct Agent {
@@ -127,7 +128,9 @@ namespace GWAPI {
 
 		AgentArray GetAgentArray();
 
-		AgentMgr(GWAPIMgr* obj) : parent(obj){}
+		void ChangeTarget(Agent* Agent);
+
+		AgentMgr(GWAPIMgr* obj);
 	};
 
 }

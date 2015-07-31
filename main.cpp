@@ -36,10 +36,10 @@ void init(HMODULE hModule){
 	while (1){
 		Sleep(100);
 		if (GetAsyncKeyState(VK_HOME) & 1){
-			GW->Skillbar->UseSkill(6);
+			GW->Items->OpenXunlaiWindow();
 		}
 		if (GetAsyncKeyState(VK_END) & 1){
-			GW->Effects->GetDrunkAf(5,1);
+			GW->Effects->GetDrunkAf(5,5);
 		}
 		if (GetAsyncKeyState(VK_INSERT) & 1){
 			GW->Map->Travel(133);

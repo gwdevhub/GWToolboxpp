@@ -137,7 +137,7 @@ namespace GwConstants {
 		const int RedBeanCake = 1323;
 	}
 
-	namespace ModelID { // aka
+	namespace ModelID { // probably this name is wrong
 		const int SkeletonOfDhuum = 2338;
 		const int Boo = 7445;
 	}

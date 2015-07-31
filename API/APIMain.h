@@ -14,6 +14,7 @@ namespace GWAPI{
 	class StoCMgr;
 
 	class AgentMgr;
+	class ItemMgr;
 	class SkillbarMgr;
 	class EffectMgr;
 	class MapMgr;
@@ -29,6 +30,7 @@ namespace GWAPI{
 
 #include "CtoSMgr.h"
 #include "AgentMgr.h"
+#include "ItemMgr.h"
 
 #include "StoCMgr.h"
 

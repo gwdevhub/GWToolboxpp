@@ -90,6 +90,7 @@
     <ClInclude Include="API\EffectMgr.h" />
     <ClInclude Include="API\GameThreadMgr.h" />
     <ClInclude Include="API\GWAPIMgr.h" />
+    <ClInclude Include="API\ItemMgr.h" />
     <ClInclude Include="API\MapMgr.h" />
     <ClInclude Include="API\MemoryMgr.h" />
     <ClInclude Include="API\CtoSMgr.h" />
@@ -199,6 +200,7 @@
     <ClCompile Include="API\EffectMgr.cpp" />
     <ClCompile Include="API\GameThreadMgr.cpp" />
     <ClCompile Include="API\GWAPIMgr.cpp" />
+    <ClCompile Include="API\ItemMgr.cpp" />
     <ClCompile Include="API\MapMgr.cpp" />
     <ClCompile Include="API\MemoryMgr.cpp" />
     <ClCompile Include="API\SkillbarMgr.cpp" />

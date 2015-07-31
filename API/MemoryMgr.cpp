@@ -33,6 +33,11 @@ BYTE* GWAPI::MemoryMgr::PostProcessEffectFunction = NULL;
 BYTE* GWAPI::MemoryMgr::SkillArray = NULL;
 BYTE* GWAPI::MemoryMgr::UseSkillFunction = NULL;
 
+BYTE* GWAPI::MemoryMgr::ChangeTargetFunction = NULL;
+
+BYTE* GWAPI::MemoryMgr::XunlaiSession = NULL;
+BYTE* GWAPI::MemoryMgr::OpenXunlaiFunction = NULL;
+
 
 void GWAPI::MemoryMgr::Retour(BYTE *src, BYTE *restore, const int len)
 {
@@ -153,9 +158,23 @@ bool GWAPI::MemoryMgr::Scan()
 			UseSkillFunction = scan;
 		}
 
-		const BYTE PostProcessEffectFunctiionCode[] = { 0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x10, 0x89, 0x4D, 0xF8, 0xC7, 0x45, 0xFC };
-		if (!memcmp(scan, PostProcessEffectFunctiionCode, sizeof(PostProcessEffectFunctiionCode))){
+		const BYTE PostProcessEffectFunctionCode[] = { 0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x10, 0x89, 0x4D, 0xF8, 0xC7, 0x45, 0xFC };
+		if (!memcmp(scan, PostProcessEffectFunctionCode, sizeof(PostProcessEffectFunctionCode))){
 			PostProcessEffectFunction = scan;
+		}
+
+		const BYTE ChangeTargetCode[] = { 0x33, 0xC0, 0x3B, 0xDA, 0x0F, 0x95, 0xC0, 0x33 };
+		if (!memcmp(scan, ChangeTargetCode, sizeof(ChangeTargetCode))){
+			ChangeTargetFunction = scan - 0x78;
+		}
+
+		const BYTE StorageFunctionCode[] = { 0x8B, 0xF1, 0x6A, 0x00, 0xBA, 0x12 };
+		const BYTE StorageSessionCode[] = { 0x8D, 0x14, 0x76, 0x8D, 0x14, 0x90, 0x8B, 0x42, 0x08, 0xA8, 0x01, 0x75, 0x41};
+		if (!memcmp(scan, StorageFunctionCode, sizeof(StorageFunctionCode))){
+			OpenXunlaiFunction = scan - 6;
+		}
+		if (!memcmp(scan, StorageSessionCode, sizeof(StorageSessionCode))){
+			XunlaiSession = *(BYTE**)(scan - 4);
 		}
 
 		if (agArrayPtr &&
@@ -168,10 +187,14 @@ bool GWAPI::MemoryMgr::Scan()
 			SkillTimerPtr &&
 			SkillArray &&
 			UseSkillFunction &&
-			PostProcessEffectFunction
+			PostProcessEffectFunction &&
+			ChangeTargetFunction &&
+			OpenXunlaiFunction &&
+			XunlaiSession
 			) {
 				return true;
 			}
 	}
 	return false;
 }
+
