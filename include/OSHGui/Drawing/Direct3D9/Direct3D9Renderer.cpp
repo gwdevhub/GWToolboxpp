@@ -36,7 +36,7 @@ namespace OSHGui
 				throw Misc::NotSupportedException();
 			}
 
-			maxTextureSize = std::min(caps.MaxTextureHeight, caps.MaxTextureWidth);
+			maxTextureSize = (std::min)(caps.MaxTextureHeight, caps.MaxTextureWidth);
 
 			supportNonSquareTex = !(caps.TextureCaps & D3DPTEXTURECAPS_SQUAREONLY);
 
@@ -161,7 +161,7 @@ namespace OSHGui
 			}
 			if (!supportNonSquareTex)
 			{
-				s.Width = s.Height = std::max(s.Width, s.Height);
+				s.Width = s.Height = (std::max)(s.Width, s.Height);
 			}
 
 			return s;

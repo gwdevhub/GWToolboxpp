@@ -50,8 +50,8 @@ namespace OSHGui
 			int TryConvertDIKey(BYTE dik, Misc::AnsiChar *chars);
 
 			IDirectInput8 *directInputInterface;
-			IDirectInputDevice8A *keyboardDevice;
-			IDirectInputDevice8A *mouseDevice;
+			IDirectInputDevice8W *keyboardDevice;
+			IDirectInputDevice8W *mouseDevice;
 
 			Drawing::RectangleI mouseClipArea;
 			Drawing::PointI mouseLocation;

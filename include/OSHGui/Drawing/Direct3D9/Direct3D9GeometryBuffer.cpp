@@ -44,10 +44,10 @@ namespace OSHGui
 		//---------------------------------------------------------------------------
 		void Direct3D9GeometryBuffer::SetClippingRegion(const RectangleF &region)
 		{
-			clipRect.SetTop(std::max(0.0f, region.GetTop()));
-			clipRect.SetBottom(std::max(0.0f, region.GetBottom()));
-			clipRect.SetLeft(std::max(0.0f, region.GetLeft()));
-			clipRect.SetRight(std::max(0.0f, region.GetRight()));
+			clipRect.SetTop((std::max)(0.0f, region.GetTop()));
+			clipRect.SetBottom((std::max)(0.0f, region.GetBottom()));
+			clipRect.SetLeft((std::max)(0.0f, region.GetLeft()));
+			clipRect.SetRight((std::max)(0.0f, region.GetRight()));
 		}
 		//---------------------------------------------------------------------------
 		void Direct3D9GeometryBuffer::SetActiveTexture(const TexturePtr &texture)

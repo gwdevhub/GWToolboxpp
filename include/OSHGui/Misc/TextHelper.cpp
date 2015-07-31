@@ -151,7 +151,7 @@ namespace OSHGui
 			{
 				Drawing::PointF charPosition = GetCharacterPosition(i);
 
-				int actualDistance = std::abs(charPosition.Left - position.Left);
+				int actualDistance = std::floor(std::abs(charPosition.Left - position.Left));
 
 				if (actualDistance > distance)
 				{

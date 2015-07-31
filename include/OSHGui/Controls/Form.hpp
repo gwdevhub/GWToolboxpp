@@ -17,13 +17,13 @@ namespace OSHGui
 	class Panel;
 
 	/**
-	 * Tritt ein, wenn die Form geschlossen werden soll.
+	 * Occurs when the form is to be closed.
 	 */
 	typedef Event<void(Control*, bool &canClose)> FormClosingEvent;
 	typedef EventHandler<void(Control*, bool &canClose)> FormClosingEventHandler;
 
 	/**
-	 * Gibt Bezeichner an, die den Rückgabewert eines Dialogfelds angeben.
+	 * Specifies identifiers that indicate the return value of a dialog box.
 	 */
 	enum class DialogResult
 	{
@@ -62,7 +62,7 @@ namespace OSHGui
 	};
 
 	/**
-	 * Stellt ein Fenster dar, das die Benutzeroberfläche bildet.
+	 * Represents a window that forms the user interface.
 	 */
 	class OSHGUI_EXPORT Form : public Control
 	{
@@ -72,12 +72,12 @@ namespace OSHGui
 		using Control::SetSize;
 
 		/**
-		 * Konstruktor der Klasse.
+		 * Constructor of the class.
 		 */
 		Form();
 		
 		/**
-		 * Ruft ab, ob die Form modal dargestellt wird.
+		 * Gets whether the form is displayed modally.
 		 *
 		 * \return modal
 		 */
@@ -132,7 +132,7 @@ namespace OSHGui
 		FormClosingEvent& GetFormClosingEvent();
 		
 		/**
-		 * Zeigt die Form an.
+		 * Shows the form.
 		 *
 		 * \param instance die aktuelle Instanz dieser Form
 		 */

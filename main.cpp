@@ -1,5 +1,6 @@
-//#define GWAPI_USEDIRECTX
+#define GWAPI_USEDIRECTX
 #include "API\APIMain.h"
+#include "GWToolbox\GWToolbox.h"
 #include <stdio.h>
 
 using namespace GWAPI;

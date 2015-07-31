@@ -10,6 +10,33 @@
     <Filter Include="API\src">
       <UniqueIdentifier>{a2fe4797-9ce7-4d2b-a7ae-48c4f5016886}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Main\GWToolbox">
+      <UniqueIdentifier>{28a47b76-4274-45d8-8321-99874759f77a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="OSHGui">
+      <UniqueIdentifier>{426e8cee-2eae-46bf-a650-1af926bc96f7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="OSHGui\Controls">
+      <UniqueIdentifier>{a147cde5-5d58-44dd-8126-6044ab2697be}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="OSHGui\Cursor">
+      <UniqueIdentifier>{df9f7802-d711-4e6c-8632-bc309e85b5d3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="OSHGui\Drawing">
+      <UniqueIdentifier>{b2b2677e-a767-412b-bf7e-185ad0bf43dc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="OSHGui\Event">
+      <UniqueIdentifier>{68e742c1-0c14-45cb-912a-ea39b32db127}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="OSHGui\Input">
+      <UniqueIdentifier>{faa4c2a0-a018-4be5-9760-9ee7b85436d2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="OSHGui\Misc">
+      <UniqueIdentifier>{2e26e187-055f-4639-88e7-eb4348aa6997}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="OSHGui\Drawing\Direct3D9">
+      <UniqueIdentifier>{e7ff49f7-1032-424c-b420-442b281845ec}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="API\APIMain.h">
@@ -49,6 +76,291 @@
     <ClInclude Include="API\MapMgr.h">
       <Filter>API</Filter>
     </ClInclude>
+    <ClInclude Include="GwConstants.h">
+      <Filter>API</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\GWToolbox.h">
+      <Filter>Main\GWToolbox</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Application.hpp">
+      <Filter>OSHGui</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Exports.hpp">
+      <Filter>OSHGui</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\FormManager.hpp">
+      <Filter>OSHGui</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\OSHGui.hpp">
+      <Filter>OSHGui</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Controls\Button.hpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Controls\CheckBox.hpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Controls\ColorBar.hpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Controls\ColorPicker.hpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Controls\ComboBox.hpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Controls\Control.hpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Controls\Form.hpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Controls\GroupBox.hpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Controls\HotkeyControl.hpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Controls\Label.hpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Controls\LinkLabel.hpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Controls\ListBox.hpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Controls\MessageBox.hpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Controls\Panel.hpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Controls\PictureBox.hpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Controls\ProgressBar.hpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Controls\RadioButton.hpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Controls\ScrollBar.hpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Controls\TabControl.hpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Controls\TabPage.hpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Controls\TextBox.hpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Controls\Timer.hpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Controls\TrackBar.hpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Cursor\Circle.hpp">
+      <Filter>OSHGui\Cursor</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Cursor\Cursor.hpp">
+      <Filter>OSHGui\Cursor</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Cursor\Cursors.hpp">
+      <Filter>OSHGui\Cursor</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Cursor\Hand.hpp">
+      <Filter>OSHGui\Cursor</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Cursor\IBeam.hpp">
+      <Filter>OSHGui\Cursor</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Cursor\Pen.hpp">
+      <Filter>OSHGui\Cursor</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Cursor\Pipette.hpp">
+      <Filter>OSHGui\Cursor</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Cursor\Wait.hpp">
+      <Filter>OSHGui\Cursor</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\Color.hpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\ColorRectangle.hpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\CustomizableImage.hpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\Font.hpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\FontGlyph.hpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\FontManager.hpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\FreeTypeFont.hpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\GeometryBuffer.hpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\Graphics.hpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\Image.hpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\ImageGraphics.hpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\ImageLoader.hpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\Point.hpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\Quaternion.hpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\Rectangle.hpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\RenderContext.hpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\Renderer.hpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\RenderQueue.hpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\RenderSurface.hpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\RenderTarget.hpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\Size.hpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\Texture.hpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\TextureAnimator.hpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\TextureTarget.hpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\Theme.hpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\Vector.hpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\Vertex.hpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Event\Event.hpp">
+      <Filter>OSHGui\Event</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Event\EventHandler.hpp">
+      <Filter>OSHGui\Event</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Event\Hotkey.hpp">
+      <Filter>OSHGui\Event</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Event\Key.hpp">
+      <Filter>OSHGui\Event</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Event\KeyboardMessage.hpp">
+      <Filter>OSHGui\Event</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Event\KeyEventArgs.hpp">
+      <Filter>OSHGui\Event</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Event\KeyPressEventArgs.hpp">
+      <Filter>OSHGui\Event</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Event\MouseButton.hpp">
+      <Filter>OSHGui\Event</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Event\MouseEventArgs.hpp">
+      <Filter>OSHGui\Event</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Event\MouseMessage.hpp">
+      <Filter>OSHGui\Event</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Event\ScrollEventArgs.hpp">
+      <Filter>OSHGui\Event</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Input\DirectInput8.hpp">
+      <Filter>OSHGui\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Input\Input.hpp">
+      <Filter>OSHGui\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Input\WindowsMessage.hpp">
+      <Filter>OSHGui\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Input\WindowsMessageThreaded.hpp">
+      <Filter>OSHGui\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Misc\Any.hpp">
+      <Filter>OSHGui\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Misc\ConcurrendQueue.hpp">
+      <Filter>OSHGui\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Misc\DateTime.hpp">
+      <Filter>OSHGui\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Misc\Exceptions.hpp">
+      <Filter>OSHGui\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Misc\Intersection.hpp">
+      <Filter>OSHGui\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Misc\RawDataContainer.hpp">
+      <Filter>OSHGui\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Misc\ReverseIterator.hpp">
+      <Filter>OSHGui\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Misc\Strings.hpp">
+      <Filter>OSHGui\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Misc\TextHelper.hpp">
+      <Filter>OSHGui\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Misc\TimeSpan.hpp">
+      <Filter>OSHGui\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\Direct3D9\Direct3D9GeometryBuffer.hpp">
+      <Filter>OSHGui\Drawing\Direct3D9</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\Direct3D9\Direct3D9Renderer.hpp">
+      <Filter>OSHGui\Drawing\Direct3D9</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\Direct3D9\Direct3D9RenderTarget.hpp">
+      <Filter>OSHGui\Drawing\Direct3D9</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\Direct3D9\Direct3D9Texture.hpp">
+      <Filter>OSHGui\Drawing\Direct3D9</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\Direct3D9\Direct3D9TextureTarget.hpp">
+      <Filter>OSHGui\Drawing\Direct3D9</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OSHGui\Drawing\Direct3D9\Direct3D9ViewportTarget.hpp">
+      <Filter>OSHGui\Drawing\Direct3D9</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -83,6 +395,201 @@
     </ClCompile>
     <ClCompile Include="API\MapMgr.cpp">
       <Filter>API\src</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\GWToolbox.cpp">
+      <Filter>Main\GWToolbox</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Application.cpp">
+      <Filter>OSHGui</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\FormManager.cpp">
+      <Filter>OSHGui</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Controls\Button.cpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Controls\CheckBox.cpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Controls\ColorBar.cpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Controls\ColorPicker.cpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Controls\ComboBox.cpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Controls\Control.cpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Controls\Form.cpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Controls\GroupBox.cpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Controls\HotkeyControl.cpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Controls\Label.cpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Controls\LinkLabel.cpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Controls\ListBox.cpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Controls\MessageBox.cpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Controls\Panel.cpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Controls\PictureBox.cpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Controls\ProgressBar.cpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Controls\RadioButton.cpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Controls\ScrollBar.cpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Controls\TabControl.cpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Controls\TabPage.cpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Controls\TextBox.cpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Controls\Timer.cpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Controls\TrackBar.cpp">
+      <Filter>OSHGui\Controls</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Cursor\Circle.cpp">
+      <Filter>OSHGui\Cursor</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Cursor\Cursor.cpp">
+      <Filter>OSHGui\Cursor</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Cursor\Cursors.cpp">
+      <Filter>OSHGui\Cursor</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Cursor\Hand.cpp">
+      <Filter>OSHGui\Cursor</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Cursor\IBeam.cpp">
+      <Filter>OSHGui\Cursor</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Cursor\Pen.cpp">
+      <Filter>OSHGui\Cursor</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Cursor\Pipette.cpp">
+      <Filter>OSHGui\Cursor</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Cursor\Wait.cpp">
+      <Filter>OSHGui\Cursor</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Drawing\Color.cpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Drawing\ColorRectangle.cpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Drawing\CustomizableImage.cpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Drawing\Font.cpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Drawing\FontManager.cpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Drawing\FreeTypeFont.cpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Drawing\GeometryBuffer.cpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Drawing\Graphics.cpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Drawing\Image.cpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Drawing\ImageGraphics.cpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Drawing\ImageLoader.cpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Drawing\RenderQueue.cpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Drawing\RenderSurface.cpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Drawing\RenderTarget.cpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Drawing\Theme.cpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Drawing\Vector.cpp">
+      <Filter>OSHGui\Drawing</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Input\DirectInput8.cpp">
+      <Filter>OSHGui\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Input\Input.cpp">
+      <Filter>OSHGui\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Input\WindowsMessage.cpp">
+      <Filter>OSHGui\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Input\WindowsMessageThreaded.cpp">
+      <Filter>OSHGui\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Misc\DateTime.cpp">
+      <Filter>OSHGui\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Misc\Exceptions.cpp">
+      <Filter>OSHGui\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Misc\RawDataContainer.cpp">
+      <Filter>OSHGui\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Misc\Strings.cpp">
+      <Filter>OSHGui\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Misc\TextHelper.cpp">
+      <Filter>OSHGui\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Misc\TimeSpan.cpp">
+      <Filter>OSHGui\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Drawing\Direct3D9\Direct3D9GeometryBuffer.cpp">
+      <Filter>OSHGui\Drawing\Direct3D9</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Drawing\Direct3D9\Direct3D9Renderer.cpp">
+      <Filter>OSHGui\Drawing\Direct3D9</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Drawing\Direct3D9\Direct3D9Texture.cpp">
+      <Filter>OSHGui\Drawing\Direct3D9</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Drawing\Direct3D9\Direct3D9TextureTarget.cpp">
+      <Filter>OSHGui\Drawing\Direct3D9</Filter>
+    </ClCompile>
+    <ClCompile Include="include\OSHGui\Drawing\Direct3D9\Direct3D9ViewportTarget.cpp">
+      <Filter>OSHGui\Drawing\Direct3D9</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
