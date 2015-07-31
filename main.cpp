@@ -38,7 +38,7 @@ void init(HMODULE hModule){
 			GW->Skillbar->UseSkill(6);
 		}
 		if (GetAsyncKeyState(VK_END) & 1){
-			GW->ToggleRendering();
+			GW->Effects->GetDrunkAf(5,1);
 		}
 		if (GetAsyncKeyState(VK_INSERT) & 1){
 			GW->Map->Travel(133);

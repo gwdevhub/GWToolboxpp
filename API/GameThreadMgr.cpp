@@ -66,14 +66,10 @@ void GWAPI::GameThreadMgr::ToggleRenderHook()
 
 GWAPI::GameThreadMgr::GameThreadMgr(GWAPI::GWAPIMgr* obj) : parent(obj)
 {
-	memcpy(GameLoopRestore, MemoryMgr::GameLoopLocation, 5);
-	MemoryMgr::GameLoopReturn = (BYTE*)MemoryMgr::Detour(MemoryMgr::GameLoopLocation, (BYTE*)gameLoopHook, 5);
+	MemoryMgr::GameLoopReturn = (BYTE*)MemoryMgr::Detour(MemoryMgr::GameLoopLocation, (BYTE*)gameLoopHook, 5, &GameLoopRestore);
 }
 
 GWAPI::GameThreadMgr::~GameThreadMgr()
 {
-	DWORD dwProt;
-	VirtualProtect(MemoryMgr::GameLoopLocation, 5, PAGE_READWRITE, &dwProt);
-	memcpy(MemoryMgr::GameLoopLocation, GameLoopRestore, 5);
-	VirtualProtect(MemoryMgr::GameLoopLocation, 5, dwProt, NULL);
+	MemoryMgr::Retour(MemoryMgr::GameLoopLocation, GameLoopRestore, 5);
 }

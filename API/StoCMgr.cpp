@@ -1,10 +1,10 @@
 #include "StoCMgr.h"
 
 
-std::queue<GWAPI::PacketHandler*> GWAPI::StoCMgr::m_PacketQueue;
+std::queue<GWAPI::StoCMgr::PacketHandler*> GWAPI::StoCMgr::m_PacketQueue;
 HANDLE GWAPI::StoCMgr::m_PacketQueueMutex;
-GWAPI::handler* GWAPI::StoCMgr::m_OrigLSHandler = NULL;
-GWAPI::handler* GWAPI::StoCMgr::m_OrigGSHandler = NULL;
+GWAPI::StoCMgr::handler* GWAPI::StoCMgr::m_OrigLSHandler = NULL;
+GWAPI::StoCMgr::handler* GWAPI::StoCMgr::m_OrigGSHandler = NULL;
 
 GWAPI::StoCMgr::StoCMgr(GWAPIMgr* obj) : parent(obj){
 	BYTE* start = (BYTE*)0x00401000;
@@ -64,20 +64,20 @@ GWAPI::StoCMgr::~StoCMgr(){
 	TerminateThread(m_PacketQueueThread, 0);
 }
 
-GWAPI::StoCPacketMetadata* GWAPI::StoCMgr::GetGSMetaData(){
+GWAPI::StoCMgr::StoCPacketMetadata* GWAPI::StoCMgr::GetGSMetaData(){
 	return m_GSPacketMetadata;
 }
 
-GWAPI::StoCPacketMetadata* GWAPI::StoCMgr::GetLSMetaData(){
+GWAPI::StoCMgr::StoCPacketMetadata* GWAPI::StoCMgr::GetLSMetaData(){
 	return m_LSPacketMetadata;
 }
 
-GWAPI::handler GWAPI::StoCMgr::SetGSPacket(DWORD Header, handler function){
+GWAPI::StoCMgr::handler GWAPI::StoCMgr::SetGSPacket(DWORD Header, handler function){
 	m_OrigGSHandler[Header] = m_GSPacketMetadata[Header].HandlerFunc;
 	m_GSPacketMetadata[Header].HandlerFunc = function;
 	return m_OrigGSHandler[Header];
 }
-GWAPI::handler GWAPI::StoCMgr::SetLSPacket(DWORD Header, handler function){
+GWAPI::StoCMgr::handler GWAPI::StoCMgr::SetLSPacket(DWORD Header, handler function){
 	m_OrigLSHandler[Header] = m_LSPacketMetadata[Header].HandlerFunc;
 	m_LSPacketMetadata[Header].HandlerFunc = function;
 	return m_OrigLSHandler[Header];
@@ -156,4 +156,37 @@ void GWAPI::StoCMgr::DisplayError(const char* Format, ...)
 	va_end(args);
 	MessageBoxA(0, buffer, "ERROR", MB_ICONERROR | MB_OK);
 	delete[] buffer;
+}
+
+GWAPI::StoCMgr::AutoMutex::~AutoMutex()
+{
+	ReleaseMutex(m_Mutex);
+}
+
+GWAPI::StoCMgr::AutoMutex::AutoMutex(HANDLE mutex)
+{
+	m_Mutex = mutex;
+	if (WaitForSingleObject(m_Mutex, INFINITE) != WAIT_OBJECT_0)
+	{
+		MessageBoxA(NULL, "Unable to retrieve mutex!", "Auto Mutex", MB_ICONERROR | MB_OK);
+	}
+}
+
+void GWAPI::StoCMgr::Exception::clear()
+{
+	delete[] msg;
+}
+
+GWAPI::StoCMgr::Exception::Exception(const char* message, ...)
+{
+	va_start(vl, message);
+	va_len = _vscprintf(message, vl);
+	msg = new char[va_len + 1];
+	vsprintf_s(msg, (va_len + 1) * sizeof(char), message, vl);
+	va_end(vl);
+}
+
+const char* GWAPI::StoCMgr::Exception::getMsg()
+{
+	return msg;
 }

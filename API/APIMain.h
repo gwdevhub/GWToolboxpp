@@ -6,9 +6,10 @@
 
 namespace GWAPI{
 	class GWAPIMgr;
-	struct MemoryMgr;
 
+	struct MemoryMgr;
 	class GameThreadMgr;
+
 	class CtoSMgr;
 	class StoCMgr;
 
@@ -20,6 +21,7 @@ namespace GWAPI{
 #ifdef GWAPI_USEDIRECTX
 	class DirectXMgr;
 #endif
+
 }
 
 #include "MemoryMgr.h"

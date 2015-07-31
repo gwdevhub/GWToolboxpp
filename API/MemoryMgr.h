@@ -57,6 +57,9 @@ namespace GWAPI{
 
 		// Skill timer for effects.
 		static BYTE* SkillTimerPtr;
+		
+		// To extract alcohol level.
+		static BYTE* PostProcessEffectFunction;
 
 		// Skill structure array.
 

@@ -27,6 +27,8 @@ BYTE* GWAPI::MemoryMgr::WriteChatFunction = NULL;
 // Used to get precise skill recharge times.
 BYTE* GWAPI::MemoryMgr::SkillTimerPtr = NULL;
 
+BYTE* GWAPI::MemoryMgr::PostProcessEffectFunction = NULL;
+
 // Used to get skill information.
 BYTE* GWAPI::MemoryMgr::SkillArray = NULL;
 BYTE* GWAPI::MemoryMgr::UseSkillFunction = NULL;
@@ -151,6 +153,11 @@ bool GWAPI::MemoryMgr::Scan()
 			UseSkillFunction = scan;
 		}
 
+		const BYTE PostProcessEffectFunctiionCode[] = { 0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x10, 0x89, 0x4D, 0xF8, 0xC7, 0x45, 0xFC };
+		if (!memcmp(scan, PostProcessEffectFunctiionCode, sizeof(PostProcessEffectFunctiionCode))){
+			PostProcessEffectFunction = scan;
+		}
+
 		if (agArrayPtr &&
 			CtoGSObjectPtr &&
 			CtoGSSendFunction &&
@@ -160,7 +167,8 @@ bool GWAPI::MemoryMgr::Scan()
 			WriteChatFunction &&
 			SkillTimerPtr &&
 			SkillArray &&
-			UseSkillFunction
+			UseSkillFunction &&
+			PostProcessEffectFunction
 			) {
 				return true;
 			}

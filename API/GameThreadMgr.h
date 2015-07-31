@@ -16,7 +16,7 @@ namespace GWAPI{
 
 		GWAPIMgr* parent;
 
-		BYTE GameLoopRestore[5];
+		BYTE* GameLoopRestore;
 
 		std::vector<std::function<void(void)> > m_Calls;
 		mutable std::mutex m_CallVecMutex;

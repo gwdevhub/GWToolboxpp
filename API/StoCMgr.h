@@ -38,68 +38,53 @@
 
 namespace GWAPI{
 
-#pragma pack(1)
-	struct Packet
-	{
-		DWORD Header;
-	};
-#pragma pack()
-
-	typedef bool(__fastcall *handler)(Packet*, DWORD);
-
-	class PacketHandler
-	{
-	public:
-		virtual bool HandlePacket(){ return false; }
-		virtual DWORD GetHeader(){ return -1; }
-	};
-
-	struct StoCPacketMetadata
-	{
-		DWORD* PacketTemplate;
-		int TemplateSize;
-		handler HandlerFunc;
-	};
-
-	class AutoMutex
-	{
-	public:
-		AutoMutex(HANDLE mutex)
-		{
-			m_Mutex = mutex;
-			if (WaitForSingleObject(m_Mutex, INFINITE) != WAIT_OBJECT_0)
-			{
-				MessageBoxA(NULL, "Unable to retrieve mutex!", "Auto Mutex", MB_ICONERROR | MB_OK);
-			}
-		}
-		~AutoMutex()
-		{
-			ReleaseMutex(m_Mutex);
-		}
-	private:
-		HANDLE m_Mutex;
-	};
 		class StoCMgr{
+
+
+			class AutoMutex
+			{
+			public:
+				AutoMutex(HANDLE mutex);
+				~AutoMutex();
+			private:
+				HANDLE m_Mutex;
+			};
+
 			class Exception{
 				char* msg;
 				va_list vl;
 				int va_len;
 			public:
-				const char* getMsg(){
-					return msg;
-				}
-				Exception(const char* message, ...){
-					va_start(vl, message);
-					va_len = _vscprintf(message, vl);
-					msg = new char[va_len + 1];
-					vsprintf_s(msg, (va_len + 1) * sizeof(char), message, vl);
-					va_end(vl);
-				}
-				void clear(){
-					delete[] msg;
-				}
+				const char* getMsg();
+				Exception(const char* message, ...);
+				void clear();
 			};
 		public:
+
+#pragma pack(1)
+			struct Packet
+			{
+				DWORD Header;
+			};
+#pragma pack()
+
+			typedef bool(__fastcall *handler)(Packet*, DWORD);
+
+			class PacketHandler
+			{
+			public:
+				virtual bool HandlePacket(){ return false; }
+				virtual DWORD GetHeader(){ return -1; }
+			};
+
+			struct StoCPacketMetadata
+			{
+				DWORD* PacketTemplate;
+				int TemplateSize;
+				handler HandlerFunc;
+			};
+
+
 			static HANDLE m_PacketQueueMutex;
 
 			StoCMgr(GWAPIMgr* obj);
