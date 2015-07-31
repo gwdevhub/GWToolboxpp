@@ -14,6 +14,7 @@ GWAPI::GWAPIMgr::GWAPIMgr()
 		CtoS = new CtoSMgr(this);
 		StoC = new StoCMgr(this);
 		Agents = new AgentMgr(this);
+		Items = new ItemMgr(this);
 #ifdef GWAPI_USEDIRECTX
 		DirectX = new DirectXMgr(this);
 #endif

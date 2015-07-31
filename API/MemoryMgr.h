@@ -61,10 +61,18 @@ namespace GWAPI{
 		// To extract alcohol level.
 		static BYTE* PostProcessEffectFunction;
 
+		// To change target.
+
+		static BYTE* ChangeTargetFunction;
+
 		// Skill structure array.
 
 		static BYTE* SkillArray;
 		static BYTE* UseSkillFunction;
+
+		// Addresses used for opening xunlai window.
+		static BYTE* OpenXunlaiFunction;
+		static BYTE* XunlaiSession;
 
 		// Basics
 		static bool Scan();

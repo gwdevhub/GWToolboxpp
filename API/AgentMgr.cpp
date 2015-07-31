@@ -7,6 +7,16 @@ GWAPI::AgentMgr::AgentArray GWAPI::AgentMgr::GetAgentArray()
 	return agRet;
 }
 
+GWAPI::AgentMgr::AgentMgr(GWAPIMgr* obj) : parent(obj)
+{
+	_ChangeTarget = (ChangeTarget_t)MemoryMgr::ChangeTargetFunction;
+}
+
+void GWAPI::AgentMgr::ChangeTarget(Agent* Agent)
+{
+	parent->GameThread->Enqueue(_ChangeTarget, Agent->Id);
+}
+
 GWAPI::AgentMgr::Agent* GWAPI::AgentMgr::AgentArray::GetTarget()
 {
 	return GetIndex(GetTargetId());
