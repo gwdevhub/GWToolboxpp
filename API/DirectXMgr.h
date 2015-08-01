@@ -16,8 +16,8 @@ namespace GWAPI {
 		bool bDataCompare(const BYTE* pData, const BYTE* bMask, const char* szMask);
 		DWORD dwFindPattern(DWORD dwAddress, DWORD dwLen, BYTE* bMask, char* szMask);
 	public:
-		typedef HRESULT(__stdcall *EndScene_t)(IDirect3DDevice9* pDevice);
-		typedef HRESULT(__stdcall *Reset_t)(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETERS* pPresentationParameters);
+		typedef HRESULT(WINAPI *EndScene_t)(IDirect3DDevice9* pDevice);
+		typedef HRESULT(WINAPI *Reset_t)(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETERS* pPresentationParameters);
 
 		void CreateRenderHooks(EndScene_t _endscene, Reset_t _reset);
 		void RestoreRenderHooks();

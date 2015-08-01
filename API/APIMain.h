@@ -34,9 +34,9 @@ namespace GWAPI{
 
 #include "StoCMgr.h"
 
-#ifdef GWAPI_USEDIRECTX
+//#ifdef GWAPI_USEDIRECTX
 #include "DirectXMgr.h"
-#endif
+//#endif
 
 #include "SkillbarMgr.h"
 #include "EffectMgr.h"

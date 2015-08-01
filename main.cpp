@@ -19,7 +19,6 @@ void init(HMODULE hModule){
 
 	AgentMgr::Agent* player = agents.GetPlayer();
 
-
 	printf("X: %f Y: %f\n", player->X, player->Y);
 
 	SkillbarMgr::Skillbar sb = GW->Skillbar->GetPlayerSkillbar();
@@ -33,18 +32,20 @@ void init(HMODULE hModule){
 	for (DWORD i = 0; i < effects.size(); i++)
 		printf("Effect ID: %d Duration: %.2f Type: %d\n", effects[i].SkillId, effects[i].Duration, effects[i].EffectType);
 
-	while (1){
-		Sleep(100);
-		if (GetAsyncKeyState(VK_HOME) & 1){
-			GW->Items->OpenXunlaiWindow();
-		}
-		if (GetAsyncKeyState(VK_END) & 1){
-			GW->Effects->GetDrunkAf(5,5);
-		}
-		if (GetAsyncKeyState(VK_INSERT) & 1){
-			GW->Map->Travel(133);
-		}
-	}
+	//while (1){
+	//	Sleep(100);
+	//	if (GetAsyncKeyState(VK_HOME) & 1){
+	//		GW->Items->OpenXunlaiWindow();
+	//	}
+	//	if (GetAsyncKeyState(VK_END) & 1){
+	//		GW->Effects->GetDrunkAf(5,5);
+	//	}
+	//	if (GetAsyncKeyState(VK_INSERT) & 1){
+	//		GW->Map->Travel(133);
+	//	}
+	//}
+
+	GWToolbox tb = GWToolbox();
 
 }
 
