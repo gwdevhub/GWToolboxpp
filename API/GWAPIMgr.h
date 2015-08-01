@@ -11,9 +11,9 @@ namespace GWAPI {
 		friend class StoCMgr;
 		friend class AgentMgr;
 		friend class ItemMgr;
-//#ifdef GWAPI_USEDIRECTX
+#ifdef GWAPI_USEDIRECTX
 		friend class DirectXMgr;
-//#endif
+#endif
 		friend class SkillbarMgr;
 		friend class EffectMgr;
 		friend class MapMgr;
@@ -29,9 +29,9 @@ namespace GWAPI {
 		SkillbarMgr* Skillbar;
 		EffectMgr* Effects;
 		MapMgr* Map;
-//#ifdef GWAPI_USEDIRECTX
+#ifdef GWAPI_USEDIRECTX
 		DirectXMgr* DirectX;
-//#endif
+#endif
 		void ToggleRendering();
 		static GWAPIMgr* GetInstance();
 	};

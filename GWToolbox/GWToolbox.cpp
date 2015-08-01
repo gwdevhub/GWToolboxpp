@@ -5,6 +5,8 @@
 using namespace OSHGui::Drawing;
 
 namespace{
+	LPD3DXFONT dbgFont = NULL;
+	RECT Type1Rect = { 50, 50, 300, 14 };
 	GWAPI::GWAPIMgr * mgr;
 	GWAPI::DirectXMgr * dx;
 }
@@ -30,7 +32,6 @@ void create_gui(IDirect3DDevice9* pDevice) {
 
 // All rendering done here.
 static HRESULT WINAPI endScene(IDirect3DDevice9* pDevice) {
-	static GWAPI::DirectXMgr::EndScene_t retfunc = dx->GetEndsceneReturn();
 	static bool init = false;
 	if (!init) {
 		init = true;
@@ -45,20 +46,23 @@ static HRESULT WINAPI endScene(IDirect3DDevice9* pDevice) {
 
 	renderer.EndRendering();
 
+	if (!dbgFont)
+		D3DXCreateFontA(pDevice, 14, 0, FW_BOLD, 0, false, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, ANTIALIASED_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Arial", &dbgFont);
 
-	return retfunc(pDevice);
+
+	//dbgFont->DrawTextA(NULL, "AHJHJHJHJHJHJHJHJHJ", strlen("AHJHJHJHJHJHJHJHJHJ") + 1, &Type1Rect, DT_NOCLIP, 0xFF00FF00);
+
+	return  dx->GetEndsceneReturn()(pDevice);
 }
 
 static HRESULT WINAPI resetScene(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETERS* pPresentationParameters) {
-	static GWAPI::DirectXMgr::Reset_t retfunc = dx->GetResetReturn();
-
 
 	// pre-reset here.
 
-
-	HRESULT result = retfunc(pDevice, pPresentationParameters);
+	if (dbgFont) dbgFont->OnLostDevice();
+	HRESULT result = dx->GetResetReturn()(pDevice, pPresentationParameters);
 	if (result == D3D_OK){
-		// post-reset here.
+		if (dbgFont) dbgFont->OnResetDevice();// post-reset here.
 	}
 
 	return result;

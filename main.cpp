@@ -1,4 +1,3 @@
-#define GWAPI_USEDIRECTX
 #include "API\APIMain.h"
 #include "GWToolbox\GWToolbox.h"
 #include <stdio.h>

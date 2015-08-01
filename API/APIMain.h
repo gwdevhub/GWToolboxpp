@@ -2,7 +2,7 @@
 #define TOOLBOX_API_H
 
 #include <Windows.h>
-
+#define GWAPI_USEDIRECTX
 
 namespace GWAPI{
 	class GWAPIMgr;
@@ -34,9 +34,9 @@ namespace GWAPI{
 
 #include "StoCMgr.h"
 
-//#ifdef GWAPI_USEDIRECTX
+#ifdef GWAPI_USEDIRECTX
 #include "DirectXMgr.h"
-//#endif
+#endif
 
 #include "SkillbarMgr.h"
 #include "EffectMgr.h"
