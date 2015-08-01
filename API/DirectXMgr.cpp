@@ -5,6 +5,15 @@ GWAPI::DirectXMgr::DirectXMgr(GWAPIMgr* obj) : parent(obj)
 
 }
 
+GWAPI::DirectXMgr::EndScene_t GWAPI::DirectXMgr::GetEndsceneReturn()
+{
+	return oEndScene;
+}
+
+GWAPI::DirectXMgr::Reset_t GWAPI::DirectXMgr::GetResetReturn()
+{
+	return oReset;
+}
 
 void GWAPI::DirectXMgr::CreateRenderHooks(EndScene_t _endscene, Reset_t _reset)
 {

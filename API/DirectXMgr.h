@@ -22,6 +22,9 @@ namespace GWAPI {
 		void CreateRenderHooks(EndScene_t _endscene, Reset_t _reset);
 		void RestoreRenderHooks();
 
+		EndScene_t GetEndsceneReturn();
+		Reset_t GetResetReturn();
+
 		DirectXMgr(GWAPIMgr* obj);
 
 	private:
