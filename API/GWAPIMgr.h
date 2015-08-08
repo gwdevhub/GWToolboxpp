@@ -19,11 +19,12 @@ namespace GWAPI {
 		friend class MapMgr;
 
 		GameThreadMgr* GameThread;
-		CtoSMgr* CtoS;
-		StoCMgr* StoC;
-	
+		
 		GWAPIMgr();
 	public:
+
+		CtoSMgr* CtoS;
+		StoCMgr* StoC;
 		AgentMgr* Agents;
 		ItemMgr* Items;
 		SkillbarMgr* Skillbar;

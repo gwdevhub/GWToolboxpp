@@ -2,6 +2,8 @@
 #define TOOLBOX_API_H
 
 #include <Windows.h>
+
+// Comment out this #define to make the directx shit not compile into the project.
 #define GWAPI_USEDIRECTX
 
 namespace GWAPI{
