@@ -19,7 +19,8 @@ void __declspec(naked) GWAPI::GameThreadMgr::gameLoopHook()
 	static GWAPIMgr* inst;
 	_asm PUSHAD
 
-	inst = GWAPIMgr::GetInstance();
+	if (inst == NULL)
+		inst = GWAPIMgr::GetInstance();
 	if (inst != NULL)
 		inst->GameThread->CallFunctions();
 
