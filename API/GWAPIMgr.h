@@ -6,6 +6,8 @@ namespace GWAPI {
 
 	class GWAPIMgr {
 
+		static GWAPIMgr* instance;
+
 		friend class GameThreadMgr;
 		friend class CtoSMgr;
 		friend class StoCMgr;
@@ -36,7 +38,10 @@ namespace GWAPI {
 		DirectXMgr* DirectX;
 #endif
 		void ToggleRendering();
+
+		static void Initialize();
 		static GWAPIMgr* GetInstance();
+		static void Destruct();
 	};
 
 }

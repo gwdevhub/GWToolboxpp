@@ -37,6 +37,8 @@ namespace GWAPI {
 		BYTE endsceneRestore[20];
 		BYTE resetRestore[20];
 
+		bool hooked = false;
+
 		DWORD* VTableStart = 0;
 	};
 

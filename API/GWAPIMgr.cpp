@@ -1,10 +1,10 @@
 #include "GWAPIMgr.h"
 
+GWAPI::GWAPIMgr* GWAPI::GWAPIMgr::instance = NULL;
 
 GWAPI::GWAPIMgr* GWAPI::GWAPIMgr::GetInstance()
 {
-	static GWAPIMgr* inst = new GWAPIMgr();
-	return inst;
+	return instance ? instance : NULL;
 }
 
 GWAPI::GWAPIMgr::GWAPIMgr()
@@ -34,16 +34,31 @@ void GWAPI::GWAPIMgr::ToggleRendering()
 
 GWAPI::GWAPIMgr::~GWAPIMgr()
 {
-	delete DirectX;
+#ifdef GWAPI_USEDIRECTX
+	if (DirectX) delete DirectX;
+#endif
+	if (Map) delete Map;
 
-	delete Agents;
-	delete Items;
-	delete Skillbar;
-	delete Effects;
-	delete Map;
+	if (Effects) delete Effects;
+	if (Skillbar) delete Skillbar;
 
-	delete CtoS;
-	delete StoC;
-	delete GameThread;
+	if (Items) delete Items;
+	if (Agents) delete Agents;
+	
+	if (CtoS) delete CtoS;
+	if (StoC) delete StoC;
+	if (GameThread) delete GameThread;
+}
+
+void GWAPI::GWAPIMgr::Initialize()
+{
+	if (!instance) instance = new GWAPIMgr();
+}
+
+void GWAPI::GWAPIMgr::Destruct()
+{
+	if (instance){
+		delete instance;
+	}
 }
 

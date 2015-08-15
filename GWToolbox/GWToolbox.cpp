@@ -15,6 +15,7 @@ namespace{
 	GWAPI::GWAPIMgr * mgr;
 	GWAPI::DirectXMgr * dx;
 
+	HHOOK oshinputhook;
 	WindowsMessage input;
 }
 
@@ -90,7 +91,7 @@ void create_gui(IDirect3DDevice9* pDevice) {
 		//std::cout << "hotkey fired! \n";
 	}));
 
-	SetWindowsHookEx(WH_GETMESSAGE, MessageHook, NULL, GetCurrentThreadId());
+	oshinputhook = SetWindowsHookEx(WH_GETMESSAGE, MessageHook, NULL, GetCurrentThreadId());
 }
 
 // All rendering done here.
@@ -133,24 +134,51 @@ static HRESULT WINAPI resetScene(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETER
 
 
 void GWToolbox::exec() {
+	GWAPI::GWAPIMgr::Initialize();
+
 	mgr = GWAPI::GWAPIMgr::GetInstance();
 	dx = mgr->DirectX;
 
-	dx->CreateRenderHooks(endScene, resetScene);
+	//dx->CreateRenderHooks(endScene, resetScene);
 
+
+	
+	//input.SetKeyboardInputEnabled(true);
+	//input.SetMouseInputEnabled(true);
+
+	m_Active = true;
+
+	CreateThread(0, 0, (LPTHREAD_START_ROUTINE)GWToolbox::threadStarter, this, 0, 0);
+}
+
+void GWToolbox::main()
+{
 	Application * app = Application::InstancePtr();
-	
-	input.SetKeyboardInputEnabled(true);
-	input.SetMouseInputEnabled(true);
-
-	
-
-	//while (true) { // main loop
+	while (true) { // main loop
 		if (app->HasBeenInitialized()) {
-
 		}
-
 		Sleep(10);
 
-	//}
+		if (GetAsyncKeyState(VK_END) & 1)
+			destroy();
+	}
+}
+
+void GWToolbox::destroy()
+{
+	//UnhookWindowsHookEx(oshinputhook);
+	GWAPI::GWAPIMgr::Destruct();
+	m_Active = false;
+	ExitThread(EXIT_SUCCESS);
+}
+
+bool GWToolbox::isActive()
+{
+	return m_Active;
+}
+
+
+void GWToolbox::threadStarter(GWToolbox* ptr)
+{
+	ptr->main();
 }

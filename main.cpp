@@ -1,60 +1,19 @@
 #include "API\APIMain.h"
 #include "GWToolbox\GWToolbox.h"
 #include <stdio.h>
-
-using namespace GWAPI;
-
-GWAPIMgr* GW;
-
+GWToolbox* tb;
 // Do all your startup things here instead.
 void init(HMODULE hModule){
+
 	AllocConsole();
-	FILE* fh;
-	freopen_s(&fh, "CONOUT$", "w", stdout);
 
-	GW = GWAPIMgr::GetInstance();
+	tb = new GWToolbox(hModule);
+	tb->exec();
 
-	AgentMgr::AgentArray agents = GW->Agents->GetAgentArray();
 
-	AgentMgr::Agent* player = agents.GetPlayer();
+	while (tb->isActive()) Sleep(100);
 
-	printf("X: %f Y: %f\n", player->X, player->Y);
-
-	SkillbarMgr::Skillbar sb = GW->Skillbar->GetPlayerSkillbar();
-
-	printf("Skill 1: %d Skill 2: %d Skill 3: %d Skill 4: %d Skill 5: %d Skill 6: %d Skill 7: %d Skill 8: %d\n", 
-		sb.Skills[0].SkillId, sb.Skills[1].SkillId, sb.Skills[2].SkillId, sb.Skills[3].SkillId, 
-		sb.Skills[4].SkillId, sb.Skills[5].SkillId, sb.Skills[6].SkillId, sb.Skills[7].SkillId);
-
-	EffectMgr::EffectArray effects = GW->Effects->GetPlayerEffectArray();
-
-	for (DWORD i = 0; i < effects.size(); i++)
-		printf("Effect ID: %d Duration: %.2f Type: %d\n", effects[i].SkillId, effects[i].Duration, effects[i].EffectType);
-
-	//while (1){
-	//	Sleep(100);
-	//	if (GetAsyncKeyState(VK_HOME) & 1){
-	//		GW->Items->OpenXunlaiWindow();
-	//	}
-	//	if (GetAsyncKeyState(VK_END) & 1){
-	//		GW->Effects->GetDrunkAf(5,5);
-	//	}
-	//	if (GetAsyncKeyState(VK_INSERT) & 1){
-	//		GW->Map->Travel(133);
-	//	}
-	//}
-
-	GWToolbox tb = GWToolbox();
-	tb.exec();
-
-	while (1){
-		Sleep(100);
-		if (GetAsyncKeyState(VK_END) & 1){
-			delete GW;
-			FreeLibraryAndExitThread(hModule, 0);
-		}
-	}
-
+	FreeLibraryAndExitThread(hModule, 0);
 }
 
 // DLL entry point, not safe to stay in this thread for long.
