@@ -9,10 +9,16 @@ using namespace OSHGui;
 class GWToolbox {
 
 public:
-	GWToolbox() {};
+	GWToolbox(HMODULE mod) : m_dllmodule(mod) {};
 
 	void exec();
+	void main();
+	void destroy();
+	bool isActive();
 
 private:
-	
+	bool m_Active;
+	HMODULE m_dllmodule;
+
+	static void threadStarter(GWToolbox* ptr);
 };
