@@ -32,3 +32,18 @@ void GWAPI::GWAPIMgr::ToggleRendering()
 	GameThread->ToggleRenderHook();
 }
 
+GWAPI::GWAPIMgr::~GWAPIMgr()
+{
+	delete DirectX;
+
+	delete Agents;
+	delete Items;
+	delete Skillbar;
+	delete Effects;
+	delete Map;
+
+	delete CtoS;
+	delete StoC;
+	delete GameThread;
+}
+

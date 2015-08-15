@@ -26,6 +26,7 @@ namespace GWAPI {
 		Reset_t GetResetReturn();
 
 		DirectXMgr(GWAPIMgr* obj);
+		~DirectXMgr();
 
 	private:
 		friend class GWAPIMgr;

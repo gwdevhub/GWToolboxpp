@@ -60,3 +60,9 @@ bool GWAPI::DirectXMgr::bDataCompare(const BYTE* pData, const BYTE* bMask, const
 			return false;
 	return ((*szMask) == NULL);
 }
+
+GWAPI::DirectXMgr::~DirectXMgr()
+{
+	if (oEndScene)
+		RestoreRenderHooks();
+}

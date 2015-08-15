@@ -47,6 +47,14 @@ void init(HMODULE hModule){
 	GWToolbox tb = GWToolbox();
 	tb.exec();
 
+	while (1){
+		Sleep(100);
+		if (GetAsyncKeyState(VK_END) & 1){
+			delete GW;
+			FreeLibraryAndExitThread(hModule, 0);
+		}
+	}
+
 }
 
 // DLL entry point, not safe to stay in this thread for long.

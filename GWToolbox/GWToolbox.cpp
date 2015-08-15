@@ -21,20 +21,16 @@ namespace{
 LRESULT CALLBACK MessageHook(int code, WPARAM wParam, LPARAM lParam) {
 
 	// do nothing if application is not initialized or we got a message that we shouldn't handle
-	if (!Application::InstancePtr()->HasBeenInitialized()
-		|| (lParam & 0x80000000)
-		|| (lParam & 0x40000000)
-		|| (code != HC_ACTION)) {
+	if (Application::InstancePtr()->HasBeenInitialized()
+		&& (lParam & 0x80000000) == 0
+		&& (lParam & 0x40000000) == 0
+		&& (code == HC_ACTION)) {
 
-		return CallNextHookEx(NULL, code, wParam, lParam);
-	}
+		LPMSG msg = (LPMSG)lParam;
 
-	LPMSG msg = (LPMSG)lParam;
-
-	switch (msg->message) {
+		switch (msg->message) {
 		case WM_RBUTTONDOWN:
 		case WM_RBUTTONUP:
-			return CallNextHookEx(NULL, code, wParam, lParam);
 			break;
 
 		case WM_MOUSEMOVE:
@@ -46,12 +42,10 @@ LRESULT CALLBACK MessageHook(int code, WPARAM wParam, LPARAM lParam) {
 			if (input.ProcessMessage(msg)) {
 				//std::cout << "consumed mouse event " << msg->message << '\n';
 				return TRUE;
-			} else {
-				return CallNextHookEx(NULL, code, wParam, lParam);
 			}
 			break;
 
-		// send keyboard messages to both gw and toolbox
+			// send keyboard messages to both gw and toolbox
 		case WM_KEYDOWN:
 		case WM_SYSKEYDOWN:
 		case WM_KEYUP:
@@ -61,13 +55,10 @@ LRESULT CALLBACK MessageHook(int code, WPARAM wParam, LPARAM lParam) {
 		case WM_IME_CHAR:
 			//std::cout << "processing keyboard event " << msg->message << '\n';
 			input.ProcessMessage(msg);
-			return CallNextHookEx(NULL, code, wParam, lParam);
 			break;
-
-		default:
-			return CallNextHookEx(NULL, code, wParam, lParam);
-			break;
+		}
 	}
+	return CallNextHookEx(NULL, code, wParam, lParam);
 }
 
 
@@ -81,7 +72,6 @@ void create_gui(IDirect3DDevice9* pDevice) {
 		theme.Load("D:\\My Documents\\gwtoolbox-plusplus\\DefaultTheme.txt"); // TODO: use a use local path or standard path instead
 		app->SetTheme(theme);
 	} catch (Misc::InvalidThemeException e) {
-		std::cout << e.message << '\n';
 	}
 	
 	auto font = FontManager::LoadFont("Arial", 8.0f, false); //Arial, 8PT, no anti-aliasing
@@ -155,11 +145,12 @@ void GWToolbox::exec() {
 
 	
 
-	while (true) { // main loop
+	//while (true) { // main loop
 		if (app->HasBeenInitialized()) {
 
 		}
 
 		Sleep(10);
-	}
+
+	//}
 }
