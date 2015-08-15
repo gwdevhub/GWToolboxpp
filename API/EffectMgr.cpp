@@ -19,9 +19,27 @@ GWAPI::EffectMgr::Effect GWAPI::EffectMgr::GetPlayerEffectById(DWORD SkillID)
 	throw 1;
 }
 
+GWAPI::EffectMgr::Buff GWAPI::EffectMgr::GetPlayerBuffBySkillId(DWORD SkillID)
+{
+	BuffArray Buffs = GetPlayerBuffArray();
+
+	for (DWORD i = 1; i < Buffs.size(); i++)
+		if (Buffs[i].SkillId == SkillID) return Buffs[i];
+
+	throw 1;
+}
+
 GWAPI::EffectMgr::EffectArray GWAPI::EffectMgr::GetPlayerEffectArray()
 {
-	return *MemoryMgr::ReadPtrChain<EffectArray*>(MemoryMgr::GetContextPtr(), 3, 0x2C, 0x508, 0x14);
+	AgentEffectsArray ageffects = GetPartyEffectArray();
+	if (ageffects.IsValid()){
+		EffectArray ret = ageffects[0].Effects;
+		if (ret.IsValid()){
+			return ret;
+		}
+	}
+
+	throw 1;
 }
 
 void __fastcall GWAPI::EffectMgr::AlcoholHandler(DWORD Intensity, DWORD Tint)
@@ -38,4 +56,22 @@ GWAPI::EffectMgr::~EffectMgr()
 void GWAPI::EffectMgr::GetDrunkAf(DWORD Intensity,DWORD Tint)
 {
 	parent->GameThread->Enqueue(PPERetourFunc, Intensity, Tint);
+}
+
+GWAPI::EffectMgr::AgentEffectsArray GWAPI::EffectMgr::GetPartyEffectArray()
+{
+	return *MemoryMgr::ReadPtrChain<AgentEffectsArray*>(MemoryMgr::GetContextPtr(), 2, 0x2C, 0x508);
+}
+
+GWAPI::EffectMgr::BuffArray GWAPI::EffectMgr::GetPlayerBuffArray()
+{
+	AgentEffectsArray ageffects = GetPartyEffectArray();
+	if (ageffects.IsValid()){
+		BuffArray ret = ageffects[0].Buffs;
+		if (ret.IsValid()){
+			return ret;
+		}
+	}
+
+	throw 1;
 }

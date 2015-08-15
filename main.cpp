@@ -5,15 +5,8 @@ GWToolbox* tb;
 // Do all your startup things here instead.
 void init(HMODULE hModule){
 
-	AllocConsole();
-
 	tb = new GWToolbox(hModule);
 	tb->exec();
-
-
-	while (tb->isActive()) Sleep(100);
-
-	FreeLibraryAndExitThread(hModule, 0);
 }
 
 // DLL entry point, not safe to stay in this thread for long.

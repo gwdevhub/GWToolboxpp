@@ -22,10 +22,12 @@ namespace{
 LRESULT CALLBACK MessageHook(int code, WPARAM wParam, LPARAM lParam) {
 
 	// do nothing if application is not initialized or we got a message that we shouldn't handle
-	if (Application::InstancePtr()->HasBeenInitialized()
-		&& (lParam & 0x80000000) == 0
-		&& (lParam & 0x40000000) == 0
-		&& (code == HC_ACTION)) {
+	if (!Application::InstancePtr()->HasBeenInitialized()
+		|| (lParam & 0x80000000)
+		|| (lParam & 0x40000000)
+		|| (code != HC_ACTION)) {
+		return CallNextHookEx(NULL, code, wParam, lParam);
+	}
 
 		LPMSG msg = (LPMSG)lParam;
 
@@ -58,7 +60,6 @@ LRESULT CALLBACK MessageHook(int code, WPARAM wParam, LPARAM lParam) {
 			input.ProcessMessage(msg);
 			break;
 		}
-	}
 	return CallNextHookEx(NULL, code, wParam, lParam);
 }
 
@@ -70,7 +71,7 @@ void create_gui(IDirect3DDevice9* pDevice) {
 
 	Theme theme;
 	try {
-		theme.Load("D:\\My Documents\\gwtoolbox-plusplus\\DefaultTheme.txt"); // TODO: use a use local path or standard path instead
+		theme.Load("DefaultTheme.txt"); // TODO: use a use local path or standard path instead
 		app->SetTheme(theme);
 	} catch (Misc::InvalidThemeException e) {
 	}
@@ -139,12 +140,12 @@ void GWToolbox::exec() {
 	mgr = GWAPI::GWAPIMgr::GetInstance();
 	dx = mgr->DirectX;
 
-	//dx->CreateRenderHooks(endScene, resetScene);
+	dx->CreateRenderHooks(endScene, resetScene);
 
 
 	
-	//input.SetKeyboardInputEnabled(true);
-	//input.SetMouseInputEnabled(true);
+	input.SetKeyboardInputEnabled(true);
+	input.SetMouseInputEnabled(true);
 
 	m_Active = true;
 

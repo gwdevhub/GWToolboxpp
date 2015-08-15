@@ -13,6 +13,7 @@ namespace GWAPI{
 			T* m_array;
 			DWORD m_allocatedsize;
 			DWORD m_currentsize;
+			DWORD m_unk1;
 		public:
 			T GetIndex(DWORD index)
 			{
@@ -23,6 +24,9 @@ namespace GWAPI{
 			T operator[](DWORD index)
 			{
 				return GetIndex(index);
+			}
+			bool IsValid(){
+				return m_array != NULL;
 			}
 
 			DWORD size() const { return m_currentsize; }
@@ -85,7 +89,13 @@ namespace GWAPI{
 			va_start(vl, AmountofOffsets);
 			while (AmountofOffsets--)
 			{
-				pBase = (*(DWORD*)pBase) + va_arg(vl, DWORD);
+				pBase = (*(DWORD*)pBase);
+					if (pBase){
+						pBase += va_arg(vl, DWORD);
+					}
+					else{
+						return NULL;
+					}
 			}
 			va_end(vl);
 
