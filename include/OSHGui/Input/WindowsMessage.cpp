@@ -31,6 +31,8 @@ namespace OSHGui
 				case WM_RBUTTONDOWN:
 				case WM_RBUTTONUP:
 				case WM_MOUSEWHEEL:
+				case WM_MBUTTONDOWN:
+				case WM_MBUTTONUP:
 				{
 					if (enableMouseInput)
 					{

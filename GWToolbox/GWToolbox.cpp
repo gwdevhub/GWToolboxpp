@@ -1,33 +1,106 @@
 #include "GWToolbox.h"
 #include "../include/OSHGui/OSHGui.hpp"
 #include "../include/OSHGui/Drawing/Direct3D9/Direct3D9Renderer.hpp"
+#include "../include/OSHGui/Drawing/Theme.hpp"
+#include "../include/OSHGui/Input/WindowsMessage.hpp"
+
+#include <iostream>
 
 using namespace OSHGui::Drawing;
+using namespace OSHGui::Input;
 
 namespace{
 	LPD3DXFONT dbgFont = NULL;
 	RECT Type1Rect = { 50, 50, 300, 14 };
 	GWAPI::GWAPIMgr * mgr;
 	GWAPI::DirectXMgr * dx;
+
+	WindowsMessage input;
 }
+
+LRESULT CALLBACK MessageHook(int code, WPARAM wParam, LPARAM lParam) {
+
+	// do nothing if application is not initialized or we got a message that we shouldn't handle
+	if (!Application::InstancePtr()->HasBeenInitialized()
+		|| (lParam & 0x80000000)
+		|| (lParam & 0x40000000)
+		|| (code != HC_ACTION)) {
+
+		return CallNextHookEx(NULL, code, wParam, lParam);
+	}
+
+	LPMSG msg = (LPMSG)lParam;
+
+	switch (msg->message) {
+		case WM_RBUTTONDOWN:
+		case WM_RBUTTONUP:
+			return CallNextHookEx(NULL, code, wParam, lParam);
+			break;
+
+		case WM_MOUSEMOVE:
+		case WM_LBUTTONDOWN:
+		case WM_LBUTTONUP:
+		case WM_MOUSEWHEEL:
+		case WM_MBUTTONDOWN:
+		case WM_MBUTTONUP:
+			if (input.ProcessMessage(msg)) {
+				//std::cout << "consumed mouse event " << msg->message << '\n';
+				return TRUE;
+			} else {
+				return CallNextHookEx(NULL, code, wParam, lParam);
+			}
+			break;
+
+		// send keyboard messages to both gw and toolbox
+		case WM_KEYDOWN:
+		case WM_SYSKEYDOWN:
+		case WM_KEYUP:
+		case WM_SYSKEYUP:
+		case WM_CHAR:
+		case WM_SYSCHAR:
+		case WM_IME_CHAR:
+			//std::cout << "processing keyboard event " << msg->message << '\n';
+			input.ProcessMessage(msg);
+			return CallNextHookEx(NULL, code, wParam, lParam);
+			break;
+
+		default:
+			return CallNextHookEx(NULL, code, wParam, lParam);
+			break;
+	}
+}
+
 
 void create_gui(IDirect3DDevice9* pDevice) {
 	Application::Initialize(std::unique_ptr<Direct3D9Renderer>(new Direct3D9Renderer(pDevice)));
 
 	Application * app = Application::InstancePtr();
 
+	Theme theme;
+	try {
+		theme.Load("D:\\My Documents\\gwtoolbox-plusplus\\DefaultTheme.txt"); // TODO: use a use local path or standard path instead
+		app->SetTheme(theme);
+	} catch (Misc::InvalidThemeException e) {
+		std::cout << e.message << '\n';
+	}
+	
 	auto font = FontManager::LoadFont("Arial", 8.0f, false); //Arial, 8PT, no anti-aliasing
 	app->SetDefaultFont(font);
+	app->SetCursorEnabled(false);
 
 	auto form = std::make_shared<Form>();
+	form->SetText("GWToolbox++");
+	form->SetSize(100, 300);
 
 	app->Run(form);
-
 	app->Enable();
 
 	app->RegisterHotkey(Hotkey(Key::Insert, [] {
-		Application::Instance().Toggle();
+		Application::InstancePtr()->Toggle();
+		//std::cout << "hotkey fired! \n";
 	}));
+
+	SetWindowsHookEx(WH_GETMESSAGE, MessageHook, NULL, GetCurrentThreadId());
 }
 
 // All rendering done here.
@@ -69,10 +142,24 @@ static HRESULT WINAPI resetScene(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETER
 }
 
 
-
-void GWToolbox::init() {
+void GWToolbox::exec() {
 	mgr = GWAPI::GWAPIMgr::GetInstance();
 	dx = mgr->DirectX;
 
 	dx->CreateRenderHooks(endScene, resetScene);
+
+	Application * app = Application::InstancePtr();
+	
+	input.SetKeyboardInputEnabled(true);
+	input.SetMouseInputEnabled(true);
+
+	
+
+	while (true) { // main loop
+		if (app->HasBeenInitialized()) {
+
+		}
+
+		Sleep(10);
+	}
 }

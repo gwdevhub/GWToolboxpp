@@ -14,6 +14,7 @@
 #include "Drawing/FontManager.hpp"
 #include "Cursor/Cursors.hpp"
 #include <algorithm>
+#include <iostream>
 
 namespace OSHGui
 {
@@ -207,63 +208,49 @@ namespace OSHGui
 	//---------------------------------------------------------------------------
 	bool Application::ProcessMouseMessage(const MouseMessage &message)
 	{
-		if (!isEnabled_)
-		{
+		if (!isEnabled_) {
 			return false;
 		}
 
 		mouse_.Location = message.GetLocation();
 
-		if (CaptureControl != nullptr)
-		{
+		if (CaptureControl != nullptr) {
 			CaptureControl->ProcessMouseMessage(message);
 			return true;
 		}
-		if (FocusedControl != nullptr)
-		{
-			if (FocusedControl->ProcessMouseMessage(message))
-			{
+		if (FocusedControl != nullptr) {
+			if (FocusedControl->ProcessMouseMessage(message)) {
 				return true;
 			}
 		}
 
-		if (formManager_.GetFormCount() > 0)
-		{
+		if (formManager_.GetFormCount() > 0) {
 			auto foreMost = formManager_.GetForeMost();
-			if (foreMost != nullptr && foreMost->IsModal())
-			{
-				for (auto it = foreMost->GetPostOrderEnumerator(); it(); ++it)
-				{
+			if (foreMost != nullptr && foreMost->IsModal()) {
+				for (auto it = foreMost->GetPostOrderEnumerator(); it(); ++it) {
 					auto control = *it;
-					if (control->ProcessMouseMessage(message))
-					{
+					if (control->ProcessMouseMessage(message)) {
 						return true;
 					}
 				}
 				return false;
 			}
 			
-			for (auto it = formManager_.GetEnumerator(); it(); ++it)
-			{
+			for (auto it = formManager_.GetEnumerator(); it(); ++it) {
 				auto &form = *it;
 				
-				for (auto it2 = form->GetPostOrderEnumerator(); it2(); ++it2)
-				{
+				for (auto it2 = form->GetPostOrderEnumerator(); it2(); ++it2) {
 					auto control = *it2;
-					if (control->ProcessMouseMessage(message))
-					{
-						if (form != foreMost)
-						{
+					if (control->ProcessMouseMessage(message)) {
+						if (form != foreMost) {
 							formManager_.BringToFront(form);
 						}
-
 						return true;
 					}
 				}
 			}
 
-			if (MouseEnteredControl)
-			{
+			if (MouseEnteredControl) {
 				MouseEnteredControl->OnMouseLeave(message);
 			}
 		}

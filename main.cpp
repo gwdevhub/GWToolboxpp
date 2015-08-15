@@ -45,6 +45,7 @@ void init(HMODULE hModule){
 	//}
 
 	GWToolbox tb = GWToolbox();
+	tb.exec();
 
 }
 

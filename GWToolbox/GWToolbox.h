@@ -7,10 +7,10 @@ using namespace OSHGui;
 class GWToolbox {
 
 public:
-	GWToolbox() {
-		init();
-	}
+	GWToolbox() {};
+
+	void exec();
 
 private:
-	void init();
+	
 };
