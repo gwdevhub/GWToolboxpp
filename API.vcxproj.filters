@@ -364,6 +364,9 @@
     <ClInclude Include="API\GwConstants.h">
       <Filter>API</Filter>
     </ClInclude>
+    <ClInclude Include="GWToolbox\Pcons.h">
+      <Filter>Main\GWToolbox</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -596,6 +599,9 @@
     </ClCompile>
     <ClCompile Include="API\ItemMgr.cpp">
       <Filter>API\src</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Pcons.cpp">
+      <Filter>Main\GWToolbox</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

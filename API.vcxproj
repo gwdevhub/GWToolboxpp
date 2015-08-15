@@ -98,6 +98,7 @@
     <ClInclude Include="API\SkillbarMgr.h" />
     <ClInclude Include="API\StoCMgr.h" />
     <ClInclude Include="GWToolbox\GWToolbox.h" />
+    <ClInclude Include="GWToolbox\Pcons.h" />
     <ClInclude Include="include\OSHGui\Application.hpp" />
     <ClInclude Include="include\OSHGui\Controls\Button.hpp" />
     <ClInclude Include="include\OSHGui\Controls\CheckBox.hpp" />
@@ -206,6 +207,7 @@
     <ClCompile Include="API\SkillbarMgr.cpp" />
     <ClCompile Include="API\StoCMgr.cpp" />
     <ClCompile Include="GWToolbox\GWToolbox.cpp" />
+    <ClCompile Include="GWToolbox\Pcons.cpp" />
     <ClCompile Include="include\OSHGui\Application.cpp" />
     <ClCompile Include="include\OSHGui\Controls\Button.cpp" />
     <ClCompile Include="include\OSHGui\Controls\CheckBox.cpp" />
