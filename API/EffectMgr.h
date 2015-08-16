@@ -9,10 +9,6 @@ namespace GWAPI {
 	class EffectMgr {
 	public:
 
-		void DropBuff(DWORD buffId){
-			parent->CtoS->SendPacket(0x8, 0x23, buffId);
-		}
-
 		struct Effect {							// total : 18 BYTEs
 			DWORD SkillId;						// 0000						skill id of the effect
 			long EffectType;					// 0004						type classifier 0 = condition/shout, 8 = stance, 11 = maintained enchantment, 14 = enchantment/nature ritual
@@ -47,6 +43,7 @@ namespace GWAPI {
 		AgentEffectsArray GetPartyEffectArray();
 		EffectArray GetPlayerEffectArray();
 		BuffArray GetPlayerBuffArray();
+		void DropBuff(DWORD buffId);
 		Effect GetPlayerEffectById(DWORD SkillID);
 		Buff GetPlayerBuffBySkillId(DWORD SkillID);
 		EffectMgr(GWAPIMgr* obj);

@@ -9,16 +9,24 @@ using namespace OSHGui;
 class GWToolbox {
 
 public:
-	GWToolbox(HMODULE mod) : m_dllmodule(mod) {};
-
-	void exec();
-	void main();
-	void destroy();
-	bool isActive();
+	// will create a new toolbox object and run it, can be used as argument for createThread
+	static void threadEntry(HMODULE mod);
 
 private:
+	GWToolbox(HMODULE mod) : m_dllmodule(mod) {};
+
+	// Executes setup and main loop of toolbox. 
+	void exec();
+
+	// Self destructs
+	void destroy();
+
+	// ??? (also why a private accessor to a private field? xD)
+	bool isActive();
+	// ???
 	bool m_Active;
+	// ???
 	HMODULE m_dllmodule;
 
-	static void threadStarter(GWToolbox* ptr);
+	
 };

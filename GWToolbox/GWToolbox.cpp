@@ -141,19 +141,12 @@ void GWToolbox::exec() {
 	dx = mgr->DirectX;
 
 	dx->CreateRenderHooks(endScene, resetScene);
-
-
 	
 	input.SetKeyboardInputEnabled(true);
 	input.SetMouseInputEnabled(true);
 
 	m_Active = true;
 
-	CreateThread(0, 0, (LPTHREAD_START_ROUTINE)GWToolbox::threadStarter, this, 0, 0);
-}
-
-void GWToolbox::main()
-{
 	Application * app = Application::InstancePtr();
 	while (true) { // main loop
 		if (app->HasBeenInitialized()) {
@@ -173,13 +166,14 @@ void GWToolbox::destroy()
 	ExitThread(EXIT_SUCCESS);
 }
 
-bool GWToolbox::isActive()
+// what is this for?
+bool GWToolbox::isActive() 
 {
 	return m_Active;
 }
 
 
-void GWToolbox::threadStarter(GWToolbox* ptr)
-{
-	ptr->main();
+void GWToolbox::threadEntry(HMODULE mod) {
+	GWToolbox * tb = new GWToolbox(mod);
+	tb->exec();
 }

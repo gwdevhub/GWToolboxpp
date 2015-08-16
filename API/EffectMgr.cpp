@@ -75,3 +75,8 @@ GWAPI::EffectMgr::BuffArray GWAPI::EffectMgr::GetPlayerBuffArray()
 
 	throw 1;
 }
+
+void GWAPI::EffectMgr::DropBuff(DWORD buffId) 
+{
+	parent->CtoS->SendPacket(0x8, 0x23, buffId);
+}

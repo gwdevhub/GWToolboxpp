@@ -1,12 +1,11 @@
 #include "API\APIMain.h"
 #include "GWToolbox\GWToolbox.h"
 #include <stdio.h>
-GWToolbox* tb;
+
 // Do all your startup things here instead.
 void init(HMODULE hModule){
 
-	tb = new GWToolbox(hModule);
-	tb->exec();
+	CreateThread(0, 0, (LPTHREAD_START_ROUTINE)GWToolbox::threadEntry, hModule, 0, 0);
 }
 
 // DLL entry point, not safe to stay in this thread for long.
