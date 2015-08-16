@@ -10,6 +10,7 @@ void Hotkeys::callbackStuck() {
 
 void Hotkeys::callbackRecall() {
 	if (!isExplorable()) return;
+
 	GWAPIMgr* API = GWAPIMgr::GetInstance();
 	EffectMgr::Buff recall = API->Effects->GetPlayerBuffBySkillId(GwConstants::SkillID::Recall);
 	if (recall.SkillId) {
@@ -56,8 +57,8 @@ void Hotkeys::callbackClicker() {
 }
 
 void Hotkeys::callbackRes() {
-	if (!isExplorable()) return;
-	if (!GWAPIMgr::GetInstance()->Items->UseItemByModelId(GwConstants::ItemID::ResScrolls)) {
+	if (isExplorable()
+		&& !GWAPIMgr::GetInstance()->Items->UseItemByModelId(GwConstants::ItemID::ResScrolls)) {
 		GWAPIMgr::GetInstance()->Chat->WriteToChat(L"[Warning] Res scroll not found!");
 	}
 }
@@ -68,8 +69,8 @@ void Hotkeys::callbackAge() {
 }
 
 void Hotkeys::callbackPstone() {
-	if (!isExplorable()) return;
-	if (!GWAPIMgr::GetInstance()->Items->UseItemByModelId(GwConstants::ItemID::Powerstone)) {
+	if (isExplorable()
+		&& !GWAPIMgr::GetInstance()->Items->UseItemByModelId(GwConstants::ItemID::Powerstone)) {
 		GWAPIMgr::GetInstance()->Chat->WriteToChat(L"[Warning] Powerstone not found!");
 	}
 }
@@ -101,46 +102,82 @@ void Hotkeys::callbackGhostTarget() {
 }
 
 void Hotkeys::callbackGhostPop() {
-	if (isLoading()) return;
-	if (!GWAPIMgr::GetInstance()->Items->UseItemByModelId(GwConstants::ItemID::GhostInTheBox)) {
+	if (!isLoading()
+		&& !GWAPIMgr::GetInstance()->Items->UseItemByModelId(GwConstants::ItemID::GhostInTheBox)) {
 		GWAPIMgr::GetInstance()->Chat->WriteToChat(L"[Warning] Ghost-in-the-box not found!");
 	}
 }
 
 void Hotkeys::callbackGstonePop() {
-
+	if (isExplorable()
+		&& !GWAPIMgr::GetInstance()->Items->UseItemByModelId(GwConstants::ItemID::GhastlyStone)) {
+		GWAPIMgr::GetInstance()->Chat->WriteToChat(L"[Warning] Ghastly Summoning Stone not found!");
+	}
 }
 
 void Hotkeys::callbackLegioPop() {
-
+	if (isExplorable()
+		&& !GWAPIMgr::GetInstance()->Items->UseItemByModelId(GwConstants::ItemID::LegionnaireStone)) {
+		GWAPIMgr::GetInstance()->Chat->WriteToChat(L"[Warning] Legionnaire Summoning Crystal not found!");
+	}
 }
 
 void Hotkeys::callbackRainbowUse() {
+	if (!isExplorable()) return;
 
-}
+	GWAPIMgr* API = GWAPIMgr::GetInstance();
 
-void Hotkeys::callbackLooter() {
+	if (API->Effects->GetPlayerEffectById(GwConstants::Effect::Redrock).SkillId == 0) {
+		if (!API->Items->UseItemByModelId(GwConstants::ItemID::RRC)) {
+			API->Chat->WriteToChat(L"[Warning] Red Rock Candy not found!");
+		}
+	}
 
+	if (API->Effects->GetPlayerEffectById(GwConstants::Effect::Bluerock).SkillId == 0) {
+		if (!API->Items->UseItemByModelId(GwConstants::ItemID::BRC)) {
+			API->Chat->WriteToChat(L"[Warning] Blue Rock Candy not found!");
+		}
+	}
+
+	if (API->Effects->GetPlayerEffectById(GwConstants::Effect::Greenrock).SkillId == 0) {
+		if (!API->Items->UseItemByModelId(GwConstants::ItemID::GRC)) {
+			API->Chat->WriteToChat(L"[Warning] Green Rock Candy not found!");
+		}
+	}
 }
 
 void Hotkeys::callbackIdentifier() {
-
+	// TODO
 }
 
 void Hotkeys::callbackRupt() {
+	ruptToggle = !ruptToggle;
 
+	if (!isLoading()) {
+		GWAPIMgr::GetInstance()->Chat->WriteToChat(clickerToggle ? L"Rupt enabled" : L"Rupt disabled");
+	}
 }
 
 void Hotkeys::callbackMovement() {
+	if (isLoading()) return;
+	if (movementX == 0 && movementY == 0) return;
 
+	GWAPIMgr::GetInstance()->Agents->Move(movementX, movementY);
+	GWAPIMgr::GetInstance()->Chat->WriteToChat(L"Movement macro activated");
 }
 
 void Hotkeys::callbackDrop1Coin() {
+	if (!isExplorable()) return;
 
+	GWAPIMgr::GetInstance()->Items->DropGold();
 }
 
 void Hotkeys::callbackDropCoins() {
+	dropCoinsToggle = !dropCoinsToggle;
 
+	if (!isLoading()) {
+		GWAPIMgr::GetInstance()->Chat->WriteToChat(clickerToggle ? L"Coin dropper enabled" : L"Coin dropper disabled");
+	}
 }
 
 Hotkeys::Hotkeys() :
@@ -159,7 +196,6 @@ GhostPop(initializer++),
 GstonePop(initializer++),
 LegioPop(initializer++),
 RainbowUse(initializer++),
-Looter(initializer++),
 Identifier(initializer++),
 Rupt(initializer++),
 Movement(initializer++),
@@ -185,7 +221,6 @@ count(initializer)
 	hotkeyName[Hotkeys::GstonePop] = "gstonepop";
 	hotkeyName[Hotkeys::LegioPop] = "legiopop";
 	hotkeyName[Hotkeys::RainbowUse] = "rainbowpop";
-	hotkeyName[Hotkeys::Looter] = "looter";
 	hotkeyName[Hotkeys::Identifier] = "identifier";
 	hotkeyName[Hotkeys::Rupt] = "rupt";
 	hotkeyName[Hotkeys::Movement] = "movement";
@@ -207,7 +242,6 @@ count(initializer)
 	callbacks[Hotkeys::GstonePop] = &Hotkeys::callbackGstonePop;
 	callbacks[Hotkeys::LegioPop] = &Hotkeys::callbackLegioPop;
 	callbacks[Hotkeys::RainbowUse] = &Hotkeys::callbackRainbowUse;
-	callbacks[Hotkeys::Looter] = &Hotkeys::callbackLooter;
 	callbacks[Hotkeys::Identifier] = &Hotkeys::callbackIdentifier;
 	callbacks[Hotkeys::Rupt] = &Hotkeys::callbackRupt;
 	callbacks[Hotkeys::Movement] = &Hotkeys::callbackMovement;

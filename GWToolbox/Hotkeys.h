@@ -25,7 +25,6 @@ private:
 	const BYTE GstonePop;
 	const BYTE LegioPop;
 	const BYTE RainbowUse;
-	const BYTE Looter;
 	const BYTE Identifier;
 	const BYTE Rupt;
 	const BYTE Movement;
@@ -43,8 +42,8 @@ private:
 	unsigned int ruptSkillSlot = 0;		// skill slot of the skill to rupt with
 	bool ruptToggle = false;			// rupter active or not
 
-	int movementX = 0;					// X coordinate of the destination of movement macro
-	int movementY = 0;					// Y coordinate of the destination of movement macro
+	float movementX = 0;					// X coordinate of the destination of movement macro
+	float movementY = 0;					// Y coordinate of the destination of movement macro
 	
 	vector<string> hotkeyName;			// name of hotkeys in Ini file
 

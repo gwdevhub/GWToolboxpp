@@ -70,7 +70,7 @@ namespace GWAPI {
 		void PickUpItem(Item* item, DWORD CallTarget = 0);
 
 		void OpenXunlaiWindow();
-
+		
 		void DropGold(DWORD Amount = 1);
 	};
 }
