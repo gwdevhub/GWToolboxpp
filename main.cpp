@@ -1,9 +1,12 @@
 #include "API\APIMain.h"
 #include "GWToolbox\GWToolbox.h"
-#include <stdio.h>
 
 // Do all your startup things here instead.
 void init(HMODULE hModule){
+
+	AllocConsole();
+	FILE* fh;
+	freopen_s(&fh, "CONOUT$", "w", stdout);
 
 	CreateThread(0, 0, (LPTHREAD_START_ROUTINE)GWToolbox::threadEntry, hModule, 0, 0);
 }

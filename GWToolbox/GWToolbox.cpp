@@ -9,6 +9,8 @@
 using namespace OSHGui::Drawing;
 using namespace OSHGui::Input;
 
+GWToolbox* GWToolbox::instance = NULL;
+
 namespace{
 	LPD3DXFONT dbgFont = NULL;
 	RECT Type1Rect = { 50, 50, 300, 14 };
@@ -74,6 +76,7 @@ void create_gui(IDirect3DDevice9* pDevice) {
 		theme.Load("DefaultTheme.txt"); // TODO: use a use local path or standard path instead
 		app->SetTheme(theme);
 	} catch (Misc::InvalidThemeException e) {
+		std::cout << "Warning: could not load theme file\n";
 	}
 	
 	auto font = FontManager::LoadFont("Arial", 8.0f, false); //Arial, 8PT, no anti-aliasing
@@ -91,6 +94,8 @@ void create_gui(IDirect3DDevice9* pDevice) {
 		Application::InstancePtr()->Toggle();
 		//std::cout << "hotkey fired! \n";
 	}));
+
+	GWToolbox::getInstance()->pcons->buildUI();
 
 	oshinputhook = SetWindowsHookEx(WH_GETMESSAGE, MessageHook, NULL, GetCurrentThreadId());
 }
@@ -140,6 +145,8 @@ void GWToolbox::exec() {
 	mgr = GWAPI::GWAPIMgr::GetInstance();
 	dx = mgr->DirectX;
 
+	pcons->loadIni();
+
 	dx->CreateRenderHooks(endScene, resetScene);
 	
 	input.SetKeyboardInputEnabled(true);
@@ -150,6 +157,7 @@ void GWToolbox::exec() {
 	Application * app = Application::InstancePtr();
 	while (true) { // main loop
 		if (app->HasBeenInitialized()) {
+			pcons->mainRoutine();
 		}
 		Sleep(10);
 
@@ -174,6 +182,8 @@ bool GWToolbox::isActive()
 
 
 void GWToolbox::threadEntry(HMODULE mod) {
-	GWToolbox * tb = new GWToolbox(mod);
-	tb->exec();
+	if (instance) return;
+
+	instance = new GWToolbox(mod);
+	instance->exec();
 }
