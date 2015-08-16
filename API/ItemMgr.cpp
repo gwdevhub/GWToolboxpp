@@ -62,3 +62,8 @@ bool GWAPI::ItemMgr::UseItemByModelId(DWORD modelid, BYTE bagStart /*= 1*/, cons
 
 	return false;
 }
+
+void GWAPI::ItemMgr::DropGold(DWORD Amount /*= 1*/)
+{
+	parent->CtoS->SendPacket(0x8, 0x29, Amount);
+}

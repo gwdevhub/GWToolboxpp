@@ -41,10 +41,22 @@ DWORD GWAPI::AgentMgr::GetSqrDistance(Agent* a, Agent* b) {
 GWAPI::AgentMgr::AgentMgr(GWAPIMgr* obj) : parent(obj)
 {
 	_ChangeTarget = (ChangeTarget_t)MemoryMgr::ChangeTargetFunction;
+	_Move = (Move_t)MemoryMgr::MoveFunction;
 }
 
 void GWAPI::AgentMgr::ChangeTarget(Agent* Agent)
 {
 	parent->GameThread->Enqueue(_ChangeTarget, Agent->Id);
+}
+
+void GWAPI::AgentMgr::Move(float X, float Y, DWORD ZPlane /*= 0*/)
+{
+	static MovePosition* pos = new MovePosition();
+
+	pos->X = X;
+	pos->Y = Y;
+	pos->ZPlane = ZPlane;
+
+	parent->GameThread->Enqueue(_Move, pos);
 }
 

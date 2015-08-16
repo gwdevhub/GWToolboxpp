@@ -38,6 +38,8 @@ BYTE* GWAPI::MemoryMgr::ChangeTargetFunction = NULL;
 BYTE* GWAPI::MemoryMgr::XunlaiSession = NULL;
 BYTE* GWAPI::MemoryMgr::OpenXunlaiFunction = NULL;
 
+BYTE* GWAPI::MemoryMgr::MoveFunction = NULL;
+
 
 void GWAPI::MemoryMgr::Retour(BYTE *src, BYTE *restore, const int len)
 {
@@ -177,6 +179,11 @@ bool GWAPI::MemoryMgr::Scan()
 			XunlaiSession = *(BYTE**)(scan - 4);
 		}
 
+		const BYTE MoveFunctionCode[] = { 0xD9, 0x07, 0xD8, 0x5D, 0xF0, 0xDF, 0xE0, 0xF6, 0xC4, 0x01 };
+		if (!memcmp(scan, MoveFunctionCode, sizeof(MoveFunctionCode))){
+			MoveFunction = scan - 0x12;
+		}
+
 		if (agArrayPtr &&
 			CtoGSObjectPtr &&
 			CtoGSSendFunction &&
@@ -190,11 +197,14 @@ bool GWAPI::MemoryMgr::Scan()
 			PostProcessEffectFunction &&
 			ChangeTargetFunction &&
 			OpenXunlaiFunction &&
-			XunlaiSession
+			XunlaiSession &&
+			MoveFunction
 			) {
 				return true;
 			}
 	}
 	return false;
 }
+
+
 

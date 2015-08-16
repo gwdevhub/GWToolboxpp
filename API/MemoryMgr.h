@@ -78,6 +78,9 @@ namespace GWAPI{
 		static BYTE* OpenXunlaiFunction;
 		static BYTE* XunlaiSession;
 
+		// For move calls that dont glitch your char around.
+		static BYTE* MoveFunction;
+
 		// Basics
 		static bool Scan();
 		static void *Detour(BYTE *src, const BYTE *dst, const int len, BYTE** restore = NULL);

@@ -11,6 +11,15 @@ namespace GWAPI {
 		typedef void(__fastcall *ChangeTarget_t)(DWORD AgentID);
 		ChangeTarget_t _ChangeTarget;
 		friend class GWAPIMgr;
+
+		struct MovePosition {
+			float X;
+			float Y;
+			DWORD ZPlane; // Ground in gwapi.
+		};
+
+		typedef void(__fastcall *Move_t)(MovePosition* Pos);
+		Move_t _Move;
 	public:
 		struct Agent {
 			DWORD* vtable;
@@ -170,6 +179,8 @@ namespace GWAPI {
 		DWORD GetSqrDistance(Agent* a, Agent* b);
 
 		void ChangeTarget(Agent* Agent);
+
+		void Move(float X, float Y, DWORD ZPlane = 0);
 
 		AgentMgr(GWAPIMgr* obj);
 	};
