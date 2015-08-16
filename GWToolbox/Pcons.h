@@ -3,6 +3,8 @@
 #include <list>
 #include <vector>
 
+#include "Timer.h"
+
 using namespace std;
 
 //enum class Pcon { Cons, Alcohol, RRC, BRC, GRC, Pie, Cupcake, Apple, Corn, Egg, 
@@ -34,32 +36,47 @@ private:
 
 	unsigned int pconsCount = 18;
 
-	// true if the feature is enabled, false otherwise
-	bool pcons_enabled;
+	// true if the feature is enabled, false otherwise 
+	bool enabled;
 
-	// map from pcons to ini name
+	// map from each pcons to ini name
 	vector<string> pconsName;
 
 	// map from pcons to item id
 	vector<int> pconsItemID;
 
-	// map from pcons to status active
+	// map from pcons to status active (bool) 
 	vector<bool> pconsActive;
 
-	// checks if the pcon is in inventory
+	// list of pcons timers 
+	vector<timer_t> pconsTimer;
+ 
+	// list of pcons effects 
+	vector<int> pconsEffect;
+
+	// checks if the pcon is in inventory 
 	bool pconsFind(unsigned int ModelID);
 
-	// scans inventory and updates UI
+	// it will use if needed the pcon. Same as main routine,
+	// but only for one pcon
+	void checkAndUsePcon(int PconID);
+
+	// scans inventory, updates UI and the pconsActive array 
 	void scanInventory();
 
 public:
 	Pcons();
-	~Pcons() {}
+	~Pcons();
 
-	void enable() { pcons_enabled = true; }
-	void disable() { pcons_enabled = false; }
+	void enable() { enabled = true; }
+	void disable() { enabled = false; }
 	
-	void pconsLoadIni();
-	void pconsBuildUI();
+	// load settings from ini file 
+	void loadIni();
 
+	// create user interface
+	void buildUI();
+
+	// runs one loop of the main routine (checking each pcon once)
+	void mainRoutine();
 };

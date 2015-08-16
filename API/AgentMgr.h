@@ -126,7 +126,18 @@ namespace GWAPI {
 			Agent* GetTarget();
 		};
 
-		AgentArray GetAgentArray();
+		AgentArray* GetAgentArray();
+		AgentArray* GetParty(); // maybe should be part of AgentArray ?
+		size_t GetPartySize(); // this should NOT be part of party-array, it's computed differently
+
+		// Computes distance between the two agents in game units
+		DWORD GetDistance(Agent* a, Agent* b);
+
+		// Computes squared distance between the two agents in game units
+		DWORD GetSqrDistance(Agent* a, Agent* b);
+
+		inline Agent* GetPlayer() { return GetAgentArray()->GetPlayer(); }
+		inline Agent* GetTarget() { return GetAgentArray()->GetTarget(); }
 
 		void ChangeTarget(Agent* Agent);
 

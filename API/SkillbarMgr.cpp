@@ -9,7 +9,7 @@ GWAPI::SkillbarMgr::Skill GWAPI::SkillbarMgr::GetSkillConstantData(DWORD SkillID
 void GWAPI::SkillbarMgr::UseSkill(DWORD Slot, DWORD Target /*= 0*/, DWORD CallTarget /*= 0*/)
 {
 	Slot--;
-	parent->GameThread->Enqueue(_UseSkill, parent->Agents->GetAgentArray().GetPlayerId(), Slot, Target, CallTarget);
+	parent->GameThread->Enqueue(_UseSkill, parent->Agents->GetAgentArray()->GetPlayerId(), Slot, Target, CallTarget);
 }
 
 GWAPI::SkillbarMgr::SkillbarMgr(GWAPIMgr* obj) : parent(obj)

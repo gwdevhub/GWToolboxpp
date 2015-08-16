@@ -20,3 +20,8 @@ GWAPI::MapMgr::MapMgr(GWAPIMgr* obj) : parent(obj)
 {
 
 }
+
+GwConstants::InstanceType GWAPI::MapMgr::GetInstanceType() {
+	// TODO
+	return GwConstants::InstanceType::Explorable;
+}

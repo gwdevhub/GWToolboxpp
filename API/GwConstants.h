@@ -8,19 +8,9 @@ namespace GwConstants {
 
 	enum class InstanceType { Outpost, Explorable, Loading };
 
-	enum class Range {
-		Adjacent = 156,
-		Nearby = 240,
-		Area = 312,
-		Earshot = 1000,
-		Spellcast = 1085,
-		Spirit = 2500,
-		Compass = 5000
-	};
-
 	enum class Profession { None, Warrior, Ranger, Monk, Necromancer, Mesmer, Elementalist, Assassin, Ritualist, Paragon, Dervish };
 
-	enum class Attribute {													// probably not used but why not
+	enum class Attribute {												// probably not used but why not
 		FastCasting, IllusionMagic, DominationMagic, InspirationMagic,		// mesmer
 		BloodMagic, DeathMagic, SoulReaping, Curses,						// necro
 		AirMagic, EarthMagic, FireMagic, WaterMagic, EnergyStorage,			// ele
@@ -33,6 +23,26 @@ namespace GwConstants {
 		SpearMastery, Command, Motivation, Leadership,						// paragon
 		ScytheMastery, WindPrayers, EarthPrayers, Mysticism,				// derv
 		None = 0xff
+	};
+
+	namespace Range {
+		const int Adjacent = 156;
+		const int Nearby = 240;
+		const int Area = 312;
+		const int Earshot = 1000;
+		const int Spellcast = 1085;
+		const int Spirit = 2500;
+		const int Compass = 5000;
+	};
+
+	namespace SqrRange {
+		const int Adjacent = Range::Adjacent * Range::Adjacent;
+		const int Nearby = Range::Nearby * Range::Nearby;
+		const int Area = Range::Area * Range::Area;
+		const int Earshot = Range::Earshot * Range::Earshot;
+		const int Spellcast = Range::Spellcast * Range::Spellcast;
+		const int Spirit = Range::Spirit * Range::Spirit;
+		const int Compass = Range::Compass * Range::Compass;
 	};
 	
 
@@ -76,7 +86,6 @@ namespace GwConstants {
 		const int Feathers = 933;
 
 		// pcons
-		const int Grog = 30855;
 		const int BRC = 31151;
 		const int GRC = 31152;
 		const int RRC = 31153;
@@ -100,6 +109,7 @@ namespace GwConstants {
 		const int PahnaiSalad = 17062;
 		const int Mobstopper = 32558;
 		const int Powerstone = 24862;
+
 		const int CremeBrulee = 15528;
 		const int Fruitcake = 21492;
 		const int SugaryBlueDrink = 21812;
@@ -107,12 +117,28 @@ namespace GwConstants {
 		const int JarOfHoney = 31150;
 		const int ChocolateBunny = 22644;
 
-		// TODO alcohol
+		// level-1 alcohol
+		const int Eggnog = 6375;
+		const int DwarvenAle = 5585;
+		const int HuntersAle = 910;
+		const int Absinthe = 6367;
+		const int WitchsBrew = 6049;
+		const int Ricewine = 15477;
+		const int ShamrockAle = 22190;
+		const int Cider = 28435;
+
+		// level-5 alcohol
+		const int Grog = 30855;
+		const int SpikedEggnog = 6366;
+		const int AgedDwarvenAle = 24593;
+		const int AgedHungersAle = 31145;
+		const int Keg = 31146;
+		const int FlaskOfFirewater = 2513;
+		const int KrytanBrandy = 35124;
+
 	}
 
 	namespace Effect {
-		const int Lightbringer = 1813;
-		const int Hardmode = 1912;
 		const int Corn = 2604;
 		const int Apple = 2605;
 		const int Redrock = 2973;
@@ -130,7 +156,11 @@ namespace GwConstants {
 		const int ConsGrail = 2521;
 		const int SkaleVigor = 1681;
 		const int PahnaiSalad = 1682;
+
+		const int Lightbringer = 1813;
+		const int Hardmode = 1912;
 		const int WeakenedByDhuum = 3077;
+
 		const int CremeBrulee = 1612;
 		const int BlueDrink = 1916;
 		const int ChocolateBunny = 1933;

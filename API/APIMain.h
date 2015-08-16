@@ -57,6 +57,7 @@
 #define GWAPI_USEDIRECTX
 
 #include "GWAPIMgr.h"
+#include "GwConstants.h"
 
 #include "MemoryMgr.h"
 #include "GameThreadMgr.h"

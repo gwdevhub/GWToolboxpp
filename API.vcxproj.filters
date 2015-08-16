@@ -367,6 +367,9 @@
     <ClInclude Include="GWToolbox\Pcons.h">
       <Filter>Main\GWToolbox</Filter>
     </ClInclude>
+    <ClInclude Include="GWToolbox\Timer.h">
+      <Filter>Main\GWToolbox</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
