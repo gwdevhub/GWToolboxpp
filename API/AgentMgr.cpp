@@ -1,6 +1,6 @@
 #include "AgentMgr.h"
 
-GWAPI::AgentMgr::AgentArray* GWAPI::AgentMgr::GetAgentArray()
+GWAPI::AgentMgr::AgentArray* GWAPI::AgentMgr::GetAgentArrayPtr()
 {
 	AgentArray *agRet = (AgentArray*)MemoryMgr::agArrayPtr;
 	if (agRet->size() == 0) throw 1;
@@ -9,7 +9,7 @@ GWAPI::AgentMgr::AgentArray* GWAPI::AgentMgr::GetAgentArray()
 
 std::vector<GWAPI::AgentMgr::Agent*> * GWAPI::AgentMgr::GetParty() {
 	std::vector<Agent*>* party = new std::vector<Agent*>(GetPartySize());
-	AgentArray agents = *GetAgentArray();
+	AgentArray agents = *GetAgentArrayPtr();
 
 	for (size_t i = 0; i < agents.size(); ++i) {
 		if (agents[i]->Allegiance == 1
