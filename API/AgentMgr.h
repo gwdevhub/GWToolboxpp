@@ -2,6 +2,7 @@
 
 #include <Windows.h>
 #include "APIMain.h"
+#include <vector>
 
 namespace GWAPI {
 
@@ -127,8 +128,12 @@ namespace GWAPI {
 		};
 
 		AgentArray* GetAgentArray();
-		AgentArray* GetParty(); // maybe should be part of AgentArray ?
-		size_t GetPartySize(); // this should NOT be part of party-array, it's computed differently
+
+		// Returns a vector of agents in the party. YOU SHALL DELETE THIS VECTOR AFTER YOU'RE DONE.
+		std::vector<Agent*>* GetParty();
+
+		// Returns the size of the party
+		size_t GetPartySize();
 
 		// Computes distance between the two agents in game units
 		DWORD GetDistance(Agent* a, Agent* b);

@@ -104,7 +104,7 @@ void Pcons::mainRoutine() {
 			&& Timer::diff(pconsTimer[pcons::Cons]) > 5000) {
 
 			size_t partySize = API->Agents->GetPartySize();
-			AgentMgr::AgentArray party = *API->Agents->GetParty();
+			vector<AgentMgr::Agent*> party = *API->Agents->GetParty();
 			if (partySize > 0 && party.size() == partySize) {
 				bool everybodyAliveAndLoaded = true;
 				for (size_t i = 0; i < party.size(); ++i) {
@@ -186,7 +186,7 @@ void Pcons::mainRoutine() {
 		if (pconsActive[pcons::Res]
 			&& Timer::diff(pconsTimer[pcons::Res]) > 500) {
 
-			AgentMgr::AgentArray party = *API->Agents->GetParty();
+			vector<AgentMgr::Agent*> party = *API->Agents->GetParty();
 			for (size_t i = 0; i < party.size(); ++i) {
 				AgentMgr::Agent * me = API->Agents->GetPlayer();
 				if (party[i]->GetIsDead()

@@ -7,15 +7,15 @@ GWAPI::AgentMgr::AgentArray* GWAPI::AgentMgr::GetAgentArray()
 	return agRet;
 }
 
-GWAPI::AgentMgr::AgentArray* GWAPI::AgentMgr::GetParty() {
-	AgentArray* party = new AgentArray();
+std::vector<GWAPI::AgentMgr::Agent*> * GWAPI::AgentMgr::GetParty() {
+	std::vector<Agent*>* party = new std::vector<Agent*>(GetPartySize());
 	AgentArray agents = *GetAgentArray();
 
 	for (size_t i = 0; i < agents.size(); ++i) {
 		if (agents[i]->Allegiance == 1
 			&& (agents[i]->TypeMap & 0x20000)) {
 
-			// TODO add agents to party maybe? idk
+			party->push_back(agents[i]);
 		}
 	}
 
