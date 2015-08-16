@@ -1,15 +1,15 @@
 #include "AgentMgr.h"
 
-GWAPI::AgentMgr::AgentArray* GWAPI::AgentMgr::GetAgentArray()
+GWAPI::AgentMgr::AgentArray GWAPI::AgentMgr::GetAgentArray()
 {
-	AgentArray *agRet = (AgentArray*)MemoryMgr::agArrayPtr;
+	AgentArray* agRet = (AgentArray*)MemoryMgr::agArrayPtr;
 	if (agRet->size() == 0) throw 1;
-	return agRet;
+	return *agRet;
 }
 
 std::vector<GWAPI::AgentMgr::Agent*> * GWAPI::AgentMgr::GetParty() {
 	std::vector<Agent*>* party = new std::vector<Agent*>(GetPartySize());
-	AgentArray agents = *GetAgentArray();
+	AgentArray agents = GetAgentArray();
 
 	for (size_t i = 0; i < agents.size(); ++i) {
 		if (agents[i]->Allegiance == 1
@@ -48,22 +48,3 @@ void GWAPI::AgentMgr::ChangeTarget(Agent* Agent)
 	parent->GameThread->Enqueue(_ChangeTarget, Agent->Id);
 }
 
-GWAPI::AgentMgr::Agent* GWAPI::AgentMgr::AgentArray::GetTarget()
-{
-	return GetIndex(GetTargetId());
-}
-
-GWAPI::AgentMgr::Agent* GWAPI::AgentMgr::AgentArray::GetPlayer()
-{
-	return GetIndex(GetPlayerId());
-}
-
-DWORD GWAPI::AgentMgr::AgentArray::GetTargetId()
-{
-	return *(DWORD*)MemoryMgr::TargetAgentIDPtr;
-}
-
-DWORD GWAPI::AgentMgr::AgentArray::GetPlayerId()
-{
-	return *(DWORD*)MemoryMgr::PlayerAgentIDPtr;
-}

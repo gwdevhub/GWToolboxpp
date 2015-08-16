@@ -96,6 +96,7 @@ void create_gui(IDirect3DDevice9* pDevice) {
 	}));
 
 	GWToolbox::getInstance()->pcons->buildUI();
+	GWToolbox::getInstance()->builds->buildUI();
 
 	oshinputhook = SetWindowsHookEx(WH_GETMESSAGE, MessageHook, NULL, GetCurrentThreadId());
 }
@@ -158,6 +159,7 @@ void GWToolbox::exec() {
 	while (true) { // main loop
 		if (app->HasBeenInitialized()) {
 			pcons->mainRoutine();
+			builds->mainRoutine();
 		}
 		Sleep(10);
 

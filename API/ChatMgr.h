@@ -1,5 +1,6 @@
 #pragma once
 #include "APIMain.h"
+#include <string>
 
 
 
@@ -17,12 +18,12 @@ namespace GWAPI {
 		};
 
 	public:
-		
+
 		// Sendchat, should be self explanatory. SendChat(L"I love gwtoolbox",L'!');
-		void SendChat(wchar_t* msg, wchar_t channel);
+		void SendChat(const wchar_t* msg, wchar_t channel);
 
 		// Write to chat as a PM with printf style arguments.
-		void WriteToChat(wchar_t* format, ...);
+		void WriteToChat(const wchar_t* format, ...);
 
 	};
 

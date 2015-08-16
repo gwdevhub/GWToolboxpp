@@ -1,7 +1,7 @@
 #include "ChatMgr.h"
 
 
-void GWAPI::ChatMgr::SendChat(wchar_t* msg, wchar_t channel)
+void GWAPI::ChatMgr::SendChat(const wchar_t* msg, wchar_t channel)
 {
 	static P5E_SendChat* chat = NULL;
 
@@ -14,7 +14,7 @@ void GWAPI::ChatMgr::SendChat(wchar_t* msg, wchar_t channel)
 	parent->CtoS->SendPacket<P5E_SendChat>(chat);
 }
 
-void GWAPI::ChatMgr::WriteToChat(wchar_t* format, ...)
+void GWAPI::ChatMgr::WriteToChat(const wchar_t* format, ...)
 {
 	static wchar_t* chat = NULL;
 	static wchar_t* name = L"GWToolbox++";

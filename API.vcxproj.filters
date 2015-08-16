@@ -373,6 +373,15 @@
     <ClInclude Include="API\ChatMgr.h">
       <Filter>API</Filter>
     </ClInclude>
+    <ClInclude Include="GWToolbox\Hotkeys.h">
+      <Filter>Main\GWToolbox</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Builds.h">
+      <Filter>Main\GWToolbox</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Travel.h">
+      <Filter>Main\GWToolbox</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -611,6 +620,15 @@
     </ClCompile>
     <ClCompile Include="API\ChatMgr.cpp">
       <Filter>API\src</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Hotkeys.cpp">
+      <Filter>Main\GWToolbox</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Builds.cpp">
+      <Filter>Main\GWToolbox</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Travel.cpp">
+      <Filter>Main\GWToolbox</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

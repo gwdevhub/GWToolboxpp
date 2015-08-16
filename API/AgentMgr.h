@@ -7,7 +7,7 @@
 namespace GWAPI {
 
 	class AgentMgr {
-		GWAPIMgr* parent;
+		GWAPIMgr* const parent;
 		typedef void(__fastcall *ChangeTarget_t)(DWORD AgentID);
 		ChangeTarget_t _ChangeTarget;
 		friend class GWAPIMgr;
@@ -135,21 +135,29 @@ namespace GWAPI {
 			DWORD effects;
 		};
 
+		
 		class AgentArray : public MemoryMgr::gw_array<Agent*> {
 		public:
-			DWORD GetPlayerId();
-			DWORD GetTargetId();
-			Agent* GetPlayer();
-			Agent* GetTarget();
+			Agent* GetPlayer() { return GetIndex(GetPlayerId()); }
+			Agent* GetTarget() { return GetIndex(GetTargetId()); }
+			inline DWORD GetPlayerId() { return *(DWORD*)MemoryMgr::TargetAgentIDPtr; }
+			inline DWORD GetTargetId() { return *(DWORD*)MemoryMgr::TargetAgentIDPtr; }
 		};
+
+		inline Agent* GetPlayer() { return GetAgentArray()[GetPlayerId()]; }
+		inline Agent* GetTarget() { return GetAgentArray()[GetTargetId()]; }
+
+		inline DWORD GetPlayerId() { return *(DWORD*)MemoryMgr::TargetAgentIDPtr; }
+		inline DWORD GetTargetId() { return *(DWORD*)MemoryMgr::TargetAgentIDPtr; }
 
 		typedef MemoryMgr::gw_array<MapAgent> MapAgentArray;
 
-		MapAgentArray* GetMapAgentArrayPtr();
+		MapAgentArray* GetMapAgentArray();
 
-		AgentArray* GetAgentArrayPtr();
+		AgentArray GetAgentArray();
 
-		// Returns a vector of agents in the party. YOU SHALL DELETE THIS VECTOR AFTER YOU'RE DONE.
+		// Returns a vector of agents in the party. 
+		// YOU SHALL DELETE THIS VECTOR AFTER YOU'RE DONE.
 		std::vector<Agent*>* GetParty();
 
 		// Returns the size of the party
@@ -160,9 +168,6 @@ namespace GWAPI {
 
 		// Computes squared distance between the two agents in game units
 		DWORD GetSqrDistance(Agent* a, Agent* b);
-
-		inline Agent* GetPlayer() { return GetAgentArrayPtr()->GetPlayer(); }
-		inline Agent* GetTarget() { return GetAgentArrayPtr()->GetTarget(); }
 
 		void ChangeTarget(Agent* Agent);
 
