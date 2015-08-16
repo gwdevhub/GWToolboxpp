@@ -23,8 +23,11 @@ std::vector<GWAPI::AgentMgr::Agent*> * GWAPI::AgentMgr::GetParty() {
 }
 
 size_t GWAPI::AgentMgr::GetPartySize() {
-	// TODO
-	return 8;
+	size_t ret = 0;
+	for (BYTE i = 0; i < 3; ++i) {
+		ret += *MemoryMgr::ReadPtrChain<size_t*>(MemoryMgr::GetContextPtr(), 3, 0x4C, 0x54, 0x0C + 0x10 * i);
+	}
+	return ret;
 }
 
 DWORD GWAPI::AgentMgr::GetDistance(Agent* a, Agent* b) {

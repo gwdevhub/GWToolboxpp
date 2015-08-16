@@ -8,12 +8,19 @@ using namespace OSHGui;
 
 class GWToolbox {
 
+private:
+	static GWToolbox* instance;
+
 public:
-	// will create a new toolbox object and run it, can be used as argument for createThread
-	static void threadEntry(HMODULE mod);
+	Pcons* const pcons;
 
 private:
-	GWToolbox(HMODULE mod) : m_dllmodule(mod) {};
+	GWToolbox(HMODULE mod) :
+		m_dllmodule(mod),
+		pcons(new Pcons()) {
+	}
+
+	//~GWToolbox();
 
 	// Executes setup and main loop of toolbox. 
 	void exec();
@@ -28,5 +35,11 @@ private:
 	// ???
 	HMODULE m_dllmodule;
 
+public:
+	// will create a new toolbox object and run it, can be used as argument for createThread
+	static void threadEntry(HMODULE mod);
+
+	// returns toolbox instance
+	static GWToolbox* getInstance() { return instance; }
 	
 };

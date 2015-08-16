@@ -7,9 +7,6 @@
 
 using namespace std;
 
-//enum class Pcon { Cons, Alcohol, RRC, BRC, GRC, Pie, Cupcake, Apple, Corn, Egg, 
-//	Kabob, Warsupply, Lunars, Res, Skalesoup, Mobstoppers, Panhai, City};
-
 namespace pcons {
 	const int Cons = 0;
 	const int Alcohol = 1;
