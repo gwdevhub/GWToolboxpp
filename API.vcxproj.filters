@@ -370,6 +370,9 @@
     <ClInclude Include="GWToolbox\Timer.h">
       <Filter>Main\GWToolbox</Filter>
     </ClInclude>
+    <ClInclude Include="API\ChatMgr.h">
+      <Filter>API</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -605,6 +608,9 @@
     </ClCompile>
     <ClCompile Include="GWToolbox\Pcons.cpp">
       <Filter>Main\GWToolbox</Filter>
+    </ClCompile>
+    <ClCompile Include="API\ChatMgr.cpp">
+      <Filter>API\src</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

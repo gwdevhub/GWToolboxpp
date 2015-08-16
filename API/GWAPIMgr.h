@@ -19,6 +19,7 @@ namespace GWAPI {
 		friend class SkillbarMgr;
 		friend class EffectMgr;
 		friend class MapMgr;
+		friend class ChatMgr;
 
 		GameThreadMgr* GameThread;
 		CtoSMgr* CtoS;
@@ -34,6 +35,7 @@ namespace GWAPI {
 		SkillbarMgr* Skillbar;
 		EffectMgr* Effects;
 		MapMgr* Map;
+		ChatMgr* Chat;
 #ifdef GWAPI_USEDIRECTX
 		DirectXMgr* DirectX;
 #endif

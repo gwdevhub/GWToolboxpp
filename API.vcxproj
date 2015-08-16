@@ -86,6 +86,7 @@
     <ClInclude Include="API\AgentMgr.h" />
     <ClInclude Include="API\APIMain.h" />
     <ClInclude Include="API\APIncludes.h" />
+    <ClInclude Include="API\ChatMgr.h" />
     <ClInclude Include="API\DirectXMgr.h" />
     <ClInclude Include="API\EffectMgr.h" />
     <ClInclude Include="API\GameThreadMgr.h" />
@@ -197,6 +198,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="API\AgentMgr.cpp" />
+    <ClCompile Include="API\ChatMgr.cpp" />
     <ClCompile Include="API\CtoSMgr.cpp" />
     <ClCompile Include="API\DirectXMgr.cpp" />
     <ClCompile Include="API\EffectMgr.cpp" />

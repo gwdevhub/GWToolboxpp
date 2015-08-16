@@ -119,6 +119,22 @@ namespace GWAPI {
 			inline bool GetIsAttacking() { return ModelState == 96 || ModelState == 1088 || ModelState == 1120; }
 		};
 
+		struct MapAgent{
+			float curenergy; //?
+			float maxenergy; //?
+			float energyregen;
+			DWORD skilltimestamp; //?
+			float unk2;
+			float MaxEnergy2; // again?
+			float unk3;
+			DWORD unk4;
+			float curHealth;
+			float maxHealth;
+			float healthregen;
+			DWORD unk5;
+			DWORD effects;
+		};
+
 		class AgentArray : public MemoryMgr::gw_array<Agent*> {
 		public:
 			DWORD GetPlayerId();
@@ -127,7 +143,11 @@ namespace GWAPI {
 			Agent* GetTarget();
 		};
 
-		AgentArray* GetAgentArray();
+		typedef MemoryMgr::gw_array<MapAgent> MapAgentArray;
+
+		MapAgentArray* GetMapAgentArrayPtr();
+
+		AgentArray* GetAgentArrayPtr();
 
 		// Returns a vector of agents in the party. YOU SHALL DELETE THIS VECTOR AFTER YOU'RE DONE.
 		std::vector<Agent*>* GetParty();
@@ -141,8 +161,8 @@ namespace GWAPI {
 		// Computes squared distance between the two agents in game units
 		DWORD GetSqrDistance(Agent* a, Agent* b);
 
-		inline Agent* GetPlayer() { return GetAgentArray()->GetPlayer(); }
-		inline Agent* GetTarget() { return GetAgentArray()->GetTarget(); }
+		inline Agent* GetPlayer() { return GetAgentArrayPtr()->GetPlayer(); }
+		inline Agent* GetTarget() { return GetAgentArrayPtr()->GetTarget(); }
 
 		void ChangeTarget(Agent* Agent);
 

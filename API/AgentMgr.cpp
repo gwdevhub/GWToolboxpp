@@ -1,6 +1,6 @@
 #include "AgentMgr.h"
 
-GWAPI::AgentMgr::AgentArray* GWAPI::AgentMgr::GetAgentArray()
+GWAPI::AgentMgr::AgentArray* GWAPI::AgentMgr::GetAgentArrayPtr()
 {
 	AgentArray *agRet = (AgentArray*)MemoryMgr::agArrayPtr;
 	if (agRet->size() == 0) throw 1;
@@ -9,7 +9,7 @@ GWAPI::AgentMgr::AgentArray* GWAPI::AgentMgr::GetAgentArray()
 
 std::vector<GWAPI::AgentMgr::Agent*> * GWAPI::AgentMgr::GetParty() {
 	std::vector<Agent*>* party = new std::vector<Agent*>(GetPartySize());
-	AgentArray agents = *GetAgentArray();
+	AgentArray agents = *GetAgentArrayPtr();
 
 	for (size_t i = 0; i < agents.size(); ++i) {
 		if (agents[i]->Allegiance == 1
@@ -23,8 +23,12 @@ std::vector<GWAPI::AgentMgr::Agent*> * GWAPI::AgentMgr::GetParty() {
 }
 
 size_t GWAPI::AgentMgr::GetPartySize() {
-	// TODO
-	return 8;
+	size_t ret = 0;
+
+	for (BYTE i = 0; i < 3; i++)
+		ret += *MemoryMgr::ReadPtrChain<size_t*>(MemoryMgr::GetContextPtr(), 3, 0x4C, 0x54, 0xC + 0x10 * i);
+
+	return ret;
 }
 
 DWORD GWAPI::AgentMgr::GetDistance(Agent* a, Agent* b) {
@@ -43,6 +47,11 @@ GWAPI::AgentMgr::AgentMgr(GWAPIMgr* obj) : parent(obj)
 void GWAPI::AgentMgr::ChangeTarget(Agent* Agent)
 {
 	parent->GameThread->Enqueue(_ChangeTarget, Agent->Id);
+}
+
+GWAPI::AgentMgr::MapAgentArray* GWAPI::AgentMgr::GetMapAgentArrayPtr()
+{
+	return MemoryMgr::ReadPtrChain<MapAgentArray*>(MemoryMgr::GetContextPtr(), 2, 0x2C, 0x7C);
 }
 
 GWAPI::AgentMgr::Agent* GWAPI::AgentMgr::AgentArray::GetTarget()

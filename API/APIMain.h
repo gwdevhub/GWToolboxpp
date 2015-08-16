@@ -77,7 +77,7 @@
 
 #include "MapMgr.h"
 
-
+#include "ChatMgr.h"
 
 namespace GWAPI{
 	class GWAPIMgr;
