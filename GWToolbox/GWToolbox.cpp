@@ -191,7 +191,7 @@ void GWToolbox::threadEntry(HMODULE mod) {
 
 	GWAPI::GWAPIMgr::Initialize();
 	GWAPI::GWAPIMgr * API = GWAPI::GWAPIMgr::GetInstance();
-	API->Chat->WriteChat(L"test");
+	API->Chat->SendChat(L"test", L'#');
 
 	instance = new GWToolbox(mod);
 	instance->exec();

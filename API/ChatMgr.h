@@ -15,6 +15,7 @@ namespace GWAPI {
 			const DWORD header = 0x5E;
 			wchar_t channel;
 			wchar_t msg[137];
+			DWORD unk;
 		};
 
 	public:
