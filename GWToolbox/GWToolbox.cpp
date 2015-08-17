@@ -45,7 +45,7 @@ LRESULT CALLBACK MessageHook(int code, WPARAM wParam, LPARAM lParam) {
 		case WM_MBUTTONDOWN:
 		case WM_MBUTTONUP:
 			if (input.ProcessMessage(msg)) {
-				//std::cout << "consumed mouse event " << msg->message << '\n';
+				std::cout << "consumed mouse event " << msg->message << '\n';
 				return TRUE;
 			}
 			break;
@@ -58,7 +58,7 @@ LRESULT CALLBACK MessageHook(int code, WPARAM wParam, LPARAM lParam) {
 		case WM_CHAR:
 		case WM_SYSCHAR:
 		case WM_IME_CHAR:
-			//std::cout << "processing keyboard event " << msg->message << '\n';
+			std::cout << "processing keyboard event " << msg->message << '\n';
 			input.ProcessMessage(msg);
 			break;
 		}
@@ -90,13 +90,15 @@ void create_gui(IDirect3DDevice9* pDevice) {
 	app->Run(form);
 	app->Enable();
 
-	app->RegisterHotkey(Hotkey(Key::Insert, [] {
-		Application::InstancePtr()->Toggle();
-		//std::cout << "hotkey fired! \n";
-	}));
+	//app->RegisterHotkey(Hotkey(Key::Insert, [] {
+	//	Application::InstancePtr()->Toggle();
+	//	//std::cout << "hotkey fired! \n";
+	//}));
 
-	GWToolbox::getInstance()->pcons->buildUI();
-	GWToolbox::getInstance()->builds->buildUI();
+	GWToolbox * tb = GWToolbox::getInstance();
+	tb->pcons->buildUI();
+	tb->builds->buildUI();
+	tb->hotkeys->buildUI();
 
 	oshinputhook = SetWindowsHookEx(WH_GETMESSAGE, MessageHook, NULL, GetCurrentThreadId());
 }
@@ -141,12 +143,12 @@ static HRESULT WINAPI resetScene(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETER
 
 
 void GWToolbox::exec() {
-	GWAPI::GWAPIMgr::Initialize();
-
 	mgr = GWAPI::GWAPIMgr::GetInstance();
 	dx = mgr->DirectX;
 
 	pcons->loadIni();
+	builds->loadIni();
+	hotkeys->loadIni();
 
 	dx->CreateRenderHooks(endScene, resetScene);
 	
@@ -160,6 +162,7 @@ void GWToolbox::exec() {
 		if (app->HasBeenInitialized()) {
 			pcons->mainRoutine();
 			builds->mainRoutine();
+			hotkeys->mainRoutine();
 		}
 		Sleep(10);
 
@@ -185,6 +188,10 @@ bool GWToolbox::isActive()
 
 void GWToolbox::threadEntry(HMODULE mod) {
 	if (instance) return;
+
+	GWAPI::GWAPIMgr::Initialize();
+	GWAPI::GWAPIMgr * API = GWAPI::GWAPIMgr::GetInstance();
+	API->Chat->WriteChat(L"test");
 
 	instance = new GWToolbox(mod);
 	instance->exec();

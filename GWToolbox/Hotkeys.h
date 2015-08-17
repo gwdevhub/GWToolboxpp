@@ -1,12 +1,15 @@
 #pragma once
 
 #include <vector>
+#include <functional>
+
 #include "Timer.h"
 #include "../API/APIMain.h"
 
 using namespace std;
 
 typedef unsigned char BYTE;
+//typedef std::function<void(const Hotkeys&)> HotkeyCallback;
 
 class Hotkeys {
 private:
@@ -32,47 +35,47 @@ private:
 	const BYTE DropCoins;
 	const BYTE count;
 
-	bool clickerToggle = false;			// clicker is active or not
-	bool dropCoinsToggle = false;		// coin dropper is active or not
+	bool clickerToggle = false;				// clicker is active or not
+	bool dropCoinsToggle = false;			// coin dropper is active or not
 
-	timer_t clickerTimer;				// timer for clicker
-	timer_t dropCoinsTimer;				// timer for coin dropper
+	timer_t clickerTimer;					// timer for clicker
+	timer_t dropCoinsTimer;					// timer for coin dropper
 	
-	unsigned int ruptSkillID = 0;		// skill id of the skill to rupt
-	unsigned int ruptSkillSlot = 0;		// skill slot of the skill to rupt with
-	bool ruptToggle = false;			// rupter active or not
+	unsigned int ruptSkillID = 0;			// skill id of the skill to rupt
+	unsigned int ruptSkillSlot = 0;			// skill slot of the skill to rupt with
+	bool ruptToggle = false;				// rupter active or not
 
 	float movementX = 0;					// X coordinate of the destination of movement macro
 	float movementY = 0;					// Y coordinate of the destination of movement macro
 	
-	vector<string> hotkeyName;			// name of hotkeys in Ini file
+	vector<string> hotkeyName;				// name of hotkeys in Ini file
 
-	vector<void(Hotkeys::*)()> callbacks;		// functions to call when hotkey is used
+	vector<void(*)(Hotkeys*) > callbacks;	// functions to call when hotkey is used
 
-	void callbackStuck();
-	void callbackRecall();
-	void callbackUA();
-	void callbackResign();
-	void callbackTeamResign();
-	void callbackClicker();
-	void callbackRes();
-	void callbackAge();
-	void callbackPstone();
-	void callbackGhostTarget();
-	void callbackGhostPop();
-	void callbackGstonePop();
-	void callbackLegioPop();
-	void callbackRainbowUse();
-	void callbackLooter();
-	void callbackIdentifier();
-	void callbackRupt();
-	void callbackMovement();
-	void callbackDrop1Coin();
-	void callbackDropCoins();
+	static void callbackStuck(Hotkeys* self);
+	static void callbackRecall(Hotkeys* self);
+	static void callbackUA(Hotkeys* self);
+	static void callbackResign(Hotkeys* self);
+	static void callbackTeamResign(Hotkeys* self);
+	static void callbackClicker(Hotkeys* self);
+	static void callbackRes(Hotkeys* self);
+	static void callbackAge(Hotkeys* self);
+	static void callbackPstone(Hotkeys* self);
+	static void callbackGhostTarget(Hotkeys* self);
+	static void callbackGhostPop(Hotkeys* self);
+	static void callbackGstonePop(Hotkeys* self);
+	static void callbackLegioPop(Hotkeys* self);
+	static void callbackRainbowUse(Hotkeys* self);
+	static void callbackLooter(Hotkeys* self);
+	static void callbackIdentifier(Hotkeys* self);
+	static void callbackRupt(Hotkeys* self);
+	static void callbackMovement(Hotkeys* self);
+	static void callbackDrop1Coin(Hotkeys* self);
+	static void callbackDropCoins(Hotkeys* self);
 
-	inline bool isLoading()		{ return GWAPI::GWAPIMgr::GetInstance()->Map->GetInstanceType() == GwConstants::InstanceType::Loading; }
-	inline bool isExplorable()	{ return GWAPI::GWAPIMgr::GetInstance()->Map->GetInstanceType() == GwConstants::InstanceType::Explorable; }
-	inline bool isOutpost()		{ return GWAPI::GWAPIMgr::GetInstance()->Map->GetInstanceType() == GwConstants::InstanceType::Outpost; }
+	static inline bool isLoading()		{ return GWAPI::GWAPIMgr::GetInstance()->Map->GetInstanceType() == GwConstants::InstanceType::Loading; }
+	static inline bool isExplorable()	{ return GWAPI::GWAPIMgr::GetInstance()->Map->GetInstanceType() == GwConstants::InstanceType::Explorable; }
+	static inline bool isOutpost()		{ return GWAPI::GWAPIMgr::GetInstance()->Map->GetInstanceType() == GwConstants::InstanceType::Outpost; }
 
 public:
 	Hotkeys();

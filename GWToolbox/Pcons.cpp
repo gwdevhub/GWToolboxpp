@@ -162,7 +162,7 @@ void Pcons::mainRoutine() {
 						pconsTimer[Pcons::Cons] = Timer::init();
 					} else {
 						scanInventory();
-						API->Chat->WriteToChat(L"[WARNING] Cannot find cons");
+						API->Chat->WriteChat(L"[WARNING] Cannot find cons");
 					}
 				}
 			}
@@ -195,7 +195,7 @@ void Pcons::mainRoutine() {
 					pconsTimer[Pcons::Alcohol] = Timer::init();
 				} else {
 					scanInventory();
-					API->Chat->WriteToChat(L"[WARNING] Cannot find Alcohol");
+					API->Chat->WriteChat(L"[WARNING] Cannot find Alcohol");
 				}
 			}
 		}
@@ -214,7 +214,7 @@ void Pcons::mainRoutine() {
 				pconsTimer[Pcons::Lunars] = Timer::init();
 			} else {
 				scanInventory();
-				API->Chat->WriteToChat(L"[WARNING] Cannot find Lunar Fortunes");
+				API->Chat->WriteChat(L"[WARNING] Cannot find Lunar Fortunes");
 			}
 		}
 
@@ -231,7 +231,7 @@ void Pcons::mainRoutine() {
 						pconsTimer[Pcons::Res] = Timer::init();
 					} else {
 						scanInventory();
-						API->Chat->WriteToChat(L"[WARNING] Cannot find Res Scrolls");
+						API->Chat->WriteChat(L"[WARNING] Cannot find Res Scrolls");
 					}
 
 				}
@@ -251,7 +251,7 @@ void Pcons::mainRoutine() {
 				pconsTimer[Pcons::Mobstoppers] = Timer::init();
 			} else {
 				scanInventory();
-				API->Chat->WriteToChat(L"[WARNING] Cannot find Mobstoppers");
+				API->Chat->WriteChat(L"[WARNING] Cannot find Mobstoppers");
 			}
 		}
 		break;
@@ -278,7 +278,7 @@ void Pcons::mainRoutine() {
 						pconsTimer[Pcons::City] = Timer::init();
 					} else {
 						scanInventory();
-						API->Chat->WriteToChat(L"[WARNING] Cannot find a city speedboost");
+						API->Chat->WriteChat(L"[WARNING] Cannot find a city speedboost");
 					}
 				}
 			}
@@ -304,7 +304,7 @@ void Pcons::checkAndUsePcon(int PconID) {
 				scanInventory();
 				wstring msg(L"[WARNING] Cannot find ");
 				msg.append(pconsChatName[PconID]);
-				API->Chat->WriteToChat(msg.c_str());
+				API->Chat->WriteChat(msg.c_str());
 			}
 		}
 	}

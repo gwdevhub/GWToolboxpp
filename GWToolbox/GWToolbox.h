@@ -4,6 +4,7 @@
 
 #include "Pcons.h"
 #include "Builds.h"
+#include "Hotkeys.h"
 
 using namespace OSHGui;
 
@@ -15,13 +16,15 @@ private:
 public:
 	Pcons* const pcons;
 	Builds* const builds;
+	Hotkeys * const hotkeys;
 
 private:
 	GWToolbox(HMODULE mod) :
 		m_dllmodule(mod),
 		pcons(new Pcons()),
-		builds(new Builds()) {
-	}
+		builds(new Builds()),
+		hotkeys(new Hotkeys()) 
+	{ }
 
 	// Executes setup and main loop of toolbox. 
 	void exec();

@@ -16,7 +16,7 @@ private:
 	void sendPlayerBuild(std::wstring name, std::wstring template_, int partyMember, bool showNumbers);
 
 public:
-	void readIni();
+	void loadIni();
 	void buildUI();
 	void mainRoutine();
 };

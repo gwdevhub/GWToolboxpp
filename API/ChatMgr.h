@@ -23,7 +23,10 @@ namespace GWAPI {
 		void SendChat(const wchar_t* msg, wchar_t channel);
 
 		// Write to chat as a PM with printf style arguments.
-		void WriteToChat(const wchar_t* format, ...);
+		void WriteChatF(const wchar_t* format, ...);
+
+		// Simple write to chat as a PM
+		void WriteChat(const wchar_t* msg, const wchar_t* from = L"GWToolbox++");
 
 	};
 

@@ -23,7 +23,7 @@ void Builds::sendPlayerBuild(wstring name, wstring template_, int partyMember, b
 	GWAPI::GWAPIMgr::GetInstance()->Chat->SendChat(msg.c_str(), L'#');
 }
 
-void Builds::readIni() {
+void Builds::loadIni() {
 	// TODO
 }
 

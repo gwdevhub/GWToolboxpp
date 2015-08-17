@@ -2,13 +2,13 @@
 
 using namespace GWAPI;
 
-void Hotkeys::callbackStuck() {
-	if (isLoading()) return;
+void Hotkeys::callbackStuck(Hotkeys * self) {
+	if (self->isLoading()) return;
 
 	GWAPIMgr::GetInstance()->Chat->SendChat(L"stuck", L'/');
 }
 
-void Hotkeys::callbackRecall() {
+void Hotkeys::callbackRecall(Hotkeys * self) {
 	if (!isExplorable()) return;
 
 	GWAPIMgr* API = GWAPIMgr::GetInstance();
@@ -23,7 +23,7 @@ void Hotkeys::callbackRecall() {
 	}
 }
 
-void Hotkeys::callbackUA() {
+void Hotkeys::callbackUA(Hotkeys * self) {
 	if (!isExplorable()) return;
 
 	GWAPIMgr* API = GWAPIMgr::GetInstance();
@@ -38,44 +38,44 @@ void Hotkeys::callbackUA() {
 	}
 }
 
-void Hotkeys::callbackResign() {
+void Hotkeys::callbackResign(Hotkeys * self) {
 	if (isLoading()) return;
 	GWAPIMgr::GetInstance()->Chat->SendChat(L"resign", L'/');
-	GWAPIMgr::GetInstance()->Chat->WriteToChat(L"/resign");
+	GWAPIMgr::GetInstance()->Chat->WriteChat(L"/resign");
 }
 
-void Hotkeys::callbackTeamResign() {
+void Hotkeys::callbackTeamResign(Hotkeys * self) {
 	if (isLoading()) return;
 	GWAPIMgr::GetInstance()->Chat->SendChat(L"[/resign;xx]", L'#');
 }
 
-void Hotkeys::callbackClicker() {
-	clickerToggle = !clickerToggle;
+void Hotkeys::callbackClicker(Hotkeys * self) {
+	self->clickerToggle = !self->clickerToggle;
 	if (!isLoading()) {
-		GWAPIMgr::GetInstance()->Chat->WriteToChat(clickerToggle ? L"Clicker enabled" : L"Clicker disabled");
+		GWAPIMgr::GetInstance()->Chat->WriteChat(self->clickerToggle ? L"Clicker enabled" : L"Clicker disabled");
 	}
 }
 
-void Hotkeys::callbackRes() {
+void Hotkeys::callbackRes(Hotkeys * self) {
 	if (isExplorable()
 		&& !GWAPIMgr::GetInstance()->Items->UseItemByModelId(GwConstants::ItemID::ResScrolls)) {
-		GWAPIMgr::GetInstance()->Chat->WriteToChat(L"[Warning] Res scroll not found!");
+		GWAPIMgr::GetInstance()->Chat->WriteChat(L"[Warning] Res scroll not found!");
 	}
 }
 
-void Hotkeys::callbackAge() {
+void Hotkeys::callbackAge(Hotkeys * self) {
 	if (isLoading()) return;
 	GWAPIMgr::GetInstance()->Chat->SendChat(L"age", L'/');
 }
 
-void Hotkeys::callbackPstone() {
+void Hotkeys::callbackPstone(Hotkeys * self) {
 	if (isExplorable()
 		&& !GWAPIMgr::GetInstance()->Items->UseItemByModelId(GwConstants::ItemID::Powerstone)) {
-		GWAPIMgr::GetInstance()->Chat->WriteToChat(L"[Warning] Powerstone not found!");
+		GWAPIMgr::GetInstance()->Chat->WriteChat(L"[Warning] Powerstone not found!");
 	}
 }
 
-void Hotkeys::callbackGhostTarget() {
+void Hotkeys::callbackGhostTarget(Hotkeys * self) {
 	if (isLoading()) return;
 
 	GWAPIMgr* API = GWAPIMgr::GetInstance();
@@ -101,82 +101,82 @@ void Hotkeys::callbackGhostTarget() {
 	}
 }
 
-void Hotkeys::callbackGhostPop() {
+void Hotkeys::callbackGhostPop(Hotkeys * self) {
 	if (!isLoading()
 		&& !GWAPIMgr::GetInstance()->Items->UseItemByModelId(GwConstants::ItemID::GhostInTheBox)) {
-		GWAPIMgr::GetInstance()->Chat->WriteToChat(L"[Warning] Ghost-in-the-box not found!");
+		GWAPIMgr::GetInstance()->Chat->WriteChat(L"[Warning] Ghost-in-the-box not found!");
 	}
 }
 
-void Hotkeys::callbackGstonePop() {
+void Hotkeys::callbackGstonePop(Hotkeys * self) {
 	if (isExplorable()
 		&& !GWAPIMgr::GetInstance()->Items->UseItemByModelId(GwConstants::ItemID::GhastlyStone)) {
-		GWAPIMgr::GetInstance()->Chat->WriteToChat(L"[Warning] Ghastly Summoning Stone not found!");
+		GWAPIMgr::GetInstance()->Chat->WriteChat(L"[Warning] Ghastly Summoning Stone not found!");
 	}
 }
 
-void Hotkeys::callbackLegioPop() {
+void Hotkeys::callbackLegioPop(Hotkeys * self) {
 	if (isExplorable()
 		&& !GWAPIMgr::GetInstance()->Items->UseItemByModelId(GwConstants::ItemID::LegionnaireStone)) {
-		GWAPIMgr::GetInstance()->Chat->WriteToChat(L"[Warning] Legionnaire Summoning Crystal not found!");
+		GWAPIMgr::GetInstance()->Chat->WriteChat(L"[Warning] Legionnaire Summoning Crystal not found!");
 	}
 }
 
-void Hotkeys::callbackRainbowUse() {
+void Hotkeys::callbackRainbowUse(Hotkeys * self) {
 	if (!isExplorable()) return;
 
 	GWAPIMgr* API = GWAPIMgr::GetInstance();
 
 	if (API->Effects->GetPlayerEffectById(GwConstants::Effect::Redrock).SkillId == 0) {
 		if (!API->Items->UseItemByModelId(GwConstants::ItemID::RRC)) {
-			API->Chat->WriteToChat(L"[Warning] Red Rock Candy not found!");
+			API->Chat->WriteChat(L"[Warning] Red Rock Candy not found!");
 		}
 	}
 
 	if (API->Effects->GetPlayerEffectById(GwConstants::Effect::Bluerock).SkillId == 0) {
 		if (!API->Items->UseItemByModelId(GwConstants::ItemID::BRC)) {
-			API->Chat->WriteToChat(L"[Warning] Blue Rock Candy not found!");
+			API->Chat->WriteChat(L"[Warning] Blue Rock Candy not found!");
 		}
 	}
 
 	if (API->Effects->GetPlayerEffectById(GwConstants::Effect::Greenrock).SkillId == 0) {
 		if (!API->Items->UseItemByModelId(GwConstants::ItemID::GRC)) {
-			API->Chat->WriteToChat(L"[Warning] Green Rock Candy not found!");
+			API->Chat->WriteChat(L"[Warning] Green Rock Candy not found!");
 		}
 	}
 }
 
-void Hotkeys::callbackIdentifier() {
+void Hotkeys::callbackIdentifier(Hotkeys * self) {
 	// TODO
 }
 
-void Hotkeys::callbackRupt() {
-	ruptToggle = !ruptToggle;
+void Hotkeys::callbackRupt(Hotkeys * self) {
+	self->ruptToggle = !self->ruptToggle;
 
 	if (!isLoading()) {
-		GWAPIMgr::GetInstance()->Chat->WriteToChat(clickerToggle ? L"Rupt enabled" : L"Rupt disabled");
+		GWAPIMgr::GetInstance()->Chat->WriteChat(self->clickerToggle ? L"Rupt enabled" : L"Rupt disabled");
 	}
 }
 
-void Hotkeys::callbackMovement() {
+void Hotkeys::callbackMovement(Hotkeys * self) {
 	if (isLoading()) return;
-	if (movementX == 0 && movementY == 0) return;
+	if (self->movementX == 0 && self->movementY == 0) return;
 
-	GWAPIMgr::GetInstance()->Agents->Move(movementX, movementY);
-	GWAPIMgr::GetInstance()->Chat->WriteToChat(L"Movement macro activated");
+	GWAPIMgr::GetInstance()->Agents->Move(self->movementX, self->movementY);
+	GWAPIMgr::GetInstance()->Chat->WriteChat(L"Movement macro activated");
 }
 
-void Hotkeys::callbackDrop1Coin() {
+void Hotkeys::callbackDrop1Coin(Hotkeys * self) {
 	if (!isExplorable()) return;
 
 	GWAPIMgr::GetInstance()->Items->DropGold();
 }
 
-void Hotkeys::callbackDropCoins() {
-	dropCoinsToggle = !dropCoinsToggle;
+void Hotkeys::callbackDropCoins(Hotkeys * self) {
+	self->dropCoinsToggle = !self->dropCoinsToggle;
 
 	if (!isLoading()) {
-		GWAPIMgr::GetInstance()->Chat->WriteToChat(clickerToggle ? L"Coin dropper enabled" : L"Coin dropper disabled");
+		GWAPIMgr::GetInstance()->Chat->WriteChat(self->clickerToggle ? L"Coin dropper enabled" : L"Coin dropper disabled");
 	}
 }
 
@@ -227,7 +227,7 @@ count(initializer)
 	hotkeyName[Hotkeys::Drop1Coin] = "drop1coin";
 	hotkeyName[Hotkeys::DropCoins] = "dropcoins";
 
-	callbacks = vector<void(Hotkeys::*)()>(Hotkeys::count);
+	callbacks = std::vector<void(*)(Hotkeys*)>(Hotkeys::count);
 	callbacks[Hotkeys::Stuck] = &Hotkeys::callbackStuck;
 	callbacks[Hotkeys::Recall] = &Hotkeys::callbackRecall;
 	callbacks[Hotkeys::UA] = &Hotkeys::callbackUA;
@@ -258,5 +258,7 @@ void Hotkeys::buildUI() {
 }
 
 void Hotkeys::mainRoutine() {
-	// TODO
+	if (GetAsyncKeyState(VK_INSERT) & 1) {
+		callbacks[Hotkeys::Age](this);
+	}
 }

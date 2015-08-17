@@ -14,7 +14,7 @@ void GWAPI::ChatMgr::SendChat(const wchar_t* msg, wchar_t channel)
 	parent->CtoS->SendPacket<P5E_SendChat>(chat);
 }
 
-void GWAPI::ChatMgr::WriteToChat(const wchar_t* format, ...)
+void GWAPI::ChatMgr::WriteChatF(const wchar_t* format, ...)
 {
 	static wchar_t* chat = NULL;
 	static wchar_t* name = L"GWToolbox++";
@@ -32,4 +32,11 @@ void GWAPI::ChatMgr::WriteToChat(const wchar_t* format, ...)
 	((void(__fastcall *)(DWORD, wchar_t*, wchar_t*))
 		MemoryMgr::WriteChatFunction)
 		(0, name, chat);
+}
+
+void GWAPI::ChatMgr::WriteChat(const wchar_t* msg, const wchar_t* from) {
+
+	((void(__fastcall *)(DWORD, const wchar_t*, const wchar_t*))
+		MemoryMgr::WriteChatFunction)
+		(0, from, msg);
 }
