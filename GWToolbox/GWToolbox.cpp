@@ -157,6 +157,8 @@ void GWToolbox::exec() {
 
 	m_Active = true;
 
+	mgr->Chat->WriteChatF(L"My Agent Id = %d", mgr->Agents->GetPlayerId());
+
 	Application * app = Application::InstancePtr();
 	while (true) { // main loop
 		if (app->HasBeenInitialized()) {
