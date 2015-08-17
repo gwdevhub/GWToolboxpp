@@ -15,16 +15,19 @@ private:
 	static GWToolbox* instance;
 
 public:
+	Config* const config;
+
 	Pcons* const pcons;
 	Builds* const builds;
-	Hotkeys * const hotkeys;
+	Hotkeys* const hotkeys;
 
 private:
 	GWToolbox(HMODULE mod) :
 		m_dllmodule(mod),
+		config(new Config()),
 		pcons(new Pcons()),
 		builds(new Builds()),
-		hotkeys(new Hotkeys()) 
+		hotkeys(new Hotkeys())
 	{ }
 
 	// Executes setup and main loop of toolbox. 
@@ -33,12 +36,9 @@ private:
 	// Self destructs
 	void destroy();
 
-	// ??? (also why a private accessor to a private field? xD)
-	bool isActive();
-	// ???
-	bool m_Active;
-	// ???
-	HMODULE m_dllmodule;
+	bool isActive();		// ??? (also why a private accessor to a private field? xD)
+	bool m_Active;			// ???
+	HMODULE m_dllmodule;	// ???
 
 public:
 	// will create a new toolbox object and run it, can be used as argument for createThread

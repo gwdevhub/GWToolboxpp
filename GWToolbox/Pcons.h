@@ -34,7 +34,7 @@ private:
 	
 	bool enabled;						// true if the feature is enabled, false otherwise 
 
-	vector<string> pconsName;			// map from each pcon to ini name
+	vector<wstring> pconsName;			// map from each pcon to ini name
 	vector<wstring> pconsChatName;		// map from each pcon to chat name
 	vector<int> pconsItemID;			// map from pcons to item id
 	vector<bool> pconsActive;			// map from pcons to status active (bool) 

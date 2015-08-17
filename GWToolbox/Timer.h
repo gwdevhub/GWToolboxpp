@@ -13,7 +13,7 @@ find the difference in milliseconds with Timer::diff(timer_t timer)
 
 typedef unsigned long timer_t;
 
-class Timer {
+class TBTimer {
 	
 public:
 	// Initializes a new timer (saves current time)

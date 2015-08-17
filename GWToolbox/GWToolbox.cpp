@@ -74,10 +74,10 @@ void create_gui(IDirect3DDevice9* pDevice) {
 
 	Theme theme;
 	try {
-		theme.Load("DefaultTheme.txt"); // TODO: use a use local path or standard path instead
+		theme.Load(GWToolbox::getInstance()->config->getPath("DefaultTheme.txt"));
 		app->SetTheme(theme);
 	} catch (Misc::InvalidThemeException e) {
-		std::cout << "Warning: could not load theme file\n";
+		std::wcout << L"Warning: could not load theme file\n";
 	}
 	
 	auto font = FontManager::LoadFont("Arial", 8.0f, false); //Arial, 8PT, no anti-aliasing
@@ -159,8 +159,6 @@ void GWToolbox::exec() {
 
 	m_Active = true;
 
-	mgr->Chat->WriteChatF(L"My Agent Id = %d", mgr->Agents->GetPlayerId());
-
 	Application * app = Application::InstancePtr();
 	while (true) { // main loop
 		if (app->HasBeenInitialized()) {
@@ -177,6 +175,11 @@ void GWToolbox::exec() {
 
 void GWToolbox::destroy()
 {
+	delete config;
+	delete pcons;
+	delete builds;
+	delete hotkeys;
+
 	//UnhookWindowsHookEx(oshinputhook);
 	GWAPI::GWAPIMgr::Destruct();
 	m_Active = false;
@@ -184,8 +187,7 @@ void GWToolbox::destroy()
 }
 
 // what is this for?
-bool GWToolbox::isActive() 
-{
+bool GWToolbox::isActive() {
 	return m_Active;
 }
 

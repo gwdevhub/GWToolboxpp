@@ -203,8 +203,8 @@ Drop1Coin(initializer++),
 DropCoins(initializer++),
 count(initializer)
 {
-	clickerTimer = Timer::init();
-	dropCoinsTimer = Timer::init();
+	clickerTimer = TBTimer::init();
+	dropCoinsTimer = TBTimer::init();
 
 	hotkeyName = vector<string>(Hotkeys::count);
 	hotkeyName[Hotkeys::Stuck] = "stuck";
@@ -247,6 +247,9 @@ count(initializer)
 	callbacks[Hotkeys::Movement] = &Hotkeys::callbackMovement;
 	callbacks[Hotkeys::Drop1Coin] = &Hotkeys::callbackDrop1Coin;
 	callbacks[Hotkeys::DropCoins] = &Hotkeys::callbackDropCoins;
+}
+
+Hotkeys::~Hotkeys() {
 }
 
 void Hotkeys::loadIni() {

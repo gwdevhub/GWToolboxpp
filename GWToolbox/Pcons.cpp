@@ -2,6 +2,9 @@
 #include "../API/GwConstants.h"
 #include "../API/APIMain.h"
 
+//#include "Config.h"
+#include "GWToolbox.h"
+
 using namespace GWAPI;
 using namespace GwConstants;
 
@@ -30,25 +33,25 @@ count(initializer)
 
 	pconsActive = vector<bool>(Pcons::count, false);
 
-	pconsName = vector<string>(Pcons::count);
-	pconsName[Pcons::Cons] = "cons";
-	pconsName[Pcons::Alcohol] = "alcohol";
-	pconsName[Pcons::RRC] = "RRC";
-	pconsName[Pcons::BRC] = "BRC";
-	pconsName[Pcons::GRC] = "GRC";
-	pconsName[Pcons::Pie] = "pie";
-	pconsName[Pcons::Cupcake] = "cupcake";
-	pconsName[Pcons::Apple] = "apple";
-	pconsName[Pcons::Corn] = "corn";
-	pconsName[Pcons::Egg] = "egg";
-	pconsName[Pcons::Kabob] = "kabob";
-	pconsName[Pcons::Warsupply] = "warsupply";
-	pconsName[Pcons::Lunars] = "lunars";
-	pconsName[Pcons::Res] = "res";
-	pconsName[Pcons::Skalesoup] = "skalesoup";
-	pconsName[Pcons::Mobstoppers] = "mobstoppers";
-	pconsName[Pcons::Panhai] = "panhai";
-	pconsName[Pcons::City] = "city";
+	pconsName = vector<wstring>(Pcons::count);
+	pconsName[Pcons::Cons] = L"cons";
+	pconsName[Pcons::Alcohol] = L"alcohol";
+	pconsName[Pcons::RRC] = L"RRC";
+	pconsName[Pcons::BRC] = L"BRC";
+	pconsName[Pcons::GRC] = L"GRC";
+	pconsName[Pcons::Pie] = L"pie";
+	pconsName[Pcons::Cupcake] = L"cupcake";
+	pconsName[Pcons::Apple] = L"apple";
+	pconsName[Pcons::Corn] = L"corn";
+	pconsName[Pcons::Egg] = L"egg";
+	pconsName[Pcons::Kabob] = L"kabob";
+	pconsName[Pcons::Warsupply] = L"warsupply";
+	pconsName[Pcons::Lunars] = L"lunars";
+	pconsName[Pcons::Res] = L"res";
+	pconsName[Pcons::Skalesoup] = L"skalesoup";
+	pconsName[Pcons::Mobstoppers] = L"mobstoppers";
+	pconsName[Pcons::Panhai] = L"panhai";
+	pconsName[Pcons::City] = L"city";
 	
 	pconsItemID = vector<int>(Pcons::count, -1);
 	pconsItemID[Pcons::RRC] = GwConstants::ItemID::RRC;
@@ -66,7 +69,7 @@ count(initializer)
 	pconsItemID[Pcons::Mobstoppers] = GwConstants::ItemID::Mobstopper;
 	pconsItemID[Pcons::Panhai] = GwConstants::ItemID::PahnaiSalad;
 
-	pconsTimer = vector<timer_t>(Pcons::count, Timer::init());
+	pconsTimer = vector<timer_t>(Pcons::count, TBTimer::init());
 
 	pconsEffect = vector<int>(Pcons::count, -1);
 	pconsEffect[Pcons::RRC] = Effect::Redrock;
@@ -83,25 +86,30 @@ count(initializer)
 	pconsEffect[Pcons::Panhai] = Effect::PahnaiSalad;
 
 	pconsChatName = vector<wstring>(Pcons::count, L"");
-	pconsName[Pcons::RRC] = "Red Rocks";
-	pconsName[Pcons::BRC] = "Blue Rocks";
-	pconsName[Pcons::GRC] = "Green Rocks";
-	pconsName[Pcons::Pie] = "Pies";
-	pconsName[Pcons::Cupcake] = "Cupcakes";
-	pconsName[Pcons::Apple] = "Apples";
-	pconsName[Pcons::Corn] = "Corns";
-	pconsName[Pcons::Egg] = "Eggs";
-	pconsName[Pcons::Kabob] = "Kabobs";
-	pconsName[Pcons::Warsupply] = "War Supplies";
-	pconsName[Pcons::Skalesoup] = "Skalefin Soup";
-	pconsName[Pcons::Panhai] = "Panhai Salad";
+	pconsChatName[Pcons::RRC] = L"Red Rocks";
+	pconsChatName[Pcons::BRC] = L"Blue Rocks";
+	pconsChatName[Pcons::GRC] = L"Green Rocks";
+	pconsChatName[Pcons::Pie] = L"Pies";
+	pconsChatName[Pcons::Cupcake] = L"Cupcakes";
+	pconsChatName[Pcons::Apple] = L"Apples";
+	pconsChatName[Pcons::Corn] = L"Corns";
+	pconsChatName[Pcons::Egg] = L"Eggs";
+	pconsChatName[Pcons::Kabob] = L"Kabobs";
+	pconsChatName[Pcons::Warsupply] = L"War Supplies";
+	pconsChatName[Pcons::Skalesoup] = L"Skalefin Soup";
+	pconsChatName[Pcons::Panhai] = L"Panhai Salad";
 }
 
 Pcons::~Pcons() {
 }
 
 void Pcons::loadIni() {
-	// TODO
+	Config* config = GWToolbox::getInstance()->config;
+	wstring section = L"pcons";
+	enabled = config->iniReadBool(section, L"active", false);
+	for (size_t i = 0; i < Pcons::count; ++i) {
+		pconsActive[i] = config->iniReadBool(section, pconsName[i], false);
+	}
 }
 
 void Pcons::buildUI() {
@@ -137,7 +145,7 @@ void Pcons::mainRoutine() {
 			&& API->Effects->GetPlayerEffectById(Effect::ConsEssence).SkillId
 			&& API->Effects->GetPlayerEffectById(Effect::ConsArmor).SkillId
 			&& API->Effects->GetPlayerEffectById(Effect::ConsGrail).SkillId
-			&& Timer::diff(pconsTimer[Pcons::Cons]) > 5000) {
+			&& TBTimer::diff(pconsTimer[Pcons::Cons]) > 5000) {
 
 			size_t partySize = API->Agents->GetPartySize();
 			vector<AgentMgr::Agent*> party = *API->Agents->GetParty();
@@ -159,7 +167,7 @@ void Pcons::mainRoutine() {
 						API->Items->UseItemByModelId(ItemID::ConsGrail);
 						API->Items->UseItemByModelId(ItemID::ConsArmor);
 							
-						pconsTimer[Pcons::Cons] = Timer::init();
+						pconsTimer[Pcons::Cons] = TBTimer::init();
 					} else {
 						scanInventory();
 						API->Chat->WriteChat(L"[WARNING] Cannot find cons");
@@ -172,7 +180,7 @@ void Pcons::mainRoutine() {
 		// alcohol
 		if (pconsActive[Pcons::Alcohol]) {
 			if (API->Effects->GetAlcoholLevel() <= 1
-				&& Timer::diff(pconsTimer[Pcons::Alcohol]) > 5000) {
+				&& TBTimer::diff(pconsTimer[Pcons::Alcohol]) > 5000) {
 
 				// use an alcohol item. Because of logical-OR only the first one will be used
 				if (   API->Items->UseItemByModelId(ItemID::Eggnog)
@@ -192,7 +200,7 @@ void Pcons::mainRoutine() {
 					|| API->Items->UseItemByModelId(ItemID::FlaskOfFirewater)
 					|| API->Items->UseItemByModelId(ItemID::KrytanBrandy)) {
 
-					pconsTimer[Pcons::Alcohol] = Timer::init();
+					pconsTimer[Pcons::Alcohol] = TBTimer::init();
 				} else {
 					scanInventory();
 					API->Chat->WriteChat(L"[WARNING] Cannot find Alcohol");
@@ -203,7 +211,7 @@ void Pcons::mainRoutine() {
 		// lunars
 		if (pconsActive[Pcons::Lunars]
 			&& API->Effects->GetPlayerEffectById(Effect::Lunars).SkillId
-			&& Timer::diff(pconsTimer[Pcons::Lunars]) > 500) {
+			&& TBTimer::diff(pconsTimer[Pcons::Lunars]) > 500) {
 
 			if (   API->Items->UseItemByModelId(ItemID::LunarDragon)
 				&& API->Items->UseItemByModelId(ItemID::LunarHorse)
@@ -211,7 +219,7 @@ void Pcons::mainRoutine() {
 				&& API->Items->UseItemByModelId(ItemID::LunarSheep)
 				&& API->Items->UseItemByModelId(ItemID::LunarSnake)) {
 
-				pconsTimer[Pcons::Lunars] = Timer::init();
+				pconsTimer[Pcons::Lunars] = TBTimer::init();
 			} else {
 				scanInventory();
 				API->Chat->WriteChat(L"[WARNING] Cannot find Lunar Fortunes");
@@ -220,7 +228,7 @@ void Pcons::mainRoutine() {
 
 		// res scrolls
 		if (pconsActive[Pcons::Res]
-			&& Timer::diff(pconsTimer[Pcons::Res]) > 500) {
+			&& TBTimer::diff(pconsTimer[Pcons::Res]) > 500) {
 
 			vector<AgentMgr::Agent*> party = *API->Agents->GetParty();
 			for (size_t i = 0; i < party.size(); ++i) {
@@ -228,7 +236,7 @@ void Pcons::mainRoutine() {
 				if (party[i]->GetIsDead()
 					&& API->Agents->GetSqrDistance(party[i], me) < SqrRange::Earshot) {
 					if (API->Items->UseItemByModelId(ItemID::ResScrolls)) {
-						pconsTimer[Pcons::Res] = Timer::init();
+						pconsTimer[Pcons::Res] = TBTimer::init();
 					} else {
 						scanInventory();
 						API->Chat->WriteChat(L"[WARNING] Cannot find Res Scrolls");
@@ -245,10 +253,10 @@ void Pcons::mainRoutine() {
 			&& API->Agents->GetTarget()->PlayerNumber == ModelID::SkeletonOfDhuum
 			&& API->Agents->GetTarget()->HP < 0.25
 			&& API->Agents->GetDistance(API->Agents->GetTarget(), API->Agents->GetPlayer())
-			&& Timer::diff(pconsTimer[Pcons::Mobstoppers]) > 5000) {
+			&& TBTimer::diff(pconsTimer[Pcons::Mobstoppers]) > 5000) {
 
 			if (API->Items->UseItemByModelId(ItemID::Mobstopper)) {
-				pconsTimer[Pcons::Mobstoppers] = Timer::init();
+				pconsTimer[Pcons::Mobstoppers] = TBTimer::init();
 			} else {
 				scanInventory();
 				API->Chat->WriteChat(L"[WARNING] Cannot find Mobstoppers");
@@ -275,7 +283,7 @@ void Pcons::mainRoutine() {
 						|| API->Items->UseItemByModelId(ItemID::RedBeanCake)
 						|| API->Items->UseItemByModelId(ItemID::JarOfHoney)) {
 
-						pconsTimer[Pcons::City] = Timer::init();
+						pconsTimer[Pcons::City] = TBTimer::init();
 					} else {
 						scanInventory();
 						API->Chat->WriteChat(L"[WARNING] Cannot find a city speedboost");
@@ -292,14 +300,14 @@ void Pcons::mainRoutine() {
 
 void Pcons::checkAndUsePcon(int PconID) {
 	if (pconsActive[PconID]
-		&& Timer::diff(pconsTimer[PconID]) > 5000) {
+		&& TBTimer::diff(pconsTimer[PconID]) > 5000) {
 
 		GWAPIMgr * API = GWAPIMgr::GetInstance();
 		EffectMgr::Effect effect = API->Effects->GetPlayerEffectById(pconsEffect[PconID]);
 
 		if (effect.SkillId == 0 || effect.GetTimeRemaining() < 1000) {
 			if (API->Items->UseItemByModelId(pconsItemID[PconID])) {
-				pconsTimer[PconID] = Timer::init();
+				pconsTimer[PconID] = TBTimer::init();
 			} else {
 				scanInventory();
 				wstring msg(L"[WARNING] Cannot find ");
