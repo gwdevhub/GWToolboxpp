@@ -149,14 +149,14 @@ namespace GWAPI {
 		public:
 			Agent* GetPlayer() { return GetIndex(GetPlayerId()); }
 			Agent* GetTarget() { return GetIndex(GetTargetId()); }
-			inline DWORD GetPlayerId() { return *(DWORD*)MemoryMgr::TargetAgentIDPtr; }
+			inline DWORD GetPlayerId() { return *(DWORD*)MemoryMgr::PlayerAgentIDPtr; }
 			inline DWORD GetTargetId() { return *(DWORD*)MemoryMgr::TargetAgentIDPtr; }
 		};
 
 		inline Agent* GetPlayer() { return GetAgentArray()[GetPlayerId()]; }
 		inline Agent* GetTarget() { return GetAgentArray()[GetTargetId()]; }
 
-		inline DWORD GetPlayerId() { return *(DWORD*)MemoryMgr::TargetAgentIDPtr; }
+		inline DWORD GetPlayerId() { return *(DWORD*)MemoryMgr::PlayerAgentIDPtr; }
 		inline DWORD GetTargetId() { return *(DWORD*)MemoryMgr::TargetAgentIDPtr; }
 
 		typedef MemoryMgr::gw_array<MapAgent> MapAgentArray;
