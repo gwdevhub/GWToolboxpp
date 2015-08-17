@@ -5,6 +5,7 @@
 #include "../include/OSHGui/Input/WindowsMessage.hpp"
 
 #include <iostream>
+#include <string>
 
 using namespace OSHGui::Drawing;
 using namespace OSHGui::Input;
@@ -145,6 +146,7 @@ static HRESULT WINAPI resetScene(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETER
 void GWToolbox::exec() {
 	mgr = GWAPI::GWAPIMgr::GetInstance();
 	dx = mgr->DirectX;
+	
 
 	pcons->loadIni();
 	builds->loadIni();

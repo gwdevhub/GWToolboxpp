@@ -5,6 +5,7 @@
 #include "Pcons.h"
 #include "Builds.h"
 #include "Hotkeys.h"
+#include "Config.h"
 
 using namespace OSHGui;
 

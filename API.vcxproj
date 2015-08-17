@@ -99,6 +99,7 @@
     <ClInclude Include="API\SkillbarMgr.h" />
     <ClInclude Include="API\StoCMgr.h" />
     <ClInclude Include="GWToolbox\Builds.h" />
+    <ClInclude Include="GWToolbox\Config.h" />
     <ClInclude Include="GWToolbox\GWToolbox.h" />
     <ClInclude Include="GWToolbox\Hotkeys.h" />
     <ClInclude Include="GWToolbox\Pcons.h" />
