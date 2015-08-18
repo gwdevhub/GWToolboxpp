@@ -385,6 +385,9 @@
     <ClInclude Include="GWToolbox\Config.h">
       <Filter>Main\GWToolbox</Filter>
     </ClInclude>
+    <ClInclude Include="GWToolbox\logger.h">
+      <Filter>Main\GWToolbox</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">

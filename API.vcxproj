@@ -102,6 +102,7 @@
     <ClInclude Include="GWToolbox\Config.h" />
     <ClInclude Include="GWToolbox\GWToolbox.h" />
     <ClInclude Include="GWToolbox\Hotkeys.h" />
+    <ClInclude Include="GWToolbox\logger.h" />
     <ClInclude Include="GWToolbox\Pcons.h" />
     <ClInclude Include="GWToolbox\Timer.h" />
     <ClInclude Include="GWToolbox\Travel.h" />

@@ -105,10 +105,10 @@ Pcons::~Pcons() {
 
 void Pcons::loadIni() {
 	Config* config = GWToolbox::getInstance()->config;
-	wstring section = L"pcons";
+	const wchar_t* section = L"pcons";
 	enabled = config->iniReadBool(section, L"active", false);
 	for (size_t i = 0; i < Pcons::count; ++i) {
-		pconsActive[i] = config->iniReadBool(section, pconsName[i], false);
+		pconsActive[i] = config->iniReadBool(section, pconsName[i].c_str(), false);
 	}
 }
 

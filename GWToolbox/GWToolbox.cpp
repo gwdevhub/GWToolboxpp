@@ -4,7 +4,6 @@
 #include "../include/OSHGui/Drawing/Theme.hpp"
 #include "../include/OSHGui/Input/WindowsMessage.hpp"
 
-#include <iostream>
 #include <string>
 
 using namespace OSHGui::Drawing;
@@ -46,7 +45,7 @@ LRESULT CALLBACK MessageHook(int code, WPARAM wParam, LPARAM lParam) {
 		case WM_MBUTTONDOWN:
 		case WM_MBUTTONUP:
 			if (input.ProcessMessage(msg)) {
-				std::cout << "consumed mouse event " << msg->message << '\n';
+				LOG("consumed mouse event %d\n",msg->message);
 				return TRUE;
 			}
 			break;
@@ -59,7 +58,7 @@ LRESULT CALLBACK MessageHook(int code, WPARAM wParam, LPARAM lParam) {
 		case WM_CHAR:
 		case WM_SYSCHAR:
 		case WM_IME_CHAR:
-			std::cout << "processing keyboard event " << msg->message << '\n';
+			LOG("processing keyboard event %d\n", msg->message);
 			input.ProcessMessage(msg);
 			break;
 		}
@@ -72,12 +71,14 @@ void create_gui(IDirect3DDevice9* pDevice) {
 
 	Application * app = Application::InstancePtr();
 
-	Theme theme;
+	string path = GWToolbox::getInstance()->config->getPathA("DefaultTheme.txt");
 	try {
-		theme.Load(GWToolbox::getInstance()->config->getPath("DefaultTheme.txt"));
+		Theme theme;
+		theme.Load(path);
 		app->SetTheme(theme);
+		LOG("Loaded theme file %s\n", path);
 	} catch (Misc::InvalidThemeException e) {
-		std::wcout << L"Warning: could not load theme file\n";
+		ERR("WARNING Could not load theme file %s\n", path);
 	}
 	
 	auto font = FontManager::LoadFont("Arial", 8.0f, false); //Arial, 8PT, no anti-aliasing
@@ -93,7 +94,6 @@ void create_gui(IDirect3DDevice9* pDevice) {
 
 	//app->RegisterHotkey(Hotkey(Key::Insert, [] {
 	//	Application::InstancePtr()->Toggle();
-	//	//std::cout << "hotkey fired! \n";
 	//}));
 
 	GWToolbox * tb = GWToolbox::getInstance();
@@ -175,6 +175,8 @@ void GWToolbox::exec() {
 
 void GWToolbox::destroy()
 {
+	config->save();
+
 	delete config;
 	delete pcons;
 	delete builds;
