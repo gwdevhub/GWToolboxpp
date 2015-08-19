@@ -1,10 +1,13 @@
 #include "GWToolbox.h"
+
 #include "../include/OSHGui/OSHGui.hpp"
 #include "../include/OSHGui/Drawing/Direct3D9/Direct3D9Renderer.hpp"
 #include "../include/OSHGui/Drawing/Theme.hpp"
 #include "../include/OSHGui/Input/WindowsMessage.hpp"
 
 #include <string>
+
+#include "TBMainWindow.h"
 
 using namespace OSHGui::Drawing;
 using namespace OSHGui::Input;
@@ -54,7 +57,7 @@ static LRESULT CALLBACK NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARA
 		case WM_MOUSEWHEEL:
 		case WM_MBUTTONDOWN:
 			if (input.ProcessMessage(&msg)) {
-				LOG("consumed mouse event %d\n", Message);
+				//LOG("consumed mouse event %d\n", Message);
 				return TRUE;
 			}
 			break;
@@ -67,7 +70,7 @@ static LRESULT CALLBACK NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARA
 		case WM_CHAR:
 		case WM_SYSCHAR:
 		case WM_IME_CHAR:
-			LOG("processing keyboard event %d, key %u\n", Message, wParam);
+			//LOG("processing keyboard event %d, key %u\n", Message, wParam);
 			input.ProcessMessage(&msg);
 			GWToolbox::getInstance()->hotkeyMgr->processMessage(&msg);
 			break;
@@ -79,6 +82,7 @@ static LRESULT CALLBACK NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARA
 
 
 void create_gui(IDirect3DDevice9* pDevice) {
+	LOG("Creating GUI\n");
 	Application::Initialize(std::unique_ptr<Direct3D9Renderer>(new Direct3D9Renderer(pDevice)));
 
 	Application * app = Application::InstancePtr();
@@ -93,30 +97,19 @@ void create_gui(IDirect3DDevice9* pDevice) {
 		ERR("WARNING Could not load theme file %s\n", path.c_str());
 	}
 	
-	auto font = FontManager::LoadFont("Arial", 8.0f, false); //Arial, 8PT, no anti-aliasing
+	FontPtr font = FontManager::LoadFont("Arial", 8.0f, false); //Arial, 8PT, no anti-aliasing
 	app->SetDefaultFont(font);
 	app->SetCursorEnabled(false);
 
-	auto form = std::make_shared<Form>();
-	form->SetText("GWToolbox++");
-	form->SetSize(100, 300);
+	std::shared_ptr<TBMainWindow> mainWindow = std::make_shared<TBMainWindow>();
+	app->Run(mainWindow);
 	
-	Button * pcons = new Button();
-	pcons->SetText("Pcons");
-	pcons->SetBounds(0, 0, 100, 30);
-	pcons->GetClickEvent() += ClickEventHandler([pcons](Control*) {
-		LOG("Clicked on pcons!\n");
-	});
-	
-	form->AddControl(pcons);
-
-	app->Run(form);
-	app->Enable();
-
 	GWToolbox * tb = GWToolbox::getInstance();
 	tb->pcons->buildUI();
 	tb->builds->buildUI();
 	tb->hotkeys->buildUI();
+
+	app->Enable();
 
 	HWND hWnd = GWAPI::MemoryMgr::GetGWWindowHandle();
 	OldWndProc = SetWindowLongPtr(hWnd, GWL_WNDPROC, (long)NewWndProc);
@@ -160,16 +153,15 @@ static HRESULT WINAPI resetScene(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETER
 	return result;
 }
 
-
 void GWToolbox::exec() {
 	mgr = GWAPI::GWAPIMgr::GetInstance();
 	dx = mgr->DirectX;
-	
 
 	pcons->loadIni();
 	builds->loadIni();
 	hotkeys->loadIni();
 
+	LOG("Installing dx hooks\n");
 	dx->CreateRenderHooks(endScene, resetScene);
 	
 	input.SetKeyboardInputEnabled(true);
@@ -193,7 +185,7 @@ void GWToolbox::exec() {
 
 void GWToolbox::destroy()
 {
-	
+	LOG("Destroying GWToolbox++\n");
 	delete pcons;
 	delete builds;
 	delete hotkeys;
@@ -219,8 +211,12 @@ bool GWToolbox::isActive() {
 void GWToolbox::threadEntry(HMODULE mod) {
 	if (instance) return;
 
+	LOG("Initializing GWAPI\n");
 	GWAPI::GWAPIMgr::Initialize();
 
+	LOG("Creating GWToolbox++\n");
 	instance = new GWToolbox(mod);
+
+	LOG("Running GWToolbox++\n");
 	instance->exec();
 }

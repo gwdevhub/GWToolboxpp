@@ -14,13 +14,13 @@
 namespace OSHGui
 {
 	/**
-	 * Wird zum Gruppieren von Auflistungen von Steuerelementen verwendet.
+	 * Used to group collections of controls.
 	 */
 	class OSHGUI_EXPORT Panel : public Control
 	{
 	public:
 		/**
-		 * Konstruktor der Klasse.
+		 * Constructor of the class.
 		 */
 		Panel();
 

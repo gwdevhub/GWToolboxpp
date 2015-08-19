@@ -105,6 +105,7 @@
     <ClInclude Include="GWToolbox\Hotkeys.h" />
     <ClInclude Include="GWToolbox\logger.h" />
     <ClInclude Include="GWToolbox\Pcons.h" />
+    <ClInclude Include="GWToolbox\TBMainWindow.h" />
     <ClInclude Include="GWToolbox\Timer.h" />
     <ClInclude Include="GWToolbox\Travel.h" />
     <ClInclude Include="include\OSHGui\Application.hpp" />

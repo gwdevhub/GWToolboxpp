@@ -4,7 +4,7 @@
 /*
 This class is my attempt at creating a logger that can be toggled in release
 
-it can be naive or bad, idk, but works and should be efficient on release
+it can be naive or bad, idk, but works and should be efficient on non-debug build
 */
 
 #define DEBUG_BUILD 1
@@ -17,6 +17,7 @@ it can be naive or bad, idk, but works and should be efficient on release
 // can make IFLEZERR, IFEQZERR, IFGTZERR, etc if needed
 #else
 #define LOG(msg, ...)
+#define LOGW(msg, ...)
 #define ERR(msg, ...)
 #define IFLTZERR(var, msg, ...)
 #endif
