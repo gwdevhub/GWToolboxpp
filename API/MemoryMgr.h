@@ -81,6 +81,8 @@ namespace GWAPI{
 		// For move calls that dont glitch your char around.
 		static BYTE* MoveFunction;
 
+		static BYTE* WinHandlePtr;
+
 		// Basics
 		static bool Scan();
 		static void *Detour(BYTE *src, const BYTE *dst, const int len, BYTE** restore = NULL);
@@ -110,5 +112,6 @@ namespace GWAPI{
 		// Memory Reads.
 		static DWORD GetContextPtr(){ return (*(DWORD*)BasePointerLocation) + 0x18; }
 		static DWORD GetSkillTimer(){ return *(DWORD*)SkillTimerPtr; }
+		static HWND GetGWWindowHandle(){ return *(HWND*)WinHandlePtr; }
 	};
 }

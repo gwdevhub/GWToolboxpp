@@ -40,6 +40,7 @@ BYTE* GWAPI::MemoryMgr::OpenXunlaiFunction = NULL;
 
 BYTE* GWAPI::MemoryMgr::MoveFunction = NULL;
 
+BYTE* GWAPI::MemoryMgr::WinHandlePtr = NULL;
 
 void GWAPI::MemoryMgr::Retour(BYTE *src, BYTE *restore, const int len)
 {
@@ -184,6 +185,11 @@ bool GWAPI::MemoryMgr::Scan()
 			MoveFunction = scan - 0x12;
 		}
 
+		const BYTE WinHandleCode[] = { 0x56, 0x8B, 0xF1, 0x85, 0xC0, 0x89, 0x35 };
+		if (!memcmp(scan, WinHandleCode, sizeof(WinHandleCode))){
+			WinHandlePtr = (BYTE*)(*(DWORD*)(scan + 7));
+		}
+
 		if (agArrayPtr &&
 			CtoGSObjectPtr &&
 			CtoGSSendFunction &&
@@ -198,7 +204,8 @@ bool GWAPI::MemoryMgr::Scan()
 			ChangeTargetFunction &&
 			OpenXunlaiFunction &&
 			XunlaiSession &&
-			MoveFunction
+			MoveFunction &&
+			WinHandlePtr
 			) {
 				return true;
 			}
