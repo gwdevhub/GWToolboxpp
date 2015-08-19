@@ -12,10 +12,10 @@ using namespace OSHGui::Input;
 GWToolbox* GWToolbox::instance = NULL;
 
 namespace{
-	LPD3DXFONT dbgFont = NULL;
-	RECT Type1Rect = { 50, 50, 300, 14 };
 	GWAPI::GWAPIMgr * mgr;
 	GWAPI::DirectXMgr * dx;
+
+	Direct3D9Renderer* renderer;
 
 	HHOOK oshinputhook;
 	long OldWndProc = 0;
@@ -79,7 +79,9 @@ static LRESULT CALLBACK NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARA
 
 
 void create_gui(IDirect3DDevice9* pDevice) {
-	Application::Initialize(std::unique_ptr<Direct3D9Renderer>(new Direct3D9Renderer(pDevice)));
+	renderer = new Direct3D9Renderer(pDevice);
+
+	Application::Initialize(std::unique_ptr<Direct3D9Renderer>(renderer));
 
 	Application * app = Application::InstancePtr();
 
@@ -124,37 +126,35 @@ void create_gui(IDirect3DDevice9* pDevice) {
 
 // All rendering done here.
 static HRESULT WINAPI endScene(IDirect3DDevice9* pDevice) {
+	static GWAPI::DirectXMgr::EndScene_t origfunc = dx->GetEndsceneReturn();
 	static bool init = false;
 	if (!init) {
 		init = true;
 		create_gui(pDevice);
 	}
 
-	auto &renderer = Application::Instance().GetRenderer();
-
-	renderer.BeginRendering();
+	renderer->BeginRendering();
 
 	Application::Instance().Render();
 
-	renderer.EndRendering();
-
-	if (!dbgFont)
-		D3DXCreateFontA(pDevice, 14, 0, FW_BOLD, 0, false, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, ANTIALIASED_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Arial", &dbgFont);
+	renderer->EndRendering();
 
 
-	//dbgFont->DrawTextA(NULL, "AHJHJHJHJHJHJHJHJHJ", strlen("AHJHJHJHJHJHJHJHJHJ") + 1, &Type1Rect, DT_NOCLIP, 0xFF00FF00);
-
-	return  dx->GetEndsceneReturn()(pDevice);
+	return origfunc(pDevice);
 }
 
 static HRESULT WINAPI resetScene(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETERS* pPresentationParameters) {
+	static GWAPI::DirectXMgr::Reset_t origfunc = dx->GetResetReturn();
+
 
 	// pre-reset here.
 
-	if (dbgFont) dbgFont->OnLostDevice();
-	HRESULT result = dx->GetResetReturn()(pDevice, pPresentationParameters);
+	renderer->PreD3DReset();
+
+	HRESULT result = origfunc(pDevice, pPresentationParameters);
 	if (result == D3D_OK){
-		if (dbgFont) dbgFont->OnResetDevice();// post-reset here.
+		// post-reset here.
+		renderer->PostD3DReset();
 	}
 
 	return result;

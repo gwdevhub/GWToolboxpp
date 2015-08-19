@@ -60,3 +60,8 @@ void GWAPI::AgentMgr::Move(float X, float Y, DWORD ZPlane /*= 0*/)
 	parent->GameThread->Enqueue(_Move, pos);
 }
 
+void GWAPI::AgentMgr::Dialog(DWORD id)
+{
+	parent->CtoS->SendPacket(0x8, 0x35, id);
+}
+

@@ -182,6 +182,8 @@ namespace GWAPI {
 
 		void Move(float X, float Y, DWORD ZPlane = 0);
 
+		void Dialog(DWORD id);
+
 		AgentMgr(GWAPIMgr* obj);
 	};
 
