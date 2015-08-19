@@ -82,14 +82,10 @@ static LRESULT CALLBACK NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARA
 
 
 void create_gui(IDirect3DDevice9* pDevice) {
-<<<<<<< HEAD
-	renderer = new Direct3D9Renderer(pDevice);
 
-	Application::Initialize(std::unique_ptr<Direct3D9Renderer>(renderer));
-=======
 	LOG("Creating GUI\n");
-	Application::Initialize(std::unique_ptr<Direct3D9Renderer>(new Direct3D9Renderer(pDevice)));
->>>>>>> fcce52ff78d9f352cebf840d3731ffa577106d70
+	renderer = new Direct3D9Renderer(pDevice);
+	Application::Initialize(std::unique_ptr<Direct3D9Renderer>(renderer));
 
 	Application * app = Application::InstancePtr();
 
