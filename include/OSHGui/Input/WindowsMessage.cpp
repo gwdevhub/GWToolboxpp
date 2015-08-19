@@ -52,37 +52,37 @@ namespace OSHGui
 								state = MouseState::Move;
 								break;
 							case WM_LBUTTONDOWN:
-								SetCapture(message->hwnd);
+								//SetCapture(message->hwnd);
 								state = MouseState::Down;
 								button = MouseButton::Left;
 								break;
 							case WM_LBUTTONUP:
-								ReleaseCapture();
+								//ReleaseCapture();
 								state = MouseState::Up;
 								button = MouseButton::Left;
 								break;
 							case WM_RBUTTONDOWN:
-								SetCapture(message->hwnd);
+								//SetCapture(message->hwnd);
 								state = MouseState::Down;
 								button = MouseButton::Right;
 								break;
 							case WM_RBUTTONUP:
-								ReleaseCapture();
+								//ReleaseCapture();
 								state = MouseState::Up;
 								button = MouseButton::Right;
 								break;
 							case WM_MBUTTONDOWN:
-								SetCapture(message->hwnd);
+								//SetCapture(message->hwnd);
 								state = MouseState::Down;
 								button = MouseButton::Middle;
 								break;
 							case WM_MBUTTONUP:
-								ReleaseCapture();
+								//ReleaseCapture();
 								state = MouseState::Up;
 								button = MouseButton::Middle;
 								break;
 							case WM_MOUSEWHEEL:
-								state = MouseState::Scroll;
+								//state = MouseState::Scroll;
 								location = lastMouseLocation; //not valid when scrolling
 								delta = -((short)HIWORD(message->wParam) / 120) * 4/*number of lines to scroll*/;
 								break;

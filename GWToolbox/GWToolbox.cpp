@@ -4,7 +4,6 @@
 #include "../include/OSHGui/Drawing/Theme.hpp"
 #include "../include/OSHGui/Input/WindowsMessage.hpp"
 
-#include <iostream>
 #include <string>
 
 using namespace OSHGui::Drawing;
@@ -32,37 +31,39 @@ LRESULT CALLBACK MessageHook(int code, WPARAM wParam, LPARAM lParam) {
 		return CallNextHookEx(NULL, code, wParam, lParam);
 	}
 
-		LPMSG msg = (LPMSG)lParam;
+	LPMSG msg = (LPMSG)lParam;
 
-		switch (msg->message) {
-		case WM_RBUTTONDOWN:
-		case WM_RBUTTONUP:
-			break;
+	switch (msg->message) {
+	case WM_RBUTTONDOWN:
+	case WM_RBUTTONUP:
+		break;
 
-		case WM_MOUSEMOVE:
-		case WM_LBUTTONDOWN:
-		case WM_LBUTTONUP:
-		case WM_MOUSEWHEEL:
-		case WM_MBUTTONDOWN:
-		case WM_MBUTTONUP:
-			if (input.ProcessMessage(msg)) {
-				std::cout << "consumed mouse event " << msg->message << '\n';
-				return TRUE;
-			}
-			break;
-
-			// send keyboard messages to both gw and toolbox
-		case WM_KEYDOWN:
-		case WM_SYSKEYDOWN:
-		case WM_KEYUP:
-		case WM_SYSKEYUP:
-		case WM_CHAR:
-		case WM_SYSCHAR:
-		case WM_IME_CHAR:
-			std::cout << "processing keyboard event " << msg->message << '\n';
-			input.ProcessMessage(msg);
-			break;
+	case WM_MOUSEMOVE:
+	case WM_LBUTTONDOWN:
+	case WM_LBUTTONUP:
+	case WM_MOUSEWHEEL:
+	case WM_MBUTTONDOWN:
+	case WM_MBUTTONUP:
+		if (input.ProcessMessage(msg)) {
+			//LOG("consumed mouse event %d\n",msg->message);
+			return TRUE;
 		}
+		break;
+
+	// send keyboard messages to gw, osh and toolbox (does osh need it?)
+	case WM_KEYDOWN:
+	case WM_SYSKEYDOWN:
+	case WM_KEYUP:
+	case WM_SYSKEYUP:
+	case WM_CHAR:
+	case WM_SYSCHAR:
+	case WM_IME_CHAR:
+		//LOG("processing keyboard event %d, key %u\n", msg->message, msg->wParam);
+		input.ProcessMessage(msg);
+		GWToolbox::getInstance()->hotkeyMgr->processMessage(msg);
+		break;
+	}
+
 	return CallNextHookEx(NULL, code, wParam, lParam);
 }
 
@@ -72,12 +73,14 @@ void create_gui(IDirect3DDevice9* pDevice) {
 
 	Application * app = Application::InstancePtr();
 
-	Theme theme;
+	string path = GWToolbox::getInstance()->config->getPathA("DefaultTheme.txt");
 	try {
-		theme.Load(GWToolbox::getInstance()->config->getPath("DefaultTheme.txt"));
+		Theme theme;
+		theme.Load(path);
 		app->SetTheme(theme);
+		LOG("Loaded theme file %s\n", path.c_str());
 	} catch (Misc::InvalidThemeException e) {
-		std::wcout << L"Warning: could not load theme file\n";
+		ERR("WARNING Could not load theme file %s\n", path.c_str());
 	}
 	
 	auto font = FontManager::LoadFont("Arial", 8.0f, false); //Arial, 8PT, no anti-aliasing
@@ -87,13 +90,21 @@ void create_gui(IDirect3DDevice9* pDevice) {
 	auto form = std::make_shared<Form>();
 	form->SetText("GWToolbox++");
 	form->SetSize(100, 300);
+	
+	Label * pcons = new Label();
+	pcons->SetText("Pcons");
+	pcons->SetBounds(0, 0, 100, 30);
+	pcons->GetClickEvent() += ClickEventHandler([pcons](Control*) {
+		LOG("Clicked on pcons!\n");
+	});
+	
+	form->AddControl(pcons);
 
 	app->Run(form);
 	app->Enable();
 
 	//app->RegisterHotkey(Hotkey(Key::Insert, [] {
 	//	Application::InstancePtr()->Toggle();
-	//	//std::cout << "hotkey fired! \n";
 	//}));
 
 	GWToolbox * tb = GWToolbox::getInstance();
@@ -175,12 +186,16 @@ void GWToolbox::exec() {
 
 void GWToolbox::destroy()
 {
-	delete config;
+	
 	delete pcons;
 	delete builds;
 	delete hotkeys;
 
-	//UnhookWindowsHookEx(oshinputhook);
+	config->save();
+	delete config;
+	delete hotkeyMgr;
+
+	UnhookWindowsHookEx(oshinputhook);
 	GWAPI::GWAPIMgr::Destruct();
 	m_Active = false;
 	ExitThread(EXIT_SUCCESS);
@@ -196,8 +211,6 @@ void GWToolbox::threadEntry(HMODULE mod) {
 	if (instance) return;
 
 	GWAPI::GWAPIMgr::Initialize();
-	GWAPI::GWAPIMgr * API = GWAPI::GWAPIMgr::GetInstance();
-	API->Chat->SendChat(L"test", L'#');
 
 	instance = new GWToolbox(mod);
 	instance->exec();

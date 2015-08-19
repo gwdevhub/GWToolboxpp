@@ -26,4 +26,3 @@ public:
 		return ((unsigned long)clock() - (unsigned long)timer) * 1000 / CLOCKS_PER_SEC;
 	}
 };
-

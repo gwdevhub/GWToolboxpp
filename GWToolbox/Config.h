@@ -1,9 +1,11 @@
 #include <string>
-#include <iostream>
 #include <vector>
+#include <list>
 
 #include "Shlobj.h"
 #include "Shlwapi.h"
+
+#include "logger.h"
 
 #include "../SimpleIni.h"
 
@@ -11,56 +13,114 @@ using namespace std;
 
 class Config {
 private:
-	string  settingsFolder;
-	wstring settingsFolderW;
-	wstring iniFilePath;
-	CSimpleIni iniFile;
+	string  settingsFolderA;	// the settings folder as ansi string
+	wstring settingsFolderW;	// the settings folder as wstring
+	wstring iniFilePath;		// the full ini file path
+	CSimpleIni* iniFile;		// SimpleIni object
 
 public:
 	const wstring version = L"1.0";
 
 	Config() {
-		TCHAR szPathW[MAX_PATH];
+		WCHAR szPathW[MAX_PATH];
 		szPathW[0] = L'\0';
-		SHGetFolderPath(NULL, CSIDL_COMMON_APPDATA, NULL, 0, szPathW);
+		SHGetFolderPathW(NULL, CSIDL_COMMON_APPDATA, NULL, 0, szPathW);
 		settingsFolderW = szPathW;
 		settingsFolderW.append(L"\\GWToolbox");
 
 		CHAR szPath[MAX_PATH];
 		szPath[0] = '\0';
 		SHGetFolderPathA(NULL, CSIDL_COMMON_APPDATA, NULL, 0, szPath);
-		settingsFolder = szPath;
-		settingsFolder.append("\\GWToolbox");
+		settingsFolderA = szPath;
+		settingsFolderA.append("\\GWToolbox");
 
-		iniFilePath = wstring(settingsFolderW);
+		wstring iniFilePath = wstring(settingsFolderW);
 		iniFilePath.append(L"\\GWToolbox.ini");
 
-		std::wcout << settingsFolderW << std::endl;
-		std::cout << settingsFolder << std::endl;
-
-		CSimpleIni iniFile(false, false, false);
-		iniFile.LoadFile(iniFilePath.c_str());
+		iniFile = new CSimpleIni(false, false, false);
+		iniFile->LoadFile(iniFilePath.c_str());
 	}
 
-	~Config() {};
-
-	wstring iniRead(wstring section, wstring key, wstring def) {
-		return iniFile.GetValue(section.c_str(), key.c_str(), def.c_str());
+	// Save the changes to the ini file
+	void save() {
+		iniFile->SaveFile(iniFilePath.c_str());
 	}
 
-	bool iniReadBool(wstring section, wstring key, bool def) {
-		wstring defStr = def ? L"True" : L"False";
-		wstring value = iniFile.GetValue(section.c_str(), key.c_str(), defStr.c_str());
-		return value.compare(L"True") == 0;
+	// Destruct this object
+	// Important: call save if you wish to save the settings to ini
+	~Config() {
+		iniFile->Reset();
+		delete iniFile;
+	};
+
+	// Retrieve a wstring value of the key in the section. 
+	// Returns def if no value was found.
+	const wchar_t* iniRead(const wchar_t* section, const wchar_t* key, const wchar_t* def) {
+		return iniFile->GetValue(section, key, def);
 	}
 
-	void iniWrite(wstring section, wstring key, wstring value) {
-		iniFile.SetValue(section.c_str(), key.c_str(), value.c_str());
+	// Retrieve a bool value of the key in the section. 
+	// Returns def if no value was found.
+	bool iniReadBool(const wchar_t* section, const wchar_t* key, bool def) {
+		return iniFile->GetBoolValue(section, key, def);
+	}
+
+	// Retrieve a long value of the key in the section. 
+	// Returns def if no value was found.
+	long iniReadLong(const wchar_t* section, const wchar_t* key, long def) {
+		return iniFile->GetLongValue(section, key, def);
+	}
+
+	// Retrieve a double value of the key in the section. 
+	// Returns def if no value was found.
+	double iniReadDouble(const wchar_t* section, const wchar_t* key, double def) {
+		return iniFile->GetDoubleValue(section, key, def);
+	}
+
+	// Add or update a wstring value in the given section / key combination.
+	void iniWrite(const wchar_t* section, const wchar_t* key, const wchar_t* value) {
+		SI_Error err = iniFile->SetValue(section, key, value);
+		IFLTZERR(err, "SimpleIni SetValue error: %d", err);
+	}
+
+	// Add or update a bool value in the given section / key combination.
+	void iniWriteBool(const wchar_t* section, const wchar_t* key, bool value) {
+		SI_Error err = iniFile->SetBoolValue(section, key, value);
+		IFLTZERR(err, "SimpleIni SetBoolValue error: %d", err);
+	}
+
+	// Add or update a long value in the given section / key combination.
+	void iniWriteLong(const wchar_t* section, const wchar_t* key, long value) {
+		SI_Error err = iniFile->SetLongValue(section, key, value);
+		IFLTZERR(err, "SimpleIni SetDoubleValue error: %d", err);
+	}
+
+	// Add or update a double value in the given section / key combination.
+	void iniWriteDouble(const wchar_t* section, const wchar_t* key, double value) {
+		SI_Error err = iniFile->SetDoubleValue(section, key, value);
+		IFLTZERR(err, "SimpleIni SetDoubleValue error: %d", err);
+	}
+
+	// returns a list of all the section names
+	// note: do not rely on the order
+	std::list<wstring> iniReadSections() {
+		CSimpleIni::TNamesDepend entries;
+		iniFile->GetAllSections(entries);
+		std::list<wstring> sections(entries.size());
+		for (CSimpleIni::Entry entry : entries) {
+			sections.push_back(wstring(entry.pItem));
+		}
+		return sections;
+	}
+
+	// deletes a section from the ini file
+	void iniDeleteSection(const wchar_t* section) {
+		iniFile->Delete(section, NULL);
 	}
 
 	wstring getSettingsFolderW() { return settingsFolderW; }
-	string	getSettingsFolder () { return settingsFolder; }
+	string	getSettingsFolderA() { return settingsFolderA; }
 
 	wstring getPathW(wstring filename) { return settingsFolderW + L"\\" + filename; }
-	string	getPath (string filename)  { return settingsFolder  + "\\"  + filename; }
+	string	getPathA(string  filename) { return settingsFolderA +  "\\" + filename; }
 };
