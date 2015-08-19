@@ -107,8 +107,6 @@ namespace GWAPI{
 			return (T)pBase;
 		}
 
-
-
 		// Memory Reads.
 		static DWORD GetContextPtr(){ return (*(DWORD*)BasePointerLocation) + 0x18; }
 		static DWORD GetSkillTimer(){ return *(DWORD*)SkillTimerPtr; }

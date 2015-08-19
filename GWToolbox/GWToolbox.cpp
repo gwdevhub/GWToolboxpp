@@ -18,53 +18,63 @@ namespace{
 	GWAPI::DirectXMgr * dx;
 
 	HHOOK oshinputhook;
+	long OldWndProc = 0;
 	WindowsMessage input;
 }
 
-LRESULT CALLBACK MessageHook(int code, WPARAM wParam, LPARAM lParam) {
-
-	// do nothing if application is not initialized or we got a message that we shouldn't handle
-	if (!Application::InstancePtr()->HasBeenInitialized()
-		|| (lParam & 0x80000000)
-		|| (lParam & 0x40000000)
-		|| (code != HC_ACTION)) {
-		return CallNextHookEx(NULL, code, wParam, lParam);
+static LRESULT CALLBACK NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) {
+	
+	if (Message == WM_QUIT || Message == WM_CLOSE) {
+		GWToolbox::getInstance()->config->save();
+		return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
 	}
 
-	LPMSG msg = (LPMSG)lParam;
+	if (Application::InstancePtr()->HasBeenInitialized()) {
+		MSG msg;
+		msg.hwnd = hWnd;
+		msg.message = Message;
+		msg.wParam = wParam;
+		msg.lParam = lParam;
 
-	switch (msg->message) {
-	case WM_RBUTTONDOWN:
-	case WM_RBUTTONUP:
-		break;
+		switch (Message) {
+		// Send right mouse button events to gw (move view around) and don't mess with them
+		case WM_RBUTTONDOWN:
+		case WM_RBUTTONUP:
+			break;
 
-	case WM_MOUSEMOVE:
-	case WM_LBUTTONDOWN:
-	case WM_LBUTTONUP:
-	case WM_MOUSEWHEEL:
-	case WM_MBUTTONDOWN:
-	case WM_MBUTTONUP:
-		if (input.ProcessMessage(msg)) {
-			//LOG("consumed mouse event %d\n",msg->message);
-			return TRUE;
+		// Send button up mouse events to both gw and osh, to avoid gw being stuck on mouse-down
+		case WM_LBUTTONUP:
+		case WM_MBUTTONUP:
+			input.ProcessMessage(&msg);
+			break;
+		
+		// Send other mouse events to osh first and consume them if used
+		case WM_MOUSEMOVE:
+		case WM_LBUTTONDOWN:
+		case WM_MOUSEWHEEL:
+		case WM_MBUTTONDOWN:
+			if (input.ProcessMessage(&msg)) {
+				LOG("consumed mouse event %d\n", Message);
+				return TRUE;
+			}
+			break;
+
+		// send keyboard messages to gw, osh and toolbox (does osh need them?)
+		case WM_KEYDOWN:
+		case WM_SYSKEYDOWN:
+		case WM_KEYUP:
+		case WM_SYSKEYUP:
+		case WM_CHAR:
+		case WM_SYSCHAR:
+		case WM_IME_CHAR:
+			LOG("processing keyboard event %d, key %u\n", Message, wParam);
+			input.ProcessMessage(&msg);
+			GWToolbox::getInstance()->hotkeyMgr->processMessage(&msg);
+			break;
 		}
-		break;
-
-	// send keyboard messages to gw, osh and toolbox (does osh need it?)
-	case WM_KEYDOWN:
-	case WM_SYSKEYDOWN:
-	case WM_KEYUP:
-	case WM_SYSKEYUP:
-	case WM_CHAR:
-	case WM_SYSCHAR:
-	case WM_IME_CHAR:
-		//LOG("processing keyboard event %d, key %u\n", msg->message, msg->wParam);
-		input.ProcessMessage(msg);
-		GWToolbox::getInstance()->hotkeyMgr->processMessage(msg);
-		break;
 	}
 
-	return CallNextHookEx(NULL, code, wParam, lParam);
+	return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
 }
 
 
@@ -91,7 +101,7 @@ void create_gui(IDirect3DDevice9* pDevice) {
 	form->SetText("GWToolbox++");
 	form->SetSize(100, 300);
 	
-	Label * pcons = new Label();
+	Button * pcons = new Button();
 	pcons->SetText("Pcons");
 	pcons->SetBounds(0, 0, 100, 30);
 	pcons->GetClickEvent() += ClickEventHandler([pcons](Control*) {
@@ -103,16 +113,13 @@ void create_gui(IDirect3DDevice9* pDevice) {
 	app->Run(form);
 	app->Enable();
 
-	//app->RegisterHotkey(Hotkey(Key::Insert, [] {
-	//	Application::InstancePtr()->Toggle();
-	//}));
-
 	GWToolbox * tb = GWToolbox::getInstance();
 	tb->pcons->buildUI();
 	tb->builds->buildUI();
 	tb->hotkeys->buildUI();
 
-	oshinputhook = SetWindowsHookEx(WH_GETMESSAGE, MessageHook, NULL, GetCurrentThreadId());
+	HWND hWnd = GWAPI::MemoryMgr::GetGWWindowHandle();
+	OldWndProc = SetWindowLongPtr(hWnd, GWL_WNDPROC, (long)NewWndProc);
 }
 
 // All rendering done here.
@@ -195,7 +202,9 @@ void GWToolbox::destroy()
 	delete config;
 	delete hotkeyMgr;
 
-	UnhookWindowsHookEx(oshinputhook);
+	HWND hWnd = GWAPI::MemoryMgr::GetGWWindowHandle();
+	SetWindowLongPtr(hWnd, GWL_WNDPROC, (long)OldWndProc);
+	
 	GWAPI::GWAPIMgr::Destruct();
 	m_Active = false;
 	ExitThread(EXIT_SUCCESS);
