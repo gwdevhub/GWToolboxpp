@@ -6,6 +6,7 @@
 #include "Builds.h"
 #include "Hotkeys.h"
 #include "Config.h"
+#include "HotkeyMgr.h"
 
 using namespace OSHGui;
 
@@ -16,6 +17,7 @@ private:
 
 public:
 	Config* const config;
+	HotkeyMgr* const hotkeyMgr;
 
 	Pcons* const pcons;
 	Builds* const builds;
@@ -25,6 +27,8 @@ private:
 	GWToolbox(HMODULE mod) :
 		m_dllmodule(mod),
 		config(new Config()),
+		hotkeyMgr(new HotkeyMgr()),
+
 		pcons(new Pcons()),
 		builds(new Builds()),
 		hotkeys(new Hotkeys())

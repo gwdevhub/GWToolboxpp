@@ -101,6 +101,7 @@
     <ClInclude Include="GWToolbox\Builds.h" />
     <ClInclude Include="GWToolbox\Config.h" />
     <ClInclude Include="GWToolbox\GWToolbox.h" />
+    <ClInclude Include="GWToolbox\HotkeyMgr.h" />
     <ClInclude Include="GWToolbox\Hotkeys.h" />
     <ClInclude Include="GWToolbox\logger.h" />
     <ClInclude Include="GWToolbox\Pcons.h" />
@@ -216,6 +217,7 @@
     <ClCompile Include="API\StoCMgr.cpp" />
     <ClCompile Include="GWToolbox\Builds.cpp" />
     <ClCompile Include="GWToolbox\GWToolbox.cpp" />
+    <ClCompile Include="GWToolbox\HotkeyMgr.cpp" />
     <ClCompile Include="GWToolbox\Hotkeys.cpp" />
     <ClCompile Include="GWToolbox\Pcons.cpp" />
     <ClCompile Include="GWToolbox\Travel.cpp" />

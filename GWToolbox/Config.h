@@ -1,5 +1,6 @@
 #include <string>
 #include <vector>
+#include <list>
 
 #include "Shlobj.h"
 #include "Shlwapi.h"
@@ -64,6 +65,12 @@ public:
 		return iniFile->GetBoolValue(section, key, def);
 	}
 
+	// Retrieve a long value of the key in the section. 
+	// Returns def if no value was found.
+	long iniReadLong(const wchar_t* section, const wchar_t* key, long def) {
+		return iniFile->GetLongValue(section, key, def);
+	}
+
 	// Retrieve a double value of the key in the section. 
 	// Returns def if no value was found.
 	double iniReadDouble(const wchar_t* section, const wchar_t* key, double def) {
@@ -82,10 +89,33 @@ public:
 		IFLTZERR(err, "SimpleIni SetBoolValue error: %d", err);
 	}
 
+	// Add or update a long value in the given section / key combination.
+	void iniWriteLong(const wchar_t* section, const wchar_t* key, long value) {
+		SI_Error err = iniFile->SetLongValue(section, key, value);
+		IFLTZERR(err, "SimpleIni SetDoubleValue error: %d", err);
+	}
+
 	// Add or update a double value in the given section / key combination.
 	void iniWriteDouble(const wchar_t* section, const wchar_t* key, double value) {
 		SI_Error err = iniFile->SetDoubleValue(section, key, value);
 		IFLTZERR(err, "SimpleIni SetDoubleValue error: %d", err);
+	}
+
+	// returns a list of all the section names
+	// note: do not rely on the order
+	std::list<wstring> iniReadSections() {
+		CSimpleIni::TNamesDepend entries;
+		iniFile->GetAllSections(entries);
+		std::list<wstring> sections(entries.size());
+		for (CSimpleIni::Entry entry : entries) {
+			sections.push_back(wstring(entry.pItem));
+		}
+		return sections;
+	}
+
+	// deletes a section from the ini file
+	void iniDeleteSection(const wchar_t* section) {
+		iniFile->Delete(section, NULL);
 	}
 
 	wstring getSettingsFolderW() { return settingsFolderW; }
