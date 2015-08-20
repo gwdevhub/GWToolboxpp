@@ -1,43 +1,38 @@
 #pragma once
 
+#include <vector>
 #include "../include/OSHGui/OSHGui.hpp"
 
-using namespace OSHGui::Drawing;
+using namespace OSHGui;
 
-class TBMainWindow : public OSHGui::Form {
+class TBMainWindow : public Form {
+public:
+	static const int width = 100;
+	static const int height = 300;
+	static const int tabButtonHeight = 27;
+
 private:
-	const int width = 100;
-	const int height = 300;
+	std::vector<Panel*> panels;
+	int currentPanel;
+
+	void createTabButton(const char* s, int& idx, const char* icon);
+	void setupPanel(Panel* panel);
 
 public:
-	TBMainWindow() {
-		SetText("GWToolbox++");
-		SetSize(width, height);
+	TBMainWindow();
 
-		Button * pcons = new Button();
-		pcons->SetText("Pcons");
-		pcons->SetBounds(0, 0, width - DefaultBorderPadding * 2, 30);
-		//pcons->SetBackColor(Color(0, 0, 0, 0));
-		pcons->GetClickEvent() += ClickEventHandler([pcons](Control*) {
-			LOG("Clicked on pcons!\n");
-		});
-		AddControl(pcons);
+	virtual void DrawSelf(Drawing::RenderContext &context) override;
 
-		Button * hotkeys = new Button();
-		hotkeys->SetText("Hotkeys");
-		hotkeys->SetBounds(0, 30, width - DefaultBorderPadding * 2, 30);
-		//hotkeys->SetBackColor(Color(0, 0, 0, 0));
-		hotkeys->GetClickEvent() += ClickEventHandler([pcons](Control*) {
-			LOG("Clicked on hotkeys!\n");
-		});
-		AddControl(hotkeys);
+	void openClosePanel(int index);
+};
 
-		Panel * test = new Panel();
-		test->SetLocation(150, 20);
-		test->SetSize(200, 200);
-		test->SetBackColor(Color(1, 1, 1, 1));
-		test->SetEnabled(true);
-		AddControl(test);
-	}
+class TabButton : public Button {
+private:
+	PictureBox* const pic;
 
+public:
+	TabButton(const char* s, const char* icon);
+
+	virtual void DrawSelf(Drawing::RenderContext &context) override;
+	virtual void CalculateLabelLocation() override;
 };

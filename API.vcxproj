@@ -221,6 +221,7 @@
     <ClCompile Include="GWToolbox\HotkeyMgr.cpp" />
     <ClCompile Include="GWToolbox\Hotkeys.cpp" />
     <ClCompile Include="GWToolbox\Pcons.cpp" />
+    <ClCompile Include="GWToolbox\TBMainWIndow.cpp" />
     <ClCompile Include="GWToolbox\Travel.cpp" />
     <ClCompile Include="include\OSHGui\Application.cpp" />
     <ClCompile Include="include\OSHGui\Controls\Button.cpp" />

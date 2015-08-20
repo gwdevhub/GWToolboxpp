@@ -2,7 +2,7 @@
 
 #include <list>
 #include <vector>
-
+#include "../include/OSHGui/OSHGui.hpp"
 #include "Timer.h"
 
 using namespace std;
@@ -58,7 +58,17 @@ public:
 	void enable() { enabled = true; }
 	void disable() { enabled = false; }
 	
-	void loadIni();			// load settings from ini file 
-	void buildUI();			// create user interface
-	void mainRoutine();		// runs one loop of the main routine (checking each pcon once)
+	void loadIni();				// load settings from ini file 
+	OSHGui::Panel* buildUI();	// create user interface
+	void mainRoutine();			// runs one loop of the main routine (checking each pcon once)
+
+	class Pcon : public OSHGui::PictureBox {
+	private:
+		OSHGui::Label* label;
+		int count;
+	public:
+		Pcon(const char* icon);
+		virtual void DrawSelf(OSHGui::Drawing::RenderContext &context) override;
+	};
 };
+

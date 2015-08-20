@@ -50,7 +50,7 @@ count(initializer)
 	pconsName[Pcons::Res] = L"res";
 	pconsName[Pcons::Skalesoup] = L"skalesoup";
 	pconsName[Pcons::Mobstoppers] = L"mobstoppers";
-	pconsName[Pcons::Panhai] = L"panhai";
+	pconsName[Pcons::Panhai] = L"pahnai";
 	pconsName[Pcons::City] = L"city";
 	
 	pconsItemID = vector<int>(Pcons::count, -1);
@@ -97,7 +97,7 @@ count(initializer)
 	pconsChatName[Pcons::Kabob] = L"Kabobs";
 	pconsChatName[Pcons::Warsupply] = L"War Supplies";
 	pconsChatName[Pcons::Skalesoup] = L"Skalefin Soup";
-	pconsChatName[Pcons::Panhai] = L"Panhai Salad";
+	pconsChatName[Pcons::Panhai] = L"Pahnai Salad";
 }
 
 Pcons::~Pcons() {
@@ -112,8 +112,39 @@ void Pcons::loadIni() {
 	}
 }
 
-void Pcons::buildUI() {
-	// TODO
+OSHGui::Panel* Pcons::buildUI() {
+	Panel* p = new Panel();
+
+	GWToolbox * tb = GWToolbox::getInstance();
+	Pcon* cupcake = new Pcon(tb->config->getPathA("Birthday_Cupcake.png").c_str());
+	p->AddControl(cupcake);
+	p->SetLocation(0, 0);
+
+	return p;
+}
+
+Pcons::Pcon::Pcon(const char* icon) {
+	PictureBox::PictureBox();
+
+	count = 0;
+
+	if (icon) SetImage(Drawing::Image::FromFile(icon));
+	SetSize(64, 64);
+	SetBackColor(Drawing::Color::Empty());
+	SetStretch(false);
+	SetEnabled(true);
+
+	label = new Label();
+	label->SetLocation(0, 0);
+	label->SetSize(64, 20);
+	label->SetBackColor(Drawing::Color::Empty());
+	label->SetText(std::to_string(count));
+	AddSubControl(label);
+}
+
+void Pcons::Pcon::DrawSelf(Drawing::RenderContext &context) {
+	PictureBox::DrawSelf(context);
+	label->Render();
 }
 
 void Pcons::mainRoutine() {

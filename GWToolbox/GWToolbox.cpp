@@ -99,7 +99,7 @@ void create_gui(IDirect3DDevice9* pDevice) {
 		ERR("WARNING Could not load theme file %s\n", path.c_str());
 	}
 	
-	FontPtr font = FontManager::LoadFont("Arial", 8.0f, false); //Arial, 8PT, no anti-aliasing
+	FontPtr font = FontManager::LoadFont("Arial", 9.0f, false); //Arial, 8PT, no anti-aliasing
 	app->SetDefaultFont(font);
 	app->SetCursorEnabled(false);
 
@@ -110,7 +110,7 @@ void create_gui(IDirect3DDevice9* pDevice) {
 	tb->pcons->buildUI();
 	tb->builds->buildUI();
 	tb->hotkeys->buildUI();
-
+	
 	app->Enable();
 
 	HWND hWnd = GWAPI::MemoryMgr::GetGWWindowHandle();

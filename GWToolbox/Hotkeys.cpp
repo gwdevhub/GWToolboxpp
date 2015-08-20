@@ -269,8 +269,10 @@ void Hotkeys::loadIni() {
 	}
 }
 
-void Hotkeys::buildUI() {
-	// TODO
+OSHGui::Panel* Hotkeys::buildUI() {
+	OSHGui::Panel* p = new Panel();
+	p->SetBackColor(Drawing::Color(1, 0, 1, 1));
+	return p;
 }
 
 void Hotkeys::mainRoutine() {
