@@ -42,7 +42,7 @@ private:
 
 	bool isActive();		// ??? (also why a private accessor to a private field? xD)
 	bool m_Active;			// ???
-	HMODULE m_dllmodule;	// ???
+	HMODULE m_dllmodule;	// Handle to the dll module we are running, used to clear the module from GW on eject.
 
 public:
 	// will create a new toolbox object and run it, can be used as argument for createThread

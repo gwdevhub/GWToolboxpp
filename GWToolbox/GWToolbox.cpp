@@ -198,8 +198,11 @@ void GWToolbox::destroy()
 	SetWindowLongPtr(hWnd, GWL_WNDPROC, (long)OldWndProc);
 	
 	GWAPI::GWAPIMgr::Destruct();
+#if DEBUG_BUILD
+	FreeConsole();
+#endif
 	m_Active = false;
-	ExitThread(EXIT_SUCCESS);
+	FreeLibraryAndExitThread(m_dllmodule, EXIT_SUCCESS);
 }
 
 // what is this for?
