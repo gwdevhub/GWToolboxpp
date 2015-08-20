@@ -39,6 +39,12 @@ GWAPI::StoCMgr::StoCMgr(GWAPIMgr* obj) : parent(obj){
 	m_OrigLSHandler = new handler<Packet*>[m_LSPacketCount];
 	m_OrigGSHandler = new handler<Packet*>[m_GSPacketCount];
 
+	for (int i = 0; i < m_LSPacketCount; i++)
+		m_OrigLSHandler[i] = NULL;
+
+	for (int i = 0; i < m_GSPacketCount; i++)
+		m_OrigGSHandler[i] = NULL;
+
 }
 
 GWAPI::StoCMgr::~StoCMgr(){
