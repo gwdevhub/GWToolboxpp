@@ -3,10 +3,7 @@
 
 void GWAPI::ChatMgr::SendChat(const wchar_t* msg, wchar_t channel)
 {
-	static P5E_SendChat* chat = NULL;
-
-	if (chat != NULL) delete chat;
-	chat = new P5E_SendChat();
+	static P5E_SendChat* chat = new P5E_SendChat();
 
 	chat->channel = channel;
 	wcscpy_s(chat->msg, msg);
