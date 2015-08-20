@@ -144,6 +144,11 @@ namespace GWAPI {
 			DWORD effects;
 		};
 
+		struct PartyMember{
+			DWORD PartyPosition;
+			DWORD unk1;
+			DWORD isLoaded;
+		};
 		
 		class AgentArray : public MemoryMgr::gw_array<Agent*> {
 		public:
@@ -160,10 +165,20 @@ namespace GWAPI {
 		inline DWORD GetTargetId() { return *(DWORD*)MemoryMgr::TargetAgentIDPtr; }
 
 		typedef MemoryMgr::gw_array<MapAgent> MapAgentArray;
+		typedef MemoryMgr::gw_array<PartyMember> PartyMemberArray;
 
+		// Returns array of alternate agent array that can be read beyond compass range.
+		// Holds limited info and needs to be explored more.
 		MapAgentArray* GetMapAgentArray();
 
+		// Returns Agentstruct Array of agents in compass range, full structs.
 		AgentArray GetAgentArray();
+
+		// Returns the party member array, used in GetIsPartyLoaded().
+		PartyMemberArray GetPartyMemberArray();
+
+		// Returns whether your party is loaded currently.
+		bool GetIsPartyLoaded();
 
 		// Returns a vector of agents in the party. 
 		// YOU SHALL DELETE THIS VECTOR AFTER YOU'RE DONE.

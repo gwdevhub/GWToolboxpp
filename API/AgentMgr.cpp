@@ -65,3 +65,22 @@ void GWAPI::AgentMgr::Dialog(DWORD id)
 	parent->CtoS->SendPacket(0x8, 0x35, id);
 }
 
+GWAPI::AgentMgr::PartyMemberArray GWAPI::AgentMgr::GetPartyMemberArray()
+{
+	return *MemoryMgr::ReadPtrChain<PartyMemberArray*>(MemoryMgr::GetContextPtr(), 3, 0x4C, 0x54, 0x4);
+}
+
+bool GWAPI::AgentMgr::GetIsPartyLoaded()
+{
+	if (parent->Map->GetInstanceType() == GwConstants::InstanceType::Loading) return false;
+
+	PartyMemberArray party = GetPartyMemberArray();
+	if (!party.IsValid()) return false;
+
+	for (DWORD i = 0; i < party.size(); i++){
+		if (party[i].isLoaded == 0) return false;
+	}
+
+	return true;
+}
+

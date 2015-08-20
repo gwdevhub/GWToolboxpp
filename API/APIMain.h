@@ -56,8 +56,9 @@
 // Comment out this #define to make the directx shit not compile into the project.
 #define GWAPI_USEDIRECTX
 
-#include "GWAPIMgr.h"
 #include "GwConstants.h"
+#include "GWAPIMgr.h"
+
 
 #include "MemoryMgr.h"
 #include "GameThreadMgr.h"
