@@ -82,7 +82,7 @@ void HotkeyMove::exec() {
 void HotkeyDialog::exec() {
 	if (isLoading()) return;
 
-	// TODO
+	GWAPIMgr::GetInstance()->Agents->Dialog(DialogID);
 }
 
 void HotkeyPingBuild::exec() {

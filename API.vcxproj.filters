@@ -645,5 +645,8 @@
     <ClCompile Include="GWToolbox\HotkeyMgr.cpp">
       <Filter>Main\GWToolbox</Filter>
     </ClCompile>
+    <ClCompile Include="GWToolbox\TBMainWIndow.cpp">
+      <Filter>Main\GWToolbox</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

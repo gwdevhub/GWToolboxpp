@@ -3,7 +3,7 @@
 #include <vector>
 #include <functional>
 #include <string>
-
+#include "../include/OSHGui/OSHGui.hpp"
 #include "Timer.h"
 #include "../API/APIMain.h"
 #include "HotkeyMgr.h"
@@ -48,7 +48,7 @@ public:
 	inline bool toggleRupt() { return ruptActive = !ruptActive; }
 
 	void loadIni();							// load settings from ini file
-	void buildUI();							// create user interface
+	OSHGui::Panel* buildUI();				// create user interface
 	void mainRoutine();						// do... nothing atm
 
 };
