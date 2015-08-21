@@ -38,21 +38,18 @@ namespace GWAPI {
 			DWORD* ModStruct;						// 0010						pointer to an array of mods
 			DWORD ModStructSize;				// 0014						size of this array
 			wchar_t* Customized;				// 0018
-			BYTE unknown2[4];					// 001C	|--4 BYTEs--|
-			BYTE Type;							// 0020
-			BYTE unknown3;						// 0021	|--1 BYTE---|
-			short ExtraId;						// 0022
-			short Value;						// 0024
-			DWORD Interaction;   				//							ways the player can interact with the item
-			DWORD ModelId;						// 002C
-			DWORD ModString;					// 0030
-			BYTE unknown4[4];					// 0034	|--4 BYTEs--|
-			DWORD NameString;					// 0038
-			BYTE unknown5[16];					// 003C	|-16 BYTEs--|
-			BYTE Quantity;						// 004C
-			BYTE Equipped;						// 004D
-			BYTE unknown6;						// 004E	|--1 BYTE---|
-			BYTE Slot;							// 004F
+			BYTE unknown3[6];
+			short extraId;
+			BYTE unknown4[8];
+			long ModelId;
+			BYTE* modString;
+			BYTE unknown5[4];
+			BYTE* extraItemInfo;
+			byte unknown6[15];
+			byte Quantity;
+			byte equipped;
+			byte profession;
+			byte slot;						// 004F
 		};
 
 		ItemArray GetItemArray();
