@@ -10,7 +10,10 @@ using namespace GWAPI;
 using namespace OSHGui::Drawing;
 using namespace GwConstants;
 
-Pcons::Pcons() {}
+Pcons::Pcons() {
+	initialized = false;
+	enabled = false;
+}
 
 Pcons::~Pcons() {}
 
@@ -20,8 +23,7 @@ void Pcons::loadIni() {
 
 OSHGui::Panel* Pcons::buildUI() {
 	Panel* panel = new Panel();
-	panel->SetBackColor(Drawing::Color::Empty());
-	panel->SetSize(0, 0);
+	panel->SetSize(6 * 2 + Pcon::WIDTH * 3, 6 * 2 + Pcon::HEIGHT * 6);
 	LOG("building pcons ui\n");
 	int row = 0;
 	int col = 0;
@@ -203,13 +205,14 @@ OSHGui::Panel* Pcons::buildUI() {
 
 	Pcons::scanInventory();
 
+	initialized = true;
+
 	return panel;
 }
 
-Pcon::Pcon(const wchar_t* ini) {
-	Button::Button();
+Pcon::Pcon(const wchar_t* ini)
+: Button() {
 	
-	back = new Label();
 	pic = new PictureBox();
 	shadow = new Label();
 	quantity = 0;
@@ -220,13 +223,6 @@ Pcon::Pcon(const wchar_t* ini) {
 	effectID = 0;
 	threshold = 0;
 	timer = TBTimer::init();
-
-	back->SetSize(WIDTH, HEIGHT);
-	back->SetBackColor(Color::FromARGB(90, 0, 0, 0));
-	back->SetText("");
-	back->SetLocation(0, 0);
-	AddSubControl(back);
-	// TODO custom control?
 	
 	pic->SetBackColor(Drawing::Color::Empty());
 	pic->SetStretch(true);
@@ -258,12 +254,14 @@ void Pcon::toggleActive() {
 }
 
 void Pcon::DrawSelf(Drawing::RenderContext &context) {
-	Drawing::Graphics g(*geometry_);
-	back->Render();
 	pic->Render();
 	shadow->Render();
-	label_->Render();
-	//Button::DrawSelf(context);
+	Button::DrawSelf(context);
+}
+
+void Pcon::PopulateGeometry() {
+	Button::PopulateGeometry();
+	Drawing::Graphics g(*geometry_);
 	if (enabled) {
 		g.DrawRectangle(Drawing::Color::Red(), 0.0, 0.0, (float)GetWidth() - 1, (float)GetHeight() - 1);
 	}
@@ -525,14 +523,13 @@ void Pcon::updateLabel() {
 }
 
 void Pcons::mainRoutine() {
-	if (!enabled) return;
+	if (!enabled || !initialized) return;
 
 	GWAPIMgr * API = GWAPIMgr::GetInstance();
 
 	switch (API->Map->GetInstanceType()) {
 	case GwConstants::InstanceType::Explorable:
 		if (API->Agents->GetPlayer()->GetIsDead()) break;
-
 		redrock->checkAndUse();
 		bluerock->checkAndUse();
 		greenrock->checkAndUse();

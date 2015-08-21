@@ -39,9 +39,11 @@ namespace OSHGui
 
 		if (GetBackColor().GetAlpha() > 0)
 		{
-			g.FillRectangle(GetBackColor() - Color::FromARGB(0, 100, 100, 100), GetBounds());
+			g.FillRectangle(GetBackColor() - Color::FromARGB(0, 100, 100, 100), 
+				0, 0, (float)GetWidth(), (float)GetHeight());
 			auto color = GetBackColor() - Color::FromARGB(0, 90, 90, 90);
-			g.FillRectangleGradient(ColorRectangle(GetBackColor(), GetBackColor(), color, color), RectangleF(GetLocation() + PointF(1, 1), GetSize() - SizeF(2, 2)));
+			g.FillRectangleGradient(ColorRectangle(GetBackColor(), GetBackColor(), color, color), 
+				1, 1, (float)GetWidth()-2, (float)GetHeight()-2);
 		}
 	}
 	//---------------------------------------------------------------------------

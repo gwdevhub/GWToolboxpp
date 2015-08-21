@@ -15,7 +15,6 @@ public:
 	static const int HEIGHT = 50;
 
 private:
-	OSHGui::Label* back;
 	OSHGui::PictureBox* pic;
 	OSHGui::Label* shadow;
 	const wchar_t* iniName;
@@ -31,8 +30,9 @@ protected:
 
 public:
 	Pcon(const wchar_t* ini);
-	virtual void DrawSelf(OSHGui::Drawing::RenderContext &context) override;
-	virtual void CalculateLabelLocation() override {};
+	void DrawSelf(OSHGui::Drawing::RenderContext &context) override;
+	void CalculateLabelLocation() override {};
+	void PopulateGeometry() override;
 
 	void setIcon(const char* icon, int xOff, int yOff, int size);
 	inline void setChatName(const wchar_t* chat) { chatName = chat; }
@@ -102,8 +102,8 @@ private:
 	Pcon* pahnai;
 	Pcon* city;
 	
-	// true if the feature is enabled, false otherwise 
-	bool enabled;
+	bool initialized;	// true if the feature is initialized
+	bool enabled;		// true if the feature is enabled, false otherwise 
 
 	// scans inventory and updates UI
 	void scanInventory();

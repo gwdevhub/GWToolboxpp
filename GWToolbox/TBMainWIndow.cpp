@@ -53,10 +53,11 @@ void TBMainWindow::createTabButton(const char* s, int& idx, const char* icon) {
 }
 
 void TBMainWindow::setupPanel(Panel* panel) {
+	panel->SetLocation(width, 0);
+	panel->SetVisible(false);
+	panel->SetEnabled(false);
 	panels.push_back(panel);
 	AddSubControl(panel);
-	panel->SetLocation(width, 0);
-	panel->SetEnabled(false);
 }
 
 void TBMainWindow::DrawSelf(RenderContext &context) {
@@ -69,7 +70,9 @@ void TBMainWindow::DrawSelf(RenderContext &context) {
 
 void TBMainWindow::openClosePanel(int index) {
 	if (currentPanel >= 0) {
+		panels[currentPanel]->SetVisible(false);
 		panels[currentPanel]->SetEnabled(false);
+
 	}
 
 	if (index == currentPanel) {
@@ -77,6 +80,7 @@ void TBMainWindow::openClosePanel(int index) {
 	} else {
 		if (index < (int)panels.size()) {
 			currentPanel = index;
+			panels[currentPanel]->SetVisible(true);
 			panels[currentPanel]->SetEnabled(true);
 		} else {
 			ERR("ERROR bad panel index!\n");
