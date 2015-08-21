@@ -99,8 +99,8 @@ void create_gui(IDirect3DDevice9* pDevice) {
 		ERR("WARNING Could not load theme file %s\n", path.c_str());
 	}
 	
-	FontPtr font = FontManager::LoadFont("Arial", 9.0f, false); //Arial, 8PT, no anti-aliasing
-	app->SetDefaultFont(font);
+	app->SetDefaultFont(TBMainWindow::getTBFont(18.0f, false));
+
 	app->SetCursorEnabled(false);
 
 	std::shared_ptr<TBMainWindow> mainWindow = std::make_shared<TBMainWindow>();

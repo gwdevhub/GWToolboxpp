@@ -45,16 +45,18 @@ GWAPI::ItemMgr::ItemMgr(GWAPIMgr* obj) : parent(obj)
 bool GWAPI::ItemMgr::UseItemByModelId(DWORD modelid, BYTE bagStart /*= 1*/, const BYTE bagEnd /*= 4*/)
 {
 	Bag** bags = GetBagArray();
-	Bag* curBag = NULL;
+	Bag* bag = NULL;
 
-	for (; bagStart <= bagEnd; bagStart++){
-		curBag = bags[bagStart];
-		if (curBag != NULL){
-			ItemArray curItems = curBag->Items;
-			for (DWORD i = 0; i < curItems.size(); i++){
-				if (curItems[i]->ModelId = modelid){
-					UseItem(curItems[i]);
-					return true;
+	for (int bagIndex = bagStart; bagIndex <= bagEnd; ++bagIndex) {
+		bag = bags[bagIndex];
+		if (bag != NULL) {
+			ItemMgr::ItemArray items = bag->Items;
+			for (size_t i = 0; i < items.size(); i++) {
+				if (items[i]) {
+					if (items[i]->ModelId == modelid) {
+						UseItem(items[i]);
+						return true;
+					}
 				}
 			}
 		}

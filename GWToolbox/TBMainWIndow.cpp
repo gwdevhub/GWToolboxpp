@@ -19,10 +19,9 @@ TBMainWindow::TBMainWindow() {
 
 	// build main UI
 	SetText("GWToolbox++");
-	SetFont(FontManager::LoadFont("Arial", 8.0f, false));
 	SetSize(width, height);
+	SetFont(TBMainWindow::getTBFont(8.0, true));
 	
-	SetFont(FontManager::LoadFont("Arial", 10.0f, false));
 	createTabButton("Pcons", i, tb->config->getPathA("cupcake.png").c_str());
 	setupPanel(tb->pcons->buildUI());
 	
@@ -31,13 +30,13 @@ TBMainWindow::TBMainWindow() {
 
 	createTabButton("Builds", i, tb->config->getPathA("list.png").c_str());
 
-	createTabButton("Fast Travel", i, tb->config->getPathA("plane.png").c_str());
+	createTabButton("Travel", i, tb->config->getPathA("plane.png").c_str());
 
 	createTabButton("Dialogs", i, tb->config->getPathA("comment.png").c_str());
 
 	createTabButton("Others?", i, NULL);
 
-	createTabButton("Materials?", i, tb->config->getPathA("feather.png").c_str());
+	createTabButton("Materials", i, tb->config->getPathA("feather.png").c_str());
 
 	createTabButton("Settings", i, tb->config->getPathA("settings.png").c_str());
 }
@@ -50,7 +49,6 @@ void TBMainWindow::createTabButton(const char* s, int& idx, const char* icon) {
 	b->SetLocation(0, idx * tabButtonHeight);
 	const int index = idx;
 	b->GetClickEvent() += ClickEventHandler([self, index](Control*) { self->openClosePanel(index); });
-	
 	++idx;
 }
 
@@ -86,6 +84,24 @@ void TBMainWindow::openClosePanel(int index) {
 	}
 }
 
+FontPtr TBMainWindow::getTBFont(float size, bool antialiased) {
+	FontPtr font;
+	try {
+		string path = GWToolbox::getInstance()->config->getPathA("Friz_Quadrata_Regular.ttf");
+		font = FontManager::LoadFontFromFile(path, size, antialiased);
+	} catch (Misc::FileNotFoundException e) {
+		LOG("ERROR - font file not found, falling back to Arial 8\n");
+		font = FontManager::LoadFont("Arial", 8.0f, false);
+	}
+
+	if (font == NULL) {
+		LOG("ERROR loading font, falling back to Arial 8\n");
+		font = FontManager::LoadFont("Arial", 8.0f, false);
+	}
+
+	return font;
+}
+
 TabButton::TabButton(const char* s, const char* icon)
 : pic(new PictureBox()) {
 	Button::Button();
@@ -100,6 +116,7 @@ TabButton::TabButton(const char* s, const char* icon)
 
 	label_->SetText(s);
 
+	SetFont(TBMainWindow::getTBFont(11.0f, true));
 	SetSize(TBMainWindow::width - DefaultBorderPadding * 2, TBMainWindow::tabButtonHeight - 1);
 	SetBackColor(Color::Empty());
 }

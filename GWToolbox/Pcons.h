@@ -13,34 +13,72 @@ class Pcon : public OSHGui::Button {
 public:
 	static const int WIDTH = 50;
 	static const int HEIGHT = 50;
-	static const int PIC_SIZE = 64;
 
 private:
+	OSHGui::Label* back;
 	OSHGui::PictureBox* pic;
 	OSHGui::Label* shadow;
+	const wchar_t* iniName;
+
+protected:
+	const wchar_t* chatName;
 	int quantity;
 	bool enabled;
-	const wchar_t* iniName;
-	const wchar_t* chatName;
 	UINT itemID;
 	UINT effectID;
 	int threshold;
 	timer_t timer;
 
 public:
-	Pcon(const wchar_t* ini, int xOffset, int yOffset);
+	Pcon(const wchar_t* ini);
 	virtual void DrawSelf(OSHGui::Drawing::RenderContext &context) override;
 	virtual void CalculateLabelLocation() override {};
 
-	void setIcon(const char* icon);
+	void setIcon(const char* icon, int xOff, int yOff, int size);
 	inline void setChatName(const wchar_t* chat) { chatName = chat; }
 	inline void setItemID(UINT item) { itemID = item; }
 	inline void setEffectID(UINT effect) { effectID = effect; }
 	inline void setThreshold(int t) { threshold = t; }
 
-	void checkAndUse();
-	void scanInventory();
-	void toggleActive();
+	virtual void checkAndUse();		// checks if need to use pcon, uses if needed
+	virtual void scanInventory();	// scans inventory, updates quantity field
+	void updateLabel();		// updates the label with quantity and color
+	void toggleActive();	// disables if enabled, enables if disabled
+};
+
+class PconCons : public Pcon {
+public:
+	PconCons(const wchar_t* ini)
+		: Pcon(ini) {}
+
+	void checkAndUse() override;
+};
+
+class PconCity : public Pcon {
+public:
+	PconCity(const wchar_t* ini)
+		: Pcon(ini) {}
+
+	void checkAndUse() override;
+	void scanInventory() override;
+};
+
+class PconAlcohol : public Pcon {
+public:
+	PconAlcohol(const wchar_t* ini)
+		: Pcon(ini) {}
+
+	void checkAndUse() override;
+	void scanInventory() override;
+};
+
+class PconLunar : public Pcon {
+public:
+	PconLunar(const wchar_t* ini)
+		: Pcon(ini) {}
+
+	void checkAndUse() override;
+	void scanInventory() override;
 };
 
 class Pcons {

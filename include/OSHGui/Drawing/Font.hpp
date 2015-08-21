@@ -24,21 +24,21 @@ namespace OSHGui
 	namespace Drawing
 	{
 		/**
-		 * Die Klasse repräsentiert eine Schrift(art).
+		 * The class represents a font (type).
 		 */
 		class OSHGUI_EXPORT Font
 		{
 		public:
 			/**
-			 * Destruktor.
+			 * Destructor
 			 */
 			virtual ~Font();
 
 			/**
-			 * Prüft, ob der entsprechende Codepoint gezeichnet werden kann.
+			 * Checks whether the corresponding code point can be drawn.
 			 *
 			 * \param cp Codepoint
-			 * \return true, falls der Codepoint gezeichnet werden kann
+			 * \return true, if the code point can be drawn
 			 */
 			bool IsCodepointAvailable(uint32_t cp) const
 			{
@@ -46,7 +46,7 @@ namespace OSHGui
 			}
 
 			/**
-			 * Zeichnet den Text in den GeometryBuffer.
+			 * Draws the text in the GeometryBuffer.
 			 *
 			 * \param buffer GeometryBuffer
 			 * \param text Text
@@ -61,7 +61,7 @@ namespace OSHGui
 			virtual float DrawText(GeometryBuffer &buffer, const Misc::AnsiString &text, const PointF &position, const RectangleF *clip, const ColorRectangle &colors, const float spaceExtra = 0.0f, const float scaleX = 1.0f, const float scaleY = 1.0f) const;
 
 			/**
-			 * Ruft die Höhe einer Textzeile ab.
+			 * Gets the height of a line of text.
 			 *
 			 * \param scaleY Skalierungsfaktor (default = 1)
 			 * \return Höhe einer Textzeile
@@ -72,10 +72,10 @@ namespace OSHGui
 			}
 
 			/**
-			 * Ruft die Höhe der Schrift in Pixeln ab.
+			 * Gets the height of the font, in pixels.
 			 *
-			 * \param scaleY Skalierungsfaktor (default = 1)
-			 * \return Höhe der Schrift
+			 * \param scaleY scaling factor (default = 1)
+			 * \return Height of the font
 			 */
 			float GetFontHeight(float scaleY = 1.0f) const
 			{
@@ -83,10 +83,10 @@ namespace OSHGui
 			}
 
 			/**
-			 * Ruft die Höhe des größten Glyphen der Schrift in Pixeln ab.
+			 * Gets the height of the tallest glyph font, in pixels.
 			 *
-			 * \param scaleY Skalierungsfaktor (default = 1)
-			 * \return Höhe des größten Glyphen der Schrift
+			 * \param scaleY scaling factor (default = 1)
+			 * \return Height of the tallest glyph font
 			 */
 			float GetBaseline(float scaleY = 1.0f) const
 			{
@@ -94,8 +94,9 @@ namespace OSHGui
 			}
 
 			/**
-			 * Ruft die Breite des gezeichneten Textes in Pixeln ab.
-			 * Dies ist die tatsächlich verwendete Breite, während \a GetTextAdvance die theoretische Breite des Textes berechnet.
+			 * Gets the width of the drawn text, in pixels.
+			 * This is the width actually used, while \ a GetTextAdvance 
+			 * computes the theoretical width of the text.
 			 *
 			 * \param scaleY Skalierungsfaktor (default = 1)
 			 * \return Breite des gezeichneten Textes
@@ -104,7 +105,8 @@ namespace OSHGui
 			virtual float GetTextExtent(const Misc::AnsiString &text, float scaleX = 1.0f) const;
 
 			/**
-			 * Ruft die theoretisch Breite des gezeichneten Textes in Pixeln ab. "Theoretisch" bedeutet, dass schräge Glyphen breiter sein können, wie ihre eigentliche Breite.
+			 * Gets the width of the theoretically drawn from the text, in pixels. 
+			 * "Theoretically" means that oblique glyphs can be wider as their actual width.
 			 *
 			 * \param scaleY Skalierungsfaktor (default = 1)
 			 * \return Breite des gezeichneten Textes
@@ -113,7 +115,7 @@ namespace OSHGui
 			virtual float GetTextAdvance(const Misc::AnsiString &text, float scaleX = 1.0f) const;
 
 			/**
-			 * Ruft den Index des Zeichens ab, das am nächsten zu dem angegebenen Pixel liegt.
+			 * Gets the index of the character that is closest to the specified pixels.
 			 *
 			 * \param text Text
 			 * \param pixel Pixel, dessen Index gesucht wird
@@ -137,7 +139,7 @@ namespace OSHGui
 			size_t GetCharAtPixel(const Misc::AnsiString& text, size_t start, float pixel, float scaleX = 1.0f) const;
 
 			/**
-			 * Ruft den zu \a codepoint gehörenden Glyph ab und rastert ihn eventuell.
+			 * Gets the to \ a codepoint belonging Glyph and possibly scans him.
 			 *
 			 * \param codepoint Codepoint
 			 * \return nullptr, falls der Glyph nicht existiert
@@ -145,7 +147,7 @@ namespace OSHGui
 			const FontGlyph* GetGlyphData(uint32_t codepoint) const;
 
 			/**
-			* Legt die Display-Größe fest.
+			* Specifies the screen size.
 			*
 			* @param size
 			*/

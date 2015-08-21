@@ -19,33 +19,33 @@ namespace OSHGui
 	namespace Drawing
 	{
 		/**
-		 * Die Klasse ermöglicht das Laden einer Schriftart.
+		 * The class allows loading a font.
 		 */
 		class OSHGUI_EXPORT FontManager
 		{
 		public:
 			/**
-			 * Lädt die Schriftart mit dem entsprechenden Namen.
+			 * Loads the font with the corresponding name.
 			 *
-			 * \param name Name der Schriftart
-			 * \param pointSize Größe in PT
-			 * \param antiAliased Legt fest, ob AntiAliasing verwendet werden soll
-			 * \return Die geladene Schriftart oder nullptr, falls die Schriftart nicht gefunden wird.
+			 * \param name of the font
+			 * \param pointSize Size in PT
+			 * \param antiAliased Determines whether antialiasing should be used
+			 * \return The downloaded font or nullptr, if the font is not found.
 			 */
 			static FontPtr LoadFont(Misc::AnsiString name, float pointSize, bool antiAliased);
 			/**
-			 * Lädt die Schriftart aus der angegebenen Datei.
+			 * Loads the font from the specified file.
 			 *
-			 * \param file Pfad zur Datei
-			 * \param pointSize Größe in PT
-			 * \param antiAliased Legt fest, ob AntiAliasing verwendet werden soll
-			 * \return Die geladene Schriftart oder nullptr, falls die Schriftart nicht gefunden wird.
+			 * \param file Path to the file
+			 * \param pointSize Size in PT
+			 * \param antiAliased Determines whether antialiasing should be used
+			 * \return The downloaded font or nullptr, if the font is not found.
 			 */
 			static FontPtr LoadFontFromFile(const Misc::AnsiString &file, float pointSize, bool antiAliased);
 			static FontPtr LoadFontFromMemory(const Misc::RawDataContainer &data, float pointSize, bool antiAliased);
 
 			/**
-			* Legt die Display-Größe fest.
+			* Specifies the screen size.
 			*
 			* @param size
 			*/
