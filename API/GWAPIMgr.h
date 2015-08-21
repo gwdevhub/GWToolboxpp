@@ -10,7 +10,6 @@ namespace GWAPI {
 
 		friend class GameThreadMgr;
 		friend class CtoSMgr;
-		friend class StoCMgr;
 		friend class AgentMgr;
 		friend class ItemMgr;
 #ifdef GWAPI_USEDIRECTX
@@ -23,7 +22,6 @@ namespace GWAPI {
 
 		GameThreadMgr* GameThread;
 		CtoSMgr* CtoS;
-		StoCMgr* StoC;
 		
 		GWAPIMgr();
 		~GWAPIMgr();

@@ -67,8 +67,6 @@
 #include "AgentMgr.h"
 #include "ItemMgr.h"
 
-#include "StoCMgr.h"
-
 #ifdef GWAPI_USEDIRECTX
 #include "DirectXMgr.h"
 #endif
@@ -87,7 +85,6 @@ namespace GWAPI{
 	class GameThreadMgr;
 
 	class CtoSMgr;
-	class StoCMgr;
 
 	class AgentMgr;
 	class ItemMgr;

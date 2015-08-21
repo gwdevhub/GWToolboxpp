@@ -12,7 +12,6 @@ GWAPI::GWAPIMgr::GWAPIMgr()
 	if (MemoryMgr::Scan()){
 		GameThread = new GameThreadMgr(this);
 		CtoS = new CtoSMgr(this);
-		StoC = new StoCMgr(this);
 		Agents = new AgentMgr(this);
 		Items = new ItemMgr(this);
 #ifdef GWAPI_USEDIRECTX
@@ -47,7 +46,6 @@ GWAPI::GWAPIMgr::~GWAPIMgr()
 	if (Agents) delete Agents;
 	
 	if (CtoS) delete CtoS;
-	if (StoC) delete StoC;
 	if (GameThread) delete GameThread;
 }
 

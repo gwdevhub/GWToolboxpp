@@ -69,10 +69,12 @@
       <WarningLevel>Level3</WarningLevel>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;API_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -97,7 +99,6 @@
     <ClInclude Include="API\MemoryMgr.h" />
     <ClInclude Include="API\CtoSMgr.h" />
     <ClInclude Include="API\SkillbarMgr.h" />
-    <ClInclude Include="API\StoCMgr.h" />
     <ClInclude Include="GWToolbox\Builds.h" />
     <ClInclude Include="GWToolbox\Config.h" />
     <ClInclude Include="GWToolbox\GWToolbox.h" />
@@ -215,7 +216,6 @@
     <ClCompile Include="API\MapMgr.cpp" />
     <ClCompile Include="API\MemoryMgr.cpp" />
     <ClCompile Include="API\SkillbarMgr.cpp" />
-    <ClCompile Include="API\StoCMgr.cpp" />
     <ClCompile Include="GWToolbox\Builds.cpp" />
     <ClCompile Include="GWToolbox\GWToolbox.cpp" />
     <ClCompile Include="GWToolbox\HotkeyMgr.cpp" />

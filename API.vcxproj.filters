@@ -46,9 +46,6 @@
     <ClInclude Include="API\DirectXMgr.h">
       <Filter>API</Filter>
     </ClInclude>
-    <ClInclude Include="API\StoCMgr.h">
-      <Filter>API</Filter>
-    </ClInclude>
     <ClInclude Include="API\MemoryMgr.h">
       <Filter>API</Filter>
     </ClInclude>
@@ -400,9 +397,6 @@
       <Filter>Main</Filter>
     </ClCompile>
     <ClCompile Include="API\DirectXMgr.cpp">
-      <Filter>API\src</Filter>
-    </ClCompile>
-    <ClCompile Include="API\StoCMgr.cpp">
       <Filter>API\src</Filter>
     </ClCompile>
     <ClCompile Include="API\MemoryMgr.cpp">
