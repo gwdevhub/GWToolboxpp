@@ -265,10 +265,10 @@ Pcon::Pcon(const wchar_t* ini, int xOffset, int yOffset) {
 	threshold = 0;
 	timer = TBTimer::init();
 	
-	pic->SetSize(PIC_SIZE, PIC_SIZE);
+	pic->SetSize(48, 48);
 	pic->SetLocation(xOffset, yOffset);
 	pic->SetBackColor(Drawing::Color::Empty());
-	pic->SetStretch(false);
+	pic->SetStretch(true);
 	pic->SetEnabled(false);
 	AddSubControl(pic);
 
@@ -335,9 +335,8 @@ void Pcon::scanInventory() {
 		bag = bags[bagIndex];
 		if (bag != NULL) {
 			ItemMgr::ItemArray items = bag->Items;
-			for (unsigned int i = 0; i < items.size(); i++) {
+			for (size_t i = 0; i < items.size(); i++) {
 				if (items[i]) {
-					LOG("%d\n", items[i]->Quantity);
 					if (items[i]->ModelId == itemID) {
 						quantity += items[i]->Quantity;
 					}
@@ -543,24 +542,25 @@ void Pcons::mainRoutine() {
 }
 
 void Pcons::scanInventory() {
-	//essence->scanInventory();
-	//grail->scanInventory();
-	//armor->scanInventory();
-	//alcohol->scanInventory();
-	//redrock->scanInventory();
-	//bluerock->scanInventory();
-	//greenrock->scanInventory();
-	//pie->scanInventory();
+	essence->scanInventory();
+	grail->scanInventory();
+	armor->scanInventory();
+	alcohol->scanInventory();
+	redrock->scanInventory();
+	bluerock->scanInventory();
+	greenrock->scanInventory();
+	pie->scanInventory();
 	cupcake->scanInventory();
-	//apple->scanInventory();
-	//corn->scanInventory();
-	//egg->scanInventory();
-	//kabob->scanInventory();
-	//warsupply->scanInventory();
-	//lunars->scanInventory();
-	//skalesoup->scanInventory();
-	//pahnai->scanInventory();
-	//city->scanInventory();
+	apple->scanInventory();
+	corn->scanInventory();
+	egg->scanInventory();
+	kabob->scanInventory();
+	warsupply->scanInventory();
+	lunars->scanInventory();
+	skalesoup->scanInventory();
+	pahnai->scanInventory();
+	city->scanInventory();
+
 	//vector<unsigned int> quantity(Pcons::count, 0);
 	//unsigned int quantityEssence = 0;
 	//unsigned int quantityGrail = 0;
