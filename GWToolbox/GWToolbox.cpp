@@ -106,11 +106,6 @@ void create_gui(IDirect3DDevice9* pDevice) {
 	std::shared_ptr<TBMainWindow> mainWindow = std::make_shared<TBMainWindow>();
 	app->Run(mainWindow);
 	
-	GWToolbox * tb = GWToolbox::getInstance();
-	tb->pcons->buildUI();
-	tb->builds->buildUI();
-	tb->hotkeys->buildUI();
-	
 	app->Enable();
 
 	HWND hWnd = GWAPI::MemoryMgr::GetGWWindowHandle();

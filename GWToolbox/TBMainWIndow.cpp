@@ -46,18 +46,19 @@ void TBMainWindow::createTabButton(const char* s, int& idx, const char* icon) {
 	TBMainWindow * self = this;
 
 	TabButton* b = new TabButton(s, icon);
+	AddControl(b);
 	b->SetLocation(0, idx * tabButtonHeight);
 	const int index = idx;
 	b->GetClickEvent() += ClickEventHandler([self, index](Control*) { self->openClosePanel(index); });
-	AddControl(b);
+	
 	++idx;
 }
 
 void TBMainWindow::setupPanel(Panel* panel) {
-	panel->SetLocation(width / 2, 0);
-	panel->SetEnabled(false);
 	panels.push_back(panel);
 	AddSubControl(panel);
+	panel->SetLocation(width, 0);
+	panel->SetEnabled(false);
 }
 
 void TBMainWindow::DrawSelf(RenderContext &context) {

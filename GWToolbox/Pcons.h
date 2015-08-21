@@ -7,48 +7,67 @@
 
 using namespace std;
 
-typedef unsigned char BYTE;
+typedef unsigned int UINT;
+
+class Pcon : public OSHGui::Button {
+public:
+	static const int WIDTH = 50;
+	static const int HEIGHT = 50;
+	static const int PIC_SIZE = 64;
+
+private:
+	OSHGui::PictureBox* pic;
+	OSHGui::Label* shadow;
+	int quantity;
+	bool enabled;
+	const wchar_t* iniName;
+	const wchar_t* chatName;
+	UINT itemID;
+	UINT effectID;
+	int threshold;
+	timer_t timer;
+
+public:
+	Pcon(const wchar_t* ini, int xOffset, int yOffset);
+	virtual void DrawSelf(OSHGui::Drawing::RenderContext &context) override;
+	virtual void CalculateLabelLocation() override {};
+
+	void setIcon(const char* icon);
+	inline void setChatName(const wchar_t* chat) { chatName = chat; }
+	inline void setItemID(UINT item) { itemID = item; }
+	inline void setEffectID(UINT effect) { effectID = effect; }
+	inline void setThreshold(int t) { threshold = t; }
+
+	void checkAndUse();
+	void scanInventory();
+	void toggleActive();
+};
 
 class Pcons {
 private:
-	BYTE initializer;
-	const BYTE Cons;
-	const BYTE Alcohol;
-	const BYTE RRC;
-	const BYTE BRC;
-	const BYTE GRC;
-	const BYTE Pie;
-	const BYTE Cupcake;
-	const BYTE Apple;
-	const BYTE Corn;
-	const BYTE Egg;
-	const BYTE Kabob;
-	const BYTE Warsupply;
-	const BYTE Lunars;
-	const BYTE Res;
-	const BYTE Skalesoup;
-	const BYTE Mobstoppers;
-	const BYTE Panhai;
-	const BYTE City;
-	const BYTE count;
+	Pcon* essence;
+	Pcon* grail;
+	Pcon* armor;
+	Pcon* alcohol;
+	Pcon* redrock;
+	Pcon* bluerock;
+	Pcon* greenrock;
+	Pcon* pie;
+	Pcon* cupcake;
+	Pcon* apple;
+	Pcon* corn;
+	Pcon* egg;
+	Pcon* kabob;
+	Pcon* warsupply;
+	Pcon* lunars;
+	Pcon* skalesoup;
+	Pcon* pahnai;
+	Pcon* city;
 	
-	bool enabled;						// true if the feature is enabled, false otherwise 
+	// true if the feature is enabled, false otherwise 
+	bool enabled;
 
-	vector<wstring> pconsName;			// map from each pcon to ini name
-	vector<wstring> pconsChatName;		// map from each pcon to chat name
-	vector<int> pconsItemID;			// map from pcons to item id
-	vector<bool> pconsActive;			// map from pcons to status active (bool) 
-	vector<timer_t> pconsTimer;			// list of pcons timers 
-	vector<int> pconsEffect;			// list of pcons effects 
-
-	// checks if the pcon is in inventory 
-	bool pconsFind(unsigned int ModelID);
-
-	// it will use if needed the pcon. Same as main routine,
-	// but only for one pcon
-	void checkAndUsePcon(int PconID);
-
-	// scans inventory, updates UI and the pconsActive array 
+	// scans inventory and updates UI
 	void scanInventory();
 
 public:
@@ -61,14 +80,4 @@ public:
 	void loadIni();				// load settings from ini file 
 	OSHGui::Panel* buildUI();	// create user interface
 	void mainRoutine();			// runs one loop of the main routine (checking each pcon once)
-
-	class Pcon : public OSHGui::PictureBox {
-	private:
-		OSHGui::Label* label;
-		int count;
-	public:
-		Pcon(const char* icon);
-		virtual void DrawSelf(OSHGui::Drawing::RenderContext &context) override;
-	};
 };
-
