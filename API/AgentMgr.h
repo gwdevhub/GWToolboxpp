@@ -169,7 +169,7 @@ namespace GWAPI {
 
 		// Returns array of alternate agent array that can be read beyond compass range.
 		// Holds limited info and needs to be explored more.
-		MapAgentArray* GetMapAgentArray();
+		MapAgentArray GetMapAgentArray();
 
 		// Returns Agentstruct Array of agents in compass range, full structs.
 		AgentArray GetAgentArray();

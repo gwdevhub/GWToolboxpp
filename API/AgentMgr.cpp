@@ -84,3 +84,8 @@ bool GWAPI::AgentMgr::GetIsPartyLoaded()
 	return true;
 }
 
+GWAPI::AgentMgr::MapAgentArray GWAPI::AgentMgr::GetMapAgentArray()
+{
+	return *MemoryMgr::ReadPtrChain<MapAgentArray*>(MemoryMgr::GetContextPtr(), 2, 0x2C, 0x7C);
+}
+
