@@ -24,8 +24,6 @@ public:
 	virtual void DrawSelf(Drawing::RenderContext &context) override;
 
 	void openClosePanel(int index);
-
-	static Drawing::FontPtr getTBFont(float size, bool antialiased);
 };
 
 class TabButton : public Button {

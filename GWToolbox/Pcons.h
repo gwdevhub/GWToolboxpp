@@ -16,6 +16,7 @@ public:
 
 private:
 	OSHGui::PictureBox* pic;
+	OSHGui::PictureBox* tick;
 	OSHGui::Label* shadow;
 	const wchar_t* iniName;
 
@@ -26,7 +27,7 @@ protected:
 	UINT itemID;
 	UINT effectID;
 	int threshold;
-	timer_t timer;
+	clock_t timer;
 
 public:
 	Pcon(const wchar_t* ini);

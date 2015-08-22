@@ -1,6 +1,7 @@
 #include "TBMainWindow.h"
 #include "logger.h"
 #include "../include/OSHGui/OSHGui.hpp"
+#include "GuiUtils.h"
 #include "GWToolbox.h"
 
 using namespace OSHGui::Drawing;
@@ -12,7 +13,7 @@ TBMainWindow::TBMainWindow() {
 	currentPanel = -1;
 
 	// some local vars
-	GWToolbox * tb = GWToolbox::getInstance();
+	GWToolbox* tb = GWToolbox::getInstance();
 	int y = 0;
 	int i = 0;
 	int tabButtonHeight = 27;
@@ -20,17 +21,17 @@ TBMainWindow::TBMainWindow() {
 	// build main UI
 	SetText("GWToolbox++");
 	SetSize(width, height);
-	SetFont(TBMainWindow::getTBFont(8.0, true));
+	SetFont(GuiUtils::getTBFont(8.0, true));
 	
-	createTabButton("Pcons", i, tb->config->getPathA("cupcake.png").c_str());
+	createTabButton("Pcons", i, GuiUtils::getPathA("cupcake.png").c_str());
 	setupPanel(tb->pcons->buildUI());
 
 	Button* toggle = new Button();
 	toggle->SetText("Disabled");
 	toggle->SetBackColor(Color::Empty());
-	toggle->SetMouseOverFocusColor(Color::FromARGB(90, 50, 50, 50));
+	toggle->SetMouseOverFocusColor(GuiUtils::getMouseOverColor());
 	toggle->SetForeColor(Color::Red());
-	toggle->SetFont(getTBFont(10.0, true));
+	toggle->SetFont(GuiUtils::getTBFont(10.0, true));
 	toggle->GetClickEvent() += ClickEventHandler([toggle](Control*) {
 		bool active = GWToolbox::getInstance()->pcons->toggleActive();
 		if (active) {
@@ -46,20 +47,20 @@ TBMainWindow::TBMainWindow() {
 	AddControl(toggle);
 	
 	++i;
-	createTabButton("Hotkeys", i, tb->config->getPathA("keyboard.png").c_str());
+	createTabButton("Hotkeys", i, GuiUtils::getPathA("keyboard.png").c_str());
 	setupPanel(tb->hotkeys->buildUI());
 
-	createTabButton("Builds", i, tb->config->getPathA("list.png").c_str());
+	createTabButton("Builds", i, GuiUtils::getPathA("list.png").c_str());
 
-	createTabButton("Travel", i, tb->config->getPathA("plane.png").c_str());
+	createTabButton("Travel", i, GuiUtils::getPathA("plane.png").c_str());
 
-	createTabButton("Dialogs", i, tb->config->getPathA("comment.png").c_str());
+	createTabButton("Dialogs", i, GuiUtils::getPathA("comment.png").c_str());
 
 	createTabButton("Others?", i, NULL);
 
-	createTabButton("Materials", i, tb->config->getPathA("feather.png").c_str());
+	createTabButton("Materials", i, GuiUtils::getPathA("feather.png").c_str());
 
-	createTabButton("Settings", i, tb->config->getPathA("settings.png").c_str());
+	createTabButton("Settings", i, GuiUtils::getPathA("settings.png").c_str());
 }
 
 void TBMainWindow::createTabButton(const char* s, int& idx, const char* icon) {
@@ -108,24 +109,6 @@ void TBMainWindow::openClosePanel(int index) {
 	}
 }
 
-FontPtr TBMainWindow::getTBFont(float size, bool antialiased) {
-	FontPtr font;
-	try {
-		string path = GWToolbox::getInstance()->config->getPathA("Friz_Quadrata_Regular.ttf");
-		font = FontManager::LoadFontFromFile(path, size, antialiased);
-	} catch (Misc::FileNotFoundException e) {
-		LOG("ERROR - font file not found, falling back to Arial\n");
-		font = FontManager::LoadFont("Arial", size, false);
-	}
-
-	if (font == NULL) {
-		LOG("ERROR loading font, falling back to Arial\n");
-		font = FontManager::LoadFont("Arial", size, false);
-	}
-
-	return font;
-}
-
 TabButton::TabButton(const char* s, const char* icon)
 : pic(new PictureBox()) {
 	Button::Button();
@@ -140,10 +123,10 @@ TabButton::TabButton(const char* s, const char* icon)
 
 	label_->SetText(s);
 
-	SetFont(TBMainWindow::getTBFont(10.0f, true));
+	SetFont(GuiUtils::getTBFont(10.0f, true));
 	SetSize(TBMainWindow::width - DefaultBorderPadding * 2, TBMainWindow::tabButtonHeight - 1);
 	SetBackColor(Color::Empty());
-	SetMouseOverFocusColor(Color::FromARGB(90, 50, 50, 50));
+	SetMouseOverFocusColor(GuiUtils::getMouseOverColor());
 }
 
 void TabButton::DrawSelf(Drawing::RenderContext &context) {

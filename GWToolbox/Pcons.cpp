@@ -214,6 +214,7 @@ Pcon::Pcon(const wchar_t* ini)
 : Button() {
 	
 	pic = new PictureBox();
+	tick = new PictureBox();
 	shadow = new Label();
 	quantity = 0;
 	enabled = GWToolbox::getInstance()->config->iniReadBool(L"pcons", ini, false);;
@@ -223,6 +224,14 @@ Pcon::Pcon(const wchar_t* ini)
 	effectID = 0;
 	threshold = 0;
 	timer = TBTimer::init();
+
+	tick->SetBackColor(Drawing::Color::Empty());
+	tick->SetStretch(true);
+	tick->SetEnabled(false);
+	tick->SetLocation(10, 10);
+	tick->SetSize(35, 35);
+	tick->SetImage(Drawing::Image::FromFile(GuiUtils::getPathA("Tick2.png")));
+	AddSubControl(tick);
 	
 	pic->SetBackColor(Drawing::Color::Empty());
 	pic->SetStretch(true);
@@ -230,47 +239,49 @@ Pcon::Pcon(const wchar_t* ini)
 	AddSubControl(pic);
 
 	shadow->SetText(std::to_string(quantity));
-	shadow->SetFont(TBMainWindow::getTBFont(11.0f, true));
+	shadow->SetFont(GuiUtils::getTBFont(11.0f, true));
 	shadow->SetForeColor(Drawing::Color::Black());
 	shadow->SetLocation(1, 1);
 	AddSubControl(shadow);
 
 	label_->SetText(std::to_string(quantity));
 	label_->SetLocation(0, 0);
-	label_->SetFont(TBMainWindow::getTBFont(11.0f, true));
+	label_->SetFont(GuiUtils::getTBFont(11.0f, true));
 
 	SetSize(WIDTH, HEIGHT);
 	SetBackColor(Drawing::Color::Empty());
+	SetMouseOverFocusColor(GuiUtils::getMouseOverColor());
 
-	GetClickEvent() += ClickEventHandler([this](Control*) { 
-		LOG("click event handler\n");
-		this->toggleActive();
-	});
+	GetClickEvent() += ClickEventHandler([this](Control*) { this->toggleActive(); });
 }
 
 void Pcon::toggleActive() {
 	enabled = !enabled;
+	scanInventory();
 	GWToolbox::getInstance()->config->iniWriteBool(L"pcons", iniName, enabled);
 }
 
 void Pcon::DrawSelf(Drawing::RenderContext &context) {
+	BufferGeometry(context);
+	QueueGeometry(context);
 	pic->Render();
 	shadow->Render();
-	Button::DrawSelf(context);
+	label_->Render();
+	if (enabled) tick->Render();
 }
 
 void Pcon::PopulateGeometry() {
 	Button::PopulateGeometry();
 	Drawing::Graphics g(*geometry_);
-	if (enabled) {
-		g.DrawRectangle(Drawing::Color::Red(), 0.0, 0.0, (float)GetWidth() - 1, (float)GetHeight() - 1);
-	}
+	//if (enabled) {
+	//	g.DrawRectangle(Drawing::Color::Red(), 0.0, 0.0, (float)GetWidth() - 1, (float)GetHeight() - 1);
+	//}
 }
 
 void Pcon::setIcon(const char* icon, int xOff, int yOff, int size) {
 	pic->SetSize(size, size);
 	pic->SetLocation(xOff, yOff);
-	pic->SetImage(Drawing::Image::FromFile(GWToolbox::getInstance()->config->getPathA(icon)));
+	pic->SetImage(Drawing::Image::FromFile(GuiUtils::getPathA(icon)));
 }
 
 void Pcon::checkAndUse() {
@@ -443,7 +454,6 @@ void PconCity::scanInventory() {
 
 void PconAlcohol::scanInventory() {
 	quantity = 0;
-	LOG("looking for alcohol\n");
 	ItemMgr::Bag** bags = GWAPIMgr::GetInstance()->Items->GetBagArray();
 	ItemMgr::Bag* bag = NULL;
 	for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
@@ -529,7 +539,11 @@ void Pcons::mainRoutine() {
 
 	switch (API->Map->GetInstanceType()) {
 	case GwConstants::InstanceType::Explorable:
+		if (API->Map->GetInstanceTime() < 1000) break;
 		if (API->Agents->GetPlayer()->GetIsDead()) break;
+		essence->checkAndUse();
+		grail->checkAndUse();
+		armor->checkAndUse();
 		redrock->checkAndUse();
 		bluerock->checkAndUse();
 		greenrock->checkAndUse();
@@ -547,6 +561,7 @@ void Pcons::mainRoutine() {
 		break;
 
 	case GwConstants::InstanceType::Outpost:
+		if (API->Map->GetInstanceTime() < 1000) break;
 		city->checkAndUse();
 		break;
 

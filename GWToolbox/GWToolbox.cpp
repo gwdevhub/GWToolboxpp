@@ -7,6 +7,7 @@
 
 #include <string>
 
+#include "Timer.h"
 #include "TBMainWindow.h"
 
 using namespace OSHGui::Drawing;
@@ -93,7 +94,7 @@ void create_gui(IDirect3DDevice9* pDevice) {
 
 	Application * app = Application::InstancePtr();
 
-	string path = GWToolbox::getInstance()->config->getPathA("DefaultTheme.txt");
+	string path = GuiUtils::getPathA("DefaultTheme.txt");
 	try {
 		Theme theme;
 		theme.Load(path);
@@ -103,7 +104,7 @@ void create_gui(IDirect3DDevice9* pDevice) {
 		ERR("WARNING Could not load theme file %s\n", path.c_str());
 	}
 	
-	app->SetDefaultFont(TBMainWindow::getTBFont(18.0f, false));
+	app->SetDefaultFont(GuiUtils::getTBFont(10.0f, false));
 
 	app->SetCursorEnabled(false);
 
@@ -156,6 +157,7 @@ void GWToolbox::exec() {
 	mgr = GWAPI::GWAPIMgr::GetInstance();
 	dx = mgr->DirectX;
 
+	LOG("Loading from ini\n");
 	pcons->loadIni();
 	builds->loadIni();
 	hotkeys->loadIni();
@@ -169,12 +171,14 @@ void GWToolbox::exec() {
 	m_Active = true;
 
 	Application * app = Application::InstancePtr();
+
 	while (true) { // main loop
 		if (app->HasBeenInitialized()) {
 			pcons->mainRoutine();
 			builds->mainRoutine();
 			hotkeys->mainRoutine();
 		}
+
 		Sleep(10);
 
 		if (GetAsyncKeyState(VK_END) & 1)

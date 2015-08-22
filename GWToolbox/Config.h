@@ -6,6 +6,7 @@
 #include "Shlwapi.h"
 
 #include "logger.h"
+#include "GuiUtils.h"
 
 #include "../SimpleIni.h"
 
@@ -13,8 +14,6 @@ using namespace std;
 
 class Config {
 private:
-	string  settingsFolderA;	// the settings folder as ansi string
-	wstring settingsFolderW;	// the settings folder as wstring
 	wstring iniFilePath;		// the full ini file path
 	CSimpleIni* iniFile;		// SimpleIni object
 
@@ -22,20 +21,7 @@ public:
 	const wstring version = L"1.0";
 
 	Config() {
-		WCHAR szPathW[MAX_PATH];
-		szPathW[0] = L'\0';
-		SHGetFolderPathW(NULL, CSIDL_COMMON_APPDATA, NULL, 0, szPathW);
-		settingsFolderW = szPathW;
-		settingsFolderW.append(L"\\GWToolbox");
-
-		CHAR szPath[MAX_PATH];
-		szPath[0] = '\0';
-		SHGetFolderPathA(NULL, CSIDL_COMMON_APPDATA, NULL, 0, szPath);
-		settingsFolderA = szPath;
-		settingsFolderA.append("\\GWToolbox");
-
-		wstring iniFilePath = wstring(settingsFolderW);
-		iniFilePath.append(L"\\GWToolbox.ini");
+		iniFilePath = GuiUtils::getPathW(L"GWToolbox.ini");
 
 		iniFile = new CSimpleIni(false, false, false);
 		iniFile->LoadFile(iniFilePath.c_str());
@@ -117,10 +103,4 @@ public:
 	void iniDeleteSection(const wchar_t* section) {
 		iniFile->Delete(section, NULL);
 	}
-
-	wstring getSettingsFolderW() { return settingsFolderW; }
-	string	getSettingsFolderA() { return settingsFolderA; }
-
-	wstring getPathW(wstring filename) { return settingsFolderW + L"\\" + filename; }
-	string	getPathA(string  filename) { return settingsFolderA +  "\\" + filename; }
 };
