@@ -326,28 +326,39 @@ void PconCons::checkAndUse() {
 void PconCity::checkAndUse() {
 	if (enabled	&& TBTimer::diff(timer) > 5000) {
 		GWAPIMgr* API = GWAPIMgr::GetInstance();
-		if (API->Agents->GetPlayer()->MoveX > 0 || API->Agents->GetPlayer()->MoveY > 0) {
-			if (API->Effects->GetPlayerEffectById(Effect::CremeBrulee).SkillId
-				|| API->Effects->GetPlayerEffectById(Effect::BlueDrink).SkillId
-				|| API->Effects->GetPlayerEffectById(Effect::ChocolateBunny).SkillId
-				|| API->Effects->GetPlayerEffectById(Effect::RedBeanCake).SkillId) {
+		try {
+			if (API->Agents->GetPlayer() && 
+				(API->Agents->GetPlayer()->MoveX > 0 || API->Agents->GetPlayer()->MoveY > 0)) {
+				LOG("%d %d %d %d\n",
+					API->Effects->GetPlayerEffectById(Effect::CremeBrulee).SkillId,
+					API->Effects->GetPlayerEffectById(Effect::BlueDrink).SkillId,
+					API->Effects->GetPlayerEffectById(Effect::ChocolateBunny).SkillId,
+					API->Effects->GetPlayerEffectById(Effect::RedBeanCake).SkillId);
+				if (API->Effects->GetPlayerEffectById(Effect::CremeBrulee).SkillId
+					|| API->Effects->GetPlayerEffectById(Effect::BlueDrink).SkillId
+					|| API->Effects->GetPlayerEffectById(Effect::ChocolateBunny).SkillId
+					|| API->Effects->GetPlayerEffectById(Effect::RedBeanCake).SkillId) {
 
-				// then we have effect on already, do nothing
-			} else {
-				// we should use it. Because of logical-OR only the first one will be used
-				if (API->Items->UseItemByModelId(ItemID::CremeBrulee)
-					|| API->Items->UseItemByModelId(ItemID::ChocolateBunny)
-					|| API->Items->UseItemByModelId(ItemID::Fruitcake)
-					|| API->Items->UseItemByModelId(ItemID::SugaryBlueDrink)
-					|| API->Items->UseItemByModelId(ItemID::RedBeanCake)
-					|| API->Items->UseItemByModelId(ItemID::JarOfHoney)) {
-
-					timer = TBTimer::init();
+					// then we have effect on already, do nothing
 				} else {
-					scanInventory();
-					API->Chat->WriteChat(L"[WARNING] Cannot find a city speedboost");
+					LOG("lets do it\n");
+					// we should use it. Because of logical-OR only the first one will be used
+					if (API->Items->UseItemByModelId(ItemID::CremeBrulee)
+						|| API->Items->UseItemByModelId(ItemID::ChocolateBunny)
+						|| API->Items->UseItemByModelId(ItemID::Fruitcake)
+						|| API->Items->UseItemByModelId(ItemID::SugaryBlueDrink)
+						|| API->Items->UseItemByModelId(ItemID::RedBeanCake)
+						|| API->Items->UseItemByModelId(ItemID::JarOfHoney)) {
+
+						timer = TBTimer::init();
+					} else {
+						scanInventory();
+						API->Chat->WriteChat(L"[WARNING] Cannot find a city speedboost");
+					}
 				}
 			}
+		} catch (APIException_t) {
+			LOG("API exception \n");
 		}
 	}
 }
@@ -536,11 +547,18 @@ void Pcons::mainRoutine() {
 	if (!enabled || !initialized) return;
 
 	GWAPIMgr * API = GWAPIMgr::GetInstance();
+	InstanceType type;
+	try {
+		type = API->Map->GetInstanceType();
+		if (type == InstanceType::Loading) return;
+		if (API->Agents->GetPlayer() == nullptr) return;
+		if (API->Agents->GetPlayer()->Id == 0) return;
+		if (API->Agents->GetPlayer()->HP == 0) return;
+	} catch (APIException_t) {
+		return;
+	}
 
-	switch (API->Map->GetInstanceType()) {
-	case GwConstants::InstanceType::Explorable:
-		if (API->Map->GetInstanceTime() < 1000) break;
-		if (API->Agents->GetPlayer()->GetIsDead()) break;
+	if (type == InstanceType::Explorable) {
 		essence->checkAndUse();
 		grail->checkAndUse();
 		armor->checkAndUse();
@@ -558,15 +576,8 @@ void Pcons::mainRoutine() {
 		pahnai->checkAndUse();
 		alcohol->checkAndUse();
 		lunars->checkAndUse();
-		break;
-
-	case GwConstants::InstanceType::Outpost:
-		if (API->Map->GetInstanceTime() < 1000) break;
+	} else if (type == InstanceType::Outpost) {
 		city->checkAndUse();
-		break;
-
-	case GwConstants::InstanceType::Loading:
-		break;
 	}
 }
 

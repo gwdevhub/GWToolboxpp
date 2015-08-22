@@ -3,7 +3,7 @@
 GWAPI::AgentMgr::AgentArray GWAPI::AgentMgr::GetAgentArray()
 {
 	AgentArray* agRet = (AgentArray*)MemoryMgr::agArrayPtr;
-	if (agRet->size() == 0) throw 1;
+	if (agRet->size() == 0) throw API_EXCEPTION;
 	return *agRet;
 }
 
@@ -89,3 +89,20 @@ GWAPI::AgentMgr::MapAgentArray GWAPI::AgentMgr::GetMapAgentArray()
 	return *MemoryMgr::ReadPtrChain<MapAgentArray*>(MemoryMgr::GetContextPtr(), 2, 0x2C, 0x7C);
 }
 
+GWAPI::AgentMgr::Agent* GWAPI::AgentMgr::GetPlayer() {
+	AgentArray agents = GetAgentArray();
+	if (agents.IsValid()) {
+		return GetAgentArray()[GetPlayerId()];
+	} else {
+		return nullptr;
+	}
+}
+
+GWAPI::AgentMgr::Agent* GWAPI::AgentMgr::GetTarget() {
+	AgentArray agents = GetAgentArray();
+	if (agents.IsValid()) {
+		return GetAgentArray()[GetTargetId()];
+	} else {
+		return nullptr;
+	}
+}

@@ -1,8 +1,12 @@
 #pragma  once
 #include <Windows.h>
 #include "APIMain.h"
+#include <exception>
 
 namespace GWAPI {
+
+	typedef BYTE APIException_t;
+	const APIException_t API_EXCEPTION = 1;
 
 	class GWAPIMgr {
 

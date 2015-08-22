@@ -8,7 +8,7 @@ void GWAPI::MapMgr::Travel(DWORD MapID, DWORD District /*= 0*/, DWORD Region /*=
 
 DWORD GWAPI::MapMgr::GetInstanceTime()
 {
-	return *MemoryMgr::ReadPtrChain<DWORD*>(MemoryMgr::GetContextPtr(), 2, 0x8, 0x1A8);
+	return *MemoryMgr::ReadPtrChain<DWORD*>(MemoryMgr::GetContextPtr(), 2, 0x8, 0x1AC);
 }
 
 DWORD GWAPI::MapMgr::GetMapID()

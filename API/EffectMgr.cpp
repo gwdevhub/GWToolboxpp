@@ -13,11 +13,12 @@ GWAPI::EffectMgr::Effect GWAPI::EffectMgr::GetPlayerEffectById(DWORD SkillID)
 {
 	EffectArray Effects = GetPlayerEffectArray();
 
-	for (DWORD i = 1; i < Effects.size(); i++)
+	
+	for (DWORD i = 1; i < Effects.size(); i++) {
 		if (Effects[i].SkillId == SkillID) return Effects[i];
+	}
 
-	Effect noEff;
-	noEff.SkillId = 0;
+	Effect noEff = { 0, 0, 0, 0, 0, 0 };
 	return noEff;
 }
 
@@ -25,12 +26,11 @@ GWAPI::EffectMgr::Buff GWAPI::EffectMgr::GetPlayerBuffBySkillId(DWORD SkillID)
 {
 	BuffArray Buffs = GetPlayerBuffArray();
 
-	for (DWORD i = 1; i < Buffs.size(); i++)
+	for (DWORD i = 1; i < Buffs.size(); i++) {
 		if (Buffs[i].SkillId == SkillID) return Buffs[i];
+	}
 
-	Buff noBuff;
-	noBuff.SkillId = 0;
-	noBuff.BuffId = 0;
+	Buff noBuff = { 0, 0, 0, 0 };
 	return noBuff;
 }
 
@@ -44,7 +44,7 @@ GWAPI::EffectMgr::EffectArray GWAPI::EffectMgr::GetPlayerEffectArray()
 		}
 	}
 
-	throw 1;
+	throw API_EXCEPTION;
 }
 
 void __fastcall GWAPI::EffectMgr::AlcoholHandler(DWORD Intensity, DWORD Tint)
@@ -78,7 +78,7 @@ GWAPI::EffectMgr::BuffArray GWAPI::EffectMgr::GetPlayerBuffArray()
 		}
 	}
 
-	throw 1;
+	throw API_EXCEPTION;
 }
 
 void GWAPI::EffectMgr::DropBuff(DWORD buffId) 

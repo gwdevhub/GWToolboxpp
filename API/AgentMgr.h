@@ -158,8 +158,8 @@ namespace GWAPI {
 			inline DWORD GetTargetId() { return *(DWORD*)MemoryMgr::TargetAgentIDPtr; }
 		};
 
-		inline Agent* GetPlayer() { return GetAgentArray()[GetPlayerId()]; }
-		inline Agent* GetTarget() { return GetAgentArray()[GetTargetId()]; }
+		Agent* GetPlayer();
+		Agent* GetTarget();
 
 		inline DWORD GetPlayerId() { return *(DWORD*)MemoryMgr::PlayerAgentIDPtr; }
 		inline DWORD GetTargetId() { return *(DWORD*)MemoryMgr::TargetAgentIDPtr; }
