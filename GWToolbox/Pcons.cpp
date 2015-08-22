@@ -329,11 +329,6 @@ void PconCity::checkAndUse() {
 		try {
 			if (API->Agents->GetPlayer() && 
 				(API->Agents->GetPlayer()->MoveX > 0 || API->Agents->GetPlayer()->MoveY > 0)) {
-				LOG("%d %d %d %d\n",
-					API->Effects->GetPlayerEffectById(Effect::CremeBrulee).SkillId,
-					API->Effects->GetPlayerEffectById(Effect::BlueDrink).SkillId,
-					API->Effects->GetPlayerEffectById(Effect::ChocolateBunny).SkillId,
-					API->Effects->GetPlayerEffectById(Effect::RedBeanCake).SkillId);
 				if (API->Effects->GetPlayerEffectById(Effect::CremeBrulee).SkillId
 					|| API->Effects->GetPlayerEffectById(Effect::BlueDrink).SkillId
 					|| API->Effects->GetPlayerEffectById(Effect::ChocolateBunny).SkillId
@@ -341,7 +336,6 @@ void PconCity::checkAndUse() {
 
 					// then we have effect on already, do nothing
 				} else {
-					LOG("lets do it\n");
 					// we should use it. Because of logical-OR only the first one will be used
 					if (API->Items->UseItemByModelId(ItemID::CremeBrulee)
 						|| API->Items->UseItemByModelId(ItemID::ChocolateBunny)
@@ -358,7 +352,7 @@ void PconCity::checkAndUse() {
 				}
 			}
 		} catch (APIException_t) {
-			LOG("API exception \n");
+			// ignore, it'll go better next time
 		}
 	}
 }
