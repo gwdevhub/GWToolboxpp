@@ -18,7 +18,7 @@ Pcons::Pcons() {
 Pcons::~Pcons() {}
 
 void Pcons::loadIni() {
-	enabled = GWToolbox::getInstance()->config->iniReadBool(L"pcons", L"active", false);
+	//enabled = GWToolbox::getInstance()->config->iniReadBool(L"pcons", L"active", false);
 }
 
 OSHGui::Panel* Pcons::buildUI() {

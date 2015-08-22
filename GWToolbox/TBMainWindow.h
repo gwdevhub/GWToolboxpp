@@ -35,6 +35,7 @@ private:
 public:
 	TabButton(const char* s, const char* icon);
 
-	virtual void DrawSelf(Drawing::RenderContext &context) override;
-	virtual void CalculateLabelLocation() override;
+	void DrawSelf(Drawing::RenderContext &context) override;
+	void CalculateLabelLocation() override;
+	void PopulateGeometry() override;
 };

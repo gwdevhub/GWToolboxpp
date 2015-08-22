@@ -24,7 +24,28 @@ TBMainWindow::TBMainWindow() {
 	
 	createTabButton("Pcons", i, tb->config->getPathA("cupcake.png").c_str());
 	setupPanel(tb->pcons->buildUI());
+
+	Button* toggle = new Button();
+	toggle->SetText("Disabled");
+	toggle->SetBackColor(Color::Empty());
+	toggle->SetMouseOverFocusColor(Color::FromARGB(90, 50, 50, 50));
+	toggle->SetForeColor(Color::Red());
+	toggle->SetFont(getTBFont(10.0, true));
+	toggle->GetClickEvent() += ClickEventHandler([toggle](Control*) {
+		bool active = GWToolbox::getInstance()->pcons->toggleActive();
+		if (active) {
+			toggle->SetForeColor(Color::Lime());
+			toggle->SetText("Enabled");
+		} else {
+			toggle->SetForeColor(Color::Red());
+			toggle->SetText("Disabled");
+		}
+	});
+	toggle->SetSize(width - 2 * DefaultBorderPadding, tabButtonHeight - 1);
+	toggle->SetLocation(0, i * tabButtonHeight - 1);
+	AddControl(toggle);
 	
+	++i;
 	createTabButton("Hotkeys", i, tb->config->getPathA("keyboard.png").c_str());
 	setupPanel(tb->hotkeys->buildUI());
 
@@ -119,19 +140,20 @@ TabButton::TabButton(const char* s, const char* icon)
 
 	label_->SetText(s);
 
-	SetFont(TBMainWindow::getTBFont(11.0f, true));
+	SetFont(TBMainWindow::getTBFont(10.0f, true));
 	SetSize(TBMainWindow::width - DefaultBorderPadding * 2, TBMainWindow::tabButtonHeight - 1);
 	SetBackColor(Color::Empty());
+	SetMouseOverFocusColor(Color::FromARGB(90, 50, 50, 50));
 }
 
 void TabButton::DrawSelf(Drawing::RenderContext &context) {
 	Button::DrawSelf(context);
 	pic->Render();
-
+}
+void TabButton::PopulateGeometry() {
+	Button::PopulateGeometry();
 	Graphics g(*geometry_);
-	g.DrawLine(GetForeColor(), 
-		PointF(0, TBMainWindow::tabButtonHeight - 1), 
-		PointF(TBMainWindow::width - DefaultBorderPadding * 2, TBMainWindow::tabButtonHeight - 1));
+	g.DrawLine(GetForeColor(), PointF(0, 0), PointF(TBMainWindow::width - DefaultBorderPadding * 2, 0));
 }
 void TabButton::CalculateLabelLocation() {
 	label_->SetLocation(Drawing::PointI(GetSize().Width / 2 - label_->GetSize().Width / 2 + 13, GetSize().Height / 2 - label_->GetSize().Height / 2));

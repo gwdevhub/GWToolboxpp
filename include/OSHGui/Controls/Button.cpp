@@ -110,7 +110,7 @@ namespace OSHGui
 		Graphics g(*geometry_);
 
 		auto tempColor = GetBackColor();
-		if ((isFocused_ || isInside_) && !(isFocused_ && isClicked_))
+		if ((/*isFocused_ ||*/ isInside_) && !(isFocused_ && isClicked_))
 		{
 			tempColor = tempColor + GetMouseOverFocusColor();
 		}

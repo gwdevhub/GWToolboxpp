@@ -114,6 +114,7 @@ public:
 
 	void enable() { enabled = true; }
 	void disable() { enabled = false; }
+	bool toggleActive() { return enabled = !enabled; }
 	
 	void loadIni();				// load settings from ini file 
 	OSHGui::Panel* buildUI();	// create user interface
