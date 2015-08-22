@@ -72,7 +72,6 @@ void TBMainWindow::openClosePanel(int index) {
 	if (currentPanel >= 0) {
 		panels[currentPanel]->SetVisible(false);
 		panels[currentPanel]->SetEnabled(false);
-
 	}
 
 	if (index == currentPanel) {
@@ -94,13 +93,13 @@ FontPtr TBMainWindow::getTBFont(float size, bool antialiased) {
 		string path = GWToolbox::getInstance()->config->getPathA("Friz_Quadrata_Regular.ttf");
 		font = FontManager::LoadFontFromFile(path, size, antialiased);
 	} catch (Misc::FileNotFoundException e) {
-		LOG("ERROR - font file not found, falling back to Arial 8\n");
-		font = FontManager::LoadFont("Arial", 8.0f, false);
+		LOG("ERROR - font file not found, falling back to Arial\n");
+		font = FontManager::LoadFont("Arial", size, false);
 	}
 
 	if (font == NULL) {
-		LOG("ERROR loading font, falling back to Arial 8\n");
-		font = FontManager::LoadFont("Arial", 8.0f, false);
+		LOG("ERROR loading font, falling back to Arial\n");
+		font = FontManager::LoadFont("Arial", size, false);
 	}
 
 	return font;

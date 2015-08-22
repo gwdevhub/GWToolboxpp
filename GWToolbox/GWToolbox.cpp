@@ -54,8 +54,10 @@ static LRESULT CALLBACK NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARA
 		// Send other mouse events to osh first and consume them if used
 		case WM_MOUSEMOVE:
 		case WM_LBUTTONDOWN:
+		case WM_LBUTTONDBLCLK:
 		case WM_MOUSEWHEEL:
 		case WM_MBUTTONDOWN:
+		case WM_MBUTTONDBLCLK:
 			if (input.ProcessMessage(&msg)) {
 				//LOG("consumed mouse event %d\n", Message);
 				return TRUE;

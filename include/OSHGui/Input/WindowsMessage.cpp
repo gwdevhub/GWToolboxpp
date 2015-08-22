@@ -28,11 +28,14 @@ namespace OSHGui
 				case WM_MOUSEMOVE:
 				case WM_LBUTTONDOWN:
 				case WM_LBUTTONUP:
+				case WM_LBUTTONDBLCLK:
 				case WM_RBUTTONDOWN:
 				case WM_RBUTTONUP:
+				case WM_RBUTTONDBLCLK:
 				case WM_MOUSEWHEEL:
 				case WM_MBUTTONDOWN:
 				case WM_MBUTTONUP:
+				case WM_MBUTTONDBLCLK:
 				{
 					if (enableMouseInput)
 					{
@@ -61,6 +64,10 @@ namespace OSHGui
 								state = MouseState::Up;
 								button = MouseButton::Left;
 								break;
+							case WM_LBUTTONDBLCLK:
+								state = MouseState::Down;
+								button = MouseButton::Left;
+								break;
 							case WM_RBUTTONDOWN:
 								//SetCapture(message->hwnd);
 								state = MouseState::Down;
@@ -69,6 +76,10 @@ namespace OSHGui
 							case WM_RBUTTONUP:
 								//ReleaseCapture();
 								state = MouseState::Up;
+								button = MouseButton::Right;
+								break;
+							case WM_RBUTTONDBLCLK:
+								state = MouseState::Down;
 								button = MouseButton::Right;
 								break;
 							case WM_MBUTTONDOWN:
@@ -81,6 +92,9 @@ namespace OSHGui
 								state = MouseState::Up;
 								button = MouseButton::Middle;
 								break;
+							case WM_MBUTTONDBLCLK:
+								state = MouseState::Down;
+								button = MouseButton::Middle;
 							case WM_MOUSEWHEEL:
 								//state = MouseState::Scroll;
 								location = lastMouseLocation; //not valid when scrolling
