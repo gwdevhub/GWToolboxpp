@@ -42,14 +42,14 @@ namespace OSHGui
 		class GuiRenderSurface;
 
 		/**
-		 * Initialisiert die Application-Klasse.
+		 * Initializes the Application class.
 		 *
 		 * \param renderer Instanz des verwendeten Renderers
 		 */
 		static void Initialize(std::unique_ptr<Drawing::Renderer> &&renderer);
 		
 		/**
-		 * Ruft ab, ob das GUI aktiviert ist.
+		 * Gets whether the GUI is activated.
 		 *
 		 * return isEnabled
 		 */
@@ -132,26 +132,31 @@ namespace OSHGui
 		const Drawing::Theme& GetTheme() const;
 	
 		/**
-		 * Aktiviert das GUI.
+		 * Activates the GUI.
 		 */
 		void Enable();
 		/**
-		 * Deaktiviert das GUI.
+		 * Disables the GUI.
 		 */
 		void Disable();
 		/**
-		 * Wechselt zwischen Enabled und Disabled.
+		 * Toggle between Enabled and Disabled.
 		 */
 		void Toggle();
 
 		/**
-		 * Legt die Hauptform des GUI fest.
+		 * Removes focus from the GUI
+		 */
+		void clearFocus();
+
+		/**
+		 * Sets the main form of the GUI.
 		 *
-		 * \param mainForm die Hauptform, die angezeigt wird, sobald das GUI aktiviert wird
+		 * \param mainForm the main form that is displayed when the GUI is activated
 		 */
 		void Run(const std::shared_ptr<Form> &mainForm);
 		/**
-		 * Gibt eine MouseMessage an die geöffneten Formen weiter.
+		 * Is a Mouse Message to the open forms on.
 		 *
 		 * \param mouse
 		 * \return true, falls die Nachricht verarbeitet wurde

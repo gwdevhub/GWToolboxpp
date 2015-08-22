@@ -187,6 +187,14 @@ namespace OSHGui
 		}
 	}
 	//---------------------------------------------------------------------------
+	void Application::clearFocus()
+	{
+		if (FocusedControl != nullptr) {
+			FocusedControl->OnLostFocus(nullptr);
+			FocusedControl = nullptr;
+		}
+	}
+	//---------------------------------------------------------------------------
 	void Application::Run(const std::shared_ptr<Form> &mainForm)
 	{
 		#ifndef OSHGUI_DONTUSEEXCEPTIONS

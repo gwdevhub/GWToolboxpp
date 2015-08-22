@@ -61,6 +61,8 @@ static LRESULT CALLBACK NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARA
 			if (input.ProcessMessage(&msg)) {
 				//LOG("consumed mouse event %d\n", Message);
 				return TRUE;
+			} else {
+				Application::InstancePtr()->clearFocus();
 			}
 			break;
 
