@@ -27,6 +27,7 @@ protected:
 	UINT itemID;
 	UINT effectID;
 	int threshold;
+public:
 	clock_t timer;
 
 public:
@@ -41,7 +42,7 @@ public:
 	inline void setEffectID(UINT effect) { effectID = effect; }
 	inline void setThreshold(int t) { threshold = t; }
 
-	virtual void checkAndUse();		// checks if need to use pcon, uses if needed
+	virtual bool checkAndUse();		// checks if need to use pcon, uses if needed. Returns true if was used.
 	virtual void scanInventory();	// scans inventory, updates quantity field
 	void updateLabel();		// updates the label with quantity and color
 	void toggleActive();	// disables if enabled, enables if disabled
@@ -52,7 +53,7 @@ public:
 	PconCons(const wchar_t* ini)
 		: Pcon(ini) {}
 
-	void checkAndUse() override;
+	bool checkAndUse() override;
 };
 
 class PconCity : public Pcon {
@@ -60,7 +61,7 @@ public:
 	PconCity(const wchar_t* ini)
 		: Pcon(ini) {}
 
-	void checkAndUse() override;
+	bool checkAndUse() override;
 	void scanInventory() override;
 };
 
@@ -69,7 +70,7 @@ public:
 	PconAlcohol(const wchar_t* ini)
 		: Pcon(ini) {}
 
-	void checkAndUse() override;
+	bool checkAndUse() override;
 	void scanInventory() override;
 };
 
@@ -78,7 +79,7 @@ public:
 	PconLunar(const wchar_t* ini)
 		: Pcon(ini) {}
 
-	void checkAndUse() override;
+	bool checkAndUse() override;
 	void scanInventory() override;
 };
 

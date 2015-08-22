@@ -258,6 +258,7 @@ Pcon::Pcon(const wchar_t* ini)
 void Pcon::toggleActive() {
 	enabled = !enabled;
 	scanInventory();
+	updateLabel();
 	GWToolbox::getInstance()->config->iniWriteBool(L"pcons", iniName, enabled);
 }
 
@@ -284,47 +285,59 @@ void Pcon::setIcon(const char* icon, int xOff, int yOff, int size) {
 	pic->SetImage(Drawing::Image::FromFile(GuiUtils::getPathA(icon)));
 }
 
-void Pcon::checkAndUse() {
-	if (enabled && TBTimer::diff(timer) > 5000) {
+bool Pcon::checkAndUse() {
+	if (enabled && TBTimer::diff(this->timer) > 5000) {
 
 		GWAPIMgr* API = GWAPIMgr::GetInstance();
-		EffectMgr::Effect effect = API->Effects->GetPlayerEffectById(effectID);
-
-		if (effect.SkillId == 0 || effect.GetTimeRemaining() < 1000) {
-			if (API->Items->UseItemByModelId(itemID)) {
-				timer = TBTimer::init();
-			} else {
-				Pcon::scanInventory();
-				API->Chat->WriteChatF(L"[WARNING] Cannot find %ls", chatName);
+		try {
+			EffectMgr::Effect effect = API->Effects->GetPlayerEffectById(effectID);
+		
+			if (effect.SkillId == 0 || effect.GetTimeRemaining() < 1000) {
+				bool used = API->Items->UseItemByModelId(itemID);
+				this->scanInventory();
+				this->updateLabel();
+				if (used) {
+					this->timer = TBTimer::init();
+				} else {
+					API->Chat->WriteChatF(L"[WARNING] Cannot find %ls", chatName);
+				}
+				return used;
 			}
-		}
+		} catch (APIException_t) {}
 	}
+	return false;
 }
 
-void PconCons::checkAndUse() {
-	if (enabled && TBTimer::diff(timer) > 5000) {
+bool PconCons::checkAndUse() {
+	if (enabled && TBTimer::diff(this->timer) > 5000) {
 		GWAPIMgr* API = GWAPIMgr::GetInstance();
-		EffectMgr::Effect effect = API->Effects->GetPlayerEffectById(effectID);
-		if (effect.SkillId == 0 || effect.GetTimeRemaining() < 1000) {
-			if (!API->Agents->GetIsPartyLoaded()) return;
+		try {
+			EffectMgr::Effect effect = API->Effects->GetPlayerEffectById(effectID);
+			if (effect.SkillId == 0 || effect.GetTimeRemaining() < 1000) {
+				if (!API->Agents->GetIsPartyLoaded()) return false;
 
-			AgentMgr::MapAgentArray mapAgents = API->Agents->GetMapAgentArray();
-			for (size_t i = 0; i < mapAgents.size(); ++i) {
-				if (mapAgents[i].curHealth == 0) return;
-			}
+				AgentMgr::MapAgentArray mapAgents = API->Agents->GetMapAgentArray();
+				for (size_t i = 0; i < mapAgents.size(); ++i) {
+					if (mapAgents[i].curHealth == 0) return false;
+				}
 			
-			if (API->Items->UseItemByModelId(itemID)) {
-				timer = TBTimer::init();
-			} else {
-				scanInventory();
-				API->Chat->WriteChatF(L"[WARNING] Cannot find %ls", chatName);
+				bool used = API->Items->UseItemByModelId(itemID);
+				this->scanInventory();
+				this->updateLabel();
+				if (used) {
+					this->timer = TBTimer::init();
+				} else {
+					API->Chat->WriteChatF(L"[WARNING] Cannot find %ls", chatName);
+				}
+				return used;
 			}
-		}
+		} catch (APIException_t) {}
 	}
+	return false;
 }
 
-void PconCity::checkAndUse() {
-	if (enabled	&& TBTimer::diff(timer) > 5000) {
+bool PconCity::checkAndUse() {
+	if (enabled	&& TBTimer::diff(this->timer) > 5000) {
 		GWAPIMgr* API = GWAPIMgr::GetInstance();
 		try {
 			if (API->Agents->GetPlayer() && 
@@ -337,74 +350,85 @@ void PconCity::checkAndUse() {
 					// then we have effect on already, do nothing
 				} else {
 					// we should use it. Because of logical-OR only the first one will be used
-					if (API->Items->UseItemByModelId(ItemID::CremeBrulee)
+					bool used = API->Items->UseItemByModelId(ItemID::CremeBrulee)
 						|| API->Items->UseItemByModelId(ItemID::ChocolateBunny)
 						|| API->Items->UseItemByModelId(ItemID::Fruitcake)
 						|| API->Items->UseItemByModelId(ItemID::SugaryBlueDrink)
 						|| API->Items->UseItemByModelId(ItemID::RedBeanCake)
-						|| API->Items->UseItemByModelId(ItemID::JarOfHoney)) {
-
-						timer = TBTimer::init();
+						|| API->Items->UseItemByModelId(ItemID::JarOfHoney);
+					this->scanInventory();
+					this->updateLabel();
+					if (used) {
+						this->timer = TBTimer::init();
 					} else {
-						scanInventory();
 						API->Chat->WriteChat(L"[WARNING] Cannot find a city speedboost");
 					}
+					return used;
 				}
 			}
-		} catch (APIException_t) {
-			// ignore, it'll go better next time
-		}
+		} catch (APIException_t) {}
 	}
+	return false;
 }
 
-void PconAlcohol::checkAndUse() {
-	if (enabled && TBTimer::diff(timer) > 5000) {
+bool PconAlcohol::checkAndUse() {
+	if (enabled && TBTimer::diff(this->timer) > 5000) {
 		GWAPIMgr* API = GWAPIMgr::GetInstance();
-		if (API->Effects->GetAlcoholLevel() <= 1) {
-			// use an alcohol item. Because of logical-OR only the first one will be used
-			if (   API->Items->UseItemByModelId(ItemID::Eggnog)
-				|| API->Items->UseItemByModelId(ItemID::DwarvenAle)
-				|| API->Items->UseItemByModelId(ItemID::HuntersAle)
-				|| API->Items->UseItemByModelId(ItemID::Absinthe)
-				|| API->Items->UseItemByModelId(ItemID::WitchsBrew)
-				|| API->Items->UseItemByModelId(ItemID::Ricewine)
-				|| API->Items->UseItemByModelId(ItemID::ShamrockAle)
-				|| API->Items->UseItemByModelId(ItemID::Cider)
+		try {
+			if (API->Effects->GetAlcoholLevel() <= 1) {
+				// use an alcohol item. Because of logical-OR only the first one will be used
+				bool used = API->Items->UseItemByModelId(ItemID::Eggnog)
+					|| API->Items->UseItemByModelId(ItemID::DwarvenAle)
+					|| API->Items->UseItemByModelId(ItemID::HuntersAle)
+					|| API->Items->UseItemByModelId(ItemID::Absinthe)
+					|| API->Items->UseItemByModelId(ItemID::WitchsBrew)
+					|| API->Items->UseItemByModelId(ItemID::Ricewine)
+					|| API->Items->UseItemByModelId(ItemID::ShamrockAle)
+					|| API->Items->UseItemByModelId(ItemID::Cider)
 
-				|| API->Items->UseItemByModelId(ItemID::Grog)
-				|| API->Items->UseItemByModelId(ItemID::SpikedEggnog)
-				|| API->Items->UseItemByModelId(ItemID::AgedDwarvenAle)
-				|| API->Items->UseItemByModelId(ItemID::AgedHungersAle)
-				|| API->Items->UseItemByModelId(ItemID::Keg)
-				|| API->Items->UseItemByModelId(ItemID::FlaskOfFirewater)
-				|| API->Items->UseItemByModelId(ItemID::KrytanBrandy)) {
-
-				timer = TBTimer::init();
-			} else {
-				scanInventory();
-				API->Chat->WriteChat(L"[WARNING] Cannot find Alcohol");
+					|| API->Items->UseItemByModelId(ItemID::Grog)
+					|| API->Items->UseItemByModelId(ItemID::SpikedEggnog)
+					|| API->Items->UseItemByModelId(ItemID::AgedDwarvenAle)
+					|| API->Items->UseItemByModelId(ItemID::AgedHungersAle)
+					|| API->Items->UseItemByModelId(ItemID::Keg)
+					|| API->Items->UseItemByModelId(ItemID::FlaskOfFirewater)
+					|| API->Items->UseItemByModelId(ItemID::KrytanBrandy);
+				this->scanInventory();
+				this->updateLabel();
+				if (used) {
+					this->timer = TBTimer::init();
+				} else {
+					API->Chat->WriteChat(L"[WARNING] Cannot find Alcohol");
+				}
+				return used;
 			}
-		}
+		} catch (APIException_t) {}
 	}
+	return false;
 }
 
-void PconLunar::checkAndUse() {
-	if (enabled	&& TBTimer::diff(timer) > 500) {
+bool PconLunar::checkAndUse() {
+	if (enabled	&& TBTimer::diff(this->timer) > 500) {
 		GWAPIMgr* API = GWAPIMgr::GetInstance();
-		if (API->Effects->GetPlayerEffectById(Effect::Lunars).SkillId == 0) {
-			if (   API->Items->UseItemByModelId(ItemID::LunarDragon)
-				|| API->Items->UseItemByModelId(ItemID::LunarHorse)
-				|| API->Items->UseItemByModelId(ItemID::LunarRabbit)
-				|| API->Items->UseItemByModelId(ItemID::LunarSheep)
-				|| API->Items->UseItemByModelId(ItemID::LunarSnake)) {
-
-				timer = TBTimer::init();
-			} else {
-				scanInventory();
-				API->Chat->WriteChat(L"[WARNING] Cannot find Lunar Fortunes");
+		try {
+			if (API->Effects->GetPlayerEffectById(Effect::Lunars).SkillId == 0) {
+				bool used = API->Items->UseItemByModelId(ItemID::LunarDragon)
+					|| API->Items->UseItemByModelId(ItemID::LunarHorse)
+					|| API->Items->UseItemByModelId(ItemID::LunarRabbit)
+					|| API->Items->UseItemByModelId(ItemID::LunarSheep)
+					|| API->Items->UseItemByModelId(ItemID::LunarSnake);
+				this->scanInventory();
+				this->updateLabel();
+				if (used) {
+					this->timer = TBTimer::init();
+				} else {
+					API->Chat->WriteChat(L"[WARNING] Cannot find Lunar Fortunes");
+				}
+				return used;
 			}
-		}
+		} catch (APIException_t) {}
 	}
+	return false;
 }
 
 void Pcon::scanInventory() {
