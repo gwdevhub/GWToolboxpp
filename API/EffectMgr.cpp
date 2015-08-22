@@ -14,7 +14,7 @@ GWAPI::EffectMgr::Effect GWAPI::EffectMgr::GetPlayerEffectById(DWORD SkillID)
 	EffectArray Effects = GetPlayerEffectArray();
 
 	
-	for (DWORD i = 1; i < Effects.size(); i++) {
+	for (DWORD i = 0; i < Effects.size(); i++) {
 		if (Effects[i].SkillId == SkillID) return Effects[i];
 	}
 
@@ -26,7 +26,7 @@ GWAPI::EffectMgr::Buff GWAPI::EffectMgr::GetPlayerBuffBySkillId(DWORD SkillID)
 {
 	BuffArray Buffs = GetPlayerBuffArray();
 
-	for (DWORD i = 1; i < Buffs.size(); i++) {
+	for (DWORD i = 0; i < Buffs.size(); i++) {
 		if (Buffs[i].SkillId == SkillID) return Buffs[i];
 	}
 
