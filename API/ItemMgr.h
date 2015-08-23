@@ -6,13 +6,14 @@
 namespace GWAPI {
 
 	class ItemMgr {
-
+		friend class GWAPIMgr;
 		typedef void(__fastcall *OpenXunlai_t)(DWORD, DWORD*);
 		OpenXunlai_t _OpenXunlai;
 		GWAPIMgr* parent;
+		ItemMgr(GWAPIMgr* obj);
 
 	public:
-		ItemMgr(GWAPIMgr* obj);
+		
 
 		struct Bag;
 		struct Item;
@@ -38,18 +39,21 @@ namespace GWAPI {
 			DWORD* ModStruct;						// 0010						pointer to an array of mods
 			DWORD ModStructSize;				// 0014						size of this array
 			wchar_t* Customized;				// 0018
-			BYTE unknown3[6];
+			BYTE unknown3[3];
+			short type;
 			short extraId;
-			BYTE unknown4[8];
+			short value;
+			BYTE unknown4[4];
+			short interaction;
 			long ModelId;
 			BYTE* modString;
 			BYTE unknown5[4];
 			BYTE* extraItemInfo;
-			byte unknown6[15];
-			byte Quantity;
-			byte equipped;
-			byte profession;
-			byte slot;						// 004F
+			BYTE unknown6[15];
+			BYTE Quantity;
+			BYTE equipped;
+			BYTE profession;
+			BYTE slot;						// 004F
 		};
 
 		ItemArray GetItemArray();
@@ -60,14 +64,22 @@ namespace GWAPI {
 
 		bool UseItemByModelId(DWORD modelid, BYTE bagStart = 1,const BYTE bagEnd = 4);
 
+		DWORD CountItemByModelId(DWORD modelid, BYTE bagStart = 1, const BYTE bagEnd = 4);
+
+		Item* GetItemByModelId(DWORD modelid, BYTE bagStart = 1, const BYTE bagEnd = 4);
+
 		void EquipItem(Item* item);
 
 		void DropItem(Item* item, DWORD quantity);
-
+		
 		void PickUpItem(Item* item, DWORD CallTarget = 0);
 
 		void OpenXunlaiWindow();
 		
 		void DropGold(DWORD Amount = 1);
+
+		DWORD GetGoldAmountOnCharacter();
+
+		DWORD GetGoldAmountInStorage();
 	};
 }

@@ -21,6 +21,7 @@ GWAPI::GWAPIMgr::GWAPIMgr()
 		Effects = new EffectMgr(this);
 		Map = new MapMgr(this);
 		Chat = new ChatMgr(this);
+		Merchant = new MerchantMgr(this);
 	}
 	else{
 		MessageBoxA(0, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0);
@@ -47,6 +48,7 @@ GWAPI::GWAPIMgr::~GWAPIMgr()
 	
 	if (CtoS) delete CtoS;
 	if (GameThread) delete GameThread;
+	if (Merchant) delete Merchant;
 }
 
 void GWAPI::GWAPIMgr::Initialize()

@@ -83,6 +83,17 @@ namespace GWAPI{
 
 		static BYTE* WinHandlePtr;
 
+		// For buying/selling items
+		static BYTE* BuyItemFunction;
+		static BYTE* SellItemFunction;
+
+		static BYTE* TraderBuyClassHook;
+		static BYTE* TraderSellClassHook;
+		static BYTE* RequestQuoteFunction;
+
+		static BYTE* TraderFunction;
+		static BYTE* CraftitemObj;
+
 		// Basics
 		static bool Scan();
 		static void *Detour(BYTE *src, const BYTE *dst, const int len, BYTE** restore = NULL);

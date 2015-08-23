@@ -42,6 +42,15 @@ BYTE* GWAPI::MemoryMgr::MoveFunction = NULL;
 
 BYTE* GWAPI::MemoryMgr::WinHandlePtr = NULL;
 
+// Merchant functions/object pointers
+BYTE* GWAPI::MemoryMgr::CraftitemObj = NULL;
+BYTE* GWAPI::MemoryMgr::TraderFunction = NULL;
+BYTE* GWAPI::MemoryMgr::TraderBuyClassHook = NULL;
+BYTE* GWAPI::MemoryMgr::TraderSellClassHook = NULL;
+BYTE* GWAPI::MemoryMgr::RequestQuoteFunction = NULL;
+BYTE* GWAPI::MemoryMgr::SellItemFunction = NULL;
+BYTE* GWAPI::MemoryMgr::BuyItemFunction = NULL;
+
 void GWAPI::MemoryMgr::Retour(BYTE *src, BYTE *restore, const int len)
 {
 	DWORD dwBack;
@@ -190,6 +199,43 @@ bool GWAPI::MemoryMgr::Scan()
 			WinHandlePtr = (BYTE*)(*(DWORD*)(scan + 7));
 		}
 
+		const BYTE BuyItemCode[] = { 0x8B, 0x45, 0x18, 0x83, 0xF8, 0x10, 0x76, 0x17, 0x68 };
+		const BYTE SellItemCode[] = { 0x8B, 0x4D, 0x20, 0x85, 0xC9, 0x0F, 0x85, 0x8E };
+		if (!memcmp(scan, SellItemCode, sizeof(SellItemCode))){
+			SellItemFunction = scan - 0x56;
+		}
+		if (!memcmp(scan, BuyItemCode, sizeof(BuyItemCode))){
+			BuyItemFunction = scan - 0x2C;
+		}
+
+		const BYTE InitTraderBuyCode[] = { 0x81, 0x7B, 0x10, 0x01, 0x01, 0x00, 0x00 };
+		const BYTE InitTraderSellCode[] = { 0x8B, 0x1F, 0x83, 0x3B, 0x0D };
+		if (!memcmp(scan, InitTraderBuyCode, sizeof(InitTraderBuyCode)))
+		{
+			TraderBuyClassHook = scan - 0x42;
+		}
+		if (!memcmp(scan, InitTraderSellCode, sizeof(InitTraderSellCode)))
+		{
+			TraderSellClassHook = scan - 0x27;
+		}
+
+		const BYTE TraderFunctionCode[] = { 0x8B, 0x45, 0x18, 0x8B, 0x55, 0x10, 0x85 };
+		if (!memcmp(scan, TraderFunctionCode, sizeof(TraderFunctionCode))){
+			TraderFunction = scan - 0x48;
+		}
+
+		const BYTE RequestQuoteCode[] = { 0x81, 0xEC, 0x9C, 0x00, 0x00, 0x00, 0x53, 0x56, 0x8B };
+		if (!memcmp(scan, RequestQuoteCode, sizeof(RequestQuoteCode))){
+			RequestQuoteFunction = scan - 3;
+		}
+
+
+		const BYTE CraftItemBaseCode[] = { 0x85, 0xC0, 0x59, 0x74, 0x3C, 0x83, 0x05 };
+		if (!memcmp(scan, CraftItemBaseCode, sizeof(CraftItemBaseCode)))
+		{
+			CraftitemObj = *(BYTE**)(scan - 0xE);
+		}
+
 		if (agArrayPtr &&
 			CtoGSObjectPtr &&
 			CtoGSSendFunction &&
@@ -205,13 +251,22 @@ bool GWAPI::MemoryMgr::Scan()
 			OpenXunlaiFunction &&
 			XunlaiSession &&
 			MoveFunction &&
-			WinHandlePtr
+			WinHandlePtr &&
+			SellItemFunction &&
+			BuyItemFunction &&
+			TraderFunction &&
+			RequestQuoteFunction &&
+			CraftitemObj &&
+			TraderBuyClassHook &&
+			TraderSellClassHook
 			) {
 				return true;
 			}
 	}
 	return false;
 }
+
+
 
 
 

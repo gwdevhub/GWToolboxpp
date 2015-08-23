@@ -43,13 +43,12 @@ void __declspec(naked) GWAPI::GameThreadMgr::renderHook()
 
 void GWAPI::GameThreadMgr::ToggleRenderHook()
 {
-	static bool enabled = false;
 	static BYTE restorebuf[5];
 	static DWORD dwProt;
 
-	enabled = !enabled;
+	m_RenderingState = !m_RenderingState;
 
-	if (enabled)
+	if (m_RenderingState)
 	{
 		memcpy(restorebuf, MemoryMgr::RenderLoopLocation, 5);
 
@@ -65,12 +64,13 @@ void GWAPI::GameThreadMgr::ToggleRenderHook()
 	}
 }
 
-GWAPI::GameThreadMgr::GameThreadMgr(GWAPI::GWAPIMgr* obj) : parent(obj)
+GWAPI::GameThreadMgr::GameThreadMgr(GWAPI::GWAPIMgr* obj) : parent(obj), m_RenderingState(false)
 {
 	MemoryMgr::GameLoopReturn = (BYTE*)MemoryMgr::Detour(MemoryMgr::GameLoopLocation, (BYTE*)gameLoopHook, 5, &GameLoopRestore);
 }
 
 GWAPI::GameThreadMgr::~GameThreadMgr()
 {
+	if (m_RenderingState) ToggleRenderHook();
 	MemoryMgr::Retour(MemoryMgr::GameLoopLocation, GameLoopRestore, 5);
 }

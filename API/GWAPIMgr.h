@@ -23,6 +23,7 @@ namespace GWAPI {
 		friend class EffectMgr;
 		friend class MapMgr;
 		friend class ChatMgr;
+		friend class MerchantMgr;
 
 		GameThreadMgr* GameThread;
 		CtoSMgr* CtoS;
@@ -38,6 +39,7 @@ namespace GWAPI {
 		EffectMgr* Effects;
 		MapMgr* Map;
 		ChatMgr* Chat;
+		MerchantMgr* Merchant;
 #ifdef GWAPI_USEDIRECTX
 		DirectXMgr* DirectX;
 #endif

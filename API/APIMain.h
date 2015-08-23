@@ -56,28 +56,7 @@
 // Comment out this #define to make the directx shit not compile into the project.
 #define GWAPI_USEDIRECTX
 
-#include "GwConstants.h"
-#include "GWAPIMgr.h"
-
-
-#include "MemoryMgr.h"
-#include "GameThreadMgr.h"
-
-#include "CtoSMgr.h"
-#include "AgentMgr.h"
-#include "ItemMgr.h"
-
-#ifdef GWAPI_USEDIRECTX
-#include "DirectXMgr.h"
-#endif
-
-#include "SkillbarMgr.h"
-#include "EffectMgr.h"
-
-#include "MapMgr.h"
-
-#include "ChatMgr.h"
-
+/* Forward declarations. Commented out because we probly dont need these :P keep for now
 namespace GWAPI{
 	class GWAPIMgr;
 
@@ -92,12 +71,37 @@ namespace GWAPI{
 	class EffectMgr;
 	class MapMgr;
 
+	class MerchantMgr;
+
 #ifdef GWAPI_USEDIRECTX
 	class DirectXMgr;
 #endif
 
-}
+}*/
 
 
+#include "GwConstants.h"
+#include "GWAPIMgr.h"
+
+
+#include "MemoryMgr.h"
+#include "GameThreadMgr.h"
+
+#include "CtoSMgr.h"
+#include "AgentMgr.h"
+#include "ItemMgr.h"
+
+#include "MerchantMgr.h"
+
+#ifdef GWAPI_USEDIRECTX
+#include "DirectXMgr.h"
+#endif
+
+#include "SkillbarMgr.h"
+#include "EffectMgr.h"
+
+#include "MapMgr.h"
+
+#include "ChatMgr.h"
 
 #endif

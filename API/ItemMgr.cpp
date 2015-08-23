@@ -69,3 +69,58 @@ void GWAPI::ItemMgr::DropGold(DWORD Amount /*= 1*/)
 {
 	parent->CtoS->SendPacket(0x8, 0x29, Amount);
 }
+
+DWORD GWAPI::ItemMgr::CountItemByModelId(DWORD modelid, BYTE bagStart /*= 1*/, const BYTE bagEnd /*= 4*/)
+{
+	DWORD itemcount = 0;
+	Bag** bags = GetBagArray();
+	Bag* bag = NULL;
+
+	for (int bagIndex = bagStart; bagIndex <= bagEnd; ++bagIndex) {
+		bag = bags[bagIndex];
+		if (bag != NULL) {
+			ItemMgr::ItemArray items = bag->Items;
+			for (size_t i = 0; i < items.size(); i++) {
+				if (items[i]) {
+					if (items[i]->ModelId == modelid) {
+						itemcount += items[i]->Quantity;
+					}
+				}
+			}
+		}
+	}
+
+	return itemcount;
+}
+
+GWAPI::ItemMgr::Item* GWAPI::ItemMgr::GetItemByModelId(DWORD modelid, BYTE bagStart /*= 1*/, const BYTE bagEnd /*= 4*/)
+{
+	Bag** bags = GetBagArray();
+	Bag* bag = NULL;
+
+	for (int bagIndex = bagStart; bagIndex <= bagEnd; ++bagIndex) {
+		bag = bags[bagIndex];
+		if (bag != NULL) {
+			ItemMgr::ItemArray items = bag->Items;
+			for (size_t i = 0; i < items.size(); i++) {
+				if (items[i]) {
+					if (items[i]->ModelId == modelid) {
+						return items[i];
+					}
+				}
+			}
+		}
+	}
+
+	return NULL;
+}
+
+DWORD GWAPI::ItemMgr::GetGoldAmountOnCharacter()
+{
+	return *MemoryMgr::ReadPtrChain<DWORD*>(MemoryMgr::GetContextPtr(), 3, 0x40, 0xF8, 0x7C);
+}
+
+DWORD GWAPI::ItemMgr::GetGoldAmountInStorage()
+{
+	return *MemoryMgr::ReadPtrChain<DWORD*>(MemoryMgr::GetContextPtr(), 3, 0x40, 0xF8, 0x80);
+}

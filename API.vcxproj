@@ -98,6 +98,7 @@
     <ClInclude Include="API\MapMgr.h" />
     <ClInclude Include="API\MemoryMgr.h" />
     <ClInclude Include="API\CtoSMgr.h" />
+    <ClInclude Include="API\MerchantMgr.h" />
     <ClInclude Include="API\SkillbarMgr.h" />
     <ClInclude Include="GWToolbox\Builds.h" />
     <ClInclude Include="GWToolbox\Config.h" />
@@ -216,6 +217,7 @@
     <ClCompile Include="API\ItemMgr.cpp" />
     <ClCompile Include="API\MapMgr.cpp" />
     <ClCompile Include="API\MemoryMgr.cpp" />
+    <ClCompile Include="API\MerchantMgr.cpp" />
     <ClCompile Include="API\SkillbarMgr.cpp" />
     <ClCompile Include="GWToolbox\Builds.cpp" />
     <ClCompile Include="GWToolbox\GWToolbox.cpp" />

@@ -16,6 +16,7 @@ namespace GWAPI{
 
 		GWAPIMgr* parent;
 
+		bool m_RenderingState;
 		BYTE* GameLoopRestore;
 
 		std::vector<std::function<void(void)> > m_Calls;
