@@ -1,5 +1,7 @@
 #include "GameThreadMgr.h"
 
+#include "MemoryMgr.h"
+
 void __stdcall GWAPI::GameThreadMgr::CallFunctions()
 {
 

@@ -1,5 +1,9 @@
 #include "ItemMgr.h"
 
+#include "MemoryMgr.h"
+#include "GameThreadMgr.h"
+#include "CtoSMgr.h"
+
 void GWAPI::ItemMgr::OpenXunlaiWindow()
 {
 	static DWORD* xunlaibuf = new DWORD[2]{0, 1};

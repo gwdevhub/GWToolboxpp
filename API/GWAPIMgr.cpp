@@ -1,5 +1,25 @@
 #include "GWAPIMgr.h"
 
+#include "MemoryMgr.h"
+#include "GameThreadMgr.h"
+
+#include "CtoSMgr.h"
+#include "AgentMgr.h"
+#include "ItemMgr.h"
+
+#include "MerchantMgr.h"
+
+#ifdef GWAPI_USEDIRECTX
+#include "DirectXMgr.h"
+#endif
+
+#include "SkillbarMgr.h"
+#include "EffectMgr.h"
+
+#include "MapMgr.h"
+
+#include "ChatMgr.h"
+
 GWAPI::GWAPIMgr* GWAPI::GWAPIMgr::instance = NULL;
 
 GWAPI::GWAPIMgr* GWAPI::GWAPIMgr::GetInstance()

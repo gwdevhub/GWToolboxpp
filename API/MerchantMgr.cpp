@@ -1,5 +1,9 @@
 #include "MerchantMgr.h"
 
+#include "MemoryMgr.h"
+#include "GameThreadMgr.h"
+#include "ItemMgr.h"
+
 BYTE* GWAPI::MerchantMgr::TraderSellClass = NULL;
 BYTE* GWAPI::MerchantMgr::TraderBuyClass = NULL;
 BYTE* GWAPI::MerchantMgr::TraderSellClassHookRestore = NULL;
@@ -245,7 +249,7 @@ void GWAPI::MerchantMgr::BuyQuotedItem()
 	parent->GameThread->Enqueue(CommandTraderBuy);
 }
 
-void GWAPI::MerchantMgr::RequestSellQuote(ItemMgr::Item* itemtorequest)
+void GWAPI::MerchantMgr::RequestSellQuote(DWORD itemtorequest)
 {
 	if (!itemtorequest) return;
 	parent->GameThread->Enqueue(CommandRequestTraderBuyQuote, (long*)itemtorequest);
@@ -253,28 +257,31 @@ void GWAPI::MerchantMgr::RequestSellQuote(ItemMgr::Item* itemtorequest)
 
 void GWAPI::MerchantMgr::RequestBuyQuote(DWORD ModelIDToRequest)
 {
-	ItemMgr::Item* itemtorequest = GetMerchantItemByModelId(ModelIDToRequest);
+	DWORD itemtorequest = GetMerchantItemByModelId(ModelIDToRequest);
 	if (!itemtorequest) return;
 
 	parent->GameThread->Enqueue(CommandRequestTraderBuyQuote, (long*)itemtorequest);
 }
 
-void GWAPI::MerchantMgr::SellItemToMerch(ItemMgr::Item* ItemToSell, DWORD AmountToSell /*= 1*/)
+void GWAPI::MerchantMgr::SellItemToMerch(DWORD ItemToSell, DWORD AmountToSell /*= 1*/)
 {
-	long amount = AmountToSell * ItemToSell->value;
+	ItemMgr::ItemArray items = parent->Items->GetItemArray();
+	long amount = AmountToSell * items[ItemToSell]->value;
 
 	parent->GameThread->Enqueue(CommandSellMerchantItem, (long*)ItemToSell, amount);
 }
 
 void GWAPI::MerchantMgr::BuyMerchItem(DWORD ModelId, DWORD AmountToBuy)
 {
+	ItemMgr::ItemArray items = parent->Items->GetItemArray();
 	static long* amountptr = new long;
 	*amountptr = AmountToBuy;
+	static long* itemidptr = new long;
 
-	ItemMgr::Item* ItemToBuy = GetMerchantItemByModelId(ModelId);
-	if (!ItemToBuy) return;
+	*itemidptr = GetMerchantItemByModelId(ModelId);
+	if (!(*itemidptr)) return;
 
-	parent->GameThread->Enqueue(CommandBuyMerchantItem, (long*)ItemToBuy, amountptr, ItemToBuy->value);
+	parent->GameThread->Enqueue(CommandBuyMerchantItem, itemidptr, amountptr, items[*itemidptr]->value);
 }
 
 void GWAPI::MerchantMgr::CollectItem(int modelIDToGive, int AmountPerCollect, int modelIDtoRecieve)
@@ -282,10 +289,12 @@ void GWAPI::MerchantMgr::CollectItem(int modelIDToGive, int AmountPerCollect, in
 	ItemMgr::Item* itemGiving = parent->Items->GetItemByModelId(modelIDToGive);
 	if (!itemGiving || itemGiving->Quantity < AmountPerCollect) return;
 
-	ItemMgr::Item*  itemRecieving = GetMerchantItemByModelId(modelIDtoRecieve);
-	if (!itemRecieving) return;
+	static long* itemidptr = new long;
 
-	parent->GameThread->Enqueue(CommandCollectItem, (long*)itemGiving, AmountPerCollect, (long*)itemRecieving);
+	*itemidptr = GetMerchantItemByModelId(modelIDtoRecieve);
+	if (!(*itemidptr)) return;
+
+	parent->GameThread->Enqueue(CommandCollectItem, (long*)itemGiving, AmountPerCollect, itemidptr);
 }
 
 void GWAPI::MerchantMgr::CraftGrail(int amount)
@@ -322,17 +331,18 @@ void GWAPI::MerchantMgr::CraftItem(long ModelId, long Quantity, long value, long
 
 	*QuantityPtr = Quantity;
 
-	ItemMgr::Item* itemtobuy = GetMerchantItemByModelId(ModelId);
-	if (!itemtobuy) return;
+	static long* itemtobuyptr = new long;
+	*itemtobuyptr = GetMerchantItemByModelId(ModelId);
+	if (!(*itemtobuyptr)) return;
 
 	MaterialPtr = GetCraftItemArray(Quantity, matcount, Materials);
 
 	delete[] Materials;
 
-	parent->GameThread->Enqueue(CommandCraftItem, (long*)itemtobuy, QuantityPtr, MaterialPtr, matcount, GoldTotal);
+	parent->GameThread->Enqueue(CommandCraftItem, itemtobuyptr, QuantityPtr, MaterialPtr, matcount, GoldTotal);
 }
 
-GWAPI::ItemMgr::Item* GWAPI::MerchantMgr::GetMerchantItemByModelId(DWORD modelid)
+DWORD GWAPI::MerchantMgr::GetMerchantItemByModelId(DWORD modelid)
 {
 	try{
 		ItemMgr::ItemArray itemstructs = parent->Items->GetItemArray();
@@ -343,7 +353,7 @@ GWAPI::ItemMgr::Item* GWAPI::MerchantMgr::GetMerchantItemByModelId(DWORD modelid
 
 		for (DWORD i = 0; i < merchitems.size(); i++){
 			if (itemstructs[merchitems[i]]->ModelId == modelid){
-				return itemstructs[merchitems[i]];
+				return merchitems[i];
 			}
 		}
 	}

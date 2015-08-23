@@ -1,5 +1,10 @@
 #include "EffectMgr.h"
 
+#include "MemoryMgr.h"
+#include "GameThreadMgr.h"
+#include "CtoSMgr.h"
+#include "AgentMgr.h"
+
 DWORD GWAPI::EffectMgr::AlcoholLevel = NULL;
 GWAPI::EffectMgr::PPEFunc_t GWAPI::EffectMgr::PPERetourFunc = NULL;
 

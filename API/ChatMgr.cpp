@@ -1,5 +1,7 @@
 #include "ChatMgr.h"
 
+#include "MemoryMgr.h"
+#include "CtoSMgr.h"
 
 void GWAPI::ChatMgr::SendChat(const wchar_t* msg, wchar_t channel)
 {

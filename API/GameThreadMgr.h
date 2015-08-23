@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include "APIMain.h"
+#include "GWAPIMgr.h"
 
 #include <vector>
 #include <functional>

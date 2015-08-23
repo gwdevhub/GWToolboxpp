@@ -1,5 +1,9 @@
 #include "SkillbarMgr.h"
 
+#include "MemoryMgr.h"
+#include "GameThreadMgr.h"
+#include "CtoSMgr.h"
+
 
 GWAPI::SkillbarMgr::Skill GWAPI::SkillbarMgr::GetSkillConstantData(DWORD SkillID)
 {

@@ -1,7 +1,9 @@
 #pragma once
 
 #include <Windows.h>
-#include "APIMain.h"
+#include "ItemMgr.h"
+#include "GWAPIMgr.h"
+
 
 namespace GWAPI {
 
@@ -53,7 +55,7 @@ namespace GWAPI {
 		// Returns the merchant array in memory, holds ItemID's that can be used to grab structs from.
 		ItemRowArray GetMerchantItemsArray();
 
-		ItemMgr::Item* GetMerchantItemByModelId(DWORD modelid);
+		DWORD GetMerchantItemByModelId(DWORD modelid);
 
 		// Craft Item, use this to create items that require materials (Cons,Armor,etc.)
 		void CraftItem(long ModelId, long Quantity, long value, long matcount, CraftMaterial* Materials);
@@ -71,13 +73,13 @@ namespace GWAPI {
 		void BuyMerchItem(DWORD ModelId, DWORD AmountToBuy);
 
 		// Sell to general merchant.
-		void SellItemToMerch(ItemMgr::Item* ItemToSell, DWORD AmountToSell = 1);
+		void SellItemToMerch(DWORD ItemToSell, DWORD AmountToSell = 1);
 
 		// Request quote of item from a trader.
 		void RequestBuyQuote(DWORD ModelIDToRequest);
 
 		// Request quote to sell one of your items to a trader.
-		void RequestSellQuote(ItemMgr::Item* itemtorequest);
+		void RequestSellQuote(DWORD itemtorequest);
 
 		// These are pretty self explanatory.
 		void BuyQuotedItem();

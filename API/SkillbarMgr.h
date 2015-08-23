@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Windows.h>
-#include "APIMain.h"
+#include "GWAPIMgr.h"
 
 namespace GWAPI{
 

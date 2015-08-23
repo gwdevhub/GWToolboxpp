@@ -1,5 +1,10 @@
 #include "AgentMgr.h"
 
+#include "MemoryMgr.h"
+#include "GameThreadMgr.h"
+#include "CtoSMgr.h"
+#include "MapMgr.h"
+
 GWAPI::AgentMgr::AgentArray GWAPI::AgentMgr::GetAgentArray()
 {
 	AgentArray* agRet = (AgentArray*)MemoryMgr::agArrayPtr;
