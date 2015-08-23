@@ -2,6 +2,8 @@
 
 Debug/
 Release/
+include/OSHGui/Dependencies/Lib
+include/OSHGui/Dependencies/Source
 
 # Bloated Windows Databases
 
@@ -20,3 +22,4 @@ Release/
 *.pch
 *.idb
 *.pdb
+include/OSHGui/Dependencies/Include/
