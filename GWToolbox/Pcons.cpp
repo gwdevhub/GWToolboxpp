@@ -1,229 +1,27 @@
 #include "Pcons.h"
-#include "../API/GwConstants.h"
 #include "../API/APIMain.h"
-#include "TBMainWindow.h"
-
-//#include "Config.h"
 #include "GWToolbox.h"
 
-using namespace GWAPI;
+using namespace OSHGui;
 using namespace OSHGui::Drawing;
 using namespace GwConstants;
-
-Pcons::Pcons() {
-	initialized = false;
-	enabled = false;
-}
-
-Pcons::~Pcons() {}
-
-void Pcons::loadIni() {
-	//enabled = GWToolbox::getInstance()->config->iniReadBool(L"pcons", L"active", false);
-}
-
-OSHGui::Panel* Pcons::buildUI() {
-	Panel* panel = new Panel();
-	panel->SetSize(6 * 2 + Pcon::WIDTH * 3, 6 * 2 + Pcon::HEIGHT * 6);
-	LOG("building pcons ui\n");
-	int row = 0;
-	int col = 0;
-
-	essence = new PconCons(L"essence");
-	essence->setIcon("Essence_of_Celerity.png", 0, 0, 64);
-	essence->setChatName(L"Essence of Celerity");
-	essence->setItemID(ItemID::ConsEssence);
-	essence->setEffectID(Effect::ConsEssence);
-	essence->setThreshold(5);
-	essence->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	panel->AddControl(essence);
-	++col;
-
-	grail = new PconCons(L"grail");
-	grail->setIcon("Grail_of_Might.png", 0, 0, 56);
-	grail->setChatName(L"Grail of Might");
-	grail->setItemID(ItemID::ConsGrail);
-	grail->setEffectID(Effect::ConsGrail);
-	grail->setThreshold(5);
-	grail->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	panel->AddControl(grail);
-	++col;
-
-	armor = new PconCons(L"armor");
-	armor->setIcon("Armor_of_Salvation.png", 0, 0, 54);
-	armor->setChatName(L"Armor of Salvation");
-	armor->setItemID(ItemID::ConsArmor);
-	armor->setEffectID(Effect::ConsArmor);
-	armor->setThreshold(5);
-	armor->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	panel->AddControl(armor);
-	++row; col = 0;
-
-	redrock = new Pcon(L"redrock");
-	redrock->setIcon("Red_Rock_Candy.png", 0, 0, 56);
-	redrock->setChatName(L"Red Rock Candy");
-	redrock->setItemID(ItemID::RRC);
-	redrock->setEffectID(Effect::Redrock);
-	redrock->setThreshold(5);
-	redrock->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	panel->AddControl(redrock);
-	++col;
-
-	bluerock = new Pcon(L"bluerock");
-	bluerock->setIcon("Blue_Rock_Candy.png", 0, 0, 56);
-	bluerock->setChatName(L"Blue Rock Candy");
-	bluerock->setItemID(ItemID::BRC);
-	bluerock->setEffectID(Effect::Bluerock);
-	bluerock->setThreshold(10);
-	bluerock->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	panel->AddControl(bluerock);
-	++col;
-
-	greenrock = new Pcon(L"greenrock");
-	greenrock->setIcon("Green_Rock_Candy.png", 0, 0, 56);
-	greenrock->setChatName(L"Green Rock Candy");
-	greenrock->setItemID(ItemID::GRC);
-	greenrock->setEffectID(Effect::Greenrock);
-	greenrock->setThreshold(15);
-	greenrock->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	panel->AddControl(greenrock);
-	++row; col = 0;
-
-	cupcake = new Pcon(L"cupcake");
-	cupcake->setIcon("Birthday_Cupcake.png", 0, 0, 56);
-	cupcake->setChatName(L"Birthday Cupcake");
-	cupcake->setItemID(ItemID::Cupcakes);
-	cupcake->setEffectID(Effect::Cupcake);
-	cupcake->setThreshold(10);
-	cupcake->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	panel->AddControl(cupcake);
-	++col;
-
-	apple = new Pcon(L"apple");
-	apple->setIcon("Candy_Apple.png", 0, 0, 56);
-	apple->setChatName(L"Candy Apple");
-	apple->setItemID(ItemID::Apples);
-	apple->setEffectID(Effect::Apple);
-	apple->setThreshold(10);
-	apple->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	panel->AddControl(apple);
-	++col;
-
-	corn = new Pcon(L"corn");
-	corn->setIcon("Candy_Corn.png", 0, 0, 56);
-	corn->setChatName(L"Candy Corn");
-	corn->setItemID(ItemID::Corns);
-	corn->setEffectID(Effect::Corn);
-	corn->setThreshold(10);
-	corn->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	panel->AddControl(corn);
-	++row; col = 0;
-
-	egg = new Pcon(L"egg");
-	egg->setIcon("Golden_Egg.png", 0, 0, 52);
-	egg->setChatName(L"Golden Egg");
-	egg->setItemID(ItemID::Eggs);
-	egg->setEffectID(Effect::Egg);
-	egg->setThreshold(20);
-	egg->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	panel->AddControl(egg);
-	++col;
-
-	pie = new Pcon(L"pie");
-	pie->setIcon("Slice_of_Pumpkin_Pie.png", 0, 0, 56);
-	pie->setChatName(L"Slice of Pumpkin_Pie");
-	pie->setItemID(ItemID::Pies);
-	pie->setEffectID(Effect::Pie);
-	pie->setThreshold(10);
-	pie->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	panel->AddControl(pie);
-	++col;
-
-	city = new PconCity(L"city");
-	city->setIcon("Sugary_Blue_Drink.png", 0, 0, 50);
-	city->setChatName(L"City speedboost");
-	city->setThreshold(20);
-	city->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	panel->AddControl(city);
-	++row; col = 0;
-
-	alcohol = new PconAlcohol(L"alcohol");
-	alcohol->setIcon("Dwarven_Ale.png", 0, 0, 50);
-	alcohol->setChatName(L"Alcohol");
-	alcohol->setThreshold(10);
-	alcohol->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	panel->AddControl(alcohol);
-	++col;
-
-	lunars = new PconLunar(L"lunars");
-	lunars->setIcon("Lunar_Fortune.png", 0, 0, 56);
-	lunars->setChatName(L"Lunar Fortunes");
-	lunars->setEffectID(Effect::Lunars);
-	lunars->setThreshold(10);
-	lunars->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	panel->AddControl(lunars);
-	++col;
-
-	warsupply = new Pcon(L"warsupply");
-	warsupply->setIcon("War_Supplies.png", 0, 0, 48);
-	warsupply->setChatName(L"War Supplies");
-	warsupply->setItemID(ItemID::Warsupplies);
-	warsupply->setEffectID(Effect::Warsupplies);
-	warsupply->setThreshold(20);
-	warsupply->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	panel->AddControl(warsupply);
-	++row; col = 0;
-
-	kabob = new Pcon(L"kabob");
-	kabob->setIcon("Drake_Kabob.png", 0, 0, 52);
-	kabob->setChatName(L"Drake Kabob");
-	kabob->setItemID(ItemID::Kabobs);
-	kabob->setEffectID(Effect::Kabobs);
-	kabob->setThreshold(10);
-	kabob->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	panel->AddControl(kabob);
-	++col;
-
-	skalesoup = new Pcon(L"skalesoup");
-	skalesoup->setIcon("Bowl_of_Skalefin_Soup.png", 0, 0, 56);
-	skalesoup->setChatName(L"Bowl of Skalefin Soup");
-	skalesoup->setItemID(ItemID::SkalefinSoup);
-	skalesoup->setEffectID(Effect::SkaleVigor);
-	skalesoup->setThreshold(10);
-	skalesoup->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	panel->AddControl(skalesoup);
-	++col;
-
-	pahnai = new Pcon(L"pahnai");
-	pahnai->setIcon("Pahnai_Salad.png", 0, 0, 56);
-	pahnai->setChatName(L"Pahnai Salad");
-	pahnai->setItemID(ItemID::PahnaiSalad);
-	pahnai->setEffectID(Effect::PahnaiSalad);
-	pahnai->setThreshold(10);
-	pahnai->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	panel->AddControl(pahnai);
-	++row; col = 0;
-
-	Pcons::scanInventory();
-
-	initialized = true;
-
-	return panel;
-}
+using namespace GWAPI;
 
 Pcon::Pcon(const wchar_t* ini)
-: Button() {
-	
+	: Button() {
+
 	pic = new PictureBox();
 	tick = new PictureBox();
 	shadow = new Label();
 	quantity = 0;
-	enabled = GWToolbox::getInstance()->config->iniReadBool(L"pcons", ini, false);;
+	enabled = GWToolbox::instance()->config()->iniReadBool(L"pcons", ini, false);;
 	iniName = ini;
-	chatName = ini; // should be set later, but its a good temporary value
+	chatName = ini; // will be set later, but its a good temporary value
 	itemID = 0;
 	effectID = 0;
 	threshold = 0;
 	timer = TBTimer::init();
+	update_timer = 0;
 
 	tick->SetBackColor(Drawing::Color::Empty());
 	tick->SetStretch(true);
@@ -232,7 +30,7 @@ Pcon::Pcon(const wchar_t* ini)
 	tick->SetSize(35, 35);
 	tick->SetImage(Drawing::Image::FromFile(GuiUtils::getPathA("Tick2.png")));
 	AddSubControl(tick);
-	
+
 	pic->SetBackColor(Drawing::Color::Empty());
 	pic->SetStretch(true);
 	pic->SetEnabled(false);
@@ -259,7 +57,7 @@ void Pcon::toggleActive() {
 	enabled = !enabled;
 	scanInventory();
 	updateLabel();
-	GWToolbox::getInstance()->config->iniWriteBool(L"pcons", iniName, enabled);
+	GWToolbox::instance()->config()->iniWriteBool(L"pcons", iniName, enabled);
 }
 
 void Pcon::DrawSelf(Drawing::RenderContext &context) {
@@ -271,35 +69,40 @@ void Pcon::DrawSelf(Drawing::RenderContext &context) {
 	if (enabled) tick->Render();
 }
 
-void Pcon::PopulateGeometry() {
-	Button::PopulateGeometry();
-	Drawing::Graphics g(*geometry_);
-	//if (enabled) {
-	//	g.DrawRectangle(Drawing::Color::Red(), 0.0, 0.0, (float)GetWidth() - 1, (float)GetHeight() - 1);
-	//}
-}
-
 void Pcon::setIcon(const char* icon, int xOff, int yOff, int size) {
 	pic->SetSize(size, size);
 	pic->SetLocation(xOff, yOff);
 	pic->SetImage(Drawing::Image::FromFile(GuiUtils::getPathA(icon)));
 }
 
+void Pcon::checkUpdateTimer() {
+	if (update_timer != 0 && TBTimer::diff(update_timer) > 2000) {
+		bool old_enabled = enabled;
+		this->scanInventory();
+		update_timer = 0;
+		if (old_enabled && !enabled) {
+			GWAPIMgr::GetInstance()->Chat->WriteChatF(L"[WARNING] Cannot find %ls", chatName);
+		}
+	}
+}
+
 bool Pcon::checkAndUse() {
+	checkUpdateTimer();
+
 	if (enabled && TBTimer::diff(this->timer) > 5000) {
 
 		GWAPIMgr* API = GWAPIMgr::GetInstance();
 		try {
 			EffectMgr::Effect effect = API->Effects->GetPlayerEffectById(effectID);
-		
+
 			if (effect.SkillId == 0 || effect.GetTimeRemaining() < 1000) {
 				bool used = API->Items->UseItemByModelId(itemID);
-				this->scanInventory();
-				this->updateLabel();
 				if (used) {
 					this->timer = TBTimer::init();
+					this->update_timer = TBTimer::init();
 				} else {
 					API->Chat->WriteChatF(L"[WARNING] Cannot find %ls", chatName);
+					this->scanInventory();
 				}
 				return used;
 			}
@@ -309,6 +112,8 @@ bool Pcon::checkAndUse() {
 }
 
 bool PconCons::checkAndUse() {
+	checkUpdateTimer();
+
 	if (enabled && TBTimer::diff(this->timer) > 5000) {
 		GWAPIMgr* API = GWAPIMgr::GetInstance();
 		try {
@@ -320,14 +125,14 @@ bool PconCons::checkAndUse() {
 				for (size_t i = 0; i < mapAgents.size(); ++i) {
 					if (mapAgents[i].curHealth == 0) return false;
 				}
-			
+
 				bool used = API->Items->UseItemByModelId(itemID);
-				this->scanInventory();
-				this->updateLabel();
 				if (used) {
 					this->timer = TBTimer::init();
+					this->update_timer = TBTimer::init();
 				} else {
 					API->Chat->WriteChatF(L"[WARNING] Cannot find %ls", chatName);
+					this->scanInventory();
 				}
 				return used;
 			}
@@ -337,10 +142,12 @@ bool PconCons::checkAndUse() {
 }
 
 bool PconCity::checkAndUse() {
+	checkUpdateTimer();
+
 	if (enabled	&& TBTimer::diff(this->timer) > 5000) {
 		GWAPIMgr* API = GWAPIMgr::GetInstance();
 		try {
-			if (API->Agents->GetPlayer() && 
+			if (API->Agents->GetPlayer() &&
 				(API->Agents->GetPlayer()->MoveX > 0 || API->Agents->GetPlayer()->MoveY > 0)) {
 				if (API->Effects->GetPlayerEffectById(Effect::CremeBrulee).SkillId
 					|| API->Effects->GetPlayerEffectById(Effect::BlueDrink).SkillId
@@ -356,12 +163,12 @@ bool PconCity::checkAndUse() {
 						|| API->Items->UseItemByModelId(ItemID::SugaryBlueDrink)
 						|| API->Items->UseItemByModelId(ItemID::RedBeanCake)
 						|| API->Items->UseItemByModelId(ItemID::JarOfHoney);
-					this->scanInventory();
-					this->updateLabel();
 					if (used) {
 						this->timer = TBTimer::init();
+						this->update_timer = TBTimer::init();
 					} else {
 						API->Chat->WriteChat(L"[WARNING] Cannot find a city speedboost");
+						this->scanInventory();
 					}
 					return used;
 				}
@@ -372,6 +179,8 @@ bool PconCity::checkAndUse() {
 }
 
 bool PconAlcohol::checkAndUse() {
+	checkUpdateTimer();
+
 	if (enabled && TBTimer::diff(this->timer) > 5000) {
 		GWAPIMgr* API = GWAPIMgr::GetInstance();
 		try {
@@ -393,12 +202,12 @@ bool PconAlcohol::checkAndUse() {
 					|| API->Items->UseItemByModelId(ItemID::Keg)
 					|| API->Items->UseItemByModelId(ItemID::FlaskOfFirewater)
 					|| API->Items->UseItemByModelId(ItemID::KrytanBrandy);
-				this->scanInventory();
-				this->updateLabel();
 				if (used) {
 					this->timer = TBTimer::init();
+					this->update_timer = TBTimer::init();
 				} else {
 					API->Chat->WriteChat(L"[WARNING] Cannot find Alcohol");
+					this->scanInventory();
 				}
 				return used;
 			}
@@ -408,6 +217,8 @@ bool PconAlcohol::checkAndUse() {
 }
 
 bool PconLunar::checkAndUse() {
+	checkUpdateTimer();
+
 	if (enabled	&& TBTimer::diff(this->timer) > 500) {
 		GWAPIMgr* API = GWAPIMgr::GetInstance();
 		try {
@@ -417,12 +228,12 @@ bool PconLunar::checkAndUse() {
 					|| API->Items->UseItemByModelId(ItemID::LunarRabbit)
 					|| API->Items->UseItemByModelId(ItemID::LunarSheep)
 					|| API->Items->UseItemByModelId(ItemID::LunarSnake);
-				this->scanInventory();
-				this->updateLabel();
 				if (used) {
 					this->timer = TBTimer::init();
+					this->update_timer = TBTimer::init();
 				} else {
 					API->Chat->WriteChat(L"[WARNING] Cannot find Lunar Fortunes");
+					this->scanInventory();
 				}
 				return used;
 			}
@@ -465,7 +276,7 @@ void PconCity::scanInventory() {
 			ItemMgr::ItemArray items = bag->Items;
 			for (size_t i = 0; i < items.size(); i++) {
 				if (items[i]) {
-					if (   items[i]->ModelId == ItemID::CremeBrulee
+					if (items[i]->ModelId == ItemID::CremeBrulee
 						|| items[i]->ModelId == ItemID::SugaryBlueDrink
 						|| items[i]->ModelId == ItemID::ChocolateBunny
 						|| items[i]->ModelId == ItemID::RedBeanCake) {
@@ -491,23 +302,23 @@ void PconAlcohol::scanInventory() {
 			ItemMgr::ItemArray items = bag->Items;
 			for (size_t i = 0; i < items.size(); i++) {
 				if (items[i]) {
-					if (	   items[i]->ModelId == ItemID::Eggnog
-							|| items[i]->ModelId == ItemID::DwarvenAle
-							|| items[i]->ModelId == ItemID::HuntersAle
-							|| items[i]->ModelId == ItemID::Absinthe
-							|| items[i]->ModelId == ItemID::WitchsBrew
-							|| items[i]->ModelId == ItemID::Ricewine
-							|| items[i]->ModelId == ItemID::ShamrockAle
-							|| items[i]->ModelId == ItemID::Cider) {
+					if (items[i]->ModelId == ItemID::Eggnog
+						|| items[i]->ModelId == ItemID::DwarvenAle
+						|| items[i]->ModelId == ItemID::HuntersAle
+						|| items[i]->ModelId == ItemID::Absinthe
+						|| items[i]->ModelId == ItemID::WitchsBrew
+						|| items[i]->ModelId == ItemID::Ricewine
+						|| items[i]->ModelId == ItemID::ShamrockAle
+						|| items[i]->ModelId == ItemID::Cider) {
 
 						quantity += items[i]->Quantity;
 					} else if (items[i]->ModelId == ItemID::Grog
-							|| items[i]->ModelId == ItemID::SpikedEggnog
-							|| items[i]->ModelId == ItemID::AgedDwarvenAle
-							|| items[i]->ModelId == ItemID::AgedHungersAle
-							|| items[i]->ModelId == ItemID::Keg
-							|| items[i]->ModelId == ItemID::FlaskOfFirewater
-							|| items[i]->ModelId == ItemID::KrytanBrandy) {
+						|| items[i]->ModelId == ItemID::SpikedEggnog
+						|| items[i]->ModelId == ItemID::AgedDwarvenAle
+						|| items[i]->ModelId == ItemID::AgedHungersAle
+						|| items[i]->ModelId == ItemID::Keg
+						|| items[i]->ModelId == ItemID::FlaskOfFirewater
+						|| items[i]->ModelId == ItemID::KrytanBrandy) {
 
 						quantity += items[i]->Quantity * 5;
 					}
@@ -531,7 +342,7 @@ void PconLunar::scanInventory() {
 			ItemMgr::ItemArray items = bag->Items;
 			for (size_t i = 0; i < items.size(); i++) {
 				if (items[i]) {
-					if (   items[i]->ModelId == ItemID::LunarDragon
+					if (items[i]->ModelId == ItemID::LunarDragon
 						|| items[i]->ModelId == ItemID::LunarHorse
 						|| items[i]->ModelId == ItemID::LunarRabbit
 						|| items[i]->ModelId == ItemID::LunarSheep
@@ -560,63 +371,3 @@ void Pcon::updateLabel() {
 		label_->SetForeColor(Color(1.0, 0.0, 1.0, 0.0));
 	}
 }
-
-void Pcons::mainRoutine() {
-	if (!enabled || !initialized) return;
-
-	GWAPIMgr * API = GWAPIMgr::GetInstance();
-	InstanceType type;
-	try {
-		type = API->Map->GetInstanceType();
-		if (type == InstanceType::Loading) return;
-		if (API->Agents->GetPlayer() == nullptr) return;
-		if (API->Agents->GetPlayer()->Id == 0) return;
-		if (API->Agents->GetPlayer()->HP == 0) return;
-	} catch (APIException_t) {
-		return;
-	}
-
-	if (type == InstanceType::Explorable) {
-		essence->checkAndUse();
-		grail->checkAndUse();
-		armor->checkAndUse();
-		redrock->checkAndUse();
-		bluerock->checkAndUse();
-		greenrock->checkAndUse();
-		pie->checkAndUse();
-		cupcake->checkAndUse();
-		apple->checkAndUse();
-		corn->checkAndUse();
-		egg->checkAndUse();
-		kabob->checkAndUse();
-		warsupply->checkAndUse();
-		skalesoup->checkAndUse();
-		pahnai->checkAndUse();
-		alcohol->checkAndUse();
-		lunars->checkAndUse();
-	} else if (type == InstanceType::Outpost) {
-		city->checkAndUse();
-	}
-}
-
-void Pcons::scanInventory() {
-	essence->scanInventory();
-	grail->scanInventory();
-	armor->scanInventory();
-	alcohol->scanInventory();
-	redrock->scanInventory();
-	bluerock->scanInventory();
-	greenrock->scanInventory();
-	pie->scanInventory();
-	cupcake->scanInventory();
-	apple->scanInventory();
-	corn->scanInventory();
-	egg->scanInventory();
-	kabob->scanInventory();
-	warsupply->scanInventory();
-	lunars->scanInventory();
-	skalesoup->scanInventory();
-	pahnai->scanInventory();
-	city->scanInventory();
-}
-

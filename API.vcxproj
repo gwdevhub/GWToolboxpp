@@ -82,7 +82,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
-	  <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>JsonCpp_r.lib;FreeType_r.lib;SimpleImageLoader_r.lib;D3DX11Effects_r.lib;dxguid.lib;dinput8.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -106,11 +106,12 @@
     <ClInclude Include="GWToolbox\Config.h" />
     <ClInclude Include="GWToolbox\GuiUtils.h" />
     <ClInclude Include="GWToolbox\GWToolbox.h" />
-    <ClInclude Include="GWToolbox\HotkeyMgr.h" />
+    <ClInclude Include="GWToolbox\HotkeyPanel.h" />
     <ClInclude Include="GWToolbox\Hotkeys.h" />
     <ClInclude Include="GWToolbox\logger.h" />
+    <ClInclude Include="GWToolbox\PconPanel.h" />
     <ClInclude Include="GWToolbox\Pcons.h" />
-    <ClInclude Include="GWToolbox\TBMainWindow.h" />
+    <ClInclude Include="GWToolbox\MainWindow.h" />
     <ClInclude Include="GWToolbox\Timer.h" />
     <ClInclude Include="GWToolbox\Travel.h" />
     <ClInclude Include="include\OSHGui\Application.hpp" />
@@ -223,10 +224,11 @@
     <ClCompile Include="API\SkillbarMgr.cpp" />
     <ClCompile Include="GWToolbox\Builds.cpp" />
     <ClCompile Include="GWToolbox\GWToolbox.cpp" />
-    <ClCompile Include="GWToolbox\HotkeyMgr.cpp" />
+    <ClCompile Include="GWToolbox\HotkeyPanel.cpp" />
     <ClCompile Include="GWToolbox\Hotkeys.cpp" />
+    <ClCompile Include="GWToolbox\PconPanel.cpp" />
     <ClCompile Include="GWToolbox\Pcons.cpp" />
-    <ClCompile Include="GWToolbox\TBMainWIndow.cpp" />
+    <ClCompile Include="GWToolbox\MainWindow.cpp" />
     <ClCompile Include="GWToolbox\Travel.cpp" />
     <ClCompile Include="include\OSHGui\Application.cpp" />
     <ClCompile Include="include\OSHGui\Controls\Button.cpp" />

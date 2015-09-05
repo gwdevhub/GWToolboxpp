@@ -1,4 +1,4 @@
-#include "TBMainWindow.h"
+#include "MainWindow.h"
 #include "logger.h"
 #include "../include/OSHGui/OSHGui.hpp"
 #include "GuiUtils.h"
@@ -7,15 +7,18 @@
 using namespace OSHGui::Drawing;
 using namespace OSHGui;
 
-TBMainWindow::TBMainWindow() {
-	// initialize fields
+MainWindow::MainWindow() : 
+pcon_panel_(new PconPanel()), 
+hotkey_panel_(new HotkeyPanel()) {
+
 	panels = std::vector<Panel*>();
 	currentPanel = -1;
 
 	// some local vars
-	GWToolbox* tb = GWToolbox::getInstance();
+	GWToolbox* tb = GWToolbox::instance();
 	int y = 0;
-	int i = 0;
+	int panel_idx = 0;
+	int button_idx = 0;
 	int tabButtonHeight = 27;
 
 	// build main UI
@@ -23,8 +26,9 @@ TBMainWindow::TBMainWindow() {
 	SetSize(width, height);
 	SetFont(GuiUtils::getTBFont(8.0, true));
 	
-	createTabButton("Pcons", i, GuiUtils::getPathA("cupcake.png").c_str());
-	setupPanel(tb->pcons->buildUI());
+	createTabButton("Pcons", button_idx, panel_idx, GuiUtils::getPathA("cupcake.png").c_str());
+	pcon_panel_->buildUI();
+	setupPanel(pcon_panel_);
 
 	Button* toggle = new Button();
 	toggle->SetText("Disabled");
@@ -32,8 +36,9 @@ TBMainWindow::TBMainWindow() {
 	toggle->SetMouseOverFocusColor(GuiUtils::getMouseOverColor());
 	toggle->SetForeColor(Color::Red());
 	toggle->SetFont(GuiUtils::getTBFont(10.0, true));
-	toggle->GetClickEvent() += ClickEventHandler([toggle](Control*) {
-		bool active = GWToolbox::getInstance()->pcons->toggleActive();
+	PconPanel* const pcon_panel = pcon_panel_;
+	toggle->GetClickEvent() += ClickEventHandler([toggle, pcon_panel](Control*) {
+		bool active = pcon_panel->toggleActive();
 		if (active) {
 			toggle->SetForeColor(Color::Lime());
 			toggle->SetText("Enabled");
@@ -43,38 +48,41 @@ TBMainWindow::TBMainWindow() {
 		}
 	});
 	toggle->SetSize(width - 2 * DefaultBorderPadding, tabButtonHeight - 1);
-	toggle->SetLocation(0, i * tabButtonHeight - 1);
+	toggle->SetLocation(0, button_idx * tabButtonHeight - 1);
 	AddControl(toggle);
 	
-	++i;
-	createTabButton("Hotkeys", i, GuiUtils::getPathA("keyboard.png").c_str());
-	setupPanel(tb->hotkeys->buildUI());
+	++button_idx;
+	createTabButton("Hotkeys", button_idx, panel_idx, GuiUtils::getPathA("keyboard.png").c_str());
+	hotkey_panel_->buildUI();
+	setupPanel(hotkey_panel_);
 
-	createTabButton("Builds", i, GuiUtils::getPathA("list.png").c_str());
+	createTabButton("Builds", button_idx, panel_idx, GuiUtils::getPathA("list.png").c_str());
 
-	createTabButton("Travel", i, GuiUtils::getPathA("plane.png").c_str());
+	createTabButton("Travel", button_idx, panel_idx, GuiUtils::getPathA("plane.png").c_str());
 
-	createTabButton("Dialogs", i, GuiUtils::getPathA("comment.png").c_str());
+	createTabButton("Dialogs", button_idx, panel_idx, GuiUtils::getPathA("comment.png").c_str());
 
-	createTabButton("Others?", i, NULL);
+	createTabButton("Others?", button_idx, panel_idx, NULL);
 
-	createTabButton("Materials", i, GuiUtils::getPathA("feather.png").c_str());
+	createTabButton("Materials", button_idx, panel_idx, GuiUtils::getPathA("feather.png").c_str());
 
-	createTabButton("Settings", i, GuiUtils::getPathA("settings.png").c_str());
+	createTabButton("Settings", button_idx, panel_idx, GuiUtils::getPathA("settings.png").c_str());
 }
 
-void TBMainWindow::createTabButton(const char* s, int& idx, const char* icon) {
-	TBMainWindow * self = this;
+void MainWindow::createTabButton(const char* s, int& button_idx,
+									int& panel_idx, const char* icon) {
+	MainWindow * self = this;
 
 	TabButton* b = new TabButton(s, icon);
 	AddControl(b);
-	b->SetLocation(0, idx * tabButtonHeight);
-	const int index = idx;
+	b->SetLocation(0, button_idx * tabButtonHeight);
+	const int index = panel_idx;
 	b->GetClickEvent() += ClickEventHandler([self, index](Control*) { self->openClosePanel(index); });
-	++idx;
+	++button_idx;
+	++panel_idx;
 }
 
-void TBMainWindow::setupPanel(Panel* panel) {
+void MainWindow::setupPanel(Panel* panel) {
 	panel->SetLocation(width, 0);
 	panel->SetVisible(false);
 	panel->SetEnabled(false);
@@ -82,7 +90,7 @@ void TBMainWindow::setupPanel(Panel* panel) {
 	AddSubControl(panel);
 }
 
-void TBMainWindow::DrawSelf(RenderContext &context) {
+void MainWindow::DrawSelf(RenderContext &context) {
 	Form::DrawSelf(context);
 
 	if (currentPanel >= 0) {
@@ -90,7 +98,7 @@ void TBMainWindow::DrawSelf(RenderContext &context) {
 	}
 }
 
-void TBMainWindow::openClosePanel(int index) {
+void MainWindow::openClosePanel(int index) {
 	if (currentPanel >= 0) {
 		panels[currentPanel]->SetVisible(false);
 		panels[currentPanel]->SetEnabled(false);
@@ -124,7 +132,7 @@ TabButton::TabButton(const char* s, const char* icon)
 	label_->SetText(s);
 
 	SetFont(GuiUtils::getTBFont(10.0f, true));
-	SetSize(TBMainWindow::width - DefaultBorderPadding * 2, TBMainWindow::tabButtonHeight - 1);
+	SetSize(MainWindow::width - DefaultBorderPadding * 2, MainWindow::tabButtonHeight - 1);
 	SetBackColor(Color::Empty());
 	SetMouseOverFocusColor(GuiUtils::getMouseOverColor());
 }
@@ -136,8 +144,12 @@ void TabButton::DrawSelf(Drawing::RenderContext &context) {
 void TabButton::PopulateGeometry() {
 	Button::PopulateGeometry();
 	Graphics g(*geometry_);
-	g.DrawLine(GetForeColor(), PointF(0, 0), PointF(TBMainWindow::width - DefaultBorderPadding * 2, 0));
+	g.DrawLine(GetForeColor(), PointF(0, 0), PointF(MainWindow::width - DefaultBorderPadding * 2, 0));
 }
 void TabButton::CalculateLabelLocation() {
 	label_->SetLocation(Drawing::PointI(GetSize().Width / 2 - label_->GetSize().Width / 2 + 13, GetSize().Height / 2 - label_->GetSize().Height / 2));
 };
+
+void MainWindow::MainRoutine() {
+	pcon_panel_->mainRoutine();
+}

@@ -1,13 +1,9 @@
 #pragma once
 
-#include <list>
-#include <vector>
+#include <stdint.h>
 #include "../include/OSHGui/OSHGui.hpp"
 #include "Timer.h"
 
-using namespace std;
-
-typedef unsigned int UINT;
 
 class Pcon : public OSHGui::Button {
 public:
@@ -24,22 +20,22 @@ protected:
 	const wchar_t* chatName;
 	int quantity;
 	bool enabled;
-	UINT itemID;
-	UINT effectID;
+	unsigned int itemID;
+	unsigned int effectID;
 	int threshold;
-public:
 	clock_t timer;
+	clock_t update_timer;
+	void checkUpdateTimer();
 
 public:
 	Pcon(const wchar_t* ini);
 	void DrawSelf(OSHGui::Drawing::RenderContext &context) override;
 	void CalculateLabelLocation() override {};
-	void PopulateGeometry() override;
 
 	void setIcon(const char* icon, int xOff, int yOff, int size);
 	inline void setChatName(const wchar_t* chat) { chatName = chat; }
-	inline void setItemID(UINT item) { itemID = item; }
-	inline void setEffectID(UINT effect) { effectID = effect; }
+	inline void setItemID(unsigned int item) { itemID = item; }
+	inline void setEffectID(unsigned int effect) { effectID = effect; }
 	inline void setThreshold(int t) { threshold = t; }
 
 	virtual bool checkAndUse();		// checks if need to use pcon, uses if needed. Returns true if was used.
@@ -51,7 +47,8 @@ public:
 class PconCons : public Pcon {
 public:
 	PconCons(const wchar_t* ini)
-		: Pcon(ini) {}
+		: Pcon(ini) {
+	}
 
 	bool checkAndUse() override;
 };
@@ -59,7 +56,8 @@ public:
 class PconCity : public Pcon {
 public:
 	PconCity(const wchar_t* ini)
-		: Pcon(ini) {}
+		: Pcon(ini) {
+	}
 
 	bool checkAndUse() override;
 	void scanInventory() override;
@@ -68,7 +66,8 @@ public:
 class PconAlcohol : public Pcon {
 public:
 	PconAlcohol(const wchar_t* ini)
-		: Pcon(ini) {}
+		: Pcon(ini) {
+	}
 
 	bool checkAndUse() override;
 	void scanInventory() override;
@@ -77,48 +76,9 @@ public:
 class PconLunar : public Pcon {
 public:
 	PconLunar(const wchar_t* ini)
-		: Pcon(ini) {}
+		: Pcon(ini) {
+	}
 
 	bool checkAndUse() override;
 	void scanInventory() override;
-};
-
-class Pcons {
-private:
-	Pcon* essence;
-	Pcon* grail;
-	Pcon* armor;
-	Pcon* alcohol;
-	Pcon* redrock;
-	Pcon* bluerock;
-	Pcon* greenrock;
-	Pcon* pie;
-	Pcon* cupcake;
-	Pcon* apple;
-	Pcon* corn;
-	Pcon* egg;
-	Pcon* kabob;
-	Pcon* warsupply;
-	Pcon* lunars;
-	Pcon* skalesoup;
-	Pcon* pahnai;
-	Pcon* city;
-	
-	bool initialized;	// true if the feature is initialized
-	bool enabled;		// true if the feature is enabled, false otherwise 
-
-	// scans inventory and updates UI
-	void scanInventory();
-
-public:
-	Pcons();
-	~Pcons();
-
-	void enable() { enabled = true; }
-	void disable() { enabled = false; }
-	bool toggleActive() { return enabled = !enabled; }
-	
-	void loadIni();				// load settings from ini file 
-	OSHGui::Panel* buildUI();	// create user interface
-	void mainRoutine();			// runs one loop of the main routine (checking each pcon once)
 };

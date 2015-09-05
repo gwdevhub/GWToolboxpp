@@ -361,9 +361,6 @@
     <ClInclude Include="API\GwConstants.h">
       <Filter>API</Filter>
     </ClInclude>
-    <ClInclude Include="GWToolbox\Pcons.h">
-      <Filter>Main\GWToolbox</Filter>
-    </ClInclude>
     <ClInclude Include="GWToolbox\Timer.h">
       <Filter>Main\GWToolbox</Filter>
     </ClInclude>
@@ -385,17 +382,23 @@
     <ClInclude Include="GWToolbox\logger.h">
       <Filter>Main\GWToolbox</Filter>
     </ClInclude>
-    <ClInclude Include="GWToolbox\HotkeyMgr.h">
-      <Filter>Main\GWToolbox</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\TBMainWindow.h">
-      <Filter>Main\GWToolbox</Filter>
-    </ClInclude>
     <ClInclude Include="GWToolbox\GuiUtils.h">
       <Filter>Main\GWToolbox</Filter>
     </ClInclude>
     <ClInclude Include="API\MerchantMgr.h">
       <Filter>API</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\PconPanel.h">
+      <Filter>Main\GWToolbox</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Pcons.h">
+      <Filter>Main\GWToolbox</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\MainWindow.h">
+      <Filter>Main\GWToolbox</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\HotkeyPanel.h">
+      <Filter>Main\GWToolbox</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -627,9 +630,6 @@
     <ClCompile Include="API\ItemMgr.cpp">
       <Filter>API\src</Filter>
     </ClCompile>
-    <ClCompile Include="GWToolbox\Pcons.cpp">
-      <Filter>Main\GWToolbox</Filter>
-    </ClCompile>
     <ClCompile Include="API\ChatMgr.cpp">
       <Filter>API\src</Filter>
     </ClCompile>
@@ -642,14 +642,20 @@
     <ClCompile Include="GWToolbox\Travel.cpp">
       <Filter>Main\GWToolbox</Filter>
     </ClCompile>
-    <ClCompile Include="GWToolbox\HotkeyMgr.cpp">
-      <Filter>Main\GWToolbox</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\TBMainWIndow.cpp">
-      <Filter>Main\GWToolbox</Filter>
-    </ClCompile>
     <ClCompile Include="API\MerchantMgr.cpp">
       <Filter>API\src</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\PconPanel.cpp">
+      <Filter>Main\GWToolbox</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Pcons.cpp">
+      <Filter>Main\GWToolbox</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\MainWindow.cpp">
+      <Filter>Main\GWToolbox</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\HotkeyPanel.cpp">
+      <Filter>Main\GWToolbox</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

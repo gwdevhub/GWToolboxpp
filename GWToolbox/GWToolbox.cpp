@@ -8,12 +8,12 @@
 #include <string>
 
 #include "Timer.h"
-#include "TBMainWindow.h"
+#include "MainWindow.h"
 
 using namespace OSHGui::Drawing;
 using namespace OSHGui::Input;
 
-GWToolbox* GWToolbox::instance = NULL;
+GWToolbox* GWToolbox::instance_ = NULL;
 
 namespace{
 	GWAPI::GWAPIMgr * mgr;
@@ -29,7 +29,7 @@ namespace{
 static LRESULT CALLBACK NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) {
 	
 	if (Message == WM_QUIT || Message == WM_CLOSE) {
-		GWToolbox::getInstance()->config->save();
+		GWToolbox::instance()->config()->save();
 		return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
 	}
 
@@ -77,7 +77,7 @@ static LRESULT CALLBACK NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARA
 		case WM_IME_CHAR:
 			//LOG("processing keyboard event %d, key %u\n", Message, wParam);
 			input.ProcessMessage(&msg);
-			GWToolbox::getInstance()->hotkeyMgr->processMessage(&msg);
+			GWToolbox::instance()->main_window()->hotkey_panel()->ProcessMessage(&msg);
 			break;
 		}
 	}
@@ -108,8 +108,10 @@ void create_gui(IDirect3DDevice9* pDevice) {
 
 	app->SetCursorEnabled(false);
 
-	std::shared_ptr<TBMainWindow> mainWindow = std::make_shared<TBMainWindow>();
-	app->Run(mainWindow);
+	MainWindow* main_window = new MainWindow();
+	std::shared_ptr<MainWindow> shared_ptr = std::shared_ptr<MainWindow>(main_window);
+	app->Run(shared_ptr);
+	GWToolbox::instance()->set_main_window(main_window);
 	
 	app->Enable();
 
@@ -157,26 +159,17 @@ void GWToolbox::exec() {
 	mgr = GWAPI::GWAPIMgr::GetInstance();
 	dx = mgr->DirectX;
 
-	LOG("Loading from ini\n");
-	pcons->loadIni();
-	builds->loadIni();
-	hotkeys->loadIni();
-
 	LOG("Installing dx hooks\n");
 	dx->CreateRenderHooks(endScene, resetScene);
 	
 	input.SetKeyboardInputEnabled(true);
 	input.SetMouseInputEnabled(true);
 
-	m_Active = true;
-
 	Application * app = Application::InstancePtr();
 
 	while (true) { // main loop
-		if (app->HasBeenInitialized()) {
-			pcons->mainRoutine();
-			builds->mainRoutine();
-			hotkeys->mainRoutine();
+		if (app->HasBeenInitialized() && main_window_) {
+			main_window_->MainRoutine();
 		}
 
 		Sleep(10);
@@ -189,13 +182,10 @@ void GWToolbox::exec() {
 void GWToolbox::destroy()
 {
 	LOG("Destroying GWToolbox++\n");
-	delete pcons;
-	delete builds;
-	delete hotkeys;
 
-	config->save();
-	delete config;
-	delete hotkeyMgr;
+
+	config_->save();
+	delete config_;
 
 	HWND hWnd = GWAPI::MemoryMgr::GetGWWindowHandle();
 	SetWindowLongPtr(hWnd, GWL_WNDPROC, (long)OldWndProc);
@@ -204,25 +194,19 @@ void GWToolbox::destroy()
 #if DEBUG_BUILD
 	FreeConsole();
 #endif
-	m_Active = false;
 	FreeLibraryAndExitThread(m_dllmodule, EXIT_SUCCESS);
-}
-
-// what is this for?
-bool GWToolbox::isActive() {
-	return m_Active;
 }
 
 
 void GWToolbox::threadEntry(HMODULE mod) {
-	if (instance) return;
+	if (GWToolbox::instance()) return;
 
 	LOG("Initializing GWAPI\n");
 	GWAPI::GWAPIMgr::Initialize();
 
 	LOG("Creating GWToolbox++\n");
-	instance = new GWToolbox(mod);
+	instance_ = new GWToolbox(mod);
 
 	LOG("Running GWToolbox++\n");
-	instance->exec();
+	instance_->exec();
 }

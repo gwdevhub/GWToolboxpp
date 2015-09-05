@@ -2,10 +2,12 @@
 
 #include <vector>
 #include "../include/OSHGui/OSHGui.hpp"
+#include "PconPanel.h"
+#include "HotkeyPanel.h"
 
 using namespace OSHGui;
 
-class TBMainWindow : public Form {
+class MainWindow : public Form {
 public:
 	static const int width = 100;
 	static const int height = 300;
@@ -15,15 +17,22 @@ private:
 	std::vector<Panel*> panels;
 	int currentPanel;
 
-	void createTabButton(const char* s, int& idx, const char* icon);
+	PconPanel* const pcon_panel_;
+	HotkeyPanel* const hotkey_panel_;
+
+	void createTabButton(const char* s, int& button_idx, int& panel_idx, const char* icon);
 	void setupPanel(Panel* panel);
 
 public:
-	TBMainWindow();
+	MainWindow();
 
 	virtual void DrawSelf(Drawing::RenderContext &context) override;
 
 	void openClosePanel(int index);
+	PconPanel* pcon_panel() { return pcon_panel_; }
+	HotkeyPanel* hotkey_panel() { return hotkey_panel_; }
+
+	void MainRoutine();
 };
 
 class TabButton : public Button {

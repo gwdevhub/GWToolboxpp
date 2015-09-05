@@ -2,36 +2,24 @@
 #include "../include/OSHGui/OSHGui.hpp"
 #include "../include/OSHGui/Drawing/Direct3D9/Direct3D9Renderer.hpp"
 
-#include "Pcons.h"
-#include "Builds.h"
-#include "Hotkeys.h"
 #include "Config.h"
-#include "HotkeyMgr.h"
+#include "MainWindow.h"
 
 using namespace OSHGui;
 
 class GWToolbox {
 
 private:
-	static GWToolbox* instance;
+	static GWToolbox* instance_;
 
-public:
-	Config* const config;
-	HotkeyMgr* const hotkeyMgr;
-
-	Pcons* const pcons;
-	Builds* const builds;
-	Hotkeys* const hotkeys;
+	Config* const config_;
+	MainWindow* main_window_;
 
 private:
 	GWToolbox(HMODULE mod) :
 		m_dllmodule(mod),
-		config(new Config()),
-		hotkeyMgr(new HotkeyMgr()),
-
-		pcons(new Pcons()),
-		builds(new Builds()),
-		hotkeys(new Hotkeys())
+		config_(new Config()),
+		main_window_(NULL)
 	{ }
 
 	// Executes setup and main loop of toolbox. 
@@ -40,8 +28,6 @@ private:
 	// Self destructs
 	void destroy();
 
-	bool isActive();		// ??? (also why a private accessor to a private field? xD)
-	bool m_Active;			// ???
 	HMODULE m_dllmodule;	// Handle to the dll module we are running, used to clear the module from GW on eject.
 
 public:
@@ -49,6 +35,11 @@ public:
 	static void threadEntry(HMODULE mod);
 
 	// returns toolbox instance
-	static GWToolbox* getInstance() { return instance; }
+	static GWToolbox* instance() { return instance_; }
+	inline Config* config() { return config_; }
+	inline void set_main_window(MainWindow* main_window) {
+		main_window_ = main_window;
+	}
+	inline MainWindow* main_window() { return main_window_; }
 	
 };
