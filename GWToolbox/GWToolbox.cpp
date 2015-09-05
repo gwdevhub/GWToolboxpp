@@ -14,6 +14,7 @@ using namespace OSHGui::Drawing;
 using namespace OSHGui::Input;
 
 GWToolbox* GWToolbox::instance_ = NULL;
+bool GWToolbox::capture_input = false;
 
 namespace{
 	GWAPI::GWAPIMgr * mgr;
@@ -67,7 +68,7 @@ static LRESULT CALLBACK NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARA
 			}
 			break;
 
-		// send keyboard messages to gw, osh and toolbox (does osh need them?)
+		// send keyboard messages to gw, osh and toolbox
 		case WM_KEYDOWN:
 		case WM_SYSKEYDOWN:
 		case WM_KEYUP:
@@ -75,9 +76,11 @@ static LRESULT CALLBACK NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARA
 		case WM_CHAR:
 		case WM_SYSCHAR:
 		case WM_IME_CHAR:
-			//LOG("processing keyboard event %d, key %u\n", Message, wParam);
-			input.ProcessMessage(&msg);
 			GWToolbox::instance()->main_window()->hotkey_panel()->ProcessMessage(&msg);
+			if (GWToolbox::capture_input) {
+				input.ProcessMessage(&msg);
+				return TRUE;
+			}
 			break;
 		}
 	}

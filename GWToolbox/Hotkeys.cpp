@@ -1,45 +1,52 @@
 #include "Hotkeys.h"
 #include "logger.h"
+#include "GWToolbox.h"
+#include "Config.h"
 
 using namespace GWAPI;
 using namespace OSHGui;
 
-TBHotkey::TBHotkey(string name, long key, bool active)
-	: key_(key) {
+TBHotkey::TBHotkey(string name, long key, bool active, wstring ini_section)
+	: active_(active), key_(key), ini_section_(ini_section) {
+
 	pressed_ = false;
-	active_ = active;
 
 	TBHotkey* self = this;
 	SetBackColor(Drawing::Color::Empty());
+	SetSize(WIDTH, HEIGHT);
 
 	CheckBox* checkbox = new CheckBox();
 	checkbox->SetChecked(active);
+	checkbox->SetText("Active");
 	checkbox->SetLocation(0, 0);
-	checkbox->GetCheckedChangedEvent() += CheckedChangedEventHandler([self, checkbox](Control*) {
+	checkbox->SetSize(CONTROL_WIDTH, CONTROL_HEIGHT);
+	checkbox->SetBackColor(Drawing::Color::Black());
+	checkbox->GetCheckedChangedEvent() += CheckedChangedEventHandler([self, checkbox, ini_section](Control*) {
 		self->set_active(checkbox->GetChecked());
+		GWToolbox::instance()->config()->iniWriteBool(ini_section.c_str(), TBHotkey::IniKeyActive(), checkbox->GetChecked());
 	});
 	AddControl(checkbox);
-
+	
 	Button* hotkey_button = new Button();
 	hotkey_button->SetText(std::to_string(key));
-	hotkey_button->SetSize(60, 20);
-	hotkey_button->SetLocation(checkbox->GetRight(), 0);
-	hotkey_button->GetClickEvent() += ClickEventHandler([](Control*) {
-		// TODO something
+	hotkey_button->SetSize(CONTROL_WIDTH, CONTROL_HEIGHT);
+	hotkey_button->SetLocation(0, CONTROL_HEIGHT + VSPACE);
+	hotkey_button->GetClickEvent() += ClickEventHandler([self](Control*) {
+		// TODO set new hotkey
 	});
 	AddControl(hotkey_button);
 
 	Label* action = new Label();
 	action->SetText(name);
-	action->SetLocation(hotkey_button->GetRight(), 0);
+	action->SetLocation(CONTROL_WIDTH + HSPACE, VSPACE);
 	AddControl(action);
 
 	// then there will be hotkey-specific items here
 
 	Button* run_button = new Button();
 	run_button->SetText("Run");
-	run_button->SetSize(60, 20);
-	run_button->SetLocation(WIDTH - 60, 0);
+	run_button->SetSize(CONTROL_WIDTH, CONTROL_HEIGHT);
+	run_button->SetLocation(WIDTH - CONTROL_WIDTH, 0);
 	run_button->GetClickEvent() += ClickEventHandler([self](Control*) {
 		self->exec();
 	});
@@ -47,15 +54,78 @@ TBHotkey::TBHotkey(string name, long key, bool active)
 }
 
 
-HotkeySendChat::HotkeySendChat(long key, bool active, wstring msg, wchar_t channel)
-	: TBHotkey("Send Chat", key, active), msg_(msg), channel_(channel) {
+HotkeySendChat::HotkeySendChat(long key, bool active, wstring ini_section, 
+	wstring msg, wchar_t channel)
+	: TBHotkey("Send Chat", key, active, ini_section), msg_(msg), channel_(channel) {
+	
+	ComboBox* combo = new ComboBox();
+	combo->AddItem("/");
+	combo->AddItem("!");
+	combo->AddItem("@");
+	combo->AddItem("#");
+	combo->AddItem("$");
+	combo->AddItem("%");
+	combo->SetSelectedIndex(ChannelToIndex(channel));
+	combo->SetSize(30, CONTROL_HEIGHT);
+	combo->SetLocation(CONTROL_WIDTH + HSPACE, CONTROL_HEIGHT + VSPACE);
+	HotkeySendChat* self = this;
+	combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
+		[self, combo, ini_section](Control*) {
+		wchar_t channel = self->IndexToChannel(combo->GetSelectedIndex());
+		self->set_channel(channel);
+		GWToolbox::instance()->config()->iniWrite(ini_section.c_str(), 
+			self->IniKeyChannel(), wstring(1, channel).c_str());
+	});
+	AddControl(combo);
 	
 	string text = string(msg.begin(), msg.end());
-	Label* label = new Label();
-	label->SetText(text);
-	label->SetLocation(100, 0);
-	AddControl(label);
-	
+	TextBox* text_box = new TextBox();
+	text_box->SetText(text);
+	text_box->SetSize(WIDTH - combo->GetRight() - HSPACE / 2, CONTROL_HEIGHT);
+	text_box->SetLocation(combo->GetRight() + HSPACE / 2, combo->GetTop());
+	text_box->GetTextChangedEvent() += TextChangedEventHandler(
+		[self, text_box, ini_section](Control*) {
+		string text = text_box->GetText();
+		wstring wtext = wstring(text.begin(), text.end());
+		self->set_msg(wtext);
+		GWToolbox::instance()->config()->iniWrite(ini_section.c_str(),
+			self->IniKeyMsg(), wtext.c_str());
+	});
+	text_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
+		GWToolbox::capture_input = true;
+	});
+	text_box->GetFocusLostEvent() += FocusLostEventHandler([](Control*, Control*) {
+		GWToolbox::capture_input = false;
+	});
+	AddControl(text_box);
+}
+
+int HotkeySendChat::ChannelToIndex(wchar_t channel) {
+	switch (channel) {
+	case L'/': return 0;
+	case L'!': return 1;
+	case L'@': return 2;
+	case L'#': return 3;
+	case L'$': return 4;
+	case L'%': return 5;
+	default:
+		LOG("Warning - bad channel %lc", channel);
+		return 0;
+	}
+}
+
+wchar_t HotkeySendChat::IndexToChannel(int index) {
+	switch (index) {
+	case 0: return L'/';
+	case 1: return L'!';
+	case 2: return L'@';
+	case 3: return L'#';
+	case 4: return L'$';
+	case 5: return L'%';
+	default:
+		LOG("Warning - bad index %d", index);
+		return L'/';
+	}
 }
 
 void HotkeyUseItem::exec() {

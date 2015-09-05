@@ -31,6 +31,8 @@ private:
 	HMODULE m_dllmodule;	// Handle to the dll module we are running, used to clear the module from GW on eject.
 
 public:
+	static bool capture_input;
+
 	// will create a new toolbox object and run it, can be used as argument for createThread
 	static void threadEntry(HMODULE mod);
 
