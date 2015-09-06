@@ -25,7 +25,7 @@ void PconPanel::buildUI() {
 	essence->setIcon("Essence_of_Celerity.png", 0, 0, 64);
 	essence->setChatName(L"Essence of Celerity");
 	essence->setItemID(ItemID::ConsEssence);
-	essence->setEffectID(Effect::ConsEssence);
+	essence->setEffectID(GwConstants::EffectID::ConsEssence);
 	essence->setThreshold(5);
 	essence->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
 	AddControl(essence);
@@ -35,7 +35,7 @@ void PconPanel::buildUI() {
 	grail->setIcon("Grail_of_Might.png", 0, 0, 56);
 	grail->setChatName(L"Grail of Might");
 	grail->setItemID(ItemID::ConsGrail);
-	grail->setEffectID(Effect::ConsGrail);
+	grail->setEffectID(GwConstants::EffectID::ConsGrail);
 	grail->setThreshold(5);
 	grail->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
 	AddControl(grail);
@@ -45,7 +45,7 @@ void PconPanel::buildUI() {
 	armor->setIcon("Armor_of_Salvation.png", 0, 0, 54);
 	armor->setChatName(L"Armor of Salvation");
 	armor->setItemID(ItemID::ConsArmor);
-	armor->setEffectID(Effect::ConsArmor);
+	armor->setEffectID(GwConstants::EffectID::ConsArmor);
 	armor->setThreshold(5);
 	armor->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
 	AddControl(armor);
@@ -55,7 +55,7 @@ void PconPanel::buildUI() {
 	redrock->setIcon("Red_Rock_Candy.png", 0, 0, 56);
 	redrock->setChatName(L"Red Rock Candy");
 	redrock->setItemID(ItemID::RRC);
-	redrock->setEffectID(Effect::Redrock);
+	redrock->setEffectID(GwConstants::EffectID::Redrock);
 	redrock->setThreshold(5);
 	redrock->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
 	AddControl(redrock);
@@ -65,7 +65,7 @@ void PconPanel::buildUI() {
 	bluerock->setIcon("Blue_Rock_Candy.png", 0, 0, 56);
 	bluerock->setChatName(L"Blue Rock Candy");
 	bluerock->setItemID(ItemID::BRC);
-	bluerock->setEffectID(Effect::Bluerock);
+	bluerock->setEffectID(GwConstants::EffectID::Bluerock);
 	bluerock->setThreshold(10);
 	bluerock->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
 	AddControl(bluerock);
@@ -75,7 +75,7 @@ void PconPanel::buildUI() {
 	greenrock->setIcon("Green_Rock_Candy.png", 0, 0, 56);
 	greenrock->setChatName(L"Green Rock Candy");
 	greenrock->setItemID(ItemID::GRC);
-	greenrock->setEffectID(Effect::Greenrock);
+	greenrock->setEffectID(GwConstants::EffectID::Greenrock);
 	greenrock->setThreshold(15);
 	greenrock->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
 	AddControl(greenrock);
@@ -85,7 +85,7 @@ void PconPanel::buildUI() {
 	cupcake->setIcon("Birthday_Cupcake.png", 0, 0, 56);
 	cupcake->setChatName(L"Birthday Cupcake");
 	cupcake->setItemID(ItemID::Cupcakes);
-	cupcake->setEffectID(Effect::Cupcake);
+	cupcake->setEffectID(GwConstants::EffectID::Cupcake);
 	cupcake->setThreshold(10);
 	cupcake->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
 	AddControl(cupcake);
@@ -95,7 +95,7 @@ void PconPanel::buildUI() {
 	apple->setIcon("Candy_Apple.png", 0, 0, 56);
 	apple->setChatName(L"Candy Apple");
 	apple->setItemID(ItemID::Apples);
-	apple->setEffectID(Effect::Apple);
+	apple->setEffectID(GwConstants::EffectID::Apple);
 	apple->setThreshold(10);
 	apple->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
 	AddControl(apple);
@@ -105,7 +105,7 @@ void PconPanel::buildUI() {
 	corn->setIcon("Candy_Corn.png", 0, 0, 56);
 	corn->setChatName(L"Candy Corn");
 	corn->setItemID(ItemID::Corns);
-	corn->setEffectID(Effect::Corn);
+	corn->setEffectID(GwConstants::EffectID::Corn);
 	corn->setThreshold(10);
 	corn->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
 	AddControl(corn);
@@ -115,7 +115,7 @@ void PconPanel::buildUI() {
 	egg->setIcon("Golden_Egg.png", 0, 0, 52);
 	egg->setChatName(L"Golden Egg");
 	egg->setItemID(ItemID::Eggs);
-	egg->setEffectID(Effect::Egg);
+	egg->setEffectID(GwConstants::EffectID::Egg);
 	egg->setThreshold(20);
 	egg->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
 	AddControl(egg);
@@ -125,7 +125,7 @@ void PconPanel::buildUI() {
 	pie->setIcon("Slice_of_Pumpkin_Pie.png", 0, 0, 56);
 	pie->setChatName(L"Slice of Pumpkin_Pie");
 	pie->setItemID(ItemID::Pies);
-	pie->setEffectID(Effect::Pie);
+	pie->setEffectID(GwConstants::EffectID::Pie);
 	pie->setThreshold(10);
 	pie->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
 	AddControl(pie);
@@ -150,7 +150,7 @@ void PconPanel::buildUI() {
 	lunars = new PconLunar(L"lunars");
 	lunars->setIcon("Lunar_Fortune.png", 0, 0, 56);
 	lunars->setChatName(L"Lunar Fortunes");
-	lunars->setEffectID(Effect::Lunars);
+	lunars->setEffectID(GwConstants::EffectID::Lunars);
 	lunars->setThreshold(10);
 	lunars->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
 	AddControl(lunars);
@@ -160,7 +160,7 @@ void PconPanel::buildUI() {
 	warsupply->setIcon("War_Supplies.png", 0, 0, 48);
 	warsupply->setChatName(L"War Supplies");
 	warsupply->setItemID(ItemID::Warsupplies);
-	warsupply->setEffectID(Effect::Warsupplies);
+	warsupply->setEffectID(GwConstants::EffectID::Warsupplies);
 	warsupply->setThreshold(20);
 	warsupply->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
 	AddControl(warsupply);
@@ -170,7 +170,7 @@ void PconPanel::buildUI() {
 	kabob->setIcon("Drake_Kabob.png", 0, 0, 52);
 	kabob->setChatName(L"Drake Kabob");
 	kabob->setItemID(ItemID::Kabobs);
-	kabob->setEffectID(Effect::Kabobs);
+	kabob->setEffectID(GwConstants::EffectID::Kabobs);
 	kabob->setThreshold(10);
 	kabob->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
 	AddControl(kabob);
@@ -180,7 +180,7 @@ void PconPanel::buildUI() {
 	skalesoup->setIcon("Bowl_of_Skalefin_Soup.png", 0, 0, 56);
 	skalesoup->setChatName(L"Bowl of Skalefin Soup");
 	skalesoup->setItemID(ItemID::SkalefinSoup);
-	skalesoup->setEffectID(Effect::SkaleVigor);
+	skalesoup->setEffectID(GwConstants::EffectID::SkaleVigor);
 	skalesoup->setThreshold(10);
 	skalesoup->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
 	AddControl(skalesoup);
@@ -190,7 +190,7 @@ void PconPanel::buildUI() {
 	pahnai->setIcon("Pahnai_Salad.png", 0, 0, 56);
 	pahnai->setChatName(L"Pahnai Salad");
 	pahnai->setItemID(ItemID::PahnaiSalad);
-	pahnai->setEffectID(Effect::PahnaiSalad);
+	pahnai->setEffectID(GwConstants::EffectID::PahnaiSalad);
 	pahnai->setThreshold(10);
 	pahnai->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
 	AddControl(pahnai);

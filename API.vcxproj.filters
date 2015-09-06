@@ -400,6 +400,9 @@
     <ClInclude Include="GWToolbox\HotkeyPanel.h">
       <Filter>Main\GWToolbox</Filter>
     </ClInclude>
+    <ClInclude Include="API\GWStructures.h">
+      <Filter>API</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">

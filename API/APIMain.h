@@ -63,6 +63,8 @@
 #include "MemoryMgr.h"
 #include "GameThreadMgr.h"
 
+#include "GWStructures.h"
+
 #include "CtoSMgr.h"
 #include "AgentMgr.h"
 #include "ItemMgr.h"

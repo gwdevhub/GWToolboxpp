@@ -31,12 +31,12 @@ void GWAPI::ItemMgr::UseItem(Item* item)
 	parent->CtoS->SendPacket(0x8, 0x78, item->ItemId);
 }
 
-GWAPI::ItemMgr::Bag** GWAPI::ItemMgr::GetBagArray()
+GWAPI::Bag** GWAPI::ItemMgr::GetBagArray()
 {
 	return *MemoryMgr::ReadPtrChain<Bag***>(MemoryMgr::GetContextPtr(), 2, 0x40, 0xF8);
 }
 
-GWAPI::ItemMgr::ItemArray GWAPI::ItemMgr::GetItemArray()
+GWAPI::ItemArray GWAPI::ItemMgr::GetItemArray()
 {
 	return *MemoryMgr::ReadPtrChain<ItemArray*>(MemoryMgr::GetContextPtr(), 2, 0x40, 0xB8);
 }
@@ -54,7 +54,7 @@ bool GWAPI::ItemMgr::UseItemByModelId(DWORD modelid, BYTE bagStart /*= 1*/, cons
 	for (int bagIndex = bagStart; bagIndex <= bagEnd; ++bagIndex) {
 		bag = bags[bagIndex];
 		if (bag != NULL) {
-			ItemMgr::ItemArray items = bag->Items;
+			ItemArray items = bag->Items;
 			for (size_t i = 0; i < items.size(); i++) {
 				if (items[i]) {
 					if (items[i]->ModelId == modelid) {
@@ -83,7 +83,7 @@ DWORD GWAPI::ItemMgr::CountItemByModelId(DWORD modelid, BYTE bagStart /*= 1*/, c
 	for (int bagIndex = bagStart; bagIndex <= bagEnd; ++bagIndex) {
 		bag = bags[bagIndex];
 		if (bag != NULL) {
-			ItemMgr::ItemArray items = bag->Items;
+			ItemArray items = bag->Items;
 			for (size_t i = 0; i < items.size(); i++) {
 				if (items[i]) {
 					if (items[i]->ModelId == modelid) {
@@ -97,7 +97,7 @@ DWORD GWAPI::ItemMgr::CountItemByModelId(DWORD modelid, BYTE bagStart /*= 1*/, c
 	return itemcount;
 }
 
-GWAPI::ItemMgr::Item* GWAPI::ItemMgr::GetItemByModelId(DWORD modelid, BYTE bagStart /*= 1*/, const BYTE bagEnd /*= 4*/)
+GWAPI::Item* GWAPI::ItemMgr::GetItemByModelId(DWORD modelid, BYTE bagStart /*= 1*/, const BYTE bagEnd /*= 4*/)
 {
 	Bag** bags = GetBagArray();
 	Bag* bag = NULL;
@@ -105,7 +105,7 @@ GWAPI::ItemMgr::Item* GWAPI::ItemMgr::GetItemByModelId(DWORD modelid, BYTE bagSt
 	for (int bagIndex = bagStart; bagIndex <= bagEnd; ++bagIndex) {
 		bag = bags[bagIndex];
 		if (bag != NULL) {
-			ItemMgr::ItemArray items = bag->Items;
+			ItemArray items = bag->Items;
 			for (size_t i = 0; i < items.size(); i++) {
 				if (items[i]) {
 					if (items[i]->ModelId == modelid) {

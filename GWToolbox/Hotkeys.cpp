@@ -29,7 +29,8 @@ TBHotkey::TBHotkey(Key key, Key modifier, bool active, wstring ini_section)
 	HotkeyControl* hotkey_button = new HotkeyControl();
 	hotkey_button->SetSize(WIDTH - checkbox->GetRight() - 60 - HSPACE * 2, LINE_HEIGHT);
 	hotkey_button->SetLocation(checkbox->GetRight() + HSPACE, 0);
-	hotkey_button->SetHotkey((Key)key);
+	hotkey_button->SetHotkey(key);
+	hotkey_button->SetHotkeyModifier(modifier);
 	hotkey_button->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
 		GWToolbox::capture_input = true;
 	});
@@ -306,7 +307,7 @@ void HotkeyDropUseBuff::exec() {
 	if (!isExplorable()) return;
 
 	GWAPIMgr* API = GWAPIMgr::GetInstance();
-	EffectMgr::Buff buff = API->Effects->GetPlayerBuffBySkillId(skillID_);
+	Buff buff = API->Effects->GetPlayerBuffBySkillId(skillID_);
 	if (buff.SkillId) {
 		API->Effects->DropBuff(buff.BuffId);
 	} else {
@@ -339,8 +340,8 @@ void HotkeyTarget::exec() {
 	if (isLoading()) return;
 
 	GWAPIMgr* API = GWAPIMgr::GetInstance();
-	AgentMgr::Agent* me = API->Agents->GetPlayer();
-	AgentMgr::AgentArray agents = API->Agents->GetAgentArray();
+	Agent* me = API->Agents->GetPlayer();
+	AgentArray agents = API->Agents->GetAgentArray();
 
 	unsigned long distance = GwConstants::SqrRange::Compass;
 	int closest = -1;
@@ -365,7 +366,7 @@ void HotkeyMove::exec() {
 	if (!isExplorable()) return;
 
 	GWAPIMgr* API = GWAPIMgr::GetInstance();
-	AgentMgr::Agent* me = API->Agents->GetPlayer();
+	Agent* me = API->Agents->GetPlayer();
 	double sqrDist = (me->X - x) * (me->X - x) + (me->Y - y) * (me->Y - y);
 	if (sqrDist < GwConstants::SqrRange::Compass) {
 		API->Agents->Move(x, y);
