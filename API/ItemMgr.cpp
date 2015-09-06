@@ -49,12 +49,15 @@ GWAPI::ItemMgr::ItemMgr(GWAPIMgr* obj) : parent(obj)
 bool GWAPI::ItemMgr::UseItemByModelId(DWORD modelid, BYTE bagStart /*= 1*/, const BYTE bagEnd /*= 4*/)
 {
 	Bag** bags = GetBagArray();
+	if (bags == NULL) return false;
+
 	Bag* bag = NULL;
 
 	for (int bagIndex = bagStart; bagIndex <= bagEnd; ++bagIndex) {
 		bag = bags[bagIndex];
 		if (bag != NULL) {
 			ItemArray items = bag->Items;
+			if (!items.IsValid()) return false;
 			for (size_t i = 0; i < items.size(); i++) {
 				if (items[i]) {
 					if (items[i]->ModelId == modelid) {

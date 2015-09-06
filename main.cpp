@@ -11,6 +11,7 @@ void init(HMODULE hModule){
 	FILE* fh;
 	freopen_s(&fh, "CONOUT$", "w", stdout);
 	freopen_s(&fh, "CONOUT$", "w", stderr);
+	SetConsoleTitleA("GWTB++ Debug Console");
 #endif
 
 	CreateThread(0, 0, (LPTHREAD_START_ROUTINE)GWToolbox::threadEntry, hModule, 0, 0);

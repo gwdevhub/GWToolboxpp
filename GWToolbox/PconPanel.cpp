@@ -209,9 +209,9 @@ void PconPanel::mainRoutine() {
 	try {
 		type = API->Map->GetInstanceType();
 		if (type == InstanceType::Loading) return;
-		if (API->Agents->GetPlayer() == nullptr) return;
-		if (API->Agents->GetPlayer()->Id == 0) return;
-		if (API->Agents->GetPlayer()->HP == 0) return;
+		if (API->Agents->GetPlayerId() == 0) return;
+		if (API->Agents->GetPlayer() == NULL) return;
+		if (API->Agents->GetPlayer()->GetIsDead()) return;
 	} catch (APIException_t) {
 		return;
 	}
