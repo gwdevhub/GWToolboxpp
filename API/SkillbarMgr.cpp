@@ -5,7 +5,7 @@
 #include "CtoSMgr.h"
 
 
-GWAPI::SkillbarMgr::Skill GWAPI::SkillbarMgr::GetSkillConstantData(DWORD SkillID)
+GWAPI::Skill GWAPI::SkillbarMgr::GetSkillConstantData(DWORD SkillID)
 {
 	return SkillConstants[SkillID];
 }
@@ -22,12 +22,12 @@ GWAPI::SkillbarMgr::SkillbarMgr(GWAPIMgr* obj) : parent(obj)
 	_UseSkill = (UseSkill_t)MemoryMgr::UseSkillFunction;
 }
 
-GWAPI::SkillbarMgr::Skillbar GWAPI::SkillbarMgr::GetPlayerSkillbar()
+GWAPI::Skillbar GWAPI::SkillbarMgr::GetPlayerSkillbar()
 {
 	return GetSkillbarArray()[0];
 }
 
-GWAPI::SkillbarMgr::SkillbarArray GWAPI::SkillbarMgr::GetSkillbarArray()
+GWAPI::SkillbarArray GWAPI::SkillbarMgr::GetSkillbarArray()
 {
 	return *MemoryMgr::ReadPtrChain<SkillbarArray*>(MemoryMgr::GetContextPtr(), 2, 0x2C, 0x6F0);
 }

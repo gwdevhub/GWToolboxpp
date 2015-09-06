@@ -153,7 +153,7 @@ void HotkeyDropUseBuff::exec() {
 	if (!isExplorable()) return;
 
 	GWAPIMgr* API = GWAPIMgr::GetInstance();
-	EffectMgr::Buff buff = API->Effects->GetPlayerBuffBySkillId(SkillID);
+	Buff buff = API->Effects->GetPlayerBuffBySkillId(SkillID);
 	if (buff.SkillId) {
 		API->Effects->DropBuff(buff.BuffId);
 	} else {
@@ -173,8 +173,8 @@ void HotkeyTarget::exec() {
 	if (isLoading()) return;
 
 	GWAPIMgr* API = GWAPIMgr::GetInstance();
-	AgentMgr::Agent* me = API->Agents->GetPlayer();
-	AgentMgr::AgentArray agents = API->Agents->GetAgentArray();
+	Agent* me = API->Agents->GetPlayer();
+	AgentArray agents = API->Agents->GetAgentArray();
 
 	unsigned long distance = GwConstants::SqrRange::Compass;
 	int closest = -1;
@@ -199,7 +199,7 @@ void HotkeyMove::exec() {
 	if (!isExplorable()) return;
 
 	GWAPIMgr* API = GWAPIMgr::GetInstance();
-	AgentMgr::Agent* me = API->Agents->GetPlayer();
+	Agent* me = API->Agents->GetPlayer();
 	double sqrDist = (me->X - x) * (me->X - x) + (me->Y - y) * (me->Y - y);
 	if (sqrDist < GwConstants::SqrRange::Compass) {
 		API->Agents->Move(x, y);

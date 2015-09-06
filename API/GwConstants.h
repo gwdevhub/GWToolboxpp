@@ -138,7 +138,7 @@ namespace GwConstants {
 
 	}
 
-	namespace Effect {
+	namespace EffectID {
 		const int Corn = 2604;
 		const int Apple = 2605;
 		const int Redrock = 2973;

@@ -93,7 +93,7 @@ bool Pcon::checkAndUse() {
 
 		GWAPIMgr* API = GWAPIMgr::GetInstance();
 		try {
-			EffectMgr::Effect effect = API->Effects->GetPlayerEffectById(effectID);
+			GWAPI::Effect effect = API->Effects->GetPlayerEffectById(effectID);
 
 			if (effect.SkillId == 0 || effect.GetTimeRemaining() < 1000) {
 				bool used = API->Items->UseItemByModelId(itemID);
@@ -117,11 +117,11 @@ bool PconCons::checkAndUse() {
 	if (enabled && TBTimer::diff(this->timer) > 5000) {
 		GWAPIMgr* API = GWAPIMgr::GetInstance();
 		try {
-			EffectMgr::Effect effect = API->Effects->GetPlayerEffectById(effectID);
+			GWAPI::Effect effect = API->Effects->GetPlayerEffectById(effectID);
 			if (effect.SkillId == 0 || effect.GetTimeRemaining() < 1000) {
 				if (!API->Agents->GetIsPartyLoaded()) return false;
 
-				AgentMgr::MapAgentArray mapAgents = API->Agents->GetMapAgentArray();
+				MapAgentArray mapAgents = API->Agents->GetMapAgentArray();
 				for (size_t i = 0; i < mapAgents.size(); ++i) {
 					if (mapAgents[i].curHealth == 0) return false;
 				}
@@ -149,10 +149,10 @@ bool PconCity::checkAndUse() {
 		try {
 			if (API->Agents->GetPlayer() &&
 				(API->Agents->GetPlayer()->MoveX > 0 || API->Agents->GetPlayer()->MoveY > 0)) {
-				if (API->Effects->GetPlayerEffectById(Effect::CremeBrulee).SkillId
-					|| API->Effects->GetPlayerEffectById(Effect::BlueDrink).SkillId
-					|| API->Effects->GetPlayerEffectById(Effect::ChocolateBunny).SkillId
-					|| API->Effects->GetPlayerEffectById(Effect::RedBeanCake).SkillId) {
+				if (API->Effects->GetPlayerEffectById(GwConstants::EffectID::CremeBrulee).SkillId
+					|| API->Effects->GetPlayerEffectById(GwConstants::EffectID::BlueDrink).SkillId
+					|| API->Effects->GetPlayerEffectById(GwConstants::EffectID::ChocolateBunny).SkillId
+					|| API->Effects->GetPlayerEffectById(GwConstants::EffectID::RedBeanCake).SkillId) {
 
 					// then we have effect on already, do nothing
 				} else {
@@ -222,7 +222,7 @@ bool PconLunar::checkAndUse() {
 	if (enabled	&& TBTimer::diff(this->timer) > 500) {
 		GWAPIMgr* API = GWAPIMgr::GetInstance();
 		try {
-			if (API->Effects->GetPlayerEffectById(Effect::Lunars).SkillId == 0) {
+			if (API->Effects->GetPlayerEffectById(GwConstants::EffectID::Lunars).SkillId == 0) {
 				bool used = API->Items->UseItemByModelId(ItemID::LunarDragon)
 					|| API->Items->UseItemByModelId(ItemID::LunarHorse)
 					|| API->Items->UseItemByModelId(ItemID::LunarRabbit)
@@ -245,12 +245,12 @@ bool PconLunar::checkAndUse() {
 void Pcon::scanInventory() {
 	quantity = 0;
 
-	ItemMgr::Bag** bags = GWAPIMgr::GetInstance()->Items->GetBagArray();
-	ItemMgr::Bag* bag = NULL;
+	Bag** bags = GWAPIMgr::GetInstance()->Items->GetBagArray();
+	Bag* bag = NULL;
 	for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
 		bag = bags[bagIndex];
 		if (bag != NULL) {
-			ItemMgr::ItemArray items = bag->Items;
+			ItemArray items = bag->Items;
 			for (size_t i = 0; i < items.size(); i++) {
 				if (items[i]) {
 					if (items[i]->ModelId == itemID) {
@@ -268,12 +268,12 @@ void Pcon::scanInventory() {
 void PconCity::scanInventory() {
 	quantity = 0;
 
-	ItemMgr::Bag** bags = GWAPIMgr::GetInstance()->Items->GetBagArray();
-	ItemMgr::Bag* bag = NULL;
+	Bag** bags = GWAPIMgr::GetInstance()->Items->GetBagArray();
+	Bag* bag = NULL;
 	for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
 		bag = bags[bagIndex];
 		if (bag != NULL) {
-			ItemMgr::ItemArray items = bag->Items;
+			ItemArray items = bag->Items;
 			for (size_t i = 0; i < items.size(); i++) {
 				if (items[i]) {
 					if (items[i]->ModelId == ItemID::CremeBrulee
@@ -294,12 +294,12 @@ void PconCity::scanInventory() {
 
 void PconAlcohol::scanInventory() {
 	quantity = 0;
-	ItemMgr::Bag** bags = GWAPIMgr::GetInstance()->Items->GetBagArray();
-	ItemMgr::Bag* bag = NULL;
+	Bag** bags = GWAPIMgr::GetInstance()->Items->GetBagArray();
+	Bag* bag = NULL;
 	for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
 		bag = bags[bagIndex];
 		if (bag != NULL) {
-			ItemMgr::ItemArray items = bag->Items;
+			ItemArray items = bag->Items;
 			for (size_t i = 0; i < items.size(); i++) {
 				if (items[i]) {
 					if (items[i]->ModelId == ItemID::Eggnog
@@ -334,12 +334,12 @@ void PconAlcohol::scanInventory() {
 void PconLunar::scanInventory() {
 	quantity = 0;
 
-	ItemMgr::Bag** bags = GWAPIMgr::GetInstance()->Items->GetBagArray();
-	ItemMgr::Bag* bag = NULL;
+	Bag** bags = GWAPIMgr::GetInstance()->Items->GetBagArray();
+	Bag* bag = NULL;
 	for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
 		bag = bags[bagIndex];
 		if (bag != NULL) {
-			ItemMgr::ItemArray items = bag->Items;
+			ItemArray items = bag->Items;
 			for (size_t i = 0; i < items.size(); i++) {
 				if (items[i]) {
 					if (items[i]->ModelId == ItemID::LunarDragon

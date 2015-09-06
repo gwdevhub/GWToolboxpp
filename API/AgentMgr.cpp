@@ -5,14 +5,14 @@
 #include "CtoSMgr.h"
 #include "MapMgr.h"
 
-GWAPI::AgentMgr::AgentArray GWAPI::AgentMgr::GetAgentArray()
+GWAPI::AgentArray GWAPI::AgentMgr::GetAgentArray()
 {
 	AgentArray* agRet = (AgentArray*)MemoryMgr::agArrayPtr;
 	if (agRet->size() == 0) throw API_EXCEPTION;
 	return *agRet;
 }
 
-std::vector<GWAPI::AgentMgr::Agent*> * GWAPI::AgentMgr::GetParty() {
+std::vector<GWAPI::Agent*> * GWAPI::AgentMgr::GetParty() {
 	std::vector<Agent*>* party = new std::vector<Agent*>(GetPartySize());
 	AgentArray agents = GetAgentArray();
 
@@ -70,7 +70,7 @@ void GWAPI::AgentMgr::Dialog(DWORD id)
 	parent->CtoS->SendPacket(0x8, 0x35, id);
 }
 
-GWAPI::AgentMgr::PartyMemberArray GWAPI::AgentMgr::GetPartyMemberArray()
+GWAPI::PartyMemberArray GWAPI::AgentMgr::GetPartyMemberArray()
 {
 	return *MemoryMgr::ReadPtrChain<PartyMemberArray*>(MemoryMgr::GetContextPtr(), 3, 0x4C, 0x54, 0x4);
 }
@@ -89,12 +89,12 @@ bool GWAPI::AgentMgr::GetIsPartyLoaded()
 	return true;
 }
 
-GWAPI::AgentMgr::MapAgentArray GWAPI::AgentMgr::GetMapAgentArray()
+GWAPI::MapAgentArray GWAPI::AgentMgr::GetMapAgentArray()
 {
 	return *MemoryMgr::ReadPtrChain<MapAgentArray*>(MemoryMgr::GetContextPtr(), 2, 0x2C, 0x7C);
 }
 
-GWAPI::AgentMgr::Agent* GWAPI::AgentMgr::GetPlayer() {
+GWAPI::Agent* GWAPI::AgentMgr::GetPlayer() {
 	AgentArray agents = GetAgentArray();
 	if (agents.IsValid()) {
 		return GetAgentArray()[GetPlayerId()];
@@ -103,7 +103,7 @@ GWAPI::AgentMgr::Agent* GWAPI::AgentMgr::GetPlayer() {
 	}
 }
 
-GWAPI::AgentMgr::Agent* GWAPI::AgentMgr::GetTarget() {
+GWAPI::Agent* GWAPI::AgentMgr::GetTarget() {
 	AgentArray agents = GetAgentArray();
 	if (agents.IsValid()) {
 		return GetAgentArray()[GetTargetId()];

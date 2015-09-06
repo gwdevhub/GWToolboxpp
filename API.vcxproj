@@ -96,6 +96,7 @@
     <ClInclude Include="API\GameThreadMgr.h" />
     <ClInclude Include="API\GWAPIMgr.h" />
     <ClInclude Include="API\GwConstants.h" />
+    <ClInclude Include="API\GWStructures.h" />
     <ClInclude Include="API\ItemMgr.h" />
     <ClInclude Include="API\MapMgr.h" />
     <ClInclude Include="API\MemoryMgr.h" />
