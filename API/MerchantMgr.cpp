@@ -252,7 +252,7 @@ void GWAPI::MerchantMgr::BuyQuotedItem()
 void GWAPI::MerchantMgr::RequestSellQuote(DWORD itemtorequest)
 {
 	if (!itemtorequest) return;
-	parent->GameThread->Enqueue(CommandRequestTraderBuyQuote, (long*)itemtorequest);
+	parent->GameThread->Enqueue(CommandRequestTraderSellQuote, (long*)itemtorequest);
 }
 
 void GWAPI::MerchantMgr::RequestBuyQuote(DWORD ModelIDToRequest)
