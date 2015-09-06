@@ -77,7 +77,9 @@ void MainWindow::createTabButton(const char* s, int& button_idx,
 	AddControl(b);
 	b->SetLocation(0, button_idx * tabButtonHeight);
 	const int index = panel_idx;
-	b->GetClickEvent() += ClickEventHandler([self, index](Control*) { self->openClosePanel(index); });
+	b->GetClickEvent() += ClickEventHandler([self, index](Control*) { 
+		self->openClosePanel(index); 
+	});
 	++button_idx;
 	++panel_idx;
 }
@@ -111,6 +113,7 @@ void MainWindow::openClosePanel(int index) {
 			currentPanel = index;
 			panels[currentPanel]->SetVisible(true);
 			panels[currentPanel]->SetEnabled(true);
+			panels[currentPanel]->Focus();
 		} else {
 			ERR("ERROR bad panel index!\n");
 		}

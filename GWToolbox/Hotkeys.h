@@ -42,6 +42,7 @@ public:
 	inline static const wchar_t* IniKeyHotkey() { return L"hotkey"; }
 	inline static const wchar_t* IniKeyModifier() { return L"modifier"; }
 
+	inline wstring ini_section() { return ini_section_; }
 	inline bool active() { return active_; }
 	inline bool pressed() { return pressed_; }
 	inline void set_pressed(bool pressed) { pressed_ = pressed; }
@@ -50,6 +51,7 @@ public:
 	inline void set_key(OSHGui::Key key) { key_ = key; }
 	inline void set_modifier(OSHGui::Key modifier) { modifier_ = modifier; }
 	virtual void exec() = 0;
+	virtual string GetDescription() = 0;
 };
 
 // hotkey to send a message in chat
@@ -67,6 +69,7 @@ public:
 	inline static const wchar_t* IniKeyMsg() { return L"msg"; }
 	inline static const wchar_t* IniKeyChannel() { return L"channel"; }
 	void exec();
+	string GetDescription() override { return string("Send Chat"); }
 
 	int ChannelToIndex(wchar_t channel);
 	wchar_t IndexToChannel(int index);
@@ -89,6 +92,7 @@ public:
 	static const wchar_t* IniItemIDKey() { return L"ItemID"; }
 	static const wchar_t* IniItemNameKey() { return L"ItemName"; }
 	void exec();
+	string GetDescription() override { return string("Use Item"); }
 
 	inline void set_item_id(UINT ID) { item_id_ = ID; }
 	inline void set_item_name(wstring name) { item_name_ = name; }
@@ -108,6 +112,7 @@ public:
 	static const wchar_t* IniSection() { return L"DropUseBuff"; }
 	static const wchar_t* IniSkillIDKey() { return L"SkillID"; }
 	void exec();
+	string GetDescription() override { return string("Drop/Use Buff"); }
 
 	UINT IndexToSkillID(int index);
 	inline void set_skillID(UINT skillID) { skillID_ = skillID; }
@@ -133,6 +138,7 @@ public:
 	static const wchar_t* IniSection() { return L"Toggle"; }
 	static const wchar_t* IniToggleIDKey() { return L"ToggleID"; }
 	void exec();
+	string GetDescription() override { return string("Toggle"); }
 
 	inline void set_target(Toggle target) { target_ = target; }
 };
@@ -152,6 +158,7 @@ public:
 	static const wchar_t* IniTargetIDKey() { return L"TargetID"; }
 	static const wchar_t* IniTargetNameKey() { return L"TargetName"; }
 	void exec();
+	string GetDescription() override { return string("Target"); }
 
 	inline void set_targetID(UINT targetID) { targetID_ = targetID; }
 	inline void set_target_name(wstring target_name) { target_name_ = target_name; }
@@ -175,6 +182,7 @@ public:
 	static const wchar_t* IniNameKey() { return L"name"; }
 
 	void exec();
+	string GetDescription() override { return string("Move"); }
 
 	inline void set_x(float x) { x_ = x; }
 	inline void set_y(float y) { y_ = y; }
@@ -195,6 +203,7 @@ public:
 	static const wchar_t* IniDialogNameKey() { return L"DialogName"; }
 	
 	void exec();
+	string GetDescription() override { return string("Dialog"); }
 
 	inline void set_id(UINT id) { id_ = id; }
 	inline void set_name(wstring name) { name_ = name; }
@@ -215,4 +224,5 @@ public:
 	static const wchar_t* IniBuildIdxKey() { return L"BuildIndex"; }
 
 	void exec();
+	string GetDescription() override { return string("Ping Build"); }
 };

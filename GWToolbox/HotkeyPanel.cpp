@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "HotkeyPanel.h"
 #include "logger.h"
 #include "GWToolbox.h"
@@ -9,55 +11,158 @@ HotkeyPanel::HotkeyPanel() {
 	hotkeys = vector<TBHotkey*>();
 }
 
+void HotkeyPanel::OnMouseScroll(const MouseMessage &mouse) {
+	int delta = mouse.GetDelta() > 0 ? 1 : -1;
+	scrollbar_->SetValue(scrollbar_->GetValue() + delta);
+}
+
 void HotkeyPanel::buildUI() {
 	LOG("Building Hotkey Panel\n");
 	const int height = 300;
 	loadIni();
-
+	
 	ScrollBar* scrollbar = new ScrollBar();
 	scrollbar->SetLocation(TBHotkey::WIDTH + 2 * DefaultBorderPadding, 0);
 	scrollbar->SetSize(scrollbar->GetWidth(), height);
 	scrollbar->GetScrollEvent() += ScrollEventHandler([this, scrollbar](Control*, ScrollEventArgs) {
 		this->set_first_shown(scrollbar->GetValue());
-		LOG("Scroll Event\n");
 	});
-	scrollbar->GetMouseScrollEvent() += MouseScrollEventHandler([](Control*, MouseEventArgs) {
-		LOG("mouse scroll event\n");
-	});
-	GetMouseScrollEvent() += MouseScrollEventHandler([](Control*, MouseEventArgs) {
-		LOG("scrolled on panel\n");
-	});
-
 	scrollbar_ = scrollbar;
 	AddControl(scrollbar);
+	
+	ComboBox* create_combo = new ComboBox();
+	create_combo->AddItem("Create Hotkey...");
+	create_combo->AddItem("Send Chat");
+	create_combo->AddItem("Use Item");
+	create_combo->AddItem("Drop or Use Buff");
+	create_combo->AddItem("Function Toggle");
+	create_combo->AddItem("Target");
+	create_combo->AddItem("Move to coordinate");
+	create_combo->AddItem("Dialog");
+	create_combo->SetSelectedIndex(0);
+	create_combo->SetMaxShowItems(create_combo->GetItemsCount());
+	create_combo->SetLocation(DefaultBorderPadding,
+		DefaultBorderPadding + MAX_SHOWN * (TBHotkey::HEIGHT + DefaultBorderPadding));
+	create_combo->SetSize(TBHotkey::WIDTH / 2 - TBHotkey::HSPACE / 2, TBHotkey::LINE_HEIGHT);
+	create_combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
+		[this, create_combo](Control*) {
+		if (create_combo->GetSelectedIndex() == 0) return;
+
+		wstring ini = L"hotkey-";
+		ini += to_wstring(this->NewID());
+		ini += L":";
+		switch (create_combo->GetSelectedIndex()) {
+		case 1:
+			ini += HotkeySendChat::IniSection();
+			this->AddHotkey(new HotkeySendChat(Key::None, Key::None, true, ini, L"", L'/'));
+			break;
+		case 2:
+			ini += HotkeyUseItem::IniSection();
+			this->AddHotkey(new HotkeyUseItem(Key::None, Key::None, true, ini, 0, L""));
+			break;
+		case 3:
+			ini += HotkeyDropUseBuff::IniSection();
+			this->AddHotkey(new HotkeyDropUseBuff(Key::None, Key::None, true, ini, GwConstants::SkillID::Recall));
+			break;
+		case 4:
+			ini += HotkeyToggle::IniSection();
+			this->AddHotkey(new HotkeyToggle(Key::None, Key::None, true, ini, 1));
+			break;
+		case 5:
+			ini += HotkeyTarget::IniSection();
+			this->AddHotkey(new HotkeyTarget(Key::None, Key::None, true, ini, 0, L""));
+			break;
+		case 6:
+			ini += HotkeyMove::IniSection();
+			this->AddHotkey(new HotkeyMove(Key::None, Key::None, true, ini, 0.0, 0.0, L""));
+			break;
+		case 7:
+			ini += HotkeyDialog::IniSection();
+			this->AddHotkey(new HotkeyDialog(Key::None, Key::None, true, ini, 0, L""));
+			break;
+		default:
+			break;
+		}
+		create_combo->SetSelectedIndex(0);
+	});
+	AddControl(create_combo);
+
+	ComboBox* delete_combo = new ComboBox();
+	delete_combo->SetSize(TBHotkey::WIDTH / 2 - TBHotkey::HSPACE / 2, TBHotkey::LINE_HEIGHT);
+	delete_combo->SetLocation(create_combo->GetRight() + TBHotkey::HSPACE, create_combo->GetTop());
+	delete_combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
+		[this, delete_combo](Control*) {
+		int index = delete_combo->GetSelectedIndex();
+		if (index == 0) return;
+		this->DeleteHotkey(index - 1);
+	});
+	AddControl(delete_combo);
+	delete_combo_ = delete_combo;
+	
+	for (TBHotkey* hotkey : hotkeys) {
+		AddSubControl(hotkey);
+	}
+	
+	first_shown_ = 0;
+	UpdateScrollBarMax();
+	scrollbar_->ScrollToTop();
+	CalculateHotkeyPositions();
+	UpdateDeleteCombo();
 
 	SetSize(TBHotkey::WIDTH + 2 * DefaultBorderPadding + scrollbar->GetWidth(), height);
+}
 
-	for (size_t i = 0; i < hotkeys.size(); ++i) {
-		hotkeys[i]->SetLocation(0, 0);
-		AddSubControl(hotkeys[i]);
+void HotkeyPanel::UpdateDeleteCombo() {
+	delete_combo_->Clear();
+	delete_combo_->AddItem("Delete Hotkey...");
+	for (int i = 0; i < (int)hotkeys.size(); ++i) {
+		delete_combo_->AddItem(hotkeys[i]->GetDescription());
 	}
+	delete_combo_->SetSelectedIndex(0);
+}
 
-	ResetHotkeyPositions();
+void HotkeyPanel::UpdateScrollBarMax() {
+	int max = (std::max)(0, (int)hotkeys.size() - MAX_SHOWN);
+	scrollbar_->SetMaximum(max);
+}
+
+void HotkeyPanel::DeleteHotkey(int index) {
+	if (index < 0 || index >= (int)hotkeys.size()) return;
+
+	GWToolbox::instance()->config()->iniDeleteSection(hotkeys[index]->ini_section().c_str());
+	RemoveControl(hotkeys[index]);
+	hotkeys.erase(hotkeys.begin() + index);
+	UpdateScrollBarMax();
 	CalculateHotkeyPositions();
+	UpdateDeleteCombo();
+}
+
+void HotkeyPanel::AddHotkey(TBHotkey* hotkey) {
+	hotkeys.push_back(hotkey);
+	AddSubControl(hotkey);
+	UpdateScrollBarMax();
+	scrollbar_->ScrollToBottom();
+	CalculateHotkeyPositions();
+	UpdateDeleteCombo();
 }
 
 void HotkeyPanel::set_first_shown(int first) {
-	if (first < 0) return;
-	if (first >(int)hotkeys.size() - MAX_SHOWN) return;
-	first_shown_ = first;
+	if (first < 0) {
+		first_shown_ = 0;
+	} else if (first > (int)hotkeys.size() - MAX_SHOWN) {
+		first_shown_ = (int)hotkeys.size() - MAX_SHOWN;
+	} else {
+		first_shown_ = first;
+	}
+	
 	CalculateHotkeyPositions();
 }
 
-void HotkeyPanel::ResetHotkeyPositions() {
-	int amount_hidden = hotkeys.size() - MAX_SHOWN;
-	first_shown_ = 0;
-	scrollbar_->SetMaximum(amount_hidden);
-	scrollbar_->ScrollToTop();
-}
-
 void HotkeyPanel::CalculateHotkeyPositions() {
-	assert(first_shown_ >= 0);
+	if (first_shown_ < 0) {
+		LOG("ERROR first shown < 0 (HotkeyPanel::CalculateHotkeyPositions())\n");
+		first_shown_ = 0;
+	}
 
 	for (int i = 0; i < MAX_SHOWN && first_shown_ + i < (int)hotkeys.size(); ++i) {
 		hotkeys[first_shown_ + i]->SetLocation(DefaultBorderPadding,
@@ -69,7 +174,7 @@ void HotkeyPanel::DrawSelf(Drawing::RenderContext& context) {
 	Panel::DrawSelf(context);
 
 	int i = first_shown_ + MAX_SHOWN - 1;
-	if (i > (int)hotkeys.size()) i = hotkeys.size() - 1;
+	if (i >= (int)hotkeys.size()) i = (int)hotkeys.size() - 1;
 	for (; i >= first_shown_; --i) {
 		hotkeys[i]->Render();
 	}
@@ -130,6 +235,10 @@ void HotkeyPanel::loadIni() {
 			size_t second_sep = section.find(L':', first_sep);
 
 			wstring id = section.substr(first_sep + 1, second_sep - first_sep - 1);
+			try {
+				long long_id = stol(id);
+				if (long_id > max_id_) max_id_ = long_id;
+			} catch (...) {}
 			wstring type = section.substr(second_sep + 1);
 			//wstring wname = config->iniRead(section.c_str(), L"name", L"");
 			//string name = string(wname.begin(), wname.end()); // transform wstring in string

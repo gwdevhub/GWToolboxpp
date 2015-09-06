@@ -786,6 +786,11 @@ namespace OSHGui
 	//---------------------------------------------------------------------------
 	void Control::OnMouseScroll(const MouseMessage &mouse)
 	{
+		bool consumed = false;
+		for (Control* c : internalControls_) {
+			c->OnMouseScroll(mouse);
+		}
+
 		MouseEventArgs args(mouse);
 		args.Location -= absoluteLocation_;
 		mouseScrollEvent_.Invoke(this, args);
@@ -958,7 +963,7 @@ namespace OSHGui
 				}
 				break;
 			case MouseState::Scroll:
-				if (hasCaptured_ || isFocused_)
+				if (hasCaptured_ || isFocused_ || Intersect(mouse.GetLocation()))
 				{
 					if (canRaiseEvents_)
 					{
