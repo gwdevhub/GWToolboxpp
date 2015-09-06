@@ -96,7 +96,7 @@ namespace OSHGui
 								state = MouseState::Down;
 								button = MouseButton::Middle;
 							case WM_MOUSEWHEEL:
-								//state = MouseState::Scroll;
+								state = MouseState::Scroll;
 								location = lastMouseLocation; //not valid when scrolling
 								delta = -((short)HIWORD(message->wParam) / 120) * 4/*number of lines to scroll*/;
 								break;

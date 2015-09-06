@@ -20,7 +20,12 @@ using namespace std;
 // class used to keep a list of hotkeys, capture keyboard event and fire hotkeys as needed
 class HotkeyPanel : public OSHGui::Panel {
 private:
+	static const int MAX_SHOWN = 4;
+	int first_shown_;
+
 	vector<TBHotkey*> hotkeys;				// list of hotkeys
+
+	OSHGui::ScrollBar* scrollbar_;
 
 	bool clickerActive = false;				// clicker is active or not
 	bool dropCoinsActive = false;			// coin dropper is active or not
@@ -35,6 +40,9 @@ private:
 	float movementX = 0;					// X coordinate of the destination of movement macro
 	float movementY = 0;					// Y coordinate of the destination of movement macro
 
+	void CalculateHotkeyPositions();
+	void ResetHotkeyPositions();
+
 public:
 	HotkeyPanel();
 	
@@ -47,4 +55,7 @@ public:
 	void mainRoutine();						// do... nothing atm
 
 	bool ProcessMessage(LPMSG msg);
+	void set_first_shown(int first);
+
+	void DrawSelf(OSHGui::Drawing::RenderContext &context) override;
 };

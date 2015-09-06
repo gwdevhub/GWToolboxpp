@@ -61,7 +61,6 @@ static LRESULT CALLBACK NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARA
 		case WM_MBUTTONDOWN:
 		case WM_MBUTTONDBLCLK:
 			if (input.ProcessMessage(&msg)) {
-				//LOG("consumed mouse event %d\n", Message);
 				return TRUE;
 			} else {
 				Application::InstancePtr()->clearFocus();

@@ -17,16 +17,61 @@ void HotkeyPanel::buildUI() {
 	ScrollBar* scrollbar = new ScrollBar();
 	scrollbar->SetLocation(TBHotkey::WIDTH + 2 * DefaultBorderPadding, 0);
 	scrollbar->SetSize(scrollbar->GetWidth(), height);
+	scrollbar->GetScrollEvent() += ScrollEventHandler([this, scrollbar](Control*, ScrollEventArgs) {
+		this->set_first_shown(scrollbar->GetValue());
+		LOG("Scroll Event\n");
+	});
+	scrollbar->GetMouseScrollEvent() += MouseScrollEventHandler([](Control*, MouseEventArgs) {
+		LOG("mouse scroll event\n");
+	});
+	GetMouseScrollEvent() += MouseScrollEventHandler([](Control*, MouseEventArgs) {
+		LOG("scrolled on panel\n");
+	});
+
+	scrollbar_ = scrollbar;
 	AddControl(scrollbar);
 
 	SetSize(TBHotkey::WIDTH + 2 * DefaultBorderPadding + scrollbar->GetWidth(), height);
 
-	// add in reverse order so that things are rendered bot-to-top and 
-	// combo-boxes going over the next hotkey is actually rendered after (= on top)
-	for (int i = hotkeys.size()-1; i >= 0; --i) {
-		hotkeys[i]->SetLocation(DefaultBorderPadding, 
-			DefaultBorderPadding + i * (TBHotkey::HEIGHT + 10));
-		AddControl(hotkeys[i]);
+	for (size_t i = 0; i < hotkeys.size(); ++i) {
+		hotkeys[i]->SetLocation(0, 0);
+		AddSubControl(hotkeys[i]);
+	}
+
+	ResetHotkeyPositions();
+	CalculateHotkeyPositions();
+}
+
+void HotkeyPanel::set_first_shown(int first) {
+	if (first < 0) return;
+	if (first >(int)hotkeys.size() - MAX_SHOWN) return;
+	first_shown_ = first;
+	CalculateHotkeyPositions();
+}
+
+void HotkeyPanel::ResetHotkeyPositions() {
+	int amount_hidden = hotkeys.size() - MAX_SHOWN;
+	first_shown_ = 0;
+	scrollbar_->SetMaximum(amount_hidden);
+	scrollbar_->ScrollToTop();
+}
+
+void HotkeyPanel::CalculateHotkeyPositions() {
+	assert(first_shown_ >= 0);
+
+	for (int i = 0; i < MAX_SHOWN && first_shown_ + i < (int)hotkeys.size(); ++i) {
+		hotkeys[first_shown_ + i]->SetLocation(DefaultBorderPadding,
+			DefaultBorderPadding + i * (TBHotkey::HEIGHT + DefaultBorderPadding));
+	}
+}
+
+void HotkeyPanel::DrawSelf(Drawing::RenderContext& context) {
+	Panel::DrawSelf(context);
+
+	int i = first_shown_ + MAX_SHOWN - 1;
+	if (i > (int)hotkeys.size()) i = hotkeys.size() - 1;
+	for (; i >= first_shown_; --i) {
+		hotkeys[i]->Render();
 	}
 }
 
@@ -96,56 +141,41 @@ void HotkeyPanel::loadIni() {
 			if (type.compare(HotkeySendChat::IniSection()) == 0) {
 				wstring msg = config->iniRead(section.c_str(), HotkeySendChat::IniKeyMsg(), L"");
 				wchar_t channel = config->iniRead(section.c_str(), HotkeySendChat::IniKeyChannel(), L"")[0];
-				if (channel) {
-					tb_hk = new HotkeySendChat(key, modifier, active, section, msg, channel);
-				}
+				tb_hk = new HotkeySendChat(key, modifier, active, section, msg, channel);
 
 			} else if (type.compare(HotkeyUseItem::IniSection()) == 0) {
 				UINT itemID = (UINT)config->iniReadLong(section.c_str(), HotkeyUseItem::IniItemIDKey(), 0);
 				wstring item_name = config->iniRead(section.c_str(), HotkeyUseItem::IniItemNameKey(), L"");
-				if (itemID > 0) {
-					tb_hk = new HotkeyUseItem(key, modifier, active, section, itemID, item_name);
-				}
+				tb_hk = new HotkeyUseItem(key, modifier, active, section, itemID, item_name);
 
 			} else if (type.compare(HotkeyDropUseBuff::IniSection()) == 0) {
 				UINT skillID = (UINT)config->iniReadLong(section.c_str(), HotkeyDropUseBuff::IniSkillIDKey(), 0);
-				if (skillID > 0) {
-					tb_hk = new HotkeyDropUseBuff(key, modifier, active, section, skillID);
-				}
+				tb_hk = new HotkeyDropUseBuff(key, modifier, active, section, skillID);
 
 			} else if (type.compare(HotkeyToggle::IniSection()) == 0) {
 				int toggleID = (int)config->iniReadLong(section.c_str(), HotkeyToggle::IniToggleIDKey(), 0);
-				if (toggleID > 0) {
-					tb_hk = new HotkeyToggle(key, modifier, active, section, toggleID);
-				}
+				tb_hk = new HotkeyToggle(key, modifier, active, section, toggleID);
 
 			} else if (type.compare(HotkeyTarget::IniSection()) == 0) {
 				UINT targetID = (UINT)config->iniReadLong(section.c_str(), HotkeyTarget::IniTargetIDKey(), 0);
 				wstring target_name = config->iniRead(section.c_str(), HotkeyTarget::IniTargetNameKey(), L"");
-				if (targetID > 0) {
-					tb_hk = new HotkeyTarget(key, modifier, active, section, targetID, target_name);
-				}
+				tb_hk = new HotkeyTarget(key, modifier, active, section, targetID, target_name);
 
 			} else if (type.compare(HotkeyMove::IniSection()) == 0) {
 				float x = (float)config->iniReadDouble(section.c_str(), HotkeyMove::IniXKey(), 0.0);
 				float y = (float)config->iniReadDouble(section.c_str(), HotkeyMove::IniYKey(), 0.0);
 				wstring name = config->iniRead(section.c_str(), HotkeyMove::IniNameKey(), L"");
-				if (x != 0.0 || y != 0.0) {
-					tb_hk = new HotkeyMove(key, modifier, active, section, x, y, name);
-				}
+				tb_hk = new HotkeyMove(key, modifier, active, section, x, y, name);
 
 			} else if (type.compare(HotkeyDialog::IniSection()) == 0) {
 				UINT dialogID = (UINT)config->iniReadLong(section.c_str(), HotkeyDialog::IniDialogIDKey(), 0);
 				wstring dialog_name = config->iniRead(section.c_str(), HotkeyDialog::IniDialogNameKey(), L"");
-				if (dialogID > 0) {
-					tb_hk = new HotkeyDialog(key, modifier, active, section, dialogID, dialog_name);
-				}
+				tb_hk = new HotkeyDialog(key, modifier, active, section, dialogID, dialog_name);
 
 			} else if (type.compare(HotkeyPingBuild::IniSection()) == 0) {
 				UINT index = (UINT)config->iniReadLong(section.c_str(), HotkeyPingBuild::IniBuildIdxKey(), 0);
-				if (index > 0) {
-					tb_hk = new HotkeyPingBuild(key, modifier, active, section, index);
-				}
+				tb_hk = new HotkeyPingBuild(key, modifier, active, section, index);
+
 			} else {
 				LOG("WARNING hotkey detected, but could not match any type!\n");
 			}
@@ -158,5 +188,9 @@ void HotkeyPanel::loadIni() {
 }
 
 void HotkeyPanel::mainRoutine() {
+	// TODO clicker
 
+	// TODO coin dropper
+
+	// TODO rupt?
 }
