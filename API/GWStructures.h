@@ -264,13 +264,15 @@ namespace GWAPI {
 
 		long GetTimeElapsed() const { return MemoryMgr::GetSkillTimer() - TimeStamp; }
 		long GetTimeRemaining() const { return (long)(Duration * 1000) - GetTimeElapsed(); }
+		static Effect Nil() { return Effect{ 0, 0, 0, 0, 0, 0 }; }
 	};
 
 	struct Buff {							// total : 10 bytes
 		DWORD SkillId;						// 0000						skill id of the buff
-		byte Unknown1[4];					// 0004
+		DWORD Unknown1;					// 0004
 		DWORD BuffId;						// 0008						id of buff in the buff array
 		DWORD TargetAgentId;				// 000C						agent id of the target (0 if no target)
+		static Buff Nil() { return Buff{ 0, 0, 0, 0 }; }
 	};
 
 	typedef MemoryMgr::gw_array<Effect> EffectArray;

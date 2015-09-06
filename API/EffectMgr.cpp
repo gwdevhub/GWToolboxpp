@@ -16,27 +16,34 @@ GWAPI::EffectMgr::EffectMgr(GWAPIMgr* obj) :parent(obj)
 
 GWAPI::Effect GWAPI::EffectMgr::GetPlayerEffectById(DWORD SkillID)
 {
-	EffectArray Effects = GetPlayerEffectArray();
+	AgentEffectsArray AgEffects = GetPartyEffectArray();
 
-	
-	for (DWORD i = 0; i < Effects.size(); i++) {
-		if (Effects[i].SkillId == SkillID) return Effects[i];
+	if (AgEffects.IsValid()){
+		EffectArray Effects = AgEffects[0].Effects;
+		if (Effects.IsValid()){
+			for (DWORD i = 0; i < Effects.size(); i++) {
+				if (Effects[i].SkillId == SkillID) return Effects[i];
+			}
+		}
 	}
 
-	Effect noEff = { 0, 0, 0, 0, 0, 0 };
-	return noEff;
+	return Effect::Nil();
 }
 
 GWAPI::Buff GWAPI::EffectMgr::GetPlayerBuffBySkillId(DWORD SkillID)
 {
-	BuffArray Buffs = GetPlayerBuffArray();
+	AgentEffectsArray AgEffects = GetPartyEffectArray();
 
-	for (DWORD i = 0; i < Buffs.size(); i++) {
-		if (Buffs[i].SkillId == SkillID) return Buffs[i];
+	if (AgEffects.IsValid()){
+		BuffArray Buffs = AgEffects[0].Buffs;
+		if (Buffs.IsValid()){
+			for (DWORD i = 0; i < Buffs.size(); i++) {
+				if (Buffs[i].SkillId == SkillID) return Buffs[i];
+			}
+		}
 	}
 
-	Buff noBuff = { 0, 0, 0, 0 };
-	return noBuff;
+	return Buff::Nil();
 }
 
 GWAPI::EffectArray GWAPI::EffectMgr::GetPlayerEffectArray()
