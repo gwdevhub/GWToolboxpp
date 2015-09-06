@@ -21,7 +21,9 @@ void HotkeyPanel::buildUI() {
 
 	SetSize(TBHotkey::WIDTH + 2 * DefaultBorderPadding + scrollbar->GetWidth(), height);
 
-	for (size_t i = 0; i < hotkeys.size(); ++i) {
+	// add in reverse order so that things are rendered bot-to-top and 
+	// combo-boxes going over the next hotkey is actually rendered after (= on top)
+	for (int i = hotkeys.size()-1; i >= 0; --i) {
 		hotkeys[i]->SetLocation(DefaultBorderPadding, 
 			DefaultBorderPadding + i * (TBHotkey::HEIGHT + 10));
 		AddControl(hotkeys[i]);
@@ -44,7 +46,10 @@ bool HotkeyPanel::ProcessMessage(LPMSG msg) {
 
 		bool triggered = false;
 		for (TBHotkey* hk : hotkeys) {
-			if (!hk->pressed() && keyData == hk->key() && modifier == hk->modifier()) {
+			if (hk->active() 
+				&& !hk->pressed() && keyData == hk->key() 
+				&& modifier == hk->modifier()) {
+
 				hk->set_pressed(true);
 				hk->exec();
 				triggered = true;
@@ -96,41 +101,44 @@ void HotkeyPanel::loadIni() {
 				}
 
 			} else if (type.compare(HotkeyUseItem::IniSection()) == 0) {
-				UINT ItemID = (UINT)config->iniReadLong(section.c_str(), HotkeyUseItem::IniItemIDKey(), 0);
-				wstring ItemName = config->iniRead(section.c_str(), HotkeyUseItem::IniItemNameKey(), L"<some item>");
-				if (ItemID > 0) {
-					tb_hk = new HotkeyUseItem(key, modifier, active, section, ItemID, ItemName);
+				UINT itemID = (UINT)config->iniReadLong(section.c_str(), HotkeyUseItem::IniItemIDKey(), 0);
+				wstring item_name = config->iniRead(section.c_str(), HotkeyUseItem::IniItemNameKey(), L"");
+				if (itemID > 0) {
+					tb_hk = new HotkeyUseItem(key, modifier, active, section, itemID, item_name);
 				}
 
 			} else if (type.compare(HotkeyDropUseBuff::IniSection()) == 0) {
-				UINT SkillID = (UINT)config->iniReadLong(section.c_str(), HotkeyDropUseBuff::IniSkillIDKey(), 0);
-				if (SkillID > 0) {
-					tb_hk = new HotkeyDropUseBuff(key, modifier, active, section, SkillID);
+				UINT skillID = (UINT)config->iniReadLong(section.c_str(), HotkeyDropUseBuff::IniSkillIDKey(), 0);
+				if (skillID > 0) {
+					tb_hk = new HotkeyDropUseBuff(key, modifier, active, section, skillID);
 				}
 
 			} else if (type.compare(HotkeyToggle::IniSection()) == 0) {
-				int ToggleID = (int)config->iniReadLong(section.c_str(), HotkeyToggle::IniToggleIDKey(), 0);
-				if (ToggleID > 0) {
-					tb_hk = new HotkeyToggle(key, modifier, active, section, ToggleID);
+				int toggleID = (int)config->iniReadLong(section.c_str(), HotkeyToggle::IniToggleIDKey(), 0);
+				if (toggleID > 0) {
+					tb_hk = new HotkeyToggle(key, modifier, active, section, toggleID);
 				}
 
 			} else if (type.compare(HotkeyTarget::IniSection()) == 0) {
-				UINT TargetID = (UINT)config->iniReadLong(section.c_str(), HotkeyTarget::IniTargetID(), 0);
-				if (TargetID > 0) {
-					tb_hk = new HotkeyTarget(key, modifier, active, section, TargetID);
+				UINT targetID = (UINT)config->iniReadLong(section.c_str(), HotkeyTarget::IniTargetIDKey(), 0);
+				wstring target_name = config->iniRead(section.c_str(), HotkeyTarget::IniTargetNameKey(), L"");
+				if (targetID > 0) {
+					tb_hk = new HotkeyTarget(key, modifier, active, section, targetID, target_name);
 				}
 
 			} else if (type.compare(HotkeyMove::IniSection()) == 0) {
 				float x = (float)config->iniReadDouble(section.c_str(), HotkeyMove::IniXKey(), 0.0);
 				float y = (float)config->iniReadDouble(section.c_str(), HotkeyMove::IniYKey(), 0.0);
+				wstring name = config->iniRead(section.c_str(), HotkeyMove::IniNameKey(), L"");
 				if (x != 0.0 || y != 0.0) {
-					tb_hk = new HotkeyMove(key, modifier, active, section, x, y);
+					tb_hk = new HotkeyMove(key, modifier, active, section, x, y, name);
 				}
 
 			} else if (type.compare(HotkeyDialog::IniSection()) == 0) {
-				UINT DialogID = (UINT)config->iniReadLong(section.c_str(), HotkeyDialog::IniDialogIDKey(), 0);
-				if (DialogID > 0) {
-					tb_hk = new HotkeyDialog(key, modifier, active, section, DialogID);
+				UINT dialogID = (UINT)config->iniReadLong(section.c_str(), HotkeyDialog::IniDialogIDKey(), 0);
+				wstring dialog_name = config->iniRead(section.c_str(), HotkeyDialog::IniDialogNameKey(), L"");
+				if (dialogID > 0) {
+					tb_hk = new HotkeyDialog(key, modifier, active, section, dialogID, dialog_name);
 				}
 
 			} else if (type.compare(HotkeyPingBuild::IniSection()) == 0) {

@@ -19,7 +19,7 @@ public:
 	static const int HEIGHT = LINE_HEIGHT * 2 + VSPACE * 3;
 	static const int ITEM_X = 0;
 	static const int ITEM_Y = LINE_HEIGHT + VSPACE;
-	static const int LABEL_Y = ITEM_Y + 4;
+	static const int LABEL_Y = ITEM_Y + 5;
 
 protected:
 	bool pressed_;
@@ -42,6 +42,7 @@ public:
 	inline static const wchar_t* IniKeyHotkey() { return L"hotkey"; }
 	inline static const wchar_t* IniKeyModifier() { return L"modifier"; }
 
+	inline bool active() { return active_; }
 	inline bool pressed() { return pressed_; }
 	inline void set_pressed(bool pressed) { pressed_ = pressed; }
 	inline OSHGui::Key key() { return key_; }
@@ -140,53 +141,63 @@ public:
 // it will target the closest agent with the given PlayerNumber (aka modelID)
 class HotkeyTarget : public TBHotkey {
 private:
-	const UINT TargetID;
+	UINT targetID_;
+	wstring target_name_;
 
 public:
-	HotkeyTarget(OSHGui::Key key, OSHGui::Key modifier, bool active, 
-		wstring ini_section, UINT _targetID) :
-		TBHotkey(key, modifier, active, ini_section), TargetID(_targetID) {
-	}
+	HotkeyTarget(OSHGui::Key key, OSHGui::Key modifier, bool active,
+		wstring ini_section, UINT targetID, wstring target_name);
 
 	static const wchar_t* IniSection() { return L"Target"; }
-	static const wchar_t* IniTargetID() { return L"TargetID"; }
+	static const wchar_t* IniTargetIDKey() { return L"TargetID"; }
+	static const wchar_t* IniTargetNameKey() { return L"TargetName"; }
 	void exec();
+
+	inline void set_targetID(UINT targetID) { targetID_ = targetID; }
+	inline void set_target_name(wstring target_name) { target_name_ = target_name; }
 };
 
 // hotkey to move to a specific position
 // it will only move in explorables, and if in compass range from destination
 class HotkeyMove : public TBHotkey {
 private:
-	const float x;
-	const float y;
+	float x_;
+	float y_;
+	wstring name_;
 
 public:
-	HotkeyMove(OSHGui::Key key, OSHGui::Key modifier, bool active, 
-		wstring ini_section, float _x, float _y) :
-		TBHotkey(key, modifier, active, ini_section), x(_x), y(_y) {
-	}
+	HotkeyMove(OSHGui::Key key, OSHGui::Key modifier, bool active,
+		wstring ini_section, float x, float y, wstring name);
 
 	static const wchar_t* IniSection() { return L"Move"; }
 	static const wchar_t* IniXKey() { return L"x"; }
 	static const wchar_t* IniYKey() { return L"y"; }
+	static const wchar_t* IniNameKey() { return L"name"; }
 
 	void exec();
+
+	inline void set_x(float x) { x_ = x; }
+	inline void set_y(float y) { y_ = y; }
+	inline void set_name(wstring name) { name_ = name; }
 };
 
 class HotkeyDialog : public TBHotkey {
 private:
-	UINT DialogID;
+	UINT id_;
+	wstring name_;
 
 public:
-	HotkeyDialog(OSHGui::Key key, OSHGui::Key modifier, bool active, 
-		wstring ini_section, UINT _id) :
-		TBHotkey(key, modifier, active, ini_section), DialogID(_id) {
-	}
+	HotkeyDialog(OSHGui::Key key, OSHGui::Key modifier, bool active,
+		wstring ini_section, UINT dialogID, wstring dialog_name);
 
 	static const wchar_t* IniSection() { return L"Dialog"; }
 	static const wchar_t* IniDialogIDKey() { return L"DialogID"; }
-
+	static const wchar_t* IniDialogNameKey() { return L"DialogName"; }
+	
 	void exec();
+
+	inline void set_id(UINT id) { id_ = id; }
+	inline void set_name(wstring name) { name_ = name; }
 };
 
 class HotkeyPingBuild : public TBHotkey {
@@ -197,6 +208,7 @@ public:
 	HotkeyPingBuild(OSHGui::Key key, OSHGui::Key modifier, bool active, 
 		wstring ini_section, UINT _idx) :
 		TBHotkey(key, modifier, active, ini_section), BuildIdx(_idx) {
+		// TODO (maybe or maybe just get rid of it)
 	}
 
 	static const wchar_t* IniSection() { return L"PingBuild"; }

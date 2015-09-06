@@ -1,3 +1,5 @@
+#include <iostream>
+#include <sstream>
 #include "Hotkeys.h"
 #include "logger.h"
 #include "GWToolbox.h"
@@ -153,26 +155,35 @@ HotkeyUseItem::HotkeyUseItem(Key key, Key modifier, bool active, wstring ini_sec
 	label->SetText("Use Item");
 	AddControl(label);
 
-	int width_left = WIDTH - label->GetRight() - HSPACE;
+	Label* label_id = new Label();
+	label_id->SetLocation(label->GetRight() + HSPACE, LABEL_Y);
+	label_id->SetText("ID:");
+	AddControl(label_id);
+
+	int width_left = WIDTH - label_id->GetRight();
 	TextBox* id_box = new TextBox();
 	id_box->SetText(to_string(item_id_));
 	id_box->SetSize(width_left / 2 - HSPACE / 2, LINE_HEIGHT);
-	id_box->SetLocation(label->GetRight() + HSPACE, ITEM_Y);
+	id_box->SetLocation(label_id->GetRight(), ITEM_Y);
 	id_box->GetTextChangedEvent() += TextChangedEventHandler(
 		[self, id_box, ini_section](Control*) {
-		string text = id_box->GetText();
-		long id = std::stol(text);
-		if (id > 0) {
+		try {
+			long id = std::stol(id_box->GetText());
 			self->set_item_id((UINT)id);
 			GWToolbox::instance()->config()->iniWriteLong(ini_section.c_str(),
 				self->IniItemIDKey(), id);
-		}
+		} catch (...) {}
 	});
 	id_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
 		GWToolbox::capture_input = true;
 	});
-	id_box->GetFocusLostEvent() += FocusLostEventHandler([](Control*, Control*) {
+	id_box->GetFocusLostEvent() += FocusLostEventHandler([id_box](Control*, Control*) {
 		GWToolbox::capture_input = false;
+		try {
+			std::stol(id_box->GetText());
+		} catch (...) {
+			id_box->SetText("0");
+		}
 	});
 	AddControl(id_box);
 
@@ -242,8 +253,12 @@ UINT HotkeyDropUseBuff::IndexToSkillID(int index) {
 	case 2: 
 		if (combo_->GetItemsCount() == 3) {
 			string s = combo_->GetItem(2);
-			int i = std::stoi(s);
-			return (UINT)i;
+			try {
+				int i = std::stoi(s);
+				return (UINT)i;
+			} catch (...) {
+				return 0;
+			}
 		}
 	default:
 		LOG("Warning. bad skill id %d\n", index);
@@ -279,6 +294,233 @@ HotkeyToggle::HotkeyToggle(Key key, Key modifier, bool active, wstring ini_secti
 			self->IniToggleIDKey(), (long)target);
 	});
 	AddControl(combo);
+}
+
+HotkeyTarget::HotkeyTarget(Key key, Key modifier, bool active, wstring ini_section, 
+	UINT targetID, wstring target_name)
+	: TBHotkey(key, modifier, active, ini_section), targetID_(targetID), target_name_(target_name) {
+
+	HotkeyTarget* self = this;
+
+	Label* label = new Label();
+	label->SetLocation(ITEM_X, LABEL_Y);
+	label->SetText("Target");
+	AddControl(label);
+
+	Label* label_id = new Label();
+	label_id->SetLocation(label->GetRight() + HSPACE, LABEL_Y);
+	label_id->SetText("ID:");
+	AddControl(label_id);
+
+	int width_left = WIDTH - label_id->GetRight();
+	TextBox* id_box = new TextBox();
+	id_box->SetText(to_string(targetID_));
+	id_box->SetSize(width_left / 2 - HSPACE / 2, LINE_HEIGHT);
+	id_box->SetLocation(label_id->GetRight(), ITEM_Y);
+	id_box->GetTextChangedEvent() += TextChangedEventHandler(
+		[self, id_box, ini_section](Control*) {
+		try {
+			long id = std::stol(id_box->GetText());
+			self->set_targetID((UINT)id);
+			GWToolbox::instance()->config()->iniWriteLong(ini_section.c_str(),
+				self->IniTargetIDKey(), id);
+		} catch (...) {}
+	});
+	id_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
+		GWToolbox::capture_input = true;
+	});
+	id_box->GetFocusLostEvent() += FocusLostEventHandler([id_box](Control*, Control*) {
+		GWToolbox::capture_input = false;
+		try {
+			std::stol(id_box->GetText());
+		} catch (...) {
+			id_box->SetText("0");
+		}
+	});
+	AddControl(id_box);
+
+	TextBox* name_box = new TextBox();
+	string text = string(target_name_.begin(), target_name_.end());
+	name_box->SetText(text.c_str());
+	name_box->SetSize(width_left / 2 - HSPACE / 2, LINE_HEIGHT);
+	name_box->SetLocation(id_box->GetRight() + HSPACE, ITEM_Y);
+	name_box->GetTextChangedEvent() += TextChangedEventHandler(
+		[self, name_box, ini_section](Control*) {
+		string text = name_box->GetText();
+		wstring wtext = wstring(text.begin(), text.end());
+		self->set_target_name(wtext);
+		GWToolbox::instance()->config()->iniWrite(ini_section.c_str(),
+			self->IniTargetNameKey(), wtext.c_str());
+	});
+	name_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
+		GWToolbox::capture_input = true;
+	});
+	name_box->GetFocusLostEvent() += FocusLostEventHandler([](Control*, Control*) {
+		GWToolbox::capture_input = false;
+	});
+	AddControl(name_box);
+}
+
+HotkeyMove::HotkeyMove(Key key, Key modifier, bool active, wstring ini_section,
+	float x, float y, wstring name)
+	: TBHotkey(key, modifier, active, ini_section), x_(x), y_(y), name_(name) {
+
+	HotkeyMove* self = this;
+
+	Label* label = new Label();
+	label->SetLocation(ITEM_X, LABEL_Y);
+	label->SetText("Move");
+	AddControl(label);
+
+	Label* label_x = new Label();
+	label_x->SetLocation(label->GetRight() + HSPACE, LABEL_Y);
+	label_x->SetText("X");
+	AddControl(label_x);
+
+	std::stringstream ss;
+	TextBox* box_x = new TextBox();
+	ss.clear();
+	ss << x;
+	box_x->SetText(ss.str());
+	box_x->SetSize(50, LINE_HEIGHT);
+	box_x->SetLocation(label_x->GetRight(), ITEM_Y);
+	box_x->GetTextChangedEvent() += TextChangedEventHandler(
+		[self, box_x, ini_section](Control*) {
+		try {
+			float x = std::stof(box_x->GetText());
+			self->set_x(x);
+			GWToolbox::instance()->config()->iniWriteDouble(ini_section.c_str(), self->IniXKey(), x);
+		} catch (...) {}
+	});
+	box_x->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
+		GWToolbox::capture_input = true;
+	});
+	box_x->GetFocusLostEvent() += FocusLostEventHandler([box_x](Control*, Control*) {
+		GWToolbox::capture_input = false;
+		try {
+			std::stof(box_x->GetText());
+		} catch (...) {
+			box_x->SetText("0.0");
+		}
+	});
+	AddControl(box_x);
+
+	Label* label_y = new Label();
+	label_y->SetLocation(box_x->GetRight() + HSPACE, LABEL_Y);
+	label_y->SetText("Y");
+	AddControl(label_y);
+
+	TextBox* box_y = new TextBox();
+	ss.clear();
+	ss << y;
+	box_y->SetText(ss.str());
+	box_y->SetSize(50, LINE_HEIGHT);
+	box_y->SetLocation(label_y->GetRight(), ITEM_Y);
+	box_y->GetTextChangedEvent() += TextChangedEventHandler(
+		[self, box_y, ini_section](Control*) {
+		try {
+			float y = std::stof(box_y->GetText());
+			self->set_y(y);
+			GWToolbox::instance()->config()->iniWriteDouble(ini_section.c_str(), self->IniYKey(), y);
+		} catch (...) {}
+	});
+	box_y->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
+		GWToolbox::capture_input = true;
+	});
+	box_y->GetFocusLostEvent() += FocusLostEventHandler([box_y](Control*, Control*) {
+		GWToolbox::capture_input = false;
+		try {
+			std::stof(box_y->GetText());
+		} catch (...) {
+			box_y->SetText("0.0");
+		}
+	});
+	AddControl(box_y);
+
+	TextBox* name_box = new TextBox();
+	string text = string(name_.begin(), name_.end());
+	name_box->SetText(text.c_str());
+	name_box->SetSize(WIDTH - box_y->GetRight() - HSPACE, LINE_HEIGHT);
+	name_box->SetLocation(box_y->GetRight() + HSPACE, ITEM_Y);
+	name_box->GetTextChangedEvent() += TextChangedEventHandler(
+		[self, name_box, ini_section](Control*) {
+		string text = name_box->GetText();
+		wstring wtext = wstring(text.begin(), text.end());
+		self->set_name(wtext);
+		GWToolbox::instance()->config()->iniWrite(ini_section.c_str(),
+			self->IniNameKey(), wtext.c_str());
+	});
+	name_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
+		GWToolbox::capture_input = true;
+	});
+	name_box->GetFocusLostEvent() += FocusLostEventHandler([](Control*, Control*) {
+		GWToolbox::capture_input = false;
+	});
+	AddControl(name_box);
+}
+
+HotkeyDialog::HotkeyDialog(Key key, Key modifier, bool active, wstring ini_section, UINT id, wstring name)
+	: TBHotkey(key, modifier, active, ini_section), id_(id), name_(name) {
+
+	HotkeyDialog* self = this;
+
+	Label* label = new Label();
+	label->SetLocation(ITEM_X, LABEL_Y);
+	label->SetText("Dialog");
+	AddControl(label);
+
+	Label* label_id = new Label();
+	label_id->SetLocation(label->GetRight() + HSPACE, LABEL_Y);
+	label_id->SetText("ID:");
+	AddControl(label_id);
+
+	int width_left = WIDTH - label_id->GetRight();
+	TextBox* id_box = new TextBox();
+	id_box->SetText(to_string(id_));
+	id_box->SetSize(width_left / 2 - HSPACE / 2, LINE_HEIGHT);
+	id_box->SetLocation(label_id->GetRight(), ITEM_Y);
+	id_box->GetTextChangedEvent() += TextChangedEventHandler(
+		[self, id_box, ini_section](Control*) {
+		try {
+			long id = std::stol(id_box->GetText());
+			self->set_id((UINT)id);
+			GWToolbox::instance()->config()->iniWriteLong(ini_section.c_str(),
+				self->IniDialogIDKey(), id);
+		} catch (...) {}
+	});
+	id_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
+		GWToolbox::capture_input = true;
+	});
+	id_box->GetFocusLostEvent() += FocusLostEventHandler([id_box](Control*, Control*) {
+		GWToolbox::capture_input = false;
+		try {
+			std::stol(id_box->GetText());
+		} catch (...) {
+			id_box->SetText("0");
+		}
+	});
+	AddControl(id_box);
+
+	TextBox* name_box = new TextBox();
+	string text = string(name_.begin(), name_.end());
+	name_box->SetText(text.c_str());
+	name_box->SetSize(width_left / 2 - HSPACE / 2, LINE_HEIGHT);
+	name_box->SetLocation(id_box->GetRight() + HSPACE, ITEM_Y);
+	name_box->GetTextChangedEvent() += TextChangedEventHandler(
+		[self, name_box, ini_section](Control*) {
+		string text = name_box->GetText();
+		wstring wtext = wstring(text.begin(), text.end());
+		self->set_name(wtext);
+		GWToolbox::instance()->config()->iniWrite(ini_section.c_str(),
+			self->IniDialogNameKey(), wtext.c_str());
+	});
+	name_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
+		GWToolbox::capture_input = true;
+	});
+	name_box->GetFocusLostEvent() += FocusLostEventHandler([](Control*, Control*) {
+		GWToolbox::capture_input = false;
+	});
+	AddControl(name_box);
 }
 
 void HotkeyUseItem::exec() {
@@ -347,8 +589,7 @@ void HotkeyTarget::exec() {
 	int closest = -1;
 
 	for (size_t i = 0; i < agents.size(); ++i) {
-		if (agents[i]->PlayerNumber == TargetID
-			&& agents[i]->HP >= 0) {
+		if (agents[i]->PlayerNumber == targetID_ && agents[i]->HP >= 0) {
 
 			unsigned long newDistance = API->Agents->GetSqrDistance(me, agents[i]);
 			if (newDistance < distance) {
@@ -367,9 +608,9 @@ void HotkeyMove::exec() {
 
 	GWAPIMgr* API = GWAPIMgr::GetInstance();
 	Agent* me = API->Agents->GetPlayer();
-	double sqrDist = (me->X - x) * (me->X - x) + (me->Y - y) * (me->Y - y);
+	double sqrDist = (me->X - x_) * (me->X - x_) + (me->Y - y_) * (me->Y - y_);
 	if (sqrDist < GwConstants::SqrRange::Compass) {
-		API->Agents->Move(x, y);
+		API->Agents->Move(x_, y_);
 	}
 	GWAPIMgr::GetInstance()->Chat->WriteChat(L"Movement macro activated");
 }
@@ -377,7 +618,7 @@ void HotkeyMove::exec() {
 void HotkeyDialog::exec() {
 	if (isLoading()) return;
 
-	GWAPIMgr::GetInstance()->Agents->Dialog(DialogID);
+	GWAPIMgr::GetInstance()->Agents->Dialog(id_);
 }
 
 void HotkeyPingBuild::exec() {
