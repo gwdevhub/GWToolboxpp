@@ -24,7 +24,7 @@ namespace OSHGui
 	//Constructor
 	//---------------------------------------------------------------------------
 	ListBox::ListBox()
-		: selectedIndex_(-1),
+		: selectedIndex_(-1), hoveredIndex_(-1),
 		  firstVisibleItemIndex_(0),
 		  autoScrollEnabled_(false)
 	{
@@ -111,13 +111,6 @@ namespace OSHGui
 		{
 			return;
 		}
-
-		#ifndef OSHGUI_DONTUSEEXCEPTIONS
-		if (index < 0 || index >= (int)items_.size())
-		{
-			throw Misc::ArgumentOutOfRangeException("index");
-		}
-		#endif
 
 		selectedIndex_ = index;
 
@@ -289,9 +282,14 @@ namespace OSHGui
 		int padding = GetFont()->GetFontHeight() + DefaultItemPadding;
 		for (int i = 0; i < maxVisibleItems_ && i + firstVisibleItemIndex_ < (int)items_.size(); ++i)
 		{
-			if (firstVisibleItemIndex_ + i == selectedIndex_)
-			{
-				g.FillRectangle(Color::Red(), PointF(itemX - 1, itemY + i * padding - 1), SizeF(itemAreaSize_.Width + 2, padding));
+			if (hoveredIndex_ >= 0) {
+				if (firstVisibleItemIndex_ + i == hoveredIndex_) {
+					g.FillRectangle(Color::Red(), PointF(itemX - 1, itemY + i * padding - 1), SizeF(itemAreaSize_.Width + 2, padding));
+				}
+			} else {
+				if (firstVisibleItemIndex_ + i == selectedIndex_) {
+					g.FillRectangle(Color::Red(), PointF(itemX - 1, itemY + i * padding - 1), SizeF(itemAreaSize_.Width + 2, padding));
+				}
 			}
 
 			g.DrawString(items_[firstVisibleItemIndex_ + i], GetFont(), GetForeColor(), PointF(itemX + 1, itemY + i * padding));
@@ -300,6 +298,24 @@ namespace OSHGui
 	//---------------------------------------------------------------------------
 	//Event-Handling
 	//---------------------------------------------------------------------------
+	void ListBox::OnMouseMove(const MouseMessage &mouse) {
+		Control::OnMouseMove(mouse);
+
+		if (Intersection::TestRectangle(absoluteLocation_.OffsetEx(4, 4), itemAreaSize_, mouse.GetLocation())) {
+			int hoveredIndex = firstVisibleItemIndex_ + (mouse.GetLocation().Y - absoluteLocation_.Y - 4) / (GetFont()->GetFontHeight() + DefaultItemPadding);
+			if (hoveredIndex < items_.size()) {
+				if (hoveredIndex != hoveredIndex_) {
+					hoveredIndex_ = hoveredIndex;
+					Invalidate();
+				}
+			}
+		}
+	}
+	void ListBox::OnMouseLeave(const MouseMessage &mouse) {
+		Control::OnMouseLeave(mouse);
+		if (hoveredIndex_ != -1) Invalidate();
+		hoveredIndex_ = -1;
+	}
 	void ListBox::OnMouseClick(const MouseMessage &mouse)
 	{
 		Control::OnMouseClick(mouse);

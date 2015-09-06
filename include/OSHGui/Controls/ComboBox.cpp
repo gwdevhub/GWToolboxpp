@@ -102,9 +102,10 @@ namespace OSHGui
 		listBox_->ExpandSizeToShowItems(4);
 		listBox_->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler([this](Control*)
 		{
-			button_->SetText(listBox_->GetSelectedItem());
-			if (listBox_->GetVisible())
-			{
+			if (listBox_->GetSelectedIndex() >= 0) {
+				button_->SetText(listBox_->GetSelectedItem());
+			}
+			if (listBox_->GetVisible()) {
 				Collapse();
 				button_->Focus();
 			}

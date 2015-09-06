@@ -121,7 +121,7 @@ int HotkeySendChat::ChannelToIndex(wchar_t channel) {
 	case L'$': return 4;
 	case L'%': return 5;
 	default:
-		LOG("Warning - bad channel %lc", channel);
+		LOG("Warning - bad channel %lc\n", channel);
 		return 0;
 	}
 }
@@ -135,7 +135,7 @@ wchar_t HotkeySendChat::IndexToChannel(int index) {
 	case 4: return L'$';
 	case 5: return L'%';
 	default:
-		LOG("Warning - bad index %d", index);
+		LOG("Warning - bad index %d\n", index);
 		return L'/';
 	}
 }

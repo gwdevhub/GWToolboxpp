@@ -144,6 +144,8 @@ namespace OSHGui
 	protected:
 		virtual void PopulateGeometry() override;
 
+		virtual void OnMouseLeave(const MouseMessage &mouse) override;
+		virtual void OnMouseMove(const MouseMessage &mouse) override;
 		virtual void OnMouseClick(const MouseMessage &mouse) override;
 		virtual void OnMouseScroll(const MouseMessage &mouse) override;
 		virtual bool OnKeyDown(const KeyboardMessage &keyboard) override;
@@ -156,6 +158,7 @@ namespace OSHGui
 
 		void CheckForScrollBar();
 		
+		int hoveredIndex_;
 		int selectedIndex_;
 		int firstVisibleItemIndex_;
 		int maxVisibleItems_;

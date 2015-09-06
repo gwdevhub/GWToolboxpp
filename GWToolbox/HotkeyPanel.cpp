@@ -31,7 +31,7 @@ void HotkeyPanel::buildUI() {
 	AddControl(scrollbar);
 	
 	ComboBox* create_combo = new ComboBox();
-	create_combo->AddItem("Create Hotkey...");
+	create_combo->SetText("Create Hotkey");
 	create_combo->AddItem("Send Chat");
 	create_combo->AddItem("Use Item");
 	create_combo->AddItem("Drop or Use Buff");
@@ -39,62 +39,64 @@ void HotkeyPanel::buildUI() {
 	create_combo->AddItem("Target");
 	create_combo->AddItem("Move to coordinate");
 	create_combo->AddItem("Dialog");
-	create_combo->SetSelectedIndex(0);
 	create_combo->SetMaxShowItems(create_combo->GetItemsCount());
 	create_combo->SetLocation(DefaultBorderPadding,
 		DefaultBorderPadding + MAX_SHOWN * (TBHotkey::HEIGHT + DefaultBorderPadding));
 	create_combo->SetSize(TBHotkey::WIDTH / 2 - TBHotkey::HSPACE / 2, TBHotkey::LINE_HEIGHT);
 	create_combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
 		[this, create_combo](Control*) {
-		if (create_combo->GetSelectedIndex() == 0) return;
-
+		if (create_combo->GetSelectedIndex() < 0) return;
 		wstring ini = L"hotkey-";
 		ini += to_wstring(this->NewID());
 		ini += L":";
 		switch (create_combo->GetSelectedIndex()) {
-		case 1:
+		case 0:
 			ini += HotkeySendChat::IniSection();
 			this->AddHotkey(new HotkeySendChat(Key::None, Key::None, true, ini, L"", L'/'));
 			break;
-		case 2:
+		case 1:
 			ini += HotkeyUseItem::IniSection();
 			this->AddHotkey(new HotkeyUseItem(Key::None, Key::None, true, ini, 0, L""));
 			break;
-		case 3:
+		case 2:
 			ini += HotkeyDropUseBuff::IniSection();
 			this->AddHotkey(new HotkeyDropUseBuff(Key::None, Key::None, true, ini, GwConstants::SkillID::Recall));
 			break;
-		case 4:
+		case 3:
 			ini += HotkeyToggle::IniSection();
 			this->AddHotkey(new HotkeyToggle(Key::None, Key::None, true, ini, 1));
 			break;
-		case 5:
+		case 4:
 			ini += HotkeyTarget::IniSection();
 			this->AddHotkey(new HotkeyTarget(Key::None, Key::None, true, ini, 0, L""));
 			break;
-		case 6:
+		case 5:
 			ini += HotkeyMove::IniSection();
 			this->AddHotkey(new HotkeyMove(Key::None, Key::None, true, ini, 0.0, 0.0, L""));
 			break;
-		case 7:
+		case 6:
 			ini += HotkeyDialog::IniSection();
 			this->AddHotkey(new HotkeyDialog(Key::None, Key::None, true, ini, 0, L""));
 			break;
 		default:
 			break;
 		}
-		create_combo->SetSelectedIndex(0);
+		create_combo->SetText("Create Hotkey");
+		create_combo->SetSelectedIndex(-1);
 	});
 	AddControl(create_combo);
 
 	ComboBox* delete_combo = new ComboBox();
+	delete_combo->SetText("Delete Hotkey");
 	delete_combo->SetSize(TBHotkey::WIDTH / 2 - TBHotkey::HSPACE / 2, TBHotkey::LINE_HEIGHT);
 	delete_combo->SetLocation(create_combo->GetRight() + TBHotkey::HSPACE, create_combo->GetTop());
 	delete_combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
 		[this, delete_combo](Control*) {
 		int index = delete_combo->GetSelectedIndex();
-		if (index == 0) return;
-		this->DeleteHotkey(index - 1);
+		if (index < 0) return;
+		this->DeleteHotkey(index);
+		delete_combo->SetText("Delete Hotkey");
+		delete_combo->SetSelectedIndex(-1);
 	});
 	AddControl(delete_combo);
 	delete_combo_ = delete_combo;
@@ -114,11 +116,11 @@ void HotkeyPanel::buildUI() {
 
 void HotkeyPanel::UpdateDeleteCombo() {
 	delete_combo_->Clear();
-	delete_combo_->AddItem("Delete Hotkey...");
+	delete_combo_->SetText("Delete Hotkey");
 	for (int i = 0; i < (int)hotkeys.size(); ++i) {
 		delete_combo_->AddItem(hotkeys[i]->GetDescription());
 	}
-	delete_combo_->SetSelectedIndex(0);
+	delete_combo_->SetSelectedIndex(-1);
 }
 
 void HotkeyPanel::UpdateScrollBarMax() {
@@ -249,7 +251,7 @@ void HotkeyPanel::loadIni() {
 
 			if (type.compare(HotkeySendChat::IniSection()) == 0) {
 				wstring msg = config->iniRead(section.c_str(), HotkeySendChat::IniKeyMsg(), L"");
-				wchar_t channel = config->iniRead(section.c_str(), HotkeySendChat::IniKeyChannel(), L"")[0];
+				wchar_t channel = config->iniRead(section.c_str(), HotkeySendChat::IniKeyChannel(), L"/")[0];
 				tb_hk = new HotkeySendChat(key, modifier, active, section, msg, channel);
 
 			} else if (type.compare(HotkeyUseItem::IniSection()) == 0) {
