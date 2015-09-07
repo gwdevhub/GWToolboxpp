@@ -191,11 +191,13 @@ void GWToolbox::exec() {
 		Sleep(10);
 
 		if (GetAsyncKeyState(VK_END) & 1)
-			destroy();
+			Destroy();
+		if (must_self_destruct_)
+			Destroy();
 	}
 }
 
-void GWToolbox::destroy()
+void GWToolbox::Destroy()
 {
 	LOG("Destroying GWToolbox++\n");
 

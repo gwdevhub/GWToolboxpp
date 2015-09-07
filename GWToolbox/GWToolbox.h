@@ -17,19 +17,22 @@ private:
 	MainWindow* main_window_;
 	TimerWindow* timer_window_;
 
+	bool must_self_destruct_;
+
 private:
 	GWToolbox(HMODULE mod) :
 		m_dllmodule(mod),
-		config_(new Config()),
-		main_window_(NULL),
-		timer_window_(NULL)
-	{ }
+		config_(new Config()) { 
+		main_window_ = NULL;
+		timer_window_ = NULL;
+		must_self_destruct_ = false;
+	}
 
 	// Executes setup and main loop of toolbox. 
 	void exec();
 
 	// Self destructs
-	void destroy();
+	void Destroy();
 
 	HMODULE m_dllmodule;	// Handle to the dll module we are running, used to clear the module from GW on eject.
 
@@ -48,6 +51,5 @@ public:
 	inline void set_main_window(MainWindow* w) { main_window_ = w; }
 	inline void set_timer_window(TimerWindow* w) { timer_window_ = w; }
 
-	
-	
+	void StartSelfDestruct() { must_self_destruct_ = true; }
 };

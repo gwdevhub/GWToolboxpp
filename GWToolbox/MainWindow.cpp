@@ -50,6 +50,9 @@ hotkey_panel_(new HotkeyPanel()) {
 	close->SetSize(18, TITLE_HEIGHT);
 	close->SetBackColor(Drawing::Color::Empty());
 	close->SetMouseOverFocusColor(GuiUtils::getMouseOverColor());
+	close->GetClickEvent() += ClickEventHandler([](Control*) {
+		GWToolbox::instance()->StartSelfDestruct();
+	});
 	AddControl(close);
 
 	main_panel_ = new Panel();
