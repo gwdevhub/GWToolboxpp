@@ -136,6 +136,11 @@ static HRESULT WINAPI endScene(IDirect3DDevice9* pDevice) {
 		create_gui(pDevice);
 	}
 
+	GWToolbox* tb = GWToolbox::instance();
+	if (tb && tb->timer_window()) {
+		tb->timer_window()->UpdateLabel();
+	}
+
 	renderer->BeginRendering();
 
 	Application::Instance().Render();
@@ -180,7 +185,7 @@ void GWToolbox::exec() {
 
 			if (main_window_) main_window_->MainRoutine();
 
-			if (timer_window_) timer_window_->MainRoutine();
+			
 		}
 
 		Sleep(10);

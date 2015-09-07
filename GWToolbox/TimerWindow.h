@@ -17,10 +17,11 @@ public:
 	inline static const wchar_t* IniKeyY() { return L"y"; }
 	inline static const wchar_t* IniKeyColor() { return L"color"; }
 
-	void MainRoutine();
+	void UpdateLabel();
 
 private:
 	DragButton* timer_;
+	DragButton* shadow_;
 	long current_time_;
 
 	void SaveLocation();

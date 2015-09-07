@@ -160,4 +160,6 @@ void TabButton::CalculateLabelLocation() {
 
 void MainWindow::MainRoutine() {
 	pcon_panel_->mainRoutine();
+
+	hotkey_panel_->mainRoutine();
 }

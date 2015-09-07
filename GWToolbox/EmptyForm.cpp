@@ -9,9 +9,9 @@ const Drawing::SizeI EmptyForm::DefaultSize(300, 300);
 EmptyForm::EmptyForm()
 	: Form() {
 
-	containerPanel_ = new Panel();
 	containerPanel_->SetLocation(0, 0);
-	AddSubControl(containerPanel_);
+
+	RemoveControl(captionBar_);
 
 	SetLocation(DefaultLocation);
 	SetSize(DefaultSize);
@@ -22,14 +22,6 @@ EmptyForm::EmptyForm()
 void EmptyForm::SetSize(const Drawing::SizeI &size) {
 	Control::SetSize(size);
 	containerPanel_->SetSize(size);
-}
-
-const std::deque<Control*>& EmptyForm::GetControls() const {
-	return containerPanel_->GetControls();
-}
-
-void EmptyForm::AddControl(Control *control) {
-	containerPanel_->AddControl(control);
 }
 
 void EmptyForm::DrawSelf(Drawing::RenderContext &context) {

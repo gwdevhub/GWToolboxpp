@@ -42,8 +42,12 @@ public:
 	// returns toolbox instance
 	static GWToolbox* instance() { return instance_; }
 	inline Config* config() { return config_; }
+	inline MainWindow* main_window() { return main_window_; }
+	inline TimerWindow* timer_window() { return timer_window_; }
+	
 	inline void set_main_window(MainWindow* w) { main_window_ = w; }
 	inline void set_timer_window(TimerWindow* w) { timer_window_ = w; }
-	inline MainWindow* main_window() { return main_window_; }
+
+	
 	
 };

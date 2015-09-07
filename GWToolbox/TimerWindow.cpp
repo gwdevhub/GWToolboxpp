@@ -20,11 +20,23 @@ TimerWindow::TimerWindow() {
 	SetLocation(x, y);
 	SetSize(Drawing::SizeI(WIDTH, HEIGHT));
 
+	shadow_ = new DragButton();
+	int offsetX= 2; 
+	int offsetY = 2;
+	shadow_->SetText("TEST");
+	shadow_->SetSize(GetSize());
+	shadow_->SetLocation(offsetX, offsetY);
+	shadow_->SetFont(GuiUtils::getTBFont(26.0f, true));
+	shadow_->SetBackColor(Drawing::Color::Empty());
+	shadow_->SetForeColor(Drawing::Color::Black());
+	shadow_->SetEnabled(false);
+	AddControl(shadow_);
+
 	timer_ = new DragButton();
 	timer_->SetText("TEST");
 	timer_->SetSize(GetSize());
-	timer_->SetFont(GuiUtils::getTBFont(26.0f, true));
 	timer_->SetLocation(0, 0);
+	timer_->SetFont(GuiUtils::getTBFont(26.0f, true));
 	timer_->SetBackColor(Drawing::Color::Empty());
 	timer_->GetMouseUpEvent() += MouseUpEventHandler([this](Control*, MouseEventArgs) {
 		SaveLocation();
@@ -41,9 +53,8 @@ void TimerWindow::SaveLocation() {
 	config->iniWriteLong(TimerWindow::IniSection(), TimerWindow::IniKeyY(), y);
 }
 
-void TimerWindow::MainRoutine() {
-	GWAPIMgr* API = GWAPIMgr::GetInstance();
-	long uptime = API->Map->GetInstanceTime();
+void TimerWindow::UpdateLabel() {
+	long uptime = GWAPIMgr::GetInstance()->Map->GetInstanceTime();
 	long time = uptime / 1000;
 	if (time != current_time_) {
 		current_time_ = time;
@@ -65,6 +76,9 @@ void TimerWindow::MainRoutine() {
 		
 		timer_->SetText(ss.str());
 		timer_->Invalidate();
+
+		shadow_->SetText(ss.str());
+		shadow_->Invalidate();
 	}
 	
 }

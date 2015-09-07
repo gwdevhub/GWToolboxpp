@@ -166,14 +166,14 @@ namespace OSHGui
 	protected:
 		virtual void PopulateGeometry() override;
 
+		CaptionBar *captionBar_;
+		Panel *containerPanel_;
+
 	private:
 		static const Drawing::PointI DefaultLocation;
 		static const Drawing::SizeI DefaultSize;
 
 		std::weak_ptr<Form> instance_;
-
-		CaptionBar *captionBar_;
-		Panel *containerPanel_;
 
 		bool isModal_;
 		FormClosingEvent formClosingEvent_;
