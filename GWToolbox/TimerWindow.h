@@ -17,6 +17,7 @@ public:
 
 	const int WIDTH = 180;
 	const int HEIGHT = 50;
+	const int URGOZ_HEIGHT = 25;
 
 public:
 	TimerWindow();
@@ -31,7 +32,10 @@ public:
 private:
 	TimerLabel* timer_;
 	TimerLabel* shadow_;
+	TimerLabel* urgoz_timer_;
+	TimerLabel* urgoz_shadow_;
 	long current_time_;
+	bool in_urgoz_;
 
 	void SaveLocation();
 };

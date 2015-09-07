@@ -25,6 +25,10 @@ public:
 
 	virtual void DrawSelf(OSHGui::Drawing::RenderContext &context) override;
 
+	virtual void SetBackColor(const OSHGui::Drawing::Color& color) override {
+		containerPanel_->SetBackColor(color);
+	}
+
 protected:
 	virtual void PopulateGeometry() override;
 
