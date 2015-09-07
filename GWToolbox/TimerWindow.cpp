@@ -19,11 +19,12 @@ TimerWindow::TimerWindow() {
 
 	SetLocation(x, y);
 	SetSize(Drawing::SizeI(WIDTH, HEIGHT));
-
-	shadow_ = new DragButton();
+	
+	shadow_ = new TimerLabel();
 	int offsetX= 2; 
 	int offsetY = 2;
-	shadow_->SetText("TEST");
+	shadow_->SetText("Temp");
+	shadow_->SetAnchor(AnchorStyles::Left);
 	shadow_->SetSize(GetSize());
 	shadow_->SetLocation(offsetX, offsetY);
 	shadow_->SetFont(GuiUtils::getTBFont(26.0f, true));
@@ -32,8 +33,9 @@ TimerWindow::TimerWindow() {
 	shadow_->SetEnabled(false);
 	AddControl(shadow_);
 
-	timer_ = new DragButton();
-	timer_->SetText("TEST");
+	timer_ = new TimerLabel();
+	timer_->SetText("Temp");
+	shadow_->SetAnchor(AnchorStyles::Left);
 	timer_->SetSize(GetSize());
 	timer_->SetLocation(0, 0);
 	timer_->SetFont(GuiUtils::getTBFont(26.0f, true));

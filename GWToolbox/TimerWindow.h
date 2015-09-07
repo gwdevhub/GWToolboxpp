@@ -6,6 +6,15 @@
 
 class TimerWindow : public EmptyForm {
 public:
+	class TimerLabel : public DragButton {
+	public:
+		TimerLabel() {}
+		virtual void CalculateLabelLocation() override {
+			label_->SetLocation(OSHGui::Drawing::PointI(DefaultBorderPadding, 
+				GetSize().Height / 2 - label_->GetSize().Height / 2));
+		}
+	};
+
 	const int WIDTH = 180;
 	const int HEIGHT = 50;
 
@@ -20,8 +29,8 @@ public:
 	void UpdateLabel();
 
 private:
-	DragButton* timer_;
-	DragButton* shadow_;
+	TimerLabel* timer_;
+	TimerLabel* shadow_;
 	long current_time_;
 
 	void SaveLocation();
