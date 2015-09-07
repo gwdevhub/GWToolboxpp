@@ -74,8 +74,8 @@ namespace OSHGui
 		/**
 		 * Constructor of the class.
 		 */
+		Form(bool create_caption);
 		Form();
-		
 		/**
 		 * Gets whether the form is displayed modally.
 		 *

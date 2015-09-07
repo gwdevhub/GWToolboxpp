@@ -126,7 +126,7 @@ void TimerWindow::UpdateLabel() {
 			
 			string text;
 			if (temp < 15) {
-				urgoz_timer_->SetForeColor(Drawing::Color::Green());
+				urgoz_timer_->SetForeColor(Drawing::Color::Lime());
 				text = string("Open - ") + to_string(15 - temp);
 			} else {
 				urgoz_timer_->SetForeColor(Drawing::Color::Red());

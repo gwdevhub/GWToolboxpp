@@ -7,11 +7,9 @@ const Drawing::PointI EmptyForm::DefaultLocation(200, 50);
 const Drawing::SizeI EmptyForm::DefaultSize(300, 300);
 
 EmptyForm::EmptyForm()
-	: Form() {
+	: Form(false) {
 
 	containerPanel_->SetLocation(0, 0);
-
-	RemoveControl(captionBar_);
 
 	SetLocation(DefaultLocation);
 	SetSize(DefaultSize);

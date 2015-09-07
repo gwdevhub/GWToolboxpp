@@ -23,7 +23,8 @@ namespace OSHGui
 	//---------------------------------------------------------------------------
 	//Constructor
 	//---------------------------------------------------------------------------
-	Form::Form()
+	Form::Form() : Form(true) {}
+	Form::Form(bool create_caption)
 		: isModal_(false),
 		  dialogResult_(DialogResult::None)
 	{
@@ -34,9 +35,13 @@ namespace OSHGui
 		isEnabled_ = false;
 		isFocusable_ = true;
 
-		captionBar_ = new CaptionBar();
-		captionBar_->SetLocation(Drawing::PointI(0, 0));
-		AddSubControl(captionBar_);
+		if (create_caption) {
+			captionBar_ = new CaptionBar();
+			captionBar_->SetLocation(Drawing::PointI(0, 0));
+			AddSubControl(captionBar_);
+		} else {
+			captionBar_ = nullptr;
+		}
 
 		containerPanel_ = new Panel();
 		containerPanel_->SetLocation(Drawing::PointI(DefaultBorderPadding, DefaultBorderPadding + CaptionBar::DefaultCaptionBarHeight));
@@ -55,25 +60,29 @@ namespace OSHGui
 	{
 		Control::SetSize(size);
 
-		captionBar_->SetSize(size);
+		if (captionBar_) captionBar_->SetSize(size);
 		containerPanel_->SetSize(size.InflateEx(-DefaultBorderPadding * 2, -DefaultBorderPadding * 2 - CaptionBar::DefaultCaptionBarHeight));
 	}
 	//---------------------------------------------------------------------------
 	void Form::SetText(const Misc::AnsiString &text)
 	{
-		captionBar_->SetText(text);
+		if (captionBar_) captionBar_->SetText(text);
 	}
 	//---------------------------------------------------------------------------
 	const Misc::AnsiString& Form::GetText() const
 	{
-		return captionBar_->GetText();
+		if (captionBar_) {
+			return captionBar_->GetText();
+		} else {
+			return "";
+		}
 	}
 	//---------------------------------------------------------------------------
 	void Form::SetForeColor(const Drawing::Color &color)
 	{
 		Control::SetForeColor(color);
 
-		captionBar_->SetForeColor(color);
+		if (captionBar_) captionBar_->SetForeColor(color);
 	}
 	//---------------------------------------------------------------------------
 	const std::deque<Control*>& Form::GetControls() const
@@ -153,7 +162,7 @@ namespace OSHGui
 	{
 		Control::DrawSelf(context);
 
-		captionBar_->Render();
+		if (captionBar_) captionBar_->Render();
 		containerPanel_->Render();
 	}
 	//---------------------------------------------------------------------------
@@ -166,7 +175,9 @@ namespace OSHGui
 		g.FillRectangle(GetBackColor() - Color::FromARGB(0, 100, 100, 100), RectangleF(PointF(), GetSize()));
 		auto color = GetBackColor() - Color::FromARGB(0, 90, 90, 90);
 		g.FillRectangleGradient(ColorRectangle(GetBackColor(), GetBackColor(), color, color), RectangleF(PointF(1, 1), GetSize() - SizeF(2, 2)));
-		g.FillRectangle(GetBackColor() - Color::FromARGB(0, 50, 50, 50), RectangleF(PointF(5, captionBar_->GetBottom() + 2), SizeF(GetWidth() - 10, 1)));
+		g.FillRectangle(GetBackColor() - Color::FromARGB(0, 50, 50, 50), 
+			RectangleF(PointF(5, (captionBar_ ? captionBar_->GetBottom() : 0) + 2), 
+			SizeF(GetWidth() - 10, 1)));
 	}
 	//---------------------------------------------------------------------------
 	//Form::Captionbar::Button

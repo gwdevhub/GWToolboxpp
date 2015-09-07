@@ -12,7 +12,8 @@ pcon_panel_(new PconPanel()),
 hotkey_panel_(new HotkeyPanel()) {
 
 	panels = std::vector<Panel*>();
-	currentPanel = -1;
+	current_panel_ = -1;
+	minimized_ = false;
 	
 	// some local vars
 	GWToolbox* tb = GWToolbox::instance();
@@ -22,13 +23,44 @@ hotkey_panel_(new HotkeyPanel()) {
 	int tabButtonHeight = 27;
 
 	// build main UI
-	SetText("GWToolbox++");
-	SetSize(width, height);
+	SetSize(Drawing::SizeI(WIDTH, HEIGHT));
 	SetFont(GuiUtils::getTBFont(8.0, true));
+
+	TitleLabel* title = new TitleLabel();
+	title->SetText("Toolbox++");
+	title->SetLocation(0, 0);
+	title->SetSize(64, TITLE_HEIGHT);
+	title->SetBackColor(Drawing::Color::Empty());
+	AddControl(title);
+
+	Button* minimize = new Button();
+	minimize->SetText("-");
+	minimize->SetLocation(64, 0);
+	minimize->SetSize(18, TITLE_HEIGHT);
+	minimize->SetBackColor(Drawing::Color::Empty());
+	minimize->SetMouseOverFocusColor(GuiUtils::getMouseOverColor());
+	minimize->GetClickEvent() += ClickEventHandler([this](Control*) {
+		ToggleMinimize();
+	});
+	AddControl(minimize);
+
+	Button* close = new Button();
+	close->SetText("x");
+	close->SetLocation(82, 0);
+	close->SetSize(18, TITLE_HEIGHT);
+	close->SetBackColor(Drawing::Color::Empty());
+	close->SetMouseOverFocusColor(GuiUtils::getMouseOverColor());
+	AddControl(close);
+
+	main_panel_ = new Panel();
+	main_panel_->SetBackColor(Drawing::Color::Empty());
+	main_panel_->SetSize(WIDTH, HEIGHT - TITLE_HEIGHT);
+	main_panel_->SetLocation(0, TITLE_HEIGHT);
+	AddControl(main_panel_);
 	
-	createTabButton("Pcons", button_idx, panel_idx, GuiUtils::getPathA("cupcake.png").c_str());
+	CreateTabButton("Pcons", button_idx, panel_idx, GuiUtils::getPathA("cupcake.png").c_str());
 	pcon_panel_->buildUI();
-	setupPanel(pcon_panel_);
+	SetupPanel(pcon_panel_);
 
 	Button* toggle = new Button();
 	toggle->SetText("Disabled");
@@ -41,27 +73,39 @@ hotkey_panel_(new HotkeyPanel()) {
 		bool active = pcon_panel->toggleActive();
 		this->UpdatePconToggleButton(active);
 	});
-	toggle->SetSize(width - 2 * DefaultBorderPadding, tabButtonHeight - 1);
-	toggle->SetLocation(0, button_idx * tabButtonHeight - 1);
-	AddControl(toggle);
+	toggle->SetSize(WIDTH - 2 * DefaultBorderPadding, tabButtonHeight - 1);
+	toggle->SetLocation(DefaultBorderPadding, button_idx * tabButtonHeight - 1);
+	main_panel_->AddControl(toggle);
 	pcon_toggle_button_ = toggle;
 	
 	++button_idx;
-	createTabButton("Hotkeys", button_idx, panel_idx, GuiUtils::getPathA("keyboard.png").c_str());
+	CreateTabButton("Hotkeys", button_idx, panel_idx, GuiUtils::getPathA("keyboard.png").c_str());
 	hotkey_panel_->buildUI();
-	setupPanel(hotkey_panel_);
+	SetupPanel(hotkey_panel_);
 
-	createTabButton("Builds", button_idx, panel_idx, GuiUtils::getPathA("list.png").c_str());
+	CreateTabButton("Builds", button_idx, panel_idx, GuiUtils::getPathA("list.png").c_str());
 
-	createTabButton("Travel", button_idx, panel_idx, GuiUtils::getPathA("plane.png").c_str());
+	CreateTabButton("Travel", button_idx, panel_idx, GuiUtils::getPathA("plane.png").c_str());
 
-	createTabButton("Dialogs", button_idx, panel_idx, GuiUtils::getPathA("comment.png").c_str());
+	CreateTabButton("Dialogs", button_idx, panel_idx, GuiUtils::getPathA("comment.png").c_str());
 
-	createTabButton("Others?", button_idx, panel_idx, NULL);
+	CreateTabButton("Others?", button_idx, panel_idx, NULL);
 
-	createTabButton("Materials", button_idx, panel_idx, GuiUtils::getPathA("feather.png").c_str());
+	CreateTabButton("Materials", button_idx, panel_idx, GuiUtils::getPathA("feather.png").c_str());
 
-	createTabButton("Settings", button_idx, panel_idx, GuiUtils::getPathA("settings.png").c_str());
+	CreateTabButton("Settings", button_idx, panel_idx, GuiUtils::getPathA("settings.png").c_str());
+}
+
+void MainWindow::ToggleMinimize() {
+	minimized_ = !minimized_;
+
+	if (minimized_) {
+		SetSize(Drawing::SizeI(WIDTH, TITLE_HEIGHT));
+		main_panel_->SetVisible(false);
+	} else {
+		SetSize(Drawing::SizeI(WIDTH, HEIGHT));
+		main_panel_->SetVisible(true);
+	}
 }
 
 void MainWindow::UpdatePconToggleButton(bool active) {
@@ -74,23 +118,23 @@ void MainWindow::UpdatePconToggleButton(bool active) {
 	}
 }
 
-void MainWindow::createTabButton(const char* s, int& button_idx,
+void MainWindow::CreateTabButton(const char* s, int& button_idx,
 									int& panel_idx, const char* icon) {
 	MainWindow * self = this;
 
 	TabButton* b = new TabButton(s, icon);
-	AddControl(b);
-	b->SetLocation(0, button_idx * tabButtonHeight);
+	b->SetLocation(DefaultBorderPadding, button_idx * TAB_HEIGHT);
 	const int index = panel_idx;
 	b->GetClickEvent() += ClickEventHandler([self, index](Control*) { 
 		self->openClosePanel(index); 
 	});
+	main_panel_->AddControl(b);
 	++button_idx;
 	++panel_idx;
 }
 
-void MainWindow::setupPanel(Panel* panel) {
-	panel->SetLocation(width, 0);
+void MainWindow::SetupPanel(Panel* panel) {
+	panel->SetLocation(WIDTH, 0);
 	panel->SetVisible(false);
 	panel->SetEnabled(false);
 	panels.push_back(panel);
@@ -100,25 +144,27 @@ void MainWindow::setupPanel(Panel* panel) {
 void MainWindow::DrawSelf(RenderContext &context) {
 	Form::DrawSelf(context);
 
-	if (currentPanel >= 0) {
-		panels[currentPanel]->Render();
+	if (!minimized_) {
+		if (current_panel_ >= 0) {
+			panels[current_panel_]->Render();
+		}
 	}
 }
 
 void MainWindow::openClosePanel(int index) {
-	if (currentPanel >= 0) {
-		panels[currentPanel]->SetVisible(false);
-		panels[currentPanel]->SetEnabled(false);
+	if (current_panel_ >= 0) {
+		panels[current_panel_]->SetVisible(false);
+		panels[current_panel_]->SetEnabled(false);
 	}
 
-	if (index == currentPanel) {
-		currentPanel = -1;
+	if (index == current_panel_) {
+		current_panel_ = -1;
 	} else {
 		if (index < (int)panels.size()) {
-			currentPanel = index;
-			panels[currentPanel]->SetVisible(true);
-			panels[currentPanel]->SetEnabled(true);
-			panels[currentPanel]->Focus();
+			current_panel_ = index;
+			panels[current_panel_]->SetVisible(true);
+			panels[current_panel_]->SetEnabled(true);
+			panels[current_panel_]->Focus();
 		} else {
 			ERR("ERROR bad panel index!\n");
 		}
@@ -140,7 +186,7 @@ TabButton::TabButton(const char* s, const char* icon)
 	label_->SetText(s);
 
 	SetFont(GuiUtils::getTBFont(10.0f, true));
-	SetSize(MainWindow::width - DefaultBorderPadding * 2, MainWindow::tabButtonHeight - 1);
+	SetSize(MainWindow::WIDTH - DefaultBorderPadding * 2, MainWindow::TAB_HEIGHT - 1);
 	SetBackColor(Color::Empty());
 	SetMouseOverFocusColor(GuiUtils::getMouseOverColor());
 }
@@ -149,11 +195,13 @@ void TabButton::DrawSelf(Drawing::RenderContext &context) {
 	Button::DrawSelf(context);
 	pic->Render();
 }
+
 void TabButton::PopulateGeometry() {
 	Button::PopulateGeometry();
 	Graphics g(*geometry_);
-	g.DrawLine(GetForeColor(), PointF(0, 0), PointF(MainWindow::width - DefaultBorderPadding * 2, 0));
+	g.DrawLine(GetForeColor(), PointF(0, 0), PointF(MainWindow::WIDTH - DefaultBorderPadding * 2, 0));
 }
+
 void TabButton::CalculateLabelLocation() {
 	label_->SetLocation(Drawing::PointI(GetSize().Width / 2 - label_->GetSize().Width / 2 + 13, GetSize().Height / 2 - label_->GetSize().Height / 2));
 };
