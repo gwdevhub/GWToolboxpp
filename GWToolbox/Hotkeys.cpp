@@ -205,8 +205,9 @@ HotkeyUseItem::HotkeyUseItem(Key key, Key modifier, bool active, wstring ini_sec
 	AddControl(name_box);
 }
 
-HotkeyDropUseBuff::HotkeyDropUseBuff(Key key, Key modifier, bool active, wstring ini_section, UINT skillID) :
-TBHotkey(key, modifier, active, ini_section), skillID_(skillID) {
+HotkeyDropUseBuff::HotkeyDropUseBuff(Key key, Key modifier, bool active, 
+	wstring ini_section, UINT id) :
+TBHotkey(key, modifier, active, ini_section), id_(id) {
 
 	Label* label = new Label();
 	label->SetLocation(ITEM_X, LABEL_Y);
@@ -218,7 +219,7 @@ TBHotkey(key, modifier, active, ini_section), skillID_(skillID) {
 	combo->AddItem("UA");
 	combo->SetSize(WIDTH - label->GetRight() - HSPACE, LINE_HEIGHT);
 	combo->SetLocation(label->GetRight() + HSPACE, ITEM_Y);
-	switch (skillID) {
+	switch (id) {
 	case GwConstants::SkillID::Recall:
 		combo->SetSelectedIndex(0);
 		break;
@@ -226,14 +227,14 @@ TBHotkey(key, modifier, active, ini_section), skillID_(skillID) {
 		combo->SetSelectedIndex(1);
 		break;
 	default:
-		combo->AddItem(to_string(skillID));
+		combo->AddItem(to_string(id));
 		combo->SetSelectedIndex(2);
 		break;
 	}
 	combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
 		[this, combo, ini_section](Control*) {
 		UINT skillID = this->IndexToSkillID(combo->GetSelectedIndex());
-		this->set_skillID(skillID);
+		this->set_id(skillID);
 		GWToolbox::instance()->config()->iniWriteLong(ini_section.c_str(),
 			this->IniSkillIDKey(), (long)skillID);
 	});
@@ -292,7 +293,7 @@ HotkeyToggle::HotkeyToggle(Key key, Key modifier, bool active, wstring ini_secti
 
 HotkeyTarget::HotkeyTarget(Key key, Key modifier, bool active, wstring ini_section, 
 	UINT targetID, wstring target_name)
-	: TBHotkey(key, modifier, active, ini_section), targetID_(targetID), target_name_(target_name) {
+	: TBHotkey(key, modifier, active, ini_section), id_(targetID), name_(target_name) {
 
 	Label* label = new Label();
 	label->SetLocation(ITEM_X, LABEL_Y);
@@ -306,14 +307,14 @@ HotkeyTarget::HotkeyTarget(Key key, Key modifier, bool active, wstring ini_secti
 
 	int width_left = WIDTH - label_id->GetRight();
 	TextBox* id_box = new TextBox();
-	id_box->SetText(to_string(targetID_));
+	id_box->SetText(to_string(id_));
 	id_box->SetSize(width_left / 2 - HSPACE / 2, LINE_HEIGHT);
 	id_box->SetLocation(label_id->GetRight(), ITEM_Y);
 	id_box->GetTextChangedEvent() += TextChangedEventHandler(
 		[this, id_box, ini_section](Control*) {
 		try {
 			long id = std::stol(id_box->GetText());
-			this->set_targetID((UINT)id);
+			this->set_id((UINT)id);
 			GWToolbox::instance()->config()->iniWriteLong(ini_section.c_str(),
 				this->IniTargetIDKey(), id);
 		} catch (...) {}
@@ -332,7 +333,7 @@ HotkeyTarget::HotkeyTarget(Key key, Key modifier, bool active, wstring ini_secti
 	AddControl(id_box);
 
 	TextBox* name_box = new TextBox();
-	string text = string(target_name_.begin(), target_name_.end());
+	string text = string(name_.begin(), name_.end());
 	name_box->SetText(text.c_str());
 	name_box->SetSize(width_left / 2 - HSPACE / 2, LINE_HEIGHT);
 	name_box->SetLocation(id_box->GetRight() + HSPACE, ITEM_Y);
@@ -340,7 +341,7 @@ HotkeyTarget::HotkeyTarget(Key key, Key modifier, bool active, wstring ini_secti
 		[this, name_box, ini_section](Control*) {
 		string text = name_box->GetText();
 		wstring wtext = wstring(text.begin(), text.end());
-		this->set_target_name(wtext);
+		this->set_name(wtext);
 		GWToolbox::instance()->config()->iniWrite(ini_section.c_str(),
 			this->IniTargetNameKey(), wtext.c_str());
 	});
@@ -537,14 +538,14 @@ void HotkeySendChat::exec() {
 
 void HotkeyDropUseBuff::exec() {
 	if (!isExplorable()) return;
-	if (skillID_ <= 0) return;
+	if (id_ <= 0) return;
 
 	GWAPIMgr* API = GWAPIMgr::GetInstance();
-	Buff buff = API->Effects->GetPlayerBuffBySkillId(skillID_);
+	Buff buff = API->Effects->GetPlayerBuffBySkillId(id_);
 	if (buff.SkillId) {
 		API->Effects->DropBuff(buff.BuffId);
 	} else {
-		int slot = API->Skillbar->getSkillSlot(skillID_);
+		int slot = API->Skillbar->getSkillSlot(id_);
 		if (slot > 0 && API->Skillbar->GetPlayerSkillbar().Skills[slot].Recharge == 0) {
 			API->Skillbar->UseSkill(slot, API->Agents->GetTargetId());
 		}
@@ -553,12 +554,14 @@ void HotkeyDropUseBuff::exec() {
 
 void HotkeyToggle::exec() {
 	GWToolbox* tb = GWToolbox::instance();
+	bool active;
 	switch (target_) {
 	case HotkeyToggle::Clicker:
 		tb->main_window()->hotkey_panel()->toggleClicker();
 		break;
 	case HotkeyToggle::Pcons:
-		tb->main_window()->pcon_panel()->toggleActive();
+		active = tb->main_window()->pcon_panel()->toggleActive();
+		tb->main_window()->UpdatePconToggleButton(active);
 		break;
 	case HotkeyToggle::CoinDrop:
 		tb->main_window()->hotkey_panel()->toggleCoinDrop();
@@ -571,7 +574,7 @@ void HotkeyToggle::exec() {
 
 void HotkeyTarget::exec() {
 	if (isLoading()) return;
-	if (targetID_ <= 0) return;
+	if (id_ <= 0) return;
 
 	GWAPIMgr* API = GWAPIMgr::GetInstance();
 	Agent* me = API->Agents->GetPlayer();
@@ -581,7 +584,7 @@ void HotkeyTarget::exec() {
 	int closest = -1;
 
 	for (size_t i = 0; i < agents.size(); ++i) {
-		if (agents[i]->PlayerNumber == targetID_ && agents[i]->HP >= 0) {
+		if (agents[i]->PlayerNumber == id_ && agents[i]->HP >= 0) {
 
 			unsigned long newDistance = API->Agents->GetSqrDistance(me, agents[i]);
 			if (newDistance < distance) {

@@ -29,9 +29,9 @@ namespace OSHGui
 	class Form;
 	
 	/**
-	 * Stellt Methoden und Eigenschaften für die Verwaltung einer
-	 * Anwendung zur Verfügung, z.B. Methoden zum Starten und Beenden einer
-	 * Anwendung sowie für das Abrufen von Informationen zu einer Anwendung.
+	 * Provides methods and properties to manage an application available, 
+	 * eg Methods to start and stop an application and 
+	 * for retrieving information about an application.
 	 */
 	class OSHGUI_EXPORT Application
 	{
@@ -44,7 +44,7 @@ namespace OSHGui
 		/**
 		 * Initializes the Application class.
 		 *
-		 * \param renderer Instanz des verwendeten Renderers
+		 * \param renderer Instance of the renderer used
 		 */
 		static void Initialize(std::unique_ptr<Drawing::Renderer> &&renderer);
 		
@@ -55,77 +55,77 @@ namespace OSHGui
 		 */
 		const bool IsEnabled() const;
 		/**
-		 * Ruft die aktuelle Uhrzeit ab.
+		 * Gets the current time.
 		 *
 		 * \return DateTime::Now
 		 */
 		const Misc::DateTime& GetNow() const;
 
 		/**
-		 * Ruft den verwendeten Renderer ab.
+		 * Gets the renderer used.
 		 *
 		 * \return renderer
 		 */
 		Drawing::Renderer& GetRenderer() const;
 		/**
-		 * Ruft das RenderSurface der Gui ab.
+		 * Gets the Render Surface of Gui.
 		 *
 		 * \return GuiRenderSurface
 		 */
 		GuiRenderSurface& GetRenderSurface();
 		/**
-		 * Legt die Display-Größe fest.
+		 * Specifies the screen size.
 		 *
 		 * @param size
 		 */
 		void DisplaySizeChanged(const Drawing::SizeF &size);
 		
 		/**
-		 * Legt die Standardschrift für das Gui fest.
+		 * Sets the default font for the GUI.
 		 *
 		 * \param font Standardschrift
 		 */
 		void SetDefaultFont(const Drawing::FontPtr &font);
 		/**
-		 * Ruft die Standardschrift für das Gui ab.
+		 * Gets the default font for the GUI.
 		 *
 		 * \return Standardschrift
 		 */
 		Drawing::FontPtr& GetDefaultFont();
 		
 		/**
-		 * Ruft die aktuelle Mausposition ab.
+		 * Gets the current mouse position.
 		 *
 		 * \return cursorLocation
 		 */
 		const Drawing::PointF& GetCursorLocation() const;
 		/**
-		 * Ruft den Cursor ab.
+		 * Gets the cursor.
 		 *
 		 * \return cursor
 		 */
 		const std::shared_ptr<Cursor>& GetCursor() const;
 		/**
-		 * Legt den Cursor fest.
+		 * Sets the cursor.
 		 *
 		 * \param cursor
 		 */
 		void SetCursor(const std::shared_ptr<Cursor> &cursor);
 		/**
-		 * Legt fest, ob der Cursor gezeichnet werden soll.
+		 * Defines whether the cursor is to be drawn.
 		 *
 		 * \param enabled
 		 */
 		void SetCursorEnabled(bool enabled);
 		
 		/**
-		 * Legt das Theme für das Gui fest.
+		 * Specifies the Theme for Gui.
 		 *
 		 * \param theme Theme
 		 */
 		void SetTheme(const Drawing::Theme &theme);
 		/**
-		 * Ruft das Theme für das Gui ab.
+		 * Gets the Theme for Gui.
 		 *
 		 * \return Theme
 		 */
@@ -159,37 +159,37 @@ namespace OSHGui
 		 * Is a Mouse Message to the open forms on.
 		 *
 		 * \param mouse
-		 * \return true, falls die Nachricht verarbeitet wurde
+		 * \return true, if the message was processed
 		 */
 		bool ProcessMouseMessage(const MouseMessage &mouse);
 		/**
-		 * Gibt eine KeyboardMessage an die geöffneten Formen weiter.
+		 * Indicates a keyboard message to the open forms on.
 		 *
 		 * \param keyboard
-		 * \return true, falls die Nachricht verarbeitet wurde
+		 * \return true, if the message was processed
 		 */
 		bool ProcessKeyboardMessage(const KeyboardMessage &keyboard);
 		
 		/**
-		 * Zeichnet die geöffneten Formen.
+		 * Draws the open forms.
 		 */
 		void Render();
 
 		/**
-		 * Registriert einen neuen Hotkey.
+		 * Registers a new hotkey.
 		 *
 		 * \param hotkey
 		 */
 		void RegisterHotkey(const Hotkey &hotkey);
 		/**
-		 * Entfernt einen Hotkey.
+		 * Removes a hotkey.
 		 *
 		 * \param hotkey
 		 */
 		void UnregisterHotkey(const Hotkey &hotkey);
 		
 		/**
-		 * Ruft die aktuelle Instanz der Application ab.
+		 * Gets the current instance of the Application.
 		 *
 		 * \return instance
 		 */

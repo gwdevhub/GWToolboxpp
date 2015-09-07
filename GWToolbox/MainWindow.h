@@ -17,6 +17,7 @@ private:
 	std::vector<Panel*> panels;
 	int currentPanel;
 
+	Button* pcon_toggle_button_;
 	PconPanel* const pcon_panel_;
 	HotkeyPanel* const hotkey_panel_;
 
@@ -29,6 +30,7 @@ public:
 	virtual void DrawSelf(Drawing::RenderContext &context) override;
 
 	void openClosePanel(int index);
+	void UpdatePconToggleButton(bool active);
 	PconPanel* pcon_panel() { return pcon_panel_; }
 	HotkeyPanel* hotkey_panel() { return hotkey_panel_; }
 

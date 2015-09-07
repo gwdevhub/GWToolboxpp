@@ -9,6 +9,7 @@
 
 #include "Timer.h"
 #include "MainWindow.h"
+#include "TimerWindow.h"
 
 using namespace OSHGui::Drawing;
 using namespace OSHGui::Input;
@@ -114,6 +115,10 @@ void create_gui(IDirect3DDevice9* pDevice) {
 	std::shared_ptr<MainWindow> shared_ptr = std::shared_ptr<MainWindow>(main_window);
 	app->Run(shared_ptr);
 	GWToolbox::instance()->set_main_window(main_window);
+
+	TimerWindow* timer_window = new TimerWindow();
+	std::shared_ptr<TimerWindow> timer_shared = std::shared_ptr<TimerWindow>(timer_window);
+	timer_shared->ShowDialog(timer_shared);
 	
 	app->Enable();
 

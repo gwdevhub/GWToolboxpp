@@ -13,7 +13,7 @@ hotkey_panel_(new HotkeyPanel()) {
 
 	panels = std::vector<Panel*>();
 	currentPanel = -1;
-
+	
 	// some local vars
 	GWToolbox* tb = GWToolbox::instance();
 	int y = 0;
@@ -37,19 +37,14 @@ hotkey_panel_(new HotkeyPanel()) {
 	toggle->SetForeColor(Color::Red());
 	toggle->SetFont(GuiUtils::getTBFont(10.0, true));
 	PconPanel* const pcon_panel = pcon_panel_;
-	toggle->GetClickEvent() += ClickEventHandler([toggle, pcon_panel](Control*) {
+	toggle->GetClickEvent() += ClickEventHandler([this, toggle, pcon_panel](Control*) {
 		bool active = pcon_panel->toggleActive();
-		if (active) {
-			toggle->SetForeColor(Color::Lime());
-			toggle->SetText("Enabled");
-		} else {
-			toggle->SetForeColor(Color::Red());
-			toggle->SetText("Disabled");
-		}
+		this->UpdatePconToggleButton(active);
 	});
 	toggle->SetSize(width - 2 * DefaultBorderPadding, tabButtonHeight - 1);
 	toggle->SetLocation(0, button_idx * tabButtonHeight - 1);
 	AddControl(toggle);
+	pcon_toggle_button_ = toggle;
 	
 	++button_idx;
 	createTabButton("Hotkeys", button_idx, panel_idx, GuiUtils::getPathA("keyboard.png").c_str());
@@ -67,6 +62,16 @@ hotkey_panel_(new HotkeyPanel()) {
 	createTabButton("Materials", button_idx, panel_idx, GuiUtils::getPathA("feather.png").c_str());
 
 	createTabButton("Settings", button_idx, panel_idx, GuiUtils::getPathA("settings.png").c_str());
+}
+
+void MainWindow::UpdatePconToggleButton(bool active) {
+	if (active) {
+		pcon_toggle_button_->SetForeColor(Color::Lime());
+		pcon_toggle_button_->SetText("Enabled");
+	} else {
+		pcon_toggle_button_->SetForeColor(Color::Red());
+		pcon_toggle_button_->SetText("Disabled");
+	}
 }
 
 void MainWindow::createTabButton(const char* s, int& button_idx,

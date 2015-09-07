@@ -114,6 +114,7 @@
     <ClInclude Include="GWToolbox\Pcons.h" />
     <ClInclude Include="GWToolbox\MainWindow.h" />
     <ClInclude Include="GWToolbox\Timer.h" />
+    <ClInclude Include="GWToolbox\TimerWindow.h" />
     <ClInclude Include="GWToolbox\Travel.h" />
     <ClInclude Include="include\OSHGui\Application.hpp" />
     <ClInclude Include="include\OSHGui\Controls\Button.hpp" />
@@ -230,6 +231,7 @@
     <ClCompile Include="GWToolbox\PconPanel.cpp" />
     <ClCompile Include="GWToolbox\Pcons.cpp" />
     <ClCompile Include="GWToolbox\MainWindow.cpp" />
+    <ClCompile Include="GWToolbox\TimerWindow.cpp" />
     <ClCompile Include="GWToolbox\Travel.cpp" />
     <ClCompile Include="include\OSHGui\Application.cpp" />
     <ClCompile Include="include\OSHGui\Controls\Button.cpp" />

@@ -138,16 +138,16 @@ namespace OSHGui
 		 */
 		void Show(const std::shared_ptr<Form> &instance);
 		/**
-		 * Zeigt die Form modal an.
+		 * Displays the form to modal.
 		 *
 		 * \param instance die aktuelle Instanz dieser Form
 		 */
 		void ShowDialog(const std::shared_ptr<Form> &instance);
 		/**
-		 * Zeigt die Form modal an.
+		 * Displays the form to modal.
 		 *
-		 * \param instance die aktuelle Instanz dieser Form
-		 * \param closeFunction diese Funktion wird ausgeführt, wenn die Form geschlossen wird (kann 0 sein)
+		 * \param instance the current instance of this form
+		 * \param closeFunction this function is performed when the mold is closed (can be null)
 		 */
 		void ShowDialog(const std::shared_ptr<Form> &instance, const std::function<void()> &closeFunction);
 		/**
@@ -155,7 +155,7 @@ namespace OSHGui
 		 */
 		void Close();
 		/**
-		 * Fügt ein untergeordnetes Steuerelement hinzu.
+		 * Adds a child control.
 		 *
 		 * \param control
 		 */

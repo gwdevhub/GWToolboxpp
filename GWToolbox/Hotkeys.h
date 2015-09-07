@@ -21,6 +21,8 @@ public:
 	static const int ITEM_Y = LINE_HEIGHT + VSPACE;
 	static const int LABEL_Y = ITEM_Y + 5;
 
+	
+
 protected:
 	bool pressed_;
 	bool active_;
@@ -28,14 +30,15 @@ protected:
 	OSHGui::Key modifier_;
 	const wstring ini_section_;
 
+	inline void set_active(bool active) { active_ = active; }
+	inline void set_key(OSHGui::Key key) { key_ = key; }
+	inline void set_modifier(OSHGui::Key modifier) { modifier_ = modifier; }
 	inline bool isLoading() { return GWAPI::GWAPIMgr::GetInstance()->Map->GetInstanceType() == GwConstants::InstanceType::Loading; }
 	inline bool isExplorable() { return GWAPI::GWAPIMgr::GetInstance()->Map->GetInstanceType() == GwConstants::InstanceType::Explorable; }
 	inline bool isOutpost() { return GWAPI::GWAPIMgr::GetInstance()->Map->GetInstanceType() == GwConstants::InstanceType::Outpost; }
 
 	TBHotkey(OSHGui::Key key, OSHGui::Key modifier, bool active, 
 		wstring ini_section);
-
-	inline void set_active(bool active) { active_ = active; }
 
 public:
 	inline static const wchar_t* IniKeyActive() { return L"active"; }
@@ -48,8 +51,6 @@ public:
 	inline void set_pressed(bool pressed) { pressed_ = pressed; }
 	inline OSHGui::Key key() { return key_; }
 	inline OSHGui::Key modifier() { return modifier_; }
-	inline void set_key(OSHGui::Key key) { key_ = key; }
-	inline void set_modifier(OSHGui::Key modifier) { modifier_ = modifier; }
 	virtual void exec() = 0;
 	virtual string GetDescription() = 0;
 };
@@ -61,6 +62,11 @@ private:
 	wstring msg_;
 	wchar_t channel_;
 
+	inline void set_channel(wchar_t channel) { channel_ = channel; }
+	inline void set_msg(wstring msg) { msg_ = msg; }
+	int ChannelToIndex(wchar_t channel);
+	wchar_t IndexToChannel(int index);
+
 public:
 	HotkeySendChat(OSHGui::Key key, OSHGui::Key modifier, bool active, 
 		wstring ini_section, wstring _msg, wchar_t _channel);
@@ -68,13 +74,9 @@ public:
 	inline static const wchar_t* IniSection() { return L"SendChat"; }
 	inline static const wchar_t* IniKeyMsg() { return L"msg"; }
 	inline static const wchar_t* IniKeyChannel() { return L"channel"; }
+	
 	void exec();
 	string GetDescription() override { return string("Send Chat"); }
-
-	int ChannelToIndex(wchar_t channel);
-	wchar_t IndexToChannel(int index);
-	inline void set_channel(wchar_t channel) { channel_ = channel; }
-	inline void set_msg(wstring msg) { msg_ = msg; }
 };
 
 // hotkey to use an item
@@ -84,6 +86,9 @@ private:
 	UINT item_id_;
 	wstring item_name_;
 
+	inline void set_item_id(UINT ID) { item_id_ = ID; }
+	inline void set_item_name(wstring name) { item_name_ = name; }
+
 public:
 	HotkeyUseItem(OSHGui::Key key, OSHGui::Key modifier, bool active, 
 		wstring ini_section, UINT item_id_, wstring item_name_);
@@ -91,31 +96,28 @@ public:
 	static const wchar_t* IniSection() { return L"UseItem"; }
 	static const wchar_t* IniItemIDKey() { return L"ItemID"; }
 	static const wchar_t* IniItemNameKey() { return L"ItemName"; }
+
 	void exec();
 	string GetDescription() override { return string("Use Item"); }
-
-	inline void set_item_id(UINT ID) { item_id_ = ID; }
-	inline void set_item_name(wstring name) { item_name_ = name; }
 };
 
 // hotkey to drop a buff if currently active, and cast it on the current target if not
 // can be used for recall, ua, and maybe others?
 class HotkeyDropUseBuff : public TBHotkey {
 private:
-	UINT skillID_;
+	UINT id_;
 	OSHGui::ComboBox* combo_;
 
+	UINT IndexToSkillID(int index);
+	inline void set_id(UINT id) { id_ = id; }
 public:
 	HotkeyDropUseBuff(OSHGui::Key key, OSHGui::Key modifier, bool active, 
-		wstring ini_section, UINT _skillID);
+		wstring ini_section, UINT skill_id);
 
 	static const wchar_t* IniSection() { return L"DropUseBuff"; }
 	static const wchar_t* IniSkillIDKey() { return L"SkillID"; }
 	void exec();
 	string GetDescription() override { return string("Drop/Use Buff"); }
-
-	UINT IndexToSkillID(int index);
-	inline void set_skillID(UINT skillID) { skillID_ = skillID; }
 };
 
 // hotkey to toggle a toolbox function
@@ -131,37 +133,39 @@ public:
 private:
 	Toggle target_; // the thing to toggle
 
+	inline void set_target(Toggle target) { target_ = target; }
+
 public:
 	HotkeyToggle(OSHGui::Key key, OSHGui::Key modifier, bool active, 
 		wstring ini_section, int toggle_id);
 
 	static const wchar_t* IniSection() { return L"Toggle"; }
 	static const wchar_t* IniToggleIDKey() { return L"ToggleID"; }
+
 	void exec();
 	string GetDescription() override { return string("Toggle"); }
-
-	inline void set_target(Toggle target) { target_ = target; }
 };
 
 // hotkey to target something in-game
 // it will target the closest agent with the given PlayerNumber (aka modelID)
 class HotkeyTarget : public TBHotkey {
 private:
-	UINT targetID_;
-	wstring target_name_;
+	UINT id_;
+	wstring name_;
+
+	inline void set_id(UINT targetID) { id_ = targetID; }
+	inline void set_name(wstring name) { name_ = name; }
 
 public:
 	HotkeyTarget(OSHGui::Key key, OSHGui::Key modifier, bool active,
-		wstring ini_section, UINT targetID, wstring target_name);
+		wstring ini_section, UINT id, wstring name);
 
 	static const wchar_t* IniSection() { return L"Target"; }
 	static const wchar_t* IniTargetIDKey() { return L"TargetID"; }
 	static const wchar_t* IniTargetNameKey() { return L"TargetName"; }
+
 	void exec();
 	string GetDescription() override { return string("Target"); }
-
-	inline void set_targetID(UINT targetID) { targetID_ = targetID; }
-	inline void set_target_name(wstring target_name) { target_name_ = target_name; }
 };
 
 // hotkey to move to a specific position
@@ -171,6 +175,10 @@ private:
 	float x_;
 	float y_;
 	wstring name_;
+
+	inline void set_x(float x) { x_ = x; }
+	inline void set_y(float y) { y_ = y; }
+	inline void set_name(wstring name) { name_ = name; }
 
 public:
 	HotkeyMove(OSHGui::Key key, OSHGui::Key modifier, bool active,
@@ -183,16 +191,15 @@ public:
 
 	void exec();
 	string GetDescription() override { return string("Move"); }
-
-	inline void set_x(float x) { x_ = x; }
-	inline void set_y(float y) { y_ = y; }
-	inline void set_name(wstring name) { name_ = name; }
 };
 
 class HotkeyDialog : public TBHotkey {
 private:
 	UINT id_;
 	wstring name_;
+
+	inline void set_id(UINT id) { id_ = id; }
+	inline void set_name(wstring name) { name_ = name; }
 
 public:
 	HotkeyDialog(OSHGui::Key key, OSHGui::Key modifier, bool active,
@@ -204,19 +211,16 @@ public:
 	
 	void exec();
 	string GetDescription() override { return string("Dialog"); }
-
-	inline void set_id(UINT id) { id_ = id; }
-	inline void set_name(wstring name) { name_ = name; }
 };
 
 class HotkeyPingBuild : public TBHotkey {
 private:
-	UINT BuildIdx;
+	UINT build_index_;
 
 public:
 	HotkeyPingBuild(OSHGui::Key key, OSHGui::Key modifier, bool active, 
 		wstring ini_section, UINT _idx) :
-		TBHotkey(key, modifier, active, ini_section), BuildIdx(_idx) {
+		TBHotkey(key, modifier, active, ini_section), build_index_(_idx) {
 		// TODO (maybe or maybe just get rid of it)
 	}
 

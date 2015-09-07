@@ -230,6 +230,7 @@ bool HotkeyPanel::ProcessMessage(LPMSG msg) {
 void HotkeyPanel::loadIni() {
 	Config* config = GWToolbox::instance()->config();
 
+	max_id_ = 0;
 	list<wstring> sections = config->iniReadSections();
 	for (wstring section : sections) {
 		if (section.compare(0, 6, L"hotkey") == 0) {

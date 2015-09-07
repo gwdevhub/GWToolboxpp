@@ -25,14 +25,10 @@ namespace OSHGui
 	
 		button_ = new ComboBoxButton();
 		button_->SetLocation(Drawing::PointI(0, 0));
-		button_->GetClickEvent() += ClickEventHandler([this](Control*)
-		{
-			if (!droppedDown_)
-			{
+		button_->GetClickEvent() += ClickEventHandler([this](Control*) {
+			if (!droppedDown_) {
 				Expand();
-			}
-			else
-			{
+			} else {
 				Collapse();
 			}
 		});
@@ -100,6 +96,9 @@ namespace OSHGui
 		listBox_->SetSize(Drawing::SizeI(listBox_->GetWidth(), 4));
 		listBox_->SetVisible(false);
 		listBox_->ExpandSizeToShowItems(4);
+		listBox_->GetClickEvent() += ClickEventHandler([this](Control*) {
+			Collapse();
+		});
 		listBox_->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler([this](Control*)
 		{
 			if (listBox_->GetSelectedIndex() >= 0) {
