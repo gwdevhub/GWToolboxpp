@@ -19,7 +19,7 @@ namespace OSHGui
 	//static attributes
 	//---------------------------------------------------------------------------
 	const Drawing::PointI Form::DefaultLocation(50, 50);
-	const Drawing::SizeI Form::DefaultSize(300, 300);
+	const Drawing::SizeI Form::DefaultSize(50, 50);
 	//---------------------------------------------------------------------------
 	//Constructor
 	//---------------------------------------------------------------------------
