@@ -20,6 +20,16 @@ public:
 		}
 	};
 
+	class CloseButton : public Button {
+	protected:
+		virtual void PopulateGeometry() override;
+	};
+
+	class MinimizeButton : public Button {
+	protected:
+		virtual void PopulateGeometry() override;
+	};
+
 	static const int WIDTH = 100;
 	static const int HEIGHT = 300;
 	static const int TAB_HEIGHT = 27;

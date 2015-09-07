@@ -41,8 +41,7 @@ hotkey_panel_(new HotkeyPanel()) {
 	});
 	AddControl(title);
 
-	Button* minimize = new Button();
-	minimize->SetText("-");
+	MinimizeButton* minimize = new MinimizeButton();
 	minimize->SetLocation(64, 0);
 	minimize->SetSize(18, TITLE_HEIGHT);
 	minimize->SetBackColor(Drawing::Color::Empty());
@@ -52,8 +51,7 @@ hotkey_panel_(new HotkeyPanel()) {
 	});
 	AddControl(minimize);
 
-	Button* close = new Button();
-	close->SetText("x");
+	CloseButton* close = new CloseButton();
 	close->SetLocation(82, 0);
 	close->SetSize(18, TITLE_HEIGHT);
 	close->SetBackColor(Drawing::Color::Empty());
@@ -230,4 +228,41 @@ void MainWindow::SaveLocation() {
 	Config* config = GWToolbox::instance()->config();
 	config->iniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyX(), x);
 	config->iniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyY(), y);
+}
+
+
+void MainWindow::CloseButton::PopulateGeometry() {
+	using namespace OSHGui::Drawing;
+	Graphics g(*geometry_);
+
+	Color color = GetBackColor();
+	if (isInside_ && !isClicked_) {
+		color = color + GetMouseOverFocusColor();
+	}
+	g.FillRectangle(color, RectangleF(0, 0, (float)GetWidth(), (float)(GetHeight())));
+
+	color = GetParent()->GetForeColor();
+	PointF offset = PointF((float)(GetWidth() / 2), (float)(GetHeight() / 2));
+	for (int i = 0; i < 4; ++i) {
+		float f = (float)i;
+		g.FillRectangle(color, offset + PointF(-5 + f,-4 + f), SizeF(3, 1));
+		g.FillRectangle(color, offset + PointF( 1 - f,-4 + f), SizeF(3, 1));
+		g.FillRectangle(color, offset + PointF(-5 + f, 3 - f), SizeF(3, 1));
+		g.FillRectangle(color, offset + PointF( 1 - f, 3 - f), SizeF(3, 1));
+	}
+}
+
+void MainWindow::MinimizeButton::PopulateGeometry() {
+	using namespace OSHGui::Drawing;
+	Graphics g(*geometry_);
+
+	Color color = GetBackColor();
+	if (isInside_ && !isClicked_) {
+		color = color + GetMouseOverFocusColor();
+	}
+	g.FillRectangle(color, RectangleF(0, 0, (float)GetWidth(), (float)(GetHeight())));
+
+	color = GetParent()->GetForeColor();
+	PointF offset = PointF((float)(GetWidth() / 2), (float)(GetHeight() / 2));
+	g.FillRectangle(color, offset - PointF(4, 1), SizeF(8, 2));
 }

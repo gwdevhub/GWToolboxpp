@@ -13,9 +13,9 @@ using namespace std;
 class GuiUtils {
 public:
 
-	// Returns the default on hover color. TODO add this to theme file?
+	// Returns the default on hover color.
 	static Color getMouseOverColor() {
-		return Color::FromARGB(90, 50, 50, 50); 
+		return OSHGui::Application::InstancePtr()->GetTheme().GetControlColorTheme("mouseover").ForeColor;
 	}
 
 	// Returns the settings folder as std::wstring
