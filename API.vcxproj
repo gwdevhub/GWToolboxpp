@@ -105,6 +105,7 @@
     <ClInclude Include="API\SkillbarMgr.h" />
     <ClInclude Include="GWToolbox\Builds.h" />
     <ClInclude Include="GWToolbox\Config.h" />
+    <ClInclude Include="GWToolbox\EmptyForm.h" />
     <ClInclude Include="GWToolbox\GuiUtils.h" />
     <ClInclude Include="GWToolbox\GWToolbox.h" />
     <ClInclude Include="GWToolbox\HotkeyPanel.h" />
@@ -225,6 +226,7 @@
     <ClCompile Include="API\MerchantMgr.cpp" />
     <ClCompile Include="API\SkillbarMgr.cpp" />
     <ClCompile Include="GWToolbox\Builds.cpp" />
+    <ClCompile Include="GWToolbox\EmptyForm.cpp" />
     <ClCompile Include="GWToolbox\GWToolbox.cpp" />
     <ClCompile Include="GWToolbox\HotkeyPanel.cpp" />
     <ClCompile Include="GWToolbox\Hotkeys.cpp" />

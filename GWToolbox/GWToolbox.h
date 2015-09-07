@@ -4,6 +4,7 @@
 
 #include "Config.h"
 #include "MainWindow.h"
+#include "TimerWindow.h"
 
 using namespace OSHGui;
 
@@ -14,12 +15,14 @@ private:
 
 	Config* const config_;
 	MainWindow* main_window_;
+	TimerWindow* timer_window_;
 
 private:
 	GWToolbox(HMODULE mod) :
 		m_dllmodule(mod),
 		config_(new Config()),
-		main_window_(NULL)
+		main_window_(NULL),
+		timer_window_(NULL)
 	{ }
 
 	// Executes setup and main loop of toolbox. 
@@ -39,9 +42,8 @@ public:
 	// returns toolbox instance
 	static GWToolbox* instance() { return instance_; }
 	inline Config* config() { return config_; }
-	inline void set_main_window(MainWindow* main_window) {
-		main_window_ = main_window;
-	}
+	inline void set_main_window(MainWindow* w) { main_window_ = w; }
+	inline void set_timer_window(TimerWindow* w) { timer_window_ = w; }
 	inline MainWindow* main_window() { return main_window_; }
 	
 };

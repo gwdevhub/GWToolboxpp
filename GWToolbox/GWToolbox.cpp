@@ -118,7 +118,8 @@ void create_gui(IDirect3DDevice9* pDevice) {
 
 	TimerWindow* timer_window = new TimerWindow();
 	std::shared_ptr<TimerWindow> timer_shared = std::shared_ptr<TimerWindow>(timer_window);
-	timer_shared->ShowDialog(timer_shared);
+	timer_window->Show(timer_shared);
+	GWToolbox::instance()->set_timer_window(timer_window);
 	
 	app->Enable();
 

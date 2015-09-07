@@ -1,10 +1,12 @@
-#include "../include/OSHGui/OSHGui.hpp"
+#pragma once
 
+#include "EmptyForm.h"
 
-
-class TimerWindow : public OSHGui::Form {
+class TimerWindow : public EmptyForm {
 public:
 	TimerWindow() {
-
+		Label* label = new Label();
+		label->SetText("TEST");
+		AddControl(label);
 	}
 };
