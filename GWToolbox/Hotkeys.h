@@ -17,8 +17,10 @@ public:
 	static const int HSPACE = 10;
 	static const int WIDTH = 250;
 	static const int HEIGHT = LINE_HEIGHT * 2 + VSPACE * 3;
+	static const int HOTKEY_X = 0;
+	static const int HOTKEY_Y = LINE_HEIGHT + VSPACE;
 	static const int ITEM_X = 0;
-	static const int ITEM_Y = LINE_HEIGHT + VSPACE;
+	static const int ITEM_Y = 0;
 	static const int LABEL_Y = ITEM_Y + 5;
 
 	
@@ -39,6 +41,8 @@ protected:
 
 	TBHotkey(OSHGui::Key key, OSHGui::Key modifier, bool active, 
 		wstring ini_section);
+
+	virtual void PopulateGeometry() override;
 
 public:
 	inline static const wchar_t* IniKeyActive() { return L"active"; }

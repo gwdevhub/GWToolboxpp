@@ -19,7 +19,7 @@ TBHotkey::TBHotkey(Key key, Key modifier, bool active, wstring ini_section)
 	CheckBox* checkbox = new CheckBox();
 	checkbox->SetChecked(active);
 	checkbox->SetText("");
-	checkbox->SetLocation(0, 5);
+	checkbox->SetLocation(HOTKEY_X, HOTKEY_Y + 5);
 	checkbox->SetBackColor(Drawing::Color::Black());
 	checkbox->GetCheckedChangedEvent() += CheckedChangedEventHandler([this, checkbox, ini_section](Control*) {
 		this->set_active(checkbox->GetChecked());
@@ -29,7 +29,7 @@ TBHotkey::TBHotkey(Key key, Key modifier, bool active, wstring ini_section)
 
 	HotkeyControl* hotkey_button = new HotkeyControl();
 	hotkey_button->SetSize(WIDTH - checkbox->GetRight() - 60 - HSPACE * 2, LINE_HEIGHT);
-	hotkey_button->SetLocation(checkbox->GetRight() + HSPACE, 0);
+	hotkey_button->SetLocation(checkbox->GetRight() + HSPACE, HOTKEY_Y);
 	hotkey_button->SetHotkey(key);
 	hotkey_button->SetHotkeyModifier(modifier);
 	hotkey_button->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
@@ -54,11 +54,18 @@ TBHotkey::TBHotkey(Key key, Key modifier, bool active, wstring ini_section)
 	Button* run_button = new Button();
 	run_button->SetText("Run");
 	run_button->SetSize(60, LINE_HEIGHT);
-	run_button->SetLocation(WIDTH - 60, 0);
+	run_button->SetLocation(WIDTH - 60, HOTKEY_Y);
 	run_button->GetClickEvent() += ClickEventHandler([this](Control*) {
 		this->exec();
 	});
 	AddControl(run_button);
+}
+
+void TBHotkey::PopulateGeometry() {
+	Panel::PopulateGeometry();
+	Graphics g(*geometry_);
+	g.DrawLine(GetForeColor(), PointF((float)DefaultBorderPadding, (float)HEIGHT),
+		PointF((float)WIDTH - DefaultBorderPadding, (float)HEIGHT));
 }
 
 
