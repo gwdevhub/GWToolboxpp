@@ -22,7 +22,12 @@ hotkey_panel_(new HotkeyPanel()) {
 	int button_idx = 0;
 	int tabButtonHeight = 27;
 
+	Config* config = GWToolbox::instance()->config();
+	int xlocation = config->iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyX(), 100);
+	int ylocation = config->iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyY(), 100);
+
 	// build main UI
+	SetLocation(xlocation, ylocation);
 	SetSize(Drawing::SizeI(WIDTH, HEIGHT));
 	SetFont(GuiUtils::getTBFont(8.0, true));
 
@@ -31,6 +36,9 @@ hotkey_panel_(new HotkeyPanel()) {
 	title->SetLocation(0, 0);
 	title->SetSize(64, TITLE_HEIGHT);
 	title->SetBackColor(Drawing::Color::Empty());
+	title->GetMouseUpEvent() += MouseUpEventHandler([this](Control*, MouseEventArgs) {
+		SaveLocation();
+	});
 	AddControl(title);
 
 	Button* minimize = new Button();
@@ -213,4 +221,13 @@ void MainWindow::MainRoutine() {
 	pcon_panel_->mainRoutine();
 
 	hotkey_panel_->mainRoutine();
+}
+
+void MainWindow::SaveLocation() {
+	CalculateAbsoluteLocation();
+	int x = absoluteLocation_.X;
+	int y = absoluteLocation_.Y;
+	Config* config = GWToolbox::instance()->config();
+	config->iniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyX(), x);
+	config->iniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyY(), y);
 }

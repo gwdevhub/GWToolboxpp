@@ -38,9 +38,14 @@ private:
 	void CreateTabButton(const char* s, int& button_idx, int& panel_idx, const char* icon);
 	void SetupPanel(Panel* panel);
 	void ToggleMinimize();
+	void SaveLocation();
 
 public:
 	MainWindow();
+	
+	inline static const wchar_t* IniSection() { return L"mainwindow"; }
+	inline static const wchar_t* IniKeyX() { return L"x"; }
+	inline static const wchar_t* IniKeyY() { return L"y"; }
 
 	virtual void DrawSelf(Drawing::RenderContext &context) override;
 
