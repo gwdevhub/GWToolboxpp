@@ -39,28 +39,29 @@ void EmptyForm::DrawSelf(Drawing::RenderContext &context) {
 
 void EmptyForm::PopulateGeometry() {}
 
-void EmptyForm::OnMouseDown(const MouseMessage &mouse) {
-	Control::OnMouseDown(mouse);
+void EmptyForm::DragButton::OnMouseDown(const MouseMessage &mouse) {
 	drag_ = true;
 	OnGotMouseCapture();
 	dragStart_ = mouse.GetLocation();
-	LOG("on mouse down\n");
+	Control::OnMouseDown(mouse);
 }
 
-void EmptyForm::OnMouseMove(const MouseMessage &mouse) {
-	Control::OnMouseMove(mouse);
+void EmptyForm::DragButton::OnMouseMove(const MouseMessage &mouse) {
 	if (drag_) {
-		SetLocation(GetLocation() + (mouse.GetLocation() - dragStart_));
+		Control* parent = this;
+		while (parent->GetParent()) {
+			parent = parent->GetParent();
+		}
+		parent->SetLocation(parent->GetLocation() + (mouse.GetLocation() - dragStart_));
 		dragStart_ = mouse.GetLocation();
 	}
-	LOG("on mouse move\n");
+	Control::OnMouseMove(mouse);
 }
 
-void EmptyForm::OnMouseUp(const MouseMessage &mouse) {
-	Control::OnMouseUp(mouse);
+void EmptyForm::DragButton::OnMouseUp(const MouseMessage &mouse) {
 	if (drag_) {
 		drag_ = false;
 		OnLostMouseCapture();
 	}
-	LOG("on mouse up\n");
+	Control::OnMouseUp(mouse);
 }

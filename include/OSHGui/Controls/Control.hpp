@@ -279,15 +279,15 @@ namespace OSHGui
 		 */
 		virtual void SetLocation(int x, int y);
 		/**
-		 * Legt die Koordinaten der linken oberen Ecke des Steuerelements relativ zur
-		 * linken oberen Ecke des Containers fest.
+		 * Sets the coordinates of the upper left corner of the control 
+		 * relative to the fixed upper left corner of the container.
 		 *
 		 * \param location
 		 */
 		virtual void SetLocation(const Drawing::PointI &location);
 		/**
-		 * Ruft die Koordinaten der linken oberen Ecke des Steuerelements relativ zur
-		 * linken oberen Ecke des Containers ab.
+		 * Gets the coordinates of the upper left corner of the control 
+		 * relative to the upper left corner from the container.
 		 *
 		 * \return location
 		 */
@@ -578,7 +578,7 @@ namespace OSHGui
 		 */
 		virtual bool Intersect(const Drawing::PointI &point) const;
 		/**
-		 * Berechnet die absolute Position des Steuerelements.
+		 * Calculates the absolute position of the control.
 		 */
 		virtual void CalculateAbsoluteLocation();
 		/**

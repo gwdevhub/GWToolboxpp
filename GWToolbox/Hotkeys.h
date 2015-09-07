@@ -94,8 +94,8 @@ public:
 		wstring ini_section, UINT item_id_, wstring item_name_);
 
 	static const wchar_t* IniSection() { return L"UseItem"; }
-	static const wchar_t* IniItemIDKey() { return L"ItemID"; }
-	static const wchar_t* IniItemNameKey() { return L"ItemName"; }
+	static const wchar_t* IniKeyItemID() { return L"ItemID"; }
+	static const wchar_t* IniKeyItemName() { return L"ItemName"; }
 
 	void exec();
 	string GetDescription() override { return string("Use Item"); }
@@ -115,7 +115,7 @@ public:
 		wstring ini_section, UINT skill_id);
 
 	static const wchar_t* IniSection() { return L"DropUseBuff"; }
-	static const wchar_t* IniSkillIDKey() { return L"SkillID"; }
+	static const wchar_t* IniKeySkillID() { return L"SkillID"; }
 	void exec();
 	string GetDescription() override { return string("Drop/Use Buff"); }
 };
@@ -140,7 +140,7 @@ public:
 		wstring ini_section, int toggle_id);
 
 	static const wchar_t* IniSection() { return L"Toggle"; }
-	static const wchar_t* IniToggleIDKey() { return L"ToggleID"; }
+	static const wchar_t* IniKeyToggleID() { return L"ToggleID"; }
 
 	void exec();
 	string GetDescription() override { return string("Toggle"); }
@@ -161,8 +161,8 @@ public:
 		wstring ini_section, UINT id, wstring name);
 
 	static const wchar_t* IniSection() { return L"Target"; }
-	static const wchar_t* IniTargetIDKey() { return L"TargetID"; }
-	static const wchar_t* IniTargetNameKey() { return L"TargetName"; }
+	static const wchar_t* IniKeyTargetID() { return L"TargetID"; }
+	static const wchar_t* IniKeyTargetName() { return L"TargetName"; }
 
 	void exec();
 	string GetDescription() override { return string("Target"); }
@@ -185,9 +185,9 @@ public:
 		wstring ini_section, float x, float y, wstring name);
 
 	static const wchar_t* IniSection() { return L"Move"; }
-	static const wchar_t* IniXKey() { return L"x"; }
-	static const wchar_t* IniYKey() { return L"y"; }
-	static const wchar_t* IniNameKey() { return L"name"; }
+	static const wchar_t* IniKeyX() { return L"x"; }
+	static const wchar_t* IniKeyY() { return L"y"; }
+	static const wchar_t* IniKeyName() { return L"name"; }
 
 	void exec();
 	string GetDescription() override { return string("Move"); }
@@ -206,8 +206,8 @@ public:
 		wstring ini_section, UINT dialogID, wstring dialog_name);
 
 	static const wchar_t* IniSection() { return L"Dialog"; }
-	static const wchar_t* IniDialogIDKey() { return L"DialogID"; }
-	static const wchar_t* IniDialogNameKey() { return L"DialogName"; }
+	static const wchar_t* IniKeyDialogID() { return L"DialogID"; }
+	static const wchar_t* IniKeyDialogName() { return L"DialogName"; }
 	
 	void exec();
 	string GetDescription() override { return string("Dialog"); }
@@ -225,7 +225,7 @@ public:
 	}
 
 	static const wchar_t* IniSection() { return L"PingBuild"; }
-	static const wchar_t* IniBuildIdxKey() { return L"BuildIndex"; }
+	static const wchar_t* IniKeyBuildIdx() { return L"BuildIndex"; }
 
 	void exec();
 	string GetDescription() override { return string("Ping Build"); }

@@ -4,6 +4,21 @@
 
 class EmptyForm : public OSHGui::Form {
 public:
+	class DragButton : public OSHGui::Button {
+	public:
+		DragButton() {
+			isFocusable_ = false;
+			drag_ = false;
+		}
+	protected:
+		virtual void OnMouseDown(const OSHGui::MouseMessage &mouse) override;
+		virtual void OnMouseMove(const OSHGui::MouseMessage &mouse) override;
+		virtual void OnMouseUp(const OSHGui::MouseMessage &mouse) override;
+	private:
+		bool drag_;
+		OSHGui::Drawing::PointI dragStart_;
+	};
+
 	EmptyForm();
 
 	virtual void SetSize(const OSHGui::Drawing::SizeI &size) override;
@@ -16,13 +31,6 @@ public:
 
 protected:
 	virtual void PopulateGeometry() override;
-
-	bool drag_;
-	OSHGui::Drawing::PointI dragStart_;
-
-	virtual void OnMouseDown(const OSHGui::MouseMessage &mouse) override;
-	virtual void OnMouseMove(const OSHGui::MouseMessage &mouse) override;
-	virtual void OnMouseUp(const OSHGui::MouseMessage &mouse) override;
 
 private:
 	static const OSHGui::Drawing::PointI DefaultLocation;

@@ -118,7 +118,7 @@ void create_gui(IDirect3DDevice9* pDevice) {
 
 	TimerWindow* timer_window = new TimerWindow();
 	std::shared_ptr<TimerWindow> timer_shared = std::shared_ptr<TimerWindow>(timer_window);
-	timer_window->Show(timer_shared);
+	timer_shared->Show(timer_shared);
 	GWToolbox::instance()->set_timer_window(timer_window);
 	
 	app->Enable();
@@ -176,8 +176,11 @@ void GWToolbox::exec() {
 	Application * app = Application::InstancePtr();
 
 	while (true) { // main loop
-		if (app->HasBeenInitialized() && main_window_) {
-			main_window_->MainRoutine();
+		if (app->HasBeenInitialized()) {
+
+			if (main_window_) main_window_->MainRoutine();
+
+			if (timer_window_) timer_window_->MainRoutine();
 		}
 
 		Sleep(10);

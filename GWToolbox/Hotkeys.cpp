@@ -167,7 +167,7 @@ HotkeyUseItem::HotkeyUseItem(Key key, Key modifier, bool active, wstring ini_sec
 			long id = std::stol(id_box->GetText());
 			this->set_item_id((UINT)id);
 			GWToolbox::instance()->config()->iniWriteLong(ini_section.c_str(),
-				this->IniItemIDKey(), id);
+				this->IniKeyItemID(), id);
 		} catch (...) {}
 	});
 	id_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
@@ -194,7 +194,7 @@ HotkeyUseItem::HotkeyUseItem(Key key, Key modifier, bool active, wstring ini_sec
 		wstring wtext = wstring(text.begin(), text.end());
 		this->set_item_name(wtext);
 		GWToolbox::instance()->config()->iniWrite(ini_section.c_str(),
-			this->IniItemNameKey(), wtext.c_str());
+			this->IniKeyItemName(), wtext.c_str());
 	});
 	name_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
 		GWToolbox::capture_input = true;
@@ -236,7 +236,7 @@ TBHotkey(key, modifier, active, ini_section), id_(id) {
 		UINT skillID = this->IndexToSkillID(combo->GetSelectedIndex());
 		this->set_id(skillID);
 		GWToolbox::instance()->config()->iniWriteLong(ini_section.c_str(),
-			this->IniSkillIDKey(), (long)skillID);
+			this->IniKeySkillID(), (long)skillID);
 	});
 	combo_ = combo;
 	AddControl(combo);
@@ -286,7 +286,7 @@ HotkeyToggle::HotkeyToggle(Key key, Key modifier, bool active, wstring ini_secti
 		Toggle target = (Toggle)index;
 		this->set_target(target);
 		GWToolbox::instance()->config()->iniWriteLong(ini_section.c_str(), 
-			this->IniToggleIDKey(), (long)target);
+			this->IniKeyToggleID(), (long)target);
 	});
 	AddControl(combo);
 }
@@ -316,7 +316,7 @@ HotkeyTarget::HotkeyTarget(Key key, Key modifier, bool active, wstring ini_secti
 			long id = std::stol(id_box->GetText());
 			this->set_id((UINT)id);
 			GWToolbox::instance()->config()->iniWriteLong(ini_section.c_str(),
-				this->IniTargetIDKey(), id);
+				this->IniKeyTargetID(), id);
 		} catch (...) {}
 	});
 	id_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
@@ -343,7 +343,7 @@ HotkeyTarget::HotkeyTarget(Key key, Key modifier, bool active, wstring ini_secti
 		wstring wtext = wstring(text.begin(), text.end());
 		this->set_name(wtext);
 		GWToolbox::instance()->config()->iniWrite(ini_section.c_str(),
-			this->IniTargetNameKey(), wtext.c_str());
+			this->IniKeyTargetName(), wtext.c_str());
 	});
 	name_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
 		GWToolbox::capture_input = true;
@@ -380,7 +380,8 @@ HotkeyMove::HotkeyMove(Key key, Key modifier, bool active, wstring ini_section,
 		try {
 			float x = std::stof(box_x->GetText());
 			this->set_x(x);
-			GWToolbox::instance()->config()->iniWriteDouble(ini_section.c_str(), this->IniXKey(), x);
+			GWToolbox::instance()->config()->iniWriteDouble(ini_section.c_str(), 
+				this->IniKeyX(), x);
 		} catch (...) {}
 	});
 	box_x->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
@@ -412,7 +413,8 @@ HotkeyMove::HotkeyMove(Key key, Key modifier, bool active, wstring ini_section,
 		try {
 			float y = std::stof(box_y->GetText());
 			this->set_y(y);
-			GWToolbox::instance()->config()->iniWriteDouble(ini_section.c_str(), this->IniYKey(), y);
+			GWToolbox::instance()->config()->iniWriteDouble(ini_section.c_str(), 
+				this->IniKeyY(), y);
 		} catch (...) {}
 	});
 	box_y->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
@@ -439,7 +441,7 @@ HotkeyMove::HotkeyMove(Key key, Key modifier, bool active, wstring ini_section,
 		wstring wtext = wstring(text.begin(), text.end());
 		this->set_name(wtext);
 		GWToolbox::instance()->config()->iniWrite(ini_section.c_str(),
-			this->IniNameKey(), wtext.c_str());
+			this->IniKeyName(), wtext.c_str());
 	});
 	name_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
 		GWToolbox::capture_input = true;
@@ -474,7 +476,7 @@ HotkeyDialog::HotkeyDialog(Key key, Key modifier, bool active, wstring ini_secti
 			long id = std::stol(id_box->GetText());
 			this->set_id((UINT)id);
 			GWToolbox::instance()->config()->iniWriteLong(ini_section.c_str(),
-				this->IniDialogIDKey(), id);
+				this->IniKeyDialogID(), id);
 		} catch (...) {}
 	});
 	id_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
@@ -501,7 +503,7 @@ HotkeyDialog::HotkeyDialog(Key key, Key modifier, bool active, wstring ini_secti
 		wstring wtext = wstring(text.begin(), text.end());
 		this->set_name(wtext);
 		GWToolbox::instance()->config()->iniWrite(ini_section.c_str(),
-			this->IniDialogNameKey(), wtext.c_str());
+			this->IniKeyDialogName(), wtext.c_str());
 	});
 	name_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
 		GWToolbox::capture_input = true;

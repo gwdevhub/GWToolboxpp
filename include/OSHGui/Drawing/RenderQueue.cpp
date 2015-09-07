@@ -8,9 +8,8 @@ namespace OSHGui
 	{
 		void RenderQueue::Draw() const
 		{
-			for (auto &buffer : buffers)
-			{
-				buffer->Draw();
+			for (size_t i = 0; i < buffers.size(); ++i) {
+				buffers[i]->Draw();
 			}
 		}
 		//---------------------------------------------------------------------------
