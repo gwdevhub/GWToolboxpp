@@ -1,10 +1,12 @@
 #pragma once
 
+#include "../include/OSHGui/OSHGui.hpp"
+
 #include "Timer.h"
 #include <vector>
 #include <string>
 
-class Builds {
+class BuildPanel : public OSHGui::Panel {
 private:
 	const int amount = 16;
 	const int maxPartySize = 12;
@@ -16,7 +18,7 @@ private:
 	void sendPlayerBuild(std::wstring name, std::wstring template_, int partyMember, bool showNumbers);
 
 public:
-	void loadIni();
-	void buildUI();
-	void mainRoutine();
+	void LoadIni();
+	void BuildUI();
+	void MainRoutine();
 };

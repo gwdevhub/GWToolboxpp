@@ -15,7 +15,7 @@ PconPanel::PconPanel() {
 	enabled = false;
 }
 
-void PconPanel::buildUI() {
+void PconPanel::BuildUI() {
 	SetSize(6 * 2 + Pcon::WIDTH * 3, 6 * 2 + Pcon::HEIGHT * 6);
 	LOG("building pcons ui\n");
 	int row = 0;
@@ -196,12 +196,12 @@ void PconPanel::buildUI() {
 	AddControl(pahnai);
 	++row; col = 0;
 
-	this->scanInventory();
+	this->ScanInventory();
 
 	initialized = true;
 }
 
-void PconPanel::mainRoutine() {
+void PconPanel::MainRoutine() {
 	if (!enabled || !initialized) return;
 
 	GWAPIMgr * API = GWAPIMgr::GetInstance();
@@ -239,7 +239,7 @@ void PconPanel::mainRoutine() {
 	}
 }
 
-void PconPanel::scanInventory() {
+void PconPanel::ScanInventory() {
 	essence->scanInventory();
 	grail->scanInventory();
 	armor->scanInventory();

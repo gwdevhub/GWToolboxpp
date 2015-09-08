@@ -31,15 +31,15 @@ private:
 	bool enabled;		// true if the feature is enabled, false otherwise 
 
 	// scans inventory and updates UI
-	void scanInventory();
+	void ScanInventory();
 
 public:
 	PconPanel();
 
-	void enable() { enabled = true; }
-	void disable() { enabled = false; }
-	bool toggleActive() { return enabled = !enabled; }
+	void Enable() { enabled = true; }
+	void Disable() { enabled = false; }
+	bool ToggleActive() { return enabled = !enabled; }
 	
-	void buildUI();	// create user interface
-	void mainRoutine();			// runs one loop of the main routine (checking each pcon once)
+	void BuildUI();	// create user interface
+	void MainRoutine();			// runs one loop of the main routine (checking each pcon once)
 };

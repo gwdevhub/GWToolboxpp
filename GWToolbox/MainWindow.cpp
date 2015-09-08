@@ -8,8 +8,14 @@ using namespace OSHGui::Drawing;
 using namespace OSHGui;
 
 MainWindow::MainWindow() : 
-pcon_panel_(new PconPanel()), 
-hotkey_panel_(new HotkeyPanel()) {
+pcon_panel_(new PconPanel()),
+hotkey_panel_(new HotkeyPanel()),
+build_panel_(new BuildPanel()),
+travel_panel_(new TravelPanel()),
+dialog_panel_(new DialogPanel()),
+others_panel_(new OthersPanel()),
+materials_panel_(new MaterialsPanel()),
+settings_panel_(new SettingsPanel()) {
 
 	panels = std::vector<Panel*>();
 	current_panel_ = -1;
@@ -68,8 +74,6 @@ hotkey_panel_(new HotkeyPanel()) {
 	AddControl(main_panel_);
 	
 	CreateTabButton("Pcons", button_idx, panel_idx, GuiUtils::getPathA("cupcake.png").c_str());
-	pcon_panel_->buildUI();
-	SetupPanel(pcon_panel_);
 
 	Button* toggle = new Button();
 	toggle->SetText("Disabled");
@@ -79,7 +83,7 @@ hotkey_panel_(new HotkeyPanel()) {
 	toggle->SetFont(GuiUtils::getTBFont(10.0, true));
 	PconPanel* const pcon_panel = pcon_panel_;
 	toggle->GetClickEvent() += ClickEventHandler([this, toggle, pcon_panel](Control*) {
-		bool active = pcon_panel->toggleActive();
+		bool active = pcon_panel->ToggleActive();
 		this->UpdatePconToggleButton(active);
 	});
 	toggle->SetSize(WIDTH - 2 * DefaultBorderPadding, tabButtonHeight - 1);
@@ -89,8 +93,6 @@ hotkey_panel_(new HotkeyPanel()) {
 	
 	++button_idx;
 	CreateTabButton("Hotkeys", button_idx, panel_idx, GuiUtils::getPathA("keyboard.png").c_str());
-	hotkey_panel_->buildUI();
-	SetupPanel(hotkey_panel_);
 
 	CreateTabButton("Builds", button_idx, panel_idx, GuiUtils::getPathA("list.png").c_str());
 
@@ -103,6 +105,24 @@ hotkey_panel_(new HotkeyPanel()) {
 	CreateTabButton("Materials", button_idx, panel_idx, GuiUtils::getPathA("feather.png").c_str());
 
 	CreateTabButton("Settings", button_idx, panel_idx, GuiUtils::getPathA("settings.png").c_str());
+
+	pcon_panel_->BuildUI();
+	hotkey_panel_->BuildUI();
+	build_panel_->BuildUI();
+	travel_panel_->BuildUI();
+	dialog_panel_->BuildUI();
+	others_panel_->BuildUI();
+	materials_panel_->BuildUI();
+	settings_panel_->BuildUI();
+
+	SetupPanel(pcon_panel_);
+	SetupPanel(hotkey_panel_);
+	SetupPanel(build_panel_);
+	SetupPanel(travel_panel_);
+	SetupPanel(dialog_panel_);
+	SetupPanel(others_panel_);
+	SetupPanel(materials_panel_);
+	SetupPanel(settings_panel_);
 }
 
 void MainWindow::ToggleMinimize() {
@@ -216,9 +236,9 @@ void TabButton::CalculateLabelLocation() {
 };
 
 void MainWindow::MainRoutine() {
-	pcon_panel_->mainRoutine();
+	pcon_panel_->MainRoutine();
 
-	hotkey_panel_->mainRoutine();
+	hotkey_panel_->MainRoutine();
 }
 
 void MainWindow::SaveLocation() {

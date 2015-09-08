@@ -16,10 +16,10 @@ void HotkeyPanel::OnMouseScroll(const MouseMessage &mouse) {
 	scrollbar_->SetValue(scrollbar_->GetValue() + delta);
 }
 
-void HotkeyPanel::buildUI() {
+void HotkeyPanel::BuildUI() {
 	LOG("Building Hotkey Panel\n");
 	const int height = 300;
-	loadIni();
+	LoadIni();
 	
 	ScrollBar* scrollbar = new ScrollBar();
 	scrollbar->SetLocation(TBHotkey::WIDTH + 2 * DefaultBorderPadding, 0);
@@ -227,7 +227,7 @@ bool HotkeyPanel::ProcessMessage(LPMSG msg) {
 }
 
 
-void HotkeyPanel::loadIni() {
+void HotkeyPanel::LoadIni() {
 	Config* config = GWToolbox::instance()->config();
 
 	max_id_ = 0;
@@ -299,7 +299,7 @@ void HotkeyPanel::loadIni() {
 	}
 }
 
-void HotkeyPanel::mainRoutine() {
+void HotkeyPanel::MainRoutine() {
 	// TODO clicker
 
 	// TODO coin dropper

@@ -68,7 +68,6 @@ void TBHotkey::PopulateGeometry() {
 		PointF((float)WIDTH - DefaultBorderPadding, (float)HEIGHT));
 }
 
-
 HotkeySendChat::HotkeySendChat(Key key, Key modifier, bool active, wstring ini_section,
 	wstring msg, wchar_t channel)
 	: TBHotkey(key, modifier, active, ini_section), msg_(msg), channel_(channel) {
@@ -566,17 +565,17 @@ void HotkeyToggle::exec() {
 	bool active;
 	switch (target_) {
 	case HotkeyToggle::Clicker:
-		tb->main_window()->hotkey_panel()->toggleClicker();
+		tb->main_window()->hotkey_panel()->ToggleClicker();
 		break;
 	case HotkeyToggle::Pcons:
-		active = tb->main_window()->pcon_panel()->toggleActive();
+		active = tb->main_window()->pcon_panel()->ToggleActive();
 		tb->main_window()->UpdatePconToggleButton(active);
 		break;
 	case HotkeyToggle::CoinDrop:
-		tb->main_window()->hotkey_panel()->toggleCoinDrop();
+		tb->main_window()->hotkey_panel()->ToggleCoinDrop();
 		break;
 	case HotkeyToggle::RuptBot:
-		tb->main_window()->hotkey_panel()->toggleRupt();
+		tb->main_window()->hotkey_panel()->ToggleRupt();
 		break;
 	}
 }

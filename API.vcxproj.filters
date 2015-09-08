@@ -370,12 +370,6 @@
     <ClInclude Include="GWToolbox\Hotkeys.h">
       <Filter>Main\GWToolbox</Filter>
     </ClInclude>
-    <ClInclude Include="GWToolbox\Builds.h">
-      <Filter>Main\GWToolbox</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\Travel.h">
-      <Filter>Main\GWToolbox</Filter>
-    </ClInclude>
     <ClInclude Include="GWToolbox\Config.h">
       <Filter>Main\GWToolbox</Filter>
     </ClInclude>
@@ -407,6 +401,24 @@
       <Filter>Main\GWToolbox</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\EmptyForm.h">
+      <Filter>Main\GWToolbox</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\TravelPanel.h">
+      <Filter>Main\GWToolbox</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\BuildPanel.h">
+      <Filter>Main\GWToolbox</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\DialogPanel.h">
+      <Filter>Main\GWToolbox</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\OthersPanel.h">
+      <Filter>Main\GWToolbox</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\SettingsPanel.h">
+      <Filter>Main\GWToolbox</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\MaterialsPanel.h">
       <Filter>Main\GWToolbox</Filter>
     </ClInclude>
   </ItemGroup>
@@ -645,12 +657,6 @@
     <ClCompile Include="GWToolbox\Hotkeys.cpp">
       <Filter>Main\GWToolbox</Filter>
     </ClCompile>
-    <ClCompile Include="GWToolbox\Builds.cpp">
-      <Filter>Main\GWToolbox</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\Travel.cpp">
-      <Filter>Main\GWToolbox</Filter>
-    </ClCompile>
     <ClCompile Include="API\MerchantMgr.cpp">
       <Filter>API\src</Filter>
     </ClCompile>
@@ -670,6 +676,24 @@
       <Filter>Main\GWToolbox</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\EmptyForm.cpp">
+      <Filter>Main\GWToolbox</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\TravelPanel.cpp">
+      <Filter>Main\GWToolbox</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\BuildPanel.cpp">
+      <Filter>Main\GWToolbox</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\DialogPanel.cpp">
+      <Filter>Main\GWToolbox</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\OthersPanel.cpp">
+      <Filter>Main\GWToolbox</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\SettingsPanel.cpp">
+      <Filter>Main\GWToolbox</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\MaterialsPanel.cpp">
       <Filter>Main\GWToolbox</Filter>
     </ClCompile>
   </ItemGroup>

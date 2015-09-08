@@ -51,13 +51,13 @@ protected:
 public:
 	HotkeyPanel();
 	
-	inline bool toggleClicker() { return clickerActive = !clickerActive; }
-	inline bool toggleCoinDrop() { return dropCoinsActive = !dropCoinsActive; }
-	inline bool toggleRupt() { return ruptActive = !ruptActive; }
+	inline bool ToggleClicker() { return clickerActive = !clickerActive; }
+	inline bool ToggleCoinDrop() { return dropCoinsActive = !dropCoinsActive; }
+	inline bool ToggleRupt() { return ruptActive = !ruptActive; }
 
-	void loadIni();							// load settings from ini file
-	void buildUI();				// create user interface
-	void mainRoutine();						// do... nothing atm
+	void LoadIni();				// load settings from ini file
+	void BuildUI();				// create user interface
+	void MainRoutine();			// do... nothing atm
 
 	bool ProcessMessage(LPMSG msg);
 	void set_first_shown(int first);
