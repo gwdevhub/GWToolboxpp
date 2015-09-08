@@ -55,7 +55,7 @@ namespace GWAPI {
 		// Returns the merchant array in memory, holds ItemID's that can be used to grab structs from.
 		ItemRowArray GetMerchantItemsArray();
 
-		DWORD GetMerchantItemByModelId(DWORD modelid);
+		GW::Item* GetMerchantItemByModelId(DWORD modelid);
 
 		// Craft Item, use this to create items that require materials (Cons,Armor,etc.)
 		void CraftItem(long ModelId, long Quantity, long value, long matcount, CraftMaterial* Materials);
@@ -70,16 +70,16 @@ namespace GWAPI {
 		void CollectItem(int modelIDToGive, int AmountPerCollect, int modelIDtoRecieve);
 
 		// Buy from general merchant.
-		void BuyMerchItem(DWORD ModelId, DWORD AmountToBuy);
+		void BuyMerchItem(DWORD ModelIdToBuy, DWORD AmountToBuy);
 
 		// Sell to general merchant.
-		void SellItemToMerch(DWORD ItemToSell, DWORD AmountToSell = 1);
+		void SellItemToMerch(GW::Item* ItemToSell, DWORD AmountToSell = 1);
 
 		// Request quote of item from a trader.
 		void RequestBuyQuote(DWORD ModelIDToRequest);
 
 		// Request quote to sell one of your items to a trader.
-		void RequestSellQuote(DWORD itemtorequest);
+		void RequestSellQuote(GW::Item* itemtorequest);
 
 		// These are pretty self explanatory.
 		void BuyQuotedItem();

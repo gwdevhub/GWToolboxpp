@@ -249,7 +249,7 @@ void GWAPI::MerchantMgr::BuyQuotedItem()
 	parent->GameThread->Enqueue(CommandTraderBuy);
 }
 
-void GWAPI::MerchantMgr::RequestSellQuote(DWORD itemtorequest)
+void GWAPI::MerchantMgr::RequestSellQuote(GW::Item* itemtorequest)
 {
 	if (!itemtorequest) return;
 	parent->GameThread->Enqueue(CommandRequestTraderSellQuote, (long*)itemtorequest);
@@ -257,31 +257,29 @@ void GWAPI::MerchantMgr::RequestSellQuote(DWORD itemtorequest)
 
 void GWAPI::MerchantMgr::RequestBuyQuote(DWORD ModelIDToRequest)
 {
-	DWORD itemtorequest = GetMerchantItemByModelId(ModelIDToRequest);
+	GW::Item* itemtorequest = GetMerchantItemByModelId(ModelIDToRequest);
 	if (!itemtorequest) return;
 
 	parent->GameThread->Enqueue(CommandRequestTraderBuyQuote, (long*)itemtorequest);
 }
 
-void GWAPI::MerchantMgr::SellItemToMerch(DWORD ItemToSell, DWORD AmountToSell /*= 1*/)
+void GWAPI::MerchantMgr::SellItemToMerch(GW::Item* ItemToSell, DWORD AmountToSell /*= 1*/)
 {
-	GW::ItemArray items = parent->Items->GetItemArray();
-	long amount = AmountToSell * items[ItemToSell]->value;
+	long amount = AmountToSell * ItemToSell->value;
 
 	parent->GameThread->Enqueue(CommandSellMerchantItem, (long*)ItemToSell, amount);
 }
 
-void GWAPI::MerchantMgr::BuyMerchItem(DWORD ModelId, DWORD AmountToBuy)
+void GWAPI::MerchantMgr::BuyMerchItem(DWORD ModelIdToBuy, DWORD AmountToBuy)
 {
 	GW::ItemArray items = parent->Items->GetItemArray();
 	static long* amountptr = new long;
 	*amountptr = AmountToBuy;
-	static long* itemidptr = new long;
 
-	*itemidptr = GetMerchantItemByModelId(ModelId);
-	if (!(*itemidptr)) return;
+	GW::Item* itemidptr = GetMerchantItemByModelId(ModelIdToBuy);
+	if (!itemidptr) return;
 
-	parent->GameThread->Enqueue(CommandBuyMerchantItem, itemidptr, amountptr, items[*itemidptr]->value);
+	parent->GameThread->Enqueue(CommandBuyMerchantItem, (long*)itemidptr, amountptr, itemidptr->value);
 }
 
 void GWAPI::MerchantMgr::CollectItem(int modelIDToGive, int AmountPerCollect, int modelIDtoRecieve)
@@ -289,12 +287,10 @@ void GWAPI::MerchantMgr::CollectItem(int modelIDToGive, int AmountPerCollect, in
 	GW::Item* itemGiving = parent->Items->GetItemByModelId(modelIDToGive);
 	if (!itemGiving || itemGiving->Quantity < AmountPerCollect) return;
 
-	static long* itemidptr = new long;
+	GW::Item* itemidptr = GetMerchantItemByModelId(modelIDtoRecieve);
+	if (!itemidptr) return;
 
-	*itemidptr = GetMerchantItemByModelId(modelIDtoRecieve);
-	if (!(*itemidptr)) return;
-
-	parent->GameThread->Enqueue(CommandCollectItem, (long*)itemGiving, AmountPerCollect, itemidptr);
+	parent->GameThread->Enqueue(CommandCollectItem, (long*)itemGiving, AmountPerCollect, (long*)itemidptr);
 }
 
 void GWAPI::MerchantMgr::CraftGrail(int amount)
@@ -331,18 +327,17 @@ void GWAPI::MerchantMgr::CraftItem(long ModelId, long Quantity, long value, long
 
 	*QuantityPtr = Quantity;
 
-	static long* itemtobuyptr = new long;
-	*itemtobuyptr = GetMerchantItemByModelId(ModelId);
-	if (!(*itemtobuyptr)) return;
+	GW::Item* itemtobuyptr = GetMerchantItemByModelId(ModelId);
+	if (!itemtobuyptr) return;
 
 	MaterialPtr = GetCraftItemArray(Quantity, matcount, Materials);
 
 	delete[] Materials;
 
-	parent->GameThread->Enqueue(CommandCraftItem, itemtobuyptr, QuantityPtr, MaterialPtr, matcount, GoldTotal);
+	parent->GameThread->Enqueue(CommandCraftItem, (long*)itemtobuyptr, QuantityPtr, MaterialPtr, matcount, GoldTotal);
 }
 
-DWORD GWAPI::MerchantMgr::GetMerchantItemByModelId(DWORD modelid)
+GWAPI::GW::Item* GWAPI::MerchantMgr::GetMerchantItemByModelId(DWORD modelid)
 {
 	try{
 		GW::ItemArray itemstructs = parent->Items->GetItemArray();
@@ -353,7 +348,7 @@ DWORD GWAPI::MerchantMgr::GetMerchantItemByModelId(DWORD modelid)
 
 		for (DWORD i = 0; i < merchitems.size(); i++){
 			if (itemstructs[merchitems[i]]->ModelId == modelid){
-				return merchitems[i];
+				return itemstructs[merchitems[i]];
 			}
 		}
 	}
