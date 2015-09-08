@@ -94,6 +94,8 @@ namespace GWAPI{
 		static BYTE* TraderFunction;
 		static BYTE* CraftitemObj;
 
+		static BYTE* MapInfoPtr;
+
 		// Basics
 		static bool Scan();
 		static void *Detour(BYTE *src, const BYTE *dst, const int len, BYTE** restore = NULL);

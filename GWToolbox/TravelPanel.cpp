@@ -58,9 +58,9 @@ void TravelPanel::BuildUI() {
 
 void TravelPanel::UpdateDistrict(int gui_index) {
 	GWAPI::GWAPIMgr* api = GWAPI::GWAPIMgr::GetInstance();
-	region_ = 0;
+	region_ = api->Map->GetRegion();
 	district_ = 0;
-	language_ = 0;
+	language_ = api->Map->GetLanguage();
 	switch (gui_index) {
 	case 0: // Current District
 		break;
