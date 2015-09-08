@@ -1,5 +1,5 @@
 #pragma once
-
+#include <Windows.h>
 #include "../include/OSHGui/OSHGui.hpp"
 
 class TravelPanel : public OSHGui::Panel {
@@ -11,18 +11,19 @@ private:
 	const int BUTTON_HEIGHT = 25;
 	
 
-	int region_;
-	int district_;
-	int language_;
+	DWORD region_;
+	DWORD district_;
+	DWORD language_;
 
+	void AddTravelButton(std::string text, int grid_x, int grid_y, DWORD map_id);
 	void UpdateDistrict(int gui_index);
 
 public:
 	TravelPanel();
 
-	int region() { return region_; }
-	int district() { return district_; }
-	int language() { return language_; }
+	DWORD region() { return region_; }
+	DWORD district() { return district_; }
+	DWORD language() { return language_; }
 
 	void BuildUI();				// create user interface
 };
