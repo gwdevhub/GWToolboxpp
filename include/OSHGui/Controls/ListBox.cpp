@@ -47,8 +47,8 @@ namespace OSHGui
 		AddSubControl(scrollBar_);
 
 		SetSize(DefaultSize);
-		
-		maxVisibleItems_ = GetHeight() / (GetFont()->GetFontHeight() + DefaultItemPadding);
+
+		itemHeight_ = GetFont()->GetFontHeight() + DefaultItemPadding;
 
 		ApplyTheme(Application::Instance().GetTheme());
 	}
@@ -69,6 +69,7 @@ namespace OSHGui
 		{
 			itemAreaSize_.Width -= scrollBar_->GetWidth();
 		}
+		maxVisibleItems_ = std::max(1l, std::lround((float)(itemAreaSize_.Height) / itemHeight_));
 
 		scrollBar_->SetLocation(size.Width - scrollBar_->GetWidth() - 1, 0);
 		scrollBar_->SetSize(scrollBar_->GetWidth(), size.Height);
@@ -80,6 +81,7 @@ namespace OSHGui
 	{
 		Control::SetFont(font);
 
+		itemHeight_ = GetFont()->GetFontHeight() + DefaultItemPadding;
 		CheckForScrollBar();
 	}
 	//---------------------------------------------------------------------------
@@ -166,13 +168,14 @@ namespace OSHGui
 	//---------------------------------------------------------------------------
 	bool ListBox::Intersect(const Drawing::PointI &point) const
 	{
-		return Intersection::TestRectangle(absoluteLocation_, scrollBar_->GetVisible() ? size_.InflateEx(-scrollBar_->GetWidth(), 0) : size_, point);
+		return Intersection::TestRectangle(absoluteLocation_, 
+			scrollBar_->GetVisible() ? size_.InflateEx(-scrollBar_->GetWidth(), 0) : size_, 
+			point);
 	}
 	//---------------------------------------------------------------------------
 	void ListBox::ExpandSizeToShowItems(int count)
 	{
-		auto itemHeight = GetFont()->GetFontHeight() + DefaultItemPadding;
-		int newHeight = count * itemHeight;
+		int newHeight = count * itemHeight_;
 
 		SetSize(GetWidth(), newHeight + DefaultItemAreaPadding.Height);
 	}
@@ -236,11 +239,9 @@ namespace OSHGui
 	//---------------------------------------------------------------------------
 	void ListBox::CheckForScrollBar()
 	{
-		int itemHeight = GetFont()->GetFontHeight() + DefaultItemPadding;
+		maxVisibleItems_ = std::max(1l, std::lround((float)(itemAreaSize_.Height) / itemHeight_));
 
-		maxVisibleItems_ = std::max(1, itemAreaSize_.Height / itemHeight);
-
-		if (!items_.empty() && items_.size() * itemHeight > itemAreaSize_.Height)
+		if (!items_.empty() && items_.size() * itemHeight_ > itemAreaSize_.Height)
 		{
 			if (!scrollBar_->GetVisible())
 			{
@@ -269,30 +270,32 @@ namespace OSHGui
 
 		Graphics g(*geometry_);
 
-		g.FillRectangle(GetBackColor(), PointF(1, 1), GetSize() - SizeF(2, 2));
+		Color color = GetBackColor() + Color::FromARGB(100, 0, 0, 0);
+		g.FillRectangle(color, PointF(1, 1), GetSize() - SizeF(2, 2));
 
-		auto color = GetBackColor() + Color::FromARGB(0, 54, 53, 52);
+		color = GetBackColor() + Color::FromARGB(0, 54, 53, 52);
 		g.FillRectangle(color, PointF(1, 0), SizeF(GetWidth() - 2, 1));
 		g.FillRectangle(color, PointF(0, 1), SizeF(1, GetHeight() - 2));
 		g.FillRectangle(color, PointF(GetWidth() - 1, 1), SizeF(1, GetHeight() - 2));
 		g.FillRectangle(color, PointF(1, GetHeight() - 1), SizeF(GetWidth() - 2, 1));
 
 		int itemX = 4;
-		int itemY = 5;
-		int padding = GetFont()->GetFontHeight() + DefaultItemPadding;
+		int itemY = 4;
 		for (int i = 0; i < maxVisibleItems_ && i + firstVisibleItemIndex_ < (int)items_.size(); ++i)
 		{
 			if (hoveredIndex_ >= 0) {
 				if (firstVisibleItemIndex_ + i == hoveredIndex_) {
-					g.FillRectangle(Color::Red(), PointF(itemX - 1, itemY + i * padding - 1), SizeF(itemAreaSize_.Width + 2, padding));
+					g.FillRectangle(Color::Red(), 
+						PointF(itemX - 1, itemY + i * itemHeight_ - 1), 
+						SizeF(itemAreaSize_.Width + 2, itemHeight_ - DefaultItemPadding + 2));
 				}
 			} else {
 				if (firstVisibleItemIndex_ + i == selectedIndex_) {
-					g.FillRectangle(Color::Red(), PointF(itemX - 1, itemY + i * padding - 1), SizeF(itemAreaSize_.Width + 2, padding));
+					g.FillRectangle(Color::Red(), PointF(itemX - 1, itemY + i * itemHeight_ - 1), SizeF(itemAreaSize_.Width + 2, itemHeight_));
 				}
 			}
 
-			g.DrawString(items_[firstVisibleItemIndex_ + i], GetFont(), GetForeColor(), PointF(itemX + 1, itemY + i * padding));
+			g.DrawString(items_[firstVisibleItemIndex_ + i], GetFont(), GetForeColor(), PointF(itemX + 1, itemY + i * itemHeight_));
 		}
 	}
 	//---------------------------------------------------------------------------
@@ -302,7 +305,8 @@ namespace OSHGui
 		Control::OnMouseMove(mouse);
 
 		if (Intersection::TestRectangle(absoluteLocation_.OffsetEx(4, 4), itemAreaSize_, mouse.GetLocation())) {
-			int hoveredIndex = firstVisibleItemIndex_ + (mouse.GetLocation().Y - absoluteLocation_.Y - 4) / (GetFont()->GetFontHeight() + DefaultItemPadding);
+			int hoveredIndex = firstVisibleItemIndex_ + 
+				std::lround((float)(mouse.GetLocation().Y - absoluteLocation_.Y - 8) / itemHeight_);
 			if (hoveredIndex < items_.size()) {
 				if (hoveredIndex != hoveredIndex_) {
 					hoveredIndex_ = hoveredIndex;
@@ -322,7 +326,8 @@ namespace OSHGui
 
 		if (Intersection::TestRectangle(absoluteLocation_.OffsetEx(4, 4), itemAreaSize_, mouse.GetLocation()))
 		{
-			int clickedIndex = firstVisibleItemIndex_ + (mouse.GetLocation().Y - absoluteLocation_.Y - 4) / (GetFont()->GetFontHeight() + DefaultItemPadding);
+			int clickedIndex = firstVisibleItemIndex_ +
+				std::lround((float)(mouse.GetLocation().Y - absoluteLocation_.Y - 8) / itemHeight_);
 			if (clickedIndex < items_.size())
 			{
 				SetSelectedIndex(clickedIndex);

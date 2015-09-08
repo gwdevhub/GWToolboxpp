@@ -13,6 +13,7 @@ void TravelPanel::BuildUI() {
 	SetSize(WIDTH, HEIGHT);
 
 	ComboBox* combo = new ComboBox();
+	combo->SetMaxShowItems(14);
 	combo->AddItem("Current District");
 	combo->AddItem("International");
 	combo->AddItem("American");

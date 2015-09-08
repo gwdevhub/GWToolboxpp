@@ -161,7 +161,8 @@ namespace OSHGui
 		int hoveredIndex_;
 		int selectedIndex_;
 		int firstVisibleItemIndex_;
-		int maxVisibleItems_;
+		int itemHeight_;
+		long maxVisibleItems_;
 		bool autoScrollEnabled_;
 		
 		Drawing::RectangleI itemsRect_;

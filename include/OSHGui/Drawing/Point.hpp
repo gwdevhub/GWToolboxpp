@@ -17,15 +17,15 @@ namespace OSHGui
 	namespace Drawing
 	{
 		/**
-		 * Stellt ein geordnetes Paar von x- und y-Koordinaten als ganze Zahlen dar,
-		 * das einen Punkt in einem zweidimensionalen Raum definiert.
+		 * Represents an ordered pair of x and y coordinates as integers 
+		 * is defining a point in a two-dimensional space.
 		 */
 		template<typename Val>
 		class OSHGUI_EXPORT Point
 		{
 		public:
 			/**
-			 * Erstellt einen Punkt mit den Koordinaten 0/0.
+			 * Creates a point with the coordinates 0/0.
 			 */
 			Point()
 				: X(Val()),
@@ -34,7 +34,7 @@ namespace OSHGui
 
 			}
 			/**
-			 * Erstellt einen Punkt mit den Koordinaten X/Y.
+			 * Creates a point with coordinates X / Y.
 			 */
 			Point(Val x, Val y)
 				: X(std::move(x)),
@@ -73,7 +73,7 @@ namespace OSHGui
 			}
 			
 			/**
-			 * Verschiebt den Punkt um X/Y.
+			 * Moves the point to X / Y.
 			 *
 			 * \param x
 			 * \param y
@@ -86,7 +86,7 @@ namespace OSHGui
 				Y += y;
 			}
 			/**
-			 * Verschiebt den Punkt um das Offset.
+			 * Moves the point to the offset.
 			 *
 			 * \param offset
 			 */
@@ -96,7 +96,7 @@ namespace OSHGui
 				Y += offset.Y;
 			}
 			/**
-			 * Kopiert den Punkt und verschiebt ihn um X/Y.
+			 * Copies the point and move it to X / Y.
 			 *
 			 * \param x
 			 * \param y
@@ -111,7 +111,7 @@ namespace OSHGui
 				return temp;
 			}
 			/**
-			 * Kopiert den Punkt und verschiebt ihn um das Offset.
+			 * Copies the point and moves it to the offset.
 			 *
 			 * \param offset
 			 * \return der neue Punkt
@@ -123,13 +123,11 @@ namespace OSHGui
 				return temp;
 			}
 			
-			union
-			{
+			union {
 				Val X;
 				Val Left;
 			};
-			union
-			{
+			union {
 				Val Y;
 				Val Top;
 			};

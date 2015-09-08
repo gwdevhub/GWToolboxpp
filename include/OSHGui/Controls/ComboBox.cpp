@@ -113,6 +113,7 @@ namespace OSHGui
 		{
 			if (newFocusedControl == nullptr)
 			{
+				Collapse();
 				return;
 			}
 			
@@ -327,7 +328,7 @@ namespace OSHGui
 	//---------------------------------------------------------------------------
 	void ComboBox::ComboBoxButton::CalculateLabelLocation()
 	{
-		label_->SetLocation(Drawing::PointI(6, GetSize().Height / 2.f - label_->GetSize().Height / 2.f));
+		label_->SetLocation(Drawing::PointI(6, GetSize().Height / 2 - label_->GetSize().Height / 2));
 	}
 	//---------------------------------------------------------------------------
 	bool ComboBox::ComboBoxButton::OnKeyDown(const KeyboardMessage &keyboard)
