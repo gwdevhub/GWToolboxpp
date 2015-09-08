@@ -5,24 +5,6 @@
 
 namespace GWAPI {
 
-	struct MemoryMgr;
-	class GameThreadMgr;
-
-	class CtoSMgr;
-
-	class AgentMgr;
-	class ItemMgr;
-	class SkillbarMgr;
-	class EffectMgr;
-	class MapMgr;
-
-	class MerchantMgr;
-
-#ifdef GWAPI_USEDIRECTX
-	class DirectXMgr;
-#endif
-
-
 	typedef BYTE APIException_t;
 	const APIException_t API_EXCEPTION = 1;
 
