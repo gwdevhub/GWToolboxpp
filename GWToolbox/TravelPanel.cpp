@@ -1,8 +1,10 @@
 #include "TravelPanel.h"
 #include "../API/APIMain.h"
+#include <string>
 
 using namespace OSHGui;
 using namespace GWAPI;
+using namespace std;
 
 TravelPanel::TravelPanel() {
 }
@@ -34,26 +36,27 @@ void TravelPanel::BuildUI() {
 	combo->SetSelectedIndex(0);
 	AddControl(combo);
 
-	Button* toa = new Button();
-	toa->SetText("ToA");
-	toa->SetSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	toa->SetLocation(SPACE, combo->GetBottom() + SPACE);
-	toa->GetClickEvent() += ClickEventHandler([this](Control*) {
-		GWAPIMgr::GetInstance()->Map->Travel(
-			GwConstants::MapID::ToA, district(), region(), language());
-	});
-	AddControl(toa);
+	using namespace GwConstants;
+	AddTravelButton("ToA", 0, 1, MapID::ToA);
+	AddTravelButton("DoA", 1, 1, MapID::DoA);
+	AddTravelButton("Kamadan", 0, 2, MapID::Kamadan);
+	AddTravelButton("Embark", 1, 2, MapID::Embark);
+	AddTravelButton("Vlox's", 0, 3, MapID::Vlox);
+	AddTravelButton("EOTN", 1, 3, MapID::Eotn);
+	AddTravelButton("Urgoz", 0, 4, MapID::Urgoz);
+	AddTravelButton("Deep", 1, 4, MapID::Deep);
+}
 
-	Button* doa = new Button();
-	doa->SetText("DoA");
-	doa->SetSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	doa->SetLocation(toa->GetRight() + SPACE, toa->GetTop());
-	toa->GetClickEvent() += ClickEventHandler([this](Control*) {
-		GWAPIMgr::GetInstance()->Map->Travel(
-			GwConstants::MapID::DoA, district(), region(), language());
+void TravelPanel::AddTravelButton(string text, int grid_x, int grid_y, DWORD map_id) {
+	Button* button = new Button();
+	button->SetText(text);
+	button->SetSize(BUTTON_WIDTH, BUTTON_HEIGHT);
+	button->SetLocation(SPACE + (BUTTON_WIDTH + SPACE) * grid_x, 
+		SPACE + (BUTTON_HEIGHT + SPACE) * grid_y);
+	button->GetClickEvent() += ClickEventHandler([this, map_id](Control*) {
+		GWAPIMgr::GetInstance()->Map->Travel(map_id, district(), region(), language());
 	});
-	AddControl(doa);
-
+	AddControl(button);
 }
 
 void TravelPanel::UpdateDistrict(int gui_index) {
