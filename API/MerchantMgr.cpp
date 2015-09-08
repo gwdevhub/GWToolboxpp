@@ -209,15 +209,15 @@ long* GWAPI::MerchantMgr::GetCraftItemArray(long aQuantity, long aMatCount, Craf
 	retArr = new long[retArrSize];
 	retArrSize = NULL;
 
-	Bag** curBags = parent->Items->GetBagArray();
+	GW::Bag** curBags = parent->Items->GetBagArray();
 	if (curBags == NULL) return NULL;
 
 	for (int i = 0; i < aMatCount; i++){
 		for (int curBag = 1; curBag <= 4; curBag++){
-			Bag* curBagPtr = curBags[curBag];
+			GW::Bag* curBagPtr = curBags[curBag];
 			if (!curBagPtr) continue;
 
-			ItemArray curItemArr = curBagPtr->Items;
+			GW::ItemArray curItemArr = curBagPtr->Items;
 			if (!curItemArr.IsValid()) continue;
 
 			for (DWORD j = 0; j < curItemArr.size(); j++){
@@ -265,7 +265,7 @@ void GWAPI::MerchantMgr::RequestBuyQuote(DWORD ModelIDToRequest)
 
 void GWAPI::MerchantMgr::SellItemToMerch(DWORD ItemToSell, DWORD AmountToSell /*= 1*/)
 {
-	ItemArray items = parent->Items->GetItemArray();
+	GW::ItemArray items = parent->Items->GetItemArray();
 	long amount = AmountToSell * items[ItemToSell]->value;
 
 	parent->GameThread->Enqueue(CommandSellMerchantItem, (long*)ItemToSell, amount);
@@ -273,7 +273,7 @@ void GWAPI::MerchantMgr::SellItemToMerch(DWORD ItemToSell, DWORD AmountToSell /*
 
 void GWAPI::MerchantMgr::BuyMerchItem(DWORD ModelId, DWORD AmountToBuy)
 {
-	ItemArray items = parent->Items->GetItemArray();
+	GW::ItemArray items = parent->Items->GetItemArray();
 	static long* amountptr = new long;
 	*amountptr = AmountToBuy;
 	static long* itemidptr = new long;
@@ -286,7 +286,7 @@ void GWAPI::MerchantMgr::BuyMerchItem(DWORD ModelId, DWORD AmountToBuy)
 
 void GWAPI::MerchantMgr::CollectItem(int modelIDToGive, int AmountPerCollect, int modelIDtoRecieve)
 {
-	Item* itemGiving = parent->Items->GetItemByModelId(modelIDToGive);
+	GW::Item* itemGiving = parent->Items->GetItemByModelId(modelIDToGive);
 	if (!itemGiving || itemGiving->Quantity < AmountPerCollect) return;
 
 	static long* itemidptr = new long;
@@ -345,7 +345,7 @@ void GWAPI::MerchantMgr::CraftItem(long ModelId, long Quantity, long value, long
 DWORD GWAPI::MerchantMgr::GetMerchantItemByModelId(DWORD modelid)
 {
 	try{
-		ItemArray itemstructs = parent->Items->GetItemArray();
+		GW::ItemArray itemstructs = parent->Items->GetItemArray();
 		if (!itemstructs.IsValid()) throw API_EXCEPTION;
 
 		ItemRowArray merchitems = GetMerchantItemsArray();

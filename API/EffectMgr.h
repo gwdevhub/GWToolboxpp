@@ -9,12 +9,12 @@ namespace GWAPI {
 	class EffectMgr {
 	public:
 
-		AgentEffectsArray GetPartyEffectArray();
-		EffectArray GetPlayerEffectArray();
-		BuffArray GetPlayerBuffArray();
+		GW::AgentEffectsArray GetPartyEffectArray();
+		GW::EffectArray GetPlayerEffectArray();
+		GW::BuffArray GetPlayerBuffArray();
 		void DropBuff(DWORD buffId);
-		Effect GetPlayerEffectById(DWORD SkillID);
-		Buff GetPlayerBuffBySkillId(DWORD SkillID);
+		GW::Effect GetPlayerEffectById(DWORD SkillID);
+		GW::Buff GetPlayerBuffBySkillId(DWORD SkillID);
 		EffectMgr(GWAPIMgr* obj);
 		~EffectMgr();
 		DWORD GetAlcoholLevel() const { return AlcoholLevel; }

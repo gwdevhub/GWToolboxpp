@@ -14,12 +14,12 @@ GWAPI::EffectMgr::EffectMgr(GWAPIMgr* obj) :parent(obj)
 	PPERetourFunc = (PPEFunc_t)MemoryMgr::Detour(MemoryMgr::PostProcessEffectFunction, (BYTE*)AlcoholHandler, 6, &AlcoholHandlerRestore);
 }
 
-GWAPI::Effect GWAPI::EffectMgr::GetPlayerEffectById(DWORD SkillID)
+GWAPI::GW::Effect GWAPI::EffectMgr::GetPlayerEffectById(DWORD SkillID)
 {
-	AgentEffectsArray AgEffects = GetPartyEffectArray();
+	GW::AgentEffectsArray AgEffects = GetPartyEffectArray();
 
 	if (AgEffects.IsValid()){
-		EffectArray Effects = AgEffects[0].Effects;
+		GW::EffectArray Effects = AgEffects[0].Effects;
 		if (Effects.IsValid()){
 			for (DWORD i = 0; i < Effects.size(); i++) {
 				if (Effects[i].SkillId == SkillID) return Effects[i];
@@ -27,15 +27,15 @@ GWAPI::Effect GWAPI::EffectMgr::GetPlayerEffectById(DWORD SkillID)
 		}
 	}
 
-	return Effect::Nil();
+	return GW::Effect::Nil();
 }
 
-GWAPI::Buff GWAPI::EffectMgr::GetPlayerBuffBySkillId(DWORD SkillID)
+GWAPI::GW::Buff GWAPI::EffectMgr::GetPlayerBuffBySkillId(DWORD SkillID)
 {
-	AgentEffectsArray AgEffects = GetPartyEffectArray();
+	GW::AgentEffectsArray AgEffects = GetPartyEffectArray();
 
 	if (AgEffects.IsValid()){
-		BuffArray Buffs = AgEffects[0].Buffs;
+		GW::BuffArray Buffs = AgEffects[0].Buffs;
 		if (Buffs.IsValid()){
 			for (DWORD i = 0; i < Buffs.size(); i++) {
 				if (Buffs[i].SkillId == SkillID) return Buffs[i];
@@ -43,14 +43,14 @@ GWAPI::Buff GWAPI::EffectMgr::GetPlayerBuffBySkillId(DWORD SkillID)
 		}
 	}
 
-	return Buff::Nil();
+	return GW::Buff::Nil();
 }
 
-GWAPI::EffectArray GWAPI::EffectMgr::GetPlayerEffectArray()
+GWAPI::GW::EffectArray GWAPI::EffectMgr::GetPlayerEffectArray()
 {
-	AgentEffectsArray ageffects = GetPartyEffectArray();
+	GW::AgentEffectsArray ageffects = GetPartyEffectArray();
 	if (ageffects.IsValid()){
-		EffectArray ret = ageffects[0].Effects;
+		GW::EffectArray ret = ageffects[0].Effects;
 		if (ret.IsValid()){
 			return ret;
 		}
@@ -75,16 +75,16 @@ void GWAPI::EffectMgr::GetDrunkAf(DWORD Intensity,DWORD Tint)
 	parent->GameThread->Enqueue(PPERetourFunc, Intensity, Tint);
 }
 
-GWAPI::AgentEffectsArray GWAPI::EffectMgr::GetPartyEffectArray()
+GWAPI::GW::AgentEffectsArray GWAPI::EffectMgr::GetPartyEffectArray()
 {
-	return *MemoryMgr::ReadPtrChain<AgentEffectsArray*>(MemoryMgr::GetContextPtr(), 2, 0x2C, 0x508);
+	return *MemoryMgr::ReadPtrChain<GW::AgentEffectsArray*>(MemoryMgr::GetContextPtr(), 2, 0x2C, 0x508);
 }
 
-GWAPI::BuffArray GWAPI::EffectMgr::GetPlayerBuffArray()
+GWAPI::GW::BuffArray GWAPI::EffectMgr::GetPlayerBuffArray()
 {
-	AgentEffectsArray ageffects = GetPartyEffectArray();
+	GW::AgentEffectsArray ageffects = GetPartyEffectArray();
 	if (ageffects.IsValid()){
-		BuffArray ret = ageffects[0].Buffs;
+		GW::BuffArray ret = ageffects[0].Buffs;
 		if (ret.IsValid()){
 			return ret;
 		}

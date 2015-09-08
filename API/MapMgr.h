@@ -22,7 +22,7 @@ namespace GWAPI{
 
 		DWORD GetMapID();
 
-		inline int GetRegion() { return *(int*)(MemoryMgr::MapInfoPtr + 0x8); }
+		inline int GetRegion() { return *(int*)(MemoryMgr::MapInfoPtr + 0x10); }
 		inline int GetLanguage() { return *(int*)(MemoryMgr::MapInfoPtr + 0xC); }
 
 		DWORD GetInstanceTime();

@@ -11,34 +11,34 @@ void GWAPI::ItemMgr::OpenXunlaiWindow()
 		*MemoryMgr::ReadPtrChain<DWORD*>((DWORD)MemoryMgr::XunlaiSession, 4, 0x118, 0x10, 0, 0x14), xunlaibuf);
 }
 
-void GWAPI::ItemMgr::PickUpItem(Item* item, DWORD CallTarget /*= 0*/)
+void GWAPI::ItemMgr::PickUpItem(GW::Item* item, DWORD CallTarget /*= 0*/)
 {
 	parent->CtoS->SendPacket(0xC, 0x39, item->AgentId, CallTarget);
 }
 
-void GWAPI::ItemMgr::DropItem(Item* item, DWORD quantity)
+void GWAPI::ItemMgr::DropItem(GW::Item* item, DWORD quantity)
 {
 	parent->CtoS->SendPacket(0xC, 0x26, item->ItemId, quantity);
 }
 
-void GWAPI::ItemMgr::EquipItem(Item* item)
+void GWAPI::ItemMgr::EquipItem(GW::Item* item)
 {
 	parent->CtoS->SendPacket(0x8, 0x2A, item->ItemId);
 }
 
-void GWAPI::ItemMgr::UseItem(Item* item)
+void GWAPI::ItemMgr::UseItem(GW::Item* item)
 {
 	parent->CtoS->SendPacket(0x8, 0x78, item->ItemId);
 }
 
-GWAPI::Bag** GWAPI::ItemMgr::GetBagArray()
+GWAPI::GW::Bag** GWAPI::ItemMgr::GetBagArray()
 {
-	return *MemoryMgr::ReadPtrChain<Bag***>(MemoryMgr::GetContextPtr(), 2, 0x40, 0xF8);
+	return *MemoryMgr::ReadPtrChain<GW::Bag***>(MemoryMgr::GetContextPtr(), 2, 0x40, 0xF8);
 }
 
-GWAPI::ItemArray GWAPI::ItemMgr::GetItemArray()
+GWAPI::GW::ItemArray GWAPI::ItemMgr::GetItemArray()
 {
-	return *MemoryMgr::ReadPtrChain<ItemArray*>(MemoryMgr::GetContextPtr(), 2, 0x40, 0xB8);
+	return *MemoryMgr::ReadPtrChain<GW::ItemArray*>(MemoryMgr::GetContextPtr(), 2, 0x40, 0xB8);
 }
 
 GWAPI::ItemMgr::ItemMgr(GWAPIMgr* obj) : parent(obj)
@@ -48,15 +48,15 @@ GWAPI::ItemMgr::ItemMgr(GWAPIMgr* obj) : parent(obj)
 
 bool GWAPI::ItemMgr::UseItemByModelId(DWORD modelid, BYTE bagStart /*= 1*/, const BYTE bagEnd /*= 4*/)
 {
-	Bag** bags = GetBagArray();
+	GW::Bag** bags = GetBagArray();
 	if (bags == NULL) return false;
 
-	Bag* bag = NULL;
+	GW::Bag* bag = NULL;
 
 	for (int bagIndex = bagStart; bagIndex <= bagEnd; ++bagIndex) {
 		bag = bags[bagIndex];
 		if (bag != NULL) {
-			ItemArray items = bag->Items;
+			GW::ItemArray items = bag->Items;
 			if (!items.IsValid()) return false;
 			for (size_t i = 0; i < items.size(); i++) {
 				if (items[i]) {
@@ -80,13 +80,13 @@ void GWAPI::ItemMgr::DropGold(DWORD Amount /*= 1*/)
 DWORD GWAPI::ItemMgr::CountItemByModelId(DWORD modelid, BYTE bagStart /*= 1*/, const BYTE bagEnd /*= 4*/)
 {
 	DWORD itemcount = 0;
-	Bag** bags = GetBagArray();
-	Bag* bag = NULL;
+	GW::Bag** bags = GetBagArray();
+	GW::Bag* bag = NULL;
 
 	for (int bagIndex = bagStart; bagIndex <= bagEnd; ++bagIndex) {
 		bag = bags[bagIndex];
 		if (bag != NULL) {
-			ItemArray items = bag->Items;
+			GW::ItemArray items = bag->Items;
 			for (size_t i = 0; i < items.size(); i++) {
 				if (items[i]) {
 					if (items[i]->ModelId == modelid) {
@@ -100,15 +100,15 @@ DWORD GWAPI::ItemMgr::CountItemByModelId(DWORD modelid, BYTE bagStart /*= 1*/, c
 	return itemcount;
 }
 
-GWAPI::Item* GWAPI::ItemMgr::GetItemByModelId(DWORD modelid, BYTE bagStart /*= 1*/, const BYTE bagEnd /*= 4*/)
+GWAPI::GW::Item* GWAPI::ItemMgr::GetItemByModelId(DWORD modelid, BYTE bagStart /*= 1*/, const BYTE bagEnd /*= 4*/)
 {
-	Bag** bags = GetBagArray();
-	Bag* bag = NULL;
+	GW::Bag** bags = GetBagArray();
+	GW::Bag* bag = NULL;
 
 	for (int bagIndex = bagStart; bagIndex <= bagEnd; ++bagIndex) {
 		bag = bags[bagIndex];
 		if (bag != NULL) {
-			ItemArray items = bag->Items;
+			GW::ItemArray items = bag->Items;
 			for (size_t i = 0; i < items.size(); i++) {
 				if (items[i]) {
 					if (items[i]->ModelId == modelid) {

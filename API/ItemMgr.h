@@ -15,23 +15,23 @@ namespace GWAPI {
 	public:
 	
 
-		ItemArray GetItemArray();
+		GW::ItemArray GetItemArray();
 
-		Bag** GetBagArray();
+		GW::Bag** GetBagArray();
 
-		void UseItem(Item* item);
+		void UseItem(GW::Item* item);
 
 		bool UseItemByModelId(DWORD modelid, BYTE bagStart = 1,const BYTE bagEnd = 4);
 
 		DWORD CountItemByModelId(DWORD modelid, BYTE bagStart = 1, const BYTE bagEnd = 4);
 
-		Item* GetItemByModelId(DWORD modelid, BYTE bagStart = 1, const BYTE bagEnd = 4);
+		GW::Item* GetItemByModelId(DWORD modelid, BYTE bagStart = 1, const BYTE bagEnd = 4);
 
-		void EquipItem(Item* item);
+		void EquipItem(GW::Item* item);
 
-		void DropItem(Item* item, DWORD quantity);
+		void DropItem(GW::Item* item, DWORD quantity);
 		
-		void PickUpItem(Item* item, DWORD CallTarget = 0);
+		void PickUpItem(GW::Item* item, DWORD CallTarget = 0);
 
 		void OpenXunlaiWindow();
 		

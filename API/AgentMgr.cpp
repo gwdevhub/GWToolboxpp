@@ -5,16 +5,16 @@
 #include "CtoSMgr.h"
 #include "MapMgr.h"
 
-GWAPI::AgentArray GWAPI::AgentMgr::GetAgentArray()
+GWAPI::GW::AgentArray GWAPI::AgentMgr::GetAgentArray()
 {
-	AgentArray* agRet = (AgentArray*)MemoryMgr::agArrayPtr;
+	GW::AgentArray* agRet = (GW::AgentArray*)MemoryMgr::agArrayPtr;
 	if (agRet->size() == 0) throw API_EXCEPTION;
 	return *agRet;
 }
 
-std::vector<GWAPI::Agent*> * GWAPI::AgentMgr::GetParty() {
-	std::vector<Agent*>* party = new std::vector<Agent*>(GetPartySize());
-	AgentArray agents = GetAgentArray();
+std::vector<GWAPI::GW::Agent*> * GWAPI::AgentMgr::GetParty() {
+	std::vector<GW::Agent*>* party = new std::vector<GW::Agent*>(GetPartySize());
+	GW::AgentArray agents = GetAgentArray();
 
 	for (size_t i = 0; i < agents.size(); ++i) {
 		if (agents[i]->Allegiance == 1
@@ -35,11 +35,11 @@ size_t GWAPI::AgentMgr::GetPartySize() {
 	return ret;
 }
 
-DWORD GWAPI::AgentMgr::GetDistance(Agent* a, Agent* b) {
+DWORD GWAPI::AgentMgr::GetDistance(GW::Agent* a, GW::Agent* b) {
 	return (DWORD)sqrtl((DWORD)(a->X - b->X) * (DWORD)(a->X - b->X) + (DWORD)(a->Y - b->Y) * (DWORD)(a->Y - b->Y));
 }
 
-DWORD GWAPI::AgentMgr::GetSqrDistance(Agent* a, Agent* b) {
+DWORD GWAPI::AgentMgr::GetSqrDistance(GW::Agent* a, GW::Agent* b) {
 	return (DWORD)(a->X - b->X) * (DWORD)(a->X - b->X) + (DWORD)(a->Y - b->Y) * (DWORD)(a->Y - b->Y);
 }
 
@@ -49,7 +49,7 @@ GWAPI::AgentMgr::AgentMgr(GWAPIMgr* obj) : parent(obj)
 	_Move = (Move_t)MemoryMgr::MoveFunction;
 }
 
-void GWAPI::AgentMgr::ChangeTarget(Agent* Agent)
+void GWAPI::AgentMgr::ChangeTarget(GW::Agent* Agent)
 {
 	parent->GameThread->Enqueue(_ChangeTarget, Agent->Id);
 }
@@ -70,16 +70,16 @@ void GWAPI::AgentMgr::Dialog(DWORD id)
 	parent->CtoS->SendPacket(0x8, 0x35, id);
 }
 
-GWAPI::PartyMemberArray GWAPI::AgentMgr::GetPartyMemberArray()
+GWAPI::GW::PartyMemberArray GWAPI::AgentMgr::GetPartyMemberArray()
 {
-	return *MemoryMgr::ReadPtrChain<PartyMemberArray*>(MemoryMgr::GetContextPtr(), 3, 0x4C, 0x54, 0x4);
+	return *MemoryMgr::ReadPtrChain<GW::PartyMemberArray*>(MemoryMgr::GetContextPtr(), 3, 0x4C, 0x54, 0x4);
 }
 
 bool GWAPI::AgentMgr::GetIsPartyLoaded()
 {
 	if (parent->Map->GetInstanceType() == GwConstants::InstanceType::Loading) return false;
 
-	PartyMemberArray party = GetPartyMemberArray();
+	GW::PartyMemberArray party = GetPartyMemberArray();
 	if (!party.IsValid()) return false;
 
 	for (DWORD i = 0; i < party.size(); i++){
@@ -89,13 +89,13 @@ bool GWAPI::AgentMgr::GetIsPartyLoaded()
 	return true;
 }
 
-GWAPI::MapAgentArray GWAPI::AgentMgr::GetMapAgentArray()
+GWAPI::GW::MapAgentArray GWAPI::AgentMgr::GetMapAgentArray()
 {
-	return *MemoryMgr::ReadPtrChain<MapAgentArray*>(MemoryMgr::GetContextPtr(), 2, 0x2C, 0x7C);
+	return *MemoryMgr::ReadPtrChain<GW::MapAgentArray*>(MemoryMgr::GetContextPtr(), 2, 0x2C, 0x7C);
 }
 
-GWAPI::Agent* GWAPI::AgentMgr::GetPlayer() {
-	AgentArray agents = GetAgentArray();
+GWAPI::GW::Agent* GWAPI::AgentMgr::GetPlayer() {
+	GW::AgentArray agents = GetAgentArray();
 	if (agents.IsValid()) {
 		return GetAgentArray()[GetPlayerId()];
 	} else {
@@ -103,8 +103,8 @@ GWAPI::Agent* GWAPI::AgentMgr::GetPlayer() {
 	}
 }
 
-GWAPI::Agent* GWAPI::AgentMgr::GetTarget() {
-	AgentArray agents = GetAgentArray();
+GWAPI::GW::Agent* GWAPI::AgentMgr::GetTarget() {
+	GW::AgentArray agents = GetAgentArray();
 	if (agents.IsValid()) {
 		return GetAgentArray()[GetTargetId()];
 	} else {

@@ -5,7 +5,7 @@
 #include "CtoSMgr.h"
 
 
-GWAPI::Skill GWAPI::SkillbarMgr::GetSkillConstantData(DWORD SkillID)
+GWAPI::GW::Skill GWAPI::SkillbarMgr::GetSkillConstantData(DWORD SkillID)
 {
 	return SkillConstants[SkillID];
 }
@@ -18,18 +18,22 @@ void GWAPI::SkillbarMgr::UseSkill(DWORD Slot, DWORD Target /*= 0*/, DWORD CallTa
 
 GWAPI::SkillbarMgr::SkillbarMgr(GWAPIMgr* obj) : parent(obj)
 {
-	SkillConstants = (Skill*)MemoryMgr::SkillArray;
+	SkillConstants = (GW::Skill*)MemoryMgr::SkillArray;
 	_UseSkill = (UseSkill_t)MemoryMgr::UseSkillFunction;
 }
 
-GWAPI::Skillbar GWAPI::SkillbarMgr::GetPlayerSkillbar()
+GWAPI::GW::Skillbar GWAPI::SkillbarMgr::GetPlayerSkillbar()
 {
-	return GetSkillbarArray()[0];
+	GW::SkillbarArray sb = GetSkillbarArray();
+
+	if (!sb.IsValid()) throw API_EXCEPTION;
+
+	return sb[0];
 }
 
-GWAPI::SkillbarArray GWAPI::SkillbarMgr::GetSkillbarArray()
+GWAPI::GW::SkillbarArray GWAPI::SkillbarMgr::GetSkillbarArray()
 {
-	return *MemoryMgr::ReadPtrChain<SkillbarArray*>(MemoryMgr::GetContextPtr(), 2, 0x2C, 0x6F0);
+	return *MemoryMgr::ReadPtrChain<GW::SkillbarArray*>(MemoryMgr::GetContextPtr(), 2, 0x2C, 0x6F0);
 }
 
 void GWAPI::SkillbarMgr::UseSkillByID(DWORD SkillID, DWORD Target /*= 0*/, DWORD CallTarget /*= 0*/)
@@ -38,7 +42,7 @@ void GWAPI::SkillbarMgr::UseSkillByID(DWORD SkillID, DWORD Target /*= 0*/, DWORD
 }
 
 int GWAPI::SkillbarMgr::getSkillSlot(DWORD SkillID) {
-	Skillbar bar = GetPlayerSkillbar();
+	GW::Skillbar bar = GetPlayerSkillbar();
 	for (int i = 0; i < 8; ++i) {
 		if (bar.Skills[i].SkillId == SkillID) {
 			return i;

@@ -22,39 +22,39 @@ namespace GWAPI {
 		Move_t _Move;
 	public:
 
-		Agent* GetPlayer();
-		Agent* GetTarget();
+		GW::Agent* GetPlayer();
+		GW::Agent* GetTarget();
 
 		inline DWORD GetPlayerId() { return *(DWORD*)MemoryMgr::PlayerAgentIDPtr; }
 		inline DWORD GetTargetId() { return *(DWORD*)MemoryMgr::TargetAgentIDPtr; }
 
 		// Returns array of alternate agent array that can be read beyond compass range.
 		// Holds limited info and needs to be explored more.
-		MapAgentArray GetMapAgentArray();
+		GW::MapAgentArray GetMapAgentArray();
 
 		// Returns Agentstruct Array of agents in compass range, full structs.
-		AgentArray GetAgentArray();
+		GW::AgentArray GetAgentArray();
 
 		// Returns the party member array, used in GetIsPartyLoaded().
-		PartyMemberArray GetPartyMemberArray();
+		GW::PartyMemberArray GetPartyMemberArray();
 
 		// Returns whether your party is loaded currently.
 		bool GetIsPartyLoaded();
 
 		// Returns a vector of agents in the party. 
 		// YOU SHALL DELETE THIS VECTOR AFTER YOU'RE DONE.
-		std::vector<Agent*>* GetParty();
+		std::vector<GW::Agent*>* GetParty();
 
 		// Returns the size of the party
 		size_t GetPartySize();
 
 		// Computes distance between the two agents in game units
-		DWORD GetDistance(Agent* a, Agent* b);
+		DWORD GetDistance(GW::Agent* a, GW::Agent* b);
 
 		// Computes squared distance between the two agents in game units
-		DWORD GetSqrDistance(Agent* a, Agent* b);
+		DWORD GetSqrDistance(GW::Agent* a, GW::Agent* b);
 
-		void ChangeTarget(Agent* Agent);
+		void ChangeTarget(GW::Agent* Agent);
 
 		void Move(float X, float Y, DWORD ZPlane = 0);
 
