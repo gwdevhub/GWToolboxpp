@@ -8,9 +8,15 @@ namespace GWAPI {
 
 	class AgentMgr {
 		GWAPIMgr* const parent;
+		friend class GWAPIMgr;
+
 		typedef void(__fastcall *ChangeTarget_t)(DWORD AgentID);
 		ChangeTarget_t _ChangeTarget;
-		friend class GWAPIMgr;
+
+		BYTE* DialogLogRestore;
+		static BYTE* DialogLogRet;
+		static DWORD LastDialogId;
+		static void detourDialogLog();
 
 		struct MovePosition {
 			float X;
@@ -22,6 +28,7 @@ namespace GWAPI {
 		Move_t _Move;
 
 		AgentMgr(GWAPIMgr* obj);
+		~AgentMgr();
 	public:
 
 		// Get AgentArray Structures of player or target.
@@ -79,6 +86,9 @@ namespace GWAPI {
 
 		// Call target of specified agent without interacting with the agent.
 		void CallTarget(GW::Agent* Agent);
+
+		// Returns last dialog id sent to the server.
+		DWORD GetLastDialogId() const { return LastDialogId; }
 	};
 
 }

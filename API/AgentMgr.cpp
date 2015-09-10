@@ -5,6 +5,11 @@
 #include "CtoSMgr.h"
 #include "MapMgr.h"
 
+
+BYTE* GWAPI::AgentMgr::DialogLogRet = NULL;
+DWORD GWAPI::AgentMgr::LastDialogId = 0;
+
+
 GWAPI::GW::AgentArray GWAPI::AgentMgr::GetAgentArray()
 {
 	GW::AgentArray* agRet = (GW::AgentArray*)MemoryMgr::agArrayPtr;
@@ -47,6 +52,13 @@ GWAPI::AgentMgr::AgentMgr(GWAPIMgr* obj) : parent(obj)
 {
 	_ChangeTarget = (ChangeTarget_t)MemoryMgr::ChangeTargetFunction;
 	_Move = (Move_t)MemoryMgr::MoveFunction;
+	DialogLogRet = (BYTE*)MemoryMgr::Detour(MemoryMgr::DialogFunc, (BYTE*)AgentMgr::detourDialogLog, 9, &DialogLogRestore);
+}
+
+
+GWAPI::AgentMgr::~AgentMgr()
+{
+	MemoryMgr::Retour(MemoryMgr::DialogFunc, DialogLogRestore, 9);
 }
 
 void GWAPI::AgentMgr::ChangeTarget(GW::Agent* Agent)
@@ -130,4 +142,10 @@ void GWAPI::AgentMgr::GoSignpost(GW::Agent* Agent, BOOL CallTarget /*= 0*/)
 void GWAPI::AgentMgr::CallTarget(GW::Agent* Agent)
 {
 	parent->CtoS->SendPacket(0xC, 0x1C, 0xA, Agent->Id);
+}
+
+void __declspec(naked) GWAPI::AgentMgr::detourDialogLog()
+{
+	_asm MOV GWAPI::AgentMgr::LastDialogId, ESI
+	_asm JMP GWAPI::AgentMgr::DialogLogRet
 }
