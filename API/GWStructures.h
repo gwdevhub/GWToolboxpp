@@ -289,5 +289,10 @@ namespace GWAPI {
 
 		typedef MemoryMgr::gw_array<AgentEffects> AgentEffectsArray;
 
+
+		struct GHKey{
+			DWORD key[4];
+		};
+
 	}
 }

@@ -111,3 +111,23 @@ GWAPI::GW::Agent* GWAPI::AgentMgr::GetTarget() {
 		return nullptr;
 	}
 }
+
+void GWAPI::AgentMgr::GoNPC(GW::Agent* Agent, DWORD CallTarget /*= 0*/)
+{
+	parent->CtoS->SendPacket(0xC, 0x33, Agent->Id, CallTarget);
+}
+
+void GWAPI::AgentMgr::GoPlayer(GW::Agent* Agent)
+{
+	parent->CtoS->SendPacket(0x8, 0x2D, Agent->Id);
+}
+
+void GWAPI::AgentMgr::GoSignpost(GW::Agent* Agent, BOOL CallTarget /*= 0*/)
+{
+	parent->CtoS->SendPacket(0xC, 0x4B, Agent->Id, CallTarget);
+}
+
+void GWAPI::AgentMgr::CallTarget(GW::Agent* Agent)
+{
+	parent->CtoS->SendPacket(0xC, 0x1C, 0xA, Agent->Id);
+}
