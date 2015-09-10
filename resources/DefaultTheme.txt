@@ -8,27 +8,35 @@
 	"themes" : {
 		"button" : {
 			"forecolor" : [ 255, 255, 255, 255 ],
-			"backcolor" : [ 50, 34, 34, 34 ]
-		},
-		"label" : {
-			"forecolor" : [ 255, 255, 255, 255 ],
-			"backcolor" : [ 50, 34, 34, 34 ]
-		},
-		"linklabel" : {
-			"forecolor" : [ 255, 255, 255, 255 ],
-			"backcolor" : [ 50, 34, 34, 34 ]
+			"backcolor" : [ 100, 34, 34, 34 ]
 		},
 		"combobox" : {
 			"forecolor" : [ 255, 255, 255, 255 ],
-			"backcolor" : [ 50, 34, 34, 34 ]
+			"backcolor" : [ 100, 34, 34, 34 ]
 		},
 		"checkbox" : {
 			"forecolor" : [ 255, 255, 255, 255 ],
-			"backcolor" : [ 50, 34, 34, 34 ]
+			"backcolor" : [ 100, 34, 34, 34 ]
 		},
 		"textbox" : {
 			"forecolor" : [ 255, 255, 255, 255 ],
-			"backcolor" : [ 50, 34, 34, 34 ]
+			"backcolor" : [ 100, 34, 34, 34 ]
+		},
+		"label" : {
+			"forecolor" : [ 255, 255, 255, 255 ],
+			"backcolor" : [ 0, 0, 0, 0 ]
+		},
+		"panel" : {
+			"forecolor" : [ 255, 255, 255, 255 ],
+			"backcolor" : [ 90, 0, 0, 0 ]
+		},
+		"timer" : {
+			"forecolor" : [255, 255, 255, 255],
+			"backcolor" : [0, 0, 0, 0 ]
+		},
+		"mouseover" : {
+			"forecolor" : [20, 255, 255, 255],
+			"backcolor" : [0, 0, 0, 0]
 		}
 	}
 }
