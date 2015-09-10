@@ -73,7 +73,8 @@ settings_panel_(new SettingsPanel()) {
 	main_panel_->SetLocation(0, TITLE_HEIGHT);
 	AddControl(main_panel_);
 	
-	CreateTabButton("Pcons", button_idx, panel_idx, GuiUtils::getPathA("cupcake.png").c_str());
+	CreateTabButton("Pcons", button_idx, panel_idx, 
+		GuiUtils::getSubPathA("cupcake.png", "img").c_str());
 
 	Button* toggle = new Button();
 	toggle->SetText("Disabled");
@@ -92,19 +93,25 @@ settings_panel_(new SettingsPanel()) {
 	pcon_toggle_button_ = toggle;
 	
 	++button_idx;
-	CreateTabButton("Hotkeys", button_idx, panel_idx, GuiUtils::getPathA("keyboard.png").c_str());
+	CreateTabButton("Hotkeys", button_idx, panel_idx, 
+		GuiUtils::getSubPathA("keyboard.png", "img").c_str());
 
-	CreateTabButton("Builds", button_idx, panel_idx, GuiUtils::getPathA("list.png").c_str());
+	CreateTabButton("Builds", button_idx, panel_idx, 
+		GuiUtils::getSubPathA("list.png", "img").c_str());
 
-	CreateTabButton("Travel", button_idx, panel_idx, GuiUtils::getPathA("plane.png").c_str());
+	CreateTabButton("Travel", button_idx, panel_idx, 
+		GuiUtils::getSubPathA("plane.png", "img").c_str());
 
-	CreateTabButton("Dialogs", button_idx, panel_idx, GuiUtils::getPathA("comment.png").c_str());
+	CreateTabButton("Dialogs", button_idx, panel_idx, 
+		GuiUtils::getSubPathA("comment.png", "img").c_str());
 
 	CreateTabButton("Others?", button_idx, panel_idx, NULL);
 
-	CreateTabButton("Materials", button_idx, panel_idx, GuiUtils::getPathA("feather.png").c_str());
+	CreateTabButton("Materials", button_idx, panel_idx, 
+		GuiUtils::getSubPathA("feather.png", "img").c_str());
 
-	CreateTabButton("Settings", button_idx, panel_idx, GuiUtils::getPathA("settings.png").c_str());
+	CreateTabButton("Settings", button_idx, panel_idx, 
+		GuiUtils::getSubPathA("settings.png", "img").c_str());
 
 	pcon_panel_->BuildUI();
 	hotkey_panel_->BuildUI();

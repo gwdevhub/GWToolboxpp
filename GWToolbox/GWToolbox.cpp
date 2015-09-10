@@ -97,7 +97,7 @@ void create_gui(IDirect3DDevice9* pDevice) {
 
 	Application * app = Application::InstancePtr();
 
-	string path = GuiUtils::getPathA("DefaultTheme.txt");
+	string path = GuiUtils::getPathA("Theme.txt");
 	try {
 		Theme theme;
 		theme.Load(path);

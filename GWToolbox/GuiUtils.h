@@ -22,16 +22,16 @@ public:
 	static wstring getSettingsFolderW() {
 		WCHAR szPathW[MAX_PATH];
 		szPathW[0] = L'\0';
-		SHGetFolderPathW(NULL, CSIDL_COMMON_APPDATA, NULL, 0, szPathW);
-		return wstring(szPathW) + L"\\GWToolbox";
+		SHGetFolderPathW(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, szPathW);
+		return wstring(szPathW) + L"\\GWToolboxpp";
 	}
 
 	// Returns the settings folder as std::string
 	static string getSettingsFolderA() {
 		CHAR szPath[MAX_PATH];
 		szPath[0] = '\0';
-		SHGetFolderPathA(NULL, CSIDL_COMMON_APPDATA, NULL, 0, szPath);
-		return string(szPath) + "\\GWToolbox";
+		SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, szPath);
+		return string(szPath) + "\\GWToolboxpp";
 	}
 
 	// Returns the path of the given file in the settings folder as std::wstring
@@ -60,7 +60,7 @@ public:
 	static FontPtr getTBFont(float size, bool antialiased) {
 		FontPtr font;
 		try {
-			string path = GuiUtils::getPathA("Friz_Quadrata_Regular.ttf");
+			string path = GuiUtils::getPathA("Font.ttf");
 			font = FontManager::LoadFontFromFile(path, size, antialiased);
 		} catch (OSHGui::Misc::FileNotFoundException e) {
 			LOG("ERROR - font file not found, falling back to Arial\n");

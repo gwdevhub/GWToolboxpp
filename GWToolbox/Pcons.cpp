@@ -28,7 +28,7 @@ Pcon::Pcon(const wchar_t* ini)
 	tick->SetEnabled(false);
 	tick->SetLocation(10, 10);
 	tick->SetSize(35, 35);
-	tick->SetImage(Drawing::Image::FromFile(GuiUtils::getPathA("Tick2.png")));
+	tick->SetImage(Drawing::Image::FromFile(GuiUtils::getSubPathA("Tick.png", "img")));
 	AddSubControl(tick);
 
 	pic->SetBackColor(Drawing::Color::Empty());
@@ -72,7 +72,7 @@ void Pcon::DrawSelf(Drawing::RenderContext &context) {
 void Pcon::setIcon(const char* icon, int xOff, int yOff, int size) {
 	pic->SetSize(size, size);
 	pic->SetLocation(xOff, yOff);
-	pic->SetImage(Drawing::Image::FromFile(GuiUtils::getPathA(icon)));
+	pic->SetImage(Drawing::Image::FromFile(GuiUtils::getSubPathA(icon, "img")));
 }
 
 void Pcon::checkUpdateTimer() {
