@@ -54,6 +54,8 @@ BYTE* GWAPI::MemoryMgr::BuyItemFunction = NULL;
 
 BYTE* GWAPI::MemoryMgr::MapInfoPtr = NULL;
 
+BYTE* GWAPI::MemoryMgr::DialogFunc = NULL;
+
 void GWAPI::MemoryMgr::Retour(BYTE *src, BYTE *restore, const int len)
 {
 	DWORD dwBack;
@@ -244,6 +246,11 @@ bool GWAPI::MemoryMgr::Scan()
 			MapInfoPtr = *(BYTE**)(scan + 7);
 		}
 
+		const BYTE DialogLogCode[] = { 0x55,0x8B,0xEC,0x83,0xEC,0x28,0x53,0x56,0x57,0x8B,0xF2,0x8B,0xD9 };
+		if (!memcmp(scan, DialogLogCode, sizeof(DialogLogCode))){
+			DialogFunc = scan - 0x28;
+		}
+
 		if (agArrayPtr &&
 			CtoGSObjectPtr &&
 			CtoGSSendFunction &&
@@ -267,7 +274,8 @@ bool GWAPI::MemoryMgr::Scan()
 			CraftitemObj &&
 			TraderBuyClassHook &&
 			TraderSellClassHook &&
-			MapInfoPtr
+			MapInfoPtr &&
+			DialogFunc
 			) {
 				return true;
 			}

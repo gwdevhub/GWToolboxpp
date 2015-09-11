@@ -8,9 +8,15 @@ namespace GWAPI {
 
 	class AgentMgr {
 		GWAPIMgr* const parent;
+		friend class GWAPIMgr;
+
 		typedef void(__fastcall *ChangeTarget_t)(DWORD AgentID);
 		ChangeTarget_t _ChangeTarget;
-		friend class GWAPIMgr;
+
+		BYTE* DialogLogRestore;
+		static BYTE* DialogLogRet;
+		static DWORD LastDialogId;
+		static void detourDialogLog();
 
 		struct MovePosition {
 			float X;
@@ -20,11 +26,16 @@ namespace GWAPI {
 
 		typedef void(__fastcall *Move_t)(MovePosition* Pos);
 		Move_t _Move;
+
+		AgentMgr(GWAPIMgr* obj);
+		~AgentMgr();
 	public:
 
+		// Get AgentArray Structures of player or target.
 		GW::Agent* GetPlayer();
 		GW::Agent* GetTarget();
 
+		// Get Current AgentID's of player or target.
 		inline DWORD GetPlayerId() { return *(DWORD*)MemoryMgr::PlayerAgentIDPtr; }
 		inline DWORD GetTargetId() { return *(DWORD*)MemoryMgr::TargetAgentIDPtr; }
 
@@ -54,13 +65,30 @@ namespace GWAPI {
 		// Computes squared distance between the two agents in game units
 		DWORD GetSqrDistance(GW::Agent* a, GW::Agent* b);
 
+		// Change targeted agent to (Agent)
 		void ChangeTarget(GW::Agent* Agent);
 
+		// Move to specified coordinates.
 		void Move(float X, float Y, DWORD ZPlane = 0);
 
+		// Same as pressing button (id) while talking to an NPC.
 		void Dialog(DWORD id);
 
-		AgentMgr(GWAPIMgr* obj);
+		// Go to an NPC and begin interaction.
+		void GoNPC(GW::Agent* Agent, DWORD CallTarget = 0);
+
+		// Walk to a player.
+		void GoPlayer(GW::Agent* Agent);
+
+		// Go to a chest/signpost (yellow nametag) specified by (Agent).
+		// Also sets agent as your open chest target.
+		void GoSignpost(GW::Agent* Agent, BOOL CallTarget = 0);
+
+		// Call target of specified agent without interacting with the agent.
+		void CallTarget(GW::Agent* Agent);
+
+		// Returns last dialog id sent to the server.
+		DWORD GetLastDialogId() const { return LastDialogId; }
 	};
 
 }

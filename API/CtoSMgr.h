@@ -11,12 +11,15 @@ namespace GWAPI {
 
 		SendCtoGSPacket_t CtoGSPacketSendFunction;
 		DWORD GetCtoGSObj();
-	public:
 
 		CtoSMgr(GWAPIMgr* obj);
+	public:
 
+		
+		// Send packet that uses only dword parameters, can copypaste most gwa2 sendpackets :D
 		void SendPacket(DWORD size, ...);
 
+		// Send a packet with a specific struct alignment, used for more complex packets.
 		template <class T>
 		void SendPacket(T* packet)
 		{

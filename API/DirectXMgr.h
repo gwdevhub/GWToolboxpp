@@ -15,6 +15,9 @@ namespace GWAPI {
 	class DirectXMgr {
 		bool bDataCompare(const BYTE* pData, const BYTE* bMask, const char* szMask);
 		DWORD dwFindPattern(DWORD dwAddress, DWORD dwLen, BYTE* bMask, char* szMask);
+
+		DirectXMgr(GWAPIMgr* obj);
+		~DirectXMgr();
 	public:
 		typedef HRESULT(WINAPI *EndScene_t)(IDirect3DDevice9* pDevice);
 		typedef HRESULT(WINAPI *Reset_t)(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETERS* pPresentationParameters);
@@ -25,8 +28,7 @@ namespace GWAPI {
 		EndScene_t GetEndsceneReturn();
 		Reset_t GetResetReturn();
 
-		DirectXMgr(GWAPIMgr* obj);
-		~DirectXMgr();
+		
 
 	private:
 		friend class GWAPIMgr;

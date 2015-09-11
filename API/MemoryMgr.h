@@ -96,6 +96,8 @@ namespace GWAPI{
 
 		static BYTE* MapInfoPtr;
 
+		static BYTE* DialogFunc;
+
 		// Basics
 		static bool Scan();
 		static void *Detour(BYTE *src, const BYTE *dst, const int len, BYTE** restore = NULL);
