@@ -13,7 +13,7 @@ namespace GWAPI{
 
 		// Get the skill slot in the player bar of the player.
 		// Returns 0 if the skill is not there
-		int getSkillSlot(DWORD SkillID);
+		int getSkillSlot(GwConstants::SkillID SkillID);
 		
 		void UseSkill(DWORD Slot, DWORD Target = 0, DWORD CallTarget = 0);
 

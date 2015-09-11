@@ -109,14 +109,14 @@ public:
 // can be used for recall, ua, and maybe others?
 class HotkeyDropUseBuff : public TBHotkey {
 private:
-	UINT id_;
+	GwConstants::SkillID id_;
 	OSHGui::ComboBox* combo_;
 
-	UINT IndexToSkillID(int index);
-	inline void set_id(UINT id) { id_ = id; }
+	GwConstants::SkillID IndexToSkillID(int index);
+	inline void set_id(GwConstants::SkillID id) { id_ = id; }
 public:
 	HotkeyDropUseBuff(OSHGui::Key key, OSHGui::Key modifier, bool active, 
-		wstring ini_section, UINT skill_id);
+		wstring ini_section, GwConstants::SkillID skill_id);
 
 	static const wchar_t* IniSection() { return L"DropUseBuff"; }
 	static const wchar_t* IniKeySkillID() { return L"SkillID"; }

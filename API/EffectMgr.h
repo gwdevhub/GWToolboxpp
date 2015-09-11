@@ -13,8 +13,8 @@ namespace GWAPI {
 		GW::EffectArray GetPlayerEffectArray();
 		GW::BuffArray GetPlayerBuffArray();
 		void DropBuff(DWORD buffId);
-		GW::Effect GetPlayerEffectById(DWORD SkillID);
-		GW::Buff GetPlayerBuffBySkillId(DWORD SkillID);
+		GW::Effect GetPlayerEffectById(GwConstants::SkillID SkillID);
+		GW::Buff GetPlayerBuffBySkillId(GwConstants::SkillID SkillID);
 		EffectMgr(GWAPIMgr* obj);
 		~EffectMgr();
 		DWORD GetAlcoholLevel() const { return AlcoholLevel; }

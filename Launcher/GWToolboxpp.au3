@@ -200,16 +200,6 @@ Func Out($msg)
 	GUICtrlSetData($status, $msg)
 EndFunc
 
-Func clientselectChange()
-
-EndFunc
-Func exeselectClick()
-
-EndFunc
-Func LaunchButtonClick()
-
-EndFunc
-
 
 Func ScanForCharname()
 	Local $lCharNameCode = BinaryToString('0x90909066C705')

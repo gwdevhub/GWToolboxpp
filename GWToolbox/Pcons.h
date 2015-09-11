@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "../include/OSHGui/OSHGui.hpp"
 #include "Timer.h"
+#include "../API/GwConstants.h"
 
 
 class Pcon : public OSHGui::Button {
@@ -21,7 +22,7 @@ protected:
 	int quantity;
 	bool enabled;
 	unsigned int itemID;
-	unsigned int effectID;
+	GwConstants::SkillID effectID;
 	int threshold;
 	clock_t timer;
 	clock_t update_timer;
@@ -35,7 +36,7 @@ public:
 	void setIcon(const char* icon, int xOff, int yOff, int size);
 	inline void setChatName(const wchar_t* chat) { chatName = chat; }
 	inline void setItemID(unsigned int item) { itemID = item; }
-	inline void setEffectID(unsigned int effect) { effectID = effect; }
+	inline void setEffectID(GwConstants::SkillID effect) { effectID = effect; }
 	inline void setThreshold(int t) { threshold = t; }
 
 	virtual bool checkAndUse();		// checks if need to use pcon, uses if needed. Returns true if was used.

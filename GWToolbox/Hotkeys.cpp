@@ -212,7 +212,7 @@ HotkeyUseItem::HotkeyUseItem(Key key, Key modifier, bool active, wstring ini_sec
 }
 
 HotkeyDropUseBuff::HotkeyDropUseBuff(Key key, Key modifier, bool active, 
-	wstring ini_section, UINT id) :
+	wstring ini_section, GwConstants::SkillID id) :
 TBHotkey(key, modifier, active, ini_section), id_(id) {
 
 	Label* label = new Label();
@@ -229,17 +229,17 @@ TBHotkey(key, modifier, active, ini_section), id_(id) {
 	case GwConstants::SkillID::Recall:
 		combo->SetSelectedIndex(0);
 		break;
-	case GwConstants::SkillID::UA:
+	case GwConstants::SkillID::Unyielding_Aura:
 		combo->SetSelectedIndex(1);
 		break;
 	default:
-		combo->AddItem(to_string(id));
+		combo->AddItem(to_string(static_cast<int>(id)));
 		combo->SetSelectedIndex(2);
 		break;
 	}
 	combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
 		[this, combo, ini_section](Control*) {
-		UINT skillID = this->IndexToSkillID(combo->GetSelectedIndex());
+		GwConstants::SkillID skillID = this->IndexToSkillID(combo->GetSelectedIndex());
 		this->set_id(skillID);
 		GWToolbox::instance()->config()->iniWriteLong(ini_section.c_str(),
 			this->IniKeySkillID(), (long)skillID);
@@ -248,18 +248,18 @@ TBHotkey(key, modifier, active, ini_section), id_(id) {
 	AddControl(combo);
 }
 
-UINT HotkeyDropUseBuff::IndexToSkillID(int index) {
+GwConstants::SkillID HotkeyDropUseBuff::IndexToSkillID(int index) {
 	switch (index) {
 	case 0: return GwConstants::SkillID::Recall;
-	case 1: return GwConstants::SkillID::UA;
+	case 1: return GwConstants::SkillID::Unyielding_Aura;
 	case 2: 
 		if (combo_->GetItemsCount() == 3) {
 			string s = combo_->GetItem(2);
 			try {
 				int i = std::stoi(s);
-				return (UINT)i;
+				return static_cast<GwConstants::SkillID>(i);
 			} catch (...) {
-				return 0;
+				return GwConstants::SkillID::No_Skill;
 			}
 		}
 	default:
@@ -546,7 +546,6 @@ void HotkeySendChat::exec() {
 
 void HotkeyDropUseBuff::exec() {
 	if (!isExplorable()) return;
-	if (id_ <= 0) return;
 
 	GWAPIMgr* API = GWAPIMgr::GetInstance();
 	GW::Buff buff = API->Effects->GetPlayerBuffBySkillId(id_);

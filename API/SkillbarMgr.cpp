@@ -41,10 +41,11 @@ void GWAPI::SkillbarMgr::UseSkillByID(DWORD SkillID, DWORD Target /*= 0*/, DWORD
 	parent->CtoS->SendPacket(0x14, 0x40, SkillID, 0, Target, CallTarget);
 }
 
-int GWAPI::SkillbarMgr::getSkillSlot(DWORD SkillID) {
+int GWAPI::SkillbarMgr::getSkillSlot(GwConstants::SkillID SkillID) {
+	DWORD id = static_cast<DWORD>(SkillID);
 	GW::Skillbar bar = GetPlayerSkillbar();
 	for (int i = 0; i < 8; ++i) {
-		if (bar.Skills[i].SkillId == SkillID) {
+		if (bar.Skills[i].SkillId == id) {
 			return i;
 		}
 	}

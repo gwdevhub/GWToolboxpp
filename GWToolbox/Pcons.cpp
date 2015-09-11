@@ -18,7 +18,7 @@ Pcon::Pcon(const wchar_t* ini)
 	iniName = ini;
 	chatName = ini; // will be set later, but its a good temporary value
 	itemID = 0;
-	effectID = 0;
+	effectID = SkillID::No_Skill;
 	threshold = 0;
 	timer = TBTimer::init();
 	update_timer = 0;
@@ -149,10 +149,10 @@ bool PconCity::checkAndUse() {
 		try {
 			if (API->Agents->GetPlayer() &&
 				(API->Agents->GetPlayer()->MoveX > 0 || API->Agents->GetPlayer()->MoveY > 0)) {
-				if (API->Effects->GetPlayerEffectById(GwConstants::EffectID::CremeBrulee).SkillId
-					|| API->Effects->GetPlayerEffectById(GwConstants::EffectID::BlueDrink).SkillId
-					|| API->Effects->GetPlayerEffectById(GwConstants::EffectID::ChocolateBunny).SkillId
-					|| API->Effects->GetPlayerEffectById(GwConstants::EffectID::RedBeanCake).SkillId) {
+				if (   API->Effects->GetPlayerEffectById(SkillID::Sugar_Rush_short).SkillId
+					|| API->Effects->GetPlayerEffectById(SkillID::Sugar_Rush_long).SkillId
+					|| API->Effects->GetPlayerEffectById(SkillID::Sugar_Jolt_short).SkillId
+					|| API->Effects->GetPlayerEffectById(SkillID::Sugar_Jolt_long).SkillId) {
 
 					// then we have effect on already, do nothing
 				} else {
@@ -222,7 +222,7 @@ bool PconLunar::checkAndUse() {
 	if (enabled	&& TBTimer::diff(this->timer) > 500) {
 		GWAPIMgr* API = GWAPIMgr::GetInstance();
 		try {
-			if (API->Effects->GetPlayerEffectById(GwConstants::EffectID::Lunars).SkillId == 0) {
+			if (API->Effects->GetPlayerEffectById(SkillID::Lunar_Blessing).SkillId == 0) {
 				bool used = API->Items->UseItemByModelId(ItemID::LunarDragon)
 					|| API->Items->UseItemByModelId(ItemID::LunarHorse)
 					|| API->Items->UseItemByModelId(ItemID::LunarRabbit)

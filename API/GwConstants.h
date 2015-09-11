@@ -1,6 +1,10 @@
 #ifndef __GWCONSTANTS_H
 #define __GWCONSTANTS_H
 
+#pragma once
+
+#include "GwConstantsSkills.h"
+#include "GwConstantsMaps.h"
 
 namespace GwConstants {
 
@@ -8,9 +12,10 @@ namespace GwConstants {
 
 	enum class InstanceType { Outpost, Explorable, Loading };
 
-	enum class Profession { None, Warrior, Ranger, Monk, Necromancer, Mesmer, Elementalist, Assassin, Ritualist, Paragon, Dervish };
+	enum class Profession { None, Warrior, Ranger, Monk, Necromancer, Mesmer, 
+		Elementalist, Assassin, Ritualist, Paragon, Dervish };
 
-	enum class Attribute {												// probably not used but why not
+	enum class Attribute {			
 		FastCasting, IllusionMagic, DominationMagic, InspirationMagic,		// mesmer
 		BloodMagic, DeathMagic, SoulReaping, Curses,						// necro
 		AirMagic, EarthMagic, FireMagic, WaterMagic, EnergyStorage,			// ele
@@ -24,6 +29,8 @@ namespace GwConstants {
 		ScytheMastery, WindPrayers, EarthPrayers, Mysticism,				// derv
 		None = 0xff
 	};
+
+	enum class  OnlineStatus{ Offline, Online, DND, Away };
 
 	namespace Range {
 		const int Adjacent = 156;
@@ -44,32 +51,6 @@ namespace GwConstants {
 		const int Spirit = Range::Spirit * Range::Spirit;
 		const int Compass = Range::Compass * Range::Compass;
 	};
-	
-
-	namespace SkillID {
-		const int Recall = 925;
-		const int UA = 268;
-		const int EtherRenewal = 181;
-		const int BurningSpeed = 823;
-		const int SpiritBond = 1114;
-		const int BalthazarSpirit = 242;
-		const int LifeBond = 241;
-		const int ProtectiveBond = 263;
-		// Feel free to add more as needed
-	}
-
-	namespace MapID {
-		const int ToA = 138;
-		const int Kamadan = 449;
-		const int DoA = 474;
-		const int Embark = 857;
-		const int Vlox = 624;
-		const int Urgoz = 266;
-		const int Deep = 307;
-		const int Eotn = 642;
-		const int UW = 72;
-		const int FoW = 34;
-	}
 
 	namespace ItemID { // aka item modelIDs
 		// item that make agents
@@ -135,36 +116,6 @@ namespace GwConstants {
 		const int Keg = 31146;
 		const int FlaskOfFirewater = 2513;
 		const int KrytanBrandy = 35124;
-
-	}
-
-	namespace EffectID {
-		const int Corn = 2604;
-		const int Apple = 2605;
-		const int Redrock = 2973;
-		const int Bluerock = 2971;
-		const int Greenrock = 2972;
-		const int Warsupplies = 3174;
-		const int Kabobs = 1680;
-		const int Cupcake = 1945;
-		const int Egg = 1934;
-		const int Grog = 2923;
-		const int Pie = 2649;
-		const int Lunars = 1926;
-		const int ConsEssence = 2522;
-		const int ConsArmor = 2520;
-		const int ConsGrail = 2521;
-		const int SkaleVigor = 1681;
-		const int PahnaiSalad = 1682;
-
-		const int Lightbringer = 1813;
-		const int Hardmode = 1912;
-		const int WeakenedByDhuum = 3077;
-
-		const int CremeBrulee = 1612;
-		const int BlueDrink = 1916;
-		const int ChocolateBunny = 1933;
-		const int RedBeanCake = 1323;
 	}
 
 	namespace ModelID { // probably this name is wrong

@@ -38,17 +38,17 @@ void TravelPanel::BuildUI() {
 	AddControl(combo);
 
 	using namespace GwConstants;
-	AddTravelButton("ToA", 0, 1, MapID::ToA);
-	AddTravelButton("DoA", 1, 1, MapID::DoA);
-	AddTravelButton("Kamadan", 0, 2, MapID::Kamadan);
-	AddTravelButton("Embark", 1, 2, MapID::Embark);
-	AddTravelButton("Vlox's", 0, 3, MapID::Vlox);
-	AddTravelButton("EOTN", 1, 3, MapID::Eotn);
-	AddTravelButton("Urgoz", 0, 4, MapID::Urgoz);
-	AddTravelButton("Deep", 1, 4, MapID::Deep);
+	AddTravelButton("ToA", 0, 1, MapID::Temple_of_the_Ages);
+	AddTravelButton("DoA", 1, 1, MapID::Domain_of_Anguish);
+	AddTravelButton("Kamadan", 0, 2, MapID::Kamadan_Jewel_of_Istan);
+	AddTravelButton("Embark", 1, 2, MapID::Embark_Beach);
+	AddTravelButton("Vlox's", 0, 3, MapID::Vloxs_Falls);
+	AddTravelButton("EOTN", 1, 3, MapID::Eye_of_the_North_outpost);
+	AddTravelButton("Urgoz", 0, 4, MapID::Urgozs_Warren);
+	AddTravelButton("Deep", 1, 4, MapID::The_Deep);
 }
 
-void TravelPanel::AddTravelButton(string text, int grid_x, int grid_y, DWORD map_id) {
+void TravelPanel::AddTravelButton(string text, int grid_x, int grid_y, GwConstants::MapID map_id) {
 	Button* button = new Button();
 	button->SetText(text);
 	button->SetSize(BUTTON_WIDTH, BUTTON_HEIGHT);

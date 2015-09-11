@@ -113,8 +113,8 @@ void TimerWindow::UpdateLabel() {
 		shadow_->SetText(ss.str());
 		shadow_->Invalidate();
 
-		DWORD map_id = GWAPIMgr::GetInstance()->Map->GetMapID();
-		if (map_id == GwConstants::MapID::Urgoz) {
+		GwConstants::MapID map_id = GWAPIMgr::GetInstance()->Map->GetMapID();
+		if (map_id == GwConstants::MapID::Urgozs_Warren) {
 			if (!in_urgoz_) {
 				in_urgoz_ = true;
 				SetSize(Drawing::SizeI(WIDTH, HEIGHT + URGOZ_HEIGHT));

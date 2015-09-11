@@ -1,6 +1,7 @@
 #pragma once
 #include <Windows.h>
 #include "../include/OSHGui/OSHGui.hpp"
+#include "../API/GwConstants.h"
 
 class TravelPanel : public OSHGui::Panel {
 private:
@@ -15,7 +16,7 @@ private:
 	DWORD district_;
 	DWORD language_;
 
-	void AddTravelButton(std::string text, int grid_x, int grid_y, DWORD map_id);
+	void AddTravelButton(std::string text, int grid_x, int grid_y, GwConstants::MapID map_id);
 	void UpdateDistrict(int gui_index);
 
 public:

@@ -261,8 +261,9 @@ void HotkeyPanel::LoadIni() {
 				tb_hk = new HotkeyUseItem(key, modifier, active, section, itemID, item_name);
 
 			} else if (type.compare(HotkeyDropUseBuff::IniSection()) == 0) {
-				UINT skillID = (UINT)config->iniReadLong(section.c_str(), HotkeyDropUseBuff::IniKeySkillID(), 0);
-				tb_hk = new HotkeyDropUseBuff(key, modifier, active, section, skillID);
+				long skillID = config->iniReadLong(section.c_str(), HotkeyDropUseBuff::IniKeySkillID(), 0);
+				GwConstants::SkillID id = static_cast<GwConstants::SkillID>(skillID);
+				tb_hk = new HotkeyDropUseBuff(key, modifier, active, section, id);
 
 			} else if (type.compare(HotkeyToggle::IniSection()) == 0) {
 				int toggleID = (int)config->iniReadLong(section.c_str(), HotkeyToggle::IniKeyToggleID(), 0);

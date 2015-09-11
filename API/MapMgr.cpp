@@ -3,11 +3,11 @@
 #include "MemoryMgr.h"
 #include "CtoSMgr.h"
 
-void GWAPI::MapMgr::Travel(DWORD MapID, DWORD District /*= 0*/, int Region /*= 0*/, DWORD Language /*= 0*/)
+void GWAPI::MapMgr::Travel(GwConstants::MapID MapID, DWORD District /*= 0*/, int Region /*= 0*/, DWORD Language /*= 0*/)
 {
 	static PAB_ZoneMap* pak = new PAB_ZoneMap();
 
-	pak->mapid = MapID;
+	pak->mapid = static_cast<DWORD>(MapID);
 	pak->district = District;
 	pak->region = Region;
 	pak->language = Language;
@@ -21,9 +21,9 @@ DWORD GWAPI::MapMgr::GetInstanceTime()
 	return *MemoryMgr::ReadPtrChain<DWORD*>(MemoryMgr::GetContextPtr(), 2, 0x8, 0x1AC);
 }
 
-DWORD GWAPI::MapMgr::GetMapID()
+GwConstants::MapID GWAPI::MapMgr::GetMapID()
 {
-	return *(DWORD*)MemoryMgr::MapIDPtr;
+	return static_cast<GwConstants::MapID>(*(DWORD*)MemoryMgr::MapIDPtr);
 }
 
 GWAPI::MapMgr::MapMgr(GWAPIMgr* obj) : parent(obj)

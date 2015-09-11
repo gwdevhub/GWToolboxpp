@@ -14,15 +14,16 @@ GWAPI::EffectMgr::EffectMgr(GWAPIMgr* obj) :parent(obj)
 	PPERetourFunc = (PPEFunc_t)MemoryMgr::Detour(MemoryMgr::PostProcessEffectFunction, (BYTE*)AlcoholHandler, 6, &AlcoholHandlerRestore);
 }
 
-GWAPI::GW::Effect GWAPI::EffectMgr::GetPlayerEffectById(DWORD SkillID)
+GWAPI::GW::Effect GWAPI::EffectMgr::GetPlayerEffectById(GwConstants::SkillID SkillID)
 {
+	DWORD id = static_cast<DWORD>(SkillID);
 	GW::AgentEffectsArray AgEffects = GetPartyEffectArray();
 
 	if (AgEffects.IsValid()){
 		GW::EffectArray Effects = AgEffects[0].Effects;
 		if (Effects.IsValid()){
 			for (DWORD i = 0; i < Effects.size(); i++) {
-				if (Effects[i].SkillId == SkillID) return Effects[i];
+				if (Effects[i].SkillId == id) return Effects[i];
 			}
 		}
 	}
@@ -30,15 +31,16 @@ GWAPI::GW::Effect GWAPI::EffectMgr::GetPlayerEffectById(DWORD SkillID)
 	return GW::Effect::Nil();
 }
 
-GWAPI::GW::Buff GWAPI::EffectMgr::GetPlayerBuffBySkillId(DWORD SkillID)
-{
+GWAPI::GW::Buff GWAPI::EffectMgr::GetPlayerBuffBySkillId(GwConstants::SkillID SkillID)
+{	
+	DWORD id = static_cast<DWORD>(SkillID);
 	GW::AgentEffectsArray AgEffects = GetPartyEffectArray();
 
 	if (AgEffects.IsValid()){
 		GW::BuffArray Buffs = AgEffects[0].Buffs;
 		if (Buffs.IsValid()){
 			for (DWORD i = 0; i < Buffs.size(); i++) {
-				if (Buffs[i].SkillId == SkillID) return Buffs[i];
+				if (Buffs[i].SkillId == id) return Buffs[i];
 			}
 		}
 	}
