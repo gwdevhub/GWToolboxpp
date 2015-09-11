@@ -127,7 +127,18 @@ namespace GWAPI {
 			float maxHealth;
 			float healthregen;
 			DWORD unk5;
-			DWORD effects;
+			DWORD Effects;
+
+			// Health Bar Effect Bitmasks.
+			inline bool GetIsBleeding() { return (Effects & 1) != 0; }
+			inline bool GetIsConditioned() { return (Effects & 2) != 0; }
+			inline bool GetIsDead() { return (Effects & 16) != 0; }
+			inline bool GetIsDeepWounded() { return (Effects & 32) != 0; }
+			inline bool GetIsPoisoned() { return (Effects & 64) != 0; }
+			inline bool GetIsEnchanted() { return (Effects & 128) != 0; }
+			inline bool GetIsDegenHexed() { return (Effects & 1024) != 0; }
+			inline bool GetIsHexed() { return (Effects & 2048) != 0; }
+			inline bool GetIsWeaponSpelled() { return (Effects & 32768) != 0; }
 		};
 
 		struct PartyMember{
@@ -293,6 +304,30 @@ namespace GWAPI {
 		struct GHKey{
 			DWORD key[4];
 		};
+
+		struct Guild {
+			GHKey GuildHallKey;
+
+			inline wchar_t* GetGuildName(){ return (wchar_t*)(this + 0x30); }
+			inline wchar_t* GetGuildTag(){ return (wchar_t*)(this + 0x80); }
+		};
+
+		typedef MemoryMgr::gw_array<Guild*> GuildArray;
+
+		struct MissionMapIcon { // MapOverlay from GWCA
+			long index;
+			float X;
+			float Y;
+			long unknown1; // = 0
+			long unknown2; // = 0
+			long option; // Affilitation/color. Enum { 0 = gray, blue, red, yellow, teal, purple, green, gray };
+			long unknown3; // = 0
+			long modelId; // Model of the displayed icon in the Minimap
+			long unknown4; // = 0
+			void* unknown5; // May concern the name
+		};
+
+		typedef MemoryMgr::gw_array<MissionMapIcon> MissionMapIconArray;
 
 	}
 }

@@ -34,3 +34,8 @@ GWAPI::MapMgr::MapMgr(GWAPIMgr* obj) : parent(obj)
 GwConstants::InstanceType GWAPI::MapMgr::GetInstanceType() {
 	return *(GwConstants::InstanceType*)(MemoryMgr::agArrayPtr - 0xF0);
 }
+
+GWAPI::GW::MissionMapIconArray GWAPI::MapMgr::GetMissionMapIconArray()
+{
+	return *MemoryMgr::ReadPtrChain<GW::MissionMapIconArray*>(MemoryMgr::GetContextPtr(), 2, 0x2C, 0x7EC);
+}
