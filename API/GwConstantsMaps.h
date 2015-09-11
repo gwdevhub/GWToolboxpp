@@ -741,7 +741,7 @@ namespace GwConstants {
 	};
 
 	// This array needs testing lol.
-	/*const char* NAME_FROM_ID[] = {
+	const char* const NAME_FROM_ID[] = {
 		"",
 		"Gladiators Arena",
 		"DEV Test Arena (1v1)",
@@ -1471,5 +1471,5 @@ namespace GwConstants {
 		"Plains of Jarin",
 		"Plains of Jarin",
 		"(crash)" 
-	};*/
+	};
 }
