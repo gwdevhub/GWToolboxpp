@@ -87,14 +87,14 @@ void TimerWindow::SaveLocation() {
 }
 
 void TimerWindow::UpdateUI() {
-	long uptime = GWAPIMgr::GetInstance()->Map->GetInstanceTime();
-	long time = uptime / 1000;
+	unsigned long uptime = GWAPIMgr::GetInstance()->Map->GetInstanceTime();
+	unsigned long  time = uptime / 1000;
 	if (time != current_time_) {
 		current_time_ = time;
 
-		int seconds = time % 60;
-		int minutes = (int)(time / 60) % 60;
-		int hours = (int)(time / (60 * 60));
+		unsigned long  seconds = time % 60;
+		unsigned long  minutes = (unsigned long)(time / 60) % 60;
+		unsigned long  hours = (unsigned long)(time / (60 * 60));
 
 		stringstream ss;
 		ss.fill('0');

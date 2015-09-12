@@ -1,3 +1,5 @@
+#pragma once
+
 #include "../API/APIMain.h"
 #include "../include/OSHGui/OSHGui.hpp"
 #include "../include/OSHGui/Drawing/Direct3D9/Direct3D9Renderer.hpp"
@@ -5,6 +7,7 @@
 #include "Config.h"
 #include "MainWindow.h"
 #include "TimerWindow.h"
+#include "HealthWindow.h"
 
 using namespace OSHGui;
 
@@ -16,6 +19,7 @@ private:
 	Config* const config_;
 	MainWindow* main_window_;
 	TimerWindow* timer_window_;
+	HealthWindow* health_window_;
 
 	bool must_self_destruct_;
 
@@ -25,6 +29,7 @@ private:
 		config_(new Config()) { 
 		main_window_ = NULL;
 		timer_window_ = NULL;
+		health_window_ = NULL;
 		must_self_destruct_ = false;
 	}
 
@@ -47,9 +52,11 @@ public:
 	inline Config* config() { return config_; }
 	inline MainWindow* main_window() { return main_window_; }
 	inline TimerWindow* timer_window() { return timer_window_; }
+	inline HealthWindow* health_window() { return health_window_; }
 	
 	inline void set_main_window(MainWindow* w) { main_window_ = w; }
 	inline void set_timer_window(TimerWindow* w) { timer_window_ = w; }
+	inline void set_health_window(HealthWindow* w) { health_window_ = w; }
 
 	void StartSelfDestruct() { must_self_destruct_ = true; }
 };

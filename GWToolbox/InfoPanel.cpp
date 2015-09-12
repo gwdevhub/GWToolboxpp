@@ -4,6 +4,9 @@
 #include <cmath>
 
 #include "../API/APIMain.h"
+#include "GWToolbox.h"
+#include "Config.h"
+#include "HealthWindow.h"
 
 using namespace OSHGui;
 
@@ -25,7 +28,7 @@ void InfoPanel::BuildUI() {
 	GroupBox* player = new GroupBox();
 	player->SetSize(full_item_width, group_height);
 	player->SetLocation(item1_x, DefaultBorderPadding);
-	player->SetText(" Player ");
+	player->SetText(" Player Position ");
 	player->SetBackColor(Drawing::Color::Empty());
 	AddControl(player);
 	Label* xtext = new Label();
@@ -36,7 +39,7 @@ void InfoPanel::BuildUI() {
 	player_x->SetLocation(xtext->GetRight(), DefaultBorderPadding);
 	player->AddControl(player_x);
 	Label* ytext = new Label();
-	ytext->SetLocation(player->GetWidth() / 2 - 6, DefaultBorderPadding);
+	ytext->SetLocation(player->GetWidth() / 2 + DefaultBorderPadding, DefaultBorderPadding);
 	ytext->SetText("y:");
 	player->AddControl(ytext);
 	player_y = new Label();
@@ -77,7 +80,7 @@ void InfoPanel::BuildUI() {
 	GroupBox* dialog = new GroupBox();
 	dialog->SetSize(half_item_width, group_height);
 	dialog->SetLocation(item2_x, target->GetBottom() + DefaultBorderPadding);
-	dialog->SetText(" Dialog ID ");
+	dialog->SetText(" Last Dialog ID ");
 	dialog->SetBackColor(Drawing::Color::Empty());
 	AddControl(dialog);
 	dialog_id = new Label();
@@ -98,8 +101,15 @@ void InfoPanel::BuildUI() {
 	targetHp->SetLocation(item1_x, bonds->GetBottom() + DefaultBorderPadding);
 	targetHp->SetText("Show Target Health");
 	targetHp->GetCheckedChangedEvent() += CheckedChangedEventHandler([targetHp](Control*) {
-		// TODO
+		GWToolbox* tb = GWToolbox::instance();
+		bool show = targetHp->GetChecked();
+		if (tb->health_window()) {
+			tb->health_window()->Show(show);
+		}
+		tb->config()->iniWriteBool(HealthWindow::IniSection(), HealthWindow::IniKeyShow(), show);
 	});
+	targetHp->SetChecked(GWToolbox::instance()->config()->iniReadBool(
+		HealthWindow::IniSection(), HealthWindow::IniKeyShow(), false));
 	AddControl(targetHp);
 
 	CheckBox* distance = new CheckBox();
@@ -116,7 +126,9 @@ void InfoPanel::BuildUI() {
 	xunlai->SetLocation(item1_x, distance->GetBottom() + DefaultBorderPadding);
 	xunlai->SetText("Open Xunlai Chest");
 	xunlai->GetClickEvent() += ClickEventHandler([](Control*) {
-		GWAPI::GWAPIMgr::GetInstance()->Items->OpenXunlaiWindow();
+		if (GWAPI::GWAPIMgr::GetInstance()->Map->GetInstanceType() == GwConstants::InstanceType::Outpost) {
+			GWAPI::GWAPIMgr::GetInstance()->Items->OpenXunlaiWindow();
+		}
 	});
 	AddControl(xunlai);
 
@@ -131,28 +143,44 @@ void InfoPanel::UpdateUI() {
 	GWAPI::GWAPIMgr* api = GWAPI::GWAPIMgr::GetInstance();
 	
 	Agent* player = api->Agents->GetPlayer();
-	if (player) {
-		player_x->SetText(to_string(lroundf(player->X)));
-		player_y->SetText(to_string(lroundf(player->Y)));
-	} else {
-		player_x->SetText(" -");
-		player_y->SetText(" -");
+	float x = player ? player->X : 0;
+	float y = player ? player->Y : 0;
+	if (x != current_player_x || y != current_player_y) {
+		current_player_x = x;
+		current_player_y = y;
+		if (player) {
+			player_x->SetText(to_string(lroundf(player->X)));
+			player_y->SetText(to_string(lroundf(player->Y)));
+		} else {
+			player_x->SetText(" -");
+			player_y->SetText(" -");
+		}
 	}
+	
 
 	Agent* target = api->Agents->GetTarget();
-	if (target) {
-		target_id->SetText(to_string(target->PlayerNumber));
-	} else {
-		target_id->SetText("-");
+	long id = target ? target->PlayerNumber : 0;
+	if (id != current_target_id) {
+		if (target) {
+			target_id->SetText(to_string(target->PlayerNumber));
+		} else {
+			target_id->SetText("-");
+		}
 	}
 
-	string map = to_string(static_cast<int>(api->Map->GetMapID()));
-	switch (api->Map->GetInstanceType()) {
-	case GwConstants::InstanceType::Explorable: break;
-	case GwConstants::InstanceType::Loading: map += " (loading)"; break;
-	case GwConstants::InstanceType::Outpost: map += " (outpost)"; break;
+	if (api->Map->GetMapID() != current_map_id
+		|| api->Map->GetInstanceType() != current_map_type) {
+		current_map_id = api->Map->GetMapID();
+		current_map_type = api->Map->GetInstanceType();
+		string map = to_string(static_cast<int>(current_map_id));
+		switch (api->Map->GetInstanceType()) {
+		case GwConstants::InstanceType::Explorable: break;
+		case GwConstants::InstanceType::Loading: map += " (loading)"; break;
+		case GwConstants::InstanceType::Outpost: map += " (outpost)"; break;
+		}
+		map_id->SetText(map);
 	}
-	map_id->SetText(map);
+	
 
 	Bag** bags = api->Items->GetBagArray();
 	if (bags) {
@@ -161,16 +189,23 @@ void InfoPanel::UpdateUI() {
 			ItemArray items = bag1->Items;
 			if (items.IsValid()) {
 				Item* item = items[0];
-				if (item) {
-					item_id->SetText(to_string(item->ModelId));
-				} else {
-					item_id->SetText(" -");
+				long id = item ? item->ModelId : -1;
+				if (current_item_id != id) {
+					current_item_id = id;
+					if (item) {
+						item_id->SetText(to_string(item->ModelId));
+					} else {
+						item_id->SetText(" -");
+					}
 				}
 			}
 		}
 	}
 
-	static char dialogtxt[0x10];
-	sprintf_s(dialogtxt, "0x%X", api->Agents->GetLastDialogId());
-	dialog_id->SetText(dialogtxt);
+	if (current_dialog_id != api->Agents->GetLastDialogId()) {
+		static char dialogtxt[0x10];
+		current_dialog_id = api->Agents->GetLastDialogId();
+		sprintf_s(dialogtxt, "0x%X", current_dialog_id);
+		dialog_id->SetText(dialogtxt);
+	}
 }

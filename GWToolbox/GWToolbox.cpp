@@ -121,7 +121,9 @@ void create_gui(IDirect3DDevice9* pDevice) {
 	std::shared_ptr<TimerWindow> timer_shared = std::shared_ptr<TimerWindow>(timer_window);
 	timer_shared->Show(timer_shared);
 	GWToolbox::instance()->set_timer_window(timer_window);
-	
+
+	GWToolbox::instance()->set_health_window(new HealthWindow());
+
 	app->Enable();
 
 	HWND hWnd = GWAPI::MemoryMgr::GetGWWindowHandle();
@@ -139,12 +141,15 @@ static HRESULT WINAPI endScene(IDirect3DDevice9* pDevice) {
 
 	GWToolbox* tb = GWToolbox::instance();
 	if (tb) {
+		if (tb->main_window() && tb->main_window()->info_panel()) {
+			tb->main_window()->info_panel()->UpdateUI();
+		}
+
 		if (tb->timer_window()) {
 			tb->timer_window()->UpdateUI();
 		}
-
-		if (tb->main_window() && tb->main_window()->info_panel()) {
-			tb->main_window()->info_panel()->UpdateUI();
+		if (tb->health_window()) {
+			tb->health_window()->UpdateUI();
 		}
 	}
 	

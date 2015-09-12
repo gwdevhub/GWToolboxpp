@@ -30,13 +30,17 @@
 			"forecolor" : [ 255, 255, 255, 255 ],
 			"backcolor" : [ 90, 0, 0, 0 ]
 		},
+		"mouseover" : {
+			"forecolor" : [20, 255, 255, 255],
+			"backcolor" : [0, 0, 0, 0]
+		},
 		"timer" : {
 			"forecolor" : [255, 255, 255, 255],
 			"backcolor" : [0, 0, 0, 0 ]
 		},
-		"mouseover" : {
-			"forecolor" : [20, 255, 255, 255],
-			"backcolor" : [0, 0, 0, 0]
+		"target_health" : {
+			"forecolor" : [255, 255, 255, 255],
+			"backcolor" : [0, 0, 0, 0 ]
 		}
 	}
 }
