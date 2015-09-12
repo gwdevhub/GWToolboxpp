@@ -9,8 +9,11 @@ namespace GWAPI {
 		friend class GWAPIMgr;
 		GWAPIMgr* parent;
 
-		SendCtoGSPacket_t CtoGSPacketSendFunction;
+		static SendCtoGSPacket_t CtoGSPacketSendFunction;
 		DWORD GetCtoGSObj();
+
+
+		static void __fastcall packetsendintermediary(DWORD thisptr, DWORD size, DWORD* packet);
 
 		CtoSMgr(GWAPIMgr* obj);
 	public:

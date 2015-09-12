@@ -48,10 +48,14 @@ GWAPI::ItemMgr::ItemMgr(GWAPIMgr* obj) : parent(obj)
 
 bool GWAPI::ItemMgr::UseItemByModelId(DWORD modelid, BYTE bagStart /*= 1*/, const BYTE bagEnd /*= 4*/)
 {
+
+	if (parent->Map->GetInstanceType() == GwConstants::InstanceType::Loading) return false;
+
 	GW::Bag** bags = GetBagArray();
 	if (bags == NULL) return false;
 
 	GW::Bag* bag = NULL;
+	GW::Item* item = NULL;
 
 	for (int bagIndex = bagStart; bagIndex <= bagEnd; ++bagIndex) {
 		bag = bags[bagIndex];
@@ -59,9 +63,10 @@ bool GWAPI::ItemMgr::UseItemByModelId(DWORD modelid, BYTE bagStart /*= 1*/, cons
 			GW::ItemArray items = bag->Items;
 			if (!items.IsValid()) return false;
 			for (size_t i = 0; i < items.size(); i++) {
-				if (items[i]) {
-					if (items[i]->ModelId == modelid) {
-						UseItem(items[i]);
+				item = items[i];
+				if (item != NULL) {
+					if (item->ModelId == modelid) {
+						UseItem(item);
 						return true;
 					}
 				}
