@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../include/OSHGui/OSHGui.hpp"
+#include "../API/GwConstants.h"
 
 class InfoPanel : public OSHGui::Panel {
 private:
@@ -10,6 +11,14 @@ private:
 	OSHGui::Label* map_id;
 	OSHGui::Label* item_id;
 	OSHGui::Label* dialog_id;
+
+	float current_player_x;
+	float current_player_y;
+	long current_target_id;
+	GwConstants::MapID current_map_id;
+	GwConstants::InstanceType current_map_type;
+	long current_item_id;
+	long current_dialog_id;
 
 public:
 	InfoPanel();

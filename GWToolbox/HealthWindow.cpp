@@ -98,7 +98,6 @@ void HealthWindow::UpdateUI() {
 		current_hp = hp;
 		current_max = max;
 
-
 		string s1;
 		string s2;
 		if (target && target->Type == 0xDB) {

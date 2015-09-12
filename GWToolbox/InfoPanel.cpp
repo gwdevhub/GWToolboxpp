@@ -141,28 +141,44 @@ void InfoPanel::UpdateUI() {
 	GWAPI::GWAPIMgr* api = GWAPI::GWAPIMgr::GetInstance();
 	
 	Agent* player = api->Agents->GetPlayer();
-	if (player) {
-		player_x->SetText(to_string(lroundf(player->X)));
-		player_y->SetText(to_string(lroundf(player->Y)));
-	} else {
-		player_x->SetText(" -");
-		player_y->SetText(" -");
+	float x = player ? player->X : 0;
+	float y = player ? player->Y : 0;
+	if (x != current_player_x || y != current_player_y) {
+		current_player_x = x;
+		current_player_y = y;
+		if (player) {
+			player_x->SetText(to_string(lroundf(player->X)));
+			player_y->SetText(to_string(lroundf(player->Y)));
+		} else {
+			player_x->SetText(" -");
+			player_y->SetText(" -");
+		}
 	}
+	
 
 	Agent* target = api->Agents->GetTarget();
-	if (target) {
-		target_id->SetText(to_string(target->PlayerNumber));
-	} else {
-		target_id->SetText("-");
+	long id = target ? target->PlayerNumber : 0;
+	if (id != current_target_id) {
+		if (target) {
+			target_id->SetText(to_string(target->PlayerNumber));
+		} else {
+			target_id->SetText("-");
+		}
 	}
 
-	string map = to_string(static_cast<int>(api->Map->GetMapID()));
-	switch (api->Map->GetInstanceType()) {
-	case GwConstants::InstanceType::Explorable: break;
-	case GwConstants::InstanceType::Loading: map += " (loading)"; break;
-	case GwConstants::InstanceType::Outpost: map += " (outpost)"; break;
+	if (api->Map->GetMapID() != current_map_id
+		|| api->Map->GetInstanceType() != current_map_type) {
+		current_map_id = api->Map->GetMapID();
+		current_map_type = api->Map->GetInstanceType();
+		string map = to_string(static_cast<int>(current_map_id));
+		switch (api->Map->GetInstanceType()) {
+		case GwConstants::InstanceType::Explorable: break;
+		case GwConstants::InstanceType::Loading: map += " (loading)"; break;
+		case GwConstants::InstanceType::Outpost: map += " (outpost)"; break;
+		}
+		map_id->SetText(map);
 	}
-	map_id->SetText(map);
+	
 
 	Bag** bags = api->Items->GetBagArray();
 	if (bags) {
@@ -171,14 +187,21 @@ void InfoPanel::UpdateUI() {
 			ItemArray items = bag1->Items;
 			if (items.IsValid()) {
 				Item* item = items[0];
-				if (item) {
-					item_id->SetText(to_string(item->ModelId));
-				} else {
-					item_id->SetText(" -");
+				long id = item ? item->ModelId : -1;
+				if (current_item_id != id) {
+					current_item_id = id;
+					if (item) {
+						item_id->SetText(to_string(item->ModelId));
+					} else {
+						item_id->SetText(" -");
+					}
 				}
 			}
 		}
 	}
 
-	dialog_id->SetText(to_string(api->Agents->GetLastDialogId()));
+	if (current_dialog_id != api->Agents->GetLastDialogId()) {
+		current_dialog_id = api->Agents->GetLastDialogId();
+		dialog_id->SetText(to_string(api->Agents->GetLastDialogId()));
+	}
 }
