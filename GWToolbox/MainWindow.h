@@ -9,7 +9,7 @@
 #include "TravelPanel.h"
 #include "BuildPanel.h"
 #include "DialogPanel.h"
-#include "OthersPanel.h"
+#include "InfoPanel.h"
 #include "MaterialsPanel.h"
 #include "SettingsPanel.h"
 
@@ -54,7 +54,7 @@ private:
 	BuildPanel* const build_panel_;
 	TravelPanel* const travel_panel_;
 	DialogPanel* const dialog_panel_;
-	OthersPanel* const others_panel_;
+	InfoPanel* const info_panel_;
 	MaterialsPanel* const materials_panel_;
 	SettingsPanel* const settings_panel_;
 
@@ -79,7 +79,7 @@ public:
 	BuildPanel* build_panel() { return build_panel_; }
 	TravelPanel* travel_panel() { return travel_panel_; }
 	DialogPanel* dialog_panel() { return dialog_panel_; }
-	OthersPanel* others_panel() { return others_panel_; }
+	InfoPanel* info_panel() { return info_panel_; }
 	MaterialsPanel* materials_panel() { return materials_panel_; }
 	SettingsPanel* settings_panel() { return settings_panel_; }
 

@@ -115,7 +115,7 @@
     <ClInclude Include="GWToolbox\Hotkeys.h" />
     <ClInclude Include="GWToolbox\logger.h" />
     <ClInclude Include="GWToolbox\MaterialsPanel.h" />
-    <ClInclude Include="GWToolbox\OthersPanel.h" />
+    <ClInclude Include="GWToolbox\InfoPanel.h" />
     <ClInclude Include="GWToolbox\PconPanel.h" />
     <ClInclude Include="GWToolbox\Pcons.h" />
     <ClInclude Include="GWToolbox\MainWindow.h" />
@@ -238,7 +238,7 @@
     <ClCompile Include="GWToolbox\HotkeyPanel.cpp" />
     <ClCompile Include="GWToolbox\Hotkeys.cpp" />
     <ClCompile Include="GWToolbox\MaterialsPanel.cpp" />
-    <ClCompile Include="GWToolbox\OthersPanel.cpp" />
+    <ClCompile Include="GWToolbox\InfoPanel.cpp" />
     <ClCompile Include="GWToolbox\PconPanel.cpp" />
     <ClCompile Include="GWToolbox\Pcons.cpp" />
     <ClCompile Include="GWToolbox\MainWindow.cpp" />

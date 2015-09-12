@@ -13,7 +13,7 @@ hotkey_panel_(new HotkeyPanel()),
 build_panel_(new BuildPanel()),
 travel_panel_(new TravelPanel()),
 dialog_panel_(new DialogPanel()),
-others_panel_(new OthersPanel()),
+info_panel_(new InfoPanel()),
 materials_panel_(new MaterialsPanel()),
 settings_panel_(new SettingsPanel()) {
 
@@ -38,6 +38,7 @@ settings_panel_(new SettingsPanel()) {
 	SetFont(GuiUtils::getTBFont(8.0, true));
 
 	TitleLabel* title = new TitleLabel();
+	title->SetFont(GuiUtils::getTBFont(8, true));
 	title->SetText("Toolbox++");
 	title->SetLocation(0, 0);
 	title->SetSize(64, TITLE_HEIGHT);
@@ -105,7 +106,8 @@ settings_panel_(new SettingsPanel()) {
 	CreateTabButton("Dialogs", button_idx, panel_idx, 
 		GuiUtils::getSubPathA("comment.png", "img").c_str());
 
-	CreateTabButton("Others?", button_idx, panel_idx, NULL);
+	CreateTabButton("Info", button_idx, panel_idx, 
+		GuiUtils::getSubPathA("info.png", "img").c_str());
 
 	CreateTabButton("Materials", button_idx, panel_idx, 
 		GuiUtils::getSubPathA("feather.png", "img").c_str());
@@ -118,7 +120,7 @@ settings_panel_(new SettingsPanel()) {
 	build_panel_->BuildUI();
 	travel_panel_->BuildUI();
 	dialog_panel_->BuildUI();
-	others_panel_->BuildUI();
+	info_panel_->BuildUI();
 	materials_panel_->BuildUI();
 	settings_panel_->BuildUI();
 
@@ -127,7 +129,7 @@ settings_panel_(new SettingsPanel()) {
 	SetupPanel(build_panel_);
 	SetupPanel(travel_panel_);
 	SetupPanel(dialog_panel_);
-	SetupPanel(others_panel_);
+	SetupPanel(info_panel_);
 	SetupPanel(materials_panel_);
 	SetupPanel(settings_panel_);
 }

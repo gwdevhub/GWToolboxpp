@@ -107,11 +107,12 @@ void create_gui(IDirect3DDevice9* pDevice) {
 		ERR("WARNING Could not load theme file %s\n", path.c_str());
 	}
 	
-	app->SetDefaultFont(GuiUtils::getTBFont(10.0f, false));
+	app->SetDefaultFont(GuiUtils::getTBFont(10.0f, true));
 
 	app->SetCursorEnabled(false);
 
 	MainWindow* main_window = new MainWindow();
+	main_window->SetFont(app->GetDefaultFont());
 	std::shared_ptr<MainWindow> shared_ptr = std::shared_ptr<MainWindow>(main_window);
 	app->Run(shared_ptr);
 	GWToolbox::instance()->set_main_window(main_window);
@@ -137,9 +138,17 @@ static HRESULT WINAPI endScene(IDirect3DDevice9* pDevice) {
 	}
 
 	GWToolbox* tb = GWToolbox::instance();
-	if (tb && tb->timer_window()) {
-		tb->timer_window()->UpdateLabel();
+	if (tb) {
+		if (tb->timer_window()) {
+			tb->timer_window()->UpdateUI();
+		}
+
+		if (tb->main_window() && tb->main_window()->info_panel()) {
+			tb->main_window()->info_panel()->UpdateUI();
+		}
 	}
+	
+	
 
 	renderer->BeginRendering();
 

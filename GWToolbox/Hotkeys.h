@@ -121,7 +121,7 @@ public:
 	static const wchar_t* IniSection() { return L"DropUseBuff"; }
 	static const wchar_t* IniKeySkillID() { return L"SkillID"; }
 	void exec();
-	string GetDescription() override { return string("Drop/Use Buff"); }
+	string GetDescription() override { return string("Drop or Use Buff"); }
 };
 
 // hotkey to toggle a toolbox function
@@ -147,7 +147,7 @@ public:
 	static const wchar_t* IniKeyToggleID() { return L"ToggleID"; }
 
 	void exec();
-	string GetDescription() override { return string("Toggle"); }
+	string GetDescription() override { return string("Toggle Function"); }
 };
 
 // hotkey to target something in-game
@@ -194,7 +194,7 @@ public:
 	static const wchar_t* IniKeyName() { return L"name"; }
 
 	void exec();
-	string GetDescription() override { return string("Move"); }
+	string GetDescription() override { return string("Move to"); }
 };
 
 class HotkeyDialog : public TBHotkey {

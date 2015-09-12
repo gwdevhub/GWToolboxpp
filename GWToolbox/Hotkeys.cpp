@@ -20,7 +20,6 @@ TBHotkey::TBHotkey(Key key, Key modifier, bool active, wstring ini_section)
 	checkbox->SetChecked(active);
 	checkbox->SetText("");
 	checkbox->SetLocation(HOTKEY_X, HOTKEY_Y + 5);
-	checkbox->SetBackColor(Drawing::Color::Black());
 	checkbox->GetCheckedChangedEvent() += CheckedChangedEventHandler([this, checkbox, ini_section](Control*) {
 		this->set_active(checkbox->GetChecked());
 		GWToolbox::instance()->config()->iniWriteBool(ini_section.c_str(), TBHotkey::IniKeyActive(), checkbox->GetChecked());

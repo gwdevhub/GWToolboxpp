@@ -8,7 +8,7 @@
 	"themes" : {
 		"button" : {
 			"forecolor" : [ 255, 255, 255, 255 ],
-			"backcolor" : [ 100, 34, 34, 34 ]
+			"backcolor" : [ 100, 90, 90, 90 ]
 		},
 		"combobox" : {
 			"forecolor" : [ 255, 255, 255, 255 ],
@@ -16,7 +16,7 @@
 		},
 		"checkbox" : {
 			"forecolor" : [ 255, 255, 255, 255 ],
-			"backcolor" : [ 100, 34, 34, 34 ]
+			"backcolor" : [ 255, 0, 0, 0 ]
 		},
 		"textbox" : {
 			"forecolor" : [ 255, 255, 255, 255 ],

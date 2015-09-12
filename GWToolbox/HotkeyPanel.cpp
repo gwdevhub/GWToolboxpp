@@ -37,7 +37,7 @@ void HotkeyPanel::BuildUI() {
 	create_combo->AddItem("Drop or Use Buff");
 	create_combo->AddItem("Function Toggle");
 	create_combo->AddItem("Target");
-	create_combo->AddItem("Move to coordinate");
+	create_combo->AddItem("Move to");
 	create_combo->AddItem("Dialog");
 	create_combo->SetMaxShowItems(create_combo->GetItemsCount());
 	create_combo->SetLocation(DefaultBorderPadding,

@@ -13,7 +13,7 @@ DWORD GWAPI::AgentMgr::LastDialogId = 0;
 GWAPI::GW::AgentArray GWAPI::AgentMgr::GetAgentArray()
 {
 	GW::AgentArray* agRet = (GW::AgentArray*)MemoryMgr::agArrayPtr;
-	if (agRet->size() == 0) throw API_EXCEPTION;
+	//if (agRet->size() == 0) throw API_EXCEPTION;
 	return *agRet;
 }
 

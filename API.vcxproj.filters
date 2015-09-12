@@ -412,9 +412,6 @@
     <ClInclude Include="GWToolbox\DialogPanel.h">
       <Filter>Main\GWToolbox</Filter>
     </ClInclude>
-    <ClInclude Include="GWToolbox\OthersPanel.h">
-      <Filter>Main\GWToolbox</Filter>
-    </ClInclude>
     <ClInclude Include="GWToolbox\SettingsPanel.h">
       <Filter>Main\GWToolbox</Filter>
     </ClInclude>
@@ -426,6 +423,9 @@
     </ClInclude>
     <ClInclude Include="API\GwConstantsSkills.h">
       <Filter>API</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\InfoPanel.h">
+      <Filter>Main\GWToolbox</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -693,13 +693,13 @@
     <ClCompile Include="GWToolbox\DialogPanel.cpp">
       <Filter>Main\GWToolbox</Filter>
     </ClCompile>
-    <ClCompile Include="GWToolbox\OthersPanel.cpp">
-      <Filter>Main\GWToolbox</Filter>
-    </ClCompile>
     <ClCompile Include="GWToolbox\SettingsPanel.cpp">
       <Filter>Main\GWToolbox</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\MaterialsPanel.cpp">
+      <Filter>Main\GWToolbox</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\InfoPanel.cpp">
       <Filter>Main\GWToolbox</Filter>
     </ClCompile>
   </ItemGroup>

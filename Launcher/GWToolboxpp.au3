@@ -1,5 +1,6 @@
 #RequireAdmin
 
+#include <InetConstants.au3>
 #include <ButtonConstants.au3>
 #include <ComboConstants.au3>
 #include <GUIConstantsEx.au3>
@@ -102,15 +103,35 @@ EndIf
 ; 2. install required files if missing
 InstallResources()
 
-; 3. check for updates
+; 3. find gw client
+ScanForGWClients()
+
+; 4. check for updates
 If $DevelopMode Then
 	FileInstall("..\Debug\API.dll", $dll, True) ; True = overwrite
 Else
-	; TODO check for updates
+	If FileExists($dll) Then FileDelete($dll)
+	Global $download = InetGet($host & "GWToolboxpp.dll", $ini, Default, $INET_DOWNLOADBACKGROUND)
+	If $download == 0 Then
+		MsgBox(0, "GWToolbox++ Launcher", "Download error: " & @error)
+	EndIf
+	Out("Updating... 0 %")
+
+	While Not InetGetInfo($download, $INET_DOWNLOADCOMPLETE)
+		Sleep(250)
+		Local $completed = InetGetInfo($download)
+		Local $size = InetGetInfo($download)
+		Local $progress
+		If $size > 0 Then
+			$progress = $completed / $size * 100 & " %"
+		Else
+			$progress = $completed
+		EndIf
+		Out("Updating... " & $progress)
+	WEnd
 EndIf
 
-; 4. find gw client
-ScanForGWClients()
+
 
 ; 5. proceed if $autolaunch or wait for user input
 Out("Ready")
@@ -159,6 +180,8 @@ Func ScanForGWClients()
 EndFunc
 
 Func InjectGW()
+	If $DevelopMode Then FileCopy("..\Debug\API.dll", $dll, 1)
+
 	If Not $no_gui Then GUICtrlSetState($LaunchButton, $GUI_DISABLE)
 	Out("Launching...")
 	If $launch_exe Then
@@ -309,117 +332,103 @@ Func InstallResources()
 	EndIf
 
 	; tab icons
+	If Not FileExists($imgFolder & "info.png") Then
+		FileInstall("..\resources\info.png", $imgFolder & "info.png")
+	EndIf
+
 	If Not FileExists($imgFolder & "comment.png") Then
-		FileInstall("..\resources\" & "comment.png", $imgFolder & "comment.png")
+		FileInstall("..\resources\comment.png", $imgFolder & "comment.png")
 	endIf
 	If Not FileExists($imgFolder & "cupcake.png") Then
-		FileInstall("..\resources\" & "cupcake.png", $imgFolder & "cupcake.png")
+		FileInstall("..\resources\cupcake.png", $imgFolder & "cupcake.png")
 	endIf
 	If Not FileExists($imgFolder & "feather.png") Then
-		FileInstall("..\resources\" & "feather.png", $imgFolder & "feather.png")
+		FileInstall("..\resources\feather.png", $imgFolder & "feather.png")
 	endIf
 	If Not FileExists($imgFolder & "keyboard.png") Then
-		FileInstall("..\resources\" & "keyboard.png", $imgFolder & "keyboard.png")
+		FileInstall("..\resources\keyboard.png", $imgFolder & "keyboard.png")
 	endIf
 	If Not FileExists($imgFolder & "list.png") Then
-		FileInstall("..\resources\" & "list.png", $imgFolder & "list.png")
+		FileInstall("..\resources\list.png", $imgFolder & "list.png")
 	endIf
 	If Not FileExists($imgFolder & "plane.png") Then
-		FileInstall("..\resources\" & "plane.png", $imgFolder & "plane.png")
+		FileInstall("..\resources\plane.png", $imgFolder & "plane.png")
 	endIf
 	If Not FileExists($imgFolder & "settings.png") Then
-		FileInstall("..\resources\" & "settings.png", $imgFolder & "settings.png")
+		FileInstall("..\resources\settings.png", $imgFolder & "settings.png")
 	endIf
 
 	; pcons
-	Global $essence = "Essence_of_Celerity.png"
-	If Not FileExists($imgFolder & $essence) Then
-		FileInstall("..\resources\" & $essence, $imgFolder & $essence)
+	If Not FileExists($imgFolder & "Essence_of_Celerity.png") Then
+		FileInstall("..\resources\Essence_of_Celerity.png", $imgFolder & "Essence_of_Celerity.png")
 	EndIf
 
-	Global $grail = "Grail_of_Might.png"
-	If Not FileExists($imgFolder & $grail) Then
-		FileInstall("..\resources\" & $grail, $imgFolder & $grail)
+	If Not FileExists($imgFolder & "Grail_of_Might.png") Then
+		FileInstall("..\resources\Grail_of_Might.png", $imgFolder & "Grail_of_Might.png")
 	EndIf
 
-	Global $armor = "Armor_of_Salvation.png"
-	If Not FileExists($imgFolder & $armor) Then
-		FileInstall("..\resources\" & $armor, $imgFolder & $armor)
+	If Not FileExists($imgFolder & "Armor_of_Salvation.png") Then
+		FileInstall("..\resources\Armor_of_Salvation.png", $imgFolder & "Armor_of_Salvation.png")
 	EndIf
 
-	Global $alcohol = "Red_Rock_Candy.png"
-	If Not FileExists($imgFolder & $alcohol) Then
-		FileInstall("..\resources\" & $alcohol, $imgFolder & $alcohol)
+	If Not FileExists($imgFolder & "Red_Rock_Candy.png") Then
+		FileInstall("..\resources\Red_Rock_Candy.png", $imgFolder & "Red_Rock_Candy.png")
 	EndIf
 
-	Global $redrock = "Blue_Rock_Candy.png"
-	If Not FileExists($imgFolder & $redrock) Then
-		FileInstall("..\resources\" & $redrock, $imgFolder & $redrock)
+	If Not FileExists($imgFolder & "Blue_Rock_Candy.png") Then
+		FileInstall("..\resources\Blue_Rock_Candy.png", $imgFolder & "Blue_Rock_Candy.png")
 	EndIf
 
-	Global $bluerock = "Green_Rock_Candy.png"
-	If Not FileExists($imgFolder & $bluerock) Then
-		FileInstall("..\resources\" & $bluerock, $imgFolder & $bluerock)
+	If Not FileExists($imgFolder & "Green_Rock_Candy.png") Then
+		FileInstall("..\resources\Green_Rock_Candy.png", $imgFolder & "Green_Rock_Candy.png")
 	EndIf
 
-	Global $greenrock = "Birthday_Cupcake.png"
-	If Not FileExists($imgFolder & $greenrock) Then
-		FileInstall("..\resources\" & $greenrock, $imgFolder & $greenrock)
+	If Not FileExists($imgFolder & "Birthday_Cupcake.png") Then
+		FileInstall("..\resources\Birthday_Cupcake.png", $imgFolder & "Birthday_Cupcake.png")
 	EndIf
 
-	Global $pie = "Candy_Apple.png"
-	If Not FileExists($imgFolder & $pie) Then
-		FileInstall("..\resources\" & $pie, $imgFolder & $pie)
+	If Not FileExists($imgFolder & "Candy_Apple.png") Then
+		FileInstall("..\resources\Candy_Apple.png", $imgFolder & "Candy_Apple.png")
 	EndIf
 
-	Global $cupcake = "Candy_Corn.png"
-	If Not FileExists($imgFolder & $cupcake) Then
-		FileInstall("..\resources\" & $cupcake, $imgFolder & $cupcake)
+	If Not FileExists($imgFolder & "Candy_Corn.png") Then
+		FileInstall("..\resources\Candy_Corn.png", $imgFolder & "Candy_Corn.png")
 	EndIf
 
-	Global $apple = "Golden_Egg.png"
-	If Not FileExists($imgFolder & $apple) Then
-		FileInstall("..\resources\" & $apple, $imgFolder & $apple)
+	If Not FileExists($imgFolder & "Golden_Egg.png") Then
+		FileInstall("..\resources\Golden_Egg.png", $imgFolder & "Golden_Egg.png")
 	EndIf
 
-	Global $corn = "Slice_of_Pumpkin_Pie.png"
-	If Not FileExists($imgFolder & $corn) Then
-		FileInstall("..\resources\" & $corn, $imgFolder & $corn)
+	If Not FileExists($imgFolder & "Slice_of_Pumpkin_Pie.png") Then
+		FileInstall("..\resources\Slice_of_Pumpkin_Pie.png", $imgFolder & "Slice_of_Pumpkin_Pie.png")
 	EndIf
 
-	Global $egg = "Sugary_Blue_Drink.png"
-	If Not FileExists($imgFolder & $egg) Then
-		FileInstall("..\resources\" & $egg, $imgFolder & $egg)
+	If Not FileExists($imgFolder & "Sugary_Blue_Drink.png") Then
+		FileInstall("..\resources\Sugary_Blue_Drink.png", $imgFolder & "Sugary_Blue_Drink.png")
 	EndIf
 
-	Global $kabob = "Dwarven_Ale.png"
-	If Not FileExists($imgFolder & $kabob) Then
-		FileInstall("..\resources\" & $kabob, $imgFolder & $kabob)
+	If Not FileExists($imgFolder & "Dwarven_Ale.png") Then
+		FileInstall("..\resources\Dwarven_Ale.png", $imgFolder & "Dwarven_Ale.png")
 	EndIf
 
-	Global $warsupply = "Lunar_Fortune.png"
-	If Not FileExists($imgFolder & $warsupply) Then
-		FileInstall("..\resources\" & $warsupply, $imgFolder & $warsupply)
+	If Not FileExists($imgFolder & "Lunar_Fortune.png") Then
+		FileInstall("..\resources\Lunar_Fortune.png", $imgFolder & "Lunar_Fortune.png")
 	EndIf
 
-	Global $lunars = "War_Supplies.png"
-	If Not FileExists($imgFolder & $lunars) Then
-		FileInstall("..\resources\" & $lunars, $imgFolder & $lunars)
+	If Not FileExists($imgFolder & "War_Supplies.png") Then
+		FileInstall("..\resources\War_Supplies.png", $imgFolder & "War_Supplies.png")
 	EndIf
 
-	Global $skalesoup = "Drake_Kabob.png"
-	If Not FileExists($imgFolder & $skalesoup) Then
-		FileInstall("..\resources\" & $skalesoup, $imgFolder & $skalesoup)
+	If Not FileExists($imgFolder & "Drake_Kabob.png") Then
+		FileInstall("..\resources\Drake_Kabob.png", $imgFolder & "Drake_Kabob.png")
 	EndIf
 
-	Global $pahnai = "Bowl_of_Skalefin_Soup.png"
-	If Not FileExists($imgFolder & $pahnai) Then
-		FileInstall("..\resources\" & $pahnai, $imgFolder & $pahnai)
+	If Not FileExists($imgFolder & "Bowl_of_Skalefin_Soup.png") Then
+		FileInstall("..\resources\Bowl_of_Skalefin_Soup.png", $imgFolder & "Bowl_of_Skalefin_Soup.png")
 	EndIf
 
-	Global $city = "Pahnai_Salad.png"
-	If Not FileExists($imgFolder & $city) Then
-		FileInstall("..\resources\" & $city, $imgFolder & $city)
+	If Not FileExists($imgFolder & "Pahnai_Salad.png") Then
+		FileInstall("..\resources\Pahnai_Salad.png", $imgFolder & "Pahnai_Salad.png")
 	EndIf
 EndFunc
 

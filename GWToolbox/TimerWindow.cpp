@@ -86,7 +86,7 @@ void TimerWindow::SaveLocation() {
 	config->iniWriteLong(TimerWindow::IniSection(), TimerWindow::IniKeyY(), y);
 }
 
-void TimerWindow::UpdateLabel() {
+void TimerWindow::UpdateUI() {
 	long uptime = GWAPIMgr::GetInstance()->Map->GetInstanceTime();
 	long time = uptime / 1000;
 	if (time != current_time_) {
