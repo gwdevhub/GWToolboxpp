@@ -78,6 +78,7 @@
 #include "SkillbarMgr.h"
 #include "EffectMgr.h"
 
+#include "GuildMgr.h"
 #include "MapMgr.h"
 
 #include "ChatMgr.h"

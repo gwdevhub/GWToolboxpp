@@ -426,6 +426,9 @@
     </ClInclude>
     <ClInclude Include="GWToolbox\InfoPanel.h">
       <Filter>Main\GWToolbox</Filter>
+	</ClInclude>
+    <ClInclude Include="API\GuildMgr.h">
+      <Filter>API</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -701,6 +704,9 @@
     </ClCompile>
     <ClCompile Include="GWToolbox\InfoPanel.cpp">
       <Filter>Main\GWToolbox</Filter>
+	 </ClCompile>
+    <ClCompile Include="API\GuildMgr.cpp">
+      <Filter>API\src</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

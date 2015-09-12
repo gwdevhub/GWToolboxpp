@@ -39,5 +39,8 @@ namespace GWAPI{
 		// Travel to specified outpost.
 		void Travel(GwConstants::MapID MapID, DWORD District = 0, int Region = 0, DWORD Language = 0);
 
+		// Returns array of icons (res shrines, quarries, traders, etc) on mission map.
+		// Look at MissionMapIcon struct for more info.
+		GW::MissionMapIconArray GetMissionMapIconArray();
 	};
 }
