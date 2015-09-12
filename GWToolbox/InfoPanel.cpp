@@ -4,6 +4,9 @@
 #include <cmath>
 
 #include "../API/APIMain.h"
+#include "GWToolbox.h"
+#include "Config.h"
+#include "HealthWindow.h"
 
 using namespace OSHGui;
 
@@ -25,7 +28,7 @@ void InfoPanel::BuildUI() {
 	GroupBox* player = new GroupBox();
 	player->SetSize(full_item_width, group_height);
 	player->SetLocation(item1_x, DefaultBorderPadding);
-	player->SetText(" Player ");
+	player->SetText(" Player Position ");
 	player->SetBackColor(Drawing::Color::Empty());
 	AddControl(player);
 	Label* xtext = new Label();
@@ -36,7 +39,7 @@ void InfoPanel::BuildUI() {
 	player_x->SetLocation(xtext->GetRight(), DefaultBorderPadding);
 	player->AddControl(player_x);
 	Label* ytext = new Label();
-	ytext->SetLocation(player->GetWidth() / 2 - 6, DefaultBorderPadding);
+	ytext->SetLocation(player->GetWidth() / 2 + DefaultBorderPadding, DefaultBorderPadding);
 	ytext->SetText("y:");
 	player->AddControl(ytext);
 	player_y = new Label();
@@ -77,7 +80,7 @@ void InfoPanel::BuildUI() {
 	GroupBox* dialog = new GroupBox();
 	dialog->SetSize(half_item_width, group_height);
 	dialog->SetLocation(item2_x, target->GetBottom() + DefaultBorderPadding);
-	dialog->SetText(" Dialog ID ");
+	dialog->SetText(" Last Dialog ID ");
 	dialog->SetBackColor(Drawing::Color::Empty());
 	AddControl(dialog);
 	dialog_id = new Label();
@@ -98,8 +101,15 @@ void InfoPanel::BuildUI() {
 	targetHp->SetLocation(item1_x, bonds->GetBottom() + DefaultBorderPadding);
 	targetHp->SetText("Show Target Health");
 	targetHp->GetCheckedChangedEvent() += CheckedChangedEventHandler([targetHp](Control*) {
-		// TODO
+		GWToolbox* tb = GWToolbox::instance();
+		bool show = targetHp->GetChecked();
+		if (tb->health_window()) {
+			tb->health_window()->Show(show);
+		}
+		tb->config()->iniWriteBool(HealthWindow::IniSection(), HealthWindow::IniKeyShow(), show);
 	});
+	targetHp->SetChecked(GWToolbox::instance()->config()->iniReadBool(
+		HealthWindow::IniSection(), HealthWindow::IniKeyShow(), false));
 	AddControl(targetHp);
 
 	CheckBox* distance = new CheckBox();
@@ -116,7 +126,9 @@ void InfoPanel::BuildUI() {
 	xunlai->SetLocation(item1_x, distance->GetBottom() + DefaultBorderPadding);
 	xunlai->SetText("Open Xunlai Chest");
 	xunlai->GetClickEvent() += ClickEventHandler([](Control*) {
-		GWAPI::GWAPIMgr::GetInstance()->Items->OpenXunlaiWindow();
+		if (GWAPI::GWAPIMgr::GetInstance()->Map->GetInstanceType() == GwConstants::InstanceType::Outpost) {
+			GWAPI::GWAPIMgr::GetInstance()->Items->OpenXunlaiWindow();
+		}
 	});
 	AddControl(xunlai);
 
