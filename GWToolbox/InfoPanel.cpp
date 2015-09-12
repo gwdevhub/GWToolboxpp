@@ -126,6 +126,8 @@ void InfoPanel::UpdateUI() {
 	using namespace GWAPI::GW;
 	using namespace std;
 
+	
+
 	GWAPI::GWAPIMgr* api = GWAPI::GWAPIMgr::GetInstance();
 	
 	Agent* player = api->Agents->GetPlayer();
@@ -168,5 +170,7 @@ void InfoPanel::UpdateUI() {
 		}
 	}
 
-	dialog_id->SetText(to_string(api->Agents->GetLastDialogId()));
+	static char dialogtxt[0x10];
+	sprintf_s(dialogtxt, "0x%X", api->Agents->GetLastDialogId());
+	dialog_id->SetText(dialogtxt);
 }
