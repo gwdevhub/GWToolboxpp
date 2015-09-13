@@ -42,7 +42,7 @@ namespace GWAPI {
 		typedef void(__fastcall *PPEFunc_t)(DWORD Intensity, DWORD Tint);
 		static PPEFunc_t PPERetourFunc;
 		static DWORD AlcoholLevel;
-		BYTE* AlcoholHandlerRestore;
+		Hook hkPostProcessEffect;
 		static void __fastcall AlcoholHandler(DWORD Intensity, DWORD Tint);
 		friend class GWAPIMgr;
 		GWAPIMgr* parent;

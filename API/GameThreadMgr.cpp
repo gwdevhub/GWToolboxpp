@@ -68,11 +68,11 @@ void GWAPI::GameThreadMgr::ToggleRenderHook()
 
 GWAPI::GameThreadMgr::GameThreadMgr(GWAPI::GWAPIMgr* obj) : parent(obj), m_RenderingState(false)
 {
-	MemoryMgr::GameLoopReturn = (BYTE*)MemoryMgr::Detour(MemoryMgr::GameLoopLocation, (BYTE*)gameLoopHook, 5, &GameLoopRestore);
+	MemoryMgr::GameLoopReturn = (BYTE*)hkGameThread.Detour(MemoryMgr::GameLoopLocation, (BYTE*)gameLoopHook, 5);
 }
 
 GWAPI::GameThreadMgr::~GameThreadMgr()
 {
 	if (m_RenderingState) ToggleRenderHook();
-	MemoryMgr::Retour(MemoryMgr::GameLoopLocation, GameLoopRestore, 5);
+	hkGameThread.Retour();
 }

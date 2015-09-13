@@ -52,13 +52,13 @@ GWAPI::AgentMgr::AgentMgr(GWAPIMgr* obj) : parent(obj)
 {
 	_ChangeTarget = (ChangeTarget_t)MemoryMgr::ChangeTargetFunction;
 	_Move = (Move_t)MemoryMgr::MoveFunction;
-	DialogLogRet = (BYTE*)MemoryMgr::Detour(MemoryMgr::DialogFunc, (BYTE*)AgentMgr::detourDialogLog, 9, &DialogLogRestore);
+	DialogLogRet = (BYTE*)hkDialogLog.Detour(MemoryMgr::DialogFunc, (BYTE*)AgentMgr::detourDialogLog, 9);
 }
 
 
 GWAPI::AgentMgr::~AgentMgr()
 {
-	MemoryMgr::Retour(MemoryMgr::DialogFunc, DialogLogRestore, 9);
+	hkDialogLog.Retour();
 }
 
 void GWAPI::AgentMgr::ChangeTarget(GW::Agent* Agent)

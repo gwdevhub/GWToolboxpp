@@ -13,7 +13,9 @@ namespace GWAPI {
 		typedef void(__fastcall *ChangeTarget_t)(DWORD AgentID);
 		ChangeTarget_t _ChangeTarget;
 
-		BYTE* DialogLogRestore;
+		
+		Hook hkDialogLog;
+
 		static BYTE* DialogLogRet;
 		static DWORD LastDialogId;
 		static void detourDialogLog();

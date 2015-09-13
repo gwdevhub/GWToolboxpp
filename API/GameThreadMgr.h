@@ -17,7 +17,8 @@ namespace GWAPI{
 		GWAPIMgr* parent;
 
 		bool m_RenderingState;
-		BYTE* GameLoopRestore;
+
+		Hook hkGameThread;
 
 		std::vector<std::function<void(void)> > m_Calls;
 		mutable std::mutex m_CallVecMutex;

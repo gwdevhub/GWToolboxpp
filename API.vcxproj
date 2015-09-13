@@ -100,6 +100,7 @@
     <ClInclude Include="API\GwConstantsMaps.h" />
     <ClInclude Include="API\GwConstantsSkills.h" />
     <ClInclude Include="API\GWStructures.h" />
+    <ClInclude Include="API\Hooker.h" />
     <ClInclude Include="API\ItemMgr.h" />
     <ClInclude Include="API\MapMgr.h" />
     <ClInclude Include="API\MemoryMgr.h" />
@@ -228,6 +229,7 @@
     <ClCompile Include="API\EffectMgr.cpp" />
     <ClCompile Include="API\GameThreadMgr.cpp" />
     <ClCompile Include="API\GWAPIMgr.cpp" />
+    <ClCompile Include="API\Hooker.cpp" />
     <ClCompile Include="API\ItemMgr.cpp" />
     <ClCompile Include="API\MapMgr.cpp" />
     <ClCompile Include="API\MemoryMgr.cpp" />

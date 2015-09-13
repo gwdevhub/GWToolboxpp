@@ -23,10 +23,11 @@ namespace GWAPI {
 		GWAPIMgr* parent;
 
 		static BYTE* TraderBuyClassHookRet;
-		static BYTE* TraderBuyClassHookRestore;
+		Hook hkTraderBuyClass;
 
 		static BYTE* TraderSellClassHookRet;
-		static BYTE* TraderSellClassHookRestore;
+		Hook hkTraderSellClass;
+
 
 		MerchantMgr(GWAPIMgr* obj);
 		~MerchantMgr();

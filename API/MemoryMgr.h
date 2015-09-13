@@ -100,8 +100,6 @@ namespace GWAPI{
 
 		// Basics
 		static bool Scan();
-		static void *Detour(BYTE *src, const BYTE *dst, const int len, BYTE** restore = NULL);
-		static void Retour(BYTE *src, BYTE *restore, const int len);
 		template <typename T> static T ReadPtrChain(DWORD pBase,DWORD AmountofOffsets,...)
 		{
 			va_list vl;

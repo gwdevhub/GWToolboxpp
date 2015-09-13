@@ -6,9 +6,7 @@
 
 BYTE* GWAPI::MerchantMgr::TraderSellClass = NULL;
 BYTE* GWAPI::MerchantMgr::TraderBuyClass = NULL;
-BYTE* GWAPI::MerchantMgr::TraderSellClassHookRestore = NULL;
 BYTE* GWAPI::MerchantMgr::TraderSellClassHookRet = NULL;
-BYTE* GWAPI::MerchantMgr::TraderBuyClassHookRestore = NULL;
 BYTE* GWAPI::MerchantMgr::TraderBuyClassHookRet = NULL;
 
 void GWAPI::MerchantMgr::CommandTraderSell()
@@ -183,14 +181,14 @@ void __declspec(naked) GWAPI::MerchantMgr::TraderBuyClassHook()
 
 GWAPI::MerchantMgr::~MerchantMgr()
 {
-	MemoryMgr::Retour(MemoryMgr::TraderBuyClassHook, TraderBuyClassHookRestore, 6);
-	MemoryMgr::Retour(MemoryMgr::TraderSellClassHook, TraderSellClassHookRestore, 6);
+	hkTraderBuyClass.Retour();
+	hkTraderSellClass.Retour();
 }
 
 GWAPI::MerchantMgr::MerchantMgr(GWAPIMgr* obj) : parent(obj)
 {
-	TraderBuyClassHookRet = (BYTE*)MemoryMgr::Detour(MemoryMgr::TraderBuyClassHook, (BYTE*)TraderBuyClassHook, 6, &TraderBuyClassHookRestore);
-	TraderSellClassHookRet = (BYTE*)MemoryMgr::Detour(MemoryMgr::TraderSellClassHook, (BYTE*)TraderSellClassHook, 6, &TraderSellClassHookRestore);
+	TraderBuyClassHookRet = (BYTE*)hkTraderBuyClass.Detour(MemoryMgr::TraderBuyClassHook, (BYTE*)TraderBuyClassHook, 6);
+	TraderSellClassHookRet = (BYTE*)hkTraderSellClass.Detour(MemoryMgr::TraderSellClassHook, (BYTE*)TraderSellClassHook, 6);
 }
 
 long* GWAPI::MerchantMgr::GetCraftItemArray(long aQuantity, long aMatCount, CraftMaterial* mats)
