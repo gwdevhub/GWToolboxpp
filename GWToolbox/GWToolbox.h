@@ -43,7 +43,8 @@ private:
 	}
 
 	// Executes setup and main loop of toolbox. 
-	void exec();
+	void Exec();
+	void MainLoop();
 
 	// Self destructs
 	void Destroy();
@@ -73,6 +74,8 @@ public:
 	inline void set_bonds_window(BondsWindow* w) { bonds_window_ = w; }
 	inline void set_health_window(HealthWindow* w) { health_window_ = w; }
 	inline void set_distance_window(DistanceWindow* w) { distance_window_ = w; }
+
+	void UpdateUI();
 
 	void StartSelfDestruct() { must_self_destruct_ = true; }
 };

@@ -131,21 +131,6 @@ void create_gui(IDirect3DDevice9* pDevice) {
 	OldWndProc = SetWindowLongPtr(hWnd, GWL_WNDPROC, (long)NewWndProc);
 }
 
-static void UpdateUI() {
-	GWToolbox* tb = GWToolbox::instance();
-	if (tb->initialized()) {
-		__try {
-			tb->main_window()->UpdateUI();
-			tb->timer_window()->UpdateUI();
-			tb->bonds_window()->UpdateUI();
-			tb->health_window()->UpdateUI();
-			tb->distance_window()->UpdateUI();
-		} __except (EXCEPTION_EXECUTE_HANDLER) {
-			LOG("BAD! (in render thread)\n");
-		}
-	}
-}
-
 // All rendering done here.
 static HRESULT WINAPI endScene(IDirect3DDevice9* pDevice) {
 	static GWAPI::DirectXMgr::EndScene_t origfunc = dx->GetEndsceneReturn();
@@ -155,14 +140,13 @@ static HRESULT WINAPI endScene(IDirect3DDevice9* pDevice) {
 		create_gui(pDevice);
 	}
 
-	UpdateUI();
+	GWToolbox::instance()->UpdateUI();
 
 	renderer->BeginRendering();
 
 	Application::InstancePtr()->Render();
 
 	renderer->EndRendering();
-
 
 	return origfunc(pDevice);
 }
@@ -184,7 +168,7 @@ static HRESULT WINAPI resetScene(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETER
 	return result;
 }
 
-void GWToolbox::exec() {
+void GWToolbox::Exec() {
 	mgr = GWAPI::GWAPIMgr::GetInstance();
 	dx = mgr->DirectX;
 
@@ -194,10 +178,15 @@ void GWToolbox::exec() {
 	input.SetKeyboardInputEnabled(true);
 	input.SetMouseInputEnabled(true);
 
+	MainLoop();
+}
+
+void GWToolbox::MainLoop() {
+
 	Application * app = Application::InstancePtr();
 
 	while (true) { // main loop
-		if (app->HasBeenInitialized() && initialized()) {
+		if (app->HasBeenInitialized() && initialized_) {
 			__try {
 				main_window_->MainRoutine();
 				timer_window_->MainRoutine();
@@ -215,6 +204,20 @@ void GWToolbox::exec() {
 			Destroy();
 		if (must_self_destruct_)
 			Destroy();
+	}
+}
+
+void GWToolbox::UpdateUI() {
+	if (initialized_) {
+		__try {
+			main_window_->UpdateUI();
+			timer_window_->UpdateUI();
+			bonds_window_->UpdateUI();
+			health_window_->UpdateUI();
+			distance_window_->UpdateUI();
+		} __except (EXCEPTION_EXECUTE_HANDLER) {
+			LOG("BAD! (in render thread)\n");
+		}
 	}
 }
 
@@ -247,5 +250,5 @@ void GWToolbox::threadEntry(HMODULE mod) {
 	instance_ = new GWToolbox(mod);
 
 	LOG("Running GWToolbox++\n");
-	instance_->exec();
+	instance_->Exec();
 }

@@ -15,6 +15,18 @@
 
 using namespace OSHGui;
 
+class TabButton : public Button {
+private:
+	PictureBox* const pic;
+
+public:
+	TabButton(const char* s, const char* icon);
+
+	void DrawSelf(Drawing::RenderContext &context) override;
+	void CalculateLabelLocation() override;
+	void PopulateGeometry() override;
+};
+
 class MainWindow : public ToolboxWindow {
 public:
 	class TitleLabel : public DragButton {
@@ -45,6 +57,7 @@ public:
 private:
 	Panel* main_panel_;
 	std::vector<ToolboxPanel*> panels;
+	std::vector<TabButton*> tab_buttons;
 	int current_panel_;
 	bool minimized_;
 
@@ -90,14 +103,3 @@ public:
 	void MainRoutine();
 };
 
-class TabButton : public Button {
-private:
-	PictureBox* const pic;
-
-public:
-	TabButton(const char* s, const char* icon);
-
-	void DrawSelf(Drawing::RenderContext &context) override;
-	void CalculateLabelLocation() override;
-	void PopulateGeometry() override;
-};

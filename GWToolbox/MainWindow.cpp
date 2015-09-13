@@ -18,6 +18,7 @@ materials_panel_(new MaterialsPanel()),
 settings_panel_(new SettingsPanel()) {
 
 	panels = std::vector<ToolboxPanel*>();
+	tab_buttons = std::vector<TabButton*>();
 	current_panel_ = -1;
 	minimized_ = false;
 	
@@ -174,6 +175,7 @@ void MainWindow::CreateTabButton(const char* s, int& button_idx,
 	b->GetClickEvent() += ClickEventHandler([self, index](Control*) { 
 		self->openClosePanel(index); 
 	});
+	tab_buttons.push_back(b);
 	main_panel_->AddControl(b);
 	++button_idx;
 	++panel_idx;
@@ -193,6 +195,7 @@ void MainWindow::openClosePanel(int index) {
 	if (current_panel_ >= 0) {
 		panels[current_panel_]->SetVisible(false);
 		panels[current_panel_]->SetEnabled(false);
+		tab_buttons[current_panel_]->SetBackColor(Drawing::Color::Empty());
 	}
 
 	if (index == current_panel_) {
@@ -200,6 +203,7 @@ void MainWindow::openClosePanel(int index) {
 	} else {
 		if (index < (int)panels.size()) {
 			current_panel_ = index;
+			tab_buttons[current_panel_]->SetBackColor(tab_buttons[current_panel_]->GetMouseOverFocusColor());
 			panels[current_panel_]->SetVisible(true);
 			panels[current_panel_]->SetEnabled(true);
 			panels[current_panel_]->Focus();
