@@ -34,8 +34,13 @@ std::vector<GWAPI::GW::Agent*> * GWAPI::AgentMgr::GetParty() {
 
 size_t GWAPI::AgentMgr::GetPartySize() {
 	size_t ret = 0;
+	size_t* retptr = NULL;
 	for (BYTE i = 0; i < 3; ++i) {
-		ret += *MemoryMgr::ReadPtrChain<size_t*>(MemoryMgr::GetContextPtr(), 3, 0x4C, 0x54, 0x0C + 0x10 * i);
+		retptr = MemoryMgr::ReadPtrChain<size_t*>(MemoryMgr::GetContextPtr(), 3, 0x4C, 0x54, 0x0C + 0x10 * i);
+		if (retptr == NULL)
+			return NULL;
+		else
+			ret += *retptr;
 	}
 	return ret;
 }
