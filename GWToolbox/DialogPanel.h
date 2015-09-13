@@ -1,11 +1,11 @@
 #pragma once
 
-#include "../include/OSHGui/OSHGui.hpp"
+#include "ToolboxPanel.h"
 
-class DialogPanel : public OSHGui::Panel {
+class DialogPanel : public ToolboxPanel {
 public:
 	DialogPanel();
 
-	void BuildUI();				// create user interface
+	void BuildUI() override;				// create user interface
 };
 

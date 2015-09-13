@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../include/OSHGui/OSHGui.hpp"
+#include "ToolboxPanel.h"
 #include "../API/GwConstants.h"
 
-class InfoPanel : public OSHGui::Panel {
+class InfoPanel : public ToolboxPanel {
 private:
 	OSHGui::Label* player_x;
 	OSHGui::Label* player_y;
@@ -23,7 +23,7 @@ private:
 public:
 	InfoPanel();
 
-	void BuildUI();				// create user interface
+	void BuildUI() override;
 
 	void UpdateUI();
 };

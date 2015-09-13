@@ -6,6 +6,7 @@
 #include <Windows.h>
 #include <string>
 
+#include "ToolboxPanel.h"
 #include "../include/OSHGui/OSHGui.hpp"
 
 #include "../API/APIMain.h"
@@ -18,7 +19,7 @@ using namespace std;
 
 
 // class used to keep a list of hotkeys, capture keyboard event and fire hotkeys as needed
-class HotkeyPanel : public OSHGui::Panel {
+class HotkeyPanel : public ToolboxPanel {
 private:
 	static const int MAX_SHOWN = 4;			// number of hotkeys shown in interface
 	int first_shown_;						// index of first one shown
@@ -56,7 +57,7 @@ public:
 	inline bool ToggleRupt() { return ruptActive = !ruptActive; }
 
 	void LoadIni();				// load settings from ini file
-	void BuildUI();				// create user interface
+	void BuildUI() override;				// create user interface
 	void MainRoutine();			// do... nothing atm
 
 	bool ProcessMessage(LPMSG msg);

@@ -2,13 +2,16 @@
 
 #include <list>
 #include <vector>
-#include "../include/OSHGui/OSHGui.hpp"
 #include "Timer.h"
 #include "Pcons.h"
 #include "../API/GwConstants.h"
+#include "ToolboxPanel.h"
 
-class PconPanel : public OSHGui::Panel {
+class PconPanel : public ToolboxPanel {
 private:
+	static const int WIDTH = 6 * 2 + Pcon::WIDTH * 3;
+	static const int HEIGHT = 6 * 2 + Pcon::HEIGHT * 6;
+
 	Pcon* essence;
 	Pcon* grail;
 	Pcon* armor;
