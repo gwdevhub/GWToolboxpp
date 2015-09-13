@@ -138,6 +138,7 @@ void MainWindow::ToggleMinimize() {
 	minimized_ = !minimized_;
 
 	if (minimized_) {
+		if (current_panel_ >= 0) openClosePanel(current_panel_);
 		SetSize(Drawing::SizeI(WIDTH, TITLE_HEIGHT));
 		main_panel_->SetVisible(false);
 	} else {
