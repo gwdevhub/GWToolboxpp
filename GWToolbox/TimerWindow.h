@@ -29,6 +29,12 @@ public:
 
 	void UpdateUI();
 
+	void SetFreeze(bool b) {
+		containerPanel_->SetEnabled(!b);
+		timer_->SetEnabled(!b);
+		urgoz_timer_->SetEnabled(!b);
+	}
+
 private:
 	TimerLabel* timer_;
 	TimerLabel* shadow_;

@@ -21,6 +21,12 @@ public:
 
 	void UpdateUI();
 
+	void SetFreeze(bool b) {
+		containerPanel_->SetEnabled(!b);
+		percent->SetEnabled(!b);
+		absolute->SetEnabled(!b);
+	}
+
 private:
 	DragButton* percent;
 	DragButton* percent_shadow;

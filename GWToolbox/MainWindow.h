@@ -69,6 +69,8 @@ public:
 	inline static const wchar_t* IniSection() { return L"mainwindow"; }
 	inline static const wchar_t* IniKeyX() { return L"x"; }
 	inline static const wchar_t* IniKeyY() { return L"y"; }
+	inline static const wchar_t* IniKeyTabsLeft() { return L"tabsleft"; }
+	inline static const wchar_t* IniKeyFreeze() { return L"freeze_widgets"; }
 
 	virtual void DrawSelf(Drawing::RenderContext &context) override;
 

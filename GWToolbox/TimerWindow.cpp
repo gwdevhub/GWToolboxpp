@@ -32,7 +32,7 @@ TimerWindow::TimerWindow() {
 	shadow_->SetAnchor(AnchorStyles::Left);
 	shadow_->SetSize(WIDTH, HEIGHT);
 	shadow_->SetLocation(offsetX, offsetY);
-	shadow_->SetFont(GuiUtils::getTBFont(26.0f, true));
+	shadow_->SetFont(GuiUtils::getTBFont(30.0f, true));
 	shadow_->SetBackColor(Drawing::Color::Empty());
 	shadow_->SetForeColor(Drawing::Color::Black());
 	shadow_->SetEnabled(false);
@@ -43,7 +43,7 @@ TimerWindow::TimerWindow() {
 	timer_->SetAnchor(AnchorStyles::Left);
 	timer_->SetSize(WIDTH, HEIGHT);
 	timer_->SetLocation(0, 0);
-	timer_->SetFont(GuiUtils::getTBFont(26.0f, true));
+	timer_->SetFont(GuiUtils::getTBFont(30.0f, true));
 	timer_->SetForeColor(theme.ForeColor);
 	timer_->SetBackColor(Drawing::Color::Empty());
 	timer_->GetMouseUpEvent() += MouseUpEventHandler([this](Control*, MouseEventArgs) {
@@ -76,6 +76,9 @@ TimerWindow::TimerWindow() {
 	});
 	urgoz_timer_->SetVisible(false);
 	AddControl(urgoz_timer_);
+
+	SetFreeze(GWToolbox::instance()->config()->iniReadBool(MainWindow::IniSection(),
+		MainWindow::IniKeyFreeze(), false));
 
 	std::shared_ptr<TimerWindow> self = std::shared_ptr<TimerWindow>(this);
 	Show(self);

@@ -5,11 +5,11 @@
 #include "logger.h"
 
 class BondsWindow : public EmptyForm {
-	static const int party_size = 8;
+	static const int n_players = 12;
 	static const int n_bonds = 3;
 	static const int IMG_SIZE = 22;
 	static const int WIDTH = IMG_SIZE * n_bonds;
-	static const int HEIGHT = IMG_SIZE * party_size;
+	static const int HEIGHT = IMG_SIZE * n_players;
 
 	class BondsMonitor : public DragButton {
 		enum class Bond { Balth, Life, Prot };
@@ -17,11 +17,13 @@ class BondsWindow : public EmptyForm {
 		int GetBond(int xcoord);
 		int GetPlayer(int ycoord);
 
+		bool freezed;
 		int hovered_player;
 		int hovered_bond;
 		bool pressed;
-		OSHGui::PictureBox* pics[party_size][n_bonds];
-		int buff_id[party_size][n_bonds];
+		int party_size;
+		OSHGui::PictureBox* pics[n_players][n_bonds];
+		int buff_id[n_players][n_bonds];
 
 	protected:
 		virtual void PopulateGeometry() override;
@@ -29,12 +31,12 @@ class BondsWindow : public EmptyForm {
 		virtual void OnMouseMove(const OSHGui::MouseMessage &mouse) override;
 		virtual void OnMouseUp(const OSHGui::MouseMessage &mouse) override;
 		virtual void OnMouseLeave(const OSHGui::MouseMessage &mouse) override;
-		virtual void OnMouseClick(const OSHGui::MouseMessage &mouse) override;
 	public:
 		BondsMonitor();
 		void DrawSelf(OSHGui::Drawing::RenderContext &context) override;
 		void SaveLocation();
 		void UpdateUI();
+		inline void SetFreeze(bool b) { freezed = b; }
 	};
 
 public:
@@ -48,6 +50,7 @@ public:
 
 	void Show(bool show);
 	inline void UpdateUI() { if (monitor) monitor->UpdateUI(); }
+	inline void SetFreze(bool b) { monitor->SetFreeze(b); }
 
 private:
 	BondsMonitor* monitor;

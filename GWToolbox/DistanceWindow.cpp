@@ -69,6 +69,9 @@ DistanceWindow::DistanceWindow() {
 	bool show = config->iniReadBool(DistanceWindow::IniSection(), DistanceWindow::IniKeyShow(), false);
 	Show(show);
 
+	SetFreeze(GWToolbox::instance()->config()->iniReadBool(MainWindow::IniSection(),
+		MainWindow::IniKeyFreeze(), false));
+
 	std::shared_ptr<DistanceWindow> self = std::shared_ptr<DistanceWindow>(this);
 	Form::Show(self);
 }

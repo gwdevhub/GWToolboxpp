@@ -40,9 +40,12 @@ BondsWindow::BondsMonitor::BondsMonitor() {
 	SetEnabled(true);
 	hovered_player = -1;
 	hovered_bond = -1;
+	party_size = n_players; // initialize at max, upcate will take care of shrinking as needed.
 	pressed = false;
+	freezed = GWToolbox::instance()->config()->iniReadBool(MainWindow::IniSection(),
+		MainWindow::IniKeyFreeze(), false);
 
-	for (int i = 0; i < party_size; ++i) {
+	for (int i = 0; i < n_players; ++i) {
 		for (int j = 0; j < n_bonds; ++j) {
 			buff_id[i][j] = 0;
 			pics[i][j] = new PictureBox();
@@ -54,7 +57,7 @@ BondsWindow::BondsMonitor::BondsMonitor() {
 			AddSubControl(pics[i][j]);
 		}
 	}
-	for (int i = 0; i < party_size; ++i) {
+	for (int i = 0; i < n_players; ++i) {
 		pics[i][0]->SetImage(Image::FromFile(GuiUtils::getSubPathA("balthspirit.jpg", "img")));
 		pics[i][1]->SetImage(Image::FromFile(GuiUtils::getSubPathA("lifebond.jpg", "img")));
 		pics[i][2]->SetImage(Image::FromFile(GuiUtils::getSubPathA("protbond.jpg", "img")));
@@ -95,23 +98,34 @@ int BondsWindow::BondsMonitor::GetPlayer(int ycoord) {
 }
 
 void BondsWindow::BondsMonitor::OnMouseDown(const OSHGui::MouseMessage &mouse) {
-	DragButton::OnMouseDown(mouse);
+	if (!freezed) DragButton::OnMouseDown(mouse);
 	pressed = true;
 	Invalidate();
 }
 void BondsWindow::BondsMonitor::OnMouseMove(const OSHGui::MouseMessage &mouse) {
-	DragButton::OnMouseMove(mouse);
+	if (!freezed) DragButton::OnMouseMove(mouse);
 	int player = GetPlayer(mouse.GetLocation().Y);
 	int bond = GetBond(mouse.GetLocation().X);
 	if (hovered_player != player || hovered_bond != bond) {
 		hovered_player = player;
 		hovered_bond = bond;
+		pressed = false;
 		Invalidate();
 	}
-	
 }
 void BondsWindow::BondsMonitor::OnMouseUp(const OSHGui::MouseMessage &mouse) {
-	DragButton::OnMouseUp(mouse);
+	if (!freezed) DragButton::OnMouseUp(mouse);
+	if (pressed) {
+		int player = GetPlayer(mouse.GetLocation().Y);
+		int bond = GetBond(mouse.GetLocation().X);
+
+		if (player >= 0 && player < n_players
+			&& bond >= 0 && bond < n_bonds
+			&& pics[player][bond]->GetVisible()) {
+
+			GWAPIMgr::GetInstance()->Effects->DropBuff(buff_id[player][bond]);
+		}
+	}
 	pressed = false;
 	Invalidate();
 }
@@ -120,18 +134,6 @@ void BondsWindow::BondsMonitor::OnMouseLeave(const OSHGui::MouseMessage &mouse) 
 	hovered_player = -1;
 	hovered_bond = -1;
 	Invalidate();
-}
-void BondsWindow::BondsMonitor::OnMouseClick(const OSHGui::MouseMessage &mouse) {
-	DragButton::OnMouseClick(mouse);
-	int player = GetPlayer(mouse.GetLocation().Y);
-	int bond = GetBond(mouse.GetLocation().X);
-	
-	if (player >= 0 && player < party_size
-		&& bond >= 0 && bond < n_bonds
-		&& pics[player][bond]->GetVisible()) {
-
-		GWAPIMgr::GetInstance()->Effects->DropBuff(buff_id[player][bond]);
-	}
 }
 
 void BondsWindow::BondsMonitor::SaveLocation() {
@@ -150,6 +152,14 @@ void BondsWindow::BondsMonitor::UpdateUI() {
 
 	GWAPI::GWAPIMgr* api = GWAPI::GWAPIMgr::GetInstance();
 
+	int size = api->Agents->GetPartySize();
+	if (size > n_players) size = n_players;
+	if (party_size != size) {
+		party_size = size;
+		SetSize(n_bonds * IMG_SIZE, party_size * IMG_SIZE);
+		parent_->SetSize(GetSize());
+	}
+
 	AgentEffectsArray effects = api->Effects->GetPartyEffectArray();
 	if (!effects.IsValid()) return;
 
@@ -159,8 +169,8 @@ void BondsWindow::BondsMonitor::UpdateUI() {
 	AgentArray agents = api->Agents->GetAgentArray();
 	if (!agents.IsValid()) return;
 
-	bool show[party_size][n_bonds];
-	for (int i = 0; i < party_size; ++i) {
+	bool show[n_players][n_bonds];
+	for (int i = 0; i < n_players; ++i) {
 		for (int j = 0; j < n_bonds; ++j) {
 			show[i][j] = false;
 		}
@@ -170,8 +180,8 @@ void BondsWindow::BondsMonitor::UpdateUI() {
 		DWORD target_id = buffs[i].TargetAgentId;
 		if (target_id < agents.size() && agents[target_id]) {
 			player = agents[target_id]->PlayerNumber;
-			if (player == 0 || player > party_size) continue;
-			--player;	// player numbers are from 1 to 8 in party list
+			if (player == 0 || player > n_players) continue;
+			--player;	// player numbers are from 1 to partysize in party list
 		}
 
 		int bond = -1;
@@ -187,7 +197,7 @@ void BondsWindow::BondsMonitor::UpdateUI() {
 		buff_id[player][bond] = buffs[i].BuffId;
 	}
 
-	for (int i = 0; i < party_size; ++i) {
+	for (int i = 0; i < n_players; ++i) {
 		for (int j = 0; j < n_bonds; ++j) {
 			if (pics[i][j]->GetVisible() != show[i][j]) {
 				pics[i][j]->SetVisible(show[i][j]);
@@ -201,4 +211,3 @@ void BondsWindow::Show(bool show) {
 	containerPanel_->SetVisible(show);
 	monitor->SetVisible(show);
 }
-

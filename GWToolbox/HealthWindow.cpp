@@ -69,6 +69,9 @@ HealthWindow::HealthWindow() {
 	bool show = config->iniReadBool(HealthWindow::IniSection(), HealthWindow::IniKeyShow(), false);
 	Show(show);
 
+	SetFreeze(GWToolbox::instance()->config()->iniReadBool(MainWindow::IniSection(),
+		MainWindow::IniKeyFreeze(), false));
+
 	std::shared_ptr<HealthWindow> self = std::shared_ptr<HealthWindow>(this);
 	Form::Show(self);
 }
