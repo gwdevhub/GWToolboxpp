@@ -49,11 +49,6 @@ GWAPI::GWAPIMgr::GWAPIMgr()
 	}
 }
 
-void GWAPI::GWAPIMgr::ToggleRendering()
-{
-	GameThread->ToggleRenderHook();
-}
-
 GWAPI::GWAPIMgr::~GWAPIMgr()
 {
 #ifdef GWAPI_USEDIRECTX

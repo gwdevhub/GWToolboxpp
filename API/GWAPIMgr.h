@@ -26,14 +26,15 @@ namespace GWAPI {
 		friend class MerchantMgr;
 		friend class GuildMgr;
 
-		GameThreadMgr* GameThread;
-		CtoSMgr* CtoS;
+		
 		
 		GWAPIMgr();
 		~GWAPIMgr();
 	public:
 
-		
+
+		GameThreadMgr* GameThread;
+		CtoSMgr* CtoS;
 		AgentMgr* Agents;
 		ItemMgr* Items;
 		SkillbarMgr* Skillbar;
@@ -45,7 +46,6 @@ namespace GWAPI {
 #ifdef GWAPI_USEDIRECTX
 		DirectXMgr* DirectX;
 #endif
-		void ToggleRendering();
 
 		static void Initialize();
 		static GWAPIMgr* GetInstance();

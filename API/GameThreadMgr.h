@@ -21,6 +21,7 @@ namespace GWAPI{
 		Hook hkGameThread;
 
 		std::vector<std::function<void(void)> > m_Calls;
+		std::vector<std::function<void(void)> > m_CallsPermanent;
 		mutable std::mutex m_CallVecMutex;
 
 		GameThreadMgr(GWAPIMgr* obj);
@@ -38,6 +39,13 @@ namespace GWAPI{
 			std::unique_lock<std::mutex> VecLock(m_CallVecMutex);
 			m_Calls.emplace_back(std::bind(std::forward<F>(Func), std::forward<ArgTypes>(Args)...));
 		}
+		template<typename F, typename... ArgTypes>
+		void AddPermanentCall(F&& Func, ArgTypes&&... Args)
+		{
+			std::unique_lock<std::mutex> VecLock(m_CallVecMutex);
+			m_CallsPermanent.emplace_back(std::bind(std::forward<F>(Func), std::forward<ArgTypes>(Args)...));
+		}
+
 
 		static void gameLoopHook();
 		static void renderHook();
