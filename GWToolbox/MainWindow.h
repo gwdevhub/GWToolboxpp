@@ -70,6 +70,7 @@ public:
 	inline static const wchar_t* IniKeyY() { return L"y"; }
 	inline static const wchar_t* IniKeyTabsLeft() { return L"tabsleft"; }
 	inline static const wchar_t* IniKeyFreeze() { return L"freeze_widgets"; }
+	inline static const wchar_t* IniKeyHideTarget() { return L"hide_target"; }
 
 	virtual void DrawSelf(Drawing::RenderContext &context) override;
 

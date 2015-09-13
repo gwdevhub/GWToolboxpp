@@ -27,13 +27,20 @@ public:
 		absolute->SetEnabled(!b);
 	}
 
+	inline void SetHideTarget(bool b) { hide_target = b; }
+
 private:
+	bool enabled;
+
 	DragButton* percent;
 	DragButton* percent_shadow;
 	DragButton* absolute;
 	DragButton* absolute_shadow;
 
 	float current_distance;
+	bool hide_target;
 
 	void SaveLocation();
+
+	void _Show(bool show);
 };
