@@ -142,11 +142,15 @@ static HRESULT WINAPI endScene(IDirect3DDevice9* pDevice) {
 
 	GWToolbox* tb = GWToolbox::instance();
 	if (tb->initialized()) {
-		tb->main_window()->UpdateUI();
-		tb->timer_window()->UpdateUI();
-		tb->bonds_window()->UpdateUI();
-		tb->health_window()->UpdateUI();
-		tb->distance_window()->UpdateUI();
+		__try {
+			tb->main_window()->UpdateUI();
+			tb->timer_window()->UpdateUI();
+			tb->bonds_window()->UpdateUI();
+			tb->health_window()->UpdateUI();
+			tb->distance_window()->UpdateUI();
+		} __except (EXCEPTION_EXECUTE_HANDLER) {
+			LOG("BAD! (in render thread)\n");
+		}
 	}
 
 	renderer->BeginRendering();
@@ -190,11 +194,15 @@ void GWToolbox::exec() {
 
 	while (true) { // main loop
 		if (app->HasBeenInitialized() && initialized()) {
-			main_window_->MainRoutine();
-			timer_window_->MainRoutine();
-			bonds_window_->MainRoutine();
-			health_window_->MainRoutine();
-			distance_window_->MainRoutine();
+			__try {
+				main_window_->MainRoutine();
+				timer_window_->MainRoutine();
+				bonds_window_->MainRoutine();
+				health_window_->MainRoutine();
+				distance_window_->MainRoutine();
+			} __except (EXCEPTION_EXECUTE_HANDLER) {
+				LOG("BAD! (in main thread)\n");
+			}
 		}
 
 		Sleep(10);
