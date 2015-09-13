@@ -114,7 +114,7 @@ GWAPI::GW::MapAgentArray GWAPI::AgentMgr::GetMapAgentArray()
 GWAPI::GW::Agent* GWAPI::AgentMgr::GetPlayer() {
 	GW::AgentArray agents = GetAgentArray();
 	if (agents.IsValid()) {
-		return GetAgentArray()[GetPlayerId()];
+		return agents[GetPlayerId()];
 	} else {
 		return nullptr;
 	}
@@ -123,7 +123,7 @@ GWAPI::GW::Agent* GWAPI::AgentMgr::GetPlayer() {
 GWAPI::GW::Agent* GWAPI::AgentMgr::GetTarget() {
 	GW::AgentArray agents = GetAgentArray();
 	if (agents.IsValid()) {
-		return GetAgentArray()[GetTargetId()];
+		return agents[GetTargetId()];
 	} else {
 		return nullptr;
 	}
