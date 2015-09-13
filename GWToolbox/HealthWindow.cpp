@@ -10,13 +10,14 @@
 HealthWindow::HealthWindow() {
 
 	Config* config = GWToolbox::instance()->config();
-	int x = config->iniReadLong(HealthWindow::IniSection(), HealthWindow::IniKeyX(), 100);
+	int x = config->iniReadLong(HealthWindow::IniSection(), HealthWindow::IniKeyX(), 400);
 	int y = config->iniReadLong(HealthWindow::IniSection(), HealthWindow::IniKeyY(), 100);
 
 	SetLocation(x, y);
-	SetSize(Drawing::SizeI(WIDTH, HEIGHT));
+	SetSize(Drawing::SizeI(WIDTH, HEIGHT + ABS_HEIGHT));
 
-	Drawing::Theme::ControlTheme theme = Application::InstancePtr()->GetTheme().GetControlColorTheme("target_health");
+	Drawing::Theme::ControlTheme theme = Application::InstancePtr()
+		->GetTheme().GetControlColorTheme(HealthWindow::ThemeKey());
 	SetBackColor(theme.BackColor);
 
 	int offsetX = 2;

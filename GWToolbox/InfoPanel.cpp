@@ -125,6 +125,8 @@ void InfoPanel::BuildUI() {
 		}
 		tb->config()->iniWriteBool(DistanceWindow::IniSection(), DistanceWindow::IniKeyShow(), show);
 	});
+	distance->SetChecked(GWToolbox::instance()->config()->iniReadBool(
+		DistanceWindow::IniSection(), DistanceWindow::IniKeyShow(), false));
 	AddControl(distance);
 
 	Button* xunlai = new Button();

@@ -38,9 +38,13 @@
 			"forecolor" : [255, 255, 255, 255],
 			"backcolor" : [0, 0, 0, 0 ]
 		},
-		"target_health" : {
+		"health" : {
 			"forecolor" : [255, 255, 255, 255],
 			"backcolor" : [0, 0, 0, 0 ]
+		},
+		"distance" : {
+			"forecolor" : [255, 255, 255, 255],
+			"backcolor" : [0, 0, 0, 0]
 		}
 	}
 }
