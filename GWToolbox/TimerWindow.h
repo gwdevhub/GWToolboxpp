@@ -25,6 +25,7 @@ public:
 	inline static const wchar_t* IniSection() { return L"timer"; }
 	inline static const wchar_t* IniKeyX() { return L"x"; }
 	inline static const wchar_t* IniKeyY() { return L"y"; }
+	inline static const char* ThemeKey() { return "timer"; }
 
 	void UpdateUI();
 

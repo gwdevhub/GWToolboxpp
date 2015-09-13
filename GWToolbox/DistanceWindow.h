@@ -3,19 +3,19 @@
 #include "EmptyForm.h"
 #include "../include/OSHGui/OSHGui.hpp"
 
-class HealthWindow : public EmptyForm {
+class DistanceWindow : public EmptyForm {
 public:
 	const int WIDTH = 150;
 	const int HEIGHT = 50;
 	const int ABS_HEIGHT = 25;
 
-	HealthWindow();
+	DistanceWindow();
 
-	inline static const wchar_t* IniSection() { return L"TargetHealth"; }
+	inline static const wchar_t* IniSection() { return L"Distance"; }
 	inline static const wchar_t* IniKeyX() { return L"x"; }
 	inline static const wchar_t* IniKeyY() { return L"y"; }
 	inline static const wchar_t* IniKeyShow() { return L"show"; }
-	inline static const char* ThemeKey() { return "health"; }
+	inline static const char* ThemeKey() { return "distance"; }
 
 	void Show(bool show);
 
@@ -27,8 +27,7 @@ private:
 	DragButton* absolute;
 	DragButton* absolute_shadow;
 
-	float current_hp;
-	long current_max;
+	float current_distance;
 
 	void SaveLocation();
 };

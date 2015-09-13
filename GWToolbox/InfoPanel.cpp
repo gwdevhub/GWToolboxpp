@@ -7,6 +7,8 @@
 #include "GWToolbox.h"
 #include "Config.h"
 #include "HealthWindow.h"
+#include "DistanceWindow.h"
+#include "BondsWindow.h"
 
 using namespace OSHGui;
 
@@ -92,8 +94,15 @@ void InfoPanel::BuildUI() {
 	bonds->SetLocation(item1_x, dialog->GetBottom() + DefaultBorderPadding);
 	bonds->SetText("Show Bonds Monitor");
 	bonds->GetCheckedChangedEvent() += CheckedChangedEventHandler([bonds](Control*) {
-		// TODO
+		GWToolbox* tb = GWToolbox::instance();
+		bool show = bonds->GetChecked();
+		if (tb->bonds_window()) {
+			tb->bonds_window()->Show(show);
+		}
+		tb->config()->iniWriteBool(BondsWindow::IniSection(), BondsWindow::IniKeyShow(), show);
 	});
+	bonds->SetChecked(GWToolbox::instance()->config()->iniReadBool(
+		BondsWindow::IniSection(), BondsWindow::IniKeyShow(), false));
 	AddControl(bonds);
 
 	CheckBox* targetHp = new CheckBox();
@@ -117,8 +126,15 @@ void InfoPanel::BuildUI() {
 	distance->SetLocation(item1_x, targetHp->GetBottom() + DefaultBorderPadding);
 	distance->SetText("Show Target Distance");
 	distance->GetCheckedChangedEvent() += CheckedChangedEventHandler([distance](Control*) {
-		// TODO
+		GWToolbox* tb = GWToolbox::instance();
+		bool show = distance->GetChecked();
+		if (tb->distance_window()) {
+			tb->distance_window()->Show(show);
+		}
+		tb->config()->iniWriteBool(DistanceWindow::IniSection(), DistanceWindow::IniKeyShow(), show);
 	});
+	distance->SetChecked(GWToolbox::instance()->config()->iniReadBool(
+		DistanceWindow::IniSection(), DistanceWindow::IniKeyShow(), false));
 	AddControl(distance);
 
 	Button* xunlai = new Button();

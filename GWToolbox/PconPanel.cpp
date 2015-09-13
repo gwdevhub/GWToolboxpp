@@ -202,9 +202,22 @@ void PconPanel::BuildUI() {
 }
 
 void PconPanel::MainRoutine() {
-	if (!enabled || !initialized) return;
+	if (!initialized) return;
 
 	GWAPIMgr * API = GWAPIMgr::GetInstance();
+	if (current_map_type != API->Map->GetInstanceType()) {
+		current_map_type = API->Map->GetInstanceType();
+		scan_inventory_timer = TBTimer::init();
+	}
+
+	if (scan_inventory_timer > 0 && TBTimer::diff(scan_inventory_timer) > 2000) {
+		scan_inventory_timer = 0;
+		if (API->Map->GetInstanceType() != GwConstants::InstanceType::Loading) {
+			ScanInventory();
+		}
+	}
+
+	if (!enabled) return;
 	InstanceType type;
 	try {
 		type = API->Map->GetInstanceType();

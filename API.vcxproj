@@ -107,9 +107,11 @@
     <ClInclude Include="API\CtoSMgr.h" />
     <ClInclude Include="API\MerchantMgr.h" />
     <ClInclude Include="API\SkillbarMgr.h" />
+    <ClInclude Include="GWToolbox\BondsWindow.h" />
     <ClInclude Include="GWToolbox\BuildPanel.h" />
     <ClInclude Include="GWToolbox\Config.h" />
     <ClInclude Include="GWToolbox\DialogPanel.h" />
+    <ClInclude Include="GWToolbox\DistanceWindow.h" />
     <ClInclude Include="GWToolbox\EmptyForm.h" />
     <ClInclude Include="GWToolbox\GuiUtils.h" />
     <ClInclude Include="GWToolbox\GWToolbox.h" />
@@ -236,8 +238,10 @@
     <ClCompile Include="API\MerchantMgr.cpp" />
     <ClCompile Include="API\SkillbarMgr.cpp" />
     <ClCompile Include="API\GuildMgr.cpp" />
+    <ClCompile Include="GWToolbox\BondsWindow.cpp" />
     <ClCompile Include="GWToolbox\BuildPanel.cpp" />
     <ClCompile Include="GWToolbox\DialogPanel.cpp" />
+    <ClCompile Include="GWToolbox\DistanceWindow.cpp" />
     <ClCompile Include="GWToolbox\EmptyForm.cpp" />
     <ClCompile Include="GWToolbox\GWToolbox.cpp" />
     <ClCompile Include="GWToolbox\HotkeyPanel.cpp" />

@@ -435,6 +435,12 @@
     </ClInclude>
     <ClInclude Include="API\Hooker.h">
       <Filter>API</Filter>
+   </ClInclude>
+    <ClInclude Include="GWToolbox\DistanceWindow.h">
+      <Filter>Main\GWToolbox</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\BondsWindow.h">
+      <Filter>Main\GWToolbox</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -719,6 +725,12 @@
     </ClCompile>
     <ClCompile Include="API\Hooker.cpp">
       <Filter>API\src</Filter>
+	</ClCompile>
+    <ClCompile Include="GWToolbox\DistanceWindow.cpp">
+      <Filter>Main\GWToolbox</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\BondsWindow.cpp">
+      <Filter>Main\GWToolbox</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -15,13 +15,14 @@ TimerWindow::TimerWindow() {
 	in_urgoz_ = false;
 
 	Config* config = GWToolbox::instance()->config();
-	int x = config->iniReadLong(TimerWindow::IniSection(), TimerWindow::IniKeyX(), 100);
+	int x = config->iniReadLong(TimerWindow::IniSection(), TimerWindow::IniKeyX(), 400);
 	int y = config->iniReadLong(TimerWindow::IniSection(), TimerWindow::IniKeyY(), 100);
 
 	SetLocation(x, y);
 	SetSize(Drawing::SizeI(WIDTH, HEIGHT));
 
-	Drawing::Theme::ControlTheme theme = Application::InstancePtr()->GetTheme().GetControlColorTheme("timer");
+	Drawing::Theme::ControlTheme theme = Application::InstancePtr()
+		->GetTheme().GetControlColorTheme(TimerWindow::ThemeKey());
 	SetBackColor(theme.BackColor);
 
 	int offsetX = 2;
@@ -75,6 +76,9 @@ TimerWindow::TimerWindow() {
 	});
 	urgoz_timer_->SetVisible(false);
 	AddControl(urgoz_timer_);
+
+	std::shared_ptr<TimerWindow> self = std::shared_ptr<TimerWindow>(this);
+	Show(self);
 }
 
 void TimerWindow::SaveLocation() {
