@@ -1,9 +1,9 @@
 #pragma once
 
-#include "EmptyForm.h"
+#include "ToolboxWindow.h"
 #include "../include/OSHGui/OSHGui.hpp"
 
-class HealthWindow : public EmptyForm {
+class HealthWindow : public ToolboxWindow {
 public:
 	const int WIDTH = 150;
 	const int HEIGHT = 50;
@@ -20,6 +20,7 @@ public:
 	void Show(bool show);
 
 	void UpdateUI();
+	inline void MainRoutine() {};
 
 	void SetFreeze(bool b) {
 		containerPanel_->SetEnabled(!b);
@@ -27,7 +28,11 @@ public:
 		absolute->SetEnabled(!b);
 	}
 
+	inline void SetHideTarget(bool b) { hide_target = b; }
+
 private:
+	bool enabled;
+
 	DragButton* percent;
 	DragButton* percent_shadow;
 	DragButton* absolute;
@@ -35,6 +40,9 @@ private:
 
 	float current_hp;
 	long current_max;
+	bool hide_target;
 
 	void SaveLocation();
+
+	void _Show(bool show);
 };

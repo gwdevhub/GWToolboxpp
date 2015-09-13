@@ -2,7 +2,7 @@
 
 #include "../include/OSHGui/OSHGui.hpp"
 
-class EmptyForm : public OSHGui::Form {
+class ToolboxWindow : public OSHGui::Form {
 public:
 	class DragButton : public OSHGui::Button {
 	public:
@@ -19,7 +19,13 @@ public:
 		OSHGui::Drawing::PointI dragStart_;
 	};
 
-	EmptyForm();
+	ToolboxWindow();
+
+	// Update user interface, try to keep it lightweight, will be executed in gw render thread
+	virtual void UpdateUI() = 0;
+
+	// Update and do everything else. DO NOT TOUCH USER INTERFACE.
+	virtual void MainRoutine() = 0;
 
 	virtual void SetSize(const OSHGui::Drawing::SizeI &size) override;
 

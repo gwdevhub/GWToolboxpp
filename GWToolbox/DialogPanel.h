@@ -6,6 +6,8 @@ class DialogPanel : public ToolboxPanel {
 public:
 	DialogPanel();
 
-	void BuildUI() override;				// create user interface
+	void BuildUI() override;
+	void UpdateUI() override {};
+	void MainRoutine() override {};
 };
 

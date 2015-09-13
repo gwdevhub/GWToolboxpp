@@ -26,7 +26,8 @@ protected:
 	int threshold;
 	clock_t timer;
 	clock_t update_timer;
-	void checkUpdateTimer();
+	bool update_ui;
+	void CheckUpdateTimer();
 
 public:
 	Pcon(const wchar_t* ini);
@@ -40,8 +41,8 @@ public:
 	inline void setThreshold(int t) { threshold = t; }
 
 	virtual bool checkAndUse();		// checks if need to use pcon, uses if needed. Returns true if was used.
+	void UpdateUI();
 	virtual void scanInventory();	// scans inventory, updates quantity field
-	void updateLabel();		// updates the label with quantity and color
 	void toggleActive();	// disables if enabled, enables if disabled
 };
 

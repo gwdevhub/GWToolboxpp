@@ -49,4 +49,19 @@ void SettingsPanel::BuildUI() {
 		GWToolbox::instance()->distance_window()->SetFreeze(b);
 	});
 	AddControl(freeze);
+
+	CheckBox* hidetarget = new CheckBox();
+	hidetarget->SetText("Hide target when no target");
+	hidetarget->SetLocation(DefaultBorderPadding, freeze->GetBottom() + DefaultBorderPadding);
+	hidetarget->SetSize(item_width, item_height);
+	hidetarget->SetChecked(config->iniReadBool(MainWindow::IniSection(), 
+		MainWindow::IniKeyHideTarget(), false));
+	hidetarget->GetCheckedChangedEvent() += CheckedChangedEventHandler([hidetarget](Control*) {
+		bool hide = hidetarget->GetChecked();
+		GWToolbox::instance()->health_window()->SetHideTarget(hide);
+		GWToolbox::instance()->distance_window()->SetHideTarget(hide);
+		GWToolbox::instance()->config()->iniWriteBool(MainWindow::IniSection(),
+			MainWindow::IniKeyHideTarget(), hide);
+	});
+	AddControl(hidetarget);
 }

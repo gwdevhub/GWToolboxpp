@@ -2,7 +2,7 @@
 
 #include <vector>
 #include "../include/OSHGui/OSHGui.hpp"
-#include "EmptyForm.h"
+#include "ToolboxWindow.h"
 
 #include "PconPanel.h"
 #include "HotkeyPanel.h"
@@ -15,7 +15,7 @@
 
 using namespace OSHGui;
 
-class MainWindow : public EmptyForm {
+class MainWindow : public ToolboxWindow {
 public:
 	class TitleLabel : public DragButton {
 	public:
@@ -70,6 +70,7 @@ public:
 	inline static const wchar_t* IniKeyY() { return L"y"; }
 	inline static const wchar_t* IniKeyTabsLeft() { return L"tabsleft"; }
 	inline static const wchar_t* IniKeyFreeze() { return L"freeze_widgets"; }
+	inline static const wchar_t* IniKeyHideTarget() { return L"hide_target"; }
 
 	virtual void DrawSelf(Drawing::RenderContext &context) override;
 
@@ -85,6 +86,7 @@ public:
 	SettingsPanel* settings_panel() { return settings_panel_; }
 
 	void SetPanelPositions(bool left);
+	void UpdateUI();
 	void MainRoutine();
 };
 

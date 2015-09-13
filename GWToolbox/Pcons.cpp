@@ -56,7 +56,7 @@ Pcon::Pcon(const wchar_t* ini)
 void Pcon::toggleActive() {
 	enabled = !enabled;
 	scanInventory();
-	updateLabel();
+	update_ui = true;
 	GWToolbox::instance()->config()->iniWriteBool(L"pcons", iniName, enabled);
 }
 
@@ -75,19 +75,35 @@ void Pcon::setIcon(const char* icon, int xOff, int yOff, int size) {
 	pic->SetImage(Drawing::Image::FromFile(GuiUtils::getSubPathA(icon, "img")));
 }
 
-void Pcon::checkUpdateTimer() {
+void Pcon::UpdateUI() {
+	if (update_ui) {
+		label_->SetText(std::to_string(quantity));
+		shadow->SetText(std::to_string(quantity));
+
+		if (quantity == 0) {
+			label_->SetForeColor(Color(1.0, 1.0, 0.0, 0.0));
+		} else if (quantity < threshold) {
+			label_->SetForeColor(Color(1.0, 1.0, 1.0, 0.0));
+		} else {
+			label_->SetForeColor(Color(1.0, 0.0, 1.0, 0.0));
+		}
+		update_ui = false;
+	}
+}
+
+void Pcon::CheckUpdateTimer() {
 	if (update_timer != 0 && TBTimer::diff(update_timer) > 2000) {
 		bool old_enabled = enabled;
 		this->scanInventory();
 		update_timer = 0;
-		if (old_enabled && !enabled) {
+		if (old_enabled != enabled) {
 			GWAPIMgr::GetInstance()->Chat->WriteChatF(L"[WARNING] Cannot find %ls", chatName);
 		}
 	}
 }
 
 bool Pcon::checkAndUse() {
-	checkUpdateTimer();
+	CheckUpdateTimer();
 
 	if (enabled && TBTimer::diff(this->timer) > 5000) {
 
@@ -101,6 +117,7 @@ bool Pcon::checkAndUse() {
 					this->timer = TBTimer::init();
 					this->update_timer = TBTimer::init();
 				} else {
+					// this should never happen, it should be disabled before
 					API->Chat->WriteChatF(L"[WARNING] Cannot find %ls", chatName);
 					this->scanInventory();
 				}
@@ -112,7 +129,7 @@ bool Pcon::checkAndUse() {
 }
 
 bool PconCons::checkAndUse() {
-	checkUpdateTimer();
+	CheckUpdateTimer();
 
 	if (enabled && TBTimer::diff(this->timer) > 5000) {
 		GWAPIMgr* API = GWAPIMgr::GetInstance();
@@ -142,7 +159,7 @@ bool PconCons::checkAndUse() {
 }
 
 bool PconCity::checkAndUse() {
-	checkUpdateTimer();
+	CheckUpdateTimer();
 
 	if (enabled	&& TBTimer::diff(this->timer) > 5000) {
 		GWAPIMgr* API = GWAPIMgr::GetInstance();
@@ -179,7 +196,7 @@ bool PconCity::checkAndUse() {
 }
 
 bool PconAlcohol::checkAndUse() {
-	checkUpdateTimer();
+	CheckUpdateTimer();
 
 	if (enabled && TBTimer::diff(this->timer) > 5000) {
 		GWAPIMgr* API = GWAPIMgr::GetInstance();
@@ -217,7 +234,7 @@ bool PconAlcohol::checkAndUse() {
 }
 
 bool PconLunar::checkAndUse() {
-	checkUpdateTimer();
+	CheckUpdateTimer();
 
 	if (enabled	&& TBTimer::diff(this->timer) > 500) {
 		GWAPIMgr* API = GWAPIMgr::GetInstance();
@@ -243,6 +260,9 @@ bool PconLunar::checkAndUse() {
 }
 
 void Pcon::scanInventory() {
+	int old_quantity = quantity;
+	bool old_enabled = enabled;
+
 	quantity = 0;
 
 	GW::Bag** bags = GWAPIMgr::GetInstance()->Items->GetBagArray();
@@ -262,10 +282,14 @@ void Pcon::scanInventory() {
 	}
 
 	enabled = enabled && quantity > 0;
-	updateLabel();
+	
+	if (old_quantity != quantity || old_enabled != enabled) update_ui = true;
 }
 
 void PconCity::scanInventory() {
+	int old_quantity = quantity;
+	bool old_enabled = enabled;
+
 	quantity = 0;
 
 	GW::Bag** bags = GWAPIMgr::GetInstance()->Items->GetBagArray();
@@ -289,10 +313,14 @@ void PconCity::scanInventory() {
 	}
 
 	enabled = enabled && quantity > 0;
-	updateLabel();
+
+	if (old_quantity != quantity || old_enabled != enabled) update_ui = true;
 }
 
 void PconAlcohol::scanInventory() {
+	int old_quantity = quantity;
+	bool old_enabled = enabled;
+
 	quantity = 0;
 	GW::Bag** bags = GWAPIMgr::GetInstance()->Items->GetBagArray();
 	GW::Bag* bag = NULL;
@@ -328,10 +356,14 @@ void PconAlcohol::scanInventory() {
 	}
 
 	enabled = enabled && quantity > 0;
-	updateLabel();
+	
+	if (old_quantity != quantity || old_enabled != enabled) update_ui = true;
 }
 
 void PconLunar::scanInventory() {
+	int old_quantity = quantity;
+	bool old_enabled = enabled;
+
 	quantity = 0;
 
 	GW::Bag** bags = GWAPIMgr::GetInstance()->Items->GetBagArray();
@@ -356,18 +388,6 @@ void PconLunar::scanInventory() {
 	}
 
 	enabled = enabled && quantity > 0;
-	updateLabel();
-}
-
-void Pcon::updateLabel() {
-	label_->SetText(std::to_string(quantity));
-	shadow->SetText(std::to_string(quantity));
-
-	if (quantity == 0) {
-		label_->SetForeColor(Color(1.0, 1.0, 0.0, 0.0));
-	} else if (quantity < threshold) {
-		label_->SetForeColor(Color(1.0, 1.0, 1.0, 0.0));
-	} else {
-		label_->SetForeColor(Color(1.0, 0.0, 1.0, 0.0));
-	}
+	
+	if (old_quantity != quantity || old_enabled != enabled) update_ui = true;
 }

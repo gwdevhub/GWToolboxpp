@@ -18,6 +18,7 @@ class GWToolbox {
 
 private:
 	static GWToolbox* instance_;
+	bool initialized_;
 
 	Config* const config_;
 	MainWindow* main_window_;
@@ -37,6 +38,7 @@ private:
 		bonds_window_ = NULL;
 		health_window_ = NULL;
 		distance_window_ = NULL;
+		initialized_ = false;
 		must_self_destruct_ = false;
 	}
 
@@ -53,6 +55,9 @@ public:
 
 	// will create a new toolbox object and run it, can be used as argument for createThread
 	static void threadEntry(HMODULE mod);
+
+	inline void SetInitialized() { initialized_ = true; }
+	inline bool initialized() { return initialized_; }
 
 	// returns toolbox instance
 	static GWToolbox* instance() { return instance_; }

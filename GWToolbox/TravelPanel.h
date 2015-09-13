@@ -27,5 +27,7 @@ public:
 	DWORD language() { return language_; }
 
 	void BuildUI() override;
+	void UpdateUI() override {};
+	void MainRoutine() override {};
 };
 

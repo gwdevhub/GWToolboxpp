@@ -112,7 +112,7 @@
     <ClInclude Include="GWToolbox\Config.h" />
     <ClInclude Include="GWToolbox\DialogPanel.h" />
     <ClInclude Include="GWToolbox\DistanceWindow.h" />
-    <ClInclude Include="GWToolbox\EmptyForm.h" />
+    <ClInclude Include="GWToolbox\ToolboxWindow.h" />
     <ClInclude Include="GWToolbox\GuiUtils.h" />
     <ClInclude Include="GWToolbox\GWToolbox.h" />
     <ClInclude Include="GWToolbox\HotkeyPanel.h" />
@@ -243,7 +243,7 @@
     <ClCompile Include="GWToolbox\BuildPanel.cpp" />
     <ClCompile Include="GWToolbox\DialogPanel.cpp" />
     <ClCompile Include="GWToolbox\DistanceWindow.cpp" />
-    <ClCompile Include="GWToolbox\EmptyForm.cpp" />
+    <ClCompile Include="GWToolbox\ToolboxWindow.cpp" />
     <ClCompile Include="GWToolbox\GWToolbox.cpp" />
     <ClCompile Include="GWToolbox\HotkeyPanel.cpp" />
     <ClCompile Include="GWToolbox\Hotkeys.cpp" />

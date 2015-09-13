@@ -1,10 +1,10 @@
 #pragma once
 
-#include "EmptyForm.h"
+#include "ToolboxWindow.h"
 #include "../include/OSHGui/OSHGui.hpp"
 #include "logger.h"
 
-class BondsWindow : public EmptyForm {
+class BondsWindow : public ToolboxWindow {
 	static const int n_players = 12;
 	static const int n_bonds = 3;
 	static const int IMG_SIZE = 22;
@@ -50,6 +50,7 @@ public:
 
 	void Show(bool show);
 	inline void UpdateUI() { if (monitor) monitor->UpdateUI(); }
+	inline void MainRoutine() {};
 	inline void SetFreze(bool b) { monitor->SetFreeze(b); }
 
 private:

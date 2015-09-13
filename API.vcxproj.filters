@@ -400,9 +400,6 @@
     <ClInclude Include="GWToolbox\TimerWindow.h">
       <Filter>Main\GWToolbox</Filter>
     </ClInclude>
-    <ClInclude Include="GWToolbox\EmptyForm.h">
-      <Filter>Main\GWToolbox</Filter>
-    </ClInclude>
     <ClInclude Include="GWToolbox\TravelPanel.h">
       <Filter>Main\GWToolbox</Filter>
     </ClInclude>
@@ -443,6 +440,9 @@
       <Filter>Main\GWToolbox</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\ToolboxPanel.h">
+      <Filter>Main\GWToolbox</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\ToolboxWindow.h">
       <Filter>Main\GWToolbox</Filter>
     </ClInclude>
   </ItemGroup>
@@ -699,9 +699,6 @@
     <ClCompile Include="GWToolbox\TimerWindow.cpp">
       <Filter>Main\GWToolbox</Filter>
     </ClCompile>
-    <ClCompile Include="GWToolbox\EmptyForm.cpp">
-      <Filter>Main\GWToolbox</Filter>
-    </ClCompile>
     <ClCompile Include="GWToolbox\TravelPanel.cpp">
       <Filter>Main\GWToolbox</Filter>
     </ClCompile>
@@ -733,6 +730,9 @@
       <Filter>Main\GWToolbox</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\BondsWindow.cpp">
+      <Filter>Main\GWToolbox</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\ToolboxWindow.cpp">
       <Filter>Main\GWToolbox</Filter>
     </ClCompile>
   </ItemGroup>

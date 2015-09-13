@@ -72,6 +72,9 @@ DistanceWindow::DistanceWindow() {
 	SetFreeze(GWToolbox::instance()->config()->iniReadBool(MainWindow::IniSection(),
 		MainWindow::IniKeyFreeze(), false));
 
+	SetHideTarget(GWToolbox::instance()->config()->iniReadBool(MainWindow::IniSection(),
+		MainWindow::IniKeyHideTarget(), false));
+
 	std::shared_ptr<DistanceWindow> self = std::shared_ptr<DistanceWindow>(this);
 	Form::Show(self);
 }
@@ -89,7 +92,7 @@ void DistanceWindow::UpdateUI() {
 	using namespace GWAPI::GW;
 	using namespace std;
 
-	if (!isVisible_) return;
+	if (!enabled) return;
 
 	GWAPI::GWAPIMgr* api = GWAPI::GWAPIMgr::GetInstance();
 
@@ -108,9 +111,11 @@ void DistanceWindow::UpdateUI() {
 		if (target && me) {
 			s1 = to_string(distance * 100 / GwConstants::Range::Compass) + " %";
 			s2 = to_string(distance);
+			if (!isVisible_) _Show(true);
 		} else {
 			s1 = "-";
 			s2 = "-";
+			if (hide_target && isVisible_) _Show(false);
 		}
 		percent->SetText(s1);
 		percent_shadow->SetText(s1);
@@ -120,10 +125,13 @@ void DistanceWindow::UpdateUI() {
 }
 
 void DistanceWindow::Show(bool show) {
-	SetVisible(show);
-	
-	containerPanel_->SetVisible(show);
+	enabled = show;
+	_Show(show);
+}
 
+void DistanceWindow::_Show(bool show) {
+	SetVisible(show);
+	containerPanel_->SetVisible(show);
 	for (Control* c : GetControls()) {
 		c->SetVisible(show);
 	}

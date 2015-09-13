@@ -24,7 +24,7 @@ public:
 	InfoPanel();
 
 	void BuildUI() override;
-
-	void UpdateUI();
+	void UpdateUI() override;
+	void MainRoutine() override {};
 };
 

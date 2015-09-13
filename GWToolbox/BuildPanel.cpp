@@ -35,7 +35,3 @@ void BuildPanel::BuildUI() {
 	label->SetText("Build panel under construction");
 	AddControl(label);
 }
-
-void BuildPanel::MainRoutine() {
-	// TODO
-}

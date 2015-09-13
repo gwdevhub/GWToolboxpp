@@ -20,5 +20,6 @@ private:
 public:
 	void LoadIni();
 	void BuildUI() override;
-	void MainRoutine();
+	void UpdateUI() override {};
+	void MainRoutine() override {};
 };

@@ -7,5 +7,7 @@ public:
 	SettingsPanel();
 
 	void BuildUI() override;
+	void UpdateUI() override {};
+	void MainRoutine() override {};
 };
 
