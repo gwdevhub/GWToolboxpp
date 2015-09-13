@@ -120,6 +120,7 @@ void create_gui(IDirect3DDevice9* pDevice) {
 
 	GWToolbox::instance()->set_main_window(main_window);
 	GWToolbox::instance()->set_timer_window(new TimerWindow());
+	GWToolbox::instance()->set_bonds_window(new BondsWindow());
 	GWToolbox::instance()->set_health_window(new HealthWindow());
 	GWToolbox::instance()->set_distance_window(new DistanceWindow());
 
@@ -152,6 +153,9 @@ static HRESULT WINAPI endScene(IDirect3DDevice9* pDevice) {
 		}
 		if (tb->distance_window()) {
 			tb->distance_window()->UpdateUI();
+		}
+		if (tb->bonds_window()) {
+			tb->bonds_window()->UpdateUI();
 		}
 	}
 	
