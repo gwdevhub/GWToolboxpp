@@ -131,15 +131,7 @@ void create_gui(IDirect3DDevice9* pDevice) {
 	OldWndProc = SetWindowLongPtr(hWnd, GWL_WNDPROC, (long)NewWndProc);
 }
 
-// All rendering done here.
-static HRESULT WINAPI endScene(IDirect3DDevice9* pDevice) {
-	static GWAPI::DirectXMgr::EndScene_t origfunc = dx->GetEndsceneReturn();
-	static bool init = false;
-	if (!init) {
-		init = true;
-		create_gui(pDevice);
-	}
-
+static void UpdateUI() {
 	GWToolbox* tb = GWToolbox::instance();
 	if (tb->initialized()) {
 		__try {
@@ -152,10 +144,22 @@ static HRESULT WINAPI endScene(IDirect3DDevice9* pDevice) {
 			LOG("BAD! (in render thread)\n");
 		}
 	}
+}
+
+// All rendering done here.
+static HRESULT WINAPI endScene(IDirect3DDevice9* pDevice) {
+	static GWAPI::DirectXMgr::EndScene_t origfunc = dx->GetEndsceneReturn();
+	static bool init = false;
+	if (!init) {
+		init = true;
+		create_gui(pDevice);
+	}
+
+	UpdateUI();
 
 	renderer->BeginRendering();
 
-	Application::Instance().Render();
+	Application::InstancePtr()->Render();
 
 	renderer->EndRendering();
 
