@@ -185,7 +185,8 @@ void HotkeyPanel::DrawSelf(Drawing::RenderContext& context) {
 bool HotkeyPanel::ProcessMessage(LPMSG msg) {
 	switch (msg->message) {
 	case WM_KEYDOWN:
-	case WM_SYSKEYDOWN: {
+	case WM_SYSKEYDOWN:
+	case WM_XBUTTONDOWN: {
 		Key modifier = Key::None;
 		if (GetKeyState(static_cast<int>(Key::ControlKey)) < 0)
 			modifier |= Key::Control;
@@ -211,7 +212,8 @@ bool HotkeyPanel::ProcessMessage(LPMSG msg) {
 	}
 
 	case WM_KEYUP:
-	case WM_SYSKEYUP: {
+	case WM_SYSKEYUP:
+	case WM_XBUTTONUP: {
 		Key keyData = (Key)msg->wParam;
 		for (TBHotkey* hk : hotkeys) {
 			if (hk->pressed() && keyData == hk->key()) {

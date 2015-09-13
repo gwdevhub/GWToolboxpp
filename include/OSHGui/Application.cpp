@@ -275,6 +275,7 @@ namespace OSHGui
 	//---------------------------------------------------------------------------
 	bool Application::ProcessKeyboardMessage(const KeyboardMessage &keyboard)
 	{
+		
 		if (keyboard.GetState() == KeyboardState::KeyDown)
 		{
 			bool hotkeyFired = false;

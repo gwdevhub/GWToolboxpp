@@ -75,6 +75,9 @@ TimerWindow::TimerWindow() {
 	});
 	urgoz_timer_->SetVisible(false);
 	AddControl(urgoz_timer_);
+
+	std::shared_ptr<TimerWindow> self = std::shared_ptr<TimerWindow>(this);
+	Show(self);
 }
 
 void TimerWindow::SaveLocation() {

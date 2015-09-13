@@ -66,11 +66,11 @@ HealthWindow::HealthWindow() {
 	});
 	AddControl(absolute);
 
-	std::shared_ptr<HealthWindow> self = std::shared_ptr<HealthWindow>(this);
-	Form::Show(self);
-
 	bool show = config->iniReadBool(HealthWindow::IniSection(), HealthWindow::IniKeyShow(), false);
 	Show(show);
+
+	std::shared_ptr<HealthWindow> self = std::shared_ptr<HealthWindow>(this);
+	Form::Show(self);
 }
 
 void HealthWindow::SaveLocation() {

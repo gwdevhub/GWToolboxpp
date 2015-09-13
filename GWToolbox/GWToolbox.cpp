@@ -76,6 +76,8 @@ static LRESULT CALLBACK NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARA
 		case WM_CHAR:
 		case WM_SYSCHAR:
 		case WM_IME_CHAR:
+		case WM_XBUTTONDOWN:
+		case WM_XBUTTONUP:
 			GWToolbox::instance()->main_window()->hotkey_panel()->ProcessMessage(&msg);
 			if (GWToolbox::capture_input) {
 				input.ProcessMessage(&msg);
@@ -115,13 +117,9 @@ void create_gui(IDirect3DDevice9* pDevice) {
 	main_window->SetFont(app->GetDefaultFont());
 	std::shared_ptr<MainWindow> shared_ptr = std::shared_ptr<MainWindow>(main_window);
 	app->Run(shared_ptr);
+
 	GWToolbox::instance()->set_main_window(main_window);
-
-	TimerWindow* timer_window = new TimerWindow();
-	std::shared_ptr<TimerWindow> timer_shared = std::shared_ptr<TimerWindow>(timer_window);
-	timer_shared->Show(timer_shared);
-	GWToolbox::instance()->set_timer_window(timer_window);
-
+	GWToolbox::instance()->set_timer_window(new TimerWindow());
 	GWToolbox::instance()->set_health_window(new HealthWindow());
 
 	app->Enable();

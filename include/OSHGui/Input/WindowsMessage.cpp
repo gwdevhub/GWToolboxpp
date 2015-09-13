@@ -116,6 +116,8 @@ namespace OSHGui
 				case WM_CHAR:
 				case WM_SYSCHAR:
 				case WM_IME_CHAR:
+				case WM_XBUTTONDOWN:
+				case WM_XBUTTONUP:
 				{
 					if (enableKeyboardInput)
 					{
@@ -150,9 +152,35 @@ namespace OSHGui
 							if (GetKeyState(static_cast<int>(Key::Menu)) < 0)
 								modifier |= Key::Alt;
 
-							state = message->message == WM_KEYDOWN || message->message == WM_SYSKEYDOWN ? KeyboardState::KeyDown : KeyboardState::KeyUp;
+							switch (message->message) {
+							case WM_KEYDOWN:
+							case WM_SYSKEYDOWN:
+							case WM_XBUTTONDOWN:
+								state = KeyboardState::KeyDown;
+								break;
+							case WM_KEYUP:
+							case WM_SYSKEYUP:
+							case WM_XBUTTONUP:
+								state = KeyboardState::KeyUp;
+								break;
+							default:
+								break;
+							}
 
-							keyData = (Key)message->wParam | modifier;
+							switch (message->message) {
+							case WM_KEYDOWN:
+							case WM_SYSKEYDOWN:
+							case WM_KEYUP:
+							case WM_SYSKEYUP:
+								keyData = (Key)message->wParam | modifier;
+								break;
+							case WM_XBUTTONUP:
+							case WM_XBUTTONDOWN:
+								keyData = (Key)LOWORD(message->wParam);
+								if (LOWORD(message->wParam) == MK_XBUTTON1) keyData = Key::XButton1 | modifier;
+								if (LOWORD(message->wParam) == MK_XBUTTON2) keyData = Key::XButton2 | modifier;
+								break;
+							}
 						}
 
 						if (state != KeyboardState::Unknown)
