@@ -1,12 +1,12 @@
-#include "EmptyForm.h"
+#include "ToolboxWindow.h"
 #include "logger.h"
 
 using namespace OSHGui;
 
-const Drawing::PointI EmptyForm::DefaultLocation(200, 50);
-const Drawing::SizeI EmptyForm::DefaultSize(300, 300);
+const Drawing::PointI ToolboxWindow::DefaultLocation(200, 50);
+const Drawing::SizeI ToolboxWindow::DefaultSize(300, 300);
 
-EmptyForm::EmptyForm()
+ToolboxWindow::ToolboxWindow()
 	: Form(false) {
 
 	containerPanel_->SetLocation(0, 0);
@@ -17,26 +17,26 @@ EmptyForm::EmptyForm()
 	ApplyTheme(Application::Instance().GetTheme());
 }
 
-void EmptyForm::SetSize(const Drawing::SizeI &size) {
+void ToolboxWindow::SetSize(const Drawing::SizeI &size) {
 	Control::SetSize(size);
 	containerPanel_->SetSize(size);
 }
 
-void EmptyForm::DrawSelf(Drawing::RenderContext &context) {
+void ToolboxWindow::DrawSelf(Drawing::RenderContext &context) {
 	Control::DrawSelf(context);
 	containerPanel_->Render();
 }
 
-void EmptyForm::PopulateGeometry() {}
+void ToolboxWindow::PopulateGeometry() {}
 
-void EmptyForm::DragButton::OnMouseDown(const MouseMessage &mouse) {
+void ToolboxWindow::DragButton::OnMouseDown(const MouseMessage &mouse) {
 	drag_ = true;
 	OnGotMouseCapture();
 	dragStart_ = mouse.GetLocation();
 	Control::OnMouseDown(mouse);
 }
 
-void EmptyForm::DragButton::OnMouseMove(const MouseMessage &mouse) {
+void ToolboxWindow::DragButton::OnMouseMove(const MouseMessage &mouse) {
 	if (drag_) {
 		Control* parent = this;
 		while (parent->GetParent()) {
@@ -48,7 +48,7 @@ void EmptyForm::DragButton::OnMouseMove(const MouseMessage &mouse) {
 	Control::OnMouseMove(mouse);
 }
 
-void EmptyForm::DragButton::OnMouseUp(const MouseMessage &mouse) {
+void ToolboxWindow::DragButton::OnMouseUp(const MouseMessage &mouse) {
 	if (drag_) {
 		drag_ = false;
 		OnLostMouseCapture();

@@ -245,9 +245,15 @@ void TabButton::CalculateLabelLocation() {
 };
 
 void MainWindow::MainRoutine() {
-	pcon_panel_->MainRoutine();
+	for (ToolboxPanel* panel : panels) {
+		panel->MainRoutine();
+	}
+}
 
-	hotkey_panel_->MainRoutine();
+void MainWindow::UpdateUI() {
+	for (ToolboxPanel* panel : panels) {
+		panel->UpdateUI();
+	}
 }
 
 void MainWindow::SaveLocation() {

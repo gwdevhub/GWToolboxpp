@@ -1,9 +1,9 @@
 #pragma once
 
-#include "EmptyForm.h"
+#include "ToolboxWindow.h"
 #include "../include/OSHGui/OSHGui.hpp"
 
-class DistanceWindow : public EmptyForm {
+class DistanceWindow : public ToolboxWindow {
 public:
 	const int WIDTH = 150;
 	const int HEIGHT = 50;
@@ -20,6 +20,7 @@ public:
 	void Show(bool show);
 
 	void UpdateUI();
+	inline void MainRoutine() {};
 
 	void SetFreeze(bool b) {
 		containerPanel_->SetEnabled(!b);

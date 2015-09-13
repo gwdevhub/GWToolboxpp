@@ -20,6 +20,7 @@ void PconPanel::BuildUI() {
 	
 	int row = 0;
 	int col = 0;
+	pcons = vector<Pcon*>();
 
 	essence = new PconCons(L"essence");
 	essence->setIcon("Essence_of_Celerity.png", 0, 0, 64);
@@ -28,7 +29,7 @@ void PconPanel::BuildUI() {
 	essence->setEffectID(SkillID::Essence_of_Celerity_item_effect);
 	essence->setThreshold(5);
 	essence->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	AddControl(essence);
+	pcons.push_back(essence);
 	++col;
 
 	grail = new PconCons(L"grail");
@@ -38,7 +39,7 @@ void PconPanel::BuildUI() {
 	grail->setEffectID(SkillID::Grail_of_Might_item_effect);
 	grail->setThreshold(5);
 	grail->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	AddControl(grail);
+	pcons.push_back(grail);
 	++col;
 
 	armor = new PconCons(L"armor");
@@ -48,7 +49,7 @@ void PconPanel::BuildUI() {
 	armor->setEffectID(SkillID::Armor_of_Salvation_item_effect);
 	armor->setThreshold(5);
 	armor->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	AddControl(armor);
+	pcons.push_back(armor);
 	++row; col = 0;
 
 	redrock = new Pcon(L"redrock");
@@ -58,7 +59,7 @@ void PconPanel::BuildUI() {
 	redrock->setEffectID(SkillID::Red_Rock_Candy_Rush);
 	redrock->setThreshold(5);
 	redrock->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	AddControl(redrock);
+	pcons.push_back(redrock);
 	++col;
 
 	bluerock = new Pcon(L"bluerock");
@@ -68,7 +69,7 @@ void PconPanel::BuildUI() {
 	bluerock->setEffectID(SkillID::Blue_Rock_Candy_Rush);
 	bluerock->setThreshold(10);
 	bluerock->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	AddControl(bluerock);
+	pcons.push_back(bluerock);
 	++col;
 
 	greenrock = new Pcon(L"greenrock");
@@ -78,7 +79,7 @@ void PconPanel::BuildUI() {
 	greenrock->setEffectID(SkillID::Green_Rock_Candy_Rush);
 	greenrock->setThreshold(15);
 	greenrock->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	AddControl(greenrock);
+	pcons.push_back(greenrock);
 	++row; col = 0;
 
 	cupcake = new Pcon(L"cupcake");
@@ -88,7 +89,7 @@ void PconPanel::BuildUI() {
 	cupcake->setEffectID(SkillID::Birthday_Cupcake_skill);
 	cupcake->setThreshold(10);
 	cupcake->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	AddControl(cupcake);
+	pcons.push_back(cupcake);
 	++col;
 
 	apple = new Pcon(L"apple");
@@ -98,7 +99,7 @@ void PconPanel::BuildUI() {
 	apple->setEffectID(SkillID::Candy_Apple_skill);
 	apple->setThreshold(10);
 	apple->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	AddControl(apple);
+	pcons.push_back(apple);
 	++col;
 
 	corn = new Pcon(L"corn");
@@ -108,7 +109,7 @@ void PconPanel::BuildUI() {
 	corn->setEffectID(SkillID::Candy_Corn_skill);
 	corn->setThreshold(10);
 	corn->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	AddControl(corn);
+	pcons.push_back(corn);
 	++row; col = 0;
 
 	egg = new Pcon(L"egg");
@@ -118,7 +119,7 @@ void PconPanel::BuildUI() {
 	egg->setEffectID(SkillID::Golden_Egg_skill);
 	egg->setThreshold(20);
 	egg->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	AddControl(egg);
+	pcons.push_back(egg);
 	++col;
 
 	pie = new Pcon(L"pie");
@@ -128,7 +129,7 @@ void PconPanel::BuildUI() {
 	pie->setEffectID(SkillID::Pie_Induced_Ecstasy);
 	pie->setThreshold(10);
 	pie->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	AddControl(pie);
+	pcons.push_back(pie);
 	++col;
 
 	city = new PconCity(L"city");
@@ -136,7 +137,7 @@ void PconPanel::BuildUI() {
 	city->setChatName(L"City speedboost");
 	city->setThreshold(20);
 	city->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	AddControl(city);
+	pcons.push_back(city);
 	++row; col = 0;
 
 	alcohol = new PconAlcohol(L"alcohol");
@@ -144,7 +145,7 @@ void PconPanel::BuildUI() {
 	alcohol->setChatName(L"Alcohol");
 	alcohol->setThreshold(10);
 	alcohol->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	AddControl(alcohol);
+	pcons.push_back(alcohol);
 	++col;
 
 	lunars = new PconLunar(L"lunars");
@@ -153,7 +154,7 @@ void PconPanel::BuildUI() {
 	lunars->setEffectID(SkillID::Lunar_Blessing);
 	lunars->setThreshold(10);
 	lunars->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	AddControl(lunars);
+	pcons.push_back(lunars);
 	++col;
 
 	warsupply = new Pcon(L"warsupply");
@@ -163,7 +164,7 @@ void PconPanel::BuildUI() {
 	warsupply->setEffectID(SkillID::Well_Supplied);
 	warsupply->setThreshold(20);
 	warsupply->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	AddControl(warsupply);
+	pcons.push_back(warsupply);
 	++row; col = 0;
 
 	kabob = new Pcon(L"kabob");
@@ -173,7 +174,7 @@ void PconPanel::BuildUI() {
 	kabob->setEffectID(SkillID::Drake_Skin);
 	kabob->setThreshold(10);
 	kabob->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	AddControl(kabob);
+	pcons.push_back(kabob);
 	++col;
 
 	skalesoup = new Pcon(L"skalesoup");
@@ -183,7 +184,7 @@ void PconPanel::BuildUI() {
 	skalesoup->setEffectID(SkillID::Skale_Vigor);
 	skalesoup->setThreshold(10);
 	skalesoup->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	AddControl(skalesoup);
+	pcons.push_back(skalesoup);
 	++col;
 
 	pahnai = new Pcon(L"pahnai");
@@ -193,18 +194,22 @@ void PconPanel::BuildUI() {
 	pahnai->setEffectID(SkillID::Pahnai_Salad_item_effect);
 	pahnai->setThreshold(10);
 	pahnai->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	AddControl(pahnai);
+	pcons.push_back(pahnai);
 	++row; col = 0;
 
-	this->ScanInventory();
+	for (Pcon* pcon : pcons) {
+		pcon->scanInventory();
+		AddControl(pcon);
+	}
 
 	initialized = true;
 }
 
-void PconPanel::MainRoutine() {
+void PconPanel::UpdateUI() {
 	if (!initialized) return;
 
 	GWAPIMgr * API = GWAPIMgr::GetInstance();
+
 	if (current_map_type != API->Map->GetInstanceType()) {
 		current_map_type = API->Map->GetInstanceType();
 		scan_inventory_timer = TBTimer::init();
@@ -212,10 +217,21 @@ void PconPanel::MainRoutine() {
 
 	if (scan_inventory_timer > 0 && TBTimer::diff(scan_inventory_timer) > 2000) {
 		scan_inventory_timer = 0;
-		if (API->Map->GetInstanceType() != GwConstants::InstanceType::Loading) {
-			ScanInventory();
+
+		for (Pcon* pcon : pcons) {
+			pcon->scanInventory();
 		}
 	}
+
+	for (Pcon* pcon : pcons) {
+		pcon->UpdateUI();
+	}
+}
+
+void PconPanel::MainRoutine() {
+	if (!initialized) return;
+
+	GWAPIMgr * API = GWAPIMgr::GetInstance();
 
 	if (!enabled) return;
 	InstanceType type;
@@ -251,25 +267,3 @@ void PconPanel::MainRoutine() {
 		city->checkAndUse();
 	}
 }
-
-void PconPanel::ScanInventory() {
-	essence->scanInventory();
-	grail->scanInventory();
-	armor->scanInventory();
-	alcohol->scanInventory();
-	redrock->scanInventory();
-	bluerock->scanInventory();
-	greenrock->scanInventory();
-	pie->scanInventory();
-	cupcake->scanInventory();
-	apple->scanInventory();
-	corn->scanInventory();
-	egg->scanInventory();
-	kabob->scanInventory();
-	warsupply->scanInventory();
-	lunars->scanInventory();
-	skalesoup->scanInventory();
-	pahnai->scanInventory();
-	city->scanInventory();
-}
-

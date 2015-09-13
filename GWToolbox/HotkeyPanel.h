@@ -57,8 +57,9 @@ public:
 	inline bool ToggleRupt() { return ruptActive = !ruptActive; }
 
 	void LoadIni();				// load settings from ini file
-	void BuildUI() override;				// create user interface
-	void MainRoutine();			// do... nothing atm
+	void BuildUI() override;	// create user interface
+	inline void UpdateUI() override {};
+	void MainRoutine() override;
 
 	bool ProcessMessage(LPMSG msg);
 	void set_first_shown(int first);

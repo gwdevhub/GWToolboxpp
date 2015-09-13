@@ -2,7 +2,7 @@
 
 #include <vector>
 #include "../include/OSHGui/OSHGui.hpp"
-#include "EmptyForm.h"
+#include "ToolboxWindow.h"
 
 #include "PconPanel.h"
 #include "HotkeyPanel.h"
@@ -15,7 +15,7 @@
 
 using namespace OSHGui;
 
-class MainWindow : public EmptyForm {
+class MainWindow : public ToolboxWindow {
 public:
 	class TitleLabel : public DragButton {
 	public:
@@ -86,6 +86,7 @@ public:
 	SettingsPanel* settings_panel() { return settings_panel_; }
 
 	void SetPanelPositions(bool left);
+	void UpdateUI();
 	void MainRoutine();
 };
 

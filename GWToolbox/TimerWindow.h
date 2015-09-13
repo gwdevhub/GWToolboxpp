@@ -1,10 +1,10 @@
 #pragma once
 
-#include "EmptyForm.h"
+#include "ToolboxWindow.h"
 #include "../include/OSHGui/OSHGui.hpp"
 #include "logger.h"
 
-class TimerWindow : public EmptyForm {
+class TimerWindow : public ToolboxWindow {
 public:
 	class TimerLabel : public DragButton {
 	public:
@@ -28,6 +28,7 @@ public:
 	inline static const char* ThemeKey() { return "timer"; }
 
 	void UpdateUI();
+	inline void MainRoutine() {};
 
 	void SetFreeze(bool b) {
 		containerPanel_->SetEnabled(!b);

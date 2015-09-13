@@ -30,14 +30,11 @@ private:
 	Pcon* skalesoup;
 	Pcon* pahnai;
 	Pcon* city;
-	
+	std::vector<Pcon*> pcons;
 	bool initialized;	// true if the feature is initialized
 	bool enabled;		// true if the feature is enabled, false otherwise 
 	GwConstants::InstanceType current_map_type;
 	clock_t scan_inventory_timer;
-
-	// scans inventory and updates UI
-	void ScanInventory();
 
 public:
 	PconPanel();
@@ -46,6 +43,7 @@ public:
 	void Disable() { enabled = false; }
 	bool ToggleActive() { return enabled = !enabled; }
 	
-	void BuildUI();	// create user interface
-	void MainRoutine();			// runs one loop of the main routine (checking each pcon once)
+	void BuildUI() override;
+	void UpdateUI() override;
+	void MainRoutine() override;// runs one loop of the main routine (checking each pcon once)
 };

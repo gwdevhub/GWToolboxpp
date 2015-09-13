@@ -125,6 +125,7 @@ void create_gui(IDirect3DDevice9* pDevice) {
 	GWToolbox::instance()->set_distance_window(new DistanceWindow());
 
 	app->Enable();
+	GWToolbox::instance()->SetInitialized();
 
 	HWND hWnd = GWAPI::MemoryMgr::GetGWWindowHandle();
 	OldWndProc = SetWindowLongPtr(hWnd, GWL_WNDPROC, (long)NewWndProc);
@@ -140,25 +141,13 @@ static HRESULT WINAPI endScene(IDirect3DDevice9* pDevice) {
 	}
 
 	GWToolbox* tb = GWToolbox::instance();
-	if (tb) {
-		if (tb->main_window() && tb->main_window()->info_panel()) {
-			tb->main_window()->info_panel()->UpdateUI();
-		}
-
-		if (tb->timer_window()) {
-			tb->timer_window()->UpdateUI();
-		}
-		if (tb->health_window()) {
-			tb->health_window()->UpdateUI();
-		}
-		if (tb->distance_window()) {
-			tb->distance_window()->UpdateUI();
-		}
-		if (tb->bonds_window()) {
-			tb->bonds_window()->UpdateUI();
-		}
+	if (tb->initialized()) {
+		tb->main_window()->UpdateUI();
+		tb->timer_window()->UpdateUI();
+		tb->bonds_window()->UpdateUI();
+		tb->health_window()->UpdateUI();
+		tb->distance_window()->UpdateUI();
 	}
-	
 
 	renderer->BeginRendering();
 
@@ -200,11 +189,12 @@ void GWToolbox::exec() {
 	Application * app = Application::InstancePtr();
 
 	while (true) { // main loop
-		if (app->HasBeenInitialized()) {
-
-			if (main_window_) main_window_->MainRoutine();
-
-			
+		if (app->HasBeenInitialized() && initialized()) {
+			main_window_->MainRoutine();
+			timer_window_->MainRoutine();
+			bonds_window_->MainRoutine();
+			health_window_->MainRoutine();
+			distance_window_->MainRoutine();
 		}
 
 		Sleep(10);

@@ -6,6 +6,8 @@ class MaterialsPanel : public ToolboxPanel {
 public:
 	MaterialsPanel();
 
-	void BuildUI();				// create user interface
+	void BuildUI() override;
+	void UpdateUI() override {};
+	void MainRoutine() override {};
 };
 
