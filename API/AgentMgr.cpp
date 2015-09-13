@@ -112,19 +112,30 @@ GWAPI::GW::MapAgentArray GWAPI::AgentMgr::GetMapAgentArray()
 }
 
 GWAPI::GW::Agent* GWAPI::AgentMgr::GetPlayer() {
-	GW::AgentArray agents = GetAgentArray();
-	if (agents.IsValid()) {
-		return agents[GetPlayerId()];
-	} else {
+	__try{
+		GW::AgentArray agents = GetAgentArray();
+		if (agents.IsValid()) {
+			return agents[GetPlayerId()];
+		}
+		else {
+			return nullptr;
+		}
+	}
+	__except (EXCEPTION_EXECUTE_HANDLER){
 		return nullptr;
 	}
 }
 
 GWAPI::GW::Agent* GWAPI::AgentMgr::GetTarget() {
+	__try{
 	GW::AgentArray agents = GetAgentArray();
 	if (agents.IsValid()) {
 		return agents[GetTargetId()];
 	} else {
+		return nullptr;
+	}
+	}
+	__except (EXCEPTION_EXECUTE_HANDLER){
 		return nullptr;
 	}
 }
