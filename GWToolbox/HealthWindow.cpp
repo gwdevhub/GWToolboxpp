@@ -14,7 +14,7 @@ HealthWindow::HealthWindow() {
 	int y = config->iniReadLong(HealthWindow::IniSection(), HealthWindow::IniKeyY(), 100);
 
 	SetLocation(x, y);
-	SetSize(Drawing::SizeI(WIDTH, HEIGHT + ABS_HEIGHT));
+	SetSize(Drawing::SizeI(WIDTH, HEIGHT + ABS_HEIGHT + DefaultBorderPadding));
 
 	Drawing::Theme::ControlTheme theme = Application::InstancePtr()
 		->GetTheme().GetControlColorTheme(HealthWindow::ThemeKey());

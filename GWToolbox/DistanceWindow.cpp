@@ -14,7 +14,7 @@ DistanceWindow::DistanceWindow() {
 	int y = config->iniReadLong(DistanceWindow::IniSection(), DistanceWindow::IniKeyY(), 100);
 
 	SetLocation(x, y);
-	SetSize(Drawing::SizeI(WIDTH, HEIGHT + ABS_HEIGHT));
+	SetSize(Drawing::SizeI(WIDTH, HEIGHT + ABS_HEIGHT + DefaultBorderPadding));
 
 	Drawing::Theme::ControlTheme theme = Application::InstancePtr()
 		->GetTheme().GetControlColorTheme(DistanceWindow::ThemeKey());
