@@ -1,15 +1,15 @@
 #pragma once
 #include <Windows.h>
-#include "../include/OSHGui/OSHGui.hpp"
+#include "ToolboxPanel.h"
 #include "../API/GwConstants.h"
 
-class TravelPanel : public OSHGui::Panel {
+class TravelPanel : public ToolboxPanel {
 private:
-	const int WIDTH = 200;
-	const int HEIGHT = 300;
-	const int SPACE = 6;
-	const int BUTTON_WIDTH = (WIDTH - 3 * SPACE) / 2;
-	const int BUTTON_HEIGHT = 25;
+	static const int WIDTH = 200;
+	static const int HEIGHT = 300;
+	static const int SPACE = 6;
+	static const int BUTTON_WIDTH = (WIDTH - 3 * SPACE) / 2;
+	static const int BUTTON_HEIGHT = 25;
 	
 
 	DWORD region_;
@@ -26,6 +26,6 @@ public:
 	DWORD district() { return district_; }
 	DWORD language() { return language_; }
 
-	void BuildUI();				// create user interface
+	void BuildUI() override;
 };
 

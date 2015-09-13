@@ -44,7 +44,7 @@ public:
 
 private:
 	Panel* main_panel_;
-	std::vector<Panel*> panels;
+	std::vector<ToolboxPanel*> panels;
 	int current_panel_;
 	bool minimized_;
 
@@ -59,7 +59,6 @@ private:
 	SettingsPanel* const settings_panel_;
 
 	void CreateTabButton(const char* s, int& button_idx, int& panel_idx, const char* icon);
-	void SetupPanel(Panel* panel);
 	void ToggleMinimize();
 	void SaveLocation();
 
@@ -85,6 +84,7 @@ public:
 	MaterialsPanel* materials_panel() { return materials_panel_; }
 	SettingsPanel* settings_panel() { return settings_panel_; }
 
+	void SetPanelPositions(bool left);
 	void MainRoutine();
 };
 

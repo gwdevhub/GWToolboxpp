@@ -29,6 +29,7 @@ void SettingsPanel::BuildUI() {
 	tabsleft->GetCheckedChangedEvent() += CheckedChangedEventHandler([tabsleft](Control*) {
 		GWToolbox::instance()->config()->iniWriteBool(MainWindow::IniSection(),
 			MainWindow::IniKeyTabsLeft(), tabsleft->GetChecked());
+		GWToolbox::instance()->main_window()->SetPanelPositions(tabsleft->GetChecked());
 	});
 	AddControl(tabsleft);
 

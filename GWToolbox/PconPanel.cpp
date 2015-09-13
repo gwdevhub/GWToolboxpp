@@ -16,8 +16,8 @@ PconPanel::PconPanel() {
 }
 
 void PconPanel::BuildUI() {
-	SetSize(6 * 2 + Pcon::WIDTH * 3, 6 * 2 + Pcon::HEIGHT * 6);
-	LOG("building pcons ui\n");
+	SetSize(WIDTH, HEIGHT);
+	
 	int row = 0;
 	int col = 0;
 

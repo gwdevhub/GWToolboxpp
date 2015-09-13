@@ -1,12 +1,12 @@
 #pragma once
 
-#include "../include/OSHGui/OSHGui.hpp"
+#include "ToolboxPanel.h"
 
 #include "Timer.h"
 #include <vector>
 #include <string>
 
-class BuildPanel : public OSHGui::Panel {
+class BuildPanel : public ToolboxPanel {
 private:
 	const int amount = 16;
 	const int maxPartySize = 12;
@@ -19,6 +19,6 @@ private:
 
 public:
 	void LoadIni();
-	void BuildUI();
+	void BuildUI() override;
 	void MainRoutine();
 };

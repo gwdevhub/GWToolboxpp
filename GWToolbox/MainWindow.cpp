@@ -17,7 +17,7 @@ info_panel_(new InfoPanel()),
 materials_panel_(new MaterialsPanel()),
 settings_panel_(new SettingsPanel()) {
 
-	panels = std::vector<Panel*>();
+	panels = std::vector<ToolboxPanel*>();
 	current_panel_ = -1;
 	minimized_ = false;
 	
@@ -115,23 +115,30 @@ settings_panel_(new SettingsPanel()) {
 	CreateTabButton("Settings", button_idx, panel_idx, 
 		GuiUtils::getSubPathA("settings.png", "img").c_str());
 
-	pcon_panel_->BuildUI();
-	hotkey_panel_->BuildUI();
-	build_panel_->BuildUI();
-	travel_panel_->BuildUI();
-	dialog_panel_->BuildUI();
-	info_panel_->BuildUI();
-	materials_panel_->BuildUI();
-	settings_panel_->BuildUI();
+	panels.push_back(pcon_panel_);
+	panels.push_back(hotkey_panel_);
+	panels.push_back(build_panel_);
+	panels.push_back(travel_panel_);
+	panels.push_back(dialog_panel_);
+	panels.push_back(info_panel_);
+	panels.push_back(materials_panel_);
+	panels.push_back(settings_panel_);
 
-	SetupPanel(pcon_panel_);
-	SetupPanel(hotkey_panel_);
-	SetupPanel(build_panel_);
-	SetupPanel(travel_panel_);
-	SetupPanel(dialog_panel_);
-	SetupPanel(info_panel_);
-	SetupPanel(materials_panel_);
-	SetupPanel(settings_panel_);
+	
+	for (ToolboxPanel* panel : panels) {
+		panel->BuildUI();
+		panel->SetVisible(false);
+		panel->SetEnabled(false);
+		AddSubControl(panel);
+	}
+	SetPanelPositions(GWToolbox::instance()->config()->iniReadBool(
+		MainWindow::IniSection(), MainWindow::IniKeyTabsLeft(), false));
+}
+
+void MainWindow::SetPanelPositions(bool left) {
+	for (ToolboxPanel* panel : panels) {
+		panel->SetLocation(left ? -panel->GetWidth() : GetWidth(), 0);
+	}
 }
 
 void MainWindow::ToggleMinimize() {
@@ -170,14 +177,6 @@ void MainWindow::CreateTabButton(const char* s, int& button_idx,
 	main_panel_->AddControl(b);
 	++button_idx;
 	++panel_idx;
-}
-
-void MainWindow::SetupPanel(Panel* panel) {
-	panel->SetLocation(WIDTH, 0);
-	panel->SetVisible(false);
-	panel->SetEnabled(false);
-	panels.push_back(panel);
-	AddSubControl(panel);
 }
 
 void MainWindow::DrawSelf(RenderContext &context) {

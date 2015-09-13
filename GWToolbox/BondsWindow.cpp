@@ -31,6 +31,9 @@ BondsWindow::BondsWindow() {
 	monitor->SetSize(WIDTH, HEIGHT);
 	AddControl(monitor);
 
+	bool show = config->iniReadBool(BondsWindow::IniSection(), BondsWindow::IniKeyShow(), false);
+	Show(show);
+
 	std::shared_ptr<BondsWindow> self = std::shared_ptr<BondsWindow>(this);
 	Form::Show(self);
 }

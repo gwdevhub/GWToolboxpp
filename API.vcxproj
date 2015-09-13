@@ -127,6 +127,7 @@
     <ClInclude Include="GWToolbox\HealthWindow.h" />
     <ClInclude Include="GWToolbox\Timer.h" />
     <ClInclude Include="GWToolbox\TimerWindow.h" />
+    <ClInclude Include="GWToolbox\ToolboxPanel.h" />
     <ClInclude Include="GWToolbox\TravelPanel.h" />
     <ClInclude Include="include\OSHGui\Application.hpp" />
     <ClInclude Include="include\OSHGui\Controls\Button.hpp" />

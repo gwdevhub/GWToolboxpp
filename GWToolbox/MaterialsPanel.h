@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../include/OSHGui/OSHGui.hpp"
+#include "ToolboxPanel.h"
 
-class MaterialsPanel : public OSHGui::Panel {
+class MaterialsPanel : public ToolboxPanel {
 public:
 	MaterialsPanel();
 
