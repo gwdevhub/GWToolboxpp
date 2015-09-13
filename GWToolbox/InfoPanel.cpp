@@ -7,6 +7,7 @@
 #include "GWToolbox.h"
 #include "Config.h"
 #include "HealthWindow.h"
+#include "DistanceWindow.h"
 
 using namespace OSHGui;
 
@@ -117,7 +118,12 @@ void InfoPanel::BuildUI() {
 	distance->SetLocation(item1_x, targetHp->GetBottom() + DefaultBorderPadding);
 	distance->SetText("Show Target Distance");
 	distance->GetCheckedChangedEvent() += CheckedChangedEventHandler([distance](Control*) {
-		// TODO
+		GWToolbox* tb = GWToolbox::instance();
+		bool show = distance->GetChecked();
+		if (tb->distance_window()) {
+			tb->distance_window()->Show(show);
+		}
+		tb->config()->iniWriteBool(DistanceWindow::IniSection(), DistanceWindow::IniKeyShow(), show);
 	});
 	AddControl(distance);
 

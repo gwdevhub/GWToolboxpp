@@ -1,4 +1,4 @@
-#include "HealthWindow.h"
+#include "DistanceWindow.h"
 
 #include <string>
 
@@ -7,11 +7,11 @@
 #include "../API/APIMain.h"
 #include "GuiUtils.h"
 
-HealthWindow::HealthWindow() {
+DistanceWindow::DistanceWindow() {
 
 	Config* config = GWToolbox::instance()->config();
-	int x = config->iniReadLong(HealthWindow::IniSection(), HealthWindow::IniKeyX(), 100);
-	int y = config->iniReadLong(HealthWindow::IniSection(), HealthWindow::IniKeyY(), 100);
+	int x = config->iniReadLong(DistanceWindow::IniSection(), DistanceWindow::IniKeyX(), 100);
+	int y = config->iniReadLong(DistanceWindow::IniSection(), DistanceWindow::IniKeyY(), 100);
 
 	SetLocation(x, y);
 	SetSize(Drawing::SizeI(WIDTH, HEIGHT));
@@ -65,23 +65,23 @@ HealthWindow::HealthWindow() {
 	});
 	AddControl(absolute);
 
-	bool show = config->iniReadBool(HealthWindow::IniSection(), HealthWindow::IniKeyShow(), false);
+	bool show = config->iniReadBool(DistanceWindow::IniSection(), DistanceWindow::IniKeyShow(), false);
 	Show(show);
 
-	std::shared_ptr<HealthWindow> self = std::shared_ptr<HealthWindow>(this);
+	std::shared_ptr<DistanceWindow> self = std::shared_ptr<DistanceWindow>(this);
 	Form::Show(self);
 }
 
-void HealthWindow::SaveLocation() {
+void DistanceWindow::SaveLocation() {
 	CalculateAbsoluteLocation();
 	int x = absoluteLocation_.X;
 	int y = absoluteLocation_.Y;
 	Config* config = GWToolbox::instance()->config();
-	config->iniWriteLong(HealthWindow::IniSection(), HealthWindow::IniKeyX(), x);
-	config->iniWriteLong(HealthWindow::IniSection(), HealthWindow::IniKeyY(), y);
+	config->iniWriteLong(DistanceWindow::IniSection(), DistanceWindow::IniKeyX(), x);
+	config->iniWriteLong(DistanceWindow::IniSection(), DistanceWindow::IniKeyY(), y);
 }
 
-void HealthWindow::UpdateUI() {
+void DistanceWindow::UpdateUI() {
 	using namespace GWAPI::GW;
 	using namespace std;
 
@@ -90,28 +90,23 @@ void HealthWindow::UpdateUI() {
 	GWAPI::GWAPIMgr* api = GWAPI::GWAPIMgr::GetInstance();
 
 	Agent* target = api->Agents->GetTarget();
-	float hp = target ? target->HP : -1;
-	long max = target ? target->MaxHP : -1;
+	Agent* me = api->Agents->GetPlayer();
+	long distance;
+	if (target && me) {
+		distance = api->Agents->GetDistance(target, me);
+	} else {
+		distance = -1;
+	}
 
-	if (hp != current_hp || max != current_max) {
-		current_hp = hp;
-		current_max = max;
-
+	if (distance != current_distance) {
 		string s1;
 		string s2;
-		if (target && target->Type == 0xDB) {
-			s1 = to_string(lroundf(target->HP * 100));
-			s1 += " %";
-			
-			if (target->MaxHP > 0) {
-				s2 = to_string(lroundf(target->HP * target->MaxHP));
-				s2 = s2 + " / " + to_string(target->MaxHP);
-			} else {
-				s2 = "- / -";
-			}
+		if (target && me) {
+			s1 = to_string(distance * 100 / GwConstants::Range::Compass) + " %";
+			s2 = to_string(distance);
 		} else {
 			s1 = "-";
-			s2 = "- / -";
+			s2 = "-";
 		}
 		percent->SetText(s1);
 		percent_shadow->SetText(s1);
@@ -120,7 +115,7 @@ void HealthWindow::UpdateUI() {
 	}
 }
 
-void HealthWindow::Show(bool show) {
+void DistanceWindow::Show(bool show) {
 	SetVisible(show);
 	
 	containerPanel_->SetVisible(show);
