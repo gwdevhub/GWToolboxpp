@@ -13,7 +13,7 @@
 Opt("MustDeclareVars", True)
 Opt("GUIOnEventMode", True)
 
-Global $DevelopMode = True
+Global $DevelopMode = False
 If @Compiled Then $DevelopMode = False
 Global $installDLL
 
@@ -33,7 +33,7 @@ Global Const $imgFolder = $folder & "img\"
 Global Const $ini = $folder & "GWToolbox.ini"
 Global Const $launcher_section = "Launcher"
 Global Const $theme = $folder & "Theme.txt"
-Global Const $dll = $folder & "GWToolboxpp.dll"
+Global Const $dll = $folder & "GWToolbox.dll"
 
 Global $close_after = (IniRead($ini, $launcher_section, "close_after", False) == "True")
 Global $autolaunch = (IniRead($ini, $launcher_section, "autolaunch", False) == "True")
@@ -78,7 +78,7 @@ If Not $no_gui Then
 	Global Const $close_after_checkbox = GUICtrlCreateCheckbox("Close after launch", 336, 168, 121, 17)
 		GUICtrlSetOnEvent(-1, "GuIEventHandler")
 		If $close_after Then GUICtrlSetState(-1, $GUI_CHECKED)
-	Global Const $autolaunch_checkbox = GUICtrlCreateCheckbox("Automatically launch", 336, 144, 121, 17)
+	Global Const $autolaunch_checkbox = GUICtrlCreateCheckbox("Auto launch", 336, 144, 121, 17)
 		GUICtrlSetOnEvent(-1, "GuIEventHandler")
 		If $autolaunch Then GUICtrlSetState(-1, $GUI_CHECKED)
 
@@ -107,29 +107,25 @@ InstallResources()
 ScanForGWClients()
 
 ; 4. check for updates
-If $DevelopMode Then
-	FileInstall("..\Debug\API.dll", $dll, True) ; True = overwrite
-Else
-	If FileExists($dll) Then FileDelete($dll)
-	Global $download = InetGet($host & "GWToolboxpp.dll", $ini, Default, $INET_DOWNLOADBACKGROUND)
-	If $download == 0 Then
-		MsgBox(0, "GWToolbox++ Launcher", "Download error: " & @error)
-	EndIf
-	Out("Updating... 0 %")
+;~ 	Global $download = InetGet($host & "GWToolboxpp.dll", $ini, Default, $INET_DOWNLOADBACKGROUND)
+;~ 	If $download == 0 Then
+;~ 		MsgBox(0, "GWToolbox++ Launcher", "Download error: " & @error)
+;~ 	EndIf
+;~ 	Out("Updating... 0 %")
 
-	While Not InetGetInfo($download, $INET_DOWNLOADCOMPLETE)
-		Sleep(250)
-		Local $completed = InetGetInfo($download)
-		Local $size = InetGetInfo($download)
-		Local $progress
-		If $size > 0 Then
-			$progress = $completed / $size * 100 & " %"
-		Else
-			$progress = $completed
-		EndIf
-		Out("Updating... " & $progress)
-	WEnd
-EndIf
+;~ 	While Not InetGetInfo($download, $INET_DOWNLOADCOMPLETE)
+;~ 		Sleep(250)
+;~ 		Local $completed = InetGetInfo($download)
+;~ 		Local $size = InetGetInfo($download)
+;~ 		Local $progress
+;~ 		If $size > 0 Then
+;~ 			$progress = $completed / $size * 100 & " %"
+;~ 		Else
+;~ 			$progress = $completed
+;~ 		EndIf
+;~ 		Out("Updating... " & $progress)
+;~ 	WEnd
+
 
 
 
@@ -162,10 +158,11 @@ Func ScanForGWClients()
 		For $i = 1 To $lWinList[0][0]
 			$lCharArray[$i - 1][1] = WinGetProcess($lWinList[$i][1])
 			MemoryOpen($lCharArray[$i - 1][1])
-			If $i = 1 Then $lFirstChar = ScanForCharname()
+			ScanForCharname()
 			$lCharArray[$i - 1][0] = MemoryRead($mCharname, 'wchar[30]')
 			MemoryClose()
 
+			If $i = 1 Then $lFirstChar = MemoryRead($mCharname, 'wchar[30]')
 			$lComboStr &= $lCharArray[$i - 1][0]
 			If $i <> $lWinList[0][0] Then $lComboStr &= '|'
 		Next
@@ -185,7 +182,7 @@ Func InjectGW()
 	If Not $no_gui Then GUICtrlSetState($LaunchButton, $GUI_DISABLE)
 	Out("Launching...")
 	If $launch_exe Then
-		; TODO
+		MsgBox(0, "error", "exe launch not implemented")
 
 	Else
 		If $lWinList[0][0] = 0 Then
@@ -210,6 +207,7 @@ Func InjectGW()
 
 		ConsoleWrite("injecting" & @CRLF)
 		_InjectDll($lCharArray[$selectedClient][1], $dll)
+		if @error Then MsgBox(0, "error", @error)
 
 	EndIf
 
@@ -304,6 +302,10 @@ Func GuIEventHandler()
 EndFunc
 
 Func InstallResources()
+	If Not FileExists($folder & "GWToolbox.dll") Then
+		FileInstall("..\Debug\API.dll", $folder & "GWToolbox.dll")
+	EndIf
+
 	If Not FileExists($folder & "Theme.txt") Then
 		FileInstall("..\resources\DefaultTheme.txt", $folder & "Theme.txt")
 	EndIf
