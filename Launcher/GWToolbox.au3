@@ -87,10 +87,10 @@ Switch $WinList[0][0]
 			$lComboStr &= $char_names[$i - 1]
 			If $i <> $WinList[0][0] Then $lComboStr &= '|'
 		Next
-		Local $gui = GUICreate("GWToolbox++", 150, 80)
+		Local $gui = GUICreate("GWToolbox++", 150, 60)
 		Local $comboCharname = GUICtrlCreateCombo("", 6, 6, 138, 25, $CBS_DROPDOWNLIST)
 		GUICtrlSetData(-1, $lComboStr, $lFirstChar)
-		Local $button = GUICtrlCreateButton("Launch", 9, 67, 142, 24)
+		Local $button = GUICtrlCreateButton("Launch", 6, 31, 138, 24)
 		GUISetState(@SW_SHOW, $gui)
 		Out("made gui")
 		While True
