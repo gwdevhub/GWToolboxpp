@@ -524,7 +524,7 @@ void HotkeyUseItem::exec() {
 	if (item_id_ <= 0) return;
 
 	if (GWAPI::GWAPIMgr::GetInstance()->Items->UseItemByModelId(item_id_)) {
-		LOG("Hotkey fired: used item %s (ID: %u)", item_name_, item_id_);
+		LOG("Hotkey fired: used item %s (ID: %u)\n", item_name_.c_str(), item_id_);
 	} else {
 		wstring name = item_name_.empty() ? to_wstring(item_id_) : item_name_;
 		wstring msg = wstring(L"[Warning] ") + item_name_ + L"not found!";

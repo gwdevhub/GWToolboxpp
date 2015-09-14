@@ -12,7 +12,6 @@ GWAPI::GW::Skill GWAPI::SkillbarMgr::GetSkillConstantData(DWORD SkillID)
 
 void GWAPI::SkillbarMgr::UseSkill(DWORD Slot, DWORD Target /*= 0*/, DWORD CallTarget /*= 0*/)
 {
-	Slot--;
 	parent->GameThread->Enqueue(_UseSkill, parent->Agents->GetPlayerId(), Slot, Target, CallTarget);
 }
 
@@ -49,5 +48,5 @@ int GWAPI::SkillbarMgr::getSkillSlot(GwConstants::SkillID SkillID) {
 			return i;
 		}
 	}
-	return 0;
+	return -1;
 }
