@@ -583,8 +583,15 @@ void HotkeyTarget::exec() {
 	if (id_ <= 0) return;
 
 	GWAPIMgr* API = GWAPIMgr::GetInstance();
-	GW::Agent* me = API->Agents->GetPlayer();
+
 	GW::AgentArray agents = API->Agents->GetAgentArray();
+	if (!agents.IsValid()) {
+		LOG("Agent array not valid\n");
+		return;
+	}
+
+	GW::Agent* me = agents[API->Agents->GetPlayerId()];
+	if (me == nullptr) return;
 
 	unsigned long distance = GwConstants::SqrRange::Compass;
 	int closest = -1;
