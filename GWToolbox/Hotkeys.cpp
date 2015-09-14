@@ -581,12 +581,10 @@ void HotkeyToggle::exec() {
 void HotkeyTarget::exec() {
 	if (isLoading()) return;
 	if (id_ <= 0) return;
-
 	GWAPIMgr* API = GWAPIMgr::GetInstance();
 
 	GW::AgentArray agents = API->Agents->GetAgentArray();
 	if (!agents.IsValid()) {
-		LOG("Agent array not valid\n");
 		return;
 	}
 
@@ -597,8 +595,9 @@ void HotkeyTarget::exec() {
 	int closest = -1;
 
 	for (size_t i = 0; i < agents.size(); ++i) {
-		if (agents[i]->PlayerNumber == id_ && agents[i]->HP >= 0) {
-
+		GW::Agent* agent = agents[i];
+		if (agent == nullptr) continue;
+		if (agent->PlayerNumber == id_ && agent->HP >= 0) {
 			unsigned long newDistance = API->Agents->GetSqrDistance(me, agents[i]);
 			if (newDistance < distance) {
 				closest = i;
