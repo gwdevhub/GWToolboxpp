@@ -40,7 +40,7 @@ void TravelPanel::BuildUI() {
 	using namespace GwConstants;
 	AddTravelButton("ToA", 0, 1, MapID::Temple_of_the_Ages);
 	AddTravelButton("DoA", 1, 1, MapID::Domain_of_Anguish);
-	AddTravelButton("Kamadan", 0, 2, MapID::Kamadan_Jewel_of_Istan);
+	AddTravelButton("Kamadan", 0, 2, MapID::Kamadan_Jewel_of_Istan_outpost);
 	AddTravelButton("Embark", 1, 2, MapID::Embark_Beach);
 	AddTravelButton("Vlox's", 0, 3, MapID::Vloxs_Falls);
 	AddTravelButton("EOTN", 1, 3, MapID::Eye_of_the_North_outpost);

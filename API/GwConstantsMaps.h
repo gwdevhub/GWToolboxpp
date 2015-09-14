@@ -397,7 +397,7 @@ namespace GwConstants {
 		The_Mirror_of_Lyss = 419,
 		Secure_the_Refuge,
 		Venta_Cemetery,
-		Kamadan_Jewel_of_Istan,
+		Kamadan_Jewel_of_Istan_explorable,
 		The_Tribunal,
 		Kodonur_Crossroads,
 		Rilohn_Refuge,
