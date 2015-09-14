@@ -54,7 +54,10 @@ GWAPI::GWAPIMgr::~GWAPIMgr()
 #ifdef GWAPI_USEDIRECTX
 	if (DirectX) delete DirectX;
 #endif
+	if (Merchant) delete Merchant;
+
 	if (Map) delete Map;
+	if (Guild) delete Guild;
 
 	if (Effects) delete Effects;
 	if (Skillbar) delete Skillbar;
@@ -64,8 +67,6 @@ GWAPI::GWAPIMgr::~GWAPIMgr()
 	
 	if (CtoS) delete CtoS;
 	if (GameThread) delete GameThread;
-	if (Merchant) delete Merchant;
-	if (Guild) delete Guild;
 }
 
 void GWAPI::GWAPIMgr::Initialize()
