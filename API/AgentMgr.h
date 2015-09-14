@@ -10,7 +10,7 @@ namespace GWAPI {
 		GWAPIMgr* const parent;
 		friend class GWAPIMgr;
 
-		typedef void(__fastcall *ChangeTarget_t)(DWORD AgentID);
+		typedef void(__fastcall *ChangeTarget_t)(DWORD AgentID,DWORD smth);
 		ChangeTarget_t _ChangeTarget;
 
 		

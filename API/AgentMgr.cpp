@@ -68,7 +68,7 @@ GWAPI::AgentMgr::~AgentMgr()
 
 void GWAPI::AgentMgr::ChangeTarget(GW::Agent* Agent)
 {
-	parent->GameThread->Enqueue(_ChangeTarget, Agent->Id);
+	parent->GameThread->Enqueue(_ChangeTarget, Agent->Id,0);
 }
 
 void GWAPI::AgentMgr::Move(float X, float Y, DWORD ZPlane /*= 0*/)
