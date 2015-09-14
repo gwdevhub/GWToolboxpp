@@ -524,7 +524,7 @@ void HotkeyUseItem::exec() {
 	if (item_id_ <= 0) return;
 
 	if (GWAPI::GWAPIMgr::GetInstance()->Items->UseItemByModelId(item_id_)) {
-		LOG("Hotkey fired: used item %s (ID: %u)", item_name_, item_id_);
+		LOG("Hotkey fired: used item %s (ID: %u)\n", item_name_.c_str(), item_id_);
 	} else {
 		wstring name = item_name_.empty() ? to_wstring(item_id_) : item_name_;
 		wstring msg = wstring(L"[Warning] ") + item_name_ + L"not found!";
@@ -581,12 +581,10 @@ void HotkeyToggle::exec() {
 void HotkeyTarget::exec() {
 	if (isLoading()) return;
 	if (id_ <= 0) return;
-
 	GWAPIMgr* API = GWAPIMgr::GetInstance();
 
 	GW::AgentArray agents = API->Agents->GetAgentArray();
 	if (!agents.IsValid()) {
-		LOG("Agent array not valid\n");
 		return;
 	}
 
@@ -597,8 +595,9 @@ void HotkeyTarget::exec() {
 	int closest = -1;
 
 	for (size_t i = 0; i < agents.size(); ++i) {
-		if (agents[i]->PlayerNumber == id_ && agents[i]->HP >= 0) {
-
+		GW::Agent* agent = agents[i];
+		if (agent == nullptr) continue;
+		if (agent->PlayerNumber == id_ && agent->HP >= 0) {
 			unsigned long newDistance = API->Agents->GetSqrDistance(me, agents[i]);
 			if (newDistance < distance) {
 				closest = i;

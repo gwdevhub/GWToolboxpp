@@ -247,7 +247,7 @@ void HotkeyPanel::LoadIni() {
 			wstring type = section.substr(second_sep + 1);
 			//wstring wname = config->iniRead(section.c_str(), L"name", L"");
 			//string name = string(wname.begin(), wname.end()); // transform wstring in string
-			bool active = config->iniReadBool(section.c_str(), TBHotkey::IniKeyActive(), false);
+			bool active = config->iniReadBool(section.c_str(), TBHotkey::IniKeyActive(), true);
 			Key key = (Key)config->iniReadLong(section.c_str(), TBHotkey::IniKeyHotkey(), 0);
 			Key modifier = (Key)config->iniReadLong(section.c_str(), TBHotkey::IniKeyModifier(), 0);
 			TBHotkey* tb_hk = NULL;
@@ -263,7 +263,8 @@ void HotkeyPanel::LoadIni() {
 				tb_hk = new HotkeyUseItem(key, modifier, active, section, itemID, item_name);
 
 			} else if (type.compare(HotkeyDropUseBuff::IniSection()) == 0) {
-				long skillID = config->iniReadLong(section.c_str(), HotkeyDropUseBuff::IniKeySkillID(), 0);
+				long skillID = config->iniReadLong(section.c_str(), HotkeyDropUseBuff::IniKeySkillID(), 
+					static_cast<long>(GwConstants::SkillID::Recall));
 				GwConstants::SkillID id = static_cast<GwConstants::SkillID>(skillID);
 				tb_hk = new HotkeyDropUseBuff(key, modifier, active, section, id);
 
