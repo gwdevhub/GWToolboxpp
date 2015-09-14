@@ -174,11 +174,16 @@ namespace OSHGui
 							case WM_SYSKEYUP:
 								keyData = (Key)message->wParam | modifier;
 								break;
-							case WM_XBUTTONUP:
 							case WM_XBUTTONDOWN:
 								keyData = (Key)LOWORD(message->wParam);
 								if (LOWORD(message->wParam) == MK_XBUTTON1) keyData = Key::XButton1 | modifier;
 								if (LOWORD(message->wParam) == MK_XBUTTON2) keyData = Key::XButton2 | modifier;
+								break;
+							case WM_XBUTTONUP:
+								// This is wrong, but there's no correct easy way to do it
+								// See HotkeyPanel for Toolbox's solution to this
+								// and msdn page on WM_XBUTTONUP message
+								keyData = Key::None;
 								break;
 							}
 						}

@@ -183,6 +183,26 @@ void HotkeyPanel::DrawSelf(Drawing::RenderContext& context) {
 }
 
 bool HotkeyPanel::ProcessMessage(LPMSG msg) {
+
+	Key keyData = Key::None;
+	switch (msg->message) {
+	case WM_KEYDOWN:
+	case WM_SYSKEYDOWN:
+	case WM_KEYUP:
+	case WM_SYSKEYUP:
+		keyData = (Key)msg->wParam;
+		break;
+	case WM_XBUTTONDOWN:
+		if (LOWORD(msg->wParam) & MK_XBUTTON1) keyData = Key::XButton1;
+		if (LOWORD(msg->wParam) & MK_XBUTTON2) keyData = Key::XButton2;
+		break;
+	case WM_XBUTTONUP:
+		// leave keydata to none, need to handle special case below
+		break;
+	default:
+		break;
+	}
+
 	switch (msg->message) {
 	case WM_KEYDOWN:
 	case WM_SYSKEYDOWN:
@@ -194,8 +214,6 @@ bool HotkeyPanel::ProcessMessage(LPMSG msg) {
 			modifier |= Key::Shift;
 		if (GetKeyState(static_cast<int>(Key::Menu)) < 0)
 			modifier |= Key::Alt;
-
-		Key keyData = (Key)msg->wParam;
 
 		bool triggered = false;
 		for (TBHotkey* hk : hotkeys) {
@@ -213,15 +231,20 @@ bool HotkeyPanel::ProcessMessage(LPMSG msg) {
 
 	case WM_KEYUP:
 	case WM_SYSKEYUP:
-	case WM_XBUTTONUP: {
-		Key keyData = (Key)msg->wParam;
 		for (TBHotkey* hk : hotkeys) {
 			if (hk->pressed() && keyData == hk->key()) {
 				hk->set_pressed(false);
 			}
 		}
 		return false;
-	}
+
+	case WM_XBUTTONUP:
+		for (TBHotkey* hk : hotkeys) {
+			if (hk->pressed() && (hk->key() == Key::XButton1 || hk->key() == Key::XButton2)) {
+				hk->set_pressed(false);
+			}
+		}
+		return false;
 
 	default:
 		return false;
