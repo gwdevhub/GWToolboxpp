@@ -5,7 +5,8 @@
 #include <GUIConstantsEx.au3>
 #include <GuiComboBox.au3>
 
-Global Const $overwrite = True And Not @Compiled
+Global Const $overwrite = True
+Global Const $debug = True And Not @Compiled
 Global Const $host = "http://fbgmguild.com/GWToolboxpp/"
 Global Const $folder = @LocalAppDataDir & "\GWToolboxpp\"
 Global Const $imgFolder = $folder & "img\"
@@ -17,7 +18,11 @@ DirCreate($imgFolder)
 
 #Region fileinstalls
 ; various
-FileInstall("..\Debug\API.dll", $folder & "GWToolbox.dll", $overwrite)
+If $debug Then
+	FileInstall("..\Debug\API.dll", $folder & "GWToolbox.dll", $overwrite)
+Else
+	FileInstall("..\Release\API.dll", $folder & "GWToolbox.dll", $overwrite)
+EndIf
 FileInstall("..\resources\DefaultTheme.txt", $folder & "Theme.txt")
 FileInstall("..\resources\Friz_Quadrata_Regular.ttf", $folder & "Font.ttf")
 FileInstall("..\resources\DefaultSettings.ini", $folder & "GWToolbox.ini")

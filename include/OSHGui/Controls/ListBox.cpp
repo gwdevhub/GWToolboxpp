@@ -69,7 +69,7 @@ namespace OSHGui
 		{
 			itemAreaSize_.Width -= scrollBar_->GetWidth();
 		}
-		maxVisibleItems_ = std::max(1l, std::lround((float)(itemAreaSize_.Height) / itemHeight_));
+		maxVisibleItems_ = std::max(1l, std::lround((float)(itemAreaSize_.Height) / itemHeight_)) + 1;
 
 		scrollBar_->SetLocation(size.Width - scrollBar_->GetWidth() - 1, 0);
 		scrollBar_->SetSize(scrollBar_->GetWidth(), size.Height);
@@ -117,7 +117,7 @@ namespace OSHGui
 		selectedIndex_ = index;
 
 		selectedIndexChangedEvent_.Invoke(this);
-
+		
 		if (index - firstVisibleItemIndex_ >= maxVisibleItems_ || index - firstVisibleItemIndex_ < 0)
 		{
 			for (firstVisibleItemIndex_ = 0; firstVisibleItemIndex_ <= index; firstVisibleItemIndex_ += maxVisibleItems_);
@@ -128,7 +128,6 @@ namespace OSHGui
 			}
 			scrollBar_->SetValue(firstVisibleItemIndex_);
 		}
-
 		Invalidate();
 	}
 	//---------------------------------------------------------------------------
@@ -239,7 +238,7 @@ namespace OSHGui
 	//---------------------------------------------------------------------------
 	void ListBox::CheckForScrollBar()
 	{
-		maxVisibleItems_ = std::max(1l, std::lround((float)(itemAreaSize_.Height) / itemHeight_));
+		maxVisibleItems_ = std::max(1l, std::lround((float)(itemAreaSize_.Height) / itemHeight_)) + 1;
 
 		if (!items_.empty() && items_.size() * itemHeight_ > itemAreaSize_.Height)
 		{
