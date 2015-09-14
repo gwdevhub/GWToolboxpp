@@ -187,6 +187,7 @@ namespace OSHGui
 			 * Initialisiert eine FileNotFoundException.
 			 */
 			FileNotFoundException();
+			FileNotFoundException(const Misc::AnsiString &message);
 		};
 	}
 }

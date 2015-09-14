@@ -62,7 +62,7 @@ namespace OSHGui
 			}
 			else
 			{
-				throw Misc::FileNotFoundException();
+				throw Misc::FileNotFoundException(filename);
 			}
 		}
 		//---------------------------------------------------------------------------

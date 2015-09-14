@@ -117,10 +117,9 @@ namespace OSHGui
 		//Constructor
 		//---------------------------------------------------------------------------
 		FileNotFoundException::FileNotFoundException()
-			: Exception()
-		{
-
-		}
+			: Exception() { }
+		FileNotFoundException::FileNotFoundException(const Misc::AnsiString &message)
+			: Exception(message) { }
 		//---------------------------------------------------------------------------
 	}
 }

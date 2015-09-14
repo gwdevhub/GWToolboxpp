@@ -112,20 +112,23 @@ void create_gui(IDirect3DDevice9* pDevice) {
 	app->SetDefaultFont(GuiUtils::getTBFont(10.0f, true));
 
 	app->SetCursorEnabled(false);
+	try {
+		MainWindow* main_window = new MainWindow();
+		main_window->SetFont(app->GetDefaultFont());
+		std::shared_ptr<MainWindow> shared_ptr = std::shared_ptr<MainWindow>(main_window);
+		app->Run(shared_ptr);
 
-	MainWindow* main_window = new MainWindow();
-	main_window->SetFont(app->GetDefaultFont());
-	std::shared_ptr<MainWindow> shared_ptr = std::shared_ptr<MainWindow>(main_window);
-	app->Run(shared_ptr);
+		GWToolbox::instance()->set_main_window(main_window);
+		GWToolbox::instance()->set_timer_window(new TimerWindow());
+		GWToolbox::instance()->set_bonds_window(new BondsWindow());
+		GWToolbox::instance()->set_health_window(new HealthWindow());
+		GWToolbox::instance()->set_distance_window(new DistanceWindow());
 
-	GWToolbox::instance()->set_main_window(main_window);
-	GWToolbox::instance()->set_timer_window(new TimerWindow());
-	GWToolbox::instance()->set_bonds_window(new BondsWindow());
-	GWToolbox::instance()->set_health_window(new HealthWindow());
-	GWToolbox::instance()->set_distance_window(new DistanceWindow());
-
-	app->Enable();
-	GWToolbox::instance()->SetInitialized();
+		app->Enable();
+		GWToolbox::instance()->SetInitialized();
+	} catch (Misc::FileNotFoundException e) {
+		LOG("Error: file not found %s\n", e.what());
+	}
 
 	HWND hWnd = GWAPI::MemoryMgr::GetGWWindowHandle();
 	OldWndProc = SetWindowLongPtr(hWnd, GWL_WNDPROC, (long)NewWndProc);
