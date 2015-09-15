@@ -93,7 +93,7 @@ static LRESULT CALLBACK NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARA
 
 void create_gui(IDirect3DDevice9* pDevice) {
 
-	LOG("Creating GUI\n");
+	LOG("Creating GUI...");
 	renderer = new Direct3D9Renderer(pDevice);
 	Application::Initialize(std::unique_ptr<Direct3D9Renderer>(renderer));
 
@@ -104,7 +104,6 @@ void create_gui(IDirect3DDevice9* pDevice) {
 		Theme theme;
 		theme.Load(path);
 		app->SetTheme(theme);
-		LOG("Loaded theme file %s\n", path.c_str());
 	} catch (Misc::InvalidThemeException e) {
 		ERR("WARNING Could not load theme file %s\n", path.c_str());
 	}
@@ -126,12 +125,12 @@ void create_gui(IDirect3DDevice9* pDevice) {
 
 		app->Enable();
 		GWToolbox::instance()->SetInitialized();
+
+		LOG("ok\n");
 	} catch (Misc::FileNotFoundException e) {
 		LOG("Error: file not found %s\n", e.what());
+		GWToolbox::instance()->StartSelfDestruct();
 	}
-
-	HWND hWnd = GWAPI::MemoryMgr::GetGWWindowHandle();
-	OldWndProc = SetWindowLongPtr(hWnd, GWL_WNDPROC, (long)NewWndProc);
 }
 
 // All rendering done here.
@@ -175,8 +174,14 @@ void GWToolbox::Exec() {
 	mgr = GWAPI::GWAPIMgr::GetInstance();
 	dx = mgr->DirectX;
 
-	LOG("Installing dx hooks\n");
+	LOG("Installing dx hooks... ");
 	dx->CreateRenderHooks(endScene, resetScene);
+	LOG("ok\n");
+
+	LOG("Installing input event handler... ");
+	HWND hWnd = GWAPI::MemoryMgr::GetGWWindowHandle();
+	OldWndProc = SetWindowLongPtr(hWnd, GWL_WNDPROC, (long)NewWndProc);
+	LOG("ok\n");
 	
 	input.SetKeyboardInputEnabled(true);
 	input.SetMouseInputEnabled(true);
@@ -197,7 +202,7 @@ void GWToolbox::MainLoop() {
 				health_window_->MainRoutine();
 				distance_window_->MainRoutine();
 			} __except (EXCEPTION_EXECUTE_HANDLER) {
-				LOG("BAD! (in main thread)\n");
+				LOG("Badness happened! (in main thread)\n");
 			}
 		}
 
@@ -219,7 +224,7 @@ void GWToolbox::UpdateUI() {
 			health_window_->UpdateUI();
 			distance_window_->UpdateUI();
 		} __except (EXCEPTION_EXECUTE_HANDLER) {
-			LOG("BAD! (in render thread)\n");
+			LOG("Badness happened! (in render thread)\n");
 		}
 	}
 }
@@ -227,7 +232,6 @@ void GWToolbox::UpdateUI() {
 void GWToolbox::Destroy()
 {
 	LOG("Destroying GWToolbox++\n");
-
 
 	config_->save();
 	delete config_;
@@ -246,12 +250,13 @@ void GWToolbox::Destroy()
 void GWToolbox::threadEntry(HMODULE mod) {
 	if (GWToolbox::instance()) return;
 
-	LOG("Initializing GWAPI\n");
+	LOG("Initializing API... ");
 	GWAPI::GWAPIMgr::Initialize();
+	LOG("ok\n");
 
-	LOG("Creating GWToolbox++\n");
+	LOG("Creating GWToolbox++... ");
 	instance_ = new GWToolbox(mod);
+	LOG("ok\n");
 
-	LOG("Running GWToolbox++\n");
 	instance_->Exec();
 }

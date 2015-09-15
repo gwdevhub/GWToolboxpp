@@ -17,7 +17,6 @@ void HotkeyPanel::OnMouseScroll(const MouseMessage &mouse) {
 }
 
 void HotkeyPanel::BuildUI() {
-	LOG("Building Hotkey Panel\n");
 	const int height = 300;
 	LoadIni();
 	
