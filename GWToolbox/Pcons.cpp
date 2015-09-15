@@ -26,8 +26,8 @@ Pcon::Pcon(const wchar_t* ini)
 	tick->SetBackColor(Drawing::Color::Empty());
 	tick->SetStretch(true);
 	tick->SetEnabled(false);
-	tick->SetLocation(10, 10);
-	tick->SetSize(35, 35);
+	tick->SetLocation(0, 0);
+	tick->SetSize(WIDTH, HEIGHT);
 	tick->SetImage(Drawing::Image::FromFile(GuiUtils::getSubPathA("Tick.png", "img")));
 	AddSubControl(tick);
 
@@ -36,15 +36,17 @@ Pcon::Pcon(const wchar_t* ini)
 	pic->SetEnabled(false);
 	AddSubControl(pic);
 
+	int text_x = 5;
+	int text_y = 3;
 	shadow->SetText(std::to_string(quantity));
 	shadow->SetFont(GuiUtils::getTBFont(11.0f, true));
 	shadow->SetForeColor(Drawing::Color::Black());
-	shadow->SetLocation(1, 1);
+	shadow->SetLocation(text_x + 1, text_y + 1);
 	AddSubControl(shadow);
 
 	label_->SetText(std::to_string(quantity));
-	label_->SetLocation(0, 0);
 	label_->SetFont(GuiUtils::getTBFont(11.0f, true));
+	label_->SetLocation(text_x, text_y);
 
 	SetSize(WIDTH, HEIGHT);
 	SetBackColor(Drawing::Color::Empty());

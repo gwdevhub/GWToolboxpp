@@ -26,7 +26,7 @@ EndIf
 FileInstall("..\resources\DefaultTheme.txt", $folder & "Theme.txt")
 FileInstall("..\resources\Friz_Quadrata_Regular.ttf", $folder & "Font.ttf")
 FileInstall("..\resources\DefaultSettings.ini", $folder & "GWToolbox.ini")
-FileInstall("..\resources\Tick.png", $imgFolder & "Tick.png")
+FileInstall("..\resources\Tick_v2.png", $imgFolder & "Tick.png")
 ; Skill icons (bonds)
 FileInstall("..\resources\balthspirit.jpg", $imgFolder & "balthspirit.jpg")
 FileInstall("..\resources\protbond.jpg", $imgFolder & "protbond.jpg")

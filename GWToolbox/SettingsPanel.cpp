@@ -1,6 +1,7 @@
 #include "SettingsPanel.h"
 #include "GWToolbox.h"
 #include "Config.h"
+#include "GuiUtils.h"
 #include "HealthWindow.h"
 #include "TimerWindow.h"
 #include "DistanceWindow.h"
@@ -20,9 +21,19 @@ void SettingsPanel::BuildUI() {
 	GWToolbox* tb = GWToolbox::instance();
 	Config* config = tb->config();
 
+	Label* version = new Label();
+	version->SetText("GWToolbox++ 0.1 (Alpha)");
+	version->SetLocation(GetWidth() / 2 - version->GetWidth() / 2, DefaultBorderPadding);
+	AddControl(version);
+
+	Label* authors = new Label();
+	authors->SetText("by Has and KAOS");
+	authors->SetLocation(GetWidth() / 2 - authors->GetWidth() / 2, version->GetBottom() + DefaultBorderPadding);
+	AddControl(authors);
+
 	CheckBox* tabsleft = new CheckBox();
 	tabsleft->SetText("Open tabs on the left");
-	tabsleft->SetLocation(DefaultBorderPadding, DefaultBorderPadding);
+	tabsleft->SetLocation(DefaultBorderPadding, authors->GetBottom() + DefaultBorderPadding * 3);
 	tabsleft->SetSize(item_width, item_height);
 	tabsleft->SetChecked(config->iniReadBool(MainWindow::IniSection(), 
 		MainWindow::IniKeyTabsLeft(), false));
@@ -51,7 +62,7 @@ void SettingsPanel::BuildUI() {
 	AddControl(freeze);
 
 	CheckBox* hidetarget = new CheckBox();
-	hidetarget->SetText("Hide target when no target");
+	hidetarget->SetText("Hide target windows");
 	hidetarget->SetLocation(DefaultBorderPadding, freeze->GetBottom() + DefaultBorderPadding);
 	hidetarget->SetSize(item_width, item_height);
 	hidetarget->SetChecked(config->iniReadBool(MainWindow::IniSection(), 
@@ -64,4 +75,23 @@ void SettingsPanel::BuildUI() {
 			MainWindow::IniKeyHideTarget(), hide);
 	});
 	AddControl(hidetarget);
+
+
+	Button* folder = new Button();
+	folder->SetText("Open Settings Folder");
+	folder->SetSize(item_width, item_height);
+	folder->SetLocation(DefaultBorderPadding, GetHeight() - DefaultBorderPadding - folder->GetHeight());
+	folder->GetClickEvent() += ClickEventHandler([](Control*) {
+		ShellExecute(NULL, L"open", GuiUtils::getSettingsFolderW().c_str(), NULL, NULL, SW_SHOWNORMAL);
+	});
+	AddControl(folder);
+
+	Button* website = new Button();
+	website->SetText("Open GWToolbox++ Website");
+	website->SetSize(item_width, item_height);
+	website->SetLocation(DefaultBorderPadding, folder->GetTop() - DefaultBorderPadding - website->GetHeight());
+	website->GetClickEvent() += ClickEventHandler([](Control*) {
+		ShellExecute(NULL, L"open", L"http://fbgmguild.com/GWToolboxpp/", NULL, NULL, SW_SHOWNORMAL);
+	});
+	AddControl(website);
 }

@@ -83,7 +83,7 @@ void PconPanel::BuildUI() {
 	++row; col = 0;
 
 	cupcake = new Pcon(L"cupcake");
-	cupcake->setIcon("Birthday_Cupcake.png", 0, 0, 56);
+	cupcake->setIcon("Birthday_Cupcake.png", 1, 0, 56);
 	cupcake->setChatName(L"Birthday Cupcake");
 	cupcake->setItemID(ItemID::Cupcakes);
 	cupcake->setEffectID(SkillID::Birthday_Cupcake_skill);
@@ -93,7 +93,7 @@ void PconPanel::BuildUI() {
 	++col;
 
 	apple = new Pcon(L"apple");
-	apple->setIcon("Candy_Apple.png", 0, 0, 56);
+	apple->setIcon("Candy_Apple.png", 2, 0, 56);
 	apple->setChatName(L"Candy Apple");
 	apple->setItemID(ItemID::Apples);
 	apple->setEffectID(SkillID::Candy_Apple_skill);
@@ -103,7 +103,7 @@ void PconPanel::BuildUI() {
 	++col;
 
 	corn = new Pcon(L"corn");
-	corn->setIcon("Candy_Corn.png", 0, 0, 56);
+	corn->setIcon("Candy_Corn.png", 2, 0, 56);
 	corn->setChatName(L"Candy Corn");
 	corn->setItemID(ItemID::Corns);
 	corn->setEffectID(SkillID::Candy_Corn_skill);
@@ -113,7 +113,7 @@ void PconPanel::BuildUI() {
 	++row; col = 0;
 
 	egg = new Pcon(L"egg");
-	egg->setIcon("Golden_Egg.png", 0, 0, 52);
+	egg->setIcon("Golden_Egg.png", 5, 0, 52);
 	egg->setChatName(L"Golden Egg");
 	egg->setItemID(ItemID::Eggs);
 	egg->setEffectID(SkillID::Golden_Egg_skill);
@@ -123,7 +123,7 @@ void PconPanel::BuildUI() {
 	++col;
 
 	pie = new Pcon(L"pie");
-	pie->setIcon("Slice_of_Pumpkin_Pie.png", 0, 0, 56);
+	pie->setIcon("Slice_of_Pumpkin_Pie.png", 3, 0, 56);
 	pie->setChatName(L"Slice of Pumpkin_Pie");
 	pie->setItemID(ItemID::Pies);
 	pie->setEffectID(SkillID::Pie_Induced_Ecstasy);
@@ -133,7 +133,7 @@ void PconPanel::BuildUI() {
 	++col;
 
 	city = new PconCity(L"city");
-	city->setIcon("Sugary_Blue_Drink.png", 0, 0, 50);
+	city->setIcon("Sugary_Blue_Drink.png", 4, 0, 50);
 	city->setChatName(L"City speedboost");
 	city->setThreshold(20);
 	city->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
@@ -141,7 +141,7 @@ void PconPanel::BuildUI() {
 	++row; col = 0;
 
 	alcohol = new PconAlcohol(L"alcohol");
-	alcohol->setIcon("Dwarven_Ale.png", 0, 0, 50);
+	alcohol->setIcon("Dwarven_Ale.png", 4, 0, 50);
 	alcohol->setChatName(L"Alcohol");
 	alcohol->setThreshold(10);
 	alcohol->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
@@ -158,7 +158,7 @@ void PconPanel::BuildUI() {
 	++col;
 
 	warsupply = new Pcon(L"warsupply");
-	warsupply->setIcon("War_Supplies.png", 0, 0, 48);
+	warsupply->setIcon("War_Supplies.png", 1, 0, 48);
 	warsupply->setChatName(L"War Supplies");
 	warsupply->setItemID(ItemID::Warsupplies);
 	warsupply->setEffectID(SkillID::Well_Supplied);
@@ -168,7 +168,7 @@ void PconPanel::BuildUI() {
 	++row; col = 0;
 
 	kabob = new Pcon(L"kabob");
-	kabob->setIcon("Drake_Kabob.png", 0, 0, 52);
+	kabob->setIcon("Drake_Kabob.png", 2, 0, 52);
 	kabob->setChatName(L"Drake Kabob");
 	kabob->setItemID(ItemID::Kabobs);
 	kabob->setEffectID(SkillID::Drake_Skin);
@@ -178,7 +178,7 @@ void PconPanel::BuildUI() {
 	++col;
 
 	skalesoup = new Pcon(L"skalesoup");
-	skalesoup->setIcon("Bowl_of_Skalefin_Soup.png", 0, 0, 56);
+	skalesoup->setIcon("Bowl_of_Skalefin_Soup.png", 0, 2, 58);
 	skalesoup->setChatName(L"Bowl of Skalefin Soup");
 	skalesoup->setItemID(ItemID::SkalefinSoup);
 	skalesoup->setEffectID(SkillID::Skale_Vigor);
@@ -188,7 +188,7 @@ void PconPanel::BuildUI() {
 	++col;
 
 	pahnai = new Pcon(L"pahnai");
-	pahnai->setIcon("Pahnai_Salad.png", 0, 0, 56);
+	pahnai->setIcon("Pahnai_Salad.png", 3, 0, 58);
 	pahnai->setChatName(L"Pahnai Salad");
 	pahnai->setItemID(ItemID::PahnaiSalad);
 	pahnai->setEffectID(SkillID::Pahnai_Salad_item_effect);
