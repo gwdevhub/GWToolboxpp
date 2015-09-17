@@ -14,6 +14,7 @@ namespace GWAPI {
 	
 		BYTE* Detour(BYTE* _source, BYTE* _detour,const DWORD _length);
 		void Retour();
+		~Hook(){ if (m_source) Retour(); }
 	};
 
 }
