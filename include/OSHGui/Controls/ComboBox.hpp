@@ -205,6 +205,7 @@ namespace OSHGui
 			Drawing::PointI arrowAbsoluteLocation_;
 		};
 
+		protected:
 		ComboBoxButton *button_;
 		ListBox *listBox_;
 	};

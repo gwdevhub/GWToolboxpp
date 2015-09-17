@@ -69,7 +69,7 @@ namespace OSHGui
 		{
 			itemAreaSize_.Width -= scrollBar_->GetWidth();
 		}
-		maxVisibleItems_ = std::max(1l, std::lround((float)(itemAreaSize_.Height) / itemHeight_)) + 1;
+		maxVisibleItems_ = std::max(1l, std::lround((float)(itemAreaSize_.Height) / itemHeight_));
 
 		scrollBar_->SetLocation(size.Width - scrollBar_->GetWidth() - 1, 0);
 		scrollBar_->SetSize(scrollBar_->GetWidth(), size.Height);
@@ -238,7 +238,7 @@ namespace OSHGui
 	//---------------------------------------------------------------------------
 	void ListBox::CheckForScrollBar()
 	{
-		maxVisibleItems_ = std::max(1l, std::lround((float)(itemAreaSize_.Height) / itemHeight_)) + 1;
+		maxVisibleItems_ = std::max(1l, std::lround((float)(itemAreaSize_.Height) / itemHeight_));
 
 		if (!items_.empty() && items_.size() * itemHeight_ > itemAreaSize_.Height)
 		{
@@ -254,6 +254,24 @@ namespace OSHGui
 			scrollBar_->SetVisible(false);
 			itemAreaSize_.Width += scrollBar_->GetWidth();
 		}
+	}
+	//---------------------------------------------------------------------------
+	void ListBox::SetHoveredIndex(int index) {
+		if (hoveredIndex_ == index) {
+			return;
+		}
+
+		hoveredIndex_ = index;
+
+		if (index - firstVisibleItemIndex_ >= maxVisibleItems_ || index - firstVisibleItemIndex_ < 0) {
+			for (firstVisibleItemIndex_ = 0; firstVisibleItemIndex_ <= index; firstVisibleItemIndex_ += maxVisibleItems_);
+			firstVisibleItemIndex_ -= maxVisibleItems_;
+			if (firstVisibleItemIndex_ < 0) {
+				firstVisibleItemIndex_ = 0;
+			}
+			scrollBar_->SetValue(firstVisibleItemIndex_);
+		}
+		Invalidate();
 	}
 	//---------------------------------------------------------------------------
 	void ListBox::DrawSelf(Drawing::RenderContext &context)
@@ -363,40 +381,42 @@ namespace OSHGui
 				case Key::PageUp:
 				case Key::PageDown:
 				{
-					int newSelectedIndex = selectedIndex_;
+					int newHoveredIndex = hoveredIndex_;
 
 					switch (keyboard.GetKeyCode())
 					{
 						case Key::Up:
-							--newSelectedIndex;
+							--newHoveredIndex;
 							break;
 						case Key::Down:
-							++newSelectedIndex;
+							++newHoveredIndex;
 							break;
 						case Key::Home:
-							newSelectedIndex = 0;
+							newHoveredIndex = 0;
 							break;
 						case Key::End:
-							newSelectedIndex = items_.size() - 1;
+							newHoveredIndex = items_.size() - 1;
 							break;
 						case Key::PageUp:
-							newSelectedIndex += maxVisibleItems_;
+							newHoveredIndex += maxVisibleItems_;
 							break;
 						case Key::PageDown:
-							newSelectedIndex -= maxVisibleItems_;
+							newHoveredIndex -= maxVisibleItems_;
 							break;
 					}
 
-					if (newSelectedIndex < 0)
+					if (newHoveredIndex < 0)
 					{
-						newSelectedIndex = 0;
+						newHoveredIndex = 0;
 					}
-					if (newSelectedIndex >= (int)items_.size())
+					if (newHoveredIndex >= (int)items_.size())
 					{
-						newSelectedIndex = items_.size() - 1;
+						newHoveredIndex = items_.size() - 1;
 					}
 
-					SetSelectedIndex(newSelectedIndex);
+					SetHoveredIndex(newHoveredIndex);
+
+					Invalidate();
 
 					return true;
 				}
@@ -425,10 +445,10 @@ namespace OSHGui
 
 					++foundIndex;
 				}
-					
+				
 				if (foundIndex < (int)items_.size())
 				{
-					SetSelectedIndex(foundIndex);
+					SetHoveredIndex(foundIndex);
 				}
 			}
 		}
