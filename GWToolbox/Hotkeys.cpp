@@ -634,3 +634,70 @@ void HotkeyPingBuild::exec() {
 
 	// TODO (maybe or maybe just get rid of it)
 }
+
+
+string HotkeySendChat::GetDescription() {
+	return string("Send ") + static_cast<char>(channel_) + string(msg_.begin(), msg_.end());
+}
+
+string HotkeyUseItem::GetDescription() {
+	if (item_name_.empty()) {
+		return string("Use Item #") + to_string(item_id_);
+	} else {
+		return string("Use ") + string(item_name_.begin(), item_name_.end());
+	}
+}
+
+string HotkeyDropUseBuff::GetDescription() {
+	switch (id_) {
+	case GwConstants::SkillID::Recall:
+		return string("Drop/Use Recall");
+	case GwConstants::SkillID::Unyielding_Aura:
+		return string("Drop/Use UA");
+	default:
+		return string("Drop/Use Skill #") + to_string(static_cast<long>(id_));
+	}
+}
+
+string HotkeyToggle::GetDescription() {
+	switch (target_) {
+	case HotkeyToggle::Clicker:
+		return string("Toggle Clicker");
+	case HotkeyToggle::Pcons:
+		return string("Toggle Pcons");
+	case HotkeyToggle::CoinDrop:
+		return string("Toggle Coin Drop");
+	case HotkeyToggle::RuptBot:
+		return string("Toggle Rupt Bot");
+	default:
+		return string("Toggle Function");
+	}
+}
+
+string HotkeyTarget::GetDescription() {
+	if (name_.empty()) {
+		return string("Target ") + to_string(id_);
+	} else {
+		return string("Target ") + string(name_.begin(), name_.end());
+	}
+}
+
+string HotkeyMove::GetDescription() {
+	if (name_.empty()) {
+		return string("Move (") + to_string(lroundf(x_)) + ", " + to_string(lroundf(y_)) + ")";
+	} else {
+		return string("Move ") + string(name_.begin(), name_.end());
+	}
+}
+
+string HotkeyDialog::GetDescription() {
+	if (name_.empty()) {
+		return string("Dialog ") + to_string(id_);
+	} else {
+		return string("Dialog ") + string(name_.begin(), name_.end());
+	}
+}
+
+string HotkeyPingBuild::GetDescription() {
+	return string("Ping Build #") + to_string(build_index_);
+}

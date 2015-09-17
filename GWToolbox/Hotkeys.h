@@ -80,7 +80,7 @@ public:
 	inline static const wchar_t* IniKeyChannel() { return L"channel"; }
 	
 	void exec();
-	string GetDescription() override { return string("Send Chat"); }
+	string GetDescription() override;
 };
 
 // hotkey to use an item
@@ -102,7 +102,7 @@ public:
 	static const wchar_t* IniKeyItemName() { return L"ItemName"; }
 
 	void exec();
-	string GetDescription() override { return string("Use Item"); }
+	string GetDescription() override;
 };
 
 // hotkey to drop a buff if currently active, and cast it on the current target if not
@@ -121,7 +121,7 @@ public:
 	static const wchar_t* IniSection() { return L"DropUseBuff"; }
 	static const wchar_t* IniKeySkillID() { return L"SkillID"; }
 	void exec();
-	string GetDescription() override { return string("Drop or Use Buff"); }
+	string GetDescription() override;
 };
 
 // hotkey to toggle a toolbox function
@@ -147,7 +147,7 @@ public:
 	static const wchar_t* IniKeyToggleID() { return L"ToggleID"; }
 
 	void exec();
-	string GetDescription() override { return string("Toggle Function"); }
+	string GetDescription() override;
 };
 
 // hotkey to target something in-game
@@ -169,7 +169,7 @@ public:
 	static const wchar_t* IniKeyTargetName() { return L"TargetName"; }
 
 	void exec();
-	string GetDescription() override { return string("Target"); }
+	string GetDescription() override;
 };
 
 // hotkey to move to a specific position
@@ -194,7 +194,7 @@ public:
 	static const wchar_t* IniKeyName() { return L"name"; }
 
 	void exec();
-	string GetDescription() override { return string("Move to"); }
+	string GetDescription() override;
 };
 
 class HotkeyDialog : public TBHotkey {
@@ -214,7 +214,7 @@ public:
 	static const wchar_t* IniKeyDialogName() { return L"DialogName"; }
 	
 	void exec();
-	string GetDescription() override { return string("Dialog"); }
+	string GetDescription() override;
 };
 
 class HotkeyPingBuild : public TBHotkey {
@@ -232,5 +232,5 @@ public:
 	static const wchar_t* IniKeyBuildIdx() { return L"BuildIndex"; }
 
 	void exec();
-	string GetDescription() override { return string("Ping Build"); }
+	string GetDescription() override;
 };

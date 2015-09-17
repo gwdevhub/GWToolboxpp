@@ -82,7 +82,8 @@ void SettingsPanel::BuildUI() {
 	folder->SetSize(item_width, item_height);
 	folder->SetLocation(DefaultBorderPadding, GetHeight() - DefaultBorderPadding - folder->GetHeight());
 	folder->GetClickEvent() += ClickEventHandler([](Control*) {
-		ShellExecute(NULL, L"open", GuiUtils::getSettingsFolderW().c_str(), NULL, NULL, SW_SHOWNORMAL);
+		CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+		ShellExecuteA(NULL, "open", GuiUtils::getSettingsFolderA().c_str(), NULL, NULL, SW_SHOWNORMAL);
 	});
 	AddControl(folder);
 
@@ -91,7 +92,8 @@ void SettingsPanel::BuildUI() {
 	website->SetSize(item_width, item_height);
 	website->SetLocation(DefaultBorderPadding, folder->GetTop() - DefaultBorderPadding - website->GetHeight());
 	website->GetClickEvent() += ClickEventHandler([](Control*) {
-		ShellExecute(NULL, L"open", L"http://fbgmguild.com/GWToolboxpp/", NULL, NULL, SW_SHOWNORMAL);
+		CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+		ShellExecuteA(NULL, "open", "http://fbgmguild.com/GWToolboxpp/", NULL, NULL, SW_SHOWNORMAL);
 	});
 	AddControl(website);
 }

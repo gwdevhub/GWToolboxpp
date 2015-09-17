@@ -208,7 +208,7 @@ void GWToolbox::MainLoop() {
 
 		Sleep(10);
 
-		if (GetAsyncKeyState(VK_END) & 1)
+		if (DEBUG_BUILD && GetAsyncKeyState(VK_END) & 1)
 			Destroy();
 		if (must_self_destruct_)
 			Destroy();

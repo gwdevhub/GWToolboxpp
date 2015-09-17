@@ -6,8 +6,11 @@ This class is my attempt at creating a logger that can be toggled in release
 
 it can be naive or bad, idk, but works and should be efficient on non-debug build
 */
-
+#ifdef _DEBUG
 #define DEBUG_BUILD 1
+#else
+#define DEBUG_BUILD 0
+#endif
 
 #if DEBUG_BUILD
 #define LOG(msg, ...) fprintf(stdout, msg, ##__VA_ARGS__)

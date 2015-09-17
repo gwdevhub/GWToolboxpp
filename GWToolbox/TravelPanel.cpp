@@ -12,6 +12,16 @@ TravelPanel::TravelPanel() {
 void TravelPanel::BuildUI() {
 	SetSize(WIDTH, HEIGHT);
 
+	using namespace GwConstants;
+	AddTravelButton("ToA", 0, 0, MapID::Temple_of_the_Ages);
+	AddTravelButton("DoA", 1, 0, MapID::Domain_of_Anguish);
+	AddTravelButton("Kamadan", 0, 1, MapID::Kamadan_Jewel_of_Istan_outpost);
+	AddTravelButton("Embark", 1, 1, MapID::Embark_Beach);
+	AddTravelButton("Vlox's", 0, 2, MapID::Vloxs_Falls);
+	AddTravelButton("Gadd's", 1, 2, MapID::Gadds_Encampment_outpost);
+	AddTravelButton("Urgoz", 0, 3, MapID::Urgozs_Warren);
+	AddTravelButton("Deep", 1, 3, MapID::The_Deep);
+
 	ComboBox* combo = new ComboBox();
 	combo->SetMaxShowItems(14);
 	combo->AddItem("Current District");
@@ -29,23 +39,13 @@ void TravelPanel::BuildUI() {
 	combo->AddItem("Asia Chinese");
 	combo->AddItem("Asia Japanese");
 	combo->SetSize(GetWidth() - 2 * SPACE, BUTTON_HEIGHT);
-	combo->SetLocation(DefaultBorderPadding, DefaultBorderPadding);
+	combo->SetLocation(DefaultBorderPadding, GetHeight() - DefaultBorderPadding - combo->GetHeight());
 	combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
 		[this, combo](Control*) {
 		UpdateDistrict(combo->GetSelectedIndex());
 	});
 	combo->SetSelectedIndex(0);
 	AddControl(combo);
-
-	using namespace GwConstants;
-	AddTravelButton("ToA", 0, 1, MapID::Temple_of_the_Ages);
-	AddTravelButton("DoA", 1, 1, MapID::Domain_of_Anguish);
-	AddTravelButton("Kamadan", 0, 2, MapID::Kamadan_Jewel_of_Istan_outpost);
-	AddTravelButton("Embark", 1, 2, MapID::Embark_Beach);
-	AddTravelButton("Vlox's", 0, 3, MapID::Vloxs_Falls);
-	AddTravelButton("EOTN", 1, 3, MapID::Eye_of_the_North_outpost);
-	AddTravelButton("Urgoz", 0, 4, MapID::Urgozs_Warren);
-	AddTravelButton("Deep", 1, 4, MapID::The_Deep);
 }
 
 void TravelPanel::AddTravelButton(string text, int grid_x, int grid_y, GwConstants::MapID map_id) {
