@@ -4,6 +4,7 @@
 #include <MsgBoxConstants.au3>
 #include <GUIConstantsEx.au3>
 #include <GuiComboBox.au3>
+#include <WinAPIProc.au3>
 
 Global Const $overwrite = True
 Global Const $debug = True And Not @Compiled
@@ -12,6 +13,22 @@ Global Const $folder = @LocalAppDataDir & "\GWToolboxpp\"
 Global Const $imgFolder = $folder & "img\"
 
 Global $mKernelHandle, $mGWProcHandle, $mCharname
+
+Global $ERRSTRING[13]
+
+$ERRSTRING[0] = "No error."
+$ERRSTRING[1] = "Invalid ProcessId."
+$ERRSTRING[2] = "File does not exist."
+$ERRSTRING[3] = "File is not a .dll (invalid file)."
+$ERRSTRING[4] = "Failed to open 'Advapi32.dll'."
+$ERRSTRING[5] = "Failed to get the full path."
+$ERRSTRING[6] = "Failed to open the process."
+$ERRSTRING[7] = "Failed to call 'GetModuleHandle'."
+$ERRSTRING[8] = "Failed to call 'GetProcAddress'."
+$ERRSTRING[9] = "Failed to call 'VirtualAllocEx'."
+$ERRSTRING[10] = "Failed to write the memory."
+$ERRSTRING[11] = "Failed to create the 'RemoteThread'."
+$ERRSTRING[12] = "GWToolbox++ already in specified process."
 
 DirCreate($folder)
 DirCreate($imgFolder)
@@ -115,7 +132,7 @@ EndIf
 
 Global $ret = _InjectDll($gwPID, $folder & "GWtoolbox.dll")
 If Not $ret Then
-	MsgBox($MB_ICONERROR, "GWToolbox++", "Injection error - " & @error)
+	MsgBox($MB_ICONERROR, "GWToolbox++", "Injection error - " & @error & " (" & $ERRSTRING[@error] & ")")
 EndIf
 
 
@@ -198,29 +215,38 @@ Func _InjectDll($ProcessId, $DllPath)
 	If Not (FileExists($DllPath)) Then Return SetError(2, "", False)
 	If Not (StringRight($DllPath, 4) == ".dll") Then Return SetError(3, "", False)
 
-	$Kernel32 = DllOpen("kernel32.dll")
+	Local $Kernel32 = DllOpen("kernel32.dll")
 	If @error Then Return SetError(4, "", False)
 
-	$DLL_Path = DllStructCreate("char[255]")
+	Local $DLL_Path = DllStructCreate("char[255]")
 	DllCall($Kernel32, "DWORD", "GetFullPathNameA", "str", $DllPath, "DWORD", 255, "ptr", DllStructGetPtr($DLL_Path), "int", 0)
 	If @error Then Return SetError(5, "", False)
 
-	$hProcess = DllCall($Kernel32, "DWORD", "OpenProcess", "DWORD", 0x1F0FFF, "int", 0, "DWORD", $ProcessId)
+	Local $sDLLFullPath = DllStructGetData($DLL_Path,1)
+
+	Local $av_ProcSnapShot = _WinAPI_EnumProcessModules($ProcessId, $LIST_MODULES_32BIT)
+	For $i = 1 To $av_ProcSnapShot[0][0]
+		If $av_ProcSnapShot[$i][1] = $sDLLFullPath Then
+			Return SetError(12, "", False)
+		EndIf
+	Next
+
+	Local $hProcess = DllCall($Kernel32, "DWORD", "OpenProcess", "DWORD", 0x1F0FFF, "int", 0, "DWORD", $ProcessId)
 	If @error Then Return SetError(6, "", False)
 
-	$hModule = DllCall($Kernel32, "DWORD", "GetModuleHandleA", "str", "kernel32.dll")
+	Local $hModule = DllCall($Kernel32, "DWORD", "GetModuleHandleA", "str", "kernel32.dll")
 	If @error Then Return SetError(7, "", False)
 
-	$lpStartAddress = DllCall($Kernel32, "DWORD", "GetProcAddress", "DWORD", $hModule[0], "str", "LoadLibraryA")
+	Local $lpStartAddress = DllCall($Kernel32, "DWORD", "GetProcAddress", "DWORD", $hModule[0], "str", "LoadLibraryA")
 	If @error Then Return SetError(8, "", False)
 
-	$lpParameter = DllCall($Kernel32, "DWORD", "VirtualAllocEx", "int", $hProcess[0], "int", 0, "ULONG_PTR", DllStructGetSize($DLL_Path), "DWORD", 0x3000, "int", 4)
+	Local $lpParameter = DllCall($Kernel32, "DWORD", "VirtualAllocEx", "int", $hProcess[0], "int", 0, "ULONG_PTR", DllStructGetSize($DLL_Path), "DWORD", 0x3000, "int", 4)
 	If @error Then Return SetError(9, "", False)
 
 	DllCall($Kernel32, "BOOL", "WriteProcessMemory", "int", $hProcess[0], "DWORD", $lpParameter[0], "str", DllStructGetData($DLL_Path, 1), "ULONG_PTR", DllStructGetSize($DLL_Path), "int", 0)
 	If @error Then Return SetError(10, "", False)
 
-	$hThread = DllCall($Kernel32, "int", "CreateRemoteThread", "DWORD", $hProcess[0], "int", 0, "int", 0, "DWORD", $lpStartAddress[0], "DWORD", $lpParameter[0], "int", 0, "int", 0)
+	Local $hThread = DllCall($Kernel32, "int", "CreateRemoteThread", "DWORD", $hProcess[0], "int", 0, "int", 0, "DWORD", $lpStartAddress[0], "DWORD", $lpParameter[0], "int", 0, "int", 0)
 	If @error Then Return SetError(11, "", False)
 
 	DllCall($Kernel32, "BOOL", "CloseHandle", "DWORD", $hProcess[0])
