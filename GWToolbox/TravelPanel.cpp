@@ -1,6 +1,8 @@
 #include "TravelPanel.h"
 #include "../API/APIMain.h"
+#include "MainWindow.h"
 #include "GWToolbox.h"
+#include "Config.h"
 #include <string>
 
 using namespace OSHGui;
@@ -27,6 +29,35 @@ void TravelPanel::BuildUI() {
 	AddTravelButton("Gadd's", 1, 2, MapID::Gadds_Encampment_outpost);
 	AddTravelButton("Urgoz", 0, 3, MapID::Urgozs_Warren);
 	AddTravelButton("Deep", 1, 3, MapID::The_Deep);
+
+	for (int i = 0; i < 3; ++i) {
+		wstring key = wstring(L"Travel") + to_wstring(i);
+		int index = GWToolbox::instance()->config()->iniReadLong(MainWindow::IniSection(), key.c_str(), 0);
+		ComboBox* fav_combo = new TravelCombo();
+		fav_combo->SetSize((WIDTH - 3 * SPACE) * 3 / 4, BUTTON_HEIGHT);
+		fav_combo->SetLocation(DefaultBorderPadding, SPACE * 2 + (BUTTON_HEIGHT + SPACE) * (i + 4));
+		for (int i = 0; i < n_outposts; ++i) {
+			fav_combo->AddItem(IndexToOutpostName(i));
+		}
+		fav_combo->SetSelectedIndex(index);
+		fav_combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
+			[fav_combo, key](Control*) {
+			GWToolbox::instance()->config()->iniWriteLong(MainWindow::IniSection(), 
+				key.c_str(), fav_combo->GetSelectedIndex());
+		});
+		AddControl(fav_combo);
+
+		Button* fav_button = new Button();
+		fav_button->SetSize((WIDTH - 3 * SPACE) / 4, BUTTON_HEIGHT);
+		fav_button->SetLocation(fav_combo->GetRight() + DefaultBorderPadding, fav_combo->GetTop());
+		fav_button->SetText("Go");
+		fav_button->GetClickEvent() += ClickEventHandler([this, fav_combo](Control*) {
+			int index = fav_combo->GetSelectedIndex();
+			GWAPIMgr::GetInstance()->Map->Travel(IndexToOutpostID(index),
+				this->district(), this->region(), this->language());
+		});
+		AddControl(fav_button);
+	}
 
 	ComboBox* district = new ComboBox();
 	district->SetMaxShowItems(14);
