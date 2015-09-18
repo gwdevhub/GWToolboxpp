@@ -28,7 +28,7 @@ TimerWindow::TimerWindow() {
 	int offsetX = 2;
 	int offsetY = 2;
 	shadow_ = new TimerLabel();
-	shadow_->SetText("Temp");
+	shadow_->SetText("");
 	shadow_->SetAnchor(AnchorStyles::Left);
 	shadow_->SetSize(WIDTH, HEIGHT);
 	shadow_->SetLocation(offsetX, offsetY);
@@ -39,7 +39,7 @@ TimerWindow::TimerWindow() {
 	AddControl(shadow_);
 	
 	timer_ = new TimerLabel();
-	timer_->SetText("Temp");
+	timer_->SetText("");
 	timer_->SetAnchor(AnchorStyles::Left);
 	timer_->SetSize(WIDTH, HEIGHT);
 	timer_->SetLocation(0, 0);
@@ -52,7 +52,7 @@ TimerWindow::TimerWindow() {
 	AddControl(timer_);
 
 	urgoz_shadow_ = new TimerLabel();
-	urgoz_shadow_->SetText("Temp");
+	urgoz_shadow_->SetText("");
 	urgoz_shadow_->SetAnchor(AnchorStyles::Left);
 	urgoz_shadow_->SetSize(WIDTH, URGOZ_HEIGHT);
 	urgoz_shadow_->SetLocation(offsetX, HEIGHT + offsetY);
@@ -64,7 +64,7 @@ TimerWindow::TimerWindow() {
 	AddControl(urgoz_shadow_);
 
 	urgoz_timer_ = new TimerLabel();
-	urgoz_timer_->SetText("Temp");
+	urgoz_timer_->SetText("");
 	urgoz_timer_->SetAnchor(AnchorStyles::Left);
 	urgoz_timer_->SetSize(WIDTH, URGOZ_HEIGHT);
 	urgoz_timer_->SetLocation(0, HEIGHT);

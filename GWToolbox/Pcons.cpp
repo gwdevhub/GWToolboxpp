@@ -13,7 +13,7 @@ Pcon::Pcon(const wchar_t* ini)
 	pic = new PictureBox();
 	tick = new PictureBox();
 	shadow = new Label();
-	quantity = 0;
+	quantity = -1; // to force a redraw when first created
 	enabled = GWToolbox::instance()->config()->iniReadBool(L"pcons", ini, false);;
 	iniName = ini;
 	chatName = ini; // will be set later, but its a good temporary value
@@ -268,15 +268,17 @@ void Pcon::scanInventory() {
 	quantity = 0;
 
 	GW::Bag** bags = GWAPIMgr::GetInstance()->Items->GetBagArray();
-	GW::Bag* bag = NULL;
-	for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
-		bag = bags[bagIndex];
-		if (bag != NULL) {
-			GW::ItemArray items = bag->Items;
-			for (size_t i = 0; i < items.size(); i++) {
-				if (items[i]) {
-					if (items[i]->ModelId == itemID) {
-						quantity += items[i]->Quantity;
+	if (bags != nullptr) {
+		GW::Bag* bag = NULL;
+		for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
+			bag = bags[bagIndex];
+			if (bag != NULL) {
+				GW::ItemArray items = bag->Items;
+				for (size_t i = 0; i < items.size(); i++) {
+					if (items[i]) {
+						if (items[i]->ModelId == itemID) {
+							quantity += items[i]->Quantity;
+						}
 					}
 				}
 			}
@@ -295,19 +297,21 @@ void PconCity::scanInventory() {
 	quantity = 0;
 
 	GW::Bag** bags = GWAPIMgr::GetInstance()->Items->GetBagArray();
-	GW::Bag* bag = NULL;
-	for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
-		bag = bags[bagIndex];
-		if (bag != NULL) {
-			GW::ItemArray items = bag->Items;
-			for (size_t i = 0; i < items.size(); i++) {
-				if (items[i]) {
-					if (items[i]->ModelId == ItemID::CremeBrulee
-						|| items[i]->ModelId == ItemID::SugaryBlueDrink
-						|| items[i]->ModelId == ItemID::ChocolateBunny
-						|| items[i]->ModelId == ItemID::RedBeanCake) {
+	if (bags != nullptr) {
+		GW::Bag* bag = NULL;
+		for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
+			bag = bags[bagIndex];
+			if (bag != NULL) {
+				GW::ItemArray items = bag->Items;
+				for (size_t i = 0; i < items.size(); i++) {
+					if (items[i]) {
+						if (items[i]->ModelId == ItemID::CremeBrulee
+							|| items[i]->ModelId == ItemID::SugaryBlueDrink
+							|| items[i]->ModelId == ItemID::ChocolateBunny
+							|| items[i]->ModelId == ItemID::RedBeanCake) {
 
-						quantity += items[i]->Quantity;
+							quantity += items[i]->Quantity;
+						}
 					}
 				}
 			}
@@ -325,32 +329,34 @@ void PconAlcohol::scanInventory() {
 
 	quantity = 0;
 	GW::Bag** bags = GWAPIMgr::GetInstance()->Items->GetBagArray();
-	GW::Bag* bag = NULL;
-	for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
-		bag = bags[bagIndex];
-		if (bag != NULL) {
-			GW::ItemArray items = bag->Items;
-			for (size_t i = 0; i < items.size(); i++) {
-				if (items[i]) {
-					if (items[i]->ModelId == ItemID::Eggnog
-						|| items[i]->ModelId == ItemID::DwarvenAle
-						|| items[i]->ModelId == ItemID::HuntersAle
-						|| items[i]->ModelId == ItemID::Absinthe
-						|| items[i]->ModelId == ItemID::WitchsBrew
-						|| items[i]->ModelId == ItemID::Ricewine
-						|| items[i]->ModelId == ItemID::ShamrockAle
-						|| items[i]->ModelId == ItemID::Cider) {
+	if (bags != nullptr) {
+		GW::Bag* bag = NULL;
+		for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
+			bag = bags[bagIndex];
+			if (bag != NULL) {
+				GW::ItemArray items = bag->Items;
+				for (size_t i = 0; i < items.size(); i++) {
+					if (items[i]) {
+						if (items[i]->ModelId == ItemID::Eggnog
+							|| items[i]->ModelId == ItemID::DwarvenAle
+							|| items[i]->ModelId == ItemID::HuntersAle
+							|| items[i]->ModelId == ItemID::Absinthe
+							|| items[i]->ModelId == ItemID::WitchsBrew
+							|| items[i]->ModelId == ItemID::Ricewine
+							|| items[i]->ModelId == ItemID::ShamrockAle
+							|| items[i]->ModelId == ItemID::Cider) {
 
-						quantity += items[i]->Quantity;
-					} else if (items[i]->ModelId == ItemID::Grog
-						|| items[i]->ModelId == ItemID::SpikedEggnog
-						|| items[i]->ModelId == ItemID::AgedDwarvenAle
-						|| items[i]->ModelId == ItemID::AgedHungersAle
-						|| items[i]->ModelId == ItemID::Keg
-						|| items[i]->ModelId == ItemID::FlaskOfFirewater
-						|| items[i]->ModelId == ItemID::KrytanBrandy) {
+							quantity += items[i]->Quantity;
+						} else if (items[i]->ModelId == ItemID::Grog
+							|| items[i]->ModelId == ItemID::SpikedEggnog
+							|| items[i]->ModelId == ItemID::AgedDwarvenAle
+							|| items[i]->ModelId == ItemID::AgedHungersAle
+							|| items[i]->ModelId == ItemID::Keg
+							|| items[i]->ModelId == ItemID::FlaskOfFirewater
+							|| items[i]->ModelId == ItemID::KrytanBrandy) {
 
-						quantity += items[i]->Quantity * 5;
+							quantity += items[i]->Quantity * 5;
+						}
 					}
 				}
 			}
@@ -369,20 +375,22 @@ void PconLunar::scanInventory() {
 	quantity = 0;
 
 	GW::Bag** bags = GWAPIMgr::GetInstance()->Items->GetBagArray();
-	GW::Bag* bag = NULL;
-	for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
-		bag = bags[bagIndex];
-		if (bag != NULL) {
-			GW::ItemArray items = bag->Items;
-			for (size_t i = 0; i < items.size(); i++) {
-				if (items[i]) {
-					if (items[i]->ModelId == ItemID::LunarDragon
-						|| items[i]->ModelId == ItemID::LunarHorse
-						|| items[i]->ModelId == ItemID::LunarRabbit
-						|| items[i]->ModelId == ItemID::LunarSheep
-						|| items[i]->ModelId == ItemID::LunarSnake) {
+	if (bags != nullptr) {
+		GW::Bag* bag = NULL;
+		for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
+			bag = bags[bagIndex];
+			if (bag != NULL) {
+				GW::ItemArray items = bag->Items;
+				for (size_t i = 0; i < items.size(); i++) {
+					if (items[i]) {
+						if (items[i]->ModelId == ItemID::LunarDragon
+							|| items[i]->ModelId == ItemID::LunarHorse
+							|| items[i]->ModelId == ItemID::LunarRabbit
+							|| items[i]->ModelId == ItemID::LunarSheep
+							|| items[i]->ModelId == ItemID::LunarSnake) {
 
-						quantity += items[i]->Quantity;
+							quantity += items[i]->Quantity;
+						}
 					}
 				}
 			}

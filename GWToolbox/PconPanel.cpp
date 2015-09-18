@@ -198,8 +198,9 @@ void PconPanel::BuildUI() {
 	++row; col = 0;
 
 	for (Pcon* pcon : pcons) {
-		pcon->scanInventory();
 		AddControl(pcon);
+		pcon->scanInventory();
+		pcon->UpdateUI();
 	}
 
 	initialized = true;
