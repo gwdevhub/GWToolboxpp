@@ -31,7 +31,9 @@ BYTE* GWAPI::Hook::Detour(BYTE* _source, BYTE* _detour, const DWORD _length)
 	m_source[0] = 0xE9;
 	*(DWORD*)(m_source + 1) = (DWORD)(_detour - (m_source + 5));
 
-	memset(m_source + 5, 0x90, m_length - 5);
+	if (m_length != 5)
+		for (DWORD i = 5; i < m_length;i++)
+			m_source[i] = 0x90;
 
 	VirtualProtect(m_source, m_length, dwOldProt, &dwOldProt);
 
