@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <Windows.h>
 
 #include "HotkeyPanel.h"
 #include "logger.h"
@@ -335,9 +336,24 @@ void HotkeyPanel::LoadIni() {
 }
 
 void HotkeyPanel::MainRoutine() {
-	// TODO clicker
+	if (clickerActive && TBTimer::diff(clickerTimer) > 20) {
+		clickerTimer = TBTimer::init();
+		INPUT input;
+		input.type = INPUT_MOUSE;
+		input.mi.dx = 0;
+		input.mi.dy = 0;
+		input.mi.mouseData = 0;
+		input.mi.dwFlags = MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP;
+		input.mi.time = 0;
+		input.mi.dwExtraInfo = NULL;
 
-	// TODO coin dropper
+		SendInput(1, &input, sizeof(INPUT));
+	}
+
+	if (dropCoinsActive && TBTimer::diff(dropCoinsTimer) > 400) {
+		dropCoinsTimer = TBTimer::init();
+		GWAPIMgr::GetInstance()->Items->DropGold(1);
+	}
 
 	// TODO rupt?
 }

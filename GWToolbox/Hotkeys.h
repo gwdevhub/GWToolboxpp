@@ -128,7 +128,7 @@ public:
 class HotkeyToggle : public TBHotkey {
 public:
 	enum Toggle {
-		Clicker = 1,
+		Clicker,
 		Pcons,
 		CoinDrop,
 		RuptBot

@@ -24,9 +24,10 @@ namespace OSHGui
 	//Constructor
 	//---------------------------------------------------------------------------
 	ListBox::ListBox()
-		: selectedIndex_(-1), hoveredIndex_(-1),
-		  firstVisibleItemIndex_(0),
-		  autoScrollEnabled_(false)
+		: selectedIndex_(-1), 
+		hoveredIndex_(-1),
+		firstVisibleItemIndex_(0),
+		autoScrollEnabled_(false)
 	{
 		type_ = ControlType::ListBox;
 	
@@ -230,6 +231,8 @@ namespace OSHGui
 		scrollBar_->SetMaximum(1);
 		
 		selectedIndex_ = -1;
+		hoveredIndex_ = -1;
+		firstVisibleItemIndex_ = 0;
 
 		CheckForScrollBar();
 
