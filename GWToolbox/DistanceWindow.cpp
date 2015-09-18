@@ -23,7 +23,7 @@ DistanceWindow::DistanceWindow() {
 	int offsetX = 2;
 	int offsetY = 2;
 	percent_shadow = new DragButton();
-	percent_shadow->SetText("tmp");
+	percent_shadow->SetText("");
 	percent_shadow->SetSize(WIDTH, HEIGHT);
 	percent_shadow->SetLocation(offsetX, offsetY);
 	percent_shadow->SetFont(GuiUtils::getTBFont(26.0f, true));
@@ -33,7 +33,7 @@ DistanceWindow::DistanceWindow() {
 	AddControl(percent_shadow);
 
 	percent = new DragButton();
-	percent->SetText("tmp");
+	percent->SetText("");
 	percent->SetSize(WIDTH, HEIGHT);
 	percent->SetLocation(0, 0);
 	percent->SetFont(GuiUtils::getTBFont(26.0f, true));
@@ -45,7 +45,7 @@ DistanceWindow::DistanceWindow() {
 	AddControl(percent);
 
 	absolute_shadow = new DragButton();
-	absolute_shadow->SetText("tmp");
+	absolute_shadow->SetText("");
 	absolute_shadow->SetSize(WIDTH, ABS_HEIGHT);
 	absolute_shadow->SetLocation(offsetX, HEIGHT + offsetY);
 	absolute_shadow->SetFont(GuiUtils::getTBFont(16.0f, true));
@@ -55,7 +55,7 @@ DistanceWindow::DistanceWindow() {
 	AddControl(absolute_shadow);
 
 	absolute = new DragButton();
-	absolute->SetText("tmp");
+	absolute->SetText("");
 	absolute->SetSize(WIDTH, ABS_HEIGHT);
 	absolute->SetLocation(0, HEIGHT);
 	absolute->SetFont(GuiUtils::getTBFont(16.0f, true));

@@ -157,6 +157,7 @@ namespace OSHGui
 		static const int DefaultItemPadding;
 
 		void CheckForScrollBar();
+		void SetHoveredIndex(int index);
 		
 		int hoveredIndex_;
 		int selectedIndex_;

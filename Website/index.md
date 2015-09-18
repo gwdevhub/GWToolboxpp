@@ -1,10 +1,10 @@
 # Guild Wars Toolbox++
 A set of tools for Guild Wars speed-clearers
 
-_by Has and 0x4D1_
+_by Has and KAOS_
 
 ---------------
 ### Download
-[GWToolboxpp.exe](http://fbgmguild.com/GWToolboxpp/GWToolboxpp.exe)
+[GWToolbox.exe](http://fbgmguild.com/GWToolboxpp/GWToolbox.exe)
 
 (under construction)
