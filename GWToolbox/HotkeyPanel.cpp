@@ -192,10 +192,13 @@ bool HotkeyPanel::ProcessMessage(LPMSG msg) {
 		keyData = (Key)msg->wParam;
 		break;
 	case WM_XBUTTONDOWN:
+	case WM_MBUTTONDOWN:
+		if (LOWORD(msg->wParam) & MK_MBUTTON) keyData = Key::MButton;
 		if (LOWORD(msg->wParam) & MK_XBUTTON1) keyData = Key::XButton1;
 		if (LOWORD(msg->wParam) & MK_XBUTTON2) keyData = Key::XButton2;
 		break;
 	case WM_XBUTTONUP:
+	case WM_MBUTTONUP:
 		// leave keydata to none, need to handle special case below
 		break;
 	default:
@@ -205,7 +208,8 @@ bool HotkeyPanel::ProcessMessage(LPMSG msg) {
 	switch (msg->message) {
 	case WM_KEYDOWN:
 	case WM_SYSKEYDOWN:
-	case WM_XBUTTONDOWN: {
+	case WM_XBUTTONDOWN:
+	case WM_MBUTTONDOWN: {
 		Key modifier = Key::None;
 		if (GetKeyState(static_cast<int>(Key::ControlKey)) < 0)
 			modifier |= Key::Control;
@@ -244,7 +248,12 @@ bool HotkeyPanel::ProcessMessage(LPMSG msg) {
 			}
 		}
 		return false;
-
+	case WM_MBUTTONUP:
+		for (TBHotkey* hk : hotkeys) {
+			if (hk->pressed() && hk->key() == Key::MButton) {
+				hk->set_pressed(false);
+			}
+		}
 	default:
 		return false;
 	}

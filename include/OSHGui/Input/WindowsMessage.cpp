@@ -33,9 +33,9 @@ namespace OSHGui
 				case WM_RBUTTONUP:
 				case WM_RBUTTONDBLCLK:
 				case WM_MOUSEWHEEL:
-				case WM_MBUTTONDOWN:
-				case WM_MBUTTONUP:
-				case WM_MBUTTONDBLCLK:
+				//case WM_MBUTTONDOWN:
+				//case WM_MBUTTONUP:
+				//case WM_MBUTTONDBLCLK:
 				{
 					if (enableMouseInput)
 					{
@@ -82,19 +82,19 @@ namespace OSHGui
 								state = MouseState::Down;
 								button = MouseButton::Right;
 								break;
-							case WM_MBUTTONDOWN:
-								//SetCapture(message->hwnd);
-								state = MouseState::Down;
-								button = MouseButton::Middle;
-								break;
-							case WM_MBUTTONUP:
-								//ReleaseCapture();
-								state = MouseState::Up;
-								button = MouseButton::Middle;
-								break;
-							case WM_MBUTTONDBLCLK:
-								state = MouseState::Down;
-								button = MouseButton::Middle;
+							//case WM_MBUTTONDOWN:
+							//	//SetCapture(message->hwnd);
+							//	state = MouseState::Down;
+							//	button = MouseButton::Middle;
+							//	break;
+							//case WM_MBUTTONUP:
+							//	//ReleaseCapture();
+							//	state = MouseState::Up;
+							//	button = MouseButton::Middle;
+							//	break;
+							//case WM_MBUTTONDBLCLK:
+							//	state = MouseState::Down;
+							//	button = MouseButton::Middle;
 							case WM_MOUSEWHEEL:
 								state = MouseState::Scroll;
 								location = lastMouseLocation; //not valid when scrolling
@@ -118,6 +118,8 @@ namespace OSHGui
 				case WM_IME_CHAR:
 				case WM_XBUTTONDOWN:
 				case WM_XBUTTONUP:
+				case WM_MBUTTONDOWN:
+				case WM_MBUTTONUP:
 				{
 					if (enableKeyboardInput)
 					{
@@ -156,11 +158,13 @@ namespace OSHGui
 							case WM_KEYDOWN:
 							case WM_SYSKEYDOWN:
 							case WM_XBUTTONDOWN:
+							case WM_MBUTTONDOWN:
 								state = KeyboardState::KeyDown;
 								break;
 							case WM_KEYUP:
 							case WM_SYSKEYUP:
 							case WM_XBUTTONUP:
+							case WM_MBUTTONUP:
 								state = KeyboardState::KeyUp;
 								break;
 							default:
@@ -175,11 +179,14 @@ namespace OSHGui
 								keyData = (Key)message->wParam | modifier;
 								break;
 							case WM_XBUTTONDOWN:
+							case WM_MBUTTONDOWN:
 								keyData = (Key)LOWORD(message->wParam);
+								if (LOWORD(message->wParam) == MK_MBUTTON) keyData = Key::MButton | modifier;
 								if (LOWORD(message->wParam) == MK_XBUTTON1) keyData = Key::XButton1 | modifier;
 								if (LOWORD(message->wParam) == MK_XBUTTON2) keyData = Key::XButton2 | modifier;
 								break;
 							case WM_XBUTTONUP:
+							case WM_MBUTTONUP:
 								// This is wrong, but there's no correct easy way to do it
 								// See HotkeyPanel for Toolbox's solution to this
 								// and msdn page on WM_XBUTTONUP message

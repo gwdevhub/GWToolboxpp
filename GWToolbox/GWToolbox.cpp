@@ -50,7 +50,6 @@ static LRESULT CALLBACK NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARA
 
 		// Send button up mouse events to both gw and osh, to avoid gw being stuck on mouse-down
 		case WM_LBUTTONUP:
-		case WM_MBUTTONUP:
 			input.ProcessMessage(&msg);
 			break;
 		
@@ -59,10 +58,8 @@ static LRESULT CALLBACK NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARA
 		case WM_LBUTTONDOWN:
 		case WM_LBUTTONDBLCLK:
 		case WM_MOUSEWHEEL:
-		case WM_MBUTTONDOWN:
-		case WM_MBUTTONDBLCLK:
 			if (input.ProcessMessage(&msg)) {
-				return TRUE;
+				return true;
 			} else {
 				Application::InstancePtr()->clearFocus();
 			}
@@ -78,10 +75,12 @@ static LRESULT CALLBACK NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARA
 		case WM_IME_CHAR:
 		case WM_XBUTTONDOWN:
 		case WM_XBUTTONUP:
+		case WM_MBUTTONDOWN:
+		case WM_MBUTTONUP:
 			GWToolbox::instance()->main_window()->hotkey_panel()->ProcessMessage(&msg);
 			if (GWToolbox::capture_input) {
 				input.ProcessMessage(&msg);
-				return TRUE;
+				return true;
 			}
 			break;
 		}
