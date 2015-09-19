@@ -140,9 +140,12 @@ bool PconCons::checkAndUse() {
 			if (effect.SkillId == 0 || effect.GetTimeRemaining() < 1000) {
 				if (!API->Agents->GetIsPartyLoaded()) return false;
 
+				DWORD currentPlayerAgID;
 				GW::MapAgentArray mapAgents = API->Agents->GetMapAgentArray();
-				for (size_t i = 0; i < mapAgents.size(); ++i) {
-					if (mapAgents[i].curHealth == 0) return false;
+				for (size_t i = 1; i <= API->Agents->GetAmountOfPlayersInInstance(); ++i) {
+					currentPlayerAgID = API->Agents->GetAgentIdByLoginNumber(i);
+					if (!currentPlayerAgID) continue;
+					if (mapAgents[currentPlayerAgID].GetIsDead()) return false;
 				}
 
 				bool used = API->Items->UseItemByModelId(itemID);
