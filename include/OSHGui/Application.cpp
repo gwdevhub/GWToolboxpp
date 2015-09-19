@@ -226,7 +226,7 @@ namespace OSHGui
 			CaptureControl->ProcessMouseMessage(message);
 			return true;
 		}
-		if (FocusedControl != nullptr) {
+		if (FocusedControl != nullptr && message.GetState() != MouseState::Scroll) {
 			if (FocusedControl->ProcessMouseMessage(message)) {
 				return true;
 			}

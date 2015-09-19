@@ -206,7 +206,6 @@ void MainWindow::openClosePanel(int index) {
 			tab_buttons[current_panel_]->SetBackColor(tab_buttons[current_panel_]->GetMouseOverFocusColor());
 			panels[current_panel_]->SetVisible(true);
 			panels[current_panel_]->SetEnabled(true);
-			panels[current_panel_]->Focus();
 		} else {
 			ERR("ERROR bad panel index!\n");
 		}
