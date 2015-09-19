@@ -156,3 +156,18 @@ void __declspec(naked) GWAPI::AgentMgr::detourDialogLog()
 	_asm MOV GWAPI::AgentMgr::LastDialogId, ESI
 	_asm JMP GWAPI::AgentMgr::DialogLogRet
 }
+
+DWORD GWAPI::AgentMgr::GetAmountOfPlayersInInstance()
+{
+	return MemoryMgr::ReadPtrChain<DWORD>(MemoryMgr::GetContextPtr(), 3, 0x2C, 0x814, 0);
+}
+
+wchar_t* GWAPI::AgentMgr::GetPlayerNameByLoginNumber(DWORD loginnumber)
+{
+	return MemoryMgr::ReadPtrChain<wchar_t*>(MemoryMgr::GetContextPtr(), 4, 0x2C, 0x80C, 0x28 + 0x4C * loginnumber, 0);
+}
+
+DWORD GWAPI::AgentMgr::GetAgentIdByLoginNumber(DWORD loginnumber)
+{
+	return MemoryMgr::ReadPtrChain<DWORD>(MemoryMgr::GetContextPtr(), 4, 0x2C, 0x80C, 0x4C * loginnumber, 0);
+}

@@ -91,6 +91,15 @@ namespace GWAPI {
 
 		// Returns last dialog id sent to the server.
 		DWORD GetLastDialogId() const { return LastDialogId; }
+
+		// Uses size of player array. Needs testing.
+		DWORD GetAmountOfPlayersInInstance();
+
+		// Returns name of player with selected loginnumber.
+		wchar_t* GetPlayerNameByLoginNumber(DWORD loginnumber);
+
+		// Returns AgentID of player with selected loginnumber.
+		DWORD GetAgentIdByLoginNumber(DWORD loginnumber);
 	};
 
 }
