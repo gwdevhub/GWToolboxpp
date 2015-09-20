@@ -37,6 +37,12 @@
     <Filter Include="OSHGui\Drawing\Direct3D9">
       <UniqueIdentifier>{e7ff49f7-1032-424c-b420-442b281845ec}</UniqueIdentifier>
     </Filter>
+    <Filter Include="API\include">
+      <UniqueIdentifier>{4bc08657-50ae-435d-b4b8-20819ccf6064}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="API\include\disasm">
+      <UniqueIdentifier>{6c13c867-a48c-4fac-b44c-dd3b203ac649}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="API\APIMain.h">
@@ -448,6 +454,9 @@
     <ClInclude Include="GWToolbox\EditBuild.h">
       <Filter>Main\GWToolbox</Filter>
     </ClInclude>
+    <ClInclude Include="include\disasm\ld32.h">
+      <Filter>API\include\disasm</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -740,6 +749,9 @@
     </ClCompile>
     <ClCompile Include="GWToolbox\EditBuild.cpp">
       <Filter>Main\GWToolbox</Filter>
+    </ClCompile>
+    <ClCompile Include="include\disasm\ld32.c">
+      <Filter>API\include\disasm</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

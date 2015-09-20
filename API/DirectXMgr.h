@@ -5,7 +5,6 @@
 
 #include <d3d9.h>
 #include <d3dx9.h>
-#include "detours.h"
 
 #pragma comment(lib, "d3d9.lib")
 #pragma comment(lib, "d3dx9.lib")
@@ -36,8 +35,8 @@ namespace GWAPI {
 		EndScene_t oEndScene = NULL;
 		Reset_t oReset = NULL;
 
-		BYTE endsceneRestore[20];
-		BYTE resetRestore[20];
+		Hook hkDXEndscene;
+		Hook hkDXReset;
 
 		bool hooked = false;
 

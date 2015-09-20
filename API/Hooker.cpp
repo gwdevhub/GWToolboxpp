@@ -1,5 +1,9 @@
 #include "Hooker.h"
 
+extern "C"{
+#include "../include/disasm/ld32.h"
+}
+
 void GWAPI::Hook::Retour()
 {
 	DWORD dwOldProt;
@@ -39,4 +43,21 @@ BYTE* GWAPI::Hook::Detour(BYTE* _source, BYTE* _detour, const DWORD _length)
 
 
 	return m_retourfunc;
+}
+
+DWORD GWAPI::Hook::CalculateDetourLength(BYTE* _source,DWORD _maxLength)
+{
+	
+	DWORD dwLen = 0;
+	DWORD dwCurOp;
+
+	do{
+		dwCurOp = length_disasm((void*)_source);
+		if (dwCurOp != 0){
+			dwLen += dwCurOp;
+			_source += dwCurOp;
+		}
+	} while (dwLen < 5);
+
+	return dwLen;
 }

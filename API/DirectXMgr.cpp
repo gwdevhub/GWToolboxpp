@@ -30,11 +30,11 @@ void GWAPI::DirectXMgr::CreateRenderHooks(EndScene_t _endscene, Reset_t _reset)
 	DWORD pA1 = dwFindPattern((DWORD)hD3D9, 0x128000, (PBYTE)"\xC7\x06\x00\x00\x00\x00\x89\x86\x00\x00\x00\x00\x89\x86", "xx????xx????xx");
 	memcpy(&VTableStart, (void*)(pA1 + 2), 4);
 
-	memcpy(endsceneRestore, (void*)(VTableStart[42]), 20);
-	memcpy(resetRestore, (void*)(VTableStart[16]), 20);
+	DWORD dwEndsceneLen = Hook::CalculateDetourLength((BYTE*)(VTableStart[42]));
+	oEndScene = (EndScene_t)hkDXEndscene.Detour((BYTE*)(VTableStart[42]), (BYTE*)_endscene, dwEndsceneLen);
 
-	oEndScene = (EndScene_t)DetourFunction((BYTE*)(VTableStart[42]), (BYTE*)_endscene);
-	oReset = (Reset_t)DetourFunction((BYTE*)(VTableStart[16]), (BYTE*)_reset);
+	DWORD dwResetLen = Hook::CalculateDetourLength((BYTE*)(VTableStart[16]));
+	oReset = (Reset_t)hkDXReset.Detour((BYTE*)(VTableStart[16]), (BYTE*)_reset, dwResetLen);
 
 	hooked = true;
 }
@@ -43,13 +43,8 @@ void GWAPI::DirectXMgr::RestoreRenderHooks()
 {
 	if (!hooked) return;
 
-	DWORD dwOldProt;
-	VirtualProtect((void*)(VTableStart[42]), 20, PAGE_READWRITE, &dwOldProt);
-	memcpy((void*)(VTableStart[42]), endsceneRestore, 20);
-	VirtualProtect((void*)(VTableStart[42]), 20, dwOldProt, 0);
-	VirtualProtect((void*)(VTableStart[16]), 20, PAGE_READWRITE, &dwOldProt);
-	memcpy((void*)(VTableStart[16]), resetRestore, 20);
-	VirtualProtect((void*)(VTableStart[16]), 20, dwOldProt, 0);
+	hkDXEndscene.Retour();
+	hkDXReset.Retour();
 
 	hooked = false;
 }

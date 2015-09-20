@@ -46,8 +46,9 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>include\Microsoft DirectX SDK %28June 2010%29\Include;include\msdetour;include\OSHGui;include\OSHGui\Dependencies\Source\FreeType\include;include\OSHGui\Dependencies\Source\SimpleImageLoader;include\OSHGui\Dependencies\Source\JsonCpp\include;$(IncludePath)</IncludePath>
-    <LibraryPath>include\msdetour;include\Microsoft DirectX SDK %28June 2010%29\Lib\x86;libraries;$(LibraryPath)</LibraryPath>
+    <IncludePath>include\Microsoft DirectX SDK %28June 2010%29\Include;include\OSHGui;include\OSHGui\Dependencies\Source\FreeType\include;include\OSHGui\Dependencies\Source\SimpleImageLoader;include\OSHGui\Dependencies\Source\JsonCpp\include;$(IncludePath)</IncludePath>
+    <LibraryPath>include\Microsoft DirectX SDK %28June 2010%29\Lib\x86;libraries;$(LibraryPath)</LibraryPath>
+    <SourcePath>$(SourcePath)</SourcePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -130,6 +131,7 @@
     <ClInclude Include="GWToolbox\TimerWindow.h" />
     <ClInclude Include="GWToolbox\ToolboxPanel.h" />
     <ClInclude Include="GWToolbox\TravelPanel.h" />
+    <ClInclude Include="include\disasm\ld32.h" />
     <ClInclude Include="include\OSHGui\Application.hpp" />
     <ClInclude Include="include\OSHGui\Controls\Button.hpp" />
     <ClInclude Include="include\OSHGui\Controls\CheckBox.hpp" />
@@ -258,6 +260,7 @@
     <ClCompile Include="GWToolbox\HealthWindow.cpp" />
     <ClCompile Include="GWToolbox\TimerWindow.cpp" />
     <ClCompile Include="GWToolbox\TravelPanel.cpp" />
+    <ClCompile Include="include\disasm\ld32.c" />
     <ClCompile Include="include\OSHGui\Application.cpp" />
     <ClCompile Include="include\OSHGui\Controls\Button.cpp" />
     <ClCompile Include="include\OSHGui\Controls\CheckBox.cpp" />
