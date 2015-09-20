@@ -7,6 +7,9 @@
  */
 
 #include "TextBox.hpp"
+
+#include <Windows.h>
+
 #include "../Misc/Exceptions.hpp"
 
 namespace OSHGui
@@ -41,7 +44,7 @@ namespace OSHGui
 	//---------------------------------------------------------------------------
 	void TextBox::SetSize(const Drawing::SizeI &size)
 	{
-		Drawing::SizeI fixxed(size.Width, GetFont()->GetFontHeight() + DefaultTextOffset.Top * 2);
+		Drawing::SizeI fixxed(size.Width, (int)GetFont()->GetFontHeight() + DefaultTextOffset.Top * 2);
 
 		Control::SetSize(fixxed);
 
@@ -255,6 +258,35 @@ namespace OSHGui
 			case Key::End:
 				PlaceCaret(textHelper_.GetLength());
 				break;
+		}
+
+		if (keyboard.GetModifier() == Key::Control) {
+			Key keycode = keyboard.GetKeyCode();
+			if (keycode == Key::X || keycode == Key::C || keycode == Key::V) {
+				if (OpenClipboard(nullptr)) {
+					Misc::AnsiString text = GetText();
+					char * buffer;
+					switch (keyboard.GetKeyCode()) {
+					case Key::X:
+						SetText("");
+						// fall through
+					case Key::C: {
+						EmptyClipboard();
+						HGLOBAL clip_buffer = GlobalAlloc(GMEM_DDESHARE, text.size() + 1);
+						buffer = (char*)GlobalLock(clip_buffer);
+						strcpy_s(buffer, text.size() + 1, text.c_str());
+						GlobalUnlock(clip_buffer);
+						SetClipboardData(CF_TEXT, clip_buffer);
+						break;
+					}
+					case Key::V:
+						buffer = (char*)GetClipboardData(CF_TEXT);
+						SetText(buffer);
+						break;
+					}
+					CloseClipboard();
+				}
+			}
 		}
 
 		return false;
