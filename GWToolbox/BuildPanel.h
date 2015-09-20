@@ -58,6 +58,4 @@ public:
 	void MainRoutine() override;
 
 	void SetPanelPosition(bool left);
-
-	void DrawSelf(OSHGui::Drawing::RenderContext &context) override;
 };

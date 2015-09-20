@@ -88,18 +88,9 @@ void BuildPanel::set_first_shown(int first) {
 	for (int i = 0; i < N_BUILDS; ++i) {
 		builds[i]->SetLocation(DefaultBorderPadding,
 			DefaultBorderPadding + (i - first_shown_) * (BUILD_HEIGHT + DefaultBorderPadding));
+	
+		builds[i]->SetVisible(i >= first_shown_ && i < first_shown_ + MAX_SHOWN);
 	}
-}
-
-void BuildPanel::DrawSelf(Drawing::RenderContext& context) {
-	Panel::DrawSelf(context);
-
-	int i = first_shown_ + MAX_SHOWN - 1;
-	for (; i >= first_shown_; --i) {
-		builds[i]->Render();
-	}
-
-	edit_build_->Render();
 }
 
 void BuildPanel::BuildUI() {
@@ -109,7 +100,7 @@ void BuildPanel::BuildUI() {
 
 	edit_build_ = new EditBuild();
 	edit_build_->SetVisible(false);
-	AddSubControl(edit_build_);
+	AddControl(edit_build_);
 
 	ScrollBar* scrollbar = new ScrollBar();
 	scrollbar->SetSize(scrollbar->GetWidth(), GetHeight());
@@ -131,7 +122,7 @@ void BuildPanel::BuildUI() {
 		build->SetSize(GetWidth() - scrollbar->GetWidth() - 2 * DefaultBorderPadding, BUILD_HEIGHT);
 		build->BuildUI();
 		builds.push_back(build);
-		AddSubControl(builds[i]);
+		AddControl(builds[i]);
 	}
 
 	set_first_shown(0);

@@ -172,9 +172,11 @@ void HotkeyPanel::CalculateHotkeyPositions() {
 		first_shown_ = 0;
 	}
 
-	for (size_t i = 0; i < hotkeys.size(); ++i) {
+	for (int i = 0; i < static_cast<int>(hotkeys.size()); ++i) {
 		hotkeys[i]->SetLocation(DefaultBorderPadding,
 			DefaultBorderPadding + (i - first_shown_) * (TBHotkey::HEIGHT + DefaultBorderPadding));
+
+		hotkeys[i]->SetVisible(i >= first_shown_ && i < first_shown_ + MAX_SHOWN);
 	}
 }
 
