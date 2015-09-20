@@ -110,14 +110,14 @@ namespace OSHGui
 	//---------------------------------------------------------------------------
 	void ListBox::SetSelectedIndex(int index)
 	{
-		if (selectedIndex_ == index)
-		{
-			return;
-		}
+		if (selectedIndex_ == index) return;
+		if (index >= static_cast<int>(items_.size())) return;
 
 		selectedIndex_ = index;
 
 		selectedIndexChangedEvent_.Invoke(this);
+
+		if (index >= static_cast<int>(items_.size())) return;
 		
 		if (index - firstVisibleItemIndex_ >= maxVisibleItems_ || index - firstVisibleItemIndex_ < 0)
 		{

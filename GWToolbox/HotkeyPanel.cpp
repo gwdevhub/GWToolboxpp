@@ -102,9 +102,7 @@ void HotkeyPanel::BuildUI() {
 		[this, delete_combo](Control*) {
 		int index = delete_combo->GetSelectedIndex();
 		if (index < 0) return;
-		this->DeleteHotkey(index);
-		delete_combo->SetText("Delete Hotkey");
-		delete_combo->SetSelectedIndex(-1);
+		DeleteHotkey(index);
 	});
 	AddControl(delete_combo);
 	delete_combo_ = delete_combo;
@@ -121,6 +119,7 @@ void HotkeyPanel::BuildUI() {
 }
 
 void HotkeyPanel::UpdateDeleteCombo() {
+	delete_combo_->SetSelectedIndex(-1);
 	delete_combo_->Clear();
 	delete_combo_->SetText("Delete Hotkey");
 	for (int i = 0; i < (int)hotkeys.size(); ++i) {
