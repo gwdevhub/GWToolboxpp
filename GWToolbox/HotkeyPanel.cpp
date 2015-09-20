@@ -42,6 +42,7 @@ void HotkeyPanel::BuildUI() {
 	create_combo->AddItem("Target");
 	create_combo->AddItem("Move to");
 	create_combo->AddItem("Dialog");
+	create_combo->AddItem("Open Xunlai");
 	create_combo->SetMaxShowItems(create_combo->GetItemsCount());
 	create_combo->SetLocation(DefaultBorderPadding,
 		DefaultBorderPadding + MAX_SHOWN * (TBHotkey::HEIGHT + DefaultBorderPadding));
@@ -80,6 +81,10 @@ void HotkeyPanel::BuildUI() {
 		case 6:
 			ini += HotkeyDialog::IniSection();
 			this->AddHotkey(new HotkeyDialog(Key::None, Key::None, true, ini, 0, L""));
+			break;
+		case 7:
+			ini += HotkeyOpenXunlai::IniSection();
+			this->AddHotkey(new HotkeyOpenXunlai(Key::None, Key::None, true, ini));
 			break;
 		default:
 			break;
@@ -325,7 +330,10 @@ void HotkeyPanel::LoadIni() {
 				UINT index = (UINT)config->iniReadLong(section.c_str(), HotkeyPingBuild::IniKeyBuildIdx(), 0);
 				tb_hk = new HotkeyPingBuild(key, modifier, active, section, index);
 
-			} else {
+			}else if (type.compare(HotkeyOpenXunlai::IniSection()) == 0) {
+				tb_hk = new HotkeyOpenXunlai(key, modifier, active, section);
+			}
+			else {
 				LOG("WARNING hotkey detected, but could not match any type!\n");
 			}
 

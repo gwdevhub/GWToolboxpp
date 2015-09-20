@@ -234,3 +234,15 @@ public:
 	void exec();
 	string GetDescription() override;
 };
+
+class HotkeyOpenXunlai : public TBHotkey {
+public:
+
+	HotkeyOpenXunlai(OSHGui::Key key, OSHGui::Key modifier, bool active,
+		wstring ini_section);
+
+	static const wchar_t* IniSection() { return L"OpenXunlai"; }
+
+	void exec();
+	string GetDescription() override;
+};

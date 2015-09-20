@@ -537,6 +537,15 @@ HotkeyDialog::HotkeyDialog(Key key, Key modifier, bool active, wstring ini_secti
 	AddControl(name_box);
 }
 
+HotkeyOpenXunlai::HotkeyOpenXunlai(OSHGui::Key key, OSHGui::Key modifier, bool active,
+	wstring ini_section) :
+	TBHotkey(key, modifier, active, ini_section){
+	Label* label = new Label();
+	label->SetLocation(ITEM_X, LABEL_Y);
+	label->SetText("Open Xunlai");
+	AddControl(label);
+}
+
 void HotkeyUseItem::exec() {
 	if (!isExplorable()) return;
 	if (item_id_ <= 0) return;
@@ -660,6 +669,13 @@ void HotkeyPingBuild::exec() {
 	// TODO (maybe or maybe just get rid of it)
 }
 
+void HotkeyOpenXunlai::exec()
+{
+	GWAPIMgr* api = GWAPIMgr::GetInstance();
+
+	if (api->Map->GetInstanceType() == GwConstants::InstanceType::Outpost)
+		api->Items->OpenXunlaiWindow();
+}
 
 string HotkeySendChat::GetDescription() {
 	return string("Send ") + static_cast<char>(channel_) + string(msg_.begin(), msg_.end());
@@ -725,4 +741,10 @@ string HotkeyDialog::GetDescription() {
 
 string HotkeyPingBuild::GetDescription() {
 	return string("Ping Build #") + to_string(build_index_);
+}
+
+
+
+string HotkeyOpenXunlai::GetDescription() {
+	return string("Open Xunlai Chest Panel");
 }
