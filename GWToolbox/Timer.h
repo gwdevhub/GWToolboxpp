@@ -8,7 +8,7 @@ timer type is timer_t
 
 create a timer with Timer::init()
 
-find the difference in milliseconds with Timer::diff(timer_t timer)
+find the difference in milliseconds with Timer::diff(click_t timer)
 */
 
 class TBTimer {

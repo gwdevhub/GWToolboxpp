@@ -140,6 +140,7 @@ void MainWindow::SetPanelPositions(bool left) {
 	for (ToolboxPanel* panel : panels) {
 		panel->SetLocation(left ? -panel->GetWidth() : GetWidth(), 0);
 	}
+	build_panel_->SetPanelPosition(left);
 }
 
 void MainWindow::ToggleMinimize() {

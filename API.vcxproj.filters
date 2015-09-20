@@ -445,6 +445,9 @@
     <ClInclude Include="GWToolbox\ToolboxWindow.h">
       <Filter>Main\GWToolbox</Filter>
     </ClInclude>
+    <ClInclude Include="GWToolbox\EditBuild.h">
+      <Filter>Main\GWToolbox</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -733,6 +736,9 @@
       <Filter>Main\GWToolbox</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\ToolboxWindow.cpp">
+      <Filter>Main\GWToolbox</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\EditBuild.cpp">
       <Filter>Main\GWToolbox</Filter>
     </ClCompile>
   </ItemGroup>

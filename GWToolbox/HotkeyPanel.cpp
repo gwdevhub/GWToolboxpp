@@ -19,16 +19,19 @@ void HotkeyPanel::OnMouseScroll(const MouseMessage &mouse) {
 
 void HotkeyPanel::BuildUI() {
 	const int height = 300;
+	
 	LoadIni();
 	
 	ScrollBar* scrollbar = new ScrollBar();
-	scrollbar->SetLocation(TBHotkey::WIDTH + 2 * DefaultBorderPadding, 0);
 	scrollbar->SetSize(scrollbar->GetWidth(), height);
+	scrollbar->SetLocation(TBHotkey::WIDTH + 2 * DefaultBorderPadding, 0);
 	scrollbar->GetScrollEvent() += ScrollEventHandler([this, scrollbar](Control*, ScrollEventArgs) {
 		this->set_first_shown(scrollbar->GetValue());
 	});
 	scrollbar_ = scrollbar;
 	AddControl(scrollbar);
+
+	SetSize(TBHotkey::WIDTH + 2 * DefaultBorderPadding + scrollbar->GetWidth(), height);
 	
 	ComboBox* create_combo = new ComboBox();
 	create_combo->SetText("Create Hotkey");
@@ -110,8 +113,6 @@ void HotkeyPanel::BuildUI() {
 	scrollbar_->ScrollToTop();
 	CalculateHotkeyPositions();
 	UpdateDeleteCombo();
-
-	SetSize(TBHotkey::WIDTH + 2 * DefaultBorderPadding + scrollbar->GetWidth(), height);
 }
 
 void HotkeyPanel::UpdateDeleteCombo() {
@@ -166,9 +167,9 @@ void HotkeyPanel::CalculateHotkeyPositions() {
 		first_shown_ = 0;
 	}
 
-	for (int i = 0; i < MAX_SHOWN && first_shown_ + i < (int)hotkeys.size(); ++i) {
-		hotkeys[first_shown_ + i]->SetLocation(DefaultBorderPadding,
-			DefaultBorderPadding + i * (TBHotkey::HEIGHT + DefaultBorderPadding));
+	for (size_t i = 0; i < hotkeys.size(); ++i) {
+		hotkeys[i]->SetLocation(DefaultBorderPadding,
+			DefaultBorderPadding + (i - first_shown_) * (TBHotkey::HEIGHT + DefaultBorderPadding));
 	}
 }
 
