@@ -746,5 +746,5 @@ string HotkeyPingBuild::GetDescription() {
 
 
 string HotkeyOpenXunlai::GetDescription() {
-	return string("Open Xunlai Chest Panel");
+	return string("Open Xunlai");
 }
