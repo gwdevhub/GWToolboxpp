@@ -13,7 +13,7 @@ namespace GWAPI {
 		DWORD m_length;
 	public:
 	
-		static DWORD CalculateDetourLength(BYTE* _source,DWORD _maxLength = 0x100);
+		static DWORD CalculateDetourLength(BYTE* _source);
 		BYTE* Detour(BYTE* _source, BYTE* _detour,const DWORD _length);
 		void Retour();
 	};

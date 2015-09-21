@@ -45,7 +45,7 @@ BYTE* GWAPI::Hook::Detour(BYTE* _source, BYTE* _detour, const DWORD _length)
 	return m_retourfunc;
 }
 
-DWORD GWAPI::Hook::CalculateDetourLength(BYTE* _source,DWORD _maxLength)
+DWORD GWAPI::Hook::CalculateDetourLength(BYTE* _source)
 {
 	
 	DWORD dwLen = 0;
