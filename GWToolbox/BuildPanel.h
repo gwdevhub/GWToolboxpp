@@ -38,11 +38,6 @@ private:
 	clock_t send_timer;
 	std::queue<std::wstring> queue;
 
-	// Send a complete teambuild by index
-	void SendTeamBuild(int buildID);
-
-	// Send a specific player build
-	void sendPlayerBuild(std::wstring name, std::wstring template_, int partyMember, bool showNumbers);
 	inline void Enqueue(std::wstring msg) { queue.push(msg); }
 	void CalculateBuildPositions();
 	inline void set_first_shown(int first);
@@ -51,11 +46,16 @@ protected:
 	void OnMouseScroll(const OSHGui::MouseMessage &mouse) override;
 
 public:
+	static const int WIDTH = 250;
+	static const int HEIGHT = 300;
+
 	BuildPanel();
 
 	void BuildUI() override;
 	void UpdateUI() override {};
 	void MainRoutine() override;
 
-	void SetPanelPosition(bool left);
+	inline void SetPanelPosition(bool left) { 
+		edit_build_->SetPanelPosition(left); 
+	}
 };

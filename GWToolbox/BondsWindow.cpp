@@ -190,41 +190,41 @@ void BondsWindow::BondsMonitor::UpdateUI() {
 		parent_->SetSize(GetSize());
 	}
 
-	AgentEffectsArray effects = api->Effects->GetPartyEffectArray();
-	if (!effects.IsValid()) return;
-
-	BuffArray buffs = effects[0].Buffs;
-	if (!buffs.IsValid()) return;
-
-	AgentArray agents = api->Agents->GetAgentArray();
-	if (!agents.IsValid()) return;
-
 	bool show[n_players][n_bonds];
 	for (int i = 0; i < n_players; ++i) {
 		for (int j = 0; j < n_bonds; ++j) {
 			show[i][j] = false;
 		}
 	}
-	for (size_t i = 0; i < buffs.size(); ++i) {
-		int player = -1;
-		DWORD target_id = buffs[i].TargetAgentId;
-		if (target_id < agents.size() && agents[target_id]) {
-			player = agents[target_id]->PlayerNumber;
-			if (player == 0 || player > n_players) continue;
-			--player;	// player numbers are from 1 to partysize in party list
-		}
 
-		int bond = -1;
-		switch (static_cast<GwConstants::SkillID>(buffs[i].SkillId)) {
-		case GwConstants::SkillID::Balthazars_Spirit: bond = 0; break;
-		case GwConstants::SkillID::Life_Bond: bond = 1; break;
-		case GwConstants::SkillID::Protective_Bond: bond = 2; break;
-		default: break;
+	AgentEffectsArray effects = api->Effects->GetPartyEffectArray();
+	if (effects.IsValid()) {
+		BuffArray buffs = effects[0].Buffs;
+		AgentArray agents = api->Agents->GetAgentArray();
+
+		if (buffs.IsValid() && agents.IsValid() && effects.IsValid()) {
+			for (size_t i = 0; i < buffs.size(); ++i) {
+				int player = -1;
+				DWORD target_id = buffs[i].TargetAgentId;
+				if (target_id < agents.size() && agents[target_id]) {
+					player = agents[target_id]->PlayerNumber;
+					if (player == 0 || player > n_players) continue;
+					--player;	// player numbers are from 1 to partysize in party list
+				}
+
+				int bond = -1;
+				switch (static_cast<GwConstants::SkillID>(buffs[i].SkillId)) {
+				case GwConstants::SkillID::Balthazars_Spirit: bond = 0; break;
+				case GwConstants::SkillID::Life_Bond: bond = 1; break;
+				case GwConstants::SkillID::Protective_Bond: bond = 2; break;
+				default: break;
+				}
+				if (bond == -1) continue;
+
+				show[player][bond] = true;
+				buff_id[player][bond] = buffs[i].BuffId;
+			}
 		}
-		if (bond == -1) continue;
-		
-		show[player][bond] = true;
-		buff_id[player][bond] = buffs[i].BuffId;
 	}
 
 	for (int i = 0; i < n_players; ++i) {

@@ -18,8 +18,18 @@ EditBuild::EditBuild() {
 	label_name->SetLocation(DefaultBorderPadding, DefaultBorderPadding + 3);
 	AddControl(label_name);
 
+	Button* button = new Button();
+	button->SetSize(ITEM_HEIGHT, ITEM_HEIGHT);
+	button->SetLocation(GetWidth() - ITEM_HEIGHT - DefaultBorderPadding, DefaultBorderPadding);
+	button->SetText("^");
+	button->GetClickEvent() += ClickEventHandler([this](Control*) {
+		up_ = !up_;
+		UpdateLocation();
+	});
+	AddControl(button);
+
 	name = new TextBox();
-	name->SetSize(GetWidth() - label_name->GetWidth() - DefaultBorderPadding * 3, ITEM_HEIGHT);
+	name->SetSize(button->GetLeft() - label_name->GetRight() - 2 * DefaultBorderPadding, ITEM_HEIGHT);
 	name->SetLocation(label_name->GetRight() + DefaultBorderPadding, DefaultBorderPadding);
 	EnableTextInput(name);
 	AddControl(name);
@@ -103,6 +113,10 @@ EditBuild::EditBuild() {
 
 	SetSize(templates[0]->GetRight() + SEND_WIDTH + 2 * DefaultBorderPadding,
 		ok->GetBottom() + DefaultBorderPadding);
+
+	up_ = true;
+	left_ = false;
+	UpdateLocation();
 }
 
 void EditBuild::EnableTextInput(TextBox* tb) {
@@ -166,4 +180,11 @@ void EditBuild::SaveBuild() {
 	}
 
 	config->iniWriteBool(section.c_str(), L"showNumbers", show_numbers->GetChecked());
+}
+
+void EditBuild::UpdateLocation() {
+	int x = left_ ? -GetWidth() : BuildPanel::WIDTH;
+	int y = up_ ? 0 : BuildPanel::HEIGHT - GetHeight();
+
+	SetLocation(x, y);
 }

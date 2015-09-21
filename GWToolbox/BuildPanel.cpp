@@ -94,7 +94,7 @@ void BuildPanel::set_first_shown(int first) {
 }
 
 void BuildPanel::BuildUI() {
-	SetSize(250, 300);
+	SetSize(WIDTH, HEIGHT);
 
 	Config* config = GWToolbox::instance()->config();
 
@@ -128,13 +128,13 @@ void BuildPanel::BuildUI() {
 	set_first_shown(0);
 }
 
-void BuildPanel::SetPanelPosition(bool left) {
-	if (left) {
-		edit_build_->SetLocation(-edit_build_->GetWidth(), 0);
-	} else {
-		edit_build_->SetLocation(GetWidth(), 0);
-	}
-}
+//void BuildPanel::SetPanelPosition(bool left) {
+//	if (left) {
+//		edit_build_->SetLocation(-edit_build_->GetWidth(), 0);
+//	} else {
+//		edit_build_->SetLocation(GetWidth(), 0);
+//	}
+//}
 
 void BuildPanel::MainRoutine() {
 	if (!queue.empty() && TBTimer::diff(send_timer) > 600) {
