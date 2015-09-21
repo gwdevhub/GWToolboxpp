@@ -7,7 +7,7 @@
 class DialogPanel : public ToolboxPanel {
 private:
 	const int n_quests = 29;
-	const int n_dialogs = 1;
+	const int n_dialogs = 11;
 
 	inline DWORD QuestAcceptDialog(DWORD quest) { return (quest << 8) | 0x800001; }
 	DWORD QuestRewardDialog(DWORD quest) { return (quest << 8) | 0x800007; }

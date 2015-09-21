@@ -138,6 +138,18 @@ namespace GwConstants {
 		const int FerryDocksToKaineng = 136; // Mhenlo
 		const int FerryDocksToLA = 137;		 // Mhenlo
 		const int FerryGateToLA = 133;		 // Lionguard Neiro
+
+		// Profession Changer Dialogs.
+		const int ProfChangeWarrior = 0x184;
+		const int ProfChangeRanger = 0x284;
+		const int ProfChangeMonk = 0x384;
+		const int ProfChangeNecro = 0x484;
+		const int ProfChangeMesmer = 0x584;
+		const int ProfChangeEle = 0x684;
+		const int ProfChangeAssassin = 0x784;
+		const int ProfChangeRitualist = 0x884;
+		const int ProfChangeParagon = 0x984;
+		const int ProfChangeDervish = 0xA84;
 	}
 
 	namespace QuestID {

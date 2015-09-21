@@ -204,6 +204,16 @@ DWORD DialogPanel::IndexToQuestID(int index) {
 string DialogPanel::IndexToDialogName(int index) {
 	switch (index) {
 	case 0: return "Craft fow armor";
+	case 1: return "Profession Change - W";
+	case 2: return "Profession Change - R";
+	case 3: return "Profession Change - Mo";
+	case 4: return "Profession Change - N";
+	case 5: return "Profession Change - Me";
+	case 6: return "Profession Change - E";
+	case 7: return "Profession Change - A";
+	case 8: return "Profession Change - Rt";
+	case 9: return "Profession Change - P";
+	case 10: return "Profession Change - D";
 	default: return "";
 	}
 }
@@ -211,6 +221,16 @@ string DialogPanel::IndexToDialogName(int index) {
 DWORD DialogPanel::IndexToDialogID(int index) {
 	switch (index) {
 	case 0: return GwConstants::DialogID::FowCraftArmor;
+	case 1: return GwConstants::DialogID::ProfChangeWarrior;
+	case 2: return GwConstants::DialogID::ProfChangeRanger;
+	case 3: return GwConstants::DialogID::ProfChangeMonk;
+	case 4: return GwConstants::DialogID::ProfChangeNecro;
+	case 5: return GwConstants::DialogID::ProfChangeMesmer;
+	case 6: return GwConstants::DialogID::ProfChangeEle;
+	case 7: return GwConstants::DialogID::ProfChangeAssassin;
+	case 8: return GwConstants::DialogID::ProfChangeRitualist;
+	case 9: return GwConstants::DialogID::ProfChangeParagon;
+	case 10: return GwConstants::DialogID::ProfChangeDervish;
 	default: return 0;
 	}
 }
