@@ -493,7 +493,7 @@ HotkeyDialog::HotkeyDialog(Key key, Key modifier, bool active, wstring ini_secti
 	id_box->GetTextChangedEvent() += TextChangedEventHandler(
 		[this, id_box, ini_section](Control*) {
 		try {
-			long id = std::stol(id_box->GetText(),0,0);
+			long id = std::stol(id_box->GetText(), 0, 0);
 			this->set_id((UINT)id);
 			GWToolbox::instance()->config()->iniWriteLong(ini_section.c_str(),
 				this->IniKeyDialogID(), id);
@@ -506,7 +506,7 @@ HotkeyDialog::HotkeyDialog(Key key, Key modifier, bool active, wstring ini_secti
 	id_box->GetFocusLostEvent() += FocusLostEventHandler([id_box](Control*, Control*) {
 		GWToolbox::capture_input = false;
 		try {
-			std::stol(id_box->GetText());
+			std::stol(id_box->GetText(), 0, 0);
 			GWToolbox::instance()->main_window()->hotkey_panel()->UpdateDeleteCombo();
 		} catch (...) {
 			id_box->SetText("0");

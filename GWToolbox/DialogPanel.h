@@ -7,6 +7,7 @@
 class DialogPanel : public ToolboxPanel {
 private:
 	const int n_quests = 29;
+	const int n_dialogs = 1;
 
 	inline DWORD QuestAcceptDialog(DWORD quest) { return (quest << 8) | 0x800001; }
 	DWORD QuestRewardDialog(DWORD quest) { return (quest << 8) | 0x800007; }
@@ -16,6 +17,9 @@ private:
 
 	std::string IndexToQuestName(int index);
 	DWORD IndexToQuestID(int index);
+
+	std::string IndexToDialogName(int index);
+	DWORD IndexToDialogID(int index);
 
 public:
 	static const int WIDTH = 300;

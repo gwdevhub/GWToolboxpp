@@ -65,10 +65,53 @@ void DialogPanel::BuildUI() {
 		AddControl(complete);
 	}
 
+	ComboBox* combo = new ComboBox();
+	combo->SetLocation(SPACE, SPACE * 3 + (BUTTON_HEIGHT + SPACE) * 7);
+	combo->SetSize((WIDTH - SPACE * 3) * 3 / 4, BUTTON_HEIGHT);
+	for (int i = 0; i < n_dialogs; ++i) {
+		combo->AddItem(IndexToDialogName(i));
+	}
+	combo->SetSelectedIndex(0);
+	AddControl(combo);
+
+	Button* combo_send = new Button();
+	combo_send->SetLocation(combo->GetRight() + SPACE, combo->GetTop());
+	combo_send->SetSize((WIDTH - 3 * SPACE) / 4, BUTTON_HEIGHT);
+	combo_send->SetText("Send");
+	combo_send->GetClickEvent() += ClickEventHandler([this, combo](Control*) {
+		int index = combo->GetSelectedIndex();
+		int id = IndexToDialogID(index);
+		GWAPIMgr::GetInstance()->Agents->Dialog(id);
+	});
+	AddControl(combo_send);
+
 	TextBox* textbox = new TextBox();
 	textbox->SetLocation(SPACE, SPACE * 3 + (BUTTON_HEIGHT + SPACE) * 8);
 	textbox->SetSize((WIDTH - SPACE * 3) * 3 / 4, BUTTON_HEIGHT);
+	textbox->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
+		GWToolbox::capture_input = true;
+	});
+	textbox->GetFocusLostEvent() += FocusLostEventHandler([textbox](Control*, Control*) {
+		GWToolbox::capture_input = false;
+		try {
+			std::stol(textbox->GetText(), 0, 0);
+		} catch (...) {
+			textbox->SetText("0");
+		}
+	});
 	AddControl(textbox);
+
+	Button* custom_send = new Button();
+	custom_send->SetLocation(textbox->GetRight() + SPACE, textbox->GetTop());
+	custom_send->SetSize((WIDTH - 3 * SPACE) / 4, BUTTON_HEIGHT);
+	custom_send->SetText("Send");
+	custom_send->GetClickEvent() += ClickEventHandler([textbox](Control*) {
+		try {
+			long id = std::stol(textbox->GetText(), 0, 0);
+			GWAPIMgr::GetInstance()->Agents->Dialog(id);
+		} catch (...) { }
+	});
+	AddControl(custom_send);
 }
 
 void DialogPanel::CreateButton(int grid_x, int grid_y, int hor_amount,
@@ -154,6 +197,20 @@ DWORD DialogPanel::IndexToQuestID(int index) {
 	case 26: return GwConstants::QuestID::Doa::BroodWars;
 	case 27: return GwConstants::QuestID::Doa::FoundryBreakout;
 	case 28: return GwConstants::QuestID::Doa::FoundryOfFailedCreations;
+	default: return 0;
+	}
+}
+
+string DialogPanel::IndexToDialogName(int index) {
+	switch (index) {
+	case 0: return "Craft fow armor";
+	default: return "";
+	}
+}
+
+DWORD DialogPanel::IndexToDialogID(int index) {
+	switch (index) {
+	case 0: return GwConstants::DialogID::FowCraftArmor;
 	default: return 0;
 	}
 }
