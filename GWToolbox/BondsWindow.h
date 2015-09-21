@@ -25,6 +25,8 @@ class BondsWindow : public ToolboxWindow {
 		OSHGui::PictureBox* pics[n_players][n_bonds];
 		int buff_id[n_players][n_bonds];
 
+		void DropUseBuff(int bond, int player);
+
 	protected:
 		virtual void PopulateGeometry() override;
 		virtual void OnMouseDown(const OSHGui::MouseMessage &mouse) override;

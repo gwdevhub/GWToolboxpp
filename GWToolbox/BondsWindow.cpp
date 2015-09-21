@@ -123,15 +123,42 @@ void BondsWindow::BondsMonitor::OnMouseUp(const OSHGui::MouseMessage &mouse) {
 		int bond = GetBond(mouse.GetLocation().X);
 
 		if (player >= 0 && player < n_players
-			&& bond >= 0 && bond < n_bonds
-			&& pics[player][bond]->GetVisible()) {
-
-			GWAPIMgr::GetInstance()->Effects->DropBuff(buff_id[player][bond]);
+			&& bond >= 0 && bond < n_bonds) {
+			
+			DropUseBuff(bond, player);
 		}
 	}
+
 	pressed = false;
 	Invalidate();
 }
+
+void BondsWindow::BondsMonitor::DropUseBuff(int bond, int player) {
+	GWAPIMgr* api = GWAPIMgr::GetInstance();
+	if (pics[player][bond]->GetVisible()) {
+		if (buff_id[player][bond] > 0) {
+			api->Effects->DropBuff(buff_id[player][bond]);
+		}
+	} else {
+		// cast bond on player
+		GwConstants::SkillID buff;
+		switch (static_cast<Bond>(bond)) {
+		case Bond::Balth: buff = GwConstants::SkillID::Balthazars_Spirit; break;
+		case Bond::Life: buff = GwConstants::SkillID::Life_Bond; break;
+		case Bond::Prot: buff = GwConstants::SkillID::Protective_Bond; break;
+		}
+
+		int target = api->Agents->GetAgentIdByLoginNumber(player + 1);
+		if (target <= 0) return;
+
+		int slot = api->Skillbar->getSkillSlot(buff);
+		if (slot <= 0) return;
+		if (api->Skillbar->GetPlayerSkillbar().Skills[slot].Recharge != 0) return;
+
+		api->Skillbar->UseSkill(slot, target);
+	}
+}
+
 void BondsWindow::BondsMonitor::OnMouseLeave(const OSHGui::MouseMessage &mouse) {
 	DragButton::OnMouseLeave(mouse);
 	hovered_player = -1;

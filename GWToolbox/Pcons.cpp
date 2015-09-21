@@ -138,13 +138,16 @@ bool PconCons::checkAndUse() {
 		try {
 			GW::Effect effect = API->Effects->GetPlayerEffectById(effectID);
 			if (effect.SkillId == 0 || effect.GetTimeRemaining() < 1000) {
+
 				if (!API->Agents->GetIsPartyLoaded()) return false;
 
-				DWORD currentPlayerAgID;
 				GW::MapAgentArray mapAgents = API->Agents->GetMapAgentArray();
-				for (size_t i = 1; i <= API->Agents->GetAmountOfPlayersInInstance(); ++i) {
-					currentPlayerAgID = API->Agents->GetAgentIdByLoginNumber(i);
-					if (!currentPlayerAgID) continue;
+				if (!mapAgents.IsValid()) return false;
+				int n_players = API->Agents->GetAmountOfPlayersInInstance();
+				for (int i = 1; i <= n_players; ++i) {
+					DWORD currentPlayerAgID = API->Agents->GetAgentIdByLoginNumber(i);
+					if (currentPlayerAgID <= 0) return false;
+					if (currentPlayerAgID >= mapAgents.size()) return false;
 					if (mapAgents[currentPlayerAgID].GetIsDead()) return false;
 				}
 

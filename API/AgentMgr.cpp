@@ -159,7 +159,8 @@ void __declspec(naked) GWAPI::AgentMgr::detourDialogLog()
 
 DWORD GWAPI::AgentMgr::GetAmountOfPlayersInInstance()
 {
-	return MemoryMgr::ReadPtrChain<DWORD>(MemoryMgr::GetContextPtr(), 3, 0x2C, 0x814, 0);
+	// -1 because the 1st array element is nil
+	return MemoryMgr::ReadPtrChain<DWORD>(MemoryMgr::GetContextPtr(), 3, 0x2C, 0x814, 0) - 1;
 }
 
 wchar_t* GWAPI::AgentMgr::GetPlayerNameByLoginNumber(DWORD loginnumber)
