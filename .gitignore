@@ -23,3 +23,4 @@ include/OSHGui/Dependencies/Source
 *.idb
 *.pdb
 include/OSHGui/Dependencies/Include/
+Launcher/GWToolbox.exe
