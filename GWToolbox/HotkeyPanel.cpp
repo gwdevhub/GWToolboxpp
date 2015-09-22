@@ -43,6 +43,7 @@ void HotkeyPanel::BuildUI() {
 	create_combo->AddItem("Move to");
 	create_combo->AddItem("Dialog");
 	create_combo->AddItem("Open Xunlai");
+	create_combo->AddItem("Open Locked Chest");
 	create_combo->SetMaxShowItems(create_combo->GetItemsCount());
 	create_combo->SetLocation(DefaultBorderPadding,
 		DefaultBorderPadding + MAX_SHOWN * (TBHotkey::HEIGHT + DefaultBorderPadding));
@@ -85,6 +86,10 @@ void HotkeyPanel::BuildUI() {
 		case 7:
 			ini += HotkeyOpenXunlai::IniSection();
 			this->AddHotkey(new HotkeyOpenXunlai(Key::None, Key::None, true, ini));
+			break;
+		case 8:
+			ini += HotkeyOpenLockedChest::IniSection();
+			this->AddHotkey(new HotkeyOpenLockedChest(Key::None, Key::None, true, ini));
 			break;
 		default:
 			break;
@@ -333,6 +338,9 @@ void HotkeyPanel::LoadIni() {
 
 			}else if (type.compare(HotkeyOpenXunlai::IniSection()) == 0) {
 				tb_hk = new HotkeyOpenXunlai(key, modifier, active, section);
+			}
+			else if (type.compare(HotkeyOpenLockedChest::IniSection()) == 0) {
+				tb_hk = new HotkeyOpenLockedChest(key, modifier, active, section);
 			}
 			else {
 				LOG("WARNING hotkey detected, but could not match any type!\n");

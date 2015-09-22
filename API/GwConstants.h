@@ -30,7 +30,23 @@ namespace GwConstants {
 		None = 0xff
 	};
 
-	enum class  OnlineStatus{ Offline, Online, DND, Away };
+	enum class OnlineStatus{ Offline, Online, DND, Away };
+
+	enum class Bag{	None,Backpack,Belt_Pouch,Bag_1,Bag_2,Equipment_Pack,
+					Material_Storage,Unclaimed_Items,Storage_1,Storage_2,
+					Storage_3,Storage_4,Storage_5,Storage_6,Storage_7,
+					Storage_8,Storage_9,Equipped_Items};
+
+	enum class AgentType{
+		Living = 0xDB,Chest_Signpost = 0x200,Item = 0x400
+	};
+
+	enum class ItemType {
+		Salvage,Axe=2,Bag,Boots,Bow,Chestpiece=7,Rune_Mod,Usable,Dye,
+		Materials_Zcoins,Offhand,Gloves,Hammer=15,Headpiece,CC_Shards,
+		Key,Leggings,Gold_Coin,Quest_Item,Wand,Shield=24,Staff=26,Sword,
+		Kit=29,Trophy,Scroll,Daggers,Minipet,Scythe,Spear,Costume=45
+	};
 
 	namespace Range {
 		const int Adjacent = 156;
