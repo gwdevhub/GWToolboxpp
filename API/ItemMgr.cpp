@@ -136,3 +136,8 @@ DWORD GWAPI::ItemMgr::GetGoldAmountInStorage()
 {
 	return *MemoryMgr::ReadPtrChain<DWORD*>(MemoryMgr::GetContextPtr(), 3, 0x40, 0xF8, 0x80);
 }
+
+void GWAPI::ItemMgr::OpenLockedChest()
+{
+	return parent->CtoS->SendPacket(0x8, 0x4D, 0x2);
+}

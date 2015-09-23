@@ -246,3 +246,15 @@ public:
 	void exec();
 	string GetDescription() override;
 };
+
+class HotkeyOpenLockedChest : public TBHotkey {
+public:
+
+	HotkeyOpenLockedChest(OSHGui::Key key, OSHGui::Key modifier, bool active,
+		wstring ini_section);
+
+	static const wchar_t* IniSection() { return L"OpenLockedChest"; }
+
+	void exec();
+	string GetDescription() override;
+};

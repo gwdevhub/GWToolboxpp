@@ -54,5 +54,8 @@ namespace GWAPI {
 
 		// Get amount of gold in storage.
 		DWORD GetGoldAmountInStorage();
+
+		// Open locked chest, raw packet, first send a GoSignpost packet to select chest.
+		void OpenLockedChest();
 	};
 }

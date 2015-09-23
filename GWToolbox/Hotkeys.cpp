@@ -546,6 +546,14 @@ HotkeyOpenXunlai::HotkeyOpenXunlai(OSHGui::Key key, OSHGui::Key modifier, bool a
 	AddControl(label);
 }
 
+HotkeyOpenLockedChest::HotkeyOpenLockedChest(OSHGui::Key key, OSHGui::Key modifier, bool active,
+	wstring ini_section) : TBHotkey(key, modifier, active, ini_section){
+	Label* label = new Label();
+	label->SetLocation(ITEM_X, LABEL_Y);
+	label->SetText("Open Locked Chest");
+	AddControl(label);
+}
+
 void HotkeyUseItem::exec() {
 	if (!isExplorable()) return;
 	if (item_id_ <= 0) return;
@@ -675,6 +683,18 @@ void HotkeyOpenXunlai::exec()
 		api->Items->OpenXunlaiWindow();
 }
 
+void HotkeyOpenLockedChest::exec()
+{
+	GWAPIMgr* api = GWAPIMgr::GetInstance();
+	GW::Agent* target = api->Agents->GetTarget();
+
+	if (target && target->Type == 0x200)
+	{
+		api->Agents->GoSignpost(target);
+		api->Items->OpenLockedChest();
+	}
+}
+
 string HotkeySendChat::GetDescription() {
 	return string("Send ") + static_cast<char>(channel_) + string(msg_.begin(), msg_.end());
 }
@@ -745,4 +765,8 @@ string HotkeyPingBuild::GetDescription() {
 
 string HotkeyOpenXunlai::GetDescription() {
 	return string("Open Xunlai");
+}
+
+string HotkeyOpenLockedChest::GetDescription() {
+	return string("Open Locked Chest");
 }

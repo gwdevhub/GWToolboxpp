@@ -15,7 +15,7 @@ void DialogPanel::BuildUI() {
 
 	CreateButton(0, 0, 2, "Four Horseman", QuestAcceptDialog(GwConstants::QuestID::UW::Planes));
 	CreateButton(1, 0, 2, "Demon Assassin", QuestAcceptDialog(GwConstants::QuestID::UW::Mnt));
-	CreateButton(0, 1, 2, "Tower of Strenght", QuestAcceptDialog(GwConstants::QuestID::Fow::Tos));
+	CreateButton(0, 1, 2, "Tower of Strength", QuestAcceptDialog(GwConstants::QuestID::Fow::Tos));
 	CreateButton(1, 1, 2, "Foundry Reward", QuestRewardDialog(GwConstants::QuestID::Doa::FoundryBreakout));
 
 	CreateButton(0, 2, 4, "Lab", GwConstants::DialogID::UwTeleLab);
