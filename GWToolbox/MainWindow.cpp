@@ -149,9 +149,16 @@ void MainWindow::ToggleMinimize() {
 	if (minimized_) {
 		if (current_panel_ >= 0) openClosePanel(current_panel_);
 		SetSize(Drawing::SizeI(WIDTH, TITLE_HEIGHT));
+		SetLocation(Drawing::PointI(250, 0));
 		main_panel_->SetVisible(false);
 	} else {
+		Config* config = GWToolbox::instance()->config();
+		int xlocation = config->iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyX(), 100);
+		int ylocation = config->iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyY(), 100);
+
 		SetSize(Drawing::SizeI(WIDTH, HEIGHT));
+
+		SetLocation(Drawing::PointI(xlocation, ylocation));
 		main_panel_->SetVisible(true);
 	}
 }
