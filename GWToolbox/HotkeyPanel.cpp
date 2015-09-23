@@ -44,8 +44,7 @@ void HotkeyPanel::BuildUI() {
 	create_combo->AddItem("Dialog");
 	create_combo->AddItem("Open Xunlai");
 	create_combo->SetMaxShowItems(create_combo->GetItemsCount());
-	create_combo->SetLocation(DefaultBorderPadding,
-		DefaultBorderPadding + MAX_SHOWN * (TBHotkey::HEIGHT + DefaultBorderPadding));
+	create_combo->SetLocation(DefaultBorderPadding, DefaultBorderPadding);
 	create_combo->SetSize(TBHotkey::WIDTH / 2 - TBHotkey::HSPACE / 2, TBHotkey::LINE_HEIGHT);
 	create_combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
 		[this, create_combo](Control*) {
@@ -173,7 +172,7 @@ void HotkeyPanel::CalculateHotkeyPositions() {
 
 	for (int i = 0; i < static_cast<int>(hotkeys.size()); ++i) {
 		hotkeys[i]->SetLocation(DefaultBorderPadding,
-			DefaultBorderPadding + (i - first_shown_) * (TBHotkey::HEIGHT + DefaultBorderPadding));
+			delete_combo_->GetBottom() + DefaultBorderPadding + (i - first_shown_) * (TBHotkey::HEIGHT + DefaultBorderPadding));
 
 		hotkeys[i]->SetVisible(i >= first_shown_ && i < first_shown_ + MAX_SHOWN);
 	}

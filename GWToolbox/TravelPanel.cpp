@@ -20,22 +20,65 @@ void TravelPanel::BuildUI() {
 
 	SetSize(WIDTH, HEIGHT);
 
+	ComboBox* combo = new TravelCombo();
+	combo->SetMaxShowItems(10);
+	combo->SetText("Travel To...");
+	for (int i = 0; i < n_outposts; ++i) {
+		combo->AddItem(IndexToOutpostName(i));
+	}
+	combo->SetSize(GetWidth() - 2 * SPACE, BUTTON_HEIGHT);
+	combo->SetLocation(SPACE, SPACE);
+	combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
+		[this, combo](Control*) {
+		if (combo->GetSelectedIndex() < 0) return;
+		GwConstants::MapID id = IndexToOutpostID(combo->GetSelectedIndex());
+		GWAPIMgr::GetInstance()->Map->Travel(id, this->district(), this->region(), this->language());
+		combo->SetText("Travel To...");
+		combo->SetSelectedIndex(-1);
+	});
+	AddControl(combo);
+
+	ComboBox* district = new ComboBox();
+	district->SetMaxShowItems(14);
+	district->AddItem("Current District");
+	district->AddItem("International");
+	district->AddItem("American");
+	district->AddItem("American District 1");
+	district->AddItem("Europe English");
+	district->AddItem("Europe French");
+	district->AddItem("Europe German");
+	district->AddItem("Europe Italian");
+	district->AddItem("Europe Spanish");
+	district->AddItem("Europe Polish");
+	district->AddItem("Europe Russian");
+	district->AddItem("Asian Korean");
+	district->AddItem("Asia Chinese");
+	district->AddItem("Asia Japanese");
+	district->SetSize(GetWidth() - 2 * SPACE, BUTTON_HEIGHT);
+	district->SetLocation(SPACE, district->GetBottom() + SPACE);
+	district->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
+		[this, district](Control*) {
+		UpdateDistrict(district->GetSelectedIndex());
+	});
+	district->SetSelectedIndex(0);
+	AddControl(district);
+
 	using namespace GwConstants;
-	AddTravelButton("ToA", 0, 0, MapID::Temple_of_the_Ages);
-	AddTravelButton("DoA", 1, 0, MapID::Domain_of_Anguish);
-	AddTravelButton("Kamadan", 0, 1, MapID::Kamadan_Jewel_of_Istan_outpost);
-	AddTravelButton("Embark", 1, 1, MapID::Embark_Beach);
-	AddTravelButton("Vlox's", 0, 2, MapID::Vloxs_Falls);
-	AddTravelButton("Gadd's", 1, 2, MapID::Gadds_Encampment_outpost);
-	AddTravelButton("Urgoz", 0, 3, MapID::Urgozs_Warren);
-	AddTravelButton("Deep", 1, 3, MapID::The_Deep);
+	AddTravelButton("ToA", 0, 2, MapID::Temple_of_the_Ages);
+	AddTravelButton("DoA", 1, 2, MapID::Domain_of_Anguish);
+	AddTravelButton("Kamadan", 0, 3, MapID::Kamadan_Jewel_of_Istan_outpost);
+	AddTravelButton("Embark", 1, 3, MapID::Embark_Beach);
+	AddTravelButton("Vlox's", 0, 4, MapID::Vloxs_Falls);
+	AddTravelButton("Gadd's", 1, 4, MapID::Gadds_Encampment_outpost);
+	AddTravelButton("Urgoz", 0, 5, MapID::Urgozs_Warren);
+	AddTravelButton("Deep", 1, 5, MapID::The_Deep);
 
 	for (int i = 0; i < 3; ++i) {
 		wstring key = wstring(L"Travel") + to_wstring(i);
 		int index = GWToolbox::instance()->config()->iniReadLong(MainWindow::IniSection(), key.c_str(), 0);
 		ComboBox* fav_combo = new TravelCombo();
 		fav_combo->SetSize((WIDTH - 3 * SPACE) * 3 / 4, BUTTON_HEIGHT);
-		fav_combo->SetLocation(DefaultBorderPadding, SPACE * 2 + (BUTTON_HEIGHT + SPACE) * (i + 4));
+		fav_combo->SetLocation(DefaultBorderPadding, SPACE * 2 + (BUTTON_HEIGHT + SPACE) * (i + 6));
 		for (int i = 0; i < n_outposts; ++i) {
 			fav_combo->AddItem(IndexToOutpostName(i));
 		}
@@ -58,49 +101,6 @@ void TravelPanel::BuildUI() {
 		});
 		AddControl(fav_button);
 	}
-
-	ComboBox* district = new ComboBox();
-	district->SetMaxShowItems(14);
-	district->AddItem("Current District");
-	district->AddItem("International");
-	district->AddItem("American");
-	district->AddItem("American District 1");
-	district->AddItem("Europe English");
-	district->AddItem("Europe French");
-	district->AddItem("Europe German");
-	district->AddItem("Europe Italian");
-	district->AddItem("Europe Spanish");
-	district->AddItem("Europe Polish");
-	district->AddItem("Europe Russian");
-	district->AddItem("Asian Korean");
-	district->AddItem("Asia Chinese");
-	district->AddItem("Asia Japanese");
-	district->SetSize(GetWidth() - 2 * SPACE, BUTTON_HEIGHT);
-	district->SetLocation(DefaultBorderPadding, GetHeight() - DefaultBorderPadding - district->GetHeight());
-	district->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
-		[this, district](Control*) {
-		UpdateDistrict(district->GetSelectedIndex());
-	});
-	district->SetSelectedIndex(0);
-	AddControl(district);
-
-	ComboBox* combo = new TravelCombo();
-	combo->SetMaxShowItems(10);
-	combo->SetText("Travel To...");
-	for (int i = 0; i < n_outposts; ++i) {
-		combo->AddItem(IndexToOutpostName(i));
-	}
-	combo->SetSize(GetWidth() - 2 * SPACE, BUTTON_HEIGHT);
-	combo->SetLocation(DefaultBorderPadding, district->GetTop() - DefaultBorderPadding - combo->GetHeight());
-	combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
-		[this, combo](Control*) {
-		if (combo->GetSelectedIndex() < 0) return;
-		GwConstants::MapID id = IndexToOutpostID(combo->GetSelectedIndex());
-		GWAPIMgr::GetInstance()->Map->Travel(id, this->district(), this->region(), this->language());
-		combo->SetText("Travel To...");
-		combo->SetSelectedIndex(-1);
-	});
-	AddControl(combo);
 }
 
 TravelPanel::TravelCombo::TravelCombo() {
@@ -134,7 +134,7 @@ void TravelPanel::AddTravelButton(string text, int grid_x, int grid_y, GwConstan
 	button->SetText(text);
 	button->SetSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	button->SetLocation(SPACE + (BUTTON_WIDTH + SPACE) * grid_x, 
-		SPACE + (BUTTON_HEIGHT + SPACE) * grid_y);
+		SPACE * 2 + (BUTTON_HEIGHT + SPACE) * grid_y);
 	button->GetClickEvent() += ClickEventHandler([this, map_id](Control*) {
 		GWAPIMgr::GetInstance()->Map->Travel(map_id, district(), region(), language());
 	});
