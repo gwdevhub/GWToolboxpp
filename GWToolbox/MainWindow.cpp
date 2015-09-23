@@ -21,6 +21,7 @@ settings_panel_(new SettingsPanel()) {
 	tab_buttons = std::vector<TabButton*>();
 	current_panel_ = -1;
 	minimized_ = false;
+	useMinimizedAltPos_ = false;
 	
 	// some local vars
 	GWToolbox* tb = GWToolbox::instance();
@@ -45,7 +46,10 @@ settings_panel_(new SettingsPanel()) {
 	title->SetSize(64, TITLE_HEIGHT);
 	title->SetBackColor(Drawing::Color::Empty());
 	title->GetMouseUpEvent() += MouseUpEventHandler([this](Control*, MouseEventArgs) {
-		SaveLocation();
+		if (minimized_)
+			SaveMinimizedLocation();
+		else
+			SaveLocation();
 	});
 	AddControl(title);
 
@@ -145,20 +149,29 @@ void MainWindow::SetPanelPositions(bool left) {
 
 void MainWindow::ToggleMinimize() {
 	minimized_ = !minimized_;
+	Config* config = GWToolbox::instance()->config();
 
-	if (minimized_) {
+	if ( minimized_) {
 		if (current_panel_ >= 0) openClosePanel(current_panel_);
 		SetSize(Drawing::SizeI(WIDTH, TITLE_HEIGHT));
-		SetLocation(Drawing::PointI(250, 0));
+		if (useMinimizedAltPos_){
+			int xlocation = config->iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltX(), 100);
+			int ylocation = config->iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltY(), 100);
+
+			SetLocation(Drawing::PointI(xlocation, ylocation));
+		}
 		main_panel_->SetVisible(false);
 	} else {
-		Config* config = GWToolbox::instance()->config();
-		int xlocation = config->iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyX(), 100);
-		int ylocation = config->iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyY(), 100);
-
+		
 		SetSize(Drawing::SizeI(WIDTH, HEIGHT));
 
-		SetLocation(Drawing::PointI(xlocation, ylocation));
+		if (useMinimizedAltPos_){
+			int xlocation = config->iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyX(), 100);
+			int ylocation = config->iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyY(), 100);
+
+			SetLocation(Drawing::PointI(xlocation, ylocation));
+		}
+
 		main_panel_->SetVisible(true);
 	}
 }
@@ -274,6 +287,15 @@ void MainWindow::SaveLocation() {
 	Config* config = GWToolbox::instance()->config();
 	config->iniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyX(), x);
 	config->iniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyY(), y);
+}
+
+void MainWindow::SaveMinimizedLocation() {
+	CalculateAbsoluteLocation();
+	int x = absoluteLocation_.X;
+	int y = absoluteLocation_.Y;
+	Config* config = GWToolbox::instance()->config();
+	config->iniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltX(), x);
+	config->iniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltY(), y);
 }
 
 

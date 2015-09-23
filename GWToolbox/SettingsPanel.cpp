@@ -76,6 +76,20 @@ void SettingsPanel::BuildUI() {
 	});
 	AddControl(hidetarget);
 
+	CheckBox* minimizealtpos = new CheckBox();
+	minimizealtpos->SetText("Minmize to Alt Position");
+	minimizealtpos->SetLocation(DefaultBorderPadding, hidetarget->GetBottom() + DefaultBorderPadding);
+	minimizealtpos->SetSize(item_width, item_height);
+	minimizealtpos->SetChecked(config->iniReadBool(MainWindow::IniSection(),
+		MainWindow::IniKeyMinAltPos(), false));
+	minimizealtpos->GetCheckedChangedEvent() += CheckedChangedEventHandler([minimizealtpos](Control*) {
+		bool enabled = minimizealtpos->GetChecked();
+		GWToolbox::instance()->main_window()->setUseMinimizedAltPos(enabled);
+		GWToolbox::instance()->config()->iniWriteBool(MainWindow::IniSection(),
+			MainWindow::IniKeyMinAltPos(), enabled);
+	});
+	AddControl(minimizealtpos);
+
 
 	Button* folder = new Button();
 	folder->SetText("Open Settings Folder");

@@ -60,6 +60,7 @@ private:
 	std::vector<TabButton*> tab_buttons;
 	int current_panel_;
 	bool minimized_;
+	bool useMinimizedAltPos_;
 
 	Button* pcon_toggle_button_;
 	PconPanel* const pcon_panel_;
@@ -74,6 +75,7 @@ private:
 	void CreateTabButton(const char* s, int& button_idx, int& panel_idx, const char* icon);
 	void ToggleMinimize();
 	void SaveLocation();
+	void SaveMinimizedLocation();
 
 public:
 	MainWindow();
@@ -81,13 +83,17 @@ public:
 	inline static const wchar_t* IniSection() { return L"mainwindow"; }
 	inline static const wchar_t* IniKeyX() { return L"x"; }
 	inline static const wchar_t* IniKeyY() { return L"y"; }
+	inline static const wchar_t* IniKeyMinimizedAltX() { return L"minx"; }
+	inline static const wchar_t* IniKeyMinimizedAltY() { return L"miny"; }
 	inline static const wchar_t* IniKeyTabsLeft() { return L"tabsleft"; }
 	inline static const wchar_t* IniKeyFreeze() { return L"freeze_widgets"; }
 	inline static const wchar_t* IniKeyHideTarget() { return L"hide_target"; }
+	inline static const wchar_t* IniKeyMinAltPos() { return L"minimize_alt_position"; }
 
 	virtual void DrawSelf(Drawing::RenderContext &context) override;
 
 	void openClosePanel(int index);
+	inline void setUseMinimizedAltPos(bool enable){ useMinimizedAltPos_ = enable;}
 	void UpdatePconToggleButton(bool active);
 	PconPanel* pcon_panel() { return pcon_panel_; }
 	HotkeyPanel* hotkey_panel() { return hotkey_panel_; }
