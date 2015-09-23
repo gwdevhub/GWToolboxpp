@@ -21,7 +21,7 @@ settings_panel_(new SettingsPanel()) {
 	tab_buttons = std::vector<TabButton*>();
 	current_panel_ = -1;
 	minimized_ = false;
-	useMinimizedAltPos_ = false;
+	
 	
 	// some local vars
 	GWToolbox* tb = GWToolbox::instance();
@@ -31,6 +31,8 @@ settings_panel_(new SettingsPanel()) {
 	int tabButtonHeight = 27;
 
 	Config* config = GWToolbox::instance()->config();
+
+	useMinimizedAltPos_ = config->iniReadBool(MainWindow::IniSection(), MainWindow::IniKeyMinAltPos(), false);
 	int xlocation = config->iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyX(), 100);
 	int ylocation = config->iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyY(), 100);
 
