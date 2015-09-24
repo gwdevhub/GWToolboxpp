@@ -27,8 +27,10 @@ BYTE* GWAPI::Hook::Detour(BYTE* _source, BYTE* _detour, const DWORD _length)
 
 	memcpy(m_retourfunc, m_source, m_length);
 
-	(m_retourfunc + m_length)[0] = 0xE9;
-	*(DWORD*)(m_retourfunc + m_length + 1) = (DWORD)((m_source + m_length) - (m_retourfunc + m_length + 5));
+	m_retourfunc += m_length;
+	
+	m_retourfunc[0] = 0xE9;
+	*(DWORD*)(m_retourfunc + 1) = (DWORD)((m_source + m_length) - (m_retourfunc + 5));
 
 	VirtualProtect(m_source, m_length, PAGE_READWRITE, &dwOldProt);
 
@@ -42,7 +44,7 @@ BYTE* GWAPI::Hook::Detour(BYTE* _source, BYTE* _detour, const DWORD _length)
 	VirtualProtect(m_source, m_length, dwOldProt, &dwOldProt);
 
 
-	return m_retourfunc;
+	return m_retourfunc - m_length;
 }
 
 DWORD GWAPI::Hook::CalculateDetourLength(BYTE* _source)
