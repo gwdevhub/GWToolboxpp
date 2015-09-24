@@ -33,7 +33,7 @@ void SettingsPanel::BuildUI() {
 
 	CheckBox* tabsleft = new CheckBox();
 	tabsleft->SetText("Open tabs on the left");
-	tabsleft->SetLocation(DefaultBorderPadding, authors->GetBottom() + DefaultBorderPadding * 3);
+	tabsleft->SetLocation(DefaultBorderPadding, authors->GetBottom() + DefaultBorderPadding * 2);
 	tabsleft->SetSize(item_width, item_height);
 	tabsleft->SetChecked(config->iniReadBool(MainWindow::IniSection(), 
 		MainWindow::IniKeyTabsLeft(), false));
@@ -46,7 +46,7 @@ void SettingsPanel::BuildUI() {
 
 	CheckBox* freeze = new CheckBox();
 	freeze->SetText("Freeze info widget positions");
-	freeze->SetLocation(DefaultBorderPadding, tabsleft->GetBottom() + DefaultBorderPadding);
+	freeze->SetLocation(DefaultBorderPadding, tabsleft->GetBottom());
 	freeze->SetSize(item_width, item_height);
 	freeze->SetChecked(config->iniReadBool(MainWindow::IniSection(), 
 		MainWindow::IniKeyFreeze(), false));
@@ -63,7 +63,7 @@ void SettingsPanel::BuildUI() {
 
 	CheckBox* hidetarget = new CheckBox();
 	hidetarget->SetText("Hide target windows");
-	hidetarget->SetLocation(DefaultBorderPadding, freeze->GetBottom() + DefaultBorderPadding);
+	hidetarget->SetLocation(DefaultBorderPadding, freeze->GetBottom());
 	hidetarget->SetSize(item_width, item_height);
 	hidetarget->SetChecked(config->iniReadBool(MainWindow::IniSection(), 
 		MainWindow::IniKeyHideTarget(), false));
@@ -78,7 +78,7 @@ void SettingsPanel::BuildUI() {
 
 	CheckBox* minimizealtpos = new CheckBox();
 	minimizealtpos->SetText("Minmize to Alt Position");
-	minimizealtpos->SetLocation(DefaultBorderPadding, hidetarget->GetBottom() + DefaultBorderPadding);
+	minimizealtpos->SetLocation(DefaultBorderPadding, hidetarget->GetBottom());
 	minimizealtpos->SetSize(item_width, item_height);
 	minimizealtpos->SetChecked(config->iniReadBool(MainWindow::IniSection(),
 		MainWindow::IniKeyMinAltPos(), false));
@@ -89,6 +89,20 @@ void SettingsPanel::BuildUI() {
 			MainWindow::IniKeyMinAltPos(), enabled);
 	});
 	AddControl(minimizealtpos);
+
+	CheckBox* tickwithpcons = new CheckBox();
+	tickwithpcons->SetText("Tick with pcon status");
+	tickwithpcons->SetLocation(DefaultBorderPadding, minimizealtpos->GetBottom());
+	tickwithpcons->SetSize(item_width, item_height);
+	tickwithpcons->SetChecked(config->iniReadBool(MainWindow::IniSection(), 
+		MainWindow::IniKeyTickWithPcons(), false));
+	tickwithpcons->GetCheckedChangedEvent() += CheckedChangedEventHandler([tickwithpcons](Control*) {
+		bool enabled = tickwithpcons->GetChecked();
+		GWToolbox::instance()->main_window()->set_tick_with_pcons(enabled);
+		GWToolbox::instance()->config()->iniWriteBool(MainWindow::IniSection(),
+			MainWindow::IniKeyTickWithPcons(), enabled);
+	});
+	AddControl(tickwithpcons);
 
 
 	Button* folder = new Button();

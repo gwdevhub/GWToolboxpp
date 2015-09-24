@@ -33,6 +33,7 @@ settings_panel_(new SettingsPanel()) {
 	Config* config = GWToolbox::instance()->config();
 
 	use_minimized_alt_pos_ = config->iniReadBool(MainWindow::IniSection(), MainWindow::IniKeyMinAltPos(), false);
+	tick_with_pcons_ = config->iniReadBool(MainWindow::IniSection(), MainWindow::IniKeyTickWithPcons(), false);
 	int xlocation = config->iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyX(), 100);
 	int ylocation = config->iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyY(), 100);
 
@@ -185,6 +186,9 @@ void MainWindow::UpdatePconToggleButton(bool active) {
 	} else {
 		pcon_toggle_button_->SetForeColor(Color::Red());
 		pcon_toggle_button_->SetText("Disabled");
+	}
+	if (tick_with_pcons_) {
+		GWAPIMgr::GetInstance()->Agents->Tick(active);
 	}
 }
 

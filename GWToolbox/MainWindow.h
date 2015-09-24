@@ -61,6 +61,7 @@ private:
 	int current_panel_;
 	bool minimized_;
 	bool use_minimized_alt_pos_;
+	bool tick_with_pcons_;
 
 	Button* pcon_toggle_button_;
 	PconPanel* const pcon_panel_;
@@ -89,11 +90,14 @@ public:
 	inline static const wchar_t* IniKeyFreeze() { return L"freeze_widgets"; }
 	inline static const wchar_t* IniKeyHideTarget() { return L"hide_target"; }
 	inline static const wchar_t* IniKeyMinAltPos() { return L"minimize_alt_position"; }
+	inline static const wchar_t* IniKeyTickWithPcons() { return L"tick_with_pcons"; }
 
 	virtual void DrawSelf(Drawing::RenderContext &context) override;
 
 	void OpenClosePanel(int index);
 	inline void set_use_minimized_alt_pos(bool enable) { use_minimized_alt_pos_ = enable; }
+	inline void set_tick_with_pcons(bool enabled) { tick_with_pcons_ = enabled; }
+	
 	void UpdatePconToggleButton(bool active);
 	PconPanel* pcon_panel() { return pcon_panel_; }
 	HotkeyPanel* hotkey_panel() { return hotkey_panel_; }
