@@ -232,16 +232,20 @@ void GWToolbox::Destroy()
 {
 	LOG("Destroying GWToolbox++\n");
 
-	config_->save();
-	delete config_;
+	Sleep(100);
 
+	config_->save();
+	Sleep(100);
+	delete config_;
+	Sleep(100);
 	HWND hWnd = GWAPI::MemoryMgr::GetGWWindowHandle();
 	SetWindowLongPtr(hWnd, GWL_WNDPROC, (long)OldWndProc);
-	
+	Sleep(100);
 	GWAPI::GWAPIMgr::Destruct();
 #if DEBUG_BUILD
 	FreeConsole();
 #endif
+	Sleep(100);
 	FreeLibraryAndExitThread(m_dllmodule, EXIT_SUCCESS);
 }
 

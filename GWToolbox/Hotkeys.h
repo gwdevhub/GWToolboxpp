@@ -240,17 +240,15 @@ public:
 
 class HotkeyPingBuild : public TBHotkey {
 private:
-	UINT build_index_;
+	long index_;
 
+	inline void set_index(long index) { index_ = index; }
 public:
-	HotkeyPingBuild(OSHGui::Key key, OSHGui::Key modifier, bool active, 
-		wstring ini_section, long _idx) :
-		TBHotkey(key, modifier, active, ini_section), build_index_(_idx) {
-		// TODO (maybe or maybe just get rid of it)
-	}
+	HotkeyPingBuild(OSHGui::Key key, OSHGui::Key modifier, bool active,
+		wstring ini_section, long index);
 
 	static const wchar_t* IniSection() { return L"PingBuild"; }
-	static const wchar_t* IniKeyBuildIdx() { return L"BuildIndex"; }
+	static const wchar_t* IniKeyBuildIndex() { return L"BuildIndex"; }
 
 	void exec() override;
 	string GetDescription() override;

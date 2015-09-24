@@ -4,6 +4,7 @@
 #include "logger.h"
 #include "GWToolbox.h"
 #include "Config.h"
+#include "BuildPanel.h"
 
 using namespace GWAPI;
 using namespace OSHGui;
@@ -565,6 +566,37 @@ HotkeyDialog::HotkeyDialog(Key key, Key modifier, bool active, wstring ini_secti
 	AddControl(name_box);
 }
 
+HotkeyPingBuild::HotkeyPingBuild(Key key, Key modifier, bool active, wstring ini_section, long index)
+	: TBHotkey(key, modifier, active, ini_section), index_(index) {
+	
+	Label* label = new Label();
+	label->SetLocation(ITEM_X, LABEL_Y);
+	label->SetText("Ping...");
+	AddControl(label);
+
+	ComboBox* combo = new ComboBox();
+	combo->SetSize(WIDTH - label->GetRight() - HSPACE, LINE_HEIGHT);
+	combo->SetLocation(label->GetRight() + HSPACE, ITEM_Y);
+	for (int i = 0; i < BuildPanel::N_BUILDS; ++i) {
+		int index = i + 1;
+		wstring section = wstring(L"builds") + to_wstring(index);
+		wstring wname = GWToolbox::instance()->config()->iniRead(section.c_str(), L"buildname", L"");
+		if (wname.empty()) wname = wstring(L"<Build ") + to_wstring(index);
+		string name = string(wname.begin(), wname.end());
+		combo->AddItem(name);
+	}
+	combo->SetSelectedIndex(index);
+	combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
+		[this, combo, ini_section](Control*) {
+		long index = combo->GetSelectedIndex();
+		this->set_index(index);
+		GWToolbox::instance()->config()->iniWriteLong(ini_section.c_str(),
+			this->IniKeyBuildIndex(), index);
+		GWToolbox::instance()->main_window()->hotkey_panel()->UpdateDeleteCombo();
+	});
+	AddControl(combo);
+}
+
 void HotkeyUseItem::exec() {
 	if (!isExplorable()) return;
 	if (item_id_ <= 0) return;
@@ -700,7 +732,9 @@ void HotkeyDialog::exec() {
 void HotkeyPingBuild::exec() {
 	if (isLoading()) return;
 
-	// TODO (maybe or maybe just get rid of it)
+	if (index_ >= 0 && index_ < BuildPanel::N_BUILDS) {
+		GWToolbox::instance()->main_window()->build_panel()->SendTeamBuild(index_);
+	}
 }
 
 string HotkeySendChat::GetDescription() {
@@ -777,5 +811,5 @@ string HotkeyDialog::GetDescription() {
 }
 
 string HotkeyPingBuild::GetDescription() {
-	return string("Ping Build #") + to_string(build_index_);
+	return string("Ping Build #") + to_string(index_);
 }
