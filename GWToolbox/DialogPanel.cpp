@@ -101,8 +101,10 @@ void DialogPanel::BuildUI() {
 	});
 	textbox->GetKeyPressEvent() += KeyPressEventHandler([textbox](Control*,KeyPressEventArgs args){
 		if (args.KeyChar == VK_RETURN){
-			long id = std::stol(textbox->GetText(), 0, 0);
-			GWAPIMgr::GetInstance()->Agents->Dialog(id);
+			try {
+				long id = std::stol(textbox->GetText(), 0, 0);
+				GWAPIMgr::GetInstance()->Agents->Dialog(id);
+			} catch (...) {}
 		}
 	});
 	AddControl(textbox);
