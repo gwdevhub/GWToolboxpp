@@ -142,7 +142,7 @@ namespace GWAPI {
 		};
 
 		struct PartyMember{
-			DWORD PartyPosition;
+			DWORD loginnumber;
 			DWORD unk1;
 			DWORD isLoaded;
 		};
