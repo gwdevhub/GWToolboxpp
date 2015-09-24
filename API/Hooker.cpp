@@ -43,8 +43,9 @@ BYTE* GWAPI::Hook::Detour(BYTE* _source, BYTE* _detour, const DWORD _length)
 
 	VirtualProtect(m_source, m_length, dwOldProt, &dwOldProt);
 
+	m_retourfunc -= m_length;
 
-	return m_retourfunc - m_length;
+	return m_retourfunc;
 }
 
 DWORD GWAPI::Hook::CalculateDetourLength(BYTE* _source)
