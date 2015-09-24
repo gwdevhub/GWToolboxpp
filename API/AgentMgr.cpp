@@ -100,7 +100,7 @@ bool GWAPI::AgentMgr::GetIsPartyLoaded()
 	if (!party.IsValid()) return false;
 
 	for (DWORD i = 0; i < party.size(); i++){
-		if (party[i].isLoaded == 0) return false;
+		if ((party[i].isLoaded & 1) == 0) return false;
 	}
 
 	return true;
@@ -171,4 +171,25 @@ wchar_t* GWAPI::AgentMgr::GetPlayerNameByLoginNumber(DWORD loginnumber)
 DWORD GWAPI::AgentMgr::GetAgentIdByLoginNumber(DWORD loginnumber)
 {
 	return MemoryMgr::ReadPtrChain<DWORD>(MemoryMgr::GetContextPtr(), 4, 0x2C, 0x80C, 0x4C * loginnumber, 0);
+}
+
+bool GWAPI::AgentMgr::GetIsPartyTicked(DWORD partyposition /*= 0*/)
+{
+	GW::PartyMemberArray party = GetPartyMemberArray();
+	if (partyposition){
+		return (party[--partyposition].isLoaded & 2) != 0;
+	}
+	else{
+		for (size_t i = 0; i < party.size(); i++){
+			if ((party[partyposition].isLoaded & 2) == 0){
+				return false;
+			}
+		}
+		return true;
+	}
+}
+
+void GWAPI::AgentMgr::Tick(bool flag /*= true*/)
+{
+	parent->CtoS->SendPacket(0x8, 0xA9, flag);
 }

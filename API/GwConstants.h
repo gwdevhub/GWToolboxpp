@@ -48,6 +48,8 @@ namespace GwConstants {
 		Kit=29,Trophy,Scroll,Daggers,Minipet,Scythe,Spear,Costume=45
 	};
 
+	enum class Tick { NOT_READY, READY };
+
 	namespace Range {
 		const int Adjacent = 156;
 		const int Nearby = 240;
