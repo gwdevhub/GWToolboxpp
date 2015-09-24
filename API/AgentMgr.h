@@ -54,11 +54,20 @@ namespace GWAPI {
 		// Returns whether your party is loaded currently.
 		bool GetIsPartyLoaded();
 
-		// Returns if party member (1-based) is ticked in party. default will return whether all party members are ticked.
-		bool GetIsPartyTicked(DWORD partyposition = 0);
+		// Checks if the whole party is ticked
+		bool GetPartyTicked();
+
+		// Get party member ready status
+		bool GetTicked(DWORD loginNumber);
+
+		// Get player ready status
+		bool GetTicked();
 
 		// Set party ready status.
-		void Tick(bool flag = true);
+		void Tick(bool flag);
+
+		// Ticks
+		inline void Tick() { Tick(true); }
 
 		// Returns a vector of agents in the party. 
 		// YOU SHALL DELETE THIS VECTOR AFTER YOU'RE DONE.
