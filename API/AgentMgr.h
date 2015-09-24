@@ -58,7 +58,7 @@ namespace GWAPI {
 		bool GetPartyTicked();
 
 		// Get party member ready status
-		bool GetTicked(DWORD loginNumber);
+		bool GetTicked(DWORD index);
 
 		// Get player ready status
 		bool GetTicked();
