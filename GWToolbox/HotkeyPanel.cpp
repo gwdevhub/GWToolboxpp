@@ -336,7 +336,7 @@ void HotkeyPanel::LoadIni() {
 				tb_hk = new HotkeyDialog(key, modifier, active, section, dialogID, dialog_name);
 
 			} else if (type.compare(HotkeyPingBuild::IniSection()) == 0) {
-				UINT index = (UINT)config->iniReadLong(section.c_str(), HotkeyPingBuild::IniKeyBuildIdx(), 0);
+				UINT index = (UINT)config->iniReadLong(section.c_str(), HotkeyPingBuild::IniKeyBuildIndex(), 0);
 				tb_hk = new HotkeyPingBuild(key, modifier, active, section, index);
 
 			} else {
