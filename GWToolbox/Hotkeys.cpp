@@ -273,14 +273,14 @@ GwConstants::SkillID HotkeyDropUseBuff::IndexToSkillID(int index) {
 	}
 }
 
-HotkeyToggle::HotkeyToggle(Key key, Key modifier, bool active, wstring ini_section, int toggle_id)
+HotkeyToggle::HotkeyToggle(Key key, Key modifier, bool active, wstring ini_section, long toggle_id)
 	: TBHotkey(key, modifier, active, ini_section) {
 
 	target_ = static_cast<HotkeyToggle::Toggle>(toggle_id);
 
 	Label* label = new Label();
 	label->SetLocation(ITEM_X, LABEL_Y);
-	label->SetText("Toggle function");
+	label->SetText("Toggle...");
 	AddControl(label);
 
 	ComboBox* combo = new ComboBox();
@@ -289,7 +289,6 @@ HotkeyToggle::HotkeyToggle(Key key, Key modifier, bool active, wstring ini_secti
 	combo->AddItem("Clicker");
 	combo->AddItem("Pcons");
 	combo->AddItem("Coin drop");
-	combo->AddItem("Rupt bot");
 	combo->SetSelectedIndex(toggle_id);
 	combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
 		[this, combo, ini_section](Control*) {
@@ -297,7 +296,36 @@ HotkeyToggle::HotkeyToggle(Key key, Key modifier, bool active, wstring ini_secti
 		Toggle target = static_cast<HotkeyToggle::Toggle>(index);
 		this->set_target(target);
 		GWToolbox::instance()->config()->iniWriteLong(ini_section.c_str(), 
-			this->IniKeyToggleID(), (long)target);
+			this->IniKeyToggleID(), index);
+		GWToolbox::instance()->main_window()->hotkey_panel()->UpdateDeleteCombo();
+	});
+	AddControl(combo);
+}
+
+HotkeyAction::HotkeyAction(Key key, Key modifier, bool active, wstring ini_section, long action_id)
+	: TBHotkey(key, modifier, active, ini_section) {
+
+	action_ = static_cast<HotkeyAction::Action>(action_id);
+
+	Label* label = new Label();
+	label->SetLocation(ITEM_X, LABEL_Y);
+	label->SetText("Execute...");
+	AddControl(label);
+
+	ComboBox* combo = new ComboBox();
+	combo->SetSize(WIDTH - label->GetRight() - HSPACE, LINE_HEIGHT);
+	combo->SetLocation(label->GetRight() + HSPACE, ITEM_Y);
+	combo->AddItem("Open Xunlai Chest");
+	combo->AddItem("Open Locked Chest");
+	combo->AddItem("Drop Gold Coin");
+	combo->SetSelectedIndex(action_id);
+	combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
+		[this, combo, ini_section](Control*) {
+		int index = combo->GetSelectedIndex();
+		Action action = static_cast<HotkeyAction::Action>(index);
+		this->set_action(action);
+		GWToolbox::instance()->config()->iniWriteLong(ini_section.c_str(),
+			this->IniKeyActionID(), index);
 		GWToolbox::instance()->main_window()->hotkey_panel()->UpdateDeleteCombo();
 	});
 	AddControl(combo);
@@ -537,23 +565,6 @@ HotkeyDialog::HotkeyDialog(Key key, Key modifier, bool active, wstring ini_secti
 	AddControl(name_box);
 }
 
-HotkeyOpenXunlai::HotkeyOpenXunlai(OSHGui::Key key, OSHGui::Key modifier, bool active,
-	wstring ini_section) :
-	TBHotkey(key, modifier, active, ini_section){
-	Label* label = new Label();
-	label->SetLocation(ITEM_X, LABEL_Y);
-	label->SetText("Open Xunlai");
-	AddControl(label);
-}
-
-HotkeyOpenLockedChest::HotkeyOpenLockedChest(OSHGui::Key key, OSHGui::Key modifier, bool active,
-	wstring ini_section) : TBHotkey(key, modifier, active, ini_section){
-	Label* label = new Label();
-	label->SetLocation(ITEM_X, LABEL_Y);
-	label->SetText("Open Locked Chest");
-	AddControl(label);
-}
-
 void HotkeyUseItem::exec() {
 	if (!isExplorable()) return;
 	if (item_id_ <= 0) return;
@@ -609,11 +620,28 @@ void HotkeyToggle::exec() {
 		GWAPIMgr::GetInstance()->Chat->WriteChat(
 			active ? L"Coin dropper is active" : L"Coin dropper is disabled");
 		break;
-	case HotkeyToggle::RuptBot:
-		active = tb->main_window()->hotkey_panel()->ToggleRupt();
-		GWAPIMgr::GetInstance()->Chat->WriteChat(L"Rupt bot not implemented");
-		//GWAPIMgr::GetInstance()->Chat->WriteChat(
-			//active ? L"Rupt bot is active" : L"Rupt bot is disabled");
+	}
+}
+
+void HotkeyAction::exec() {
+	GWAPIMgr* api = GWAPIMgr::GetInstance();
+
+	switch (action_) {
+	case HotkeyAction::OpenXunlaiChest:
+		if (api->Map->GetInstanceType() == GwConstants::InstanceType::Outpost) {
+			api->Items->OpenXunlaiWindow();
+		}
+		break;
+	case HotkeyAction::OpenLockedChest: {
+		GW::Agent* target = api->Agents->GetTarget();
+		if (target && target->Type == 0x200) {
+			api->Agents->GoSignpost(target);
+			api->Items->OpenLockedChest();
+		}
+		break;
+	}
+	case HotkeyAction::DropGoldCoin:
+		api->Items->DropGold(1);
 		break;
 	}
 }
@@ -675,26 +703,6 @@ void HotkeyPingBuild::exec() {
 	// TODO (maybe or maybe just get rid of it)
 }
 
-void HotkeyOpenXunlai::exec()
-{
-	GWAPIMgr* api = GWAPIMgr::GetInstance();
-
-	if (api->Map->GetInstanceType() == GwConstants::InstanceType::Outpost)
-		api->Items->OpenXunlaiWindow();
-}
-
-void HotkeyOpenLockedChest::exec()
-{
-	GWAPIMgr* api = GWAPIMgr::GetInstance();
-	GW::Agent* target = api->Agents->GetTarget();
-
-	if (target && target->Type == 0x200)
-	{
-		api->Agents->GoSignpost(target);
-		api->Items->OpenLockedChest();
-	}
-}
-
 string HotkeySendChat::GetDescription() {
 	return string("Send ") + static_cast<char>(channel_) + string(msg_.begin(), msg_.end());
 }
@@ -726,10 +734,21 @@ string HotkeyToggle::GetDescription() {
 		return string("Toggle Pcons");
 	case HotkeyToggle::CoinDrop:
 		return string("Toggle Coin Drop");
-	case HotkeyToggle::RuptBot:
-		return string("Toggle Rupt Bot");
 	default:
-		return string("Toggle Function");
+		return string("error :(");
+	}
+}
+
+string HotkeyAction::GetDescription() {
+	switch (action_) {
+	case HotkeyAction::OpenXunlaiChest:
+		return string("Open Xunlai Chest");
+	case HotkeyAction::OpenLockedChest:
+		return string("Open Locked Chest");
+	case HotkeyAction::DropGoldCoin:
+		return string("Drop Gold Coin");
+	default:
+		return string("error :(");
 	}
 }
 
@@ -759,14 +778,4 @@ string HotkeyDialog::GetDescription() {
 
 string HotkeyPingBuild::GetDescription() {
 	return string("Ping Build #") + to_string(build_index_);
-}
-
-
-
-string HotkeyOpenXunlai::GetDescription() {
-	return string("Open Xunlai");
-}
-
-string HotkeyOpenLockedChest::GetDescription() {
-	return string("Open Locked Chest");
 }

@@ -34,16 +34,16 @@ void HotkeyPanel::BuildUI() {
 	SetSize(TBHotkey::WIDTH + 2 * DefaultBorderPadding + scrollbar->GetWidth(), height);
 	
 	ComboBox* create_combo = new ComboBox();
-	create_combo->SetText("Create Hotkey");
-	create_combo->AddItem("Send Chat");
-	create_combo->AddItem("Use Item");
-	create_combo->AddItem("Drop or Use Buff");
-	create_combo->AddItem("Function Toggle");
-	create_combo->AddItem("Target");
-	create_combo->AddItem("Move to");
-	create_combo->AddItem("Dialog");
-	create_combo->AddItem("Open Xunlai");
-	create_combo->AddItem("Open Locked Chest");
+	create_combo->SetText("Create Hotkey"); 
+	create_combo->AddItem("Send Chat");			// 0
+	create_combo->AddItem("Use Item");			// 1
+	create_combo->AddItem("Drop or Use Buff");	// 2
+	create_combo->AddItem("Toggle...");			// 3
+	create_combo->AddItem("Execute...");		// 4
+	create_combo->AddItem("Target");			// 5
+	create_combo->AddItem("Move to");			// 6
+	create_combo->AddItem("Dialog");			// 7
+	create_combo->AddItem("Ping Build");		// 8
 	create_combo->SetMaxShowItems(create_combo->GetItemsCount());
 	create_combo->SetLocation(DefaultBorderPadding, DefaultBorderPadding);
 	create_combo->SetSize(TBHotkey::WIDTH / 2 - TBHotkey::HSPACE / 2, TBHotkey::LINE_HEIGHT);
@@ -71,24 +71,24 @@ void HotkeyPanel::BuildUI() {
 			this->AddHotkey(new HotkeyToggle(Key::None, Key::None, true, ini, 1));
 			break;
 		case 4:
+			ini += HotkeyAction::IniSection();
+			this->AddHotkey(new HotkeyAction(Key::None, Key::None, true, ini, 0));
+			break;
+		case 5:
 			ini += HotkeyTarget::IniSection();
 			this->AddHotkey(new HotkeyTarget(Key::None, Key::None, true, ini, 0, L""));
 			break;
-		case 5:
+		case 6:
 			ini += HotkeyMove::IniSection();
 			this->AddHotkey(new HotkeyMove(Key::None, Key::None, true, ini, 0.0, 0.0, L""));
 			break;
-		case 6:
+		case 7:
 			ini += HotkeyDialog::IniSection();
 			this->AddHotkey(new HotkeyDialog(Key::None, Key::None, true, ini, 0, L""));
 			break;
-		case 7:
-			ini += HotkeyOpenXunlai::IniSection();
-			this->AddHotkey(new HotkeyOpenXunlai(Key::None, Key::None, true, ini));
-			break;
 		case 8:
-			ini += HotkeyOpenLockedChest::IniSection();
-			this->AddHotkey(new HotkeyOpenLockedChest(Key::None, Key::None, true, ini));
+			ini += HotkeyPingBuild::IniSection();
+			this->AddHotkey(new HotkeyPingBuild(Key::None, Key::None, true, ini, 0));
 			break;
 		default:
 			break;
@@ -312,8 +312,12 @@ void HotkeyPanel::LoadIni() {
 				tb_hk = new HotkeyDropUseBuff(key, modifier, active, section, id);
 
 			} else if (type.compare(HotkeyToggle::IniSection()) == 0) {
-				int toggleID = (int)config->iniReadLong(section.c_str(), HotkeyToggle::IniKeyToggleID(), 0);
+				long toggleID = config->iniReadLong(section.c_str(), HotkeyToggle::IniKeyToggleID(), 0);
 				tb_hk = new HotkeyToggle(key, modifier, active, section, toggleID);
+
+			} else if (type.compare(HotkeyAction::IniSection()) == 0) {
+				long actionID = config->iniReadLong(section.c_str(), HotkeyAction::IniKeyActionID(), 0);
+				tb_hk = new HotkeyAction(key, modifier, active, section, actionID);
 
 			} else if (type.compare(HotkeyTarget::IniSection()) == 0) {
 				UINT targetID = (UINT)config->iniReadLong(section.c_str(), HotkeyTarget::IniKeyTargetID(), 0);
@@ -335,13 +339,7 @@ void HotkeyPanel::LoadIni() {
 				UINT index = (UINT)config->iniReadLong(section.c_str(), HotkeyPingBuild::IniKeyBuildIdx(), 0);
 				tb_hk = new HotkeyPingBuild(key, modifier, active, section, index);
 
-			}else if (type.compare(HotkeyOpenXunlai::IniSection()) == 0) {
-				tb_hk = new HotkeyOpenXunlai(key, modifier, active, section);
-			}
-			else if (type.compare(HotkeyOpenLockedChest::IniSection()) == 0) {
-				tb_hk = new HotkeyOpenLockedChest(key, modifier, active, section);
-			}
-			else {
+			} else {
 				LOG("WARNING hotkey detected, but could not match any type!\n");
 			}
 

@@ -79,7 +79,7 @@ public:
 	inline static const wchar_t* IniKeyMsg() { return L"msg"; }
 	inline static const wchar_t* IniKeyChannel() { return L"channel"; }
 	
-	void exec();
+	void exec() override;
 	string GetDescription() override;
 };
 
@@ -101,7 +101,7 @@ public:
 	static const wchar_t* IniKeyItemID() { return L"ItemID"; }
 	static const wchar_t* IniKeyItemName() { return L"ItemName"; }
 
-	void exec();
+	void exec() override;
 	string GetDescription() override;
 };
 
@@ -120,7 +120,7 @@ public:
 
 	static const wchar_t* IniSection() { return L"DropUseBuff"; }
 	static const wchar_t* IniKeySkillID() { return L"SkillID"; }
-	void exec();
+	void exec() override;
 	string GetDescription() override;
 };
 
@@ -130,8 +130,7 @@ public:
 	enum Toggle {
 		Clicker,
 		Pcons,
-		CoinDrop,
-		RuptBot
+		CoinDrop
 	};
 
 private:
@@ -141,12 +140,34 @@ private:
 
 public:
 	HotkeyToggle(OSHGui::Key key, OSHGui::Key modifier, bool active, 
-		wstring ini_section, int toggle_id);
+		wstring ini_section, long toggle_id);
 
 	static const wchar_t* IniSection() { return L"Toggle"; }
 	static const wchar_t* IniKeyToggleID() { return L"ToggleID"; }
 
-	void exec();
+	void exec() override;
+	string GetDescription() override;
+};
+
+class HotkeyAction : public TBHotkey {
+public:
+	enum Action {
+		OpenXunlaiChest,
+		OpenLockedChest,
+		DropGoldCoin
+	};
+private:
+	Action action_;
+	inline void set_action(Action action) { action_ = action; }
+
+public:
+	HotkeyAction(OSHGui::Key key, OSHGui::Key modifier, bool active,
+		wstring ini_section, long action_id);
+
+	static const wchar_t* IniSection() { return L"Action"; }
+	static const wchar_t* IniKeyActionID() { return L"ActionID"; }
+
+	void exec() override;
 	string GetDescription() override;
 };
 
@@ -168,7 +189,7 @@ public:
 	static const wchar_t* IniKeyTargetID() { return L"TargetID"; }
 	static const wchar_t* IniKeyTargetName() { return L"TargetName"; }
 
-	void exec();
+	void exec() override;
 	string GetDescription() override;
 };
 
@@ -193,7 +214,7 @@ public:
 	static const wchar_t* IniKeyY() { return L"y"; }
 	static const wchar_t* IniKeyName() { return L"name"; }
 
-	void exec();
+	void exec() override;
 	string GetDescription() override;
 };
 
@@ -213,7 +234,7 @@ public:
 	static const wchar_t* IniKeyDialogID() { return L"DialogID"; }
 	static const wchar_t* IniKeyDialogName() { return L"DialogName"; }
 	
-	void exec();
+	void exec() override;
 	string GetDescription() override;
 };
 
@@ -223,7 +244,7 @@ private:
 
 public:
 	HotkeyPingBuild(OSHGui::Key key, OSHGui::Key modifier, bool active, 
-		wstring ini_section, UINT _idx) :
+		wstring ini_section, long _idx) :
 		TBHotkey(key, modifier, active, ini_section), build_index_(_idx) {
 		// TODO (maybe or maybe just get rid of it)
 	}
@@ -231,30 +252,6 @@ public:
 	static const wchar_t* IniSection() { return L"PingBuild"; }
 	static const wchar_t* IniKeyBuildIdx() { return L"BuildIndex"; }
 
-	void exec();
-	string GetDescription() override;
-};
-
-class HotkeyOpenXunlai : public TBHotkey {
-public:
-
-	HotkeyOpenXunlai(OSHGui::Key key, OSHGui::Key modifier, bool active,
-		wstring ini_section);
-
-	static const wchar_t* IniSection() { return L"OpenXunlai"; }
-
-	void exec();
-	string GetDescription() override;
-};
-
-class HotkeyOpenLockedChest : public TBHotkey {
-public:
-
-	HotkeyOpenLockedChest(OSHGui::Key key, OSHGui::Key modifier, bool active,
-		wstring ini_section);
-
-	static const wchar_t* IniSection() { return L"OpenLockedChest"; }
-
-	void exec();
+	void exec() override;
 	string GetDescription() override;
 };
