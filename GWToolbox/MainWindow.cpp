@@ -32,7 +32,7 @@ settings_panel_(new SettingsPanel()) {
 
 	Config* config = GWToolbox::instance()->config();
 
-	useMinimizedAltPos_ = config->iniReadBool(MainWindow::IniSection(), MainWindow::IniKeyMinAltPos(), false);
+	use_minimized_alt_pos_ = config->iniReadBool(MainWindow::IniSection(), MainWindow::IniKeyMinAltPos(), false);
 	int xlocation = config->iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyX(), 100);
 	int ylocation = config->iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyY(), 100);
 
@@ -48,10 +48,11 @@ settings_panel_(new SettingsPanel()) {
 	title->SetSize(64, TITLE_HEIGHT);
 	title->SetBackColor(Drawing::Color::Empty());
 	title->GetMouseUpEvent() += MouseUpEventHandler([this](Control*, MouseEventArgs) {
-		if (minimized_)
+		if (minimized_ && use_minimized_alt_pos_) {
 			SaveMinimizedLocation();
-		else
+		} else {
 			SaveLocation();
+		}
 	});
 	AddControl(title);
 
@@ -154,26 +155,25 @@ void MainWindow::ToggleMinimize() {
 	Config* config = GWToolbox::instance()->config();
 
 	if ( minimized_) {
-		if (current_panel_ >= 0) openClosePanel(current_panel_);
+		if (current_panel_ >= 0) OpenClosePanel(current_panel_);
 		SetSize(Drawing::SizeI(WIDTH, TITLE_HEIGHT));
-		if (useMinimizedAltPos_){
+		if (use_minimized_alt_pos_) {
 			int xlocation = config->iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltX(), 100);
 			int ylocation = config->iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltY(), 100);
 
-			SetLocation(Drawing::PointI(xlocation, ylocation));
+			SetLocation(xlocation, ylocation);
 		}
 		main_panel_->SetVisible(false);
 	} else {
 		
 		SetSize(Drawing::SizeI(WIDTH, HEIGHT));
 
-		if (useMinimizedAltPos_){
+		if (use_minimized_alt_pos_) {
 			int xlocation = config->iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyX(), 100);
 			int ylocation = config->iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyY(), 100);
 
-			SetLocation(Drawing::PointI(xlocation, ylocation));
+			SetLocation(xlocation, ylocation);
 		}
-
 		main_panel_->SetVisible(true);
 	}
 }
@@ -196,7 +196,7 @@ void MainWindow::CreateTabButton(const char* s, int& button_idx,
 	b->SetLocation(DefaultBorderPadding, button_idx * TAB_HEIGHT);
 	const int index = panel_idx;
 	b->GetClickEvent() += ClickEventHandler([self, index](Control*) { 
-		self->openClosePanel(index); 
+		self->OpenClosePanel(index); 
 	});
 	tab_buttons.push_back(b);
 	main_panel_->AddControl(b);
@@ -214,7 +214,7 @@ void MainWindow::DrawSelf(RenderContext &context) {
 	}
 }
 
-void MainWindow::openClosePanel(int index) {
+void MainWindow::OpenClosePanel(int index) {
 	if (current_panel_ >= 0) {
 		panels[current_panel_]->SetVisible(false);
 		panels[current_panel_]->SetEnabled(false);

@@ -60,7 +60,7 @@ private:
 	std::vector<TabButton*> tab_buttons;
 	int current_panel_;
 	bool minimized_;
-	bool useMinimizedAltPos_;
+	bool use_minimized_alt_pos_;
 
 	Button* pcon_toggle_button_;
 	PconPanel* const pcon_panel_;
@@ -92,8 +92,8 @@ public:
 
 	virtual void DrawSelf(Drawing::RenderContext &context) override;
 
-	void openClosePanel(int index);
-	inline void setUseMinimizedAltPos(bool enable){ useMinimizedAltPos_ = enable;}
+	void OpenClosePanel(int index);
+	inline void set_use_minimized_alt_pos(bool enable) { use_minimized_alt_pos_ = enable; }
 	void UpdatePconToggleButton(bool active);
 	PconPanel* pcon_panel() { return pcon_panel_; }
 	HotkeyPanel* hotkey_panel() { return hotkey_panel_; }

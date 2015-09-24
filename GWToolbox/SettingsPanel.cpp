@@ -84,7 +84,7 @@ void SettingsPanel::BuildUI() {
 		MainWindow::IniKeyMinAltPos(), false));
 	minimizealtpos->GetCheckedChangedEvent() += CheckedChangedEventHandler([minimizealtpos](Control*) {
 		bool enabled = minimizealtpos->GetChecked();
-		GWToolbox::instance()->main_window()->setUseMinimizedAltPos(enabled);
+		GWToolbox::instance()->main_window()->set_use_minimized_alt_pos(enabled);
 		GWToolbox::instance()->config()->iniWriteBool(MainWindow::IniSection(),
 			MainWindow::IniKeyMinAltPos(), enabled);
 	});

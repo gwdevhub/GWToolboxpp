@@ -1,7 +1,7 @@
 #include "API\APIMain.h"
 #include "GWToolbox\GWToolbox.h"
 
-#include <ctime>
+#include <time.h>
 #include <fstream>
 
 #define DEBUG 1
@@ -11,12 +11,19 @@ LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo)
 	PEXCEPTION_RECORD records = ExceptionInfo->ExceptionRecord;
 	PCONTEXT cpudbg = ExceptionInfo->ContextRecord;
 	if (records->ExceptionFlags != 0){
-		string filename;
-		std::time_t time = std::time(nullptr);
-		filename += GuiUtils::getSubPathA(std::asctime(std::localtime(&time)), "crash");
-		filename += ".txt";
-		ofstream logfile(filename.c_str());
 
+		time_t rawtime;
+		time(&rawtime);
+
+		struct tm timeinfo;
+		localtime_s(&timeinfo, &rawtime);
+
+		char buffer[64];
+		asctime_s(buffer, sizeof(buffer), &timeinfo);
+
+		string filename = string("Crash-") + string(buffer) + string(".txt");
+		string path = GuiUtils::getPathA(filename.c_str());
+		ofstream logfile(path.c_str());
 
 
 		logfile << hex;
