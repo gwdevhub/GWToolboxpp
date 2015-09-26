@@ -10,26 +10,26 @@ namespace GWAPI{
 		template <typename T>
 		class gw_array {
 		protected:
-			T* m_array;
-			DWORD m_allocatedsize;
-			DWORD m_currentsize;
-			DWORD m_unk1;
+			T* array_;
+			DWORD allocated_size_;
+			DWORD current_size_;
+			DWORD unknown_;
 		public:
-			T GetIndex(DWORD index)
+			T index(DWORD _index)
 			{
-				if (index > m_currentsize || index < 0) throw 1;
-				return m_array[index];
+				if (_index > current_size_ || _index < 0) throw 1;
+				return array_[_index];
 			}
 
-			T operator[](DWORD index)
+			T operator[](DWORD _index)
 			{
-				return GetIndex(index);
+				return index(_index);
 			}
-			bool IsValid(){
-				return m_array != NULL;
+			bool valid(){
+				return array_ != NULL;
 			}
 
-			DWORD size() const { return m_currentsize; }
+			DWORD size() const { return current_size_; }
 		};
 
 		// Agent shit
@@ -100,16 +100,16 @@ namespace GWAPI{
 
 		// Basics
 		static bool Scan();
-		template <typename T> static T ReadPtrChain(DWORD pBase,DWORD AmountofOffsets,...)
+		template <typename T> static T ReadPtrChain(DWORD _base,DWORD _amount_of_offsets,...)
 		{
 			va_list vl;
 
-			va_start(vl, AmountofOffsets);
-			while (AmountofOffsets--)
+			va_start(vl, _amount_of_offsets);
+			while (_amount_of_offsets--)
 			{
-				pBase = (*(DWORD*)pBase);
-					if (pBase){
-						pBase += va_arg(vl, DWORD);
+				_base = (*(DWORD*)_base);
+					if (_base){
+						_base += va_arg(vl, DWORD);
 					}
 					else{
 						return NULL;
@@ -117,7 +117,7 @@ namespace GWAPI{
 			}
 			va_end(vl);
 
-			return (T)pBase;
+			return (T)_base;
 		}
 
 		// Memory Reads.

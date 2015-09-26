@@ -4,19 +4,19 @@
 
 void __stdcall GWAPI::GameThreadMgr::CallFunctions()
 {
-	std::unique_lock<std::mutex> VecLock(m_CallVecMutex);
-	if (m_Calls.empty()) return;
+	std::unique_lock<std::mutex> VecLock(call_vector_mutex_);
+	if (calls_.empty()) return;
 
-	for (const auto& Call : m_Calls)
+	for (const auto& Call : calls_)
 	{
 		Call();
 	}
 
-	m_Calls.clear();
+	calls_.clear();
 
-	if (m_CallsPermanent.empty()) return;
+	if (calls_permanent_.empty()) return;
 
-	for (const auto& Call : m_CallsPermanent)
+	for (const auto& Call : calls_permanent_)
 	{
 		Call();
 	}
@@ -28,9 +28,9 @@ void __declspec(naked) GWAPI::GameThreadMgr::gameLoopHook()
 	_asm PUSHAD
 
 	if (inst == NULL)
-		inst = GWAPIMgr::GetInstance();
+		inst = GWAPIMgr::instance();
 	if (inst != NULL)
-		inst->GameThread->CallFunctions();
+		inst->Gamethread()->CallFunctions();
 
 	_asm POPAD
 	_asm JMP MemoryMgr::GameLoopReturn
@@ -54,9 +54,9 @@ void GWAPI::GameThreadMgr::ToggleRenderHook()
 	static BYTE restorebuf[5];
 	static DWORD dwProt;
 
-	m_RenderingState = !m_RenderingState;
+	render_state_ = !render_state_;
 
-	if (m_RenderingState)
+	if (render_state_)
 	{
 		memcpy(restorebuf, MemoryMgr::RenderLoopLocation, 5);
 
@@ -72,13 +72,17 @@ void GWAPI::GameThreadMgr::ToggleRenderHook()
 	}
 }
 
-GWAPI::GameThreadMgr::GameThreadMgr(GWAPI::GWAPIMgr* obj) : parent(obj), m_RenderingState(false)
+GWAPI::GameThreadMgr::GameThreadMgr(GWAPI::GWAPIMgr* obj) : parent_(obj), render_state_(false)
 {
-	MemoryMgr::GameLoopReturn = (BYTE*)hkGameThread.Detour(MemoryMgr::GameLoopLocation, (BYTE*)gameLoopHook, 5);
+	MemoryMgr::GameLoopReturn = (BYTE*)hk_game_thread_.Detour(MemoryMgr::GameLoopLocation, (BYTE*)gameLoopHook, 5);
 }
 
 GWAPI::GameThreadMgr::~GameThreadMgr()
 {
-	if (m_RenderingState) ToggleRenderHook();
-	hkGameThread.Retour();
+}
+
+void GWAPI::GameThreadMgr::RestoreHooks()
+{
+	if (render_state_) ToggleRenderHook();
+	hk_game_thread_.Retour();
 }

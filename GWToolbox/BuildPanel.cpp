@@ -132,7 +132,7 @@ void BuildPanel::MainRoutine() {
 	if (!queue.empty() && TBTimer::diff(send_timer) > 600) {
 		send_timer = TBTimer::init();
 
-		GWAPIMgr::GetInstance()->Chat->SendChat(queue.front().c_str(), L'#');
+		GWAPIMgr::instance()->Chat()->SendChat(queue.front().c_str(), L'#');
 		queue.pop();
 	}
 }

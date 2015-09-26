@@ -50,7 +50,7 @@ void DialogPanel::BuildUI() {
 		take->SetText("Take");
 		take->GetClickEvent() += ClickEventHandler([this, fav_combo](Control*) {
 			int index = fav_combo->GetSelectedIndex();
-			GWAPIMgr::GetInstance()->Agents->Dialog(QuestAcceptDialog(IndexToQuestID(index)));
+			GWAPIMgr::instance()->Agents()->Dialog(QuestAcceptDialog(IndexToQuestID(index)));
 		});
 		AddControl(take);
 
@@ -60,7 +60,7 @@ void DialogPanel::BuildUI() {
 		complete->SetText("Complete");
 		complete->GetClickEvent() += ClickEventHandler([this, fav_combo](Control*) {
 			int index = fav_combo->GetSelectedIndex();
-			GWAPIMgr::GetInstance()->Agents->Dialog(QuestRewardDialog(IndexToQuestID(index)));
+			GWAPIMgr::instance()->Agents()->Dialog(QuestRewardDialog(IndexToQuestID(index)));
 		});
 		AddControl(complete);
 	}
@@ -81,7 +81,7 @@ void DialogPanel::BuildUI() {
 	combo_send->GetClickEvent() += ClickEventHandler([this, combo](Control*) {
 		int index = combo->GetSelectedIndex();
 		int id = IndexToDialogID(index);
-		GWAPIMgr::GetInstance()->Agents->Dialog(id);
+		GWAPIMgr::instance()->Agents()->Dialog(id);
 	});
 	AddControl(combo_send);
 
@@ -103,7 +103,7 @@ void DialogPanel::BuildUI() {
 		if (args.KeyChar == VK_RETURN){
 			try {
 				long id = std::stol(textbox->GetText(), 0, 0);
-				GWAPIMgr::GetInstance()->Agents->Dialog(id);
+				GWAPIMgr::instance()->Agents()->Dialog(id);
 			} catch (...) {}
 		}
 	});
@@ -116,7 +116,7 @@ void DialogPanel::BuildUI() {
 	custom_send->GetClickEvent() += ClickEventHandler([textbox](Control*) {
 		try {
 			long id = std::stol(textbox->GetText(), 0, 0);
-			GWAPIMgr::GetInstance()->Agents->Dialog(id);
+			GWAPIMgr::instance()->Agents()->Dialog(id);
 		} catch (...) { }
 	});
 	AddControl(custom_send);
@@ -134,7 +134,7 @@ void DialogPanel::CreateButton(int grid_x, int grid_y, int hor_amount,
 	button->SetSize(width, BUTTON_HEIGHT);
 	button->SetLocation(x, y);
 	button->GetClickEvent() += ClickEventHandler([dialog](Control*) {
-		GWAPIMgr::GetInstance()->Agents->Dialog(dialog);
+		GWAPIMgr::instance()->Agents()->Dialog(dialog);
 	});
 	AddControl(button);
 }

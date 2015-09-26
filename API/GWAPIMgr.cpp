@@ -20,29 +20,29 @@
 
 #include "ChatMgr.h"
 
-GWAPI::GWAPIMgr* GWAPI::GWAPIMgr::instance = NULL;
+GWAPI::GWAPIMgr* GWAPI::GWAPIMgr::instance_ = NULL;
 
-GWAPI::GWAPIMgr* GWAPI::GWAPIMgr::GetInstance()
+GWAPI::GWAPIMgr* GWAPI::GWAPIMgr::instance()
 {
-	return instance ? instance : NULL;
+	return instance_ ? instance_ : NULL;
 }
 
 GWAPI::GWAPIMgr::GWAPIMgr()
 {
 	if (MemoryMgr::Scan()){
-		GameThread = new GameThreadMgr(this);
-		CtoS = new CtoSMgr(this);
-		Agents = new AgentMgr(this);
-		Items = new ItemMgr(this);
+		gamethread_ = new GameThreadMgr(this);
+		ctos_ = new CtoSMgr(this);
+		agents_ = new AgentMgr(this);
+		items_ = new ItemMgr(this);
 #ifdef GWAPI_USEDIRECTX
-		DirectX = new DirectXMgr(this);
+		directx_ = new DirectXMgr(this);
 #endif
-		Skillbar = new SkillbarMgr(this);
-		Effects = new EffectMgr(this);
-		Map = new MapMgr(this);
-		Chat = new ChatMgr(this);
-		Merchant = new MerchantMgr(this);
-		Guild = new GuildMgr(this);
+		skillbar_ = new SkillbarMgr(this);
+		effects_ = new EffectMgr(this);
+		map_ = new MapMgr(this);
+		chat_ = new ChatMgr(this);
+		merchant_ = new MerchantMgr(this);
+		guild_ = new GuildMgr(this);
 	}
 	else{
 		MessageBoxA(0, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0);
@@ -52,33 +52,41 @@ GWAPI::GWAPIMgr::GWAPIMgr()
 GWAPI::GWAPIMgr::~GWAPIMgr()
 {
 #ifdef GWAPI_USEDIRECTX
-	if (DirectX) delete DirectX;
+	directx_->RestoreHooks();
 #endif
-	GameThread->m_Calls.clear();
-	if (GameThread) delete GameThread;
-	if (Map) delete Map;
-	if (Guild) delete Guild;
+	gamethread_->RestoreHooks();
+	merchant_->RestoreHooks();
+	agents_->RestoreHooks();
+	effects_->RestoreHooks();
 
-	if (Skillbar) delete Skillbar;
+	Gamethread()->calls_.clear();
+#ifdef GWAPI_USEDIRECTX
+	if (directx_) delete directx_;
+#endif
+	if (gamethread_) delete gamethread_;
+	if (map_) delete map_;
+	if (guild_) delete guild_;
 
-	if (Items) delete Items;
-	if (Agents) delete Agents;
+	if (skillbar_) delete skillbar_;
+
+	if (items_) delete items_;
+	if (agents_) delete agents_;
 	
-	if (CtoS) delete CtoS;
+	if (ctos_) delete ctos_;
 
-	if (Effects) delete Effects;
-	if (Merchant) delete Merchant;
+	if (effects_) delete effects_;
+	if (merchant_) delete merchant_;
 }
 
 void GWAPI::GWAPIMgr::Initialize()
 {
-	if (!instance) instance = new GWAPIMgr();
+	if (!instance_) instance_ = new GWAPIMgr();
 }
 
 void GWAPI::GWAPIMgr::Destruct()
 {
-	if (instance){
-		delete instance;
+	if (instance_){
+		delete instance_;
 	}
 }
 

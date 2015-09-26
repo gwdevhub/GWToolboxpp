@@ -20,20 +20,21 @@ namespace GWAPI {
 		};
 	private:
 		friend class GWAPIMgr;
-		GWAPIMgr* parent;
+		GWAPIMgr* const parent_;
 
-		static BYTE* TraderBuyClassHookRet;
-		Hook hkTraderBuyClass;
+		static BYTE* trader_buy_class_hook_return_;
+		Hook hk_trader_buy_class_;
 
-		static BYTE* TraderSellClassHookRet;
-		Hook hkTraderSellClass;
+		static BYTE* trader_sell_class_hook_return_;
+		Hook hk_trader_sell_class_;
 
+		void RestoreHooks();
 
 		MerchantMgr(GWAPIMgr* obj);
 		~MerchantMgr();
 
-		static BYTE* TraderBuyClass;
-		static BYTE* TraderSellClass;
+		static BYTE* trader_buy_class_;
+		static BYTE* trader_sell_class_;
 
 		static void TraderBuyClassHook();
 		static void TraderSellClassHook();

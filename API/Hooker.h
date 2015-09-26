@@ -8,9 +8,9 @@ namespace GWAPI {
 	// v1 hooker by 4D 1
 
 	class Hook {
-		BYTE* m_retourfunc;
-		BYTE* m_source;
-		DWORD m_length;
+		BYTE* retour_func_;
+		BYTE* source_;
+		DWORD length_;
 	public:
 	
 		static DWORD CalculateDetourLength(BYTE* _source);

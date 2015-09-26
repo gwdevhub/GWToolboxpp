@@ -7,30 +7,34 @@
 namespace GWAPI {
 
 	class AgentMgr {
-		GWAPIMgr* const parent;
+		AgentMgr(GWAPIMgr* obj);
+		~AgentMgr();
+
 		friend class GWAPIMgr;
-
 		typedef void(__fastcall *ChangeTarget_t)(DWORD AgentID,DWORD smth);
-		ChangeTarget_t _ChangeTarget;
-
-		
-		Hook hkDialogLog;
-
-		static BYTE* DialogLogRet;
-		static DWORD LastDialogId;
-		static void detourDialogLog();
-
 		struct MovePosition {
 			float X;
 			float Y;
 			DWORD ZPlane; // Ground in gwapi.
 		};
-
 		typedef void(__fastcall *Move_t)(MovePosition* Pos);
-		Move_t _Move;
 
-		AgentMgr(GWAPIMgr* obj);
-		~AgentMgr();
+		GWAPIMgr* const parent_;
+
+		ChangeTarget_t change_target_;
+
+		
+		Hook hk_dialog_log_;
+
+		void RestoreHooks();
+
+		static BYTE* dialog_log_ret_;
+		static DWORD last_dialog_id_;
+		static void detourDialogLog();
+
+		Move_t move_;
+
+
 	public:
 
 		// Get AgentArray Structures of player or target.
@@ -105,7 +109,7 @@ namespace GWAPI {
 		void CallTarget(GW::Agent* Agent);
 
 		// Returns last dialog id sent to the server.
-		DWORD GetLastDialogId() const { return LastDialogId; }
+		DWORD GetLastDialogId() const { return last_dialog_id_; }
 
 		// Uses size of player array. Needs testing.
 		DWORD GetAmountOfPlayersInInstance();

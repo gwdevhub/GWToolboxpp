@@ -6,9 +6,9 @@
 namespace GWAPI {
 
 	class GuildMgr {
-		GWAPIMgr* parent;
+		GWAPIMgr* const parent_;
 		friend class GWAPIMgr;
-		GuildMgr(GWAPIMgr* obj) : parent(obj) {}
+		GuildMgr(GWAPIMgr* obj) : parent_(obj) {}
 
 	public:
 

@@ -40,8 +40,8 @@ void GWToolbox::ThreadEntry(HMODULE dllmodule) {
 }
 
 void GWToolbox::Exec() {
-	GWAPI::GWAPIMgr* api = GWAPI::GWAPIMgr::GetInstance();
-	dx = api->DirectX;
+	GWAPI::GWAPIMgr* api = GWAPI::GWAPIMgr::instance();
+	dx = api->DirectX();
 
 	LOG("Installing dx hooks\n");
 	dx->CreateRenderHooks(endScene, resetScene);
@@ -262,7 +262,7 @@ void GWToolbox::CreateGui(IDirect3DDevice9* pDevice) {
 
 // All rendering done here.
 HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
-	static GWAPI::DirectXMgr::EndScene_t origfunc = dx->GetEndsceneReturn();
+	static GWAPI::DirectXMgr::EndScene_t origfunc = dx->EndsceneReturn();
 	static bool init = false;
 	if (!init) {
 		init = true;
@@ -281,7 +281,7 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 }
 
 HRESULT WINAPI GWToolbox::resetScene(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETERS* pPresentationParameters) {
-	static GWAPI::DirectXMgr::Reset_t origfunc = dx->GetResetReturn();
+	static GWAPI::DirectXMgr::Reset_t origfunc = dx->ResetReturn();
 
 	// pre-reset here.
 

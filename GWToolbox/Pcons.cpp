@@ -99,7 +99,7 @@ void Pcon::CheckUpdateTimer() {
 		this->scanInventory();
 		update_timer = 0;
 		if (old_enabled != enabled) {
-			GWAPIMgr::GetInstance()->Chat->WriteChatF(L"[WARNING] Cannot find %ls", chatName);
+			GWAPIMgr::instance()->Chat()->WriteChatF(L"[WARNING] Cannot find %ls", chatName);
 		}
 	}
 }
@@ -109,18 +109,18 @@ bool Pcon::checkAndUse() {
 
 	if (enabled && TBTimer::diff(this->timer) > 5000) {
 
-		GWAPIMgr* API = GWAPIMgr::GetInstance();
+		GWAPIMgr* API = GWAPIMgr::instance();
 		try {
-			GW::Effect effect = API->Effects->GetPlayerEffectById(effectID);
+			GW::Effect effect = API->Effects()->GetPlayerEffectById(effectID);
 
 			if (effect.SkillId == 0 || effect.GetTimeRemaining() < 1000) {
-				bool used = API->Items->UseItemByModelId(itemID);
+				bool used = API->Items()->UseItemByModelId(itemID);
 				if (used) {
 					this->timer = TBTimer::init();
 					this->update_timer = TBTimer::init();
 				} else {
 					// this should never happen, it should be disabled before
-					API->Chat->WriteChatF(L"[WARNING] Cannot find %ls", chatName);
+					API->Chat()->WriteChatF(L"[WARNING] Cannot find %ls", chatName);
 					this->scanInventory();
 				}
 				return used;
@@ -134,29 +134,29 @@ bool PconCons::checkAndUse() {
 	CheckUpdateTimer();
 
 	if (enabled && TBTimer::diff(this->timer) > 5000) {
-		GWAPIMgr* API = GWAPIMgr::GetInstance();
+		GWAPIMgr* API = GWAPIMgr::instance();
 		try {
-			GW::Effect effect = API->Effects->GetPlayerEffectById(effectID);
+			GW::Effect effect = API->Effects()->GetPlayerEffectById(effectID);
 			if (effect.SkillId == 0 || effect.GetTimeRemaining() < 1000) {
 
-				if (!API->Agents->GetIsPartyLoaded()) return false;
+				if (!API->Agents()->GetIsPartyLoaded()) return false;
 
-				GW::MapAgentArray mapAgents = API->Agents->GetMapAgentArray();
-				if (!mapAgents.IsValid()) return false;
-				int n_players = API->Agents->GetAmountOfPlayersInInstance();
+				GW::MapAgentArray mapAgents = API->Agents()->GetMapAgentArray();
+				if (!mapAgents.valid()) return false;
+				int n_players = API->Agents()->GetAmountOfPlayersInInstance();
 				for (int i = 1; i <= n_players; ++i) {
-					DWORD currentPlayerAgID = API->Agents->GetAgentIdByLoginNumber(i);
+					DWORD currentPlayerAgID = API->Agents()->GetAgentIdByLoginNumber(i);
 					if (currentPlayerAgID <= 0) return false;
 					if (currentPlayerAgID >= mapAgents.size()) return false;
 					if (mapAgents[currentPlayerAgID].GetIsDead()) return false;
 				}
 
-				bool used = API->Items->UseItemByModelId(itemID);
+				bool used = API->Items()->UseItemByModelId(itemID);
 				if (used) {
 					this->timer = TBTimer::init();
 					this->update_timer = TBTimer::init();
 				} else {
-					API->Chat->WriteChatF(L"[WARNING] Cannot find %ls", chatName);
+					API->Chat()->WriteChatF(L"[WARNING] Cannot find %ls", chatName);
 					this->scanInventory();
 				}
 				return used;
@@ -170,29 +170,29 @@ bool PconCity::checkAndUse() {
 	CheckUpdateTimer();
 
 	if (enabled	&& TBTimer::diff(this->timer) > 5000) {
-		GWAPIMgr* API = GWAPIMgr::GetInstance();
+		GWAPIMgr* API = GWAPIMgr::instance();
 		try {
-			if (API->Agents->GetPlayer() &&
-				(API->Agents->GetPlayer()->MoveX > 0 || API->Agents->GetPlayer()->MoveY > 0)) {
-				if (   API->Effects->GetPlayerEffectById(SkillID::Sugar_Rush_short).SkillId
-					|| API->Effects->GetPlayerEffectById(SkillID::Sugar_Rush_long).SkillId
-					|| API->Effects->GetPlayerEffectById(SkillID::Sugar_Jolt_short).SkillId
-					|| API->Effects->GetPlayerEffectById(SkillID::Sugar_Jolt_long).SkillId) {
+			if (API->Agents()->GetPlayer() &&
+				(API->Agents()->GetPlayer()->MoveX > 0 || API->Agents()->GetPlayer()->MoveY > 0)) {
+				if (   API->Effects()->GetPlayerEffectById(SkillID::Sugar_Rush_short).SkillId
+					|| API->Effects()->GetPlayerEffectById(SkillID::Sugar_Rush_long).SkillId
+					|| API->Effects()->GetPlayerEffectById(SkillID::Sugar_Jolt_short).SkillId
+					|| API->Effects()->GetPlayerEffectById(SkillID::Sugar_Jolt_long).SkillId) {
 
 					// then we have effect on already, do nothing
 				} else {
 					// we should use it. Because of logical-OR only the first one will be used
-					bool used = API->Items->UseItemByModelId(ItemID::CremeBrulee)
-						|| API->Items->UseItemByModelId(ItemID::ChocolateBunny)
-						|| API->Items->UseItemByModelId(ItemID::Fruitcake)
-						|| API->Items->UseItemByModelId(ItemID::SugaryBlueDrink)
-						|| API->Items->UseItemByModelId(ItemID::RedBeanCake)
-						|| API->Items->UseItemByModelId(ItemID::JarOfHoney);
+					bool used = API->Items()->UseItemByModelId(ItemID::CremeBrulee)
+						|| API->Items()->UseItemByModelId(ItemID::ChocolateBunny)
+						|| API->Items()->UseItemByModelId(ItemID::Fruitcake)
+						|| API->Items()->UseItemByModelId(ItemID::SugaryBlueDrink)
+						|| API->Items()->UseItemByModelId(ItemID::RedBeanCake)
+						|| API->Items()->UseItemByModelId(ItemID::JarOfHoney);
 					if (used) {
 						this->timer = TBTimer::init();
 						this->update_timer = TBTimer::init();
 					} else {
-						API->Chat->WriteChat(L"[WARNING] Cannot find a city speedboost");
+						API->Chat()->WriteChat(L"[WARNING] Cannot find a city speedboost");
 						this->scanInventory();
 					}
 					return used;
@@ -207,31 +207,31 @@ bool PconAlcohol::checkAndUse() {
 	CheckUpdateTimer();
 
 	if (enabled && TBTimer::diff(this->timer) > 5000) {
-		GWAPIMgr* API = GWAPIMgr::GetInstance();
+		GWAPIMgr* API = GWAPIMgr::instance();
 		try {
-			if (API->Effects->GetAlcoholLevel() <= 1) {
+			if (API->Effects()->GetAlcoholLevel() <= 1) {
 				// use an alcohol item. Because of logical-OR only the first one will be used
-				bool used = API->Items->UseItemByModelId(ItemID::Eggnog)
-					|| API->Items->UseItemByModelId(ItemID::DwarvenAle)
-					|| API->Items->UseItemByModelId(ItemID::HuntersAle)
-					|| API->Items->UseItemByModelId(ItemID::Absinthe)
-					|| API->Items->UseItemByModelId(ItemID::WitchsBrew)
-					|| API->Items->UseItemByModelId(ItemID::Ricewine)
-					|| API->Items->UseItemByModelId(ItemID::ShamrockAle)
-					|| API->Items->UseItemByModelId(ItemID::Cider)
+				bool used = API->Items()->UseItemByModelId(ItemID::Eggnog)
+					|| API->Items()->UseItemByModelId(ItemID::DwarvenAle)
+					|| API->Items()->UseItemByModelId(ItemID::HuntersAle)
+					|| API->Items()->UseItemByModelId(ItemID::Absinthe)
+					|| API->Items()->UseItemByModelId(ItemID::WitchsBrew)
+					|| API->Items()->UseItemByModelId(ItemID::Ricewine)
+					|| API->Items()->UseItemByModelId(ItemID::ShamrockAle)
+					|| API->Items()->UseItemByModelId(ItemID::Cider)
 
-					|| API->Items->UseItemByModelId(ItemID::Grog)
-					|| API->Items->UseItemByModelId(ItemID::SpikedEggnog)
-					|| API->Items->UseItemByModelId(ItemID::AgedDwarvenAle)
-					|| API->Items->UseItemByModelId(ItemID::AgedHungersAle)
-					|| API->Items->UseItemByModelId(ItemID::Keg)
-					|| API->Items->UseItemByModelId(ItemID::FlaskOfFirewater)
-					|| API->Items->UseItemByModelId(ItemID::KrytanBrandy);
+					|| API->Items()->UseItemByModelId(ItemID::Grog)
+					|| API->Items()->UseItemByModelId(ItemID::SpikedEggnog)
+					|| API->Items()->UseItemByModelId(ItemID::AgedDwarvenAle)
+					|| API->Items()->UseItemByModelId(ItemID::AgedHungersAle)
+					|| API->Items()->UseItemByModelId(ItemID::Keg)
+					|| API->Items()->UseItemByModelId(ItemID::FlaskOfFirewater)
+					|| API->Items()->UseItemByModelId(ItemID::KrytanBrandy);
 				if (used) {
 					this->timer = TBTimer::init();
 					this->update_timer = TBTimer::init();
 				} else {
-					API->Chat->WriteChat(L"[WARNING] Cannot find Alcohol");
+					API->Chat()->WriteChat(L"[WARNING] Cannot find Alcohol");
 					this->scanInventory();
 				}
 				return used;
@@ -245,19 +245,19 @@ bool PconLunar::checkAndUse() {
 	CheckUpdateTimer();
 
 	if (enabled	&& TBTimer::diff(this->timer) > 500) {
-		GWAPIMgr* API = GWAPIMgr::GetInstance();
+		GWAPIMgr* API = GWAPIMgr::instance();
 		try {
-			if (API->Effects->GetPlayerEffectById(SkillID::Lunar_Blessing).SkillId == 0) {
-				bool used = API->Items->UseItemByModelId(ItemID::LunarDragon)
-					|| API->Items->UseItemByModelId(ItemID::LunarHorse)
-					|| API->Items->UseItemByModelId(ItemID::LunarRabbit)
-					|| API->Items->UseItemByModelId(ItemID::LunarSheep)
-					|| API->Items->UseItemByModelId(ItemID::LunarSnake);
+			if (API->Effects()->GetPlayerEffectById(SkillID::Lunar_Blessing).SkillId == 0) {
+				bool used = API->Items()->UseItemByModelId(ItemID::LunarDragon)
+					|| API->Items()->UseItemByModelId(ItemID::LunarHorse)
+					|| API->Items()->UseItemByModelId(ItemID::LunarRabbit)
+					|| API->Items()->UseItemByModelId(ItemID::LunarSheep)
+					|| API->Items()->UseItemByModelId(ItemID::LunarSnake);
 				if (used) {
 					this->timer = TBTimer::init();
 					this->update_timer = TBTimer::init();
 				} else {
-					API->Chat->WriteChat(L"[WARNING] Cannot find Lunar Fortunes");
+					API->Chat()->WriteChat(L"[WARNING] Cannot find Lunar Fortunes");
 					this->scanInventory();
 				}
 				return used;
@@ -273,7 +273,7 @@ void Pcon::scanInventory() {
 
 	quantity = 0;
 
-	GW::Bag** bags = GWAPIMgr::GetInstance()->Items->GetBagArray();
+	GW::Bag** bags = GWAPIMgr::instance()->Items()->GetBagArray();
 	if (bags != nullptr) {
 		GW::Bag* bag = NULL;
 		for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
@@ -302,7 +302,7 @@ void PconCity::scanInventory() {
 
 	quantity = 0;
 
-	GW::Bag** bags = GWAPIMgr::GetInstance()->Items->GetBagArray();
+	GW::Bag** bags = GWAPIMgr::instance()->Items()->GetBagArray();
 	if (bags != nullptr) {
 		GW::Bag* bag = NULL;
 		for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
@@ -334,7 +334,7 @@ void PconAlcohol::scanInventory() {
 	bool old_enabled = enabled;
 
 	quantity = 0;
-	GW::Bag** bags = GWAPIMgr::GetInstance()->Items->GetBagArray();
+	GW::Bag** bags = GWAPIMgr::instance()->Items()->GetBagArray();
 	if (bags != nullptr) {
 		GW::Bag* bag = NULL;
 		for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
@@ -380,7 +380,7 @@ void PconLunar::scanInventory() {
 
 	quantity = 0;
 
-	GW::Bag** bags = GWAPIMgr::GetInstance()->Items->GetBagArray();
+	GW::Bag** bags = GWAPIMgr::instance()->Items()->GetBagArray();
 	if (bags != nullptr) {
 		GW::Bag* bag = NULL;
 		for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {

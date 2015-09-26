@@ -6,7 +6,7 @@
 
 namespace GWAPI{
 	class MapMgr{
-		GWAPIMgr* parent;
+		GWAPIMgr* const parent_;
 		friend class GWAPIMgr;
 		struct PAB_ZoneMap {
 			const DWORD header = 0xAB;

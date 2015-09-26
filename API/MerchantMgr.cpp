@@ -4,20 +4,20 @@
 #include "GameThreadMgr.h"
 #include "ItemMgr.h"
 
-BYTE* GWAPI::MerchantMgr::TraderSellClass = NULL;
-BYTE* GWAPI::MerchantMgr::TraderBuyClass = NULL;
-BYTE* GWAPI::MerchantMgr::TraderSellClassHookRet = NULL;
-BYTE* GWAPI::MerchantMgr::TraderBuyClassHookRet = NULL;
+BYTE* GWAPI::MerchantMgr::trader_sell_class_ = NULL;
+BYTE* GWAPI::MerchantMgr::trader_buy_class_ = NULL;
+BYTE* GWAPI::MerchantMgr::trader_sell_class_hook_return_ = NULL;
+BYTE* GWAPI::MerchantMgr::trader_buy_class_hook_return_ = NULL;
 
 void GWAPI::MerchantMgr::CommandTraderSell()
 {
-	if (!((long*)TraderSellClass)[1] || !((long*)TraderSellClass)[2]){ return; }
+	if (!((long*)trader_sell_class_)[1] || !((long*)trader_sell_class_)[2]){ return; }
 
 	static long* info = new long[2];
-	info[0] = ((long*)TraderSellClass)[1];
-	info[1] = ((long*)TraderSellClass)[2];
+	info[0] = ((long*)trader_sell_class_)[1];
+	info[1] = ((long*)trader_sell_class_)[2];
 
-	long price = ((long*)TraderSellClass)[2];
+	long price = ((long*)trader_sell_class_)[2];
 
 	_asm {
 		PUSH 0
@@ -35,13 +35,13 @@ void GWAPI::MerchantMgr::CommandTraderSell()
 
 void GWAPI::MerchantMgr::CommandTraderBuy()
 {
-	if (!((long*)TraderBuyClass)[1] || !((long*)TraderBuyClass)[2]){ return; }
+	if (!((long*)trader_buy_class_)[1] || !((long*)trader_buy_class_)[2]){ return; }
 
 	static long* info = new long[2];
-	info[0] = ((long*)TraderBuyClass)[1];
-	info[1] = ((long*)TraderBuyClass)[2];
+	info[0] = ((long*)trader_buy_class_)[1];
+	info[1] = ((long*)trader_buy_class_)[2];
 
-	long price = ((long*)TraderBuyClass)[2];
+	long price = ((long*)trader_buy_class_)[2];
 
 	_asm {
 		PUSH 0
@@ -110,8 +110,8 @@ void GWAPI::MerchantMgr::CommandRequestTraderSellQuote(long* itemptr)
 			MOV EDX, 0
 			CALL MemoryMgr::RequestQuoteFunction
 	}
-	((long*)TraderSellClass)[1] = *itemptr;
-	((long*)TraderSellClass)[9] = 2;
+	((long*)trader_sell_class_)[1] = *itemptr;
+	((long*)trader_sell_class_)[9] = 2;
 }
 
 void GWAPI::MerchantMgr::CommandRequestTraderBuyQuote(long* itemptr)
@@ -127,8 +127,8 @@ void GWAPI::MerchantMgr::CommandRequestTraderBuyQuote(long* itemptr)
 			MOV EDX, 0
 			CALL MemoryMgr::RequestQuoteFunction
 	}
-	((long*)TraderBuyClass)[1] = *itemptr;
-	((long*)TraderBuyClass)[5] = 3;
+	((long*)trader_buy_class_)[1] = *itemptr;
+	((long*)trader_buy_class_)[5] = 3;
 }
 
 void GWAPI::MerchantMgr::CommandSellMerchantItem(long* itemIdPtr, long itemValue)
@@ -166,29 +166,27 @@ void GWAPI::MerchantMgr::CommandBuyMerchantItem(long* idptr, long* quantityptr, 
 void __declspec(naked) GWAPI::MerchantMgr::TraderSellClassHook()
 {
 	_asm{
-		MOV TraderSellClass, ECX
-		JMP TraderSellClassHookRet
+		MOV trader_sell_class_, ECX
+		JMP trader_sell_class_hook_return_
 	}
 }
 
 void __declspec(naked) GWAPI::MerchantMgr::TraderBuyClassHook()
 {
 	_asm{
-		MOV TraderBuyClass, ECX
-		JMP TraderBuyClassHookRet
+		MOV trader_buy_class_, ECX
+		JMP trader_buy_class_hook_return_
 	}
 }
 
 GWAPI::MerchantMgr::~MerchantMgr()
 {
-	hkTraderBuyClass.Retour();
-	hkTraderSellClass.Retour();
 }
 
-GWAPI::MerchantMgr::MerchantMgr(GWAPIMgr* obj) : parent(obj)
+GWAPI::MerchantMgr::MerchantMgr(GWAPIMgr* obj) : parent_(obj)
 {
-	TraderBuyClassHookRet = (BYTE*)hkTraderBuyClass.Detour(MemoryMgr::TraderBuyClassHook, (BYTE*)TraderBuyClassHook, 6);
-	TraderSellClassHookRet = (BYTE*)hkTraderSellClass.Detour(MemoryMgr::TraderSellClassHook, (BYTE*)TraderSellClassHook, 6);
+	trader_buy_class_hook_return_ = (BYTE*)hk_trader_buy_class_.Detour(MemoryMgr::TraderBuyClassHook, (BYTE*)TraderBuyClassHook, 6);
+	trader_sell_class_hook_return_ = (BYTE*)hk_trader_sell_class_.Detour(MemoryMgr::TraderSellClassHook, (BYTE*)TraderSellClassHook, 6);
 }
 
 long* GWAPI::MerchantMgr::GetCraftItemArray(long aQuantity, long aMatCount, CraftMaterial* mats)
@@ -198,7 +196,7 @@ long* GWAPI::MerchantMgr::GetCraftItemArray(long aQuantity, long aMatCount, Craf
 	long* retArr = 0;
 
 	for (int i = 0; i < aMatCount; i++){
-		TotalMats[i] = parent->Items->CountItemByModelId(mats[i].ModelID);
+		TotalMats[i] = parent_->Items()->CountItemByModelId(mats[i].ModelID);
 		if (TotalMats[i] < mats[i].Quantity * aQuantity) return NULL;
 		TotalMats[i] = (long)((TotalMats[i] / 250) + 1);
 		retArrSize += TotalMats[i];
@@ -207,7 +205,7 @@ long* GWAPI::MerchantMgr::GetCraftItemArray(long aQuantity, long aMatCount, Craf
 	retArr = new long[retArrSize];
 	retArrSize = NULL;
 
-	GW::Bag** curBags = parent->Items->GetBagArray();
+	GW::Bag** curBags = parent_->Items()->GetBagArray();
 	if (curBags == NULL) return NULL;
 
 	for (int i = 0; i < aMatCount; i++){
@@ -216,7 +214,7 @@ long* GWAPI::MerchantMgr::GetCraftItemArray(long aQuantity, long aMatCount, Craf
 			if (!curBagPtr) continue;
 
 			GW::ItemArray curItemArr = curBagPtr->Items;
-			if (!curItemArr.IsValid()) continue;
+			if (!curItemArr.valid()) continue;
 
 			for (DWORD j = 0; j < curItemArr.size(); j++){
 				if (!curItemArr[j]) continue;
@@ -239,18 +237,18 @@ long* GWAPI::MerchantMgr::GetCraftItemArray(long aQuantity, long aMatCount, Craf
 
 void GWAPI::MerchantMgr::SellQuotedItem()
 {
-	parent->GameThread->Enqueue(CommandTraderSell);
+	parent_->Gamethread()->Enqueue(CommandTraderSell);
 }
 
 void GWAPI::MerchantMgr::BuyQuotedItem()
 {
-	parent->GameThread->Enqueue(CommandTraderBuy);
+	parent_->Gamethread()->Enqueue(CommandTraderBuy);
 }
 
 void GWAPI::MerchantMgr::RequestSellQuote(GW::Item* itemtorequest)
 {
 	if (!itemtorequest) return;
-	parent->GameThread->Enqueue(CommandRequestTraderSellQuote, (long*)itemtorequest);
+	parent_->Gamethread()->Enqueue(CommandRequestTraderSellQuote, (long*)itemtorequest);
 }
 
 void GWAPI::MerchantMgr::RequestBuyQuote(DWORD ModelIDToRequest)
@@ -258,37 +256,37 @@ void GWAPI::MerchantMgr::RequestBuyQuote(DWORD ModelIDToRequest)
 	GW::Item* itemtorequest = GetMerchantItemByModelId(ModelIDToRequest);
 	if (!itemtorequest) return;
 
-	parent->GameThread->Enqueue(CommandRequestTraderBuyQuote, (long*)itemtorequest);
+	parent_->Gamethread()->Enqueue(CommandRequestTraderBuyQuote, (long*)itemtorequest);
 }
 
 void GWAPI::MerchantMgr::SellItemToMerch(GW::Item* ItemToSell, DWORD AmountToSell /*= 1*/)
 {
 	long amount = AmountToSell * ItemToSell->value;
 
-	parent->GameThread->Enqueue(CommandSellMerchantItem, (long*)ItemToSell, amount);
+	parent_->Gamethread()->Enqueue(CommandSellMerchantItem, (long*)ItemToSell, amount);
 }
 
 void GWAPI::MerchantMgr::BuyMerchItem(DWORD ModelIdToBuy, DWORD AmountToBuy)
 {
-	GW::ItemArray items = parent->Items->GetItemArray();
+	GW::ItemArray items = parent_->Items()->GetItemArray();
 	static long* amountptr = new long;
 	*amountptr = AmountToBuy;
 
 	GW::Item* itemidptr = GetMerchantItemByModelId(ModelIdToBuy);
 	if (!itemidptr) return;
 
-	parent->GameThread->Enqueue(CommandBuyMerchantItem, (long*)itemidptr, amountptr, itemidptr->value);
+	parent_->Gamethread()->Enqueue(CommandBuyMerchantItem, (long*)itemidptr, amountptr, itemidptr->value);
 }
 
 void GWAPI::MerchantMgr::CollectItem(int modelIDToGive, int AmountPerCollect, int modelIDtoRecieve)
 {
-	GW::Item* itemGiving = parent->Items->GetItemByModelId(modelIDToGive);
+	GW::Item* itemGiving = parent_->Items()->GetItemByModelId(modelIDToGive);
 	if (!itemGiving || itemGiving->Quantity < AmountPerCollect) return;
 
 	GW::Item* itemidptr = GetMerchantItemByModelId(modelIDtoRecieve);
 	if (!itemidptr) return;
 
-	parent->GameThread->Enqueue(CommandCollectItem, (long*)itemGiving, AmountPerCollect, (long*)itemidptr);
+	parent_->Gamethread()->Enqueue(CommandCollectItem, (long*)itemGiving, AmountPerCollect, (long*)itemidptr);
 }
 
 void GWAPI::MerchantMgr::CraftGrail(int amount)
@@ -332,17 +330,17 @@ void GWAPI::MerchantMgr::CraftItem(long ModelId, long Quantity, long value, long
 
 	delete[] Materials;
 
-	parent->GameThread->Enqueue(CommandCraftItem, (long*)itemtobuyptr, QuantityPtr, MaterialPtr, matcount, GoldTotal);
+	parent_->Gamethread()->Enqueue(CommandCraftItem, (long*)itemtobuyptr, QuantityPtr, MaterialPtr, matcount, GoldTotal);
 }
 
 GWAPI::GW::Item* GWAPI::MerchantMgr::GetMerchantItemByModelId(DWORD modelid)
 {
 	try{
-		GW::ItemArray itemstructs = parent->Items->GetItemArray();
-		if (!itemstructs.IsValid()) throw API_EXCEPTION;
+		GW::ItemArray itemstructs = parent_->Items()->GetItemArray();
+		if (!itemstructs.valid()) throw API_EXCEPTION;
 
 		ItemRowArray merchitems = GetMerchantItemsArray();
-		if (!merchitems.IsValid()) throw API_EXCEPTION;
+		if (!merchitems.valid()) throw API_EXCEPTION;
 
 		for (DWORD i = 0; i < merchitems.size(); i++){
 			if (itemstructs[merchitems[i]]->ModelId == modelid){
@@ -360,8 +358,14 @@ GWAPI::MerchantMgr::ItemRowArray GWAPI::MerchantMgr::GetMerchantItemsArray()
 {
 	ItemRowArray ret = *MemoryMgr::ReadPtrChain<ItemRowArray*>(MemoryMgr::GetContextPtr(), 2, 0x2C, 0x24);
 
-	if (!ret.IsValid()) throw API_EXCEPTION;
+	if (!ret.valid()) throw API_EXCEPTION;
 
 	return ret;
+}
+
+void GWAPI::MerchantMgr::RestoreHooks()
+{
+	hk_trader_buy_class_.Retour();
+	hk_trader_sell_class_.Retour();
 }
 

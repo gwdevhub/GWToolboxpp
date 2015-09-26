@@ -35,9 +35,9 @@ protected:
 	inline void set_active(bool active) { active_ = active; }
 	inline void set_key(OSHGui::Key key) { key_ = key; }
 	inline void set_modifier(OSHGui::Key modifier) { modifier_ = modifier; }
-	inline bool isLoading() { return GWAPI::GWAPIMgr::GetInstance()->Map->GetInstanceType() == GwConstants::InstanceType::Loading; }
-	inline bool isExplorable() { return GWAPI::GWAPIMgr::GetInstance()->Map->GetInstanceType() == GwConstants::InstanceType::Explorable; }
-	inline bool isOutpost() { return GWAPI::GWAPIMgr::GetInstance()->Map->GetInstanceType() == GwConstants::InstanceType::Outpost; }
+	inline bool isLoading() { return GWAPI::GWAPIMgr::instance()->Map()->GetInstanceType() == GwConstants::InstanceType::Loading; }
+	inline bool isExplorable() { return GWAPI::GWAPIMgr::instance()->Map()->GetInstanceType() == GwConstants::InstanceType::Explorable; }
+	inline bool isOutpost() { return GWAPI::GWAPIMgr::instance()->Map()->GetInstanceType() == GwConstants::InstanceType::Outpost; }
 
 	TBHotkey(OSHGui::Key key, OSHGui::Key modifier, bool active, 
 		wstring ini_section);

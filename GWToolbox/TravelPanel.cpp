@@ -32,7 +32,7 @@ void TravelPanel::BuildUI() {
 		[this, combo](Control*) {
 		if (combo->GetSelectedIndex() < 0) return;
 		GwConstants::MapID id = IndexToOutpostID(combo->GetSelectedIndex());
-		GWAPIMgr::GetInstance()->Map->Travel(id, this->district(), this->region(), this->language());
+		GWAPIMgr::instance()->Map()->Travel(id, this->district(), this->region(), this->language());
 		combo->SetText("Travel To...");
 		combo->SetSelectedIndex(-1);
 	});
@@ -96,7 +96,7 @@ void TravelPanel::BuildUI() {
 		fav_button->SetText("Go");
 		fav_button->GetClickEvent() += ClickEventHandler([this, fav_combo](Control*) {
 			int index = fav_combo->GetSelectedIndex();
-			GWAPIMgr::GetInstance()->Map->Travel(IndexToOutpostID(index),
+			GWAPIMgr::instance()->Map()->Travel(IndexToOutpostID(index),
 				this->district(), this->region(), this->language());
 		});
 		AddControl(fav_button);
@@ -114,7 +114,7 @@ TravelPanel::TravelCombo::TravelCombo() {
 
 DWORD TravelPanel::region() {
 	if (current_district_) {
-		return GWAPIMgr::GetInstance()->Map->GetRegion();
+		return GWAPIMgr::instance()->Map()->GetRegion();
 	} else {
 		return region_;
 	}
@@ -122,7 +122,7 @@ DWORD TravelPanel::region() {
 
 DWORD TravelPanel::language() {
 	if (current_district_) {
-		return GWAPIMgr::GetInstance()->Map->GetLanguage();
+		return GWAPIMgr::instance()->Map()->GetLanguage();
 	} else {
 		return language_;
 	}
@@ -136,17 +136,17 @@ void TravelPanel::AddTravelButton(string text, int grid_x, int grid_y, GwConstan
 	button->SetLocation(SPACE + (BUTTON_WIDTH + SPACE) * grid_x, 
 		SPACE * 2 + (BUTTON_HEIGHT + SPACE) * grid_y);
 	button->GetClickEvent() += ClickEventHandler([this, map_id](Control*) {
-		GWAPIMgr::GetInstance()->Map->Travel(map_id, district(), region(), language());
+		GWAPIMgr::instance()->Map()->Travel(map_id, district(), region(), language());
 	});
 	AddControl(button);
 }
 
 void TravelPanel::UpdateDistrict(int gui_index) {
-	GWAPI::GWAPIMgr* api = GWAPI::GWAPIMgr::GetInstance();
+	GWAPI::GWAPIMgr* api = GWAPI::GWAPIMgr::instance();
 	current_district_ = false;
-	region_ = api->Map->GetRegion();
+	region_ = api->Map()->GetRegion();
 	district_ = 0;
-	language_ = api->Map->GetLanguage();
+	language_ = api->Map()->GetLanguage();
 	switch (gui_index) {
 	case 0: // Current District
 		current_district_ = true;

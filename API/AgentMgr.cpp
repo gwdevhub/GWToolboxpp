@@ -6,8 +6,8 @@
 #include "MapMgr.h"
 
 
-BYTE* GWAPI::AgentMgr::DialogLogRet = NULL;
-DWORD GWAPI::AgentMgr::LastDialogId = 0;
+BYTE* GWAPI::AgentMgr::dialog_log_ret_ = NULL;
+DWORD GWAPI::AgentMgr::last_dialog_id_ = 0;
 
 
 GWAPI::GW::AgentArray GWAPI::AgentMgr::GetAgentArray()
@@ -53,22 +53,22 @@ DWORD GWAPI::AgentMgr::GetSqrDistance(GW::Agent* a, GW::Agent* b) {
 	return (DWORD)(a->X - b->X) * (DWORD)(a->X - b->X) + (DWORD)(a->Y - b->Y) * (DWORD)(a->Y - b->Y);
 }
 
-GWAPI::AgentMgr::AgentMgr(GWAPIMgr* obj) : parent(obj)
+GWAPI::AgentMgr::AgentMgr(GWAPIMgr* obj) : parent_(obj)
 {
-	_ChangeTarget = (ChangeTarget_t)MemoryMgr::ChangeTargetFunction;
-	_Move = (Move_t)MemoryMgr::MoveFunction;
-	DialogLogRet = (BYTE*)hkDialogLog.Detour(MemoryMgr::DialogFunc, (BYTE*)AgentMgr::detourDialogLog, 9);
+	change_target_ = (ChangeTarget_t)MemoryMgr::ChangeTargetFunction;
+	move_ = (Move_t)MemoryMgr::MoveFunction;
+	dialog_log_ret_ = (BYTE*)hk_dialog_log_.Detour(MemoryMgr::DialogFunc, (BYTE*)AgentMgr::detourDialogLog, 9);
 }
 
 
 GWAPI::AgentMgr::~AgentMgr()
 {
-	hkDialogLog.Retour();
+	hk_dialog_log_.Retour();
 }
 
 void GWAPI::AgentMgr::ChangeTarget(GW::Agent* Agent)
 {
-	parent->GameThread->Enqueue(_ChangeTarget, Agent->Id,0);
+	parent_->Gamethread()->Enqueue(change_target_, Agent->Id,0);
 }
 
 void GWAPI::AgentMgr::Move(float X, float Y, DWORD ZPlane /*= 0*/)
@@ -79,12 +79,12 @@ void GWAPI::AgentMgr::Move(float X, float Y, DWORD ZPlane /*= 0*/)
 	pos->Y = Y;
 	pos->ZPlane = ZPlane;
 
-	parent->GameThread->Enqueue(_Move, pos);
+	parent_->Gamethread()->Enqueue(move_, pos);
 }
 
 void GWAPI::AgentMgr::Dialog(DWORD id)
 {
-	parent->CtoS->SendPacket(0x8, 0x35, id);
+	parent_->CtoS()->SendPacket(0x8, 0x35, id);
 }
 
 GWAPI::GW::PartyMemberArray GWAPI::AgentMgr::GetPartyMemberArray()
@@ -94,10 +94,10 @@ GWAPI::GW::PartyMemberArray GWAPI::AgentMgr::GetPartyMemberArray()
 
 bool GWAPI::AgentMgr::GetIsPartyLoaded()
 {
-	if (parent->Map->GetInstanceType() == GwConstants::InstanceType::Loading) return false;
+	if (parent_->Map()->GetInstanceType() == GwConstants::InstanceType::Loading) return false;
 
 	GW::PartyMemberArray party = GetPartyMemberArray();
-	if (!party.IsValid()) return false;
+	if (!party.valid()) return false;
 
 	for (DWORD i = 0; i < party.size(); i++){
 		if ((party[i].isLoaded & 1) == 0) return false;
@@ -114,7 +114,7 @@ GWAPI::GW::MapAgentArray GWAPI::AgentMgr::GetMapAgentArray()
 GWAPI::GW::Agent* GWAPI::AgentMgr::GetPlayer() {
 	GW::AgentArray agents = GetAgentArray();
 	int id = GetPlayerId();
-	if (agents.IsValid() && id > 0) {
+	if (agents.valid() && id > 0) {
 		return agents[id];
 	} else {
 		return nullptr;
@@ -124,7 +124,7 @@ GWAPI::GW::Agent* GWAPI::AgentMgr::GetPlayer() {
 GWAPI::GW::Agent* GWAPI::AgentMgr::GetTarget() {
 	GW::AgentArray agents = GetAgentArray();
 	int id = GetTargetId();
-	if (agents.IsValid() && id > 0) {
+	if (agents.valid() && id > 0) {
 		return agents[id];
 	} else {
 		return nullptr;
@@ -133,28 +133,28 @@ GWAPI::GW::Agent* GWAPI::AgentMgr::GetTarget() {
 
 void GWAPI::AgentMgr::GoNPC(GW::Agent* Agent, DWORD CallTarget /*= 0*/)
 {
-	parent->CtoS->SendPacket(0xC, 0x33, Agent->Id, CallTarget);
+	parent_->CtoS()->SendPacket(0xC, 0x33, Agent->Id, CallTarget);
 }
 
 void GWAPI::AgentMgr::GoPlayer(GW::Agent* Agent)
 {
-	parent->CtoS->SendPacket(0x8, 0x2D, Agent->Id);
+	parent_->CtoS()->SendPacket(0x8, 0x2D, Agent->Id);
 }
 
 void GWAPI::AgentMgr::GoSignpost(GW::Agent* Agent, BOOL CallTarget /*= 0*/)
 {
-	parent->CtoS->SendPacket(0xC, 0x4B, Agent->Id, CallTarget);
+	parent_->CtoS()->SendPacket(0xC, 0x4B, Agent->Id, CallTarget);
 }
 
 void GWAPI::AgentMgr::CallTarget(GW::Agent* Agent)
 {
-	parent->CtoS->SendPacket(0xC, 0x1C, 0xA, Agent->Id);
+	parent_->CtoS()->SendPacket(0xC, 0x1C, 0xA, Agent->Id);
 }
 
 void __declspec(naked) GWAPI::AgentMgr::detourDialogLog()
 {
-	_asm MOV GWAPI::AgentMgr::LastDialogId, ESI
-	_asm JMP GWAPI::AgentMgr::DialogLogRet
+	_asm MOV GWAPI::AgentMgr::last_dialog_id_, ESI
+	_asm JMP GWAPI::AgentMgr::dialog_log_ret_
 }
 
 DWORD GWAPI::AgentMgr::GetAmountOfPlayersInInstance()
@@ -175,7 +175,7 @@ DWORD GWAPI::AgentMgr::GetAgentIdByLoginNumber(DWORD loginnumber)
 
 bool GWAPI::AgentMgr::GetPartyTicked() {
 	GW::PartyMemberArray party = GetPartyMemberArray();
-	if (party.IsValid()) {
+	if (party.valid()) {
 		for (size_t i = 0; i < party.size(); ++i) {
 			if ((party[i].isLoaded & 2) == 0) {
 				return false;
@@ -189,7 +189,7 @@ bool GWAPI::AgentMgr::GetPartyTicked() {
 
 bool GWAPI::AgentMgr::GetTicked(DWORD index) {
 	GW::PartyMemberArray party = GetPartyMemberArray();
-	if (party.IsValid()) {
+	if (party.valid()) {
 		return (party[index].isLoaded & 2) != 0;
 	} else {
 		return false;
@@ -199,7 +199,7 @@ bool GWAPI::AgentMgr::GetTicked(DWORD index) {
 bool GWAPI::AgentMgr::GetTicked() {
 	GW::PartyMemberArray party = GetPartyMemberArray();
 	GW::Agent* me = GetPlayer();
-	if (party.IsValid() && me) {
+	if (party.valid() && me) {
 		for (DWORD i = 0; i < party.size();i++){
 			if (party[i].loginnumber == me->LoginNumber){
 				return (party[i].isLoaded & 2) != 0;
@@ -213,5 +213,10 @@ bool GWAPI::AgentMgr::GetTicked() {
 
 void GWAPI::AgentMgr::Tick(bool flag)
 {
-	parent->CtoS->SendPacket(0x8, 0xA9, flag);
+	parent_->CtoS()->SendPacket(0x8, 0xA9, flag);
+}
+
+void GWAPI::AgentMgr::RestoreHooks()
+{
+	hk_dialog_log_.Retour();
 }

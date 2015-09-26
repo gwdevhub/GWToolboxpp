@@ -13,7 +13,7 @@ void GWAPI::MapMgr::Travel(GwConstants::MapID MapID, DWORD District /*= 0*/, int
 	pak->language = Language;
 	pak->unk = 1;
 
-	parent->CtoS->SendPacket<PAB_ZoneMap>(pak);
+	parent_->CtoS()->SendPacket<PAB_ZoneMap>(pak);
 }
 
 DWORD GWAPI::MapMgr::GetInstanceTime()
@@ -26,7 +26,7 @@ GwConstants::MapID GWAPI::MapMgr::GetMapID()
 	return static_cast<GwConstants::MapID>(*(DWORD*)MemoryMgr::MapIDPtr);
 }
 
-GWAPI::MapMgr::MapMgr(GWAPIMgr* obj) : parent(obj)
+GWAPI::MapMgr::MapMgr(GWAPIMgr* obj) : parent_(obj)
 {
 
 }

@@ -68,7 +68,7 @@ EditBuild::EditBuild() {
 			message += L";";
 			message += ToWString(templates[i]->GetText());
 			message += L"]";
-			GWAPIMgr::GetInstance()->Chat->SendChat(message.c_str(), L'#');
+			GWAPIMgr::instance()->Chat()->SendChat(message.c_str(), L'#');
 		});
 		AddControl(send);
 

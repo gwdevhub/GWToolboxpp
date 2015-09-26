@@ -188,7 +188,7 @@ void MainWindow::UpdatePconToggleButton(bool active) {
 		pcon_toggle_button_->SetText("Disabled");
 	}
 	if (tick_with_pcons_) {
-		GWAPIMgr::GetInstance()->Agents->Tick(active);
+		GWAPIMgr::instance()->Agents()->Tick(active);
 	}
 }
 
