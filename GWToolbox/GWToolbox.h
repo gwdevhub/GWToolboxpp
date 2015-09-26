@@ -49,7 +49,7 @@ private:
 
 	//------ Private Fields ------//
 private:
-	HMODULE m_dllmodule;	// Handle to the dll module we are running, used to clear the module from GW on eject.
+	HMODULE dll_module_;	// Handle to the dll module we are running, used to clear the module from GW on eject.
 
 	bool initialized_;
 	bool capture_input_;
@@ -65,7 +65,7 @@ private:
 	//------ Constructor ------//
 private:
 	GWToolbox(HMODULE mod) :
-		m_dllmodule(mod),
+		dll_module_(mod),
 		config_(new Config()) { 
 		main_window_ = NULL;
 		timer_window_ = NULL;

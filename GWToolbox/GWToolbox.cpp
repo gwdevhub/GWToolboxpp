@@ -112,7 +112,7 @@ void GWToolbox::Exec() {
 	fclose(logfile);
 #endif
 	Sleep(100);
-	FreeLibraryAndExitThread(m_dllmodule, EXIT_SUCCESS);
+	FreeLibraryAndExitThread(dll_module_, EXIT_SUCCESS);
 }
 
 void GWToolbox::ExceptionHappened() {
