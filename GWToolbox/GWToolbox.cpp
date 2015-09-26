@@ -113,7 +113,7 @@ void GWToolbox::Exec() {
 	FreeConsole();
 #endif
 	Sleep(100);
-	FreeLibraryAndExitThread(m_dllmodule, EXIT_SUCCESS);
+	FreeLibraryAndExitThread(dll_module_, EXIT_SUCCESS);
 }
 
 // TODO delete
