@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Windows.h>
+
 #include "../API/APIMain.h"
 #include "../include/OSHGui/OSHGui.hpp"
 #include "../include/OSHGui/Input/WindowsMessage.hpp"
@@ -13,6 +15,7 @@
 #include "DistanceWindow.h"
 
 class GWToolbox {
+public:
 
 	//------ Static Fields ------//
 private:
@@ -31,9 +34,6 @@ private:
 
 	static void SafeCreateGui(IDirect3DDevice9* pDevice);
 	static void CreateGui(IDirect3DDevice9* pDevice);
-
-	static LONG WINAPI ExceptionHandler(
-		EXCEPTION_POINTERS* ExceptionInfo);
 
 	// DirectX event handlers declaration
 	static HRESULT WINAPI endScene(IDirect3DDevice9* pDevice);
