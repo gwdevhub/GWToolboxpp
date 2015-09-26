@@ -20,7 +20,7 @@ OSHGui::Input::WindowsMessage GWToolbox::input;
 void GWToolbox::SafeThreadEntry(HMODULE dllmodule) {
 	__try {
 		GWToolbox::ThreadEntry(dllmodule);
-	} __except (GWToolbox::ExceptionHandler(GetExceptionInformation()), EXCEPTION_EXECUTE_HANDLER) {
+	} __except (Logger::GenerateDump(GetExceptionInformation())) {
 		LOG("SafeThreadEntry __except body\n");
 	}
 }
@@ -99,45 +99,6 @@ void GWToolbox::Exec() {
 	FreeLibraryAndExitThread(dll_module_, EXIT_SUCCESS);
 }
 
-LONG WINAPI GWToolbox::ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo) {
-	PEXCEPTION_RECORD records = ExceptionInfo->ExceptionRecord;
-	PCONTEXT cpudbg = ExceptionInfo->ContextRecord;
-
-	LOG("\nException Handler\n");
-	LOG("Code: %x\n", records->ExceptionCode);
-	LOG("Addr: %p\n", records->ExceptionAddress);
-	LOG("Flag: %x\n", records->ExceptionFlags);
-
-	LOG("Registers:\n");
-	LOG("\teax: %x\n", cpudbg->Eax);
-	LOG("\tebx: %x\n", cpudbg->Ebx);
-	LOG("\tecx: %x\n", cpudbg->Ecx);
-	LOG("\tedx: %x\n", cpudbg->Edx);
-	LOG("\tesi: %x\n", cpudbg->Esi);
-	LOG("\tedi: %x\n", cpudbg->Edi);
-	LOG("\tesp: %x\n", cpudbg->Esp);
-	LOG("\tebp: %x\n", cpudbg->Ebp);
-	LOG("\teip: %x\n", cpudbg->Eip);
-
-	LOG("Stack:\n");
-	for (DWORD i = 0; i <= 0x40; i += 4) {
-		LOG("\t[esp+%d]: %x\n", i, (((DWORD*)(cpudbg->Esp))[i / 4]));
-	}
-
-	LOG("Closing log file, bye!\n");
-	Logger::Close();
-
-	MessageBoxA(0,
-		"GWToolbox crashed, oops\n\n"
-		"A log file has been created in the GWToolbox data folder.\n"
-		"Open it by typing running %LOCALAPPDATA% and looking for GWToolboxpp folder\n"
-		"Please send the file to the GWToolbox++ developers.\n"
-		"Thank you and sorry for the inconvenience.",
-		"GWToolbox++ Crash!", 0);
-
-	return EXCEPTION_EXECUTE_HANDLER;
-}
-
 LRESULT CALLBACK GWToolbox::NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) {
 	
 	if (Message == WM_QUIT || Message == WM_CLOSE) {
@@ -203,7 +164,7 @@ LRESULT CALLBACK GWToolbox::NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, L
 void GWToolbox::SafeCreateGui(IDirect3DDevice9* pDevice) {
 	__try {
 		GWToolbox::CreateGui(pDevice);
-	} __except (GWToolbox::ExceptionHandler(GetExceptionInformation()), EXCEPTION_EXECUTE_HANDLER) {
+	} __except (Logger::GenerateDump(GetExceptionInformation())) {
 		LOG("SafeCreateGui __except body\n");
 	}
 }

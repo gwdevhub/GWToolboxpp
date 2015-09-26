@@ -1,5 +1,9 @@
 #include "logger.h"
 
+#include <strsafe.h>
+#include <dbghelp.h>
+#include <shellapi.h>
+#include <shlobj.h>
 #include <stdarg.h>
 #include <time.h>
 
@@ -65,4 +69,49 @@ void Logger::LogW(const wchar_t* msg, ...) {
 #ifndef _DEBUG
 	fflush(logfile);
 #endif
+}
+
+LONG WINAPI Logger::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers) {
+	BOOL bMiniDumpSuccessful;
+	WCHAR szFileName[MAX_PATH];
+	WCHAR* szVersion = L"v0.1";
+	DWORD dwBufferSize = MAX_PATH;
+	HANDLE hDumpFile;
+	SYSTEMTIME stLocalTime;
+	MINIDUMP_EXCEPTION_INFORMATION ExpParam;
+
+	GetLocalTime(&stLocalTime);
+
+	StringCchPrintf(szFileName, MAX_PATH, L"%s\\%s-%04d%02d%02d-%02d%02d%02d-%ld-%ld.dmp",
+		GuiUtils::getSettingsFolderW().c_str() , szVersion,
+		stLocalTime.wYear, stLocalTime.wMonth, stLocalTime.wDay,
+		stLocalTime.wHour, stLocalTime.wMinute, stLocalTime.wSecond,
+		GetCurrentProcessId(), GetCurrentThreadId());
+	hDumpFile = CreateFile(szFileName, GENERIC_READ | GENERIC_WRITE,
+		FILE_SHARE_WRITE | FILE_SHARE_READ, 0, CREATE_ALWAYS, 0, 0);
+
+	ExpParam.ThreadId = GetCurrentThreadId();
+	ExpParam.ExceptionPointers = pExceptionPointers;
+	ExpParam.ClientPointers = TRUE;
+
+	bMiniDumpSuccessful = MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(),
+		hDumpFile, MiniDumpWithDataSegs, &ExpParam, NULL, NULL);
+
+	if (bMiniDumpSuccessful) {
+		MessageBoxA(0,
+			"GWToolbox crashed, oops\n\n"
+			"Log and dump files have been created in the GWToolbox data folder.\n"
+			"Open it by typing running %LOCALAPPDATA% and looking for GWToolboxpp folder\n"
+			"Please send the files to the GWToolbox++ developers.\n"
+			"Thank you and sorry for the inconvenience.",
+			"GWToolbox++ Crash!", 0);
+	} else {
+		MessageBoxA(0,
+			"GWToolbox crashed, oops\n\n"
+			"Error creating the dump file\n"
+			"I don't really know what to do, sorry, contact the developers.\n",
+			"GWToolbox++ Crash!", 0);
+	}
+	
+	return EXCEPTION_EXECUTE_HANDLER;
 }

@@ -1,13 +1,10 @@
 #pragma once
 
+#include <Windows.h>
 #include <stdio.h>
 #include <time.h>
 
-/*
-This class is my attempt at creating a logger that can be toggled in release
 
-it can be naive or bad, idk, but works and should be efficient on non-debug build
-*/
 #ifdef _DEBUG
 #define DEBUG_BUILD 1
 #else
@@ -36,4 +33,8 @@ public:
 	// in release it closes the file
 	// in debug frees the console
 	static void Close();
+
+	// Creates minidump, to be called from within __except()
+	static LONG WINAPI GenerateDump(
+		EXCEPTION_POINTERS* pExceptionPointers);
 };
