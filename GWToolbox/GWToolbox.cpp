@@ -11,6 +11,11 @@
 #include "MainWindow.h"
 #include "TimerWindow.h"
 
+const wchar_t * GWToolbox::Host = L"http://fbgmguild.com/GWToolboxpp/";
+const char* GWToolbox::VersionA = "0.1";
+const wchar_t* GWToolbox::VersionW = L"0.1";
+
+
 GWToolbox* GWToolbox::instance_ = NULL;
 GWAPI::DirectXMgr* GWToolbox::dx = NULL;
 OSHGui::Drawing::Direct3D9Renderer* GWToolbox::renderer = NULL;

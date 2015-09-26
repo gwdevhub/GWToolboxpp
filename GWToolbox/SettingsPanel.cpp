@@ -22,7 +22,7 @@ void SettingsPanel::BuildUI() {
 	Config* config = tb->config();
 
 	Label* version = new Label();
-	version->SetText("GWToolbox++ 0.1 (Alpha)");
+	version->SetText(string("GWToolbox++") + GWToolbox::VersionA);
 	version->SetLocation(GetWidth() / 2 - version->GetWidth() / 2, DefaultBorderPadding);
 	AddControl(version);
 
@@ -111,7 +111,7 @@ void SettingsPanel::BuildUI() {
 	folder->SetLocation(DefaultBorderPadding, GetHeight() - DefaultBorderPadding - folder->GetHeight());
 	folder->GetClickEvent() += ClickEventHandler([](Control*) {
 		CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-		ShellExecuteA(NULL, "open", GuiUtils::getSettingsFolderA().c_str(), NULL, NULL, SW_SHOWNORMAL);
+		ShellExecuteW(NULL, L"open", GuiUtils::getSettingsFolderW().c_str(), NULL, NULL, SW_SHOWNORMAL);
 	});
 	AddControl(folder);
 
@@ -121,7 +121,7 @@ void SettingsPanel::BuildUI() {
 	website->SetLocation(DefaultBorderPadding, folder->GetTop() - DefaultBorderPadding - website->GetHeight());
 	website->GetClickEvent() += ClickEventHandler([](Control*) {
 		CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-		ShellExecuteA(NULL, "open", "http://fbgmguild.com/GWToolboxpp/", NULL, NULL, SW_SHOWNORMAL);
+		ShellExecuteW(NULL, L"open", GWToolbox::Host, NULL, NULL, SW_SHOWNORMAL);
 	});
 	AddControl(website);
 }
