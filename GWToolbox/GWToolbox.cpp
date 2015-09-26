@@ -6,17 +6,12 @@
 #include "../include/OSHGui/Input/WindowsMessage.hpp"
 
 #include <string>
-#include <time.h>
-#include <fstream>
 
 #include "Timer.h"
 #include "MainWindow.h"
 #include "TimerWindow.h"
 
-using namespace std;
-
 GWToolbox* GWToolbox::instance_ = NULL;
-FILE* GWToolbox::logfile = NULL;
 GWAPI::DirectXMgr* GWToolbox::dx = NULL;
 OSHGui::Drawing::Direct3D9Renderer* GWToolbox::renderer = NULL;
 long GWToolbox::OldWndProc = 0;
@@ -25,25 +20,19 @@ OSHGui::Input::WindowsMessage GWToolbox::input;
 void GWToolbox::SafeThreadEntry(HMODULE dllmodule) {
 	__try {
 		GWToolbox::ThreadEntry(dllmodule);
-	} __except (EXCEPTION_EXECUTE_HANDLER) {
-		GWToolbox::ExceptionHappened();
+	} __except (GWToolbox::ExceptionHandler(GetExceptionInformation()), EXCEPTION_EXECUTE_HANDLER) {
+		LOG("SafeThreadEntry __except body\n");
 	}
 }
 
 void GWToolbox::ThreadEntry(HMODULE dllmodule) {
 	if (GWToolbox::instance()) return;
 
-	if (!DEBUG_BUILD) {
-		freopen_s(&logfile, GuiUtils::getPathA("log.txt").c_str(), "w", stdout);
-	}
-
 	LOG("Initializing API\n");
 	GWAPI::GWAPIMgr::Initialize();
-	LOG("Initialized API\n");
 
 	LOG("Creating GWToolbox++\n");
 	instance_ = new GWToolbox(dllmodule);
-	LOG("Created GWToolbox++\n");
 
 	//*(byte*)0 = 0; // uncomment for guaranteed fun
 
@@ -104,22 +93,39 @@ void GWToolbox::Exec() {
 	Sleep(100);
 	LOG("Destroying API\n");
 	GWAPI::GWAPIMgr::Destruct();
-#if DEBUG_BUILD
-	LOG("Destroying Console, bye\n");
-	FreeConsole();
-#else
-	LOG("Closing log file, bye\n");
-	fclose(logfile);
-#endif
+	LOG("Closing log/console, bye!\n");
+	Logger::Close();
 	Sleep(100);
 	FreeLibraryAndExitThread(dll_module_, EXIT_SUCCESS);
 }
 
-void GWToolbox::ExceptionHappened() {
-	LOG("ExceptionHappened\n");
-#if DEBUG_BUILD
-	fclose(logfile);
-#endif
+LONG WINAPI GWToolbox::ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo) {
+	PEXCEPTION_RECORD records = ExceptionInfo->ExceptionRecord;
+	PCONTEXT cpudbg = ExceptionInfo->ContextRecord;
+
+	LOG("\nException Handler\n");
+	LOG("Code: %x\n", records->ExceptionCode);
+	LOG("Addr: %p\n", records->ExceptionAddress);
+	LOG("Flag: %x\n", records->ExceptionFlags);
+
+	LOG("Registers:\n");
+	LOG("\teax: %x\n", cpudbg->Eax);
+	LOG("\tebx: %x\n", cpudbg->Ebx);
+	LOG("\tecx: %x\n", cpudbg->Ecx);
+	LOG("\tedx: %x\n", cpudbg->Edx);
+	LOG("\tesi: %x\n", cpudbg->Esi);
+	LOG("\tedi: %x\n", cpudbg->Edi);
+	LOG("\tesp: %x\n", cpudbg->Esp);
+	LOG("\tebp: %x\n", cpudbg->Ebp);
+	LOG("\teip: %x\n", cpudbg->Eip);
+
+	LOG("Stack:\n");
+	for (DWORD i = 0; i <= 0x40; i += 4) {
+		LOG("\t[esp+%d]: %x\n", i, (((DWORD*)(cpudbg->Esp))[i / 4]));
+	}
+
+	LOG("Closing log file, bye!\n");
+	Logger::Close();
 
 	MessageBoxA(0,
 		"GWToolbox crashed, oops\n\n"
@@ -129,60 +135,8 @@ void GWToolbox::ExceptionHappened() {
 		"Thank you and sorry for the inconvenience.",
 		"GWToolbox++ Crash!", 0);
 
-	// TODO kill process ?
+	return EXCEPTION_EXECUTE_HANDLER;
 }
-
-// TODO delete
-/*
-LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo) {
-	PEXCEPTION_RECORD records = ExceptionInfo->ExceptionRecord;
-	PCONTEXT cpudbg = ExceptionInfo->ContextRecord;
-	if (records->ExceptionFlags != 0) {
-
-		time_t rawtime;
-		time(&rawtime);
-
-		struct tm timeinfo;
-		localtime_s(&timeinfo, &rawtime);
-
-		char buffer[64];
-		asctime_s(buffer, sizeof(buffer), &timeinfo);
-
-		string filename = string("Crash-") + string(buffer) + string(".txt");
-		string path = GuiUtils::getPathA(filename.c_str());
-		ofstream logfile(path.c_str());
-
-
-		logfile << hex;
-		logfile << "Code: " << records->ExceptionCode << endl;
-		logfile << "Addr: " << records->ExceptionAddress << endl;
-		logfile << "Flag: " << records->ExceptionFlags << endl << endl;
-
-		logfile << "Registers:" << endl;
-		logfile << "\teax: " << cpudbg->Eax << endl;
-		logfile << "\tebx: " << cpudbg->Ebx << endl;
-		logfile << "\tecx: " << cpudbg->Ecx << endl;
-		logfile << "\tedx: " << cpudbg->Edx << endl;
-		logfile << "\tesi: " << cpudbg->Esi << endl;
-		logfile << "\tedi: " << cpudbg->Edi << endl;
-		logfile << "\tesp: " << cpudbg->Esp << endl;
-		logfile << "\tebp: " << cpudbg->Ebp << endl;
-		logfile << "\teip: " << cpudbg->Eip << endl << endl;
-
-		logfile << "Stack:" << endl;
-
-		for (DWORD i = 0; i <= 0x40; i += 4)
-			logfile << "\t[esp+" << i << "]: " << ((DWORD*)(cpudbg->Esp))[i / 4];
-
-
-		logfile.close();
-
-		MessageBoxA(0, "Guild Wars - Crash!", "GWToolbox has detected Guild Wars has crashed, oops.\nThis may be a crash toolbox has made, or something completely irrelevant to it.\nFor help on this matter, please access the log file placed in the \"crash\" folder of the GWToolbox data folder with the correct date and time, and send the file along with any information or actions surrounding the crash to the GWToolbox++ developers.\nThank you and sorry for the inconvenience.", 0);
-		return EXCEPTION_EXECUTE_HANDLER;
-	} else {
-		return EXCEPTION_CONTINUE_EXECUTION;
-	}
-}*/
 
 LRESULT CALLBACK GWToolbox::NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) {
 	
@@ -249,8 +203,8 @@ LRESULT CALLBACK GWToolbox::NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, L
 void GWToolbox::SafeCreateGui(IDirect3DDevice9* pDevice) {
 	__try {
 		GWToolbox::CreateGui(pDevice);
-	} __except (EXCEPTION_EXECUTE_HANDLER) {
-		GWToolbox::ExceptionHappened();
+	} __except (GWToolbox::ExceptionHandler(GetExceptionInformation()), EXCEPTION_EXECUTE_HANDLER) {
+		LOG("SafeCreateGui __except body\n");
 	}
 }
 
@@ -266,7 +220,7 @@ void GWToolbox::CreateGui(IDirect3DDevice9* pDevice) {
 	Application * app = Application::InstancePtr();
 
 	LOG("Loading Theme\n");
-	string path = GuiUtils::getPathA("Theme.txt");
+	std::string path = GuiUtils::getPathA("Theme.txt");
 	try {
 		Theme theme;
 		theme.Load(path);
@@ -278,7 +232,6 @@ void GWToolbox::CreateGui(IDirect3DDevice9* pDevice) {
 	
 	LOG("Loading font\n");
 	app->SetDefaultFont(GuiUtils::getTBFont(10.0f, true));
-	LOG("Loaded font\n");
 
 	app->SetCursorEnabled(false);
 	try {

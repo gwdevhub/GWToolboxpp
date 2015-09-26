@@ -1,19 +1,11 @@
-#include "API\APIMain.h"
 #include "GWToolbox\GWToolbox.h"
-
-
+#include "GWToolbox\logger.h"
 
 // Do all your startup things here instead.
 void init(HMODULE hModule){
 
-#if DEBUG_BUILD
-	AllocConsole();
-	FILE* fh;
-	freopen_s(&fh, "CONOUT$", "w", stdout);
-	freopen_s(&fh, "CONOUT$", "w", stderr);
-	SetConsoleTitleA("GWTB++ Debug Console");
-#endif
-
+	Logger::Init();
+	LOG("Creating toolbox thread\n");
 	CreateThread(0, 0, (LPTHREAD_START_ROUTINE)GWToolbox::SafeThreadEntry, hModule, 0, 0);
 }
 

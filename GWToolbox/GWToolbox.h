@@ -1,8 +1,5 @@
 #pragma once
 
-#include <fstream>
-#include <string>
-
 #include "../API/APIMain.h"
 #include "../include/OSHGui/OSHGui.hpp"
 #include "../include/OSHGui/Input/WindowsMessage.hpp"
@@ -20,7 +17,6 @@ class GWToolbox {
 	//------ Static Fields ------//
 private:
 	static GWToolbox* instance_;
-	static FILE* logfile;
 	static GWAPI::DirectXMgr* dx;
 	static OSHGui::Drawing::Direct3D9Renderer* renderer;
 	static long OldWndProc;
@@ -36,7 +32,8 @@ private:
 	static void SafeCreateGui(IDirect3DDevice9* pDevice);
 	static void CreateGui(IDirect3DDevice9* pDevice);
 
-	static void ExceptionHappened();
+	static LONG WINAPI ExceptionHandler(
+		EXCEPTION_POINTERS* ExceptionInfo);
 
 	// DirectX event handlers declaration
 	static HRESULT WINAPI endScene(IDirect3DDevice9* pDevice);
