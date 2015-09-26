@@ -1,5 +1,8 @@
 #pragma once
 
+#include <fstream>
+#include <string>
+
 #include "../API/APIMain.h"
 #include "../include/OSHGui/OSHGui.hpp"
 #include "../include/OSHGui/Input/WindowsMessage.hpp"
@@ -17,6 +20,7 @@ class GWToolbox {
 	//------ Static Fields ------//
 private:
 	static GWToolbox* instance_;
+	static FILE* logfile;
 	static GWAPI::DirectXMgr* dx;
 	static OSHGui::Drawing::Direct3D9Renderer* renderer;
 	static long OldWndProc;

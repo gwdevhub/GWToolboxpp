@@ -247,6 +247,7 @@
     <ClCompile Include="GWToolbox\DialogPanel.cpp" />
     <ClCompile Include="GWToolbox\DistanceWindow.cpp" />
     <ClCompile Include="GWToolbox\EditBuild.cpp" />
+    <ClCompile Include="GWToolbox\logger.cpp" />
     <ClCompile Include="GWToolbox\ToolboxWindow.cpp" />
     <ClCompile Include="GWToolbox\GWToolbox.cpp" />
     <ClCompile Include="GWToolbox\HotkeyPanel.cpp" />

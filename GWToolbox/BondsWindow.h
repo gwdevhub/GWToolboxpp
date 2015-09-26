@@ -2,7 +2,6 @@
 
 #include "ToolboxWindow.h"
 #include "../include/OSHGui/OSHGui.hpp"
-#include "logger.h"
 
 class BondsWindow : public ToolboxWindow {
 	static const int n_players = 12;

@@ -16,6 +16,7 @@
 using namespace std;
 
 GWToolbox* GWToolbox::instance_ = NULL;
+FILE* GWToolbox::logfile = NULL;
 GWAPI::DirectXMgr* GWToolbox::dx = NULL;
 OSHGui::Drawing::Direct3D9Renderer* GWToolbox::renderer = NULL;
 long GWToolbox::OldWndProc = 0;
@@ -29,30 +30,20 @@ void GWToolbox::SafeThreadEntry(HMODULE dllmodule) {
 	}
 }
 
-void GWToolbox::ExceptionHappened() {
-	// TODO write log file
-
-	MessageBoxA(0,
-		"GWToolbox crashed, oops\n\n"
-		"A log file has been created in the GWToolbox data folder.\n"
-		"Open it by typing running %LOCALAPPDATA% and looking for GWToolboxpp folder\n"
-		"Please send the file to the GWToolbox++ developers.\n"
-		"Thank you and sorry for the inconvenience.",
-		"GWToolbox++ Crash!", 0);
-
-	// TODO kill process ?
-}
-
 void GWToolbox::ThreadEntry(HMODULE dllmodule) {
 	if (GWToolbox::instance()) return;
 
-	LOG("Initializing API... ");
-	GWAPI::GWAPIMgr::Initialize();
-	LOG("ok\n");
+	if (!DEBUG_BUILD) {
+		freopen_s(&logfile, GuiUtils::getPathA("log.txt").c_str(), "w", stdout);
+	}
 
-	LOG("Creating GWToolbox++... ");
+	LOG("Initializing API\n");
+	GWAPI::GWAPIMgr::Initialize();
+	LOG("Initialized API\n");
+
+	LOG("Creating GWToolbox++\n");
 	instance_ = new GWToolbox(dllmodule);
-	LOG("ok\n");
+	LOG("Created GWToolbox++\n");
 
 	//*(byte*)0 = 0; // uncomment for guaranteed fun
 
@@ -63,14 +54,14 @@ void GWToolbox::Exec() {
 	GWAPI::GWAPIMgr* api = GWAPI::GWAPIMgr::GetInstance();
 	dx = api->DirectX;
 
-	LOG("Installing dx hooks... ");
+	LOG("Installing dx hooks\n");
 	dx->CreateRenderHooks(endScene, resetScene);
-	LOG("ok\n");
+	LOG("Installed dx hooks\n");
 
-	LOG("Installing input event handler... ");
+	LOG("Installing input event handler\n");
 	HWND gw_window_handle = GWAPI::MemoryMgr::GetGWWindowHandle();
 	OldWndProc = SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)NewWndProc);
-	LOG("ok\n");
+	LOG("Installed input event handler\n");
 
 	input.SetKeyboardInputEnabled(true);
 	input.SetMouseInputEnabled(true);
@@ -102,21 +93,47 @@ void GWToolbox::Exec() {
 
 	Sleep(100);
 
+	LOG("Saving config file\n");
 	config_->save();
 	Sleep(100);
+	LOG("Deleting config\n");
 	delete config_;
 	Sleep(100);
+	LOG("Restoring input hook\n");
 	SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
 	Sleep(100);
+	LOG("Destroying API\n");
 	GWAPI::GWAPIMgr::Destruct();
 #if DEBUG_BUILD
+	LOG("Destroying Console, bye\n");
 	FreeConsole();
+#else
+	LOG("Closing log file, bye\n");
+	fclose(logfile);
 #endif
 	Sleep(100);
 	FreeLibraryAndExitThread(m_dllmodule, EXIT_SUCCESS);
 }
 
+void GWToolbox::ExceptionHappened() {
+	LOG("ExceptionHappened\n");
+#if DEBUG_BUILD
+	fclose(logfile);
+#endif
+
+	MessageBoxA(0,
+		"GWToolbox crashed, oops\n\n"
+		"A log file has been created in the GWToolbox data folder.\n"
+		"Open it by typing running %LOCALAPPDATA% and looking for GWToolboxpp folder\n"
+		"Please send the file to the GWToolbox++ developers.\n"
+		"Thank you and sorry for the inconvenience.",
+		"GWToolbox++ Crash!", 0);
+
+	// TODO kill process ?
+}
+
 // TODO delete
+/*
 LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo) {
 	PEXCEPTION_RECORD records = ExceptionInfo->ExceptionRecord;
 	PCONTEXT cpudbg = ExceptionInfo->ContextRecord;
@@ -165,7 +182,7 @@ LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo) {
 	} else {
 		return EXCEPTION_CONTINUE_EXECUTION;
 	}
-}
+}*/
 
 LRESULT CALLBACK GWToolbox::NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) {
 	
@@ -239,40 +256,51 @@ void GWToolbox::SafeCreateGui(IDirect3DDevice9* pDevice) {
 
 void GWToolbox::CreateGui(IDirect3DDevice9* pDevice) {
 
-	LOG("Creating GUI...");
+	LOG("Creating GUI\n");
+	LOG("Creating Renderer\n");
 	renderer = new Direct3D9Renderer(pDevice);
+
+	LOG("Creating OSH Application\n");
 	Application::Initialize(std::unique_ptr<Direct3D9Renderer>(renderer));
 
 	Application * app = Application::InstancePtr();
 
+	LOG("Loading Theme\n");
 	string path = GuiUtils::getPathA("Theme.txt");
 	try {
 		Theme theme;
 		theme.Load(path);
 		app->SetTheme(theme);
+		LOG("Loaded Theme\n");
 	} catch (Misc::InvalidThemeException e) {
-		ERR("WARNING Could not load theme file %s\n", path.c_str());
+		LOG("WARNING Could not load theme file %s\n", path.c_str());
 	}
 	
+	LOG("Loading font\n");
 	app->SetDefaultFont(GuiUtils::getTBFont(10.0f, true));
+	LOG("Loaded font\n");
 
 	app->SetCursorEnabled(false);
 	try {
+		LOG("Creating main window\n");
 		MainWindow* main_window = new MainWindow();
 		main_window->SetFont(app->GetDefaultFont());
 		std::shared_ptr<MainWindow> shared_ptr = std::shared_ptr<MainWindow>(main_window);
 		app->Run(shared_ptr);
 
 		GWToolbox::instance()->set_main_window(main_window);
+		LOG("Creating timer\n");
 		GWToolbox::instance()->set_timer_window(new TimerWindow());
+		LOG("Creating bonds window\n");
 		GWToolbox::instance()->set_bonds_window(new BondsWindow());
+		LOG("Creating health window\n");
 		GWToolbox::instance()->set_health_window(new HealthWindow());
+		LOG("Creating distance window\n");
 		GWToolbox::instance()->set_distance_window(new DistanceWindow());
-
+		LOG("Enabling app\n");
 		app->Enable();
 		GWToolbox::instance()->set_initialized();
-
-		LOG("ok\n");
+		LOG("Gui Created\n");
 	} catch (Misc::FileNotFoundException e) {
 		LOG("Error: file not found %s\n", e.what());
 		GWToolbox::instance()->StartSelfDestruct();

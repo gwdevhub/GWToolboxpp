@@ -234,7 +234,7 @@ void MainWindow::OpenClosePanel(int index) {
 			panels[current_panel_]->SetVisible(true);
 			panels[current_panel_]->SetEnabled(true);
 		} else {
-			ERR("ERROR bad panel index!\n");
+			LOG("ERROR bad panel index!\n");
 		}
 	}
 }

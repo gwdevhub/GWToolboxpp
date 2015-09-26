@@ -68,25 +68,33 @@ public:
 	// Add or update a wstring value in the given section / key combination.
 	void iniWrite(const wchar_t* section, const wchar_t* key, const wchar_t* value) {
 		SI_Error err = iniFile->SetValue(section, key, value);
-		IFLTZERR(err, "SimpleIni SetValue error: %d", err);
+		if (err < 0) {
+			LOG("SimpleIni SetValue error: %d", err);
+		}
 	}
 
 	// Add or update a bool value in the given section / key combination.
 	void iniWriteBool(const wchar_t* section, const wchar_t* key, bool value) {
 		SI_Error err = iniFile->SetBoolValue(section, key, value);
-		IFLTZERR(err, "SimpleIni SetBoolValue error: %d", err);
+		if (err < 0) {
+			LOG("SimpleIni SetBoolValue error: %d", err);
+		}
 	}
 
 	// Add or update a long value in the given section / key combination.
 	void iniWriteLong(const wchar_t* section, const wchar_t* key, long value) {
 		SI_Error err = iniFile->SetLongValue(section, key, value);
-		IFLTZERR(err, "SimpleIni SetDoubleValue error: %d", err);
+		if (err < 0) {
+			LOG("SimpleIni SetLongValue error: %d", err);
+		}
 	}
 
 	// Add or update a double value in the given section / key combination.
 	void iniWriteDouble(const wchar_t* section, const wchar_t* key, double value) {
 		SI_Error err = iniFile->SetDoubleValue(section, key, value);
-		IFLTZERR(err, "SimpleIni SetDoubleValue error: %d", err);
+		if (err < 0) {
+			LOG("SimpleIni SetDoubleValue error: %d", err);
+		}
 	}
 
 	// returns a list of all the section names
