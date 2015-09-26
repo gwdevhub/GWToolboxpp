@@ -10,7 +10,7 @@ namespace GWAPI {
 
 	class GWAPIMgr {
 
-		static GWAPIMgr* instance;
+		static GWAPIMgr* instance_;
 
 		friend class GameThreadMgr;
 		friend class CtoSMgr;
@@ -26,29 +26,41 @@ namespace GWAPI {
 		friend class MerchantMgr;
 		friend class GuildMgr;
 
-		
+		GameThreadMgr* gamethread_;
+		CtoSMgr* ctos_;
+		AgentMgr* agents_;
+		ItemMgr* items_;
+		SkillbarMgr* skillbar_;
+		EffectMgr* effects_;
+		MapMgr* map_;
+		ChatMgr* chat_;
+		MerchantMgr* merchant_;
+		GuildMgr* guild_;
+#ifdef GWAPI_USEDIRECTX
+		DirectXMgr* directx_;
+
+#endif
 		
 		GWAPIMgr();
 		~GWAPIMgr();
 	public:
 
-
-		GameThreadMgr* GameThread;
-		CtoSMgr* CtoS;
-		AgentMgr* Agents;
-		ItemMgr* Items;
-		SkillbarMgr* Skillbar;
-		EffectMgr* Effects;
-		MapMgr* Map;
-		ChatMgr* Chat;
-		MerchantMgr* Merchant;
-		GuildMgr* Guild;
+		inline GameThreadMgr* Gamethread() const { return gamethread_; }
+		inline CtoSMgr* CtoS() const { return ctos_; }
+		inline AgentMgr* Agents() const { return agents_; }
+		inline ItemMgr* Items() const { return items_; }
+		inline SkillbarMgr* Skillbar() const { return skillbar_; }
+		inline EffectMgr* Effects() const { return effects_; }
+		inline ChatMgr* Chat() const { return chat_; }
+		inline MerchantMgr* Merchant() const { return merchant_; }
+		inline GuildMgr* Guild() const { return guild_; }
+		inline MapMgr* Map() const { return map_; }
 #ifdef GWAPI_USEDIRECTX
-		DirectXMgr* DirectX;
+		inline DirectXMgr* DirectX() const { return directx_; }
 #endif
 
 		static void Initialize();
-		static GWAPIMgr* GetInstance();
+		static GWAPIMgr* instance();
 		static void Destruct();
 	};
 

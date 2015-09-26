@@ -8,8 +8,10 @@ namespace GWAPI {
 	class ItemMgr {
 		friend class GWAPIMgr;
 		typedef void(__fastcall *OpenXunlai_t)(DWORD, DWORD*);
-		OpenXunlai_t _OpenXunlai;
-		GWAPIMgr* parent;
+
+		OpenXunlai_t open_xunlai_function_;
+		GWAPIMgr* const parent_;
+
 		ItemMgr(GWAPIMgr* obj);
 
 	public:

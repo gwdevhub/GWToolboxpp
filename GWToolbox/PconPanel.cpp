@@ -209,10 +209,10 @@ void PconPanel::BuildUI() {
 void PconPanel::UpdateUI() {
 	if (!initialized) return;
 
-	GWAPIMgr * API = GWAPIMgr::GetInstance();
+	GWAPIMgr * API = GWAPIMgr::instance();
 
-	if (current_map_type != API->Map->GetInstanceType()) {
-		current_map_type = API->Map->GetInstanceType();
+	if (current_map_type != API->Map()->GetInstanceType()) {
+		current_map_type = API->Map()->GetInstanceType();
 		scan_inventory_timer = TBTimer::init();
 	}
 
@@ -232,16 +232,16 @@ void PconPanel::UpdateUI() {
 void PconPanel::MainRoutine() {
 	if (!initialized) return;
 
-	GWAPIMgr * API = GWAPIMgr::GetInstance();
+	GWAPIMgr * API = GWAPIMgr::instance();
 
 	if (!enabled) return;
 	InstanceType type;
 	try {
-		type = API->Map->GetInstanceType();
+		type = API->Map()->GetInstanceType();
 		if (type == InstanceType::Loading) return;
-		if (API->Agents->GetPlayerId() == 0) return;
-		if (API->Agents->GetPlayer() == NULL) return;
-		if (API->Agents->GetPlayer()->GetIsDead()) return;
+		if (API->Agents()->GetPlayerId() == 0) return;
+		if (API->Agents()->GetPlayer() == NULL) return;
+		if (API->Agents()->GetPlayer()->GetIsDead()) return;
 	} catch (APIException_t) {
 		return;
 	}

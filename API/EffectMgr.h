@@ -29,7 +29,7 @@ namespace GWAPI {
 
 		// Returns current level of intoxication, 0-5 scale.
 		// If > 0 then skills that benefit from drunk will work.
-		DWORD GetAlcoholLevel() const { return AlcoholLevel; }
+		DWORD GetAlcoholLevel() const { return alcohol_level_; }
 
 		// Have fun with this ;))))))))))
 		void GetDrunkAf(DWORD Intensity, DWORD Tint);
@@ -39,13 +39,17 @@ namespace GWAPI {
 		EffectMgr(GWAPIMgr* obj);
 		~EffectMgr();
 
-		typedef void(__fastcall *PPEFunc_t)(DWORD Intensity, DWORD Tint);
-		static PPEFunc_t PPERetourFunc;
-		static DWORD AlcoholLevel;
-		Hook hkPostProcessEffect;
-		static void __fastcall AlcoholHandler(DWORD Intensity, DWORD Tint);
 		friend class GWAPIMgr;
-		GWAPIMgr* parent;
+		typedef void(__fastcall *PPEFunc_t)(DWORD Intensity, DWORD Tint);
+		static void __fastcall AlcoholHandler(DWORD Intensity, DWORD Tint);
+
+		static PPEFunc_t ppe_retour_func_;
+		static DWORD alcohol_level_;
+		Hook hk_post_process_effect_;
+
+		void RestoreHooks();
+		
+		GWAPIMgr* const parent_;
 		
 	};
 }

@@ -6,61 +6,61 @@ extern "C"{
 
 void GWAPI::Hook::Retour()
 {
-	DWORD dwOldProt;
+	DWORD old_protection;
 
-	VirtualProtect(m_source, m_length, PAGE_READWRITE, &dwOldProt);
+	VirtualProtect(source_, length_, PAGE_READWRITE, &old_protection);
 
-	memcpy(m_source, m_retourfunc, m_length);
+	memcpy(source_, retour_func_, length_);
 
-	VirtualProtect(m_source, m_length, dwOldProt, &dwOldProt);
+	VirtualProtect(source_, length_, old_protection, &old_protection);
 
-	delete[] m_retourfunc;
+	delete[] retour_func_;
 }
 
 BYTE* GWAPI::Hook::Detour(BYTE* _source, BYTE* _detour, const DWORD _length)
 {
-	DWORD dwOldProt;
+	DWORD old_protection;
 
-	m_source = _source;
-	m_length = _length;
-	m_retourfunc = new BYTE[m_length + 5];
+	source_ = _source;
+	length_ = _length;
+	retour_func_ = new BYTE[length_ + 5];
 
-	memcpy(m_retourfunc, m_source, m_length);
+	memcpy(retour_func_, source_, length_);
 
-	m_retourfunc += m_length;
+	retour_func_ += length_;
 	
-	m_retourfunc[0] = 0xE9;
-	*(DWORD*)(m_retourfunc + 1) = (DWORD)((m_source + m_length) - (m_retourfunc + 5));
+	retour_func_[0] = 0xE9;
+	*(DWORD*)(retour_func_ + 1) = (DWORD)((source_ + length_) - (retour_func_ + 5));
 
-	VirtualProtect(m_source, m_length, PAGE_READWRITE, &dwOldProt);
+	VirtualProtect(source_, length_, PAGE_READWRITE, &old_protection);
 
-	m_source[0] = 0xE9;
-	*(DWORD*)(m_source + 1) = (DWORD)(_detour - (m_source + 5));
+	source_[0] = 0xE9;
+	*(DWORD*)(source_ + 1) = (DWORD)(_detour - (source_ + 5));
 
-	if (m_length != 5)
-		for (DWORD i = 5; i < m_length;i++)
-			m_source[i] = 0x90;
+	if (length_ != 5)
+		for (DWORD i = 5; i < length_;i++)
+			source_[i] = 0x90;
 
-	VirtualProtect(m_source, m_length, dwOldProt, &dwOldProt);
+	VirtualProtect(source_, length_, old_protection, &old_protection);
 
-	m_retourfunc -= m_length;
+	retour_func_ -= length_;
 
-	return m_retourfunc;
+	return retour_func_;
 }
 
 DWORD GWAPI::Hook::CalculateDetourLength(BYTE* _source)
 {
 	
-	DWORD dwLen = 0;
-	DWORD dwCurOp;
+	DWORD len = 0;
+	DWORD current_op;
 
 	do{
-		dwCurOp = length_disasm((void*)_source);
-		if (dwCurOp != 0){
-			dwLen += dwCurOp;
-			_source += dwCurOp;
+		current_op = length_disasm((void*)_source);
+		if (current_op != 0){
+			len += current_op;
+			_source += current_op;
 		}
-	} while (dwLen < 5);
+	} while (len < 5);
 
-	return dwLen;
+	return len;
 }

@@ -1,7 +1,7 @@
 #include "CtoSMgr.h"
 
 
-GWAPI::CtoSMgr::SendCtoGSPacket_t GWAPI::CtoSMgr::CtoGSPacketSendFunction = NULL;
+GWAPI::CtoSMgr::SendCtoGSPacket_t GWAPI::CtoSMgr::gs_send_function_ = NULL;
 
 void GWAPI::CtoSMgr::SendPacket(DWORD size, ...)
 {
@@ -16,12 +16,12 @@ void GWAPI::CtoSMgr::SendPacket(DWORD size, ...)
 	}
 	va_end(vl);
 
-	parent->GameThread->Enqueue(packetsendintermediary, GetCtoGSObj(), size, pak);
+	parent_->Gamethread()->Enqueue(packetsendintermediary, GetCtoGSObj(), size, pak);
 }
 
-GWAPI::CtoSMgr::CtoSMgr(GWAPIMgr* obj) : parent(obj)
+GWAPI::CtoSMgr::CtoSMgr(GWAPIMgr* obj) : parent_(obj)
 {
-	CtoGSPacketSendFunction = (SendCtoGSPacket_t)MemoryMgr::CtoGSSendFunction;
+	gs_send_function_ = (SendCtoGSPacket_t)MemoryMgr::CtoGSSendFunction;
 }
 
 DWORD GWAPI::CtoSMgr::GetCtoGSObj()
@@ -31,7 +31,7 @@ DWORD GWAPI::CtoSMgr::GetCtoGSObj()
 
 void GWAPI::CtoSMgr::packetsendintermediary(DWORD thisptr, DWORD size, DWORD* packet)
 {
-	CtoGSPacketSendFunction(thisptr, size, packet);
+	gs_send_function_(thisptr, size, packet);
 
 	delete[] packet;
 }

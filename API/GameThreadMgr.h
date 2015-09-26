@@ -10,19 +10,23 @@
 
 namespace GWAPI{
 
+	// Shoutouts to DarthTon @ unknowncheats.me for this class.
+
 	class GameThreadMgr{
 
 		friend class GWAPIMgr;
 
-		GWAPIMgr* parent;
+		GWAPIMgr* const parent_;
 
-		bool m_RenderingState;
+		bool render_state_;
 
-		Hook hkGameThread;
+		Hook hk_game_thread_;
 
-		std::vector<std::function<void(void)> > m_Calls;
-		std::vector<std::function<void(void)> > m_CallsPermanent;
-		mutable std::mutex m_CallVecMutex;
+		void RestoreHooks();
+
+		std::vector<std::function<void(void)> > calls_;
+		std::vector<std::function<void(void)> > calls_permanent_;
+		mutable std::mutex call_vector_mutex_;
 
 		GameThreadMgr(GWAPIMgr* obj);
 		~GameThreadMgr();
@@ -36,14 +40,14 @@ namespace GWAPI{
 		template<typename F, typename... ArgTypes>
 		void Enqueue(F&& Func, ArgTypes&&... Args)
 		{
-			std::unique_lock<std::mutex> VecLock(m_CallVecMutex);
-			m_Calls.emplace_back(std::bind(std::forward<F>(Func), std::forward<ArgTypes>(Args)...));
+			std::unique_lock<std::mutex> VecLock(call_vector_mutex_);
+			calls_.emplace_back(std::bind(std::forward<F>(Func), std::forward<ArgTypes>(Args)...));
 		}
 		template<typename F, typename... ArgTypes>
 		void AddPermanentCall(F&& Func, ArgTypes&&... Args)
 		{
-			std::unique_lock<std::mutex> VecLock(m_CallVecMutex);
-			m_CallsPermanent.emplace_back(std::bind(std::forward<F>(Func), std::forward<ArgTypes>(Args)...));
+			std::unique_lock<std::mutex> VecLock(call_vector_mutex_);
+			calls_permanent_.emplace_back(std::bind(std::forward<F>(Func), std::forward<ArgTypes>(Args)...));
 		}
 
 

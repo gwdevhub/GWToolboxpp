@@ -1,23 +1,23 @@
 #include "DirectXMgr.h"
 
-GWAPI::DirectXMgr::DirectXMgr(GWAPIMgr* obj) : parent(obj)
+GWAPI::DirectXMgr::DirectXMgr(GWAPIMgr* obj) : parent_(obj)
 {
 
 }
 
-GWAPI::DirectXMgr::EndScene_t GWAPI::DirectXMgr::GetEndsceneReturn()
+GWAPI::DirectXMgr::EndScene_t GWAPI::DirectXMgr::EndsceneReturn()
 {
-	return oEndScene;
+	return endscene_;
 }
 
-GWAPI::DirectXMgr::Reset_t GWAPI::DirectXMgr::GetResetReturn()
+GWAPI::DirectXMgr::Reset_t GWAPI::DirectXMgr::ResetReturn()
 {
-	return oReset;
+	return reset_;
 }
 
 void GWAPI::DirectXMgr::CreateRenderHooks(EndScene_t _endscene, Reset_t _reset)
 {
-	if (hooked) return;
+	if (hooked_) return;
 
 
 	HMODULE hD3D9 = NULL;
@@ -28,25 +28,25 @@ void GWAPI::DirectXMgr::CreateRenderHooks(EndScene_t _endscene, Reset_t _reset)
 	}
 
 	DWORD pA1 = dwFindPattern((DWORD)hD3D9, 0x128000, (PBYTE)"\xC7\x06\x00\x00\x00\x00\x89\x86\x00\x00\x00\x00\x89\x86", "xx????xx????xx");
-	memcpy(&VTableStart, (void*)(pA1 + 2), 4);
+	memcpy(&vtable_start_, (void*)(pA1 + 2), 4);
 
-	DWORD dwEndsceneLen = Hook::CalculateDetourLength((BYTE*)(VTableStart[42]));
-	oEndScene = (EndScene_t)hkDXEndscene.Detour((BYTE*)(VTableStart[42]), (BYTE*)_endscene, dwEndsceneLen);
+	DWORD dwEndsceneLen = Hook::CalculateDetourLength((BYTE*)(vtable_start_[42]));
+	endscene_ = (EndScene_t)hk_endscene_.Detour((BYTE*)(vtable_start_[42]), (BYTE*)_endscene, dwEndsceneLen);
 
-	DWORD dwResetLen = Hook::CalculateDetourLength((BYTE*)(VTableStart[16]));
-	oReset = (Reset_t)hkDXReset.Detour((BYTE*)(VTableStart[16]), (BYTE*)_reset, dwResetLen);
+	DWORD dwResetLen = Hook::CalculateDetourLength((BYTE*)(vtable_start_[16]));
+	reset_ = (Reset_t)hk_reset_.Detour((BYTE*)(vtable_start_[16]), (BYTE*)_reset, dwResetLen);
 
-	hooked = true;
+	hooked_ = true;
 }
 
-void GWAPI::DirectXMgr::RestoreRenderHooks()
+void GWAPI::DirectXMgr::RestoreHooks()
 {
-	if (!hooked) return;
+	if (!hooked_) return;
 
-	hkDXEndscene.Retour();
-	hkDXReset.Retour();
+	hk_endscene_.Retour();
+	hk_reset_.Retour();
 
-	hooked = false;
+	hooked_ = false;
 }
 
 DWORD GWAPI::DirectXMgr::dwFindPattern(DWORD dwAddress, DWORD dwLen, BYTE* bMask, char* szMask)
@@ -67,6 +67,4 @@ bool GWAPI::DirectXMgr::bDataCompare(const BYTE* pData, const BYTE* bMask, const
 
 GWAPI::DirectXMgr::~DirectXMgr()
 {
-	if (hooked)
-		RestoreRenderHooks();
 }

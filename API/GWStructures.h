@@ -153,8 +153,8 @@ namespace GWAPI {
 
 		class AgentArray : public MemoryMgr::gw_array < Agent* > {
 		public:
-			Agent* GetPlayer() { return GetIndex(GetPlayerId()); }
-			Agent* GetTarget() { return GetIndex(GetTargetId()); }
+			Agent* GetPlayer() { return index(GetPlayerId()); }
+			Agent* GetTarget() { return index(GetTargetId()); }
 			inline DWORD GetPlayerId() { return *(DWORD*)MemoryMgr::PlayerAgentIDPtr; }
 			inline DWORD GetTargetId() { return *(DWORD*)MemoryMgr::TargetAgentIDPtr; }
 		};

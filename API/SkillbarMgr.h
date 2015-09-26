@@ -32,10 +32,12 @@ namespace GWAPI{
 		
 	private:
 		SkillbarMgr(GWAPIMgr* obj);
+
 		typedef void(__fastcall *UseSkill_t)(DWORD, DWORD, DWORD, DWORD);
-		UseSkill_t _UseSkill;
 		friend class GWAPIMgr;
-		GWAPIMgr* parent;
-		GW::Skill* SkillConstants;
+
+		UseSkill_t UseSkill_;
+		GWAPIMgr* parent_;
+		GW::Skill* SkillConstants_;
 	};
 }

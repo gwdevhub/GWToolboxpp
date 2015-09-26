@@ -10,7 +10,7 @@ void GWAPI::ChatMgr::SendChat(const wchar_t* msg, wchar_t channel)
 	chat->channel = channel;
 	wcscpy_s(chat->msg, msg);
 
-	parent->CtoS->SendPacket<P5E_SendChat>(chat);
+	parent_->CtoS()->SendPacket<P5E_SendChat>(chat);
 }
 
 void GWAPI::ChatMgr::WriteChatF(const wchar_t* format, ...)

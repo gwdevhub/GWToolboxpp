@@ -7,28 +7,28 @@
 void GWAPI::ItemMgr::OpenXunlaiWindow()
 {
 	static DWORD* xunlaibuf = new DWORD[2]{0, 1};
-	parent->GameThread->Enqueue(_OpenXunlai,
+	parent_->Gamethread()->Enqueue(open_xunlai_function_,
 		*MemoryMgr::ReadPtrChain<DWORD*>((DWORD)MemoryMgr::XunlaiSession, 4, 0x118, 0x10, 0, 0x14), xunlaibuf);
 }
 
 void GWAPI::ItemMgr::PickUpItem(GW::Item* item, DWORD CallTarget /*= 0*/)
 {
-	parent->CtoS->SendPacket(0xC, 0x39, item->AgentId, CallTarget);
+	parent_->CtoS()->SendPacket(0xC, 0x39, item->AgentId, CallTarget);
 }
 
 void GWAPI::ItemMgr::DropItem(GW::Item* item, DWORD quantity)
 {
-	parent->CtoS->SendPacket(0xC, 0x26, item->ItemId, quantity);
+	parent_->CtoS()->SendPacket(0xC, 0x26, item->ItemId, quantity);
 }
 
 void GWAPI::ItemMgr::EquipItem(GW::Item* item)
 {
-	parent->CtoS->SendPacket(0x8, 0x2A, item->ItemId);
+	parent_->CtoS()->SendPacket(0x8, 0x2A, item->ItemId);
 }
 
 void GWAPI::ItemMgr::UseItem(GW::Item* item)
 {
-	parent->CtoS->SendPacket(0x8, 0x78, item->ItemId);
+	parent_->CtoS()->SendPacket(0x8, 0x78, item->ItemId);
 }
 
 GWAPI::GW::Bag** GWAPI::ItemMgr::GetBagArray()
@@ -41,15 +41,15 @@ GWAPI::GW::ItemArray GWAPI::ItemMgr::GetItemArray()
 	return *MemoryMgr::ReadPtrChain<GW::ItemArray*>(MemoryMgr::GetContextPtr(), 2, 0x40, 0xB8);
 }
 
-GWAPI::ItemMgr::ItemMgr(GWAPIMgr* obj) : parent(obj)
+GWAPI::ItemMgr::ItemMgr(GWAPIMgr* obj) : parent_(obj)
 {
-	_OpenXunlai = (OpenXunlai_t)MemoryMgr::OpenXunlaiFunction;
+	open_xunlai_function_ = (OpenXunlai_t)MemoryMgr::OpenXunlaiFunction;
 }
 
 bool GWAPI::ItemMgr::UseItemByModelId(DWORD modelid, BYTE bagStart /*= 1*/, const BYTE bagEnd /*= 4*/)
 {
 
-	if (parent->Map->GetInstanceType() == GwConstants::InstanceType::Loading) return false;
+	if (parent_->Map()->GetInstanceType() == GwConstants::InstanceType::Loading) return false;
 
 	GW::Bag** bags = GetBagArray();
 	if (bags == NULL) return false;
@@ -61,7 +61,7 @@ bool GWAPI::ItemMgr::UseItemByModelId(DWORD modelid, BYTE bagStart /*= 1*/, cons
 		bag = bags[bagIndex];
 		if (bag != NULL) {
 			GW::ItemArray items = bag->Items;
-			if (!items.IsValid()) return false;
+			if (!items.valid()) return false;
 			for (size_t i = 0; i < items.size(); i++) {
 				item = items[i];
 				if (item != NULL) {
@@ -79,7 +79,7 @@ bool GWAPI::ItemMgr::UseItemByModelId(DWORD modelid, BYTE bagStart /*= 1*/, cons
 
 void GWAPI::ItemMgr::DropGold(DWORD Amount /*= 1*/)
 {
-	parent->CtoS->SendPacket(0x8, 0x29, Amount);
+	parent_->CtoS()->SendPacket(0x8, 0x29, Amount);
 }
 
 DWORD GWAPI::ItemMgr::CountItemByModelId(DWORD modelid, BYTE bagStart /*= 1*/, const BYTE bagEnd /*= 4*/)
@@ -139,5 +139,5 @@ DWORD GWAPI::ItemMgr::GetGoldAmountInStorage()
 
 void GWAPI::ItemMgr::OpenLockedChest()
 {
-	return parent->CtoS->SendPacket(0x8, 0x4D, 0x2);
+	return parent_->CtoS()->SendPacket(0x8, 0x4D, 0x2);
 }

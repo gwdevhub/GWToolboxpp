@@ -8,8 +8,8 @@ namespace GWAPI {
 
 	class ChatMgr{
 		friend class GWAPIMgr;
-		GWAPIMgr* parent;
-		ChatMgr(GWAPIMgr* obj) : parent(obj) {}
+		GWAPIMgr* const parent_;
+		ChatMgr(GWAPIMgr* obj) : parent_(obj) {}
 
 		struct P5E_SendChat{
 			const DWORD header = 0x5E;

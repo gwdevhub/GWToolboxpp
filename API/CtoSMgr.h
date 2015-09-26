@@ -7,11 +7,10 @@ namespace GWAPI {
 	class CtoSMgr {
 		typedef void(__fastcall *SendCtoGSPacket_t)(DWORD ctogsobj, DWORD size, DWORD* packet);
 		friend class GWAPIMgr;
-		GWAPIMgr* parent;
+		GWAPIMgr* parent_;
 
-		static SendCtoGSPacket_t CtoGSPacketSendFunction;
+		static SendCtoGSPacket_t gs_send_function_;
 		DWORD GetCtoGSObj();
-
 
 		static void __fastcall packetsendintermediary(DWORD thisptr, DWORD size, DWORD* packet);
 
@@ -27,7 +26,7 @@ namespace GWAPI {
 		void SendPacket(T* packet)
 		{
 			DWORD size = sizeof(T);
-			parent->GameThread->Enqueue(CtoGSPacketSendFunction, GetCtoGSObj(), size, (DWORD*)packet);
+			parent_->Gamethread()->Enqueue(gs_send_function_, GetCtoGSObj(), size, (DWORD*)packet);
 		}
 
 	};

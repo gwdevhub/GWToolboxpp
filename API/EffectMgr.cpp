@@ -5,13 +5,13 @@
 #include "CtoSMgr.h"
 #include "AgentMgr.h"
 
-DWORD GWAPI::EffectMgr::AlcoholLevel = NULL;
-GWAPI::EffectMgr::PPEFunc_t GWAPI::EffectMgr::PPERetourFunc = NULL;
+DWORD GWAPI::EffectMgr::alcohol_level_ = NULL;
+GWAPI::EffectMgr::PPEFunc_t GWAPI::EffectMgr::ppe_retour_func_ = NULL;
 
 
-GWAPI::EffectMgr::EffectMgr(GWAPIMgr* obj) :parent(obj)
+GWAPI::EffectMgr::EffectMgr(GWAPIMgr* obj) :parent_(obj)
 {
-	PPERetourFunc = (PPEFunc_t)hkPostProcessEffect.Detour(MemoryMgr::PostProcessEffectFunction, (BYTE*)AlcoholHandler, 6);
+	ppe_retour_func_ = (PPEFunc_t)hk_post_process_effect_.Detour(MemoryMgr::PostProcessEffectFunction, (BYTE*)AlcoholHandler, 6);
 }
 
 GWAPI::GW::Effect GWAPI::EffectMgr::GetPlayerEffectById(GwConstants::SkillID SkillID)
@@ -19,9 +19,9 @@ GWAPI::GW::Effect GWAPI::EffectMgr::GetPlayerEffectById(GwConstants::SkillID Ski
 	DWORD id = static_cast<DWORD>(SkillID);
 	GW::AgentEffectsArray AgEffects = GetPartyEffectArray();
 
-	if (AgEffects.IsValid()){
+	if (AgEffects.valid()){
 		GW::EffectArray Effects = AgEffects[0].Effects;
-		if (Effects.IsValid()){
+		if (Effects.valid()){
 			for (DWORD i = 0; i < Effects.size(); i++) {
 				if (Effects[i].SkillId == id) return Effects[i];
 			}
@@ -36,9 +36,9 @@ GWAPI::GW::Buff GWAPI::EffectMgr::GetPlayerBuffBySkillId(GwConstants::SkillID Sk
 	DWORD id = static_cast<DWORD>(SkillID);
 	GW::AgentEffectsArray AgEffects = GetPartyEffectArray();
 
-	if (AgEffects.IsValid()){
+	if (AgEffects.valid()){
 		GW::BuffArray Buffs = AgEffects[0].Buffs;
-		if (Buffs.IsValid()){
+		if (Buffs.valid()){
 			for (DWORD i = 0; i < Buffs.size(); i++) {
 				if (Buffs[i].SkillId == id) return Buffs[i];
 			}
@@ -51,9 +51,9 @@ GWAPI::GW::Buff GWAPI::EffectMgr::GetPlayerBuffBySkillId(GwConstants::SkillID Sk
 GWAPI::GW::EffectArray GWAPI::EffectMgr::GetPlayerEffectArray()
 {
 	GW::AgentEffectsArray ageffects = GetPartyEffectArray();
-	if (ageffects.IsValid()){
+	if (ageffects.valid()){
 		GW::EffectArray ret = ageffects[0].Effects;
-		if (ret.IsValid()){
+		if (ret.valid()){
 			return ret;
 		}
 	}
@@ -63,18 +63,17 @@ GWAPI::GW::EffectArray GWAPI::EffectMgr::GetPlayerEffectArray()
 
 void __fastcall GWAPI::EffectMgr::AlcoholHandler(DWORD Intensity, DWORD Tint)
 {
-	AlcoholLevel = Intensity;
-	return PPERetourFunc(Intensity, Tint);
+	alcohol_level_ = Intensity;
+	return ppe_retour_func_(Intensity, Tint);
 }
 
 GWAPI::EffectMgr::~EffectMgr()
 {
-	hkPostProcessEffect.Retour();
 }
 
 void GWAPI::EffectMgr::GetDrunkAf(DWORD Intensity,DWORD Tint)
 {
-	parent->GameThread->Enqueue(PPERetourFunc, Intensity, Tint);
+	parent_->Gamethread()->Enqueue(ppe_retour_func_, Intensity, Tint);
 }
 
 GWAPI::GW::AgentEffectsArray GWAPI::EffectMgr::GetPartyEffectArray()
@@ -85,9 +84,9 @@ GWAPI::GW::AgentEffectsArray GWAPI::EffectMgr::GetPartyEffectArray()
 GWAPI::GW::BuffArray GWAPI::EffectMgr::GetPlayerBuffArray()
 {
 	GW::AgentEffectsArray ageffects = GetPartyEffectArray();
-	if (ageffects.IsValid()){
+	if (ageffects.valid()){
 		GW::BuffArray ret = ageffects[0].Buffs;
-		if (ret.IsValid()){
+		if (ret.valid()){
 			return ret;
 		}
 	}
@@ -97,5 +96,10 @@ GWAPI::GW::BuffArray GWAPI::EffectMgr::GetPlayerBuffArray()
 
 void GWAPI::EffectMgr::DropBuff(DWORD buffId) 
 {
-	parent->CtoS->SendPacket(0x8, 0x23, buffId);
+	parent_->CtoS()->SendPacket(0x8, 0x23, buffId);
+}
+
+void GWAPI::EffectMgr::RestoreHooks()
+{
+	hk_post_process_effect_.Retour();
 }
