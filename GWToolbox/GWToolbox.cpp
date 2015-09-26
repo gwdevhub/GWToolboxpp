@@ -13,29 +13,13 @@
 #include "MainWindow.h"
 #include "TimerWindow.h"
 
-using namespace OSHGui::Drawing;
-using namespace OSHGui::Input;
 using namespace std;
 
-
-// DirectX event handlers declaration
-static HRESULT WINAPI endScene(IDirect3DDevice9* pDevice);
-static HRESULT WINAPI resetScene(IDirect3DDevice9* pDevice, 
-	D3DPRESENT_PARAMETERS* pPresentationParameters);
-
-// Input event handler declaration
-static LRESULT CALLBACK NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam);
-
 GWToolbox* GWToolbox::instance_ = NULL;
-
-namespace{
-	GWAPI::DirectXMgr * dx;
-
-	Direct3D9Renderer* renderer;
-
-	long OldWndProc = 0;
-	WindowsMessage input;
-}
+GWAPI::DirectXMgr* GWToolbox::dx = NULL;
+OSHGui::Drawing::Direct3D9Renderer* GWToolbox::renderer = NULL;
+long GWToolbox::OldWndProc = 0;
+OSHGui::Input::WindowsMessage GWToolbox::input;
 
 void GWToolbox::SafeThreadEntry(HMODULE dllmodule) {
 	__try {
@@ -183,7 +167,7 @@ LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo) {
 	}
 }
 
-static LRESULT CALLBACK NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK GWToolbox::NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) {
 	
 	if (Message == WM_QUIT || Message == WM_CLOSE) {
 		GWToolbox::instance()->config()->save();
@@ -286,7 +270,7 @@ void GWToolbox::CreateGui(IDirect3DDevice9* pDevice) {
 		GWToolbox::instance()->set_distance_window(new DistanceWindow());
 
 		app->Enable();
-		GWToolbox::instance()->SetInitialized();
+		GWToolbox::instance()->set_initialized();
 
 		LOG("ok\n");
 	} catch (Misc::FileNotFoundException e) {
@@ -296,7 +280,7 @@ void GWToolbox::CreateGui(IDirect3DDevice9* pDevice) {
 }
 
 // All rendering done here.
-static HRESULT WINAPI endScene(IDirect3DDevice9* pDevice) {
+HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 	static GWAPI::DirectXMgr::EndScene_t origfunc = dx->GetEndsceneReturn();
 	static bool init = false;
 	if (!init) {
@@ -315,7 +299,7 @@ static HRESULT WINAPI endScene(IDirect3DDevice9* pDevice) {
 	return origfunc(pDevice);
 }
 
-static HRESULT WINAPI resetScene(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETERS* pPresentationParameters) {
+HRESULT WINAPI GWToolbox::resetScene(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETERS* pPresentationParameters) {
 	static GWAPI::DirectXMgr::Reset_t origfunc = dx->GetResetReturn();
 
 	// pre-reset here.
@@ -330,8 +314,6 @@ static HRESULT WINAPI resetScene(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETER
 
 	return result;
 }
-
-
 
 void GWToolbox::UpdateUI() {
 	if (initialized_) {

@@ -2,6 +2,7 @@
 
 #include "../API/APIMain.h"
 #include "../include/OSHGui/OSHGui.hpp"
+#include "../include/OSHGui/Input/WindowsMessage.hpp"
 #include "../include/OSHGui/Drawing/Direct3D9/Direct3D9Renderer.hpp"
 
 #include "Config.h"
@@ -11,14 +12,44 @@
 #include "HealthWindow.h"
 #include "DistanceWindow.h"
 
-
-using namespace OSHGui;
-
 class GWToolbox {
 
+	//------ Static Fields ------//
 private:
 	static GWToolbox* instance_;
+	static GWAPI::DirectXMgr* dx;
+	static OSHGui::Drawing::Direct3D9Renderer* renderer;
+	static long OldWndProc;
+	static OSHGui::Input::WindowsMessage input;
+
+	//------ Static Methods ------//
+public:
+	// will create a new toolbox object and run it, can be used as argument for createThread
+	static void SafeThreadEntry(HMODULE mod);
+private:
+	static void ThreadEntry(HMODULE dllmodule);
+
+	static void SafeCreateGui(IDirect3DDevice9* pDevice);
+	static void CreateGui(IDirect3DDevice9* pDevice);
+
+	static void ExceptionHappened();
+
+	// DirectX event handlers declaration
+	static HRESULT WINAPI endScene(IDirect3DDevice9* pDevice);
+	static HRESULT WINAPI resetScene(IDirect3DDevice9* pDevice,
+		D3DPRESENT_PARAMETERS* pPresentationParameters);
+
+	// Input event handler declaration
+	static LRESULT CALLBACK NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam);
+
+
+	//------ Private Fields ------//
+private:
+	HMODULE m_dllmodule;	// Handle to the dll module we are running, used to clear the module from GW on eject.
+
 	bool initialized_;
+	bool capture_input_;
+	bool must_self_destruct_;
 
 	Config* const config_;
 	MainWindow* main_window_;
@@ -27,9 +58,7 @@ private:
 	HealthWindow* health_window_;
 	DistanceWindow* distance_window_;
 
-	bool capture_input_;
-	bool must_self_destruct_;
-
+	//------ Constructor ------//
 private:
 	GWToolbox(HMODULE mod) :
 		m_dllmodule(mod),
@@ -44,30 +73,30 @@ private:
 		capture_input_ = false;
 	}
 
+	//------ Private Methods ------//
+private:
 	// Does everything: setup, main loop, destruction 
 	void Exec();
+	void UpdateUI();
 
-	HMODULE m_dllmodule;	// Handle to the dll module we are running, used to clear the module from GW on eject.
+	//------ Setters ------//
+private:
+	inline void set_initialized() { initialized_ = true; }
+	inline void set_main_window(MainWindow* w) { main_window_ = w; }
+	inline void set_timer_window(TimerWindow* w) { timer_window_ = w; }
+	inline void set_bonds_window(BondsWindow* w) { bonds_window_ = w; }
+	inline void set_health_window(HealthWindow* w) { health_window_ = w; }
+	inline void set_distance_window(DistanceWindow* w) { distance_window_ = w; }
 
+	//------ Public methods ------//
 public:
+	static GWToolbox* instance() { return instance_; }
 
-	static void ExceptionHappened();
-
-	// will create a new toolbox object and run it, can be used as argument for createThread
-	static void SafeThreadEntry(HMODULE mod);
-	static void ThreadEntry(HMODULE dllmodule);
-
-	static void SafeCreateGui(IDirect3DDevice9* pDevice);
-	static void CreateGui(IDirect3DDevice9* pDevice);
-
-	inline void SetInitialized() { initialized_ = true; }
 	inline bool initialized() { return initialized_; }
 
 	inline bool capture_input() { return capture_input_; }
 	inline void set_capture_input(bool capture) { capture_input_ = capture; }
-
-	// returns toolbox instance
-	static GWToolbox* instance() { return instance_; }
+	
 	inline Config* config() { return config_; }
 	inline MainWindow* main_window() { return main_window_; }
 	inline TimerWindow* timer_window() { return timer_window_; }
@@ -75,13 +104,5 @@ public:
 	inline HealthWindow* health_window() { return health_window_; }
 	inline DistanceWindow* distance_window() { return distance_window_; }
 	
-	inline void set_main_window(MainWindow* w) { main_window_ = w; }
-	inline void set_timer_window(TimerWindow* w) { timer_window_ = w; }
-	inline void set_bonds_window(BondsWindow* w) { bonds_window_ = w; }
-	inline void set_health_window(HealthWindow* w) { health_window_ = w; }
-	inline void set_distance_window(DistanceWindow* w) { distance_window_ = w; }
-
-	void UpdateUI();
-
 	void StartSelfDestruct() { must_self_destruct_ = true; }
 };
