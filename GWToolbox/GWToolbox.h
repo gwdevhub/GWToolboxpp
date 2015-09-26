@@ -27,6 +27,7 @@ private:
 	HealthWindow* health_window_;
 	DistanceWindow* distance_window_;
 
+	bool capture_input_;
 	bool must_self_destruct_;
 
 private:
@@ -40,25 +41,30 @@ private:
 		distance_window_ = NULL;
 		initialized_ = false;
 		must_self_destruct_ = false;
+		capture_input_ = false;
 	}
 
-	// Executes setup and main loop of toolbox. 
+	// Does everything: setup, main loop, destruction 
 	void Exec();
-	void MainLoop();
-
-	// Self destructs
-	void Destroy();
 
 	HMODULE m_dllmodule;	// Handle to the dll module we are running, used to clear the module from GW on eject.
 
 public:
-	static bool capture_input;
+
+	static void ExceptionHappened();
 
 	// will create a new toolbox object and run it, can be used as argument for createThread
-	static void threadEntry(HMODULE mod);
+	static void SafeThreadEntry(HMODULE mod);
+	static void ThreadEntry(HMODULE dllmodule);
+
+	static void SafeCreateGui(IDirect3DDevice9* pDevice);
+	static void CreateGui(IDirect3DDevice9* pDevice);
 
 	inline void SetInitialized() { initialized_ = true; }
 	inline bool initialized() { return initialized_; }
+
+	inline bool capture_input() { return capture_input_; }
+	inline void set_capture_input(bool capture) { capture_input_ = capture; }
 
 	// returns toolbox instance
 	static GWToolbox* instance() { return instance_; }

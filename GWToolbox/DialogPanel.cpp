@@ -89,10 +89,10 @@ void DialogPanel::BuildUI() {
 	textbox->SetLocation(SPACE, SPACE * 3 + (BUTTON_HEIGHT + SPACE) * 8);
 	textbox->SetSize((WIDTH - SPACE * 3) * 3 / 4, BUTTON_HEIGHT);
 	textbox->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::capture_input = true;
+		GWToolbox::instance()->set_capture_input(true);
 	});
 	textbox->GetFocusLostEvent() += FocusLostEventHandler([textbox](Control*, Control*) {
-		GWToolbox::capture_input = false;
+		GWToolbox::instance()->set_capture_input(false);
 		try {
 			std::stol(textbox->GetText(), 0, 0);
 		} catch (...) {

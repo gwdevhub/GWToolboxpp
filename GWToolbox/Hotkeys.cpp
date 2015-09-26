@@ -33,10 +33,10 @@ TBHotkey::TBHotkey(Key key, Key modifier, bool active, wstring ini_section)
 	hotkey_button->SetHotkey(key);
 	hotkey_button->SetHotkeyModifier(modifier);
 	hotkey_button->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::capture_input = true;
+		GWToolbox::instance()->set_capture_input(true);
 	});
 	hotkey_button->GetFocusLostEvent() += FocusLostEventHandler([](Control*, Control*) {
-		GWToolbox::capture_input = false;
+		GWToolbox::instance()->set_capture_input(false);
 	});
 	hotkey_button->GetHotkeyChangedEvent() += HotkeyChangedEventHandler(
 		[this, hotkey_button, ini_section](Control*) {
@@ -112,10 +112,10 @@ HotkeySendChat::HotkeySendChat(Key key, Key modifier, bool active, wstring ini_s
 		GWToolbox::instance()->main_window()->hotkey_panel()->UpdateDeleteCombo();
 	});
 	text_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::capture_input = true;
+		GWToolbox::instance()->set_capture_input(true);
 	});
 	text_box->GetFocusLostEvent() += FocusLostEventHandler([](Control*, Control*) {
-		GWToolbox::capture_input = false;
+		GWToolbox::instance()->set_capture_input(false);
 	});
 	AddControl(text_box);
 }
@@ -180,10 +180,10 @@ HotkeyUseItem::HotkeyUseItem(Key key, Key modifier, bool active, wstring ini_sec
 		} catch (...) {}
 	});
 	id_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::capture_input = true;
+		GWToolbox::instance()->set_capture_input(true);
 	});
 	id_box->GetFocusLostEvent() += FocusLostEventHandler([id_box](Control*, Control*) {
-		GWToolbox::capture_input = false;
+		GWToolbox::instance()->set_capture_input(false);
 		try {
 			std::stol(id_box->GetText());
 			GWToolbox::instance()->main_window()->hotkey_panel()->UpdateDeleteCombo();
@@ -208,10 +208,10 @@ HotkeyUseItem::HotkeyUseItem(Key key, Key modifier, bool active, wstring ini_sec
 		GWToolbox::instance()->main_window()->hotkey_panel()->UpdateDeleteCombo();
 	});
 	name_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::capture_input = true;
+		GWToolbox::instance()->set_capture_input(true);
 	});
 	name_box->GetFocusLostEvent() += FocusLostEventHandler([](Control*, Control*) {
-		GWToolbox::capture_input = false;
+		GWToolbox::instance()->set_capture_input(false);
 	});
 	AddControl(name_box);
 }
@@ -362,10 +362,10 @@ HotkeyTarget::HotkeyTarget(Key key, Key modifier, bool active, wstring ini_secti
 		} catch (...) {}
 	});
 	id_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::capture_input = true;
+		GWToolbox::instance()->set_capture_input(true);
 	});
 	id_box->GetFocusLostEvent() += FocusLostEventHandler([id_box](Control*, Control*) {
-		GWToolbox::capture_input = false;
+		GWToolbox::instance()->set_capture_input(false);
 		try {
 			std::stol(id_box->GetText());
 			GWToolbox::instance()->main_window()->hotkey_panel()->UpdateDeleteCombo();
@@ -390,10 +390,10 @@ HotkeyTarget::HotkeyTarget(Key key, Key modifier, bool active, wstring ini_secti
 		GWToolbox::instance()->main_window()->hotkey_panel()->UpdateDeleteCombo();
 	});
 	name_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::capture_input = true;
+		GWToolbox::instance()->set_capture_input(true);
 	});
 	name_box->GetFocusLostEvent() += FocusLostEventHandler([](Control*, Control*) {
-		GWToolbox::capture_input = false;
+		GWToolbox::instance()->set_capture_input(false);
 	});
 	AddControl(name_box);
 }
@@ -430,10 +430,10 @@ HotkeyMove::HotkeyMove(Key key, Key modifier, bool active, wstring ini_section,
 		} catch (...) {}
 	});
 	box_x->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::capture_input = true;
+		GWToolbox::instance()->set_capture_input(true);
 	});
 	box_x->GetFocusLostEvent() += FocusLostEventHandler([box_x](Control*, Control*) {
-		GWToolbox::capture_input = false;
+		GWToolbox::instance()->set_capture_input(false);
 		try {
 			std::stof(box_x->GetText());
 			GWToolbox::instance()->main_window()->hotkey_panel()->UpdateDeleteCombo();
@@ -465,10 +465,10 @@ HotkeyMove::HotkeyMove(Key key, Key modifier, bool active, wstring ini_section,
 		} catch (...) {}
 	});
 	box_y->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::capture_input = true;
+		GWToolbox::instance()->set_capture_input(true);
 	});
 	box_y->GetFocusLostEvent() += FocusLostEventHandler([box_y](Control*, Control*) {
-		GWToolbox::capture_input = false;
+		GWToolbox::instance()->set_capture_input(false);
 		try {
 			std::stof(box_y->GetText());
 			GWToolbox::instance()->main_window()->hotkey_panel()->UpdateDeleteCombo();
@@ -493,10 +493,10 @@ HotkeyMove::HotkeyMove(Key key, Key modifier, bool active, wstring ini_section,
 		GWToolbox::instance()->main_window()->hotkey_panel()->UpdateDeleteCombo();
 	});
 	name_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::capture_input = true;
+		GWToolbox::instance()->set_capture_input(true);
 	});
 	name_box->GetFocusLostEvent() += FocusLostEventHandler([](Control*, Control*) {
-		GWToolbox::capture_input = false;
+		GWToolbox::instance()->set_capture_input(false);
 	});
 	AddControl(name_box);
 }
@@ -530,10 +530,10 @@ HotkeyDialog::HotkeyDialog(Key key, Key modifier, bool active, wstring ini_secti
 		} catch (...) {}
 	});
 	id_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::capture_input = true;
+		GWToolbox::instance()->set_capture_input(true);
 	});
 	id_box->GetFocusLostEvent() += FocusLostEventHandler([id_box](Control*, Control*) {
-		GWToolbox::capture_input = false;
+		GWToolbox::instance()->set_capture_input(false);
 		try {
 			std::stol(id_box->GetText(), 0, 0);
 			GWToolbox::instance()->main_window()->hotkey_panel()->UpdateDeleteCombo();
@@ -558,10 +558,10 @@ HotkeyDialog::HotkeyDialog(Key key, Key modifier, bool active, wstring ini_secti
 		GWToolbox::instance()->main_window()->hotkey_panel()->UpdateDeleteCombo();
 	});
 	name_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::capture_input = true;
+		GWToolbox::instance()->set_capture_input(true);
 	});
 	name_box->GetFocusLostEvent() += FocusLostEventHandler([](Control*, Control*) {
-		GWToolbox::capture_input = false;
+		GWToolbox::instance()->set_capture_input(false);
 	});
 	AddControl(name_box);
 }

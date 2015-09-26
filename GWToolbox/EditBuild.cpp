@@ -121,10 +121,10 @@ EditBuild::EditBuild() {
 
 void EditBuild::EnableTextInput(TextBox* tb) {
 	tb->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::capture_input = true;
+		GWToolbox::instance()->set_capture_input(true);
 	});
 	tb->GetFocusLostEvent() += FocusLostEventHandler([](Control*, Control*) {
-		GWToolbox::capture_input = false;
+		GWToolbox::instance()->set_capture_input(false);
 	});
 }
 
