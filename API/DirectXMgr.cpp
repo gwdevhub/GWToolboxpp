@@ -1,4 +1,5 @@
 #include "DirectXMgr.h"
+#include "..\GWToolbox\logger.h"
 
 GWAPI::DirectXMgr::DirectXMgr(GWAPIMgr* obj) : parent_(obj)
 {
@@ -19,6 +20,7 @@ void GWAPI::DirectXMgr::CreateRenderHooks(EndScene_t _endscene, Reset_t _reset)
 {
 	if (hooked_) return;
 
+	LOG("DX Start");
 
 	HMODULE hD3D9 = NULL;
 	while (!hD3D9)
@@ -27,14 +29,19 @@ void GWAPI::DirectXMgr::CreateRenderHooks(EndScene_t _endscene, Reset_t _reset)
 		Sleep(5);
 	}
 
-	DWORD pA1 = FindPattern((DWORD)hD3D9, 0x128000, "\xC7\x06\x00\x00\x00\x00\x89\x86\x00\x00\x00\x00\x89\x86", "xx????xx????xx");
-	memcpy(&vtable_start_, (void*)(pA1 + 2), 4);
+	LOG("DX Module found! Addr: %X", hD3D9);
 
+	DWORD pA1 = FindPattern((DWORD)hD3D9, 0x128000, "\xC7\x06\x00\x00\x00\x00\x89\x86\x00\x00\x00\x00\x89\x86", "xx????xx????xx");
+	LOG("Vtable scan found! Addr: %X", pA1);
+	memcpy(&vtable_start_, (void*)(pA1 + 2), 4);
+	LOG("memcpy vtable done");
 	DWORD dwEndsceneLen = Hook::CalculateDetourLength((BYTE*)(vtable_start_[42]));
 	endscene_ = (EndScene_t)hk_endscene_.Detour((BYTE*)(vtable_start_[42]), (BYTE*)_endscene, dwEndsceneLen);
+	LOG("DX endscene! Len: %d Addr: %X", dwEndsceneLen, hD3D9);
 
 	DWORD dwResetLen = Hook::CalculateDetourLength((BYTE*)(vtable_start_[16]));
 	reset_ = (Reset_t)hk_reset_.Detour((BYTE*)(vtable_start_[16]), (BYTE*)_reset, dwResetLen);
+	LOG("DX reset! Len: %d Addr: %X", hD3D9);
 
 	hooked_ = true;
 }
@@ -51,7 +58,18 @@ void GWAPI::DirectXMgr::RestoreHooks()
 
 DWORD GWAPI::DirectXMgr::FindPattern(DWORD _base, DWORD _size, char* _pattern, char* _mask)
 {
+
+	LOG("Finding pattern Base: %X Size: %X");
 	int pattern_length = strlen(_mask);
+
+	LOG("Pattern: ");
+
+		for (size_t i = 0; i < pattern_length; i++){
+			printf("%02X ", _pattern[i]);
+			Logger::FlushFile();
+		}
+		
+	
 	bool found = false;
 
 	//For each byte from start to end

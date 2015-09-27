@@ -94,7 +94,7 @@ LONG WINAPI Logger::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers) {
 	ExpParam.ClientPointers = TRUE;
 
 	bMiniDumpSuccessful = MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(),
-		hDumpFile, MiniDumpWithDataSegs, &ExpParam, NULL, NULL);
+		hDumpFile, MiniDumpWithFullMemory, &ExpParam, NULL, NULL);
 
 	if (bMiniDumpSuccessful) {
 		MessageBoxA(0,
@@ -113,4 +113,9 @@ LONG WINAPI Logger::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers) {
 	}
 	
 	return EXCEPTION_EXECUTE_HANDLER;
+}
+
+void Logger::FlushFile()
+{
+	fflush(logfile);
 }

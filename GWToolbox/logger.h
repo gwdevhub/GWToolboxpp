@@ -30,6 +30,9 @@ public:
 	// printf-style wide-string log
 	static void LogW(const wchar_t* msg, ...);
 
+	// flushes log file.
+	static void FlushFile();
+
 	// in release it closes the file
 	// in debug frees the console
 	static void Close();

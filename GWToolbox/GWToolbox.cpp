@@ -201,6 +201,7 @@ void GWToolbox::CreateGui(IDirect3DDevice9* pDevice) {
 
 	app->SetCursorEnabled(false);
 	try {
+
 		LOG("Creating main window\n");
 		MainWindow* main_window = new MainWindow();
 		main_window->SetFont(app->GetDefaultFont());
