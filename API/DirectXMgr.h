@@ -12,8 +12,7 @@
 namespace GWAPI {
 
 	class DirectXMgr {
-		bool bDataCompare(const BYTE* pData, const BYTE* bMask, const char* szMask);
-		DWORD dwFindPattern(DWORD dwAddress, DWORD dwLen, BYTE* bMask, char* szMask);
+		DWORD FindPattern(DWORD _base, DWORD _size, char* _pattern, char* _mask);
 
 		DirectXMgr(GWAPIMgr* obj);
 		~DirectXMgr();

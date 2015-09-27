@@ -27,7 +27,7 @@ void GWAPI::DirectXMgr::CreateRenderHooks(EndScene_t _endscene, Reset_t _reset)
 		Sleep(5);
 	}
 
-	DWORD pA1 = dwFindPattern((DWORD)hD3D9, 0x128000, (PBYTE)"\xC7\x06\x00\x00\x00\x00\x89\x86\x00\x00\x00\x00\x89\x86", "xx????xx????xx");
+	DWORD pA1 = FindPattern((DWORD)hD3D9, 0x128000, "\xC7\x06\x00\x00\x00\x00\x89\x86\x00\x00\x00\x00\x89\x86", "xx????xx????xx");
 	memcpy(&vtable_start_, (void*)(pA1 + 2), 4);
 
 	DWORD dwEndsceneLen = Hook::CalculateDetourLength((BYTE*)(vtable_start_[42]));
@@ -49,20 +49,30 @@ void GWAPI::DirectXMgr::RestoreHooks()
 	hooked_ = false;
 }
 
-DWORD GWAPI::DirectXMgr::dwFindPattern(DWORD dwAddress, DWORD dwLen, BYTE* bMask, char* szMask)
+DWORD GWAPI::DirectXMgr::FindPattern(DWORD _base, DWORD _size, char* _pattern, char* _mask)
 {
-	for (DWORD i = 0; i < dwLen; i++)
-		if (bDataCompare((BYTE*)(dwAddress + i), bMask, szMask))
-			return (DWORD)(dwAddress + i);
-	return 0;
-}
+	int pattern_length = strlen(_mask);
+	bool found = false;
 
-bool GWAPI::DirectXMgr::bDataCompare(const BYTE* pData, const BYTE* bMask, const char* szMask)
-{
-	for (; *szMask; ++szMask, ++pData, ++bMask)
-		if (*szMask == 'x' && *pData != *bMask)
-			return false;
-	return ((*szMask) == NULL);
+	//For each byte from start to end
+	for (DWORD i = _base; i < _base + _size - pattern_length; i++)
+	{
+		found = true;
+		//For each byte in the pattern
+		for (int idx = 0; idx < pattern_length; idx++)
+		{
+			if (_mask[idx] == 'x' && _pattern[idx] != *(char*)(i + idx))
+			{
+				found = false;
+				break;
+			}
+		}
+		if (found)
+		{
+			return i;
+		}
+	}
+	return NULL;
 }
 
 GWAPI::DirectXMgr::~DirectXMgr()
