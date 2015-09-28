@@ -63,7 +63,6 @@ GWAPI::AgentMgr::AgentMgr(GWAPIMgr* obj) : parent_(obj)
 
 GWAPI::AgentMgr::~AgentMgr()
 {
-	hk_dialog_log_.Retour();
 }
 
 void GWAPI::AgentMgr::ChangeTarget(GW::Agent* Agent)
