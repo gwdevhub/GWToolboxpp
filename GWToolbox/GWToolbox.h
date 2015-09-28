@@ -14,6 +14,12 @@
 #include "HealthWindow.h"
 #include "DistanceWindow.h"
 
+#ifdef _DEBUG
+#define EXCEPT_EXPRESSION EXCEPTION_CONTINUE_SEARCH
+#else
+#define EXCEPT_EXPRESSION Logger::GenerateDump(GetExceptionInformation())
+#endif
+
 class GWToolbox {
 public:
 	static const wchar_t * Host;

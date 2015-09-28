@@ -4,13 +4,6 @@
 #include <stdio.h>
 #include <time.h>
 
-
-#ifdef _DEBUG
-#define DEBUG_BUILD 1
-#else
-#define DEBUG_BUILD 0
-#endif
-
 #define LOG(msg, ...) Logger::Log(msg, ##__VA_ARGS__)
 #define LOGW(msg, ...) Logger::LogW(msg, ##__VA_ARGS__)
 

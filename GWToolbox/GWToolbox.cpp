@@ -25,7 +25,7 @@ OSHGui::Input::WindowsMessage GWToolbox::input;
 void GWToolbox::SafeThreadEntry(HMODULE dllmodule) {
 	__try {
 		GWToolbox::ThreadEntry(dllmodule);
-	} __except (Logger::GenerateDump(GetExceptionInformation())) {
+	} __except ( EXCEPT_EXPRESSION ) {
 		LOG("SafeThreadEntry __except body\n");
 	}
 }
@@ -76,9 +76,10 @@ void GWToolbox::Exec() {
 		}
 
 		Sleep(10);
-
-		if (DEBUG_BUILD && GetAsyncKeyState(VK_END) & 1)
+#ifdef _DEBUG
+		if (GetAsyncKeyState(VK_END) & 1)
 			break;
+#endif
 		if (must_self_destruct_)
 			break;
 	}
@@ -169,7 +170,7 @@ LRESULT CALLBACK GWToolbox::NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, L
 void GWToolbox::SafeCreateGui(IDirect3DDevice9* pDevice) {
 	__try {
 		GWToolbox::CreateGui(pDevice);
-	} __except (Logger::GenerateDump(GetExceptionInformation())) {
+	} __except ( EXCEPT_EXPRESSION ) {
 		LOG("SafeCreateGui __except body\n");
 	}
 }
