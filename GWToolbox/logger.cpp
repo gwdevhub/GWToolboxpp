@@ -93,8 +93,9 @@ LONG WINAPI Logger::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers) {
 	ExpParam.ExceptionPointers = pExceptionPointers;
 	ExpParam.ClientPointers = TRUE;
 
+	//MINIDUMP_TYPE flags = static_cast<MINIDUMP_TYPE>(MiniDumpWithDataSegs | MiniDumpWithPrivateReadWriteMemory);
 	bMiniDumpSuccessful = MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(),
-		hDumpFile, MiniDumpWithFullMemory, &ExpParam, NULL, NULL);
+		hDumpFile, MiniDumpWithDataSegs, &ExpParam, NULL, NULL);
 
 	if (bMiniDumpSuccessful) {
 		MessageBoxA(0,

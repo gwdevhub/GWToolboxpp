@@ -36,9 +36,9 @@ DirCreate($imgFolder)
 #Region fileinstalls
 ; various
 If $debug Then
-	FileInstall("..\Debug\API.dll", $folder & "GWToolbox.dll", $overwrite)
+	FileInstall("..\Debug\GWToolbox.dll", $folder & "GWToolbox.dll", $overwrite)
 Else
-	FileInstall("..\Release\API.dll", $folder & "GWToolbox.dll", $overwrite)
+	FileInstall("..\Release\GWToolbox.dll", $folder & "GWToolbox.dll", $overwrite)
 EndIf
 FileInstall("..\resources\DefaultTheme.txt", $folder & "Theme.txt")
 FileInstall("..\resources\Friz_Quadrata_Regular.ttf", $folder & "Font.ttf")
