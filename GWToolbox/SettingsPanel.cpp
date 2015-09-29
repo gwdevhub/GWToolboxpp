@@ -1,4 +1,7 @@
 #include "SettingsPanel.h"
+
+#include <Windows.h>
+
 #include "GWToolbox.h"
 #include "Config.h"
 #include "GuiUtils.h"
@@ -6,6 +9,7 @@
 #include "TimerWindow.h"
 #include "DistanceWindow.h"
 #include "BondsWindow.h"
+#include "../API/APIMain.h"
 
 using namespace OSHGui;
 
@@ -13,13 +17,17 @@ SettingsPanel::SettingsPanel() {
 }
 
 void SettingsPanel::BuildUI() {
+	GWToolbox* tb = GWToolbox::instance();
+	Config* config = tb->config();
+
+	location_current_map_ = GwConstants::MapID::None;
+	location_timer_ = TBTimer::init();
+	location_active_ = config->iniReadBool(MainWindow::IniSection(), MainWindow::IniKeySaveLocation(), false);
+
 	SetSize(250, 300);
 	int width = 250;
 	int item_width = width - 2 * DefaultBorderPadding;
 	int item_height = 25;
-
-	GWToolbox* tb = GWToolbox::instance();
-	Config* config = tb->config();
 
 	Label* version = new Label();
 	version->SetText(string("GWToolbox++") + GWToolbox::VersionA);
@@ -77,7 +85,7 @@ void SettingsPanel::BuildUI() {
 	AddControl(hidetarget);
 
 	CheckBox* minimizealtpos = new CheckBox();
-	minimizealtpos->SetText("Minmize to Alt Position");
+	minimizealtpos->SetText("Minimize to Alt Position");
 	minimizealtpos->SetLocation(DefaultBorderPadding, hidetarget->GetBottom());
 	minimizealtpos->SetSize(item_width, item_height);
 	minimizealtpos->SetChecked(config->iniReadBool(MainWindow::IniSection(),
@@ -104,6 +112,19 @@ void SettingsPanel::BuildUI() {
 	});
 	AddControl(tickwithpcons);
 
+	CheckBox* savelocation = new CheckBox();
+	savelocation->SetText("Save location data");
+	savelocation->SetLocation(DefaultBorderPadding, tickwithpcons->GetBottom());
+	savelocation->SetSize(item_width, item_height);
+	savelocation->SetChecked(location_active_);
+	savelocation->GetCheckedChangedEvent() += CheckedChangedEventHandler(
+		[savelocation, this](Control*) {
+		location_active_ = savelocation->GetChecked();
+		GWToolbox::instance()->config()->iniWriteBool(MainWindow::IniSection(),
+			MainWindow::IniKeySaveLocation(), location_active_);
+	});
+	AddControl(savelocation);
+
 
 	Button* folder = new Button();
 	folder->SetText("Open Settings Folder");
@@ -125,3 +146,76 @@ void SettingsPanel::BuildUI() {
 	});
 	AddControl(website);
 }
+
+
+void SettingsPanel::MainRoutine() {
+	if (location_active_ && TBTimer::diff(location_timer_) > 1000) {
+		location_timer_ = TBTimer::init();
+		GWAPIMgr* api = GWAPIMgr::instance();
+		if (api->Map()->GetInstanceType() == GwConstants::InstanceType::Explorable
+			&& api->Agents()->GetPlayer() != nullptr
+			&& api->Map()->GetInstanceTime() > 3000) {
+			GwConstants::MapID current = api->Map()->GetMapID();
+			if (location_current_map_ != current) {
+				location_current_map_ = current;
+
+				string map_string;
+				switch (current) {
+				case GwConstants::MapID::Domain_of_Anguish:
+					map_string = "DoA";
+					break;
+				case GwConstants::MapID::Urgozs_Warren:
+					map_string = "Urgoz";
+					break;
+				case GwConstants::MapID::The_Deep:
+					map_string = "Deep";
+					break;
+				case GwConstants::MapID::The_Underworld:
+					map_string = "UW";
+					break;
+				case GwConstants::MapID::The_Fissure_of_Woe:
+					map_string = "FoW";
+					break;
+				default:
+					map_string = string("Map-") + to_string(static_cast<long>(current));
+				}
+
+				string prof_string = "";
+				GW::Agent* me = api->Agents()->GetPlayer();
+				if (me) {
+					prof_string += " - ";
+					prof_string += api->Agents()->GetProfessionAcronym(
+						static_cast<GwConstants::Profession>(me->Primary));
+					prof_string += "-";
+					prof_string += api->Agents()->GetProfessionAcronym(
+						static_cast<GwConstants::Profession>(me->Secondary));
+				}
+
+				SYSTEMTIME localtime;
+				GetLocalTime(&localtime);
+				string filename = to_string(localtime.wYear)
+					+ "-" + to_string(localtime.wMonth)
+					+ "-" + to_string(localtime.wDay)
+					+ " - " + to_string(localtime.wHour)
+					+ "-" + to_string(localtime.wMinute)
+					+ "-" + to_string(localtime.wSecond)
+					+ " - " + map_string + prof_string + ".log";
+
+				if (location_file_.is_open()) location_file_.close();
+				location_file_.open(GuiUtils::getSubPathA(filename, "location logs").c_str());
+			}
+
+			GW::Agent* me = api->Agents()->GetPlayer();
+			if (location_file_.is_open() && me != nullptr) {
+				location_file_ << "Time=" << api->Map()->GetInstanceTime();
+				location_file_ << " X=" << me->X;
+				location_file_ << " Y=" << me->Y;
+				location_file_ << "\n";
+			}
+		} else {
+			location_current_map_ = GwConstants::MapID::None;
+			location_file_.close();
+		}
+	}
+}
+

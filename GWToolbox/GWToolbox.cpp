@@ -88,6 +88,10 @@ void GWToolbox::Exec() {
 
 	Sleep(100);
 
+	LOG("Disabling GUI\n");
+	Application::InstancePtr()->Disable();
+	LOG("Closing settings\n");
+	main_window()->settings_panel()->Close();
 	LOG("Saving config file\n");
 	config_->save();
 	Sleep(100);

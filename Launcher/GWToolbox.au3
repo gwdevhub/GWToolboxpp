@@ -11,6 +11,7 @@ Global Const $debug = True And Not @Compiled
 Global Const $host = "http://fbgmguild.com/GWToolboxpp/"
 Global Const $folder = @LocalAppDataDir & "\GWToolboxpp\"
 Global Const $imgFolder = $folder & "img\"
+Global Const $locationLogsFolder = $folder & "location logs\"
 
 Global $mKernelHandle, $mGWProcHandle, $mCharname
 
@@ -32,6 +33,7 @@ $ERRSTRING[12] = "GWToolbox++ already in specified process."
 
 DirCreate($folder)
 DirCreate($imgFolder)
+DirCreate($locationLogsFolder)
 
 #Region fileinstalls
 ; various

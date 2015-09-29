@@ -119,6 +119,9 @@ namespace GWAPI {
 
 		// Returns AgentID of player with selected loginnumber.
 		DWORD GetAgentIdByLoginNumber(DWORD loginnumber);
+
+		// Returns the profession as short string, e.g. "W" for warrior
+		const char* GetProfessionAcronym(GwConstants::Profession profession);
 	};
 
 }

@@ -2,7 +2,8 @@
 
 namespace GwConstants {
 	enum class MapID {
-		Gladiators_Arena = 1,
+		None = 0,
+		Gladiators_Arena,
 		DEV_Test_Arena_1v1,
 		Test_map,
 		Warriors_Isle_outpost,

@@ -219,3 +219,20 @@ void GWAPI::AgentMgr::RestoreHooks()
 {
 	hk_dialog_log_.Retour();
 }
+
+
+const char* GWAPI::AgentMgr::GetProfessionAcronym(GwConstants::Profession profession) {
+	switch (profession) {
+	case GwConstants::Profession::Warrior: return "W";
+	case GwConstants::Profession::Ranger: return "R";
+	case GwConstants::Profession::Monk: return "Mo";
+	case GwConstants::Profession::Necromancer: return "N";
+	case GwConstants::Profession::Mesmer: return "Me";
+	case GwConstants::Profession::Elementalist: return "E";
+	case GwConstants::Profession::Assassin: return "A";
+	case GwConstants::Profession::Ritualist: return "Rt";
+	case GwConstants::Profession::Paragon: return "P";
+	case GwConstants::Profession::Dervish: return "D";
+	default: return "";
+	}
+}
