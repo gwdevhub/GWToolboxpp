@@ -6,8 +6,10 @@
 class HealthWindow : public ToolboxWindow {
 public:
 	const int WIDTH = 150;
-	const int HEIGHT = 50;
-	const int ABS_HEIGHT = 25;
+	const int LABEL_HEIGHT = 20;
+	const int PERCENT_HEIGHT = 50;
+	const int ABSOLUTE_HEIGHT = 25;
+	const int HEIGHT = LABEL_HEIGHT + PERCENT_HEIGHT + ABSOLUTE_HEIGHT;
 
 	HealthWindow();
 

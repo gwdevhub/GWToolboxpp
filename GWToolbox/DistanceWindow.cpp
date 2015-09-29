@@ -14,7 +14,7 @@ DistanceWindow::DistanceWindow() {
 	int y = config->iniReadLong(DistanceWindow::IniSection(), DistanceWindow::IniKeyY(), 100);
 
 	SetLocation(x, y);
-	SetSize(Drawing::SizeI(WIDTH, HEIGHT + ABS_HEIGHT + DefaultBorderPadding));
+	SetSize(Drawing::SizeI(WIDTH, HEIGHT));
 
 	Drawing::Theme::ControlTheme theme = Application::InstancePtr()
 		->GetTheme().GetControlColorTheme(DistanceWindow::ThemeKey());
@@ -22,10 +22,33 @@ DistanceWindow::DistanceWindow() {
 
 	int offsetX = 2;
 	int offsetY = 2;
+
+	DragButton* label_shadow = new DragButton();
+	label_shadow->SetText("Distance");
+	label_shadow->SetSize(WIDTH, LABEL_HEIGHT);
+	label_shadow->SetLocation(1, 1);
+	label_shadow->SetFont(GuiUtils::getTBFont(12.0f, true));
+	label_shadow->SetBackColor(Drawing::Color::Empty());
+	label_shadow->SetForeColor(Drawing::Color::Black());
+	label_shadow->SetEnabled(false);
+	AddControl(label_shadow);
+
+	DragButton* label = new DragButton();
+	label->SetText("Distance");
+	label->SetSize(WIDTH, LABEL_HEIGHT);
+	label->SetLocation(0, 0);
+	label->SetFont(GuiUtils::getTBFont(12.0f, true));
+	label->SetBackColor(Drawing::Color::Empty());
+	label->SetForeColor(theme.ForeColor);
+	label->GetMouseUpEvent() += MouseUpEventHandler([this](Control*, MouseEventArgs) {
+		SaveLocation();
+	});
+	AddControl(label);
+
 	percent_shadow = new DragButton();
 	percent_shadow->SetText("");
-	percent_shadow->SetSize(WIDTH, HEIGHT);
-	percent_shadow->SetLocation(offsetX, offsetY);
+	percent_shadow->SetSize(WIDTH, PERCENT_HEIGHT);
+	percent_shadow->SetLocation(offsetX, LABEL_HEIGHT + offsetY);
 	percent_shadow->SetFont(GuiUtils::getTBFont(26.0f, true));
 	percent_shadow->SetBackColor(Drawing::Color::Empty());
 	percent_shadow->SetForeColor(Drawing::Color::Black());
@@ -34,8 +57,8 @@ DistanceWindow::DistanceWindow() {
 
 	percent = new DragButton();
 	percent->SetText("");
-	percent->SetSize(WIDTH, HEIGHT);
-	percent->SetLocation(0, 0);
+	percent->SetSize(WIDTH, PERCENT_HEIGHT);
+	percent->SetLocation(0, LABEL_HEIGHT);
 	percent->SetFont(GuiUtils::getTBFont(26.0f, true));
 	percent->SetBackColor(Drawing::Color::Empty());
 	percent->SetForeColor(theme.ForeColor);
@@ -46,8 +69,8 @@ DistanceWindow::DistanceWindow() {
 
 	absolute_shadow = new DragButton();
 	absolute_shadow->SetText("");
-	absolute_shadow->SetSize(WIDTH, ABS_HEIGHT);
-	absolute_shadow->SetLocation(offsetX, HEIGHT + offsetY);
+	absolute_shadow->SetSize(WIDTH, ABSOLUTE_HEIGHT);
+	absolute_shadow->SetLocation(offsetX, LABEL_HEIGHT + PERCENT_HEIGHT + offsetY);
 	absolute_shadow->SetFont(GuiUtils::getTBFont(16.0f, true));
 	absolute_shadow->SetBackColor(Drawing::Color::Empty());
 	absolute_shadow->SetForeColor(Drawing::Color::Black());
@@ -56,8 +79,8 @@ DistanceWindow::DistanceWindow() {
 
 	absolute = new DragButton();
 	absolute->SetText("");
-	absolute->SetSize(WIDTH, ABS_HEIGHT);
-	absolute->SetLocation(0, HEIGHT);
+	absolute->SetSize(WIDTH, ABSOLUTE_HEIGHT);
+	absolute->SetLocation(0, LABEL_HEIGHT + PERCENT_HEIGHT);
 	absolute->SetFont(GuiUtils::getTBFont(16.0f, true));
 	absolute->SetBackColor(Drawing::Color::Empty());
 	absolute->SetForeColor(theme.ForeColor);
