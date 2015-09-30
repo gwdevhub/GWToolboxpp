@@ -30,6 +30,10 @@
 			"forecolor" : [ 255, 255, 255, 255 ],
 			"backcolor" : [ 90, 0, 0, 0 ]
 		},
+		"scrollbar" : {
+			"forecolor" : [ 255, 255, 255, 255 ],
+			"backcolor" : [ 100, 90, 90, 90 ]
+		},
 		"mouseover" : {
 			"forecolor" : [20, 255, 255, 255],
 			"backcolor" : [0, 0, 0, 0]
