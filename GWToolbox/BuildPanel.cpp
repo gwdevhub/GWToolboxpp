@@ -131,7 +131,12 @@ void BuildPanel::MainRoutine() {
 	if (!queue.empty() && TBTimer::diff(send_timer) > 600) {
 		send_timer = TBTimer::init();
 
-		GWAPIMgr::instance()->Chat()->SendChat(queue.front().c_str(), L'#');
-		queue.pop();
+		GWAPIMgr* api = GWAPIMgr::instance();
+		if (api->Map()->GetInstanceType() != GwConstants::InstanceType::Loading
+			&& api->Agents()->GetPlayer()) {
+
+			api->Chat()->SendChat(queue.front().c_str(), L'#');
+			queue.pop();
+		}
 	}
 }
