@@ -1,6 +1,7 @@
 #RequireAdmin
 
 #Include <WinAPI.au3>
+#include <WinAPIProc.au3>
 #include <File.au3>
 #include <ComboConstants.au3>
 #include <GUIConstantsEx.au3>
@@ -50,63 +51,19 @@ Switch $WinList[0][0]
 
 EndSwitch
 
-Global $processes = _ProcessGetLoadedModules($gwPID)
+Global $modules = _WinAPI_EnumProcessModules($gwPID)
 
 Global $gui = GUICreate("GW loaded modules list", 400, 300)
 Global $edit = GUICtrlCreateEdit("", 0, 0, 400, 300)
-GUICtrlSetData(-1, $processes)
 GUISetState(@SW_SHOW, $gui)
 
-For $i = 0 To UBound($processes)-1
-	GUICtrlSetData($edit, $processes[$i] & @CRLF, 1)
+For $i = 1 To $modules[0][0]
+	GUICtrlSetData($edit, $modules[$i][1] & @CRLF, 1)
 Next
 
 While GUIGetMsg() <> $GUI_EVENT_CLOSE
 	Sleep(1)
 WEnd
-
-
-; #FUNCTION#;===============================================================================
-;
-; Name...........: _ProcessGetLoadedModules
-; Description ...: Returns an array containing the full path of the loaded modules
-; Syntax.........: _ProcessGetLoadedModules($iPID)
-; Parameters ....:
-; Return values .: Success - An array with all the paths
-;               : Failure - -1 and @error=1 if the specified process couldn't be opened.
-; Author ........: Andreas Karlsson (monoceres) & ProgAndy
-; Modified.......:
-; Remarks .......:
-; Related .......:
-; Link ..........;
-; Example .......; No
-;
-;;==========================================================================================
-Func _ProcessGetLoadedModules($iPID)
-    Local Const $PROCESS_QUERY_INFORMATION=0x0400
-    Local Const $PROCESS_VM_READ=0x0010
-    Local $aCall, $hPsapi=DllOpen("Psapi.dll")
-    Local $hProcess, $tModulesStruct
-    $tModulesStruct=DllStructCreate("hwnd [200]")
-    Local $SIZEOFHWND = DllStructGetSize($tModulesStruct)/200
-    $hProcess=_WinAPI_OpenProcess(BitOR($PROCESS_QUERY_INFORMATION,$PROCESS_VM_READ),False,$iPID)
-    If Not $hProcess Then Return SetError(1,0,-1)
-    $aCall=DllCall($hPsapi,"int","EnumProcessModules","ptr",$hProcess,"ptr",DllStructGetPtr($tModulesStruct),"dword",DllStructGetSize($tModulesStruct),"dword*","")
-    If $aCall[4]>DllStructGetSize($tModulesStruct) Then
-        $tModulesStruct=DllStructCreate("hwnd ["&$aCall[4]/$SIZEOFHWND&"]")
-        $aCall=DllCall($hPsapi,"int","EnumProcessModules","ptr",$hProcess,"ptr",DllStructGetPtr($tModulesStruct),"dword",$aCall[4],"dword*","")
-    EndIf
-    Local $aReturn[$aCall[4]/$SIZEOFHWND]
-    For $i=0 To Ubound($aReturn)-1
-
-$aCall=DllCall($hPsapi,"dword","GetModuleFileNameExW","ptr",$hProcess,"ptr",DllStructGetData($tModulesStruct,1,$i+1),"wstr","","dword",65536)
-$aReturn[$i]=$aCall[3]
-
-Next
-    _WinAPI_CloseHandle($hProcess)
-    DllClose($hPsapi)
-    Return $aReturn
-EndFunc
 
 
 #Region memory managment and char name read

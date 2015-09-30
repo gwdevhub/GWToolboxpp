@@ -12,6 +12,7 @@ Global Const $overwrite = True
 Global Const $debug = True And Not @Compiled
 Global Const $host = "http://fbgmguild.com/GWToolboxpp/"
 Global Const $folder = @LocalAppDataDir & "\GWToolboxpp\"
+Global Const $dllpath = $folder & "GWToolbox.dll"
 Global Const $imgFolder = $folder & "img\"
 Global Const $locationLogsFolder = $folder & "location logs\"
 
@@ -40,9 +41,9 @@ DirCreate($locationLogsFolder)
 #Region fileinstalls
 ; various
 If $debug Then
-	FileInstall("..\Debug\GWToolbox.dll", $folder & "GWToolbox.dll", $overwrite)
+	FileInstall("..\Debug\GWToolbox.dll", $dllpath, $overwrite)
 Else
-	FileInstall("..\Release\GWToolbox.dll", $folder & "GWToolbox.dll", $overwrite)
+	FileInstall("..\Release\GWToolbox.dll", $dllpath, $overwrite)
 EndIf
 FileInstall("..\resources\DefaultTheme.txt", $folder & "Theme.txt")
 FileInstall("..\resources\Friz_Quadrata_Regular.ttf", $folder & "Font.ttf")
@@ -134,9 +135,35 @@ If Not ProcessExists($gwPID) Then
 	Exit
 EndIf
 
-Global $ret = _InjectDll($gwPID, $folder & "GWtoolbox.dll")
+Global $ret = _InjectDll($gwPID, $dllpath)
 If Not $ret Then
 	MsgBox($MB_ICONERROR, "GWToolbox++", "Injection error - " & @error & " (" & $ERRSTRING[@error] & ")")
+	Exit
+EndIf
+
+Global $found = False
+Global $deadlock = TimerInit()
+
+While Not $found And TimerDiff($deadlock) < 3000
+
+	Global $modules = _WinAPI_EnumProcessModules($gwPID)
+	If @error Then
+		MsgBox($MB_ICONERROR, "GWToolbox++", "Error: cannot open process to list modules, " & @error)
+		Exit
+	EndIf
+
+	For $i = 1 To $modules[0][0]
+		If $modules[$i][1] == $dllpath Then
+			$found = True
+			ExitLoop
+		EndIf
+	Next
+	Sleep(200)
+WEnd
+
+If Not $found Then
+	MsgBox($MB_ICONERROR, "GWToolbox++", "Error: GWToolbox.dll not loaded" & @CRLF & "Something is probably blocking dll injection")
+	Exit
 EndIf
 
 
@@ -212,6 +239,7 @@ EndFunc   ;==>ScanForCharname
 ;                             9 = Failed to call 'VirtualAllocEx'.
 ;                             10 = Failed to write the memory.
 ;                             11 = Failed to create the 'RemoteThread'.
+;							  12 = Dll already injected in process
 ; Author(s):        KillerDeluxe
 ;=================================================================================================
 Func _InjectDll($ProcessId, $DllPath)
@@ -230,7 +258,7 @@ Func _InjectDll($ProcessId, $DllPath)
 
 	Local $av_ProcSnapShot = _WinAPI_EnumProcessModules($ProcessId, $LIST_MODULES_32BIT)
 	For $i = 1 To $av_ProcSnapShot[0][0]
-		If $av_ProcSnapShot[$i][1] = $sDLLFullPath Then
+		If $av_ProcSnapShot[$i][1] == $sDLLFullPath Then
 			Return SetError(12, "", False)
 		EndIf
 	Next
