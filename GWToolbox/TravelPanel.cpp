@@ -75,9 +75,9 @@ void TravelPanel::BuildUI() {
 		wstring key = wstring(L"Travel") + to_wstring(i);
 		int index = GWToolbox::instance()->config()->iniReadLong(MainWindow::IniSection(), key.c_str(), 0);
 		ComboBox* fav_combo = new TravelCombo();
-		fav_combo->SetSize((GetWidth() - 3 * DefaultBorderPadding) * 3 / 4, BUTTON_HEIGHT);
+		fav_combo->SetSize(GuiUtils::ComputeWidth(GetWidth(), 4, 3), BUTTON_HEIGHT);
 		fav_combo->SetLocation(DefaultBorderPadding, 
-			DefaultBorderPadding * 2 + (BUTTON_HEIGHT + DefaultBorderPadding) * (i + 6));
+			DefaultBorderPadding + (BUTTON_HEIGHT + DefaultBorderPadding) * (i + 6));
 		for (int i = 0; i < n_outposts; ++i) {
 			fav_combo->AddItem(IndexToOutpostName(i));
 		}
@@ -90,8 +90,8 @@ void TravelPanel::BuildUI() {
 		AddControl(fav_combo);
 
 		Button* fav_button = new Button();
-		fav_button->SetSize((GetWidth() - 3 * DefaultBorderPadding) / 4, BUTTON_HEIGHT);
-		fav_button->SetLocation(fav_combo->GetRight() + DefaultBorderPadding, fav_combo->GetTop());
+		fav_button->SetSize(GuiUtils::ComputeWidth(GetWidth(), 4), BUTTON_HEIGHT);
+		fav_button->SetLocation(GuiUtils::ComputeX(GetWidth(), 4, 3), fav_combo->GetTop());
 		fav_button->SetText("Go");
 		fav_button->GetClickEvent() += ClickEventHandler([this, fav_combo](Control*) {
 			int index = fav_combo->GetSelectedIndex();
@@ -129,13 +129,11 @@ DWORD TravelPanel::language() {
 
 
 void TravelPanel::AddTravelButton(string text, int grid_x, int grid_y, GwConstants::MapID map_id) {
-	const int BUTTON_WIDTH = (GetWidth() - 3 * DefaultBorderPadding) / 2;
-	
 	Button* button = new Button();
 	button->SetText(text);
-	button->SetSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	button->SetLocation(DefaultBorderPadding + (BUTTON_WIDTH + DefaultBorderPadding) * grid_x, 
-		DefaultBorderPadding * 2 + (BUTTON_HEIGHT + DefaultBorderPadding) * grid_y);
+	button->SetSize(GuiUtils::ComputeWidth(GetWidth(), 2), BUTTON_HEIGHT);
+	button->SetLocation(GuiUtils::ComputeX(GetWidth(), 2, grid_x), 
+		DefaultBorderPadding + (BUTTON_HEIGHT + DefaultBorderPadding) * grid_y);
 	button->GetClickEvent() += ClickEventHandler([this, map_id](Control*) {
 		GWAPIMgr::instance()->Map()->Travel(map_id, district(), region(), language());
 	});

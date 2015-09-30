@@ -174,7 +174,8 @@ void HotkeyPanel::CalculateHotkeyPositions() {
 
 	for (int i = 0; i < static_cast<int>(hotkeys.size()); ++i) {
 		hotkeys[i]->SetLocation(DefaultBorderPadding,
-			delete_combo_->GetBottom() + DefaultBorderPadding + (i - first_shown_) * (TBHotkey::HEIGHT + DefaultBorderPadding));
+			delete_combo_->GetBottom() + DefaultBorderPadding + 
+			(i - first_shown_) * (TBHotkey::HEIGHT + DefaultBorderPadding / 2));
 
 		hotkeys[i]->SetVisible(i >= first_shown_ && i < first_shown_ + MAX_SHOWN);
 	}

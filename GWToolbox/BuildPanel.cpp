@@ -13,7 +13,7 @@ void BuildPanel::Build::BuildUI() {
 
 	Button* button = new Button();
 	button->SetText(name_);
-	button->SetSize(GetWidth() - edit_button_width - DefaultBorderPadding / 2, GetHeight());
+	button->SetSize(GetWidth() - edit_button_width - DefaultBorderPadding, GetHeight());
 	button->SetLocation(0, 0);
 	button->GetClickEvent() += ClickEventHandler([this](Control*) {
 		SendTeamBuild();

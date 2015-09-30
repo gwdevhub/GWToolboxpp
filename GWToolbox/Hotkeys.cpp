@@ -64,8 +64,7 @@ TBHotkey::TBHotkey(Key key, Key modifier, bool active, wstring ini_section)
 void TBHotkey::PopulateGeometry() {
 	Panel::PopulateGeometry();
 	Graphics g(*geometry_);
-	g.DrawLine(GetForeColor(), PointF((float)DefaultBorderPadding, (float)HEIGHT),
-		PointF((float)WIDTH - DefaultBorderPadding, (float)HEIGHT));
+	g.DrawLine(GetForeColor(), PointF(0.0f, -3.0f), PointF((float)WIDTH, -3.0f));
 }
 
 HotkeySendChat::HotkeySendChat(Key key, Key modifier, bool active, wstring ini_section,

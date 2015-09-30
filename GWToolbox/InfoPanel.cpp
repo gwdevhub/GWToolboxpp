@@ -9,6 +9,7 @@
 #include "HealthWindow.h"
 #include "DistanceWindow.h"
 #include "BondsWindow.h"
+#include "GuiUtils.h"
 
 using namespace OSHGui;
 
@@ -20,7 +21,7 @@ void InfoPanel::BuildUI() {
 	int full_item_width = GetWidth() - 2 * DefaultBorderPadding;
 	int half_item_width = (GetWidth() - 3 * DefaultBorderPadding) / 2;
 	int group_height = 42;
-	int item_height = 30;
+	int item_height = 25;
 	int item1_x = DefaultBorderPadding;
 	int item2_x = half_item_width + 2 * DefaultBorderPadding;
 
@@ -137,8 +138,8 @@ void InfoPanel::BuildUI() {
 	AddControl(distance);
 
 	Button* xunlai = new Button();
-	xunlai->SetSize(full_item_width, item_height);
-	xunlai->SetLocation(item1_x, distance->GetBottom() + DefaultBorderPadding);
+	xunlai->SetSize(full_item_width, 30);
+	xunlai->SetLocation(item1_x, GetHeight() - xunlai->GetHeight() - DefaultBorderPadding);
 	xunlai->SetText("Open Xunlai Chest");
 	xunlai->GetClickEvent() += ClickEventHandler([](Control*) {
 		if (GWAPI::GWAPIMgr::instance()->Map()->GetInstanceType() == GwConstants::InstanceType::Outpost) {

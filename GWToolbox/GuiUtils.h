@@ -12,6 +12,8 @@ using namespace std;
 
 class GuiUtils {
 public:
+	static const int SPACE = 6; // same as OSHGui's DefaultBorderPadding
+	static const int ROW_HEIGHT = 25; // toolbox standard button height
 
 	// Returns the default on hover color.
 	static Color getMouseOverColor() {
@@ -72,5 +74,21 @@ public:
 			font = FontManager::LoadFont("Arial", size, false);
 		}
 		return font;
+	}
+
+	static int ComputeX(int container_width, int horizontal_amount, int grid_x) {
+		
+		const int item_width = ComputeWidth(container_width, horizontal_amount);
+		return SPACE + grid_x * (item_width + SPACE);
+	}
+
+	static int ComputeY(int grid_y) {
+		return SPACE + grid_y * (ROW_HEIGHT + SPACE);
+	}
+
+	static int ComputeWidth(int container_width, int horizontal_amount,
+		int grid_width = 1) {
+		const int item_width = (container_width - SPACE) / horizontal_amount - SPACE;
+		return item_width * grid_width + (grid_width - 1) * SPACE;
 	}
 };

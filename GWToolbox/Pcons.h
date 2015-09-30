@@ -8,8 +8,8 @@
 
 class Pcon : public OSHGui::Button {
 public:
-	static const int WIDTH = 50;
-	static const int HEIGHT = 50;
+	static const int WIDTH = 46;
+	static const int HEIGHT = WIDTH;
 
 private:
 	OSHGui::PictureBox* pic;

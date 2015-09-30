@@ -6,6 +6,8 @@
 #include <GuiComboBox.au3>
 #include <WinAPIProc.au3>
 
+; dx runtime: http://www.microsoft.com/en-us/download/details.aspx?id=8109
+
 Global Const $overwrite = True
 Global Const $debug = True And Not @Compiled
 Global Const $host = "http://fbgmguild.com/GWToolboxpp/"

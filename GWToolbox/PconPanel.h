@@ -9,9 +9,6 @@
 
 class PconPanel : public ToolboxPanel {
 private:
-	static const int WIDTH = 6 * 2 + Pcon::WIDTH * 3;
-	static const int HEIGHT = 6 * 2 + Pcon::HEIGHT * 6;
-
 	Pcon* essence;
 	Pcon* grail;
 	Pcon* armor;
