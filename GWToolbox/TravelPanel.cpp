@@ -18,16 +18,14 @@ void TravelPanel::BuildUI() {
 	district_ = 0;
 	language_ = 0;
 
-	SetSize(WIDTH, HEIGHT);
-
 	ComboBox* combo = new TravelCombo();
 	combo->SetMaxShowItems(10);
 	combo->SetText("Travel To...");
 	for (int i = 0; i < n_outposts; ++i) {
 		combo->AddItem(IndexToOutpostName(i));
 	}
-	combo->SetSize(GetWidth() - 2 * SPACE, BUTTON_HEIGHT);
-	combo->SetLocation(SPACE, SPACE);
+	combo->SetSize(GetWidth() - 2 * DefaultBorderPadding, BUTTON_HEIGHT);
+	combo->SetLocation(DefaultBorderPadding, DefaultBorderPadding);
 	combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
 		[this, combo](Control*) {
 		if (combo->GetSelectedIndex() < 0) return;
@@ -54,8 +52,8 @@ void TravelPanel::BuildUI() {
 	district->AddItem("Asian Korean");
 	district->AddItem("Asia Chinese");
 	district->AddItem("Asia Japanese");
-	district->SetSize(GetWidth() - 2 * SPACE, BUTTON_HEIGHT);
-	district->SetLocation(SPACE, district->GetBottom() + SPACE);
+	district->SetSize(GetWidth() - 2 * DefaultBorderPadding, BUTTON_HEIGHT);
+	district->SetLocation(DefaultBorderPadding, district->GetBottom() + DefaultBorderPadding);
 	district->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
 		[this, district](Control*) {
 		UpdateDistrict(district->GetSelectedIndex());
@@ -77,8 +75,9 @@ void TravelPanel::BuildUI() {
 		wstring key = wstring(L"Travel") + to_wstring(i);
 		int index = GWToolbox::instance()->config()->iniReadLong(MainWindow::IniSection(), key.c_str(), 0);
 		ComboBox* fav_combo = new TravelCombo();
-		fav_combo->SetSize((WIDTH - 3 * SPACE) * 3 / 4, BUTTON_HEIGHT);
-		fav_combo->SetLocation(DefaultBorderPadding, SPACE * 2 + (BUTTON_HEIGHT + SPACE) * (i + 6));
+		fav_combo->SetSize((GetWidth() - 3 * DefaultBorderPadding) * 3 / 4, BUTTON_HEIGHT);
+		fav_combo->SetLocation(DefaultBorderPadding, 
+			DefaultBorderPadding * 2 + (BUTTON_HEIGHT + DefaultBorderPadding) * (i + 6));
 		for (int i = 0; i < n_outposts; ++i) {
 			fav_combo->AddItem(IndexToOutpostName(i));
 		}
@@ -91,7 +90,7 @@ void TravelPanel::BuildUI() {
 		AddControl(fav_combo);
 
 		Button* fav_button = new Button();
-		fav_button->SetSize((WIDTH - 3 * SPACE) / 4, BUTTON_HEIGHT);
+		fav_button->SetSize((GetWidth() - 3 * DefaultBorderPadding) / 4, BUTTON_HEIGHT);
 		fav_button->SetLocation(fav_combo->GetRight() + DefaultBorderPadding, fav_combo->GetTop());
 		fav_button->SetText("Go");
 		fav_button->GetClickEvent() += ClickEventHandler([this, fav_combo](Control*) {
@@ -130,11 +129,13 @@ DWORD TravelPanel::language() {
 
 
 void TravelPanel::AddTravelButton(string text, int grid_x, int grid_y, GwConstants::MapID map_id) {
+	const int BUTTON_WIDTH = (GetWidth() - 3 * DefaultBorderPadding) / 2;
+	
 	Button* button = new Button();
 	button->SetText(text);
 	button->SetSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	button->SetLocation(SPACE + (BUTTON_WIDTH + SPACE) * grid_x, 
-		SPACE * 2 + (BUTTON_HEIGHT + SPACE) * grid_y);
+	button->SetLocation(DefaultBorderPadding + (BUTTON_WIDTH + DefaultBorderPadding) * grid_x, 
+		DefaultBorderPadding * 2 + (BUTTON_HEIGHT + DefaultBorderPadding) * grid_y);
 	button->GetClickEvent() += ClickEventHandler([this, map_id](Control*) {
 		GWAPIMgr::instance()->Map()->Travel(map_id, district(), region(), language());
 	});

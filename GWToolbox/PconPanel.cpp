@@ -82,14 +82,14 @@ void PconPanel::BuildUI() {
 	pcons.push_back(greenrock);
 	++row; col = 0;
 
-	cupcake = new Pcon(L"cupcake");
-	cupcake->setIcon("Birthday_Cupcake.png", 1, 0, 56);
-	cupcake->setChatName(L"Birthday Cupcake");
-	cupcake->setItemID(ItemID::Cupcakes);
-	cupcake->setEffectID(SkillID::Birthday_Cupcake_skill);
-	cupcake->setThreshold(10);
-	cupcake->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	pcons.push_back(cupcake);
+	egg = new Pcon(L"egg");
+	egg->setIcon("Golden_Egg.png", 5, 0, 52);
+	egg->setChatName(L"Golden Egg");
+	egg->setItemID(ItemID::Eggs);
+	egg->setEffectID(SkillID::Golden_Egg_skill);
+	egg->setThreshold(20);
+	egg->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
+	pcons.push_back(egg);
 	++col;
 
 	apple = new Pcon(L"apple");
@@ -112,14 +112,14 @@ void PconPanel::BuildUI() {
 	pcons.push_back(corn);
 	++row; col = 0;
 
-	egg = new Pcon(L"egg");
-	egg->setIcon("Golden_Egg.png", 5, 0, 52);
-	egg->setChatName(L"Golden Egg");
-	egg->setItemID(ItemID::Eggs);
-	egg->setEffectID(SkillID::Golden_Egg_skill);
-	egg->setThreshold(20);
-	egg->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	pcons.push_back(egg);
+	cupcake = new Pcon(L"cupcake");
+	cupcake->setIcon("Birthday_Cupcake.png", 1, 0, 56);
+	cupcake->setChatName(L"Birthday Cupcake");
+	cupcake->setItemID(ItemID::Cupcakes);
+	cupcake->setEffectID(SkillID::Birthday_Cupcake_skill);
+	cupcake->setThreshold(10);
+	cupcake->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
+	pcons.push_back(cupcake);
 	++col;
 
 	pie = new Pcon(L"pie");
@@ -132,12 +132,14 @@ void PconPanel::BuildUI() {
 	pcons.push_back(pie);
 	++col;
 
-	city = new PconCity(L"city");
-	city->setIcon("Sugary_Blue_Drink.png", 4, 0, 50);
-	city->setChatName(L"City speedboost");
-	city->setThreshold(20);
-	city->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	pcons.push_back(city);
+	warsupply = new Pcon(L"warsupply");
+	warsupply->setIcon("War_Supplies.png", 1, 0, 48);
+	warsupply->setChatName(L"War Supplies");
+	warsupply->setItemID(ItemID::Warsupplies);
+	warsupply->setEffectID(SkillID::Well_Supplied);
+	warsupply->setThreshold(20);
+	warsupply->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
+	pcons.push_back(warsupply);
 	++row; col = 0;
 
 	alcohol = new PconAlcohol(L"alcohol");
@@ -157,14 +159,12 @@ void PconPanel::BuildUI() {
 	pcons.push_back(lunars);
 	++col;
 
-	warsupply = new Pcon(L"warsupply");
-	warsupply->setIcon("War_Supplies.png", 1, 0, 48);
-	warsupply->setChatName(L"War Supplies");
-	warsupply->setItemID(ItemID::Warsupplies);
-	warsupply->setEffectID(SkillID::Well_Supplied);
-	warsupply->setThreshold(20);
-	warsupply->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
-	pcons.push_back(warsupply);
+	city = new PconCity(L"city");
+	city->setIcon("Sugary_Blue_Drink.png", 4, 0, 50);
+	city->setChatName(L"City speedboost");
+	city->setThreshold(20);
+	city->SetLocation(6 + col * Pcon::WIDTH, 6 + row * Pcon::HEIGHT);
+	pcons.push_back(city);
 	++row; col = 0;
 
 	kabob = new Pcon(L"kabob");

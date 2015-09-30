@@ -94,7 +94,6 @@ void BuildPanel::set_first_shown(int first) {
 }
 
 void BuildPanel::BuildUI() {
-	SetSize(WIDTH, HEIGHT);
 
 	Config* config = GWToolbox::instance()->config();
 

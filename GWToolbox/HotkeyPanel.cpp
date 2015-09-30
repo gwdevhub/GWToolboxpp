@@ -18,20 +18,17 @@ void HotkeyPanel::OnMouseScroll(const MouseMessage &mouse) {
 }
 
 void HotkeyPanel::BuildUI() {
-	const int height = 300;
 	
 	LoadIni();
 	
 	ScrollBar* scrollbar = new ScrollBar();
-	scrollbar->SetSize(scrollbar->GetWidth(), height);
+	scrollbar->SetSize(scrollbar->GetWidth(), GetHeight());
 	scrollbar->SetLocation(TBHotkey::WIDTH + 2 * DefaultBorderPadding, 0);
 	scrollbar->GetScrollEvent() += ScrollEventHandler([this, scrollbar](Control*, ScrollEventArgs) {
 		this->set_first_shown(scrollbar->GetValue());
 	});
 	scrollbar_ = scrollbar;
 	AddControl(scrollbar);
-
-	SetSize(TBHotkey::WIDTH + 2 * DefaultBorderPadding + scrollbar->GetWidth(), height);
 	
 	ComboBox* create_combo = new ComboBox();
 	create_combo->SetText("Create Hotkey"); 

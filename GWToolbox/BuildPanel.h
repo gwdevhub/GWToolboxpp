@@ -48,9 +48,6 @@ protected:
 	void OnMouseScroll(const OSHGui::MouseMessage &mouse) override;
 
 public:
-	static const int WIDTH = 250;
-	static const int HEIGHT = 300;
-
 	BuildPanel();
 
 	void BuildUI() override;

@@ -16,14 +16,13 @@ InfoPanel::InfoPanel() {
 }
 
 void InfoPanel::BuildUI() {
-	int width = 250;
-	int full_item_width = width - 2 * DefaultBorderPadding;
-	int half_item_width = (width - 3 * DefaultBorderPadding) / 2;
+
+	int full_item_width = GetWidth() - 2 * DefaultBorderPadding;
+	int half_item_width = (GetWidth() - 3 * DefaultBorderPadding) / 2;
 	int group_height = 42;
 	int item_height = 30;
 	int item1_x = DefaultBorderPadding;
 	int item2_x = half_item_width + 2 * DefaultBorderPadding;
-	SetSize(250, 300);
 
 	using namespace OSHGui;
 

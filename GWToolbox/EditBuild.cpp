@@ -183,8 +183,8 @@ void EditBuild::SaveBuild() {
 }
 
 void EditBuild::UpdateLocation() {
-	int x = left_ ? -GetWidth() : BuildPanel::WIDTH;
-	int y = up_ ? 0 : BuildPanel::HEIGHT - GetHeight();
+	int x = left_ ? -GetWidth() : MainWindow::SIDE_PANEL_WIDTH;
+	int y = up_ ? 0 : MainWindow::SIDE_PANEL_WIDTH - GetHeight();
 
 	SetLocation(x, y);
 }

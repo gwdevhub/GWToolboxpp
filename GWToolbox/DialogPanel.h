@@ -22,8 +22,6 @@ private:
 	DWORD IndexToDialogID(int index);
 
 public:
-	static const int WIDTH = 300;
-	static const int HEIGHT = 300;
 	static const int SPACE = DefaultBorderPadding;
 	static const int BUTTON_HEIGHT = 25;
 

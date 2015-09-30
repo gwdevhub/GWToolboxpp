@@ -24,10 +24,8 @@ void SettingsPanel::BuildUI() {
 	location_timer_ = TBTimer::init();
 	location_active_ = config->iniReadBool(MainWindow::IniSection(), MainWindow::IniKeySaveLocation(), false);
 
-	SetSize(250, 300);
-	int width = 250;
-	int item_width = width - 2 * DefaultBorderPadding;
-	int item_height = 25;
+	const int item_width = GetWidth() - 2 * DefaultBorderPadding;
+	const int item_height = 25;
 
 	Label* version = new Label();
 	version->SetText(string("GWToolbox++") + GWToolbox::VersionA);

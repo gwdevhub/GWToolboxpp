@@ -2,6 +2,7 @@
 #include "../API/APIMain.h"
 #include "GWToolbox.h"
 #include "Config.h"
+#include "MainWindow.h"
 
 using namespace OSHGui;
 using namespace GWAPI;
@@ -11,7 +12,6 @@ DialogPanel::DialogPanel() {
 }
 
 void DialogPanel::BuildUI() {
-	SetSize(WIDTH, HEIGHT);
 
 	CreateButton(0, 0, 2, "Four Horseman", QuestAcceptDialog(GwConstants::QuestID::UW::Planes));
 	CreateButton(1, 0, 2, "Demon Assassin", QuestAcceptDialog(GwConstants::QuestID::UW::Mnt));
@@ -31,7 +31,7 @@ void DialogPanel::BuildUI() {
 		wstring key = wstring(L"Quest") + to_wstring(i);
 		int index = GWToolbox::instance()->config()->iniReadLong(MainWindow::IniSection(), key.c_str(), 0);
 		ComboBox* fav_combo = new ComboBox();
-		fav_combo->SetSize((WIDTH - 4 * SPACE) * 2 / 4, BUTTON_HEIGHT);
+		fav_combo->SetSize((GetWidth() - 4 * SPACE) * 2 / 4, BUTTON_HEIGHT);
 		fav_combo->SetLocation(DefaultBorderPadding, SPACE * 2 + (BUTTON_HEIGHT + SPACE) * (i + 4));
 		for (int i = 0; i < n_quests; ++i) {
 			fav_combo->AddItem(IndexToQuestName(i));
@@ -45,7 +45,7 @@ void DialogPanel::BuildUI() {
 		AddControl(fav_combo);
 
 		Button* take = new Button();
-		take->SetSize((WIDTH - 3 * SPACE) / 4, fav_combo->GetHeight());
+		take->SetSize((GetWidth() - 3 * SPACE) / 4, fav_combo->GetHeight());
 		take->SetLocation(fav_combo->GetRight() + SPACE, fav_combo->GetTop());
 		take->SetText("Take");
 		take->GetClickEvent() += ClickEventHandler([this, fav_combo](Control*) {
@@ -55,7 +55,7 @@ void DialogPanel::BuildUI() {
 		AddControl(take);
 
 		Button* complete = new Button();
-		complete->SetSize((WIDTH - 3 * SPACE) / 4, fav_combo->GetHeight());
+		complete->SetSize((GetWidth() - 3 * SPACE) / 4, fav_combo->GetHeight());
 		complete->SetLocation(take->GetRight() + SPACE, fav_combo->GetTop());
 		complete->SetText("Complete");
 		complete->GetClickEvent() += ClickEventHandler([this, fav_combo](Control*) {
@@ -67,7 +67,7 @@ void DialogPanel::BuildUI() {
 
 	ComboBox* combo = new ComboBox();
 	combo->SetLocation(SPACE, SPACE * 3 + (BUTTON_HEIGHT + SPACE) * 7);
-	combo->SetSize((WIDTH - SPACE * 3) * 3 / 4, BUTTON_HEIGHT);
+	combo->SetSize((GetWidth() - SPACE * 3) * 3 / 4, BUTTON_HEIGHT);
 	for (int i = 0; i < n_dialogs; ++i) {
 		combo->AddItem(IndexToDialogName(i));
 	}
@@ -76,7 +76,7 @@ void DialogPanel::BuildUI() {
 
 	Button* combo_send = new Button();
 	combo_send->SetLocation(combo->GetRight() + SPACE, combo->GetTop());
-	combo_send->SetSize((WIDTH - 3 * SPACE) / 4, BUTTON_HEIGHT);
+	combo_send->SetSize((GetWidth() - 3 * SPACE) / 4, BUTTON_HEIGHT);
 	combo_send->SetText("Send");
 	combo_send->GetClickEvent() += ClickEventHandler([this, combo](Control*) {
 		int index = combo->GetSelectedIndex();
@@ -87,7 +87,7 @@ void DialogPanel::BuildUI() {
 
 	TextBox* textbox = new TextBox();
 	textbox->SetLocation(SPACE, SPACE * 3 + (BUTTON_HEIGHT + SPACE) * 8);
-	textbox->SetSize((WIDTH - SPACE * 3) * 3 / 4, BUTTON_HEIGHT);
+	textbox->SetSize((GetWidth() - SPACE * 3) * 3 / 4, BUTTON_HEIGHT);
 	textbox->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
 		GWToolbox::instance()->set_capture_input(true);
 	});
@@ -111,7 +111,7 @@ void DialogPanel::BuildUI() {
 
 	Button* custom_send = new Button();
 	custom_send->SetLocation(textbox->GetRight() + SPACE, textbox->GetTop());
-	custom_send->SetSize((WIDTH - 3 * SPACE) / 4, BUTTON_HEIGHT);
+	custom_send->SetSize((GetWidth() - 3 * SPACE) / 4, BUTTON_HEIGHT);
 	custom_send->SetText("Send");
 	custom_send->GetClickEvent() += ClickEventHandler([textbox](Control*) {
 		try {
@@ -125,7 +125,7 @@ void DialogPanel::BuildUI() {
 void DialogPanel::CreateButton(int grid_x, int grid_y, int hor_amount,
 	std::string text, DWORD dialog) {
 
-	const int width = (WIDTH - (hor_amount + 1) * SPACE) / hor_amount;
+	const int width = (GetWidth() - (hor_amount + 1) * SPACE) / hor_amount;
 	const int x = SPACE + grid_x * (width + SPACE);
 	const int y = SPACE + grid_y * (BUTTON_HEIGHT + SPACE);
 

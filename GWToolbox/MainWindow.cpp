@@ -135,6 +135,7 @@ settings_panel_(new SettingsPanel()) {
 
 	
 	for (ToolboxPanel* panel : panels) {
+		panel->SetSize(SIDE_PANEL_WIDTH, HEIGHT);
 		panel->BuildUI();
 		panel->SetVisible(false);
 		panel->SetEnabled(false);

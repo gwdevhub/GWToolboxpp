@@ -8,10 +8,6 @@
 
 class TravelPanel : public ToolboxPanel {
 private:
-	static const int WIDTH = 200;
-	static const int HEIGHT = 300;
-	static const int SPACE = DefaultBorderPadding;
-	static const int BUTTON_WIDTH = (WIDTH - 3 * SPACE) / 2;
 	static const int BUTTON_HEIGHT = 25;
 	const int n_outposts = 185;
 
