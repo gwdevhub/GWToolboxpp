@@ -64,7 +64,7 @@ DWORD GWAPI::DirectXMgr::FindPattern(DWORD _base, DWORD _size, char* _pattern, c
 
 	LOG("Pattern: \n");
 
-	for (size_t i = 0; i < pattern_length; i++) {
+	for (int i = 0; i < pattern_length; i++) {
 		printf("%02X \n", _pattern[i]);
 		Logger::FlushFile();
 	}
