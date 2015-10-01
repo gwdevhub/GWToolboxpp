@@ -2,9 +2,10 @@
 
 #include <fstream>
 
+#include "../API/GwConstants.h"
+
 #include "ToolboxPanel.h"
 #include "Timer.h"
-#include "../API/GwConstants.h"
 
 class SettingsPanel : public ToolboxPanel {
 private:

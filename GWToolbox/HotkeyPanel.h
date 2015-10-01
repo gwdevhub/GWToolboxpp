@@ -6,10 +6,10 @@
 #include <Windows.h>
 #include <string>
 
-#include "ToolboxPanel.h"
-#include "../include/OSHGui/OSHGui.hpp"
-
+#include "OSHGui.hpp"
 #include "../API/APIMain.h"
+
+#include "ToolboxPanel.h"
 #include "logger.h"
 #include "Timer.h"
 #include "Hotkeys.h"

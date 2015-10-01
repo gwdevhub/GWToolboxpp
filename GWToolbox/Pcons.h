@@ -1,9 +1,13 @@
 #pragma once
 
 #include <stdint.h>
-#include "../include/OSHGui/OSHGui.hpp"
-#include "Timer.h"
+
+#include "OSHGui.hpp"
+
 #include "../API/GwConstants.h"
+
+#include "Timer.h"
+
 
 
 class Pcon : public OSHGui::Button {

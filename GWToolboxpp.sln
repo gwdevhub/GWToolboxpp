@@ -4,6 +4,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 12.0.40629.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GWToolbox", "GWToolbox.vcxproj", "{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{296FB7C3-29B9-4111-9243-6EB8CB71D458} = {296FB7C3-29B9-4111-9243-6EB8CB71D458}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OSHGui", "OSHGui.vcxproj", "{296FB7C3-29B9-4111-9243-6EB8CB71D458}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +20,10 @@ Global
 		{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}.Debug|Win32.Build.0 = Debug|Win32
 		{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}.Release|Win32.ActiveCfg = Release|Win32
 		{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}.Release|Win32.Build.0 = Release|Win32
+		{296FB7C3-29B9-4111-9243-6EB8CB71D458}.Debug|Win32.ActiveCfg = Debug|Win32
+		{296FB7C3-29B9-4111-9243-6EB8CB71D458}.Debug|Win32.Build.0 = Debug|Win32
+		{296FB7C3-29B9-4111-9243-6EB8CB71D458}.Release|Win32.ActiveCfg = Release|Win32
+		{296FB7C3-29B9-4111-9243-6EB8CB71D458}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,4 +1,5 @@
 #include "ToolboxWindow.h"
+
 #include "logger.h"
 
 using namespace OSHGui;

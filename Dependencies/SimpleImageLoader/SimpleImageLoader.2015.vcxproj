@@ -1,0 +1,255 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Convert.cpp" />
+    <ClCompile Include="Flip.cpp" />
+    <ClCompile Include="ImageData.cpp" />
+    <ClCompile Include="ImageLoader.cpp" />
+    <ClCompile Include="LibJPEG\jaricom.c" />
+    <ClCompile Include="LibJPEG\jcarith.c" />
+    <ClCompile Include="LibJPEG\jccoefct.c" />
+    <ClCompile Include="LibJPEG\jccolor.c" />
+    <ClCompile Include="LibJPEG\jcdctmgr.c" />
+    <ClCompile Include="LibJPEG\jchuff.c" />
+    <ClCompile Include="LibJPEG\jcinit.c" />
+    <ClCompile Include="LibJPEG\jcmainct.c" />
+    <ClCompile Include="LibJPEG\jcmarker.c" />
+    <ClCompile Include="LibJPEG\jcmaster.c" />
+    <ClCompile Include="LibJPEG\jcomapi.c" />
+    <ClCompile Include="LibJPEG\jcprepct.c" />
+    <ClCompile Include="LibJPEG\jcsample.c" />
+    <ClCompile Include="LibJPEG\jdapimin.c" />
+    <ClCompile Include="LibJPEG\jdapistd.c" />
+    <ClCompile Include="LibJPEG\jdarith.c" />
+    <ClCompile Include="LibJPEG\jdcoefct.c" />
+    <ClCompile Include="LibJPEG\jdcolor.c" />
+    <ClCompile Include="LibJPEG\jddctmgr.c" />
+    <ClCompile Include="LibJPEG\jdhuff.c" />
+    <ClCompile Include="LibJPEG\jdinput.c" />
+    <ClCompile Include="LibJPEG\jdmainct.c" />
+    <ClCompile Include="LibJPEG\jdmarker.c" />
+    <ClCompile Include="LibJPEG\jdmaster.c" />
+    <ClCompile Include="LibJPEG\jdmerge.c" />
+    <ClCompile Include="LibJPEG\jdpostct.c" />
+    <ClCompile Include="LibJPEG\jdsample.c" />
+    <ClCompile Include="LibJPEG\jerror.c" />
+    <ClCompile Include="LibJPEG\jfdctflt.c" />
+    <ClCompile Include="LibJPEG\jfdctfst.c" />
+    <ClCompile Include="LibJPEG\jfdctint.c" />
+    <ClCompile Include="LibJPEG\jidctflt.c" />
+    <ClCompile Include="LibJPEG\jidctfst.c" />
+    <ClCompile Include="LibJPEG\jidctint.c" />
+    <ClCompile Include="LibJPEG\jmemmgr.c" />
+    <ClCompile Include="LibJPEG\jmemnobs.c" />
+    <ClCompile Include="LibJPEG\jquant1.c" />
+    <ClCompile Include="LibJPEG\jquant2.c" />
+    <ClCompile Include="LibJPEG\jutils.c" />
+    <ClCompile Include="LibPNG\png.c" />
+    <ClCompile Include="LibPNG\pngerror.c" />
+    <ClCompile Include="LibPNG\pngget.c" />
+    <ClCompile Include="LibPNG\pngmem.c" />
+    <ClCompile Include="LibPNG\pngread.c" />
+    <ClCompile Include="LibPNG\pngrio.c" />
+    <ClCompile Include="LibPNG\pngrtran.c" />
+    <ClCompile Include="LibPNG\pngrutil.c" />
+    <ClCompile Include="LibPNG\pngset.c" />
+    <ClCompile Include="LibPNG\pngtrans.c" />
+    <ClCompile Include="PluginBMP.cpp" />
+    <ClCompile Include="PluginJPEG.cpp" />
+    <ClCompile Include="PluginPNG.cpp" />
+    <ClCompile Include="Stream.cpp" />
+    <ClCompile Include="ZLib\adler32.c" />
+    <ClCompile Include="ZLib\compress.c" />
+    <ClCompile Include="ZLib\crc32.c" />
+    <ClCompile Include="ZLib\deflate.c" />
+    <ClCompile Include="ZLib\gzclose.c" />
+    <ClCompile Include="ZLib\gzlib.c" />
+    <ClCompile Include="ZLib\gzread.c" />
+    <ClCompile Include="ZLib\infback.c" />
+    <ClCompile Include="ZLib\inffast.c" />
+    <ClCompile Include="ZLib\inflate.c" />
+    <ClCompile Include="ZLib\inftrees.c" />
+    <ClCompile Include="ZLib\trees.c" />
+    <ClCompile Include="ZLib\uncompr.c" />
+    <ClCompile Include="ZLib\zutil.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Common.hpp" />
+    <ClInclude Include="Convert.hpp" />
+    <ClInclude Include="Flip.hpp" />
+    <ClInclude Include="Plugin.hpp" />
+    <ClInclude Include="PluginBMP.hpp" />
+    <ClInclude Include="PluginJPEG.hpp" />
+    <ClInclude Include="PluginPNG.hpp" />
+    <ClInclude Include="SimpleImageLoader.hpp" />
+    <ClInclude Include="Stream.hpp" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{D8FFBB21-1CB1-4C27-BE8C-F7D8C211DE90}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>SimpleImageLoader</RootNamespace>
+    <ProjectName>SimpleImageLoader</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <TargetName>$(ProjectName)_d</TargetName>
+    <OutDir>$(Configuration)\$(PlatformTarget)\</OutDir>
+    <IntDir>$(Configuration)\$(PlatformTarget)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <TargetName>$(ProjectName)_d</TargetName>
+    <OutDir>$(Configuration)\$(PlatformTarget)\</OutDir>
+    <IntDir>$(Configuration)\$(PlatformTarget)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>$(Configuration)\$(PlatformTarget)\</OutDir>
+    <IntDir>$(Configuration)\$(PlatformTarget)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(Configuration)\$(PlatformTarget)\</OutDir>
+    <IntDir>$(Configuration)\$(PlatformTarget)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>ZLib</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy Debug\x86\SimpleImageLoader_d.lib ..\..\Lib\x86 /Y
+copy SimpleImageLoader.hpp ..\..\Include /Y</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>ZLib</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy Debug\x64\SimpleImageLoader_d.lib ..\..\Lib\x64 /Y
+copy SimpleImageLoader.hpp ..\..\Include /Y</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>ZLib</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy Release\x86\SimpleImageLoader.lib ..\..\Lib\x86 /Y
+copy SimpleImageLoader.hpp ..\..\Include /Y</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>ZLib</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy Release\x64\SimpleImageLoader.lib ..\..\Lib\x64 /Y
+copy SimpleImageLoader.hpp ..\..\Include /Y</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

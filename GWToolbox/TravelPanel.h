@@ -1,7 +1,10 @@
 #pragma once
+
 #include <string>
 #include <Windows.h>
-#include "../include/OSHGui/OSHGui.hpp"
+
+#include "OSHGui.hpp"
+
 #include "ToolboxPanel.h"
 #include "../API/GwConstants.h"
 #include "logger.h"

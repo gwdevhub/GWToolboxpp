@@ -1,7 +1,8 @@
 #pragma once
 
-#include "ToolboxPanel.h"
 #include "../API/GwConstants.h"
+
+#include "ToolboxPanel.h"
 
 class InfoPanel : public ToolboxPanel {
 private:

@@ -3,12 +3,13 @@
 #include <sstream>
 #include <string>
 
+#include "OSHGui.hpp"
+
 #include "GWToolbox.h"
 #include "Config.h"
 #include "../API/APIMain.h"
 #include "GuiUtils.h"
-#include "../include/OSHGui/OSHGui.hpp"
-#include "../include/OSHGui/Misc/Intersection.hpp"
+
 
 using namespace OSHGui;
 

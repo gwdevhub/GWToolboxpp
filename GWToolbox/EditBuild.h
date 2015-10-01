@@ -1,7 +1,8 @@
 #pragma once
 
 #include <vector>
-#include "../include/OSHGui/OSHGui.hpp"
+
+#include "OSHGui.hpp"
 
 class EditBuild : public OSHGui::Panel {
 public:

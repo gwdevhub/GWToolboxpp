@@ -1,9 +1,10 @@
 #pragma once
 
-#include "Shlobj.h"
-#include "Shlwapi.h"
+#include <Shlobj.h>
+#include <Shlwapi.h>
 
-#include "../include/OSHGui/OSHGui.hpp"
+#include "OSHGui.hpp"
+
 #include <string>
 #include "logger.h"
 

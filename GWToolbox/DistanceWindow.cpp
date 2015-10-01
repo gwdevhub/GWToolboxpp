@@ -2,9 +2,10 @@
 
 #include <string>
 
+#include "../API/APIMain.h"
+
 #include "GWToolbox.h"
 #include "Config.h"
-#include "../API/APIMain.h"
 #include "GuiUtils.h"
 
 DistanceWindow::DistanceWindow() {

@@ -1,5 +1,7 @@
 #include "DialogPanel.h"
+
 #include "../API/APIMain.h"
+
 #include "GWToolbox.h"
 #include "Config.h"
 #include "MainWindow.h"

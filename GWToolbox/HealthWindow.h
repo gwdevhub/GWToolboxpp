@@ -1,7 +1,8 @@
 #pragma once
 
+#include "../OSHGui/OSHGui.hpp"
+
 #include "ToolboxWindow.h"
-#include "../include/OSHGui/OSHGui.hpp"
 
 class HealthWindow : public ToolboxWindow {
 public:

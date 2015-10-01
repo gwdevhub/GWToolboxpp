@@ -1,9 +1,13 @@
 #include "TravelPanel.h"
+
+#include <string>
+
 #include "../API/APIMain.h"
+
 #include "MainWindow.h"
 #include "GWToolbox.h"
 #include "Config.h"
-#include <string>
+
 
 using namespace OSHGui;
 using namespace GWAPI;

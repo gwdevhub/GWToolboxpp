@@ -1,7 +1,7 @@
 #include "Hooker.h"
 
 extern "C"{
-#include "../include/disasm/ld32.h"
+#include "disasm/ld32.h"
 }
 
 void GWAPI::Hook::Retour()

@@ -1,6 +1,8 @@
 #include "MainWindow.h"
+
+#include "OSHGui.hpp"
+
 #include "logger.h"
-#include "../include/OSHGui/OSHGui.hpp"
 #include "GuiUtils.h"
 #include "GWToolbox.h"
 

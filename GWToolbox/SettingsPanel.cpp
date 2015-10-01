@@ -2,6 +2,8 @@
 
 #include <Windows.h>
 
+#include "../API/APIMain.h"
+
 #include "GWToolbox.h"
 #include "Config.h"
 #include "GuiUtils.h"
@@ -9,7 +11,6 @@
 #include "TimerWindow.h"
 #include "DistanceWindow.h"
 #include "BondsWindow.h"
-#include "../API/APIMain.h"
 
 using namespace OSHGui;
 

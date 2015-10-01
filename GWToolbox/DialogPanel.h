@@ -2,6 +2,7 @@
 
 #include <Windows.h>
 #include <string>
+
 #include "ToolboxPanel.h"
 
 class DialogPanel : public ToolboxPanel {

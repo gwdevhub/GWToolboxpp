@@ -1,11 +1,8 @@
 #include "GWToolbox.h"
 
-#include "../include/OSHGui/OSHGui.hpp"
-#include "../include/OSHGui/Drawing/Direct3D9/Direct3D9Renderer.hpp"
-#include "../include/OSHGui/Drawing/Theme.hpp"
-#include "../include/OSHGui/Input/WindowsMessage.hpp"
-
 #include <string>
+
+#include "OSHGui.hpp"
 
 #include "Timer.h"
 #include "MainWindow.h"

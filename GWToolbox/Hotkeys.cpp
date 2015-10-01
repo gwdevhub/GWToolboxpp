@@ -1,6 +1,8 @@
+#include "Hotkeys.h"
+
 #include <iostream>
 #include <sstream>
-#include "Hotkeys.h"
+
 #include "logger.h"
 #include "GWToolbox.h"
 #include "Config.h"

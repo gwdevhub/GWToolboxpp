@@ -1,9 +1,10 @@
 #pragma once
 
 #include <vector>
-#include "../include/OSHGui/OSHGui.hpp"
-#include "ToolboxWindow.h"
 
+#include "OSHGui.hpp"
+
+#include "ToolboxWindow.h"
 #include "PconPanel.h"
 #include "HotkeyPanel.h"
 #include "TravelPanel.h"

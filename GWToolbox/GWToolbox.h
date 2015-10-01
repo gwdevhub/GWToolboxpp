@@ -3,9 +3,8 @@
 #include <Windows.h>
 
 #include "../API/APIMain.h"
-#include "../include/OSHGui/OSHGui.hpp"
-#include "../include/OSHGui/Input/WindowsMessage.hpp"
-#include "../include/OSHGui/Drawing/Direct3D9/Direct3D9Renderer.hpp"
+#include "OSHGui.hpp"
+#include "Input/WindowsMessage.hpp"
 
 #include "Config.h"
 #include "MainWindow.h"

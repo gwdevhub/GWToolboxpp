@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "../API/APIMain.h"
+
 #include "GWToolbox.h"
 #include "Config.h"
 #include "HealthWindow.h"

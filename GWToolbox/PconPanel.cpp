@@ -1,9 +1,8 @@
 #include "PconPanel.h"
-#include "../API/GwConstants.h"
-#include "../API/APIMain.h"
-#include "MainWindow.h"
 
-//#include "Config.h"
+#include "../API/APIMain.h"
+
+#include "MainWindow.h"
 #include "GWToolbox.h"
 
 using namespace GWAPI;

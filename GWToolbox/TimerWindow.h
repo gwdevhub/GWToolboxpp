@@ -1,7 +1,8 @@
 #pragma once
 
+#include "OSHGui.hpp"
+
 #include "ToolboxWindow.h"
-#include "../include/OSHGui/OSHGui.hpp"
 #include "logger.h"
 
 class TimerWindow : public ToolboxWindow {

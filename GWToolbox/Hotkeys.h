@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "../include/OSHGui/OSHGui.hpp"
+#include "OSHGui.hpp"
 #include "../API/APIMain.h"
 
 using namespace std;

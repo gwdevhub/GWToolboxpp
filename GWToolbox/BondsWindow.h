@@ -1,7 +1,9 @@
 #pragma once
 
+#include "OSHGui.hpp"
+
 #include "ToolboxWindow.h"
-#include "../include/OSHGui/OSHGui.hpp"
+
 
 class BondsWindow : public ToolboxWindow {
 	static const int n_players = 12;

@@ -2,9 +2,11 @@
 
 #include <list>
 #include <vector>
+
+#include "../API/GwConstants.h"
+
 #include "Timer.h"
 #include "Pcons.h"
-#include "../API/GwConstants.h"
 #include "ToolboxPanel.h"
 
 class PconPanel : public ToolboxPanel {
