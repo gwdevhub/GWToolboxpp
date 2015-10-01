@@ -18,33 +18,19 @@ Global Const $locationLogsFolder = $folder & "location logs\"
 
 Global $mKernelHandle, $mGWProcHandle, $mCharname
 
-Global $ERRSTRING[13]
-
-$ERRSTRING[0] = "No error."
-$ERRSTRING[1] = "Invalid ProcessId."
-$ERRSTRING[2] = "File does not exist."
-$ERRSTRING[3] = "File is not a .dll (invalid file)."
-$ERRSTRING[4] = "Failed to open 'Advapi32.dll'."
-$ERRSTRING[5] = "Failed to get the full path."
-$ERRSTRING[6] = "Failed to open the process."
-$ERRSTRING[7] = "Failed to call 'GetModuleHandle'."
-$ERRSTRING[8] = "Failed to call 'GetProcAddress'."
-$ERRSTRING[9] = "Failed to call 'VirtualAllocEx'."
-$ERRSTRING[10] = "Failed to write the memory."
-$ERRSTRING[11] = "Failed to create the 'RemoteThread'."
-$ERRSTRING[12] = "GWToolbox++ already in specified process."
-
-DirCreate($folder)
-DirCreate($imgFolder)
-DirCreate($locationLogsFolder)
+If Not FileExists($folder) Then DirCreate($folder)
+If Not FileExists($folder) Then Error("failed to create installation folder")
+If Not FileExists($imgFolder) Then DirCreate($imgFolder)
+if Not FileExists($locationLogsFolder) Then DirCreate($locationLogsFolder)
 
 #Region fileinstalls
 ; various
 If $debug Then
-	FileInstall("..\Debug\GWToolbox.dll", $dllpath, $overwrite)
+	FileCopy("..\Debug\GWToolbox.dll", $dllpath, $overwrite)
 Else
 	FileInstall("..\Release\GWToolbox.dll", $dllpath, $overwrite)
 EndIf
+If Not FileExists($dllpath) Then Error("Failed to install GWToolbox.dll")
 FileInstall("..\resources\DefaultTheme.txt", $folder & "Theme.txt")
 FileInstall("..\resources\Friz_Quadrata_Regular.ttf", $folder & "Font.ttf")
 FileInstall("..\resources\DefaultSettings.ini", $folder & "GWToolbox.ini")
@@ -83,16 +69,12 @@ FileInstall("..\resources\Bowl_of_Skalefin_Soup.png", $imgFolder & "Bowl_of_Skal
 FileInstall("..\resources\Pahnai_Salad.png", $imgFolder & "Pahnai_Salad.png")
 #EndRegion
 
-Func Out($msg)
-	ConsoleWrite($msg & @CRLF)
-EndFunc
-
+; === Client selection ===
 Global $WinList = WinList("[CLASS:ArenaNet_Dx_Window_Class]")
 Global $gwPID
 Switch $WinList[0][0]
 	Case 0
-		MsgBox($MB_ICONERROR, "GWToolbox++", "Error: Guild Wars is not running")
-		Exit
+		Error("Guild Wars not running")
 	Case 1
 		$gwPID = WinGetProcess($WinList[1][1])
 	Case Else
@@ -114,7 +96,6 @@ Switch $WinList[0][0]
 		GUICtrlSetData(-1, $lComboStr, $lFirstChar)
 		Local $button = GUICtrlCreateButton("Launch", 6, 31, 138, 24)
 		GUISetState(@SW_SHOW, $gui)
-		Out("made gui")
 		While True
 			Switch GUIGetMsg()
 				Case $button
@@ -127,30 +108,62 @@ Switch $WinList[0][0]
 
 		Local $index = _GUICtrlComboBox_GetCurSel($comboCharname)
 		$gwPID = WinGetProcess($WinList[$index + 1][1])
-
 EndSwitch
 
-If Not ProcessExists($gwPID) Then
-	MsgBox($MB_ICONERROR, "GWToolbox++", "Error: bad process")
-	Exit
-EndIf
+If Not ProcessExists($gwPID) Then Error("Cannot find Guild Wars process")
 
-Global $ret = _InjectDll($gwPID, $dllpath)
-If Not $ret Then
-	MsgBox($MB_ICONERROR, "GWToolbox++", "Injection error - " & @error & " (" & $ERRSTRING[@error] & ")")
-	Exit
-EndIf
+; === Injection ===
+Local $Kernel32 = DllOpen("kernel32.dll")
+If $Kernel32 == -1 Then Error("Failed to open kernel32.dll")
 
-Global $found = False
-Global $deadlock = TimerInit()
+Local $DLL_Path = DllStructCreate("char[255]")
+Local $getfullpath_ret = DllCall($Kernel32, "DWORD", "GetFullPathNameA", "str", $dllpath, "DWORD", 255, "ptr", DllStructGetPtr($DLL_Path), "int", 0)
+If @error Then Error1("Failed to DllCall GetFullPathNameA", @error)
+If $getfullpath_ret == 0 Then Error2("Failed to call 'GetFullPathNameA'", _WinAPI_GetLastError(), $getfullpath_ret)
+Local $sDLLFullPath = DllStructGetData($DLL_Path,1)
 
+Local $modules = _WinAPI_EnumProcessModules($gwPID)
+If @error Then Error2("Failed to call 'EnumProcessModules' (1)", @error, $modules)
+For $i = 1 To $modules[0][0]
+	If $modules[$i][1] == $dllpath Then Error("GWToolbox++ already in specified process")
+Next
+
+Local $hProcess = DllCall($Kernel32, "DWORD", "OpenProcess", "DWORD", 0x1F0FFF, "int", 0, "DWORD", $gwPID)
+If @error Then Error1("Failed to DllCall OpenProcess", @error)
+If $hProcess == 0 Then Error2("OpenProcess failed", _WinAPI_GetLastError(), $hProcess)
+
+Local $hModule = DllCall($Kernel32, "DWORD", "GetModuleHandleA", "str", "kernel32.dll")
+If @error Then Error1("Failed to DllCall GetModuleHandleA", @error)
+If $hModule == 0 Then Error2("GetModuleHandle failed", _WinAPI_GetLastError(), $hModule)
+
+Local $lpStartAddress = DllCall($Kernel32, "DWORD", "GetProcAddress", "DWORD", $hModule[0], "str", "LoadLibraryA")
+If @error Then Error1("Failed to DllCall GetProcAddress", @error)
+If $lpStartAddress == 0 Then Error2("GetProcAddress failed", _WinAPI_GetLastError(), $lpStartAddress)
+
+Local $lpParameter = DllCall($Kernel32, "DWORD", "VirtualAllocEx", "int", $hProcess[0], "int", 0, "ULONG_PTR", DllStructGetSize($DLL_Path), "DWORD", 0x3000, "int", 4)
+If @error Then Error1("Failed to DllCall VirtualAllocEx", @error)
+If $lpParameter == 0 Then Error2("VirtualAllocEx failed", _WinAPI_GetLastError(), $lpParameter)
+
+Local $writeProcMem_ret = DllCall($Kernel32, "BOOL", "WriteProcessMemory", "int", $hProcess[0], "DWORD", $lpParameter[0], "str", $sDLLFullPath, "ULONG_PTR", DllStructGetSize($DLL_Path), "int", 0)
+If @error Then Error1("Failed to DllCall WriteProcessMemory", @error)
+If $writeProcMem_ret == 0 Then Error2("WriteProcessMemory failed", _WinAPI_GetLastError(), $writeProcMem_ret)
+
+Local $hThread = DllCall($Kernel32, "int", "CreateRemoteThread", "DWORD", $hProcess[0], "int", 0, "int", 0, "DWORD", $lpStartAddress[0], "DWORD", $lpParameter[0], "int", 0, "int", 0)
+If @error Then Error1("Failed to DllCall CreateRemoteThread", @error)
+If $hThread == 0 Then Error2("CreateRemoteThread failed", _WinAPI_GetLastError(), $hThread)
+
+Local $closehandle_ret = DllCall($Kernel32, "BOOL", "CloseHandle", "DWORD", $hProcess[0])
+If @error Then Error1("Failed to DllCall CloseHandle", @error)
+If $closehandle_ret == 0 Then Error2("CloseHandle failed", _WinAPI_GetLastError(), $closehandle_ret)
+
+DllClose($Kernel32)
+
+Local $found = False
+Local $deadlock = TimerInit()
 While Not $found And TimerDiff($deadlock) < 3000
 
-	Global $modules = _WinAPI_EnumProcessModules($gwPID)
-	If @error Then
-		MsgBox($MB_ICONERROR, "GWToolbox++", "Error: cannot open process to list modules, " & @error)
-		Exit
-	EndIf
+	$modules = _WinAPI_EnumProcessModules($gwPID)
+	If @error Then Error2("Failed to call 'EnumProcessModules' (2)", @error, $modules)
 
 	For $i = 1 To $modules[0][0]
 		If $modules[$i][1] == $dllpath Then
@@ -160,13 +173,22 @@ While Not $found And TimerDiff($deadlock) < 3000
 	Next
 	Sleep(200)
 WEnd
+If Not $found Then Error("GWToolbox.dll was not loaded, unknown error")
 
-If Not $found Then
-	MsgBox($MB_ICONERROR, "GWToolbox++", "Error: GWToolbox.dll not loaded" & @CRLF & "Something is probably blocking dll injection")
+#Region error message boxes
+Func Error($msg)
+	MsgBox($MB_ICONERROR, "GWToolbox++", "Error: " & $msg)
 	Exit
-EndIf
-
-
+EndFunc
+Func Error1($msg, $err)
+	MsgBox($MB_ICONERROR, "GWToolbox++", "Error: " & $msg & @CRLF & "Error code: " & $err)
+	Exit
+EndFunc
+Func Error2($msg, $err, $ret)
+	MsgBox($MB_ICONERROR, "GWToolbox++","Error: " & $msg & @CRLF & "Error code: " & $err & @CRLF & "Return value: " & $ret)
+	Exit
+EndFunc
+#EndRegion
 #Region memory managment and char name read
 Func MemoryOpen($aPID)
 	$mKernelHandle = DllOpen('kernel32.dll')
@@ -220,70 +242,4 @@ Func ScanForCharname()
 
 	Return False
 EndFunc   ;==>ScanForCharname
-#EndRegion
-#Region injectdll
-;=================================================================================================
-; Function:            _InjectDll($ProcessId, $DllPath)
-; Description:        Injects a .dll into a running program.
-; Return Value(s):    On Success - Returns true
-;                    On Failure - Returns false
-;                    @Error - 0 = No error.
-;                             1 = Invalid ProcessId.
-;                             2 = File does not exist.
-;                             3 = File is not a .dll (invalid file).
-;                             4 = Failed to open 'Advapi32.dll'.
-;                             5 = Failed to get the full path.
-;                             6 = Failed to open the process.
-;                             7 = Failed to call 'GetModuleHandle'.
-;                             8 = Failed to call 'GetProcAddress'.
-;                             9 = Failed to call 'VirtualAllocEx'.
-;                             10 = Failed to write the memory.
-;                             11 = Failed to create the 'RemoteThread'.
-;							  12 = Dll already injected in process
-; Author(s):        KillerDeluxe
-;=================================================================================================
-Func _InjectDll($ProcessId, $DllPath)
-	If $ProcessId == 0 Then Return SetError(1, "", False)
-	If Not (FileExists($DllPath)) Then Return SetError(2, "", False)
-	If Not (StringRight($DllPath, 4) == ".dll") Then Return SetError(3, "", False)
-
-	Local $Kernel32 = DllOpen("kernel32.dll")
-	If @error Then Return SetError(4, "", False)
-
-	Local $DLL_Path = DllStructCreate("char[255]")
-	DllCall($Kernel32, "DWORD", "GetFullPathNameA", "str", $DllPath, "DWORD", 255, "ptr", DllStructGetPtr($DLL_Path), "int", 0)
-	If @error Then Return SetError(5, "", False)
-
-	Local $sDLLFullPath = DllStructGetData($DLL_Path,1)
-
-	Local $av_ProcSnapShot = _WinAPI_EnumProcessModules($ProcessId, $LIST_MODULES_32BIT)
-	For $i = 1 To $av_ProcSnapShot[0][0]
-		If $av_ProcSnapShot[$i][1] == $sDLLFullPath Then
-			Return SetError(12, "", False)
-		EndIf
-	Next
-
-	Local $hProcess = DllCall($Kernel32, "DWORD", "OpenProcess", "DWORD", 0x1F0FFF, "int", 0, "DWORD", $ProcessId)
-	If @error Then Return SetError(6, "", False)
-
-	Local $hModule = DllCall($Kernel32, "DWORD", "GetModuleHandleA", "str", "kernel32.dll")
-	If @error Then Return SetError(7, "", False)
-
-	Local $lpStartAddress = DllCall($Kernel32, "DWORD", "GetProcAddress", "DWORD", $hModule[0], "str", "LoadLibraryA")
-	If @error Then Return SetError(8, "", False)
-
-	Local $lpParameter = DllCall($Kernel32, "DWORD", "VirtualAllocEx", "int", $hProcess[0], "int", 0, "ULONG_PTR", DllStructGetSize($DLL_Path), "DWORD", 0x3000, "int", 4)
-	If @error Then Return SetError(9, "", False)
-
-	DllCall($Kernel32, "BOOL", "WriteProcessMemory", "int", $hProcess[0], "DWORD", $lpParameter[0], "str", $sDLLFullPath, "ULONG_PTR", DllStructGetSize($DLL_Path), "int", 0)
-	If @error Then Return SetError(10, "", False)
-
-	Local $hThread = DllCall($Kernel32, "int", "CreateRemoteThread", "DWORD", $hProcess[0], "int", 0, "int", 0, "DWORD", $lpStartAddress[0], "DWORD", $lpParameter[0], "int", 0, "int", 0)
-	If @error Then Return SetError(11, "", False)
-
-	DllCall($Kernel32, "BOOL", "CloseHandle", "DWORD", $hProcess[0])
-	DllClose($Kernel32)
-
-	Return SetError(0, "", True)
-EndFunc   ;==>_InjectDll
 #EndRegion

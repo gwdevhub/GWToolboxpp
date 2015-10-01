@@ -91,9 +91,6 @@
     <ClCompile Include="GWToolbox\logger.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="GWToolbox\main.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
     <ClCompile Include="GWToolbox\MainWindow.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -118,5 +115,6 @@
     <ClCompile Include="GWToolbox\TravelPanel.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="GWToolbox\main.cpp" />
   </ItemGroup>
 </Project>
