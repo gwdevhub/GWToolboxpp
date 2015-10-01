@@ -2,7 +2,7 @@
 
 #include <fstream>
 
-#include "../API/GwConstants.h"
+#include "GwConstants.h"
 
 #include "ToolboxPanel.h"
 #include "Timer.h"

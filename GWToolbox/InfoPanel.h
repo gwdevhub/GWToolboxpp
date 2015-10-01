@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../API/GwConstants.h"
+#include "GwConstants.h"
 
 #include "ToolboxPanel.h"
 

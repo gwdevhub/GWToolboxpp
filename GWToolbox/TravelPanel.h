@@ -6,7 +6,7 @@
 #include "OSHGui.hpp"
 
 #include "ToolboxPanel.h"
-#include "../API/GwConstants.h"
+#include "GwConstants.h"
 #include "logger.h"
 
 class TravelPanel : public ToolboxPanel {

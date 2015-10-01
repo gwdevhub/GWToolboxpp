@@ -1,6 +1,6 @@
 #include "PconPanel.h"
 
-#include "../API/APIMain.h"
+#include "APIMain.h"
 
 #include "MainWindow.h"
 #include "GWToolbox.h"

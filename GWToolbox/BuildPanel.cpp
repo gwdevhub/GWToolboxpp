@@ -1,6 +1,6 @@
 #include "BuildPanel.h"
 
-#include "../API/APIMain.h"
+#include "APIMain.h"
 
 #include "GWToolbox.h"
 #include "Config.h"

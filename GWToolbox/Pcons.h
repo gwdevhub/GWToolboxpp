@@ -4,7 +4,7 @@
 
 #include "OSHGui.hpp"
 
-#include "../API/GwConstants.h"
+#include "GwConstants.h"
 
 #include "Timer.h"
 

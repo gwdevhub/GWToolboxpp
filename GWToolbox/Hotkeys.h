@@ -3,7 +3,7 @@
 #include <string>
 
 #include "OSHGui.hpp"
-#include "../API/APIMain.h"
+#include "APIMain.h"
 
 using namespace std;
 

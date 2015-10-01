@@ -7,7 +7,7 @@
 #include <string>
 
 #include "OSHGui.hpp"
-#include "../API/APIMain.h"
+#include "APIMain.h"
 
 #include "ToolboxPanel.h"
 #include "logger.h"

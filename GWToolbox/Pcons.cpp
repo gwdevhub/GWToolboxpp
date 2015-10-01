@@ -1,6 +1,6 @@
 #include "Pcons.h"
 
-#include "../API/APIMain.h"
+#include "APIMain.h"
 
 #include "GWToolbox.h"
 

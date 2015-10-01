@@ -41,14 +41,14 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>OSHGui;Dependencies\Microsoft DirectX SDK (June 2010)\Include;$(IncludePath)</IncludePath>
+    <IncludePath>OSHGui;API;Dependencies\Microsoft DirectX SDK (June 2010)\Include;$(IncludePath)</IncludePath>
     <LibraryPath>Libraries;Dependencies\Microsoft DirectX SDK (June 2010)\Lib\x86;$(LibraryPath)</LibraryPath>
     <IntDir>$(Configuration)\$(ProjectName)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>OSHGui;Dependencies\Microsoft DirectX SDK (June 2010)\Include;$(IncludePath)</IncludePath>
+    <IncludePath>OSHGui;API;Dependencies\Microsoft DirectX SDK (June 2010)\Include;$(IncludePath)</IncludePath>
     <LibraryPath>Libraries;Dependencies\Microsoft DirectX SDK (June 2010)\Lib\x86;$(LibraryPath)</LibraryPath>
     <IntDir>$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
@@ -64,7 +64,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>JsonCpp_d.lib;FreeType_d.lib;SimpleImageLoader_d.lib;D3DX11Effects_d.lib;dxguid.lib;dinput8.lib;dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
     </Link>
@@ -91,31 +91,10 @@
       <OptimizeReferences>true</OptimizeReferences>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>oshgui_r.lib;dxguid.lib;dinput8.lib;dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="API\AgentMgr.h" />
-    <ClInclude Include="API\APIMain.h" />
-    <ClInclude Include="API\APIncludes.h" />
-    <ClInclude Include="API\ChatMgr.h" />
-    <ClInclude Include="API\DirectXMgr.h" />
-    <ClInclude Include="API\disasm\ld32.h" />
-    <ClInclude Include="API\EffectMgr.h" />
-    <ClInclude Include="API\GameThreadMgr.h" />
-    <ClInclude Include="API\GuildMgr.h" />
-    <ClInclude Include="API\GWAPIMgr.h" />
-    <ClInclude Include="API\GwConstants.h" />
-    <ClInclude Include="API\GwConstantsMaps.h" />
-    <ClInclude Include="API\GwConstantsSkills.h" />
-    <ClInclude Include="API\GWStructures.h" />
-    <ClInclude Include="API\Hooker.h" />
-    <ClInclude Include="API\ItemMgr.h" />
-    <ClInclude Include="API\MapMgr.h" />
-    <ClInclude Include="API\MemoryMgr.h" />
-    <ClInclude Include="API\CtoSMgr.h" />
-    <ClInclude Include="API\MerchantMgr.h" />
-    <ClInclude Include="API\SkillbarMgr.h" />
     <ClInclude Include="GWToolbox\BondsWindow.h" />
     <ClInclude Include="GWToolbox\BuildPanel.h" />
     <ClInclude Include="GWToolbox\Config.h" />
@@ -141,21 +120,6 @@
     <ClInclude Include="GWToolbox\TravelPanel.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="API\AgentMgr.cpp" />
-    <ClCompile Include="API\ChatMgr.cpp" />
-    <ClCompile Include="API\CtoSMgr.cpp" />
-    <ClCompile Include="API\DirectXMgr.cpp" />
-    <ClCompile Include="API\disasm\ld32.c" />
-    <ClCompile Include="API\EffectMgr.cpp" />
-    <ClCompile Include="API\GameThreadMgr.cpp" />
-    <ClCompile Include="API\GWAPIMgr.cpp" />
-    <ClCompile Include="API\Hooker.cpp" />
-    <ClCompile Include="API\ItemMgr.cpp" />
-    <ClCompile Include="API\MapMgr.cpp" />
-    <ClCompile Include="API\MemoryMgr.cpp" />
-    <ClCompile Include="API\MerchantMgr.cpp" />
-    <ClCompile Include="API\SkillbarMgr.cpp" />
-    <ClCompile Include="API\GuildMgr.cpp" />
     <ClCompile Include="GWToolbox\BondsWindow.cpp" />
     <ClCompile Include="GWToolbox\BuildPanel.cpp" />
     <ClCompile Include="GWToolbox\DialogPanel.cpp" />
@@ -178,6 +142,9 @@
     <ClCompile Include="GWToolbox\TravelPanel.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="API.vcxproj">
+      <Project>{37abfeba-d5e8-4a84-86ee-722b46faa7f2}</Project>
+    </ProjectReference>
     <ProjectReference Include="OSHGui.vcxproj">
       <Project>{296fb7c3-29b9-4111-9243-6eb8cb71d458}</Project>
     </ProjectReference>

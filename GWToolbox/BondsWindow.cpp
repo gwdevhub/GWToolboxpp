@@ -4,10 +4,10 @@
 #include <string>
 
 #include "OSHGui.hpp"
+#include "APIMain.h"
 
 #include "GWToolbox.h"
 #include "Config.h"
-#include "../API/APIMain.h"
 #include "GuiUtils.h"
 
 

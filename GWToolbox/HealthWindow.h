@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../OSHGui/OSHGui.hpp"
+#include "OSHGui.hpp"
 
 #include "ToolboxWindow.h"
 

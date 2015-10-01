@@ -1,258 +1,122 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="API">
-      <UniqueIdentifier>{7a8ff138-89d0-481c-8012-da132ab072bf}</UniqueIdentifier>
+    <Filter Include="MainWindow">
+      <UniqueIdentifier>{3eda78ba-9481-4130-92cf-e248ec0bda9c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Main">
-      <UniqueIdentifier>{97525afe-d017-4745-b219-af0b027ac49f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="API\src">
-      <UniqueIdentifier>{a2fe4797-9ce7-4d2b-a7ae-48c4f5016886}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="API\disasm">
-      <UniqueIdentifier>{4bc08657-50ae-435d-b4b8-20819ccf6064}</UniqueIdentifier>
+    <Filter Include="Source">
+      <UniqueIdentifier>{ec22750a-9a1e-4197-b6a3-497639f4dde6}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="API\APIMain.h">
-      <Filter>API</Filter>
-    </ClInclude>
-    <ClInclude Include="API\DirectXMgr.h">
-      <Filter>API</Filter>
-    </ClInclude>
-    <ClInclude Include="API\MemoryMgr.h">
-      <Filter>API</Filter>
-    </ClInclude>
-    <ClInclude Include="API\GameThreadMgr.h">
-      <Filter>API</Filter>
-    </ClInclude>
-    <ClInclude Include="API\APIncludes.h">
-      <Filter>API</Filter>
-    </ClInclude>
-    <ClInclude Include="API\CtoSMgr.h">
-      <Filter>API</Filter>
-    </ClInclude>
-    <ClInclude Include="API\AgentMgr.h">
-      <Filter>API</Filter>
-    </ClInclude>
-    <ClInclude Include="API\GWAPIMgr.h">
-      <Filter>API</Filter>
-    </ClInclude>
-    <ClInclude Include="API\SkillbarMgr.h">
-      <Filter>API</Filter>
-    </ClInclude>
-    <ClInclude Include="API\EffectMgr.h">
-      <Filter>API</Filter>
-    </ClInclude>
-    <ClInclude Include="API\MapMgr.h">
-      <Filter>API</Filter>
-    </ClInclude>
-    <ClInclude Include="API\ItemMgr.h">
-      <Filter>API</Filter>
-    </ClInclude>
-    <ClInclude Include="API\GwConstants.h">
-      <Filter>API</Filter>
-    </ClInclude>
-    <ClInclude Include="API\ChatMgr.h">
-      <Filter>API</Filter>
-    </ClInclude>
-    <ClInclude Include="API\MerchantMgr.h">
-      <Filter>API</Filter>
-    </ClInclude>
-    <ClInclude Include="API\GWStructures.h">
-      <Filter>API</Filter>
-    </ClInclude>
-    <ClInclude Include="API\GwConstantsMaps.h">
-      <Filter>API</Filter>
-    </ClInclude>
-    <ClInclude Include="API\GwConstantsSkills.h">
-      <Filter>API</Filter>
-    </ClInclude>
-    <ClInclude Include="API\GuildMgr.h">
-      <Filter>API</Filter>
-    </ClInclude>
-    <ClInclude Include="API\Hooker.h">
-      <Filter>API</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\BondsWindow.h">
-      <Filter>Main</Filter>
-    </ClInclude>
     <ClInclude Include="GWToolbox\BuildPanel.h">
-      <Filter>Main</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\Config.h">
-      <Filter>Main</Filter>
+      <Filter>MainWindow</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\DialogPanel.h">
-      <Filter>Main</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\DistanceWindow.h">
-      <Filter>Main</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\EditBuild.h">
-      <Filter>Main</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\GuiUtils.h">
-      <Filter>Main</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\GWToolbox.h">
-      <Filter>Main</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\HealthWindow.h">
-      <Filter>Main</Filter>
+      <Filter>MainWindow</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\HotkeyPanel.h">
-      <Filter>Main</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\Hotkeys.h">
-      <Filter>Main</Filter>
+      <Filter>MainWindow</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\InfoPanel.h">
-      <Filter>Main</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\logger.h">
-      <Filter>Main</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\MainWindow.h">
-      <Filter>Main</Filter>
+      <Filter>MainWindow</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\MaterialsPanel.h">
-      <Filter>Main</Filter>
+      <Filter>MainWindow</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\PconPanel.h">
-      <Filter>Main</Filter>
+      <Filter>MainWindow</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\Pcons.h">
-      <Filter>Main</Filter>
+      <Filter>MainWindow</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\SettingsPanel.h">
-      <Filter>Main</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\Timer.h">
-      <Filter>Main</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\TimerWindow.h">
-      <Filter>Main</Filter>
+      <Filter>MainWindow</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\ToolboxPanel.h">
-      <Filter>Main</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\ToolboxWindow.h">
-      <Filter>Main</Filter>
+      <Filter>MainWindow</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\TravelPanel.h">
-      <Filter>Main</Filter>
+      <Filter>MainWindow</Filter>
     </ClInclude>
-    <ClInclude Include="API\disasm\ld32.h">
-      <Filter>API\disasm</Filter>
+    <ClInclude Include="GWToolbox\EditBuild.h">
+      <Filter>MainWindow</Filter>
     </ClInclude>
+    <ClInclude Include="GWToolbox\Hotkeys.h">
+      <Filter>MainWindow</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\BondsWindow.h" />
+    <ClInclude Include="GWToolbox\Config.h" />
+    <ClInclude Include="GWToolbox\DistanceWindow.h" />
+    <ClInclude Include="GWToolbox\GuiUtils.h" />
+    <ClInclude Include="GWToolbox\GWToolbox.h" />
+    <ClInclude Include="GWToolbox\HealthWindow.h" />
+    <ClInclude Include="GWToolbox\logger.h" />
+    <ClInclude Include="GWToolbox\MainWindow.h" />
+    <ClInclude Include="GWToolbox\Timer.h" />
+    <ClInclude Include="GWToolbox\TimerWindow.h" />
+    <ClInclude Include="GWToolbox\ToolboxWindow.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="API\DirectXMgr.cpp">
-      <Filter>API\src</Filter>
-    </ClCompile>
-    <ClCompile Include="API\MemoryMgr.cpp">
-      <Filter>API\src</Filter>
-    </ClCompile>
-    <ClCompile Include="API\GameThreadMgr.cpp">
-      <Filter>API\src</Filter>
-    </ClCompile>
-    <ClCompile Include="API\CtoSMgr.cpp">
-      <Filter>API\src</Filter>
-    </ClCompile>
-    <ClCompile Include="API\AgentMgr.cpp">
-      <Filter>API\src</Filter>
-    </ClCompile>
-    <ClCompile Include="API\GWAPIMgr.cpp">
-      <Filter>API\src</Filter>
-    </ClCompile>
-    <ClCompile Include="API\SkillbarMgr.cpp">
-      <Filter>API\src</Filter>
-    </ClCompile>
-    <ClCompile Include="API\EffectMgr.cpp">
-      <Filter>API\src</Filter>
-    </ClCompile>
-    <ClCompile Include="API\MapMgr.cpp">
-      <Filter>API\src</Filter>
-    </ClCompile>
-    <ClCompile Include="API\ItemMgr.cpp">
-      <Filter>API\src</Filter>
-    </ClCompile>
-    <ClCompile Include="API\ChatMgr.cpp">
-      <Filter>API\src</Filter>
-    </ClCompile>
-    <ClCompile Include="API\MerchantMgr.cpp">
-      <Filter>API\src</Filter>
-    </ClCompile>
-    <ClCompile Include="API\GuildMgr.cpp">
-      <Filter>API\src</Filter>
-    </ClCompile>
-    <ClCompile Include="API\Hooker.cpp">
-      <Filter>API\src</Filter>
-    </ClCompile>
     <ClCompile Include="GWToolbox\BondsWindow.cpp">
-      <Filter>Main</Filter>
+      <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\BuildPanel.cpp">
-      <Filter>Main</Filter>
+      <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\DialogPanel.cpp">
-      <Filter>Main</Filter>
+      <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\DistanceWindow.cpp">
-      <Filter>Main</Filter>
+      <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\EditBuild.cpp">
-      <Filter>Main</Filter>
+      <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\GWToolbox.cpp">
-      <Filter>Main</Filter>
+      <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\HealthWindow.cpp">
-      <Filter>Main</Filter>
+      <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\HotkeyPanel.cpp">
-      <Filter>Main</Filter>
+      <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\Hotkeys.cpp">
-      <Filter>Main</Filter>
+      <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\InfoPanel.cpp">
-      <Filter>Main</Filter>
+      <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\logger.cpp">
-      <Filter>Main</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\MainWindow.cpp">
-      <Filter>Main</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\MaterialsPanel.cpp">
-      <Filter>Main</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\PconPanel.cpp">
-      <Filter>Main</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\Pcons.cpp">
-      <Filter>Main</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\SettingsPanel.cpp">
-      <Filter>Main</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\TimerWindow.cpp">
-      <Filter>Main</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\ToolboxWindow.cpp">
-      <Filter>Main</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\TravelPanel.cpp">
-      <Filter>Main</Filter>
+      <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\main.cpp">
-      <Filter>Main</Filter>
+      <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="API\disasm\ld32.c">
-      <Filter>API\disasm</Filter>
+    <ClCompile Include="GWToolbox\MainWindow.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\MaterialsPanel.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\PconPanel.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Pcons.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\SettingsPanel.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\TimerWindow.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\ToolboxWindow.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\TravelPanel.cpp">
+      <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

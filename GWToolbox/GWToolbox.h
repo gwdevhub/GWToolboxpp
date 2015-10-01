@@ -2,7 +2,7 @@
 
 #include <Windows.h>
 
-#include "../API/APIMain.h"
+#include "APIMain.h"
 #include "OSHGui.hpp"
 #include "Input/WindowsMessage.hpp"
 

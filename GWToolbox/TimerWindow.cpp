@@ -3,7 +3,7 @@
 #include <sstream>
 #include <string>
 
-#include "../API/APIMain.h"
+#include "APIMain.h"
 
 #include "GWToolbox.h"
 #include "Config.h"
