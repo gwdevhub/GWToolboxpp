@@ -9,8 +9,8 @@
 #include "TimerWindow.h"
 
 const wchar_t * GWToolbox::Host = L"http://fbgmguild.com/GWToolboxpp/";
-const char* GWToolbox::VersionA = "0.1";
-const wchar_t* GWToolbox::VersionW = L"0.1";
+const char* GWToolbox::VersionA = "1.0";
+const wchar_t* GWToolbox::VersionW = L"1.0";
 
 
 GWToolbox* GWToolbox::instance_ = NULL;
@@ -56,6 +56,8 @@ void GWToolbox::Exec() {
 
 	input.SetKeyboardInputEnabled(true);
 	input.SetMouseInputEnabled(true);
+
+	config_->iniWrite(L"launcher", L"dllversion", VersionW);
 
 	Application * app = Application::InstancePtr();
 

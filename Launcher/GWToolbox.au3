@@ -5,10 +5,18 @@
 #include <GUIConstantsEx.au3>
 #include <GuiComboBox.au3>
 #include <WinAPIProc.au3>
+#include <InetConstants.au3>
+#include <GUIConstantsEx.au3>
+#include <ProgressConstants.au3>
+#include <StaticConstants.au3>
+#include <WindowsConstants.au3>
 
 ; dx runtime: http://www.microsoft.com/en-us/download/details.aspx?id=8109
 
-Global Const $overwrite = True
+Opt("MustDeclareVars", True)
+Opt("GuiResizeMode", BitOR($GUI_DOCKSIZE, $GUI_DOCKTOP, $GUI_DOCKLEFT))
+
+; ==== Globals ====
 Global Const $debug = True And Not @Compiled
 Global Const $host = "http://fbgmguild.com/GWToolboxpp/"
 Global Const $folder = @LocalAppDataDir & "\GWToolboxpp\"
@@ -17,18 +25,135 @@ Global Const $imgFolder = $folder & "img\"
 Global Const $locationLogsFolder = $folder & "location logs\"
 
 Global $mKernelHandle, $mGWProcHandle, $mCharname
+Global $gui = 0, $label = 0, $progress = 0, $changelabel = 0, $height = 0
 
+; ==== Create directories ====
 If Not FileExists($folder) Then DirCreate($folder)
 If Not FileExists($folder) Then Error("failed to create installation folder")
 If Not FileExists($imgFolder) Then DirCreate($imgFolder)
 if Not FileExists($locationLogsFolder) Then DirCreate($locationLogsFolder)
 
+; ==== Disclaimer ====
+If Not FileExists($dllpath) Then
+	If MsgBox($MB_OKCANCEL, "GWToolbox++", 'DISCLAIMER:'&@CRLF& _
+	'THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESSED OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF ' & _
+	'FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY ' & _
+	'DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.' & @CRLF&@CRLF & _
+	'By clicking the OK button you agree with all the above.') <> $IDOK Then Exit
+EndIf
+
+; ==== Updates ====
+Update()
+Func Update()
+	If $debug Then Return
+
+	Local $width = 300
+	$height = 60
+	$gui = GUICreate("GWToolbox++", $width, $height)
+	$label = GUICtrlCreateLabel("Checking for Updates...", 8, 8, 284, 17, Default, $GUI_WS_EX_PARENTDRAG)
+	$progress = GUICtrlCreateProgress(8, 27, 284, 25)
+	GUISetState(@SW_SHOW, $gui)
+
+	If FileExists($dllpath) Then ; otherwise don't even check version, we have to download anyway
+
+		Local $version_tmp = $folder & "tmp.txt"
+		Local $version_download = InetGet($host & "version.txt", $version_tmp, BitOR($INET_FORCERELOAD, $INET_FORCEBYPASS), $INET_DOWNLOADBACKGROUND)
+		Local $version_data
+		While True
+			$version_data = InetGetInfo($version_download)
+
+			GUICtrlSetData($Label, "Checking for Updates... " & $version_data[$INET_DOWNLOADREAD] & " / " & $version_data[$INET_DOWNLOADSIZE] & " bytes")
+			If $version_data[$INET_DOWNLOADSIZE] > 0 Then GUICtrlSetData($Progress, $version_data[$INET_DOWNLOADREAD] / $version_data[$INET_DOWNLOADSIZE] * 100)
+			If $version_data[$INET_DOWNLOADCOMPLETE] Then
+				GUICtrlSetData($Progress, 100)
+				GUICtrlSetData($Label, "Checking for Updates... Done (" & Round($version_data[$INET_DOWNLOADREAD]) & " bytes")
+				ExitLoop
+			EndIf
+
+			If GUIGetMsg() == $GUI_EVENT_CLOSE Then
+				InetClose($version_download)
+				FileDelete($version_tmp)
+				Exit
+			EndIf
+		WEnd
+
+		If $version_data[$INET_DOWNLOADERROR] Then Return MsgBox($MB_ICONERROR, "GWToolbox++", "Error checking for updates (1)")
+
+		Local $remote_version = FileRead($version_tmp)
+		InetClose($version_download)
+		FileDelete($version_tmp)
+		Local $local_version = IniRead($folder & "GWToolbox.ini", "launcher", "dllversion", "0")
+		If $remote_version == "" Or $local_version == "" Then Return MsgBox($MB_ICONERROR, "GWToolbox++", "Error checking for updates (2)")
+
+		If $remote_version == $local_version Then
+			GUIDelete($gui)
+			$gui = 0
+			Return ; updated, we're done
+		EndIf
+	EndIf
+
+	GUICtrlSetData($Label, "Updating...")
+	GUICtrlSetData($Progress, 0)
+
+	Local $dll_tmp = $folder & "tmp.dll"
+	Local $dll_download = InetGet($host & "GWToolbox.dll", $dll_tmp, BitOR($INET_FORCERELOAD, $INET_FORCEBYPASS), $INET_DOWNLOADBACKGROUND)
+	Local $dll_data
+	Local $changelog_tmp = $folder & "tmp.txt"
+	Local $changelog_download = InetGet($host & "changelog.txt", $changelog_tmp, BitOR($INET_FORCERELOAD, $INET_FORCEBYPASS), $INET_DOWNLOADBACKGROUND)
+	Local $changelog_data
+	While True
+		$dll_data = InetGetInfo($dll_download)
+		$changelog_data = InetGetInfo($changelog_download)
+
+		If $changelabel == 0 And $changelog_data[$INET_DOWNLOADCOMPLETE] And $changelog_data[$INET_DOWNLOADSUCCESS] Then
+			Local $changelog = FileRead($changelog_tmp)
+			Local $changelog_height = Int(StringLeft($changelog, 4))
+			Local $changelog_message = StringTrimLeft($changelog, 4)
+			Local $pos = WinGetPos($gui)
+			WinMove($gui, "", $pos[0], $pos[1], $pos[2], $pos[3] + $changelog_height)
+			$changelabel = GUICtrlCreateLabel("Change log:" & @CRLF & $changelog_message, 8, $height, $width - 2 * 8, $changelog_height, Default, $GUI_WS_EX_PARENTDRAG)
+			$height += $changelog_height
+		EndIf
+
+		GUICtrlSetData($Label, "Updating... " & Round($dll_data[$INET_DOWNLOADREAD] / 1024) & " / " & Round($dll_data[$INET_DOWNLOADSIZE] / 1024) & " Kbytes")
+		If $dll_data[$INET_DOWNLOADSIZE] > 0 Then GUICtrlSetData($Progress, $dll_data[$INET_DOWNLOADREAD] / $dll_data[$INET_DOWNLOADSIZE] * 100)
+		If $dll_data[$INET_DOWNLOADCOMPLETE] And $changelog_data[$INET_DOWNLOADCOMPLETE] Then
+			GUICtrlSetData($Progress, 100)
+			GUICtrlSetData($Label, "Updating... Done (" & Round($dll_data[$INET_DOWNLOADREAD] / 1024) & " Kbytes)")
+			ExitLoop
+		EndIf
+
+		If GUIGetMsg() == $GUI_EVENT_CLOSE Then
+			InetClose($dll_download)
+			InetClose($changelog_download)
+			FileDelete($dll_tmp)
+			FileDelete($changelog_tmp)
+			Exit
+		EndIf
+	WEnd
+
+	If $dll_data[$INET_DOWNLOADERROR] Then Return MsgBox($MB_ICONERROR, "GWToolbox++", "Error checking for updates(3)")
+
+	Sleep(50)
+
+	FileDelete($dllpath)
+	FileMove($dll_tmp, $dllpath)
+
+	Sleep(50)
+
+	InetClose($dll_download)
+	InetClose($changelog_download)
+	FileDelete($dll_tmp)
+	FileDelete($changelog_tmp)
+EndFunc
+
 #Region fileinstalls
+; ==== Install resources ====
 ; various
 If $debug Then
-	FileCopy("..\Debug\GWToolbox.dll", $dllpath, $overwrite)
+	FileCopy("..\Debug\GWToolbox.dll", $dllpath, $FC_OVERWRITE)
 Else
-	FileInstall("..\Release\GWToolbox.dll", $dllpath, $overwrite)
+	FileInstall("..\Release\GWToolbox.dll", $dllpath, $FC_NOOVERWRITE)
 EndIf
 If Not FileExists($dllpath) Then Error("Failed to install GWToolbox.dll")
 FileInstall("..\resources\DefaultTheme.txt", $folder & "Theme.txt")
@@ -91,11 +216,11 @@ Switch $WinList[0][0]
 			$lComboStr &= $char_names[$i - 1]
 			If $i <> $WinList[0][0] Then $lComboStr &= '|'
 		Next
-		Local $gui = GUICreate("GWToolbox++", 150, 60)
+		Local $selection_gui = GUICreate("GWToolbox++", 150, 60)
 		Local $comboCharname = GUICtrlCreateCombo("", 6, 6, 138, 25, $CBS_DROPDOWNLIST)
 		GUICtrlSetData(-1, $lComboStr, $lFirstChar)
 		Local $button = GUICtrlCreateButton("Launch", 6, 31, 138, 24)
-		GUISetState(@SW_SHOW, $gui)
+		GUISetState(@SW_SHOW, $selection_gui)
 		While True
 			Switch GUIGetMsg()
 				Case $button
@@ -174,6 +299,16 @@ While Not $found And TimerDiff($deadlock) < 3000
 	Sleep(200)
 WEnd
 If Not $found Then Error("GWToolbox.dll was not loaded, unknown error")
+
+
+If $gui > 0 Then
+	Local $pos = WinGetPos($gui)
+	GUICtrlCreateLabel("You can close me, but please read me first!", 8, $height - 25, 284, 17, $SS_CENTER, $GUI_WS_EX_PARENTDRAG)
+
+	While GUIGetMsg() <> $GUI_EVENT_CLOSE
+		Sleep(0)
+	WEnd
+EndIf
 
 #Region error message boxes
 Func Error($msg)

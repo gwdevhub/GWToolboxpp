@@ -29,7 +29,7 @@ void SettingsPanel::BuildUI() {
 	const int item_height = 25;
 
 	Label* version = new Label();
-	version->SetText(string("GWToolbox++") + GWToolbox::VersionA);
+	version->SetText(string("GWToolbox++ version ") + GWToolbox::VersionA);
 	version->SetLocation(GetWidth() / 2 - version->GetWidth() / 2, DefaultBorderPadding);
 	AddControl(version);
 
