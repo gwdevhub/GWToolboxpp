@@ -10,6 +10,7 @@ namespace GWAPI {
 
 	class GWAPIMgr {
 
+		static bool init_sucessful_;
 		static GWAPIMgr* instance_;
 
 		friend class GameThreadMgr;
@@ -59,7 +60,7 @@ namespace GWAPI {
 		inline DirectXMgr* DirectX() const { return directx_; }
 #endif
 
-		static void Initialize();
+		static bool Initialize();
 		static GWAPIMgr* instance();
 		static void Destruct();
 	};
