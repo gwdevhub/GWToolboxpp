@@ -1,4 +1,6 @@
 #include "MemoryMgr.h"
+#include "PatternScanner.h"
+#include "..\GWToolbox\logger.h"
 
 // Agent Array
 BYTE* GWAPI::MemoryMgr::agArrayPtr = NULL;
@@ -58,184 +60,259 @@ BYTE* GWAPI::MemoryMgr::DialogFunc = NULL;
 
 bool GWAPI::MemoryMgr::Scan()
 {
-#define SCAN_START (BYTE*)0x401000
-#define SCAN_END (BYTE*)0x900000
+	PatternScanner scan(0x401000, 0x4FF000);
+	LOG("[------------------ API SCAN START ------------------]\n");
 
-	for (BYTE* scan = SCAN_START; scan < SCAN_END; scan++)
-	{
 		// Agent Array
-		const BYTE AgentBaseCode[] = { 0x56, 0x8B, 0xF1, 0x3B, 0xF0, 0x72, 0x04 };
-		if (!memcmp(scan, AgentBaseCode, sizeof(AgentBaseCode)))
+		agArrayPtr = (BYTE*)scan.FindPattern("\x56\x8B\xF1\x3B\xF0\x72\x04", "xxxxxxx", 0xC);
+		if (agArrayPtr)
 		{
-			agArrayPtr = *(BYTE**)(scan + 0xC);
+			LOG("agArrayPtr = %X\n", agArrayPtr);
+			agArrayPtr = *(BYTE**)agArrayPtr;
 			PlayerAgentIDPtr = (BYTE*)(agArrayPtr - 0x54);
 			TargetAgentIDPtr = (BYTE*)(agArrayPtr - 0x500);
 		}
+		else{
+			LOG("agArrayPtr = ERR\n");
+			return false;
+		}
 
 		// Packet Sender Stuff
-		const BYTE CtoGSObjectCode[] = { 0x56, 0x33, 0xF6, 0x3B, 0xCE, 0x74, 0x0E, 0x56, 0x33, 0xD2 };
-		const BYTE CtoGSSendCode[] = { 0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x2C, 0x53, 0x56, 0x57, 0x8B, 0xF9, 0x85 };
-		if (!memcmp(scan, CtoGSObjectCode, sizeof(CtoGSObjectCode)))
-		{
-			CtoGSObjectPtr = scan;
+		CtoGSObjectPtr = (BYTE*)scan.FindPattern("\x56\x33\xF6\x3B\xCE\x74\x0E\x56\x33\xD2", "xxxxxxxxxx", 0);
+		if (CtoGSObjectPtr){
+			LOG("CtoGSObjectPtr = %X\n", CtoGSObjectPtr);
 		}
-		if (!memcmp(scan, CtoGSSendCode, sizeof(CtoGSSendCode)))
-		{
-			CtoGSSendFunction = scan;
+		else{
+			LOG("CtoGSObjectPtr = ERR\n");
+			return false;
+		}
+		CtoGSSendFunction = (BYTE*)scan.FindPattern("\x55\x8B\xEC\x83\xEC\x2C\x53\x56\x57\x8B\xF9\x85", "xxxxxxxxxxxx", 0);
+		if (CtoGSObjectPtr){
+			LOG("CtoGSSendFunction = %X\n", CtoGSSendFunction);
+		}
+		else{
+			LOG("CtoGSSendFunction = ERR\n");
+			return false;
 		}
 
 		// Base pointer, used to get context pointer for game world.
-		const BYTE BasePointerLocationCode[] = { 0x8B, 0x42, 0x0C, 0x56, 0x8B, 0x35 };
-		if (!memcmp(scan, BasePointerLocationCode, sizeof(BasePointerLocationCode)))
-		{
-			BasePointerLocation = (BYTE*)(*(DWORD*)(scan + 6));
+		BasePointerLocation = (BYTE*)scan.FindPattern("\x8B\x42\x0C\x56\x8B\x35", "xxxxxx", 0);
+		if (BasePointerLocation){
+			LOG("BasePointerLocation = %X\n", BasePointerLocation);
+			BasePointerLocation = (BYTE*)(*(DWORD*)(BasePointerLocation + 6));
+		}
+		else{
+			LOG("BasePointerLocation = ERR\n");
+			return false;
 		}
 
 		// Used for gamethread calls, as well as disable/enable rendering.
-		const BYTE EngineCode[] = { 0x53, 0x56, 0xDF, 0xE0, 0xF6, 0xC4, 0x41 };
-		if (!memcmp(scan, EngineCode, sizeof(EngineCode)))
-		{
-			RenderLoopLocation = scan + 0x65;
+		RenderLoopLocation = (BYTE*)scan.FindPattern("\x53\x56\xDF\xE0\xF6\xC4\x41", "xxxxxxx", 0);
+		if (RenderLoopLocation){
+			LOG("RenderLoopLocation = %X\n", RenderLoopLocation);
+			RenderLoopLocation = RenderLoopLocation + 0x65;
 			GameLoopLocation = RenderLoopLocation - 0x76;
 			RenderLoopLocation = GameLoopLocation + 0x5D;
 		}
+		else{
+			LOG("RenderLoopLocation = ERR\n");
+			return false;
+		}
 
 		// For Map IDs
-		const BYTE MapIdLocationCode[] = { 0xB0, 0x7F, 0x8D, 0x55 };
-		if (!memcmp(scan, MapIdLocationCode, sizeof(MapIdLocationCode))){
-			MapIDPtr = *(BYTE**)(scan + 0x46);
+		MapIDPtr = (BYTE*)scan.FindPattern("\xB0\x7F\x8D\x55", "xxxx", 0);
+		if (MapIDPtr){
+			LOG("MapIDPtr = %X\n", MapIDPtr);
+			MapIDPtr = *(BYTE**)(MapIDPtr + 0x46);
+		}
+		else{
+			LOG("MapIDPtr = ERR\n");
+			return false;
 		}
 
 		// To write info / Debug as a PM in chat
-		const BYTE WriteChatCode[] = { 0x55, 0x8B, 0xEC, 0x51, 0x53, 0x89, 0x4D, 0xFC, 0x8B, 0x4D, 0x08, 0x56, 0x57, 0x8B };
-		if (!memcmp(scan, WriteChatCode, sizeof(WriteChatCode))){
-			WriteChatFunction = (BYTE*)scan;
+		WriteChatFunction = (BYTE*)scan.FindPattern("\x55\x8B\xEC\x51\x53\x89\x4D\xFC\x8B\x4D\x08\x56\x57\x8B", "xxxxxxxxxxxxxx", 0);
+		if (WriteChatFunction){
+			LOG("WriteChatFunction = %X\n", WriteChatFunction);
+		}
+		else{
+			LOG("WriteChatFunction = ERR\n");
+			return false;
 		}
 
 		// Skill timer to use for exact effect times.
-		const BYTE SkillTimerCode[] = { 0x85, 0xc9, 0x74, 0x15, 0x8b, 0xd6, 0x2b, 0xd1, 0x83, 0xfa, 0x64 };
-		if (!memcmp(scan, SkillTimerCode, sizeof(SkillTimerCode))){
-			SkillTimerPtr = *(BYTE**)(scan - 4);
+		SkillTimerPtr = (BYTE*)scan.FindPattern("\x85\xC9\x74\x15\x8B\xD6\x2B\xD1\x83\xFA\x64", "xxxxxxxxxxx", 0);
+		if (SkillTimerPtr){
+			LOG("SkillTimerPtr = %X\n", SkillTimerPtr);
+			SkillTimerPtr = *(BYTE**)(SkillTimerPtr - 4);
+		}
+		else{
+			LOG("SkillTimerPtr = ERR\n");
+			return false;
 		}
 
 		// Skill array.
-		const BYTE SkillArrayCode[] = { 0x8D, 0x04, 0xB6, 0x5E, 0xC1, 0xE0, 0x05, 0x05 };
-		if (!memcmp(scan, SkillArrayCode, sizeof(SkillArrayCode))){
-			SkillArray = *(BYTE**)(scan + 8);
+		SkillArray = (BYTE*)scan.FindPattern("\x8D\x04\xB6\x5E\xC1\xE0\x05\x05", "xxxxxxxx", 0);
+		if (SkillArray){
+			LOG("SkillArray = %X\n", SkillArray);
+			SkillArray = *(BYTE**)(SkillArray + 8);
+		}
+		else{
+			LOG("SkillArray = ERR\n");
+			return false;
 		}
 
 		// Use Skill Function.
-		const BYTE UseSkillFunctionCode[] = { 0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x10, 0x53, 0x56, 0x8B, 0xD9, 0x57, 0x8B, 0xF2, 0x89, 0x5D, 0xF0 };
-		if (!memcmp(scan, UseSkillFunctionCode, sizeof(UseSkillFunctionCode))){
-			UseSkillFunction = scan;
+		UseSkillFunction = (BYTE*)scan.FindPattern("\x55\x8B\xEC\x83\xEC\x10\x53\x56\x8B\xD9\x57\x8B\xF2\x89\x5D\xF0", "xxxxxxxxxxxxxxxx", 0);
+		if (UseSkillFunction){
+			LOG("UseSkillFunction = %X\n", UseSkillFunction);
 		}
-
-		const BYTE PostProcessEffectFunctionCode[] = { 0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x10, 0x89, 0x4D, 0xF8, 0xC7, 0x45, 0xFC };
-		if (!memcmp(scan, PostProcessEffectFunctionCode, sizeof(PostProcessEffectFunctionCode))){
-			PostProcessEffectFunction = scan;
-		}
-
-		const BYTE ChangeTargetCode[] = { 0x33, 0xC0, 0x3B, 0xDA, 0x0F, 0x95, 0xC0, 0x33 };
-		if (!memcmp(scan, ChangeTargetCode, sizeof(ChangeTargetCode))){
-			ChangeTargetFunction = scan - 0x78;
-		}
-
-		const BYTE StorageFunctionCode[] = { 0x8B, 0xF1, 0x6A, 0x00, 0xBA, 0x12 };
-		const BYTE StorageSessionCode[] = { 0x8D, 0x14, 0x76, 0x8D, 0x14, 0x90, 0x8B, 0x42, 0x08, 0xA8, 0x01, 0x75, 0x41};
-		if (!memcmp(scan, StorageFunctionCode, sizeof(StorageFunctionCode))){
-			OpenXunlaiFunction = scan - 6;
-		}
-		if (!memcmp(scan, StorageSessionCode, sizeof(StorageSessionCode))){
-			XunlaiSession = *(BYTE**)(scan - 4);
-		}
-
-		const BYTE MoveFunctionCode[] = { 0xD9, 0x07, 0xD8, 0x5D, 0xF0, 0xDF, 0xE0, 0xF6, 0xC4, 0x01 };
-		if (!memcmp(scan, MoveFunctionCode, sizeof(MoveFunctionCode))){
-			MoveFunction = scan - 0x12;
-		}
-
-		const BYTE WinHandleCode[] = { 0x56, 0x8B, 0xF1, 0x85, 0xC0, 0x89, 0x35 };
-		if (!memcmp(scan, WinHandleCode, sizeof(WinHandleCode))){
-			WinHandlePtr = (BYTE*)(*(DWORD*)(scan + 7));
-		}
-
-		const BYTE BuyItemCode[] = { 0x8B, 0x45, 0x18, 0x83, 0xF8, 0x10, 0x76, 0x17, 0x68 };
-		const BYTE SellItemCode[] = { 0x8B, 0x4D, 0x20, 0x85, 0xC9, 0x0F, 0x85, 0x8E };
-		if (!memcmp(scan, SellItemCode, sizeof(SellItemCode))){
-			SellItemFunction = scan - 0x56;
-		}
-		if (!memcmp(scan, BuyItemCode, sizeof(BuyItemCode))){
-			BuyItemFunction = scan - 0x2C;
-		}
-
-		const BYTE InitTraderBuyCode[] = { 0x81, 0x7B, 0x10, 0x01, 0x01, 0x00, 0x00 };
-		const BYTE InitTraderSellCode[] = { 0x8B, 0x1F, 0x83, 0x3B, 0x0D };
-		if (!memcmp(scan, InitTraderBuyCode, sizeof(InitTraderBuyCode)))
-		{
-			TraderBuyClassHook = scan - 0x42;
-		}
-		if (!memcmp(scan, InitTraderSellCode, sizeof(InitTraderSellCode)))
-		{
-			TraderSellClassHook = scan - 0x27;
-		}
-
-		const BYTE TraderFunctionCode[] = { 0x8B, 0x45, 0x18, 0x8B, 0x55, 0x10, 0x85 };
-		if (!memcmp(scan, TraderFunctionCode, sizeof(TraderFunctionCode))){
-			TraderFunction = scan - 0x48;
-		}
-
-		const BYTE RequestQuoteCode[] = { 0x81, 0xEC, 0x9C, 0x00, 0x00, 0x00, 0x53, 0x56, 0x8B };
-		if (!memcmp(scan, RequestQuoteCode, sizeof(RequestQuoteCode))){
-			RequestQuoteFunction = scan - 3;
+		else{
+			LOG("UseSkillFunction = ERR\n");
+			return false;
 		}
 
 
-		const BYTE CraftItemBaseCode[] = { 0x85, 0xC0, 0x59, 0x74, 0x3C, 0x83, 0x05 };
-		if (!memcmp(scan, CraftItemBaseCode, sizeof(CraftItemBaseCode)))
-		{
-			CraftitemObj = *(BYTE**)(scan - 0xE);
+		PostProcessEffectFunction = (BYTE*)scan.FindPattern("\x55\x8B\xEC\x83\xEC\x10\x89\x4D\xF8\xC7\x45\xFC", "xxxxxxxxxxxx", 0);
+		if (PostProcessEffectFunction){
+			LOG("PostProcessEffectFunction = %X\n", PostProcessEffectFunction);
+		}
+		else{
+			LOG("PostProcessEffectFunction = ERR\n");
+			return false;
 		}
 
-		const BYTE MapInfoCode[] = { 0xC3,0x8B,0x75,0xFC,0x8B,0x04,0xB5 };
-		if (!memcmp(scan, MapInfoCode, sizeof(MapInfoCode))){
-			MapInfoPtr = *(BYTE**)(scan + 7);
+		ChangeTargetFunction = (BYTE*)scan.FindPattern("\x33\xC0\x3B\xDA\x0F\x95\xC0\x33", "xxxxxxxx", -0x78);
+		if (ChangeTargetFunction){
+			LOG("ChangeTargetFunction = %X\n", ChangeTargetFunction);
+		}
+		else{
+			LOG("ChangeTargetFunction = ERR\n");
+			return false;
 		}
 
-		const BYTE DialogLogCode[] = { 0x55,0x8B,0xEC,0x83,0xEC,0x28,0x53,0x56,0x57,0x8B,0xF2,0x8B,0xD9 };
-		if (!memcmp(scan, DialogLogCode, sizeof(DialogLogCode))){
-			DialogFunc = scan - 0x28;
+		OpenXunlaiFunction = (BYTE*)scan.FindPattern("\x8B\xF1\x6A\x00\xBA\x12", "xxxxxx", -6);
+		if (OpenXunlaiFunction){
+			LOG("OpenXunlaiFunction = %X\n", OpenXunlaiFunction);
+		}
+		else{
+			LOG("OpenXunlaiFunction = ERR\n");
+			return false;
+		}
+		XunlaiSession = (BYTE*)scan.FindPattern("\x8D\x14\x76\x8D\x14\x90\x8B\x42\x08\xA8\x01\x75\x41", "xxxxxxxxxxxxx", 0);
+		if (XunlaiSession){
+			LOG("XunlaiSession = %X\n", XunlaiSession);
+			XunlaiSession = *(BYTE**)(XunlaiSession - 4);
+		}
+		else{
+			LOG("XunlaiSession = ERR\n");
+			return false;
 		}
 
-		if (agArrayPtr &&
-			CtoGSObjectPtr &&
-			CtoGSSendFunction &&
-			BasePointerLocation &&
-			RenderLoopLocation &&
-			MapIDPtr &&
-			WriteChatFunction &&
-			SkillTimerPtr &&
-			SkillArray &&
-			UseSkillFunction &&
-			PostProcessEffectFunction &&
-			ChangeTargetFunction &&
-			OpenXunlaiFunction &&
-			XunlaiSession &&
-			MoveFunction &&
-			WinHandlePtr &&
-			SellItemFunction &&
-			BuyItemFunction &&
-			TraderFunction &&
-			RequestQuoteFunction &&
-			CraftitemObj &&
-			TraderBuyClassHook &&
-			TraderSellClassHook &&
-			MapInfoPtr &&
-			DialogFunc
-			) {
-				return true;
-			}
-	}
-	return false;
+		MoveFunction = (BYTE*)scan.FindPattern("\xD9\x07\xD8\x5D\xF0\xDF\xE0\xF6\xC4\x01", "xxxxxxxxxx", -0x12);
+		if (MoveFunction){
+			LOG("MoveFunction = %X\n", MoveFunction);
+		}
+		else{
+			LOG("MoveFunction = ERR\n");
+			return false;
+		}
+
+		WinHandlePtr = (BYTE*)scan.FindPattern("\x56\x8B\xF1\x85\xC0\x89\x35", "xxxxxxx", 0);
+		if (WinHandlePtr){
+			LOG("WinHandlePtr = %X\n", WinHandlePtr);
+			WinHandlePtr = *(BYTE**)(WinHandlePtr + 7);
+		}
+		else{
+			LOG("WinHandlePtr = ERR\n");
+			return false;
+		}
+
+		BuyItemFunction = (BYTE*)scan.FindPattern("\x8B\x45\x18\x83\xF8\x10\x76\x17\x68", "xxxxxxxxx", -0x2C);
+		if (BuyItemFunction){
+			LOG("BuyItemFunction = %X\n", BuyItemFunction);
+		}
+		else{
+			LOG("BuyItemFunction = ERR\n");
+			return false;
+		}
+		SellItemFunction = (BYTE*)scan.FindPattern("\x8B\x4D\x20\x85\xC9\x0F\x85\x8E", "xxxxxxxx", -0x56);
+		if (SellItemFunction){
+			LOG("SellItemFunction = %X\n", SellItemFunction);
+		}
+		else{
+			LOG("SellItemFunction = ERR\n");
+			return false;
+		}
+
+		TraderBuyClassHook = (BYTE*)scan.FindPattern("\x81\x7B\x10\x01\x01\x00\x00", "xxxxxxx", -0x42);
+		if (TraderBuyClassHook){
+			LOG("TraderBuyClassHook = %X\n", TraderBuyClassHook);
+		}
+		else{
+			LOG("TraderBuyClassHook = ERR\n");
+			return false;
+		}
+
+		TraderSellClassHook = (BYTE*)scan.FindPattern("\x8B\x1F\x83\x3B\x0D", "xxxxx", -0x27);
+		if (TraderSellClassHook){
+			LOG("TraderSellClassHook = %X\n", TraderSellClassHook);
+		}
+		else{
+			LOG("TraderSellClassHook = ERR\n");
+			return false;
+		}
+
+		TraderFunction = (BYTE*)scan.FindPattern("\x8B\x45\x18\x8B\x55\x10\x85", "xxxxxxx", -0x48);
+		if (TraderFunction){
+			LOG("TraderFunction = %X\n", TraderFunction);
+		}
+		else{
+			LOG("TraderFunction = ERR\n");
+			return false;
+		}
+
+		RequestQuoteFunction = (BYTE*)scan.FindPattern("\x81\xEC\x9C\x00\x00\x00\x53\x56\x8B", "xxxxxxxxx", -3);
+		if (RequestQuoteFunction){
+			LOG("RequestQuoteFunction = %X\n", RequestQuoteFunction);
+		}
+		else{
+			LOG("RequestQuoteFunction = ERR\n");
+			return false;
+		}
+
+		CraftitemObj = (BYTE*)scan.FindPattern("\x85\xC0\x59\x74\x3C\x83\x05", "xxxxxxx", 0);
+		if (CraftitemObj){
+			LOG("CraftitemObj = %X\n", CraftitemObj);
+			CraftitemObj = *(BYTE**)(CraftitemObj - 0xE);
+		}
+		else{
+			LOG("CraftitemObj = ERR\n");
+			return false;
+		}
+
+		MapInfoPtr = (BYTE*)scan.FindPattern("\xC3\x8B\x75\xFC\x8B\x04\xB5", "xxxxxxx", 0);
+		if (MapInfoPtr){
+			LOG("MapInfoPtr = %X\n", MapInfoPtr);
+			MapInfoPtr = *(BYTE**)(MapInfoPtr + 7);
+		}
+		else{
+			LOG("MapInfoPtr = ERR\n");
+			return false;
+		}
+
+
+		DialogFunc = (BYTE*)scan.FindPattern("\x55\x8B\xEC\x83\xEC\x28\x53\x56\x57\x8B\xF2\x8B\xD9", "xxxxxxxxxxxxx", -0x28);
+		if (DialogFunc){
+			LOG("DialogFunc = %X\n", DialogFunc);
+		}
+		else{
+			LOG("DialogFunc = ERR\n");
+			return false;
+		}
+
+		LOG("[--------- API SCAN COMPLETED SUCESSFULLY ---------]\n");
+		return true;
 }
 
 

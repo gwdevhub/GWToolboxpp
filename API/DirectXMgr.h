@@ -12,7 +12,6 @@
 namespace GWAPI {
 
 	class DirectXMgr {
-		DWORD FindPattern(DWORD _base, DWORD _size, char* _pattern, char* _mask);
 
 		DirectXMgr(GWAPIMgr* obj);
 		~DirectXMgr();

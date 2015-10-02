@@ -32,6 +32,7 @@
     <ClInclude Include="API\MemoryMgr.h" />
     <ClInclude Include="API\MerchantMgr.h" />
     <ClInclude Include="API\SkillbarMgr.h" />
+    <ClInclude Include="API\PatternScanner.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="API\AgentMgr.cpp">
@@ -78,6 +79,9 @@
     </ClCompile>
     <ClCompile Include="API\disasm\ld32.c">
       <Filter>disasm</Filter>
+    </ClCompile>
+    <ClCompile Include="API\PatternScanner.cpp">
+      <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

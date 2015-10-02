@@ -31,6 +31,7 @@
     <ClInclude Include="API\MapMgr.h" />
     <ClInclude Include="API\MemoryMgr.h" />
     <ClInclude Include="API\MerchantMgr.h" />
+    <ClInclude Include="API\PatternScanner.h" />
     <ClInclude Include="API\SkillbarMgr.h" />
   </ItemGroup>
   <ItemGroup>
@@ -48,6 +49,7 @@
     <ClCompile Include="API\MapMgr.cpp" />
     <ClCompile Include="API\MemoryMgr.cpp" />
     <ClCompile Include="API\MerchantMgr.cpp" />
+    <ClCompile Include="API\PatternScanner.cpp" />
     <ClCompile Include="API\SkillbarMgr.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
