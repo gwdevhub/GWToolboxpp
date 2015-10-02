@@ -52,7 +52,8 @@ public:
 
 	static const int WIDTH = 100;
 	static const int HEIGHT = 285;
-	static const int TAB_HEIGHT = 27;
+	static const int TAB_HEIGHT = 29;
+	static const int TOGGLE_HEIGHT = 26;
 	static const int TITLE_HEIGHT = 22;
 	static const int SIDE_PANEL_WIDTH = 280;
 

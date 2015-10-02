@@ -30,7 +30,6 @@ settings_panel_(new SettingsPanel()) {
 	int y = 0;
 	int panel_idx = 0;
 	int button_idx = 0;
-	int tabButtonHeight = 27;
 
 	Config* config = GWToolbox::instance()->config();
 
@@ -99,12 +98,11 @@ settings_panel_(new SettingsPanel()) {
 		bool active = pcon_panel->ToggleActive();
 		this->UpdatePconToggleButton(active);
 	});
-	toggle->SetSize(WIDTH - 2 * DefaultBorderPadding, tabButtonHeight - 1);
-	toggle->SetLocation(DefaultBorderPadding, button_idx * tabButtonHeight - 1);
+	toggle->SetSize(WIDTH - 2 * DefaultBorderPadding, TOGGLE_HEIGHT);
+	toggle->SetLocation(DefaultBorderPadding, TAB_HEIGHT - 2);
 	main_panel_->AddControl(toggle);
 	pcon_toggle_button_ = toggle;
 	
-	++button_idx;
 	CreateTabButton("Hotkeys", button_idx, panel_idx, 
 		GuiUtils::getSubPathA("keyboard.png", "img").c_str());
 
@@ -200,7 +198,8 @@ void MainWindow::CreateTabButton(const char* s, int& button_idx,
 	MainWindow * self = this;
 
 	TabButton* b = new TabButton(s, icon);
-	b->SetLocation(DefaultBorderPadding, button_idx * TAB_HEIGHT);
+	b->SetLocation(DefaultBorderPadding, button_idx * TAB_HEIGHT 
+		+ ((button_idx > 0) ? TOGGLE_HEIGHT : 0));
 	const int index = panel_idx;
 	b->GetClickEvent() += ClickEventHandler([self, index](Control*) { 
 		self->OpenClosePanel(index); 
