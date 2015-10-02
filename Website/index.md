@@ -20,6 +20,22 @@ _by Has and KAOS_
 __Will I get banned for using GWToolbox++?__
 I can't say. GWToolbox++ is not a bot as it it does not play the game for you, however it does use the same technology that bots use. What can I say, though, is that as far as we know noone has ever been banned for it since it was created years ago.
 
+__I am getting an error message saying "msvcr120.dll" is missing, what's wrong?__
+Please install the Microsoft Visual C++ 2013 Redistributable  found [here](http://www.microsoft.com/en-us/download/details.aspx?id=40784).
+You will want to select *vcredist_x86.exe* to download and install.
+
+__I am getting an error message saying "d3dx9_43.dll (or some other d3d9 dll) is missing", how fix?__
+Please install the DirectX Redistributable found [here](http://www.microsoft.com/en-us/download/details.aspx?id=8109).
+
+__I have an feature request/non-bug issue with GWToolbox++. Where can I voice it?__
+We are always open to comments and criticism about GWToolbox++. If you have features or opinions of features you would like to voice to the developers, please leave your input on the repository issue tracker found [here](https://bitbucket.org/ggori/gwtoolbox-plusplus/issues/new). Please make sure to select either *enhancement* or *proposal* for this type of request.
+
+__GWToolbox++ just crashed and set my grandmas hair on fire! Help!__
+Oops. Please start a bug issue at the repository issue tracker [here](https://bitbucket.org/ggori/gwtoolbox-plusplus/issues/new) immediately. If the error was not critical, a messagebox should have displayed with the title "GWToolbox++ Crash!". If the dump file generated sucessfully, please go to your start menu search bar and type %LOCALAPPDATA%. Press enter, and your appdata folder should open. Navigate to the GWToolboxpp folder and find the most recent .dmp file created. If you are able to find the file, attach this file on your issue as it can help greatly with fixing the issue. Be sure to also include what you were doing in game at the time of the crash, and any other information that might help. If it is an issue we can solve we will get to fixing it when we can.
+
+__Can I view the GWToolbox++ source code?__
+Yes. The git repository, along with the most recent revision of source is publicly available [here](https://bitbucket.org/ggori/gwtoolbox-plusplus/src).
+
 ### Detailed feature description
 
 Each button in the main window will open a panel on the side. 
