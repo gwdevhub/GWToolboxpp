@@ -4,6 +4,10 @@
 // Do all your startup things here instead.
 void init(HMODULE hModule){
 	__try {
+		if (*(DWORD*)0x00DE0000 != NULL){
+			MessageBoxA(0,"Please restart guild wars and try again.", "GWToolbox++ - Clientside Error Detected", 0);
+			FreeLibraryAndExitThread(hModule, EXIT_SUCCESS);
+		}
 		Logger::Init();
 		LOG("Creating toolbox thread\n");
 		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)GWToolbox::SafeThreadEntry, hModule, 0, 0);
