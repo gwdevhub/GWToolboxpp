@@ -15,9 +15,170 @@
 
 <hr>
 
+
+
 <h3 id="download">Download</h3>
 
 <p><a href="http://fbgmguild.com/GWToolboxpp/GWToolbox.exe">GWToolbox.exe</a></p>
 
-<p>(under construction)</p></div></body>
+
+
+<h3 id="feature-overview">Feature Overview</h3>
+
+<ul>
+<li>Automatically <strong>maintains</strong> selected pcons</li>
+<li>Ability to set <strong>hotkeys</strong> for typing commands into chat (e.g. /stuck and /resign), using or cancelling recall and UA, using an item (e.g. res scroll, powerstone), targeting an agent (e.g. Boo) and more!</li>
+<li>Send team builds into chat</li>
+<li>Fast travel to any outpost</li>
+<li>Take or accept quests quickly with hotkeys, and be able to do so while NPCs are in combat</li>
+<li>Check price for consets, res scrolls and powerstones, automatically buy materials for any amount of those - <strong>Coming soon!</strong></li>
+<li>Show instance timer, target health or distance, maintained E/Mo bonds</li>
+</ul>
+
+<h3 id="faqs">FAQs</h3>
+
+<p><strong>Will I get banned for using GWToolbox++?</strong> <br>
+I can’t say. GWToolbox++ is not a bot as it it does not play the game for you, however it does use the same technology that bots use. What can I say, though, is that as far as we know noone has ever been banned for it since it was created years ago.</p>
+
+<p><strong>I am getting an error message saying “msvcr120.dll” is missing, what’s wrong?</strong> <br>
+Please install the Microsoft Visual C++ 2013 Redistributable  found <a href="http://www.microsoft.com/en-us/download/details.aspx?id=40784">here</a>. <br>
+You will want to select <em>vcredist_x86.exe</em> to download and install.</p>
+
+<p><strong>I am getting an error message saying “d3dx9_43.dll (or some other d3d9 dll) is missing”, how fix?</strong> <br>
+Please install the DirectX Redistributable found <a href="http://www.microsoft.com/en-us/download/details.aspx?id=8109">here</a>.</p>
+
+<p><strong>I have an feature request/non-bug issue with GWToolbox++. Where can I voice it?</strong> <br>
+We are always open to comments and criticism about GWToolbox++. If you have features or opinions of features you would like to voice to the developers, please leave your input on the repository issue tracker found <a href="https://bitbucket.org/ggori/gwtoolbox-plusplus/issues/new">here</a>. Please make sure to select either <em>enhancement</em> or <em>proposal</em> for this type of request.</p>
+
+<p><strong>GWToolbox++ just crashed and set my grandmas hair on fire! Help!</strong> <br>
+Oops. Please start a bug issue at the repository issue tracker <a href="https://bitbucket.org/ggori/gwtoolbox-plusplus/issues/new">here</a> immediately. If the error was not critical, a messagebox should have displayed with the title “GWToolbox++ Crash!”. If the dump file generated sucessfully, please go to your start menu search bar and type %LOCALAPPDATA%. Press enter, and your appdata folder should open. Navigate to the GWToolboxpp folder and find the most recent .dmp file created. If you are able to find the file, attach this file on your issue as it can help greatly with fixing the issue. Be sure to also include what you were doing in game at the time of the crash, and any other information that might help. If it is an issue we can solve we will get to fixing it when we can.</p>
+
+<p><strong>Can I view the GWToolbox++ source code?</strong> <br>
+Yes. The git repository, along with the most recent revision of source is publicly available <a href="https://bitbucket.org/ggori/gwtoolbox-plusplus/src">here</a>.</p>
+
+
+
+<h3 id="detailed-feature-description">Detailed feature description</h3>
+
+<p>Each button in the main window will open a panel on the side.  <br>
+The two buttons on the top-right are used to minimize and close Toolbox++. <br>
+You can drag the title bar “Toolbox++” to move the main window.</p>
+
+
+
+<h4 id="pcons">Pcons</h4>
+
+<p>Select the consumables you want to use, then use the <strong>Enabled</strong>/<strong>Disabled</strong> button. When status is <strong>Enabled</strong>, Toolbox++ will use and maintain the selected consumables.</p>
+
+
+
+<h4 id="hotkeys">Hotkeys</h4>
+
+<p>You can create a new hotkey clicking on the <strong>Create Hotkey</strong> button and selecting the one wanted. Similarly, you can delete an existing hotkey with the <strong>Delete Hotkey</strong> button.</p>
+
+<p>Each hotkey has two rows, the first one is different for each hotkey (more below) while the second row is the same for all hotkeys.  <br>
+In the second row there is a checkbox, a hotkey field and a <strong>Run</strong> button. <br>
+Checkbox will enable or disable the hotkey, <strong>Run</strong> will execute the hotkey (even if disabled). In order to set a key, click on the hotkey field and then press the key. Modifier keys Control, Alt and Shift are supported.</p>
+
+<p>There are several types of hotkey, each one can be customized.</p>
+
+<ul>
+<li><strong>Send Chat Hotkey</strong> <br>
+will send the message in the selected channel</li>
+<li><strong>Use Item Hotkey</strong> <br>
+will use an item from your inventory. The first field is the item ID, the second field is an arbitrary name for the hotkey. You can find item IDs from the Info panel (more below)</li>
+<li><strong>Drop or Use Buff Hotkey</strong> <br>
+you can select a buff, <strong>Recall</strong> or <strong>UA</strong>. When pressing the hotkey if the buff was active it will be dropped, otherwise it will be casted.</li>
+<li><strong>Toggle… Hotkey</strong> <br>
+this hotkey is used to toggle some other toolbox functionalities: <strong>Clicker</strong>, <strong>Pcons</strong> or <strong>Coin dropper</strong></li>
+<li><strong>Execute… Hotkey</strong> <br>
+this hotkey is used to execute some single actions: <strong>Open Xunlai Chest</strong>, <strong>Open Locked Chest</strong> or <strong>Drop one gold coin</strong></li>
+<li><strong>Target</strong> <br>
+will target the closest agent with the specified ID (PlayerNumber). You can find IDs from the Info panel (more below)</li>
+<li><strong>Move to</strong> <br>
+will issue a move command to the specified coordinates. This will only happen if the destination is within radar range.</li>
+<li><strong>Dialog</strong> <br>
+will send the specified dialog ID</li>
+<li><strong>Ping Build</strong> <br>
+will ping the selected team build to chat, you can edit team builds in the Builds panel (more below)</li>
+</ul>
+
+
+
+<h4 id="builds">Builds</h4>
+
+<p>You can send into Team Chat your saved team builds.</p>
+
+<p>First of all, press Edit in any row, and write or paste your team build, save with <strong>ok</strong> or cancel and then click on the team build name to send it to chat.</p>
+
+<p>Note that copy, cut and paste work on the <strong>entire</strong> text box, ignoring the cursor.</p>
+
+
+
+<h4 id="travel">Travel</h4>
+
+<p>You can travel to any town or use one of the fast travel buttons. Additionally, you can set up to 3 favorite towns for fast access. </p>
+
+<p>The District combo box affects all travel actions in the panel.</p>
+
+
+
+<h4 id="dialogs">Dialogs</h4>
+
+<p>You can use the buttons to easily send the correspondent dialog. You can also set up to 3 favorite quests to take or complete. Finally, you can send other dialogs from the combo box or a custom one in the last row.</p>
+
+<p>Note that you need to talk to the relevant NPC before using any dialog</p>
+
+
+
+<h4 id="info">Info</h4>
+
+<p>In the top half of the panel you can see information that may help setting up hotkeys.</p>
+
+<ul>
+<li><strong>Player Position</strong> shows x and y coordinates of the player</li>
+<li><strong>Target ID</strong> shows the ID (PlayerNumber) of the current target</li>
+<li><strong>Map ID</strong> shows the ID of the current map</li>
+<li><strong>First Item ID</strong> shows the ID (ModelID) of the first item in the inventory (top left in Backpack)</li>
+<li><strong>Last Dialog ID</strong> shows the ID of the last dialog sent by your character</li>
+</ul>
+
+<p>You can toggle the widgets <strong>Bonds Monitor</strong>, <strong>Target Health</strong> and <strong>Target Distance</strong> by clicking on the correspondent checkbox.</p>
+
+<ul>
+<li><strong>Bonds Monitor</strong> is typically focused for E/Mo, shows the currently maintained <strong>Balth</strong>, <strong>Prot</strong> and <strong>Life</strong> bonds on the team. You can also cast or drop bonds by clicking on each slot.</li>
+<li><strong>Target Health</strong> shows the health of the current target both in percentage and absolute values</li>
+<li><strong>Target Distance</strong> shows the distance to the current target both in percentage of radar range and absolute in-game units. For reference Radar Range is 5000, Spirit Range is 2500, casting range is 1200 and aggro range is 1000.</li>
+</ul>
+
+<p>Finally, there is a button to <strong>Open Xunlai Chest</strong> from anywhere in an outpost.</p>
+
+
+
+<h4 id="materials">Materials</h4>
+
+<p>&lt; under construction &gt;</p>
+
+
+
+<h4 id="settings">Settings</h4>
+
+<ul>
+<li><strong>Open tabs on the left</strong> will open panels on the left instead of right side</li>
+<li><strong>Freeze info widget positions</strong> will freeze Timer, Bonds Monitor, Target Health and Target Distance position on screen. Additionally, it will allow click-through all of those except for bonds monitor.</li>
+<li><strong>Hide target windows</strong> will hide Target Health and Target Distance when a target is not selected</li>
+<li><strong>Minimize to Alt position</strong> makes the saved positions for toolbox and minimized toolbox independent</li>
+<li><strong>Tick with pcon status</strong>. If enabled, when enabling or disabling <strong>Pcons</strong> Toolbox++ will also tick or untick in party list</li>
+<li><strong>Save Location Data</strong>. If enabled, Toolbox++ will save your position each second in a log file in the settings folder</li>
+<li><strong>Open GWToolbox++ Website</strong> will open this web page</li>
+<li><strong>Open Settings Folder</strong> will open the installation folder</li>
+</ul>
+
+
+
+<h3 id="source-code">Source code</h3>
+
+<p>GWToolbox++ is completely open source and the repository is available <a href="https://bitbucket.org/ggori/gwtoolbox-plusplus">here</a> on BitBucket</p>
+
+<p>Feel free to download or fork the repository and play with it. You can message us on BitBucket or do a pull request if you make something cool!</p></div></body>
 </html>

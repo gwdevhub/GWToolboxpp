@@ -7,11 +7,11 @@ _by Has and KAOS_
 ### Download
 [GWToolbox.exe](http://fbgmguild.com/GWToolboxpp/GWToolbox.exe)
 
-### Features
+### Feature Overview
 * Automatically **maintains** selected pcons
-* Ability to set **hotkeys** for typing /stuck and /resign, using or cancelling recall and UA, using res scrolls and powerstones and more!
+* Ability to set **hotkeys** for typing commands into chat (e.g. /stuck and /resign), using or cancelling recall and UA, using an item (e.g. res scroll, powerstone), targeting an agent (e.g. Boo) and more!
 * Send team builds into chat
-* Fast travel to **any** outpost
+* Fast travel to any outpost
 * Take or accept quests quickly with hotkeys, and be able to do so while NPCs are in combat
 * Check price for consets, res scrolls and powerstones, automatically buy materials for any amount of those - **Coming soon!**
 * Show instance timer, target health or distance, maintained E/Mo bonds
