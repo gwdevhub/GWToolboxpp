@@ -47,7 +47,7 @@ private:
 	void CalculateHotkeyPositions();
 
 protected:
-	void OnMouseScroll(const OSHGui::MouseMessage &mouse) override;
+	bool OnMouseScroll(const OSHGui::MouseMessage &mouse) override;
 
 public:
 	HotkeyPanel();

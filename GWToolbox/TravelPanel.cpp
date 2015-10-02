@@ -106,7 +106,8 @@ void TravelPanel::BuildUI() {
 	}
 }
 
-TravelPanel::TravelCombo::TravelCombo() {
+TravelPanel::TravelCombo::TravelCombo() 
+	: OSHGui::ComboBox() {
 	listBox_->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
 		GWToolbox::instance()->set_capture_input(true);
 	});

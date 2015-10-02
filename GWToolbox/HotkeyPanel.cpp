@@ -12,9 +12,13 @@ HotkeyPanel::HotkeyPanel() {
 	hotkeys = vector<TBHotkey*>();
 }
 
-void HotkeyPanel::OnMouseScroll(const MouseMessage &mouse) {
+bool HotkeyPanel::OnMouseScroll(const MouseMessage &mouse) {
+	Control::OnMouseScroll(mouse);
+
 	int delta = mouse.GetDelta() > 0 ? 1 : -1;
 	scrollbar_->SetValue(scrollbar_->GetValue() + delta);
+
+	return true;
 }
 
 void HotkeyPanel::BuildUI() {

@@ -277,11 +277,13 @@ namespace OSHGui
 		}
 	}
 	//---------------------------------------------------------------------------
-	void ScrollBar::OnMouseScroll(const MouseMessage &mouse)
+	bool ScrollBar::OnMouseScroll(const MouseMessage &mouse)
 	{
 		Control::OnMouseScroll(mouse);
 
 		SetValueInternal(value_ + mouse.GetDelta());
+
+		return true;
 	}
 	//---------------------------------------------------------------------------
 	//ScrollBar::ScrollBarButton

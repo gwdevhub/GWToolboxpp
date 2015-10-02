@@ -244,7 +244,6 @@ namespace OSHGui
 				return false;
 			}
 			
-			bool consumed = false;
 			for (auto it = formManager_.GetEnumerator(); it(); ++it) {
 				auto &form = *it;
 				
@@ -254,12 +253,7 @@ namespace OSHGui
 						if (form != foreMost) {
 							formManager_.BringToFront(form);
 						}
-						// pass scroll events to all controls and just not the innermost one
-						if (message.GetState() == MouseState::Scroll) {
-							consumed = true;
-						} else {
-							return true;
-						}
+						return true;
 					}
 				}
 			}
@@ -267,7 +261,7 @@ namespace OSHGui
 			if (MouseEnteredControl) {
 				MouseEnteredControl->OnMouseLeave(message);
 			}
-			return consumed;
+			return false;
 		}
 
 		return false;

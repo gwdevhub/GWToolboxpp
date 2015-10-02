@@ -355,20 +355,28 @@ namespace OSHGui
 		}
 	}
 	//---------------------------------------------------------------------------
-	void ListBox::OnMouseScroll(const MouseMessage &mouse)
+	bool ListBox::OnMouseScroll(const MouseMessage &mouse)
 	{
 		Control::OnMouseScroll(mouse);
 
 		int newScrollValue = scrollBar_->GetValue() + mouse.GetDelta();
-		if (newScrollValue < 0)
-		{
+		if (newScrollValue < 0) {
 			newScrollValue = 0;
-		}
-		else if (newScrollValue > items_.size() - maxVisibleItems_)
-		{
+		} else if (newScrollValue > items_.size() - maxVisibleItems_) {
 			newScrollValue = items_.size() - maxVisibleItems_;
 		}
 		scrollBar_->SetValue(newScrollValue);
+
+		hoveredIndex_ = hoveredIndex_ + mouse.GetDelta();
+		if (hoveredIndex_ < 0) {
+			hoveredIndex_ = 0;
+		} else if (hoveredIndex_ > items_.size() - maxVisibleItems_) {
+			hoveredIndex_ = items_.size() - maxVisibleItems_;
+		}
+
+		Invalidate();
+
+		return true;
 	}
 	//---------------------------------------------------------------------------
 	bool ListBox::OnKeyDown(const KeyboardMessage &keyboard)

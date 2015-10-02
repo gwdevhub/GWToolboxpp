@@ -694,7 +694,7 @@ namespace OSHGui
 		virtual void OnMouseClick(const MouseMessage &mouse);
 		virtual void OnMouseUp(const MouseMessage &mouse);
 		virtual void OnMouseMove(const MouseMessage &mouse);
-		virtual void OnMouseScroll(const MouseMessage &mouse);
+		virtual bool OnMouseScroll(const MouseMessage &mouse);
 		virtual void OnMouseEnter(const MouseMessage &mouse);
 		virtual void OnMouseLeave(const MouseMessage &mouse);
 		virtual void OnGotMouseCapture();

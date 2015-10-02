@@ -784,16 +784,12 @@ namespace OSHGui
 		mouseMoveEvent_.Invoke(this, args);
 	}
 	//---------------------------------------------------------------------------
-	void Control::OnMouseScroll(const MouseMessage &mouse)
+	bool Control::OnMouseScroll(const MouseMessage &mouse)
 	{
-		bool consumed = false;
-		for (Control* c : internalControls_) {
-			c->OnMouseScroll(mouse);
-		}
-
 		MouseEventArgs args(mouse);
 		args.Location -= absoluteLocation_;
 		mouseScrollEvent_.Invoke(this, args);
+		return args.Handled;
 	}
 	//---------------------------------------------------------------------------
 	void Control::OnMouseEnter(const MouseMessage &mouse)
@@ -969,11 +965,9 @@ namespace OSHGui
 					{
 						if (mouse.GetDelta() != 0)
 						{
-							OnMouseScroll(mouse);
+							return OnMouseScroll(mouse);
 						}
 					}
-
-					return true;
 				}
 				break;
 		}

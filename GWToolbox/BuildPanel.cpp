@@ -73,9 +73,13 @@ BuildPanel::BuildPanel() {
 	send_timer = TBTimer::init();
 }
 
-void BuildPanel::OnMouseScroll(const MouseMessage &mouse) {
+bool BuildPanel::OnMouseScroll(const MouseMessage &mouse) {
+	Control::OnMouseScroll(mouse);
+
 	int delta = mouse.GetDelta() > 0 ? 1 : -1;
 	scrollbar_->SetValue(scrollbar_->GetValue() + delta);
+
+	return true;
 }
 
 void BuildPanel::set_first_shown(int first) {

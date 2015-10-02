@@ -29,10 +29,11 @@ namespace OSHGui
 		 */
 		MouseEventArgs(const MouseMessage &mouseEvent)
 			: State(mouseEvent.GetState()),
-			  Location(mouseEvent.GetLocation())
-		{
-			
+			  Location(mouseEvent.GetLocation()),
+			  Handled(false) {
 		}
+		
+		bool Handled;
 	};
 }
 

@@ -209,11 +209,13 @@ namespace OSHGui
 		SetValueInternal(tick * tickFrequency_);
 	}
 	//---------------------------------------------------------------------------
-	void TrackBar::OnMouseScroll(const MouseMessage &mouse)
+	bool TrackBar::OnMouseScroll(const MouseMessage &mouse)
 	{
 		Control::OnMouseScroll(mouse);
 
 		SetValueInternal(value_ + mouse.GetDelta());
+
+		return true;
 	}
 	//---------------------------------------------------------------------------
 	bool TrackBar::OnKeyDown(const KeyboardMessage &keyboard)

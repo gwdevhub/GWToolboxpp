@@ -45,7 +45,7 @@ private:
 	inline void set_first_shown(int first);
 
 protected:
-	void OnMouseScroll(const OSHGui::MouseMessage &mouse) override;
+	bool OnMouseScroll(const OSHGui::MouseMessage &mouse) override;
 
 public:
 	BuildPanel();

@@ -105,7 +105,7 @@ namespace OSHGui
 		virtual void OnMouseUp(const MouseMessage &mouse) override;
 		virtual void OnMouseClick(const MouseMessage &mouse) override;
 		virtual void OnMouseMove(const MouseMessage &mouse) override;
-		virtual void OnMouseScroll(const MouseMessage &mouse) override;
+		virtual bool OnMouseScroll(const MouseMessage &mouse) override;
 		virtual bool OnKeyDown(const KeyboardMessage &keyboard) override;
 	
 	private:
