@@ -87,7 +87,7 @@ bool GWAPI::MemoryMgr::Scan()
 			return false;
 		}
 		CtoGSSendFunction = (BYTE*)scan.FindPattern("\x55\x8B\xEC\x83\xEC\x2C\x53\x56\x57\x8B\xF9\x85", "xxxxxxxxxxxx", 0);
-		if (CtoGSObjectPtr){
+		if (CtoGSSendFunction){
 			LOG("CtoGSSendFunction = %X\n", CtoGSSendFunction);
 		}
 		else{

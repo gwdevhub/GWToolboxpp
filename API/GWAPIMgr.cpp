@@ -22,6 +22,8 @@
 
 GWAPI::GWAPIMgr* GWAPI::GWAPIMgr::instance_ = NULL;
 
+bool GWAPI::GWAPIMgr::init_sucessful_;
+
 GWAPI::GWAPIMgr* GWAPI::GWAPIMgr::instance()
 {
 	return instance_ ? instance_ : NULL;
@@ -43,9 +45,10 @@ GWAPI::GWAPIMgr::GWAPIMgr()
 		chat_ = new ChatMgr(this);
 		merchant_ = new MerchantMgr(this);
 		guild_ = new GuildMgr(this);
+		init_sucessful_ = true;
 	}
 	else{
-		MessageBoxA(0, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0);
+		init_sucessful_ = false;
 	}
 }
 
@@ -78,9 +81,10 @@ GWAPI::GWAPIMgr::~GWAPIMgr()
 	if (merchant_) delete merchant_;
 }
 
-void GWAPI::GWAPIMgr::Initialize()
+bool GWAPI::GWAPIMgr::Initialize()
 {
 	if (!instance_) instance_ = new GWAPIMgr();
+	return init_sucessful_;
 }
 
 void GWAPI::GWAPIMgr::Destruct()
@@ -89,4 +93,3 @@ void GWAPI::GWAPIMgr::Destruct()
 		delete instance_;
 	}
 }
-

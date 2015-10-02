@@ -31,7 +31,10 @@ void GWToolbox::ThreadEntry(HMODULE dllmodule) {
 	if (GWToolbox::instance()) return;
 
 	LOG("Initializing API\n");
-	GWAPI::GWAPIMgr::Initialize();
+	if (!GWAPI::GWAPIMgr::Initialize()){
+		MessageBoxA(0, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0);
+		FreeLibraryAndExitThread(dllmodule, EXIT_SUCCESS);
+	}
 
 	LOG("Creating GWToolbox++\n");
 	instance_ = new GWToolbox(dllmodule);
