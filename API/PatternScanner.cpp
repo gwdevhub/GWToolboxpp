@@ -3,6 +3,7 @@
 
 DWORD GWAPI::PatternScanner::FindPattern(char* pattern, char* mask, DWORD offset)
 {
+	BYTE first = pattern[0];
 	int patternLength = strlen(mask);
 	bool found = false;
 
@@ -10,9 +11,14 @@ DWORD GWAPI::PatternScanner::FindPattern(char* pattern, char* mask, DWORD offset
 	for (DWORD i = base_; i < base_ + size_ - patternLength; i++)
 	{
 		found = true;
+		if (*(BYTE*)i != first)
+		{
+			continue;
+		}
 		//For each byte in the pattern
 		for (int idx = 0; idx < patternLength; idx++)
 		{
+
 			if (mask[idx] == 'x' && pattern[idx] != *(char*)(i + idx))
 			{
 				found = false;
