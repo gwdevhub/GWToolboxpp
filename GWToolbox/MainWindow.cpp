@@ -95,6 +95,10 @@ settings_panel_(new SettingsPanel()) {
 	toggle->SetFont(GuiUtils::getTBFont(10.0, true));
 	PconPanel* const pcon_panel = pcon_panel_;
 	toggle->GetClickEvent() += ClickEventHandler([this, toggle, pcon_panel](Control*) {
+		if (GWAPIMgr::instance()->Map()->GetInstanceType() == GwConstants::InstanceType::Loading)
+		{
+			return;
+		}
 		bool active = pcon_panel->ToggleActive();
 		this->UpdatePconToggleButton(active);
 	});

@@ -11,7 +11,7 @@ void GWAPI::MapMgr::Travel(GwConstants::MapID MapID, DWORD District /*= 0*/, int
 	pak->district = District;
 	pak->region = Region;
 	pak->language = Language;
-	pak->unk = 1;
+	pak->unk = 0;
 
 	parent_->CtoS()->SendPacket<PAB_ZoneMap>(pak);
 }
