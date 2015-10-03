@@ -160,24 +160,18 @@ void EditBuild::SaveBuild() {
 	wstring key;
 
 	string s_name = name->GetText();
-	if (!s_name.empty()) {
-		key = L"buildname";
-		config->iniWrite(section.c_str(), key.c_str(), ToWString(s_name).c_str());
-		editing_button->SetText(s_name);
-	}
+	key = L"buildname";
+	config->iniWrite(section.c_str(), key.c_str(), ToWString(s_name).c_str());
+	editing_button->SetText(s_name);
 
 	for (int i = 0; i < N_PLAYERS; ++i) {
 		string s_name = names[i]->GetText();
-		if (!s_name.empty()) {
-			key = L"name" + to_wstring(i + 1);
-			config->iniWrite(section.c_str(), key.c_str(), ToWString(s_name).c_str());
-		}
+		key = L"name" + to_wstring(i + 1);
+		config->iniWrite(section.c_str(), key.c_str(), ToWString(s_name).c_str());
 
 		string s_template = templates[i]->GetText();
-		if (!s_template.empty()) {
-			key = L"template" + to_wstring(i + 1);
-			config->iniWrite(section.c_str(), key.c_str(), ToWString(s_template).c_str());
-		}
+		key = L"template" + to_wstring(i + 1);
+		config->iniWrite(section.c_str(), key.c_str(), ToWString(s_template).c_str());
 	}
 
 	config->iniWriteBool(section.c_str(), L"showNumbers", show_numbers->GetChecked());
