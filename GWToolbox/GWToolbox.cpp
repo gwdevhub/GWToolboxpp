@@ -9,8 +9,8 @@
 #include "TimerWindow.h"
 
 const wchar_t * GWToolbox::Host = L"http://fbgmguild.com/GWToolboxpp/";
-const char* GWToolbox::VersionA = "1.0";
-const wchar_t* GWToolbox::VersionW = L"1.0";
+const char* GWToolbox::VersionA = "1.2";
+const wchar_t* GWToolbox::VersionW = L"1.2";
 
 
 GWToolbox* GWToolbox::instance_ = NULL;

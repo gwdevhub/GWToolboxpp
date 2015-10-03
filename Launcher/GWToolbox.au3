@@ -18,6 +18,7 @@ Opt("GuiResizeMode", BitOR($GUI_DOCKSIZE, $GUI_DOCKTOP, $GUI_DOCKLEFT))
 
 ; ==== Globals ====
 Global Const $debug = True And Not @Compiled
+Global Const $no_update = True
 Global Const $host = "http://fbgmguild.com/GWToolboxpp/"
 Global Const $folder = @LocalAppDataDir & "\GWToolboxpp\"
 Global Const $dllpath = $folder & "GWToolbox.dll"
@@ -45,7 +46,7 @@ EndIf
 ; ==== Updates ====
 Update()
 Func Update()
-	If $debug Then Return
+	If $debug And $no_update Then Return
 
 	Local $width = 300
 	$height = 60

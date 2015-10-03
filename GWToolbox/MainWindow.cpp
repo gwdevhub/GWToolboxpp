@@ -95,10 +95,6 @@ settings_panel_(new SettingsPanel()) {
 	toggle->SetFont(GuiUtils::getTBFont(10.0, true));
 	PconPanel* const pcon_panel = pcon_panel_;
 	toggle->GetClickEvent() += ClickEventHandler([this, toggle, pcon_panel](Control*) {
-		if (GWAPIMgr::instance()->Map()->GetInstanceType() == GwConstants::InstanceType::Loading)
-		{
-			return;
-		}
 		bool active = pcon_panel->ToggleActive();
 		this->UpdatePconToggleButton(active);
 	});
@@ -192,7 +188,7 @@ void MainWindow::UpdatePconToggleButton(bool active) {
 		pcon_toggle_button_->SetForeColor(Color::Red());
 		pcon_toggle_button_->SetText("Disabled");
 	}
-	if (tick_with_pcons_) {
+	if (tick_with_pcons_ && GWAPIMgr::instance()->Map()->GetInstanceType() == GwConstants::InstanceType::Outpost) {
 		GWAPIMgr::instance()->Agents()->Tick(active);
 	}
 }
