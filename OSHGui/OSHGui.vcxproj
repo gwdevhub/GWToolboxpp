@@ -1,0 +1,268 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="OSHGui\Application.cpp" />
+    <ClCompile Include="OSHGui\Controls\Button.cpp" />
+    <ClCompile Include="OSHGui\Controls\CheckBox.cpp" />
+    <ClCompile Include="OSHGui\Controls\ColorBar.cpp" />
+    <ClCompile Include="OSHGui\Controls\ColorPicker.cpp" />
+    <ClCompile Include="OSHGui\Controls\ComboBox.cpp" />
+    <ClCompile Include="OSHGui\Controls\Control.cpp" />
+    <ClCompile Include="OSHGui\Controls\Form.cpp" />
+    <ClCompile Include="OSHGui\Controls\GroupBox.cpp" />
+    <ClCompile Include="OSHGui\Controls\HotkeyControl.cpp" />
+    <ClCompile Include="OSHGui\Controls\Label.cpp" />
+    <ClCompile Include="OSHGui\Controls\LinkLabel.cpp" />
+    <ClCompile Include="OSHGui\Controls\ListBox.cpp" />
+    <ClCompile Include="OSHGui\Controls\MessageBox.cpp" />
+    <ClCompile Include="OSHGui\Controls\Panel.cpp" />
+    <ClCompile Include="OSHGui\Controls\PictureBox.cpp" />
+    <ClCompile Include="OSHGui\Controls\ProgressBar.cpp" />
+    <ClCompile Include="OSHGui\Controls\RadioButton.cpp" />
+    <ClCompile Include="OSHGui\Controls\ScrollBar.cpp" />
+    <ClCompile Include="OSHGui\Controls\TabControl.cpp" />
+    <ClCompile Include="OSHGui\Controls\TabPage.cpp" />
+    <ClCompile Include="OSHGui\Controls\TextBox.cpp" />
+    <ClCompile Include="OSHGui\Controls\Timer.cpp" />
+    <ClCompile Include="OSHGui\Controls\TrackBar.cpp" />
+    <ClCompile Include="OSHGui\Cursor\Circle.cpp" />
+    <ClCompile Include="OSHGui\Cursor\Cursor.cpp" />
+    <ClCompile Include="OSHGui\Cursor\Cursors.cpp" />
+    <ClCompile Include="OSHGui\Cursor\Hand.cpp" />
+    <ClCompile Include="OSHGui\Cursor\IBeam.cpp" />
+    <ClCompile Include="OSHGui\Cursor\Pen.cpp" />
+    <ClCompile Include="OSHGui\Cursor\Pipette.cpp" />
+    <ClCompile Include="OSHGui\Cursor\Wait.cpp" />
+    <ClCompile Include="OSHGui\Drawing\Color.cpp" />
+    <ClCompile Include="OSHGui\Drawing\ColorRectangle.cpp" />
+    <ClCompile Include="OSHGui\Drawing\CustomizableImage.cpp" />
+    <ClCompile Include="OSHGui\Drawing\Direct3D9\Direct3D9GeometryBuffer.cpp" />
+    <ClCompile Include="OSHGui\Drawing\Direct3D9\Direct3D9Renderer.cpp" />
+    <ClCompile Include="OSHGui\Drawing\Direct3D9\Direct3D9Texture.cpp" />
+    <ClCompile Include="OSHGui\Drawing\Direct3D9\Direct3D9TextureTarget.cpp" />
+    <ClCompile Include="OSHGui\Drawing\Direct3D9\Direct3D9ViewportTarget.cpp" />
+    <ClCompile Include="OSHGui\Drawing\Font.cpp" />
+    <ClCompile Include="OSHGui\Drawing\FontManager.cpp" />
+    <ClCompile Include="OSHGui\Drawing\FreeTypeFont.cpp" />
+    <ClCompile Include="OSHGui\Drawing\GeometryBuffer.cpp" />
+    <ClCompile Include="OSHGui\Drawing\Graphics.cpp" />
+    <ClCompile Include="OSHGui\Drawing\Image.cpp" />
+    <ClCompile Include="OSHGui\Drawing\ImageGraphics.cpp" />
+    <ClCompile Include="OSHGui\Drawing\ImageLoader.cpp" />
+    <ClCompile Include="OSHGui\Drawing\RenderQueue.cpp" />
+    <ClCompile Include="OSHGui\Drawing\RenderSurface.cpp" />
+    <ClCompile Include="OSHGui\Drawing\RenderTarget.cpp" />
+    <ClCompile Include="OSHGui\Drawing\Theme.cpp" />
+    <ClCompile Include="OSHGui\Drawing\Vector.cpp" />
+    <ClCompile Include="OSHGui\FormManager.cpp" />
+    <ClCompile Include="OSHGui\Input\Input.cpp" />
+    <ClCompile Include="OSHGui\Input\WindowsMessage.cpp" />
+    <ClCompile Include="OSHGui\Input\WindowsMessageThreaded.cpp" />
+    <ClCompile Include="OSHGui\Misc\DateTime.cpp" />
+    <ClCompile Include="OSHGui\Misc\Exceptions.cpp" />
+    <ClCompile Include="OSHGui\Misc\RawDataContainer.cpp" />
+    <ClCompile Include="OSHGui\Misc\Strings.cpp" />
+    <ClCompile Include="OSHGui\Misc\TextHelper.cpp" />
+    <ClCompile Include="OSHGui\Misc\TimeSpan.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="OSHGui\Application.hpp" />
+    <ClInclude Include="OSHGui\Controls\Button.hpp" />
+    <ClInclude Include="OSHGui\Controls\CheckBox.hpp" />
+    <ClInclude Include="OSHGui\Controls\ColorBar.hpp" />
+    <ClInclude Include="OSHGui\Controls\ColorPicker.hpp" />
+    <ClInclude Include="OSHGui\Controls\ComboBox.hpp" />
+    <ClInclude Include="OSHGui\Controls\Control.hpp" />
+    <ClInclude Include="OSHGui\Controls\Form.hpp" />
+    <ClInclude Include="OSHGui\Controls\GroupBox.hpp" />
+    <ClInclude Include="OSHGui\Controls\HotkeyControl.hpp" />
+    <ClInclude Include="OSHGui\Controls\Label.hpp" />
+    <ClInclude Include="OSHGui\Controls\LinkLabel.hpp" />
+    <ClInclude Include="OSHGui\Controls\ListBox.hpp" />
+    <ClInclude Include="OSHGui\Controls\MessageBox.hpp" />
+    <ClInclude Include="OSHGui\Controls\Panel.hpp" />
+    <ClInclude Include="OSHGui\Controls\PictureBox.hpp" />
+    <ClInclude Include="OSHGui\Controls\ProgressBar.hpp" />
+    <ClInclude Include="OSHGui\Controls\RadioButton.hpp" />
+    <ClInclude Include="OSHGui\Controls\ScrollBar.hpp" />
+    <ClInclude Include="OSHGui\Controls\TabControl.hpp" />
+    <ClInclude Include="OSHGui\Controls\TabPage.hpp" />
+    <ClInclude Include="OSHGui\Controls\TextBox.hpp" />
+    <ClInclude Include="OSHGui\Controls\Timer.hpp" />
+    <ClInclude Include="OSHGui\Controls\TrackBar.hpp" />
+    <ClInclude Include="OSHGui\Cursor\Circle.hpp" />
+    <ClInclude Include="OSHGui\Cursor\Cursor.hpp" />
+    <ClInclude Include="OSHGui\Cursor\Cursors.hpp" />
+    <ClInclude Include="OSHGui\Cursor\Hand.hpp" />
+    <ClInclude Include="OSHGui\Cursor\IBeam.hpp" />
+    <ClInclude Include="OSHGui\Cursor\Pen.hpp" />
+    <ClInclude Include="OSHGui\Cursor\Pipette.hpp" />
+    <ClInclude Include="OSHGui\Cursor\Wait.hpp" />
+    <ClInclude Include="OSHGui\Drawing\Color.hpp" />
+    <ClInclude Include="OSHGui\Drawing\ColorRectangle.hpp" />
+    <ClInclude Include="OSHGui\Drawing\CustomizableImage.hpp" />
+    <ClInclude Include="OSHGui\Drawing\Direct3D9\Direct3D9GeometryBuffer.hpp" />
+    <ClInclude Include="OSHGui\Drawing\Direct3D9\Direct3D9Renderer.hpp" />
+    <ClInclude Include="OSHGui\Drawing\Direct3D9\Direct3D9RenderTarget.hpp" />
+    <ClInclude Include="OSHGui\Drawing\Direct3D9\Direct3D9Texture.hpp" />
+    <ClInclude Include="OSHGui\Drawing\Direct3D9\Direct3D9TextureTarget.hpp" />
+    <ClInclude Include="OSHGui\Drawing\Direct3D9\Direct3D9ViewportTarget.hpp" />
+    <ClInclude Include="OSHGui\Drawing\Font.hpp" />
+    <ClInclude Include="OSHGui\Drawing\FontGlyph.hpp" />
+    <ClInclude Include="OSHGui\Drawing\FontManager.hpp" />
+    <ClInclude Include="OSHGui\Drawing\FreeTypeFont.hpp" />
+    <ClInclude Include="OSHGui\Drawing\GeometryBuffer.hpp" />
+    <ClInclude Include="OSHGui\Drawing\Graphics.hpp" />
+    <ClInclude Include="OSHGui\Drawing\Image.hpp" />
+    <ClInclude Include="OSHGui\Drawing\ImageGraphics.hpp" />
+    <ClInclude Include="OSHGui\Drawing\ImageLoader.hpp" />
+    <ClInclude Include="OSHGui\Drawing\Point.hpp" />
+    <ClInclude Include="OSHGui\Drawing\Quaternion.hpp" />
+    <ClInclude Include="OSHGui\Drawing\Rectangle.hpp" />
+    <ClInclude Include="OSHGui\Drawing\RenderContext.hpp" />
+    <ClInclude Include="OSHGui\Drawing\Renderer.hpp" />
+    <ClInclude Include="OSHGui\Drawing\RenderQueue.hpp" />
+    <ClInclude Include="OSHGui\Drawing\RenderSurface.hpp" />
+    <ClInclude Include="OSHGui\Drawing\RenderTarget.hpp" />
+    <ClInclude Include="OSHGui\Drawing\Size.hpp" />
+    <ClInclude Include="OSHGui\Drawing\Texture.hpp" />
+    <ClInclude Include="OSHGui\Drawing\TextureTarget.hpp" />
+    <ClInclude Include="OSHGui\Drawing\Theme.hpp" />
+    <ClInclude Include="OSHGui\Drawing\Vector.hpp" />
+    <ClInclude Include="OSHGui\Drawing\Vertex.hpp" />
+    <ClInclude Include="OSHGui\Event\Event.hpp" />
+    <ClInclude Include="OSHGui\Event\EventHandler.hpp" />
+    <ClInclude Include="OSHGui\Event\Hotkey.hpp" />
+    <ClInclude Include="OSHGui\Event\Key.hpp" />
+    <ClInclude Include="OSHGui\Event\KeyboardMessage.hpp" />
+    <ClInclude Include="OSHGui\Event\KeyEventArgs.hpp" />
+    <ClInclude Include="OSHGui\Event\KeyPressEventArgs.hpp" />
+    <ClInclude Include="OSHGui\Event\MouseButton.hpp" />
+    <ClInclude Include="OSHGui\Event\MouseEventArgs.hpp" />
+    <ClInclude Include="OSHGui\Event\MouseMessage.hpp" />
+    <ClInclude Include="OSHGui\Event\ScrollEventArgs.hpp" />
+    <ClInclude Include="OSHGui\Exports.hpp" />
+    <ClInclude Include="OSHGui\FormManager.hpp" />
+    <ClInclude Include="OSHGui\Input\Input.hpp" />
+    <ClInclude Include="OSHGui\Input\WindowsMessage.hpp" />
+    <ClInclude Include="OSHGui\Input\WindowsMessageThreaded.hpp" />
+    <ClInclude Include="OSHGui\Misc\Any.hpp" />
+    <ClInclude Include="OSHGui\Misc\ConcurrendQueue.hpp" />
+    <ClInclude Include="OSHGui\Misc\DateTime.hpp" />
+    <ClInclude Include="OSHGui\Misc\Exceptions.hpp" />
+    <ClInclude Include="OSHGui\Misc\Intersection.hpp" />
+    <ClInclude Include="OSHGui\Misc\RawDataContainer.hpp" />
+    <ClInclude Include="OSHGui\Misc\ReverseIterator.hpp" />
+    <ClInclude Include="OSHGui\Misc\Strings.hpp" />
+    <ClInclude Include="OSHGui\Misc\TextHelper.hpp" />
+    <ClInclude Include="OSHGui\Misc\TimeSpan.hpp" />
+    <ClInclude Include="OSHGui\OSHGui.hpp" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{296FB7C3-29B9-4111-9243-6EB8CB71D458}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>OSHGui</RootNamespace>
+    <ProjectName>OSHGui</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <TargetName>OSHGui_d</TargetName>
+    <OutDir>$(ProjectDir)</OutDir>
+    <LibraryPath>Libraries;$(LibraryPath)</LibraryPath>
+    <IncludePath>Dependencies\DirectX\Include;Dependencies\SimpleImageLoader;Dependencies\JsonCpp\include;Dependencies\FreeType\include;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <TargetName>OSHGui_r</TargetName>
+    <OutDir>$(ProjectDir)</OutDir>
+    <LibraryPath>Libraries;$(LibraryPath)</LibraryPath>
+    <IncludePath>Dependencies\DirectX\Include;Dependencies\SimpleImageLoader;Dependencies\JsonCpp\include;Dependencies\FreeType\include;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;NOMINMAX;WIN32_LEAN_AND_MEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <DisableSpecificWarnings>4244;4018;4351</DisableSpecificWarnings>
+      <MinimalRebuild>false</MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <Lib>
+      <AdditionalDependencies>jsoncpp_d.lib;freetype_d.lib;simpleimageloader_d.lib</AdditionalDependencies>
+    </Lib>
+    <Lib />
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>Full</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;NOMINMAX;WIN32_LEAN_AND_MEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4244;4018;4351</DisableSpecificWarnings>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+    <Lib>
+      <AdditionalDependencies>jsoncpp_r.lib;freetype_r.lib;simpleimageloader_r.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>
+      </AdditionalLibraryDirectories>
+    </Lib>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

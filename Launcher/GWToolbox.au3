@@ -18,7 +18,7 @@ Opt("GuiResizeMode", BitOR($GUI_DOCKSIZE, $GUI_DOCKTOP, $GUI_DOCKLEFT))
 
 ; ==== Globals ====
 Global Const $debug = True And Not @Compiled
-Global Const $no_update = True
+Global Const $no_update = False
 Global Const $host = "http://fbgmguild.com/GWToolboxpp/"
 Global Const $folder = @LocalAppDataDir & "\GWToolboxpp\"
 Global Const $dllpath = $folder & "GWToolbox.dll"
@@ -152,9 +152,9 @@ EndFunc
 ; ==== Install resources ====
 ; various
 If $debug Then
-	FileCopy("..\Debug\GWToolbox.dll", $dllpath, $FC_OVERWRITE)
+	FileCopy("..\GWToolbox\Debug\GWToolbox.dll", $dllpath, $FC_OVERWRITE)
 Else
-	FileInstall("..\Release\GWToolbox.dll", $dllpath, $FC_NOOVERWRITE)
+	FileInstall("..\GWToolbox\Release\GWToolbox.dll", $dllpath, $FC_NOOVERWRITE)
 EndIf
 If Not FileExists($dllpath) Then Error("Failed to install GWToolbox.dll")
 FileInstall("..\resources\DefaultTheme.txt", $folder & "Theme.txt")

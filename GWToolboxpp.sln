@@ -3,14 +3,14 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
 VisualStudioVersion = 12.0.40629.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GWToolbox", "GWToolbox.vcxproj", "{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GWToolbox", "GWToolbox\GWToolbox.vcxproj", "{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}"
 	ProjectSection(ProjectDependencies) = postProject
 		{296FB7C3-29B9-4111-9243-6EB8CB71D458} = {296FB7C3-29B9-4111-9243-6EB8CB71D458}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "API", "API.vcxproj", "{37ABFEBA-D5E8-4A84-86EE-722B46FAA7F2}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "API", "API\API.vcxproj", "{37ABFEBA-D5E8-4A84-86EE-722B46FAA7F2}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OSHGui", "OSHGui.vcxproj", "{296FB7C3-29B9-4111-9243-6EB8CB71D458}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OSHGui", "OSHGui\OSHGui.vcxproj", "{296FB7C3-29B9-4111-9243-6EB8CB71D458}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
