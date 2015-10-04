@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "OSHGui.hpp"
+#include "OSHGui\OSHGui.hpp"
 
 #include "ToolboxWindow.h"
 #include "PconPanel.h"

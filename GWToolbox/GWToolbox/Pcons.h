@@ -2,9 +2,9 @@
 
 #include <stdint.h>
 
-#include "OSHGui.hpp"
+#include "OSHGui\OSHGui.hpp"
 
-#include "GwConstants.h"
+#include "GWCA\GwConstants.h"
 
 #include "Timer.h"
 

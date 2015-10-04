@@ -3,7 +3,7 @@
 #include <list>
 #include <vector>
 
-#include "GwConstants.h"
+#include "GWCA\GwConstants.h"
 
 #include "Timer.h"
 #include "Pcons.h"

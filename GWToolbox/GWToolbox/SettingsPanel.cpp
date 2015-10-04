@@ -2,7 +2,7 @@
 
 #include <Windows.h>
 
-#include "APIMain.h"
+#include "GWCA\APIMain.h"
 
 #include "GWToolbox.h"
 #include "Config.h"

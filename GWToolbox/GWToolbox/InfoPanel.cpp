@@ -3,7 +3,7 @@
 #include <string>
 #include <cmath>
 
-#include "APIMain.h"
+#include "GWCA\APIMain.h"
 
 #include "GWToolbox.h"
 #include "Config.h"

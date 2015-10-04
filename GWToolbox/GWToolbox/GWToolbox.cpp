@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "OSHGui.hpp"
+#include "OSHGui\OSHGui.hpp"
 
 #include "Timer.h"
 #include "MainWindow.h"

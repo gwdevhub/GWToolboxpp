@@ -3,7 +3,7 @@
 #include <Shlobj.h>
 #include <Shlwapi.h>
 
-#include "OSHGui.hpp"
+#include "OSHGui\OSHGui.hpp"
 
 #include <string>
 #include "logger.h"

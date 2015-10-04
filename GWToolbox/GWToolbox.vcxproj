@@ -41,14 +41,14 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(SolutionDir)OSHGui\OSHGui;$(SolutionDir)API\API;Dependencies;Dependencies\DirectX\Include;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)OSHGui;$(SolutionDir)GWCA;Dependencies;Dependencies\DirectX\Include;$(IncludePath)</IncludePath>
     <LibraryPath>Dependencies\DirectX\Lib\x86\;$(LibraryPath)</LibraryPath>
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(ProjectDir)$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(SolutionDir)OSHGui\OSHGui;$(SolutionDir)API\API;Dependencies;Dependencies\DirectX\Include;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)OSHGui;$(SolutionDir)GWCA;Dependencies;Dependencies\DirectX\Include;$(IncludePath)</IncludePath>
     <OutDir>$(Configuration)\</OutDir>
     <LibraryPath>Dependencies\DirectX\Lib\x86\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
@@ -142,8 +142,8 @@
     <ClCompile Include="GWToolbox\TravelPanel.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\API\API.vcxproj">
-      <Project>{37abfeba-d5e8-4a84-86ee-722b46faa7f2}</Project>
+    <ProjectReference Include="..\GWCA\GWCA.vcxproj">
+      <Project>{b3359f05-68cf-4e7f-b9d6-d106f6d48a38}</Project>
     </ProjectReference>
     <ProjectReference Include="..\OSHGui\OSHGui.vcxproj">
       <Project>{296fb7c3-29b9-4111-9243-6eb8cb71d458}</Project>

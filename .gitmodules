@@ -1,0 +1,3 @@
+[submodule "GWCA"]
+	path = GWCA
+	url = https://bitbucket.org/0x4D1/gwca

@@ -3,8 +3,8 @@
 #include <sstream>
 #include <string>
 
-#include "OSHGui.hpp"
-#include "APIMain.h"
+#include "OSHGui\OSHGui.hpp"
+#include "GWCA\APIMain.h"
 
 #include "GWToolbox.h"
 #include "Config.h"

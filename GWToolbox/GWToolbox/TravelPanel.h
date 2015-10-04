@@ -3,10 +3,10 @@
 #include <string>
 #include <Windows.h>
 
-#include "OSHGui.hpp"
+#include "OSHGui\OSHGui.hpp"
 
 #include "ToolboxPanel.h"
-#include "GwConstants.h"
+#include "GWCA\GwConstants.h"
 #include "logger.h"
 
 class TravelPanel : public ToolboxPanel {

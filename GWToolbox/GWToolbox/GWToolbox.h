@@ -2,9 +2,9 @@
 
 #include <Windows.h>
 
-#include "APIMain.h"
-#include "OSHGui.hpp"
-#include "Input/WindowsMessage.hpp"
+#include "GWCA\APIMain.h"
+#include "OSHGui\OSHGui.hpp"
+#include "OSHGui\Input\WindowsMessage.hpp"
 
 #include "Config.h"
 #include "MainWindow.h"

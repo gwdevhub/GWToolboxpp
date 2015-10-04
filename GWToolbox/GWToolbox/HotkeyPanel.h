@@ -6,8 +6,8 @@
 #include <Windows.h>
 #include <string>
 
-#include "OSHGui.hpp"
-#include "APIMain.h"
+#include "OSHGui\OSHGui.hpp"
+#include "GWCA\APIMain.h"
 
 #include "ToolboxPanel.h"
 #include "logger.h"
