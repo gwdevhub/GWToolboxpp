@@ -145,9 +145,9 @@ namespace OSHGui
 
 			void FillEllipse(const Color &color, float x, float y, float width, float height);
 
-			void DrawString(const Misc::AnsiString &text, const FontPtr &font, const Color &color, const PointF &origin);
+			void DrawString(const Misc::UnicodeString &text, const FontPtr &font, const Color &color, const PointF &origin);
 
-			void DrawString(const Misc::AnsiString &text, const FontPtr &font, const Color &color, float x, float y);
+			void DrawString(const Misc::UnicodeString &text, const FontPtr &font, const Color &color, float x, float y);
 
 			void DrawImage(const std::shared_ptr<Image> &image, const ColorRectangle &color, const PointF &origin);
 

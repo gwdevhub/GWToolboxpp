@@ -115,7 +115,7 @@ namespace OSHGui
 		void HotkeyToText();
 
 		static const Drawing::SizeI DefaultSize;
-		static std::map<Key, Misc::AnsiString> HotkeyNames;
+		static std::map<Key, Misc::UnicodeString> HotkeyNames;
 		
 		std::unique_ptr<TextBox> textBox_;
 		

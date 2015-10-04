@@ -29,17 +29,17 @@ void SettingsPanel::BuildUI() {
 	const int item_height = 25;
 
 	Label* version = new Label();
-	version->SetText(string("GWToolbox++ version ") + GWToolbox::VersionA);
+	version->SetText(wstring(L"GWToolbox++ version ") + GWToolbox::Version);
 	version->SetLocation(GetWidth() / 2 - version->GetWidth() / 2, DefaultBorderPadding);
 	AddControl(version);
 
 	Label* authors = new Label();
-	authors->SetText("by Has and KAOS");
+	authors->SetText(L"by Has and KAOS");
 	authors->SetLocation(GetWidth() / 2 - authors->GetWidth() / 2, version->GetBottom() + DefaultBorderPadding);
 	AddControl(authors);
 
 	CheckBox* tabsleft = new CheckBox();
-	tabsleft->SetText("Open tabs on the left");
+	tabsleft->SetText(L"Open tabs on the left");
 	tabsleft->SetLocation(DefaultBorderPadding, authors->GetBottom() + DefaultBorderPadding * 2);
 	tabsleft->SetSize(item_width, item_height);
 	tabsleft->SetChecked(config->iniReadBool(MainWindow::IniSection(), 
@@ -52,7 +52,7 @@ void SettingsPanel::BuildUI() {
 	AddControl(tabsleft);
 
 	CheckBox* freeze = new CheckBox();
-	freeze->SetText("Freeze info widget positions");
+	freeze->SetText(L"Freeze info widget positions");
 	freeze->SetLocation(DefaultBorderPadding, tabsleft->GetBottom());
 	freeze->SetSize(item_width, item_height);
 	freeze->SetChecked(config->iniReadBool(MainWindow::IniSection(), 
@@ -69,7 +69,7 @@ void SettingsPanel::BuildUI() {
 	AddControl(freeze);
 
 	CheckBox* hidetarget = new CheckBox();
-	hidetarget->SetText("Hide target windows");
+	hidetarget->SetText(L"Hide target windows");
 	hidetarget->SetLocation(DefaultBorderPadding, freeze->GetBottom());
 	hidetarget->SetSize(item_width, item_height);
 	hidetarget->SetChecked(config->iniReadBool(MainWindow::IniSection(), 
@@ -84,7 +84,7 @@ void SettingsPanel::BuildUI() {
 	AddControl(hidetarget);
 
 	CheckBox* minimizealtpos = new CheckBox();
-	minimizealtpos->SetText("Minimize to Alt Position");
+	minimizealtpos->SetText(L"Minimize to Alt Position");
 	minimizealtpos->SetLocation(DefaultBorderPadding, hidetarget->GetBottom());
 	minimizealtpos->SetSize(item_width, item_height);
 	minimizealtpos->SetChecked(config->iniReadBool(MainWindow::IniSection(),
@@ -98,7 +98,7 @@ void SettingsPanel::BuildUI() {
 	AddControl(minimizealtpos);
 
 	CheckBox* tickwithpcons = new CheckBox();
-	tickwithpcons->SetText("Tick with pcon status");
+	tickwithpcons->SetText(L"Tick with pcon status");
 	tickwithpcons->SetLocation(DefaultBorderPadding, minimizealtpos->GetBottom());
 	tickwithpcons->SetSize(item_width, item_height);
 	tickwithpcons->SetChecked(config->iniReadBool(MainWindow::IniSection(), 
@@ -112,7 +112,7 @@ void SettingsPanel::BuildUI() {
 	AddControl(tickwithpcons);
 
 	CheckBox* savelocation = new CheckBox();
-	savelocation->SetText("Save location data");
+	savelocation->SetText(L"Save location data");
 	savelocation->SetLocation(DefaultBorderPadding, tickwithpcons->GetBottom());
 	savelocation->SetSize(item_width, item_height);
 	savelocation->SetChecked(location_active_);
@@ -126,17 +126,17 @@ void SettingsPanel::BuildUI() {
 
 
 	Button* folder = new Button();
-	folder->SetText("Open Settings Folder");
+	folder->SetText(L"Open Settings Folder");
 	folder->SetSize(item_width, item_height);
 	folder->SetLocation(DefaultBorderPadding, GetHeight() - DefaultBorderPadding - folder->GetHeight());
 	folder->GetClickEvent() += ClickEventHandler([](Control*) {
 		CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-		ShellExecuteW(NULL, L"open", GuiUtils::getSettingsFolderW().c_str(), NULL, NULL, SW_SHOWNORMAL);
+		ShellExecuteW(NULL, L"open", GuiUtils::getSettingsFolder().c_str(), NULL, NULL, SW_SHOWNORMAL);
 	});
 	AddControl(folder);
 
 	Button* website = new Button();
-	website->SetText("Open GWToolbox++ Website");
+	website->SetText(L"Open GWToolbox++ Website");
 	website->SetSize(item_width, item_height);
 	website->SetLocation(DefaultBorderPadding, folder->GetTop() - DefaultBorderPadding - website->GetHeight());
 	website->GetClickEvent() += ClickEventHandler([](Control*) {

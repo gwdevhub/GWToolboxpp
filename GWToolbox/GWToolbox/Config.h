@@ -23,7 +23,7 @@ public:
 	const wstring version = L"1.0";
 
 	Config() {
-		iniFilePath = GuiUtils::getPathW(L"GWToolbox.ini");
+		iniFilePath = GuiUtils::getPath(L"GWToolbox.ini");
 
 		iniFile = new CSimpleIni(false, false, false);
 		iniFile->LoadFile(iniFilePath.c_str());

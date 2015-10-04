@@ -21,7 +21,7 @@ private:
 	PictureBox* const pic;
 
 public:
-	TabButton(const char* s, const char* icon);
+	TabButton(const wchar_t* s, const char* icon);
 
 	void DrawSelf(Drawing::RenderContext &context) override;
 	void CalculateLabelLocation() override;
@@ -76,7 +76,7 @@ private:
 	MaterialsPanel* const materials_panel_;
 	SettingsPanel* const settings_panel_;
 
-	void CreateTabButton(const char* s, int& button_idx, int& panel_idx, const char* icon);
+	void CreateTabButton(const wchar_t* s, int& button_idx, int& panel_idx, const char* icon);
 	void ToggleMinimize();
 	void SaveLocation();
 	void SaveMinimizedLocation();

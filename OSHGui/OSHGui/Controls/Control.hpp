@@ -382,13 +382,13 @@ namespace OSHGui
 		 *
 		 * \param name
 		 */
-		virtual void SetName(const Misc::AnsiString &name);
+		virtual void SetName(const Misc::UnicodeString &name);
 		/**
 		 * Gets the name used to identify the control.
 		 *
 		 * \return name
 		 */
-		virtual const Misc::AnsiString& GetName() const;
+		virtual const Misc::UnicodeString& GetName() const;
 		/**
 		 * Sets the font of the text in the control.
 		 *
@@ -621,7 +621,7 @@ namespace OSHGui
 		* \param name
 		* \return 0, falls kein Steuerelement mit diesem Namen existiert
 		*/
-		Control* GetChildByName(const Misc::AnsiString &name) const;
+		Control* GetChildByName(const Misc::UnicodeString &name) const;
 		
 		/**
 		 * Processes a mouse message. Should not be invoked by the user.
@@ -717,7 +717,7 @@ namespace OSHGui
 		std::deque<Control*> internalControls_;
 		std::deque<Control*> controls_;
 
-		Misc::AnsiString name_;
+		Misc::UnicodeString name_;
 		ControlType type_;
 
 		bool canRaiseEvents_;

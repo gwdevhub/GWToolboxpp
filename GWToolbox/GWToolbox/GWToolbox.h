@@ -22,8 +22,7 @@
 class GWToolbox {
 public:
 	static const wchar_t * Host;
-	static const char* VersionA;
-	static const wchar_t* VersionW;
+	static const wchar_t* Version;
 
 	//------ Static Fields ------//
 private:

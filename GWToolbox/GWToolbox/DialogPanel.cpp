@@ -16,19 +16,19 @@ DialogPanel::DialogPanel() {
 
 void DialogPanel::BuildUI() {
 
-	CreateButton(0, 0, 2, "Four Horseman", QuestAcceptDialog(GwConstants::QuestID::UW::Planes));
-	CreateButton(1, 0, 2, "Demon Assassin", QuestAcceptDialog(GwConstants::QuestID::UW::Mnt));
-	CreateButton(0, 1, 2, "Tower of Strength", QuestAcceptDialog(GwConstants::QuestID::Fow::Tos));
-	CreateButton(1, 1, 2, "Foundry Reward", QuestRewardDialog(GwConstants::QuestID::Doa::FoundryBreakout));
+	CreateButton(0, 0, 2, L"Four Horseman", QuestAcceptDialog(GwConstants::QuestID::UW::Planes));
+	CreateButton(1, 0, 2, L"Demon Assassin", QuestAcceptDialog(GwConstants::QuestID::UW::Mnt));
+	CreateButton(0, 1, 2, L"Tower of Strength", QuestAcceptDialog(GwConstants::QuestID::Fow::Tos));
+	CreateButton(1, 1, 2, L"Foundry Reward", QuestRewardDialog(GwConstants::QuestID::Doa::FoundryBreakout));
 
-	CreateButton(0, 2, 4, "Lab", GwConstants::DialogID::UwTeleLab);
-	CreateButton(1, 2, 4, "Vale", GwConstants::DialogID::UwTeleVale);
-	CreateButton(2, 2, 4, "Pits", GwConstants::DialogID::UwTelePits);
-	CreateButton(3, 2, 4, "Pools", GwConstants::DialogID::UwTelePools);
+	CreateButton(0, 2, 4, L"Lab", GwConstants::DialogID::UwTeleLab);
+	CreateButton(1, 2, 4, L"Vale", GwConstants::DialogID::UwTeleVale);
+	CreateButton(2, 2, 4, L"Pits", GwConstants::DialogID::UwTelePits);
+	CreateButton(3, 2, 4, L"Pools", GwConstants::DialogID::UwTelePools);
 
-	CreateButton(0, 3, 3, "Planes", GwConstants::DialogID::UwTelePlanes);
-	CreateButton(1, 3, 3, "Wastes", GwConstants::DialogID::UwTeleWastes);
-	CreateButton(2, 3, 3, "Mountains", GwConstants::DialogID::UwTeleMnt);
+	CreateButton(0, 3, 3, L"Planes", GwConstants::DialogID::UwTelePlanes);
+	CreateButton(1, 3, 3, L"Wastes", GwConstants::DialogID::UwTeleWastes);
+	CreateButton(2, 3, 3, L"Mountains", GwConstants::DialogID::UwTeleMnt);
 
 	for (int i = 0; i < 3; ++i) {
 		wstring key = wstring(L"Quest") + to_wstring(i);
@@ -50,7 +50,7 @@ void DialogPanel::BuildUI() {
 		Button* take = new Button();
 		take->SetSize(GuiUtils::ComputeWidth(GetWidth(), 4), BUTTON_HEIGHT);
 		take->SetLocation(GuiUtils::ComputeX(GetWidth(), 4, 2), GuiUtils::ComputeY(i + 4));
-		take->SetText("Take");
+		take->SetText(L"Take");
 		take->GetClickEvent() += ClickEventHandler([this, fav_combo](Control*) {
 			int index = fav_combo->GetSelectedIndex();
 			GWAPIMgr::instance()->Agents()->Dialog(QuestAcceptDialog(IndexToQuestID(index)));
@@ -60,7 +60,7 @@ void DialogPanel::BuildUI() {
 		Button* complete = new Button();
 		complete->SetSize(GuiUtils::ComputeWidth(GetWidth(), 4), GuiUtils::ROW_HEIGHT);
 		complete->SetLocation(GuiUtils::ComputeX(GetWidth(), 4, 3), GuiUtils::ComputeY(i + 4));
-		complete->SetText("Complete");
+		complete->SetText(L"Complete");
 		complete->GetClickEvent() += ClickEventHandler([this, fav_combo](Control*) {
 			int index = fav_combo->GetSelectedIndex();
 			GWAPIMgr::instance()->Agents()->Dialog(QuestRewardDialog(IndexToQuestID(index)));
@@ -80,7 +80,7 @@ void DialogPanel::BuildUI() {
 	Button* combo_send = new Button();
 	combo_send->SetLocation(GuiUtils::ComputeX(GetWidth(), 4, 3), GuiUtils::ComputeY(7));
 	combo_send->SetSize(GuiUtils::ComputeWidth(GetWidth(), 4), GuiUtils::ROW_HEIGHT);
-	combo_send->SetText("Send");
+	combo_send->SetText(L"Send");
 	combo_send->GetClickEvent() += ClickEventHandler([this, combo](Control*) {
 		int index = combo->GetSelectedIndex();
 		int id = IndexToDialogID(index);
@@ -99,7 +99,7 @@ void DialogPanel::BuildUI() {
 		try {
 			std::stol(textbox->GetText(), 0, 0);
 		} catch (...) {
-			textbox->SetText("0");
+			textbox->SetText(L"0");
 		}
 	});
 	textbox->GetKeyPressEvent() += KeyPressEventHandler([textbox](Control*,KeyPressEventArgs args){
@@ -115,7 +115,7 @@ void DialogPanel::BuildUI() {
 	Button* custom_send = new Button();
 	custom_send->SetLocation(GuiUtils::ComputeX(GetWidth(), 4, 3), GuiUtils::ComputeY(8));
 	custom_send->SetSize(GuiUtils::ComputeWidth(GetWidth(), 4), BUTTON_HEIGHT);
-	custom_send->SetText("Send");
+	custom_send->SetText(L"Send");
 	custom_send->GetClickEvent() += ClickEventHandler([textbox](Control*) {
 		try {
 			long id = std::stol(textbox->GetText(), 0, 0);
@@ -126,7 +126,7 @@ void DialogPanel::BuildUI() {
 }
 
 void DialogPanel::CreateButton(int grid_x, int grid_y, int hor_amount,
-	std::string text, DWORD dialog) {
+	std::wstring text, DWORD dialog) {
 
 	Button* button = new Button();
 	button->SetText(text);
@@ -138,38 +138,38 @@ void DialogPanel::CreateButton(int grid_x, int grid_y, int hor_amount,
 	AddControl(button);
 }
 
-std::string DialogPanel::IndexToQuestName(int index) {
+std::wstring DialogPanel::IndexToQuestName(int index) {
 	switch (index) {
-	case 0: return "UW - Chamber";
-	case 1: return "UW - Wastes";
-	case 2: return "UW - UWG";
-	case 3: return "UW - Mnt";
-	case 4: return "UW - Pits";
-	case 5: return "UW - Planes";
-	case 6: return "UW - Pools";
-	case 7: return "UW - Escort";
-	case 8: return "UW - Restore";
-	case 9: return "UW - Vale";
-	case 10: return "FoW - Defend";
-	case 11: return "FoW - Army Of Darknesses";
-	case 12: return "FoW - WailingLord";
-	case 13: return "FoW - Griffons";
-	case 14: return "FoW - Slaves";
-	case 15: return "FoW - Restore";
-	case 16: return "FoW - Hunt";
-	case 17: return "FoW - Forgemaster";
-	case 18: return "FoW - Tos";
-	case 19: return "FoW - Toc";
-	case 20: return "FoW - Khobay";
-	case 21: return "DoA - Gloom 1: Deathbringer Company";
-	case 22: return "DoA - Gloom 2: Rift Between Us";
-	case 23: return "DoA - Gloom 3: To The Rescue";
-	case 24: return "DoA - City";
-	case 25: return "DoA - Veil 1: Breaching Stygian Veil";
-	case 26: return "DoA - Veil 2: Brood Wars";
-	case 27: return "DoA - Foundry 1: Foundry Breakout";
-	case 28: return "DoA - Foundry 2: Foundry Of Failed Creations";
-	default: return "";
+	case 0: return L"UW - Chamber";
+	case 1: return L"UW - Wastes";
+	case 2: return L"UW - UWG";
+	case 3: return L"UW - Mnt";
+	case 4: return L"UW - Pits";
+	case 5: return L"UW - Planes";
+	case 6: return L"UW - Pools";
+	case 7: return L"UW - Escort";
+	case 8: return L"UW - Restore";
+	case 9: return L"UW - Vale";
+	case 10: return L"FoW - Defend";
+	case 11: return L"FoW - Army Of Darknesses";
+	case 12: return L"FoW - WailingLord";
+	case 13: return L"FoW - Griffons";
+	case 14: return L"FoW - Slaves";
+	case 15: return L"FoW - Restore";
+	case 16: return L"FoW - Hunt";
+	case 17: return L"FoW - Forgemaster";
+	case 18: return L"FoW - Tos";
+	case 19: return L"FoW - Toc";
+	case 20: return L"FoW - Khobay";
+	case 21: return L"DoA - Gloom 1: Deathbringer Company";
+	case 22: return L"DoA - Gloom 2: Rift Between Us";
+	case 23: return L"DoA - Gloom 3: To The Rescue";
+	case 24: return L"DoA - City";
+	case 25: return L"DoA - Veil 1: Breaching Stygian Veil";
+	case 26: return L"DoA - Veil 2: Brood Wars";
+	case 27: return L"DoA - Foundry 1: Foundry Breakout";
+	case 28: return L"DoA - Foundry 2: Foundry Of Failed Creations";
+	default: return L"";
 	}
 }
 
@@ -208,20 +208,20 @@ DWORD DialogPanel::IndexToQuestID(int index) {
 	}
 }
 
-string DialogPanel::IndexToDialogName(int index) {
+wstring DialogPanel::IndexToDialogName(int index) {
 	switch (index) {
-	case 0: return "Craft fow armor";
-	case 1: return "Profession Change - W";
-	case 2: return "Profession Change - R";
-	case 3: return "Profession Change - Mo";
-	case 4: return "Profession Change - N";
-	case 5: return "Profession Change - Me";
-	case 6: return "Profession Change - E";
-	case 7: return "Profession Change - A";
-	case 8: return "Profession Change - Rt";
-	case 9: return "Profession Change - P";
-	case 10: return "Profession Change - D";
-	default: return "";
+	case 0: return L"Craft fow armor";
+	case 1: return L"Profession Change - W";
+	case 2: return L"Profession Change - R";
+	case 3: return L"Profession Change - Mo";
+	case 4: return L"Profession Change - N";
+	case 5: return L"Profession Change - Me";
+	case 6: return L"Profession Change - E";
+	case 7: return L"Profession Change - A";
+	case 8: return L"Profession Change - Rt";
+	case 9: return L"Profession Change - P";
+	case 10: return L"Profession Change - D";
+	default: return L"";
 	}
 }
 

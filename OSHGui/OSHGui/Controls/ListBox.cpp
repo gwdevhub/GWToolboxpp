@@ -96,7 +96,7 @@ namespace OSHGui
 		return autoScrollEnabled_;
 	}
 	//---------------------------------------------------------------------------
-	const Misc::AnsiString& ListBox::GetItem(int index) const
+	const Misc::UnicodeString& ListBox::GetItem(int index) const
 	{
 		#ifndef OSHGUI_DONTUSEEXCEPTIONS
 		if (index < 0 || index >= (int)items_.size())
@@ -137,7 +137,7 @@ namespace OSHGui
 		return selectedIndex_;
 	}
 	//---------------------------------------------------------------------------
-	void ListBox::SetSelectedItem(const Misc::AnsiString &item)
+	void ListBox::SetSelectedItem(const Misc::UnicodeString &item)
 	{
 		for (int i = items_.size() - 1; i >= 0; --i)
 		{
@@ -149,7 +149,7 @@ namespace OSHGui
 		}
 	}
 	//---------------------------------------------------------------------------
-	const Misc::AnsiString& ListBox::GetSelectedItem() const
+	const Misc::UnicodeString& ListBox::GetSelectedItem() const
 	{
 		return GetItem(GetSelectedIndex());
 	}
@@ -180,12 +180,12 @@ namespace OSHGui
 		SetSize(GetWidth(), newHeight + DefaultItemAreaPadding.Height);
 	}
 	//---------------------------------------------------------------------------
-	void ListBox::AddItem(const Misc::AnsiString &text)
+	void ListBox::AddItem(const Misc::UnicodeString &text)
 	{
 		InsertItem(!items_.empty() ? items_.size() : 0, text);
 	}
 	//---------------------------------------------------------------------------
-	void ListBox::InsertItem(int index, const Misc::AnsiString &text)
+	void ListBox::InsertItem(int index, const Misc::UnicodeString &text)
 	{
 		items_.insert(items_.begin() + index, text);
 

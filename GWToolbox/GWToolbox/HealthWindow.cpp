@@ -25,7 +25,7 @@ HealthWindow::HealthWindow() {
 	int offsetY = 2;
 
 	DragButton* label_shadow = new DragButton();
-	label_shadow->SetText("Health");
+	label_shadow->SetText(L"Health");
 	label_shadow->SetSize(WIDTH, LABEL_HEIGHT);
 	label_shadow->SetLocation(1, 1);
 	label_shadow->SetFont(GuiUtils::getTBFont(12.0f, true));
@@ -35,7 +35,7 @@ HealthWindow::HealthWindow() {
 	AddControl(label_shadow);
 
 	DragButton* label = new DragButton();
-	label->SetText("Health");
+	label->SetText(L"Health");
 	label->SetSize(WIDTH, LABEL_HEIGHT);
 	label->SetLocation(0, 0);
 	label->SetFont(GuiUtils::getTBFont(12.0f, true));
@@ -47,7 +47,7 @@ HealthWindow::HealthWindow() {
 	AddControl(label);
 
 	percent_shadow = new DragButton();
-	percent_shadow->SetText("");
+	percent_shadow->SetText(L"");
 	percent_shadow->SetSize(WIDTH, PERCENT_HEIGHT);
 	percent_shadow->SetLocation(offsetX, LABEL_HEIGHT + offsetY);
 	percent_shadow->SetFont(GuiUtils::getTBFont(26.0f, true));
@@ -57,7 +57,7 @@ HealthWindow::HealthWindow() {
 	AddControl(percent_shadow);
 
 	percent = new DragButton();
-	percent->SetText("");
+	percent->SetText(L"");
 	percent->SetSize(WIDTH, PERCENT_HEIGHT);
 	percent->SetLocation(0, LABEL_HEIGHT);
 	percent->SetFont(GuiUtils::getTBFont(26.0f, true));
@@ -69,7 +69,7 @@ HealthWindow::HealthWindow() {
 	AddControl(percent);
 
 	absolute_shadow = new DragButton();
-	absolute_shadow->SetText("");
+	absolute_shadow->SetText(L"");
 	absolute_shadow->SetSize(WIDTH, ABSOLUTE_HEIGHT);
 	absolute_shadow->SetLocation(offsetX, LABEL_HEIGHT + PERCENT_HEIGHT + offsetY);
 	absolute_shadow->SetFont(GuiUtils::getTBFont(16.0f, true));
@@ -79,7 +79,7 @@ HealthWindow::HealthWindow() {
 	AddControl(absolute_shadow);
 
 	absolute = new DragButton();
-	absolute->SetText("");
+	absolute->SetText(L"");
 	absolute->SetSize(WIDTH, ABSOLUTE_HEIGHT);
 	absolute->SetLocation(0, LABEL_HEIGHT + PERCENT_HEIGHT);
 	absolute->SetFont(GuiUtils::getTBFont(16.0f, true));
@@ -128,22 +128,22 @@ void HealthWindow::UpdateUI() {
 		current_hp = hp;
 		current_max = max;
 
-		string s1;
-		string s2;
+		wstring s1;
+		wstring s2;
 		if (target && target->Type == 0xDB) {
-			s1 = to_string(lroundf(target->HP * 100));
-			s1 += " %";
+			s1 = to_wstring(lroundf(target->HP * 100));
+			s1 += L" %";
 			
 			if (target->MaxHP > 0) {
-				s2 = to_string(lroundf(target->HP * target->MaxHP));
-				s2 = s2 + " / " + to_string(target->MaxHP);
+				s2 = to_wstring(lroundf(target->HP * target->MaxHP));
+				s2 = s2 + L" / " + to_wstring(target->MaxHP);
 			} else {
-				s2 = "- / -";
+				s2 = L"- / -";
 			}
 			if (!isVisible_) _Show(true);
 		} else {
-			s1 = "-";
-			s2 = "- / -";
+			s1 = L"-";
+			s2 = L"- / -";
 			if (hide_target && isVisible_) _Show(false);
 		}
 		percent->SetText(s1);

@@ -40,13 +40,13 @@ namespace OSHGui
 		 *
 		 * \param text
 		 */
-		void SetText(const Misc::AnsiString &text);
+		void SetText(const Misc::UnicodeString &text);
 		/**
 		 * Gibt den Text zurück.
 		 *
 		 * \return der Text
 		 */
-		const Misc::AnsiString& GetText() const;
+		const Misc::UnicodeString& GetText() const;
 		/**
 		 * Legt die Schriftart des Texts im Steuerelement fest.
 		 *

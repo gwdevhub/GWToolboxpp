@@ -24,10 +24,10 @@ private:
 	DWORD district_;
 	DWORD language_;
 
-	void AddTravelButton(std::string text, int grid_x, int grid_y, 
+	void AddTravelButton(std::wstring text, int grid_x, int grid_y, 
 		GwConstants::MapID map_id);
 	void UpdateDistrict(int gui_index);
-	std::string IndexToOutpostName(int index);
+	std::wstring IndexToOutpostName(int index);
 	GwConstants::MapID IndexToOutpostID(int index);
 
 public:

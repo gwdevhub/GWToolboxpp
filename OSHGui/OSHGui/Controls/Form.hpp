@@ -93,13 +93,13 @@ namespace OSHGui
 		 *
 		 * \param text
 		 */
-		void SetText(const Misc::AnsiString &text);
+		void SetText(const Misc::UnicodeString &text);
 		/**
 		 * Gibt den Text zurück.
 		 *
 		 * \return der Text
 		 */
-		const Misc::AnsiString& GetText() const;
+		const Misc::UnicodeString& GetText() const;
 		/**
 		 * Legt die Fordergrundfarbe des Steuerelements fest.
 		 *
@@ -208,8 +208,8 @@ namespace OSHGui
 			CaptionBar();
 
 			virtual void SetSize(const Drawing::SizeI &size) override;
-			void SetText(const Misc::AnsiString &text);
-			const Misc::AnsiString& GetText() const;
+			void SetText(const Misc::UnicodeString &text);
+			const Misc::UnicodeString& GetText() const;
 			virtual void SetForeColor(const Drawing::Color &color) override;
 
 		protected:

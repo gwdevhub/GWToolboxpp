@@ -40,13 +40,13 @@ Pcon::Pcon(const wchar_t* ini)
 
 	int text_x = 5;
 	int text_y = 3;
-	shadow->SetText(std::to_string(quantity));
+	shadow->SetText(std::to_wstring(quantity));
 	shadow->SetFont(GuiUtils::getTBFont(11.0f, true));
 	shadow->SetForeColor(Drawing::Color::Black());
 	shadow->SetLocation(text_x + 1, text_y + 1);
 	AddSubControl(shadow);
 
-	label_->SetText(std::to_string(quantity));
+	label_->SetText(std::to_wstring(quantity));
 	label_->SetFont(GuiUtils::getTBFont(11.0f, true));
 	label_->SetLocation(text_x, text_y);
 
@@ -81,8 +81,8 @@ void Pcon::setIcon(const char* icon, int xOff, int yOff, int size) {
 
 void Pcon::UpdateUI() {
 	if (update_ui) {
-		label_->SetText(std::to_string(quantity));
-		shadow->SetText(std::to_string(quantity));
+		label_->SetText(std::to_wstring(quantity));
+		shadow->SetText(std::to_wstring(quantity));
 
 		if (quantity == 0) {
 			label_->SetForeColor(Color(1.0, 1.0, 0.0, 0.0));

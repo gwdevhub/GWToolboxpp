@@ -261,12 +261,12 @@ namespace OSHGui
 		return tag_;
 	}
 	//---------------------------------------------------------------------------
-	void Control::SetName(const Misc::AnsiString &name)
+	void Control::SetName(const Misc::UnicodeString &name)
 	{
 		name_ = name;
 	}
 	//---------------------------------------------------------------------------
-	const Misc::AnsiString& Control::GetName() const
+	const Misc::UnicodeString& Control::GetName() const
 	{
 		return name_;
 	}
@@ -591,7 +591,7 @@ namespace OSHGui
 		return nullptr;
 	}
 	//---------------------------------------------------------------------------
-	Control* Control::GetChildByName(const Misc::AnsiString &name) const
+	Control* Control::GetChildByName(const Misc::UnicodeString &name) const
 	{
 		for (auto &control : controls_)
 		{

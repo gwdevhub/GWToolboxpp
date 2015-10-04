@@ -32,31 +32,31 @@ namespace OSHGui
 			RefreshSize();
 		}
 		//---------------------------------------------------------------------------
-		void TextHelper::SetText(const AnsiString &text)
+		void TextHelper::SetText(const UnicodeString &text)
 		{
 			text_ = text;
 			RefreshSize();
 		}
 		//---------------------------------------------------------------------------
-		void TextHelper::Append(const AnsiChar character)
+		void TextHelper::Append(const UnicodeChar character)
 		{
 			text_.append(1, character);
 			RefreshSize();
 		}
 		//---------------------------------------------------------------------------
-		void TextHelper::Append(const AnsiString &text)
+		void TextHelper::Append(const UnicodeString &text)
 		{
 			text_.append(text);
 			RefreshSize();
 		}
 		//---------------------------------------------------------------------------
-		void TextHelper::Insert(int position, const AnsiChar character)
+		void TextHelper::Insert(int position, const UnicodeChar character)
 		{
 			text_.insert(position, 1, character);
 			RefreshSize();
 		}
 		//---------------------------------------------------------------------------
-		void TextHelper::Insert(int position, const AnsiString &text)
+		void TextHelper::Insert(int position, const UnicodeString &text)
 		{
 			text_.insert(position, text);
 			RefreshSize();
@@ -87,7 +87,7 @@ namespace OSHGui
 			return text_.length();
 		}
 		//---------------------------------------------------------------------------
-		const AnsiString& TextHelper::GetText() const
+		const UnicodeString& TextHelper::GetText() const
 		{
 			return text_;
 		}
@@ -116,7 +116,7 @@ namespace OSHGui
 				}
 			}
 			
-			auto substring = text_.substr(0, trailing ? index + 1 : index);
+			std::wstring substring = text_.substr(0, trailing ? index + 1 : index);
 			Drawing::SizeF size(font_->GetTextExtent(substring), font_->GetFontHeight());
 			
 			return Drawing::PointF(size.Width, size.Height);//Drawing::PointF(size.Width - 2, size.Height < font->GetSize() ? font->GetSize() : size.Height);

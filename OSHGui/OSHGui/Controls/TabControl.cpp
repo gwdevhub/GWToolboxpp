@@ -108,7 +108,7 @@ namespace OSHGui
 		}
 	}
 	//---------------------------------------------------------------------------
-	TabPage* TabControl::GetTabPage(const Misc::AnsiString &text) const
+	TabPage* TabControl::GetTabPage(const Misc::UnicodeString &text) const
 	{
 		for (auto &binding : bindings_)
 		{
@@ -396,7 +396,7 @@ namespace OSHGui
 		label_->SetForeColor(color);
 	}
 	//---------------------------------------------------------------------------
-	void TabControl::TabControlButton::SetText(const Misc::AnsiString &text)
+	void TabControl::TabControlButton::SetText(const Misc::UnicodeString &text)
 	{
 		label_->SetText(text);
 

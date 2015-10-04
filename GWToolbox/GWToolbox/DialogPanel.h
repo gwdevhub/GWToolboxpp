@@ -14,12 +14,12 @@ private:
 	DWORD QuestRewardDialog(DWORD quest) { return (quest << 8) | 0x800007; }
 
 	void CreateButton(int grid_x, int grid_y, int hor_amount, 
-		std::string text, DWORD dialog);
+		std::wstring text, DWORD dialog);
 
-	std::string IndexToQuestName(int index);
+	std::wstring IndexToQuestName(int index);
 	DWORD IndexToQuestID(int index);
 
-	std::string IndexToDialogName(int index);
+	std::wstring IndexToDialogName(int index);
 	DWORD IndexToDialogID(int index);
 
 public:

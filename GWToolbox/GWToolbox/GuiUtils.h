@@ -22,7 +22,7 @@ public:
 	}
 
 	// Returns the settings folder as std::wstring
-	static wstring getSettingsFolderW() {
+	static wstring getSettingsFolder() {
 		WCHAR szPathW[MAX_PATH];
 		szPathW[0] = L'\0';
 		SHGetFolderPathW(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, szPathW);
@@ -38,8 +38,8 @@ public:
 	}
 
 	// Returns the path of the given file in the settings folder as std::wstring
-	static wstring getPathW(wstring file) { 
-		return getSettingsFolderW() + L"\\" + file; 
+	static wstring getPath(wstring file) { 
+		return getSettingsFolder() + L"\\" + file; 
 	}
 
 	// Returns the path of the given file in the settings folder as std::string
@@ -49,8 +49,8 @@ public:
 
 	// Returns the path of the given file in the subdirectory 
 	// in the settings folder as std::wstring
-	static wstring getSubPathW(wstring file, wstring subdir) {
-		return getSettingsFolderW() + L"\\" + subdir + L"\\" + file;
+	static wstring getSubPath(wstring file, wstring subdir) {
+		return getSettingsFolder() + L"\\" + subdir + L"\\" + file;
 	}
 
 	// Returns the path of the given file in the subdirectory 

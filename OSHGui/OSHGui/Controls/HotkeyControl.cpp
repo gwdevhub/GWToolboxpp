@@ -16,7 +16,7 @@
 
 namespace OSHGui
 {
-	std::map<Key, Misc::AnsiString> HotkeyControl::HotkeyNames;
+	std::map<Key, Misc::UnicodeString> HotkeyControl::HotkeyNames;
 	const Drawing::SizeI HotkeyControl::DefaultSize(100, 24);
 	//---------------------------------------------------------------------------
 	//Constructor
@@ -28,7 +28,7 @@ namespace OSHGui
 
 		if (HotkeyNames.empty())
 		{
-			#define EnumToString(x) #x
+			#define EnumToString(x) L#x
 			HotkeyNames[Key::None] = EnumToString(None);
 			HotkeyNames[Key::LButton] = EnumToString(LButton);
 			HotkeyNames[Key::RButton] = EnumToString(RButton);
@@ -312,15 +312,15 @@ namespace OSHGui
 	//---------------------------------------------------------------------------
 	void HotkeyControl::HotkeyToText()
 	{
-		auto ModifierToString = [](Key modifier) -> Misc::AnsiString
+		auto ModifierToString = [](Key modifier) -> Misc::UnicodeString
 		{
-			std::vector<Misc::AnsiString> modifierNames;
-			if ((modifier & Key::Control) == Key::Control) modifierNames.push_back("Control");
-			if ((modifier & Key::Alt) == Key::Alt) modifierNames.push_back("Alt");
-			if ((modifier & Key::Shift) == Key::Shift) modifierNames.push_back("Shift");
+			std::vector<Misc::UnicodeString> modifierNames;
+			if ((modifier & Key::Control) == Key::Control) modifierNames.push_back(L"Control");
+			if ((modifier & Key::Alt) == Key::Alt) modifierNames.push_back(L"Alt");
+			if ((modifier & Key::Shift) == Key::Shift) modifierNames.push_back(L"Shift");
 
-			std::stringstream s;
-			for (auto i = 0; i < modifierNames.size(); ++i)
+			std::wstringstream s;
+			for (size_t i = 0; i < modifierNames.size(); ++i)
 			{
 				if (i > 0)
 				{
@@ -337,10 +337,10 @@ namespace OSHGui
 		}
 		else if (modifier_ != Key::None && hotkey_ != Key::None && (hotkey_ != Key::ShiftKey && hotkey_ != Key::Menu && hotkey_ != Key::ControlKey))
 		{
-			auto modifierText = ModifierToString(modifier_);
-			auto hotkeyText = HotkeyNames[hotkey_];
+			Misc::UnicodeString modifierText = ModifierToString(modifier_);
+			Misc::UnicodeString hotkeyText = HotkeyNames[hotkey_];
 
-			textBox_->SetText(modifierText + " + " + hotkeyText);
+			textBox_->SetText(modifierText + L" + " + hotkeyText);
 		}
 		else if (hotkey_ != Key::None && (hotkey_ != Key::ShiftKey && hotkey_ != Key::Menu && hotkey_ != Key::ControlKey))
 		{

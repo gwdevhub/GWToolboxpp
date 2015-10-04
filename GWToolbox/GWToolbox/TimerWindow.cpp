@@ -29,7 +29,7 @@ TimerWindow::TimerWindow() {
 	int offsetX = 2;
 	int offsetY = 2;
 	shadow_ = new TimerLabel();
-	shadow_->SetText("");
+	shadow_->SetText(L"");
 	shadow_->SetAnchor(AnchorStyles::Left);
 	shadow_->SetSize(WIDTH, HEIGHT);
 	shadow_->SetLocation(offsetX, offsetY);
@@ -40,7 +40,7 @@ TimerWindow::TimerWindow() {
 	AddControl(shadow_);
 	
 	timer_ = new TimerLabel();
-	timer_->SetText("");
+	timer_->SetText(L"");
 	timer_->SetAnchor(AnchorStyles::Left);
 	timer_->SetSize(WIDTH, HEIGHT);
 	timer_->SetLocation(0, 0);
@@ -53,7 +53,7 @@ TimerWindow::TimerWindow() {
 	AddControl(timer_);
 
 	urgoz_shadow_ = new TimerLabel();
-	urgoz_shadow_->SetText("");
+	urgoz_shadow_->SetText(L"");
 	urgoz_shadow_->SetAnchor(AnchorStyles::Left);
 	urgoz_shadow_->SetSize(WIDTH, URGOZ_HEIGHT);
 	urgoz_shadow_->SetLocation(offsetX, HEIGHT + offsetY);
@@ -65,7 +65,7 @@ TimerWindow::TimerWindow() {
 	AddControl(urgoz_shadow_);
 
 	urgoz_timer_ = new TimerLabel();
-	urgoz_timer_->SetText("");
+	urgoz_timer_->SetText(L"");
 	urgoz_timer_->SetAnchor(AnchorStyles::Left);
 	urgoz_timer_->SetSize(WIDTH, URGOZ_HEIGHT);
 	urgoz_timer_->SetLocation(0, HEIGHT);
@@ -104,14 +104,14 @@ void TimerWindow::UpdateUI() {
 		unsigned long  minutes = (unsigned long)(time / 60) % 60;
 		unsigned long  hours = (unsigned long)(time / (60 * 60));
 
-		stringstream ss;
-		ss.fill('0');
+		wstringstream ss;
+		ss.fill(L'0');
 		ss << hours;
-		ss << ":";
+		ss << L":";
 		ss.width(2);
 		ss << minutes;
 		ss.width(1);
-		ss << ":";
+		ss << L":";
 		ss.width(2);
 		ss << seconds;
 		
@@ -132,13 +132,13 @@ void TimerWindow::UpdateUI() {
 
 			int temp = (time - 1) % 25;
 			
-			string text;
+			wstring text;
 			if (temp < 15) {
 				urgoz_timer_->SetForeColor(Drawing::Color::Lime());
-				text = string("Open - ") + to_string(15 - temp);
+				text = wstring(L"Open - ") + to_wstring(15 - temp);
 			} else {
 				urgoz_timer_->SetForeColor(Drawing::Color::Red());
-				text = string("Closed - ") + to_string(25 - temp);
+				text = wstring(L"Closed - ") + to_wstring(25 - temp);
 			}
 			urgoz_timer_->SetText(text);
 			urgoz_shadow_->SetText(text);

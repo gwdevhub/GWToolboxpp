@@ -58,7 +58,9 @@ namespace OSHGui
 			 * \param scaleY Skalierungsfaktor (default = 1)
 			 * \return End-X Koordinate des gezeichneten Textes
 			 */
-			virtual float DrawText(GeometryBuffer &buffer, const Misc::AnsiString &text, const PointF &position, const RectangleF *clip, const ColorRectangle &colors, const float spaceExtra = 0.0f, const float scaleX = 1.0f, const float scaleY = 1.0f) const;
+			virtual float DrawText(GeometryBuffer &buffer, const Misc::UnicodeString &text, 
+				const PointF &position, const RectangleF *clip, const ColorRectangle &colors, 
+				const float spaceExtra = 0.0f, const float scaleX = 1.0f, const float scaleY = 1.0f) const;
 
 			/**
 			 * Gets the height of a line of text.
@@ -102,7 +104,7 @@ namespace OSHGui
 			 * \return Breite des gezeichneten Textes
 			 * \sa GetTextAdvance
 			 */
-			virtual float GetTextExtent(const Misc::AnsiString &text, float scaleX = 1.0f) const;
+			virtual float GetTextExtent(const Misc::UnicodeString &text, float scaleX = 1.0f) const;
 
 			/**
 			 * Gets the width of the theoretically drawn from the text, in pixels. 
@@ -112,7 +114,7 @@ namespace OSHGui
 			 * \return Breite des gezeichneten Textes
 			 * \sa GetTextExtent
 			 */
-			virtual float GetTextAdvance(const Misc::AnsiString &text, float scaleX = 1.0f) const;
+			virtual float GetTextAdvance(const Misc::UnicodeString &text, float scaleX = 1.0f) const;
 
 			/**
 			 * Gets the index of the character that is closest to the specified pixels.
@@ -122,7 +124,7 @@ namespace OSHGui
 			 * \param scaleX Skalierungsfaktor (default = 1)
 			 * \return Index des gesuchten Zeichens [0, text.length()]
 			 */
-			size_t GetCharAtPixel(const Misc::AnsiString &text, float pixel, float scaleX = 1.0f) const
+			size_t GetCharAtPixel(const Misc::UnicodeString &text, float pixel, float scaleX = 1.0f) const
 			{
 				return GetCharAtPixel(text, 0, pixel, scaleX);
 			}
@@ -136,7 +138,7 @@ namespace OSHGui
 			 * \param scaleX Skalierungsfaktor (default = 1)
 			 * \return Index des gesuchten Zeichens [0, text.length()]
 			 */
-			size_t GetCharAtPixel(const Misc::AnsiString& text, size_t start, float pixel, float scaleX = 1.0f) const;
+			size_t GetCharAtPixel(const Misc::UnicodeString& text, size_t start, float pixel, float scaleX = 1.0f) const;
 
 			/**
 			 * Gets the to \ a codepoint belonging Glyph and possibly scans him.

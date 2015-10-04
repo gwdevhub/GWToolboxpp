@@ -53,7 +53,7 @@ namespace OSHGui
 		Panel::SetParent(parent);
 	}
 	//---------------------------------------------------------------------------
-	void TabPage::SetText(const Misc::AnsiString &text)
+	void TabPage::SetText(const Misc::UnicodeString &text)
 	{
 		if (button_)
 		{
@@ -65,7 +65,7 @@ namespace OSHGui
 		Invalidate();
 	}
 	//---------------------------------------------------------------------------
-	const Misc::AnsiString& TabPage::GetText() const
+	const Misc::UnicodeString& TabPage::GetText() const
 	{
 		return text_;
 	}

@@ -23,7 +23,7 @@ void BuildPanel::Build::BuildUI() {
 	AddControl(button);
 
 	Button* edit = new Button();
-	edit->SetText("Edit");
+	edit->SetText(L"Edit");
 	edit->SetSize(edit_button_width, GetHeight());
 	edit->SetLocation(GetWidth() - edit->GetWidth(), 0);
 	edit->GetClickEvent() += ClickEventHandler([this, button](Control*) {
@@ -120,9 +120,8 @@ void BuildPanel::BuildUI() {
 	for (int i = 0; i < N_BUILDS; ++i) {
 		int index = i + 1;
 		wstring section = wstring(L"builds") + to_wstring(index);
-		wstring wname = config->iniRead(section.c_str(), L"buildname", L"");
-		if (wname.empty()) wname = wstring(L"<Build ") + to_wstring(index) + wstring(L">");
-		string name = string(wname.begin(), wname.end());
+		wstring name = config->iniRead(section.c_str(), L"buildname", L"");
+		if (name.empty()) name = wstring(L"<Build ") + to_wstring(index) + wstring(L">");
 		Build* build = new Build(index, name, edit_build_, this);
 		build->SetSize(GetWidth() - scrollbar->GetWidth() - 2 * DefaultBorderPadding, BUILD_HEIGHT);
 		build->BuildUI();

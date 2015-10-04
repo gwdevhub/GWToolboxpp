@@ -35,16 +35,16 @@ void HotkeyPanel::BuildUI() {
 	AddControl(scrollbar);
 	
 	ComboBox* create_combo = new ComboBox();
-	create_combo->SetText("Create Hotkey"); 
-	create_combo->AddItem("Send Chat");			// 0
-	create_combo->AddItem("Use Item");			// 1
-	create_combo->AddItem("Drop or Use Buff");	// 2
-	create_combo->AddItem("Toggle...");			// 3
-	create_combo->AddItem("Execute...");		// 4
-	create_combo->AddItem("Target");			// 5
-	create_combo->AddItem("Move to");			// 6
-	create_combo->AddItem("Dialog");			// 7
-	create_combo->AddItem("Ping Build");		// 8
+	create_combo->SetText(L"Create Hotkey"); 
+	create_combo->AddItem(L"Send Chat");		// 0
+	create_combo->AddItem(L"Use Item");			// 1
+	create_combo->AddItem(L"Drop or Use Buff");	// 2
+	create_combo->AddItem(L"Toggle...");		// 3
+	create_combo->AddItem(L"Execute...");		// 4
+	create_combo->AddItem(L"Target");			// 5
+	create_combo->AddItem(L"Move to");			// 6
+	create_combo->AddItem(L"Dialog");			// 7
+	create_combo->AddItem(L"Ping Build");		// 8
 	create_combo->SetMaxShowItems(create_combo->GetItemsCount());
 	create_combo->SetLocation(DefaultBorderPadding, DefaultBorderPadding);
 	create_combo->SetSize(TBHotkey::WIDTH / 2 - TBHotkey::HSPACE / 2, TBHotkey::LINE_HEIGHT);
@@ -94,13 +94,13 @@ void HotkeyPanel::BuildUI() {
 		default:
 			break;
 		}
-		create_combo->SetText("Create Hotkey");
+		create_combo->SetText(L"Create Hotkey");
 		create_combo->SetSelectedIndex(-1);
 	});
 	AddControl(create_combo);
 
 	ComboBox* delete_combo = new ComboBox();
-	delete_combo->SetText("Delete Hotkey");
+	delete_combo->SetText(L"Delete Hotkey");
 	delete_combo->SetSize(TBHotkey::WIDTH / 2 - TBHotkey::HSPACE / 2, TBHotkey::LINE_HEIGHT);
 	delete_combo->SetLocation(create_combo->GetRight() + TBHotkey::HSPACE, create_combo->GetTop());
 	delete_combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
@@ -126,7 +126,7 @@ void HotkeyPanel::BuildUI() {
 void HotkeyPanel::UpdateDeleteCombo() {
 	delete_combo_->SetSelectedIndex(-1);
 	delete_combo_->Clear();
-	delete_combo_->SetText("Delete Hotkey");
+	delete_combo_->SetText(L"Delete Hotkey");
 	for (int i = 0; i < (int)hotkeys.size(); ++i) {
 		delete_combo_->AddItem(hotkeys[i]->GetDescription());
 	}

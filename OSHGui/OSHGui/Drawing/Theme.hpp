@@ -62,7 +62,7 @@ namespace OSHGui
 			 *
 			 * \param pathToThemeFile
 			 */
-			void Load(const Misc::AnsiString &pathToThemeFile);
+			void Load(const Misc::UnicodeString &pathToThemeFile);
 			/**
 			 * Speichert ein Theme am angegebenen Dateipfad.
 			 *
@@ -70,7 +70,7 @@ namespace OSHGui
 			 * \param style Array, Text, Int
 			 * \return im Fehlerfall false
 			 */
-			bool Save(const Misc::AnsiString &pathToThemeFile, ColorStyle style) const;
+			bool Save(const Misc::UnicodeString &pathToThemeFile, ColorStyle style) const;
 
 		private:
 			std::map<Misc::AnsiString, ControlTheme> controlThemes;

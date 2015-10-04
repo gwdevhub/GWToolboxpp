@@ -48,7 +48,7 @@ namespace OSHGui
 		CalculateLabelLocation();
 	}
 	//---------------------------------------------------------------------------
-	void Button::SetText(const Misc::AnsiString &text)
+	void Button::SetText(const Misc::UnicodeString &text)
 	{
 		label_->SetText(text);
 		if (autoSize_)
@@ -59,7 +59,7 @@ namespace OSHGui
 		CalculateLabelLocation();
 	}
 	//---------------------------------------------------------------------------
-	const Misc::AnsiString& Button::GetText() const
+	const Misc::UnicodeString& Button::GetText() const
 	{
 		return label_->GetText();
 	}

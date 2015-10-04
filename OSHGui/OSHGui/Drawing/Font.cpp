@@ -75,7 +75,7 @@ namespace OSHGui
 			return pos != glyphMap.end() ? &pos->second : nullptr;
 		}
 		//---------------------------------------------------------------------------
-		float Font::GetTextExtent(const Misc::AnsiString &text, float scaleX) const
+		float Font::GetTextExtent(const Misc::UnicodeString &text, float scaleX) const
 		{
 			float current = 0.f;
 			float advance = 0.f;
@@ -99,7 +99,7 @@ namespace OSHGui
 			return std::max(advance, current);
 		}
 		//---------------------------------------------------------------------------
-		float Font::GetTextAdvance(const Misc::AnsiString &text, float scaleX) const
+		float Font::GetTextAdvance(const Misc::UnicodeString &text, float scaleX) const
 		{
 			float advance = 0.0f;
 
@@ -114,7 +114,7 @@ namespace OSHGui
 			return advance;
 		}
 		//---------------------------------------------------------------------------
-		size_t Font::GetCharAtPixel(const Misc::AnsiString &text, size_t start, float pixel, float scaleX) const
+		size_t Font::GetCharAtPixel(const Misc::UnicodeString &text, size_t start, float pixel, float scaleX) const
 		{
 			float current = 0.f;
 			auto length = text.length();
@@ -150,7 +150,7 @@ namespace OSHGui
 			UpdateFont();
 		}
 		//---------------------------------------------------------------------------
-		float Font::DrawText(GeometryBuffer &buffer, const Misc::AnsiString &text, const PointF &position, const RectangleF *clip, const ColorRectangle &colors, const float spaceExtra, const float scaleX, const float scaleY) const
+		float Font::DrawText(GeometryBuffer &buffer, const Misc::UnicodeString &text, const PointF &position, const RectangleF *clip, const ColorRectangle &colors, const float spaceExtra, const float scaleX, const float scaleY) const
 		{
 			auto base = position.Y + GetBaseline(scaleY);
 			auto glyphPosition(position);

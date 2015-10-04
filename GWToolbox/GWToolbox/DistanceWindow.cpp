@@ -25,7 +25,7 @@ DistanceWindow::DistanceWindow() {
 	int offsetY = 2;
 
 	DragButton* label_shadow = new DragButton();
-	label_shadow->SetText("Distance");
+	label_shadow->SetText(L"Distance");
 	label_shadow->SetSize(WIDTH, LABEL_HEIGHT);
 	label_shadow->SetLocation(1, 1);
 	label_shadow->SetFont(GuiUtils::getTBFont(12.0f, true));
@@ -35,7 +35,7 @@ DistanceWindow::DistanceWindow() {
 	AddControl(label_shadow);
 
 	DragButton* label = new DragButton();
-	label->SetText("Distance");
+	label->SetText(L"Distance");
 	label->SetSize(WIDTH, LABEL_HEIGHT);
 	label->SetLocation(0, 0);
 	label->SetFont(GuiUtils::getTBFont(12.0f, true));
@@ -47,7 +47,7 @@ DistanceWindow::DistanceWindow() {
 	AddControl(label);
 
 	percent_shadow = new DragButton();
-	percent_shadow->SetText("");
+	percent_shadow->SetText(L"");
 	percent_shadow->SetSize(WIDTH, PERCENT_HEIGHT);
 	percent_shadow->SetLocation(offsetX, LABEL_HEIGHT + offsetY);
 	percent_shadow->SetFont(GuiUtils::getTBFont(26.0f, true));
@@ -57,7 +57,7 @@ DistanceWindow::DistanceWindow() {
 	AddControl(percent_shadow);
 
 	percent = new DragButton();
-	percent->SetText("");
+	percent->SetText(L"");
 	percent->SetSize(WIDTH, PERCENT_HEIGHT);
 	percent->SetLocation(0, LABEL_HEIGHT);
 	percent->SetFont(GuiUtils::getTBFont(26.0f, true));
@@ -69,7 +69,7 @@ DistanceWindow::DistanceWindow() {
 	AddControl(percent);
 
 	absolute_shadow = new DragButton();
-	absolute_shadow->SetText("");
+	absolute_shadow->SetText(L"");
 	absolute_shadow->SetSize(WIDTH, ABSOLUTE_HEIGHT);
 	absolute_shadow->SetLocation(offsetX, LABEL_HEIGHT + PERCENT_HEIGHT + offsetY);
 	absolute_shadow->SetFont(GuiUtils::getTBFont(16.0f, true));
@@ -79,7 +79,7 @@ DistanceWindow::DistanceWindow() {
 	AddControl(absolute_shadow);
 
 	absolute = new DragButton();
-	absolute->SetText("");
+	absolute->SetText(L"");
 	absolute->SetSize(WIDTH, ABSOLUTE_HEIGHT);
 	absolute->SetLocation(0, LABEL_HEIGHT + PERCENT_HEIGHT);
 	absolute->SetFont(GuiUtils::getTBFont(16.0f, true));
@@ -130,15 +130,15 @@ void DistanceWindow::UpdateUI() {
 	}
 
 	if (distance != current_distance) {
-		string s1;
-		string s2;
+		wstring s1;
+		wstring s2;
 		if (target && me) {
-			s1 = to_string(distance * 100 / GwConstants::Range::Compass) + " %";
-			s2 = to_string(distance);
+			s1 = to_wstring(distance * 100 / GwConstants::Range::Compass) + L" %";
+			s2 = to_wstring(distance);
 			if (!isVisible_) _Show(true);
 		} else {
-			s1 = "-";
-			s2 = "-";
+			s1 = L"-";
+			s2 = L"-";
 			if (hide_target && isVisible_) _Show(false);
 		}
 		percent->SetText(s1);

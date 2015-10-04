@@ -28,7 +28,7 @@ namespace OSHGui
 	//---------------------------------------------------------------------------
 	//Getter/Setter
 	//---------------------------------------------------------------------------
-	void Label::SetText(const Misc::AnsiString &text)
+	void Label::SetText(const Misc::UnicodeString &text)
 	{
 		textHelper_.SetText(text);
 		if (autoSize_)
@@ -37,7 +37,7 @@ namespace OSHGui
 		}
 	}
 	//---------------------------------------------------------------------------
-	const Misc::AnsiString& Label::GetText() const
+	const Misc::UnicodeString& Label::GetText() const
 	{
 		return textHelper_.GetText();
 	}

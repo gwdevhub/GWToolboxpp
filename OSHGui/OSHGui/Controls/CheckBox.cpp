@@ -53,7 +53,7 @@ namespace OSHGui
 		return checked_;
 	}
 	//---------------------------------------------------------------------------
-	void CheckBox::SetText(const Misc::AnsiString &text)
+	void CheckBox::SetText(const Misc::UnicodeString &text)
 	{
 		auto offset = label_->GetLocation();
 
@@ -68,7 +68,7 @@ namespace OSHGui
 		}
 	}
 	//---------------------------------------------------------------------------
-	const Misc::AnsiString& CheckBox::GetText() const
+	const Misc::UnicodeString& CheckBox::GetText() const
 	{
 		return label_->GetText();
 	}

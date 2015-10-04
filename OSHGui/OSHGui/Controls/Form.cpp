@@ -64,17 +64,17 @@ namespace OSHGui
 		containerPanel_->SetSize(size.InflateEx(-DefaultBorderPadding * 2, -DefaultBorderPadding * 2 - CaptionBar::DefaultCaptionBarHeight));
 	}
 	//---------------------------------------------------------------------------
-	void Form::SetText(const Misc::AnsiString &text)
+	void Form::SetText(const Misc::UnicodeString &text)
 	{
 		if (captionBar_) captionBar_->SetText(text);
 	}
 	//---------------------------------------------------------------------------
-	const Misc::AnsiString& Form::GetText() const
+	const Misc::UnicodeString& Form::GetText() const
 	{
 		if (captionBar_) {
 			return captionBar_->GetText();
 		} else {
-			return "";
+			return L"";
 		}
 	}
 	//---------------------------------------------------------------------------
@@ -254,12 +254,12 @@ namespace OSHGui
 		closeButton_->SetLocation(Drawing::PointI(size.Width - CaptionBarButton::DefaultSize.Width - DefaultButtonPadding, 0));
 	}
 	//---------------------------------------------------------------------------
-	void Form::CaptionBar::SetText(const Misc::AnsiString &text)
+	void Form::CaptionBar::SetText(const Misc::UnicodeString &text)
 	{
 		titleLabel_->SetText(text);
 	}
 	//---------------------------------------------------------------------------
-	const Misc::AnsiString& Form::CaptionBar::GetText() const
+	const Misc::UnicodeString& Form::CaptionBar::GetText() const
 	{
 		return titleLabel_->GetText();
 	}

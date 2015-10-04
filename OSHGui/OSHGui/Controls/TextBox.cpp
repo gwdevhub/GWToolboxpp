@@ -61,7 +61,7 @@ namespace OSHGui
 		SetSize(GetWidth(), 0);
 	}
 	//---------------------------------------------------------------------------
-	void TextBox::SetText(const Misc::AnsiString &text)
+	void TextBox::SetText(const Misc::UnicodeString &text)
 	{
 		realtext_ = text;
 		if (passwordChar_ == '\0')
@@ -70,7 +70,7 @@ namespace OSHGui
 		}
 		else
 		{
-			textHelper_.SetText(Misc::AnsiString(text.length(), passwordChar_));
+			textHelper_.SetText(Misc::UnicodeString(text.length(), passwordChar_));
 		}
 
 		firstVisibleCharacter_ = 0;
@@ -79,18 +79,18 @@ namespace OSHGui
 		textChangedEvent_.Invoke(this);
 	}
 	//---------------------------------------------------------------------------
-	const Misc::AnsiString& TextBox::GetText() const
+	const Misc::UnicodeString& TextBox::GetText() const
 	{
 		return realtext_;
 	}
 	//---------------------------------------------------------------------------
-	void TextBox::SetPasswordChar(const Misc::AnsiChar &passwordChar)
+	void TextBox::SetPasswordChar(const Misc::UnicodeChar &passwordChar)
 	{
 		this->passwordChar_ = passwordChar;
 		SetText(realtext_);
 	}
 	//---------------------------------------------------------------------------
-	const Misc::AnsiChar& TextBox::GetPasswordChar() const
+	const Misc::UnicodeChar& TextBox::GetPasswordChar() const
 	{
 		return passwordChar_;
 	}
@@ -264,23 +264,23 @@ namespace OSHGui
 			Key keycode = keyboard.GetKeyCode();
 			if (keycode == Key::X || keycode == Key::C || keycode == Key::V) {
 				if (OpenClipboard(nullptr)) {
-					Misc::AnsiString text = GetText();
-					char * buffer;
+					Misc::UnicodeString text = GetText();
+					wchar_t * buffer;
 					switch (keyboard.GetKeyCode()) {
 					case Key::X:
-						SetText("");
+						SetText(L"");
 						// fall through
 					case Key::C: {
 						EmptyClipboard();
-						HGLOBAL clip_buffer = GlobalAlloc(GMEM_DDESHARE, text.size() + 1);
-						buffer = (char*)GlobalLock(clip_buffer);
-						strcpy_s(buffer, text.size() + 1, text.c_str());
+						HGLOBAL clip_buffer = GlobalAlloc(GMEM_DDESHARE, (text.size() + 1) * sizeof(wchar_t));
+						buffer = (wchar_t*)GlobalLock(clip_buffer);
+						wcscpy_s(buffer, text.size() + 1, text.c_str());
 						GlobalUnlock(clip_buffer);
-						SetClipboardData(CF_TEXT, clip_buffer);
+						SetClipboardData(CF_UNICODETEXT, clip_buffer);
 						break;
 					}
 					case Key::V:
-						buffer = (char*)GetClipboardData(CF_TEXT);
+						buffer = (wchar_t*)GetClipboardData(CF_UNICODETEXT);
 						SetText(buffer);
 						break;
 					}

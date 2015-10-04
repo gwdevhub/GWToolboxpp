@@ -62,7 +62,7 @@ namespace OSHGui
 		 * \param name der Name
 		 * \return Zeiger zur TabPage
 		 */
-		TabPage* GetTabPage(const Misc::AnsiString &name) const;
+		TabPage* GetTabPage(const Misc::UnicodeString &name) const;
 		/**
 		 * Ruft die TabPage am entsprechenden Index ab.
 		 *
@@ -152,7 +152,7 @@ namespace OSHGui
 			TabControlButton(TabPageButtonBinding &binding);
 
 			virtual void SetForeColor(const Drawing::Color &color) override;
-			void SetText(const Misc::AnsiString &text);
+			void SetText(const Misc::UnicodeString &text);
 			void SetActive(bool active);
 
 			virtual void CalculateAbsoluteLocation() override;

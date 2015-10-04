@@ -45,7 +45,7 @@ settings_panel_(new SettingsPanel()) {
 
 	TitleLabel* title = new TitleLabel();
 	title->SetFont(GuiUtils::getTBFont(8, true));
-	title->SetText("Toolbox++");
+	title->SetText(L"Toolbox++");
 	title->SetLocation(0, 0);
 	title->SetSize(64, TITLE_HEIGHT);
 	title->SetBackColor(Drawing::Color::Empty());
@@ -84,11 +84,11 @@ settings_panel_(new SettingsPanel()) {
 	main_panel_->SetLocation(0, TITLE_HEIGHT);
 	AddControl(main_panel_);
 	
-	CreateTabButton("Pcons", button_idx, panel_idx, 
+	CreateTabButton(L"Pcons", button_idx, panel_idx, 
 		GuiUtils::getSubPathA("cupcake.png", "img").c_str());
 
 	Button* toggle = new Button();
-	toggle->SetText("Disabled");
+	toggle->SetText(L"Disabled");
 	toggle->SetBackColor(Color::Empty());
 	toggle->SetMouseOverFocusColor(GuiUtils::getMouseOverColor());
 	toggle->SetForeColor(Color::Red());
@@ -103,25 +103,25 @@ settings_panel_(new SettingsPanel()) {
 	main_panel_->AddControl(toggle);
 	pcon_toggle_button_ = toggle;
 	
-	CreateTabButton("Hotkeys", button_idx, panel_idx, 
+	CreateTabButton(L"Hotkeys", button_idx, panel_idx, 
 		GuiUtils::getSubPathA("keyboard.png", "img").c_str());
 
-	CreateTabButton("Builds", button_idx, panel_idx, 
+	CreateTabButton(L"Builds", button_idx, panel_idx, 
 		GuiUtils::getSubPathA("list.png", "img").c_str());
 
-	CreateTabButton("Travel", button_idx, panel_idx, 
+	CreateTabButton(L"Travel", button_idx, panel_idx, 
 		GuiUtils::getSubPathA("plane.png", "img").c_str());
 
-	CreateTabButton("Dialogs", button_idx, panel_idx, 
+	CreateTabButton(L"Dialogs", button_idx, panel_idx, 
 		GuiUtils::getSubPathA("comment.png", "img").c_str());
 
-	CreateTabButton("Info", button_idx, panel_idx, 
+	CreateTabButton(L"Info", button_idx, panel_idx, 
 		GuiUtils::getSubPathA("info.png", "img").c_str());
 
-	CreateTabButton("Materials", button_idx, panel_idx, 
+	CreateTabButton(L"Materials", button_idx, panel_idx, 
 		GuiUtils::getSubPathA("feather.png", "img").c_str());
 
-	CreateTabButton("Settings", button_idx, panel_idx, 
+	CreateTabButton(L"Settings", button_idx, panel_idx, 
 		GuiUtils::getSubPathA("settings.png", "img").c_str());
 
 	panels.push_back(pcon_panel_);
@@ -183,17 +183,17 @@ void MainWindow::ToggleMinimize() {
 void MainWindow::UpdatePconToggleButton(bool active) {
 	if (active) {
 		pcon_toggle_button_->SetForeColor(Color::Lime());
-		pcon_toggle_button_->SetText("Enabled");
+		pcon_toggle_button_->SetText(L"Enabled");
 	} else {
 		pcon_toggle_button_->SetForeColor(Color::Red());
-		pcon_toggle_button_->SetText("Disabled");
+		pcon_toggle_button_->SetText(L"Disabled");
 	}
 	if (tick_with_pcons_ && GWAPIMgr::instance()->Map()->GetInstanceType() == GwConstants::InstanceType::Outpost) {
 		GWAPIMgr::instance()->Agents()->Tick(active);
 	}
 }
 
-void MainWindow::CreateTabButton(const char* s, int& button_idx,
+void MainWindow::CreateTabButton(const wchar_t* s, int& button_idx,
 									int& panel_idx, const char* icon) {
 	MainWindow * self = this;
 
@@ -241,7 +241,7 @@ void MainWindow::OpenClosePanel(int index) {
 	}
 }
 
-TabButton::TabButton(const char* s, const char* icon)
+TabButton::TabButton(const wchar_t* s, const char* icon)
 : pic(new PictureBox()) {
 	Button::Button();
 

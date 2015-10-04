@@ -33,10 +33,4 @@ private:
 	void UpdateLocation();
 	void EnableTextInput(OSHGui::TextBox* tb);
 	void SaveBuild();
-	inline std::string ToString(std::wstring s) {
-		return std::string(s.begin(), s.end());
-	}
-	inline std::wstring ToWString(std::string s) {
-		return std::wstring(s.begin(), s.end());
-	}
 };

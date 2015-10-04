@@ -47,13 +47,13 @@ namespace OSHGui
 		 *
 		 * \param text
 		 */
-		void SetText(const Misc::AnsiString &text);
+		void SetText(const Misc::UnicodeString &text);
 		/**
 		 * Ruft den Text ab.
 		 *
 		 * \return der Text
 		 */
-		const Misc::AnsiString& GetText() const;
+		const Misc::UnicodeString& GetText() const;
 		/**
 		 * Gibt eine Liste der untergeordneten Steuerelemente zurück.
 		 *
@@ -79,7 +79,7 @@ namespace OSHGui
 		virtual void PopulateGeometry();
 
 	private:
-		Misc::AnsiString text_;
+		Misc::UnicodeString text_;
 
 		Panel *containerPanel_;
 		TabControl::TabControlButton *button_;

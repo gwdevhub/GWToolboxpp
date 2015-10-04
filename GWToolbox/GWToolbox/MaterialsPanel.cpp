@@ -8,6 +8,6 @@ MaterialsPanel::MaterialsPanel() {
 void MaterialsPanel::BuildUI() {
 
 	Label* label = new Label();
-	label->SetText("Materials panel under construction");
+	label->SetText(L"Materials panel under construction");
 	AddControl(label);
 }

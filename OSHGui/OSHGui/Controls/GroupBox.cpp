@@ -43,12 +43,12 @@ namespace OSHGui
 		containerPanel_->SetSize(size.InflateEx(-3 * 2, -3 * 2 - 10));
 	}
 	//---------------------------------------------------------------------------
-	void GroupBox::SetText(const Misc::AnsiString &text)
+	void GroupBox::SetText(const Misc::UnicodeString &text)
 	{
 		captionLabel_->SetText(text);
 	}
 	//---------------------------------------------------------------------------
-	const Misc::AnsiString& GroupBox::GetText() const
+	const Misc::UnicodeString& GroupBox::GetText() const
 	{
 		return captionLabel_->GetText();
 	}

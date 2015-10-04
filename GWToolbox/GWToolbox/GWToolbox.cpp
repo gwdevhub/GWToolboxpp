@@ -9,8 +9,7 @@
 #include "TimerWindow.h"
 
 const wchar_t * GWToolbox::Host = L"http://fbgmguild.com/GWToolboxpp/";
-const char* GWToolbox::VersionA = "1.3";
-const wchar_t* GWToolbox::VersionW = L"1.3";
+const wchar_t* GWToolbox::Version = L"1.3";
 
 
 GWToolbox* GWToolbox::instance_ = NULL;
@@ -60,7 +59,7 @@ void GWToolbox::Exec() {
 	input.SetKeyboardInputEnabled(true);
 	input.SetMouseInputEnabled(true);
 
-	config_->iniWrite(L"launcher", L"dllversion", VersionW);
+	config_->iniWrite(L"launcher", L"dllversion", Version);
 
 	Application * app = Application::InstancePtr();
 
@@ -193,7 +192,7 @@ void GWToolbox::CreateGui(IDirect3DDevice9* pDevice) {
 	Application * app = Application::InstancePtr();
 
 	LOG("Loading Theme\n");
-	std::string path = GuiUtils::getPathA("Theme.txt");
+	std::wstring path = GuiUtils::getPath(L"Theme.txt");
 	try {
 		Theme theme;
 		theme.Load(path);

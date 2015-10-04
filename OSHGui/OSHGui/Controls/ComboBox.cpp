@@ -177,12 +177,12 @@ namespace OSHGui
 		listBox_->SetBackColor(color);
 	}
 	//---------------------------------------------------------------------------
-	void ComboBox::SetText(const Misc::AnsiString &text)
+	void ComboBox::SetText(const Misc::UnicodeString &text)
 	{
 		button_->SetText(text);
 	}
 	//---------------------------------------------------------------------------
-	const Misc::AnsiString& ComboBox::GetText() const
+	const Misc::UnicodeString& ComboBox::GetText() const
 	{
 		return button_->GetText();
 	}
@@ -192,7 +192,7 @@ namespace OSHGui
 		return Control::GetIsFocused() || button_->GetIsFocused() || listBox_->GetIsFocused();
 	}
 	//---------------------------------------------------------------------------
-	const Misc::AnsiString& ComboBox::GetItem(int index) const
+	const Misc::UnicodeString& ComboBox::GetItem(int index) const
 	{
 		return listBox_->GetItem(index);
 	}
@@ -209,14 +209,14 @@ namespace OSHGui
 		return listBox_->GetSelectedIndex();
 	}
 	//---------------------------------------------------------------------------
-	void ComboBox::SetSelectedItem(const Misc::AnsiString &item)
+	void ComboBox::SetSelectedItem(const Misc::UnicodeString &item)
 	{
 		listBox_->SetSelectedItem(item);
 
 		Collapse();
 	}
 	//---------------------------------------------------------------------------
-	const Misc::AnsiString& ComboBox::GetSelectedItem() const
+	const Misc::UnicodeString& ComboBox::GetSelectedItem() const
 	{
 		return listBox_->GetSelectedItem();
 	}
@@ -260,12 +260,12 @@ namespace OSHGui
 		Invalidate();
 	}
 	//---------------------------------------------------------------------------
-	void ComboBox::AddItem(const Misc::AnsiString &text)
+	void ComboBox::AddItem(const Misc::UnicodeString &text)
 	{
 		InsertItem(listBox_->GetItemsCount(), text);
 	}
 	//---------------------------------------------------------------------------
-	void ComboBox::InsertItem(int index, const Misc::AnsiString &text)
+	void ComboBox::InsertItem(int index, const Misc::UnicodeString &text)
 	{
 		listBox_->InsertItem(index, text);
 

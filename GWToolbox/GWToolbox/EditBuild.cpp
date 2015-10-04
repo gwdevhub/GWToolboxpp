@@ -15,14 +15,14 @@ EditBuild::EditBuild() {
 	SetSize(450, 500);
 
 	Label* label_name = new Label();
-	label_name->SetText("Build Name:");
+	label_name->SetText(L"Build Name:");
 	label_name->SetLocation(DefaultBorderPadding, DefaultBorderPadding + 3);
 	AddControl(label_name);
 
 	Button* button = new Button();
 	button->SetSize(ITEM_HEIGHT, ITEM_HEIGHT);
 	button->SetLocation(GetWidth() - ITEM_HEIGHT - DefaultBorderPadding, DefaultBorderPadding);
-	button->SetText("^");
+	button->SetText(L"^");
 	button->GetClickEvent() += ClickEventHandler([this](Control*) {
 		up_ = !up_;
 		UpdateLocation();
@@ -36,7 +36,7 @@ EditBuild::EditBuild() {
 	AddControl(name);
 
 	Label* label_names = new Label();
-	label_names->SetText("Names:");
+	label_names->SetText(L"Names:");
 	label_names->SetLocation(NAME_LEFT, name->GetBottom() + DefaultBorderPadding * 2);
 	AddControl(label_names);
 
@@ -44,7 +44,7 @@ EditBuild::EditBuild() {
 	const int row_height = ITEM_HEIGHT + DefaultBorderPadding;
 	for (int i = 0; i < N_PLAYERS; ++i) {
 		Label* label_index = new Label();
-		label_index->SetText(string("#") + to_string(i + 1));
+		label_index->SetText(wstring(L"#") + to_wstring(i + 1));
 		label_index->SetLocation(DefaultBorderPadding, starty + row_height * i + 3);
 		AddControl(label_index);
 
@@ -55,7 +55,7 @@ EditBuild::EditBuild() {
 		AddControl(names[i]);
 
 		Button* send = new Button();
-		send->SetText("Send");
+		send->SetText(L"Send");
 		send->SetSize(SEND_WIDTH, names[i]->GetHeight());
 		send->SetLocation(GetWidth() - send->GetWidth() - DefaultBorderPadding / 2, 
 			starty + row_height * i);
@@ -65,9 +65,9 @@ EditBuild::EditBuild() {
 				message += to_wstring(i + 1);
 				message += L" - ";
 			}
-			message += ToWString(names[i]->GetText());
+			message += names[i]->GetText();
 			message += L";";
-			message += ToWString(templates[i]->GetText());
+			message += templates[i]->GetText();
 			message += L"]";
 			GWAPIMgr::instance()->Chat()->SendChat(message.c_str(), L'#');
 		});
@@ -81,7 +81,7 @@ EditBuild::EditBuild() {
 	}
 
 	Label* label_templates = new Label();
-	label_templates->SetText("Templates:");
+	label_templates->SetText(L"Templates:");
 	label_templates->SetLocation(templates[0]->GetLeft(), name->GetBottom() + DefaultBorderPadding * 2);
 	AddControl(label_templates);
 
@@ -89,12 +89,12 @@ EditBuild::EditBuild() {
 	const int buttons_width = (GetWidth() - templates[0]->GetLeft() - DefaultBorderPadding) / 2;
 
 	show_numbers = new CheckBox();
-	show_numbers->SetText("Show Build numbers");
+	show_numbers->SetText(L"Show Build numbers");
 	show_numbers->SetLocation(DefaultBorderPadding, last_row_y);
 	AddControl(show_numbers);
 	
 	Button* cancel = new Button();
-	cancel->SetText("Cancel");
+	cancel->SetText(L"Cancel");
 	cancel->SetLocation(templates[0]->GetLeft(), last_row_y);
 	cancel->SetSize(buttons_width, ITEM_HEIGHT);
 	cancel->GetClickEvent() += ClickEventHandler([this](Control*) {
@@ -103,7 +103,7 @@ EditBuild::EditBuild() {
 	AddControl(cancel);
 
 	Button* ok = new Button();
-	ok->SetText("Ok");
+	ok->SetText(L"Ok");
 	ok->SetLocation(cancel->GetRight() + DefaultBorderPadding, last_row_y);
 	ok->SetSize(buttons_width, ITEM_HEIGHT);
 	ok->GetClickEvent() += ClickEventHandler([this](Control*) {
@@ -139,15 +139,15 @@ void EditBuild::SetEditedBuild(int index, Button* button) {
 	
 	key = L"buildname";
 	wstring buildname = config->iniRead(section.c_str(), key.c_str(), L"");
-	name->SetText(ToString(buildname));
+	name->SetText(buildname);
 	for (int i = 0; i < N_PLAYERS; ++i) {
 		key = L"name" + to_wstring(i + 1);
 		wstring name = config->iniRead(section.c_str(), key.c_str(), L"");
-		names[i]->SetText(ToString(name));
+		names[i]->SetText(name);
 
 		key = L"template" + to_wstring(i + 1);
 		wstring temp = config->iniRead(section.c_str(), key.c_str(), L"");
-		templates[i]->SetText(ToString(temp));
+		templates[i]->SetText(temp);
 	}
 	show_numbers->SetChecked(config->iniReadBool(section.c_str(), L"showNumbers", true));
 
@@ -159,19 +159,19 @@ void EditBuild::SaveBuild() {
 	wstring section = wstring(L"builds") + to_wstring(editing_index);
 	wstring key;
 
-	string s_name = name->GetText();
+	wstring s_name = name->GetText();
 	key = L"buildname";
-	config->iniWrite(section.c_str(), key.c_str(), ToWString(s_name).c_str());
+	config->iniWrite(section.c_str(), key.c_str(), s_name.c_str());
 	editing_button->SetText(s_name);
 
 	for (int i = 0; i < N_PLAYERS; ++i) {
-		string s_name = names[i]->GetText();
+		wstring s_name = names[i]->GetText();
 		key = L"name" + to_wstring(i + 1);
-		config->iniWrite(section.c_str(), key.c_str(), ToWString(s_name).c_str());
+		config->iniWrite(section.c_str(), key.c_str(), s_name.c_str());
 
-		string s_template = templates[i]->GetText();
+		wstring s_template = templates[i]->GetText();
 		key = L"template" + to_wstring(i + 1);
-		config->iniWrite(section.c_str(), key.c_str(), ToWString(s_template).c_str());
+		config->iniWrite(section.c_str(), key.c_str(), s_template.c_str());
 	}
 
 	config->iniWriteBool(section.c_str(), L"showNumbers", show_numbers->GetChecked());

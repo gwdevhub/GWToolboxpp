@@ -16,7 +16,7 @@ public:
 private:
 	class Build : public OSHGui::Panel {
 	public:
-		Build(int index, std::string name, 
+		Build(int index, std::wstring name, 
 			EditBuild* edit_build, BuildPanel* panel)
 			: index_(index), name_(name), 
 			edit_build_(edit_build), panel_(panel) { }
@@ -24,10 +24,10 @@ private:
 		void SendTeamBuild();
 	private:
 		int index_;
-		std::string name_;
+		std::wstring name_;
 		EditBuild* edit_build_;
 		BuildPanel* panel_;
-		std::string GetDescription() { return name_; }
+		std::wstring GetDescription() { return name_; }
 	};
 
 	const int MAX_SHOWN = 9;		// number of teambuilds shown in interface

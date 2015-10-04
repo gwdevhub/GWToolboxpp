@@ -71,20 +71,20 @@ namespace OSHGui
 		 *
 		 * \param text
 		 */
-		void SetText(const Misc::AnsiString &text);
+		void SetText(const Misc::UnicodeString &text);
 		/**
 		 * Ruft den Text ab.
 		 *
 		 * \return der Text
 		 */
-		const Misc::AnsiString& GetText() const;
+		const Misc::UnicodeString& GetText() const;
 		/**
 		 * Gibt das Item an der Stelle index zurück.
 		 *
 		 * \param index
 		 * \return das Item
 		 */
-		const Misc::AnsiString& GetItem(int index) const;
+		const Misc::UnicodeString& GetItem(int index) const;
 		/**
 		 * Legt den ausgewählten Index fest.
 		 *
@@ -102,13 +102,13 @@ namespace OSHGui
 		 *
 		 * \param item
 		 */
-		void SetSelectedItem(const Misc::AnsiString &item);
+		void SetSelectedItem(const Misc::UnicodeString &item);
 		/**
 		 * Ruft das ausgewählte Item ab.
 		 *
 		 * \return das Item
 		 */
-		const Misc::AnsiString& GetSelectedItem() const;
+		const Misc::UnicodeString& GetSelectedItem() const;
 		/**
 		 * Gibt die Anzahl der Items zurück.
 		 *
@@ -139,14 +139,14 @@ namespace OSHGui
 		 *
 		 * \param text der Text des Items
 		 */
-		void AddItem(const Misc::AnsiString &text);
+		void AddItem(const Misc::UnicodeString &text);
 		/**
 		 * Fügt ein neues Item am gewählten Index hinzu.
 		 *
 		 * \param index
 		 * \param text der Text des Items
 		 */
-		void InsertItem(int index, const Misc::AnsiString &text);
+		void InsertItem(int index, const Misc::UnicodeString &text);
 		/**
 		 * Löscht das Item am gewählten Index.
 		 *
