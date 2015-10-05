@@ -168,6 +168,17 @@
     <ClInclude Include="OSHGui\Misc\TimeSpan.hpp" />
     <ClInclude Include="OSHGui\OSHGui.hpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="Dependencies\FreeType\FreeType.2013.vcxproj">
+      <Project>{2bdbacf9-9942-4157-8762-b4a024071848}</Project>
+    </ProjectReference>
+    <ProjectReference Include="Dependencies\JsonCpp\JsonCpp.2013.vcxproj">
+      <Project>{414251b2-e3be-411f-a90b-7c2cd64e3d01}</Project>
+    </ProjectReference>
+    <ProjectReference Include="Dependencies\SimpleImageLoader\SimpleImageLoader.2013.vcxproj">
+      <Project>{d8ffbb21-1cb1-4c27-be8c-f7d8c211de90}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{296FB7C3-29B9-4111-9243-6EB8CB71D458}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
@@ -199,15 +210,9 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <TargetName>OSHGui_d</TargetName>
-    <OutDir>$(ProjectDir)</OutDir>
-    <LibraryPath>Libraries;$(LibraryPath)</LibraryPath>
     <IncludePath>$(SolutionDir)Dependencies\DirectX\Include;Dependencies\SimpleImageLoader;Dependencies\JsonCpp\include;Dependencies\FreeType\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <TargetName>OSHGui_r</TargetName>
-    <OutDir>$(ProjectDir)</OutDir>
-    <LibraryPath>Libraries;$(LibraryPath)</LibraryPath>
     <IncludePath>$(SolutionDir)Dependencies\DirectX\Include;Dependencies\SimpleImageLoader;Dependencies\JsonCpp\include;Dependencies\FreeType\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -229,7 +234,8 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <Lib>
-      <AdditionalDependencies>jsoncpp_d.lib;freetype_d.lib;simpleimageloader_d.lib</AdditionalDependencies>
+      <AdditionalDependencies>
+      </AdditionalDependencies>
     </Lib>
     <Lib />
   </ItemDefinitionGroup>
@@ -257,7 +263,8 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <Lib>
-      <AdditionalDependencies>jsoncpp_r.lib;freetype_r.lib;simpleimageloader_r.lib</AdditionalDependencies>
+      <AdditionalDependencies>
+      </AdditionalDependencies>
       <AdditionalLibraryDirectories>
       </AdditionalLibraryDirectories>
     </Lib>
