@@ -34,6 +34,7 @@ private:
 
 	//------ Static Methods ------//
 public:
+
 	// will create a new toolbox object and run it, can be used as argument for createThread
 	static void SafeThreadEntry(HMODULE mod);
 private:
@@ -47,8 +48,9 @@ private:
 	static HRESULT WINAPI resetScene(IDirect3DDevice9* pDevice,
 		D3DPRESENT_PARAMETERS* pPresentationParameters);
 
-	// Input event handler declaration
-	static LRESULT CALLBACK NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam);
+	// Input event handler
+	static LRESULT CALLBACK SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam);
+	static LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam);
 
 
 	//------ Private Fields ------//

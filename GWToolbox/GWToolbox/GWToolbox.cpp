@@ -53,7 +53,7 @@ void GWToolbox::Exec() {
 
 	LOG("Installing input event handler\n");
 	HWND gw_window_handle = GWAPI::MemoryMgr::GetGWWindowHandle();
-	OldWndProc = SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)NewWndProc);
+	OldWndProc = SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)SafeWndProc);
 	LOG("Installed input event handler\n");
 
 	input.SetKeyboardInputEnabled(true);
@@ -110,7 +110,16 @@ void GWToolbox::Exec() {
 	FreeLibraryAndExitThread(dll_module_, EXIT_SUCCESS);
 }
 
-LRESULT CALLBACK GWToolbox::NewWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK GWToolbox::SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) {
+	__try {
+		return GWToolbox::WndProc(hWnd, Message, wParam, lParam);
+	} __except (EXCEPTION_EXECUTE_HANDLER) {
+		return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
+	}
+}
+
+
+LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) {
 	
 	if (Message == WM_QUIT || Message == WM_CLOSE) {
 		GWToolbox::instance()->config()->save();
