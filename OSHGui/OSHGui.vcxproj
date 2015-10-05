@@ -202,13 +202,13 @@
     <TargetName>OSHGui_d</TargetName>
     <OutDir>$(ProjectDir)</OutDir>
     <LibraryPath>Libraries;$(LibraryPath)</LibraryPath>
-    <IncludePath>Dependencies\DirectX\Include;Dependencies\SimpleImageLoader;Dependencies\JsonCpp\include;Dependencies\FreeType\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)Dependencies\DirectX\Include;Dependencies\SimpleImageLoader;Dependencies\JsonCpp\include;Dependencies\FreeType\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <TargetName>OSHGui_r</TargetName>
     <OutDir>$(ProjectDir)</OutDir>
     <LibraryPath>Libraries;$(LibraryPath)</LibraryPath>
-    <IncludePath>Dependencies\DirectX\Include;Dependencies\SimpleImageLoader;Dependencies\JsonCpp\include;Dependencies\FreeType\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)Dependencies\DirectX\Include;Dependencies\SimpleImageLoader;Dependencies\JsonCpp\include;Dependencies\FreeType\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
