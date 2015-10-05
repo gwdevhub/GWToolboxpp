@@ -1,51 +1,21 @@
 # Build directories
-
-
 Debug/
-
 Release/
 
-include/OSHGui/Dependencies/Lib
-
-include/OSHGui/Dependencies/Source
-libraries/
-
-
-
 # Bloated Windows Databases
-
-
-
 *.sdf
-
 *.opensdf
-
 *.suo
 
-
-
-# Compiled Object files
-
-
+# Compiled files
 *.slo
-
 *.lo
-
 *.o
-
 *.obj
-
+*.exe
 
 # Precompiled Headers
-
 *.gch
-
 *.pch
-
 *.idb
-
 *.pdb
-
-include/OSHGui/Dependencies/Include/
-
-Launcher/GWToolbox.exe
