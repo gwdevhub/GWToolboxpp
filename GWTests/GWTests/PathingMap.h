@@ -1,3 +1,9 @@
+/*
+Made by ACB
+
+taken from https://bitbucket.org/ACB/gwpathingmaps
+*/
+
 #pragma once
 #include <vector>
 #include <tchar.h>

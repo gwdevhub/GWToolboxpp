@@ -24,12 +24,39 @@
     <ClCompile Include="GWTests\Viewer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GWTests\Minimap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GWTests\PmapRenderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GWTests\PathingMap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GWTests\Viewer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GWTests\Point2d.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GWTests\Point2i.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GWTests\MyD3DVertex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GWTests\Renderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GWTests\Minimap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GWTests\PmapRenderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GWTests\Point2f.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,3 +1,9 @@
+/*
+Made by ACB
+
+taken from https://bitbucket.org/ACB/gwpathingmaps
+*/
+
 #include "PathingMap.h"
 #include <iostream>
 #include <fstream>
