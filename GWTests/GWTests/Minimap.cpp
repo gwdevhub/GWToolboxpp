@@ -5,11 +5,11 @@
 void Minimap::UIRenderer::Initialize(IDirect3DDevice9* device) {
 	count_ = 2;
 	type_ = D3DPT_TRIANGLEFAN;
-	DWORD color = 0xAA000000;
 
 	Vertex* vertices = nullptr;
 	unsigned int vertex_count = 4;
 
+	if (buffer_) buffer_->Release();
 	device->CreateVertexBuffer(sizeof(Vertex) * vertex_count, 0,
 		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer_, NULL);
 	buffer_->Lock(0, sizeof(Vertex) * vertex_count,
@@ -17,7 +17,7 @@ void Minimap::UIRenderer::Initialize(IDirect3DDevice9* device) {
 
 	for (unsigned int i = 0; i < vertex_count; ++i) {
 		vertices[i].z = 0;
-		vertices[i].color = color;
+		vertices[i].color = D3DCOLOR_ARGB(0xFF, 0xFF, 0xFF, 0xFF);
 	}
 
 	vertices[0].x = -1;
@@ -41,7 +41,7 @@ void Minimap::RangeRenderer::CreateCircle(Vertex* vertices, float radius) {
 		vertices[i].x = radius * std::cos(angle);
 		vertices[i].y = radius * std::sin(angle);
 		vertices[i].z = 1.0f;
-		vertices[i].color = 0xFF222222;
+		vertices[i].color = 0xFF555577;
 	}
 	vertices[circle_points] = vertices[0];
 }
@@ -53,6 +53,7 @@ void Minimap::RangeRenderer::Initialize(IDirect3DDevice9* device) {
 	Vertex* vertices = nullptr;
 	unsigned int vertex_count = count_ + 3;
 
+	if (buffer_) buffer_->Release();
 	device->CreateVertexBuffer(sizeof(Vertex) * vertex_count, 0,
 		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer_, NULL);
 	buffer_->Lock(0, sizeof(Vertex) * vertex_count,
@@ -89,7 +90,14 @@ Minimap::Minimap()
 	: ui_renderer(UIRenderer()), range_renderer(RangeRenderer()) {
 	
 	pmap_renderer = PmapRenderer();
-	pmap_renderer.LoadMap(127484);
+
+	GWAPI::GWAPIMgr* api = GWAPI::GWAPIMgr::instance();
+	api->StoC()->AddGameServerEvent<GWAPI::StoC::P391_InstanceLoadFile>(
+		[this](GWAPI::StoC::P391_InstanceLoadFile* packet) {
+		pmap_renderer.LoadMap(packet->map_fileID);
+	});
+
+	pmap_renderer.LoadMap(219215);
 }
 
 void Minimap::Render(IDirect3DDevice9* device) {
@@ -97,8 +105,9 @@ void Minimap::Render(IDirect3DDevice9* device) {
 	GW::Agent* me = GWAPIMgr::instance()->Agents()->GetPlayer();
 	if (me != nullptr) {
 		SetTranslation(-me->X, -me->Y);
-		SetRotation(-me->Rotation + (float)M_PI_2);
 	}
+	float camera_yaw = GWAPIMgr::instance()->Camera()->GetYaw();
+	SetRotation(-camera_yaw + (float)M_PI_2);
 
 	device->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, TRUE);
 
@@ -163,7 +172,7 @@ void Minimap::RenderAgents(IDirect3DDevice9* device) {
 		if (agent == me) color = D3DCOLOR_XRGB(255, 0, 255);
 
 		float rotation = agent->Rotation;
-		float size = 50;
+		float size = 75;
 
 		vertices->x = agent->X + size * std::cos(rotation);
 		vertices->y = agent->Y + size * std::sin(rotation);
@@ -186,4 +195,5 @@ void Minimap::RenderAgents(IDirect3DDevice9* device) {
 	buffer->Unlock();
 	device->SetStreamSource(0, buffer, 0, sizeof(Vertex));
 	device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, tri_count);
+	buffer->Release();
 }

@@ -6,9 +6,18 @@ PmapRenderer::PmapRenderer()
 	: pmap(PathingMap(0)) {
 }
 
+void PmapRenderer::Render(IDirect3DDevice9* device) {
+	if (pmap.GetPathingData().size() == 0) return;
+
+	Renderer::Render(device);
+}
+
 void PmapRenderer::Initialize(IDirect3DDevice9* device) {
 
 	std::vector<PathingMapTrapezoid>trapez = pmap.GetPathingData();
+
+	if (trapez.size() == 0) return;
+
 	short max_plane = 0;
 	for (size_t i = 0; i < trapez.size(); ++i) {
 		if (max_plane < trapez[i].Plane) {
@@ -19,15 +28,16 @@ void PmapRenderer::Initialize(IDirect3DDevice9* device) {
 	count_ = trapez.size() * 2;
 	type_ = D3DPT_TRIANGLELIST;
 	Vertex* vertices = nullptr;
-
+	
+	if (buffer_) buffer_->Release();
 	device->CreateVertexBuffer(sizeof(Vertex) * count_ * 3, 0,
 		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer_, NULL);
 	buffer_->Lock(0, sizeof(Vertex) * count_ * 3,
 		(VOID**)&vertices, D3DLOCK_DISCARD);
-
+	
 	for (size_t i = 0; i < trapez.size(); ++i) {
-		DWORD c = trapez[i].Plane * 255 / max_plane / 2;
-		DWORD color = D3DCOLOR_ARGB(0xAA, 0xFF - c, 0xFF - c, 0xFF);
+		DWORD c = trapez[i].Plane * 255 / max_plane * 2;
+		DWORD color = D3DCOLOR_ARGB(0xFF, 0, 0, c);
 		for (int j = 0; j < 6; ++j) {
 			vertices[i * 6 + j].z = 1.0f;
 			vertices[i * 6 + j].color = color;
@@ -70,9 +80,10 @@ void PmapRenderer::LoadMap(unsigned long file_hash) {
 	wsprintf(filename, L"PMAPs\\MAP %010u.pmap", file_hash);
 	bool loaded = pmap.Open(filename);
 	if (loaded) {
-		printf("loaded pmap!\n");
+		printf("loaded pmap %u!\n", file_hash);
 	} else {
 		printf("failed to load pmap!\n");
 	}
-	printf("number of trapzeoids %d\n", pmap.GetPathingData().size());
+
+	Invalidate();
 }

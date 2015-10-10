@@ -61,6 +61,8 @@ void init(HMODULE hModule) {
 		//SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
 		GWAPI::GWAPIMgr::Destruct();
 
+		Sleep(100);
+
 	} else {
 		printf("Initialize Failed\n");
 	}

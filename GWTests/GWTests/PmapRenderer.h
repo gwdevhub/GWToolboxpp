@@ -11,6 +11,8 @@ class PmapRenderer : public Renderer {
 public:
 	PmapRenderer();
 
+	void Render(IDirect3DDevice9* deivce) override;
+
 	void LoadMap(unsigned long file_hash);
 
 protected:
