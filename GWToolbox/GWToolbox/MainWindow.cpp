@@ -189,7 +189,8 @@ void MainWindow::UpdatePconToggleButton(bool active) {
 		pcon_toggle_button_->SetText(L"Disabled");
 	}
 	if (tick_with_pcons_ && GWAPIMgr::instance()->Map()->GetInstanceType() == GwConstants::InstanceType::Outpost) {
-		GWAPIMgr::instance()->Agents()->Tick(active);
+		GWCA api;
+		api->Agents()->Tick(active);
 	}
 }
 

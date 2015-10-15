@@ -31,6 +31,7 @@ private:
 	static OSHGui::Drawing::Direct3D9Renderer* renderer;
 	static long OldWndProc;
 	static OSHGui::Input::WindowsMessage input;
+	static D3DVIEWPORT9 viewport;
 
 	//------ Static Methods ------//
 public:

@@ -17,6 +17,8 @@ GWAPI::DirectXMgr* GWToolbox::dx = NULL;
 OSHGui::Drawing::Direct3D9Renderer* GWToolbox::renderer = NULL;
 long GWToolbox::OldWndProc = 0;
 OSHGui::Input::WindowsMessage GWToolbox::input;
+D3DVIEWPORT9 GWToolbox::viewport;
+
 
 void GWToolbox::SafeThreadEntry(HMODULE dllmodule) {
 	__try {
@@ -30,7 +32,7 @@ void GWToolbox::ThreadEntry(HMODULE dllmodule) {
 	if (GWToolbox::instance()) return;
 
 	LOG("Initializing API\n");
-	if (!GWAPI::GWAPIMgr::Initialize()){
+	if (!GWAPI::GWCA::Initialize()){
 		MessageBoxA(0, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0);
 		FreeLibraryAndExitThread(dllmodule, EXIT_SUCCESS);
 	}
@@ -44,7 +46,7 @@ void GWToolbox::ThreadEntry(HMODULE dllmodule) {
 }
 
 void GWToolbox::Exec() {
-	GWAPI::GWAPIMgr* api = GWAPI::GWAPIMgr::instance();
+	GWAPI::GWAPIMgr* api = GWAPIMgr::instance();
 	dx = api->DirectX();
 
 	LOG("Installing dx hooks\n");
@@ -103,7 +105,7 @@ void GWToolbox::Exec() {
 	SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
 	Sleep(100);
 	LOG("Destroying API\n");
-	GWAPI::GWAPIMgr::Destruct();
+	GWAPI::GWCA::Destruct();
 	LOG("Closing log/console, bye!\n");
 	Logger::Close();
 	Sleep(100);
@@ -248,15 +250,43 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 	static bool init = false;
 	if (!init) {
 		init = true;
+		
 		GWToolbox::SafeCreateGui(pDevice);
 	}
 
 	GWToolbox::instance()->UpdateUI();
 
+	pDevice->GetViewport(&viewport);
+
+	auto location = GWToolbox::instance()->main_window()->GetLocation();
+
+	if (location.X < 0){
+		location.X = 0;
+	}
+	if (location.Y < 0){
+		location.Y = 0;
+	}
+
+	auto location_bounds = location;
+	auto width = GWToolbox::instance()->main_window()->GetWidth();
+	auto height = GWToolbox::instance()->main_window()->GetHeight();
+
+	location_bounds.X += width;
+	location_bounds.Y += height;
+
+	if (location_bounds.X > viewport.Width){
+		location.X = viewport.Width - width;
+	}
+	if (location_bounds.Y > viewport.Height){
+		location.Y = viewport.Height - height;
+	}
+
+	if (location != GWToolbox::instance()->main_window()->GetLocation()){
+		GWToolbox::instance()->main_window()->SetLocation(location);
+	}
+
 	renderer->BeginRendering();
-
 	Application::InstancePtr()->Render();
-
 	renderer->EndRendering();
 
 	return origfunc(pDevice);
@@ -291,4 +321,3 @@ void GWToolbox::UpdateUI() {
 		}
 	}
 }
-

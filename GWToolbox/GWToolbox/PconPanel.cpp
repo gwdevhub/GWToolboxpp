@@ -215,7 +215,7 @@ void PconPanel::BuildUI() {
 void PconPanel::UpdateUI() {
 	if (!initialized) return;
 
-	GWAPIMgr * API = GWAPIMgr::instance();
+	GWCA API;
 
 	if (current_map_type != API->Map()->GetInstanceType()) {
 		current_map_type = API->Map()->GetInstanceType();
@@ -238,7 +238,7 @@ void PconPanel::UpdateUI() {
 void PconPanel::MainRoutine() {
 	if (!initialized) return;
 
-	GWAPIMgr * API = GWAPIMgr::instance();
+	GWCA API;
 
 	if (!enabled) return;
 	InstanceType type;

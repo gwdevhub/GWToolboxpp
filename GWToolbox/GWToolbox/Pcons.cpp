@@ -101,7 +101,8 @@ void Pcon::CheckUpdateTimer() {
 		this->scanInventory();
 		update_timer = 0;
 		if (old_enabled != enabled) {
-			GWAPIMgr::instance()->Chat()->WriteChatF(L"[WARNING] Cannot find %ls", chatName);
+			GWCA API;
+			API->Chat()->WriteChatF(L"[WARNING] Cannot find %ls", chatName);
 		}
 	}
 }
@@ -111,7 +112,7 @@ bool Pcon::checkAndUse() {
 
 	if (enabled && TBTimer::diff(this->timer) > 5000) {
 
-		GWAPIMgr* API = GWAPIMgr::instance();
+		GWCA API;
 		try {
 			GW::Effect effect = API->Effects()->GetPlayerEffectById(effectID);
 
@@ -136,7 +137,7 @@ bool PconCons::checkAndUse() {
 	CheckUpdateTimer();
 
 	if (enabled && TBTimer::diff(this->timer) > 5000) {
-		GWAPIMgr* API = GWAPIMgr::instance();
+		GWCA API;
 		try {
 			GW::Effect effect = API->Effects()->GetPlayerEffectById(effectID);
 			if (effect.SkillId == 0 || effect.GetTimeRemaining() < 1000) {
@@ -172,7 +173,7 @@ bool PconCity::checkAndUse() {
 	CheckUpdateTimer();
 
 	if (enabled	&& TBTimer::diff(this->timer) > 5000) {
-		GWAPIMgr* API = GWAPIMgr::instance();
+		GWCA API;
 		try {
 			if (API->Agents()->GetPlayer() &&
 				(API->Agents()->GetPlayer()->MoveX > 0 || API->Agents()->GetPlayer()->MoveY > 0)) {
@@ -209,7 +210,7 @@ bool PconAlcohol::checkAndUse() {
 	CheckUpdateTimer();
 
 	if (enabled && TBTimer::diff(this->timer) > 5000) {
-		GWAPIMgr* API = GWAPIMgr::instance();
+		GWCA API;
 		try {
 			if (API->Effects()->GetAlcoholLevel() <= 1) {
 				// use an alcohol item. Because of logical-OR only the first one will be used
@@ -247,7 +248,7 @@ bool PconLunar::checkAndUse() {
 	CheckUpdateTimer();
 
 	if (enabled	&& TBTimer::diff(this->timer) > 500) {
-		GWAPIMgr* API = GWAPIMgr::instance();
+		GWCA API;
 		try {
 			if (API->Effects()->GetPlayerEffectById(SkillID::Lunar_Blessing).SkillId == 0) {
 				bool used = API->Items()->UseItemByModelId(ItemID::LunarDragon)
@@ -274,8 +275,8 @@ void Pcon::scanInventory() {
 	bool old_enabled = enabled;
 
 	quantity = 0;
-
-	GW::Bag** bags = GWAPIMgr::instance()->Items()->GetBagArray();
+	GWCA API;
+	GW::Bag** bags = API->Items()->GetBagArray();
 	if (bags != nullptr) {
 		GW::Bag* bag = NULL;
 		for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
@@ -303,8 +304,8 @@ void PconCity::scanInventory() {
 	bool old_enabled = enabled;
 
 	quantity = 0;
-
-	GW::Bag** bags = GWAPIMgr::instance()->Items()->GetBagArray();
+	GWCA API;
+	GW::Bag** bags = API->Items()->GetBagArray();
 	if (bags != nullptr) {
 		GW::Bag* bag = NULL;
 		for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
@@ -336,7 +337,8 @@ void PconAlcohol::scanInventory() {
 	bool old_enabled = enabled;
 
 	quantity = 0;
-	GW::Bag** bags = GWAPIMgr::instance()->Items()->GetBagArray();
+	GWCA API;
+	GW::Bag** bags = API->Items()->GetBagArray();
 	if (bags != nullptr) {
 		GW::Bag* bag = NULL;
 		for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
@@ -381,8 +383,8 @@ void PconLunar::scanInventory() {
 	bool old_enabled = enabled;
 
 	quantity = 0;
-
-	GW::Bag** bags = GWAPIMgr::instance()->Items()->GetBagArray();
+	GWCA API;
+	GW::Bag** bags = API->Items()->GetBagArray();
 	if (bags != nullptr) {
 		GW::Bag* bag = NULL;
 		for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {

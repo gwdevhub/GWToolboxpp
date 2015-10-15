@@ -590,11 +590,11 @@ HotkeyPingBuild::HotkeyPingBuild(Key key, Key modifier, bool active, wstring ini
 void HotkeyUseItem::exec() {
 	if (!isExplorable()) return;
 	if (item_id_ <= 0) return;
-
-	if (!GWAPI::GWAPIMgr::instance()->Items()->UseItemByModelId(item_id_)) {
+	GWCA api;
+	if (!api->Items()->UseItemByModelId(item_id_)) {
 		wstring name = item_name_.empty() ? to_wstring(item_id_) : item_name_;
 		wstring msg = wstring(L"[Warning] ") + item_name_ + L"not found!";
-		GWAPI::GWAPIMgr::instance()->Chat()->WriteChat(msg.c_str());
+		api->Chat()->WriteChat(msg.c_str());
 		LOGW(msg.c_str());
 	}
 }
@@ -602,24 +602,24 @@ void HotkeyUseItem::exec() {
 void HotkeySendChat::exec() {
 	if (isLoading()) return;
 	if (msg_.empty()) return;
-
-	GWAPIMgr::instance()->Chat()->SendChat(msg_.c_str(), channel_);
+	GWCA api;
+	api->Chat()->SendChat(msg_.c_str(), channel_);
 	if (channel_ == L'/') {
-		GWAPIMgr::instance()->Chat()->WriteChat((wstring(L"/") + msg_).c_str());
+		api->Chat()->WriteChat((wstring(L"/") + msg_).c_str());
 	}
 }
 
 void HotkeyDropUseBuff::exec() {
 	if (!isExplorable()) return;
 
-	GWAPIMgr* API = GWAPIMgr::instance();
-	GW::Buff buff = API->Effects()->GetPlayerBuffBySkillId(id_);
+	GWCA api;
+	GW::Buff buff = api->Effects()->GetPlayerBuffBySkillId(id_);
 	if (buff.SkillId) {
-		API->Effects()->DropBuff(buff.BuffId);
+		api->Effects()->DropBuff(buff.BuffId);
 	} else {
-		int slot = API->Skillbar()->getSkillSlot(id_);
-		if (slot > 0 && API->Skillbar()->GetPlayerSkillbar().Skills[slot].Recharge == 0) {
-			API->Skillbar()->UseSkill(slot, API->Agents()->GetTargetId());
+		int slot = api->Skillbar()->getSkillSlot(id_);
+		if (slot > 0 && api->Skillbar()->GetPlayerSkillbar().Skills[slot].Recharge == 0) {
+			api->Skillbar()->UseSkill(slot, api->Agents()->GetTargetId());
 		}
 	}
 }
@@ -627,10 +627,11 @@ void HotkeyDropUseBuff::exec() {
 void HotkeyToggle::exec() {
 	GWToolbox* tb = GWToolbox::instance();
 	bool active;
+	GWCA api;
 	switch (target_) {
 	case HotkeyToggle::Clicker:
 		active = tb->main_window()->hotkey_panel()->ToggleClicker();
-		GWAPIMgr::instance()->Chat()->WriteChat(
+		api->Chat()->WriteChat(
 			active ? L"Clicker is active" : L"Clicker is disabled");
 		break;
 	case HotkeyToggle::Pcons:
@@ -639,7 +640,7 @@ void HotkeyToggle::exec() {
 		break;
 	case HotkeyToggle::CoinDrop:
 		active = tb->main_window()->hotkey_panel()->ToggleCoinDrop();
-		GWAPIMgr::instance()->Chat()->WriteChat(
+		api->Chat()->WriteChat(
 			active ? L"Coin dropper is active" : L"Coin dropper is disabled");
 		break;
 	}
@@ -647,7 +648,7 @@ void HotkeyToggle::exec() {
 
 void HotkeyAction::exec() {
 	if (isLoading()) return;
-	GWAPIMgr* api = GWAPIMgr::instance();
+	GWCA api;
 
 	switch (action_) {
 	case HotkeyAction::OpenXunlaiChest:
@@ -676,7 +677,7 @@ void HotkeyAction::exec() {
 void HotkeyTarget::exec() {
 	if (isLoading()) return;
 	if (id_ <= 0) return;
-	GWAPIMgr* API = GWAPIMgr::instance();
+	GWCA API;
 
 	GW::AgentArray agents = API->Agents()->GetAgentArray();
 	if (!agents.valid()) {
@@ -708,20 +709,21 @@ void HotkeyTarget::exec() {
 void HotkeyMove::exec() {
 	if (!isExplorable()) return;
 
-	GWAPIMgr* API = GWAPIMgr::instance();
+	GWCA API;
 	GW::Agent* me = API->Agents()->GetPlayer();
 	double sqrDist = (me->X - x_) * (me->X - x_) + (me->Y - y_) * (me->Y - y_);
 	if (sqrDist < GwConstants::SqrRange::Compass) {
 		API->Agents()->Move(x_, y_);
 	}
-	GWAPIMgr::instance()->Chat()->WriteChat(L"Movement macro activated");
+	API->Chat()->WriteChat(L"Movement macro activated");
 }
 
 void HotkeyDialog::exec() {
 	if (isLoading()) return;
 	if (id_ <= 0) return;
 
-	GWAPIMgr::instance()->Agents()->Dialog(id_);
+	GWCA api;
+	api->Agents()->Dialog(id_);
 }
 
 void HotkeyPingBuild::exec() {

@@ -69,7 +69,8 @@ EditBuild::EditBuild() {
 			message += L";";
 			message += templates[i]->GetText();
 			message += L"]";
-			GWAPIMgr::instance()->Chat()->SendChat(message.c_str(), L'#');
+			GWCA api;
+			api->Chat()->SendChat(message.c_str(), L'#');
 		});
 		AddControl(send);
 

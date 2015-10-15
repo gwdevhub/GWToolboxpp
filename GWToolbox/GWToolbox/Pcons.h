@@ -43,6 +43,7 @@ public:
 	inline void setItemID(unsigned int item) { itemID = item; }
 	inline void setEffectID(GwConstants::SkillID effect) { effectID = effect; }
 	inline void setThreshold(int t) { threshold = t; }
+	
 
 	virtual bool checkAndUse();		// checks if need to use pcon, uses if needed. Returns true if was used.
 	void UpdateUI();

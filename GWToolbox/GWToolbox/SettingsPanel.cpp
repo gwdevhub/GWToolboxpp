@@ -150,7 +150,7 @@ void SettingsPanel::BuildUI() {
 void SettingsPanel::MainRoutine() {
 	if (location_active_ && TBTimer::diff(location_timer_) > 1000) {
 		location_timer_ = TBTimer::init();
-		GWAPIMgr* api = GWAPIMgr::instance();
+		GWCA api;
 		if (api->Map()->GetInstanceType() == GwConstants::InstanceType::Explorable
 			&& api->Agents()->GetPlayer() != nullptr
 			&& api->Map()->GetInstanceTime() > 3000) {

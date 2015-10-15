@@ -135,7 +135,7 @@ void BondsWindow::BondsMonitor::OnMouseUp(const OSHGui::MouseMessage &mouse) {
 }
 
 void BondsWindow::BondsMonitor::DropUseBuff(int bond, int player) {
-	GWAPIMgr* api = GWAPIMgr::instance();
+	GWCA api;
 	if (pics[player][bond]->GetVisible()) {
 		if (buff_id[player][bond] > 0) {
 			api->Effects()->DropBuff(buff_id[player][bond]);
@@ -181,7 +181,7 @@ void BondsWindow::BondsMonitor::UpdateUI() {
 
 	if (!isVisible_) return;
 
-	GWAPI::GWAPIMgr* api = GWAPI::GWAPIMgr::instance();
+	GWAPI::GWCA api;
 
 	int size = api->Agents()->GetPartySize();
 	if (size > n_players) size = n_players;

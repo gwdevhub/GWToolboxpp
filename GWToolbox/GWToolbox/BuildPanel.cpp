@@ -136,7 +136,7 @@ void BuildPanel::MainRoutine() {
 	if (!queue.empty() && TBTimer::diff(send_timer) > 600) {
 		send_timer = TBTimer::init();
 
-		GWAPIMgr* api = GWAPIMgr::instance();
+		GWCA api;
 		if (api->Map()->GetInstanceType() != GwConstants::InstanceType::Loading
 			&& api->Agents()->GetPlayer()) {
 
