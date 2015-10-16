@@ -1,5 +1,8 @@
 #include "Minimap.h"
 
+#include <Windows.h>
+#include <windowsx.h>
+
 #include "GWCA/APIMain.h"
 
 void Minimap::UIRenderer::Initialize(IDirect3DDevice9* device) {
@@ -17,7 +20,7 @@ void Minimap::UIRenderer::Initialize(IDirect3DDevice9* device) {
 
 	for (unsigned int i = 0; i < vertex_count; ++i) {
 		vertices[i].z = 0;
-		vertices[i].color = D3DCOLOR_ARGB(0xFF, 0xFF, 0xFF, 0xFF);
+		vertices[i].color = D3DCOLOR_ARGB(0xAA, 0x22, 0x22, 0x22);
 	}
 
 	vertices[0].x = -1;
@@ -41,7 +44,7 @@ void Minimap::RangeRenderer::CreateCircle(Vertex* vertices, float radius) {
 		vertices[i].x = radius * std::cos(angle);
 		vertices[i].y = radius * std::sin(angle);
 		vertices[i].z = 1.0f;
-		vertices[i].color = 0xFF555577;
+		vertices[i].color = 0xFF666677;
 	}
 	vertices[circle_points] = vertices[0];
 }
@@ -87,9 +90,10 @@ void Minimap::RangeRenderer::Render(IDirect3DDevice9* device) {
 }
 
 Minimap::Minimap() 
-	: ui_renderer(UIRenderer()), range_renderer(RangeRenderer()) {
-	
-	pmap_renderer = PmapRenderer();
+	: ui_renderer(UIRenderer()), 
+	range_renderer(RangeRenderer()),
+	pmap_renderer(PmapRenderer()),
+	agent_renderer(AgentRenderer()) {
 
 	GWAPI::GWAPIMgr* api = GWAPI::GWAPIMgr::instance();
 	api->StoC()->AddGameServerEvent<GWAPI::StoC::P391_InstanceLoadFile>(
@@ -130,70 +134,40 @@ void Minimap::Render(IDirect3DDevice9* device) {
 	range_renderer.Render(device);
 
 	RenderSetupWorldTransforms(device);
-	RenderAgents(device);
+	agent_renderer.Render(device);
 }
 
-void Minimap::RenderAgents(IDirect3DDevice9* device) {
-	using namespace GWAPI;
 
-	GWAPIMgr* api = GWAPIMgr::instance();
-	GW::Agent* me = api->Agents()->GetPlayer();
-	if (me == nullptr) return;
-	GW::AgentArray agents = api->Agents()->GetAgentArray();
-	if (!agents.valid()) return;
-
-	unsigned int tri_count = 0;
-	for (size_t i = 0; i < agents.size(); ++i) {
-		if (agents[i] != nullptr) {
-			++tri_count;
-		}
+bool Minimap::OnMouseDown(MSG msg) {
+	int x = GET_X_LPARAM(msg.lParam);
+	int y = GET_Y_LPARAM(msg.lParam);
+	if (x > GetX() && x < GetX() + GetWidth()
+		&& y > GetY() && y < GetY() + GetHeight()) {
+		drag_start_ = Point2i(x, y);
+		dragging_ = true;
+		return true;
 	}
+	return false;
+}
 
-	IDirect3DVertexBuffer9* buffer;
-	device->CreateVertexBuffer(sizeof(Vertex) * tri_count * 3, 0,
-		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
+bool Minimap::OnMouseUp(MSG msg) {
+	dragging_ = false;
+	return false;
+}
 
-	Vertex* vertices = nullptr;
-	buffer->Lock(0, sizeof(Vertex) * tri_count * 3, (VOID**)&vertices, D3DLOCK_DISCARD);
-	
-	unsigned long index = 0;
-	for (size_t i = 0; i < agents.size() && index < tri_count; ++i) {
-		GW::Agent* agent = agents[i];
-		if (agent == nullptr) continue;
-
-		++index;
-
-		DWORD color;
-		switch (agent->Allegiance) {
-		case 0x100: color = D3DCOLOR_XRGB(0, 255, 0); break;
-		case 0x300: color = D3DCOLOR_XRGB(255, 0, 0); break;
-		default:	color = D3DCOLOR_XRGB(180, 180, 0); break;
-		}
-		if (agent == me) color = D3DCOLOR_XRGB(255, 0, 255);
-
-		float rotation = agent->Rotation;
-		float size = 75;
-
-		vertices->x = agent->X + size * std::cos(rotation);
-		vertices->y = agent->Y + size * std::sin(rotation);
-		vertices->z = 1.0f;
-		vertices->color = color;
-		vertices++;
-
-		vertices->x = agent->X + size * std::cos(rotation + (float)M_PI * 2 / 3);
-		vertices->y = agent->Y + size * std::sin(rotation + (float)M_PI * 2 / 3);
-		vertices->z = 1.0f;
-		vertices->color = color;
-		vertices++;
-
-		vertices->x = agent->X + size * std::cos(rotation - (float)M_PI * 2 / 3);
-		vertices->y = agent->Y + size * std::sin(rotation - (float)M_PI * 2 / 3);;
-		vertices->z = 1.0f;
-		vertices->color = color;
-		vertices++;
+bool Minimap::OnMouseMove(MSG msg) {
+	int x = GET_X_LPARAM(msg.lParam);
+	int y = GET_Y_LPARAM(msg.lParam);
+	if (dragging_) {
+		Point2i diff = Point2i(x, y) - drag_start_;
+		SetX(GetX() + diff.x());
+		SetY(GetY() + diff.y());
+		drag_start_ = Point2i(x, y);
+		return true;
 	}
-	buffer->Unlock();
-	device->SetStreamSource(0, buffer, 0, sizeof(Vertex));
-	device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, tri_count);
-	buffer->Release();
+	return false;
+}
+
+bool Minimap::OnMouseWheel(MSG msg) {
+	return false;
 }

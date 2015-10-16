@@ -36,8 +36,8 @@ void PmapRenderer::Initialize(IDirect3DDevice9* device) {
 		(VOID**)&vertices, D3DLOCK_DISCARD);
 	
 	for (size_t i = 0; i < trapez.size(); ++i) {
-		DWORD c = trapez[i].Plane * 255 / max_plane * 2;
-		DWORD color = D3DCOLOR_ARGB(0xFF, 0, 0, c);
+		DWORD c = trapez[i].Plane * 200 / max_plane / 2;
+		DWORD color = D3DCOLOR_ARGB(0xAA, 200 - c, 200 - c, 200);
 		for (int j = 0; j < 6; ++j) {
 			vertices[i * 6 + j].z = 1.0f;
 			vertices[i * 6 + j].color = color;

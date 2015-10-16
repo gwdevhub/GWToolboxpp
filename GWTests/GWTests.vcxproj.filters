@@ -30,6 +30,9 @@
     <ClCompile Include="GWTests\PmapRenderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GWTests\AgentRenderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GWTests\PathingMap.h">
@@ -57,6 +60,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GWTests\Point2f.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GWTests\AgentRenderer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -84,6 +84,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="GWTests\AgentRenderer.cpp" />
     <ClCompile Include="GWTests\main.cpp" />
     <ClCompile Include="GWTests\Minimap.cpp" />
     <ClCompile Include="GWTests\PathingMap.cpp" />
@@ -96,6 +97,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="GWTests\AgentRenderer.h" />
     <ClInclude Include="GWTests\Minimap.h" />
     <ClInclude Include="GWTests\MyD3DVertex.h" />
     <ClInclude Include="GWTests\PathingMap.h" />
