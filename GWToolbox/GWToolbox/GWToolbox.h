@@ -87,6 +87,7 @@ private:
 private:
 	// Does everything: setup, main loop, destruction 
 	void Exec();
+	void CreateRenderHooks();
 	void UpdateUI();
 
 	//------ Setters ------//

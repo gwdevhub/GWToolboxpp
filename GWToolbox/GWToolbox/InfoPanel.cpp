@@ -143,7 +143,8 @@ void InfoPanel::BuildUI() {
 	xunlai->SetLocation(item1_x, GetHeight() - xunlai->GetHeight() - DefaultBorderPadding);
 	xunlai->SetText(L"Open Xunlai Chest");
 	xunlai->GetClickEvent() += ClickEventHandler([](Control*) {
-		if (GWAPI::GWAPIMgr::instance()->Map()->GetInstanceType() == GwConstants::InstanceType::Outpost) {
+		GWCA api;
+		if (api->Map()->GetInstanceType() == GwConstants::InstanceType::Outpost) {
 			GWCA api;
 			api->Items()->OpenXunlaiWindow();
 		}

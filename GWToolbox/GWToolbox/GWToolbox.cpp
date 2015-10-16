@@ -44,13 +44,16 @@ void GWToolbox::ThreadEntry(HMODULE dllmodule) {
 	instance_->Exec();
 }
 
-void GWToolbox::Exec() {
-	GWAPI::GWAPIMgr* api = GWAPIMgr::instance();
+void GWToolbox::CreateRenderHooks() {
+	GWCA api;
 	dx = api->DirectX();
-
 	LOG("Installing dx hooks\n");
 	dx->CreateRenderHooks(endScene, resetScene);
 	LOG("Installed dx hooks\n");
+}
+
+void GWToolbox::Exec() {
+	CreateRenderHooks();
 
 	LOG("Installing input event handler\n");
 	HWND gw_window_handle = GWAPI::MemoryMgr::GetGWWindowHandle();
@@ -245,7 +248,6 @@ void GWToolbox::CreateGui(IDirect3DDevice9* pDevice) {
 
 // All rendering done here.
 HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
-	static GWAPI::DirectXMgr::EndScene_t origfunc = dx->EndsceneReturn();
 	static bool init = false;
 	if (!init) {
 		init = true;
@@ -269,11 +271,11 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 	if (location.Y < 0){
 		location.Y = 0;
 	}
-	if (location.X > viewport.Width - size.GetWidth()) {
-		location.X = viewport.Width - size.GetWidth();
+	if (location.X > static_cast<int>(viewport.Width) - size.GetWidth()) {
+		location.X = static_cast<int>(viewport.Width) - size.GetWidth();
 	}
-	if (location.Y > viewport.Height - size.GetHeight()) {
-		location.Y = viewport.Height - size.GetHeight();
+	if (location.Y > static_cast<int>(viewport.Height) - size.GetHeight()) {
+		location.Y = static_cast<int>(viewport.Height) - size.GetHeight();
 	}
 	if (location != tb->main_window()->GetLocation()){
 		tb->main_window()->SetLocation(location);
@@ -283,17 +285,15 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 	Application::InstancePtr()->Render();
 	renderer->EndRendering();
 
-	return origfunc(pDevice);
+	return dx->EndsceneReturn()(pDevice);
 }
 
-HRESULT WINAPI GWToolbox::resetScene(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETERS* pPresentationParameters) {
-	static GWAPI::DirectXMgr::Reset_t origfunc = dx->ResetReturn();
-
+HRESULT WINAPI GWToolbox::resetScene(IDirect3DDevice9* pDevice, 
+	D3DPRESENT_PARAMETERS* pPresentationParameters) {
 	// pre-reset here.
-
 	renderer->PreD3DReset();
 
-	HRESULT result = origfunc(pDevice, pPresentationParameters);
+	HRESULT result = dx->ResetReturn()(pDevice, pPresentationParameters);
 	if (result == D3D_OK){
 		// post-reset here.
 		renderer->PostD3DReset();

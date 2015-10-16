@@ -212,7 +212,8 @@ void PconPanel::BuildUI() {
 		pcon->UpdateUI();
 	}
 
-	GWAPIMgr::instance()->ChatCommands()->RegisterKey(
+	GWCA api;
+	api->Chat()->RegisterKey(
 		L"pcons", std::bind(&PconPanel::ChatCallback, this, std::placeholders::_1));
 
 	initialized = true;
@@ -322,7 +323,8 @@ bool PconPanel::SetActive(bool active) {
 	GWToolbox* tb = GWToolbox::instance();
 	tb->main_window()->UpdatePconToggleButton(enabled);
 	if (tb->main_window()->minimized()) {
-		GWAPIMgr::instance()->Chat()->WriteChat(
+		GWCA api;
+		api->Chat()->WriteChat(
 			active ? L"Pcons enabled" : L"Pcons disabled");
 	}
 	return enabled;

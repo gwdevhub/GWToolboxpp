@@ -120,7 +120,8 @@ TravelPanel::TravelCombo::TravelCombo()
 
 DWORD TravelPanel::region() {
 	if (current_district_) {
-		return GWAPIMgr::instance()->Map()->GetRegion();
+		GWCA api;
+		return api->Map()->GetRegion();
 	} else {
 		return region_;
 	}
@@ -128,7 +129,8 @@ DWORD TravelPanel::region() {
 
 DWORD TravelPanel::language() {
 	if (current_district_) {
-		return GWAPIMgr::instance()->Map()->GetLanguage();
+		GWCA api;
+		return api->Map()->GetLanguage();
 	} else {
 		return language_;
 	}
@@ -142,13 +144,14 @@ void TravelPanel::AddTravelButton(wstring text, int grid_x, int grid_y, GwConsta
 	button->SetLocation(GuiUtils::ComputeX(GetWidth(), 2, grid_x), 
 		DefaultBorderPadding + (BUTTON_HEIGHT + DefaultBorderPadding) * grid_y);
 	button->GetClickEvent() += ClickEventHandler([this, map_id](Control*) {
-		GWAPIMgr::instance()->Map()->Travel(map_id, district(), region(), language());
+		GWCA api;
+		api->Map()->Travel(map_id, district(), region(), language());
 	});
 	AddControl(button);
 }
 
 void TravelPanel::UpdateDistrict(int gui_index) {
-	GWAPI::GWAPIMgr* api = GWAPI::GWAPIMgr::instance();
+	GWCA api;
 	current_district_ = false;
 	region_ = api->Map()->GetRegion();
 	district_ = 0;

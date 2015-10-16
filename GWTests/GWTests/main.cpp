@@ -11,6 +11,7 @@ using namespace GWAPI;
 
 unsigned long OldWndProc = 0;
 Minimap* minimap = nullptr;
+GWAPI::DirectXMgr* dx;
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) {
 
@@ -64,19 +65,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 	return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
 }
 
-HRESULT WINAPI EndScene(IDirect3DDevice9* dev) {
-	static GWAPI::DirectXMgr::EndScene_t origfunc = GWAPIMgr::instance()->DirectX()->EndsceneReturn();
-	
+HRESULT WINAPI EndScene(IDirect3DDevice9* dev) {	
 	minimap->Render(dev);
 	
-	return origfunc(dev);
+	return dx->EndsceneReturn()(dev);
 }
 
 HRESULT WINAPI ResetScene(IDirect3DDevice9* pDevice,
 	D3DPRESENT_PARAMETERS* pPresentationParameters) {
-	static GWAPI::DirectXMgr::Reset_t origfunc = GWAPIMgr::instance()->DirectX()->ResetReturn();
 
-	return origfunc(pDevice, pPresentationParameters);;
+	return dx->ResetReturn()(pDevice, pPresentationParameters);
 }
 
 void init(HMODULE hModule) {
@@ -97,8 +95,11 @@ void init(HMODULE hModule) {
 		minimap->SetLocation(100, 100);
 		minimap->SetSize(400, 400);
 
-		GWAPI::GWAPIMgr* api = GWAPI::GWAPIMgr::instance();
-		api->DirectX()->CreateRenderHooks(EndScene, ResetScene);
+		{
+			GWAPI::GWCA api;
+			dx = api->DirectX();
+			api->DirectX()->CreateRenderHooks(EndScene, ResetScene);
+		}
 
 		HWND gw_window_handle = GWAPI::MemoryMgr::GetGWWindowHandle();
 		OldWndProc = SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)WndProc);

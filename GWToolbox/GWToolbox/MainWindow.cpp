@@ -187,8 +187,8 @@ void MainWindow::UpdatePconToggleButton(bool active) {
 		pcon_toggle_button_->SetForeColor(Color::Red());
 		pcon_toggle_button_->SetText(L"Disabled");
 	}
-	if (tick_with_pcons_ && GWAPIMgr::instance()->Map()->GetInstanceType() == GwConstants::InstanceType::Outpost) {
-		GWCA api;
+	GWCA api;
+	if (tick_with_pcons_ && api->Map()->GetInstanceType() == GwConstants::InstanceType::Outpost) {
 		api->Agents()->Tick(active);
 	}
 }

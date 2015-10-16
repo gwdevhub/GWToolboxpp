@@ -369,7 +369,8 @@ void HotkeyPanel::MainRoutine() {
 
 	if (dropCoinsActive && TBTimer::diff(dropCoinsTimer) > 400) {
 		dropCoinsTimer = TBTimer::init();
-		GWAPIMgr::instance()->Items()->DropGold(1);
+		GWCA api;
+		api->Items()->DropGold(1);
 	}
 
 	// TODO rupt?
