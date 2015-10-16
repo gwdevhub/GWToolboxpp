@@ -17,7 +17,6 @@ GWAPI::DirectXMgr* GWToolbox::dx = NULL;
 OSHGui::Drawing::Direct3D9Renderer* GWToolbox::renderer = NULL;
 long GWToolbox::OldWndProc = 0;
 OSHGui::Input::WindowsMessage GWToolbox::input;
-D3DVIEWPORT9 GWToolbox::viewport;
 
 
 void GWToolbox::SafeThreadEntry(HMODULE dllmodule) {
@@ -254,11 +253,15 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 		GWToolbox::SafeCreateGui(pDevice);
 	}
 
-	GWToolbox::instance()->UpdateUI();
+	GWToolbox* tb = GWToolbox::instance();
 
+	tb->UpdateUI();
+
+	D3DVIEWPORT9 viewport;
 	pDevice->GetViewport(&viewport);
 
-	auto location = GWToolbox::instance()->main_window()->GetLocation();
+	Drawing::PointI location = tb->main_window()->GetLocation();
+	Drawing::RectangleI size = tb->main_window()->GetSize();
 
 	if (location.X < 0){
 		location.X = 0;
@@ -266,23 +269,14 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 	if (location.Y < 0){
 		location.Y = 0;
 	}
-
-	auto location_bounds = location;
-	auto width = GWToolbox::instance()->main_window()->GetWidth();
-	auto height = GWToolbox::instance()->main_window()->GetHeight();
-
-	location_bounds.X += width;
-	location_bounds.Y += height;
-
-	if (location_bounds.X > viewport.Width){
-		location.X = viewport.Width - width;
+	if (location.X > viewport.Width - size.GetWidth()) {
+		location.X = viewport.Width - size.GetWidth();
 	}
-	if (location_bounds.Y > viewport.Height){
-		location.Y = viewport.Height - height;
+	if (location.Y > viewport.Height - size.GetHeight()) {
+		location.Y = viewport.Height - size.GetHeight();
 	}
-
-	if (location != GWToolbox::instance()->main_window()->GetLocation()){
-		GWToolbox::instance()->main_window()->SetLocation(location);
+	if (location != tb->main_window()->GetLocation()){
+		tb->main_window()->SetLocation(location);
 	}
 
 	renderer->BeginRendering();
