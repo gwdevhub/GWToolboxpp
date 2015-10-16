@@ -95,8 +95,7 @@ settings_panel_(new SettingsPanel()) {
 	toggle->SetFont(GuiUtils::getTBFont(10.0, true));
 	PconPanel* const pcon_panel = pcon_panel_;
 	toggle->GetClickEvent() += ClickEventHandler([this, toggle, pcon_panel](Control*) {
-		bool active = pcon_panel->ToggleActive();
-		this->UpdatePconToggleButton(active);
+		pcon_panel->ToggleActive();
 	});
 	toggle->SetSize(WIDTH - 2 * DefaultBorderPadding, TOGGLE_HEIGHT);
 	toggle->SetLocation(DefaultBorderPadding, TAB_HEIGHT - 2);

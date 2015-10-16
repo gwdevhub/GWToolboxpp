@@ -634,8 +634,7 @@ void HotkeyToggle::exec() {
 			active ? L"Clicker is active" : L"Clicker is disabled");
 		break;
 	case HotkeyToggle::Pcons:
-		active = tb->main_window()->pcon_panel()->ToggleActive();
-		tb->main_window()->UpdatePconToggleButton(active);
+		tb->main_window()->pcon_panel()->ToggleActive();
 		break;
 	case HotkeyToggle::CoinDrop:
 		active = tb->main_window()->hotkey_panel()->ToggleCoinDrop();

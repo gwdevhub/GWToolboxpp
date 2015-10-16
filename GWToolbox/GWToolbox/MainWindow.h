@@ -101,7 +101,8 @@ public:
 	void OpenClosePanel(int index);
 	inline void set_use_minimized_alt_pos(bool enable) { use_minimized_alt_pos_ = enable; }
 	inline void set_tick_with_pcons(bool enabled) { tick_with_pcons_ = enabled; }
-	
+	inline bool minimized() { return minimized_; }
+
 	void UpdatePconToggleButton(bool active);
 	PconPanel* pcon_panel() { return pcon_panel_; }
 	HotkeyPanel* hotkey_panel() { return hotkey_panel_; }

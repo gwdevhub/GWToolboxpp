@@ -200,7 +200,9 @@ void SettingsPanel::MainRoutine() {
 					+ "-" + to_string(localtime.wSecond)
 					+ " - " + map_string + prof_string + ".log";
 
-				if (location_file_.is_open()) location_file_.close();
+				if (location_file_ && location_file_.is_open()) {
+					location_file_.close();
+				}
 				location_file_.open(GuiUtils::getSubPathA(filename, "location logs").c_str());
 			}
 

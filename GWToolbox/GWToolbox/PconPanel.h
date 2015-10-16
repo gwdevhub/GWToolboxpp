@@ -35,13 +35,15 @@ private:
 	GwConstants::InstanceType current_map_type;
 	clock_t scan_inventory_timer;
 
+private:
+	void ChatCallback(std::wstring arguments);
+
 public:
 	PconPanel();
 
-	void Enable() { enabled = true; }
-	void Disable() { enabled = false; }
-	bool ToggleActive() { return enabled = !enabled; }
-	
+	bool SetActive(bool active);
+	inline void ToggleActive() { SetActive(!enabled); }
+
 	void BuildUI() override;
 	void UpdateUI() override;
 	void MainRoutine() override;// runs one loop of the main routine (checking each pcon once)

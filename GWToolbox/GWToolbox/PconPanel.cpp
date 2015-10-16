@@ -1,5 +1,8 @@
 #include "PconPanel.h"
 
+#include <string>
+#include <functional>
+
 #include "GWCA\APIMain.h"
 
 #include "MainWindow.h"
@@ -209,6 +212,9 @@ void PconPanel::BuildUI() {
 		pcon->UpdateUI();
 	}
 
+	GWAPIMgr::instance()->ChatCommands()->RegisterKey(
+		L"pcons", std::bind(&PconPanel::ChatCallback, this, std::placeholders::_1));
+
 	initialized = true;
 }
 
@@ -273,4 +279,51 @@ void PconPanel::MainRoutine() {
 	} else if (type == InstanceType::Outpost) {
 		city->checkAndUse();
 	}
+}
+
+
+void PconPanel::ChatCallback(wstring raw_args) {
+
+	vector<wstring> args;
+	size_t index = 0;
+	while (true) {
+
+		size_t pos = raw_args.find(L' ', index);
+		
+		wstring arg;
+		if (pos == wstring::npos) {
+			arg = raw_args.substr(index);
+		} else {
+			arg = raw_args.substr(index, pos - index);
+		}
+		if (!arg.empty()) {
+			args.push_back(arg);
+		}
+		
+		if (pos == wstring::npos) break;
+		index = pos + 1;
+	}
+	
+	if (args.size() == 0) {
+		ToggleActive();
+	}
+
+	if (args.size() == 1) {
+		if (args[0].compare(L"on") == 0) {
+			SetActive(true);
+		} else if (args[0].compare(L"off") == 0) {
+			SetActive(false);
+		}
+	}
+}
+
+bool PconPanel::SetActive(bool active) {
+	enabled = active;
+	GWToolbox* tb = GWToolbox::instance();
+	tb->main_window()->UpdatePconToggleButton(enabled);
+	if (tb->main_window()->minimized()) {
+		GWAPIMgr::instance()->Chat()->WriteChat(
+			active ? L"Pcons enabled" : L"Pcons disabled");
+	}
+	return enabled;
 }
