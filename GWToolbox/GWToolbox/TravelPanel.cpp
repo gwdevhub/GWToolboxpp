@@ -34,7 +34,8 @@ void TravelPanel::BuildUI() {
 		[this, combo](Control*) {
 		if (combo->GetSelectedIndex() < 0) return;
 		GwConstants::MapID id = IndexToOutpostID(combo->GetSelectedIndex());
-		GWAPIMgr::instance()->Map()->Travel(id, this->district(), this->region(), this->language());
+		GWCA API;
+		API->Map()->Travel(id, this->district(), this->region(), this->language());
 		combo->SetText(L"Travel To...");
 		combo->SetSelectedIndex(-1);
 	});
@@ -99,7 +100,8 @@ void TravelPanel::BuildUI() {
 		fav_button->SetText(L"Go");
 		fav_button->GetClickEvent() += ClickEventHandler([this, fav_combo](Control*) {
 			int index = fav_combo->GetSelectedIndex();
-			GWAPIMgr::instance()->Map()->Travel(IndexToOutpostID(index),
+			GWCA API;
+			API->Map()->Travel(IndexToOutpostID(index),
 				this->district(), this->region(), this->language());
 		});
 		AddControl(fav_button);

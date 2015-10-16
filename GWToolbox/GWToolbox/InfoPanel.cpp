@@ -144,7 +144,8 @@ void InfoPanel::BuildUI() {
 	xunlai->SetText(L"Open Xunlai Chest");
 	xunlai->GetClickEvent() += ClickEventHandler([](Control*) {
 		if (GWAPI::GWAPIMgr::instance()->Map()->GetInstanceType() == GwConstants::InstanceType::Outpost) {
-			GWAPI::GWAPIMgr::instance()->Items()->OpenXunlaiWindow();
+			GWCA api;
+			api->Items()->OpenXunlaiWindow();
 		}
 	});
 	AddControl(xunlai);
@@ -157,7 +158,7 @@ void InfoPanel::UpdateUI() {
 
 	
 
-	GWAPI::GWAPIMgr* api = GWAPI::GWAPIMgr::instance();
+	GWAPI::GWCA api;
 	
 	Agent* player = api->Agents()->GetPlayer();
 	float x = player ? player->X : 0;

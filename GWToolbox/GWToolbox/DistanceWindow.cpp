@@ -118,7 +118,7 @@ void DistanceWindow::UpdateUI() {
 
 	if (!enabled) return;
 
-	GWAPI::GWAPIMgr* api = GWAPI::GWAPIMgr::instance();
+	GWAPI::GWCA api;
 
 	Agent* target = api->Agents()->GetTarget();
 	Agent* me = api->Agents()->GetPlayer();
