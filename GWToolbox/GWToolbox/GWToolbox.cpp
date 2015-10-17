@@ -63,7 +63,7 @@ void GWToolbox::Exec() {
 	input.SetKeyboardInputEnabled(true);
 	input.SetMouseInputEnabled(true);
 
-	config_->iniWrite(L"launcher", L"dllversion", Version);
+	config_.iniWrite(L"launcher", L"dllversion", Version);
 
 	Application * app = Application::InstancePtr();
 
@@ -98,10 +98,10 @@ void GWToolbox::Exec() {
 	LOG("Closing settings\n");
 	main_window()->settings_panel()->Close();
 	LOG("Saving config file\n");
-	config_->save();
+	config_.save();
 	Sleep(100);
 	LOG("Deleting config\n");
-	delete config_;
+	delete &config_;
 	Sleep(100);
 	LOG("Restoring input hook\n");
 	SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);

@@ -95,6 +95,7 @@
   <ItemGroup>
     <ClInclude Include="GWToolbox\BondsWindow.h" />
     <ClInclude Include="GWToolbox\BuildPanel.h" />
+    <ClInclude Include="GWToolbox\ChatCommands.h" />
     <ClInclude Include="GWToolbox\Config.h" />
     <ClInclude Include="GWToolbox\DialogPanel.h" />
     <ClInclude Include="GWToolbox\DistanceWindow.h" />
@@ -120,6 +121,7 @@
   <ItemGroup>
     <ClCompile Include="GWToolbox\BondsWindow.cpp" />
     <ClCompile Include="GWToolbox\BuildPanel.cpp" />
+    <ClCompile Include="GWToolbox\ChatCommands.cpp" />
     <ClCompile Include="GWToolbox\DialogPanel.cpp" />
     <ClCompile Include="GWToolbox\DistanceWindow.cpp" />
     <ClCompile Include="GWToolbox\EditBuild.cpp" />

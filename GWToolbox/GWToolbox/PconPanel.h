@@ -35,9 +35,6 @@ private:
 	GwConstants::InstanceType current_map_type;
 	clock_t scan_inventory_timer;
 
-private:
-	void ChatCallback(std::wstring arguments);
-
 public:
 	PconPanel();
 

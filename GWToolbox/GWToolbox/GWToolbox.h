@@ -12,6 +12,7 @@
 #include "BondsWindow.h"
 #include "HealthWindow.h"
 #include "DistanceWindow.h"
+#include "ChatCommands.h"
 
 #ifdef _DEBUG
 #define EXCEPT_EXPRESSION EXCEPTION_CONTINUE_SEARCH
@@ -61,26 +62,28 @@ private:
 	bool capture_input_;
 	bool must_self_destruct_;
 
-	Config* const config_;
+	Config& config_;
 	MainWindow* main_window_;
 	TimerWindow* timer_window_;
 	BondsWindow* bonds_window_;
 	HealthWindow* health_window_;
 	DistanceWindow* distance_window_;
+	ChatCommands& chat_commands_;
 
 	//------ Constructor ------//
 private:
 	GWToolbox(HMODULE mod) :
 		dll_module_(mod),
-		config_(new Config()) { 
-		main_window_ = NULL;
-		timer_window_ = NULL;
-		bonds_window_ = NULL;
-		health_window_ = NULL;
-		distance_window_ = NULL;
-		initialized_ = false;
-		must_self_destruct_ = false;
-		capture_input_ = false;
+		config_(*new Config()),
+		main_window_(nullptr),
+		timer_window_(nullptr),
+		bonds_window_(nullptr),
+		health_window_(nullptr),
+		distance_window_(nullptr),
+		initialized_(false),
+		must_self_destruct_(false),
+		capture_input_(false),
+		chat_commands_(*new ChatCommands()) {
 	}
 
 	//------ Private Methods ------//
@@ -108,7 +111,7 @@ public:
 	inline bool capture_input() { return capture_input_; }
 	inline void set_capture_input(bool capture) { capture_input_ = capture; }
 	
-	inline Config* config() { return config_; }
+	inline Config* config() { return &config_; }
 	inline MainWindow* main_window() { return main_window_; }
 	inline TimerWindow* timer_window() { return timer_window_; }
 	inline BondsWindow* bonds_window() { return bonds_window_; }
