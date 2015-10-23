@@ -8,12 +8,27 @@ using namespace std;
 ChatCommands::ChatCommands() {
 	GWCA api;
 
-	api->Chat()->RegisterKey(
-		L"pcons", std::bind(&ChatCommands::PconCmd, this, std::placeholders::_1));
+	api->Chat()->RegisterKey(L"pcons", 
+		std::bind(&ChatCommands::PconCmd, this, std::placeholders::_1));
 
-	api->Chat()->SetColor(0xDDDDDD);
+	wstring channel1 = api->Chat()->CreateChannel(wstring(L"~~%T~~"));
+
+	wstring channel2 = api->Chat()->CreateChannel([](wstring msg) {
+		return msg + L"rofl";
+	});
+
+	api->Chat()->RegisterKey(L"test",
+		[channel1](vector<wstring>) {
+		GWCA api;
+		api->Chat()->WriteChat(channel1.c_str(), L"Hello World!");
+	});
+
+	api->Chat()->RegisterKey(L"test2",
+		[channel2](vector<wstring>) {
+		GWCA api;
+		api->Chat()->WriteChat(channel2.c_str(), L"Bye World!");
+	});
 }
-
 
 void ChatCommands::PconCmd(vector<wstring> args) {
 

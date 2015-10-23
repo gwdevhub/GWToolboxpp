@@ -284,8 +284,7 @@ bool PconPanel::SetActive(bool active) {
 	tb->main_window()->UpdatePconToggleButton(enabled);
 	if (tb->main_window()->minimized()) {
 		GWCA api;
-		api->Chat()->WriteChat(
-			active ? L"Pcons enabled" : L"Pcons disabled");
+		api->Chat()->WriteChatF(L"asdrofl", L"Pcons %ls", active ? L"enabled" : L"disabled");
 	}
 	return enabled;
 }
