@@ -120,11 +120,11 @@ void DistanceWindow::UpdateUI() {
 
 	GWAPI::GWCA api;
 
-	Agent* target = api->Agents()->GetTarget();
-	Agent* me = api->Agents()->GetPlayer();
+	Agent* target = api().Agents().GetTarget();
+	Agent* me = api().Agents().GetPlayer();
 	long distance;
 	if (target && me) {
-		distance = api->Agents()->GetDistance(target, me);
+		distance = api().Agents().GetDistance(target, me);
 	} else {
 		distance = -1;
 	}

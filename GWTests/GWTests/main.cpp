@@ -86,7 +86,7 @@ void init(HMODULE hModule) {
 	printf("Hello world!\n");
 
 	printf("Initializing API\n");
-	if (GWAPI::GWAPIMgr::Initialize()) {
+	if (GWAPI::GWCA::Initialize()) {
 		printf("Initialized successful\n");
 
 		minimap = new Minimap();
@@ -95,11 +95,8 @@ void init(HMODULE hModule) {
 		minimap->SetLocation(100, 100);
 		minimap->SetSize(400, 400);
 
-		{
-			GWAPI::GWCA api;
-			dx = api->DirectX();
-			api->DirectX()->CreateRenderHooks(EndScene, ResetScene);
-		}
+		
+		GWAPI::GWCA::Api().DirectX().CreateRenderHooks(EndScene, ResetScene);
 
 		HWND gw_window_handle = GWAPI::MemoryMgr::GetGWWindowHandle();
 		OldWndProc = SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)WndProc);
@@ -112,7 +109,7 @@ void init(HMODULE hModule) {
 		}
 
 		SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
-		GWAPI::GWAPIMgr::Destruct();
+		GWAPI::GWCA::Destruct();
 
 		Sleep(100);
 

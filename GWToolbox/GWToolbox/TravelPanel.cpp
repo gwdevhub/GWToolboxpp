@@ -34,8 +34,7 @@ void TravelPanel::BuildUI() {
 		[this, combo](Control*) {
 		if (combo->GetSelectedIndex() < 0) return;
 		GwConstants::MapID id = IndexToOutpostID(combo->GetSelectedIndex());
-		GWCA API;
-		API->Map()->Travel(id, this->district(), this->region(), this->language());
+		GWCA::Api().Map().Travel(id, this->district(), this->region(), this->language());
 		combo->SetText(L"Travel To...");
 		combo->SetSelectedIndex(-1);
 	});
@@ -100,8 +99,7 @@ void TravelPanel::BuildUI() {
 		fav_button->SetText(L"Go");
 		fav_button->GetClickEvent() += ClickEventHandler([this, fav_combo](Control*) {
 			int index = fav_combo->GetSelectedIndex();
-			GWCA API;
-			API->Map()->Travel(IndexToOutpostID(index),
+			GWCA::Api().Map().Travel(IndexToOutpostID(index),
 				this->district(), this->region(), this->language());
 		});
 		AddControl(fav_button);
@@ -120,8 +118,7 @@ TravelPanel::TravelCombo::TravelCombo()
 
 DWORD TravelPanel::region() {
 	if (current_district_) {
-		GWCA api;
-		return api->Map()->GetRegion();
+		return GWCA::Api().Map().GetRegion();
 	} else {
 		return region_;
 	}
@@ -129,8 +126,7 @@ DWORD TravelPanel::region() {
 
 DWORD TravelPanel::language() {
 	if (current_district_) {
-		GWCA api;
-		return api->Map()->GetLanguage();
+		return GWCA::Api().Map().GetLanguage();
 	} else {
 		return language_;
 	}
@@ -144,8 +140,7 @@ void TravelPanel::AddTravelButton(wstring text, int grid_x, int grid_y, GwConsta
 	button->SetLocation(GuiUtils::ComputeX(GetWidth(), 2, grid_x), 
 		DefaultBorderPadding + (BUTTON_HEIGHT + DefaultBorderPadding) * grid_y);
 	button->GetClickEvent() += ClickEventHandler([this, map_id](Control*) {
-		GWCA api;
-		api->Map()->Travel(map_id, district(), region(), language());
+		GWCA::Api().Map().Travel(map_id, district(), region(), language());
 	});
 	AddControl(button);
 }
@@ -153,9 +148,9 @@ void TravelPanel::AddTravelButton(wstring text, int grid_x, int grid_y, GwConsta
 void TravelPanel::UpdateDistrict(int gui_index) {
 	GWCA api;
 	current_district_ = false;
-	region_ = api->Map()->GetRegion();
+	region_ = api().Map().GetRegion();
 	district_ = 0;
-	language_ = api->Map()->GetLanguage();
+	language_ = api().Map().GetLanguage();
 	switch (gui_index) {
 	case 0: // Current District
 		current_district_ = true;

@@ -28,7 +28,6 @@ public:
 	//------ Static Fields ------//
 private:
 	static GWToolbox* instance_;
-	static GWAPI::DirectXMgr* dx;
 	static OSHGui::Drawing::Direct3D9Renderer* renderer;
 	static long OldWndProc;
 	static OSHGui::Input::WindowsMessage input;
@@ -90,7 +89,6 @@ private:
 private:
 	// Does everything: setup, main loop, destruction 
 	void Exec();
-	void CreateRenderHooks();
 	void UpdateUI();
 
 	//------ Setters ------//

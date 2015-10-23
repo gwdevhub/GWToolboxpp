@@ -1,6 +1,7 @@
 # Build directories
 Debug/
 Release/
+ipch/
 
 # Bloated Windows Databases
 *.sdf

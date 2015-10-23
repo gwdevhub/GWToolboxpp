@@ -120,7 +120,7 @@ void HealthWindow::UpdateUI() {
 
 	GWAPI::GWCA api;
 
-	Agent* target = api->Agents()->GetTarget();
+	Agent* target = api().Agents().GetTarget();
 	float hp = target ? target->HP : -1;
 	long max = target ? target->MaxHP : -1;
 

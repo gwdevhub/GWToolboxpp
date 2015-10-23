@@ -218,10 +218,10 @@ void PconPanel::BuildUI() {
 void PconPanel::UpdateUI() {
 	if (!initialized) return;
 
-	GWCA API;
+	GWCA api;
 
-	if (current_map_type != API->Map()->GetInstanceType()) {
-		current_map_type = API->Map()->GetInstanceType();
+	if (current_map_type != api().Map().GetInstanceType()) {
+		current_map_type = api().Map().GetInstanceType();
 		scan_inventory_timer = TBTimer::init();
 	}
 
@@ -241,16 +241,16 @@ void PconPanel::UpdateUI() {
 void PconPanel::MainRoutine() {
 	if (!initialized) return;
 
-	GWCA API;
+	GWCA api;
 
 	if (!enabled) return;
 	InstanceType type;
 	try {
-		type = API->Map()->GetInstanceType();
+		type = api().Map().GetInstanceType();
 		if (type == InstanceType::Loading) return;
-		if (API->Agents()->GetPlayerId() == 0) return;
-		if (API->Agents()->GetPlayer() == NULL) return;
-		if (API->Agents()->GetPlayer()->GetIsDead()) return;
+		if (api().Agents().GetPlayerId() == 0) return;
+		if (api().Agents().GetPlayer() == NULL) return;
+		if (api().Agents().GetPlayer()->GetIsDead()) return;
 	} catch (APIException_t) {
 		return;
 	}
@@ -283,8 +283,7 @@ bool PconPanel::SetActive(bool active) {
 	GWToolbox* tb = GWToolbox::instance();
 	tb->main_window()->UpdatePconToggleButton(enabled);
 	if (tb->main_window()->minimized()) {
-		GWCA api;
-		api->Chat()->WriteChatF(L"asdrofl", L"Pcons %ls", active ? L"enabled" : L"disabled");
+		GWCA::Api().Chat().WriteChatF(L"asdrofl", L"Pcons %ls", active ? L"enabled" : L"disabled");
 	}
 	return enabled;
 }

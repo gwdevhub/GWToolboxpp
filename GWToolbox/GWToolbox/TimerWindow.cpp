@@ -95,8 +95,8 @@ void TimerWindow::SaveLocation() {
 }
 
 void TimerWindow::UpdateUI() {
-	GWCA API;
-	unsigned long uptime = API->Map()->GetInstanceTime();
+	GWCA api;
+	unsigned long uptime = api().Map().GetInstanceTime();
 	unsigned long  time = uptime / 1000;
 	if (time != current_time_) {
 		current_time_ = time;
@@ -122,7 +122,7 @@ void TimerWindow::UpdateUI() {
 		shadow_->SetText(ss.str());
 		shadow_->Invalidate();
 
-		GwConstants::MapID map_id = API->Map()->GetMapID();
+		GwConstants::MapID map_id = api().Map().GetMapID();
 		if (map_id == GwConstants::MapID::Urgozs_Warren) {
 			if (!in_urgoz_) {
 				in_urgoz_ = true;

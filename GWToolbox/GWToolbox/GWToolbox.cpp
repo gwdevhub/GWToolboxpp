@@ -13,7 +13,6 @@ const wchar_t* GWToolbox::Version = L"1.3";
 
 
 GWToolbox* GWToolbox::instance_ = NULL;
-GWAPI::DirectXMgr* GWToolbox::dx = NULL;
 OSHGui::Drawing::Direct3D9Renderer* GWToolbox::renderer = NULL;
 long GWToolbox::OldWndProc = 0;
 OSHGui::Input::WindowsMessage GWToolbox::input;
@@ -44,16 +43,10 @@ void GWToolbox::ThreadEntry(HMODULE dllmodule) {
 	instance_->Exec();
 }
 
-void GWToolbox::CreateRenderHooks() {
-	GWCA api;
-	dx = api->DirectX();
-	LOG("Installing dx hooks\n");
-	dx->CreateRenderHooks(endScene, resetScene);
-	LOG("Installed dx hooks\n");
-}
-
 void GWToolbox::Exec() {
-	CreateRenderHooks();
+	LOG("Installing dx hooks\n");
+	GWCA::Api().DirectX().CreateRenderHooks(endScene, resetScene);
+	LOG("Installed dx hooks\n");
 
 	LOG("Installing input event handler\n");
 	HWND gw_window_handle = GWAPI::MemoryMgr::GetGWWindowHandle();
@@ -285,7 +278,7 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 	Application::InstancePtr()->Render();
 	renderer->EndRendering();
 
-	return dx->EndsceneReturn()(pDevice);
+	return GWCA::Api().DirectX().EndsceneReturn()(pDevice);
 }
 
 HRESULT WINAPI GWToolbox::resetScene(IDirect3DDevice9* pDevice, 
@@ -293,7 +286,7 @@ HRESULT WINAPI GWToolbox::resetScene(IDirect3DDevice9* pDevice,
 	// pre-reset here.
 	renderer->PreD3DReset();
 
-	HRESULT result = dx->ResetReturn()(pDevice, pPresentationParameters);
+	HRESULT result = GWCA::Api().DirectX().ResetReturn()(pDevice, pPresentationParameters);
 	if (result == D3D_OK){
 		// post-reset here.
 		renderer->PostD3DReset();

@@ -24,13 +24,13 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 	triangle_count = 0;
 
 	GWCA api;
-	GW::Agent* me = api->Agents()->GetPlayer();
+	GW::Agent* me = api().Agents().GetPlayer();
 	if (me == nullptr) return;
-	GW::AgentArray agents = api->Agents()->GetAgentArray();
+	GW::AgentArray agents = api().Agents().GetAgentArray();
 	if (!agents.valid()) return;	
 
 	// target
-	GW::Agent* target = api->Agents()->GetTarget();
+	GW::Agent* target = api().Agents().GetTarget();
 	if (target != nullptr) {
 		QueueTriangle(device, target->X, target->Y, target->Rotation, 200, 0xFFFFFFFF);
 	}
@@ -46,7 +46,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 		case 0x300: color = D3DCOLOR_XRGB(200, 0, 0); break;
 		default:	color = D3DCOLOR_XRGB(0, 150, 0); break;
 		}
-		if (agent->Id == api->Agents()->GetPlayerId()) {
+		if (agent->Id == api().Agents().GetPlayerId()) {
 			color = D3DCOLOR_XRGB(200, 50, 255);
 		}
 		if (agent->GetIsDead()) color = D3DCOLOR_XRGB(20, 20, 20);

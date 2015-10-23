@@ -137,10 +137,10 @@ void BuildPanel::MainRoutine() {
 		send_timer = TBTimer::init();
 
 		GWCA api;
-		if (api->Map()->GetInstanceType() != GwConstants::InstanceType::Loading
-			&& api->Agents()->GetPlayer()) {
+		if (api().Map().GetInstanceType() != GwConstants::InstanceType::Loading
+			&& api().Agents().GetPlayer()) {
 
-			api->Chat()->SendChat(queue.front().c_str(), L'#');
+			api().Chat().SendChat(queue.front().c_str(), L'#');
 			queue.pop();
 		}
 	}

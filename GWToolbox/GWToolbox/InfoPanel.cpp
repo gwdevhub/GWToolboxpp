@@ -143,14 +143,11 @@ void InfoPanel::BuildUI() {
 	xunlai->SetLocation(item1_x, GetHeight() - xunlai->GetHeight() - DefaultBorderPadding);
 	xunlai->SetText(L"Open Xunlai Chest");
 	xunlai->GetClickEvent() += ClickEventHandler([](Control*) {
-		GWCA api;
-		if (api->Map()->GetInstanceType() == GwConstants::InstanceType::Outpost) {
-			GWCA api;
-			api->Items()->OpenXunlaiWindow();
+		if (GWCA::Api().Map().GetInstanceType() == GwConstants::InstanceType::Outpost) {
+			GWCA::Api().Items().OpenXunlaiWindow();
 		}
 	});
 	AddControl(xunlai);
-
 }
 
 void InfoPanel::UpdateUI() {
@@ -161,7 +158,7 @@ void InfoPanel::UpdateUI() {
 
 	GWAPI::GWCA api;
 	
-	Agent* player = api->Agents()->GetPlayer();
+	Agent* player = api().Agents().GetPlayer();
 	float x = player ? player->X : 0;
 	float y = player ? player->Y : 0;
 	if (x != current_player_x || y != current_player_y) {
@@ -176,7 +173,7 @@ void InfoPanel::UpdateUI() {
 		}
 	}
 
-	Agent* target = api->Agents()->GetTarget();
+	Agent* target = api().Agents().GetTarget();
 	long id = target ? target->PlayerNumber : 0;
 	if (id != current_target_id) {
 		if (target) {
@@ -186,12 +183,12 @@ void InfoPanel::UpdateUI() {
 		}
 	}
 
-	if (api->Map()->GetMapID() != current_map_id
-		|| api->Map()->GetInstanceType() != current_map_type) {
-		current_map_id = api->Map()->GetMapID();
-		current_map_type = api->Map()->GetInstanceType();
+	if (api().Map().GetMapID() != current_map_id
+		|| api().Map().GetInstanceType() != current_map_type) {
+		current_map_id = api().Map().GetMapID();
+		current_map_type = api().Map().GetInstanceType();
 		wstring map = to_wstring(static_cast<int>(current_map_id));
-		switch (api->Map()->GetInstanceType()) {
+		switch (api().Map().GetInstanceType()) {
 		case GwConstants::InstanceType::Explorable: break;
 		case GwConstants::InstanceType::Loading: map += L" (loading)"; break;
 		case GwConstants::InstanceType::Outpost: map += L" (outpost)"; break;
@@ -200,7 +197,7 @@ void InfoPanel::UpdateUI() {
 	}
 	
 
-	Bag** bags = api->Items()->GetBagArray();
+	Bag** bags = api().Items().GetBagArray();
 	if (bags) {
 		Bag* bag1 = bags[1];
 		if (bag1) {
@@ -220,9 +217,9 @@ void InfoPanel::UpdateUI() {
 		}
 	}
 
-	if (current_dialog_id != api->Agents()->GetLastDialogId()) {
+	if (current_dialog_id != api().Agents().GetLastDialogId()) {
 		static wchar_t dialogtxt[0x10];
-		current_dialog_id = api->Agents()->GetLastDialogId();
+		current_dialog_id = api().Agents().GetLastDialogId();
 		swprintf_s(dialogtxt, sizeof(wchar_t) * 0x10, L"0x%X", current_dialog_id);
 		dialog_id->SetText(dialogtxt);
 	}
