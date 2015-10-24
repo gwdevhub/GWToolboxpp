@@ -109,12 +109,12 @@ public:
 	inline bool capture_input() { return capture_input_; }
 	inline void set_capture_input(bool capture) { capture_input_ = capture; }
 	
-	inline Config* config() { return &config_; }
-	inline MainWindow* main_window() { return main_window_; }
-	inline TimerWindow* timer_window() { return timer_window_; }
-	inline BondsWindow* bonds_window() { return bonds_window_; }
-	inline HealthWindow* health_window() { return health_window_; }
-	inline DistanceWindow* distance_window() { return distance_window_; }
+	inline Config& config() { return config_; }
+	inline MainWindow& main_window() { return *main_window_; }
+	inline TimerWindow& timer_window() { return *timer_window_; }
+	inline BondsWindow& bonds_window() { return *bonds_window_; }
+	inline HealthWindow& health_window() { return *health_window_; }
+	inline DistanceWindow& distance_window() { return *distance_window_; }
 	
 	void StartSelfDestruct() { must_self_destruct_ = true; }
 };

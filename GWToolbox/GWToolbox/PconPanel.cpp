@@ -281,8 +281,8 @@ void PconPanel::MainRoutine() {
 bool PconPanel::SetActive(bool active) {
 	enabled = active;
 	GWToolbox* tb = GWToolbox::instance();
-	tb->main_window()->UpdatePconToggleButton(enabled);
-	if (tb->main_window()->minimized()) {
+	tb->main_window().UpdatePconToggleButton(enabled);
+	if (tb->main_window().minimized()) {
 		GWCA::Api().Chat().WriteChatF(L"asdrofl", L"Pcons %ls", active ? L"enabled" : L"disabled");
 	}
 	return enabled;

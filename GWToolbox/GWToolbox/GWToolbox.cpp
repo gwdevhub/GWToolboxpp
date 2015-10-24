@@ -89,7 +89,7 @@ void GWToolbox::Exec() {
 	LOG("Disabling GUI\n");
 	Application::InstancePtr()->Disable();
 	LOG("Closing settings\n");
-	main_window()->settings_panel()->Close();
+	main_window().settings_panel().Close();
 	LOG("Saving config file\n");
 	config_.save();
 	Sleep(100);
@@ -119,7 +119,7 @@ LRESULT CALLBACK GWToolbox::SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, 
 LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) {
 	
 	if (Message == WM_QUIT || Message == WM_CLOSE) {
-		GWToolbox::instance()->config()->save();
+		GWToolbox::instance()->config().save();
 		return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
 	}
 
@@ -165,7 +165,7 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 		case WM_XBUTTONUP:
 		case WM_MBUTTONDOWN:
 		case WM_MBUTTONUP:
-			GWToolbox::instance()->main_window()->hotkey_panel()->ProcessMessage(&msg);
+			GWToolbox::instance()->main_window().hotkey_panel().ProcessMessage(&msg);
 			if (GWToolbox::instance()->capture_input()) {
 				input.ProcessMessage(&msg);
 				return true;
@@ -255,8 +255,8 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 	D3DVIEWPORT9 viewport;
 	pDevice->GetViewport(&viewport);
 
-	Drawing::PointI location = tb->main_window()->GetLocation();
-	Drawing::RectangleI size = tb->main_window()->GetSize();
+	Drawing::PointI location = tb->main_window().GetLocation();
+	Drawing::RectangleI size = tb->main_window().GetSize();
 
 	if (location.X < 0){
 		location.X = 0;
@@ -270,8 +270,8 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 	if (location.Y > static_cast<int>(viewport.Height) - size.GetHeight()) {
 		location.Y = static_cast<int>(viewport.Height) - size.GetHeight();
 	}
-	if (location != tb->main_window()->GetLocation()){
-		tb->main_window()->SetLocation(location);
+	if (location != tb->main_window().GetLocation()){
+		tb->main_window().SetLocation(location);
 	}
 
 	renderer->BeginRendering();

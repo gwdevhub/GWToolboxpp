@@ -16,7 +16,7 @@ Pcon::Pcon(const wchar_t* ini)
 	tick = new PictureBox();
 	shadow = new Label();
 	quantity = -1; // to force a redraw when first created
-	enabled = GWToolbox::instance()->config()->iniReadBool(L"pcons", ini, false);;
+	enabled = GWToolbox::instance()->config().iniReadBool(L"pcons", ini, false);;
 	iniName = ini;
 	chatName = ini; // will be set later, but its a good temporary value
 	itemID = 0;
@@ -61,7 +61,7 @@ void Pcon::toggleActive() {
 	enabled = !enabled;
 	scanInventory();
 	update_ui = true;
-	GWToolbox::instance()->config()->iniWriteBool(L"pcons", iniName, enabled);
+	GWToolbox::instance()->config().iniWriteBool(L"pcons", iniName, enabled);
 }
 
 void Pcon::DrawSelf(Drawing::RenderContext &context) {

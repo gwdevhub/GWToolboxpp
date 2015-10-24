@@ -10,14 +10,14 @@ using namespace OSHGui::Drawing;
 using namespace OSHGui;
 
 MainWindow::MainWindow() : 
-pcon_panel_(new PconPanel()),
-hotkey_panel_(new HotkeyPanel()),
-build_panel_(new BuildPanel()),
-travel_panel_(new TravelPanel()),
-dialog_panel_(new DialogPanel()),
-info_panel_(new InfoPanel()),
-materials_panel_(new MaterialsPanel()),
-settings_panel_(new SettingsPanel()) {
+pcon_panel_(*new PconPanel()),
+hotkey_panel_(*new HotkeyPanel()),
+build_panel_(*new BuildPanel()),
+travel_panel_(*new TravelPanel()),
+dialog_panel_(*new DialogPanel()),
+info_panel_(*new InfoPanel()),
+materials_panel_(*new MaterialsPanel()),
+settings_panel_(*new SettingsPanel()) {
 
 	panels = std::vector<ToolboxPanel*>();
 	tab_buttons = std::vector<TabButton*>();
@@ -31,12 +31,12 @@ settings_panel_(new SettingsPanel()) {
 	int panel_idx = 0;
 	int button_idx = 0;
 
-	Config* config = GWToolbox::instance()->config();
+	Config& config = GWToolbox::instance()->config();
 
-	use_minimized_alt_pos_ = config->iniReadBool(MainWindow::IniSection(), MainWindow::IniKeyMinAltPos(), false);
-	tick_with_pcons_ = config->iniReadBool(MainWindow::IniSection(), MainWindow::IniKeyTickWithPcons(), false);
-	int xlocation = config->iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyX(), 100);
-	int ylocation = config->iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyY(), 100);
+	use_minimized_alt_pos_ = config.iniReadBool(MainWindow::IniSection(), MainWindow::IniKeyMinAltPos(), false);
+	tick_with_pcons_ = config.iniReadBool(MainWindow::IniSection(), MainWindow::IniKeyTickWithPcons(), false);
+	int xlocation = config.iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyX(), 100);
+	int ylocation = config.iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyY(), 100);
 
 	// build main UI
 	SetLocation(xlocation, ylocation);
@@ -93,9 +93,8 @@ settings_panel_(new SettingsPanel()) {
 	toggle->SetMouseOverFocusColor(GuiUtils::getMouseOverColor());
 	toggle->SetForeColor(Color::Red());
 	toggle->SetFont(GuiUtils::getTBFont(10.0, true));
-	PconPanel* const pcon_panel = pcon_panel_;
-	toggle->GetClickEvent() += ClickEventHandler([this, toggle, pcon_panel](Control*) {
-		pcon_panel->ToggleActive();
+	toggle->GetClickEvent() += ClickEventHandler([this](Control*) {
+		pcon_panel().ToggleActive();
 	});
 	toggle->SetSize(WIDTH - 2 * DefaultBorderPadding, TOGGLE_HEIGHT);
 	toggle->SetLocation(DefaultBorderPadding, TAB_HEIGHT - 2);
@@ -123,14 +122,14 @@ settings_panel_(new SettingsPanel()) {
 	CreateTabButton(L"Settings", button_idx, panel_idx, 
 		GuiUtils::getSubPathA("settings.png", "img").c_str());
 
-	panels.push_back(pcon_panel_);
-	panels.push_back(hotkey_panel_);
-	panels.push_back(build_panel_);
-	panels.push_back(travel_panel_);
-	panels.push_back(dialog_panel_);
-	panels.push_back(info_panel_);
-	panels.push_back(materials_panel_);
-	panels.push_back(settings_panel_);
+	panels.push_back(&pcon_panel_);
+	panels.push_back(&hotkey_panel_);
+	panels.push_back(&build_panel_);
+	panels.push_back(&travel_panel_);
+	panels.push_back(&dialog_panel_);
+	panels.push_back(&info_panel_);
+	panels.push_back(&materials_panel_);
+	panels.push_back(&settings_panel_);
 
 	
 	for (ToolboxPanel* panel : panels) {
@@ -140,7 +139,7 @@ settings_panel_(new SettingsPanel()) {
 		panel->SetEnabled(false);
 		AddSubControl(panel);
 	}
-	SetPanelPositions(GWToolbox::instance()->config()->iniReadBool(
+	SetPanelPositions(GWToolbox::instance()->config().iniReadBool(
 		MainWindow::IniSection(), MainWindow::IniKeyTabsLeft(), false));
 }
 
@@ -148,19 +147,19 @@ void MainWindow::SetPanelPositions(bool left) {
 	for (ToolboxPanel* panel : panels) {
 		panel->SetLocation(left ? -panel->GetWidth() : GetWidth(), 0);
 	}
-	build_panel_->SetPanelPosition(left);
+	build_panel().SetPanelPosition(left);
 }
 
 void MainWindow::ToggleMinimize() {
 	minimized_ = !minimized_;
-	Config* config = GWToolbox::instance()->config();
+	Config& config = GWToolbox::instance()->config();
 
 	if ( minimized_) {
 		if (current_panel_ >= 0) OpenClosePanel(current_panel_);
 		SetSize(Drawing::SizeI(WIDTH, TITLE_HEIGHT));
 		if (use_minimized_alt_pos_) {
-			int xlocation = config->iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltX(), 100);
-			int ylocation = config->iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltY(), 100);
+			int xlocation = config.iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltX(), 100);
+			int ylocation = config.iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltY(), 100);
 
 			SetLocation(xlocation, ylocation);
 		}
@@ -170,8 +169,8 @@ void MainWindow::ToggleMinimize() {
 		SetSize(Drawing::SizeI(WIDTH, HEIGHT));
 
 		if (use_minimized_alt_pos_) {
-			int xlocation = config->iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyX(), 100);
-			int ylocation = config->iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyY(), 100);
+			int xlocation = config.iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyX(), 100);
+			int ylocation = config.iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyY(), 100);
 
 			SetLocation(xlocation, ylocation);
 		}
@@ -292,18 +291,18 @@ void MainWindow::SaveLocation() {
 	CalculateAbsoluteLocation();
 	int x = absoluteLocation_.X;
 	int y = absoluteLocation_.Y;
-	Config* config = GWToolbox::instance()->config();
-	config->iniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyX(), x);
-	config->iniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyY(), y);
+	Config& config = GWToolbox::instance()->config();
+	config.iniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyX(), x);
+	config.iniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyY(), y);
 }
 
 void MainWindow::SaveMinimizedLocation() {
 	CalculateAbsoluteLocation();
 	int x = absoluteLocation_.X;
 	int y = absoluteLocation_.Y;
-	Config* config = GWToolbox::instance()->config();
-	config->iniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltX(), x);
-	config->iniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltY(), y);
+	Config& config = GWToolbox::instance()->config();
+	config.iniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltX(), x);
+	config.iniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltY(), y);
 }
 
 

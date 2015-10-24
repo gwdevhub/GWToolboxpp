@@ -15,9 +15,9 @@ TimerWindow::TimerWindow() {
 	current_time_ = 0;
 	in_urgoz_ = false;
 
-	Config* config = GWToolbox::instance()->config();
-	int x = config->iniReadLong(TimerWindow::IniSection(), TimerWindow::IniKeyX(), 400);
-	int y = config->iniReadLong(TimerWindow::IniSection(), TimerWindow::IniKeyY(), 100);
+	Config& config = GWToolbox::instance()->config();
+	int x = config.iniReadLong(TimerWindow::IniSection(), TimerWindow::IniKeyX(), 400);
+	int y = config.iniReadLong(TimerWindow::IniSection(), TimerWindow::IniKeyY(), 100);
 
 	SetLocation(x, y);
 	SetSize(Drawing::SizeI(WIDTH, HEIGHT));
@@ -78,7 +78,7 @@ TimerWindow::TimerWindow() {
 	urgoz_timer_->SetVisible(false);
 	AddControl(urgoz_timer_);
 
-	SetFreeze(GWToolbox::instance()->config()->iniReadBool(MainWindow::IniSection(),
+	SetFreeze(GWToolbox::instance()->config().iniReadBool(MainWindow::IniSection(),
 		MainWindow::IniKeyFreeze(), false));
 
 	std::shared_ptr<TimerWindow> self = std::shared_ptr<TimerWindow>(this);
@@ -89,9 +89,9 @@ void TimerWindow::SaveLocation() {
 	CalculateAbsoluteLocation();
 	int x = absoluteLocation_.X;
 	int y = absoluteLocation_.Y;
-	Config* config = GWToolbox::instance()->config();
-	config->iniWriteLong(TimerWindow::IniSection(), TimerWindow::IniKeyX(), x);
-	config->iniWriteLong(TimerWindow::IniSection(), TimerWindow::IniKeyY(), y);
+	Config& config = GWToolbox::instance()->config();
+	config.iniWriteLong(TimerWindow::IniSection(), TimerWindow::IniKeyX(), x);
+	config.iniWriteLong(TimerWindow::IniSection(), TimerWindow::IniKeyY(), y);
 }
 
 void TimerWindow::UpdateUI() {

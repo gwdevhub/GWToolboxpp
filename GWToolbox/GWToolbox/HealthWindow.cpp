@@ -10,9 +10,9 @@
 
 HealthWindow::HealthWindow() {
 
-	Config* config = GWToolbox::instance()->config();
-	int x = config->iniReadLong(HealthWindow::IniSection(), HealthWindow::IniKeyX(), 400);
-	int y = config->iniReadLong(HealthWindow::IniSection(), HealthWindow::IniKeyY(), 100);
+	Config& config = GWToolbox::instance()->config();
+	int x = config.iniReadLong(HealthWindow::IniSection(), HealthWindow::IniKeyX(), 400);
+	int y = config.iniReadLong(HealthWindow::IniSection(), HealthWindow::IniKeyY(), 100);
 
 	SetLocation(x, y);
 	SetSize(Drawing::SizeI(WIDTH, HEIGHT));
@@ -90,13 +90,13 @@ HealthWindow::HealthWindow() {
 	});
 	AddControl(absolute);
 
-	bool show = config->iniReadBool(HealthWindow::IniSection(), HealthWindow::IniKeyShow(), false);
+	bool show = config.iniReadBool(HealthWindow::IniSection(), HealthWindow::IniKeyShow(), false);
 	Show(show);
 
-	SetFreeze(GWToolbox::instance()->config()->iniReadBool(MainWindow::IniSection(),
+	SetFreeze(config.iniReadBool(MainWindow::IniSection(),
 		MainWindow::IniKeyFreeze(), false));
 
-	SetHideTarget(GWToolbox::instance()->config()->iniReadBool(MainWindow::IniSection(),
+	SetHideTarget(config.iniReadBool(MainWindow::IniSection(),
 		MainWindow::IniKeyHideTarget(), false));
 
 	std::shared_ptr<HealthWindow> self = std::shared_ptr<HealthWindow>(this);
@@ -107,9 +107,9 @@ void HealthWindow::SaveLocation() {
 	CalculateAbsoluteLocation();
 	int x = absoluteLocation_.X;
 	int y = absoluteLocation_.Y;
-	Config* config = GWToolbox::instance()->config();
-	config->iniWriteLong(HealthWindow::IniSection(), HealthWindow::IniKeyX(), x);
-	config->iniWriteLong(HealthWindow::IniSection(), HealthWindow::IniKeyY(), y);
+	Config& config = GWToolbox::instance()->config();
+	config.iniWriteLong(HealthWindow::IniSection(), HealthWindow::IniKeyX(), x);
+	config.iniWriteLong(HealthWindow::IniSection(), HealthWindow::IniKeyY(), y);
 }
 
 void HealthWindow::UpdateUI() {

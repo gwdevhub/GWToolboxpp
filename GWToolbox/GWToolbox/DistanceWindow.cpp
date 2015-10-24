@@ -10,9 +10,9 @@
 
 DistanceWindow::DistanceWindow() {
 
-	Config* config = GWToolbox::instance()->config();
-	int x = config->iniReadLong(DistanceWindow::IniSection(), DistanceWindow::IniKeyX(), 400);
-	int y = config->iniReadLong(DistanceWindow::IniSection(), DistanceWindow::IniKeyY(), 100);
+	Config& config = GWToolbox::instance()->config();
+	int x = config.iniReadLong(DistanceWindow::IniSection(), DistanceWindow::IniKeyX(), 400);
+	int y = config.iniReadLong(DistanceWindow::IniSection(), DistanceWindow::IniKeyY(), 100);
 
 	SetLocation(x, y);
 	SetSize(Drawing::SizeI(WIDTH, HEIGHT));
@@ -90,13 +90,13 @@ DistanceWindow::DistanceWindow() {
 	});
 	AddControl(absolute);
 
-	bool show = config->iniReadBool(DistanceWindow::IniSection(), DistanceWindow::IniKeyShow(), false);
+	bool show = config.iniReadBool(DistanceWindow::IniSection(), DistanceWindow::IniKeyShow(), false);
 	Show(show);
 
-	SetFreeze(GWToolbox::instance()->config()->iniReadBool(MainWindow::IniSection(),
+	SetFreeze(config.iniReadBool(MainWindow::IniSection(),
 		MainWindow::IniKeyFreeze(), false));
 
-	SetHideTarget(GWToolbox::instance()->config()->iniReadBool(MainWindow::IniSection(),
+	SetHideTarget(config.iniReadBool(MainWindow::IniSection(),
 		MainWindow::IniKeyHideTarget(), false));
 
 	std::shared_ptr<DistanceWindow> self = std::shared_ptr<DistanceWindow>(this);
@@ -107,9 +107,9 @@ void DistanceWindow::SaveLocation() {
 	CalculateAbsoluteLocation();
 	int x = absoluteLocation_.X;
 	int y = absoluteLocation_.Y;
-	Config* config = GWToolbox::instance()->config();
-	config->iniWriteLong(DistanceWindow::IniSection(), DistanceWindow::IniKeyX(), x);
-	config->iniWriteLong(DistanceWindow::IniSection(), DistanceWindow::IniKeyY(), y);
+	Config& config = GWToolbox::instance()->config();
+	config.iniWriteLong(DistanceWindow::IniSection(), DistanceWindow::IniKeyX(), x);
+	config.iniWriteLong(DistanceWindow::IniSection(), DistanceWindow::IniKeyY(), y);
 }
 
 void DistanceWindow::UpdateUI() {

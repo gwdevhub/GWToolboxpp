@@ -15,9 +15,9 @@ using namespace OSHGui;
 
 BondsWindow::BondsWindow() {
 
-	Config* config = GWToolbox::instance()->config();
-	int x = config->iniReadLong(BondsWindow::IniSection(), BondsWindow::IniKeyX(), 400);
-	int y = config->iniReadLong(BondsWindow::IniSection(), BondsWindow::IniKeyY(), 100);
+	Config& config = GWToolbox::instance()->config();
+	int x = config.iniReadLong(BondsWindow::IniSection(), BondsWindow::IniKeyX(), 400);
+	int y = config.iniReadLong(BondsWindow::IniSection(), BondsWindow::IniKeyY(), 100);
 
 	SetLocation(x, y);
 	SetSize(Drawing::SizeI(WIDTH, HEIGHT));
@@ -32,7 +32,7 @@ BondsWindow::BondsWindow() {
 	monitor->SetSize(WIDTH, HEIGHT);
 	AddControl(monitor);
 
-	bool show = config->iniReadBool(BondsWindow::IniSection(), BondsWindow::IniKeyShow(), false);
+	bool show = config.iniReadBool(BondsWindow::IniSection(), BondsWindow::IniKeyShow(), false);
 	Show(show);
 
 	std::shared_ptr<BondsWindow> self = std::shared_ptr<BondsWindow>(this);
@@ -46,7 +46,7 @@ BondsWindow::BondsMonitor::BondsMonitor() {
 	hovered_bond = -1;
 	party_size = n_players; // initialize at max, upcate will take care of shrinking as needed.
 	pressed = false;
-	freezed = GWToolbox::instance()->config()->iniReadBool(MainWindow::IniSection(),
+	freezed = GWToolbox::instance()->config().iniReadBool(MainWindow::IniSection(),
 		MainWindow::IniKeyFreeze(), false);
 
 	for (int i = 0; i < n_players; ++i) {
@@ -171,9 +171,9 @@ void BondsWindow::BondsMonitor::SaveLocation() {
 	CalculateAbsoluteLocation();
 	int x = absoluteLocation_.X;
 	int y = absoluteLocation_.Y;
-	Config* config = GWToolbox::instance()->config();
-	config->iniWriteLong(BondsWindow::IniSection(), BondsWindow::IniKeyX(), x);
-	config->iniWriteLong(BondsWindow::IniSection(), BondsWindow::IniKeyY(), y);
+	Config& config = GWToolbox::instance()->config();
+	config.iniWriteLong(BondsWindow::IniSection(), BondsWindow::IniKeyX(), x);
+	config.iniWriteLong(BondsWindow::IniSection(), BondsWindow::IniKeyY(), y);
 }
 
 void BondsWindow::BondsMonitor::UpdateUI() {

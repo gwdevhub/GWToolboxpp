@@ -97,12 +97,10 @@ void InfoPanel::BuildUI() {
 	bonds->GetCheckedChangedEvent() += CheckedChangedEventHandler([bonds](Control*) {
 		GWToolbox* tb = GWToolbox::instance();
 		bool show = bonds->GetChecked();
-		if (tb->bonds_window()) {
-			tb->bonds_window()->Show(show);
-		}
-		tb->config()->iniWriteBool(BondsWindow::IniSection(), BondsWindow::IniKeyShow(), show);
+		tb->bonds_window().Show(show);
+		tb->config().iniWriteBool(BondsWindow::IniSection(), BondsWindow::IniKeyShow(), show);
 	});
-	bonds->SetChecked(GWToolbox::instance()->config()->iniReadBool(
+	bonds->SetChecked(GWToolbox::instance()->config().iniReadBool(
 		BondsWindow::IniSection(), BondsWindow::IniKeyShow(), false));
 	AddControl(bonds);
 
@@ -113,12 +111,10 @@ void InfoPanel::BuildUI() {
 	targetHp->GetCheckedChangedEvent() += CheckedChangedEventHandler([targetHp](Control*) {
 		GWToolbox* tb = GWToolbox::instance();
 		bool show = targetHp->GetChecked();
-		if (tb->health_window()) {
-			tb->health_window()->Show(show);
-		}
-		tb->config()->iniWriteBool(HealthWindow::IniSection(), HealthWindow::IniKeyShow(), show);
+		tb->health_window().Show(show);
+		tb->config().iniWriteBool(HealthWindow::IniSection(), HealthWindow::IniKeyShow(), show);
 	});
-	targetHp->SetChecked(GWToolbox::instance()->config()->iniReadBool(
+	targetHp->SetChecked(GWToolbox::instance()->config().iniReadBool(
 		HealthWindow::IniSection(), HealthWindow::IniKeyShow(), false));
 	AddControl(targetHp);
 
@@ -129,12 +125,10 @@ void InfoPanel::BuildUI() {
 	distance->GetCheckedChangedEvent() += CheckedChangedEventHandler([distance](Control*) {
 		GWToolbox* tb = GWToolbox::instance();
 		bool show = distance->GetChecked();
-		if (tb->distance_window()) {
-			tb->distance_window()->Show(show);
-		}
-		tb->config()->iniWriteBool(DistanceWindow::IniSection(), DistanceWindow::IniKeyShow(), show);
+		tb->distance_window().Show(show);
+		tb->config().iniWriteBool(DistanceWindow::IniSection(), DistanceWindow::IniKeyShow(), show);
 	});
-	distance->SetChecked(GWToolbox::instance()->config()->iniReadBool(
+	distance->SetChecked(GWToolbox::instance()->config().iniReadBool(
 		DistanceWindow::IniSection(), DistanceWindow::IniKeyShow(), false));
 	AddControl(distance);
 

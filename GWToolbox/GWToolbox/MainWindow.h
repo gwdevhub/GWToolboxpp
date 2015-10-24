@@ -67,14 +67,14 @@ private:
 	bool tick_with_pcons_;
 
 	Button* pcon_toggle_button_;
-	PconPanel* const pcon_panel_;
-	HotkeyPanel* const hotkey_panel_;
-	BuildPanel* const build_panel_;
-	TravelPanel* const travel_panel_;
-	DialogPanel* const dialog_panel_;
-	InfoPanel* const info_panel_;
-	MaterialsPanel* const materials_panel_;
-	SettingsPanel* const settings_panel_;
+	PconPanel& pcon_panel_;
+	HotkeyPanel&hotkey_panel_;
+	BuildPanel& build_panel_;
+	TravelPanel& travel_panel_;
+	DialogPanel& dialog_panel_;
+	InfoPanel& info_panel_;
+	MaterialsPanel& materials_panel_;
+	SettingsPanel& settings_panel_;
 
 	void CreateTabButton(const wchar_t* s, int& button_idx, int& panel_idx, const char* icon);
 	void ToggleMinimize();
@@ -104,14 +104,14 @@ public:
 	inline bool minimized() { return minimized_; }
 
 	void UpdatePconToggleButton(bool active);
-	PconPanel* pcon_panel() { return pcon_panel_; }
-	HotkeyPanel* hotkey_panel() { return hotkey_panel_; }
-	BuildPanel* build_panel() { return build_panel_; }
-	TravelPanel* travel_panel() { return travel_panel_; }
-	DialogPanel* dialog_panel() { return dialog_panel_; }
-	InfoPanel* info_panel() { return info_panel_; }
-	MaterialsPanel* materials_panel() { return materials_panel_; }
-	SettingsPanel* settings_panel() { return settings_panel_; }
+	PconPanel& pcon_panel() { return pcon_panel_; }
+	HotkeyPanel& hotkey_panel() { return hotkey_panel_; }
+	BuildPanel& build_panel() { return build_panel_; }
+	TravelPanel& travel_panel() { return travel_panel_; }
+	DialogPanel& dialog_panel() { return dialog_panel_; }
+	InfoPanel& info_panel() { return info_panel_; }
+	MaterialsPanel& materials_panel() { return materials_panel_; }
+	SettingsPanel& settings_panel() { return settings_panel_; }
 
 	void SetPanelPositions(bool left);
 	void UpdateUI();

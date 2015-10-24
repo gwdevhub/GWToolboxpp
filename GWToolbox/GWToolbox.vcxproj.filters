@@ -1,49 +1,49 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="MainWindow">
-      <UniqueIdentifier>{3eda78ba-9481-4130-92cf-e248ec0bda9c}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source">
       <UniqueIdentifier>{ec22750a-9a1e-4197-b6a3-497639f4dde6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Panels">
+      <UniqueIdentifier>{3eda78ba-9481-4130-92cf-e248ec0bda9c}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GWToolbox\BuildPanel.h">
-      <Filter>MainWindow</Filter>
+      <Filter>Panels</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\DialogPanel.h">
-      <Filter>MainWindow</Filter>
+      <Filter>Panels</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\HotkeyPanel.h">
-      <Filter>MainWindow</Filter>
+      <Filter>Panels</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\InfoPanel.h">
-      <Filter>MainWindow</Filter>
+      <Filter>Panels</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\MaterialsPanel.h">
-      <Filter>MainWindow</Filter>
+      <Filter>Panels</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\PconPanel.h">
-      <Filter>MainWindow</Filter>
+      <Filter>Panels</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\Pcons.h">
-      <Filter>MainWindow</Filter>
+      <Filter>Panels</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\SettingsPanel.h">
-      <Filter>MainWindow</Filter>
+      <Filter>Panels</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\ToolboxPanel.h">
-      <Filter>MainWindow</Filter>
+      <Filter>Panels</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\TravelPanel.h">
-      <Filter>MainWindow</Filter>
+      <Filter>Panels</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\EditBuild.h">
-      <Filter>MainWindow</Filter>
+      <Filter>Panels</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\Hotkeys.h">
-      <Filter>MainWindow</Filter>
+      <Filter>Panels</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\BondsWindow.h" />
     <ClInclude Include="GWToolbox\Config.h" />

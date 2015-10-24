@@ -134,48 +134,48 @@ void EditBuild::SetEditedBuild(int index, Button* button) {
 	editing_index = index;
 	editing_button = button;
 
-	Config* config = GWToolbox::instance()->config();
+	Config& config = GWToolbox::instance()->config();
 	wstring section = wstring(L"builds") + to_wstring(index);
 	wstring key;
 	
 	key = L"buildname";
-	wstring buildname = config->iniRead(section.c_str(), key.c_str(), L"");
+	wstring buildname = config.iniRead(section.c_str(), key.c_str(), L"");
 	name->SetText(buildname);
 	for (int i = 0; i < N_PLAYERS; ++i) {
 		key = L"name" + to_wstring(i + 1);
-		wstring name = config->iniRead(section.c_str(), key.c_str(), L"");
+		wstring name = config.iniRead(section.c_str(), key.c_str(), L"");
 		names[i]->SetText(name);
 
 		key = L"template" + to_wstring(i + 1);
-		wstring temp = config->iniRead(section.c_str(), key.c_str(), L"");
+		wstring temp = config.iniRead(section.c_str(), key.c_str(), L"");
 		templates[i]->SetText(temp);
 	}
-	show_numbers->SetChecked(config->iniReadBool(section.c_str(), L"showNumbers", true));
+	show_numbers->SetChecked(config.iniReadBool(section.c_str(), L"showNumbers", true));
 
 	SetVisible(true);
 }
 
 void EditBuild::SaveBuild() {
-	Config* config = GWToolbox::instance()->config();
+	Config& config = GWToolbox::instance()->config();
 	wstring section = wstring(L"builds") + to_wstring(editing_index);
 	wstring key;
 
 	wstring s_name = name->GetText();
 	key = L"buildname";
-	config->iniWrite(section.c_str(), key.c_str(), s_name.c_str());
+	config.iniWrite(section.c_str(), key.c_str(), s_name.c_str());
 	editing_button->SetText(s_name);
 
 	for (int i = 0; i < N_PLAYERS; ++i) {
 		wstring s_name = names[i]->GetText();
 		key = L"name" + to_wstring(i + 1);
-		config->iniWrite(section.c_str(), key.c_str(), s_name.c_str());
+		config.iniWrite(section.c_str(), key.c_str(), s_name.c_str());
 
 		wstring s_template = templates[i]->GetText();
 		key = L"template" + to_wstring(i + 1);
-		config->iniWrite(section.c_str(), key.c_str(), s_template.c_str());
+		config.iniWrite(section.c_str(), key.c_str(), s_template.c_str());
 	}
 
-	config->iniWriteBool(section.c_str(), L"showNumbers", show_numbers->GetChecked());
+	config.iniWriteBool(section.c_str(), L"showNumbers", show_numbers->GetChecked());
 }
 
 void EditBuild::UpdateLocation() {
