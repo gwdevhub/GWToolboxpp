@@ -11,7 +11,6 @@ using namespace GWAPI;
 
 unsigned long OldWndProc = 0;
 Minimap* minimap = nullptr;
-GWAPI::DirectXMgr* dx;
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) {
 
@@ -68,13 +67,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 HRESULT WINAPI EndScene(IDirect3DDevice9* dev) {	
 	minimap->Render(dev);
 	
-	return dx->EndsceneReturn()(dev);
+	return GWAPI::GWCA::Api().DirectX().EndsceneReturn()(dev);
 }
 
 HRESULT WINAPI ResetScene(IDirect3DDevice9* pDevice,
 	D3DPRESENT_PARAMETERS* pPresentationParameters) {
 
-	return dx->ResetReturn()(pDevice, pPresentationParameters);
+	return GWAPI::GWCA::Api().DirectX().ResetReturn()(pDevice, pPresentationParameters);
 }
 
 void init(HMODULE hModule) {
