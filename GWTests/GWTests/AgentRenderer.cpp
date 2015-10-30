@@ -24,54 +24,103 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 	triangle_count = 0;
 
 	GWCA api;
-	GW::Agent* me = api().Agents().GetPlayer();
-	if (me == nullptr) return;
 	GW::AgentArray agents = api().Agents().GetAgentArray();
 	if (!agents.valid()) return;	
-
-	// target
-	GW::Agent* target = api().Agents().GetTarget();
-	if (target != nullptr) {
-		QueueTriangle(device, target->X, target->Y, target->Rotation, 200, 0xFFFFFFFF);
-	}
 
 	// all agents
 	for (size_t i = 0; i < agents.size(); ++i) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
+		if (agent->Id == api().Agents().GetPlayerId()) continue; // will draw player at the end
+		if (agent->Id == api().Agents().GetTargetId()) continue; // will draw target at the end
 
-		DWORD color;
-		switch (agent->Allegiance) {
-		case 0x100: color = D3DCOLOR_XRGB(0, 200, 0); break;
-		case 0x300: color = D3DCOLOR_XRGB(200, 0, 0); break;
-		default:	color = D3DCOLOR_XRGB(0, 150, 0); break;
-		}
-		if (agent->Id == api().Agents().GetPlayerId()) {
-			color = D3DCOLOR_XRGB(200, 50, 255);
-		}
-		if (agent->GetIsDead()) color = D3DCOLOR_XRGB(20, 20, 20);
+		QueueAgent(device, agent);
 
-		if (agent->TypeMap == 0x40000) {
-			QueueQuad(device, agent->X, agent->Y, 75, color);
-		} else {
-			switch (agent->Type) {
-			case 0xDB:
-				QueueTriangle(device, agent->X, agent->Y, agent->Rotation, 150, color);
-				break;
-			case 0x200:
-				QueueQuad(device, agent->X, agent->Y, 150, D3DCOLOR_XRGB(0, 0, 200));
-				break;
-			case 0x400:
-				QueueQuad(device, agent->X, agent->Y, 100, D3DCOLOR_XRGB(0, 0, 200));
-			default:
-				break;
-			}
-		}
-
-		if (triangle_count >= triangles_max + 1) Flush(device);
+		CheckFlush(device);
 	}
 
+	GW::Agent* target = api().Agents().GetTarget();
+	if (target) QueueAgent(device, target);
+
+	CheckFlush(device);
+
+	GW::Agent* player = api().Agents().GetPlayer();
+	if (player) QueueAgent(device, player);
+
 	Flush(device);
+}
+
+void AgentRenderer::QueueAgent(IDirect3DDevice9* device, GW::Agent* agent) {
+	bool is_target = GWCA::Api().Agents().GetTargetId() == agent->Id;
+	bool is_player = GWCA::Api().Agents().GetPlayerId() == agent->Id;
+
+	DWORD color;
+	if (is_player) {
+		color = D3DCOLOR_XRGB(200, 50, 255);
+	} else if (agent->GetIsDead()) {
+		color = D3DCOLOR_ARGB(150, 20, 20, 20);
+	} else {
+		switch (agent->Type) {
+		case 0x200:
+		case 0x400:
+			color = D3DCOLOR_XRGB(0, 0, 200);
+			break;
+		default:
+			switch (agent->Allegiance) {
+			case 0x100: color = D3DCOLOR_XRGB(0, 200, 0); break;
+			case 0x300: color = D3DCOLOR_XRGB(200, 0, 0); break;
+			default:	color = D3DCOLOR_XRGB(0, 150, 0); break;
+			}
+			break;
+		}
+	}
+
+	float size = 150.0f;
+	switch (agent->TypeMap) {
+	case 0x40000: size = 100.0f; break; // spirit
+	case 0xC00:	size = 200.0f; break;  // boss
+	default:
+		switch (agent->Type) {
+		case 0xDB: // players, npcs
+		case 0x200: // signposts
+			size = 150.0f; 
+			break;
+		case 0x400: // item
+			size = 75.0f;
+			break;
+		default:
+			printf("found no size for agent, id %d\n", agent->Id);
+			break;
+		}
+		break;
+	}
+
+	enum Shape { Tri, Quad };
+	Shape shape;
+	if (agent->TypeMap == 0x40000) { // spirit
+		QueueQuad(device, agent->X, agent->Y, 75, color);
+		shape = Quad;
+	} else {
+		switch (agent->Type) {
+		case 0xDB: shape = Tri; break; // players, npcs
+		case 0x200: shape = Quad; break; // signposts, chests, objects
+		case 0x400: shape = Quad; break; // item on the ground
+		default:
+			printf("Found no shape for agent, id %d\n", agent->Id);
+			break;
+		}
+	}
+
+	switch (shape) {
+	case Tri:
+		if (is_target) QueueTriangle(device, agent->X, agent->Y, agent->Rotation, size + 50, 0xFFFFFFFF);
+		QueueTriangle(device, agent->X, agent->Y, agent->Rotation, size, color);
+		break;
+	case Quad:
+		if (is_target) QueueQuad(device, agent->X, agent->Y, size + 50, 0xFFFFFFFF);
+		QueueQuad(device, agent->X, agent->Y, size, color);
+		break;
+	}
 }
 
 void AgentRenderer::QueueTriangle(IDirect3DDevice9* device,
