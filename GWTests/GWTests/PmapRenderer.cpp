@@ -2,88 +2,72 @@
 
 #include <vector>
 
-PmapRenderer::PmapRenderer()
-	: pmap(PathingMap(0)) {
-}
-
-void PmapRenderer::Render(IDirect3DDevice9* device) {
-	if (pmap.GetPathingData().size() == 0) return;
-
-	Renderer::Render(device);
-}
+#include <GWCA\GWCA.h>
 
 void PmapRenderer::Initialize(IDirect3DDevice9* device) {
+	using namespace GWAPI::GW;
 
-	std::vector<PathingMapTrapezoid>trapez = pmap.GetPathingData();
+	PathingMapArray path_map = GWAPI::GWCA::Api().Map().GetPathingMap();
 
-	if (trapez.size() == 0) return;
-
-	short max_plane = 0;
-	for (size_t i = 0; i < trapez.size(); ++i) {
-		if (max_plane < trapez[i].Plane) {
-			max_plane = trapez[i].Plane;
-		}
+	// get the number of trapezoids, need it to allocate the vertex buffer
+	size_t size = 0;
+	for (size_t i = 0; i < path_map.size(); ++i) {
+		size += path_map[i].trapezoidcount;
 	}
+	if (size == 0) return;
 
-	count_ = trapez.size() * 2;
+	count_ = size * 2;
 	type_ = D3DPT_TRIANGLELIST;
 	Vertex* vertices = nullptr;
-	
+
+	// allocate new vertex buffer
 	if (buffer_) buffer_->Release();
 	device->CreateVertexBuffer(sizeof(Vertex) * count_ * 3, 0,
 		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer_, NULL);
 	buffer_->Lock(0, sizeof(Vertex) * count_ * 3,
 		(VOID**)&vertices, D3DLOCK_DISCARD);
-	
-	for (size_t i = 0; i < trapez.size(); ++i) {
-		DWORD c = trapez[i].Plane * 200 / max_plane / 2;
-		DWORD color = D3DCOLOR_ARGB(0xAA, 200 - c, 200 - c, 200);
-		for (int j = 0; j < 6; ++j) {
-			vertices[i * 6 + j].z = 1.0f;
-			vertices[i * 6 + j].color = color;
+
+	// populate vertex buffer
+	DWORD color = D3DCOLOR_ARGB(0xAA, 200, 200, 200);
+	for (size_t i = 0; i < path_map.size(); ++i) {
+		GWAPI::GW::PathingMap pmap = path_map[i];
+		for (size_t j = 0; j < path_map[i].trapezoidcount; ++j) {
+			PathingTrapezoid trapez = path_map[i].trapezoids[j];
+
+			for (size_t k = 0; k < 6; ++k) {
+				vertices[k].z = 1.0f;
+				vertices[k].color = color;
+			}
+
+			// triangle 1
+			// topleft
+			vertices[0].x = trapez.XTL;
+			vertices[0].y = trapez.YT;
+
+			// topright
+			vertices[1].x = trapez.XTR;
+			vertices[1].y = trapez.YT;
+
+			// botleft
+			vertices[2].x = trapez.XBL;
+			vertices[2].y = trapez.YB;
+
+			// triangle 2
+			// botleft
+			vertices[3].x = trapez.XBL;
+			vertices[3].y = trapez.YB;
+
+			// topright
+			vertices[4].x = trapez.XTR;
+			vertices[4].y = trapez.YT;
+
+			// botright
+			vertices[5].x = trapez.XBR;
+			vertices[5].y = trapez.YB;
+
+			vertices += 6;
 		}
-		// triangle 1
-		// topleft
-		vertices[i * 6 + 0].x = trapez[i].XTL;
-		vertices[i * 6 + 0].y = trapez[i].YT;
-
-		// topright
-		vertices[i * 6 + 1].x = trapez[i].XTR;
-		vertices[i * 6 + 1].y = trapez[i].YT;
-
-		// botleft
-		vertices[i * 6 + 2].x = trapez[i].XBL;
-		vertices[i * 6 + 2].y = trapez[i].YB;
-
-		// triangle 2
-		// botleft
-		vertices[i * 6 + 3].x = trapez[i].XBL;
-		vertices[i * 6 + 3].y = trapez[i].YB;
-
-		// topright
-		vertices[i * 6 + 4].x = trapez[i].XTR;
-		vertices[i * 6 + 4].y = trapez[i].YT;
-
-		// botright
-		vertices[i * 6 + 5].x = trapez[i].XBR;
-		vertices[i * 6 + 5].y = trapez[i].YB;
 	}
 
 	buffer_->Unlock();
-}
-
-void PmapRenderer::LoadMap(unsigned long file_hash) {
-	printf("Loading map\n");
-	pmap = PathingMap(file_hash);
-
-	wchar_t filename[MAX_PATH];
-	wsprintf(filename, L"PMAPs\\MAP %010u.pmap", file_hash);
-	bool loaded = pmap.Open(filename);
-	if (loaded) {
-		printf("loaded pmap %u!\n", file_hash);
-	} else {
-		printf("failed to load pmap!\n");
-	}
-
-	Invalidate();
 }

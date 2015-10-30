@@ -2,13 +2,14 @@
 
 #include <Windows.h>
 #include <windowsx.h>
+#include <thread>
 
 #include "GWCA/APIMain.h"
 
 void Minimap::UIRenderer::Initialize(IDirect3DDevice9* device) {
 	count_ = 2;
 	type_ = D3DPT_TRIANGLEFAN;
-
+	printf("initializing minimap\n");
 	Vertex* vertices = nullptr;
 	unsigned int vertex_count = 4;
 
@@ -98,10 +99,10 @@ Minimap::Minimap()
 	GWAPI::GWCA api;
 	api().StoC().AddGameServerEvent<GWAPI::StoC::P391_InstanceLoadFile>(
 		[this](GWAPI::StoC::P391_InstanceLoadFile* packet) {
-		pmap_renderer.LoadMap(packet->map_fileID);
+		pmap_renderer.Invalidate();
 	});
 
-	pmap_renderer.LoadMap(219215);
+	pmap_renderer.Invalidate();
 }
 
 void Minimap::Render(IDirect3DDevice9* device) {

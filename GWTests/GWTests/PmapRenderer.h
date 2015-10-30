@@ -3,21 +3,15 @@
 #include <Windows.h>
 #include <d3d9.h>
 
-#include "PathingMap.h"
 #include "MyD3DVertex.h"
 #include "Renderer.h"
 
 class PmapRenderer : public Renderer {
 public:
-	PmapRenderer();
-
-	void Render(IDirect3DDevice9* deivce) override;
-
-	void LoadMap(unsigned long file_hash);
+	PmapRenderer() : Renderer() {}
 
 protected:
 	void Initialize(IDirect3DDevice9* device) override;
 
 private:
-	PathingMap pmap;
 };
