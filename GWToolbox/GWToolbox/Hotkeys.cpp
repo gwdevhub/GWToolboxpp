@@ -593,7 +593,7 @@ void HotkeyUseItem::exec() {
 	GWCA api;
 	if (!api().Items().UseItemByModelId(item_id_)) {
 		wstring name = item_name_.empty() ? to_wstring(item_id_) : item_name_;
-		api().Chat().WriteChatF(L"asdrofl", L"[Warning] %ls not found!", name.c_str());
+		api().Chat().WriteChatF(L"GWToolbox++", L"[Warning] %ls not found!", name.c_str());
 	}
 }
 
@@ -603,7 +603,7 @@ void HotkeySendChat::exec() {
 	GWCA api;
 	api().Chat().SendChat(msg_.c_str(), channel_);
 	if (channel_ == L'/') {
-		api().Chat().WriteChatF(L"asdrofl", L"/%ls", msg_.c_str());
+		api().Chat().WriteChatF(L"GWToolbox++", L"/%ls", msg_.c_str());
 	}
 }
 
@@ -629,7 +629,7 @@ void HotkeyToggle::exec() {
 	switch (target_) {
 	case HotkeyToggle::Clicker:
 		active = tb.main_window().hotkey_panel().ToggleClicker();
-		api().Chat().WriteChatF(L"asdrofl", L"Clicker is %ls",
+		api().Chat().WriteChatF(L"GWToolbox++", L"Clicker is %ls",
 			active ? L"active" : L"disabled");
 		break;
 	case HotkeyToggle::Pcons:
@@ -638,7 +638,7 @@ void HotkeyToggle::exec() {
 		break;
 	case HotkeyToggle::CoinDrop:
 		active = tb.main_window().hotkey_panel().ToggleCoinDrop();
-		api().Chat().WriteChatF(L"asdrofl", L"Coin dropper is %ls",
+		api().Chat().WriteChatF(L"GWToolbox++", L"Coin dropper is %ls",
 			active ? L"active" : L"disabled");
 		break;
 	}
@@ -713,7 +713,7 @@ void HotkeyMove::exec() {
 	if (sqrDist < GwConstants::SqrRange::Compass) {
 		api().Agents().Move(x_, y_);
 	}
-	api().Chat().WriteChatF(L"asdrofl", L"Movement macro activated");
+	api().Chat().WriteChatF(L"GWToolbox++", L"Movement macro activated");
 }
 
 void HotkeyDialog::exec() {

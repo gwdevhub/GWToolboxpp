@@ -101,7 +101,7 @@ void Pcon::CheckUpdateTimer() {
 		this->scanInventory();
 		update_timer = 0;
 		if (old_enabled != enabled) {
-			GWCA::Api().Chat().WriteChatF(L"asdrofl", 
+			GWCA::Api().Chat().WriteChatF(L"GWToolbox++", 
 				L"[WARNING] Cannot find %ls", chatName);
 		}
 	}
@@ -123,7 +123,7 @@ bool Pcon::checkAndUse() {
 					this->update_timer = TBTimer::init();
 				} else {
 					// this should never happen, it should be disabled before
-					api().Chat().WriteChatF(L"asdrofl", L"[WARNING] Cannot find %ls", chatName);
+					api().Chat().WriteChatF(L"GWToolbox++", L"[WARNING] Cannot find %ls", chatName);
 					this->scanInventory();
 				}
 				return used;
@@ -159,7 +159,7 @@ bool PconCons::checkAndUse() {
 					this->timer = TBTimer::init();
 					this->update_timer = TBTimer::init();
 				} else {
-					api().Chat().WriteChatF(L"asdrofl", L"[WARNING] Cannot find %ls", chatName);
+					api().Chat().WriteChatF(L"GWToolbox++", L"[WARNING] Cannot find %ls", chatName);
 					this->scanInventory();
 				}
 				return used;
@@ -195,7 +195,7 @@ bool PconCity::checkAndUse() {
 						this->timer = TBTimer::init();
 						this->update_timer = TBTimer::init();
 					} else {
-						api().Chat().WriteChatF(L"asdrofl", L"[WARNING] Cannot find a city speedboost");
+						api().Chat().WriteChatF(L"GWToolbox++", L"[WARNING] Cannot find a city speedboost");
 						this->scanInventory();
 					}
 					return used;
@@ -234,7 +234,7 @@ bool PconAlcohol::checkAndUse() {
 					this->timer = TBTimer::init();
 					this->update_timer = TBTimer::init();
 				} else {
-					api().Chat().WriteChatF(L"asdrofl", L"[WARNING] Cannot find Alcohol");
+					api().Chat().WriteChatF(L"GWToolbox++", L"[WARNING] Cannot find Alcohol");
 					this->scanInventory();
 				}
 				return used;
@@ -260,7 +260,7 @@ bool PconLunar::checkAndUse() {
 					this->timer = TBTimer::init();
 					this->update_timer = TBTimer::init();
 				} else {
-					api().Chat().WriteChatF(L"asdrofl", L"[WARNING] Cannot find Lunar Fortunes");
+					api().Chat().WriteChatF(L"GWToolbox++", L"[WARNING] Cannot find Lunar Fortunes");
 					this->scanInventory();
 				}
 				return used;
