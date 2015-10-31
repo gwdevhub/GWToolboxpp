@@ -123,10 +123,10 @@ EditBuild::EditBuild() {
 
 void EditBuild::EnableTextInput(TextBox* tb) {
 	tb->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::instance()->set_capture_input(true);
+		GWToolbox::instance().set_capture_input(true);
 	});
 	tb->GetFocusLostEvent() += FocusLostEventHandler([](Control*, Control*) {
-		GWToolbox::instance()->set_capture_input(false);
+		GWToolbox::instance().set_capture_input(false);
 	});
 }
 
@@ -134,7 +134,7 @@ void EditBuild::SetEditedBuild(int index, Button* button) {
 	editing_index = index;
 	editing_button = button;
 
-	Config& config = GWToolbox::instance()->config();
+	Config& config = GWToolbox::instance().config();
 	wstring section = wstring(L"builds") + to_wstring(index);
 	wstring key;
 	
@@ -156,7 +156,7 @@ void EditBuild::SetEditedBuild(int index, Button* button) {
 }
 
 void EditBuild::SaveBuild() {
-	Config& config = GWToolbox::instance()->config();
+	Config& config = GWToolbox::instance().config();
 	wstring section = wstring(L"builds") + to_wstring(editing_index);
 	wstring key;
 

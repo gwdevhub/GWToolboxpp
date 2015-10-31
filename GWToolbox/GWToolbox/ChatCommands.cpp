@@ -26,7 +26,7 @@ ChatCommands::ChatCommands() {
 
 void ChatCommands::PconCmd(const vector<wstring> &args) {
 
-	PconPanel& pcons = GWToolbox::instance()->main_window().pcon_panel();
+	PconPanel& pcons = GWToolbox::instance().main_window().pcon_panel();
 	if (args.size() == 0) {
 		pcons.ToggleActive();
 	}

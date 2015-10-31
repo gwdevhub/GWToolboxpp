@@ -25,7 +25,7 @@ TBHotkey::TBHotkey(Key key, Key modifier, bool active, wstring ini_section)
 	checkbox->SetLocation(HOTKEY_X, HOTKEY_Y + 5);
 	checkbox->GetCheckedChangedEvent() += CheckedChangedEventHandler([this, checkbox, ini_section](Control*) {
 		this->set_active(checkbox->GetChecked());
-		GWToolbox::instance()->config().iniWriteBool(ini_section.c_str(), TBHotkey::IniKeyActive(), checkbox->GetChecked());
+		GWToolbox::instance().config().iniWriteBool(ini_section.c_str(), TBHotkey::IniKeyActive(), checkbox->GetChecked());
 	});
 	AddControl(checkbox);
 
@@ -35,10 +35,10 @@ TBHotkey::TBHotkey(Key key, Key modifier, bool active, wstring ini_section)
 	hotkey_button->SetHotkey(key);
 	hotkey_button->SetHotkeyModifier(modifier);
 	hotkey_button->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::instance()->set_capture_input(true);
+		GWToolbox::instance().set_capture_input(true);
 	});
 	hotkey_button->GetFocusLostEvent() += FocusLostEventHandler([](Control*, Control*) {
-		GWToolbox::instance()->set_capture_input(false);
+		GWToolbox::instance().set_capture_input(false);
 	});
 	hotkey_button->GetHotkeyChangedEvent() += HotkeyChangedEventHandler(
 		[this, hotkey_button, ini_section](Control*) {
@@ -46,9 +46,9 @@ TBHotkey::TBHotkey(Key key, Key modifier, bool active, wstring ini_section)
 		Key modifier = hotkey_button->GetHotkeyModifier();
 		this->set_key(key);
 		this->set_modifier(modifier);
-		GWToolbox::instance()->config().iniWriteLong(ini_section.c_str(),
+		GWToolbox::instance().config().iniWriteLong(ini_section.c_str(),
 			this->IniKeyHotkey(), (long)key);
-		GWToolbox::instance()->config().iniWriteLong(ini_section.c_str(),
+		GWToolbox::instance().config().iniWriteLong(ini_section.c_str(),
 			this->IniKeyModifier(), (long)modifier);
 	});
 	AddControl(hotkey_button);
@@ -92,9 +92,9 @@ HotkeySendChat::HotkeySendChat(Key key, Key modifier, bool active, wstring ini_s
 		[this, combo, ini_section](Control*) {
 		wchar_t channel = this->IndexToChannel(combo->GetSelectedIndex());
 		this->set_channel(channel);
-		GWToolbox::instance()->config().iniWrite(ini_section.c_str(), 
+		GWToolbox::instance().config().iniWrite(ini_section.c_str(), 
 			this->IniKeyChannel(), wstring(1, channel).c_str());
-		GWToolbox::instance()->main_window().hotkey_panel().UpdateDeleteCombo();
+		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
 	AddControl(combo);
 	
@@ -106,15 +106,15 @@ HotkeySendChat::HotkeySendChat(Key key, Key modifier, bool active, wstring ini_s
 		[this, text_box, ini_section](Control*) {
 		wstring text = text_box->GetText();
 		this->set_msg(text);
-		GWToolbox::instance()->config().iniWrite(ini_section.c_str(),
+		GWToolbox::instance().config().iniWrite(ini_section.c_str(),
 			this->IniKeyMsg(), text.c_str());
-		GWToolbox::instance()->main_window().hotkey_panel().UpdateDeleteCombo();
+		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
 	text_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::instance()->set_capture_input(true);
+		GWToolbox::instance().set_capture_input(true);
 	});
 	text_box->GetFocusLostEvent() += FocusLostEventHandler([](Control*, Control*) {
-		GWToolbox::instance()->set_capture_input(false);
+		GWToolbox::instance().set_capture_input(false);
 	});
 	AddControl(text_box);
 }
@@ -173,19 +173,19 @@ HotkeyUseItem::HotkeyUseItem(Key key, Key modifier, bool active, wstring ini_sec
 		try {
 			long id = std::stol(id_box->GetText());
 			this->set_item_id((UINT)id);
-			GWToolbox::instance()->config().iniWriteLong(ini_section.c_str(),
+			GWToolbox::instance().config().iniWriteLong(ini_section.c_str(),
 				this->IniKeyItemID(), id);
-			GWToolbox::instance()->main_window().hotkey_panel().UpdateDeleteCombo();
+			GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 		} catch (...) {}
 	});
 	id_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::instance()->set_capture_input(true);
+		GWToolbox::instance().set_capture_input(true);
 	});
 	id_box->GetFocusLostEvent() += FocusLostEventHandler([id_box](Control*, Control*) {
-		GWToolbox::instance()->set_capture_input(false);
+		GWToolbox::instance().set_capture_input(false);
 		try {
 			std::stol(id_box->GetText());
-			GWToolbox::instance()->main_window().hotkey_panel().UpdateDeleteCombo();
+			GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 		} catch (...) {
 			id_box->SetText(L"0");
 		}
@@ -200,15 +200,15 @@ HotkeyUseItem::HotkeyUseItem(Key key, Key modifier, bool active, wstring ini_sec
 		[this, name_box, ini_section](Control*) {
 		wstring text = name_box->GetText();
 		this->set_item_name(text);
-		GWToolbox::instance()->config().iniWrite(ini_section.c_str(),
+		GWToolbox::instance().config().iniWrite(ini_section.c_str(),
 			this->IniKeyItemName(), text.c_str());
-		GWToolbox::instance()->main_window().hotkey_panel().UpdateDeleteCombo();
+		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
 	name_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::instance()->set_capture_input(true);
+		GWToolbox::instance().set_capture_input(true);
 	});
 	name_box->GetFocusLostEvent() += FocusLostEventHandler([](Control*, Control*) {
-		GWToolbox::instance()->set_capture_input(false);
+		GWToolbox::instance().set_capture_input(false);
 	});
 	AddControl(name_box);
 }
@@ -243,9 +243,9 @@ TBHotkey(key, modifier, active, ini_section), id_(id) {
 		[this, combo, ini_section](Control*) {
 		GwConstants::SkillID skillID = this->IndexToSkillID(combo->GetSelectedIndex());
 		this->set_id(skillID);
-		GWToolbox::instance()->config().iniWriteLong(ini_section.c_str(),
+		GWToolbox::instance().config().iniWriteLong(ini_section.c_str(),
 			this->IniKeySkillID(), (long)skillID);
-		GWToolbox::instance()->main_window().hotkey_panel().UpdateDeleteCombo();
+		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
 	combo_ = combo;
 	AddControl(combo);
@@ -293,9 +293,9 @@ HotkeyToggle::HotkeyToggle(Key key, Key modifier, bool active, wstring ini_secti
 		int index = combo->GetSelectedIndex();
 		Toggle target = static_cast<HotkeyToggle::Toggle>(index);
 		this->set_target(target);
-		GWToolbox::instance()->config().iniWriteLong(ini_section.c_str(), 
+		GWToolbox::instance().config().iniWriteLong(ini_section.c_str(), 
 			this->IniKeyToggleID(), index);
-		GWToolbox::instance()->main_window().hotkey_panel().UpdateDeleteCombo();
+		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
 	AddControl(combo);
 }
@@ -322,9 +322,9 @@ HotkeyAction::HotkeyAction(Key key, Key modifier, bool active, wstring ini_secti
 		int index = combo->GetSelectedIndex();
 		Action action = static_cast<HotkeyAction::Action>(index);
 		this->set_action(action);
-		GWToolbox::instance()->config().iniWriteLong(ini_section.c_str(),
+		GWToolbox::instance().config().iniWriteLong(ini_section.c_str(),
 			this->IniKeyActionID(), index);
-		GWToolbox::instance()->main_window().hotkey_panel().UpdateDeleteCombo();
+		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
 	AddControl(combo);
 }
@@ -353,19 +353,19 @@ HotkeyTarget::HotkeyTarget(Key key, Key modifier, bool active, wstring ini_secti
 		try {
 			long id = std::stol(id_box->GetText());
 			this->set_id((UINT)id);
-			GWToolbox::instance()->config().iniWriteLong(ini_section.c_str(),
+			GWToolbox::instance().config().iniWriteLong(ini_section.c_str(),
 				this->IniKeyTargetID(), id);
-			GWToolbox::instance()->main_window().hotkey_panel().UpdateDeleteCombo();
+			GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 		} catch (...) {}
 	});
 	id_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::instance()->set_capture_input(true);
+		GWToolbox::instance().set_capture_input(true);
 	});
 	id_box->GetFocusLostEvent() += FocusLostEventHandler([id_box](Control*, Control*) {
-		GWToolbox::instance()->set_capture_input(false);
+		GWToolbox::instance().set_capture_input(false);
 		try {
 			std::stol(id_box->GetText());
-			GWToolbox::instance()->main_window().hotkey_panel().UpdateDeleteCombo();
+			GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 		} catch (...) {
 			id_box->SetText(L"0");
 		}
@@ -380,15 +380,15 @@ HotkeyTarget::HotkeyTarget(Key key, Key modifier, bool active, wstring ini_secti
 		[this, name_box, ini_section](Control*) {
 		wstring text = name_box->GetText();
 		this->set_name(text);
-		GWToolbox::instance()->config().iniWrite(ini_section.c_str(),
+		GWToolbox::instance().config().iniWrite(ini_section.c_str(),
 			this->IniKeyTargetName(), text.c_str());
-		GWToolbox::instance()->main_window().hotkey_panel().UpdateDeleteCombo();
+		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
 	name_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::instance()->set_capture_input(true);
+		GWToolbox::instance().set_capture_input(true);
 	});
 	name_box->GetFocusLostEvent() += FocusLostEventHandler([](Control*, Control*) {
-		GWToolbox::instance()->set_capture_input(false);
+		GWToolbox::instance().set_capture_input(false);
 	});
 	AddControl(name_box);
 }
@@ -419,19 +419,19 @@ HotkeyMove::HotkeyMove(Key key, Key modifier, bool active, wstring ini_section,
 		try {
 			float x = std::stof(box_x->GetText());
 			this->set_x(x);
-			GWToolbox::instance()->config().iniWriteDouble(ini_section.c_str(), 
+			GWToolbox::instance().config().iniWriteDouble(ini_section.c_str(), 
 				this->IniKeyX(), x);
-			GWToolbox::instance()->main_window().hotkey_panel().UpdateDeleteCombo();
+			GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 		} catch (...) {}
 	});
 	box_x->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::instance()->set_capture_input(true);
+		GWToolbox::instance().set_capture_input(true);
 	});
 	box_x->GetFocusLostEvent() += FocusLostEventHandler([box_x](Control*, Control*) {
-		GWToolbox::instance()->set_capture_input(false);
+		GWToolbox::instance().set_capture_input(false);
 		try {
 			std::stof(box_x->GetText());
-			GWToolbox::instance()->main_window().hotkey_panel().UpdateDeleteCombo();
+			GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 		} catch (...) {
 			box_x->SetText(L"0.0");
 		}
@@ -454,19 +454,19 @@ HotkeyMove::HotkeyMove(Key key, Key modifier, bool active, wstring ini_section,
 		try {
 			float y = std::stof(box_y->GetText());
 			this->set_y(y);
-			GWToolbox::instance()->config().iniWriteDouble(ini_section.c_str(), 
+			GWToolbox::instance().config().iniWriteDouble(ini_section.c_str(), 
 				this->IniKeyY(), y);
-			GWToolbox::instance()->main_window().hotkey_panel().UpdateDeleteCombo();
+			GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 		} catch (...) {}
 	});
 	box_y->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::instance()->set_capture_input(true);
+		GWToolbox::instance().set_capture_input(true);
 	});
 	box_y->GetFocusLostEvent() += FocusLostEventHandler([box_y](Control*, Control*) {
-		GWToolbox::instance()->set_capture_input(false);
+		GWToolbox::instance().set_capture_input(false);
 		try {
 			std::stof(box_y->GetText());
-			GWToolbox::instance()->main_window().hotkey_panel().UpdateDeleteCombo();
+			GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 		} catch (...) {
 			box_y->SetText(L"0.0");
 		}
@@ -481,15 +481,15 @@ HotkeyMove::HotkeyMove(Key key, Key modifier, bool active, wstring ini_section,
 		[this, name_box, ini_section](Control*) {
 		wstring text = name_box->GetText();
 		this->set_name(text);
-		GWToolbox::instance()->config().iniWrite(ini_section.c_str(),
+		GWToolbox::instance().config().iniWrite(ini_section.c_str(),
 			this->IniKeyName(), text.c_str());
-		GWToolbox::instance()->main_window().hotkey_panel().UpdateDeleteCombo();
+		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
 	name_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::instance()->set_capture_input(true);
+		GWToolbox::instance().set_capture_input(true);
 	});
 	name_box->GetFocusLostEvent() += FocusLostEventHandler([](Control*, Control*) {
-		GWToolbox::instance()->set_capture_input(false);
+		GWToolbox::instance().set_capture_input(false);
 	});
 	AddControl(name_box);
 }
@@ -517,19 +517,19 @@ HotkeyDialog::HotkeyDialog(Key key, Key modifier, bool active, wstring ini_secti
 		try {
 			long id = std::stol(id_box->GetText(), 0, 0);
 			this->set_id((UINT)id);
-			GWToolbox::instance()->config().iniWriteLong(ini_section.c_str(),
+			GWToolbox::instance().config().iniWriteLong(ini_section.c_str(),
 				this->IniKeyDialogID(), id);
-			GWToolbox::instance()->main_window().hotkey_panel().UpdateDeleteCombo();
+			GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 		} catch (...) {}
 	});
 	id_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::instance()->set_capture_input(true);
+		GWToolbox::instance().set_capture_input(true);
 	});
 	id_box->GetFocusLostEvent() += FocusLostEventHandler([id_box](Control*, Control*) {
-		GWToolbox::instance()->set_capture_input(false);
+		GWToolbox::instance().set_capture_input(false);
 		try {
 			std::stol(id_box->GetText(), 0, 0);
-			GWToolbox::instance()->main_window().hotkey_panel().UpdateDeleteCombo();
+			GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 		} catch (...) {
 			id_box->SetText(L"0");
 		}
@@ -544,15 +544,15 @@ HotkeyDialog::HotkeyDialog(Key key, Key modifier, bool active, wstring ini_secti
 		[this, name_box, ini_section](Control*) {
 		wstring text = name_box->GetText();
 		this->set_name(text);
-		GWToolbox::instance()->config().iniWrite(ini_section.c_str(),
+		GWToolbox::instance().config().iniWrite(ini_section.c_str(),
 			this->IniKeyDialogName(), text.c_str());
-		GWToolbox::instance()->main_window().hotkey_panel().UpdateDeleteCombo();
+		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
 	name_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::instance()->set_capture_input(true);
+		GWToolbox::instance().set_capture_input(true);
 	});
 	name_box->GetFocusLostEvent() += FocusLostEventHandler([](Control*, Control*) {
-		GWToolbox::instance()->set_capture_input(false);
+		GWToolbox::instance().set_capture_input(false);
 	});
 	AddControl(name_box);
 }
@@ -571,7 +571,7 @@ HotkeyPingBuild::HotkeyPingBuild(Key key, Key modifier, bool active, wstring ini
 	for (int i = 0; i < BuildPanel::N_BUILDS; ++i) {
 		int index = i + 1;
 		wstring section = wstring(L"builds") + to_wstring(index);
-		wstring name = GWToolbox::instance()->config().iniRead(section.c_str(), L"buildname", L"");
+		wstring name = GWToolbox::instance().config().iniRead(section.c_str(), L"buildname", L"");
 		if (name.empty()) name = wstring(L"<Build ") + to_wstring(index);
 		combo->AddItem(name);
 	}
@@ -580,9 +580,9 @@ HotkeyPingBuild::HotkeyPingBuild(Key key, Key modifier, bool active, wstring ini
 		[this, combo, ini_section](Control*) {
 		long index = combo->GetSelectedIndex();
 		this->set_index(index);
-		GWToolbox::instance()->config().iniWriteLong(ini_section.c_str(),
+		GWToolbox::instance().config().iniWriteLong(ini_section.c_str(),
 			this->IniKeyBuildIndex(), index);
-		GWToolbox::instance()->main_window().hotkey_panel().UpdateDeleteCombo();
+		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
 	AddControl(combo);
 }
@@ -623,21 +623,21 @@ void HotkeyDropUseBuff::exec() {
 }
 
 void HotkeyToggle::exec() {
-	GWToolbox* tb = GWToolbox::instance();
+	GWToolbox& tb = GWToolbox::instance();
 	bool active;
 	GWCA api;
 	switch (target_) {
 	case HotkeyToggle::Clicker:
-		active = tb->main_window().hotkey_panel().ToggleClicker();
+		active = tb.main_window().hotkey_panel().ToggleClicker();
 		api().Chat().WriteChatF(L"asdrofl", L"Clicker is %ls",
 			active ? L"active" : L"disabled");
 		break;
 	case HotkeyToggle::Pcons:
-		tb->main_window().pcon_panel().ToggleActive();
+		tb.main_window().pcon_panel().ToggleActive();
 		// writing to chat is done by ToggleActive if needed
 		break;
 	case HotkeyToggle::CoinDrop:
-		active = tb->main_window().hotkey_panel().ToggleCoinDrop();
+		active = tb.main_window().hotkey_panel().ToggleCoinDrop();
 		api().Chat().WriteChatF(L"asdrofl", L"Coin dropper is %ls",
 			active ? L"active" : L"disabled");
 		break;
@@ -727,7 +727,7 @@ void HotkeyPingBuild::exec() {
 	if (isLoading()) return;
 
 	if (index_ >= 0 && index_ < BuildPanel::N_BUILDS) {
-		GWToolbox::instance()->main_window().build_panel().SendTeamBuild(index_);
+		GWToolbox::instance().main_window().build_panel().SendTeamBuild(index_);
 	}
 }
 

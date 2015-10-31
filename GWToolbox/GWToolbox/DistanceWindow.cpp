@@ -10,7 +10,7 @@
 
 DistanceWindow::DistanceWindow() {
 
-	Config& config = GWToolbox::instance()->config();
+	Config& config = GWToolbox::instance().config();
 	int x = config.iniReadLong(DistanceWindow::IniSection(), DistanceWindow::IniKeyX(), 400);
 	int y = config.iniReadLong(DistanceWindow::IniSection(), DistanceWindow::IniKeyY(), 100);
 
@@ -107,7 +107,7 @@ void DistanceWindow::SaveLocation() {
 	CalculateAbsoluteLocation();
 	int x = absoluteLocation_.X;
 	int y = absoluteLocation_.Y;
-	Config& config = GWToolbox::instance()->config();
+	Config& config = GWToolbox::instance().config();
 	config.iniWriteLong(DistanceWindow::IniSection(), DistanceWindow::IniKeyX(), x);
 	config.iniWriteLong(DistanceWindow::IniSection(), DistanceWindow::IniKeyY(), y);
 }

@@ -15,7 +15,7 @@ using namespace OSHGui;
 
 BondsWindow::BondsWindow() {
 
-	Config& config = GWToolbox::instance()->config();
+	Config& config = GWToolbox::instance().config();
 	int x = config.iniReadLong(BondsWindow::IniSection(), BondsWindow::IniKeyX(), 400);
 	int y = config.iniReadLong(BondsWindow::IniSection(), BondsWindow::IniKeyY(), 100);
 
@@ -46,7 +46,7 @@ BondsWindow::BondsMonitor::BondsMonitor() {
 	hovered_bond = -1;
 	party_size = n_players; // initialize at max, upcate will take care of shrinking as needed.
 	pressed = false;
-	freezed = GWToolbox::instance()->config().iniReadBool(MainWindow::IniSection(),
+	freezed = GWToolbox::instance().config().iniReadBool(MainWindow::IniSection(),
 		MainWindow::IniKeyFreeze(), false);
 
 	for (int i = 0; i < n_players; ++i) {
@@ -171,7 +171,7 @@ void BondsWindow::BondsMonitor::SaveLocation() {
 	CalculateAbsoluteLocation();
 	int x = absoluteLocation_.X;
 	int y = absoluteLocation_.Y;
-	Config& config = GWToolbox::instance()->config();
+	Config& config = GWToolbox::instance().config();
 	config.iniWriteLong(BondsWindow::IniSection(), BondsWindow::IniKeyX(), x);
 	config.iniWriteLong(BondsWindow::IniSection(), BondsWindow::IniKeyY(), y);
 }

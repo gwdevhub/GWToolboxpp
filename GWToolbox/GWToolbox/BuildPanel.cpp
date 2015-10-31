@@ -33,7 +33,7 @@ void BuildPanel::Build::BuildUI() {
 }
 
 void BuildPanel::Build::SendTeamBuild() {
-	Config& config = GWToolbox::instance()->config();
+	Config& config = GWToolbox::instance().config();
 	wstring section = wstring(L"builds") + to_wstring(index_);
 	wstring key;
 
@@ -101,7 +101,7 @@ void BuildPanel::set_first_shown(int first) {
 
 void BuildPanel::BuildUI() {
 
-	Config& config = GWToolbox::instance()->config();
+	Config& config = GWToolbox::instance().config();
 
 	edit_build_ = new EditBuild();
 	edit_build_->SetVisible(false);

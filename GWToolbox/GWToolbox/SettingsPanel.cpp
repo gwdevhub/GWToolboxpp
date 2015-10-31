@@ -18,8 +18,7 @@ SettingsPanel::SettingsPanel() {
 }
 
 void SettingsPanel::BuildUI() {
-	GWToolbox* tb = GWToolbox::instance();
-	Config& config = tb->config();
+	Config& config = GWToolbox::instance().config();
 
 	location_current_map_ = GwConstants::MapID::None;
 	location_timer_ = TBTimer::init();
@@ -45,9 +44,9 @@ void SettingsPanel::BuildUI() {
 	tabsleft->SetChecked(config.iniReadBool(MainWindow::IniSection(), 
 		MainWindow::IniKeyTabsLeft(), false));
 	tabsleft->GetCheckedChangedEvent() += CheckedChangedEventHandler([tabsleft](Control*) {
-		GWToolbox::instance()->config().iniWriteBool(MainWindow::IniSection(),
+		GWToolbox::instance().config().iniWriteBool(MainWindow::IniSection(),
 			MainWindow::IniKeyTabsLeft(), tabsleft->GetChecked());
-		GWToolbox::instance()->main_window().SetPanelPositions(tabsleft->GetChecked());
+		GWToolbox::instance().main_window().SetPanelPositions(tabsleft->GetChecked());
 	});
 	AddControl(tabsleft);
 
@@ -59,12 +58,12 @@ void SettingsPanel::BuildUI() {
 		MainWindow::IniKeyFreeze(), false));
 	freeze->GetCheckedChangedEvent() += CheckedChangedEventHandler([freeze](Control*) {
 		bool b = freeze->GetChecked();
-		GWToolbox::instance()->config().iniWriteBool(MainWindow::IniSection(),
+		GWToolbox::instance().config().iniWriteBool(MainWindow::IniSection(),
 			MainWindow::IniKeyFreeze(), b);
-		GWToolbox::instance()->timer_window().SetFreeze(b);
-		GWToolbox::instance()->bonds_window().SetFreze(b);
-		GWToolbox::instance()->health_window().SetFreeze(b);
-		GWToolbox::instance()->distance_window().SetFreeze(b);
+		GWToolbox::instance().timer_window().SetFreeze(b);
+		GWToolbox::instance().bonds_window().SetFreze(b);
+		GWToolbox::instance().health_window().SetFreeze(b);
+		GWToolbox::instance().distance_window().SetFreeze(b);
 	});
 	AddControl(freeze);
 
@@ -76,9 +75,9 @@ void SettingsPanel::BuildUI() {
 		MainWindow::IniKeyHideTarget(), false));
 	hidetarget->GetCheckedChangedEvent() += CheckedChangedEventHandler([hidetarget](Control*) {
 		bool hide = hidetarget->GetChecked();
-		GWToolbox::instance()->health_window().SetHideTarget(hide);
-		GWToolbox::instance()->distance_window().SetHideTarget(hide);
-		GWToolbox::instance()->config().iniWriteBool(MainWindow::IniSection(),
+		GWToolbox::instance().health_window().SetHideTarget(hide);
+		GWToolbox::instance().distance_window().SetHideTarget(hide);
+		GWToolbox::instance().config().iniWriteBool(MainWindow::IniSection(),
 			MainWindow::IniKeyHideTarget(), hide);
 	});
 	AddControl(hidetarget);
@@ -91,8 +90,8 @@ void SettingsPanel::BuildUI() {
 		MainWindow::IniKeyMinAltPos(), false));
 	minimizealtpos->GetCheckedChangedEvent() += CheckedChangedEventHandler([minimizealtpos](Control*) {
 		bool enabled = minimizealtpos->GetChecked();
-		GWToolbox::instance()->main_window().set_use_minimized_alt_pos(enabled);
-		GWToolbox::instance()->config().iniWriteBool(MainWindow::IniSection(),
+		GWToolbox::instance().main_window().set_use_minimized_alt_pos(enabled);
+		GWToolbox::instance().config().iniWriteBool(MainWindow::IniSection(),
 			MainWindow::IniKeyMinAltPos(), enabled);
 	});
 	AddControl(minimizealtpos);
@@ -105,8 +104,8 @@ void SettingsPanel::BuildUI() {
 		MainWindow::IniKeyTickWithPcons(), false));
 	tickwithpcons->GetCheckedChangedEvent() += CheckedChangedEventHandler([tickwithpcons](Control*) {
 		bool enabled = tickwithpcons->GetChecked();
-		GWToolbox::instance()->main_window().set_tick_with_pcons(enabled);
-		GWToolbox::instance()->config().iniWriteBool(MainWindow::IniSection(),
+		GWToolbox::instance().main_window().set_tick_with_pcons(enabled);
+		GWToolbox::instance().config().iniWriteBool(MainWindow::IniSection(),
 			MainWindow::IniKeyTickWithPcons(), enabled);
 	});
 	AddControl(tickwithpcons);
@@ -119,7 +118,7 @@ void SettingsPanel::BuildUI() {
 	savelocation->GetCheckedChangedEvent() += CheckedChangedEventHandler(
 		[savelocation, this](Control*) {
 		location_active_ = savelocation->GetChecked();
-		GWToolbox::instance()->config().iniWriteBool(MainWindow::IniSection(),
+		GWToolbox::instance().config().iniWriteBool(MainWindow::IniSection(),
 			MainWindow::IniKeySaveLocation(), location_active_);
 	});
 	AddControl(savelocation);

@@ -10,7 +10,7 @@
 
 HealthWindow::HealthWindow() {
 
-	Config& config = GWToolbox::instance()->config();
+	Config& config = GWToolbox::instance().config();
 	int x = config.iniReadLong(HealthWindow::IniSection(), HealthWindow::IniKeyX(), 400);
 	int y = config.iniReadLong(HealthWindow::IniSection(), HealthWindow::IniKeyY(), 100);
 
@@ -107,7 +107,7 @@ void HealthWindow::SaveLocation() {
 	CalculateAbsoluteLocation();
 	int x = absoluteLocation_.X;
 	int y = absoluteLocation_.Y;
-	Config& config = GWToolbox::instance()->config();
+	Config& config = GWToolbox::instance().config();
 	config.iniWriteLong(HealthWindow::IniSection(), HealthWindow::IniKeyX(), x);
 	config.iniWriteLong(HealthWindow::IniSection(), HealthWindow::IniKeyY(), y);
 }

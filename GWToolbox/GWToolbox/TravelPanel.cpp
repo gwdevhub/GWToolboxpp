@@ -77,7 +77,7 @@ void TravelPanel::BuildUI() {
 
 	for (int i = 0; i < 3; ++i) {
 		wstring key = wstring(L"Travel") + to_wstring(i);
-		int index = GWToolbox::instance()->config().iniReadLong(MainWindow::IniSection(), key.c_str(), 0);
+		int index = GWToolbox::instance().config().iniReadLong(MainWindow::IniSection(), key.c_str(), 0);
 		ComboBox* fav_combo = new TravelCombo();
 		fav_combo->SetSize(GuiUtils::ComputeWidth(GetWidth(), 4, 3), BUTTON_HEIGHT);
 		fav_combo->SetLocation(DefaultBorderPadding, 
@@ -88,7 +88,7 @@ void TravelPanel::BuildUI() {
 		fav_combo->SetSelectedIndex(index);
 		fav_combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
 			[fav_combo, key](Control*) {
-			GWToolbox::instance()->config().iniWriteLong(MainWindow::IniSection(), 
+			GWToolbox::instance().config().iniWriteLong(MainWindow::IniSection(), 
 				key.c_str(), fav_combo->GetSelectedIndex());
 		});
 		AddControl(fav_combo);
@@ -109,10 +109,10 @@ void TravelPanel::BuildUI() {
 TravelPanel::TravelCombo::TravelCombo() 
 	: OSHGui::ComboBox() {
 	listBox_->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::instance()->set_capture_input(true);
+		GWToolbox::instance().set_capture_input(true);
 	});
 	listBox_->GetFocusLostEvent() += FocusLostEventHandler([](Control*, Control*) {
-		GWToolbox::instance()->set_capture_input(false);
+		GWToolbox::instance().set_capture_input(false);
 	});
 }
 

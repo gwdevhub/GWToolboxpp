@@ -102,7 +102,7 @@ private:
 
 	//------ Public methods ------//
 public:
-	static GWToolbox* instance() { return instance_; }
+	static GWToolbox& instance() { return *instance_; }
 
 	inline bool initialized() { return initialized_; }
 

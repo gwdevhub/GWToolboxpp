@@ -141,7 +141,7 @@ void HotkeyPanel::UpdateScrollBarMax() {
 void HotkeyPanel::DeleteHotkey(int index) {
 	if (index < 0 || index >= (int)hotkeys.size()) return;
 
-	GWToolbox::instance()->config().iniDeleteSection(hotkeys[index]->ini_section().c_str());
+	GWToolbox::instance().config().iniDeleteSection(hotkeys[index]->ini_section().c_str());
 	RemoveControl(hotkeys[index]);
 	hotkeys.erase(hotkeys.begin() + index);
 	UpdateScrollBarMax();
@@ -275,7 +275,7 @@ bool HotkeyPanel::ProcessMessage(LPMSG msg) {
 
 
 void HotkeyPanel::LoadIni() {
-	Config& config = GWToolbox::instance()->config();
+	Config& config = GWToolbox::instance().config();
 
 	max_id_ = 0;
 	list<wstring> sections = config.iniReadSections();

@@ -27,7 +27,7 @@ void GWToolbox::SafeThreadEntry(HMODULE dllmodule) {
 }
 
 void GWToolbox::ThreadEntry(HMODULE dllmodule) {
-	if (GWToolbox::instance()) return;
+	if (instance_) return;
 
 	LOG("Initializing API\n");
 	if (!GWAPI::GWCA::Initialize()){
@@ -119,7 +119,7 @@ LRESULT CALLBACK GWToolbox::SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, 
 LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) {
 	
 	if (Message == WM_QUIT || Message == WM_CLOSE) {
-		GWToolbox::instance()->config().save();
+		GWToolbox::instance().config().save();
 		return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
 	}
 
@@ -165,8 +165,8 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 		case WM_XBUTTONUP:
 		case WM_MBUTTONDOWN:
 		case WM_MBUTTONUP:
-			GWToolbox::instance()->main_window().hotkey_panel().ProcessMessage(&msg);
-			if (GWToolbox::instance()->capture_input()) {
+			GWToolbox::instance().main_window().hotkey_panel().ProcessMessage(&msg);
+			if (GWToolbox::instance().capture_input()) {
 				input.ProcessMessage(&msg);
 				return true;
 			}
@@ -220,22 +220,22 @@ void GWToolbox::CreateGui(IDirect3DDevice9* pDevice) {
 		std::shared_ptr<MainWindow> shared_ptr = std::shared_ptr<MainWindow>(main_window);
 		app->Run(shared_ptr);
 
-		GWToolbox::instance()->set_main_window(main_window);
+		GWToolbox::instance().set_main_window(main_window);
 		LOG("Creating timer\n");
-		GWToolbox::instance()->set_timer_window(new TimerWindow());
+		GWToolbox::instance().set_timer_window(new TimerWindow());
 		LOG("Creating bonds window\n");
-		GWToolbox::instance()->set_bonds_window(new BondsWindow());
+		GWToolbox::instance().set_bonds_window(new BondsWindow());
 		LOG("Creating health window\n");
-		GWToolbox::instance()->set_health_window(new HealthWindow());
+		GWToolbox::instance().set_health_window(new HealthWindow());
 		LOG("Creating distance window\n");
-		GWToolbox::instance()->set_distance_window(new DistanceWindow());
+		GWToolbox::instance().set_distance_window(new DistanceWindow());
 		LOG("Enabling app\n");
 		app->Enable();
-		GWToolbox::instance()->set_initialized();
+		GWToolbox::instance().set_initialized();
 		LOG("Gui Created\n");
 	} catch (Misc::FileNotFoundException e) {
 		LOG("Error: file not found %s\n", e.what());
-		GWToolbox::instance()->StartSelfDestruct();
+		GWToolbox::instance().StartSelfDestruct();
 	}
 }
 
@@ -248,15 +248,15 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 		GWToolbox::SafeCreateGui(pDevice);
 	}
 
-	GWToolbox* tb = GWToolbox::instance();
+	GWToolbox& tb = GWToolbox::instance();
 
-	tb->UpdateUI();
+	tb.UpdateUI();
 
 	D3DVIEWPORT9 viewport;
 	pDevice->GetViewport(&viewport);
 
-	Drawing::PointI location = tb->main_window().GetLocation();
-	Drawing::RectangleI size = tb->main_window().GetSize();
+	Drawing::PointI location = tb.main_window().GetLocation();
+	Drawing::RectangleI size = tb.main_window().GetSize();
 
 	if (location.X < 0){
 		location.X = 0;
@@ -270,8 +270,8 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 	if (location.Y > static_cast<int>(viewport.Height) - size.GetHeight()) {
 		location.Y = static_cast<int>(viewport.Height) - size.GetHeight();
 	}
-	if (location != tb->main_window().GetLocation()){
-		tb->main_window().SetLocation(location);
+	if (location != tb.main_window().GetLocation()){
+		tb.main_window().SetLocation(location);
 	}
 
 	renderer->BeginRendering();

@@ -26,12 +26,11 @@ settings_panel_(*new SettingsPanel()) {
 	
 	
 	// some local vars
-	GWToolbox* tb = GWToolbox::instance();
 	int y = 0;
 	int panel_idx = 0;
 	int button_idx = 0;
 
-	Config& config = GWToolbox::instance()->config();
+	Config& config = GWToolbox::instance().config();
 
 	use_minimized_alt_pos_ = config.iniReadBool(MainWindow::IniSection(), MainWindow::IniKeyMinAltPos(), false);
 	tick_with_pcons_ = config.iniReadBool(MainWindow::IniSection(), MainWindow::IniKeyTickWithPcons(), false);
@@ -74,7 +73,7 @@ settings_panel_(*new SettingsPanel()) {
 	close->SetBackColor(Drawing::Color::Empty());
 	close->SetMouseOverFocusColor(GuiUtils::getMouseOverColor());
 	close->GetClickEvent() += ClickEventHandler([](Control*) {
-		GWToolbox::instance()->StartSelfDestruct();
+		GWToolbox::instance().StartSelfDestruct();
 	});
 	AddControl(close);
 
@@ -139,7 +138,7 @@ settings_panel_(*new SettingsPanel()) {
 		panel->SetEnabled(false);
 		AddSubControl(panel);
 	}
-	SetPanelPositions(GWToolbox::instance()->config().iniReadBool(
+	SetPanelPositions(GWToolbox::instance().config().iniReadBool(
 		MainWindow::IniSection(), MainWindow::IniKeyTabsLeft(), false));
 }
 
@@ -152,7 +151,7 @@ void MainWindow::SetPanelPositions(bool left) {
 
 void MainWindow::ToggleMinimize() {
 	minimized_ = !minimized_;
-	Config& config = GWToolbox::instance()->config();
+	Config& config = GWToolbox::instance().config();
 
 	if ( minimized_) {
 		if (current_panel_ >= 0) OpenClosePanel(current_panel_);
@@ -291,7 +290,7 @@ void MainWindow::SaveLocation() {
 	CalculateAbsoluteLocation();
 	int x = absoluteLocation_.X;
 	int y = absoluteLocation_.Y;
-	Config& config = GWToolbox::instance()->config();
+	Config& config = GWToolbox::instance().config();
 	config.iniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyX(), x);
 	config.iniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyY(), y);
 }
@@ -300,7 +299,7 @@ void MainWindow::SaveMinimizedLocation() {
 	CalculateAbsoluteLocation();
 	int x = absoluteLocation_.X;
 	int y = absoluteLocation_.Y;
-	Config& config = GWToolbox::instance()->config();
+	Config& config = GWToolbox::instance().config();
 	config.iniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltX(), x);
 	config.iniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltY(), y);
 }
