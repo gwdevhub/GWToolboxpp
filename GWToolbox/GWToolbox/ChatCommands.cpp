@@ -8,27 +8,23 @@ using namespace std;
 ChatCommands::ChatCommands() {
 	GWCA api;
 
-	api().Chat().RegisterKey(L"pcons", 
+	api().Chat().RegisterCommand(L"pcons", 
 		std::bind(&ChatCommands::PconCmd, this, std::placeholders::_1));
 
-	wstring channel1 = api().Chat().CreateChannel(wstring(L"~~%T~~"));
+	api().Chat().RegisterChannel(L"GwToolbox++ age", 0x00CCFF, 0x33CC33);
+	api().Chat().RegisterCommand(L"age2", [api](vector<wstring>&){ // Exemple of new channel system
+		wchar_t buffer[30];
+		DWORD second = api().Map().GetInstanceTime() / 1000;
 
-	wstring channel2 = api().Chat().CreateChannel([](wstring msg) {
-		return msg + L"rofl";
+		wsprintf(buffer, L"%02u:%02u:%02u", (second / 3600), (second / 60) % 60, second % 60);
+
+		api().Chat().WriteChat(L"GwToolbox++", buffer);
 	});
 
-	api().Chat().RegisterKey(L"test",
-		[channel1](vector<wstring>) {
-		GWCA::Api().Chat().WriteChat(channel1.c_str(), L"Hello World!");
-	});
-
-	api().Chat().RegisterKey(L"test2",
-		[channel2](vector<wstring>) {
-		GWCA::Api().Chat().WriteChat(channel2.c_str(), L"Bye World!");
-	});
+	api().Chat().RegisterChannel(L"GwToolbox++ log", 0x6633FF, 0x00CC66);
 }
 
-void ChatCommands::PconCmd(vector<wstring> args) {
+void ChatCommands::PconCmd(const vector<wstring> &args) {
 
 	PconPanel& pcons = GWToolbox::instance()->main_window().pcon_panel();
 	if (args.size() == 0) {

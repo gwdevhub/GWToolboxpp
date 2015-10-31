@@ -8,5 +8,5 @@ public:
 	ChatCommands();
 
 private:
-	void PconCmd(std::vector<std::wstring> args);
+	void PconCmd(const std::vector<std::wstring> &args);
 };
