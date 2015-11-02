@@ -5,6 +5,7 @@
 #include <GUIConstantsEx.au3>
 #include <GuiComboBox.au3>
 #include <WinAPIProc.au3>
+#include <WinAPISys.au3>
 #include <InetConstants.au3>
 #include <GUIConstantsEx.au3>
 #include <ProgressConstants.au3>
@@ -238,6 +239,10 @@ EndSwitch
 
 If Not ProcessExists($gwPID) Then Error("Cannot find Guild Wars process")
 
+; === Check for DEP (Data Execution prevention) ===
+Local $dep_status = _WinAPI_GetSystemDEPPolicy()
+if ($dep_status == 1) Then Error("You have DEP (Data Execution Prevention) enabled for all applications, GWToolbox will not work unless you disable it or whitelist gw.exe")
+
 ; === Injection ===
 Local $Kernel32 = DllOpen("kernel32.dll")
 If $Kernel32 == -1 Then Error("Failed to open kernel32.dll")
@@ -299,8 +304,14 @@ While Not $found And TimerDiff($deadlock) < 3000
 	Next
 	Sleep(200)
 WEnd
-If Not $found Then Error("GWToolbox.dll was not loaded, unknown error")
 
+If Not $found Then
+	If ($dep_status == 3) Then
+		Error("GWToolbox.dll was not loaded, unknown error" & @CRLF & "Note: you have DEP (Data Execution Prevention) enabled, make sure to whitelist gw.exe")
+	Else
+		Error("GWToolbox.dll was not loaded, unknown error")
+	EndIf
+EndIf
 
 If $gui > 0 Then
 	Local $pos = WinGetPos($gui)

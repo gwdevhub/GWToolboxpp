@@ -8,7 +8,7 @@ using namespace std;
 ChatCommands::ChatCommands() {
 	GWCA api;
 
-	api().Chat().RegisterChannel(L"GWToolbox++", 0x00CCFF, 0x33CC33);
+	api().Chat().RegisterChannel(L"GWToolbox++", 0x00CCFF, 0xDDDDDD);
 
 	api().Chat().RegisterCommand(L"pcons", 
 		std::bind(&ChatCommands::PconCmd, this, std::placeholders::_1));
