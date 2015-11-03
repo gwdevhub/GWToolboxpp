@@ -3,7 +3,7 @@
 #include <d3d9.h>
 #include <cstdlib>
 
-#include <GWCA/APIMain.h>
+#include <GWCA\APIMain.h>
 
 #include "Minimap.h"
 

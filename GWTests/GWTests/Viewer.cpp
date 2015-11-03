@@ -1,5 +1,7 @@
 #include "Viewer.h"
-#include "GWCA/APIMain.h"
+
+#include <d3dx9math.h>
+#include "GWCA\APIMain.h"
 
 Viewer::Viewer() {
 	location_ = Point2i(0, 0);

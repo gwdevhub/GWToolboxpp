@@ -3,6 +3,8 @@
 #include <Windows.h>
 #include <windowsx.h>
 #include <thread>
+#include <d3d9.h>
+#include <d3dx9math.h>
 
 #include "GWCA/APIMain.h"
 

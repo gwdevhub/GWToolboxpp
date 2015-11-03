@@ -41,12 +41,12 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(SolutionDir)Dependencies\DirectX\Include\;$(SolutionDir)GWCA\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)Dependencies\DirectX\Include\;$(SolutionDir)GWCA\;$(SolutionDir);$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)Dependencies\DirectX\Lib\x86\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(SolutionDir)Dependencies\DirectX\Include\;$(SolutionDir)GWCA\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)Dependencies\DirectX\Include\;$(SolutionDir)GWCA\;$(SolutionDir);$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)Dependencies\DirectX\Lib\x86\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
