@@ -31,8 +31,8 @@ void PmapRenderer::Initialize(IDirect3DDevice9* device) {
 	DWORD color = D3DCOLOR_ARGB(0xAA, 200, 200, 200);
 	for (size_t i = 0; i < path_map.size(); ++i) {
 		GWAPI::GW::PathingMap pmap = path_map[i];
-		for (size_t j = 0; j < path_map[i].trapezoidcount; ++j) {
-			PathingTrapezoid trapez = path_map[i].trapezoids[j];
+		for (size_t j = 0; j < pmap.trapezoidcount; ++j) {
+			PathingTrapezoid& trapez = pmap.trapezoids[j];
 
 			for (size_t k = 0; k < 6; ++k) {
 				vertices[k].z = 1.0f;
