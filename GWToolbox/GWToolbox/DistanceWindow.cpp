@@ -122,30 +122,23 @@ void DistanceWindow::UpdateUI() {
 
 	Agent* target = api().Agents().GetTarget();
 	Agent* me = api().Agents().GetPlayer();
-	long distance;
-	if (target && me) {
-		distance = api().Agents().GetDistance(target, me);
-	} else {
-		distance = -1;
-	}
 
-	if (distance != current_distance) {
-		wstring s1;
-		wstring s2;
-		if (target && me) {
-			s1 = to_wstring(distance * 100 / GwConstants::Range::Compass) + L" %";
-			s2 = to_wstring(distance);
-			if (!isVisible_) _Show(true);
-		} else {
-			s1 = L"-";
-			s2 = L"-";
-			if (hide_target && isVisible_) _Show(false);
-		}
-		percent->SetText(s1);
-		percent_shadow->SetText(s1);
-		absolute->SetText(s2);
-		absolute_shadow->SetText(s2);
+	wstring s1;
+	wstring s2;
+	if (target && me) {
+		long distance = api().Agents().GetDistance(target, me);
+		s1 = to_wstring(distance * 100 / GwConstants::Range::Compass) + L" %";
+		s2 = to_wstring(distance);
+		if (!isVisible_) _Show(true);
+	} else {
+		s1 = L"-";
+		s2 = L"-";
+		if (hide_target && isVisible_) _Show(false);
 	}
+	percent->SetText(s1);
+	percent_shadow->SetText(s1);
+	absolute->SetText(s2);
+	absolute_shadow->SetText(s2);
 }
 
 void DistanceWindow::Show(bool show) {
