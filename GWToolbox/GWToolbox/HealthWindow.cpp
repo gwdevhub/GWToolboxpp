@@ -120,37 +120,30 @@ void HealthWindow::UpdateUI() {
 
 	GWAPI::GWCA api;
 
+	wstring s1;
+	wstring s2;
+
 	Agent* target = api().Agents().GetTarget();
-	float hp = target ? target->HP : -1;
-	long max = target ? target->MaxHP : -1;
-
-	if (hp != current_hp || max != current_max) {
-		current_hp = hp;
-		current_max = max;
-
-		wstring s1;
-		wstring s2;
-		if (target && target->Type == 0xDB) {
-			s1 = to_wstring(lroundf(target->HP * 100));
-			s1 += L" %";
+	if (target && target->Type == 0xDB) {
+		s1 = to_wstring(lroundf(target->HP * 100));
+		s1 += L" %";
 			
-			if (target->MaxHP > 0) {
-				s2 = to_wstring(lroundf(target->HP * target->MaxHP));
-				s2 = s2 + L" / " + to_wstring(target->MaxHP);
-			} else {
-				s2 = L"- / -";
-			}
-			if (!isVisible_) _Show(true);
+		if (target->MaxHP > 0) {
+			s2 = to_wstring(lroundf(target->HP * target->MaxHP));
+			s2 = s2 + L" / " + to_wstring(target->MaxHP);
 		} else {
-			s1 = L"-";
 			s2 = L"- / -";
-			if (hide_target && isVisible_) _Show(false);
 		}
-		percent->SetText(s1);
-		percent_shadow->SetText(s1);
-		absolute->SetText(s2);
-		absolute_shadow->SetText(s2);
+		if (!isVisible_) _Show(true);
+	} else {
+		s1 = L"-";
+		s2 = L"- / -";
+		if (hide_target && isVisible_) _Show(false);
 	}
+	percent->SetText(s1);
+	percent_shadow->SetText(s1);
+	absolute->SetText(s2);
+	absolute_shadow->SetText(s2);
 }
 
 void HealthWindow::Show(bool show) {

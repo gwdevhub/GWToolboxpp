@@ -41,8 +41,6 @@ private:
 	DragButton* absolute;
 	DragButton* absolute_shadow;
 
-	float current_hp;
-	long current_max;
 	bool hide_target;
 
 	void SaveLocation();
