@@ -8,7 +8,7 @@
     <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>CSLauncher</RootNamespace>
-    <AssemblyName>CSLauncher</AssemblyName>
+    <AssemblyName>GWToolbox</AssemblyName>
     <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -27,16 +27,26 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
+    <OutputPath>..\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup>
-    <StartupObject />
+    <StartupObject>CSLauncher.CSLauncher</StartupObject>
   </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>Resources\gwtoolbox.ico</ApplicationIcon>
+  </PropertyGroup>
+  <PropertyGroup />
   <ItemGroup>
     <None Include="App.config" />
+    <EmbeddedResource Include="Resources\DefaultSettings.ini" />
+    <EmbeddedResource Include="Resources\Friz_Quadrata_Regular.ttf" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CharSelector.cs">
@@ -47,10 +57,24 @@
     </Compile>
     <Compile Include="CSLauncher.cs" />
     <Compile Include="GWCAMemory.cs" />
+    <Compile Include="INI Reader.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
+    <Compile Include="ResInstaller.cs" />
+    <Compile Include="Updater.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Updater.Designer.cs">
+      <DependentUpon>Updater.cs</DependentUpon>
     </Compile>
   </ItemGroup>
   <ItemGroup>
@@ -68,6 +92,48 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+    <EmbeddedResource Include="Updater.resx">
+      <DependentUpon>Updater.cs</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\Tick_v1.png" />
+    <EmbeddedResource Include="Resources\Tick_v0.png" />
+    <EmbeddedResource Include="Resources\War_Supplies.png" />
+    <EmbeddedResource Include="Resources\Tick_v2.png" />
+    <EmbeddedResource Include="Resources\Sugary_Blue_Drink.png" />
+    <EmbeddedResource Include="Resources\Slice_of_Pumpkin_Pie.png" />
+    <EmbeddedResource Include="Resources\settings.png" />
+    <EmbeddedResource Include="Resources\Scroll_of_Resurrection.png" />
+    <EmbeddedResource Include="Resources\Red_Rock_Candy.png" />
+    <EmbeddedResource Include="Resources\protbond.jpg" />
+    <EmbeddedResource Include="Resources\plane.png" />
+    <EmbeddedResource Include="Resources\Pahnai_Salad.png" />
+    <EmbeddedResource Include="Resources\Lunar_Fortune.png" />
+    <EmbeddedResource Include="Resources\list.png" />
+    <EmbeddedResource Include="Resources\lifebond.jpg" />
+    <EmbeddedResource Include="Resources\keyboard.png" />
+    <EmbeddedResource Include="Resources\info.png" />
+    <EmbeddedResource Include="Resources\Green_Rock_Candy.png" />
+    <EmbeddedResource Include="Resources\Grail_of_Might.png" />
+    <EmbeddedResource Include="Resources\Golden_Egg.png" />
+    <EmbeddedResource Include="Resources\Fruitcake.png" />
+    <EmbeddedResource Include="Resources\feather.png" />
+    <EmbeddedResource Include="Resources\Essence_of_Celerity.png" />
+    <EmbeddedResource Include="Resources\Dwarven_Ale.png" />
+    <EmbeddedResource Include="Resources\Drake_Kabob.png" />
+    <EmbeddedResource Include="Resources\DefaultTheme.txt" />
+    <EmbeddedResource Include="Resources\cupcake.png" />
+    <EmbeddedResource Include="Resources\comment.png" />
+    <EmbeddedResource Include="Resources\Candy_Corn.png" />
+    <EmbeddedResource Include="Resources\Candy_Apple.png" />
+    <EmbeddedResource Include="Resources\Bowl_of_Skalefin_Soup.png" />
+    <EmbeddedResource Include="Resources\Bottle_of_Grog.png" />
+    <EmbeddedResource Include="Resources\Blue_Rock_Candy.png" />
+    <EmbeddedResource Include="Resources\Birthday_Cupcake.png" />
+    <EmbeddedResource Include="Resources\balthspirit.jpg" />
+    <EmbeddedResource Include="Resources\Armor_of_Salvation.png" />
+    <EmbeddedResource Include="Resources\gwtoolbox.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -6,8 +6,10 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Diagnostics;
 using System.Threading;
+using System.IO;
 using GWCA.Memory;
 using System.Security.Principal;
+using INI;
 
 namespace CSLauncher
 {
@@ -34,11 +36,12 @@ namespace CSLauncher
         [STAThread]
       static void Main(string[] args)
         {
+            Application.EnableVisualStyles();
 
-            bool isElevated;
+            // Check for admin rights.
             WindowsIdentity identity = WindowsIdentity.GetCurrent();
             WindowsPrincipal principal = new WindowsPrincipal(identity);
-            isElevated = principal.IsInRole(WindowsBuiltInRole.Administrator);
+            bool isElevated = principal.IsInRole(WindowsBuiltInRole.Administrator);
 
             if(!isElevated)
             {
@@ -49,25 +52,46 @@ namespace CSLauncher
                 return;
             }
 
+            ResInstaller installer = new ResInstaller();
+
+            // Install resources
+            bool tbdirexists = installer.TBDirExists();
+            if (!tbdirexists)
+            {
+                Directory.CreateDirectory(Environment.GetEnvironmentVariable("LocalAppData") + "\\GWToolboxpp\\");
+                installer.Install();
+            }
+
+            INI_Reader ini = new INI_Reader(Environment.GetEnvironmentVariable("LocalAppData") + "\\GWToolboxpp\\GWToolbox.ini");
+            Updater updater = new Updater();
+
+            if(!installer.DLLExists())
+            {
+                updater.DownloadDLL();
+                ini.IniWriteValue("launcher", "dllversion", updater.GetRemoteVersion());
+            }
+        
+            updater.CheckForUpdates();
+
+            // Look for gw processes.
             Process[] gwprocs = Process.GetProcessesByName("Gw");
 
             switch(gwprocs.Length)
             {
-                case 0:
+                case 0: // No gw processes found.
                     MessageBox.Show("No Guild Wars clients found.\n" +
                                     "Please log into Guild Wars first.", 
                                     "GWToolbox++ Error", 
                                     MessageBoxButtons.OK, 
                                     MessageBoxIcon.Error);
                     break;
-                case 1:
+                case 1: // Only one process found, injecting.
                     proctoinject = gwprocs[0];
                     break;
-                default:
+                default: // More than one found, make user select client.
 
                     CharSelector chargui = new CharSelector();
 
-                    Application.EnableVisualStyles();
                     Application.Run(chargui);
                     
                     proctoinject = chargui.SelectedProcess;
