@@ -6,7 +6,8 @@
 using namespace std;
 
 ChatCommands::ChatCommands() {
-	GWCA::Api().Chat().RegisterChannel(L"GWToolbox++", 0x00CCFF, 0xDDDDDD);
+	//GWCA::Api().Chat().RegisterChannel(L"GWToolbox++", 0x00CCFF, 0xDDDDDD);
+	GWCA::Api().Chat().CreateChannel(std::wstring(L"{GWToolbox++}%T"));
 
 	AddCommand(L"age2", [](vector<wstring>) {
 		wchar_t buffer[30];
@@ -45,8 +46,9 @@ void ChatCommands::AddCommand(wstring cmd, Handler_t handler) {
 		printf("[WARNING] Adding command %S which is already in the map!\n", cmd.c_str());
 	}
 	commands_[cmd] = handler;
-	GWCA::Api().Chat().RegisterCommand(cmd, std::bind(&ChatCommands::ParseCommand,
-		this, std::placeholders::_1, std::placeholders::_2));
+	GWCA::Api().Chat().RegisterKey(cmd, [handler](std::vector<std::wstring> args){
+		handler(args);
+	});
 }
 
 void ChatCommands::ParseCommand(wstring cmd, vector<wstring> args) {

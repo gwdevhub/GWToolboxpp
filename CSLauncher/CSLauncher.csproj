@@ -43,10 +43,6 @@
     <None Include="App.config" />
     <EmbeddedResource Include="Resources\DefaultSettings.ini" />
     <EmbeddedResource Include="Resources\Friz_Quadrata_Regular.ttf" />
-    <None Include="Properties\Settings.settings">
-      <Generator>SettingsSingleFileGenerator</Generator>
-      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CharSelector.cs">
@@ -63,11 +59,6 @@
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
-    </Compile>
-    <Compile Include="Properties\Settings.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTimeSharedInput>True</DesignTimeSharedInput>
-      <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
     <Compile Include="ResInstaller.cs" />
     <Compile Include="Updater.cs">

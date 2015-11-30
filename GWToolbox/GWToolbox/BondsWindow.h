@@ -8,7 +8,7 @@
 class BondsWindow : public ToolboxWindow {
 	static const int n_players = 12;
 	static const int n_bonds = 3;
-	static const int IMG_SIZE = 22;
+	static const int IMG_SIZE = 25;
 	static const int WIDTH = IMG_SIZE * n_bonds;
 	static const int HEIGHT = IMG_SIZE * n_players;
 
