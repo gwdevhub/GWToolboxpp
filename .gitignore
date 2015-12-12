@@ -20,3 +20,4 @@ ipch/
 *.pch
 *.idb
 *.pdb
+*.opendb
