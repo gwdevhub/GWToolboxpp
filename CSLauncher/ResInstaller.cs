@@ -23,6 +23,7 @@ namespace CSLauncher
             string toolboxdir = Environment.GetEnvironmentVariable("LocalAppData") + "\\GWToolboxpp\\";
 
             string imgdir = toolboxdir + "img\\";
+            Directory.CreateDirectory(imgdir);
 
             // Panel Icons
             Properties.Resources.comment.Save(imgdir + "comment.png");
