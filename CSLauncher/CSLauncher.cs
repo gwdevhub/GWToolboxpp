@@ -52,15 +52,9 @@ namespace CSLauncher
                 return;
             }
 
-            ResInstaller installer = new ResInstaller();
-
             // Install resources
-            bool tbdirexists = installer.TBDirExists();
-            if (!tbdirexists)
-            {
-                Directory.CreateDirectory(Environment.GetEnvironmentVariable("LocalAppData") + "\\GWToolboxpp\\");
-                installer.Install();
-            }
+            ResInstaller installer = new ResInstaller();
+            installer.Install();
 
             INI_Reader ini = new INI_Reader(Environment.GetEnvironmentVariable("LocalAppData") + "\\GWToolboxpp\\GWToolbox.ini");
             Updater updater = new Updater();
@@ -70,7 +64,7 @@ namespace CSLauncher
                 updater.DownloadDLL();
                 ini.IniWriteValue("launcher", "dllversion", updater.GetRemoteVersion());
             }
-        
+            
             updater.CheckForUpdates();
 
             // Look for gw processes.

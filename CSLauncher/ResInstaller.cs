@@ -9,10 +9,6 @@ namespace CSLauncher
 {
     class ResInstaller
     {
-        public bool TBDirExists()
-        {
-            return Directory.Exists(Environment.GetEnvironmentVariable("LocalAppData") + "\\GWToolboxpp");
-        }
         public bool DLLExists()
         {
             return File.Exists(Environment.GetEnvironmentVariable("LocalAppData") + "\\GWToolboxpp\\GWToolbox.dll");
@@ -23,51 +19,73 @@ namespace CSLauncher
             string toolboxdir = Environment.GetEnvironmentVariable("LocalAppData") + "\\GWToolboxpp\\";
 
             string imgdir = toolboxdir + "img\\";
-            Directory.CreateDirectory(imgdir);
+
+            EnsureDirectoryExists(toolboxdir);
+            EnsureDirectoryExists(imgdir);
+            EnsureDirectoryExists(toolboxdir + "location logs\\");
 
             // Panel Icons
-            Properties.Resources.comment.Save(imgdir + "comment.png");
-            Properties.Resources.cupcake.Save(imgdir + "cupcake.png");
-            Properties.Resources.feather.Save(imgdir + "feather.png");
-            Properties.Resources.info.Save(imgdir + "info.png");
-            Properties.Resources.list.Save(imgdir + "list.png");
-            Properties.Resources.keyboard.Save(imgdir + "keyboard.png");
-            Properties.Resources.plane.Save(imgdir + "plane.png");
-            Properties.Resources.settings.Save(imgdir + "settings.png");
+            EnsureFileExists(Properties.Resources.comment, imgdir + "comment.png");
+            EnsureFileExists(Properties.Resources.cupcake, imgdir + "cupcake.png");
+            EnsureFileExists(Properties.Resources.feather, imgdir + "feather.png");
+            EnsureFileExists(Properties.Resources.info, imgdir + "info.png");
+            EnsureFileExists(Properties.Resources.list, imgdir + "list.png");
+            EnsureFileExists(Properties.Resources.keyboard, imgdir + "keyboard.png");
+            EnsureFileExists(Properties.Resources.plane, imgdir + "plane.png");
+            EnsureFileExists(Properties.Resources.settings, imgdir + "settings.png");
 
             // Bond Skills
-            Properties.Resources.balthspirit.Save(imgdir + "balthspirit.jpg");
-            Properties.Resources.lifebond.Save(imgdir + "lifebond.jpg");
-            Properties.Resources.protbond.Save(imgdir + "protbond.jpg");
+            EnsureFileExists(Properties.Resources.balthspirit, imgdir + "balthspirit.jpg");
+            EnsureFileExists(Properties.Resources.lifebond, imgdir + "lifebond.jpg");
+            EnsureFileExists(Properties.Resources.protbond, imgdir + "protbond.jpg");
 
             // Cons
-            Properties.Resources.Armor_of_Salvation.Save(imgdir + "Armor_of_Salvation.png");
-            Properties.Resources.Birthday_Cupcake.Save(imgdir + "Birthday_Cupcake.png");
-            Properties.Resources.Blue_Rock_Candy.Save(imgdir + "Blue_Rock_Candy.png");
-            Properties.Resources.Bottle_of_Grog.Save(imgdir + "Bottle_of_Grog.png");
-            Properties.Resources.Bowl_of_Skalefin_Soup.Save(imgdir + "Bowl_of_Skalefin_Soup.png");
-            Properties.Resources.Candy_Apple.Save(imgdir + "Candy_Apple.png");
-            Properties.Resources.Candy_Corn.Save(imgdir + "Candy_Corn.png");
-            Properties.Resources.Drake_Kabob.Save(imgdir + "Drake_Kabob.png");
-            Properties.Resources.Dwarven_Ale.Save(imgdir + "Dwarven_Ale.png");
-            Properties.Resources.Essence_of_Celerity.Save(imgdir + "Essence_of_Celerity.png");
-            Properties.Resources.Fruitcake.Save(imgdir + "Fruitcake.png");
-            Properties.Resources.Golden_Egg.Save(imgdir + "Golden_Egg.png");
-            Properties.Resources.Grail_of_Might.Save(imgdir + "Grail_of_Might.png");
-            Properties.Resources.Green_Rock_Candy.Save(imgdir + "Green_Rock_Candy.png");
-            Properties.Resources.Lunar_Fortune.Save(imgdir + "Lunar_Fortune.png");
-            Properties.Resources.Pahnai_Salad.Save(imgdir + "Pahnai_Salad.png");
-            Properties.Resources.Red_Rock_Candy.Save(imgdir + "Red_Rock_Candy.png");
-            Properties.Resources.Slice_of_Pumpkin_Pie.Save(imgdir + "Slice_of_Pumpkin_Pie.png");
-            Properties.Resources.Sugary_Blue_Drink.Save(imgdir + "Sugary_Blue_Drink.png");
-            Properties.Resources.War_Supplies.Save(imgdir + "War_Supplies.png");
+            EnsureFileExists(Properties.Resources.Armor_of_Salvation, imgdir + "Armor_of_Salvation.png");
+            EnsureFileExists(Properties.Resources.Birthday_Cupcake, imgdir + "Birthday_Cupcake.png");
+            EnsureFileExists(Properties.Resources.Blue_Rock_Candy, imgdir + "Blue_Rock_Candy.png");
+            EnsureFileExists(Properties.Resources.Bottle_of_Grog, imgdir + "Bottle_of_Grog.png");
+            EnsureFileExists(Properties.Resources.Bowl_of_Skalefin_Soup, imgdir + "Bowl_of_Skalefin_Soup.png");
+            EnsureFileExists(Properties.Resources.Candy_Apple, imgdir + "Candy_Apple.png");
+            EnsureFileExists(Properties.Resources.Candy_Corn, imgdir + "Candy_Corn.png");
+            EnsureFileExists(Properties.Resources.Drake_Kabob, imgdir + "Drake_Kabob.png");
+            EnsureFileExists(Properties.Resources.Dwarven_Ale, imgdir + "Dwarven_Ale.png");
+            EnsureFileExists(Properties.Resources.Essence_of_Celerity, imgdir + "Essence_of_Celerity.png");
+            EnsureFileExists(Properties.Resources.Fruitcake, imgdir + "Fruitcake.png");
+            EnsureFileExists(Properties.Resources.Golden_Egg, imgdir + "Golden_Egg.png");
+            EnsureFileExists(Properties.Resources.Grail_of_Might, imgdir + "Grail_of_Might.png");
+            EnsureFileExists(Properties.Resources.Green_Rock_Candy, imgdir + "Green_Rock_Candy.png");
+            EnsureFileExists(Properties.Resources.Lunar_Fortune, imgdir + "Lunar_Fortune.png");
+            EnsureFileExists(Properties.Resources.Pahnai_Salad, imgdir + "Pahnai_Salad.png");
+            EnsureFileExists(Properties.Resources.Red_Rock_Candy, imgdir + "Red_Rock_Candy.png");
+            EnsureFileExists(Properties.Resources.Slice_of_Pumpkin_Pie, imgdir + "Slice_of_Pumpkin_Pie.png");
+            EnsureFileExists(Properties.Resources.Sugary_Blue_Drink, imgdir + "Sugary_Blue_Drink.png");
+            EnsureFileExists(Properties.Resources.War_Supplies, imgdir + "War_Supplies.png");
 
-            Properties.Resources.Tick_v2.Save(imgdir + "Tick.png");
+            EnsureFileExists(Properties.Resources.Tick_v2, imgdir + "Tick.png");
 
             // Config files and fonts
-            File.WriteAllBytes(toolboxdir + "Font.ttf",Properties.Resources.Friz_Quadrata_Regular);
-            File.WriteAllText(toolboxdir + "GWToolbox.ini", Properties.Resources.DefaultSettings);
-            File.WriteAllText(toolboxdir + "Theme.txt", Properties.Resources.DefaultTheme);
+            if (!File.Exists(toolboxdir + "Font.ttf"))
+                File.WriteAllBytes(toolboxdir + "Font.ttf",Properties.Resources.Friz_Quadrata_Regular);
+            if (!File.Exists(toolboxdir + "GWToolbox.ini"))
+                File.WriteAllText(toolboxdir + "GWToolbox.ini", Properties.Resources.DefaultSettings);
+            if (!File.Exists(toolboxdir + "Theme.txt"))
+                File.WriteAllText(toolboxdir + "Theme.txt", Properties.Resources.DefaultTheme);
+        }
+
+        private void EnsureDirectoryExists(string path)
+        {
+            if (!Directory.Exists(path))
+            {
+                Directory.CreateDirectory(path);
+            }
+        }
+
+        private void EnsureFileExists(System.Drawing.Bitmap file, string path)
+        {
+            if (!File.Exists(path))
+            {
+                file.Save(path);
+            }
         }
     }
 }
