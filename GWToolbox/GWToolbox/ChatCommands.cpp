@@ -19,6 +19,9 @@ ChatCommands::ChatCommands() {
 	AddCommand(L"tp", ChatCommands::CmdTP);
 	AddCommand(L"to", ChatCommands::CmdTP);
 	AddCommand(L"travel", ChatCommands::CmdTP);
+
+	DWORD playerNumber = GWCA::Api().Agents().GetPlayer()->PlayerNumber;
+	ChatLogger::LogF(L"Welcome %ls!", GWCA::Api().Agents().GetPlayerNameByLoginNumber(playerNumber));
 }
 
 void ChatCommands::AddCommand(wstring cmd, Handler_t handler) {
