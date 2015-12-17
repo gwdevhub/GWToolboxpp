@@ -10,13 +10,15 @@ using namespace std;
 
 ChatCommands::ChatCommands() {
 
-ChatLogger::Init();
+	ChatLogger::Init();
 
-AddCommand(L"age2", ChatCommands::CmdAge2);
-AddCommand(L"pcons", ChatCommands::CmdPcons);
-AddCommand(L"dialog", ChatCommands::CmdDialog);
-AddCommand(L"tb", ChatCommands::CmdTB);
-AddCommand(L"tp", ChatCommands::CmdTP);
+	AddCommand(L"age2", ChatCommands::CmdAge2);
+	AddCommand(L"pcons", ChatCommands::CmdPcons);
+	AddCommand(L"dialog", ChatCommands::CmdDialog);
+	AddCommand(L"tb", ChatCommands::CmdTB);
+	AddCommand(L"tp", ChatCommands::CmdTP);
+	AddCommand(L"to", ChatCommands::CmdTP);
+	AddCommand(L"travel", ChatCommands::CmdTP);
 }
 
 void ChatCommands::AddCommand(wstring cmd, Handler_t handler) {
@@ -118,6 +120,8 @@ void ChatCommands::CmdTP(vector<wstring> args) {
 			GWToolbox::instance().main_window().travel_panel().TravelFavorite(1);
 		} else if (arg == L"fav3") {
 			GWToolbox::instance().main_window().travel_panel().TravelFavorite(2);
+		} else if (arg == L"gh") {
+			GWCA::Api().Guild().TravelGH();
 		}
 	}
 }
