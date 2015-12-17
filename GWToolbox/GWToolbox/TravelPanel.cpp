@@ -82,8 +82,8 @@ void TravelPanel::BuildUI() {
 		fav_combo->SetSize(GuiUtils::ComputeWidth(GetWidth(), 4, 3), BUTTON_HEIGHT);
 		fav_combo->SetLocation(DefaultBorderPadding, 
 			DefaultBorderPadding + (BUTTON_HEIGHT + DefaultBorderPadding) * (i + 6));
-		for (int i = 0; i < n_outposts; ++i) {
-			fav_combo->AddItem(IndexToOutpostName(i));
+		for (int j = 0; j < n_outposts; ++j) {
+			fav_combo->AddItem(IndexToOutpostName(j));
 		}
 		fav_combo->SetSelectedIndex(index);
 		fav_combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
@@ -97,12 +97,20 @@ void TravelPanel::BuildUI() {
 		fav_button->SetSize(GuiUtils::ComputeWidth(GetWidth(), 4), BUTTON_HEIGHT);
 		fav_button->SetLocation(GuiUtils::ComputeX(GetWidth(), 4, 3), fav_combo->GetTop());
 		fav_button->SetText(L"Go");
-		fav_button->GetClickEvent() += ClickEventHandler([this, fav_combo](Control*) {
-			int index = fav_combo->GetSelectedIndex();
-			GWCA::Api().Map().Travel(IndexToOutpostID(index),
-				this->district(), this->region(), this->language());
+		fav_button->GetClickEvent() += ClickEventHandler([this, i](Control*) {
+			TravelFavorite(i);
 		});
 		AddControl(fav_button);
+
+		combo_boxes_[i] = fav_combo;
+	}
+}
+
+void TravelPanel::TravelFavorite(int fav_idx) {
+	if (fav_idx >= 0 && fav_idx < 3) {
+		int outpost_idx = combo_boxes_[fav_idx]->GetSelectedIndex();
+		GWCA::Api().Map().Travel(IndexToOutpostID(outpost_idx),
+			this->district(), this->region(), this->language());
 	}
 }
 

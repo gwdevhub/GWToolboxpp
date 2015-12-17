@@ -149,8 +149,8 @@ void MainWindow::SetPanelPositions(bool left) {
 	build_panel().SetPanelPosition(left);
 }
 
-void MainWindow::ToggleMinimize() {
-	minimized_ = !minimized_;
+void MainWindow::SetMinimized(bool minimized) {
+	minimized_ = minimized;
 	Config& config = GWToolbox::instance().config();
 
 	if ( minimized_) {

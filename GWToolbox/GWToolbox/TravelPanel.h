@@ -10,6 +10,19 @@
 #include "logger.h"
 
 class TravelPanel : public ToolboxPanel {
+public:
+	TravelPanel();
+
+	DWORD region();
+	DWORD district() { return district_; }
+	DWORD language();
+
+	void BuildUI() override;
+	void UpdateUI() override {};
+	void MainRoutine() override {};
+
+	void TravelFavorite(int fav_idx);
+
 private:
 	static const int BUTTON_HEIGHT = 25;
 	const int n_outposts = 185;
@@ -30,15 +43,6 @@ private:
 	std::wstring IndexToOutpostName(int index);
 	GwConstants::MapID IndexToOutpostID(int index);
 
-public:
-	TravelPanel();
-
-	DWORD region();
-	DWORD district() { return district_; }
-	DWORD language();
-
-	void BuildUI() override;
-	void UpdateUI() override {};
-	void MainRoutine() override {};
+	OSHGui::ComboBox* combo_boxes_[3];
 };
 

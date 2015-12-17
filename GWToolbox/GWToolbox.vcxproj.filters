@@ -57,6 +57,7 @@
     <ClInclude Include="GWToolbox\TimerWindow.h" />
     <ClInclude Include="GWToolbox\ToolboxWindow.h" />
     <ClInclude Include="GWToolbox\ChatCommands.h" />
+    <ClInclude Include="GWToolbox\ChatLogger.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\BondsWindow.cpp">

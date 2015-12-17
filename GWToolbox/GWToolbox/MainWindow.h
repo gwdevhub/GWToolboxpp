@@ -77,7 +77,6 @@ private:
 	SettingsPanel& settings_panel_;
 
 	void CreateTabButton(const wchar_t* s, int& button_idx, int& panel_idx, const char* icon);
-	void ToggleMinimize();
 	void SaveLocation();
 	void SaveMinimizedLocation();
 
@@ -102,6 +101,8 @@ public:
 	inline void set_use_minimized_alt_pos(bool enable) { use_minimized_alt_pos_ = enable; }
 	inline void set_tick_with_pcons(bool enabled) { tick_with_pcons_ = enabled; }
 	inline bool minimized() { return minimized_; }
+	void SetMinimized(bool minimized);
+	void ToggleMinimize() { SetMinimized(!minimized_); }
 
 	void UpdatePconToggleButton(bool active);
 	PconPanel& pcon_panel() { return pcon_panel_; }

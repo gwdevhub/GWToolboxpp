@@ -6,21 +6,19 @@
 #include <functional>
 
 class ChatCommands {
-	typedef std::function<bool(std::vector<std::wstring>)> Handler_t;
+	typedef std::function<void(std::vector<std::wstring>)> Handler_t;
 
 public:
 	ChatCommands();
 
 private:
 	void AddCommand(std::wstring cmd, Handler_t);
+	
+	static std::wstring GetLowerCaseArg(std::vector<std::wstring>, int index);
 
-	void ParseCommand(std::wstring cmd, std::vector<std::wstring> args);
-
-	bool PconCmd(std::vector<std::wstring> args);
-
-	// map from command to handler executing the command
-	// the handler takes a vector of arguments
-	// returns true if successful, false if error. 
-	// On error, a sequence of commands will stop executing
-	std::map<std::wstring, Handler_t> commands_;
+	static void CmdAge2(std::vector<std::wstring>);
+	static void CmdPcons(std::vector<std::wstring> args);
+	static void CmdDialog(std::vector<std::wstring> args);
+	static void CmdTB(std::vector<std::wstring> args);
+	static void CmdTP(std::vector<std::wstring> args);
 };

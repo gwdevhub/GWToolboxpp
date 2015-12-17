@@ -96,6 +96,7 @@
     <ClInclude Include="GWToolbox\BondsWindow.h" />
     <ClInclude Include="GWToolbox\BuildPanel.h" />
     <ClInclude Include="GWToolbox\ChatCommands.h" />
+    <ClInclude Include="GWToolbox\ChatLogger.h" />
     <ClInclude Include="GWToolbox\Config.h" />
     <ClInclude Include="GWToolbox\DialogPanel.h" />
     <ClInclude Include="GWToolbox\DistanceWindow.h" />
