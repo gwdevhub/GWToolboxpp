@@ -11,14 +11,11 @@ using GWCA.Memory;
 using System.Security.Principal;
 using INI;
 
-namespace CSLauncher
-{
-    static class CSLauncher
-    {
+namespace CSLauncher {
+    static class CSLauncher {
         const string DLL_DIRECTORY = "\\GWToolboxpp\\GWToolbox.dll";
 
-        static readonly string[] LOADMODULE_RESULT_MESSAGES = 
-        {
+        static readonly string[] LOADMODULE_RESULT_MESSAGES = {
             "GWToolbox.dll successfully loaded.",
             "GWToolbox.dll not found.",
             "kernel32.dll not found.\nHow the fuck did you do this.",
@@ -31,11 +28,10 @@ namespace CSLauncher
         };
 
 
-      static Process proctoinject = null;
+        static Process proctoinject = null;
  
         [STAThread]
-      static void Main(string[] args)
-        {
+        static void Main(string[] args) {
             Application.EnableVisualStyles();
 
             // Check for admin rights.
@@ -43,8 +39,7 @@ namespace CSLauncher
             WindowsPrincipal principal = new WindowsPrincipal(identity);
             bool isElevated = principal.IsInRole(WindowsBuiltInRole.Administrator);
 
-            if(!isElevated)
-            {
+            if(!isElevated) {
                 MessageBox.Show("Please run the launcher as Admin.",
                                    "GWToolbox++ Error",
                                    MessageBoxButtons.OK,
@@ -52,26 +47,44 @@ namespace CSLauncher
                 return;
             }
 
+            // names and paths
+            string localappdata = Environment.GetEnvironmentVariable("LocalAppData");
+            string settingsfolder = localappdata + "\\GWToolboxpp\\";
+            string inifile = settingsfolder + "GWToolbox.ini";
+#if DEBUG
+            string dllfile = "GWToolbox.dll"; // same folder where the launcher is built
+#else
+            string dllfile = settingsfolder + "GWToolbox.dll";
+#endif
+
             // Install resources
             ResInstaller installer = new ResInstaller();
             installer.Install();
 
-            INI_Reader ini = new INI_Reader(Environment.GetEnvironmentVariable("LocalAppData") + "\\GWToolboxpp\\GWToolbox.ini");
+            INI_Reader ini = new INI_Reader(inifile);
             Updater updater = new Updater();
 
-            if(!installer.DLLExists())
-            {
+#if DEBUG
+            // do nothing, we'll use GWToolbox.dll in /Debug
+#else
+            // Download or update if needed
+            if (!File.Exists(dllfile)) {
                 updater.DownloadDLL();
-                ini.IniWriteValue("launcher", "dllversion", updater.GetRemoteVersion());
+            } else {
+                updater.CheckForUpdates();
             }
-            
-            updater.CheckForUpdates();
+#endif
+            // check again after download/update/build
+            if (!File.Exists(dllfile)) {
+                MessageBox.Show("Cannot find GWToolbox.dll", "GWToolbox++ Launcher Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
 
             // Look for gw processes.
             Process[] gwprocs = Process.GetProcessesByName("Gw");
 
-            switch(gwprocs.Length)
-            {
+            switch(gwprocs.Length) {
                 case 0: // No gw processes found.
                     MessageBox.Show("No Guild Wars clients found.\n" +
                                     "Please log into Guild Wars first.", 
@@ -95,11 +108,8 @@ namespace CSLauncher
             if (proctoinject == null) return;
 
             GWCAMemory mem = new GWCAMemory(proctoinject);
-
-            GWCAMemory.LOADMODULERESULT result = mem.LoadModule(Environment.GetEnvironmentVariable("LocalAppData") + DLL_DIRECTORY);
-
+            GWCAMemory.LOADMODULERESULT result = mem.LoadModule(dllfile);
             if (result == GWCAMemory.LOADMODULERESULT.SUCCESSFUL) return;
-
             MessageBox.Show("Module Load Error.\n" +
                             LOADMODULE_RESULT_MESSAGES[(uint)result], 
                             "GWToolbox++ Error", 

@@ -5,17 +5,9 @@ using System.Text;
 using System.Threading.Tasks;
 using System.IO;
 
-namespace CSLauncher
-{
-    class ResInstaller
-    {
-        public bool DLLExists()
-        {
-            return File.Exists(Environment.GetEnvironmentVariable("LocalAppData") + "\\GWToolboxpp\\GWToolbox.dll");
-        }
-
-        public void Install()
-        {
+namespace CSLauncher {
+    class ResInstaller {
+        public void Install() {
             string toolboxdir = Environment.GetEnvironmentVariable("LocalAppData") + "\\GWToolboxpp\\";
 
             string imgdir = toolboxdir + "img\\";
@@ -64,27 +56,32 @@ namespace CSLauncher
             EnsureFileExists(Properties.Resources.Tick_v2, imgdir + "Tick.png");
 
             // Config files and fonts
-            if (!File.Exists(toolboxdir + "Font.ttf"))
-                File.WriteAllBytes(toolboxdir + "Font.ttf",Properties.Resources.Friz_Quadrata_Regular);
-            if (!File.Exists(toolboxdir + "GWToolbox.ini"))
-                File.WriteAllText(toolboxdir + "GWToolbox.ini", Properties.Resources.DefaultSettings);
-            if (!File.Exists(toolboxdir + "Theme.txt"))
-                File.WriteAllText(toolboxdir + "Theme.txt", Properties.Resources.DefaultTheme);
+            EnsureFileExists(Properties.Resources.Friz_Quadrata_Regular, toolboxdir + "Font.ttf");
+            EnsureFileExists(Properties.Resources.DefaultSettings, toolboxdir + "GWToolbox.ini");
+            EnsureFileExists(Properties.Resources.DefaultTheme, toolboxdir + "Theme.txt");
         }
 
-        private void EnsureDirectoryExists(string path)
-        {
-            if (!Directory.Exists(path))
-            {
+        private void EnsureDirectoryExists(string path) {
+            if (!Directory.Exists(path)) {
                 Directory.CreateDirectory(path);
             }
         }
 
-        private void EnsureFileExists(System.Drawing.Bitmap file, string path)
-        {
-            if (!File.Exists(path))
-            {
+        private void EnsureFileExists(System.Drawing.Bitmap file, string path) {
+            if (!File.Exists(path)) {
                 file.Save(path);
+            }
+        }
+
+        private void EnsureFileExists(byte[] file, string path) {
+            if (!File.Exists(path)) {
+                File.WriteAllBytes(path, file);
+            }
+        }
+
+        private void EnsureFileExists(string file, string path) {
+            if (!File.Exists(path)) {
+                File.WriteAllText(path, file);
             }
         }
     }

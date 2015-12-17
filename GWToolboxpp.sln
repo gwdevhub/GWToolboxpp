@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.23107.0
+VisualStudioVersion = 14.0.24720.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GWToolbox", "GWToolbox\GWToolbox.vcxproj", "{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -21,6 +21,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GWTests", "GWTests\GWTests.vcxproj", "{292A9FE3-078A-46E7-B384-67AE96A6FA0C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSLauncher", "CSLauncher\CSLauncher.csproj", "{588D4291-48BD-449E-BB02-D3D48C21C0A9}"
+	ProjectSection(ProjectDependencies) = postProject
+		{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E} = {CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
