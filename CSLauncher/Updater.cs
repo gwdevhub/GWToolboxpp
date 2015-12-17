@@ -14,6 +14,7 @@ namespace CSLauncher
 {
     public partial class Updater : Form
     {
+        bool downloaded = false;
         const string REMOTE_HOST = "http://fbgmguild.com/GWToolboxpp/";
         WebClient host = null;
         INI_Reader ini = null;
@@ -66,12 +67,18 @@ namespace CSLauncher
 
         private void buttonDownload_Click(object sender, EventArgs e)
         {
-            buttonDownload.Enabled = false;
-            buttonDownload.Text = "Downloading...";
+            if (!downloaded) {
+                buttonDownload.Enabled = false;
+                buttonDownload.Text = "Downloading...";
 
-            DownloadDLL();
+                DownloadDLL();
 
-            buttonDownload.Text = "Done! (Close this window to continue)";
+                downloaded = true;
+                buttonDownload.Enabled = true;
+                buttonDownload.Text = "Done! (Press me to continue)";
+            } else {
+                this.Close();
+            }
         }
     }
 }

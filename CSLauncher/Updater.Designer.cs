@@ -29,59 +29,52 @@
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Updater));
-            this.groupBoxUpdate = new System.Windows.Forms.GroupBox();
-            this.richTextBoxUpdateNotes = new System.Windows.Forms.RichTextBox();
             this.buttonDownload = new System.Windows.Forms.Button();
-            this.groupBoxUpdate.SuspendLayout();
+            this.richTextBoxUpdateNotes = new System.Windows.Forms.RichTextBox();
             this.SuspendLayout();
-            // 
-            // groupBoxUpdate
-            // 
-            this.groupBoxUpdate.Controls.Add(this.buttonDownload);
-            this.groupBoxUpdate.Location = new System.Drawing.Point(12, 194);
-            this.groupBoxUpdate.Name = "groupBoxUpdate";
-            this.groupBoxUpdate.Size = new System.Drawing.Size(260, 55);
-            this.groupBoxUpdate.TabIndex = 0;
-            this.groupBoxUpdate.TabStop = false;
-            this.groupBoxUpdate.Text = "Update?";
-            // 
-            // richTextBoxUpdateNotes
-            // 
-            this.richTextBoxUpdateNotes.Location = new System.Drawing.Point(12, 12);
-            this.richTextBoxUpdateNotes.Name = "richTextBoxUpdateNotes";
-            this.richTextBoxUpdateNotes.Size = new System.Drawing.Size(260, 176);
-            this.richTextBoxUpdateNotes.TabIndex = 1;
-            this.richTextBoxUpdateNotes.Text = "";
             // 
             // buttonDownload
             // 
-            this.buttonDownload.Location = new System.Drawing.Point(6, 19);
+            this.buttonDownload.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.buttonDownload.Dock = System.Windows.Forms.DockStyle.Bottom;
+            this.buttonDownload.Location = new System.Drawing.Point(0, 230);
             this.buttonDownload.Name = "buttonDownload";
-            this.buttonDownload.Size = new System.Drawing.Size(248, 25);
+            this.buttonDownload.Size = new System.Drawing.Size(351, 31);
             this.buttonDownload.TabIndex = 1;
             this.buttonDownload.Text = "Download";
             this.buttonDownload.UseVisualStyleBackColor = true;
             this.buttonDownload.Click += new System.EventHandler(this.buttonDownload_Click);
             // 
+            // richTextBoxUpdateNotes
+            // 
+            this.richTextBoxUpdateNotes.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.richTextBoxUpdateNotes.Location = new System.Drawing.Point(0, 0);
+            this.richTextBoxUpdateNotes.Name = "richTextBoxUpdateNotes";
+            this.richTextBoxUpdateNotes.ReadOnly = true;
+            this.richTextBoxUpdateNotes.Size = new System.Drawing.Size(351, 230);
+            this.richTextBoxUpdateNotes.TabIndex = 1;
+            this.richTextBoxUpdateNotes.Text = "";
+            // 
             // Updater
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(284, 261);
+            this.ClientSize = new System.Drawing.Size(351, 261);
+            this.Controls.Add(this.buttonDownload);
             this.Controls.Add(this.richTextBoxUpdateNotes);
-            this.Controls.Add(this.groupBoxUpdate);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "Updater";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "GWToolbox++ - New Update";
             this.Load += new System.EventHandler(this.Updater_Load);
-            this.groupBoxUpdate.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }
 
         #endregion
 
-        private System.Windows.Forms.GroupBox groupBoxUpdate;
         private System.Windows.Forms.Button buttonDownload;
         private System.Windows.Forms.RichTextBox richTextBoxUpdateNotes;
     }
