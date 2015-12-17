@@ -89,6 +89,9 @@ void ChatCommands::CmdTB(vector<wstring> args) {
 			GWToolbox::instance().main_window().SetMinimized(true);
 		} else if (arg == L"maxi" || arg == L"maximize") {
 			GWToolbox::instance().main_window().SetMinimized(false);
+		} else if (arg == L"close" || arg == L"quit" || arg == L"exit") {
+			ChatLogger::Log(L"Bye!");
+			GWToolbox::instance().StartSelfDestruct();
 		}
 	}
 }
