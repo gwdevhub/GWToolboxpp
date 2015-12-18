@@ -3,19 +3,15 @@
 #include <string>
 #include <Windows.h>
 
-#include "OSHGui\OSHGui.hpp"
+#include <GWCA\GwConstants.h>
+#include <OSHGui\OSHGui.hpp>
 
 #include "ToolboxPanel.h"
-#include "GWCA\GwConstants.h"
 #include "logger.h"
 
 class TravelPanel : public ToolboxPanel {
 public:
 	TravelPanel();
-
-	DWORD region();
-	DWORD district() { return district_; }
-	DWORD language();
 
 	void BuildUI() override;
 	void UpdateUI() override {};
@@ -32,10 +28,8 @@ private:
 		TravelCombo();
 	};
 
-	bool current_district_;
-	DWORD region_;
-	DWORD district_;
-	DWORD language_;
+	GwConstants::District district_;
+	int district_number_;
 
 	void AddTravelButton(std::wstring text, int grid_x, int grid_y, 
 		GwConstants::MapID map_id);
@@ -45,4 +39,3 @@ private:
 
 	OSHGui::ComboBox* combo_boxes_[3];
 };
-

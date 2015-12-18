@@ -17,10 +17,6 @@ TravelPanel::TravelPanel() {
 }
 
 void TravelPanel::BuildUI() {
-	current_district_ = true;
-	region_ = 0;
-	district_ = 0;
-	language_ = 0;
 
 	ComboBox* combo = new TravelCombo();
 	combo->SetMaxShowItems(10);
@@ -34,7 +30,7 @@ void TravelPanel::BuildUI() {
 		[this, combo](Control*) {
 		if (combo->GetSelectedIndex() < 0) return;
 		GwConstants::MapID id = IndexToOutpostID(combo->GetSelectedIndex());
-		GWCA::Api().Map().Travel(id, this->district(), this->region(), this->language());
+		GWCA::Api().Map().Travel(id, district_, district_number_);
 		combo->SetText(L"Travel To...");
 		combo->SetSelectedIndex(-1);
 	});
@@ -109,8 +105,7 @@ void TravelPanel::BuildUI() {
 void TravelPanel::TravelFavorite(int fav_idx) {
 	if (fav_idx >= 0 && fav_idx < 3) {
 		int outpost_idx = combo_boxes_[fav_idx]->GetSelectedIndex();
-		GWCA::Api().Map().Travel(IndexToOutpostID(outpost_idx),
-			this->district(), this->region(), this->language());
+		GWCA::Api().Map().Travel(IndexToOutpostID(outpost_idx), district_, district_number_);
 	}
 }
 
@@ -124,22 +119,6 @@ TravelPanel::TravelCombo::TravelCombo()
 	});
 }
 
-DWORD TravelPanel::region() {
-	if (current_district_) {
-		return GWCA::Api().Map().GetRegion();
-	} else {
-		return region_;
-	}
-}
-
-DWORD TravelPanel::language() {
-	if (current_district_) {
-		return GWCA::Api().Map().GetLanguage();
-	} else {
-		return language_;
-	}
-}
-
 
 void TravelPanel::AddTravelButton(wstring text, int grid_x, int grid_y, GwConstants::MapID map_id) {
 	Button* button = new Button();
@@ -148,70 +127,57 @@ void TravelPanel::AddTravelButton(wstring text, int grid_x, int grid_y, GwConsta
 	button->SetLocation(GuiUtils::ComputeX(GetWidth(), 2, grid_x), 
 		DefaultBorderPadding + (BUTTON_HEIGHT + DefaultBorderPadding) * grid_y);
 	button->GetClickEvent() += ClickEventHandler([this, map_id](Control*) {
-		GWCA::Api().Map().Travel(map_id, district(), region(), language());
+		GWCA::Api().Map().Travel(map_id, district_, district_number_);
 	});
 	AddControl(button);
 }
 
 void TravelPanel::UpdateDistrict(int gui_index) {
 	GWCA api;
-	current_district_ = false;
-	region_ = api().Map().GetRegion();
-	district_ = 0;
-	language_ = api().Map().GetLanguage();
+	district_number_ = 0;
 	switch (gui_index) {
 	case 0: // Current District
-		current_district_ = true;
+		district_ = GwConstants::District::Current;
 		break;
 	case 1: // International
-		region_ = -2;
+		district_ = GwConstants::District::International;
 		break;
 	case 2: // American
-		region_ = 0;
+		district_ = GwConstants::District::American;
 		break;
 	case 3: // American District 1
-		region_ = 0;
-		district_ = 1;
+		district_ = GwConstants::District::American;
+		district_number_ = 1;
 		break;
 	case 4: // Europe English
-		region_ = 2;
-		language_ = 0;
+		district_ = GwConstants::District::EuropeEnglish;
 		break;
 	case 5: // Europe French
-		region_ = 2;
-		language_ = 2;
+		district_ = GwConstants::District::EuropeFrench;
 		break;
 	case 6: // Europe German
-		region_ = 2;
-		language_ = 3;
+		district_ = GwConstants::District::EuropeGerman;
 		break;
 	case 7: // Europe Italian
-		region_ = 2;
-		language_ = 4;
+		district_ = GwConstants::District::EuropeItalian;
 		break;
 	case 8: // Europe Spanish
-		region_ = 2;
-		language_ = 5;
+		district_ = GwConstants::District::EuropeSpanish;
 		break;
 	case 9: // Europe Polish
-		region_ = 2;
-		language_ = 9;
+		district_ = GwConstants::District::EuropePolish;
 		break;
 	case 10: // Europe Russian
-		region_ = 2;
-		language_ = 10;
+		district_ = GwConstants::District::EuropeRussian;
 		break;
 	case 11: // Asian Korean
-		region_ = 1;
-		language_ = 0;
+		district_ = GwConstants::District::AsiaKorean;
 		break;
 	case 12: // Asia Chinese
-		region_ = 3;
-		language_ = 0;
+		district_ = GwConstants::District::AsiaChinese;
 		break;
 	case 13: // Asia Japanese
-		region_ = 4;
-		language_ = 0;
+		district_ = GwConstants::District::AsiaJapanese;
 		break;
 	default:
 		break;

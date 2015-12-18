@@ -103,30 +103,48 @@ void ChatCommands::CmdTP(vector<wstring> args) {
 	if (args.size() == 0) {
 		ChatLogger::Log(L"[Error] Please provide an argument");
 	} else {
-		wstring arg = GetLowerCaseArg(args, 0);
-		if (arg == L"toa") {
-			GWCA::Api().Map().Travel(GwConstants::MapID::Temple_of_the_Ages);
-		} else if (arg == L"doa") {
-			GWCA::Api().Map().Travel(GwConstants::MapID::Domain_of_Anguish);
-		} else if (arg == L"kamadan" || arg == L"kama") {
-			GWCA::Api().Map().Travel(GwConstants::MapID::Kamadan_Jewel_of_Istan_outpost);
-		} else if (arg == L"embark") {
-			GWCA::Api().Map().Travel(GwConstants::MapID::Embark_Beach);
-		} else if (arg == L"vlox" || arg == L"vloxs") {
-			GWCA::Api().Map().Travel(GwConstants::MapID::Vloxs_Falls);
-		} else if (arg == L"gadd" || arg == L"gadds") {
-			GWCA::Api().Map().Travel(GwConstants::MapID::Gadds_Encampment_outpost);
-		} else if (arg == L"urgoz") {
-			GWCA::Api().Map().Travel(GwConstants::MapID::Urgozs_Warren);
-		} else if (arg == L"deep") {
-			GWCA::Api().Map().Travel(GwConstants::MapID::The_Deep);
-		} else if (arg == L"fav1") {
+		wstring town = GetLowerCaseArg(args, 0);
+
+		GwConstants::District district = GwConstants::District::Current;
+		int district_number = 0;
+		if (args.size() >= 2) {
+			wstring dis = GetLowerCaseArg(args, 1);
+			if (dis == L"ae1") {
+				district = GwConstants::District::American;
+			} else if (dis == L"ee1") {
+				district = GwConstants::District::EuropeEnglish;
+			} else if (dis == L"eg1" || dis == L"dd1") {  // dd1 is german: deutche dist
+				district = GwConstants::District::EuropeGerman;
+			} else if (dis == L"int") {
+				district = GwConstants::District::International;
+			} else {
+				ChatLogger::LogF(L"Invalid district '%ls'", dis.c_str());
+			}
+		}
+
+		if (town == L"toa") {
+			GWCA::Api().Map().Travel(GwConstants::MapID::Temple_of_the_Ages, district, district_number);
+		} else if (town == L"doa") {
+			GWCA::Api().Map().Travel(GwConstants::MapID::Domain_of_Anguish, district, district_number);
+		} else if (town == L"kamadan" || town == L"kama") {
+			GWCA::Api().Map().Travel(GwConstants::MapID::Kamadan_Jewel_of_Istan_outpost, district, district_number);
+		} else if (town == L"embark") {
+			GWCA::Api().Map().Travel(GwConstants::MapID::Embark_Beach, district, district_number);
+		} else if (town == L"vlox" || town == L"vloxs") {
+			GWCA::Api().Map().Travel(GwConstants::MapID::Vloxs_Falls, district, district_number);
+		} else if (town == L"gadd" || town == L"gadds") {
+			GWCA::Api().Map().Travel(GwConstants::MapID::Gadds_Encampment_outpost, district, district_number);
+		} else if (town == L"urgoz") {
+			GWCA::Api().Map().Travel(GwConstants::MapID::Urgozs_Warren, district, district_number);
+		} else if (town == L"deep") {
+			GWCA::Api().Map().Travel(GwConstants::MapID::The_Deep, district, district_number);
+		} else if (town == L"fav1") {
 			GWToolbox::instance().main_window().travel_panel().TravelFavorite(0);
-		} else if (arg == L"fav2") {
+		} else if (town == L"fav2") {
 			GWToolbox::instance().main_window().travel_panel().TravelFavorite(1);
-		} else if (arg == L"fav3") {
+		} else if (town == L"fav3") {
 			GWToolbox::instance().main_window().travel_panel().TravelFavorite(2);
-		} else if (arg == L"gh") {
+		} else if (town == L"gh") {
 			GWCA::Api().Guild().TravelGH();
 		}
 	}
