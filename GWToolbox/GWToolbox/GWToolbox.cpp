@@ -300,9 +300,9 @@ void GWToolbox::UpdateUI() {
 		__try {
 			main_window_->UpdateUI();
 			timer_window_->UpdateUI();
-			bonds_window_->UpdateUI();
 			health_window_->UpdateUI();
 			distance_window_->UpdateUI();
+			bonds_window_->UpdateUI();
 		} __except (EXCEPTION_EXECUTE_HANDLER) {
 			LOG("Badness happened! (in render thread)\n");
 		}

@@ -26,8 +26,10 @@ class BondsWindow : public ToolboxWindow {
 		int hovered_bond;
 		bool pressed;
 		int party_size;
-		OSHGui::PictureBox* pics[MAX_PLAYERS][MAX_BONDS];
-		int buff_id[MAX_PLAYERS][MAX_BONDS];
+		// allocate twice as much memory because something was overwriting 
+		// the end of it. Maybe now it'll overwrite useless stuff.
+		OSHGui::PictureBox* pics[MAX_PLAYERS * 2][MAX_BONDS];
+		int buff_id[MAX_PLAYERS * 2][MAX_BONDS];
 
 		void DropUseBuff(int bond, int player);
 
