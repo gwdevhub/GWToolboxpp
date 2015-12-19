@@ -10,6 +10,11 @@ using namespace std;
 
 ChatCommands::ChatCommands() {
 
+	unlocked_camera = false;
+	forward_movement = 0;
+	side_movement = 0;
+	vertical_movement = 0;
+
 	ChatLogger::Init();
 
 	AddCommand(L"age2", ChatCommands::CmdAge2);
@@ -31,6 +36,57 @@ void ChatCommands::AddCommand(wstring cmd, Handler_t handler) {
 		[handler](std::wstring cmd, std::vector<std::wstring> args) {
 		handler(args);
 	});
+}
+
+bool ChatCommands::ProcessMessage(LPMSG msg) {
+	if (!unlocked_camera) return false;
+
+	switch (msg->message) {
+	case WM_KEYDOWN:
+	case WM_SYSKEYDOWN: {
+		OSHGui::Key key = (OSHGui::Key)msg->wParam;
+		switch (key) {
+		case OSHGui::Key::W: forward_movement = +1; return true;
+		case OSHGui::Key::S: forward_movement = -1; return true;
+		case OSHGui::Key::D: side_movement = -1; return true;
+		case OSHGui::Key::A: side_movement = +1; return true;
+		case OSHGui::Key::X: vertical_movement = -1; return true;
+		case OSHGui::Key::Z: vertical_movement = +1; return true;
+		default: return false;
+		}
+	}
+	
+	case WM_KEYUP:
+	case WM_SYSKEYUP: {
+		OSHGui::Key key = (OSHGui::Key)msg->wParam;
+		switch (key) {
+		case OSHGui::Key::W:
+		case OSHGui::Key::S:
+			forward_movement = 0;
+			return true;
+		case OSHGui::Key::D:
+		case OSHGui::Key::A:
+			side_movement = 0;
+			return true;
+		case OSHGui::Key::X:
+		case OSHGui::Key::Z:
+			vertical_movement = 0;
+			return true;
+		default: return false;
+		}
+	}
+	}
+
+	return false;
+}
+
+void ChatCommands::UpdateUI() {
+	if (unlocked_camera) {
+		GWCA::Api().Camera().ForwardMovement(speed * forward_movement);
+		GWCA::Api().Camera().SideMovement(speed * side_movement);
+		GWCA::Api().Camera().VerticalMovement(speed * vertical_movement);
+		GWCA::Api().Camera().UpdateCameraPos();
+	}
 }
 
 wstring ChatCommands::GetLowerCaseArg(vector<wstring> args, int index) {
@@ -173,8 +229,10 @@ void ChatCommands::CmdCamera(vector<wstring> args) {
 		wstring arg = args[0];
 		if (arg == L"lock") {
 			GWCA::Api().Camera().UnlockCam(false);
+			GWToolbox::instance().chat_commands().unlocked_camera = false;
 		} else if (arg == L"unlock") {
 			GWCA::Api().Camera().UnlockCam(true);
+			GWToolbox::instance().chat_commands().unlocked_camera = true;
 		} else {
 			ChatLogger::Log(L"[Error] Invalid argument. Please use '/camera lock' or '/camera unlock'");
 		}

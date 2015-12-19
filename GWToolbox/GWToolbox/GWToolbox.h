@@ -62,19 +62,19 @@ private:
 	bool capture_input_;
 	bool must_self_destruct_;
 
-	Config& config_;
+	Config* config_;
 	MainWindow* main_window_;
 	TimerWindow* timer_window_;
 	BondsWindow* bonds_window_;
 	HealthWindow* health_window_;
 	DistanceWindow* distance_window_;
-	ChatCommands& chat_commands_;
+	ChatCommands* chat_commands_;
 
 	//------ Constructor ------//
 private:
 	GWToolbox(HMODULE mod) :
 		dll_module_(mod),
-		config_(*new Config()),
+		config_(new Config()),
 		main_window_(nullptr),
 		timer_window_(nullptr),
 		bonds_window_(nullptr),
@@ -83,7 +83,7 @@ private:
 		initialized_(false),
 		must_self_destruct_(false),
 		capture_input_(false),
-		chat_commands_(*new ChatCommands()) {
+		chat_commands_(new ChatCommands()) {
 	}
 
 	//------ Private Methods ------//
@@ -110,7 +110,9 @@ public:
 	inline bool capture_input() { return capture_input_; }
 	inline void set_capture_input(bool capture) { capture_input_ = capture; }
 	
-	inline Config& config() { return config_; }
+	inline Config& config() { return *config_; }
+	inline ChatCommands& chat_commands() { return *chat_commands_; }
+
 	inline MainWindow& main_window() { return *main_window_; }
 	inline TimerWindow& timer_window() { return *timer_window_; }
 	inline BondsWindow& bonds_window() { return *bonds_window_; }
