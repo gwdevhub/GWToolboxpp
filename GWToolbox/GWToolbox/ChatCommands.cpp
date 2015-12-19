@@ -224,17 +224,28 @@ void ChatCommands::CmdZoom(vector<wstring> args) {
 
 void ChatCommands::CmdCamera(vector<wstring> args) {
 	if (args.empty()) {
-		ChatLogger::Log(L"[Error] Please use '/camera lock' or '/camera unlock'");
+		GWCA::Api().Camera().UnlockCam(false);
+		GWToolbox::instance().chat_commands().unlocked_camera = false;
 	} else {
-		wstring arg = args[0];
-		if (arg == L"lock") {
+		wstring arg0 = GetLowerCaseArg(args, 0);
+		if (arg0 == L"lock") {
 			GWCA::Api().Camera().UnlockCam(false);
 			GWToolbox::instance().chat_commands().unlocked_camera = false;
-		} else if (arg == L"unlock") {
+		} else if (arg0 == L"unlock") {
 			GWCA::Api().Camera().UnlockCam(true);
 			GWToolbox::instance().chat_commands().unlocked_camera = true;
+			ChatLogger::Log(L"Use W,A,S,D,X,Z for camera movement");
+		} else if (arg0 == L"fog") {
+			if (args.size() >= 2) {
+				wstring arg1 = GetLowerCaseArg(args, 1);
+				if (arg1 == L"on") {
+					GWCA::Api().Camera().SetFog(true);
+				} else if (arg1 == L"off") {
+					GWCA::Api().Camera().SetFog(false);
+				}
+			}
 		} else {
-			ChatLogger::Log(L"[Error] Invalid argument. Please use '/camera lock' or '/camera unlock'");
+			ChatLogger::Log(L"[Error] Invalid argument.");
 		}
 	}
 }
