@@ -177,6 +177,22 @@ void MainWindow::SetMinimized(bool minimized) {
 	}
 }
 
+void MainWindow::SetHided(bool hided) {
+	hided_ = hided;
+	Config& config = GWToolbox::instance().config();
+
+	if (hided_) {
+		SetSize(Drawing::SizeI(0, 0));
+		main_panel_->SetVisible(false);
+		SetVisible(false);
+	}
+	else {
+		SetSize(Drawing::SizeI(WIDTH, HEIGHT));
+		main_panel_->SetVisible(true);
+		SetVisible(true);
+	}
+}
+
 void MainWindow::UpdatePconToggleButton(bool active) {
 	if (active) {
 		pcon_toggle_button_->SetForeColor(Color::Lime());

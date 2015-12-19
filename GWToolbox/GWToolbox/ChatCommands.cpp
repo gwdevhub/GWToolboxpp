@@ -82,10 +82,12 @@ void ChatCommands::CmdTB(vector<wstring> args) {
 		wstring arg = GetLowerCaseArg(args, 0);
 		if (arg == L"age") {
 			CmdAge2(args);
+		} else if (arg == L"chest") {
+			GWCA::Api().Items().OpenXunlaiWindow();
 		} else if (arg == L"hide") {
-			GWToolbox::instance().main_window().SetVisible(false);
+			GWToolbox::instance().main_window().SetHided(true);
 		} else if (arg == L"show") {
-			GWToolbox::instance().main_window().SetVisible(true);
+			GWToolbox::instance().main_window().SetHided(false);
 		} else if (arg == L"reset") {
 			GWToolbox::instance().main_window().SetLocation(0, 0);
 		} else if (arg == L"mini" || arg == L"minimize") {

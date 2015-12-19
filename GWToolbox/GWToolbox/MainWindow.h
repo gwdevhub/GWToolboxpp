@@ -63,6 +63,7 @@ private:
 	std::vector<TabButton*> tab_buttons;
 	int current_panel_;
 	bool minimized_;
+	bool hided_;
 	bool use_minimized_alt_pos_;
 	bool tick_with_pcons_;
 
@@ -103,6 +104,8 @@ public:
 	inline bool minimized() { return minimized_; }
 	void SetMinimized(bool minimized);
 	void ToggleMinimize() { SetMinimized(!minimized_); }
+	void SetHided(bool hided);
+	void ToggleHided() { SetHided(!hided_); }
 
 	void UpdatePconToggleButton(bool active);
 	PconPanel& pcon_panel() { return pcon_panel_; }
