@@ -13,6 +13,7 @@
 #include "HealthWindow.h"
 #include "DistanceWindow.h"
 #include "ChatCommands.h"
+#include "ChatLogger.h"
 
 #ifdef _DEBUG
 #define EXCEPT_EXPRESSION EXCEPTION_CONTINUE_SEARCH
@@ -116,5 +117,7 @@ public:
 	inline HealthWindow& health_window() { return *health_window_; }
 	inline DistanceWindow& distance_window() { return *distance_window_; }
 	
-	void StartSelfDestruct() { must_self_destruct_ = true; }
+	void StartSelfDestruct() { 
+		ChatLogger::Log(L"Bye!");
+		must_self_destruct_ = true; }
 };

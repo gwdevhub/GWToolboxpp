@@ -21,7 +21,7 @@ ChatCommands::ChatCommands() {
 	AddCommand(L"travel", ChatCommands::CmdTP);
 
 	DWORD playerNumber = GWCA::Api().Agents().GetPlayer()->PlayerNumber;
-	ChatLogger::LogF(L"Welcome %ls!", GWCA::Api().Agents().GetPlayerNameByLoginNumber(playerNumber));
+	ChatLogger::LogF(L"Hello %ls!", GWCA::Api().Agents().GetPlayerNameByLoginNumber(playerNumber));
 }
 
 void ChatCommands::AddCommand(wstring cmd, Handler_t handler) {
@@ -85,9 +85,9 @@ void ChatCommands::CmdTB(vector<wstring> args) {
 		} else if (arg == L"chest") {
 			GWCA::Api().Items().OpenXunlaiWindow();
 		} else if (arg == L"hide") {
-			GWToolbox::instance().main_window().SetHided(true);
+			GWToolbox::instance().main_window().SetHidden(true);
 		} else if (arg == L"show") {
-			GWToolbox::instance().main_window().SetHided(false);
+			GWToolbox::instance().main_window().SetHidden(false);
 		} else if (arg == L"reset") {
 			GWToolbox::instance().main_window().SetLocation(0, 0);
 		} else if (arg == L"mini" || arg == L"minimize") {
@@ -95,7 +95,6 @@ void ChatCommands::CmdTB(vector<wstring> args) {
 		} else if (arg == L"maxi" || arg == L"maximize") {
 			GWToolbox::instance().main_window().SetMinimized(false);
 		} else if (arg == L"close" || arg == L"quit" || arg == L"exit") {
-			ChatLogger::Log(L"Bye!");
 			GWToolbox::instance().StartSelfDestruct();
 		}
 	}

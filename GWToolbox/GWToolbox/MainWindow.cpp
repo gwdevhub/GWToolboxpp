@@ -177,16 +177,15 @@ void MainWindow::SetMinimized(bool minimized) {
 	}
 }
 
-void MainWindow::SetHided(bool hided) {
-	hided_ = hided;
-	Config& config = GWToolbox::instance().config();
+void MainWindow::SetHidden(bool hidden) {
+	hidden_ = hidden;
 
-	if (hided_) {
+	if (hidden) {
+		if (current_panel_ >= 0) OpenClosePanel(current_panel_);
 		SetSize(Drawing::SizeI(0, 0));
 		main_panel_->SetVisible(false);
 		SetVisible(false);
-	}
-	else {
+	} else {
 		SetSize(Drawing::SizeI(WIDTH, HEIGHT));
 		main_panel_->SetVisible(true);
 		SetVisible(true);
