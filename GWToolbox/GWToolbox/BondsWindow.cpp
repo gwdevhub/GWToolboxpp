@@ -15,21 +15,43 @@ using namespace OSHGui;
 
 BondsWindow::BondsWindow() {
 
+	GwConstants::InterfaceSize interfacesize = GetInterfaceSize();
+	int img_size;
+	switch (interfacesize) {
+	case GwConstants::InterfaceSize::SMALL:
+		img_size = GwConstants::HealthbarHeight::Small;
+		break;
+	case GwConstants::InterfaceSize::NORMAL:
+		img_size = GwConstants::HealthbarHeight::Normal;
+		break;
+	case GwConstants::InterfaceSize::LARGE:
+		img_size = GwConstants::HealthbarHeight::Large;
+		break;
+	case GwConstants::InterfaceSize::VERYLARGE:
+		img_size = GwConstants::HealthbarHeight::VeryLarge;
+		break;
+	default:
+		img_size = GwConstants::HealthbarHeight::Normal;
+		break;
+	}
+	int width = img_size * MAX_BONDS;
+	int height = img_size * MAX_PLAYERS;
+
 	Config& config = GWToolbox::instance().config();
 	int x = config.iniReadLong(BondsWindow::IniSection(), BondsWindow::IniKeyX(), 400);
 	int y = config.iniReadLong(BondsWindow::IniSection(), BondsWindow::IniKeyY(), 100);
 
 	SetLocation(x, y);
-	SetSize(Drawing::SizeI(WIDTH, HEIGHT));
+	SetSize(Drawing::SizeI(width, height));
 	SetEnabled(false);
 
 	Drawing::Theme::ControlTheme theme = Application::InstancePtr()
 		->GetTheme().GetControlColorTheme(BondsWindow::ThemeKey());
 	SetBackColor(theme.BackColor);
 
-	monitor = new BondsMonitor();
+	monitor = new BondsMonitor(img_size);
 	monitor->SetLocation(0, 0);
-	monitor->SetSize(WIDTH, HEIGHT);
+	monitor->SetSize(width, height);
 	AddControl(monitor);
 
 	bool show = config.iniReadBool(BondsWindow::IniSection(), BondsWindow::IniKeyShow(), false);
@@ -39,29 +61,29 @@ BondsWindow::BondsWindow() {
 	Form::Show(self);
 }
 
-BondsWindow::BondsMonitor::BondsMonitor() {
+BondsWindow::BondsMonitor::BondsMonitor(int img_size) : img_size_(img_size) {
 	isFocusable_ = true;
 	SetEnabled(true);
 	hovered_player = -1;
 	hovered_bond = -1;
-	party_size = n_players; // initialize at max, upcate will take care of shrinking as needed.
+	party_size = MAX_PLAYERS; // initialize at max, upcate will take care of shrinking as needed.
 	pressed = false;
 	freezed = GWToolbox::instance().config().iniReadBool(MainWindow::IniSection(),
 		MainWindow::IniKeyFreeze(), false);
 
-	for (int i = 0; i < n_players; ++i) {
-		for (int j = 0; j < n_bonds; ++j) {
+	for (int i = 0; i < MAX_PLAYERS; ++i) {
+		for (int j = 0; j < MAX_BONDS; ++j) {
 			buff_id[i][j] = 0;
 			pics[i][j] = new PictureBox();
-			pics[i][j]->SetLocation(j * IMG_SIZE, i *IMG_SIZE);
-			pics[i][j]->SetSize(IMG_SIZE, IMG_SIZE);
-			pics[i][j]->SetStretch(false);
+			pics[i][j]->SetLocation(j * img_size_, i *img_size_);
+			pics[i][j]->SetSize(img_size_, img_size_);
+			pics[i][j]->SetStretch(true);
 			pics[i][j]->SetVisible(false);
 			pics[i][j]->SetEnabled(false);
 			AddSubControl(pics[i][j]);
 		}
 	}
-	for (int i = 0; i < n_players; ++i) {
+	for (int i = 0; i < MAX_PLAYERS; ++i) {
 		pics[i][0]->SetImage(Image::FromFile(GuiUtils::getSubPathA("balthspirit.jpg", "img")));
 		pics[i][1]->SetImage(Image::FromFile(GuiUtils::getSubPathA("lifebond.jpg", "img")));
 		pics[i][2]->SetImage(Image::FromFile(GuiUtils::getSubPathA("protbond.jpg", "img")));
@@ -74,7 +96,7 @@ BondsWindow::BondsMonitor::BondsMonitor() {
 
 void BondsWindow::BondsMonitor::DrawSelf(Drawing::RenderContext &context) {
 	for (int i = 0; i < party_size; ++i) {
-		for (int j = 0; j < n_bonds; ++j) {
+		for (int j = 0; j < MAX_BONDS; ++j) {
 			if (pics[i][j]->GetVisible()) {
 				pics[i][j]->Render();
 			}
@@ -88,17 +110,17 @@ void BondsWindow::BondsMonitor::PopulateGeometry() {
 		Graphics g(*geometry_);
 		Drawing::Color c = GetForeColor();
 		if (pressed) c = c - Drawing::Color::FromARGB(50, 50, 50, 50);
-		g.DrawRectangle(c, (float)IMG_SIZE * hovered_bond, (float)IMG_SIZE * hovered_player, 
-			(float)IMG_SIZE, (float)IMG_SIZE);
+		g.DrawRectangle(c, (float)img_size_ * hovered_bond, (float)img_size_ * hovered_player,
+			(float)img_size_, (float)img_size_);
 	}
 }
 
 int BondsWindow::BondsMonitor::GetBond(int xcoord) {
-	return (xcoord - absoluteLocation_.X) / IMG_SIZE;
+	return (xcoord - absoluteLocation_.X) / img_size_;
 }
 
 int BondsWindow::BondsMonitor::GetPlayer(int ycoord) {
-	return (ycoord - absoluteLocation_.Y) / IMG_SIZE;
+	return (ycoord - absoluteLocation_.Y) / img_size_;
 }
 
 void BondsWindow::BondsMonitor::OnMouseDown(const OSHGui::MouseMessage &mouse) {
@@ -123,8 +145,8 @@ void BondsWindow::BondsMonitor::OnMouseUp(const OSHGui::MouseMessage &mouse) {
 		int player = GetPlayer(mouse.GetLocation().Y);
 		int bond = GetBond(mouse.GetLocation().X);
 
-		if (player >= 0 && player < n_players
-			&& bond >= 0 && bond < n_bonds) {
+		if (player >= 0 && player < MAX_PLAYERS
+			&& bond >= 0 && bond < MAX_BONDS) {
 			
 			DropUseBuff(bond, player);
 		}
@@ -184,16 +206,16 @@ void BondsWindow::BondsMonitor::UpdateUI() {
 	GWAPI::GWCA api;
 
 	int size = api().Agents().GetPartySize();
-	if (size > n_players) size = n_players;
+	if (size > MAX_PLAYERS) size = MAX_PLAYERS;
 	if (party_size != size) {
 		party_size = size;
-		SetSize(n_bonds * IMG_SIZE, party_size * IMG_SIZE);
+		SetSize(MAX_BONDS * img_size_, party_size * img_size_);
 		parent_->SetSize(GetSize());
 	}
 
-	bool show[n_players][n_bonds];
-	for (int i = 0; i < n_players; ++i) {
-		for (int j = 0; j < n_bonds; ++j) {
+	bool show[MAX_PLAYERS][MAX_BONDS];
+	for (int i = 0; i < MAX_PLAYERS; ++i) {
+		for (int j = 0; j < MAX_BONDS; ++j) {
 			show[i][j] = false;
 		}
 	}
@@ -209,7 +231,7 @@ void BondsWindow::BondsMonitor::UpdateUI() {
 				DWORD target_id = buffs[i].TargetAgentId;
 				if (target_id < agents.size() && agents[target_id]) {
 					player = agents[target_id]->PlayerNumber;
-					if (player == 0 || player > n_players) continue;
+					if (player == 0 || player > MAX_PLAYERS) continue;
 					--player;	// player numbers are from 1 to partysize in party list
 				}
 
@@ -228,8 +250,8 @@ void BondsWindow::BondsMonitor::UpdateUI() {
 		}
 	}
 
-	for (int i = 0; i < n_players; ++i) {
-		for (int j = 0; j < n_bonds; ++j) {
+	for (int i = 0; i < MAX_PLAYERS; ++i) {
+		for (int j = 0; j < MAX_BONDS; ++j) {
 			if (pics[i][j]->GetVisible() != show[i][j]) {
 				pics[i][j]->SetVisible(show[i][j]);
 			}
