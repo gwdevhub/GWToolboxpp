@@ -19,6 +19,8 @@ ChatCommands::ChatCommands() {
 	AddCommand(L"tp", ChatCommands::CmdTP);
 	AddCommand(L"to", ChatCommands::CmdTP);
 	AddCommand(L"travel", ChatCommands::CmdTP);
+	AddCommand(L"zoom", ChatCommands::CmdZoom);
+	AddCommand(L"camera", ChatCommands::CmdCamera);
 
 	DWORD playerNumber = GWCA::Api().Agents().GetPlayer()->PlayerNumber;
 	ChatLogger::LogF(L"Hello %ls!", GWCA::Api().Agents().GetPlayerNameByLoginNumber(playerNumber));
@@ -147,6 +149,34 @@ void ChatCommands::CmdTP(vector<wstring> args) {
 			GWToolbox::instance().main_window().travel_panel().TravelFavorite(2);
 		} else if (town == L"gh") {
 			GWCA::Api().Guild().TravelGH();
+		}
+	}
+}
+
+void ChatCommands::CmdZoom(vector<wstring> args) {
+	if (args.empty()) {
+		GWCA::Api().Camera().SetMaxDist(750.0f);
+	} else {
+		try {
+			long distance = std::stol(args[0]);
+			GWCA::Api().Camera().SetMaxDist(static_cast<float>(distance));
+		} catch (...) {
+			ChatLogger::LogF(L"[Error] Invalid argument '%ls', please use an integer value", args[0].c_str());
+		}
+	}
+}
+
+void ChatCommands::CmdCamera(vector<wstring> args) {
+	if (args.empty()) {
+		ChatLogger::Log(L"[Error] Please use '/camera lock' or '/camera unlock'");
+	} else {
+		wstring arg = args[0];
+		if (arg == L"lock") {
+			GWCA::Api().Camera().UnlockCam(false);
+		} else if (arg == L"unlock") {
+			GWCA::Api().Camera().UnlockCam(true);
+		} else {
+			ChatLogger::Log(L"[Error] Invalid argument. Please use '/camera lock' or '/camera unlock'");
 		}
 	}
 }
