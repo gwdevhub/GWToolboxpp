@@ -10,6 +10,8 @@ using namespace GWAPI;
 
 PartyDamage::PartyDamage() {
 
+	total = 0;
+
 	GWCA::Api().StoC().AddGameServerEvent<StoC::P151>(
 		[this](StoC::P151* packet) {
 
@@ -31,6 +33,7 @@ PartyDamage::PartyDamage() {
 		if (cause == nullptr) return;
 		if (cause->LoginNumber == 0) return; // ignore NPCs, heroes
 		if (cause->PlayerNumber == 0) return; // might as well check for this too
+		if (cause->PlayerNumber > MAX_PLAYERS) return;
 
 		// get target agent
 		GW::Agent* target = GWCA::Api().Agents().GetAgentByID(packet->target_id);
@@ -39,11 +42,13 @@ PartyDamage::PartyDamage() {
 											  // such as Life bond or sacrifice
 
 		if (target->MaxHP > 0 && target->MaxHP < 100000) {
-			long dmg = std::lround(packet->value * target->MaxHP);
-			printf("[%d] %d -> %d\n", cause->PlayerNumber, dmg, packet->target_id);
+			long dmg = std::lround(-packet->value * target->MaxHP);
+			//printf("[%d] %d -> %d\n", cause->PlayerNumber, dmg, packet->target_id);
+			damage[cause->PlayerNumber - 1] += dmg;
+			total += dmg;
 		} else {
-			printf("[%d] %f %% -> %d\n", cause->PlayerNumber,
-				packet->value, packet->target_id);
+			//printf("[%d] %f %% -> %d\n", cause->PlayerNumber,
+				//packet->value, packet->target_id);
 		}
 	});
 
@@ -52,8 +57,8 @@ PartyDamage::PartyDamage() {
 	int y = config.IniReadLong(PartyDamage::IniSection(), PartyDamage::IniKeyY(), 100);
 	SetLocation(x, y);
 
-	int line_height = GuiUtils::GetPartyHealthbarHeight();
-	SetSize(Drawing::SizeI(ABS_WIDTH + PERC_WIDTH, line_height * MAX_PLAYERS));
+	line_height_ = GuiUtils::GetPartyHealthbarHeight();
+	SetSize(Drawing::SizeI(ABS_WIDTH + PERC_WIDTH, line_height_ * MAX_PLAYERS));
 
 	Drawing::Theme::ControlTheme theme = Application::InstancePtr()
 		->GetTheme().GetControlColorTheme(BondsWindow::ThemeKey());
@@ -61,12 +66,14 @@ PartyDamage::PartyDamage() {
 
 	int offsetX = 2;
 	int offsetY = 2;
-	float fontsize = 8.0f;
+	float fontsize = 10.0f;
 	for (int i = 0; i < MAX_PLAYERS; ++i) {
+		damage[i] = 0;
+
 		absolute[i] = new DragButton();
 		absolute[i]->SetText(L"100%");
-		absolute[i]->SetSize(ABS_WIDTH, line_height);
-		absolute[i]->SetLocation(0, i * line_height);
+		absolute[i]->SetSize(ABS_WIDTH, line_height_);
+		absolute[i]->SetLocation(0, i * line_height_);
 		absolute[i]->SetFont(GuiUtils::getTBFont(fontsize, true));
 		absolute[i]->SetBackColor(Drawing::Color::Empty());
 		absolute[i]->SetForeColor(theme.ForeColor);
@@ -77,8 +84,8 @@ PartyDamage::PartyDamage() {
 
 		percent[i] = new DragButton();
 		percent[i]->SetText(L"42.0k");
-		percent[i]->SetSize(PERC_WIDTH, line_height);
-		percent[i]->SetLocation(ABS_WIDTH, i * line_height);
+		percent[i]->SetSize(PERC_WIDTH, line_height_);
+		percent[i]->SetLocation(ABS_WIDTH, i * line_height_);
 		percent[i]->SetFont(GuiUtils::getTBFont(fontsize, true));
 		percent[i]->SetBackColor(Drawing::Color::Empty());
 		percent[i]->SetForeColor(theme.ForeColor);
@@ -105,7 +112,28 @@ void PartyDamage::MainRoutine() {
 }
 
 void PartyDamage::UpdateUI() {
+	if (!isVisible_) return;
 
+	GWCA api;
+
+	int size = api().Agents().GetPartySize();
+	if (size > MAX_PLAYERS) size = MAX_PLAYERS;
+	if (party_size_ != size) {
+		party_size_ = size;
+		SetSize(Drawing::SizeI(WIDTH, party_size_ * line_height_));
+		for (int i = 0; i < MAX_PLAYERS; ++i) {
+			bool visible = (i < party_size_);
+			absolute[i]->SetVisible(visible);
+			percent[i]->SetVisible(visible);
+		}
+	}
+
+	for (int i = 0; i < MAX_PLAYERS; ++i) {
+		absolute[i]->SetText(std::to_wstring(damage[i]));
+		double part = 0;
+		if (total > 0) part = (double)(damage[i]) / total;
+		percent[i]->SetText(std::to_wstring(part));
+	}
 }
 
 void PartyDamage::SaveLocation() {
