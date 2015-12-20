@@ -9,12 +9,6 @@
 using namespace std;
 
 ChatCommands::ChatCommands() {
-
-	unlocked_camera = false;
-	forward_movement = 0;
-	side_movement = 0;
-	vertical_movement = 0;
-
 	ChatLogger::Init();
 
 	AddCommand(L"age2", ChatCommands::CmdAge2);
@@ -39,40 +33,23 @@ void ChatCommands::AddCommand(wstring cmd, Handler_t handler) {
 }
 
 bool ChatCommands::ProcessMessage(LPMSG msg) {
-	if (!unlocked_camera) return false;
+	CameraMgr cam = GWCA::Api().Camera();
+	float speed = 25.f;
+
+	if (!cam.GetCameraUnlock()) return false;
 
 	switch (msg->message) {
 	case WM_KEYDOWN:
 	case WM_SYSKEYDOWN: {
 		OSHGui::Key key = (OSHGui::Key)msg->wParam;
 		switch (key) {
-		case OSHGui::Key::W: forward_movement = +1; return true;
-		case OSHGui::Key::S: forward_movement = -1; return true;
-		case OSHGui::Key::D: side_movement = -1; return true;
-		case OSHGui::Key::A: side_movement = +1; return true;
-		case OSHGui::Key::X: vertical_movement = -1; return true;
-		case OSHGui::Key::Z: vertical_movement = +1; return true;
-		default: return false;
-		}
-	}
-	
-	case WM_KEYUP:
-	case WM_SYSKEYUP: {
-		OSHGui::Key key = (OSHGui::Key)msg->wParam;
-		switch (key) {
 		case OSHGui::Key::W:
 		case OSHGui::Key::S:
-			forward_movement = 0;
-			return true;
 		case OSHGui::Key::D:
 		case OSHGui::Key::A:
-			side_movement = 0;
-			return true;
 		case OSHGui::Key::X:
 		case OSHGui::Key::Z:
-			vertical_movement = 0;
 			return true;
-		default: return false;
 		}
 	}
 	}
@@ -80,13 +57,27 @@ bool ChatCommands::ProcessMessage(LPMSG msg) {
 	return false;
 }
 
+void ChatCommands::UpdateLookAtPos() {
+	CameraMgr cam = GWCA::Api().Camera();
+	float speed = 25.f;
+
+	if (GetAsyncKeyState('W'))
+		cam.ForwardMovement(speed);
+	if (GetAsyncKeyState('S'))
+		cam.ForwardMovement(-speed);
+	if (GetAsyncKeyState('Z'))
+		cam.VerticalMovement(speed);
+	if (GetAsyncKeyState('X'))
+		cam.VerticalMovement(-speed);
+
+}
+
 void ChatCommands::UpdateUI() {
-	if (unlocked_camera) {
-		GWCA::Api().Camera().ForwardMovement(speed * forward_movement);
-		GWCA::Api().Camera().SideMovement(speed * side_movement);
-		GWCA::Api().Camera().VerticalMovement(speed * vertical_movement);
-		GWCA::Api().Camera().UpdateCameraPos();
-	}
+	CameraMgr cam = GWCA::Api().Camera();
+	if (!cam.GetCameraUnlock()) return;
+	UpdateLookAtPos();
+
+	cam.SetCameraPos(cam.ComputeCamPos(750.f)); // we most likely want to compute at 2.f which is first person in gw
 }
 
 wstring ChatCommands::GetLowerCaseArg(vector<wstring> args, int index) {
@@ -225,15 +216,12 @@ void ChatCommands::CmdZoom(vector<wstring> args) {
 void ChatCommands::CmdCamera(vector<wstring> args) {
 	if (args.empty()) {
 		GWCA::Api().Camera().UnlockCam(false);
-		GWToolbox::instance().chat_commands().unlocked_camera = false;
 	} else {
 		wstring arg0 = GetLowerCaseArg(args, 0);
 		if (arg0 == L"lock") {
 			GWCA::Api().Camera().UnlockCam(false);
-			GWToolbox::instance().chat_commands().unlocked_camera = false;
 		} else if (arg0 == L"unlock") {
 			GWCA::Api().Camera().UnlockCam(true);
-			GWToolbox::instance().chat_commands().unlocked_camera = true;
 			ChatLogger::Log(L"Use W,A,S,D,X,Z for camera movement");
 		} else if (arg0 == L"fog") {
 			if (args.size() >= 2) {
