@@ -11,6 +11,7 @@ using namespace GWAPI;
 PartyDamage::PartyDamage() {
 
 	total = 0;
+	send_timer = TBTimer::init();
 
 	GWCA::Api().StoC().AddGameServerEvent<StoC::P151>(
 		[this](StoC::P151* packet) {
@@ -41,15 +42,15 @@ PartyDamage::PartyDamage() {
 		if (target->LoginNumber != 0) return; // ignore player-inflicted damage
 											  // such as Life bond or sacrifice
 
+		long dmg;
 		if (target->MaxHP > 0 && target->MaxHP < 100000) {
-			long dmg = std::lround(-packet->value * target->MaxHP);
-			//printf("[%d] %d -> %d\n", cause->PlayerNumber, dmg, packet->target_id);
-			damage[cause->PlayerNumber - 1] += dmg;
-			total += dmg;
+			dmg = std::lround(-packet->value * target->MaxHP);
 		} else {
-			//printf("[%d] %f %% -> %d\n", cause->PlayerNumber,
-				//packet->value, packet->target_id);
+			long maxhp = target->Level * 20 + 100;
+			dmg = std::lround(-packet->value * maxhp);
 		}
+		damage[cause->PlayerNumber - 1] += dmg;
+		total += dmg;
 	});
 
 	Config& config = GWToolbox::instance().config();
@@ -96,19 +97,25 @@ PartyDamage::PartyDamage() {
 	}
 
 	bool show = config.IniReadBool(PartyDamage::IniSection(), PartyDamage::InikeyShow(), false);
-	show = true;
-	SetVisible(show);
-	containerPanel_->SetVisible(show);
-	for (Control* c : controls_) {
-		c->SetVisible(show);
-	}
+	ShowWindow(show);
+
+	SetFreeze(config.IniReadBool(MainWindow::IniSection(), MainWindow::IniKeyFreeze(), false));
 
 	std::shared_ptr<PartyDamage> self = std::shared_ptr<PartyDamage>(this);
 	Form::Show(self);
 }
 
 void PartyDamage::MainRoutine() {
+	if (!send_queue.empty() && TBTimer::diff(send_timer) > 600) {
+		send_timer = TBTimer::init();
 
+		GWCA api;
+		if (api().Map().GetInstanceType() != GwConstants::InstanceType::Loading
+			&& api().Agents().GetPlayer()) {
+			api().Chat().SendChat(send_queue.front().c_str(), L'#');
+			send_queue.pop();
+		}
+	}
 }
 
 void PartyDamage::UpdateUI() {
@@ -128,11 +135,24 @@ void PartyDamage::UpdateUI() {
 		}
 	}
 
+	const int BUF_SIZE = 10;
+	wchar_t buff[BUF_SIZE];
 	for (int i = 0; i < MAX_PLAYERS; ++i) {
-		absolute[i]->SetText(std::to_wstring(damage[i]));
+		if (damage[i] < 1000) {
+			swprintf_s(buff, BUF_SIZE, L"%d", damage[i]);
+		} else if (damage[i] < 1000 * 10) {
+			swprintf_s(buff, BUF_SIZE, L"%.2f k", (float)damage[i] / 1000);
+		} else if (damage[i] < 1000 * 1000) {
+			swprintf_s(buff, BUF_SIZE, L"%.1f k", (float)damage[i] / 1000);
+		} else {
+			swprintf_s(buff, BUF_SIZE, L"%.1f mil", (float)damage[i] / 1000000);
+		}
+		absolute[i]->SetText(buff);
+
 		double part = 0;
-		if (total > 0) part = (double)(damage[i]) / total;
-		percent[i]->SetText(std::to_wstring(part));
+		if (total > 0) part = (double)(damage[i]) / total * 100;
+		swprintf_s(buff, BUF_SIZE, L"%.1f %%", part);
+		percent[i]->SetText(buff);
 	}
 }
 
@@ -143,4 +163,25 @@ void PartyDamage::SaveLocation() {
 	Config& config = GWToolbox::instance().config();
 	config.IniWriteLong(PartyDamage::IniSection(), PartyDamage::IniKeyX(), x);
 	config.IniWriteLong(PartyDamage::IniSection(), PartyDamage::IniKeyY(), y);
+}
+
+void PartyDamage::WriteChat() {
+	for (int i = 0; i < party_size_; ++i) {
+		send_queue.push(std::to_wstring(i) + L" " + std::to_wstring(damage[i]));
+	}
+}
+
+void PartyDamage::Reset() {
+	total = 0;
+	for (int i = 0; i < MAX_PLAYERS; ++i) {
+		damage[i] = 0;
+	}
+}
+
+void PartyDamage::SetFreeze(bool b) {
+	containerPanel_->SetEnabled(!b);
+	for (int i = 0; i < MAX_PLAYERS; ++i) {
+		absolute[i]->SetEnabled(!b);
+		percent[i]->SetEnabled(!b);
+	}
 }

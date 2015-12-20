@@ -64,6 +64,7 @@ void SettingsPanel::BuildUI() {
 		GWToolbox::instance().bonds_window().SetFreze(b);
 		GWToolbox::instance().health_window().SetFreeze(b);
 		GWToolbox::instance().distance_window().SetFreeze(b);
+		GWToolbox::instance().party_damage().SetFreeze(b);
 	});
 	AddControl(freeze);
 

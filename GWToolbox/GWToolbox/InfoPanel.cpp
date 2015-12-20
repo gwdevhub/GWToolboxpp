@@ -7,10 +7,12 @@
 
 #include "GWToolbox.h"
 #include "Config.h"
+#include "GuiUtils.h"
+
 #include "HealthWindow.h"
 #include "DistanceWindow.h"
 #include "BondsWindow.h"
-#include "GuiUtils.h"
+#include "PartyDamage.h"
 
 using namespace OSHGui;
 
@@ -99,7 +101,7 @@ void InfoPanel::BuildUI() {
 	bonds->GetCheckedChangedEvent() += CheckedChangedEventHandler([bonds](Control*) {
 		GWToolbox& tb = GWToolbox::instance();
 		bool show = bonds->GetChecked();
-		tb.bonds_window().Show(show);
+		tb.bonds_window().ShowWindow(show);
 		tb.config().IniWriteBool(BondsWindow::IniSection(), BondsWindow::IniKeyShow(), show);
 	});
 	AddControl(bonds);
@@ -113,7 +115,7 @@ void InfoPanel::BuildUI() {
 	targetHp->GetCheckedChangedEvent() += CheckedChangedEventHandler([targetHp](Control*) {
 		GWToolbox& tb = GWToolbox::instance();
 		bool show = targetHp->GetChecked();
-		tb.health_window().Show(show);
+		tb.health_window().ShowWindow(show);
 		tb.config().IniWriteBool(HealthWindow::IniSection(), HealthWindow::IniKeyShow(), show);
 	});
 	AddControl(targetHp);
@@ -127,10 +129,24 @@ void InfoPanel::BuildUI() {
 	distance->GetCheckedChangedEvent() += CheckedChangedEventHandler([distance](Control*) {
 		GWToolbox& tb = GWToolbox::instance();
 		bool show = distance->GetChecked();
-		tb.distance_window().Show(show);
+		tb.distance_window().ShowWindow(show);
 		tb.config().IniWriteBool(DistanceWindow::IniSection(), DistanceWindow::IniKeyShow(), show);
 	});
 	AddControl(distance);
+
+	CheckBox* damage = new CheckBox();
+	damage->SetSize(full_item_width, item_height);
+	damage->SetLocation(item1_x, distance->GetBottom() + DefaultBorderPadding);
+	damage->SetText(L"Show Party Damage");
+	damage->SetChecked(GWToolbox::instance().config().IniReadBool(
+		PartyDamage::IniSection(), PartyDamage::InikeyShow(), false));
+	damage->GetCheckedChangedEvent() += CheckedChangedEventHandler([damage](Control*) {
+		GWToolbox& tb = GWToolbox::instance();
+		bool show = damage->GetChecked();
+		tb.party_damage().ShowWindow(show);
+		tb.config().IniWriteBool(PartyDamage::IniSection(), PartyDamage::InikeyShow(), show);
+	});
+	AddControl(damage);
 
 	Button* xunlai = new Button();
 	xunlai->SetSize(full_item_width, 30);

@@ -37,7 +37,7 @@ BondsWindow::BondsWindow() {
 	AddControl(monitor);
 
 	bool show = config.IniReadBool(BondsWindow::IniSection(), BondsWindow::IniKeyShow(), false);
-	Show(show);
+	ShowWindow(show);
 
 	std::shared_ptr<BondsWindow> self = std::shared_ptr<BondsWindow>(this);
 	Form::Show(self);
@@ -239,10 +239,4 @@ void BondsWindow::BondsMonitor::UpdateUI() {
 			}
 		}
 	}
-}
-
-void BondsWindow::Show(bool show) {
-	SetVisible(show);
-	containerPanel_->SetVisible(show);
-	monitor->SetVisible(show);
 }

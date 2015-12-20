@@ -20,7 +20,7 @@ public:
 	inline static const wchar_t* IniKeyShow() { return L"show"; }
 	inline static const char* ThemeKey() { return "health"; }
 
-	void Show(bool show);
+	void ShowWindow(bool show) override;
 
 	void UpdateUI();
 	inline void MainRoutine() {};
@@ -44,6 +44,4 @@ private:
 	bool hide_target;
 
 	void SaveLocation();
-
-	void _Show(bool show);
 };

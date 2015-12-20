@@ -27,6 +27,12 @@ public:
 	// Update and do everything else. DO NOT TOUCH USER INTERFACE.
 	virtual void MainRoutine() = 0;
 
+	virtual void ShowWindow(bool show) {
+		SetVisible(show);
+		containerPanel_->SetVisible(show);
+		for (Control* c : GetControls()) c->SetVisible(show);
+	}
+
 	virtual void SetSize(const OSHGui::Drawing::SizeI &size) override;
 
 	virtual void DrawSelf(OSHGui::Drawing::RenderContext &context) override;

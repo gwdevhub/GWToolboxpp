@@ -91,7 +91,7 @@ DistanceWindow::DistanceWindow() {
 	AddControl(absolute);
 
 	bool show = config.IniReadBool(DistanceWindow::IniSection(), DistanceWindow::IniKeyShow(), false);
-	Show(show);
+	ShowWindow(show);
 
 	SetFreeze(config.IniReadBool(MainWindow::IniSection(),
 		MainWindow::IniKeyFreeze(), false));
@@ -129,11 +129,11 @@ void DistanceWindow::UpdateUI() {
 		long distance = api().Agents().GetDistance(target, me);
 		s1 = to_wstring(distance * 100 / GwConstants::Range::Compass) + L" %";
 		s2 = to_wstring(distance);
-		if (!isVisible_) _Show(true);
+		if (!isVisible_) ToolboxWindow::ShowWindow(true);
 	} else {
 		s1 = L"-";
 		s2 = L"-";
-		if (hide_target && isVisible_) _Show(false);
+		if (hide_target && isVisible_) ToolboxWindow::ShowWindow(false);
 	}
 	percent->SetText(s1);
 	percent_shadow->SetText(s1);
@@ -141,15 +141,7 @@ void DistanceWindow::UpdateUI() {
 	absolute_shadow->SetText(s2);
 }
 
-void DistanceWindow::Show(bool show) {
+void DistanceWindow::ShowWindow(bool show) {
+	ToolboxWindow::ShowWindow(show);
 	enabled = show;
-	_Show(show);
-}
-
-void DistanceWindow::_Show(bool show) {
-	SetVisible(show);
-	containerPanel_->SetVisible(show);
-	for (Control* c : GetControls()) {
-		c->SetVisible(show);
-	}
 }

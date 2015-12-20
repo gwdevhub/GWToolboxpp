@@ -53,7 +53,6 @@ public:
 	inline static const wchar_t* IniKeyShow() { return L"show"; }
 	inline static const char* ThemeKey() { return "bonds"; }
 
-	void Show(bool show);
 	inline void UpdateUI() { if (monitor) monitor->UpdateUI(); }
 	inline void MainRoutine() {};
 	inline void SetFreze(bool b) { monitor->SetFreeze(b); }

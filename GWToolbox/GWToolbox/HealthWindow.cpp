@@ -91,7 +91,7 @@ HealthWindow::HealthWindow() {
 	AddControl(absolute);
 
 	bool show = config.IniReadBool(HealthWindow::IniSection(), HealthWindow::IniKeyShow(), false);
-	Show(show);
+	ShowWindow(show);
 
 	SetFreeze(config.IniReadBool(MainWindow::IniSection(),
 		MainWindow::IniKeyFreeze(), false));
@@ -134,11 +134,11 @@ void HealthWindow::UpdateUI() {
 		} else {
 			s2 = L"- / -";
 		}
-		if (!isVisible_) _Show(true);
+		if (!isVisible_) ToolboxWindow::ShowWindow(true);
 	} else {
 		s1 = L"-";
 		s2 = L"- / -";
-		if (hide_target && isVisible_) _Show(false);
+		if (hide_target && isVisible_) ToolboxWindow::ShowWindow(false);
 	}
 	percent->SetText(s1);
 	percent_shadow->SetText(s1);
@@ -146,15 +146,8 @@ void HealthWindow::UpdateUI() {
 	absolute_shadow->SetText(s2);
 }
 
-void HealthWindow::Show(bool show) {
+void HealthWindow::ShowWindow(bool show) {
+	ToolboxWindow::ShowWindow(show);
 	enabled = show;
-	_Show(show);
 }
 
-void HealthWindow::_Show(bool show) {
-	SetVisible(show);
-	containerPanel_->SetVisible(show);
-	for (Control* c : GetControls()) {
-		c->SetVisible(show);
-	}
-}
