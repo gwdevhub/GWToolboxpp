@@ -6,19 +6,24 @@
 #include "OSHGui\OSHGui.hpp"
 #include "OSHGui\Input\WindowsMessage.hpp"
 
+#include "ChatLogger.h"
 #include "Config.h"
+#include "ChatCommands.h"
+
 #include "MainWindow.h"
 #include "TimerWindow.h"
 #include "BondsWindow.h"
 #include "HealthWindow.h"
 #include "DistanceWindow.h"
-#include "ChatCommands.h"
-#include "ChatLogger.h"
+#include "PartyDamage.h"
+
 
 #ifdef _DEBUG
-#define EXCEPT_EXPRESSION EXCEPTION_CONTINUE_SEARCH
+#define EXCEPT_EXPRESSION_ENTRY EXCEPTION_CONTINUE_SEARCH
+#define EXCEPT_EXPRESSION_LOOP EXCEPTION_CONTINUE_SEARCH
 #else
-#define EXCEPT_EXPRESSION Logger::GenerateDump(GetExceptionInformation())
+#define EXCEPT_EXPRESSION_ENTRY Logger::GenerateDump(GetExceptionInformation())
+#define EXCEPT_EXPRESSION_LOOP EXCEPTION_EXECUTE_HANDLER
 #endif
 
 class GWToolbox {
@@ -63,27 +68,30 @@ private:
 	bool must_self_destruct_;
 
 	Config* config_;
+	ChatCommands* chat_commands_;
+
 	MainWindow* main_window_;
 	TimerWindow* timer_window_;
 	BondsWindow* bonds_window_;
 	HealthWindow* health_window_;
 	DistanceWindow* distance_window_;
-	ChatCommands* chat_commands_;
+	PartyDamage* party_damage_;
 
 	//------ Constructor ------//
 private:
 	GWToolbox(HMODULE mod) :
 		dll_module_(mod),
 		config_(new Config()),
+		chat_commands_(new ChatCommands()),
 		main_window_(nullptr),
 		timer_window_(nullptr),
 		bonds_window_(nullptr),
 		health_window_(nullptr),
 		distance_window_(nullptr),
+		party_damage_(nullptr),
 		initialized_(false),
 		must_self_destruct_(false),
-		capture_input_(false),
-		chat_commands_(new ChatCommands()) {
+		capture_input_(false) {
 	}
 
 	//------ Private Methods ------//
@@ -100,6 +108,7 @@ private:
 	inline void set_bonds_window(BondsWindow* w) { bonds_window_ = w; }
 	inline void set_health_window(HealthWindow* w) { health_window_ = w; }
 	inline void set_distance_window(DistanceWindow* w) { distance_window_ = w; }
+	inline void set_party_damage(PartyDamage* w) { party_damage_ = w; }
 
 	//------ Public methods ------//
 public:
@@ -118,6 +127,7 @@ public:
 	inline BondsWindow& bonds_window() { return *bonds_window_; }
 	inline HealthWindow& health_window() { return *health_window_; }
 	inline DistanceWindow& distance_window() { return *distance_window_; }
+	inline PartyDamage& party_damage() { return *party_damage_; }
 	
 	void StartSelfDestruct() { 
 		ChatLogger::Log(L"Bye!");

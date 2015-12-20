@@ -38,19 +38,19 @@ void BuildPanel::Build::SendTeamBuild() {
 	wstring key;
 
 	key = L"buildname";
-	wstring buildname = config.iniRead(section.c_str(), key.c_str(), L"");
+	wstring buildname = config.IniRead(section.c_str(), key.c_str(), L"");
 	if (!buildname.empty()) {
 		panel_->Enqueue(buildname);
 	}
 
-	bool show_numbers = config.iniReadBool(section.c_str(), L"showNumbers", true);
+	bool show_numbers = config.IniReadBool(section.c_str(), L"showNumbers", true);
 
 	for (int i = 0; i < edit_build_->N_PLAYERS; ++i) {
 		key = L"name" + to_wstring(i + 1);
-		wstring name = config.iniRead(section.c_str(), key.c_str(), L"");
+		wstring name = config.IniRead(section.c_str(), key.c_str(), L"");
 
 		key = L"template" + to_wstring(i + 1);
-		wstring temp = config.iniRead(section.c_str(), key.c_str(), L"");
+		wstring temp = config.IniRead(section.c_str(), key.c_str(), L"");
 		
 		if (!name.empty() && !temp.empty()) {
 			wstring message = L"[";
@@ -120,7 +120,7 @@ void BuildPanel::BuildUI() {
 	for (int i = 0; i < N_BUILDS; ++i) {
 		int index = i + 1;
 		wstring section = wstring(L"builds") + to_wstring(index);
-		wstring name = config.iniRead(section.c_str(), L"buildname", L"");
+		wstring name = config.IniRead(section.c_str(), L"buildname", L"");
 		if (name.empty()) name = wstring(L"<Build ") + to_wstring(index) + wstring(L">");
 		Build* build = new Build(index, name, edit_build_, this);
 		build->SetSize(GetWidth() - scrollbar->GetWidth() - 2 * DefaultBorderPadding, BUILD_HEIGHT);

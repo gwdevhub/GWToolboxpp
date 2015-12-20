@@ -27,7 +27,7 @@ TBHotkey::TBHotkey(Key key, Key modifier, bool active, wstring ini_section)
 	checkbox->SetLocation(HOTKEY_X, HOTKEY_Y + 5);
 	checkbox->GetCheckedChangedEvent() += CheckedChangedEventHandler([this, checkbox, ini_section](Control*) {
 		this->set_active(checkbox->GetChecked());
-		GWToolbox::instance().config().iniWriteBool(ini_section.c_str(), TBHotkey::IniKeyActive(), checkbox->GetChecked());
+		GWToolbox::instance().config().IniWriteBool(ini_section.c_str(), TBHotkey::IniKeyActive(), checkbox->GetChecked());
 	});
 	AddControl(checkbox);
 
@@ -48,9 +48,9 @@ TBHotkey::TBHotkey(Key key, Key modifier, bool active, wstring ini_section)
 		Key modifier = hotkey_button->GetHotkeyModifier();
 		this->set_key(key);
 		this->set_modifier(modifier);
-		GWToolbox::instance().config().iniWriteLong(ini_section.c_str(),
+		GWToolbox::instance().config().IniWriteLong(ini_section.c_str(),
 			this->IniKeyHotkey(), (long)key);
-		GWToolbox::instance().config().iniWriteLong(ini_section.c_str(),
+		GWToolbox::instance().config().IniWriteLong(ini_section.c_str(),
 			this->IniKeyModifier(), (long)modifier);
 	});
 	AddControl(hotkey_button);
@@ -94,7 +94,7 @@ HotkeySendChat::HotkeySendChat(Key key, Key modifier, bool active, wstring ini_s
 		[this, combo, ini_section](Control*) {
 		wchar_t channel = this->IndexToChannel(combo->GetSelectedIndex());
 		this->set_channel(channel);
-		GWToolbox::instance().config().iniWrite(ini_section.c_str(), 
+		GWToolbox::instance().config().IniWrite(ini_section.c_str(), 
 			this->IniKeyChannel(), wstring(1, channel).c_str());
 		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
@@ -108,7 +108,7 @@ HotkeySendChat::HotkeySendChat(Key key, Key modifier, bool active, wstring ini_s
 		[this, text_box, ini_section](Control*) {
 		wstring text = text_box->GetText();
 		this->set_msg(text);
-		GWToolbox::instance().config().iniWrite(ini_section.c_str(),
+		GWToolbox::instance().config().IniWrite(ini_section.c_str(),
 			this->IniKeyMsg(), text.c_str());
 		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
@@ -175,7 +175,7 @@ HotkeyUseItem::HotkeyUseItem(Key key, Key modifier, bool active, wstring ini_sec
 		try {
 			long id = std::stol(id_box->GetText());
 			this->set_item_id((UINT)id);
-			GWToolbox::instance().config().iniWriteLong(ini_section.c_str(),
+			GWToolbox::instance().config().IniWriteLong(ini_section.c_str(),
 				this->IniKeyItemID(), id);
 			GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 		} catch (...) {}
@@ -202,7 +202,7 @@ HotkeyUseItem::HotkeyUseItem(Key key, Key modifier, bool active, wstring ini_sec
 		[this, name_box, ini_section](Control*) {
 		wstring text = name_box->GetText();
 		this->set_item_name(text);
-		GWToolbox::instance().config().iniWrite(ini_section.c_str(),
+		GWToolbox::instance().config().IniWrite(ini_section.c_str(),
 			this->IniKeyItemName(), text.c_str());
 		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
@@ -245,7 +245,7 @@ TBHotkey(key, modifier, active, ini_section), id_(id) {
 		[this, combo, ini_section](Control*) {
 		GwConstants::SkillID skillID = this->IndexToSkillID(combo->GetSelectedIndex());
 		this->set_id(skillID);
-		GWToolbox::instance().config().iniWriteLong(ini_section.c_str(),
+		GWToolbox::instance().config().IniWriteLong(ini_section.c_str(),
 			this->IniKeySkillID(), (long)skillID);
 		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
@@ -295,7 +295,7 @@ HotkeyToggle::HotkeyToggle(Key key, Key modifier, bool active, wstring ini_secti
 		int index = combo->GetSelectedIndex();
 		Toggle target = static_cast<HotkeyToggle::Toggle>(index);
 		this->set_target(target);
-		GWToolbox::instance().config().iniWriteLong(ini_section.c_str(), 
+		GWToolbox::instance().config().IniWriteLong(ini_section.c_str(), 
 			this->IniKeyToggleID(), index);
 		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
@@ -324,7 +324,7 @@ HotkeyAction::HotkeyAction(Key key, Key modifier, bool active, wstring ini_secti
 		int index = combo->GetSelectedIndex();
 		Action action = static_cast<HotkeyAction::Action>(index);
 		this->set_action(action);
-		GWToolbox::instance().config().iniWriteLong(ini_section.c_str(),
+		GWToolbox::instance().config().IniWriteLong(ini_section.c_str(),
 			this->IniKeyActionID(), index);
 		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
@@ -355,7 +355,7 @@ HotkeyTarget::HotkeyTarget(Key key, Key modifier, bool active, wstring ini_secti
 		try {
 			long id = std::stol(id_box->GetText());
 			this->set_id((UINT)id);
-			GWToolbox::instance().config().iniWriteLong(ini_section.c_str(),
+			GWToolbox::instance().config().IniWriteLong(ini_section.c_str(),
 				this->IniKeyTargetID(), id);
 			GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 		} catch (...) {}
@@ -382,7 +382,7 @@ HotkeyTarget::HotkeyTarget(Key key, Key modifier, bool active, wstring ini_secti
 		[this, name_box, ini_section](Control*) {
 		wstring text = name_box->GetText();
 		this->set_name(text);
-		GWToolbox::instance().config().iniWrite(ini_section.c_str(),
+		GWToolbox::instance().config().IniWrite(ini_section.c_str(),
 			this->IniKeyTargetName(), text.c_str());
 		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
@@ -421,7 +421,7 @@ HotkeyMove::HotkeyMove(Key key, Key modifier, bool active, wstring ini_section,
 		try {
 			float x = std::stof(box_x->GetText());
 			this->set_x(x);
-			GWToolbox::instance().config().iniWriteDouble(ini_section.c_str(), 
+			GWToolbox::instance().config().IniWriteDouble(ini_section.c_str(), 
 				this->IniKeyX(), x);
 			GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 		} catch (...) {}
@@ -456,7 +456,7 @@ HotkeyMove::HotkeyMove(Key key, Key modifier, bool active, wstring ini_section,
 		try {
 			float y = std::stof(box_y->GetText());
 			this->set_y(y);
-			GWToolbox::instance().config().iniWriteDouble(ini_section.c_str(), 
+			GWToolbox::instance().config().IniWriteDouble(ini_section.c_str(), 
 				this->IniKeyY(), y);
 			GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 		} catch (...) {}
@@ -483,7 +483,7 @@ HotkeyMove::HotkeyMove(Key key, Key modifier, bool active, wstring ini_section,
 		[this, name_box, ini_section](Control*) {
 		wstring text = name_box->GetText();
 		this->set_name(text);
-		GWToolbox::instance().config().iniWrite(ini_section.c_str(),
+		GWToolbox::instance().config().IniWrite(ini_section.c_str(),
 			this->IniKeyName(), text.c_str());
 		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
@@ -519,7 +519,7 @@ HotkeyDialog::HotkeyDialog(Key key, Key modifier, bool active, wstring ini_secti
 		try {
 			long id = std::stol(id_box->GetText(), 0, 0);
 			this->set_id((UINT)id);
-			GWToolbox::instance().config().iniWriteLong(ini_section.c_str(),
+			GWToolbox::instance().config().IniWriteLong(ini_section.c_str(),
 				this->IniKeyDialogID(), id);
 			GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 		} catch (...) {}
@@ -546,7 +546,7 @@ HotkeyDialog::HotkeyDialog(Key key, Key modifier, bool active, wstring ini_secti
 		[this, name_box, ini_section](Control*) {
 		wstring text = name_box->GetText();
 		this->set_name(text);
-		GWToolbox::instance().config().iniWrite(ini_section.c_str(),
+		GWToolbox::instance().config().IniWrite(ini_section.c_str(),
 			this->IniKeyDialogName(), text.c_str());
 		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
@@ -573,7 +573,7 @@ HotkeyPingBuild::HotkeyPingBuild(Key key, Key modifier, bool active, wstring ini
 	for (int i = 0; i < BuildPanel::N_BUILDS; ++i) {
 		int index = i + 1;
 		wstring section = wstring(L"builds") + to_wstring(index);
-		wstring name = GWToolbox::instance().config().iniRead(section.c_str(), L"buildname", L"");
+		wstring name = GWToolbox::instance().config().IniRead(section.c_str(), L"buildname", L"");
 		if (name.empty()) name = wstring(L"<Build ") + to_wstring(index);
 		combo->AddItem(name);
 	}
@@ -582,7 +582,7 @@ HotkeyPingBuild::HotkeyPingBuild(Key key, Key modifier, bool active, wstring ini
 		[this, combo, ini_section](Control*) {
 		long index = combo->GetSelectedIndex();
 		this->set_index(index);
-		GWToolbox::instance().config().iniWriteLong(ini_section.c_str(),
+		GWToolbox::instance().config().IniWriteLong(ini_section.c_str(),
 			this->IniKeyBuildIndex(), index);
 		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});

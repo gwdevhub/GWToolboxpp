@@ -30,7 +30,7 @@ public:
 	}
 
 	// Save the changes to the ini file
-	void save() {
+	void Save() {
 		iniFile->SaveFile(iniFilePath.c_str());
 	}
 
@@ -43,30 +43,30 @@ public:
 
 	// Retrieve a wstring value of the key in the section. 
 	// Returns def if no value was found.
-	const wchar_t* iniRead(const wchar_t* section, const wchar_t* key, const wchar_t* def) {
+	const wchar_t* IniRead(const wchar_t* section, const wchar_t* key, const wchar_t* def) {
 		return iniFile->GetValue(section, key, def);
 	}
 
 	// Retrieve a bool value of the key in the section. 
 	// Returns def if no value was found.
-	bool iniReadBool(const wchar_t* section, const wchar_t* key, bool def) {
+	bool IniReadBool(const wchar_t* section, const wchar_t* key, bool def) {
 		return iniFile->GetBoolValue(section, key, def);
 	}
 
 	// Retrieve a long value of the key in the section. 
 	// Returns def if no value was found.
-	long iniReadLong(const wchar_t* section, const wchar_t* key, long def) {
+	long IniReadLong(const wchar_t* section, const wchar_t* key, long def) {
 		return iniFile->GetLongValue(section, key, def);
 	}
 
 	// Retrieve a double value of the key in the section. 
 	// Returns def if no value was found.
-	double iniReadDouble(const wchar_t* section, const wchar_t* key, double def) {
+	double IniReadDouble(const wchar_t* section, const wchar_t* key, double def) {
 		return iniFile->GetDoubleValue(section, key, def);
 	}
 
 	// Add or update a wstring value in the given section / key combination.
-	void iniWrite(const wchar_t* section, const wchar_t* key, const wchar_t* value) {
+	void IniWrite(const wchar_t* section, const wchar_t* key, const wchar_t* value) {
 		SI_Error err = iniFile->SetValue(section, key, value);
 		if (err < 0) {
 			LOG("SimpleIni SetValue error: %d", err);
@@ -74,7 +74,7 @@ public:
 	}
 
 	// Add or update a bool value in the given section / key combination.
-	void iniWriteBool(const wchar_t* section, const wchar_t* key, bool value) {
+	void IniWriteBool(const wchar_t* section, const wchar_t* key, bool value) {
 		SI_Error err = iniFile->SetBoolValue(section, key, value);
 		if (err < 0) {
 			LOG("SimpleIni SetBoolValue error: %d", err);
@@ -82,7 +82,7 @@ public:
 	}
 
 	// Add or update a long value in the given section / key combination.
-	void iniWriteLong(const wchar_t* section, const wchar_t* key, long value) {
+	void IniWriteLong(const wchar_t* section, const wchar_t* key, long value) {
 		SI_Error err = iniFile->SetLongValue(section, key, value);
 		if (err < 0) {
 			LOG("SimpleIni SetLongValue error: %d", err);
@@ -90,7 +90,7 @@ public:
 	}
 
 	// Add or update a double value in the given section / key combination.
-	void iniWriteDouble(const wchar_t* section, const wchar_t* key, double value) {
+	void IniWriteDouble(const wchar_t* section, const wchar_t* key, double value) {
 		SI_Error err = iniFile->SetDoubleValue(section, key, value);
 		if (err < 0) {
 			LOG("SimpleIni SetDoubleValue error: %d", err);
@@ -99,7 +99,7 @@ public:
 
 	// returns a list of all the section names
 	// note: do not rely on the order
-	std::list<wstring> iniReadSections() {
+	std::list<wstring> IniReadSections() {
 		CSimpleIni::TNamesDepend entries;
 		iniFile->GetAllSections(entries);
 		std::list<wstring> sections(entries.size());
@@ -110,7 +110,7 @@ public:
 	}
 
 	// deletes a section from the ini file
-	void iniDeleteSection(const wchar_t* section) {
+	void IniDeleteSection(const wchar_t* section) {
 		iniFile->Delete(section, NULL);
 	}
 };

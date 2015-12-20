@@ -22,7 +22,7 @@ void SettingsPanel::BuildUI() {
 
 	location_current_map_ = GwConstants::MapID::None;
 	location_timer_ = TBTimer::init();
-	location_active_ = config.iniReadBool(MainWindow::IniSection(), MainWindow::IniKeySaveLocation(), false);
+	location_active_ = config.IniReadBool(MainWindow::IniSection(), MainWindow::IniKeySaveLocation(), false);
 
 	const int item_width = GetWidth() - 2 * DefaultBorderPadding;
 	const int item_height = 25;
@@ -41,10 +41,10 @@ void SettingsPanel::BuildUI() {
 	tabsleft->SetText(L"Open tabs on the left");
 	tabsleft->SetLocation(DefaultBorderPadding, authors->GetBottom() + DefaultBorderPadding * 2);
 	tabsleft->SetSize(item_width, item_height);
-	tabsleft->SetChecked(config.iniReadBool(MainWindow::IniSection(), 
+	tabsleft->SetChecked(config.IniReadBool(MainWindow::IniSection(), 
 		MainWindow::IniKeyTabsLeft(), false));
 	tabsleft->GetCheckedChangedEvent() += CheckedChangedEventHandler([tabsleft](Control*) {
-		GWToolbox::instance().config().iniWriteBool(MainWindow::IniSection(),
+		GWToolbox::instance().config().IniWriteBool(MainWindow::IniSection(),
 			MainWindow::IniKeyTabsLeft(), tabsleft->GetChecked());
 		GWToolbox::instance().main_window().SetPanelPositions(tabsleft->GetChecked());
 	});
@@ -54,11 +54,11 @@ void SettingsPanel::BuildUI() {
 	freeze->SetText(L"Freeze info widget positions");
 	freeze->SetLocation(DefaultBorderPadding, tabsleft->GetBottom());
 	freeze->SetSize(item_width, item_height);
-	freeze->SetChecked(config.iniReadBool(MainWindow::IniSection(), 
+	freeze->SetChecked(config.IniReadBool(MainWindow::IniSection(), 
 		MainWindow::IniKeyFreeze(), false));
 	freeze->GetCheckedChangedEvent() += CheckedChangedEventHandler([freeze](Control*) {
 		bool b = freeze->GetChecked();
-		GWToolbox::instance().config().iniWriteBool(MainWindow::IniSection(),
+		GWToolbox::instance().config().IniWriteBool(MainWindow::IniSection(),
 			MainWindow::IniKeyFreeze(), b);
 		GWToolbox::instance().timer_window().SetFreeze(b);
 		GWToolbox::instance().bonds_window().SetFreze(b);
@@ -71,13 +71,13 @@ void SettingsPanel::BuildUI() {
 	hidetarget->SetText(L"Hide target windows");
 	hidetarget->SetLocation(DefaultBorderPadding, freeze->GetBottom());
 	hidetarget->SetSize(item_width, item_height);
-	hidetarget->SetChecked(config.iniReadBool(MainWindow::IniSection(), 
+	hidetarget->SetChecked(config.IniReadBool(MainWindow::IniSection(), 
 		MainWindow::IniKeyHideTarget(), false));
 	hidetarget->GetCheckedChangedEvent() += CheckedChangedEventHandler([hidetarget](Control*) {
 		bool hide = hidetarget->GetChecked();
 		GWToolbox::instance().health_window().SetHideTarget(hide);
 		GWToolbox::instance().distance_window().SetHideTarget(hide);
-		GWToolbox::instance().config().iniWriteBool(MainWindow::IniSection(),
+		GWToolbox::instance().config().IniWriteBool(MainWindow::IniSection(),
 			MainWindow::IniKeyHideTarget(), hide);
 	});
 	AddControl(hidetarget);
@@ -86,12 +86,12 @@ void SettingsPanel::BuildUI() {
 	minimizealtpos->SetText(L"Minimize to Alt Position");
 	minimizealtpos->SetLocation(DefaultBorderPadding, hidetarget->GetBottom());
 	minimizealtpos->SetSize(item_width, item_height);
-	minimizealtpos->SetChecked(config.iniReadBool(MainWindow::IniSection(),
+	minimizealtpos->SetChecked(config.IniReadBool(MainWindow::IniSection(),
 		MainWindow::IniKeyMinAltPos(), false));
 	minimizealtpos->GetCheckedChangedEvent() += CheckedChangedEventHandler([minimizealtpos](Control*) {
 		bool enabled = minimizealtpos->GetChecked();
 		GWToolbox::instance().main_window().set_use_minimized_alt_pos(enabled);
-		GWToolbox::instance().config().iniWriteBool(MainWindow::IniSection(),
+		GWToolbox::instance().config().IniWriteBool(MainWindow::IniSection(),
 			MainWindow::IniKeyMinAltPos(), enabled);
 	});
 	AddControl(minimizealtpos);
@@ -100,12 +100,12 @@ void SettingsPanel::BuildUI() {
 	tickwithpcons->SetText(L"Tick with pcon status");
 	tickwithpcons->SetLocation(DefaultBorderPadding, minimizealtpos->GetBottom());
 	tickwithpcons->SetSize(item_width, item_height);
-	tickwithpcons->SetChecked(config.iniReadBool(MainWindow::IniSection(), 
+	tickwithpcons->SetChecked(config.IniReadBool(MainWindow::IniSection(), 
 		MainWindow::IniKeyTickWithPcons(), false));
 	tickwithpcons->GetCheckedChangedEvent() += CheckedChangedEventHandler([tickwithpcons](Control*) {
 		bool enabled = tickwithpcons->GetChecked();
 		GWToolbox::instance().main_window().set_tick_with_pcons(enabled);
-		GWToolbox::instance().config().iniWriteBool(MainWindow::IniSection(),
+		GWToolbox::instance().config().IniWriteBool(MainWindow::IniSection(),
 			MainWindow::IniKeyTickWithPcons(), enabled);
 	});
 	AddControl(tickwithpcons);
@@ -118,7 +118,7 @@ void SettingsPanel::BuildUI() {
 	savelocation->GetCheckedChangedEvent() += CheckedChangedEventHandler(
 		[savelocation, this](Control*) {
 		location_active_ = savelocation->GetChecked();
-		GWToolbox::instance().config().iniWriteBool(MainWindow::IniSection(),
+		GWToolbox::instance().config().IniWriteBool(MainWindow::IniSection(),
 			MainWindow::IniKeySaveLocation(), location_active_);
 	});
 	AddControl(savelocation);

@@ -32,7 +32,7 @@ void DialogPanel::BuildUI() {
 
 	for (int i = 0; i < 3; ++i) {
 		wstring key = wstring(L"Quest") + to_wstring(i);
-		int index = GWToolbox::instance().config().iniReadLong(MainWindow::IniSection(), key.c_str(), 0);
+		int index = GWToolbox::instance().config().IniReadLong(MainWindow::IniSection(), key.c_str(), 0);
 		ComboBox* fav_combo = new ComboBox();
 		fav_combo->SetSize(GuiUtils::ComputeWidth(GetWidth(), 4, 2), BUTTON_HEIGHT);
 		fav_combo->SetLocation(GuiUtils::ComputeX(GetWidth(), 4, 0),  GuiUtils::ComputeY(i + 4));
@@ -42,7 +42,7 @@ void DialogPanel::BuildUI() {
 		fav_combo->SetSelectedIndex(index);
 		fav_combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
 			[fav_combo, key](Control*) {
-			GWToolbox::instance().config().iniWriteLong(MainWindow::IniSection(),
+			GWToolbox::instance().config().IniWriteLong(MainWindow::IniSection(),
 				key.c_str(), fav_combo->GetSelectedIndex());
 		});
 		AddControl(fav_combo);

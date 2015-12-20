@@ -32,10 +32,10 @@ settings_panel_(*new SettingsPanel()) {
 
 	Config& config = GWToolbox::instance().config();
 
-	use_minimized_alt_pos_ = config.iniReadBool(MainWindow::IniSection(), MainWindow::IniKeyMinAltPos(), false);
-	tick_with_pcons_ = config.iniReadBool(MainWindow::IniSection(), MainWindow::IniKeyTickWithPcons(), false);
-	int xlocation = config.iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyX(), 100);
-	int ylocation = config.iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyY(), 100);
+	use_minimized_alt_pos_ = config.IniReadBool(MainWindow::IniSection(), MainWindow::IniKeyMinAltPos(), false);
+	tick_with_pcons_ = config.IniReadBool(MainWindow::IniSection(), MainWindow::IniKeyTickWithPcons(), false);
+	int xlocation = config.IniReadLong(MainWindow::IniSection(), MainWindow::IniKeyX(), 100);
+	int ylocation = config.IniReadLong(MainWindow::IniSection(), MainWindow::IniKeyY(), 100);
 
 	// build main UI
 	SetLocation(xlocation, ylocation);
@@ -138,7 +138,7 @@ settings_panel_(*new SettingsPanel()) {
 		panel->SetEnabled(false);
 		AddSubControl(panel);
 	}
-	SetPanelPositions(GWToolbox::instance().config().iniReadBool(
+	SetPanelPositions(GWToolbox::instance().config().IniReadBool(
 		MainWindow::IniSection(), MainWindow::IniKeyTabsLeft(), false));
 }
 
@@ -157,8 +157,8 @@ void MainWindow::SetMinimized(bool minimized) {
 		if (current_panel_ >= 0) OpenClosePanel(current_panel_);
 		SetSize(Drawing::SizeI(WIDTH, TITLE_HEIGHT));
 		if (use_minimized_alt_pos_) {
-			int xlocation = config.iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltX(), 100);
-			int ylocation = config.iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltY(), 100);
+			int xlocation = config.IniReadLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltX(), 100);
+			int ylocation = config.IniReadLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltY(), 100);
 
 			SetLocation(xlocation, ylocation);
 		}
@@ -168,8 +168,8 @@ void MainWindow::SetMinimized(bool minimized) {
 		SetSize(Drawing::SizeI(WIDTH, HEIGHT));
 
 		if (use_minimized_alt_pos_) {
-			int xlocation = config.iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyX(), 100);
-			int ylocation = config.iniReadLong(MainWindow::IniSection(), MainWindow::IniKeyY(), 100);
+			int xlocation = config.IniReadLong(MainWindow::IniSection(), MainWindow::IniKeyX(), 100);
+			int ylocation = config.IniReadLong(MainWindow::IniSection(), MainWindow::IniKeyY(), 100);
 
 			SetLocation(xlocation, ylocation);
 		}
@@ -306,8 +306,8 @@ void MainWindow::SaveLocation() {
 	int x = absoluteLocation_.X;
 	int y = absoluteLocation_.Y;
 	Config& config = GWToolbox::instance().config();
-	config.iniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyX(), x);
-	config.iniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyY(), y);
+	config.IniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyX(), x);
+	config.IniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyY(), y);
 }
 
 void MainWindow::SaveMinimizedLocation() {
@@ -315,8 +315,8 @@ void MainWindow::SaveMinimizedLocation() {
 	int x = absoluteLocation_.X;
 	int y = absoluteLocation_.Y;
 	Config& config = GWToolbox::instance().config();
-	config.iniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltX(), x);
-	config.iniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltY(), y);
+	config.IniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltX(), x);
+	config.IniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltY(), y);
 }
 
 

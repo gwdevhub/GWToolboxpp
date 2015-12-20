@@ -10,9 +10,6 @@
 class BondsWindow : public ToolboxWindow {
 	static const int MAX_PLAYERS = 12;
 	static const int MAX_BONDS = 3;
-	//static const int IMG_SIZE = 25;
-	//static const int WIDTH = IMG_SIZE * n_bonds;
-	//static const int HEIGHT = IMG_SIZE * n_players;
 
 	class BondsMonitor : public DragButton {
 		enum class Bond { Balth, Life, Prot };
@@ -60,9 +57,6 @@ public:
 	inline void UpdateUI() { if (monitor) monitor->UpdateUI(); }
 	inline void MainRoutine() {};
 	inline void SetFreze(bool b) { monitor->SetFreeze(b); }
-
-	GwConstants::InterfaceSize GetInterfaceSize() { 
-		return static_cast<GwConstants::InterfaceSize>(*(DWORD*)0x0A3FD08); }
 
 private:
 	BondsMonitor* monitor;

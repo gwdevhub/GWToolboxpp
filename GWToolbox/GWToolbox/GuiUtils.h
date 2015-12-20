@@ -3,7 +3,8 @@
 #include <Shlobj.h>
 #include <Shlwapi.h>
 
-#include "OSHGui\OSHGui.hpp"
+#include <OSHGui\OSHGui.hpp>
+#include <GWCA\GwConstants.h>
 
 #include <string>
 #include "logger.h"
@@ -91,5 +92,23 @@ public:
 		int grid_width = 1) {
 		const int item_width = (container_width - SPACE) / horizontal_amount - SPACE;
 		return item_width * grid_width + (grid_width - 1) * SPACE;
+	}
+
+	static int GetPartyHealthbarHeight() {
+		GwConstants::InterfaceSize interfacesize = 
+			static_cast<GwConstants::InterfaceSize>(*(DWORD*)0x0A3FD08);
+
+		switch (interfacesize) {
+		case GwConstants::InterfaceSize::SMALL:
+			return GwConstants::HealthbarHeight::Small;
+		case GwConstants::InterfaceSize::NORMAL:
+			return GwConstants::HealthbarHeight::Normal;
+		case GwConstants::InterfaceSize::LARGE:
+			return GwConstants::HealthbarHeight::Large;
+		case GwConstants::InterfaceSize::VERYLARGE:
+			return GwConstants::HealthbarHeight::VeryLarge;
+		default:
+			return GwConstants::HealthbarHeight::Normal;
+		}
 	}
 };

@@ -101,6 +101,7 @@
     <ClInclude Include="GWToolbox\DialogPanel.h" />
     <ClInclude Include="GWToolbox\DistanceWindow.h" />
     <ClInclude Include="GWToolbox\EditBuild.h" />
+    <ClInclude Include="GWToolbox\PartyDamage.h" />
     <ClInclude Include="GWToolbox\ToolboxWindow.h" />
     <ClInclude Include="GWToolbox\GuiUtils.h" />
     <ClInclude Include="GWToolbox\GWToolbox.h" />
@@ -128,6 +129,7 @@
     <ClCompile Include="GWToolbox\EditBuild.cpp" />
     <ClCompile Include="GWToolbox\logger.cpp" />
     <ClCompile Include="GWToolbox\main.cpp" />
+    <ClCompile Include="GWToolbox\PartyDamage.cpp" />
     <ClCompile Include="GWToolbox\ToolboxWindow.cpp" />
     <ClCompile Include="GWToolbox\GWToolbox.cpp" />
     <ClCompile Include="GWToolbox\HotkeyPanel.cpp" />

@@ -11,7 +11,7 @@ void init(HMODULE hModule){
 		Logger::Init();
 		LOG("Creating toolbox thread\n");
 		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)GWToolbox::SafeThreadEntry, hModule, 0, 0);
-	} __except ( EXCEPT_EXPRESSION ) {
+	} __except ( EXCEPT_EXPRESSION_ENTRY ) {
 	}
 }
 
@@ -21,7 +21,7 @@ BOOL WINAPI DllMain(_In_ HMODULE _HDllHandle, _In_ DWORD _Reason, _In_opt_ LPVOI
 		__try {
 			DisableThreadLibraryCalls(_HDllHandle);
 			CreateThread(0, 0, (LPTHREAD_START_ROUTINE)init, _HDllHandle, 0, 0);
-		} __except ( EXCEPT_EXPRESSION ) {
+		} __except ( EXCEPT_EXPRESSION_ENTRY ) {
 		}
 	}
 	return TRUE;

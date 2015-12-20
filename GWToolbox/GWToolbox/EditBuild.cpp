@@ -139,18 +139,18 @@ void EditBuild::SetEditedBuild(int index, Button* button) {
 	wstring key;
 	
 	key = L"buildname";
-	wstring buildname = config.iniRead(section.c_str(), key.c_str(), L"");
+	wstring buildname = config.IniRead(section.c_str(), key.c_str(), L"");
 	name->SetText(buildname);
 	for (int i = 0; i < N_PLAYERS; ++i) {
 		key = L"name" + to_wstring(i + 1);
-		wstring name = config.iniRead(section.c_str(), key.c_str(), L"");
+		wstring name = config.IniRead(section.c_str(), key.c_str(), L"");
 		names[i]->SetText(name);
 
 		key = L"template" + to_wstring(i + 1);
-		wstring temp = config.iniRead(section.c_str(), key.c_str(), L"");
+		wstring temp = config.IniRead(section.c_str(), key.c_str(), L"");
 		templates[i]->SetText(temp);
 	}
-	show_numbers->SetChecked(config.iniReadBool(section.c_str(), L"showNumbers", true));
+	show_numbers->SetChecked(config.IniReadBool(section.c_str(), L"showNumbers", true));
 
 	SetVisible(true);
 }
@@ -162,20 +162,20 @@ void EditBuild::SaveBuild() {
 
 	wstring s_name = name->GetText();
 	key = L"buildname";
-	config.iniWrite(section.c_str(), key.c_str(), s_name.c_str());
+	config.IniWrite(section.c_str(), key.c_str(), s_name.c_str());
 	editing_button->SetText(s_name);
 
 	for (int i = 0; i < N_PLAYERS; ++i) {
 		wstring s_name = names[i]->GetText();
 		key = L"name" + to_wstring(i + 1);
-		config.iniWrite(section.c_str(), key.c_str(), s_name.c_str());
+		config.IniWrite(section.c_str(), key.c_str(), s_name.c_str());
 
 		wstring s_template = templates[i]->GetText();
 		key = L"template" + to_wstring(i + 1);
-		config.iniWrite(section.c_str(), key.c_str(), s_template.c_str());
+		config.IniWrite(section.c_str(), key.c_str(), s_template.c_str());
 	}
 
-	config.iniWriteBool(section.c_str(), L"showNumbers", show_numbers->GetChecked());
+	config.IniWriteBool(section.c_str(), L"showNumbers", show_numbers->GetChecked());
 }
 
 void EditBuild::UpdateLocation() {

@@ -15,31 +15,13 @@ using namespace OSHGui;
 
 BondsWindow::BondsWindow() {
 
-	GwConstants::InterfaceSize interfacesize = GetInterfaceSize();
-	int img_size;
-	switch (interfacesize) {
-	case GwConstants::InterfaceSize::SMALL:
-		img_size = GwConstants::HealthbarHeight::Small;
-		break;
-	case GwConstants::InterfaceSize::NORMAL:
-		img_size = GwConstants::HealthbarHeight::Normal;
-		break;
-	case GwConstants::InterfaceSize::LARGE:
-		img_size = GwConstants::HealthbarHeight::Large;
-		break;
-	case GwConstants::InterfaceSize::VERYLARGE:
-		img_size = GwConstants::HealthbarHeight::VeryLarge;
-		break;
-	default:
-		img_size = GwConstants::HealthbarHeight::Normal;
-		break;
-	}
+	int img_size = GuiUtils::GetPartyHealthbarHeight();
 	int width = img_size * MAX_BONDS;
 	int height = img_size * MAX_PLAYERS;
 
 	Config& config = GWToolbox::instance().config();
-	int x = config.iniReadLong(BondsWindow::IniSection(), BondsWindow::IniKeyX(), 400);
-	int y = config.iniReadLong(BondsWindow::IniSection(), BondsWindow::IniKeyY(), 100);
+	int x = config.IniReadLong(BondsWindow::IniSection(), BondsWindow::IniKeyX(), 400);
+	int y = config.IniReadLong(BondsWindow::IniSection(), BondsWindow::IniKeyY(), 100);
 
 	SetLocation(x, y);
 	SetSize(Drawing::SizeI(width, height));
@@ -54,7 +36,7 @@ BondsWindow::BondsWindow() {
 	monitor->SetSize(width, height);
 	AddControl(monitor);
 
-	bool show = config.iniReadBool(BondsWindow::IniSection(), BondsWindow::IniKeyShow(), false);
+	bool show = config.IniReadBool(BondsWindow::IniSection(), BondsWindow::IniKeyShow(), false);
 	Show(show);
 
 	std::shared_ptr<BondsWindow> self = std::shared_ptr<BondsWindow>(this);
@@ -68,7 +50,7 @@ BondsWindow::BondsMonitor::BondsMonitor(int img_size) : img_size_(img_size) {
 	hovered_bond = -1;
 	party_size = MAX_PLAYERS; // initialize at max, upcate will take care of shrinking as needed.
 	pressed = false;
-	freezed = GWToolbox::instance().config().iniReadBool(MainWindow::IniSection(),
+	freezed = GWToolbox::instance().config().IniReadBool(MainWindow::IniSection(),
 		MainWindow::IniKeyFreeze(), false);
 
 	for (int i = 0; i < MAX_PLAYERS; ++i) {
@@ -194,8 +176,8 @@ void BondsWindow::BondsMonitor::SaveLocation() {
 	int x = absoluteLocation_.X;
 	int y = absoluteLocation_.Y;
 	Config& config = GWToolbox::instance().config();
-	config.iniWriteLong(BondsWindow::IniSection(), BondsWindow::IniKeyX(), x);
-	config.iniWriteLong(BondsWindow::IniSection(), BondsWindow::IniKeyY(), y);
+	config.IniWriteLong(BondsWindow::IniSection(), BondsWindow::IniKeyX(), x);
+	config.IniWriteLong(BondsWindow::IniSection(), BondsWindow::IniKeyY(), y);
 }
 
 void BondsWindow::BondsMonitor::UpdateUI() {

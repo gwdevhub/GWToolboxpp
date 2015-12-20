@@ -21,7 +21,7 @@ OSHGui::Input::WindowsMessage GWToolbox::input;
 void GWToolbox::SafeThreadEntry(HMODULE dllmodule) {
 	__try {
 		GWToolbox::ThreadEntry(dllmodule);
-	} __except ( EXCEPT_EXPRESSION ) {
+	} __except ( EXCEPT_EXPRESSION_ENTRY ) {
 		LOG("SafeThreadEntry __except body\n");
 	}
 }
@@ -56,11 +56,11 @@ void GWToolbox::Exec() {
 	input.SetKeyboardInputEnabled(true);
 	input.SetMouseInputEnabled(true);
 
-	config_->iniWrite(L"launcher", L"dllversion", Version);
+	config_->IniWrite(L"launcher", L"dllversion", Version);
 
 	Application * app = Application::InstancePtr();
 
-	while (true) { // main loop
+	while (!must_self_destruct_) { // main loop
 		if (app->HasBeenInitialized() && initialized_) {
 			__try {
 				main_window_->MainRoutine();
@@ -68,7 +68,8 @@ void GWToolbox::Exec() {
 				bonds_window_->MainRoutine();
 				health_window_->MainRoutine();
 				distance_window_->MainRoutine();
-			} __except (EXCEPTION_EXECUTE_HANDLER) {
+				party_damage_->MainRoutine();
+			} __except ( EXCEPT_EXPRESSION_LOOP ) {
 				LOG("Badness happened! (in main thread)\n");
 			}
 		}
@@ -78,8 +79,6 @@ void GWToolbox::Exec() {
 		if (GetAsyncKeyState(VK_END) & 1)
 			break;
 #endif
-		if (must_self_destruct_)
-			break;
 	}
 
 	LOG("Destroying GWToolbox++\n");
@@ -91,7 +90,7 @@ void GWToolbox::Exec() {
 	LOG("Closing settings\n");
 	main_window().settings_panel().Close();
 	LOG("Saving config file\n");
-	config_->save();
+	config_->Save();
 	Sleep(100);
 	LOG("Deleting config\n");
 	delete config_;
@@ -120,7 +119,7 @@ LRESULT CALLBACK GWToolbox::SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, 
 LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) {
 	
 	if (Message == WM_QUIT || Message == WM_CLOSE) {
-		GWToolbox::instance().config().save();
+		GWToolbox::instance().config().Save();
 		return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
 	}
 
@@ -185,7 +184,7 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 void GWToolbox::SafeCreateGui(IDirect3DDevice9* pDevice) {
 	__try {
 		GWToolbox::CreateGui(pDevice);
-	} __except ( EXCEPT_EXPRESSION ) {
+	} __except ( EXCEPT_EXPRESSION_ENTRY ) {
 		LOG("SafeCreateGui __except body\n");
 	}
 }
@@ -233,6 +232,8 @@ void GWToolbox::CreateGui(IDirect3DDevice9* pDevice) {
 		GWToolbox::instance().set_health_window(new HealthWindow());
 		LOG("Creating distance window\n");
 		GWToolbox::instance().set_distance_window(new DistanceWindow());
+		LOG("Creating party damage window\n");
+		GWToolbox::instance().set_party_damage(new PartyDamage());
 		LOG("Enabling app\n");
 		app->Enable();
 		GWToolbox::instance().set_initialized();
@@ -248,39 +249,40 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 	static bool init = false;
 	if (!init) {
 		init = true;
-		
 		GWToolbox::SafeCreateGui(pDevice);
 	}
 
 	GWToolbox& tb = GWToolbox::instance();
+	if (!tb.must_self_destruct_) {
 
-	tb.UpdateUI();
+		tb.UpdateUI();
 
-	D3DVIEWPORT9 viewport;
-	pDevice->GetViewport(&viewport);
+		D3DVIEWPORT9 viewport;
+		pDevice->GetViewport(&viewport);
 
-	Drawing::PointI location = tb.main_window().GetLocation();
-	Drawing::RectangleI size = tb.main_window().GetSize();
+		Drawing::PointI location = tb.main_window().GetLocation();
+		Drawing::RectangleI size = tb.main_window().GetSize();
 
-	if (location.X < 0){
-		location.X = 0;
-	}
-	if (location.Y < 0){
-		location.Y = 0;
-	}
-	if (location.X > static_cast<int>(viewport.Width) - size.GetWidth()) {
-		location.X = static_cast<int>(viewport.Width) - size.GetWidth();
-	}
-	if (location.Y > static_cast<int>(viewport.Height) - size.GetHeight()) {
-		location.Y = static_cast<int>(viewport.Height) - size.GetHeight();
-	}
-	if (location != tb.main_window().GetLocation()){
-		tb.main_window().SetLocation(location);
-	}
+		if (location.X < 0) {
+			location.X = 0;
+		}
+		if (location.Y < 0) {
+			location.Y = 0;
+		}
+		if (location.X > static_cast<int>(viewport.Width) - size.GetWidth()) {
+			location.X = static_cast<int>(viewport.Width) - size.GetWidth();
+		}
+		if (location.Y > static_cast<int>(viewport.Height) - size.GetHeight()) {
+			location.Y = static_cast<int>(viewport.Height) - size.GetHeight();
+		}
+		if (location != tb.main_window().GetLocation()) {
+			tb.main_window().SetLocation(location);
+		}
 
-	renderer->BeginRendering();
-	Application::InstancePtr()->Render();
-	renderer->EndRendering();
+		renderer->BeginRendering();
+		Application::InstancePtr()->Render();
+		renderer->EndRendering();
+	}
 
 	return GWCA::Api().DirectX().EndsceneReturn()(pDevice);
 }
@@ -307,8 +309,9 @@ void GWToolbox::UpdateUI() {
 			timer_window_->UpdateUI();
 			health_window_->UpdateUI();
 			distance_window_->UpdateUI();
+			party_damage_->UpdateUI();
 			bonds_window_->UpdateUI();
-		} __except (EXCEPTION_EXECUTE_HANDLER) {
+		} __except ( EXCEPT_EXPRESSION_LOOP ) {
 			LOG("Badness happened! (in render thread)\n");
 		}
 	}

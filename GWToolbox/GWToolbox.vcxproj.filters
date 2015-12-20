@@ -58,6 +58,7 @@
     <ClInclude Include="GWToolbox\ToolboxWindow.h" />
     <ClInclude Include="GWToolbox\ChatCommands.h" />
     <ClInclude Include="GWToolbox\ChatLogger.h" />
+    <ClInclude Include="GWToolbox\PartyDamage.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\BondsWindow.cpp">
@@ -119,6 +120,9 @@
     </ClCompile>
     <ClCompile Include="GWToolbox\main.cpp" />
     <ClCompile Include="GWToolbox\ChatCommands.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\PartyDamage.cpp">
       <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>
