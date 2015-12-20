@@ -29,10 +29,5 @@ private:
 
 	static void CmdZoom(std::vector<std::wstring> args);
 	static void CmdCamera(std::vector<std::wstring> args);
-
-	bool unlocked_camera;
-	int forward_movement;
-	int side_movement;
-	int vertical_movement;
-	const float speed = 10.0f;
+	static void UpdateLookAtPos();
 };
