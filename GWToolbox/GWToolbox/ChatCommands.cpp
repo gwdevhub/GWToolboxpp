@@ -20,6 +20,7 @@ ChatCommands::ChatCommands() {
 	AddCommand(L"travel", ChatCommands::CmdTP);
 	AddCommand(L"zoom", ChatCommands::CmdZoom);
 	AddCommand(L"camera", ChatCommands::CmdCamera);
+	AddCommand(L"cam", ChatCommands::CmdCamera);
 
 	DWORD playerNumber = GWCA::Api().Agents().GetPlayer()->PlayerNumber;
 	ChatLogger::LogF(L"Hello %ls!", GWCA::Api().Agents().GetPlayerNameByLoginNumber(playerNumber));
@@ -36,7 +37,7 @@ bool ChatCommands::ProcessMessage(LPMSG msg) {
 	CameraMgr cam = GWCA::Api().Camera();
 	float speed = 25.f;
 
-	if (!cam.GetCameraUnlock()) return false;
+	if (!cam.GetCameraUnlock() || *(DWORD*)0xA377C8) return false; // 0xA377C8 is a flag when someone is typing
 
 	switch (msg->message) {
 	case WM_KEYDOWN:
@@ -74,10 +75,10 @@ void ChatCommands::UpdateLookAtPos() {
 
 void ChatCommands::UpdateUI() {
 	CameraMgr cam = GWCA::Api().Camera();
-	if (!cam.GetCameraUnlock()) return;
+	if (!cam.GetCameraUnlock() || *(DWORD*)0xA377C8) return; // same as above
 	UpdateLookAtPos();
 
-	cam.SetCameraPos(cam.ComputeCamPos(750.f)); // we most likely want to compute at 2.f which is first person in gw
+	cam.SetCameraPos(cam.ComputeCamPos(0)); // we most likely want to compute at 2.f which is first person in gw, 0 keep same dist
 }
 
 wstring ChatCommands::GetLowerCaseArg(vector<wstring> args, int index) {
