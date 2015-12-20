@@ -234,7 +234,18 @@ void ChatCommands::CmdCamera(vector<wstring> args) {
 					GWCA::Api().Camera().SetFog(false);
 				}
 			}
-		} else {
+		}
+		else if (arg0 == L"fov") {
+			wstring arg1 = GetLowerCaseArg(args, 1);
+			if (arg1 == L"default"){
+				GWCA::Api().Camera().SetFieldOfView(1.308997f);
+				return;
+			}
+			float fovnew = std::stof(arg1);
+			GWCA::Api().Camera().SetFieldOfView(fovnew);
+			ChatLogger::LogF(L"Field of View is %f",fovnew);
+		}
+		else {
 			ChatLogger::Log(L"[Error] Invalid argument.");
 		}
 	}

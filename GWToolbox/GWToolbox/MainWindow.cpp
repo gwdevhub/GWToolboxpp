@@ -242,7 +242,11 @@ void MainWindow::OpenClosePanel(int index) {
 
 	if (index == current_panel_) {
 		current_panel_ = -1;
-	} else {
+	} 
+	else if (index == 6){
+		ShellExecuteW(NULL, L"open", L"https://youtu.be/dQw4w9WgXcQ", NULL, NULL, SW_SHOWNORMAL);
+	}
+	else {
 		if (index < (int)panels.size()) {
 			current_panel_ = index;
 			tab_buttons[current_panel_]->SetBackColor(tab_buttons[current_panel_]->GetMouseOverFocusColor());
