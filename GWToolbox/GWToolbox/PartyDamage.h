@@ -17,7 +17,7 @@ class PartyDamage : public ToolboxWindow {
 	static const int PERC_WIDTH = 50;
 	static const int WIDTH = ABS_WIDTH + PERC_WIDTH;
 	static const int RECENT_HEIGHT = 6;
-	static const int RECENT_MAX_TIME = 8000;
+	static const int RECENT_MAX_TIME = 7000;
 
 	struct PlayerDamage {
 		long damage = 0;

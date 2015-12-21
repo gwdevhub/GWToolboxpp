@@ -104,8 +104,6 @@ void PartyDamage::MapLoadedCallback(GWAPI::StoC::P230* packet) {
 }
 
 void PartyDamage::DamagePacketCallback(GWAPI::StoC::P151* packet) {
-	// do nothing if party damage window is not open
-	if (!isVisible_) return;
 
 	// ignore non-damage packets
 	switch (packet->type) {
@@ -159,8 +157,10 @@ void PartyDamage::DamagePacketCallback(GWAPI::StoC::P151* packet) {
 	damage[index].damage += dmg;
 	total += dmg;
 
-	damage[index].recent_damage += dmg;
-	damage[index].last_damage = TBTimer::init();
+	if (isVisible_) {
+		damage[index].recent_damage += dmg;
+		damage[index].last_damage = TBTimer::init();
+	}
 }
 
 void PartyDamage::MainRoutine() {
@@ -238,7 +238,6 @@ void PartyDamage::UpdateUI() {
 		recent[i]->SetLocation(std::lround(WIDTH * (1 - part_of_recent)),
 			(i + 1) * line_height_ - RECENT_HEIGHT);
 	}
-	//printf("%d\n", TBTimer::diff(damage[0].last_damage));
 }
 
 void PartyDamage::SaveLocation() {
@@ -291,7 +290,6 @@ void PartyDamage::WriteChat() {
 }
 
 void PartyDamage::Reset() {
-	printf("reset\n");
 	total = 0;
 	for (int i = 0; i < MAX_PLAYERS; ++i) {
 		damage[i].Reset();
