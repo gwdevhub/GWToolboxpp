@@ -2,8 +2,11 @@
 
 #include <queue>
 #include <string>
+#include <map>
 
 #include <OSHGui\OSHGui.hpp>
+#include <GWCA\GwConstants.h>
+#include <GWCA\GWCA.h>
 
 #include "ToolboxWindow.h"
 #include "Timer.h"
@@ -13,6 +16,20 @@ class PartyDamage : public ToolboxWindow {
 	static const int ABS_WIDTH = 70;
 	static const int PERC_WIDTH = 70;
 	static const int WIDTH = ABS_WIDTH + PERC_WIDTH;
+
+	struct PlayerDamage {
+		long damage = 0;
+		std::wstring name;
+		GwConstants::Profession primary = GwConstants::Profession::None;
+		GwConstants::Profession secondary = GwConstants::Profession::None;
+
+		void Reset() {
+			damage = 0;
+			name = L"";
+			primary = GwConstants::Profession::None;
+			secondary = GwConstants::Profession::None;
+		}
+	};
 
 public:
 	PartyDamage();
@@ -37,16 +54,30 @@ public:
 	void Reset();
 
 private:
+	void DamagePacketCallback(GWAPI::StoC::P151* packet);
+	void MapLoadedCallback(GWAPI::StoC::P230* packet);
+
 	void SaveLocation();
+	float GetPartOfTotal(long dmg);
+	inline float GetPercentageOfTotal(long dmg) { return GetPartOfTotal(dmg) * 100.0f; };
+	float GetPartOfMax(long dmg);
+	inline float GetPercentageOfMax(long dmg) { return GetPartOfMax(dmg) * 100.0f; };
+	long GetMax();
 
-	int party_size_;
-	int line_height_;
-
+	// damage values
 	long total;
-	long damage[MAX_PLAYERS];
+	PlayerDamage damage[MAX_PLAYERS];
+	std::map<DWORD, long> hp_map;
+
+	// UI elements
+	int line_height_;
+	int party_size_;
 	DragButton* absolute[MAX_PLAYERS];
 	DragButton* percent[MAX_PLAYERS];
+	OSHGui::Panel* bar[MAX_PLAYERS];
 
+	// main routine variables
+	bool in_explorable = false;
 	clock_t send_timer;
 	std::queue<std::wstring> send_queue;
 };

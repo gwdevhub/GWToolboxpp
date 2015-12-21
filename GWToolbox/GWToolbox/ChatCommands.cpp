@@ -22,6 +22,7 @@ ChatCommands::ChatCommands() {
 	AddCommand(L"camera", ChatCommands::CmdCamera);
 	AddCommand(L"cam", ChatCommands::CmdCamera);
 	AddCommand(L"damage", ChatCommands::CmdDamage);
+	AddCommand(L"dmg", ChatCommands::CmdDamage);
 
 	DWORD playerNumber = GWCA::Api().Agents().GetPlayer()->PlayerNumber;
 	ChatLogger::LogF(L"Hello %ls!", GWCA::Api().Agents().GetPlayerNameByLoginNumber(playerNumber));
@@ -254,7 +255,7 @@ void ChatCommands::CmdCamera(vector<wstring> args) {
 void ChatCommands::CmdDamage(vector<wstring> args) {
 	if (!args.empty()) {
 		wstring arg0 = GetLowerCaseArg(args, 0);
-		if (arg0 == L"print") {
+		if (arg0 == L"print" || arg0 == L"report") {
 			GWToolbox::instance().party_damage().WriteChat();
 		} else if (arg0 == L"reset") {
 			GWToolbox::instance().party_damage().Reset();

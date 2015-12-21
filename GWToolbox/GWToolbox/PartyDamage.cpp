@@ -1,6 +1,7 @@
 #include "PartyDamage.h"
 
 #include <GWCA\GWCA.h>
+#include <sstream>
 
 #include "GuiUtils.h"
 #include "Config.h"
@@ -14,44 +15,10 @@ PartyDamage::PartyDamage() {
 	send_timer = TBTimer::init();
 
 	GWCA::Api().StoC().AddGameServerEvent<StoC::P151>(
-		[this](StoC::P151* packet) {
+		std::bind(&PartyDamage::DamagePacketCallback, this, std::placeholders::_1));
 
-		// ignore non-damage packets
-		switch (packet->type) {
-		case StoC::P151_Type::damage:
-		case StoC::P151_Type::critical:
-		case StoC::P151_Type::armorignoring:
-			break;
-		default:
-			return;
-		}
-
-		// ignore heals
-		if (packet->value >= 0) return;
-
-		// get cause agent
-		GW::Agent* cause = GWCA::Api().Agents().GetAgentByID(packet->cause_id);
-		if (cause == nullptr) return;
-		if (cause->LoginNumber == 0) return; // ignore NPCs, heroes
-		if (cause->PlayerNumber == 0) return; // might as well check for this too
-		if (cause->PlayerNumber > MAX_PLAYERS) return;
-
-		// get target agent
-		GW::Agent* target = GWCA::Api().Agents().GetAgentByID(packet->target_id);
-		if (target == nullptr) return;
-		if (target->LoginNumber != 0) return; // ignore player-inflicted damage
-											  // such as Life bond or sacrifice
-
-		long dmg;
-		if (target->MaxHP > 0 && target->MaxHP < 100000) {
-			dmg = std::lround(-packet->value * target->MaxHP);
-		} else {
-			long maxhp = target->Level * 20 + 100;
-			dmg = std::lround(-packet->value * maxhp);
-		}
-		damage[cause->PlayerNumber - 1] += dmg;
-		total += dmg;
-	});
+	GWCA::Api().StoC().AddGameServerEvent<StoC::P230>(
+		std::bind(&PartyDamage::MapLoadedCallback, this, std::placeholders::_1));
 
 	Config& config = GWToolbox::instance().config();
 	int x = config.IniReadLong(PartyDamage::IniSection(), PartyDamage::IniKeyX(), 400);
@@ -67,9 +34,15 @@ PartyDamage::PartyDamage() {
 
 	int offsetX = 2;
 	int offsetY = 2;
-	float fontsize = 10.0f;
+	float fontsize = 9.0f;
 	for (int i = 0; i < MAX_PLAYERS; ++i) {
-		damage[i] = 0;
+		damage[i].damage= 0;
+
+		bar[i] = new Panel();
+		bar[i]->SetSize(WIDTH, line_height_);
+		bar[i]->SetLocation(0, i * line_height_);
+		bar[i]->SetBackColor(Drawing::Color(0.4f, 0.8f, 0.4f, 0.2f));
+		AddControl(bar[i]);
 
 		absolute[i] = new DragButton();
 		absolute[i]->SetText(L"100%");
@@ -105,10 +78,83 @@ PartyDamage::PartyDamage() {
 	Form::Show(self);
 }
 
+void PartyDamage::MapLoadedCallback(GWAPI::StoC::P230* packet) {
+	switch (GWCA::Api().Map().GetInstanceType()) {
+	case GwConstants::InstanceType::Outpost:
+		in_explorable = false;
+		break;
+	case GwConstants::InstanceType::Explorable:
+		if (!in_explorable) {
+			in_explorable = true;
+			Reset();
+		}
+		break;
+	case GwConstants::InstanceType::Loading:
+	default:
+		break;
+	}
+}
+
+void PartyDamage::DamagePacketCallback(GWAPI::StoC::P151* packet) {
+	// do nothing if party damage window is not open
+	if (!isVisible_) return;
+
+	// ignore non-damage packets
+	switch (packet->type) {
+	case StoC::P151_Type::damage:
+	case StoC::P151_Type::critical:
+	case StoC::P151_Type::armorignoring:
+		break;
+	default:
+		return;
+	}
+
+	// ignore heals
+	if (packet->value >= 0) return;
+
+	// get cause agent
+	GW::Agent* cause = GWCA::Api().Agents().GetAgentByID(packet->cause_id);
+	if (cause == nullptr) return;
+	if (cause->LoginNumber == 0) return; // ignore NPCs, heroes
+	if (cause->PlayerNumber == 0) return; // might as well check for this too
+	if (cause->PlayerNumber > MAX_PLAYERS) return;
+
+	// get target agent
+	GW::Agent* target = GWCA::Api().Agents().GetAgentByID(packet->target_id);
+	if (target == nullptr) return;
+	if (target->LoginNumber != 0) return; // ignore player-inflicted damage
+										  // such as Life bond or sacrifice
+
+	long dmg;
+	if (target->MaxHP > 0 && target->MaxHP < 100000) {
+		dmg = std::lround(-packet->value * target->MaxHP);
+		hp_map[target->PlayerNumber] = target->MaxHP;
+	} else {
+		auto it = hp_map.find(target->PlayerNumber);
+		if (it == hp_map.end()) {
+			// max hp not found, approximate with hp/lvl formula
+			dmg = std::lround(-packet->value * target->Level * 20 + 100);
+		} else {
+			long maxhp = it->second;
+			dmg = std::lround(-packet->value * it->second);
+		}
+	}
+
+	int index = cause->PlayerNumber - 1;
+
+	if (damage[index].damage == 0) {
+		damage[index].name = GWCA::Api().Agents().GetPlayerNameByLoginNumber(cause->LoginNumber);
+		damage[index].primary = static_cast<GwConstants::Profession>(cause->Primary);
+		damage[index].secondary = static_cast<GwConstants::Profession>(cause->Secondary);
+	}
+
+	damage[index].damage += dmg;
+	total += dmg;
+}
+
 void PartyDamage::MainRoutine() {
 	if (!send_queue.empty() && TBTimer::diff(send_timer) > 600) {
 		send_timer = TBTimer::init();
-
 		GWCA api;
 		if (api().Map().GetInstanceType() != GwConstants::InstanceType::Loading
 			&& api().Agents().GetPlayer()) {
@@ -132,27 +178,31 @@ void PartyDamage::UpdateUI() {
 			bool visible = (i < party_size_);
 			absolute[i]->SetVisible(visible);
 			percent[i]->SetVisible(visible);
+			bar[i]->SetVisible(visible);
 		}
 	}
 
 	const int BUF_SIZE = 10;
 	wchar_t buff[BUF_SIZE];
 	for (int i = 0; i < MAX_PLAYERS; ++i) {
-		if (damage[i] < 1000) {
-			swprintf_s(buff, BUF_SIZE, L"%d", damage[i]);
-		} else if (damage[i] < 1000 * 10) {
-			swprintf_s(buff, BUF_SIZE, L"%.2f k", (float)damage[i] / 1000);
-		} else if (damage[i] < 1000 * 1000) {
-			swprintf_s(buff, BUF_SIZE, L"%.1f k", (float)damage[i] / 1000);
+		if (damage[i].damage < 1000) {
+			swprintf_s(buff, BUF_SIZE, L"%d", damage[i].damage);
+		} else if (damage[i].damage < 1000 * 10) {
+			swprintf_s(buff, BUF_SIZE, L"%.2f k", (float)damage[i].damage / 1000);
+		} else if (damage[i].damage < 1000 * 1000) {
+			swprintf_s(buff, BUF_SIZE, L"%.1f k", (float)damage[i].damage / 1000);
 		} else {
-			swprintf_s(buff, BUF_SIZE, L"%.1f mil", (float)damage[i] / 1000000);
+			swprintf_s(buff, BUF_SIZE, L"%.1f mil", (float)damage[i].damage / 1000000);
 		}
 		absolute[i]->SetText(buff);
 
-		double part = 0;
-		if (total > 0) part = (double)(damage[i]) / total * 100;
-		swprintf_s(buff, BUF_SIZE, L"%.1f %%", part);
+		float perc_of_total = GetPercentageOfTotal(damage[i].damage);
+		swprintf_s(buff, BUF_SIZE, L"%.1f %%", perc_of_total);
 		percent[i]->SetText(buff);
+
+		float part_of_max = GetPartOfMax(damage[i].damage);
+		bar[i]->SetSize(std::lround(WIDTH * part_of_max), line_height_);
+		bar[i]->SetLocation(std::lround(WIDTH * (1 - part_of_max)), i * line_height_);
 	}
 }
 
@@ -165,16 +215,51 @@ void PartyDamage::SaveLocation() {
 	config.IniWriteLong(PartyDamage::IniSection(), PartyDamage::IniKeyY(), y);
 }
 
-void PartyDamage::WriteChat() {
-	for (int i = 0; i < party_size_; ++i) {
-		send_queue.push(std::to_wstring(i) + L" " + std::to_wstring(damage[i]));
+float PartyDamage::GetPartOfTotal(long dmg) {
+	if (total == 0) return 0;
+	return (float)dmg / total;
+}
+
+float PartyDamage::GetPartOfMax(long dmg) {
+	long max = GetMax();
+	if (max == 0) return 0;
+	return (float)dmg / max;
+}
+
+long PartyDamage::GetMax() {
+	long max = 0;
+	for (int i = 0; i < MAX_PLAYERS; ++i) {
+		if (max < damage[i].damage) {
+			max = damage[i].damage;
+		}
 	}
+	return max;
+}
+
+void PartyDamage::WriteChat() {
+	for (int i = 0; i < MAX_PLAYERS; ++i) {
+		if (damage[i].damage > 0) {
+			std::wstringstream ss;
+			ss << GwConstants::to_wstring(damage[i].primary);
+			ss << L"/";
+			ss << GwConstants::to_wstring(damage[i].secondary);
+			ss << L" ";
+			ss << damage[i].name;
+			ss << L" (";
+			ss << GetPercentageOfTotal(damage[i].damage);
+			ss << L" %) ";
+			ss << damage[i].damage;
+			send_queue.push(ss.str());
+		}
+	}
+	send_queue.push(L"Total (100%) " + std::to_wstring(total));
 }
 
 void PartyDamage::Reset() {
+	printf("reset\n");
 	total = 0;
 	for (int i = 0; i < MAX_PLAYERS; ++i) {
-		damage[i] = 0;
+		damage[i].Reset();
 	}
 }
 
