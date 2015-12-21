@@ -13,18 +13,23 @@
 
 class PartyDamage : public ToolboxWindow {
 	static const int MAX_PLAYERS = 12;
-	static const int ABS_WIDTH = 70;
-	static const int PERC_WIDTH = 70;
+	static const int ABS_WIDTH = 50;
+	static const int PERC_WIDTH = 50;
 	static const int WIDTH = ABS_WIDTH + PERC_WIDTH;
+	static const int RECENT_HEIGHT = 6;
+	static const int RECENT_MAX_TIME = 8000;
 
 	struct PlayerDamage {
 		long damage = 0;
+		clock_t last_damage;
+		long recent_damage;
 		std::wstring name;
 		GwConstants::Profession primary = GwConstants::Profession::None;
 		GwConstants::Profession secondary = GwConstants::Profession::None;
 
 		void Reset() {
 			damage = 0;
+			recent_damage = 0;
 			name = L"";
 			primary = GwConstants::Profession::None;
 			secondary = GwConstants::Profession::None;
@@ -75,6 +80,7 @@ private:
 	DragButton* absolute[MAX_PLAYERS];
 	DragButton* percent[MAX_PLAYERS];
 	OSHGui::Panel* bar[MAX_PLAYERS];
+	OSHGui::Panel* recent[MAX_PLAYERS];
 
 	// main routine variables
 	bool in_explorable = false;

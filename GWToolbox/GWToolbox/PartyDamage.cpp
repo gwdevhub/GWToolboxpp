@@ -29,7 +29,7 @@ PartyDamage::PartyDamage() {
 	SetSize(Drawing::SizeI(ABS_WIDTH + PERC_WIDTH, line_height_ * MAX_PLAYERS));
 
 	Drawing::Theme::ControlTheme theme = Application::InstancePtr()
-		->GetTheme().GetControlColorTheme(BondsWindow::ThemeKey());
+		->GetTheme().GetControlColorTheme(PartyDamage::ThemeKey());
 	SetBackColor(theme.BackColor);
 
 	int offsetX = 2;
@@ -37,6 +37,8 @@ PartyDamage::PartyDamage() {
 	float fontsize = 9.0f;
 	for (int i = 0; i < MAX_PLAYERS; ++i) {
 		damage[i].damage= 0;
+		damage[i].recent_damage = 0;
+		damage[i].last_damage = TBTimer::init();
 
 		bar[i] = new Panel();
 		bar[i]->SetSize(WIDTH, line_height_);
@@ -44,9 +46,15 @@ PartyDamage::PartyDamage() {
 		bar[i]->SetBackColor(Drawing::Color(0.4f, 0.8f, 0.4f, 0.2f));
 		AddControl(bar[i]);
 
+		recent[i] = new Panel();
+		recent[i]->SetSize(WIDTH, RECENT_HEIGHT);
+		recent[i]->SetLocation(0, (i + 1) * line_height_ - RECENT_HEIGHT);
+		recent[i]->SetBackColor(Drawing::Color(0.8f, 0.4f, 0.6f, 0.9f));
+		AddControl(recent[i]);
+
 		absolute[i] = new DragButton();
-		absolute[i]->SetText(L"100%");
-		absolute[i]->SetSize(ABS_WIDTH, line_height_);
+		absolute[i]->SetText(L"0 %");
+		absolute[i]->SetSize(ABS_WIDTH, line_height_ - RECENT_HEIGHT / 2);
 		absolute[i]->SetLocation(0, i * line_height_);
 		absolute[i]->SetFont(GuiUtils::getTBFont(fontsize, true));
 		absolute[i]->SetBackColor(Drawing::Color::Empty());
@@ -57,8 +65,8 @@ PartyDamage::PartyDamage() {
 		AddControl(absolute[i]);
 
 		percent[i] = new DragButton();
-		percent[i]->SetText(L"42.0k");
-		percent[i]->SetSize(PERC_WIDTH, line_height_);
+		percent[i]->SetText(L"");
+		percent[i]->SetSize(PERC_WIDTH, line_height_ - RECENT_HEIGHT / 2);
 		percent[i]->SetLocation(ABS_WIDTH, i * line_height_);
 		percent[i]->SetFont(GuiUtils::getTBFont(fontsize, true));
 		percent[i]->SetBackColor(Drawing::Color::Empty());
@@ -150,6 +158,9 @@ void PartyDamage::DamagePacketCallback(GWAPI::StoC::P151* packet) {
 
 	damage[index].damage += dmg;
 	total += dmg;
+
+	damage[index].recent_damage += dmg;
+	damage[index].last_damage = TBTimer::init();
 }
 
 void PartyDamage::MainRoutine() {
@@ -179,6 +190,21 @@ void PartyDamage::UpdateUI() {
 			absolute[i]->SetVisible(visible);
 			percent[i]->SetVisible(visible);
 			bar[i]->SetVisible(visible);
+			recent[i]->SetVisible(visible);
+		}
+	}
+
+	// reset recent if needed
+	for (int i = 0; i < MAX_PLAYERS; ++i) {
+		if (TBTimer::diff(damage[i].last_damage) > RECENT_MAX_TIME) {
+			damage[i].recent_damage = 0;
+		}
+	}
+
+	long max_recent = 0;
+	for (int i = 0; i < MAX_PLAYERS; ++i) {
+		if (max_recent < damage[i].recent_damage) {
+			max_recent = damage[i].recent_damage;
 		}
 	}
 
@@ -203,7 +229,16 @@ void PartyDamage::UpdateUI() {
 		float part_of_max = GetPartOfMax(damage[i].damage);
 		bar[i]->SetSize(std::lround(WIDTH * part_of_max), line_height_);
 		bar[i]->SetLocation(std::lround(WIDTH * (1 - part_of_max)), i * line_height_);
+
+		float part_of_recent = 0;
+		if (max_recent > 0) {
+			part_of_recent = (float)(damage[i].recent_damage) / max_recent;
+		}
+		recent[i]->SetSize(std::lround(WIDTH * part_of_recent), RECENT_HEIGHT);
+		recent[i]->SetLocation(std::lround(WIDTH * (1 - part_of_recent)),
+			(i + 1) * line_height_ - RECENT_HEIGHT);
 	}
+	//printf("%d\n", TBTimer::diff(damage[0].last_damage));
 }
 
 void PartyDamage::SaveLocation() {

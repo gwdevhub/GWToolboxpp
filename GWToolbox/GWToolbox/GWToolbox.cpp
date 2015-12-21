@@ -76,8 +76,11 @@ void GWToolbox::Exec() {
 
 		Sleep(10);
 #ifdef _DEBUG
-		if (GetAsyncKeyState(VK_END) & 1)
+		if (GetAsyncKeyState(VK_END) & 1) {
+			must_self_destruct_ = true;
 			break;
+		}
+			
 #endif
 	}
 
