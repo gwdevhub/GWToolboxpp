@@ -11,6 +11,10 @@ namespace OSHGui
 {
 	namespace Drawing
 	{
+		bool Theme::ContainsColorTheme(const Misc::AnsiString &controlClass) const {
+			return controlThemes.find(controlClass) != controlThemes.end();
+		}
+
 		void Theme::SetControlColorTheme(const Misc::AnsiString &controlClass, const Theme::ControlTheme &controlTheme)
 		{
 			controlThemes[controlClass] = controlTheme;

@@ -58,7 +58,7 @@ void GWToolbox::Exec() {
 
 	config_->IniWrite(L"launcher", L"dllversion", Version);
 
-	Application * app = Application::InstancePtr();
+	Application* app = Application::InstancePtr();
 
 	while (!must_self_destruct_) { // main loop
 		if (app->HasBeenInitialized() && initialized_) {
@@ -126,7 +126,7 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 		return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
 	}
 
-	if (Application::InstancePtr()->HasBeenInitialized()) {
+	if (Application::Instance().HasBeenInitialized()) {
 		MSG msg;
 		msg.hwnd = hWnd;
 		msg.message = Message;
@@ -152,7 +152,7 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 			if (input.ProcessMessage(&msg)) {
 				return true;
 			} else {
-				Application::InstancePtr()->clearFocus();
+				Application::Instance().clearFocus();
 			}
 			break;
 
@@ -201,30 +201,21 @@ void GWToolbox::CreateGui(IDirect3DDevice9* pDevice) {
 	LOG("Creating OSH Application\n");
 	Application::Initialize(std::unique_ptr<Direct3D9Renderer>(renderer));
 
-	Application * app = Application::InstancePtr();
+	Application& app = Application::Instance();
 
-	LOG("Loading Theme\n");
-	std::wstring path = GuiUtils::getPath(L"Theme.txt");
-	try {
-		Theme theme;
-		theme.Load(path);
-		app->SetTheme(theme);
-		LOG("Loaded Theme\n");
-	} catch (Misc::InvalidThemeException e) {
-		LOG("WARNING Could not load theme file %s\n", path.c_str());
-	}
+	GWToolbox::instance().LoadTheme();
 	
 	LOG("Loading font\n");
-	app->SetDefaultFont(GuiUtils::getTBFont(10.0f, true));
+	app.SetDefaultFont(GuiUtils::getTBFont(10.0f, true));
 
-	app->SetCursorEnabled(false);
+	app.SetCursorEnabled(false);
 	try {
 
 		LOG("Creating main window\n");
 		MainWindow* main_window = new MainWindow();
-		main_window->SetFont(app->GetDefaultFont());
+		main_window->SetFont(app.GetDefaultFont());
 		std::shared_ptr<MainWindow> shared_ptr = std::shared_ptr<MainWindow>(main_window);
-		app->Run(shared_ptr);
+		app.Run(shared_ptr);
 
 		GWToolbox::instance().set_main_window(main_window);
 		LOG("Creating timer\n");
@@ -238,9 +229,11 @@ void GWToolbox::CreateGui(IDirect3DDevice9* pDevice) {
 		LOG("Creating party damage window\n");
 		GWToolbox::instance().set_party_damage(new PartyDamage());
 		LOG("Enabling app\n");
-		app->Enable();
+		app.Enable();
 		GWToolbox::instance().set_initialized();
 		LOG("Gui Created\n");
+		LOG("Saving theme\n");
+		GWToolbox::instance().SaveTheme();
 	} catch (Misc::FileNotFoundException e) {
 		LOG("Error: file not found %s\n", e.what());
 		GWToolbox::instance().StartSelfDestruct();
@@ -318,4 +311,23 @@ void GWToolbox::UpdateUI() {
 			LOG("Badness happened! (in render thread)\n");
 		}
 	}
+}
+
+void GWToolbox::LoadTheme() {
+	LOG("Loading Theme\n");
+	std::wstring path = GuiUtils::getPath(L"Theme.txt");
+	try {
+		OSHGui::Drawing::Theme theme;
+		theme.Load(path);
+		OSHGui::Application::Instance().SetTheme(theme);
+		LOG("Loaded Theme\n");
+	} catch (Misc::InvalidThemeException e) {
+		LOG("[Warning] Could not load theme file %s\n", path.c_str());
+	}
+}
+
+void GWToolbox::SaveTheme() {
+	OSHGui::Drawing::Theme& t = Application::Instance().GetTheme();
+	t.Save(GuiUtils::getPath(L"Theme.txt"),
+		OSHGui::Drawing::Theme::ColorStyle::Array);
 }

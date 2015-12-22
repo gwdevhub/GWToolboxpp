@@ -101,6 +101,9 @@ private:
 	void Exec();
 	void UpdateUI();
 
+	void LoadTheme();
+	void SaveTheme();
+
 	//------ Setters ------//
 private:
 	inline void set_initialized() { initialized_ = true; }

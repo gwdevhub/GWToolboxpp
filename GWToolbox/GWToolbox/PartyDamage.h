@@ -7,6 +7,7 @@
 #include <OSHGui\OSHGui.hpp>
 #include <GWCA\GwConstants.h>
 #include <GWCA\GWCA.h>
+#include <SimpleIni.h>
 
 #include "ToolboxWindow.h"
 #include "Timer.h"
@@ -18,6 +19,11 @@ class PartyDamage : public ToolboxWindow {
 	static const int WIDTH = ABS_WIDTH + PERC_WIDTH;
 	static const int RECENT_HEIGHT = 6;
 	static const int RECENT_MAX_TIME = 7000;
+
+	const OSHGui::Drawing::Color default_forecolor = OSHGui::Drawing::Color(1, 1, 1, 1);
+	const OSHGui::Drawing::Color default_backcolor = OSHGui::Drawing::Color(0.3f, 0, 0, 0);
+	const OSHGui::Drawing::Color default_forebarcolor = OSHGui::Drawing::Color(0.8f, 0.4f, 0.6f, 0.9f);
+	const OSHGui::Drawing::Color default_backbarcolor = OSHGui::Drawing::Color(0.4f, 0.8f, 0.4f, 0.2f);
 
 	struct PlayerDamage {
 		long damage = 0;
@@ -87,4 +93,7 @@ private:
 	bool in_explorable = false;
 	clock_t send_timer;
 	std::queue<std::wstring> send_queue;
+
+	// ini
+	
 };

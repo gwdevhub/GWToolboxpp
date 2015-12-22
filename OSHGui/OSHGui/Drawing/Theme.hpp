@@ -43,6 +43,10 @@ namespace OSHGui
 			ControlTheme DefaultColor;
 
 			/**
+			 * Checks if we have the control class
+			 */
+			bool ContainsColorTheme(const Misc::AnsiString &controlClass) const;
+			/**
 			 * Legt das Farbschema für eine Control Klasse fest. Die Klassennamen sind in der Control.hpp zu finden.
 			 *
 			 * \param controlClass

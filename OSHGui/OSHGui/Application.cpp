@@ -151,7 +151,7 @@ namespace OSHGui
 		}
 	}
 	//---------------------------------------------------------------------------
-	const Drawing::Theme& Application::GetTheme() const
+	Drawing::Theme& Application::GetTheme()
 	{
 		return currentTheme_;
 	}

@@ -129,7 +129,7 @@ namespace OSHGui
 		 *
 		 * \return Theme
 		 */
-		const Drawing::Theme& GetTheme() const;
+		Drawing::Theme& GetTheme();
 	
 		/**
 		 * Activates the GUI.

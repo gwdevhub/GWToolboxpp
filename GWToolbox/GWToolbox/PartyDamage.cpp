@@ -28,13 +28,21 @@ PartyDamage::PartyDamage() {
 	line_height_ = GuiUtils::GetPartyHealthbarHeight();
 	SetSize(Drawing::SizeI(ABS_WIDTH + PERC_WIDTH, line_height_ * MAX_PLAYERS));
 
-	Drawing::Theme::ControlTheme theme = Application::InstancePtr()
-		->GetTheme().GetControlColorTheme(PartyDamage::ThemeKey());
+	if (!Application::Instance().GetTheme().ContainsColorTheme(PartyDamage::ThemeKey())) {
+		Drawing::Theme::ControlTheme ctheme(default_forecolor, default_backcolor);
+		Drawing::Theme::ControlTheme barctheme(default_forebarcolor, default_backbarcolor);
+		Drawing::Theme& theme = Application::Instance().GetTheme();
+		theme.SetControlColorTheme(PartyDamage::ThemeKey(), ctheme);
+		theme.SetControlColorTheme(PartyDamage::ThemeBarsKey(), barctheme);
+	}
+
+	Drawing::Theme::ControlTheme theme = Application::Instance()
+		.GetTheme().GetControlColorTheme(PartyDamage::ThemeKey());
+	Drawing::Theme::ControlTheme bartheme = Application::Instance()
+		.GetTheme().GetControlColorTheme(PartyDamage::ThemeBarsKey());
+
 	SetBackColor(theme.BackColor);
 	labelcolor = theme.ForeColor;
-
-	Drawing::Theme::ControlTheme bartheme = Application::InstancePtr()
-		->GetTheme().GetControlColorTheme(PartyDamage::ThemeBarsKey());
 
 	int offsetX = 2;
 	int offsetY = 2;
