@@ -31,6 +31,10 @@ PartyDamage::PartyDamage() {
 	Drawing::Theme::ControlTheme theme = Application::InstancePtr()
 		->GetTheme().GetControlColorTheme(PartyDamage::ThemeKey());
 	SetBackColor(theme.BackColor);
+	labelcolor = theme.ForeColor;
+
+	Drawing::Theme::ControlTheme bartheme = Application::InstancePtr()
+		->GetTheme().GetControlColorTheme(PartyDamage::ThemeBarsKey());
 
 	int offsetX = 2;
 	int offsetY = 2;
@@ -43,13 +47,13 @@ PartyDamage::PartyDamage() {
 		bar[i] = new Panel();
 		bar[i]->SetSize(WIDTH, line_height_);
 		bar[i]->SetLocation(0, i * line_height_);
-		bar[i]->SetBackColor(Drawing::Color(0.4f, 0.8f, 0.4f, 0.2f));
+		bar[i]->SetBackColor(bartheme.BackColor);
 		AddControl(bar[i]);
 
 		recent[i] = new Panel();
 		recent[i]->SetSize(WIDTH, RECENT_HEIGHT);
 		recent[i]->SetLocation(0, (i + 1) * line_height_ - RECENT_HEIGHT);
-		recent[i]->SetBackColor(Drawing::Color(0.8f, 0.4f, 0.6f, 0.9f));
+		recent[i]->SetBackColor(bartheme.ForeColor);
 		AddControl(recent[i]);
 
 		absolute[i] = new DragButton();
@@ -149,6 +153,7 @@ void PartyDamage::DamagePacketCallback(GWAPI::StoC::P151* packet) {
 	int index = cause->PlayerNumber - 1;
 
 	if (damage[index].damage == 0) {
+		damage[index].agent_id = packet->cause_id;
 		damage[index].name = GWCA::Api().Agents().GetPlayerNameByLoginNumber(cause->LoginNumber);
 		damage[index].primary = static_cast<GwConstants::Profession>(cause->Primary);
 		damage[index].secondary = static_cast<GwConstants::Profession>(cause->Secondary);
@@ -208,9 +213,16 @@ void PartyDamage::UpdateUI() {
 		}
 	}
 
+	long max = 0;
+	for (int i = 0; i < MAX_PLAYERS; ++i) {
+		if (max < damage[i].damage) {
+			max = damage[i].damage;
+		}
+	}
+
 	const int BUF_SIZE = 10;
 	wchar_t buff[BUF_SIZE];
-	for (int i = 0; i < MAX_PLAYERS; ++i) {
+	for (int i = 0; i < party_size_; ++i) {
 		if (damage[i].damage < 1000) {
 			swprintf_s(buff, BUF_SIZE, L"%d", damage[i].damage);
 		} else if (damage[i].damage < 1000 * 10) {
@@ -226,7 +238,10 @@ void PartyDamage::UpdateUI() {
 		swprintf_s(buff, BUF_SIZE, L"%.1f %%", perc_of_total);
 		percent[i]->SetText(buff);
 
-		float part_of_max = GetPartOfMax(damage[i].damage);
+		float part_of_max = 0;
+		if (max > 0) {
+			part_of_max = (float)(damage[i].damage) / max;
+		}
 		bar[i]->SetSize(std::lround(WIDTH * part_of_max), line_height_);
 		bar[i]->SetLocation(std::lround(WIDTH * (1 - part_of_max)), i * line_height_);
 
@@ -237,6 +252,18 @@ void PartyDamage::UpdateUI() {
 		recent[i]->SetSize(std::lround(WIDTH * part_of_recent), RECENT_HEIGHT);
 		recent[i]->SetLocation(std::lround(WIDTH * (1 - part_of_recent)),
 			(i + 1) * line_height_ - RECENT_HEIGHT);
+
+		Drawing::Color inactive = labelcolor - Drawing::Color(0.0f, 0.3f, 0.3f, 0.3f);
+		if (damage[i].damage == 0 
+			|| api().Map().GetInstanceType() == GwConstants::InstanceType::Outpost
+			|| api().Agents().GetAgentByID(damage[i].agent_id) == nullptr) {
+
+			absolute[i]->SetForeColor(inactive);
+			percent[i]->SetForeColor(inactive);
+		} else {
+			absolute[i]->SetForeColor(labelcolor);
+			percent[i]->SetForeColor(labelcolor);
+		}
 	}
 }
 
@@ -252,22 +279,6 @@ void PartyDamage::SaveLocation() {
 float PartyDamage::GetPartOfTotal(long dmg) {
 	if (total == 0) return 0;
 	return (float)dmg / total;
-}
-
-float PartyDamage::GetPartOfMax(long dmg) {
-	long max = GetMax();
-	if (max == 0) return 0;
-	return (float)dmg / max;
-}
-
-long PartyDamage::GetMax() {
-	long max = 0;
-	for (int i = 0; i < MAX_PLAYERS; ++i) {
-		if (max < damage[i].damage) {
-			max = damage[i].damage;
-		}
-	}
-	return max;
 }
 
 void PartyDamage::WriteChat() {

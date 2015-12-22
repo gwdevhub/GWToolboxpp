@@ -21,8 +21,9 @@ class PartyDamage : public ToolboxWindow {
 
 	struct PlayerDamage {
 		long damage = 0;
-		clock_t last_damage;
 		long recent_damage;
+		clock_t last_damage;
+		long agent_id = 0;
 		std::wstring name;
 		GwConstants::Profession primary = GwConstants::Profession::None;
 		GwConstants::Profession secondary = GwConstants::Profession::None;
@@ -30,6 +31,7 @@ class PartyDamage : public ToolboxWindow {
 		void Reset() {
 			damage = 0;
 			recent_damage = 0;
+			agent_id = 0;
 			name = L"";
 			primary = GwConstants::Profession::None;
 			secondary = GwConstants::Profession::None;
@@ -44,6 +46,7 @@ public:
 	inline static const wchar_t* IniKeyY() { return L"y"; }
 	inline static const wchar_t* InikeyShow() { return L"show"; }
 	inline static const char* ThemeKey() { return "damage"; }
+	inline static const char* ThemeBarsKey() { return "damagebars"; }
 
 	void UpdateUI();
 	void MainRoutine();
@@ -65,9 +68,6 @@ private:
 	void SaveLocation();
 	float GetPartOfTotal(long dmg);
 	inline float GetPercentageOfTotal(long dmg) { return GetPartOfTotal(dmg) * 100.0f; };
-	float GetPartOfMax(long dmg);
-	inline float GetPercentageOfMax(long dmg) { return GetPartOfMax(dmg) * 100.0f; };
-	long GetMax();
 
 	// damage values
 	long total;
@@ -81,6 +81,7 @@ private:
 	DragButton* percent[MAX_PLAYERS];
 	OSHGui::Panel* bar[MAX_PLAYERS];
 	OSHGui::Panel* recent[MAX_PLAYERS];
+	OSHGui::Drawing::Color labelcolor;
 
 	// main routine variables
 	bool in_explorable = false;
