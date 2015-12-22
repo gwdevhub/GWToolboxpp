@@ -96,6 +96,13 @@ PartyDamage::PartyDamage() {
 
 	std::shared_ptr<PartyDamage> self = std::shared_ptr<PartyDamage>(this);
 	Form::Show(self);
+
+	LoadIni();
+}
+
+PartyDamage::~PartyDamage() {
+	inifile_->Reset();
+	delete inifile_;
 }
 
 void PartyDamage::MapLoadedCallback(GWAPI::StoC::P230* packet) {
@@ -321,4 +328,31 @@ void PartyDamage::SetFreeze(bool b) {
 		absolute[i]->SetEnabled(!b);
 		percent[i]->SetEnabled(!b);
 	}
+}
+
+void PartyDamage::LoadIni() {
+	inifile_ = new CSimpleIni(false, false, false);
+	inifile_->LoadFile(GuiUtils::getPath(inifilename).c_str());
+	CSimpleIni::TNamesDepend keys;
+	inifile_->GetAllKeys(inisection, keys);
+	for (CSimpleIni::Entry key : keys) {
+		const wchar_t* wkey = key.pItem;
+		try {
+			long lkey = std::stol(wkey);
+			if (lkey <= 0) continue;
+			long lval = inifile_->GetLongValue(inisection, wkey, 0);
+			if (lval <= 0) continue;
+			hp_map[lkey] = lval;
+		} catch (...) {
+			// no big deal
+		}
+	}
+}
+
+void PartyDamage::SaveIni() {
+	for (const std::pair<DWORD, long>& item : hp_map) {
+		wstring key = std::to_wstring(item.first);
+		inifile_->SetLongValue(inisection, key.c_str(), item.second, 0, false, true);
+	}
+	inifile_->SaveFile(GuiUtils::getPath(inifilename).c_str());
 }

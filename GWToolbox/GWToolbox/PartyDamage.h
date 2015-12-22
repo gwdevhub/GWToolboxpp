@@ -11,8 +11,12 @@
 
 #include "ToolboxWindow.h"
 #include "Timer.h"
+#include "GuiUtils.h"
 
 class PartyDamage : public ToolboxWindow {
+	const wchar_t* inifilename = L"healthlog.ini";
+	const wchar_t* inisection = L"health";
+
 	static const int MAX_PLAYERS = 12;
 	static const int ABS_WIDTH = 50;
 	static const int PERC_WIDTH = 50;
@@ -46,6 +50,7 @@ class PartyDamage : public ToolboxWindow {
 
 public:
 	PartyDamage();
+	~PartyDamage();
 
 	inline static const wchar_t* IniSection() { return L"damage"; }
 	inline static const wchar_t* IniKeyX() { return L"x"; }
@@ -66,6 +71,9 @@ public:
 
 	void WriteChat();
 	void Reset();
+
+	void LoadIni();
+	void SaveIni();
 
 private:
 	void DamagePacketCallback(GWAPI::StoC::P151* packet);
@@ -95,5 +103,5 @@ private:
 	std::queue<std::wstring> send_queue;
 
 	// ini
-	
+	CSimpleIni* inifile_;
 };

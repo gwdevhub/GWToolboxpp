@@ -94,6 +94,8 @@ void GWToolbox::Exec() {
 	main_window().settings_panel().Close();
 	LOG("Saving config file\n");
 	config_->Save();
+	LOG("saving health log\n");
+	party_damage().SaveIni();
 	Sleep(100);
 	LOG("Deleting config\n");
 	delete config_;
