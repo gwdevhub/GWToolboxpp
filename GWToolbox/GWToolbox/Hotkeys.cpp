@@ -603,10 +603,10 @@ void HotkeySendChat::exec() {
 	if (isLoading()) return;
 	if (msg_.empty()) return;
 	GWCA api;
-	api().Chat().SendChat(msg_.c_str(), channel_);
 	if (channel_ == L'/') {
 		ChatLogger::LogF(L"/%ls", msg_.c_str());
 	}
+	api().Chat().SendChatCmd(msg_.c_str(), channel_);
 }
 
 void HotkeyDropUseBuff::exec() {

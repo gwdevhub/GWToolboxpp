@@ -23,7 +23,7 @@ settings_panel_(*new SettingsPanel()) {
 	tab_buttons = std::vector<TabButton*>();
 	current_panel_ = -1;
 	minimized_ = false;
-	
+	hidden_ = false;
 	
 	// some local vars
 	int y = 0;

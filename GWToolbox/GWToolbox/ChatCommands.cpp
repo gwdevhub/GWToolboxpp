@@ -129,7 +129,7 @@ void ChatCommands::CmdDialog(vector<wstring> args) {
 
 void ChatCommands::CmdTB(vector<wstring> args) {
 	if (args.size() == 0) {
-		ChatLogger::Log(L"[Error] Please provide an argument");
+		GWToolbox::instance().main_window().ToggleHidden();
 	} else {
 		wstring arg = GetLowerCaseArg(args, 0);
 		if (arg == L"age") {
