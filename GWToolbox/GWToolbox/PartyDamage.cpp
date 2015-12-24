@@ -297,22 +297,29 @@ float PartyDamage::GetPartOfTotal(long dmg) {
 }
 
 void PartyDamage::WriteChat() {
-	for (int i = 0; i < MAX_PLAYERS; ++i) {
-		if (damage[i].damage > 0) {
-			std::wstringstream ss;
-			ss << GwConstants::to_wstring(damage[i].primary);
-			ss << L"/";
-			ss << GwConstants::to_wstring(damage[i].secondary);
-			ss << L" ";
-			ss << damage[i].name;
-			ss << L" (";
-			ss << GetPercentageOfTotal(damage[i].damage);
-			ss << L" %) ";
-			ss << damage[i].damage;
-			send_queue.push(ss.str());
+	vector<size_t> idx(MAX_PLAYERS);
+	for (size_t i = 0; i < MAX_PLAYERS; ++i) idx[i] = i;
+	sort(idx.begin(), idx.end(), [this](size_t i1, size_t i2) {
+		return damage[i1].damage > damage[i2].damage;
+	});
+
+	for (int i = 0; i < idx.size(); ++i) {
+		int index = idx[i];
+		if (damage[index].damage > 0) {
+			const int size = 130;
+			wchar_t buff[size];
+			swprintf_s(buff, size, L"%2d ~ %3.2f %% ~ %ls/%ls %ls ~ %d",
+				index + 1,
+				GetPercentageOfTotal(damage[index].damage),
+				GwConstants::to_wstring(damage[index].primary).c_str(),
+				GwConstants::to_wstring(damage[index].secondary).c_str(),
+				damage[index].name.c_str(),
+				damage[index].damage);
+
+			send_queue.push(buff);
 		}
 	}
-	send_queue.push(L"Total (100%) " + std::to_wstring(total));
+	send_queue.push(L"Total ~ 100 % ~ " + std::to_wstring(total));
 }
 
 void PartyDamage::Reset() {
