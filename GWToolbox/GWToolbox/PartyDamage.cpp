@@ -309,7 +309,7 @@ void PartyDamage::WriteChat() {
 			const int size = 130;
 			wchar_t buff[size];
 			swprintf_s(buff, size, L"%2d ~ %3.2f %% ~ %ls/%ls %ls ~ %d",
-				index + 1,
+				i + 1,
 				GetPercentageOfTotal(damage[index].damage),
 				GwConstants::to_wstring(damage[index].primary).c_str(),
 				GwConstants::to_wstring(damage[index].secondary).c_str(),
