@@ -195,7 +195,6 @@ void BondsWindow::BondsMonitor::UpdateUI() {
 		parent_->SetSize(GetSize());
 	}
 
-	bool show[MAX_PLAYERS][MAX_BONDS];
 	for (int i = 0; i < MAX_PLAYERS; ++i) {
 		for (int j = 0; j < MAX_BONDS; ++j) {
 			show[i][j] = false;

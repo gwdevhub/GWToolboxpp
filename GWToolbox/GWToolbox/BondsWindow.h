@@ -27,6 +27,7 @@ class BondsWindow : public ToolboxWindow {
 		// the end of it. Maybe now it'll overwrite useless stuff.
 		OSHGui::PictureBox* pics[MAX_PLAYERS * 2][MAX_BONDS];
 		int buff_id[MAX_PLAYERS * 2][MAX_BONDS];
+		bool show[MAX_PLAYERS * 2][MAX_BONDS];
 
 		void DropUseBuff(int bond, int player);
 
