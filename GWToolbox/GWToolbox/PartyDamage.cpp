@@ -303,7 +303,7 @@ void PartyDamage::WriteChat() {
 		return damage[i1].damage > damage[i2].damage;
 	});
 
-	for (int i = 0; i < idx.size(); ++i) {
+	for (size_t i = 0; i < idx.size(); ++i) {
 		int index = idx[i];
 		if (damage[index].damage > 0) {
 			const int size = 130;

@@ -28,6 +28,7 @@ private:
 	static void CmdTB(std::vector<std::wstring> args);
 	static void CmdTP(std::vector<std::wstring> args);
 	static void CmdDamage(std::vector<std::wstring> args);
+	static void CmdChest(std::vector<std::wstring> args);
 
 	static void CmdZoom(std::vector<std::wstring> args);
 	static void CmdCamera(std::vector<std::wstring> args);

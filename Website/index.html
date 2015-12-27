@@ -15,7 +15,36 @@
 
 <hr>
 
+<p><div class="toc">
+<ul>
+<li><a href="#guild-wars-toolbox">Guild Wars Toolbox++</a><ul>
+<li><ul>
+<li><a href="#download">Download</a></li>
+<li><a href="#feature-overview">Feature Overview</a></li>
+<li><a href="#faqs">FAQs</a></li>
+<li><a href="#detailed-feature-description">Detailed feature description</a><ul>
+<li><a href="#pcons">Pcons</a></li>
+<li><a href="#hotkeys">Hotkeys</a></li>
+<li><a href="#builds">Builds</a></li>
+<li><a href="#travel">Travel</a></li>
+<li><a href="#dialogs">Dialogs</a></li>
+<li><a href="#info">Info</a></li>
+<li><a href="#materials">Materials</a></li>
+<li><a href="#settings">Settings</a></li>
+</ul>
+</li>
+<li><a href="#customization">Customization</a></li>
+<li><a href="#chat-commands">Chat commands</a></li>
+<li><a href="#source-code">Source code</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</p>
 
+<hr>
 
 <h3 id="download">Download</h3>
 
@@ -34,6 +63,8 @@
 <li>Check price for consets, res scrolls and powerstones, automatically buy materials for any amount of those - <strong>Coming soon!</strong></li>
 <li>Show instance timer, target health or distance, maintained E/Mo bonds</li>
 </ul>
+
+
 
 <h3 id="faqs">FAQs</h3>
 
@@ -149,11 +180,10 @@ will ping the selected team build to chat, you can edit team builds in the Build
 <li><strong>Bonds Monitor</strong> is typically focused for E/Mo, shows the currently maintained <strong>Balth</strong>, <strong>Prot</strong> and <strong>Life</strong> bonds on the team. You can also cast or drop bonds by clicking on each slot.</li>
 <li><strong>Target Health</strong> shows the health of the current target both in percentage and absolute values</li>
 <li><strong>Target Distance</strong> shows the distance to the current target both in percentage of radar range and absolute in-game units. For reference Radar Range is 5000, Spirit Range is 2500, casting range is 1200 and aggro range is 1000.</li>
+<li><strong>Party Damage</strong> shows the damage done by each player in your party. You will see the absolute value and the percentage of the total party damage done. The background of each row also shows visually the amount. Finally, a thin bar will show recent damage in real time, this value resets for each player after a few seconds of not doing damage.</li>
 </ul>
 
 <p>Finally, there is a button to <strong>Open Xunlai Chest</strong> from anywhere in an outpost.</p>
-
-
 
 <h4 id="materials">Materials</h4>
 
@@ -175,6 +205,55 @@ will ping the selected team build to chat, you can edit team builds in the Build
 </ul>
 
 
+
+<h3 id="customization">Customization</h3>
+
+<p>You can change the background and foreground (font) color of each toolbox component. To do so, go into settings, click Open Settings Folder, and edit the Theme.txt file. Note that the file is in JSON format, and the theme is loaded on startup.</p>
+
+<p>You can change the toolbox font by replacing the Font.ttf file in the settings folder.</p>
+
+<p>You can change the toolbox icons by replacing the appropriate file in the settings folder / img.</p>
+
+
+
+<h3 id="chat-commands">Chat commands</h3>
+
+<p>Toolbox supports a variety of chat commands, you can use them by typing in chat like in-game commands such as <code>/age</code></p>
+
+<ul>
+<li><code>/age2</code> or <code>/tb age</code> will display a simple in-game instance time</li>
+<li><code>/pcons</code> will toggle pcons, alternatively, you can use <code>/pcons on</code> or <code>/pcons off</code></li>
+<li><code>/dialog [id]</code> will send a dialog, use an integer or hex number instead of <code>[id]</code></li>
+<li><p><code>/to [dest]</code>, <code>/tp [dest]</code> or <code>/travel [dest]</code> will map travel you to the <code>[dest]</code> outpost. You can use the following values instead of <code>[dest]</code>:</p>
+
+<ul><li><code>toa</code></li>
+<li><code>doa</code></li>
+<li><code>kamadan</code> or <code>kama</code></li>
+<li><code>embark</code></li>
+<li><code>vlox</code> or <code>vloxs</code></li>
+<li><code>gadd</code> or <code>gadds</code></li>
+<li><code>urgoz</code></li>
+<li><code>deep</code></li>
+<li><code>fav1</code>, <code>fav2</code>, <code>fav3</code> for your favorite locations</li>
+<li><code>gh</code> for guild hall <br>
+You can also specify the district with a third argument, possible values are <code>ae1</code>, <code>ee1</code>, <code>eg1</code> (or <code>dd1</code>) and <code>int</code>.</li></ul></li>
+<li><p><code>/zoom [value]</code> to change the maximum zoom. Use a number instead of <code>[value]</code>. Use just <code>/zoom</code> without an argument to reset to default value.</p></li>
+<li><code>/tb [arg]</code> has several options to control toolbox: <br>
+<ul><li><code>/tb hide</code> to completely hide toolbox</li>
+<li><code>/tb show</code> to show toolbox</li>
+<li><code>/tb reset</code> to reset the location to the topleft corner</li>
+<li><code>/tb mini</code> or <code>/tb minimize</code> to minimize</li>
+<li><code>/tb maxi</code> or <code>/tb maximize</code> to maximize</li>
+<li><code>/tb close</code>, <code>/tb quit</code> or <code>/tb exit</code> to close toolbox</li></ul></li>
+<li><code>/chest</code> or <code>/xunlai</code> to open Xunlai Chest in a city or outpost</li>
+<li><code>/cam [args]</code> or <code>/camera [args]</code> to control various aspect of the camera: <br>
+<ul><li><code>/cam unlock</code> and <code>/cam lock</code> to lock/unlock camera</li>
+<li><code>/cam fog on</code> or <code>/cam fog off</code> to enable or disable fog</li>
+<li><code>/cam fov [amount]</code> to change the Field-of-View, or <code>/cam fov default</code> to reset it.</li></ul></li>
+<li><code>/dmg [arg]</code> or <code>/damage [arg]</code> controls the party damage monitor: <br>
+<ul><li><code>/dmg report</code> to print the results in party chat</li>
+<li><code>/dmg reset</code> to reset</li></ul></li>
+</ul>
 
 <h3 id="source-code">Source code</h3>
 

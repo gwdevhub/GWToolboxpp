@@ -27,6 +27,8 @@ ChatCommands::ChatCommands() {
 	AddCommand(L"cam", ChatCommands::CmdCamera);
 	AddCommand(L"damage", ChatCommands::CmdDamage);
 	AddCommand(L"dmg", ChatCommands::CmdDamage);
+	AddCommand(L"chest", ChatCommands::CmdChest);
+	AddCommand(L"xunlai", ChatCommands::CmdChest);
 
 	DWORD playerNumber = GWCA::Api().Agents().GetPlayer()->PlayerNumber;
 	ChatLogger::LogF(L"Hello %ls!", GWCA::Api().Agents().GetPlayerNameByLoginNumber(playerNumber));
@@ -136,6 +138,12 @@ void ChatCommands::CmdDialog(vector<wstring> args) {
 	}
 }
 
+void ChatCommands::CmdChest(vector<wstring> args) {
+	if (GWCA::Api().Map().GetInstanceType() == GwConstants::InstanceType::Outpost) {
+		GWCA::Api().Items().OpenXunlaiWindow();
+	}
+}
+
 void ChatCommands::CmdTB(vector<wstring> args) {
 	if (args.size() == 0) {
 		GWToolbox::instance().main_window().ToggleHidden();
@@ -143,8 +151,6 @@ void ChatCommands::CmdTB(vector<wstring> args) {
 		wstring arg = GetLowerCaseArg(args, 0);
 		if (arg == L"age") {
 			CmdAge2(args);
-		} else if (arg == L"chest") {
-			GWCA::Api().Items().OpenXunlaiWindow();
 		} else if (arg == L"hide") {
 			GWToolbox::instance().main_window().SetHidden(true);
 		} else if (arg == L"show") {

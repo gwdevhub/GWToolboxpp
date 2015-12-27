@@ -4,6 +4,11 @@ A set of tools for Guild Wars speed-clearers
 _by Has and KAOS_
 
 ---------------
+
+[TOC]
+
+---------------
+
 ### Download
 [GWToolbox.exe](http://fbgmguild.com/GWToolboxpp/GWToolbox.exe)
 
@@ -104,6 +109,7 @@ You can toggle the widgets **Bonds Monitor**, **Target Health** and **Target Dis
 * __Bonds Monitor__ is typically focused for E/Mo, shows the currently maintained **Balth**, **Prot** and **Life** bonds on the team. You can also cast or drop bonds by clicking on each slot.
 * __Target Health__ shows the health of the current target both in percentage and absolute values
 * __Target Distance__ shows the distance to the current target both in percentage of radar range and absolute in-game units. For reference Radar Range is 5000, Spirit Range is 2500, casting range is 1200 and aggro range is 1000.
+* __Party Damage__ shows the damage done by each player in your party. You will see the absolute value and the percentage of the total party damage done. The background of each row also shows visually the amount. Finally, a thin bar will show recent damage in real time, this value resets for each player after a few seconds of not doing damage.
 
 Finally, there is a button to **Open Xunlai Chest** from anywhere in an outpost.
 
@@ -120,6 +126,50 @@ Finally, there is a button to **Open Xunlai Chest** from anywhere in an outpost.
 * __Save Location Data__. If enabled, Toolbox++ will save your position each second in a log file in the settings folder
 * __Open GWToolbox++ Website__ will open this web page
 * __Open Settings Folder__ will open the installation folder
+
+### Customization
+You can change the background and foreground (font) color of each toolbox component. To do so, go into settings, click Open Settings Folder, and edit the Theme.txt file. Note that the file is in JSON format, and the theme is loaded on startup.
+
+You can change the toolbox font by replacing the Font.ttf file in the settings folder.
+
+You can change the toolbox icons by replacing the appropriate file in the settings folder / img.
+
+### Chat commands
+Toolbox supports a variety of chat commands, you can use them by typing in chat like in-game commands such as `/age`
+
+* `/age2` or `/tb age` will display a simple in-game instance time
+* `/pcons` will toggle pcons, alternatively, you can use `/pcons on` or `/pcons off`
+* `/dialog [id]` will send a dialog, use an integer or hex number instead of `[id]`
+* `/to [dest]`, `/tp [dest]` or `/travel [dest]` will map travel you to the `[dest]` outpost. You can use the following values instead of `[dest]`:
+	* `toa`
+	* `doa`
+	* `kamadan` or `kama`
+	* `embark`
+	* `vlox` or `vloxs`
+	* `gadd` or `gadds`
+	* `urgoz`
+	* `deep`
+	* `fav1`, `fav2`, `fav3` for your favorite locations
+	* `gh` for guild hall
+You can also specify the district with a third argument, possible values are `ae1`, `ee1`, `eg1` (or `dd1`) and `int`.
+
+* `/zoom [value]` to change the maximum zoom. Use a number instead of `[value]`. Use just `/zoom` without an argument to reset to default value.
+* `/tb [arg]` has several options to control toolbox:
+	* `/tb hide` to completely hide toolbox
+	* `/tb show` to show toolbox
+	* `/tb reset` to reset the location to the topleft corner
+	* `/tb mini` or `/tb minimize` to minimize
+	* `/tb maxi` or `/tb maximize` to maximize
+	* `/tb close`, `/tb quit` or `/tb exit` to close toolbox
+* `/chest` or `/xunlai` to open Xunlai Chest in a city or outpost
+* `/cam [args]` or `/camera [args]` to control various aspect of the camera:
+	* `/cam unlock` and `/cam lock` to lock/unlock camera
+	* `/cam fog on` or `/cam fog off` to enable or disable fog
+	* `/cam fov [amount]` to change the Field-of-View, or `/cam fov default` to reset it.
+* `/dmg [arg]` or `/damage [arg]` controls the party damage monitor:
+	* `/dmg report` to print the results in party chat
+	* `/dmg reset` to reset
+
 
 ### Source code
 GWToolbox++ is completely open source and the repository is available [here](https://bitbucket.org/ggori/gwtoolbox-plusplus) on BitBucket
