@@ -11,6 +11,10 @@ using namespace std;
 ChatCommands::ChatCommands() {
 	ChatLogger::Init();
 
+	move_forward = 0;
+	move_side = 0;
+	move_up = 0;
+
 	AddCommand(L"age2", ChatCommands::CmdAge2);
 	AddCommand(L"pcons", ChatCommands::CmdPcons);
 	AddCommand(L"dialog", ChatCommands::CmdDialog);
@@ -39,20 +43,37 @@ bool ChatCommands::ProcessMessage(LPMSG msg) {
 	CameraMgr cam = GWCA::Api().Camera();
 	float speed = 25.f;
 
-	if (!cam.GetCameraUnlock() || *(DWORD*)0xA377C8) return false; // 0xA377C8 is a flag when someone is typing
+	if (!cam.GetCameraUnlock() || IsTyping()) return false; // 0xA377C8 is a flag when someone is typing
 
 	switch (msg->message) {
-	case WM_KEYDOWN:
-	case WM_SYSKEYDOWN: {
+	case WM_KEYDOWN: {
+		OSHGui::Key key = (OSHGui::Key)msg->wParam;
+		switch (key) {
+		case OSHGui::Key::W: move_forward = 1; return true;
+		case OSHGui::Key::S: move_forward = -1; return true;
+		case OSHGui::Key::D: move_side = 1; return true;
+		case OSHGui::Key::A: move_side = -1; return true;
+		case OSHGui::Key::X: move_up = 1; return true;
+		case OSHGui::Key::Z: move_up = -1; return true;
+		}
+	}
+	case WM_KEYUP: {
 		OSHGui::Key key = (OSHGui::Key)msg->wParam;
 		switch (key) {
 		case OSHGui::Key::W:
 		case OSHGui::Key::S:
+			move_forward = 0; 
+			return true;
 		case OSHGui::Key::D:
 		case OSHGui::Key::A:
+			move_side = 0;
+			return true;
 		case OSHGui::Key::X:
 		case OSHGui::Key::Z:
+			move_up = 0;
 			return true;
+		default:
+			break;
 		}
 	}
 	}
@@ -60,27 +81,15 @@ bool ChatCommands::ProcessMessage(LPMSG msg) {
 	return false;
 }
 
-void ChatCommands::UpdateLookAtPos() {
-	CameraMgr cam = GWCA::Api().Camera();
-	float speed = 25.f;
-
-	if (GetAsyncKeyState('W'))
-		cam.ForwardMovement(speed);
-	if (GetAsyncKeyState('S'))
-		cam.ForwardMovement(-speed);
-	if (GetAsyncKeyState('Z'))
-		cam.VerticalMovement(speed);
-	if (GetAsyncKeyState('X'))
-		cam.VerticalMovement(-speed);
-
-}
-
 void ChatCommands::UpdateUI() {
 	CameraMgr cam = GWCA::Api().Camera();
-	if (!cam.GetCameraUnlock() || *(DWORD*)0xA377C8) return; // same as above
-	UpdateLookAtPos();
-
-	cam.SetCameraPos(cam.ComputeCamPos(0)); // we most likely want to compute at 2.f which is first person in gw, 0 keep same dist
+	if (cam.GetCameraUnlock() && !IsTyping()) {
+		float speed = 25.0f;
+		cam.ForwardMovement(speed * move_forward);
+		cam.VerticalMovement(-speed * move_up);
+		cam.SideMovement(-speed * move_side);
+		cam.UpdateCameraPos();
+	}
 }
 
 wstring ChatCommands::GetLowerCaseArg(vector<wstring> args, int index) {

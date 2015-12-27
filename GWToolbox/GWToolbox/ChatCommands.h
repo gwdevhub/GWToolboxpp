@@ -18,6 +18,7 @@ public:
 
 private:
 	void AddCommand(std::wstring cmd, Handler_t);
+	bool IsTyping() { return (*(DWORD*)0xA377C8) != 0; }
 	
 	static std::wstring GetLowerCaseArg(std::vector<std::wstring>, int index);
 
@@ -30,5 +31,8 @@ private:
 
 	static void CmdZoom(std::vector<std::wstring> args);
 	static void CmdCamera(std::vector<std::wstring> args);
-	static void UpdateLookAtPos();
+
+	int move_forward;
+	int move_side;
+	int move_up;
 };
