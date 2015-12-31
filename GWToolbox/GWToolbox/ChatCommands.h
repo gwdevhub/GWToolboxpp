@@ -17,7 +17,7 @@ public:
 	void UpdateUI();
 
 private:
-	void AddCommand(std::wstring cmd, Handler_t);
+	void AddCommand(std::wstring cmd, Handler_t, bool override = true);
 	bool IsTyping() { return (*(DWORD*)0xA377C8) != 0; }
 	
 	static std::wstring GetLowerCaseArg(std::vector<std::wstring>, int index);
@@ -29,6 +29,7 @@ private:
 	static void CmdTP(std::vector<std::wstring> args);
 	static void CmdDamage(std::vector<std::wstring> args);
 	static void CmdChest(std::vector<std::wstring> args);
+	static void CmdAfk(std::vector<std::wstring> args);
 
 	static void CmdZoom(std::vector<std::wstring> args);
 	static void CmdCamera(std::vector<std::wstring> args);

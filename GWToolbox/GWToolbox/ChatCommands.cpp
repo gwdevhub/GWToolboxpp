@@ -29,16 +29,17 @@ ChatCommands::ChatCommands() {
 	AddCommand(L"dmg", ChatCommands::CmdDamage);
 	AddCommand(L"chest", ChatCommands::CmdChest);
 	AddCommand(L"xunlai", ChatCommands::CmdChest);
+	AddCommand(L"afk", ChatCommands::CmdAfk, false);
 
 	DWORD playerNumber = GWCA::Api().Agents().GetPlayer()->PlayerNumber;
 	ChatLogger::LogF(L"Hello %ls!", GWCA::Api().Agents().GetPlayerNameByLoginNumber(playerNumber));
 }
 
-void ChatCommands::AddCommand(wstring cmd, Handler_t handler) {
+void ChatCommands::AddCommand(wstring cmd, Handler_t handler, bool override) {
 	GWCA::Api().Chat().RegisterCommand(cmd,
 		[handler](std::wstring cmd, std::vector<std::wstring> args) {
 		handler(args);
-	});
+	}, override);
 }
 
 bool ChatCommands::ProcessMessage(LPMSG msg) {
@@ -276,4 +277,8 @@ void ChatCommands::CmdDamage(vector<wstring> args) {
 			GWToolbox::instance().party_damage().Reset();
 		}
 	}
+}
+
+void ChatCommands::CmdAfk(vector<wstring> args) {
+	GWCA::Api().FriendList().SetFriendListStatus(GwConstants::OnlineStatus::AWAY);
 }
