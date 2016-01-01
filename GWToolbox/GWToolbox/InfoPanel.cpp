@@ -93,9 +93,9 @@ void InfoPanel::BuildUI() {
 	dialog->AddControl(dialog_id);
 
 	CheckBox* bonds = new CheckBox();
-	bonds->SetSize(full_item_width, item_height);
+	bonds->SetSize(half_item_width, item_height);
 	bonds->SetLocation(item1_x, dialog->GetBottom() + DefaultBorderPadding);
-	bonds->SetText(L"Show Bonds Monitor");
+	bonds->SetText(L"Bonds Monitor");
 	bonds->SetChecked(GWToolbox::instance().config().IniReadBool(
 		BondsWindow::IniSection(), BondsWindow::IniKeyShow(), false));
 	bonds->GetCheckedChangedEvent() += CheckedChangedEventHandler([bonds](Control*) {
@@ -107,9 +107,9 @@ void InfoPanel::BuildUI() {
 	AddControl(bonds);
 
 	CheckBox* targetHp = new CheckBox();
-	targetHp->SetSize(full_item_width, item_height);
+	targetHp->SetSize(half_item_width, item_height);
 	targetHp->SetLocation(item1_x, bonds->GetBottom() + DefaultBorderPadding);
-	targetHp->SetText(L"Show Target Health");
+	targetHp->SetText(L"Target Health");
 	targetHp->SetChecked(GWToolbox::instance().config().IniReadBool(
 		HealthWindow::IniSection(), HealthWindow::IniKeyShow(), false));
 	targetHp->GetCheckedChangedEvent() += CheckedChangedEventHandler([targetHp](Control*) {
@@ -121,9 +121,9 @@ void InfoPanel::BuildUI() {
 	AddControl(targetHp);
 
 	CheckBox* distance = new CheckBox();
-	distance->SetSize(full_item_width, item_height);
+	distance->SetSize(half_item_width, item_height);
 	distance->SetLocation(item1_x, targetHp->GetBottom() + DefaultBorderPadding);
-	distance->SetText(L"Show Target Distance");
+	distance->SetText(L"Target Distance");
 	distance->SetChecked(GWToolbox::instance().config().IniReadBool(
 		DistanceWindow::IniSection(), DistanceWindow::IniKeyShow(), false));
 	distance->GetCheckedChangedEvent() += CheckedChangedEventHandler([distance](Control*) {
@@ -135,9 +135,9 @@ void InfoPanel::BuildUI() {
 	AddControl(distance);
 
 	CheckBox* damage = new CheckBox();
-	damage->SetSize(full_item_width, item_height);
+	damage->SetSize(half_item_width, item_height);
 	damage->SetLocation(item1_x, distance->GetBottom() + DefaultBorderPadding);
-	damage->SetText(L"Show Party Damage");
+	damage->SetText(L"Party Damage");
 	damage->SetChecked(GWToolbox::instance().config().IniReadBool(
 		PartyDamage::IniSection(), PartyDamage::InikeyShow(), false));
 	damage->GetCheckedChangedEvent() += CheckedChangedEventHandler([damage](Control*) {
@@ -147,6 +147,19 @@ void InfoPanel::BuildUI() {
 		tb.config().IniWriteBool(PartyDamage::IniSection(), PartyDamage::InikeyShow(), show);
 	});
 	AddControl(damage);
+
+	CheckBox* timestamps = new CheckBox();
+	timestamps->SetSize(half_item_width, item_height);
+	timestamps->SetLocation(item2_x, bonds->GetTop());
+	timestamps->SetText(L"Chat Timestamps");
+	timestamps->SetChecked(GWToolbox::instance().config().IniReadBool(
+		MainWindow::IniSection(), MainWindow::IniKeyTimestamps(), true));
+	timestamps->GetCheckedChangedEvent() += CheckedChangedEventHandler([timestamps](Control*) {
+		bool active = timestamps->GetChecked();
+		GWCA::Api().Chat().ToggleTimeStamp(active);
+		GWToolbox::instance().config().IniWriteBool(MainWindow::IniSection(), MainWindow::IniKeyTimestamps(), active);
+	});
+	AddControl(timestamps);
 
 	Button* xunlai = new Button();
 	xunlai->SetSize(full_item_width, 30);

@@ -6,9 +6,6 @@
 
 class ChatLogger {
 public:
-	static void Init() {
-		GWAPI::GWCA::Api().Chat().RegisterChannel(L"GWToolbox++", 0x00CCFF, 0xDDDDDD);
-	}
 
 	inline static void Log(const wchar_t* msg) {
 		GWAPI::GWCA::Api().Chat().WriteChat(L"GWToolbox++", msg);

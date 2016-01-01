@@ -9,8 +9,7 @@
 using namespace std;
 
 ChatCommands::ChatCommands() {
-	ChatLogger::Init();
-
+	
 	move_forward = 0;
 	move_side = 0;
 	move_up = 0;
@@ -30,9 +29,6 @@ ChatCommands::ChatCommands() {
 	AddCommand(L"chest", ChatCommands::CmdChest);
 	AddCommand(L"xunlai", ChatCommands::CmdChest);
 	AddCommand(L"afk", ChatCommands::CmdAfk, false);
-
-	DWORD playerNumber = GWCA::Api().Agents().GetPlayer()->PlayerNumber;
-	ChatLogger::LogF(L"Hello %ls!", GWCA::Api().Agents().GetPlayerNameByLoginNumber(playerNumber));
 }
 
 void ChatCommands::AddCommand(wstring cmd, Handler_t handler, bool override) {

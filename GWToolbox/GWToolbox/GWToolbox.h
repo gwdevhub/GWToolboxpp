@@ -93,6 +93,14 @@ private:
 		initialized_(false),
 		must_self_destruct_(false),
 		capture_input_(false) {
+
+		GWAPI::GWCA::Api().Chat().RegisterChannel(L"GWToolbox++", 0x00CCFF, 0xDDDDDD);
+		GWAPI::GWCA::Api().Chat().SetTimestampColor(0xBBBBBB);
+		GWAPI::GWCA::Api().Chat().ToggleTimeStamp(config().IniReadBool(
+			MainWindow::IniSection(), MainWindow::IniKeyTimestamps(), true));
+
+		DWORD playerNumber = GWCA::Api().Agents().GetPlayer()->PlayerNumber;
+		ChatLogger::LogF(L"Hello %ls!", GWCA::Api().Agents().GetPlayerNameByLoginNumber(playerNumber));
 	}
 
 	//------ Private Methods ------//
