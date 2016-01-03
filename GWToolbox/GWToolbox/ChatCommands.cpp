@@ -13,6 +13,7 @@ ChatCommands::ChatCommands() {
 	move_forward = 0;
 	move_side = 0;
 	move_up = 0;
+	cam_speed_ = DEFAULT_CAM_SPEED;
 
 	AddCommand(L"age2", ChatCommands::CmdAge2);
 	AddCommand(L"pcons", ChatCommands::CmdPcons);
@@ -83,15 +84,15 @@ bool ChatCommands::ProcessMessage(LPMSG msg) {
 void ChatCommands::UpdateUI() {
 	CameraMgr cam = GWCA::Api().Camera();
 	if (cam.GetCameraUnlock() && !IsTyping()) {
-		float speed = 25.0f;
-		cam.ForwardMovement(speed * move_forward);
-		cam.VerticalMovement(-speed * move_up);
-		cam.SideMovement(-speed * move_side);
+		cam.ForwardMovement(cam_speed_ * move_forward);
+		cam.VerticalMovement(-cam_speed_ * move_up);
+		cam.SideMovement(-cam_speed_ * move_side);
 		cam.UpdateCameraPos();
 	}
 }
 
-wstring ChatCommands::GetLowerCaseArg(vector<wstring> args, int index) {
+wstring ChatCommands::GetLowerCaseArg(vector<wstring> args, size_t index) {
+	if (index >= args.size()) return L"";
 	wstring arg = args[index];
 	std::transform(arg.begin(), arg.end(), arg.begin(), ::tolower);
 	return arg;
@@ -239,26 +240,40 @@ void ChatCommands::CmdCamera(vector<wstring> args) {
 			GWCA::Api().Camera().UnlockCam(true);
 			ChatLogger::Log(L"Use W,A,S,D,X,Z for camera movement");
 		} else if (arg0 == L"fog") {
-			if (args.size() >= 2) {
-				wstring arg1 = GetLowerCaseArg(args, 1);
-				if (arg1 == L"on") {
-					GWCA::Api().Camera().SetFog(true);
-				} else if (arg1 == L"off") {
-					GWCA::Api().Camera().SetFog(false);
+			wstring arg1 = GetLowerCaseArg(args, 1);
+			if (arg1 == L"on") {
+				GWCA::Api().Camera().SetFog(true);
+			} else if (arg1 == L"off") {
+				GWCA::Api().Camera().SetFog(false);
+			}
+		} else if (arg0 == L"fov") {
+			wstring arg1 = GetLowerCaseArg(args, 1);
+			if (arg1 == L"default") {
+				GWCA::Api().Camera().SetFieldOfView(1.308997f);
+			} else {
+				try {
+					float fovnew = std::stof(arg1);
+					GWCA::Api().Camera().SetFieldOfView(fovnew);
+					ChatLogger::LogF(L"Field of View is %f", fovnew);
+				} catch (...) {
+					ChatLogger::LogF(L"[Error] Invalid argument '%ls', please use a float value", args[1].c_str());
 				}
 			}
-		}
-		else if (arg0 == L"fov") {
+		} else if (arg0 == L"speed") {
 			wstring arg1 = GetLowerCaseArg(args, 1);
-			if (arg1 == L"default"){
-				GWCA::Api().Camera().SetFieldOfView(1.308997f);
-				return;
+			ChatCommands& self = GWToolbox::instance().chat_commands();
+			if (arg1 == L"default") {
+				self.cam_speed_ = self.DEFAULT_CAM_SPEED;
+			} else {
+				try {
+					float speed = std::stof(arg1);
+					self.cam_speed_ = speed;
+					ChatLogger::LogF(L"Camera speed is now %f", speed);
+				} catch (...) {
+					ChatLogger::LogF(L"[Error] Invalid argument '%ls', please use a float value", args[1].c_str());
+				}
 			}
-			float fovnew = std::stof(arg1);
-			GWCA::Api().Camera().SetFieldOfView(fovnew);
-			ChatLogger::LogF(L"Field of View is %f",fovnew);
-		}
-		else {
+		} else {
 			ChatLogger::Log(L"[Error] Invalid argument.");
 		}
 	}

@@ -151,7 +151,7 @@ void InfoPanel::BuildUI() {
 	CheckBox* timestamps = new CheckBox();
 	timestamps->SetSize(half_item_width, item_height);
 	timestamps->SetLocation(item2_x, bonds->GetTop());
-	timestamps->SetText(L"Chat Timestamps");
+	timestamps->SetText(L"Timestamps");
 	timestamps->SetChecked(GWToolbox::instance().config().IniReadBool(
 		MainWindow::IniSection(), MainWindow::IniKeyTimestamps(), true));
 	timestamps->GetCheckedChangedEvent() += CheckedChangedEventHandler([timestamps](Control*) {

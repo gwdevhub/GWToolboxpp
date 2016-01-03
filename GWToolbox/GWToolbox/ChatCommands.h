@@ -8,6 +8,7 @@
 
 class ChatCommands {
 	typedef std::function<void(std::vector<std::wstring>)> Handler_t;
+	const float DEFAULT_CAM_SPEED = 25.0f;
 
 public:
 	ChatCommands();
@@ -20,7 +21,7 @@ private:
 	void AddCommand(std::wstring cmd, Handler_t, bool override = true);
 	bool IsTyping() { return (*(DWORD*)0xA377C8) != 0; }
 	
-	static std::wstring GetLowerCaseArg(std::vector<std::wstring>, int index);
+	static std::wstring GetLowerCaseArg(std::vector<std::wstring>, size_t index);
 
 	static void CmdAge2(std::vector<std::wstring>);
 	static void CmdPcons(std::vector<std::wstring> args);
@@ -37,4 +38,5 @@ private:
 	int move_forward;
 	int move_side;
 	int move_up;
+	float cam_speed_;
 };
