@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "GWCA\APIMain.h"
+#include <GWCA\GWCA.h>
 
 #include "GWToolbox.h"
 #include "Config.h"
@@ -113,20 +113,20 @@ void DistanceWindow::SaveLocation() {
 }
 
 void DistanceWindow::UpdateUI() {
-	using namespace GWAPI::GW;
+	using namespace GWCA::GW;
 	using namespace std;
 
 	if (!enabled) return;
 
-	GWAPI::GWCA api;
+	GWCA::Api api;
 
-	Agent* target = api().Agents().GetTarget();
-	Agent* me = api().Agents().GetPlayer();
+	Agent* target = api.Agents().GetTarget();
+	Agent* me = api.Agents().GetPlayer();
 
 	wstring s1;
 	wstring s2;
 	if (target && me) {
-		long distance = api().Agents().GetDistance(target, me);
+		long distance = api.Agents().GetDistance(target, me);
 		s1 = to_wstring(distance * 100 / GwConstants::Range::Compass) + L" %";
 		s2 = to_wstring(distance);
 		if (!isVisible_) ToolboxWindow::ShowWindow(true);

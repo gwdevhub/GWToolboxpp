@@ -3,6 +3,10 @@
 #include <iostream>
 #include <sstream>
 
+#include <GWCA\ItemMgr.h>
+#include <GWCA\EffectMgr.h>
+#include <GWCA\SkillbarMgr.h>
+
 #include "logger.h"
 #include "ChatLogger.h"
 #include "GWToolbox.h"
@@ -10,7 +14,7 @@
 #include "BuildPanel.h"
 
 
-using namespace GWAPI;
+using namespace GWCA;
 using namespace OSHGui;
 
 TBHotkey::TBHotkey(Key key, Key modifier, bool active, wstring ini_section)
@@ -592,8 +596,7 @@ HotkeyPingBuild::HotkeyPingBuild(Key key, Key modifier, bool active, wstring ini
 void HotkeyUseItem::exec() {
 	if (!isExplorable()) return;
 	if (item_id_ <= 0) return;
-	GWCA api;
-	if (!api().Items().UseItemByModelId(item_id_)) {
+	if (!GWCA::Api::Items().UseItemByModelId(item_id_)) {
 		wstring name = item_name_.empty() ? to_wstring(item_id_) : item_name_;
 		ChatLogger::LogF(L"[Warning] %ls not found!", name.c_str());
 	}
@@ -602,24 +605,23 @@ void HotkeyUseItem::exec() {
 void HotkeySendChat::exec() {
 	if (isLoading()) return;
 	if (msg_.empty()) return;
-	GWCA api;
 	if (channel_ == L'/') {
 		ChatLogger::LogF(L"/%ls", msg_.c_str());
 	}
-	api().Chat().SendChatCmd(msg_.c_str(), channel_);
+	Api::Chat().SendChatCmd(msg_.c_str(), channel_);
 }
 
 void HotkeyDropUseBuff::exec() {
 	if (!isExplorable()) return;
 
-	GWCA api;
-	GW::Buff buff = api().Effects().GetPlayerBuffBySkillId(id_);
+	Api api;
+	GW::Buff buff = api.Effects().GetPlayerBuffBySkillId(id_);
 	if (buff.SkillId) {
-		api().Effects().DropBuff(buff.BuffId);
+		api.Effects().DropBuff(buff.BuffId);
 	} else {
-		int slot = api().Skillbar().GetSkillSlot(id_);
-		if (slot > 0 && api().Skillbar().GetPlayerSkillbar().Skills[slot].Recharge == 0) {
-			api().Skillbar().UseSkill(slot, api().Agents().GetTargetId());
+		int slot = api.Skillbar().GetSkillSlot(id_);
+		if (slot > 0 && api.Skillbar().GetPlayerSkillbar().Skills[slot].Recharge == 0) {
+			api.Skillbar().UseSkill(slot, api.Agents().GetTargetId());
 		}
 	}
 }
@@ -627,7 +629,6 @@ void HotkeyDropUseBuff::exec() {
 void HotkeyToggle::exec() {
 	GWToolbox& tb = GWToolbox::instance();
 	bool active;
-	GWCA api;
 	switch (target_) {
 	case HotkeyToggle::Clicker:
 		active = tb.main_window().hotkey_panel().ToggleClicker();
@@ -646,27 +647,26 @@ void HotkeyToggle::exec() {
 
 void HotkeyAction::exec() {
 	if (isLoading()) return;
-	GWCA api;
-
+	Api api;
 	switch (action_) {
 	case HotkeyAction::OpenXunlaiChest:
 		if (isOutpost()) {
-			api().Items().OpenXunlaiWindow();
+			api.Items().OpenXunlaiWindow();
 		}
 		break;
 	case HotkeyAction::OpenLockedChest: {
 		if (isExplorable()) {
-			GW::Agent* target = api().Agents().GetTarget();
+			GW::Agent* target = api.Agents().GetTarget();
 			if (target && target->Type == 0x200) {
-				api().Agents().GoSignpost(target);
-				api().Items().OpenLockedChest();
+				api.Agents().GoSignpost(target);
+				api.Items().OpenLockedChest();
 			}
 		}
 		break;
 	}
 	case HotkeyAction::DropGoldCoin:
 		if (isExplorable()) {
-			api().Items().DropGold(1);
+			api.Items().DropGold(1);
 		}
 		break;
 	}
@@ -675,14 +675,14 @@ void HotkeyAction::exec() {
 void HotkeyTarget::exec() {
 	if (isLoading()) return;
 	if (id_ <= 0) return;
-	GWCA api;
+	Api api;
 
-	GW::AgentArray agents = api().Agents().GetAgentArray();
+	GW::AgentArray agents = api.Agents().GetAgentArray();
 	if (!agents.valid()) {
 		return;
 	}
 
-	GW::Agent* me = agents[api().Agents().GetPlayerId()];
+	GW::Agent* me = agents[api.Agents().GetPlayerId()];
 	if (me == nullptr) return;
 
 	unsigned long distance = GwConstants::SqrRange::Compass;
@@ -693,7 +693,7 @@ void HotkeyTarget::exec() {
 		if (agent == nullptr) continue;
 		//if (agent->PlayerNumber != me->PlayerNumber) {
 		if (agent->PlayerNumber == id_ && agent->HP >= 0) {
-			unsigned long newDistance = api().Agents().GetSqrDistance(me, agents[i]);
+			unsigned long newDistance = api.Agents().GetSqrDistance(me, agents[i]);
 			if (newDistance < distance) {
 				closest = i;
 				distance = newDistance;
@@ -701,18 +701,18 @@ void HotkeyTarget::exec() {
 		}
 	}
 	if (closest > 0) {
-		api().Agents().ChangeTarget(agents[closest]);
+		api.Agents().ChangeTarget(agents[closest]);
 	}
 }
 
 void HotkeyMove::exec() {
 	if (!isExplorable()) return;
 
-	GWCA api;
-	GW::Agent* me = api().Agents().GetPlayer();
+	Api api;
+	GW::Agent* me = api.Agents().GetPlayer();
 	double sqrDist = (me->X - x_) * (me->X - x_) + (me->Y - y_) * (me->Y - y_);
 	if (sqrDist < GwConstants::SqrRange::Compass) {
-		api().Agents().Move(x_, y_);
+		api.Agents().Move(x_, y_);
 	}
 	ChatLogger::LogF(L"Movement macro activated");
 }

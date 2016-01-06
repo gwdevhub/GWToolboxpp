@@ -2,7 +2,8 @@
 
 #include <string>
 
-#include "GWCA\APIMain.h"
+#include <GWCA\GWCA.h>
+#include <GWCA\MapMgr.h>
 
 #include "MainWindow.h"
 #include "GWToolbox.h"
@@ -10,7 +11,7 @@
 
 
 using namespace OSHGui;
-using namespace GWAPI;
+using namespace GWCA;
 using namespace std;
 
 TravelPanel::TravelPanel() {
@@ -133,7 +134,6 @@ void TravelPanel::AddTravelButton(wstring text, int grid_x, int grid_y, GwConsta
 }
 
 void TravelPanel::UpdateDistrict(int gui_index) {
-	GWCA api;
 	district_number_ = 0;
 	switch (gui_index) {
 	case 0: // Current District

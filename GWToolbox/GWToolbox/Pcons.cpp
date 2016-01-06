@@ -1,6 +1,8 @@
 #include "Pcons.h"
 
-#include "GWCA\APIMain.h"
+#include <GWCA\GWCA.h>
+#include <GWCA\EffectMgr.h>
+#include <GWCA\ItemMgr.h>
 
 #include "GWToolbox.h"
 #include "ChatLogger.h"
@@ -8,7 +10,7 @@
 using namespace OSHGui;
 using namespace OSHGui::Drawing;
 using namespace GwConstants;
-using namespace GWAPI;
+using namespace GWCA;
 
 Pcon::Pcon(const wchar_t* ini)
 	: Button() {
@@ -112,23 +114,21 @@ bool Pcon::checkAndUse() {
 
 	if (enabled && TBTimer::diff(this->timer) > 5000) {
 
-		GWCA api;
-		try {
-			GW::Effect effect = api().Effects().GetPlayerEffectById(effectID);
+		GWCA::Api api;
+		GW::Effect effect = api.Effects().GetPlayerEffectById(effectID);
 
-			if (effect.SkillId == 0 || effect.GetTimeRemaining() < 1000) {
-				bool used = api().Items().UseItemByModelId(itemID);
-				if (used) {
-					this->timer = TBTimer::init();
-					this->update_timer = TBTimer::init();
-				} else {
-					// this should never happen, it should be disabled before
-					ChatLogger::LogF(L"[WARNING] Cannot find %ls", chatName);
-					this->scanInventory();
-				}
-				return used;
+		if (effect.SkillId == 0 || effect.GetTimeRemaining() < 1000) {
+			bool used = api.Items().UseItemByModelId(itemID);
+			if (used) {
+				this->timer = TBTimer::init();
+				this->update_timer = TBTimer::init();
+			} else {
+				// this should never happen, it should be disabled before
+				ChatLogger::LogF(L"[WARNING] Cannot find %ls", chatName);
+				this->scanInventory();
 			}
-		} catch (APIException_t) {}
+			return used;
+		}
 	}
 	return false;
 }
@@ -137,34 +137,32 @@ bool PconCons::checkAndUse() {
 	CheckUpdateTimer();
 
 	if (enabled && TBTimer::diff(this->timer) > 5000) {
-		GWCA api;
-		try {
-			GW::Effect effect = api().Effects().GetPlayerEffectById(effectID);
-			if (effect.SkillId == 0 || effect.GetTimeRemaining() < 1000) {
+		GWCA::Api api;
+		GW::Effect effect = api.Effects().GetPlayerEffectById(effectID);
+		if (effect.SkillId == 0 || effect.GetTimeRemaining() < 1000) {
 
-				if (!api().Agents().GetIsPartyLoaded()) return false;
+			if (!api.Agents().GetIsPartyLoaded()) return false;
 
-				GW::MapAgentArray mapAgents = api().Agents().GetMapAgentArray();
-				if (!mapAgents.valid()) return false;
-				int n_players = api().Agents().GetAmountOfPlayersInInstance();
-				for (int i = 1; i <= n_players; ++i) {
-					DWORD currentPlayerAgID = api().Agents().GetAgentIdByLoginNumber(i);
-					if (currentPlayerAgID <= 0) return false;
-					if (currentPlayerAgID >= mapAgents.size()) return false;
-					if (mapAgents[currentPlayerAgID].GetIsDead()) return false;
-				}
-
-				bool used = api().Items().UseItemByModelId(itemID);
-				if (used) {
-					this->timer = TBTimer::init();
-					this->update_timer = TBTimer::init();
-				} else {
-					ChatLogger::LogF(L"[WARNING] Cannot find %ls", chatName);
-					this->scanInventory();
-				}
-				return used;
+			GW::MapAgentArray mapAgents = api.Agents().GetMapAgentArray();
+			if (!mapAgents.valid()) return false;
+			int n_players = api.Agents().GetAmountOfPlayersInInstance();
+			for (int i = 1; i <= n_players; ++i) {
+				DWORD currentPlayerAgID = api.Agents().GetAgentIdByLoginNumber(i);
+				if (currentPlayerAgID <= 0) return false;
+				if (currentPlayerAgID >= mapAgents.size()) return false;
+				if (mapAgents[currentPlayerAgID].GetIsDead()) return false;
 			}
-		} catch (APIException_t) {}
+
+			bool used = api.Items().UseItemByModelId(itemID);
+			if (used) {
+				this->timer = TBTimer::init();
+				this->update_timer = TBTimer::init();
+			} else {
+				ChatLogger::LogF(L"[WARNING] Cannot find %ls", chatName);
+				this->scanInventory();
+			}
+			return used;
+		}
 	}
 	return false;
 }
@@ -173,35 +171,33 @@ bool PconCity::checkAndUse() {
 	CheckUpdateTimer();
 
 	if (enabled	&& TBTimer::diff(this->timer) > 5000) {
-		GWCA api;
-		try {
-			if (api().Agents().GetPlayer() &&
-				(api().Agents().GetPlayer()->MoveX > 0 || api().Agents().GetPlayer()->MoveY > 0)) {
-				if (api().Effects().GetPlayerEffectById(SkillID::Sugar_Rush_short).SkillId
-					|| api().Effects().GetPlayerEffectById(SkillID::Sugar_Rush_long).SkillId
-					|| api().Effects().GetPlayerEffectById(SkillID::Sugar_Jolt_short).SkillId
-					|| api().Effects().GetPlayerEffectById(SkillID::Sugar_Jolt_long).SkillId) {
+		GWCA::Api api;
+		if (api.Agents().GetPlayer() &&
+			(api.Agents().GetPlayer()->MoveX > 0 || api.Agents().GetPlayer()->MoveY > 0)) {
+			if (api.Effects().GetPlayerEffectById(SkillID::Sugar_Rush_short).SkillId
+				|| api.Effects().GetPlayerEffectById(SkillID::Sugar_Rush_long).SkillId
+				|| api.Effects().GetPlayerEffectById(SkillID::Sugar_Jolt_short).SkillId
+				|| api.Effects().GetPlayerEffectById(SkillID::Sugar_Jolt_long).SkillId) {
 
-					// then we have effect on already, do nothing
+				// then we have effect on already, do nothing
+			} else {
+				// we should use it. Because of logical-OR only the first one will be used
+				bool used = api.Items().UseItemByModelId(ItemID::CremeBrulee)
+					|| api.Items().UseItemByModelId(ItemID::ChocolateBunny)
+					|| api.Items().UseItemByModelId(ItemID::Fruitcake)
+					|| api.Items().UseItemByModelId(ItemID::SugaryBlueDrink)
+					|| api.Items().UseItemByModelId(ItemID::RedBeanCake)
+					|| api.Items().UseItemByModelId(ItemID::JarOfHoney);
+				if (used) {
+					this->timer = TBTimer::init();
+					this->update_timer = TBTimer::init();
 				} else {
-					// we should use it. Because of logical-OR only the first one will be used
-					bool used = api().Items().UseItemByModelId(ItemID::CremeBrulee)
-						|| api().Items().UseItemByModelId(ItemID::ChocolateBunny)
-						|| api().Items().UseItemByModelId(ItemID::Fruitcake)
-						|| api().Items().UseItemByModelId(ItemID::SugaryBlueDrink)
-						|| api().Items().UseItemByModelId(ItemID::RedBeanCake)
-						|| api().Items().UseItemByModelId(ItemID::JarOfHoney);
-					if (used) {
-						this->timer = TBTimer::init();
-						this->update_timer = TBTimer::init();
-					} else {
-						ChatLogger::Log(L"[WARNING] Cannot find a city speedboost");
-						this->scanInventory();
-					}
-					return used;
+					ChatLogger::Log(L"[WARNING] Cannot find a city speedboost");
+					this->scanInventory();
 				}
+				return used;
 			}
-		} catch (APIException_t) {}
+		}
 	}
 	return false;
 }
@@ -210,36 +206,34 @@ bool PconAlcohol::checkAndUse() {
 	CheckUpdateTimer();
 
 	if (enabled && TBTimer::diff(this->timer) > 5000) {
-		GWCA api;
-		try {
-			if (api().Effects().GetAlcoholLevel() <= 1) {
-				// use an alcohol item. Because of logical-OR only the first one will be used
-				bool used = api().Items().UseItemByModelId(ItemID::Eggnog)
-					|| api().Items().UseItemByModelId(ItemID::DwarvenAle)
-					|| api().Items().UseItemByModelId(ItemID::HuntersAle)
-					|| api().Items().UseItemByModelId(ItemID::Absinthe)
-					|| api().Items().UseItemByModelId(ItemID::WitchsBrew)
-					|| api().Items().UseItemByModelId(ItemID::Ricewine)
-					|| api().Items().UseItemByModelId(ItemID::ShamrockAle)
-					|| api().Items().UseItemByModelId(ItemID::Cider)
+		GWCA::Api api;
+		if (api.Effects().GetAlcoholLevel() <= 1) {
+			// use an alcohol item. Because of logical-OR only the first one will be used
+			bool used = api.Items().UseItemByModelId(ItemID::Eggnog)
+				|| api.Items().UseItemByModelId(ItemID::DwarvenAle)
+				|| api.Items().UseItemByModelId(ItemID::HuntersAle)
+				|| api.Items().UseItemByModelId(ItemID::Absinthe)
+				|| api.Items().UseItemByModelId(ItemID::WitchsBrew)
+				|| api.Items().UseItemByModelId(ItemID::Ricewine)
+				|| api.Items().UseItemByModelId(ItemID::ShamrockAle)
+				|| api.Items().UseItemByModelId(ItemID::Cider)
 
-					|| api().Items().UseItemByModelId(ItemID::Grog)
-					|| api().Items().UseItemByModelId(ItemID::SpikedEggnog)
-					|| api().Items().UseItemByModelId(ItemID::AgedDwarvenAle)
-					|| api().Items().UseItemByModelId(ItemID::AgedHungersAle)
-					|| api().Items().UseItemByModelId(ItemID::Keg)
-					|| api().Items().UseItemByModelId(ItemID::FlaskOfFirewater)
-					|| api().Items().UseItemByModelId(ItemID::KrytanBrandy);
-				if (used) {
-					this->timer = TBTimer::init();
-					this->update_timer = TBTimer::init();
-				} else {
-					ChatLogger::Log(L"[WARNING] Cannot find Alcohol");
-					this->scanInventory();
-				}
-				return used;
+				|| api.Items().UseItemByModelId(ItemID::Grog)
+				|| api.Items().UseItemByModelId(ItemID::SpikedEggnog)
+				|| api.Items().UseItemByModelId(ItemID::AgedDwarvenAle)
+				|| api.Items().UseItemByModelId(ItemID::AgedHungersAle)
+				|| api.Items().UseItemByModelId(ItemID::Keg)
+				|| api.Items().UseItemByModelId(ItemID::FlaskOfFirewater)
+				|| api.Items().UseItemByModelId(ItemID::KrytanBrandy);
+			if (used) {
+				this->timer = TBTimer::init();
+				this->update_timer = TBTimer::init();
+			} else {
+				ChatLogger::Log(L"[WARNING] Cannot find Alcohol");
+				this->scanInventory();
 			}
-		} catch (APIException_t) {}
+			return used;
+		}
 	}
 	return false;
 }
@@ -248,24 +242,22 @@ bool PconLunar::checkAndUse() {
 	CheckUpdateTimer();
 
 	if (enabled	&& TBTimer::diff(this->timer) > 500) {
-		GWCA api;
-		try {
-			if (api().Effects().GetPlayerEffectById(SkillID::Lunar_Blessing).SkillId == 0) {
-				bool used = api().Items().UseItemByModelId(ItemID::LunarDragon)
-					|| api().Items().UseItemByModelId(ItemID::LunarHorse)
-					|| api().Items().UseItemByModelId(ItemID::LunarRabbit)
-					|| api().Items().UseItemByModelId(ItemID::LunarSheep)
-					|| api().Items().UseItemByModelId(ItemID::LunarSnake);
-				if (used) {
-					this->timer = TBTimer::init();
-					this->update_timer = TBTimer::init();
-				} else {
-					ChatLogger::Log(L"[WARNING] Cannot find Lunar Fortunes");
-					this->scanInventory();
-				}
-				return used;
+		GWCA::Api api;
+		if (api.Effects().GetPlayerEffectById(SkillID::Lunar_Blessing).SkillId == 0) {
+			bool used = api.Items().UseItemByModelId(ItemID::LunarDragon)
+				|| api.Items().UseItemByModelId(ItemID::LunarHorse)
+				|| api.Items().UseItemByModelId(ItemID::LunarRabbit)
+				|| api.Items().UseItemByModelId(ItemID::LunarSheep)
+				|| api.Items().UseItemByModelId(ItemID::LunarSnake);
+			if (used) {
+				this->timer = TBTimer::init();
+				this->update_timer = TBTimer::init();
+			} else {
+				ChatLogger::Log(L"[WARNING] Cannot find Lunar Fortunes");
+				this->scanInventory();
 			}
-		} catch (APIException_t) {}
+			return used;
+		}
 	}
 	return false;
 }
@@ -275,8 +267,7 @@ void Pcon::scanInventory() {
 	bool old_enabled = enabled;
 
 	quantity = 0;
-	GWCA api;
-	GW::Bag** bags = api().Items().GetBagArray();
+	GW::Bag** bags = GWCA::Api::Items().GetBagArray();
 	if (bags != nullptr) {
 		GW::Bag* bag = NULL;
 		for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
@@ -304,8 +295,7 @@ void PconCity::scanInventory() {
 	bool old_enabled = enabled;
 
 	quantity = 0;
-	GWCA api;
-	GW::Bag** bags = api().Items().GetBagArray();
+	GW::Bag** bags = GWCA::Api::Items().GetBagArray();
 	if (bags != nullptr) {
 		GW::Bag* bag = NULL;
 		for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
@@ -337,8 +327,7 @@ void PconAlcohol::scanInventory() {
 	bool old_enabled = enabled;
 
 	quantity = 0;
-	GWCA api;
-	GW::Bag** bags = api().Items().GetBagArray();
+	GW::Bag** bags = GWCA::Api::Items().GetBagArray();
 	if (bags != nullptr) {
 		GW::Bag* bag = NULL;
 		for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
@@ -383,8 +372,7 @@ void PconLunar::scanInventory() {
 	bool old_enabled = enabled;
 
 	quantity = 0;
-	GWCA api;
-	GW::Bag** bags = api().Items().GetBagArray();
+	GW::Bag** bags = GWCA::Api::Items().GetBagArray();
 	if (bags != nullptr) {
 		GW::Bag* bag = NULL;
 		for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {

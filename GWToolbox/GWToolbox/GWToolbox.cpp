@@ -2,7 +2,10 @@
 
 #include <string>
 
-#include "OSHGui\OSHGui.hpp"
+#include <OSHGui\OSHGui.hpp>
+
+#include <GWCA\GWCA.h>
+#include <GWCA\DirectXMgr.h>
 
 #include "Timer.h"
 #include "MainWindow.h"
@@ -30,7 +33,7 @@ void GWToolbox::ThreadEntry(HMODULE dllmodule) {
 	if (instance_) return;
 
 	LOG("Initializing API\n");
-	if (!GWAPI::GWCA::Initialize()){
+	if (!GWCA::Api::Initialize()){
 		MessageBoxA(0, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0);
 		FreeLibraryAndExitThread(dllmodule, EXIT_SUCCESS);
 	}
@@ -49,7 +52,7 @@ void GWToolbox::Exec() {
 	LOG("Installed dx hooks\n");
 
 	LOG("Installing input event handler\n");
-	HWND gw_window_handle = GWAPI::MemoryMgr::GetGWWindowHandle();
+	HWND gw_window_handle = GWCA::MemoryMgr::GetGWWindowHandle();
 	OldWndProc = SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)SafeWndProc);
 	LOG("Installed input event handler\n");
 
@@ -105,7 +108,7 @@ void GWToolbox::Exec() {
 	SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
 	Sleep(100);
 	LOG("Destroying API\n");
-	GWAPI::GWCA::Destruct();
+	GWCA::Api::Destruct();
 	LOG("Closing log/console, bye!\n");
 	Logger::Close();
 	Sleep(100);

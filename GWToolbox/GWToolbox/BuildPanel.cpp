@@ -1,6 +1,8 @@
 #include "BuildPanel.h"
 
-#include "GWCA\APIMain.h"
+#include <GWCA\GWCA.h>
+#include <GWCA\ChatMgr.h>
+#include <GWCA\MapMgr.h>
 
 #include "GWToolbox.h"
 #include "Config.h"
@@ -136,11 +138,11 @@ void BuildPanel::MainRoutine() {
 	if (!queue.empty() && TBTimer::diff(send_timer) > 600) {
 		send_timer = TBTimer::init();
 
-		GWCA api;
-		if (api().Map().GetInstanceType() != GwConstants::InstanceType::Loading
-			&& api().Agents().GetPlayer()) {
+		GWCA::Api api;
+		if (api.Map().GetInstanceType() != GwConstants::InstanceType::Loading
+			&& api.Agents().GetPlayer()) {
 
-			api().Chat().SendChat(queue.front().c_str(), L'#');
+			api.Chat().SendChat(queue.front().c_str(), L'#');
 			queue.pop();
 		}
 	}

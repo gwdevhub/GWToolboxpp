@@ -3,8 +3,12 @@
 #include <sstream>
 #include <string>
 
-#include "OSHGui\OSHGui.hpp"
-#include "GWCA\APIMain.h"
+#include <OSHGui\OSHGui.hpp>
+
+#include <GWCA\GWCA.h>
+#include <GWCA\EffectMgr.h>
+#include <GWCA\SkillbarMgr.h>
+#include <GWCA\GWStructures.h>
 
 #include "GWToolbox.h"
 #include "Config.h"
@@ -139,10 +143,10 @@ void BondsWindow::BondsMonitor::OnMouseUp(const OSHGui::MouseMessage &mouse) {
 }
 
 void BondsWindow::BondsMonitor::DropUseBuff(int bond, int player) {
-	GWCA api;
+	GWCA::Api api;
 	if (pics[player][bond]->GetVisible()) {
 		if (buff_id[player][bond] > 0) {
-			api().Effects().DropBuff(buff_id[player][bond]);
+			api.Effects().DropBuff(buff_id[player][bond]);
 		}
 	} else {
 		// cast bond on player
@@ -153,14 +157,14 @@ void BondsWindow::BondsMonitor::DropUseBuff(int bond, int player) {
 		case Bond::Prot: buff = GwConstants::SkillID::Protective_Bond; break;
 		}
 
-		int target = api().Agents().GetAgentIdByLoginNumber(player + 1);
+		int target = api.Agents().GetAgentIdByLoginNumber(player + 1);
 		if (target <= 0) return;
 
-		int slot = api().Skillbar().GetSkillSlot(buff);
+		int slot = api.Skillbar().GetSkillSlot(buff);
 		if (slot <= 0) return;
-		if (api().Skillbar().GetPlayerSkillbar().Skills[slot].Recharge != 0) return;
+		if (api.Skillbar().GetPlayerSkillbar().Skills[slot].Recharge != 0) return;
 
-		api().Skillbar().UseSkill(slot, target);
+		api.Skillbar().UseSkill(slot, target);
 	}
 }
 
@@ -181,13 +185,13 @@ void BondsWindow::BondsMonitor::SaveLocation() {
 }
 
 void BondsWindow::BondsMonitor::UpdateUI() {
-	using namespace GW;
+	//using namespace GW;
 
 	if (!isVisible_) return;
 
-	GWAPI::GWCA api;
+	GWCA::Api api;
 
-	int size = api().Agents().GetPartySize();
+	int size = api.Agents().GetPartySize();
 	if (size > MAX_PLAYERS) size = MAX_PLAYERS;
 	if (party_size != size) {
 		party_size = size;
@@ -201,10 +205,10 @@ void BondsWindow::BondsMonitor::UpdateUI() {
 		}
 	}
 
-	AgentEffectsArray effects = api().Effects().GetPartyEffectArray();
+	GWCA::GW::AgentEffectsArray effects = api.Effects().GetPartyEffectArray();
 	if (effects.valid()) {
-		BuffArray buffs = effects[0].Buffs;
-		AgentArray agents = api().Agents().GetAgentArray();
+		GWCA::GW::BuffArray buffs = effects[0].Buffs;
+		GWCA::GW::AgentArray agents = api.Agents().GetAgentArray();
 
 		if (buffs.valid() && agents.valid() && effects.valid()) {
 			for (size_t i = 0; i < buffs.size(); ++i) {

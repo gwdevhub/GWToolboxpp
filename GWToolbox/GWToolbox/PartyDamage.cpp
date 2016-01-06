@@ -1,23 +1,25 @@
 #include "PartyDamage.h"
 
-#include <GWCA\GWCA.h>
 #include <sstream>
+
+#include <GWCA\GWCA.h>
+#include <GWCA\StoCMgr.h>
 
 #include "GuiUtils.h"
 #include "Config.h"
 #include "GWToolbox.h"
 
-using namespace GWAPI;
+using namespace GWCA;
 
 PartyDamage::PartyDamage() {
 
 	total = 0;
 	send_timer = TBTimer::init();
 
-	GWCA::Api().StoC().AddGameServerEvent<StoC::P151>(
+	Api().StoC().AddGameServerEvent<StoC_Pak::P151>(
 		std::bind(&PartyDamage::DamagePacketCallback, this, std::placeholders::_1));
 
-	GWCA::Api().StoC().AddGameServerEvent<StoC::P230>(
+	Api().StoC().AddGameServerEvent<StoC_Pak::P230>(
 		std::bind(&PartyDamage::MapLoadedCallback, this, std::placeholders::_1));
 
 	Config& config = GWToolbox::instance().config();
@@ -105,7 +107,7 @@ PartyDamage::~PartyDamage() {
 	delete inifile_;
 }
 
-bool PartyDamage::MapLoadedCallback(GWAPI::StoC::P230* packet) {
+bool PartyDamage::MapLoadedCallback(GWCA::StoC_Pak::P230* packet) {
 	switch (GWCA::Api().Map().GetInstanceType()) {
 	case GwConstants::InstanceType::Outpost:
 		in_explorable = false;
@@ -123,13 +125,13 @@ bool PartyDamage::MapLoadedCallback(GWAPI::StoC::P230* packet) {
 	return false;
 }
 
-bool PartyDamage::DamagePacketCallback(GWAPI::StoC::P151* packet) {
+bool PartyDamage::DamagePacketCallback(GWCA::StoC_Pak::P151* packet) {
 
 	// ignore non-damage packets
 	switch (packet->type) {
-	case StoC::P151_Type::damage:
-	case StoC::P151_Type::critical:
-	case StoC::P151_Type::armorignoring:
+	case StoC_Pak::P151_Type::damage:
+	case StoC_Pak::P151_Type::critical:
+	case StoC_Pak::P151_Type::armorignoring:
 		break;
 	default:
 		return false;
@@ -188,10 +190,10 @@ bool PartyDamage::DamagePacketCallback(GWAPI::StoC::P151* packet) {
 void PartyDamage::MainRoutine() {
 	if (!send_queue.empty() && TBTimer::diff(send_timer) > 600) {
 		send_timer = TBTimer::init();
-		GWCA api;
-		if (api().Map().GetInstanceType() != GwConstants::InstanceType::Loading
-			&& api().Agents().GetPlayer()) {
-			api().Chat().SendChat(send_queue.front().c_str(), L'#');
+		Api api;
+		if (api.Map().GetInstanceType() != GwConstants::InstanceType::Loading
+			&& api.Agents().GetPlayer()) {
+			api.Chat().SendChat(send_queue.front().c_str(), L'#');
 			send_queue.pop();
 		}
 	}
@@ -200,9 +202,8 @@ void PartyDamage::MainRoutine() {
 void PartyDamage::UpdateUI() {
 	if (!isVisible_) return;
 
-	GWCA api;
-
-	int size = api().Agents().GetPartySize();
+	Api api;
+	int size = api.Agents().GetPartySize();
 	if (size > MAX_PLAYERS) size = MAX_PLAYERS;
 	if (party_size_ != size) {
 		party_size_ = size;
@@ -272,8 +273,8 @@ void PartyDamage::UpdateUI() {
 
 		Drawing::Color inactive = labelcolor - Drawing::Color(0.0f, 0.3f, 0.3f, 0.3f);
 		if (damage[i].damage == 0 
-			|| api().Map().GetInstanceType() == GwConstants::InstanceType::Outpost
-			|| api().Agents().GetAgentByID(damage[i].agent_id) == nullptr) {
+			|| api.Map().GetInstanceType() == GwConstants::InstanceType::Outpost
+			|| api.Agents().GetAgentByID(damage[i].agent_id) == nullptr) {
 
 			absolute[i]->SetForeColor(inactive);
 			percent[i]->SetForeColor(inactive);

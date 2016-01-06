@@ -2,6 +2,12 @@
 
 #include <algorithm>
 
+#include <GWCA\CameraMgr.h>
+#include <GWCA\ChatMgr.h>
+#include <GWCA\ItemMgr.h>
+#include <GWCA\GuildMgr.h>
+#include <GWCA\FriendListMgr.h>
+
 #include "PconPanel.h"
 #include "GWToolbox.h"
 #include "ChatLogger.h"
@@ -40,7 +46,7 @@ void ChatCommands::AddCommand(wstring cmd, Handler_t handler, bool override) {
 }
 
 bool ChatCommands::ProcessMessage(LPMSG msg) {
-	CameraMgr cam = GWCA::Api().Camera();
+	GWCA::CameraMgr cam = GWCA::Api::Camera();
 	float speed = 25.f;
 
 	if (!cam.GetCameraUnlock() || IsTyping()) return false; // 0xA377C8 is a flag when someone is typing
@@ -82,7 +88,7 @@ bool ChatCommands::ProcessMessage(LPMSG msg) {
 }
 
 void ChatCommands::UpdateUI() {
-	CameraMgr cam = GWCA::Api().Camera();
+	GWCA::CameraMgr cam = GWCA::Api::Camera();
 	if (cam.GetCameraUnlock() && !IsTyping()) {
 		cam.ForwardMovement(cam_speed_ * move_forward);
 		cam.VerticalMovement(-cam_speed_ * move_up);
@@ -100,8 +106,7 @@ wstring ChatCommands::GetLowerCaseArg(vector<wstring> args, size_t index) {
 
 void ChatCommands::CmdAge2(vector<wstring>) {
 	wchar_t buffer[30];
-	GWCA api;
-	DWORD second = api().Map().GetInstanceTime() / 1000;
+	DWORD second = GWCA::Api::Map().GetInstanceTime() / 1000;
 	wsprintf(buffer, L"%02u:%02u:%02u", (second / 3600), (second / 60) % 60, second % 60);
 	ChatLogger::Log(buffer);
 }
@@ -137,8 +142,8 @@ void ChatCommands::CmdDialog(vector<wstring> args) {
 }
 
 void ChatCommands::CmdChest(vector<wstring> args) {
-	if (GWCA::Api().Map().GetInstanceType() == GwConstants::InstanceType::Outpost) {
-		GWCA::Api().Items().OpenXunlaiWindow();
+	if (GWCA::Api::Map().GetInstanceType() == GwConstants::InstanceType::Outpost) {
+		GWCA::Api::Items().OpenXunlaiWindow();
 	}
 }
 
@@ -211,7 +216,7 @@ void ChatCommands::CmdTP(vector<wstring> args) {
 		} else if (town == L"fav3") {
 			GWToolbox::instance().main_window().travel_panel().TravelFavorite(2);
 		} else if (town == L"gh") {
-			GWCA::Api().Guild().TravelGH();
+			GWCA::Api::Guild().TravelGH();
 		}
 	}
 }
@@ -291,5 +296,5 @@ void ChatCommands::CmdDamage(vector<wstring> args) {
 }
 
 void ChatCommands::CmdAfk(vector<wstring> args) {
-	GWCA::Api().FriendList().SetFriendListStatus(GwConstants::OnlineStatus::AWAY);
+	GWCA::Api::FriendList().SetFriendListStatus(GwConstants::OnlineStatus::AWAY);
 }

@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "OSHGui\OSHGui.hpp"
+#include <OSHGui\OSHGui.hpp>
 
 class EditBuild : public OSHGui::Panel {
 public:

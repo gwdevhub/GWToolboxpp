@@ -3,13 +3,14 @@
 #include <string>
 #include <functional>
 
-#include "GWCA\APIMain.h"
+#include <GWCA\GWCA.h>
+#include <GWCA\MapMgr.h>
 
 #include "MainWindow.h"
 #include "GWToolbox.h"
 #include "ChatLogger.h"
 
-using namespace GWAPI;
+using namespace GWCA;
 using namespace OSHGui::Drawing;
 using namespace GwConstants;
 
@@ -219,10 +220,10 @@ void PconPanel::BuildUI() {
 void PconPanel::UpdateUI() {
 	if (!initialized) return;
 
-	GWCA api;
+	GWCA::Api api;
 
-	if (current_map_type != api().Map().GetInstanceType()) {
-		current_map_type = api().Map().GetInstanceType();
+	if (current_map_type != api.Map().GetInstanceType()) {
+		current_map_type = api.Map().GetInstanceType();
 		scan_inventory_timer = TBTimer::init();
 	}
 
@@ -242,19 +243,14 @@ void PconPanel::UpdateUI() {
 void PconPanel::MainRoutine() {
 	if (!initialized) return;
 
-	GWCA api;
-
 	if (!enabled) return;
-	InstanceType type;
-	try {
-		type = api().Map().GetInstanceType();
-		if (type == InstanceType::Loading) return;
-		if (api().Agents().GetPlayerId() == 0) return;
-		if (api().Agents().GetPlayer() == NULL) return;
-		if (api().Agents().GetPlayer()->GetIsDead()) return;
-	} catch (APIException_t) {
-		return;
-	}
+	
+	GWCA::Api api;
+	InstanceType type = api.Map().GetInstanceType();
+	if (type == InstanceType::Loading) return;
+	if (api.Agents().GetPlayerId() == 0) return;
+	if (api.Agents().GetPlayer() == NULL) return;
+	if (api.Agents().GetPlayer()->GetIsDead()) return;
 
 	if (type == InstanceType::Explorable) {
 		essence->checkAndUse();

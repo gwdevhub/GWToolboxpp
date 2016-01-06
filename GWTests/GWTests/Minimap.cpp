@@ -6,7 +6,9 @@
 #include <d3d9.h>
 #include <d3dx9math.h>
 
-#include "GWCA/APIMain.h"
+#include <GWCA\GWCA.h>
+#include <GWCA\StoCMgr.h>
+#include <GWCA\CameraMgr.h>
 
 void Minimap::UIRenderer::Initialize(IDirect3DDevice9* device) {
 	count_ = 2;
@@ -98,9 +100,8 @@ Minimap::Minimap()
 	pmap_renderer(PmapRenderer()),
 	agent_renderer(AgentRenderer()) {
 
-	GWAPI::GWCA api;
-	api().StoC().AddGameServerEvent<GWAPI::StoC::P391_InstanceLoadFile>(
-		[this](GWAPI::StoC::P391_InstanceLoadFile* packet) {
+	GWCA::Api::StoC().AddGameServerEvent<GWCA::StoC_Pak::P391_InstanceLoadFile>(
+		[this](GWCA::StoC_Pak::P391_InstanceLoadFile* packet) {
 		pmap_renderer.Invalidate();
 		return false;
 	});
@@ -109,13 +110,12 @@ Minimap::Minimap()
 }
 
 void Minimap::Render(IDirect3DDevice9* device) {
-	using namespace GWAPI;
-	GWCA api;
-	GW::Agent* me = api().Agents().GetPlayer();
+	using namespace GWCA;
+	GW::Agent* me = Api::Agents().GetPlayer();
 	if (me != nullptr) {
 		SetTranslation(-me->X, -me->Y);
 	}
-	float camera_yaw = api().Camera().GetYaw();
+	float camera_yaw = Api::Camera().GetYaw();
 	SetRotation(-camera_yaw + (float)M_PI_2);
 
 	device->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, TRUE);

@@ -1,6 +1,8 @@
 #include <algorithm>
 #include <Windows.h>
 
+#include <GWCA\ItemMgr.h>
+
 #include "HotkeyPanel.h"
 #include "logger.h"
 #include "GWToolbox.h"
@@ -369,7 +371,7 @@ void HotkeyPanel::MainRoutine() {
 
 	if (dropCoinsActive && TBTimer::diff(dropCoinsTimer) > 400) {
 		dropCoinsTimer = TBTimer::init();
-		GWCA::Api().Items().DropGold(1);
+		GWCA::Api::Items().DropGold(1);
 	}
 
 	// TODO rupt?

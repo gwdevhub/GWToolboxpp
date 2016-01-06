@@ -3,11 +3,12 @@
 #include <vector>
 
 #include <GWCA\GWCA.h>
+#include <GWCA\MapMgr.h>
 
 void PmapRenderer::Initialize(IDirect3DDevice9* device) {
-	using namespace GWAPI::GW;
+	using namespace GWCA::GW;
 
-	PathingMapArray path_map = GWAPI::GWCA::Api().Map().GetPathingMap();
+	PathingMapArray path_map = GWCA::Api::Map().GetPathingMap();
 
 	// get the number of trapezoids, need it to allocate the vertex buffer
 	size_t size = 0;
@@ -30,7 +31,7 @@ void PmapRenderer::Initialize(IDirect3DDevice9* device) {
 	// populate vertex buffer
 	DWORD color = D3DCOLOR_ARGB(0xAA, 200, 200, 200);
 	for (size_t i = 0; i < path_map.size(); ++i) {
-		GWAPI::GW::PathingMap pmap = path_map[i];
+		GWCA::GW::PathingMap pmap = path_map[i];
 		for (size_t j = 0; j < pmap.trapezoidcount; ++j) {
 			PathingTrapezoid& trapez = pmap.trapezoids[j];
 

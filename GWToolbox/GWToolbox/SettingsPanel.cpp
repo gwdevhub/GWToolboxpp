@@ -2,7 +2,7 @@
 
 #include <Windows.h>
 
-#include "GWCA\APIMain.h"
+#include <GWCA\GWCA.h>
 
 #include "GWToolbox.h"
 #include "Config.h"
@@ -150,11 +150,11 @@ void SettingsPanel::BuildUI() {
 void SettingsPanel::MainRoutine() {
 	if (location_active_ && TBTimer::diff(location_timer_) > 1000) {
 		location_timer_ = TBTimer::init();
-		GWCA api;
-		if (api().Map().GetInstanceType() == GwConstants::InstanceType::Explorable
-			&& api().Agents().GetPlayer() != nullptr
-			&& api().Map().GetInstanceTime() > 3000) {
-			GwConstants::MapID current = api().Map().GetMapID();
+		GWCA::Api api;
+		if (api.Map().GetInstanceType() == GwConstants::InstanceType::Explorable
+			&& api.Agents().GetPlayer() != nullptr
+			&& api.Map().GetInstanceTime() > 3000) {
+			GwConstants::MapID current = api.Map().GetMapID();
 			if (location_current_map_ != current) {
 				location_current_map_ = current;
 
@@ -180,13 +180,13 @@ void SettingsPanel::MainRoutine() {
 				}
 
 				string prof_string = "";
-				GW::Agent* me = api().Agents().GetPlayer();
+				GWCA::GW::Agent* me = api.Agents().GetPlayer();
 				if (me) {
 					prof_string += " - ";
-					prof_string += api().Agents().GetProfessionAcronym(
+					prof_string += api.Agents().GetProfessionAcronym(
 						static_cast<GwConstants::Profession>(me->Primary));
 					prof_string += "-";
-					prof_string += api().Agents().GetProfessionAcronym(
+					prof_string += api.Agents().GetProfessionAcronym(
 						static_cast<GwConstants::Profession>(me->Secondary));
 				}
 
@@ -206,9 +206,9 @@ void SettingsPanel::MainRoutine() {
 				location_file_.open(GuiUtils::getSubPathA(filename, "location logs").c_str());
 			}
 
-			GW::Agent* me = api().Agents().GetPlayer();
+			GWCA::GW::Agent* me = api.Agents().GetPlayer();
 			if (location_file_.is_open() && me != nullptr) {
-				location_file_ << "Time=" << api().Map().GetInstanceTime();
+				location_file_ << "Time=" << api.Map().GetInstanceTime();
 				location_file_ << " X=" << me->X;
 				location_file_ << " Y=" << me->Y;
 				location_file_ << "\n";

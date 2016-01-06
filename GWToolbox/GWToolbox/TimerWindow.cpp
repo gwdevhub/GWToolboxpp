@@ -3,7 +3,8 @@
 #include <sstream>
 #include <string>
 
-#include "GWCA\APIMain.h"
+#include <GWCA\GWCA.h>
+#include <GWCA\MapMgr.h>
 
 #include "GWToolbox.h"
 #include "Config.h"
@@ -95,8 +96,7 @@ void TimerWindow::SaveLocation() {
 }
 
 void TimerWindow::UpdateUI() {
-	GWCA api;
-	unsigned long uptime = api().Map().GetInstanceTime();
+	unsigned long uptime = GWCA::Api::Map().GetInstanceTime();
 	unsigned long  time = uptime / 1000;
 	if (time != current_time_) {
 		current_time_ = time;
@@ -122,7 +122,7 @@ void TimerWindow::UpdateUI() {
 		shadow_->SetText(ss.str());
 		shadow_->Invalidate();
 
-		GwConstants::MapID map_id = api().Map().GetMapID();
+		GwConstants::MapID map_id = GWCA::Api::Map().GetMapID();
 		if (map_id == GwConstants::MapID::Urgozs_Warren) {
 			if (!in_urgoz_) {
 				in_urgoz_ = true;

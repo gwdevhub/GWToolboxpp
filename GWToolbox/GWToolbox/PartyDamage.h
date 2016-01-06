@@ -7,6 +7,7 @@
 #include <OSHGui\OSHGui.hpp>
 #include <GWCA\GwConstants.h>
 #include <GWCA\GWCA.h>
+#include <GWCA\StoCPackets.h>
 #include <SimpleIni.h>
 
 #include "ToolboxWindow.h"
@@ -76,8 +77,8 @@ public:
 	void SaveIni();
 
 private:
-	bool DamagePacketCallback(GWAPI::StoC::P151* packet);
-	bool MapLoadedCallback(GWAPI::StoC::P230* packet);
+	bool DamagePacketCallback(GWCA::StoC_Pak::P151* packet);
+	bool MapLoadedCallback(GWCA::StoC_Pak::P230* packet);
 
 	void SaveLocation();
 	float GetPartOfTotal(long dmg);

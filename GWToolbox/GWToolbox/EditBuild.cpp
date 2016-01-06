@@ -2,6 +2,9 @@
 
 #include <string>
 
+#include <GWCA\GWCA.h>
+#include <GWCA\ChatMgr.h>
+
 #include "GWToolbox.h"
 #include "logger.h"
 
@@ -69,8 +72,8 @@ EditBuild::EditBuild() {
 			message += L";";
 			message += templates[i]->GetText();
 			message += L"]";
-			GWCA api;
-			api().Chat().SendChat(message.c_str(), L'#');
+			GWCA::Api api;
+			api.Chat().SendChat(message.c_str(), L'#');
 		});
 		AddControl(send);
 

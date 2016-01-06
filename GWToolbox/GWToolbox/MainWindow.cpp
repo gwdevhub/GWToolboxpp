@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 
-#include "OSHGui\OSHGui.hpp"
+#include <OSHGui\OSHGui.hpp>
+#include <GWCA\GWCA.h>
 
 #include "logger.h"
 #include "GuiUtils.h"
@@ -200,9 +201,8 @@ void MainWindow::UpdatePconToggleButton(bool active) {
 		pcon_toggle_button_->SetForeColor(Color::Red());
 		pcon_toggle_button_->SetText(L"Disabled");
 	}
-	GWCA api;
-	if (tick_with_pcons_ && api().Map().GetInstanceType() == GwConstants::InstanceType::Outpost) {
-		api().Agents().Tick(active);
+	if (tick_with_pcons_ && GWCA::Api::Map().GetInstanceType() == GwConstants::InstanceType::Outpost) {
+		GWCA::Api::Agents().Tick(active);
 	}
 }
 

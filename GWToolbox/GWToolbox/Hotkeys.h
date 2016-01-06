@@ -2,8 +2,9 @@
 
 #include <string>
 
-#include "OSHGui\OSHGui.hpp"
-#include "GWCA\APIMain.h"
+#include <OSHGui\OSHGui.hpp>
+#include <GWCA\GWCA.h>
+#include <GWCA\MapMgr.h>
 
 using namespace std;
 
@@ -36,11 +37,11 @@ protected:
 	inline void set_key(OSHGui::Key key) { key_ = key; }
 	inline void set_modifier(OSHGui::Key modifier) { modifier_ = modifier; }
 	bool isLoading() { 
-		return GWAPI::GWCA::Api().Map().GetInstanceType() == GwConstants::InstanceType::Loading; }
+		return GWCA::Api::Map().GetInstanceType() == GwConstants::InstanceType::Loading; }
 	bool isExplorable() { 
-		return GWAPI::GWCA::Api().Map().GetInstanceType() == GwConstants::InstanceType::Explorable; }
+		return GWCA::Api::Map().GetInstanceType() == GwConstants::InstanceType::Explorable; }
 	bool isOutpost() { 
-		return GWAPI::GWCA::Api().Map().GetInstanceType() == GwConstants::InstanceType::Outpost; }
+		return GWCA::Api::Map().GetInstanceType() == GwConstants::InstanceType::Outpost; }
 
 	TBHotkey(OSHGui::Key key, OSHGui::Key modifier, bool active, 
 		wstring ini_section);

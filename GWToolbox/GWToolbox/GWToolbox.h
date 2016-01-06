@@ -2,9 +2,11 @@
 
 #include <Windows.h>
 
-#include "GWCA\APIMain.h"
-#include "OSHGui\OSHGui.hpp"
-#include "OSHGui\Input\WindowsMessage.hpp"
+#include <GWCA\GWCA.h>
+#include <GWCA\ChatMgr.h>
+
+#include <OSHGui\OSHGui.hpp>
+#include <OSHGui\Input\WindowsMessage.hpp>
 
 #include "ChatLogger.h"
 #include "Config.h"
@@ -94,15 +96,14 @@ private:
 		must_self_destruct_(false),
 		capture_input_(false) {
 
-		GWAPI::GWCA api;
-		api().Chat().RegisterChannel(L"GWToolbox++", 0x00CCFF, 0xDDDDDD);
-		api().Chat().SetTimestampColor(0xBBBBBB);
-		api().Chat().ToggleTimeStamp(config().IniReadBool(
+		GWCA::Api::Chat().RegisterChannel(L"GWToolbox++", 0x00CCFF, 0xDDDDDD);
+		GWCA::Api::Chat().SetTimestampColor(0xBBBBBB);
+		GWCA::Api::Chat().ToggleTimeStamp(config().IniReadBool(
 			MainWindow::IniSection(), MainWindow::IniKeyTimestamps(), true));
 
-		if (api().Map().GetInstanceType() != GwConstants::InstanceType::Loading) {
-			DWORD playerNumber = api().Agents().GetPlayer()->PlayerNumber;
-			ChatLogger::LogF(L"Hello %ls!", api().Agents().GetPlayerNameByLoginNumber(playerNumber));
+		if (GWCA::Api::Map().GetInstanceType() != GwConstants::InstanceType::Loading) {
+			DWORD playerNumber = GWCA::Api::Agents().GetPlayer()->PlayerNumber;
+			ChatLogger::LogF(L"Hello %ls!", GWCA::Api::Agents().GetPlayerNameByLoginNumber(playerNumber));
 		}
 	}
 
@@ -145,7 +146,7 @@ public:
 	inline PartyDamage& party_damage() { return *party_damage_; }
 	
 	void StartSelfDestruct() { 
-		if (GWCA::Api().Map().GetInstanceType() != GwConstants::InstanceType::Loading) {
+		if (GWCA::Api::Map().GetInstanceType() != GwConstants::InstanceType::Loading) {
 			ChatLogger::Log(L"Bye!");
 		}
 		must_self_destruct_ = true; }

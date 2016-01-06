@@ -1,7 +1,9 @@
 #pragma once
 
+#include <GWCA\GWStructures.h>
+
 #include "Renderer.h"
-#include <GWCA\APIMain.h>
+
 
 class AgentRenderer : public Renderer {
 public:
@@ -9,7 +11,7 @@ public:
 
 private:
 	void Initialize(IDirect3DDevice9* device) override;
-	void QueueAgent(IDirect3DDevice9* device, GWAPI::GW::Agent* agent);
+	void QueueAgent(IDirect3DDevice9* device, GWCA::GW::Agent* agent);
 	void QueueTriangle(IDirect3DDevice9* device, 
 		float x, float y, float rotation, float size, DWORD color);
 	void QueueQuad(IDirect3DDevice9* device,

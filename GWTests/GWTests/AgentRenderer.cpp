@@ -1,8 +1,9 @@
 #include "AgentRenderer.h"
 
-#include <GWCA\APIMain.h>
+#include <GWCA\GWCA.h>
+#include <GWCA\AgentMgr.h>
 
-using namespace GWAPI;
+using namespace GWCA;
 
 void AgentRenderer::Initialize(IDirect3DDevice9* device) {
 	type_ = D3DPT_TRIANGLELIST;
@@ -23,36 +24,35 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 
 	triangle_count = 0;
 
-	GWCA api;
-	GW::AgentArray agents = api().Agents().GetAgentArray();
+	GW::AgentArray agents = Api::Agents().GetAgentArray();
 	if (!agents.valid()) return;	
 
 	// all agents
 	for (size_t i = 0; i < agents.size(); ++i) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
-		if (agent->Id == api().Agents().GetPlayerId()) continue; // will draw player at the end
-		if (agent->Id == api().Agents().GetTargetId()) continue; // will draw target at the end
+		if (agent->Id == Api::Agents().GetPlayerId()) continue; // will draw player at the end
+		if (agent->Id == Api::Agents().GetTargetId()) continue; // will draw target at the end
 
 		QueueAgent(device, agent);
 
 		CheckFlush(device);
 	}
 
-	GW::Agent* target = api().Agents().GetTarget();
+	GW::Agent* target = Api::Agents().GetTarget();
 	if (target) QueueAgent(device, target);
 
 	CheckFlush(device);
 
-	GW::Agent* player = api().Agents().GetPlayer();
+	GW::Agent* player = Api::Agents().GetPlayer();
 	if (player) QueueAgent(device, player);
 
 	Flush(device);
 }
 
 void AgentRenderer::QueueAgent(IDirect3DDevice9* device, GW::Agent* agent) {
-	bool is_target = GWCA::Api().Agents().GetTargetId() == agent->Id;
-	bool is_player = GWCA::Api().Agents().GetPlayerId() == agent->Id;
+	bool is_target = GWCA::Api::Agents().GetTargetId() == agent->Id;
+	bool is_player = GWCA::Api::Agents().GetPlayerId() == agent->Id;
 
 	DWORD color;
 	if (is_player) {

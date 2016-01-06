@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "GWCA\APIMain.h"
+#include <GWCA\GWCA.h>
 
 #include "GWToolbox.h"
 #include "Config.h"
@@ -113,17 +113,15 @@ void HealthWindow::SaveLocation() {
 }
 
 void HealthWindow::UpdateUI() {
-	using namespace GWAPI::GW;
+	using namespace GWCA::GW;
 	using namespace std;
 
 	if (!enabled) return;
 
-	GWAPI::GWCA api;
-
 	wstring s1;
 	wstring s2;
 
-	Agent* target = api().Agents().GetTarget();
+	Agent* target = GWCA::Api::Agents().GetTarget();
 	if (target && target->Type == 0xDB) {
 		s1 = to_wstring(lroundf(target->HP * 100));
 		s1 += L" %";

@@ -6,17 +6,13 @@
 #include <Windows.h>
 #include <string>
 
-#include "OSHGui\OSHGui.hpp"
-#include "GWCA\APIMain.h"
+#include <OSHGui\OSHGui.hpp>
+#include <GWCA\GWCA.h>
 
 #include "ToolboxPanel.h"
 #include "logger.h"
 #include "Timer.h"
 #include "Hotkeys.h"
-
-using namespace GWAPI;
-using namespace std;
-
 
 // class used to keep a list of hotkeys, capture keyboard event and fire hotkeys as needed
 class HotkeyPanel : public ToolboxPanel {
@@ -24,7 +20,7 @@ private:
 	static const int MAX_SHOWN = 4;			// number of hotkeys shown in interface
 	int first_shown_;						// index of first one shown
 
-	vector<TBHotkey*> hotkeys;				// list of hotkeys
+	std::vector<TBHotkey*> hotkeys;				// list of hotkeys
 
 	OSHGui::ScrollBar* scrollbar_;
 	OSHGui::ComboBox* delete_combo_;
