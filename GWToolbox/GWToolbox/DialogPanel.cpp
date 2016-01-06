@@ -48,7 +48,8 @@ void DialogPanel::BuildUI() {
 		AddControl(fav_combo);
 
 		Button* take = new Button();
-		take->SetSize(GuiUtils::ComputeWidth(GetWidth(), 4), BUTTON_HEIGHT);
+		int offset = 12;
+		take->SetSize(GuiUtils::ComputeWidth(GetWidth(), 4) - offset, BUTTON_HEIGHT);
 		take->SetLocation(GuiUtils::ComputeX(GetWidth(), 4, 2), GuiUtils::ComputeY(i + 4));
 		take->SetText(L"Take");
 		take->GetClickEvent() += ClickEventHandler([this, fav_combo](Control*) {
@@ -58,8 +59,8 @@ void DialogPanel::BuildUI() {
 		AddControl(take);
 
 		Button* complete = new Button();
-		complete->SetSize(GuiUtils::ComputeWidth(GetWidth(), 4), GuiUtils::ROW_HEIGHT);
-		complete->SetLocation(GuiUtils::ComputeX(GetWidth(), 4, 3), GuiUtils::ComputeY(i + 4));
+		complete->SetSize(GuiUtils::ComputeWidth(GetWidth(), 4) + offset, GuiUtils::ROW_HEIGHT);
+		complete->SetLocation(GuiUtils::ComputeX(GetWidth(), 4, 3) - offset, GuiUtils::ComputeY(i + 4));
 		complete->SetText(L"Complete");
 		complete->GetClickEvent() += ClickEventHandler([this, fav_combo](Control*) {
 			int index = fav_combo->GetSelectedIndex();

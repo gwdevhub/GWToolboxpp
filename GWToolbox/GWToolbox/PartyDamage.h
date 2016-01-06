@@ -76,8 +76,8 @@ public:
 	void SaveIni();
 
 private:
-	void DamagePacketCallback(GWAPI::StoC::P151* packet);
-	void MapLoadedCallback(GWAPI::StoC::P230* packet);
+	bool DamagePacketCallback(GWAPI::StoC::P151* packet);
+	bool MapLoadedCallback(GWAPI::StoC::P230* packet);
 
 	void SaveLocation();
 	float GetPartOfTotal(long dmg);

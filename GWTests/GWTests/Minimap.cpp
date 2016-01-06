@@ -102,6 +102,7 @@ Minimap::Minimap()
 	api().StoC().AddGameServerEvent<GWAPI::StoC::P391_InstanceLoadFile>(
 		[this](GWAPI::StoC::P391_InstanceLoadFile* packet) {
 		pmap_renderer.Invalidate();
+		return false;
 	});
 
 	pmap_renderer.Invalidate();

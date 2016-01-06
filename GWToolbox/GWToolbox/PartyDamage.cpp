@@ -105,7 +105,7 @@ PartyDamage::~PartyDamage() {
 	delete inifile_;
 }
 
-void PartyDamage::MapLoadedCallback(GWAPI::StoC::P230* packet) {
+bool PartyDamage::MapLoadedCallback(GWAPI::StoC::P230* packet) {
 	switch (GWCA::Api().Map().GetInstanceType()) {
 	case GwConstants::InstanceType::Outpost:
 		in_explorable = false;
@@ -120,9 +120,10 @@ void PartyDamage::MapLoadedCallback(GWAPI::StoC::P230* packet) {
 	default:
 		break;
 	}
+	return false;
 }
 
-void PartyDamage::DamagePacketCallback(GWAPI::StoC::P151* packet) {
+bool PartyDamage::DamagePacketCallback(GWAPI::StoC::P151* packet) {
 
 	// ignore non-damage packets
 	switch (packet->type) {
@@ -131,23 +132,23 @@ void PartyDamage::DamagePacketCallback(GWAPI::StoC::P151* packet) {
 	case StoC::P151_Type::armorignoring:
 		break;
 	default:
-		return;
+		return false;
 	}
 
 	// ignore heals
-	if (packet->value >= 0) return;
+	if (packet->value >= 0) return false;
 
 	// get cause agent
 	GW::Agent* cause = GWCA::Api().Agents().GetAgentByID(packet->cause_id);
-	if (cause == nullptr) return;
-	if (cause->LoginNumber == 0) return; // ignore NPCs, heroes
-	if (cause->PlayerNumber == 0) return; // might as well check for this too
-	if (cause->PlayerNumber > MAX_PLAYERS) return;
+	if (cause == nullptr) return false;
+	if (cause->LoginNumber == 0) return false; // ignore NPCs, heroes
+	if (cause->PlayerNumber == 0) return false; // might as well check for this too
+	if (cause->PlayerNumber > MAX_PLAYERS) return false;
 
 	// get target agent
 	GW::Agent* target = GWCA::Api().Agents().GetAgentByID(packet->target_id);
-	if (target == nullptr) return;
-	if (target->LoginNumber != 0) return; // ignore player-inflicted damage
+	if (target == nullptr) return false;
+	if (target->LoginNumber != 0) return false; // ignore player-inflicted damage
 										  // such as Life bond or sacrifice
 
 	long dmg;
@@ -181,6 +182,7 @@ void PartyDamage::DamagePacketCallback(GWAPI::StoC::P151* packet) {
 		damage[index].recent_damage += dmg;
 		damage[index].last_damage = TBTimer::init();
 	}
+	return false;
 }
 
 void PartyDamage::MainRoutine() {

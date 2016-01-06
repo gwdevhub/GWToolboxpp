@@ -94,13 +94,16 @@ private:
 		must_self_destruct_(false),
 		capture_input_(false) {
 
-		GWAPI::GWCA::Api().Chat().RegisterChannel(L"GWToolbox++", 0x00CCFF, 0xDDDDDD);
-		GWAPI::GWCA::Api().Chat().SetTimestampColor(0xBBBBBB);
-		GWAPI::GWCA::Api().Chat().ToggleTimeStamp(config().IniReadBool(
+		GWAPI::GWCA api;
+		api().Chat().RegisterChannel(L"GWToolbox++", 0x00CCFF, 0xDDDDDD);
+		api().Chat().SetTimestampColor(0xBBBBBB);
+		api().Chat().ToggleTimeStamp(config().IniReadBool(
 			MainWindow::IniSection(), MainWindow::IniKeyTimestamps(), true));
 
-		DWORD playerNumber = GWCA::Api().Agents().GetPlayer()->PlayerNumber;
-		ChatLogger::LogF(L"Hello %ls!", GWCA::Api().Agents().GetPlayerNameByLoginNumber(playerNumber));
+		if (api().Map().GetInstanceType() != GwConstants::InstanceType::Loading) {
+			DWORD playerNumber = api().Agents().GetPlayer()->PlayerNumber;
+			ChatLogger::LogF(L"Hello %ls!", api().Agents().GetPlayerNameByLoginNumber(playerNumber));
+		}
 	}
 
 	//------ Private Methods ------//
@@ -142,6 +145,8 @@ public:
 	inline PartyDamage& party_damage() { return *party_damage_; }
 	
 	void StartSelfDestruct() { 
-		ChatLogger::Log(L"Bye!");
+		if (GWCA::Api().Map().GetInstanceType() != GwConstants::InstanceType::Loading) {
+			ChatLogger::Log(L"Bye!");
+		}
 		must_self_destruct_ = true; }
 };
