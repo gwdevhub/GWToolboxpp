@@ -201,8 +201,8 @@ void MainWindow::UpdatePconToggleButton(bool active) {
 		pcon_toggle_button_->SetForeColor(Color::Red());
 		pcon_toggle_button_->SetText(L"Disabled");
 	}
-	if (tick_with_pcons_ && GWCA::Api::Map().GetInstanceType() == GwConstants::InstanceType::Outpost) {
-		GWCA::Api::Agents().Tick(active);
+	if (tick_with_pcons_ && GWCA::Map().GetInstanceType() == GwConstants::InstanceType::Outpost) {
+		GWCA::Agents().Tick(active);
 	}
 }
 

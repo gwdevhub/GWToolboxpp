@@ -68,13 +68,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 HRESULT WINAPI EndScene(IDirect3DDevice9* dev) {	
 	minimap->Render(dev);
 	
-	return GWCA::Api::DirectX().EndsceneReturn()(dev);
+	return GWCA::DirectX().EndsceneReturn()(dev);
 }
 
 HRESULT WINAPI ResetScene(IDirect3DDevice9* pDevice,
 	D3DPRESENT_PARAMETERS* pPresentationParameters) {
 
-	return GWCA::Api::DirectX().ResetReturn()(pDevice, pPresentationParameters);
+	return GWCA::DirectX().ResetReturn()(pDevice, pPresentationParameters);
 }
 
 void init(HMODULE hModule) {
@@ -86,7 +86,7 @@ void init(HMODULE hModule) {
 	printf("Hello world!\n");
 
 	printf("Initializing API\n");
-	if (GWCA::Api::Initialize()) {
+	if (GWCA::Api().Initialize()) {
 		printf("Initialized successful\n");
 
 		minimap = new Minimap();
@@ -96,7 +96,7 @@ void init(HMODULE hModule) {
 		minimap->SetSize(400, 400);
 
 		
-		GWCA::Api::DirectX().CreateRenderHooks(EndScene, ResetScene);
+		GWCA::DirectX().CreateRenderHooks(EndScene, ResetScene);
 
 		HWND gw_window_handle = GWCA::MemoryMgr::GetGWWindowHandle();
 		OldWndProc = SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)WndProc);
@@ -109,7 +109,7 @@ void init(HMODULE hModule) {
 		}
 
 		SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
-		GWCA::Api::Destruct();
+		GWCA::Api().Destruct();
 
 		Sleep(100);
 

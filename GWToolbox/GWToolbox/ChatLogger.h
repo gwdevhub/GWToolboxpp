@@ -9,11 +9,11 @@ class ChatLogger {
 public:
 
 	inline static void Log(const wchar_t* msg) {
-		GWCA::Api::Chat().WriteChat(L"GWToolbox++", msg);
+		GWCA::Chat().WriteChat(L"GWToolbox++", msg);
 	}
 
 	inline static void Log(const std::wstring msg) {
-		GWCA::Api::Chat().WriteChat(L"GWToolbox++", msg.c_str());
+		GWCA::Chat().WriteChat(L"GWToolbox++", msg.c_str());
 	}
 
 	static void LogF(const wchar_t* format, ...) {
@@ -24,7 +24,7 @@ public:
 		vswprintf_s(chat, szbuf, format, vl);
 		va_end(vl);
 
-		GWCA::Api::Chat().WriteChat(L"GWToolbox++", chat);
+		GWCA::Chat().WriteChat(L"GWToolbox++", chat);
 
 		delete[] chat;
 	}

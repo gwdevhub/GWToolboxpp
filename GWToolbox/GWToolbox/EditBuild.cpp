@@ -72,8 +72,7 @@ EditBuild::EditBuild() {
 			message += L";";
 			message += templates[i]->GetText();
 			message += L"]";
-			GWCA::Api api;
-			api.Chat().SendChat(message.c_str(), L'#');
+			GWCA::Chat().SendChat(message.c_str(), L'#');
 		});
 		AddControl(send);
 

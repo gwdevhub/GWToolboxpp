@@ -100,7 +100,7 @@ Minimap::Minimap()
 	pmap_renderer(PmapRenderer()),
 	agent_renderer(AgentRenderer()) {
 
-	GWCA::Api::StoC().AddGameServerEvent<GWCA::StoC_Pak::P391_InstanceLoadFile>(
+	GWCA::StoC().AddGameServerEvent<GWCA::StoC_Pak::P391_InstanceLoadFile>(
 		[this](GWCA::StoC_Pak::P391_InstanceLoadFile* packet) {
 		pmap_renderer.Invalidate();
 		return false;
@@ -111,11 +111,11 @@ Minimap::Minimap()
 
 void Minimap::Render(IDirect3DDevice9* device) {
 	using namespace GWCA;
-	GW::Agent* me = Api::Agents().GetPlayer();
+	GW::Agent* me = GWCA::Agents().GetPlayer();
 	if (me != nullptr) {
 		SetTranslation(-me->X, -me->Y);
 	}
-	float camera_yaw = Api::Camera().GetYaw();
+	float camera_yaw = GWCA::Camera().GetYaw();
 	SetRotation(-camera_yaw + (float)M_PI_2);
 
 	device->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, TRUE);

@@ -114,11 +114,10 @@ bool Pcon::checkAndUse() {
 
 	if (enabled && TBTimer::diff(this->timer) > 5000) {
 
-		GWCA::Api api;
-		GW::Effect effect = api.Effects().GetPlayerEffectById(effectID);
+		GW::Effect effect = GWCA::Effects().GetPlayerEffectById(effectID);
 
 		if (effect.SkillId == 0 || effect.GetTimeRemaining() < 1000) {
-			bool used = api.Items().UseItemByModelId(itemID);
+			bool used = GWCA::Items().UseItemByModelId(itemID);
 			if (used) {
 				this->timer = TBTimer::init();
 				this->update_timer = TBTimer::init();
@@ -137,23 +136,22 @@ bool PconCons::checkAndUse() {
 	CheckUpdateTimer();
 
 	if (enabled && TBTimer::diff(this->timer) > 5000) {
-		GWCA::Api api;
-		GW::Effect effect = api.Effects().GetPlayerEffectById(effectID);
+		GW::Effect effect = GWCA::Effects().GetPlayerEffectById(effectID);
 		if (effect.SkillId == 0 || effect.GetTimeRemaining() < 1000) {
 
-			if (!api.Agents().GetIsPartyLoaded()) return false;
+			if (!GWCA::Agents().GetIsPartyLoaded()) return false;
 
-			GW::MapAgentArray mapAgents = api.Agents().GetMapAgentArray();
+			GW::MapAgentArray mapAgents = GWCA::Agents().GetMapAgentArray();
 			if (!mapAgents.valid()) return false;
-			int n_players = api.Agents().GetAmountOfPlayersInInstance();
+			int n_players = GWCA::Agents().GetAmountOfPlayersInInstance();
 			for (int i = 1; i <= n_players; ++i) {
-				DWORD currentPlayerAgID = api.Agents().GetAgentIdByLoginNumber(i);
+				DWORD currentPlayerAgID = GWCA::Agents().GetAgentIdByLoginNumber(i);
 				if (currentPlayerAgID <= 0) return false;
 				if (currentPlayerAgID >= mapAgents.size()) return false;
 				if (mapAgents[currentPlayerAgID].GetIsDead()) return false;
 			}
 
-			bool used = api.Items().UseItemByModelId(itemID);
+			bool used = GWCA::Items().UseItemByModelId(itemID);
 			if (used) {
 				this->timer = TBTimer::init();
 				this->update_timer = TBTimer::init();
@@ -171,23 +169,22 @@ bool PconCity::checkAndUse() {
 	CheckUpdateTimer();
 
 	if (enabled	&& TBTimer::diff(this->timer) > 5000) {
-		GWCA::Api api;
-		if (api.Agents().GetPlayer() &&
-			(api.Agents().GetPlayer()->MoveX > 0 || api.Agents().GetPlayer()->MoveY > 0)) {
-			if (api.Effects().GetPlayerEffectById(SkillID::Sugar_Rush_short).SkillId
-				|| api.Effects().GetPlayerEffectById(SkillID::Sugar_Rush_long).SkillId
-				|| api.Effects().GetPlayerEffectById(SkillID::Sugar_Jolt_short).SkillId
-				|| api.Effects().GetPlayerEffectById(SkillID::Sugar_Jolt_long).SkillId) {
+		if (GWCA::Agents().GetPlayer() &&
+			(GWCA::Agents().GetPlayer()->MoveX > 0 || GWCA::Agents().GetPlayer()->MoveY > 0)) {
+			if (GWCA::Effects().GetPlayerEffectById(SkillID::Sugar_Rush_short).SkillId
+				|| GWCA::Effects().GetPlayerEffectById(SkillID::Sugar_Rush_long).SkillId
+				|| GWCA::Effects().GetPlayerEffectById(SkillID::Sugar_Jolt_short).SkillId
+				|| GWCA::Effects().GetPlayerEffectById(SkillID::Sugar_Jolt_long).SkillId) {
 
 				// then we have effect on already, do nothing
 			} else {
 				// we should use it. Because of logical-OR only the first one will be used
-				bool used = api.Items().UseItemByModelId(ItemID::CremeBrulee)
-					|| api.Items().UseItemByModelId(ItemID::ChocolateBunny)
-					|| api.Items().UseItemByModelId(ItemID::Fruitcake)
-					|| api.Items().UseItemByModelId(ItemID::SugaryBlueDrink)
-					|| api.Items().UseItemByModelId(ItemID::RedBeanCake)
-					|| api.Items().UseItemByModelId(ItemID::JarOfHoney);
+				bool used = GWCA::Items().UseItemByModelId(ItemID::CremeBrulee)
+					|| GWCA::Items().UseItemByModelId(ItemID::ChocolateBunny)
+					|| GWCA::Items().UseItemByModelId(ItemID::Fruitcake)
+					|| GWCA::Items().UseItemByModelId(ItemID::SugaryBlueDrink)
+					|| GWCA::Items().UseItemByModelId(ItemID::RedBeanCake)
+					|| GWCA::Items().UseItemByModelId(ItemID::JarOfHoney);
 				if (used) {
 					this->timer = TBTimer::init();
 					this->update_timer = TBTimer::init();
@@ -206,25 +203,24 @@ bool PconAlcohol::checkAndUse() {
 	CheckUpdateTimer();
 
 	if (enabled && TBTimer::diff(this->timer) > 5000) {
-		GWCA::Api api;
-		if (api.Effects().GetAlcoholLevel() <= 1) {
+		if (GWCA::Effects().GetAlcoholLevel() <= 1) {
 			// use an alcohol item. Because of logical-OR only the first one will be used
-			bool used = api.Items().UseItemByModelId(ItemID::Eggnog)
-				|| api.Items().UseItemByModelId(ItemID::DwarvenAle)
-				|| api.Items().UseItemByModelId(ItemID::HuntersAle)
-				|| api.Items().UseItemByModelId(ItemID::Absinthe)
-				|| api.Items().UseItemByModelId(ItemID::WitchsBrew)
-				|| api.Items().UseItemByModelId(ItemID::Ricewine)
-				|| api.Items().UseItemByModelId(ItemID::ShamrockAle)
-				|| api.Items().UseItemByModelId(ItemID::Cider)
+			bool used = GWCA::Items().UseItemByModelId(ItemID::Eggnog)
+				|| GWCA::Items().UseItemByModelId(ItemID::DwarvenAle)
+				|| GWCA::Items().UseItemByModelId(ItemID::HuntersAle)
+				|| GWCA::Items().UseItemByModelId(ItemID::Absinthe)
+				|| GWCA::Items().UseItemByModelId(ItemID::WitchsBrew)
+				|| GWCA::Items().UseItemByModelId(ItemID::Ricewine)
+				|| GWCA::Items().UseItemByModelId(ItemID::ShamrockAle)
+				|| GWCA::Items().UseItemByModelId(ItemID::Cider)
 
-				|| api.Items().UseItemByModelId(ItemID::Grog)
-				|| api.Items().UseItemByModelId(ItemID::SpikedEggnog)
-				|| api.Items().UseItemByModelId(ItemID::AgedDwarvenAle)
-				|| api.Items().UseItemByModelId(ItemID::AgedHungersAle)
-				|| api.Items().UseItemByModelId(ItemID::Keg)
-				|| api.Items().UseItemByModelId(ItemID::FlaskOfFirewater)
-				|| api.Items().UseItemByModelId(ItemID::KrytanBrandy);
+				|| GWCA::Items().UseItemByModelId(ItemID::Grog)
+				|| GWCA::Items().UseItemByModelId(ItemID::SpikedEggnog)
+				|| GWCA::Items().UseItemByModelId(ItemID::AgedDwarvenAle)
+				|| GWCA::Items().UseItemByModelId(ItemID::AgedHungersAle)
+				|| GWCA::Items().UseItemByModelId(ItemID::Keg)
+				|| GWCA::Items().UseItemByModelId(ItemID::FlaskOfFirewater)
+				|| GWCA::Items().UseItemByModelId(ItemID::KrytanBrandy);
 			if (used) {
 				this->timer = TBTimer::init();
 				this->update_timer = TBTimer::init();
@@ -242,13 +238,12 @@ bool PconLunar::checkAndUse() {
 	CheckUpdateTimer();
 
 	if (enabled	&& TBTimer::diff(this->timer) > 500) {
-		GWCA::Api api;
-		if (api.Effects().GetPlayerEffectById(SkillID::Lunar_Blessing).SkillId == 0) {
-			bool used = api.Items().UseItemByModelId(ItemID::LunarDragon)
-				|| api.Items().UseItemByModelId(ItemID::LunarHorse)
-				|| api.Items().UseItemByModelId(ItemID::LunarRabbit)
-				|| api.Items().UseItemByModelId(ItemID::LunarSheep)
-				|| api.Items().UseItemByModelId(ItemID::LunarSnake);
+		if (GWCA::Effects().GetPlayerEffectById(SkillID::Lunar_Blessing).SkillId == 0) {
+			bool used = GWCA::Items().UseItemByModelId(ItemID::LunarDragon)
+				|| GWCA::Items().UseItemByModelId(ItemID::LunarHorse)
+				|| GWCA::Items().UseItemByModelId(ItemID::LunarRabbit)
+				|| GWCA::Items().UseItemByModelId(ItemID::LunarSheep)
+				|| GWCA::Items().UseItemByModelId(ItemID::LunarSnake);
 			if (used) {
 				this->timer = TBTimer::init();
 				this->update_timer = TBTimer::init();
@@ -267,7 +262,7 @@ void Pcon::scanInventory() {
 	bool old_enabled = enabled;
 
 	quantity = 0;
-	GW::Bag** bags = GWCA::Api::Items().GetBagArray();
+	GW::Bag** bags = GWCA::Items().GetBagArray();
 	if (bags != nullptr) {
 		GW::Bag* bag = NULL;
 		for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
@@ -295,7 +290,7 @@ void PconCity::scanInventory() {
 	bool old_enabled = enabled;
 
 	quantity = 0;
-	GW::Bag** bags = GWCA::Api::Items().GetBagArray();
+	GW::Bag** bags = GWCA::Items().GetBagArray();
 	if (bags != nullptr) {
 		GW::Bag* bag = NULL;
 		for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
@@ -327,7 +322,7 @@ void PconAlcohol::scanInventory() {
 	bool old_enabled = enabled;
 
 	quantity = 0;
-	GW::Bag** bags = GWCA::Api::Items().GetBagArray();
+	GW::Bag** bags = GWCA::Items().GetBagArray();
 	if (bags != nullptr) {
 		GW::Bag* bag = NULL;
 		for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
@@ -372,7 +367,7 @@ void PconLunar::scanInventory() {
 	bool old_enabled = enabled;
 
 	quantity = 0;
-	GW::Bag** bags = GWCA::Api::Items().GetBagArray();
+	GW::Bag** bags = GWCA::Items().GetBagArray();
 	if (bags != nullptr) {
 		GW::Bag* bag = NULL;
 		for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {

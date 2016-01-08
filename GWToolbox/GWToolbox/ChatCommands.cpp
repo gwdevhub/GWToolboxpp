@@ -39,14 +39,14 @@ ChatCommands::ChatCommands() {
 }
 
 void ChatCommands::AddCommand(wstring cmd, Handler_t handler, bool override) {
-	GWCA::Api().Chat().RegisterCommand(cmd,
+	GWCA::Chat().RegisterCommand(cmd,
 		[handler](std::wstring cmd, std::vector<std::wstring> args) {
 		handler(args);
 	}, override);
 }
 
 bool ChatCommands::ProcessMessage(LPMSG msg) {
-	GWCA::CameraMgr cam = GWCA::Api::Camera();
+	GWCA::CameraMgr cam = GWCA::Camera();
 	float speed = 25.f;
 
 	if (!cam.GetCameraUnlock() || IsTyping()) return false; // 0xA377C8 is a flag when someone is typing
@@ -88,7 +88,7 @@ bool ChatCommands::ProcessMessage(LPMSG msg) {
 }
 
 void ChatCommands::UpdateUI() {
-	GWCA::CameraMgr cam = GWCA::Api::Camera();
+	GWCA::CameraMgr cam = GWCA::Camera();
 	if (cam.GetCameraUnlock() && !IsTyping()) {
 		cam.ForwardMovement(cam_speed_ * move_forward);
 		cam.VerticalMovement(-cam_speed_ * move_up);
@@ -106,7 +106,7 @@ wstring ChatCommands::GetLowerCaseArg(vector<wstring> args, size_t index) {
 
 void ChatCommands::CmdAge2(vector<wstring>) {
 	wchar_t buffer[30];
-	DWORD second = GWCA::Api::Map().GetInstanceTime() / 1000;
+	DWORD second = GWCA::Map().GetInstanceTime() / 1000;
 	wsprintf(buffer, L"%02u:%02u:%02u", (second / 3600), (second / 60) % 60, second % 60);
 	ChatLogger::Log(buffer);
 }
@@ -133,7 +133,7 @@ void ChatCommands::CmdDialog(vector<wstring> args) {
 	} else {
 		try {
 			long id = std::stol(args[0], 0, 0);
-			GWCA::Api().Agents().Dialog(id);
+			GWCA::Agents().Dialog(id);
 			ChatLogger::LogF(L"Sent Dialog 0x%X", id);
 		} catch (...) {
 			ChatLogger::LogF(L"[Error] Invalid argument '%ls', please use an integer or hex value", args[0].c_str());
@@ -142,8 +142,8 @@ void ChatCommands::CmdDialog(vector<wstring> args) {
 }
 
 void ChatCommands::CmdChest(vector<wstring> args) {
-	if (GWCA::Api::Map().GetInstanceType() == GwConstants::InstanceType::Outpost) {
-		GWCA::Api::Items().OpenXunlaiWindow();
+	if (GWCA::Map().GetInstanceType() == GwConstants::InstanceType::Outpost) {
+		GWCA::Items().OpenXunlaiWindow();
 	}
 }
 
@@ -194,21 +194,21 @@ void ChatCommands::CmdTP(vector<wstring> args) {
 		}
 
 		if (town == L"toa") {
-			GWCA::Api().Map().Travel(GwConstants::MapID::Temple_of_the_Ages, district, district_number);
+			GWCA::Map().Travel(GwConstants::MapID::Temple_of_the_Ages, district, district_number);
 		} else if (town == L"doa") {
-			GWCA::Api().Map().Travel(GwConstants::MapID::Domain_of_Anguish, district, district_number);
+			GWCA::Map().Travel(GwConstants::MapID::Domain_of_Anguish, district, district_number);
 		} else if (town == L"kamadan" || town == L"kama") {
-			GWCA::Api().Map().Travel(GwConstants::MapID::Kamadan_Jewel_of_Istan_outpost, district, district_number);
+			GWCA::Map().Travel(GwConstants::MapID::Kamadan_Jewel_of_Istan_outpost, district, district_number);
 		} else if (town == L"embark") {
-			GWCA::Api().Map().Travel(GwConstants::MapID::Embark_Beach, district, district_number);
+			GWCA::Map().Travel(GwConstants::MapID::Embark_Beach, district, district_number);
 		} else if (town == L"vlox" || town == L"vloxs") {
-			GWCA::Api().Map().Travel(GwConstants::MapID::Vloxs_Falls, district, district_number);
+			GWCA::Map().Travel(GwConstants::MapID::Vloxs_Falls, district, district_number);
 		} else if (town == L"gadd" || town == L"gadds") {
-			GWCA::Api().Map().Travel(GwConstants::MapID::Gadds_Encampment_outpost, district, district_number);
+			GWCA::Map().Travel(GwConstants::MapID::Gadds_Encampment_outpost, district, district_number);
 		} else if (town == L"urgoz") {
-			GWCA::Api().Map().Travel(GwConstants::MapID::Urgozs_Warren, district, district_number);
+			GWCA::Map().Travel(GwConstants::MapID::Urgozs_Warren, district, district_number);
 		} else if (town == L"deep") {
-			GWCA::Api().Map().Travel(GwConstants::MapID::The_Deep, district, district_number);
+			GWCA::Map().Travel(GwConstants::MapID::The_Deep, district, district_number);
 		} else if (town == L"fav1") {
 			GWToolbox::instance().main_window().travel_panel().TravelFavorite(0);
 		} else if (town == L"fav2") {
@@ -216,18 +216,18 @@ void ChatCommands::CmdTP(vector<wstring> args) {
 		} else if (town == L"fav3") {
 			GWToolbox::instance().main_window().travel_panel().TravelFavorite(2);
 		} else if (town == L"gh") {
-			GWCA::Api::Guild().TravelGH();
+			GWCA::Guild().TravelGH();
 		}
 	}
 }
 
 void ChatCommands::CmdZoom(vector<wstring> args) {
 	if (args.empty()) {
-		GWCA::Api().Camera().SetMaxDist(750.0f);
+		GWCA::Camera().SetMaxDist(750.0f);
 	} else {
 		try {
 			long distance = std::stol(args[0]);
-			GWCA::Api().Camera().SetMaxDist(static_cast<float>(distance));
+			GWCA::Camera().SetMaxDist(static_cast<float>(distance));
 		} catch (...) {
 			ChatLogger::LogF(L"[Error] Invalid argument '%ls', please use an integer value", args[0].c_str());
 		}
@@ -236,29 +236,29 @@ void ChatCommands::CmdZoom(vector<wstring> args) {
 
 void ChatCommands::CmdCamera(vector<wstring> args) {
 	if (args.empty()) {
-		GWCA::Api().Camera().UnlockCam(false);
+		GWCA::Camera().UnlockCam(false);
 	} else {
 		wstring arg0 = GetLowerCaseArg(args, 0);
 		if (arg0 == L"lock") {
-			GWCA::Api().Camera().UnlockCam(false);
+			GWCA::Camera().UnlockCam(false);
 		} else if (arg0 == L"unlock") {
-			GWCA::Api().Camera().UnlockCam(true);
+			GWCA::Camera().UnlockCam(true);
 			ChatLogger::Log(L"Use W,A,S,D,X,Z for camera movement");
 		} else if (arg0 == L"fog") {
 			wstring arg1 = GetLowerCaseArg(args, 1);
 			if (arg1 == L"on") {
-				GWCA::Api().Camera().SetFog(true);
+				GWCA::Camera().SetFog(true);
 			} else if (arg1 == L"off") {
-				GWCA::Api().Camera().SetFog(false);
+				GWCA::Camera().SetFog(false);
 			}
 		} else if (arg0 == L"fov") {
 			wstring arg1 = GetLowerCaseArg(args, 1);
 			if (arg1 == L"default") {
-				GWCA::Api().Camera().SetFieldOfView(1.308997f);
+				GWCA::Camera().SetFieldOfView(1.308997f);
 			} else {
 				try {
 					float fovnew = std::stof(arg1);
-					GWCA::Api().Camera().SetFieldOfView(fovnew);
+					GWCA::Camera().SetFieldOfView(fovnew);
 					ChatLogger::LogF(L"Field of View is %f", fovnew);
 				} catch (...) {
 					ChatLogger::LogF(L"[Error] Invalid argument '%ls', please use a float value", args[1].c_str());
@@ -296,5 +296,5 @@ void ChatCommands::CmdDamage(vector<wstring> args) {
 }
 
 void ChatCommands::CmdAfk(vector<wstring> args) {
-	GWCA::Api::FriendList().SetFriendListStatus(GwConstants::OnlineStatus::AWAY);
+	GWCA::FriendList().SetFriendListStatus(GwConstants::OnlineStatus::AWAY);
 }

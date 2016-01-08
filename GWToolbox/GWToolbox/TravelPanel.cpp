@@ -31,7 +31,7 @@ void TravelPanel::BuildUI() {
 		[this, combo](Control*) {
 		if (combo->GetSelectedIndex() < 0) return;
 		GwConstants::MapID id = IndexToOutpostID(combo->GetSelectedIndex());
-		GWCA::Api().Map().Travel(id, district_, district_number_);
+		GWCA::Map().Travel(id, district_, district_number_);
 		combo->SetText(L"Travel To...");
 		combo->SetSelectedIndex(-1);
 	});
@@ -106,7 +106,7 @@ void TravelPanel::BuildUI() {
 void TravelPanel::TravelFavorite(int fav_idx) {
 	if (fav_idx >= 0 && fav_idx < 3) {
 		int outpost_idx = combo_boxes_[fav_idx]->GetSelectedIndex();
-		GWCA::Api().Map().Travel(IndexToOutpostID(outpost_idx), district_, district_number_);
+		GWCA::Map().Travel(IndexToOutpostID(outpost_idx), district_, district_number_);
 	}
 }
 
@@ -128,7 +128,7 @@ void TravelPanel::AddTravelButton(wstring text, int grid_x, int grid_y, GwConsta
 	button->SetLocation(GuiUtils::ComputeX(GetWidth(), 2, grid_x), 
 		DefaultBorderPadding + (BUTTON_HEIGHT + DefaultBorderPadding) * grid_y);
 	button->GetClickEvent() += ClickEventHandler([this, map_id](Control*) {
-		GWCA::Api().Map().Travel(map_id, district_, district_number_);
+		GWCA::Map().Travel(map_id, district_, district_number_);
 	});
 	AddControl(button);
 }

@@ -37,11 +37,11 @@ protected:
 	inline void set_key(OSHGui::Key key) { key_ = key; }
 	inline void set_modifier(OSHGui::Key modifier) { modifier_ = modifier; }
 	bool isLoading() { 
-		return GWCA::Api::Map().GetInstanceType() == GwConstants::InstanceType::Loading; }
+		return GWCA::Map().GetInstanceType() == GwConstants::InstanceType::Loading; }
 	bool isExplorable() { 
-		return GWCA::Api::Map().GetInstanceType() == GwConstants::InstanceType::Explorable; }
+		return GWCA::Map().GetInstanceType() == GwConstants::InstanceType::Explorable; }
 	bool isOutpost() { 
-		return GWCA::Api::Map().GetInstanceType() == GwConstants::InstanceType::Outpost; }
+		return GWCA::Map().GetInstanceType() == GwConstants::InstanceType::Outpost; }
 
 	TBHotkey(OSHGui::Key key, OSHGui::Key modifier, bool active, 
 		wstring ini_section);

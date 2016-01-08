@@ -9,17 +9,15 @@
 #include "Config.h"
 #include "GWToolbox.h"
 
-using namespace GWCA;
-
 PartyDamage::PartyDamage() {
 
 	total = 0;
 	send_timer = TBTimer::init();
 
-	Api().StoC().AddGameServerEvent<StoC_Pak::P151>(
+	GWCA::StoC().AddGameServerEvent<GWCA::StoC_Pak::P151>(
 		std::bind(&PartyDamage::DamagePacketCallback, this, std::placeholders::_1));
 
-	Api().StoC().AddGameServerEvent<StoC_Pak::P230>(
+	GWCA::StoC().AddGameServerEvent<GWCA::StoC_Pak::P230>(
 		std::bind(&PartyDamage::MapLoadedCallback, this, std::placeholders::_1));
 
 	Config& config = GWToolbox::instance().config();
@@ -108,7 +106,7 @@ PartyDamage::~PartyDamage() {
 }
 
 bool PartyDamage::MapLoadedCallback(GWCA::StoC_Pak::P230* packet) {
-	switch (GWCA::Api().Map().GetInstanceType()) {
+	switch (GWCA::Map().GetInstanceType()) {
 	case GwConstants::InstanceType::Outpost:
 		in_explorable = false;
 		break;
@@ -129,9 +127,9 @@ bool PartyDamage::DamagePacketCallback(GWCA::StoC_Pak::P151* packet) {
 
 	// ignore non-damage packets
 	switch (packet->type) {
-	case StoC_Pak::P151_Type::damage:
-	case StoC_Pak::P151_Type::critical:
-	case StoC_Pak::P151_Type::armorignoring:
+	case GWCA::StoC_Pak::P151_Type::damage:
+	case GWCA::StoC_Pak::P151_Type::critical:
+	case GWCA::StoC_Pak::P151_Type::armorignoring:
 		break;
 	default:
 		return false;
@@ -141,14 +139,14 @@ bool PartyDamage::DamagePacketCallback(GWCA::StoC_Pak::P151* packet) {
 	if (packet->value >= 0) return false;
 
 	// get cause agent
-	GW::Agent* cause = GWCA::Api().Agents().GetAgentByID(packet->cause_id);
+	GWCA::GW::Agent* cause = GWCA::Agents().GetAgentByID(packet->cause_id);
 	if (cause == nullptr) return false;
 	if (cause->LoginNumber == 0) return false; // ignore NPCs, heroes
 	if (cause->PlayerNumber == 0) return false; // might as well check for this too
 	if (cause->PlayerNumber > MAX_PLAYERS) return false;
 
 	// get target agent
-	GW::Agent* target = GWCA::Api().Agents().GetAgentByID(packet->target_id);
+	GWCA::GW::Agent* target = GWCA::Agents().GetAgentByID(packet->target_id);
 	if (target == nullptr) return false;
 	if (target->LoginNumber != 0) return false; // ignore player-inflicted damage
 										  // such as Life bond or sacrifice
@@ -172,7 +170,7 @@ bool PartyDamage::DamagePacketCallback(GWCA::StoC_Pak::P151* packet) {
 
 	if (damage[index].damage == 0) {
 		damage[index].agent_id = packet->cause_id;
-		damage[index].name = GWCA::Api().Agents().GetPlayerNameByLoginNumber(cause->LoginNumber);
+		damage[index].name = GWCA::Agents().GetPlayerNameByLoginNumber(cause->LoginNumber);
 		damage[index].primary = static_cast<GwConstants::Profession>(cause->Primary);
 		damage[index].secondary = static_cast<GwConstants::Profession>(cause->Secondary);
 	}
@@ -190,10 +188,9 @@ bool PartyDamage::DamagePacketCallback(GWCA::StoC_Pak::P151* packet) {
 void PartyDamage::MainRoutine() {
 	if (!send_queue.empty() && TBTimer::diff(send_timer) > 600) {
 		send_timer = TBTimer::init();
-		Api api;
-		if (api.Map().GetInstanceType() != GwConstants::InstanceType::Loading
-			&& api.Agents().GetPlayer()) {
-			api.Chat().SendChat(send_queue.front().c_str(), L'#');
+		if (GWCA::Map().GetInstanceType() != GwConstants::InstanceType::Loading
+			&& GWCA::Agents().GetPlayer()) {
+			GWCA::Chat().SendChat(send_queue.front().c_str(), L'#');
 			send_queue.pop();
 		}
 	}
@@ -202,8 +199,7 @@ void PartyDamage::MainRoutine() {
 void PartyDamage::UpdateUI() {
 	if (!isVisible_) return;
 
-	Api api;
-	int size = api.Agents().GetPartySize();
+	int size = GWCA::Agents().GetPartySize();
 	if (size > MAX_PLAYERS) size = MAX_PLAYERS;
 	if (party_size_ != size) {
 		party_size_ = size;
@@ -273,8 +269,8 @@ void PartyDamage::UpdateUI() {
 
 		Drawing::Color inactive = labelcolor - Drawing::Color(0.0f, 0.3f, 0.3f, 0.3f);
 		if (damage[i].damage == 0 
-			|| api.Map().GetInstanceType() == GwConstants::InstanceType::Outpost
-			|| api.Agents().GetAgentByID(damage[i].agent_id) == nullptr) {
+			|| GWCA::Map().GetInstanceType() == GwConstants::InstanceType::Outpost
+			|| GWCA::Agents().GetAgentByID(damage[i].agent_id) == nullptr) {
 
 			absolute[i]->SetForeColor(inactive);
 			percent[i]->SetForeColor(inactive);

@@ -118,15 +118,13 @@ void DistanceWindow::UpdateUI() {
 
 	if (!enabled) return;
 
-	GWCA::Api api;
-
-	Agent* target = api.Agents().GetTarget();
-	Agent* me = api.Agents().GetPlayer();
+	Agent* target = GWCA::Agents().GetTarget();
+	Agent* me = GWCA::Agents().GetPlayer();
 
 	wstring s1;
 	wstring s2;
 	if (target && me) {
-		long distance = api.Agents().GetDistance(target, me);
+		long distance = GWCA::Agents().GetDistance(target, me);
 		s1 = to_wstring(distance * 100 / GwConstants::Range::Compass) + L" %";
 		s2 = to_wstring(distance);
 		if (!isVisible_) ToolboxWindow::ShowWindow(true);

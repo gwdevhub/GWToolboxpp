@@ -138,11 +138,10 @@ void BuildPanel::MainRoutine() {
 	if (!queue.empty() && TBTimer::diff(send_timer) > 600) {
 		send_timer = TBTimer::init();
 
-		GWCA::Api api;
-		if (api.Map().GetInstanceType() != GwConstants::InstanceType::Loading
-			&& api.Agents().GetPlayer()) {
+		if (GWCA::Map().GetInstanceType() != GwConstants::InstanceType::Loading
+			&& GWCA::Agents().GetPlayer()) {
 
-			api.Chat().SendChat(queue.front().c_str(), L'#');
+			GWCA::Chat().SendChat(queue.front().c_str(), L'#');
 			queue.pop();
 		}
 	}

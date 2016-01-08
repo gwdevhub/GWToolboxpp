@@ -6,6 +6,19 @@
 
 #include <GWCA\GWCA.h>
 #include <GWCA\DirectXMgr.h>
+#include <GWCA\AgentMgr.h>
+#include <GWCA\CameraMgr.h>
+#include <GWCA\ChatMgr.h>
+#include <GWCA\EffectMgr.h>
+#include <GWCA\FriendListMgr.h>
+#include <GWCA\GuildMgr.h>
+#include <GWCA\ItemMgr.h>
+#include <GWCA\MapMgr.h>
+#include <GWCA\MerchantMgr.h>
+#include <GWCA\PartyMgr.h>
+#include <GWCA\PlayerMgr.h>
+#include <GWCA\SkillbarMgr.h>
+#include <GWCA\StoCMgr.h>
 
 #include "Timer.h"
 #include "MainWindow.h"
@@ -38,6 +51,20 @@ void GWToolbox::ThreadEntry(HMODULE dllmodule) {
 		FreeLibraryAndExitThread(dllmodule, EXIT_SUCCESS);
 	}
 
+	GWCA::Gamethread();
+	GWCA::CtoS();
+	GWCA::StoC();
+	GWCA::Agents();
+	GWCA::Items();
+	GWCA::Skillbar();
+	GWCA::Effects();
+	GWCA::Chat();
+	GWCA::Merchant();
+	GWCA::Guild();
+	GWCA::Map();
+	GWCA::FriendList();
+	GWCA::Camera();
+
 	LOG("Creating GWToolbox++\n");
 	instance_ = new GWToolbox(dllmodule);
 
@@ -48,7 +75,7 @@ void GWToolbox::ThreadEntry(HMODULE dllmodule) {
 
 void GWToolbox::Exec() {
 	LOG("Installing dx hooks\n");
-	GWCA::Api().DirectX().CreateRenderHooks(endScene, resetScene);
+	GWCA::DirectX().CreateRenderHooks(endScene, resetScene);
 	LOG("Installed dx hooks\n");
 
 	LOG("Installing input event handler\n");
@@ -285,7 +312,7 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 		renderer->EndRendering();
 	}
 
-	return GWCA::Api().DirectX().EndsceneReturn()(pDevice);
+	return GWCA::DirectX().EndsceneReturn()(pDevice);
 }
 
 HRESULT WINAPI GWToolbox::resetScene(IDirect3DDevice9* pDevice, 
@@ -293,7 +320,7 @@ HRESULT WINAPI GWToolbox::resetScene(IDirect3DDevice9* pDevice,
 	// pre-reset here.
 	renderer->PreD3DReset();
 
-	HRESULT result = GWCA::Api().DirectX().ResetReturn()(pDevice, pPresentationParameters);
+	HRESULT result = GWCA::DirectX().ResetReturn()(pDevice, pPresentationParameters);
 	if (result == D3D_OK){
 		// post-reset here.
 		renderer->PostD3DReset();

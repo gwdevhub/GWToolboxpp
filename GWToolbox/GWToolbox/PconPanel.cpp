@@ -220,10 +220,8 @@ void PconPanel::BuildUI() {
 void PconPanel::UpdateUI() {
 	if (!initialized) return;
 
-	GWCA::Api api;
-
-	if (current_map_type != api.Map().GetInstanceType()) {
-		current_map_type = api.Map().GetInstanceType();
+	if (current_map_type != GWCA::Map().GetInstanceType()) {
+		current_map_type = GWCA::Map().GetInstanceType();
 		scan_inventory_timer = TBTimer::init();
 	}
 
@@ -245,12 +243,11 @@ void PconPanel::MainRoutine() {
 
 	if (!enabled) return;
 	
-	GWCA::Api api;
-	InstanceType type = api.Map().GetInstanceType();
+	InstanceType type = GWCA::Map().GetInstanceType();
 	if (type == InstanceType::Loading) return;
-	if (api.Agents().GetPlayerId() == 0) return;
-	if (api.Agents().GetPlayer() == NULL) return;
-	if (api.Agents().GetPlayer()->GetIsDead()) return;
+	if (GWCA::Agents().GetPlayerId() == 0) return;
+	if (GWCA::Agents().GetPlayer() == NULL) return;
+	if (GWCA::Agents().GetPlayer()->GetIsDead()) return;
 
 	if (type == InstanceType::Explorable) {
 		essence->checkAndUse();

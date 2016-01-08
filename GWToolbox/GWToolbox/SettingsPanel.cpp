@@ -150,11 +150,10 @@ void SettingsPanel::BuildUI() {
 void SettingsPanel::MainRoutine() {
 	if (location_active_ && TBTimer::diff(location_timer_) > 1000) {
 		location_timer_ = TBTimer::init();
-		GWCA::Api api;
-		if (api.Map().GetInstanceType() == GwConstants::InstanceType::Explorable
-			&& api.Agents().GetPlayer() != nullptr
-			&& api.Map().GetInstanceTime() > 3000) {
-			GwConstants::MapID current = api.Map().GetMapID();
+		if (GWCA::Map().GetInstanceType() == GwConstants::InstanceType::Explorable
+			&& GWCA::Agents().GetPlayer() != nullptr
+			&& GWCA::Map().GetInstanceTime() > 3000) {
+			GwConstants::MapID current = GWCA::Map().GetMapID();
 			if (location_current_map_ != current) {
 				location_current_map_ = current;
 
@@ -180,13 +179,13 @@ void SettingsPanel::MainRoutine() {
 				}
 
 				string prof_string = "";
-				GWCA::GW::Agent* me = api.Agents().GetPlayer();
+				GWCA::GW::Agent* me = GWCA::Agents().GetPlayer();
 				if (me) {
 					prof_string += " - ";
-					prof_string += api.Agents().GetProfessionAcronym(
+					prof_string += GWCA::Agents().GetProfessionAcronym(
 						static_cast<GwConstants::Profession>(me->Primary));
 					prof_string += "-";
-					prof_string += api.Agents().GetProfessionAcronym(
+					prof_string += GWCA::Agents().GetProfessionAcronym(
 						static_cast<GwConstants::Profession>(me->Secondary));
 				}
 
@@ -206,9 +205,9 @@ void SettingsPanel::MainRoutine() {
 				location_file_.open(GuiUtils::getSubPathA(filename, "location logs").c_str());
 			}
 
-			GWCA::GW::Agent* me = api.Agents().GetPlayer();
+			GWCA::GW::Agent* me = GWCA::Agents().GetPlayer();
 			if (location_file_.is_open() && me != nullptr) {
-				location_file_ << "Time=" << api.Map().GetInstanceTime();
+				location_file_ << "Time=" << GWCA::Map().GetInstanceTime();
 				location_file_ << " X=" << me->X;
 				location_file_ << " Y=" << me->Y;
 				location_file_ << "\n";

@@ -143,10 +143,9 @@ void BondsWindow::BondsMonitor::OnMouseUp(const OSHGui::MouseMessage &mouse) {
 }
 
 void BondsWindow::BondsMonitor::DropUseBuff(int bond, int player) {
-	GWCA::Api api;
 	if (pics[player][bond]->GetVisible()) {
 		if (buff_id[player][bond] > 0) {
-			api.Effects().DropBuff(buff_id[player][bond]);
+			GWCA::Effects().DropBuff(buff_id[player][bond]);
 		}
 	} else {
 		// cast bond on player
@@ -157,14 +156,14 @@ void BondsWindow::BondsMonitor::DropUseBuff(int bond, int player) {
 		case Bond::Prot: buff = GwConstants::SkillID::Protective_Bond; break;
 		}
 
-		int target = api.Agents().GetAgentIdByLoginNumber(player + 1);
+		int target = GWCA::Agents().GetAgentIdByLoginNumber(player + 1);
 		if (target <= 0) return;
 
-		int slot = api.Skillbar().GetSkillSlot(buff);
+		int slot = GWCA::Skillbar().GetSkillSlot(buff);
 		if (slot <= 0) return;
-		if (api.Skillbar().GetPlayerSkillbar().Skills[slot].Recharge != 0) return;
+		if (GWCA::Skillbar().GetPlayerSkillbar().Skills[slot].Recharge != 0) return;
 
-		api.Skillbar().UseSkill(slot, target);
+		GWCA::Skillbar().UseSkill(slot, target);
 	}
 }
 
@@ -189,9 +188,7 @@ void BondsWindow::BondsMonitor::UpdateUI() {
 
 	if (!isVisible_) return;
 
-	GWCA::Api api;
-
-	int size = api.Agents().GetPartySize();
+	int size = GWCA::Agents().GetPartySize();
 	if (size > MAX_PLAYERS) size = MAX_PLAYERS;
 	if (party_size != size) {
 		party_size = size;
@@ -205,10 +202,10 @@ void BondsWindow::BondsMonitor::UpdateUI() {
 		}
 	}
 
-	GWCA::GW::AgentEffectsArray effects = api.Effects().GetPartyEffectArray();
+	GWCA::GW::AgentEffectsArray effects = GWCA::Effects().GetPartyEffectArray();
 	if (effects.valid()) {
 		GWCA::GW::BuffArray buffs = effects[0].Buffs;
-		GWCA::GW::AgentArray agents = api.Agents().GetAgentArray();
+		GWCA::GW::AgentArray agents = GWCA::Agents().GetAgentArray();
 
 		if (buffs.valid() && agents.valid() && effects.valid()) {
 			for (size_t i = 0; i < buffs.size(); ++i) {

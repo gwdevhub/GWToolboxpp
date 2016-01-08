@@ -54,7 +54,7 @@ void DialogPanel::BuildUI() {
 		take->SetText(L"Take");
 		take->GetClickEvent() += ClickEventHandler([this, fav_combo](Control*) {
 			int index = fav_combo->GetSelectedIndex();
-			GWCA::Api::Agents().Dialog(QuestAcceptDialog(IndexToQuestID(index)));
+			GWCA::Agents().Dialog(QuestAcceptDialog(IndexToQuestID(index)));
 		});
 		AddControl(take);
 
@@ -64,7 +64,7 @@ void DialogPanel::BuildUI() {
 		complete->SetText(L"Complete");
 		complete->GetClickEvent() += ClickEventHandler([this, fav_combo](Control*) {
 			int index = fav_combo->GetSelectedIndex();
-			GWCA::Api::Agents().Dialog(QuestRewardDialog(IndexToQuestID(index)));
+			GWCA::Agents().Dialog(QuestRewardDialog(IndexToQuestID(index)));
 		});
 		AddControl(complete);
 	}
@@ -85,7 +85,7 @@ void DialogPanel::BuildUI() {
 	combo_send->GetClickEvent() += ClickEventHandler([this, combo](Control*) {
 		int index = combo->GetSelectedIndex();
 		int id = IndexToDialogID(index);
-		GWCA::Api::Agents().Dialog(id);
+		GWCA::Agents().Dialog(id);
 	});
 	AddControl(combo_send);
 
@@ -107,7 +107,7 @@ void DialogPanel::BuildUI() {
 		if (args.KeyChar == VK_RETURN){
 			try {
 				long id = std::stol(textbox->GetText(), 0, 0);
-				GWCA::Api::Agents().Dialog(id);
+				GWCA::Agents().Dialog(id);
 			} catch (...) {}
 		}
 	});
@@ -120,7 +120,7 @@ void DialogPanel::BuildUI() {
 	custom_send->GetClickEvent() += ClickEventHandler([textbox](Control*) {
 		try {
 			long id = std::stol(textbox->GetText(), 0, 0);
-			GWCA::Api::Agents().Dialog(id);
+			GWCA::Agents().Dialog(id);
 		} catch (...) { }
 	});
 	AddControl(custom_send);
@@ -134,7 +134,7 @@ void DialogPanel::CreateButton(int grid_x, int grid_y, int hor_amount,
 	button->SetSize(GuiUtils::ComputeWidth(GetWidth(), hor_amount), BUTTON_HEIGHT);
 	button->SetLocation(GuiUtils::ComputeX(GetWidth(), hor_amount, grid_x), GuiUtils::ComputeY(grid_y));
 	button->GetClickEvent() += ClickEventHandler([dialog](Control*) {
-		GWCA::Api::Agents().Dialog(dialog);
+		GWCA::Agents().Dialog(dialog);
 	});
 	AddControl(button);
 }

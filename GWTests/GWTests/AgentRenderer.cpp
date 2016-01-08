@@ -24,35 +24,35 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 
 	triangle_count = 0;
 
-	GW::AgentArray agents = Api::Agents().GetAgentArray();
+	GW::AgentArray agents = GWCA::Agents().GetAgentArray();
 	if (!agents.valid()) return;	
 
 	// all agents
 	for (size_t i = 0; i < agents.size(); ++i) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
-		if (agent->Id == Api::Agents().GetPlayerId()) continue; // will draw player at the end
-		if (agent->Id == Api::Agents().GetTargetId()) continue; // will draw target at the end
+		if (agent->Id == GWCA::Agents().GetPlayerId()) continue; // will draw player at the end
+		if (agent->Id == GWCA::Agents().GetTargetId()) continue; // will draw target at the end
 
 		QueueAgent(device, agent);
 
 		CheckFlush(device);
 	}
 
-	GW::Agent* target = Api::Agents().GetTarget();
+	GW::Agent* target = GWCA::Agents().GetTarget();
 	if (target) QueueAgent(device, target);
 
 	CheckFlush(device);
 
-	GW::Agent* player = Api::Agents().GetPlayer();
+	GW::Agent* player = GWCA::Agents().GetPlayer();
 	if (player) QueueAgent(device, player);
 
 	Flush(device);
 }
 
 void AgentRenderer::QueueAgent(IDirect3DDevice9* device, GW::Agent* agent) {
-	bool is_target = GWCA::Api::Agents().GetTargetId() == agent->Id;
-	bool is_player = GWCA::Api::Agents().GetPlayerId() == agent->Id;
+	bool is_target = GWCA::Agents().GetTargetId() == agent->Id;
+	bool is_player = GWCA::Agents().GetPlayerId() == agent->Id;
 
 	DWORD color;
 	if (is_player) {

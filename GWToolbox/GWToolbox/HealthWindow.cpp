@@ -121,7 +121,7 @@ void HealthWindow::UpdateUI() {
 	wstring s1;
 	wstring s2;
 
-	Agent* target = GWCA::Api::Agents().GetTarget();
+	Agent* target = GWCA::Agents().GetTarget();
 	if (target && target->Type == 0xDB) {
 		s1 = to_wstring(lroundf(target->HP * 100));
 		s1 += L" %";
