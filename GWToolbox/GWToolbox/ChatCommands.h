@@ -31,6 +31,7 @@ private:
 	static void CmdDamage(std::vector<std::wstring> args);
 	static void CmdChest(std::vector<std::wstring> args);
 	static void CmdAfk(std::vector<std::wstring> args);
+	static void CmdTarget(std::vector<std::wstring> args);
 
 	static void CmdZoom(std::vector<std::wstring> args);
 	static void CmdCamera(std::vector<std::wstring> args);

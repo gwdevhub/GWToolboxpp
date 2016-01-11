@@ -36,6 +36,8 @@ ChatCommands::ChatCommands() {
 	AddCommand(L"chest", ChatCommands::CmdChest);
 	AddCommand(L"xunlai", ChatCommands::CmdChest);
 	AddCommand(L"afk", ChatCommands::CmdAfk, false);
+	AddCommand(L"target", ChatCommands::CmdTarget);
+	AddCommand(L"tgt", ChatCommands::CmdTarget);
 }
 
 void ChatCommands::AddCommand(wstring cmd, Handler_t handler, bool override) {
@@ -297,4 +299,51 @@ void ChatCommands::CmdDamage(vector<wstring> args) {
 
 void ChatCommands::CmdAfk(vector<wstring> args) {
 	GWCA::FriendList().SetFriendListStatus(GwConstants::OnlineStatus::AWAY);
+}
+
+void ChatCommands::CmdTarget(vector<wstring> args) {
+	if (!args.empty()) {
+		wstring arg0 = GetLowerCaseArg(args, 0);
+		if (arg0 == L"closest" || arg0 == L"nearest") {
+			// target nearest agent
+			GWCA::GW::AgentArray agents = GWCA::Agents().GetAgentArray();
+			if (!agents.valid()) return;
+
+			GWCA::GW::Agent* me = GWCA::Agents().GetPlayer();
+			if (me == nullptr) return;
+
+			unsigned long distance = GwConstants::SqrRange::Compass;
+			int closest = -1;
+
+			for (size_t i = 0; i < agents.size(); ++i) {
+				GWCA::GW::Agent* agent = agents[i];
+				if (agent == nullptr) continue;
+				if (agent->PlayerNumber != me->PlayerNumber) {
+					unsigned long newDistance = GWCA::Agents().GetSqrDistance(me, agents[i]);
+					if (newDistance < distance) {
+						closest = i;
+						distance = newDistance;
+					}
+				}
+			}
+			if (closest > 0) {
+				GWCA::Agents().ChangeTarget(agents[closest]);
+			}
+
+		} else if (arg0 == L"getid") {
+			GWCA::GW::Agent* target = GWCA::Agents().GetTarget();
+			if (target == nullptr) {
+				ChatLogger::Log(L"No target selected!");
+			} else {
+				ChatLogger::LogF(L"Target model id (PlayerNumber) is %d", target->PlayerNumber);
+			}
+		} else if (arg0 == L"getpos") {
+			GWCA::GW::Agent* target = GWCA::Agents().GetTarget();
+			if (target == nullptr) {
+				ChatLogger::Log(L"No target selected!");
+			} else {
+				ChatLogger::LogF(L"Target coordinates are [(%f, %f);xx]", target->X, target->Y);
+			}
+		}
+	}
 }
