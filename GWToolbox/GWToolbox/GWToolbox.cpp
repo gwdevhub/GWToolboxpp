@@ -209,6 +209,10 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 				return true;
 			}
 			break;
+
+		case WM_SIZE:
+			GWToolbox::instance().must_resize_ = true;
+			break;
 		}
 	}
 
@@ -282,6 +286,11 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 
 	GWToolbox& tb = GWToolbox::instance();
 	if (!tb.must_self_destruct_) {
+
+		if (tb.must_resize_) {
+			tb.must_resize_ = false;
+			renderer->UpdateSize();
+		}
 
 		tb.UpdateUI();
 

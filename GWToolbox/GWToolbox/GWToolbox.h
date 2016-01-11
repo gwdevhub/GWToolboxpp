@@ -30,11 +30,11 @@
 #endif
 
 class GWToolbox {
+	//------ Static Fields ------//
 public:
 	static const wchar_t * Host;
 	static const wchar_t* Version;
-
-	//------ Static Fields ------//
+	
 private:
 	static GWToolbox* instance_;
 	static OSHGui::Drawing::Direct3D9Renderer* renderer;
@@ -43,7 +43,6 @@ private:
 
 	//------ Static Methods ------//
 public:
-
 	// will create a new toolbox object and run it, can be used as argument for createThread
 	static void SafeThreadEntry(HMODULE mod);
 private:
@@ -61,25 +60,6 @@ private:
 	static LRESULT CALLBACK SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam);
 	static LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam);
 
-
-	//------ Private Fields ------//
-private:
-	HMODULE dll_module_;	// Handle to the dll module we are running, used to clear the module from GW on eject.
-
-	bool initialized_;
-	bool capture_input_;
-	bool must_self_destruct_;
-
-	Config* config_;
-	ChatCommands* chat_commands_;
-
-	MainWindow* main_window_;
-	TimerWindow* timer_window_;
-	BondsWindow* bonds_window_;
-	HealthWindow* health_window_;
-	DistanceWindow* distance_window_;
-	PartyDamage* party_damage_;
-
 	//------ Constructor ------//
 private:
 	GWToolbox(HMODULE mod) :
@@ -94,6 +74,7 @@ private:
 		party_damage_(nullptr),
 		initialized_(false),
 		must_self_destruct_(false),
+		must_resize_(false),
 		capture_input_(false) {
 
 		GWCA::Chat().RegisterChannel(L"GWToolbox++", 0x00CCFF, 0xDDDDDD);
@@ -105,6 +86,32 @@ private:
 			DWORD playerNumber = GWCA::Agents().GetPlayer()->PlayerNumber;
 			ChatLogger::LogF(L"Hello %ls!", GWCA::Agents().GetPlayerNameByLoginNumber(playerNumber));
 		}
+	}
+
+	//------ Public methods ------//
+public:
+	static GWToolbox& instance() { return *instance_; }
+
+	inline bool initialized() { return initialized_; }
+
+	inline bool capture_input() { return capture_input_; }
+	inline void set_capture_input(bool capture) { capture_input_ = capture; }
+
+	inline Config& config() { return *config_; }
+	inline ChatCommands& chat_commands() { return *chat_commands_; }
+
+	inline MainWindow& main_window() { return *main_window_; }
+	inline TimerWindow& timer_window() { return *timer_window_; }
+	inline BondsWindow& bonds_window() { return *bonds_window_; }
+	inline HealthWindow& health_window() { return *health_window_; }
+	inline DistanceWindow& distance_window() { return *distance_window_; }
+	inline PartyDamage& party_damage() { return *party_damage_; }
+
+	void StartSelfDestruct() {
+		if (GWCA::Map().GetInstanceType() != GwConstants::InstanceType::Loading) {
+			ChatLogger::Log(L"Bye!");
+		}
+		must_self_destruct_ = true;
 	}
 
 	//------ Private Methods ------//
@@ -126,28 +133,23 @@ private:
 	inline void set_distance_window(DistanceWindow* w) { distance_window_ = w; }
 	inline void set_party_damage(PartyDamage* w) { party_damage_ = w; }
 
-	//------ Public methods ------//
-public:
-	static GWToolbox& instance() { return *instance_; }
 
-	inline bool initialized() { return initialized_; }
+	//------ Private Fields ------//
+private:
+	HMODULE dll_module_;	// Handle to the dll module we are running, used to clear the module from GW on eject.
 
-	inline bool capture_input() { return capture_input_; }
-	inline void set_capture_input(bool capture) { capture_input_ = capture; }
-	
-	inline Config& config() { return *config_; }
-	inline ChatCommands& chat_commands() { return *chat_commands_; }
+	bool initialized_;
+	bool capture_input_;
+	bool must_self_destruct_;
+	bool must_resize_;
 
-	inline MainWindow& main_window() { return *main_window_; }
-	inline TimerWindow& timer_window() { return *timer_window_; }
-	inline BondsWindow& bonds_window() { return *bonds_window_; }
-	inline HealthWindow& health_window() { return *health_window_; }
-	inline DistanceWindow& distance_window() { return *distance_window_; }
-	inline PartyDamage& party_damage() { return *party_damage_; }
-	
-	void StartSelfDestruct() { 
-		if (GWCA::Map().GetInstanceType() != GwConstants::InstanceType::Loading) {
-			ChatLogger::Log(L"Bye!");
-		}
-		must_self_destruct_ = true; }
+	Config* config_;
+	ChatCommands* chat_commands_;
+
+	MainWindow* main_window_;
+	TimerWindow* timer_window_;
+	BondsWindow* bonds_window_;
+	HealthWindow* health_window_;
+	DistanceWindow* distance_window_;
+	PartyDamage* party_damage_;
 };

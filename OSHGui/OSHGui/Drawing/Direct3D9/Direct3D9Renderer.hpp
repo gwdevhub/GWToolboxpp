@@ -79,6 +79,7 @@ namespace OSHGui
 
 			virtual void BeginRendering() override;
 			virtual void EndRendering() override;
+			void UpdateSize() { SetDisplaySize(GetViewportSize()); }
 			virtual void SetDisplaySize(const SizeF &sz) override;
 			virtual const SizeF& GetDisplaySize() const override;
 			virtual const PointF& GetDisplayDPI() const override;
