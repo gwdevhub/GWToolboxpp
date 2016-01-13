@@ -118,7 +118,11 @@ public:
 private:
 	// Does everything: setup, main loop, destruction 
 	void Exec();
+
+	// updates UI. will be ran in render loop
 	void UpdateUI();
+
+	void ResizeUI();
 
 	void LoadTheme();
 	void SaveTheme();
@@ -141,7 +145,10 @@ private:
 	bool initialized_;
 	bool capture_input_;
 	bool must_self_destruct_;
+	
 	bool must_resize_;
+	OSHGui::Drawing::SizeI old_screen_size_;
+	OSHGui::Drawing::SizeI new_screen_size_;
 
 	Config* config_;
 	ChatCommands* chat_commands_;

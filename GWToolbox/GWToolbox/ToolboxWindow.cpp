@@ -18,18 +18,6 @@ ToolboxWindow::ToolboxWindow()
 	ApplyTheme(Application::Instance().GetTheme());
 }
 
-void ToolboxWindow::SetSize(const Drawing::SizeI &size) {
-	Control::SetSize(size);
-	containerPanel_->SetSize(size);
-}
-
-void ToolboxWindow::DrawSelf(Drawing::RenderContext &context) {
-	Control::DrawSelf(context);
-	containerPanel_->Render();
-}
-
-void ToolboxWindow::PopulateGeometry() {}
-
 void ToolboxWindow::DragButton::OnMouseDown(const MouseMessage &mouse) {
 	drag_ = true;
 	OnGotMouseCapture();
@@ -55,4 +43,26 @@ void ToolboxWindow::DragButton::OnMouseUp(const MouseMessage &mouse) {
 		OnLostMouseCapture();
 	}
 	Control::OnMouseUp(mouse);
+}
+
+void ToolboxWindow::ResizeUI(OSHGui::Drawing::SizeI before, OSHGui::Drawing::SizeI after) {
+	int x_center = GetLocation().X + GetSize().Width / 2;
+	int y_center = GetLocation().Y + GetSize().Height / 2;
+
+	int x_new = GetLocation().X;
+	int y_new = GetLocation().Y;
+
+	if (x_center > before.Width * 2 / 3) {
+		x_new += after.Width - before.Width;
+	} else if (x_center > before.Width / 3) {
+		x_new += (after.Width - before.Width) / 2;
+	}
+
+	if (y_center > before.Height * 2 / 3) {
+		y_new += after.Height - before.Height;
+	} else if (y_center > before.Height / 3) {
+		y_new += (after.Height - before.Height);
+	}
+
+	SetLocation(x_new, y_new);
 }

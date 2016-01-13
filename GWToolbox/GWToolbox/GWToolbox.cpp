@@ -212,6 +212,7 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 
 		case WM_SIZE:
 			GWToolbox::instance().must_resize_ = true;
+			GWToolbox::instance().new_screen_size_ = SizeI(LOWORD(lParam), HIWORD(lParam));
 			break;
 		}
 	}
@@ -233,6 +234,8 @@ void GWToolbox::CreateGui(IDirect3DDevice9* pDevice) {
 	LOG("Creating GUI\n");
 	LOG("Creating Renderer\n");
 	renderer = new Direct3D9Renderer(pDevice);
+	GWToolbox::instance().old_screen_size_ = renderer->GetDisplaySize();
+	GWToolbox::instance().new_screen_size_ = renderer->GetDisplaySize();
 
 	LOG("Creating OSH Application\n");
 	Application::Initialize(std::unique_ptr<Direct3D9Renderer>(renderer));
@@ -290,6 +293,8 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 		if (tb.must_resize_) {
 			tb.must_resize_ = false;
 			renderer->UpdateSize();
+			tb.ResizeUI();
+			tb.old_screen_size_ = tb.new_screen_size_;
 		}
 
 		tb.UpdateUI();
@@ -351,6 +356,17 @@ void GWToolbox::UpdateUI() {
 		} __except ( EXCEPT_EXPRESSION_LOOP ) {
 			LOG("Badness happened! (in render thread)\n");
 		}
+	}
+}
+
+void GWToolbox::ResizeUI() {
+	if (initialized_) {
+		main_window_->ResizeUI(old_screen_size_, new_screen_size_);
+		timer_window_->ResizeUI(old_screen_size_, new_screen_size_);
+		health_window_->ResizeUI(old_screen_size_, new_screen_size_);
+		distance_window_->ResizeUI(old_screen_size_, new_screen_size_);
+		party_damage_->ResizeUI(old_screen_size_, new_screen_size_);
+		bonds_window_->ResizeUI(old_screen_size_, new_screen_size_);
 	}
 }
 

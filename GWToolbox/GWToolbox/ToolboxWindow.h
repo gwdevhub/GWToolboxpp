@@ -27,22 +27,31 @@ public:
 	// Update and do everything else. DO NOT TOUCH USER INTERFACE.
 	virtual void MainRoutine() = 0;
 
+	void ResizeUI(OSHGui::Drawing::SizeI before, 
+		OSHGui::Drawing::SizeI after);
+
 	virtual void ShowWindow(bool show) {
 		SetVisible(show);
 		containerPanel_->SetVisible(show);
 		for (Control* c : GetControls()) c->SetVisible(show);
 	}
 
-	virtual void SetSize(const OSHGui::Drawing::SizeI &size) override;
+	virtual void SetSize(const OSHGui::Drawing::SizeI &size) override {
+		OSHGui::Control::SetSize(size);
+		containerPanel_->SetSize(size);
+	}
 
-	virtual void DrawSelf(OSHGui::Drawing::RenderContext &context) override;
+	virtual void DrawSelf(OSHGui::Drawing::RenderContext &context) override {
+		OSHGui::Control::DrawSelf(context);
+		containerPanel_->Render();
+	}
 
 	virtual void SetBackColor(const OSHGui::Drawing::Color& color) override {
 		containerPanel_->SetBackColor(color);
 	}
 
 protected:
-	virtual void PopulateGeometry() override;
+	virtual void PopulateGeometry() override {}
 
 private:
 	static const OSHGui::Drawing::PointI DefaultLocation;

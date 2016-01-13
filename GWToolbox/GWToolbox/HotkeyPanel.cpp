@@ -370,8 +370,10 @@ void HotkeyPanel::MainRoutine() {
 	}
 
 	if (dropCoinsActive && TBTimer::diff(dropCoinsTimer) > 400) {
-		dropCoinsTimer = TBTimer::init();
-		GWCA::Items().DropGold(1);
+		if (GWCA::Map().GetInstanceType() == GwConstants::InstanceType::Explorable) {
+			dropCoinsTimer = TBTimer::init();
+			GWCA::Items().DropGold(1);
+		}
 	}
 
 	// TODO rupt?
