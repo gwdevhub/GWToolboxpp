@@ -8,6 +8,10 @@
 class ChatLogger {
 public:
 
+	static void Init() {
+		GWCA::Chat().RegisterChannel(L"GWToolbox++", 0x00CCFF);
+	}
+
 	inline static void Log(const wchar_t* msg) {
 		GWCA::Chat().WriteChat(L"GWToolbox++", msg);
 	}

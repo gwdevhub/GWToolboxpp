@@ -77,11 +77,7 @@ private:
 		must_resize_(false),
 		capture_input_(false) {
 
-		GWCA::Chat().RegisterChannel(L"GWToolbox++", 0x00CCFF, 0xDDDDDD);
-		GWCA::Chat().SetTimestampColor(0xBBBBBB);
-		GWCA::Chat().ToggleTimeStamp(false);
-			// config().IniReadBool(
-			//MainWindow::IniSection(), MainWindow::IniKeyTimestamps(), false));
+		ChatLogger::Init();
 
 		if (GWCA::Map().GetInstanceType() != GwConstants::InstanceType::Loading) {
 			DWORD playerNumber = GWCA::Agents().GetPlayer()->PlayerNumber;
