@@ -96,6 +96,7 @@ public:
 	inline static const wchar_t* IniKeyTickWithPcons() { return L"tick_with_pcons"; }
 	inline static const wchar_t* IniKeySaveLocation() { return L"save_location"; }
 	inline static const wchar_t* IniKeyTimestamps() { return L"timestamps"; }
+	inline static const wchar_t* IniKeyOpenLinks() { return L"openlinks"; }
 
 	virtual void DrawSelf(Drawing::RenderContext &context) override;
 

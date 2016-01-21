@@ -34,12 +34,12 @@ void SettingsPanel::BuildUI() {
 
 	Label* authors = new Label();
 	authors->SetText(L"by Has and KAOS");
-	authors->SetLocation(GetWidth() / 2 - authors->GetWidth() / 2, version->GetBottom() + DefaultBorderPadding);
+	authors->SetLocation(GetWidth() / 2 - authors->GetWidth() / 2, version->GetBottom());
 	AddControl(authors);
 
 	CheckBox* tabsleft = new CheckBox();
 	tabsleft->SetText(L"Open tabs on the left");
-	tabsleft->SetLocation(DefaultBorderPadding, authors->GetBottom() + DefaultBorderPadding * 2);
+	tabsleft->SetLocation(DefaultBorderPadding, authors->GetBottom() + DefaultBorderPadding);
 	tabsleft->SetSize(item_width, item_height);
 	tabsleft->SetChecked(config.IniReadBool(MainWindow::IniSection(), 
 		MainWindow::IniKeyTabsLeft(), false));
@@ -123,6 +123,22 @@ void SettingsPanel::BuildUI() {
 			MainWindow::IniKeySaveLocation(), location_active_);
 	});
 	AddControl(savelocation);
+
+	bool openlink_active = config.IniReadBool(MainWindow::IniSection(), MainWindow::IniKeyOpenLinks(), true);
+	GWCA::Chat().SetOpenLinks(openlink_active);
+	CheckBox* openlinks = new CheckBox();
+	openlinks->SetText(L"Open web links in templates");
+	openlinks->SetLocation(DefaultBorderPadding, savelocation->GetBottom());
+	openlinks->SetSize(item_width, item_height);
+	openlinks->SetChecked(openlink_active);
+	openlinks->GetCheckedChangedEvent() += CheckedChangedEventHandler(
+		[openlinks, this](Control*) {
+		bool active = openlinks->GetChecked();
+		GWCA::Chat().SetOpenLinks(active);
+		GWToolbox::instance().config().IniWriteBool(MainWindow::IniSection(),
+			MainWindow::IniKeyOpenLinks(), active);
+	});
+	AddControl(openlinks);
 
 
 	Button* folder = new Button();
