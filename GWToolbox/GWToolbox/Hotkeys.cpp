@@ -40,11 +40,15 @@ TBHotkey::TBHotkey(Key key, Key modifier, bool active, wstring ini_section)
 	hotkey_button->SetLocation(checkbox->GetRight() + HSPACE, HOTKEY_Y);
 	hotkey_button->SetHotkey(key);
 	hotkey_button->SetHotkeyModifier(modifier);
-	hotkey_button->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
+	hotkey_button->GetFocusGotEvent() += FocusGotEventHandler([hotkey_button](Control*) {
 		GWToolbox::instance().set_capture_input(true);
+		hotkey_button->SetBackColor(Drawing::Color::Red());
 	});
-	hotkey_button->GetFocusLostEvent() += FocusLostEventHandler([](Control*, Control*) {
+	hotkey_button->GetFocusLostEvent() += FocusLostEventHandler([hotkey_button, this](Control*, Control*) {
 		GWToolbox::instance().set_capture_input(false);
+		Misc::AnsiString controltype = Control::ControlTypeToString(GetType());
+		Drawing::Theme::ControlTheme theme = Application::Instance().GetTheme().GetControlColorTheme(controltype);
+		hotkey_button->SetBackColor(theme.BackColor);
 	});
 	hotkey_button->GetHotkeyChangedEvent() += HotkeyChangedEventHandler(
 		[this, hotkey_button, ini_section](Control*) {
