@@ -4,8 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GWToolbox++</title>
-<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
-<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+<link rel="stylesheet" href="gwtoolbox.css" />
 </head>
 <body><div class="container"><h1 id="guild-wars-toolbox">Guild Wars Toolbox++</h1>
 
@@ -46,48 +45,67 @@
 
 <hr>
 
+
+
 <h3 id="download">Download</h3>
 
-<p><a href="http://fbgmguild.com/GWToolboxpp/GWToolbox.exe">GWToolbox.exe</a></p>
-
-
+<p>Launcher: <a href="http://fbgmguild.com/GWToolboxpp/GWToolbox.exe">GWToolbox.exe</a> <br>
+<em>Current version is GWToolbox++ 1.4</em></p>
 
 <h3 id="feature-overview">Feature Overview</h3>
 
 <ul>
-<li>Automatically <strong>maintains</strong> selected pcons</li>
+<li>Automatically <strong>maintains</strong> selected pcons.</li>
 <li>Ability to set <strong>hotkeys</strong> for typing commands into chat (e.g. /stuck and /resign), using or cancelling recall and UA, using an item (e.g. res scroll, powerstone), targeting an agent (e.g. Boo) and more!</li>
-<li>Send team builds into chat</li>
-<li>Fast travel to any outpost</li>
-<li>Take or accept quests quickly with hotkeys, and be able to do so while NPCs are in combat</li>
+<li>Send team builds into chat.</li>
+<li>Fast travel to any outpost.</li>
+<li>Take or accept quests quickly with hotkeys, and be able to do so while NPCs are in combat.</li>
 <li>Check price for consets, res scrolls and powerstones, automatically buy materials for any amount of those - <strong>Coming soon!</strong></li>
-<li>Show instance timer, target health or distance, maintained E/Mo bonds</li>
+<li>Show instance timer, target health or distance.</li>
+<li>Show maintained E/Mo bonds sorted by party list, and being able to cast and dismiss bonds with a single click.</li>
+<li>Show the amount of damage done by your party and your heroes.</li>
+<li>Customize camera zoom or unlock camera completely.</li>
 </ul>
-
-
 
 <h3 id="faqs">FAQs</h3>
 
 <p><strong>Will I get banned for using GWToolbox++?</strong> <br>
-I can’t say. GWToolbox++ is not a bot as it it does not play the game for you, however it does use the same technology that bots use. What can I say, though, is that as far as we know noone has ever been banned for it since it was created years ago.</p>
+We can’t say. Toolbox++ is not a bot as it it does not play the game for you, however it does use the same technology that bots use. What we can say, though, is that as far as we know no one has ever been banned for it since it was created years ago.</p>
 
 <p><strong>I am getting an error message saying “msvcr120.dll” is missing, what’s wrong?</strong> <br>
 Please install the Microsoft Visual C++ 2013 Redistributable  found <a href="http://www.microsoft.com/en-us/download/details.aspx?id=40784">here</a>. <br>
 You will want to select <em>vcredist_x86.exe</em> to download and install.</p>
 
 <p><strong>I am getting an error message saying “d3dx9_43.dll (or some other d3d9 dll) is missing”, how fix?</strong> <br>
-Please install the DirectX Redistributable found <a href="http://www.microsoft.com/en-us/download/details.aspx?id=8109">here</a>.</p>
+Please install the DirectX Redistributable found <a href="http://www.microsoft.com/en-us/download/details.aspx?id=8109">here</a>. You will want to extract the package in a folder in your computer and then run <code>DXSETUP.exe</code>.</p>
 
-<p><strong>I have an feature request/non-bug issue with GWToolbox++. Where can I voice it?</strong> <br>
-We are always open to comments and criticism about GWToolbox++. If you have features or opinions of features you would like to voice to the developers, please leave your input on the repository issue tracker found <a href="https://bitbucket.org/ggori/gwtoolbox-plusplus/issues/new">here</a>. Please make sure to select either <em>enhancement</em> or <em>proposal</em> for this type of request.</p>
+<p><strong>Can I run Toolbox++ with other programs such as GWMultilaunch, TexMod, uMod, or a screen recording software?</strong></p>
+
+<ul>
+<li>GWMultilaunch is not a problem, if you have multiple clients open Toolbox++ will ask which client to use.</li>
+<li>TexMod or uMod <em>should</em> work. You probably want to run them first, and Toolbox++ later. uMod with dll-drop method is recommended.</li>
+<li>Screen recording software <em>should</em> work. You probably want to launch them last, after Toolbox++. If you can, use <code>window capture</code> instead of <code>game capture</code>. <br>
+Note that TexMod, uMod, screen recording software (in game capture mode) and Toolbox++ all use similar techniques to capture and display information on the screen. Because of this, they may interfere with each other. Also note that when you use more than one of the above programs Guild Wars may crash when you close any of them.</li>
+</ul>
+
+<p><strong>I run the launcher and then nothing happens / Guild Wars closes / crashes</strong> <br>
+There may be different reasons for this. Try the following, in no particular order: <br>
+* Launch both Guild Wars and Toolbox++ as administrator. <br>
+* Launch Toolbox++ while Guild Wars is running in windowed mode, not minimized or fullscreen. <br>
+* Avoid using other programs that interact with Guild Wars (TexMod, uMod, MultiLaunch, screen recording software, game overlays such as steam and others) <br>
+* (unlikely) Add GWToolbox.exe and gw.exe to your antivirus whitelist.</p>
+
+<p><strong>I run the launcher and I get the message “GWToolbox.dll was not loaded, unknown error”</strong> <br>
+This error typically means that some security feature is preventing Toolbox++ to access Guild Wars. One such feature is Data Execution Prevention, it is disabled by default but if enabled you need to add gw.exe to its whitelist. The other security programs causing this is any particularly zealous antivirus software. You typically need to add both GWToolbox.exe and gw.exe to its whitelist.</p>
 
 <p><strong>GWToolbox++ just crashed and set my grandmas hair on fire! Help!</strong> <br>
-Oops. Please start a bug issue at the repository issue tracker <a href="https://bitbucket.org/ggori/gwtoolbox-plusplus/issues/new">here</a> immediately. If the error was not critical, a messagebox should have displayed with the title “GWToolbox++ Crash!”. If the dump file generated sucessfully, please go to your start menu search bar and type %LOCALAPPDATA%. Press enter, and your appdata folder should open. Navigate to the GWToolboxpp folder and find the most recent .dmp file created. If you are able to find the file, attach this file on your issue as it can help greatly with fixing the issue. Be sure to also include what you were doing in game at the time of the crash, and any other information that might help. If it is an issue we can solve we will get to fixing it when we can.</p>
+Oops. Please start a bug issue at the repository issue tracker <a href="https://bitbucket.org/ggori/gwtoolbox-plusplus/issues/new">here</a> immediately. If the error was not critical, a message box should have displayed with the title “GWToolbox++ Crash!”. If the message box states that the dump file generated sucessfully, please go to your start menu search bar and type %LOCALAPPDATA%. Press enter, and your appdata folder should open. Navigate to the GWToolboxpp folder and find the most recent .dmp file created. If you are able to find the file, attach this file on your issue as it can help greatly with fixing the issue. Be sure to also include what you were doing in game at the time of the crash, and any other information that might help. If it is an issue we can solve we will get to fixing it when we can.</p>
+
+<p><strong>I have an feature request/non-bug issue with GWToolbox++. Where can I voice it?</strong> <br>
+We are always open to comments and criticism about Toolbox++. If you have features or opinions of features you would like to voice to the developers, please leave your input on the repository issue tracker found <a href="https://bitbucket.org/ggori/gwtoolbox-plusplus/issues/new">here</a>. Please make sure to select either <em>enhancement</em> or <em>proposal</em> for this type of request.</p>
 
 <p><strong>Can I view the GWToolbox++ source code?</strong> <br>
 Yes. The git repository, along with the most recent revision of source is publicly available <a href="https://bitbucket.org/ggori/gwtoolbox-plusplus/src">here</a>.</p>
-
-
 
 <h3 id="detailed-feature-description">Detailed feature description</h3>
 
@@ -180,10 +198,12 @@ will ping the selected team build to chat, you can edit team builds in the Build
 <li><strong>Bonds Monitor</strong> is typically focused for E/Mo, shows the currently maintained <strong>Balth</strong>, <strong>Prot</strong> and <strong>Life</strong> bonds on the team. You can also cast or drop bonds by clicking on each slot.</li>
 <li><strong>Target Health</strong> shows the health of the current target both in percentage and absolute values</li>
 <li><strong>Target Distance</strong> shows the distance to the current target both in percentage of radar range and absolute in-game units. For reference Radar Range is 5000, Spirit Range is 2500, casting range is 1200 and aggro range is 1000.</li>
-<li><strong>Party Damage</strong> shows the damage done by each player in your party. You will see the absolute value and the percentage of the total party damage done. The background of each row also shows visually the amount. Finally, a thin bar will show recent damage in real time, this value resets for each player after a few seconds of not doing damage.</li>
+<li><strong>Party Damage</strong> shows the damage done by each player in your party. You will see the absolute value and the percentage of the total party damage done. The background of each row also shows visually the amount. Finally, a thin bar will show recent damage in real time, this value resets for each player after a few seconds of not doing damage. You can reset the count with <code>/damage reset</code> and you can write the results to team chat with <code>/damage report</code>.</li>
 </ul>
 
 <p>Finally, there is a button to <strong>Open Xunlai Chest</strong> from anywhere in an outpost.</p>
+
+
 
 <h4 id="materials">Materials</h4>
 
@@ -194,14 +214,15 @@ will ping the selected team build to chat, you can edit team builds in the Build
 <h4 id="settings">Settings</h4>
 
 <ul>
-<li><strong>Open tabs on the left</strong> will open panels on the left instead of right side</li>
+<li><strong>Open tabs on the left</strong> will open panels on the left instead of right side.</li>
 <li><strong>Freeze info widget positions</strong> will freeze Timer, Bonds Monitor, Target Health and Target Distance position on screen. Additionally, it will allow click-through all of those except for bonds monitor.</li>
-<li><strong>Hide target windows</strong> will hide Target Health and Target Distance when a target is not selected</li>
-<li><strong>Minimize to Alt position</strong> makes the saved positions for toolbox and minimized toolbox independent</li>
-<li><strong>Tick with pcon status</strong>. If enabled, when enabling or disabling <strong>Pcons</strong> Toolbox++ will also tick or untick in party list</li>
-<li><strong>Save Location Data</strong>. If enabled, Toolbox++ will save your position each second in a log file in the settings folder</li>
-<li><strong>Open GWToolbox++ Website</strong> will open this web page</li>
-<li><strong>Open Settings Folder</strong> will open the installation folder</li>
+<li><strong>Hide target windows</strong> will hide Target Health and Target Distance when a target is not selected.</li>
+<li><strong>Minimize to Alt position</strong> makes the saved positions for toolbox and minimized toolbox independent.</li>
+<li><strong>Tick with pcon status</strong>. If enabled, when enabling or disabling <strong>Pcons</strong> Toolbox++ will also tick or untick in party list.</li>
+<li><strong>Save Location Data</strong>. If enabled, Toolbox++ will save your position each second in a log file in the settings folder.</li>
+<li><strong>Open GWToolbox++ Website</strong> will open this web page.</li>
+<li><strong>Open Settings Folder</strong> will open the installation folder.</li>
+<li><strong>Open web links in templates</strong> will make it so that when you click on a web link on a equipment or skill template your default browser will immediately launch the clicked link.</li>
 </ul>
 
 
@@ -253,11 +274,18 @@ You can also specify the district with a third argument, possible values are <co
 <li><code>/dmg [arg]</code> or <code>/damage [arg]</code> controls the party damage monitor: <br>
 <ul><li><code>/dmg report</code> to print the results in party chat</li>
 <li><code>/dmg reset</code> to reset</li></ul></li>
+<li><code>/afk</code> will make your character <code>/sit</code> and set your status to <code>Away</code></li>
+<li><code>/target</code> or <code>/tgt</code> has few advanced ways to interact with your target: <br>
+<ul><li><code>/target closest</code> or <code>/target nearest</code> will target the closest agent to the player</li>
+<li><code>/target getid</code> will print the the target model ID (aka PlayerNumber). This is unique and constant for each kind of agent.</li>
+<li><code>/target getpos</code> will print the coordinates (x, y) of the target</li></ul></li>
 </ul>
+
+
 
 <h3 id="source-code">Source code</h3>
 
-<p>GWToolbox++ is completely open source and the repository is available <a href="https://bitbucket.org/ggori/gwtoolbox-plusplus">here</a> on BitBucket</p>
+<p>GWToolbox++ is completely open source and the repository is available <a href="https://bitbucket.org/ggori/gwtoolbox-plusplus">here</a> on BitBucket.</p>
 
 <p>Feel free to download or fork the repository and play with it. You can message us on BitBucket or do a pull request if you make something cool!</p></div></body>
 </html>
