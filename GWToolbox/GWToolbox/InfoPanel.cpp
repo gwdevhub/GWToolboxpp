@@ -149,18 +149,19 @@ void InfoPanel::BuildUI() {
 	});
 	AddControl(damage);
 
-	CheckBox* timestamps = new CheckBox();
-	timestamps->SetSize(half_item_width, item_height);
-	timestamps->SetLocation(item2_x, bonds->GetTop());
-	timestamps->SetText(L"Timestamps");
-	timestamps->SetChecked(GWToolbox::instance().config().IniReadBool(
-		MainWindow::IniSection(), MainWindow::IniKeyTimestamps(), true));
-	timestamps->GetCheckedChangedEvent() += CheckedChangedEventHandler([timestamps](Control*) {
-		bool active = timestamps->GetChecked();
-		GWCA::Chat().ToggleTimeStamp(active);
-		GWToolbox::instance().config().IniWriteBool(MainWindow::IniSection(), MainWindow::IniKeyTimestamps(), active);
-	});
-	AddControl(timestamps);
+	// uncomment when timestamps are stable
+	//CheckBox* timestamps = new CheckBox();
+	//timestamps->SetSize(half_item_width, item_height);
+	//timestamps->SetLocation(item2_x, bonds->GetTop());
+	//timestamps->SetText(L"Timestamps");
+	//timestamps->SetChecked(GWToolbox::instance().config().IniReadBool(
+	//	MainWindow::IniSection(), MainWindow::IniKeyTimestamps(), false));
+	//timestamps->GetCheckedChangedEvent() += CheckedChangedEventHandler([timestamps](Control*) {
+	//	bool active = timestamps->GetChecked();
+	//	GWCA::Chat().ToggleTimeStamp(active);
+	//	GWToolbox::instance().config().IniWriteBool(MainWindow::IniSection(), MainWindow::IniKeyTimestamps(), active);
+	//});
+	//AddControl(timestamps);
 
 	Button* xunlai = new Button();
 	xunlai->SetSize(full_item_width, 30);

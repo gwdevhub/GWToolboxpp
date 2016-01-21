@@ -3,6 +3,7 @@
 #include <GWCA\GWCA.h>
 #include <GWCA\EffectMgr.h>
 #include <GWCA\ItemMgr.h>
+#include <GWCA\PartyMgr.h>
 
 #include "GWToolbox.h"
 #include "ChatLogger.h"
@@ -139,7 +140,7 @@ bool PconCons::checkAndUse() {
 		GW::Effect effect = GWCA::Effects().GetPlayerEffectById(effectID);
 		if (effect.SkillId == 0 || effect.GetTimeRemaining() < 1000) {
 
-			if (!GWCA::Agents().GetIsPartyLoaded()) return false;
+			if (!GWCA::Party().GetIsPartyLoaded()) return false;
 
 			GW::MapAgentArray mapAgents = GWCA::Agents().GetMapAgentArray();
 			if (!mapAgents.valid()) return false;

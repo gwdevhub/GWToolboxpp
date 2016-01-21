@@ -84,7 +84,7 @@ void SettingsPanel::BuildUI() {
 	AddControl(hidetarget);
 
 	CheckBox* minimizealtpos = new CheckBox();
-	minimizealtpos->SetText(L"Minimize to Alt Position");
+	minimizealtpos->SetText(L"Minimize to different position");
 	minimizealtpos->SetLocation(DefaultBorderPadding, hidetarget->GetBottom());
 	minimizealtpos->SetSize(item_width, item_height);
 	minimizealtpos->SetChecked(config.IniReadBool(MainWindow::IniSection(),

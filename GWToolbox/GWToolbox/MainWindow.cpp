@@ -2,6 +2,7 @@
 
 #include <OSHGui\OSHGui.hpp>
 #include <GWCA\GWCA.h>
+#include <GWCA\PartyMgr.h>
 
 #include "logger.h"
 #include "GuiUtils.h"
@@ -202,7 +203,7 @@ void MainWindow::UpdatePconToggleButton(bool active) {
 		pcon_toggle_button_->SetText(L"Disabled");
 	}
 	if (tick_with_pcons_ && GWCA::Map().GetInstanceType() == GwConstants::InstanceType::Outpost) {
-		GWCA::Agents().Tick(active);
+		GWCA::Party().Tick(active);
 	}
 }
 
@@ -243,9 +244,9 @@ void MainWindow::OpenClosePanel(int index) {
 	if (index == current_panel_) {
 		current_panel_ = -1;
 	} 
-	else if (index == 6){
-		ShellExecuteW(NULL, L"open", L"https://youtu.be/dQw4w9WgXcQ", NULL, NULL, SW_SHOWNORMAL);
-	}
+	//else if (index == 6){
+	//	ShellExecuteW(NULL, L"open", L"https://youtu.be/dQw4w9WgXcQ", NULL, NULL, SW_SHOWNORMAL);
+	//}
 	else {
 		if (index < (int)panels.size()) {
 			current_panel_ = index;

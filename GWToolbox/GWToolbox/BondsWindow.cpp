@@ -9,6 +9,7 @@
 #include <GWCA\EffectMgr.h>
 #include <GWCA\SkillbarMgr.h>
 #include <GWCA\GWStructures.h>
+#include <GWCA\PartyMgr.h>
 
 #include "GWToolbox.h"
 #include "Config.h"
@@ -188,7 +189,7 @@ void BondsWindow::BondsMonitor::UpdateUI() {
 
 	if (!isVisible_) return;
 
-	int size = GWCA::Agents().GetPartySize();
+	int size = GWCA::Party().GetPartySize();
 	if (size > MAX_PLAYERS) size = MAX_PLAYERS;
 	if (party_size != size) {
 		party_size = size;

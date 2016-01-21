@@ -55,6 +55,7 @@ void GWToolbox::ThreadEntry(HMODULE dllmodule) {
 	GWCA::CtoS();
 	GWCA::StoC();
 	GWCA::Agents();
+	GWCA::Party();
 	GWCA::Items();
 	GWCA::Skillbar();
 	GWCA::Effects();

@@ -64,5 +64,10 @@ void ToolboxWindow::ResizeUI(OSHGui::Drawing::SizeI before, OSHGui::Drawing::Siz
 		y_new += (after.Height - before.Height);
 	}
 
+	if (x_new < 0) x_new = 0;
+	if (y_new < 0) y_new = 0;
+	if (x_new > after.Width - GetWidth()) x_new = after.Width - GetWidth();
+	if (y_new > after.Height - GetHeight()) y_new = after.Height - GetHeight();
+
 	SetLocation(x_new, y_new);
 }

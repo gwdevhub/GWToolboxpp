@@ -4,6 +4,7 @@
 
 #include <GWCA\GWCA.h>
 #include <GWCA\StoCMgr.h>
+#include <GWCA\PartyMgr.h>
 
 #include "GuiUtils.h"
 #include "Config.h"
@@ -140,10 +141,13 @@ bool PartyDamage::DamagePacketCallback(GWCA::StoC_Pak::P151* packet) {
 
 	// get cause agent
 	GWCA::GW::Agent* cause = GWCA::Agents().GetAgentByID(packet->cause_id);
+	
 	if (cause == nullptr) return false;
+	if (cause->Allegiance != 0x100) return false;
 	if (cause->LoginNumber == 0) return false; // ignore NPCs, heroes
 	if (cause->PlayerNumber == 0) return false; // might as well check for this too
 	if (cause->PlayerNumber > MAX_PLAYERS) return false;
+
 
 	// get target agent
 	GWCA::GW::Agent* target = GWCA::Agents().GetAgentByID(packet->target_id);
@@ -159,7 +163,7 @@ bool PartyDamage::DamagePacketCallback(GWCA::StoC_Pak::P151* packet) {
 		auto it = hp_map.find(target->PlayerNumber);
 		if (it == hp_map.end()) {
 			// max hp not found, approximate with hp/lvl formula
-			dmg = std::lround(-packet->value * target->Level * 20 + 100);
+			dmg = std::lround(-packet->value * (target->Level * 20 + 100));
 		} else {
 			long maxhp = it->second;
 			dmg = std::lround(-packet->value * it->second);
@@ -199,7 +203,7 @@ void PartyDamage::MainRoutine() {
 void PartyDamage::UpdateUI() {
 	if (!isVisible_) return;
 
-	int size = GWCA::Agents().GetPartySize();
+	int size = GWCA::Party().GetPartySize();
 	if (size > MAX_PLAYERS) size = MAX_PLAYERS;
 	if (party_size_ != size) {
 		party_size_ = size;

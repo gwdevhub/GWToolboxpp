@@ -51,7 +51,7 @@ bool ChatCommands::ProcessMessage(LPMSG msg) {
 	GWCA::CameraMgr cam = GWCA::Camera();
 	float speed = 25.f;
 
-	if (!cam.GetCameraUnlock() || IsTyping()) return false; // 0xA377C8 is a flag when someone is typing
+	if (!cam.GetCameraUnlock() || IsTyping()) return false;
 
 	switch (msg->message) {
 	case WM_KEYDOWN: {
