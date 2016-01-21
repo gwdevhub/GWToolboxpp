@@ -80,6 +80,8 @@ private:
 	bool DamagePacketCallback(GWCA::StoC_Pak::P151* packet);
 	bool MapLoadedCallback(GWCA::StoC_Pak::P230* packet);
 
+	void CreatePartyIndexMap();
+
 	void SaveLocation();
 	float GetPartOfTotal(long dmg);
 	inline float GetPercentageOfTotal(long dmg) { return GetPartOfTotal(dmg) * 100.0f; };
@@ -88,6 +90,7 @@ private:
 	long total;
 	PlayerDamage damage[MAX_PLAYERS];
 	std::map<DWORD, long> hp_map;
+	std::map<DWORD, int> party_index;
 
 	// UI elements
 	int line_height_;

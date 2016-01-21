@@ -112,6 +112,7 @@ bool PartyDamage::MapLoadedCallback(GWCA::StoC_Pak::P230* packet) {
 		in_explorable = false;
 		break;
 	case GwConstants::InstanceType::Explorable:
+		party_index.clear();
 		if (!in_explorable) {
 			in_explorable = true;
 			Reset();
@@ -144,16 +145,18 @@ bool PartyDamage::DamagePacketCallback(GWCA::StoC_Pak::P151* packet) {
 	
 	if (cause == nullptr) return false;
 	if (cause->Allegiance != 0x100) return false;
-	if (cause->LoginNumber == 0) return false; // ignore NPCs, heroes
-	if (cause->PlayerNumber == 0) return false; // might as well check for this too
-	if (cause->PlayerNumber > MAX_PLAYERS) return false;
-
+	auto cause_it = party_index.find(cause->Id);
+	if (cause_it == party_index.end()) return false;  // ignore damage done by non-party members
 
 	// get target agent
 	GWCA::GW::Agent* target = GWCA::Agents().GetAgentByID(packet->target_id);
 	if (target == nullptr) return false;
 	if (target->LoginNumber != 0) return false; // ignore player-inflicted damage
-										  // such as Life bond or sacrifice
+										        // such as Life bond or sacrifice
+	if (target->Allegiance == 0x100) return false; // ignore damage inflicted to allies in general
+	// warning: note damage to allied spirits, minions or stones may still trigger
+	// you can do damage like that by standing in bugged dart traps in eye of the north
+	// or maybe with some skills that damage minions/spirits
 
 	long dmg;
 	if (target->MaxHP > 0 && target->MaxHP < 100000) {
@@ -170,11 +173,15 @@ bool PartyDamage::DamagePacketCallback(GWCA::StoC_Pak::P151* packet) {
 		}
 	}
 
-	int index = cause->PlayerNumber - 1;
-
+	int index = cause_it->second;
+	if (index >= MAX_PLAYERS) return false; // something went very wrong.
 	if (damage[index].damage == 0) {
 		damage[index].agent_id = packet->cause_id;
-		damage[index].name = GWCA::Agents().GetPlayerNameByLoginNumber(cause->LoginNumber);
+		if (cause->LoginNumber > 0) {
+			damage[index].name = GWCA::Agents().GetPlayerNameByLoginNumber(cause->LoginNumber);
+		} else {
+			damage[index].name = L"<A Hero>";
+		}
 		damage[index].primary = static_cast<GwConstants::Profession>(cause->Primary);
 		damage[index].secondary = static_cast<GwConstants::Profession>(cause->Secondary);
 	}
@@ -196,6 +203,32 @@ void PartyDamage::MainRoutine() {
 			&& GWCA::Agents().GetPlayer()) {
 			GWCA::Chat().SendChat(send_queue.front().c_str(), L'#');
 			send_queue.pop();
+		}
+	}
+
+	if (party_index.empty()) {
+		CreatePartyIndexMap();
+	}
+}
+
+void PartyDamage::CreatePartyIndexMap() {
+	if (!GWCA::Party().GetIsPartyLoaded()) return;
+	
+	GWCA::GW::PartyInfo* info = GWCA::Party().GetPartyInfo();
+	if (info == nullptr) return;
+
+	GWCA::GW::PlayerArray players = GWCA::Agents().GetPlayerArray();
+	if (!players.valid()) return;
+
+	int index = 0;
+	for (auto player : info->players) {
+		long id = players[player.loginnumber].AgentID;
+		party_index[id] = index++;
+
+		for (auto hero : info->heroes) {
+			if (hero.ownerplayerid == player.loginnumber) {
+				party_index[hero.id] = index++;
+			}
 		}
 	}
 }
