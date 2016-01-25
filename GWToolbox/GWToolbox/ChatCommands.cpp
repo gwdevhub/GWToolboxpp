@@ -184,10 +184,13 @@ void ChatCommands::CmdTP(vector<wstring> args) {
 			wstring dis = GetLowerCaseArg(args, 1);
 			if (dis == L"ae1") {
 				district = GwConstants::District::American;
+				district_number = 1;
 			} else if (dis == L"ee1") {
 				district = GwConstants::District::EuropeEnglish;
+				district_number = 1;
 			} else if (dis == L"eg1" || dis == L"dd1") {  // dd1 is german: deutche dist
 				district = GwConstants::District::EuropeGerman;
+				district_number = 1;
 			} else if (dis == L"int") {
 				district = GwConstants::District::International;
 			} else {
