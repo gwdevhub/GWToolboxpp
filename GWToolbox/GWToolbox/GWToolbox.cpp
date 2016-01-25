@@ -235,8 +235,11 @@ void GWToolbox::CreateGui(IDirect3DDevice9* pDevice) {
 	LOG("Creating GUI\n");
 	LOG("Creating Renderer\n");
 	renderer = new Direct3D9Renderer(pDevice);
-	GWToolbox::instance().old_screen_size_ = renderer->GetDisplaySize();
-	GWToolbox::instance().new_screen_size_ = renderer->GetDisplaySize();
+
+	int old_width = std::lroundf(renderer->GetDisplaySize().Width);
+	int old_height = std::lroundf(renderer->GetDisplaySize().Height);
+	GWToolbox::instance().old_screen_size_ = Drawing::SizeI(old_width, old_height);
+	GWToolbox::instance().new_screen_size_ = Drawing::SizeI(old_width, old_height);
 
 	LOG("Creating OSH Application\n");
 	Application::Initialize(std::unique_ptr<Direct3D9Renderer>(renderer));

@@ -79,7 +79,10 @@ private:
 
 		ChatLogger::Init();
 
-		if (GWCA::Map().GetInstanceType() != GwConstants::InstanceType::Loading) {
+		if (GWCA::Map().GetInstanceType() != GwConstants::InstanceType::Loading
+			&& GWCA::Agents().GetAgentArray().valid()
+			&& GWCA::Agents().GetPlayer() != nullptr) {
+
 			DWORD playerNumber = GWCA::Agents().GetPlayer()->PlayerNumber;
 			ChatLogger::LogF(L"Hello %ls!", GWCA::Agents().GetPlayerNameByLoginNumber(playerNumber));
 		}

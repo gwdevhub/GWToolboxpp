@@ -369,7 +369,7 @@ void HotkeyPanel::MainRoutine() {
 		SendInput(1, &input, sizeof(INPUT));
 	}
 
-	if (dropCoinsActive && TBTimer::diff(dropCoinsTimer) > 400) {
+	if (dropCoinsActive && TBTimer::diff(dropCoinsTimer) > 500) {
 		if (GWCA::Map().GetInstanceType() == GwConstants::InstanceType::Explorable) {
 			dropCoinsTimer = TBTimer::init();
 			GWCA::Items().DropGold(1);
