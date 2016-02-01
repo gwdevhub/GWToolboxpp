@@ -694,7 +694,7 @@ void HotkeyTarget::exec() {
 		if (agent == nullptr) continue;
 		//if (agent->PlayerNumber != me->PlayerNumber) {
 		if (agent->PlayerNumber == id_ && agent->HP >= 0) {
-			unsigned long newDistance = Agents().GetSqrDistance(me, agents[i]);
+			unsigned long newDistance = Agents().GetSqrDistance(me->pos, agents[i]->pos);
 			if (newDistance < distance) {
 				closest = i;
 				distance = newDistance;

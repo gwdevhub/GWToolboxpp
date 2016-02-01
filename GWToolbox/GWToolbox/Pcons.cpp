@@ -240,11 +240,15 @@ bool PconLunar::checkAndUse() {
 
 	if (enabled	&& TBTimer::diff(this->timer) > 500) {
 		if (GWCA::Effects().GetPlayerEffectById(SkillID::Lunar_Blessing).SkillId == 0) {
-			bool used = GWCA::Items().UseItemByModelId(ItemID::LunarDragon)
+			bool used = GWCA::Items().UseItemByModelId(ItemID::LunarRat)
+				|| GWCA::Items().UseItemByModelId(ItemID::LunarOx)
+				|| GWCA::Items().UseItemByModelId(ItemID::LunarTiger)
+				|| GWCA::Items().UseItemByModelId(ItemID::LunarDragon)
 				|| GWCA::Items().UseItemByModelId(ItemID::LunarHorse)
 				|| GWCA::Items().UseItemByModelId(ItemID::LunarRabbit)
 				|| GWCA::Items().UseItemByModelId(ItemID::LunarSheep)
-				|| GWCA::Items().UseItemByModelId(ItemID::LunarSnake);
+				|| GWCA::Items().UseItemByModelId(ItemID::LunarSnake)
+				|| GWCA::Items().UseItemByModelId(ItemID::LunarMonkey);
 			if (used) {
 				this->timer = TBTimer::init();
 				this->update_timer = TBTimer::init();

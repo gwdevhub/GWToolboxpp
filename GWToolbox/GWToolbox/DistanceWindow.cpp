@@ -124,7 +124,7 @@ void DistanceWindow::UpdateUI() {
 	wstring s1;
 	wstring s2;
 	if (target && me) {
-		long distance = GWCA::Agents().GetDistance(target, me);
+		long distance = GWCA::Agents().GetDistance(target->pos, me->pos);
 		s1 = to_wstring(distance * 100 / GwConstants::Range::Compass) + L" %";
 		s2 = to_wstring(distance);
 		if (!isVisible_) ToolboxWindow::ShowWindow(true);

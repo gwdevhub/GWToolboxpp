@@ -322,7 +322,7 @@ void ChatCommands::CmdTarget(vector<wstring> args) {
 				GWCA::GW::Agent* agent = agents[i];
 				if (agent == nullptr) continue;
 				if (agent->PlayerNumber != me->PlayerNumber) {
-					unsigned long newDistance = GWCA::Agents().GetSqrDistance(me, agents[i]);
+					unsigned long newDistance = GWCA::Agents().GetSqrDistance(me->pos, agents[i]->pos);
 					if (newDistance < distance) {
 						closest = i;
 						distance = newDistance;
