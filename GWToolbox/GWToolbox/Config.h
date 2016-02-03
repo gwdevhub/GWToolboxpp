@@ -16,7 +16,7 @@ using namespace std;
 
 class Config {
 public:
-	const wstring version = L"1.0";
+	const wstring version = L"1.6";
 
 	Config() {
 		inifile_path_ = GuiUtils::getPath(L"GWToolbox.ini");

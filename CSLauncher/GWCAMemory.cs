@@ -83,6 +83,9 @@ namespace GWCA
             [DllImport("kernel32.dll", SetLastError = true)]
             static extern UInt32 WaitForSingleObject(IntPtr hHandle, UInt32 dwMilliseconds);
 
+            [DllImport("kernel32.dll", SetLastError = true)]
+            static extern UInt32 GetExitCodeThread(IntPtr hHandle, out IntPtr dwMilliseconds);
+
             [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
             public static extern IntPtr GetModuleHandle(string lpModuleName);
             #endregion
@@ -306,9 +309,10 @@ namespace GWCA
             /// </summary>
             /// <param name="modulepath">Relative path to module to load.</param>
             /// <returns>bool on if injection was sucessful</returns>
-            public LOADMODULERESULT LoadModule(string modulepath)
+            public LOADMODULERESULT LoadModule(string modulepath,out IntPtr module)
             {
                 string modulefullpath = Path.GetFullPath(modulepath);
+                module = IntPtr.Zero;
 
                 if (!File.Exists(modulefullpath))
                 {
@@ -350,6 +354,12 @@ namespace GWCA
                 {
                     return LOADMODULERESULT.REMOTE_THREAD_DID_NOT_FINISH;
                 }
+
+                if(GetExitCodeThread(hThread, out module) == 0)
+                {
+                    return LOADMODULERESULT.REMOTE_THREAD_DID_NOT_FINISH;
+                }
+
 
                 IntPtr MemoryFreeResult = VirtualFreeEx(process.Handle, hStringBuffer, 0, 0x8000 /* MEM_RELEASE */);
                 if (MemoryFreeResult == IntPtr.Zero)

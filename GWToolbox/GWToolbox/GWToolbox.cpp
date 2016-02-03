@@ -25,7 +25,7 @@
 #include "TimerWindow.h"
 
 const wchar_t * GWToolbox::Host = L"http://fbgmguild.com/GWToolboxpp/";
-const wchar_t* GWToolbox::Version = L"1.5";
+const wchar_t* GWToolbox::Version = L"1.6";
 
 
 GWToolbox* GWToolbox::instance_ = NULL;

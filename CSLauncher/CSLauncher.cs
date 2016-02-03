@@ -107,14 +107,23 @@ namespace CSLauncher {
 
             if (proctoinject == null) return;
 
+            IntPtr dll_return;
             GWCAMemory mem = new GWCAMemory(proctoinject);
-            GWCAMemory.LOADMODULERESULT result = mem.LoadModule(dllfile);
-            if (result == GWCAMemory.LOADMODULERESULT.SUCCESSFUL) return;
-            MessageBox.Show("Module Load Error.\n" +
-                            LOADMODULE_RESULT_MESSAGES[(uint)result], 
-                            "GWToolbox++ Error", 
-                            MessageBoxButtons.OK, 
-                            MessageBoxIcon.Error);
+            GWCAMemory.LOADMODULERESULT result = mem.LoadModule(dllfile,out dll_return);
+            if (result == GWCAMemory.LOADMODULERESULT.SUCCESSFUL && dll_return != IntPtr.Zero) return;
+            if (result == GWCAMemory.LOADMODULERESULT.SUCCESSFUL){
+                MessageBox.Show("Error loading DLL: ExitCode " + dll_return,
+                                "GWToolbox++ Error",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Error);
+            }
+            else {
+                MessageBox.Show("Module Load Error.\n" +
+                                LOADMODULE_RESULT_MESSAGES[(uint)result] + "\n",
+                                "GWToolbox++ Error",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Error);
+            }
         }
     }
 }

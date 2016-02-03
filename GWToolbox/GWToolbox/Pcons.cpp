@@ -381,11 +381,15 @@ void PconLunar::scanInventory() {
 				GW::ItemArray items = bag->Items;
 				for (size_t i = 0; i < items.size(); i++) {
 					if (items[i]) {
-						if (items[i]->ModelId == ItemID::LunarDragon
+						if (items[i]->ModelId == ItemID::LunarRat
+							|| items[i]->ModelId == ItemID::LunarOx
+							|| items[i]->ModelId == ItemID::LunarTiger
+							|| items[i]->ModelId == ItemID::LunarDragon
 							|| items[i]->ModelId == ItemID::LunarHorse
 							|| items[i]->ModelId == ItemID::LunarRabbit
 							|| items[i]->ModelId == ItemID::LunarSheep
-							|| items[i]->ModelId == ItemID::LunarSnake) {
+							|| items[i]->ModelId == ItemID::LunarSnake
+							|| items[i]->ModelId == ItemID::LunarMonkey) {
 
 							quantity += items[i]->Quantity;
 						}
