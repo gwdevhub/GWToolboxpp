@@ -54,12 +54,13 @@ void Minimap::RangeRenderer::CreateCircle(Vertex* vertices, float radius) {
 	vertices[circle_points] = vertices[0];
 }
 void Minimap::RangeRenderer::Initialize(IDirect3DDevice9* device) {
-	count_ = circle_points * 3; // radar range, spirit range, aggro range
+	const int num_circles = 4;
+	count_ = circle_points * num_circles; // radar range, spirit range, aggro range
 	type_ = D3DPT_LINESTRIP;
 	float radius;
 
 	Vertex* vertices = nullptr;
-	unsigned int vertex_count = count_ + 3;
+	unsigned int vertex_count = count_ + num_circles;
 
 	if (buffer_) buffer_->Release();
 	device->CreateVertexBuffer(sizeof(Vertex) * vertex_count, 0,
@@ -75,6 +76,9 @@ void Minimap::RangeRenderer::Initialize(IDirect3DDevice9* device) {
 
 	radius = static_cast<float>(GwConstants::Range::Spellcast);
 	CreateCircle(vertices + circle_vertices * 2, radius);
+
+	radius = static_cast<float>(GwConstants::Range::Nearby);
+	CreateCircle(vertices + circle_vertices * 3, radius);
 
 	buffer_->Unlock();
 }
@@ -92,6 +96,7 @@ void Minimap::RangeRenderer::Render(IDirect3DDevice9* device) {
 	device->DrawPrimitive(type_, circle_vertices * 0, circle_points);
 	device->DrawPrimitive(type_, circle_vertices * 1, circle_points);
 	device->DrawPrimitive(type_, circle_vertices * 2, circle_points);
+	device->DrawPrimitive(type_, circle_vertices * 3, circle_points);
 }
 
 Minimap::Minimap() 

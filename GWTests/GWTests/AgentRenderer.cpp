@@ -83,7 +83,7 @@ void AgentRenderer::QueueAgent(IDirect3DDevice9* device, GW::Agent* agent) {
 		switch (agent->Type) {
 		case 0xDB: // players, npcs
 		case 0x200: // signposts
-			size = 150.0f; 
+			size = 75.0f; 
 			break;
 		case 0x400: // item
 			size = 75.0f;

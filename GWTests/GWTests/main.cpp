@@ -93,7 +93,7 @@ void init(HMODULE hModule) {
 		minimap->Scale(0.0002f);
 		minimap->Translate(0, -3000.0f);
 		minimap->SetLocation(100, 100);
-		minimap->SetSize(400, 400);
+		minimap->SetSize(600, 600);
 
 		
 		GWCA::DirectX().CreateRenderHooks(EndScene, ResetScene);
