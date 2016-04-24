@@ -144,7 +144,7 @@ bool PartyDamage::DamagePacketCallback(GWCA::StoC_Pak::P151* packet) {
 	GWCA::GW::Agent* cause = GWCA::Agents().GetAgentByID(packet->cause_id);
 	
 	if (cause == nullptr) return false;
-	if (cause->Allegiance != 0x100) return false;
+	if (cause->Allegiance != 0x1) return false;
 	auto cause_it = party_index.find(cause->Id);
 	if (cause_it == party_index.end()) return false;  // ignore damage done by non-party members
 
@@ -153,7 +153,7 @@ bool PartyDamage::DamagePacketCallback(GWCA::StoC_Pak::P151* packet) {
 	if (target == nullptr) return false;
 	if (target->LoginNumber != 0) return false; // ignore player-inflicted damage
 										        // such as Life bond or sacrifice
-	if (target->Allegiance == 0x100) return false; // ignore damage inflicted to allies in general
+	if (target->Allegiance == 0x1) return false; // ignore damage inflicted to allies in general
 	// warning: note damage to allied spirits, minions or stones may still trigger
 	// you can do damage like that by standing in bugged dart traps in eye of the north
 	// or maybe with some skills that damage minions/spirits

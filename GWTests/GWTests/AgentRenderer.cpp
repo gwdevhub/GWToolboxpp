@@ -50,26 +50,56 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 	Flush(device);
 }
 
+DWORD AgentRenderer::GetEnemyColor(GW::Agent* agent) const {
+	if (agent->HP > 0.9f) return D3DCOLOR_XRGB(255, 0, 0);
+	else if (agent->HP > 0.5f) return D3DCOLOR_XRGB(220, 0, 0);
+	else if (agent->HP > 0.0f) return D3DCOLOR_XRGB(180, 0, 0);
+	else return D3DCOLOR_ARGB(100, 50, 0, 0);
+}
+
+DWORD AgentRenderer::GetAllyColor(GW::Agent* agent) const {
+	if (agent->GetIsDead()) return D3DCOLOR_ARGB(100, 0, 50, 0);
+	switch (agent->Allegiance) {
+	case 0x1: return D3DCOLOR_XRGB(0, 255, 0); // ally
+	case 0x6: return D3DCOLOR_XRGB(0, 200, 0); // npc / minipet
+	case 0x4: return D3DCOLOR_XRGB(0, 150, 0); // spirit / pet
+	case 0x5: return D3DCOLOR_XRGB(0, 100, 0); // minion
+	default: return D3DCOLOR_XRGB(0, 0, 0);
+	}
+}
+
 void AgentRenderer::QueueAgent(IDirect3DDevice9* device, GW::Agent* agent) {
 	bool is_target = GWCA::Agents().GetTargetId() == agent->Id;
 	bool is_player = GWCA::Agents().GetPlayerId() == agent->Id;
 
-	DWORD color;
+	DWORD color = D3DCOLOR_XRGB(255, 255, 0);
 	if (is_player) {
-		color = D3DCOLOR_XRGB(200, 50, 255);
-	} else if (agent->GetIsDead()) {
-		color = D3DCOLOR_ARGB(150, 20, 20, 20);
+		color = D3DCOLOR_XRGB(255, 0, 255);
 	} else {
 		switch (agent->Type) {
-		case 0x200:
-		case 0x400:
-			color = D3DCOLOR_XRGB(0, 0, 200);
-			break;
+		case 0x200: color = D3DCOLOR_XRGB(0, 0, 200); break; // signpost
+		case 0x400: color = D3DCOLOR_XRGB(0, 0, 255); break; // item
 		default:
 			switch (agent->Allegiance) {
-			case 0x100: color = D3DCOLOR_XRGB(0, 200, 0); break;
-			case 0x300: color = D3DCOLOR_XRGB(200, 0, 0); break;
-			default:	color = D3DCOLOR_XRGB(0, 150, 0); break;
+			case 0x2: // neutral
+				color = D3DCOLOR_XRGB(0, 0, 220);
+				break;
+
+			case 0x3: 
+				color = GetEnemyColor(agent);
+				break;
+
+			case 0x1: // ally
+			case 0x4: // spirit / pet
+			case 0x5: // minion
+			case 0x6: // npc / minipet
+				color = GetAllyColor(agent);
+				break;
+
+			default:	
+				printf("unknown allegiance %d\n", agent->Allegiance);
+				color = D3DCOLOR_XRGB(0, 255, 255); 
+				break;
 			}
 			break;
 		}
@@ -77,19 +107,27 @@ void AgentRenderer::QueueAgent(IDirect3DDevice9* device, GW::Agent* agent) {
 
 	float size = 150.0f;
 	switch (agent->TypeMap) {
-	case 0x40000: size = 100.0f; break; // spirit
-	case 0xC00:	size = 200.0f; break;  // boss
+	case 0x40000: size = 50.0f; break; // spirit	
+	// TODO: find a better way to detect spirit. Atm it will turn back to triangle after it dies
+	case 0xC00:	size = 150.0f; break;  // boss
 	default:
 		switch (agent->Type) {
-		case 0xDB: // players, npcs
-		case 0x200: // signposts
-			size = 75.0f; 
-			break;
-		case 0x400: // item
-			size = 75.0f;
-			break;
+		case 0x200: size = 50.0f; break; // signposts
+		case 0x400: size = 25.0f; break; // item
 		default:
-			printf("found no size for agent, id %d\n", agent->Id);
+			switch (agent->Allegiance) {
+			case 0x1: // ally
+			case 0x2: // neutral
+			case 0x3: // enemy
+			case 0x6: // npc / minipet
+				size = 75.0f; break;
+
+			case 0x4: // spirit / pet
+			case 0x5: // minion
+				size = 50.0f; break;
+			
+			default: size = 75.0f; break;
+			} 
 			break;
 		}
 		break;
@@ -98,7 +136,6 @@ void AgentRenderer::QueueAgent(IDirect3DDevice9* device, GW::Agent* agent) {
 	enum Shape { Tri, Quad };
 	Shape shape;
 	if (agent->TypeMap == 0x40000) { // spirit
-		QueueQuad(device, agent->X, agent->Y, 75, color);
 		shape = Quad;
 	} else {
 		switch (agent->Type) {
@@ -113,11 +150,11 @@ void AgentRenderer::QueueAgent(IDirect3DDevice9* device, GW::Agent* agent) {
 
 	switch (shape) {
 	case Tri:
-		if (is_target) QueueTriangle(device, agent->X, agent->Y, agent->Rotation, size + 50, 0xFFFFFFFF);
+		if (is_target) QueueTriangle(device, agent->X, agent->Y, agent->Rotation, size * 1.3f, 0xFFFFFFFF);
 		QueueTriangle(device, agent->X, agent->Y, agent->Rotation, size, color);
 		break;
 	case Quad:
-		if (is_target) QueueQuad(device, agent->X, agent->Y, size + 50, 0xFFFFFFFF);
+		if (is_target) QueueQuad(device, agent->X, agent->Y, size * 1.3f, 0xFFFFFFFF);
 		QueueQuad(device, agent->X, agent->Y, size, color);
 		break;
 	}
@@ -166,6 +203,10 @@ void AgentRenderer::QueueQuad(IDirect3DDevice9* device,
 
 	vertices += 6;
 	triangle_count += 2;
+}
+
+void AgentRenderer::CheckFlush(IDirect3DDevice9* device) {
+	if (triangle_count > triangles_max - 2) Flush(device);
 }
 
 void AgentRenderer::Flush(IDirect3DDevice9* device) {

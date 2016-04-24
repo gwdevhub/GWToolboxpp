@@ -1,6 +1,7 @@
 #pragma once
 
 #include <GWCA\GWStructures.h>
+#include <GWCA\AgentMgr.h>
 
 #include "Renderer.h"
 
@@ -17,10 +18,11 @@ private:
 	void QueueQuad(IDirect3DDevice9* device,
 		float x, float y, float size, DWORD color);
 
-	void CheckFlush(IDirect3DDevice9* device) {
-		if (triangle_count > triangles_max - 2) Flush(device);
-	}
+	void CheckFlush(IDirect3DDevice9* device);
 	void Flush(IDirect3DDevice9* device);
+
+	DWORD GetEnemyColor(GWCA::GW::Agent* agent) const;
+	DWORD GetAllyColor(GWCA::GW::Agent* agent) const;
 
 	Vertex* vertices;			// vertices array
 	unsigned int triangle_count;// count of triangles
