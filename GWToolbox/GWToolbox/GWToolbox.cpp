@@ -201,7 +201,6 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 		case WM_XBUTTONUP:
 		case WM_MBUTTONDOWN:
 		case WM_MBUTTONUP:
-			GWToolbox::instance().main_window().hotkey_panel().ProcessMessage(&msg);
 			if (GWToolbox::instance().capture_input()) {
 				input.ProcessMessage(&msg);
 				return true;
@@ -209,6 +208,7 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 			if (GWToolbox::instance().chat_commands().ProcessMessage(&msg)) {
 				return true;
 			}
+			GWToolbox::instance().main_window().hotkey_panel().ProcessMessage(&msg);
 			break;
 
 		case WM_SIZE:

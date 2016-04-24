@@ -107,6 +107,7 @@ Minimap::Minimap()
 
 	GWCA::StoC().AddGameServerEvent<GWCA::StoC_Pak::P391_InstanceLoadFile>(
 		[this](GWCA::StoC_Pak::P391_InstanceLoadFile* packet) {
+		printf("loading map %d\n", packet->map_fileID);
 		pmap_renderer.Invalidate();
 		return false;
 	});
