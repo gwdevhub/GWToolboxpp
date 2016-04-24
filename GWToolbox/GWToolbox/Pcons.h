@@ -27,7 +27,7 @@ protected:
 	bool enabled;
 	unsigned int itemID;
 	GwConstants::SkillID effectID;
-	int threshold;
+	int threshold; // quantity at which the number color goes from green to yellow
 	clock_t timer;
 	clock_t update_timer;
 	bool update_ui;

@@ -9,62 +9,79 @@ MaterialsPanel::MaterialsPanel() {
 
 void MaterialsPanel::BuildUI() {
 
-	Label* label;
-	Button* button;
-	TextBox* textbox;
+	const int textbox_x = 180;
+	const int buybutton_x = 220;
 
-	int textbox_x = 180;
-	int buybutton_x = 220;
-	int row_height = 25;
-	int cur_row = 0;
-
-	label = new Label();
-	label->SetText(L"Essence of Celerity");
-	label->SetLocation(DefaultBorderPadding, DefaultBorderPadding + row_height * cur_row);
-	AddControl(label);
-
-	textbox = new TextBox();
-	textbox->SetSize(40, textbox->GetHeight());
-	textbox->SetLocation(textbox_x, DefaultBorderPadding + row_height * cur_row);
-	textbox->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::instance().set_capture_input(true);
-	});
-	textbox->GetFocusLostEvent() += FocusLostEventHandler([textbox](Control*, Control*) {
-		GWToolbox::instance().set_capture_input(false);
-		try {
-			std::stof(textbox->GetText());
-		} catch (...) {
-			textbox->SetText(L"0");
+	auto GetName = [](enum Item item) -> wstring {
+		switch (item) {
+		case MaterialsPanel::Essence: return L"Essence of Celrity";
+		case MaterialsPanel::Grail: return L"Grail of Might";
+		case MaterialsPanel::Armor: return L"Armor of Salvation";
+		case MaterialsPanel::Powerstone: return L"Powerstone of Courage";
+		case MaterialsPanel::ResScroll: return L"Ressurrection Scroll";
+		case MaterialsPanel::Any: return L"";
+		default: return L"";
 		}
-	});
-	AddControl(textbox);
+	};
+	const int group_width = (GetWidth() - 3 * DefaultBorderPadding) / 2;
+	const int group_height = 50;
+	const int item_width = (group_width - 2 * DefaultBorderPadding) / 3;
 
-	button = new Button();
-	button->SetSize(50, button->GetHeight());
-	button->SetLocation(buybutton_x, DefaultBorderPadding + row_height * cur_row);
-	button->SetText(L"Buy");
-	AddControl(button);
-	
+	auto MakeRow = [&](enum Item item, string file, int size, int x, int y) -> void {
+		GroupBox* group = new GroupBox();
+		group->SetSize(group_width, group_height);
+		group->SetLocation(DefaultBorderPadding + x * (group_width + DefaultBorderPadding),
+			DefaultBorderPadding + y * (group_height + DefaultBorderPadding));
+		group->SetBackColor(Drawing::Color::Empty());
+		AddControl(group);
 
-	Label* grail = new Label();
-	grail->SetText(L"Grail of Might");
-	grail->SetLocation(DefaultBorderPadding, DefaultBorderPadding + row_height * 1);
-	AddControl(grail);
+		PictureBox* pic = new PictureBox();
+		pic->SetEnabled(false);
+		pic->SetBackColor(Color::Empty());
+		pic->SetMouseOverFocusColor(GuiUtils::getMouseOverColor());
+		pic->SetImage(Drawing::Image::FromFile(GuiUtils::getSubPathA(file, "img")));
+		pic->SetStretch(true);
+		pic->SetSize(size, size);
+		pic->SetLocation(0,-10);
+		group->AddControl(pic);
+		
+		TextBox* textbox = new TextBox();
+		textbox->SetText(L"1");
+		textbox->SetSize(item_width, textbox->GetHeight());
+		textbox->SetLocation(item_width + 3, 5);
+		textbox->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
+			GWToolbox::instance().set_capture_input(true);
+		});
+		textbox->GetFocusLostEvent() += FocusLostEventHandler([textbox](Control*, Control*) {
+			GWToolbox::instance().set_capture_input(false);
+			try {
+				std::stof(textbox->GetText());
+			} catch (...) {
+				textbox->SetText(L"0");
+			}
+		});
+		group->AddControl(textbox);
 
-	Label* armor = new Label();
-	armor->SetText(L"Armor of Salvation");
-	armor->SetLocation(DefaultBorderPadding, DefaultBorderPadding + row_height * 2);
-	AddControl(armor);
+		Button* button = new Button();
+		button->SetSize(item_width, textbox->GetHeight());
+		button->SetLocation(textbox->GetRight() + 3, textbox->GetTop());
+		button->SetText(L"Buy");
+		group->AddControl(button);
+	};
 
-	Label* pstone = new Label();
-	pstone->SetText(L"Powerstone of Courage");
-	pstone->SetLocation(DefaultBorderPadding, DefaultBorderPadding + row_height * 3);
-	AddControl(pstone);
+	MakeRow(Essence, "Essence_of_Celerity.png", 60, 0, 0);
+	MakeRow(Grail, "Grail_of_Might.png", 50, 0, 1);
+	MakeRow(Armor, "Armor_of_Salvation.png", 52, 0, 2);
 
-	Label* res = new Label();
-	res->SetText(L"Ressurrection Scroll");
-	res->SetLocation(DefaultBorderPadding, DefaultBorderPadding + row_height * 4);
-	AddControl(res);
+	MakeRow(Powerstone, "Armor_of_Salvation.png", 60, 1, 0);
+	MakeRow(ResScroll, "Armor_of_Salvation.png", 60, 1, 1);
+
+	GroupBox* group = new GroupBox();
+	group->SetSize(GetWidth() - 2 * DefaultBorderPadding, 40);
+	group->SetLocation(DefaultBorderPadding,
+		DefaultBorderPadding + 3 * (group_height + DefaultBorderPadding));
+	group->SetBackColor(Drawing::Color::Empty());
+	AddControl(group);
 
 	ComboBox* combo = new ComboBox();
 	combo->AddItem(L"10 Bones");
@@ -85,6 +102,35 @@ void MaterialsPanel::BuildUI() {
 
 	});
 	combo->SetSelectedIndex(0);
-	combo->SetLocation(DefaultBorderPadding, DefaultBorderPadding + row_height * 5);
-	AddControl(combo);
+	combo->SetLocation(0, 0);
+	combo->SetSize(176, combo->GetHeight());
+	group->AddControl(combo);
+
+	TextBox* textbox = new TextBox();
+	textbox->SetText(L"1");
+	textbox->SetSize(item_width, combo->GetHeight());
+	textbox->SetLocation(combo->GetRight() + 3, 0);
+	textbox->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
+		GWToolbox::instance().set_capture_input(true);
+	});
+	textbox->GetFocusLostEvent() += FocusLostEventHandler([textbox](Control*, Control*) {
+		GWToolbox::instance().set_capture_input(false);
+		try {
+			std::stof(textbox->GetText());
+		} catch (...) {
+			textbox->SetText(L"0");
+		}
+	});
+	group->AddControl(textbox);
+
+	Button* button = new Button();
+	button->SetSize(item_width, combo->GetHeight());
+	button->SetLocation(textbox->GetRight() + 3, textbox->GetTop());
+	button->SetText(L"Buy");
+	group->AddControl(button);
+
+	Label* log = new Label();
+	log->SetText(L"here there will be bought x/x");
+	log->SetLocation(DefaultBorderPadding, DefaultBorderPadding + 4 * (group_height + DefaultBorderPadding));
+	AddControl(log);
 }
