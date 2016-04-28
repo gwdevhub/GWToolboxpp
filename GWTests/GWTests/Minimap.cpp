@@ -43,18 +43,17 @@ void Minimap::UIRenderer::Initialize(IDirect3DDevice9* device) {
 	buffer_->Unlock();
 }
 
-void Minimap::RangeRenderer::CreateCircle(Vertex* vertices, float radius) {
+void Minimap::RangeRenderer::CreateCircle(Vertex* vertices, float radius, DWORD color) {
 	for (size_t i = 0; i < circle_vertices; ++i) {
 		float angle = i * (2 * static_cast<float>(M_PI) / circle_vertices);
 		vertices[i].x = radius * std::cos(angle);
 		vertices[i].y = radius * std::sin(angle);
 		vertices[i].z = 1.0f;
-		vertices[i].color = 0xFF666677;
+		vertices[i].color = color; // 0xFF666677;
 	}
 	vertices[circle_points] = vertices[0];
 }
 void Minimap::RangeRenderer::Initialize(IDirect3DDevice9* device) {
-	const int num_circles = 3;
 	count_ = circle_points * num_circles; // radar range, spirit range, aggro range
 	type_ = D3DPT_LINESTRIP;
 	float radius;
@@ -69,16 +68,19 @@ void Minimap::RangeRenderer::Initialize(IDirect3DDevice9* device) {
 		(VOID**)&vertices, D3DLOCK_DISCARD);
 	
 	radius = static_cast<float>(GwConstants::Range::Compass);
-	CreateCircle(vertices + circle_vertices * 0, radius);
+	CreateCircle(vertices + circle_vertices * 0, radius, 0xFF666611); // 0xFF666677
 
 	radius = static_cast<float>(GwConstants::Range::Spirit);
-	CreateCircle(vertices + circle_vertices * 1, radius);
+	CreateCircle(vertices + circle_vertices * 1, radius, 0xFF337733);
 
 	radius = static_cast<float>(GwConstants::Range::Spellcast);
-	CreateCircle(vertices + circle_vertices * 2, radius);
+	CreateCircle(vertices + circle_vertices * 2, radius, 0xFF117777);
 
-	//radius = static_cast<float>(GwConstants::Range::Nearby);
-	//CreateCircle(vertices + circle_vertices * 3, radius);
+	radius = static_cast<float>(GwConstants::Range::Earshot);
+	CreateCircle(vertices + circle_vertices * 3, radius, 0xFF994444);
+
+	radius = static_cast<float>(360);
+	CreateCircle(vertices + circle_vertices * 4, radius, 0xFF881188);
 
 	buffer_->Unlock();
 }
@@ -93,10 +95,9 @@ void Minimap::RangeRenderer::Render(IDirect3DDevice9* device) {
 	device->SetRenderState(D3DRS_LIGHTING, FALSE);
 
 	device->SetStreamSource(0, buffer_, 0, sizeof(Vertex));
-	device->DrawPrimitive(type_, circle_vertices * 0, circle_points);
-	device->DrawPrimitive(type_, circle_vertices * 1, circle_points);
-	device->DrawPrimitive(type_, circle_vertices * 2, circle_points);
-	//device->DrawPrimitive(type_, circle_vertices * 3, circle_points);
+	for (int i = 0; i < num_circles; ++i) {
+		device->DrawPrimitive(type_, circle_vertices * i, circle_points);
+	}
 }
 
 Minimap::Minimap() 

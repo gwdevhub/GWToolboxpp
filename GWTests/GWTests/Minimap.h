@@ -11,9 +11,10 @@ class Minimap : public Viewer {
 	};
 
 	class RangeRenderer : public Renderer {
+		static const int num_circles = 5;
 		static const int circle_points = 64;
 		static const int circle_vertices = 65;
-		void CreateCircle(Vertex* vertices, float radius);
+		void CreateCircle(Vertex* vertices, float radius, DWORD color);
 		void Initialize(IDirect3DDevice9* device) override;
 	public:
 		void Render(IDirect3DDevice9* device) override;

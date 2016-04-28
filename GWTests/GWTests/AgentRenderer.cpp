@@ -167,14 +167,14 @@ void AgentRenderer::QueueTriangle(IDirect3DDevice9* device,
 		vertices[i].color = color;
 	}
 
-	vertices[0].x = x + size * 1.3f * std::cos(rotation);
-	vertices[0].y = y + size * 1.3f * std::sin(rotation);
+	vertices[0].x = x + size * 1.5f * std::cos(rotation);
+	vertices[0].y = y + size * 1.5f * std::sin(rotation);
 
-	vertices[1].x = x + size * std::cos(rotation + (float)M_PI * 2 / 3);
-	vertices[1].y = y + size * std::sin(rotation + (float)M_PI * 2 / 3);
+	vertices[1].x = x + size * 0.7f * std::cos(rotation + (float)M_PI * 2 / 3);
+	vertices[1].y = y + size * 0.7f * std::sin(rotation + (float)M_PI * 2 / 3);
 
-	vertices[2].x = x + size * std::cos(rotation - (float)M_PI * 2 / 3);
-	vertices[2].y = y + size * std::sin(rotation - (float)M_PI * 2 / 3);
+	vertices[2].x = x + size * 0.7f * std::cos(rotation - (float)M_PI * 2 / 3);
+	vertices[2].y = y + size * 0.7f * std::sin(rotation - (float)M_PI * 2 / 3);
 
 	vertices += 3;
 	triangle_count += 1;
