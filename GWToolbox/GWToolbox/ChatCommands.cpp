@@ -48,12 +48,53 @@ ChatCommands::ChatCommands() {
 	AddCommand(L"useskill", ChatCommands::CmdUseSkill);
 	AddCommand(L"skilluse", ChatCommands::CmdUseSkill);
 
-	auto ShouldIgnore = [](GWCA::StoC_Pak::P081* pak) -> bool {
+	auto Get1stSegment = [](GWCA::StoC_Pak::P081* pak) -> wchar_t* {
+		for (size_t i = 0; pak->message[i] != 0; ++i) {
+			if (pak->message[i] == 0x10A) return pak->message + i + 1;
+		}
+		return nullptr;
+	};
+	auto Get2ndSegment = [](GWCA::StoC_Pak::P081* pak) -> wchar_t* {
+		for (size_t i = 0; pak->message[i] != 0; ++i) {
+			if (pak->message[i] == 0x10B) return pak->message + i + 1;
+		}
+		return nullptr;
+	};
+
+	auto GetNumericSegment = [](GWCA::StoC_Pak::P081* pak) -> DWORD {
+		for (size_t i = 0; pak->message[i] != 0; ++i) {
+			if (pak->message[i] == 0x10F) return (pak->message[i + 1] & 0xFF);
+		}
+		return 0;
+	};
+
+	auto ShouldIgnore = [&](GWCA::StoC_Pak::P081* pak) -> bool {
 		switch (pak->message[0]) {
-		//case 0x7df: return true; // party shares gold
-		case 0x7f0: return true; // monster drop
-		//case 0x7f2: return true; // player drop
-		//case 0x7fc: return true; // pick up item
+		case 108:	// player message
+		case 0x7df: // party shares gold
+		case 0x7f6: // player x picks up item y
+		case 0x7f2: // player x drops item y
+		case 0x7fc: // player x picks up item y
+		case 807: // player joined the game
+			return false;
+
+		case 0x7f0: { // monster x drops item y (no assignment)
+			wchar_t* item = Get2ndSegment(pak);
+			if (item && item[0] == 0xA40) return false;	// first wchar of item is rarity, 0xA40 is gold rarity
+			return true;
+		}
+		case 0x7f1: { // monster x drops item y, your party assigns to player z
+			wchar_t* item = Get2ndSegment(pak);
+			DWORD assignee = GetNumericSegment(pak);
+			GWCA::GW::Agent* me = GWCA::Agents().GetPlayer();
+			if (item && item[0] == 0xA40 && me && me->PlayerNumber == assignee) return false;
+			return true;
+		}
+
+		case 816: // you gain a skill point
+		case 817: // player x gained a skill point
+			return true;
+
 		case 0x8101:
 			switch (pak->message[1]) {
 			case 0x1868: return true; // teilah takes 10 festival tickets
@@ -65,31 +106,36 @@ ChatCommands::ChatCommands() {
 			case 0x186d: return true; // did not win 9rings
 			default: return false;
 			}
+
 		case 0x8102:
 			switch (pak->message[1]) {
-			case 0x4650: return true; // skill has been updated for pvp
-			default: return false;
+			case 0x4650: // skill has been updated for pvp
+			case 0x4651: // a hero skill has been updated for pvp
+				return true;
+
+			case 0x223B: // a party won hall of heroes
+				return false;
+
+			default: 
+				return false;
 			}
-		default: return false;
+
+		default: 
+			//printf("Pak 81: ");
+			//for (size_t i = 0; pak->message[i] != 0; ++i) printf(" 0x%x", pak->message[i]);
+			//printf("\n");
+			return false;
 		}
 	};
 
 	suppress_next_message = false;
 	suppress_messages_active = false;
 	GWCA::StoC().AddGameServerEvent<GWCA::StoC_Pak::P081>([&](GWCA::StoC_Pak::P081* pak) -> bool {
-		if (pak->message[0] == 0x108) { // player message
-			return false;
-		} else {
-			if (suppress_messages_active && ShouldIgnore(pak)) {
-				suppress_next_message = true;
-				return true;
-			} else {
-				//printf("P081:");
-				//for (size_t i = 0; pak->message[i] != 0; ++i) printf(" 0x%x", pak->message[i]);
-				//printf("\n");
-				return false;
-			}
+		if (suppress_messages_active && ShouldIgnore(pak)) {
+			suppress_next_message = true;
+			return true;
 		}
+		return false;
 	});
 
 	GWCA::StoC().AddGameServerEvent<GWCA::StoC_Pak::P082>([&](GWCA::StoC_Pak::P082* pak) -> bool {

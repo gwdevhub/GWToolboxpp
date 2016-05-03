@@ -76,6 +76,7 @@ private:
 		initialized_(false),
 		must_self_destruct_(false),
 		must_resize_(false),
+		right_mouse_pressed_(false),
 		adjust_on_resize_(false),
 		capture_input_(false) {
 

@@ -142,7 +142,7 @@ public:
 class BorderlessWindow : public BoolSetting {
 public:
 	BorderlessWindow(OSHGui::Control* parent) : BoolSetting(parent, false, L"borderlesswindow") {
-		Initialize(L"Borderless fullscreen window");
+		Initialize(L"Borderless window mode");
 
 		patches.push_back(new GWCA::MemoryPatcher((void*)0x0067D7C8, 
 			(BYTE*)"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90", 16));

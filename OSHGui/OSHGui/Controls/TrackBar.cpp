@@ -107,7 +107,7 @@ namespace OSHGui {
 			valueChangedEvent_.Invoke(this);
 
 			int tick = value / tickFrequency_;
-			sliderLocation_.Left = tick * pixelsPerTick_;
+			sliderLocation_.Left = std::lroundf(tick * pixelsPerTick_);
 			sliderAbsoluteLocation_.Left = absoluteLocation_.Left + sliderLocation_.Left;
 
 			Invalidate();
@@ -133,7 +133,7 @@ namespace OSHGui {
 
 		auto tickCount = 1 + (maximum_ - minimum_) / tickFrequency_;
 		for (int i = 0; i < tickCount; ++i) {
-			int x = SliderSize.Width / 2 + i * pixelsPerTick_;
+			int x = SliderSize.Width / 2 + std::lroundf(i * pixelsPerTick_);
 			g.FillRectangle(color, PointI(x, DefaultTickOffset), SizeI(1, 5));
 		}
 
@@ -175,7 +175,7 @@ namespace OSHGui {
 	}
 	//---------------------------------------------------------------------------
 	void TrackBar::HandleMouseEvent(const MouseMessage &mouse) {
-		int tick = (mouse.GetLocation().Left - absoluteLocation_.Left) / pixelsPerTick_;
+		int tick =  std::lroundf((mouse.GetLocation().Left - absoluteLocation_.Left) / pixelsPerTick_);
 		SetValueInternal(tick * tickFrequency_);
 	}
 	//---------------------------------------------------------------------------
