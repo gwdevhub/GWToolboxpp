@@ -12,15 +12,12 @@
 #include "Direct3D9RenderTarget.hpp"
 #include "../Rectangle.hpp"
 
-namespace OSHGui
-{
-	namespace Drawing
-	{
+namespace OSHGui {
+	namespace Drawing {
 		/**
 		 * Die Direct3D9 Variante des RenderTarget.
 		 */
-		class OSHGUI_EXPORT Direct3D9ViewportTarget : public Direct3D9RenderTarget<>
-		{
+		class OSHGUI_EXPORT Direct3D9ViewportTarget : public Direct3D9RenderTarget<> {
 		public:
 			/**
 			 * Erzeugt ein RenderTarget, das den Direct3D9 Viewport für Zeichenoperationen verwendet.
@@ -35,7 +32,7 @@ namespace OSHGui
 			 * \param owner Renderer Objekt, das das RenderTarget erstellt hat
 			 * \param area Bereich für Zeichenoperationen
 			 */
-			Direct3D9ViewportTarget(Direct3D9Renderer &owner, const RectangleF &area);
+			Direct3D9ViewportTarget(Direct3D9Renderer &owner, const RectangleI &area);
 
 			virtual bool IsImageryCache() const override;
 		};

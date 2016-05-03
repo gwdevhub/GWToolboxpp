@@ -17,21 +17,17 @@
 #include "../Misc/Strings.hpp"
 #include <memory>
 
-namespace OSHGui
-{
-	namespace Drawing
-	{
+namespace OSHGui {
+	namespace Drawing {
 		/**
 		 * Die abstrakte Klasse repräsentiert eine Textur und wird durch den Renderer erstellt.
 		 */
-		class OSHGUI_EXPORT Texture
-		{
+		class OSHGUI_EXPORT Texture {
 		public:
 			/**
 			 * Auflistung der möglichen PixelFormate.
 			 */
-			enum class PixelFormat
-			{
+			enum class PixelFormat {
 				RGB,
 				RGBA,
 				RGBA_4444,
@@ -47,8 +43,7 @@ namespace OSHGui
 			/**
 			 * Destructor der Klasse.
 			 */
-			virtual ~Texture()
-			{
+			virtual ~Texture() {
 
 			}
 
@@ -57,14 +52,14 @@ namespace OSHGui
 			 *
 			 * \return Größe der Textur
 			 */
-			virtual const SizeF& GetSize() const = 0;
+			virtual const SizeI& GetSize() const = 0;
 
 			/**
 			 * Ruft die Originalgröße der Daten der Textur ab, mit denen sie erstellt wurde.
 			 *
 			 * \return Originalgröße der Textur
 			 */
-			virtual const SizeF& GetOriginalDataSize() const = 0;
+			virtual const SizeI& GetOriginalDataSize() const = 0;
 
 			/**
 			 * Ruft die Pixel-zu-Texel Werte ab, die benutzt werden um Pixelwerte zu Texturkoordinaten umzurechnen.
@@ -87,7 +82,7 @@ namespace OSHGui
 			 * \param size die Größe des Bildes
 			 * \param format
 			 */
-			virtual void LoadFromMemory(const void *buffer, const SizeF &size, PixelFormat format) = 0;
+			virtual void LoadFromMemory(const void *buffer, const SizeI &size, PixelFormat format) = 0;
 
 			/**
 			 * Prüft, ob Texturen im angegebenen Format erstellt werden können.

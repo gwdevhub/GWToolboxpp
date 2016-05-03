@@ -13,18 +13,15 @@
 #include "Rectangle.hpp"
 #include "Point.hpp"
 
-namespace OSHGui
-{
-	namespace Drawing
-	{
+namespace OSHGui {
+	namespace Drawing {
 		class GeometryBuffer;
 		class RenderQueue;
 
 		/**
 		 * Interface für Zeichenoberflächen.
 		 */
-		class OSHGUI_EXPORT RenderTarget
-		{
+		class OSHGUI_EXPORT RenderTarget {
 		public:
 			/**
 			 * Zeichnet den Inhalt des GeometryBuffer.
@@ -45,14 +42,14 @@ namespace OSHGui
 			 *
 			 * \param area Zeichenbereich
 			 */
-			virtual void SetArea(const RectangleF &area) = 0;
+			virtual void SetArea(const RectangleI &area) = 0;
 
 			/**
 			 * Ruft den Zeichenbereich ab.
 			 *
 			 * \return Zeichenbereich
 			 */
-			virtual const RectangleF& GetArea() const = 0;
+			virtual const RectangleI& GetArea() const = 0;
 
 			/**
 			 * Ruft ab, ob das RenderTarget den gezeichneten Inhalt über mehrere Frames hinweg behält (z.B. Zeichnen auf eine Textur)

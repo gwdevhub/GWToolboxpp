@@ -11,7 +11,7 @@
 
 class TravelPanel : public ToolboxPanel {
 public:
-	TravelPanel();
+	TravelPanel(OSHGui::Control* parent) : ToolboxPanel(parent) {}
 
 	void BuildUI() override;
 	void UpdateUI() override {};
@@ -20,12 +20,11 @@ public:
 	void TravelFavorite(int fav_idx);
 
 private:
-	static const int BUTTON_HEIGHT = 25;
-	const int n_outposts = 185;
+	const int n_outposts = 180;
 
 	class TravelCombo : public OSHGui::ComboBox {
 	public:
-		TravelCombo();
+		TravelCombo(OSHGui::Control* parent);
 	};
 
 	GwConstants::District district_;

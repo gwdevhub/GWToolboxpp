@@ -10,21 +10,17 @@
 #include "../Misc/Exceptions.hpp"
 #include <SimpleImageLoader.hpp>
 
-namespace OSHGui
-{
-	namespace Drawing
-	{
-		ImageData LoadImageFromContainerToRGBABuffer(Misc::RawDataContainer &data)
-		{
+namespace OSHGui {
+	namespace Drawing {
+		ImageData LoadImageFromContainerToRGBABuffer(Misc::RawDataContainer &data) {
 			auto image = SimpleImageLoader::LoadImage(data.GetData());
 
-			ImageData imageData = { image.GetData(), SizeF(image.GetWidth(), image.GetHeight()) };
+			ImageData imageData = { image.GetData(), SizeI(image.GetWidth(), image.GetHeight()) };
 			
 			return imageData;
 		}
 		//---------------------------------------------------------------------------
-		ImageData LoadImageFromFileToRGBABuffer(const Misc::AnsiString &file)
-		{
+		ImageData LoadImageFromFileToRGBABuffer(const Misc::AnsiString &file) {
 			Misc::RawDataContainer data;
 			data.LoadFromFile(file);
 			return LoadImageFromContainerToRGBABuffer(data);

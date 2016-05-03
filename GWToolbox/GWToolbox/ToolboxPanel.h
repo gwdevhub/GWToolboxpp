@@ -4,6 +4,8 @@
 
 class ToolboxPanel : public OSHGui::Panel {
 public:
+	ToolboxPanel(OSHGui::Control* parent) : OSHGui::Panel(parent) {}
+
 	// Create user interface
 	virtual void BuildUI() = 0;
 

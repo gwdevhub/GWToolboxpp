@@ -14,17 +14,14 @@
 #include <d3dx9.h>
 #include <vector>
 
-namespace OSHGui
-{
-	namespace Drawing
-	{
+namespace OSHGui {
+	namespace Drawing {
 		class Direct3D9Texture;
 
 		/**
 		 * Die Direct3D9 Variante des GeometryBuffer.
 		 */
-		class OSHGUI_EXPORT Direct3D9GeometryBuffer : public GeometryBuffer
-		{
+		class OSHGUI_EXPORT Direct3D9GeometryBuffer : public GeometryBuffer {
 		public:
 			/**
 			 * Konstruktor der Klasse.
@@ -33,10 +30,11 @@ namespace OSHGui
 			 */
 			Direct3D9GeometryBuffer(Direct3D9Renderer &owner);
 
-			virtual void SetTranslation(const Vector &translation) override;
+			virtual void SetTranslation(const PointF &translation) override;
 			virtual void SetRotation(const Quaternion &rotation) override;
-			virtual void SetPivot(const Vector &pivot) override;
-			virtual void SetClippingRegion(const RectangleF &region) override;
+			virtual void SetPivot(const PointF &pivot) override;
+			virtual void SetClippingRegion(const RectangleI &region) override;
+			virtual RectangleI GetClippingRegion() override;
 			virtual void SetActiveTexture(const TexturePtr &texture) override;
 			virtual void SetClippingActive(const bool active) override;
 			virtual bool IsClippingActive() const override;
@@ -46,25 +44,18 @@ namespace OSHGui
 			virtual void Reset() override;
 
 		protected:
-			/**
-			 * Erledigt das Batch Management bevor neue Geometrie hinzugefügt wird.
-			 */
 			void PerformBatchManagement();
-			/**
-			 * Updatet die Transformationsmatrix vor dem Zeichnen.
-			 */
+
 			void UpdateMatrix() const;
 
-			struct D3DVertex
-			{
+			struct D3DVertex {
 				D3DVertex(float _x, float _y, float _z, DWORD _color, float _tu, float _tv)
 					: x(_x),
 					  y(_y),
 					  z(_z),
 					  color(_color),
 					  tu(_tu),
-					  tv(_tv)
-				{
+					  tv(_tv) {
 
 				}
 
@@ -76,14 +67,12 @@ namespace OSHGui
 				float tv;
 			};
 
-			struct BatchInfo
-			{
+			struct BatchInfo {
 				BatchInfo(LPDIRECT3DTEXTURE9 _texture, uint32_t _count, VertexDrawMode _mode, bool _clip)
 					: texture(_texture),
 					  count(_count),
 					  mode(_mode),
-					  clip(_clip)
-				{
+					  clip(_clip) {
 
 				}
 
@@ -103,11 +92,11 @@ namespace OSHGui
 			VertexList vertices;
 			
 			bool clippingActive;
-			RectangleF clipRect;
+			RectangleI clipRect;
 			
-			Vector translation;
+			PointF translation;
 			Quaternion rotation;
-			Vector pivot;
+			PointF pivot;
 			
 			mutable bool matrixValid;
 			mutable D3DXMATRIX matrix;

@@ -3,16 +3,11 @@
 #include "../../Misc/Exceptions.hpp"
 #include <d3dx9.h>
 
-namespace OSHGui
-{
-	namespace Drawing
-	{
-		namespace
-		{
-			static D3DFORMAT ToD3DPixelFormat(const Texture::PixelFormat format)
-			{
-				switch (format)
-				{
+namespace OSHGui {
+	namespace Drawing {
+		namespace {
+			static D3DFORMAT ToD3DPixelFormat(const Texture::PixelFormat format) {
+				switch (format) {
 				case Texture::PixelFormat::RGBA:
 					return D3DFMT_A8R8G8B8;
 				case Texture::PixelFormat::RGB:
@@ -32,10 +27,8 @@ namespace OSHGui
 				}
 			}
 			//---------------------------------------------------------------------------
-			static uint32_t CalculateDataWidth(const uint32_t width, Texture::PixelFormat format)
-			{
-				switch (format)
-				{
+			static uint32_t CalculateDataWidth(const uint32_t width, Texture::PixelFormat format) {
+				switch (format) {
 				case Texture::PixelFormat::RGBA:
 					return width * 4;
 				case Texture::PixelFormat::RGB:
@@ -53,12 +46,9 @@ namespace OSHGui
 				}
 			}
 			//---------------------------------------------------------------------------
-			static void BlitRGBToBGRSurface(const uint8_t *src, uint8_t *dst, const SizeF &size)
-			{
-				for (auto i = 0; i < size.Height; ++i)
-				{
-					for (auto j = 0; j < size.Width; ++j)
-					{
+			static void BlitRGBToBGRSurface(const uint8_t *src, uint8_t *dst, const SizeI &size) {
+				for (auto i = 0; i < size.Height; ++i) {
+					for (auto j = 0; j < size.Width; ++j) {
 						*dst++ = src[2];
 						*dst++ = src[1];
 						*dst++ = src[0];
@@ -67,12 +57,9 @@ namespace OSHGui
 				}
 			}
 			//---------------------------------------------------------------------------
-			void BlitRGBAToD3DCOLORSurface(const uint32_t *src, uint32_t *dst, const SizeF &size, uint32_t pitch)
-			{
-				for (auto i = 0; i < size.Height; ++i)
-				{
-					for (auto j = 0; j < size.Width; ++j)
-					{
+			void BlitRGBAToD3DCOLORSurface(const uint32_t *src, uint32_t *dst, const SizeI &size, uint32_t pitch) {
+				for (auto i = 0; i < size.Height; ++i) {
+					for (auto j = 0; j < size.Width; ++j) {
 						auto pixel = src[j];
 						auto tmp = pixel & 0x00FF00FF;
 						dst[j] = pixel & 0xFF00FF00 | (tmp << 16) | (tmp >> 16);
@@ -83,12 +70,9 @@ namespace OSHGui
 				}
 			}
 			//---------------------------------------------------------------------------
-			void BlitD3DCOLORSurfaceToRGBA(const uint32_t *src, uint32_t *dst, const SizeF &size, uint32_t pitch)
-			{
-				for (auto i = 0; i < size.Height; ++i)
-				{
-					for (auto j = 0; j < size.Width; ++j)
-					{
+			void BlitD3DCOLORSurfaceToRGBA(const uint32_t *src, uint32_t *dst, const SizeI &size, uint32_t pitch) {
+				for (auto i = 0; i < size.Height; ++i) {
+					for (auto j = 0; j < size.Width; ++j) {
 						auto pixel = src[j];
 						auto tmp = pixel & 0x00FF00FF;
 						dst[j] = pixel & 0xFF00FF00 | (tmp << 16) | (tmp >> 16);
@@ -99,35 +83,27 @@ namespace OSHGui
 				}
 			}
 			//---------------------------------------------------------------------------
-			class PixelBuffer
-			{
+			class PixelBuffer {
 			public:
-				PixelBuffer(const void *data, const SizeF &size, Texture::PixelFormat format)
+				PixelBuffer(const void *data, const SizeI &size, Texture::PixelFormat format)
 					: sourceBuffer(static_cast<const uint8_t*>(data)),
-					pitch(CalculateDataWidth(static_cast<size_t>(size.Width), format))
-				{
-					if (format == Texture::PixelFormat::RGBA || format == Texture::PixelFormat::RGB)
-					{
+					pitch(CalculateDataWidth(static_cast<size_t>(size.Width), format)) {
+					if (format == Texture::PixelFormat::RGBA || format == Texture::PixelFormat::RGB) {
 						workBuffer.resize(pitch * static_cast<size_t>(size.Height));
 
-						if (format == Texture::PixelFormat::RGBA)
-						{
+						if (format == Texture::PixelFormat::RGBA) {
 							BlitRGBAToD3DCOLORSurface(reinterpret_cast<const uint32_t*>(sourceBuffer), reinterpret_cast<uint32_t*>(workBuffer.data()), size, pitch);
-						}
-						else
-						{
+						} else {
 							BlitRGBToBGRSurface(sourceBuffer, workBuffer.data(), size);
 						}
 					}
 				}
 				//---------------------------------------------------------------------------
-				size_t GetPitch() const
-				{
+				size_t GetPitch() const {
 					return pitch;
 				}
 				//---------------------------------------------------------------------------
-				const uint8_t* GetPixelData() const
-				{
+				const uint8_t* GetPixelData() const {
 					return !workBuffer.empty() ? workBuffer.data() : sourceBuffer;
 				}
 				//---------------------------------------------------------------------------
@@ -144,11 +120,10 @@ namespace OSHGui
 		Direct3D9Texture::Direct3D9Texture(Direct3D9Renderer &_owner)
 			: owner(_owner),
 			  texture(nullptr),
-			  size(0.0f, 0.0f),
-			  dataSize(0.0f, 0.0f),
+			  size(0, 0),
+			  dataSize(0, 0),
 			  texelScaling(0.0f, 0.0f),
-			  savedSurfaceDescValid(false)
-		{
+			  savedSurfaceDescValid(false) {
 
 		}
 		//---------------------------------------------------------------------------
@@ -156,33 +131,28 @@ namespace OSHGui
 			: owner(_owner),
 			  texture(nullptr),
 			  texelScaling(0.0f, 0.0f),
-			  savedSurfaceDescValid(false)
-		{
+			  savedSurfaceDescValid(false) {
 			LoadFromFile(filename);
 		}
 		//---------------------------------------------------------------------------
-		Direct3D9Texture::Direct3D9Texture(Direct3D9Renderer &_owner, const SizeF &_size)
+		Direct3D9Texture::Direct3D9Texture(Direct3D9Renderer &_owner, const SizeI &_size)
 			: owner(_owner),
 			  texture(nullptr),
-			  size(0.0f, 0.0f),
+			  size(0, 0),
 			  dataSize(size),
 			  texelScaling(0.0f, 0.0f),
-			  savedSurfaceDescValid(false)
-		{
+			  savedSurfaceDescValid(false) {
 			CreateDirect3D9Texture(_size, D3DFMT_A8R8G8B8);
 		}
 		//---------------------------------------------------------------------------
-		Direct3D9Texture::~Direct3D9Texture()
-		{
+		Direct3D9Texture::~Direct3D9Texture() {
 			CleanupDirect3D9Texture();
 		}
 		//---------------------------------------------------------------------------
 		//Getter/Setter
 		//---------------------------------------------------------------------------
-		void Direct3D9Texture::SetDirect3D9Texture(LPDIRECT3DTEXTURE9 tex)
-		{
-			if (texture != tex)
-			{
+		void Direct3D9Texture::SetDirect3D9Texture(LPDIRECT3DTEXTURE9 tex) {
+			if (texture != tex) {
 				CleanupDirect3D9Texture();
 				dataSize.Width = dataSize.Height = 0;
 
@@ -196,44 +166,36 @@ namespace OSHGui
 			UpdateCachedScaleValues();
 		}
 		//---------------------------------------------------------------------------
-		LPDIRECT3DTEXTURE9 Direct3D9Texture::GetDirect3D9Texture() const
-		{
+		LPDIRECT3DTEXTURE9 Direct3D9Texture::GetDirect3D9Texture() const {
 			return texture;
 		}
 		//---------------------------------------------------------------------------
-		const SizeF& Direct3D9Texture::GetSize() const
-		{
+		const SizeI& Direct3D9Texture::GetSize() const {
 			return size;
 		}
 		//---------------------------------------------------------------------------
-		const SizeF& Direct3D9Texture::GetOriginalDataSize() const
-		{
+		const SizeI& Direct3D9Texture::GetOriginalDataSize() const {
 			return dataSize;
 		}
 		//---------------------------------------------------------------------------
-		const std::pair<float, float>& Direct3D9Texture::GetTexelScaling() const
-		{
+		const std::pair<float, float>& Direct3D9Texture::GetTexelScaling() const {
 			return texelScaling;
 		}
 		//---------------------------------------------------------------------------
-		void Direct3D9Texture::SetOriginalDataSize(const SizeF& size)
-		{
+		void Direct3D9Texture::SetOriginalDataSize(const SizeI& size) {
 			dataSize = size;
 			UpdateCachedScaleValues();
 		}
 		//---------------------------------------------------------------------------
 		//Runtime-Functions
 		//---------------------------------------------------------------------------
-		void Direct3D9Texture::LoadFromFile(const Misc::AnsiString &filename)
-		{
-			auto imageData = LoadImageFromFileToRGBABuffer(filename);
+		void Direct3D9Texture::LoadFromFile(const Misc::AnsiString &filename) {
+			Drawing::ImageData imageData = LoadImageFromFileToRGBABuffer(filename);
 			LoadFromMemory(imageData.Data.data(), imageData.Size, PixelFormat::RGBA);
 		}
 		//---------------------------------------------------------------------------
-		void Direct3D9Texture::LoadFromMemory(const void *buffer, const SizeF &size, PixelFormat pixelFormat)
-		{
-			if (!IsPixelFormatSupported(pixelFormat))
-			{
+		void Direct3D9Texture::LoadFromMemory(const void *buffer, const SizeI &size, PixelFormat pixelFormat) {
+			if (!IsPixelFormatSupported(pixelFormat)) {
 				throw Misc::NotSupportedException();
 			}
 
@@ -245,24 +207,23 @@ namespace OSHGui
 
 			const RECT rect = { 0, 0, static_cast<LONG>(size.Width), static_cast<LONG>(size.Height) };
 
-			auto hr = D3DXLoadSurfaceFromMemory(surface, nullptr, nullptr, pixelBuffer.GetPixelData(), d3dFormat == D3DFMT_X8R8G8B8 ? D3DFMT_R8G8B8 : d3dFormat, pixelBuffer.GetPitch(), nullptr, &rect, D3DX_FILTER_NONE, 0);
+			HRESULT hr = D3DXLoadSurfaceFromMemory(surface, nullptr, nullptr, pixelBuffer.GetPixelData(), d3dFormat == D3DFMT_X8R8G8B8 ? D3DFMT_R8G8B8 : d3dFormat, pixelBuffer.GetPitch(), nullptr, &rect, D3DX_FILTER_NONE, 0);
 
 			surface->Release();
 
-			if (FAILED(hr))
-			{
+			if (FAILED(hr)) {
 				throw Misc::Exception();
 			}
 		}
 		//---------------------------------------------------------------------------
-		void Direct3D9Texture::CreateDirect3D9Texture(const SizeF &size, D3DFORMAT format)
-		{
+		void Direct3D9Texture::CreateDirect3D9Texture(const SizeI &size, D3DFORMAT format) {
 			CleanupDirect3D9Texture();
 
-			auto textureSize = owner.GetAdjustedSize(size);
+			auto textureSize = owner.GetAdjustedSize(size.cast<int>());
 
-			if (FAILED(D3DXCreateTexture(owner.GetDevice(), static_cast<UINT>(textureSize.Width), static_cast<UINT>(textureSize.Height), 1, 0, format, D3DPOOL_MANAGED, &texture)))
-			{
+			if (FAILED(D3DXCreateTexture(owner.GetDevice(), 
+				static_cast<UINT>(textureSize.Width), static_cast<UINT>(textureSize.Height), 
+				1U, 0, format, D3DPOOL_MANAGED, &texture))) {
 				throw Misc::Exception();
 			}
 
@@ -271,64 +232,52 @@ namespace OSHGui
 			UpdateCachedScaleValues();
 		}
 		//---------------------------------------------------------------------------
-		IDirect3DSurface9* Direct3D9Texture::GetTextureSurface() const
-		{
+		IDirect3DSurface9* Direct3D9Texture::GetTextureSurface() const {
 			LPDIRECT3DSURFACE9 surface;
-			if (FAILED(texture->GetSurfaceLevel(0, &surface)))
-			{
+			if (FAILED(texture->GetSurfaceLevel(0, &surface))) {
 				throw Misc::Exception();
 			}
 
 			return surface;
 		}
 		//---------------------------------------------------------------------------
-		void Direct3D9Texture::CleanupDirect3D9Texture()
-		{
-			if (texture)
-			{
+		void Direct3D9Texture::CleanupDirect3D9Texture() {
+			if (texture) {
 				texture->Release();
 				texture = nullptr;
 			}
 		}
 		//---------------------------------------------------------------------------
-		void Direct3D9Texture::UpdateCachedScaleValues()
-		{
-			const float orgW = dataSize.Width;
-			const float texW = size.Width;
+		void Direct3D9Texture::UpdateCachedScaleValues() {
+			const int orgW = dataSize.Width;
+			const int texW = size.Width;
 
 			texelScaling.first = 1.0f / ((orgW == texW) ? orgW : texW);
 
-			const float orgH = dataSize.Height;
-			const float texH = size.Height;
+			const int orgH = dataSize.Height;
+			const int texH = size.Height;
 
 			texelScaling.second = 1.0f / ((orgH == texH) ? orgH : texH);
 		}
 		//---------------------------------------------------------------------------
-		void Direct3D9Texture::UpdateTextureSize()
-		{
+		void Direct3D9Texture::UpdateTextureSize() {
 			D3DSURFACE_DESC description;
-			if (texture && SUCCEEDED(texture->GetLevelDesc(0, &description)))
-			{
-				size.Width  = static_cast<float>(description.Width);
-				size.Height = static_cast<float>(description.Height);
-			}
-			else
-			{
+			if (texture && SUCCEEDED(texture->GetLevelDesc(0, &description))) {
+				size.Width  = static_cast<int>(description.Width);
+				size.Height = static_cast<int>(description.Height);
+			} else {
 				size = dataSize;
 			}
 		}
 		//---------------------------------------------------------------------------
-		void Direct3D9Texture::PreD3DReset()
-		{
-			if (savedSurfaceDescValid || !texture)
-			{
+		void Direct3D9Texture::PreD3DReset() {
+			if (savedSurfaceDescValid || !texture) {
 				return;
 			}
 
 			texture->GetLevelDesc(0, &savedSurfaceDescription);
 
-			if (savedSurfaceDescription.Pool == D3DPOOL_MANAGED)
-			{
+			if (savedSurfaceDescription.Pool == D3DPOOL_MANAGED) {
 				return;
 			}
 
@@ -337,10 +286,8 @@ namespace OSHGui
 			savedSurfaceDescValid = true;
 		}
 		//---------------------------------------------------------------------------
-		void Direct3D9Texture::PostD3DReset()
-		{
-			if (!savedSurfaceDescValid)
-			{
+		void Direct3D9Texture::PostD3DReset() {
+			if (!savedSurfaceDescValid) {
 				return;
 			}
 
@@ -349,8 +296,7 @@ namespace OSHGui
 			savedSurfaceDescValid = false;
 		}
 		//---------------------------------------------------------------------------
-		bool Direct3D9Texture::IsPixelFormatSupported(const PixelFormat format) const
-		{
+		bool Direct3D9Texture::IsPixelFormatSupported(const PixelFormat format) const {
 			D3DDEVICE_CREATION_PARAMETERS parameters;
 			owner.GetDevice()->GetCreationParameters(&parameters);
 
@@ -362,8 +308,7 @@ namespace OSHGui
 
 			auto d3dFormat = ToD3DPixelFormat(format);
 
-			if (d3dFormat == D3DFMT_UNKNOWN)
-			{
+			if (d3dFormat == D3DFMT_UNKNOWN) {
 				return false;
 			}
 

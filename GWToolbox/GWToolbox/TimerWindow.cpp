@@ -20,7 +20,7 @@ TimerWindow::TimerWindow() {
 	int x = config.IniReadLong(TimerWindow::IniSection(), TimerWindow::IniKeyX(), 400);
 	int y = config.IniReadLong(TimerWindow::IniSection(), TimerWindow::IniKeyY(), 100);
 
-	SetLocation(x, y);
+	SetLocation(Drawing::PointI(x, y));
 	SetSize(Drawing::SizeI(WIDTH, HEIGHT));
 
 	Drawing::Theme::ControlTheme theme = Application::InstancePtr()
@@ -29,22 +29,11 @@ TimerWindow::TimerWindow() {
 
 	int offsetX = 2;
 	int offsetY = 2;
-	shadow_ = new TimerLabel();
-	shadow_->SetText(L"");
-	shadow_->SetAnchor(AnchorStyles::Left);
-	shadow_->SetSize(WIDTH, HEIGHT);
-	shadow_->SetLocation(offsetX, offsetY);
-	shadow_->SetFont(GuiUtils::getTBFont(30.0f, true));
-	shadow_->SetBackColor(Drawing::Color::Empty());
-	shadow_->SetForeColor(Drawing::Color::Black());
-	shadow_->SetEnabled(false);
-	AddControl(shadow_);
-	
-	timer_ = new TimerLabel();
+	timer_ = new TimerLabel(containerPanel_);
 	timer_->SetText(L"");
 	timer_->SetAnchor(AnchorStyles::Left);
-	timer_->SetSize(WIDTH, HEIGHT);
-	timer_->SetLocation(0, 0);
+	timer_->SetSize(Drawing::SizeI(WIDTH, HEIGHT));
+	timer_->SetLocation(Drawing::PointI(0, 0));
 	timer_->SetFont(GuiUtils::getTBFont(30.0f, true));
 	timer_->SetForeColor(theme.ForeColor);
 	timer_->SetBackColor(Drawing::Color::Empty());
@@ -53,23 +42,22 @@ TimerWindow::TimerWindow() {
 	});
 	AddControl(timer_);
 
-	urgoz_shadow_ = new TimerLabel();
-	urgoz_shadow_->SetText(L"");
-	urgoz_shadow_->SetAnchor(AnchorStyles::Left);
-	urgoz_shadow_->SetSize(WIDTH, URGOZ_HEIGHT);
-	urgoz_shadow_->SetLocation(offsetX, HEIGHT + offsetY);
-	urgoz_shadow_->SetFont(GuiUtils::getTBFont(16.0f, true));
-	urgoz_shadow_->SetBackColor(Drawing::Color::Empty());
-	urgoz_shadow_->SetForeColor(Drawing::Color::Black());
-	urgoz_shadow_->SetEnabled(false);
-	urgoz_shadow_->SetVisible(false);
-	AddControl(urgoz_shadow_);
+	shadow_ = new TimerLabel(containerPanel_);
+	shadow_->SetText(L"");
+	shadow_->SetAnchor(AnchorStyles::Left);
+	shadow_->SetSize(Drawing::SizeI(WIDTH, HEIGHT));
+	shadow_->SetLocation(Drawing::PointI(offsetX, offsetY));
+	shadow_->SetFont(GuiUtils::getTBFont(30.0f, true));
+	shadow_->SetBackColor(Drawing::Color::Empty());
+	shadow_->SetForeColor(Drawing::Color::Black());
+	shadow_->SetEnabled(false);
+	AddControl(shadow_);
 
-	urgoz_timer_ = new TimerLabel();
+	urgoz_timer_ = new TimerLabel(containerPanel_);
 	urgoz_timer_->SetText(L"");
 	urgoz_timer_->SetAnchor(AnchorStyles::Left);
-	urgoz_timer_->SetSize(WIDTH, URGOZ_HEIGHT);
-	urgoz_timer_->SetLocation(0, HEIGHT);
+	urgoz_timer_->SetSize(Drawing::SizeI(WIDTH, URGOZ_HEIGHT));
+	urgoz_timer_->SetLocation(Drawing::PointI(0, HEIGHT));
 	urgoz_timer_->SetFont(GuiUtils::getTBFont(16.0f, true));
 	urgoz_timer_->SetForeColor(theme.ForeColor);
 	urgoz_timer_->SetBackColor(Drawing::Color::Empty());
@@ -79,8 +67,17 @@ TimerWindow::TimerWindow() {
 	urgoz_timer_->SetVisible(false);
 	AddControl(urgoz_timer_);
 
-	SetFreeze(GWToolbox::instance().config().IniReadBool(MainWindow::IniSection(),
-		MainWindow::IniKeyFreeze(), false));
+	urgoz_shadow_ = new TimerLabel(containerPanel_);
+	urgoz_shadow_->SetText(L"");
+	urgoz_shadow_->SetAnchor(AnchorStyles::Left);
+	urgoz_shadow_->SetSize(Drawing::SizeI(WIDTH, URGOZ_HEIGHT));
+	urgoz_shadow_->SetLocation(Drawing::PointI(offsetX, HEIGHT + offsetY));
+	urgoz_shadow_->SetFont(GuiUtils::getTBFont(16.0f, true));
+	urgoz_shadow_->SetBackColor(Drawing::Color::Empty());
+	urgoz_shadow_->SetForeColor(Drawing::Color::Black());
+	urgoz_shadow_->SetEnabled(false);
+	urgoz_shadow_->SetVisible(false);
+	AddControl(urgoz_shadow_);
 
 	std::shared_ptr<TimerWindow> self = std::shared_ptr<TimerWindow>(this);
 	Show(self);
@@ -153,5 +150,4 @@ void TimerWindow::UpdateUI() {
 			}
 		}
 	}
-	
 }

@@ -23,7 +23,7 @@ namespace OSHGui
 		/**
 		 * Konstruktor der Klasse.
 		 */
-		ProgressBar();
+		ProgressBar(Control* parent);
 	
 		/**
 		 * Legt den minimalen Wert fest.

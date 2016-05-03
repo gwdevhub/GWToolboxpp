@@ -13,14 +13,11 @@
 #include "Size.hpp"
 #include <vector>
 
-namespace OSHGui
-{
-	namespace Drawing
-	{
-		struct OSHGUI_EXPORT ImageData
-		{
+namespace OSHGui {
+	namespace Drawing {
+		struct OSHGUI_EXPORT ImageData {
 			std::vector<uint8_t> Data;
-			SizeF Size;
+			SizeI Size;
 		};
 
 		ImageData OSHGUI_EXPORT LoadImageFromContainerToRGBABuffer(Misc::RawDataContainer &data);

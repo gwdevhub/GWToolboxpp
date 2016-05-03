@@ -12,158 +12,90 @@
 #include "DistanceWindow.h"
 #include "BondsWindow.h"
 
-using namespace OSHGui;
+#include "Settings.h"
 
-SettingsPanel::SettingsPanel() {
-}
+using namespace OSHGui;
 
 void SettingsPanel::BuildUI() {
 	Config& config = GWToolbox::instance().config();
 
 	location_current_map_ = GwConstants::MapID::None;
 	location_timer_ = TBTimer::init();
-	location_active_ = config.IniReadBool(MainWindow::IniSection(), MainWindow::IniKeySaveLocation(), false);
+	location_active_ = false;
 
-	const int item_width = GetWidth() - 2 * DefaultBorderPadding;
-	const int item_height = 25;
+	const int item_width = GetWidth() - 2 * Padding;
 
-	Label* version = new Label();
+	Label* version = new Label(this);
 	version->SetText(wstring(L"GWToolbox++ version ") + GWToolbox::Version);
-	version->SetLocation(GetWidth() / 2 - version->GetWidth() / 2, DefaultBorderPadding);
+	version->SetLocation(PointI(GetWidth() / 2 - version->GetWidth() / 2, Padding / 2));
 	AddControl(version);
 
-	Label* authors = new Label();
+	Label* authors = new Label(this);
 	authors->SetText(L"by Has and KAOS");
-	authors->SetLocation(GetWidth() / 2 - authors->GetWidth() / 2, version->GetBottom());
+	authors->SetFont(GuiUtils::getTBFont(8.0f, true));
+	authors->SetLocation(PointI(GetWidth() / 2 - authors->GetWidth() / 2, version->GetBottom()));
 	AddControl(authors);
 
-	CheckBox* tabsleft = new CheckBox();
-	tabsleft->SetText(L"Open tabs on the left");
-	tabsleft->SetLocation(DefaultBorderPadding, authors->GetBottom() + DefaultBorderPadding);
-	tabsleft->SetSize(item_width, item_height);
-	tabsleft->SetChecked(config.IniReadBool(MainWindow::IniSection(), 
-		MainWindow::IniKeyTabsLeft(), false));
-	tabsleft->GetCheckedChangedEvent() += CheckedChangedEventHandler([tabsleft](Control*) {
-		GWToolbox::instance().config().IniWriteBool(MainWindow::IniSection(),
-			MainWindow::IniKeyTabsLeft(), tabsleft->GetChecked());
-		GWToolbox::instance().main_window().SetPanelPositions(tabsleft->GetChecked());
-	});
-	AddControl(tabsleft);
+	ScrollPanel* panel = new ScrollPanel(this);
+	panel->SetLocation(PointI(Padding, authors->GetBottom() + Padding / 2));
+	panel->SetWidth(GetWidth() - Padding * 2);
+	panel->GetContainer()->SetBackColor(Color::Empty());
+	panel->SetAutoSize(true);
+	AddControl(panel);
 
-	CheckBox* freeze = new CheckBox();
-	freeze->SetText(L"Freeze info widget positions");
-	freeze->SetLocation(DefaultBorderPadding, tabsleft->GetBottom());
-	freeze->SetSize(item_width, item_height);
-	freeze->SetChecked(config.IniReadBool(MainWindow::IniSection(), 
-		MainWindow::IniKeyFreeze(), false));
-	freeze->GetCheckedChangedEvent() += CheckedChangedEventHandler([freeze](Control*) {
-		bool b = freeze->GetChecked();
-		GWToolbox::instance().config().IniWriteBool(MainWindow::IniSection(),
-			MainWindow::IniKeyFreeze(), b);
-		GWToolbox::instance().timer_window().SetFreeze(b);
-		GWToolbox::instance().bonds_window().SetFreze(b);
-		GWToolbox::instance().health_window().SetFreeze(b);
-		GWToolbox::instance().distance_window().SetFreeze(b);
-		GWToolbox::instance().party_damage().SetFreeze(b);
-	});
-	AddControl(freeze);
+	boolsettings.push_back(new OpenTabsLeft(panel->GetContainer()));
+	boolsettings.push_back(new FreezeWidgets(panel->GetContainer()));
+	boolsettings.push_back(new HideTargetWidgets(panel->GetContainer()));
+	boolsettings.push_back(new MinimizeToAltPos(panel->GetContainer()));
+	boolsettings.push_back(new AdjustOnResize(panel->GetContainer()));
+	boolsettings.push_back(new BorderlessWindow(panel->GetContainer()));
+	boolsettings.push_back(new SuppressMessages(panel->GetContainer()));
+	boolsettings.push_back(new TickWithPcons(panel->GetContainer()));
+	boolsettings.push_back(new OpenTemplateLinks(panel->GetContainer()));
+	boolsettings.push_back(new SaveLocationData(panel->GetContainer()));
 
-	CheckBox* hidetarget = new CheckBox();
-	hidetarget->SetText(L"Hide target windows");
-	hidetarget->SetLocation(DefaultBorderPadding, freeze->GetBottom());
-	hidetarget->SetSize(item_width, item_height);
-	hidetarget->SetChecked(config.IniReadBool(MainWindow::IniSection(), 
-		MainWindow::IniKeyHideTarget(), false));
-	hidetarget->GetCheckedChangedEvent() += CheckedChangedEventHandler([hidetarget](Control*) {
-		bool hide = hidetarget->GetChecked();
-		GWToolbox::instance().health_window().SetHideTarget(hide);
-		GWToolbox::instance().distance_window().SetHideTarget(hide);
-		GWToolbox::instance().config().IniWriteBool(MainWindow::IniSection(),
-			MainWindow::IniKeyHideTarget(), hide);
-	});
-	AddControl(hidetarget);
+	for (size_t i = 0; i < boolsettings.size(); ++i) {
+		boolsettings[i]->SetWidth(panel->GetContainer()->GetWidth());
+		if (i == 0) {
+			boolsettings[i]->SetLocation(PointI(0, 0));
+		} else {
+			boolsettings[i]->SetLocation(PointI(0, boolsettings[i - 1]->GetBottom() + Padding));
+		}
+		panel->AddControl(boolsettings[i]);
+	}
 
-	CheckBox* minimizealtpos = new CheckBox();
-	minimizealtpos->SetText(L"Minimize to different position");
-	minimizealtpos->SetLocation(DefaultBorderPadding, hidetarget->GetBottom());
-	minimizealtpos->SetSize(item_width, item_height);
-	minimizealtpos->SetChecked(config.IniReadBool(MainWindow::IniSection(),
-		MainWindow::IniKeyMinAltPos(), false));
-	minimizealtpos->GetCheckedChangedEvent() += CheckedChangedEventHandler([minimizealtpos](Control*) {
-		bool enabled = minimizealtpos->GetChecked();
-		GWToolbox::instance().main_window().set_use_minimized_alt_pos(enabled);
-		GWToolbox::instance().config().IniWriteBool(MainWindow::IniSection(),
-			MainWindow::IniKeyMinAltPos(), enabled);
-	});
-	AddControl(minimizealtpos);
-
-	CheckBox* tickwithpcons = new CheckBox();
-	tickwithpcons->SetText(L"Tick with pcon status");
-	tickwithpcons->SetLocation(DefaultBorderPadding, minimizealtpos->GetBottom());
-	tickwithpcons->SetSize(item_width, item_height);
-	tickwithpcons->SetChecked(config.IniReadBool(MainWindow::IniSection(), 
-		MainWindow::IniKeyTickWithPcons(), false));
-	tickwithpcons->GetCheckedChangedEvent() += CheckedChangedEventHandler([tickwithpcons](Control*) {
-		bool enabled = tickwithpcons->GetChecked();
-		GWToolbox::instance().main_window().set_tick_with_pcons(enabled);
-		GWToolbox::instance().config().IniWriteBool(MainWindow::IniSection(),
-			MainWindow::IniKeyTickWithPcons(), enabled);
-	});
-	AddControl(tickwithpcons);
-
-	CheckBox* savelocation = new CheckBox();
-	savelocation->SetText(L"Save location data");
-	savelocation->SetLocation(DefaultBorderPadding, tickwithpcons->GetBottom());
-	savelocation->SetSize(item_width, item_height);
-	savelocation->SetChecked(location_active_);
-	savelocation->GetCheckedChangedEvent() += CheckedChangedEventHandler(
-		[savelocation, this](Control*) {
-		location_active_ = savelocation->GetChecked();
-		GWToolbox::instance().config().IniWriteBool(MainWindow::IniSection(),
-			MainWindow::IniKeySaveLocation(), location_active_);
-	});
-	AddControl(savelocation);
-
-	bool openlink_active = config.IniReadBool(MainWindow::IniSection(), MainWindow::IniKeyOpenLinks(), true);
-	GWCA::Chat().SetOpenLinks(openlink_active);
-	CheckBox* openlinks = new CheckBox();
-	openlinks->SetText(L"Open web links in templates");
-	openlinks->SetLocation(DefaultBorderPadding, savelocation->GetBottom());
-	openlinks->SetSize(item_width, item_height);
-	openlinks->SetChecked(openlink_active);
-	openlinks->GetCheckedChangedEvent() += CheckedChangedEventHandler(
-		[openlinks, this](Control*) {
-		bool active = openlinks->GetChecked();
-		GWCA::Chat().SetOpenLinks(active);
-		GWToolbox::instance().config().IniWriteBool(MainWindow::IniSection(),
-			MainWindow::IniKeyOpenLinks(), active);
-	});
-	AddControl(openlinks);
-
-
-	Button* folder = new Button();
+	Button* folder = new Button(this);
 	folder->SetText(L"Open Settings Folder");
-	folder->SetSize(item_width, item_height);
-	folder->SetLocation(DefaultBorderPadding, GetHeight() - DefaultBorderPadding - folder->GetHeight());
+	folder->SetSize(SizeI(item_width, GuiUtils::ROW_HEIGHT));
+	folder->SetLocation(PointI(Padding, GetHeight() - Padding - folder->GetHeight()));
 	folder->GetClickEvent() += ClickEventHandler([](Control*) {
 		CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 		ShellExecuteW(NULL, L"open", GuiUtils::getSettingsFolder().c_str(), NULL, NULL, SW_SHOWNORMAL);
 	});
 	AddControl(folder);
 
-	Button* website = new Button();
+	Button* website = new Button(this);
 	website->SetText(L"Open GWToolbox++ Website");
-	website->SetSize(item_width, item_height);
-	website->SetLocation(DefaultBorderPadding, folder->GetTop() - DefaultBorderPadding - website->GetHeight());
+	website->SetSize(SizeI(item_width, GuiUtils::ROW_HEIGHT));
+	website->SetLocation(PointI(Padding, folder->GetTop() - Padding - website->GetHeight()));
 	website->GetClickEvent() += ClickEventHandler([](Control*) {
 		CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 		ShellExecuteW(NULL, L"open", GWToolbox::Host, NULL, NULL, SW_SHOWNORMAL);
 	});
 	AddControl(website);
+
+	panel->SetHeight(website->GetTop() - authors->GetBottom() - Padding);
+}
+
+void SettingsPanel::ApplySettings() {
+	for (BoolSetting* setting : boolsettings) {
+		setting->ApplySetting(setting->ReadSetting());
+	}
 }
 
 
 void SettingsPanel::MainRoutine() {
+	// save location data
 	if (location_active_ && TBTimer::diff(location_timer_) > 1000) {
 		location_timer_ = TBTimer::init();
 		if (GWCA::Map().GetInstanceType() == GwConstants::InstanceType::Explorable

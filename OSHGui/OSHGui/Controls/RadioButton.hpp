@@ -23,7 +23,7 @@ namespace OSHGui
 		/**
 		 * Konstruktor der Klasse.
 		 */
-		RadioButton();
+		RadioButton(Control* parent);
 		
 		/**
 		 * Legt den checked-Status fest und passt automatisch

@@ -17,141 +17,136 @@
 
 using namespace OSHGui;
 
-InfoPanel::InfoPanel() {
-}
-
 void InfoPanel::BuildUI() {
 
-	int full_item_width = GetWidth() - 2 * DefaultBorderPadding;
-	int half_item_width = (GetWidth() - 3 * DefaultBorderPadding) / 2;
+	int full_item_width = GuiUtils::ComputeWidth(GetWidth(), 1);
+	int half_item_width = GuiUtils::ComputeWidth(GetWidth(), 2);
 	int group_height = 42;
-	int item_height = 25;
-	int item1_x = DefaultBorderPadding;
-	int item2_x = half_item_width + 2 * DefaultBorderPadding;
+	int item1_x = GuiUtils::ComputeX(GetWidth(), 2, 0);
+	int item2_x = GuiUtils::ComputeX(GetWidth(), 2, 1);
 
 	using namespace OSHGui;
 
-	GroupBox* player = new GroupBox();
-	player->SetSize(full_item_width, group_height);
-	player->SetLocation(item1_x, DefaultBorderPadding);
+	GroupBox* player = new GroupBox(this);
+	player->SetSize(SizeI(full_item_width, group_height));
+	player->SetLocation(PointI(item1_x, Padding));
 	player->SetText(L" Player Position ");
 	player->SetBackColor(Drawing::Color::Empty());
 	AddControl(player);
-	Label* xtext = new Label();
-	xtext->SetLocation(DefaultBorderPadding, DefaultBorderPadding);
-	xtext->SetText(L"x:");
+	Label* xtext = new Label(player->GetContainer());
+	xtext->SetLocation(PointI(Padding, Padding));
+	xtext->SetText(L"x: ");
 	player->AddControl(xtext);
-	player_x = new Label();
-	player_x->SetLocation(xtext->GetRight(), DefaultBorderPadding);
+	player_x = new Label(player->GetContainer());
+	player_x->SetLocation(PointI(xtext->GetRight(), Padding));
 	player->AddControl(player_x);
-	Label* ytext = new Label();
-	ytext->SetLocation(player->GetWidth() / 2 + DefaultBorderPadding, DefaultBorderPadding);
-	ytext->SetText(L"y:");
+	Label* ytext = new Label(player->GetContainer());
+	ytext->SetLocation(PointI(player->GetWidth() / 2 + Padding, Padding));
+	ytext->SetText(L"y: ");
 	player->AddControl(ytext);
-	player_y = new Label();
-	player_y->SetLocation(ytext->GetRight(), DefaultBorderPadding);
+	player_y = new Label(player->GetContainer());
+	player_y->SetLocation(PointI(ytext->GetRight(), Padding));
 	player->AddControl(player_y);
 
-
-	GroupBox* target = new GroupBox();
-	target->SetSize(half_item_width, group_height);
-	target->SetLocation(item1_x, player->GetBottom() + DefaultBorderPadding);
+	GroupBox* target = new GroupBox(this);
+	target->SetSize(SizeI(half_item_width, group_height));
+	target->SetLocation(PointI(item1_x, player->GetBottom() + Padding));
 	target->SetText(L" Target ID ");
 	target->SetBackColor(Drawing::Color::Empty());
 	AddControl(target);
-	target_id = new Label();
-	target_id->SetLocation(DefaultBorderPadding, DefaultBorderPadding);
+	target_id = new Label(target->GetContainer());
+	target_id->SetLocation(PointI(Padding, Padding));
 	target->AddControl(target_id);
 
-	GroupBox* map = new GroupBox();
-	map->SetSize(half_item_width, group_height);
-	map->SetLocation(item2_x, player->GetBottom() + DefaultBorderPadding);
+	GroupBox* map = new GroupBox(this);
+	map->SetSize(SizeI(half_item_width, group_height));
+	map->SetLocation(PointI(item2_x, player->GetBottom() + Padding));
 	map->SetText(L" Map ID ");
 	map->SetBackColor(Drawing::Color::Empty());
 	AddControl(map);
-	map_id = new Label();
-	map_id->SetLocation(DefaultBorderPadding, DefaultBorderPadding);
+	map_id = new Label(map->GetContainer());
+	map_id->SetLocation(PointI(Padding, Padding));
 	map->AddControl(map_id);
 
-	GroupBox* item = new GroupBox();
-	item->SetSize(half_item_width, group_height);
-	item->SetLocation(item1_x, target->GetBottom() + DefaultBorderPadding);
+	GroupBox* item = new GroupBox(this);
+	item->SetSize(SizeI(half_item_width, group_height));
+	item->SetLocation(PointI(item1_x, target->GetBottom() + Padding));
 	item->SetText(L" First Item ID ");
 	item->SetBackColor(Drawing::Color::Empty());
 	AddControl(item);
-	item_id = new Label();
-	item_id->SetLocation(DefaultBorderPadding, DefaultBorderPadding);
+	item_id = new Label(item->GetContainer());
+	item_id->SetLocation(PointI(Padding, Padding));
 	item->AddControl(item_id);
 
-	GroupBox* dialog = new GroupBox();
-	dialog->SetSize(half_item_width, group_height);
-	dialog->SetLocation(item2_x, target->GetBottom() + DefaultBorderPadding);
+	GroupBox* dialog = new GroupBox(this);
+	dialog->SetSize(SizeI(half_item_width, group_height));
+	dialog->SetLocation(PointI(item2_x, target->GetBottom() + Padding));
 	dialog->SetText(L" Last Dialog ID ");
 	dialog->SetBackColor(Drawing::Color::Empty());
 	AddControl(dialog);
-	dialog_id = new Label();
-	dialog_id->SetLocation(DefaultBorderPadding, DefaultBorderPadding);
+	dialog_id = new Label(dialog->GetContainer());
+	dialog_id->SetLocation(PointI(Padding, Padding));
 	dialog->AddControl(dialog_id);
 
-	CheckBox* bonds = new CheckBox();
-	bonds->SetSize(half_item_width, item_height);
-	bonds->SetLocation(item1_x, dialog->GetBottom() + DefaultBorderPadding);
+	CheckBox* bonds = new CheckBox(this);
 	bonds->SetText(L"Bonds Monitor");
+	bonds->SetWidth(half_item_width);
+	bonds->SetLocation(PointI(item1_x, dialog->GetBottom() + Padding));
 	bonds->SetChecked(GWToolbox::instance().config().IniReadBool(
 		BondsWindow::IniSection(), BondsWindow::IniKeyShow(), false));
 	bonds->GetCheckedChangedEvent() += CheckedChangedEventHandler([bonds](Control*) {
 		GWToolbox& tb = GWToolbox::instance();
 		bool show = bonds->GetChecked();
-		tb.bonds_window().ShowWindow(show);
+		tb.bonds_window().SetVisible(show);
 		tb.config().IniWriteBool(BondsWindow::IniSection(), BondsWindow::IniKeyShow(), show);
 	});
 	AddControl(bonds);
 
-	CheckBox* targetHp = new CheckBox();
-	targetHp->SetSize(half_item_width, item_height);
-	targetHp->SetLocation(item1_x, bonds->GetBottom() + DefaultBorderPadding);
+	CheckBox* targetHp = new CheckBox(this);
 	targetHp->SetText(L"Target Health");
+	targetHp->SetWidth(half_item_width);
+	targetHp->SetLocation(PointI(item1_x, bonds->GetBottom() + Padding));
 	targetHp->SetChecked(GWToolbox::instance().config().IniReadBool(
 		HealthWindow::IniSection(), HealthWindow::IniKeyShow(), false));
 	targetHp->GetCheckedChangedEvent() += CheckedChangedEventHandler([targetHp](Control*) {
 		GWToolbox& tb = GWToolbox::instance();
 		bool show = targetHp->GetChecked();
-		tb.health_window().ShowWindow(show);
+		tb.health_window().SetViewable(show);
 		tb.config().IniWriteBool(HealthWindow::IniSection(), HealthWindow::IniKeyShow(), show);
 	});
 	AddControl(targetHp);
 
-	CheckBox* distance = new CheckBox();
-	distance->SetSize(half_item_width, item_height);
-	distance->SetLocation(item1_x, targetHp->GetBottom() + DefaultBorderPadding);
+	CheckBox* distance = new CheckBox(this);
 	distance->SetText(L"Target Distance");
+	distance->SetWidth(half_item_width);
+	distance->SetLocation(PointI(item1_x, targetHp->GetBottom() + Padding));
 	distance->SetChecked(GWToolbox::instance().config().IniReadBool(
 		DistanceWindow::IniSection(), DistanceWindow::IniKeyShow(), false));
 	distance->GetCheckedChangedEvent() += CheckedChangedEventHandler([distance](Control*) {
 		GWToolbox& tb = GWToolbox::instance();
 		bool show = distance->GetChecked();
-		tb.distance_window().ShowWindow(show);
+		tb.distance_window().SetViewable(show);
 		tb.config().IniWriteBool(DistanceWindow::IniSection(), DistanceWindow::IniKeyShow(), show);
 	});
 	AddControl(distance);
 
-	CheckBox* damage = new CheckBox();
-	damage->SetSize(half_item_width, item_height);
-	damage->SetLocation(item1_x, distance->GetBottom() + DefaultBorderPadding);
+	CheckBox* damage = new CheckBox(this);
 	damage->SetText(L"Party Damage");
+	damage->SetWidth(half_item_width);
+	damage->SetLocation(PointI(item1_x, distance->GetBottom() + Padding));
 	damage->SetChecked(GWToolbox::instance().config().IniReadBool(
 		PartyDamage::IniSection(), PartyDamage::InikeyShow(), false));
 	damage->GetCheckedChangedEvent() += CheckedChangedEventHandler([damage](Control*) {
 		GWToolbox& tb = GWToolbox::instance();
 		bool show = damage->GetChecked();
-		tb.party_damage().ShowWindow(show);
+		tb.party_damage().SetVisible(show);
 		tb.config().IniWriteBool(PartyDamage::IniSection(), PartyDamage::InikeyShow(), show);
 	});
 	AddControl(damage);
 
-	Button* xunlai = new Button();
-	xunlai->SetSize(full_item_width, 30);
-	xunlai->SetLocation(item1_x, GetHeight() - xunlai->GetHeight() - DefaultBorderPadding);
+	Button* xunlai = new Button(this);
+	xunlai->SetSize(SizeI(full_item_width, GuiUtils::BUTTON_HEIGHT));
+	xunlai->SetLocation(PointI(item1_x, GetHeight() - xunlai->GetHeight() - Padding));
 	xunlai->SetText(L"Open Xunlai Chest");
 	xunlai->GetClickEvent() += ClickEventHandler([](Control*) {
 		if (GWCA::Map().GetInstanceType() == GwConstants::InstanceType::Outpost) {

@@ -20,13 +20,11 @@
 #endif
 #endif
 
-namespace OSHGui
-{
+namespace OSHGui {
 	/**
 	 * Gibt Konstanten an, die definieren, welche Schaltflächen der MessageBox angezeigt werden.
 	 */
-	enum class MessageBoxButtons
-	{
+	enum class MessageBoxButtons {
 		/**
 		 * Das Meldungsfeld enthält die Schaltfläche OK.
 		 */
@@ -53,8 +51,7 @@ namespace OSHGui
 		RetryCancel
 	};
 
-	class OSHGUI_EXPORT MessageBox
-	{
+	class OSHGUI_EXPORT MessageBox {
 	public:
 		static void Show(const Misc::UnicodeString &text);
 		static void Show(const Misc::UnicodeString &text, const Misc::UnicodeString &caption);
@@ -63,9 +60,8 @@ namespace OSHGui
 		static void ShowDialog(const Misc::UnicodeString &text, const Misc::UnicodeString &caption, const std::function<void(DialogResult result)> &closeFunction);
 		static void ShowDialog(const Misc::UnicodeString &text, const Misc::UnicodeString &caption, MessageBoxButtons buttons, const std::function<void(DialogResult result)> &closeFunction);
 
-	private:
-		class MessageBoxForm : public Form
-		{
+	public:
+		class MessageBoxForm : public Form {
 		private:
 			void InitializeComponent(const Misc::UnicodeString &text, const Misc::UnicodeString &caption, MessageBoxButtons buttons);
 			void AddButtons(const std::vector<Misc::UnicodeString> &label, const std::vector<ClickEventHandler> &eventHandler);

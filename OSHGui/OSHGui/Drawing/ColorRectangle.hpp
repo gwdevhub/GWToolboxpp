@@ -11,15 +11,12 @@
 
 #include "Color.hpp"
 
-namespace OSHGui
-{
-	namespace Drawing
-	{
+namespace OSHGui {
+	namespace Drawing {
 		/**
 		 * Definiert ein Rechteckt, das an allen Ecken verschiedene Farben haben kann.
 		 */
-		class OSHGUI_EXPORT ColorRectangle
-		{
+		class OSHGUI_EXPORT ColorRectangle {
 		public:
 			/**
 			 * Legt die Farbe aller Ecken fest.

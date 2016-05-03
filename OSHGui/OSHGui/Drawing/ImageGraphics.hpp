@@ -37,14 +37,14 @@ namespace OSHGui
 			 * \param origin
 			 * \param size
 			 */
-			void DrawRectangle(const ColorRectangle &color, const PointF &origin, const SizeF &size);
+			void DrawRectangle(const ColorRectangle &color, const PointI &origin, const SizeI &size);
 			/**
 			 * Füllt das Rechteck.
 			 *
 			 * \param color
 			 * \param rectangle
 			 */
-			void DrawRectangle(const ColorRectangle &color, const RectangleF &rectangle);
+			void DrawRectangle(const ColorRectangle &color, const RectangleI &rectangle);
 			/**
 			 * Füllt die Textur mit einem Farbverlauf.
 			 *
@@ -52,7 +52,7 @@ namespace OSHGui
 			 * \param origin
 			 * \param size
 			 */
-			void FillRectangle(const ColorRectangle &colors, const PointF &origin, const SizeF &size);
+			void FillRectangle(const ColorRectangle &colors, const PointI &origin, const SizeI &size);
 			/**
 			 * Füllt die Textur mit einem Farbverlauf.
 			 *
@@ -60,7 +60,7 @@ namespace OSHGui
 			 * \param origin
 			 * \param size
 			 */
-			void FillRectangle(const ColorRectangle &colors, const RectangleF &rectangle);
+			void FillRectangle(const ColorRectangle &colors, const RectangleI &rectangle);
 			/**
 			 * Füllt den Bereich mit der Farbe, der zwischen den Ecken des Polygons liegt.
 			 *

@@ -15,10 +15,8 @@
 #include <vector>
 #include <map>
 
-namespace OSHGui
-{
-	namespace Drawing
-	{
+namespace OSHGui {
+	namespace Drawing {
 		class Direct3D9Texture;
 		class Direct3D9TextureTarget;
 		class Direct3D9GeometryBuffer;
@@ -26,8 +24,7 @@ namespace OSHGui
 		/**
 		 * Die Direct3D9 Variante des Renderer.
 		 */
-		class OSHGUI_EXPORT Direct3D9Renderer : public Renderer
-		{
+		class OSHGUI_EXPORT Direct3D9Renderer : public Renderer {
 		public:
 			/**
 			 * Konstruktor der Klasse.
@@ -68,20 +65,20 @@ namespace OSHGui
 			 * \return umgewandelte Größe
 			 * \sa SupportsNonSquareTexture(), SupportsNPOTTextures()
 			 */
-			SizeF GetAdjustedSize(const SizeF &size);
+			SizeI GetAdjustedSize(const SizeI &size);
 
 			virtual RenderTargetPtr& GetDefaultRenderTarget() override;
 			virtual GeometryBufferPtr CreateGeometryBuffer() override;
 			virtual TextureTargetPtr CreateTextureTarget() override;
 			virtual TexturePtr CreateTexture() override;
 			virtual TexturePtr CreateTexture(const Misc::AnsiString &filename) override;
-			virtual TexturePtr CreateTexture(const SizeF &size) override;
+			virtual TexturePtr CreateTexture(const SizeI &size) override;
 
 			virtual void BeginRendering() override;
 			virtual void EndRendering() override;
 			void UpdateSize() { SetDisplaySize(GetViewportSize()); }
-			virtual void SetDisplaySize(const SizeF &sz) override;
-			virtual const SizeF& GetDisplaySize() const override;
+			virtual void SetDisplaySize(const SizeI &sz) override;
+			virtual const SizeI& GetDisplaySize() const override;
 			virtual const PointF& GetDisplayDPI() const override;
 			virtual uint32_t GetMaximumTextureSize() const override;
 
@@ -91,14 +88,14 @@ namespace OSHGui
 			 *
 			 * \return Größe des Viewport
 			 */
-			SizeF GetViewportSize();
+			SizeI GetViewportSize();
 			/**
 			 * Berechnet die nächste Zweierpotenz, falss \a size keine Zweierpotenz ist.
 			 *
 			 * \param size
 			 * \return nächste Zweierpotenz
 			 */
-			float GetSizeNextPOT(float size) const;
+			unsigned int GetSizeNextPOT(unsigned int size) const;
 
 			/**
 			 * Entfernt ungültige Referenzen zu Objekten, für die ein Reset ausgeführt werden muss.
@@ -107,7 +104,7 @@ namespace OSHGui
 
 			LPDIRECT3DDEVICE9 device;
 			
-			SizeF displaySize;
+			SizeI displaySize;
 			PointF displayDPI;
 			
 			RenderTargetPtr defaultTarget;

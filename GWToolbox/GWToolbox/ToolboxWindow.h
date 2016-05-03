@@ -6,7 +6,7 @@ class ToolboxWindow : public OSHGui::Form {
 public:
 	class DragButton : public OSHGui::Button {
 	public:
-		DragButton() {
+		DragButton(OSHGui::Control* parent) : OSHGui::Button(parent) {
 			isFocusable_ = false;
 			drag_ = false;
 		}
@@ -27,23 +27,21 @@ public:
 	// Update and do everything else. DO NOT TOUCH USER INTERFACE.
 	virtual void MainRoutine() = 0;
 
-	void ResizeUI(OSHGui::Drawing::SizeI before, 
-		OSHGui::Drawing::SizeI after);
+	void ResizeUI(OSHGui::Drawing::SizeI before, OSHGui::Drawing::SizeI after);
 
-	virtual void ShowWindow(bool show) {
-		SetVisible(show);
-		containerPanel_->SetVisible(show);
-		for (Control* c : GetControls()) c->SetVisible(show);
+	virtual void SetViewable(bool viewable) { 
+		isViewable_ = viewable; 
+		if (!viewable && isVisible_) Control::SetVisible(false);
 	}
+	virtual void SetVisible(bool visible) override {
+		if (visible && isViewable_) Control::SetVisible(true);
+		else Control::SetVisible(false);
+	}
+
 
 	virtual void SetSize(const OSHGui::Drawing::SizeI &size) override {
 		OSHGui::Control::SetSize(size);
 		containerPanel_->SetSize(size);
-	}
-
-	virtual void DrawSelf(OSHGui::Drawing::RenderContext &context) override {
-		OSHGui::Control::DrawSelf(context);
-		containerPanel_->Render();
 	}
 
 	virtual void SetBackColor(const OSHGui::Drawing::Color& color) override {
@@ -52,6 +50,8 @@ public:
 
 protected:
 	virtual void PopulateGeometry() override {}
+
+	bool isViewable_;	// if true, the control can be set visible
 
 private:
 	static const OSHGui::Drawing::PointI DefaultLocation;

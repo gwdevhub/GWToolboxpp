@@ -12,10 +12,8 @@
 #include "../Drawing/Point.hpp"
 #include "../Drawing/Size.hpp"
 
-namespace OSHGui
-{
-	class Intersection
-	{
+namespace OSHGui {
+	class Intersection {
 	public:
 		/**
 		 * Prüft, ob sich der Punkt test innerhalb des von location und size aufgespannten Rechtecks liegt.
@@ -24,8 +22,18 @@ namespace OSHGui
 		 * \param size
 		 * \param test
 		 */
-		static bool TestRectangle(const Drawing::PointF &location, const Drawing::SizeF &size, const Drawing::PointF &test)
-		{
+		static bool TestRectangleF(const Drawing::PointF &location, 
+			const Drawing::SizeF &size, 
+			const Drawing::PointF &test) {
+
+			return (test.X >= location.X && test.X < location.X + size.Width)
+				&& (test.Y >= location.Y && test.Y < location.Y + size.Height);
+		}
+
+		static bool TestRectangleI(const Drawing::PointI &location,
+			const Drawing::SizeI &size,
+			const Drawing::PointI &test) {
+
 			return (test.X >= location.X && test.X < location.X + size.Width)
 				&& (test.Y >= location.Y && test.Y < location.Y + size.Height);
 		}

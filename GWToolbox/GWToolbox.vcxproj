@@ -99,6 +99,7 @@
     <ClInclude Include="GWToolbox\DistanceWindow.h" />
     <ClInclude Include="GWToolbox\EditBuild.h" />
     <ClInclude Include="GWToolbox\PartyDamage.h" />
+    <ClInclude Include="GWToolbox\Settings.h" />
     <ClInclude Include="GWToolbox\ToolboxWindow.h" />
     <ClInclude Include="GWToolbox\GuiUtils.h" />
     <ClInclude Include="GWToolbox\GWToolbox.h" />

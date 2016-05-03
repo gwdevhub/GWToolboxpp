@@ -82,6 +82,7 @@ void GWToolbox::Exec() {
 	LOG("Installing input event handler\n");
 	HWND gw_window_handle = GWCA::MemoryMgr::GetGWWindowHandle();
 	OldWndProc = SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)SafeWndProc);
+	LOG("oldwndproc %X\n", OldWndProc);
 	LOG("Installed input event handler\n");
 
 	input.SetKeyboardInputEnabled(true);
@@ -94,6 +95,7 @@ void GWToolbox::Exec() {
 	while (!must_self_destruct_) { // main loop
 		if (app->HasBeenInitialized() && initialized_) {
 			__try {
+				chat_commands_->MainRoutine();
 				main_window_->MainRoutine();
 				timer_window_->MainRoutine();
 				bonds_window_->MainRoutine();
@@ -168,13 +170,12 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 
 		switch (Message) {
 		// Send right mouse button events to gw (move view around) and don't mess with them
-		case WM_RBUTTONDOWN:
-		case WM_RBUTTONUP:
-			break;
+		case WM_RBUTTONDOWN: GWToolbox::instance().right_mouse_pressed_ = true; break;
+		case WM_RBUTTONUP: GWToolbox::instance().right_mouse_pressed_ = false; break;
 
 		// Send button up mouse events to both gw and osh, to avoid gw being stuck on mouse-down
 		case WM_LBUTTONUP:
-			input.ProcessMessage(&msg);
+			input.ProcessMouseMessage(&msg);
 			break;
 		
 		// Send other mouse events to osh first and consume them if used
@@ -182,7 +183,8 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 		case WM_LBUTTONDOWN:
 		case WM_LBUTTONDBLCLK:
 		case WM_MOUSEWHEEL:
-			if (input.ProcessMessage(&msg)) {
+			if (GWToolbox::instance().right_mouse_pressed_) break;
+			if (input.ProcessMouseMessage(&msg)) {
 				return true;
 			} else {
 				Application::Instance().clearFocus();
@@ -212,8 +214,12 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 			break;
 
 		case WM_SIZE:
-			GWToolbox::instance().must_resize_ = true;
 			GWToolbox::instance().new_screen_size_ = SizeI(LOWORD(lParam), HIWORD(lParam));
+			if (GWToolbox::instance().new_screen_size_ != GWToolbox::instance().old_screen_size_) GWToolbox::instance().must_resize_ = true;
+			break;
+
+		default:
+			//printf("0x%X, 0x%X, 0x%X\n", Message, wParam, lParam);
 			break;
 		}
 	}
@@ -236,10 +242,8 @@ void GWToolbox::CreateGui(IDirect3DDevice9* pDevice) {
 	LOG("Creating Renderer\n");
 	renderer = new Direct3D9Renderer(pDevice);
 
-	int old_width = std::lroundf(renderer->GetDisplaySize().Width);
-	int old_height = std::lroundf(renderer->GetDisplaySize().Height);
-	GWToolbox::instance().old_screen_size_ = Drawing::SizeI(old_width, old_height);
-	GWToolbox::instance().new_screen_size_ = Drawing::SizeI(old_width, old_height);
+	GWToolbox::instance().old_screen_size_ = renderer->GetDisplaySize();
+	GWToolbox::instance().new_screen_size_ = renderer->GetDisplaySize();
 
 	LOG("Creating OSH Application\n");
 	Application::Initialize(std::unique_ptr<Direct3D9Renderer>(renderer));
@@ -271,12 +275,15 @@ void GWToolbox::CreateGui(IDirect3DDevice9* pDevice) {
 		GWToolbox::instance().set_distance_window(new DistanceWindow());
 		LOG("Creating party damage window\n");
 		GWToolbox::instance().set_party_damage(new PartyDamage());
+		LOG("Applying settings\n");
+		GWToolbox::instance().main_window().settings_panel().ApplySettings();
 		LOG("Enabling app\n");
 		app.Enable();
 		GWToolbox::instance().set_initialized();
 		LOG("Gui Created\n");
 		LOG("Saving theme\n");
 		GWToolbox::instance().SaveTheme();
+
 	} catch (Misc::FileNotFoundException e) {
 		LOG("Error: file not found %s\n", e.what());
 		GWToolbox::instance().StartSelfDestruct();
@@ -305,7 +312,6 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 
 		D3DVIEWPORT9 viewport;
 		pDevice->GetViewport(&viewport);
-
 		Drawing::PointI location = tb.main_window().GetLocation();
 		Drawing::RectangleI size = tb.main_window().GetSize();
 
@@ -364,7 +370,7 @@ void GWToolbox::UpdateUI() {
 }
 
 void GWToolbox::ResizeUI() {
-	if (initialized_) {
+	if (initialized_ && adjust_on_resize_) {
 		main_window_->ResizeUI(old_screen_size_, new_screen_size_);
 		timer_window_->ResizeUI(old_screen_size_, new_screen_size_);
 		health_window_->ResizeUI(old_screen_size_, new_screen_size_);

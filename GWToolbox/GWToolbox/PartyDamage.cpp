@@ -24,7 +24,7 @@ PartyDamage::PartyDamage() {
 	Config& config = GWToolbox::instance().config();
 	int x = config.IniReadLong(PartyDamage::IniSection(), PartyDamage::IniKeyX(), 400);
 	int y = config.IniReadLong(PartyDamage::IniSection(), PartyDamage::IniKeyY(), 100);
-	SetLocation(x, y);
+	SetLocation(PointI(x, y));
 
 	line_height_ = GuiUtils::GetPartyHealthbarHeight();
 	SetSize(Drawing::SizeI(ABS_WIDTH + PERC_WIDTH, line_height_ * MAX_PLAYERS));
@@ -53,22 +53,22 @@ PartyDamage::PartyDamage() {
 		damage[i].recent_damage = 0;
 		damage[i].last_damage = TBTimer::init();
 
-		bar[i] = new Panel();
-		bar[i]->SetSize(WIDTH, line_height_);
-		bar[i]->SetLocation(0, i * line_height_);
+		bar[i] = new Panel(containerPanel_);
+		bar[i]->SetSize(SizeI(WIDTH, line_height_));
+		bar[i]->SetLocation(PointI(0, i * line_height_));
 		bar[i]->SetBackColor(bartheme.BackColor);
 		AddControl(bar[i]);
 
-		recent[i] = new Panel();
-		recent[i]->SetSize(WIDTH, RECENT_HEIGHT);
-		recent[i]->SetLocation(0, (i + 1) * line_height_ - RECENT_HEIGHT);
+		recent[i] = new Panel(containerPanel_);
+		recent[i]->SetSize(SizeI(WIDTH, RECENT_HEIGHT));
+		recent[i]->SetLocation(PointI(0, (i + 1) * line_height_ - RECENT_HEIGHT));
 		recent[i]->SetBackColor(bartheme.ForeColor);
 		AddControl(recent[i]);
 
-		absolute[i] = new DragButton();
+		absolute[i] = new DragButton(containerPanel_);
 		absolute[i]->SetText(L"0 %");
-		absolute[i]->SetSize(ABS_WIDTH, line_height_ - RECENT_HEIGHT / 2);
-		absolute[i]->SetLocation(0, i * line_height_);
+		absolute[i]->SetSize(SizeI(ABS_WIDTH, line_height_ - RECENT_HEIGHT / 2));
+		absolute[i]->SetLocation(PointI(0, i * line_height_));
 		absolute[i]->SetFont(GuiUtils::getTBFont(fontsize, true));
 		absolute[i]->SetBackColor(Drawing::Color::Empty());
 		absolute[i]->SetForeColor(theme.ForeColor);
@@ -77,10 +77,10 @@ PartyDamage::PartyDamage() {
 		});
 		AddControl(absolute[i]);
 
-		percent[i] = new DragButton();
+		percent[i] = new DragButton(containerPanel_);
 		percent[i]->SetText(L"");
-		percent[i]->SetSize(PERC_WIDTH, line_height_ - RECENT_HEIGHT / 2);
-		percent[i]->SetLocation(ABS_WIDTH, i * line_height_);
+		percent[i]->SetSize(SizeI(PERC_WIDTH, line_height_ - RECENT_HEIGHT / 2));
+		percent[i]->SetLocation(PointI(ABS_WIDTH, i * line_height_));
 		percent[i]->SetFont(GuiUtils::getTBFont(fontsize, true));
 		percent[i]->SetBackColor(Drawing::Color::Empty());
 		percent[i]->SetForeColor(theme.ForeColor);
@@ -90,13 +90,11 @@ PartyDamage::PartyDamage() {
 		AddControl(percent[i]);
 	}
 
-	bool show = config.IniReadBool(PartyDamage::IniSection(), PartyDamage::InikeyShow(), false);
-	ShowWindow(show);
-
-	SetFreeze(config.IniReadBool(MainWindow::IniSection(), MainWindow::IniKeyFreeze(), false));
-
 	std::shared_ptr<PartyDamage> self = std::shared_ptr<PartyDamage>(this);
 	Form::Show(self);
+
+	bool show = config.IniReadBool(PartyDamage::IniSection(), PartyDamage::InikeyShow(), false);
+	SetVisible(show);
 
 	LoadIni();
 }
@@ -293,16 +291,16 @@ void PartyDamage::UpdateUI() {
 		if (max > 0) {
 			part_of_max = (float)(damage[i].damage) / max;
 		}
-		bar[i]->SetSize(std::lround(WIDTH * part_of_max), line_height_);
-		bar[i]->SetLocation(std::lround(WIDTH * (1 - part_of_max)), i * line_height_);
+		bar[i]->SetSize(SizeI(std::lround(WIDTH * part_of_max), line_height_));
+		bar[i]->SetLocation(PointI(std::lround(WIDTH * (1 - part_of_max)), i * line_height_));
 
 		float part_of_recent = 0;
 		if (max_recent > 0) {
 			part_of_recent = (float)(damage[i].recent_damage) / max_recent;
 		}
-		recent[i]->SetSize(std::lround(WIDTH * part_of_recent), RECENT_HEIGHT);
-		recent[i]->SetLocation(std::lround(WIDTH * (1 - part_of_recent)),
-			(i + 1) * line_height_ - RECENT_HEIGHT);
+		recent[i]->SetSize(SizeI(std::lround(WIDTH * part_of_recent), RECENT_HEIGHT));
+		recent[i]->SetLocation(PointI(std::lround(WIDTH * (1 - part_of_recent)),
+			(i + 1) * line_height_ - RECENT_HEIGHT));
 
 		Drawing::Color inactive = labelcolor - Drawing::Color(0.0f, 0.3f, 0.3f, 0.3f);
 		if (damage[i].damage == 0 
@@ -366,6 +364,7 @@ void PartyDamage::Reset() {
 }
 
 void PartyDamage::SetFreeze(bool b) {
+	Control::SetEnabled(!b);
 	containerPanel_->SetEnabled(!b);
 	for (int i = 0; i < MAX_PLAYERS; ++i) {
 		absolute[i]->SetEnabled(!b);

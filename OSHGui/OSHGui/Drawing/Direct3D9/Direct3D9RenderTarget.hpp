@@ -17,13 +17,10 @@
 
 #include <d3dx9.h>
 
-namespace OSHGui
-{
-	namespace Drawing
-	{
+namespace OSHGui {
+	namespace Drawing {
 		template <typename T = RenderTarget>
-		class Direct3D9RenderTarget : public T
-		{
+		class Direct3D9RenderTarget : public T {
 		public:
 			//---------------------------------------------------------------------------
 			//Constructor
@@ -32,62 +29,52 @@ namespace OSHGui
 				: owner(_owner),
 				  area(0, 0, 0, 0),
 				  viewDistance(0),
-				  matrixValid(false)
-			{
+				  matrixValid(false) {
 			
 			}
 			//---------------------------------------------------------------------------
 			//Getter/Setter
 			//---------------------------------------------------------------------------
-			void SetArea(const RectangleF &_area) override
-			{
+			void SetArea(const RectangleI &_area) override {
 				area = _area;
 				matrixValid = false;
 			}
 			//---------------------------------------------------------------------------
-			const RectangleF& GetArea() const override
-			{
+			const RectangleI& GetArea() const override {
 				return area;
 			}
 			//---------------------------------------------------------------------------
 			//Runtime-Functions
 			//---------------------------------------------------------------------------
-			void Draw(const GeometryBuffer &buffer) override
-			{
+			void Draw(const GeometryBuffer &buffer) override {
 				buffer.Draw();
 			}
 			//---------------------------------------------------------------------------
-			void Draw(const RenderQueue &queue) override
-			{
+			void Draw(const RenderQueue &queue) override {
 				queue.Draw();
 			}
 			//---------------------------------------------------------------------------
-			void Activate() override
-			{
-				if (!matrixValid)
-				{
+			void Activate() override {
+				if (!matrixValid) {
 					UpdateMatrix();
 				}
 
 				D3DVIEWPORT9 vp;
 				SetupViewport(vp);
 				owner.GetDevice()->SetViewport(&vp);
-
 				owner.GetDevice()->SetTransform(D3DTS_PROJECTION, &matrix);
 			}
 			//---------------------------------------------------------------------------
-			void Deactivate() override
-			{
+			void Deactivate() override {
 			
 			}
 			//---------------------------------------------------------------------------
 
 		protected:
-			void UpdateMatrix() const
-			{
+			void UpdateMatrix() const {
 				const float fov = 0.523598776f;
-				const float width = area.GetWidth();
-				const float height = area.GetHeight();
+				const float width = static_cast<float>(area.GetWidth());
+				const float height = static_cast<float>(area.GetHeight());
 				const float aspect = width / height;
 				const float halfWidth = width * 0.5f;
 				const float halfHeight = height * 0.5f;
@@ -99,12 +86,12 @@ namespace OSHGui
 
 				D3DXMATRIX tmp;
 				D3DXMatrixMultiply(&matrix, D3DXMatrixLookAtRH(&matrix, &eye, &at, &up), D3DXMatrixPerspectiveFovRH(&tmp, fov, aspect, viewDistance * 0.5f, viewDistance * 2.0f));
+				//D3DXMatrixIdentity(&matrix);
 
 				matrixValid = true;
 			}
 			//---------------------------------------------------------------------------
-			void SetupViewport(D3DVIEWPORT9 &viewport) const
-			{
+			void SetupViewport(D3DVIEWPORT9 &viewport) const {
 				viewport.X = area.GetLeft();
 				viewport.Y = area.GetTop();
 				viewport.Width = area.GetWidth();
@@ -116,7 +103,7 @@ namespace OSHGui
 
 			Direct3D9Renderer &owner;
 			
-			RectangleF area;
+			RectangleI area;
 			
 			mutable D3DXMATRIX matrix;
 			mutable bool matrixValid;

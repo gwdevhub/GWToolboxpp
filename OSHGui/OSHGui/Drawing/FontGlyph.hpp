@@ -3,15 +3,12 @@
 
 #include "Image.hpp"
 
-namespace OSHGui
-{
-	namespace Drawing
-	{
+namespace OSHGui {
+	namespace Drawing {
 		/**
 		 * Interne Klasse, die einen einzelen Schriftglyph repräsentiert.
 		 */
-		class OSHGUI_EXPORT FontGlyph
-		{
+		class OSHGUI_EXPORT FontGlyph {
 		public:
 			/**
 			 * Konstruktor der Klasse.
@@ -23,9 +20,7 @@ namespace OSHGui
 			FontGlyph(float _advance = 0.0f, ImagePtr _image = nullptr, bool _valid = false)
 				: image(std::move(_image)),
 				  advance(_advance),
-				  valid(_valid)
-			{
-
+				  valid(_valid) {
 			}
 
 			/**
@@ -33,8 +28,7 @@ namespace OSHGui
 			 *
 			 * \return das Image-Objekt
 			 */
-			const ImagePtr& GetImage() const
-			{
+			const ImagePtr& GetImage() const {
 				return image;
 			}
 
@@ -42,21 +36,18 @@ namespace OSHGui
 			 * Ruft die scalierte Größe des Glyphs ab.
 			 *
 			 */
-			SizeF GetSize(float scaleX, float scaleY) const
-			{
-				return SizeF(GetWidth(scaleX), GetHeight(scaleY));
+			SizeI GetSize() const {
+				return SizeI(GetWidth(), GetHeight());
 			}
 
-			//! Return the scaled width of the glyph.
-			float GetWidth(float scaleX) const
-			{
-				return image->GetSize().Width * scaleX;
+			//! Return the width of the glyph.
+			int GetWidth() const {
+				return image->GetSize().Width;
 			}
 
-			//! Return the scaled height of the glyph.
-			float GetHeight(float scaleY) const
-			{
-				return image->GetSize().Height * scaleY;
+			//! Return the height of the glyph.
+			int GetHeight() const {
+				return image->GetSize().Height;
 			}
 
 			/*!
@@ -66,9 +57,8 @@ namespace OSHGui
 				The rendered advance value is the total number of pixels from the
 				current pen position that will be occupied by this glyph when rendered.
 			*/
-			float GetRenderedAdvance(float scaleX) const
-			{
-				return (image->GetSize().Width + image->GetOffset().X) * scaleX;
+			int GetRenderedAdvance() const {
+				return (image->GetSize().Width + image->GetOffset().X);
 			}
 
 			/*!
@@ -80,32 +70,27 @@ namespace OSHGui
 				is not always the same as the glyph image width or rendererd advance,
 				since it allows for horizontal overhangs.
 			*/
-			float GetAdvance(float scaleX = 1.0f) const
-			{
-				return advance * scaleX;
+			float GetAdvance() const {
+				return advance;
 			}
 
 			//! Set the horizontal advance value for the glyph.
-			void SetAdvance(float advance)
-			{
+			void SetAdvance(float advance) {
 				this->advance = advance;
 			}
 
 			//! Set the CEGUI::Image object rendered for this glyph.
-			void SetImage(const ImagePtr &image)
-			{
+			void SetImage(const ImagePtr &image) {
 				this->image = image;
 			}
 
 			//! mark the FontGlyph as valid
-			void SetValid(bool valid)
-			{
+			void SetValid(bool valid) {
 				this->valid = valid;
 			}
 
 			//! return whether the FontGlyph is marked as valid
-			bool IsValid() const
-			{
+			bool IsValid() const {
 				return valid;
 			}
 

@@ -11,12 +11,9 @@
 
 #include "../Exports.hpp"
 
-namespace OSHGui
-{
-	namespace Drawing
-	{
-		class OSHGUI_EXPORT Vector
-		{
+namespace OSHGui {
+	namespace Drawing {
+		class OSHGUI_EXPORT Vector {
 		public:
 			Vector();
 			Vector(float x, float y, float z);

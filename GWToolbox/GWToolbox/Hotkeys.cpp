@@ -17,27 +17,27 @@
 using namespace GWCA;
 using namespace OSHGui;
 
-TBHotkey::TBHotkey(Key key, Key modifier, bool active, wstring ini_section)
-	: active_(active), key_(key), modifier_(modifier), ini_section_(ini_section) {
+TBHotkey::TBHotkey(OSHGui::Control* parent, Key key, Key modifier, bool active, wstring ini_section)
+	: OSHGui::Panel(parent), active_(active), key_(key), modifier_(modifier), ini_section_(ini_section) {
 
 	pressed_ = false;
 
 	SetBackColor(Drawing::Color::Empty());
-	SetSize(WIDTH, HEIGHT);
+	SetSize(SizeI(WIDTH, HEIGHT));
 
-	CheckBox* checkbox = new CheckBox();
+	CheckBox* checkbox = new CheckBox(this);
 	checkbox->SetChecked(active);
 	checkbox->SetText(L"");
-	checkbox->SetLocation(HOTKEY_X, HOTKEY_Y + 5);
+	checkbox->SetLocation(PointI(HOTKEY_X, HOTKEY_Y + 5));
 	checkbox->GetCheckedChangedEvent() += CheckedChangedEventHandler([this, checkbox, ini_section](Control*) {
 		this->set_active(checkbox->GetChecked());
 		GWToolbox::instance().config().IniWriteBool(ini_section.c_str(), TBHotkey::IniKeyActive(), checkbox->GetChecked());
 	});
 	AddControl(checkbox);
 
-	HotkeyControl* hotkey_button = new HotkeyControl();
-	hotkey_button->SetSize(WIDTH - checkbox->GetRight() - 60 - HSPACE * 2, LINE_HEIGHT);
-	hotkey_button->SetLocation(checkbox->GetRight() + HSPACE, HOTKEY_Y);
+	HotkeyControl* hotkey_button = new HotkeyControl(this);
+	hotkey_button->SetSize(SizeI(WIDTH - checkbox->GetRight() - 60 - HSPACE * 2, LINE_HEIGHT));
+	hotkey_button->SetLocation(PointI(checkbox->GetRight() + HSPACE, HOTKEY_Y));
 	hotkey_button->SetHotkey(key);
 	hotkey_button->SetHotkeyModifier(modifier);
 	hotkey_button->GetFocusGotEvent() += FocusGotEventHandler([hotkey_button](Control*) {
@@ -63,10 +63,10 @@ TBHotkey::TBHotkey(Key key, Key modifier, bool active, wstring ini_section)
 	});
 	AddControl(hotkey_button);
 
-	Button* run_button = new Button();
+	Button* run_button = new Button(this);
 	run_button->SetText(L"Run");
-	run_button->SetSize(60, LINE_HEIGHT);
-	run_button->SetLocation(WIDTH - 60, HOTKEY_Y);
+	run_button->SetSize(SizeI(60, LINE_HEIGHT));
+	run_button->SetLocation(PointI(WIDTH - 60, HOTKEY_Y));
 	run_button->GetClickEvent() += ClickEventHandler([this](Control*) {
 		this->exec();
 	});
@@ -76,19 +76,19 @@ TBHotkey::TBHotkey(Key key, Key modifier, bool active, wstring ini_section)
 void TBHotkey::PopulateGeometry() {
 	Panel::PopulateGeometry();
 	Graphics g(*geometry_);
-	g.DrawLine(GetForeColor(), PointF(0.0f, -3.0f), PointF((float)WIDTH, -3.0f));
+	g.DrawLine(GetForeColor(), PointI(0, 1), PointI(WIDTH, 1));
 }
 
-HotkeySendChat::HotkeySendChat(Key key, Key modifier, bool active, wstring ini_section,
-	wstring msg, wchar_t channel)
-	: TBHotkey(key, modifier, active, ini_section), msg_(msg), channel_(channel) {
+HotkeySendChat::HotkeySendChat(OSHGui::Control* parent, Key key, Key modifier, 
+	bool active, wstring ini_section, wstring msg, wchar_t channel)
+	: TBHotkey(parent, key, modifier, active, ini_section), msg_(msg), channel_(channel) {
 	
-	Label* label = new Label();
-	label->SetLocation(ITEM_X, LABEL_Y);
+	Label* label = new Label(this);
+	label->SetLocation(PointI(ITEM_X, LABEL_Y));
 	label->SetText(L"Send Chat");
 	AddControl(label);
 
-	ComboBox* combo = new ComboBox();
+	ComboBox* combo = new ComboBox(this);
 	combo->AddItem(L"/");
 	combo->AddItem(L"!");
 	combo->AddItem(L"@");
@@ -96,8 +96,8 @@ HotkeySendChat::HotkeySendChat(Key key, Key modifier, bool active, wstring ini_s
 	combo->AddItem(L"$");
 	combo->AddItem(L"%");
 	combo->SetSelectedIndex(ChannelToIndex(channel));
-	combo->SetSize(30, LINE_HEIGHT);
-	combo->SetLocation(label->GetRight() + HSPACE, ITEM_Y);
+	combo->SetSize(SizeI(30, LINE_HEIGHT));
+	combo->SetLocation(PointI(label->GetRight() + HSPACE, ITEM_Y));
 	combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
 		[this, combo, ini_section](Control*) {
 		wchar_t channel = this->IndexToChannel(combo->GetSelectedIndex());
@@ -106,12 +106,12 @@ HotkeySendChat::HotkeySendChat(Key key, Key modifier, bool active, wstring ini_s
 			this->IniKeyChannel(), wstring(1, channel).c_str());
 		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
-	AddControl(combo);
+	controls_.push_front(combo);
 	
-	TextBox* text_box = new TextBox();
+	TextBox* text_box = new TextBox(this);
 	text_box->SetText(msg);
-	text_box->SetSize(WIDTH - combo->GetRight() - HSPACE, LINE_HEIGHT);
-	text_box->SetLocation(combo->GetRight() + HSPACE, ITEM_Y);
+	text_box->SetSize(SizeI(WIDTH - combo->GetRight() - HSPACE, LINE_HEIGHT));
+	text_box->SetLocation(PointI(combo->GetRight() + HSPACE, ITEM_Y));
 	text_box->GetTextChangedEvent() += TextChangedEventHandler(
 		[this, text_box, ini_section](Control*) {
 		wstring text = text_box->GetText();
@@ -157,27 +157,27 @@ wchar_t HotkeySendChat::IndexToChannel(int index) {
 	}
 }
 
-HotkeyUseItem::HotkeyUseItem(Key key, Key modifier, bool active, wstring ini_section,
-	UINT item_id_, wstring item_name_) :
-	TBHotkey(key, modifier, active, ini_section), 
+HotkeyUseItem::HotkeyUseItem(OSHGui::Control* parent, Key key, Key modifier, 
+	bool active, wstring ini_section, UINT item_id_, wstring item_name_) :
+	TBHotkey(parent, key, modifier, active, ini_section), 
 	item_id_(item_id_), 
 	item_name_(item_name_) {
 
-	Label* label = new Label();
-	label->SetLocation(ITEM_X, LABEL_Y);
+	Label* label = new Label(this);
+	label->SetLocation(PointI(ITEM_X, LABEL_Y));
 	label->SetText(L"Use Item");
 	AddControl(label);
 
-	Label* label_id = new Label();
-	label_id->SetLocation(label->GetRight() + HSPACE, LABEL_Y);
+	Label* label_id = new Label(this);
+	label_id->SetLocation(PointI(label->GetRight() + HSPACE, LABEL_Y));
 	label_id->SetText(L"ID:");
 	AddControl(label_id);
 
 	int width_left = WIDTH - label_id->GetRight();
-	TextBox* id_box = new TextBox();
+	TextBox* id_box = new TextBox(this);
 	id_box->SetText(to_wstring(item_id_));
-	id_box->SetSize(width_left / 2 - HSPACE / 2, LINE_HEIGHT);
-	id_box->SetLocation(label_id->GetRight(), ITEM_Y);
+	id_box->SetSize(SizeI(width_left / 2 - HSPACE / 2, LINE_HEIGHT));
+	id_box->SetLocation(PointI(label_id->GetRight(), ITEM_Y));
 	id_box->GetTextChangedEvent() += TextChangedEventHandler(
 		[this, id_box, ini_section](Control*) {
 		try {
@@ -202,10 +202,10 @@ HotkeyUseItem::HotkeyUseItem(Key key, Key modifier, bool active, wstring ini_sec
 	});
 	AddControl(id_box);
 
-	TextBox* name_box = new TextBox();
+	TextBox* name_box = new TextBox(this);
 	name_box->SetText(item_name_.c_str());
-	name_box->SetSize(width_left / 2 - HSPACE / 2, LINE_HEIGHT);
-	name_box->SetLocation(id_box->GetRight() + HSPACE , ITEM_Y);
+	name_box->SetSize(SizeI(width_left / 2 - HSPACE / 2, LINE_HEIGHT));
+	name_box->SetLocation(PointI(id_box->GetRight() + HSPACE , ITEM_Y));
 	name_box->GetTextChangedEvent() += TextChangedEventHandler(
 		[this, name_box, ini_section](Control*) {
 		wstring text = name_box->GetText();
@@ -223,20 +223,20 @@ HotkeyUseItem::HotkeyUseItem(Key key, Key modifier, bool active, wstring ini_sec
 	AddControl(name_box);
 }
 
-HotkeyDropUseBuff::HotkeyDropUseBuff(Key key, Key modifier, bool active, 
-	wstring ini_section, GwConstants::SkillID id) :
-TBHotkey(key, modifier, active, ini_section), id_(id) {
+HotkeyDropUseBuff::HotkeyDropUseBuff(OSHGui::Control* parent, Key key, Key modifier, 
+	bool active, wstring ini_section, GwConstants::SkillID id) :
+	TBHotkey(parent, key, modifier, active, ini_section), id_(id) {
 
-	Label* label = new Label();
-	label->SetLocation(ITEM_X, LABEL_Y);
+	Label* label = new Label(this);
+	label->SetLocation(PointI(ITEM_X, LABEL_Y));
 	label->SetText(L"Drop / Use Buff");
 	AddControl(label);
 
-	ComboBox* combo = new ComboBox();
+	ComboBox* combo = new ComboBox(this);
 	combo->AddItem(L"Recall");
 	combo->AddItem(L"UA");
-	combo->SetSize(WIDTH - label->GetRight() - HSPACE, LINE_HEIGHT);
-	combo->SetLocation(label->GetRight() + HSPACE, ITEM_Y);
+	combo->SetSize(SizeI(WIDTH - label->GetRight() - HSPACE, LINE_HEIGHT));
+	combo->SetLocation(PointI(label->GetRight() + HSPACE, ITEM_Y));
 	switch (id) {
 	case GwConstants::SkillID::Recall:
 		combo->SetSelectedIndex(0);
@@ -258,7 +258,7 @@ TBHotkey(key, modifier, active, ini_section), id_(id) {
 		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
 	combo_ = combo;
-	AddControl(combo);
+	controls_.push_front(combo);
 }
 
 GwConstants::SkillID HotkeyDropUseBuff::IndexToSkillID(int index) {
@@ -281,19 +281,20 @@ GwConstants::SkillID HotkeyDropUseBuff::IndexToSkillID(int index) {
 	}
 }
 
-HotkeyToggle::HotkeyToggle(Key key, Key modifier, bool active, wstring ini_section, long toggle_id)
-	: TBHotkey(key, modifier, active, ini_section) {
+HotkeyToggle::HotkeyToggle(OSHGui::Control* parent, Key key, Key modifier, 
+	bool active, wstring ini_section, long toggle_id)
+	: TBHotkey(parent, key, modifier, active, ini_section) {
 
 	target_ = static_cast<HotkeyToggle::Toggle>(toggle_id);
 
-	Label* label = new Label();
-	label->SetLocation(ITEM_X, LABEL_Y);
+	Label* label = new Label(this);
+	label->SetLocation(PointI(ITEM_X, LABEL_Y));
 	label->SetText(L"Toggle...");
 	AddControl(label);
 
-	ComboBox* combo = new ComboBox();
-	combo->SetSize(WIDTH - label->GetRight() - HSPACE, LINE_HEIGHT);
-	combo->SetLocation(label->GetRight() + HSPACE, ITEM_Y);
+	ComboBox* combo = new ComboBox(this);
+	combo->SetSize(SizeI(WIDTH - label->GetRight() - HSPACE, LINE_HEIGHT));
+	combo->SetLocation(PointI(label->GetRight() + HSPACE, ITEM_Y));
 	combo->AddItem(L"Clicker");
 	combo->AddItem(L"Pcons");
 	combo->AddItem(L"Coin drop");
@@ -307,22 +308,23 @@ HotkeyToggle::HotkeyToggle(Key key, Key modifier, bool active, wstring ini_secti
 			this->IniKeyToggleID(), index);
 		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
-	AddControl(combo);
+	controls_.push_front(combo);
 }
 
-HotkeyAction::HotkeyAction(Key key, Key modifier, bool active, wstring ini_section, long action_id)
-	: TBHotkey(key, modifier, active, ini_section) {
+HotkeyAction::HotkeyAction(OSHGui::Control* parent, Key key, Key modifier, 
+	bool active, wstring ini_section, long action_id)
+	: TBHotkey(parent, key, modifier, active, ini_section) {
 
 	action_ = static_cast<HotkeyAction::Action>(action_id);
 
-	Label* label = new Label();
-	label->SetLocation(ITEM_X, LABEL_Y);
+	Label* label = new Label(this);
+	label->SetLocation(PointI(ITEM_X, LABEL_Y));
 	label->SetText(L"Execute...");
 	AddControl(label);
 
-	ComboBox* combo = new ComboBox();
-	combo->SetSize(WIDTH - label->GetRight() - HSPACE, LINE_HEIGHT);
-	combo->SetLocation(label->GetRight() + HSPACE, ITEM_Y);
+	ComboBox* combo = new ComboBox(this);
+	combo->SetSize(SizeI(WIDTH - label->GetRight() - HSPACE, LINE_HEIGHT));
+	combo->SetLocation(PointI(label->GetRight() + HSPACE, ITEM_Y));
 	combo->AddItem(L"Open Xunlai Chest");
 	combo->AddItem(L"Open Locked Chest");
 	combo->AddItem(L"Drop Gold Coin");
@@ -336,28 +338,28 @@ HotkeyAction::HotkeyAction(Key key, Key modifier, bool active, wstring ini_secti
 			this->IniKeyActionID(), index);
 		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
-	AddControl(combo);
+	controls_.push_front(combo);
 }
 
-HotkeyTarget::HotkeyTarget(Key key, Key modifier, bool active, wstring ini_section, 
-	UINT targetID, wstring target_name)
-	: TBHotkey(key, modifier, active, ini_section), id_(targetID), name_(target_name) {
+HotkeyTarget::HotkeyTarget(OSHGui::Control* parent, Key key, Key modifier, 
+	bool active, wstring ini_section, UINT targetID, wstring target_name)
+	: TBHotkey(parent, key, modifier, active, ini_section), id_(targetID), name_(target_name) {
 
-	Label* label = new Label();
-	label->SetLocation(ITEM_X, LABEL_Y);
+	Label* label = new Label(this);
+	label->SetLocation(PointI(ITEM_X, LABEL_Y));
 	label->SetText(L"Target");
 	AddControl(label);
 
-	Label* label_id = new Label();
-	label_id->SetLocation(label->GetRight() + HSPACE, LABEL_Y);
+	Label* label_id = new Label(this);
+	label_id->SetLocation(PointI(label->GetRight() + HSPACE, LABEL_Y));
 	label_id->SetText(L"ID:");
 	AddControl(label_id);
 
 	int width_left = WIDTH - label_id->GetRight();
-	TextBox* id_box = new TextBox();
+	TextBox* id_box = new TextBox(this);
 	id_box->SetText(to_wstring(id_));
-	id_box->SetSize(width_left / 2 - HSPACE / 2, LINE_HEIGHT);
-	id_box->SetLocation(label_id->GetRight(), ITEM_Y);
+	id_box->SetSize(SizeI(width_left / 2 - HSPACE / 2, LINE_HEIGHT));
+	id_box->SetLocation(PointI(label_id->GetRight(), ITEM_Y));
 	id_box->GetTextChangedEvent() += TextChangedEventHandler(
 		[this, id_box, ini_section](Control*) {
 		try {
@@ -382,10 +384,10 @@ HotkeyTarget::HotkeyTarget(Key key, Key modifier, bool active, wstring ini_secti
 	});
 	AddControl(id_box);
 
-	TextBox* name_box = new TextBox();
+	TextBox* name_box = new TextBox(this);
 	name_box->SetText(name_.c_str());
-	name_box->SetSize(width_left / 2 - HSPACE / 2, LINE_HEIGHT);
-	name_box->SetLocation(id_box->GetRight() + HSPACE, ITEM_Y);
+	name_box->SetSize(SizeI(width_left / 2 - HSPACE / 2, LINE_HEIGHT));
+	name_box->SetLocation(PointI(id_box->GetRight() + HSPACE, ITEM_Y));
 	name_box->GetTextChangedEvent() += TextChangedEventHandler(
 		[this, name_box, ini_section](Control*) {
 		wstring text = name_box->GetText();
@@ -403,27 +405,27 @@ HotkeyTarget::HotkeyTarget(Key key, Key modifier, bool active, wstring ini_secti
 	AddControl(name_box);
 }
 
-HotkeyMove::HotkeyMove(Key key, Key modifier, bool active, wstring ini_section,
-	float x, float y, wstring name)
-	: TBHotkey(key, modifier, active, ini_section), x_(x), y_(y), name_(name) {
+HotkeyMove::HotkeyMove(OSHGui::Control* parent, Key key, Key modifier, 
+	bool active, wstring ini_section, float x, float y, wstring name)
+	: TBHotkey(parent, key, modifier, active, ini_section), x_(x), y_(y), name_(name) {
 
-	Label* label = new Label();
-	label->SetLocation(ITEM_X, LABEL_Y);
+	Label* label = new Label(this);
+	label->SetLocation(PointI(ITEM_X, LABEL_Y));
 	label->SetText(L"Move");
 	AddControl(label);
 
-	Label* label_x = new Label();
-	label_x->SetLocation(label->GetRight() + HSPACE, LABEL_Y);
+	Label* label_x = new Label(this);
+	label_x->SetLocation(PointI(label->GetRight() + HSPACE, LABEL_Y));
 	label_x->SetText(L"X");
 	AddControl(label_x);
 
 	std::wstringstream ss;
-	TextBox* box_x = new TextBox();
+	TextBox* box_x = new TextBox(this);
 	ss.clear();
 	ss << x;
 	box_x->SetText(ss.str());
-	box_x->SetSize(50, LINE_HEIGHT);
-	box_x->SetLocation(label_x->GetRight(), ITEM_Y);
+	box_x->SetSize(SizeI(50, LINE_HEIGHT));
+	box_x->SetLocation(PointI(label_x->GetRight(), ITEM_Y));
 	box_x->GetTextChangedEvent() += TextChangedEventHandler(
 		[this, box_x, ini_section](Control*) {
 		try {
@@ -448,17 +450,17 @@ HotkeyMove::HotkeyMove(Key key, Key modifier, bool active, wstring ini_section,
 	});
 	AddControl(box_x);
 
-	Label* label_y = new Label();
-	label_y->SetLocation(box_x->GetRight() + HSPACE, LABEL_Y);
+	Label* label_y = new Label(this);
+	label_y->SetLocation(PointI(box_x->GetRight() + HSPACE, LABEL_Y));
 	label_y->SetText(L"Y");
 	AddControl(label_y);
 
-	TextBox* box_y = new TextBox();
+	TextBox* box_y = new TextBox(this);
 	ss.clear();
 	ss << y;
 	box_y->SetText(ss.str());
-	box_y->SetSize(50, LINE_HEIGHT);
-	box_y->SetLocation(label_y->GetRight(), ITEM_Y);
+	box_y->SetSize(SizeI(50, LINE_HEIGHT));
+	box_y->SetLocation(PointI(label_y->GetRight(), ITEM_Y));
 	box_y->GetTextChangedEvent() += TextChangedEventHandler(
 		[this, box_y, ini_section](Control*) {
 		try {
@@ -483,10 +485,10 @@ HotkeyMove::HotkeyMove(Key key, Key modifier, bool active, wstring ini_section,
 	});
 	AddControl(box_y);
 
-	TextBox* name_box = new TextBox();
+	TextBox* name_box = new TextBox(this);
 	name_box->SetText(name_.c_str());
-	name_box->SetSize(WIDTH - box_y->GetRight() - HSPACE, LINE_HEIGHT);
-	name_box->SetLocation(box_y->GetRight() + HSPACE, ITEM_Y);
+	name_box->SetSize(SizeI(WIDTH - box_y->GetRight() - HSPACE, LINE_HEIGHT));
+	name_box->SetLocation(PointI(box_y->GetRight() + HSPACE, ITEM_Y));
 	name_box->GetTextChangedEvent() += TextChangedEventHandler(
 		[this, name_box, ini_section](Control*) {
 		wstring text = name_box->GetText();
@@ -504,24 +506,25 @@ HotkeyMove::HotkeyMove(Key key, Key modifier, bool active, wstring ini_section,
 	AddControl(name_box);
 }
 
-HotkeyDialog::HotkeyDialog(Key key, Key modifier, bool active, wstring ini_section, UINT id, wstring name)
-	: TBHotkey(key, modifier, active, ini_section), id_(id), name_(name) {
+HotkeyDialog::HotkeyDialog(OSHGui::Control* parent, Key key, Key modifier, 
+	bool active, wstring ini_section, UINT id, wstring name)
+	: TBHotkey(parent, key, modifier, active, ini_section), id_(id), name_(name) {
 
-	Label* label = new Label();
-	label->SetLocation(ITEM_X, LABEL_Y);
+	Label* label = new Label(this);
+	label->SetLocation(PointI(ITEM_X, LABEL_Y));
 	label->SetText(L"Dialog");
 	AddControl(label);
 
-	Label* label_id = new Label();
-	label_id->SetLocation(label->GetRight() + HSPACE, LABEL_Y);
+	Label* label_id = new Label(this);
+	label_id->SetLocation(PointI(label->GetRight() + HSPACE, LABEL_Y));
 	label_id->SetText(L"ID:");
 	AddControl(label_id);
 
 	int width_left = WIDTH - label_id->GetRight();
-	TextBox* id_box = new TextBox();
+	TextBox* id_box = new TextBox(this);
 	id_box->SetText(to_wstring(id_));
-	id_box->SetSize(width_left / 2 - HSPACE / 2, LINE_HEIGHT);
-	id_box->SetLocation(label_id->GetRight(), ITEM_Y);
+	id_box->SetSize(SizeI(width_left / 2 - HSPACE / 2, LINE_HEIGHT));
+	id_box->SetLocation(PointI(label_id->GetRight(), ITEM_Y));
 	id_box->GetTextChangedEvent() += TextChangedEventHandler(
 		[this, id_box, ini_section](Control*) {
 		try {
@@ -546,10 +549,10 @@ HotkeyDialog::HotkeyDialog(Key key, Key modifier, bool active, wstring ini_secti
 	});
 	AddControl(id_box);
 
-	TextBox* name_box = new TextBox();
+	TextBox* name_box = new TextBox(this);
 	name_box->SetText(name_.c_str());
-	name_box->SetSize(width_left / 2 - HSPACE / 2, LINE_HEIGHT);
-	name_box->SetLocation(id_box->GetRight() + HSPACE, ITEM_Y);
+	name_box->SetSize(SizeI(width_left / 2 - HSPACE / 2, LINE_HEIGHT));
+	name_box->SetLocation(PointI(id_box->GetRight() + HSPACE, ITEM_Y));
 	name_box->GetTextChangedEvent() += TextChangedEventHandler(
 		[this, name_box, ini_section](Control*) {
 		wstring text = name_box->GetText();
@@ -567,17 +570,18 @@ HotkeyDialog::HotkeyDialog(Key key, Key modifier, bool active, wstring ini_secti
 	AddControl(name_box);
 }
 
-HotkeyPingBuild::HotkeyPingBuild(Key key, Key modifier, bool active, wstring ini_section, long index)
-	: TBHotkey(key, modifier, active, ini_section), index_(index) {
+HotkeyPingBuild::HotkeyPingBuild(OSHGui::Control* parent, Key key, Key modifier, 
+	bool active, wstring ini_section, long index)
+	: TBHotkey(parent, key, modifier, active, ini_section), index_(index) {
 	
-	Label* label = new Label();
-	label->SetLocation(ITEM_X, LABEL_Y);
+	Label* label = new Label(this);
+	label->SetLocation(PointI(ITEM_X, LABEL_Y));
 	label->SetText(L"Ping...");
 	AddControl(label);
 
-	ComboBox* combo = new ComboBox();
-	combo->SetSize(WIDTH - label->GetRight() - HSPACE, LINE_HEIGHT);
-	combo->SetLocation(label->GetRight() + HSPACE, ITEM_Y);
+	ComboBox* combo = new ComboBox(this);
+	combo->SetSize(SizeI(WIDTH - label->GetRight() - HSPACE, LINE_HEIGHT));
+	combo->SetLocation(PointI(label->GetRight() + HSPACE, ITEM_Y));
 	for (int i = 0; i < BuildPanel::N_BUILDS; ++i) {
 		int index = i + 1;
 		wstring section = wstring(L"builds") + to_wstring(index);
@@ -594,7 +598,7 @@ HotkeyPingBuild::HotkeyPingBuild(Key key, Key modifier, bool active, wstring ini
 			this->IniKeyBuildIndex(), index);
 		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
-	AddControl(combo);
+	controls_.push_front(combo);
 }
 
 void HotkeyUseItem::exec() {

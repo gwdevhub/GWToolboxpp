@@ -13,10 +13,8 @@
 #include <stdarg.h>
 #include "../Exports.hpp"
 
-namespace OSHGui
-{
-	namespace Misc
-	{
+namespace OSHGui {
+	namespace Misc {
 		/**
 		 * Stellt Text als eine Reihe von Unicode-Zeichen dar.
 		 */
@@ -34,10 +32,8 @@ namespace OSHGui
 		 */
 		typedef char AnsiChar;
 		
-		namespace String
-		{
-			enum Latin1Category
-			{
+		namespace String {
+			enum Latin1Category {
 				Control,
 				Letter,
 				DecimalDigitNumber,
@@ -64,10 +60,8 @@ namespace OSHGui
 			 * \param c das Zeichen
 			 * \return die Latin1Category
 			 */
-			inline Latin1Category GetLatin1Category(const AnsiChar c)
-			{
-				static Latin1Category latin1Category[] =
-				{
+			inline Latin1Category GetLatin1Category(const AnsiChar c) {
+				static Latin1Category latin1Category[] = {
 					Control, Control, Control, Control, Control, Control, Control, Control, // 0000 - 0007
 					Control, Control, Control, Control, Control, Control, Control, Control, // 0008 - 000F
 					Control, Control, Control, Control, Control, Control, Control, Control, // 0010 - 0017
@@ -111,8 +105,7 @@ namespace OSHGui
 			 * \param c
 			 * \return
 			 */
-			inline bool IsAscii(const AnsiChar c)
-			{
+			inline bool IsAscii(const AnsiChar c) {
 				return c <= '\x7F';
 			}
 
@@ -122,10 +115,8 @@ namespace OSHGui
 			 * \param c
 			 * \return
 			 */
-			inline bool IsDigit(const AnsiChar c)
-			{
-				if (IsAscii(c))
-				{
+			inline bool IsDigit(const AnsiChar c) {
+				if (IsAscii(c)) {
 					return c >= '0' && c <= '9';
 				}
 				return GetLatin1Category(c) == DecimalDigitNumber;
@@ -137,14 +128,11 @@ namespace OSHGui
 			 * \param c
 			 * \return
 			 */
-			inline bool IsNumber(const AnsiChar c)
-			{
-				if (IsAscii(c))
-				{
+			inline bool IsNumber(const AnsiChar c) {
+				if (IsAscii(c)) {
 					return c >= '0' && c <= '9';
 				}
-				switch (GetLatin1Category(c))
-				{
+				switch (GetLatin1Category(c)) {
 					case DecimalDigitNumber:
 					case OtherNumber:
 						return true;
@@ -158,15 +146,12 @@ namespace OSHGui
 			 * \param c
 			 * \return
 			 */
-			inline bool IsLetter(const AnsiChar c)
-			{
-				if (IsAscii(c))
-				{
+			inline bool IsLetter(const AnsiChar c) {
+				if (IsAscii(c)) {
 					AnsiChar x = c | (char)0x20;
 					return (x >= 'a' && x <= 'z');
 				}
-				switch (GetLatin1Category(c))
-				{
+				switch (GetLatin1Category(c)) {
 					case UppercaseLetter:
 					case LowercaseLetter:
 						return true;
@@ -180,8 +165,7 @@ namespace OSHGui
 			 * \param c
 			 * \return
 			 */
-			inline bool IsWhiteSpace(const AnsiChar c)
-			{
+			inline bool IsWhiteSpace(const AnsiChar c) {
 				return ((c == ' ') || (c >= '\x09' && c <= '\x0d') || c == '\xa0' || c == '\x85');
 			}
 
@@ -191,10 +175,8 @@ namespace OSHGui
 			 * \param c
 			 * \return
 			 */
-			inline bool IsUpper(const AnsiChar c)
-			{
-				if (IsAscii(c))
-				{
+			inline bool IsUpper(const AnsiChar c) {
+				if (IsAscii(c)) {
 					return c >= 'A' && c <= 'Z';
 				}
 				return GetLatin1Category(c) == UppercaseLetter;
@@ -206,10 +188,8 @@ namespace OSHGui
 			 * \param c
 			 * \return
 			 */
-			inline bool IsLower(const AnsiChar c)
-			{
-				if (IsAscii(c))
-				{
+			inline bool IsLower(const AnsiChar c) {
+				if (IsAscii(c)) {
 					return c >= 'a' && c <= 'z';
 				}
 				return GetLatin1Category(c) == LowercaseLetter;
@@ -221,10 +201,8 @@ namespace OSHGui
 			 * \param c
 			 * \return
 			 */
-			inline bool IsSymbol(const AnsiChar c)
-			{
-				switch (GetLatin1Category(c))
-				{
+			inline bool IsSymbol(const AnsiChar c) {
+				switch (GetLatin1Category(c)) {
 					case OtherSymbol:
 					case ModifierSymbol:
 					case MathSymbol:
@@ -240,10 +218,8 @@ namespace OSHGui
 			 * \param c
 			 * \return
 			 */
-			inline bool IsPunctuation(const AnsiChar c)
-			{
-				switch (GetLatin1Category(c))
-				{
+			inline bool IsPunctuation(const AnsiChar c) {
+				switch (GetLatin1Category(c)) {
 					case ConnectorPunctuation:
 					case DashPunctuation:
 					case OpenPunctuation:
@@ -262,8 +238,7 @@ namespace OSHGui
 			 * \param c
 			 * \return
 			 */
-			inline bool IsSeperator(const AnsiChar c)
-			{
+			inline bool IsSeperator(const AnsiChar c) {
 				return c == '\x20' || c == '\xa0';
 			}
 
@@ -273,10 +248,8 @@ namespace OSHGui
 			 * \param c
 			 * \return
 			 */
-			inline bool IsLetterOrDigit(const AnsiChar c)
-			{
-				switch (GetLatin1Category(c))
-				{
+			inline bool IsLetterOrDigit(const AnsiChar c) {
+				switch (GetLatin1Category(c)) {
 					case UppercaseLetter:
 					case LowercaseLetter:
 					case DecimalDigitNumber:
@@ -291,8 +264,7 @@ namespace OSHGui
 			 * \param c
 			 * \return
 			 */
-			inline bool IsControl(const AnsiChar c)
-			{
+			inline bool IsControl(const AnsiChar c) {
 				return GetLatin1Category(c) == Control;
 			}
 
@@ -302,10 +274,8 @@ namespace OSHGui
 			 * \param ansi
 			 * \return unicode
 			 */
-			inline UnicodeString AnsiToUnicode(const AnsiString &ansi)
-			{
-				if (ansi.length() == 0)
-				{
+			inline UnicodeString AnsiToUnicode(const AnsiString &ansi) {
+				if (ansi.length() == 0) {
 					return L"";
 				}
 
@@ -321,10 +291,8 @@ namespace OSHGui
 			 * \param unicode
 			 * \return ansi
 			 */
-			inline AnsiString UnicodeToAnsi(const UnicodeString &unicode)
-			{
-				if (unicode.length() == 0)
-				{
+			inline AnsiString UnicodeToAnsi(const UnicodeString &unicode) {
+				if (unicode.length() == 0) {
 					return "";
 				}
 

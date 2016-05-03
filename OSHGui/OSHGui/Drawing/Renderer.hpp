@@ -15,10 +15,8 @@
 #include <cstdint>
 #include <memory>
 
-namespace OSHGui
-{
-	namespace Drawing
-	{
+namespace OSHGui {
+	namespace Drawing {
 		class Texture;
 		typedef std::shared_ptr<Texture> TexturePtr;
 		class TextureTarget;
@@ -31,8 +29,7 @@ namespace OSHGui
 		/**
 		 * Abstrakte Klasse zur Implementierung der Zeichensysteme.
 		 */
-		class OSHGUI_EXPORT Renderer
-		{
+		class OSHGUI_EXPORT Renderer {
 		public:
 			/**
 			 * Destruktor der Klasse.
@@ -81,7 +78,7 @@ namespace OSHGui
 			 * \param size
 			 * \return Textur
 			 */
-			virtual TexturePtr CreateTexture(const SizeF &size) = 0;
+			virtual TexturePtr CreateTexture(const SizeI &size) = 0;
 
 			/**
 			 * Erlaubt dem Renderer sich auf das Zeichnen vorzubereiten.
@@ -98,14 +95,14 @@ namespace OSHGui
 			 *
 			 * \param size
 			 */
-			virtual void SetDisplaySize(const SizeF &size) = 0;
+			virtual void SetDisplaySize(const SizeI &size) = 0;
 
 			/**
 			 * Ruft die Größe des Zeichenbereichs ab.
 			 *
 			 * \return Größe des Zeichenbereichs
 			 */
-			virtual const SizeF& GetDisplaySize() const = 0;
+			virtual const SizeI& GetDisplaySize() const = 0;
 
 			/**
 			 * Ruft die Auflösung der Zeichenfläche in DPI ab.

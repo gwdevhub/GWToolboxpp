@@ -38,8 +38,7 @@ class BondsWindow : public ToolboxWindow {
 		virtual void OnMouseUp(const OSHGui::MouseMessage &mouse) override;
 		virtual void OnMouseLeave(const OSHGui::MouseMessage &mouse) override;
 	public:
-		BondsMonitor(int img_size);
-		void DrawSelf(OSHGui::Drawing::RenderContext &context) override;
+		BondsMonitor(OSHGui::Control* parent, int img_size);
 		void SaveLocation();
 		void UpdateUI();
 		inline void SetFreeze(bool b) { freezed = b; }

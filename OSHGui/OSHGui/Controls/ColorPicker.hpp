@@ -32,7 +32,7 @@ namespace OSHGui
 		/**
 		 * Konstruktor der Klasse.
 		 */
-		ColorPicker();
+		ColorPicker(Control* parent);
 		
 		/**
 		 * Legt die Höhe und Breite des Steuerelements fest.

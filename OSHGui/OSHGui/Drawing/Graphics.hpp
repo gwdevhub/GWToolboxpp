@@ -14,147 +14,50 @@
 #include "Font.hpp"
 #include <vector>
 
-namespace OSHGui
-{
-	namespace Drawing
-	{
+namespace OSHGui {
+	namespace Drawing {
 		class Image;
 
-		class OSHGUI_EXPORT Graphics
-		{
+		class OSHGUI_EXPORT Graphics {
 		public:
 			Graphics(GeometryBuffer &buffer);
 			~Graphics();
 
-			/**
-			 * Legt die Farbe fest, mit der gezeichnet wird.
-			 *
-			 * \param color die Farbe
-			 */
-			void SetClip(const RectangleF &clip);
+			void SetClip(const RectangleI &clip);
 
-			/**
-			 * Löscht den Inhalt der Textur.
-			 */
 			void Clear();
 
 			void Rotate(const PointF &pivot, const Vector &angles);
 
-			void DrawLine(const Color &color, const PointF &from, const PointF &to);
-			/**
-			 * Füllt das Rechteck.
-			 *
-			 * \param color
-			 * \param origin
-			 * \param size
-			 */
-			void DrawRectangle(const Color &color, const PointF &origin, const SizeF &size);
-			/**
-			 * Füllt das Rechteck.
-			 *
-			 * \param color
-			 * \param rectangle
-			 */
-			void DrawRectangle(const Color &color, const RectangleF &rectangle);
-			/**
-			 * Füllt das Rechteck.
-			 *
-			 * \param color
-			 * \param rectangle
-			 */
-			void DrawRectangle(const Color &color, float x, float y, float width, float height);
-			/**
-			 * Füllt das Rechteck.
-			 *
-			 * \param color
-			 * \param origin
-			 * \param size
-			 */
-			void FillRectangle(const Color &color, const PointF &origin, const SizeF &size);
-			/**
-			 * Füllt das Rechteck.
-			 *
-			 * \param color
-			 * \param rectangle
-			 */
-			void FillRectangle(const Color &color, const RectangleF &rectangle);
-			/**
-			 * Füllt das Rechteck.
-			 *
-			 * \param color
-			 * \param rectangle
-			 */
-			void FillRectangle(const Color &color, float x, float y, float width, float height);
-			/**
-			 * Füllt die Textur mit einem Farbverlauf.
-			 *
-			 * \param colors die Eckfarben
-			 * \param origin
-			 * \param size
-			 */
-			void FillRectangleGradient(const ColorRectangle &colors, const PointF &origin, const SizeF &size);
-			/**
-			 * Füllt die Textur mit einem Farbverlauf.
-			 *
-			 * \param colors die Eckfarben
-			 * \param origin
-			 * \param size
-			 */
-			void FillRectangleGradient(const ColorRectangle &colors, const RectangleF &rectangle);
-			/**
-			 * Füllt die Textur mit einem Farbverlauf.
-			 *
-			 * \param colors die Eckfarben
-			 * \param origin
-			 * \param size
-			 */
-			void FillRectangleGradient(const ColorRectangle &colors, float x, float y, float width, float height);
-			/**
-			 * Füllt den Bereich mit der Farbe, der zwischen den Ecken des Polygons liegt.
-			 *
-			 * \param vertices
-			 */
-			void FillPolygon(const std::vector<PointF> &vertices, const Color &color);
-			/**
-			 * Füllt einen Kreis.
-			 *
-			 * \param color
-			 * \param origin
-			 * \param radius
-			 */
-			void FillCircle(const Color &color, const PointF &origin, float radius);
-			/**
-			 * Füllt einen Kreis.
-			 *
-			 * \param color
-			 * \param x
-			 * \param y
-			 * \param radius
-			 */
-			void FillCircle(const Color &color, float x, float y, float radius);
-			/**
-			 * Füllt eine Ellipse mit der entsprechenden Größe um den Mittelpunkt herum.
-			 *
-			 * \param color
-			 * \param origin
-			 * \param size
-			 */
-			void FillEllipse(const Color &color, const PointF &origin, const SizeF &size);
+			void DrawLine(const Color &color, const PointI &from, const PointI &to);
 
-			void FillEllipse(const Color &color, const RectangleF &region);
+			void DrawRectangle(const Color &color, const PointI &origin, const SizeI &size);
+			void DrawRectangle(const Color &color, const RectangleI &rectangle);
+			void DrawRectangle(const Color &color, int x, int y, int width, int height);
+			
+			void FillRectangle(const Color &color, int x, int y, int width, int height);
+			void FillRectangle(const Color &color, const PointI &origin, const SizeI &size);
+			void FillRectangle(const Color &color, const RectangleI &rectangle);
 
-			void FillEllipse(const Color &color, float x, float y, float width, float height);
+			void FillRectangleGradient(const ColorRectangle &colors, int x, int y, int width, int height);
+			void FillRectangleGradient(const ColorRectangle &colors, const PointI &origin, const SizeI &size);
+			void FillRectangleGradient(const ColorRectangle &colors, const RectangleI &rectangle);
 
-			void DrawString(const Misc::UnicodeString &text, const FontPtr &font, const Color &color, const PointF &origin);
+			void FillCircle(const Color &color, const PointI &origin, int radius);
+			void FillCircle(const Color &color, int x, int y, int radius);
 
-			void DrawString(const Misc::UnicodeString &text, const FontPtr &font, const Color &color, float x, float y);
+			void FillEllipse(const Color &color, const PointI &origin, const SizeI &size);
+			void FillEllipse(const Color &color, const RectangleI &region);
+			void FillEllipse(const Color &color, int x, int y, int width, int height);
+
+			void DrawString(const Misc::UnicodeString &text, const FontPtr &font, const Color &color, const PointI &origin);
+			void DrawString(const Misc::UnicodeString &text, const FontPtr &font, const Color &color, int x, int y);
 
 			void DrawImage(const std::shared_ptr<Image> &image, const ColorRectangle &color, const PointF &origin);
-
+			void DrawImage(const std::shared_ptr<Image> &image, const ColorRectangle &color, const PointI &origin, const RectangleI &clip);
 			void DrawImage(const std::shared_ptr<Image> &image, const ColorRectangle &color, const PointF &origin, const RectangleF &clip);
-
+			void DrawImage(const std::shared_ptr<Image> &image, const ColorRectangle &color, const RectangleI &area);
 			void DrawImage(const std::shared_ptr<Image> &image, const ColorRectangle &color, const RectangleF &area);
-
 			void DrawImage(const std::shared_ptr<Image> &image, const ColorRectangle &color, const RectangleF &area, const RectangleF &clip);
 
 		private:

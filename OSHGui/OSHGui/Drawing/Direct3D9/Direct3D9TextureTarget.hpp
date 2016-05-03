@@ -14,17 +14,14 @@
 
 #include <d3d9.h>
 
-namespace OSHGui
-{
-	namespace Drawing
-	{
+namespace OSHGui {
+	namespace Drawing {
 		class Direct3D9Texture;
 
 		/**
 		 * Die Direct3D9 Variante des TextureTarget.
 		 */
-		class OSHGUI_EXPORT Direct3D9TextureTarget : public Direct3D9RenderTarget<TextureTarget>
-		{
+		class OSHGUI_EXPORT Direct3D9TextureTarget : public Direct3D9RenderTarget<TextureTarget> {
 		public:
 			/**
 			 * Konstruktor der Klasse.
@@ -53,11 +50,11 @@ namespace OSHGui
 			
 			virtual void Clear() override;
 			virtual TexturePtr GetTexture() const override;
-			virtual void DeclareRenderSize(const SizeF& size) override;
+			virtual void DeclareRenderSize(const SizeI& size) override;
 			virtual bool IsRenderingInverted() const override;
 
 		protected:
-			static const float DefaultSize;
+			static const int DefaultSize;
 
 			/**
 			 * Erzeugt die Textur, auf die gezeichnet wird.

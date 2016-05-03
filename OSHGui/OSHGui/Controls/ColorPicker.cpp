@@ -10,8 +10,7 @@
 #include "../Drawing/CustomizableImage.hpp"
 #include "../Misc/Exceptions.hpp"
 
-namespace OSHGui
-{
+namespace OSHGui {
 	//---------------------------------------------------------------------------
 	//static attributes
 	//---------------------------------------------------------------------------
@@ -19,10 +18,10 @@ namespace OSHGui
 	//---------------------------------------------------------------------------
 	//Constructor
 	//---------------------------------------------------------------------------
-	ColorPicker::ColorPicker()
-		: drag_(false),
-		  color_(Drawing::Color::White())
-	{
+	ColorPicker::ColorPicker(Control* parent) : Control(parent),
+		drag_(false),
+		color_(Drawing::Color::White()) {
+
 		type_ = ControlType::ColorPicker;
 		
 		cursor_ = Cursors::Get(Cursors::Pipette);
@@ -34,20 +33,16 @@ namespace OSHGui
 	//---------------------------------------------------------------------------
 	//Getter/Setter
 	//---------------------------------------------------------------------------
-	void ColorPicker::SetSize(const Drawing::SizeI &size)
-	{
-		if (size_ != size)
-		{
+	void ColorPicker::SetSize(const Drawing::SizeI &size) {
+		if (size_ != size) {
 			Control::SetSize(size);
 
 			CreateGradientTexture();
 		}
 	}
 	//---------------------------------------------------------------------------
-	void ColorPicker::SetColor(const Drawing::Color &color)
-	{
-		if (color_ != color)
-		{
+	void ColorPicker::SetColor(const Drawing::Color &color) {
+		if (color_ != color) {
 			color_ = color;
 		
 			CalculateColorCursorLocation();
@@ -58,58 +53,47 @@ namespace OSHGui
 		}
 	}
 	//---------------------------------------------------------------------------
-	const Drawing::Color& ColorPicker::GetColor() const
-	{
+	const Drawing::Color& ColorPicker::GetColor() const {
 		return color_;
 	}
 	//---------------------------------------------------------------------------
-	Drawing::Color ColorPicker::GetColorAtPoint(const Drawing::PointI &point) const
-	{
+	Drawing::Color ColorPicker::GetColorAtPoint(const Drawing::PointI &point) const {
 		using namespace Drawing;
 
 		#ifndef OSHGUI_DONTUSEEXCEPTIONS
-		if (point.X < 0 || point.X >= GetWidth())
-		{
+		if (point.X < 0 || point.X >= GetWidth()) {
 			throw Misc::ArgumentOutOfRangeException("x");
 		}
-		if (point.Y < 0 || point.Y >= GetHeight())
-		{
+		if (point.Y < 0 || point.Y >= GetHeight()) {
 			throw Misc::ArgumentOutOfRangeException("y");
 		}
 		#endif
 
-		double hue = (1.0 / GetWidth()) * point.X;
+		float hue = (1.0f / GetWidth()) * point.X;
 		hue = hue - (int)hue;
-		double saturation, brightness;
-		if (point.Y <= GetHeight() / 2.0)
-		{
-			saturation = point.Y / (GetHeight() / 2.0);
+		float saturation, brightness;
+		if (point.Y <= GetHeight() / 2.0f) {
+			saturation = point.Y / (GetHeight() / 2.0f);
 			brightness = 1;
-		}
-		else
-		{
-			saturation = (GetHeight() / 2.0) / point.Y;
-			brightness = ((GetHeight() / 2.0) - point.Y + (GetHeight() / 2.0)) / point.Y;
+		} else {
+			saturation = (GetHeight() / 2.0f) / point.Y;
+			brightness = ((GetHeight() / 2.0f) - point.Y + (GetHeight() / 2.0f)) / point.Y;
 		}
 
 		return Color::FromHSB(hue, saturation, brightness);
 	}
 	//---------------------------------------------------------------------------
-	ColorChangedEvent& ColorPicker::GetColorChangedEvent()
-	{
+	ColorChangedEvent& ColorPicker::GetColorChangedEvent() {
 		return colorChangedEvent_;
 	}
 	//---------------------------------------------------------------------------
 	//Runtime-Functions
 	//---------------------------------------------------------------------------
-	void ColorPicker::CreateGradientTexture()
-	{
+	void ColorPicker::CreateGradientTexture() {
 		Drawing::CustomizableImage image(GetSize());
 		Drawing::PointI p;
-		for (p.Y = 0; p.Y < GetHeight(); ++p.Y)
-		{
-			for (p.X = 0; p.X < GetWidth(); ++p.X)
-			{
+		for (p.Y = 0; p.Y < GetHeight(); ++p.Y) {
+			for (p.X = 0; p.X < GetWidth(); ++p.X) {
 				image.SetRectangle(Drawing::RectangleI(p, Drawing::SizeI(1, 1)), GetColorAtPoint(p));
 			}
 		}
@@ -117,8 +101,7 @@ namespace OSHGui
 		gradient_ = Drawing::Image::FromCustomizableImage(image);
 	}
 	//---------------------------------------------------------------------------
-	void ColorPicker::CalculateColorCursorLocation()
-	{
+	void ColorPicker::CalculateColorCursorLocation() {
 		float red = color_.GetRed();
 		float green = color_.GetGreen();
 		float blue = color_.GetBlue();
@@ -135,13 +118,10 @@ namespace OSHGui
 		if (min < red)
 			min = red;
 		
-		if (max == min)
-		{
+		if (max == min) {
 			colorCursorLocation_.Left = 2;
 			colorCursorLocation_.Top = max > 0 ? 2 : GetHeight() - 2;
-		}
-		else
-		{
+		} else {
 			float f = max == red ? green - blue : max == green ? blue - red : red - green;
 			float i = max == red ? 3.0f : max == green ? 5.0f : 1.0f;
 			int hue = (int)std::floor((i - f / (min - max)) * 60) % 360;
@@ -149,47 +129,40 @@ namespace OSHGui
 			int val = (int)std::floor(min * 100);
 		 
 			colorCursorLocation_.Left = (int)(hue * (GetWidth() / 360.0f));
-			if (val == 100 && sat != 100)
-			{
+			if (val == 100 && sat != 100) {
 				colorCursorLocation_.Top = (int)((GetHeight() / 2.0f) - ((100 - sat) * (GetHeight() / 200.0f)));
-			}
-			else
-			{
+			} else {
 				colorCursorLocation_.Top = (int)(GetHeight() - (val * (GetHeight() / 200.0f)));
 			}
 		}
 	}
 	//---------------------------------------------------------------------------
-	void ColorPicker::PopulateGeometry()
-	{
+	void ColorPicker::PopulateGeometry() {
 		using namespace Drawing;
 
 		Graphics g(*geometry_);
 
-		g.DrawImage(gradient_, Color::White(), RectangleF(PointF(0, 0), GetSize()));
+		g.DrawImage(gradient_, Color::White(), RectangleI(PointI(0, 0), GetSize()));
 
-		g.FillRectangle(Color::Black(), RectangleF(colorCursorLocation_ - PointF(2, 2), SizeF(4, 4)));
-		g.FillRectangle(Color::White(), RectangleF(colorCursorLocation_ - PointF(1, 1), SizeF(2, 2)));
+		g.FillRectangle(Color::Black(), RectangleI(colorCursorLocation_ - PointI(2, 2), SizeI(4, 4)));
+		g.FillRectangle(Color::White(), RectangleI(colorCursorLocation_ - PointI(1, 1), SizeI(2, 2)));
 	}
 	//---------------------------------------------------------------------------
 	//Event-Handling
 	//---------------------------------------------------------------------------
-	void ColorPicker::OnMouseDown(const MouseMessage &mouse)
-	{
+	void ColorPicker::OnMouseDown(const MouseMessage &mouse) {
 		Control::OnMouseDown(mouse);
 
 		drag_ = true;
 	}
 	//---------------------------------------------------------------------------
-	void ColorPicker::OnMouseMove(const MouseMessage &mouse)
-	{
+	void ColorPicker::OnMouseMove(const MouseMessage &mouse) {
 		Control::OnMouseMove(mouse);
 		
 		HandleMouseEvent(mouse);
 	}
 	//---------------------------------------------------------------------------
-	void ColorPicker::OnMouseUp(const MouseMessage &mouse)
-	{
+	void ColorPicker::OnMouseUp(const MouseMessage &mouse) {
 		Control::OnMouseUp(mouse);
 
 		HandleMouseEvent(mouse);
@@ -197,10 +170,8 @@ namespace OSHGui
 		drag_ = false;
 	}
 	//---------------------------------------------------------------------------
-	void ColorPicker::HandleMouseEvent(const MouseMessage &mouse)
-	{
-		if (drag_)
-		{
+	void ColorPicker::HandleMouseEvent(const MouseMessage &mouse) {
+		if (drag_) {
 			colorCursorLocation_ = mouse.GetLocation() - absoluteLocation_;
 			
 			color_ = GetColorAtPoint(colorCursorLocation_);

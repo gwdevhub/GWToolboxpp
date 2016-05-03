@@ -22,7 +22,7 @@ namespace OSHGui
 		/**
 		 * Konstruktor der Klasse.
 		 */
-		LinkLabel();
+		LinkLabel(Control* parent);
 
 		virtual bool Intersect(const Drawing::PointI &point) const override;
 

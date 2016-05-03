@@ -11,18 +11,20 @@
 
 #include "Control.hpp"
 
-namespace OSHGui
-{
+namespace OSHGui {
 	/**
 	 * Used to group collections of controls.
 	 */
-	class OSHGUI_EXPORT Panel : public Control
-	{
+	class OSHGUI_EXPORT Panel : public Control {
 	public:
 		/**
 		 * Constructor of the class.
 		 */
-		Panel();
+		Panel(Control* parent);
+
+		virtual bool Intersect(const Drawing::PointI &point) const;
+
+		virtual void ApplyTheme(const Drawing::Theme &theme) override;
 
 	protected:
 		virtual void PopulateGeometry() override;

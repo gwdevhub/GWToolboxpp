@@ -10,8 +10,7 @@
 #include "../Misc/Exceptions.hpp"
 #include "../Misc/Intersection.hpp"
 
-namespace OSHGui
-{
+namespace OSHGui {
 	//---------------------------------------------------------------------------
 	//static attributes
 	//---------------------------------------------------------------------------
@@ -20,14 +19,12 @@ namespace OSHGui
 	//---------------------------------------------------------------------------
 	//Constructor
 	//---------------------------------------------------------------------------
-	ColorBar::ColorBar()
-		: barIndex_(0),
-		  color_(Drawing::Color::Black())
-	{
+	ColorBar::ColorBar(Control* parent) : Control(parent), 
+		barIndex_(0),
+		color_(Drawing::Color::Black()) {
 		type_ = ControlType::ColorBar;
 	
-		for (int i = 0; i < 3; ++i)
-		{
+		for (int i = 0; i < 3; ++i) {
 			bars_.push_back(Drawing::Color::Black());
 			barSliderLocation_.push_back(Drawing::PointI(0, i * 15 + 9));
 			barSliderAbsoluteLocation_.push_back(Drawing::PointI(0, 0));
@@ -43,24 +40,18 @@ namespace OSHGui
 	//---------------------------------------------------------------------------
 	//Getter/Setter
 	//---------------------------------------------------------------------------
-	void ColorBar::SetSize(const Drawing::SizeI &size)
-	{
-		if (size_.Width != size.Width)
-		{
+	void ColorBar::SetSize(const Drawing::SizeI &size) {
+		if (size_.Width != size.Width) {
 			Control::SetSize(size);
 
 			UpdateBars();
-		}
-		else
-		{
+		} else {
 			Control::SetSize(size);
 		}
 	}
 	//---------------------------------------------------------------------------
-	void ColorBar::SetColor(const Drawing::Color &color)
-	{
-		if (color_ != color)
-		{
+	void ColorBar::SetColor(const Drawing::Color &color) {
+		if (color_ != color) {
 			color_ = color;
 
 			UpdateBars();
@@ -69,31 +60,26 @@ namespace OSHGui
 		}
 	}
 	//---------------------------------------------------------------------------
-	const Drawing::Color& ColorBar::GetColor() const
-	{
+	const Drawing::Color& ColorBar::GetColor() const {
 		return color_;
 	}
 	//---------------------------------------------------------------------------
-	ColorChangedEvent& ColorBar::GetColorChangedEvent()
-	{
+	ColorChangedEvent& ColorBar::GetColorChangedEvent() {
 		return colorChangedEvent_;
 	}
 	//---------------------------------------------------------------------------
 	//Runtime-Functions
 	//---------------------------------------------------------------------------
-	void ColorBar::UpdateColor()
-	{
-		float multi = 1.0f / (GetWidth() - 2);
+	void ColorBar::UpdateColor() {
+		float multi = 1.0f / ((float)GetWidth() - 2);
 		float newColor = multi * barSliderLocation_[barIndex_].Left;
 		
 		SetColor(Drawing::Color(barIndex_ == 0 ? newColor : color_.GetRed(), barIndex_ == 1 ? newColor : color_.GetGreen(), barIndex_ == 2 ? newColor : color_.GetBlue()));
 	}
 	//---------------------------------------------------------------------------
-	void ColorBar::UpdateBars()
-	{
-		float multi = GetWidth() - 2;
-		for (int i = 0; i < 3; ++i)
-		{
+	void ColorBar::UpdateBars() {
+		float multi = (float)GetWidth() - 2;
+		for (int i = 0; i < 3; ++i) {
 			bars_[i].TopLeft = bars_[i].BottomLeft = i == 0 ? Drawing::Color(0, color_.GetGreen(), color_.GetBlue()) : i == 1 ? Drawing::Color(color_.GetRed(), 0, color_.GetBlue()) : Drawing::Color(color_.GetRed(), color_.GetGreen(), 0);
 			bars_[i].TopRight = bars_[i].BottomRight = color_;
 			
@@ -105,37 +91,31 @@ namespace OSHGui
 		Invalidate();
 	}
 	//---------------------------------------------------------------------------
-	void ColorBar::PopulateGeometry()
-	{
+	void ColorBar::PopulateGeometry() {
 		using namespace Drawing;
 
 		Graphics g(*geometry_);
 
-		for (int i = 0; i < 3; ++i)
-		{
-			g.FillRectangleGradient(bars_[i], RectangleF(PointI(0, i * 15), SizeI(GetWidth(), 8)));
+		for (int i = 0; i < 3; ++i) {
+			g.FillRectangleGradient(bars_[i], RectangleI(PointI(0, i * 15), SizeI(GetWidth(), 8)));
 
 			auto sliderPos = barSliderLocation_[i] + PointI(1, 0);
-			for (int j = 0; j < 3; ++j)
-			{
-				g.FillRectangle(GetForeColor(), RectangleF(PointI(sliderPos.X - j, sliderPos.Y + j), SizeI(1 + j * 2, 1)));
+			for (int j = 0; j < 3; ++j) {
+				g.FillRectangle(GetForeColor(), RectangleI(PointI(sliderPos.X - j, sliderPos.Y + j), SizeI(1 + j * 2, 1)));
 			}
 		}
 	}
 	//---------------------------------------------------------------------------
 	//Event-Handling
 	//---------------------------------------------------------------------------
-	void ColorBar::OnMouseDown(const MouseMessage &mouse)
-	{
+	void ColorBar::OnMouseDown(const MouseMessage &mouse) {
 		Control::OnMouseDown(mouse);
 
 		drag_[0] = drag_[1] = drag_[2] = false;
 
-		for (int i = 0; i < 3; ++i)
-		{
+		for (int i = 0; i < 3; ++i) {
 			auto barLocation = Drawing::PointI(absoluteLocation_.Left, absoluteLocation_.Top + i * 15);
-			if (Intersection::TestRectangle(barLocation, DefaultBarSize, mouse.GetLocation()))
-			{
+			if (Intersection::TestRectangleI(barLocation, DefaultBarSize, mouse.GetLocation())) {
 				barIndex_ = i;
 
 				drag_[barIndex_] = true;
@@ -143,16 +123,11 @@ namespace OSHGui
 				OnGotMouseCapture();
 
 				int localLocation = mouse.GetLocation().Left - absoluteLocation_.Left;
-				if (localLocation < 0)
-				{
+				if (localLocation < 0) {
 					barSliderLocation_[barIndex_].Left = 0;
-				}
-				else if (localLocation > GetWidth() - 2)
-				{
+				} else if (localLocation > GetWidth() - 2) {
 					barSliderLocation_[barIndex_].Left = GetWidth() - 2;
-				}
-				else
-				{
+				} else {
 					barSliderLocation_[barIndex_].Left = localLocation;
 				}
 
@@ -165,12 +140,10 @@ namespace OSHGui
 		}
 	}
 	//---------------------------------------------------------------------------
-	void ColorBar::OnMouseUp(const MouseMessage &mouse)
-	{
+	void ColorBar::OnMouseUp(const MouseMessage &mouse) {
 		Control::OnMouseUp(mouse);
 
-		if (drag_[barIndex_])
-		{
+		if (drag_[barIndex_]) {
 			drag_[barIndex_] = false;
 
 			colorChangedEvent_.Invoke(this, color_);
@@ -179,23 +152,16 @@ namespace OSHGui
 		}
 	}
 	//---------------------------------------------------------------------------
-	void ColorBar::OnMouseMove(const MouseMessage &mouse)
-	{
+	void ColorBar::OnMouseMove(const MouseMessage &mouse) {
 		Control::OnMouseMove(mouse);
 
-		if (drag_[barIndex_])
-		{
+		if (drag_[barIndex_]) {
 			int localLocation = mouse.GetLocation().Left - absoluteLocation_.Left;
-			if (localLocation < 0)
-			{
+			if (localLocation < 0) {
 				barSliderLocation_[barIndex_].Left = 0;
-			}
-			else if (localLocation > GetWidth() - 2)
-			{
+			} else if (localLocation > GetWidth() - 2) {
 				barSliderLocation_[barIndex_].Left = GetWidth() - 2;
-			}
-			else
-			{
+			} else {
 				barSliderLocation_[barIndex_].Left = localLocation;
 			}
 			
@@ -205,20 +171,15 @@ namespace OSHGui
 		}
 	}
 	//---------------------------------------------------------------------------
-	bool ColorBar::OnKeyDown(const KeyboardMessage &keyboard)
-	{
-		if (!Control::OnKeyDown(keyboard))
-		{
-			if (keyboard.GetKeyCode() == Key::Left || keyboard.GetKeyCode() == Key::Right)
-			{
+	bool ColorBar::OnKeyDown(const KeyboardMessage &keyboard) {
+		if (!Control::OnKeyDown(keyboard)) {
+			if (keyboard.GetKeyCode() == Key::Left || keyboard.GetKeyCode() == Key::Right) {
 				barSliderLocation_[barIndex_].Left += keyboard.GetKeyCode() == Key::Left ? -1 : 1;
 				
-				if (barSliderLocation_[barIndex_].Left < 0)
-				{
+				if (barSliderLocation_[barIndex_].Left < 0) {
 					barSliderLocation_[barIndex_].Left = 0;
 				}
-				if (barSliderLocation_[barIndex_].Left >= GetWidth() - 2)
-				{
+				if (barSliderLocation_[barIndex_].Left >= GetWidth() - 2) {
 					barSliderLocation_[barIndex_].Left = GetWidth() - 2;
 				}
 

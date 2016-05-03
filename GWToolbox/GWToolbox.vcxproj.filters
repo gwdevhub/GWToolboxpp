@@ -59,6 +59,9 @@
     <ClInclude Include="GWToolbox\ChatCommands.h" />
     <ClInclude Include="GWToolbox\ChatLogger.h" />
     <ClInclude Include="GWToolbox\PartyDamage.h" />
+    <ClInclude Include="GWToolbox\Settings.h">
+      <Filter>Panels</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\BondsWindow.cpp">

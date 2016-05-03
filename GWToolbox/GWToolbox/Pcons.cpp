@@ -13,48 +13,48 @@ using namespace OSHGui::Drawing;
 using namespace GwConstants;
 using namespace GWCA;
 
-Pcon::Pcon(const wchar_t* ini)
-	: Button() {
+Pcon::Pcon(OSHGui::Control* parent, const wchar_t* ini) : Button(parent),
+	pic(new PictureBox(this)),
+	tick(new PictureBox(this)),
+	shadow(new Label(this)),
+	itemID(0),
+	effectID(SkillID::No_Skill),
+	threshold(0),
+	timer(TBTimer::init()),
+	update_timer(0),
+	quantity(-1), /* to force a redraw when first created */
+	chatName(ini), // will be set later, but its a good temporary value
+	iniName(ini) {
 
-	pic = new PictureBox();
-	tick = new PictureBox();
-	shadow = new Label();
-	quantity = -1; // to force a redraw when first created
 	enabled = GWToolbox::instance().config().IniReadBool(L"pcons", ini, false);;
-	iniName = ini;
-	chatName = ini; // will be set later, but its a good temporary value
-	itemID = 0;
-	effectID = SkillID::No_Skill;
-	threshold = 0;
-	timer = TBTimer::init();
-	update_timer = 0;
 
 	tick->SetBackColor(Drawing::Color::Empty());
 	tick->SetStretch(true);
 	tick->SetEnabled(false);
-	tick->SetLocation(0, 0);
-	tick->SetSize(WIDTH, HEIGHT);
+	tick->SetLocation(PointI(0, 0));
+	tick->SetSize(SizeI(WIDTH, HEIGHT));
 	tick->SetImage(Drawing::Image::FromFile(GuiUtils::getSubPathA("Tick.png", "img")));
-	AddSubControl(tick);
+	AddControl(tick);
 
 	pic->SetBackColor(Drawing::Color::Empty());
 	pic->SetStretch(true);
 	pic->SetEnabled(false);
-	AddSubControl(pic);
+	AddControl(pic);
 
 	int text_x = 5;
 	int text_y = 3;
 	shadow->SetText(std::to_wstring(quantity));
 	shadow->SetFont(GuiUtils::getTBFont(11.0f, true));
 	shadow->SetForeColor(Drawing::Color::Black());
-	shadow->SetLocation(text_x + 1, text_y + 1);
-	AddSubControl(shadow);
+	shadow->SetLocation(PointI(text_x + 1, text_y + 1));
+	AddControl(shadow);
 
 	label_->SetText(std::to_wstring(quantity));
 	label_->SetFont(GuiUtils::getTBFont(11.0f, true));
-	label_->SetLocation(text_x, text_y);
+	label_->SetLocation(PointI(text_x, text_y));
+	AddControl(label_);
 
-	SetSize(WIDTH, HEIGHT);
+	SetSize(SizeI(WIDTH, HEIGHT));
 	SetBackColor(Drawing::Color::Empty());
 	SetMouseOverFocusColor(GuiUtils::getMouseOverColor());
 
@@ -68,18 +68,9 @@ void Pcon::toggleActive() {
 	GWToolbox::instance().config().IniWriteBool(L"pcons", iniName, enabled);
 }
 
-void Pcon::DrawSelf(Drawing::RenderContext &context) {
-	BufferGeometry(context);
-	QueueGeometry(context);
-	pic->Render();
-	shadow->Render();
-	label_->Render();
-	if (enabled) tick->Render();
-}
-
 void Pcon::setIcon(const char* icon, int xOff, int yOff, int size) {
-	pic->SetSize(size, size);
-	pic->SetLocation(xOff, yOff);
+	pic->SetSize(SizeI(size, size));
+	pic->SetLocation(PointI(xOff, yOff));
 	pic->SetImage(Drawing::Image::FromFile(GuiUtils::getSubPathA(icon, "img")));
 }
 
@@ -95,6 +86,9 @@ void Pcon::UpdateUI() {
 		} else {
 			label_->SetForeColor(Color(1.0, 0.0, 1.0, 0.0));
 		}
+
+		tick->SetVisible(enabled);
+
 		update_ui = false;
 	}
 }

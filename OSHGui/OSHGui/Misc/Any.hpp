@@ -11,36 +11,29 @@
 
 #include "../Exports.hpp"
 
-namespace OSHGui
-{
-	namespace Misc
-	{
+namespace OSHGui {
+	namespace Misc {
 		/**
 		 * Dieser Datentyp kann jeden anderen Datentyp aufnehmen.
 		 */
-		class OSHGUI_EXPORT Any
-		{
+		class OSHGUI_EXPORT Any {
 		private:
 			//Verhindert "ISO C++ forbids declaration of 'TypeWrapper' with no type"
-			class AnyTypeWrapper
-			{
+			class AnyTypeWrapper {
 			public:
 				virtual ~AnyTypeWrapper() { }
 				virtual void* GetObject() = 0;
 			};
 			//---------------------------------------------------------------------------
 			template<typename T>
-			class TypeWrapper : public AnyTypeWrapper
-			{
+			class TypeWrapper : public AnyTypeWrapper {
 			public:
 				TypeWrapper(const T &object)
-					: obj_(object)
-				{
+					: obj_(object) {
 				
 				}
 				//---------------------------------------------------------------------------
-				virtual void* GetObject()
-				{
+				virtual void* GetObject() {
 					return &obj_;
 				}
 				//---------------------------------------------------------------------------
@@ -52,16 +45,14 @@ namespace OSHGui
 			unsigned int id_;
 			std::shared_ptr<AnyTypeWrapper> wrapper_;
 			//---------------------------------------------------------------------------
-			static unsigned int NextID()
-			{
+			static unsigned int NextID() {
 				static unsigned int id = 0;
 				++id;
 				return id;
 			}
 			//---------------------------------------------------------------------------
 			template<typename T>
-			static unsigned int TypeID()
-			{
+			static unsigned int TypeID() {
 				static unsigned int id = NextID();
 				return id;
 			}
@@ -72,8 +63,7 @@ namespace OSHGui
 			 * Erzeugt ein leeres Any-Objekt.
 			 */
 			Any()
-				: id_(0)
-			{
+				: id_(0) {
 
 			}
 
@@ -85,16 +75,14 @@ namespace OSHGui
 			template<typename T>
 			Any(const T &obj)
 				: id_(TypeID<T>()),
-				  wrapper_(new TypeWrapper<T>(obj_))
-			{
+				  wrapper_(new TypeWrapper<T>(obj_)) {
 				
 			}
 			
 			/**
 			 * Dieser Operator erlaubt per if (!any) { any ist leer } zu prüfen, ob das Any-Objekt leer ist.
 			 */
-			operator bool() const
-			{
+			operator bool() const {
 				return id_ != 0;
 			}
 
@@ -105,14 +93,10 @@ namespace OSHGui
 			 * \return das aufgenommene Objekt
 			 */
 			template<typename T>
-			T& CastTo() const
-			{
-				if (TypeID<T>() == id_)
-				{
+			T& CastTo() const {
+				if (TypeID<T>() == id_) {
 					return *static_cast<T*>(wrapper_->GetObject());
-				}
-				else
-				{
+				} else {
 					#ifndef OSHGUI_DONTUSEEXCEPTIONS
 					throw InvalidOperationException("Cannot cast object");
 					#endif

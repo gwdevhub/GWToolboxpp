@@ -12,15 +12,12 @@
 #include <vector>
 #include "GeometryBuffer.hpp"
 
-namespace OSHGui
-{
-	namespace Drawing
-	{
+namespace OSHGui {
+	namespace Drawing {
 		/**
 		 * Die Klasse repräsentiert eine Queue von GeometryBuffer Objekten zum Zeichnen.
 		 */
-		class OSHGUI_EXPORT RenderQueue
-		{
+		class OSHGUI_EXPORT RenderQueue {
 		public:
 			/**
 			 * Zeichnet alle GeometryBuffer Objekte und belässt sie in der Queue.

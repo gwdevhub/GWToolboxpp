@@ -9,34 +9,27 @@
 #include "WindowsMessageThreaded.hpp"
 #include "../Application.hpp"
 
-namespace OSHGui
-{
-	namespace Input
-	{
+namespace OSHGui {
+	namespace Input {
 		Input::Input()
 			: enableMouseInput(true),
-			  enableKeyboardInput(true)
-		{
+			  enableKeyboardInput(true) {
 
 		}
 		//---------------------------------------------------------------------------
-		void Input::SetMouseInputEnabled(bool enable)
-		{
+		void Input::SetMouseInputEnabled(bool enable) {
 			enableMouseInput = enable;
 		}
 		//---------------------------------------------------------------------------
-		void Input::SetKeyboardInputEnabled(bool enable)
-		{
+		void Input::SetKeyboardInputEnabled(bool enable) {
 			enableKeyboardInput = enable;
 		}
 		//---------------------------------------------------------------------------
-		bool Input::InjectMouseMessage(const MouseMessage &mouse)
-		{
+		bool Input::InjectMouseMessage(const MouseMessage &mouse) {
 			return Application::Instance().ProcessMouseMessage(mouse);
 		}
 		//---------------------------------------------------------------------------
-		bool Input::InjectKeyboardMessage(const KeyboardMessage &keyboard)
-		{
+		bool Input::InjectKeyboardMessage(const KeyboardMessage &keyboard) {
 			return Application::Instance().ProcessKeyboardMessage(keyboard);
 		}
 	}

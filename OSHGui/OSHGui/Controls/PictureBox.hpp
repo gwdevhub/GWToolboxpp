@@ -25,7 +25,7 @@ namespace OSHGui
 		/**
 		 * Konstruktor der Klasse.
 		 */
-		PictureBox();
+		PictureBox(Control* parent);
 		
 		/**
 		 * Legt das in der PictureBox dargestellte Bild fest.

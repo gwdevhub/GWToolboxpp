@@ -7,10 +7,11 @@ using namespace OSHGui;
 const Drawing::PointI ToolboxWindow::DefaultLocation(200, 50);
 const Drawing::SizeI ToolboxWindow::DefaultSize(300, 300);
 
-ToolboxWindow::ToolboxWindow()
-	: Form(false) {
+ToolboxWindow::ToolboxWindow() : Form(false) {
 
-	containerPanel_->SetLocation(0, 0);
+	containerPanel_->SetLocation(Drawing::PointI(0, 0));
+
+	canRaiseEvents_ = false;
 
 	SetLocation(DefaultLocation);
 	SetSize(DefaultSize);
@@ -69,5 +70,5 @@ void ToolboxWindow::ResizeUI(OSHGui::Drawing::SizeI before, OSHGui::Drawing::Siz
 	if (x_new > after.Width - GetWidth()) x_new = after.Width - GetWidth();
 	if (y_new > after.Height - GetHeight()) y_new = after.Height - GetHeight();
 
-	SetLocation(x_new, y_new);
+	SetLocation(Drawing::PointI(x_new, y_new));
 }

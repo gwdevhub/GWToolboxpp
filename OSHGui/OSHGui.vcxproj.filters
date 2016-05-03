@@ -239,6 +239,9 @@
     <ClCompile Include="OSHGui\Drawing\Direct3D9\Direct3D9ViewportTarget.cpp">
       <Filter>Source\Drawing\Direct3D9</Filter>
     </ClCompile>
+    <ClCompile Include="OSHGui\Controls\ScrollPanel.cpp">
+      <Filter>Source\Controls</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="OSHGui\Misc\ConcurrendQueue.hpp">
@@ -513,6 +516,9 @@
     </ClInclude>
     <ClInclude Include="OSHGui\Drawing\Direct3D9\Direct3D9ViewportTarget.hpp">
       <Filter>Source\Drawing\Direct3D9</Filter>
+    </ClInclude>
+    <ClInclude Include="OSHGui\Controls\ScrollPanel.hpp">
+      <Filter>Headers\Controls</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

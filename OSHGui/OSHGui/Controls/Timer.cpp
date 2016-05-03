@@ -9,14 +9,12 @@
 #include "Timer.hpp"
 #include "../Misc/Exceptions.hpp"
 
-namespace OSHGui
-{
+namespace OSHGui {
 	//---------------------------------------------------------------------------
 	//Constructor
 	//---------------------------------------------------------------------------
-	Timer::Timer()
-		: interval_(Misc::TimeSpan::FromMilliseconds(100))
-	{
+	Timer::Timer(Control* parent) : Control(parent),
+		interval_(Misc::TimeSpan::FromMilliseconds(100)) {
 		type_ = ControlType::Timer;
 	
 		SetEnabled(false);
@@ -24,21 +22,17 @@ namespace OSHGui
 	//---------------------------------------------------------------------------
 	//Getter/Setter
 	//---------------------------------------------------------------------------
-	void Timer::SetEnabled(bool isEnabled)
-	{
-		if (isEnabled_ != isEnabled)
-		{
+	void Timer::SetEnabled(bool isEnabled) {
+		if (isEnabled_ != isEnabled) {
 			next_ = Misc::DateTime();
 			
 			Control::SetEnabled(isEnabled);
 		}
 	}
 	//---------------------------------------------------------------------------
-	void Timer::SetInterval(int interval)
-	{
+	void Timer::SetInterval(int interval) {
 		#ifndef OSHGUI_DONTUSEEXCEPTIONS
-		if (interval < 1)
-		{
+		if (interval < 1) {
 			throw Misc::ArgumentOutOfRangeException("interval");
 		}
 		#endif
@@ -46,37 +40,30 @@ namespace OSHGui
 		interval_ = Misc::TimeSpan::FromMilliseconds(interval);
 	}
 	//---------------------------------------------------------------------------
-	int Timer::GetInterval() const
-	{
+	int Timer::GetInterval() const {
 		return interval_.GetTotalMilliseconds();
 	}
 	//---------------------------------------------------------------------------
-	TickEvent& Timer::GetTickEvent()
-	{
+	TickEvent& Timer::GetTickEvent() {
 		return tickEvent_;
 	}
 	//---------------------------------------------------------------------------
 	//Runtime-Functions
 	//---------------------------------------------------------------------------
-	void Timer::Start()
-	{
+	void Timer::Start() {
 		SetEnabled(true);
 	}
 	//---------------------------------------------------------------------------
-	void Timer::Stop()
-	{
+	void Timer::Stop() {
 		SetEnabled(false);
 	}
 	//---------------------------------------------------------------------------
-	bool Timer::Intersect(const Drawing::PointI &point) const
-	{
+	bool Timer::Intersect(const Drawing::PointI &point) const {
 		return false;
 	}
 	//---------------------------------------------------------------------------
-	void Timer::InjectTime(const Misc::DateTime &time)
-	{
-		if (time >= next_)
-		{
+	void Timer::InjectTime(const Misc::DateTime &time) {
+		if (time >= next_) {
 			next_ = time.Add(interval_);
 			
 			tickEvent_.Invoke(this);

@@ -3,33 +3,27 @@
 #include "../Misc/Exceptions.hpp"
 #include <algorithm>
 
-namespace OSHGui
-{
-	namespace Drawing
-	{
+namespace OSHGui {
+	namespace Drawing {
 		//---------------------------------------------------------------------------
 		//Constructor
 		//---------------------------------------------------------------------------
 		CustomizableImage::CustomizableImage(SizeI size_)
 			: size(std::move(size_)),
-			  data(size_.Width * size_.Height)
-		{
+			  data(size_.Width * size_.Height) {
 
 		}
 		//---------------------------------------------------------------------------
 		//Getter/Setter
 		//---------------------------------------------------------------------------
-		const SizeI& CustomizableImage::GetSize() const
-		{
+		const SizeI& CustomizableImage::GetSize() const {
 			return size;
 		}
 		//---------------------------------------------------------------------------
-		std::vector<argb_t> CustomizableImage::GetRGBAData() const
-		{
+		std::vector<argb_t> CustomizableImage::GetRGBAData() const {
 			std::vector<argb_t> temp(data.size());
 			auto index = 0;
-			for (auto &color : data)
-			{
+			for (auto &color : data) {
 				auto col = color.GetARGB();
 				std::swap(*(((uint8_t*)&col) + 0), *(((uint8_t*)&col) + 2)); //flip R/B
 				temp[index++] = col;
@@ -39,34 +33,28 @@ namespace OSHGui
 		//---------------------------------------------------------------------------
 		//Runtime-Functions
 		//---------------------------------------------------------------------------
-		void CustomizableImage::SetRectangle(RectangleI area, const ColorRectangle &color)
-		{
-			if (area.GetLeft() >= size.Width || area.GetTop() >= size.Height)
-			{
+		void CustomizableImage::SetRectangle(RectangleI area, const ColorRectangle &color) {
+			if (area.GetLeft() >= size.Width || area.GetTop() >= size.Height) {
 				return;
 			}
 
-			if (area.GetRight() > size.Width)
-			{
+			if (area.GetRight() > size.Width) {
 				area.SetWidth(area.GetRight() - size.Width);
 			}
-			if (area.GetBottom() > size.Height)
-			{
+			if (area.GetBottom() > size.Height) {
 				area.SetHeight(area.GetBottom() - size.Height);
 			}
 
-			float calcWidth = std::max(area.GetWidth() - 1, 1);
-			float calcHeight = std::max(area.GetHeight() - 1, 1);
+			int calcWidth = std::max(area.GetWidth() - 1, 1);
+			int calcHeight = std::max(area.GetHeight() - 1, 1);
 
-			for (int j = 0; j < area.GetHeight(); ++j)
-			{
+			for (int j = 0; j < area.GetHeight(); ++j) {
 				auto row = (area.GetTop() + j) * size.Width;
 
-				for (int i = 0; i < area.GetWidth(); ++i)
-				{
+				for (int i = 0; i < area.GetWidth(); ++i) {
 					auto index = (area.GetLeft() + i) + row;
 
-					data[index] = color.GetColorAtPoint(i / calcWidth, j / calcHeight);
+					data[index] = color.GetColorAtPoint((float)i / calcWidth, (float)j / calcHeight);
 				}
 			}
 		}

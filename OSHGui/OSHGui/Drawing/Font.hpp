@@ -19,15 +19,12 @@
 
 #undef DrawText
 
-namespace OSHGui
-{
-	namespace Drawing
-	{
+namespace OSHGui {
+	namespace Drawing {
 		/**
 		 * The class represents a font (type).
 		 */
-		class OSHGUI_EXPORT Font
-		{
+		class OSHGUI_EXPORT Font {
 		public:
 			/**
 			 * Destructor
@@ -40,8 +37,7 @@ namespace OSHGui
 			 * \param cp Codepoint
 			 * \return true, if the code point can be drawn
 			 */
-			bool IsCodepointAvailable(uint32_t cp) const
-			{
+			bool IsCodepointAvailable(uint32_t cp) const {
 				return (glyphMap.find(cp) != glyphMap.end());
 			}
 
@@ -54,45 +50,37 @@ namespace OSHGui
 			 * \param clip Clippingregion
 			 * \param colors Farbe(n) der Glyphen
 			 * \param spaceExtra zusätzlicher Platz bei einem Leerzeichen
-			 * \param scaleX Skalierungsfaktor (default = 1)
-			 * \param scaleY Skalierungsfaktor (default = 1)
 			 * \return End-X Koordinate des gezeichneten Textes
 			 */
 			virtual float DrawText(GeometryBuffer &buffer, const Misc::UnicodeString &text, 
-				const PointF &position, const RectangleF *clip, const ColorRectangle &colors, 
-				const float spaceExtra = 0.0f, const float scaleX = 1.0f, const float scaleY = 1.0f) const;
+				const PointI &position, const RectangleF *clip, const ColorRectangle &colors, 
+				const float spaceExtra = 0.0f) const;
 
 			/**
 			 * Gets the height of a line of text.
 			 *
-			 * \param scaleY Skalierungsfaktor (default = 1)
 			 * \return Höhe einer Textzeile
 			 */
-			float GetLineSpacing(float scaleY = 1.0f) const
-			{
-				return height * scaleY;
+			float GetLineSpacing() const {
+				return height;
 			}
 
 			/**
 			 * Gets the height of the font, in pixels.
 			 *
-			 * \param scaleY scaling factor (default = 1)
 			 * \return Height of the font
 			 */
-			float GetFontHeight(float scaleY = 1.0f) const
-			{
-				return (ascender - descender) * scaleY;
+			float GetFontHeight() const {
+				return ascender - descender;
 			}
 
 			/**
 			 * Gets the height of the tallest glyph font, in pixels.
 			 *
-			 * \param scaleY scaling factor (default = 1)
 			 * \return Height of the tallest glyph font
 			 */
-			float GetBaseline(float scaleY = 1.0f) const
-			{
-				return ascender * scaleY;
+			float GetBaseline() const {
+				return ascender;
 			}
 
 			/**
@@ -100,33 +88,29 @@ namespace OSHGui
 			 * This is the width actually used, while \ a GetTextAdvance 
 			 * computes the theoretical width of the text.
 			 *
-			 * \param scaleY Skalierungsfaktor (default = 1)
 			 * \return Breite des gezeichneten Textes
 			 * \sa GetTextAdvance
 			 */
-			virtual float GetTextExtent(const Misc::UnicodeString &text, float scaleX = 1.0f) const;
+			virtual float GetTextExtent(const Misc::UnicodeString &text) const;
 
 			/**
 			 * Gets the width of the theoretically drawn from the text, in pixels. 
 			 * "Theoretically" means that oblique glyphs can be wider as their actual width.
 			 *
-			 * \param scaleY Skalierungsfaktor (default = 1)
 			 * \return Breite des gezeichneten Textes
 			 * \sa GetTextExtent
 			 */
-			virtual float GetTextAdvance(const Misc::UnicodeString &text, float scaleX = 1.0f) const;
+			virtual float GetTextAdvance(const Misc::UnicodeString &text) const;
 
 			/**
 			 * Gets the index of the character that is closest to the specified pixels.
 			 *
 			 * \param text Text
 			 * \param pixel Pixel, dessen Index gesucht wird
-			 * \param scaleX Skalierungsfaktor (default = 1)
 			 * \return Index des gesuchten Zeichens [0, text.length()]
 			 */
-			size_t GetCharAtPixel(const Misc::UnicodeString &text, float pixel, float scaleX = 1.0f) const
-			{
-				return GetCharAtPixel(text, 0, pixel, scaleX);
+			size_t GetCharAtPixel(const Misc::UnicodeString &text, float pixel) const {
+				return GetCharAtPixel(text, 0, pixel);
 			}
 
 			/**
@@ -135,10 +119,9 @@ namespace OSHGui
 			 * \param text Text
 			 * \param start Startindex im Text
 			 * \param pixel Pixel, dessen Index gesucht wird
-			 * \param scaleX Skalierungsfaktor (default = 1)
 			 * \return Index des gesuchten Zeichens [0, text.length()]
 			 */
-			size_t GetCharAtPixel(const Misc::UnicodeString& text, size_t start, float pixel, float scaleX = 1.0f) const;
+			size_t GetCharAtPixel(const Misc::UnicodeString& text, size_t start, float pixel) const;
 
 			/**
 			 * Gets the to \ a codepoint belonging Glyph and possibly scans him.
@@ -153,7 +136,7 @@ namespace OSHGui
 			*
 			* @param size
 			*/
-			void DisplaySizeChanged(const SizeF &size);
+			void DisplaySizeChanged(const SizeI &size);
 
 		protected:
 			/**
@@ -190,9 +173,6 @@ namespace OSHGui
 			float ascender;
 			float descender;
 			float height;
-
-			float scalingHorizontal;
-			float scalingVertical;
 
 			uint32_t maximumCodepoint;
 

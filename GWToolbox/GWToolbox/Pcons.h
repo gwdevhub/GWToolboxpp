@@ -9,7 +9,6 @@
 #include "Timer.h"
 
 
-
 class Pcon : public OSHGui::Button {
 public:
 	static const int WIDTH = 46;
@@ -34,8 +33,7 @@ protected:
 	void CheckUpdateTimer();
 
 public:
-	Pcon(const wchar_t* ini);
-	void DrawSelf(OSHGui::Drawing::RenderContext &context) override;
+	Pcon(OSHGui::Control* parent, const wchar_t* ini);
 	void CalculateLabelLocation() override {};
 
 	void setIcon(const char* icon, int xOff, int yOff, int size);
@@ -48,23 +46,19 @@ public:
 	virtual bool checkAndUse();		// checks if need to use pcon, uses if needed. Returns true if was used.
 	void UpdateUI();
 	virtual void scanInventory();	// scans inventory, updates quantity field
-	void toggleActive();	// disables if enabled, enables if disabled
+	void toggleActive();			// disables if enabled, enables if disabled
 };
 
 class PconCons : public Pcon {
 public:
-	PconCons(const wchar_t* ini)
-		: Pcon(ini) {
-	}
+	PconCons(OSHGui::Control* parent, const wchar_t* ini) : Pcon(parent, ini) {}
 
 	bool checkAndUse() override;
 };
 
 class PconCity : public Pcon {
 public:
-	PconCity(const wchar_t* ini)
-		: Pcon(ini) {
-	}
+	PconCity(OSHGui::Control* parent, const wchar_t* ini) : Pcon(parent, ini) {}
 
 	bool checkAndUse() override;
 	void scanInventory() override;
@@ -72,9 +66,7 @@ public:
 
 class PconAlcohol : public Pcon {
 public:
-	PconAlcohol(const wchar_t* ini)
-		: Pcon(ini) {
-	}
+	PconAlcohol(OSHGui::Control* parent, const wchar_t* ini) : Pcon(parent, ini) {}
 
 	bool checkAndUse() override;
 	void scanInventory() override;
@@ -82,9 +74,7 @@ public:
 
 class PconLunar : public Pcon {
 public:
-	PconLunar(const wchar_t* ini)
-		: Pcon(ini) {
-	}
+	PconLunar(OSHGui::Control* parent, const wchar_t* ini) : Pcon(parent, ini) {}
 
 	bool checkAndUse() override;
 	void scanInventory() override;

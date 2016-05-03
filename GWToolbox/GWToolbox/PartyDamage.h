@@ -63,8 +63,8 @@ public:
 	void UpdateUI();
 	void MainRoutine();
 
-	void ShowWindow(bool show) override {
-		ToolboxWindow::ShowWindow(show);
+	void SetVisible(bool visible) override {
+		Control::SetVisible(visible);
 		party_size_ = 0;
 	}
 

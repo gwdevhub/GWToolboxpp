@@ -14,20 +14,18 @@
 #include "../Misc/Exceptions.hpp"
 #include "../Misc/Intersection.hpp"
 
-namespace OSHGui
-{
+namespace OSHGui {
 	std::map<Key, Misc::UnicodeString> HotkeyControl::HotkeyNames;
 	const Drawing::SizeI HotkeyControl::DefaultSize(100, 24);
 	//---------------------------------------------------------------------------
 	//Constructor
 	//---------------------------------------------------------------------------
-	HotkeyControl::HotkeyControl()
-		: textBox_(new TextBox())
-	{
+	HotkeyControl::HotkeyControl(Control* parent) : Control(parent),
+		textBox_(new TextBox(this)) {
+		
 		type_ = ControlType::HotkeyControl;
 
-		if (HotkeyNames.empty())
-		{
+		if (HotkeyNames.empty()) {
 			#define EnumToString(x) L#x
 			HotkeyNames[Key::None] = EnumToString(None);
 			HotkeyNames[Key::LButton] = EnumToString(LButton);
@@ -222,7 +220,7 @@ namespace OSHGui
 
 		textBox_->SetLocation(Drawing::PointI(0, 0));
 		textBox_->ShowCaret(false);
-		textBox_->SetParent(this);
+		AddControl(textBox_);
 		
 		SetSize(DefaultSize);
 		
@@ -233,40 +231,34 @@ namespace OSHGui
 	//---------------------------------------------------------------------------
 	//Getter/Setter
 	//---------------------------------------------------------------------------
-	void HotkeyControl::SetSize(const Drawing::SizeI &size)
-	{
+	void HotkeyControl::SetSize(const Drawing::SizeI &size) {
 		Control::SetSize(size);
 		
 		textBox_->SetSize(size);
 
-		clearButtonLocation_ = Drawing::PointI(GetWidth() - 13, GetHeight() * 0.5f - 4);
+		clearButtonLocation_ = Drawing::PointI(GetWidth() - 13, GetHeight() / 2 - 4);
 	}
 	//---------------------------------------------------------------------------
-	void HotkeyControl::SetFont(const Drawing::FontPtr &font)
-	{
+	void HotkeyControl::SetFont(const Drawing::FontPtr &font) {
 		Control::SetFont(font);
 		
 		textBox_->SetFont(GetFont());
 	}
 	//---------------------------------------------------------------------------
-	void HotkeyControl::SetForeColor(const Drawing::Color &color)
-	{
+	void HotkeyControl::SetForeColor(const Drawing::Color &color) {
 		Control::SetForeColor(color);
 		
 		textBox_->SetForeColor(GetForeColor());
 	}
 	//---------------------------------------------------------------------------
-	void HotkeyControl::SetBackColor(const Drawing::Color &color)
-	{
+	void HotkeyControl::SetBackColor(const Drawing::Color &color) {
 		Control::SetBackColor(color);
 		
 		textBox_->SetBackColor(GetBackColor());
 	}
 	//---------------------------------------------------------------------------
-	void HotkeyControl::SetHotkey(Key hotkey)
-	{
-		if (hotkey_ != hotkey)
-		{
+	void HotkeyControl::SetHotkey(Key hotkey) {
+		if (hotkey_ != hotkey) {
 			hotkey_ = hotkey;
 			
 			HotkeyToText();
@@ -275,15 +267,12 @@ namespace OSHGui
 		}
 	}
 	//---------------------------------------------------------------------------
-	Key HotkeyControl::GetHotkey() const
-	{
+	Key HotkeyControl::GetHotkey() const {
 		return hotkey_;
 	}
 	//---------------------------------------------------------------------------
-	void HotkeyControl::SetHotkeyModifier(Key modifier)
-	{
-		if (modifier_ != modifier)
-		{
+	void HotkeyControl::SetHotkeyModifier(Key modifier) {
+		if (modifier_ != modifier) {
 			modifier_ = modifier;
 		
 			HotkeyToText();
@@ -292,38 +281,31 @@ namespace OSHGui
 		}
 	}
 	//---------------------------------------------------------------------------
-	Key HotkeyControl::GetHotkeyModifier() const
-	{
+	Key HotkeyControl::GetHotkeyModifier() const {
 		return modifier_;
 	}
 	//---------------------------------------------------------------------------
-	HotkeyChangedEvent& HotkeyControl::GetHotkeyChangedEvent()
-	{
+	HotkeyChangedEvent& HotkeyControl::GetHotkeyChangedEvent() {
 		return hotkeyChangedEvent_;
 	}
 	//---------------------------------------------------------------------------
 	//Runtime-Functions
 	//---------------------------------------------------------------------------
-	void HotkeyControl::ClearHotkey()
-	{
+	void HotkeyControl::ClearHotkey() {
 		SetHotkey(Key::None);
 		SetHotkeyModifier(Key::None);
 	}
 	//---------------------------------------------------------------------------
-	void HotkeyControl::HotkeyToText()
-	{
-		auto ModifierToString = [](Key modifier) -> Misc::UnicodeString
-		{
+	void HotkeyControl::HotkeyToText() {
+		auto ModifierToString = [](Key modifier) -> Misc::UnicodeString {
 			std::vector<Misc::UnicodeString> modifierNames;
 			if ((modifier & Key::Control) == Key::Control) modifierNames.push_back(L"Control");
 			if ((modifier & Key::Alt) == Key::Alt) modifierNames.push_back(L"Alt");
 			if ((modifier & Key::Shift) == Key::Shift) modifierNames.push_back(L"Shift");
 
 			std::wstringstream s;
-			for (size_t i = 0; i < modifierNames.size(); ++i)
-			{
-				if (i > 0)
-				{
+			for (size_t i = 0; i < modifierNames.size(); ++i) {
+				if (i > 0) {
 					s << " + ";
 				}
 				s << modifierNames[i];
@@ -331,93 +313,62 @@ namespace OSHGui
 			return s.str();
 		};
 
-		if (modifier_ == Key::None && hotkey_ == Key::None)
-		{
+		if (modifier_ == Key::None && hotkey_ == Key::None) {
 			textBox_->SetText(HotkeyNames[hotkey_]);
-		}
-		else if (modifier_ != Key::None && hotkey_ != Key::None && (hotkey_ != Key::ShiftKey && hotkey_ != Key::Menu && hotkey_ != Key::ControlKey))
-		{
+		} else if (modifier_ != Key::None && hotkey_ != Key::None && (hotkey_ != Key::ShiftKey && hotkey_ != Key::Menu && hotkey_ != Key::ControlKey)) {
 			Misc::UnicodeString modifierText = ModifierToString(modifier_);
 			Misc::UnicodeString hotkeyText = HotkeyNames[hotkey_];
 
 			textBox_->SetText(modifierText + L" + " + hotkeyText);
-		}
-		else if (hotkey_ != Key::None && (hotkey_ != Key::ShiftKey && hotkey_ != Key::Menu && hotkey_ != Key::ControlKey))
-		{
+		} else if (hotkey_ != Key::None && (hotkey_ != Key::ShiftKey && hotkey_ != Key::Menu && hotkey_ != Key::ControlKey)) {
 			auto hotkeyText = HotkeyNames[hotkey_];
 			textBox_->SetText(hotkeyText);
-		}
-		else
-		{
+		} else {
 			auto modifierText = ModifierToString(modifier_);
 			textBox_->SetText(modifierText);
 		}
 	}
 	//---------------------------------------------------------------------------
-	void HotkeyControl::CalculateAbsoluteLocation()
-	{
-		Control::CalculateAbsoluteLocation();
-		
-		textBox_->CalculateAbsoluteLocation();
-	}
-	//---------------------------------------------------------------------------
-	void HotkeyControl::DrawSelf(Drawing::RenderContext &context)
-	{
-		textBox_->Render();
-
-		Control::DrawSelf(context);
-	}
-	//---------------------------------------------------------------------------
-	void HotkeyControl::PopulateGeometry()
-	{
+	void HotkeyControl::PopulateGeometry() {
 		using namespace Drawing;
 
 		Graphics g(*geometry_);
 
-		for (int i = 0; i < 4; ++i)
-		{
-			g.FillRectangle(GetForeColor(), clearButtonLocation_ + PointF(i, i), SizeF(3, 1));
-			g.FillRectangle(GetForeColor(), clearButtonLocation_ + PointF(6 - i, i), SizeF(3, 1));
-			g.FillRectangle(GetForeColor(), clearButtonLocation_ + PointF(i, 7 - i), SizeF(3, 1));
-			g.FillRectangle(GetForeColor(), clearButtonLocation_ + PointF(6 - i, 7 - i), SizeF(3, 1));
+		for (int i = 0; i < 4; ++i) {
+			g.FillRectangle(GetForeColor(), clearButtonLocation_ + PointI(i, i), SizeI(3, 1));
+			g.FillRectangle(GetForeColor(), clearButtonLocation_ + PointI(6 - i, i), SizeI(3, 1));
+			g.FillRectangle(GetForeColor(), clearButtonLocation_ + PointI(i, 7 - i), SizeI(3, 1));
+			g.FillRectangle(GetForeColor(), clearButtonLocation_ + PointI(6 - i, 7 - i), SizeI(3, 1));
 		}
 	}
 	//---------------------------------------------------------------------------
 	//Event-Handling
 	//---------------------------------------------------------------------------
-	void HotkeyControl::OnMouseClick(const MouseMessage &mouse)
-	{
-		if (Intersection::TestRectangle(absoluteLocation_ + clearButtonLocation_, Drawing::SizeI(9, 8), mouse.GetLocation()))
-		{
+	void HotkeyControl::OnMouseClick(const MouseMessage &mouse) {
+		if (Intersection::TestRectangleI(absoluteLocation_ + clearButtonLocation_, Drawing::SizeI(9, 8), mouse.GetLocation())) {
 			ClearHotkey();
-		}
-		else
-		{
+		} else {
 			Control::OnMouseClick(mouse);
 		}
 	}
 	//---------------------------------------------------------------------------
-	bool HotkeyControl::OnKeyDown(const KeyboardMessage &keyboard)
-	{
-		if (!Control::OnKeyDown(keyboard))
-		{
+	bool HotkeyControl::OnKeyDown(const KeyboardMessage &keyboard) {
+		if (!Control::OnKeyDown(keyboard)) {
 			KeyEventArgs args(keyboard);
 			SetHotkey(args.GetKeyCode());
 			SetHotkeyModifier(args.GetModifier());
-
+			
 			return false;
 		}
 
 		return true;
 	}
 	//---------------------------------------------------------------------------
-	bool HotkeyControl::OnKeyPress(const KeyboardMessage &keyboard)
-	{
+	bool HotkeyControl::OnKeyPress(const KeyboardMessage &keyboard) {
 		return true;
 	}
 	//---------------------------------------------------------------------------
-	bool HotkeyControl::OnKeyUp(const KeyboardMessage &keyboard)
-	{
+	bool HotkeyControl::OnKeyUp(const KeyboardMessage &keyboard) {
 		return true;
 	}
 	//---------------------------------------------------------------------------

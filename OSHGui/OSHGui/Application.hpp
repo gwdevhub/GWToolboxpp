@@ -23,8 +23,7 @@
 #include "FormManager.hpp"
 #include "Event/Hotkey.hpp"
 
-namespace OSHGui
-{
+namespace OSHGui {
 	class Control;
 	class Form;
 	
@@ -33,116 +32,49 @@ namespace OSHGui
 	 * eg Methods to start and stop an application and 
 	 * for retrieving information about an application.
 	 */
-	class OSHGUI_EXPORT Application
-	{
+	class OSHGUI_EXPORT Application {
 		friend Control;
 		friend Form;
 
 	public:
-		class GuiRenderSurface;
 
-		/**
-		 * Initializes the Application class.
-		 *
-		 * \param renderer Instance of the renderer used
-		 */
 		static void Initialize(std::unique_ptr<Drawing::Renderer> &&renderer);
 		
-		/**
-		 * Gets whether the GUI is activated.
-		 *
-		 * return isEnabled
-		 */
 		const bool IsEnabled() const;
-		/**
-		 * Gets the current time.
-		 *
-		 * \return DateTime::Now
-		 */
+
 		const Misc::DateTime& GetNow() const;
 
-		/**
-		 * Gets the renderer used.
-		 *
-		 * \return renderer
-		 */
+
 		Drawing::Renderer& GetRenderer() const;
-		/**
-		 * Gets the Render Surface of Gui.
-		 *
-		 * \return GuiRenderSurface
-		 */
-		GuiRenderSurface& GetRenderSurface();
+		Drawing::RenderSurface& GetRenderSurface();
+		void Invalidate();
 		/**
 		 * Specifies the screen size.
-		 *
-		 * @param size
 		 */
-		void DisplaySizeChanged(const Drawing::SizeF &size);
+		void DisplaySizeChanged(const Drawing::SizeI &size);
 		
-		/**
-		 * Sets the default font for the GUI.
-		 *
-		 * \param font Standardschrift
-		 */
 		void SetDefaultFont(const Drawing::FontPtr &font);
-		/**
-		 * Gets the default font for the GUI.
-		 *
-		 * \return Standardschrift
-		 */
 		Drawing::FontPtr& GetDefaultFont();
 		
-		/**
-		 * Gets the current mouse position.
-		 *
-		 * \return cursorLocation
-		 */
-		const Drawing::PointF& GetCursorLocation() const;
-		/**
-		 * Gets the cursor.
-		 *
-		 * \return cursor
-		 */
+
+		const Drawing::PointI& GetCursorLocation() const;
+
 		const std::shared_ptr<Cursor>& GetCursor() const;
-		/**
-		 * Sets the cursor.
-		 *
-		 * \param cursor
-		 */
 		void SetCursor(const std::shared_ptr<Cursor> &cursor);
 		/**
 		 * Defines whether the cursor is to be drawn.
-		 *
-		 * \param enabled
 		 */
 		void SetCursorEnabled(bool enabled);
 		
 		/**
 		 * Specifies the Theme for Gui.
-		 *
-		 * \param theme Theme
 		 */
 		void SetTheme(const Drawing::Theme &theme);
-		/**
-		 * Gets the Theme for Gui.
-		 *
-		 * \return Theme
-		 */
 		Drawing::Theme& GetTheme();
 	
-		/**
-		 * Activates the GUI.
-		 */
 		void Enable();
-		/**
-		 * Disables the GUI.
-		 */
 		void Disable();
-		/**
-		 * Toggle between Enabled and Disabled.
-		 */
-		void Toggle();
+		void Toggle(); // Toggles between Enabled and Disabled
 
 		/**
 		 * Removes focus from the GUI
@@ -158,60 +90,25 @@ namespace OSHGui
 		/**
 		 * Is a Mouse Message to the open forms on.
 		 *
-		 * \param mouse
 		 * \return true, if the message was processed
 		 */
 		bool ProcessMouseMessage(const MouseMessage &mouse);
 		/**
 		 * Indicates a keyboard message to the open forms on.
 		 *
-		 * \param keyboard
 		 * \return true, if the message was processed
 		 */
 		bool ProcessKeyboardMessage(const KeyboardMessage &keyboard);
 		
-		/**
-		 * Draws the open forms.
-		 */
 		void Render();
 
-		/**
-		 * Registers a new hotkey.
-		 *
-		 * \param hotkey
-		 */
 		void RegisterHotkey(const Hotkey &hotkey);
-		/**
-		 * Removes a hotkey.
-		 *
-		 * \param hotkey
-		 */
 		void UnregisterHotkey(const Hotkey &hotkey);
 		
-		/**
-		 * Gets the current instance of the Application.
-		 *
-		 * \return instance
-		 */
 		static Application& Instance();
 		static Application* InstancePtr();
 
 		static bool HasBeenInitialized();
-
-		class GuiRenderSurface : public Drawing::RenderSurface
-		{
-		public:
-			GuiRenderSurface(Drawing::RenderTarget &target);
-
-			void Invalidate();
-
-			virtual void Draw() override;
-
-		private:
-			friend void Application::Render();
-
-			bool needsRedraw_;
-		};
 
 	private:
 		static Application *instance;
@@ -224,7 +121,9 @@ namespace OSHGui
 		void InjectTime();
 
 		std::unique_ptr<Drawing::Renderer> renderer_;
-		GuiRenderSurface guiSurface_;
+		Drawing::RenderSurface renderSurface_;
+		bool needsRedraw_;
+
 		Drawing::FontPtr defaultFont_;
 		
 		Drawing::Theme defaultTheme_;
@@ -234,9 +133,8 @@ namespace OSHGui
 		
 		Misc::DateTime now_;
 
-		struct
-		{
-			Drawing::PointF Location;
+		struct {
+			Drawing::PointI Location;
 			std::shared_ptr<Cursor> Cursor;
 			bool Enabled;
 		} mouse_;

@@ -12,45 +12,19 @@
 #include "Control.hpp"
 #include "../Misc/TextHelper.hpp"
 
-namespace OSHGui
-{
+namespace OSHGui {
 	/**
 	 * Stellt ein Label-Steuerelement dar.
 	 */
-	class OSHGUI_EXPORT Label : public Control
-	{
+	class OSHGUI_EXPORT Label : public Control {
 	public:
-		/**
-		 * Konstruktor der Klasse.
-		 */
-		Label();
+		Label(Control* parent);
 		
-		/**
-		 * Legt den Text fest. Falls autoSize = true, wird die Größe automatisch angepasst.
-		 *
-		 * \param text
-		 */
+
 		void SetText(const Misc::UnicodeString &text);
-		/**
-		 * Ruft den Text ab.
-		 *
-		 * \return der Text
-		 */
 		const Misc::UnicodeString& GetText() const;
-		/**
-		 * Legt die Schriftart des Texts im Steuerelement fest.
-		 *
-		 * \param font
-		 */
+
 		virtual void SetFont(const Drawing::FontPtr &font) override;
-		
-		/**
-		 * Überprüft, ob sich der Punkt innerhalb des Steuerelements befindet.
-		 *
-		 * \param point
-		 * \return ja / nein
-		 */
-		virtual bool Intersect(const Drawing::PointI &point) const override;
 		
 	protected:
 		virtual void PopulateGeometry() override;

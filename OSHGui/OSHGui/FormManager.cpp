@@ -184,8 +184,7 @@ namespace OSHGui
 		}
 	}
 	//---------------------------------------------------------------------------
-	FormManager::FormIterator FormManager::GetEnumerator()
-	{
+	FormManager::FormIterator FormManager::GetEnumerator() {
 		return FormIterator(*this);
 	}
 	//---------------------------------------------------------------------------

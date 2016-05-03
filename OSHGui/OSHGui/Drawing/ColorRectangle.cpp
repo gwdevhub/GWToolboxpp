@@ -42,10 +42,9 @@ namespace OSHGui
 			return TopLeft == TopRight && TopLeft == BottomLeft && TopLeft == BottomRight;
 		}
 		//---------------------------------------------------------------------------
-		Color ColorRectangle::GetColorAtPoint(float x, float y) const
-		{
-			auto h1((TopRight - TopLeft) * x + TopLeft);
-			auto h2((BottomRight - BottomLeft) * x + BottomLeft);
+		Color ColorRectangle::GetColorAtPoint(float x, float y) const {
+			Drawing::Color h1((TopRight - TopLeft) * x + TopLeft);
+			Drawing::Color h2((BottomRight - BottomLeft) * x + BottomLeft);
 			return (h2 - h1) * y + h1;
 		}
 		//---------------------------------------------------------------------------

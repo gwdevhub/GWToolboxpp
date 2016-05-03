@@ -7,6 +7,8 @@
 #include <GWCA\ItemMgr.h>
 #include <GWCA\GuildMgr.h>
 #include <GWCA\FriendListMgr.h>
+#include <GWCA\StoCMgr.h>
+#include <GWCA\SkillbarMgr.h>
 
 #include "PconPanel.h"
 #include "GWToolbox.h"
@@ -20,6 +22,10 @@ ChatCommands::ChatCommands() {
 	move_side = 0;
 	move_up = 0;
 	cam_speed_ = DEFAULT_CAM_SPEED;
+
+	skill_to_use = 0;
+	skill_usage_delay = 1.0f;
+	skill_timer = TBTimer::init();
 
 	AddCommand(L"age2", ChatCommands::CmdAge2);
 	AddCommand(L"pcons", ChatCommands::CmdPcons);
@@ -38,6 +44,69 @@ ChatCommands::ChatCommands() {
 	AddCommand(L"afk", ChatCommands::CmdAfk, false);
 	AddCommand(L"target", ChatCommands::CmdTarget);
 	AddCommand(L"tgt", ChatCommands::CmdTarget);
+
+	AddCommand(L"useskill", ChatCommands::CmdUseSkill);
+	AddCommand(L"skilluse", ChatCommands::CmdUseSkill);
+
+	auto ShouldIgnore = [](GWCA::StoC_Pak::P081* pak) -> bool {
+		switch (pak->message[0]) {
+		//case 0x7df: return true; // party shares gold
+		case 0x7f0: return true; // monster drop
+		//case 0x7f2: return true; // player drop
+		//case 0x7fc: return true; // pick up item
+		case 0x8101:
+			switch (pak->message[1]) {
+			case 0x1868: return true; // teilah takes 10 festival tickets
+			case 0x1867: return true; // stay where you are, nine rings is about to begin
+			case 0x1869: return true; // big winner! 55 tickets
+			case 0x186a: return true; // you win 40 tickets
+			case 0x186b: return true; // you win 25 festival tickets
+			case 0x186c: return true; // you win 15 festival tickets
+			case 0x186d: return true; // did not win 9rings
+			default: return false;
+			}
+		case 0x8102:
+			switch (pak->message[1]) {
+			case 0x4650: return true; // skill has been updated for pvp
+			default: return false;
+			}
+		default: return false;
+		}
+	};
+
+	suppress_next_message = false;
+	suppress_messages_active = false;
+	GWCA::StoC().AddGameServerEvent<GWCA::StoC_Pak::P081>([&](GWCA::StoC_Pak::P081* pak) -> bool {
+		if (pak->message[0] == 0x108) { // player message
+			return false;
+		} else {
+			if (suppress_messages_active && ShouldIgnore(pak)) {
+				suppress_next_message = true;
+				return true;
+			} else {
+				//printf("P081:");
+				//for (size_t i = 0; pak->message[i] != 0; ++i) printf(" 0x%x", pak->message[i]);
+				//printf("\n");
+				return false;
+			}
+		}
+	});
+
+	GWCA::StoC().AddGameServerEvent<GWCA::StoC_Pak::P082>([&](GWCA::StoC_Pak::P082* pak) -> bool {
+		if (suppress_next_message) {
+			suppress_next_message = false;
+			return true;
+		}
+		return false;
+	});
+
+	GWCA::StoC().AddGameServerEvent<GWCA::StoC_Pak::P085>([&](GWCA::StoC_Pak::P085* pak) -> bool {
+		if (suppress_next_message) {
+			suppress_next_message = false;
+			return true;
+		}
+		return false;
+	});
 }
 
 void ChatCommands::AddCommand(wstring cmd, Handler_t handler, bool override) {
@@ -96,6 +165,27 @@ void ChatCommands::UpdateUI() {
 		cam.VerticalMovement(-cam_speed_ * move_up);
 		cam.SideMovement(-cam_speed_ * move_side);
 		cam.UpdateCameraPos();
+	}
+}
+
+void ChatCommands::MainRoutine() {
+	if (skill_to_use > 0 && skill_to_use < 9 
+		&& GWCA::Map().GetInstanceType() == GwConstants::InstanceType::Explorable
+		&& TBTimer::diff(skill_timer) / 1000.0f > skill_usage_delay) {
+
+		GWCA::SkillbarMgr manager = GWCA::Skillbar();
+		GWCA::GW::Skillbar skillbar = manager.GetPlayerSkillbar();
+		if (skillbar.IsValid()) {
+			GWCA::GW::SkillbarSkill skill = skillbar.Skills[skill_to_use - 1]; // -1 to switch range [1,8] -> [0,7]
+			if (skill.GetRecharge() == 0) {
+				printf("using skill \n");
+				manager.UseSkill(skill_to_use - 1, GWCA::Agents().GetTargetId());
+
+				GWCA::GW::Skill skilldata = manager.GetSkillConstantData(skill.SkillId);
+				skill_usage_delay = skilldata.Activation + skilldata.Aftercast + 1.0f; // one additional second to account for ping and to avoid spamming in case of bad target
+				skill_timer = TBTimer::init();
+			}
+		}
 	}
 }
 
@@ -161,7 +251,7 @@ void ChatCommands::CmdTB(vector<wstring> args) {
 		} else if (arg == L"show") {
 			GWToolbox::instance().main_window().SetHidden(false);
 		} else if (arg == L"reset") {
-			GWToolbox::instance().main_window().SetLocation(0, 0);
+			GWToolbox::instance().main_window().SetLocation(PointI(0, 0));
 		} else if (arg == L"mini" || arg == L"minimize") {
 			GWToolbox::instance().main_window().SetMinimized(true);
 		} else if (arg == L"maxi" || arg == L"maximize") {
@@ -347,6 +437,20 @@ void ChatCommands::CmdTarget(vector<wstring> args) {
 			} else {
 				ChatLogger::LogF(L"Target coordinates are [(%f, %f);xx]", target->X, target->Y);
 			}
+		}
+	}
+}
+
+void ChatCommands::CmdUseSkill(vector<wstring> args) {
+	ChatCommands& self = GWToolbox::instance().chat_commands();
+	if (args.empty()) {
+		self.skill_to_use = 0;
+	} else if (args.size() == 1) {
+		try {
+			int skill = std::stoi(args[0]);
+			if (skill >= 0 && skill <= 8) self.skill_to_use = skill;
+		} catch (...) {
+			ChatLogger::LogF(L"[Error] Invalid argument '%ls', please use an integer value", args[0].c_str());
 		}
 	}
 }

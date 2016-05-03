@@ -1,25 +1,20 @@
 #include "GeometryBuffer.hpp"
 
-namespace OSHGui
-{
-	namespace Drawing
-	{
+namespace OSHGui {
+	namespace Drawing {
 		//---------------------------------------------------------------------------
 		//Constructor
 		//---------------------------------------------------------------------------
 		GeometryBuffer::GeometryBuffer()
-			: drawMode(VertexDrawMode::TriangleList)
-		{
+			: drawMode(VertexDrawMode::TriangleList) {
 		}
 		//---------------------------------------------------------------------------
-		GeometryBuffer::~GeometryBuffer()
-		{
+		GeometryBuffer::~GeometryBuffer() {
 		}
 		//---------------------------------------------------------------------------
 		//Getter/Setter
 		//---------------------------------------------------------------------------
-		void GeometryBuffer::SetVertexDrawMode(VertexDrawMode mode)
-		{
+		void GeometryBuffer::SetVertexDrawMode(VertexDrawMode mode) {
 			drawMode = mode;
 		}
 		//---------------------------------------------------------------------------

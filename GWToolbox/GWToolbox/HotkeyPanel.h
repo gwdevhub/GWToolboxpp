@@ -17,13 +17,10 @@
 // class used to keep a list of hotkeys, capture keyboard event and fire hotkeys as needed
 class HotkeyPanel : public ToolboxPanel {
 private:
-	static const int MAX_SHOWN = 4;			// number of hotkeys shown in interface
-	int first_shown_;						// index of first one shown
-
 	std::vector<TBHotkey*> hotkeys;				// list of hotkeys
 
-	OSHGui::ScrollBar* scrollbar_;
 	OSHGui::ComboBox* delete_combo_;
+	OSHGui::ScrollPanel* scroll_panel_;
 
 	long max_id_;
 
@@ -42,29 +39,24 @@ private:
 
 	void CalculateHotkeyPositions();
 
-protected:
-	bool OnMouseScroll(const OSHGui::MouseMessage &mouse) override;
-
 public:
-	HotkeyPanel();
+	HotkeyPanel(OSHGui::Control* parent);
 	
 	inline bool ToggleClicker() { return clickerActive = !clickerActive; }
 	inline bool ToggleCoinDrop() { return dropCoinsActive = !dropCoinsActive; }
 	inline bool ToggleRupt() { return ruptActive = !ruptActive; }
 
-	void LoadIni();				// load settings from ini file
-	void BuildUI() override;	// create user interface
+	void BuildUI() override;
 	inline void UpdateUI() override {};
 	void MainRoutine() override;
 
 	bool ProcessMessage(LPMSG msg);
-	void set_first_shown(int first);
 
-	void DrawSelf(OSHGui::Drawing::RenderContext &context) override;
+	void UpdateDeleteCombo();
 
+private:
 	void AddHotkey(TBHotkey* hotkey);
 	void DeleteHotkey(int index);
-	void UpdateDeleteCombo();
 	void UpdateScrollBarMax();
 
 	inline long NewID() { return ++max_id_; }

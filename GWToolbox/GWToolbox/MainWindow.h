@@ -21,9 +21,8 @@ private:
 	PictureBox* const pic;
 
 public:
-	TabButton(const wchar_t* s, const char* icon);
+	TabButton(Control* parent, wstring s, string icon);
 
-	void DrawSelf(Drawing::RenderContext &context) override;
 	void CalculateLabelLocation() override;
 	void PopulateGeometry() override;
 };
@@ -32,20 +31,23 @@ class MainWindow : public ToolboxWindow {
 public:
 	class TitleLabel : public DragButton {
 	public:
-		TitleLabel() {}
+		TitleLabel(OSHGui::Control* parent) : DragButton(parent) {}
 		virtual void CalculateLabelLocation() override {
-			label_->SetLocation(OSHGui::Drawing::PointI(
-				DefaultBorderPadding / 2,
+			label_->SetLocation(OSHGui::Drawing::PointI(Padding / 2,
 				GetSize().Height / 2 - label_->GetSize().Height / 2));
 		}
 	};
 
 	class CloseButton : public Button {
+	public:
+		CloseButton(Control* parent) : Button(parent) {}
 	protected:
 		virtual void PopulateGeometry() override;
 	};
 
 	class MinimizeButton : public Button {
+	public:
+		MinimizeButton(Control* parent) : Button(parent) {}
 	protected:
 		virtual void PopulateGeometry() override;
 	};
@@ -77,7 +79,6 @@ private:
 	MaterialsPanel& materials_panel_;
 	SettingsPanel& settings_panel_;
 
-	void CreateTabButton(const wchar_t* s, int& button_idx, int& panel_idx, const char* icon);
 	void SaveLocation();
 	void SaveMinimizedLocation();
 
@@ -89,18 +90,8 @@ public:
 	inline static const wchar_t* IniKeyY() { return L"y"; }
 	inline static const wchar_t* IniKeyMinimizedAltX() { return L"minx"; }
 	inline static const wchar_t* IniKeyMinimizedAltY() { return L"miny"; }
-	inline static const wchar_t* IniKeyTabsLeft() { return L"tabsleft"; }
-	inline static const wchar_t* IniKeyFreeze() { return L"freeze_widgets"; }
-	inline static const wchar_t* IniKeyHideTarget() { return L"hide_target"; }
-	inline static const wchar_t* IniKeyMinAltPos() { return L"minimize_alt_position"; }
-	inline static const wchar_t* IniKeyTickWithPcons() { return L"tick_with_pcons"; }
-	inline static const wchar_t* IniKeySaveLocation() { return L"save_location"; }
-	inline static const wchar_t* IniKeyTimestamps() { return L"timestamps"; }
-	inline static const wchar_t* IniKeyOpenLinks() { return L"openlinks"; }
 
-	virtual void DrawSelf(Drawing::RenderContext &context) override;
-
-	void OpenClosePanel(int index);
+	void OpenClosePanel(size_t index);
 	inline void set_use_minimized_alt_pos(bool enable) { use_minimized_alt_pos_ = enable; }
 	inline void set_tick_with_pcons(bool enabled) { tick_with_pcons_ = enabled; }
 	inline bool minimized() { return minimized_; }
@@ -118,6 +109,8 @@ public:
 	InfoPanel& info_panel() { return info_panel_; }
 	MaterialsPanel& materials_panel() { return materials_panel_; }
 	SettingsPanel& settings_panel() { return settings_panel_; }
+
+	virtual bool Intersect(const Drawing::PointI &point) const override;
 
 	void SetPanelPositions(bool left);
 	void UpdateUI();

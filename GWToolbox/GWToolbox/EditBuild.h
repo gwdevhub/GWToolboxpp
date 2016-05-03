@@ -13,7 +13,7 @@ public:
 	const int NAME_WIDTH = 150;
 	const int SEND_WIDTH = 45;
 
-	EditBuild();
+	EditBuild(OSHGui::Control* parent);
 	
 	void SetEditedBuild(int index, OSHGui::Button* button);
 	void SetPanelPosition(bool left) { left_ = left; UpdateLocation(); }

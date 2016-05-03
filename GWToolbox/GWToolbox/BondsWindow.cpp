@@ -28,7 +28,7 @@ BondsWindow::BondsWindow() {
 	int x = config.IniReadLong(BondsWindow::IniSection(), BondsWindow::IniKeyX(), 400);
 	int y = config.IniReadLong(BondsWindow::IniSection(), BondsWindow::IniKeyY(), 100);
 
-	SetLocation(x, y);
+	SetLocation(PointI(x, y));
 	SetSize(Drawing::SizeI(width, height));
 	SetEnabled(false);
 
@@ -36,38 +36,38 @@ BondsWindow::BondsWindow() {
 		->GetTheme().GetControlColorTheme(BondsWindow::ThemeKey());
 	SetBackColor(theme.BackColor);
 
-	monitor = new BondsMonitor(img_size);
-	monitor->SetLocation(0, 0);
-	monitor->SetSize(width, height);
+	monitor = new BondsMonitor(this, img_size);
+	monitor->SetLocation(PointI(0, 0));
+	monitor->SetSize(SizeI(width, height));
 	AddControl(monitor);
-
-	bool show = config.IniReadBool(BondsWindow::IniSection(), BondsWindow::IniKeyShow(), false);
-	ShowWindow(show);
 
 	std::shared_ptr<BondsWindow> self = std::shared_ptr<BondsWindow>(this);
 	Form::Show(self);
+
+	bool show = config.IniReadBool(BondsWindow::IniSection(), BondsWindow::IniKeyShow(), false);
+	SetVisible(show);
 }
 
-BondsWindow::BondsMonitor::BondsMonitor(int img_size) : img_size_(img_size) {
+BondsWindow::BondsMonitor::BondsMonitor(OSHGui::Control* parent, int img_size) : 
+	DragButton(parent), 
+	img_size_(img_size) {
+
 	isFocusable_ = true;
 	SetEnabled(true);
 	hovered_player = -1;
 	hovered_bond = -1;
 	party_size = MAX_PLAYERS; // initialize at max, upcate will take care of shrinking as needed.
 	pressed = false;
-	freezed = GWToolbox::instance().config().IniReadBool(MainWindow::IniSection(),
-		MainWindow::IniKeyFreeze(), false);
 
 	for (int i = 0; i < MAX_PLAYERS; ++i) {
 		for (int j = 0; j < MAX_BONDS; ++j) {
 			buff_id[i][j] = 0;
-			pics[i][j] = new PictureBox();
-			pics[i][j]->SetLocation(j * img_size_, i *img_size_);
-			pics[i][j]->SetSize(img_size_, img_size_);
+			pics[i][j] = new PictureBox(this);
+			pics[i][j]->SetLocation(PointI(j * img_size_, i *img_size_));
+			pics[i][j]->SetSize(SizeI(img_size_, img_size_));
 			pics[i][j]->SetStretch(true);
 			pics[i][j]->SetVisible(false);
 			pics[i][j]->SetEnabled(false);
-			AddSubControl(pics[i][j]);
 		}
 	}
 	for (int i = 0; i < MAX_PLAYERS; ++i) {
@@ -81,24 +81,12 @@ BondsWindow::BondsMonitor::BondsMonitor(int img_size) : img_size_(img_size) {
 	});
 }
 
-void BondsWindow::BondsMonitor::DrawSelf(Drawing::RenderContext &context) {
-	for (int i = 0; i < party_size; ++i) {
-		for (int j = 0; j < MAX_BONDS; ++j) {
-			if (pics[i][j]->GetVisible()) {
-				pics[i][j]->Render();
-			}
-		}
-	}
-	Control::DrawSelf(context);
-}
-
 void BondsWindow::BondsMonitor::PopulateGeometry() {
 	if (hovered_player != -1 && hovered_bond != -1) {
 		Graphics g(*geometry_);
 		Drawing::Color c = GetForeColor();
 		if (pressed) c = c - Drawing::Color::FromARGB(50, 50, 50, 50);
-		g.DrawRectangle(c, (float)img_size_ * hovered_bond, (float)img_size_ * hovered_player,
-			(float)img_size_, (float)img_size_);
+		g.DrawRectangle(c, img_size_ * hovered_bond, img_size_ * hovered_player, img_size_, img_size_);
 	}
 }
 
@@ -185,15 +173,13 @@ void BondsWindow::BondsMonitor::SaveLocation() {
 }
 
 void BondsWindow::BondsMonitor::UpdateUI() {
-	//using namespace GW;
-
 	if (!isVisible_) return;
 
 	int size = GWCA::Party().GetPartySize();
 	if (size > MAX_PLAYERS) size = MAX_PLAYERS;
 	if (party_size != size) {
 		party_size = size;
-		SetSize(MAX_BONDS * img_size_, party_size * img_size_);
+		SetSize(SizeI(MAX_BONDS * img_size_, party_size * img_size_));
 		parent_->SetSize(GetSize());
 	}
 

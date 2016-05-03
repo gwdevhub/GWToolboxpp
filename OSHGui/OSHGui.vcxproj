@@ -30,6 +30,7 @@
     <ClCompile Include="OSHGui\Controls\ProgressBar.cpp" />
     <ClCompile Include="OSHGui\Controls\RadioButton.cpp" />
     <ClCompile Include="OSHGui\Controls\ScrollBar.cpp" />
+    <ClCompile Include="OSHGui\Controls\ScrollPanel.cpp" />
     <ClCompile Include="OSHGui\Controls\TabControl.cpp" />
     <ClCompile Include="OSHGui\Controls\TabPage.cpp" />
     <ClCompile Include="OSHGui\Controls\TextBox.cpp" />
@@ -95,6 +96,7 @@
     <ClInclude Include="OSHGui\Controls\ProgressBar.hpp" />
     <ClInclude Include="OSHGui\Controls\RadioButton.hpp" />
     <ClInclude Include="OSHGui\Controls\ScrollBar.hpp" />
+    <ClInclude Include="OSHGui\Controls\ScrollPanel.hpp" />
     <ClInclude Include="OSHGui\Controls\TabControl.hpp" />
     <ClInclude Include="OSHGui\Controls\TabPage.hpp" />
     <ClInclude Include="OSHGui\Controls\TextBox.hpp" />
@@ -225,7 +227,6 @@
       </AdditionalIncludeDirectories>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
-      <DisableSpecificWarnings>4244;4018;4351</DisableSpecificWarnings>
       <MinimalRebuild>false</MinimalRebuild>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -250,7 +251,6 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;NOMINMAX;WIN32_LEAN_AND_MEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <DisableSpecificWarnings>4244;4018;4351</DisableSpecificWarnings>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>

@@ -14,12 +14,10 @@
 #include <functional>
 #include "Exports.hpp"
 
-namespace OSHGui
-{
+namespace OSHGui {
 	class Form;
 
-	class OSHGUI_EXPORT FormManager
-	{
+	class OSHGUI_EXPORT FormManager {
 	public:
 		class FormIterator;
 
@@ -101,8 +99,7 @@ namespace OSHGui
 		FormIterator GetEnumerator();
 
 	private:
-		struct FormInfo
-		{
+		struct FormInfo {
 			std::shared_ptr<Form> Form;
 			std::function<void()> CloseFunction;
 			bool Remove;
@@ -112,8 +109,7 @@ namespace OSHGui
 		std::shared_ptr<Form> mainForm_;
 
 	public:
-		class FormIterator
-		{
+		class FormIterator {
 		public:
 			FormIterator(FormManager &fm);
 

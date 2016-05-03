@@ -14,15 +14,12 @@
 
 #include "../Vertex.hpp"
 
-namespace OSHGui
-{
-	namespace Drawing
-	{
+namespace OSHGui {
+	namespace Drawing {
 		/**
 		 * Die Direct3D9 Variante der Texture.
 		 */
-		class OSHGUI_EXPORT Direct3D9Texture : public Texture
-		{
+		class OSHGUI_EXPORT Direct3D9Texture : public Texture {
 		public:
 			virtual ~Direct3D9Texture();
 
@@ -45,7 +42,7 @@ namespace OSHGui
 			 * 
 			 * \param size Originalgröße
 			 */
-			void SetOriginalDataSize(const SizeF& size);
+			void SetOriginalDataSize(const SizeI& size);
 
 			/**
 			 * Hilfsfunktion, die vor einem D3D Reset vom Renderer aufgerufen wird.
@@ -56,18 +53,18 @@ namespace OSHGui
 			 */
 			void PostD3DReset();
 
-			virtual const SizeF& GetSize() const override;
-			virtual const SizeF& GetOriginalDataSize() const override;
+			virtual const SizeI& GetSize() const override;
+			virtual const SizeI& GetOriginalDataSize() const override;
 			virtual const std::pair<float, float>& GetTexelScaling() const override;
 			virtual void LoadFromFile(const Misc::AnsiString &filename) override;
-			virtual void LoadFromMemory(const void *buffer, const SizeF &size, PixelFormat pixelFormat) override;
+			virtual void LoadFromMemory(const void *buffer, const SizeI &size, PixelFormat pixelFormat) override;
 			virtual bool IsPixelFormatSupported(const PixelFormat format) const override;
 
 		protected:
 			// Friends (to allow construction and destruction)
 			friend TexturePtr Direct3D9Renderer::CreateTexture();
 			friend TexturePtr Direct3D9Renderer::CreateTexture(const Misc::AnsiString&);
-			friend TexturePtr Direct3D9Renderer::CreateTexture(const SizeF&);
+			friend TexturePtr Direct3D9Renderer::CreateTexture(const SizeI&);
 
 			/**
 			 * Erstellt eine leere Textur.
@@ -88,7 +85,7 @@ namespace OSHGui
 			 * \param owner Renderer Objekt, das die Textur erstellt hat
 			 * \param size Größe der Textur
 			 */
-			Direct3D9Texture(Direct3D9Renderer &owner, const SizeF &size);
+			Direct3D9Texture(Direct3D9Renderer &owner, const SizeI &size);
 
 			/**
 			 * Erzeugt intern die verwendete Textur.
@@ -96,7 +93,7 @@ namespace OSHGui
 			 * \param size Größe der Textur
 			 * \param format D3DFORMAT der Textur
 			 */
-			virtual void CreateDirect3D9Texture(const SizeF &size, D3DFORMAT format);
+			virtual void CreateDirect3D9Texture(const SizeI &size, D3DFORMAT format);
 			/**
 			 * Gibt die intern verwendete Textur frei.
 			 */
@@ -121,8 +118,8 @@ namespace OSHGui
 			
 			LPDIRECT3DTEXTURE9 texture;
 			
-			SizeF size;
-			SizeF dataSize;
+			SizeI size;
+			SizeI dataSize;
 			
 			std::pair<float, float> texelScaling;
 			

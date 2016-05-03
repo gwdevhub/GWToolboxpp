@@ -16,9 +16,9 @@ public:
 private:
 	class Build : public OSHGui::Panel {
 	public:
-		Build(int index, std::wstring name, 
+		Build(OSHGui::Control* parent, int index, std::wstring name, 
 			EditBuild* edit_build, BuildPanel* panel)
-			: index_(index), name_(name), 
+			: Panel(parent), index_(index), name_(name),
 			edit_build_(edit_build), panel_(panel) { }
 		void BuildUI();
 		void SendTeamBuild();
@@ -35,20 +35,17 @@ private:
 
 	int first_shown_;				// index of first one shown
 	std::vector<Build*> builds;
-	OSHGui::ScrollBar* scrollbar_;
 	EditBuild* edit_build_;
 	clock_t send_timer;
 	std::queue<std::wstring> queue;
 
+	virtual bool Intersect(const OSHGui::Drawing::PointI &point) const override;
+
 	inline void Enqueue(std::wstring msg) { queue.push(msg); }
 	void CalculateBuildPositions();
-	inline void set_first_shown(int first);
-
-protected:
-	bool OnMouseScroll(const OSHGui::MouseMessage &mouse) override;
 
 public:
-	BuildPanel();
+	BuildPanel(OSHGui::Control* parent);
 
 	void BuildUI() override;
 	void UpdateUI() override {};

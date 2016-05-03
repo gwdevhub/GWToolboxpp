@@ -10,8 +10,7 @@
 #include "Label.hpp"
 #include "../Misc/Exceptions.hpp"
 
-namespace OSHGui
-{
+namespace OSHGui {
 	//---------------------------------------------------------------------------
 	//static attributes
 	//---------------------------------------------------------------------------
@@ -19,27 +18,26 @@ namespace OSHGui
 	//---------------------------------------------------------------------------
 	//Constructor
 	//---------------------------------------------------------------------------
-	CheckBox::CheckBox()
-		: checked_(false),
-		  label_(new Label())
-	{
+	CheckBox::CheckBox(Control* parent) : Control(parent),
+		checked_(false),
+		label_(new Label(this)) {
+
 		type_ = ControlType::CheckBox;
 		
-		SetSize(DefaultCheckBoxSize, DefaultCheckBoxSize);
+		SetSize(Drawing::SizeI(DefaultCheckBoxSize, DefaultCheckBoxSize));
 		SetAutoSize(true);
 
 		label_->SetLocation(DefaultLabelOffset);
 		label_->SetBackColor(Drawing::Color::Empty());
+		AddControl(label_);
 
 		ApplyTheme(Application::Instance().GetTheme());
 	}
 	//---------------------------------------------------------------------------
 	//Getter/Setter
 	//---------------------------------------------------------------------------
-	void CheckBox::SetChecked(bool checked)
-	{
-		if (checked_ != checked)
-		{
+	void CheckBox::SetChecked(bool checked) {
+		if (checked_ != checked) {
 			checked_ = checked;
 			
 			checkedChangedEvent_.Invoke(this);
@@ -48,47 +46,37 @@ namespace OSHGui
 		}
 	}
 	//---------------------------------------------------------------------------
-	bool CheckBox::GetChecked() const
-	{
+	bool CheckBox::GetChecked() const {
 		return checked_;
 	}
 	//---------------------------------------------------------------------------
-	void CheckBox::SetText(const Misc::UnicodeString &text)
-	{
+	void CheckBox::SetText(const Misc::UnicodeString &text) {
 		auto offset = label_->GetLocation();
 
 		label_->SetText(text);
-		if (autoSize_)
-		{
+		if (autoSize_) {
 			size_ = label_->GetSize().InflateEx(offset.Left, offset.Top);
-			if (size_.Height < DefaultCheckBoxSize)
-			{
+			if (size_.Height < DefaultCheckBoxSize) {
 				size_.Height = DefaultCheckBoxSize;
 			}
 		}
 	}
 	//---------------------------------------------------------------------------
-	const Misc::UnicodeString& CheckBox::GetText() const
-	{
+	const Misc::UnicodeString& CheckBox::GetText() const {
 		return label_->GetText();
 	}
 	//---------------------------------------------------------------------------
-	void CheckBox::SetFont(const Drawing::FontPtr &font)
-	{
+	void CheckBox::SetFont(const Drawing::FontPtr &font) {
 		Control::SetFont(font);
 
 		label_->SetFont(font);
-		if (autoSize_)
-		{
+		if (autoSize_) {
 			size_ = label_->GetSize();
-			if (GetFont()->GetFontHeight() < DefaultCheckBoxSize)
-			{
+			if (GetFont()->GetFontHeight() < DefaultCheckBoxSize) {
 				checkBoxLocation_ = Drawing::PointI(0, 0);
 				int y = (int)(DefaultCheckBoxSize / 2.0f - GetFont()->GetFontHeight() / 2.0f + 0.5f);
 				label_->SetLocation(Drawing::PointI(DefaultLabelOffset.Left, y));
-			}
-			else
-			{
+			} else {
 				label_->SetLocation(DefaultLabelOffset);
 				int y = (int)(GetFont()->GetFontHeight() / 2.0f - DefaultCheckBoxSize / 2.0f + 0.5f);
 				checkBoxLocation_ = Drawing::PointI(0, y);
@@ -96,69 +84,53 @@ namespace OSHGui
 		}
 	}
 	//---------------------------------------------------------------------------
-	void CheckBox::SetForeColor(const Drawing::Color &color)
-	{
+	void CheckBox::SetForeColor(const Drawing::Color &color) {
 		Control::SetForeColor(color);
 
 		label_->SetForeColor(color);
 	}
 	//---------------------------------------------------------------------------
-	CheckedChangedEvent& CheckBox::GetCheckedChangedEvent()
-	{
+	CheckedChangedEvent& CheckBox::GetCheckedChangedEvent() {
 		return checkedChangedEvent_;
 	}
 	//---------------------------------------------------------------------------
 	//Runtime-Functions
 	//---------------------------------------------------------------------------
-	void CheckBox::CalculateAbsoluteLocation()
-	{
+	void CheckBox::CalculateAbsoluteLocation() {
 		Control::CalculateAbsoluteLocation();
 
 		checkBoxAbsoluteLocation_ = absoluteLocation_ + checkBoxLocation_;
-
-		label_->SetParent(this);
 	}
 	//---------------------------------------------------------------------------
-	void CheckBox::DrawSelf(Drawing::RenderContext &context)
-	{
-		Control::DrawSelf(context);
-
-		label_->Render();
-	}
-	//---------------------------------------------------------------------------
-	void CheckBox::PopulateGeometry()
-	{
+	void CheckBox::PopulateGeometry() {
 		using namespace Drawing;
 
 		Graphics g(*geometry_);
 
-		g.FillRectangle(GetBackColor(), RectangleF(PointF(0, 0), SizeF(DefaultCheckBoxSize, DefaultCheckBoxSize)));
+		int offset = (GetHeight() - DefaultCheckBoxSize) / 2;
+
+		g.FillRectangle(GetBackColor(), RectangleI(PointI(0, offset), SizeI(DefaultCheckBoxSize, DefaultCheckBoxSize)));
 		
-		g.FillRectangleGradient(ColorRectangle(Color::White(), Color::White() - Color::FromARGB(0, 137, 137, 137)), RectangleF(PointF(1, 1), SizeF(15, 15)));
-		g.FillRectangleGradient(ColorRectangle(GetBackColor(), GetBackColor() + Color::FromARGB(0, 55, 55, 55)), RectangleF(PointF(2, 2), SizeF(13, 13)));
+		g.FillRectangleGradient(ColorRectangle(Color::White(), Color::White() - Color::FromARGB(0, 137, 137, 137)), RectangleI(PointI(1, 1 + offset), SizeI(15, 15)));
+		g.FillRectangleGradient(ColorRectangle(GetBackColor(), GetBackColor() + Color::FromARGB(0, 55, 55, 55)), RectangleI(PointI(2, 2 + offset), SizeI(13, 13)));
 		
-		if (checked_)
-		{
-			g.FillRectangle(Color::White(), RectangleF(PointF(5, 5), SizeF(7, 7)));
-			g.FillRectangleGradient(ColorRectangle(Color::White(), Color::White() - Color::FromARGB(0, 137, 137, 137)), RectangleF(PointF(6, 6), SizeF(5, 5)));
+		if (checked_) {
+			g.FillRectangle(Color::White(), RectangleI(PointI(5, 5 + offset), SizeI(7, 7)));
+			g.FillRectangleGradient(ColorRectangle(Color::White(), Color::White() - Color::FromARGB(0, 137, 137, 137)), RectangleI(PointI(6, 6 + offset), SizeI(5, 5)));
 		}
 	}
 	//---------------------------------------------------------------------------
 	//Event-Handling
 	//---------------------------------------------------------------------------
-	void CheckBox::OnMouseClick(const MouseMessage &mouse)
-	{
+	void CheckBox::OnMouseClick(const MouseMessage &mouse) {
 		Control::OnMouseClick(mouse);
 
 		SetChecked(!GetChecked());
 	}
 	//---------------------------------------------------------------------------
-	bool CheckBox::OnKeyUp(const KeyboardMessage &keyboard)
-	{
-		if (!Control::OnKeyUp(keyboard))
-		{
-			if (keyboard.GetKeyCode() == Key::Space)
-			{
+	bool CheckBox::OnKeyUp(const KeyboardMessage &keyboard) {
+		if (!Control::OnKeyUp(keyboard)) {
+			if (keyboard.GetKeyCode() == Key::Space) {
 				SetChecked(!GetChecked());
 			}
 		}

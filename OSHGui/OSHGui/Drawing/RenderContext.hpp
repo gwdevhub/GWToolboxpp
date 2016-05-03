@@ -12,18 +12,14 @@
 #include "Point.hpp"
 #include "RenderSurface.hpp"
 
-namespace OSHGui
-{
+namespace OSHGui {
 	class Control;
 
-	namespace Drawing
-	{
-		class OSHGUI_EXPORT RenderContext
-		{
+	namespace Drawing {
+		class OSHGUI_EXPORT RenderContext {
 		public:
 			RenderSurface *Surface;
-			const Control *Owner;
-			PointF Offset;
+			RectangleI Clip;
 			RenderQueueType QueueType;
 		};
 	}

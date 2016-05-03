@@ -22,7 +22,7 @@ private:
 	long current_dialog_id;
 
 public:
-	InfoPanel();
+	InfoPanel(OSHGui::Control* parent) : ToolboxPanel(parent) {}
 
 	void BuildUI() override;
 	void UpdateUI() override;

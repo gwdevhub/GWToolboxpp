@@ -14,15 +14,12 @@
 #include "Font.hpp"
 #include "../Misc/RawDataContainer.hpp"
 
-namespace OSHGui
-{
-	namespace Drawing
-	{
+namespace OSHGui {
+	namespace Drawing {
 		/**
 		 * The class allows loading a font.
 		 */
-		class OSHGUI_EXPORT FontManager
-		{
+		class OSHGUI_EXPORT FontManager {
 		public:
 			/**
 			 * Loads the font with the corresponding name.
@@ -49,7 +46,7 @@ namespace OSHGui
 			*
 			* @param size
 			*/
-			static void DisplaySizeChanged(const SizeF &size);
+			static void DisplaySizeChanged(const SizeI &size);
 
 		private:
 			static std::unordered_map<Misc::AnsiString, std::weak_ptr<Drawing::Font>> loadedFonts;

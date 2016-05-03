@@ -19,10 +19,8 @@ typedef struct FT_FaceRec_*  FT_Face;
 
 #undef DrawText
 
-namespace OSHGui
-{
-	namespace Drawing
-	{
+namespace OSHGui {
+	namespace Drawing {
 		/*!
 		\brief
 			Implementation of the Font class interface using the FreeType library.
@@ -34,8 +32,7 @@ namespace OSHGui
 			Glyphs are rendered dynamically on demand, so a large font with lots
 			of glyphs won't slow application startup time.
 		*/
-		class OSHGUI_EXPORT FreeTypeFont : public Font
-		{
+		class OSHGUI_EXPORT FreeTypeFont : public Font {
 		public:
 			/*!
 			\brief

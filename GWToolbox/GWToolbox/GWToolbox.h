@@ -26,6 +26,7 @@
 #define EXCEPT_EXPRESSION_LOOP EXCEPTION_EXECUTE_HANDLER
 #else
 #define EXCEPT_EXPRESSION_ENTRY Logger::GenerateDump(GetExceptionInformation())
+//#define EXCEPT_EXPRESSION_ENTRY EXCEPTION_CONTINUE_SEARCH
 #define EXCEPT_EXPRESSION_LOOP EXCEPTION_EXECUTE_HANDLER
 #endif
 
@@ -75,6 +76,7 @@ private:
 		initialized_(false),
 		must_self_destruct_(false),
 		must_resize_(false),
+		adjust_on_resize_(false),
 		capture_input_(false) {
 
 		ChatLogger::Init();
@@ -96,6 +98,7 @@ public:
 
 	inline bool capture_input() { return capture_input_; }
 	inline void set_capture_input(bool capture) { capture_input_ = capture; }
+	inline void set_adjust_on_resize(bool active) { adjust_on_resize_ = active; }
 
 	inline Config& config() { return *config_; }
 	inline ChatCommands& chat_commands() { return *chat_commands_; }
@@ -137,16 +140,17 @@ private:
 	inline void set_distance_window(DistanceWindow* w) { distance_window_ = w; }
 	inline void set_party_damage(PartyDamage* w) { party_damage_ = w; }
 
-
 	//------ Private Fields ------//
 private:
 	HMODULE dll_module_;	// Handle to the dll module we are running, used to clear the module from GW on eject.
 
-	bool initialized_;
+	bool initialized_;		// true after initialization
 	bool capture_input_;
-	bool must_self_destruct_;
+	bool right_mouse_pressed_;	// if true right mouse has been pressed, ignore move events
+	bool must_self_destruct_;	// is true when toolbox should quit
 	
-	bool must_resize_;
+	bool adjust_on_resize_; // if true toolbox windows will try to adjust position on gw window resize
+	bool must_resize_;		// true when a resize event is sent, is checked by render thread
 	OSHGui::Drawing::SizeI old_screen_size_;
 	OSHGui::Drawing::SizeI new_screen_size_;
 

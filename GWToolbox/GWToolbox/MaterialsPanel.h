@@ -13,7 +13,7 @@ class MaterialsPanel : public ToolboxPanel {
 	};
 
 public:
-	MaterialsPanel();
+	MaterialsPanel(OSHGui::Control* parent) : ToolboxPanel(parent) {}
 
 	void BuildUI() override;
 	void UpdateUI() override {};

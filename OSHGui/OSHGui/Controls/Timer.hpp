@@ -11,8 +11,7 @@
 
 #include "Control.hpp"
 
-namespace OSHGui
-{
+namespace OSHGui {
 	/**
 	 * Tritt auf, wenn das angegebene Intervall verstrichen ist.
 	 */
@@ -23,13 +22,12 @@ namespace OSHGui
 	 * Implementiert einen Zeitgeber, der ein Ereignis in benutzerdefinierten
 	 * Intervallen auslöst.
 	 */
-	class OSHGUI_EXPORT Timer : public Control
-	{
+	class OSHGUI_EXPORT Timer : public Control {
 	public:
 		/**
 		 * Konstruktor der Klasse.
 		 */
-		Timer();
+		Timer(Control* parent);
 		
 		/**
 		 * Legt fest, ob das Steuerlement auf Benutzerinteraktionen reagieren kann.

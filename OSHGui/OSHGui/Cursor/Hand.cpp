@@ -9,56 +9,51 @@
 #include "Hand.hpp"
 #include "../Drawing/Graphics.hpp"
 
-namespace OSHGui
-{
+namespace OSHGui {
 	//---------------------------------------------------------------------------
 	//Runtime-Functions
 	//---------------------------------------------------------------------------
-	void HandCursor::Initialize()
-	{
+	void HandCursor::Initialize() {
 		using namespace Drawing;
 
 		Graphics g(*geometry_);
 
-		PointF offset(-5, 0);
+		PointI offset(-5, 0);
 
-		g.FillRectangle(Color::Black(), PointF(6, 5) + offset, SizeF(7, 9));
-		g.FillRectangle(Color::White(), PointF(0, 7) + offset, SizeF(1, 2));
-		g.FillRectangle(Color::White(), PointF(1, 6) + offset, SizeF(1, 1));
-		for (int i = 0; i < 3; ++i)
-		{
-			g.FillRectangle(Color::White(), PointF(2 + i, 6 + i) + offset, SizeF(1, 1));
+		g.FillRectangle(Color::Black(), PointI(6, 5) + offset, SizeI(7, 9));
+		g.FillRectangle(Color::White(), PointI(0, 7) + offset, SizeI(1, 2));
+		g.FillRectangle(Color::White(), PointI(1, 6) + offset, SizeI(1, 1));
+		for (int i = 0; i < 3; ++i) {
+			g.FillRectangle(Color::White(), PointI(2 + i, 6 + i) + offset, SizeI(1, 1));
+		} 
+		for (int i = 0; i < 4; ++i) {
+			g.FillRectangle(Color::White(), PointI(1 + i, 9 + i) + offset, SizeI(1, 1));
+			g.FillRectangle(Color::Black(), PointI(1 + i, 7 + i) + offset, SizeI(1, 1));
+			g.FillRectangle(Color::Black(), PointI(2 + i, 7 + i) + offset, SizeI(1, 1));
+			g.FillRectangle(Color::Black(), PointI(1 + i, 8 + i) + offset, SizeI(1, 1));
+			g.FillRectangle(Color::Black(), PointI(3 + i, 11 + i) + offset, SizeI(1, 1));
 		}
-		for (int i = 0; i < 4; ++i)
-		{
-			g.FillRectangle(Color::White(), PointF(1 + i, 9 + i) + offset, SizeF(1, 1));
-			g.FillRectangle(Color::Black(), PointF(1 + i, 7 + i) + offset, SizeF(1, 1));
-			g.FillRectangle(Color::Black(), PointF(2 + i, 7 + i) + offset, SizeF(1, 1));
-			g.FillRectangle(Color::Black(), PointF(1 + i, 8 + i) + offset, SizeF(1, 1));
-			g.FillRectangle(Color::Black(), PointF(3 + i, 11 + i) + offset, SizeF(1, 1));
-		}
-		g.FillRectangle(Color::White(), PointF(4, 1) + offset, SizeF(1, 7));
-		g.FillRectangle(Color::White(), PointF(5, 0) + offset, SizeF(2, 1));
-		g.FillRectangle(Color::White(), PointF(5, 15) + offset, SizeF(5, 1));
-		g.FillRectangle(Color::White(), PointF(7, 1) + offset, SizeF(1, 6));
-		g.FillRectangle(Color::White(), PointF(7, 9) + offset, SizeF(1, 4));
-		g.FillRectangle(Color::White(), PointF(9, 9) + offset, SizeF(1, 4));
-		g.FillRectangle(Color::White(), PointF(11, 9) + offset, SizeF(1, 4));
-		g.FillRectangle(Color::White(), PointF(8, 4) + offset, SizeF(4, 1));
-		g.FillRectangle(Color::White(), PointF(10, 5) + offset, SizeF(1, 2));
-		g.FillRectangle(Color::White(), PointF(12, 5) + offset, SizeF(1, 2));
-		g.FillRectangle(Color::White(), PointF(13, 5) + offset, SizeF(1, 1));
-		g.FillRectangle(Color::White(), PointF(14, 6) + offset, SizeF(1, 5));
-		g.FillRectangle(Color::White(), PointF(13, 11) + offset, SizeF(1, 2));
-		g.FillRectangle(Color::White(), PointF(12, 13) + offset, SizeF(1, 3));
-		g.FillRectangle(Color::Black(), PointF(5, 1) + offset, SizeF(2, 13));
-		g.FillRectangle(Color::Black(), PointF(7, 14) + offset, SizeF(3, 1));
-		g.FillRectangle(Color::Black(), PointF(13, 6) + offset, SizeF(1, 5));
-		g.FillRectangle(Color::Black(), PointF(11, 14) + offset, SizeF(1, 1));
-		for (int i = 0; i < 2; ++i)
-		{
-			g.FillRectangle(Color::White(), PointF(10 + i, 14 + i) + offset, SizeF(1, 1));
-			g.FillRectangle(Color::White(), PointF(4 + i, 13 + i) + offset, SizeF(1, 1));
+		g.FillRectangle(Color::White(), PointI(4, 1) + offset, SizeI(1, 7));
+		g.FillRectangle(Color::White(), PointI(5, 0) + offset, SizeI(2, 1));
+		g.FillRectangle(Color::White(), PointI(5, 15) + offset, SizeI(5, 1));
+		g.FillRectangle(Color::White(), PointI(7, 1) + offset, SizeI(1, 6));
+		g.FillRectangle(Color::White(), PointI(7, 9) + offset, SizeI(1, 4));
+		g.FillRectangle(Color::White(), PointI(9, 9) + offset, SizeI(1, 4));
+		g.FillRectangle(Color::White(), PointI(11, 9) + offset, SizeI(1, 4));
+		g.FillRectangle(Color::White(), PointI(8, 4) + offset, SizeI(4, 1));
+		g.FillRectangle(Color::White(), PointI(10, 5) + offset, SizeI(1, 2));
+		g.FillRectangle(Color::White(), PointI(12, 5) + offset, SizeI(1, 2));
+		g.FillRectangle(Color::White(), PointI(13, 5) + offset, SizeI(1, 1));
+		g.FillRectangle(Color::White(), PointI(14, 6) + offset, SizeI(1, 5));
+		g.FillRectangle(Color::White(), PointI(13, 11) + offset, SizeI(1, 2));
+		g.FillRectangle(Color::White(), PointI(12, 13) + offset, SizeI(1, 3));
+		g.FillRectangle(Color::Black(), PointI(5, 1) + offset, SizeI(2, 13));
+		g.FillRectangle(Color::Black(), PointI(7, 14) + offset, SizeI(3, 1));
+		g.FillRectangle(Color::Black(), PointI(13, 6) + offset, SizeI(1, 5));
+		g.FillRectangle(Color::Black(), PointI(11, 14) + offset, SizeI(1, 1));
+		for (int i = 0; i < 2; ++i) {
+			g.FillRectangle(Color::White(), PointI(10 + i, 14 + i) + offset, SizeI(1, 1));
+			g.FillRectangle(Color::White(), PointI(4 + i, 13 + i) + offset, SizeI(1, 1));
 		}
 	}
 	//---------------------------------------------------------------------------

@@ -12,10 +12,8 @@
 #include "Key.hpp"
 #include "../Misc/Strings.hpp"
 
-namespace OSHGui
-{
-	enum class KeyboardState
-	{
+namespace OSHGui {
+	enum class KeyboardState {
 		/**
 		 * Unbekannt
 		 */
@@ -37,8 +35,7 @@ namespace OSHGui
 	/**
 	 * Tastaturevent
 	 */
-	class OSHGUI_EXPORT KeyboardMessage
-	{
+	class OSHGUI_EXPORT KeyboardMessage {
 	public:
 		/**
 		 * Konstruktor der Klasse.
@@ -46,41 +43,34 @@ namespace OSHGui
 		KeyboardMessage()
 			: state_(KeyboardState::Unknown),
 			  keyData_(Key::None),
-			  keyChar_('\0')
-		{
+			  keyChar_('\0') {
 
 		}
 
 		KeyboardMessage(KeyboardState state, Key keyData, Misc::AnsiChar keyChar)
 			: state_(state),
 			  keyData_(keyData),
-			  keyChar_(keyChar)
-		{
+			  keyChar_(keyChar) {
 
 		}
 
-		Key GetKeyData() const
-		{
+		Key GetKeyData() const {
 			return keyData_;
 		}
 
-		Key GetKeyCode() const
-		{
+		Key GetKeyCode() const {
 			return keyData_ & Key::KeyCode;
 		}
 
-		Key GetModifier() const
-		{
+		Key GetModifier() const {
 			return keyData_ & Key::Modifiers;
 		}
 
-		KeyboardState GetState() const
-		{
+		KeyboardState GetState() const {
 			return state_;
 		}
 
-		Misc::AnsiChar GetKeyChar() const
-		{
+		Misc::AnsiChar GetKeyChar() const {
 			return keyChar_;
 		}
 
@@ -89,8 +79,7 @@ namespace OSHGui
 		 *
 		 * \return ja / nein
 		 */
-		bool IsAlphaNumeric() const
-		{
+		bool IsAlphaNumeric() const {
 			return Misc::String::IsLetterOrDigit(keyChar_)
 				|| Misc::String::IsPunctuation(keyChar_)
 				|| Misc::String::IsSeperator(keyChar_)

@@ -6,6 +6,8 @@
 #include <functional>
 #include <Windows.h>
 
+#include "Timer.h"
+
 class ChatCommands {
 	typedef std::function<void(std::vector<std::wstring>)> Handler_t;
 	const float DEFAULT_CAM_SPEED = 25.0f;
@@ -16,6 +18,9 @@ public:
 	bool ProcessMessage(LPMSG msg);
 
 	void UpdateUI();
+	void MainRoutine();
+
+	void SetSuppressMessages(bool active) { suppress_messages_active = active; }
 
 private:
 	void AddCommand(std::wstring cmd, Handler_t, bool override = true);
@@ -32,6 +37,7 @@ private:
 	static void CmdChest(std::vector<std::wstring> args);
 	static void CmdAfk(std::vector<std::wstring> args);
 	static void CmdTarget(std::vector<std::wstring> args);
+	static void CmdUseSkill(std::vector<std::wstring> args);
 
 	static void CmdZoom(std::vector<std::wstring> args);
 	static void CmdCamera(std::vector<std::wstring> args);
@@ -40,4 +46,11 @@ private:
 	int move_side;
 	int move_up;
 	float cam_speed_;
+
+	bool suppress_messages_active;
+	bool suppress_next_message;
+
+	int skill_to_use;
+	float skill_usage_delay;
+	clock_t skill_timer;
 };

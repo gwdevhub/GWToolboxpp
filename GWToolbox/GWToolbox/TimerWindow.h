@@ -9,14 +9,14 @@ class TimerWindow : public ToolboxWindow {
 public:
 	class TimerLabel : public DragButton {
 	public:
-		TimerLabel() {}
+		TimerLabel(OSHGui::Control* parent) : DragButton(parent) {}
 		virtual void CalculateLabelLocation() override {
-			label_->SetLocation(OSHGui::Drawing::PointI(DefaultBorderPadding, 
+			label_->SetLocation(OSHGui::Drawing::PointI(Padding,
 				GetSize().Height / 2 - label_->GetSize().Height / 2));
 		}
 	};
 
-	const int WIDTH = 180;
+	const int WIDTH = 250;
 	const int HEIGHT = 50;
 	const int URGOZ_HEIGHT = 25;
 
@@ -32,6 +32,7 @@ public:
 	inline void MainRoutine() {};
 
 	void SetFreeze(bool b) {
+		Control::SetEnabled(!b);
 		containerPanel_->SetEnabled(!b);
 		timer_->SetEnabled(!b);
 		urgoz_timer_->SetEnabled(!b);

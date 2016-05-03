@@ -13,8 +13,7 @@
 #include "Label.hpp"
 #include "Panel.hpp"
 
-namespace OSHGui
-{
+namespace OSHGui {
 	//---------------------------------------------------------------------------
 	//static attributes
 	//---------------------------------------------------------------------------
@@ -24,10 +23,10 @@ namespace OSHGui
 	//Constructor
 	//---------------------------------------------------------------------------
 	Form::Form() : Form(true) {}
-	Form::Form(bool create_caption)
-		: isModal_(false),
-		  dialogResult_(DialogResult::None)
-	{
+	Form::Form(bool create_caption) : Control(nullptr),
+		isModal_(false),
+		dialogResult_(DialogResult::None) {
+		
 		type_ = ControlType::Form;
 		
 		parent_ = nullptr;//this;
@@ -36,17 +35,17 @@ namespace OSHGui
 		isFocusable_ = true;
 
 		if (create_caption) {
-			captionBar_ = new CaptionBar();
+			captionBar_ = new CaptionBar(this);
 			captionBar_->SetLocation(Drawing::PointI(0, 0));
-			AddSubControl(captionBar_);
+			controls_.push_back(captionBar_);
 		} else {
 			captionBar_ = nullptr;
 		}
 
-		containerPanel_ = new Panel();
-		containerPanel_->SetLocation(Drawing::PointI(DefaultBorderPadding, DefaultBorderPadding + CaptionBar::DefaultCaptionBarHeight));
+		containerPanel_ = new Panel(this);
+		containerPanel_->SetLocation(Drawing::PointI(Padding, Padding + CaptionBar::DefaultCaptionBarHeight));
 		containerPanel_->SetBackColor(Drawing::Color::Empty());
-		AddSubControl(containerPanel_);
+		controls_.push_back(containerPanel_);
 
 		SetLocation(DefaultLocation);
 		SetSize(DefaultSize);
@@ -56,21 +55,19 @@ namespace OSHGui
 	//---------------------------------------------------------------------------
 	//Getter/Setter
 	//---------------------------------------------------------------------------
-	void Form::SetSize(const Drawing::SizeI &size)
-	{
+	void Form::SetSize(const Drawing::SizeI &size) {
 		Control::SetSize(size);
 
 		if (captionBar_) captionBar_->SetSize(size);
-		containerPanel_->SetSize(size.InflateEx(-DefaultBorderPadding * 2, -DefaultBorderPadding * 2 - CaptionBar::DefaultCaptionBarHeight));
+		containerPanel_->SetSize(Drawing::SizeI(size.Width - Padding * 2, 
+			size.Height - Padding * 2 - CaptionBar::DefaultCaptionBarHeight));
 	}
 	//---------------------------------------------------------------------------
-	void Form::SetText(const Misc::UnicodeString &text)
-	{
+	void Form::SetText(const Misc::UnicodeString &text) {
 		if (captionBar_) captionBar_->SetText(text);
 	}
 	//---------------------------------------------------------------------------
-	const Misc::UnicodeString& Form::GetText() const
-	{
+	const Misc::UnicodeString& Form::GetText() const {
 		if (captionBar_) {
 			return captionBar_->GetText();
 		} else {
@@ -78,47 +75,40 @@ namespace OSHGui
 		}
 	}
 	//---------------------------------------------------------------------------
-	void Form::SetForeColor(const Drawing::Color &color)
-	{
+	void Form::SetForeColor(const Drawing::Color &color) {
 		Control::SetForeColor(color);
-
 		if (captionBar_) captionBar_->SetForeColor(color);
 	}
 	//---------------------------------------------------------------------------
-	const std::deque<Control*>& Form::GetControls() const
-	{
-		return containerPanel_->GetControls();
-	}
-	//---------------------------------------------------------------------------
-	void Form::SetDialogResult(DialogResult result)
-	{
+	void Form::SetDialogResult(DialogResult result) {
 		dialogResult_ = result;
 	}
 	//---------------------------------------------------------------------------
-	DialogResult Form::GetDialogResult() const
-	{
+	DialogResult Form::GetDialogResult() const {
 		return dialogResult_;
 	}
 	//---------------------------------------------------------------------------
-	FormClosingEvent& Form::GetFormClosingEvent()
-	{
+	FormClosingEvent& Form::GetFormClosingEvent() {
 		return formClosingEvent_;
 	}
 	//---------------------------------------------------------------------------
-	bool Form::IsModal() const
-	{
+	bool Form::IsModal() const {
 		return isModal_;
+	}
+	//---------------------------------------------------------------------------
+	const std::deque<Control*>& Form::GetControls() const {
+		return containerPanel_->GetControls();
+	}
+	void Form::AddControl(Control *control) {
+		containerPanel_->AddControl(control);
+	}
+	void Form::RemoveControl(Control *control) {
+		containerPanel_->RemoveControl(control);
 	}
 	//---------------------------------------------------------------------------
 	//Runtime-Functions
 	//---------------------------------------------------------------------------
-	void Form::AddControl(Control *control)
-	{
-		containerPanel_->AddControl(control);
-	}
-	//---------------------------------------------------------------------------
-	void Form::Show(const std::shared_ptr<Form> &instance)
-	{
+	void Form::Show(const std::shared_ptr<Form> &instance) {
 		instance_ = std::weak_ptr<Form>(instance);
 	
 		Application::Instance().formManager_.RegisterForm(instance);
@@ -129,13 +119,11 @@ namespace OSHGui
 		CalculateAbsoluteLocation();
 	}
 	//---------------------------------------------------------------------------
-	void Form::ShowDialog(const std::shared_ptr<Form> &instance)
-	{
+	void Form::ShowDialog(const std::shared_ptr<Form> &instance) {
 		ShowDialog(instance, std::function<void()>());
 	}
 	//---------------------------------------------------------------------------
-	void Form::ShowDialog(const std::shared_ptr<Form> &instance, const std::function<void()> &closeFunction)
-	{
+	void Form::ShowDialog(const std::shared_ptr<Form> &instance, const std::function<void()> &closeFunction) {
 		isModal_ = true;
 
 		instance_ = std::weak_ptr<Form>(instance);
@@ -148,36 +136,26 @@ namespace OSHGui
 		CalculateAbsoluteLocation();
 	}
 	//---------------------------------------------------------------------------
-	void Form::Close()
-	{
+	void Form::Close() {
 		bool canClose = true;
 		formClosingEvent_.Invoke(this, canClose);
-		if (canClose)
-		{
+		if (canClose) {
 			Application::Instance().formManager_.UnregisterForm(instance_.lock());
 		}
 	}
 	//---------------------------------------------------------------------------
-	void Form::DrawSelf(Drawing::RenderContext &context)
-	{
-		Control::DrawSelf(context);
-
-		if (captionBar_) captionBar_->Render();
-		containerPanel_->Render();
-	}
-	//---------------------------------------------------------------------------
-	void Form::PopulateGeometry()
-	{
+	void Form::PopulateGeometry() {
 		using namespace Drawing;
 
 		Graphics g(*geometry_);
 
-		g.FillRectangle(GetBackColor() - Color::FromARGB(0, 100, 100, 100), RectangleF(PointF(), GetSize()));
+		g.FillRectangle(GetBackColor() - Color::FromARGB(0, 100, 100, 100), RectangleI(PointI(), GetSize()));
 		auto color = GetBackColor() - Color::FromARGB(0, 90, 90, 90);
-		g.FillRectangleGradient(ColorRectangle(GetBackColor(), GetBackColor(), color, color), RectangleF(PointF(1, 1), GetSize() - SizeF(2, 2)));
+		g.FillRectangleGradient(ColorRectangle(GetBackColor(), GetBackColor(), color, color), 
+			RectangleI(PointI(1, 1), GetSize() - SizeI(2, 2)));
 		g.FillRectangle(GetBackColor() - Color::FromARGB(0, 50, 50, 50), 
-			RectangleF(PointF(5, (captionBar_ ? captionBar_->GetBottom() : 0) + 2), 
-			SizeF(GetWidth() - 10, 1)));
+			RectangleI(PointI(5, (captionBar_ ? captionBar_->GetBottom() : 0) + 2),
+			SizeI(GetWidth() - 10, 1)));
 	}
 	//---------------------------------------------------------------------------
 	//Form::Captionbar::Button
@@ -185,44 +163,36 @@ namespace OSHGui
 	const Drawing::SizeI Form::CaptionBar::CaptionBarButton::DefaultSize(17, 17);
 	const Drawing::PointI Form::CaptionBar::CaptionBarButton::DefaultCrossOffset(8, 6);
 	//---------------------------------------------------------------------------
-	Form::CaptionBar::CaptionBarButton::CaptionBarButton()
-	{
+	Form::CaptionBar::CaptionBarButton::CaptionBarButton(Control* parent) : Control(parent) {
 		isFocusable_ = false;
-
 		SetSize(DefaultSize);
 	}
 	//---------------------------------------------------------------------------
-	void Form::CaptionBar::CaptionBarButton::CalculateAbsoluteLocation()
-	{
+	void Form::CaptionBar::CaptionBarButton::CalculateAbsoluteLocation() {
 		Control::CalculateAbsoluteLocation();
-
 		crossAbsoluteLocation_ = absoluteLocation_ + DefaultCrossOffset;
-
-		geometry_->SetTranslation(Drawing::Vector(crossAbsoluteLocation_.X, crossAbsoluteLocation_.Y, 0.0f));
+		geometry_->SetTranslation(crossAbsoluteLocation_.cast<float>());
 	}
 	//---------------------------------------------------------------------------
-	void Form::CaptionBar::CaptionBarButton::OnMouseUp(const MouseMessage &mouse)
-	{
+	void Form::CaptionBar::CaptionBarButton::OnMouseUp(const MouseMessage &mouse) {
 		Control::OnMouseUp(mouse);
 
 		auto owner = static_cast<Form*>(parent_->GetParent());
 		owner->Close();
 	}
 	//---------------------------------------------------------------------------
-	void Form::CaptionBar::CaptionBarButton::PopulateGeometry()
-	{
+	void Form::CaptionBar::CaptionBarButton::PopulateGeometry() {
 		using namespace Drawing;
 
 		Graphics g(*geometry_);
 
 		auto color = GetParent()->GetForeColor();
 
-		for (int i = 0; i < 4; ++i)
-		{
-			g.FillRectangle(color, PointF(i, i), SizeF(3, 1));
-			g.FillRectangle(color, PointF(6 - i, i), SizeF(3, 1));
-			g.FillRectangle(color, PointF(i, 7 - i), SizeF(3, 1));
-			g.FillRectangle(color, PointF(6 - i, 7 - i), SizeF(3, 1));
+		for (int i = 0; i < 4; ++i) {
+			g.FillRectangle(color, PointI(i, i), SizeI(3, 1));
+			g.FillRectangle(color, PointI(6 - i, i), SizeI(3, 1));
+			g.FillRectangle(color, PointI(i, 7 - i), SizeI(3, 1));
+			g.FillRectangle(color, PointI(6 - i, 7 - i), SizeI(3, 1));
 		}
 	}
 	//---------------------------------------------------------------------------
@@ -230,58 +200,41 @@ namespace OSHGui
 	//---------------------------------------------------------------------------
 	const Drawing::PointI Form::CaptionBar::DefaultTitleOffset(4, 4);
 	//---------------------------------------------------------------------------
-	Form::CaptionBar::CaptionBar()
-	{
+	Form::CaptionBar::CaptionBar(Control* parent) : Control(parent) {
 		isFocusable_ = false;
 		drag_ = false;
 
-		titleLabel_ = new Label();
+		titleLabel_ = new Label(this);
 		titleLabel_->SetLocation(DefaultTitleOffset);
 		titleLabel_->SetBackColor(Drawing::Color::Empty());
 
-		AddSubControl(titleLabel_);
-
-		closeButton_ = new CaptionBarButton();
+		closeButton_ = new CaptionBarButton(this);
 		closeButton_->SetBackColor(Drawing::Color::Empty());
-		
-		AddSubControl(closeButton_);
 	}
 	//---------------------------------------------------------------------------
-	void Form::CaptionBar::SetSize(const Drawing::SizeI &size)
-	{
+	void Form::CaptionBar::SetSize(const Drawing::SizeI &size) {
 		Control::SetSize(Drawing::SizeI(size.Width, DefaultCaptionBarHeight));
 
-		closeButton_->SetLocation(Drawing::PointI(size.Width - CaptionBarButton::DefaultSize.Width - DefaultButtonPadding, 0));
+		closeButton_->SetLocation(Drawing::PointI(size.Width - 
+			CaptionBarButton::DefaultSize.Width - DefaultButtonPadding, 0));
 	}
 	//---------------------------------------------------------------------------
-	void Form::CaptionBar::SetText(const Misc::UnicodeString &text)
-	{
+	void Form::CaptionBar::SetText(const Misc::UnicodeString &text) {
 		titleLabel_->SetText(text);
 	}
 	//---------------------------------------------------------------------------
-	const Misc::UnicodeString& Form::CaptionBar::GetText() const
-	{
+	const Misc::UnicodeString& Form::CaptionBar::GetText() const {
 		return titleLabel_->GetText();
 	}
 	//---------------------------------------------------------------------------
-	void Form::CaptionBar::SetForeColor(const Drawing::Color &color)
-	{
+	void Form::CaptionBar::SetForeColor(const Drawing::Color &color) {
 		Control::SetForeColor(color);
 
 		closeButton_->SetForeColor(color);
 		titleLabel_->SetForeColor(color);
 	}
 	//---------------------------------------------------------------------------
-	void Form::CaptionBar::DrawSelf(Drawing::RenderContext &context)
-	{
-		Control::DrawSelf(context);
-
-		titleLabel_->Render();
-		closeButton_->Render();
-	}
-	//---------------------------------------------------------------------------
-	void Form::CaptionBar::OnMouseDown(const MouseMessage &mouse)
-	{
+	void Form::CaptionBar::OnMouseDown(const MouseMessage &mouse) {
 		Control::OnMouseDown(mouse);
 
 		drag_ = true;
@@ -289,23 +242,19 @@ namespace OSHGui
 		dragStart_ = mouse.GetLocation();
 	}
 	//---------------------------------------------------------------------------
-	void Form::CaptionBar::OnMouseMove(const MouseMessage &mouse)
-	{
+	void Form::CaptionBar::OnMouseMove(const MouseMessage &mouse) {
 		Control::OnMouseMove(mouse);
 		
-		if (drag_)
-		{
+		if (drag_) {
 			GetParent()->SetLocation(GetParent()->GetLocation() + (mouse.GetLocation() - dragStart_));
 			dragStart_ = mouse.GetLocation();
 		}
 	}
 	//---------------------------------------------------------------------------
-	void Form::CaptionBar::OnMouseUp(const MouseMessage &mouse)
-	{
+	void Form::CaptionBar::OnMouseUp(const MouseMessage &mouse) {
 		Control::OnMouseUp(mouse);
 
-		if (drag_)
-		{
+		if (drag_) {
 			drag_ = false;
 			OnLostMouseCapture();
 		}

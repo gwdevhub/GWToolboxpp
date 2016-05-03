@@ -11,15 +11,12 @@
 
 #include "RenderTarget.hpp"
 
-namespace OSHGui
-{
-	namespace Drawing
-	{
+namespace OSHGui {
+	namespace Drawing {
 		/**
 		 * Spezielles RenderTarget, das ein Interface für ein TextureTarget bereitstellt.
 		 */
-		class OSHGUI_EXPORT TextureTarget : public RenderTarget
-		{
+		class OSHGUI_EXPORT TextureTarget : public RenderTarget {
 		public:
 			/**
 			 * Ruft die Textur ab, die als TextureTarget verwendet wird.
@@ -33,7 +30,7 @@ namespace OSHGui
 			 *
 			 * \param size Größe des Zeichenbereichs
 			 */
-			virtual void DeclareRenderSize(const SizeF& size) = 0;
+			virtual void DeclareRenderSize(const SizeI& size) = 0;
 
 			virtual bool IsRenderingInverted() const = 0;
 

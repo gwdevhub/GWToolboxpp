@@ -12,8 +12,7 @@
 #include "Control.hpp"
 #include "../Misc/TextHelper.hpp"
 
-namespace OSHGui
-{
+namespace OSHGui {
 	/**
 	 * Tritt ein, wenn sich der Wert der Text-Eigenschaft ändert.
 	 */
@@ -23,15 +22,14 @@ namespace OSHGui
 	/**
 	 * Stellt ein Textfeld-Steuerelement dar.
 	 */
-	class OSHGUI_EXPORT TextBox : public Control
-	{
+	class OSHGUI_EXPORT TextBox : public Control {
 	public:
 		using Control::SetSize;
 
 		/**
 		 * Konstruktor der Klasse.
 		 */
-		TextBox();
+		TextBox(Control* parent);
 		
 		/**
 		 * Legt die Höhe und Breite des Steuerelements fest.
@@ -75,10 +73,7 @@ namespace OSHGui
 		TextChangedEvent& GetTextChangedEvent();
 
 		virtual void ShowCaret(bool showCaret);
-		
-		/**
-		 * Berechnet die absolute Position des Steuerelements.
-		 */
+
 		virtual void CalculateAbsoluteLocation() override;
 	
 	protected:

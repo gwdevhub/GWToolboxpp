@@ -9,8 +9,7 @@
 #include "ProgressBar.hpp"
 #include "../Misc/Exceptions.hpp"
 
-namespace OSHGui
-{
+namespace OSHGui {
 	//---------------------------------------------------------------------------
 	//static attributes
 	//---------------------------------------------------------------------------
@@ -18,11 +17,11 @@ namespace OSHGui
 	//---------------------------------------------------------------------------
 	//Constructor
 	//---------------------------------------------------------------------------
-	ProgressBar::ProgressBar()
-		: min_(0),
-		  max_(100),
-		  value_(0)
-	{
+	ProgressBar::ProgressBar(Control* parent) : Control(parent),
+		min_(0),
+		max_(100),
+		value_(0) {
+
 		type_ = ControlType::ProgressBar;
 
 		SetSize(DefaultSize);
@@ -36,40 +35,33 @@ namespace OSHGui
 	//---------------------------------------------------------------------------
 	//Getter/Setter
 	//---------------------------------------------------------------------------
-	void ProgressBar::SetMin(int min)
-	{
+	void ProgressBar::SetMin(int min) {
 		min_ = min;
-		if (min_ > max_)
-		{
+		if (min_ > max_) {
 			max_ = min_;
 		}
 
 		Adjust();
 	}
 	//---------------------------------------------------------------------------
-	int ProgressBar::GetMin() const
-	{
+	int ProgressBar::GetMin() const {
 		return min_;
 	}
 	//---------------------------------------------------------------------------
-	void ProgressBar::SetMax(int max)
-	{
+	void ProgressBar::SetMax(int max) {
 		max_ = max;
-		if (max_ < min_)
-		{
+		if (max_ < min_) {
 			min_ = max_;
 		}
 		
 		Adjust();
 	}
 	//---------------------------------------------------------------------------
-	int ProgressBar::GetMax() const
-	{
+	int ProgressBar::GetMax() const {
 		return max_;
 	}
 	//---------------------------------------------------------------------------
-	void ProgressBar::SetValue(int value)
-	{
+	void ProgressBar::SetValue(int value) {
 		value_ = value;
 
 		Adjust();
@@ -77,62 +69,52 @@ namespace OSHGui
 		Invalidate();
 	}
 	//---------------------------------------------------------------------------
-	int ProgressBar::GetValue() const
-	{
+	int ProgressBar::GetValue() const {
 		return value_;
 	}
 	//---------------------------------------------------------------------------
-	void ProgressBar::SetBarColor(const Drawing::Color &color)
-	{
+	void ProgressBar::SetBarColor(const Drawing::Color &color) {
 		barColor_ = color;
 
 		Invalidate();
 	}
 	//---------------------------------------------------------------------------
-	const Drawing::Color& ProgressBar::GetBarColor() const
-	{
+	const Drawing::Color& ProgressBar::GetBarColor() const {
 		return barColor_;
 	}
 	//---------------------------------------------------------------------------
 	//Runtime-Functions
 	//---------------------------------------------------------------------------
-	bool ProgressBar::Intersect(const Drawing::PointI &point) const
-	{
+	bool ProgressBar::Intersect(const Drawing::PointI &point) const {
 		return false;
 	}
 	//---------------------------------------------------------------------------
-	void ProgressBar::Adjust()
-	{
-		if (value_ < min_)
-		{
+	void ProgressBar::Adjust() {
+		if (value_ < min_) {
 			value_ = min_;
 		}
-		if (value_ > max_)
-		{
+		if (value_ > max_) {
 			value_ = max_;
 		}
 	}
 	//---------------------------------------------------------------------------
-	void ProgressBar::PopulateGeometry()
-	{
+	void ProgressBar::PopulateGeometry() {
 		using namespace Drawing;
 
 		Graphics g(*geometry_);
 
-		if (!GetBackColor().IsTranslucent())
-		{
-			g.FillRectangle(GetBackColor(), PointF(1, 0), GetSize() - SizeF(2, 0));
-			g.FillRectangle(GetBackColor(), PointF(0, 1), GetSize() - SizeF(0, 2));
+		if (!GetBackColor().IsTranslucent()){
+			g.FillRectangle(GetBackColor(), PointI(1, 0), GetSize() - SizeI(2, 0));
+			g.FillRectangle(GetBackColor(), PointI(0, 1), GetSize() - SizeI(0, 2));
 		}
 
-		g.FillRectangle(GetForeColor(), PointF(1, 0), SizeF(GetWidth() - 2, 1));
-		g.FillRectangle(GetForeColor(), PointF(1, GetHeight() - 1), SizeF(GetWidth() - 2, 1));
-		g.FillRectangle(GetForeColor(), PointF(0, 1), SizeF(1, GetHeight() - 2));
-		g.FillRectangle(GetForeColor(), PointF(GetWidth() - 1, 1), SizeF(1, GetHeight() - 2));
+		g.FillRectangle(GetForeColor(), PointI(1, 0), SizeI(GetWidth() - 2, 1));
+		g.FillRectangle(GetForeColor(), PointI(1, GetHeight() - 1), SizeI(GetWidth() - 2, 1));
+		g.FillRectangle(GetForeColor(), PointI(0, 1), SizeI(1, GetHeight() - 2));
+		g.FillRectangle(GetForeColor(), PointI(GetWidth() - 1, 1), SizeI(1, GetHeight() - 2));
 		
-		for (int i = (int)(value_ / ((max_ - min_) / ((GetWidth() - 4) / 12.0f)) - 1); i >= 0; --i)
-		{
-			g.FillRectangle(barColor_, PointF(4 + i * 12, 4), SizeF(8, GetHeight() - 8));
+		for (int i = (int)(value_ / ((max_ - min_) / ((GetWidth() - 4) / 12.0f)) - 1); i >= 0; --i) {
+			g.FillRectangle(barColor_, PointI(4 + i * 12, 4), SizeI(8, GetHeight() - 8));
 		}
 	}
 	//---------------------------------------------------------------------------

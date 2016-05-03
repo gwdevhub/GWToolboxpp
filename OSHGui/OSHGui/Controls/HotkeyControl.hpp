@@ -33,7 +33,7 @@ namespace OSHGui
 		/**
 		 * Konstruktor der Klasse.
 		 */
-		HotkeyControl();
+		HotkeyControl(Control* parent);
 
 		/**
 		 * Legt die Höhe und Breite des Steuerelements fest.
@@ -96,14 +96,8 @@ namespace OSHGui
 		 * Setzt den Hotkey und den HotkeyModifier auf None.
 		 */
 		void ClearHotkey();
-
-		/**
-		 * Berechnet die absolute Position des Steuerelements.
-		 */
-		virtual void CalculateAbsoluteLocation() override;
 	
 	protected:
-		virtual void DrawSelf(Drawing::RenderContext &context) override;
 		virtual void PopulateGeometry() override;
 
 		virtual void OnMouseClick(const MouseMessage &mouse) override;
@@ -117,7 +111,7 @@ namespace OSHGui
 		static const Drawing::SizeI DefaultSize;
 		static std::map<Key, Misc::UnicodeString> HotkeyNames;
 		
-		std::unique_ptr<TextBox> textBox_;
+		TextBox* textBox_;
 		
 		Drawing::PointI clearButtonLocation_;
 

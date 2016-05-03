@@ -30,7 +30,7 @@ namespace OSHGui
 		/**
 		 * Konstruktor der Klasse.
 		 */
-		ColorBar();
+		ColorBar(Control* parent);
 		
 		/**
 		 * Legt die Höhe und Breite des Steuerelements fest.

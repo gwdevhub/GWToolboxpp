@@ -1,5 +1,6 @@
 #include "BuildPanel.h"
 
+#include <OSHGui\Misc\Intersection.hpp>
 #include <GWCA\GWCA.h>
 #include <GWCA\ChatMgr.h>
 #include <GWCA\MapMgr.h>
@@ -15,19 +16,19 @@ void BuildPanel::Build::BuildUI() {
 
 	const int edit_button_width = 60;
 
-	Button* button = new Button();
+	Button* button = new Button(this);
 	button->SetText(name_);
-	button->SetSize(GetWidth() - edit_button_width - DefaultBorderPadding, GetHeight());
-	button->SetLocation(0, 0);
+	button->SetSize(SizeI(GetWidth() - edit_button_width - Padding, GetHeight()));
+	button->SetLocation(PointI(0, 0));
 	button->GetClickEvent() += ClickEventHandler([this](Control*) {
 		SendTeamBuild();
 	});
 	AddControl(button);
 
-	Button* edit = new Button();
+	Button* edit = new Button(this);
 	edit->SetText(L"Edit");
-	edit->SetSize(edit_button_width, GetHeight());
-	edit->SetLocation(GetWidth() - edit->GetWidth(), 0);
+	edit->SetSize(SizeI(edit_button_width, GetHeight()));
+	edit->SetLocation(PointI(GetWidth() - edit->GetWidth(), 0));
 	edit->GetClickEvent() += ClickEventHandler([this, button](Control*) {
 		edit_build_->SetEditedBuild(index_, button);
 	});
@@ -69,69 +70,49 @@ void BuildPanel::Build::SendTeamBuild() {
 	}
 }
 
-BuildPanel::BuildPanel() {
+BuildPanel::BuildPanel(OSHGui::Control* parent) : ToolboxPanel(parent) {
 	builds = vector<Build*>();
 	first_shown_ = 0;
 	send_timer = TBTimer::init();
 }
 
-bool BuildPanel::OnMouseScroll(const MouseMessage &mouse) {
-	Control::OnMouseScroll(mouse);
-
-	int delta = mouse.GetDelta() > 0 ? 1 : -1;
-	scrollbar_->SetValue(scrollbar_->GetValue() + delta);
-
-	return true;
-}
-
-void BuildPanel::set_first_shown(int first) {
-	if (first < 0) {
-		first_shown_ = 0;
-	} else if (first > N_BUILDS - MAX_SHOWN) {
-		first_shown_ = N_BUILDS - MAX_SHOWN;
+bool BuildPanel::Intersect(const Drawing::PointI &point) const {
+	if (edit_build_->GetVisible()) {
+		return Control::Intersect(point) || edit_build_->Intersect(point);
 	} else {
-		first_shown_ = first;
-	}
-
-	for (int i = 0; i < N_BUILDS; ++i) {
-		builds[i]->SetLocation(DefaultBorderPadding,
-			DefaultBorderPadding + (i - first_shown_) * (BUILD_HEIGHT + DefaultBorderPadding));
-	
-		builds[i]->SetVisible(i >= first_shown_ && i < first_shown_ + MAX_SHOWN);
+		return Control::Intersect(point);
 	}
 }
 
 void BuildPanel::BuildUI() {
 
+	clip_ = Clipping::None;
+
 	Config& config = GWToolbox::instance().config();
 
-	edit_build_ = new EditBuild();
+	edit_build_ = new EditBuild(this);
 	edit_build_->SetVisible(false);
 	AddControl(edit_build_);
 
-	ScrollBar* scrollbar = new ScrollBar();
-	scrollbar->SetSize(scrollbar->GetWidth(), GetHeight());
-	scrollbar->SetLocation(GetWidth() - scrollbar->GetWidth(), 0);
-	scrollbar->SetMaximum(N_BUILDS - MAX_SHOWN);
-	scrollbar->GetScrollEvent() += ScrollEventHandler([this, scrollbar](Control*, ScrollEventArgs) {
-		this->set_first_shown(scrollbar->GetValue());
-	});
-	scrollbar_ = scrollbar;
-	AddControl(scrollbar);
+	ScrollPanel* panel = new ScrollPanel(this);
+	panel->SetLocation(PointI(0, 0));
+	panel->SetSize(GetSize());
+	panel->GetContainer()->SetBackColor(Color::Empty());
+	panel->SetInternalHeight(N_BUILDS * (BUILD_HEIGHT + Padding) + Padding);
+	AddControl(panel);
 
 	for (int i = 0; i < N_BUILDS; ++i) {
 		int index = i + 1;
 		wstring section = wstring(L"builds") + to_wstring(index);
 		wstring name = config.IniRead(section.c_str(), L"buildname", L"");
 		if (name.empty()) name = wstring(L"<Build ") + to_wstring(index) + wstring(L">");
-		Build* build = new Build(index, name, edit_build_, this);
-		build->SetSize(GetWidth() - scrollbar->GetWidth() - 2 * DefaultBorderPadding, BUILD_HEIGHT);
+		Build* build = new Build(panel->GetContainer(), index, name, edit_build_, this);
+		build->SetSize(SizeI(panel->GetContainer()->GetWidth() - 2 * Padding, BUILD_HEIGHT));
+		build->SetLocation(PointI(Padding, Padding + i * (BUILD_HEIGHT + Padding)));
 		build->BuildUI();
 		builds.push_back(build);
-		AddControl(builds[i]);
+		panel->AddControl(build);
 	}
-
-	set_first_shown(0);
 }
 
 void BuildPanel::MainRoutine() {

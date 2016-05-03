@@ -18,13 +18,11 @@ public:
 	static const int HSPACE = 10;
 	static const int WIDTH = 250;
 	static const int HEIGHT = LINE_HEIGHT * 2 + VSPACE * 3;
-	static const int HOTKEY_X = 0;
-	static const int HOTKEY_Y = LINE_HEIGHT + VSPACE;
 	static const int ITEM_X = 0;
-	static const int ITEM_Y = 0;
+	static const int ITEM_Y = 1 + VSPACE; // 1 pixel for the line
 	static const int LABEL_Y = ITEM_Y + 5;
-
-	
+	static const int HOTKEY_X = 0;
+	static const int HOTKEY_Y = ITEM_Y + LINE_HEIGHT + VSPACE;
 
 protected:
 	bool pressed_;
@@ -43,8 +41,8 @@ protected:
 	bool isOutpost() { 
 		return GWCA::Map().GetInstanceType() == GwConstants::InstanceType::Outpost; }
 
-	TBHotkey(OSHGui::Key key, OSHGui::Key modifier, bool active, 
-		wstring ini_section);
+	TBHotkey(OSHGui::Control* parent, OSHGui::Key key, 
+		OSHGui::Key modifier, bool active, wstring ini_section);
 
 	virtual void PopulateGeometry() override;
 
@@ -76,8 +74,8 @@ private:
 	wchar_t IndexToChannel(int index);
 
 public:
-	HotkeySendChat(OSHGui::Key key, OSHGui::Key modifier, bool active, 
-		wstring ini_section, wstring _msg, wchar_t _channel);
+	HotkeySendChat(OSHGui::Control* parent, OSHGui::Key key, OSHGui::Key modifier, 
+		bool active, wstring ini_section, wstring _msg, wchar_t _channel);
 
 	inline static const wchar_t* IniSection() { return L"SendChat"; }
 	inline static const wchar_t* IniKeyMsg() { return L"msg"; }
@@ -98,8 +96,8 @@ private:
 	inline void set_item_name(wstring name) { item_name_ = name; }
 
 public:
-	HotkeyUseItem(OSHGui::Key key, OSHGui::Key modifier, bool active, 
-		wstring ini_section, UINT item_id_, wstring item_name_);
+	HotkeyUseItem(OSHGui::Control* parent, OSHGui::Key key, OSHGui::Key modifier, 
+		bool active, wstring ini_section, UINT item_id_, wstring item_name_);
 
 	static const wchar_t* IniSection() { return L"UseItem"; }
 	static const wchar_t* IniKeyItemID() { return L"ItemID"; }
@@ -119,8 +117,8 @@ private:
 	GwConstants::SkillID IndexToSkillID(int index);
 	inline void set_id(GwConstants::SkillID id) { id_ = id; }
 public:
-	HotkeyDropUseBuff(OSHGui::Key key, OSHGui::Key modifier, bool active, 
-		wstring ini_section, GwConstants::SkillID skill_id);
+	HotkeyDropUseBuff(OSHGui::Control* parent, OSHGui::Key key, OSHGui::Key modifier, 
+		bool active, wstring ini_section, GwConstants::SkillID skill_id);
 
 	static const wchar_t* IniSection() { return L"DropUseBuff"; }
 	static const wchar_t* IniKeySkillID() { return L"SkillID"; }
@@ -143,8 +141,8 @@ private:
 	inline void set_target(Toggle target) { target_ = target; }
 
 public:
-	HotkeyToggle(OSHGui::Key key, OSHGui::Key modifier, bool active, 
-		wstring ini_section, long toggle_id);
+	HotkeyToggle(OSHGui::Control* parent, OSHGui::Key key, OSHGui::Key modifier, 
+		bool active, wstring ini_section, long toggle_id);
 
 	static const wchar_t* IniSection() { return L"Toggle"; }
 	static const wchar_t* IniKeyToggleID() { return L"ToggleID"; }
@@ -165,8 +163,8 @@ private:
 	inline void set_action(Action action) { action_ = action; }
 
 public:
-	HotkeyAction(OSHGui::Key key, OSHGui::Key modifier, bool active,
-		wstring ini_section, long action_id);
+	HotkeyAction(OSHGui::Control* parent, OSHGui::Key key, OSHGui::Key modifier, 
+		bool active, wstring ini_section, long action_id);
 
 	static const wchar_t* IniSection() { return L"Action"; }
 	static const wchar_t* IniKeyActionID() { return L"ActionID"; }
@@ -186,8 +184,8 @@ private:
 	inline void set_name(wstring name) { name_ = name; }
 
 public:
-	HotkeyTarget(OSHGui::Key key, OSHGui::Key modifier, bool active,
-		wstring ini_section, UINT id, wstring name);
+	HotkeyTarget(OSHGui::Control* parent, OSHGui::Key key, OSHGui::Key modifier, 
+		bool active, wstring ini_section, UINT id, wstring name);
 
 	static const wchar_t* IniSection() { return L"Target"; }
 	static const wchar_t* IniKeyTargetID() { return L"TargetID"; }
@@ -210,8 +208,8 @@ private:
 	inline void set_name(wstring name) { name_ = name; }
 
 public:
-	HotkeyMove(OSHGui::Key key, OSHGui::Key modifier, bool active,
-		wstring ini_section, float x, float y, wstring name);
+	HotkeyMove(OSHGui::Control* parent, OSHGui::Key key, OSHGui::Key modifier, 
+		bool active, wstring ini_section, float x, float y, wstring name);
 
 	static const wchar_t* IniSection() { return L"Move"; }
 	static const wchar_t* IniKeyX() { return L"x"; }
@@ -231,8 +229,8 @@ private:
 	inline void set_name(wstring name) { name_ = name; }
 
 public:
-	HotkeyDialog(OSHGui::Key key, OSHGui::Key modifier, bool active,
-		wstring ini_section, UINT dialogID, wstring dialog_name);
+	HotkeyDialog(OSHGui::Control* parent, OSHGui::Key key, OSHGui::Key modifier, 
+		bool active, wstring ini_section, UINT dialogID, wstring dialog_name);
 
 	static const wchar_t* IniSection() { return L"Dialog"; }
 	static const wchar_t* IniKeyDialogID() { return L"DialogID"; }
@@ -248,8 +246,8 @@ private:
 
 	inline void set_index(long index) { index_ = index; }
 public:
-	HotkeyPingBuild(OSHGui::Key key, OSHGui::Key modifier, bool active,
-		wstring ini_section, long index);
+	HotkeyPingBuild(OSHGui::Control* parent, OSHGui::Key key, OSHGui::Key modifier, 
+		bool active, wstring ini_section, long index);
 
 	static const wchar_t* IniSection() { return L"PingBuild"; }
 	static const wchar_t* IniKeyBuildIndex() { return L"BuildIndex"; }

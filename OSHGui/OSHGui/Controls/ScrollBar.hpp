@@ -11,8 +11,7 @@
 
 #include "Control.hpp"
 
-namespace OSHGui
-{
+namespace OSHGui {
 	/**
 	 * Tritt auf, wenn der ScrollBalken verschoben wird.
 	 */
@@ -22,81 +21,35 @@ namespace OSHGui
 	/**
 	 * Implementiert die Basisfunktionen eines Schiebeleisten-Steuerelements.
 	 */
-	class OSHGUI_EXPORT ScrollBar : public Control
-	{
+	class OSHGUI_EXPORT ScrollBar : public Control {
 	public:
 		using Control::SetSize;
 
-		/**
-		 * Konstruktor der Klasse.
-		 */
-		ScrollBar();
+		ScrollBar(Control* parent);
 		
-		/**
-		 * Legt die Höhe und Breite des Steuerelements fest.
-		 *
-		 * \param size
-		 */
 		virtual void SetSize(const Drawing::SizeI &size) override;
-		/**
-		 * Legt die Fordergrundfarbe des Steuerelements fest.
-		 *
-		 * \param color
-		 */
+
 		virtual void SetForeColor(const Drawing::Color &color) override;
-		/**
-		 * Legt den aktuellen Wert des Bildlauffelds fets.
-		 *
-		 * \param value
-		 */
+
+		void SetDeltaFactor(int factor) { deltaFactor_ = factor; }
+		int GetDeltaFactor() const { return deltaFactor_; }
+
 		void SetValue(int value);
-		/**
-		 * Ruft den aktuellen Wert des Bildlauffelds ab.
-		 *
-		 * \return die Position
-		 */
+		void InjectDelta(int delta);
 		int GetValue() const;
-		/**
-		 * Legt die Anzahl der scrollbaren Elemente fest.
-		 *
-		 * \param maximum
-		 */
+
 		void SetMaximum(int maximum);
-		/**
-		 * Ruft die Anzahl der scrollbaren Elemente ab.
-		 *
-		 * \return maximum
-		 */
 		int GetMaximum() const;
-		/**
-		 * Ruft das ScrollEvent für das Steuerelement ab.
-		 *
-		 * \return scrollEvent
-		 */
+
 		ScrollEvent& GetScrollEvent();
 
-		/**
-		 * Überprüft, ob sich der Punkt innerhalb des Steuerelements befindet.
-		 *
-		 * \param point
-		 * \return ja / nein
-		 */
 		virtual bool Intersect(const Drawing::PointI &point) const override;
-		/**
-		 * Berechnet die absolute Position des Steuerelements.
-		 */
-		virtual void CalculateAbsoluteLocation() override;
-		/**
-		 * Verschiebt die ScrollBar zum Anfang.
-		 */
-		void ScrollToTop();
-		/**
-		 * Verschiebt die ScrollBar zum Ende.
-		 */
-		void ScrollToBottom();
-		
-		virtual void DrawSelf(Drawing::RenderContext &context) override;
 
+		void ScrollToTop();
+		void ScrollToBottom();
+
+		virtual void CalculateAbsoluteLocation() override;
+		
 	protected:
 		virtual void PopulateGeometry() override;
 
@@ -127,20 +80,18 @@ namespace OSHGui
 
 		ScrollEvent scrollEvent_;
 
-		class ScrollBarButton : public Control
-		{
+		class ScrollBarButton : public Control {
 		public:
 			using Control::SetSize;
 
-			enum class ScrollBarDirection
-			{
+			enum class ScrollBarDirection {
 				Up,
 				Down
 			};
 
 			static const Drawing::SizeI DefaultSize;
 
-			ScrollBarButton(ScrollBarDirection direction);
+			ScrollBarButton(Control* parent, ScrollBarDirection direction);
 			
 			virtual void SetSize(const Drawing::SizeI &size) override;
 
@@ -150,8 +101,10 @@ namespace OSHGui
 		private:
 			ScrollBarDirection direction_;
 
-			Drawing::PointF iconLocation_;
+			Drawing::PointI iconLocation_;
 		};
+
+		int deltaFactor_;
 
 		ScrollBarButton *upButton_;
 		ScrollBarButton *downButton_;

@@ -1,10 +1,10 @@
 /*
- * OldSchoolHack GUI
- *
- * by KN4CK3R http://www.oldschoolhack.me
- *
- * See license in OSHGui.hpp
- */
+* OldSchoolHack GUI
+*
+* by KN4CK3R http://www.oldschoolhack.me
+*
+* See license in OSHGui.hpp
+*/
 
 #ifndef OSHGUI_DRAWING_SIZE_HPP
 #define OSHGUI_DRAWING_SIZE_HPP
@@ -12,168 +12,81 @@
 #include "../Exports.hpp"
 #include "Point.hpp"
 
-namespace OSHGui
-{
-	namespace Drawing
-	{
-		/**
-		 * Speichert ein geordnetes Paar von ganzen Zahlen, i. d. R. die Breite
-		 * und Höhe eines Rechtecks.
-		 */
-		template<typename Val>
-		class OSHGUI_EXPORT Size
-		{
+namespace OSHGui {
+	namespace Drawing {
+		template<typename T>
+		class OSHGUI_EXPORT Size {
 		public:
-			/**
-			 * Erstellt ein SizeF-Objekt ohne Ausmaße.
-			 */
-			Size()
-				: Width(Val()),
-				  Height(Val())
-			{
+			Size() : Width(T()), Height(T()) {}
+			Size(T width, T height) : Width(std::move(width)), Height(std::move(height)) {}
 
+			// hacky wizardry to compile a bad conversion
+			//template<typename T2>
+			//operator Size<T2>() const {
+			//	return Size<T2>(Width, Height);
+			//}
+
+			template<typename T2>
+			Size<T2> cast() const {
+				return Size<T2>(static_cast<T2>(Width), static_cast<T2>(Height));
 			}
-			/**
-			 * Erstellt ein SizeF-Objekt mit der angegeben Breite und Höhe
-			 *
-			 * \param width
-			 * \param height
-			 */
-			Size(Val width, Val height)
-				: Width(std::move(width)),
-				  Height(std::move(height))
-			{
 
+			bool operator == (const Size<T> &rhs) const {
+				return Width == rhs.Width && Height == rhs.Height;
 			}
-			
-			Size<Val>& operator+=(const Size<Val> &rhs)
-			{
-				Inflate(rhs.Width, rhs.Height);
 
+			bool operator != (const Size<T> &rhs) const {
+				return Width != rhs.Width || Height != rhs.Height;
+			}
+
+			const Size<T> operator + (const Size<T> &rhs) const {
+				return Size<T>(Width + rhs.Width, Height + rhs.Height);
+			}
+
+			const Size<T> operator - (const Size<T> &rhs) const {
+				return Size<T>(Width - rhs.Width, Height - rhs.Height);
+			}
+
+			const Size<T> operator * (const std::pair<T, T> &rhs) const {
+				return Size<T>(Width * rhs.first, Height * rhs.second);
+			}
+
+			Size<T>& operator += (const Size<T> &rhs) {
+				Width += rhs.Width;
+				Height += rhs.Height;
 				return *this;
 			}
 
-			Size<Val>& operator-=(const Size<Val> &rhs)
-			{
-				Inflate(-rhs.Width, -rhs.Height);
-
+			Size<T>& operator -= (const Size<T> &rhs) {
+				Width -= rhs.Width;
+				Height -= rhs.Height;
 				return *this;
 			}
 
-			template<typename Val2>
-			Size<Val>& operator*=(const std::pair<Val2, Val2> &rhs)
-			{
-				Width *= rhs.first;
-				Height *= rhs.second;
-
-				return *this;
+			void Inflate(T w, T h) {
+				Width += w;
+				Height += h;
 			}
 
-			template<typename Val2>
-			operator Size<Val2>() const
-			{
-				return Size<Val2>(Width, Height);
-			}
-			
-			/**
-			 * Erweitert das SizeF-Objekt um die angegebe Breite und Höhe.
-			 *
-			 * \param width
-			 * \param height
-			 */
-			void Inflate(Val width, Val height)
-			{
-				//REMOVE ME
-
-				Width += width;
-				Height += height;
-			}
-			/**
-			 * Erweitert das SizeF-Objekt.
-			 *
-			 * \param width
-			 * \param height
-			 */
-			void Inflate(const Size<Val> &size)
-			{
+			void Inflate(const Size<T> &size) {
 				Width += size.Width;
 				Height += size.Height;
 			}
-			/**
-			 * Kopiert das SizeF-Objekt und erweitert es um die angegebe Breite und Höhe.
-			 *
-			 * \param width
-			 * \param height
-			 * \return size
-			 */
-			Size<Val> InflateEx(Val width, Val height) const
-			{
-				//REMOVE ME
 
-				auto temp(*this);
-				temp.Inflate(width, height);
-				return temp;
+			Size<T> InflateEx(T w, T h) const {
+				return Size<T>(Width + w, Height + h);
 			}
-			/**
-			 * Kopiert das SizeF-Objekt und erweitert es.
-			 *
-			 * \param width
-			 * \param height
-			 * \return size
-			 */
-			Size<Val> InflateEx(const Size<Val> &size) const
-			{
-				auto temp(*this);
-				temp.Inflate(size);
-				return temp;
+
+			Size<T> InflateEx(const Size<T> &size) const {
+				return Size<T>(Width + size.Width, Height + size.Height);
 			}
-			
-			Val Width;
-			Val Height;
+
+			T Width;
+			T Height;
 		};
 
-		template<typename Val>
-		bool operator==(const Size<Val> &lhs, const Size<Val> &rhs)
-		{
-			return lhs.Width == rhs.Width && lhs.Height == rhs.Height;
-		}
-		template<typename Val>
-		bool operator!=(const Size<Val> &lhs, const Size<Val> &rhs) { return !(lhs == rhs); }
-		template<typename Val>
-		bool operator<(const Size<Val> &lhs, const Size<Val> &rhs)
-		{
-			return lhs.Width < rhs.Width && lhs.Height < rhs.Height;
-		}
-		template<typename Val>
-		bool operator>(const Size<Val> &lhs, const Size<Val> &rhs) { return rhs < lhs; }
-		template<typename Val>
-		bool operator>=(const Size<Val> &lhs, const Size<Val> &rhs) { return !(rhs < lhs); }
-		template<typename Val>
-		bool operator<=(const Size<Val> &lhs, const Size<Val> &rhs) { return !(rhs > lhs); }
-
-		template<typename Val, typename Val2>
-		const Size<Val> operator+(const Size<Val> &lhs, const Size<Val2> &rhs)
-		{
-			auto temp(lhs);
-			temp += rhs;
-			return temp;
-		}
-		template<typename Val, typename Val2>
-		const Size<Val> operator-(const Size<Val> &lhs, const Size<Val2> &rhs)
-		{
-			auto temp(lhs);
-			temp -= rhs;
-			return temp;
-		}
-		template<typename Val, typename Val2>
-		const Size<Val> operator*(const Size<Val> &lhs, const std::pair<Val2, Val2> &rhs)
-		{
-			auto temp(lhs);
-			temp *= rhs;
-			return temp;
-		}
-
 		typedef Size<int> SizeI;
+		typedef Size<unsigned long> SizeUL; // also DWORD
 		typedef Size<float> SizeF;
 	}
 }

@@ -12,27 +12,23 @@
 #include <Windows.h>
 #include "Input.hpp"
 
-namespace OSHGui
-{
+namespace OSHGui {
 	class MouseMessage;
 	class KeyboardMessage;
 
-	namespace Input
-	{
+	namespace Input {
 		/**
 		 * Verwaltet den Input unter Windows.
 		 */
-		class OSHGUI_EXPORT WindowsMessage : public Input
-		{
+		class OSHGUI_EXPORT WindowsMessage : public Input {
 		public:
 			WindowsMessage();
 
-			/**
-			 * Wandelt eine Windows Message in ein Event um.
-			 *
-			 * \param message
-			 */
 			bool ProcessMessage(LPMSG message);
+
+			bool ProcessMouseMessage(LPMSG message);
+
+			bool ProcessKeyboardMessage(LPMSG message);
 
 		private:
 			static const int SystemDefaultCharSize = 2;

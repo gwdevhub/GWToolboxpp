@@ -12,8 +12,7 @@
 #include <memory>
 #include "Control.hpp"
 
-namespace OSHGui
-{
+namespace OSHGui {
 	class Label;
 	class TabPage;
 
@@ -26,8 +25,8 @@ namespace OSHGui
 	/**
 	 * Verwaltet eine Gruppe zusammengehöriger Registerkarten.
 	 */
-	class OSHGUI_EXPORT TabControl : public Control
-	{
+	 // TabControl is untested with the new OSHGui rework - bugs are likely
+	class OSHGUI_EXPORT TabControl : public Control {
 		friend TabPage;
 
 	public:
@@ -36,7 +35,7 @@ namespace OSHGui
 		/**
 		 * Konstruktor der Klasse.
 		 */
-		TabControl();
+		TabControl(Control* parent);
 
 		/**
 		 * Legt die Höhe und Breite des Steuerelements fest.
@@ -101,32 +100,12 @@ namespace OSHGui
 		 */
 		SelectedIndexChangedEvent& GetSelectedIndexChangedEvent();
 		
-		/**
-		 * Fügt dem TabControl eine neue TabPage hinzu.
-		 *
-		 * \param tabPage
-		 */
 		void AddTabPage(TabPage *tabPage);
-		/**
-		 * Entfernt eine TabPage aus dem TabControl.
-		 *
-		 * \param tabPage
-		 */
 		void RemoveTabPage(TabPage *tabPage);
 		
-		/**
-		 * Berechnet die absolute Position des Steuerelements.
-		 */
-		virtual void CalculateAbsoluteLocation() override;
-		/**
-		 * Veranlasst das Steuerelement, sein Aussehen dem Theme anzupassen.
-		 *
-		 * \param theme
-		 */
 		virtual void ApplyTheme(const Drawing::Theme &theme) override;
 
-	protected:
-		virtual void DrawSelf(Drawing::RenderContext &context) override;
+		virtual void CalculateAbsoluteLocation() override;
 
 	private:
 		static const Drawing::SizeI DefaultSize;
@@ -139,23 +118,19 @@ namespace OSHGui
 		SelectedIndexChangedEvent selectedIndexChangedEvent_;
 
 		class TabControlButton;
-		struct TabPageButtonBinding
-		{
+		struct TabPageButtonBinding {
 			int Index;
 			TabPage *TabPage;
 			TabControlButton *Button;
 		};
 
-		class TabControlButton : public Control
-		{
+		class TabControlButton : public Control {
 		public:
-			TabControlButton(TabPageButtonBinding &binding);
+			TabControlButton(Control* parent, TabPageButtonBinding &binding);
 
 			virtual void SetForeColor(const Drawing::Color &color) override;
 			void SetText(const Misc::UnicodeString &text);
 			void SetActive(bool active);
-
-			virtual void CalculateAbsoluteLocation() override;
 
 		protected:
 			virtual void DrawSelf(Drawing::RenderContext &context) override;
@@ -175,18 +150,16 @@ namespace OSHGui
 		TabPageButtonBinding *selected_;
 		std::vector<std::unique_ptr<TabPageButtonBinding>> bindings_;
 
-		class TabControlSwitchButton : public Control
-		{
+		class TabControlSwitchButton : public Control {
 		public:
-			enum class TabControlSwitchButtonDirection
-			{
+			enum class TabControlSwitchButtonDirection {
 				Left,
 				Right
 			};
 
 			static const Drawing::SizeI DefaultSize;
 
-			TabControlSwitchButton(TabControlSwitchButtonDirection direction);
+			TabControlSwitchButton(Control* parent, TabControlSwitchButtonDirection direction);
 
 		protected:
 			virtual void PopulateGeometry() override;

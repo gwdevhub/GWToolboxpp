@@ -17,10 +17,8 @@
 #include "Rectangle.hpp"
 #include <memory>
 
-namespace OSHGui
-{
-	namespace Drawing
-	{
+namespace OSHGui {
+	namespace Drawing {
 		class Graphics;
 		class Font;
 		class CustomizableImage;
@@ -45,7 +43,7 @@ namespace OSHGui
 			 * \param area
 			 * \param offset
 			 */
-			Image(TexturePtr texture, RectangleF area, PointF offset);
+			Image(TexturePtr texture, RectangleI area, PointI offset);
 			/**
 			 * Destructor
 			 */
@@ -80,12 +78,12 @@ namespace OSHGui
 			 * \param format the PixelFormat
 			 * \return the loaded image
 			 */
-			static std::shared_ptr<Image> FromBuffer(const void *data, const SizeF &size, Texture::PixelFormat format);
+			static std::shared_ptr<Image> FromBuffer(const void *data, const SizeI &size, Texture::PixelFormat format);
 
 			static void ComputeScalingFactors(const SizeF &displaySize, const SizeF &nativeDisplaySize, float &xScale, float &yScale);
 
-			virtual const SizeF& GetSize() const;
-			virtual const PointF& GetOffset() const;
+			virtual const SizeI& GetSize() const;
+			virtual const PointI& GetOffset() const;
 
 		protected:
 			friend class Graphics;
@@ -95,8 +93,8 @@ namespace OSHGui
 
 		private:
 			TexturePtr texture;
-			RectangleF area;
-			PointF offset;
+			RectangleI area;
+			PointI offset;
 		};
 
 		typedef std::shared_ptr<Image> ImagePtr;

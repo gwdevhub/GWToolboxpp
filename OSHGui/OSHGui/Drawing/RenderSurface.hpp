@@ -14,21 +14,17 @@
 #include "Point.hpp"
 #include <vector>
 
-namespace OSHGui
-{
-	namespace Drawing
-	{
+namespace OSHGui {
+	namespace Drawing {
 		class RenderTarget;
 
-		enum class RenderQueueType
-		{
+		enum class RenderQueueType {
 			Underlay,
 			Base,
 			Overlay
 		};
 
-		class OSHGUI_EXPORT RenderSurface
-		{
+		class OSHGUI_EXPORT RenderSurface {
 		public:
 			RenderSurface(RenderTarget &target);
 			virtual ~RenderSurface() { }

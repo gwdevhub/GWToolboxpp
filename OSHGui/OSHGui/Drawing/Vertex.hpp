@@ -11,15 +11,13 @@
 
 #include "Vector.hpp"
 #include "Color.hpp"
+#include "Point.hpp"
 
-namespace OSHGui
-{
-	namespace Drawing
-	{
-		class OSHGUI_EXPORT Vertex
-		{
+namespace OSHGui {
+	namespace Drawing {
+		class OSHGUI_EXPORT Vertex {
 		public:
-			Vector Position;
+			PointF Position;
 			Drawing::Color Color;
 			PointF TextureCoordinates;
 		};

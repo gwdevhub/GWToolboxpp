@@ -12,8 +12,7 @@
 
 #include "../Misc/Exceptions.hpp"
 
-namespace OSHGui
-{
+namespace OSHGui {
 	//---------------------------------------------------------------------------
 	//static attributes
 	//---------------------------------------------------------------------------
@@ -22,15 +21,15 @@ namespace OSHGui
 	//---------------------------------------------------------------------------
 	//Constructor
 	//---------------------------------------------------------------------------
-	TextBox::TextBox()
-		: textHelper_(GetFont()),
-		  blinkTime_(Misc::TimeSpan::FromMilliseconds(500)),
-		  firstVisibleCharacter_(0),
-		  visibleCharacterCount_(0),
-		  caretPosition_(0),
-		  passwordChar_('\0'),
-		  showCaret_(true)
-	{
+	TextBox::TextBox(Control* parent) : Control(parent),
+		textHelper_(GetFont()),
+		blinkTime_(Misc::TimeSpan::FromMilliseconds(500)),
+		firstVisibleCharacter_(0),
+		visibleCharacterCount_(0),
+		caretPosition_(0),
+		passwordChar_('\0'),
+		showCaret_(true) {
+
 		type_ = ControlType::TextBox;
 	
 		ApplyTheme(Application::Instance().GetTheme());
@@ -42,8 +41,7 @@ namespace OSHGui
 	//---------------------------------------------------------------------------
 	//Getter/Setter
 	//---------------------------------------------------------------------------
-	void TextBox::SetSize(const Drawing::SizeI &size)
-	{
+	void TextBox::SetSize(const Drawing::SizeI &size) {
 		Drawing::SizeI fixxed(size.Width, (int)GetFont()->GetFontHeight() + DefaultTextOffset.Top * 2);
 
 		Control::SetSize(fixxed);
@@ -54,22 +52,17 @@ namespace OSHGui
 		PlaceCaret(textHelper_.GetText().length());
 	}
 	//---------------------------------------------------------------------------
-	void TextBox::SetFont(const Drawing::FontPtr &font)
-	{
+	void TextBox::SetFont(const Drawing::FontPtr &font) {
 		Control::SetFont(font);
 
-		SetSize(GetWidth(), 0);
+		SetSize(Drawing::SizeI(GetWidth(), 0));
 	}
 	//---------------------------------------------------------------------------
-	void TextBox::SetText(const Misc::UnicodeString &text)
-	{
+	void TextBox::SetText(const Misc::UnicodeString &text) {
 		realtext_ = text;
-		if (passwordChar_ == '\0')
-		{
+		if (passwordChar_ == '\0') {
 			textHelper_.SetText(text);
-		}
-		else
-		{
+		} else {
 			textHelper_.SetText(Misc::UnicodeString(text.length(), passwordChar_));
 		}
 
@@ -79,99 +72,81 @@ namespace OSHGui
 		textChangedEvent_.Invoke(this);
 	}
 	//---------------------------------------------------------------------------
-	const Misc::UnicodeString& TextBox::GetText() const
-	{
+	const Misc::UnicodeString& TextBox::GetText() const {
 		return realtext_;
 	}
 	//---------------------------------------------------------------------------
-	void TextBox::SetPasswordChar(const Misc::UnicodeChar &passwordChar)
-	{
+	void TextBox::SetPasswordChar(const Misc::UnicodeChar &passwordChar) {
 		this->passwordChar_ = passwordChar;
 		SetText(realtext_);
 	}
 	//---------------------------------------------------------------------------
-	const Misc::UnicodeChar& TextBox::GetPasswordChar() const
-	{
+	const Misc::UnicodeChar& TextBox::GetPasswordChar() const {
 		return passwordChar_;
 	}
 	//---------------------------------------------------------------------------
-	TextChangedEvent& TextBox::GetTextChangedEvent()
-	{
+	TextChangedEvent& TextBox::GetTextChangedEvent() {
 		return textChangedEvent_;
 	}
 	//---------------------------------------------------------------------------
 	//Runtime-Functions
 	//---------------------------------------------------------------------------
-	void TextBox::ShowCaret(bool showCaret)
-	{
+	void TextBox::ShowCaret(bool showCaret) {
 		showCaret_ = showCaret;
 	}
 	//---------------------------------------------------------------------------
-	void TextBox::CalculateAbsoluteLocation()
-	{
+	void TextBox::CalculateAbsoluteLocation() {
 		Control::CalculateAbsoluteLocation();
 		
 		textRect_ = Drawing::RectangleI(DefaultTextOffset.Left, DefaultTextOffset.Top, GetWidth() - DefaultTextOffset.Left * 2, GetHeight() - DefaultTextOffset.Top * 2);
 		PlaceCaret(caretPosition_);
 	}
 	//---------------------------------------------------------------------------
-	void TextBox::ResetCaretBlink()
-	{
+	void TextBox::ResetCaretBlink() {
 		drawCaret_ = false;
 		nextBlinkTime_ = Misc::DateTime();
 	}
 	//---------------------------------------------------------------------------
-	void TextBox::PlaceCaret(int position)
-	{
-		if (position < 0)
-		{
+	void TextBox::PlaceCaret(int position) {
+		if (position < 0) {
 			position = 0;
 		}
 		caretPosition_ = position;
 
-		Drawing::PointI caretPositionTrail;
-		Drawing::PointI firstVisibleCharacterPosition = textHelper_.GetCharacterPosition(firstVisibleCharacter_);
-		Drawing::PointI newCaretPosition = textHelper_.GetCharacterPosition(position);
+		Drawing::PointF caretPositionTrail;
+		Drawing::PointF firstVisibleCharacterPosition = textHelper_.GetCharacterPosition(firstVisibleCharacter_);
+		Drawing::PointF newCaretPosition = textHelper_.GetCharacterPosition(position);
 
 		//if the new caretPosition is bigger than the text length
-		if (position > textHelper_.GetLength())
-		{
+		if (position > textHelper_.GetLength()) {
 			caretPosition_ = position = textHelper_.GetLength();
 			caretPositionTrail = newCaretPosition;
-		}
-		else
-		{
+		} else {
 			caretPositionTrail = textHelper_.GetCharacterPosition(position, true);
 		}
 
 		//if the new caretPosition is smaller than the textRect
-		if (newCaretPosition.Left <= firstVisibleCharacterPosition.Left)
-		{
-			if (position > 1)
-			{
+		if (newCaretPosition.Left <= firstVisibleCharacterPosition.Left) {
+			if (position > 1) {
 				firstVisibleCharacter_ = position - 2;
-			}
-			else
-			{
+			} else {
 				firstVisibleCharacter_ = position;
 			}
-		}
-		else if (caretPositionTrail.Left > firstVisibleCharacterPosition.Left + textRect_.GetWidth()) //if the new caretPosition is bigger than the textRect
-		{
-			int newFirstVisibleCharacterPositionLeft = caretPositionTrail.Left - textRect_.GetWidth();
-			int newFirstVisibleCharacter = textHelper_.GetClosestCharacterIndex(Drawing::PointI(newFirstVisibleCharacterPositionLeft, 0));
+		} else if (caretPositionTrail.Left > firstVisibleCharacterPosition.Left + textRect_.GetWidth()) { //if the new caretPosition is bigger than the textRect
+			float newFirstVisibleCharacterPositionLeft = caretPositionTrail.Left - textRect_.GetWidth();
+			int newFirstVisibleCharacter = textHelper_.GetClosestCharacterIndex(
+				Drawing::PointF(newFirstVisibleCharacterPositionLeft, 0));
 
-			Drawing::PointI newFirstVisibleCharacterPosition = textHelper_.GetCharacterPosition(newFirstVisibleCharacter);
-			if (newFirstVisibleCharacterPosition.Left < newFirstVisibleCharacterPositionLeft)
-			{
+			Drawing::PointF newFirstVisibleCharacterPosition = textHelper_.GetCharacterPosition(newFirstVisibleCharacter);
+			if (newFirstVisibleCharacterPosition.Left < newFirstVisibleCharacterPositionLeft) {
 				++newFirstVisibleCharacter;
 			}
 
 			firstVisibleCharacter_ = newFirstVisibleCharacter;
 		}
 
-		Drawing::SizeI strWidth = textHelper_.GetStringSize(firstVisibleCharacter_, caretPosition_ - firstVisibleCharacter_);
-		caretRect_ = Drawing::RectangleI(textRect_.GetLeft() + strWidth.Width, textRect_.GetTop(), 1, textRect_.GetHeight());
+		Drawing::SizeF strWidth = textHelper_.GetStringSize(firstVisibleCharacter_, caretPosition_ - firstVisibleCharacter_);
+		caretRect_ = Drawing::RectangleI(textRect_.GetLeft() + static_cast<int>(strWidth.Width), textRect_.GetTop(), 1, textRect_.GetHeight());
 
 		ResetCaretBlink();
 		visibleCharacterCount_ = CalculateVisibleCharacters();
@@ -179,10 +154,8 @@ namespace OSHGui
 		Invalidate();
 	}
 	//---------------------------------------------------------------------------
-	void TextBox::InjectTime(const Misc::DateTime &time)
-	{
-		if (time > nextBlinkTime_)
-		{
+	void TextBox::InjectTime(const Misc::DateTime &time) {
+		if (time > nextBlinkTime_) {
 			drawCaret_ = !drawCaret_;
 			nextBlinkTime_ = time.Add(blinkTime_);
 
@@ -190,45 +163,40 @@ namespace OSHGui
 		}
 	}
 	//---------------------------------------------------------------------------
-	void TextBox::PopulateGeometry()
-	{
+	void TextBox::PopulateGeometry() {
 		using namespace Drawing;
 
 		Graphics g(*geometry_);
 
-		g.FillRectangle(GetBackColor() - Color::FromARGB(0, 20, 20, 20), PointF(0, 0), GetSize());
-		g.FillRectangle(GetBackColor(), PointF(1, 1), GetSize() - SizeF(2, 2));
+		g.FillRectangle(GetBackColor() - Color::FromARGB(0, 20, 20, 20), PointI(0, 0), GetSize());
+		g.FillRectangle(GetBackColor(), PointI(1, 1), GetSize() - SizeI(2, 2));
 
-		if (showCaret_)
-		{
-			if (isFocused_ && drawCaret_)
-			{
+		if (showCaret_) {
+			if (isFocused_ && drawCaret_) {
 				g.FillRectangle(GetForeColor(), caretRect_);
 			}
 		}
 
-		g.DrawString(textHelper_.GetText().substr(firstVisibleCharacter_, visibleCharacterCount_), GetFont(), GetForeColor(), textRect_.GetLocation());
+		g.DrawString(textHelper_.GetText().substr(firstVisibleCharacter_, visibleCharacterCount_), 
+			GetFont(), GetForeColor(), textRect_.GetLocation());
 	}
 	//---------------------------------------------------------------------------
 	//Event-Handling
 	//---------------------------------------------------------------------------
-	void TextBox::OnMouseDown(const MouseMessage &mouse)
-	{
+	void TextBox::OnMouseDown(const MouseMessage &mouse) {
 		Control::OnMouseDown(mouse);
 
-		Drawing::SizeI strWidth = textHelper_.GetStringSize(0, firstVisibleCharacter_);
-		PlaceCaret(textHelper_.GetClosestCharacterIndex(mouse.GetLocation() - absoluteLocation_ + Drawing::PointI(strWidth.Width - 7, 0)) - 1);
+		Drawing::SizeF strWidth = textHelper_.GetStringSize(0, firstVisibleCharacter_);
+		PlaceCaret(textHelper_.GetClosestCharacterIndex(
+			(mouse.GetLocation() - absoluteLocation_ + Drawing::PointI((int)(strWidth.Width) - 7, 0) ).cast<float>() ) - 1);
 	}
 	//---------------------------------------------------------------------------
-	bool TextBox::OnKeyDown(const KeyboardMessage &keyboard)
-	{
+	bool TextBox::OnKeyDown(const KeyboardMessage &keyboard) {
 		Control::OnKeyDown(keyboard);
 
-		switch (keyboard.GetKeyCode())
-		{
+		switch (keyboard.GetKeyCode()) {
 			case Key::Delete:
-				if (caretPosition_ < textHelper_.GetLength())
-				{
+				if (caretPosition_ < textHelper_.GetLength()) {
 					textHelper_.Remove(caretPosition_, 1);
 					realtext_.erase(caretPosition_, 1);
 					PlaceCaret(caretPosition_);
@@ -237,8 +205,7 @@ namespace OSHGui
 				}
 				break;
 			case Key::Back:
-				if (caretPosition_ > 0 && textHelper_.GetLength() > 0)
-				{
+				if (caretPosition_ > 0 && textHelper_.GetLength() > 0) {
 					textHelper_.Remove(caretPosition_ - 1, 1);
 					realtext_.erase(caretPosition_ - 1, 1);
 					PlaceCaret(caretPosition_ - 1);
@@ -292,22 +259,15 @@ namespace OSHGui
 		return false;
 	}
 	//---------------------------------------------------------------------------
-	bool TextBox::OnKeyPress(const KeyboardMessage &keyboard)
-	{
-		if (!Control::OnKeyPress(keyboard))
-		{
+	bool TextBox::OnKeyPress(const KeyboardMessage &keyboard) {
+		if (!Control::OnKeyPress(keyboard)) {
 			KeyEventArgs args(keyboard);
-			if (keyboard.GetKeyCode() != Key::Return)
-			{
-				if (keyboard.IsAlphaNumeric())
-				{
+			if (keyboard.GetKeyCode() != Key::Return) {
+				if (keyboard.IsAlphaNumeric()) {
 					realtext_.insert(caretPosition_, 1, keyboard.GetKeyChar());
-					if (passwordChar_ == '\0')
-					{
+					if (passwordChar_ == '\0') {
 						textHelper_.Insert(caretPosition_, keyboard.GetKeyChar());
-					}
-					else
-					{
+					} else {
 						textHelper_.Insert(caretPosition_, passwordChar_);
 					}
 					PlaceCaret(++caretPosition_);
@@ -320,27 +280,21 @@ namespace OSHGui
 		return true;
 	}
 	//---------------------------------------------------------------------------
-	void TextBox::OnTextChanged()
-	{
+	void TextBox::OnTextChanged() {
 		textChangedEvent_.Invoke(this);
 		visibleCharacterCount_ = CalculateVisibleCharacters();
 	}
 	//---------------------------------------------------------------------------
-	int TextBox::CalculateVisibleCharacters()
-	{
+	int TextBox::CalculateVisibleCharacters() {
 		int visibleCharacters = textHelper_.GetLength() - firstVisibleCharacter_;
 
-		if (textHelper_.GetStringSize(firstVisibleCharacter_, visibleCharacters).Width > textRect_.GetWidth())
-		{
+		if (textHelper_.GetStringSize(firstVisibleCharacter_, visibleCharacters).Width > textRect_.GetWidth()) {
 			float averageWidth = textHelper_.GetSize().Width / (float)textHelper_.GetLength();
-			visibleCharacters = (float)textRect_.GetWidth() / averageWidth;
+			visibleCharacters = std::lroundf((float)textRect_.GetWidth() / averageWidth);
 
-			if (textHelper_.GetStringSize(firstVisibleCharacter_, visibleCharacters).Width > textRect_.GetWidth())
-			{
+			if (textHelper_.GetStringSize(firstVisibleCharacter_, visibleCharacters).Width > textRect_.GetWidth()) {
 				while (textHelper_.GetStringSize(firstVisibleCharacter_, --visibleCharacters).Width > textRect_.GetWidth());
-			}
-			else
-			{
+			} else {
 				while (textHelper_.GetStringSize(firstVisibleCharacter_, ++visibleCharacters).Width <= textRect_.GetWidth());
 				--visibleCharacters;
 			}

@@ -27,7 +27,7 @@ namespace OSHGui
 		/**
 		 * Konstruktor der Klasse.
 		 */
-		TabPage();
+		TabPage(Control* parent);
 		
 		/**
 		 * Legt die Höhe und Breite des Steuerelements fest.
@@ -35,13 +35,6 @@ namespace OSHGui
 		 * \param size
 		 */
 		virtual void SetSize(const Drawing::SizeI &size) override;
-		/**
-		 * Legt das übergeordnete Steuerelement fest.
-		 * Kann nur ein TabControl sein!
-		 *
-		 * \param parent
-		 */
-		virtual void SetParent(Control *parent) override;
 		/**
 		 * Legt den Text fest.
 		 *
@@ -54,28 +47,10 @@ namespace OSHGui
 		 * \return der Text
 		 */
 		const Misc::UnicodeString& GetText() const;
-		/**
-		 * Gibt eine Liste der untergeordneten Steuerelemente zurück.
-		 *
-		 * \return parent
-		 */
-		virtual const std::deque<Control*>& GetControls() const override;
 
-		/**
-		 * Fügt ein untergeordnetes Steuerelement hinzu.
-		 *
-		 * \param control
-		 */
-		virtual void AddControl(Control *control) override;
-		/**
-		 * Entfernt ein untergeordnetes Steuerelement.
-		 *
-		 * \param control
-		 */
-		virtual void RemoveControl(Control *control) override;
+		inline Panel* GetContainer() { return containerPanel_; }
 
 	protected:
-		virtual void DrawSelf(Drawing::RenderContext &context) override;
 		virtual void PopulateGeometry();
 
 	private:

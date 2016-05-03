@@ -36,7 +36,7 @@ private:
 	clock_t scan_inventory_timer;
 
 public:
-	PconPanel();
+	PconPanel(OSHGui::Control* parent);
 
 	bool SetActive(bool active);
 	inline void ToggleActive() { SetActive(!enabled); }

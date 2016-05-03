@@ -4,9 +4,6 @@
 
 using namespace OSHGui;
 
-MaterialsPanel::MaterialsPanel() {
-}
-
 void MaterialsPanel::BuildUI() {
 
 	const int textbox_x = 180;
@@ -23,32 +20,32 @@ void MaterialsPanel::BuildUI() {
 		default: return L"";
 		}
 	};
-	const int group_width = (GetWidth() - 3 * DefaultBorderPadding) / 2;
+	const int group_width = (GetWidth() - 3 * Padding) / 2;
 	const int group_height = 50;
-	const int item_width = (group_width - 2 * DefaultBorderPadding) / 3;
-
+	const int item_width = (group_width - 2 * Padding) / 3;
+	
 	auto MakeRow = [&](enum Item item, string file, int size, int x, int y) -> void {
-		GroupBox* group = new GroupBox();
-		group->SetSize(group_width, group_height);
-		group->SetLocation(DefaultBorderPadding + x * (group_width + DefaultBorderPadding),
-			DefaultBorderPadding + y * (group_height + DefaultBorderPadding));
+		GroupBox* group = new GroupBox(this);
+		group->SetSize(SizeI(group_width, group_height));
+		group->SetLocation(PointI(Padding + x * (group_width + Padding),
+			Padding + y * (group_height + Padding)));
 		group->SetBackColor(Drawing::Color::Empty());
 		AddControl(group);
 
-		PictureBox* pic = new PictureBox();
+		PictureBox* pic = new PictureBox(group->GetContainer());
 		pic->SetEnabled(false);
 		pic->SetBackColor(Color::Empty());
 		pic->SetMouseOverFocusColor(GuiUtils::getMouseOverColor());
 		pic->SetImage(Drawing::Image::FromFile(GuiUtils::getSubPathA(file, "img")));
 		pic->SetStretch(true);
-		pic->SetSize(size, size);
-		pic->SetLocation(0,-10);
+		pic->SetSize(SizeI(size, size));
+		pic->SetLocation(PointI(0,-10));
 		group->AddControl(pic);
 		
-		TextBox* textbox = new TextBox();
+		TextBox* textbox = new TextBox(group->GetContainer());
 		textbox->SetText(L"1");
-		textbox->SetSize(item_width, textbox->GetHeight());
-		textbox->SetLocation(item_width + 3, 5);
+		textbox->SetSize(SizeI(item_width, textbox->GetHeight()));
+		textbox->SetLocation(PointI(item_width + 3, 5));
 		textbox->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
 			GWToolbox::instance().set_capture_input(true);
 		});
@@ -62,9 +59,9 @@ void MaterialsPanel::BuildUI() {
 		});
 		group->AddControl(textbox);
 
-		Button* button = new Button();
-		button->SetSize(item_width, textbox->GetHeight());
-		button->SetLocation(textbox->GetRight() + 3, textbox->GetTop());
+		Button* button = new Button(group->GetContainer());
+		button->SetSize(SizeI(item_width, textbox->GetHeight()));
+		button->SetLocation(PointI(textbox->GetRight() + 3, textbox->GetTop()));
 		button->SetText(L"Buy");
 		group->AddControl(button);
 	};
@@ -76,14 +73,13 @@ void MaterialsPanel::BuildUI() {
 	MakeRow(Powerstone, "Armor_of_Salvation.png", 60, 1, 0);
 	MakeRow(ResScroll, "Armor_of_Salvation.png", 60, 1, 1);
 
-	GroupBox* group = new GroupBox();
-	group->SetSize(GetWidth() - 2 * DefaultBorderPadding, 40);
-	group->SetLocation(DefaultBorderPadding,
-		DefaultBorderPadding + 3 * (group_height + DefaultBorderPadding));
+	GroupBox* group = new GroupBox(this);
+	group->SetSize(SizeI(GetWidth() - 2 * Padding, 40));
+	group->SetLocation(PointI(Padding, Padding + 3 * (group_height + Padding)));
 	group->SetBackColor(Drawing::Color::Empty());
 	AddControl(group);
 
-	ComboBox* combo = new ComboBox();
+	ComboBox* combo = new ComboBox(group->GetContainer());
 	combo->AddItem(L"10 Bones");
 	combo->AddItem(L"10 Iron Ingots");
 	combo->AddItem(L"10 Tanned Hide Squares");
@@ -102,14 +98,14 @@ void MaterialsPanel::BuildUI() {
 
 	});
 	combo->SetSelectedIndex(0);
-	combo->SetLocation(0, 0);
-	combo->SetSize(176, combo->GetHeight());
+	combo->SetLocation(PointI(0, 0));
+	combo->SetSize(SizeI(176, combo->GetHeight()));
 	group->AddControl(combo);
 
-	TextBox* textbox = new TextBox();
+	TextBox* textbox = new TextBox(group->GetContainer());
 	textbox->SetText(L"1");
-	textbox->SetSize(item_width, combo->GetHeight());
-	textbox->SetLocation(combo->GetRight() + 3, 0);
+	textbox->SetSize(SizeI(item_width, combo->GetHeight()));
+	textbox->SetLocation(PointI(combo->GetRight() + 3, 0));
 	textbox->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
 		GWToolbox::instance().set_capture_input(true);
 	});
@@ -123,14 +119,21 @@ void MaterialsPanel::BuildUI() {
 	});
 	group->AddControl(textbox);
 
-	Button* button = new Button();
-	button->SetSize(item_width, combo->GetHeight());
-	button->SetLocation(textbox->GetRight() + 3, textbox->GetTop());
+	Button* button = new Button(group->GetContainer());
+	button->SetSize(SizeI(item_width, combo->GetHeight()));
+	button->SetLocation(PointI(textbox->GetRight() + 3, textbox->GetTop()));
 	button->SetText(L"Buy");
 	group->AddControl(button);
 
-	Label* log = new Label();
-	log->SetText(L"here there will be bought x/x");
-	log->SetLocation(DefaultBorderPadding, DefaultBorderPadding + 4 * (group_height + DefaultBorderPadding));
+	Label* log = new Label(this);
+	//log->SetText(L"here there will be bought x/x");
+	log->SetText(L"Work in progress");
+	log->SetLocation(PointI(Padding, Padding + 4 * (group_height + Padding)));
 	AddControl(log);
+
+	Label* log2 = new Label(this);
+	log2->SetText(L"Materials buyer NOT working");
+	log2->SetLocation(PointI(Padding, log->GetBottom() + Padding));
+	AddControl(log2);
 }
+

@@ -14,8 +14,10 @@ using namespace std;
 
 class GuiUtils {
 public:
-	static const int SPACE = 6; // same as OSHGui's DefaultBorderPadding
+	static const int SPACE = 6; // same as OSHGui's Padding
+	static const int HALFSPACE = SPACE / 2;
 	static const int ROW_HEIGHT = 25; // toolbox standard button height
+	static const int BUTTON_HEIGHT = 25;
 
 	// Returns the default on hover color.
 	static Color getMouseOverColor() {
@@ -79,19 +81,22 @@ public:
 	}
 
 	static int ComputeX(int container_width, int horizontal_amount, int grid_x) {
-		
-		const int item_width = ComputeWidth(container_width, horizontal_amount);
-		return SPACE + grid_x * (item_width + SPACE);
+		float item_width = ComputeWidthF(container_width, horizontal_amount);
+		return std::lroundf(SPACE + grid_x * (item_width + SPACE));
 	}
 
 	static int ComputeY(int grid_y) {
 		return SPACE + grid_y * (ROW_HEIGHT + SPACE);
 	}
 
-	static int ComputeWidth(int container_width, int horizontal_amount,
-		int grid_width = 1) {
-		const int item_width = (container_width - SPACE) / horizontal_amount - SPACE;
+	static float ComputeWidthF(int container_width, int horizontal_amount, int grid_width = 1) {
+		float item_width = (float)(container_width - SPACE) / horizontal_amount - SPACE;
 		return item_width * grid_width + (grid_width - 1) * SPACE;
+	}
+
+	static int ComputeWidth(int container_width, int horizontal_amount, int grid_width = 1) {
+		float item_width = (float)(container_width - SPACE) / horizontal_amount - SPACE;
+		return std::lroundf(std::floor(item_width * grid_width + (grid_width - 1) * SPACE));
 	}
 
 	static int GetPartyHealthbarHeight() {

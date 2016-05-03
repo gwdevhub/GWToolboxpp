@@ -11,76 +11,30 @@
 
 #include "Control.hpp"
 
-namespace OSHGui
-{
+namespace OSHGui {
 	class Label;
 
-	/**
-	 * Tritt ein, wenn sich der Wert der Checked-Eigenschaft ändert.
-	 */
 	typedef Event<void(Control*)> CheckedChangedEvent;
 	typedef EventHandler<void(Control*)> CheckedChangedEventHandler;
 	
-	/**
-	 * Stellt ein CheckBox-Steuerelement dar.
-	 */
-	class OSHGUI_EXPORT CheckBox : public Control
-	{
+	class OSHGUI_EXPORT CheckBox : public Control {
 	public:
-		/**
-		 * Konstruktor der Klasse.
-		 */
-		CheckBox();
 
-		/**
-		 * Legt den checked-Status fest.
-		 *
-		 * \param checked
-		 */
+		CheckBox(Control* parent);
+
 		virtual void SetChecked(bool checked);
-		/**
-		 * Gibt den checked-Status zurück.
-		 *
-		 * \return ja / nein
-		 */
 		virtual bool GetChecked() const;
-		/**
-		 * Legt den Text fest. Falls autoSize = true, wird die Größe automatisch angepasst.
-		 *
-		 * \param text
-		 */
-		void SetText(const Misc::UnicodeString &text);
-		/**
-		 * Ruft den Text ab.
-		 *
-		 * \return der Text
-		 */
-		const Misc::UnicodeString& GetText() const;
-		/**
-		 * Legt die Schriftart des Texts im Steuerelement fest.
-		 *
-		 * \param font
-		 */
-		virtual void SetFont(const Drawing::FontPtr &font) override;
-		/**
-		 * Legt die Fordergrundfarbe des Steuerelements fest.
-		 *
-		 * \param color
-		 */
-		virtual void SetForeColor(const Drawing::Color &color) override;
-		/**
-		 * Ruft das CheckedChangeEvent für das Steuerelement ab.
-		 *
-		 * \return checkedChangeEvent
-		 */
-		CheckedChangedEvent& GetCheckedChangedEvent();
-		
-		/**
-		 * Berechnet die absolute Position des Steuerelements.
-		 */
-		virtual void CalculateAbsoluteLocation() override;
 
-		virtual void DrawSelf(Drawing::RenderContext &context) override;
+		void SetText(const Misc::UnicodeString &text);
+		const Misc::UnicodeString& GetText() const;
+
+		virtual void SetFont(const Drawing::FontPtr &font) override;
+
+		virtual void SetForeColor(const Drawing::Color &color) override;
+
+		CheckedChangedEvent& GetCheckedChangedEvent();
+
+		virtual void CalculateAbsoluteLocation() override;
 	
 	protected:
 		static const Drawing::PointI DefaultLabelOffset;
@@ -98,7 +52,7 @@ namespace OSHGui
 		
 		CheckedChangedEvent checkedChangedEvent_;
 
-		std::unique_ptr<Label> label_;
+		Label* label_;
 	};
 }
 

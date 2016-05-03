@@ -14,16 +14,13 @@
 #include "Strings.hpp"
 #include "TimeSpan.hpp"
 
-namespace OSHGui
-{
-	namespace Misc
-	{
+namespace OSHGui {
+	namespace Misc {
 		/**
 		 * Gibt an, ob ein DateTime-Objekt eine lokale Zeit, eine koordinate Weltzeit
 		 * (UTC) angibt oder weder lokale Zeit noch UTC angegeben sind.
 		 */
-		enum class DateTimeKind
-		{
+		enum class DateTimeKind {
 			Unspecified = 0,
 			Utc,
 			Local
@@ -32,8 +29,7 @@ namespace OSHGui
 		/**
 		 * Gibt den Wochentag an.
 		 */
-		enum class DayOfWeek
-		{
+		enum class DayOfWeek {
 			Sunday = 0,
 			Monday,
 			Tuesday,
@@ -46,11 +42,9 @@ namespace OSHGui
 		/**
 		 * Stellt einen Zeitpunkt dar, der durch Datum und Uhrzeit dargestellt wird.
 		 */
-		class OSHGUI_EXPORT DateTime
-		{
+		class OSHGUI_EXPORT DateTime {
 		private:
-			enum class DatePart
-			{
+			enum class DatePart {
 				Year = 0,
 				DayOfYear,
 				Month,

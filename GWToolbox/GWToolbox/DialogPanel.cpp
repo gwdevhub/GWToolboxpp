@@ -11,9 +11,6 @@ using namespace OSHGui;
 using namespace GWCA;
 using namespace std;
 
-DialogPanel::DialogPanel() {
-}
-
 void DialogPanel::BuildUI() {
 
 	CreateButton(0, 0, 2, L"Four Horseman", QuestAcceptDialog(GwConstants::QuestID::UW::Planes));
@@ -33,12 +30,14 @@ void DialogPanel::BuildUI() {
 	for (int i = 0; i < 3; ++i) {
 		wstring key = wstring(L"Quest") + to_wstring(i);
 		int index = GWToolbox::instance().config().IniReadLong(MainWindow::IniSection(), key.c_str(), 0);
-		ComboBox* fav_combo = new ComboBox();
-		fav_combo->SetSize(GuiUtils::ComputeWidth(GetWidth(), 4, 2), BUTTON_HEIGHT);
-		fav_combo->SetLocation(GuiUtils::ComputeX(GetWidth(), 4, 0),  GuiUtils::ComputeY(i + 4));
+		ComboBox* fav_combo = new ComboBox(this);
 		for (int j = 0; j < n_quests; ++j) {
 			fav_combo->AddItem(IndexToQuestName(j));
 		}
+		fav_combo->SetAutoSize(true);
+		fav_combo->SetSize(SizeI(GuiUtils::ComputeWidth(GetWidth(), 4, 2), BUTTON_HEIGHT));
+		fav_combo->SetLocation(PointI(GuiUtils::ComputeX(GetWidth(), 4, 0),  GuiUtils::ComputeY(i + 4)));
+		
 		fav_combo->SetSelectedIndex(index);
 		fav_combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
 			[fav_combo, key](Control*) {
@@ -47,10 +46,10 @@ void DialogPanel::BuildUI() {
 		});
 		AddControl(fav_combo);
 
-		Button* take = new Button();
+		Button* take = new Button(this);
 		int offset = 12;
-		take->SetSize(GuiUtils::ComputeWidth(GetWidth(), 4) - offset, BUTTON_HEIGHT);
-		take->SetLocation(GuiUtils::ComputeX(GetWidth(), 4, 2), GuiUtils::ComputeY(i + 4));
+		take->SetSize(SizeI(GuiUtils::ComputeWidth(GetWidth(), 4) - offset, BUTTON_HEIGHT));
+		take->SetLocation(PointI(GuiUtils::ComputeX(GetWidth(), 4, 2), GuiUtils::ComputeY(i + 4)));
 		take->SetText(L"Take");
 		take->GetClickEvent() += ClickEventHandler([this, fav_combo](Control*) {
 			int index = fav_combo->GetSelectedIndex();
@@ -58,9 +57,9 @@ void DialogPanel::BuildUI() {
 		});
 		AddControl(take);
 
-		Button* complete = new Button();
-		complete->SetSize(GuiUtils::ComputeWidth(GetWidth(), 4) + offset, GuiUtils::ROW_HEIGHT);
-		complete->SetLocation(GuiUtils::ComputeX(GetWidth(), 4, 3) - offset, GuiUtils::ComputeY(i + 4));
+		Button* complete = new Button(this);
+		complete->SetSize(SizeI(GuiUtils::ComputeWidth(GetWidth(), 4) + offset, GuiUtils::ROW_HEIGHT));
+		complete->SetLocation(PointI(GuiUtils::ComputeX(GetWidth(), 4, 3) - offset, GuiUtils::ComputeY(i + 4)));
 		complete->SetText(L"Complete");
 		complete->GetClickEvent() += ClickEventHandler([this, fav_combo](Control*) {
 			int index = fav_combo->GetSelectedIndex();
@@ -69,18 +68,18 @@ void DialogPanel::BuildUI() {
 		AddControl(complete);
 	}
 	
-	ComboBox* combo = new ComboBox();
-	combo->SetLocation(SPACE, GuiUtils::ComputeY(7));
-	combo->SetSize(GuiUtils::ComputeWidth(GetWidth(), 4, 3), GuiUtils::ROW_HEIGHT);
+	ComboBox* combo = new ComboBox(this);
+	combo->SetLocation(PointI(SPACE, GuiUtils::ComputeY(7)));
+	combo->SetSize(SizeI(GuiUtils::ComputeWidth(GetWidth(), 4, 3), GuiUtils::ROW_HEIGHT));
 	for (int i = 0; i < n_dialogs; ++i) {
 		combo->AddItem(IndexToDialogName(i));
 	}
 	combo->SetSelectedIndex(0);
 	AddControl(combo);
 
-	Button* combo_send = new Button();
-	combo_send->SetLocation(GuiUtils::ComputeX(GetWidth(), 4, 3), GuiUtils::ComputeY(7));
-	combo_send->SetSize(GuiUtils::ComputeWidth(GetWidth(), 4), GuiUtils::ROW_HEIGHT);
+	Button* combo_send = new Button(this);
+	combo_send->SetLocation(PointI(GuiUtils::ComputeX(GetWidth(), 4, 3), GuiUtils::ComputeY(7)));
+	combo_send->SetSize(SizeI(GuiUtils::ComputeWidth(GetWidth(), 4), GuiUtils::ROW_HEIGHT));
 	combo_send->SetText(L"Send");
 	combo_send->GetClickEvent() += ClickEventHandler([this, combo](Control*) {
 		int index = combo->GetSelectedIndex();
@@ -89,9 +88,9 @@ void DialogPanel::BuildUI() {
 	});
 	AddControl(combo_send);
 
-	TextBox* textbox = new TextBox();
-	textbox->SetLocation(SPACE, GuiUtils::ComputeY(8));
-	textbox->SetSize(GuiUtils::ComputeWidth(GetWidth(), 4, 3), GuiUtils::ROW_HEIGHT);
+	TextBox* textbox = new TextBox(this);
+	textbox->SetLocation(PointI(SPACE, GuiUtils::ComputeY(8)));
+	textbox->SetSize(SizeI(GuiUtils::ComputeWidth(GetWidth(), 4, 3), GuiUtils::ROW_HEIGHT));
 	textbox->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
 		GWToolbox::instance().set_capture_input(true);
 	});
@@ -113,9 +112,9 @@ void DialogPanel::BuildUI() {
 	});
 	AddControl(textbox);
 
-	Button* custom_send = new Button();
-	custom_send->SetLocation(GuiUtils::ComputeX(GetWidth(), 4, 3), GuiUtils::ComputeY(8));
-	custom_send->SetSize(GuiUtils::ComputeWidth(GetWidth(), 4), BUTTON_HEIGHT);
+	Button* custom_send = new Button(this);
+	custom_send->SetLocation(PointI(GuiUtils::ComputeX(GetWidth(), 4, 3), GuiUtils::ComputeY(8)));
+	custom_send->SetSize(SizeI(GuiUtils::ComputeWidth(GetWidth(), 4), BUTTON_HEIGHT));
 	custom_send->SetText(L"Send");
 	custom_send->GetClickEvent() += ClickEventHandler([textbox](Control*) {
 		try {
@@ -129,10 +128,10 @@ void DialogPanel::BuildUI() {
 void DialogPanel::CreateButton(int grid_x, int grid_y, int hor_amount,
 	std::wstring text, DWORD dialog) {
 
-	Button* button = new Button();
+	Button* button = new Button(this);
 	button->SetText(text);
-	button->SetSize(GuiUtils::ComputeWidth(GetWidth(), hor_amount), BUTTON_HEIGHT);
-	button->SetLocation(GuiUtils::ComputeX(GetWidth(), hor_amount, grid_x), GuiUtils::ComputeY(grid_y));
+	button->SetSize(SizeI(GuiUtils::ComputeWidth(GetWidth(), hor_amount), BUTTON_HEIGHT));
+	button->SetLocation(PointI(GuiUtils::ComputeX(GetWidth(), hor_amount, grid_x), GuiUtils::ComputeY(grid_y)));
 	button->GetClickEvent() += ClickEventHandler([dialog](Control*) {
 		GWCA::Agents().Dialog(dialog);
 	});
@@ -222,6 +221,10 @@ wstring DialogPanel::IndexToDialogName(int index) {
 	case 8: return L"Profession Change - Rt";
 	case 9: return L"Profession Change - P";
 	case 10: return L"Profession Change - D";
+	case 11: return L"Kama -> Docks @ Hahnna";
+	case 12: return L"Docks -> Kaineng @ Mhenlo";
+	case 13: return L"Docks -> LA Gate @ Mhenlo";
+	case 14: return L"LA Gate -> LA @ Neiro";
 	default: return L"";
 	}
 }
@@ -239,6 +242,10 @@ DWORD DialogPanel::IndexToDialogID(int index) {
 	case 8: return GwConstants::DialogID::ProfChangeRitualist;
 	case 9: return GwConstants::DialogID::ProfChangeParagon;
 	case 10: return GwConstants::DialogID::ProfChangeDervish;
+	case 11: return GwConstants::DialogID::FerryKamadanToDocks;
+	case 12: return GwConstants::DialogID::FerryDocksToKaineng;
+	case 13: return GwConstants::DialogID::FerryDocksToLA;
+	case 14: return GwConstants::DialogID::FerryGateToLA;
 	default: return 0;
 	}
 }

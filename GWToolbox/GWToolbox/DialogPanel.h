@@ -8,7 +8,7 @@
 class DialogPanel : public ToolboxPanel {
 private:
 	const int n_quests = 29;
-	const int n_dialogs = 11;
+	const int n_dialogs = 15;
 
 	inline DWORD QuestAcceptDialog(DWORD quest) { return (quest << 8) | 0x800001; }
 	DWORD QuestRewardDialog(DWORD quest) { return (quest << 8) | 0x800007; }
@@ -23,10 +23,10 @@ private:
 	DWORD IndexToDialogID(int index);
 
 public:
-	static const int SPACE = DefaultBorderPadding;
+	static const int SPACE = Padding;
 	static const int BUTTON_HEIGHT = 25;
 
-	DialogPanel();
+	DialogPanel(OSHGui::Control* parent) : ToolboxPanel(parent) {}
 
 	void BuildUI() override;
 	void UpdateUI() override {};

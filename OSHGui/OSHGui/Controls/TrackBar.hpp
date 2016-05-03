@@ -30,7 +30,7 @@ namespace OSHGui
 		/**
 		 * Konstruktor der Klasse.
 		 */
-		TrackBar();
+		TrackBar(Control* parent);
 
 		/**
 		 * Legt die Höhe und Breite des Steuerelements fest.
@@ -92,10 +92,7 @@ namespace OSHGui
 		 * \return valueChangedEvent
 		 */
 		ValueChangedEvent& GetValueChangedEvent();
-		
-		/**
-		 * Berechnet die absolute Position des Steuerelements.
-		 */
+
 		virtual void CalculateAbsoluteLocation() override;
 
 	protected:

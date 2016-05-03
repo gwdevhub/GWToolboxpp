@@ -11,8 +11,7 @@
 
 #include "Control.hpp"
 
-namespace OSHGui
-{
+namespace OSHGui {
 	class Label;
 	class Panel;
 
@@ -25,8 +24,7 @@ namespace OSHGui
 	/**
 	 * Specifies identifiers that indicate the return value of a dialog box.
 	 */
-	enum class DialogResult
-	{
+	enum class DialogResult {
 		/**
 		 * Der Rückgabewert des Dialogfelds ist Nothing.
 		 */
@@ -64,16 +62,12 @@ namespace OSHGui
 	/**
 	 * Represents a window that forms the user interface.
 	 */
-	class OSHGUI_EXPORT Form : public Control
-	{
+	class OSHGUI_EXPORT Form : public Control {
 		class CaptionBar;
 
 	public:
 		using Control::SetSize;
 
-		/**
-		 * Constructor of the class.
-		 */
 		Form(bool create_caption);
 		Form();
 		/**
@@ -82,17 +76,9 @@ namespace OSHGui
 		 * \return modal
 		 */
 		bool IsModal() const;
-		/**
-		 * Legt die Höhe und Breite des Steuerelements fest.
-		 *
-		 * \param size
-		 */
+
 		virtual void SetSize(const Drawing::SizeI &size) override;
-		/**
-		 * Legt den Text fest.
-		 *
-		 * \param text
-		 */
+
 		void SetText(const Misc::UnicodeString &text);
 		/**
 		 * Gibt den Text zurück.
@@ -100,18 +86,9 @@ namespace OSHGui
 		 * \return der Text
 		 */
 		const Misc::UnicodeString& GetText() const;
-		/**
-		 * Legt die Fordergrundfarbe des Steuerelements fest.
-		 *
-		 * \param color
-		 */
+
 		virtual void SetForeColor(const Drawing::Color &color) override;
-		/**
-		 * Gibt eine Liste der untergeordneten Steuerelemente zurück.
-		 *
-		 * \return parent
-		 */
-		virtual const std::deque<Control*>& GetControls() const override;
+		
 		/**
 		 * Legt das DialogResult für das Fenster fest.
 		 *
@@ -154,14 +131,10 @@ namespace OSHGui
 		 * Schließt die Form.
 		 */
 		void Close();
-		/**
-		 * Adds a child control.
-		 *
-		 * \param control
-		 */
-		virtual void AddControl(Control *control) override;
 
-		virtual void DrawSelf(Drawing::RenderContext &context) override;
+		virtual const std::deque<Control*>& GetControls() const override;
+		virtual void AddControl(Control *control) override;
+		virtual void RemoveControl(Control *control) override;
 
 	protected:
 		virtual void PopulateGeometry() override;
@@ -180,14 +153,12 @@ namespace OSHGui
 
 		DialogResult dialogResult_;
 
-		class CaptionBar : public Control
-		{
-			class CaptionBarButton : public Control
-			{
+		class CaptionBar : public Control {
+			class CaptionBarButton : public Control {
 			public:
 				static const Drawing::SizeI DefaultSize;
 
-				CaptionBarButton();
+				CaptionBarButton(Control* parent);
 
 				virtual void CalculateAbsoluteLocation() override;
 
@@ -205,16 +176,15 @@ namespace OSHGui
 		public:
 			static const int DefaultCaptionBarHeight = 17;
 
-			CaptionBar();
+			CaptionBar(Control* parent);
 
 			virtual void SetSize(const Drawing::SizeI &size) override;
+
 			void SetText(const Misc::UnicodeString &text);
 			const Misc::UnicodeString& GetText() const;
 			virtual void SetForeColor(const Drawing::Color &color) override;
 
 		protected:
-			virtual void DrawSelf(Drawing::RenderContext &context) override;
-
 			virtual void OnMouseDown(const MouseMessage &mouse) override;
 			virtual void OnMouseMove(const MouseMessage &mouse) override;
 			virtual void OnMouseUp(const MouseMessage &mouse) override;

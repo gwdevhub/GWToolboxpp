@@ -20,12 +20,13 @@ public:
 	inline static const wchar_t* IniKeyShow() { return L"show"; }
 	inline static const char* ThemeKey() { return "distance"; }
 
-	void ShowWindow(bool show) override;
+	//void ShowWindow(bool show) override;
 
 	void UpdateUI();
 	inline void MainRoutine() {};
 
 	void SetFreeze(bool b) {
+		Control::SetEnabled(!b);
 		containerPanel_->SetEnabled(!b);
 		percent->SetEnabled(!b);
 		absolute->SetEnabled(!b);
@@ -34,12 +35,12 @@ public:
 	inline void SetHideTarget(bool b) { hide_target = b; }
 
 private:
-	bool enabled;
-
 	DragButton* percent;
 	DragButton* percent_shadow;
 	DragButton* absolute;
 	DragButton* absolute_shadow;
+
+	long current_distance;
 
 	bool hide_target;
 
