@@ -30,7 +30,7 @@ BondsWindow::BondsWindow() {
 
 	SetLocation(PointI(x, y));
 	SetSize(Drawing::SizeI(width, height));
-	SetEnabled(false);
+	//SetEnabled(false);
 
 	Drawing::Theme::ControlTheme theme = Application::InstancePtr()
 		->GetTheme().GetControlColorTheme(BondsWindow::ThemeKey());
@@ -63,11 +63,13 @@ BondsWindow::BondsMonitor::BondsMonitor(OSHGui::Control* parent, int img_size) :
 		for (int j = 0; j < MAX_BONDS; ++j) {
 			buff_id[i][j] = 0;
 			pics[i][j] = new PictureBox(this);
-			pics[i][j]->SetLocation(PointI(j * img_size_, i *img_size_));
-			pics[i][j]->SetSize(SizeI(img_size_, img_size_));
+			pics[i][j]->SetLocation(PointI(j * img_size_ + 1, i *img_size_ + 1));
+			pics[i][j]->SetSize(SizeI(img_size_ - 2, img_size_ - 2));
 			pics[i][j]->SetStretch(true);
 			pics[i][j]->SetVisible(false);
 			pics[i][j]->SetEnabled(false);
+			pics[i][j]->SetClip(Clipping::OnParent); // so they dont modify clipping
+			AddControl(pics[i][j]);
 		}
 	}
 	for (int i = 0; i < MAX_PLAYERS; ++i) {
@@ -79,6 +81,16 @@ BondsWindow::BondsMonitor::BondsMonitor(OSHGui::Control* parent, int img_size) :
 	GetMouseUpEvent() += MouseUpEventHandler([this](Control*, MouseEventArgs) {
 		SaveLocation();
 	});
+}
+
+void BondsWindow::BondsMonitor::Render(OSHGui::Drawing::RenderContext &context) {
+	if (!isVisible_) return;
+
+	for (Control* control : controls_) {
+		control->Render(context);
+	}
+
+	DrawSelf(context);
 }
 
 void BondsWindow::BondsMonitor::PopulateGeometry() {
@@ -99,12 +111,22 @@ int BondsWindow::BondsMonitor::GetPlayer(int ycoord) {
 }
 
 void BondsWindow::BondsMonitor::OnMouseDown(const OSHGui::MouseMessage &mouse) {
-	if (!freezed) DragButton::OnMouseDown(mouse);
+	if (freezed) {
+		Control::OnMouseDown(mouse);
+	} else {
+		DragButton::OnMouseDown(mouse);
+	}
+
 	pressed = true;
 	Invalidate();
 }
 void BondsWindow::BondsMonitor::OnMouseMove(const OSHGui::MouseMessage &mouse) {
-	if (!freezed) DragButton::OnMouseMove(mouse);
+	if (freezed) {
+		Control::OnMouseMove(mouse);
+	} else {
+		DragButton::OnMouseMove(mouse);
+	}
+
 	int player = GetPlayer(mouse.GetLocation().Y);
 	int bond = GetBond(mouse.GetLocation().X);
 	if (hovered_player != player || hovered_bond != bond) {
@@ -115,7 +137,12 @@ void BondsWindow::BondsMonitor::OnMouseMove(const OSHGui::MouseMessage &mouse) {
 	}
 }
 void BondsWindow::BondsMonitor::OnMouseUp(const OSHGui::MouseMessage &mouse) {
-	if (!freezed) DragButton::OnMouseUp(mouse);
+	if (freezed) {
+		Control::OnMouseUp(mouse);
+	} else {
+		DragButton::OnMouseUp(mouse);
+	}
+
 	if (pressed) {
 		int player = GetPlayer(mouse.GetLocation().Y);
 		int bond = GetBond(mouse.GetLocation().X);

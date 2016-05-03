@@ -53,18 +53,6 @@ PartyDamage::PartyDamage() {
 		damage[i].recent_damage = 0;
 		damage[i].last_damage = TBTimer::init();
 
-		bar[i] = new Panel(containerPanel_);
-		bar[i]->SetSize(SizeI(WIDTH, line_height_));
-		bar[i]->SetLocation(PointI(0, i * line_height_));
-		bar[i]->SetBackColor(bartheme.BackColor);
-		AddControl(bar[i]);
-
-		recent[i] = new Panel(containerPanel_);
-		recent[i]->SetSize(SizeI(WIDTH, RECENT_HEIGHT));
-		recent[i]->SetLocation(PointI(0, (i + 1) * line_height_ - RECENT_HEIGHT));
-		recent[i]->SetBackColor(bartheme.ForeColor);
-		AddControl(recent[i]);
-
 		absolute[i] = new DragButton(containerPanel_);
 		absolute[i]->SetText(L"0 %");
 		absolute[i]->SetSize(SizeI(ABS_WIDTH, line_height_ - RECENT_HEIGHT / 2));
@@ -88,6 +76,18 @@ PartyDamage::PartyDamage() {
 			SaveLocation();
 		});
 		AddControl(percent[i]);
+
+		recent[i] = new Panel(containerPanel_);
+		recent[i]->SetSize(SizeI(WIDTH, RECENT_HEIGHT));
+		recent[i]->SetLocation(PointI(0, (i + 1) * line_height_ - RECENT_HEIGHT));
+		recent[i]->SetBackColor(bartheme.ForeColor);
+		AddControl(recent[i]);
+
+		bar[i] = new Panel(containerPanel_);
+		bar[i]->SetSize(SizeI(WIDTH, line_height_));
+		bar[i]->SetLocation(PointI(0, i * line_height_));
+		bar[i]->SetBackColor(bartheme.BackColor);
+		AddControl(bar[i]);
 	}
 
 	std::shared_ptr<PartyDamage> self = std::shared_ptr<PartyDamage>(this);

@@ -32,6 +32,7 @@ class BondsWindow : public ToolboxWindow {
 		void DropUseBuff(int bond, int player);
 
 	protected:
+		virtual void Render(OSHGui::Drawing::RenderContext& context);
 		virtual void PopulateGeometry() override;
 		virtual void OnMouseDown(const OSHGui::MouseMessage &mouse) override;
 		virtual void OnMouseMove(const OSHGui::MouseMessage &mouse) override;
