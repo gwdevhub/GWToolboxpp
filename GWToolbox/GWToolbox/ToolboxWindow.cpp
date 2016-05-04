@@ -12,6 +12,7 @@ ToolboxWindow::ToolboxWindow() : Form(false) {
 	containerPanel_->SetLocation(Drawing::PointI(0, 0));
 
 	canRaiseEvents_ = false;
+	isViewable_ = true;
 
 	SetLocation(DefaultLocation);
 	SetSize(DefaultSize);
