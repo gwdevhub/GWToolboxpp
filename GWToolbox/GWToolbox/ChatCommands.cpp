@@ -91,8 +91,8 @@ ChatCommands::ChatCommands() {
 			return true;
 		}
 
-		case 816: // you gain a skill point
-		case 817: // player x gained a skill point
+		case 0x816: // you gain a skill point
+		case 0x817: // player x gained a skill point
 			return true;
 
 		case 0x8101:

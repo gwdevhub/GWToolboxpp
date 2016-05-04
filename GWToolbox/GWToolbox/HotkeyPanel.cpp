@@ -17,75 +17,75 @@ HotkeyPanel::HotkeyPanel(OSHGui::Control* parent) : ToolboxPanel(parent) {
 void HotkeyPanel::BuildUI() {
 	Config& config = GWToolbox::instance().config();
 	
-	ComboBox* create_combo = new ComboBox(this);
-	create_combo->SetText(L"Create Hotkey"); 
-	create_combo->AddItem(L"Send Chat");		// 0
-	create_combo->AddItem(L"Use Item");			// 1
-	create_combo->AddItem(L"Drop or Use Buff");	// 2
-	create_combo->AddItem(L"Toggle...");		// 3
-	create_combo->AddItem(L"Execute...");		// 4
-	create_combo->AddItem(L"Target");			// 5
-	create_combo->AddItem(L"Move to");			// 6
-	create_combo->AddItem(L"Dialog");			// 7
-	create_combo->AddItem(L"Ping Build");		// 8
-	create_combo->SetMaxShowItems(create_combo->GetItemsCount());
-	create_combo->SetLocation(PointI(Padding, Padding));
-	create_combo->SetSize(SizeI(GuiUtils::ComputeWidth(GetWidth(), 2), GuiUtils::BUTTON_HEIGHT));
-	create_combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
+	create_combo_ = new ComboBox(this);
+	create_combo_->SetText(L"Create Hotkey");
+	create_combo_->AddItem(L"Send Chat");		// 0
+	create_combo_->AddItem(L"Use Item");			// 1
+	create_combo_->AddItem(L"Drop or Use Buff");	// 2
+	create_combo_->AddItem(L"Toggle...");		// 3
+	create_combo_->AddItem(L"Execute...");		// 4
+	create_combo_->AddItem(L"Target");			// 5
+	create_combo_->AddItem(L"Move to");			// 6
+	create_combo_->AddItem(L"Dialog");			// 7
+	create_combo_->AddItem(L"Ping Build");		// 8
+	create_combo_->SetMaxShowItems(create_combo_->GetItemsCount());
+	create_combo_->SetLocation(PointI(Padding, Padding));
+	create_combo_->SetSize(SizeI(GuiUtils::ComputeWidth(GetWidth(), 2), GuiUtils::BUTTON_HEIGHT));
+	create_combo_->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
 		[&](Control*) {
-		if (create_combo->GetSelectedIndex() < 0) return;
+		if (create_combo_->GetSelectedIndex() < 0) return;
 		wstring ini = L"hotkey-";
 		ini += to_wstring(this->NewID());
 		ini += L":";
-		switch (create_combo->GetSelectedIndex()) {
+		switch (create_combo_->GetSelectedIndex()) {
 		case 0:
 			ini += HotkeySendChat::IniSection();
-			AddHotkey(new HotkeySendChat(this, Key::None, Key::None, true, ini, L"", L'/'));
+			AddHotkey(new HotkeySendChat(scroll_panel_->GetContainer(), Key::None, Key::None, true, ini, L"", L'/'));
 			break;
 		case 1:
 			ini += HotkeyUseItem::IniSection();
-			AddHotkey(new HotkeyUseItem(this, Key::None, Key::None, true, ini, 0, L""));
+			AddHotkey(new HotkeyUseItem(scroll_panel_->GetContainer(), Key::None, Key::None, true, ini, 0, L""));
 			break;
 		case 2:
 			ini += HotkeyDropUseBuff::IniSection();
-			AddHotkey(new HotkeyDropUseBuff(this, Key::None, Key::None, true, ini, GwConstants::SkillID::Recall));
+			AddHotkey(new HotkeyDropUseBuff(scroll_panel_->GetContainer(), Key::None, Key::None, true, ini, GwConstants::SkillID::Recall));
 			break;
 		case 3:
 			ini += HotkeyToggle::IniSection();
-			AddHotkey(new HotkeyToggle(this, Key::None, Key::None, true, ini, 1));
+			AddHotkey(new HotkeyToggle(scroll_panel_->GetContainer(), Key::None, Key::None, true, ini, 1));
 			break;
 		case 4:
 			ini += HotkeyAction::IniSection();
-			AddHotkey(new HotkeyAction(this, Key::None, Key::None, true, ini, 0));
+			AddHotkey(new HotkeyAction(scroll_panel_->GetContainer(), Key::None, Key::None, true, ini, 0));
 			break;
 		case 5:
 			ini += HotkeyTarget::IniSection();
-			AddHotkey(new HotkeyTarget(this, Key::None, Key::None, true, ini, 0, L""));
+			AddHotkey(new HotkeyTarget(scroll_panel_->GetContainer(), Key::None, Key::None, true, ini, 0, L""));
 			break;
 		case 6:
 			ini += HotkeyMove::IniSection();
-			AddHotkey(new HotkeyMove(this, Key::None, Key::None, true, ini, 0.0, 0.0, L""));
+			AddHotkey(new HotkeyMove(scroll_panel_->GetContainer(), Key::None, Key::None, true, ini, 0.0, 0.0, L""));
 			break;
 		case 7:
 			ini += HotkeyDialog::IniSection();
-			AddHotkey(new HotkeyDialog(this, Key::None, Key::None, true, ini, 0, L""));
+			AddHotkey(new HotkeyDialog(scroll_panel_->GetContainer(), Key::None, Key::None, true, ini, 0, L""));
 			break;
 		case 8:
 			ini += HotkeyPingBuild::IniSection();
-			AddHotkey(new HotkeyPingBuild(this, Key::None, Key::None, true, ini, 0));
+			AddHotkey(new HotkeyPingBuild(scroll_panel_->GetContainer(), Key::None, Key::None, true, ini, 0));
 			break;
 		default:
 			break;
 		}
-		create_combo->SetText(L"Create Hotkey");
-		create_combo->SetSelectedIndex(-1);
+		create_combo_->SetText(L"Create Hotkey");
+		create_combo_->SetSelectedIndex(-1);
 	});
-	AddControl(create_combo);
+	AddControl(create_combo_);
 
 	delete_combo_ = new ComboBox(this);
 	delete_combo_->SetText(L"Delete Hotkey");
 	delete_combo_->SetSize(SizeI(GuiUtils::ComputeWidth(GetWidth(), 2), GuiUtils::BUTTON_HEIGHT));
-	delete_combo_->SetLocation(PointI(create_combo->GetRight() + Padding, Padding));
+	delete_combo_->SetLocation(PointI(create_combo_->GetRight() + Padding, Padding));
 	delete_combo_->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
 		[this](Control*) {
 		int index = delete_combo_->GetSelectedIndex();
@@ -95,8 +95,8 @@ void HotkeyPanel::BuildUI() {
 	AddControl(delete_combo_);
 
 	scroll_panel_ = new ScrollPanel(this);
-	scroll_panel_->SetLocation(PointI(0, create_combo->GetBottom() + Padding));
-	scroll_panel_->SetSize(SizeI(GetWidth(), GetHeight() - create_combo->GetHeight() - 2 * Padding));
+	scroll_panel_->SetLocation(PointI(0, create_combo_->GetBottom() + Padding));
+	scroll_panel_->SetSize(SizeI(GetWidth(), GetHeight() - create_combo_->GetHeight() - 2 * Padding));
 	scroll_panel_->GetContainer()->SetBackColor(Color::Empty());
 	AddControl(scroll_panel_);
 
@@ -197,7 +197,7 @@ void HotkeyPanel::DeleteHotkey(int index) {
 	if (index < 0 || index >= (int)hotkeys.size()) return;
 
 	GWToolbox::instance().config().IniDeleteSection(hotkeys[index]->ini_section().c_str());
-	RemoveControl(hotkeys[index]);
+	scroll_panel_->RemoveControl(hotkeys[index]);
 	hotkeys.erase(hotkeys.begin() + index);
 	UpdateScrollBarMax();
 	CalculateHotkeyPositions();
@@ -206,7 +206,7 @@ void HotkeyPanel::DeleteHotkey(int index) {
 
 void HotkeyPanel::AddHotkey(TBHotkey* hotkey) {
 	hotkeys.push_back(hotkey);
-	AddControl(hotkey);
+	scroll_panel_->AddControl(hotkey);
 	UpdateScrollBarMax();
 	scroll_panel_->ScrollToBottom();
 	CalculateHotkeyPositions();

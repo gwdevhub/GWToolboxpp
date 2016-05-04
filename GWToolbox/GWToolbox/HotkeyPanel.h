@@ -19,6 +19,7 @@ class HotkeyPanel : public ToolboxPanel {
 private:
 	std::vector<TBHotkey*> hotkeys;				// list of hotkeys
 
+	OSHGui::ComboBox* create_combo_;
 	OSHGui::ComboBox* delete_combo_;
 	OSHGui::ScrollPanel* scroll_panel_;
 

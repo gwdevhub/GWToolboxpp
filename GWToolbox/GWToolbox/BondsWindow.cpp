@@ -30,7 +30,6 @@ BondsWindow::BondsWindow() {
 
 	SetLocation(PointI(x, y));
 	SetSize(Drawing::SizeI(width, height));
-	//SetEnabled(false);
 
 	Drawing::Theme::ControlTheme theme = Application::InstancePtr()
 		->GetTheme().GetControlColorTheme(BondsWindow::ThemeKey());
