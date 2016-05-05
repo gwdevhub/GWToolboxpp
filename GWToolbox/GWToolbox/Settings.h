@@ -160,8 +160,20 @@ public:
 	void ApplySetting(bool value) {
 		DWORD current_style = GetWindowLong(GWCA::MemoryMgr::GetGWWindowHandle(), GWL_STYLE);
 
-		DWORD style = value ? WS_POPUP | WS_VISIBLE | WS_MINIMIZEBOX 
+		if ((current_style & WS_POPUP) != 0) { // borderless or fullscreen
+			if ((current_style & WS_MAXIMIZEBOX) == 0) { // fullscreen
+				if (value) {
+					ChatLogger::Log(L"Please enable Borderless while in Windowed mode");
+					SetChecked(false);
+				}
+				return;
+			}
+		}
+
+		DWORD style = value ? WS_POPUP | WS_VISIBLE | WS_MINIMIZEBOX | WS_CLIPSIBLINGS | WS_MAXIMIZEBOX
 			: WS_SIZEBOX | WS_SYSMENU | WS_CAPTION | WS_VISIBLE | WS_MAXIMIZEBOX | WS_MINIMIZEBOX | WS_CLIPSIBLINGS;
+
+		//printf("old 0x%X, new 0x%X\n", current_style, style);
 
 		if (current_style != style) {
 			for (GWCA::MemoryPatcher* patch : patches) patch->TooglePatch(value);
