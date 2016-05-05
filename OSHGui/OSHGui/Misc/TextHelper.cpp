@@ -95,21 +95,19 @@ namespace OSHGui {
 			}
 			
 			std::wstring substring = text_.substr(0, trailing ? index + 1 : index);
-			Drawing::SizeF size(font_->GetTextExtent(substring), font_->GetFontHeight());
-			
-			return Drawing::PointF(size.Width, size.Height);//Drawing::PointF(size.Width - 2, size.Height < font->GetSize() ? font->GetSize() : size.Height);
+			return Drawing::PointF(font_->GetTextExtent(substring), font_->GetFontHeight());
 		}
 		//---------------------------------------------------------------------------
 		Drawing::SizeF TextHelper::GetStringSize(int index, int size) const {
 			if (GetLength() == 0 || size == 0) {
-				return Drawing::SizeF(0, font_->GetFontHeight());
+				return Drawing::SizeF(0, std::ceil(font_->GetFontHeight()));
 			}
 			if (index >= GetLength()) {
 				index = GetLength() - 1;
 			}
 
 			std::wstring substring = size == -1 ? text_.substr(index) : text_.substr(index, size);
-			return Drawing::SizeF(font_->GetTextExtent(substring), font_->GetFontHeight());
+			return Drawing::SizeF(std::ceil(font_->GetTextExtent(substring)), std::ceil(font_->GetFontHeight()));
 		}
 		//---------------------------------------------------------------------------
 		int TextHelper::GetClosestCharacterIndex(const Drawing::PointF &position) const {

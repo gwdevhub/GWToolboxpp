@@ -16,15 +16,12 @@
 #include "../Drawing/Point.hpp"
 #include "../Drawing/Size.hpp"
 
-namespace OSHGui
-{
-	namespace Misc
-	{
+namespace OSHGui {
+	namespace Misc {
 		/**
 		 * Verwaltet eine Zeichenkette und deren Ausmaﬂe.
 		 */
-		class OSHGUI_EXPORT TextHelper
-		{
+		class OSHGUI_EXPORT TextHelper {
 		public:
 			/**
 			 * Erstellt ein TextHelper-Objekt mit der entsprechenden Schriftart.

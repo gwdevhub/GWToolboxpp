@@ -503,7 +503,7 @@ void ChatCommands::CmdTarget(vector<wstring> args) {
 			if (target == nullptr) {
 				ChatLogger::Log(L"No target selected!");
 			} else {
-				ChatLogger::LogF(L"Target coordinates are [(%f, %f);xx]", target->X, target->Y);
+				ChatLogger::LogF(L"Target coordinates are (%f, %f)", target->X, target->Y);
 			}
 		}
 	}
@@ -514,11 +514,16 @@ void ChatCommands::CmdUseSkill(vector<wstring> args) {
 	if (args.empty()) {
 		self.skill_to_use = 0;
 	} else if (args.size() == 1) {
-		try {
-			int skill = std::stoi(args[0]);
-			if (skill >= 0 && skill <= 8) self.skill_to_use = skill;
-		} catch (...) {
-			ChatLogger::LogF(L"[Error] Invalid argument '%ls', please use an integer value", args[0].c_str());
+		wstring arg0 = GetLowerCaseArg(args, 0);
+		if (arg0 == L"stop" || arg0 == L"off") {
+			self.skill_to_use = 0;
+		} else {
+			try {
+				int skill = std::stoi(args[0]);
+				if (skill >= 0 && skill <= 8) self.skill_to_use = skill;
+			} catch (...) {
+				ChatLogger::LogF(L"[Error] Invalid argument '%ls', please use an integer value", args[0].c_str());
+			}
 		}
 	}
 }

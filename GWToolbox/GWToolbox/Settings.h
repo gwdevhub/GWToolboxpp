@@ -131,7 +131,7 @@ public:
 class SuppressMessages : public BoolSetting {
 public:
 	SuppressMessages(OSHGui::Control* parent) : BoolSetting(parent, false, L"suppressmessages") {
-		Initialize(L"Suppress drop messages");
+		Initialize(L"Suppress item messages");
 	}
 
 	void ApplySetting(bool value) override {
