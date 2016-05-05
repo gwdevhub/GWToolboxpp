@@ -43,6 +43,7 @@ void SettingsPanel::BuildUI() {
 	panel->SetAutoSize(true);
 	AddControl(panel);
 
+	// should be in the same order as the Settings_enum
 	boolsettings.push_back(new OpenTabsLeft(panel->GetContainer()));
 	boolsettings.push_back(new FreezeWidgets(panel->GetContainer()));
 	boolsettings.push_back(new HideTargetWidgets(panel->GetContainer()));

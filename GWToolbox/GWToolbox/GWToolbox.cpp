@@ -23,6 +23,7 @@
 #include "Timer.h"
 #include "MainWindow.h"
 #include "TimerWindow.h"
+#include "Settings.h"
 
 const wchar_t * GWToolbox::Host = L"http://fbgmguild.com/GWToolboxpp/";
 const wchar_t* GWToolbox::Version = L"1.6";
@@ -203,19 +204,35 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 		case WM_XBUTTONUP:
 		case WM_MBUTTONDOWN:
 		case WM_MBUTTONUP:
+			// send input to OSHgui for creating hotkeys and general UI stuff
 			if (GWToolbox::instance().capture_input()) {
 				input.ProcessMessage(&msg);
 				return true;
 			}
+
+			// send input to chat commands for camera movement
 			if (GWToolbox::instance().chat_commands().ProcessMessage(&msg)) {
 				return true;
 			}
+
+			// send input to toolbox to trigger hotkeys
 			GWToolbox::instance().main_window().hotkey_panel().ProcessMessage(&msg);
+
+			// block alt-enter if in borderless to avoid graphic glitches (no reason to go fullscreen anyway)
+			if (GWToolbox::instance().main_window().settings_panel().GetSetting(
+				SettingsPanel::Setting_enum::e_BorderlessWindow)->ReadSetting()
+				&& (GetAsyncKeyState(VK_MENU) < 0)
+				&& (GetAsyncKeyState(VK_RETURN) < 0)) {
+				return true;
+			}
+
 			break;
 
 		case WM_SIZE:
 			GWToolbox::instance().new_screen_size_ = SizeI(LOWORD(lParam), HIWORD(lParam));
-			if (GWToolbox::instance().new_screen_size_ != GWToolbox::instance().old_screen_size_) GWToolbox::instance().must_resize_ = true;
+			if (GWToolbox::instance().new_screen_size_ != GWToolbox::instance().old_screen_size_) {
+				GWToolbox::instance().must_resize_ = true;
+			}
 			break;
 
 		default:

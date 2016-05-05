@@ -48,13 +48,13 @@ ChatCommands::ChatCommands() {
 	AddCommand(L"useskill", ChatCommands::CmdUseSkill);
 	AddCommand(L"skilluse", ChatCommands::CmdUseSkill);
 
-	auto Get1stSegment = [](GWCA::StoC_Pak::P081* pak) -> wchar_t* {
+	auto Get1stSegment = [](GWCA::StoC_Pak::P081* pak) -> const wchar_t* {
 		for (size_t i = 0; pak->message[i] != 0; ++i) {
 			if (pak->message[i] == 0x10A) return pak->message + i + 1;
 		}
 		return nullptr;
 	};
-	auto Get2ndSegment = [](GWCA::StoC_Pak::P081* pak) -> wchar_t* {
+	auto Get2ndSegment = [](GWCA::StoC_Pak::P081* pak) -> const wchar_t* {
 		for (size_t i = 0; pak->message[i] != 0; ++i) {
 			if (pak->message[i] == 0x10B) return pak->message + i + 1;
 		}
@@ -68,42 +68,64 @@ ChatCommands::ChatCommands() {
 		return 0;
 	};
 
+	auto ShouldIgnoreByAgentThatDropped = [](const wchar_t* agent_segment) -> bool {
+		if (agent_segment == nullptr) return false;		// something went wrong, don't ignore
+		if (agent_segment[0] == 0xBA9 && agent_segment[1] == 0x107) return false;
+		return true;
+	};
+
+	auto ShouldIgnoreItem = [](const wchar_t* item_segment) -> bool {
+		if (item_segment == nullptr) return false;		// something went wrong, don't ignore
+		if (item_segment[0] == 0xA40) return false;		// don't ignore gold items
+		if (   item_segment[0] == 0x108
+			&& item_segment[1] == 0x10A
+			&& item_segment[2] == 0x22D9
+			&& item_segment[3] == 0xE7B8
+			&& item_segment[4] == 0xE9DD
+			&& item_segment[5] == 0x2322) return false;	// don't ignore ectos
+		return true;
+	};
+
 	auto ShouldIgnore = [&](GWCA::StoC_Pak::P081* pak) -> bool {
 		switch (pak->message[0]) {
-		case 108:	// player message
-		case 0x7df: // party shares gold
-		case 0x7f6: // player x picks up item y
-		case 0x7f2: // player x drops item y
-		case 0x7fc: // player x picks up item y
-		case 807: // player joined the game
+		// ==== Messages not ignored ====
+		case 0x108:	// player message
+		case 0x7F2: // you drop item x
+		case 0x7FC: // you pick up item y (note: item can be unassigned gold)
+		case 0x807: // player joined the game
 			return false;
 
-		case 0x7f0: { // monster x drops item y (no assignment)
-			wchar_t* item = Get2ndSegment(pak);
-			if (item && item[0] == 0xA40) return false;	// first wchar of item is rarity, 0xA40 is gold rarity
-			return true;
-		}
-		case 0x7f1: { // monster x drops item y, your party assigns to player z
-			wchar_t* item = Get2ndSegment(pak);
-			DWORD assignee = GetNumericSegment(pak);
-			GWCA::GW::Agent* me = GWCA::Agents().GetPlayer();
-			if (item && item[0] == 0xA40 && me && me->PlayerNumber == assignee) return false;
-			return true;
-		}
-
+		// ==== Ignored Messages ====
+		case 0x7E0: // party shares gold
+		case 0x7DF: // party shares gold ?
+		case 0x7F6: // player x picks up item y (note: item can be unassigned gold)
 		case 0x816: // you gain a skill point
 		case 0x817: // player x gained a skill point
 			return true;
+
+		// ==== Monster drops: ignored unless gold/ecto for player ====
+		case 0x7F0: { // monster/player x drops item y (no assignment)
+			// first segment describes the agent who dropped
+			return ShouldIgnoreByAgentThatDropped(Get1stSegment(pak)) && ShouldIgnoreItem(Get2ndSegment(pak));
+		}
+		case 0x7F1: { // monster x drops item y, your party assigns to player z
+			// 0x7F1 0x9A9D 0xE943 0xB33 0x10A <monster> 0x1 0x10B <rarity> 0x10A <item> 0x1 0x1 0x10F <assignee: playernumber + 0x100>
+			// <monster> is wchar_t id of several wchars
+			// <rarity> is 0x108 for common, 0xA40 gold, 0xA42 purple, 0xA43 green
+			GWCA::GW::Agent* me = GWCA::Agents().GetPlayer();
+			if (me && me->PlayerNumber != GetNumericSegment(pak)) return true;	// ignore drops not for the player
+			return ShouldIgnoreItem(Get2ndSegment(pak));
+		}
 
 		case 0x8101:
 			switch (pak->message[1]) {
 			case 0x1868: return true; // teilah takes 10 festival tickets
 			case 0x1867: return true; // stay where you are, nine rings is about to begin
 			case 0x1869: return true; // big winner! 55 tickets
-			case 0x186a: return true; // you win 40 tickets
-			case 0x186b: return true; // you win 25 festival tickets
-			case 0x186c: return true; // you win 15 festival tickets
-			case 0x186d: return true; // did not win 9rings
+			case 0x186A: return true; // you win 40 tickets
+			case 0x186B: return true; // you win 25 festival tickets
+			case 0x186C: return true; // you win 15 festival tickets
+			case 0x186D: return true; // did not win 9rings
 			default: return false;
 			}
 
@@ -114,15 +136,13 @@ ChatCommands::ChatCommands() {
 				return true;
 
 			case 0x223B: // a party won hall of heroes
-				return false;
-
-			default: 
+			case 0x23E4: // 0xF8AA 0x95CD 0x2766 // the world no longer has the favor of the gods
+			default:
 				return false;
 			}
 
 		default: 
-			//printf("Pak 81: ");
-			//for (size_t i = 0; pak->message[i] != 0; ++i) printf(" 0x%x", pak->message[i]);
+			//for (size_t i = 0; pak->message[i] != 0; ++i) printf(" 0x%X", pak->message[i]);
 			//printf("\n");
 			return false;
 		}
@@ -131,6 +151,8 @@ ChatCommands::ChatCommands() {
 	suppress_next_message = false;
 	suppress_messages_active = false;
 	GWCA::StoC().AddGameServerEvent<GWCA::StoC_Pak::P081>([&](GWCA::StoC_Pak::P081* pak) -> bool {
+		for (size_t i = 0; pak->message[i] != 0; ++i) printf(" 0x%X", pak->message[i]);
+		printf("\n");
 		if (suppress_messages_active && ShouldIgnore(pak)) {
 			suppress_next_message = true;
 			return true;

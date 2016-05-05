@@ -10,6 +10,19 @@
 class BoolSetting;
 
 class SettingsPanel : public ToolboxPanel {
+public:
+	enum Setting_enum : unsigned int {
+		e_OpenTabsLeft,
+		e_FreezeWidgets,
+		e_HideTargetWidgets,
+		e_MinimizeToAltPos,
+		e_AdjustOnResize,
+		e_BorderlessWindow,
+		e_SuppressMessages,
+		e_TickWithPcons,
+		e_OpenTemplateLinks,
+		e_SaveLocationData
+	};
 private:
 	bool location_active_; // true if active
 	clock_t location_timer_;
@@ -30,5 +43,9 @@ public:
 	inline void Close() { if (location_file_.is_open()) location_file_.close(); }
 
 	void ApplySettings();
+
+	BoolSetting* GetSetting(Setting_enum setting) {
+		return boolsettings[setting];
+	}
 };
 

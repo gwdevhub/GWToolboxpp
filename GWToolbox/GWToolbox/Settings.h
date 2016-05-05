@@ -158,21 +158,25 @@ public:
 		patches.push_back(new GWCA::MemoryPatcher((void*)0x0067D65E, a, 10));
 	}
 	void ApplySetting(bool value) {
-		for (GWCA::MemoryPatcher* patch : patches) patch->TooglePatch(value);
+		DWORD current_style = GetWindowLong(GWCA::MemoryMgr::GetGWWindowHandle(), GWL_STYLE);
 
-		DWORD style;
-		if (value) style = WS_POPUP | WS_VISIBLE | WS_MINIMIZEBOX;
-		else style = WS_SIZEBOX | WS_SYSMENU | WS_CAPTION | WS_VISIBLE | WS_MAXIMIZEBOX | WS_MINIMIZEBOX;
-		SetWindowLong(GWCA::MemoryMgr::GetGWWindowHandle(), GWL_STYLE, style);
+		DWORD style = value ? WS_POPUP | WS_VISIBLE | WS_MINIMIZEBOX 
+			: WS_SIZEBOX | WS_SYSMENU | WS_CAPTION | WS_VISIBLE | WS_MAXIMIZEBOX | WS_MINIMIZEBOX | WS_CLIPSIBLINGS;
 
-		if (value) {
-			int width = GetSystemMetrics(SM_CXSCREEN);
-			int height = GetSystemMetrics(SM_CYSCREEN);
-			MoveWindow(GWCA::MemoryMgr::GetGWWindowHandle(), 0, 0, width, height, TRUE);
-		} else {
-			RECT size;
-			SystemParametersInfoW(SPI_GETWORKAREA, 0, &size, 0);
-			MoveWindow(GWCA::MemoryMgr::GetGWWindowHandle(), size.top, size.left, size.right, size.bottom, TRUE);
+		if (current_style != style) {
+			for (GWCA::MemoryPatcher* patch : patches) patch->TooglePatch(value);
+
+			SetWindowLong(GWCA::MemoryMgr::GetGWWindowHandle(), GWL_STYLE, style);
+
+			if (value) {
+				int width = GetSystemMetrics(SM_CXSCREEN);
+				int height = GetSystemMetrics(SM_CYSCREEN);
+				MoveWindow(GWCA::MemoryMgr::GetGWWindowHandle(), 0, 0, width, height, TRUE);
+			} else {
+				RECT size;
+				SystemParametersInfoW(SPI_GETWORKAREA, 0, &size, 0);
+				MoveWindow(GWCA::MemoryMgr::GetGWWindowHandle(), size.top, size.left, size.right, size.bottom, TRUE);
+			}
 		}
 	}
 
