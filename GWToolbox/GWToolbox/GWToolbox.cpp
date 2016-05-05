@@ -5,7 +5,6 @@
 #include <OSHGui\OSHGui.hpp>
 
 #include <GWCA\GWCA.h>
-#include <GWCA\DirectXMgr.h>
 #include <GWCA\AgentMgr.h>
 #include <GWCA\CameraMgr.h>
 #include <GWCA\ChatMgr.h>
@@ -19,6 +18,7 @@
 #include <GWCA\PlayerMgr.h>
 #include <GWCA\SkillbarMgr.h>
 #include <GWCA\StoCMgr.h>
+#include <..\gwca_dx\DirectXHooker.h>
 
 #include "Timer.h"
 #include "MainWindow.h"
@@ -33,6 +33,8 @@ GWToolbox* GWToolbox::instance_ = NULL;
 OSHGui::Drawing::Direct3D9Renderer* GWToolbox::renderer = NULL;
 long GWToolbox::OldWndProc = 0;
 OSHGui::Input::WindowsMessage GWToolbox::input;
+
+GWCA::DirectXHooker dx_hooker;
 
 
 void GWToolbox::SafeThreadEntry(HMODULE dllmodule) {
@@ -77,7 +79,8 @@ void GWToolbox::ThreadEntry(HMODULE dllmodule) {
 
 void GWToolbox::Exec() {
 	LOG("Installing dx hooks\n");
-	GWCA::DirectX().CreateRenderHooks(endScene, resetScene);
+	dx_hooker.AddHook(GWCA::dx9::kEndScene, (void*)endScene);
+	dx_hooker.AddHook(GWCA::dx9::kReset, (void*)resetScene);
 	LOG("Installed dx hooks\n");
 
 	LOG("Installing input event handler\n");
@@ -353,7 +356,7 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 		renderer->EndRendering();
 	}
 
-	return GWCA::DirectX().EndsceneReturn()(pDevice);
+	return dx_hooker.original<GWCA::dx9::EndScene_t>(GWCA::dx9::kEndScene)(pDevice);
 }
 
 HRESULT WINAPI GWToolbox::resetScene(IDirect3DDevice9* pDevice, 
@@ -361,7 +364,7 @@ HRESULT WINAPI GWToolbox::resetScene(IDirect3DDevice9* pDevice,
 	// pre-reset here.
 	renderer->PreD3DReset();
 
-	HRESULT result = GWCA::DirectX().ResetReturn()(pDevice, pPresentationParameters);
+	HRESULT result = dx_hooker.original<GWCA::dx9::Reset_t>(GWCA::dx9::kReset)(pDevice, pPresentationParameters);
 	if (result == D3D_OK){
 		// post-reset here.
 		renderer->PostD3DReset();
