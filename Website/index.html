@@ -6,6 +6,7 @@
 <title>GWToolbox++</title>
 <link rel="stylesheet" href="gwtoolbox.css" />
 </head>
+
 <body><div class="container"><h1 id="guild-wars-toolbox">Guild Wars Toolbox++</h1>
 
 <p>A set of tools for Guild Wars speed-clearers</p>
@@ -50,7 +51,8 @@
 <h3 id="download">Download</h3>
 
 <p>Launcher: <a href="http://fbgmguild.com/GWToolboxpp/GWToolbox.exe">GWToolbox.exe</a> <br>
-<em>Current version is GWToolbox++ 1.4</em></p>
+Beta Launcher: <a href="http://fbgmguild.com/GWToolboxpp/GWToolbox_beta.exe">GWToolbox_beta.exe</a> <br>
+<em>Current version is GWToolbox++ 1.7</em></p>
 
 <h3 id="feature-overview">Feature Overview</h3>
 
@@ -58,7 +60,7 @@
 <li>Automatically <strong>maintains</strong> selected pcons.</li>
 <li>Ability to set <strong>hotkeys</strong> for typing commands into chat (e.g. /stuck and /resign), using or cancelling recall and UA, using an item (e.g. res scroll, powerstone), targeting an agent (e.g. Boo) and more!</li>
 <li>Send team builds into chat.</li>
-<li>Fast travel to any outpost.</li>
+<li>Fast travel to any previously visited outpost.</li>
 <li>Take or accept quests quickly with hotkeys, and be able to do so while NPCs are in combat.</li>
 <li>Check price for consets, res scrolls and powerstones, automatically buy materials for any amount of those - <strong>Coming soon!</strong></li>
 <li>Show instance timer, target health or distance.</li>
@@ -106,6 +108,8 @@ We are always open to comments and criticism about Toolbox++. If you have featur
 
 <p><strong>Can I view the GWToolbox++ source code?</strong> <br>
 Yes. The git repository, along with the most recent revision of source is publicly available <a href="https://bitbucket.org/ggori/gwtoolbox-plusplus/src">here</a>.</p>
+
+
 
 <h3 id="detailed-feature-description">Detailed feature description</h3>
 
@@ -197,13 +201,11 @@ will ping the selected team build to chat, you can edit team builds in the Build
 <ul>
 <li><strong>Bonds Monitor</strong> is typically focused for E/Mo, shows the currently maintained <strong>Balth</strong>, <strong>Prot</strong> and <strong>Life</strong> bonds on the team. You can also cast or drop bonds by clicking on each slot.</li>
 <li><strong>Target Health</strong> shows the health of the current target both in percentage and absolute values</li>
-<li><strong>Target Distance</strong> shows the distance to the current target both in percentage of radar range and absolute in-game units. For reference Radar Range is 5000, Spirit Range is 2500, casting range is 1200 and aggro range is 1000.</li>
-<li><strong>Party Damage</strong> shows the damage done by each player in your party. You will see the absolute value and the percentage of the total party damage done. The background of each row also shows visually the amount. Finally, a thin bar will show recent damage in real time, this value resets for each player after a few seconds of not doing damage. You can reset the count with <code>/damage reset</code> and you can write the results to team chat with <code>/damage report</code>.</li>
+<li><strong>Target Distance</strong> shows the distance to the current target both in percentage of radar range and absolute in-game units. For reference Radar Range is about 5000, Spirit Range is 2500, casting range is 1200 and aggro range is 1000.</li>
+<li><strong>Party Damage</strong> shows the damage done by each player in your party. You will see the absolute value and the percentage of the total party damage done. The background of each row also shows visually the amount. Finally, a thin bar will show recent damage in real time, this value resets for each player after a few seconds of not doing damage. You can reset the count with <code>/damage reset</code> and you can write the results to team chat with <code>/damage report</code>. Note that toolbox is only able to detect damage done in radar range.</li>
 </ul>
 
 <p>Finally, there is a button to <strong>Open Xunlai Chest</strong> from anywhere in an outpost.</p>
-
-
 
 <h4 id="materials">Materials</h4>
 
@@ -217,15 +219,16 @@ will ping the selected team build to chat, you can edit team builds in the Build
 <li><strong>Open tabs on the left</strong> will open panels on the left instead of right side.</li>
 <li><strong>Freeze info widget positions</strong> will freeze Timer, Bonds Monitor, Target Health and Target Distance position on screen. Additionally, it will allow click-through all of those except for bonds monitor.</li>
 <li><strong>Hide target windows</strong> will hide Target Health and Target Distance when a target is not selected.</li>
-<li><strong>Minimize to Alt position</strong> makes the saved positions for toolbox and minimized toolbox independent.</li>
+<li><strong>Minimize to different position</strong> makes the saved positions for toolbox and minimized toolbox independent.</li>
+<li><strong>Adjust positions on window resize</strong>. Toolbox++ will try to adjust widget positions when the Guild Wars window is resized, e.g. by keeping the timer on the right border.</li>
+<li><strong>Borderless window mode</strong> will turn the Guild Wars window into “borderless fullscreen” mode, which means GW will show full-screen but act if it was windowed.</li>
+<li><strong>Hide server chat spam</strong> will hide all chat messages of item drops and pick-ups, with the exception of gold rarity items assigned to yourself. Will also hide messages such as the 9rings spam and "Skill x has been updated for pvp"</li>
 <li><strong>Tick with pcon status</strong>. If enabled, when enabling or disabling <strong>Pcons</strong> Toolbox++ will also tick or untick in party list.</li>
 <li><strong>Save Location Data</strong>. If enabled, Toolbox++ will save your position each second in a log file in the settings folder.</li>
 <li><strong>Open GWToolbox++ Website</strong> will open this web page.</li>
 <li><strong>Open Settings Folder</strong> will open the installation folder.</li>
 <li><strong>Open web links in templates</strong> will make it so that when you click on a web link on a equipment or skill template your default browser will immediately launch the clicked link.</li>
 </ul>
-
-
 
 <h3 id="customization">Customization</h3>
 
@@ -245,8 +248,7 @@ will ping the selected team build to chat, you can edit team builds in the Build
 <li><code>/age2</code> or <code>/tb age</code> will display a simple in-game instance time</li>
 <li><code>/pcons</code> will toggle pcons, alternatively, you can use <code>/pcons on</code> or <code>/pcons off</code></li>
 <li><code>/dialog [id]</code> will send a dialog, use an integer or hex number instead of <code>[id]</code></li>
-<li><p><code>/to [dest]</code>, <code>/tp [dest]</code> or <code>/travel [dest]</code> will map travel you to the <code>[dest]</code> outpost. You can use the following values instead of <code>[dest]</code>:</p>
-
+<li><code>/to [dest]</code>, <code>/tp [dest]</code> or <code>/travel [dest]</code> will map travel you to the <code>[dest]</code> outpost. You can use the following values instead of <code>[dest]</code>: <br>
 <ul><li><code>toa</code></li>
 <li><code>doa</code></li>
 <li><code>kamadan</code> or <code>kama</code></li>
@@ -258,7 +260,7 @@ will ping the selected team build to chat, you can edit team builds in the Build
 <li><code>fav1</code>, <code>fav2</code>, <code>fav3</code> for your favorite locations</li>
 <li><code>gh</code> for guild hall <br>
 You can also specify the district with a third argument, possible values are <code>ae1</code>, <code>ee1</code>, <code>eg1</code> (or <code>dd1</code>) and <code>int</code>.</li></ul></li>
-<li><p><code>/zoom [value]</code> to change the maximum zoom. Use a number instead of <code>[value]</code>. Use just <code>/zoom</code> without an argument to reset to default value.</p></li>
+<li><code>/zoom [value]</code> to change the maximum zoom. Use a number instead of <code>[value]</code>. Use just <code>/zoom</code> without an argument to reset to default value.</li>
 <li><code>/tb [arg]</code> has several options to control toolbox: <br>
 <ul><li><code>/tb hide</code> to completely hide toolbox</li>
 <li><code>/tb show</code> to show toolbox</li>
@@ -279,9 +281,8 @@ You can also specify the district with a third argument, possible values are <co
 <ul><li><code>/target closest</code> or <code>/target nearest</code> will target the closest agent to the player</li>
 <li><code>/target getid</code> will print the the target model ID (aka PlayerNumber). This is unique and constant for each kind of agent.</li>
 <li><code>/target getpos</code> will print the coordinates (x, y) of the target</li></ul></li>
+<li><code>/useskill [slot]</code> will use the selected skill on recharge, for example <code>/useskill 1</code> will use your first skill. Use <code>/useskill</code>, <code>/useskill 0</code> or <code>/useskill</code> to stop.</li>
 </ul>
-
-
 
 <h3 id="source-code">Source code</h3>
 

@@ -11,13 +11,14 @@ _by Has and KAOS_
 
 ### Download
 Launcher: [GWToolbox.exe](http://fbgmguild.com/GWToolboxpp/GWToolbox.exe)
-*Current version is GWToolbox++ 1.4*
+Beta Launcher: [GWToolbox_beta.exe](http://fbgmguild.com/GWToolboxpp/GWToolbox_beta.exe)
+*Current version is GWToolbox++ 1.7*
 
 ### Feature Overview
 * Automatically **maintains** selected pcons.
 * Ability to set **hotkeys** for typing commands into chat (e.g. /stuck and /resign), using or cancelling recall and UA, using an item (e.g. res scroll, powerstone), targeting an agent (e.g. Boo) and more!
 * Send team builds into chat.
-* Fast travel to any outpost.
+* Fast travel to any previously visited outpost.
 * Take or accept quests quickly with hotkeys, and be able to do so while NPCs are in combat.
 * Check price for consets, res scrolls and powerstones, automatically buy materials for any amount of those - **Coming soon!**
 * Show instance timer, target health or distance.
@@ -129,8 +130,8 @@ You can toggle the widgets **Bonds Monitor**, **Target Health** and **Target Dis
 
 * __Bonds Monitor__ is typically focused for E/Mo, shows the currently maintained **Balth**, **Prot** and **Life** bonds on the team. You can also cast or drop bonds by clicking on each slot.
 * __Target Health__ shows the health of the current target both in percentage and absolute values
-* __Target Distance__ shows the distance to the current target both in percentage of radar range and absolute in-game units. For reference Radar Range is 5000, Spirit Range is 2500, casting range is 1200 and aggro range is 1000.
-* __Party Damage__ shows the damage done by each player in your party. You will see the absolute value and the percentage of the total party damage done. The background of each row also shows visually the amount. Finally, a thin bar will show recent damage in real time, this value resets for each player after a few seconds of not doing damage. You can reset the count with `/damage reset` and you can write the results to team chat with `/damage report`.
+* __Target Distance__ shows the distance to the current target both in percentage of radar range and absolute in-game units. For reference Radar Range is about 5000, Spirit Range is 2500, casting range is 1200 and aggro range is 1000.
+* __Party Damage__ shows the damage done by each player in your party. You will see the absolute value and the percentage of the total party damage done. The background of each row also shows visually the amount. Finally, a thin bar will show recent damage in real time, this value resets for each player after a few seconds of not doing damage. You can reset the count with `/damage reset` and you can write the results to team chat with `/damage report`. Note that toolbox is only able to detect damage done in radar range.
 
 Finally, there is a button to **Open Xunlai Chest** from anywhere in an outpost.
 
@@ -142,7 +143,10 @@ Finally, there is a button to **Open Xunlai Chest** from anywhere in an outpost.
 * __Open tabs on the left__ will open panels on the left instead of right side.
 * __Freeze info widget positions__ will freeze Timer, Bonds Monitor, Target Health and Target Distance position on screen. Additionally, it will allow click-through all of those except for bonds monitor.
 * __Hide target windows__ will hide Target Health and Target Distance when a target is not selected.
-* __Minimize to Alt position__ makes the saved positions for toolbox and minimized toolbox independent.
+* __Minimize to different position__ makes the saved positions for toolbox and minimized toolbox independent.
+* __Adjust positions on window resize__. Toolbox++ will try to adjust widget positions when the Guild Wars window is resized, e.g. by keeping the timer on the right border.
+* __Borderless window mode__ will turn the Guild Wars window into "borderless fullscreen" mode, which means GW will show full-screen but act if it was windowed.
+* __Suppress item messages__ will remove all chat messages of item drops and pick-ups, with the exception of gold rarity items assigned to yourself.
 * __Tick with pcon status__. If enabled, when enabling or disabling **Pcons** Toolbox++ will also tick or untick in party list.
 * __Save Location Data__. If enabled, Toolbox++ will save your position each second in a log file in the settings folder.
 * __Open GWToolbox++ Website__ will open this web page.
@@ -174,7 +178,6 @@ Toolbox supports a variety of chat commands, you can use them by typing in chat 
 	* `fav1`, `fav2`, `fav3` for your favorite locations
 	* `gh` for guild hall
 You can also specify the district with a third argument, possible values are `ae1`, `ee1`, `eg1` (or `dd1`) and `int`.
-
 * `/zoom [value]` to change the maximum zoom. Use a number instead of `[value]`. Use just `/zoom` without an argument to reset to default value.
 * `/tb [arg]` has several options to control toolbox:
 	* `/tb hide` to completely hide toolbox
@@ -196,6 +199,7 @@ You can also specify the district with a third argument, possible values are `ae
 	* `/target closest` or `/target nearest` will target the closest agent to the player
 	* `/target getid` will print the the target model ID (aka PlayerNumber). This is unique and constant for each kind of agent.
 	* `/target getpos` will print the coordinates (x, y) of the target
+* `/useskill [slot]` will use the selected skill on recharge, for example `/useskill 1` will use your first skill. Use `/useskill`, `/useskill 0` or `/useskill` to stop.
 
 
 ### Source code

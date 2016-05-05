@@ -26,7 +26,7 @@
 #include "Settings.h"
 
 const wchar_t * GWToolbox::Host = L"http://fbgmguild.com/GWToolboxpp/";
-const wchar_t* GWToolbox::Version = L"1.6";
+const wchar_t* GWToolbox::Version = L"1.7";
 
 
 GWToolbox* GWToolbox::instance_ = NULL;

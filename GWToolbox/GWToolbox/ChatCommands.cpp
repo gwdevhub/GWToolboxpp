@@ -83,6 +83,12 @@ ChatCommands::ChatCommands() {
 			&& item_segment[3] == 0xE7B8
 			&& item_segment[4] == 0xE9DD
 			&& item_segment[5] == 0x2322) return false;	// don't ignore ectos
+		if (   item_segment[0] == 0x108
+			&& item_segment[1] == 0x10A
+			&& item_segment[2] == 0x22EA
+			&& item_segment[3] == 0xFDA9
+			&& item_segment[4] == 0xDE53
+			&& item_segment[5] == 0x2D16) return false; // don't ignore obby shards
 		return true;
 	};
 
@@ -90,6 +96,14 @@ ChatCommands::ChatCommands() {
 		switch (pak->message[0]) {
 		// ==== Messages not ignored ====
 		case 0x108:	// player message
+		case 0x777: // I'm level x and x% of the way earning my next skill point	(author is not part of the message)
+		case 0x778: // I'm following x			(author is not part of the message)
+		case 0x77B: // I'm talking to x			(author is not part of the message)
+		case 0x77C: // I'm wielding x			(author is not part of the message)
+		case 0x77D: // I'm wielding x and y		(author is not part of the message)
+		case 0x781: // I'm targeting x			(author is not part of the message)
+		case 0x783: // I'm targeting myself!	(author is not part of the message)
+		case 0x7ED: // opening the chest reveals x, which your party reserves for y
 		case 0x7F2: // you drop item x
 		case 0x7FC: // you pick up item y (note: item can be unassigned gold)
 		case 0x807: // player joined the game
@@ -137,6 +151,7 @@ ChatCommands::ChatCommands() {
 
 			case 0x223B: // a party won hall of heroes
 			case 0x23E4: // 0xF8AA 0x95CD 0x2766 // the world no longer has the favor of the gods
+			case 0x3772: // I'm under the effect of x
 			default:
 				return false;
 			}
@@ -151,8 +166,10 @@ ChatCommands::ChatCommands() {
 	suppress_next_message = false;
 	suppress_messages_active = false;
 	GWCA::StoC().AddGameServerEvent<GWCA::StoC_Pak::P081>([&](GWCA::StoC_Pak::P081* pak) -> bool {
-		for (size_t i = 0; pak->message[i] != 0; ++i) printf(" 0x%X", pak->message[i]);
-		printf("\n");
+		//if (pak->message[0] != 0x108) {
+		//	for (size_t i = 0; pak->message[i] != 0; ++i) printf(" 0x%X", pak->message[i]);
+		//	printf("\n");
+		//}
 		if (suppress_messages_active && ShouldIgnore(pak)) {
 			suppress_next_message = true;
 			return true;

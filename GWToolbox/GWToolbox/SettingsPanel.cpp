@@ -40,6 +40,7 @@ void SettingsPanel::BuildUI() {
 	panel->SetLocation(PointI(Padding, authors->GetBottom() + Padding / 2));
 	panel->SetWidth(GetWidth() - Padding * 2);
 	panel->GetContainer()->SetBackColor(Color::Empty());
+	panel->SetDeltaFactor(5);
 	panel->SetAutoSize(true);
 	AddControl(panel);
 
