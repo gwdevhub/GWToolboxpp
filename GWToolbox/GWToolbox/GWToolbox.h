@@ -5,6 +5,8 @@
 #include <GWCA\GWCA.h>
 #include <GWCA\ChatMgr.h>
 
+#include <GWCA_DX\DirectXHooker.h>
+
 #include <OSHGui\OSHGui.hpp>
 #include <OSHGui\Input\WindowsMessage.hpp>
 
@@ -38,6 +40,7 @@ public:
 	
 private:
 	static GWToolbox* instance_;
+	static GWCA::DirectXHooker dx_hooker;
 	static OSHGui::Drawing::Direct3D9Renderer* renderer;
 	static long OldWndProc;
 	static OSHGui::Input::WindowsMessage input;

@@ -117,11 +117,11 @@ void DistanceWindow::UpdateUI() {
 	Agent* target = GWCA::Agents().GetTarget();
 	Agent* me = GWCA::Agents().GetPlayer();
 	if (target && me) {
-		distance = GWCA::Agents().GetDistance(target->pos, me->pos);
+		distance = std::lroundf(GWCA::Agents().GetDistance(target->pos, me->pos));
 	}
 
 	// update visibility if needed
-	if (distance >= 0) {
+	if (distance >= 0.0f) {
 		if (!isVisible_) SetVisible(true);
 	} else {
 		if (hide_target && isVisible_) SetVisible(false);

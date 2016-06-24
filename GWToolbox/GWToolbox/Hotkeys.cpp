@@ -690,14 +690,14 @@ void HotkeyTarget::exec() {
 	GW::Agent* me = agents[Agents().GetPlayerId()];
 	if (me == nullptr) return;
 
-	unsigned long distance = GwConstants::SqrRange::Compass;
+	float distance = (float)GwConstants::SqrRange::Compass;
 	int closest = -1;
 
 	for (size_t i = 0; i < agents.size(); ++i) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
 		if (agent->PlayerNumber == id_ && agent->HP > 0) {
-			unsigned long newDistance = Agents().GetSqrDistance(me->pos, agents[i]->pos);
+			float newDistance = Agents().GetSqrDistance(me->pos, agents[i]->pos);
 			if (newDistance < distance) {
 				closest = i;
 				distance = newDistance;

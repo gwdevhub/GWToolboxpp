@@ -18,7 +18,7 @@
 #include <GWCA\PlayerMgr.h>
 #include <GWCA\SkillbarMgr.h>
 #include <GWCA\StoCMgr.h>
-#include <..\gwca_dx\DirectXHooker.h>
+#include <GWCA_DX\DirectXHooker.h>
 
 #include "Timer.h"
 #include "MainWindow.h"
@@ -33,9 +33,7 @@ GWToolbox* GWToolbox::instance_ = NULL;
 OSHGui::Drawing::Direct3D9Renderer* GWToolbox::renderer = NULL;
 long GWToolbox::OldWndProc = 0;
 OSHGui::Input::WindowsMessage GWToolbox::input;
-
-GWCA::DirectXHooker dx_hooker;
-
+GWCA::DirectXHooker GWToolbox::dx_hooker;
 
 void GWToolbox::SafeThreadEntry(HMODULE dllmodule) {
 	__try {

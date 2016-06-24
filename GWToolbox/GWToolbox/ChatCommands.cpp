@@ -432,16 +432,20 @@ void ChatCommands::CmdCamera(vector<wstring> args) {
 				GWCA::Camera().SetFog(false);
 			}
 		} else if (arg0 == L"fov") {
-			wstring arg1 = GetLowerCaseArg(args, 1);
-			if (arg1 == L"default") {
+			if (args.size() == 1) {
 				GWCA::Camera().SetFieldOfView(1.308997f);
 			} else {
-				try {
-					float fovnew = std::stof(arg1);
-					GWCA::Camera().SetFieldOfView(fovnew);
-					ChatLogger::LogF(L"Field of View is %f", fovnew);
-				} catch (...) {
-					ChatLogger::LogF(L"[Error] Invalid argument '%ls', please use a float value", args[1].c_str());
+				wstring arg1 = GetLowerCaseArg(args, 1);
+				if (arg1 == L"default") {
+					GWCA::Camera().SetFieldOfView(1.308997f);
+				} else {
+					try {
+						float fovnew = std::stof(arg1);
+						GWCA::Camera().SetFieldOfView(fovnew);
+						ChatLogger::LogF(L"Field of View is %f", fovnew);
+					} catch (...) {
+						ChatLogger::LogF(L"[Error] Invalid argument '%ls', please use a float value", args[1].c_str());
+					}
 				}
 			}
 		} else if (arg0 == L"speed") {
@@ -490,14 +494,14 @@ void ChatCommands::CmdTarget(vector<wstring> args) {
 			GWCA::GW::Agent* me = GWCA::Agents().GetPlayer();
 			if (me == nullptr) return;
 
-			unsigned long distance = GwConstants::SqrRange::Compass;
+			float distance = (float)GwConstants::SqrRange::Compass;
 			int closest = -1;
 
 			for (size_t i = 0; i < agents.size(); ++i) {
 				GWCA::GW::Agent* agent = agents[i];
 				if (agent == nullptr) continue;
 				if (agent->PlayerNumber != me->PlayerNumber) {
-					unsigned long newDistance = GWCA::Agents().GetSqrDistance(me->pos, agents[i]->pos);
+					float newDistance = GWCA::Agents().GetSqrDistance(me->pos, agents[i]->pos);
 					if (newDistance < distance) {
 						closest = i;
 						distance = newDistance;
