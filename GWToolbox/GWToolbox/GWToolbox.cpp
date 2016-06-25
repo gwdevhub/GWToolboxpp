@@ -33,7 +33,7 @@ GWToolbox* GWToolbox::instance_ = NULL;
 OSHGui::Drawing::Direct3D9Renderer* GWToolbox::renderer = NULL;
 long GWToolbox::OldWndProc = 0;
 OSHGui::Input::WindowsMessage GWToolbox::input;
-GWCA::DirectXHooker GWToolbox::dx_hooker;
+GWCA::DirectXHooker* GWToolbox::dx_hooker = nullptr;
 
 void GWToolbox::SafeThreadEntry(HMODULE dllmodule) {
 	__try {
@@ -67,6 +67,8 @@ void GWToolbox::ThreadEntry(HMODULE dllmodule) {
 	GWCA::FriendList();
 	GWCA::Camera();
 
+	dx_hooker = new GWCA::DirectXHooker();
+
 	LOG("Creating GWToolbox++\n");
 	instance_ = new GWToolbox(dllmodule);
 
@@ -77,8 +79,8 @@ void GWToolbox::ThreadEntry(HMODULE dllmodule) {
 
 void GWToolbox::Exec() {
 	LOG("Installing dx hooks\n");
-	dx_hooker.AddHook(GWCA::dx9::kEndScene, (void*)endScene);
-	dx_hooker.AddHook(GWCA::dx9::kReset, (void*)resetScene);
+	dx_hooker->AddHook(GWCA::dx9::kEndScene, (void*)endScene);
+	dx_hooker->AddHook(GWCA::dx9::kReset, (void*)resetScene);
 	LOG("Installed dx hooks\n");
 
 	LOG("Installing input event handler\n");
@@ -115,7 +117,6 @@ void GWToolbox::Exec() {
 			must_self_destruct_ = true;
 			break;
 		}
-			
 #endif
 	}
 
@@ -123,14 +124,16 @@ void GWToolbox::Exec() {
 
 	Sleep(100);
 
-	LOG("Disabling GUI\n");
-	Application::InstancePtr()->Disable();
-	LOG("Closing settings\n");
-	main_window().settings_panel().Close();
-	LOG("Saving config file\n");
-	config_->Save();
-	LOG("saving health log\n");
-	party_damage().SaveIni();
+	if (app->HasBeenInitialized()) {
+		LOG("Disabling GUI\n");
+		Application::InstancePtr()->Disable();
+		LOG("Closing settings\n");
+		main_window().settings_panel().Close();
+		LOG("Saving config file\n");
+		config_->Save();
+		LOG("saving health log\n");
+		party_damage().SaveIni();
+	}
 	Sleep(100);
 	LOG("Deleting config\n");
 	delete config_;
@@ -141,6 +144,8 @@ void GWToolbox::Exec() {
 	Sleep(100);
 	LOG("Destroying API\n");
 	GWCA::Api::Destruct();
+	LOG("Destroying directX hook");
+	delete dx_hooker;
 	LOG("Closing log/console, bye!\n");
 	Logger::Close();
 	Sleep(100);
@@ -354,7 +359,7 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 		renderer->EndRendering();
 	}
 
-	return dx_hooker.original<GWCA::dx9::EndScene_t>(GWCA::dx9::kEndScene)(pDevice);
+	return dx_hooker->original<GWCA::dx9::EndScene_t>(GWCA::dx9::kEndScene)(pDevice);
 }
 
 HRESULT WINAPI GWToolbox::resetScene(IDirect3DDevice9* pDevice, 
@@ -362,7 +367,7 @@ HRESULT WINAPI GWToolbox::resetScene(IDirect3DDevice9* pDevice,
 	// pre-reset here.
 	renderer->PreD3DReset();
 
-	HRESULT result = dx_hooker.original<GWCA::dx9::Reset_t>(GWCA::dx9::kReset)(pDevice, pPresentationParameters);
+	HRESULT result = dx_hooker->original<GWCA::dx9::Reset_t>(GWCA::dx9::kReset)(pDevice, pPresentationParameters);
 	if (result == D3D_OK){
 		// post-reset here.
 		renderer->PostD3DReset();

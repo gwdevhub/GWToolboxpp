@@ -40,7 +40,7 @@ public:
 	
 private:
 	static GWToolbox* instance_;
-	static GWCA::DirectXHooker dx_hooker;
+	static GWCA::DirectXHooker* dx_hooker;
 	static OSHGui::Drawing::Direct3D9Renderer* renderer;
 	static long OldWndProc;
 	static OSHGui::Input::WindowsMessage input;
