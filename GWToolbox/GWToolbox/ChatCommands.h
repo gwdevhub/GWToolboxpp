@@ -7,6 +7,7 @@
 #include <Windows.h>
 
 #include "Timer.h"
+#include "ChatFilter.h"
 
 class ChatCommands {
 	typedef std::function<void(std::vector<std::wstring>)> Handler_t;
@@ -20,7 +21,7 @@ public:
 	void UpdateUI();
 	void MainRoutine();
 
-	void SetSuppressMessages(bool active) { suppress_messages_active = active; }
+	void SetSuppressMessages(bool active) { chat_filter->SetSuppressMessages(active); }
 
 private:
 	void AddCommand(std::wstring cmd, Handler_t, bool override = true);
@@ -42,13 +43,12 @@ private:
 	static void CmdZoom(std::vector<std::wstring> args);
 	static void CmdCamera(std::vector<std::wstring> args);
 
+	ChatFilter* chat_filter;
+
 	int move_forward;
 	int move_side;
 	int move_up;
 	float cam_speed_;
-
-	bool suppress_messages_active;
-	bool suppress_next_message;
 
 	int skill_to_use;
 	float skill_usage_delay;

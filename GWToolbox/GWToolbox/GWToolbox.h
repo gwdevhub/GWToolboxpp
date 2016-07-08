@@ -20,6 +20,7 @@
 #include "HealthWindow.h"
 #include "DistanceWindow.h"
 #include "PartyDamage.h"
+#include "Minimap.h"
 
 
 #ifdef _DEBUG
@@ -134,16 +135,6 @@ private:
 	void LoadTheme();
 	void SaveTheme();
 
-	//------ Setters ------//
-private:
-	inline void set_initialized() { initialized_ = true; }
-	inline void set_main_window(MainWindow* w) { main_window_ = w; }
-	inline void set_timer_window(TimerWindow* w) { timer_window_ = w; }
-	inline void set_bonds_window(BondsWindow* w) { bonds_window_ = w; }
-	inline void set_health_window(HealthWindow* w) { health_window_ = w; }
-	inline void set_distance_window(DistanceWindow* w) { distance_window_ = w; }
-	inline void set_party_damage(PartyDamage* w) { party_damage_ = w; }
-
 	//------ Private Fields ------//
 private:
 	HMODULE dll_module_;	// Handle to the dll module we are running, used to clear the module from GW on eject.
@@ -167,4 +158,6 @@ private:
 	HealthWindow* health_window_;
 	DistanceWindow* distance_window_;
 	PartyDamage* party_damage_;
+
+	Minimap* minimap_;
 };

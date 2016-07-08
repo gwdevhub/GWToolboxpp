@@ -1,132 +1,228 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source">
-      <UniqueIdentifier>{ec22750a-9a1e-4197-b6a3-497639f4dde6}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Panels">
       <UniqueIdentifier>{3eda78ba-9481-4130-92cf-e248ec0bda9c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Windows">
+      <UniqueIdentifier>{7372b4a6-b924-421c-aee8-c005b628c146}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Panels\Builds">
+      <UniqueIdentifier>{281802a2-6e99-4643-8bb1-24d49379808c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Panels\Hotkeys">
+      <UniqueIdentifier>{08f1a537-cc72-449b-8fc7-be6285f656d7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Panels\Settings">
+      <UniqueIdentifier>{744c682f-c899-4414-967d-a722234170cc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Panels\Pcons">
+      <UniqueIdentifier>{d2bfc54f-2087-499d-9115-c45d667d2981}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Panels\Travel">
+      <UniqueIdentifier>{624fe487-72db-4894-a784-fb22fe444f1c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Panels\Dialogs">
+      <UniqueIdentifier>{860d578b-a03b-401e-9334-3415f5a12f0b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Panels\Info">
+      <UniqueIdentifier>{076e2b66-b6f2-42cf-b9cd-2f991fea2cfb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Panels\Materials">
+      <UniqueIdentifier>{dd4ea2fb-9e11-4117-b6db-cc2cf2303926}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\Distance">
+      <UniqueIdentifier>{fbeb5788-cdfc-4876-95a2-6db9ce029758}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\Health">
+      <UniqueIdentifier>{1b291bcd-827a-4ff8-83c6-c8cb641aa2f8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\Timer">
+      <UniqueIdentifier>{a198a88b-9177-4a4c-aaae-15001e5fed83}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\DamageMonitor">
+      <UniqueIdentifier>{47e6e76c-22bf-4151-9e40-ef731c1f4c9b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\BondsMonitor">
+      <UniqueIdentifier>{0960737e-8500-47dd-af04-72e67f34ddfe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\Minimap">
+      <UniqueIdentifier>{0bd6729c-886d-4389-984e-3090392bd105}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="GWToolbox\BuildPanel.h">
-      <Filter>Panels</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\DialogPanel.h">
-      <Filter>Panels</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\HotkeyPanel.h">
-      <Filter>Panels</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\InfoPanel.h">
-      <Filter>Panels</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\MaterialsPanel.h">
-      <Filter>Panels</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\PconPanel.h">
-      <Filter>Panels</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\Pcons.h">
-      <Filter>Panels</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\SettingsPanel.h">
-      <Filter>Panels</Filter>
-    </ClInclude>
     <ClInclude Include="GWToolbox\ToolboxPanel.h">
       <Filter>Panels</Filter>
     </ClInclude>
-    <ClInclude Include="GWToolbox\TravelPanel.h">
-      <Filter>Panels</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\EditBuild.h">
-      <Filter>Panels</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\Hotkeys.h">
-      <Filter>Panels</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\BondsWindow.h" />
     <ClInclude Include="GWToolbox\Config.h" />
-    <ClInclude Include="GWToolbox\DistanceWindow.h" />
     <ClInclude Include="GWToolbox\GuiUtils.h" />
     <ClInclude Include="GWToolbox\GWToolbox.h" />
-    <ClInclude Include="GWToolbox\HealthWindow.h" />
     <ClInclude Include="GWToolbox\logger.h" />
-    <ClInclude Include="GWToolbox\MainWindow.h" />
     <ClInclude Include="GWToolbox\Timer.h" />
-    <ClInclude Include="GWToolbox\TimerWindow.h" />
-    <ClInclude Include="GWToolbox\ToolboxWindow.h" />
-    <ClInclude Include="GWToolbox\ChatCommands.h" />
     <ClInclude Include="GWToolbox\ChatLogger.h" />
-    <ClInclude Include="GWToolbox\PartyDamage.h" />
+    <ClInclude Include="GWToolbox\MainWindow.h">
+      <Filter>Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\ToolboxWindow.h">
+      <Filter>Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\BuildPanel.h">
+      <Filter>Panels\Builds</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\EditBuild.h">
+      <Filter>Panels\Builds</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\HotkeyPanel.h">
+      <Filter>Panels\Hotkeys</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Hotkeys.h">
+      <Filter>Panels\Hotkeys</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\SettingsPanel.h">
+      <Filter>Panels\Settings</Filter>
+    </ClInclude>
     <ClInclude Include="GWToolbox\Settings.h">
-      <Filter>Panels</Filter>
+      <Filter>Panels\Settings</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\PconPanel.h">
+      <Filter>Panels\Pcons</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Pcons.h">
+      <Filter>Panels\Pcons</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\ChatCommands.h">
+      <Filter>Panels\Settings</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\ChatFilter.h">
+      <Filter>Panels\Settings</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\TravelPanel.h">
+      <Filter>Panels\Travel</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\DialogPanel.h">
+      <Filter>Panels\Dialogs</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\InfoPanel.h">
+      <Filter>Panels\Info</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\MaterialsPanel.h">
+      <Filter>Panels\Materials</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\BondsWindow.h">
+      <Filter>Windows\BondsMonitor</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\DistanceWindow.h">
+      <Filter>Windows\Distance</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\HealthWindow.h">
+      <Filter>Windows\Health</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\PartyDamage.h">
+      <Filter>Windows\DamageMonitor</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\TimerWindow.h">
+      <Filter>Windows\Timer</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Minimap.h">
+      <Filter>Windows\Minimap</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\PmapRenderer.h">
+      <Filter>Windows\Minimap</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Viewer.h">
+      <Filter>Windows\Minimap</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\AgentRenderer.h">
+      <Filter>Windows\Minimap</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\VBuffer.h">
+      <Filter>Windows\Minimap</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\D3DVertex.h">
+      <Filter>Windows\Minimap</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\RangeRenderer.h">
+      <Filter>Windows\Minimap</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="GWToolbox\BondsWindow.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\BuildPanel.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\DialogPanel.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\DistanceWindow.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\EditBuild.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\GWToolbox.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\HealthWindow.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\HotkeyPanel.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\Hotkeys.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\InfoPanel.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\logger.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
+    <ClCompile Include="GWToolbox\main.cpp" />
     <ClCompile Include="GWToolbox\MainWindow.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\MaterialsPanel.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\PconPanel.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\Pcons.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\SettingsPanel.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\TimerWindow.cpp">
-      <Filter>Source</Filter>
+      <Filter>Windows</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\ToolboxWindow.cpp">
-      <Filter>Source</Filter>
+      <Filter>Windows</Filter>
     </ClCompile>
-    <ClCompile Include="GWToolbox\TravelPanel.cpp">
-      <Filter>Source</Filter>
+    <ClCompile Include="GWToolbox\BuildPanel.cpp">
+      <Filter>Panels\Builds</Filter>
     </ClCompile>
-    <ClCompile Include="GWToolbox\main.cpp" />
+    <ClCompile Include="GWToolbox\EditBuild.cpp">
+      <Filter>Panels\Builds</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\HotkeyPanel.cpp">
+      <Filter>Panels\Hotkeys</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Hotkeys.cpp">
+      <Filter>Panels\Hotkeys</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\SettingsPanel.cpp">
+      <Filter>Panels\Settings</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\PconPanel.cpp">
+      <Filter>Panels\Pcons</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Pcons.cpp">
+      <Filter>Panels\Pcons</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\ChatFilter.cpp">
+      <Filter>Panels\Settings</Filter>
+    </ClCompile>
     <ClCompile Include="GWToolbox\ChatCommands.cpp">
-      <Filter>Source</Filter>
+      <Filter>Panels\Settings</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\GWToolbox.cpp" />
+    <ClCompile Include="GWToolbox\logger.cpp" />
+    <ClCompile Include="GWToolbox\TravelPanel.cpp">
+      <Filter>Panels\Travel</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\DialogPanel.cpp">
+      <Filter>Panels\Dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\InfoPanel.cpp">
+      <Filter>Panels\Info</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\MaterialsPanel.cpp">
+      <Filter>Panels\Materials</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\BondsWindow.cpp">
+      <Filter>Windows\BondsMonitor</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\DistanceWindow.cpp">
+      <Filter>Windows\Distance</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\HealthWindow.cpp">
+      <Filter>Windows\Health</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\PartyDamage.cpp">
-      <Filter>Source</Filter>
+      <Filter>Windows\DamageMonitor</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\TimerWindow.cpp">
+      <Filter>Windows\Timer</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Minimap.cpp">
+      <Filter>Windows\Minimap</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\PmapRenderer.cpp">
+      <Filter>Windows\Minimap</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Viewer.cpp">
+      <Filter>Windows\Minimap</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\AgentRenderer.cpp">
+      <Filter>Windows\Minimap</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\RangeRenderer.cpp">
+      <Filter>Windows\Minimap</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

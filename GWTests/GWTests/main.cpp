@@ -4,7 +4,7 @@
 #include <cstdlib>
 
 #include <GWCA\GWCA.h>
-#include <GWCA\DirectXMgr.h>
+#include <GWCA_DX\DirectXHooker.h>
 
 #include "Minimap.h"
 
@@ -12,6 +12,7 @@ using namespace GWCA;
 
 unsigned long OldWndProc = 0;
 Minimap* minimap = nullptr;
+DirectXHooker* dxhooker = nullptr;
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) {
 
@@ -68,13 +69,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 HRESULT WINAPI EndScene(IDirect3DDevice9* dev) {	
 	minimap->Render(dev);
 	
-	return GWCA::DirectX().EndsceneReturn()(dev);
+	return dxhooker->original<GWCA::dx9::EndScene_t>(GWCA::dx9::kEndScene)(dev);
 }
 
 HRESULT WINAPI ResetScene(IDirect3DDevice9* pDevice,
 	D3DPRESENT_PARAMETERS* pPresentationParameters) {
 
-	return GWCA::DirectX().ResetReturn()(pDevice, pPresentationParameters);
+	return dxhooker->original<GWCA::dx9::Reset_t>(GWCA::dx9::kReset)
+		(pDevice, pPresentationParameters);
 }
 
 void init(HMODULE hModule) {
@@ -95,8 +97,10 @@ void init(HMODULE hModule) {
 		minimap->SetLocation(100, 100);
 		minimap->SetSize(600, 600);
 
+		dxhooker = new GWCA::DirectXHooker();
 		
-		GWCA::DirectX().CreateRenderHooks(EndScene, ResetScene);
+		dxhooker->AddHook(GWCA::dx9::kEndScene, (void*)EndScene);
+		dxhooker->AddHook(GWCA::dx9::kReset, (void*)ResetScene);
 
 		HWND gw_window_handle = GWCA::MemoryMgr::GetGWWindowHandle();
 		OldWndProc = SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)WndProc);
@@ -109,6 +113,7 @@ void init(HMODULE hModule) {
 		}
 
 		SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
+		delete dxhooker;
 		GWCA::Api().Destruct();
 
 		Sleep(100);

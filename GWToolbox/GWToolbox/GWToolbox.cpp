@@ -144,7 +144,7 @@ void GWToolbox::Exec() {
 	Sleep(100);
 	LOG("Destroying API\n");
 	GWCA::Api::Destruct();
-	LOG("Destroying directX hook");
+	LOG("Destroying directX hook\n");
 	delete dx_hooker;
 	LOG("Closing log/console, bye!\n");
 	Logger::Close();
@@ -183,6 +183,7 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 		// Send button up mouse events to both gw and osh, to avoid gw being stuck on mouse-down
 		case WM_LBUTTONUP:
 			input.ProcessMouseMessage(&msg);
+			GWToolbox::instance().minimap_->OnMouseUp(msg);
 			break;
 		
 		// Send other mouse events to osh first and consume them if used
@@ -191,6 +192,11 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 		case WM_LBUTTONDBLCLK:
 		case WM_MOUSEWHEEL:
 			if (GWToolbox::instance().right_mouse_pressed_) break;
+			switch (Message) {
+			case WM_MOUSEMOVE: if (GWToolbox::instance().minimap_->OnMouseMove(msg)) return true; break;
+			case WM_LBUTTONDOWN: if (GWToolbox::instance().minimap_->OnMouseDown(msg)) return true; break;
+			case WM_MOUSEWHEEL: if (GWToolbox::instance().minimap_->OnMouseWheel(msg)) return true; break;
+			}
 			if (input.ProcessMouseMessage(&msg)) {
 				return true;
 			} else {
@@ -282,30 +288,36 @@ void GWToolbox::CreateGui(IDirect3DDevice9* pDevice) {
 	try {
 
 		LOG("Creating main window\n");
-		MainWindow* main_window = new MainWindow();
-		main_window->SetFont(app.GetDefaultFont());
-		std::shared_ptr<MainWindow> shared_ptr = std::shared_ptr<MainWindow>(main_window);
+		GWToolbox& tb = GWToolbox::instance();
+		tb.main_window_ = new MainWindow();
+		tb.main_window_->SetFont(app.GetDefaultFont());
+		std::shared_ptr<MainWindow> shared_ptr = std::shared_ptr<MainWindow>(tb.main_window_);
 		app.Run(shared_ptr);
 
-		GWToolbox::instance().set_main_window(main_window);
 		LOG("Creating timer\n");
-		GWToolbox::instance().set_timer_window(new TimerWindow());
+		tb.timer_window_ = new TimerWindow();
 		LOG("Creating bonds window\n");
-		GWToolbox::instance().set_bonds_window(new BondsWindow());
+		tb.bonds_window_ = new BondsWindow();
 		LOG("Creating health window\n");
-		GWToolbox::instance().set_health_window(new HealthWindow());
+		tb.health_window_ = new HealthWindow();
 		LOG("Creating distance window\n");
-		GWToolbox::instance().set_distance_window(new DistanceWindow());
+		tb.distance_window_ = new DistanceWindow();
 		LOG("Creating party damage window\n");
-		GWToolbox::instance().set_party_damage(new PartyDamage());
+		tb.party_damage_ = new PartyDamage();
 		LOG("Applying settings\n");
-		GWToolbox::instance().main_window().settings_panel().ApplySettings();
+		tb.main_window().settings_panel().ApplySettings();
 		LOG("Enabling app\n");
 		app.Enable();
-		GWToolbox::instance().set_initialized();
+		tb.initialized_ = true;
 		LOG("Gui Created\n");
+		LOG("Creating Minimap\n");
+		tb.minimap_ = new Minimap();
+		tb.minimap_->Scale(0.0002f);
+		tb.minimap_->Translate(0, -3000.0f);
+		tb.minimap_->SetLocation(0, 0);
+		tb.minimap_->SetSize(600, 600);
 		LOG("Saving theme\n");
-		GWToolbox::instance().SaveTheme();
+		tb.SaveTheme();
 
 	} catch (Misc::FileNotFoundException e) {
 		LOG("Error: file not found %s\n", e.what());
@@ -322,7 +334,7 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 	}
 
 	GWToolbox& tb = GWToolbox::instance();
-	if (!tb.must_self_destruct_) {
+	if (!tb.must_self_destruct_ && Application::Instance().HasBeenInitialized()) {
 
 		if (tb.must_resize_) {
 			tb.must_resize_ = false;
@@ -353,27 +365,35 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 		if (location != tb.main_window().GetLocation()) {
 			tb.main_window().SetLocation(location);
 		}
-
 		renderer->BeginRendering();
 		Application::InstancePtr()->Render();
 		renderer->EndRendering();
+
+		tb.minimap_->Render(pDevice);
 	}
 
-	return dx_hooker->original<GWCA::dx9::EndScene_t>(GWCA::dx9::kEndScene)(pDevice);
+	GWCA::dx9::EndScene_t endscene_orig = dx_hooker->original<GWCA::dx9::EndScene_t>(GWCA::dx9::kEndScene);
+	return endscene_orig(pDevice);
 }
 
 HRESULT WINAPI GWToolbox::resetScene(IDirect3DDevice9* pDevice, 
 	D3DPRESENT_PARAMETERS* pPresentationParameters) {
-	// pre-reset here.
-	renderer->PreD3DReset();
 
-	HRESULT result = dx_hooker->original<GWCA::dx9::Reset_t>(GWCA::dx9::kReset)(pDevice, pPresentationParameters);
-	if (result == D3D_OK){
-		// post-reset here.
-		renderer->PostD3DReset();
+	if (Application::Instance().HasBeenInitialized()) {
+		// pre-reset here.
+		renderer->PreD3DReset();
+
+		HRESULT result = dx_hooker->original<GWCA::dx9::Reset_t>(GWCA::dx9::kReset)(pDevice, pPresentationParameters);
+		if (result == D3D_OK) {
+			// post-reset here.
+			renderer->PostD3DReset();
+		}
+
+		return result;
+	} else {
+		GWCA::dx9::Reset_t reset_orig = dx_hooker->original<GWCA::dx9::Reset_t>(GWCA::dx9::kReset);
+		return reset_orig(pDevice, pPresentationParameters);
 	}
-
-	return result;
 }
 
 void GWToolbox::UpdateUI() {
