@@ -62,6 +62,10 @@ Minimap::Minimap()
 
 void Minimap::Render(IDirect3DDevice9* device) {
 	using namespace GWCA;
+	//if (GWCA::Map().GetInstanceType() == GwConstants::InstanceType::Loading) {
+	//	return;
+	//}
+
 	GW::Agent* me = GWCA::Agents().GetPlayer();
 	if (me != nullptr) {
 		SetTranslation(-me->X, -me->Y);
@@ -79,30 +83,11 @@ void Minimap::Render(IDirect3DDevice9* device) {
 
 	RenderSetupClipping(device);
 	RenderSetupProjection(device);
-
-	//device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
-	//device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_INVDESTCOLOR);
-	//device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ZERO);
-	//device->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
-
-	//device->SetTransform(D3DTS_WORLD, &identity);
-	//device->SetTransform(D3DTS_VIEW, &identity);
-	//ui_renderer.Render(device);
-
-	//device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_INVDESTCOLOR);
-	//device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ZERO);
-	//device->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
 	
 	RenderSetupWorldTransforms(device);
-	//device->SetRenderState(D3DRS_BLENDOPALPHA, D3DBLENDOP_MAX);
 	pmap_renderer.Render(device);	
 
-	//device->SetTransform(D3DTS_VIEW, &identity);
-	//device->SetTransform(D3DTS_WORLD, &identity);
-	//ui_renderer.Render(device);
-
 	D3DXMATRIX scale;
-	float ratio = 1.0f;// (float)GetWidth() / GetHeight();
 	D3DXMatrixScaling(&scale, scale_, scale_, 1);
 	device->SetTransform(D3DTS_VIEW, &scale);
 	device->SetTransform(D3DTS_WORLD, &identity);
@@ -110,10 +95,6 @@ void Minimap::Render(IDirect3DDevice9* device) {
 
 	RenderSetupWorldTransforms(device);
 	agent_renderer.Render(device);
-
-	//device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
-	//device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
-	//device->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
 }
 
 

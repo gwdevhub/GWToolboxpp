@@ -5,6 +5,79 @@
 
 using namespace GWCA;
 
+AgentRenderer::AgentRenderer() :
+	vertices(nullptr),
+	triangle_count(0),
+	triangles_max(0),
+	vertices_max(0) {
+
+	shapes[Tear].AddVertex(1.8f, 0, -50);		// A
+	shapes[Tear].AddVertex(0.7f, 0.7f, -50);	// B
+	shapes[Tear].AddVertex(0.0f, 0.0f, 50);		// O
+	shapes[Tear].AddVertex(0.7f, 0.7f, -50);	// B
+	shapes[Tear].AddVertex(0.0f, 1.0f, -50);	// C
+	shapes[Tear].AddVertex(0.0f, 0.0f, 50);		// O
+	shapes[Tear].AddVertex(0.0f, 1.0f, -50);	// C
+	shapes[Tear].AddVertex(-0.7f, 0.7f, -50);	// D
+	shapes[Tear].AddVertex(0.0f, 0.0f, 50);		// O
+	shapes[Tear].AddVertex(-0.7f, 0.7f, -50);	// D
+	shapes[Tear].AddVertex(-1.0f, 0.0f, -50);	// E
+	shapes[Tear].AddVertex(0.0f, 0.0f, 50);		// O
+	shapes[Tear].AddVertex(-1.0f, 0.0f, -50);	// E
+	shapes[Tear].AddVertex(-0.7f, -0.7f, -50);	// F
+	shapes[Tear].AddVertex(0.0f, 0.0f, 50);		// O
+	shapes[Tear].AddVertex(-0.7f, -0.7f, -50);	// F
+	shapes[Tear].AddVertex(0.0f, -1.0f, -50);	// G
+	shapes[Tear].AddVertex(0.0f, 0.0f, 50);		// O
+	shapes[Tear].AddVertex(0.0f, -1.0f, -50);	// G
+	shapes[Tear].AddVertex(0.7f, -0.7f, -50);	// H
+	shapes[Tear].AddVertex(0.0f, 0.0f, 50);		// O
+	shapes[Tear].AddVertex(0.7f, -0.7f, -50);	// H
+	shapes[Tear].AddVertex(1.8f, 0.0f, -50);	// A
+	shapes[Tear].AddVertex(0.0f, 0.0f, 50);		// O
+
+	shapes[Circle].AddVertex(1.0f, 0, -50);		// A
+	shapes[Circle].AddVertex(0.7f, 0.7f, -50);	// B
+	shapes[Circle].AddVertex(0.0f, 0.0f, 50);	// O
+	shapes[Circle].AddVertex(0.7f, 0.7f, -50);	// B
+	shapes[Circle].AddVertex(0.0f, 1.0f, -50);	// C
+	shapes[Circle].AddVertex(0.0f, 0.0f, 50);	// O
+	shapes[Circle].AddVertex(0.0f, 1.0f, -50);	// C
+	shapes[Circle].AddVertex(-0.7f, 0.7f, -50);	// D
+	shapes[Circle].AddVertex(0.0f, 0.0f, 50);	// O
+	shapes[Circle].AddVertex(-0.7f, 0.7f, -50);	// D
+	shapes[Circle].AddVertex(-1.0f, 0.0f, -50);	// E
+	shapes[Circle].AddVertex(0.0f, 0.0f, 50);	// O
+	shapes[Circle].AddVertex(-1.0f, 0.0f, -50);	// E
+	shapes[Circle].AddVertex(-0.7f, -0.7f, -50);// F
+	shapes[Circle].AddVertex(0.0f, 0.0f, 50);	// O
+	shapes[Circle].AddVertex(-0.7f, -0.7f, -50);// F
+	shapes[Circle].AddVertex(0.0f, -1.0f, -50);	// G
+	shapes[Circle].AddVertex(0.0f, 0.0f, 50);	// O
+	shapes[Circle].AddVertex(0.0f, -1.0f, -50);	// G
+	shapes[Circle].AddVertex(0.7f, -0.7f, -50);	// H
+	shapes[Circle].AddVertex(0.0f, 0.0f, 50);	// O
+	shapes[Circle].AddVertex(0.7f, -0.7f, -50);	// H
+	shapes[Circle].AddVertex(1.0f, 0.0f, -50);	// A
+	shapes[Circle].AddVertex(0.0f, 0.0f, 50);	// O
+
+	shapes[Quad].AddVertex(1.0f, -1.0f, -50);
+	shapes[Quad].AddVertex(1.0f, 1.0f, -50);
+	shapes[Quad].AddVertex(0.0f, 0.0f, 50);
+	shapes[Quad].AddVertex(1.0f, 1.0f, -50);
+	shapes[Quad].AddVertex(-1.0f, 1.0f, -50);
+	shapes[Quad].AddVertex(0.0f, 0.0f, 50);
+	shapes[Quad].AddVertex(-1.0f, 1.0f, -50);
+	shapes[Quad].AddVertex(-1.0f, -1.0f, -50);
+	shapes[Quad].AddVertex(0.0f, 0.0f, 50);
+	shapes[Quad].AddVertex(-1.0f, -1.0f, -50);
+	shapes[Quad].AddVertex(1.0f, -1.0f, -50);
+	shapes[Quad].AddVertex(0.0f, 0.0f, 50);
+
+	max_shape_tris = shapes[Tear].vertices.size() / 3;
+}
+
+
 void AgentRenderer::Initialize(IDirect3DDevice9* device) {
 	type_ = D3DPT_TRIANGLELIST;
 	triangles_max = 0x200;
@@ -34,185 +107,160 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 		if (agent->Id == GWCA::Agents().GetPlayerId()) continue; // will draw player at the end
 		if (agent->Id == GWCA::Agents().GetTargetId()) continue; // will draw target at the end
 
-		QueueAgent(device, agent);
+		Enqueue(agent);
 
 		CheckFlush(device);
 	}
 
 	GW::Agent* target = GWCA::Agents().GetTarget();
-	if (target) QueueAgent(device, target);
+	if (target) Enqueue(target);
 
 	CheckFlush(device);
 
 	GW::Agent* player = GWCA::Agents().GetPlayer();
-	if (player) QueueAgent(device, player);
+	if (player && player->Id != Agents().GetTargetId()) Enqueue(player);
 
 	Flush(device);
 }
 
-DWORD AgentRenderer::GetEnemyColor(GW::Agent* agent) const {
-	if (agent->HP > 0.9f) return D3DCOLOR_XRGB(255, 0, 0);
-	else if (agent->HP > 0.5f) return D3DCOLOR_XRGB(220, 0, 0);
-	else if (agent->HP > 0.0f) return D3DCOLOR_XRGB(180, 0, 0);
-	else return D3DCOLOR_ARGB(100, 50, 0, 0);
+void AgentRenderer::Enqueue(GW::Agent* agent) {
+	if (agent->GetIsLivingType() && agent->IsNPC()) {
+		GW::NPC& npc = GWCA::Agents().GetNPCByID(agent->PlayerNumber);
+		if ((npc.npcflags & 0x10000) > 0) return;
+	}
+
+	Color color = GetColor(agent);
+	float size = GetSize(agent);
+	Shape_e shape = GetShape(agent);
+
+	if (GWCA::Agents().GetTargetId() == agent->Id) {
+		Enqueue(shape, agent, size + 50.0f, Color(255, 255, 0));
+	}
+	Enqueue(shape, agent, size, color);
 }
 
-DWORD AgentRenderer::GetAllyColor(GW::Agent* agent) const {
-	if (agent->GetIsDead()) return D3DCOLOR_ARGB(100, 0, 50, 0);
+AgentRenderer::Color AgentRenderer::GetColor(GW::Agent* agent) const {
+	if (agent->Id == GWCA::Agents().GetPlayerId()) return Color(240, 0, 240);
+	if (agent->GetIsSignpostType()) return Color(0, 0, 200);
+	if (agent->GetIsItemType()) return Color(0, 0, 240);
+
 	switch (agent->Allegiance) {
-	case 0x1: return D3DCOLOR_XRGB(0, 255, 0); // ally
-	case 0x6: return D3DCOLOR_XRGB(0, 200, 0); // npc / minipet
-	case 0x4: return D3DCOLOR_XRGB(0, 150, 0); // spirit / pet
-	case 0x5: return D3DCOLOR_XRGB(0, 100, 0); // minion
-	default: return D3DCOLOR_XRGB(0, 0, 0);
-	}
-}
+	case 0x2: // neutral
+		return Color(0, 0, 220); 
 
-void AgentRenderer::QueueAgent(IDirect3DDevice9* device, GW::Agent* agent) {
-	bool is_target = GWCA::Agents().GetTargetId() == agent->Id;
-	bool is_player = GWCA::Agents().GetPlayerId() == agent->Id;
+	case 0x3: // hostile
+		if (agent->HP > 0.9f) return Color(240, 0, 0);
+		else if (agent->HP > 0.0f) return Color(170, 0, 0);
+		else return Color(100, 50, 0, 0);
 
-	DWORD color = D3DCOLOR_XRGB(255, 255, 0);
-	if (is_player) {
-		color = D3DCOLOR_XRGB(255, 0, 255);
-	} else {
-		switch (agent->Type) {
-		case 0x200: color = D3DCOLOR_XRGB(0, 0, 200); break; // signpost
-		case 0x400: color = D3DCOLOR_XRGB(0, 0, 255); break; // item
-		default:
-			switch (agent->Allegiance) {
-			case 0x2: // neutral
-				color = D3DCOLOR_XRGB(0, 0, 220);
-				break;
-
-			case 0x3: 
-				color = GetEnemyColor(agent);
-				break;
-
-			case 0x1: // ally
-			case 0x4: // spirit / pet
-			case 0x5: // minion
-			case 0x6: // npc / minipet
-				color = GetAllyColor(agent);
-				break;
-
-			default:	
-				printf("unknown allegiance %d\n", agent->Allegiance);
-				color = D3DCOLOR_XRGB(0, 255, 255); 
-				break;
-			}
-			break;
+	case 0x1: // ally
+	case 0x4: // spirit / pet
+	case 0x5: // minion
+	case 0x6: // npc / minipet
+		if (agent->GetIsDead()) return Color(100, 0, 50, 0);
+		switch (agent->Allegiance) {
+		case 0x1: return Color(0, 240, 0); // ally
+		case 0x6: return Color(0, 180, 0); // npc / minipet
+		case 0x4: return Color(0, 140, 0); // spirit / pet
+		case 0x5: return Color(0, 80, 0); // minion
+		default: return Color(0, 0, 0);
 		}
-	}
 
-	float size = 150.0f;
-	switch (agent->TypeMap) {
-	case 0x40000: size = 50.0f; break; // spirit	
-	// TODO: find a better way to detect spirit. Atm it will turn back to triangle after it dies
-	case 0xC00:	size = 150.0f; break;  // boss
 	default:
-		switch (agent->Type) {
-		case 0x200: size = 50.0f; break; // signposts
-		case 0x400: size = 25.0f; break; // item
-		default:
-			switch (agent->Allegiance) {
-			case 0x1: // ally
-			case 0x2: // neutral
-			case 0x3: // enemy
-			case 0x6: // npc / minipet
-				size = 75.0f; break;
-
-			case 0x4: // spirit / pet
-			case 0x5: // minion
-				size = 50.0f; break;
-			
-			default: size = 75.0f; break;
-			} 
-			break;
-		}
-		break;
-	}
-
-	enum Shape { Tri, Quad };
-	Shape shape;
-	if (agent->TypeMap == 0x40000) { // spirit
-		shape = Quad;
-	} else {
-		switch (agent->Type) {
-		case 0xDB: shape = Tri; break; // players, npcs
-		case 0x200: shape = Quad; break; // signposts, chests, objects
-		case 0x400: shape = Quad; break; // item on the ground
-		default:
-			printf("Found no shape for agent, id %d\n", agent->Id);
-			break;
-		}
-	}
-
-	switch (shape) {
-	case Tri:
-		if (is_target) QueueTriangle(device, agent->X, agent->Y, agent->Rotation, size * 1.3f, 0xFFFFFFFF);
-		QueueTriangle(device, agent->X, agent->Y, agent->Rotation, size, color);
-		break;
-	case Quad:
-		if (is_target) QueueQuad(device, agent->X, agent->Y, size * 1.3f, 0xFFFFFFFF);
-		QueueQuad(device, agent->X, agent->Y, size, color);
-		break;
+		printf("unknown allegiance %d\n", agent->Allegiance);
+		return Color(0, 255, 255);
 	}
 }
 
-void AgentRenderer::QueueTriangle(IDirect3DDevice9* device,
-	float x, float y, float rotation, float size, DWORD color) {
-	for (int i = 0; i < 3; ++i) {
-		vertices[i].z = 0.0f;
-		vertices[i].color = color;
+float AgentRenderer::GetSize(GW::Agent* agent) const {
+	if (agent->Id == GWCA::Agents().GetPlayerId()) return 100.0f;
+	if (agent->GetIsSignpostType()) return 50.0f;
+	if (agent->GetIsItemType()) return 25.0f;
+	if (agent->GetHasBossGlow()) return 125.0f;
+
+	switch (agent->Allegiance) {
+	case 0x1: // ally
+	case 0x2: // neutral
+	case 0x4: // spirit / pet
+	case 0x6: // npc / minipet
+		return 75.0f;
+
+	case 0x5: // minion
+		return 50.0f;
+
+	case 0x3: // hostile
+		switch (agent->PlayerNumber) {
+		case GwConstants::ModelID::StygianLordNecro:
+		case GwConstants::ModelID::StygianLordMesmer:
+		case GwConstants::ModelID::StygianLordEle:
+		case GwConstants::ModelID::StygianLordMonk:
+		case GwConstants::ModelID::StygianLordDerv:
+		case GwConstants::ModelID::StygianLordRanger:
+		case GwConstants::ModelID::BlackBeastOfArgh:
+			// TODO add more
+			return 125.0f;
+
+		default:
+			return 75.0f;
+		}
+		break;
+
+	default:
+		return 75.0f;
 	}
-
-	vertices[0].x = x + size * 1.5f * std::cos(rotation);
-	vertices[0].y = y + size * 1.5f * std::sin(rotation);
-
-	vertices[1].x = x + size * 0.7f * std::cos(rotation + (float)M_PI * 2 / 3);
-	vertices[1].y = y + size * 0.7f * std::sin(rotation + (float)M_PI * 2 / 3);
-
-	vertices[2].x = x + size * 0.7f * std::cos(rotation - (float)M_PI * 2 / 3);
-	vertices[2].y = y + size * 0.7f * std::sin(rotation - (float)M_PI * 2 / 3);
-
-	vertices += 3;
-	triangle_count += 1;
 }
 
-void AgentRenderer::QueueQuad(IDirect3DDevice9* device,
-	float x, float y, float size, DWORD color) {
+AgentRenderer::Shape_e AgentRenderer::GetShape(GW::Agent* agent) const {
+	if (agent->GetIsSignpostType()) return Quad;
+	if (agent->GetIsItemType()) return Quad;
 
-	for (int i = 0; i < 6; ++i) {
-		vertices[i].z = 0.0f;
-		vertices[i].color = color;
+	if (agent->LoginNumber > 0) return Tear;	// players
+	if (!agent->GetIsLivingType()) return Quad; // shouldn't happen but just in case
+	
+	GW::NPC& npc = GWCA::Agents().GetNPCByID(agent->PlayerNumber);
+	switch (npc.modelfileid) {
+	case 0x22A34: // nature rituals
+	case 0x2D0E4: // defensive binding rituals
+	case 0x2963E: // dummies
+		return Circle;
+	
+	default: 
+		return Tear;
 	}
+}
 
-	vertices[0].x = x - size;
-	vertices[0].y = y + size;
-	vertices[1].x = x + size;
-	vertices[1].y = y + size;
-	vertices[2].x = x - size;
-	vertices[2].y = y - size;
-	vertices[3].x = x - size;
-	vertices[3].y = y - size;
-	vertices[4].x = x + size;
-	vertices[4].y = y + size;
-	vertices[5].x = x + size;
-	vertices[5].y = y - size;
-
-	vertices += 6;
-	triangle_count += 2;
+void AgentRenderer::Enqueue(Shape_e shape, GW::Agent* agent, float size, Color color) {
+	Vector2f translate(agent->X, agent->Y);
+	unsigned int i;
+	for (i = 0; i < shapes[shape].vertices.size(); ++i) {
+		Vector2f v = shapes[shape].vertices[i].Rotated(agent->Rotation_cos,
+			agent->Rotation_sin) * size + translate;
+		Color c = color + shapes[shape].colors[i];
+		c.Clamp();
+		vertices[i].z = 0.0f;
+		vertices[i].color = c.GetDXColor();
+		vertices[i].x = v.x;
+		vertices[i].y = v.y;
+	}
+	vertices += shapes[shape].vertices.size();
+	triangle_count += shapes[shape].vertices.size() / 3;
 }
 
 void AgentRenderer::CheckFlush(IDirect3DDevice9* device) {
-	if (triangle_count > triangles_max - 2) Flush(device);
+	if (triangle_count > triangles_max - max_shape_tris) Flush(device);
 }
 
 void AgentRenderer::Flush(IDirect3DDevice9* device) {
-	buffer_->Unlock();
-	device->SetStreamSource(0, buffer_, 0, sizeof(D3DVertex));
-	device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, triangle_count);
-	buffer_->Lock(0, sizeof(D3DVertex) * vertices_max, (VOID**)&vertices, D3DLOCK_NOOVERWRITE);
-	triangle_count = 0;
+	if (triangle_count != 0) {
+		buffer_->Unlock();
+		device->SetStreamSource(0, buffer_, 0, sizeof(D3DVertex));
+		device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, triangle_count);
+		buffer_->Lock(0, sizeof(D3DVertex) * vertices_max, (VOID**)&vertices, D3DLOCK_NOOVERWRITE);
+		triangle_count = 0;
+	}
+}
+
+void AgentRenderer::Shape_t::AddVertex(float x, float y, int color) {
+	vertices.push_back(Vector2f(x, y));
+	colors.push_back(color);
 }

@@ -192,11 +192,11 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 		case WM_LBUTTONDBLCLK:
 		case WM_MOUSEWHEEL:
 			if (GWToolbox::instance().right_mouse_pressed_) break;
-			switch (Message) {
-			case WM_MOUSEMOVE: if (GWToolbox::instance().minimap_->OnMouseMove(msg)) return true; break;
-			case WM_LBUTTONDOWN: if (GWToolbox::instance().minimap_->OnMouseDown(msg)) return true; break;
-			case WM_MOUSEWHEEL: if (GWToolbox::instance().minimap_->OnMouseWheel(msg)) return true; break;
-			}
+			//switch (Message) {
+			//case WM_MOUSEMOVE: if (GWToolbox::instance().minimap_->OnMouseMove(msg)) return true; break;
+			//case WM_LBUTTONDOWN: if (GWToolbox::instance().minimap_->OnMouseDown(msg)) return true; break;
+			//case WM_MOUSEWHEEL: if (GWToolbox::instance().minimap_->OnMouseWheel(msg)) return true; break;
+			//}
 			if (input.ProcessMouseMessage(&msg)) {
 				return true;
 			} else {
@@ -314,7 +314,7 @@ void GWToolbox::CreateGui(IDirect3DDevice9* pDevice) {
 		tb.minimap_ = new Minimap();
 		tb.minimap_->Scale(0.0002f);
 		tb.minimap_->Translate(0, -3000.0f);
-		tb.minimap_->SetLocation(0, 0);
+		tb.minimap_->SetLocation(0, 50);
 		tb.minimap_->SetSize(600, 600);
 		LOG("Saving theme\n");
 		tb.SaveTheme();
