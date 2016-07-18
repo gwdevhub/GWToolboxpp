@@ -5,12 +5,9 @@
 #include "PmapRenderer.h"
 #include "AgentRenderer.h"
 #include "RangeRenderer.h"
+#include "PingsLinesRenderer.h"
 
 class Minimap : public Viewer {
-	class UIRenderer : public VBuffer {
-		void Initialize(IDirect3DDevice9* device) override;
-	};
-
 public:
 	Minimap();
 
@@ -26,8 +23,8 @@ private:
 	int drag_start_x_;
 	int drag_start_y_;
 
-	UIRenderer ui_renderer;
 	RangeRenderer range_renderer;
 	PmapRenderer pmap_renderer;
 	AgentRenderer agent_renderer;
+	PingsLinesRenderer pingslines_renderer;
 };

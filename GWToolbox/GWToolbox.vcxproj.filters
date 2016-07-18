@@ -144,6 +144,9 @@
     <ClInclude Include="GWToolbox\RangeRenderer.h">
       <Filter>Windows\Minimap</Filter>
     </ClInclude>
+    <ClInclude Include="GWToolbox\PingsLinesRenderer.h">
+      <Filter>Windows\Minimap</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -222,6 +225,9 @@
       <Filter>Windows\Minimap</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\RangeRenderer.cpp">
+      <Filter>Windows\Minimap</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\PingsLinesRenderer.cpp">
       <Filter>Windows\Minimap</Filter>
     </ClCompile>
   </ItemGroup>

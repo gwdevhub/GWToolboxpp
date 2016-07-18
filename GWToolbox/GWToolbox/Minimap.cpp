@@ -10,42 +10,41 @@
 #include <GWCA\StoCMgr.h>
 #include <GWCA\CameraMgr.h>
 
-void Minimap::UIRenderer::Initialize(IDirect3DDevice9* device) {
-	count_ = 1;
-	type_ = D3DPT_TRIANGLEFAN;
-	printf("initializing minimap\n");
-	D3DVertex* vertices = nullptr;
-	unsigned int vertex_count = 4;
-
-	if (buffer_) buffer_->Release();
-	device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, 0,
-		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer_, NULL);
-	buffer_->Lock(0, sizeof(D3DVertex) * vertex_count,
-		(VOID**)&vertices, D3DLOCK_DISCARD);
-
-	for (unsigned int i = 0; i < vertex_count; ++i) {
-		vertices[i].z = 0.0f;
-		vertices[i].color = D3DCOLOR_ARGB(0x77, 0xFF, 0xFF, 0xFF);
-	}
-
-	vertices[0].x = -1;
-	vertices[0].y = 1;
-	
-	vertices[1].x = -1;
-	vertices[1].y = -1;
-
-	vertices[2].x = 1;
-	vertices[2].y = -1;
-
-	vertices[3].x = 1;
-	vertices[3].y = 1;
-
-	buffer_->Unlock();
-}
+//void Minimap::UIRenderer::Initialize(IDirect3DDevice9* device) {
+//	count_ = 1;
+//	type_ = D3DPT_TRIANGLEFAN;
+//	printf("initializing minimap\n");
+//	D3DVertex* vertices = nullptr;
+//	unsigned int vertex_count = 4;
+//
+//	if (buffer_) buffer_->Release();
+//	device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, 0,
+//		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer_, NULL);
+//	buffer_->Lock(0, sizeof(D3DVertex) * vertex_count,
+//		(VOID**)&vertices, D3DLOCK_DISCARD);
+//
+//	for (unsigned int i = 0; i < vertex_count; ++i) {
+//		vertices[i].z = 0.0f;
+//		vertices[i].color = D3DCOLOR_ARGB(0x77, 0xFF, 0xFF, 0xFF);
+//	}
+//
+//	vertices[0].x = -1;
+//	vertices[0].y = 1;
+//	
+//	vertices[1].x = -1;
+//	vertices[1].y = -1;
+//
+//	vertices[2].x = 1;
+//	vertices[2].y = -1;
+//
+//	vertices[3].x = 1;
+//	vertices[3].y = 1;
+//
+//	buffer_->Unlock();
+//}
 
 Minimap::Minimap() 
-	: ui_renderer(UIRenderer()), 
-	range_renderer(RangeRenderer()),
+	: range_renderer(RangeRenderer()),
 	pmap_renderer(PmapRenderer()),
 	agent_renderer(AgentRenderer()),
 	dragging_(false) {
@@ -95,6 +94,8 @@ void Minimap::Render(IDirect3DDevice9* device) {
 
 	RenderSetupWorldTransforms(device);
 	agent_renderer.Render(device);
+
+	pingslines_renderer.Render(device);
 }
 
 

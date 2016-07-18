@@ -104,6 +104,7 @@
     <ClInclude Include="GWToolbox\Minimap.h" />
     <ClInclude Include="GWToolbox\D3DVertex.h" />
     <ClInclude Include="GWToolbox\PartyDamage.h" />
+    <ClInclude Include="GWToolbox\PingsLinesRenderer.h" />
     <ClInclude Include="GWToolbox\PmapRenderer.h" />
     <ClInclude Include="GWToolbox\RangeRenderer.h" />
     <ClInclude Include="GWToolbox\VBuffer.h" />
@@ -140,6 +141,7 @@
     <ClCompile Include="GWToolbox\main.cpp" />
     <ClCompile Include="GWToolbox\Minimap.cpp" />
     <ClCompile Include="GWToolbox\PartyDamage.cpp" />
+    <ClCompile Include="GWToolbox\PingsLinesRenderer.cpp" />
     <ClCompile Include="GWToolbox\PmapRenderer.cpp" />
     <ClCompile Include="GWToolbox\RangeRenderer.cpp" />
     <ClCompile Include="GWToolbox\ToolboxWindow.cpp" />
