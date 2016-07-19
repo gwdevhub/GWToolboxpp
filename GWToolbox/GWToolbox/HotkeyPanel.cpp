@@ -19,15 +19,16 @@ void HotkeyPanel::BuildUI() {
 	
 	create_combo_ = new ComboBox(this);
 	create_combo_->SetText(L"Create Hotkey");
-	create_combo_->AddItem(L"Send Chat");		// 0
+	create_combo_->AddItem(L"Send Chat");			// 0
 	create_combo_->AddItem(L"Use Item");			// 1
 	create_combo_->AddItem(L"Drop or Use Buff");	// 2
-	create_combo_->AddItem(L"Toggle...");		// 3
-	create_combo_->AddItem(L"Execute...");		// 4
-	create_combo_->AddItem(L"Target");			// 5
-	create_combo_->AddItem(L"Move to");			// 6
-	create_combo_->AddItem(L"Dialog");			// 7
-	create_combo_->AddItem(L"Ping Build");		// 8
+	create_combo_->AddItem(L"Toggle...");			// 3
+	create_combo_->AddItem(L"Execute...");			// 4
+	create_combo_->AddItem(L"Target");				// 5
+	create_combo_->AddItem(L"Move to");				// 6
+	create_combo_->AddItem(L"Dialog");				// 7
+	create_combo_->AddItem(L"Ping Build");			// 8
+	create_combo_->AddItem(L"Reapply Title");		// 9
 	create_combo_->SetMaxShowItems(create_combo_->GetItemsCount());
 	create_combo_->SetLocation(PointI(Padding, Padding));
 	create_combo_->SetSize(SizeI(GuiUtils::ComputeWidth(GetWidth(), 2), GuiUtils::BUTTON_HEIGHT));
@@ -74,6 +75,9 @@ void HotkeyPanel::BuildUI() {
 			ini += HotkeyPingBuild::IniSection();
 			AddHotkey(new HotkeyPingBuild(scroll_panel_->GetContainer(), Key::None, Key::None, true, ini, 0));
 			break;
+		case 9:
+			ini += HotkeyReapplyTitle::IniSection();
+			AddHotkey(new HotkeyReapplyTitle(scroll_panel_->GetContainer(), Key::None, Key::None, true, ini, GwConstants::TitleID::Lightbringer));
 		default:
 			break;
 		}
@@ -162,6 +166,11 @@ void HotkeyPanel::BuildUI() {
 				UINT index = (UINT)config.IniReadLong(section.c_str(), HotkeyPingBuild::IniKeyBuildIndex(), 0);
 				tb_hk = new HotkeyPingBuild(scroll_panel_->GetContainer(), key, modifier, active, section, index);
 
+			} else if (type.compare(HotkeyReapplyTitle::IniSection()) == 0) {
+				UINT titleId = (UINT)config.IniReadLong(section.c_str(), HotkeyReapplyTitle::IniKeyTitleID(),
+					static_cast<long>(GwConstants::TitleID::Lightbringer));
+				auto id = static_cast<GwConstants::TitleID>(titleId);
+				tb_hk = new HotkeyReapplyTitle(scroll_panel_->GetContainer(), key, modifier, active, section, id);
 			} else {
 				LOG("WARNING hotkey detected, but could not match any type!\n");
 			}

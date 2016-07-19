@@ -98,7 +98,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 	triangle_count = 0;
 
 	GW::AgentArray agents = GWCA::Agents().GetAgentArray();
-	if (!agents.valid()) return;	
+	if (!agents.valid()) return;
 
 	// all agents
 	for (size_t i = 0; i < agents.size(); ++i) {
@@ -125,7 +125,10 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 
 void AgentRenderer::Enqueue(GW::Agent* agent) {
 	if (agent->GetIsLivingType() && agent->IsNPC()) {
-		GW::NPC& npc = GWCA::Agents().GetNPCByID(agent->PlayerNumber);
+		auto npcs = GWCA::Agents().GetNPCArray();
+		if (!npcs.valid()) return;
+
+		GW::NPC& npc = npcs[agent->PlayerNumber];
 		if ((npc.npcflags & 0x10000) > 0) return;
 	}
 
@@ -217,7 +220,10 @@ AgentRenderer::Shape_e AgentRenderer::GetShape(GW::Agent* agent) const {
 	if (agent->LoginNumber > 0) return Tear;	// players
 	if (!agent->GetIsLivingType()) return Quad; // shouldn't happen but just in case
 	
-	GW::NPC& npc = GWCA::Agents().GetNPCByID(agent->PlayerNumber);
+	auto npcs = GWCA::Agents().GetNPCArray();
+	if (!npcs.valid()) return Tear;
+
+	GW::NPC& npc = npcs[agent->PlayerNumber];
 	switch (npc.modelfileid) {
 	case 0x22A34: // nature rituals
 	case 0x2D0E4: // defensive binding rituals
