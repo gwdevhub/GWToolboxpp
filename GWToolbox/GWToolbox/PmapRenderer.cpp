@@ -10,7 +10,14 @@
 void PmapRenderer::Initialize(IDirect3DDevice9* device) {
 	using namespace GWCA::GW;
 
-	PathingMapArray path_map = GWCA::Map().GetPathingMap();
+	PathingMapArray path_map;
+
+	if (GWCA::Map().IsMapLoaded()) {
+		path_map = GWCA::Map().GetPathingMap();
+	}
+	else {
+		return; // no map loaded yet, so don't render anything
+	}
 
 	// get the number of trapezoids, need it to allocate the vertex buffer
 	size_t size = 0;
