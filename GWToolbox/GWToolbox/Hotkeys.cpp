@@ -5,6 +5,7 @@
 
 #include <GWCA\ItemMgr.h>
 #include <GWCA\EffectMgr.h>
+#include <GWCA\PlayerMgr.h>
 #include <GWCA\SkillbarMgr.h>
 
 #include "logger.h"
@@ -601,6 +602,60 @@ HotkeyPingBuild::HotkeyPingBuild(OSHGui::Control* parent, Key key, Key modifier,
 	controls_.push_front(combo);
 }
 
+HotkeyReapplyTitle::HotkeyReapplyTitle(OSHGui::Control* parent, Key key, Key modifier,
+	bool active, wstring ini_section, GwConstants::TitleID titleId)
+	: TBHotkey(parent, key, modifier, active, ini_section), titleId_(titleId) {
+
+	Label* label = new Label(this);
+	label->SetLocation(PointI(ITEM_X, LABEL_Y));
+	label->SetText(L"Reapply Title");
+	AddControl(label);
+
+	ComboBox* combo = new ComboBox(this);
+	combo->AddItem(L"Lightbringer");
+	combo->SetSize(SizeI(WIDTH - label->GetRight() - HSPACE, LINE_HEIGHT));
+	combo->SetLocation(PointI(label->GetRight() + HSPACE, ITEM_Y));
+	switch (titleId) {
+	case GwConstants::TitleID::Lightbringer:
+		combo->SetSelectedIndex(0);
+		break;
+	default:
+		combo->AddItem(to_wstring(static_cast<int>(titleId)));
+		combo->SetSelectedIndex(1);
+		break;
+	}
+	combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
+		[this, combo, ini_section](Control*) {
+		auto titleId = this->IndexToTitleID(combo->GetSelectedIndex());
+		this->set_id(titleId);
+		GWToolbox::instance().config().IniWriteLong(ini_section.c_str(),
+			this->IniKeyTitleID(), (long)titleId);
+		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
+	});
+	combo_ = combo;
+	controls_.push_front(combo);
+}
+
+GwConstants::TitleID HotkeyReapplyTitle::IndexToTitleID(int index) {
+	switch (index) {
+	case 0: return GwConstants::TitleID::Lightbringer;
+	case 1:
+		if (combo_->GetItemsCount() == 2) {
+			wstring s = combo_->GetItem(1);
+			try {
+				int i = std::stoi(s);
+				return static_cast<GwConstants::TitleID>(i);
+			}
+			catch (...) {
+				return GwConstants::TitleID::Lightbringer;
+			}
+		}
+	default:
+		LOG("Warning. bad title id %d\n", index);
+		return GwConstants::TitleID::Lightbringer;
+	}
+}
+
 void HotkeyUseItem::exec() {
 	if (!isExplorable()) return;
 	if (item_id_ <= 0) return;
@@ -626,9 +681,9 @@ void HotkeyDropUseBuff::exec() {
 	if (buff.SkillId) {
 		Effects().DropBuff(buff.BuffId);
 	} else {
-		int slot = Skillbar().GetSkillSlot(id_);
-		if (slot > 0 && Skillbar().GetPlayerSkillbar().Skills[slot].Recharge == 0) {
-			Skillbar().UseSkill(slot, Agents().GetTargetId());
+		int slot = GWCA::Skillbar().GetSkillSlot(id_);
+		if (slot > 0 && GWCA::Skillbar().GetPlayerSkillbar().Skills[slot].Recharge == 0) {
+			GWCA::Skillbar().UseSkill(slot, Agents().GetTargetId());
 		}
 	}
 }
@@ -735,6 +790,11 @@ void HotkeyPingBuild::exec() {
 	}
 }
 
+void HotkeyReapplyTitle::exec() {
+	Players().RemoveActiveTitle();
+	Players().SetActiveTitle(titleId_);
+}
+
 wstring HotkeySendChat::GetDescription() {
 	return wstring(L"Send ") + channel_ + msg_;
 }
@@ -810,4 +870,12 @@ wstring HotkeyDialog::GetDescription() {
 
 wstring HotkeyPingBuild::GetDescription() {
 	return wstring(L"Ping Build #") + to_wstring(index_);
+}
+
+wstring HotkeyReapplyTitle::GetDescription() {
+	switch (titleId_) {
+	case GwConstants::TitleID::Lightbringer:
+		return wstring(L"Reapply Lightbringer Title");
+	}
+	return wstring(L"Reapply Title #") + to_wstring(static_cast<long>(titleId_));
 }
