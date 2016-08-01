@@ -62,7 +62,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCA_DX.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCA_DX.lib;GWCA.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -87,7 +87,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCA_DX.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCA_DX.lib;GWCA.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -160,9 +160,6 @@
     <ClCompile Include="GWToolbox\Viewer.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\GWCA\GWCA.vcxproj">
-      <Project>{b3359f05-68cf-4e7f-b9d6-d106f6d48a38}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\OSHGui\OSHGui.vcxproj">
       <Project>{296fb7c3-29b9-4111-9243-6eb8cb71d458}</Project>
     </ProjectReference>

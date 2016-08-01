@@ -156,7 +156,8 @@ public:
 	enum Action {
 		OpenXunlaiChest,
 		OpenLockedChest,
-		DropGoldCoin
+		DropGoldCoin,
+		ReapplyLBTitle
 	};
 private:
 	Action action_;
@@ -251,24 +252,6 @@ public:
 
 	static const wchar_t* IniSection() { return L"PingBuild"; }
 	static const wchar_t* IniKeyBuildIndex() { return L"BuildIndex"; }
-
-	void exec() override;
-	wstring GetDescription() override;
-};
-
-class HotkeyReapplyTitle : public TBHotkey {
-private:
-	GwConstants::TitleID titleId_;
-	OSHGui::ComboBox* combo_;
-
-	GwConstants::TitleID IndexToTitleID(int index);
-	inline void set_id(GwConstants::TitleID id) { titleId_ = id; }
-public:
-	HotkeyReapplyTitle(OSHGui::Control* parent, OSHGui::Key key, OSHGui::Key modifier,
-		bool active, wstring ini_section, GwConstants::TitleID titleId);
-
-	static const wchar_t* IniSection() { return L"ReapplyTitle"; }
-	static const wchar_t* IniKeyTitleID() { return L"TitleID"; }
 
 	void exec() override;
 	wstring GetDescription() override;
