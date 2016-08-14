@@ -5,6 +5,7 @@
 
 #include <OSHGui\OSHGui.hpp>
 #include <GWCA\GwConstants.h>
+#include <GWCA\PatternScanner.h>
 
 #include <string>
 #include "logger.h"
@@ -100,8 +101,15 @@ public:
 	}
 
 	static int GetPartyHealthbarHeight() {
-		GwConstants::InterfaceSize interfacesize = 
-			static_cast<GwConstants::InterfaceSize>(*(DWORD*)0x0A3FD08);
+		static DWORD* optionarray = nullptr;
+		if (!optionarray) {
+			GWCA::PatternScanner scan(0x401000, 0x49a000);
+			optionarray = (DWORD*)scan.FindPattern("\x8B\x4D\x08\x85\xC9\x74\x0A", "xxxxxxx", -9);
+			if (optionarray)
+				optionarray = *(DWORD**)optionarray;
+		}
+		GwConstants::InterfaceSize interfacesize =
+			static_cast<GwConstants::InterfaceSize>(optionarray[6]);
 
 		switch (interfacesize) {
 		case GwConstants::InterfaceSize::SMALL:

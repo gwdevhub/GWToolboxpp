@@ -1,6 +1,7 @@
 #include "ChatCommands.h"
 
 #include <algorithm>
+#include <cctype>
 
 #include <GWCA\CameraMgr.h>
 #include <GWCA\ChatMgr.h>
@@ -329,9 +330,21 @@ void ChatCommands::CmdDamage(vector<wstring> args) {
 	if (!args.empty()) {
 		wstring arg0 = GetLowerCaseArg(args, 0);
 		if (arg0 == L"print" || arg0 == L"report") {
-			GWToolbox::instance().party_damage().WriteChat();
+			if (args.size() > 1) {
+				wstring arg1 = GetLowerCaseArg(args, 1);
+				if (arg1 == L"me") {
+					GWToolbox::instance().party_damage().WriteOwnDamage();
+				} else {
+					try {
+						long idx = std::stol(arg1);
+						GWToolbox::instance().party_damage().WriteDamageOf(idx - 1);
+					} catch (...) {}
+				}
+			} else {
+				GWToolbox::instance().party_damage().WritePartyDamage();
+			}
 		} else if (arg0 == L"reset") {
-			GWToolbox::instance().party_damage().Reset();
+			GWToolbox::instance().party_damage().ResetDamage();
 		}
 	}
 }

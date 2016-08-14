@@ -70,8 +70,10 @@ public:
 
 	void SetFreeze(bool b);
 
-	void WriteChat();
-	void Reset();
+	void WritePartyDamage();
+	void WriteDamageOf(int index, int rank = 0); // party index from 0 to 12
+	void WriteOwnDamage();
+	void ResetDamage();
 
 	void LoadIni();
 	void SaveIni();
@@ -83,8 +85,9 @@ private:
 	void CreatePartyIndexMap();
 
 	void SaveLocation();
-	float GetPartOfTotal(long dmg);
-	inline float GetPercentageOfTotal(long dmg) { return GetPartOfTotal(dmg) * 100.0f; };
+	float GetPartOfTotal(long dmg) const;
+	inline float GetPercentageOfTotal(long dmg) const
+	{ return GetPartOfTotal(dmg) * 100.0f; };
 
 	// damage values
 	long total;

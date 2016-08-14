@@ -61,9 +61,9 @@ Minimap::Minimap()
 
 void Minimap::Render(IDirect3DDevice9* device) {
 	using namespace GWCA;
-	//if (GWCA::Map().GetInstanceType() == GwConstants::InstanceType::Loading) {
-	//	return;
-	//}
+	if (GWCA::Map().GetInstanceType() == GwConstants::InstanceType::Loading) {
+		return;
+	}
 
 	GW::Agent* me = GWCA::Agents().GetPlayer();
 	if (me != nullptr) {

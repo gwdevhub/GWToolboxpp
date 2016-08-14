@@ -90,9 +90,6 @@
     <ClInclude Include="GWToolbox\Pcons.h">
       <Filter>Panels\Pcons</Filter>
     </ClInclude>
-    <ClInclude Include="GWToolbox\ChatCommands.h">
-      <Filter>Panels\Settings</Filter>
-    </ClInclude>
     <ClInclude Include="GWToolbox\ChatFilter.h">
       <Filter>Panels\Settings</Filter>
     </ClInclude>
@@ -147,6 +144,7 @@
     <ClInclude Include="GWToolbox\PingsLinesRenderer.h">
       <Filter>Windows\Minimap</Filter>
     </ClInclude>
+    <ClInclude Include="GWToolbox\ChatCommands.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -178,9 +176,6 @@
       <Filter>Panels\Pcons</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\ChatFilter.cpp">
-      <Filter>Panels\Settings</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\ChatCommands.cpp">
       <Filter>Panels\Settings</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\GWToolbox.cpp" />
@@ -230,5 +225,6 @@
     <ClCompile Include="GWToolbox\PingsLinesRenderer.cpp">
       <Filter>Windows\Minimap</Filter>
     </ClCompile>
+    <ClCompile Include="GWToolbox\ChatCommands.cpp" />
   </ItemGroup>
 </Project>

@@ -113,7 +113,7 @@ bool PartyDamage::MapLoadedCallback(GWCA::StoC_Pak::P230* packet) {
 		party_index.clear();
 		if (!in_explorable) {
 			in_explorable = true;
-			Reset();
+			ResetDamage();
 		}
 		break;
 	case GwConstants::InstanceType::Loading:
@@ -219,11 +219,11 @@ void PartyDamage::CreatePartyIndexMap() {
 	if (!players.valid()) return;
 
 	int index = 0;
-	for (auto player : info->players) {
+	for (GWCA::GW::PlayerPartyMember player : info->players) {
 		long id = players[player.loginnumber].AgentID;
 		party_index[id] = index++;
 
-		for (auto hero : info->heroes) {
+		for (GWCA::GW::HeroPartyMember hero : info->heroes) {
 			if (hero.ownerplayerid == player.loginnumber) {
 				party_index[hero.id] = index++;
 			}
@@ -325,12 +325,12 @@ void PartyDamage::SaveLocation() {
 	config.IniWriteLong(PartyDamage::IniSection(), PartyDamage::IniKeyY(), y);
 }
 
-float PartyDamage::GetPartOfTotal(long dmg) {
+float PartyDamage::GetPartOfTotal(long dmg) const {
 	if (total == 0) return 0;
 	return (float)dmg / total;
 }
 
-void PartyDamage::WriteChat() {
+void PartyDamage::WritePartyDamage() {
 	vector<size_t> idx(MAX_PLAYERS);
 	for (size_t i = 0; i < MAX_PLAYERS; ++i) idx[i] = i;
 	sort(idx.begin(), idx.end(), [this](size_t i1, size_t i2) {
@@ -338,25 +338,65 @@ void PartyDamage::WriteChat() {
 	});
 
 	for (size_t i = 0; i < idx.size(); ++i) {
-		int index = idx[i];
-		if (damage[index].damage > 0) {
-			const int size = 130;
-			wchar_t buff[size];
-			swprintf_s(buff, size, L"%2d ~ %3.2f %% ~ %ls/%ls %ls ~ %d",
-				i + 1,
-				GetPercentageOfTotal(damage[index].damage),
-				GwConstants::to_wstring(damage[index].primary).c_str(),
-				GwConstants::to_wstring(damage[index].secondary).c_str(),
-				damage[index].name.c_str(),
-				damage[index].damage);
+		WriteDamageOf(idx[i], i + 1);
+		//int index = idx[i];
+		//if (damage[index].damage > 0) {
+		//	const int size = 130;
+		//	wchar_t buff[size];
+		//	swprintf_s(buff, size, L"%2d ~ %3.2f %% ~ %ls/%ls %ls ~ %d",
+		//		i + 1,
+		//		GetPercentageOfTotal(damage[index].damage),
+		//		GwConstants::to_wstring(damage[index].primary).c_str(),
+		//		GwConstants::to_wstring(damage[index].secondary).c_str(),
+		//		damage[index].name.c_str(),
+		//		damage[index].damage);
 
-			send_queue.push(buff);
-		}
+		//	send_queue.push(buff);
+		//}
 	}
 	send_queue.push(L"Total ~ 100 % ~ " + std::to_wstring(total));
 }
 
-void PartyDamage::Reset() {
+void PartyDamage::WriteDamageOf(int index, int rank) {
+	if (index >= MAX_PLAYERS) return;
+	if (index < 0) return;
+	if (damage[index].damage <= 0) return;
+
+	if (rank == 0) {
+		rank = 1; // start at 1, add 1 for each player with higher damage
+		for (int i = 0; i < MAX_PLAYERS; ++i) {
+			if (i == index) continue;
+			if (damage[i].agent_id == 0) continue;
+			if (damage[i].damage > damage[index].damage) ++rank;
+		}
+	}
+
+	const int size = 130;
+	wchar_t buff[size];
+	swprintf_s(buff, size, L"#%2d ~ %3.2f %% ~ %ls/%ls %ls ~ %d",
+		rank,
+		GetPercentageOfTotal(damage[index].damage),
+		GwConstants::to_wstring(damage[index].primary).c_str(),
+		GwConstants::to_wstring(damage[index].secondary).c_str(),
+		damage[index].name.c_str(),
+		damage[index].damage);
+
+	send_queue.push(buff);
+}
+
+
+void PartyDamage::WriteOwnDamage() {
+	GWCA::Agent* me = GWCA::Agents().GetPlayer();
+	if (me == nullptr) return;
+
+	auto cause_it = party_index.find(me->Id);
+	if (cause_it == party_index.end()) return;
+
+	int index = cause_it->second;
+	WriteDamageOf(index);
+}
+
+void PartyDamage::ResetDamage() {
 	total = 0;
 	for (int i = 0; i < MAX_PLAYERS; ++i) {
 		damage[i].Reset();

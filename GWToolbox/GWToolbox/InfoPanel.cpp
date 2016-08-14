@@ -167,8 +167,8 @@ void InfoPanel::UpdateUI() {
 		current_player_x = x;
 		current_player_y = y;
 		if (player) {
-			player_x->SetText(to_wstring(lroundf(player->X)));
-			player_y->SetText(to_wstring(lroundf(player->Y)));
+			player_x->SetText(to_wstring(lroundf(x)));
+			player_y->SetText(to_wstring(lroundf(y)));
 		} else {
 			player_x->SetText(L" -");
 			player_y->SetText(L" -");

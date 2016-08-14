@@ -25,16 +25,16 @@ ChatFilter::ChatFilter() {
 			return true;
 		}
 		return false;
-		printf("Received p082\n");
+		//printf("Received p082\n");
 	});
 
 	GWCA::StoC().AddGameServerEvent<GWCA::StoC_Pak::P083>([](GWCA::StoC_Pak::P083* pak) -> bool {
-		printf("Received p083\n");
+		//printf("Received p083\n");
 		return false;
 	});
 
 	GWCA::StoC().AddGameServerEvent<GWCA::StoC_Pak::P084>([](GWCA::StoC_Pak::P084* pak) -> bool {
-		printf("Received p084: %ls [%ls]\n", pak->sender_name, pak->sender_guild);
+		//printf("Received p084: %ls [%ls]\n", pak->sender_name, pak->sender_guild);
 		return false;
 	});
 
@@ -44,7 +44,7 @@ ChatFilter::ChatFilter() {
 			return true;
 		}
 		return false;
-		printf("Received p085\n");
+		//printf("Received p085\n");
 	});
 }
 
@@ -98,19 +98,19 @@ bool ChatFilter::ShouldIgnore(GWCA::StoC_Pak::P081* pak) const {
 	switch (pak->message[0]) {
 		// ==== Messages not ignored ====
 	case 0x108: { // player message
-		for (size_t i = 0; pak->message[i] != 0; ++i) {
-			if (pak->message[i] == 0x108) {
-				printf("|");
-			} else if (pak->message[i] == 0x107) {
-				printf(">");
-			} else if (pak->message[i] == 0x1) {
-				printf("<");
-			} else {
-				printf("%lc", pak->message[i]);
-			}
-		}
-		printf("\n");
-		return false;
+		//for (size_t i = 0; pak->message[i] != 0; ++i) {
+		//	if (pak->message[i] == 0x108) {
+		//		printf("|");
+		//	} else if (pak->message[i] == 0x107) {
+		//		printf(">");
+		//	} else if (pak->message[i] == 0x1) {
+		//		printf("<");
+		//	} else {
+		//		printf("%lc", pak->message[i]);
+		//	}
+		//}
+		//printf("\n");
+		//return false;
 	}
 
 	case 0x777: // I'm level x and x% of the way earning my next skill point	(author is not part of the message)
