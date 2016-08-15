@@ -2,6 +2,9 @@
 
 #include <cmath>
 #include <GWCA\GwConstants.h>
+#include <GWCA\GWCA.h>
+#include <GWCA\SkillbarMgr.h>
+#include <GWCA\MapMgr.h>
 
 void RangeRenderer::CreateCircle(D3DVertex* vertices, float radius, DWORD color) {
 	for (size_t i = 0; i < circle_vertices; ++i) {
@@ -18,12 +21,15 @@ void RangeRenderer::Initialize(IDirect3DDevice9* device) {
 	count_ = circle_points * num_circles; // radar range, spirit range, aggro range
 	type_ = D3DPT_LINESTRIP;
 	float radius;
+	
+	checkforhos_ = true;
+	havehos_ = false;
 
 	D3DVertex* vertices = nullptr;
 	unsigned int vertex_count = count_ + num_circles;
 
 	if (buffer_) buffer_->Release();
-	device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, 0,
+	device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, D3DUSAGE_WRITEONLY,
 		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer_, NULL);
 	buffer_->Lock(0, sizeof(D3DVertex) * vertex_count,
 		(VOID**)&vertices, D3DLOCK_DISCARD);
@@ -48,8 +54,27 @@ void RangeRenderer::Initialize(IDirect3DDevice9* device) {
 
 void RangeRenderer::Render(IDirect3DDevice9* device) {
 	if (!initialized_) {
-		Initialize(device);
 		initialized_ = true;
+		Initialize(device);
+	}
+
+	switch (GWCA::Map().GetInstanceType()) {
+	case GwConstants::InstanceType::Explorable:
+		if (checkforhos_) {
+			checkforhos_ = false;
+			havehos_ = HaveHos();
+		}
+		break;
+	case GwConstants::InstanceType::Outpost:
+		checkforhos_ = true;
+		havehos_ = HaveHos();
+		break;
+	case GwConstants::InstanceType::Loading: 
+		havehos_ = false;
+		checkforhos_ = true;
+		break;
+	default:
+		break;
 	}
 
 	device->SetFVF(D3DFVF_CUSTOMVERTEX);
@@ -57,7 +82,26 @@ void RangeRenderer::Render(IDirect3DDevice9* device) {
 	device->SetRenderState(D3DRS_LIGHTING, FALSE);
 
 	device->SetStreamSource(0, buffer_, 0, sizeof(D3DVertex));
-	for (int i = 0; i < num_circles; ++i) {
+	for (int i = 0; i < num_circles - 1; ++i) {
 		device->DrawPrimitive(type_, circle_vertices * i, circle_points);
 	}
+	if (HaveHos()) {
+		device->DrawPrimitive(type_, circle_vertices * (num_circles - 1), circle_points);
+	}
+}
+
+bool RangeRenderer::HaveHos() {
+	GWCA::GW::Skillbar skillbar = GWCA::Skillbar().GetPlayerSkillbar();
+	if (!skillbar.IsValid()) {
+		checkforhos_ = true;
+		return false;
+	}
+
+	for (int i = 0; i < 8; ++i) {
+		GWCA::GW::SkillbarSkill skill = skillbar.Skills[i];
+		GwConstants::SkillID id = (GwConstants::SkillID) skill.SkillId;
+		if (id == GwConstants::SkillID::Heart_of_Shadow) return true;
+		if (id == GwConstants::SkillID::Vipers_Defense) return true;
+	}
+	return false;
 }

@@ -192,11 +192,11 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 		case WM_LBUTTONDBLCLK:
 		case WM_MOUSEWHEEL:
 			if (GWToolbox::instance().right_mouse_pressed_) break;
-			//switch (Message) {
-			//case WM_MOUSEMOVE: if (GWToolbox::instance().minimap_->OnMouseMove(msg)) return true; break;
-			//case WM_LBUTTONDOWN: if (GWToolbox::instance().minimap_->OnMouseDown(msg)) return true; break;
-			//case WM_MOUSEWHEEL: if (GWToolbox::instance().minimap_->OnMouseWheel(msg)) return true; break;
-			//}
+			switch (Message) {
+			case WM_MOUSEMOVE: if (GWToolbox::instance().minimap_->OnMouseMove(msg)) return true; break;
+			case WM_LBUTTONDOWN: if (GWToolbox::instance().minimap_->OnMouseDown(msg)) return true; break;
+			case WM_MOUSEWHEEL: if (GWToolbox::instance().minimap_->OnMouseWheel(msg)) return true; break;
+			}
 			if (input.ProcessMouseMessage(&msg)) {
 				return true;
 			} else {
@@ -304,18 +304,18 @@ void GWToolbox::CreateGui(IDirect3DDevice9* pDevice) {
 		tb.distance_window_ = new DistanceWindow();
 		LOG("Creating party damage window\n");
 		tb.party_damage_ = new PartyDamage();
+		LOG("Creating Minimap\n");
+		tb.minimap_ = new Minimap();
+		tb.minimap_->Scale(0.0002f);
+		tb.minimap_->Translate(0, -3000.0f);
+		//tb.minimap_->SetLocation(0, 50);
+		//tb.minimap_->SetSize(600, 600);
 		LOG("Applying settings\n");
 		tb.main_window().settings_panel().ApplySettings();
 		LOG("Enabling app\n");
 		app.Enable();
 		tb.initialized_ = true;
 		LOG("Gui Created\n");
-		LOG("Creating Minimap\n");
-		tb.minimap_ = new Minimap();
-		tb.minimap_->Scale(0.0002f);
-		tb.minimap_->Translate(0, -3000.0f);
-		tb.minimap_->SetLocation(0, 50);
-		tb.minimap_->SetSize(600, 600);
 		LOG("Saving theme\n");
 		tb.SaveTheme();
 
@@ -390,10 +390,10 @@ HRESULT WINAPI GWToolbox::resetScene(IDirect3DDevice9* pDevice,
 		}
 
 		return result;
-	} else {
-		GWCA::dx9::Reset_t reset_orig = dx_hooker->original<GWCA::dx9::Reset_t>(GWCA::dx9::kReset);
-		return reset_orig(pDevice, pPresentationParameters);
 	}
+
+	GWCA::dx9::Reset_t reset_orig = dx_hooker->original<GWCA::dx9::Reset_t>(GWCA::dx9::kReset);
+	return reset_orig(pDevice, pPresentationParameters);
 }
 
 void GWToolbox::UpdateUI() {

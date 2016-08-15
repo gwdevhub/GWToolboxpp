@@ -42,7 +42,7 @@ PartyDamage::PartyDamage() {
 	Drawing::Theme::ControlTheme bartheme = Application::Instance()
 		.GetTheme().GetControlColorTheme(PartyDamage::ThemeBarsKey());
 
-	SetBackColor(theme.BackColor);
+	SetTransparentBackColor(false);
 	labelcolor = theme.ForeColor;
 
 	int offsetX = 2;
@@ -409,6 +409,16 @@ void PartyDamage::SetFreeze(bool b) {
 	for (int i = 0; i < MAX_PLAYERS; ++i) {
 		absolute[i]->SetEnabled(!b);
 		percent[i]->SetEnabled(!b);
+	}
+}
+
+void PartyDamage::SetTransparentBackColor(bool b) {
+	if (b) {
+		SetBackColor(Color::Empty());
+	} else {
+		Drawing::Theme::ControlTheme theme = Application::InstancePtr()
+			->GetTheme().GetControlColorTheme(BondsWindow::ThemeKey());
+		SetBackColor(theme.BackColor);
 	}
 }
 

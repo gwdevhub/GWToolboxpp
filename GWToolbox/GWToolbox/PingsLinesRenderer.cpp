@@ -12,7 +12,7 @@ PingsLinesRenderer::PingsLinesRenderer() {
 		if (pak->NumberPts == 1) {
 			pings.push_front(new TerrainPing(pak->points[0].x, pak->points[0].y));
 		}
-		printf("Received ping at %d, %d\n", pak->points[0].x, pak->points[0].y);
+		//printf("Received ping at %d, %d\n", pak->points[0].x, pak->points[0].y);
 		return false;
 	});
 
@@ -41,13 +41,6 @@ void PingsLinesRenderer::CreatePing(float x, float y) {
 }
 
 void PingsLinesRenderer::Render(IDirect3DDevice9* device) {
-	//static clock_t test = TBTimer::init();;
-	//if (TBTimer::diff(test) > 1000) {
-	//	test = TBTimer::init();
-	//	GWCA::GW::Agent* me = GWCA::Agents().GetPlayer();
-	//	CreatePing(me->X, me->Y);
-	//}
-
 	for (Ping* ping : pings) {
 		D3DXMATRIX translate, scale, world;
 		D3DXMatrixTranslation(&translate, ping->GetX(), ping->GetY(), 0.0f);

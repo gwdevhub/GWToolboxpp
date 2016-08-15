@@ -114,6 +114,7 @@ public:
 	inline HealthWindow& health_window() { return *health_window_; }
 	inline DistanceWindow& distance_window() { return *distance_window_; }
 	inline PartyDamage& party_damage() { return *party_damage_; }
+	inline Minimap& minimap() { return *minimap_; }
 
 	void StartSelfDestruct() {
 		if (GWCA::Map().GetInstanceType() != GwConstants::InstanceType::Loading) {

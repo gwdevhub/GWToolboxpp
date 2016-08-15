@@ -3,13 +3,13 @@
 #include <GWCA\GWCA.h>
 #include <GWCA\AgentMgr.h>
 
+#include <DxErr.h>
+#pragma comment(lib, "dxerr.lib")
+
 using namespace GWCA;
 
 AgentRenderer::AgentRenderer() :
-	vertices(nullptr),
-	triangle_count(0),
-	triangles_max(0),
-	vertices_max(0) {
+	vertices(nullptr) {
 
 	shapes[Tear].AddVertex(1.8f, 0, -50);		// A
 	shapes[Tear].AddVertex(0.7f, 0.7f, -50);	// B
@@ -74,20 +74,29 @@ AgentRenderer::AgentRenderer() :
 	shapes[Quad].AddVertex(1.0f, -1.0f, -50);
 	shapes[Quad].AddVertex(0.0f, 0.0f, 50);
 
-	max_shape_tris = shapes[Tear].vertices.size() / 3;
+	max_shape_verts = shapes[Tear].vertices.size();
 }
 
 
 void AgentRenderer::Initialize(IDirect3DDevice9* device) {
 	type_ = D3DPT_TRIANGLELIST;
-	triangles_max = 0x200;
-	vertices_max = triangles_max * 3;
+
+	vertices_max = 24 * 0x200; // support for up to 512 agents, should be enough
 
 	vertices = nullptr;
-	device->CreateVertexBuffer(sizeof(D3DVertex) * vertices_max, 0,
+
+	HRESULT hr = device->CreateVertexBuffer(sizeof(D3DVertex) * vertices_max, 0,
 		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer_, NULL);
-	buffer_->Lock(0, sizeof(D3DVertex) * vertices_max, (VOID**)&vertices, D3DLOCK_NOOVERWRITE);
+	if (FAILED(hr)) {
+		printf("Error: %ls error description: %ls\n",
+			DXGetErrorString(hr), DXGetErrorDescription(hr));
+	}
 }
+
+//void AgentRenderer::OnReset(IDirect3DDevice9* device) {
+//	//buffer_->Release();
+//	//Initialize(device);
+//}
 
 void AgentRenderer::Render(IDirect3DDevice9* device) {
 	if (!initialized_) {
@@ -95,43 +104,50 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 		initialized_ = true;
 	}
 
-	triangle_count = 0;
+	HRESULT res = buffer_->Lock(0, sizeof(D3DVertex) * vertices_max, (VOID**)&vertices, D3DLOCK_DISCARD);
+	if (FAILED(res)) printf("AgentRenderer Lock() error: %d\n", res);
 
+	vertices_count = 0;
+
+	// count triangles
 	GW::AgentArray agents = GWCA::Agents().GetAgentArray();
 	if (!agents.valid()) return;
+
+	GW::NPCArray npcs = GWCA::Agents().GetNPCArray();
+	if (!npcs.valid()) return;
 
 	// all agents
 	for (size_t i = 0; i < agents.size(); ++i) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
+		if (agent->GetIsLivingType() && agent->IsNPC()
+			&& (npcs[agent->PlayerNumber].npcflags & 0x10000) > 0) {
+			continue;
+		}
 		if (agent->Id == GWCA::Agents().GetPlayerId()) continue; // will draw player at the end
 		if (agent->Id == GWCA::Agents().GetTargetId()) continue; // will draw target at the end
 
 		Enqueue(agent);
 
-		CheckFlush(device);
+		if (vertices_count >= vertices_max - 4 * max_shape_verts) break;
 	}
 
 	GW::Agent* target = GWCA::Agents().GetTarget();
 	if (target) Enqueue(target);
 
-	CheckFlush(device);
-
 	GW::Agent* player = GWCA::Agents().GetPlayer();
 	if (player && player->Id != Agents().GetTargetId()) Enqueue(player);
 
-	Flush(device);
+	buffer_->Unlock();
+
+	if (vertices_count != 0) {
+		device->SetStreamSource(0, buffer_, 0, sizeof(D3DVertex));
+		device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, vertices_count / 3);
+		vertices_count = 0;
+	}
 }
 
 void AgentRenderer::Enqueue(GW::Agent* agent) {
-	if (agent->GetIsLivingType() && agent->IsNPC()) {
-		auto npcs = GWCA::Agents().GetNPCArray();
-		if (!npcs.valid()) return;
-
-		GW::NPC& npc = npcs[agent->PlayerNumber];
-		if ((npc.npcflags & 0x10000) > 0) return;
-	}
-
 	Color color = GetColor(agent);
 	float size = GetSize(agent);
 	Shape_e shape = GetShape(agent);
@@ -143,7 +159,10 @@ void AgentRenderer::Enqueue(GW::Agent* agent) {
 }
 
 AgentRenderer::Color AgentRenderer::GetColor(GW::Agent* agent) const {
-	if (agent->Id == GWCA::Agents().GetPlayerId()) return Color(240, 0, 240);
+	if (agent->Id == GWCA::Agents().GetPlayerId()) {
+		if (agent->GetIsDead()) return Color(100, 240, 0, 240);
+		else return Color(240, 0, 240);
+	}
 	if (agent->GetIsSignpostType()) return Color(0, 0, 200);
 	if (agent->GetIsItemType()) return Color(0, 0, 240);
 
@@ -249,21 +268,7 @@ void AgentRenderer::Enqueue(Shape_e shape, GW::Agent* agent, float size, Color c
 		vertices[i].y = v.y;
 	}
 	vertices += shapes[shape].vertices.size();
-	triangle_count += shapes[shape].vertices.size() / 3;
-}
-
-void AgentRenderer::CheckFlush(IDirect3DDevice9* device) {
-	if (triangle_count > triangles_max - max_shape_tris) Flush(device);
-}
-
-void AgentRenderer::Flush(IDirect3DDevice9* device) {
-	if (triangle_count != 0) {
-		buffer_->Unlock();
-		device->SetStreamSource(0, buffer_, 0, sizeof(D3DVertex));
-		device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, triangle_count);
-		buffer_->Lock(0, sizeof(D3DVertex) * vertices_max, (VOID**)&vertices, D3DLOCK_NOOVERWRITE);
-		triangle_count = 0;
-	}
+	vertices_count += shapes[shape].vertices.size();
 }
 
 void AgentRenderer::Shape_t::AddVertex(float x, float y, int color) {

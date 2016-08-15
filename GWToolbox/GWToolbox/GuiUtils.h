@@ -118,8 +118,8 @@ public:
 			return GwConstants::HealthbarHeight::Normal;
 		case GwConstants::InterfaceSize::LARGE:
 			return GwConstants::HealthbarHeight::Large;
-		case GwConstants::InterfaceSize::VERYLARGE:
-			return GwConstants::HealthbarHeight::VeryLarge;
+		case GwConstants::InterfaceSize::LARGER:
+			return GwConstants::HealthbarHeight::Larger;
 		default:
 			return GwConstants::HealthbarHeight::Normal;
 		}

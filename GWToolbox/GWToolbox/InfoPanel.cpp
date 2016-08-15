@@ -14,6 +14,7 @@
 #include "DistanceWindow.h"
 #include "BondsWindow.h"
 #include "PartyDamage.h"
+#include "Minimap.h"
 
 using namespace OSHGui;
 
@@ -143,6 +144,20 @@ void InfoPanel::BuildUI() {
 		tb.config().IniWriteBool(PartyDamage::IniSection(), PartyDamage::InikeyShow(), show);
 	});
 	AddControl(damage);
+
+	CheckBox* minimap = new CheckBox(this);
+	minimap->SetText(L"Minimap");
+	minimap->SetWidth(half_item_width);
+	minimap->SetLocation(PointI(item2_x, dialog->GetBottom() + Padding));
+	minimap->SetChecked(GWToolbox::instance().config().IniReadBool(
+		Minimap::IniSection(), Minimap::InikeyShow(), false));
+	minimap->GetCheckedChangedEvent() += CheckedChangedEventHandler([minimap](Control*) {
+		GWToolbox& tb = GWToolbox::instance();
+		bool show = minimap->GetChecked();
+		tb.minimap().SetVisible(show);
+		tb.config().IniWriteBool(Minimap::IniSection(), Minimap::InikeyShow(), show);
+	});
+	AddControl(minimap);
 
 	Button* xunlai = new Button(this);
 	xunlai->SetSize(SizeI(full_item_width, GuiUtils::BUTTON_HEIGHT));

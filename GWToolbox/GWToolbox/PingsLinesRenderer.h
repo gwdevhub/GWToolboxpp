@@ -47,6 +47,11 @@ public:
 	PingsLinesRenderer();
 
 	void Render(IDirect3DDevice9* device);
+	inline void Invalidate() { 
+		ping_circle.Invalidate();
+		for (Ping* p : pings) delete p;
+		pings.clear();
+	}
 
 	void CreatePing(float x, float y);
 

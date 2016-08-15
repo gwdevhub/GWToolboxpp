@@ -14,8 +14,8 @@ void PmapRenderer::Initialize(IDirect3DDevice9* device) {
 
 	if (GWCA::Map().IsMapLoaded()) {
 		path_map = GWCA::Map().GetPathingMap();
-	}
-	else {
+	} else {
+		initialized_ = false;
 		return; // no map loaded yet, so don't render anything
 	}
 
@@ -32,7 +32,7 @@ void PmapRenderer::Initialize(IDirect3DDevice9* device) {
 
 	// allocate new vertex buffer
 	if (buffer_) buffer_->Release();
-	device->CreateVertexBuffer(sizeof(D3DVertex) * count_ * 3, 0,
+	device->CreateVertexBuffer(sizeof(D3DVertex) * count_ * 3, D3DUSAGE_WRITEONLY,
 		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer_, NULL);
 	buffer_->Lock(0, sizeof(D3DVertex) * count_ * 3,
 		(VOID**)&vertices, D3DLOCK_DISCARD);

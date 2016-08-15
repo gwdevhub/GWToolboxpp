@@ -60,6 +60,7 @@ public:
 		GWToolbox::instance().health_window().SetFreeze(value);
 		GWToolbox::instance().distance_window().SetFreeze(value);
 		GWToolbox::instance().party_damage().SetFreeze(value);
+		GWToolbox::instance().minimap().SetFreeze(value);
 	}
 };
 
@@ -136,6 +137,18 @@ public:
 
 	void ApplySetting(bool value) override {
 		GWToolbox::instance().chat_commands().SetSuppressMessages(value);
+	}
+};
+
+class NoBackgroundWidgets : public BoolSetting {
+public:
+	NoBackgroundWidgets(OSHGui::Control* parent) : BoolSetting(parent, false, L"nobackgroundwidgets") {
+		Initialize(L"No Background on Party Widgets");
+	}
+
+	void ApplySetting(bool value) override {
+		GWToolbox::instance().bonds_window().SetTransparentBackColor(value);
+		GWToolbox::instance().party_damage().SetTransparentBackColor(value);
 	}
 };
 

@@ -10,58 +10,53 @@
 #include <GWCA\StoCMgr.h>
 #include <GWCA\CameraMgr.h>
 
-//void Minimap::UIRenderer::Initialize(IDirect3DDevice9* device) {
-//	count_ = 1;
-//	type_ = D3DPT_TRIANGLEFAN;
-//	printf("initializing minimap\n");
-//	D3DVertex* vertices = nullptr;
-//	unsigned int vertex_count = 4;
-//
-//	if (buffer_) buffer_->Release();
-//	device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, 0,
-//		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer_, NULL);
-//	buffer_->Lock(0, sizeof(D3DVertex) * vertex_count,
-//		(VOID**)&vertices, D3DLOCK_DISCARD);
-//
-//	for (unsigned int i = 0; i < vertex_count; ++i) {
-//		vertices[i].z = 0.0f;
-//		vertices[i].color = D3DCOLOR_ARGB(0x77, 0xFF, 0xFF, 0xFF);
-//	}
-//
-//	vertices[0].x = -1;
-//	vertices[0].y = 1;
-//	
-//	vertices[1].x = -1;
-//	vertices[1].y = -1;
-//
-//	vertices[2].x = 1;
-//	vertices[2].y = -1;
-//
-//	vertices[3].x = 1;
-//	vertices[3].y = 1;
-//
-//	buffer_->Unlock();
-//}
+#include "Config.h"
+#include "GWToolbox.h"
 
 Minimap::Minimap() 
 	: range_renderer(RangeRenderer()),
 	pmap_renderer(PmapRenderer()),
 	agent_renderer(AgentRenderer()),
-	dragging_(false) {
+	dragging_(false),
+	freeze_(false),
+	loading_(false) {
 
 	GWCA::StoC().AddGameServerEvent<GWCA::StoC_Pak::P391_InstanceLoadFile>(
 		[this](GWCA::StoC_Pak::P391_InstanceLoadFile* packet) {
 		printf("loading map %d\n", packet->map_fileID);
 		pmap_renderer.Invalidate();
+		loading_ = false;
 		return false;
 	});
+
+	GWCA::StoC().AddGameServerEvent<GWCA::StoC_Pak::P406>(
+		[&](GWCA::StoC_Pak::P406* pak) {
+		loading_ = true;
+		return false;
+	});
+
+	Config& config = GWToolbox::instance().config();
+	int x = config.IniReadLong(Minimap::IniSection(), Minimap::IniKeyX(), 50);
+	int y = config.IniReadLong(Minimap::IniSection(), Minimap::IniKeyY(), 50);
+	int width = config.IniReadLong(Minimap::IniSection(), Minimap::IniKeyWidth(), 600);
+	SetX(x);
+	SetY(y);
+	SetWidth(width);
+	SetHeight(width);
+
+	visible_ = config.IniReadBool(Minimap::IniSection(), Minimap::InikeyShow(), false);
 
 	pmap_renderer.Invalidate();
 }
 
 void Minimap::Render(IDirect3DDevice9* device) {
+	if (!visible_) return;
+
 	using namespace GWCA;
-	if (GWCA::Map().GetInstanceType() == GwConstants::InstanceType::Loading) {
+	if (loading_
+		|| !GWCA::Map().IsMapLoaded()
+		|| GWCA::Map().GetInstanceType() == GwConstants::InstanceType::Loading
+		|| GWCA::Agents().GetPlayerId() == 0) {
 		return;
 	}
 
@@ -98,8 +93,9 @@ void Minimap::Render(IDirect3DDevice9* device) {
 	pingslines_renderer.Render(device);
 }
 
-
 bool Minimap::OnMouseDown(MSG msg) {
+	if (!visible_) return false;
+	if (freeze_) return false;
 	int x = GET_X_LPARAM(msg.lParam);
 	int y = GET_Y_LPARAM(msg.lParam);
 	if (x > GetX() && x < GetX() + GetWidth()
@@ -113,11 +109,17 @@ bool Minimap::OnMouseDown(MSG msg) {
 }
 
 bool Minimap::OnMouseUp(MSG msg) {
+	if (!visible_) return false;
 	dragging_ = false;
+	Config& config = GWToolbox::instance().config();
+	config.IniWriteLong(Minimap::IniSection(), Minimap::IniKeyX(), GetX());
+	config.IniWriteLong(Minimap::IniSection(), Minimap::IniKeyY(), GetY());
 	return false;
 }
 
 bool Minimap::OnMouseMove(MSG msg) {
+	if (!visible_) return false;
+	if (freeze_) return false;
 	int x = GET_X_LPARAM(msg.lParam);
 	int y = GET_Y_LPARAM(msg.lParam);
 	if (dragging_) {
@@ -133,5 +135,23 @@ bool Minimap::OnMouseMove(MSG msg) {
 }
 
 bool Minimap::OnMouseWheel(MSG msg) {
+	if (!visible_) return false;
+	if (freeze_) return false;
+	int x = GET_X_LPARAM(msg.lParam);
+	int y = GET_Y_LPARAM(msg.lParam);
+	if (x > GetX() && x < GetX() + GetWidth()
+		&& y > GetY() && y < GetY() + GetHeight()) {
+		int zDelta = GET_WHEEL_DELTA_WPARAM(msg.wParam);
+		int delta = zDelta > 0 ? 2 : -2;
+		SetWidth(GetWidth() + delta * 2);
+		SetHeight(GetHeight() + delta * 2);
+		SetX(GetX() - delta);
+		SetY(GetY() - delta);
+
+		GWToolbox::instance().config().IniWriteLong(
+			Minimap::IniSection(), Minimap::IniKeyWidth(), GetWidth());
+
+		return true;
+	}
 	return false;
 }

@@ -45,16 +45,18 @@ void SettingsPanel::BuildUI() {
 	AddControl(panel);
 
 	// should be in the same order as the Settings_enum
-	boolsettings.push_back(new OpenTabsLeft(panel->GetContainer()));
-	boolsettings.push_back(new FreezeWidgets(panel->GetContainer()));
-	boolsettings.push_back(new HideTargetWidgets(panel->GetContainer()));
-	boolsettings.push_back(new MinimizeToAltPos(panel->GetContainer()));
-	boolsettings.push_back(new AdjustOnResize(panel->GetContainer()));
-	boolsettings.push_back(new BorderlessWindow(panel->GetContainer()));
-	boolsettings.push_back(new SuppressMessages(panel->GetContainer()));
-	boolsettings.push_back(new TickWithPcons(panel->GetContainer()));
-	boolsettings.push_back(new OpenTemplateLinks(panel->GetContainer()));
-	boolsettings.push_back(new SaveLocationData(panel->GetContainer()));
+	Panel* container = panel->GetContainer();
+	boolsettings.push_back(new OpenTabsLeft(container));
+	boolsettings.push_back(new FreezeWidgets(container));
+	boolsettings.push_back(new HideTargetWidgets(container));
+	boolsettings.push_back(new MinimizeToAltPos(container));
+	boolsettings.push_back(new AdjustOnResize(container));
+	boolsettings.push_back(new BorderlessWindow(container));
+	boolsettings.push_back(new SuppressMessages(container));
+	boolsettings.push_back(new TickWithPcons(container));
+	boolsettings.push_back(new OpenTemplateLinks(container));
+	boolsettings.push_back(new SaveLocationData(container));
+	boolsettings.push_back(new NoBackgroundWidgets(container));
 
 	for (size_t i = 0; i < boolsettings.size(); ++i) {
 		boolsettings[i]->SetWidth(panel->GetContainer()->GetWidth());

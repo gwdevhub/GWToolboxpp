@@ -10,6 +10,7 @@ public:
 	AgentRenderer();
 
 	void Render(IDirect3DDevice9* device) override;
+	//void OnReset(IDirect3DDevice9* device);
 
 private:
 	struct Color {
@@ -24,7 +25,7 @@ private:
 			return Color(a + c.a, r + c.r, g + c.g, b + c.b);
 		}
 		const Color operator + (const int c) const {
-			return Color(r + c, g + c, b + c);
+			return Color(a, r + c, g + c, b + c);
 		}
 		void Clamp() {
 			if (r < 0) r = 0;
@@ -55,14 +56,10 @@ private:
 
 	void Enqueue(Shape_e shape, GWCA::GW::Agent* agent, float size, Color color);
 
-	void CheckFlush(IDirect3DDevice9* device);
-	void Flush(IDirect3DDevice9* device);
-
 	D3DVertex* vertices;		// vertices array
-	unsigned int triangle_count;// count of triangles
+	unsigned int vertices_count;// count of vertices
 	unsigned int vertices_max;	// max number of vertices to draw in one call
-	unsigned int triangles_max; // max number of triangles to draw in one call
-	unsigned int max_shape_tris;// max number of triangles in a single shape
+	unsigned int max_shape_verts;// max number of triangles in a single shape
 
 	Shape_t shapes[3];
 };

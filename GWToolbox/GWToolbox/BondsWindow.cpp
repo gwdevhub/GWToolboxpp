@@ -31,9 +31,7 @@ BondsWindow::BondsWindow() {
 	SetLocation(PointI(x, y));
 	SetSize(Drawing::SizeI(width, height));
 
-	Drawing::Theme::ControlTheme theme = Application::InstancePtr()
-		->GetTheme().GetControlColorTheme(BondsWindow::ThemeKey());
-	SetBackColor(theme.BackColor);
+	SetTransparentBackColor(false);
 
 	monitor = new BondsMonitor(this, img_size);
 	monitor->SetLocation(PointI(0, 0));
@@ -45,6 +43,16 @@ BondsWindow::BondsWindow() {
 
 	bool show = config.IniReadBool(BondsWindow::IniSection(), BondsWindow::IniKeyShow(), false);
 	SetVisible(show);
+}
+
+void BondsWindow::SetTransparentBackColor(bool b) {
+	if (b) {
+		SetBackColor(Color::Empty());
+	} else {
+		Drawing::Theme::ControlTheme theme = Application::InstancePtr()
+			->GetTheme().GetControlColorTheme(BondsWindow::ThemeKey());
+		SetBackColor(theme.BackColor);
+	}
 }
 
 BondsWindow::BondsMonitor::BondsMonitor(OSHGui::Control* parent, int img_size) : 

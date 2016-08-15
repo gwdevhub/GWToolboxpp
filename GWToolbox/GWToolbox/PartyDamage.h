@@ -69,6 +69,7 @@ public:
 	}
 
 	void SetFreeze(bool b);
+	void SetTransparentBackColor(bool b);
 
 	void WritePartyDamage();
 	void WriteDamageOf(int index, int rank = 0); // party index from 0 to 12

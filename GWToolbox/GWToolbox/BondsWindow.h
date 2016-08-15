@@ -57,6 +57,7 @@ public:
 	inline void UpdateUI() { if (monitor) monitor->UpdateUI(); }
 	inline void MainRoutine() {};
 	inline void SetFreze(bool b) { monitor->SetFreeze(b); }
+	void SetTransparentBackColor(bool b);
 
 private:
 	BondsMonitor* monitor;
