@@ -17,10 +17,10 @@ public:
 	void RenderSetupProjection(IDirect3DDevice9* device);
 	virtual void Render(IDirect3DDevice9* device) = 0;
 
-	inline int GetX() { return location_x_; }
-	inline int GetY() { return location_y_; }
-	inline int GetWidth() { return width_; }
-	inline int GetHeight() { return height_; }
+	inline int GetX() const { return location_x_; }
+	inline int GetY() const { return location_y_; }
+	inline int GetWidth() const { return width_; }
+	inline int GetHeight() const { return height_; }
 
 	inline void SetX(int x) { location_x_ = x; }
 	inline void SetY(int y) { location_y_ = y; }
@@ -42,6 +42,10 @@ public:
 	}
 	inline void SetScale(float scale) { scale_ = scale; }
 	inline void SetRotation(float radians) { rotation_ = radians; }
+	inline float GetScale() const { return scale_; }
+	inline float GetRotation() const { return rotation_; }
+	inline float GetTranslationX() const { return translation_x_; }
+	inline float GetTranslationY() const { return translation_y_; }
 
 protected:
 	float translation_x_;
@@ -53,5 +57,4 @@ protected:
 	int location_y_;
 	int width_;
 	int height_;
-
 };

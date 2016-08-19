@@ -10,7 +10,6 @@ public:
 	AgentRenderer();
 
 	void Render(IDirect3DDevice9* device) override;
-	//void OnReset(IDirect3DDevice9* device);
 
 private:
 	struct Color {
@@ -40,12 +39,14 @@ private:
 		}
 	};
 
-	enum Shape_e { Tear, Circle, Quad };
+	enum Shape_e { Tear, Circle, Quad, BigCircle };
 	struct Shape_t {
 		std::vector<GWCA::Vector2f> vertices;
-		std::vector<int> colors;
-		void AddVertex(float x, float y, int color);
+		std::vector<Color> colors;
+		void AddVertex(float x, float y, Color color);
 	};
+	static const size_t shape_size = 4;
+	Shape_t shapes[shape_size];
 
 	void Initialize(IDirect3DDevice9* device) override;
 
@@ -60,6 +61,4 @@ private:
 	unsigned int vertices_count;// count of vertices
 	unsigned int vertices_max;	// max number of vertices to draw in one call
 	unsigned int max_shape_verts;// max number of triangles in a single shape
-
-	Shape_t shapes[3];
 };

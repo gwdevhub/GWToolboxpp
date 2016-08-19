@@ -8,80 +8,81 @@
 
 using namespace GWCA;
 
-AgentRenderer::AgentRenderer() :
-	vertices(nullptr) {
+AgentRenderer::AgentRenderer() : vertices(nullptr) {
 
-	shapes[Tear].AddVertex(1.8f, 0, -50);		// A
-	shapes[Tear].AddVertex(0.7f, 0.7f, -50);	// B
-	shapes[Tear].AddVertex(0.0f, 0.0f, 50);		// O
-	shapes[Tear].AddVertex(0.7f, 0.7f, -50);	// B
-	shapes[Tear].AddVertex(0.0f, 1.0f, -50);	// C
-	shapes[Tear].AddVertex(0.0f, 0.0f, 50);		// O
-	shapes[Tear].AddVertex(0.0f, 1.0f, -50);	// C
-	shapes[Tear].AddVertex(-0.7f, 0.7f, -50);	// D
-	shapes[Tear].AddVertex(0.0f, 0.0f, 50);		// O
-	shapes[Tear].AddVertex(-0.7f, 0.7f, -50);	// D
-	shapes[Tear].AddVertex(-1.0f, 0.0f, -50);	// E
-	shapes[Tear].AddVertex(0.0f, 0.0f, 50);		// O
-	shapes[Tear].AddVertex(-1.0f, 0.0f, -50);	// E
-	shapes[Tear].AddVertex(-0.7f, -0.7f, -50);	// F
-	shapes[Tear].AddVertex(0.0f, 0.0f, 50);		// O
-	shapes[Tear].AddVertex(-0.7f, -0.7f, -50);	// F
-	shapes[Tear].AddVertex(0.0f, -1.0f, -50);	// G
-	shapes[Tear].AddVertex(0.0f, 0.0f, 50);		// O
-	shapes[Tear].AddVertex(0.0f, -1.0f, -50);	// G
-	shapes[Tear].AddVertex(0.7f, -0.7f, -50);	// H
-	shapes[Tear].AddVertex(0.0f, 0.0f, 50);		// O
-	shapes[Tear].AddVertex(0.7f, -0.7f, -50);	// H
-	shapes[Tear].AddVertex(1.8f, 0.0f, -50);	// A
-	shapes[Tear].AddVertex(0.0f, 0.0f, 50);		// O
+	Color dark(0, -50, -50, -50);
+	Color light(0, 50, 50, 50);
 
-	shapes[Circle].AddVertex(1.0f, 0, -50);		// A
-	shapes[Circle].AddVertex(0.7f, 0.7f, -50);	// B
-	shapes[Circle].AddVertex(0.0f, 0.0f, 50);	// O
-	shapes[Circle].AddVertex(0.7f, 0.7f, -50);	// B
-	shapes[Circle].AddVertex(0.0f, 1.0f, -50);	// C
-	shapes[Circle].AddVertex(0.0f, 0.0f, 50);	// O
-	shapes[Circle].AddVertex(0.0f, 1.0f, -50);	// C
-	shapes[Circle].AddVertex(-0.7f, 0.7f, -50);	// D
-	shapes[Circle].AddVertex(0.0f, 0.0f, 50);	// O
-	shapes[Circle].AddVertex(-0.7f, 0.7f, -50);	// D
-	shapes[Circle].AddVertex(-1.0f, 0.0f, -50);	// E
-	shapes[Circle].AddVertex(0.0f, 0.0f, 50);	// O
-	shapes[Circle].AddVertex(-1.0f, 0.0f, -50);	// E
-	shapes[Circle].AddVertex(-0.7f, -0.7f, -50);// F
-	shapes[Circle].AddVertex(0.0f, 0.0f, 50);	// O
-	shapes[Circle].AddVertex(-0.7f, -0.7f, -50);// F
-	shapes[Circle].AddVertex(0.0f, -1.0f, -50);	// G
-	shapes[Circle].AddVertex(0.0f, 0.0f, 50);	// O
-	shapes[Circle].AddVertex(0.0f, -1.0f, -50);	// G
-	shapes[Circle].AddVertex(0.7f, -0.7f, -50);	// H
-	shapes[Circle].AddVertex(0.0f, 0.0f, 50);	// O
-	shapes[Circle].AddVertex(0.7f, -0.7f, -50);	// H
-	shapes[Circle].AddVertex(1.0f, 0.0f, -50);	// A
-	shapes[Circle].AddVertex(0.0f, 0.0f, 50);	// O
+	shapes[Tear].AddVertex(1.8f, 0, dark);		// A
+	shapes[Tear].AddVertex(0.7f, 0.7f, dark);	// B
+	shapes[Tear].AddVertex(0.0f, 0.0f, light);		// O
+	shapes[Tear].AddVertex(0.7f, 0.7f, dark);	// B
+	shapes[Tear].AddVertex(0.0f, 1.0f, dark);	// C
+	shapes[Tear].AddVertex(0.0f, 0.0f, light);		// O
+	shapes[Tear].AddVertex(0.0f, 1.0f, dark);	// C
+	shapes[Tear].AddVertex(-0.7f, 0.7f, dark);	// D
+	shapes[Tear].AddVertex(0.0f, 0.0f, light);		// O
+	shapes[Tear].AddVertex(-0.7f, 0.7f, dark);	// D
+	shapes[Tear].AddVertex(-1.0f, 0.0f, dark);	// E
+	shapes[Tear].AddVertex(0.0f, 0.0f, light);		// O
+	shapes[Tear].AddVertex(-1.0f, 0.0f, dark);	// E
+	shapes[Tear].AddVertex(-0.7f, -0.7f, dark);	// F
+	shapes[Tear].AddVertex(0.0f, 0.0f, light);		// O
+	shapes[Tear].AddVertex(-0.7f, -0.7f, dark);	// F
+	shapes[Tear].AddVertex(0.0f, -1.0f, dark);	// G
+	shapes[Tear].AddVertex(0.0f, 0.0f, light);		// O
+	shapes[Tear].AddVertex(0.0f, -1.0f, dark);	// G
+	shapes[Tear].AddVertex(0.7f, -0.7f, dark);	// H
+	shapes[Tear].AddVertex(0.0f, 0.0f, light);		// O
+	shapes[Tear].AddVertex(0.7f, -0.7f, dark);	// H
+	shapes[Tear].AddVertex(1.8f, 0.0f, dark);	// A
+	shapes[Tear].AddVertex(0.0f, 0.0f, light);		// O
 
-	shapes[Quad].AddVertex(1.0f, -1.0f, -50);
-	shapes[Quad].AddVertex(1.0f, 1.0f, -50);
-	shapes[Quad].AddVertex(0.0f, 0.0f, 50);
-	shapes[Quad].AddVertex(1.0f, 1.0f, -50);
-	shapes[Quad].AddVertex(-1.0f, 1.0f, -50);
-	shapes[Quad].AddVertex(0.0f, 0.0f, 50);
-	shapes[Quad].AddVertex(-1.0f, 1.0f, -50);
-	shapes[Quad].AddVertex(-1.0f, -1.0f, -50);
-	shapes[Quad].AddVertex(0.0f, 0.0f, 50);
-	shapes[Quad].AddVertex(-1.0f, -1.0f, -50);
-	shapes[Quad].AddVertex(1.0f, -1.0f, -50);
-	shapes[Quad].AddVertex(0.0f, 0.0f, 50);
+	int num_triangles = 8;
+	float PI = static_cast<float>(M_PI);
+	for (int i = 0; i < num_triangles; ++i) {
+		float angle1 = 2 * (i + 0) * PI / num_triangles;
+		float angle2 = 2 * (i + 1) * PI / num_triangles;
+		shapes[Circle].AddVertex(std::cos(angle1), std::sin(angle1), dark);
+		shapes[Circle].AddVertex(std::cos(angle2), std::sin(angle2), dark);
+		shapes[Circle].AddVertex(0.0f, 0.0f, light);
+	}
 
-	max_shape_verts = shapes[Tear].vertices.size();
+	num_triangles = 32;
+	for (int i = 0; i < num_triangles; ++i) {
+		float angle1 = 2 * (i + 0) * PI / num_triangles;
+		float angle2 = 2 * (i + 1) * PI / num_triangles;
+		shapes[BigCircle].AddVertex(std::cos(angle1), std::sin(angle1), Color(50, 0, 0, 0));
+		shapes[BigCircle].AddVertex(std::cos(angle2), std::sin(angle2), Color(50, 0, 0, 0));
+		shapes[BigCircle].AddVertex(0.0f, 0.0f, Color(0, 0, 0, 0));
+	}
+
+	shapes[Quad].AddVertex(1.0f, -1.0f, dark);
+	shapes[Quad].AddVertex(1.0f, 1.0f, dark);
+	shapes[Quad].AddVertex(0.0f, 0.0f, light);
+	shapes[Quad].AddVertex(1.0f, 1.0f, dark);
+	shapes[Quad].AddVertex(-1.0f, 1.0f, dark);
+	shapes[Quad].AddVertex(0.0f, 0.0f, light);
+	shapes[Quad].AddVertex(-1.0f, 1.0f, dark);
+	shapes[Quad].AddVertex(-1.0f, -1.0f, dark);
+	shapes[Quad].AddVertex(0.0f, 0.0f, light);
+	shapes[Quad].AddVertex(-1.0f, -1.0f, dark);
+	shapes[Quad].AddVertex(1.0f, -1.0f, dark);
+	shapes[Quad].AddVertex(0.0f, 0.0f, light);
+
+	max_shape_verts = 0;
+	for (int shape = 0; shape < shape_size; ++shape) {
+		if (max_shape_verts < shapes[shape].vertices.size()) {
+			max_shape_verts = shapes[shape].vertices.size();
+		}
+	}
 }
 
 
 void AgentRenderer::Initialize(IDirect3DDevice9* device) {
 	type_ = D3DPT_TRIANGLELIST;
 
-	vertices_max = 24 * 0x200; // support for up to 512 agents, should be enough
+	vertices_max = max_shape_verts * 0x200; // support for up to 512 agents, should be enough
 
 	vertices = nullptr;
 
@@ -92,11 +93,6 @@ void AgentRenderer::Initialize(IDirect3DDevice9* device) {
 			DXGetErrorString(hr), DXGetErrorDescription(hr));
 	}
 }
-
-//void AgentRenderer::OnReset(IDirect3DDevice9* device) {
-//	//buffer_->Release();
-//	//Initialize(device);
-//}
 
 void AgentRenderer::Render(IDirect3DDevice9* device) {
 	if (!initialized_) {
@@ -116,14 +112,27 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 	GW::NPCArray npcs = GWCA::Agents().GetNPCArray();
 	if (!npcs.valid()) return;
 
-	// all agents
+	// non-player agents
 	for (size_t i = 0; i < agents.size(); ++i) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
+		if (agent->PlayerNumber <= 12) continue;
 		if (agent->GetIsLivingType() && agent->IsNPC()
 			&& (npcs[agent->PlayerNumber].npcflags & 0x10000) > 0) {
 			continue;
 		}
+		if (agent->Id == GWCA::Agents().GetTargetId()) continue; // will draw target at the end
+
+		Enqueue(agent);
+
+		if (vertices_count >= vertices_max - 16 * max_shape_verts) break;
+	}
+	// players
+	for (size_t i = 0; i < agents.size(); ++i) {
+		GW::Agent* agent = agents[i];
+		if (agent == nullptr) continue;
+		if (agent->PlayerNumber > 12) continue;
+
 		if (agent->Id == GWCA::Agents().GetPlayerId()) continue; // will draw player at the end
 		if (agent->Id == GWCA::Agents().GetTargetId()) continue; // will draw target at the end
 
@@ -131,6 +140,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 
 		if (vertices_count >= vertices_max - 4 * max_shape_verts) break;
 	}
+
 
 	GW::Agent* target = GWCA::Agents().GetTarget();
 	if (target) Enqueue(target);
@@ -142,7 +152,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 
 	if (vertices_count != 0) {
 		device->SetStreamSource(0, buffer_, 0, sizeof(D3DVertex));
-		device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, vertices_count / 3);
+		device->DrawPrimitive(type_, 0, vertices_count / 3);
 		vertices_count = 0;
 	}
 }
@@ -154,6 +164,12 @@ void AgentRenderer::Enqueue(GW::Agent* agent) {
 
 	if (GWCA::Agents().GetTargetId() == agent->Id) {
 		Enqueue(shape, agent, size + 50.0f, Color(255, 255, 0));
+	}
+	if (shape == BigCircle) {
+		if (!agent->GetIsDead()) {
+			Enqueue(BigCircle, agent, (float)GwConstants::Range::Spirit, Color(0, 0, 255, 0));
+		}
+		shape = Circle;
 	}
 	Enqueue(shape, agent, size, color);
 }
@@ -242,6 +258,10 @@ AgentRenderer::Shape_e AgentRenderer::GetShape(GW::Agent* agent) const {
 	auto npcs = GWCA::Agents().GetNPCArray();
 	if (!npcs.valid()) return Tear;
 
+	if (agent->PlayerNumber == 2872) { // EoE
+		return BigCircle;
+	}
+
 	GW::NPC& npc = npcs[agent->PlayerNumber];
 	switch (npc.modelfileid) {
 	case 0x22A34: // nature rituals
@@ -271,7 +291,7 @@ void AgentRenderer::Enqueue(Shape_e shape, GW::Agent* agent, float size, Color c
 	vertices_count += shapes[shape].vertices.size();
 }
 
-void AgentRenderer::Shape_t::AddVertex(float x, float y, int color) {
+void AgentRenderer::Shape_t::AddVertex(float x, float y, Color color) {
 	vertices.push_back(Vector2f(x, y));
 	colors.push_back(color);
 }

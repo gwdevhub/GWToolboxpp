@@ -306,10 +306,6 @@ void GWToolbox::CreateGui(IDirect3DDevice9* pDevice) {
 		tb.party_damage_ = new PartyDamage();
 		LOG("Creating Minimap\n");
 		tb.minimap_ = new Minimap();
-		tb.minimap_->Scale(0.0002f);
-		tb.minimap_->Translate(0, -3000.0f);
-		//tb.minimap_->SetLocation(0, 50);
-		//tb.minimap_->SetSize(600, 600);
 		LOG("Applying settings\n");
 		tb.main_window().settings_panel().ApplySettings();
 		LOG("Enabling app\n");

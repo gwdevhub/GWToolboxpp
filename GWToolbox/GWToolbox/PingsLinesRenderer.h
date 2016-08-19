@@ -1,11 +1,12 @@
 #pragma once
 
 #include <deque>
+#include <map>
 
 #include "VBuffer.h"
 #include "Timer.h"
 
-class PingsLinesRenderer {
+class PingsLinesRenderer : public VBuffer {
 	struct CtoS_P37 {
 		const DWORD header = 0x25;
 		DWORD session_id = 0;
@@ -15,6 +16,18 @@ class PingsLinesRenderer {
 			short y;
 		} points[8];
 		DWORD unk[8];
+	};
+	struct DrawingLine {
+		DrawingLine() : start(TBTimer::init()) {}
+		clock_t start;
+		short x1, y1;
+		short x2, y2;
+	};
+	struct PlayerDrawing {
+		PlayerDrawing() : player(0), session(0) {}
+		DWORD player;
+		DWORD session;
+		std::deque<DrawingLine> lines;
 	};
 	struct Ping {
 		Ping() : start(TBTimer::init()) {}
@@ -46,8 +59,9 @@ class PingsLinesRenderer {
 public:
 	PingsLinesRenderer();
 
-	void Render(IDirect3DDevice9* device);
-	inline void Invalidate() { 
+	void Render(IDirect3DDevice9* device) override;
+
+	inline void Invalidate() {
 		ping_circle.Invalidate();
 		for (Ping* p : pings) delete p;
 		pings.clear();
@@ -55,8 +69,20 @@ public:
 
 	void CreatePing(float x, float y);
 
+	void SetVisible(bool v) { visible_ = v; }
+
 private:
+	void Initialize(IDirect3DDevice9* device) override;
+
 	PingCircle ping_circle;
 	std::deque<Ping*> pings;
+
+	std::map<DWORD, PlayerDrawing> drawings;
+
+	bool visible_;
+
+	D3DVertex* vertices;		// vertices array
+	unsigned int vertices_count;// count of vertices
+	unsigned int vertices_max;	// max number of vertices to draw in one call
 };
 

@@ -51,7 +51,7 @@ public:
 
 class FreezeWidgets : public BoolSetting {
 public:
-	FreezeWidgets(OSHGui::Control* parent) : BoolSetting(parent, false, L"freeze_widgets") {
+	FreezeWidgets(OSHGui::Control* parent) : BoolSetting(parent, true, L"freeze_widgets") {
 		Initialize(L"Freeze info widget positions"); }
 
 	void ApplySetting(bool value) override {

@@ -8,7 +8,13 @@ void init(HMODULE hModule){
 			MessageBoxA(0,"Please restart guild wars and try again.", "GWToolbox++ - Clientside Error Detected", 0);
 			FreeLibraryAndExitThread(hModule, EXIT_SUCCESS);
 		}
+
 		Logger::Init();
+		LOG("Waiting for logged character\n");
+		while (*(void**)0xA2B294 == nullptr) {
+			Sleep(100);
+		}
+		
 		LOG("Creating toolbox thread\n");
 		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)GWToolbox::SafeThreadEntry, hModule, 0, 0);
 	} __except ( EXCEPT_EXPRESSION_ENTRY ) {

@@ -20,16 +20,28 @@ public:
 	void Render(IDirect3DDevice9* device) override;
 
 	void SetFreeze(bool b) { freeze_ = b; }
-	void SetVisible(bool v) { visible_ = v; }
+	void SetVisible(bool v) { 
+		visible_ = v;
+		pingslines_renderer.SetVisible(v);
+	}
 
 	bool OnMouseDown(MSG msg);
+	bool OnMouseDblClick(MSG msg);
 	bool OnMouseUp(MSG msg);
 	bool OnMouseMove(MSG msg);
 	bool OnMouseWheel(MSG msg);
 
 private:
+	inline bool IsInside(int x, int y) const {
+		return (x >= GetX() && x < GetX() + GetWidth()
+			&& y >= GetY() && y < GetY() + GetHeight());
+	}
+
+	void SafeSelectTarget(int ui_x, int ui_y);
+	void SelectTarget(int ui_x, int ui_y);
+
 	bool freeze_;
-	bool dragging_;
+	bool mousedown_;
 	bool visible_;
 
 	int drag_start_x_;

@@ -121,7 +121,6 @@ void ChatCommands::MainRoutine() {
 		if (skillbar.IsValid()) {
 			GWCA::GW::SkillbarSkill skill = skillbar.Skills[skill_to_use - 1]; // -1 to switch range [1,8] -> [0,7]
 			if (skill.GetRecharge() == 0) {
-				printf("using skill \n");
 				manager.UseSkill(skill_to_use - 1, GWCA::Agents().GetTargetId());
 
 				GWCA::GW::Skill skilldata = manager.GetSkillConstantData(skill.SkillId);
