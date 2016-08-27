@@ -40,10 +40,14 @@
     <ApplicationIcon>Resources\gwtoolbox.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup />
+  <PropertyGroup>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
   <ItemGroup>
     <None Include="App.config" />
     <EmbeddedResource Include="Resources\DefaultSettings.ini" />
     <EmbeddedResource Include="Resources\Friz_Quadrata_Regular.ttf" />
+    <None Include="app.manifest" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CharSelector.cs">
