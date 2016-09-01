@@ -3,10 +3,11 @@
 #include <iostream>
 #include <sstream>
 
-#include <GWCA\ItemMgr.h>
-#include <GWCA\EffectMgr.h>
-#include <GWCA\PlayerMgr.h>
-#include <GWCA\SkillbarMgr.h>
+#include <GWCA\GWCA.h>
+#include <GWCA\Managers\ItemMgr.h>
+#include <GWCA\Managers\EffectMgr.h>
+#include <GWCA\Managers\PlayerMgr.h>
+#include <GWCA\Managers\SkillbarMgr.h>
 
 #include "logger.h"
 #include "ChatLogger.h"
@@ -32,7 +33,7 @@ TBHotkey::TBHotkey(OSHGui::Control* parent, Key key, Key modifier, bool active, 
 	checkbox->SetLocation(PointI(HOTKEY_X, HOTKEY_Y + 5));
 	checkbox->GetCheckedChangedEvent() += CheckedChangedEventHandler([this, checkbox, ini_section](Control*) {
 		this->set_active(checkbox->GetChecked());
-		GWToolbox::instance().config().IniWriteBool(ini_section.c_str(), TBHotkey::IniKeyActive(), checkbox->GetChecked());
+		Config::IniWriteBool(ini_section.c_str(), TBHotkey::IniKeyActive(), checkbox->GetChecked());
 	});
 	AddControl(checkbox);
 
@@ -57,9 +58,9 @@ TBHotkey::TBHotkey(OSHGui::Control* parent, Key key, Key modifier, bool active, 
 		Key modifier = hotkey_button->GetHotkeyModifier();
 		this->set_key(key);
 		this->set_modifier(modifier);
-		GWToolbox::instance().config().IniWriteLong(ini_section.c_str(),
+		Config::IniWriteLong(ini_section.c_str(),
 			this->IniKeyHotkey(), (long)key);
-		GWToolbox::instance().config().IniWriteLong(ini_section.c_str(),
+		Config::IniWriteLong(ini_section.c_str(),
 			this->IniKeyModifier(), (long)modifier);
 	});
 	AddControl(hotkey_button);
@@ -72,6 +73,17 @@ TBHotkey::TBHotkey(OSHGui::Control* parent, Key key, Key modifier, bool active, 
 		this->exec();
 	});
 	AddControl(run_button);
+}
+
+bool TBHotkey::isLoading() const {
+	return GW::Map().GetInstanceType() == GW::Constants::InstanceType::Loading;
+}
+
+bool TBHotkey::isExplorable() const {
+	return GW::Map().GetInstanceType() == GW::Constants::InstanceType::Explorable;
+}
+bool TBHotkey::isOutpost() const {
+	return GW::Map().GetInstanceType() == GW::Constants::InstanceType::Outpost;
 }
 
 void TBHotkey::PopulateGeometry() {
@@ -103,7 +115,7 @@ HotkeySendChat::HotkeySendChat(OSHGui::Control* parent, Key key, Key modifier,
 		[this, combo, ini_section](Control*) {
 		wchar_t channel = this->IndexToChannel(combo->GetSelectedIndex());
 		this->set_channel(channel);
-		GWToolbox::instance().config().IniWrite(ini_section.c_str(), 
+		Config::IniWrite(ini_section.c_str(),
 			this->IniKeyChannel(), wstring(1, channel).c_str());
 		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
@@ -117,7 +129,7 @@ HotkeySendChat::HotkeySendChat(OSHGui::Control* parent, Key key, Key modifier,
 		[this, text_box, ini_section](Control*) {
 		wstring text = text_box->GetText();
 		this->set_msg(text);
-		GWToolbox::instance().config().IniWrite(ini_section.c_str(),
+		Config::IniWrite(ini_section.c_str(),
 			this->IniKeyMsg(), text.c_str());
 		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
@@ -184,7 +196,7 @@ HotkeyUseItem::HotkeyUseItem(OSHGui::Control* parent, Key key, Key modifier,
 		try {
 			long id = std::stol(id_box->GetText());
 			this->set_item_id((UINT)id);
-			GWToolbox::instance().config().IniWriteLong(ini_section.c_str(),
+			Config::IniWriteLong(ini_section.c_str(),
 				this->IniKeyItemID(), id);
 			GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 		} catch (...) {}
@@ -211,7 +223,7 @@ HotkeyUseItem::HotkeyUseItem(OSHGui::Control* parent, Key key, Key modifier,
 		[this, name_box, ini_section](Control*) {
 		wstring text = name_box->GetText();
 		this->set_item_name(text);
-		GWToolbox::instance().config().IniWrite(ini_section.c_str(),
+		Config::IniWrite(ini_section.c_str(),
 			this->IniKeyItemName(), text.c_str());
 		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
@@ -225,7 +237,7 @@ HotkeyUseItem::HotkeyUseItem(OSHGui::Control* parent, Key key, Key modifier,
 }
 
 HotkeyDropUseBuff::HotkeyDropUseBuff(OSHGui::Control* parent, Key key, Key modifier, 
-	bool active, wstring ini_section, GwConstants::SkillID id) :
+	bool active, wstring ini_section, GW::Constants::SkillID id) :
 	TBHotkey(parent, key, modifier, active, ini_section), id_(id) {
 
 	Label* label = new Label(this);
@@ -239,10 +251,10 @@ HotkeyDropUseBuff::HotkeyDropUseBuff(OSHGui::Control* parent, Key key, Key modif
 	combo->SetSize(SizeI(WIDTH - label->GetRight() - HSPACE, LINE_HEIGHT));
 	combo->SetLocation(PointI(label->GetRight() + HSPACE, ITEM_Y));
 	switch (id) {
-	case GwConstants::SkillID::Recall:
+	case GW::Constants::SkillID::Recall:
 		combo->SetSelectedIndex(0);
 		break;
-	case GwConstants::SkillID::Unyielding_Aura:
+	case GW::Constants::SkillID::Unyielding_Aura:
 		combo->SetSelectedIndex(1);
 		break;
 	default:
@@ -252,9 +264,9 @@ HotkeyDropUseBuff::HotkeyDropUseBuff(OSHGui::Control* parent, Key key, Key modif
 	}
 	combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
 		[this, combo, ini_section](Control*) {
-		GwConstants::SkillID skillID = this->IndexToSkillID(combo->GetSelectedIndex());
+		GW::Constants::SkillID skillID = this->IndexToSkillID(combo->GetSelectedIndex());
 		this->set_id(skillID);
-		GWToolbox::instance().config().IniWriteLong(ini_section.c_str(),
+		Config::IniWriteLong(ini_section.c_str(),
 			this->IniKeySkillID(), (long)skillID);
 		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
@@ -262,23 +274,23 @@ HotkeyDropUseBuff::HotkeyDropUseBuff(OSHGui::Control* parent, Key key, Key modif
 	controls_.push_front(combo);
 }
 
-GwConstants::SkillID HotkeyDropUseBuff::IndexToSkillID(int index) {
+GW::Constants::SkillID HotkeyDropUseBuff::IndexToSkillID(int index) {
 	switch (index) {
-	case 0: return GwConstants::SkillID::Recall;
-	case 1: return GwConstants::SkillID::Unyielding_Aura;
+	case 0: return GW::Constants::SkillID::Recall;
+	case 1: return GW::Constants::SkillID::Unyielding_Aura;
 	case 2: 
 		if (combo_->GetItemsCount() == 3) {
 			wstring s = combo_->GetItem(2);
 			try {
 				int i = std::stoi(s);
-				return static_cast<GwConstants::SkillID>(i);
+				return static_cast<GW::Constants::SkillID>(i);
 			} catch (...) {
-				return GwConstants::SkillID::No_Skill;
+				return GW::Constants::SkillID::No_Skill;
 			}
 		}
 	default:
 		LOG("Warning. bad skill id %d\n", index);
-		return GwConstants::SkillID::Recall;
+		return GW::Constants::SkillID::Recall;
 	}
 }
 
@@ -305,7 +317,7 @@ HotkeyToggle::HotkeyToggle(OSHGui::Control* parent, Key key, Key modifier,
 		int index = combo->GetSelectedIndex();
 		Toggle target = static_cast<HotkeyToggle::Toggle>(index);
 		this->set_target(target);
-		GWToolbox::instance().config().IniWriteLong(ini_section.c_str(), 
+		Config::IniWriteLong(ini_section.c_str(),
 			this->IniKeyToggleID(), index);
 		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
@@ -336,7 +348,7 @@ HotkeyAction::HotkeyAction(OSHGui::Control* parent, Key key, Key modifier,
 		int index = combo->GetSelectedIndex();
 		Action action = static_cast<HotkeyAction::Action>(index);
 		this->set_action(action);
-		GWToolbox::instance().config().IniWriteLong(ini_section.c_str(),
+		Config::IniWriteLong(ini_section.c_str(),
 			this->IniKeyActionID(), index);
 		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
@@ -367,7 +379,7 @@ HotkeyTarget::HotkeyTarget(OSHGui::Control* parent, Key key, Key modifier,
 		try {
 			long id = std::stol(id_box->GetText());
 			this->set_id((UINT)id);
-			GWToolbox::instance().config().IniWriteLong(ini_section.c_str(),
+			Config::IniWriteLong(ini_section.c_str(),
 				this->IniKeyTargetID(), id);
 			GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 		} catch (...) {}
@@ -394,7 +406,7 @@ HotkeyTarget::HotkeyTarget(OSHGui::Control* parent, Key key, Key modifier,
 		[this, name_box, ini_section](Control*) {
 		wstring text = name_box->GetText();
 		this->set_name(text);
-		GWToolbox::instance().config().IniWrite(ini_section.c_str(),
+		Config::IniWrite(ini_section.c_str(),
 			this->IniKeyTargetName(), text.c_str());
 		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
@@ -433,7 +445,7 @@ HotkeyMove::HotkeyMove(OSHGui::Control* parent, Key key, Key modifier,
 		try {
 			float x = std::stof(box_x->GetText());
 			this->set_x(x);
-			GWToolbox::instance().config().IniWriteDouble(ini_section.c_str(), 
+			Config::IniWriteDouble(ini_section.c_str(),
 				this->IniKeyX(), x);
 			GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 		} catch (...) {}
@@ -468,7 +480,7 @@ HotkeyMove::HotkeyMove(OSHGui::Control* parent, Key key, Key modifier,
 		try {
 			float y = std::stof(box_y->GetText());
 			this->set_y(y);
-			GWToolbox::instance().config().IniWriteDouble(ini_section.c_str(), 
+			Config::IniWriteDouble(ini_section.c_str(),
 				this->IniKeyY(), y);
 			GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 		} catch (...) {}
@@ -495,7 +507,7 @@ HotkeyMove::HotkeyMove(OSHGui::Control* parent, Key key, Key modifier,
 		[this, name_box, ini_section](Control*) {
 		wstring text = name_box->GetText();
 		this->set_name(text);
-		GWToolbox::instance().config().IniWrite(ini_section.c_str(),
+		Config::IniWrite(ini_section.c_str(),
 			this->IniKeyName(), text.c_str());
 		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
@@ -532,7 +544,7 @@ HotkeyDialog::HotkeyDialog(OSHGui::Control* parent, Key key, Key modifier,
 		try {
 			long id = std::stol(id_box->GetText(), 0, 0);
 			this->set_id((UINT)id);
-			GWToolbox::instance().config().IniWriteLong(ini_section.c_str(),
+			Config::IniWriteLong(ini_section.c_str(),
 				this->IniKeyDialogID(), id);
 			GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 		} catch (...) {}
@@ -559,7 +571,7 @@ HotkeyDialog::HotkeyDialog(OSHGui::Control* parent, Key key, Key modifier,
 		[this, name_box, ini_section](Control*) {
 		wstring text = name_box->GetText();
 		this->set_name(text);
-		GWToolbox::instance().config().IniWrite(ini_section.c_str(),
+		Config::IniWrite(ini_section.c_str(),
 			this->IniKeyDialogName(), text.c_str());
 		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
@@ -587,7 +599,7 @@ HotkeyPingBuild::HotkeyPingBuild(OSHGui::Control* parent, Key key, Key modifier,
 	for (int i = 0; i < BuildPanel::N_BUILDS; ++i) {
 		int index = i + 1;
 		wstring section = wstring(L"builds") + to_wstring(index);
-		wstring name = GWToolbox::instance().config().IniRead(section.c_str(), L"buildname", L"");
+		wstring name = Config::IniRead(section.c_str(), L"buildname", L"");
 		if (name.empty()) name = wstring(L"<Build ") + to_wstring(index);
 		combo->AddItem(name);
 	}
@@ -596,7 +608,7 @@ HotkeyPingBuild::HotkeyPingBuild(OSHGui::Control* parent, Key key, Key modifier,
 		[this, combo, ini_section](Control*) {
 		long index = combo->GetSelectedIndex();
 		this->set_index(index);
-		GWToolbox::instance().config().IniWriteLong(ini_section.c_str(),
+		Config::IniWriteLong(ini_section.c_str(),
 			this->IniKeyBuildIndex(), index);
 		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
@@ -606,7 +618,7 @@ HotkeyPingBuild::HotkeyPingBuild(OSHGui::Control* parent, Key key, Key modifier,
 void HotkeyUseItem::exec() {
 	if (!isExplorable()) return;
 	if (item_id_ <= 0) return;
-	if (!GWCA::Items().UseItemByModelId(item_id_)) {
+	if (!GW::Items().UseItemByModelId(item_id_)) {
 		wstring name = item_name_.empty() ? to_wstring(item_id_) : item_name_;
 		ChatLogger::LogF(L"[Warning] %ls not found!", name.c_str());
 	}
@@ -618,19 +630,19 @@ void HotkeySendChat::exec() {
 	if (channel_ == L'/') {
 		ChatLogger::LogF(L"/%ls", msg_.c_str());
 	}
-	GWCA::Chat().SendChatCmd(msg_.c_str(), channel_);
+	GW::Chat().SendChatCmd(msg_.c_str(), channel_);
 }
 
 void HotkeyDropUseBuff::exec() {
 	if (!isExplorable()) return;
 
-	GW::Buff buff = Effects().GetPlayerBuffBySkillId(id_);
+	GW::Buff buff = GW::Effects().GetPlayerBuffBySkillId(id_);
 	if (buff.SkillId) {
-		Effects().DropBuff(buff.BuffId);
+		GW::Effects().DropBuff(buff.BuffId);
 	} else {
-		int slot = GWCA::Skillbar().GetSkillSlot(id_);
-		if (slot > 0 && GWCA::Skillbar().GetPlayerSkillbar().Skills[slot].Recharge == 0) {
-			GWCA::Skillbar().UseSkill(slot, Agents().GetTargetId());
+		int slot = GW::Skillbarmgr().GetSkillSlot(id_);
+		if (slot >= 0 && GW::Skillbar::GetPlayerSkillbar().Skills[slot].Recharge == 0) {
+			GW::Skillbarmgr().UseSkill(slot, GW::Agents().GetTargetId());
 		}
 	}
 }
@@ -659,27 +671,27 @@ void HotkeyAction::exec() {
 	switch (action_) {
 	case HotkeyAction::OpenXunlaiChest:
 		if (isOutpost()) {
-			Items().OpenXunlaiWindow();
+			GW::Items().OpenXunlaiWindow();
 		}
 		break;
 	case HotkeyAction::OpenLockedChest: {
 		if (isExplorable()) {
-			GW::Agent* target = Agents().GetTarget();
+			GW::Agent* target = GW::Agents().GetTarget();
 			if (target && target->Type == 0x200) {
-				Agents().GoSignpost(target);
-				Items().OpenLockedChest();
+				GW::Agents().GoSignpost(target);
+				GW::Items().OpenLockedChest();
 			}
 		}
 		break;
 	}
 	case HotkeyAction::DropGoldCoin:
 		if (isExplorable()) {
-			Items().DropGold(1);
+			GW::Items().DropGold(1);
 		}
 		break;
 	case HotkeyAction::ReapplyLBTitle:
-		Players().RemoveActiveTitle();
-		Players().SetActiveTitle(GwConstants::TitleID::Lightbringer);
+		GW::Playermgr().RemoveActiveTitle();
+		GW::Playermgr().SetActiveTitle(GW::Constants::TitleID::Lightbringer);
 		break;
 	}
 }
@@ -688,22 +700,22 @@ void HotkeyTarget::exec() {
 	if (isLoading()) return;
 	if (id_ <= 0) return;
 
-	GW::AgentArray agents = Agents().GetAgentArray();
+	GW::AgentArray agents = GW::Agents().GetAgentArray();
 	if (!agents.valid()) {
 		return;
 	}
 
-	GW::Agent* me = agents[Agents().GetPlayerId()];
+	GW::Agent* me = agents[GW::Agents().GetPlayerId()];
 	if (me == nullptr) return;
 
-	float distance = (float)GwConstants::SqrRange::Compass;
+	float distance = GW::Constants::SqrRange::Compass;
 	int closest = -1;
 
 	for (size_t i = 0; i < agents.size(); ++i) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
 		if (agent->PlayerNumber == id_ && agent->HP > 0) {
-			float newDistance = Agents().GetSqrDistance(me->pos, agents[i]->pos);
+			float newDistance = GW::Agents().GetSqrDistance(me->pos, agents[i]->pos);
 			if (newDistance < distance) {
 				closest = i;
 				distance = newDistance;
@@ -711,17 +723,17 @@ void HotkeyTarget::exec() {
 		}
 	}
 	if (closest > 0) {
-		Agents().ChangeTarget(agents[closest]);
+		GW::Agents().ChangeTarget(agents[closest]);
 	}
 }
 
 void HotkeyMove::exec() {
 	if (!isExplorable()) return;
 
-	GW::Agent* me = Agents().GetPlayer();
+	GW::Agent* me = GW::Agents().GetPlayer();
 	double sqrDist = (me->X - x_) * (me->X - x_) + (me->Y - y_) * (me->Y - y_);
-	if (sqrDist < GwConstants::SqrRange::Compass) {
-		Agents().Move(x_, y_);
+	if (sqrDist < GW::Constants::SqrRange::Compass) {
+		GW::Agents().Move(x_, y_);
 	}
 	ChatLogger::LogF(L"Movement macro activated");
 }
@@ -730,7 +742,7 @@ void HotkeyDialog::exec() {
 	if (isLoading()) return;
 	if (id_ <= 0) return;
 
-	Agents().Dialog(id_);
+	GW::Agents().Dialog(id_);
 }
 
 void HotkeyPingBuild::exec() {
@@ -755,9 +767,9 @@ wstring HotkeyUseItem::GetDescription() {
 
 wstring HotkeyDropUseBuff::GetDescription() {
 	switch (id_) {
-	case GwConstants::SkillID::Recall:
+	case GW::Constants::SkillID::Recall:
 		return wstring(L"Drop/Use Recall");
-	case GwConstants::SkillID::Unyielding_Aura:
+	case GW::Constants::SkillID::Unyielding_Aura:
 		return wstring(L"Drop/Use UA");
 	default:
 		return wstring(L"Drop/Use Skill #") + to_wstring(static_cast<long>(id_));

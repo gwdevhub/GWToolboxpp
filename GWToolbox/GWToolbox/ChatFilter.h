@@ -1,6 +1,6 @@
 #pragma once
 
-#include <GWCA\StoCPackets.h>
+#include <GWCA\Packets\StoC.h>
 
 class ChatFilter {
 public:
@@ -9,14 +9,14 @@ public:
 	void SetSuppressMessages(bool active) { suppress_messages_active = active; }
 
 private:
-	const wchar_t* Get1stSegment(GWCA::StoC_Pak::P081* pak) const;
-	const wchar_t* Get2ndSegment(GWCA::StoC_Pak::P081* pak) const;
+	const wchar_t* Get1stSegment(GW::Packet::StoC::P081* pak) const;
+	const wchar_t* Get2ndSegment(GW::Packet::StoC::P081* pak) const;
 	
 
-	DWORD GetNumericSegment(GWCA::StoC_Pak::P081* pak) const;
+	DWORD GetNumericSegment(GW::Packet::StoC::P081* pak) const;
 	bool ShouldIgnoreByAgentThatDropped(const wchar_t* agent_segment) const;
 	bool ShouldIgnoreItem(const wchar_t* item_segment) const;
-	bool ShouldIgnore(GWCA::StoC_Pak::P081* pak) const;
+	bool ShouldIgnore(GW::Packet::StoC::P081* pak) const;
 
 	bool suppress_messages_active;
 	bool suppress_next_message;

@@ -2,11 +2,13 @@
 
 #include <OSHGui\OSHGui.hpp>
 #include <OSHGui\Misc\Intersection.hpp>
+
 #include <GWCA\GWCA.h>
-#include <GWCA\PartyMgr.h>
+#include <GWCA\Managers\PartyMgr.h>
 
 #include "logger.h"
 #include "GuiUtils.h"
+#include "Config.h"
 #include "GWToolbox.h"
 
 using namespace OSHGui::Drawing;
@@ -35,9 +37,8 @@ MainWindow::MainWindow() :
 	// some local vars
 	int y = 0;
 
-	Config& config = GWToolbox::instance().config();
-	int xlocation = config.IniReadLong(MainWindow::IniSection(), MainWindow::IniKeyX(), 100);
-	int ylocation = config.IniReadLong(MainWindow::IniSection(), MainWindow::IniKeyY(), 100);
+	int xlocation = Config::IniReadLong(MainWindow::IniSection(), MainWindow::IniKeyX(), 100);
+	int ylocation = Config::IniReadLong(MainWindow::IniSection(), MainWindow::IniKeyY(), 100);
 
 	// build main UI
 	SetLocation(PointI(xlocation, ylocation));
@@ -159,14 +160,13 @@ void MainWindow::SetPanelPositions(bool left) {
 
 void MainWindow::SetMinimized(bool minimized) {
 	minimized_ = minimized;
-	Config& config = GWToolbox::instance().config();
 
 	if (minimized_) {
 		if (current_panel_ >= 0) OpenClosePanel(current_panel_);
 		SetSize(SizeI(WIDTH, TITLE_HEIGHT));
 		if (use_minimized_alt_pos_) {
-			int xlocation = config.IniReadLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltX(), 100);
-			int ylocation = config.IniReadLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltY(), 100);
+			int xlocation = Config::IniReadLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltX(), 100);
+			int ylocation = Config::IniReadLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltY(), 100);
 
 			SetLocation(PointI(xlocation, ylocation));
 		}
@@ -176,8 +176,8 @@ void MainWindow::SetMinimized(bool minimized) {
 		SetSize(SizeI(WIDTH, HEIGHT));
 
 		if (use_minimized_alt_pos_) {
-			int xlocation = config.IniReadLong(MainWindow::IniSection(), MainWindow::IniKeyX(), 100);
-			int ylocation = config.IniReadLong(MainWindow::IniSection(), MainWindow::IniKeyY(), 100);
+			int xlocation = Config::IniReadLong(MainWindow::IniSection(), MainWindow::IniKeyX(), 100);
+			int ylocation = Config::IniReadLong(MainWindow::IniSection(), MainWindow::IniKeyY(), 100);
 
 			SetLocation(PointI(xlocation, ylocation));
 		}
@@ -208,8 +208,8 @@ void MainWindow::UpdatePconToggleButton(bool active) {
 		pcon_toggle_button_->SetForeColor(Color::Red());
 		pcon_toggle_button_->SetText(L"Disabled");
 	}
-	if (tick_with_pcons_ && GWCA::Map().GetInstanceType() == GwConstants::InstanceType::Outpost) {
-		GWCA::Party().Tick(active);
+	if (tick_with_pcons_ && GW::Map().GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+		GW::Partymgr().Tick(active);
 	}
 }
 
@@ -294,18 +294,16 @@ void MainWindow::SaveLocation() {
 	CalculateAbsoluteLocation();
 	int x = absoluteLocation_.X;
 	int y = absoluteLocation_.Y;
-	Config& config = GWToolbox::instance().config();
-	config.IniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyX(), x);
-	config.IniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyY(), y);
+	Config::IniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyX(), x);
+	Config::IniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyY(), y);
 }
 
 void MainWindow::SaveMinimizedLocation() {
 	CalculateAbsoluteLocation();
 	int x = absoluteLocation_.X;
 	int y = absoluteLocation_.Y;
-	Config& config = GWToolbox::instance().config();
-	config.IniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltX(), x);
-	config.IniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltY(), y);
+	Config::IniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltX(), x);
+	Config::IniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltY(), y);
 }
 
 

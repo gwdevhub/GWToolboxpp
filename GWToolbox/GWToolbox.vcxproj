@@ -43,12 +43,12 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <IncludePath>$(SolutionDir)GWCA_DX;$(SolutionDir)GWCA;$(SolutionDir)OSHGui;$(SolutionDir)Dependencies\DirectX\Include\;$(ProjectDir)Dependencies;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)Dependencies\DirectX\Lib\x86\;$(OutDir);$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)Dependencies\DirectX\Lib\x86\;$(OutDir);$(SolutionDir)GWCA\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>$(SolutionDir)GWCA_DX;$(SolutionDir)GWCA;$(SolutionDir)OSHGui;$(SolutionDir)Dependencies\DirectX\Include\;$(ProjectDir)Dependencies;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)Dependencies\DirectX\Lib\x86\;$(OutDir);$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)Dependencies\DirectX\Lib\x86\;$(OutDir);$(SolutionDir)GWCA\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -62,7 +62,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCA_DX.lib;GWCA.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCA_DX.lib;GWCAd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -87,7 +87,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCA_DX.lib;GWCA.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCA_DX.lib;GWCAd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -98,6 +98,7 @@
     <ClInclude Include="GWToolbox\ChatFilter.h" />
     <ClInclude Include="GWToolbox\ChatLogger.h" />
     <ClInclude Include="GWToolbox\Config.h" />
+    <ClInclude Include="GWToolbox\Defines.h" />
     <ClInclude Include="GWToolbox\DialogPanel.h" />
     <ClInclude Include="GWToolbox\DistanceWindow.h" />
     <ClInclude Include="GWToolbox\EditBuild.h" />
@@ -134,6 +135,7 @@
     <ClCompile Include="GWToolbox\BuildPanel.cpp" />
     <ClCompile Include="GWToolbox\ChatCommands.cpp" />
     <ClCompile Include="GWToolbox\ChatFilter.cpp" />
+    <ClCompile Include="GWToolbox\Config.cpp" />
     <ClCompile Include="GWToolbox\DialogPanel.cpp" />
     <ClCompile Include="GWToolbox\DistanceWindow.cpp" />
     <ClCompile Include="GWToolbox\EditBuild.cpp" />

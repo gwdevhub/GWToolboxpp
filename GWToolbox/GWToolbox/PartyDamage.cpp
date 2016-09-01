@@ -3,31 +3,34 @@
 #include <sstream>
 
 #include <GWCA\GWCA.h>
-#include <GWCA\StoCMgr.h>
-#include <GWCA\PartyMgr.h>
+#include <GWCA\Managers\ChatMgr.h>
+#include <GWCA\Managers\StoCMgr.h>
+#include <GWCA\Managers\PartyMgr.h>
+
+#include <OSHGui\OSHGui.hpp>
 
 #include "GuiUtils.h"
 #include "Config.h"
-#include "GWToolbox.h"
+
+using namespace OSHGui;
 
 PartyDamage::PartyDamage() {
 
 	total = 0;
 	send_timer = TBTimer::init();
 
-	GWCA::StoC().AddGameServerEvent<GWCA::StoC_Pak::P151>(
+	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P151>(
 		std::bind(&PartyDamage::DamagePacketCallback, this, std::placeholders::_1));
 
-	GWCA::StoC().AddGameServerEvent<GWCA::StoC_Pak::P230>(
+	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P230>(
 		std::bind(&PartyDamage::MapLoadedCallback, this, std::placeholders::_1));
 
-	Config& config = GWToolbox::instance().config();
-	int x = config.IniReadLong(PartyDamage::IniSection(), PartyDamage::IniKeyX(), 400);
-	int y = config.IniReadLong(PartyDamage::IniSection(), PartyDamage::IniKeyY(), 100);
+	int x = Config::IniReadLong(PartyDamage::IniSection(), PartyDamage::IniKeyX(), 400);
+	int y = Config::IniReadLong(PartyDamage::IniSection(), PartyDamage::IniKeyY(), 100);
 	SetLocation(PointI(x, y));
 
 	line_height_ = GuiUtils::GetPartyHealthbarHeight();
-	SetSize(Drawing::SizeI(ABS_WIDTH + PERC_WIDTH, line_height_ * MAX_PLAYERS));
+	SetSize(OSHGui::Drawing::SizeI(ABS_WIDTH + PERC_WIDTH, line_height_ * MAX_PLAYERS));
 
 	if (!Application::Instance().GetTheme().ContainsColorTheme(PartyDamage::ThemeKey())) {
 		Drawing::Theme::ControlTheme ctheme(default_forecolor, default_backcolor);
@@ -93,7 +96,7 @@ PartyDamage::PartyDamage() {
 	std::shared_ptr<PartyDamage> self = std::shared_ptr<PartyDamage>(this);
 	Form::Show(self);
 
-	bool show = config.IniReadBool(PartyDamage::IniSection(), PartyDamage::InikeyShow(), false);
+	bool show = Config::IniReadBool(PartyDamage::IniSection(), PartyDamage::InikeyShow(), false);
 	SetVisible(show);
 
 	LoadIni();
@@ -104,32 +107,32 @@ PartyDamage::~PartyDamage() {
 	delete inifile_;
 }
 
-bool PartyDamage::MapLoadedCallback(GWCA::StoC_Pak::P230* packet) {
-	switch (GWCA::Map().GetInstanceType()) {
-	case GwConstants::InstanceType::Outpost:
+bool PartyDamage::MapLoadedCallback(GW::Packet::StoC::P230* packet) {
+	switch (GW::Map().GetInstanceType()) {
+	case GW::Constants::InstanceType::Outpost:
 		in_explorable = false;
 		break;
-	case GwConstants::InstanceType::Explorable:
+	case GW::Constants::InstanceType::Explorable:
 		party_index.clear();
 		if (!in_explorable) {
 			in_explorable = true;
 			ResetDamage();
 		}
 		break;
-	case GwConstants::InstanceType::Loading:
+	case GW::Constants::InstanceType::Loading:
 	default:
 		break;
 	}
 	return false;
 }
 
-bool PartyDamage::DamagePacketCallback(GWCA::StoC_Pak::P151* packet) {
+bool PartyDamage::DamagePacketCallback(GW::Packet::StoC::P151* packet) {
 
 	// ignore non-damage packets
 	switch (packet->type) {
-	case GWCA::StoC_Pak::P151_Type::damage:
-	case GWCA::StoC_Pak::P151_Type::critical:
-	case GWCA::StoC_Pak::P151_Type::armorignoring:
+	case GW::Packet::StoC::P151_Type::damage:
+	case GW::Packet::StoC::P151_Type::critical:
+	case GW::Packet::StoC::P151_Type::armorignoring:
 		break;
 	default:
 		return false;
@@ -139,7 +142,7 @@ bool PartyDamage::DamagePacketCallback(GWCA::StoC_Pak::P151* packet) {
 	if (packet->value >= 0) return false;
 
 	// get cause agent
-	GWCA::GW::Agent* cause = GWCA::Agents().GetAgentByID(packet->cause_id);
+	GW::Agent* cause = GW::Agents().GetAgentByID(packet->cause_id);
 	
 	if (cause == nullptr) return false;
 	if (cause->Allegiance != 0x1) return false;
@@ -147,7 +150,7 @@ bool PartyDamage::DamagePacketCallback(GWCA::StoC_Pak::P151* packet) {
 	if (cause_it == party_index.end()) return false;  // ignore damage done by non-party members
 
 	// get target agent
-	GWCA::GW::Agent* target = GWCA::Agents().GetAgentByID(packet->target_id);
+	GW::Agent* target = GW::Agents().GetAgentByID(packet->target_id);
 	if (target == nullptr) return false;
 	if (target->LoginNumber != 0) return false; // ignore player-inflicted damage
 										        // such as Life bond or sacrifice
@@ -176,12 +179,12 @@ bool PartyDamage::DamagePacketCallback(GWCA::StoC_Pak::P151* packet) {
 	if (damage[index].damage == 0) {
 		damage[index].agent_id = packet->cause_id;
 		if (cause->LoginNumber > 0) {
-			damage[index].name = GWCA::Agents().GetPlayerNameByLoginNumber(cause->LoginNumber);
+			damage[index].name = GW::Agents().GetPlayerNameByLoginNumber(cause->LoginNumber);
 		} else {
 			damage[index].name = L"<A Hero>";
 		}
-		damage[index].primary = static_cast<GwConstants::Profession>(cause->Primary);
-		damage[index].secondary = static_cast<GwConstants::Profession>(cause->Secondary);
+		damage[index].primary = static_cast<GW::Constants::Profession>(cause->Primary);
+		damage[index].secondary = static_cast<GW::Constants::Profession>(cause->Secondary);
 	}
 
 	damage[index].damage += dmg;
@@ -197,9 +200,9 @@ bool PartyDamage::DamagePacketCallback(GWCA::StoC_Pak::P151* packet) {
 void PartyDamage::MainRoutine() {
 	if (!send_queue.empty() && TBTimer::diff(send_timer) > 600) {
 		send_timer = TBTimer::init();
-		if (GWCA::Map().GetInstanceType() != GwConstants::InstanceType::Loading
-			&& GWCA::Agents().GetPlayer()) {
-			GWCA::Chat().SendChat(send_queue.front().c_str(), L'#');
+		if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading
+			&& GW::Agents().GetPlayer()) {
+			GW::Chat().SendChat(send_queue.front().c_str(), L'#');
 			send_queue.pop();
 		}
 	}
@@ -210,22 +213,22 @@ void PartyDamage::MainRoutine() {
 }
 
 void PartyDamage::CreatePartyIndexMap() {
-	if (!GWCA::Party().GetIsPartyLoaded()) return;
+	if (!GW::Partymgr().GetIsPartyLoaded()) return;
 	
-	GWCA::GW::PartyInfo* info = GWCA::Party().GetPartyInfo();
+	GW::PartyInfo* info = GW::Partymgr().GetPartyInfo();
 	if (info == nullptr) return;
 
-	GWCA::GW::PlayerArray players = GWCA::Agents().GetPlayerArray();
+	GW::PlayerArray players = GW::Agents().GetPlayerArray();
 	if (!players.valid()) return;
 
 	int index = 0;
-	for (GWCA::GW::PlayerPartyMember player : info->players) {
+	for (GW::PlayerPartyMember player : info->players) {
 		long id = players[player.loginnumber].AgentID;
 		party_index[id] = index++;
 
-		for (GWCA::GW::HeroPartyMember hero : info->heroes) {
+		for (GW::HeroPartyMember hero : info->heroes) {
 			if (hero.ownerplayerid == player.loginnumber) {
-				party_index[hero.id] = index++;
+				party_index[hero.agentid] = index++;
 			}
 		}
 	}
@@ -234,7 +237,7 @@ void PartyDamage::CreatePartyIndexMap() {
 void PartyDamage::UpdateUI() {
 	if (!isVisible_) return;
 
-	int size = GWCA::Party().GetPartySize();
+	int size = GW::Partymgr().GetPartySize();
 	if (size > MAX_PLAYERS) size = MAX_PLAYERS;
 	if (party_size_ != size) {
 		party_size_ = size;
@@ -304,8 +307,8 @@ void PartyDamage::UpdateUI() {
 
 		Drawing::Color inactive = labelcolor - Drawing::Color(0.0f, 0.3f, 0.3f, 0.3f);
 		if (damage[i].damage == 0 
-			|| GWCA::Map().GetInstanceType() == GwConstants::InstanceType::Outpost
-			|| GWCA::Agents().GetAgentByID(damage[i].agent_id) == nullptr) {
+			|| GW::Map().GetInstanceType() == GW::Constants::InstanceType::Outpost
+			|| GW::Agents().GetAgentByID(damage[i].agent_id) == nullptr) {
 
 			absolute[i]->SetForeColor(inactive);
 			percent[i]->SetForeColor(inactive);
@@ -320,9 +323,8 @@ void PartyDamage::SaveLocation() {
 	CalculateAbsoluteLocation();
 	int x = absoluteLocation_.X;
 	int y = absoluteLocation_.Y;
-	Config& config = GWToolbox::instance().config();
-	config.IniWriteLong(PartyDamage::IniSection(), PartyDamage::IniKeyX(), x);
-	config.IniWriteLong(PartyDamage::IniSection(), PartyDamage::IniKeyY(), y);
+	Config::IniWriteLong(PartyDamage::IniSection(), PartyDamage::IniKeyX(), x);
+	Config::IniWriteLong(PartyDamage::IniSection(), PartyDamage::IniKeyY(), y);
 }
 
 float PartyDamage::GetPartOfTotal(long dmg) const {
@@ -376,8 +378,8 @@ void PartyDamage::WriteDamageOf(int index, int rank) {
 	swprintf_s(buff, size, L"#%2d ~ %3.2f %% ~ %ls/%ls %ls ~ %d",
 		rank,
 		GetPercentageOfTotal(damage[index].damage),
-		GwConstants::to_wstring(damage[index].primary).c_str(),
-		GwConstants::to_wstring(damage[index].secondary).c_str(),
+		GW::Constants::GetWProfessionAcronym(damage[index].primary).c_str(),
+		GW::Constants::GetWProfessionAcronym(damage[index].secondary).c_str(),
 		damage[index].name.c_str(),
 		damage[index].damage);
 
@@ -386,7 +388,7 @@ void PartyDamage::WriteDamageOf(int index, int rank) {
 
 
 void PartyDamage::WriteOwnDamage() {
-	GWCA::Agent* me = GWCA::Agents().GetPlayer();
+	GW::Agent* me = GW::Agents().GetPlayer();
 	if (me == nullptr) return;
 
 	auto cause_it = party_index.find(me->Id);
@@ -417,7 +419,7 @@ void PartyDamage::SetTransparentBackColor(bool b) {
 		SetBackColor(Color::Empty());
 	} else {
 		Drawing::Theme::ControlTheme theme = Application::InstancePtr()
-			->GetTheme().GetControlColorTheme(BondsWindow::ThemeKey());
+			->GetTheme().GetControlColorTheme(PartyDamage::ThemeKey());
 		SetBackColor(theme.BackColor);
 	}
 }

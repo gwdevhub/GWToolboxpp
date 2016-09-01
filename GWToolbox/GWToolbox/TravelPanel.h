@@ -3,7 +3,9 @@
 #include <string>
 #include <Windows.h>
 
-#include <GWCA\GwConstants.h>
+#include <GWCA\Constants\Constants.h>
+#include <GWCA\Constants\Maps.h>
+
 #include <OSHGui\OSHGui.hpp>
 
 #include "ToolboxPanel.h"
@@ -27,14 +29,14 @@ private:
 		TravelCombo(OSHGui::Control* parent);
 	};
 
-	GwConstants::District district_;
+	GW::Constants::District district_;
 	int district_number_;
 
 	void AddTravelButton(std::wstring text, int grid_x, int grid_y, 
-		GwConstants::MapID map_id);
+		GW::Constants::MapID map_id);
 	void UpdateDistrict(int gui_index);
 	std::wstring IndexToOutpostName(int index);
-	GwConstants::MapID IndexToOutpostID(int index);
+	GW::Constants::MapID IndexToOutpostID(int index);
 
 	OSHGui::ComboBox* combo_boxes_[3];
 };

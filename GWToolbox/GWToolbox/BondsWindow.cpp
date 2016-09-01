@@ -6,12 +6,11 @@
 #include <OSHGui\OSHGui.hpp>
 
 #include <GWCA\GWCA.h>
-#include <GWCA\EffectMgr.h>
-#include <GWCA\SkillbarMgr.h>
+#include <GWCA\Managers\EffectMgr.h>
+#include <GWCA\Managers\SkillbarMgr.h>
+#include <GWCA\Managers\PartyMgr.h>
 #include <GWCA\GWStructures.h>
-#include <GWCA\PartyMgr.h>
 
-#include "GWToolbox.h"
 #include "Config.h"
 #include "GuiUtils.h"
 
@@ -24,9 +23,8 @@ BondsWindow::BondsWindow() {
 	int width = img_size * MAX_BONDS;
 	int height = img_size * MAX_PLAYERS;
 
-	Config& config = GWToolbox::instance().config();
-	int x = config.IniReadLong(BondsWindow::IniSection(), BondsWindow::IniKeyX(), 400);
-	int y = config.IniReadLong(BondsWindow::IniSection(), BondsWindow::IniKeyY(), 100);
+	int x = Config::IniReadLong(BondsWindow::IniSection(), BondsWindow::IniKeyX(), 400);
+	int y = Config::IniReadLong(BondsWindow::IniSection(), BondsWindow::IniKeyY(), 100);
 
 	SetLocation(PointI(x, y));
 	SetSize(Drawing::SizeI(width, height));
@@ -41,7 +39,7 @@ BondsWindow::BondsWindow() {
 	std::shared_ptr<BondsWindow> self = std::shared_ptr<BondsWindow>(this);
 	Form::Show(self);
 
-	bool show = config.IniReadBool(BondsWindow::IniSection(), BondsWindow::IniKeyShow(), false);
+	bool show = Config::IniReadBool(BondsWindow::IniSection(), BondsWindow::IniKeyShow(), false);
 	SetVisible(show);
 }
 
@@ -168,25 +166,25 @@ void BondsWindow::BondsMonitor::OnMouseUp(const OSHGui::MouseMessage &mouse) {
 void BondsWindow::BondsMonitor::DropUseBuff(int bond, int player) {
 	if (pics[player][bond]->GetVisible()) {
 		if (buff_id[player][bond] > 0) {
-			GWCA::Effects().DropBuff(buff_id[player][bond]);
+			GW::Effects().DropBuff(buff_id[player][bond]);
 		}
 	} else {
 		// cast bond on player
-		GwConstants::SkillID buff;
+		GW::Constants::SkillID buff;
 		switch (static_cast<Bond>(bond)) {
-		case Bond::Balth: buff = GwConstants::SkillID::Balthazars_Spirit; break;
-		case Bond::Life: buff = GwConstants::SkillID::Life_Bond; break;
-		case Bond::Prot: buff = GwConstants::SkillID::Protective_Bond; break;
+		case Bond::Balth: buff = GW::Constants::SkillID::Balthazars_Spirit; break;
+		case Bond::Life: buff = GW::Constants::SkillID::Life_Bond; break;
+		case Bond::Prot: buff = GW::Constants::SkillID::Protective_Bond; break;
 		}
 
-		int target = GWCA::Agents().GetAgentIdByLoginNumber(player + 1);
+		int target = GW::Agents().GetAgentIdByLoginNumber(player + 1);
 		if (target <= 0) return;
 
-		int slot = GWCA::Skillbar().GetSkillSlot(buff);
+		int slot = GW::Skillbarmgr().GetSkillSlot(buff);
 		if (slot <= 0) return;
-		if (GWCA::Skillbar().GetPlayerSkillbar().Skills[slot].Recharge != 0) return;
+		if (GW::Skillbar::GetPlayerSkillbar().Skills[slot].Recharge != 0) return;
 
-		GWCA::Skillbar().UseSkill(slot, target);
+		GW::Skillbarmgr().UseSkill(slot, target);
 	}
 }
 
@@ -201,15 +199,14 @@ void BondsWindow::BondsMonitor::SaveLocation() {
 	CalculateAbsoluteLocation();
 	int x = absoluteLocation_.X;
 	int y = absoluteLocation_.Y;
-	Config& config = GWToolbox::instance().config();
-	config.IniWriteLong(BondsWindow::IniSection(), BondsWindow::IniKeyX(), x);
-	config.IniWriteLong(BondsWindow::IniSection(), BondsWindow::IniKeyY(), y);
+	Config::IniWriteLong(BondsWindow::IniSection(), BondsWindow::IniKeyX(), x);
+	Config::IniWriteLong(BondsWindow::IniSection(), BondsWindow::IniKeyY(), y);
 }
 
 void BondsWindow::BondsMonitor::UpdateUI() {
 	if (!isVisible_) return;
 
-	int size = GWCA::Party().GetPartySize();
+	int size = GW::Partymgr().GetPartySize();
 	if (size > MAX_PLAYERS) size = MAX_PLAYERS;
 	if (party_size != size) {
 		party_size = size;
@@ -223,10 +220,10 @@ void BondsWindow::BondsMonitor::UpdateUI() {
 		}
 	}
 
-	GWCA::GW::AgentEffectsArray effects = GWCA::Effects().GetPartyEffectArray();
+	GW::AgentEffectsArray effects = GW::Effects().GetPartyEffectArray();
 	if (effects.valid()) {
-		GWCA::GW::BuffArray buffs = effects[0].Buffs;
-		GWCA::GW::AgentArray agents = GWCA::Agents().GetAgentArray();
+		GW::BuffArray buffs = effects[0].Buffs;
+		GW::AgentArray agents = GW::Agents().GetAgentArray();
 
 		if (buffs.valid() && agents.valid() && effects.valid()) {
 			for (size_t i = 0; i < buffs.size(); ++i) {
@@ -239,10 +236,10 @@ void BondsWindow::BondsMonitor::UpdateUI() {
 				}
 
 				int bond = -1;
-				switch (static_cast<GwConstants::SkillID>(buffs[i].SkillId)) {
-				case GwConstants::SkillID::Balthazars_Spirit: bond = 0; break;
-				case GwConstants::SkillID::Life_Bond: bond = 1; break;
-				case GwConstants::SkillID::Protective_Bond: bond = 2; break;
+				switch (static_cast<GW::Constants::SkillID>(buffs[i].SkillId)) {
+				case GW::Constants::SkillID::Balthazars_Spirit: bond = 0; break;
+				case GW::Constants::SkillID::Life_Bond: bond = 1; break;
+				case GW::Constants::SkillID::Protective_Bond: bond = 2; break;
 				default: break;
 				}
 				if (bond == -1) continue;

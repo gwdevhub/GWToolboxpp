@@ -236,41 +236,33 @@ namespace GWCA
             /// <param name="signature">Group of bytes to match</param>
             /// <param name="offset">Offset from matched sig to pointer.</param>
             /// <returns>Address found if sucessful, IntPtr.Zero if not.</returns>
-            public IntPtr ScanForPtr(byte[] signature, int offset = 0,bool readptr = false)
-            {
+            public IntPtr ScanForPtr(byte[] signature, int offset = 0, bool readptr = false) {
                 bool match;
                 byte first = signature[0];
                 int sig_length = signature.Length;
 
                 // For start to end of scan range...
-                for (int scan = 0; scan <= scan_size; ++scan)
-                {
+                for (int scan = 0; scan < scan_size; ++scan) {
                     // Skip iteration if first byte does not match
-                    if (memory_dump[scan] != first)
-                    {
+                    if (memory_dump[scan] != first) {
                         continue;
                     }
+
                     match = true;
 
                     // For sig size... check for matching signature.
-                    for (int sig = 0; sig < sig_length; ++sig)
-                    {
-                        if (memory_dump[scan + sig] != signature[sig])
-                        {
+                    for (int sig = 0; sig < sig_length; ++sig) {
+                        if (memory_dump[scan + sig] != signature[sig]) {
                             match = false;
                             break;
                         }
                     }
 
                     // Add scanned address to base, plus desired offset, and read the address stored.
-                    if (match)
-					{
-						if(readptr)
-						{
+                    if (match) {
+						if (readptr) {
                             return new IntPtr(BitConverter.ToUInt32(memory_dump, scan + offset));
-						}
-						else
-						{
+						} else {
                             return new IntPtr(scan_start.ToInt32() + scan + offset);
 						}
 					}

@@ -4,8 +4,8 @@
 #include <Shlwapi.h>
 
 #include <OSHGui\OSHGui.hpp>
-#include <GWCA\GwConstants.h>
-#include <GWCA\PatternScanner.h>
+#include <GWCA\Constants\Constants.h>
+#include <GWCA\Utilities\PatternScanner.h>
 
 #include <string>
 #include "logger.h"
@@ -103,25 +103,21 @@ public:
 	static int GetPartyHealthbarHeight() {
 		static DWORD* optionarray = nullptr;
 		if (!optionarray) {
-			GWCA::PatternScanner scan(0x401000, 0x49a000);
+			GW::PatternScanner scan(0x401000, 0x49a000);
 			optionarray = (DWORD*)scan.FindPattern("\x8B\x4D\x08\x85\xC9\x74\x0A", "xxxxxxx", -9);
 			if (optionarray)
 				optionarray = *(DWORD**)optionarray;
 		}
-		GwConstants::InterfaceSize interfacesize =
-			static_cast<GwConstants::InterfaceSize>(optionarray[6]);
+		GW::Constants::InterfaceSize interfacesize =
+			static_cast<GW::Constants::InterfaceSize>(optionarray[6]);
 
 		switch (interfacesize) {
-		case GwConstants::InterfaceSize::SMALL:
-			return GwConstants::HealthbarHeight::Small;
-		case GwConstants::InterfaceSize::NORMAL:
-			return GwConstants::HealthbarHeight::Normal;
-		case GwConstants::InterfaceSize::LARGE:
-			return GwConstants::HealthbarHeight::Large;
-		case GwConstants::InterfaceSize::LARGER:
-			return GwConstants::HealthbarHeight::Larger;
+		case GW::Constants::InterfaceSize::SMALL: return GW::Constants::HealthbarHeight::Small;
+		case GW::Constants::InterfaceSize::NORMAL: return GW::Constants::HealthbarHeight::Normal;
+		case GW::Constants::InterfaceSize::LARGE: return GW::Constants::HealthbarHeight::Large;
+		case GW::Constants::InterfaceSize::LARGER: return GW::Constants::HealthbarHeight::Larger;
 		default:
-			return GwConstants::HealthbarHeight::Normal;
+			return GW::Constants::HealthbarHeight::Normal;
 		}
 	}
 };

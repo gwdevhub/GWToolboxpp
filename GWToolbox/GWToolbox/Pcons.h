@@ -4,7 +4,7 @@
 
 #include "OSHGui\OSHGui.hpp"
 
-#include "GWCA\GwConstants.h"
+#include <GWCA\Constants\Skills.h>
 
 #include "Timer.h"
 
@@ -25,7 +25,7 @@ protected:
 	int quantity;
 	bool enabled;
 	unsigned int itemID;
-	GwConstants::SkillID effectID;
+	GW::Constants::SkillID effectID;
 	int threshold; // quantity at which the number color goes from green to yellow
 	clock_t timer;
 	clock_t update_timer;
@@ -39,9 +39,8 @@ public:
 	void setIcon(const char* icon, int xOff, int yOff, int size);
 	inline void setChatName(const wchar_t* chat) { chatName = chat; }
 	inline void setItemID(unsigned int item) { itemID = item; }
-	inline void setEffectID(GwConstants::SkillID effect) { effectID = effect; }
+	inline void setEffectID(GW::Constants::SkillID effect) { effectID = effect; }
 	inline void setThreshold(int t) { threshold = t; }
-	
 
 	virtual bool checkAndUse();		// checks if need to use pcon, uses if needed. Returns true if was used.
 	void UpdateUI();

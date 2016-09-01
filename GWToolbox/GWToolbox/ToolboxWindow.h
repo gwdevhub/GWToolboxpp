@@ -1,6 +1,6 @@
 #pragma once
 
-#include "OSHGui\OSHGui.hpp"
+#include <OSHGui\OSHGui.hpp>
 
 class ToolboxWindow : public OSHGui::Form {
 public:

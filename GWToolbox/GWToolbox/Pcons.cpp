@@ -1,17 +1,17 @@
 #include "Pcons.h"
 
 #include <GWCA\GWCA.h>
-#include <GWCA\EffectMgr.h>
-#include <GWCA\ItemMgr.h>
-#include <GWCA\PartyMgr.h>
+#include <GWCA\Managers\EffectMgr.h>
+#include <GWCA\Managers\ItemMgr.h>
+#include <GWCA\Managers\PartyMgr.h>
 
-#include "GWToolbox.h"
 #include "ChatLogger.h"
+#include "Config.h"
+#include "GuiUtils.h"
 
 using namespace OSHGui;
 using namespace OSHGui::Drawing;
-using namespace GwConstants;
-using namespace GWCA;
+using namespace GW::Constants;
 
 Pcon::Pcon(OSHGui::Control* parent, const wchar_t* ini) : Button(parent),
 	pic(new PictureBox(this)),
@@ -26,7 +26,7 @@ Pcon::Pcon(OSHGui::Control* parent, const wchar_t* ini) : Button(parent),
 	chatName(ini), // will be set later, but its a good temporary value
 	iniName(ini) {
 
-	enabled = GWToolbox::instance().config().IniReadBool(L"pcons", ini, false);;
+	enabled = Config::IniReadBool(L"pcons", ini, false);;
 
 	tick->SetBackColor(Drawing::Color::Empty());
 	tick->SetStretch(true);
@@ -65,7 +65,7 @@ void Pcon::toggleActive() {
 	enabled = !enabled;
 	scanInventory();
 	update_ui = true;
-	GWToolbox::instance().config().IniWriteBool(L"pcons", iniName, enabled);
+	Config::IniWriteBool(L"pcons", iniName, enabled);
 }
 
 void Pcon::setIcon(const char* icon, int xOff, int yOff, int size) {
@@ -109,10 +109,10 @@ bool Pcon::checkAndUse() {
 
 	if (enabled && TBTimer::diff(this->timer) > 5000) {
 
-		GW::Effect effect = GWCA::Effects().GetPlayerEffectById(effectID);
+		GW::Effect effect = GW::Effects().GetPlayerEffectById(effectID);
 
 		if (effect.SkillId == 0 || effect.GetTimeRemaining() < 1000) {
-			bool used = GWCA::Items().UseItemByModelId(itemID);
+			bool used = GW::Items().UseItemByModelId(itemID);
 			if (used) {
 				this->timer = TBTimer::init();
 				this->update_timer = TBTimer::init();
@@ -131,22 +131,22 @@ bool PconCons::checkAndUse() {
 	CheckUpdateTimer();
 
 	if (enabled && TBTimer::diff(this->timer) > 5000) {
-		GW::Effect effect = GWCA::Effects().GetPlayerEffectById(effectID);
+		GW::Effect effect = GW::Effects().GetPlayerEffectById(effectID);
 		if (effect.SkillId == 0 || effect.GetTimeRemaining() < 1000) {
 
-			if (!GWCA::Party().GetIsPartyLoaded()) return false;
+			if (!GW::Partymgr().GetIsPartyLoaded()) return false;
 
-			GW::MapAgentArray mapAgents = GWCA::Agents().GetMapAgentArray();
+			GW::MapAgentArray mapAgents = GW::Agents().GetMapAgentArray();
 			if (!mapAgents.valid()) return false;
-			int n_players = GWCA::Agents().GetAmountOfPlayersInInstance();
+			int n_players = GW::Agents().GetAmountOfPlayersInInstance();
 			for (int i = 1; i <= n_players; ++i) {
-				DWORD currentPlayerAgID = GWCA::Agents().GetAgentIdByLoginNumber(i);
+				DWORD currentPlayerAgID = GW::Agents().GetAgentIdByLoginNumber(i);
 				if (currentPlayerAgID <= 0) return false;
 				if (currentPlayerAgID >= mapAgents.size()) return false;
 				if (mapAgents[currentPlayerAgID].GetIsDead()) return false;
 			}
 
-			bool used = GWCA::Items().UseItemByModelId(itemID);
+			bool used = GW::Items().UseItemByModelId(itemID);
 			if (used) {
 				this->timer = TBTimer::init();
 				this->update_timer = TBTimer::init();
@@ -164,22 +164,22 @@ bool PconCity::checkAndUse() {
 	CheckUpdateTimer();
 
 	if (enabled	&& TBTimer::diff(this->timer) > 5000) {
-		if (GWCA::Agents().GetPlayer() &&
-			(GWCA::Agents().GetPlayer()->MoveX > 0 || GWCA::Agents().GetPlayer()->MoveY > 0)) {
-			if (GWCA::Effects().GetPlayerEffectById(SkillID::Sugar_Rush_short).SkillId
-				|| GWCA::Effects().GetPlayerEffectById(SkillID::Sugar_Rush_long).SkillId
-				|| GWCA::Effects().GetPlayerEffectById(SkillID::Sugar_Jolt_short).SkillId
-				|| GWCA::Effects().GetPlayerEffectById(SkillID::Sugar_Jolt_long).SkillId) {
+		if (GW::Agents().GetPlayer() &&
+			(GW::Agents().GetPlayer()->MoveX > 0 || GW::Agents().GetPlayer()->MoveY > 0)) {
+			if (GW::Effects().GetPlayerEffectById(SkillID::Sugar_Rush_short).SkillId
+				|| GW::Effects().GetPlayerEffectById(SkillID::Sugar_Rush_long).SkillId
+				|| GW::Effects().GetPlayerEffectById(SkillID::Sugar_Jolt_short).SkillId
+				|| GW::Effects().GetPlayerEffectById(SkillID::Sugar_Jolt_long).SkillId) {
 
 				// then we have effect on already, do nothing
 			} else {
 				// we should use it. Because of logical-OR only the first one will be used
-				bool used = GWCA::Items().UseItemByModelId(ItemID::CremeBrulee)
-					|| GWCA::Items().UseItemByModelId(ItemID::ChocolateBunny)
-					|| GWCA::Items().UseItemByModelId(ItemID::Fruitcake)
-					|| GWCA::Items().UseItemByModelId(ItemID::SugaryBlueDrink)
-					|| GWCA::Items().UseItemByModelId(ItemID::RedBeanCake)
-					|| GWCA::Items().UseItemByModelId(ItemID::JarOfHoney);
+				bool used = GW::Items().UseItemByModelId(ItemID::CremeBrulee)
+					|| GW::Items().UseItemByModelId(ItemID::ChocolateBunny)
+					|| GW::Items().UseItemByModelId(ItemID::Fruitcake)
+					|| GW::Items().UseItemByModelId(ItemID::SugaryBlueDrink)
+					|| GW::Items().UseItemByModelId(ItemID::RedBeanCake)
+					|| GW::Items().UseItemByModelId(ItemID::JarOfHoney);
 				if (used) {
 					this->timer = TBTimer::init();
 					this->update_timer = TBTimer::init();
@@ -198,24 +198,24 @@ bool PconAlcohol::checkAndUse() {
 	CheckUpdateTimer();
 
 	if (enabled && TBTimer::diff(this->timer) > 5000) {
-		if (GWCA::Effects().GetAlcoholLevel() <= 1) {
+		if (GW::Effects().GetAlcoholLevel() <= 1) {
 			// use an alcohol item. Because of logical-OR only the first one will be used
-			bool used = GWCA::Items().UseItemByModelId(ItemID::Eggnog)
-				|| GWCA::Items().UseItemByModelId(ItemID::DwarvenAle)
-				|| GWCA::Items().UseItemByModelId(ItemID::HuntersAle)
-				|| GWCA::Items().UseItemByModelId(ItemID::Absinthe)
-				|| GWCA::Items().UseItemByModelId(ItemID::WitchsBrew)
-				|| GWCA::Items().UseItemByModelId(ItemID::Ricewine)
-				|| GWCA::Items().UseItemByModelId(ItemID::ShamrockAle)
-				|| GWCA::Items().UseItemByModelId(ItemID::Cider)
+			bool used = GW::Items().UseItemByModelId(ItemID::Eggnog)
+				|| GW::Items().UseItemByModelId(ItemID::DwarvenAle)
+				|| GW::Items().UseItemByModelId(ItemID::HuntersAle)
+				|| GW::Items().UseItemByModelId(ItemID::Absinthe)
+				|| GW::Items().UseItemByModelId(ItemID::WitchsBrew)
+				|| GW::Items().UseItemByModelId(ItemID::Ricewine)
+				|| GW::Items().UseItemByModelId(ItemID::ShamrockAle)
+				|| GW::Items().UseItemByModelId(ItemID::Cider)
 
-				|| GWCA::Items().UseItemByModelId(ItemID::Grog)
-				|| GWCA::Items().UseItemByModelId(ItemID::SpikedEggnog)
-				|| GWCA::Items().UseItemByModelId(ItemID::AgedDwarvenAle)
-				|| GWCA::Items().UseItemByModelId(ItemID::AgedHungersAle)
-				|| GWCA::Items().UseItemByModelId(ItemID::Keg)
-				|| GWCA::Items().UseItemByModelId(ItemID::FlaskOfFirewater)
-				|| GWCA::Items().UseItemByModelId(ItemID::KrytanBrandy);
+				|| GW::Items().UseItemByModelId(ItemID::Grog)
+				|| GW::Items().UseItemByModelId(ItemID::SpikedEggnog)
+				|| GW::Items().UseItemByModelId(ItemID::AgedDwarvenAle)
+				|| GW::Items().UseItemByModelId(ItemID::AgedHungersAle)
+				|| GW::Items().UseItemByModelId(ItemID::Keg)
+				|| GW::Items().UseItemByModelId(ItemID::FlaskOfFirewater)
+				|| GW::Items().UseItemByModelId(ItemID::KrytanBrandy);
 			if (used) {
 				this->timer = TBTimer::init();
 				this->update_timer = TBTimer::init();
@@ -233,16 +233,16 @@ bool PconLunar::checkAndUse() {
 	CheckUpdateTimer();
 
 	if (enabled	&& TBTimer::diff(this->timer) > 500) {
-		if (GWCA::Effects().GetPlayerEffectById(SkillID::Lunar_Blessing).SkillId == 0) {
-			bool used = GWCA::Items().UseItemByModelId(ItemID::LunarRat)
-				|| GWCA::Items().UseItemByModelId(ItemID::LunarOx)
-				|| GWCA::Items().UseItemByModelId(ItemID::LunarTiger)
-				|| GWCA::Items().UseItemByModelId(ItemID::LunarDragon)
-				|| GWCA::Items().UseItemByModelId(ItemID::LunarHorse)
-				|| GWCA::Items().UseItemByModelId(ItemID::LunarRabbit)
-				|| GWCA::Items().UseItemByModelId(ItemID::LunarSheep)
-				|| GWCA::Items().UseItemByModelId(ItemID::LunarSnake)
-				|| GWCA::Items().UseItemByModelId(ItemID::LunarMonkey);
+		if (GW::Effects().GetPlayerEffectById(SkillID::Lunar_Blessing).SkillId == 0) {
+			bool used = GW::Items().UseItemByModelId(ItemID::LunarRat)
+				|| GW::Items().UseItemByModelId(ItemID::LunarOx)
+				|| GW::Items().UseItemByModelId(ItemID::LunarTiger)
+				|| GW::Items().UseItemByModelId(ItemID::LunarDragon)
+				|| GW::Items().UseItemByModelId(ItemID::LunarHorse)
+				|| GW::Items().UseItemByModelId(ItemID::LunarRabbit)
+				|| GW::Items().UseItemByModelId(ItemID::LunarSheep)
+				|| GW::Items().UseItemByModelId(ItemID::LunarSnake)
+				|| GW::Items().UseItemByModelId(ItemID::LunarMonkey);
 			if (used) {
 				this->timer = TBTimer::init();
 				this->update_timer = TBTimer::init();
@@ -261,7 +261,7 @@ void Pcon::scanInventory() {
 	bool old_enabled = enabled;
 
 	quantity = 0;
-	GW::Bag** bags = GWCA::Items().GetBagArray();
+	GW::Bag** bags = GW::Items().GetBagArray();
 	if (bags != nullptr) {
 		GW::Bag* bag = NULL;
 		for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
@@ -289,7 +289,7 @@ void PconCity::scanInventory() {
 	bool old_enabled = enabled;
 
 	quantity = 0;
-	GW::Bag** bags = GWCA::Items().GetBagArray();
+	GW::Bag** bags = GW::Items().GetBagArray();
 	if (bags != nullptr) {
 		GW::Bag* bag = NULL;
 		for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
@@ -321,7 +321,7 @@ void PconAlcohol::scanInventory() {
 	bool old_enabled = enabled;
 
 	quantity = 0;
-	GW::Bag** bags = GWCA::Items().GetBagArray();
+	GW::Bag** bags = GW::Items().GetBagArray();
 	if (bags != nullptr) {
 		GW::Bag* bag = NULL;
 		for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
@@ -366,7 +366,7 @@ void PconLunar::scanInventory() {
 	bool old_enabled = enabled;
 
 	quantity = 0;
-	GW::Bag** bags = GWCA::Items().GetBagArray();
+	GW::Bag** bags = GW::Items().GetBagArray();
 	if (bags != nullptr) {
 		GW::Bag* bag = NULL;
 		for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {

@@ -1,17 +1,39 @@
 #include "AgentRenderer.h"
 
 #include <GWCA\GWCA.h>
-#include <GWCA\AgentMgr.h>
+#include <GWCA\Managers\AgentMgr.h>
 
-#include <DxErr.h>
-#pragma comment(lib, "dxerr.lib")
-
-using namespace GWCA;
+#include "Config.h"
 
 AgentRenderer::AgentRenderer() : vertices(nullptr) {
 
-	Color dark(0, -50, -50, -50);
-	Color light(0, 50, 50, 50);
+	auto IniReadColor = [](wchar_t* key, wchar_t* def) -> Color {
+		const wchar_t* wc = Config::IniRead(L"minimap", key, def);
+		Config::IniWrite(L"minimap", key, wc);
+		DWORD c = std::wcstoul(wc, nullptr, 16);
+		if (c == LONG_MAX) return Color(D3DCOLOR_ARGB(0xFF, 0x0, 0x0, 0x0));
+		return Color(c);
+	};
+
+	Color modifier = IniReadColor(L"color_agent_modifier", L"0x001E1E1E");
+	color_eoe = IniReadColor(L"color_eoe", L"0x0000FF00");
+	color_target = IniReadColor(L"color_target", L"0xFFFFFF00");
+	color_player = IniReadColor(L"color_player", L"0xFFFF8000");
+	color_player_dead = IniReadColor(L"color_player_dead", L"0x64FF8000");
+	color_signpost = IniReadColor(L"color_signpost", L"0xFF0000C8");
+	color_item = IniReadColor(L"color_item", L"0xFF0000F0");
+	color_hostile = IniReadColor(L"color_hostile", L"0xFFF00000");
+	color_hostile_damaged = IniReadColor(L"color_hostile_damaged", L"0xFF800000");
+	color_hostile_dead = IniReadColor(L"color_hostile_dead", L"0xFF320000");
+	color_neutral = IniReadColor(L"color_neutral", L"0xFF0000DC");
+	color_ally_party = IniReadColor(L"color_ally", L"0xFF00B300");
+	color_ally_npc = IniReadColor(L"color_ally_npc", L"0xFF99FF99");
+	color_ally_spirit = IniReadColor(L"color_ally_spirit", L"0xFF608000");
+	color_ally_minion = IniReadColor(L"color_ally_minion", L"0xFF008060");
+	color_ally_dead = IniReadColor(L"color_ally_dead", L"0x64006400");
+
+	Color light = modifier;
+	Color dark(0, -light.r, -light.g, -light.b);
 
 	shapes[Tear].AddVertex(1.8f, 0, dark);		// A
 	shapes[Tear].AddVertex(0.7f, 0.7f, dark);	// B
@@ -88,10 +110,7 @@ void AgentRenderer::Initialize(IDirect3DDevice9* device) {
 
 	HRESULT hr = device->CreateVertexBuffer(sizeof(D3DVertex) * vertices_max, 0,
 		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer_, NULL);
-	if (FAILED(hr)) {
-		printf("Error: %ls error description: %ls\n",
-			DXGetErrorString(hr), DXGetErrorDescription(hr));
-	}
+	if (FAILED(hr)) printf("Error: %ls\n", hr);
 }
 
 void AgentRenderer::Render(IDirect3DDevice9* device) {
@@ -106,10 +125,10 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 	vertices_count = 0;
 
 	// count triangles
-	GW::AgentArray agents = GWCA::Agents().GetAgentArray();
+	GW::AgentArray agents = GW::Agents().GetAgentArray();
 	if (!agents.valid()) return;
 
-	GW::NPCArray npcs = GWCA::Agents().GetNPCArray();
+	GW::NPCArray npcs = GW::Agents().GetNPCArray();
 	if (!npcs.valid()) return;
 
 	// non-player agents
@@ -121,7 +140,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 			&& (npcs[agent->PlayerNumber].npcflags & 0x10000) > 0) {
 			continue;
 		}
-		if (agent->Id == GWCA::Agents().GetTargetId()) continue; // will draw target at the end
+		if (agent->Id == GW::Agents().GetTargetId()) continue; // will draw target at the end
 
 		Enqueue(agent);
 
@@ -133,8 +152,8 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 		if (agent == nullptr) continue;
 		if (agent->PlayerNumber > 12) continue;
 
-		if (agent->Id == GWCA::Agents().GetPlayerId()) continue; // will draw player at the end
-		if (agent->Id == GWCA::Agents().GetTargetId()) continue; // will draw target at the end
+		if (agent->Id == GW::Agents().GetPlayerId()) continue; // will draw player at the end
+		if (agent->Id == GW::Agents().GetTargetId()) continue; // will draw target at the end
 
 		Enqueue(agent);
 
@@ -142,11 +161,11 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 	}
 
 
-	GW::Agent* target = GWCA::Agents().GetTarget();
+	GW::Agent* target = GW::Agents().GetTarget();
 	if (target) Enqueue(target);
 
-	GW::Agent* player = GWCA::Agents().GetPlayer();
-	if (player && player->Id != Agents().GetTargetId()) Enqueue(player);
+	GW::Agent* player = GW::Agents().GetPlayer();
+	if (player && player->Id != GW::Agents().GetTargetId()) Enqueue(player);
 
 	buffer_->Unlock();
 
@@ -162,12 +181,13 @@ void AgentRenderer::Enqueue(GW::Agent* agent) {
 	float size = GetSize(agent);
 	Shape_e shape = GetShape(agent);
 
-	if (GWCA::Agents().GetTargetId() == agent->Id) {
-		Enqueue(shape, agent, size + 50.0f, Color(255, 255, 0));
+	if (GW::Agents().GetTargetId() == agent->Id) {
+		Enqueue(shape, agent, size + 50.0f, color_target);
 	}
 	if (shape == BigCircle) {
 		if (!agent->GetIsDead()) {
-			Enqueue(BigCircle, agent, (float)GwConstants::Range::Spirit, Color(0, 0, 255, 0));
+			//Enqueue(BigCircle, agent, GW::Constants::Range::Spirit, color_eoe);
+			Enqueue(BigCircle, agent, GW::Constants::Range::Earshot, D3DCOLOR_ARGB(0, 255, 0, 0));
 		}
 		shape = Circle;
 	}
@@ -175,43 +195,39 @@ void AgentRenderer::Enqueue(GW::Agent* agent) {
 }
 
 AgentRenderer::Color AgentRenderer::GetColor(GW::Agent* agent) const {
-	if (agent->Id == GWCA::Agents().GetPlayerId()) {
-		if (agent->GetIsDead()) return Color(100, 240, 0, 240);
-		else return Color(240, 0, 240);
+	if (agent->Id == GW::Agents().GetPlayerId()) {
+		if (agent->GetIsDead()) return color_player_dead;
+		else return color_player;
 	}
-	if (agent->GetIsSignpostType()) return Color(0, 0, 200);
-	if (agent->GetIsItemType()) return Color(0, 0, 240);
 
+	if (agent->GetIsSignpostType()) return color_signpost;
+	if (agent->GetIsItemType()) return color_item;
+
+	// hostiles
+	if (agent->Allegiance == 0x3) {
+		if (agent->HP > 0.9f) return color_hostile;
+		if (agent->HP > 0.0f) return color_hostile_damaged;
+		return color_hostile_dead;
+	}
+
+	// neutrals
+	if (agent->Allegiance == 0x2) return color_neutral;
+
+	// friendly
+	if (agent->GetIsDead()) return color_ally_dead;
 	switch (agent->Allegiance) {
-	case 0x2: // neutral
-		return Color(0, 0, 220); 
-
-	case 0x3: // hostile
-		if (agent->HP > 0.9f) return Color(240, 0, 0);
-		else if (agent->HP > 0.0f) return Color(170, 0, 0);
-		else return Color(100, 50, 0, 0);
-
-	case 0x1: // ally
-	case 0x4: // spirit / pet
-	case 0x5: // minion
-	case 0x6: // npc / minipet
-		if (agent->GetIsDead()) return Color(100, 0, 50, 0);
-		switch (agent->Allegiance) {
-		case 0x1: return Color(0, 240, 0); // ally
-		case 0x6: return Color(0, 180, 0); // npc / minipet
-		case 0x4: return Color(0, 140, 0); // spirit / pet
-		case 0x5: return Color(0, 80, 0); // minion
-		default: return Color(0, 0, 0);
-		}
-
-	default:
-		printf("unknown allegiance %d\n", agent->Allegiance);
-		return Color(0, 255, 255);
+	case 0x1: return color_ally_party; // ally
+	case 0x6: return color_ally_npc; // npc / minipet
+	case 0x4: return color_ally_spirit; // spirit / pet
+	case 0x5: return color_ally_minion; // minion
+	default: break;
 	}
+
+	return Color(0, 0, 0);
 }
 
 float AgentRenderer::GetSize(GW::Agent* agent) const {
-	if (agent->Id == GWCA::Agents().GetPlayerId()) return 100.0f;
+	if (agent->Id == GW::Agents().GetPlayerId()) return 100.0f;
 	if (agent->GetIsSignpostType()) return 50.0f;
 	if (agent->GetIsItemType()) return 25.0f;
 	if (agent->GetHasBossGlow()) return 125.0f;
@@ -228,14 +244,18 @@ float AgentRenderer::GetSize(GW::Agent* agent) const {
 
 	case 0x3: // hostile
 		switch (agent->PlayerNumber) {
-		case GwConstants::ModelID::StygianLordNecro:
-		case GwConstants::ModelID::StygianLordMesmer:
-		case GwConstants::ModelID::StygianLordEle:
-		case GwConstants::ModelID::StygianLordMonk:
-		case GwConstants::ModelID::StygianLordDerv:
-		case GwConstants::ModelID::StygianLordRanger:
-		case GwConstants::ModelID::BlackBeastOfArgh:
-			// TODO add more
+		case GW::Constants::ModelID::DoA::StygianLordNecro:
+		case GW::Constants::ModelID::DoA::StygianLordMesmer:
+		case GW::Constants::ModelID::DoA::StygianLordEle:
+		case GW::Constants::ModelID::DoA::StygianLordMonk:
+		case GW::Constants::ModelID::DoA::StygianLordDerv:
+		case GW::Constants::ModelID::DoA::StygianLordRanger:
+		case GW::Constants::ModelID::DoA::BlackBeastOfArgh:
+		case GW::Constants::ModelID::DoA::SmotheringTendril:
+		
+		case GW::Constants::ModelID::UW::KeeperOfSouls:
+
+		case GW::Constants::ModelID::FoW::ShardWolf:
 			return 125.0f;
 
 		default:
@@ -255,7 +275,7 @@ AgentRenderer::Shape_e AgentRenderer::GetShape(GW::Agent* agent) const {
 	if (agent->LoginNumber > 0) return Tear;	// players
 	if (!agent->GetIsLivingType()) return Quad; // shouldn't happen but just in case
 	
-	auto npcs = GWCA::Agents().GetNPCArray();
+	auto npcs = GW::Agents().GetNPCArray();
 	if (!npcs.valid()) return Tear;
 
 	if (agent->PlayerNumber == 2872) { // EoE
@@ -275,10 +295,10 @@ AgentRenderer::Shape_e AgentRenderer::GetShape(GW::Agent* agent) const {
 }
 
 void AgentRenderer::Enqueue(Shape_e shape, GW::Agent* agent, float size, Color color) {
-	Vector2f translate(agent->X, agent->Y);
+	GW::Vector2f translate(agent->X, agent->Y);
 	unsigned int i;
 	for (i = 0; i < shapes[shape].vertices.size(); ++i) {
-		Vector2f v = shapes[shape].vertices[i].Rotated(agent->Rotation_cos,
+		GW::Vector2f v = shapes[shape].vertices[i].Rotated(agent->Rotation_cos,
 			agent->Rotation_sin) * size + translate;
 		Color c = color + shapes[shape].colors[i];
 		c.Clamp();
@@ -292,6 +312,6 @@ void AgentRenderer::Enqueue(Shape_e shape, GW::Agent* agent, float size, Color c
 }
 
 void AgentRenderer::Shape_t::AddVertex(float x, float y, Color color) {
-	vertices.push_back(Vector2f(x, y));
+	vertices.push_back(GW::Vector2f(x, y));
 	colors.push_back(color);
 }

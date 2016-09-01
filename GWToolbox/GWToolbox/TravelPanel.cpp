@@ -3,7 +3,7 @@
 #include <string>
 
 #include <GWCA\GWCA.h>
-#include <GWCA\MapMgr.h>
+#include <GWCA\Managers\MapMgr.h>
 
 #include "MainWindow.h"
 #include "GWToolbox.h"
@@ -12,7 +12,6 @@
 
 
 using namespace OSHGui;
-using namespace GWCA;
 using namespace std;
 
 void TravelPanel::BuildUI() {
@@ -28,8 +27,8 @@ void TravelPanel::BuildUI() {
 	combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
 		[this, combo](Control*) {
 		if (combo->GetSelectedIndex() < 0) return;
-		GwConstants::MapID id = IndexToOutpostID(combo->GetSelectedIndex());
-		GWCA::Map().Travel(id, district_, district_number_);
+		GW::Constants::MapID id = IndexToOutpostID(combo->GetSelectedIndex());
+		GW::Map().Travel(id, district_, district_number_);
 		combo->SetText(L"Travel To...");
 		combo->SetSelectedIndex(-1);
 	});
@@ -60,7 +59,7 @@ void TravelPanel::BuildUI() {
 	district->SetSelectedIndex(0);
 	AddControl(district);
 
-	using namespace GwConstants;
+	using namespace GW::Constants;
 	AddTravelButton(L"ToA", 0, 2, MapID::Temple_of_the_Ages);
 	AddTravelButton(L"DoA", 1, 2, MapID::Domain_of_Anguish);
 	AddTravelButton(L"Kamadan", 0, 3, MapID::Kamadan_Jewel_of_Istan_outpost);
@@ -72,7 +71,7 @@ void TravelPanel::BuildUI() {
 
 	for (int i = 0; i < 3; ++i) {
 		wstring key = wstring(L"Travel") + to_wstring(i);
-		int index = GWToolbox::instance().config().IniReadLong(MainWindow::IniSection(), key.c_str(), 0);
+		int index = Config::IniReadLong(MainWindow::IniSection(), key.c_str(), 0);
 		ComboBox* fav_combo = new TravelCombo(this);
 		fav_combo->SetSize(SizeI(GuiUtils::ComputeWidth(GetWidth(), 4, 3), GuiUtils::BUTTON_HEIGHT));
 		fav_combo->SetLocation(PointI(Padding, Padding + (GuiUtils::BUTTON_HEIGHT + Padding) * (i + 6)));
@@ -82,7 +81,7 @@ void TravelPanel::BuildUI() {
 		fav_combo->SetSelectedIndex(index);
 		fav_combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
 			[fav_combo, key](Control*) {
-			GWToolbox::instance().config().IniWriteLong(MainWindow::IniSection(), 
+			Config::IniWriteLong(MainWindow::IniSection(),
 				key.c_str(), fav_combo->GetSelectedIndex());
 		});
 		AddControl(fav_combo);
@@ -103,7 +102,7 @@ void TravelPanel::BuildUI() {
 void TravelPanel::TravelFavorite(int fav_idx) {
 	if (fav_idx >= 0 && fav_idx < 3) {
 		int outpost_idx = combo_boxes_[fav_idx]->GetSelectedIndex();
-		GWCA::Map().Travel(IndexToOutpostID(outpost_idx), district_, district_number_);
+		GW::Map().Travel(IndexToOutpostID(outpost_idx), district_, district_number_);
 	}
 }
 
@@ -118,14 +117,14 @@ TravelPanel::TravelCombo::TravelCombo(OSHGui::Control* parent)
 }
 
 
-void TravelPanel::AddTravelButton(wstring text, int grid_x, int grid_y, GwConstants::MapID map_id) {
+void TravelPanel::AddTravelButton(wstring text, int grid_x, int grid_y, GW::Constants::MapID map_id) {
 	Button* button = new Button(this);
 	button->SetText(text);
 	button->SetSize(SizeI(GuiUtils::ComputeWidth(GetWidth(), 2), GuiUtils::BUTTON_HEIGHT));
 	button->SetLocation(PointI(GuiUtils::ComputeX(GetWidth(), 2, grid_x), 
 		Padding + (GuiUtils::BUTTON_HEIGHT + Padding) * grid_y));
 	button->GetClickEvent() += ClickEventHandler([this, map_id](Control*) {
-		GWCA::Map().Travel(map_id, district_, district_number_);
+		GW::Map().Travel(map_id, district_, district_number_);
 	});
 	AddControl(button);
 }
@@ -133,49 +132,23 @@ void TravelPanel::AddTravelButton(wstring text, int grid_x, int grid_y, GwConsta
 void TravelPanel::UpdateDistrict(int gui_index) {
 	district_number_ = 0;
 	switch (gui_index) {
-	case 0: // Current District
-		district_ = GwConstants::District::Current;
-		break;
-	case 1: // International
-		district_ = GwConstants::District::International;
-		break;
-	case 2: // American
-		district_ = GwConstants::District::American;
-		break;
+	case 0: district_ = GW::Constants::District::Current; break;
+	case 1: district_ = GW::Constants::District::International; break;
+	case 2: district_ = GW::Constants::District::American; break;
 	case 3: // American District 1
-		district_ = GwConstants::District::American;
+		district_ = GW::Constants::District::American;
 		district_number_ = 1;
 		break;
-	case 4: // Europe English
-		district_ = GwConstants::District::EuropeEnglish;
-		break;
-	case 5: // Europe French
-		district_ = GwConstants::District::EuropeFrench;
-		break;
-	case 6: // Europe German
-		district_ = GwConstants::District::EuropeGerman;
-		break;
-	case 7: // Europe Italian
-		district_ = GwConstants::District::EuropeItalian;
-		break;
-	case 8: // Europe Spanish
-		district_ = GwConstants::District::EuropeSpanish;
-		break;
-	case 9: // Europe Polish
-		district_ = GwConstants::District::EuropePolish;
-		break;
-	case 10: // Europe Russian
-		district_ = GwConstants::District::EuropeRussian;
-		break;
-	case 11: // Asian Korean
-		district_ = GwConstants::District::AsiaKorean;
-		break;
-	case 12: // Asia Chinese
-		district_ = GwConstants::District::AsiaChinese;
-		break;
-	case 13: // Asia Japanese
-		district_ = GwConstants::District::AsiaJapanese;
-		break;
+	case 4: district_ = GW::Constants::District::EuropeEnglish; break;
+	case 5: district_ = GW::Constants::District::EuropeFrench; break;
+	case 6: district_ = GW::Constants::District::EuropeGerman; break;
+	case 7: district_ = GW::Constants::District::EuropeItalian; break;
+	case 8: district_ = GW::Constants::District::EuropeSpanish; break;
+	case 9: district_ = GW::Constants::District::EuropePolish; break;
+	case 10: district_ = GW::Constants::District::EuropeRussian; break;
+	case 11: district_ = GW::Constants::District::AsiaKorean; break;
+	case 12: district_ = GW::Constants::District::AsiaChinese; break;
+	case 13: district_ = GW::Constants::District::AsiaJapanese; break;
 	default:
 		break;
 	}
@@ -367,8 +340,8 @@ wstring TravelPanel::IndexToOutpostName(int index) {
 	}
 }
 
-GwConstants::MapID TravelPanel::IndexToOutpostID(int index) {
-	using namespace GwConstants;
+GW::Constants::MapID TravelPanel::IndexToOutpostID(int index) {
+	using namespace GW::Constants;
 	switch (index) {
 	case 0: return MapID::Abaddons_Gate;
 	case 1: return MapID::Abaddons_Mouth;

@@ -4,15 +4,15 @@
 
 #include <GWCA\GWCA.h>
 
-#include "GWToolbox.h"
 #include "Config.h"
 #include "GuiUtils.h"
 
+using namespace OSHGui;
+
 DistanceWindow::DistanceWindow() {
 
-	Config& config = GWToolbox::instance().config();
-	int x = config.IniReadLong(DistanceWindow::IniSection(), DistanceWindow::IniKeyX(), 400);
-	int y = config.IniReadLong(DistanceWindow::IniSection(), DistanceWindow::IniKeyY(), 100);
+	int x = Config::IniReadLong(DistanceWindow::IniSection(), DistanceWindow::IniKeyX(), 400);
+	int y = Config::IniReadLong(DistanceWindow::IniSection(), DistanceWindow::IniKeyY(), 100);
 
 	SetLocation(PointI(x, y));
 	SetSize(SizeI(Drawing::SizeI(WIDTH, HEIGHT)));
@@ -93,7 +93,7 @@ DistanceWindow::DistanceWindow() {
 	std::shared_ptr<DistanceWindow> self = std::shared_ptr<DistanceWindow>(this);
 	Form::Show(self);
 
-	bool show = config.IniReadBool(DistanceWindow::IniSection(), DistanceWindow::IniKeyShow(), false);
+	bool show = Config::IniReadBool(DistanceWindow::IniSection(), DistanceWindow::IniKeyShow(), false);
 	SetViewable(show);
 }
 
@@ -101,23 +101,21 @@ void DistanceWindow::SaveLocation() {
 	CalculateAbsoluteLocation();
 	int x = absoluteLocation_.X;
 	int y = absoluteLocation_.Y;
-	Config& config = GWToolbox::instance().config();
-	config.IniWriteLong(DistanceWindow::IniSection(), DistanceWindow::IniKeyX(), x);
-	config.IniWriteLong(DistanceWindow::IniSection(), DistanceWindow::IniKeyY(), y);
+	Config::IniWriteLong(DistanceWindow::IniSection(), DistanceWindow::IniKeyX(), x);
+	Config::IniWriteLong(DistanceWindow::IniSection(), DistanceWindow::IniKeyY(), y);
 }
 
 void DistanceWindow::UpdateUI() {
-	using namespace GWCA::GW;
 	using namespace std;
 
 	if (!isViewable_) return;
 	
 	// get values
 	long distance = -1;
-	Agent* target = GWCA::Agents().GetTarget();
-	Agent* me = GWCA::Agents().GetPlayer();
+	GW::Agent* target = GW::Agents().GetTarget();
+	GW::Agent* me = GW::Agents().GetPlayer();
 	if (target && me) {
-		distance = std::lroundf(GWCA::Agents().GetDistance(target->pos, me->pos));
+		distance = std::lroundf(GW::Agents().GetDistance(target->pos, me->pos));
 	}
 
 	// update visibility if needed
@@ -133,7 +131,7 @@ void DistanceWindow::UpdateUI() {
 		wstring s1;
 		wstring s2;
 		if (distance >= 0) {
-			s1 = to_wstring(distance * 100 / GwConstants::Range::Compass) + L" %";
+			s1 = to_wstring(distance * 100 / GW::Constants::Range::Compass) + L" %";
 			s2 = to_wstring(distance);
 		} else {
 			s1 = L"-";

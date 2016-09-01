@@ -1,13 +1,13 @@
 #include "ChatFilter.h"
 
 #include <GWCA\GWCA.h>
-#include <GWCA\StoCMgr.h>
+#include <GWCA\Managers\StoCMgr.h>
 
 ChatFilter::ChatFilter() {
 	suppress_next_message = false;
 	suppress_messages_active = false;
 
-	GWCA::StoC().AddGameServerEvent<GWCA::StoC_Pak::P081>([&](GWCA::StoC_Pak::P081* pak) -> bool {
+	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P081>([&](GW::Packet::StoC::P081* pak) -> bool {
 		//if (pak->message[0] != 0x108) {
 		//	for (size_t i = 0; pak->message[i] != 0; ++i) printf(" 0x%X", pak->message[i]);
 		//	printf("\n");
@@ -19,7 +19,7 @@ ChatFilter::ChatFilter() {
 		return false;
 	});
 
-	GWCA::StoC().AddGameServerEvent<GWCA::StoC_Pak::P082>([&](GWCA::StoC_Pak::P082* pak) -> bool {
+	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P082>([&](GW::Packet::StoC::P082* pak) -> bool {
 		if (suppress_next_message) {
 			suppress_next_message = false;
 			return true;
@@ -28,17 +28,17 @@ ChatFilter::ChatFilter() {
 		//printf("Received p082\n");
 	});
 
-	GWCA::StoC().AddGameServerEvent<GWCA::StoC_Pak::P083>([](GWCA::StoC_Pak::P083* pak) -> bool {
+	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P083>([](GW::Packet::StoC::P083* pak) -> bool {
 		//printf("Received p083\n");
 		return false;
 	});
 
-	GWCA::StoC().AddGameServerEvent<GWCA::StoC_Pak::P084>([](GWCA::StoC_Pak::P084* pak) -> bool {
+	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P084>([](GW::Packet::StoC::P084* pak) -> bool {
 		//printf("Received p084: %ls [%ls]\n", pak->sender_name, pak->sender_guild);
 		return false;
 	});
 
-	GWCA::StoC().AddGameServerEvent<GWCA::StoC_Pak::P085>([&](GWCA::StoC_Pak::P085* pak) -> bool {
+	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P085>([&](GW::Packet::StoC::P085* pak) -> bool {
 		if (suppress_next_message) {
 			suppress_next_message = false;
 			return true;
@@ -49,21 +49,21 @@ ChatFilter::ChatFilter() {
 }
 
 
-const wchar_t* ChatFilter::Get1stSegment(GWCA::StoC_Pak::P081* pak) const {
+const wchar_t* ChatFilter::Get1stSegment(GW::Packet::StoC::P081* pak) const {
 	for (size_t i = 0; pak->message[i] != 0; ++i) {
 		if (pak->message[i] == 0x10A) return pak->message + i + 1;
 	}
 	return nullptr;
 };
 
-const wchar_t* ChatFilter::Get2ndSegment(GWCA::StoC_Pak::P081* pak) const {
+const wchar_t* ChatFilter::Get2ndSegment(GW::Packet::StoC::P081* pak) const {
 	for (size_t i = 0; pak->message[i] != 0; ++i) {
 		if (pak->message[i] == 0x10B) return pak->message + i + 1;
 	}
 	return nullptr;
 }
 
-DWORD ChatFilter::GetNumericSegment(GWCA::StoC_Pak::P081* pak) const {
+DWORD ChatFilter::GetNumericSegment(GW::Packet::StoC::P081* pak) const {
 	for (size_t i = 0; pak->message[i] != 0; ++i) {
 		if (pak->message[i] == 0x10F) return (pak->message[i + 1] & 0xFF);
 	}
@@ -94,7 +94,7 @@ bool ChatFilter::ShouldIgnoreItem(const wchar_t* item_segment) const {
 	return true;
 }
 
-bool ChatFilter::ShouldIgnore(GWCA::StoC_Pak::P081* pak) const {
+bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) const {
 	switch (pak->message[0]) {
 		// ==== Messages not ignored ====
 	case 0x108: { // player message
@@ -143,7 +143,7 @@ bool ChatFilter::ShouldIgnore(GWCA::StoC_Pak::P081* pak) const {
 				  // 0x7F1 0x9A9D 0xE943 0xB33 0x10A <monster> 0x1 0x10B <rarity> 0x10A <item> 0x1 0x1 0x10F <assignee: playernumber + 0x100>
 				  // <monster> is wchar_t id of several wchars
 				  // <rarity> is 0x108 for common, 0xA40 gold, 0xA42 purple, 0xA43 green
-		GWCA::GW::Agent* me = GWCA::Agents().GetPlayer();
+		GW::Agent* me = GW::Agents().GetPlayer();
 		if (me && me->PlayerNumber != GetNumericSegment(pak)) return true;	// ignore drops not for the player
 		return ShouldIgnoreItem(Get2ndSegment(pak));
 	}

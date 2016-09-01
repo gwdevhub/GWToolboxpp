@@ -4,19 +4,19 @@
 
 #include <GWCA\GWCA.h>
 
-#include "GWToolbox.h"
 #include "Config.h"
 #include "GuiUtils.h"
 
 HealthWindow::HealthWindow() {
 
+	using namespace OSHGui;
+
 	current_max = -1;
 	current_abs = -1;
 	current_perc = -1;
 
-	Config& config = GWToolbox::instance().config();
-	int x = config.IniReadLong(HealthWindow::IniSection(), HealthWindow::IniKeyX(), 400);
-	int y = config.IniReadLong(HealthWindow::IniSection(), HealthWindow::IniKeyY(), 100);
+	int x = Config::IniReadLong(HealthWindow::IniSection(), HealthWindow::IniKeyX(), 400);
+	int y = Config::IniReadLong(HealthWindow::IniSection(), HealthWindow::IniKeyY(), 100);
 
 	SetLocation(PointI(x, y));
 	SetSize(SizeI(Drawing::SizeI(WIDTH, HEIGHT)));
@@ -97,7 +97,7 @@ HealthWindow::HealthWindow() {
 	std::shared_ptr<HealthWindow> self = std::shared_ptr<HealthWindow>(this);
 	Form::Show(self);
 
-	bool show = config.IniReadBool(HealthWindow::IniSection(), HealthWindow::IniKeyShow(), false);
+	bool show = Config::IniReadBool(HealthWindow::IniSection(), HealthWindow::IniKeyShow(), false);
 	SetViewable(show);
 }
 
@@ -105,13 +105,11 @@ void HealthWindow::SaveLocation() {
 	CalculateAbsoluteLocation();
 	int x = absoluteLocation_.X;
 	int y = absoluteLocation_.Y;
-	Config& config = GWToolbox::instance().config();
-	config.IniWriteLong(HealthWindow::IniSection(), HealthWindow::IniKeyX(), x);
-	config.IniWriteLong(HealthWindow::IniSection(), HealthWindow::IniKeyY(), y);
+	Config::IniWriteLong(HealthWindow::IniSection(), HealthWindow::IniKeyX(), x);
+	Config::IniWriteLong(HealthWindow::IniSection(), HealthWindow::IniKeyY(), y);
 }
 
 void HealthWindow::UpdateUI() {
-	using namespace GWCA::GW;
 	using namespace std;
 
 	if (!isViewable_) return;
@@ -120,8 +118,8 @@ void HealthWindow::UpdateUI() {
 	int max = -1;
 	int perc = -1;
 	int abs = -1;
-	Agent* target = GWCA::Agents().GetTarget();
-	if (target && target->Type == 0xDB) {
+	GW::Agent* target = GW::Agents().GetTarget();
+	if (target && target->GetIsLivingType()) {
 		perc = lroundf(target->HP * 100);
 		abs = lroundf(target->HP * target->MaxHP);
 		max = target->MaxHP;

@@ -1,7 +1,8 @@
 #pragma once
 
-#include <GWCA\GWStructures.h>
-#include <GWCA\AgentMgr.h>
+#include <vector>
+
+#include <GWCA\GameEntities\Agent.h>
 
 #include "VBuffer.h"
 
@@ -17,14 +18,18 @@ private:
 		int r;
 		int g;
 		int b;
+		Color() : a(0), r(0), g(0), b(0) {}
+		Color(DWORD c) : 
+			a((c >> 24) & 0xFF),
+			r((c >> 16) & 0xFF),
+			g((c >> 8) & 0xFF),
+			b((c) & 0xFF)
+		{}
 		Color(int _a, int _r, int _g, int _b) 
 			: a(_a), r(_r), g(_g), b(_b) {}
 		Color(int _r, int _g, int _b) : Color(255, _r, _g, _b) {}
 		const Color operator + (const Color& c) const {
 			return Color(a + c.a, r + c.r, g + c.g, b + c.b);
-		}
-		const Color operator + (const int c) const {
-			return Color(a, r + c, g + c, b + c);
 		}
 		void Clamp() {
 			if (r < 0) r = 0;
@@ -41,7 +46,7 @@ private:
 
 	enum Shape_e { Tear, Circle, Quad, BigCircle };
 	struct Shape_t {
-		std::vector<GWCA::Vector2f> vertices;
+		std::vector<GW::Vector2f> vertices;
 		std::vector<Color> colors;
 		void AddVertex(float x, float y, Color color);
 	};
@@ -50,15 +55,31 @@ private:
 
 	void Initialize(IDirect3DDevice9* device) override;
 
-	void Enqueue(GWCA::GW::Agent* agent);
-	Color GetColor(GWCA::GW::Agent* agent) const;
-	float GetSize(GWCA::GW::Agent* agent) const;
-	Shape_e GetShape(GWCA::GW::Agent* agent) const;
+	void Enqueue(GW::Agent* agent);
+	Color GetColor(GW::Agent* agent) const;
+	float GetSize(GW::Agent* agent) const;
+	Shape_e GetShape(GW::Agent* agent) const;
 
-	void Enqueue(Shape_e shape, GWCA::GW::Agent* agent, float size, Color color);
+	void Enqueue(Shape_e shape, GW::Agent* agent, float size, Color color);
 
 	D3DVertex* vertices;		// vertices array
 	unsigned int vertices_count;// count of vertices
 	unsigned int vertices_max;	// max number of vertices to draw in one call
 	unsigned int max_shape_verts;// max number of triangles in a single shape
+
+	Color color_eoe;
+	Color color_target;
+	Color color_player;
+	Color color_player_dead;
+	Color color_signpost;
+	Color color_item;
+	Color color_hostile;
+	Color color_hostile_damaged;
+	Color color_hostile_dead;
+	Color color_neutral;
+	Color color_ally_party;
+	Color color_ally_npc;
+	Color color_ally_spirit;
+	Color color_ally_minion;
+	Color color_ally_dead;
 };

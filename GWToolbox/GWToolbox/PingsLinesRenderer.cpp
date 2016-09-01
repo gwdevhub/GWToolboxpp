@@ -4,11 +4,15 @@
 #include <d3d9.h>
 
 #include <GWCA\GWCA.h>
-#include <GWCA\StoCMgr.h>
+#include <GWCA\GameEntities\Agent.h>
+#include <GWCA\Managers\StoCMgr.h>
+#include <GWCA\Packets\CtoS.h>
+
 
 PingsLinesRenderer::PingsLinesRenderer() : vertices(nullptr) {
-	GWCA::StoC().AddGameServerEvent<GWCA::StoC_Pak::P133>(
-		[&](GWCA::StoC_Pak::P133* pak) -> bool {
+
+	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P133>(
+		[&](GW::Packet::StoC::P133* pak) -> bool {
 
 		if (!visible_) return false;
 
@@ -23,17 +27,19 @@ PingsLinesRenderer::PingsLinesRenderer() : vertices(nullptr) {
 		}
 		
 		if (new_session && pak->NumberPts == 1) {
-			pings.push_front(new TerrainPing(pak->points[0].x, pak->points[0].y));
+			pings.push_front(new TerrainPing(
+				pak->points[0].x * 100.0f, 
+				pak->points[0].y * 100.0f));
 			return false;
 		} 
 
 		if (new_session) {
 			for (unsigned int i = 0; i < pak->NumberPts - 1; ++i) {
 				DrawingLine l;
-				l.x1 = pak->points[i + 0].x;
-				l.y1 = pak->points[i + 0].y;
-				l.x2 = pak->points[i + 1].x;
-				l.y2 = pak->points[i + 1].y;
+				l.x1 = pak->points[i + 0].x * 100.0f;
+				l.y1 = pak->points[i + 0].y * 100.0f;
+				l.x2 = pak->points[i + 1].x * 100.0f;
+				l.y2 = pak->points[i + 1].y * 100.0f;
 				drawings[pak->Player].lines.push_back(l);
 			}
 		} else {
@@ -44,11 +50,11 @@ PingsLinesRenderer::PingsLinesRenderer() : vertices(nullptr) {
 					l.x1 = drawings[pak->Player].lines.back().x2;
 					l.y1 = drawings[pak->Player].lines.back().y2;
 				} else {
-					l.x1 = pak->points[i - 1].x;
-					l.y1 = pak->points[i - 1].y;
+					l.x1 = pak->points[i - 1].x * 100.0f;
+					l.y1 = pak->points[i - 1].y * 100.0f;
 				}
-				l.x2 = pak->points[i].x;
-				l.y2 = pak->points[i].y;
+				l.x2 = pak->points[i].x * 100.0f;
+				l.y2 = pak->points[i].y * 100.0f;
 				drawings[pak->Player].lines.push_back(l);
 			}
 		}
@@ -56,12 +62,21 @@ PingsLinesRenderer::PingsLinesRenderer() : vertices(nullptr) {
 		return false;
 	});
 
-	GWCA::StoC().AddGameServerEvent<GWCA::StoC_Pak::P041>(
-		[&](GWCA::StoC_Pak::P041* pak) -> bool {
+	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P041>(
+		[&](GW::Packet::StoC::P041* pak) -> bool {
 		if (!visible_) return false;
 		pings.push_front(new AgentPing(pak->agent_id));
 		return false;
 	});
+
+	mouse_down = false;
+	mouse_moved = false;
+	mouse_x = 0;
+	mouse_y = 0;
+	session_id = 0;
+	lastshown = TBTimer::init();
+	lastsent = TBTimer::init();
+	lastqueued = TBTimer::init();
 }
 
 void PingsLinesRenderer::Initialize(IDirect3DDevice9* device) {
@@ -78,23 +93,6 @@ void PingsLinesRenderer::Initialize(IDirect3DDevice9* device) {
 	}
 }
 
-void PingsLinesRenderer::CreatePing(float x, float y) {
-	static CtoS_P37* packet = new CtoS_P37();
-
-	short sx = static_cast<short>(std::lroundf(x / 100.0f));
-	short sy = static_cast<short>(std::lroundf(y / 100.0f));
-
-	packet->NumberPts = 1;
-	packet->session_id = 1;
-	packet->points[0].x = sx;
-	packet->points[0].y = sy;
-	DWORD size = sizeof(CtoS_P37);
-	printf("Size 0x%X\n", size);
-	GWCA::CtoS().SendPacket<CtoS_P37>(packet);
-
-	pings.push_front(new TerrainPing(sx, sy));
-}
-
 void PingsLinesRenderer::Render(IDirect3DDevice9* device) {
 	if (!initialized_) {
 		initialized_ = true;
@@ -102,6 +100,8 @@ void PingsLinesRenderer::Render(IDirect3DDevice9* device) {
 	}
 
 	for (Ping* ping : pings) {
+		if (ping->GetScale() == 0) continue;
+
 		D3DXMATRIX translate, scale, world;
 		D3DXMatrixTranslation(&translate, ping->GetX(), ping->GetY(), 0.0f);
 		D3DXMatrixScaling(&scale, 100.0f, 100.0f, 1.0f);
@@ -128,7 +128,7 @@ void PingsLinesRenderer::Render(IDirect3DDevice9* device) {
 	HRESULT res = buffer_->Lock(0, sizeof(D3DVertex) * vertices_max, (VOID**)&vertices, D3DLOCK_DISCARD);
 	if (FAILED(res)) printf("AgentRenderer Lock() error: %d\n", res);
 
-	auto Enqueue = [&](short x, short y, short c) {
+	auto Enqueue = [&](float x, float y, short c) {
 		vertices[0].x = x;
 		vertices[0].y = y;
 		vertices[0].z = 0.0f;
@@ -159,9 +159,10 @@ void PingsLinesRenderer::Render(IDirect3DDevice9* device) {
 		}
 	}
 
-	D3DXMATRIX scale;
-	D3DXMatrixScaling(&scale, 100.0f, 100.0f, 1.0f);
-	device->SetTransform(D3DTS_WORLD, &scale);
+	D3DXMATRIX i;
+	D3DXMatrixIdentity(&i);
+	//D3DXMatrixScaling(&scale, 100.0f, 100.0f, 1.0f);
+	device->SetTransform(D3DTS_WORLD, &i);
 
 	buffer_->Unlock();
 	if (vertices_count != 0) {
@@ -199,13 +200,107 @@ void PingsLinesRenderer::PingCircle::Initialize(IDirect3DDevice9* device) {
 }
 
 float PingsLinesRenderer::AgentPing::GetX() {
-	GWCA::GW::Agent* agent = GWCA::Agents().GetAgentByID(id);
+	GW::Agent* agent = GW::Agents().GetAgentByID(id);
 	if (agent == nullptr) return 0.0f;
 	return agent->X;
 }
 
 float PingsLinesRenderer::AgentPing::GetY() {
-	GWCA::GW::Agent* agent = GWCA::Agents().GetAgentByID(id);
+	GW::Agent* agent = GW::Agents().GetAgentByID(id);
 	if (agent == nullptr) return 0.0f;
 	return agent->Y;
+}
+
+float PingsLinesRenderer::AgentPing::GetScale() {
+	GW::Agent* agent = GW::Agents().GetAgentByID(id);
+	if (agent == nullptr) return 0.0f;
+	return 1.0f;
+}
+
+bool PingsLinesRenderer::OnMouseDown(float x, float y) {
+	mouse_down = true;
+	mouse_moved = false;
+	mouse_x = x;
+	mouse_y = y;
+	queue.clear();
+	lastsent = TBTimer::init();
+	return true;
+}
+
+bool PingsLinesRenderer::OnMouseMove(float x, float y) {
+	if (!mouse_down) return false;
+
+	GW::Agent* me = GW::Agents().GetPlayer();
+	if (me == nullptr) return false;
+
+	drawings[me->PlayerNumber].player = me->PlayerNumber;
+	if (!mouse_moved) { // first time
+		mouse_moved = true;
+		BumpSessionID();
+		drawings[me->PlayerNumber].session = session_id;
+	}
+
+	if (TBTimer::diff(lastshown) > show_interval
+		|| TBTimer::diff(lastqueued) > queue_interval
+		|| TBTimer::diff(lastsent) > send_interval) {
+		lastshown = TBTimer::init();
+
+		DrawingLine l;
+		l.x1 = mouse_x;
+		l.y1 = mouse_y;
+		l.x2 = mouse_x = x;
+		l.y2 = mouse_y = y;
+		drawings[me->PlayerNumber].lines.push_back(l);
+
+		if (TBTimer::diff(lastqueued) > queue_interval
+			|| TBTimer::diff(lastsent) > send_interval) {
+			lastqueued = TBTimer::init();
+
+			queue.push_back(ShortPos(ToShortPos(x), ToShortPos(y)));
+
+			if (queue.size() == 7 || TBTimer::diff(lastsent) > send_interval) {
+				lastsent = TBTimer::init();
+				SendQueue();
+			}
+		}
+	}
+	
+	return true;
+}
+
+bool PingsLinesRenderer::OnMouseUp() {
+	if (!mouse_down) return false;
+	mouse_down = false;
+
+	if (mouse_moved) {
+		lastsent = TBTimer::init();
+	} else {
+		BumpSessionID();
+		queue.push_back(ShortPos(ToShortPos(mouse_x), ToShortPos(mouse_y)));
+		pings.push_front(new TerrainPing(mouse_x, mouse_y));
+	}
+
+	SendQueue();
+
+	return true;
+}
+
+void PingsLinesRenderer::SendQueue() {
+	static GW::Packet::P037* packet = new GW::Packet::P037();
+
+	printf("sending %d pos [%d]\n", queue.size(), session_id);
+
+	if (queue.size() > 0 && queue.size() < 8) {
+
+		packet->NumberPts = queue.size();
+		packet->session_id = session_id;
+		for (unsigned int i = 0; i < queue.size(); ++i) {
+			packet->points[i].x = queue[i].x;
+			packet->points[i].y = queue[i].y;
+		}
+
+		GW::CtoS().SendPacket<GW::Packet::P037>(packet);
+	}
+
+	queue.clear();
 }

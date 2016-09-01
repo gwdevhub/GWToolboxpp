@@ -7,11 +7,10 @@
 #include <d3dx9math.h>
 
 #include <GWCA\GWCA.h>
-#include <GWCA\StoCMgr.h>
-#include <GWCA\CameraMgr.h>
-
+#include <GWCA\Managers\StoCMgr.h>
+#include <GWCA\Managers\CameraMgr.h>
 #include "Config.h"
-#include "GWToolbox.h"
+#include "logger.h"
 
 Minimap::Minimap() 
 	: range_renderer(RangeRenderer()),
@@ -22,24 +21,23 @@ Minimap::Minimap()
 	loading_(false),
 	visible_(false) {
 
-	GWCA::StoC().AddGameServerEvent<GWCA::StoC_Pak::P391_InstanceLoadFile>(
-		[this](GWCA::StoC_Pak::P391_InstanceLoadFile* packet) {
+	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P391_InstanceLoadFile>(
+		[this](GW::Packet::StoC::P391_InstanceLoadFile* packet) {
 		printf("loading map %d\n", packet->map_fileID);
 		pmap_renderer.Invalidate();
 		loading_ = false;
 		return false;
 	});
 
-	GWCA::StoC().AddGameServerEvent<GWCA::StoC_Pak::P406>(
-		[&](GWCA::StoC_Pak::P406* pak) {
+	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P406>(
+		[&](GW::Packet::StoC::P406* pak) {
 		loading_ = true;
 		return false;
 	});
 
-	Config& config = GWToolbox::instance().config();
-	int x = config.IniReadLong(Minimap::IniSection(), Minimap::IniKeyX(), 50);
-	int y = config.IniReadLong(Minimap::IniSection(), Minimap::IniKeyY(), 50);
-	int width = config.IniReadLong(Minimap::IniSection(), Minimap::IniKeyWidth(), 600);
+	int x = Config::IniReadLong(Minimap::IniSection(), Minimap::IniKeyX(), 50);
+	int y = Config::IniReadLong(Minimap::IniSection(), Minimap::IniKeyY(), 50);
+	int width = Config::IniReadLong(Minimap::IniSection(), Minimap::IniKeyWidth(), 600);
 	SetX(x);
 	SetY(y);
 	SetWidth(width);
@@ -47,7 +45,7 @@ Minimap::Minimap()
 
 	Scale(0.0002f);
 
-	SetVisible(config.IniReadBool(Minimap::IniSection(), Minimap::InikeyShow(), false));
+	SetVisible(Config::IniReadBool(Minimap::IniSection(), Minimap::InikeyShow(), false));
 
 	pmap_renderer.Invalidate();
 }
@@ -55,22 +53,24 @@ Minimap::Minimap()
 void Minimap::Render(IDirect3DDevice9* device) {
 	if (!visible_) return;
 
-	using namespace GWCA;
 	if (loading_
-		|| !GWCA::Map().IsMapLoaded()
-		|| GWCA::Map().GetInstanceType() == GwConstants::InstanceType::Loading
-		|| GWCA::Agents().GetPlayerId() == 0) {
+		|| !GW::Map().IsMapLoaded()
+		|| GW::Map().GetInstanceType() == GW::Constants::InstanceType::Loading
+		|| GW::Agents().GetPlayerId() == 0) {
 		return;
 	}
 
-	GW::Agent* me = GWCA::Agents().GetPlayer();
-	if (me != nullptr) {
-		SetTranslation(-me->X, -me->Y);
-	}
-	float camera_yaw = GWCA::Camera().GetYaw();
+	GW::Agent* me = GW::Agents().GetPlayer();
+	if (me == nullptr) return;
+	SetTranslation(-me->X, -me->Y);
+
+	float camera_yaw = GW::Cameramgr().GetYaw();
 	SetRotation(-camera_yaw + (float)M_PI_2);
 
 	device->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, TRUE);
+	device->SetFVF(D3DFVF_CUSTOMVERTEX);
+	device->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
+	device->SetRenderState(D3DRS_LIGHTING, FALSE);
 
 	D3DXMATRIX identity;
 	D3DXMatrixIdentity(&identity);
@@ -80,60 +80,70 @@ void Minimap::Render(IDirect3DDevice9* device) {
 
 	RenderSetupClipping(device);
 	RenderSetupProjection(device);
-	
-	RenderSetupWorldTransforms(device);
+	//HRESULT zenable = device->SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE);
+	//if (zenable != D3D_OK) {
+	//	printf("NOT OK\n");
+	//}
+	//device->Clear(0, NULL, D3DCLEAR_ZBUFFER, 0x00000000, 0.5f, 0);
+	//if (zenable != D3D_OK) {
+	//	printf("NOT OK2\n");
+	//}
+	//D3DCAPS9 caps;
+	//device->GetDeviceCaps(&caps);
+
+	//LPDIRECT3DSURFACE9 pZBuffer;
+	//device->GetDepthStencilSurface(&pZBuffer);
+
+	RenderSetupWorldTransforms(device, false, false, true);
 	pmap_renderer.Render(device);	
 
-	D3DXMATRIX scale;
-	D3DXMatrixScaling(&scale, scale_, scale_, 1);
-	device->SetTransform(D3DTS_VIEW, &scale);
-	device->SetTransform(D3DTS_WORLD, &identity);
+	RenderSetupWorldTransforms(device, false, false, true);
 	range_renderer.Render(device);
 
-	RenderSetupWorldTransforms(device);
+	RenderSetupWorldTransforms(device, true, true, true);
 
 	agent_renderer.Render(device);
 
 	pingslines_renderer.Render(device);
 }
 
-void Minimap::SafeSelectTarget(int ui_x, int ui_y) {
-	__try {
-		SelectTarget(ui_x, ui_y);
-	} __except (EXCEPT_EXPRESSION_LOOP) {
-		LOG("SafeSelectTarget __except body\n");
-	}
+GW::Vector2f Minimap::InterfaceToWorld(int x, int y) const {
+	GW::Agent* me = GW::Agents().GetPlayer();
+	if (me == nullptr) return GW::Vector2f(0, 0);
+
+	x -= GetX();
+	y -= GetY();
+
+	// go from [0, width][0, height] to [-1, 1][-1, 1] and then divide by scale
+	float xs = (2.0f * x / GetWidth() - 1.0f) / GetScale();
+	float ys = (2.0f * y / GetHeight() - 1.0f) / GetScale();
+
+	// rotate by current camera rotation
+	float angle = -GW::Cameramgr().GetYaw() + (float)M_PI_2;
+	float xr = xs * std::cos(angle) - ys * std::sin(angle);
+	float yr = ys * std::cos(angle) + xs * std::sin(angle);
+
+	// translate by character position
+	float xt = xr - GetTranslationX();
+	float yt = -yr - GetTranslationY();
+
+	return GW::Vector2f(xt, yt);
 }
 
-void Minimap::SelectTarget(int ui_x, int ui_y) {
-	GWCA::GW::AgentArray agents = GWCA::Agents().GetAgentArray();
+void Minimap::SelectTarget(GW::Vector2f pos) {
+	GW::AgentArray agents = GW::Agents().GetAgentArray();
 	if (!agents.valid()) return;
-
-	GWCA::GW::Agent* me = GWCA::Agents().GetPlayer();
-	if (me == nullptr) return;
-
-	float x = 2.0f * ui_x / GetWidth() - 1.0f;
-	float y = 2.0f * ui_y / GetHeight() - 1.0f;
-	x /= GetScale();
-	y /= GetScale();
-	
-	float camera_yaw = GWCA::Camera().GetYaw();
-	float angle = -camera_yaw + (float)M_PI_2;
-	float rot_x = x * std::cos(angle) - y * std::sin(angle);
-	float rot_y = y * std::cos(angle) + x * std::sin(angle);
-
-	GWCA::GamePos pos(rot_x - GetTranslationX(), -rot_y - GetTranslationY());
 
 	float distance = 600.0f * 600.0f;
 	int closest = -1;
 
 	for (size_t i = 0; i < agents.size(); ++i) {
-		GWCA::GW::Agent* agent = agents[i];
+		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
-		if (agent->GetIsDead()) continue;
-		if (agent->HP == 0) continue;
-		if (!agent->GetIsLivingType()) continue;
-		float newDistance = GWCA::Agents().GetSqrDistance(pos, agents[i]->pos);
+		if (agent->GetIsLivingType() && agent->GetIsDead()) continue;
+		if (agent->GetIsItemType()) continue;
+		if (agent->GetIsSignpostType() && agent->ExtraType != 8141) continue; // allow locked chests
+		float newDistance = GW::Agents().GetSqrDistance(pos, agents[i]->pos);
 		if (distance > newDistance) {
 			distance = newDistance;
 			closest = i;
@@ -141,7 +151,7 @@ void Minimap::SelectTarget(int ui_x, int ui_y) {
 	}
 
 	if (closest > 0) {
-		GWCA::Agents().ChangeTarget(agents[closest]);
+		GW::Agents().ChangeTarget(agents[closest]);
 	}
 }
 
@@ -155,7 +165,7 @@ bool Minimap::OnMouseDown(MSG msg) {
 	mousedown_ = true;
 
 	if (msg.wParam & MK_CONTROL) {
-		SelectTarget(x - GetX(), y - GetY());
+		SelectTarget(InterfaceToWorld(x, y));
 		return true;
 	}
 
@@ -165,7 +175,8 @@ bool Minimap::OnMouseDown(MSG msg) {
 		return true;
 	}
 
-	return false;
+	GW::Vector2f v = InterfaceToWorld(x, y);
+	return pingslines_renderer.OnMouseDown(v.x, v.y);
 }
 
 bool Minimap::OnMouseDblClick(MSG msg) {
@@ -176,30 +187,29 @@ bool Minimap::OnMouseDblClick(MSG msg) {
 	if (!IsInside(x, y)) return false;
 
 	if (msg.wParam & MK_CONTROL) {
-		SelectTarget(x - GetX(), y - GetY());
+		SelectTarget(InterfaceToWorld(x, y));
 		return true;
 	}
 
-	return false;
+	return true;
 }
 
 bool Minimap::OnMouseUp(MSG msg) {
 	if (!visible_) return false;
+	if (!mousedown_) return false;
 
 	mousedown_ = false;
 	
 	if (!freeze_) {
-		Config& config = GWToolbox::instance().config();
-		config.IniWriteLong(Minimap::IniSection(), Minimap::IniKeyX(), GetX());
-		config.IniWriteLong(Minimap::IniSection(), Minimap::IniKeyY(), GetY());
+		Config::IniWriteLong(Minimap::IniSection(), Minimap::IniKeyX(), GetX());
+		Config::IniWriteLong(Minimap::IniSection(), Minimap::IniKeyY(), GetY());
 	}
 
-	return false;
+	return pingslines_renderer.OnMouseUp();
 }
 
 bool Minimap::OnMouseMove(MSG msg) {
 	if (!visible_) return false;
-
 	if (!mousedown_) return false;
 	
 	int x = GET_X_LPARAM(msg.lParam);
@@ -207,7 +217,7 @@ bool Minimap::OnMouseMove(MSG msg) {
 	if (!IsInside(x, y)) return false;
 
 	if (msg.wParam & MK_CONTROL) {
-		SelectTarget(x - GetX(), y - GetY());
+		SelectTarget(InterfaceToWorld(x, y));
 		return true;
 	}
 
@@ -221,7 +231,8 @@ bool Minimap::OnMouseMove(MSG msg) {
 		return true;
 	}
 
-	return false;
+	GW::Vector2f v = InterfaceToWorld(x, y);
+	return pingslines_renderer.OnMouseMove(v.x, v.y);
 }
 
 bool Minimap::OnMouseWheel(MSG msg) {
@@ -239,8 +250,7 @@ bool Minimap::OnMouseWheel(MSG msg) {
 		SetX(GetX() - delta);
 		SetY(GetY() - delta);
 
-		GWToolbox::instance().config().IniWriteLong(
-			Minimap::IniSection(), Minimap::IniKeyWidth(), GetWidth());
+		Config::IniWriteLong(Minimap::IniSection(), Minimap::IniKeyWidth(), GetWidth());
 
 		return true;
 	}

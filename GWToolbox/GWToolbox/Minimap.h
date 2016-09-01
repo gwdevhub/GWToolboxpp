@@ -37,8 +37,8 @@ private:
 			&& y >= GetY() && y < GetY() + GetHeight());
 	}
 
-	void SafeSelectTarget(int ui_x, int ui_y);
-	void SelectTarget(int ui_x, int ui_y);
+	GW::Vector2f InterfaceToWorld(int x, int y) const;
+	void SelectTarget(GW::Vector2f pos);
 
 	bool freeze_;
 	bool mousedown_;

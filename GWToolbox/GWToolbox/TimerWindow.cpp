@@ -4,9 +4,8 @@
 #include <string>
 
 #include <GWCA\GWCA.h>
-#include <GWCA\MapMgr.h>
+#include <GWCA\Managers\MapMgr.h>
 
-#include "GWToolbox.h"
 #include "Config.h"
 #include "GuiUtils.h"
 
@@ -16,9 +15,8 @@ TimerWindow::TimerWindow() {
 	current_time_ = 0;
 	in_urgoz_ = false;
 
-	Config& config = GWToolbox::instance().config();
-	int x = config.IniReadLong(TimerWindow::IniSection(), TimerWindow::IniKeyX(), 400);
-	int y = config.IniReadLong(TimerWindow::IniSection(), TimerWindow::IniKeyY(), 100);
+	int x = Config::IniReadLong(TimerWindow::IniSection(), TimerWindow::IniKeyX(), 400);
+	int y = Config::IniReadLong(TimerWindow::IniSection(), TimerWindow::IniKeyY(), 100);
 
 	SetLocation(Drawing::PointI(x, y));
 	SetSize(Drawing::SizeI(WIDTH, HEIGHT));
@@ -87,13 +85,12 @@ void TimerWindow::SaveLocation() {
 	CalculateAbsoluteLocation();
 	int x = absoluteLocation_.X;
 	int y = absoluteLocation_.Y;
-	Config& config = GWToolbox::instance().config();
-	config.IniWriteLong(TimerWindow::IniSection(), TimerWindow::IniKeyX(), x);
-	config.IniWriteLong(TimerWindow::IniSection(), TimerWindow::IniKeyY(), y);
+	Config::IniWriteLong(TimerWindow::IniSection(), TimerWindow::IniKeyX(), x);
+	Config::IniWriteLong(TimerWindow::IniSection(), TimerWindow::IniKeyY(), y);
 }
 
 void TimerWindow::UpdateUI() {
-	unsigned long uptime = GWCA::Map().GetInstanceTime();
+	unsigned long uptime = GW::Map().GetInstanceTime();
 	unsigned long  time = uptime / 1000;
 	if (time != current_time_) {
 		current_time_ = time;
@@ -119,8 +116,8 @@ void TimerWindow::UpdateUI() {
 		shadow_->SetText(ss.str());
 		shadow_->Invalidate();
 
-		GwConstants::MapID map_id = GWCA::Map().GetMapID();
-		if (map_id == GwConstants::MapID::Urgozs_Warren) {
+		GW::Constants::MapID map_id = GW::Map().GetMapID();
+		if (map_id == GW::Constants::MapID::Urgozs_Warren) {
 			if (!in_urgoz_) {
 				in_urgoz_ = true;
 				SetSize(Drawing::SizeI(WIDTH, HEIGHT + URGOZ_HEIGHT));

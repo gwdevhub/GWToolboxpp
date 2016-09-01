@@ -3,7 +3,7 @@
 #include <list>
 #include <vector>
 
-#include "GWCA\GwConstants.h"
+#include <GWCA\Constants\Constants.h>
 
 #include "Timer.h"
 #include "Pcons.h"
@@ -32,7 +32,7 @@ private:
 	std::vector<Pcon*> pcons;
 	bool initialized;	// true if the feature is initialized
 	bool enabled;		// true if the feature is enabled, false otherwise 
-	GwConstants::InstanceType current_map_type;
+	GW::Constants::InstanceType current_map_type;
 	clock_t scan_inventory_timer;
 
 public:

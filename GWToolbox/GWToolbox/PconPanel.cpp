@@ -4,7 +4,7 @@
 #include <functional>
 
 #include <GWCA\GWCA.h>
-#include <GWCA\MapMgr.h>
+#include <GWCA\Managers\MapMgr.h>
 
 #include "MainWindow.h"
 #include "GWToolbox.h"
@@ -12,7 +12,7 @@
 
 using namespace GWCA;
 using namespace OSHGui::Drawing;
-using namespace GwConstants;
+using namespace GW::Constants;
 
 PconPanel::PconPanel(OSHGui::Control* parent) : ToolboxPanel(parent) {
 	initialized = false;
@@ -219,8 +219,8 @@ void PconPanel::BuildUI() {
 void PconPanel::UpdateUI() {
 	if (!initialized) return;
 
-	if (current_map_type != GWCA::Map().GetInstanceType()) {
-		current_map_type = GWCA::Map().GetInstanceType();
+	if (current_map_type != GW::Map().GetInstanceType()) {
+		current_map_type = GW::Map().GetInstanceType();
 		scan_inventory_timer = TBTimer::init();
 	}
 
@@ -242,11 +242,11 @@ void PconPanel::MainRoutine() {
 
 	if (!enabled) return;
 	
-	InstanceType type = GWCA::Map().GetInstanceType();
+	InstanceType type = GW::Map().GetInstanceType();
 	if (type == InstanceType::Loading) return;
-	if (GWCA::Agents().GetPlayerId() == 0) return;
-	if (GWCA::Agents().GetPlayer() == NULL) return;
-	if (GWCA::Agents().GetPlayer()->GetIsDead()) return;
+	if (GW::Agents().GetPlayerId() == 0) return;
+	if (GW::Agents().GetPlayer() == NULL) return;
+	if (GW::Agents().GetPlayer()->GetIsDead()) return;
 
 	if (type == InstanceType::Explorable) {
 		essence->checkAndUse();

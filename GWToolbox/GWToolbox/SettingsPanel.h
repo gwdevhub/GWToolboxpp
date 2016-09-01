@@ -2,7 +2,7 @@
 
 #include <fstream>
 
-#include "GWCA\GwConstants.h"
+#include <GWCA\Constants\Maps.h>
 
 #include "ToolboxPanel.h"
 #include "Timer.h"
@@ -26,7 +26,7 @@ public:
 private:
 	bool location_active_; // true if active
 	clock_t location_timer_;
-	GwConstants::MapID location_current_map_;
+	GW::Constants::MapID location_current_map_;
 	std::ofstream location_file_;
 
 	std::vector<BoolSetting*> boolsettings;

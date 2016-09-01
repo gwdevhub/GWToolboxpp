@@ -8,7 +8,8 @@
 #include <time.h>
 
 #include "GuiUtils.h"
-#include "GWToolbox.h"
+
+#include "Defines.h"
 
 FILE* Logger::logfile = NULL;
 
@@ -82,7 +83,7 @@ LONG WINAPI Logger::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers) {
 	GetLocalTime(&stLocalTime);
 
 	StringCchPrintf(szFileName, MAX_PATH, L"%s\\%s-%04d%02d%02d-%02d%02d%02d-%ld-%ld.dmp",
-		GuiUtils::getSettingsFolder().c_str() , GWToolbox::Version,
+		GuiUtils::getSettingsFolder().c_str() , GWTOOLBOX_VERSION,
 		stLocalTime.wYear, stLocalTime.wMonth, stLocalTime.wDay,
 		stLocalTime.wHour, stLocalTime.wMinute, stLocalTime.wSecond,
 		GetCurrentProcessId(), GetCurrentThreadId());

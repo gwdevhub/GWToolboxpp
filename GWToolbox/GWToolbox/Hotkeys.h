@@ -1,13 +1,10 @@
 #pragma once
 
 #include <string>
-
 #include <OSHGui\OSHGui.hpp>
-#include <GWCA\GWCA.h>
-#include <GWCA\MapMgr.h>
+#include <GWCA\Constants\Skills.h>
 
 using namespace std;
-
 
 // abstract class Toolbox Hotkey
 // has the key code and pressed status
@@ -34,12 +31,9 @@ protected:
 	inline void set_active(bool active) { active_ = active; }
 	inline void set_key(OSHGui::Key key) { key_ = key; }
 	inline void set_modifier(OSHGui::Key modifier) { modifier_ = modifier; }
-	bool isLoading() { 
-		return GWCA::Map().GetInstanceType() == GwConstants::InstanceType::Loading; }
-	bool isExplorable() { 
-		return GWCA::Map().GetInstanceType() == GwConstants::InstanceType::Explorable; }
-	bool isOutpost() { 
-		return GWCA::Map().GetInstanceType() == GwConstants::InstanceType::Outpost; }
+	bool isLoading() const;
+	bool isExplorable() const;
+	bool isOutpost() const;
 
 	TBHotkey(OSHGui::Control* parent, OSHGui::Key key, 
 		OSHGui::Key modifier, bool active, wstring ini_section);
@@ -111,14 +105,14 @@ public:
 // can be used for recall, ua, and maybe others?
 class HotkeyDropUseBuff : public TBHotkey {
 private:
-	GwConstants::SkillID id_;
+	GW::Constants::SkillID id_;
 	OSHGui::ComboBox* combo_;
 
-	GwConstants::SkillID IndexToSkillID(int index);
-	inline void set_id(GwConstants::SkillID id) { id_ = id; }
+	GW::Constants::SkillID IndexToSkillID(int index);
+	inline void set_id(GW::Constants::SkillID id) { id_ = id; }
 public:
 	HotkeyDropUseBuff(OSHGui::Control* parent, OSHGui::Key key, OSHGui::Key modifier, 
-		bool active, wstring ini_section, GwConstants::SkillID skill_id);
+		bool active, wstring ini_section, GW::Constants::SkillID skill_id);
 
 	static const wchar_t* IniSection() { return L"DropUseBuff"; }
 	static const wchar_t* IniKeySkillID() { return L"SkillID"; }

@@ -1,33 +1,31 @@
 #include "GWToolbox.h"
 
+#include "Defines.h"
+
 #include <string>
 
 #include <OSHGui\OSHGui.hpp>
 
 #include <GWCA\GWCA.h>
-#include <GWCA\AgentMgr.h>
-#include <GWCA\CameraMgr.h>
-#include <GWCA\ChatMgr.h>
-#include <GWCA\EffectMgr.h>
-#include <GWCA\FriendListMgr.h>
-#include <GWCA\GuildMgr.h>
-#include <GWCA\ItemMgr.h>
-#include <GWCA\MapMgr.h>
-#include <GWCA\MerchantMgr.h>
-#include <GWCA\PartyMgr.h>
-#include <GWCA\PlayerMgr.h>
-#include <GWCA\SkillbarMgr.h>
-#include <GWCA\StoCMgr.h>
+#include <GWCA\Managers\AgentMgr.h>
+#include <GWCA\Managers\CameraMgr.h>
+#include <GWCA\Managers\ChatMgr.h>
+#include <GWCA\Managers\EffectMgr.h>
+#include <GWCA\Managers\FriendListMgr.h>
+#include <GWCA\Managers\GuildMgr.h>
+#include <GWCA\Managers\ItemMgr.h>
+#include <GWCA\Managers\MapMgr.h>
+#include <GWCA\Managers\MerchantMgr.h>
+#include <GWCA\Managers\PartyMgr.h>
+#include <GWCA\Managers\PlayerMgr.h>
+#include <GWCA\Managers\SkillbarMgr.h>
+#include <GWCA\Managers\StoCMgr.h>
 #include <GWCA_DX\DirectXHooker.h>
 
 #include "Timer.h"
 #include "MainWindow.h"
 #include "TimerWindow.h"
 #include "Settings.h"
-
-const wchar_t * GWToolbox::Host = L"http://fbgmguild.com/GWToolboxpp/";
-const wchar_t* GWToolbox::Version = L"1.8";
-
 
 GWToolbox* GWToolbox::instance_ = NULL;
 OSHGui::Drawing::Direct3D9Renderer* GWToolbox::renderer = NULL;
@@ -47,27 +45,30 @@ void GWToolbox::ThreadEntry(HMODULE dllmodule) {
 	if (instance_) return;
 
 	LOG("Initializing API\n");
-	if (!GWCA::Api::Initialize()){
+	if (!GW::Api::Initialize()){
 		MessageBoxA(0, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0);
 		FreeLibraryAndExitThread(dllmodule, EXIT_SUCCESS);
 	}
 
-	GWCA::Gamethread();
-	GWCA::CtoS();
-	GWCA::StoC();
-	GWCA::Agents();
-	GWCA::Party();
-	GWCA::Items();
-	GWCA::Skillbar();
-	GWCA::Effects();
-	GWCA::Chat();
-	GWCA::Merchant();
-	GWCA::Guild();
-	GWCA::Map();
-	GWCA::FriendList();
-	GWCA::Camera();
+	GW::Gamethread();
+	GW::CtoS();
+	GW::StoC();
+	GW::Agents();
+	GW::Partymgr();
+	GW::Items();
+	GW::Skillbarmgr();
+	GW::Effects();
+	GW::Chat();
+	GW::Merchant();
+	GW::Guildmgr();
+	GW::Map();
+	GW::FriendListmgr();
+	GW::Cameramgr();
 
 	dx_hooker = new GWCA::DirectXHooker();
+
+	LOG("Creating Config\n");
+	Config::Initialize();
 
 	LOG("Creating GWToolbox++\n");
 	instance_ = new GWToolbox(dllmodule);
@@ -84,7 +85,7 @@ void GWToolbox::Exec() {
 	LOG("Installed dx hooks\n");
 
 	LOG("Installing input event handler\n");
-	HWND gw_window_handle = GWCA::MemoryMgr::GetGWWindowHandle();
+	HWND gw_window_handle = GW::MemoryMgr::GetGWWindowHandle();
 	OldWndProc = SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)SafeWndProc);
 	LOG("oldwndproc %X\n", OldWndProc);
 	LOG("Installed input event handler\n");
@@ -92,7 +93,7 @@ void GWToolbox::Exec() {
 	input.SetKeyboardInputEnabled(true);
 	input.SetMouseInputEnabled(true);
 
-	config_->IniWrite(L"launcher", L"dllversion", Version);
+	Config::IniWrite(L"launcher", L"dllversion", GWTOOLBOX_VERSION);
 
 	Application* app = Application::InstancePtr();
 
@@ -129,23 +130,22 @@ void GWToolbox::Exec() {
 		Application::InstancePtr()->Disable();
 		LOG("Closing settings\n");
 		main_window().settings_panel().Close();
-		LOG("Saving config file\n");
-		config_->Save();
 		LOG("saving health log\n");
 		party_damage().SaveIni();
 	}
 	Sleep(100);
 	LOG("Deleting config\n");
-	delete config_;
 	delete chat_commands_;
 	Sleep(100);
 	LOG("Restoring input hook\n");
 	SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
 	Sleep(100);
 	LOG("Destroying API\n");
-	GWCA::Api::Destruct();
+	GW::Api::Destruct();
 	LOG("Destroying directX hook\n");
 	delete dx_hooker;
+	LOG("Destroying Config\n");
+	Config::Destroy();
 	LOG("Closing log/console, bye!\n");
 	Logger::Close();
 	Sleep(100);
@@ -164,7 +164,7 @@ LRESULT CALLBACK GWToolbox::SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, 
 LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) {
 	
 	if (Message == WM_QUIT || Message == WM_CLOSE) {
-		GWToolbox::instance().config().Save();
+		Config::Save();
 		return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
 	}
 
@@ -175,15 +175,17 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 		msg.wParam = wParam;
 		msg.lParam = lParam;
 
+		GWToolbox& tb = GWToolbox::instance();
+
 		switch (Message) {
 		// Send right mouse button events to gw (move view around) and don't mess with them
-		case WM_RBUTTONDOWN: GWToolbox::instance().right_mouse_pressed_ = true; break;
-		case WM_RBUTTONUP: GWToolbox::instance().right_mouse_pressed_ = false; break;
+		case WM_RBUTTONDOWN: tb.right_mouse_pressed_ = true; break;
+		case WM_RBUTTONUP: tb.right_mouse_pressed_ = false; break;
 
 		// Send button up mouse events to both gw and osh, to avoid gw being stuck on mouse-down
 		case WM_LBUTTONUP:
 			input.ProcessMouseMessage(&msg);
-			GWToolbox::instance().minimap_->OnMouseUp(msg);
+			tb.minimap_->OnMouseUp(msg);
 			break;
 		
 		// Send other mouse events to osh first and consume them if used
@@ -193,9 +195,10 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 		case WM_MOUSEWHEEL:
 			if (GWToolbox::instance().right_mouse_pressed_) break;
 			switch (Message) {
-			case WM_MOUSEMOVE: if (GWToolbox::instance().minimap_->OnMouseMove(msg)) return true; break;
-			case WM_LBUTTONDOWN: if (GWToolbox::instance().minimap_->OnMouseDown(msg)) return true; break;
-			case WM_MOUSEWHEEL: if (GWToolbox::instance().minimap_->OnMouseWheel(msg)) return true; break;
+			case WM_MOUSEMOVE: if (tb.minimap_->OnMouseMove(msg)) return true; break;
+			case WM_LBUTTONDOWN: if (tb.minimap_->OnMouseDown(msg)) return true; break;
+			case WM_MOUSEWHEEL: if (tb.minimap_->OnMouseWheel(msg)) return true; break;
+			case WM_LBUTTONDBLCLK: if (tb.minimap_->OnMouseDblClick(msg)) return true; break;
 			}
 			if (input.ProcessMouseMessage(&msg)) {
 				return true;

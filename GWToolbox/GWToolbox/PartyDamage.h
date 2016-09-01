@@ -5,9 +5,10 @@
 #include <map>
 
 #include <OSHGui\OSHGui.hpp>
-#include <GWCA\GwConstants.h>
 #include <GWCA\GWCA.h>
-#include <GWCA\StoCPackets.h>
+#include <GWCA\Constants\Constants.h>
+#include <GWCA\Packets\StoC.h>
+
 #include <SimpleIni.h>
 
 #include "ToolboxWindow.h"
@@ -36,16 +37,16 @@ class PartyDamage : public ToolboxWindow {
 		clock_t last_damage;
 		long agent_id = 0;
 		std::wstring name;
-		GwConstants::Profession primary = GwConstants::Profession::None;
-		GwConstants::Profession secondary = GwConstants::Profession::None;
+		GW::Constants::Profession primary = GW::Constants::Profession::None;
+		GW::Constants::Profession secondary = GW::Constants::Profession::None;
 
 		void Reset() {
 			damage = 0;
 			recent_damage = 0;
 			agent_id = 0;
 			name = L"";
-			primary = GwConstants::Profession::None;
-			secondary = GwConstants::Profession::None;
+			primary = GW::Constants::Profession::None;
+			secondary = GW::Constants::Profession::None;
 		}
 	};
 
@@ -80,8 +81,8 @@ public:
 	void SaveIni();
 
 private:
-	bool DamagePacketCallback(GWCA::StoC_Pak::P151* packet);
-	bool MapLoadedCallback(GWCA::StoC_Pak::P230* packet);
+	bool DamagePacketCallback(GW::Packet::StoC::P151* packet);
+	bool MapLoadedCallback(GW::Packet::StoC::P230* packet);
 
 	void CreatePartyIndexMap();
 

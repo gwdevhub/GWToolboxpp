@@ -13,7 +13,8 @@ public:
 	Viewer();
 
 	void RenderSetupClipping(IDirect3DDevice9* device);
-	void RenderSetupWorldTransforms(IDirect3DDevice9* device);
+	void RenderSetupWorldTransforms(IDirect3DDevice9* device, 
+		bool translate, bool rotate, bool zoom);
 	void RenderSetupProjection(IDirect3DDevice9* device);
 	virtual void Render(IDirect3DDevice9* device) = 0;
 

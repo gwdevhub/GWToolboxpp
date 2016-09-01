@@ -1,27 +1,24 @@
 #pragma once
 
 #include <deque>
+#include <vector>
 #include <map>
 
 #include "VBuffer.h"
 #include "Timer.h"
 
 class PingsLinesRenderer : public VBuffer {
-	struct CtoS_P37 {
-		const DWORD header = 0x25;
-		DWORD session_id = 0;
-		DWORD NumberPts;
-		struct {
-			short x;
-			short y;
-		} points[8];
-		DWORD unk[8];
+	struct ShortPos {
+		ShortPos() : x(0), y(0) {}
+		ShortPos(short _x, short _y) : x(_x), y(_y) {}
+		short x;
+		short y;
 	};
 	struct DrawingLine {
 		DrawingLine() : start(TBTimer::init()) {}
 		clock_t start;
-		short x1, y1;
-		short x2, y2;
+		float x1, y1;
+		float x2, y2;
 	};
 	struct PlayerDrawing {
 		PlayerDrawing() : player(0), session(0) {}
@@ -37,11 +34,10 @@ class PingsLinesRenderer : public VBuffer {
 		virtual float GetScale() { return 1.0f; }
 	};
 	struct TerrainPing : Ping {
-		TerrainPing(short _x, short _y) : Ping(), x(_x), y(_y) {}
-		short x;
-		short y;
-		float GetX() override { return x * 100.0f; }
-		float GetY() override { return y * 100.0f; }
+		TerrainPing(float _x, float _y) : Ping(), x(_x), y(_y) {}
+		float x, y;
+		float GetX() override { return x; }
+		float GetY() override { return y; }
 		float GetScale() override { return 2.0f; }
 	};
 	struct AgentPing : Ping {
@@ -49,6 +45,7 @@ class PingsLinesRenderer : public VBuffer {
 		DWORD id;
 		float GetX() override;
 		float GetY() override;
+		float GetScale() override;
 	};
 	class PingCircle : public VBuffer {
 		D3DVertex* vertices;
@@ -67,12 +64,20 @@ public:
 		pings.clear();
 	}
 
-	void CreatePing(float x, float y);
-
 	void SetVisible(bool v) { visible_ = v; }
+
+	bool OnMouseDown(float x, float y);
+	bool OnMouseMove(float x, float y);
+	bool OnMouseUp();
 
 private:
 	void Initialize(IDirect3DDevice9* device) override;
+
+	inline short ToShortPos(float n) {
+		return static_cast<short>(std::lroundf(n / 100.0f));
+	}
+	inline void BumpSessionID() { if (--session_id < 0) session_id = 7; }
+	void SendQueue();
 
 	PingCircle ping_circle;
 	std::deque<Ping*> pings;
@@ -81,8 +86,21 @@ private:
 
 	bool visible_;
 
+	// for pings and drawings
+	const long show_interval = 10;
+	const long queue_interval = 25;
+	const long send_interval = 250;
+	bool mouse_down;
+	bool mouse_moved; // true if moved since last pressed
+	float mouse_x, mouse_y;
+	int session_id;
+	clock_t lastshown;
+	clock_t lastsent;
+	clock_t lastqueued;
+	std::vector<ShortPos> queue;
+
+	// for the gpu
 	D3DVertex* vertices;		// vertices array
 	unsigned int vertices_count;// count of vertices
 	unsigned int vertices_max;	// max number of vertices to draw in one call
 };
-

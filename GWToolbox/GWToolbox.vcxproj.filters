@@ -145,6 +145,7 @@
       <Filter>Windows\Minimap</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\ChatCommands.h" />
+    <ClInclude Include="GWToolbox\Defines.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -226,5 +227,6 @@
       <Filter>Windows\Minimap</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\ChatCommands.cpp" />
+    <ClCompile Include="GWToolbox\Config.cpp" />
   </ItemGroup>
 </Project>

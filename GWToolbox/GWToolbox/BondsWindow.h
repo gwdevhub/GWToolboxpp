@@ -1,7 +1,5 @@
 #pragma once
 
-#include <GWCA\GwConstants.h>
-
 #include <OSHGui\OSHGui.hpp>
 
 #include "ToolboxWindow.h"

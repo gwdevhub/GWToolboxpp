@@ -4,29 +4,24 @@
 
 #include <GWCA\GWCA.h>
 
-#include "GWToolbox.h"
+#include "Defines.h"
+
 #include "Config.h"
 #include "GuiUtils.h"
-#include "HealthWindow.h"
-#include "TimerWindow.h"
-#include "DistanceWindow.h"
-#include "BondsWindow.h"
 
 #include "Settings.h"
 
 using namespace OSHGui;
 
 void SettingsPanel::BuildUI() {
-	Config& config = GWToolbox::instance().config();
-
-	location_current_map_ = GwConstants::MapID::None;
+	location_current_map_ = GW::Constants::MapID::None;
 	location_timer_ = TBTimer::init();
 	location_active_ = false;
 
 	const int item_width = GetWidth() - 2 * Padding;
 
 	Label* version = new Label(this);
-	version->SetText(wstring(L"GWToolbox++ version ") + GWToolbox::Version);
+	version->SetText(wstring(L"GWToolbox++ version ") + GWTOOLBOX_VERSION);
 	version->SetLocation(PointI(GetWidth() / 2 - version->GetWidth() / 2, Padding / 2));
 	AddControl(version);
 
@@ -84,7 +79,7 @@ void SettingsPanel::BuildUI() {
 	website->SetLocation(PointI(Padding, folder->GetTop() - Padding - website->GetHeight()));
 	website->GetClickEvent() += ClickEventHandler([](Control*) {
 		CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-		ShellExecuteW(NULL, L"open", GWToolbox::Host, NULL, NULL, SW_SHOWNORMAL);
+		ShellExecuteW(NULL, L"open", GWTOOLBOX_HOST, NULL, NULL, SW_SHOWNORMAL);
 	});
 	AddControl(website);
 
@@ -102,28 +97,28 @@ void SettingsPanel::MainRoutine() {
 	// save location data
 	if (location_active_ && TBTimer::diff(location_timer_) > 1000) {
 		location_timer_ = TBTimer::init();
-		if (GWCA::Map().GetInstanceType() == GwConstants::InstanceType::Explorable
-			&& GWCA::Agents().GetPlayer() != nullptr
-			&& GWCA::Map().GetInstanceTime() > 3000) {
-			GwConstants::MapID current = GWCA::Map().GetMapID();
+		if (GW::Map().GetInstanceType() == GW::Constants::InstanceType::Explorable
+			&& GW::Agents().GetPlayer() != nullptr
+			&& GW::Map().GetInstanceTime() > 3000) {
+			GW::Constants::MapID current = GW::Map().GetMapID();
 			if (location_current_map_ != current) {
 				location_current_map_ = current;
 
 				string map_string;
 				switch (current) {
-				case GwConstants::MapID::Domain_of_Anguish:
+				case GW::Constants::MapID::Domain_of_Anguish:
 					map_string = "DoA";
 					break;
-				case GwConstants::MapID::Urgozs_Warren:
+				case GW::Constants::MapID::Urgozs_Warren:
 					map_string = "Urgoz";
 					break;
-				case GwConstants::MapID::The_Deep:
+				case GW::Constants::MapID::The_Deep:
 					map_string = "Deep";
 					break;
-				case GwConstants::MapID::The_Underworld:
+				case GW::Constants::MapID::The_Underworld:
 					map_string = "UW";
 					break;
-				case GwConstants::MapID::The_Fissure_of_Woe:
+				case GW::Constants::MapID::The_Fissure_of_Woe:
 					map_string = "FoW";
 					break;
 				default:
@@ -131,14 +126,14 @@ void SettingsPanel::MainRoutine() {
 				}
 
 				string prof_string = "";
-				GWCA::GW::Agent* me = GWCA::Agents().GetPlayer();
+				GW::Agent* me = GW::Agents().GetPlayer();
 				if (me) {
 					prof_string += " - ";
-					prof_string += GWCA::Agents().GetProfessionAcronym(
-						static_cast<GwConstants::Profession>(me->Primary));
+					prof_string += GW::Constants::GetProfessionAcronym(
+						static_cast<GW::Constants::Profession>(me->Primary));
 					prof_string += "-";
-					prof_string += GWCA::Agents().GetProfessionAcronym(
-						static_cast<GwConstants::Profession>(me->Secondary));
+					prof_string += GW::Constants::GetProfessionAcronym(
+						static_cast<GW::Constants::Profession>(me->Secondary));
 				}
 
 				SYSTEMTIME localtime;
@@ -157,15 +152,15 @@ void SettingsPanel::MainRoutine() {
 				location_file_.open(GuiUtils::getSubPathA(filename, "location logs").c_str());
 			}
 
-			GWCA::GW::Agent* me = GWCA::Agents().GetPlayer();
+			GW::Agent* me = GW::Agents().GetPlayer();
 			if (location_file_.is_open() && me != nullptr) {
-				location_file_ << "Time=" << GWCA::Map().GetInstanceTime();
+				location_file_ << "Time=" << GW::Map().GetInstanceTime();
 				location_file_ << " X=" << me->X;
 				location_file_ << " Y=" << me->Y;
 				location_file_ << "\n";
 			}
 		} else {
-			location_current_map_ = GwConstants::MapID::None;
+			location_current_map_ = GW::Constants::MapID::None;
 			location_file_.close();
 		}
 	}

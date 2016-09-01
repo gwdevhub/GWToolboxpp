@@ -2,10 +2,10 @@
 
 #include <GWCA\GWCA.h>
 
-#include "GWToolbox.h"
 #include "Config.h"
 #include "MainWindow.h"
 #include "GuiUtils.h"
+#include "GWToolbox.h"
 
 using namespace OSHGui;
 using namespace GWCA;
@@ -13,23 +13,23 @@ using namespace std;
 
 void DialogPanel::BuildUI() {
 
-	CreateButton(0, 0, 2, L"Four Horseman", QuestAcceptDialog(GwConstants::QuestID::UW::Planes));
-	CreateButton(1, 0, 2, L"Demon Assassin", QuestAcceptDialog(GwConstants::QuestID::UW::Mnt));
-	CreateButton(0, 1, 2, L"Tower of Strength", QuestAcceptDialog(GwConstants::QuestID::Fow::Tos));
-	CreateButton(1, 1, 2, L"Foundry Reward", QuestRewardDialog(GwConstants::QuestID::Doa::FoundryBreakout));
+	CreateButton(0, 0, 2, L"Four Horseman", QuestAcceptDialog(GW::Constants::QuestID::UW::Planes));
+	CreateButton(1, 0, 2, L"Demon Assassin", QuestAcceptDialog(GW::Constants::QuestID::UW::Mnt));
+	CreateButton(0, 1, 2, L"Tower of Strength", QuestAcceptDialog(GW::Constants::QuestID::Fow::Tos));
+	CreateButton(1, 1, 2, L"Foundry Reward", QuestRewardDialog(GW::Constants::QuestID::Doa::FoundryBreakout));
 
-	CreateButton(0, 2, 4, L"Lab", GwConstants::DialogID::UwTeleLab);
-	CreateButton(1, 2, 4, L"Vale", GwConstants::DialogID::UwTeleVale);
-	CreateButton(2, 2, 4, L"Pits", GwConstants::DialogID::UwTelePits);
-	CreateButton(3, 2, 4, L"Pools", GwConstants::DialogID::UwTelePools);
+	CreateButton(0, 2, 4, L"Lab", GW::Constants::DialogID::UwTeleLab);
+	CreateButton(1, 2, 4, L"Vale", GW::Constants::DialogID::UwTeleVale);
+	CreateButton(2, 2, 4, L"Pits", GW::Constants::DialogID::UwTelePits);
+	CreateButton(3, 2, 4, L"Pools", GW::Constants::DialogID::UwTelePools);
 
-	CreateButton(0, 3, 3, L"Planes", GwConstants::DialogID::UwTelePlanes);
-	CreateButton(1, 3, 3, L"Wastes", GwConstants::DialogID::UwTeleWastes);
-	CreateButton(2, 3, 3, L"Mountains", GwConstants::DialogID::UwTeleMnt);
+	CreateButton(0, 3, 3, L"Planes", GW::Constants::DialogID::UwTelePlanes);
+	CreateButton(1, 3, 3, L"Wastes", GW::Constants::DialogID::UwTeleWastes);
+	CreateButton(2, 3, 3, L"Mountains", GW::Constants::DialogID::UwTeleMnt);
 
 	for (int i = 0; i < 3; ++i) {
 		wstring key = wstring(L"Quest") + to_wstring(i);
-		int index = GWToolbox::instance().config().IniReadLong(MainWindow::IniSection(), key.c_str(), 0);
+		int index = Config::IniReadLong(MainWindow::IniSection(), key.c_str(), 0);
 		ComboBox* fav_combo = new ComboBox(this);
 		for (int j = 0; j < n_quests; ++j) {
 			fav_combo->AddItem(IndexToQuestName(j));
@@ -41,7 +41,7 @@ void DialogPanel::BuildUI() {
 		fav_combo->SetSelectedIndex(index);
 		fav_combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
 			[fav_combo, key](Control*) {
-			GWToolbox::instance().config().IniWriteLong(MainWindow::IniSection(),
+			Config::IniWriteLong(MainWindow::IniSection(),
 				key.c_str(), fav_combo->GetSelectedIndex());
 		});
 		AddControl(fav_combo);
@@ -53,7 +53,7 @@ void DialogPanel::BuildUI() {
 		take->SetText(L"Take");
 		take->GetClickEvent() += ClickEventHandler([this, fav_combo](Control*) {
 			int index = fav_combo->GetSelectedIndex();
-			GWCA::Agents().Dialog(QuestAcceptDialog(IndexToQuestID(index)));
+			GW::Agents().Dialog(QuestAcceptDialog(IndexToQuestID(index)));
 		});
 		AddControl(take);
 
@@ -63,7 +63,7 @@ void DialogPanel::BuildUI() {
 		complete->SetText(L"Complete");
 		complete->GetClickEvent() += ClickEventHandler([this, fav_combo](Control*) {
 			int index = fav_combo->GetSelectedIndex();
-			GWCA::Agents().Dialog(QuestRewardDialog(IndexToQuestID(index)));
+			GW::Agents().Dialog(QuestRewardDialog(IndexToQuestID(index)));
 		});
 		AddControl(complete);
 	}
@@ -84,7 +84,7 @@ void DialogPanel::BuildUI() {
 	combo_send->GetClickEvent() += ClickEventHandler([this, combo](Control*) {
 		int index = combo->GetSelectedIndex();
 		int id = IndexToDialogID(index);
-		GWCA::Agents().Dialog(id);
+		GW::Agents().Dialog(id);
 	});
 	AddControl(combo_send);
 
@@ -106,7 +106,7 @@ void DialogPanel::BuildUI() {
 		if (args.KeyChar == VK_RETURN){
 			try {
 				long id = std::stol(textbox->GetText(), 0, 0);
-				GWCA::Agents().Dialog(id);
+				GW::Agents().Dialog(id);
 			} catch (...) {}
 		}
 	});
@@ -119,7 +119,7 @@ void DialogPanel::BuildUI() {
 	custom_send->GetClickEvent() += ClickEventHandler([textbox](Control*) {
 		try {
 			long id = std::stol(textbox->GetText(), 0, 0);
-			GWCA::Agents().Dialog(id);
+			GW::Agents().Dialog(id);
 		} catch (...) { }
 	});
 	AddControl(custom_send);
@@ -133,7 +133,7 @@ void DialogPanel::CreateButton(int grid_x, int grid_y, int hor_amount,
 	button->SetSize(SizeI(GuiUtils::ComputeWidth(GetWidth(), hor_amount), BUTTON_HEIGHT));
 	button->SetLocation(PointI(GuiUtils::ComputeX(GetWidth(), hor_amount, grid_x), GuiUtils::ComputeY(grid_y)));
 	button->GetClickEvent() += ClickEventHandler([dialog](Control*) {
-		GWCA::Agents().Dialog(dialog);
+		GW::Agents().Dialog(dialog);
 	});
 	AddControl(button);
 }
@@ -175,35 +175,35 @@ std::wstring DialogPanel::IndexToQuestName(int index) {
 
 DWORD DialogPanel::IndexToQuestID(int index) {
 	switch (index) {
-	case 0: return GwConstants::QuestID::UW::Chamber;
-	case 1: return GwConstants::QuestID::UW::Wastes;
-	case 2: return GwConstants::QuestID::UW::UWG;
-	case 3: return GwConstants::QuestID::UW::Mnt;
-	case 4: return GwConstants::QuestID::UW::Pits;
-	case 5: return GwConstants::QuestID::UW::Planes;
-	case 6: return GwConstants::QuestID::UW::Pools;
-	case 7: return GwConstants::QuestID::UW::Escort;
-	case 8: return GwConstants::QuestID::UW::Restore;
-	case 9: return GwConstants::QuestID::UW::Vale;
-	case 10: return GwConstants::QuestID::Fow::Defend;
-	case 11: return GwConstants::QuestID::Fow::ArmyOfDarknesses;
-	case 12: return GwConstants::QuestID::Fow::WailingLord;
-	case 13: return GwConstants::QuestID::Fow::Griffons;
-	case 14: return GwConstants::QuestID::Fow::Slaves;
-	case 15: return GwConstants::QuestID::Fow::Restore;
-	case 16: return GwConstants::QuestID::Fow::Hunt;
-	case 17: return GwConstants::QuestID::Fow::Forgemaster;
-	case 18: return GwConstants::QuestID::Fow::Tos;
-	case 19: return GwConstants::QuestID::Fow::Toc;
-	case 20: return GwConstants::QuestID::Fow::Khobay;
-	case 21: return GwConstants::QuestID::Doa::DeathbringerCompany;
-	case 22: return GwConstants::QuestID::Doa::RiftBetweenUs;
-	case 23: return GwConstants::QuestID::Doa::ToTheRescue;
-	case 24: return GwConstants::QuestID::Doa::City;
-	case 25: return GwConstants::QuestID::Doa::BreachingStygianVeil;
-	case 26: return GwConstants::QuestID::Doa::BroodWars;
-	case 27: return GwConstants::QuestID::Doa::FoundryBreakout;
-	case 28: return GwConstants::QuestID::Doa::FoundryOfFailedCreations;
+	case 0: return GW::Constants::QuestID::UW::Chamber;
+	case 1: return GW::Constants::QuestID::UW::Wastes;
+	case 2: return GW::Constants::QuestID::UW::UWG;
+	case 3: return GW::Constants::QuestID::UW::Mnt;
+	case 4: return GW::Constants::QuestID::UW::Pits;
+	case 5: return GW::Constants::QuestID::UW::Planes;
+	case 6: return GW::Constants::QuestID::UW::Pools;
+	case 7: return GW::Constants::QuestID::UW::Escort;
+	case 8: return GW::Constants::QuestID::UW::Restore;
+	case 9: return GW::Constants::QuestID::UW::Vale;
+	case 10: return GW::Constants::QuestID::Fow::Defend;
+	case 11: return GW::Constants::QuestID::Fow::ArmyOfDarknesses;
+	case 12: return GW::Constants::QuestID::Fow::WailingLord;
+	case 13: return GW::Constants::QuestID::Fow::Griffons;
+	case 14: return GW::Constants::QuestID::Fow::Slaves;
+	case 15: return GW::Constants::QuestID::Fow::Restore;
+	case 16: return GW::Constants::QuestID::Fow::Hunt;
+	case 17: return GW::Constants::QuestID::Fow::Forgemaster;
+	case 18: return GW::Constants::QuestID::Fow::Tos;
+	case 19: return GW::Constants::QuestID::Fow::Toc;
+	case 20: return GW::Constants::QuestID::Fow::Khobay;
+	case 21: return GW::Constants::QuestID::Doa::DeathbringerCompany;
+	case 22: return GW::Constants::QuestID::Doa::RiftBetweenUs;
+	case 23: return GW::Constants::QuestID::Doa::ToTheRescue;
+	case 24: return GW::Constants::QuestID::Doa::City;
+	case 25: return GW::Constants::QuestID::Doa::BreachingStygianVeil;
+	case 26: return GW::Constants::QuestID::Doa::BroodWars;
+	case 27: return GW::Constants::QuestID::Doa::FoundryBreakout;
+	case 28: return GW::Constants::QuestID::Doa::FoundryOfFailedCreations;
 	default: return 0;
 	}
 }
@@ -231,21 +231,21 @@ wstring DialogPanel::IndexToDialogName(int index) {
 
 DWORD DialogPanel::IndexToDialogID(int index) {
 	switch (index) {
-	case 0: return GwConstants::DialogID::FowCraftArmor;
-	case 1: return GwConstants::DialogID::ProfChangeWarrior;
-	case 2: return GwConstants::DialogID::ProfChangeRanger;
-	case 3: return GwConstants::DialogID::ProfChangeMonk;
-	case 4: return GwConstants::DialogID::ProfChangeNecro;
-	case 5: return GwConstants::DialogID::ProfChangeMesmer;
-	case 6: return GwConstants::DialogID::ProfChangeEle;
-	case 7: return GwConstants::DialogID::ProfChangeAssassin;
-	case 8: return GwConstants::DialogID::ProfChangeRitualist;
-	case 9: return GwConstants::DialogID::ProfChangeParagon;
-	case 10: return GwConstants::DialogID::ProfChangeDervish;
-	case 11: return GwConstants::DialogID::FerryKamadanToDocks;
-	case 12: return GwConstants::DialogID::FerryDocksToKaineng;
-	case 13: return GwConstants::DialogID::FerryDocksToLA;
-	case 14: return GwConstants::DialogID::FerryGateToLA;
+	case 0: return GW::Constants::DialogID::FowCraftArmor;
+	case 1: return GW::Constants::DialogID::ProfChangeWarrior;
+	case 2: return GW::Constants::DialogID::ProfChangeRanger;
+	case 3: return GW::Constants::DialogID::ProfChangeMonk;
+	case 4: return GW::Constants::DialogID::ProfChangeNecro;
+	case 5: return GW::Constants::DialogID::ProfChangeMesmer;
+	case 6: return GW::Constants::DialogID::ProfChangeEle;
+	case 7: return GW::Constants::DialogID::ProfChangeAssassin;
+	case 8: return GW::Constants::DialogID::ProfChangeRitualist;
+	case 9: return GW::Constants::DialogID::ProfChangeParagon;
+	case 10: return GW::Constants::DialogID::ProfChangeDervish;
+	case 11: return GW::Constants::DialogID::FerryKamadanToDocks;
+	case 12: return GW::Constants::DialogID::FerryDocksToKaineng;
+	case 13: return GW::Constants::DialogID::FerryDocksToLA;
+	case 14: return GW::Constants::DialogID::FerryGateToLA;
 	default: return 0;
 	}
 }

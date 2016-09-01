@@ -4,7 +4,7 @@
 #include <cmath>
 
 #include <GWCA\GWCA.h>
-#include <GWCA\ItemMgr.h>
+#include <GWCA\Managers\ItemMgr.h>
 
 #include "GWToolbox.h"
 #include "Config.h"
@@ -93,13 +93,13 @@ void InfoPanel::BuildUI() {
 	bonds->SetText(L"Bonds Monitor");
 	bonds->SetWidth(half_item_width);
 	bonds->SetLocation(PointI(item1_x, dialog->GetBottom() + Padding));
-	bonds->SetChecked(GWToolbox::instance().config().IniReadBool(
+	bonds->SetChecked(Config::IniReadBool(
 		BondsWindow::IniSection(), BondsWindow::IniKeyShow(), false));
 	bonds->GetCheckedChangedEvent() += CheckedChangedEventHandler([bonds](Control*) {
 		GWToolbox& tb = GWToolbox::instance();
 		bool show = bonds->GetChecked();
 		tb.bonds_window().SetVisible(show);
-		tb.config().IniWriteBool(BondsWindow::IniSection(), BondsWindow::IniKeyShow(), show);
+		Config::IniWriteBool(BondsWindow::IniSection(), BondsWindow::IniKeyShow(), show);
 	});
 	AddControl(bonds);
 
@@ -107,13 +107,13 @@ void InfoPanel::BuildUI() {
 	targetHp->SetText(L"Target Health");
 	targetHp->SetWidth(half_item_width);
 	targetHp->SetLocation(PointI(item1_x, bonds->GetBottom() + Padding));
-	targetHp->SetChecked(GWToolbox::instance().config().IniReadBool(
+	targetHp->SetChecked(Config::IniReadBool(
 		HealthWindow::IniSection(), HealthWindow::IniKeyShow(), false));
 	targetHp->GetCheckedChangedEvent() += CheckedChangedEventHandler([targetHp](Control*) {
 		GWToolbox& tb = GWToolbox::instance();
 		bool show = targetHp->GetChecked();
 		tb.health_window().SetViewable(show);
-		tb.config().IniWriteBool(HealthWindow::IniSection(), HealthWindow::IniKeyShow(), show);
+		Config::IniWriteBool(HealthWindow::IniSection(), HealthWindow::IniKeyShow(), show);
 	});
 	AddControl(targetHp);
 
@@ -121,13 +121,13 @@ void InfoPanel::BuildUI() {
 	distance->SetText(L"Target Distance");
 	distance->SetWidth(half_item_width);
 	distance->SetLocation(PointI(item1_x, targetHp->GetBottom() + Padding));
-	distance->SetChecked(GWToolbox::instance().config().IniReadBool(
+	distance->SetChecked(Config::IniReadBool(
 		DistanceWindow::IniSection(), DistanceWindow::IniKeyShow(), false));
 	distance->GetCheckedChangedEvent() += CheckedChangedEventHandler([distance](Control*) {
 		GWToolbox& tb = GWToolbox::instance();
 		bool show = distance->GetChecked();
 		tb.distance_window().SetViewable(show);
-		tb.config().IniWriteBool(DistanceWindow::IniSection(), DistanceWindow::IniKeyShow(), show);
+		Config::IniWriteBool(DistanceWindow::IniSection(), DistanceWindow::IniKeyShow(), show);
 	});
 	AddControl(distance);
 
@@ -135,13 +135,13 @@ void InfoPanel::BuildUI() {
 	damage->SetText(L"Party Damage");
 	damage->SetWidth(half_item_width);
 	damage->SetLocation(PointI(item1_x, distance->GetBottom() + Padding));
-	damage->SetChecked(GWToolbox::instance().config().IniReadBool(
+	damage->SetChecked(Config::IniReadBool(
 		PartyDamage::IniSection(), PartyDamage::InikeyShow(), false));
 	damage->GetCheckedChangedEvent() += CheckedChangedEventHandler([damage](Control*) {
 		GWToolbox& tb = GWToolbox::instance();
 		bool show = damage->GetChecked();
 		tb.party_damage().SetVisible(show);
-		tb.config().IniWriteBool(PartyDamage::IniSection(), PartyDamage::InikeyShow(), show);
+		Config::IniWriteBool(PartyDamage::IniSection(), PartyDamage::InikeyShow(), show);
 	});
 	AddControl(damage);
 
@@ -149,13 +149,13 @@ void InfoPanel::BuildUI() {
 	minimap->SetText(L"Minimap");
 	minimap->SetWidth(half_item_width);
 	minimap->SetLocation(PointI(item2_x, dialog->GetBottom() + Padding));
-	minimap->SetChecked(GWToolbox::instance().config().IniReadBool(
+	minimap->SetChecked(Config::IniReadBool(
 		Minimap::IniSection(), Minimap::InikeyShow(), false));
 	minimap->GetCheckedChangedEvent() += CheckedChangedEventHandler([minimap](Control*) {
 		GWToolbox& tb = GWToolbox::instance();
 		bool show = minimap->GetChecked();
 		tb.minimap().SetVisible(show);
-		tb.config().IniWriteBool(Minimap::IniSection(), Minimap::InikeyShow(), show);
+		Config::IniWriteBool(Minimap::IniSection(), Minimap::InikeyShow(), show);
 	});
 	AddControl(minimap);
 
@@ -164,18 +164,17 @@ void InfoPanel::BuildUI() {
 	xunlai->SetLocation(PointI(item1_x, GetHeight() - xunlai->GetHeight() - Padding));
 	xunlai->SetText(L"Open Xunlai Chest");
 	xunlai->GetClickEvent() += ClickEventHandler([](Control*) {
-		if (GWCA::Map().GetInstanceType() == GwConstants::InstanceType::Outpost) {
-			GWCA::Items().OpenXunlaiWindow();
+		if (GW::Map().GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+			GW::Items().OpenXunlaiWindow();
 		}
 	});
 	AddControl(xunlai);
 }
 
 void InfoPanel::UpdateUI() {
-	using namespace GWCA::GW;
 	using namespace std;
 	
-	Agent* player = GWCA::Agents().GetPlayer();
+	GW::Agent* player = GW::Agents().GetPlayer();
 	float x = player ? player->X : 0;
 	float y = player ? player->Y : 0;
 	if (x != current_player_x || y != current_player_y) {
@@ -190,7 +189,7 @@ void InfoPanel::UpdateUI() {
 		}
 	}
 
-	Agent* target = GWCA::Agents().GetTarget();
+	GW::Agent* target = GW::Agents().GetTarget();
 	long id = target ? target->PlayerNumber : 0;
 	if (id != current_target_id) {
 		if (target) {
@@ -200,27 +199,27 @@ void InfoPanel::UpdateUI() {
 		}
 	}
 
-	if (GWCA::Map().GetMapID() != current_map_id
-		|| GWCA::Map().GetInstanceType() != current_map_type) {
-		current_map_id = GWCA::Map().GetMapID();
-		current_map_type = GWCA::Map().GetInstanceType();
+	if (GW::Map().GetMapID() != current_map_id
+		|| GW::Map().GetInstanceType() != current_map_type) {
+		current_map_id = GW::Map().GetMapID();
+		current_map_type = GW::Map().GetInstanceType();
 		wstring map = to_wstring(static_cast<int>(current_map_id));
-		switch (GWCA::Map().GetInstanceType()) {
-		case GwConstants::InstanceType::Explorable: break;
-		case GwConstants::InstanceType::Loading: map += L" (loading)"; break;
-		case GwConstants::InstanceType::Outpost: map += L" (outpost)"; break;
+		switch (GW::Map().GetInstanceType()) {
+		case GW::Constants::InstanceType::Explorable: break;
+		case GW::Constants::InstanceType::Loading: map += L" (loading)"; break;
+		case GW::Constants::InstanceType::Outpost: map += L" (outpost)"; break;
 		}
 		map_id->SetText(map);
 	}
 	
 
-	Bag** bags = GWCA::Items().GetBagArray();
+	GW::Bag** bags = GW::Items().GetBagArray();
 	if (bags) {
-		Bag* bag1 = bags[1];
+		GW::Bag* bag1 = bags[1];
 		if (bag1) {
-			ItemArray items = bag1->Items;
+			GW::ItemArray items = bag1->Items;
 			if (items.valid()) {
-				Item* item = items[0];
+				GW::Item* item = items[0];
 				long id = item ? item->ModelId : -1;
 				if (current_item_id != id) {
 					current_item_id = id;
@@ -234,9 +233,9 @@ void InfoPanel::UpdateUI() {
 		}
 	}
 
-	if (current_dialog_id != GWCA::Agents().GetLastDialogId()) {
+	if (current_dialog_id != GW::Agents().GetLastDialogId()) {
 		static wchar_t dialogtxt[0x10];
-		current_dialog_id = GWCA::Agents().GetLastDialogId();
+		current_dialog_id = GW::Agents().GetLastDialogId();
 		swprintf_s(dialogtxt, sizeof(wchar_t) * 0x10, L"0x%X", current_dialog_id);
 		dialog_id->SetText(dialogtxt);
 	}

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "GWCA\GwConstants.h"
+#include <GWCA\Constants\Constants.h>
 
 #include "ToolboxPanel.h"
 
@@ -16,8 +16,8 @@ private:
 	float current_player_x;
 	float current_player_y;
 	long current_target_id;
-	GwConstants::MapID current_map_id;
-	GwConstants::InstanceType current_map_type;
+	GW::Constants::MapID current_map_id;
+	GW::Constants::InstanceType current_map_type;
 	long current_item_id;
 	long current_dialog_id;
 

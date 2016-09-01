@@ -3,21 +3,21 @@
 #include <string>
 
 #include <GWCA\GWCA.h>
-#include <GWCA\ChatMgr.h>
+#include <GWCA\Managers\ChatMgr.h>
 
 class ChatLogger {
 public:
 
 	static void Init() {
-		GWCA::Chat().RegisterChannel(L"GWToolbox++", 0x00CCFF);
+		GW::Chat().RegisterChannel(L"GWToolbox++", 0x00CCFF);
 	}
 
 	inline static void Log(const wchar_t* msg) {
-		GWCA::Chat().WriteChat(L"GWToolbox++", msg);
+		GW::Chat().WriteChat(L"GWToolbox++", msg);
 	}
 
 	inline static void Log(const std::wstring msg) {
-		GWCA::Chat().WriteChat(L"GWToolbox++", msg.c_str());
+		GW::Chat().WriteChat(L"GWToolbox++", msg.c_str());
 	}
 
 	static void LogF(const wchar_t* format, ...) {
@@ -28,7 +28,7 @@ public:
 		vswprintf_s(chat, szbuf, format, vl);
 		va_end(vl);
 
-		GWCA::Chat().WriteChat(L"GWToolbox++", chat);
+		GW::Chat().WriteChat(L"GWToolbox++", chat);
 
 		delete[] chat;
 	}

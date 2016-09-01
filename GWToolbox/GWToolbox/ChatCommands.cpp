@@ -3,13 +3,14 @@
 #include <algorithm>
 #include <cctype>
 
-#include <GWCA\CameraMgr.h>
-#include <GWCA\ChatMgr.h>
-#include <GWCA\ItemMgr.h>
-#include <GWCA\GuildMgr.h>
-#include <GWCA\FriendListMgr.h>
-#include <GWCA\StoCMgr.h>
-#include <GWCA\SkillbarMgr.h>
+#include <GWCA\Constants\Skills.h>
+#include <GWCA\Managers\CameraMgr.h>
+#include <GWCA\Managers\ChatMgr.h>
+#include <GWCA\Managers\ItemMgr.h>
+#include <GWCA\Managers\GuildMgr.h>
+#include <GWCA\Managers\FriendListMgr.h>
+#include <GWCA\Managers\StoCMgr.h>
+#include <GWCA\Managers\SkillbarMgr.h>
 
 #include "PconPanel.h"
 #include "GWToolbox.h"
@@ -53,17 +54,14 @@ ChatCommands::ChatCommands() {
 }
 
 void ChatCommands::AddCommand(wstring cmd, Handler_t handler, bool override) {
-	GWCA::Chat().RegisterCommand(cmd,
+	GW::Chat().RegisterCommand(cmd,
 		[handler](std::wstring cmd, std::vector<std::wstring> args) {
 		handler(args);
 	}, override);
 }
 
 bool ChatCommands::ProcessMessage(LPMSG msg) {
-	GWCA::CameraMgr cam = GWCA::Camera();
-	float speed = 25.f;
-
-	if (!cam.GetCameraUnlock() || IsTyping()) return false;
+	if (!GW::Cameramgr().GetCameraUnlock() || IsTyping()) return false;
 
 	switch (msg->message) {
 	case WM_KEYDOWN: {
@@ -102,7 +100,7 @@ bool ChatCommands::ProcessMessage(LPMSG msg) {
 }
 
 void ChatCommands::UpdateUI() {
-	GWCA::CameraMgr cam = GWCA::Camera();
+	GW::CameraMgr cam = GW::Cameramgr();
 	if (cam.GetCameraUnlock() && !IsTyping()) {
 		cam.ForwardMovement(cam_speed_ * move_forward);
 		cam.VerticalMovement(-cam_speed_ * move_up);
@@ -113,17 +111,16 @@ void ChatCommands::UpdateUI() {
 
 void ChatCommands::MainRoutine() {
 	if (skill_to_use > 0 && skill_to_use < 9 
-		&& GWCA::Map().GetInstanceType() == GwConstants::InstanceType::Explorable
+		&& GW::Map().GetInstanceType() == GW::Constants::InstanceType::Explorable
 		&& TBTimer::diff(skill_timer) / 1000.0f > skill_usage_delay) {
 
-		GWCA::SkillbarMgr manager = GWCA::Skillbar();
-		GWCA::GW::Skillbar skillbar = manager.GetPlayerSkillbar();
+		GW::Skillbar skillbar = GW::Skillbar::GetPlayerSkillbar();
 		if (skillbar.IsValid()) {
-			GWCA::GW::SkillbarSkill skill = skillbar.Skills[skill_to_use - 1]; // -1 to switch range [1,8] -> [0,7]
+			GW::SkillbarSkill skill = skillbar.Skills[skill_to_use - 1]; // -1 to switch range [1,8] -> [0,7]
 			if (skill.GetRecharge() == 0) {
-				manager.UseSkill(skill_to_use - 1, GWCA::Agents().GetTargetId());
+				GW::Skillbarmgr().UseSkill(skill_to_use - 1, GW::Agents().GetTargetId());
 
-				GWCA::GW::Skill skilldata = manager.GetSkillConstantData(skill.SkillId);
+				GW::Skill skilldata = GW::Skillbarmgr().GetSkillConstantData(skill.SkillId);
 				skill_usage_delay = skilldata.Activation + skilldata.Aftercast + 1.0f; // one additional second to account for ping and to avoid spamming in case of bad target
 				skill_timer = TBTimer::init();
 			}
@@ -140,7 +137,7 @@ wstring ChatCommands::GetLowerCaseArg(vector<wstring> args, size_t index) {
 
 void ChatCommands::CmdAge2(vector<wstring>) {
 	wchar_t buffer[30];
-	DWORD second = GWCA::Map().GetInstanceTime() / 1000;
+	DWORD second = GW::Map().GetInstanceTime() / 1000;
 	wsprintf(buffer, L"%02u:%02u:%02u", (second / 3600), (second / 60) % 60, second % 60);
 	ChatLogger::Log(buffer);
 }
@@ -167,7 +164,7 @@ void ChatCommands::CmdDialog(vector<wstring> args) {
 	} else {
 		try {
 			long id = std::stol(args[0], 0, 0);
-			GWCA::Agents().Dialog(id);
+			GW::Agents().Dialog(id);
 			ChatLogger::LogF(L"Sent Dialog 0x%X", id);
 		} catch (...) {
 			ChatLogger::LogF(L"[Error] Invalid argument '%ls', please use an integer or hex value", args[0].c_str());
@@ -176,8 +173,8 @@ void ChatCommands::CmdDialog(vector<wstring> args) {
 }
 
 void ChatCommands::CmdChest(vector<wstring> args) {
-	if (GWCA::Map().GetInstanceType() == GwConstants::InstanceType::Outpost) {
-		GWCA::Items().OpenXunlaiWindow();
+	if (GW::Map().GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+		GW::Items().OpenXunlaiWindow();
 	}
 }
 
@@ -210,42 +207,42 @@ void ChatCommands::CmdTP(vector<wstring> args) {
 	} else {
 		wstring town = GetLowerCaseArg(args, 0);
 
-		GwConstants::District district = GwConstants::District::Current;
+		GW::Constants::District district = GW::Constants::District::Current;
 		int district_number = 0;
 		if (args.size() >= 2) {
 			wstring dis = GetLowerCaseArg(args, 1);
 			if (dis == L"ae1") {
-				district = GwConstants::District::American;
+				district = GW::Constants::District::American;
 				district_number = 1;
 			} else if (dis == L"ee1") {
-				district = GwConstants::District::EuropeEnglish;
+				district = GW::Constants::District::EuropeEnglish;
 				district_number = 1;
 			} else if (dis == L"eg1" || dis == L"dd1") {  // dd1 is german: deutche dist
-				district = GwConstants::District::EuropeGerman;
+				district = GW::Constants::District::EuropeGerman;
 				district_number = 1;
 			} else if (dis == L"int") {
-				district = GwConstants::District::International;
+				district = GW::Constants::District::International;
 			} else {
 				ChatLogger::LogF(L"Invalid district '%ls'", dis.c_str());
 			}
 		}
 
 		if (town == L"toa") {
-			GWCA::Map().Travel(GwConstants::MapID::Temple_of_the_Ages, district, district_number);
+			GW::Map().Travel(GW::Constants::MapID::Temple_of_the_Ages, district, district_number);
 		} else if (town == L"doa") {
-			GWCA::Map().Travel(GwConstants::MapID::Domain_of_Anguish, district, district_number);
+			GW::Map().Travel(GW::Constants::MapID::Domain_of_Anguish, district, district_number);
 		} else if (town == L"kamadan" || town == L"kama") {
-			GWCA::Map().Travel(GwConstants::MapID::Kamadan_Jewel_of_Istan_outpost, district, district_number);
+			GW::Map().Travel(GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost, district, district_number);
 		} else if (town == L"embark") {
-			GWCA::Map().Travel(GwConstants::MapID::Embark_Beach, district, district_number);
+			GW::Map().Travel(GW::Constants::MapID::Embark_Beach, district, district_number);
 		} else if (town == L"vlox" || town == L"vloxs") {
-			GWCA::Map().Travel(GwConstants::MapID::Vloxs_Falls, district, district_number);
+			GW::Map().Travel(GW::Constants::MapID::Vloxs_Falls, district, district_number);
 		} else if (town == L"gadd" || town == L"gadds") {
-			GWCA::Map().Travel(GwConstants::MapID::Gadds_Encampment_outpost, district, district_number);
+			GW::Map().Travel(GW::Constants::MapID::Gadds_Encampment_outpost, district, district_number);
 		} else if (town == L"urgoz") {
-			GWCA::Map().Travel(GwConstants::MapID::Urgozs_Warren, district, district_number);
+			GW::Map().Travel(GW::Constants::MapID::Urgozs_Warren, district, district_number);
 		} else if (town == L"deep") {
-			GWCA::Map().Travel(GwConstants::MapID::The_Deep, district, district_number);
+			GW::Map().Travel(GW::Constants::MapID::The_Deep, district, district_number);
 		} else if (town == L"fav1") {
 			GWToolbox::instance().main_window().travel_panel().TravelFavorite(0);
 		} else if (town == L"fav2") {
@@ -253,18 +250,18 @@ void ChatCommands::CmdTP(vector<wstring> args) {
 		} else if (town == L"fav3") {
 			GWToolbox::instance().main_window().travel_panel().TravelFavorite(2);
 		} else if (town == L"gh") {
-			GWCA::Guild().TravelGH();
+			GW::Guildmgr().TravelGH();
 		}
 	}
 }
 
 void ChatCommands::CmdZoom(vector<wstring> args) {
 	if (args.empty()) {
-		GWCA::Camera().SetMaxDist(750.0f);
+		GW::Cameramgr().SetMaxDist(750.0f);
 	} else {
 		try {
 			long distance = std::stol(args[0]);
-			GWCA::Camera().SetMaxDist(static_cast<float>(distance));
+			GW::Cameramgr().SetMaxDist(static_cast<float>(distance));
 		} catch (...) {
 			ChatLogger::LogF(L"[Error] Invalid argument '%ls', please use an integer value", args[0].c_str());
 		}
@@ -273,32 +270,32 @@ void ChatCommands::CmdZoom(vector<wstring> args) {
 
 void ChatCommands::CmdCamera(vector<wstring> args) {
 	if (args.empty()) {
-		GWCA::Camera().UnlockCam(false);
+		GW::Cameramgr().UnlockCam(false);
 	} else {
 		wstring arg0 = GetLowerCaseArg(args, 0);
 		if (arg0 == L"lock") {
-			GWCA::Camera().UnlockCam(false);
+			GW::Cameramgr().UnlockCam(false);
 		} else if (arg0 == L"unlock") {
-			GWCA::Camera().UnlockCam(true);
+			GW::Cameramgr().UnlockCam(true);
 			ChatLogger::Log(L"Use W,A,S,D,X,Z for camera movement");
 		} else if (arg0 == L"fog") {
 			wstring arg1 = GetLowerCaseArg(args, 1);
 			if (arg1 == L"on") {
-				GWCA::Camera().SetFog(true);
+				GW::Cameramgr().SetFog(true);
 			} else if (arg1 == L"off") {
-				GWCA::Camera().SetFog(false);
+				GW::Cameramgr().SetFog(false);
 			}
 		} else if (arg0 == L"fov") {
 			if (args.size() == 1) {
-				GWCA::Camera().SetFieldOfView(1.308997f);
+				GW::Cameramgr().SetFieldOfView(1.308997f);
 			} else {
 				wstring arg1 = GetLowerCaseArg(args, 1);
 				if (arg1 == L"default") {
-					GWCA::Camera().SetFieldOfView(1.308997f);
+					GW::Cameramgr().SetFieldOfView(1.308997f);
 				} else {
 					try {
 						float fovnew = std::stof(arg1);
-						GWCA::Camera().SetFieldOfView(fovnew);
+						GW::Cameramgr().SetFieldOfView(fovnew);
 						ChatLogger::LogF(L"Field of View is %f", fovnew);
 					} catch (...) {
 						ChatLogger::LogF(L"[Error] Invalid argument '%ls', please use a float value", args[1].c_str());
@@ -349,7 +346,7 @@ void ChatCommands::CmdDamage(vector<wstring> args) {
 }
 
 void ChatCommands::CmdAfk(vector<wstring> args) {
-	GWCA::FriendList().SetFriendListStatus(GwConstants::OnlineStatus::AWAY);
+	GW::FriendListmgr().SetFriendListStatus(GW::Constants::OnlineStatus::AWAY);
 }
 
 void ChatCommands::CmdTarget(vector<wstring> args) {
@@ -357,20 +354,20 @@ void ChatCommands::CmdTarget(vector<wstring> args) {
 		wstring arg0 = GetLowerCaseArg(args, 0);
 		if (arg0 == L"closest" || arg0 == L"nearest") {
 			// target nearest agent
-			GWCA::GW::AgentArray agents = GWCA::Agents().GetAgentArray();
+			GW::AgentArray agents = GW::Agents().GetAgentArray();
 			if (!agents.valid()) return;
 
-			GWCA::GW::Agent* me = GWCA::Agents().GetPlayer();
+			GW::Agent* me = GW::Agents().GetPlayer();
 			if (me == nullptr) return;
 
-			float distance = (float)GwConstants::SqrRange::Compass;
+			float distance = GW::Constants::SqrRange::Compass;
 			int closest = -1;
 
 			for (size_t i = 0; i < agents.size(); ++i) {
-				GWCA::GW::Agent* agent = agents[i];
+				GW::Agent* agent = agents[i];
 				if (agent == nullptr) continue;
 				if (agent->PlayerNumber != me->PlayerNumber) {
-					float newDistance = GWCA::Agents().GetSqrDistance(me->pos, agents[i]->pos);
+					float newDistance = GW::Agents().GetSqrDistance(me->pos, agents[i]->pos);
 					if (newDistance < distance) {
 						closest = i;
 						distance = newDistance;
@@ -378,18 +375,18 @@ void ChatCommands::CmdTarget(vector<wstring> args) {
 				}
 			}
 			if (closest > 0) {
-				GWCA::Agents().ChangeTarget(agents[closest]);
+				GW::Agents().ChangeTarget(agents[closest]);
 			}
 
 		} else if (arg0 == L"getid") {
-			GWCA::GW::Agent* target = GWCA::Agents().GetTarget();
+			GW::Agent* target = GW::Agents().GetTarget();
 			if (target == nullptr) {
 				ChatLogger::Log(L"No target selected!");
 			} else {
 				ChatLogger::LogF(L"Target model id (PlayerNumber) is %d", target->PlayerNumber);
 			}
 		} else if (arg0 == L"getpos") {
-			GWCA::GW::Agent* target = GWCA::Agents().GetTarget();
+			GW::Agent* target = GW::Agents().GetTarget();
 			if (target == nullptr) {
 				ChatLogger::Log(L"No target selected!");
 			} else {

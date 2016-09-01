@@ -3,13 +3,16 @@
 #include <string>
 
 #include <GWCA\GWCA.h>
-#include <GWCA\ChatMgr.h>
+#include <GWCA\Managers\ChatMgr.h>
 
-#include "GWToolbox.h"
+#include "Config.h"
 #include "logger.h"
+#include "MainWindow.h"
+#include "GWToolbox.h"
 
 using namespace std;
 using namespace OSHGui;
+using namespace OSHGui::Drawing;
 
 EditBuild::EditBuild(OSHGui::Control* parent) : OSHGui::Panel(parent) {
 	names = vector<TextBox*>(N_PLAYERS);
@@ -72,7 +75,7 @@ EditBuild::EditBuild(OSHGui::Control* parent) : OSHGui::Panel(parent) {
 			message += L";";
 			message += templates[i]->GetText();
 			message += L"]";
-			GWCA::Chat().SendChat(message.c_str(), L'#');
+			GW::Chat().SendChat(message.c_str(), L'#');
 		});
 		AddControl(send);
 
@@ -136,48 +139,46 @@ void EditBuild::SetEditedBuild(int index, Button* button) {
 	editing_index = index;
 	editing_button = button;
 
-	Config& config = GWToolbox::instance().config();
 	wstring section = wstring(L"builds") + to_wstring(index);
 	wstring key;
 	
 	key = L"buildname";
-	wstring buildname = config.IniRead(section.c_str(), key.c_str(), L"");
+	wstring buildname = Config::IniRead(section.c_str(), key.c_str(), L"");
 	name->SetText(buildname);
 	for (int i = 0; i < N_PLAYERS; ++i) {
 		key = L"name" + to_wstring(i + 1);
-		wstring name = config.IniRead(section.c_str(), key.c_str(), L"");
+		wstring name = Config::IniRead(section.c_str(), key.c_str(), L"");
 		names[i]->SetText(name);
 
 		key = L"template" + to_wstring(i + 1);
-		wstring temp = config.IniRead(section.c_str(), key.c_str(), L"");
+		wstring temp = Config::IniRead(section.c_str(), key.c_str(), L"");
 		templates[i]->SetText(temp);
 	}
-	show_numbers->SetChecked(config.IniReadBool(section.c_str(), L"showNumbers", true));
+	show_numbers->SetChecked(Config::IniReadBool(section.c_str(), L"showNumbers", true));
 
 	SetVisible(true);
 }
 
 void EditBuild::SaveBuild() {
-	Config& config = GWToolbox::instance().config();
 	wstring section = wstring(L"builds") + to_wstring(editing_index);
 	wstring key;
 
 	wstring s_name = name->GetText();
 	key = L"buildname";
-	config.IniWrite(section.c_str(), key.c_str(), s_name.c_str());
+	Config::IniWrite(section.c_str(), key.c_str(), s_name.c_str());
 	editing_button->SetText(s_name);
 
 	for (int i = 0; i < N_PLAYERS; ++i) {
 		wstring s_name = names[i]->GetText();
 		key = L"name" + to_wstring(i + 1);
-		config.IniWrite(section.c_str(), key.c_str(), s_name.c_str());
+		Config::IniWrite(section.c_str(), key.c_str(), s_name.c_str());
 
 		wstring s_template = templates[i]->GetText();
 		key = L"template" + to_wstring(i + 1);
-		config.IniWrite(section.c_str(), key.c_str(), s_template.c_str());
+		Config::IniWrite(section.c_str(), key.c_str(), s_template.c_str());
 	}
 
-	config.IniWriteBool(section.c_str(), L"showNumbers", show_numbers->GetChecked());
+	Config::IniWriteBool(section.c_str(), L"showNumbers", show_numbers->GetChecked());
 }
 
 void EditBuild::UpdateLocation() {

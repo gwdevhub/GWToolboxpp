@@ -1,3 +1,4 @@
+#include "Defines.h"
 #include "GWToolbox.h"
 #include "logger.h"
 
