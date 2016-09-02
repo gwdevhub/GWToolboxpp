@@ -131,7 +131,7 @@ void DistanceWindow::UpdateUI() {
 		wstring s1;
 		wstring s2;
 		if (distance >= 0) {
-			s1 = to_wstring(distance * 100 / GW::Constants::Range::Compass) + L" %";
+			s1 = to_wstring(distance * 100 / (long)GW::Constants::Range::Compass) + L" %";
 			s2 = to_wstring(distance);
 		} else {
 			s1 = L"-";

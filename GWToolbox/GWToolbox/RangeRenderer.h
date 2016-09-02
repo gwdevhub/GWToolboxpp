@@ -11,6 +11,7 @@ public:
 	RangeRenderer();
 
 	void Render(IDirect3DDevice9* device) override;
+	void SetDrawCenter(bool b) { draw_center_ = b; }
 
 private:
 	void CreateCircle(D3DVertex* vertices, float radius, DWORD color);
@@ -20,6 +21,8 @@ private:
 
 	bool checkforhos_;
 	bool havehos_;
+
+	bool draw_center_;
 
 	DWORD color_range_hos;
 	DWORD color_range_aggro;

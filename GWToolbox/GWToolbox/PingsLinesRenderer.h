@@ -99,6 +99,9 @@ private:
 	clock_t lastqueued;
 	std::vector<ShortPos> queue;
 
+	DWORD color_drawings;
+	DWORD color_pings;
+
 	// for the gpu
 	D3DVertex* vertices;		// vertices array
 	unsigned int vertices_count;// count of vertices

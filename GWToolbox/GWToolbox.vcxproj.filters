@@ -146,6 +146,12 @@
     </ClInclude>
     <ClInclude Include="GWToolbox\ChatCommands.h" />
     <ClInclude Include="GWToolbox\Defines.h" />
+    <ClInclude Include="GWToolbox\SymbolsRenderer.h">
+      <Filter>Windows\Minimap</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\MinimapUtils.h">
+      <Filter>Windows\Minimap</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -228,5 +234,8 @@
     </ClCompile>
     <ClCompile Include="GWToolbox\ChatCommands.cpp" />
     <ClCompile Include="GWToolbox\Config.cpp" />
+    <ClCompile Include="GWToolbox\SymbolsRenderer.cpp">
+      <Filter>Windows\Minimap</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

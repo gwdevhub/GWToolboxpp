@@ -6,6 +6,7 @@
 #include "AgentRenderer.h"
 #include "RangeRenderer.h"
 #include "PingsLinesRenderer.h"
+#include "SymbolsRenderer.h"
 
 class Minimap : public Viewer {
 public:
@@ -37,7 +38,8 @@ private:
 			&& y >= GetY() && y < GetY() + GetHeight());
 	}
 
-	GW::Vector2f InterfaceToWorld(int x, int y) const;
+	GW::Vector2f InterfaceToWorldPoint(int x, int y) const;
+	GW::Vector2f InterfaceToWorldVector(int x, int y) const;
 	void SelectTarget(GW::Vector2f pos);
 
 	bool freeze_;
@@ -47,10 +49,14 @@ private:
 	int drag_start_x_;
 	int drag_start_y_;
 
+	// vars for minimap movement
+	clock_t last_moved_;
+
 	bool loading_; // only consider some cases but still good
 
 	RangeRenderer range_renderer;
 	PmapRenderer pmap_renderer;
 	AgentRenderer agent_renderer;
 	PingsLinesRenderer pingslines_renderer;
+	SymbolsRenderer symbols_renderer;
 };

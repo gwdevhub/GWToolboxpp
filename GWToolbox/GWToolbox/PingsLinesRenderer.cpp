@@ -8,8 +8,11 @@
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Packets\CtoS.h>
 
+#include "MinimapUtils.h"
 
 PingsLinesRenderer::PingsLinesRenderer() : vertices(nullptr) {
+
+	color_drawings = MinimapUtils::IniReadColor(L"color_drawings", L"0x00FFFFFF");
 
 	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P133>(
 		[&](GW::Packet::StoC::P133* pak) -> bool {
@@ -132,7 +135,7 @@ void PingsLinesRenderer::Render(IDirect3DDevice9* device) {
 		vertices[0].x = x;
 		vertices[0].y = y;
 		vertices[0].z = 0.0f;
-		vertices[0].color = D3DCOLOR_RGBA(255, 255, 255, c);
+		vertices[0].color = (D3DCOLOR_ARGB(c, 0, 0, 0) | color_drawings);
 		++vertices;
 		++vertices_count;
 	};
@@ -178,6 +181,9 @@ void PingsLinesRenderer::PingCircle::Initialize(IDirect3DDevice9* device) {
 	vertex_count = count_ + 2;
 	vertices = nullptr;
 
+	DWORD color = MinimapUtils::IniReadColor(L"color_pings", L"0x00FF0000");
+
+
 	if (buffer_) buffer_->Release();
 	device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, 0,
 		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer_, NULL);
@@ -185,13 +191,13 @@ void PingsLinesRenderer::PingCircle::Initialize(IDirect3DDevice9* device) {
 		(VOID**)&vertices, D3DLOCK_DISCARD);
 	
 	for (size_t i = 0; i < count_; ++i) {
-		float angle = i * (static_cast<float>(2 * M_PI) / count_);
+		float angle = i * (2 * fPI / count_);
 		bool outer = (i % 2 == 0);
 		float radius = outer ? 1.0f : 0.8f;
 		vertices[i].x = radius * std::cos(angle);
 		vertices[i].y = radius * std::sin(angle);
 		vertices[i].z = 0.0f;
-		vertices[i].color = D3DCOLOR_ARGB(outer ? 150 : 0, 255, 0, 0);
+		vertices[i].color = (D3DCOLOR_ARGB(outer ? 150 : 0, 0, 0, 0) | color);
 	}
 	vertices[count_] = vertices[0];
 	vertices[count_ + 1] = vertices[1];
@@ -288,7 +294,7 @@ bool PingsLinesRenderer::OnMouseUp() {
 void PingsLinesRenderer::SendQueue() {
 	static GW::Packet::P037* packet = new GW::Packet::P037();
 
-	printf("sending %d pos [%d]\n", queue.size(), session_id);
+	//printf("sending %d pos [%d]\n", queue.size(), session_id);
 
 	if (queue.size() > 0 && queue.size() < 8) {
 

@@ -16,6 +16,7 @@ Minimap::Minimap()
 	: range_renderer(RangeRenderer()),
 	pmap_renderer(PmapRenderer()),
 	agent_renderer(AgentRenderer()),
+	symbols_renderer(SymbolsRenderer()),
 	mousedown_(false),
 	freeze_(false),
 	loading_(false),
@@ -43,7 +44,9 @@ Minimap::Minimap()
 	SetWidth(width);
 	SetHeight(width);
 
-	Scale(0.0002f);
+	SetTranslation(0.0f, 0.0f);
+	SetScale(1.0f);
+	last_moved_ = TBTimer::init();
 
 	SetVisible(Config::IniReadBool(Minimap::IniSection(), Minimap::InikeyShow(), false));
 
@@ -62,16 +65,27 @@ void Minimap::Render(IDirect3DDevice9* device) {
 
 	GW::Agent* me = GW::Agents().GetPlayer();
 	if (me == nullptr) return;
-	SetTranslation(-me->X, -me->Y);
 
-	float camera_yaw = GW::Cameramgr().GetYaw();
-	SetRotation(-camera_yaw + (float)M_PI_2);
+	const long ms_before_back = 1000;
+	const float acceleration = 0.5f;
+	const float max_speed = 15.0f; // game units per frame
+	if ((translation_x_ != 0 || translation_y_ != 0) 
+		&& (me->MoveX != 0 || me->MoveY != 0)
+		&& TBTimer::diff(last_moved_) > ms_before_back) {
+		GW::Vector2f v(translation_x_, translation_y_);
+		float speed = std::min((TBTimer::diff(last_moved_) - ms_before_back) * acceleration, 500.0f);
+		float n = v.Norm();
+		GW::Vector2f d = v.Normalized() * speed;
+		if (std::abs(d.x) > std::abs(v.x)) SetTranslation(0, 0);
+		else Translate(-d.x, -d.y);
+	}
 
 	device->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, TRUE);
 	device->SetFVF(D3DFVF_CUSTOMVERTEX);
 	device->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
 	device->SetRenderState(D3DRS_LIGHTING, FALSE);
 
+	D3DXMATRIX view;
 	D3DXMATRIX identity;
 	D3DXMatrixIdentity(&identity);
 	device->SetTransform(D3DTS_WORLD, &identity);
@@ -80,54 +94,96 @@ void Minimap::Render(IDirect3DDevice9* device) {
 
 	RenderSetupClipping(device);
 	RenderSetupProjection(device);
-	//HRESULT zenable = device->SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE);
-	//if (zenable != D3D_OK) {
-	//	printf("NOT OK\n");
-	//}
-	//device->Clear(0, NULL, D3DCLEAR_ZBUFFER, 0x00000000, 0.5f, 0);
-	//if (zenable != D3D_OK) {
-	//	printf("NOT OK2\n");
-	//}
-	//D3DCAPS9 caps;
-	//device->GetDeviceCaps(&caps);
 
-	//LPDIRECT3DSURFACE9 pZBuffer;
-	//device->GetDepthStencilSurface(&pZBuffer);
+	D3DXMATRIX translate_char;
+	D3DXMatrixTranslation(&translate_char, -me->X, -me->Y, 0);
+	
+	D3DXMATRIX rotate_char;
+	D3DXMatrixRotationZ(&rotate_char, -GW::Cameramgr().GetYaw() + (float)M_PI_2);
 
-	RenderSetupWorldTransforms(device, false, false, true);
+	D3DXMATRIX scale, trans;
+	D3DXMatrixScaling(&scale, scale_, scale_, 1.0f);
+	D3DXMatrixTranslation(&trans, translation_x_, translation_y_, 0);
+
+	view = translate_char * rotate_char * scale * trans;
+	device->SetTransform(D3DTS_VIEW, &view);
+
 	pmap_renderer.Render(device);	
 
-	RenderSetupWorldTransforms(device, false, false, true);
+	// move the rings to the char position
+	D3DXMatrixTranslation(&translate_char, me->X, me->Y, 0);
+	device->SetTransform(D3DTS_WORLD, &translate_char); 
 	range_renderer.Render(device);
+	device->SetTransform(D3DTS_WORLD, &identity);
 
-	RenderSetupWorldTransforms(device, true, true, true);
-
+	if (translation_x_ != 0 || translation_y_ != 0) {
+		D3DXMATRIX view2 = scale;
+		device->SetTransform(D3DTS_VIEW, &view2);
+		range_renderer.SetDrawCenter(true);
+		range_renderer.Render(device);
+		range_renderer.SetDrawCenter(false);
+		device->SetTransform(D3DTS_VIEW, &view);
+	}
+	
 	agent_renderer.Render(device);
+
+	symbols_renderer.Render(device);
+	device->SetTransform(D3DTS_WORLD, &identity);
 
 	pingslines_renderer.Render(device);
 }
 
-GW::Vector2f Minimap::InterfaceToWorld(int x, int y) const {
+GW::Vector2f Minimap::InterfaceToWorldPoint(int x, int y) const {
 	GW::Agent* me = GW::Agents().GetPlayer();
 	if (me == nullptr) return GW::Vector2f(0, 0);
+	
+	// Invert viewport projection
+	x = x - GetX();
+	y = GetY() - y;
 
-	x -= GetX();
-	y -= GetY();
+	// go from [0, width][0, height] to [-1, 1][-1, 1]
+	float x2 = (2.0f * x / GetWidth() - 1.0f);
+	float y2 = (2.0f * y / GetHeight() + 1.0f);
 
-	// go from [0, width][0, height] to [-1, 1][-1, 1] and then divide by scale
-	float xs = (2.0f * x / GetWidth() - 1.0f) / GetScale();
-	float ys = (2.0f * y / GetHeight() - 1.0f) / GetScale();
+	// scale up to [-w, w]
+	float w = 5000.0f;
+	x2 *= w;
+	y2 *= w;
+
+	// translate by camera
+	x2 -= translation_x_;
+	y2 -= translation_y_;
+
+	// scale by camera
+	x2 /= scale_;
+	y2 /= scale_;
 
 	// rotate by current camera rotation
-	float angle = -GW::Cameramgr().GetYaw() + (float)M_PI_2;
-	float xr = xs * std::cos(angle) - ys * std::sin(angle);
-	float yr = ys * std::cos(angle) + xs * std::sin(angle);
+	float angle = GW::Cameramgr().GetYaw() - (float)M_PI_2;
+	float x3 = x2 * std::cos(angle) - y2 * std::sin(angle);
+	float y3 = x2 * std::sin(angle) + y2 * std::cos(angle);
 
 	// translate by character position
-	float xt = xr - GetTranslationX();
-	float yt = -yr - GetTranslationY();
+	x3 += me->X;
+	y3 += me->Y;
 
-	return GW::Vector2f(xt, yt);
+	return GW::Vector2f(x3, y3);
+}
+
+GW::Vector2f Minimap::InterfaceToWorldVector(int x, int y) const {
+	// Invert y direction
+	y = -y;
+
+	// go from [0, width][0, height] to [-1, 1][-1, 1]
+	float x2 = (2.0f * x / GetWidth());
+	float y2 = (2.0f * y / GetHeight());
+
+	// scale up to [-w, w]
+	float w = 5000.0f;
+	x2 *= w;
+	y2 *= w;
+
+	return GW::Vector2f(x2, y2);
 }
 
 void Minimap::SelectTarget(GW::Vector2f pos) {
@@ -165,18 +221,21 @@ bool Minimap::OnMouseDown(MSG msg) {
 	mousedown_ = true;
 
 	if (msg.wParam & MK_CONTROL) {
-		SelectTarget(InterfaceToWorld(x, y));
+		SelectTarget(InterfaceToWorldPoint(x, y));
 		return true;
 	}
 
-	if (!freeze_) {
-		drag_start_x_ = x;
-		drag_start_y_ = y;
-		return true;
-	}
+	drag_start_x_ = x;
+	drag_start_y_ = y;
 
-	GW::Vector2f v = InterfaceToWorld(x, y);
-	return pingslines_renderer.OnMouseDown(v.x, v.y);
+	if (msg.wParam & MK_SHIFT) return true;
+
+	if (!freeze_) return true;
+
+	GW::Vector2f v = InterfaceToWorldPoint(x, y);
+	pingslines_renderer.OnMouseDown(v.x, v.y);
+
+	return true;
 }
 
 bool Minimap::OnMouseDblClick(MSG msg) {
@@ -187,7 +246,7 @@ bool Minimap::OnMouseDblClick(MSG msg) {
 	if (!IsInside(x, y)) return false;
 
 	if (msg.wParam & MK_CONTROL) {
-		SelectTarget(InterfaceToWorld(x, y));
+		SelectTarget(InterfaceToWorldPoint(x, y));
 		return true;
 	}
 
@@ -217,7 +276,18 @@ bool Minimap::OnMouseMove(MSG msg) {
 	if (!IsInside(x, y)) return false;
 
 	if (msg.wParam & MK_CONTROL) {
-		SelectTarget(InterfaceToWorld(x, y));
+		SelectTarget(InterfaceToWorldPoint(x, y));
+		return true;
+	}
+
+	if (msg.wParam & MK_SHIFT) {
+		int diff_x = x - drag_start_x_;
+		int diff_y = y - drag_start_y_;
+		GW::Vector2f trans = InterfaceToWorldVector(diff_x, diff_y);
+		Translate(trans.x, trans.y);
+		drag_start_x_ = x;
+		drag_start_y_ = y;
+		last_moved_ = TBTimer::init();
 		return true;
 	}
 
@@ -231,7 +301,7 @@ bool Minimap::OnMouseMove(MSG msg) {
 		return true;
 	}
 
-	GW::Vector2f v = InterfaceToWorld(x, y);
+	GW::Vector2f v = InterfaceToWorldPoint(x, y);
 	return pingslines_renderer.OnMouseMove(v.x, v.y);
 }
 
@@ -241,9 +311,17 @@ bool Minimap::OnMouseWheel(MSG msg) {
 	int x = GET_X_LPARAM(msg.lParam);
 	int y = GET_Y_LPARAM(msg.lParam);
 	if (!IsInside(x, y)) return false;
+	
+	int zDelta = GET_WHEEL_DELTA_WPARAM(msg.wParam);
+
+	if (msg.wParam & MK_SHIFT) {
+		//float delta = zDelta > 0 ? 10.0f/9.0f : 9.0f/10.0f;
+		float delta = zDelta > 0 ? 1.024f : 0.9765625f;
+		Scale(delta);
+		return true;
+	}
 
 	if (!freeze_) {
-		int zDelta = GET_WHEEL_DELTA_WPARAM(msg.wParam);
 		int delta = zDelta > 0 ? 2 : -2;
 		SetWidth(GetWidth() + delta * 2);
 		SetHeight(GetHeight() + delta * 2);

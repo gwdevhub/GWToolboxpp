@@ -56,7 +56,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;API_EXPORTS;_USE_MATH_DEFINES;D3D_DEBUG_INFO;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;API_EXPORTS;_USE_MATH_DEFINES;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -73,7 +73,7 @@
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;API_EXPORTS;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;API_EXPORTS;_USE_MATH_DEFINES;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <AdditionalIncludeDirectories>
@@ -87,7 +87,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCA_DX.lib;GWCAd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCA_DX.lib;GWCA.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -104,10 +104,12 @@
     <ClInclude Include="GWToolbox\EditBuild.h" />
     <ClInclude Include="GWToolbox\Minimap.h" />
     <ClInclude Include="GWToolbox\D3DVertex.h" />
+    <ClInclude Include="GWToolbox\MinimapUtils.h" />
     <ClInclude Include="GWToolbox\PartyDamage.h" />
     <ClInclude Include="GWToolbox\PingsLinesRenderer.h" />
     <ClInclude Include="GWToolbox\PmapRenderer.h" />
     <ClInclude Include="GWToolbox\RangeRenderer.h" />
+    <ClInclude Include="GWToolbox\SymbolsRenderer.h" />
     <ClInclude Include="GWToolbox\VBuffer.h" />
     <ClInclude Include="GWToolbox\Settings.h" />
     <ClInclude Include="GWToolbox\ToolboxWindow.h" />
@@ -146,6 +148,7 @@
     <ClCompile Include="GWToolbox\PingsLinesRenderer.cpp" />
     <ClCompile Include="GWToolbox\PmapRenderer.cpp" />
     <ClCompile Include="GWToolbox\RangeRenderer.cpp" />
+    <ClCompile Include="GWToolbox\SymbolsRenderer.cpp" />
     <ClCompile Include="GWToolbox\ToolboxWindow.cpp" />
     <ClCompile Include="GWToolbox\GWToolbox.cpp" />
     <ClCompile Include="GWToolbox\HotkeyPanel.cpp" />

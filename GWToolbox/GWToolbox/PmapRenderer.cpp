@@ -101,33 +101,22 @@ void PmapRenderer::Render(IDirect3DDevice9* device) {
 		initialized_ = true;
 		Initialize(device);
 	}
-	GW::Agent* me = GW::Agents().GetPlayer();
-	if (me == nullptr) return;
-
-	float camera_yaw = GW::Cameramgr().GetYaw();
-	float rotation = -camera_yaw + (float)M_PI_2;
-
-	D3DXMATRIX translate1, rotate, translate2, world;
-	D3DXMatrixTranslation(&translate1, -me->X, -me->Y, 0.0f);
-	D3DXMatrixRotationZ(&rotate, rotation);
 
 	if (shadow_show) {
-		D3DXMatrixTranslation(&translate2, 0, -100, 0.0f);
-		world = translate1 * rotate * translate2;
-		device->SetTransform(D3DTS_WORLD, &world);
+		D3DXMATRIX oldview, translate, newview;
+		D3DXMatrixTranslation(&translate, 0, -100, 0.0f);
+		device->GetTransform(D3DTS_VIEW, &oldview);
+		newview = oldview * translate;
+		device->SetTransform(D3DTS_VIEW, &newview);
 
 		device->SetFVF(D3DFVF_CUSTOMVERTEX);
 		device->SetStreamSource(0, buffer_, 0, sizeof(D3DVertex));
 		device->DrawPrimitive(type_, 0, tri_count_);
 
-		world = translate1 * rotate;
-		device->SetTransform(D3DTS_WORLD, &world);
+		device->SetTransform(D3DTS_VIEW, &oldview);
 
 		device->DrawPrimitive(type_, vert_count_ , tri_count_);
 	} else {
-		world = translate1 * rotate;
-		device->SetTransform(D3DTS_WORLD, &world);
-
 		device->SetFVF(D3DFVF_CUSTOMVERTEX);
 		device->SetStreamSource(0, buffer_, 0, sizeof(D3DVertex));
 		device->DrawPrimitive(type_, 0, tri_count_);

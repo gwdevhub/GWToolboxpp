@@ -4,36 +4,29 @@
 #include <GWCA\Managers\AgentMgr.h>
 
 #include "Config.h"
+#include "MinimapUtils.h"
 
 AgentRenderer::AgentRenderer() : vertices(nullptr) {
 
-	auto IniReadColor = [](wchar_t* key, wchar_t* def) -> Color {
-		const wchar_t* wc = Config::IniRead(L"minimap", key, def);
-		Config::IniWrite(L"minimap", key, wc);
-		DWORD c = std::wcstoul(wc, nullptr, 16);
-		if (c == LONG_MAX) return Color(D3DCOLOR_ARGB(0xFF, 0x0, 0x0, 0x0));
-		return Color(c);
-	};
+	MinimapUtils::Color modifier = MinimapUtils::IniReadColor2(L"color_agent_modifier", L"0x001E1E1E");
+	color_eoe = MinimapUtils::IniReadColor2(L"color_eoe", L"0x0000FF00");
+	color_target = MinimapUtils::IniReadColor2(L"color_target", L"0xFFFFFF00");
+	color_player = MinimapUtils::IniReadColor2(L"color_player", L"0xFFFF8000");
+	color_player_dead = MinimapUtils::IniReadColor2(L"color_player_dead", L"0x64FF8000");
+	color_signpost = MinimapUtils::IniReadColor2(L"color_signpost", L"0xFF0000C8");
+	color_item = MinimapUtils::IniReadColor2(L"color_item", L"0xFF0000F0");
+	color_hostile = MinimapUtils::IniReadColor2(L"color_hostile", L"0xFFF00000");
+	color_hostile_damaged = MinimapUtils::IniReadColor2(L"color_hostile_damaged", L"0xFF800000");
+	color_hostile_dead = MinimapUtils::IniReadColor2(L"color_hostile_dead", L"0xFF320000");
+	color_neutral = MinimapUtils::IniReadColor2(L"color_neutral", L"0xFF0000DC");
+	color_ally_party = MinimapUtils::IniReadColor2(L"color_ally", L"0xFF00B300");
+	color_ally_npc = MinimapUtils::IniReadColor2(L"color_ally_npc", L"0xFF99FF99");
+	color_ally_spirit = MinimapUtils::IniReadColor2(L"color_ally_spirit", L"0xFF608000");
+	color_ally_minion = MinimapUtils::IniReadColor2(L"color_ally_minion", L"0xFF008060");
+	color_ally_dead = MinimapUtils::IniReadColor2(L"color_ally_dead", L"0x64006400");
 
-	Color modifier = IniReadColor(L"color_agent_modifier", L"0x001E1E1E");
-	color_eoe = IniReadColor(L"color_eoe", L"0x0000FF00");
-	color_target = IniReadColor(L"color_target", L"0xFFFFFF00");
-	color_player = IniReadColor(L"color_player", L"0xFFFF8000");
-	color_player_dead = IniReadColor(L"color_player_dead", L"0x64FF8000");
-	color_signpost = IniReadColor(L"color_signpost", L"0xFF0000C8");
-	color_item = IniReadColor(L"color_item", L"0xFF0000F0");
-	color_hostile = IniReadColor(L"color_hostile", L"0xFFF00000");
-	color_hostile_damaged = IniReadColor(L"color_hostile_damaged", L"0xFF800000");
-	color_hostile_dead = IniReadColor(L"color_hostile_dead", L"0xFF320000");
-	color_neutral = IniReadColor(L"color_neutral", L"0xFF0000DC");
-	color_ally_party = IniReadColor(L"color_ally", L"0xFF00B300");
-	color_ally_npc = IniReadColor(L"color_ally_npc", L"0xFF99FF99");
-	color_ally_spirit = IniReadColor(L"color_ally_spirit", L"0xFF608000");
-	color_ally_minion = IniReadColor(L"color_ally_minion", L"0xFF008060");
-	color_ally_dead = IniReadColor(L"color_ally_dead", L"0x64006400");
-
-	Color light = modifier;
-	Color dark(0, -light.r, -light.g, -light.b);
+	MinimapUtils::Color light = modifier;
+	MinimapUtils::Color dark(0, -light.r, -light.g, -light.b);
 
 	shapes[Tear].AddVertex(1.8f, 0, dark);		// A
 	shapes[Tear].AddVertex(0.7f, 0.7f, dark);	// B
@@ -74,9 +67,9 @@ AgentRenderer::AgentRenderer() : vertices(nullptr) {
 	for (int i = 0; i < num_triangles; ++i) {
 		float angle1 = 2 * (i + 0) * PI / num_triangles;
 		float angle2 = 2 * (i + 1) * PI / num_triangles;
-		shapes[BigCircle].AddVertex(std::cos(angle1), std::sin(angle1), Color(50, 0, 0, 0));
-		shapes[BigCircle].AddVertex(std::cos(angle2), std::sin(angle2), Color(50, 0, 0, 0));
-		shapes[BigCircle].AddVertex(0.0f, 0.0f, Color(0, 0, 0, 0));
+		shapes[BigCircle].AddVertex(std::cos(angle1), std::sin(angle1), MinimapUtils::Color(50, 0, 0, 0));
+		shapes[BigCircle].AddVertex(std::cos(angle2), std::sin(angle2), MinimapUtils::Color(50, 0, 0, 0));
+		shapes[BigCircle].AddVertex(0.0f, 0.0f, MinimapUtils::Color(0, 0, 0, 0));
 	}
 
 	shapes[Quad].AddVertex(1.0f, -1.0f, dark);
@@ -177,7 +170,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 }
 
 void AgentRenderer::Enqueue(GW::Agent* agent) {
-	Color color = GetColor(agent);
+	MinimapUtils::Color color = GetColor(agent);
 	float size = GetSize(agent);
 	Shape_e shape = GetShape(agent);
 
@@ -186,15 +179,14 @@ void AgentRenderer::Enqueue(GW::Agent* agent) {
 	}
 	if (shape == BigCircle) {
 		if (!agent->GetIsDead()) {
-			//Enqueue(BigCircle, agent, GW::Constants::Range::Spirit, color_eoe);
-			Enqueue(BigCircle, agent, GW::Constants::Range::Earshot, D3DCOLOR_ARGB(0, 255, 0, 0));
+			Enqueue(BigCircle, agent, GW::Constants::Range::Spirit, color_eoe);
 		}
 		shape = Circle;
 	}
 	Enqueue(shape, agent, size, color);
 }
 
-AgentRenderer::Color AgentRenderer::GetColor(GW::Agent* agent) const {
+MinimapUtils::Color AgentRenderer::GetColor(GW::Agent* agent) const {
 	if (agent->Id == GW::Agents().GetPlayerId()) {
 		if (agent->GetIsDead()) return color_player_dead;
 		else return color_player;
@@ -223,7 +215,7 @@ AgentRenderer::Color AgentRenderer::GetColor(GW::Agent* agent) const {
 	default: break;
 	}
 
-	return Color(0, 0, 0);
+	return MinimapUtils::Color(0, 0, 0);
 }
 
 float AgentRenderer::GetSize(GW::Agent* agent) const {
@@ -294,13 +286,13 @@ AgentRenderer::Shape_e AgentRenderer::GetShape(GW::Agent* agent) const {
 	}
 }
 
-void AgentRenderer::Enqueue(Shape_e shape, GW::Agent* agent, float size, Color color) {
+void AgentRenderer::Enqueue(Shape_e shape, GW::Agent* agent, float size, MinimapUtils::Color color) {
 	GW::Vector2f translate(agent->X, agent->Y);
 	unsigned int i;
 	for (i = 0; i < shapes[shape].vertices.size(); ++i) {
 		GW::Vector2f v = shapes[shape].vertices[i].Rotated(agent->Rotation_cos,
 			agent->Rotation_sin) * size + translate;
-		Color c = color + shapes[shape].colors[i];
+		MinimapUtils::Color c = color + shapes[shape].colors[i];
 		c.Clamp();
 		vertices[i].z = 0.0f;
 		vertices[i].color = c.GetDXColor();
@@ -311,7 +303,7 @@ void AgentRenderer::Enqueue(Shape_e shape, GW::Agent* agent, float size, Color c
 	vertices_count += shapes[shape].vertices.size();
 }
 
-void AgentRenderer::Shape_t::AddVertex(float x, float y, Color color) {
+void AgentRenderer::Shape_t::AddVertex(float x, float y, MinimapUtils::Color color) {
 	vertices.push_back(GW::Vector2f(x, y));
 	colors.push_back(color);
 }

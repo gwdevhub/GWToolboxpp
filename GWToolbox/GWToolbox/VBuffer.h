@@ -38,10 +38,6 @@ public:
 			Initialize(device);
 		}
 
-		//device->SetFVF(D3DFVF_CUSTOMVERTEX);
-		//device->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
-		//device->SetRenderState(D3DRS_LIGHTING, FALSE);
-
 		device->SetFVF(D3DFVF_CUSTOMVERTEX);
 		device->SetStreamSource(0, buffer_, 0, sizeof(D3DVertex));
 		device->DrawPrimitive(type_, 0, count_);

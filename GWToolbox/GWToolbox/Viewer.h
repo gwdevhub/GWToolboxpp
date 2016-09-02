@@ -13,8 +13,6 @@ public:
 	Viewer();
 
 	void RenderSetupClipping(IDirect3DDevice9* device);
-	void RenderSetupWorldTransforms(IDirect3DDevice9* device, 
-		bool translate, bool rotate, bool zoom);
 	void RenderSetupProjection(IDirect3DDevice9* device);
 	virtual void Render(IDirect3DDevice9* device) = 0;
 
@@ -35,16 +33,13 @@ public:
 		translation_y_ += y;
 	}
 	inline void Scale(float amount) { scale_ *= amount; }
-	inline void Rotate(float radians) { rotation_ += radians; }
 
 	void SetTranslation(float x, float y) {
 		translation_x_ = x;
 		translation_y_ = y;
 	}
 	inline void SetScale(float scale) { scale_ = scale; }
-	inline void SetRotation(float radians) { rotation_ = radians; }
 	inline float GetScale() const { return scale_; }
-	inline float GetRotation() const { return rotation_; }
 	inline float GetTranslationX() const { return translation_x_; }
 	inline float GetTranslationY() const { return translation_y_; }
 
@@ -52,7 +47,6 @@ protected:
 	float translation_x_;
 	float translation_y_;
 	float scale_;
-	float rotation_;
 
 	int location_x_;
 	int location_y_;
