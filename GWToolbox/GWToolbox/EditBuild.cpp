@@ -1,4 +1,4 @@
-#include "EditBuild.h"
+﻿#include "EditBuild.h"
 
 #include <string>
 
@@ -29,9 +29,10 @@ EditBuild::EditBuild(OSHGui::Control* parent) : OSHGui::Panel(parent) {
 	button->SetSize(SizeI(ITEM_HEIGHT, ITEM_HEIGHT));
 	button->SetLocation(PointI(GetWidth() - ITEM_HEIGHT - Padding, Padding));
 	button->SetText(L"^");
-	button->GetClickEvent() += ClickEventHandler([this](Control*) {
+	button->GetClickEvent() += ClickEventHandler([button, this](Control*) {
 		up_ = !up_;
 		UpdateLocation();
+		Config::IniWriteBool(MainWindow::IniSection(), EditBuild::IniKeyUp(), up_);
 	});
 	AddControl(button);
 
@@ -121,7 +122,8 @@ EditBuild::EditBuild(OSHGui::Control* parent) : OSHGui::Panel(parent) {
 	SetSize(SizeI(templates[0]->GetRight() + SEND_WIDTH + 2 * Padding,
 		ok->GetBottom() + Padding));
 
-	up_ = true;
+	up_ = Config::IniReadBool(MainWindow::IniSection(), EditBuild::IniKeyUp(), true);
+
 	left_ = false;
 	UpdateLocation();
 }

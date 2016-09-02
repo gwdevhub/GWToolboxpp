@@ -15,7 +15,8 @@ public:
 	inline static const wchar_t* IniSection() { return L"minimap"; }
 	inline static const wchar_t* IniKeyX() { return L"x"; }
 	inline static const wchar_t* IniKeyY() { return L"y"; }
-	inline static const wchar_t* IniKeyWidth() { return L"width"; }
+	inline static const wchar_t* IniKeySize() { return L"size"; }
+	inline static const wchar_t* IniKeyScale() { return L"scale"; }
 	inline static const wchar_t* InikeyShow() { return L"show"; }
 
 	void Render(IDirect3DDevice9* device) override;

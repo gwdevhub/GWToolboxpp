@@ -38,14 +38,13 @@ Minimap::Minimap()
 
 	int x = Config::IniReadLong(Minimap::IniSection(), Minimap::IniKeyX(), 50);
 	int y = Config::IniReadLong(Minimap::IniSection(), Minimap::IniKeyY(), 50);
-	int width = Config::IniReadLong(Minimap::IniSection(), Minimap::IniKeyWidth(), 600);
-	SetX(x);
-	SetY(y);
-	SetWidth(width);
-	SetHeight(width);
+	int size = Config::IniReadLong(Minimap::IniSection(), Minimap::IniKeySize(), 600);
+	double scale = Config::IniReadDouble(Minimap::IniSection(), Minimap::IniKeyScale(), 1.0);
+	SetLocation(x, y);
+	SetSize(size, size);
 
 	SetTranslation(0.0f, 0.0f);
-	SetScale(1.0f);
+	SetScale((float)scale);
 	last_moved_ = TBTimer::init();
 
 	SetVisible(Config::IniReadBool(Minimap::IniSection(), Minimap::InikeyShow(), false));
@@ -315,9 +314,9 @@ bool Minimap::OnMouseWheel(MSG msg) {
 	int zDelta = GET_WHEEL_DELTA_WPARAM(msg.wParam);
 
 	if (msg.wParam & MK_SHIFT) {
-		//float delta = zDelta > 0 ? 10.0f/9.0f : 9.0f/10.0f;
 		float delta = zDelta > 0 ? 1.024f : 0.9765625f;
 		Scale(delta);
+		Config::IniWriteDouble(Minimap::IniSection(), Minimap::IniKeyScale(), GetScale());
 		return true;
 	}
 
@@ -328,7 +327,7 @@ bool Minimap::OnMouseWheel(MSG msg) {
 		SetX(GetX() - delta);
 		SetY(GetY() - delta);
 
-		Config::IniWriteLong(Minimap::IniSection(), Minimap::IniKeyWidth(), GetWidth());
+		Config::IniWriteLong(Minimap::IniSection(), Minimap::IniKeySize(), GetWidth());
 
 		return true;
 	}

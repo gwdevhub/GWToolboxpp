@@ -25,7 +25,7 @@ public:
 
 private:
 	void AddCommand(std::wstring cmd, Handler_t, bool override = true);
-	bool IsTyping() { return (*(DWORD*)0xA377C8) != 0; }
+	bool IsTyping() { return (*(DWORD*)0xA377C8) != 0; } // broken
 	
 	static std::wstring GetLowerCaseArg(std::vector<std::wstring>, size_t index);
 
