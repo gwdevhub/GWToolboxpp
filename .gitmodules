@@ -1,6 +1,6 @@
 [submodule "GWCA"]
 	path = GWCA
-url=https://github.com/GregLando113/GWCA.git
+	url=https://github.com/GregLando113/GWCA
 [submodule "gwca_dx"]
 	path = gwca_dx
 	url = https://bitbucket.org/0x4D1/gwca_dx

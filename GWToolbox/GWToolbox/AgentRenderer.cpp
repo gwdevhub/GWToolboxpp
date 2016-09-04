@@ -124,12 +124,18 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 	GW::NPCArray npcs = GW::Agents().GetNPCArray();
 	if (!npcs.valid()) return;
 
+	// eoes
+	for (size_t i = 0; i < agents.size(); ++i) {
+		GW::Agent* agent = agents[i];
+		if (agent != nullptr && agent->PlayerNumber == 2872) Enqueue(agent);
+	}
 	// non-player agents
 	for (size_t i = 0; i < agents.size(); ++i) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
 		if (agent->PlayerNumber <= 12) continue;
-		if (agent->GetIsLivingType() && agent->IsNPC()
+		if (agent->PlayerNumber == 2872) continue;
+		if (/*agent->GetIsLivingType() &&*/ agent->IsNPC()
 			&& (npcs[agent->PlayerNumber].npcflags & 0x10000) > 0) {
 			continue;
 		}
