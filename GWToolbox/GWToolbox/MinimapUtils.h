@@ -26,12 +26,14 @@ public:
 			return Color(a + c.a, r + c.r, g + c.g, b + c.b);
 		}
 		void Clamp() {
+			if (a < 0) a = 0;
 			if (r < 0) r = 0;
 			if (g < 0) g = 0;
 			if (b < 0) b = 0;
-			if (r > 255) r = 255;
-			if (g > 255) g = 255;
-			if (b > 255) b = 255;
+			if (a > 0xFF) a = 0xFF;
+			if (r > 0xFF) r = 0xFF;
+			if (g > 0xFF) g = 0xFF;
+			if (b > 0xFF) b = 0xFF;
 		}
 		DWORD GetDXColor() {
 			Clamp();

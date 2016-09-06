@@ -141,8 +141,10 @@ bool PartyDamage::DamagePacketCallback(GW::Packet::StoC::P151* packet) {
 	// ignore heals
 	if (packet->value >= 0) return false;
 
+	GW::AgentArray agents = GW::Agents().GetAgentArray();
+
 	// get cause agent
-	GW::Agent* cause = GW::Agents().GetAgentByID(packet->cause_id);
+	GW::Agent* cause = agents[packet->cause_id];
 	
 	if (cause == nullptr) return false;
 	if (cause->Allegiance != 0x1) return false;
@@ -150,7 +152,7 @@ bool PartyDamage::DamagePacketCallback(GW::Packet::StoC::P151* packet) {
 	if (cause_it == party_index.end()) return false;  // ignore damage done by non-party members
 
 	// get target agent
-	GW::Agent* target = GW::Agents().GetAgentByID(packet->target_id);
+	GW::Agent* target = agents[packet->target_id];
 	if (target == nullptr) return false;
 	if (target->LoginNumber != 0) return false; // ignore player-inflicted damage
 										        // such as Life bond or sacrifice

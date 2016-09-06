@@ -38,6 +38,7 @@ private:
 	unsigned int max_shape_verts;// max number of triangles in a single shape
 
 	MinimapUtils::Color color_eoe;
+	MinimapUtils::Color color_qz;
 	MinimapUtils::Color color_target;
 	MinimapUtils::Color color_player;
 	MinimapUtils::Color color_player_dead;

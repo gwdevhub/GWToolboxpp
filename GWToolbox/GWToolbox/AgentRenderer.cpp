@@ -9,7 +9,8 @@
 AgentRenderer::AgentRenderer() : vertices(nullptr) {
 
 	MinimapUtils::Color modifier = MinimapUtils::IniReadColor2(L"color_agent_modifier", L"0x001E1E1E");
-	color_eoe = MinimapUtils::IniReadColor2(L"color_eoe", L"0x0000FF00");
+	color_eoe = MinimapUtils::IniReadColor2(L"color_eoe", L"0x3200FF00");
+	color_qz = MinimapUtils::IniReadColor2(L"color_qz", L"0x320000FF");
 	color_target = MinimapUtils::IniReadColor2(L"color_target", L"0xFFFFFF00");
 	color_player = MinimapUtils::IniReadColor2(L"color_player", L"0xFFFF8000");
 	color_player_dead = MinimapUtils::IniReadColor2(L"color_player_dead", L"0x64FF8000");
@@ -67,9 +68,9 @@ AgentRenderer::AgentRenderer() : vertices(nullptr) {
 	for (int i = 0; i < num_triangles; ++i) {
 		float angle1 = 2 * (i + 0) * PI / num_triangles;
 		float angle2 = 2 * (i + 1) * PI / num_triangles;
-		shapes[BigCircle].AddVertex(std::cos(angle1), std::sin(angle1), MinimapUtils::Color(50, 0, 0, 0));
-		shapes[BigCircle].AddVertex(std::cos(angle2), std::sin(angle2), MinimapUtils::Color(50, 0, 0, 0));
-		shapes[BigCircle].AddVertex(0.0f, 0.0f, MinimapUtils::Color(0, 0, 0, 0));
+		shapes[BigCircle].AddVertex(std::cos(angle1), std::sin(angle1), MinimapUtils::Color(0, 0, 0, 0));
+		shapes[BigCircle].AddVertex(std::cos(angle2), std::sin(angle2), MinimapUtils::Color(0, 0, 0, 0));
+		shapes[BigCircle].AddVertex(0.0f, 0.0f, MinimapUtils::Color(-50, 0, 0, 0));
 	}
 
 	shapes[Quad].AddVertex(1.0f, -1.0f, dark);
@@ -117,29 +118,43 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 
 	vertices_count = 0;
 
-	// count triangles
+	// get stuff
 	GW::AgentArray agents = GW::Agents().GetAgentArray();
 	if (!agents.valid()) return;
 
 	GW::NPCArray npcs = GW::Agents().GetNPCArray();
 	if (!npcs.valid()) return;
 
+	DWORD player_id = GW::Agents().GetPlayerId();
+	DWORD target_id = GW::Agents().GetTargetId();
+
 	// eoes
 	for (size_t i = 0; i < agents.size(); ++i) {
 		GW::Agent* agent = agents[i];
-		if (agent != nullptr && agent->PlayerNumber == 2872) Enqueue(agent);
+		if (agent == nullptr) continue;
+		if (agent->GetIsDead()) continue;
+		switch (agent->PlayerNumber) {
+		case GW::Constants::ModelID::EoE:
+			Enqueue(BigCircle, agent, GW::Constants::Range::Spirit, color_eoe);
+			break;
+		case GW::Constants::ModelID::QZ:
+			Enqueue(BigCircle, agent, GW::Constants::Range::Spirit, color_qz);
+			break;
+		default:
+			break;
+		}
 	}
 	// non-player agents
 	for (size_t i = 0; i < agents.size(); ++i) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
 		if (agent->PlayerNumber <= 12) continue;
-		if (agent->PlayerNumber == 2872) continue;
-		if (/*agent->GetIsLivingType() &&*/ agent->IsNPC()
-			&& (npcs[agent->PlayerNumber].npcflags & 0x10000) > 0) {
-			continue;
-		}
-		if (agent->Id == GW::Agents().GetTargetId()) continue; // will draw target at the end
+		if (agent->PlayerNumber == 33280) continue; // signposts in foundry
+		if (agent->GetIsLivingType()
+			&& agent->IsNPC()
+			&& agent->PlayerNumber < npcs.size()
+			&& (npcs[agent->PlayerNumber].npcflags & 0x10000) > 0) continue;
+		if (agent->Id == target_id) continue; // will draw target at the end
 
 		Enqueue(agent);
 
@@ -150,21 +165,19 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
 		if (agent->PlayerNumber > 12) continue;
-
-		if (agent->Id == GW::Agents().GetPlayerId()) continue; // will draw player at the end
-		if (agent->Id == GW::Agents().GetTargetId()) continue; // will draw target at the end
+		if (agent->Id == target_id) continue; // will draw player at the end
+		if (agent->Id == target_id) continue; // will draw target at the end
 
 		Enqueue(agent);
 
 		if (vertices_count >= vertices_max - 4 * max_shape_verts) break;
 	}
 
+	GW::Agent* target = agents[target_id];
+	if (target != nullptr) Enqueue(target);
 
-	GW::Agent* target = GW::Agents().GetTarget();
-	if (target) Enqueue(target);
-
-	GW::Agent* player = GW::Agents().GetPlayer();
-	if (player && player->Id != GW::Agents().GetTargetId()) Enqueue(player);
+	GW::Agent* player = agents[player_id];
+	if (player != nullptr && player->Id != target_id) Enqueue(player);
 
 	buffer_->Unlock();
 
@@ -183,12 +196,7 @@ void AgentRenderer::Enqueue(GW::Agent* agent) {
 	if (GW::Agents().GetTargetId() == agent->Id) {
 		Enqueue(shape, agent, size + 50.0f, color_target);
 	}
-	if (shape == BigCircle) {
-		if (!agent->GetIsDead()) {
-			Enqueue(BigCircle, agent, GW::Constants::Range::Spirit, color_eoe);
-		}
-		shape = Circle;
-	}
+
 	Enqueue(shape, agent, size, color);
 }
 
@@ -200,6 +208,20 @@ MinimapUtils::Color AgentRenderer::GetColor(GW::Agent* agent) const {
 
 	if (agent->GetIsSignpostType()) return color_signpost;
 	if (agent->GetIsItemType()) return color_item;
+
+	// don't draw dead spirits
+	auto npcs = GW::Agents().GetNPCArray();
+	if (agent->GetIsDead() && npcs.valid() && agent->PlayerNumber < npcs.size()) {
+		GW::NPC& npc = npcs[agent->PlayerNumber];
+		switch (npc.modelfileid) {
+		case 0x22A34: // nature rituals
+		case 0x2D0E4: // defensive binding rituals
+		case 0x2D07E: // offensive binding rituals
+			return MinimapUtils::Color(0, 0, 0, 0);;
+		default:
+			break;
+		}
+	}
 
 	// hostiles
 	if (agent->Allegiance == 0x3) {
@@ -272,27 +294,26 @@ AgentRenderer::Shape_e AgentRenderer::GetShape(GW::Agent* agent) const {
 
 	if (agent->LoginNumber > 0) return Tear;	// players
 	if (!agent->GetIsLivingType()) return Quad; // shouldn't happen but just in case
-	
+
 	auto npcs = GW::Agents().GetNPCArray();
-	if (!npcs.valid()) return Tear;
-
-	if (agent->PlayerNumber == 2872) { // EoE
-		return BigCircle;
+	if (npcs.valid() && agent->PlayerNumber < npcs.size()) {
+		GW::NPC& npc = npcs[agent->PlayerNumber];
+		switch (npc.modelfileid) {
+		case 0x22A34: // nature rituals
+		case 0x2D0E4: // defensive binding rituals
+		case 0x2963E: // dummies
+			return Circle;
+		default:
+			break;
+		}
 	}
 
-	GW::NPC& npc = npcs[agent->PlayerNumber];
-	switch (npc.modelfileid) {
-	case 0x22A34: // nature rituals
-	case 0x2D0E4: // defensive binding rituals
-	case 0x2963E: // dummies
-		return Circle;
-	
-	default: 
-		return Tear;
-	}
+	return Tear;
 }
 
 void AgentRenderer::Enqueue(Shape_e shape, GW::Agent* agent, float size, MinimapUtils::Color color) {
+	if (color.a == 0) return;
+
 	GW::Vector2f translate(agent->X, agent->Y);
 	unsigned int i;
 	for (i = 0; i < shapes[shape].vertices.size(); ++i) {
