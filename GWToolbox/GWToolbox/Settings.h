@@ -4,9 +4,11 @@
 #include <OSHGui\OSHGui.hpp>
 
 #include <GWCA\Utilities\MemoryPatcher.h>
+#include <GWCA\Managers\ChatMgr.h>
 
 #include "GWToolbox.h"
 #include "MainWindow.h"
+#include "ChatLogger.h"
 
 class BoolSetting : public OSHGui::CheckBox {
 public:

@@ -628,9 +628,10 @@ void HotkeySendChat::exec() {
 	if (isLoading()) return;
 	if (msg_.empty()) return;
 	if (channel_ == L'/') {
-		ChatLogger::LogF(L"/%ls", msg_.c_str());
+		//ChatLogger::LogF(L"/%ls", msg_.c_str());
+		ChatLogger::Log(L"/" + msg_);
 	}
-	GW::Chat().SendChatCmd(msg_.c_str(), channel_);
+	GW::Chat().SendChat(msg_.c_str(), channel_);
 }
 
 void HotkeyDropUseBuff::exec() {
@@ -734,8 +735,8 @@ void HotkeyMove::exec() {
 	double sqrDist = (me->X - x_) * (me->X - x_) + (me->Y - y_) * (me->Y - y_);
 	if (sqrDist < GW::Constants::SqrRange::Compass) {
 		GW::Agents().Move(x_, y_);
+		ChatLogger::Log(L"Movement macro activated");
 	}
-	ChatLogger::LogF(L"Movement macro activated");
 }
 
 void HotkeyDialog::exec() {

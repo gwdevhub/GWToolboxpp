@@ -10,7 +10,6 @@
 #include "ChatFilter.h"
 
 class ChatCommands {
-	typedef std::function<void(std::vector<std::wstring>)> Handler_t;
 	const float DEFAULT_CAM_SPEED = 25.0f;
 
 public:
@@ -24,24 +23,23 @@ public:
 	void SetSuppressMessages(bool active) { chat_filter->SetSuppressMessages(active); }
 
 private:
-	void AddCommand(std::wstring cmd, Handler_t, bool override = true);
-	bool IsTyping() { return (*(DWORD*)0xA377C8) != 0; } // broken
+	bool IsTyping() { return false; /* (*(DWORD*)0xA377C8) != 0;*/ } // broken
 	
 	static std::wstring GetLowerCaseArg(std::vector<std::wstring>, size_t index);
 
-	static void CmdAge2(std::vector<std::wstring>);
-	static void CmdPcons(std::vector<std::wstring> args);
-	static void CmdDialog(std::vector<std::wstring> args);
-	static void CmdTB(std::vector<std::wstring> args);
-	static void CmdTP(std::vector<std::wstring> args);
-	static void CmdDamage(std::vector<std::wstring> args);
-	static void CmdChest(std::vector<std::wstring> args);
-	static void CmdAfk(std::vector<std::wstring> args);
-	static void CmdTarget(std::vector<std::wstring> args);
-	static void CmdUseSkill(std::vector<std::wstring> args);
+	static bool CmdAge2(std::wstring& cmd, std::vector<std::wstring>& args);
+	static bool CmdPcons(std::wstring& cmd, std::vector<std::wstring>& args);
+	static bool CmdDialog(std::wstring& cmd, std::vector<std::wstring>& args);
+	static bool CmdTB(std::wstring& cmd, std::vector<std::wstring>& args);
+	static bool CmdTP(std::wstring& cmd, std::vector<std::wstring>& args);
+	static bool CmdDamage(std::wstring& cmd, std::vector<std::wstring>& args);
+	static bool CmdChest(std::wstring& cmd, std::vector<std::wstring>& args);
+	static bool CmdAfk(std::wstring& cmd, std::vector<std::wstring>& args);
+	static bool CmdTarget(std::wstring& cmd, std::vector<std::wstring>& args);
+	static bool CmdUseSkill(std::wstring& cmd, std::vector<std::wstring>& args);
 
-	static void CmdZoom(std::vector<std::wstring> args);
-	static void CmdCamera(std::vector<std::wstring> args);
+	static bool CmdZoom(std::wstring& cmd, std::vector<std::wstring>& args);
+	static bool CmdCamera(std::wstring& cmd, std::vector<std::wstring>& args);
 
 	ChatFilter* chat_filter;
 

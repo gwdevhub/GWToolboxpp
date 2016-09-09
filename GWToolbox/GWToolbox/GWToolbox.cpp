@@ -26,6 +26,7 @@
 #include "MainWindow.h"
 #include "TimerWindow.h"
 #include "Settings.h"
+#include "ChatLogger.h"
 
 GWToolbox* GWToolbox::instance_ = NULL;
 OSHGui::Drawing::Direct3D9Renderer* GWToolbox::renderer = NULL;
@@ -95,6 +96,16 @@ void GWToolbox::Exec() {
 
 	Config::IniWrite(L"launcher", L"dllversion", GWTOOLBOX_VERSION);
 
+	ChatLogger::Init();
+
+	if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading
+		&& GW::Agents().GetAgentArray().valid()
+		&& GW::Agents().GetPlayer() != nullptr) {
+
+		DWORD playerNumber = GW::Agents().GetPlayer()->PlayerNumber;
+		ChatLogger::LogF(L"Hello %ls!", GW::Agents().GetPlayerNameByLoginNumber(playerNumber));
+	}
+
 	Application* app = Application::InstancePtr();
 
 	while (!must_self_destruct_) { // main loop
@@ -119,6 +130,10 @@ void GWToolbox::Exec() {
 			break;
 		}
 #endif
+	}
+
+	if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading) {
+		ChatLogger::Log(L"Bye!");
 	}
 
 	LOG("Destroying GWToolbox++\n");

@@ -8,8 +8,6 @@
 #include <OSHGui\OSHGui.hpp>
 #include <OSHGui\Input\WindowsMessage.hpp>
 
-#include "ChatLogger.h"
-#include "Config.h"
 #include "ChatCommands.h"
 
 #include "MainWindow.h"
@@ -65,16 +63,6 @@ private:
 		right_mouse_pressed_(false),
 		adjust_on_resize_(false),
 		capture_input_(false) {
-
-		ChatLogger::Init();
-
-		if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading
-			&& GW::Agents().GetAgentArray().valid()
-			&& GW::Agents().GetPlayer() != nullptr) {
-
-			DWORD playerNumber = GW::Agents().GetPlayer()->PlayerNumber;
-			ChatLogger::LogF(L"Hello %ls!", GW::Agents().GetPlayerNameByLoginNumber(playerNumber));
-		}
 	}
 
 	//------ Public methods ------//
@@ -97,12 +85,7 @@ public:
 	inline PartyDamage& party_damage() { return *party_damage_; }
 	inline Minimap& minimap() { return *minimap_; }
 
-	void StartSelfDestruct() {
-		if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading) {
-			ChatLogger::Log(L"Bye!");
-		}
-		must_self_destruct_ = true;
-	}
+	void StartSelfDestruct() { must_self_destruct_ = true; }
 
 	//------ Private Methods ------//
 private:

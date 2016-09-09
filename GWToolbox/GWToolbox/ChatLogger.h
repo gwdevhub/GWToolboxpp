@@ -9,15 +9,37 @@ class ChatLogger {
 public:
 
 	static void Init() {
-		GW::Chat().RegisterChannel(L"GWToolbox++", 0x00CCFF);
+		GW::Chat().SetMessageColor(GW::Channel::CHANNEL_GWCA3, 0xFFFFFFFF);
+		GW::Chat().SetMessageColor(GW::Channel::CHANNEL_GWCA5, 0xFFFF4444);
 	}
 
-	inline static void Log(const wchar_t* msg) {
-		GW::Chat().WriteChat(L"GWToolbox++", msg);
+	inline static void Err(const std::wstring msg) {
+		std::wstring s1 = std::wstring(L"<c=#00ccff>GWToolbox++</c>: ") + msg;
+		std::wstring s2 = std::wstring(L"[Warning]: ") + msg;
+		GW::Chat().WriteChat(GW::Channel::CHANNEL_GWCA5, s1.c_str());
+		GW::Chat().WriteChat(GW::Channel::CHANNEL_GWCA4, s2.c_str());
+	}
+
+	static void ErrF(const wchar_t* format, ...) {
+		va_list vl;
+		va_start(vl, format);
+		size_t szbuf = _vscwprintf(format, vl) + 1;
+		wchar_t* chat = new wchar_t[szbuf];
+		vswprintf_s(chat, szbuf, format, vl);
+		va_end(vl);
+
+		Err(std::wstring(chat));
+
+		delete[] chat;
 	}
 
 	inline static void Log(const std::wstring msg) {
-		GW::Chat().WriteChat(L"GWToolbox++", msg.c_str());
+		std::wstring s = std::wstring(L"<c=#00ccff>GWToolbox++</c>: ") + msg;
+		GW::Chat().WriteChat(GW::Channel::CHANNEL_GWCA3, s.c_str());
+	}
+
+	inline static void Log(const wchar_t* msg) {
+		Log(std::wstring(msg));
 	}
 
 	static void LogF(const wchar_t* format, ...) {
@@ -28,8 +50,8 @@ public:
 		vswprintf_s(chat, szbuf, format, vl);
 		va_end(vl);
 
-		GW::Chat().WriteChat(L"GWToolbox++", chat);
-
+		Log(std::wstring(chat));
+		
 		delete[] chat;
 	}
 };
