@@ -79,20 +79,37 @@ void Minimap::Render(IDirect3DDevice9* device) {
 		else Translate(-d.x, -d.y);
 	}
 
-	device->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, TRUE);
+	D3DXMATRIX old_view, old_world, old_projection;
+	DWORD old_fvf, old_mutlisample, old_fillmode, old_lighting, old_scissortest;
+	device->GetTransform(D3DTS_WORLD, &old_world);
+	device->GetTransform(D3DTS_VIEW, &old_view);
+	device->GetTransform(D3DTS_PROJECTION, &old_projection);
+	device->GetFVF(&old_fvf);
 	device->SetFVF(D3DFVF_CUSTOMVERTEX);
+	device->GetRenderState(D3DRS_MULTISAMPLEANTIALIAS, &old_mutlisample);
+	device->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, TRUE);
+	device->GetRenderState(D3DRS_FILLMODE, &old_fillmode);
 	device->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
-	device->SetRenderState(D3DRS_LIGHTING, FALSE);
+	device->GetRenderState(D3DRS_LIGHTING, &old_lighting);
+	device->SetRenderState(D3DRS_LIGHTING, FALSE);	
+	device->GetRenderState(D3DRS_SCISSORTESTENABLE, &old_scissortest);
+	device->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
+
+	RECT old_clipping, clipping;
+	device->GetScissorRect(&old_clipping);
+	clipping.left = location_x_ < 0 ? 0 : location_x_;
+	clipping.right = location_x_ + width_ + 1;
+	clipping.top = location_y_ < 0 ? 0 : location_y_;
+	clipping.bottom = location_y_ + height_ + 1;
+	device->SetScissorRect(&clipping);
+	device->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
+	RenderSetupProjection(device);
 
 	D3DXMATRIX view;
 	D3DXMATRIX identity;
 	D3DXMatrixIdentity(&identity);
 	device->SetTransform(D3DTS_WORLD, &identity);
 	device->SetTransform(D3DTS_VIEW, &identity);
-	device->SetTransform(D3DTS_PROJECTION, &identity);
-
-	RenderSetupClipping(device);
-	RenderSetupProjection(device);
 
 	D3DXMATRIX translate_char;
 	D3DXMatrixTranslation(&translate_char, -me->X, -me->Y, 0);
@@ -130,6 +147,16 @@ void Minimap::Render(IDirect3DDevice9* device) {
 	device->SetTransform(D3DTS_WORLD, &identity);
 
 	pingslines_renderer.Render(device);
+
+	device->SetFVF(old_fvf);
+	device->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, old_mutlisample);
+	device->SetRenderState(D3DRS_FILLMODE, old_fillmode);
+	device->SetRenderState(D3DRS_LIGHTING, old_lighting);
+	device->SetRenderState(D3DRS_SCISSORTESTENABLE, old_scissortest);
+	device->SetScissorRect(&old_clipping);
+	device->SetTransform(D3DTS_WORLD, &old_world);
+	device->SetTransform(D3DTS_VIEW, &old_view);
+	device->SetTransform(D3DTS_PROJECTION, &old_projection);
 }
 
 GW::Vector2f Minimap::InterfaceToWorldPoint(int x, int y) const {
