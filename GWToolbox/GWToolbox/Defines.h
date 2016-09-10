@@ -1,7 +1,8 @@
 #pragma once
 
-#define GWTOOLBOX_VERSION L"1.8"
+#define GWTOOLBOX_VERSION L"1.9"
 #define GWTOOLBOX_HOST L"http://fbgmguild.com/GWToolboxpp/"
+#define GWTOOLBOX_WEBSITE L"http://tools.fbgmguild.com/"
 
 /* 
 Notes: 

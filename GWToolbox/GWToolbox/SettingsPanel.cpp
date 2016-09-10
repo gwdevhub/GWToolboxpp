@@ -79,7 +79,7 @@ void SettingsPanel::BuildUI() {
 	website->SetLocation(PointI(Padding, folder->GetTop() - Padding - website->GetHeight()));
 	website->GetClickEvent() += ClickEventHandler([](Control*) {
 		CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-		ShellExecuteW(NULL, L"open", GWTOOLBOX_HOST, NULL, NULL, SW_SHOWNORMAL);
+		ShellExecuteW(NULL, L"open", GWTOOLBOX_WEBSITE, NULL, NULL, SW_SHOWNORMAL);
 	});
 	AddControl(website);
 
