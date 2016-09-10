@@ -22,7 +22,7 @@ class GWToolbox {
 	//------ Static Fields ------//
 private:
 	static GWToolbox* instance_;
-	static GWCA::DirectXHooker* dx_hooker;
+	static GW::DirectXHooker* dx_hooker;
 	static OSHGui::Drawing::Direct3D9Renderer* renderer;
 	static long OldWndProc;
 	static OSHGui::Input::WindowsMessage input;

@@ -16,7 +16,6 @@
 #include "BuildPanel.h"
 
 
-using namespace GWCA;
 using namespace OSHGui;
 
 TBHotkey::TBHotkey(OSHGui::Control* parent, Key key, Key modifier, bool active, wstring ini_section)

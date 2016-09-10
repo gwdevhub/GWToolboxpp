@@ -8,7 +8,6 @@
 #include "GWToolbox.h"
 
 using namespace OSHGui;
-using namespace GWCA;
 using namespace std;
 
 void DialogPanel::BuildUI() {

@@ -10,7 +10,6 @@
 #include "GWToolbox.h"
 #include "ChatLogger.h"
 
-using namespace GWCA;
 using namespace OSHGui::Drawing;
 using namespace GW::Constants;
 

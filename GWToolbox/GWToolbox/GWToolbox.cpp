@@ -27,12 +27,13 @@
 #include "TimerWindow.h"
 #include "Settings.h"
 #include "ChatLogger.h"
+#include "logger.h"
 
 GWToolbox* GWToolbox::instance_ = NULL;
 OSHGui::Drawing::Direct3D9Renderer* GWToolbox::renderer = NULL;
 long GWToolbox::OldWndProc = 0;
 OSHGui::Input::WindowsMessage GWToolbox::input;
-GWCA::DirectXHooker* GWToolbox::dx_hooker = nullptr;
+GW::DirectXHooker* GWToolbox::dx_hooker = nullptr;
 
 void GWToolbox::SafeThreadEntry(HMODULE dllmodule) {
 	__try {
@@ -66,7 +67,8 @@ void GWToolbox::ThreadEntry(HMODULE dllmodule) {
 	GW::FriendListmgr();
 	GW::Cameramgr();
 
-	dx_hooker = new GWCA::DirectXHooker();
+	dx_hooker = new GW::DirectXHooker();
+	printf("DxDevice = %X\n", dx_hooker->device());
 
 	LOG("Creating Config\n");
 	Config::Initialize();
@@ -81,8 +83,8 @@ void GWToolbox::ThreadEntry(HMODULE dllmodule) {
 
 void GWToolbox::Exec() {
 	LOG("Installing dx hooks\n");
-	dx_hooker->AddHook(GWCA::dx9::kEndScene, (void*)endScene);
-	dx_hooker->AddHook(GWCA::dx9::kReset, (void*)resetScene);
+	dx_hooker->AddHook(GW::dx9::kEndScene, (void*)endScene);
+	dx_hooker->AddHook(GW::dx9::kReset, (void*)resetScene);
 	LOG("Installed dx hooks\n");
 
 	LOG("Installing input event handler\n");
@@ -209,16 +211,16 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 		case WM_LBUTTONDBLCLK:
 		case WM_MOUSEWHEEL:
 			if (GWToolbox::instance().right_mouse_pressed_) break;
+			if (input.ProcessMouseMessage(&msg)) {
+				return true;
+			} else {
+				Application::Instance().clearFocus();
+			}
 			switch (Message) {
 			case WM_MOUSEMOVE: if (tb.minimap_->OnMouseMove(msg)) return true; break;
 			case WM_LBUTTONDOWN: if (tb.minimap_->OnMouseDown(msg)) return true; break;
 			case WM_MOUSEWHEEL: if (tb.minimap_->OnMouseWheel(msg)) return true; break;
 			case WM_LBUTTONDBLCLK: if (tb.minimap_->OnMouseDblClick(msg)) return true; break;
-			}
-			if (input.ProcessMouseMessage(&msg)) {
-				return true;
-			} else {
-				Application::Instance().clearFocus();
 			}
 			break;
 
@@ -379,14 +381,15 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 		if (location != tb.main_window().GetLocation()) {
 			tb.main_window().SetLocation(location);
 		}
+
+		tb.minimap_->Render(pDevice);
+
 		renderer->BeginRendering();
 		Application::InstancePtr()->Render();
 		renderer->EndRendering();
-
-		tb.minimap_->Render(pDevice);
 	}
 
-	GWCA::dx9::EndScene_t endscene_orig = dx_hooker->original<GWCA::dx9::EndScene_t>(GWCA::dx9::kEndScene);
+	GW::dx9::EndScene_t endscene_orig = dx_hooker->original<GW::dx9::EndScene_t>(GW::dx9::kEndScene);
 	return endscene_orig(pDevice);
 }
 
@@ -397,7 +400,7 @@ HRESULT WINAPI GWToolbox::resetScene(IDirect3DDevice9* pDevice,
 		// pre-reset here.
 		renderer->PreD3DReset();
 
-		HRESULT result = dx_hooker->original<GWCA::dx9::Reset_t>(GWCA::dx9::kReset)(pDevice, pPresentationParameters);
+		HRESULT result = dx_hooker->original<GW::dx9::Reset_t>(GW::dx9::kReset)(pDevice, pPresentationParameters);
 		if (result == D3D_OK) {
 			// post-reset here.
 			renderer->PostD3DReset();
@@ -406,7 +409,7 @@ HRESULT WINAPI GWToolbox::resetScene(IDirect3DDevice9* pDevice,
 		return result;
 	}
 
-	GWCA::dx9::Reset_t reset_orig = dx_hooker->original<GWCA::dx9::Reset_t>(GWCA::dx9::kReset);
+	GW::dx9::Reset_t reset_orig = dx_hooker->original<GW::dx9::Reset_t>(GW::dx9::kReset);
 	return reset_orig(pDevice, pPresentationParameters);
 }
 
