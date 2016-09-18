@@ -343,20 +343,6 @@ void PartyDamage::WritePartyDamage() {
 
 	for (size_t i = 0; i < idx.size(); ++i) {
 		WriteDamageOf(idx[i], i + 1);
-		//int index = idx[i];
-		//if (damage[index].damage > 0) {
-		//	const int size = 130;
-		//	wchar_t buff[size];
-		//	swprintf_s(buff, size, L"%2d ~ %3.2f %% ~ %ls/%ls %ls ~ %d",
-		//		i + 1,
-		//		GetPercentageOfTotal(damage[index].damage),
-		//		GwConstants::to_wstring(damage[index].primary).c_str(),
-		//		GwConstants::to_wstring(damage[index].secondary).c_str(),
-		//		damage[index].name.c_str(),
-		//		damage[index].damage);
-
-		//	send_queue.push(buff);
-		//}
 	}
 	send_queue.push(L"Total ~ 100 % ~ " + std::to_wstring(total));
 }
