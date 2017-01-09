@@ -74,7 +74,7 @@ private:
 	void Initialize(IDirect3DDevice9* device) override;
 
 	inline short ToShortPos(float n) {
-		return static_cast<short>(std::lroundf(n / 100.0f));
+		return static_cast<short>(std::lroundf(n / 96.0f));
 	}
 	inline void BumpSessionID() { if (--session_id < 0) session_id = 7; }
 	void SendQueue();
