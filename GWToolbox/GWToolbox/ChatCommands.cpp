@@ -300,8 +300,12 @@ bool ChatCommands::CmdCamera(wstring& cmd, vector<wstring>& args) {
 				} else {
 					try {
 						float fovnew = std::stof(arg1);
-						GW::Cameramgr().SetFieldOfView(fovnew);
-						ChatLogger::LogF(L"Field of View is %f", fovnew);
+						if (fovnew > 0) {
+							GW::Cameramgr().SetFieldOfView(fovnew);
+							ChatLogger::LogF(L"Field of View is %f", fovnew);
+						} else {
+							ChatLogger::LogF(L"[Error] Invalid argument '%ls', please use a positive value", args[1].c_str());
+						}
 					} catch (...) {
 						ChatLogger::LogF(L"[Error] Invalid argument '%ls', please use a float value", args[1].c_str());
 					}
