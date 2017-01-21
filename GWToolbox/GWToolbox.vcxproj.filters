@@ -49,6 +49,9 @@
     <Filter Include="Windows\Minimap">
       <UniqueIdentifier>{0bd6729c-886d-4389-984e-3090392bd105}</UniqueIdentifier>
     </Filter>
+    <Filter Include="imgui">
+      <UniqueIdentifier>{4db1808e-6b4d-496d-8308-1167ab00639e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GWToolbox\ToolboxPanel.h">
@@ -152,6 +155,15 @@
     <ClInclude Include="GWToolbox\MinimapUtils.h">
       <Filter>Windows\Minimap</Filter>
     </ClInclude>
+    <ClInclude Include="..\imgui\imgui.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui\imgui_internal.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui\imconfig.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -236,6 +248,15 @@
     <ClCompile Include="GWToolbox\Config.cpp" />
     <ClCompile Include="GWToolbox\SymbolsRenderer.cpp">
       <Filter>Windows\Minimap</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui\imgui.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui\imgui_draw.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui\imgui_demo.cpp">
+      <Filter>imgui</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

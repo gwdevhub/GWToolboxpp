@@ -343,6 +343,7 @@ void GWToolbox::CreateGui(IDirect3DDevice9* pDevice) {
 
 // All rendering done here.
 HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
+
 	static bool init = false;
 	if (!init) {
 		init = true;
@@ -351,7 +352,7 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 
 	GWToolbox& tb = GWToolbox::instance();
 	if (!tb.must_self_destruct_ && Application::Instance().HasBeenInitialized()) {
-
+		
 		if (tb.must_resize_) {
 			tb.must_resize_ = false;
 			renderer->UpdateSize();

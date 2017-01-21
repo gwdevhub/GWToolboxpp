@@ -4,3 +4,6 @@
 [submodule "gwca_dx"]
 	path = gwca_dx
 	url = https://bitbucket.org/0x4D1/gwca_dx
+[submodule "imgui"]
+	path = imgui
+	url = https://github.com/ocornut/imgui.git

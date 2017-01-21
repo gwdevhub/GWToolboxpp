@@ -42,12 +42,12 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(SolutionDir)GWCA_DX;$(SolutionDir)GWCA;$(SolutionDir)OSHGui;$(SolutionDir)Dependencies\DirectX\Include\;$(ProjectDir)Dependencies;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)GWCA_DX;$(SolutionDir)GWCA;$(SolutionDir)OSHGui;$(SolutionDir)imgui;$(SolutionDir)Dependencies\DirectX\Include\;$(ProjectDir)Dependencies;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)Dependencies\DirectX\Lib\x86\;$(OutDir);$(SolutionDir)GWCA\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(SolutionDir)GWCA_DX;$(SolutionDir)GWCA;$(SolutionDir)OSHGui;$(SolutionDir)Dependencies\DirectX\Include\;$(ProjectDir)Dependencies;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)GWCA_DX;$(SolutionDir)GWCA;$(SolutionDir)OSHGui;$(SolutionDir)imgui;$(SolutionDir)Dependencies\DirectX\Include\;$(ProjectDir)Dependencies;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)Dependencies\DirectX\Lib\x86\;$(OutDir);$(SolutionDir)GWCA\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -91,6 +91,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\imgui\imconfig.h" />
+    <ClInclude Include="..\imgui\imgui.h" />
+    <ClInclude Include="..\imgui\imgui_internal.h" />
     <ClInclude Include="GWToolbox\AgentRenderer.h" />
     <ClInclude Include="GWToolbox\BondsWindow.h" />
     <ClInclude Include="GWToolbox\BuildPanel.h" />
@@ -132,6 +135,9 @@
     <ClInclude Include="GWToolbox\Viewer.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\imgui\imgui.cpp" />
+    <ClCompile Include="..\imgui\imgui_demo.cpp" />
+    <ClCompile Include="..\imgui\imgui_draw.cpp" />
     <ClCompile Include="GWToolbox\AgentRenderer.cpp" />
     <ClCompile Include="GWToolbox\BondsWindow.cpp" />
     <ClCompile Include="GWToolbox\BuildPanel.cpp" />
