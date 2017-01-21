@@ -65,6 +65,7 @@ public:
 	}
 
 	void SetVisible(bool v) { visible_ = v; }
+	void SetCentered(bool c) { centered_ = c; }
 
 	bool OnMouseDown(float x, float y);
 	bool OnMouseMove(float x, float y);
@@ -85,6 +86,7 @@ private:
 	std::map<DWORD, PlayerDrawing> drawings;
 
 	bool visible_;
+	bool centered_; 
 
 	// for pings and drawings
 	const long show_interval = 10;

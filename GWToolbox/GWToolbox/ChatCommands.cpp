@@ -138,7 +138,7 @@ bool ChatCommands::CmdAge2(wstring& cmd, vector<wstring>& args) {
 
 bool ChatCommands::CmdPcons(wstring& cmd, vector<wstring>& args) {
 	PconPanel& pcons = GWToolbox::instance().main_window().pcon_panel();
-	if (args.size() == 0) {
+	if (args.empty()) {
 		pcons.ToggleActive();
 	} else { // we are ignoring parameters after the first
 		wstring arg = GetLowerCaseArg(args, 0);
@@ -154,7 +154,7 @@ bool ChatCommands::CmdPcons(wstring& cmd, vector<wstring>& args) {
 }
 
 bool ChatCommands::CmdDialog(wstring& cmd, vector<wstring>& args) {
-	if (args.size() == 0) {
+	if (args.empty()) {
 		ChatLogger::LogF(L"[Error] Please provide an integer or hex argument");
 	} else {
 		try {
@@ -176,7 +176,7 @@ bool ChatCommands::CmdChest(wstring& cmd, vector<wstring>& args) {
 }
 
 bool ChatCommands::CmdTB(wstring& cmd, vector<wstring>& args) {
-	if (args.size() == 0) {
+	if (args.empty()) {
 		GWToolbox::instance().main_window().ToggleHidden();
 	} else {
 		wstring arg = GetLowerCaseArg(args, 0);
@@ -200,7 +200,7 @@ bool ChatCommands::CmdTB(wstring& cmd, vector<wstring>& args) {
 }
 
 bool ChatCommands::CmdTP(wstring& cmd, vector<wstring>& args) {
-	if (args.size() == 0) {
+	if (args.empty()) {
 		ChatLogger::Log(L"[Error] Please provide an argument");
 	} else {
 		wstring town = GetLowerCaseArg(args, 0);
@@ -260,7 +260,12 @@ bool ChatCommands::CmdZoom(wstring& cmd, vector<wstring>& args) {
 	} else {
 		try {
 			long distance = std::stol(args[0]);
-			GW::Cameramgr().SetMaxDist(static_cast<float>(distance));
+			if (distance > 0) {
+				GW::Cameramgr().SetMaxDist(static_cast<float>(distance));
+			} else {
+				ChatLogger::LogF(L"[Error] Invalid argument '%ls', please use a positive integer value", args[0].c_str());
+			}
+			
 		} catch (...) {
 			ChatLogger::LogF(L"[Error] Invalid argument '%ls', please use an integer value", args[0].c_str());
 		}
@@ -324,25 +329,25 @@ bool ChatCommands::CmdCamera(wstring& cmd, vector<wstring>& args) {
 }
 
 bool ChatCommands::CmdDamage(wstring& cmd, vector<wstring>& args) {
-	if (!args.empty()) {
-		wstring arg0 = GetLowerCaseArg(args, 0);
-		if (arg0 == L"print" || arg0 == L"report") {
-			if (args.size() > 1) {
-				wstring arg1 = GetLowerCaseArg(args, 1);
-				if (arg1 == L"me") {
-					GWToolbox::instance().party_damage().WriteOwnDamage();
-				} else {
-					try {
-						long idx = std::stol(arg1);
-						GWToolbox::instance().party_damage().WriteDamageOf(idx - 1);
-					} catch (...) {}
-				}
+	wstring arg0 = GetLowerCaseArg(args, 0);
+	if (args.empty() || arg0 == L"print" || arg0 == L"report") {
+		if (args.size() <= 1) {
+			// if no argument or just one, print the whole party
+			GWToolbox::instance().party_damage().WritePartyDamage();
+		} else {
+			// else print a specific party member
+			wstring arg1 = GetLowerCaseArg(args, 1);
+			if (arg1 == L"me") {
+				GWToolbox::instance().party_damage().WriteOwnDamage();
 			} else {
-				GWToolbox::instance().party_damage().WritePartyDamage();
+				try {
+					long idx = std::stol(arg1);
+					GWToolbox::instance().party_damage().WriteDamageOf(idx - 1);
+				} catch (...) {}
 			}
-		} else if (arg0 == L"reset") {
-			GWToolbox::instance().party_damage().ResetDamage();
 		}
+	} else if (arg0 == L"reset") {
+		GWToolbox::instance().party_damage().ResetDamage();
 	}
 	return true;
 }

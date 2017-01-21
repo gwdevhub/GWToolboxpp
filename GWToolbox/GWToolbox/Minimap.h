@@ -38,6 +38,8 @@ private:
 		return (x >= GetX() && x < GetX() + GetWidth()
 			&& y >= GetY() && y < GetY() + GetHeight());
 	}
+	// returns true if the map is visible, valid, not loading, etc
+	inline bool IsActive() const;
 
 	GW::Vector2f InterfaceToWorldPoint(int x, int y) const;
 	GW::Vector2f InterfaceToWorldVector(int x, int y) const;

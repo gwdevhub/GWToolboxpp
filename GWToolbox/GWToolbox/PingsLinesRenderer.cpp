@@ -10,7 +10,10 @@
 
 #include "MinimapUtils.h"
 
-PingsLinesRenderer::PingsLinesRenderer() : vertices(nullptr) {
+PingsLinesRenderer::PingsLinesRenderer() : 
+	vertices(nullptr),
+	visible_(false),
+	centered_(true) {
 
 	color_drawings = MinimapUtils::IniReadColor(L"color_drawings", L"0x00FFFFFF");
 
@@ -239,6 +242,7 @@ bool PingsLinesRenderer::OnMouseMove(float x, float y) {
 	GW::Agent* me = GW::Agents().GetPlayer();
 	if (me == nullptr) return false;
 
+
 	drawings[me->PlayerNumber].player = me->PlayerNumber;
 	if (!mouse_moved) { // first time
 		mouse_moved = true;
@@ -282,8 +286,13 @@ bool PingsLinesRenderer::OnMouseUp() {
 		lastsent = TBTimer::init();
 	} else {
 		BumpSessionID();
-		queue.push_back(ShortPos(ToShortPos(mouse_x), ToShortPos(mouse_y)));
-		pings.push_front(new TerrainPing(mouse_x, mouse_y));
+		GW::Agent* me = GW::Agents().GetPlayer();
+		if (!centered_ || (me && GW::Agents().GetSqrDistance(me->pos, 
+			GW::Vector2f(mouse_x, mouse_y)) < GW::Constants::SqrRange::Compass)) {
+
+			queue.push_back(ShortPos(ToShortPos(mouse_x), ToShortPos(mouse_y)));
+			pings.push_front(new TerrainPing(mouse_x, mouse_y));
+		}
 	}
 
 	SendQueue();
