@@ -71,7 +71,6 @@ void Minimap::Render(IDirect3DDevice9* device) {
 		if (std::abs(d.x) > std::abs(v.x)) SetTranslation(0, 0);
 		else Translate(-d.x, -d.y);
 	}
-	pingslines_renderer.SetCentered(translation_x_ == 0 && translation_y_ == 0);
 
 	D3DXMATRIX old_view, old_world, old_projection;
 	DWORD old_fvf, old_mutlisample, old_fillmode, old_lighting, old_scissortest;
@@ -295,7 +294,7 @@ bool Minimap::OnMouseMove(MSG msg) {
 	
 	int x = GET_X_LPARAM(msg.lParam);
 	int y = GET_Y_LPARAM(msg.lParam);
-	if (!IsInside(x, y)) return false;
+	//if (!IsInside(x, y)) return false;
 
 	if (msg.wParam & MK_CONTROL) {
 		SelectTarget(InterfaceToWorldPoint(x, y));
@@ -357,6 +356,17 @@ bool Minimap::OnMouseWheel(MSG msg) {
 	return false;
 }
 
+bool Minimap::IsInside(int x, int y) const {
+	// if centered, use radar range, otherwise use square
+	if (translation_x_ == 0 && translation_y_ == 0) {
+		GW::Vector2f gamepos = InterfaceToWorldPoint(x, y);
+		GW::Agent* me = GW::Agents().GetPlayer();
+		return me && GW::Agents().GetSqrDistance(me->pos, gamepos) < GW::Constants::SqrRange::Compass;
+	} else {
+		return (x >= GetX() && x < GetX() + GetWidth()
+			&& y >= GetY() && y < GetY() + GetHeight());
+	}
+}
 bool Minimap::IsActive() const {
 	return visible_
 		&& !loading_

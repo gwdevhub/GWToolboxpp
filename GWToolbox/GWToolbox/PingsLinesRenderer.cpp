@@ -12,8 +12,7 @@
 
 PingsLinesRenderer::PingsLinesRenderer() : 
 	vertices(nullptr),
-	visible_(false),
-	centered_(true) {
+	visible_(false) {
 
 	color_drawings = MinimapUtils::IniReadColor(L"color_drawings", L"0x00FFFFFF");
 
@@ -287,12 +286,8 @@ bool PingsLinesRenderer::OnMouseUp() {
 	} else {
 		BumpSessionID();
 		GW::Agent* me = GW::Agents().GetPlayer();
-		if (!centered_ || (me && GW::Agents().GetSqrDistance(me->pos, 
-			GW::Vector2f(mouse_x, mouse_y)) < GW::Constants::SqrRange::Compass)) {
-
-			queue.push_back(ShortPos(ToShortPos(mouse_x), ToShortPos(mouse_y)));
-			pings.push_front(new TerrainPing(mouse_x, mouse_y));
-		}
+		queue.push_back(ShortPos(ToShortPos(mouse_x), ToShortPos(mouse_y)));
+		pings.push_front(new TerrainPing(mouse_x, mouse_y));
 	}
 
 	SendQueue();

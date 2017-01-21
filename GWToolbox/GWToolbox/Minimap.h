@@ -34,10 +34,7 @@ public:
 	bool OnMouseWheel(MSG msg);
 
 private:
-	inline bool IsInside(int x, int y) const {
-		return (x >= GetX() && x < GetX() + GetWidth()
-			&& y >= GetY() && y < GetY() + GetHeight());
-	}
+	bool IsInside(int x, int y) const;
 	// returns true if the map is visible, valid, not loading, etc
 	inline bool IsActive() const;
 
