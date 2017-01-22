@@ -53,14 +53,7 @@ Minimap::Minimap()
 }
 
 void Minimap::Render(IDirect3DDevice9* device) {
-	if (!visible_) return;
-
-	if (loading_
-		|| !GW::Map().IsMapLoaded()
-		|| GW::Map().GetInstanceType() == GW::Constants::InstanceType::Loading
-		|| GW::Agents().GetPlayerId() == 0) {
-		return;
-	}
+	if (!IsActive()) return;
 
 	GW::Agent* me = GW::Agents().GetPlayer();
 	if (me == nullptr) return;
@@ -140,11 +133,11 @@ void Minimap::Render(IDirect3DDevice9* device) {
 		range_renderer.SetDrawCenter(false);
 		device->SetTransform(D3DTS_VIEW, &view);
 	}
-	
-	agent_renderer.Render(device);
 
 	symbols_renderer.Render(device);
+	
 	device->SetTransform(D3DTS_WORLD, &identity);
+	agent_renderer.Render(device);
 
 	pingslines_renderer.Render(device);
 
@@ -238,7 +231,7 @@ void Minimap::SelectTarget(GW::Vector2f pos) {
 }
 
 bool Minimap::OnMouseDown(MSG msg) {
-	if (!visible_) return false;
+	if (!IsActive()) return false;
 
 	int x = GET_X_LPARAM(msg.lParam);
 	int y = GET_Y_LPARAM(msg.lParam);
@@ -265,7 +258,7 @@ bool Minimap::OnMouseDown(MSG msg) {
 }
 
 bool Minimap::OnMouseDblClick(MSG msg) {
-	if (!visible_) return false;
+	if (!IsActive()) return false;
 
 	int x = GET_X_LPARAM(msg.lParam);
 	int y = GET_Y_LPARAM(msg.lParam);
@@ -280,7 +273,8 @@ bool Minimap::OnMouseDblClick(MSG msg) {
 }
 
 bool Minimap::OnMouseUp(MSG msg) {
-	if (!visible_) return false;
+	if (!IsActive()) return false;
+
 	if (!mousedown_) return false;
 
 	mousedown_ = false;
@@ -294,12 +288,13 @@ bool Minimap::OnMouseUp(MSG msg) {
 }
 
 bool Minimap::OnMouseMove(MSG msg) {
-	if (!visible_) return false;
+	if (!IsActive()) return false;
+
 	if (!mousedown_) return false;
 	
 	int x = GET_X_LPARAM(msg.lParam);
 	int y = GET_Y_LPARAM(msg.lParam);
-	if (!IsInside(x, y)) return false;
+	//if (!IsInside(x, y)) return false;
 
 	if (msg.wParam & MK_CONTROL) {
 		SelectTarget(InterfaceToWorldPoint(x, y));
@@ -332,7 +327,7 @@ bool Minimap::OnMouseMove(MSG msg) {
 }
 
 bool Minimap::OnMouseWheel(MSG msg) {
-	if (!visible_) return false;
+	if (!IsActive()) return false;
 
 	int x = GET_X_LPARAM(msg.lParam);
 	int y = GET_Y_LPARAM(msg.lParam);
@@ -359,4 +354,23 @@ bool Minimap::OnMouseWheel(MSG msg) {
 		return true;
 	}
 	return false;
+}
+
+bool Minimap::IsInside(int x, int y) const {
+	// if centered, use radar range, otherwise use square
+	if (translation_x_ == 0 && translation_y_ == 0) {
+		GW::Vector2f gamepos = InterfaceToWorldPoint(x, y);
+		GW::Agent* me = GW::Agents().GetPlayer();
+		return me && GW::Agents().GetSqrDistance(me->pos, gamepos) < GW::Constants::SqrRange::Compass;
+	} else {
+		return (x >= GetX() && x < GetX() + GetWidth()
+			&& y >= GetY() && y < GetY() + GetHeight());
+	}
+}
+bool Minimap::IsActive() const {
+	return visible_
+		&& !loading_
+		&& GW::Map().IsMapLoaded()
+		&& GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading
+		&& GW::Agents().GetPlayerId() != 0;
 }

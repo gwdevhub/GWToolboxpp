@@ -10,7 +10,9 @@
 
 #include "MinimapUtils.h"
 
-PingsLinesRenderer::PingsLinesRenderer() : vertices(nullptr) {
+PingsLinesRenderer::PingsLinesRenderer() : 
+	vertices(nullptr),
+	visible_(false) {
 
 	color_drawings = MinimapUtils::IniReadColor(L"color_drawings", L"0x00FFFFFF");
 
@@ -31,18 +33,18 @@ PingsLinesRenderer::PingsLinesRenderer() : vertices(nullptr) {
 		
 		if (new_session && pak->NumberPts == 1) {
 			pings.push_front(new TerrainPing(
-				pak->points[0].x * 100.0f, 
-				pak->points[0].y * 100.0f));
+				pak->points[0].x * drawing_scale,
+				pak->points[0].y * drawing_scale));
 			return false;
 		} 
 
 		if (new_session) {
 			for (unsigned int i = 0; i < pak->NumberPts - 1; ++i) {
 				DrawingLine l;
-				l.x1 = pak->points[i + 0].x * 100.0f;
-				l.y1 = pak->points[i + 0].y * 100.0f;
-				l.x2 = pak->points[i + 1].x * 100.0f;
-				l.y2 = pak->points[i + 1].y * 100.0f;
+				l.x1 = pak->points[i + 0].x * drawing_scale;
+				l.y1 = pak->points[i + 0].y * drawing_scale;
+				l.x2 = pak->points[i + 1].x * drawing_scale;
+				l.y2 = pak->points[i + 1].y * drawing_scale;
 				drawings[pak->Player].lines.push_back(l);
 			}
 		} else {
@@ -53,11 +55,11 @@ PingsLinesRenderer::PingsLinesRenderer() : vertices(nullptr) {
 					l.x1 = drawings[pak->Player].lines.back().x2;
 					l.y1 = drawings[pak->Player].lines.back().y2;
 				} else {
-					l.x1 = pak->points[i - 1].x * 100.0f;
-					l.y1 = pak->points[i - 1].y * 100.0f;
+					l.x1 = pak->points[i - 1].x * drawing_scale;
+					l.y1 = pak->points[i - 1].y * drawing_scale;
 				}
-				l.x2 = pak->points[i].x * 100.0f;
-				l.y2 = pak->points[i].y * 100.0f;
+				l.x2 = pak->points[i].x * drawing_scale;
+				l.y2 = pak->points[i].y * drawing_scale;
 				drawings[pak->Player].lines.push_back(l);
 			}
 		}
@@ -107,7 +109,7 @@ void PingsLinesRenderer::Render(IDirect3DDevice9* device) {
 
 		D3DXMATRIX translate, scale, world;
 		D3DXMatrixTranslation(&translate, ping->GetX(), ping->GetY(), 0.0f);
-		D3DXMatrixScaling(&scale, 100.0f, 100.0f, 1.0f);
+		D3DXMatrixScaling(&scale, drawing_scale, drawing_scale, 1.0f);
 		world = scale * translate;
 		device->SetTransform(D3DTS_WORLD, &world);
 		ping_circle.Render(device);
@@ -164,7 +166,6 @@ void PingsLinesRenderer::Render(IDirect3DDevice9* device) {
 
 	D3DXMATRIX i;
 	D3DXMatrixIdentity(&i);
-	//D3DXMatrixScaling(&scale, 100.0f, 100.0f, 1.0f);
 	device->SetTransform(D3DTS_WORLD, &i);
 
 	buffer_->Unlock();
@@ -239,6 +240,7 @@ bool PingsLinesRenderer::OnMouseMove(float x, float y) {
 	GW::Agent* me = GW::Agents().GetPlayer();
 	if (me == nullptr) return false;
 
+
 	drawings[me->PlayerNumber].player = me->PlayerNumber;
 	if (!mouse_moved) { // first time
 		mouse_moved = true;
@@ -282,6 +284,7 @@ bool PingsLinesRenderer::OnMouseUp() {
 		lastsent = TBTimer::init();
 	} else {
 		BumpSessionID();
+		GW::Agent* me = GW::Agents().GetPlayer();
 		queue.push_back(ShortPos(ToShortPos(mouse_x), ToShortPos(mouse_y)));
 		pings.push_front(new TerrainPing(mouse_x, mouse_y));
 	}

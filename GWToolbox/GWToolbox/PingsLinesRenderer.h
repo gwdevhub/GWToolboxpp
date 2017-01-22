@@ -8,6 +8,8 @@
 #include "Timer.h"
 
 class PingsLinesRenderer : public VBuffer {
+	const float drawing_scale = 96.0f;
+
 	struct ShortPos {
 		ShortPos() : x(0), y(0) {}
 		ShortPos(short _x, short _y) : x(_x), y(_y) {}
@@ -74,7 +76,7 @@ private:
 	void Initialize(IDirect3DDevice9* device) override;
 
 	inline short ToShortPos(float n) {
-		return static_cast<short>(std::lroundf(n / 96.0f));
+		return static_cast<short>(std::lroundf(n / drawing_scale));
 	}
 	inline void BumpSessionID() { if (--session_id < 0) session_id = 7; }
 	void SendQueue();
