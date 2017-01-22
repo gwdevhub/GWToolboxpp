@@ -29,11 +29,13 @@
 #include "ChatLogger.h"
 #include "logger.h"
 
-GWToolbox* GWToolbox::instance_ = NULL;
-OSHGui::Drawing::Direct3D9Renderer* GWToolbox::renderer = NULL;
-long GWToolbox::OldWndProc = 0;
-OSHGui::Input::WindowsMessage GWToolbox::input;
+GWToolbox* GWToolbox::instance_ = nullptr;
 GW::DirectXHooker* GWToolbox::dx_hooker = nullptr;
+OSHGui::Drawing::Direct3D9Renderer* GWToolbox::renderer = nullptr;
+OSHGui::Input::WindowsMessage GWToolbox::input;
+long GWToolbox::OldWndProc = 0;
+HMODULE GWToolbox::dllmodule = 0;
+
 
 void GWToolbox::SafeThreadEntry(HMODULE dllmodule) {
 	__try {
@@ -43,13 +45,15 @@ void GWToolbox::SafeThreadEntry(HMODULE dllmodule) {
 	}
 }
 
-void GWToolbox::ThreadEntry(HMODULE dllmodule) {
+void GWToolbox::ThreadEntry(HMODULE _dllmodule) {
 	if (instance_) return;
+
+	dllmodule = _dllmodule;
 
 	LOG("Initializing API\n");
 	if (!GW::Api::Initialize()){
 		MessageBoxA(0, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0);
-		FreeLibraryAndExitThread(dllmodule, EXIT_SUCCESS);
+		FreeLibraryAndExitThread(_dllmodule, EXIT_SUCCESS);
 	}
 
 	GW::Gamethread();
@@ -74,14 +78,9 @@ void GWToolbox::ThreadEntry(HMODULE dllmodule) {
 	Config::Initialize();
 
 	LOG("Creating GWToolbox++\n");
-	instance_ = new GWToolbox(dllmodule);
+	instance_ = new GWToolbox();
+	GWToolbox& tb = GWToolbox::instance();
 
-	//*(byte*)0 = 0; // uncomment for guaranteed fun
-
-	instance_->Exec();
-}
-
-void GWToolbox::Exec() {
 	LOG("Installing dx hooks\n");
 	dx_hooker->AddHook(GW::dx9::kEndScene, (void*)endScene);
 	dx_hooker->AddHook(GW::dx9::kReset, (void*)resetScene);
@@ -110,25 +109,12 @@ void GWToolbox::Exec() {
 
 	Application* app = Application::InstancePtr();
 
-	while (!must_self_destruct_) { // main loop
-		if (app->HasBeenInitialized() && initialized_) {
-			__try {
-				chat_commands_->MainRoutine();
-				main_window_->MainRoutine();
-				timer_window_->MainRoutine();
-				bonds_window_->MainRoutine();
-				health_window_->MainRoutine();
-				distance_window_->MainRoutine();
-				party_damage_->MainRoutine();
-			} __except ( EXCEPT_EXPRESSION_LOOP ) {
-				LOG("Badness happened! (in main thread)\n");
-			}
-		}
-
+	while (!tb.must_self_destruct_) { // wait until destruction
 		Sleep(10);
+
 #ifdef _DEBUG
 		if (GetAsyncKeyState(VK_END) & 1) {
-			must_self_destruct_ = true;
+			tb.StartSelfDestruct();
 			break;
 		}
 #endif
@@ -146,13 +132,13 @@ void GWToolbox::Exec() {
 		LOG("Disabling GUI\n");
 		Application::InstancePtr()->Disable();
 		LOG("Closing settings\n");
-		main_window().settings_panel().Close();
+		tb.main_window().settings_panel().Close();
 		LOG("saving health log\n");
-		party_damage().SaveIni();
+		tb.party_damage().SaveIni();
 	}
 	Sleep(100);
 	LOG("Deleting config\n");
-	delete chat_commands_;
+	delete tb.chat_commands_;
 	Sleep(100);
 	LOG("Restoring input hook\n");
 	SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
@@ -166,7 +152,7 @@ void GWToolbox::Exec() {
 	LOG("Closing log/console, bye!\n");
 	Logger::Close();
 	Sleep(100);
-	FreeLibraryAndExitThread(dll_module_, EXIT_SUCCESS);
+	FreeLibraryAndExitThread(dllmodule, EXIT_SUCCESS);
 }
 
 LRESULT CALLBACK GWToolbox::SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) {
@@ -176,7 +162,6 @@ LRESULT CALLBACK GWToolbox::SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, 
 		return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
 	}
 }
-
 
 LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) {
 	
@@ -276,15 +261,6 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 	return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
 }
 
-
-void GWToolbox::SafeCreateGui(IDirect3DDevice9* pDevice) {
-	__try {
-		GWToolbox::CreateGui(pDevice);
-	} __except ( EXCEPT_EXPRESSION_ENTRY ) {
-		LOG("SafeCreateGui __except body\n");
-	}
-}
-
 void GWToolbox::CreateGui(IDirect3DDevice9* pDevice) {
 
 	LOG("Creating GUI\n");
@@ -347,10 +323,15 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 	static bool init = false;
 	if (!init) {
 		init = true;
-		GWToolbox::SafeCreateGui(pDevice);
+		__try {
+			GWToolbox::CreateGui(pDevice);
+		} __except (EXCEPT_EXPRESSION_LOOP) {
+			LOG("Badness happened! (creating gui)\n");
+		}
 	}
 
 	GWToolbox& tb = GWToolbox::instance();
+
 	if (!tb.must_self_destruct_ && Application::Instance().HasBeenInitialized()) {
 		
 		if (tb.must_resize_) {
@@ -359,8 +340,6 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 			tb.ResizeUI();
 			tb.old_screen_size_ = tb.new_screen_size_;
 		}
-
-		tb.UpdateUI();
 
 		D3DVIEWPORT9 viewport;
 		pDevice->GetViewport(&viewport);
@@ -381,6 +360,32 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 		}
 		if (location != tb.main_window().GetLocation()) {
 			tb.main_window().SetLocation(location);
+		}
+
+		if (tb.initialized_) {
+			__try {
+				tb.chat_commands_->Main();
+				tb.main_window_->Main();
+				tb.timer_window_->Main();
+				tb.bonds_window_->Main();
+				tb.health_window_->Main();
+				tb.distance_window_->Main();
+				tb.party_damage_->Main();
+			} __except (EXCEPT_EXPRESSION_LOOP) {
+				LOG("Badness happened! (in main thread)\n");
+			}
+
+			__try {
+				tb.chat_commands_->Draw();
+				tb.main_window_->Draw();
+				tb.timer_window_->Draw();
+				tb.health_window_->Draw();
+				tb.distance_window_->Draw();
+				tb.party_damage_->Draw();
+				tb.bonds_window_->Draw();
+			} __except (EXCEPT_EXPRESSION_LOOP) {
+				LOG("Badness happened! (in render thread)\n");
+			}
 		}
 
 		tb.minimap_->Render(pDevice);
@@ -412,22 +417,6 @@ HRESULT WINAPI GWToolbox::resetScene(IDirect3DDevice9* pDevice,
 
 	GW::dx9::Reset_t reset_orig = dx_hooker->original<GW::dx9::Reset_t>(GW::dx9::kReset);
 	return reset_orig(pDevice, pPresentationParameters);
-}
-
-void GWToolbox::UpdateUI() {
-	if (initialized_) {
-		__try {
-			chat_commands_->UpdateUI();
-			main_window_->UpdateUI();
-			timer_window_->UpdateUI();
-			health_window_->UpdateUI();
-			distance_window_->UpdateUI();
-			party_damage_->UpdateUI();
-			bonds_window_->UpdateUI();
-		} __except ( EXCEPT_EXPRESSION_LOOP ) {
-			LOG("Badness happened! (in render thread)\n");
-		}
-	}
 }
 
 void GWToolbox::ResizeUI() {

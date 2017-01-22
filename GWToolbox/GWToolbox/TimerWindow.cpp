@@ -89,7 +89,7 @@ void TimerWindow::SaveLocation() {
 	Config::IniWriteLong(TimerWindow::IniSection(), TimerWindow::IniKeyY(), y);
 }
 
-void TimerWindow::UpdateUI() {
+void TimerWindow::Draw() {
 	unsigned long uptime = GW::Map().GetInstanceTime();
 	unsigned long  time = uptime / 1000;
 	if (time != current_time_) {

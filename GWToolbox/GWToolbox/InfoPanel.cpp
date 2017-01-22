@@ -171,9 +171,7 @@ void InfoPanel::BuildUI() {
 	AddControl(xunlai);
 }
 
-void InfoPanel::UpdateUI() {
-	using namespace std;
-	
+void InfoPanel::Draw() {	
 	GW::Agent* player = GW::Agents().GetPlayer();
 	float x = player ? player->X : 0;
 	float y = player ? player->Y : 0;
@@ -203,7 +201,7 @@ void InfoPanel::UpdateUI() {
 		|| GW::Map().GetInstanceType() != current_map_type) {
 		current_map_id = GW::Map().GetMapID();
 		current_map_type = GW::Map().GetInstanceType();
-		wstring map = to_wstring(static_cast<int>(current_map_id));
+		std::wstring map = to_wstring(static_cast<int>(current_map_id));
 		switch (GW::Map().GetInstanceType()) {
 		case GW::Constants::InstanceType::Explorable: break;
 		case GW::Constants::InstanceType::Loading: map += L" (loading)"; break;
@@ -212,7 +210,6 @@ void InfoPanel::UpdateUI() {
 		map_id->SetText(map);
 	}
 	
-
 	GW::Bag** bags = GW::Items().GetBagArray();
 	if (bags) {
 		GW::Bag* bag1 = bags[1];

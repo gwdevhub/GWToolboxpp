@@ -199,7 +199,7 @@ bool PartyDamage::DamagePacketCallback(GW::Packet::StoC::P151* packet) {
 	return false;
 }
 
-void PartyDamage::MainRoutine() {
+void PartyDamage::Main() {
 	if (!send_queue.empty() && TBTimer::diff(send_timer) > 600) {
 		send_timer = TBTimer::init();
 		if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading
@@ -236,7 +236,7 @@ void PartyDamage::CreatePartyIndexMap() {
 	}
 }
 
-void PartyDamage::UpdateUI() {
+void PartyDamage::Draw() {
 	if (!isVisible_) return;
 
 	int size = GW::Partymgr().GetPartySize();

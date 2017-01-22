@@ -8,7 +8,6 @@
 #include "GuiUtils.h"
 
 HealthWindow::HealthWindow() {
-
 	using namespace OSHGui;
 
 	current_max = -1;
@@ -109,9 +108,7 @@ void HealthWindow::SaveLocation() {
 	Config::IniWriteLong(HealthWindow::IniSection(), HealthWindow::IniKeyY(), y);
 }
 
-void HealthWindow::UpdateUI() {
-	using namespace std;
-
+void HealthWindow::Draw() {
 	if (!isViewable_) return;
 
 	// get values
@@ -135,7 +132,7 @@ void HealthWindow::UpdateUI() {
 	// update strings if needed
 	if (current_perc != perc ) {
 		current_perc = perc;
-		wstring s;
+		std::wstring s;
 		if (perc >= 0) {
 			s = to_wstring(perc) + L" %";
 		} else {
@@ -148,7 +145,7 @@ void HealthWindow::UpdateUI() {
 		current_abs = abs;
 		current_max = max;
 
-		wstring s;
+		std::wstring s;
 		if (max > 0) {
 			s = to_wstring(abs) + L" / " + to_wstring(target->MaxHP);
 		} else {

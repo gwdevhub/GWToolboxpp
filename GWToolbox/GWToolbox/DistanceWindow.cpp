@@ -105,9 +105,7 @@ void DistanceWindow::SaveLocation() {
 	Config::IniWriteLong(DistanceWindow::IniSection(), DistanceWindow::IniKeyY(), y);
 }
 
-void DistanceWindow::UpdateUI() {
-	using namespace std;
-
+void DistanceWindow::Draw() {
 	if (!isViewable_) return;
 	
 	// get values
@@ -128,11 +126,11 @@ void DistanceWindow::UpdateUI() {
 	// update strings if needed
 	if (current_distance != distance) {
 		current_distance = distance;
-		wstring s1;
-		wstring s2;
+		std::wstring s1;
+		std::wstring s2;
 		if (distance >= 0) {
-			s1 = to_wstring(distance * 100 / (long)GW::Constants::Range::Compass) + L" %";
-			s2 = to_wstring(distance);
+			s1 = std::to_wstring(distance * 100 / (long)GW::Constants::Range::Compass) + L" %";
+			s2 = std::to_wstring(distance);
 		} else {
 			s1 = L"-";
 			s2 = L"-";

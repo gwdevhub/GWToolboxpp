@@ -215,7 +215,7 @@ void PconPanel::BuildUI() {
 	initialized = true;
 }
 
-void PconPanel::UpdateUI() {
+void PconPanel::Draw() {
 	if (!initialized) return;
 
 	if (current_map_type != GW::Map().GetInstanceType()) {
@@ -236,7 +236,7 @@ void PconPanel::UpdateUI() {
 	}
 }
 
-void PconPanel::MainRoutine() {
+void PconPanel::Main() {
 	if (!initialized) return;
 
 	if (!enabled) return;

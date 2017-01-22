@@ -20,10 +20,11 @@ public:
 	inline static const wchar_t* IniKeyShow() { return L"show"; }
 	inline static const char* ThemeKey() { return "distance"; }
 
-	//void ShowWindow(bool show) override;
+	// Update. Will always be called every frame.
+	void Main() override {}
 
-	void UpdateUI();
-	inline void MainRoutine() {};
+	// Draw user interface. Will be called every frame if the element is visible
+	void Draw() override;
 
 	void SetFreeze(bool b) {
 		Control::SetEnabled(!b);

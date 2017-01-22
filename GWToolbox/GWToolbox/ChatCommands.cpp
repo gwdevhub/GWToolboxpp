@@ -92,7 +92,7 @@ bool ChatCommands::ProcessMessage(LPMSG msg) {
 	return false;
 }
 
-void ChatCommands::UpdateUI() {
+void ChatCommands::Main() {
 	GW::CameraMgr cam = GW::Cameramgr();
 	if (cam.GetCameraUnlock() && !IsTyping()) {
 		cam.ForwardMovement(cam_speed_ * move_forward);
@@ -100,9 +100,7 @@ void ChatCommands::UpdateUI() {
 		cam.SideMovement(-cam_speed_ * move_side);
 		cam.UpdateCameraPos();
 	}
-}
 
-void ChatCommands::MainRoutine() {
 	if (skill_to_use > 0 && skill_to_use < 9 
 		&& GW::Map().GetInstanceType() == GW::Constants::InstanceType::Explorable
 		&& TBTimer::diff(skill_timer) / 1000.0f > skill_usage_delay) {

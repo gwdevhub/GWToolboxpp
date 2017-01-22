@@ -278,15 +278,15 @@ void TabButton::CalculateLabelLocation() {
 	label_->SetLocation(PointI(GetSize().Width / 2 - label_->GetSize().Width / 2 + 13, GetSize().Height / 2 - label_->GetSize().Height / 2));
 };
 
-void MainWindow::MainRoutine() {
+void MainWindow::Main() {
 	for (ToolboxPanel* panel : panels) {
-		panel->MainRoutine();
+		panel->Main();
 	}
 }
 
-void MainWindow::UpdateUI() {
+void MainWindow::Draw() {
 	for (ToolboxPanel* panel : panels) {
-		panel->UpdateUI();
+		panel->Draw();
 	}
 }
 

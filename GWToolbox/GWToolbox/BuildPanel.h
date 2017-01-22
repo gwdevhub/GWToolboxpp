@@ -48,8 +48,13 @@ public:
 	BuildPanel(OSHGui::Control* parent);
 
 	void BuildUI() override;
-	void UpdateUI() override {};
-	void MainRoutine() override;
+
+	// Update. Will always be called every frame.
+	void Main() override;
+
+	// Draw user interface. Will be called every frame if the element is visible
+	void Draw() override {}
+
 	inline void SendTeamBuild(long index) { builds[index]->SendTeamBuild(); }
 	inline void SetPanelPosition(bool left) { 
 		edit_build_->SetPanelPosition(left); 

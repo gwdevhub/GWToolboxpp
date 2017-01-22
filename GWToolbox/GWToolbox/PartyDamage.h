@@ -61,8 +61,11 @@ public:
 	inline static const char* ThemeKey() { return "damage"; }
 	inline static const char* ThemeBarsKey() { return "damagebars"; }
 
-	void UpdateUI();
-	void MainRoutine();
+	// Update. Will always be called every frame.
+	void Main() override;
+
+	// Draw user interface. Will be called every frame if the element is visible
+	void Draw() override;
 
 	void SetVisible(bool visible) override {
 		Control::SetVisible(visible);

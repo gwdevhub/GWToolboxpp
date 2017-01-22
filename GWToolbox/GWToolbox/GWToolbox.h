@@ -24,8 +24,9 @@ private:
 	static GWToolbox* instance_;
 	static GW::DirectXHooker* dx_hooker;
 	static OSHGui::Drawing::Direct3D9Renderer* renderer;
-	static long OldWndProc;
 	static OSHGui::Input::WindowsMessage input;
+	static long OldWndProc;
+	static HMODULE dllmodule;
 
 	//------ Static Methods ------//
 public:
@@ -34,7 +35,6 @@ public:
 private:
 	static void ThreadEntry(HMODULE dllmodule);
 
-	static void SafeCreateGui(IDirect3DDevice9* pDevice);
 	static void CreateGui(IDirect3DDevice9* pDevice);
 
 	// DirectX event handlers declaration
@@ -48,8 +48,7 @@ private:
 
 	//------ Constructor ------//
 private:
-	GWToolbox(HMODULE mod) :
-		dll_module_(mod),
+	GWToolbox() :
 		chat_commands_(new ChatCommands()),
 		main_window_(nullptr),
 		timer_window_(nullptr),
@@ -89,12 +88,6 @@ public:
 
 	//------ Private Methods ------//
 private:
-	// Does everything: setup, main loop, destruction 
-	void Exec();
-
-	// updates UI. will be ran in render loop
-	void UpdateUI();
-
 	void ResizeUI();
 
 	void LoadTheme();
@@ -102,8 +95,6 @@ private:
 
 	//------ Private Fields ------//
 private:
-	HMODULE dll_module_;	// Handle to the dll module we are running, used to clear the module from GW on eject.
-
 	bool initialized_;		// true after initialization
 	bool capture_input_;
 	bool right_mouse_pressed_;	// if true right mouse has been pressed, ignore move events

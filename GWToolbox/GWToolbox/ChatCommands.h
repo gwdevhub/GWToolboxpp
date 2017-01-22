@@ -17,8 +17,11 @@ public:
 
 	bool ProcessMessage(LPMSG msg);
 
-	void UpdateUI();
-	void MainRoutine();
+	// Update. Will always be called every frame.
+	void Main();
+
+	// Draw user interface. Will be called every frame if the element is visible
+	void Draw() {}
 
 	void SetSuppressMessages(bool active) { chat_filter->SetSuppressMessages(active); }
 

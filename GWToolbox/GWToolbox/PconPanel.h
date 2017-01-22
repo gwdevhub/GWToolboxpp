@@ -42,6 +42,10 @@ public:
 	inline void ToggleActive() { SetActive(!enabled); }
 
 	void BuildUI() override;
-	void UpdateUI() override;
-	void MainRoutine() override;// runs one loop of the main routine (checking each pcon once)
+
+	// Update. Will always be called every frame.
+	void Main() override;
+
+	// Draw user interface. Will be called every frame if the element is visible
+	void Draw() override;
 };

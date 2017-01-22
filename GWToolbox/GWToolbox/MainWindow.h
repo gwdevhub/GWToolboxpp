@@ -113,7 +113,11 @@ public:
 	virtual bool Intersect(const Drawing::PointI &point) const override;
 
 	void SetPanelPositions(bool left);
-	void UpdateUI();
-	void MainRoutine();
+
+	// Update. Will always be called every frame.
+	void Main() override;
+
+	// Draw user interface. Will be called every frame if the element is visible
+	void Draw() override;
 };
 

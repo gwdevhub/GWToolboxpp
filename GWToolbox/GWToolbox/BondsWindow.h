@@ -39,8 +39,13 @@ class BondsWindow : public ToolboxWindow {
 	public:
 		BondsMonitor(OSHGui::Control* parent, int img_size);
 		void SaveLocation();
-		void UpdateUI();
 		inline void SetFreeze(bool b) { freezed = b; }
+
+		// Update. Will always be called every frame.
+		void Main() {};
+
+		// Draw user interface. Will be called every frame if the element is visible
+		void Draw();
 	};
 
 public:
@@ -52,8 +57,12 @@ public:
 	inline static const wchar_t* IniKeyShow() { return L"show"; }
 	inline static const char* ThemeKey() { return "bonds"; }
 
-	inline void UpdateUI() { if (monitor) monitor->UpdateUI(); }
-	inline void MainRoutine() {};
+	// Update. Will always be called every frame.
+	void Main() override {};
+
+	// Draw user interface. Will be called every frame if the element is visible
+	void Draw() override { if (monitor) monitor->Draw(); };
+
 	inline void SetFreze(bool b) { monitor->SetFreeze(b); }
 	void SetTransparentBackColor(bool b);
 

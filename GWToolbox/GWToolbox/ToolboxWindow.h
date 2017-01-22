@@ -21,11 +21,11 @@ public:
 
 	ToolboxWindow();
 
-	// Update user interface, try to keep it lightweight, will be executed in gw render thread
-	virtual void UpdateUI() = 0;
+	// Update. Will always be called every frame.
+	virtual void Main() = 0;
 
-	// Update and do everything else. DO NOT TOUCH USER INTERFACE.
-	virtual void MainRoutine() = 0;
+	// Draw user interface. Will be called every frame if the element is visible
+	virtual void Draw() = 0;
 
 	void ResizeUI(OSHGui::Drawing::SizeI before, OSHGui::Drawing::SizeI after);
 

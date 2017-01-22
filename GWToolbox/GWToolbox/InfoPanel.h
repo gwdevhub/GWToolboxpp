@@ -25,7 +25,11 @@ public:
 	InfoPanel(OSHGui::Control* parent) : ToolboxPanel(parent) {}
 
 	void BuildUI() override;
-	void UpdateUI() override;
-	void MainRoutine() override {};
+	
+	// Update. Will always be called every frame.
+	void Main() override {}
+
+	// Draw user interface. Will be called every frame if the element is visible
+	void Draw() override;
 };
 

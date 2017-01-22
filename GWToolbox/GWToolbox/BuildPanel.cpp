@@ -111,7 +111,7 @@ void BuildPanel::BuildUI() {
 	}
 }
 
-void BuildPanel::MainRoutine() {
+void BuildPanel::Main() {
 	if (!queue.empty() && TBTimer::diff(send_timer) > 600) {
 		send_timer = TBTimer::init();
 

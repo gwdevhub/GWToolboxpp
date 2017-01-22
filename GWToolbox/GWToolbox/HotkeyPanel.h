@@ -48,8 +48,12 @@ public:
 	inline bool ToggleRupt() { return ruptActive = !ruptActive; }
 
 	void BuildUI() override;
-	inline void UpdateUI() override {};
-	void MainRoutine() override;
+
+	// Update. Will always be called every frame.
+	void Main() override;
+
+	// Draw user interface. Will be called every frame if the element is visible
+	void Draw() override {}
 
 	bool ProcessMessage(LPMSG msg);
 

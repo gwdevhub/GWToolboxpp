@@ -28,8 +28,11 @@ public:
 	inline static const wchar_t* IniKeyY() { return L"y"; }
 	inline static const char* ThemeKey() { return "timer"; }
 
-	void UpdateUI();
-	inline void MainRoutine() {};
+	// Update. Will always be called every frame.
+	void Main() override {}
+
+	// Draw user interface. Will be called every frame if the element is visible
+	void Draw() override;
 
 	void SetFreeze(bool b) {
 		Control::SetEnabled(!b);

@@ -93,7 +93,7 @@ void SettingsPanel::ApplySettings() {
 }
 
 
-void SettingsPanel::MainRoutine() {
+void SettingsPanel::Main() {
 	// save location data
 	if (location_active_ && TBTimer::diff(location_timer_) > 1000) {
 		location_timer_ = TBTimer::init();

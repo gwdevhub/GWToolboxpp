@@ -203,7 +203,7 @@ void BondsWindow::BondsMonitor::SaveLocation() {
 	Config::IniWriteLong(BondsWindow::IniSection(), BondsWindow::IniKeyY(), y);
 }
 
-void BondsWindow::BondsMonitor::UpdateUI() {
+void BondsWindow::BondsMonitor::Draw() {
 	if (!isVisible_) return;
 
 	int size = GW::Partymgr().GetPartySize();

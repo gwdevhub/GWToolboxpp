@@ -298,7 +298,7 @@ bool HotkeyPanel::ProcessMessage(LPMSG msg) {
 }
 
 
-void HotkeyPanel::MainRoutine() {
+void HotkeyPanel::Main() {
 	if (clickerActive && TBTimer::diff(clickerTimer) > 20) {
 		clickerTimer = TBTimer::init();
 		INPUT input;
