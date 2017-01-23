@@ -42,13 +42,13 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(SolutionDir)GWCA_DX;$(SolutionDir)GWCA;$(SolutionDir)OSHGui;$(SolutionDir)imgui;$(SolutionDir)Dependencies\DirectX\Include\;$(ProjectDir)Dependencies;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)Dependencies\DirectX\Lib\x86\;$(OutDir);$(SolutionDir)GWCA\;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)Dependencies;$(SolutionDir)Dependencies\GWCA_DX;$(SolutionDir)Dependencies\GWCA;$(SolutionDir)Dependencies\OSHGui;$(SolutionDir)Dependencies\imgui;$(SolutionDir)Dependencies\DirectX\Include\;$(IncludePath)</IncludePath>
+    <LibraryPath>$(OutDir);$(SolutionDir)Dependencies\DirectX\Lib\x86\;$(SolutionDir)Dependencies\GWCA\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(SolutionDir)GWCA_DX;$(SolutionDir)GWCA;$(SolutionDir)OSHGui;$(SolutionDir)imgui;$(SolutionDir)Dependencies\DirectX\Include\;$(ProjectDir)Dependencies;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)Dependencies\DirectX\Lib\x86\;$(OutDir);$(SolutionDir)GWCA\;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)Dependencies;$(SolutionDir)Dependencies\GWCA_DX;$(SolutionDir)Dependencies\GWCA;$(SolutionDir)Dependencies\OSHGui;$(SolutionDir)Dependencies\imgui;$(SolutionDir)Dependencies\DirectX\Include\;$(IncludePath)</IncludePath>
+    <LibraryPath>$(OutDir);$(SolutionDir)Dependencies\DirectX\Lib\x86\;$(SolutionDir)Dependencies\GWCA\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -62,7 +62,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCA_DX.lib;GWCAd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCA_DX.lib;GWCAd.lib;OSHGui.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -87,13 +87,16 @@
       <OptimizeReferences>true</OptimizeReferences>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCA_DX.lib;GWCA.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCA_DX.lib;GWCA.lib;OSHGui.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\imgui\imconfig.h" />
-    <ClInclude Include="..\imgui\imgui.h" />
-    <ClInclude Include="..\imgui\imgui_internal.h" />
+    <ClInclude Include="..\Dependencies\imgui\imconfig.h" />
+    <ClInclude Include="..\Dependencies\imgui\imgui.h" />
+    <ClInclude Include="..\Dependencies\imgui\imgui_internal.h" />
+    <ClInclude Include="..\Dependencies\imgui\stb_rect_pack.h" />
+    <ClInclude Include="..\Dependencies\imgui\stb_textedit.h" />
+    <ClInclude Include="..\Dependencies\imgui\stb_truetype.h" />
     <ClInclude Include="GWToolbox\AgentRenderer.h" />
     <ClInclude Include="GWToolbox\BondsWindow.h" />
     <ClInclude Include="GWToolbox\BuildPanel.h" />
@@ -135,9 +138,9 @@
     <ClInclude Include="GWToolbox\Viewer.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\imgui\imgui.cpp" />
-    <ClCompile Include="..\imgui\imgui_demo.cpp" />
-    <ClCompile Include="..\imgui\imgui_draw.cpp" />
+    <ClCompile Include="..\Dependencies\imgui\imgui.cpp" />
+    <ClCompile Include="..\Dependencies\imgui\imgui_demo.cpp" />
+    <ClCompile Include="..\Dependencies\imgui\imgui_draw.cpp" />
     <ClCompile Include="GWToolbox\AgentRenderer.cpp" />
     <ClCompile Include="GWToolbox\BondsWindow.cpp" />
     <ClCompile Include="GWToolbox\BuildPanel.cpp" />
@@ -171,7 +174,7 @@
     <ClCompile Include="GWToolbox\Viewer.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\OSHGui\OSHGui.vcxproj">
+    <ProjectReference Include="..\Dependencies\OSHGui\OSHGui.vcxproj">
       <Project>{296fb7c3-29b9-4111-9243-6eb8cb71d458}</Project>
     </ProjectReference>
   </ItemGroup>

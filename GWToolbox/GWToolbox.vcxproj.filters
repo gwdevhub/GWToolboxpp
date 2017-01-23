@@ -155,13 +155,22 @@
     <ClInclude Include="GWToolbox\MinimapUtils.h">
       <Filter>Windows\Minimap</Filter>
     </ClInclude>
-    <ClInclude Include="..\imgui\imgui.h">
+    <ClInclude Include="..\Dependencies\imgui\imconfig.h">
       <Filter>imgui</Filter>
     </ClInclude>
-    <ClInclude Include="..\imgui\imgui_internal.h">
+    <ClInclude Include="..\Dependencies\imgui\imgui.h">
       <Filter>imgui</Filter>
     </ClInclude>
-    <ClInclude Include="..\imgui\imconfig.h">
+    <ClInclude Include="..\Dependencies\imgui\imgui_internal.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\imgui\stb_rect_pack.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\imgui\stb_textedit.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\imgui\stb_truetype.h">
       <Filter>imgui</Filter>
     </ClInclude>
   </ItemGroup>
@@ -249,13 +258,13 @@
     <ClCompile Include="GWToolbox\SymbolsRenderer.cpp">
       <Filter>Windows\Minimap</Filter>
     </ClCompile>
-    <ClCompile Include="..\imgui\imgui.cpp">
+    <ClCompile Include="..\Dependencies\imgui\imgui.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
-    <ClCompile Include="..\imgui\imgui_draw.cpp">
+    <ClCompile Include="..\Dependencies\imgui\imgui_demo.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
-    <ClCompile Include="..\imgui\imgui_demo.cpp">
+    <ClCompile Include="..\Dependencies\imgui\imgui_draw.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
   </ItemGroup>

@@ -1,9 +1,9 @@
 [submodule "GWCA"]
-	path = GWCA
+	path = Dependencies/GWCA
 	url=https://github.com/GregLando113/GWCA
 [submodule "gwca_dx"]
-	path = gwca_dx
+	path = Dependencies/GWCA_DX
 	url = https://bitbucket.org/0x4D1/gwca_dx
 [submodule "imgui"]
-	path = imgui
+	path = Dependencies/imgui
 	url = https://github.com/ocornut/imgui.git

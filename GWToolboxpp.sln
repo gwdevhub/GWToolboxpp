@@ -13,17 +13,17 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GWToolbox", "GWToolbox\GWTo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSLauncher", "CSLauncher\CSLauncher.csproj", "{588D4291-48BD-449E-BB02-D3D48C21C0A9}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SimpleImageLoader", "OSHGui\Dependencies\SimpleImageLoader\SimpleImageLoader.2015.vcxproj", "{D8FFBB21-1CB1-4C27-BE8C-F7D8C211DE90}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SimpleImageLoader", "Dependencies\OSHGui\Dependencies\SimpleImageLoader\SimpleImageLoader.2015.vcxproj", "{D8FFBB21-1CB1-4C27-BE8C-F7D8C211DE90}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FreeType", "OSHGui\Dependencies\FreeType\FreeType.2015.vcxproj", "{2BDBACF9-9942-4157-8762-B4A024071848}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FreeType", "Dependencies\OSHGui\Dependencies\FreeType\FreeType.2015.vcxproj", "{2BDBACF9-9942-4157-8762-B4A024071848}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "JsonCpp", "OSHGui\Dependencies\JsonCpp\JsonCpp.2015.vcxproj", "{414251B2-E3BE-411F-A90B-7C2CD64E3D01}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "JsonCpp", "Dependencies\OSHGui\Dependencies\JsonCpp\JsonCpp.2015.vcxproj", "{414251B2-E3BE-411F-A90B-7C2CD64E3D01}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OSHGui", "OSHGui\OSHGui.vcxproj", "{296FB7C3-29B9-4111-9243-6EB8CB71D458}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OSHGui", "Dependencies\OSHGui\OSHGui.vcxproj", "{296FB7C3-29B9-4111-9243-6EB8CB71D458}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GWCA_DX", "GWCA_DX\GWCA_DX_VS2013.vcxproj", "{96B63001-4A94-430B-999D-39A27B205EB6}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GWCA_DX", "Dependencies\GWCA_DX\GWCA_DX_VS2013.vcxproj", "{96B63001-4A94-430B-999D-39A27B205EB6}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GWCA", "GWCA\GWCA.2013.vcxproj", "{89DC50EE-C3C2-437C-B416-DD43AC3743CC}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GWCA", "Dependencies\GWCA\GWCA.2013.vcxproj", "{89DC50EE-C3C2-437C-B416-DD43AC3743CC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
