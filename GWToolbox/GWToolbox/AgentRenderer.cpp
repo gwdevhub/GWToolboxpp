@@ -276,6 +276,10 @@ float AgentRenderer::GetSize(GW::Agent* agent) const {
 		case GW::Constants::ModelID::UW::KeeperOfSouls:
 
 		case GW::Constants::ModelID::FoW::ShardWolf:
+
+		case GW::Constants::ModelID::SoO::Brigand:
+		case GW::Constants::ModelID::SoO::Fendi:
+		case GW::Constants::ModelID::SoO::Fendi_soul:
 			return 125.0f;
 
 		default:
