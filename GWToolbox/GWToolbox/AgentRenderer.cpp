@@ -272,6 +272,7 @@ float AgentRenderer::GetSize(GW::Agent* agent) const {
 		case GW::Constants::ModelID::DoA::StygianLordRanger:
 		case GW::Constants::ModelID::DoA::BlackBeastOfArgh:
 		case GW::Constants::ModelID::DoA::SmotheringTendril:
+		case GW::Constants::ModelID::DoA::LordJadoth:
 		
 		case GW::Constants::ModelID::UW::KeeperOfSouls:
 
