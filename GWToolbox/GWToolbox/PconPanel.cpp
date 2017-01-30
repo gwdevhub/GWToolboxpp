@@ -29,7 +29,7 @@ void PconPanel::BuildUI() {
 	int row = 0;
 	int col = 0;
 	const int top = 4;
-	pcons = vector<Pcon*>();
+	pcons = std::vector<Pcon*>();
 
 	essence = new PconCons(this, L"essence");
 	essence->setIcon("Essence_of_Celerity.png", 0, 0, 60);

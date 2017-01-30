@@ -9,7 +9,7 @@ void MaterialsPanel::BuildUI() {
 	const int textbox_x = 180;
 	const int buybutton_x = 220;
 
-	auto GetName = [](enum Item item) -> wstring {
+	auto GetName = [](enum Item item) -> std::wstring {
 		switch (item) {
 		case MaterialsPanel::Essence: return L"Essence of Celrity";
 		case MaterialsPanel::Grail: return L"Grail of Might";
@@ -24,7 +24,7 @@ void MaterialsPanel::BuildUI() {
 	const int group_height = 50;
 	const int item_width = (group_width - 2 * Padding) / 3;
 	
-	auto MakeRow = [&](enum Item item, string file, int size, int x, int y) -> void {
+	auto MakeRow = [&](enum Item item, std::string file, int size, int x, int y) -> void {
 		GroupBox* group = new GroupBox(this);
 		group->SetSize(SizeI(group_width, group_height));
 		group->SetLocation(PointI(Padding + x * (group_width + Padding),

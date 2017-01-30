@@ -23,7 +23,7 @@ public:
 	// Draw user interface. Will be called every frame if the element is visible
 	void Draw() {}
 
-	void SetSuppressMessages(bool active) { chat_filter->SetSuppressMessages(active); }
+	ChatFilter& chat_filter() { return *chat_filter_; };
 
 private:
 	bool IsTyping() { return false; /* (*(DWORD*)0xA377C8) != 0;*/ } // broken
@@ -44,7 +44,7 @@ private:
 	static bool CmdZoom(std::wstring& cmd, std::vector<std::wstring>& args);
 	static bool CmdCamera(std::wstring& cmd, std::vector<std::wstring>& args);
 
-	ChatFilter* chat_filter;
+	ChatFilter* chat_filter_;
 
 	int move_forward;
 	int move_side;

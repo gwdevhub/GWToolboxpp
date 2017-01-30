@@ -91,6 +91,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\Dependencies\imgui\examples\directx9_example\imgui_impl_dx9.h" />
     <ClInclude Include="..\Dependencies\imgui\imconfig.h" />
     <ClInclude Include="..\Dependencies\imgui\imgui.h" />
     <ClInclude Include="..\Dependencies\imgui\imgui_internal.h" />
@@ -111,10 +112,12 @@
     <ClInclude Include="GWToolbox\Minimap.h" />
     <ClInclude Include="GWToolbox\D3DVertex.h" />
     <ClInclude Include="GWToolbox\MinimapUtils.h" />
+    <ClInclude Include="GWToolbox\OtherSettings.h" />
     <ClInclude Include="GWToolbox\PartyDamage.h" />
     <ClInclude Include="GWToolbox\PingsLinesRenderer.h" />
     <ClInclude Include="GWToolbox\PmapRenderer.h" />
     <ClInclude Include="GWToolbox\RangeRenderer.h" />
+    <ClInclude Include="GWToolbox\SettingManager.h" />
     <ClInclude Include="GWToolbox\SymbolsRenderer.h" />
     <ClInclude Include="GWToolbox\VBuffer.h" />
     <ClInclude Include="GWToolbox\Settings.h" />
@@ -138,6 +141,7 @@
     <ClInclude Include="GWToolbox\Viewer.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\Dependencies\imgui\examples\directx9_example\imgui_impl_dx9.cpp" />
     <ClCompile Include="..\Dependencies\imgui\imgui.cpp" />
     <ClCompile Include="..\Dependencies\imgui\imgui_demo.cpp" />
     <ClCompile Include="..\Dependencies\imgui\imgui_draw.cpp" />
@@ -153,10 +157,13 @@
     <ClCompile Include="GWToolbox\logger.cpp" />
     <ClCompile Include="GWToolbox\main.cpp" />
     <ClCompile Include="GWToolbox\Minimap.cpp" />
+    <ClCompile Include="GWToolbox\OtherSettings.cpp" />
     <ClCompile Include="GWToolbox\PartyDamage.cpp" />
     <ClCompile Include="GWToolbox\PingsLinesRenderer.cpp" />
     <ClCompile Include="GWToolbox\PmapRenderer.cpp" />
     <ClCompile Include="GWToolbox\RangeRenderer.cpp" />
+    <ClCompile Include="GWToolbox\SettingManager.cpp" />
+    <ClCompile Include="GWToolbox\Settings.cpp" />
     <ClCompile Include="GWToolbox\SymbolsRenderer.cpp" />
     <ClCompile Include="GWToolbox\ToolboxWindow.cpp" />
     <ClCompile Include="GWToolbox\GWToolbox.cpp" />

@@ -11,6 +11,8 @@
 #include "Config.h"
 #include "GWToolbox.h"
 
+#include <imgui.h>
+
 using namespace OSHGui::Drawing;
 using namespace OSHGui;
 
@@ -24,8 +26,17 @@ MainWindow::MainWindow() :
 	materials_panel_(*new MaterialsPanel(this)),
 	settings_panel_(*new SettingsPanel(this)),
 
-	use_minimized_alt_pos_(false),
-	tick_with_pcons_(false) {
+	use_minimized_alt_pos(false, IniSection(), L"minimize_alt_position"),
+	tick_with_pcons(false, IniSection(), L"tick_with_pcons"),
+	tabs_left(false, IniSection(), L"tabsleft") {
+
+	use_minimized_alt_pos.SetText("Minimize to different position");
+	use_minimized_alt_pos.SetTooltip("The minimized position will be saved independently");
+
+	tick_with_pcons.SetText("Tick with pcon status");
+	tick_with_pcons.SetTooltip("When enabling or disabling pcons toolbox will also tick or untick in party list");
+
+	tabs_left.SetText("Open tabs on the left");
 
 	panels = std::vector<ToolboxPanel*>();
 	tab_buttons = std::vector<TabButton*>();
@@ -51,7 +62,7 @@ MainWindow::MainWindow() :
 	title->SetSize(SizeI(64, TITLE_HEIGHT));
 	title->SetBackColor(Drawing::Color::Empty());
 	title->GetMouseUpEvent() += MouseUpEventHandler([this](Control*, MouseEventArgs) {
-		if (minimized_ && use_minimized_alt_pos_) {
+		if (minimized_ && use_minimized_alt_pos.value) {
 			SaveMinimizedLocation();
 		} else {
 			SaveLocation();
@@ -85,7 +96,7 @@ MainWindow::MainWindow() :
 	main_panel_->SetLocation(PointI(0, TITLE_HEIGHT + 1));
 	AddControl(main_panel_);
 
-	auto CreateTabButton = [&](wstring name, size_t idx, string icon) -> TabButton* {
+	auto CreateTabButton = [&](std::wstring name, size_t idx, std::string icon) -> TabButton* {
 		TabButton* b = new TabButton(main_panel_, name, icon);
 		b->SetLocation(PointI(Padding, idx * TAB_HEIGHT
 			+ ((idx > 0) ? TOGGLE_HEIGHT : 0)));
@@ -164,7 +175,7 @@ void MainWindow::SetMinimized(bool minimized) {
 	if (minimized_) {
 		if (current_panel_ >= 0) OpenClosePanel(current_panel_);
 		SetSize(SizeI(WIDTH, TITLE_HEIGHT));
-		if (use_minimized_alt_pos_) {
+		if (use_minimized_alt_pos.value) {
 			int xlocation = Config::IniReadLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltX(), 100);
 			int ylocation = Config::IniReadLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltY(), 100);
 
@@ -175,7 +186,7 @@ void MainWindow::SetMinimized(bool minimized) {
 		
 		SetSize(SizeI(WIDTH, HEIGHT));
 
-		if (use_minimized_alt_pos_) {
+		if (use_minimized_alt_pos.value) {
 			int xlocation = Config::IniReadLong(MainWindow::IniSection(), MainWindow::IniKeyX(), 100);
 			int ylocation = Config::IniReadLong(MainWindow::IniSection(), MainWindow::IniKeyY(), 100);
 
@@ -208,7 +219,7 @@ void MainWindow::UpdatePconToggleButton(bool active) {
 		pcon_toggle_button_->SetForeColor(Color::Red());
 		pcon_toggle_button_->SetText(L"Disabled");
 	}
-	if (tick_with_pcons_ && GW::Map().GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+	if (tick_with_pcons.value && GW::Map().GetInstanceType() == GW::Constants::InstanceType::Outpost) {
 		GW::Partymgr().Tick(active);
 	}
 }
@@ -249,7 +260,7 @@ void MainWindow::OpenClosePanel(size_t index) {
 	}
 }
 
-TabButton::TabButton(Control* parent, wstring s, string icon) 
+TabButton::TabButton(Control* parent, std::wstring s, std::string icon) 
 	: Button(parent), pic(new PictureBox(this)) {
 
 	pic->SetImage(Image::FromFile(icon));
@@ -285,9 +296,47 @@ void MainWindow::Main() {
 }
 
 void MainWindow::Draw() {
-	for (ToolboxPanel* panel : panels) {
-		panel->Draw();
+	static bool open = true;
+	ImGui::SetNextWindowSize(ImVec2(WIDTH, HEIGHT));
+	if (ImGui::Begin("Toolbox++", &open, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar)) {
+		if (!open) GWToolbox::instance().StartSelfDestruct();
+		ImVec2 button_size(WIDTH - 2 * ImGui::GetStyle().WindowPadding.x, 0);
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+		static const char* tab_button_text [] = { "Pcons", "Hotkeys", "Builds", "Travel", 
+			"Dialogs", "Info", "Materials", "Settings" };
+
+		for (int i = 0; i < 8; ++i) {
+			if (i > 0) ImGui::Separator();
+			if (i == current_panel_) {
+				ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered]);
+				if (ImGui::Button(tab_button_text[i], button_size)) {
+					OpenClosePanel(i);
+				}
+				ImGui::PopStyleColor();
+			} else {
+				if (ImGui::Button(tab_button_text[i], button_size)) {
+					OpenClosePanel(i);
+				}
+			}
+
+			// draw the disable/enable button
+			if (i == 0) {
+				ImGui::Button("Disabled", button_size);
+			}
+		}
+		ImGui::PopStyleColor();
+
+		if (current_panel_ >= 0) {
+			panels[current_panel_]->Draw();
+		}
 	}
+	ImGui::End();
+}
+
+void MainWindow::DrawSettings() {
+	use_minimized_alt_pos.Draw();
+	tick_with_pcons.Draw();
+	tabs_left.Draw();
 }
 
 void MainWindow::SaveLocation() {

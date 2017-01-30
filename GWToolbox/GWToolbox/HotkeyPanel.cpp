@@ -15,7 +15,7 @@ using namespace OSHGui::Drawing;
 HotkeyPanel::HotkeyPanel(OSHGui::Control* parent) : ToolboxPanel(parent) {
 	clickerTimer = TBTimer::init();
 	dropCoinsTimer = TBTimer::init();
-	hotkeys = vector<TBHotkey*>();
+	hotkeys = std::vector<TBHotkey*>();
 }
 
 void HotkeyPanel::BuildUI() {	
@@ -36,8 +36,8 @@ void HotkeyPanel::BuildUI() {
 	create_combo_->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
 		[&](Control*) {
 		if (create_combo_->GetSelectedIndex() < 0) return;
-		wstring ini = L"hotkey-";
-		ini += to_wstring(this->NewID());
+		std::wstring ini = L"hotkey-";
+		ini += std::to_wstring(this->NewID());
 		ini += L":";
 		switch (create_combo_->GetSelectedIndex()) {
 		case 0:
@@ -103,31 +103,31 @@ void HotkeyPanel::BuildUI() {
 	AddControl(scroll_panel_);
 
 	max_id_ = 0;
-	list<wstring> sections = Config::IniReadSections();
-	for (wstring section : sections) {
+	std::list<std::wstring> sections = Config::IniReadSections();
+	for (std::wstring section : sections) {
 		if (section.compare(0, 6, L"hotkey") == 0) {
 			size_t first_sep = 6;
 			size_t second_sep = section.find(L':', first_sep);
 
-			wstring id = section.substr(first_sep + 1, second_sep - first_sep - 1);
+			std::wstring id = section.substr(first_sep + 1, second_sep - first_sep - 1);
 			try {
-				long long_id = stol(id);
+				long long_id = std::stol(id);
 				if (long_id > max_id_) max_id_ = long_id;
 			} catch (...) {}
-			wstring type = section.substr(second_sep + 1);
+			std::wstring type = section.substr(second_sep + 1);
 			bool active = Config::IniReadBool(section.c_str(), TBHotkey::IniKeyActive(), true);
 			Key key = (Key)Config::IniReadLong(section.c_str(), TBHotkey::IniKeyHotkey(), 0);
 			Key modifier = (Key)Config::IniReadLong(section.c_str(), TBHotkey::IniKeyModifier(), 0);
 			TBHotkey* tb_hk = NULL;
 
 			if (type.compare(HotkeySendChat::IniSection()) == 0) {
-				wstring msg = Config::IniRead(section.c_str(), HotkeySendChat::IniKeyMsg(), L"");
+				std::wstring msg = Config::IniRead(section.c_str(), HotkeySendChat::IniKeyMsg(), L"");
 				wchar_t channel = Config::IniRead(section.c_str(), HotkeySendChat::IniKeyChannel(), L"/")[0];
 				tb_hk = new HotkeySendChat(scroll_panel_->GetContainer(), key, modifier, active, section, msg, channel);
 
 			} else if (type.compare(HotkeyUseItem::IniSection()) == 0) {
 				UINT itemID = (UINT)Config::IniReadLong(section.c_str(), HotkeyUseItem::IniKeyItemID(), 0);
-				wstring item_name = Config::IniRead(section.c_str(), HotkeyUseItem::IniKeyItemName(), L"");
+				std::wstring item_name = Config::IniRead(section.c_str(), HotkeyUseItem::IniKeyItemName(), L"");
 				tb_hk = new HotkeyUseItem(scroll_panel_->GetContainer(), key, modifier, active, section, itemID, item_name);
 
 			} else if (type.compare(HotkeyDropUseBuff::IniSection()) == 0) {
@@ -146,18 +146,18 @@ void HotkeyPanel::BuildUI() {
 
 			} else if (type.compare(HotkeyTarget::IniSection()) == 0) {
 				UINT targetID = (UINT)Config::IniReadLong(section.c_str(), HotkeyTarget::IniKeyTargetID(), 0);
-				wstring target_name = Config::IniRead(section.c_str(), HotkeyTarget::IniKeyTargetName(), L"");
+				std::wstring target_name = Config::IniRead(section.c_str(), HotkeyTarget::IniKeyTargetName(), L"");
 				tb_hk = new HotkeyTarget(scroll_panel_->GetContainer(), key, modifier, active, section, targetID, target_name);
 
 			} else if (type.compare(HotkeyMove::IniSection()) == 0) {
 				float x = (float)Config::IniReadDouble(section.c_str(), HotkeyMove::IniKeyX(), 0.0);
 				float y = (float)Config::IniReadDouble(section.c_str(), HotkeyMove::IniKeyY(), 0.0);
-				wstring name = Config::IniRead(section.c_str(), HotkeyMove::IniKeyName(), L"");
+				std::wstring name = Config::IniRead(section.c_str(), HotkeyMove::IniKeyName(), L"");
 				tb_hk = new HotkeyMove(scroll_panel_->GetContainer(), key, modifier, active, section, x, y, name);
 
 			} else if (type.compare(HotkeyDialog::IniSection()) == 0) {
 				UINT dialogID = (UINT)Config::IniReadLong(section.c_str(), HotkeyDialog::IniKeyDialogID(), 0);
-				wstring dialog_name = Config::IniRead(section.c_str(), HotkeyDialog::IniKeyDialogName(), L"");
+				std::wstring dialog_name = Config::IniRead(section.c_str(), HotkeyDialog::IniKeyDialogName(), L"");
 				tb_hk = new HotkeyDialog(scroll_panel_->GetContainer(), key, modifier, active, section, dialogID, dialog_name);
 
 			} else if (type.compare(HotkeyPingBuild::IniSection()) == 0) {

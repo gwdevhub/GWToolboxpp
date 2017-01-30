@@ -4,6 +4,8 @@
 
 #include "OSHGui\OSHGui.hpp"
 
+#include "Settings.h"
+
 #include "ToolboxWindow.h"
 #include "PconPanel.h"
 #include "HotkeyPanel.h"
@@ -21,7 +23,7 @@ private:
 	PictureBox* const pic;
 
 public:
-	TabButton(Control* parent, wstring s, string icon);
+	TabButton(Control* parent, std::wstring s, std::string icon);
 
 	void CalculateLabelLocation() override;
 	void PopulateGeometry() override;
@@ -66,8 +68,9 @@ private:
 	int current_panel_;
 	bool minimized_;
 	bool hidden_;
-	bool use_minimized_alt_pos_;
-	bool tick_with_pcons_;
+	SettingBool use_minimized_alt_pos;
+	SettingBool tick_with_pcons;
+	SettingBool tabs_left;
 
 	Button* pcon_toggle_button_;
 	PconPanel& pcon_panel_;
@@ -92,8 +95,6 @@ public:
 	inline static const wchar_t* IniKeyMinimizedAltY() { return L"miny"; }
 
 	void OpenClosePanel(size_t index);
-	inline void set_use_minimized_alt_pos(bool enable) { use_minimized_alt_pos_ = enable; }
-	inline void set_tick_with_pcons(bool enabled) { tick_with_pcons_ = enabled; }
 	inline bool minimized() { return minimized_; }
 	void SetMinimized(bool minimized);
 	void ToggleMinimize() { SetMinimized(!minimized_); }
@@ -119,5 +120,9 @@ public:
 
 	// Draw user interface. Will be called every frame if the element is visible
 	void Draw() override;
+
+	void LoadSettings();
+	void DrawSettings();
+	void SaveSettings();
 };
 

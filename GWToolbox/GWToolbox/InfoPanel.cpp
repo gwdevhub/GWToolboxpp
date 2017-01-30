@@ -179,8 +179,8 @@ void InfoPanel::Draw() {
 		current_player_x = x;
 		current_player_y = y;
 		if (player) {
-			player_x->SetText(to_wstring(lroundf(x)));
-			player_y->SetText(to_wstring(lroundf(y)));
+			player_x->SetText(std::to_wstring(lroundf(x)));
+			player_y->SetText(std::to_wstring(lroundf(y)));
 		} else {
 			player_x->SetText(L" -");
 			player_y->SetText(L" -");
@@ -191,7 +191,7 @@ void InfoPanel::Draw() {
 	long id = target ? target->PlayerNumber : 0;
 	if (id != current_target_id) {
 		if (target) {
-			target_id->SetText(to_wstring(target->PlayerNumber));
+			target_id->SetText(std::to_wstring(target->PlayerNumber));
 		} else {
 			target_id->SetText(L"-");
 		}
@@ -201,7 +201,7 @@ void InfoPanel::Draw() {
 		|| GW::Map().GetInstanceType() != current_map_type) {
 		current_map_id = GW::Map().GetMapID();
 		current_map_type = GW::Map().GetInstanceType();
-		std::wstring map = to_wstring(static_cast<int>(current_map_id));
+		std::wstring map = std::to_wstring(static_cast<int>(current_map_id));
 		switch (GW::Map().GetInstanceType()) {
 		case GW::Constants::InstanceType::Explorable: break;
 		case GW::Constants::InstanceType::Loading: map += L" (loading)"; break;
@@ -221,7 +221,7 @@ void InfoPanel::Draw() {
 				if (current_item_id != id) {
 					current_item_id = id;
 					if (item) {
-						item_id->SetText(to_wstring(item->ModelId));
+						item_id->SetText(std::to_wstring(item->ModelId));
 					} else {
 						item_id->SetText(L" -");
 					}

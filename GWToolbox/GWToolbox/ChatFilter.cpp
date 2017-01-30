@@ -1,18 +1,52 @@
 #include "ChatFilter.h"
 
+#include <locale>
+
 #include <GWCA\GWCA.h>
 #include <GWCA\Managers\StoCMgr.h>
 
-ChatFilter::ChatFilter() {
+#include <imgui.h>
+
+ChatFilter::ChatFilter() : 
+	ally_common_drops(false, IniSection(), L"hide_ally_common_drops", "common drops for allies"),
+	self_common_drops(false, IniSection(), L"hide_self_common_drops", "common drops for you"),
+	ally_rare_drops(false, IniSection(), L"hide_ally_rare_drops", "rare drops for allies"),
+	self_rare_drops(false, IniSection(), L"hide_self_rare_drops", "rare drops for you"),
+	skill_point(false, IniSection(), L"hide_skillpoints", "earning skill points"),
+	pvp_messages(false, IniSection(), L"hide_pvp_messages", "pvp messages", "Such as 'A skill was updated for pvp!'"),
+	hoh(false, IniSection(), L"hide_hoh", "Hall of Heroes winners"),
+	favor(false, IniSection(), L"hide_favor", "Divine favor announcements"),
+	shingjeabroadwalk(false, IniSection(), L"hide_shingjeabroadwalk", "Shing Jea Broadwalk messages"),
+	noonehearsyou(false, IniSection(), L"hide_noonehearsyou", "'No one hears you'"),
+	messagebycontent(false, IniSection(), L"hide_by_content", "Hide any messages containing:") {
+
 	suppress_next_message = false;
-	suppress_messages_active = false;
+	suppress_next_p081 = false;
 
 	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P081>([&](GW::Packet::StoC::P081* pak) -> bool {
 		//if (pak->message[0] != 0x108) {
-		//	for (size_t i = 0; pak->message[i] != 0; ++i) printf(" 0x%X", pak->message[i]);
-		//	printf("\n");
+		//printf(" === P081: === \n");
+		//for (size_t i = 0; pak->message[i] != 0; ++i) {
+		//	if (pak->message[i] >= ' ' && pak->message[i] <= '~') {
+		//		printf("%c", pak->message[i]);
+		//	} else {
+		//		printf(" 0x%X ", pak->message[i]);
+		//	}	
 		//}
-		if (suppress_messages_active && ShouldIgnore(pak)) {
+		//printf("\n");
+		//}
+		// if ANY is active
+		if ((ally_common_drops.value
+			|| self_common_drops.value
+			|| ally_rare_drops.value
+			|| self_rare_drops.value
+			|| skill_point.value
+			|| pvp_messages.value
+			|| hoh.value
+			|| favor.value
+			|| shingjeabroadwalk.value
+			|| messagebycontent.value) 
+			&& ShouldIgnore(pak)) {
 			suppress_next_message = true;
 			return true;
 		}
@@ -29,7 +63,10 @@ ChatFilter::ChatFilter() {
 	});
 
 	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P083>([](GW::Packet::StoC::P083* pak) -> bool {
-		//printf("Received p083\n");
+		printf("Received p083\n");
+		//printf("P083: ");
+		//for (size_t i = 0; pak->message[i] != 0; ++i) printf(" 0x%X", pak->message[i]);
+		//printf("\n");
 		return false;
 	});
 
@@ -94,23 +131,52 @@ bool ChatFilter::ShouldIgnoreItem(const wchar_t* item_segment) const {
 	return true;
 }
 
-bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) const {
+bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) {
+	if (messagebycontent.value && ((pak->message[0] == 0x108)
+		|| (pak->message[0] == 0x8102 && pak->message[1] == 0xEFE))) {
+
+		wchar_t* start = &pak->message[1];
+		bool found_start = false;
+		wchar_t* end = &pak->message[122];
+		bool found_end = false;
+		for (int i = 0; pak->message[i] != 0; ++i) {
+			if (pak->message[i] == 0x107) {
+				start = &pak->message[i + 1];
+				found_start = true;
+			}
+			end = &pak->message[i + 1];
+			if (pak->message[i] == 0x1) {
+				end = &pak->message[i];
+				found_end = true;
+				break;
+			}
+		}
+		if (!found_start && !found_end) return false;
+		if (start >= end) return false;
+		std::string text(start, end);
+		std::transform(text.begin(), text.end(), text.begin(), ::tolower);
+		printf("'%s'", text.c_str());
+		if (!found_start && suppress_next_p081) {
+			suppress_next_p081 = false;
+			printf(" blocked (because previous)\n");
+			return true;
+		}
+
+		for (std::string s : filter_words) {
+			if (text.find(s) != std::string::npos) {
+				printf(" ...blocked ('%s')\n", s.c_str());
+				if (!found_end) suppress_next_p081 = true;
+				return true;
+			}
+		}
+		printf(" ...ok\n");
+		return false;
+	}
+
 	switch (pak->message[0]) {
 		// ==== Messages not ignored ====
 	case 0x108: { // player message
-		//for (size_t i = 0; pak->message[i] != 0; ++i) {
-		//	if (pak->message[i] == 0x108) {
-		//		printf("|");
-		//	} else if (pak->message[i] == 0x107) {
-		//		printf(">");
-		//	} else if (pak->message[i] == 0x1) {
-		//		printf("<");
-		//	} else {
-		//		printf("%lc", pak->message[i]);
-		//	}
-		//}
-		//printf("\n");
-		//return false;
+		// already handled
 	}
 
 	case 0x777: // I'm level x and x% of the way earning my next skill point	(author is not part of the message)
@@ -129,45 +195,64 @@ bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) const {
 		// ==== Ignored Messages ====
 	case 0x7E0: // party shares gold
 	case 0x7DF: // party shares gold ?
+		return self_common_drops.value;
 	case 0x7F6: // player x picks up item y (note: item can be unassigned gold)
+		return ally_common_drops.value;
 	case 0x816: // you gain a skill point
+		return skill_point.value;
 	case 0x817: // player x gained a skill point
-		return true;
+		return skill_point.value;
+	case 0x87C: // 'no one hears you... '
+		return noonehearsyou.value;
 
 		// ==== Monster drops: ignored unless gold/ecto for player ====
 	case 0x7F0: { // monster/player x drops item y (no assignment)
 				  // first segment describes the agent who dropped
-		return ShouldIgnoreByAgentThatDropped(Get1stSegment(pak)) && ShouldIgnoreItem(Get2ndSegment(pak));
+		if (!ShouldIgnoreByAgentThatDropped(Get1stSegment(pak))) return false;
+		bool rare = ShouldIgnoreItem(Get2ndSegment(pak));
+		if (rare) return self_rare_drops.value;
+		else return self_common_drops.value;
+		//return ShouldIgnoreByAgentThatDropped(Get1stSegment(pak)) && ShouldIgnoreItem(Get2ndSegment(pak));
 	}
 	case 0x7F1: { // monster x drops item y, your party assigns to player z
 				  // 0x7F1 0x9A9D 0xE943 0xB33 0x10A <monster> 0x1 0x10B <rarity> 0x10A <item> 0x1 0x1 0x10F <assignee: playernumber + 0x100>
 				  // <monster> is wchar_t id of several wchars
 				  // <rarity> is 0x108 for common, 0xA40 gold, 0xA42 purple, 0xA43 green
 		GW::Agent* me = GW::Agents().GetPlayer();
-		if (me && me->PlayerNumber != GetNumericSegment(pak)) return true;	// ignore drops not for the player
-		return ShouldIgnoreItem(Get2ndSegment(pak));
+		bool forplayer = (me && me->PlayerNumber == GetNumericSegment(pak));
+		bool rare = ShouldIgnoreItem(Get2ndSegment(pak));
+		if (forplayer && rare) return self_rare_drops.value;
+		if (forplayer && !rare) return self_common_drops.value;
+		if (!forplayer && rare) return ally_rare_drops.value;
+		if (!forplayer && !rare) return ally_common_drops.value;
+		//if (me && me->PlayerNumber != GetNumericSegment(pak)) return true;	// ignore drops not for the player
+		//return ShouldIgnoreItem(Get2ndSegment(pak));
+		return false;
 	}
 
 	case 0x8101:
 		switch (pak->message[1]) {
-		case 0x1868: return true; // teilah takes 10 festival tickets
-		case 0x1867: return true; // stay where you are, nine rings is about to begin
-		case 0x1869: return true; // big winner! 55 tickets
-		case 0x186A: return true; // you win 40 tickets
-		case 0x186B: return true; // you win 25 festival tickets
-		case 0x186C: return true; // you win 15 festival tickets
-		case 0x186D: return true; // did not win 9rings
+		case 0x1868: // teilah takes 10 festival tickets
+		case 0x1867: // stay where you are, nine rings is about to begin
+		case 0x1869: // big winner! 55 tickets
+		case 0x186A: // you win 40 tickets
+		case 0x186B: // you win 25 festival tickets
+		case 0x186C: // you win 15 festival tickets
+		case 0x186D: // did not win 9rings
+			return shingjeabroadwalk.value;
 		default: return false;
 		}
 
 	case 0x8102:
 		switch (pak->message[1]) {
+		// 0xEFE is a player message
 		case 0x4650: // skill has been updated for pvp
 		case 0x4651: // a hero skill has been updated for pvp
-			return true;
-
+			return pvp_messages.value;
 		case 0x223B: // a party won hall of heroes
+			return hoh.value;
 		case 0x23E4: // 0xF8AA 0x95CD 0x2766 // the world no longer has the favor of the gods
+			return favor.value;
 		case 0x3772: // I'm under the effect of x
 		default:
 			return false;
@@ -180,3 +265,51 @@ bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) const {
 	}
 }
 
+void ChatFilter::DrawSettings() {
+	ImGui::Text("Hide the following messages:");
+	ally_common_drops.Draw();
+	self_common_drops.Draw();
+	ally_rare_drops.Draw();
+	self_rare_drops.Draw();
+	skill_point.Draw();
+	pvp_messages.Draw();
+	hoh.Draw();
+	favor.Draw();
+	shingjeabroadwalk.Draw();
+	noonehearsyou.Draw();
+
+	ImGui::Separator();
+	messagebycontent.Draw();
+	ImGui::Indent();
+	ImGui::TextDisabled("(Separated by comma)");
+	const int buf_size = 1024 * 16;
+	static char buf[buf_size];
+	if (ImGui::InputTextMultiline("##filter", buf, buf_size, ImVec2(-1.0f, 0.0f))) {
+		filter_words.clear();
+		std::string text(buf);
+		char separator = ',';
+		size_t pos = text.find(separator);
+		size_t initialpos = 0;
+
+		while (pos != std::string::npos) {
+			std::string s = text.substr(initialpos, pos - initialpos);
+			if (!s.empty()) {
+				std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+				filter_words.insert(s);
+			}
+			initialpos = pos + 1;
+			pos = text.find(separator, initialpos);
+		}
+		std::string s = text.substr(initialpos, std::min(pos, text.size() - initialpos));
+		if (!s.empty()) {
+			std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+			filter_words.insert(s);
+		}
+
+		printf("filter words are:\n");
+		for (std::string s : filter_words) {
+			printf("%s\n", s.c_str());
+		}
+	}
+	ImGui::Unindent();
+}

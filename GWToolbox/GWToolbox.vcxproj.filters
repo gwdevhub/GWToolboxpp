@@ -173,6 +173,15 @@
     <ClInclude Include="..\Dependencies\imgui\stb_truetype.h">
       <Filter>imgui</Filter>
     </ClInclude>
+    <ClInclude Include="..\Dependencies\imgui\examples\directx9_example\imgui_impl_dx9.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\SettingManager.h">
+      <Filter>Panels\Settings</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\OtherSettings.h">
+      <Filter>Panels\Settings</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -266,6 +275,18 @@
     </ClCompile>
     <ClCompile Include="..\Dependencies\imgui\imgui_draw.cpp">
       <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\imgui\examples\directx9_example\imgui_impl_dx9.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Settings.cpp">
+      <Filter>Panels\Settings</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\SettingManager.cpp">
+      <Filter>Panels\Settings</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\OtherSettings.cpp">
+      <Filter>Panels\Settings</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

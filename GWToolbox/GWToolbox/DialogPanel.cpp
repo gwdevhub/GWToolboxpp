@@ -8,7 +8,6 @@
 #include "GWToolbox.h"
 
 using namespace OSHGui;
-using namespace std;
 
 void DialogPanel::BuildUI() {
 
@@ -27,7 +26,7 @@ void DialogPanel::BuildUI() {
 	CreateButton(2, 3, 3, L"Mountains", GW::Constants::DialogID::UwTeleMnt);
 
 	for (int i = 0; i < 3; ++i) {
-		wstring key = wstring(L"Quest") + to_wstring(i);
+		std::wstring key = std::wstring(L"Quest") + std::to_wstring(i);
 		int index = Config::IniReadLong(MainWindow::IniSection(), key.c_str(), 0);
 		ComboBox* fav_combo = new ComboBox(this);
 		for (int j = 0; j < n_quests; ++j) {
@@ -207,7 +206,7 @@ DWORD DialogPanel::IndexToQuestID(int index) {
 	}
 }
 
-wstring DialogPanel::IndexToDialogName(int index) {
+std::wstring DialogPanel::IndexToDialogName(int index) {
 	switch (index) {
 	case 0: return L"Craft fow armor";
 	case 1: return L"Profession Change - W";

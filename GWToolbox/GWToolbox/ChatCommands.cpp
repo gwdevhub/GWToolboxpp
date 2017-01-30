@@ -16,8 +16,6 @@
 #include "GWToolbox.h"
 #include "ChatLogger.h"
 
-using namespace std;
-
 ChatCommands::ChatCommands() {
 	
 	move_forward = 0;
@@ -29,7 +27,7 @@ ChatCommands::ChatCommands() {
 	skill_usage_delay = 1.0f;
 	skill_timer = TBTimer::init();
 
-	chat_filter = new ChatFilter();
+	chat_filter_ = new ChatFilter();
 
 	GW::Chat().RegisterCommand(L"age2", ChatCommands::CmdAge2);
 	GW::Chat().RegisterCommand(L"pcons", ChatCommands::CmdPcons);
@@ -119,14 +117,14 @@ void ChatCommands::Main() {
 	}
 }
 
-wstring ChatCommands::GetLowerCaseArg(vector<wstring> args, size_t index) {
+std::wstring ChatCommands::GetLowerCaseArg(std::vector<std::wstring> args, size_t index) {
 	if (index >= args.size()) return L"";
-	wstring arg = args[index];
+	std::wstring arg = args[index];
 	std::transform(arg.begin(), arg.end(), arg.begin(), ::tolower);
 	return arg;
 }
 
-bool ChatCommands::CmdAge2(wstring& cmd, vector<wstring>& args) {
+bool ChatCommands::CmdAge2(std::wstring& cmd, std::vector<std::wstring>& args) {
 	wchar_t buffer[30];
 	DWORD second = GW::Map().GetInstanceTime() / 1000;
 	wsprintf(buffer, L"%02u:%02u:%02u", (second / 3600), (second / 60) % 60, second % 60);
@@ -134,12 +132,12 @@ bool ChatCommands::CmdAge2(wstring& cmd, vector<wstring>& args) {
 	return true;
 }
 
-bool ChatCommands::CmdPcons(wstring& cmd, vector<wstring>& args) {
+bool ChatCommands::CmdPcons(std::wstring& cmd, std::vector<std::wstring>& args) {
 	PconPanel& pcons = GWToolbox::instance().main_window().pcon_panel();
 	if (args.empty()) {
 		pcons.ToggleActive();
 	} else { // we are ignoring parameters after the first
-		wstring arg = GetLowerCaseArg(args, 0);
+		std::wstring arg = GetLowerCaseArg(args, 0);
 		if (arg == L"on") {
 			pcons.SetActive(true);
 		} else if (arg == L"off") {
@@ -151,7 +149,7 @@ bool ChatCommands::CmdPcons(wstring& cmd, vector<wstring>& args) {
 	return true;
 }
 
-bool ChatCommands::CmdDialog(wstring& cmd, vector<wstring>& args) {
+bool ChatCommands::CmdDialog(std::wstring& cmd, std::vector<std::wstring>& args) {
 	if (args.empty()) {
 		ChatLogger::LogF(L"[Error] Please provide an integer or hex argument");
 	} else {
@@ -166,18 +164,18 @@ bool ChatCommands::CmdDialog(wstring& cmd, vector<wstring>& args) {
 	return true;
 }
 
-bool ChatCommands::CmdChest(wstring& cmd, vector<wstring>& args) {
+bool ChatCommands::CmdChest(std::wstring& cmd, std::vector<std::wstring>& args) {
 	if (GW::Map().GetInstanceType() == GW::Constants::InstanceType::Outpost) {
 		GW::Items().OpenXunlaiWindow();
 	}
 	return true;
 }
 
-bool ChatCommands::CmdTB(wstring& cmd, vector<wstring>& args) {
+bool ChatCommands::CmdTB(std::wstring& cmd, std::vector<std::wstring>& args) {
 	if (args.empty()) {
 		GWToolbox::instance().main_window().ToggleHidden();
 	} else {
-		wstring arg = GetLowerCaseArg(args, 0);
+		std::wstring arg = GetLowerCaseArg(args, 0);
 		if (arg == L"age") {
 			CmdAge2(cmd, args);
 		} else if (arg == L"hide") {
@@ -197,16 +195,16 @@ bool ChatCommands::CmdTB(wstring& cmd, vector<wstring>& args) {
 	return true;
 }
 
-bool ChatCommands::CmdTP(wstring& cmd, vector<wstring>& args) {
+bool ChatCommands::CmdTP(std::wstring& cmd, std::vector<std::wstring>& args) {
 	if (args.empty()) {
 		ChatLogger::Log(L"[Error] Please provide an argument");
 	} else {
-		wstring town = GetLowerCaseArg(args, 0);
+		std::wstring town = GetLowerCaseArg(args, 0);
 
 		GW::Constants::District district = GW::Constants::District::Current;
 		int district_number = 0;
 		if (args.size() >= 2) {
-			wstring dis = GetLowerCaseArg(args, 1);
+			std::wstring dis = GetLowerCaseArg(args, 1);
 			if (dis == L"ae1") {
 				district = GW::Constants::District::American;
 				district_number = 1;
@@ -252,7 +250,7 @@ bool ChatCommands::CmdTP(wstring& cmd, vector<wstring>& args) {
 	return true;
 }
 
-bool ChatCommands::CmdZoom(wstring& cmd, vector<wstring>& args) {
+bool ChatCommands::CmdZoom(std::wstring& cmd, std::vector<std::wstring>& args) {
 	if (args.empty()) {
 		GW::Cameramgr().SetMaxDist(750.0f);
 	} else {
@@ -271,18 +269,18 @@ bool ChatCommands::CmdZoom(wstring& cmd, vector<wstring>& args) {
 	return true;
 }
 
-bool ChatCommands::CmdCamera(wstring& cmd, vector<wstring>& args) {
+bool ChatCommands::CmdCamera(std::wstring& cmd, std::vector<std::wstring>& args) {
 	if (args.empty()) {
 		GW::Cameramgr().UnlockCam(false);
 	} else {
-		wstring arg0 = GetLowerCaseArg(args, 0);
+		std::wstring arg0 = GetLowerCaseArg(args, 0);
 		if (arg0 == L"lock") {
 			GW::Cameramgr().UnlockCam(false);
 		} else if (arg0 == L"unlock") {
 			GW::Cameramgr().UnlockCam(true);
 			ChatLogger::Log(L"Use W,A,S,D,X,Z for camera movement");
 		} else if (arg0 == L"fog") {
-			wstring arg1 = GetLowerCaseArg(args, 1);
+			std::wstring arg1 = GetLowerCaseArg(args, 1);
 			if (arg1 == L"on") {
 				GW::Cameramgr().SetFog(true);
 			} else if (arg1 == L"off") {
@@ -292,7 +290,7 @@ bool ChatCommands::CmdCamera(wstring& cmd, vector<wstring>& args) {
 			if (args.size() == 1) {
 				GW::Cameramgr().SetFieldOfView(1.308997f);
 			} else {
-				wstring arg1 = GetLowerCaseArg(args, 1);
+				std::wstring arg1 = GetLowerCaseArg(args, 1);
 				if (arg1 == L"default") {
 					GW::Cameramgr().SetFieldOfView(1.308997f);
 				} else {
@@ -310,7 +308,7 @@ bool ChatCommands::CmdCamera(wstring& cmd, vector<wstring>& args) {
 				}
 			}
 		} else if (arg0 == L"speed") {
-			wstring arg1 = GetLowerCaseArg(args, 1);
+			std::wstring arg1 = GetLowerCaseArg(args, 1);
 			ChatCommands& self = GWToolbox::instance().chat_commands();
 			if (arg1 == L"default") {
 				self.cam_speed_ = self.DEFAULT_CAM_SPEED;
@@ -330,15 +328,15 @@ bool ChatCommands::CmdCamera(wstring& cmd, vector<wstring>& args) {
 	return true;
 }
 
-bool ChatCommands::CmdDamage(wstring& cmd, vector<wstring>& args) {
-	wstring arg0 = GetLowerCaseArg(args, 0);
+bool ChatCommands::CmdDamage(std::wstring& cmd, std::vector<std::wstring>& args) {
+	std::wstring arg0 = GetLowerCaseArg(args, 0);
 	if (args.empty() || arg0 == L"print" || arg0 == L"report") {
 		if (args.size() <= 1) {
 			// if no argument or just one, print the whole party
 			GWToolbox::instance().party_damage().WritePartyDamage();
 		} else {
 			// else print a specific party member
-			wstring arg1 = GetLowerCaseArg(args, 1);
+			std::wstring arg1 = GetLowerCaseArg(args, 1);
 			if (arg1 == L"me") {
 				GWToolbox::instance().party_damage().WriteOwnDamage();
 			} else {
@@ -354,14 +352,14 @@ bool ChatCommands::CmdDamage(wstring& cmd, vector<wstring>& args) {
 	return true;
 }
 
-bool ChatCommands::CmdAfk(wstring& cmd, vector<wstring>& args) {
+bool ChatCommands::CmdAfk(std::wstring& cmd, std::vector<std::wstring>& args) {
 	GW::FriendListmgr().SetFriendListStatus(GW::Constants::OnlineStatus::AWAY);
 	return false;
 }
 
-bool ChatCommands::CmdTarget(wstring& cmd, vector<wstring>& args) {
+bool ChatCommands::CmdTarget(std::wstring& cmd, std::vector<std::wstring>& args) {
 	if (!args.empty()) {
-		wstring arg0 = GetLowerCaseArg(args, 0);
+		std::wstring arg0 = GetLowerCaseArg(args, 0);
 		if (arg0 == L"closest" || arg0 == L"nearest") {
 			// target nearest agent
 			GW::AgentArray agents = GW::Agents().GetAgentArray();
@@ -407,12 +405,12 @@ bool ChatCommands::CmdTarget(wstring& cmd, vector<wstring>& args) {
 	return true;
 }
 
-bool ChatCommands::CmdUseSkill(wstring& cmd, vector<wstring>& args) {
+bool ChatCommands::CmdUseSkill(std::wstring& cmd, std::vector<std::wstring>& args) {
 	ChatCommands& self = GWToolbox::instance().chat_commands();
 	if (args.empty()) {
 		self.skill_to_use = 0;
 	} else if (args.size() == 1) {
-		wstring arg0 = GetLowerCaseArg(args, 0);
+		std::wstring arg0 = GetLowerCaseArg(args, 0);
 		if (arg0 == L"stop" || arg0 == L"off") {
 			self.skill_to_use = 0;
 		} else {

@@ -9,6 +9,7 @@
 #include <OSHGui\Input\WindowsMessage.hpp>
 
 #include "ChatCommands.h"
+#include "OtherSettings.h"
 
 #include "MainWindow.h"
 #include "TimerWindow.h"
@@ -75,6 +76,7 @@ public:
 	inline void set_adjust_on_resize(bool active) { adjust_on_resize_ = active; }
 
 	inline ChatCommands& chat_commands() { return *chat_commands_; }
+	inline OtherSettings& settings() { return *other_settings_; }
 
 	inline MainWindow& main_window() { return *main_window_; }
 	inline TimerWindow& timer_window() { return *timer_window_; }
@@ -106,6 +108,7 @@ private:
 	OSHGui::Drawing::SizeI new_screen_size_;
 
 	ChatCommands* chat_commands_;
+	OtherSettings* other_settings_;
 
 	MainWindow* main_window_;
 	TimerWindow* timer_window_;

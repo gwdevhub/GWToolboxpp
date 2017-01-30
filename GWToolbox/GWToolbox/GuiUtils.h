@@ -3,6 +3,8 @@
 #include <Shlobj.h>
 #include <Shlwapi.h>
 
+#include <imgui.h>
+
 #include <OSHGui\OSHGui.hpp>
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\Utilities\PatternScanner.h>
@@ -11,7 +13,6 @@
 #include "logger.h"
 
 using namespace OSHGui::Drawing;
-using namespace std;
 
 class GuiUtils {
 public:
@@ -20,46 +21,71 @@ public:
 	static const int ROW_HEIGHT = 25; // toolbox standard button height
 	static const int BUTTON_HEIGHT = 25;
 
+	enum FontSize {
+		f10,
+		f12,
+		f16,
+		f26,
+		f30
+	};
+	static void LoadFonts() {
+		std::string fontfile = GuiUtils::getPathA("Font.ttf");
+		ImGuiIO& io = ImGui::GetIO();
+		ImFont* f10 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 16.0f);
+		ImFont* f12 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 19.0f);
+		ImFont* f16 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 24.0f);
+		ImFont* f26 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 42.0f);
+		ImFont* f30 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 48.0f);
+	}
+
+	static void ShowHelp(const char* help) {
+		ImGui::SameLine();
+		ImGui::TextDisabled("(?)");
+		if (ImGui::IsItemHovered()) {
+			ImGui::SetTooltip(help);
+		}
+	}
+
 	// Returns the default on hover color.
 	static Color getMouseOverColor() {
 		return OSHGui::Application::InstancePtr()->GetTheme().GetControlColorTheme("mouseover").ForeColor;
 	}
 
 	// Returns the settings folder as std::wstring
-	static wstring getSettingsFolder() {
+	static std::wstring getSettingsFolder() {
 		WCHAR szPathW[MAX_PATH];
 		szPathW[0] = L'\0';
 		SHGetFolderPathW(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, szPathW);
-		return wstring(szPathW) + L"\\GWToolboxpp";
+		return std::wstring(szPathW) + L"\\GWToolboxpp";
 	}
 
 	// Returns the settings folder as std::string
-	static string getSettingsFolderA() {
+	static std::string getSettingsFolderA() {
 		CHAR szPath[MAX_PATH];
 		szPath[0] = '\0';
 		SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, szPath);
-		return string(szPath) + "\\GWToolboxpp";
+		return std::string(szPath) + "\\GWToolboxpp";
 	}
 
 	// Returns the path of the given file in the settings folder as std::wstring
-	static wstring getPath(wstring file) { 
+	static std::wstring getPath(std::wstring file) {
 		return getSettingsFolder() + L"\\" + file; 
 	}
 
 	// Returns the path of the given file in the settings folder as std::string
-	static string getPathA(string file) { 
+	static std::string getPathA(std::string file) {
 		return getSettingsFolderA() + "\\" + file; 
 	}
 
 	// Returns the path of the given file in the subdirectory 
 	// in the settings folder as std::wstring
-	static wstring getSubPath(wstring file, wstring subdir) {
+	static std::wstring getSubPath(std::wstring file, std::wstring subdir) {
 		return getSettingsFolder() + L"\\" + subdir + L"\\" + file;
 	}
 
 	// Returns the path of the given file in the subdirectory 
 	// in the settings folder as string
-	static string getSubPathA(string file, string subdir) {
+	static std::string getSubPathA(std::string file, std::string subdir) {
 		return getSettingsFolderA() + "\\" + subdir + "\\" + file;
 	}
 
@@ -67,7 +93,7 @@ public:
 	static FontPtr getTBFont(float size, bool antialiased) {
 		FontPtr font;
 		try {
-			string path = GuiUtils::getPathA("Font.ttf");
+			std::string path = GuiUtils::getPathA("Font.ttf");
 			font = FontManager::LoadFontFromFile(path, size, antialiased);
 		} catch (OSHGui::Misc::FileNotFoundException e) {
 			LOG("ERROR - font file not found, falling back to Arial\n");

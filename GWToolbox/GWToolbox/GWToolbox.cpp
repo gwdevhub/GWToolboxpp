@@ -22,12 +22,16 @@
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA_DX\DirectXHooker.h>
 
+#include <imgui.h>
+#include <imgui\examples\directx9_example\imgui_impl_dx9.h>
+
 #include "Timer.h"
 #include "MainWindow.h"
 #include "TimerWindow.h"
 #include "Settings.h"
 #include "ChatLogger.h"
 #include "logger.h"
+#include "SettingManager.h"
 
 GWToolbox* GWToolbox::instance_ = nullptr;
 GW::DirectXHooker* GWToolbox::dx_hooker = nullptr;
@@ -142,11 +146,13 @@ void GWToolbox::ThreadEntry(HMODULE _dllmodule) {
 	Sleep(100);
 	LOG("Restoring input hook\n");
 	SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
+	ImGui_ImplDX9_Shutdown();
 	Sleep(100);
 	LOG("Destroying API\n");
 	GW::Api::Destruct();
 	LOG("Destroying directX hook\n");
 	delete dx_hooker;
+	SettingManager::SaveAll();
 	LOG("Destroying Config\n");
 	Config::Destroy();
 	LOG("Closing log/console, bye!\n");
@@ -179,6 +185,32 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 
 		GWToolbox& tb = GWToolbox::instance();
 
+		ImGuiIO& io = ImGui::GetIO();
+		switch (Message) {
+		case WM_LBUTTONDOWN: io.MouseDown[0] = true; break;
+		case WM_MBUTTONDOWN: io.MouseDown[2] = true; break;
+		case WM_MBUTTONUP: io.MouseDown[2] = false; break;
+		case WM_MOUSEWHEEL: io.MouseWheel += GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f; break;
+		case WM_MOUSEMOVE:
+			io.MousePos.x = (signed short)(lParam);
+			io.MousePos.y = (signed short)(lParam >> 16);
+			break;
+		case WM_KEYDOWN:
+			if (wParam < 256)
+				io.KeysDown[wParam] = 1;
+			break;
+		case WM_KEYUP:
+			if (wParam < 256)
+				io.KeysDown[wParam] = 0;
+			break;
+		case WM_CHAR: // You can also use ToAscii()+GetKeyboardState() to retrieve characters.
+			if (wParam > 0 && wParam < 0x10000)
+				io.AddInputCharacter((unsigned short)wParam);
+			break;
+		default:
+			break;
+		}
+
 		switch (Message) {
 		// Send right mouse button events to gw (move view around) and don't mess with them
 		case WM_RBUTTONDOWN: tb.right_mouse_pressed_ = true; break;
@@ -186,13 +218,15 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 
 		// Send button up mouse events to both gw and osh, to avoid gw being stuck on mouse-down
 		case WM_LBUTTONUP:
+			io.MouseDown[0] = false;
 			input.ProcessMouseMessage(&msg);
 			tb.minimap_->OnMouseUp(msg);
 			break;
 		
 		// Send other mouse events to osh first and consume them if used
-		case WM_MOUSEMOVE:
 		case WM_LBUTTONDOWN:
+			io.MouseDown[0] = true;
+		case WM_MOUSEMOVE:
 		case WM_LBUTTONDBLCLK:
 		case WM_MOUSEWHEEL:
 			if (GWToolbox::instance().right_mouse_pressed_) break;
@@ -236,8 +270,7 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 			GWToolbox::instance().main_window().hotkey_panel().ProcessMessage(&msg);
 
 			// block alt-enter if in borderless to avoid graphic glitches (no reason to go fullscreen anyway)
-			if (GWToolbox::instance().main_window().settings_panel().GetSetting(
-				SettingsPanel::Setting_enum::e_BorderlessWindow)->ReadSetting()
+			if (GWToolbox::instance().settings().borderless_window.value
 				&& (GetAsyncKeyState(VK_MENU) < 0)
 				&& (GetAsyncKeyState(VK_RETURN) < 0)) {
 				return true;
@@ -253,11 +286,16 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 			break;
 
 		default:
-			//printf("0x%X, 0x%X, 0x%X\n", Message, wParam, lParam);
 			break;
 		}
-	}
 
+		if (!tb.right_mouse_pressed_ && Message != WM_RBUTTONUP) {
+			if (ImGui::GetIO().WantCaptureMouse) return true;
+			if (ImGui::GetIO().WantCaptureKeyboard) return true;
+			if (ImGui::GetIO().WantTextInput) return true;
+		}
+	}
+	
 	return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
 }
 
@@ -290,6 +328,7 @@ void GWToolbox::CreateGui(IDirect3DDevice9* pDevice) {
 		std::shared_ptr<MainWindow> shared_ptr = std::shared_ptr<MainWindow>(tb.main_window_);
 		app.Run(shared_ptr);
 
+		tb.other_settings_ = new OtherSettings();
 		LOG("Creating timer\n");
 		tb.timer_window_ = new TimerWindow();
 		LOG("Creating bonds window\n");
@@ -302,14 +341,15 @@ void GWToolbox::CreateGui(IDirect3DDevice9* pDevice) {
 		tb.party_damage_ = new PartyDamage();
 		LOG("Creating Minimap\n");
 		tb.minimap_ = new Minimap();
-		LOG("Applying settings\n");
-		tb.main_window().settings_panel().ApplySettings();
 		LOG("Enabling app\n");
 		app.Enable();
 		tb.initialized_ = true;
 		LOG("Gui Created\n");
 		LOG("Saving theme\n");
 		tb.SaveTheme();
+
+		SettingManager::LoadAll();
+		SettingManager::ApplyAll();
 
 	} catch (Misc::FileNotFoundException e) {
 		LOG("Error: file not found %s\n", e.what());
@@ -328,6 +368,15 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 		} __except (EXCEPT_EXPRESSION_LOOP) {
 			LOG("Badness happened! (creating gui)\n");
 		}
+
+		[&pDevice]() {
+			ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), pDevice);
+			ImGuiIO& io = ImGui::GetIO();
+			io.MouseDrawCursor = false;
+			static std::string imgui_inifile = GuiUtils::getPathA("interface.ini");
+			io.IniFilename = imgui_inifile.c_str();
+			GuiUtils::LoadFonts();
+		}();
 	}
 
 	GWToolbox& tb = GWToolbox::instance();
@@ -375,6 +424,7 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 				LOG("Badness happened! (in main thread)\n");
 			}
 
+			ImGui_ImplDX9_NewFrame();
 			__try {
 				tb.chat_commands_->Draw();
 				tb.main_window_->Draw();
@@ -386,6 +436,8 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 			} __except (EXCEPT_EXPRESSION_LOOP) {
 				LOG("Badness happened! (in render thread)\n");
 			}
+			ImGui::ShowTestWindow();
+			ImGui::Render();
 		}
 
 		tb.minimap_->Render(pDevice);
@@ -405,6 +457,8 @@ HRESULT WINAPI GWToolbox::resetScene(IDirect3DDevice9* pDevice,
 	if (Application::Instance().HasBeenInitialized()) {
 		// pre-reset here.
 		renderer->PreD3DReset();
+
+		ImGui_ImplDX9_InvalidateDeviceObjects();
 
 		HRESULT result = dx_hooker->original<GW::dx9::Reset_t>(GW::dx9::kReset)(pDevice, pPresentationParameters);
 		if (result == D3D_OK) {

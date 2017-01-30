@@ -7,7 +7,6 @@
 
 #include "Config.h"
 
-using namespace std;
 using namespace OSHGui;
 
 void BuildPanel::Build::BuildUI() {
@@ -35,7 +34,9 @@ void BuildPanel::Build::BuildUI() {
 }
 
 void BuildPanel::Build::SendTeamBuild() {
-	wstring section = wstring(L"builds") + to_wstring(index_);
+	using namespace std;
+
+	wstring section = std::wstring(L"builds") + to_wstring(index_);
 	wstring key;
 
 	key = L"buildname";
@@ -69,7 +70,7 @@ void BuildPanel::Build::SendTeamBuild() {
 }
 
 BuildPanel::BuildPanel(OSHGui::Control* parent) : ToolboxPanel(parent) {
-	builds = vector<Build*>();
+	builds = std::vector<Build*>();
 	first_shown_ = 0;
 	send_timer = TBTimer::init();
 }
@@ -99,9 +100,9 @@ void BuildPanel::BuildUI() {
 
 	for (int i = 0; i < N_BUILDS; ++i) {
 		int index = i + 1;
-		wstring section = wstring(L"builds") + to_wstring(index);
-		wstring name = Config::IniRead(section.c_str(), L"buildname", L"");
-		if (name.empty()) name = wstring(L"<Build ") + to_wstring(index) + wstring(L">");
+		std::wstring section = std::wstring(L"builds") + std::to_wstring(index);
+		std::wstring name = Config::IniRead(section.c_str(), L"buildname", L"");
+		if (name.empty()) name = std::wstring(L"<Build ") + std::to_wstring(index) + std::wstring(L">");
 		Build* build = new Build(panel->GetContainer(), index, name, edit_build_, this);
 		build->SetSize(Drawing::SizeI(panel->GetContainer()->GetWidth() - 2 * Padding, BUILD_HEIGHT));
 		build->SetLocation(Drawing::PointI(Padding, Padding + i * (BUILD_HEIGHT + Padding)));

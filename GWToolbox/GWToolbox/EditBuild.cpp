@@ -10,13 +10,12 @@
 #include "MainWindow.h"
 #include "GWToolbox.h"
 
-using namespace std;
 using namespace OSHGui;
 using namespace OSHGui::Drawing;
 
 EditBuild::EditBuild(OSHGui::Control* parent) : OSHGui::Panel(parent) {
-	names = vector<TextBox*>(N_PLAYERS);
-	templates = vector<TextBox*>(N_PLAYERS);
+	names = std::vector<TextBox*>(N_PLAYERS);
+	templates = std::vector<TextBox*>(N_PLAYERS);
 
 	SetSize(SizeI(450, 500));
 
@@ -51,7 +50,7 @@ EditBuild::EditBuild(OSHGui::Control* parent) : OSHGui::Panel(parent) {
 	const int row_height = ITEM_HEIGHT + Padding;
 	for (int i = 0; i < N_PLAYERS; ++i) {
 		Label* label_index = new Label(this);
-		label_index->SetText(wstring(L"#") + to_wstring(i + 1));
+		label_index->SetText(std::wstring(L"#") + std::to_wstring(i + 1));
 		label_index->SetLocation(PointI(Padding, starty + row_height * i + 3));
 		AddControl(label_index);
 
@@ -67,9 +66,9 @@ EditBuild::EditBuild(OSHGui::Control* parent) : OSHGui::Panel(parent) {
 		send->SetLocation(PointI(GetWidth() - send->GetWidth() - Padding / 2,
 			starty + row_height * i));
 		send->GetClickEvent() += ClickEventHandler([this, i](Control*) {
-			wstring message = L"[";
+			std::wstring message = L"[";
 			if (show_numbers->GetChecked()) {
-				message += to_wstring(i + 1);
+				message += std::to_wstring(i + 1);
 				message += L" - ";
 			}
 			message += names[i]->GetText();
@@ -141,19 +140,19 @@ void EditBuild::SetEditedBuild(int index, Button* button) {
 	editing_index = index;
 	editing_button = button;
 
-	wstring section = wstring(L"builds") + to_wstring(index);
-	wstring key;
+	std::wstring section = std::wstring(L"builds") + std::to_wstring(index);
+	std::wstring key;
 	
 	key = L"buildname";
-	wstring buildname = Config::IniRead(section.c_str(), key.c_str(), L"");
+	std::wstring buildname = Config::IniRead(section.c_str(), key.c_str(), L"");
 	name->SetText(buildname);
 	for (int i = 0; i < N_PLAYERS; ++i) {
-		key = L"name" + to_wstring(i + 1);
-		wstring name = Config::IniRead(section.c_str(), key.c_str(), L"");
+		key = L"name" + std::to_wstring(i + 1);
+		std::wstring name = Config::IniRead(section.c_str(), key.c_str(), L"");
 		names[i]->SetText(name);
 
-		key = L"template" + to_wstring(i + 1);
-		wstring temp = Config::IniRead(section.c_str(), key.c_str(), L"");
+		key = L"template" + std::to_wstring(i + 1);
+		std::wstring temp = Config::IniRead(section.c_str(), key.c_str(), L"");
 		templates[i]->SetText(temp);
 	}
 	show_numbers->SetChecked(Config::IniReadBool(section.c_str(), L"showNumbers", true));
@@ -162,21 +161,21 @@ void EditBuild::SetEditedBuild(int index, Button* button) {
 }
 
 void EditBuild::SaveBuild() {
-	wstring section = wstring(L"builds") + to_wstring(editing_index);
-	wstring key;
+	std::wstring section = std::wstring(L"builds") + std::to_wstring(editing_index);
+	std::wstring key;
 
-	wstring s_name = name->GetText();
+	std::wstring s_name = name->GetText();
 	key = L"buildname";
 	Config::IniWrite(section.c_str(), key.c_str(), s_name.c_str());
 	editing_button->SetText(s_name);
 
 	for (int i = 0; i < N_PLAYERS; ++i) {
-		wstring s_name = names[i]->GetText();
-		key = L"name" + to_wstring(i + 1);
+		std::wstring s_name = names[i]->GetText();
+		key = L"name" + std::to_wstring(i + 1);
 		Config::IniWrite(section.c_str(), key.c_str(), s_name.c_str());
 
-		wstring s_template = templates[i]->GetText();
-		key = L"template" + to_wstring(i + 1);
+		std::wstring s_template = templates[i]->GetText();
+		key = L"template" + std::to_wstring(i + 1);
 		Config::IniWrite(section.c_str(), key.c_str(), s_template.c_str());
 	}
 

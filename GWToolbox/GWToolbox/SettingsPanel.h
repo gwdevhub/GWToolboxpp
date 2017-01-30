@@ -6,33 +6,19 @@
 
 #include "ToolboxPanel.h"
 #include "Timer.h"
-
-class BoolSetting;
+#include "Settings.h"
 
 class SettingsPanel : public ToolboxPanel {
-public:
-	enum Setting_enum : unsigned int {
-		e_OpenTabsLeft,
-		e_FreezeWidgets,
-		e_HideTargetWidgets,
-		e_MinimizeToAltPos,
-		e_AdjustOnResize,
-		e_BorderlessWindow,
-		e_SuppressMessages,
-		e_TickWithPcons,
-		e_OpenTemplateLinks,
-		e_SaveLocationData
-	};
 private:
-	bool location_active_; // true if active
+	// === location stuff ===
 	clock_t location_timer_;
 	GW::Constants::MapID location_current_map_;
 	std::ofstream location_file_;
 
-	std::vector<BoolSetting*> boolsettings;
-
 public:
-	SettingsPanel(OSHGui::Control* parent) : ToolboxPanel(parent) {}
+	SettingBool save_location_data;
+
+	SettingsPanel(OSHGui::Control* parent);
 
 	void BuildUI() override;
 
@@ -40,16 +26,7 @@ public:
 	void Main() override;
 
 	// Draw user interface. Will be called every frame if the element is visible
-	void Draw() override {}
-
-	void SetSaveLocationData(bool active) { location_active_ = active; }
+	void Draw() override;
 
 	inline void Close() { if (location_file_.is_open()) location_file_.close(); }
-
-	void ApplySettings();
-
-	BoolSetting* GetSetting(Setting_enum setting) {
-		return boolsettings[setting];
-	}
 };
-

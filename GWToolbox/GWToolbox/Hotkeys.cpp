@@ -18,7 +18,7 @@
 
 using namespace OSHGui;
 
-TBHotkey::TBHotkey(OSHGui::Control* parent, Key key, Key modifier, bool active, wstring ini_section)
+TBHotkey::TBHotkey(OSHGui::Control* parent, Key key, Key modifier, bool active, std::wstring ini_section)
 	: OSHGui::Panel(parent), active_(active), key_(key), modifier_(modifier), ini_section_(ini_section) {
 
 	pressed_ = false;
@@ -92,7 +92,7 @@ void TBHotkey::PopulateGeometry() {
 }
 
 HotkeySendChat::HotkeySendChat(OSHGui::Control* parent, Key key, Key modifier, 
-	bool active, wstring ini_section, wstring msg, wchar_t channel)
+	bool active, std::wstring ini_section, std::wstring msg, wchar_t channel)
 	: TBHotkey(parent, key, modifier, active, ini_section), msg_(msg), channel_(channel) {
 	
 	Label* label = new Label(this);
@@ -115,7 +115,7 @@ HotkeySendChat::HotkeySendChat(OSHGui::Control* parent, Key key, Key modifier,
 		wchar_t channel = this->IndexToChannel(combo->GetSelectedIndex());
 		this->set_channel(channel);
 		Config::IniWrite(ini_section.c_str(),
-			this->IniKeyChannel(), wstring(1, channel).c_str());
+			this->IniKeyChannel(), std::wstring(1, channel).c_str());
 		GWToolbox::instance().main_window().hotkey_panel().UpdateDeleteCombo();
 	});
 	controls_.push_front(combo);
@@ -126,7 +126,7 @@ HotkeySendChat::HotkeySendChat(OSHGui::Control* parent, Key key, Key modifier,
 	text_box->SetLocation(PointI(combo->GetRight() + HSPACE, ITEM_Y));
 	text_box->GetTextChangedEvent() += TextChangedEventHandler(
 		[this, text_box, ini_section](Control*) {
-		wstring text = text_box->GetText();
+		std::wstring text = text_box->GetText();
 		this->set_msg(text);
 		Config::IniWrite(ini_section.c_str(),
 			this->IniKeyMsg(), text.c_str());
@@ -170,7 +170,7 @@ wchar_t HotkeySendChat::IndexToChannel(int index) {
 }
 
 HotkeyUseItem::HotkeyUseItem(OSHGui::Control* parent, Key key, Key modifier, 
-	bool active, wstring ini_section, UINT item_id_, wstring item_name_) :
+	bool active, std::wstring ini_section, UINT item_id_, std::wstring item_name_) :
 	TBHotkey(parent, key, modifier, active, ini_section), 
 	item_id_(item_id_), 
 	item_name_(item_name_) {
@@ -187,7 +187,7 @@ HotkeyUseItem::HotkeyUseItem(OSHGui::Control* parent, Key key, Key modifier,
 
 	int width_left = WIDTH - label_id->GetRight();
 	TextBox* id_box = new TextBox(this);
-	id_box->SetText(to_wstring(item_id_));
+	id_box->SetText(std::to_wstring(item_id_));
 	id_box->SetSize(SizeI(width_left / 2 - HSPACE / 2, LINE_HEIGHT));
 	id_box->SetLocation(PointI(label_id->GetRight(), ITEM_Y));
 	id_box->GetTextChangedEvent() += TextChangedEventHandler(
@@ -220,7 +220,7 @@ HotkeyUseItem::HotkeyUseItem(OSHGui::Control* parent, Key key, Key modifier,
 	name_box->SetLocation(PointI(id_box->GetRight() + HSPACE , ITEM_Y));
 	name_box->GetTextChangedEvent() += TextChangedEventHandler(
 		[this, name_box, ini_section](Control*) {
-		wstring text = name_box->GetText();
+		std::wstring text = name_box->GetText();
 		this->set_item_name(text);
 		Config::IniWrite(ini_section.c_str(),
 			this->IniKeyItemName(), text.c_str());
@@ -236,7 +236,7 @@ HotkeyUseItem::HotkeyUseItem(OSHGui::Control* parent, Key key, Key modifier,
 }
 
 HotkeyDropUseBuff::HotkeyDropUseBuff(OSHGui::Control* parent, Key key, Key modifier, 
-	bool active, wstring ini_section, GW::Constants::SkillID id) :
+	bool active, std::wstring ini_section, GW::Constants::SkillID id) :
 	TBHotkey(parent, key, modifier, active, ini_section), id_(id) {
 
 	Label* label = new Label(this);
@@ -257,7 +257,7 @@ HotkeyDropUseBuff::HotkeyDropUseBuff(OSHGui::Control* parent, Key key, Key modif
 		combo->SetSelectedIndex(1);
 		break;
 	default:
-		combo->AddItem(to_wstring(static_cast<int>(id)));
+		combo->AddItem(std::to_wstring(static_cast<int>(id)));
 		combo->SetSelectedIndex(2);
 		break;
 	}
@@ -279,7 +279,7 @@ GW::Constants::SkillID HotkeyDropUseBuff::IndexToSkillID(int index) {
 	case 1: return GW::Constants::SkillID::Unyielding_Aura;
 	case 2: 
 		if (combo_->GetItemsCount() == 3) {
-			wstring s = combo_->GetItem(2);
+			std::wstring s = combo_->GetItem(2);
 			try {
 				int i = std::stoi(s);
 				return static_cast<GW::Constants::SkillID>(i);
@@ -294,7 +294,7 @@ GW::Constants::SkillID HotkeyDropUseBuff::IndexToSkillID(int index) {
 }
 
 HotkeyToggle::HotkeyToggle(OSHGui::Control* parent, Key key, Key modifier, 
-	bool active, wstring ini_section, long toggle_id)
+	bool active, std::wstring ini_section, long toggle_id)
 	: TBHotkey(parent, key, modifier, active, ini_section) {
 
 	target_ = static_cast<HotkeyToggle::Toggle>(toggle_id);
@@ -324,7 +324,7 @@ HotkeyToggle::HotkeyToggle(OSHGui::Control* parent, Key key, Key modifier,
 }
 
 HotkeyAction::HotkeyAction(OSHGui::Control* parent, Key key, Key modifier, 
-	bool active, wstring ini_section, long action_id)
+	bool active, std::wstring ini_section, long action_id)
 	: TBHotkey(parent, key, modifier, active, ini_section) {
 
 	action_ = static_cast<HotkeyAction::Action>(action_id);
@@ -355,7 +355,7 @@ HotkeyAction::HotkeyAction(OSHGui::Control* parent, Key key, Key modifier,
 }
 
 HotkeyTarget::HotkeyTarget(OSHGui::Control* parent, Key key, Key modifier, 
-	bool active, wstring ini_section, UINT targetID, wstring target_name)
+	bool active, std::wstring ini_section, UINT targetID, std::wstring target_name)
 	: TBHotkey(parent, key, modifier, active, ini_section), id_(targetID), name_(target_name) {
 
 	Label* label = new Label(this);
@@ -370,7 +370,7 @@ HotkeyTarget::HotkeyTarget(OSHGui::Control* parent, Key key, Key modifier,
 
 	int width_left = WIDTH - label_id->GetRight();
 	TextBox* id_box = new TextBox(this);
-	id_box->SetText(to_wstring(id_));
+	id_box->SetText(std::to_wstring(id_));
 	id_box->SetSize(SizeI(width_left / 2 - HSPACE / 2, LINE_HEIGHT));
 	id_box->SetLocation(PointI(label_id->GetRight(), ITEM_Y));
 	id_box->GetTextChangedEvent() += TextChangedEventHandler(
@@ -403,7 +403,7 @@ HotkeyTarget::HotkeyTarget(OSHGui::Control* parent, Key key, Key modifier,
 	name_box->SetLocation(PointI(id_box->GetRight() + HSPACE, ITEM_Y));
 	name_box->GetTextChangedEvent() += TextChangedEventHandler(
 		[this, name_box, ini_section](Control*) {
-		wstring text = name_box->GetText();
+		std::wstring text = name_box->GetText();
 		this->set_name(text);
 		Config::IniWrite(ini_section.c_str(),
 			this->IniKeyTargetName(), text.c_str());
@@ -419,7 +419,7 @@ HotkeyTarget::HotkeyTarget(OSHGui::Control* parent, Key key, Key modifier,
 }
 
 HotkeyMove::HotkeyMove(OSHGui::Control* parent, Key key, Key modifier, 
-	bool active, wstring ini_section, float x, float y, wstring name)
+	bool active, std::wstring ini_section, float x, float y, std::wstring name)
 	: TBHotkey(parent, key, modifier, active, ini_section), x_(x), y_(y), name_(name) {
 
 	Label* label = new Label(this);
@@ -504,7 +504,7 @@ HotkeyMove::HotkeyMove(OSHGui::Control* parent, Key key, Key modifier,
 	name_box->SetLocation(PointI(box_y->GetRight() + HSPACE, ITEM_Y));
 	name_box->GetTextChangedEvent() += TextChangedEventHandler(
 		[this, name_box, ini_section](Control*) {
-		wstring text = name_box->GetText();
+		std::wstring text = name_box->GetText();
 		this->set_name(text);
 		Config::IniWrite(ini_section.c_str(),
 			this->IniKeyName(), text.c_str());
@@ -520,7 +520,7 @@ HotkeyMove::HotkeyMove(OSHGui::Control* parent, Key key, Key modifier,
 }
 
 HotkeyDialog::HotkeyDialog(OSHGui::Control* parent, Key key, Key modifier, 
-	bool active, wstring ini_section, UINT id, wstring name)
+	bool active, std::wstring ini_section, UINT id, std::wstring name)
 	: TBHotkey(parent, key, modifier, active, ini_section), id_(id), name_(name) {
 
 	Label* label = new Label(this);
@@ -535,7 +535,7 @@ HotkeyDialog::HotkeyDialog(OSHGui::Control* parent, Key key, Key modifier,
 
 	int width_left = WIDTH - label_id->GetRight();
 	TextBox* id_box = new TextBox(this);
-	id_box->SetText(to_wstring(id_));
+	id_box->SetText(std::to_wstring(id_));
 	id_box->SetSize(SizeI(width_left / 2 - HSPACE / 2, LINE_HEIGHT));
 	id_box->SetLocation(PointI(label_id->GetRight(), ITEM_Y));
 	id_box->GetTextChangedEvent() += TextChangedEventHandler(
@@ -568,7 +568,7 @@ HotkeyDialog::HotkeyDialog(OSHGui::Control* parent, Key key, Key modifier,
 	name_box->SetLocation(PointI(id_box->GetRight() + HSPACE, ITEM_Y));
 	name_box->GetTextChangedEvent() += TextChangedEventHandler(
 		[this, name_box, ini_section](Control*) {
-		wstring text = name_box->GetText();
+		std::wstring text = name_box->GetText();
 		this->set_name(text);
 		Config::IniWrite(ini_section.c_str(),
 			this->IniKeyDialogName(), text.c_str());
@@ -584,7 +584,7 @@ HotkeyDialog::HotkeyDialog(OSHGui::Control* parent, Key key, Key modifier,
 }
 
 HotkeyPingBuild::HotkeyPingBuild(OSHGui::Control* parent, Key key, Key modifier, 
-	bool active, wstring ini_section, long index)
+	bool active, std::wstring ini_section, long index)
 	: TBHotkey(parent, key, modifier, active, ini_section), index_(index) {
 	
 	Label* label = new Label(this);
@@ -597,9 +597,9 @@ HotkeyPingBuild::HotkeyPingBuild(OSHGui::Control* parent, Key key, Key modifier,
 	combo->SetLocation(PointI(label->GetRight() + HSPACE, ITEM_Y));
 	for (int i = 0; i < BuildPanel::N_BUILDS; ++i) {
 		int index = i + 1;
-		wstring section = wstring(L"builds") + to_wstring(index);
-		wstring name = Config::IniRead(section.c_str(), L"buildname", L"");
-		if (name.empty()) name = wstring(L"<Build ") + to_wstring(index);
+		std::wstring section = std::wstring(L"builds") + std::to_wstring(index);
+		std::wstring name = Config::IniRead(section.c_str(), L"buildname", L"");
+		if (name.empty()) name = std::wstring(L"<Build ") + std::to_wstring(index);
 		combo->AddItem(name);
 	}
 	combo->SetSelectedIndex(index);
@@ -618,7 +618,7 @@ void HotkeyUseItem::exec() {
 	if (!isExplorable()) return;
 	if (item_id_ <= 0) return;
 	if (!GW::Items().UseItemByModelId(item_id_)) {
-		wstring name = item_name_.empty() ? to_wstring(item_id_) : item_name_;
+		std::wstring name = item_name_.empty() ? std::to_wstring(item_id_) : item_name_;
 		ChatLogger::LogF(L"[Warning] %ls not found!", name.c_str());
 	}
 }
@@ -753,81 +753,81 @@ void HotkeyPingBuild::exec() {
 	}
 }
 
-wstring HotkeySendChat::GetDescription() {
-	return wstring(L"Send ") + channel_ + msg_;
+std::wstring HotkeySendChat::GetDescription() {
+	return std::wstring(L"Send ") + channel_ + msg_;
 }
 
-wstring HotkeyUseItem::GetDescription() {
+std::wstring HotkeyUseItem::GetDescription() {
 	if (item_name_.empty()) {
-		return wstring(L"Use Item #") + to_wstring(item_id_);
+		return std::wstring(L"Use Item #") + std::to_wstring(item_id_);
 	} else {
-		return wstring(L"Use ") + item_name_;
+		return std::wstring(L"Use ") + item_name_;
 	}
 }
 
-wstring HotkeyDropUseBuff::GetDescription() {
+std::wstring HotkeyDropUseBuff::GetDescription() {
 	switch (id_) {
 	case GW::Constants::SkillID::Recall:
-		return wstring(L"Drop/Use Recall");
+		return std::wstring(L"Drop/Use Recall");
 	case GW::Constants::SkillID::Unyielding_Aura:
-		return wstring(L"Drop/Use UA");
+		return std::wstring(L"Drop/Use UA");
 	default:
-		return wstring(L"Drop/Use Skill #") + to_wstring(static_cast<long>(id_));
+		return std::wstring(L"Drop/Use Skill #") + std::to_wstring(static_cast<long>(id_));
 	}
 }
 
-wstring HotkeyToggle::GetDescription() {
+std::wstring HotkeyToggle::GetDescription() {
 	switch (target_) {
 	case HotkeyToggle::Clicker:
-		return wstring(L"Toggle Clicker");
+		return std::wstring(L"Toggle Clicker");
 	case HotkeyToggle::Pcons:
-		return wstring(L"Toggle Pcons");
+		return std::wstring(L"Toggle Pcons");
 	case HotkeyToggle::CoinDrop:
-		return wstring(L"Toggle Coin Drop");
+		return std::wstring(L"Toggle Coin Drop");
 	default:
-		return wstring(L"error :(");
+		return std::wstring(L"error :(");
 	}
 }
 
-wstring HotkeyAction::GetDescription() {
+std::wstring HotkeyAction::GetDescription() {
 	switch (action_) {
 	case HotkeyAction::OpenXunlaiChest:
-		return wstring(L"Open Xunlai Chest");
+		return std::wstring(L"Open Xunlai Chest");
 	case HotkeyAction::OpenLockedChest:
-		return wstring(L"Open Locked Chest");
+		return std::wstring(L"Open Locked Chest");
 	case HotkeyAction::DropGoldCoin:
-		return wstring(L"Drop Gold Coin");
+		return std::wstring(L"Drop Gold Coin");
 	case HotkeyAction::ReapplyLBTitle:
-		return wstring(L"Reapply LB Title");
+		return std::wstring(L"Reapply LB Title");
 	default:
-		return wstring(L"<Action Hotkey>");
+		return std::wstring(L"<Action Hotkey>");
 	}
 }
 
-wstring HotkeyTarget::GetDescription() {
+std::wstring HotkeyTarget::GetDescription() {
 	if (name_.empty()) {
-		return wstring(L"Target ") + to_wstring(id_);
+		return std::wstring(L"Target ") + std::to_wstring(id_);
 	} else {
-		return wstring(L"Target ") + name_;
+		return std::wstring(L"Target ") + name_;
 	}
 }
 
-wstring HotkeyMove::GetDescription() {
+std::wstring HotkeyMove::GetDescription() {
 	if (name_.empty()) {
-		return wstring(L"Move (") + to_wstring(lroundf(x_)) + L", " + to_wstring(lroundf(y_)) + L")";
+		return std::wstring(L"Move (") + std::to_wstring(lroundf(x_)) + L", " + std::to_wstring(lroundf(y_)) + L")";
 	} else {
-		return wstring(L"Move ") + name_;
+		return std::wstring(L"Move ") + name_;
 	}
 }
 
-wstring HotkeyDialog::GetDescription() {
+std::wstring HotkeyDialog::GetDescription() {
 	if (name_.empty()) {
-		return wstring(L"Dialog ") + to_wstring(id_);
+		return std::wstring(L"Dialog ") + std::to_wstring(id_);
 	} else {
-		return wstring(L"Dialog ") + name_;
+		return std::wstring(L"Dialog ") + name_;
 	}
 }
 
-wstring HotkeyPingBuild::GetDescription() {
-	return wstring(L"Ping Build #") + to_wstring(index_);
+std::wstring HotkeyPingBuild::GetDescription() {
+	return std::wstring(L"Ping Build #") + std::to_wstring(index_);
 }

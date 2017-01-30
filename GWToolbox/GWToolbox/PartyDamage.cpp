@@ -284,7 +284,7 @@ void PartyDamage::Draw() {
 		} else if (damage[i].damage < 1000 * 1000) {
 			swprintf_s(buff, BUF_SIZE, L"%.1f k", (float)damage[i].damage / 1000);
 		} else {
-			swprintf_s(buff, BUF_SIZE, L"%.1f mil", (float)damage[i].damage / 1000000);
+			swprintf_s(buff, BUF_SIZE, L"%.2f m", (float)damage[i].damage / 1000000);
 		}
 		absolute[i]->SetText(buff);
 
@@ -335,7 +335,7 @@ float PartyDamage::GetPartOfTotal(long dmg) const {
 }
 
 void PartyDamage::WritePartyDamage() {
-	vector<size_t> idx(MAX_PLAYERS);
+	std::vector<size_t> idx(MAX_PLAYERS);
 	for (size_t i = 0; i < MAX_PLAYERS; ++i) idx[i] = i;
 	sort(idx.begin(), idx.end(), [this](size_t i1, size_t i2) {
 		return damage[i1].damage > damage[i2].damage;
@@ -433,7 +433,7 @@ void PartyDamage::LoadIni() {
 
 void PartyDamage::SaveIni() {
 	for (const std::pair<DWORD, long>& item : hp_map) {
-		wstring key = std::to_wstring(item.first);
+		std::wstring key = std::to_wstring(item.first);
 		inifile_->SetLongValue(inisection, key.c_str(), item.second, 0, false, true);
 	}
 	inifile_->SaveFile(GuiUtils::getPath(inifilename).c_str());
