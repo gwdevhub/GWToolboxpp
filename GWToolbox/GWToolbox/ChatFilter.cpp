@@ -132,6 +132,7 @@ bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) const {
 	case 0x7F6: // player x picks up item y (note: item can be unassigned gold)
 	case 0x816: // you gain a skill point
 	case 0x817: // player x gained a skill point
+	case 0x87C: // 'no one hears you...'
 		return true;
 
 		// ==== Monster drops: ignored unless gold/ecto for player ====

@@ -6,4 +6,4 @@
 	url = https://github.com/GregLando113/GWCA.git
 [submodule "Dependencies/GWCA_DX"]
 	path = Dependencies/GWCA_DX
-	url = git@bitbucket.org:0x4D1/gwca_dx.git
+	url = https://ggori@bitbucket.org/0x4D1/gwca_dx.git
