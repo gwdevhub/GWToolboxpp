@@ -111,6 +111,7 @@ bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) const {
 		//}
 		//printf("\n");
 		//return false;
+		break;
 	}
 
 	case 0x777: // I'm level x and x% of the way earning my next skill point	(author is not part of the message)
@@ -158,8 +159,8 @@ bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) const {
 		case 0x186B: return true; // you win 25 festival tickets
 		case 0x186C: return true; // you win 15 festival tickets
 		case 0x186D: return true; // did not win 9rings
-		default: return false;
 		}
+		break;
 
 	case 0x8102:
 		switch (pak->message[1]) {
@@ -170,14 +171,32 @@ bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) const {
 		case 0x223B: // a party won hall of heroes
 		case 0x23E4: // 0xF8AA 0x95CD 0x2766 // the world no longer has the favor of the gods
 		case 0x3772: // I'm under the effect of x
-		default:
 			return false;
 		}
+		break;
 
-	default:
+	//default:
 		//for (size_t i = 0; pak->message[i] != 0; ++i) printf(" 0x%X", pak->message[i]);
 		//printf("\n");
-		return false;
+		//return false;
 	}
+
+	// full match
+	auto Match = [&pak](const std::initializer_list<wchar_t>& msg) -> bool {
+		int i = 0;
+		for (wchar_t b : msg) {
+			if (pak->message[i++] != b) return false;
+		}
+		return true;
+	};
+
+	if (Match({ 0x8101, 0x6649, 0xA2F9, 0xBBFA, 0x3C27 })) return true; // you will celebrate a festive new year (rocket or popper)
+	if (Match({ 0x8101, 0x664B, 0xDBAB, 0x9F4C, 0x6742 })) return true; // something special is in your future! (lucky aura)
+	if (Match({ 0x8101, 0x6648, 0xB765, 0xBC0D, 0x1F73 })) return true; // you will have a prosperous new year! (gain 100 gold)
+	if (Match({ 0x7CC, 0x962D, 0xFEB5, 0x1D08, 0x10A, 0xAC2, 0x101, 0x164, 0x1 })) return true; // you receive 100 gold
+	if (Match({ 0x8101, 0x664C, 0xD634, 0x91F8, 0x76EF })) return true; // your new year will be a blessed one (lunar blessing)
+	if (Match({ 0x8101, 0x664A, 0xEFB8, 0xDE25, 0x363 })) return true; // You will find bad luck in this new year... or bad luck will find you
+
+	return false;
 }
 

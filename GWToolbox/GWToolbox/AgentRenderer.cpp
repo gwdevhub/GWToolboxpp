@@ -125,10 +125,10 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 	GW::NPCArray npcs = GW::Agents().GetNPCArray();
 	if (!npcs.valid()) return;
 
-	DWORD player_id = GW::Agents().GetPlayerId();
-	DWORD target_id = GW::Agents().GetTargetId();
+	GW::Agent* player = GW::Agents().GetPlayer();
+	GW::Agent* target = GW::Agents().GetTarget();
 
-	// eoes
+	// 1. eoes
 	for (size_t i = 0; i < agents.size(); ++i) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
@@ -144,7 +144,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 			break;
 		}
 	}
-	// non-player agents
+	// 2. non-player agents
 	for (size_t i = 0; i < agents.size(); ++i) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
@@ -154,30 +154,39 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 			&& agent->IsNPC()
 			&& agent->PlayerNumber < npcs.size()
 			&& (npcs[agent->PlayerNumber].npcflags & 0x10000) > 0) continue;
-		if (agent->Id == target_id) continue; // will draw target at the end
+		if (target == agent) continue; // will draw target at the end
 
 		Enqueue(agent);
 
 		if (vertices_count >= vertices_max - 16 * max_shape_verts) break;
 	}
-	// players
+	// 3. target if it's a non-player
+	if (target && target->PlayerNumber > 12) {
+		Enqueue(target);
+	}
+
+	// 4. players
 	for (size_t i = 0; i < agents.size(); ++i) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
 		if (agent->PlayerNumber > 12) continue;
-		if (agent->Id == target_id) continue; // will draw player at the end
-		if (agent->Id == target_id) continue; // will draw target at the end
+		if (agent == player) continue; // will draw player at the end
+		if (agent == target) continue; // will draw target at the end
 
 		Enqueue(agent);
 
 		if (vertices_count >= vertices_max - 4 * max_shape_verts) break;
 	}
 
-	GW::Agent* target = agents[target_id];
-	if (target != nullptr) Enqueue(target);
+	// 5. target if it's a player
+	if (target && target != player && target->PlayerNumber <= 12) {
+		Enqueue(target);
+	}
 
-	GW::Agent* player = agents[player_id];
-	if (player != nullptr && player->Id != target_id) Enqueue(player);
+	// 6. player
+	if (player) {
+		Enqueue(player);
+	}
 
 	buffer_->Unlock();
 

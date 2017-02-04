@@ -242,7 +242,8 @@ bool PconLunar::checkAndUse() {
 				|| GW::Items().UseItemByModelId(ItemID::LunarRabbit)
 				|| GW::Items().UseItemByModelId(ItemID::LunarSheep)
 				|| GW::Items().UseItemByModelId(ItemID::LunarSnake)
-				|| GW::Items().UseItemByModelId(ItemID::LunarMonkey);
+				|| GW::Items().UseItemByModelId(ItemID::LunarMonkey)
+				|| GW::Items().UseItemByModelId(ItemID::LunarRooster);
 			if (used) {
 				this->timer = TBTimer::init();
 				this->update_timer = TBTimer::init();
@@ -383,7 +384,8 @@ void PconLunar::scanInventory() {
 							|| items[i]->ModelId == ItemID::LunarRabbit
 							|| items[i]->ModelId == ItemID::LunarSheep
 							|| items[i]->ModelId == ItemID::LunarSnake
-							|| items[i]->ModelId == ItemID::LunarMonkey) {
+							|| items[i]->ModelId == ItemID::LunarMonkey
+							|| items[i]->ModelId == ItemID::LunarRooster) {
 
 							quantity += items[i]->Quantity;
 						}
