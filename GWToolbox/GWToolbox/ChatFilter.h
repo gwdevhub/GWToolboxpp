@@ -1,5 +1,7 @@
 #pragma once
 
+#include <initializer_list>
+
 #include <GWCA\Packets\StoC.h>
 
 class ChatFilter {
@@ -11,7 +13,9 @@ public:
 private:
 	const wchar_t* Get1stSegment(GW::Packet::StoC::P081* pak) const;
 	const wchar_t* Get2ndSegment(GW::Packet::StoC::P081* pak) const;
-	
+	bool FullMatch(GW::Packet::StoC::P081* pak, 
+		const std::initializer_list<wchar_t>& msg) const;
+
 
 	DWORD GetNumericSegment(GW::Packet::StoC::P081* pak) const;
 	bool ShouldIgnoreByAgentThatDropped(const wchar_t* agent_segment) const;

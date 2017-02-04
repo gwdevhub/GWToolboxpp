@@ -181,22 +181,20 @@ bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) const {
 		//return false;
 	}
 
-	// full match
-	auto Match = [&pak](const std::initializer_list<wchar_t>& msg) -> bool {
-		int i = 0;
-		for (wchar_t b : msg) {
-			if (pak->message[i++] != b) return false;
-		}
-		return true;
-	};
-
-	if (Match({ 0x8101, 0x6649, 0xA2F9, 0xBBFA, 0x3C27 })) return true; // you will celebrate a festive new year (rocket or popper)
-	if (Match({ 0x8101, 0x664B, 0xDBAB, 0x9F4C, 0x6742 })) return true; // something special is in your future! (lucky aura)
-	if (Match({ 0x8101, 0x6648, 0xB765, 0xBC0D, 0x1F73 })) return true; // you will have a prosperous new year! (gain 100 gold)
-	if (Match({ 0x7CC, 0x962D, 0xFEB5, 0x1D08, 0x10A, 0xAC2, 0x101, 0x164, 0x1 })) return true; // you receive 100 gold
-	if (Match({ 0x8101, 0x664C, 0xD634, 0x91F8, 0x76EF })) return true; // your new year will be a blessed one (lunar blessing)
-	if (Match({ 0x8101, 0x664A, 0xEFB8, 0xDE25, 0x363 })) return true; // You will find bad luck in this new year... or bad luck will find you
+	if (FullMatch(pak, { 0x8101, 0x6649, 0xA2F9, 0xBBFA, 0x3C27 })) return true; // you will celebrate a festive new year (rocket or popper)
+	if (FullMatch(pak, { 0x8101, 0x664B, 0xDBAB, 0x9F4C, 0x6742 })) return true; // something special is in your future! (lucky aura)
+	if (FullMatch(pak, { 0x8101, 0x6648, 0xB765, 0xBC0D, 0x1F73 })) return true; // you will have a prosperous new year! (gain 100 gold)
+	if (FullMatch(pak, { 0x7CC, 0x962D, 0xFEB5, 0x1D08, 0x10A, 0xAC2, 0x101, 0x164, 0x1 })) return true; // you receive 100 gold
+	if (FullMatch(pak, { 0x8101, 0x664C, 0xD634, 0x91F8, 0x76EF })) return true; // your new year will be a blessed one (lunar blessing)
+	if (FullMatch(pak, { 0x8101, 0x664A, 0xEFB8, 0xDE25, 0x363 })) return true; // You will find bad luck in this new year... or bad luck will find you
 
 	return false;
 }
 
+bool ChatFilter::FullMatch(GW::Packet::StoC::P081* pak, const std::initializer_list<wchar_t>& msg) const {
+	int i = 0;
+	for (wchar_t b : msg) {
+		if (pak->message[i++] != b) return false;
+	}
+	return true;
+}
