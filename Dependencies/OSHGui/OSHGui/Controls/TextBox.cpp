@@ -232,22 +232,22 @@ namespace OSHGui {
 			if (keycode == Key::X || keycode == Key::C || keycode == Key::V) {
 				if (OpenClipboard(nullptr)) {
 					Misc::UnicodeString text = GetText();
-					wchar_t * buffer;
+					char* buffer;
 					switch (keyboard.GetKeyCode()) {
 					case Key::X:
-						SetText(L"");
+						SetText("");
 						// fall through
 					case Key::C: {
 						EmptyClipboard();
 						HGLOBAL clip_buffer = GlobalAlloc(GMEM_DDESHARE, (text.size() + 1) * sizeof(wchar_t));
-						buffer = (wchar_t*)GlobalLock(clip_buffer);
-						wcscpy_s(buffer, text.size() + 1, text.c_str());
+						buffer = (char*)GlobalLock(clip_buffer);
+						strcpy_s(buffer, text.size() + 1, text.c_str());
 						GlobalUnlock(clip_buffer);
 						SetClipboardData(CF_UNICODETEXT, clip_buffer);
 						break;
 					}
 					case Key::V:
-						buffer = (wchar_t*)GetClipboardData(CF_UNICODETEXT);
+						buffer = (char*)GetClipboardData(CF_UNICODETEXT);
 						SetText(buffer);
 						break;
 					}

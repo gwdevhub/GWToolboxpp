@@ -7,21 +7,13 @@
 
 #include <imgui.h>
 
-ChatFilter::ChatFilter() : 
-	ally_common_drops(false, IniSection(), L"hide_ally_common_drops", "common drops for allies"),
-	self_common_drops(false, IniSection(), L"hide_self_common_drops", "common drops for you"),
-	ally_rare_drops(false, IniSection(), L"hide_ally_rare_drops", "rare drops for allies"),
-	self_rare_drops(false, IniSection(), L"hide_self_rare_drops", "rare drops for you"),
-	skill_point(false, IniSection(), L"hide_skillpoints", "earning skill points"),
-	pvp_messages(false, IniSection(), L"hide_pvp_messages", "pvp messages", "Such as 'A skill was updated for pvp!'"),
-	hoh(false, IniSection(), L"hide_hoh", "Hall of Heroes winners"),
-	favor(false, IniSection(), L"hide_favor", "Divine favor announcements"),
-	shingjeabroadwalk(false, IniSection(), L"hide_shingjeabroadwalk", "Shing Jea Broadwalk messages"),
-	noonehearsyou(false, IniSection(), L"hide_noonehearsyou", "'No one hears you'"),
-	messagebycontent(false, IniSection(), L"hide_by_content", "Hide any messages containing:") {
+ChatFilter::ChatFilter() {
 
 	suppress_next_message = false;
 	suppress_next_p081 = false;
+
+	strcpy_s(bycontent_buf, "");
+	strcpy_s(byauthor_buf, "");
 
 	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P081>([&](GW::Packet::StoC::P081* pak) -> bool {
 		//if (pak->message[0] != 0x108) {
@@ -36,16 +28,16 @@ ChatFilter::ChatFilter() :
 		//printf("\n");
 		//}
 		// if ANY is active
-		if ((ally_common_drops.value
-			|| self_common_drops.value
-			|| ally_rare_drops.value
-			|| self_rare_drops.value
-			|| skill_point.value
-			|| pvp_messages.value
-			|| hoh.value
-			|| favor.value
-			|| shingjeabroadwalk.value
-			|| messagebycontent.value) 
+		if ((ally_common_drops
+			|| self_common_drops
+			|| ally_rare_drops
+			|| self_rare_drops
+			|| skill_points
+			|| pvp_messages
+			|| hoh
+			|| favor
+			|| ninerings
+			|| messagebycontent) 
 			&& ShouldIgnore(pak)) {
 			suppress_next_message = true;
 			return true;
@@ -131,8 +123,17 @@ bool ChatFilter::ShouldIgnoreItem(const wchar_t* item_segment) const {
 	return true;
 }
 
+bool ChatFilter::FullMatch(GW::Packet::StoC::P081* pak, const std::initializer_list<wchar_t>& msg) const {
+	int i = 0;
+	for (wchar_t b : msg) {
+		if (pak->message[i++] != b) return false;
+	}
+	return true;
+}
+
+
 bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) {
-	if (messagebycontent.value && ((pak->message[0] == 0x108)
+	if (messagebycontent && ((pak->message[0] == 0x108)
 		|| (pak->message[0] == 0x8102 && pak->message[1] == 0xEFE))) {
 
 		wchar_t* start = &pak->message[1];
@@ -162,7 +163,7 @@ bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) {
 			return true;
 		}
 
-		for (std::string s : filter_words) {
+		for (std::string s : bycontent_words) {
 			if (text.find(s) != std::string::npos) {
 				printf(" ...blocked ('%s')\n", s.c_str());
 				if (!found_end) suppress_next_p081 = true;
@@ -176,7 +177,20 @@ bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) {
 	switch (pak->message[0]) {
 		// ==== Messages not ignored ====
 	case 0x108: { // player message
-		// already handled
+		//for (size_t i = 0; pak->message[i] != 0; ++i) {
+		//	if (pak->message[i] == 0x108) {
+		//		printf("|");
+		//	} else if (pak->message[i] == 0x107) {
+		//		printf(">");
+		//	} else if (pak->message[i] == 0x1) {
+		//		printf("<");
+		//	} else {
+		//		printf("%lc", pak->message[i]);
+		//	}
+		//}
+		//printf("\n");
+		//return false;
+		break;
 	}
 
 	case 0x777: // I'm level x and x% of the way earning my next skill point	(author is not part of the message)
@@ -195,23 +209,23 @@ bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) {
 		// ==== Ignored Messages ====
 	case 0x7E0: // party shares gold
 	case 0x7DF: // party shares gold ?
-		return self_common_drops.value;
+		return self_common_drops;
 	case 0x7F6: // player x picks up item y (note: item can be unassigned gold)
-		return ally_common_drops.value;
+		return ally_common_drops;
 	case 0x816: // you gain a skill point
-		return skill_point.value;
+		return skill_points;
 	case 0x817: // player x gained a skill point
-		return skill_point.value;
+		return skill_points;
 	case 0x87C: // 'no one hears you... '
-		return noonehearsyou.value;
+		return noonehearsyou;
 
 		// ==== Monster drops: ignored unless gold/ecto for player ====
 	case 0x7F0: { // monster/player x drops item y (no assignment)
 				  // first segment describes the agent who dropped
 		if (!ShouldIgnoreByAgentThatDropped(Get1stSegment(pak))) return false;
 		bool rare = ShouldIgnoreItem(Get2ndSegment(pak));
-		if (rare) return self_rare_drops.value;
-		else return self_common_drops.value;
+		if (rare) return self_rare_drops;
+		else return self_common_drops;
 		//return ShouldIgnoreByAgentThatDropped(Get1stSegment(pak)) && ShouldIgnoreItem(Get2ndSegment(pak));
 	}
 	case 0x7F1: { // monster x drops item y, your party assigns to player z
@@ -221,10 +235,10 @@ bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) {
 		GW::Agent* me = GW::Agents().GetPlayer();
 		bool forplayer = (me && me->PlayerNumber == GetNumericSegment(pak));
 		bool rare = ShouldIgnoreItem(Get2ndSegment(pak));
-		if (forplayer && rare) return self_rare_drops.value;
-		if (forplayer && !rare) return self_common_drops.value;
-		if (!forplayer && rare) return ally_rare_drops.value;
-		if (!forplayer && !rare) return ally_common_drops.value;
+		if (forplayer && rare) return self_rare_drops;
+		if (forplayer && !rare) return self_common_drops;
+		if (!forplayer && rare) return ally_rare_drops;
+		if (!forplayer && !rare) return ally_common_drops;
 		//if (me && me->PlayerNumber != GetNumericSegment(pak)) return true;	// ignore drops not for the player
 		//return ShouldIgnoreItem(Get2ndSegment(pak));
 		return false;
@@ -239,77 +253,143 @@ bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) {
 		case 0x186B: // you win 25 festival tickets
 		case 0x186C: // you win 15 festival tickets
 		case 0x186D: // did not win 9rings
-			return shingjeabroadwalk.value;
-		default: return false;
+			return ninerings;
 		}
+		if (FullMatch(pak, { 0x8101, 0x6649, 0xA2F9, 0xBBFA, 0x3C27 })) return lunars; // you will celebrate a festive new year (rocket or popper)
+		if (FullMatch(pak, { 0x8101, 0x664B, 0xDBAB, 0x9F4C, 0x6742 })) return lunars; // something special is in your future! (lucky aura)
+		if (FullMatch(pak, { 0x8101, 0x6648, 0xB765, 0xBC0D, 0x1F73 })) return lunars; // you will have a prosperous new year! (gain 100 gold)
+		if (FullMatch(pak, { 0x8101, 0x664C, 0xD634, 0x91F8, 0x76EF })) return lunars; // your new year will be a blessed one (lunar blessing)
+		if (FullMatch(pak, { 0x8101, 0x664A, 0xEFB8, 0xDE25, 0x363 })) return lunars; // You will find bad luck in this new year... or bad luck will find you
+		break;
 
 	case 0x8102:
 		switch (pak->message[1]) {
 		// 0xEFE is a player message
 		case 0x4650: // skill has been updated for pvp
 		case 0x4651: // a hero skill has been updated for pvp
-			return pvp_messages.value;
+			return pvp_messages;
 		case 0x223B: // a party won hall of heroes
-			return hoh.value;
+			return hoh;
 		case 0x23E4: // 0xF8AA 0x95CD 0x2766 // the world no longer has the favor of the gods
-			return favor.value;
+			return favor;
 		case 0x3772: // I'm under the effect of x
-		default:
 			return false;
 		}
+		break;
 
-	default:
+	//default:
 		//for (size_t i = 0; pak->message[i] != 0; ++i) printf(" 0x%X", pak->message[i]);
 		//printf("\n");
-		return false;
+		//return false;
 	}
+
+	if (FullMatch(pak, { 0x7CC, 0x962D, 0xFEB5, 0x1D08, 0x10A, 0xAC2, 0x101, 0x164, 0x1 })) return lunars; // you receive 100 gold
+
+	return false;
 }
 
 void ChatFilter::DrawSettings() {
 	ImGui::Text("Hide the following messages:");
-	ally_common_drops.Draw();
-	self_common_drops.Draw();
-	ally_rare_drops.Draw();
-	self_rare_drops.Draw();
-	skill_point.Draw();
-	pvp_messages.Draw();
-	hoh.Draw();
-	favor.Draw();
-	shingjeabroadwalk.Draw();
-	noonehearsyou.Draw();
+	ImGui::Checkbox("Common drops for you", &self_common_drops);
+	ImGui::Checkbox("Common drops for allies", &ally_common_drops);
+	ImGui::Checkbox("Rare drops for you", &self_rare_drops);
+	ImGui::Checkbox("Rare drops for allies", &ally_rare_drops);
+	ImGui::Checkbox("Earning skill points", &skill_points);
+	ImGui::Checkbox("PvP messages", &pvp_messages);
+	GuiUtils::ShowHelp("Such as 'A skill was updated for pvp!'");
+	ImGui::Checkbox("Hall of Heroes winners", &hoh);
+	ImGui::Checkbox("Divine Favor announcements", &favor);
+	ImGui::Checkbox("9 Rings messages", &ninerings);
+	ImGui::Checkbox("'No one hears you...'", &noonehearsyou);
+	ImGui::Checkbox("Lunar fortunes messages", &lunars);
+	ImGui::Checkbox("Player x might not reply...", &playeraway);
 
 	ImGui::Separator();
-	messagebycontent.Draw();
+	ImGui::Checkbox("Hide any messages containing:", &messagebycontent);
 	ImGui::Indent();
 	ImGui::TextDisabled("(Separated by comma)");
-	const int buf_size = 1024 * 16;
-	static char buf[buf_size];
-	if (ImGui::InputTextMultiline("##filter", buf, buf_size, ImVec2(-1.0f, 0.0f))) {
-		filter_words.clear();
-		std::string text(buf);
-		char separator = ',';
-		size_t pos = text.find(separator);
-		size_t initialpos = 0;
-
-		while (pos != std::string::npos) {
-			std::string s = text.substr(initialpos, pos - initialpos);
-			if (!s.empty()) {
-				std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-				filter_words.insert(s);
-			}
-			initialpos = pos + 1;
-			pos = text.find(separator, initialpos);
-		}
-		std::string s = text.substr(initialpos, std::min(pos, text.size() - initialpos));
-		if (!s.empty()) {
-			std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-			filter_words.insert(s);
-		}
-
-		printf("filter words are:\n");
-		for (std::string s : filter_words) {
-			printf("%s\n", s.c_str());
-		}
+	if (ImGui::InputTextMultiline("##filter", bycontent_buf, FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0f))) {
+		ByContent_ParseBuf();
 	}
 	ImGui::Unindent();
+
+	ImGui::Separator();
+	ImGui::Checkbox("Hide any messages from: ", &messagebyauthor);
+	ImGui::Indent();
+	ImGui::TextDisabled("(Separated by comma)");
+	if (ImGui::InputTextMultiline("##byauthorfilter", byauthor_buf, FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0f))) {
+		ByAuthor_ParseBuf();
+	}
+	ImGui::Unindent();
+}
+
+void ChatFilter::ParseBuffer(const char* buf, std::set<std::string>& words) {
+	words.clear();
+	std::string text(buf);
+	char separator = ',';
+	size_t pos = text.find(separator);
+	size_t initialpos = 0;
+
+	while (pos != std::string::npos) {
+		std::string s = text.substr(initialpos, pos - initialpos);
+		if (!s.empty()) {
+			std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+			words.insert(s);
+		}
+		initialpos = pos + 1;
+		pos = text.find(separator, initialpos);
+	}
+	std::string s = text.substr(initialpos, std::min(pos, text.size() - initialpos));
+	if (!s.empty()) {
+		std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+		words.insert(s);
+	}
+
+	printf("filter words are:\n");
+	for (std::string s : words) {
+		printf("%s\n", s.c_str());
+	}
+}
+
+
+void ChatFilter::LoadSettings(CSimpleIni* ini) {
+	self_common_drops = ini->GetBoolValue(Name(), "self_common_drops", false);
+	ally_common_drops = ini->GetBoolValue(Name(), "ally_common_drops", false);
+	self_rare_drops = ini->GetBoolValue(Name(), "self_rare_drops", false);
+	ally_rare_drops = ini->GetBoolValue(Name(), "ally_rare_drops", false);
+	skill_points = ini->GetBoolValue(Name(), "skill_points", false);
+	pvp_messages = ini->GetBoolValue(Name(), "pvp_messages", true);
+	hoh = ini->GetBoolValue(Name(), "hoh_messages", false);
+	favor = ini->GetBoolValue(Name(), "favor", false);
+	ninerings = ini->GetBoolValue(Name(), "ninerings", true);
+	noonehearsyou = ini->GetBoolValue(Name(), "noonehearsyou", true);
+	lunars = ini->GetBoolValue(Name(), "lunars", true);
+	playeraway = ini->GetBoolValue(Name(), "playeraway", false);
+
+	messagebycontent = ini->GetBoolValue(Name(), "messagebycontent", false);
+	strcpy_s(bycontent_buf, ini->GetValue(Name(), "bycontentwords", ""));
+	ByContent_ParseBuf();
+
+	messagebyauthor = ini->GetBoolValue(Name(), "messagebyauthor", false);
+	strcpy_s(byauthor_buf, ini->GetValue(Name(), "byauthorwords", ""));
+	ByAuthor_ParseBuf();
+}
+
+void ChatFilter::SaveSettings(CSimpleIni* ini) {
+	ini->SetBoolValue(Name(), "self_common_drops", self_common_drops);
+	ini->SetBoolValue(Name(), "ally_common_drops", ally_common_drops);
+	ini->SetBoolValue(Name(), "self_rare_drops", self_rare_drops);
+	ini->SetBoolValue(Name(), "ally_rare_drops", ally_rare_drops);
+	ini->SetBoolValue(Name(), "skill_points", skill_points);
+	ini->SetBoolValue(Name(), "pvp_messages", pvp_messages);
+	ini->SetBoolValue(Name(), "hoh_messages", hoh);
+	ini->SetBoolValue(Name(), "favor", favor);
+	ini->SetBoolValue(Name(), "ninerings", ninerings);
+	ini->SetBoolValue(Name(), "noonehearsyou", noonehearsyou);
+	ini->SetBoolValue(Name(), "lunars", lunars);
+	ini->SetBoolValue(Name(), "playeraway", playeraway);
+	ini->SetBoolValue(Name(), "messagebycontent", messagebycontent);
+	ini->SetBoolValue(Name(), "messagebyauthor", messagebyauthor);
+	ini->SetValue(Name(), "bycontentwords", bycontent_buf);
+	ini->SetValue(Name(), "byauthorwords", "");
 }

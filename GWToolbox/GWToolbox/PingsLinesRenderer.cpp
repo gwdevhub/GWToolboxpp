@@ -14,7 +14,7 @@ PingsLinesRenderer::PingsLinesRenderer() :
 	vertices(nullptr),
 	visible_(false) {
 
-	color_drawings = MinimapUtils::IniReadColor(L"color_drawings", L"0x00FFFFFF");
+	color_drawings = MinimapUtils::IniReadColor("color_drawings", "0x00FFFFFF");
 
 	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P133>(
 		[&](GW::Packet::StoC::P133* pak) -> bool {
@@ -182,7 +182,7 @@ void PingsLinesRenderer::PingCircle::Initialize(IDirect3DDevice9* device) {
 	vertex_count = count_ + 2;
 	vertices = nullptr;
 
-	DWORD color = MinimapUtils::IniReadColor(L"color_pings", L"0x00FF0000");
+	DWORD color = MinimapUtils::IniReadColor("color_pings", "0x00FF0000");
 
 
 	if (buffer_) buffer_->Release();

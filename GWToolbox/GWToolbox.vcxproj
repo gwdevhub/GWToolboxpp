@@ -22,14 +22,14 @@
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v120</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v120</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -119,6 +119,7 @@
     <ClInclude Include="GWToolbox\RangeRenderer.h" />
     <ClInclude Include="GWToolbox\SettingManager.h" />
     <ClInclude Include="GWToolbox\SymbolsRenderer.h" />
+    <ClInclude Include="GWToolbox\ToolboxModule.h" />
     <ClInclude Include="GWToolbox\VBuffer.h" />
     <ClInclude Include="GWToolbox\Settings.h" />
     <ClInclude Include="GWToolbox\ToolboxWindow.h" />

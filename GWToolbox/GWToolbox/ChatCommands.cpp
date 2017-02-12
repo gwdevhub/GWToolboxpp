@@ -25,9 +25,7 @@ ChatCommands::ChatCommands() {
 
 	skill_to_use = 0;
 	skill_usage_delay = 1.0f;
-	skill_timer = TBTimer::init();
-
-	chat_filter_ = new ChatFilter();
+	skill_timer = clock();
 
 	GW::Chat().RegisterCommand(L"age2", ChatCommands::CmdAge2);
 	GW::Chat().RegisterCommand(L"pcons", ChatCommands::CmdPcons);
@@ -90,7 +88,7 @@ bool ChatCommands::ProcessMessage(LPMSG msg) {
 	return false;
 }
 
-void ChatCommands::Main() {
+void ChatCommands::Update() {
 	GW::CameraMgr cam = GW::Cameramgr();
 	if (cam.GetCameraUnlock() && !IsTyping()) {
 		cam.ForwardMovement(cam_speed_ * move_forward);
@@ -101,7 +99,7 @@ void ChatCommands::Main() {
 
 	if (skill_to_use > 0 && skill_to_use < 9 
 		&& GW::Map().GetInstanceType() == GW::Constants::InstanceType::Explorable
-		&& TBTimer::diff(skill_timer) / 1000.0f > skill_usage_delay) {
+		&& clock() - skill_timer / 1000.0f > skill_usage_delay) {
 
 		GW::Skillbar skillbar = GW::Skillbar::GetPlayerSkillbar();
 		if (skillbar.IsValid()) {
@@ -111,7 +109,7 @@ void ChatCommands::Main() {
 
 				GW::Skill skilldata = GW::Skillbarmgr().GetSkillConstantData(skill.SkillId);
 				skill_usage_delay = skilldata.Activation + skilldata.Aftercast + 1.0f; // one additional second to account for ping and to avoid spamming in case of bad target
-				skill_timer = TBTimer::init();
+				skill_timer = clock();
 			}
 		}
 	}
@@ -127,13 +125,13 @@ std::wstring ChatCommands::GetLowerCaseArg(std::vector<std::wstring> args, size_
 bool ChatCommands::CmdAge2(std::wstring& cmd, std::vector<std::wstring>& args) {
 	wchar_t buffer[30];
 	DWORD second = GW::Map().GetInstanceTime() / 1000;
-	wsprintf(buffer, L"%02u:%02u:%02u", (second / 3600), (second / 60) % 60, second % 60);
+	wsprintfW(buffer, L"%02u:%02u:%02u", (second / 3600), (second / 60) % 60, second % 60);
 	ChatLogger::Log(buffer);
 	return true;
 }
 
 bool ChatCommands::CmdPcons(std::wstring& cmd, std::vector<std::wstring>& args) {
-	PconPanel& pcons = GWToolbox::instance().main_window().pcon_panel();
+	PconPanel& pcons = GWToolbox::instance().main_window->pcon_panel();
 	if (args.empty()) {
 		pcons.ToggleActive();
 	} else { // we are ignoring parameters after the first
@@ -173,21 +171,21 @@ bool ChatCommands::CmdChest(std::wstring& cmd, std::vector<std::wstring>& args) 
 
 bool ChatCommands::CmdTB(std::wstring& cmd, std::vector<std::wstring>& args) {
 	if (args.empty()) {
-		GWToolbox::instance().main_window().ToggleHidden();
+		GWToolbox::instance().main_window->ToggleHidden();
 	} else {
 		std::wstring arg = GetLowerCaseArg(args, 0);
 		if (arg == L"age") {
 			CmdAge2(cmd, args);
 		} else if (arg == L"hide") {
-			GWToolbox::instance().main_window().SetHidden(true);
+			GWToolbox::instance().main_window->SetHidden(true);
 		} else if (arg == L"show") {
-			GWToolbox::instance().main_window().SetHidden(false);
+			GWToolbox::instance().main_window->SetHidden(false);
 		} else if (arg == L"reset") {
-			GWToolbox::instance().main_window().SetLocation(PointI(0, 0));
+			GWToolbox::instance().main_window->SetLocation(PointI(0, 0));
 		} else if (arg == L"mini" || arg == L"minimize") {
-			GWToolbox::instance().main_window().SetMinimized(true);
+			GWToolbox::instance().main_window->SetMinimized(true);
 		} else if (arg == L"maxi" || arg == L"maximize") {
-			GWToolbox::instance().main_window().SetMinimized(false);
+			GWToolbox::instance().main_window->SetMinimized(false);
 		} else if (arg == L"close" || arg == L"quit" || arg == L"exit") {
 			GWToolbox::instance().StartSelfDestruct();
 		}
@@ -238,11 +236,11 @@ bool ChatCommands::CmdTP(std::wstring& cmd, std::vector<std::wstring>& args) {
 		} else if (town == L"deep") {
 			GW::Map().Travel(GW::Constants::MapID::The_Deep, district, district_number);
 		} else if (town == L"fav1") {
-			GWToolbox::instance().main_window().travel_panel().TravelFavorite(0);
+			GWToolbox::instance().main_window->travel_panel().TravelFavorite(0);
 		} else if (town == L"fav2") {
-			GWToolbox::instance().main_window().travel_panel().TravelFavorite(1);
+			GWToolbox::instance().main_window->travel_panel().TravelFavorite(1);
 		} else if (town == L"fav3") {
-			GWToolbox::instance().main_window().travel_panel().TravelFavorite(2);
+			GWToolbox::instance().main_window->travel_panel().TravelFavorite(2);
 		} else if (town == L"gh") {
 			GW::Guildmgr().TravelGH();
 		}
@@ -309,13 +307,13 @@ bool ChatCommands::CmdCamera(std::wstring& cmd, std::vector<std::wstring>& args)
 			}
 		} else if (arg0 == L"speed") {
 			std::wstring arg1 = GetLowerCaseArg(args, 1);
-			ChatCommands& self = GWToolbox::instance().chat_commands();
+			ChatCommands* self = GWToolbox::instance().chat_commands;
 			if (arg1 == L"default") {
-				self.cam_speed_ = self.DEFAULT_CAM_SPEED;
+				self->cam_speed_ = self->DEFAULT_CAM_SPEED;
 			} else {
 				try {
 					float speed = std::stof(arg1);
-					self.cam_speed_ = speed;
+					self->cam_speed_ = speed;
 					ChatLogger::LogF(L"Camera speed is now %f", speed);
 				} catch (...) {
 					ChatLogger::LogF(L"[Error] Invalid argument '%ls', please use a float value", args[1].c_str());
@@ -333,21 +331,21 @@ bool ChatCommands::CmdDamage(std::wstring& cmd, std::vector<std::wstring>& args)
 	if (args.empty() || arg0 == L"print" || arg0 == L"report") {
 		if (args.size() <= 1) {
 			// if no argument or just one, print the whole party
-			GWToolbox::instance().party_damage().WritePartyDamage();
+			GWToolbox::instance().party_damage->WritePartyDamage();
 		} else {
 			// else print a specific party member
 			std::wstring arg1 = GetLowerCaseArg(args, 1);
 			if (arg1 == L"me") {
-				GWToolbox::instance().party_damage().WriteOwnDamage();
+				GWToolbox::instance().party_damage->WriteOwnDamage();
 			} else {
 				try {
 					long idx = std::stol(arg1);
-					GWToolbox::instance().party_damage().WriteDamageOf(idx - 1);
+					GWToolbox::instance().party_damage->WriteDamageOf(idx - 1);
 				} catch (...) {}
 			}
 		}
 	} else if (arg0 == L"reset") {
-		GWToolbox::instance().party_damage().ResetDamage();
+		GWToolbox::instance().party_damage->ResetDamage();
 	}
 	return true;
 }
@@ -406,17 +404,17 @@ bool ChatCommands::CmdTarget(std::wstring& cmd, std::vector<std::wstring>& args)
 }
 
 bool ChatCommands::CmdUseSkill(std::wstring& cmd, std::vector<std::wstring>& args) {
-	ChatCommands& self = GWToolbox::instance().chat_commands();
+	ChatCommands* self = GWToolbox::instance().chat_commands;
 	if (args.empty()) {
-		self.skill_to_use = 0;
+		self->skill_to_use = 0;
 	} else if (args.size() == 1) {
 		std::wstring arg0 = GetLowerCaseArg(args, 0);
 		if (arg0 == L"stop" || arg0 == L"off") {
-			self.skill_to_use = 0;
+			self->skill_to_use = 0;
 		} else {
 			try {
 				int skill = std::stoi(args[0]);
-				if (skill >= 0 && skill <= 8) self.skill_to_use = skill;
+				if (skill >= 0 && skill <= 8) self->skill_to_use = skill;
 			} catch (...) {
 				ChatLogger::LogF(L"[Error] Invalid argument '%ls', please use an integer value", args[0].c_str());
 			}

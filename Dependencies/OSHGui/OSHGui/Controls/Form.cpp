@@ -71,7 +71,7 @@ namespace OSHGui {
 		if (captionBar_) {
 			return captionBar_->GetText();
 		} else {
-			return L"";
+			return "";
 		}
 	}
 	//---------------------------------------------------------------------------

@@ -24,11 +24,11 @@ MainWindow::MainWindow() :
 	dialog_panel_(*new DialogPanel(this)),
 	info_panel_(*new InfoPanel(this)),
 	materials_panel_(*new MaterialsPanel(this)),
-	settings_panel_(*new SettingsPanel(this)),
+	settings_panel_(*new SettingsPanel()),
 
-	use_minimized_alt_pos(false, IniSection(), L"minimize_alt_position"),
-	tick_with_pcons(false, IniSection(), L"tick_with_pcons"),
-	tabs_left(false, IniSection(), L"tabsleft") {
+	use_minimized_alt_pos(false, IniSection(), "minimize_alt_position"),
+	tick_with_pcons(false, IniSection(), "tick_with_pcons"),
+	tabs_left(false, IniSection(), "tabsleft") {
 
 	use_minimized_alt_pos.SetText("Minimize to different position");
 	use_minimized_alt_pos.SetTooltip("The minimized position will be saved independently");
@@ -48,8 +48,8 @@ MainWindow::MainWindow() :
 	// some local vars
 	int y = 0;
 
-	int xlocation = Config::IniReadLong(MainWindow::IniSection(), MainWindow::IniKeyX(), 100);
-	int ylocation = Config::IniReadLong(MainWindow::IniSection(), MainWindow::IniKeyY(), 100);
+	int xlocation = Config::IniRead(MainWindow::IniSection(), MainWindow::IniKeyX(), 100l);
+	int ylocation = Config::IniRead(MainWindow::IniSection(), MainWindow::IniKeyY(), 100l);
 
 	// build main UI
 	SetLocation(PointI(xlocation, ylocation));
@@ -57,7 +57,7 @@ MainWindow::MainWindow() :
 
 	TitleLabel* title = new TitleLabel(containerPanel_);
 	title->SetFont(GuiUtils::getTBFont(8, true));
-	title->SetText(L"Toolbox++");
+	title->SetText("Toolbox++");
 	title->SetLocation(PointI(0, 0));
 	title->SetSize(SizeI(64, TITLE_HEIGHT));
 	title->SetBackColor(Drawing::Color::Empty());
@@ -96,7 +96,7 @@ MainWindow::MainWindow() :
 	main_panel_->SetLocation(PointI(0, TITLE_HEIGHT + 1));
 	AddControl(main_panel_);
 
-	auto CreateTabButton = [&](std::wstring name, size_t idx, std::string icon) -> TabButton* {
+	auto CreateTabButton = [&](std::string name, size_t idx, std::string icon) -> TabButton* {
 		TabButton* b = new TabButton(main_panel_, name, icon);
 		b->SetLocation(PointI(Padding, idx * TAB_HEIGHT
 			+ ((idx > 0) ? TOGGLE_HEIGHT : 0)));
@@ -106,11 +106,11 @@ MainWindow::MainWindow() :
 	};
 	
 	size_t panel_idx = 0;
-	CreateTabButton(L"Pcons", panel_idx++, GuiUtils::getSubPathA("cupcake.png", "img"))
+	CreateTabButton("Pcons", panel_idx++, GuiUtils::getSubPath("cupcake.png", "img"))
 		->GetClickEvent() += ClickEventHandler([&](Control*) { OpenClosePanel(0); });
 
 	Button* toggle = new Button(main_panel_);
-	toggle->SetText(L"Disabled");
+	toggle->SetText("Disabled");
 	toggle->SetBackColor(Color::Empty());
 	toggle->SetMouseOverFocusColor(GuiUtils::getMouseOverColor());
 	toggle->SetForeColor(Color::Red());
@@ -123,25 +123,25 @@ MainWindow::MainWindow() :
 	main_panel_->AddControl(toggle);
 	pcon_toggle_button_ = toggle;
 	
-	CreateTabButton(L"Hotkeys", panel_idx++, GuiUtils::getSubPathA("keyboard.png", "img"))
+	CreateTabButton("Hotkeys", panel_idx++, GuiUtils::getSubPath("keyboard.png", "img"))
 		->GetClickEvent() += ClickEventHandler([&](Control*) { OpenClosePanel(1); });
 
-	CreateTabButton(L"Builds", panel_idx++, GuiUtils::getSubPathA("list.png", "img"))
+	CreateTabButton("Builds", panel_idx++, GuiUtils::getSubPath("list.png", "img"))
 		->GetClickEvent() += ClickEventHandler([&](Control*) { OpenClosePanel(2); });
 
-	CreateTabButton(L"Travel", panel_idx++, GuiUtils::getSubPathA("plane.png", "img"))
+	CreateTabButton("Travel", panel_idx++, GuiUtils::getSubPath("plane.png", "img"))
 		->GetClickEvent() += ClickEventHandler([&](Control*) { OpenClosePanel(3); });
 
-	CreateTabButton(L"Dialogs", panel_idx++, GuiUtils::getSubPathA("comment.png", "img"))
+	CreateTabButton("Dialogs", panel_idx++, GuiUtils::getSubPath("comment.png", "img"))
 		->GetClickEvent() += ClickEventHandler([&](Control*) { OpenClosePanel(4); });
 
-	CreateTabButton(L"Info", panel_idx++, GuiUtils::getSubPathA("info.png", "img"))
+	CreateTabButton("Info", panel_idx++, GuiUtils::getSubPath("info.png", "img"))
 		->GetClickEvent() += ClickEventHandler([&](Control*) { OpenClosePanel(5); });
 
-	CreateTabButton(L"Materials", panel_idx++, GuiUtils::getSubPathA("feather.png", "img"))
+	CreateTabButton("Materials", panel_idx++, GuiUtils::getSubPath("feather.png", "img"))
 		->GetClickEvent() += ClickEventHandler([&](Control*) { OpenClosePanel(6); });
 
-	CreateTabButton(L"Settings", panel_idx++, GuiUtils::getSubPathA("settings.png", "img"))
+	CreateTabButton("Settings", panel_idx++, GuiUtils::getSubPath("settings.png", "img"))
 		->GetClickEvent() += ClickEventHandler([&](Control*) { OpenClosePanel(7); });
 
 	panels.push_back(&pcon_panel_);
@@ -151,7 +151,8 @@ MainWindow::MainWindow() :
 	panels.push_back(&dialog_panel_);
 	panels.push_back(&info_panel_);
 	panels.push_back(&materials_panel_);
-	panels.push_back(&settings_panel_);
+	panels.push_back(new SettingsPanel());
+	//panels.push_back(&settings_panel_);
 	
 	for (ToolboxPanel* panel : panels) {
 		panel->SetSize(SizeI(SIDE_PANEL_WIDTH, HEIGHT));
@@ -176,8 +177,8 @@ void MainWindow::SetMinimized(bool minimized) {
 		if (current_panel_ >= 0) OpenClosePanel(current_panel_);
 		SetSize(SizeI(WIDTH, TITLE_HEIGHT));
 		if (use_minimized_alt_pos.value) {
-			int xlocation = Config::IniReadLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltX(), 100);
-			int ylocation = Config::IniReadLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltY(), 100);
+			int xlocation = Config::IniRead(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltX(), 100l);
+			int ylocation = Config::IniRead(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltY(), 100l);
 
 			SetLocation(PointI(xlocation, ylocation));
 		}
@@ -187,8 +188,8 @@ void MainWindow::SetMinimized(bool minimized) {
 		SetSize(SizeI(WIDTH, HEIGHT));
 
 		if (use_minimized_alt_pos.value) {
-			int xlocation = Config::IniReadLong(MainWindow::IniSection(), MainWindow::IniKeyX(), 100);
-			int ylocation = Config::IniReadLong(MainWindow::IniSection(), MainWindow::IniKeyY(), 100);
+			int xlocation = Config::IniRead(MainWindow::IniSection(), MainWindow::IniKeyX(), 100l);
+			int ylocation = Config::IniRead(MainWindow::IniSection(), MainWindow::IniKeyY(), 100l);
 
 			SetLocation(PointI(xlocation, ylocation));
 		}
@@ -214,10 +215,10 @@ void MainWindow::SetHidden(bool hidden) {
 void MainWindow::UpdatePconToggleButton(bool active) {
 	if (active) {
 		pcon_toggle_button_->SetForeColor(Color::Lime());
-		pcon_toggle_button_->SetText(L"Enabled");
+		pcon_toggle_button_->SetText("Enabled");
 	} else {
 		pcon_toggle_button_->SetForeColor(Color::Red());
-		pcon_toggle_button_->SetText(L"Disabled");
+		pcon_toggle_button_->SetText("Disabled");
 	}
 	if (tick_with_pcons.value && GW::Map().GetInstanceType() == GW::Constants::InstanceType::Outpost) {
 		GW::Partymgr().Tick(active);
@@ -260,7 +261,7 @@ void MainWindow::OpenClosePanel(size_t index) {
 	}
 }
 
-TabButton::TabButton(Control* parent, std::wstring s, std::string icon) 
+TabButton::TabButton(Control* parent, std::string s, std::string icon) 
 	: Button(parent), pic(new PictureBox(this)) {
 
 	pic->SetImage(Image::FromFile(icon));
@@ -289,13 +290,25 @@ void TabButton::CalculateLabelLocation() {
 	label_->SetLocation(PointI(GetSize().Width / 2 - label_->GetSize().Width / 2 + 13, GetSize().Height / 2 - label_->GetSize().Height / 2));
 };
 
-void MainWindow::Main() {
+void MainWindow::Update() {
 	for (ToolboxPanel* panel : panels) {
-		panel->Main();
+		panel->Update();
 	}
 }
 
-void MainWindow::Draw() {
+void MainWindow::LoadSettings(CSimpleIni* ini) {
+	for (ToolboxPanel* panel : panels) {
+		panel->LoadSettings(ini);
+	}
+}
+
+void MainWindow::SaveSettings(CSimpleIni* ini) {
+	for (ToolboxPanel* panel : panels) {
+		panel->SaveSettings(ini);
+	}
+}
+
+void MainWindow::Draw(IDirect3DDevice9* pDevice) {
 	static bool open = true;
 	ImGui::SetNextWindowSize(ImVec2(WIDTH, HEIGHT));
 	if (ImGui::Begin("Toolbox++", &open, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar)) {
@@ -327,7 +340,7 @@ void MainWindow::Draw() {
 		ImGui::PopStyleColor();
 
 		if (current_panel_ >= 0) {
-			panels[current_panel_]->Draw();
+			panels[current_panel_]->Draw(pDevice);
 		}
 	}
 	ImGui::End();
@@ -343,16 +356,16 @@ void MainWindow::SaveLocation() {
 	CalculateAbsoluteLocation();
 	int x = absoluteLocation_.X;
 	int y = absoluteLocation_.Y;
-	Config::IniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyX(), x);
-	Config::IniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyY(), y);
+	Config::IniWrite(MainWindow::IniSection(), MainWindow::IniKeyX(), x);
+	Config::IniWrite(MainWindow::IniSection(), MainWindow::IniKeyY(), y);
 }
 
 void MainWindow::SaveMinimizedLocation() {
 	CalculateAbsoluteLocation();
 	int x = absoluteLocation_.X;
 	int y = absoluteLocation_.Y;
-	Config::IniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltX(), x);
-	Config::IniWriteLong(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltY(), y);
+	Config::IniWrite(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltX(), x);
+	Config::IniWrite(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltY(), y);
 }
 
 

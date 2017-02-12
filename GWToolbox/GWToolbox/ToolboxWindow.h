@@ -22,10 +22,10 @@ public:
 	ToolboxWindow();
 
 	// Update. Will always be called every frame.
-	virtual void Main() = 0;
+	virtual void Main() {};
 
 	// Draw user interface. Will be called every frame if the element is visible
-	virtual void Draw() = 0;
+	virtual void Draw() {};
 
 	void ResizeUI(OSHGui::Drawing::SizeI before, OSHGui::Drawing::SizeI after);
 

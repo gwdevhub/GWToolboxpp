@@ -29,7 +29,7 @@ public:
 		f30
 	};
 	static void LoadFonts() {
-		std::string fontfile = GuiUtils::getPathA("Font.ttf");
+		std::string fontfile = GuiUtils::getPath("Font.ttf");
 		ImGuiIO& io = ImGui::GetIO();
 		ImFont* f10 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 16.0f);
 		ImFont* f12 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 19.0f);
@@ -51,49 +51,30 @@ public:
 		return OSHGui::Application::InstancePtr()->GetTheme().GetControlColorTheme("mouseover").ForeColor;
 	}
 
-	// Returns the settings folder as std::wstring
-	static std::wstring getSettingsFolder() {
-		WCHAR szPathW[MAX_PATH];
-		szPathW[0] = L'\0';
-		SHGetFolderPathW(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, szPathW);
-		return std::wstring(szPathW) + L"\\GWToolboxpp";
-	}
-
 	// Returns the settings folder as std::string
-	static std::string getSettingsFolderA() {
+	static std::string getSettingsFolder() {
 		CHAR szPath[MAX_PATH];
 		szPath[0] = '\0';
-		SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, szPath);
+		SHGetFolderPath(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, szPath);
 		return std::string(szPath) + "\\GWToolboxpp";
 	}
 
-	// Returns the path of the given file in the settings folder as std::wstring
-	static std::wstring getPath(std::wstring file) {
-		return getSettingsFolder() + L"\\" + file; 
-	}
-
 	// Returns the path of the given file in the settings folder as std::string
-	static std::string getPathA(std::string file) {
-		return getSettingsFolderA() + "\\" + file; 
-	}
-
-	// Returns the path of the given file in the subdirectory 
-	// in the settings folder as std::wstring
-	static std::wstring getSubPath(std::wstring file, std::wstring subdir) {
-		return getSettingsFolder() + L"\\" + subdir + L"\\" + file;
+	static std::string getPath(std::string file) {
+		return getSettingsFolder() + "\\" + file; 
 	}
 
 	// Returns the path of the given file in the subdirectory 
 	// in the settings folder as string
-	static std::string getSubPathA(std::string file, std::string subdir) {
-		return getSettingsFolderA() + "\\" + subdir + "\\" + file;
+	static std::string getSubPath(std::string file, std::string subdir) {
+		return getSettingsFolder() + "\\" + subdir + "\\" + file;
 	}
 
 	// Get the default toolbox font with given size and antialiased
 	static FontPtr getTBFont(float size, bool antialiased) {
 		FontPtr font;
 		try {
-			std::string path = GuiUtils::getPathA("Font.ttf");
+			std::string path = GuiUtils::getPath("Font.ttf");
 			font = FontManager::LoadFontFromFile(path, size, antialiased);
 		} catch (OSHGui::Misc::FileNotFoundException e) {
 			LOG("ERROR - font file not found, falling back to Arial\n");

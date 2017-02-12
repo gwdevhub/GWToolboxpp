@@ -21,7 +21,7 @@ void Logger::Init() {
 	freopen_s(&fh, "CONOUT$", "w", stderr);
 	SetConsoleTitleA("GWTB++ Debug Console");
 #else
-	freopen_s(&Logger::logfile, GuiUtils::getPathA("log.txt").c_str(), "w", stdout);
+	freopen_s(&Logger::logfile, GuiUtils::getPath("log.txt").c_str(), "w", stdout);
 	//freopen_s(&logfile, GuiUtils::getPathA("log.txt").c_str(), "w", stderr);
 #endif
 }
@@ -75,14 +75,14 @@ void Logger::LogW(const wchar_t* msg, ...) {
 
 LONG WINAPI Logger::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers) {
 	BOOL bMiniDumpSuccessful;
-	WCHAR szFileName[MAX_PATH];
+	CHAR szFileName[MAX_PATH];
 	HANDLE hDumpFile;
 	SYSTEMTIME stLocalTime;
 	MINIDUMP_EXCEPTION_INFORMATION ExpParam;
 
 	GetLocalTime(&stLocalTime);
 
-	StringCchPrintf(szFileName, MAX_PATH, L"%s\\%s-%04d%02d%02d-%02d%02d%02d-%ld-%ld.dmp",
+	StringCchPrintf(szFileName, MAX_PATH, "%s\\%s-%04d%02d%02d-%02d%02d%02d-%ld-%ld.dmp",
 		GuiUtils::getSettingsFolder().c_str() , GWTOOLBOX_VERSION,
 		stLocalTime.wYear, stLocalTime.wMonth, stLocalTime.wDay,
 		stLocalTime.wHour, stLocalTime.wMinute, stLocalTime.wSecond,

@@ -6,6 +6,7 @@
 
 #include "Settings.h"
 
+#include "ToolboxModule.h"
 #include "ToolboxWindow.h"
 #include "PconPanel.h"
 #include "HotkeyPanel.h"
@@ -16,6 +17,7 @@
 #include "MaterialsPanel.h"
 #include "SettingsPanel.h"
 
+
 using namespace OSHGui;
 
 class TabButton : public Button {
@@ -23,13 +25,13 @@ private:
 	PictureBox* const pic;
 
 public:
-	TabButton(Control* parent, std::wstring s, std::string icon);
+	TabButton(Control* parent, std::string s, std::string icon);
 
 	void CalculateLabelLocation() override;
 	void PopulateGeometry() override;
 };
 
-class MainWindow : public ToolboxWindow {
+class MainWindow : public ToolboxWindow, public ToolboxModule {
 public:
 	class TitleLabel : public DragButton {
 	public:
@@ -86,13 +88,15 @@ private:
 	void SaveMinimizedLocation();
 
 public:
+	const char* Name() override { return "Main Window"; }
+
 	MainWindow();
 	
-	inline static const wchar_t* IniSection() { return L"mainwindow"; }
-	inline static const wchar_t* IniKeyX() { return L"x"; }
-	inline static const wchar_t* IniKeyY() { return L"y"; }
-	inline static const wchar_t* IniKeyMinimizedAltX() { return L"minx"; }
-	inline static const wchar_t* IniKeyMinimizedAltY() { return L"miny"; }
+	inline static const char* IniSection() { return "mainwindow"; }
+	inline static const char* IniKeyX() { return "x"; }
+	inline static const char* IniKeyY() { return "y"; }
+	inline static const char* IniKeyMinimizedAltX() { return "minx"; }
+	inline static const char* IniKeyMinimizedAltY() { return "miny"; }
 
 	void OpenClosePanel(size_t index);
 	inline bool minimized() { return minimized_; }
@@ -116,13 +120,14 @@ public:
 	void SetPanelPositions(bool left);
 
 	// Update. Will always be called every frame.
-	void Main() override;
+	void Update() override;
 
 	// Draw user interface. Will be called every frame if the element is visible
-	void Draw() override;
+	void Draw(IDirect3DDevice9* pDevice) override;
 
-	void LoadSettings();
-	void DrawSettings();
-	void SaveSettings();
+	void DrawSettings() override;
+
+	void LoadSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) override;
 };
 

@@ -25,7 +25,7 @@ protected:
 	bool active_;
 	OSHGui::Key key_;
 	OSHGui::Key modifier_;
-	const std::wstring ini_section_;
+	const std::string ini_section_;
 
 	inline void set_active(bool active) { active_ = active; }
 	inline void set_key(OSHGui::Key key) { key_ = key; }
@@ -35,47 +35,47 @@ protected:
 	bool isOutpost() const;
 
 	TBHotkey(OSHGui::Control* parent, OSHGui::Key key, 
-		OSHGui::Key modifier, bool active, std::wstring ini_section);
+		OSHGui::Key modifier, bool active, std::string ini_section);
 
 	virtual void PopulateGeometry() override;
 
 public:
-	inline static const wchar_t* IniKeyActive() { return L"active"; }
-	inline static const wchar_t* IniKeyHotkey() { return L"hotkey"; }
-	inline static const wchar_t* IniKeyModifier() { return L"modifier"; }
+	inline static const char* IniKeyActive() { return "active"; }
+	inline static const char* IniKeyHotkey() { return "hotkey"; }
+	inline static const char* IniKeyModifier() { return "modifier"; }
 
-	inline std::wstring ini_section() { return ini_section_; }
+	inline std::string ini_section() { return ini_section_; }
 	inline bool active() { return active_; }
 	inline bool pressed() { return pressed_; }
 	inline void set_pressed(bool pressed) { pressed_ = pressed; }
 	inline OSHGui::Key key() { return key_; }
 	inline OSHGui::Key modifier() { return modifier_; }
 	virtual void exec() = 0;
-	virtual std::wstring GetDescription() = 0;
+	virtual std::string GetDescription() = 0;
 };
 
 // hotkey to send a message in chat
 // can be used for anything that uses SendChat
 class HotkeySendChat : public TBHotkey {
 private:
-	std::wstring msg_;
-	wchar_t channel_;
+	std::string msg_;
+	char channel_;
 
-	inline void set_channel(wchar_t channel) { channel_ = channel; }
-	inline void set_msg(std::wstring msg) { msg_ = msg; }
-	int ChannelToIndex(wchar_t channel);
-	wchar_t IndexToChannel(int index);
+	inline void set_channel(char channel) { channel_ = channel; }
+	inline void set_msg(std::string msg) { msg_ = msg; }
+	int ChannelToIndex(char channel);
+	char IndexToChannel(int index);
 
 public:
 	HotkeySendChat(OSHGui::Control* parent, OSHGui::Key key, OSHGui::Key modifier, 
-		bool active, std::wstring ini_section, std::wstring _msg, wchar_t _channel);
+		bool active, std::string ini_section, std::string _msg, char _channel);
 
-	inline static const wchar_t* IniSection() { return L"SendChat"; }
-	inline static const wchar_t* IniKeyMsg() { return L"msg"; }
-	inline static const wchar_t* IniKeyChannel() { return L"channel"; }
+	inline static const char* IniSection() { return "SendChat"; }
+	inline static const char* IniKeyMsg() { return "msg"; }
+	inline static const char* IniKeyChannel() { return "channel"; }
 	
 	void exec() override;
-	std::wstring GetDescription() override;
+	std::string GetDescription() override;
 };
 
 // hotkey to use an item
@@ -83,21 +83,21 @@ public:
 class HotkeyUseItem : public TBHotkey {
 private:
 	UINT item_id_;
-	std::wstring item_name_;
+	std::string item_name_;
 
 	inline void set_item_id(UINT ID) { item_id_ = ID; }
-	inline void set_item_name(std::wstring name) { item_name_ = name; }
+	inline void set_item_name(std::string name) { item_name_ = name; }
 
 public:
 	HotkeyUseItem(OSHGui::Control* parent, OSHGui::Key key, OSHGui::Key modifier, 
-		bool active, std::wstring ini_section, UINT item_id_, std::wstring item_name_);
+		bool active, std::string ini_section, UINT item_id_, std::string item_name_);
 
-	static const wchar_t* IniSection() { return L"UseItem"; }
-	static const wchar_t* IniKeyItemID() { return L"ItemID"; }
-	static const wchar_t* IniKeyItemName() { return L"ItemName"; }
+	static const char* IniSection() { return "UseItem"; }
+	static const char* IniKeyItemID() { return "ItemID"; }
+	static const char* IniKeyItemName() { return "ItemName"; }
 
 	void exec() override;
-	std::wstring GetDescription() override;
+	std::string GetDescription() override;
 };
 
 // hotkey to drop a buff if currently active, and cast it on the current target if not
@@ -111,12 +111,12 @@ private:
 	inline void set_id(GW::Constants::SkillID id) { id_ = id; }
 public:
 	HotkeyDropUseBuff(OSHGui::Control* parent, OSHGui::Key key, OSHGui::Key modifier, 
-		bool active, std::wstring ini_section, GW::Constants::SkillID skill_id);
+		bool active, std::string ini_section, GW::Constants::SkillID skill_id);
 
-	static const wchar_t* IniSection() { return L"DropUseBuff"; }
-	static const wchar_t* IniKeySkillID() { return L"SkillID"; }
+	static const char* IniSection() { return "DropUseBuff"; }
+	static const char* IniKeySkillID() { return "SkillID"; }
 	void exec() override;
-	std::wstring GetDescription() override;
+	std::string GetDescription() override;
 };
 
 // hotkey to toggle a toolbox function
@@ -135,13 +135,13 @@ private:
 
 public:
 	HotkeyToggle(OSHGui::Control* parent, OSHGui::Key key, OSHGui::Key modifier, 
-		bool active, std::wstring ini_section, long toggle_id);
+		bool active, std::string ini_section, long toggle_id);
 
-	static const wchar_t* IniSection() { return L"Toggle"; }
-	static const wchar_t* IniKeyToggleID() { return L"ToggleID"; }
+	static const char* IniSection() { return "Toggle"; }
+	static const char* IniKeyToggleID() { return "ToggleID"; }
 
 	void exec() override;
-	std::wstring GetDescription() override;
+	std::string GetDescription() override;
 };
 
 class HotkeyAction : public TBHotkey {
@@ -158,13 +158,13 @@ private:
 
 public:
 	HotkeyAction(OSHGui::Control* parent, OSHGui::Key key, OSHGui::Key modifier, 
-		bool active, std::wstring ini_section, long action_id);
+		bool active, std::string ini_section, long action_id);
 
-	static const wchar_t* IniSection() { return L"Action"; }
-	static const wchar_t* IniKeyActionID() { return L"ActionID"; }
+	static const char* IniSection() { return "Action"; }
+	static const char* IniKeyActionID() { return "ActionID"; }
 
 	void exec() override;
-	std::wstring GetDescription() override;
+	std::string GetDescription() override;
 };
 
 // hotkey to target something in-game
@@ -172,21 +172,21 @@ public:
 class HotkeyTarget : public TBHotkey {
 private:
 	UINT id_;
-	std::wstring name_;
+	std::string name_;
 
 	inline void set_id(UINT targetID) { id_ = targetID; }
-	inline void set_name(std::wstring name) { name_ = name; }
+	inline void set_name(std::string name) { name_ = name; }
 
 public:
 	HotkeyTarget(OSHGui::Control* parent, OSHGui::Key key, OSHGui::Key modifier, 
-		bool active, std::wstring ini_section, UINT id, std::wstring name);
+		bool active, std::string ini_section, UINT id, std::string name);
 
-	static const wchar_t* IniSection() { return L"Target"; }
-	static const wchar_t* IniKeyTargetID() { return L"TargetID"; }
-	static const wchar_t* IniKeyTargetName() { return L"TargetName"; }
+	static const char* IniSection() { return "Target"; }
+	static const char* IniKeyTargetID() { return "TargetID"; }
+	static const char* IniKeyTargetName() { return "TargetName"; }
 
 	void exec() override;
-	std::wstring GetDescription() override;
+	std::string GetDescription() override;
 };
 
 // hotkey to move to a specific position
@@ -195,43 +195,43 @@ class HotkeyMove : public TBHotkey {
 private:
 	float x_;
 	float y_;
-	std::wstring name_;
+	std::string name_;
 
 	inline void set_x(float x) { x_ = x; }
 	inline void set_y(float y) { y_ = y; }
-	inline void set_name(std::wstring name) { name_ = name; }
+	inline void set_name(std::string name) { name_ = name; }
 
 public:
 	HotkeyMove(OSHGui::Control* parent, OSHGui::Key key, OSHGui::Key modifier, 
-		bool active, std::wstring ini_section, float x, float y, std::wstring name);
+		bool active, std::string ini_section, float x, float y, std::string name);
 
-	static const wchar_t* IniSection() { return L"Move"; }
-	static const wchar_t* IniKeyX() { return L"x"; }
-	static const wchar_t* IniKeyY() { return L"y"; }
-	static const wchar_t* IniKeyName() { return L"name"; }
+	static const char* IniSection() { return "Move"; }
+	static const char* IniKeyX() { return "x"; }
+	static const char* IniKeyY() { return "y"; }
+	static const char* IniKeyName() { return "name"; }
 
 	void exec() override;
-	std::wstring GetDescription() override;
+	std::string GetDescription() override;
 };
 
 class HotkeyDialog : public TBHotkey {
 private:
 	UINT id_;
-	std::wstring name_;
+	std::string name_;
 
 	inline void set_id(UINT id) { id_ = id; }
-	inline void set_name(std::wstring name) { name_ = name; }
+	inline void set_name(std::string name) { name_ = name; }
 
 public:
 	HotkeyDialog(OSHGui::Control* parent, OSHGui::Key key, OSHGui::Key modifier, 
-		bool active, std::wstring ini_section, UINT dialogID, std::wstring dialog_name);
+		bool active, std::string ini_section, UINT dialogID, std::string dialog_name);
 
-	static const wchar_t* IniSection() { return L"Dialog"; }
-	static const wchar_t* IniKeyDialogID() { return L"DialogID"; }
-	static const wchar_t* IniKeyDialogName() { return L"DialogName"; }
+	static const char* IniSection() { return "Dialog"; }
+	static const char* IniKeyDialogID() { return "DialogID"; }
+	static const char* IniKeyDialogName() { return "DialogName"; }
 	
 	void exec() override;
-	std::wstring GetDescription() override;
+	std::string GetDescription() override;
 };
 
 class HotkeyPingBuild : public TBHotkey {
@@ -241,11 +241,11 @@ private:
 	inline void set_index(long index) { index_ = index; }
 public:
 	HotkeyPingBuild(OSHGui::Control* parent, OSHGui::Key key, OSHGui::Key modifier, 
-		bool active, std::wstring ini_section, long index);
+		bool active, std::string ini_section, long index);
 
-	static const wchar_t* IniSection() { return L"PingBuild"; }
-	static const wchar_t* IniKeyBuildIndex() { return L"BuildIndex"; }
+	static const char* IniSection() { return "PingBuild"; }
+	static const char* IniKeyBuildIndex() { return "BuildIndex"; }
 
 	void exec() override;
-	std::wstring GetDescription() override;
+	std::string GetDescription() override;
 };

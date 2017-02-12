@@ -6,34 +6,27 @@
 #include "ToolboxPanel.h"
 
 class DialogPanel : public ToolboxPanel {
-private:
-	const int n_quests = 29;
-	const int n_dialogs = 15;
-
-	inline DWORD QuestAcceptDialog(DWORD quest) { return (quest << 8) | 0x800001; }
-	DWORD QuestRewardDialog(DWORD quest) { return (quest << 8) | 0x800007; }
-
-	void CreateButton(int grid_x, int grid_y, int hor_amount, 
-		std::wstring text, DWORD dialog);
-
-	std::wstring IndexToQuestName(int index);
-	DWORD IndexToQuestID(int index);
-
-	std::wstring IndexToDialogName(int index);
-	DWORD IndexToDialogID(int index);
-
 public:
-	static const int SPACE = Padding;
-	static const int BUTTON_HEIGHT = 25;
+	const char* Name() override { return "Dialog Panel"; }
 
 	DialogPanel(OSHGui::Control* parent) : ToolboxPanel(parent) {}
-
-	void BuildUI() override;
 	
 	// Update. Will always be called every frame.
-	void Main() override {}
+	void Update() override {}
 
 	// Draw user interface. Will be called every frame if the element is visible
-	void Draw() override {}
-};
+	void Draw(IDirect3DDevice9* pDevice) override;
 
+	void LoadSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) override;
+
+private:
+	inline DWORD QuestAcceptDialog(DWORD quest) { return (quest << 8) | 0x800001; }
+	inline DWORD QuestRewardDialog(DWORD quest) { return (quest << 8) | 0x800007; }
+
+	DWORD IndexToQuestID(int index);
+	DWORD IndexToDialogID(int index);
+
+#define NUM_DIALOG_FAV_QUESTS 3
+	int favindex[NUM_DIALOG_FAV_QUESTS];
+};

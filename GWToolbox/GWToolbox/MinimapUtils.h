@@ -41,20 +41,20 @@ public:
 		}
 	};
 
-	static DWORD IniReadColor(const wchar_t* key, const wchar_t* def) {
-		const wchar_t* inisection = L"minimap";
-		const wchar_t* wc = Config::IniRead(inisection, key, def);
+	static DWORD IniReadColor(const char* key, const char* def) {
+		const char* inisection = "minimap";
+		const char* wc = Config::IniRead(inisection, key, def);
 		Config::IniWrite(inisection, key, wc);
-		DWORD c = std::wcstoul(wc, nullptr, 16);
+		DWORD c = std::stoul(wc, nullptr, 16);
 		if (c == LONG_MAX) return D3DCOLOR_ARGB(0xFF, 0x00, 0x00, 0x00);
 		return c;
 	}
 
-	static Color IniReadColor2(const wchar_t* key, const wchar_t* def) {
-		const wchar_t* inisection = L"minimap";
-		const wchar_t* wc = Config::IniRead(inisection, key, def);
+	static Color IniReadColor2(const char* key, const char* def) {
+		const char* inisection = "minimap";
+		const char* wc = Config::IniRead(inisection, key, def);
 		Config::IniWrite(inisection, key, wc);
-		DWORD c = std::wcstoul(wc, nullptr, 16);
+		DWORD c = std::stoul(wc, nullptr, 16);
 		if (c == LONG_MAX) return Color(D3DCOLOR_ARGB(0xFF, 0x00, 0x00, 0x00));
 		return Color(c);
 	}

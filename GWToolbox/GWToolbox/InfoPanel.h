@@ -24,12 +24,14 @@ private:
 public:
 	InfoPanel(OSHGui::Control* parent) : ToolboxPanel(parent) {}
 
+	const char* Name() override { return "Info Panel"; }
+
 	void BuildUI() override;
 	
 	// Update. Will always be called every frame.
-	void Main() override {}
+	void Update() override {}
 
 	// Draw user interface. Will be called every frame if the element is visible
-	void Draw() override;
+	void Draw(IDirect3DDevice9* pDevice) override;
 };
 

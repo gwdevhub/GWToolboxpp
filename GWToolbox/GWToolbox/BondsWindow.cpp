@@ -23,8 +23,8 @@ BondsWindow::BondsWindow() {
 	int width = img_size * MAX_BONDS;
 	int height = img_size * MAX_PLAYERS;
 
-	int x = Config::IniReadLong(BondsWindow::IniSection(), BondsWindow::IniKeyX(), 400);
-	int y = Config::IniReadLong(BondsWindow::IniSection(), BondsWindow::IniKeyY(), 100);
+	int x = Config::IniRead(BondsWindow::IniSection(), BondsWindow::IniKeyX(), 400);
+	int y = Config::IniRead(BondsWindow::IniSection(), BondsWindow::IniKeyY(), 100);
 
 	SetLocation(PointI(x, y));
 	SetSize(Drawing::SizeI(width, height));
@@ -39,7 +39,7 @@ BondsWindow::BondsWindow() {
 	std::shared_ptr<BondsWindow> self = std::shared_ptr<BondsWindow>(this);
 	Form::Show(self);
 
-	bool show = Config::IniReadBool(BondsWindow::IniSection(), BondsWindow::IniKeyShow(), false);
+	bool show = Config::IniRead(BondsWindow::IniSection(), BondsWindow::IniKeyShow(), false);
 	SetVisible(show);
 }
 
@@ -78,9 +78,9 @@ BondsWindow::BondsMonitor::BondsMonitor(OSHGui::Control* parent, int img_size) :
 		}
 	}
 	for (int i = 0; i < MAX_PLAYERS; ++i) {
-		pics[i][0]->SetImage(Image::FromFile(GuiUtils::getSubPathA("balthspirit.jpg", "img")));
-		pics[i][1]->SetImage(Image::FromFile(GuiUtils::getSubPathA("lifebond.jpg", "img")));
-		pics[i][2]->SetImage(Image::FromFile(GuiUtils::getSubPathA("protbond.jpg", "img")));
+		pics[i][0]->SetImage(Image::FromFile(GuiUtils::getSubPath("balthspirit.jpg", "img")));
+		pics[i][1]->SetImage(Image::FromFile(GuiUtils::getSubPath("lifebond.jpg", "img")));
+		pics[i][2]->SetImage(Image::FromFile(GuiUtils::getSubPath("protbond.jpg", "img")));
 	}
 
 	GetMouseUpEvent() += MouseUpEventHandler([this](Control*, MouseEventArgs) {
@@ -199,8 +199,8 @@ void BondsWindow::BondsMonitor::SaveLocation() {
 	CalculateAbsoluteLocation();
 	int x = absoluteLocation_.X;
 	int y = absoluteLocation_.Y;
-	Config::IniWriteLong(BondsWindow::IniSection(), BondsWindow::IniKeyX(), x);
-	Config::IniWriteLong(BondsWindow::IniSection(), BondsWindow::IniKeyY(), y);
+	Config::IniWrite(BondsWindow::IniSection(), BondsWindow::IniKeyX(), x);
+	Config::IniWrite(BondsWindow::IniSection(), BondsWindow::IniKeyY(), y);
 }
 
 void BondsWindow::BondsMonitor::Draw() {

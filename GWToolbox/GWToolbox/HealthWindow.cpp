@@ -6,15 +6,17 @@
 #include "GWToolbox.h"
 #include "OtherSettings.h"
 
-void HealthWindow::Draw() {
+void HealthWindow::Draw(IDirect3DDevice9* pDevice) {
+	if (!visible) return;
+
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(0, 0, 0, 0));
 	ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar
 		| ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar;
-	if (GWToolbox::instance().settings().freeze_widgets.value) {
+	if (GWToolbox::instance().other_settings->freeze_widgets) {
 		flags |= ImGuiWindowFlags_NoInputs;
 	}
 	ImGui::SetNextWindowSize(ImVec2(150, 100));
-	if (ImGui::Begin("Health", nullptr, flags)) {
+	if (ImGui::Begin(Name(), nullptr, flags)) {
 		static char health_perc[32];
 		static char health_abs[32];
 		GW::Agent* target = GW::Agents().GetTarget();
@@ -63,4 +65,12 @@ void HealthWindow::Draw() {
 	}
 	ImGui::End();
 	ImGui::PopStyleColor();
+}
+
+void HealthWindow::LoadSettings(CSimpleIni* ini) {
+	visible = ini->GetBoolValue(Name(), "show", true);
+}
+
+void HealthWindow::SaveSettings(CSimpleIni* ini) {
+	ini->SetBoolValue(Name(), "show", visible);
 }

@@ -15,18 +15,18 @@ namespace OSHGui
 	{
 		namespace String
 		{
-			UnicodeString Format(const UnicodeChar *fmt, ...)
-			{
-				UnicodeChar strOut[4096];
+			//UnicodeString Format(const UnicodeChar *fmt, ...)
+			//{
+			//	UnicodeChar strOut[4096];
 
-				va_list s;
-				va_start(s, fmt);
-					vswprintf(strOut, sizeof(strOut) / sizeof(UnicodeChar), fmt, s);
-				va_end(s);
+			//	va_list s;
+			//	va_start(s, fmt);
+			//		sprintf_s(strOut, sizeof(strOut) / sizeof(UnicodeChar), fmt, s);
+			//	va_end(s);
 
-				UnicodeString str = strOut;
-				return str;
-			}
+			//	UnicodeString str = strOut;
+			//	return str;
+			//}
 			//---------------------------------------------------------------------------
 			AnsiString Format(const AnsiChar *fmt, ...)
 			{

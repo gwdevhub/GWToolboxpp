@@ -12,16 +12,16 @@
 #include "Config.h"
 
 PmapRenderer::PmapRenderer() : VBuffer() {
-	auto IniReadColor = [](wchar_t* key, wchar_t* def) -> DWORD {
-		const wchar_t* wc = Config::IniRead(L"minimap", key, def);
-		Config::IniWrite(L"minimap", key, wc);
-		DWORD c = std::wcstoul(wc, nullptr, 16);
+	auto IniReadColor = [](char* key, char* def) -> DWORD {
+		const char* wc = Config::IniRead("minimap", key, def);
+		Config::IniWrite("minimap", key, wc);
+		DWORD c = std::stoul(wc, nullptr, 16);
 		if (c == LONG_MAX) return D3DCOLOR_ARGB(0xFF, 0x0, 0x0, 0x0);
 		return c;
 	};
 
-	color_map = IniReadColor(L"color_map", L"0xFF999999");
-	color_mapshadow = IniReadColor(L"color_mapshadow", L"0xFF120808");
+	color_map = IniReadColor("color_map", "0xFF999999");
+	color_mapshadow = IniReadColor("color_mapshadow", "0xFF120808");
 	shadow_show = (((color_mapshadow >> 24) & 0xFF) > 0);
 }
 

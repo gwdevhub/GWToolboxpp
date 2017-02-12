@@ -12,12 +12,12 @@ class Minimap : public Viewer {
 public:
 	Minimap();
 
-	inline static const wchar_t* IniSection() { return L"minimap"; }
-	inline static const wchar_t* IniKeyX() { return L"x"; }
-	inline static const wchar_t* IniKeyY() { return L"y"; }
-	inline static const wchar_t* IniKeySize() { return L"size"; }
-	inline static const wchar_t* IniKeyScale() { return L"scale"; }
-	inline static const wchar_t* InikeyShow() { return L"show"; }
+	inline static const char* IniSection() { return "minimap"; }
+	inline static const char* IniKeyX() { return "x"; }
+	inline static const char* IniKeyY() { return "y"; }
+	inline static const char* IniKeySize() { return "size"; }
+	inline static const char* IniKeyScale() { return "scale"; }
+	inline static const char* InikeyShow() { return "show"; }
 
 	void Render(IDirect3DDevice9* device) override;
 

@@ -2,22 +2,31 @@
 
 #include <set>
 #include <string>
+#include <initializer_list>
 
 #include <GWCA\Packets\StoC.h>
 
+#include "ToolboxModule.h"
+
 #include "Settings.h"
 
-class ChatFilter {
-	static const wchar_t* IniSection() { return L"Chat FIlter"; }
-
+class ChatFilter : public ToolboxModule {
 public:
+	const char* Name() override { return "Chat Filter"; }
+
 	ChatFilter();
 
-	void DrawSettings();
+	void DrawSettings() override;
+
+	void LoadSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) override;
 
 private:
 	const wchar_t* Get1stSegment(GW::Packet::StoC::P081* pak) const;
 	const wchar_t* Get2ndSegment(GW::Packet::StoC::P081* pak) const;
+	bool FullMatch(GW::Packet::StoC::P081* pak, 
+		const std::initializer_list<wchar_t>& msg) const;
+
 
 	DWORD GetNumericSegment(GW::Packet::StoC::P081* pak) const;
 	bool ShouldIgnoreByAgentThatDropped(const wchar_t* agent_segment) const;
@@ -27,17 +36,33 @@ private:
 	bool suppress_next_message;
 	bool suppress_next_p081;
 
-	SettingBool ally_common_drops;
-	SettingBool self_common_drops;
-	SettingBool ally_rare_drops;
-	SettingBool self_rare_drops;
-	SettingBool skill_point;
-	SettingBool pvp_messages;
-	SettingBool hoh;
-	SettingBool favor;
-	SettingBool shingjeabroadwalk;
-	SettingBool noonehearsyou;
+	bool self_common_drops;
+	bool ally_common_drops;
+	bool self_rare_drops;
+	bool ally_rare_drops;
+	bool skill_points;
+	bool pvp_messages;
+	bool hoh;
+	bool favor;
+	bool ninerings;
+	bool noonehearsyou;
+	bool lunars;
+	bool playeraway;
 
-	SettingBool messagebycontent;
-	std::set<std::string> filter_words;
+	bool messagebycontent;
+#define FILTER_BUF_SIZE 1024*16
+	char bycontent_buf[FILTER_BUF_SIZE];
+	std::set<std::string> bycontent_words;
+
+	bool messagebyauthor;
+	char byauthor_buf[FILTER_BUF_SIZE];
+	std::set<std::string> byauthor_words;
+
+	void ParseBuffer(const char* buf, std::set<std::string>& words);
+	void ByContent_ParseBuf() {
+		ParseBuffer(bycontent_buf, bycontent_words);
+	}
+	void ByAuthor_ParseBuf() {
+		ParseBuffer(byauthor_buf, byauthor_words);
+	}
 };

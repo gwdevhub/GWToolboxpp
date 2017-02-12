@@ -13,15 +13,17 @@
 
 class TravelPanel : public ToolboxPanel {
 public:
+	const char* Name() override { return "Travel Panel"; }
+
 	TravelPanel(OSHGui::Control* parent) : ToolboxPanel(parent) {}
 
 	void BuildUI() override;
 
 	// Update. Will always be called every frame.
-	void Main() override {}
+	void Update() override {}
 
 	// Draw user interface. Will be called every frame if the element is visible
-	void Draw() override {}
+	void Draw(IDirect3DDevice9* pDevice) override {}
 
 	void TravelFavorite(int fav_idx);
 
@@ -36,10 +38,10 @@ private:
 	GW::Constants::District district_;
 	int district_number_;
 
-	void AddTravelButton(std::wstring text, int grid_x, int grid_y, 
+	void AddTravelButton(std::string text, int grid_x, int grid_y, 
 		GW::Constants::MapID map_id);
 	void UpdateDistrict(int gui_index);
-	std::wstring IndexToOutpostName(int index);
+	std::string IndexToOutpostName(int index);
 	GW::Constants::MapID IndexToOutpostID(int index);
 
 	OSHGui::ComboBox* combo_boxes_[3];

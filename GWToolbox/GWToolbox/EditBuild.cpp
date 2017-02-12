@@ -20,18 +20,18 @@ EditBuild::EditBuild(OSHGui::Control* parent) : OSHGui::Panel(parent) {
 	SetSize(SizeI(450, 500));
 
 	Label* label_name = new Label(this);
-	label_name->SetText(L"Build Name:");
+	label_name->SetText("Build Name:");
 	label_name->SetLocation(PointI(Padding, Padding + 3));
 	AddControl(label_name);
 
 	Button* button = new Button(this);
 	button->SetSize(SizeI(ITEM_HEIGHT, ITEM_HEIGHT));
 	button->SetLocation(PointI(GetWidth() - ITEM_HEIGHT - Padding, Padding));
-	button->SetText(L"^");
+	button->SetText("^");
 	button->GetClickEvent() += ClickEventHandler([button, this](Control*) {
 		up_ = !up_;
 		UpdateLocation();
-		Config::IniWriteBool(MainWindow::IniSection(), EditBuild::IniKeyUp(), up_);
+		Config::IniWrite(MainWindow::IniSection(), EditBuild::IniKeyUp(), up_);
 	});
 	AddControl(button);
 
@@ -42,7 +42,7 @@ EditBuild::EditBuild(OSHGui::Control* parent) : OSHGui::Panel(parent) {
 	AddControl(name);
 
 	Label* label_names = new Label(this);
-	label_names->SetText(L"Names:");
+	label_names->SetText("Names:");
 	label_names->SetLocation(PointI(NAME_LEFT, name->GetBottom() + Padding * 2));
 	AddControl(label_names);
 
@@ -50,7 +50,7 @@ EditBuild::EditBuild(OSHGui::Control* parent) : OSHGui::Panel(parent) {
 	const int row_height = ITEM_HEIGHT + Padding;
 	for (int i = 0; i < N_PLAYERS; ++i) {
 		Label* label_index = new Label(this);
-		label_index->SetText(std::wstring(L"#") + std::to_wstring(i + 1));
+		label_index->SetText(std::string("#") + std::to_string(i + 1));
 		label_index->SetLocation(PointI(Padding, starty + row_height * i + 3));
 		AddControl(label_index);
 
@@ -61,21 +61,21 @@ EditBuild::EditBuild(OSHGui::Control* parent) : OSHGui::Panel(parent) {
 		AddControl(names[i]);
 
 		Button* send = new Button(this);
-		send->SetText(L"Send");
+		send->SetText("Send");
 		send->SetSize(SizeI(SEND_WIDTH, names[i]->GetHeight()));
 		send->SetLocation(PointI(GetWidth() - send->GetWidth() - Padding / 2,
 			starty + row_height * i));
 		send->GetClickEvent() += ClickEventHandler([this, i](Control*) {
-			std::wstring message = L"[";
+			std::string message = "[";
 			if (show_numbers->GetChecked()) {
-				message += std::to_wstring(i + 1);
-				message += L" - ";
+				message += std::to_string(i + 1);
+				message += " - ";
 			}
 			message += names[i]->GetText();
-			message += L";";
+			message += ";";
 			message += templates[i]->GetText();
-			message += L"]";
-			GW::Chat().SendChat(message.c_str(), L'#');
+			message += "]";
+			GW::Chat().SendChat(message.c_str(), '#');
 		});
 		AddControl(send);
 
@@ -87,7 +87,7 @@ EditBuild::EditBuild(OSHGui::Control* parent) : OSHGui::Panel(parent) {
 	}
 
 	Label* label_templates = new Label(this);
-	label_templates->SetText(L"Templates:");
+	label_templates->SetText("Templates:");
 	label_templates->SetLocation(PointI(templates[0]->GetLeft(), name->GetBottom() + Padding * 2));
 	AddControl(label_templates);
 
@@ -95,12 +95,12 @@ EditBuild::EditBuild(OSHGui::Control* parent) : OSHGui::Panel(parent) {
 	const int buttons_width = (GetWidth() - templates[0]->GetLeft() - Padding) / 2;
 
 	show_numbers = new CheckBox(this);
-	show_numbers->SetText(L"Show Build numbers");
+	show_numbers->SetText("Show Build numbers");
 	show_numbers->SetLocation(PointI(Padding, last_row_y));
 	AddControl(show_numbers);
 	
 	Button* cancel = new Button(this);
-	cancel->SetText(L"Cancel");
+	cancel->SetText("Cancel");
 	cancel->SetLocation(PointI(templates[0]->GetLeft(), last_row_y));
 	cancel->SetSize(SizeI(buttons_width, ITEM_HEIGHT));
 	cancel->GetClickEvent() += ClickEventHandler([this](Control*) {
@@ -109,7 +109,7 @@ EditBuild::EditBuild(OSHGui::Control* parent) : OSHGui::Panel(parent) {
 	AddControl(cancel);
 
 	Button* ok = new Button(this);
-	ok->SetText(L"Ok");
+	ok->SetText("Ok");
 	ok->SetLocation(PointI(cancel->GetRight() + Padding, last_row_y));
 	ok->SetSize(SizeI(buttons_width, ITEM_HEIGHT));
 	ok->GetClickEvent() += ClickEventHandler([this](Control*) {
@@ -121,7 +121,7 @@ EditBuild::EditBuild(OSHGui::Control* parent) : OSHGui::Panel(parent) {
 	SetSize(SizeI(templates[0]->GetRight() + SEND_WIDTH + 2 * Padding,
 		ok->GetBottom() + Padding));
 
-	up_ = Config::IniReadBool(MainWindow::IniSection(), EditBuild::IniKeyUp(), true);
+	up_ = Config::IniRead(MainWindow::IniSection(), EditBuild::IniKeyUp(), true);
 
 	left_ = false;
 	UpdateLocation();
@@ -140,46 +140,46 @@ void EditBuild::SetEditedBuild(int index, Button* button) {
 	editing_index = index;
 	editing_button = button;
 
-	std::wstring section = std::wstring(L"builds") + std::to_wstring(index);
-	std::wstring key;
+	std::string section = std::string("builds") + std::to_string(index);
+	std::string key;
 	
-	key = L"buildname";
-	std::wstring buildname = Config::IniRead(section.c_str(), key.c_str(), L"");
+	key = "buildname";
+	std::string buildname = Config::IniRead(section.c_str(), key.c_str(), "");
 	name->SetText(buildname);
 	for (int i = 0; i < N_PLAYERS; ++i) {
-		key = L"name" + std::to_wstring(i + 1);
-		std::wstring name = Config::IniRead(section.c_str(), key.c_str(), L"");
+		key = "name" + std::to_string(i + 1);
+		std::string name = Config::IniRead(section.c_str(), key.c_str(), "");
 		names[i]->SetText(name);
 
-		key = L"template" + std::to_wstring(i + 1);
-		std::wstring temp = Config::IniRead(section.c_str(), key.c_str(), L"");
+		key = "template" + std::to_string(i + 1);
+		std::string temp = Config::IniRead(section.c_str(), key.c_str(), "");
 		templates[i]->SetText(temp);
 	}
-	show_numbers->SetChecked(Config::IniReadBool(section.c_str(), L"showNumbers", true));
+	show_numbers->SetChecked(Config::IniRead(section.c_str(), "showNumbers", true));
 
 	SetVisible(true);
 }
 
 void EditBuild::SaveBuild() {
-	std::wstring section = std::wstring(L"builds") + std::to_wstring(editing_index);
-	std::wstring key;
+	std::string section = std::string("builds") + std::to_string(editing_index);
+	std::string key;
 
-	std::wstring s_name = name->GetText();
-	key = L"buildname";
+	std::string s_name = name->GetText();
+	key = "buildname";
 	Config::IniWrite(section.c_str(), key.c_str(), s_name.c_str());
 	editing_button->SetText(s_name);
 
 	for (int i = 0; i < N_PLAYERS; ++i) {
-		std::wstring s_name = names[i]->GetText();
-		key = L"name" + std::to_wstring(i + 1);
+		std::string s_name = names[i]->GetText();
+		key = "name" + std::to_string(i + 1);
 		Config::IniWrite(section.c_str(), key.c_str(), s_name.c_str());
 
-		std::wstring s_template = templates[i]->GetText();
-		key = L"template" + std::to_wstring(i + 1);
+		std::string s_template = templates[i]->GetText();
+		key = "template" + std::to_string(i + 1);
 		Config::IniWrite(section.c_str(), key.c_str(), s_template.c_str());
 	}
 
-	Config::IniWriteBool(section.c_str(), L"showNumbers", show_numbers->GetChecked());
+	Config::IniWrite(section.c_str(), "showNumbers", show_numbers->GetChecked());
 }
 
 void EditBuild::UpdateLocation() {

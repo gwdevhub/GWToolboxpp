@@ -10,8 +10,8 @@
 #include "MinimapUtils.h"
 
 SymbolsRenderer::SymbolsRenderer() {
-	color_quest = MinimapUtils::IniReadColor2(L"color_quest", L"0xFF22EF22");
-	color_north = MinimapUtils::IniReadColor2(L"color_north", L"0xFFFF8000");
+	color_quest = MinimapUtils::IniReadColor2("color_quest", "0xFF22EF22");
+	color_north = MinimapUtils::IniReadColor2("color_north", "0xFFFF8000");
 }
 
 void SymbolsRenderer::Initialize(IDirect3DDevice9* device) {

@@ -11,11 +11,11 @@
 #include "MinimapUtils.h"
 
 RangeRenderer::RangeRenderer() {
-	color_range_hos = MinimapUtils::IniReadColor(L"color_range_hos", L"0xFF881188");
-	color_range_aggro = MinimapUtils::IniReadColor(L"color_range_aggro", L"0xFF994444");
-	color_range_cast = MinimapUtils::IniReadColor(L"color_range_cast", L"0xFF117777");
-	color_range_spirit = MinimapUtils::IniReadColor(L"color_range_spirit", L"0xFF337733");
-	color_range_compass = MinimapUtils::IniReadColor(L"color_range_compass", L"0xFF666611");
+	color_range_hos = MinimapUtils::IniReadColor("color_range_hos", "0xFF881188");
+	color_range_aggro = MinimapUtils::IniReadColor("color_range_aggro", "0xFF994444");
+	color_range_cast = MinimapUtils::IniReadColor("color_range_cast", "0xFF117777");
+	color_range_spirit = MinimapUtils::IniReadColor("color_range_spirit", "0xFF337733");
+	color_range_compass = MinimapUtils::IniReadColor("color_range_compass", "0xFF666611");
 
 	checkforhos_ = true;
 	havehos_ = false;

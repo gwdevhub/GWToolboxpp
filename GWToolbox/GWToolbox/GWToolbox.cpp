@@ -99,7 +99,7 @@ void GWToolbox::ThreadEntry(HMODULE _dllmodule) {
 	input.SetKeyboardInputEnabled(true);
 	input.SetMouseInputEnabled(true);
 
-	Config::IniWrite(L"launcher", L"dllversion", GWTOOLBOX_VERSION);
+	Config::IniWrite("launcher", "dllversion", GWTOOLBOX_VERSION);
 
 	ChatLogger::Init();
 
@@ -133,16 +133,19 @@ void GWToolbox::ThreadEntry(HMODULE _dllmodule) {
 	Sleep(100);
 
 	if (app->HasBeenInitialized()) {
+		for (ToolboxModule* module : GWToolbox::instance().modules) {
+			module->SaveSettings(Config::inifile_);
+		}
 		LOG("Disabling GUI\n");
 		Application::InstancePtr()->Disable();
 		LOG("Closing settings\n");
-		tb.main_window().settings_panel().Close();
+		tb.main_window->settings_panel().Close();
 		LOG("saving health log\n");
-		tb.party_damage().SaveIni();
+		tb.party_damage->SaveIni();
 	}
 	Sleep(100);
 	LOG("Deleting config\n");
-	delete tb.chat_commands_;
+	delete tb.chat_commands;
 	Sleep(100);
 	LOG("Restoring input hook\n");
 	SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
@@ -220,7 +223,7 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 		case WM_LBUTTONUP:
 			io.MouseDown[0] = false;
 			input.ProcessMouseMessage(&msg);
-			tb.minimap_->OnMouseUp(msg);
+			tb.minimap->OnMouseUp(msg);
 			break;
 		
 		// Send other mouse events to osh first and consume them if used
@@ -236,10 +239,10 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 				Application::Instance().clearFocus();
 			}
 			switch (Message) {
-			case WM_MOUSEMOVE: if (tb.minimap_->OnMouseMove(msg)) return true; break;
-			case WM_LBUTTONDOWN: if (tb.minimap_->OnMouseDown(msg)) return true; break;
-			case WM_MOUSEWHEEL: if (tb.minimap_->OnMouseWheel(msg)) return true; break;
-			case WM_LBUTTONDBLCLK: if (tb.minimap_->OnMouseDblClick(msg)) return true; break;
+			case WM_MOUSEMOVE: if (tb.minimap->OnMouseMove(msg)) return true; break;
+			case WM_LBUTTONDOWN: if (tb.minimap->OnMouseDown(msg)) return true; break;
+			case WM_MOUSEWHEEL: if (tb.minimap->OnMouseWheel(msg)) return true; break;
+			case WM_LBUTTONDBLCLK: if (tb.minimap->OnMouseDblClick(msg)) return true; break;
 			}
 			break;
 
@@ -262,15 +265,15 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 			}
 
 			// send input to chat commands for camera movement
-			if (GWToolbox::instance().chat_commands().ProcessMessage(&msg)) {
+			if (GWToolbox::instance().chat_commands->ProcessMessage(&msg)) {
 				return true;
 			}
 
 			// send input to toolbox to trigger hotkeys
-			GWToolbox::instance().main_window().hotkey_panel().ProcessMessage(&msg);
+			GWToolbox::instance().main_window->hotkey_panel().ProcessMessage(&msg);
 
 			// block alt-enter if in borderless to avoid graphic glitches (no reason to go fullscreen anyway)
-			if (GWToolbox::instance().settings().borderless_window.value
+			if (GWToolbox::instance().other_settings->borderless_window
 				&& (GetAsyncKeyState(VK_MENU) < 0)
 				&& (GetAsyncKeyState(VK_RETURN) < 0)) {
 				return true;
@@ -317,30 +320,28 @@ void GWToolbox::CreateGui(IDirect3DDevice9* pDevice) {
 	
 	LOG("Loading font\n");
 	app.SetDefaultFont(GuiUtils::getTBFont(10.0f, true));
-
 	app.SetCursorEnabled(false);
 	try {
 
 		LOG("Creating main window\n");
 		GWToolbox& tb = GWToolbox::instance();
-		tb.main_window_ = new MainWindow();
-		tb.main_window_->SetFont(app.GetDefaultFont());
-		std::shared_ptr<MainWindow> shared_ptr = std::shared_ptr<MainWindow>(tb.main_window_);
+		tb.main_window = new MainWindow();
+		tb.main_window->SetFont(app.GetDefaultFont());
+		std::shared_ptr<MainWindow> shared_ptr = std::shared_ptr<MainWindow>(tb.main_window);
 		app.Run(shared_ptr);
 
-		tb.other_settings_ = new OtherSettings();
-		LOG("Creating timer\n");
-		tb.timer_window_ = new TimerWindow();
-		LOG("Creating bonds window\n");
-		tb.bonds_window_ = new BondsWindow();
-		LOG("Creating health window\n");
-		tb.health_window_ = new HealthWindow();
-		LOG("Creating distance window\n");
-		tb.distance_window_ = new DistanceWindow();
-		LOG("Creating party damage window\n");
-		tb.party_damage_ = new PartyDamage();
-		LOG("Creating Minimap\n");
-		tb.minimap_ = new Minimap();
+		tb.modules.push_back(tb.chat_filter = new ChatFilter());
+		tb.modules.push_back(tb.chat_commands = new ChatCommands());
+		tb.modules.push_back(tb.other_settings = new OtherSettings());
+
+		tb.modules.push_back(tb.timer_window = new TimerWindow());
+		tb.modules.push_back(tb.health_window = new HealthWindow());
+		tb.modules.push_back(tb.distance_window = new DistanceWindow());
+		tb.modules.push_back(tb.main_window);
+		tb.bonds_window = new BondsWindow();
+		tb.party_damage = new PartyDamage();
+		tb.minimap = new Minimap();
+
 		LOG("Enabling app\n");
 		app.Enable();
 		tb.initialized_ = true;
@@ -348,6 +349,11 @@ void GWToolbox::CreateGui(IDirect3DDevice9* pDevice) {
 		LOG("Saving theme\n");
 		tb.SaveTheme();
 
+		[]() {
+			for (ToolboxModule* module : GWToolbox::instance().modules) {
+				module->LoadSettings(Config::inifile_);
+			}
+		}();
 		SettingManager::LoadAll();
 		SettingManager::ApplyAll();
 
@@ -373,7 +379,7 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 			ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), pDevice);
 			ImGuiIO& io = ImGui::GetIO();
 			io.MouseDrawCursor = false;
-			static std::string imgui_inifile = GuiUtils::getPathA("interface.ini");
+			static std::string imgui_inifile = GuiUtils::getPath("interface.ini");
 			io.IniFilename = imgui_inifile.c_str();
 			GuiUtils::LoadFonts();
 		}();
@@ -392,8 +398,8 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 
 		D3DVIEWPORT9 viewport;
 		pDevice->GetViewport(&viewport);
-		Drawing::PointI location = tb.main_window().GetLocation();
-		Drawing::RectangleI size = tb.main_window().GetSize();
+		Drawing::PointI location = tb.main_window->GetLocation();
+		Drawing::RectangleI size = tb.main_window->GetSize();
 
 		if (location.X < 0) {
 			location.X = 0;
@@ -407,32 +413,33 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 		if (location.Y > static_cast<int>(viewport.Height) - size.GetHeight()) {
 			location.Y = static_cast<int>(viewport.Height) - size.GetHeight();
 		}
-		if (location != tb.main_window().GetLocation()) {
-			tb.main_window().SetLocation(location);
+		if (location != tb.main_window->GetLocation()) {
+			tb.main_window->SetLocation(location);
 		}
 
 		if (tb.initialized_) {
+			ImGui_ImplDX9_NewFrame();
+
 			__try {
-				tb.chat_commands_->Main();
-				tb.main_window_->Main();
-				tb.timer_window_->Main();
-				tb.bonds_window_->Main();
-				tb.health_window_->Main();
-				tb.distance_window_->Main();
-				tb.party_damage_->Main();
+				[]() {
+					for (ToolboxModule* module : GWToolbox::instance().modules) {
+						module->Update();
+					}
+				}();
+				tb.bonds_window->Main();
+				tb.party_damage->Main();
 			} __except (EXCEPT_EXPRESSION_LOOP) {
 				LOG("Badness happened! (in main thread)\n");
 			}
 
-			ImGui_ImplDX9_NewFrame();
 			__try {
-				tb.chat_commands_->Draw();
-				tb.main_window_->Draw();
-				tb.timer_window_->Draw();
-				tb.health_window_->Draw();
-				tb.distance_window_->Draw();
-				tb.party_damage_->Draw();
-				tb.bonds_window_->Draw();
+				[](IDirect3DDevice9* pDevice) {
+					for (ToolboxModule* module : GWToolbox::instance().modules) {
+						module->Draw(pDevice);
+					}
+				}(pDevice);
+				tb.party_damage->Draw();
+				tb.bonds_window->Draw();
 			} __except (EXCEPT_EXPRESSION_LOOP) {
 				LOG("Badness happened! (in render thread)\n");
 			}
@@ -440,7 +447,7 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 			ImGui::Render();
 		}
 
-		tb.minimap_->Render(pDevice);
+		tb.minimap->Render(pDevice);
 
 		renderer->BeginRendering();
 		Application::InstancePtr()->Render();
@@ -475,18 +482,18 @@ HRESULT WINAPI GWToolbox::resetScene(IDirect3DDevice9* pDevice,
 
 void GWToolbox::ResizeUI() {
 	if (initialized_ && adjust_on_resize_) {
-		main_window_->ResizeUI(old_screen_size_, new_screen_size_);
-		timer_window_->ResizeUI(old_screen_size_, new_screen_size_);
-		health_window_->ResizeUI(old_screen_size_, new_screen_size_);
-		distance_window_->ResizeUI(old_screen_size_, new_screen_size_);
-		party_damage_->ResizeUI(old_screen_size_, new_screen_size_);
-		bonds_window_->ResizeUI(old_screen_size_, new_screen_size_);
+		main_window->ResizeUI(old_screen_size_, new_screen_size_);
+		//timer_window_->ResizeUI(old_screen_size_, new_screen_size_);
+		//health_window_->ResizeUI(old_screen_size_, new_screen_size_);
+		//distance_window_->ResizeUI(old_screen_size_, new_screen_size_);
+		party_damage->ResizeUI(old_screen_size_, new_screen_size_);
+		bonds_window->ResizeUI(old_screen_size_, new_screen_size_);
 	}
 }
 
 void GWToolbox::LoadTheme() {
 	LOG("Loading Theme\n");
-	std::wstring path = GuiUtils::getPath(L"Theme.txt");
+	std::string path = GuiUtils::getPath("Theme.txt");
 	try {
 		OSHGui::Drawing::Theme theme;
 		theme.Load(path);
@@ -499,6 +506,6 @@ void GWToolbox::LoadTheme() {
 
 void GWToolbox::SaveTheme() {
 	OSHGui::Drawing::Theme& t = Application::Instance().GetTheme();
-	t.Save(GuiUtils::getPath(L"Theme.txt"),
+	t.Save(GuiUtils::getPath("Theme.txt"),
 		OSHGui::Drawing::Theme::ColorStyle::Array);
 }

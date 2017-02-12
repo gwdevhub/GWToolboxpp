@@ -15,7 +15,7 @@ void BuildPanel::Build::BuildUI() {
 	const int edit_button_width = 60;
 
 	Button* button = new Button(this);
-	button->SetText(name_);
+	//button->SetText(name_);
 	button->SetSize(Drawing::SizeI(GetWidth() - edit_button_width - Padding, GetHeight()));
 	button->SetLocation(Drawing::PointI(0, 0));
 	button->GetClickEvent() += ClickEventHandler([this](Control*) {
@@ -24,7 +24,7 @@ void BuildPanel::Build::BuildUI() {
 	AddControl(button);
 
 	Button* edit = new Button(this);
-	edit->SetText(L"Edit");
+	edit->SetText("Edit");
 	edit->SetSize(Drawing::SizeI(edit_button_width, GetHeight()));
 	edit->SetLocation(Drawing::PointI(GetWidth() - edit->GetWidth(), 0));
 	edit->GetClickEvent() += ClickEventHandler([this, button](Control*) {
@@ -36,34 +36,34 @@ void BuildPanel::Build::BuildUI() {
 void BuildPanel::Build::SendTeamBuild() {
 	using namespace std;
 
-	wstring section = std::wstring(L"builds") + to_wstring(index_);
-	wstring key;
+	string section = std::string("builds") + to_string(index_);
+	string key;
 
-	key = L"buildname";
-	wstring buildname = Config::IniRead(section.c_str(), key.c_str(), L"");
+	key = "buildname";
+	string buildname = Config::IniRead(section.c_str(), key.c_str(), "");
 	if (!buildname.empty()) {
 		panel_->Enqueue(buildname);
 	}
 
-	bool show_numbers = Config::IniReadBool(section.c_str(), L"showNumbers", true);
+	bool show_numbers = Config::IniRead(section.c_str(), "showNumbers", true);
 
 	for (int i = 0; i < edit_build_->N_PLAYERS; ++i) {
-		key = L"name" + to_wstring(i + 1);
-		wstring name = Config::IniRead(section.c_str(), key.c_str(), L"");
+		key = "name" + to_string(i + 1);
+		string name = Config::IniRead(section.c_str(), key.c_str(), "");
 
-		key = L"template" + to_wstring(i + 1);
-		wstring temp = Config::IniRead(section.c_str(), key.c_str(), L"");
-		
+		key = "template" + to_string(i + 1);
+		string temp = Config::IniRead(section.c_str(), key.c_str(), "");
+
 		if (!name.empty() && !temp.empty()) {
-			wstring message = L"[";
+			string message = "[";
 			if (show_numbers) {
-				message += to_wstring(i + 1);
-				message += L" - ";
+				message += to_string(i + 1);
+				message += " - ";
 			}
 			message += name;
-			message += L";";
+			message += ";";
 			message += temp;
-			message += L"]";
+			message += "]";
 			panel_->Enqueue(message);
 		}
 	}
@@ -100,9 +100,9 @@ void BuildPanel::BuildUI() {
 
 	for (int i = 0; i < N_BUILDS; ++i) {
 		int index = i + 1;
-		std::wstring section = std::wstring(L"builds") + std::to_wstring(index);
-		std::wstring name = Config::IniRead(section.c_str(), L"buildname", L"");
-		if (name.empty()) name = std::wstring(L"<Build ") + std::to_wstring(index) + std::wstring(L">");
+		std::string section = std::string("builds") + std::to_string(index);
+		std::string name = Config::IniRead(section.c_str(), "buildname", "");
+		if (name.empty()) name = std::string("<Build ") + std::to_string(index) + std::string(">");
 		Build* build = new Build(panel->GetContainer(), index, name, edit_build_, this);
 		build->SetSize(Drawing::SizeI(panel->GetContainer()->GetWidth() - 2 * Padding, BUILD_HEIGHT));
 		build->SetLocation(Drawing::PointI(Padding, Padding + i * (BUILD_HEIGHT + Padding)));
@@ -112,14 +112,14 @@ void BuildPanel::BuildUI() {
 	}
 }
 
-void BuildPanel::Main() {
+void BuildPanel::Update() {
 	if (!queue.empty() && TBTimer::diff(send_timer) > 600) {
 		send_timer = TBTimer::init();
 
 		if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading
 			&& GW::Agents().GetPlayer()) {
 
-			GW::Chat().SendChat(queue.front().c_str(), L'#');
+			//GW::Chat().SendChat(queue.front().c_str(), L'#');
 			queue.pop();
 		}
 	}

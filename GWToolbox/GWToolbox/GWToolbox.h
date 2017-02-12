@@ -8,6 +8,7 @@
 #include <OSHGui\OSHGui.hpp>
 #include <OSHGui\Input\WindowsMessage.hpp>
 
+#include "ChatFilter.h"
 #include "ChatCommands.h"
 #include "OtherSettings.h"
 
@@ -50,13 +51,13 @@ private:
 	//------ Constructor ------//
 private:
 	GWToolbox() :
-		chat_commands_(new ChatCommands()),
-		main_window_(nullptr),
-		timer_window_(nullptr),
-		bonds_window_(nullptr),
-		health_window_(nullptr),
-		distance_window_(nullptr),
-		party_damage_(nullptr),
+		chat_commands(nullptr),
+		main_window(nullptr),
+		timer_window(nullptr),
+		bonds_window(nullptr),
+		health_window(nullptr),
+		distance_window(nullptr),
+		party_damage(nullptr),
 		initialized_(false),
 		must_self_destruct_(false),
 		must_resize_(false),
@@ -75,16 +76,20 @@ public:
 	inline void set_capture_input(bool capture) { capture_input_ = capture; }
 	inline void set_adjust_on_resize(bool active) { adjust_on_resize_ = active; }
 
-	inline ChatCommands& chat_commands() { return *chat_commands_; }
-	inline OtherSettings& settings() { return *other_settings_; }
+	ChatFilter* chat_filter;
+	ChatCommands* chat_commands;
+	OtherSettings* other_settings;
 
-	inline MainWindow& main_window() { return *main_window_; }
-	inline TimerWindow& timer_window() { return *timer_window_; }
-	inline BondsWindow& bonds_window() { return *bonds_window_; }
-	inline HealthWindow& health_window() { return *health_window_; }
-	inline DistanceWindow& distance_window() { return *distance_window_; }
-	inline PartyDamage& party_damage() { return *party_damage_; }
-	inline Minimap& minimap() { return *minimap_; }
+	MainWindow* main_window;
+	TimerWindow* timer_window;
+	BondsWindow* bonds_window;
+	HealthWindow* health_window;
+	DistanceWindow* distance_window;
+	PartyDamage* party_damage;
+
+	Minimap* minimap;
+
+	std::vector<ToolboxModule*> modules;
 
 	void StartSelfDestruct() { must_self_destruct_ = true; }
 
@@ -106,16 +111,4 @@ private:
 	bool must_resize_;		// true when a resize event is sent, is checked by render thread
 	OSHGui::Drawing::SizeI old_screen_size_;
 	OSHGui::Drawing::SizeI new_screen_size_;
-
-	ChatCommands* chat_commands_;
-	OtherSettings* other_settings_;
-
-	MainWindow* main_window_;
-	TimerWindow* timer_window_;
-	BondsWindow* bonds_window_;
-	HealthWindow* health_window_;
-	DistanceWindow* distance_window_;
-	PartyDamage* party_damage_;
-
-	Minimap* minimap_;
 };

@@ -36,14 +36,14 @@ void MaterialsPanel::BuildUI() {
 		pic->SetEnabled(false);
 		pic->SetBackColor(Color::Empty());
 		pic->SetMouseOverFocusColor(GuiUtils::getMouseOverColor());
-		pic->SetImage(Drawing::Image::FromFile(GuiUtils::getSubPathA(file, "img")));
+		pic->SetImage(Drawing::Image::FromFile(GuiUtils::getSubPath(file, "img")));
 		pic->SetStretch(true);
 		pic->SetSize(SizeI(size, size));
 		pic->SetLocation(PointI(0,-10));
 		group->AddControl(pic);
 		
 		TextBox* textbox = new TextBox(group->GetContainer());
-		textbox->SetText(L"1");
+		textbox->SetText("1");
 		textbox->SetSize(SizeI(item_width, textbox->GetHeight()));
 		textbox->SetLocation(PointI(item_width + 3, 5));
 		textbox->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
@@ -54,7 +54,7 @@ void MaterialsPanel::BuildUI() {
 			try {
 				std::stof(textbox->GetText());
 			} catch (...) {
-				textbox->SetText(L"0");
+				textbox->SetText("0");
 			}
 		});
 		group->AddControl(textbox);
@@ -62,7 +62,7 @@ void MaterialsPanel::BuildUI() {
 		Button* button = new Button(group->GetContainer());
 		button->SetSize(SizeI(item_width, textbox->GetHeight()));
 		button->SetLocation(PointI(textbox->GetRight() + 3, textbox->GetTop()));
-		button->SetText(L"Buy");
+		button->SetText("Buy");
 		group->AddControl(button);
 	};
 
@@ -80,19 +80,19 @@ void MaterialsPanel::BuildUI() {
 	AddControl(group);
 
 	ComboBox* combo = new ComboBox(group->GetContainer());
-	combo->AddItem(L"10 Bones");
-	combo->AddItem(L"10 Iron Ingots");
-	combo->AddItem(L"10 Tanned Hide Squares");
-	combo->AddItem(L"10 Scales");
-	combo->AddItem(L"10 Chitin Fragments");
-	combo->AddItem(L"10 Bolts of Cloth");
-	combo->AddItem(L"10 Wood Planks");
-	combo->AddItem(L"10 Granite Slabs");
-	combo->AddItem(L"10 Piles of Glittering Dust");
-	combo->AddItem(L"10 Plant Fibers");
-	combo->AddItem(L"10 Feathers");
-	combo->AddItem(L"Glob of Ectoplasm");
-	combo->AddItem(L"Obsidian Shard");
+	combo->AddItem("10 Bones");
+	combo->AddItem("10 Iron Ingots");
+	combo->AddItem("10 Tanned Hide Squares");
+	combo->AddItem("10 Scales");
+	combo->AddItem("10 Chitin Fragments");
+	combo->AddItem("10 Bolts of Cloth");
+	combo->AddItem("10 Wood Planks");
+	combo->AddItem("10 Granite Slabs");
+	combo->AddItem("10 Piles of Glittering Dust");
+	combo->AddItem("10 Plant Fibers");
+	combo->AddItem("10 Feathers");
+	combo->AddItem("Glob of Ectoplasm");
+	combo->AddItem("Obsidian Shard");
 	combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
 		[this, combo](Control*) {
 
@@ -103,7 +103,7 @@ void MaterialsPanel::BuildUI() {
 	group->AddControl(combo);
 
 	TextBox* textbox = new TextBox(group->GetContainer());
-	textbox->SetText(L"1");
+	textbox->SetText("1");
 	textbox->SetSize(SizeI(item_width, combo->GetHeight()));
 	textbox->SetLocation(PointI(combo->GetRight() + 3, 0));
 	textbox->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
@@ -114,7 +114,7 @@ void MaterialsPanel::BuildUI() {
 		try {
 			std::stof(textbox->GetText());
 		} catch (...) {
-			textbox->SetText(L"0");
+			textbox->SetText("0");
 		}
 	});
 	group->AddControl(textbox);
@@ -122,17 +122,17 @@ void MaterialsPanel::BuildUI() {
 	Button* button = new Button(group->GetContainer());
 	button->SetSize(SizeI(item_width, combo->GetHeight()));
 	button->SetLocation(PointI(textbox->GetRight() + 3, textbox->GetTop()));
-	button->SetText(L"Buy");
+	button->SetText("Buy");
 	group->AddControl(button);
 
 	Label* log = new Label(this);
 	//log->SetText(L"here there will be bought x/x");
-	log->SetText(L"Work in progress");
+	log->SetText("Work in progress");
 	log->SetLocation(PointI(Padding, Padding + 4 * (group_height + Padding)));
 	AddControl(log);
 
 	Label* log2 = new Label(this);
-	log2->SetText(L"Materials buyer NOT working");
+	log2->SetText("Materials buyer NOT working");
 	log2->SetLocation(PointI(Padding, log->GetBottom() + Padding));
 	AddControl(log2);
 }

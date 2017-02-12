@@ -13,7 +13,7 @@ public:
 	const int NAME_WIDTH = 150;
 	const int SEND_WIDTH = 45;
 
-	inline static const wchar_t* IniKeyUp() { return L"editbuild_up"; }
+	inline static const char* IniKeyUp() { return "editbuild_up"; }
 
 
 	EditBuild(OSHGui::Control* parent);

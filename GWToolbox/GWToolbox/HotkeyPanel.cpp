@@ -20,33 +20,33 @@ HotkeyPanel::HotkeyPanel(OSHGui::Control* parent) : ToolboxPanel(parent) {
 
 void HotkeyPanel::BuildUI() {	
 	create_combo_ = new ComboBox(this);
-	create_combo_->SetText(L"Create Hotkey");
-	create_combo_->AddItem(L"Send Chat");			// 0
-	create_combo_->AddItem(L"Use Item");			// 1
-	create_combo_->AddItem(L"Drop or Use Buff");	// 2
-	create_combo_->AddItem(L"Toggle...");			// 3
-	create_combo_->AddItem(L"Execute...");			// 4
-	create_combo_->AddItem(L"Target");				// 5
-	create_combo_->AddItem(L"Move to");				// 6
-	create_combo_->AddItem(L"Dialog");				// 7
-	create_combo_->AddItem(L"Ping Build");			// 8
+	create_combo_->SetText("Create Hotkey");
+	create_combo_->AddItem("Send Chat");			// 0
+	create_combo_->AddItem("Use Item");				// 1
+	create_combo_->AddItem("Drop or Use Buff");		// 2
+	create_combo_->AddItem("Toggle...");			// 3
+	create_combo_->AddItem("Execute...");			// 4
+	create_combo_->AddItem("Target");				// 5
+	create_combo_->AddItem("Move to");				// 6
+	create_combo_->AddItem("Dialog");				// 7
+	create_combo_->AddItem("Ping Build");			// 8
 	create_combo_->SetMaxShowItems(create_combo_->GetItemsCount());
 	create_combo_->SetLocation(PointI(Padding, Padding));
 	create_combo_->SetSize(SizeI(GuiUtils::ComputeWidth(GetWidth(), 2), GuiUtils::BUTTON_HEIGHT));
 	create_combo_->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
 		[&](Control*) {
 		if (create_combo_->GetSelectedIndex() < 0) return;
-		std::wstring ini = L"hotkey-";
-		ini += std::to_wstring(this->NewID());
-		ini += L":";
+		std::string ini = "hotkey-";
+		ini += std::to_string(this->NewID());
+		ini += ":";
 		switch (create_combo_->GetSelectedIndex()) {
 		case 0:
 			ini += HotkeySendChat::IniSection();
-			AddHotkey(new HotkeySendChat(scroll_panel_->GetContainer(), Key::None, Key::None, true, ini, L"", L'/'));
+			AddHotkey(new HotkeySendChat(scroll_panel_->GetContainer(), Key::None, Key::None, true, ini, "", '/'));
 			break;
 		case 1:
 			ini += HotkeyUseItem::IniSection();
-			AddHotkey(new HotkeyUseItem(scroll_panel_->GetContainer(), Key::None, Key::None, true, ini, 0, L""));
+			AddHotkey(new HotkeyUseItem(scroll_panel_->GetContainer(), Key::None, Key::None, true, ini, 0, ""));
 			break;
 		case 2:
 			ini += HotkeyDropUseBuff::IniSection();
@@ -62,15 +62,15 @@ void HotkeyPanel::BuildUI() {
 			break;
 		case 5:
 			ini += HotkeyTarget::IniSection();
-			AddHotkey(new HotkeyTarget(scroll_panel_->GetContainer(), Key::None, Key::None, true, ini, 0, L""));
+			AddHotkey(new HotkeyTarget(scroll_panel_->GetContainer(), Key::None, Key::None, true, ini, 0, ""));
 			break;
 		case 6:
 			ini += HotkeyMove::IniSection();
-			AddHotkey(new HotkeyMove(scroll_panel_->GetContainer(), Key::None, Key::None, true, ini, 0.0, 0.0, L""));
+			AddHotkey(new HotkeyMove(scroll_panel_->GetContainer(), Key::None, Key::None, true, ini, 0.0, 0.0, ""));
 			break;
 		case 7:
 			ini += HotkeyDialog::IniSection();
-			AddHotkey(new HotkeyDialog(scroll_panel_->GetContainer(), Key::None, Key::None, true, ini, 0, L""));
+			AddHotkey(new HotkeyDialog(scroll_panel_->GetContainer(), Key::None, Key::None, true, ini, 0, ""));
 			break;
 		case 8:
 			ini += HotkeyPingBuild::IniSection();
@@ -79,13 +79,13 @@ void HotkeyPanel::BuildUI() {
 		default:
 			break;
 		}
-		create_combo_->SetText(L"Create Hotkey");
+		create_combo_->SetText("Create Hotkey");
 		create_combo_->SetSelectedIndex(-1);
 	});
 	AddControl(create_combo_);
 
 	delete_combo_ = new ComboBox(this);
-	delete_combo_->SetText(L"Delete Hotkey");
+	delete_combo_->SetText("Delete Hotkey");
 	delete_combo_->SetSize(SizeI(GuiUtils::ComputeWidth(GetWidth(), 2), GuiUtils::BUTTON_HEIGHT));
 	delete_combo_->SetLocation(PointI(create_combo_->GetRight() + Padding, Padding));
 	delete_combo_->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
@@ -103,65 +103,65 @@ void HotkeyPanel::BuildUI() {
 	AddControl(scroll_panel_);
 
 	max_id_ = 0;
-	std::list<std::wstring> sections = Config::IniReadSections();
-	for (std::wstring section : sections) {
-		if (section.compare(0, 6, L"hotkey") == 0) {
+	std::list<std::string> sections = Config::IniReadSections();
+	for (std::string section : sections) {
+		if (section.compare(0, 6, "hotkey") == 0) {
 			size_t first_sep = 6;
 			size_t second_sep = section.find(L':', first_sep);
 
-			std::wstring id = section.substr(first_sep + 1, second_sep - first_sep - 1);
+			std::string id = section.substr(first_sep + 1, second_sep - first_sep - 1);
 			try {
 				long long_id = std::stol(id);
 				if (long_id > max_id_) max_id_ = long_id;
 			} catch (...) {}
-			std::wstring type = section.substr(second_sep + 1);
-			bool active = Config::IniReadBool(section.c_str(), TBHotkey::IniKeyActive(), true);
-			Key key = (Key)Config::IniReadLong(section.c_str(), TBHotkey::IniKeyHotkey(), 0);
-			Key modifier = (Key)Config::IniReadLong(section.c_str(), TBHotkey::IniKeyModifier(), 0);
+			std::string type = section.substr(second_sep + 1);
+			bool active = Config::IniRead(section.c_str(), TBHotkey::IniKeyActive(), true);
+			Key key = (Key)Config::IniRead(section.c_str(), TBHotkey::IniKeyHotkey(), 0);
+			Key modifier = (Key)Config::IniRead(section.c_str(), TBHotkey::IniKeyModifier(), 0);
 			TBHotkey* tb_hk = NULL;
 
 			if (type.compare(HotkeySendChat::IniSection()) == 0) {
-				std::wstring msg = Config::IniRead(section.c_str(), HotkeySendChat::IniKeyMsg(), L"");
-				wchar_t channel = Config::IniRead(section.c_str(), HotkeySendChat::IniKeyChannel(), L"/")[0];
+				std::string msg = Config::IniRead(section.c_str(), HotkeySendChat::IniKeyMsg(), "");
+				char channel = Config::IniRead(section.c_str(), HotkeySendChat::IniKeyChannel(), "/")[0];
 				tb_hk = new HotkeySendChat(scroll_panel_->GetContainer(), key, modifier, active, section, msg, channel);
 
 			} else if (type.compare(HotkeyUseItem::IniSection()) == 0) {
-				UINT itemID = (UINT)Config::IniReadLong(section.c_str(), HotkeyUseItem::IniKeyItemID(), 0);
-				std::wstring item_name = Config::IniRead(section.c_str(), HotkeyUseItem::IniKeyItemName(), L"");
+				UINT itemID = (UINT)Config::IniRead(section.c_str(), HotkeyUseItem::IniKeyItemID(), 0);
+				std::string item_name = Config::IniRead(section.c_str(), HotkeyUseItem::IniKeyItemName(), "");
 				tb_hk = new HotkeyUseItem(scroll_panel_->GetContainer(), key, modifier, active, section, itemID, item_name);
 
 			} else if (type.compare(HotkeyDropUseBuff::IniSection()) == 0) {
-				long skillID = Config::IniReadLong(section.c_str(), HotkeyDropUseBuff::IniKeySkillID(),
+				long skillID = Config::IniRead(section.c_str(), HotkeyDropUseBuff::IniKeySkillID(),
 					static_cast<long>(GW::Constants::SkillID::Recall));
 				GW::Constants::SkillID id = static_cast<GW::Constants::SkillID>(skillID);
 				tb_hk = new HotkeyDropUseBuff(scroll_panel_->GetContainer(), key, modifier, active, section, id);
 
 			} else if (type.compare(HotkeyToggle::IniSection()) == 0) {
-				long toggleID = Config::IniReadLong(section.c_str(), HotkeyToggle::IniKeyToggleID(), 0);
+				long toggleID = Config::IniRead(section.c_str(), HotkeyToggle::IniKeyToggleID(), 0);
 				tb_hk = new HotkeyToggle(scroll_panel_->GetContainer(), key, modifier, active, section, toggleID);
 
 			} else if (type.compare(HotkeyAction::IniSection()) == 0) {
-				long actionID = Config::IniReadLong(section.c_str(), HotkeyAction::IniKeyActionID(), 0);
+				long actionID = Config::IniRead(section.c_str(), HotkeyAction::IniKeyActionID(), 0);
 				tb_hk = new HotkeyAction(scroll_panel_->GetContainer(), key, modifier, active, section, actionID);
 
 			} else if (type.compare(HotkeyTarget::IniSection()) == 0) {
-				UINT targetID = (UINT)Config::IniReadLong(section.c_str(), HotkeyTarget::IniKeyTargetID(), 0);
-				std::wstring target_name = Config::IniRead(section.c_str(), HotkeyTarget::IniKeyTargetName(), L"");
+				UINT targetID = (UINT)Config::IniRead(section.c_str(), HotkeyTarget::IniKeyTargetID(), 0);
+				std::string target_name = Config::IniRead(section.c_str(), HotkeyTarget::IniKeyTargetName(), "");
 				tb_hk = new HotkeyTarget(scroll_panel_->GetContainer(), key, modifier, active, section, targetID, target_name);
 
 			} else if (type.compare(HotkeyMove::IniSection()) == 0) {
-				float x = (float)Config::IniReadDouble(section.c_str(), HotkeyMove::IniKeyX(), 0.0);
-				float y = (float)Config::IniReadDouble(section.c_str(), HotkeyMove::IniKeyY(), 0.0);
-				std::wstring name = Config::IniRead(section.c_str(), HotkeyMove::IniKeyName(), L"");
+				float x = (float)Config::IniRead(section.c_str(), HotkeyMove::IniKeyX(), 0.0);
+				float y = (float)Config::IniRead(section.c_str(), HotkeyMove::IniKeyY(), 0.0);
+				std::string name = Config::IniRead(section.c_str(), HotkeyMove::IniKeyName(), "");
 				tb_hk = new HotkeyMove(scroll_panel_->GetContainer(), key, modifier, active, section, x, y, name);
 
 			} else if (type.compare(HotkeyDialog::IniSection()) == 0) {
-				UINT dialogID = (UINT)Config::IniReadLong(section.c_str(), HotkeyDialog::IniKeyDialogID(), 0);
-				std::wstring dialog_name = Config::IniRead(section.c_str(), HotkeyDialog::IniKeyDialogName(), L"");
+				UINT dialogID = (UINT)Config::IniRead(section.c_str(), HotkeyDialog::IniKeyDialogID(), 0);
+				std::string dialog_name = Config::IniRead(section.c_str(), HotkeyDialog::IniKeyDialogName(), "");
 				tb_hk = new HotkeyDialog(scroll_panel_->GetContainer(), key, modifier, active, section, dialogID, dialog_name);
 
 			} else if (type.compare(HotkeyPingBuild::IniSection()) == 0) {
-				UINT index = (UINT)Config::IniReadLong(section.c_str(), HotkeyPingBuild::IniKeyBuildIndex(), 0);
+				UINT index = (UINT)Config::IniRead(section.c_str(), HotkeyPingBuild::IniKeyBuildIndex(), 0);
 				tb_hk = new HotkeyPingBuild(scroll_panel_->GetContainer(), key, modifier, active, section, index);
 			} else {
 				LOG("WARNING hotkey detected, but could not match any type!\n");
@@ -183,7 +183,7 @@ void HotkeyPanel::BuildUI() {
 void HotkeyPanel::UpdateDeleteCombo() {
 	delete_combo_->SetSelectedIndex(-1);
 	delete_combo_->Clear();
-	delete_combo_->SetText(L"Delete Hotkey");
+	delete_combo_->SetText("Delete Hotkey");
 	for (int i = 0; i < (int)hotkeys.size(); ++i) {
 		delete_combo_->AddItem(hotkeys[i]->GetDescription());
 	}
@@ -298,7 +298,7 @@ bool HotkeyPanel::ProcessMessage(LPMSG msg) {
 }
 
 
-void HotkeyPanel::Main() {
+void HotkeyPanel::Update() {
 	if (clickerActive && TBTimer::diff(clickerTimer) > 20) {
 		clickerTimer = TBTimer::init();
 		INPUT input;

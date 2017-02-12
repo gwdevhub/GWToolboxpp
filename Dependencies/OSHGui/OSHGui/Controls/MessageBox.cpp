@@ -77,7 +77,7 @@ namespace OSHGui {
 			case MessageBoxButtons::OK:
 				neededWidthForButtons = buttonWidth + 20;
 
-				labels.push_back(L"OK");
+				labels.push_back("OK");
 				eventHandler.push_back(ClickEventHandler([this](Control *control) {
 					SetDialogResult(DialogResult::OK);
 					Close();
@@ -86,8 +86,8 @@ namespace OSHGui {
 			case MessageBoxButtons::OKCancel:
 				neededWidthForButtons = 2 * (buttonWidth + 10) + 10;
 
-				labels.push_back(L"Cancel");
-				labels.push_back(L"OK");
+				labels.push_back("Cancel");
+				labels.push_back("OK");
 				eventHandler.push_back(ClickEventHandler([this](Control *control) {
 					SetDialogResult(DialogResult::Cancel);
 					Close();
@@ -100,9 +100,9 @@ namespace OSHGui {
 			case MessageBoxButtons::AbortRetryIgnore:
 				neededWidthForButtons = 3 * (buttonWidth + 10) + 10;
 
-				labels.push_back(L"Ignore");
-				labels.push_back(L"Retry");
-				labels.push_back(L"Abort");
+				labels.push_back("Ignore");
+				labels.push_back("Retry");
+				labels.push_back("Abort");
 				eventHandler.push_back(ClickEventHandler([this](Control *control) {
 					SetDialogResult(DialogResult::Ignore);
 					Close();
@@ -119,8 +119,8 @@ namespace OSHGui {
 			case MessageBoxButtons::YesNo:
 				neededWidthForButtons = 2 * (buttonWidth + 10) + 10;
 
-				labels.push_back(L"No");
-				labels.push_back(L"Yes");
+				labels.push_back("No");
+				labels.push_back("Yes");
 				eventHandler.push_back(ClickEventHandler([this](Control *control) {
 					SetDialogResult(DialogResult::No);
 					Close();
@@ -133,9 +133,9 @@ namespace OSHGui {
 			case MessageBoxButtons::YesNoCancel:
 				neededWidthForButtons = 3 * (buttonWidth + 10) + 10;
 
-				labels.push_back(L"Cancel");
-				labels.push_back(L"No");
-				labels.push_back(L"Yes");
+				labels.push_back("Cancel");
+				labels.push_back("No");
+				labels.push_back("Yes");
 				eventHandler.push_back(ClickEventHandler([this](Control *control) {
 					SetDialogResult(DialogResult::Cancel);
 					Close();
@@ -152,8 +152,8 @@ namespace OSHGui {
 			case MessageBoxButtons::RetryCancel:
 				neededWidthForButtons = 2 * (buttonWidth + 10) + 10;
 
-				labels.push_back(L"Cancel");
-				labels.push_back(L"Retry");
+				labels.push_back("Cancel");
+				labels.push_back("Retry");
 				eventHandler.push_back(ClickEventHandler([this](Control *control) {
 					SetDialogResult(DialogResult::Cancel);
 					Close();

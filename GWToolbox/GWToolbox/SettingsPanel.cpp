@@ -14,71 +14,20 @@
 #include "SettingManager.h"
 
 
-SettingsPanel::SettingsPanel(OSHGui::Control* parent) : ToolboxPanel(parent),
-	save_location_data(false, MainWindow::IniSection(), L"save_location") {
-
-	save_location_data.SetText("Save location data");
-	save_location_data.SetTooltip("When enabled, toolbox will save character location every second in a file in settings folder / location logs");
-}
-
-void SettingsPanel::BuildUI() {
-	using namespace OSHGui;
-
-	location_current_map_ = GW::Constants::MapID::None;
-	location_timer_ = TBTimer::init();
-	save_location_data.value = false;
-
-	const int item_width = GetWidth() - 2 * Padding;
-
-	Label* version = new Label(this);
-	version->SetText(std::wstring(L"GWToolbox++ version ") + GWTOOLBOX_VERSION);
-	version->SetLocation(PointI(GetWidth() / 2 - version->GetWidth() / 2, Padding / 2));
-	AddControl(version);
-
-	Label* authors = new Label(this);
-	authors->SetText(L"by Has and KAOS");
-	authors->SetFont(GuiUtils::getTBFont(8.0f, true));
-	authors->SetLocation(PointI(GetWidth() / 2 - authors->GetWidth() / 2, version->GetBottom()));
-	AddControl(authors);
-
-	ScrollPanel* panel = new ScrollPanel(this);
-	panel->SetLocation(PointI(Padding, authors->GetBottom() + Padding / 2));
-	panel->SetWidth(GetWidth() - Padding * 2);
-	panel->GetContainer()->SetBackColor(Color::Empty());
-	panel->SetDeltaFactor(5);
-	panel->SetAutoSize(true);
-	AddControl(panel);
-
-	// should be in the same order as the Settings_enum
-	Panel* container = panel->GetContainer();
-
-	Button* folder = new Button(this);
-	folder->SetText(L"Open Settings Folder");
-	folder->SetSize(SizeI(item_width, GuiUtils::ROW_HEIGHT));
-	folder->SetLocation(PointI(Padding, GetHeight() - Padding - folder->GetHeight()));
-	folder->GetClickEvent() += ClickEventHandler([](Control*) {
-		CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-		ShellExecuteW(NULL, L"open", GuiUtils::getSettingsFolder().c_str(), NULL, NULL, SW_SHOWNORMAL);
-	});
-	AddControl(folder);
-
-	Button* website = new Button(this);
-	website->SetText(L"Open GWToolbox++ Website");
-	website->SetSize(SizeI(item_width, GuiUtils::ROW_HEIGHT));
-	website->SetLocation(PointI(Padding, folder->GetTop() - Padding - website->GetHeight()));
-	website->GetClickEvent() += ClickEventHandler([](Control*) {
-		CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-		ShellExecuteW(NULL, L"open", GWTOOLBOX_WEBSITE, NULL, NULL, SW_SHOWNORMAL);
-	});
-	AddControl(website);
-
-	panel->SetHeight(website->GetTop() - authors->GetBottom() - Padding);
+SettingsPanel::SettingsPanel() {
+	//SettingsPanel::SettingsPanel(OSHGui::Control* parent) : ToolboxPanel(parent),
+	//	save_location_data(false, MainWindow::IniSection(), "save_location") {
+	//
+	//	save_location_data.SetText("Save location data");
+	//	save_location_data.SetTooltip("When enabled, toolbox will save character location every second in a file in settings folder / location logs");
+	//}
+	save_location_data = false;
 }
 
 
-void SettingsPanel::Main() {
+void SettingsPanel::Update() {
 	// save location data
-	if (save_location_data.value && TBTimer::diff(location_timer_) > 1000) {
+	if (save_location_data && TBTimer::diff(location_timer_) > 1000) {
 		location_timer_ = TBTimer::init();
 		if (GW::Map().GetInstanceType() == GW::Constants::InstanceType::Explorable
 			&& GW::Agents().GetPlayer() != nullptr
@@ -132,7 +81,7 @@ void SettingsPanel::Main() {
 				if (location_file_ && location_file_.is_open()) {
 					location_file_.close();
 				}
-				location_file_.open(GuiUtils::getSubPathA(filename, "location logs").c_str());
+				location_file_.open(GuiUtils::getSubPath(filename, "location logs").c_str());
 			}
 
 			GW::Agent* me = GW::Agents().GetPlayer();
@@ -149,30 +98,43 @@ void SettingsPanel::Main() {
 	}
 }
 
-void SettingsPanel::Draw() {
+void SettingsPanel::Draw(IDirect3DDevice9* pDevice) {
 	//ImGui::SetNextWindowSize(ImVec2(280, 285));
-	ImGui::Begin("Settings Panel");
-	if (ImGui::CollapsingHeader("Guild Wars General")) {
-		GWToolbox::instance().settings().borderless_window.Draw();
-		GWToolbox::instance().settings().open_template_links.Draw();
+	ImGui::Begin(Name());
+	ImGui::Text("GWToolbox++ version");
+	ImGui::SameLine();
+	ImGui::Text(GWTOOLBOX_VERSION);
+
+	ImGui::Text("by Has and KAOS");
+
+	if (ImGui::Button("Open Settings Folder")) {
+		CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+		ShellExecute(NULL, "open", GuiUtils::getSettingsFolder().c_str(), NULL, NULL, SW_SHOWNORMAL);
+	}
+
+	if (ImGui::Button("Open GWToolbox++ Website")) {
+		CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+		ShellExecute(NULL, "open", GWTOOLBOX_WEBSITE, NULL, NULL, SW_SHOWNORMAL);
+	}
+
+	if (ImGui::CollapsingHeader("General")) {
+		GWToolbox::instance().other_settings->DrawSettings();
 	}
 	if (ImGui::CollapsingHeader("Toolbox++ General")) {
-		GWToolbox::instance().settings().freeze_widgets.Draw();
-		save_location_data.Draw();
+		ImGui::Checkbox("Save Location Data", &save_location_data);
 	}
 	if (ImGui::CollapsingHeader("Main Window")) {
-		GWToolbox::instance().main_window().DrawSettings();
+		GWToolbox::instance().main_window->DrawSettings();
 	}
 	if (ImGui::CollapsingHeader("Minimap")) {
 
 	}
 	if (ImGui::CollapsingHeader("Chat Filter")) {
-		GWToolbox::instance().chat_commands().chat_filter().DrawSettings();
+		GWToolbox::instance().chat_filter->DrawSettings();
 	}
 	if (ImGui::CollapsingHeader("Theme")) {
 		
 	}
-
 
 	ImGui::End();
 }

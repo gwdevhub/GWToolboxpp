@@ -2,15 +2,18 @@
 
 #include "OSHGui\OSHGui.hpp"
 
-#include "ToolboxWindow.h"
+#include "ToolboxModule.h"
 
-class TimerWindow : public ToolboxWindow {
+class TimerWindow : public ToolboxModule {
 public:
-	TimerWindow() {}
-
-	// Update. Will always be called every frame.
-	void Main() override {}
+	const char* Name() override { return "Timer"; }
 
 	// Draw user interface. Will be called every frame if the element is visible
-	void Draw() override;
+	void Draw(IDirect3DDevice9* pDevice) override;
+
+	void LoadSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) override;
+
+private:
+	bool visible;
 };

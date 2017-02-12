@@ -94,7 +94,7 @@ namespace OSHGui {
 				}
 			}
 			
-			std::wstring substring = text_.substr(0, trailing ? index + 1 : index);
+			std::string substring = text_.substr(0, trailing ? index + 1 : index);
 			return Drawing::PointF(font_->GetTextExtent(substring), font_->GetFontHeight());
 		}
 		//---------------------------------------------------------------------------
@@ -106,7 +106,7 @@ namespace OSHGui {
 				index = GetLength() - 1;
 			}
 
-			std::wstring substring = size == -1 ? text_.substr(index) : text_.substr(index, size);
+			std::string substring = size == -1 ? text_.substr(index) : text_.substr(index, size);
 			return Drawing::SizeF(std::ceil(font_->GetTextExtent(substring)), std::ceil(font_->GetFontHeight()));
 		}
 		//---------------------------------------------------------------------------

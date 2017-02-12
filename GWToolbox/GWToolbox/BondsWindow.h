@@ -51,10 +51,10 @@ class BondsWindow : public ToolboxWindow {
 public:
 	BondsWindow();
 
-	inline static const wchar_t* IniSection() { return L"bonds"; }
-	inline static const wchar_t* IniKeyX() { return L"x"; }
-	inline static const wchar_t* IniKeyY() { return L"y"; }
-	inline static const wchar_t* IniKeyShow() { return L"show"; }
+	inline static const char* IniSection() { return "bonds"; }
+	inline static const char* IniKeyX() { return "x"; }
+	inline static const char* IniKeyY() { return "y"; }
+	inline static const char* IniKeyShow() { return "show"; }
 	inline static const char* ThemeKey() { return "bonds"; }
 
 	// Update. Will always be called every frame.

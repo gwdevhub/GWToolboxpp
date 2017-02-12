@@ -36,10 +36,10 @@ Minimap::Minimap()
 		return false;
 	});
 
-	int x = Config::IniReadLong(Minimap::IniSection(), Minimap::IniKeyX(), 50);
-	int y = Config::IniReadLong(Minimap::IniSection(), Minimap::IniKeyY(), 50);
-	int size = Config::IniReadLong(Minimap::IniSection(), Minimap::IniKeySize(), 600);
-	double scale = Config::IniReadDouble(Minimap::IniSection(), Minimap::IniKeyScale(), 1.0);
+	int x = Config::IniRead(Minimap::IniSection(), Minimap::IniKeyX(), 50l);
+	int y = Config::IniRead(Minimap::IniSection(), Minimap::IniKeyY(), 50l);
+	int size = Config::IniRead(Minimap::IniSection(), Minimap::IniKeySize(), 600l);
+	double scale = Config::IniRead(Minimap::IniSection(), Minimap::IniKeyScale(), 1.0);
 	SetLocation(x, y);
 	SetSize(size, size);
 
@@ -47,7 +47,7 @@ Minimap::Minimap()
 	SetScale((float)scale);
 	last_moved_ = TBTimer::init();
 
-	SetVisible(Config::IniReadBool(Minimap::IniSection(), Minimap::InikeyShow(), false));
+	SetVisible(Config::IniRead(Minimap::IniSection(), Minimap::InikeyShow(), false));
 
 	pmap_renderer.Invalidate();
 }
@@ -280,8 +280,8 @@ bool Minimap::OnMouseUp(MSG msg) {
 	mousedown_ = false;
 	
 	if (!freeze_) {
-		Config::IniWriteLong(Minimap::IniSection(), Minimap::IniKeyX(), GetX());
-		Config::IniWriteLong(Minimap::IniSection(), Minimap::IniKeyY(), GetY());
+		Config::IniWrite(Minimap::IniSection(), Minimap::IniKeyX(), GetX());
+		Config::IniWrite(Minimap::IniSection(), Minimap::IniKeyY(), GetY());
 	}
 
 	return pingslines_renderer.OnMouseUp();
@@ -338,7 +338,7 @@ bool Minimap::OnMouseWheel(MSG msg) {
 	if (msg.wParam & MK_SHIFT) {
 		float delta = zDelta > 0 ? 1.024f : 0.9765625f;
 		Scale(delta);
-		Config::IniWriteDouble(Minimap::IniSection(), Minimap::IniKeyScale(), GetScale());
+		Config::IniWrite(Minimap::IniSection(), Minimap::IniKeyScale(), GetScale());
 		return true;
 	}
 
@@ -349,7 +349,7 @@ bool Minimap::OnMouseWheel(MSG msg) {
 		SetX(GetX() - delta);
 		SetY(GetY() - delta);
 
-		Config::IniWriteLong(Minimap::IniSection(), Minimap::IniKeySize(), GetWidth());
+		Config::IniWrite(Minimap::IniSection(), Minimap::IniKeySize(), GetWidth());
 
 		return true;
 	}

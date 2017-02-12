@@ -7,17 +7,19 @@
 #include "OtherSettings.h"
 #include "GWToolbox.h"
 
-void TimerWindow::Draw() {
+void TimerWindow::Draw(IDirect3DDevice9* pDevice) {
+	if (!visible) return;
+
 	unsigned long time = GW::Map().GetInstanceTime() / 1000;
 
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(0, 0, 0, 0));
 	ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar
 		| ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar;
-	if (GWToolbox::instance().settings().freeze_widgets.value) {
+	if (GWToolbox::instance().other_settings->freeze_widgets) {
 		flags |= ImGuiWindowFlags_NoInputs;
 	}
 	ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f));
-	if (ImGui::Begin("Timer", nullptr, flags)) {
+	if (ImGui::Begin(Name(), nullptr, flags)) {
 		static char timer[32];
 		static char urgoz_timer[32];
 		sprintf_s(timer, "%d:%02d:%02d", time / (60 * 60), (time / 60) % 60, time % 60);
@@ -48,4 +50,12 @@ void TimerWindow::Draw() {
 	}
 	ImGui::End();
 	ImGui::PopStyleColor();
+}
+
+void TimerWindow::LoadSettings(CSimpleIni* ini) {
+	visible = ini->GetBoolValue(Name(), "show", true);
+}
+
+void TimerWindow::SaveSettings(CSimpleIni* ini) {
+	ini->SetBoolValue(Name(), "show", visible);
 }

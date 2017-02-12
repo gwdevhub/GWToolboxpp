@@ -41,6 +41,8 @@ private:
 	void CalculateHotkeyPositions();
 
 public:
+	const char* Name() override { return "Hotkey Panel"; }
+
 	HotkeyPanel(OSHGui::Control* parent);
 	
 	inline bool ToggleClicker() { return clickerActive = !clickerActive; }
@@ -50,10 +52,10 @@ public:
 	void BuildUI() override;
 
 	// Update. Will always be called every frame.
-	void Main() override;
+	void Update() override;
 
 	// Draw user interface. Will be called every frame if the element is visible
-	void Draw() override {}
+	void Draw(IDirect3DDevice9* pDevice) override {}
 
 	bool ProcessMessage(LPMSG msg);
 

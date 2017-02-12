@@ -13,7 +13,7 @@ using namespace OSHGui;
 using namespace OSHGui::Drawing;
 using namespace GW::Constants;
 
-Pcon::Pcon(OSHGui::Control* parent, const wchar_t* ini) : Button(parent),
+Pcon::Pcon(OSHGui::Control* parent, const char* ini) : Button(parent),
 	pic(new PictureBox(this)),
 	tick(new PictureBox(this)),
 	shadow(new Label(this)),
@@ -26,14 +26,14 @@ Pcon::Pcon(OSHGui::Control* parent, const wchar_t* ini) : Button(parent),
 	chatName(ini), // will be set later, but its a good temporary value
 	iniName(ini) {
 
-	enabled = Config::IniReadBool(L"pcons", ini, false);;
+	enabled = Config::IniRead("pcons", ini, false);;
 
 	tick->SetBackColor(Drawing::Color::Empty());
 	tick->SetStretch(true);
 	tick->SetEnabled(false);
 	tick->SetLocation(PointI(0, 0));
 	tick->SetSize(SizeI(WIDTH, HEIGHT));
-	tick->SetImage(Drawing::Image::FromFile(GuiUtils::getSubPathA("Tick.png", "img")));
+	tick->SetImage(Drawing::Image::FromFile(GuiUtils::getSubPath("Tick.png", "img")));
 	AddControl(tick);
 
 	pic->SetBackColor(Drawing::Color::Empty());
@@ -43,13 +43,13 @@ Pcon::Pcon(OSHGui::Control* parent, const wchar_t* ini) : Button(parent),
 
 	int text_x = 5;
 	int text_y = 3;
-	shadow->SetText(std::to_wstring(quantity));
+	shadow->SetText(std::to_string(quantity));
 	shadow->SetFont(GuiUtils::getTBFont(11.0f, true));
 	shadow->SetForeColor(Drawing::Color::Black());
 	shadow->SetLocation(PointI(text_x + 1, text_y + 1));
 	AddControl(shadow);
 
-	label_->SetText(std::to_wstring(quantity));
+	label_->SetText(std::to_string(quantity));
 	label_->SetFont(GuiUtils::getTBFont(11.0f, true));
 	label_->SetLocation(PointI(text_x, text_y));
 	AddControl(label_);
@@ -65,19 +65,19 @@ void Pcon::toggleActive() {
 	enabled = !enabled;
 	scanInventory();
 	update_ui = true;
-	Config::IniWriteBool(L"pcons", iniName, enabled);
+	Config::IniWrite("pcons", iniName, enabled);
 }
 
 void Pcon::setIcon(const char* icon, int xOff, int yOff, int size) {
 	pic->SetSize(SizeI(size, size));
 	pic->SetLocation(PointI(xOff, yOff));
-	pic->SetImage(Drawing::Image::FromFile(GuiUtils::getSubPathA(icon, "img")));
+	pic->SetImage(Drawing::Image::FromFile(GuiUtils::getSubPath(icon, "img")));
 }
 
 void Pcon::UpdateUI() {
 	if (update_ui) {
-		label_->SetText(std::to_wstring(quantity));
-		shadow->SetText(std::to_wstring(quantity));
+		label_->SetText(std::to_string(quantity));
+		shadow->SetText(std::to_string(quantity));
 
 		if (quantity == 0) {
 			label_->SetForeColor(Color(1.0, 1.0, 0.0, 0.0));
@@ -242,7 +242,8 @@ bool PconLunar::checkAndUse() {
 				|| GW::Items().UseItemByModelId(ItemID::LunarRabbit)
 				|| GW::Items().UseItemByModelId(ItemID::LunarSheep)
 				|| GW::Items().UseItemByModelId(ItemID::LunarSnake)
-				|| GW::Items().UseItemByModelId(ItemID::LunarMonkey);
+				|| GW::Items().UseItemByModelId(ItemID::LunarMonkey)
+				|| GW::Items().UseItemByModelId(ItemID::LunarRooster);
 			if (used) {
 				this->timer = TBTimer::init();
 				this->update_timer = TBTimer::init();
@@ -383,7 +384,8 @@ void PconLunar::scanInventory() {
 							|| items[i]->ModelId == ItemID::LunarRabbit
 							|| items[i]->ModelId == ItemID::LunarSheep
 							|| items[i]->ModelId == ItemID::LunarSnake
-							|| items[i]->ModelId == ItemID::LunarMonkey) {
+							|| items[i]->ModelId == ItemID::LunarMonkey
+							|| items[i]->ModelId == ItemID::LunarRooster) {
 
 							quantity += items[i]->Quantity;
 						}

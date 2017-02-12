@@ -18,10 +18,10 @@ private:
 	OSHGui::PictureBox* pic;
 	OSHGui::PictureBox* tick;
 	OSHGui::Label* shadow;
-	const wchar_t* iniName;
+	const char* iniName;
 
 protected:
-	const wchar_t* chatName;
+	const char* chatName;
 	int quantity;
 	bool enabled;
 	unsigned int itemID;
@@ -33,11 +33,11 @@ protected:
 	void CheckUpdateTimer();
 
 public:
-	Pcon(OSHGui::Control* parent, const wchar_t* ini);
+	Pcon(OSHGui::Control* parent, const char* ini);
 	void CalculateLabelLocation() override {};
 
 	void setIcon(const char* icon, int xOff, int yOff, int size);
-	inline void setChatName(const wchar_t* chat) { chatName = chat; }
+	inline void setChatName(const char* chat) { chatName = chat; }
 	inline void setItemID(unsigned int item) { itemID = item; }
 	inline void setEffectID(GW::Constants::SkillID effect) { effectID = effect; }
 	inline void setThreshold(int t) { threshold = t; }
@@ -50,14 +50,14 @@ public:
 
 class PconCons : public Pcon {
 public:
-	PconCons(OSHGui::Control* parent, const wchar_t* ini) : Pcon(parent, ini) {}
+	PconCons(OSHGui::Control* parent, const char* ini) : Pcon(parent, ini) {}
 
 	bool checkAndUse() override;
 };
 
 class PconCity : public Pcon {
 public:
-	PconCity(OSHGui::Control* parent, const wchar_t* ini) : Pcon(parent, ini) {}
+	PconCity(OSHGui::Control* parent, const char* ini) : Pcon(parent, ini) {}
 
 	bool checkAndUse() override;
 	void scanInventory() override;
@@ -65,7 +65,7 @@ public:
 
 class PconAlcohol : public Pcon {
 public:
-	PconAlcohol(OSHGui::Control* parent, const wchar_t* ini) : Pcon(parent, ini) {}
+	PconAlcohol(OSHGui::Control* parent, const char* ini) : Pcon(parent, ini) {}
 
 	bool checkAndUse() override;
 	void scanInventory() override;
@@ -73,7 +73,7 @@ public:
 
 class PconLunar : public Pcon {
 public:
-	PconLunar(OSHGui::Control* parent, const wchar_t* ini) : Pcon(parent, ini) {}
+	PconLunar(OSHGui::Control* parent, const char* ini) : Pcon(parent, ini) {}
 
 	bool checkAndUse() override;
 	void scanInventory() override;

@@ -2,19 +2,20 @@
 
 #include "OSHGui\OSHGui.hpp"
 
-#include "ToolboxWindow.h"
+#include "ToolboxModule.h"
 
-class DistanceWindow : public ToolboxWindow {
+class DistanceWindow : public ToolboxModule {
 public:
 	DistanceWindow() {};
 
-	inline static const wchar_t* IniSection() { return L"Distance"; }
-	inline static const wchar_t* IniKeyShow() { return L"show"; }
-	inline static const char* ThemeKey() { return "distance"; }
-
-	// Update. Will always be called every frame.
-	void Main() override {}
+	const char* Name() override { return "Distance"; }
 
 	// Draw user interface. Will be called every frame if the element is visible
-	void Draw() override;
+	void Draw(IDirect3DDevice9* pDevice) override;
+
+	void LoadSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) override;
+
+private:
+	bool visible;
 };

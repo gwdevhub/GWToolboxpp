@@ -8,23 +8,23 @@
 
 AgentRenderer::AgentRenderer() : vertices(nullptr) {
 
-	MinimapUtils::Color modifier = MinimapUtils::IniReadColor2(L"color_agent_modifier", L"0x001E1E1E");
-	color_eoe = MinimapUtils::IniReadColor2(L"color_eoe", L"0x3200FF00");
-	color_qz = MinimapUtils::IniReadColor2(L"color_qz", L"0x320000FF");
-	color_target = MinimapUtils::IniReadColor2(L"color_target", L"0xFFFFFF00");
-	color_player = MinimapUtils::IniReadColor2(L"color_player", L"0xFFFF8000");
-	color_player_dead = MinimapUtils::IniReadColor2(L"color_player_dead", L"0x64FF8000");
-	color_signpost = MinimapUtils::IniReadColor2(L"color_signpost", L"0xFF0000C8");
-	color_item = MinimapUtils::IniReadColor2(L"color_item", L"0xFF0000F0");
-	color_hostile = MinimapUtils::IniReadColor2(L"color_hostile", L"0xFFF00000");
-	color_hostile_damaged = MinimapUtils::IniReadColor2(L"color_hostile_damaged", L"0xFF800000");
-	color_hostile_dead = MinimapUtils::IniReadColor2(L"color_hostile_dead", L"0xFF320000");
-	color_neutral = MinimapUtils::IniReadColor2(L"color_neutral", L"0xFF0000DC");
-	color_ally_party = MinimapUtils::IniReadColor2(L"color_ally", L"0xFF00B300");
-	color_ally_npc = MinimapUtils::IniReadColor2(L"color_ally_npc", L"0xFF99FF99");
-	color_ally_spirit = MinimapUtils::IniReadColor2(L"color_ally_spirit", L"0xFF608000");
-	color_ally_minion = MinimapUtils::IniReadColor2(L"color_ally_minion", L"0xFF008060");
-	color_ally_dead = MinimapUtils::IniReadColor2(L"color_ally_dead", L"0x64006400");
+	MinimapUtils::Color modifier = MinimapUtils::IniReadColor2("color_agent_modifier", "0x001E1E1E");
+	color_eoe = MinimapUtils::IniReadColor2("color_eoe", "0x3200FF00");
+	color_qz = MinimapUtils::IniReadColor2("color_qz", "0x320000FF");
+	color_target = MinimapUtils::IniReadColor2("color_target", "0xFFFFFF00");
+	color_player = MinimapUtils::IniReadColor2("color_player", "0xFFFF8000");
+	color_player_dead = MinimapUtils::IniReadColor2("color_player_dead", "0x64FF8000");
+	color_signpost = MinimapUtils::IniReadColor2("color_signpost", "0xFF0000C8");
+	color_item = MinimapUtils::IniReadColor2("color_item", "0xFF0000F0");
+	color_hostile = MinimapUtils::IniReadColor2("color_hostile", "0xFFF00000");
+	color_hostile_damaged = MinimapUtils::IniReadColor2("color_hostile_damaged", "0xFF800000");
+	color_hostile_dead = MinimapUtils::IniReadColor2("color_hostile_dead", "0xFF320000");
+	color_neutral = MinimapUtils::IniReadColor2("color_neutral", "0xFF0000DC");
+	color_ally_party = MinimapUtils::IniReadColor2("color_ally", "0xFF00B300");
+	color_ally_npc = MinimapUtils::IniReadColor2("color_ally_npc", "0xFF99FF99");
+	color_ally_spirit = MinimapUtils::IniReadColor2("color_ally_spirit", "0xFF608000");
+	color_ally_minion = MinimapUtils::IniReadColor2("color_ally_minion", "0xFF008060");
+	color_ally_dead = MinimapUtils::IniReadColor2("color_ally_dead", "0x64006400");
 
 	MinimapUtils::Color light = modifier;
 	MinimapUtils::Color dark(0, -light.r, -light.g, -light.b);
@@ -125,10 +125,10 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 	GW::NPCArray npcs = GW::Agents().GetNPCArray();
 	if (!npcs.valid()) return;
 
-	DWORD player_id = GW::Agents().GetPlayerId();
-	DWORD target_id = GW::Agents().GetTargetId();
+	GW::Agent* player = GW::Agents().GetPlayer();
+	GW::Agent* target = GW::Agents().GetTarget();
 
-	// eoes
+	// 1. eoes
 	for (size_t i = 0; i < agents.size(); ++i) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
@@ -144,7 +144,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 			break;
 		}
 	}
-	// non-player agents
+	// 2. non-player agents
 	for (size_t i = 0; i < agents.size(); ++i) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
@@ -154,30 +154,39 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 			&& agent->IsNPC()
 			&& agent->PlayerNumber < npcs.size()
 			&& (npcs[agent->PlayerNumber].npcflags & 0x10000) > 0) continue;
-		if (agent->Id == target_id) continue; // will draw target at the end
+		if (target == agent) continue; // will draw target at the end
 
 		Enqueue(agent);
 
 		if (vertices_count >= vertices_max - 16 * max_shape_verts) break;
 	}
-	// players
+	// 3. target if it's a non-player
+	if (target && target->PlayerNumber > 12) {
+		Enqueue(target);
+	}
+
+	// 4. players
 	for (size_t i = 0; i < agents.size(); ++i) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
 		if (agent->PlayerNumber > 12) continue;
-		if (agent->Id == target_id) continue; // will draw player at the end
-		if (agent->Id == target_id) continue; // will draw target at the end
+		if (agent == player) continue; // will draw player at the end
+		if (agent == target) continue; // will draw target at the end
 
 		Enqueue(agent);
 
 		if (vertices_count >= vertices_max - 4 * max_shape_verts) break;
 	}
 
-	GW::Agent* target = agents[target_id];
-	if (target != nullptr) Enqueue(target);
+	// 5. target if it's a player
+	if (target && target != player && target->PlayerNumber <= 12) {
+		Enqueue(target);
+	}
 
-	GW::Agent* player = agents[player_id];
-	if (player != nullptr && player->Id != target_id) Enqueue(player);
+	// 6. player
+	if (player) {
+		Enqueue(player);
+	}
 
 	buffer_->Unlock();
 

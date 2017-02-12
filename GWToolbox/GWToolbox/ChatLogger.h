@@ -37,6 +37,9 @@ public:
 		std::wstring s = std::wstring(L"<c=#00ccff>GWToolbox++</c>: ") + msg;
 		GW::Chat().WriteChat(GW::Channel::CHANNEL_GWCA3, s.c_str());
 	}
+	inline static void Log(const std::string msg) {
+		Log(std::wstring(msg.begin(), msg.end()));
+	}
 
 	inline static void Log(const wchar_t* msg) {
 		Log(std::wstring(msg));

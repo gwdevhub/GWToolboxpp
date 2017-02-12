@@ -182,6 +182,7 @@
     <ClInclude Include="GWToolbox\OtherSettings.h">
       <Filter>Panels\Settings</Filter>
     </ClInclude>
+    <ClInclude Include="GWToolbox\ToolboxModule.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />

@@ -26,7 +26,7 @@ namespace OSHGui {
 		type_ = ControlType::HotkeyControl;
 
 		if (HotkeyNames.empty()) {
-			#define EnumToString(x) L#x
+			#define EnumToString(x) #x
 			HotkeyNames[Key::None] = EnumToString(None);
 			HotkeyNames[Key::LButton] = EnumToString(LButton);
 			HotkeyNames[Key::RButton] = EnumToString(RButton);
@@ -299,11 +299,11 @@ namespace OSHGui {
 	void HotkeyControl::HotkeyToText() {
 		auto ModifierToString = [](Key modifier) -> Misc::UnicodeString {
 			std::vector<Misc::UnicodeString> modifierNames;
-			if ((modifier & Key::Control) == Key::Control) modifierNames.push_back(L"Control");
-			if ((modifier & Key::Alt) == Key::Alt) modifierNames.push_back(L"Alt");
-			if ((modifier & Key::Shift) == Key::Shift) modifierNames.push_back(L"Shift");
+			if ((modifier & Key::Control) == Key::Control) modifierNames.push_back("Control");
+			if ((modifier & Key::Alt) == Key::Alt) modifierNames.push_back("Alt");
+			if ((modifier & Key::Shift) == Key::Shift) modifierNames.push_back("Shift");
 
-			std::wstringstream s;
+			std::stringstream s;
 			for (size_t i = 0; i < modifierNames.size(); ++i) {
 				if (i > 0) {
 					s << " + ";
@@ -319,7 +319,7 @@ namespace OSHGui {
 			Misc::UnicodeString modifierText = ModifierToString(modifier_);
 			Misc::UnicodeString hotkeyText = HotkeyNames[hotkey_];
 
-			textBox_->SetText(modifierText + L" + " + hotkeyText);
+			textBox_->SetText(modifierText + " + " + hotkeyText);
 		} else if (hotkey_ != Key::None && (hotkey_ != Key::ShiftKey && hotkey_ != Key::Menu && hotkey_ != Key::ControlKey)) {
 			auto hotkeyText = HotkeyNames[hotkey_];
 			textBox_->SetText(hotkeyText);

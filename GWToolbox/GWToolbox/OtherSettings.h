@@ -1,16 +1,29 @@
 #pragma once
 
-#include "Settings.h"
+#include <vector>
 
-class OtherSettings {
-	friend class GWToolbox;
+#include <GWCA\Utilities\MemoryPatcher.h>
+
+#include "ToolboxModule.h"
+
+class OtherSettings : public ToolboxModule {
+public:
+	const char* Name() override { return "Other Settings"; }
 
 	OtherSettings();
 
-public:
+	void DrawSettings() override;
+
+	void LoadSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) override;
+
 	// some settings that are either referenced from multiple places
 	// or have nowhere else to be
-	BorderlessWindow borderless_window;
-	OpenTemplateLinks open_template_links;
-	FreezeWidgets freeze_widgets;
+	bool borderless_window;
+	bool open_template_links;
+	bool freeze_widgets;
+
+private:
+	std::vector<GW::MemoryPatcher*> patches;
+	void ApplyBorderless(bool value);
 };

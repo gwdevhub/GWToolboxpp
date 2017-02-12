@@ -25,8 +25,8 @@ PartyDamage::PartyDamage() {
 	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P230>(
 		std::bind(&PartyDamage::MapLoadedCallback, this, std::placeholders::_1));
 
-	int x = Config::IniReadLong(PartyDamage::IniSection(), PartyDamage::IniKeyX(), 400);
-	int y = Config::IniReadLong(PartyDamage::IniSection(), PartyDamage::IniKeyY(), 100);
+	int x = Config::IniRead(PartyDamage::IniSection(), PartyDamage::IniKeyX(), 400l);
+	int y = Config::IniRead(PartyDamage::IniSection(), PartyDamage::IniKeyY(), 100l);
 	SetLocation(PointI(x, y));
 
 	line_height_ = GuiUtils::GetPartyHealthbarHeight();
@@ -57,7 +57,7 @@ PartyDamage::PartyDamage() {
 		damage[i].last_damage = TBTimer::init();
 
 		absolute[i] = new DragButton(containerPanel_);
-		absolute[i]->SetText(L"0 %");
+		absolute[i]->SetText("0 %");
 		absolute[i]->SetSize(SizeI(ABS_WIDTH, line_height_ - RECENT_HEIGHT / 2));
 		absolute[i]->SetLocation(PointI(0, i * line_height_));
 		absolute[i]->SetFont(GuiUtils::getTBFont(fontsize, true));
@@ -69,7 +69,7 @@ PartyDamage::PartyDamage() {
 		AddControl(absolute[i]);
 
 		percent[i] = new DragButton(containerPanel_);
-		percent[i]->SetText(L"");
+		percent[i]->SetText("");
 		percent[i]->SetSize(SizeI(PERC_WIDTH, line_height_ - RECENT_HEIGHT / 2));
 		percent[i]->SetLocation(PointI(ABS_WIDTH, i * line_height_));
 		percent[i]->SetFont(GuiUtils::getTBFont(fontsize, true));
@@ -96,7 +96,7 @@ PartyDamage::PartyDamage() {
 	std::shared_ptr<PartyDamage> self = std::shared_ptr<PartyDamage>(this);
 	Form::Show(self);
 
-	bool show = Config::IniReadBool(PartyDamage::IniSection(), PartyDamage::InikeyShow(), false);
+	bool show = Config::IniRead(PartyDamage::IniSection(), PartyDamage::InikeyShow(), false);
 	SetVisible(show);
 
 	LoadIni();
@@ -275,21 +275,21 @@ void PartyDamage::Draw() {
 	}
 
 	const int BUF_SIZE = 10;
-	wchar_t buff[BUF_SIZE];
+	char buff[BUF_SIZE];
 	for (int i = 0; i < party_size_; ++i) {
 		if (damage[i].damage < 1000) {
-			swprintf_s(buff, BUF_SIZE, L"%d", damage[i].damage);
+			sprintf_s(buff, BUF_SIZE, "%d", damage[i].damage);
 		} else if (damage[i].damage < 1000 * 10) {
-			swprintf_s(buff, BUF_SIZE, L"%.2f k", (float)damage[i].damage / 1000);
+			sprintf_s(buff, BUF_SIZE, "%.2f k", (float)damage[i].damage / 1000);
 		} else if (damage[i].damage < 1000 * 1000) {
-			swprintf_s(buff, BUF_SIZE, L"%.1f k", (float)damage[i].damage / 1000);
+			sprintf_s(buff, BUF_SIZE, "%.1f k", (float)damage[i].damage / 1000);
 		} else {
-			swprintf_s(buff, BUF_SIZE, L"%.2f m", (float)damage[i].damage / 1000000);
+			sprintf_s(buff, BUF_SIZE, "%.2f m", (float)damage[i].damage / 1000000);
 		}
 		absolute[i]->SetText(buff);
 
 		float perc_of_total = GetPercentageOfTotal(damage[i].damage);
-		swprintf_s(buff, BUF_SIZE, L"%.1f %%", perc_of_total);
+		sprintf_s(buff, BUF_SIZE, "%.1f %%", perc_of_total);
 		percent[i]->SetText(buff);
 
 		float part_of_max = 0;
@@ -325,8 +325,8 @@ void PartyDamage::SaveLocation() {
 	CalculateAbsoluteLocation();
 	int x = absoluteLocation_.X;
 	int y = absoluteLocation_.Y;
-	Config::IniWriteLong(PartyDamage::IniSection(), PartyDamage::IniKeyX(), x);
-	Config::IniWriteLong(PartyDamage::IniSection(), PartyDamage::IniKeyY(), y);
+	Config::IniWrite(PartyDamage::IniSection(), PartyDamage::IniKeyX(), x);
+	Config::IniWrite(PartyDamage::IniSection(), PartyDamage::IniKeyY(), y);
 }
 
 float PartyDamage::GetPartOfTotal(long dmg) const {
@@ -418,11 +418,10 @@ void PartyDamage::LoadIni() {
 	CSimpleIni::TNamesDepend keys;
 	inifile_->GetAllKeys(inisection, keys);
 	for (CSimpleIni::Entry key : keys) {
-		const wchar_t* wkey = key.pItem;
 		try {
-			long lkey = std::stol(wkey);
+			long lkey = std::stol(key.pItem);
 			if (lkey <= 0) continue;
-			long lval = inifile_->GetLongValue(inisection, wkey, 0);
+			long lval = inifile_->GetLongValue(inisection, key.pItem, 0);
 			if (lval <= 0) continue;
 			hp_map[lkey] = lval;
 		} catch (...) {
@@ -433,7 +432,7 @@ void PartyDamage::LoadIni() {
 
 void PartyDamage::SaveIni() {
 	for (const std::pair<DWORD, long>& item : hp_map) {
-		std::wstring key = std::to_wstring(item.first);
+		std::string key = std::to_string(item.first);
 		inifile_->SetLongValue(inisection, key.c_str(), item.second, 0, false, true);
 	}
 	inifile_->SaveFile(GuiUtils::getPath(inifilename).c_str());

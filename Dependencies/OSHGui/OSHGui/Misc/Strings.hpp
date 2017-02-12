@@ -18,11 +18,11 @@ namespace OSHGui {
 		/**
 		 * Stellt Text als eine Reihe von Unicode-Zeichen dar.
 		 */
-		typedef std::wstring UnicodeString;
+		typedef std::string UnicodeString;
 		/**
 		 * Stellt ein Unicode-Zeichen dar.
 		 */
-		typedef wchar_t UnicodeChar;
+		typedef char UnicodeChar;
 		/**
 		 * Stellt Text als eine Reihe von Ansi-Zeichen dar.
 		 */
@@ -276,7 +276,7 @@ namespace OSHGui {
 			 */
 			inline UnicodeString AnsiToUnicode(const AnsiString &ansi) {
 				if (ansi.length() == 0) {
-					return L"";
+					return "";
 				}
 
 				UnicodeString out(ansi.length(), (UnicodeChar)0);
