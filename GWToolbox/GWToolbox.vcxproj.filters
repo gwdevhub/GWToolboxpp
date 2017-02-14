@@ -72,9 +72,6 @@
     <ClInclude Include="GWToolbox\BuildPanel.h">
       <Filter>Panels\Builds</Filter>
     </ClInclude>
-    <ClInclude Include="GWToolbox\EditBuild.h">
-      <Filter>Panels\Builds</Filter>
-    </ClInclude>
     <ClInclude Include="GWToolbox\HotkeyPanel.h">
       <Filter>Panels\Hotkeys</Filter>
     </ClInclude>
@@ -193,9 +190,6 @@
       <Filter>Windows</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\BuildPanel.cpp">
-      <Filter>Panels\Builds</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\EditBuild.cpp">
       <Filter>Panels\Builds</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\HotkeyPanel.cpp">

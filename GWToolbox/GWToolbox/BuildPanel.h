@@ -7,7 +7,6 @@
 #include <string>
 
 #include "Timer.h"
-#include "EditBuild.h"
 
 class BuildPanel : public ToolboxPanel {
 private:

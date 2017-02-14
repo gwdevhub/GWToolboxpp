@@ -108,7 +108,6 @@
     <ClInclude Include="GWToolbox\Defines.h" />
     <ClInclude Include="GWToolbox\DialogPanel.h" />
     <ClInclude Include="GWToolbox\DistanceWindow.h" />
-    <ClInclude Include="GWToolbox\EditBuild.h" />
     <ClInclude Include="GWToolbox\Minimap.h" />
     <ClInclude Include="GWToolbox\D3DVertex.h" />
     <ClInclude Include="GWToolbox\MinimapUtils.h" />
@@ -154,7 +153,6 @@
     <ClCompile Include="GWToolbox\Config.cpp" />
     <ClCompile Include="GWToolbox\DialogPanel.cpp" />
     <ClCompile Include="GWToolbox\DistanceWindow.cpp" />
-    <ClCompile Include="GWToolbox\EditBuild.cpp" />
     <ClCompile Include="GWToolbox\logger.cpp" />
     <ClCompile Include="GWToolbox\main.cpp" />
     <ClCompile Include="GWToolbox\Minimap.cpp" />
