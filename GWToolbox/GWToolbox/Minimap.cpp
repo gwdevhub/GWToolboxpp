@@ -20,18 +20,19 @@ Minimap::Minimap()
 	mousedown_(false),
 	freeze_(false),
 	loading_(false),
-	visible_(false) {
+	visible_(false),
+	mapfile(0) {
 
 	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P391_InstanceLoadFile>(
-		[this](GW::Packet::StoC::P391_InstanceLoadFile* packet) {
-		printf("loading map %d\n", packet->map_fileID);
+		[this](GW::Packet::StoC::P391_InstanceLoadFile* packet) -> bool {
+		mapfile = packet->map_fileID;
 		pmap_renderer.Invalidate();
 		loading_ = false;
 		return false;
 	});
 
 	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P406>(
-		[&](GW::Packet::StoC::P406* pak) {
+		[&](GW::Packet::StoC::P406* pak) -> bool {
 		loading_ = true;
 		return false;
 	});

@@ -289,38 +289,40 @@ bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) {
 }
 
 void ChatFilter::DrawSettings() {
-	ImGui::Text("Hide the following messages:");
-	ImGui::Checkbox("Common drops for you", &self_common_drops);
-	ImGui::Checkbox("Common drops for allies", &ally_common_drops);
-	ImGui::Checkbox("Rare drops for you", &self_rare_drops);
-	ImGui::Checkbox("Rare drops for allies", &ally_rare_drops);
-	ImGui::Checkbox("Earning skill points", &skill_points);
-	ImGui::Checkbox("PvP messages", &pvp_messages);
-	GuiUtils::ShowHelp("Such as 'A skill was updated for pvp!'");
-	ImGui::Checkbox("Hall of Heroes winners", &hoh);
-	ImGui::Checkbox("Divine Favor announcements", &favor);
-	ImGui::Checkbox("9 Rings messages", &ninerings);
-	ImGui::Checkbox("'No one hears you...'", &noonehearsyou);
-	ImGui::Checkbox("Lunar fortunes messages", &lunars);
-	ImGui::Checkbox("Player x might not reply...", &playeraway);
+	if (ImGui::CollapsingHeader("Chat Filter")) {
+		ImGui::Text("Hide the following messages:");
+		ImGui::Checkbox("Common drops for you", &self_common_drops);
+		ImGui::Checkbox("Common drops for allies", &ally_common_drops);
+		ImGui::Checkbox("Rare drops for you", &self_rare_drops);
+		ImGui::Checkbox("Rare drops for allies", &ally_rare_drops);
+		ImGui::Checkbox("Earning skill points", &skill_points);
+		ImGui::Checkbox("PvP messages", &pvp_messages);
+		GuiUtils::ShowHelp("Such as 'A skill was updated for pvp!'");
+		ImGui::Checkbox("Hall of Heroes winners", &hoh);
+		ImGui::Checkbox("Divine Favor announcements", &favor);
+		ImGui::Checkbox("9 Rings messages", &ninerings);
+		ImGui::Checkbox("'No one hears you...'", &noonehearsyou);
+		ImGui::Checkbox("Lunar fortunes messages", &lunars);
+		ImGui::Checkbox("Player x might not reply...", &playeraway);
 
-	ImGui::Separator();
-	ImGui::Checkbox("Hide any messages containing:", &messagebycontent);
-	ImGui::Indent();
-	ImGui::TextDisabled("(Separated by comma)");
-	if (ImGui::InputTextMultiline("##filter", bycontent_buf, FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0f))) {
-		ByContent_ParseBuf();
-	}
-	ImGui::Unindent();
+		ImGui::Separator();
+		ImGui::Checkbox("Hide any messages containing:", &messagebycontent);
+		ImGui::Indent();
+		ImGui::TextDisabled("(Separated by comma)");
+		if (ImGui::InputTextMultiline("##filter", bycontent_buf, FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0f))) {
+			ByContent_ParseBuf();
+		}
+		ImGui::Unindent();
 
-	ImGui::Separator();
-	ImGui::Checkbox("Hide any messages from: ", &messagebyauthor);
-	ImGui::Indent();
-	ImGui::TextDisabled("(Separated by comma)");
-	if (ImGui::InputTextMultiline("##byauthorfilter", byauthor_buf, FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0f))) {
-		ByAuthor_ParseBuf();
+		ImGui::Separator();
+		ImGui::Checkbox("Hide any messages from: ", &messagebyauthor);
+		ImGui::Indent();
+		ImGui::TextDisabled("(Separated by comma)");
+		if (ImGui::InputTextMultiline("##byauthorfilter", byauthor_buf, FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0f))) {
+			ByAuthor_ParseBuf();
+		}
+		ImGui::Unindent();
 	}
-	ImGui::Unindent();
 }
 
 void ChatFilter::ParseBuffer(const char* buf, std::set<std::string>& words) {

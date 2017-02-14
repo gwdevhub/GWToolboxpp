@@ -1,126 +1,213 @@
 #include "BuildPanel.h"
 
-#include <OSHGui\Misc\Intersection.hpp>
 #include <GWCA\GWCA.h>
 #include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\MapMgr.h>
 
 #include "Config.h"
 
-using namespace OSHGui;
-
-void BuildPanel::Build::BuildUI() {
-	SetBackColor(Drawing::Color::Empty());
-
-	const int edit_button_width = 60;
-
-	Button* button = new Button(this);
-	//button->SetText(name_);
-	button->SetSize(Drawing::SizeI(GetWidth() - edit_button_width - Padding, GetHeight()));
-	button->SetLocation(Drawing::PointI(0, 0));
-	button->GetClickEvent() += ClickEventHandler([this](Control*) {
-		SendTeamBuild();
-	});
-	AddControl(button);
-
-	Button* edit = new Button(this);
-	edit->SetText("Edit");
-	edit->SetSize(Drawing::SizeI(edit_button_width, GetHeight()));
-	edit->SetLocation(Drawing::PointI(GetWidth() - edit->GetWidth(), 0));
-	edit->GetClickEvent() += ClickEventHandler([this, button](Control*) {
-		edit_build_->SetEditedBuild(index_, button);
-	});
-	AddControl(edit);
+BuildPanel::BuildPanel() {
+	teambuilds = std::vector<TeamBuild>();
+	send_timer = clock();
 }
 
-void BuildPanel::Build::SendTeamBuild() {
-	using namespace std;
-
-	string section = std::string("builds") + to_string(index_);
-	string key;
-
-	key = "buildname";
-	string buildname = Config::IniRead(section.c_str(), key.c_str(), "");
-	if (!buildname.empty()) {
-		panel_->Enqueue(buildname);
-	}
-
-	bool show_numbers = Config::IniRead(section.c_str(), "showNumbers", true);
-
-	for (int i = 0; i < edit_build_->N_PLAYERS; ++i) {
-		key = "name" + to_string(i + 1);
-		string name = Config::IniRead(section.c_str(), key.c_str(), "");
-
-		key = "template" + to_string(i + 1);
-		string temp = Config::IniRead(section.c_str(), key.c_str(), "");
-
-		if (!name.empty() && !temp.empty()) {
-			string message = "[";
-			if (show_numbers) {
-				message += to_string(i + 1);
-				message += " - ";
-			}
-			message += name;
-			message += ";";
-			message += temp;
-			message += "]";
-			panel_->Enqueue(message);
+void BuildPanel::Draw(IDirect3DDevice9* pDevice) {
+	ImGui::Begin(Name());
+	for (unsigned int i = 0; i < teambuilds.size(); ++i) {
+		TeamBuild& tbuild = teambuilds[i];
+		ImGui::PushID(i);
+		if (ImGui::Button(tbuild.name, ImVec2(ImGui::GetWindowContentRegionWidth() - 60.0f, 0))) {
+			Send(tbuild);
 		}
+		if (ImGui::IsItemHovered()) {
+			ImGui::SetTooltip("Click to send teambuild to chat");
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Edit", ImVec2(60.0f, 0))) {
+			tbuild.edit_open = true;
+		}
+		ImGui::PopID();
+	}
+	if (ImGui::Button("Add Teambuild")) {
+		teambuilds.push_back(TeamBuild());
+	}
+	ImGui::End();
+
+	for (unsigned int i = 0; i < teambuilds.size(); ++i) {
+		if (!teambuilds[i].edit_open) continue;
+		TeamBuild& tbuild = teambuilds[i];
+		ImGui::PushID(i);
+		char winname[64];
+		sprintf_s(winname, "%s###build%d", tbuild.name, i);
+		ImGui::Begin(winname, &tbuild.edit_open);
+		ImGui::PushItemWidth(-120.0f);
+		ImGui::InputText("Build Name", tbuild.name, 64);
+		ImGui::PopItemWidth();
+		for (unsigned int j = 0; j < tbuild.builds.size(); ++j) {
+			Build& build = tbuild.builds[j];
+			ImGui::PushID(j);
+			ImGui::Text("#%d", j + 1);
+			ImGui::SameLine(30.0f);
+			ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 24.0f - 50.0f - 30.0f
+				- ImGui::GetStyle().WindowPadding.x * 3) / 2);
+			ImGui::InputText("###name", build.name, 64);
+			ImGui::SameLine();
+			ImGui::InputText("###code", build.code, 64);
+			ImGui::PopItemWidth();
+			ImGui::SameLine();
+			if (ImGui::Button("Send", ImVec2(50.0f, 0))) {
+				Send(tbuild, j);
+			}
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Send to team chat");
+			ImGui::SameLine();
+			if (ImGui::Button("x", ImVec2(24.0f, 0))) {
+				tbuild.builds.erase(tbuild.builds.begin() + j);
+			}
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete build");
+			ImGui::PopID();
+		}
+		ImGui::Checkbox("Show numbers", &tbuild.show_numbers);
+		ImGui::SameLine(ImGui::GetWindowContentRegionWidth() * 0.6f);
+		if (ImGui::Button("Add Build", ImVec2(ImGui::GetWindowContentRegionWidth() * 0.4f, 0))) {
+			tbuild.builds.push_back(Build());
+		}
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Add another player build row");
+		ImGui::Spacing();
+		// issue: moving a teambuild up or down will change the teambuild window id
+		// which will make the window change size, which is pretty annoying
+		if (ImGui::SmallButton("Up") && i > 0) {
+			std::swap(teambuilds[i - 1], teambuilds[i]);
+		}
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move the teambuild up in the list");
+		ImGui::SameLine();
+		if (ImGui::SmallButton("Down") && i + 1 < teambuilds.size()) {
+			std::swap(teambuilds[i], teambuilds[i + 1]);
+		}
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move the teambuild down in the list");
+		ImGui::SameLine();
+		if (ImGui::SmallButton("Delete teambuild")) {
+			teambuilds.erase(teambuilds.begin() + i);
+			ImGui::End();
+			ImGui::PopID();
+			continue;
+		}
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete the whole teambuild!");
+		// do not finish rendering the window if we deleted the teambuild already
+		ImGui::SameLine(ImGui::GetWindowContentRegionWidth() * 0.6f);
+		if (ImGui::Button("Close", ImVec2(ImGui::GetWindowContentRegionWidth() * 0.4f, 0))) {
+			tbuild.edit_open = false;
+		}
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Close this window");
+		
+		ImGui::End();
+		ImGui::PopID();
 	}
 }
 
-BuildPanel::BuildPanel(OSHGui::Control* parent) : ToolboxPanel(parent) {
-	builds = std::vector<Build*>();
-	first_shown_ = 0;
-	send_timer = TBTimer::init();
+void BuildPanel::Send(unsigned int idx) {
+	if (idx < teambuilds.size()) {
+		Send(teambuilds[idx]);
+	}
+}
+void BuildPanel::Send(const BuildPanel::TeamBuild& tbuild) {
+	if (!std::string(tbuild.name).empty()) {
+		queue.push(tbuild.name);
+	}
+	for (unsigned int i = 0; i < tbuild.builds.size(); ++i) {
+		const Build& build = tbuild.builds[i];
+		Send(tbuild, i);
+	}
 }
 
-bool BuildPanel::Intersect(const Drawing::PointI &point) const {
-	if (edit_build_->GetVisible()) {
-		return Control::Intersect(point) || edit_build_->Intersect(point);
+void BuildPanel::Send(const TeamBuild& tbuild, unsigned int idx) {
+	if (idx >= tbuild.builds.size()) return;
+	const Build& build = tbuild.builds[idx];
+	const std::string name(build.name);
+	const std::string code(build.code);
+
+	char buf[140];
+	if (name.empty() && code.empty()) {
+		return; // nothing to do here
+	} else if (name.empty()) {
+		// name is empty, fill it with the teambuild name
+		sprintf_s(buf, "[%s %d;%s]", tbuild.name, idx + 1, build.code);
+	} else if (code.empty()) {
+		// code is empty, just print the name without template format
+		sprintf_s(buf, "%s", build.name);
+	} else if (tbuild.show_numbers) {
+		// add numbers in front of name
+		sprintf_s(buf, "[%d - %s;%s]", idx + 1, build.name, build.code);
 	} else {
-		return Control::Intersect(point);
+		// simple template
+		sprintf_s(buf, "[%s;%s]", build.name, build.code);
 	}
-}
-
-void BuildPanel::BuildUI() {
-
-	clip_ = Clipping::None;
-
-	edit_build_ = new EditBuild(this);
-	edit_build_->SetVisible(false);
-	AddControl(edit_build_);
-
-	ScrollPanel* panel = new ScrollPanel(this);
-	panel->SetLocation(Drawing::PointI(0, 0));
-	panel->SetSize(GetSize());
-	panel->GetContainer()->SetBackColor(Drawing::Color::Empty());
-	panel->SetInternalHeight(N_BUILDS * (BUILD_HEIGHT + Padding) + Padding);
-	AddControl(panel);
-
-	for (int i = 0; i < N_BUILDS; ++i) {
-		int index = i + 1;
-		std::string section = std::string("builds") + std::to_string(index);
-		std::string name = Config::IniRead(section.c_str(), "buildname", "");
-		if (name.empty()) name = std::string("<Build ") + std::to_string(index) + std::string(">");
-		Build* build = new Build(panel->GetContainer(), index, name, edit_build_, this);
-		build->SetSize(Drawing::SizeI(panel->GetContainer()->GetWidth() - 2 * Padding, BUILD_HEIGHT));
-		build->SetLocation(Drawing::PointI(Padding, Padding + i * (BUILD_HEIGHT + Padding)));
-		build->BuildUI();
-		builds.push_back(build);
-		panel->AddControl(build);
-	}
+	queue.push(buf);
 }
 
 void BuildPanel::Update() {
 	if (!queue.empty() && TBTimer::diff(send_timer) > 600) {
-		send_timer = TBTimer::init();
-
 		if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading
 			&& GW::Agents().GetPlayer()) {
 
-			//GW::Chat().SendChat(queue.front().c_str(), L'#');
+			send_timer = TBTimer::init();
+			GW::Chat().SendChat(queue.front().c_str(), '#');
 			queue.pop();
+		}
+	}
+}
+
+void BuildPanel::DrawSettings() {
+	// ?
+}
+
+void BuildPanel::LoadSettings(CSimpleIni* ini) {
+	CSimpleIni::TNamesDepend entries;
+	ini->GetAllSections(entries);
+	for (CSimpleIni::Entry& entry : entries) {
+		const char* section = entry.pItem;
+		if (strncmp(section, "builds", 6) == 0) {
+			// default to -1 because we didn't have the count field before
+			int count = ini->GetLongValue(section, "count", -1); 
+			int count2 = (count >= 0 ? count : 12);
+			teambuilds.push_back(TeamBuild(ini->GetValue(section, "buildname", "")));
+			TeamBuild& tbuild = teambuilds.back();
+			tbuild.show_numbers = ini->GetBoolValue(section, "showNumbers", true);
+			for (int i = 0; i < count2; ++i) {
+				char namekey[16];
+				char templatekey[16];
+				sprintf_s(namekey, "name%d", i);
+				sprintf_s(templatekey, "template%d", i);
+				const char* nameval = ini->GetValue(section, namekey, "");
+				const char* templateval = ini->GetValue(section, templatekey, "");
+				if (count == -1) {
+					// only add if nonempty
+					if (strcmp(nameval, "") || strcmp(templateval, "")) {
+						tbuild.builds.push_back(Build(nameval, templateval));
+					}
+				} else {
+					tbuild.builds.push_back(Build(nameval, templateval));
+				}
+			}
+		}
+	}
+}
+
+void BuildPanel::SaveSettings(CSimpleIni* ini) {
+	for (unsigned int i = 0; i < teambuilds.size(); ++i) {
+		const TeamBuild& tbuild = teambuilds[i];
+		char section[8];
+		sprintf_s(section, "builds%d", i);
+		ini->SetValue(section, "buildname", tbuild.name);
+		ini->SetBoolValue(section, "showNumbers", tbuild.show_numbers);
+		ini->SetLongValue(section, "count", tbuild.builds.size());
+		for (unsigned int j = 0; j < tbuild.builds.size(); ++j) {
+			const Build& build = tbuild.builds[j];
+			char namekey[16];
+			char templatekey[16];
+			sprintf_s(namekey, "name%d", j);
+			sprintf_s(templatekey, "template%d", j);
+			ini->SetValue(section, namekey, build.name);
+			ini->SetValue(section, templatekey, build.code);
 		}
 	}
 }

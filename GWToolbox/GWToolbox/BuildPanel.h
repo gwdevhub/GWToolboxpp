@@ -10,55 +10,49 @@
 #include "EditBuild.h"
 
 class BuildPanel : public ToolboxPanel {
-public:
-	static const int N_BUILDS = 16;
-
 private:
-	class Build : public OSHGui::Panel {
-	public:
-		Build(OSHGui::Control* parent, int index, std::string name, 
-			EditBuild* edit_build, BuildPanel* panel)
-			: Panel(parent), index_(index), name_(name),
-			edit_build_(edit_build), panel_(panel) { }
-		void BuildUI();
-		void SendTeamBuild();
-	private:
-		int index_;
-		std::string name_;
-		EditBuild* edit_build_;
-		BuildPanel* panel_;
-		std::string GetDescription() { return name_; }
+	struct Build {
+		Build(const char* n = "", const char* c = "") {
+			sprintf_s(name, "%s", n);
+			sprintf_s(code, "%s", c);
+		}
+		char name[64];
+		char code[64];
 	};
-
-	const int MAX_SHOWN = 9;		// number of teambuilds shown in interface
-	const int BUILD_HEIGHT = 25;
-
-	int first_shown_;				// index of first one shown
-	std::vector<Build*> builds;
-	EditBuild* edit_build_;
-	clock_t send_timer;
-	std::queue<std::string> queue;
-
-	virtual bool Intersect(const OSHGui::Drawing::PointI &point) const override;
-
-	inline void Enqueue(std::string msg) { queue.push(msg); }
-	void CalculateBuildPositions();
+	struct TeamBuild {
+		TeamBuild(const char* n = "") {
+			sprintf_s(name, "%s", n);
+		}
+		bool edit_open = false;
+		bool show_numbers = false;
+		char name[64];
+		std::vector<Build> builds;
+	};
 
 public:
 	const char* Name() override { return "Build Panel"; }
 
-	BuildPanel(OSHGui::Control* parent);
-
-	void BuildUI() override;
+	BuildPanel();
 
 	// Update. Will always be called every frame.
 	void Update() override;
 
 	// Draw user interface. Will be called every frame if the element is visible
-	void Draw(IDirect3DDevice9* pDevice) override {}
+	void Draw(IDirect3DDevice9* pDevice) override;
 
-	inline void SendTeamBuild(long index) { builds[index]->SendTeamBuild(); }
-	inline void SetPanelPosition(bool left) { 
-		edit_build_->SetPanelPosition(left); 
-	}
+	void DrawSettings() override;
+	void LoadSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) override;
+
+	void Send(unsigned int idx);
+private:
+	// Send a teambuild
+	void Send(const TeamBuild& tbuild);
+	// Send a specific build from a teambuild
+	void Send(const TeamBuild& tbuild, unsigned int idx);
+
+	std::vector<TeamBuild> teambuilds;
+
+	clock_t send_timer;
+	std::queue<std::string> queue;
 };

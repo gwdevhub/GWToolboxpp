@@ -14,6 +14,5 @@ public:
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
 
-private:
 	bool visible;
 };

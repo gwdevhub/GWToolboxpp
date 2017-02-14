@@ -10,332 +10,135 @@
 #include "Config.h"
 #include "GuiUtils.h"
 
+bool travelpanel_arraygetter(void* data, int idx, const char** out_text);
 
-using namespace OSHGui;
+TravelPanel::TravelPanel() {
+	fav_count = 3;
+	fav_index.resize(fav_count, n_outposts - 1);
+	district = district = GW::Constants::District::Current;
+	district_number = 0;
+}
 
-void TravelPanel::BuildUI() {
-
-	ComboBox* combo = new TravelCombo(this);
-	combo->SetMaxShowItems(10);
-	combo->SetText("Travel To...");
-	for (int i = 0; i < n_outposts; ++i) {
-		combo->AddItem(IndexToOutpostName(i));
+void TravelPanel::TravelButton(const char* text, int x_idx, GW::Constants::MapID mapid) {
+	if (x_idx != 0) ImGui::SameLine();
+	float w = (ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().WindowPadding.x) / 2;
+	if (ImGui::Button(text, ImVec2(w, 0))) {
+		GW::Map().Travel(mapid, district, district_number);
 	}
-	combo->SetSize(SizeI(GetWidth() - 2 * Padding, GuiUtils::BUTTON_HEIGHT));
-	combo->SetLocation(PointI(Padding, Padding));
-	combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
-		[this, combo](Control*) {
-		if (combo->GetSelectedIndex() < 0) return;
-		GW::Constants::MapID id = IndexToOutpostID(combo->GetSelectedIndex());
-		GW::Map().Travel(id, district_, district_number_);
-		combo->SetText("Travel To...");
-		combo->SetSelectedIndex(-1);
-	});
-	AddControl(combo);
+}
 
-	ComboBox* district = new ComboBox(this);
-	district->SetMaxShowItems(14);
-	district->AddItem("Current District");
-	district->AddItem("International");
-	district->AddItem("American");
-	district->AddItem("American District 1");
-	district->AddItem("Europe English");
-	district->AddItem("Europe French");
-	district->AddItem("Europe German");
-	district->AddItem("Europe Italian");
-	district->AddItem("Europe Spanish");
-	district->AddItem("Europe Polish");
-	district->AddItem("Europe Russian");
-	district->AddItem("Asian Korean");
-	district->AddItem("Asia Chinese");
-	district->AddItem("Asia Japanese");
-	district->SetSize(SizeI(GetWidth() - 2 * Padding, GuiUtils::BUTTON_HEIGHT));
-	district->SetLocation(PointI(Padding, district->GetBottom() + Padding));
-	district->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
-		[this, district](Control*) {
-		UpdateDistrict(district->GetSelectedIndex());
-	});
-	district->SetSelectedIndex(0);
-	AddControl(district);
+void TravelPanel::Draw(IDirect3DDevice9* pDevice) {
+	ImGui::Begin(Name());
+	ImGui::PushItemWidth(-1.0f);
+	static int travelto_index = n_outposts - 1;
+	if (ImGui::Combo("###travelto", &travelto_index, travelpanel_arraygetter, nullptr, n_outposts)) {
+		GW::Constants::MapID id = IndexToOutpostID(travelto_index);
+		GW::Map().Travel(id, district, district_number);
+		travelto_index = n_outposts - 1;
+	}
 
-	using namespace GW::Constants;
-	AddTravelButton("ToA", 0, 2, MapID::Temple_of_the_Ages);
-	AddTravelButton("DoA", 1, 2, MapID::Domain_of_Anguish);
-	AddTravelButton("Kamadan", 0, 3, MapID::Kamadan_Jewel_of_Istan_outpost);
-	AddTravelButton("Embark", 1, 3, MapID::Embark_Beach);
-	AddTravelButton("Vlox's", 0, 4, MapID::Vloxs_Falls);
-	AddTravelButton("Gadd's", 1, 4, MapID::Gadds_Encampment_outpost);
-	AddTravelButton("Urgoz", 0, 5, MapID::Urgozs_Warren);
-	AddTravelButton("Deep", 1, 5, MapID::The_Deep);
-
-	for (int i = 0; i < 3; ++i) {
-		std::string key = std::string("Travel") + std::to_string(i);
-		int index = Config::IniRead(MainWindow::IniSection(), key.c_str(), 0l);
-		ComboBox* fav_combo = new TravelCombo(this);
-		fav_combo->SetSize(SizeI(GuiUtils::ComputeWidth(GetWidth(), 4, 3), GuiUtils::BUTTON_HEIGHT));
-		fav_combo->SetLocation(PointI(Padding, Padding + (GuiUtils::BUTTON_HEIGHT + Padding) * (i + 6)));
-		for (int j = 0; j < n_outposts; ++j) {
-			fav_combo->AddItem(IndexToOutpostName(j));
+	static int district_index = 0;
+	static const char* const district_words[] = { "Current District",
+		"International",
+		"American",
+		"American District 1",
+		"Europe English",
+		"Europe French",
+		"Europe German",
+		"Europe Italian",
+		"Europe Spanish",
+		"Europe Polish",
+		"Europe Russian",
+		"Asian Korean",
+		"Asia Chinese",
+		"Asia Japanese", };
+	if (ImGui::Combo("###district", &district_index, district_words, 14)) {
+		district_number = 0;
+		switch (district_index) {
+		case 0: district = GW::Constants::District::Current; break;
+		case 1: district = GW::Constants::District::International; break;
+		case 2: district = GW::Constants::District::American; break;
+		case 3: // American District 1
+			district = GW::Constants::District::American;
+			district_number = 1;
+			break;
+		case 4: district = GW::Constants::District::EuropeEnglish; break;
+		case 5: district = GW::Constants::District::EuropeFrench; break;
+		case 6: district = GW::Constants::District::EuropeGerman; break;
+		case 7: district = GW::Constants::District::EuropeItalian; break;
+		case 8: district = GW::Constants::District::EuropeSpanish; break;
+		case 9: district = GW::Constants::District::EuropePolish; break;
+		case 10: district = GW::Constants::District::EuropeRussian; break;
+		case 11: district = GW::Constants::District::AsiaKorean; break;
+		case 12: district = GW::Constants::District::AsiaChinese; break;
+		case 13: district = GW::Constants::District::AsiaJapanese; break;
+		default:
+			break;
 		}
-		fav_combo->SetSelectedIndex(index);
-		fav_combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
-			[fav_combo, key](Control*) {
-			Config::IniWrite(MainWindow::IniSection(),
-				key.c_str(), fav_combo->GetSelectedIndex());
-		});
-		AddControl(fav_combo);
+	}
+	ImGui::PopItemWidth();
 
-		Button* fav_button = new Button(this);
-		fav_button->SetSize(SizeI(GuiUtils::ComputeWidth(GetWidth(), 4), GuiUtils::BUTTON_HEIGHT));
-		fav_button->SetLocation(PointI(GuiUtils::ComputeX(GetWidth(), 4, 3), fav_combo->GetTop()));
-		fav_button->SetText("Go");
-		fav_button->GetClickEvent() += ClickEventHandler([this, i](Control*) {
+	TravelButton("ToA", 0, GW::Constants::MapID::Temple_of_the_Ages);
+	TravelButton("DoA", 1, GW::Constants::MapID::Domain_of_Anguish);
+	TravelButton("Kamadan", 0, GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost);
+	TravelButton("Embark", 1, GW::Constants::MapID::Embark_Beach);
+	TravelButton("Vlox's", 0, GW::Constants::MapID::Vloxs_Falls);
+	TravelButton("Gadd's", 1, GW::Constants::MapID::Gadds_Encampment_outpost);
+	TravelButton("Urgoz", 0, GW::Constants::MapID::Urgozs_Warren);
+	TravelButton("Deep", 1, GW::Constants::MapID::The_Deep);
+
+	for (int i = 0; i < fav_count; ++i) {
+		ImGui::PushID(i);
+		ImGui::PushItemWidth(-40.0f - ImGui::GetStyle().WindowPadding.x);
+		ImGui::Combo("", &fav_index[i], travelpanel_arraygetter, nullptr, n_outposts);
+		ImGui::PopItemWidth();
+		ImGui::SameLine();
+		if (ImGui::Button("Go", ImVec2(40.0f, 0))) {
 			TravelFavorite(i);
-		});
-		AddControl(fav_button);
+		}
+		ImGui::PopID();
+	}
+	ImGui::End();
+}
 
-		combo_boxes_[i] = fav_combo;
+bool TravelPanel::TravelFavorite(unsigned int idx) {
+	if (idx >= 0 && idx < fav_index.size()) {
+		GW::Map().Travel(IndexToOutpostID(fav_index[idx]), district, district_number);
+		return true;
+	} else {
+		return false;
 	}
 }
 
-void TravelPanel::TravelFavorite(int fav_idx) {
-	if (fav_idx >= 0 && fav_idx < 3) {
-		int outpost_idx = combo_boxes_[fav_idx]->GetSelectedIndex();
-		GW::Map().Travel(IndexToOutpostID(outpost_idx), district_, district_number_);
+void TravelPanel::DrawSettings() {
+	if (ImGui::TreeNode(Name())) {
+		ImGui::PushItemWidth(100.0f);
+		if (ImGui::InputInt("Number of favorites", &fav_count)) {
+			if (fav_count < 0) fav_count = 0;
+			if (fav_count > 100) fav_count = 100;
+			fav_index.resize(fav_count, n_outposts - 1);
+		}
+		ImGui::PopItemWidth();
+		ImGui::TreePop();
 	}
 }
 
-TravelPanel::TravelCombo::TravelCombo(OSHGui::Control* parent)
-	: OSHGui::ComboBox(parent) {
-	listBox_->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::instance().set_capture_input(true);
-	});
-	listBox_->GetFocusLostEvent() += FocusLostEventHandler([](Control*, Control*) {
-		GWToolbox::instance().set_capture_input(false);
-	});
-}
-
-
-void TravelPanel::AddTravelButton(std::string text, int grid_x, int grid_y, GW::Constants::MapID map_id) {
-	Button* button = new Button(this);
-	button->SetText(text);
-	button->SetSize(SizeI(GuiUtils::ComputeWidth(GetWidth(), 2), GuiUtils::BUTTON_HEIGHT));
-	button->SetLocation(PointI(GuiUtils::ComputeX(GetWidth(), 2, grid_x), 
-		Padding + (GuiUtils::BUTTON_HEIGHT + Padding) * grid_y));
-	button->GetClickEvent() += ClickEventHandler([this, map_id](Control*) {
-		GW::Map().Travel(map_id, district_, district_number_);
-	});
-	AddControl(button);
-}
-
-void TravelPanel::UpdateDistrict(int gui_index) {
-	district_number_ = 0;
-	switch (gui_index) {
-	case 0: district_ = GW::Constants::District::Current; break;
-	case 1: district_ = GW::Constants::District::International; break;
-	case 2: district_ = GW::Constants::District::American; break;
-	case 3: // American District 1
-		district_ = GW::Constants::District::American;
-		district_number_ = 1;
-		break;
-	case 4: district_ = GW::Constants::District::EuropeEnglish; break;
-	case 5: district_ = GW::Constants::District::EuropeFrench; break;
-	case 6: district_ = GW::Constants::District::EuropeGerman; break;
-	case 7: district_ = GW::Constants::District::EuropeItalian; break;
-	case 8: district_ = GW::Constants::District::EuropeSpanish; break;
-	case 9: district_ = GW::Constants::District::EuropePolish; break;
-	case 10: district_ = GW::Constants::District::EuropeRussian; break;
-	case 11: district_ = GW::Constants::District::AsiaKorean; break;
-	case 12: district_ = GW::Constants::District::AsiaChinese; break;
-	case 13: district_ = GW::Constants::District::AsiaJapanese; break;
-	default:
-		break;
+void TravelPanel::LoadSettings(CSimpleIni* ini) {
+	fav_count = ini->GetLongValue(Name(), "fav_count", 3);
+	fav_index.resize(fav_count, n_outposts - 1);
+	for (int i = 0; i < fav_count; ++i) {
+		char key[32];
+		sprintf_s(key, "Town%d", i);
+		fav_index[i] = ini->GetLongValue(Name(), key, n_outposts - 1);
 	}
 }
 
-std::string TravelPanel::IndexToOutpostName(int index) {
-	switch (index) {
-	case 0: return std::string("Abaddon's Gate");
-	case 1: return std::string("Abaddon's Mouth");
-	case 2: return std::string("Altrumm Ruins");
-	case 3: return std::string("Amatz Basin");
-	case 4: return std::string("Amnoon Oasis, The");
-	case 5: return std::string("Arborstone");
-	case 6: return std::string("Ascalon City");
-	case 7: return std::string("Aspenwood Gate (Kurzick)");
-	case 8: return std::string("Aspenwood Gate (Luxon)");
-	case 9: return std::string("Astralarium, The");
-	case 10: return std::string("Augury Rock");
-	case 11: return std::string("Aurios Mines, The");
-	case 12: return std::string("Aurora Glade");
-	case 13: return std::string("Bai Paasu Reach");
-	case 14: return std::string("Basalt Grotto");
-	case 15: return std::string("Beacon's Perch");
-	case 16: return std::string("Beetletun");
-	case 17: return std::string("Beknur Harbor");
-	case 18: return std::string("Bergen Hot Springs");
-	case 19: return std::string("Blacktide Den");
-	case 20: return std::string("Bloodstone Fen");
-	case 21: return std::string("Bone Palace");
-	case 22: return std::string("Boreal Station");
-	case 23: return std::string("Boreas Seabed");
-	case 24: return std::string("Borlis Pass");
-	case 25: return std::string("Brauer Academy");
-	case 26: return std::string("Breaker Hollow");
-	case 27: return std::string("Camp Hojanu");
-	case 28: return std::string("Camp Rankor");
-	case 29: return std::string("Cavalon");
-	case 30: return std::string("Central Transfer Chamber");
-	case 31: return std::string("Chahbek Village");
-	case 32: return std::string("Champion's Dawn");
-	case 33: return std::string("Chantry of Secrets");
-	case 34: return std::string("Codex Arena");
-	case 35: return std::string("Consulate Docks");
-	case 36: return std::string("Copperhammer Mines");
-	case 37: return std::string("D'Alessio Seaboard");
-	case 38: return std::string("Dajkah Inlet");
-	case 39: return std::string("Dasha Vestibule");
-	case 40: return std::string("Deep, The");
-	case 41: return std::string("Deldrimor War Camp");
-	case 42: return std::string("Destiny's Gorge");
-	case 43: return std::string("Divinity Coast");
-	case 44: return std::string("Doomlore Shrine");
-	case 45: return std::string("Dragon's Lair, The");
-	case 46: return std::string("Dragon's Throat");
-	case 47: return std::string("Droknar's Forge");
-	case 48: return std::string("Druid's Overlook");
-	case 49: return std::string("Dunes of Despair");
-	case 50: return std::string("Durheim Archives");
-	case 51: return std::string("Dzagonur Bastion");
-	case 52: return std::string("Elona Reach");
-	case 53: return std::string("Embark Beach");
-	case 54: return std::string("Ember Light Camp");
-	case 55: return std::string("Eredon Terrace");
-	case 56: return std::string("Eternal Grove, The");
-	case 57: return std::string("Eye of the North");
-	case 58: return std::string("Fishermen's Haven");
-	case 59: return std::string("Fort Aspenwood (Kurzick)");
-	case 60: return std::string("Fort Aspenwood (Luxon)");
-	case 61: return std::string("Fort Ranik");
-	case 62: return std::string("Frontier Gate");
-	case 63: return std::string("Frost Gate, The");
-	case 64: return std::string("Gadd's Encampment");
-	case 65: return std::string("Gate of Anguish");
-	case 66: return std::string("Gate of Desolation");
-	case 67: return std::string("Gate of Fear");
-	case 68: return std::string("Gate of Madness");
-	case 69: return std::string("Gate of Pain");
-	case 70: return std::string("Gate of Secrets");
-	case 71: return std::string("Gate of the Nightfallen Lands");
-	case 72: return std::string("Gate of Torment");
-	case 73: return std::string("Gates of Kryta");
-	case 74: return std::string("Grand Court of Sebelkeh");
-	case 75: return std::string("Granite Citadel, The");
-	case 76: return std::string("Great Northern Wall, The");
-	case 77: return std::string("Great Temple of Balthazar");
-	case 78: return std::string("Grendich Courthouse");
-	case 79: return std::string("Gunnar's Hold");
-	case 80: return std::string("Gyala Hatchery");
-	case 81: return std::string("Harvest Temple");
-	case 82: return std::string("Hell's Precipice");
-	case 83: return std::string("Henge of Denravi");
-	case 84: return std::string("Heroes' Ascent");
-	case 85: return std::string("Heroes' Audience");
-	case 86: return std::string("Honur Hill");
-	case 87: return std::string("House zu Heltzer");
-	case 88: return std::string("Ice Caves of Sorrow");
-	case 89: return std::string("Ice Tooth Cave");
-	case 90: return std::string("Imperial Sanctum");
-	case 91: return std::string("Iron Mines of Moladune");
-	case 92: return std::string("Jade Flats (Kurzick)");
-	case 93: return std::string("Jade Flats (Luxon)");
-	case 94: return std::string("Jade Quarry (Kurzick), The");
-	case 95: return std::string("Jade Quarry (Luxon), The");
-	case 96: return std::string("Jennur's Horde");
-	case 97: return std::string("Jokanur Diggings");
-	case 98: return std::string("Kaineng Center");
-	case 99: return std::string("Kamadan, Jewel of Istan");
-	case 100: return std::string("Kodash Bazaar, The");
-	case 101: return std::string("Kodlonu Hamlet");
-	case 102: return std::string("Kodonur Crossroads");
-	case 103: return std::string("Lair of the Forgotten");
-	case 104: return std::string("Leviathan Pits");
-	case 105: return std::string("Lion's Arch");
-	case 106: return std::string("Longeye's Ledge");
-	case 107: return std::string("Lutgardis Conservatory");
-	case 108: return std::string("Maatu Keep");
-	case 109: return std::string("Maguuma Stade");
-	case 110: return std::string("Marhan's Grotto");
-	case 111: return std::string("Marketplace, The");
-	case 112: return std::string("Mihanu Township");
-	case 113: return std::string("Minister Cho's Estate");
-	case 114: return std::string("Moddok Crevice");
-	case 115: return std::string("Mouth of Torment, The");
-	case 116: return std::string("Nahpui Quarter");
-	case 117: return std::string("Nolani Academy");
-	case 118: return std::string("Nundu Bay");
-	case 119: return std::string("Olafstead");
-	case 120: return std::string("Piken Square");
-	case 121: return std::string("Pogahn Passage");
-	case 122: return std::string("Port Sledge");
-	case 123: return std::string("Quarrel Falls");
-	case 124: return std::string("Raisu Palace");
-	case 125: return std::string("Ran Musu Gardens");
-	case 126: return std::string("Random Arenas");
-	case 127: return std::string("Rata Sum");
-	case 128: return std::string("Remains of Sahlahja");
-	case 129: return std::string("Rilohn Refuge");
-	case 130: return std::string("Ring of Fire");
-	case 131: return std::string("Riverside Province");
-	case 132: return std::string("Ruins of Morah");
-	case 133: return std::string("Ruins of Surmia");
-	case 134: return std::string("Saint Anjeka's Shrine");
-	case 135: return std::string("Sanctum Cay");
-	case 136: return std::string("Sardelac Sanitarium");
-	case 137: return std::string("Seafarer's Rest");
-	case 138: return std::string("Seeker's Passage");
-	case 139: return std::string("Seitung Harbor");
-	case 140: return std::string("Senji's Corner");
-	case 141: return std::string("Serenity Temple");
-	case 142: return std::string("Shadow Nexus, The");
-	case 143: return std::string("Shing Jea Arena");
-	case 144: return std::string("Shing Jea Monastery");
-	case 145: return std::string("Sifhalla");
-	case 146: return std::string("Sunjiang District");
-	case 147: return std::string("Sunspear Arena");
-	case 148: return std::string("Sunspear Great Hall");
-	case 149: return std::string("Sunspear Sanctuary");
-	case 150: return std::string("Tahnnakai Temple");
-	case 151: return std::string("Tanglewood Copse");
-	case 152: return std::string("Tarnished Haven");
-	case 153: return std::string("Temple of the Ages");
-	case 154: return std::string("Thirsty River");
-	case 155: return std::string("Thunderhead Keep");
-	case 156: return std::string("Tihark Orchard");
-	case 157: return std::string("Tomb of the Primeval Kings");
-	case 158: return std::string("Tsumei Village");
-	case 159: return std::string("Umbral Grotto");
-	case 160: return std::string("Unwaking Waters (Kurzick)");
-	case 161: return std::string("Unwaking Waters (Luxon)");
-	case 162: return std::string("Urgoz's Warren");
-	case 163: return std::string("Vasburg Armory");
-	case 164: return std::string("Venta Cemetery");
-	case 165: return std::string("Ventari's Refuge");
-	case 166: return std::string("Vizunah Square (Foreign Quarter)");
-	case 167: return std::string("Vizunah Square (Local Quarter)");
-	case 168: return std::string("Vlox's Falls");
-	case 169: return std::string("Wehhan Terraces");
-	case 170: return std::string("Wilds, The");
-	case 171: return std::string("Yahnur Market");
-	case 172: return std::string("Yak's Bend");
-	case 173: return std::string("Yohlon Haven");
-	case 174: return std::string("Zaishen Challenge");
-	case 175: return std::string("Zaishen Elite");
-	case 176: return std::string("Zaishen Menagerie");
-	case 177: return std::string("Zen Daijun");
-	case 178: return std::string("Zin Ku Corridor");
-	case 179: return std::string("Zos Shivros Channel");
-	default: return std::string("a bad map");
+void TravelPanel::SaveSettings(CSimpleIni* ini) {
+	ini->SetLongValue(Name(), "fav_count", fav_count);
+	for (int i = 0; i < fav_count; ++i) {
+		char key[32];
+		sprintf_s(key, "Town%d", i);
+		ini->SetLongValue(Name(), key, fav_index[i]);
 	}
 }
 
@@ -524,4 +327,192 @@ GW::Constants::MapID TravelPanel::IndexToOutpostID(int index) {
 	case 179: return MapID::Zos_Shivros_Channel;
 	default: return MapID::Great_Temple_of_Balthazar_outpost;
 	}
+}
+
+bool travelpanel_arraygetter(void* data, int idx, const char** out_text) {
+	switch (idx) {
+	case 0: *out_text = "Abaddon's Gate";				break;
+	case 1: *out_text = "Abaddon's Mouth";				break;
+	case 2: *out_text = "Altrumm Ruins";				break;
+	case 3: *out_text = "Amatz Basin";					break;
+	case 4: *out_text = "Amnoon Oasis, The";			break;
+	case 5: *out_text = "Arborstone";					break;
+	case 6: *out_text = "Ascalon City";					break;
+	case 7: *out_text = "Aspenwood Gate (Kurzick";		break;
+	case 8: *out_text = "Aspenwood Gate (Luxon";		break;
+	case 9: *out_text = "Astralarium, The";				break;
+	case 10: *out_text = "Augury Rock";					break;
+	case 11: *out_text = "Aurios Mines, The";			break;
+	case 12: *out_text = "Aurora Glade";				break;
+	case 13: *out_text = "Bai Paasu Reach";				break;
+	case 14: *out_text = "Basalt Grotto";				break;
+	case 15: *out_text = "Beacon's Perch";				break;
+	case 16: *out_text = "Beetletun";					break;
+	case 17: *out_text = "Beknur Harbor";				break;
+	case 18: *out_text = "Bergen Hot Springs";			break;
+	case 19: *out_text = "Blacktide Den";				break;
+	case 20: *out_text = "Bloodstone Fen";				break;
+	case 21: *out_text = "Bone Palace";					break;
+	case 22: *out_text = "Boreal Station";				break;
+	case 23: *out_text = "Boreas Seabed";				break;
+	case 24: *out_text = "Borlis Pass";					break;
+	case 25: *out_text = "Brauer Academy";				break;
+	case 26: *out_text = "Breaker Hollow";				break;
+	case 27: *out_text = "Camp Hojanu";					break;
+	case 28: *out_text = "Camp Rankor";					break;
+	case 29: *out_text = "Cavalon";						break;
+	case 30: *out_text = "Central Transfer Chamber";	break;
+	case 31: *out_text = "Chahbek Village";				break;
+	case 32: *out_text = "Champion's Dawn";				break;
+	case 33: *out_text = "Chantry of Secrets";			break;
+	case 34: *out_text = "Codex Arena";					break;
+	case 35: *out_text = "Consulate Docks";				break;
+	case 36: *out_text = "Copperhammer Mines";			break;
+	case 37: *out_text = "D'Alessio Seaboard";			break;
+	case 38: *out_text = "Dajkah Inlet";				break;
+	case 39: *out_text = "Dasha Vestibule";				break;
+	case 40: *out_text = "Deep, The";					break;
+	case 41: *out_text = "Deldrimor War Camp";			break;
+	case 42: *out_text = "Destiny's Gorge";				break;
+	case 43: *out_text = "Divinity Coast";				break;
+	case 44: *out_text = "Doomlore Shrine";				break;
+	case 45: *out_text = "Dragon's Lair, The";			break;
+	case 46: *out_text = "Dragon's Throat";				break;
+	case 47: *out_text = "Droknar's Forge";				break;
+	case 48: *out_text = "Druid's Overlook";			break;
+	case 49: *out_text = "Dunes of Despair";			break;
+	case 50: *out_text = "Durheim Archives";			break;
+	case 51: *out_text = "Dzagonur Bastion";			break;
+	case 52: *out_text = "Elona Reach";					break;
+	case 53: *out_text = "Embark Beach";				break;
+	case 54: *out_text = "Ember Light Camp";			break;
+	case 55: *out_text = "Eredon Terrace";				break;
+	case 56: *out_text = "Eternal Grove, The";			break;
+	case 57: *out_text = "Eye of the North";			break;
+	case 58: *out_text = "Fishermen's Haven";			break;
+	case 59: *out_text = "Fort Aspenwood (Kurzick";		break;
+	case 60: *out_text = "Fort Aspenwood (Luxon";		break;
+	case 61: *out_text = "Fort Ranik";					break;
+	case 62: *out_text = "Frontier Gate";				break;
+	case 63: *out_text = "Frost Gate, The";				break;
+	case 64: *out_text = "Gadd's Encampment";			break;
+	case 65: *out_text = "Gate of Anguish";				break;
+	case 66: *out_text = "Gate of Desolation";			break;
+	case 67: *out_text = "Gate of Fear";				break;
+	case 68: *out_text = "Gate of Madness";				break;
+	case 69: *out_text = "Gate of Pain";				break;
+	case 70: *out_text = "Gate of Secrets";				break;
+	case 71: *out_text = "Gate of the Nightfallen Lands"; break;
+	case 72: *out_text = "Gate of Torment";				break;
+	case 73: *out_text = "Gates of Kryta";				break;
+	case 74: *out_text = "Grand Court of Sebelkeh";		break;
+	case 75: *out_text = "Granite Citadel, The";		break;
+	case 76: *out_text = "Great Northern Wall, The";	break;
+	case 77: *out_text = "Great Temple of Balthazar";	break;
+	case 78: *out_text = "Grendich Courthouse";			break;
+	case 79: *out_text = "Gunnar's Hold";				break;
+	case 80: *out_text = "Gyala Hatchery";				break;
+	case 81: *out_text = "Harvest Temple";				break;
+	case 82: *out_text = "Hell's Precipice";			break;
+	case 83: *out_text = "Henge of Denravi";			break;
+	case 84: *out_text = "Heroes' Ascent";				break;
+	case 85: *out_text = "Heroes' Audience";			break;
+	case 86: *out_text = "Honur Hill";					break;
+	case 87: *out_text = "House zu Heltzer";			break;
+	case 88: *out_text = "Ice Caves of Sorrow";			break;
+	case 89: *out_text = "Ice Tooth Cave";				break;
+	case 90: *out_text = "Imperial Sanctum";			break;
+	case 91: *out_text = "Iron Mines of Moladune";		break;
+	case 92: *out_text = "Jade Flats (Kurzick";			break;
+	case 93: *out_text = "Jade Flats (Luxon";			break;
+	case 94: *out_text = "Jade Quarry (Kurzick, The";	break;
+	case 95: *out_text = "Jade Quarry (Luxon, The";		break;
+	case 96: *out_text = "Jennur's Horde";				break;
+	case 97: *out_text = "Jokanur Diggings";			break;
+	case 98: *out_text = "Kaineng Center";				break;
+	case 99: *out_text = "Kamadan, Jewel of Istan";		break;
+	case 100: *out_text = "Kodash Bazaar, The";			break;
+	case 101: *out_text = "Kodlonu Hamlet";				break;
+	case 102: *out_text = "Kodonur Crossroads";			break;
+	case 103: *out_text = "Lair of the Forgotten";		break;
+	case 104: *out_text = "Leviathan Pits";				break;
+	case 105: *out_text = "Lion's Arch";				break;
+	case 106: *out_text = "Longeye's Ledge";			break;
+	case 107: *out_text = "Lutgardis Conservatory";		break;
+	case 108: *out_text = "Maatu Keep";					break;
+	case 109: *out_text = "Maguuma Stade";				break;
+	case 110: *out_text = "Marhan's Grotto";			break;
+	case 111: *out_text = "Marketplace, The";			break;
+	case 112: *out_text = "Mihanu Township";			break;
+	case 113: *out_text = "Minister Cho's Estate";		break;
+	case 114: *out_text = "Moddok Crevice";				break;
+	case 115: *out_text = "Mouth of Torment, The";		break;
+	case 116: *out_text = "Nahpui Quarter";				break;
+	case 117: *out_text = "Nolani Academy";				break;
+	case 118: *out_text = "Nundu Bay";					break;
+	case 119: *out_text = "Olafstead";					break;
+	case 120: *out_text = "Piken Square";				break;
+	case 121: *out_text = "Pogahn Passage";				break;
+	case 122: *out_text = "Port Sledge";				break;
+	case 123: *out_text = "Quarrel Falls";				break;
+	case 124: *out_text = "Raisu Palace";				break;
+	case 125: *out_text = "Ran Musu Gardens";			break;
+	case 126: *out_text = "Random Arenas";				break;
+	case 127: *out_text = "Rata Sum";					break;
+	case 128: *out_text = "Remains of Sahlahja";		break;
+	case 129: *out_text = "Rilohn Refuge";				break;
+	case 130: *out_text = "Ring of Fire";				break;
+	case 131: *out_text = "Riverside Province";			break;
+	case 132: *out_text = "Ruins of Morah";				break;
+	case 133: *out_text = "Ruins of Surmia";			break;
+	case 134: *out_text = "Saint Anjeka's Shrine";		break;
+	case 135: *out_text = "Sanctum Cay";				break;
+	case 136: *out_text = "Sardelac Sanitarium";		break;
+	case 137: *out_text = "Seafarer's Rest";			break;
+	case 138: *out_text = "Seeker's Passage";			break;
+	case 139: *out_text = "Seitung Harbor";				break;
+	case 140: *out_text = "Senji's Corner";				break;
+	case 141: *out_text = "Serenity Temple";			break;
+	case 142: *out_text = "Shadow Nexus, The";			break;
+	case 143: *out_text = "Shing Jea Arena";			break;
+	case 144: *out_text = "Shing Jea Monastery";		break;
+	case 145: *out_text = "Sifhalla";					break;
+	case 146: *out_text = "Sunjiang District";			break;
+	case 147: *out_text = "Sunspear Arena";				break;
+	case 148: *out_text = "Sunspear Great Hall";		break;
+	case 149: *out_text = "Sunspear Sanctuary";			break;
+	case 150: *out_text = "Tahnnakai Temple";			break;
+	case 151: *out_text = "Tanglewood Copse";			break;
+	case 152: *out_text = "Tarnished Haven";			break;
+	case 153: *out_text = "Temple of the Ages";			break;
+	case 154: *out_text = "Thirsty River";				break;
+	case 155: *out_text = "Thunderhead Keep";			break;
+	case 156: *out_text = "Tihark Orchard";				break;
+	case 157: *out_text = "Tomb of the Primeval Kings";	break;
+	case 158: *out_text = "Tsumei Village";				break;
+	case 159: *out_text = "Umbral Grotto";				break;
+	case 160: *out_text = "Unwaking Waters (Kurzick";	break;
+	case 161: *out_text = "Unwaking Waters (Luxon";		break;
+	case 162: *out_text = "Urgoz's Warren";				break;
+	case 163: *out_text = "Vasburg Armory";				break;
+	case 164: *out_text = "Venta Cemetery";				break;
+	case 165: *out_text = "Ventari's Refuge";			break;
+	case 166: *out_text = "Vizunah Square (Foreign)";	break;
+	case 167: *out_text = "Vizunah Square (Local)";		break;
+	case 168: *out_text = "Vlox's Falls";				break;
+	case 169: *out_text = "Wehhan Terraces";			break;
+	case 170: *out_text = "Wilds, The";					break;
+	case 171: *out_text = "Yahnur Market";				break;
+	case 172: *out_text = "Yak's Bend";					break;
+	case 173: *out_text = "Yohlon Haven";				break;
+	case 174: *out_text = "Zaishen Challenge";			break;
+	case 175: *out_text = "Zaishen Elite";				break;
+	case 176: *out_text = "Zaishen Menagerie";			break;
+	case 177: *out_text = "Zen Daijun";					break;
+	case 178: *out_text = "Zin Ku Corridor";			break;
+	case 179: *out_text = "Zos Shivros Channel";		break;
+	case 180: *out_text = "Travel To:";					break;
+	default: *out_text = "";
+	}
+	return true;
 }

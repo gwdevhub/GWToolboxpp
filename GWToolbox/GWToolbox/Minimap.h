@@ -33,6 +33,8 @@ public:
 	bool OnMouseMove(MSG msg);
 	bool OnMouseWheel(MSG msg);
 
+	DWORD mapfile;
+
 private:
 	bool IsInside(int x, int y) const;
 	// returns true if the map is visible, valid, not loading, etc

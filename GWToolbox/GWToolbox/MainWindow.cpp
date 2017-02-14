@@ -19,10 +19,10 @@ using namespace OSHGui;
 MainWindow::MainWindow() : 
 	pcon_panel_(*new PconPanel(this)),
 	hotkey_panel_(*new HotkeyPanel(this)),
-	build_panel_(*new BuildPanel(this)),
-	travel_panel_(*new TravelPanel(this)),
-	dialog_panel_(*new DialogPanel(this)),
-	info_panel_(*new InfoPanel(this)),
+	build_panel_(*new BuildPanel()),
+	travel_panel_(*new TravelPanel()),
+	dialog_panel_(*new DialogPanel()),
+	info_panel_(*new InfoPanel()),
 	materials_panel_(*new MaterialsPanel(this)),
 	settings_panel_(*new SettingsPanel()),
 
@@ -151,8 +151,7 @@ MainWindow::MainWindow() :
 	panels.push_back(&dialog_panel_);
 	panels.push_back(&info_panel_);
 	panels.push_back(&materials_panel_);
-	panels.push_back(new SettingsPanel());
-	//panels.push_back(&settings_panel_);
+	panels.push_back(&settings_panel_);
 	
 	for (ToolboxPanel* panel : panels) {
 		panel->SetSize(SizeI(SIDE_PANEL_WIDTH, HEIGHT));
@@ -167,7 +166,6 @@ void MainWindow::SetPanelPositions(bool left) {
 	for (ToolboxPanel* panel : panels) {
 		panel->SetLocation(PointI(left ? -panel->GetWidth() - 1 : GetWidth() + 1, 0));
 	}
-	build_panel().SetPanelPosition(left);
 }
 
 void MainWindow::SetMinimized(bool minimized) {
@@ -347,9 +345,14 @@ void MainWindow::Draw(IDirect3DDevice9* pDevice) {
 }
 
 void MainWindow::DrawSettings() {
-	use_minimized_alt_pos.Draw();
-	tick_with_pcons.Draw();
-	tabs_left.Draw();
+	if (ImGui::CollapsingHeader("Main Window")) {
+		use_minimized_alt_pos.Draw();
+		tick_with_pcons.Draw();
+		tabs_left.Draw();
+		for (ToolboxPanel* panel : panels) {
+			panel->DrawSettings();
+		}
+	}
 }
 
 void MainWindow::SaveLocation() {

@@ -3,36 +3,42 @@
 #include <GWCA\GWCA.h>
 
 #include "Config.h"
-#include "MainWindow.h"
 #include "GuiUtils.h"
 #include "GWToolbox.h"
 
-using namespace OSHGui;
+DialogPanel::DialogPanel() {
+	fav_count = 3;
+	fav_index.resize(fav_count, 0);
+}
 
 void DialogPanel::Draw(IDirect3DDevice9* pDevice) {
-	auto DialogButton = [](int x_idx, int x_qty, const char* text, DWORD dialog) -> void {
+	auto DialogButton = [](int x_idx, int x_qty, const char* text, const char* help, DWORD dialog) -> void {
 		if (x_idx != 0) ImGui::SameLine();
-		float w = (ImGui::GetWindowWidth() - ImGui::GetStyle().WindowPadding.x * (x_qty + 1)) / x_qty;
+		float w = (ImGui::GetWindowContentRegionWidth() 
+			- ImGui::GetStyle().WindowPadding.x * (x_qty - 1)) / x_qty;
 		if (ImGui::Button(text, ImVec2(w, 0))) {
 			GW::Agents().Dialog(dialog);
+		}
+		if (text != nullptr && ImGui::IsItemHovered()) {
+			ImGui::SetTooltip(help);
 		}
 	};
 
 	ImGui::Begin(Name());
-	DialogButton(0, 2, "Four Horseman", QuestAcceptDialog(GW::Constants::QuestID::UW::Planes));
-	DialogButton(1, 2, "Demon Assassin", QuestAcceptDialog(GW::Constants::QuestID::UW::Mnt));
-	DialogButton(0, 2, "Tower of Strength", QuestAcceptDialog(GW::Constants::QuestID::Fow::Tos));
-	DialogButton(1, 2, "Foundry Reward", QuestRewardDialog(GW::Constants::QuestID::Doa::FoundryBreakout));
+	DialogButton(0, 2, "Four Horseman", "Take quest in Planes", QuestAcceptDialog(GW::Constants::QuestID::UW::Planes));
+	DialogButton(1, 2, "Demon Assassin", "Take quest in Mountains", QuestAcceptDialog(GW::Constants::QuestID::UW::Mnt));
+	DialogButton(0, 2, "Tower of Strength", "Take quest", QuestAcceptDialog(GW::Constants::QuestID::Fow::Tos));
+	DialogButton(1, 2, "Foundry Reward", "Accept quest reward", QuestRewardDialog(GW::Constants::QuestID::Doa::FoundryBreakout));
+	ImGui::Separator();
+	DialogButton(0, 4, "Lab", "Teleport Lab", GW::Constants::DialogID::UwTeleLab);
+	DialogButton(1, 4, "Vale", "Teleport Vale", GW::Constants::DialogID::UwTeleVale);
+	DialogButton(2, 4, "Pits", "Teleport Pits", GW::Constants::DialogID::UwTelePits);
+	DialogButton(3, 4, "Pools", "Teleport Pools", GW::Constants::DialogID::UwTelePools);
 
-	DialogButton(0, 4, "Lab", GW::Constants::DialogID::UwTeleLab);
-	DialogButton(1, 4, "Vale", GW::Constants::DialogID::UwTeleVale);
-	DialogButton(2, 4, "Pits", GW::Constants::DialogID::UwTelePits);
-	DialogButton(3, 4, "Pools", GW::Constants::DialogID::UwTelePools);
-
-	DialogButton(0, 3, "Planes", GW::Constants::DialogID::UwTelePlanes);
-	DialogButton(1, 3, "Wastes", GW::Constants::DialogID::UwTeleWastes);
-	DialogButton(2, 3, "Mountains", GW::Constants::DialogID::UwTeleMnt);
-
+	DialogButton(0, 3, "Planes", "Teleport Planes", GW::Constants::DialogID::UwTelePlanes);
+	DialogButton(1, 3, "Wastes", "Telport Wastes", GW::Constants::DialogID::UwTeleWastes);
+	DialogButton(2, 3, "Mountains", "Teleport Mountains\nThis is NOT the mountains quest", GW::Constants::DialogID::UwTeleMnt);
+	ImGui::Separator();
 	const int n_quests = 29;
 	static const char* const questnames[] = { "UW - Chamber",
 		"UW - Wastes",
@@ -63,20 +69,22 @@ void DialogPanel::Draw(IDirect3DDevice9* pDevice) {
 		"DoA - Veil 2: Brood Wars",
 		"DoA - Foundry 1: Foundry Breakout",
 		"DoA - Foundry 2: Foundry Of Failed Creations" };
-	for (int i = 0; i < NUM_DIALOG_FAV_QUESTS; ++i) {
+	for (int i = 0; i < fav_count; ++i) {
 		ImGui::PushID(i);
-		ImGui::Combo("", &favindex[i], questnames, n_quests);
+		ImGui::PushItemWidth(-100.0f - ImGui::GetStyle().WindowPadding.x * 2);
+		ImGui::Combo("", &fav_index[i], questnames, n_quests);
+		ImGui::PopItemWidth();
 		ImGui::SameLine();
-		if (ImGui::Button("Take")) {
-			GW::Agents().Dialog(QuestAcceptDialog(IndexToQuestID(favindex[i])));
+		if (ImGui::Button("Take", ImVec2(40.0f, 0))) {
+			GW::Agents().Dialog(QuestAcceptDialog(IndexToQuestID(fav_index[i])));
 		}
 		ImGui::SameLine();
-		if (ImGui::Button("Reward")) {
-			GW::Agents().Dialog(QuestRewardDialog(IndexToDialogID(favindex[i])));
+		if (ImGui::Button("Reward", ImVec2(60.0f, 0))) {
+			GW::Agents().Dialog(QuestRewardDialog(IndexToDialogID(fav_index[i])));
 		}
 		ImGui::PopID();
 	}
-
+	ImGui::Separator();
 	const int n_dialogs = 15;
 	static const char* const dialognames[] = { "Craft fow armor",
 		"Prof Change - Warrior",
@@ -94,15 +102,17 @@ void DialogPanel::Draw(IDirect3DDevice9* pDevice) {
 		"Docks -> LA Gate @ Mhenlo",
 		"LA Gate -> LA @ Neiro" };
 	static int dialogindex = 0;
+	ImGui::PushItemWidth(-60.0f - ImGui::GetStyle().WindowPadding.x);
 	ImGui::Combo("###dialogcombo", &dialogindex, dialognames, n_dialogs);
+	ImGui::PopItemWidth();
 	ImGui::SameLine();
-	if (ImGui::Button("Send", ImVec2(-1.0f, 0.0f))) {
+	if (ImGui::Button("Send", ImVec2(60.0f, 0))) {
 		GW::Agents().Dialog(IndexToDialogID(dialogindex));
 	}
 
 	static bool hex = false;
 	static char customdialogbuf[64] = "";
-	if (ImGui::Button(hex ? "Hex" : "Dec", ImVec2(32.0f, 0.0f))) {
+	if (ImGui::Button(hex ? "Hex" : "Dec", ImVec2(32.0f, 0))) {
 		try {
 			if (hex) { // was hex, convert to dec
 				long id = std::stol(customdialogbuf, 0, 16);
@@ -114,11 +124,17 @@ void DialogPanel::Draw(IDirect3DDevice9* pDevice) {
 		} catch (...) {}
 		hex = !hex;
 	}
+	if (ImGui::IsItemHovered()) {
+		ImGui::SetTooltip(hex ? "Dialog ID is in hexadecimal value\nClick to convert to decimal"
+			: "Dialog ID is in decimal value\nClick to convert to hexadecimal");
+	}
 	ImGui::SameLine();
 	ImGuiInputTextFlags flag = (hex ? ImGuiInputTextFlags_CharsHexadecimal : ImGuiInputTextFlags_CharsDecimal);
+	ImGui::PushItemWidth(-60.0f - ImGui::GetStyle().WindowPadding.x);
 	ImGui::InputText("###dialoginput", customdialogbuf, 64, flag);
+	ImGui::PopItemWidth();
 	ImGui::SameLine();
-	if (ImGui::Button("Send", ImVec2(-1.0f, 0.0f))) {
+	if (ImGui::Button("Send", ImVec2(60.0f, 0))) {
 		try {
 			long id = std::stol(customdialogbuf, 0, hex ? 16 : 10);
 			GW::Agents().Dialog(id);
@@ -128,19 +144,35 @@ void DialogPanel::Draw(IDirect3DDevice9* pDevice) {
 	ImGui::End();
 }
 
+void DialogPanel::DrawSettings() {
+	if (ImGui::TreeNode(Name())) {
+		ImGui::PushItemWidth(100.0f);
+		if (ImGui::InputInt("Number of favorites", &fav_count)) {
+			if (fav_count < 0) fav_count = 0;
+			if (fav_count > 100) fav_count = 100;
+			fav_index.resize(fav_count, 0);
+		}
+		ImGui::PopItemWidth();
+		ImGui::TreePop();
+	}
+}
+
 void DialogPanel::LoadSettings(CSimpleIni* ini) {
-	for (int i = 0; i < NUM_DIALOG_FAV_QUESTS; ++i) {
+	fav_count = ini->GetLongValue(Name(), "fav_count", 3);
+	fav_index.resize(fav_count, 0);
+	for (int i = 0; i < fav_count; ++i) {
 		char key[32];
 		sprintf_s(key, "Quest%d", i);
-		favindex[i] = ini->GetLongValue(Name(), key, 0);
+		fav_index[i] = ini->GetLongValue(Name(), key, 0);
 	}
 }
 
 void DialogPanel::SaveSettings(CSimpleIni* ini) {
-	for (int i = 0; i < NUM_DIALOG_FAV_QUESTS; ++i) {
+	ini->SetLongValue(Name(), "fav_count", fav_count);
+	for (int i = 0; i < fav_count; ++i) {
 		char key[32];
 		sprintf_s(key, "Quest%d", i);
-		ini->SetLongValue(Name(), key, favindex[i]);
+		ini->SetLongValue(Name(), key, fav_index[i]);
 	}
 }
 

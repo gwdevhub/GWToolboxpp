@@ -595,7 +595,7 @@ HotkeyPingBuild::HotkeyPingBuild(OSHGui::Control* parent, Key key, Key modifier,
 	ComboBox* combo = new ComboBox(this);
 	combo->SetSize(SizeI(WIDTH - label->GetRight() - HSPACE, LINE_HEIGHT));
 	combo->SetLocation(PointI(label->GetRight() + HSPACE, ITEM_Y));
-	for (int i = 0; i < BuildPanel::N_BUILDS; ++i) {
+	for (int i = 0; i < 16; ++i) {
 		int index = i + 1;
 		std::string section = std::string("builds") + std::to_string(index);
 		std::string name = Config::IniRead(section.c_str(), "buildname", "");
@@ -748,9 +748,7 @@ void HotkeyDialog::exec() {
 void HotkeyPingBuild::exec() {
 	if (isLoading()) return;
 
-	if (index_ >= 0 && index_ < BuildPanel::N_BUILDS) {
-		GWToolbox::instance().main_window->build_panel().SendTeamBuild(index_);
-	}
+	GWToolbox::instance().main_window->build_panel().Send(index_);
 }
 
 std::string HotkeySendChat::GetDescription() {

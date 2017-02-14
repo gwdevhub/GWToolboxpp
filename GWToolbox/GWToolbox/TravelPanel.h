@@ -13,36 +13,27 @@
 
 class TravelPanel : public ToolboxPanel {
 public:
+	const int n_outposts = 181;
 	const char* Name() override { return "Travel Panel"; }
 
-	TravelPanel(OSHGui::Control* parent) : ToolboxPanel(parent) {}
+	TravelPanel();
 
-	void BuildUI() override;
-
-	// Update. Will always be called every frame.
-	void Update() override {}
+	bool TravelFavorite(unsigned int idx);
 
 	// Draw user interface. Will be called every frame if the element is visible
-	void Draw(IDirect3DDevice9* pDevice) override {}
+	void Draw(IDirect3DDevice9* pDevice) override;
 
-	void TravelFavorite(int fav_idx);
+	void DrawSettings() override;
+	void LoadSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) override;
 
 private:
-	const int n_outposts = 180;
-
-	class TravelCombo : public OSHGui::ComboBox {
-	public:
-		TravelCombo(OSHGui::Control* parent);
-	};
-
-	GW::Constants::District district_;
-	int district_number_;
-
-	void AddTravelButton(std::string text, int grid_x, int grid_y, 
-		GW::Constants::MapID map_id);
-	void UpdateDistrict(int gui_index);
-	std::string IndexToOutpostName(int index);
+	void TravelButton(const char* text, int x_idx, GW::Constants::MapID mapid);
 	GW::Constants::MapID IndexToOutpostID(int index);
 
-	OSHGui::ComboBox* combo_boxes_[3];
+	GW::Constants::District district;
+	int district_number;
+
+	int fav_count;
+	std::vector<int> fav_index;
 };

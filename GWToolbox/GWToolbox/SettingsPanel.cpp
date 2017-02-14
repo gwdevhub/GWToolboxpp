@@ -123,18 +123,14 @@ void SettingsPanel::Draw(IDirect3DDevice9* pDevice) {
 	if (ImGui::CollapsingHeader("Toolbox++ General")) {
 		ImGui::Checkbox("Save Location Data", &save_location_data);
 	}
-	if (ImGui::CollapsingHeader("Main Window")) {
-		GWToolbox::instance().main_window->DrawSettings();
-	}
-	if (ImGui::CollapsingHeader("Minimap")) {
-
-	}
-	if (ImGui::CollapsingHeader("Chat Filter")) {
-		GWToolbox::instance().chat_filter->DrawSettings();
-	}
-	if (ImGui::CollapsingHeader("Theme")) {
 		
-	}
+	GWToolbox::instance().main_window->DrawSettings();
+
+	if (ImGui::CollapsingHeader("Minimap")) {}
+	
+	GWToolbox::instance().chat_filter->DrawSettings();
+
+	if (ImGui::CollapsingHeader("Theme")) {}
 
 	ImGui::End();
 }

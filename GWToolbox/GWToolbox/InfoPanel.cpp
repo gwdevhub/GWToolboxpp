@@ -5,6 +5,7 @@
 
 #include <GWCA\GWCA.h>
 #include <GWCA\Managers\ItemMgr.h>
+#include <GWCA\Constants\Constants.h>
 
 #include "GWToolbox.h"
 #include "Config.h"
@@ -16,208 +17,133 @@
 #include "PartyDamage.h"
 #include "Minimap.h"
 
-using namespace OSHGui;
-
-void InfoPanel::BuildUI() {
-
-	int full_item_width = GuiUtils::ComputeWidth(GetWidth(), 1);
-	int half_item_width = GuiUtils::ComputeWidth(GetWidth(), 2);
-	int group_height = 42;
-	int item1_x = GuiUtils::ComputeX(GetWidth(), 2, 0);
-	int item2_x = GuiUtils::ComputeX(GetWidth(), 2, 1);
-
-	using namespace OSHGui;
-
-	GroupBox* player = new GroupBox(this);
-	player->SetSize(SizeI(full_item_width, group_height));
-	player->SetLocation(PointI(item1_x, Padding));
-	player->SetText(" Player Position ");
-	player->SetBackColor(Drawing::Color::Empty());
-	AddControl(player);
-	Label* xtext = new Label(player->GetContainer());
-	xtext->SetLocation(PointI(Padding, Padding));
-	xtext->SetText("x: ");
-	player->AddControl(xtext);
-	player_x = new Label(player->GetContainer());
-	player_x->SetLocation(PointI(xtext->GetRight(), Padding));
-	player->AddControl(player_x);
-	Label* ytext = new Label(player->GetContainer());
-	ytext->SetLocation(PointI(player->GetWidth() / 2 + Padding, Padding));
-	ytext->SetText("y: ");
-	player->AddControl(ytext);
-	player_y = new Label(player->GetContainer());
-	player_y->SetLocation(PointI(ytext->GetRight(), Padding));
-	player->AddControl(player_y);
-
-	GroupBox* target = new GroupBox(this);
-	target->SetSize(SizeI(half_item_width, group_height));
-	target->SetLocation(PointI(item1_x, player->GetBottom() + Padding));
-	target->SetText(" Target ID ");
-	target->SetBackColor(Drawing::Color::Empty());
-	AddControl(target);
-	target_id = new Label(target->GetContainer());
-	target_id->SetLocation(PointI(Padding, Padding));
-	target->AddControl(target_id);
-
-	GroupBox* map = new GroupBox(this);
-	map->SetSize(SizeI(half_item_width, group_height));
-	map->SetLocation(PointI(item2_x, player->GetBottom() + Padding));
-	map->SetText(" Map ID ");
-	map->SetBackColor(Drawing::Color::Empty());
-	AddControl(map);
-	map_id = new Label(map->GetContainer());
-	map_id->SetLocation(PointI(Padding, Padding));
-	map->AddControl(map_id);
-
-	GroupBox* item = new GroupBox(this);
-	item->SetSize(SizeI(half_item_width, group_height));
-	item->SetLocation(PointI(item1_x, target->GetBottom() + Padding));
-	item->SetText(" First Item ID ");
-	item->SetBackColor(Drawing::Color::Empty());
-	AddControl(item);
-	item_id = new Label(item->GetContainer());
-	item_id->SetLocation(PointI(Padding, Padding));
-	item->AddControl(item_id);
-
-	GroupBox* dialog = new GroupBox(this);
-	dialog->SetSize(SizeI(half_item_width, group_height));
-	dialog->SetLocation(PointI(item2_x, target->GetBottom() + Padding));
-	dialog->SetText(" Last Dialog ID ");
-	dialog->SetBackColor(Drawing::Color::Empty());
-	AddControl(dialog);
-	dialog_id = new Label(dialog->GetContainer());
-	dialog_id->SetLocation(PointI(Padding, Padding));
-	dialog->AddControl(dialog_id);
-
-	CheckBox* bonds = new CheckBox(this);
-	bonds->SetText("Bonds Monitor");
-	bonds->SetWidth(half_item_width);
-	bonds->SetLocation(PointI(item1_x, dialog->GetBottom() + Padding));
-	bonds->SetChecked(Config::IniRead(
-		BondsWindow::IniSection(), BondsWindow::IniKeyShow(), false));
-	bonds->GetCheckedChangedEvent() += CheckedChangedEventHandler([bonds](Control*) {
-		GWToolbox& tb = GWToolbox::instance();
-		bool show = bonds->GetChecked();
-		tb.bonds_window->SetVisible(show);
-		Config::IniWrite(BondsWindow::IniSection(), BondsWindow::IniKeyShow(), show);
-	});
-	AddControl(bonds);
-
-	CheckBox* targetHp = new CheckBox(this);
-	targetHp->SetText("Target Health");
-	targetHp->SetWidth(half_item_width);
-	targetHp->SetLocation(PointI(item1_x, bonds->GetBottom() + Padding));
-	AddControl(targetHp);
-
-	CheckBox* distance = new CheckBox(this);
-	distance->SetText("Target Distance");
-	distance->SetWidth(half_item_width);
-	distance->SetLocation(PointI(item1_x, targetHp->GetBottom() + Padding));
-	AddControl(distance);
-
-	CheckBox* damage = new CheckBox(this);
-	damage->SetText("Party Damage");
-	damage->SetWidth(half_item_width);
-	damage->SetLocation(PointI(item1_x, distance->GetBottom() + Padding));
-	damage->SetChecked(Config::IniRead(
-		PartyDamage::IniSection(), PartyDamage::InikeyShow(), false));
-	damage->GetCheckedChangedEvent() += CheckedChangedEventHandler([damage](Control*) {
-		GWToolbox& tb = GWToolbox::instance();
-		bool show = damage->GetChecked();
-		tb.party_damage->SetVisible(show);
-		Config::IniWrite(PartyDamage::IniSection(), PartyDamage::InikeyShow(), show);
-	});
-	AddControl(damage);
-
-	CheckBox* minimap = new CheckBox(this);
-	minimap->SetText("Minimap");
-	minimap->SetWidth(half_item_width);
-	minimap->SetLocation(PointI(item2_x, dialog->GetBottom() + Padding));
-	minimap->SetChecked(Config::IniRead(
-		Minimap::IniSection(), Minimap::InikeyShow(), false));
-	minimap->GetCheckedChangedEvent() += CheckedChangedEventHandler([minimap](Control*) {
-		GWToolbox& tb = GWToolbox::instance();
-		bool show = minimap->GetChecked();
-		tb.minimap->SetVisible(show);
-		Config::IniWrite(Minimap::IniSection(), Minimap::InikeyShow(), show);
-	});
-	AddControl(minimap);
-
-	Button* xunlai = new Button(this);
-	xunlai->SetSize(SizeI(full_item_width, GuiUtils::BUTTON_HEIGHT));
-	xunlai->SetLocation(PointI(item1_x, GetHeight() - xunlai->GetHeight() - Padding));
-	xunlai->SetText("Open Xunlai Chest");
-	xunlai->GetClickEvent() += ClickEventHandler([](Control*) {
-		if (GW::Map().GetInstanceType() == GW::Constants::InstanceType::Outpost) {
-			GW::Items().OpenXunlaiWindow();
-		}
-	});
-	AddControl(xunlai);
-}
-
 void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
-	GW::Agent* player = GW::Agents().GetPlayer();
-	float x = player ? player->X : 0;
-	float y = player ? player->Y : 0;
-	if (x != current_player_x || y != current_player_y) {
-		current_player_x = x;
-		current_player_y = y;
+	ImGui::Begin(Name());
+	ImGui::Checkbox("Timer", &GWToolbox::instance().timer_window->visible);
+	GuiUtils::ShowHelp("Time the instance has been active");
+	ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
+	static bool tmp = true;
+	ImGui::Checkbox("Minimap", &tmp); // &GWToolbox::instance().minimap->visible);
+	GuiUtils::ShowHelp("An alternative to the default compass");
+	ImGui::Checkbox("Bonds", &tmp); // &GWToolbox::instance().bonds_window->isVisible_);
+	GuiUtils::ShowHelp("Show the bonds maintained by you.\nOnly works on human players");
+	ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
+	ImGui::Checkbox("Damage", &tmp);
+	GuiUtils::ShowHelp("Show the damage done by each player in your party.\nOnly works on the damage done within your radar range.");
+	ImGui::Checkbox("Health", &GWToolbox::instance().health_window->visible);
+	GuiUtils::ShowHelp("Displays the health of the target.\nMax health is only computed and refreshed when you directly damage or heal your target");
+	ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
+	ImGui::Checkbox("Distance", &GWToolbox::instance().distance_window->visible);
+	GuiUtils::ShowHelp("Displays the distance to your target.\n1010 = Earshot / Aggro\n1248 = Cast range\n2500 = Spirit range\n5000 = Radar range");
+	if (ImGui::Button("Open Xunlai Chest", ImVec2(-1.0f, 0))) {
+		GW::Items().OpenXunlaiWindow();
+	}
+	if (ImGui::TreeNode("Player")) {
+		static char x_buf[32] = "";
+		static char y_buf[32] = "";
+		static char s_buf[32] = "";
+		static char agentid_buf[32] = "";
+		static char modelid_buf[32] = "";
+		GW::Agent* player = GW::Agents().GetPlayer();
 		if (player) {
-			player_x->SetText(std::to_string(lroundf(x)));
-			player_y->SetText(std::to_string(lroundf(y)));
-		} else {
-			player_x->SetText(" -");
-			player_y->SetText(" -");
+			sprintf_s(x_buf, "%.2f", player->X);
+			sprintf_s(y_buf, "%.2f", player->Y);
+			float s = sqrtf(player->MoveX * player->MoveX + player->MoveY * player->MoveY);
+			sprintf_s(s_buf, "%.3f", s / 288.0f);
+			sprintf_s(agentid_buf, "%d", player->Id);
+			sprintf_s(modelid_buf, "%d", player->PlayerNumber);
 		}
+		ImGui::PushItemWidth(-80.0f);
+		ImGui::InputText("X pos", x_buf, 32, ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputText("Y pos", y_buf, 32, ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputText("Speed", s_buf, 32, ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputText("Agent ID", agentid_buf, 32, ImGuiInputTextFlags_ReadOnly);
+		GuiUtils::ShowHelp("Agent ID is unique for each agent in the instance,\nIt's generated on spawn and will change in different instances.");
+		ImGui::InputText("Player ID", modelid_buf, 32, ImGuiInputTextFlags_ReadOnly);
+		GuiUtils::ShowHelp("Player ID is unique for each human player in the instance.");
+		ImGui::PopItemWidth();
+		ImGui::TreePop();
 	}
-
-	GW::Agent* target = GW::Agents().GetTarget();
-	long id = target ? target->PlayerNumber : 0;
-	if (id != current_target_id) {
+	if (ImGui::TreeNode("Target")) {
+		static char x_buf[32] = "";
+		static char y_buf[32] = "";
+		static char s_buf[32] = "";
+		static char agentid_buf[32] = "";
+		static char modelid_buf[32] = "";
+		GW::Agent* target = GW::Agents().GetTarget();
 		if (target) {
-			target_id->SetText(std::to_string(target->PlayerNumber));
+			sprintf_s(x_buf, "%.2f", target->X);
+			sprintf_s(y_buf, "%.2f", target->Y);
+			float s = sqrtf(target->MoveX * target->MoveX + target->MoveY * target->MoveY);
+			sprintf_s(s_buf, "%.3f", s / 288.0f);
+			sprintf_s(agentid_buf, "%d", target->Id);
+			sprintf_s(modelid_buf, "%d", target->PlayerNumber);
 		} else {
-			target_id->SetText("-");
+			sprintf_s(x_buf, "-");
+			sprintf_s(y_buf, "-");
+			sprintf_s(s_buf, "-");
+			sprintf_s(agentid_buf, "-");
+			sprintf_s(modelid_buf, "-");
 		}
+		ImGui::PushItemWidth(-80.0f);
+		ImGui::InputText("X pos", x_buf, 32, ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputText("Y pos", y_buf, 32, ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputText("Speed", s_buf, 32, ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputText("Agent ID", agentid_buf, 32, ImGuiInputTextFlags_ReadOnly);
+		GuiUtils::ShowHelp("Agent ID is unique for each agent in the instance,\nIt's generated on spawn and will change in different instances.");
+		ImGui::InputText("Model ID", modelid_buf, 32, ImGuiInputTextFlags_ReadOnly);
+		GuiUtils::ShowHelp("Model ID is unique for each kind of agent.\nIt is static and shared by the same agents.\nWhen targeting players, this is Player ID instead, unique for each player in the instance.\nFor the purpose of targeting hotkeys and commands, use this value");
+		ImGui::PopItemWidth();
+		ImGui::TreePop();
 	}
-
-	if (GW::Map().GetMapID() != current_map_id
-		|| GW::Map().GetInstanceType() != current_map_type) {
-		current_map_id = GW::Map().GetMapID();
-		current_map_type = GW::Map().GetInstanceType();
-		std::string map = std::to_string(static_cast<int>(current_map_id));
+	if (ImGui::TreeNode("Map")) {
+		static char id_buf[32] = "";
+		char* type = "";
+		static char file_buf[32] = "";
+		sprintf_s(id_buf, "%d", GW::Map().GetMapID());
 		switch (GW::Map().GetInstanceType()) {
-		case GW::Constants::InstanceType::Explorable: break;
-		case GW::Constants::InstanceType::Loading: map += " (loading)"; break;
-		case GW::Constants::InstanceType::Outpost: map += " (outpost)"; break;
+		case GW::Constants::InstanceType::Outpost: type = "Outpost\0\0\0"; break;
+		case GW::Constants::InstanceType::Explorable: type = "Explorable"; break;
+		case GW::Constants::InstanceType::Loading: type = "Loading\0\0\0"; break;
 		}
-		map_id->SetText(map);
+		sprintf_s(file_buf, "%d", GWToolbox::instance().minimap->mapfile);
+		ImGui::PushItemWidth(-80.0f);
+		ImGui::InputText("Map ID", id_buf, 32, ImGuiInputTextFlags_ReadOnly);
+		GuiUtils::ShowHelp("Map ID is unique for each area");
+		ImGui::InputText("Map Type", type, 11);
+		ImGui::InputText("Map file", file_buf, 32, ImGuiInputTextFlags_ReadOnly);
+		GuiUtils::ShowHelp("Map file is unique for each pathing map (e.g. used by minimap).\nMany different maps use the same map file");
+		ImGui::PopItemWidth();
+		ImGui::TreePop();
 	}
-	
-	GW::Bag** bags = GW::Items().GetBagArray();
-	if (bags) {
-		GW::Bag* bag1 = bags[1];
-		if (bag1) {
-			GW::ItemArray items = bag1->Items;
-			if (items.valid()) {
-				GW::Item* item = items[0];
-				long id = item ? item->ModelId : -1;
-				if (current_item_id != id) {
-					current_item_id = id;
+	if (ImGui::TreeNode("Dialog")) {
+		static char id_buf[32] = "";
+		sprintf_s(id_buf, "0x%X", GW::Agents().GetLastDialogId());
+		ImGui::PushItemWidth(-80.0f);
+		ImGui::InputText("Last Dialog", id_buf, 32, ImGuiInputTextFlags_ReadOnly);
+		ImGui::PopItemWidth();
+		ImGui::TreePop();
+	}
+	if (ImGui::TreeNode("Items")) {
+		static char id_buf[32] = "";
+		sprintf_s(id_buf, "-");
+		GW::Bag** bags = GW::Items().GetBagArray();
+		if (bags) {
+			GW::Bag* bag1 = bags[1];
+			if (bag1) {
+				GW::ItemArray items = bag1->Items;
+				if (items.valid()) {
+					GW::Item* item = items[0];
 					if (item) {
-						item_id->SetText(std::to_string(item->ModelId));
-					} else {
-						item_id->SetText(" -");
+						sprintf_s(id_buf, "%d", item->ModelId);
 					}
 				}
 			}
 		}
+		ImGui::PushItemWidth(-80.0f);
+		ImGui::InputText("First item ID", id_buf, 32, ImGuiInputTextFlags_ReadOnly);
+		ImGui::PopItemWidth();
+		ImGui::TreePop();
 	}
-
-	if (current_dialog_id != GW::Agents().GetLastDialogId()) {
-		static char dialogtxt[0x10];
-		current_dialog_id = GW::Agents().GetLastDialogId();
-		sprintf_s(dialogtxt, sizeof(wchar_t) * 0x10, "0x%X", current_dialog_id);
-		dialog_id->SetText(dialogtxt);
-	}
+	ImGui::End();
 }
