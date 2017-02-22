@@ -41,7 +41,7 @@ void OtherSettings::LoadSettings(CSimpleIni* ini) {
 	GW::Chat().SetOpenLinks(open_template_links);
 }
 
-void OtherSettings::SaveSettings(CSimpleIni* ini) {
+void OtherSettings::SaveSettings(CSimpleIni* ini) const {
 	ini->SetBoolValue(MainWindow::IniSection(), "freeze_widgets", freeze_widgets);
 	ini->SetBoolValue(MainWindow::IniSection(), "openlinks", open_template_links);
 	ini->SetBoolValue(MainWindow::IniSection(), "borderlesswindow", borderless_window);
@@ -53,7 +53,7 @@ void OtherSettings::ApplyBorderless(bool value) {
 	if ((current_style & WS_POPUP) != 0) { // borderless or fullscreen
 		if ((current_style & WS_MAXIMIZEBOX) == 0) { // fullscreen
 			if (value) {
-				ChatLogger::Log(L"Please enable Borderless while in Windowed mode");
+				ChatLogger::Log("Please enable Borderless while in Windowed mode");
 				value = false;
 			}
 			return;

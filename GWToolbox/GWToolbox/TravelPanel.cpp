@@ -28,7 +28,8 @@ void TravelPanel::TravelButton(const char* text, int x_idx, GW::Constants::MapID
 }
 
 void TravelPanel::Draw(IDirect3DDevice9* pDevice) {
-	ImGui::Begin(Name());
+	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
+	ImGui::Begin(Name(), &visible);
 	ImGui::PushItemWidth(-1.0f);
 	static int travelto_index = n_outposts - 1;
 	if (ImGui::Combo("###travelto", &travelto_index, travelpanel_arraygetter, nullptr, n_outposts)) {
@@ -133,7 +134,7 @@ void TravelPanel::LoadSettings(CSimpleIni* ini) {
 	}
 }
 
-void TravelPanel::SaveSettings(CSimpleIni* ini) {
+void TravelPanel::SaveSettings(CSimpleIni* ini) const {
 	ini->SetLongValue(Name(), "fav_count", fav_count);
 	for (int i = 0; i < fav_count; ++i) {
 		char key[32];

@@ -67,12 +67,13 @@ private:
 	Panel* main_panel_;
 	std::vector<ToolboxPanel*> panels;
 	std::vector<TabButton*> tab_buttons;
-	int current_panel_;
+
 	bool minimized_;
 	bool hidden_;
 	SettingBool use_minimized_alt_pos;
 	SettingBool tick_with_pcons;
 	SettingBool tabs_left;
+	bool one_panel_at_time_only;
 
 	Button* pcon_toggle_button_;
 	PconPanel& pcon_panel_;
@@ -88,7 +89,7 @@ private:
 	void SaveMinimizedLocation();
 
 public:
-	const char* Name() override { return "Main Window"; }
+	const char* Name() const override { return "Main Window"; }
 
 	MainWindow();
 	
@@ -115,8 +116,6 @@ public:
 	MaterialsPanel& materials_panel() { return materials_panel_; }
 	SettingsPanel& settings_panel() { return settings_panel_; }
 
-	virtual bool Intersect(const Drawing::PointI &point) const override;
-
 	void SetPanelPositions(bool left);
 
 	// Update. Will always be called every frame.
@@ -128,6 +127,6 @@ public:
 	void DrawSettings() override;
 
 	void LoadSettings(CSimpleIni* ini) override;
-	void SaveSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) const override;
 };
 

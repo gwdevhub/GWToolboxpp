@@ -289,7 +289,7 @@ bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) {
 }
 
 void ChatFilter::DrawSettings() {
-	if (ImGui::CollapsingHeader("Chat Filter")) {
+	if (ImGui::CollapsingHeader(Name())) {
 		ImGui::Text("Hide the following messages:");
 		ImGui::Checkbox("Common drops for you", &self_common_drops);
 		ImGui::Checkbox("Common drops for allies", &ally_common_drops);
@@ -377,7 +377,7 @@ void ChatFilter::LoadSettings(CSimpleIni* ini) {
 	ByAuthor_ParseBuf();
 }
 
-void ChatFilter::SaveSettings(CSimpleIni* ini) {
+void ChatFilter::SaveSettings(CSimpleIni* ini) const {
 	ini->SetBoolValue(Name(), "self_common_drops", self_common_drops);
 	ini->SetBoolValue(Name(), "ally_common_drops", ally_common_drops);
 	ini->SetBoolValue(Name(), "self_rare_drops", self_rare_drops);

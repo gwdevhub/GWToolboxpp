@@ -126,9 +126,6 @@
     <ClInclude Include="GWToolbox\PmapRenderer.h">
       <Filter>Windows\Minimap</Filter>
     </ClInclude>
-    <ClInclude Include="GWToolbox\Viewer.h">
-      <Filter>Windows\Minimap</Filter>
-    </ClInclude>
     <ClInclude Include="GWToolbox\AgentRenderer.h">
       <Filter>Windows\Minimap</Filter>
     </ClInclude>
@@ -147,9 +144,6 @@
     <ClInclude Include="GWToolbox\ChatCommands.h" />
     <ClInclude Include="GWToolbox\Defines.h" />
     <ClInclude Include="GWToolbox\SymbolsRenderer.h">
-      <Filter>Windows\Minimap</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\MinimapUtils.h">
       <Filter>Windows\Minimap</Filter>
     </ClInclude>
     <ClInclude Include="..\Dependencies\imgui\imconfig.h">
@@ -180,6 +174,10 @@
       <Filter>Panels\Settings</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\ToolboxModule.h" />
+    <ClInclude Include="GWToolbox\Key.h">
+      <Filter>Panels\Hotkeys</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Color.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -245,9 +243,6 @@
     <ClCompile Include="GWToolbox\PmapRenderer.cpp">
       <Filter>Windows\Minimap</Filter>
     </ClCompile>
-    <ClCompile Include="GWToolbox\Viewer.cpp">
-      <Filter>Windows\Minimap</Filter>
-    </ClCompile>
     <ClCompile Include="GWToolbox\AgentRenderer.cpp">
       <Filter>Windows\Minimap</Filter>
     </ClCompile>
@@ -283,5 +278,6 @@
     <ClCompile Include="GWToolbox\OtherSettings.cpp">
       <Filter>Panels\Settings</Filter>
     </ClCompile>
+    <ClCompile Include="GWToolbox\ToolboxModule.cpp" />
   </ItemGroup>
 </Project>

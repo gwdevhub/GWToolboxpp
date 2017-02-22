@@ -53,9 +53,9 @@ void TimerWindow::Draw(IDirect3DDevice9* pDevice) {
 }
 
 void TimerWindow::LoadSettings(CSimpleIni* ini) {
-	visible = ini->GetBoolValue(Name(), "show", true);
+	LoadSettingVisible(ini);
 }
 
-void TimerWindow::SaveSettings(CSimpleIni* ini) {
-	ini->SetBoolValue(Name(), "show", visible);
+void TimerWindow::SaveSettings(CSimpleIni* ini) const {
+	SaveSettingVisible(ini);
 }

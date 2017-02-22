@@ -6,9 +6,9 @@
 #include <Windows.h>
 #include <string>
 
-#include <OSHGui\OSHGui.hpp>
 #include <GWCA\GWCA.h>
 
+#include "Key.h"
 #include "ToolboxPanel.h"
 #include "logger.h"
 #include "Timer.h"
@@ -16,14 +16,32 @@
 
 // class used to keep a list of hotkeys, capture keyboard event and fire hotkeys as needed
 class HotkeyPanel : public ToolboxPanel {
+public:
+	const char* Name() const override { return "Hotkey Panel"; }
+
+	HotkeyPanel();
+	~HotkeyPanel();
+	
+	inline bool ToggleClicker() { return clickerActive = !clickerActive; }
+	inline bool ToggleCoinDrop() { return dropCoinsActive = !dropCoinsActive; }
+	inline bool ToggleRupt() { return ruptActive = !ruptActive; }
+
+	// Update. Will always be called every frame.
+	void Update() override;
+
+	// Draw user interface. Will be called every frame if the element is visible
+	void Draw(IDirect3DDevice9* pDevice) override;
+
+	bool ProcessMessage(LPMSG msg);
+
+	void LoadSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) const override;
+
 private:
 	std::vector<TBHotkey*> hotkeys;				// list of hotkeys
 
-	OSHGui::ComboBox* create_combo_;
-	OSHGui::ComboBox* delete_combo_;
-	OSHGui::ScrollPanel* scroll_panel_;
-
 	long max_id_;
+	bool block_hotkeys = false;
 
 	bool clickerActive = false;				// clicker is active or not
 	bool dropCoinsActive = false;			// coin dropper is active or not
@@ -37,34 +55,4 @@ private:
 
 	float movementX = 0;					// X coordinate of the destination of movement macro
 	float movementY = 0;					// Y coordinate of the destination of movement macro
-
-	void CalculateHotkeyPositions();
-
-public:
-	const char* Name() override { return "Hotkey Panel"; }
-
-	HotkeyPanel(OSHGui::Control* parent);
-	
-	inline bool ToggleClicker() { return clickerActive = !clickerActive; }
-	inline bool ToggleCoinDrop() { return dropCoinsActive = !dropCoinsActive; }
-	inline bool ToggleRupt() { return ruptActive = !ruptActive; }
-
-	void BuildUI() override;
-
-	// Update. Will always be called every frame.
-	void Update() override;
-
-	// Draw user interface. Will be called every frame if the element is visible
-	void Draw(IDirect3DDevice9* pDevice) override {}
-
-	bool ProcessMessage(LPMSG msg);
-
-	void UpdateDeleteCombo();
-
-private:
-	void AddHotkey(TBHotkey* hotkey);
-	void DeleteHotkey(int index);
-	void UpdateScrollBarMax();
-
-	inline long NewID() { return ++max_id_; }
 };

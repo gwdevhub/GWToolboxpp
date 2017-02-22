@@ -36,7 +36,7 @@ private:
 	clock_t scan_inventory_timer;
 
 public:
-	const char* Name() override { return "Pcon Panel"; }
+	const char* Name() const override { return "Pcon Panel"; }
 
 	PconPanel(OSHGui::Control* parent);
 

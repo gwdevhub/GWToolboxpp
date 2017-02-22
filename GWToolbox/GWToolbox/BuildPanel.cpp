@@ -6,16 +6,18 @@
 
 #include "Config.h"
 
+unsigned int BuildPanel::TeamBuild::cur_ui_id = 0;
+
 BuildPanel::BuildPanel() {
 	teambuilds = std::vector<TeamBuild>();
 	send_timer = clock();
 }
 
 void BuildPanel::Draw(IDirect3DDevice9* pDevice) {
-	ImGui::Begin(Name());
-	for (unsigned int i = 0; i < teambuilds.size(); ++i) {
-		TeamBuild& tbuild = teambuilds[i];
-		ImGui::PushID(i);
+	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
+	ImGui::Begin(Name(), &visible);
+	for (TeamBuild& tbuild : teambuilds) {
+		ImGui::PushID(tbuild.ui_id);
 		if (ImGui::Button(tbuild.name, ImVec2(ImGui::GetWindowContentRegionWidth() - 60.0f, 0))) {
 			Send(tbuild);
 		}
@@ -30,15 +32,17 @@ void BuildPanel::Draw(IDirect3DDevice9* pDevice) {
 	}
 	if (ImGui::Button("Add Teambuild")) {
 		teambuilds.push_back(TeamBuild());
+		teambuilds.back().edit_open = true; // open by default
+		teambuilds.back().builds.resize(4, Build());
 	}
 	ImGui::End();
 
 	for (unsigned int i = 0; i < teambuilds.size(); ++i) {
 		if (!teambuilds[i].edit_open) continue;
 		TeamBuild& tbuild = teambuilds[i];
-		ImGui::PushID(i);
 		char winname[64];
-		sprintf_s(winname, "%s###build%d", tbuild.name, i);
+		sprintf_s(winname, "%s###build%d", tbuild.name, tbuild.ui_id);
+		ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 		ImGui::Begin(winname, &tbuild.edit_open);
 		ImGui::PushItemWidth(-120.0f);
 		ImGui::InputText("Build Name", tbuild.name, 64);
@@ -85,25 +89,40 @@ void BuildPanel::Draw(IDirect3DDevice9* pDevice) {
 		}
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move the teambuild down in the list");
 		ImGui::SameLine();
-		if (ImGui::SmallButton("Delete teambuild")) {
-			teambuilds.erase(teambuilds.begin() + i);
-			ImGui::End();
-			ImGui::PopID();
-			continue;
+		if (ImGui::SmallButton("Delete")) {
+			ImGui::OpenPopup("Delete Teambuild?");
 		}
-		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete the whole teambuild!");
-		// do not finish rendering the window if we deleted the teambuild already
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete the teambuild");
 		ImGui::SameLine(ImGui::GetWindowContentRegionWidth() * 0.6f);
 		if (ImGui::Button("Close", ImVec2(ImGui::GetWindowContentRegionWidth() * 0.4f, 0))) {
 			tbuild.edit_open = false;
 		}
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Close this window");
+
+		if (ImGui::BeginPopupModal("Delete Teambuild?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+			ImGui::Text("Are you sure?\nThis operation cannot be undone.\n\n");
+			if (ImGui::Button("OK", ImVec2(120, 0))) {
+				teambuilds.erase(teambuilds.begin() + i);
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Cancel", ImVec2(120, 0))) { 
+				ImGui::CloseCurrentPopup(); 
+			}
+			ImGui::EndPopup();
+		}
 		
 		ImGui::End();
-		ImGui::PopID();
 	}
 }
 
+const char* BuildPanel::BuildName(unsigned int idx) const {
+	if (idx < teambuilds.size()) {
+		return teambuilds[idx].name;
+	} else {
+		return nullptr;
+	}
+}
 void BuildPanel::Send(unsigned int idx) {
 	if (idx < teambuilds.size()) {
 		Send(teambuilds[idx]);
@@ -188,15 +207,18 @@ void BuildPanel::LoadSettings(CSimpleIni* ini) {
 					tbuild.builds.push_back(Build(nameval, templateval));
 				}
 			}
+
+			// after we loaded the build delete it
+			ini->Delete(entry.pItem, nullptr);
 		}
 	}
 }
 
-void BuildPanel::SaveSettings(CSimpleIni* ini) {
+void BuildPanel::SaveSettings(CSimpleIni* ini) const {
 	for (unsigned int i = 0; i < teambuilds.size(); ++i) {
 		const TeamBuild& tbuild = teambuilds[i];
-		char section[8];
-		sprintf_s(section, "builds%d", i);
+		char section[16];
+		sprintf_s(section, "builds%03d", i);
 		ini->SetValue(section, "buildname", tbuild.name);
 		ini->SetBoolValue(section, "showNumbers", tbuild.show_numbers);
 		ini->SetLongValue(section, "count", tbuild.builds.size());

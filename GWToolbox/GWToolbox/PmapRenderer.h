@@ -4,21 +4,24 @@
 #include <d3d9.h>
 
 #include "VBuffer.h"
+#include "Color.h"
 
 class PmapRenderer : public VBuffer {
 public:
-	PmapRenderer();
-
 	// Triangle 1: (XTL, YT) (XTR, YT), (XBL, YB)
 	// Triangle 2: (XBL, YB), (XTR, YT), (XBR, YB)
 	void Render(IDirect3DDevice9* device) override;
+
+	void DrawSettings();
+	void LoadSettings(CSimpleIni* ini, const char* section);
+	void SaveSettings(CSimpleIni* ini, const char* section) const;
 
 protected:
 	void Initialize(IDirect3DDevice9* device) override;
 
 private:
-	DWORD color_map;
-	DWORD color_mapshadow;
+	Color_t color_map;
+	Color_t color_mapshadow;
 	bool shadow_show;
 
 	size_t trapez_count_;

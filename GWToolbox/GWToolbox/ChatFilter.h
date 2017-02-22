@@ -12,14 +12,14 @@
 
 class ChatFilter : public ToolboxModule {
 public:
-	const char* Name() override { return "Chat Filter"; }
+	const char* Name() const override { return "Chat Filter"; }
 
 	ChatFilter();
 
 	void DrawSettings() override;
 
 	void LoadSettings(CSimpleIni* ini) override;
-	void SaveSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) const override;
 
 private:
 	const wchar_t* Get1stSegment(GW::Packet::StoC::P081* pak) const;

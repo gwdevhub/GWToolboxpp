@@ -4,87 +4,151 @@
 #include <GWCA\Managers\AgentMgr.h>
 
 #include "Config.h"
-#include "MinimapUtils.h"
+#include "GuiUtils.h"
+
+void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
+	modifier = Colors::IniGet(ini, section, "color_agent_modifier", 0x001E1E1E);
+	color_eoe = Colors::IniGet(ini, section, "color_eoe", 0x3200FF00);
+	color_qz = Colors::IniGet(ini, section, "color_qz", 0x320000FF);
+	color_target = Colors::IniGet(ini, section, "color_target", 0xFFFFFF00);
+	color_player = Colors::IniGet(ini, section, "color_player", 0xFFFF8000);
+	color_player_dead = Colors::IniGet(ini, section, "color_player_dead", 0x64FF8000);
+	color_signpost = Colors::IniGet(ini, section, "color_signpost", 0xFF0000C8);
+	color_item = Colors::IniGet(ini, section, "color_item", 0xFF0000F0);
+	color_hostile = Colors::IniGet(ini, section, "color_hostile", 0xFFF00000);
+	color_hostile_damaged = Colors::IniGet(ini, section, "color_hostile_damaged", 0xFF800000);
+	color_hostile_dead = Colors::IniGet(ini, section, "color_hostile_dead", 0xFF320000);
+	color_neutral = Colors::IniGet(ini, section, "color_neutral", 0xFF0000DC);
+	color_ally_party = Colors::IniGet(ini, section, "color_ally", 0xFF00B300);
+	color_ally_npc = Colors::IniGet(ini, section, "color_ally_npc", 0xFF99FF99);
+	color_ally_spirit = Colors::IniGet(ini, section, "color_ally_spirit", 0xFF608000);
+	color_ally_minion = Colors::IniGet(ini, section, "color_ally_minion", 0xFF008060);
+	color_ally_dead = Colors::IniGet(ini, section, "color_ally_dead", 0x64006400);
+
+	size_default = (float)ini->GetDoubleValue(section, "size_default", 75.0);
+	size_player = (float)ini->GetDoubleValue(section, "size_player", 100.0);
+	size_signpost = (float)ini->GetDoubleValue(section, "size_signpost", 50.0);
+	size_item = (float)ini->GetDoubleValue(section, "size_item", 25.0);
+	size_boss = (float)ini->GetDoubleValue(section, "size_boss", 125.0);
+	size_minion = (float)ini->GetDoubleValue(section, "size_minion", 50.0);
+
+	Invalidate();
+}
+
+void AgentRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
+	Colors::IniSet(ini, section, "color_agent_modifier", modifier);
+	Colors::IniSet(ini, section, "color_eoe", color_eoe);
+	Colors::IniSet(ini, section, "color_qz", color_qz);
+	Colors::IniSet(ini, section, "color_target", color_target);
+	Colors::IniSet(ini, section, "color_player", color_player);
+	Colors::IniSet(ini, section, "color_player_dead", color_player_dead);
+	Colors::IniSet(ini, section, "color_signpost", color_signpost);
+	Colors::IniSet(ini, section, "color_item", color_item);
+	Colors::IniSet(ini, section, "color_hostile", color_hostile);
+	Colors::IniSet(ini, section, "color_hostile_damaged", color_hostile_damaged);
+	Colors::IniSet(ini, section, "color_hostile_dead", color_hostile_dead);
+	Colors::IniSet(ini, section, "color_neutral", color_neutral);
+	Colors::IniSet(ini, section, "color_ally", color_ally_party);
+	Colors::IniSet(ini, section, "color_ally_npc", color_ally_npc);
+	Colors::IniSet(ini, section, "color_ally_spirit", color_ally_spirit);
+	Colors::IniSet(ini, section, "color_ally_minion", color_ally_minion);
+	Colors::IniSet(ini, section, "color_ally_dead", color_ally_dead);
+
+	ini->SetDoubleValue(section, "size_default", size_default);
+	ini->SetDoubleValue(section, "size_player", size_player);
+	ini->SetDoubleValue(section, "size_signpost", size_signpost);
+	ini->SetDoubleValue(section, "size_item", size_item);
+	ini->SetDoubleValue(section, "size_boss", size_boss);
+	ini->SetDoubleValue(section, "size_minion", size_minion);
+}
+
+void AgentRenderer::DrawSettings() {
+	Colors::DrawSetting("EoE", &color_eoe);
+	GuiUtils::ShowHelp("This is the color at the edge, the color in the middle is the same, with alpha-50");
+	Colors::DrawSetting("QZ", &color_qz);
+	GuiUtils::ShowHelp("This is the color at the edge, the color in the middle is the same, with alpha-50");
+	Colors::DrawSetting("Target", &color_target);
+	Colors::DrawSetting("Player (alive)", &color_player);
+	Colors::DrawSetting("Player (dead)", &color_player_dead);
+	Colors::DrawSetting("Signpost", &color_signpost);
+	Colors::DrawSetting("Item", &color_item);
+	Colors::DrawSetting("Hostile (>90%%)", &color_hostile);
+	Colors::DrawSetting("Hostile (<90%%)", &color_hostile_damaged);
+	Colors::DrawSetting("Hostile (dead)", &color_hostile_dead);
+	Colors::DrawSetting("Neutral", &color_neutral);
+	Colors::DrawSetting("Ally (party member)", &color_ally_party);
+	Colors::DrawSetting("Ally (NPC)", &color_ally_npc);
+	Colors::DrawSetting("Ally (spirit)", &color_ally_spirit);
+	Colors::DrawSetting("Ally (minion)", &color_ally_minion);
+	Colors::DrawSetting("Ally (dead)", &color_ally_dead);
+	Colors::DrawSetting("Agent modifier", &modifier, false);
+	GuiUtils::ShowHelp("Each agent has this value removed on the border and added at the center\nZero makes agents have solid color, while a high number makes them appear more shaded.");
+
+	ImGui::DragFloat("Default Size", &size_default, 1.0f, 1.0f, 0.0f, "%.0f");
+	ImGui::DragFloat("Player Size", &size_player, 1.0f, 1.0f, 0.0f, "%.0f");
+	ImGui::DragFloat("Signpost Size", &size_signpost, 1.0f, 1.0f, 0.0f, "%.0f");
+	ImGui::DragFloat("Item Size", &size_item, 1.0f, 1.0f, 0.0f, "%.0f");
+	ImGui::DragFloat("Boss Size", &size_boss, 1.0f, 1.0f, 0.0f, "%.0f");
+	ImGui::DragFloat("Minion Size", &size_minion, 1.0f, 1.0f, 0.0f, "%.0f");
+}
 
 AgentRenderer::AgentRenderer() : vertices(nullptr) {
-
-	MinimapUtils::Color modifier = MinimapUtils::IniReadColor2("color_agent_modifier", "0x001E1E1E");
-	color_eoe = MinimapUtils::IniReadColor2("color_eoe", "0x3200FF00");
-	color_qz = MinimapUtils::IniReadColor2("color_qz", "0x320000FF");
-	color_target = MinimapUtils::IniReadColor2("color_target", "0xFFFFFF00");
-	color_player = MinimapUtils::IniReadColor2("color_player", "0xFFFF8000");
-	color_player_dead = MinimapUtils::IniReadColor2("color_player_dead", "0x64FF8000");
-	color_signpost = MinimapUtils::IniReadColor2("color_signpost", "0xFF0000C8");
-	color_item = MinimapUtils::IniReadColor2("color_item", "0xFF0000F0");
-	color_hostile = MinimapUtils::IniReadColor2("color_hostile", "0xFFF00000");
-	color_hostile_damaged = MinimapUtils::IniReadColor2("color_hostile_damaged", "0xFF800000");
-	color_hostile_dead = MinimapUtils::IniReadColor2("color_hostile_dead", "0xFF320000");
-	color_neutral = MinimapUtils::IniReadColor2("color_neutral", "0xFF0000DC");
-	color_ally_party = MinimapUtils::IniReadColor2("color_ally", "0xFF00B300");
-	color_ally_npc = MinimapUtils::IniReadColor2("color_ally_npc", "0xFF99FF99");
-	color_ally_spirit = MinimapUtils::IniReadColor2("color_ally_spirit", "0xFF608000");
-	color_ally_minion = MinimapUtils::IniReadColor2("color_ally_minion", "0xFF008060");
-	color_ally_dead = MinimapUtils::IniReadColor2("color_ally_dead", "0x64006400");
-
-	MinimapUtils::Color light = modifier;
-	MinimapUtils::Color dark(0, -light.r, -light.g, -light.b);
-
-	shapes[Tear].AddVertex(1.8f, 0, dark);		// A
-	shapes[Tear].AddVertex(0.7f, 0.7f, dark);	// B
-	shapes[Tear].AddVertex(0.0f, 0.0f, light);		// O
-	shapes[Tear].AddVertex(0.7f, 0.7f, dark);	// B
-	shapes[Tear].AddVertex(0.0f, 1.0f, dark);	// C
-	shapes[Tear].AddVertex(0.0f, 0.0f, light);		// O
-	shapes[Tear].AddVertex(0.0f, 1.0f, dark);	// C
-	shapes[Tear].AddVertex(-0.7f, 0.7f, dark);	// D
-	shapes[Tear].AddVertex(0.0f, 0.0f, light);		// O
-	shapes[Tear].AddVertex(-0.7f, 0.7f, dark);	// D
-	shapes[Tear].AddVertex(-1.0f, 0.0f, dark);	// E
-	shapes[Tear].AddVertex(0.0f, 0.0f, light);		// O
-	shapes[Tear].AddVertex(-1.0f, 0.0f, dark);	// E
-	shapes[Tear].AddVertex(-0.7f, -0.7f, dark);	// F
-	shapes[Tear].AddVertex(0.0f, 0.0f, light);		// O
-	shapes[Tear].AddVertex(-0.7f, -0.7f, dark);	// F
-	shapes[Tear].AddVertex(0.0f, -1.0f, dark);	// G
-	shapes[Tear].AddVertex(0.0f, 0.0f, light);		// O
-	shapes[Tear].AddVertex(0.0f, -1.0f, dark);	// G
-	shapes[Tear].AddVertex(0.7f, -0.7f, dark);	// H
-	shapes[Tear].AddVertex(0.0f, 0.0f, light);		// O
-	shapes[Tear].AddVertex(0.7f, -0.7f, dark);	// H
-	shapes[Tear].AddVertex(1.8f, 0.0f, dark);	// A
-	shapes[Tear].AddVertex(0.0f, 0.0f, light);		// O
+	shapes[Tear].AddVertex(1.8f, 0, Dark);		// A
+	shapes[Tear].AddVertex(0.7f, 0.7f, Dark);	// B
+	shapes[Tear].AddVertex(0.0f, 0.0f, Light);	// O
+	shapes[Tear].AddVertex(0.7f, 0.7f, Dark);	// B
+	shapes[Tear].AddVertex(0.0f, 1.0f, Dark);	// C
+	shapes[Tear].AddVertex(0.0f, 0.0f, Light);	// O
+	shapes[Tear].AddVertex(0.0f, 1.0f, Dark);	// C
+	shapes[Tear].AddVertex(-0.7f, 0.7f, Dark);	// D
+	shapes[Tear].AddVertex(0.0f, 0.0f, Light);	// O
+	shapes[Tear].AddVertex(-0.7f, 0.7f, Dark);	// D
+	shapes[Tear].AddVertex(-1.0f, 0.0f, Dark);	// E
+	shapes[Tear].AddVertex(0.0f, 0.0f, Light);	// O
+	shapes[Tear].AddVertex(-1.0f, 0.0f, Dark);	// E
+	shapes[Tear].AddVertex(-0.7f, -0.7f, Dark);	// F
+	shapes[Tear].AddVertex(0.0f, 0.0f, Light);	// O
+	shapes[Tear].AddVertex(-0.7f, -0.7f, Dark);	// F
+	shapes[Tear].AddVertex(0.0f, -1.0f, Dark);	// G
+	shapes[Tear].AddVertex(0.0f, 0.0f, Light);	// O
+	shapes[Tear].AddVertex(0.0f, -1.0f, Dark);	// G
+	shapes[Tear].AddVertex(0.7f, -0.7f, Dark);	// H
+	shapes[Tear].AddVertex(0.0f, 0.0f, Light);	// O
+	shapes[Tear].AddVertex(0.7f, -0.7f, Dark);	// H
+	shapes[Tear].AddVertex(1.8f, 0.0f, Dark);	// A
+	shapes[Tear].AddVertex(0.0f, 0.0f, Light);	// O
 
 	int num_triangles = 8;
 	float PI = static_cast<float>(M_PI);
 	for (int i = 0; i < num_triangles; ++i) {
 		float angle1 = 2 * (i + 0) * PI / num_triangles;
 		float angle2 = 2 * (i + 1) * PI / num_triangles;
-		shapes[Circle].AddVertex(std::cos(angle1), std::sin(angle1), dark);
-		shapes[Circle].AddVertex(std::cos(angle2), std::sin(angle2), dark);
-		shapes[Circle].AddVertex(0.0f, 0.0f, light);
+		shapes[Circle].AddVertex(std::cos(angle1), std::sin(angle1), Dark);
+		shapes[Circle].AddVertex(std::cos(angle2), std::sin(angle2), Dark);
+		shapes[Circle].AddVertex(0.0f, 0.0f, Light);
 	}
 
 	num_triangles = 32;
 	for (int i = 0; i < num_triangles; ++i) {
 		float angle1 = 2 * (i + 0) * PI / num_triangles;
 		float angle2 = 2 * (i + 1) * PI / num_triangles;
-		shapes[BigCircle].AddVertex(std::cos(angle1), std::sin(angle1), MinimapUtils::Color(0, 0, 0, 0));
-		shapes[BigCircle].AddVertex(std::cos(angle2), std::sin(angle2), MinimapUtils::Color(0, 0, 0, 0));
-		shapes[BigCircle].AddVertex(0.0f, 0.0f, MinimapUtils::Color(-50, 0, 0, 0));
+		shapes[BigCircle].AddVertex(std::cos(angle1), std::sin(angle1), None);
+		shapes[BigCircle].AddVertex(std::cos(angle2), std::sin(angle2), None);
+		shapes[BigCircle].AddVertex(0.0f, 0.0f, CircleCenter);
 	}
 
-	shapes[Quad].AddVertex(1.0f, -1.0f, dark);
-	shapes[Quad].AddVertex(1.0f, 1.0f, dark);
-	shapes[Quad].AddVertex(0.0f, 0.0f, light);
-	shapes[Quad].AddVertex(1.0f, 1.0f, dark);
-	shapes[Quad].AddVertex(-1.0f, 1.0f, dark);
-	shapes[Quad].AddVertex(0.0f, 0.0f, light);
-	shapes[Quad].AddVertex(-1.0f, 1.0f, dark);
-	shapes[Quad].AddVertex(-1.0f, -1.0f, dark);
-	shapes[Quad].AddVertex(0.0f, 0.0f, light);
-	shapes[Quad].AddVertex(-1.0f, -1.0f, dark);
-	shapes[Quad].AddVertex(1.0f, -1.0f, dark);
-	shapes[Quad].AddVertex(0.0f, 0.0f, light);
+	shapes[Quad].AddVertex(1.0f, -1.0f, Dark);
+	shapes[Quad].AddVertex(1.0f, 1.0f, Dark);
+	shapes[Quad].AddVertex(0.0f, 0.0f, Light);
+	shapes[Quad].AddVertex(1.0f, 1.0f, Dark);
+	shapes[Quad].AddVertex(-1.0f, 1.0f, Dark);
+	shapes[Quad].AddVertex(0.0f, 0.0f, Light);
+	shapes[Quad].AddVertex(-1.0f, 1.0f, Dark);
+	shapes[Quad].AddVertex(-1.0f, -1.0f, Dark);
+	shapes[Quad].AddVertex(0.0f, 0.0f, Light);
+	shapes[Quad].AddVertex(-1.0f, -1.0f, Dark);
+	shapes[Quad].AddVertex(1.0f, -1.0f, Dark);
+	shapes[Quad].AddVertex(0.0f, 0.0f, Light);
 
 	max_shape_verts = 0;
 	for (int shape = 0; shape < shape_size; ++shape) {
@@ -92,6 +156,10 @@ AgentRenderer::AgentRenderer() : vertices(nullptr) {
 			max_shape_verts = shapes[shape].vertices.size();
 		}
 	}
+}
+
+void AgentRenderer::Shape_t::AddVertex(float x, float y, AgentRenderer::Color_Modifier mod) {
+	vertices.push_back(Shape_Vertex(x, y, mod));
 }
 
 
@@ -192,13 +260,13 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 
 	if (vertices_count != 0) {
 		device->SetStreamSource(0, buffer_, 0, sizeof(D3DVertex));
-		device->DrawPrimitive(type_, 0, vertices_count / 3);
+		device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, vertices_count / 3);
 		vertices_count = 0;
 	}
 }
 
 void AgentRenderer::Enqueue(GW::Agent* agent) {
-	MinimapUtils::Color color = GetColor(agent);
+	Color_t color = GetColor(agent);
 	float size = GetSize(agent);
 	Shape_e shape = GetShape(agent);
 
@@ -209,7 +277,7 @@ void AgentRenderer::Enqueue(GW::Agent* agent) {
 	Enqueue(shape, agent, size, color);
 }
 
-MinimapUtils::Color AgentRenderer::GetColor(GW::Agent* agent) const {
+Color_t AgentRenderer::GetColor(GW::Agent* agent) const {
 	if (agent->Id == GW::Agents().GetPlayerId()) {
 		if (agent->GetIsDead()) return color_player_dead;
 		else return color_player;
@@ -226,7 +294,7 @@ MinimapUtils::Color AgentRenderer::GetColor(GW::Agent* agent) const {
 		case 0x22A34: // nature rituals
 		case 0x2D0E4: // defensive binding rituals
 		case 0x2D07E: // offensive binding rituals
-			return MinimapUtils::Color(0, 0, 0, 0);;
+			return IM_COL32(0, 0, 0, 0);
 		default:
 			break;
 		}
@@ -252,24 +320,24 @@ MinimapUtils::Color AgentRenderer::GetColor(GW::Agent* agent) const {
 	default: break;
 	}
 
-	return MinimapUtils::Color(0, 0, 0);
+	return IM_COL32(0, 0, 0, 0);
 }
 
 float AgentRenderer::GetSize(GW::Agent* agent) const {
-	if (agent->Id == GW::Agents().GetPlayerId()) return 100.0f;
-	if (agent->GetIsSignpostType()) return 50.0f;
-	if (agent->GetIsItemType()) return 25.0f;
-	if (agent->GetHasBossGlow()) return 125.0f;
+	if (agent->Id == GW::Agents().GetPlayerId()) return size_player;
+	if (agent->GetIsSignpostType()) return size_signpost;
+	if (agent->GetIsItemType()) return size_item;
+	if (agent->GetHasBossGlow()) return size_boss;
 
 	switch (agent->Allegiance) {
 	case 0x1: // ally
 	case 0x2: // neutral
 	case 0x4: // spirit / pet
 	case 0x6: // npc / minipet
-		return 75.0f;
+		return size_default;
 
 	case 0x5: // minion
-		return 50.0f;
+		return size_minion;
 
 	case 0x3: // hostile
 		switch (agent->PlayerNumber) {
@@ -290,15 +358,15 @@ float AgentRenderer::GetSize(GW::Agent* agent) const {
 		case GW::Constants::ModelID::SoO::Brigand:
 		case GW::Constants::ModelID::SoO::Fendi:
 		case GW::Constants::ModelID::SoO::Fendi_soul:
-			return 125.0f;
+			return size_boss;
 
 		default:
-			return 75.0f;
+			return size_default;
 		}
 		break;
 
 	default:
-		return 75.0f;
+		return size_default;
 	}
 }
 
@@ -325,26 +393,26 @@ AgentRenderer::Shape_e AgentRenderer::GetShape(GW::Agent* agent) const {
 	return Tear;
 }
 
-void AgentRenderer::Enqueue(Shape_e shape, GW::Agent* agent, float size, MinimapUtils::Color color) {
-	if (color.a == 0) return;
+void AgentRenderer::Enqueue(Shape_e shape, GW::Agent* agent, float size, Color_t color) {
+	if ((color & IM_COL32_A_MASK) == 0) return;
 
 	GW::Vector2f translate(agent->X, agent->Y);
 	unsigned int i;
 	for (i = 0; i < shapes[shape].vertices.size(); ++i) {
-		GW::Vector2f v = shapes[shape].vertices[i].Rotated(agent->Rotation_cos,
-			agent->Rotation_sin) * size + translate;
-		MinimapUtils::Color c = color + shapes[shape].colors[i];
-		c.Clamp();
+		const Shape_Vertex& vert = shapes[shape].vertices[i];
+		GW::Vector2f pos = vert.Rotated(agent->Rotation_cos, agent->Rotation_sin) * size + translate;
+		Color_t vcolor = color;
+		switch (vert.modifier) {
+		case Dark: vcolor = Colors::Sub(color, modifier); break;
+		case Light: vcolor = Colors::Add(color, modifier); break;
+		case CircleCenter: vcolor = Colors::Sub(color, IM_COL32(0, 0, 0, 50)); break;
+		case None: break;
+		}
 		vertices[i].z = 0.0f;
-		vertices[i].color = c.GetDXColor();
-		vertices[i].x = v.x;
-		vertices[i].y = v.y;
+		vertices[i].color = vcolor;
+		vertices[i].x = pos.x;
+		vertices[i].y = pos.y;
 	}
 	vertices += shapes[shape].vertices.size();
 	vertices_count += shapes[shape].vertices.size();
-}
-
-void AgentRenderer::Shape_t::AddVertex(float x, float y, MinimapUtils::Color color) {
-	vertices.push_back(GW::Vector2f(x, y));
-	colors.push_back(color);
 }

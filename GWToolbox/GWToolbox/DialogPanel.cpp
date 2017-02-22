@@ -24,7 +24,8 @@ void DialogPanel::Draw(IDirect3DDevice9* pDevice) {
 		}
 	};
 
-	ImGui::Begin(Name());
+	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
+	ImGui::Begin(Name(), &visible);
 	DialogButton(0, 2, "Four Horseman", "Take quest in Planes", QuestAcceptDialog(GW::Constants::QuestID::UW::Planes));
 	DialogButton(1, 2, "Demon Assassin", "Take quest in Mountains", QuestAcceptDialog(GW::Constants::QuestID::UW::Mnt));
 	DialogButton(0, 2, "Tower of Strength", "Take quest", QuestAcceptDialog(GW::Constants::QuestID::Fow::Tos));
@@ -167,7 +168,7 @@ void DialogPanel::LoadSettings(CSimpleIni* ini) {
 	}
 }
 
-void DialogPanel::SaveSettings(CSimpleIni* ini) {
+void DialogPanel::SaveSettings(CSimpleIni* ini) const {
 	ini->SetLongValue(Name(), "fav_count", fav_count);
 	for (int i = 0; i < fav_count; ++i) {
 		char key[32];

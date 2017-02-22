@@ -68,9 +68,9 @@ void HealthWindow::Draw(IDirect3DDevice9* pDevice) {
 }
 
 void HealthWindow::LoadSettings(CSimpleIni* ini) {
-	visible = ini->GetBoolValue(Name(), "show", true);
+	LoadSettingVisible(ini);
 }
 
-void HealthWindow::SaveSettings(CSimpleIni* ini) {
-	ini->SetBoolValue(Name(), "show", visible);
+void HealthWindow::SaveSettings(CSimpleIni* ini) const {
+	SaveSettingVisible(ini);
 }

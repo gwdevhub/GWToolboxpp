@@ -18,12 +18,13 @@
 #include "Minimap.h"
 
 void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
-	ImGui::Begin(Name());
+	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
+	ImGui::Begin(Name(), &visible);
 	ImGui::Checkbox("Timer", &GWToolbox::instance().timer_window->visible);
 	GuiUtils::ShowHelp("Time the instance has been active");
 	ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
 	static bool tmp = true;
-	ImGui::Checkbox("Minimap", &tmp); // &GWToolbox::instance().minimap->visible);
+	ImGui::Checkbox("Minimap", &GWToolbox::instance().minimap->visible); // &GWToolbox::instance().minimap->visible);
 	GuiUtils::ShowHelp("An alternative to the default compass");
 	ImGui::Checkbox("Bonds", &tmp); // &GWToolbox::instance().bonds_window->isVisible_);
 	GuiUtils::ShowHelp("Show the bonds maintained by you.\nOnly works on human players");
@@ -38,7 +39,7 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 	if (ImGui::Button("Open Xunlai Chest", ImVec2(-1.0f, 0))) {
 		GW::Items().OpenXunlaiWindow();
 	}
-	if (ImGui::TreeNode("Player")) {
+	if (ImGui::CollapsingHeader("Player")) {
 		static char x_buf[32] = "";
 		static char y_buf[32] = "";
 		static char s_buf[32] = "";
@@ -54,17 +55,16 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 			sprintf_s(modelid_buf, "%d", player->PlayerNumber);
 		}
 		ImGui::PushItemWidth(-80.0f);
-		ImGui::InputText("X pos", x_buf, 32, ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputText("Y pos", y_buf, 32, ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputText("Speed", s_buf, 32, ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputText("Agent ID", agentid_buf, 32, ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputText("X pos##player", x_buf, 32, ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputText("Y pos##player", y_buf, 32, ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputText("Speed##player", s_buf, 32, ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputText("Agent ID##player", agentid_buf, 32, ImGuiInputTextFlags_ReadOnly);
 		GuiUtils::ShowHelp("Agent ID is unique for each agent in the instance,\nIt's generated on spawn and will change in different instances.");
-		ImGui::InputText("Player ID", modelid_buf, 32, ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputText("Player ID##player", modelid_buf, 32, ImGuiInputTextFlags_ReadOnly);
 		GuiUtils::ShowHelp("Player ID is unique for each human player in the instance.");
 		ImGui::PopItemWidth();
-		ImGui::TreePop();
 	}
-	if (ImGui::TreeNode("Target")) {
+	if (ImGui::CollapsingHeader("Target")) {
 		static char x_buf[32] = "";
 		static char y_buf[32] = "";
 		static char s_buf[32] = "";
@@ -86,17 +86,16 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 			sprintf_s(modelid_buf, "-");
 		}
 		ImGui::PushItemWidth(-80.0f);
-		ImGui::InputText("X pos", x_buf, 32, ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputText("Y pos", y_buf, 32, ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputText("Speed", s_buf, 32, ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputText("Agent ID", agentid_buf, 32, ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputText("X pos##target", x_buf, 32, ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputText("Y pos##target", y_buf, 32, ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputText("Speed##target", s_buf, 32, ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputText("Agent ID##target", agentid_buf, 32, ImGuiInputTextFlags_ReadOnly);
 		GuiUtils::ShowHelp("Agent ID is unique for each agent in the instance,\nIt's generated on spawn and will change in different instances.");
-		ImGui::InputText("Model ID", modelid_buf, 32, ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputText("Model ID##target", modelid_buf, 32, ImGuiInputTextFlags_ReadOnly);
 		GuiUtils::ShowHelp("Model ID is unique for each kind of agent.\nIt is static and shared by the same agents.\nWhen targeting players, this is Player ID instead, unique for each player in the instance.\nFor the purpose of targeting hotkeys and commands, use this value");
 		ImGui::PopItemWidth();
-		ImGui::TreePop();
 	}
-	if (ImGui::TreeNode("Map")) {
+	if (ImGui::CollapsingHeader("Map")) {
 		static char id_buf[32] = "";
 		char* type = "";
 		static char file_buf[32] = "";
@@ -114,19 +113,19 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::InputText("Map file", file_buf, 32, ImGuiInputTextFlags_ReadOnly);
 		GuiUtils::ShowHelp("Map file is unique for each pathing map (e.g. used by minimap).\nMany different maps use the same map file");
 		ImGui::PopItemWidth();
-		ImGui::TreePop();
 	}
-	if (ImGui::TreeNode("Dialog")) {
+	if (ImGui::CollapsingHeader("Dialog")) {
 		static char id_buf[32] = "";
 		sprintf_s(id_buf, "0x%X", GW::Agents().GetLastDialogId());
 		ImGui::PushItemWidth(-80.0f);
 		ImGui::InputText("Last Dialog", id_buf, 32, ImGuiInputTextFlags_ReadOnly);
 		ImGui::PopItemWidth();
-		ImGui::TreePop();
 	}
-	if (ImGui::TreeNode("Items")) {
-		static char id_buf[32] = "";
-		sprintf_s(id_buf, "-");
+	if (ImGui::CollapsingHeader("Items")) {
+		static char modelid[32] = "";
+		static char itemid[32] = "";
+		strcpy_s(modelid, "-");
+		strcpy_s(itemid, "-");
 		GW::Bag** bags = GW::Items().GetBagArray();
 		if (bags) {
 			GW::Bag* bag1 = bags[1];
@@ -135,15 +134,44 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 				if (items.valid()) {
 					GW::Item* item = items[0];
 					if (item) {
-						sprintf_s(id_buf, "%d", item->ModelId);
+						sprintf_s(modelid, "%d", item->ModelId);
+						sprintf_s(itemid, "%d", item->ItemId);
 					}
 				}
 			}
 		}
 		ImGui::PushItemWidth(-80.0f);
-		ImGui::InputText("First item ID", id_buf, 32, ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputText("First item ModelID", modelid, 32, ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputText("First item ItemID", itemid, 32, ImGuiInputTextFlags_ReadOnly);
 		ImGui::PopItemWidth();
-		ImGui::TreePop();
 	}
+	if (ImGui::CollapsingHeader("Mob count")) {
+		int cast_count = 0;
+		int spirit_count = 0;
+		int compass_count = 0;
+		GW::AgentArray agents = GW::Agents().GetAgentArray();
+		GW::Agent* player = GW::Agents().GetPlayer();
+		if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading 
+			&& agents.valid()
+			&& player != nullptr) {
+
+			for (unsigned int i = 0; i < agents.size(); ++i) {
+				GW::Agent* agent = agents[i];
+				if (agent == nullptr) continue; // ignore nothings
+				if (agent->Allegiance != 0x3) continue; // ignore non-hostiles
+				if (agent->GetIsDead()) continue; // ignore dead 
+				float sqrd = GW::Agents().GetSqrDistance(player->pos, agent->pos);
+				if (sqrd < GW::Constants::SqrRange::Spellcast) ++cast_count;
+				if (sqrd < GW::Constants::SqrRange::Spirit) ++spirit_count;
+				++compass_count;
+			}
+		}
+
+		ImGui::Text("%d in casting range", cast_count);
+		ImGui::Text("%d in spirit range", spirit_count);
+		ImGui::Text("%d in compass range", compass_count);
+	}
+	// todo
+	// if (ImGui::CollapsingHeader("Resigns")) {}
 	ImGui::End();
 }

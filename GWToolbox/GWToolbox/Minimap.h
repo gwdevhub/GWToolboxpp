@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Viewer.h"
+#include "ToolboxModule.h"
 #include "VBuffer.h"
 #include "PmapRenderer.h"
 #include "AgentRenderer.h"
@@ -8,30 +8,33 @@
 #include "PingsLinesRenderer.h"
 #include "SymbolsRenderer.h"
 
-class Minimap : public Viewer {
+class Minimap : public ToolboxModule {
+	struct Vec2i {
+		Vec2i(int _x, int _y) : x(_x), y(_y) {}
+		Vec2i() : x(0), y(0) {}
+		int x, y;
+	};
 public:
+	const int ms_before_back = 1000; // time before we snap back to player
+	const float acceleration = 0.5f;
+	const float max_speed = 15.0f; // game units per frame
+
+	const char* Name() const override { return "Minimap"; }
 	Minimap();
 
-	inline static const char* IniSection() { return "minimap"; }
-	inline static const char* IniKeyX() { return "x"; }
-	inline static const char* IniKeyY() { return "y"; }
-	inline static const char* IniKeySize() { return "size"; }
-	inline static const char* IniKeyScale() { return "scale"; }
-	inline static const char* InikeyShow() { return "show"; }
+	void Draw(IDirect3DDevice9* device) override;
+	void RenderSetupProjection(IDirect3DDevice9* device);
 
-	void Render(IDirect3DDevice9* device) override;
+	bool OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam);
+	bool OnMouseDblClick(UINT Message, WPARAM wParam, LPARAM lParam);
+	bool OnMouseUp(UINT Message, WPARAM wParam, LPARAM lParam);
+	bool OnMouseMove(UINT Message, WPARAM wParam, LPARAM lParam);
+	bool OnMouseWheel(UINT Message, WPARAM wParam, LPARAM lParam);
+	bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
 
-	void SetFreeze(bool b) { freeze_ = b; }
-	void SetVisible(bool v) { 
-		visible_ = v;
-		pingslines_renderer.SetVisible(v);
-	}
-
-	bool OnMouseDown(MSG msg);
-	bool OnMouseDblClick(MSG msg);
-	bool OnMouseUp(MSG msg);
-	bool OnMouseMove(MSG msg);
-	bool OnMouseWheel(MSG msg);
+	void DrawSettings() override;
+	void LoadSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) const override;
 
 	DWORD mapfile;
 
@@ -40,21 +43,23 @@ private:
 	// returns true if the map is visible, valid, not loading, etc
 	inline bool IsActive() const;
 
-	GW::Vector2f InterfaceToWorldPoint(int x, int y) const;
-	GW::Vector2f InterfaceToWorldVector(int x, int y) const;
+	GW::Vector2f InterfaceToWorldPoint(Vec2i pos) const;
+	GW::Vector2f InterfaceToWorldVector(Vec2i pos) const;
 	void SelectTarget(GW::Vector2f pos);
 
-	bool freeze_;
-	bool mousedown_;
-	bool visible_;
+	bool mousedown;
 
-	int drag_start_x_;
-	int drag_start_y_;
+	Vec2i location;
+	int size;
+
+	Vec2i drag_start;
+	GW::Vector2f translation;
+	float scale;
 
 	// vars for minimap movement
-	clock_t last_moved_;
+	clock_t last_moved;
 
-	bool loading_; // only consider some cases but still good
+	bool loading; // only consider some cases but still good
 
 	RangeRenderer range_renderer;
 	PmapRenderer pmap_renderer;

@@ -99,34 +99,31 @@ void SettingsPanel::Update() {
 }
 
 void SettingsPanel::Draw(IDirect3DDevice9* pDevice) {
-	//ImGui::SetNextWindowSize(ImVec2(280, 285));
-	ImGui::Begin(Name());
-	ImGui::Text("GWToolbox++ version");
-	ImGui::SameLine();
-	ImGui::Text(GWTOOLBOX_VERSION);
-
-	ImGui::Text("by Has and KAOS");
-
-	if (ImGui::Button("Open Settings Folder")) {
+	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(550, 680), ImGuiSetCond_FirstUseEver);
+	ImGui::Begin(Name(), &visible);
+	ImGui::Text("GWToolbox++ version %s by Has and KAOS", GWTOOLBOX_VERSION);
+	float w = ImGui::GetWindowContentRegionWidth() / 2;
+	if (ImGui::Button("Open Settings Folder", ImVec2(w, 0))) {
 		CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 		ShellExecute(NULL, "open", GuiUtils::getSettingsFolder().c_str(), NULL, NULL, SW_SHOWNORMAL);
 	}
-
-	if (ImGui::Button("Open GWToolbox++ Website")) {
+	ImGui::SameLine();
+	if (ImGui::Button("Open GWToolbox++ Website", ImVec2(w, 0))) {
 		CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 		ShellExecute(NULL, "open", GWTOOLBOX_WEBSITE, NULL, NULL, SW_SHOWNORMAL);
 	}
-
+	
 	if (ImGui::CollapsingHeader("General")) {
 		GWToolbox::instance().other_settings->DrawSettings();
 	}
 	if (ImGui::CollapsingHeader("Toolbox++ General")) {
 		ImGui::Checkbox("Save Location Data", &save_location_data);
 	}
-		
+	
 	GWToolbox::instance().main_window->DrawSettings();
 
-	if (ImGui::CollapsingHeader("Minimap")) {}
+	GWToolbox::instance().minimap->DrawSettings();
 	
 	GWToolbox::instance().chat_filter->DrawSettings();
 

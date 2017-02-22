@@ -4,8 +4,12 @@
 #include <vector>
 #include <map>
 
+#include <GWCA\Packets\StoC.h>
+
 #include "VBuffer.h"
 #include "Timer.h"
+
+#include "Color.h"
 
 class PingsLinesRenderer : public VBuffer {
 	const float drawing_scale = 96.0f;
@@ -53,6 +57,8 @@ class PingsLinesRenderer : public VBuffer {
 		D3DVertex* vertices;
 		unsigned int vertex_count;
 		void Initialize(IDirect3DDevice9* device) override;
+	public:
+		DWORD color_pings;
 	};
 
 public:
@@ -66,11 +72,16 @@ public:
 		pings.clear();
 	}
 
-	void SetVisible(bool v) { visible_ = v; }
-
 	bool OnMouseDown(float x, float y);
 	bool OnMouseMove(float x, float y);
 	bool OnMouseUp();
+
+	void P041Callback(GW::Packet::StoC::P041* pak);
+	void P133Callback(GW::Packet::StoC::P133* pak);
+
+	void DrawSettings();
+	void LoadSettings(CSimpleIni* ini, const char* section);
+	void SaveSettings(CSimpleIni* ini, const char* section) const;
 
 private:
 	void Initialize(IDirect3DDevice9* device) override;
@@ -86,8 +97,6 @@ private:
 
 	std::map<DWORD, PlayerDrawing> drawings;
 
-	bool visible_;
-
 	// for pings and drawings
 	const long show_interval = 10;
 	const long queue_interval = 25;
@@ -102,7 +111,6 @@ private:
 	std::vector<ShortPos> queue;
 
 	DWORD color_drawings;
-	DWORD color_pings;
 
 	// for the gpu
 	D3DVertex* vertices;		// vertices array

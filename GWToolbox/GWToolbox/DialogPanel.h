@@ -7,7 +7,7 @@
 
 class DialogPanel : public ToolboxPanel {
 public:
-	const char* Name() override { return "Dialog Panel"; }
+	const char* Name() const override { return "Dialog Panel"; }
 
 	DialogPanel();
 
@@ -16,7 +16,7 @@ public:
 
 	void DrawSettings() override;
 	void LoadSettings(CSimpleIni* ini) override;
-	void SaveSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) const override;
 
 private:
 	inline DWORD QuestAcceptDialog(DWORD quest) { return (quest << 8) | 0x800001; }

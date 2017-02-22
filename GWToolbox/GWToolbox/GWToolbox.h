@@ -28,7 +28,6 @@ private:
 	static OSHGui::Drawing::Direct3D9Renderer* renderer;
 	static OSHGui::Input::WindowsMessage input;
 	static long OldWndProc;
-	static HMODULE dllmodule;
 
 	//------ Static Methods ------//
 public:
@@ -36,8 +35,6 @@ public:
 	static void SafeThreadEntry(HMODULE mod);
 private:
 	static void ThreadEntry(HMODULE dllmodule);
-
-	static void CreateGui(IDirect3DDevice9* pDevice);
 
 	// DirectX event handlers declaration
 	static HRESULT WINAPI endScene(IDirect3DDevice9* pDevice);
@@ -50,31 +47,15 @@ private:
 
 	//------ Constructor ------//
 private:
-	GWToolbox() :
-		chat_commands(nullptr),
-		main_window(nullptr),
-		timer_window(nullptr),
-		bonds_window(nullptr),
-		health_window(nullptr),
-		distance_window(nullptr),
-		party_damage(nullptr),
-		initialized_(false),
-		must_self_destruct_(false),
-		must_resize_(false),
-		right_mouse_pressed_(false),
-		adjust_on_resize_(false),
-		capture_input_(false) {
-	}
+	GWToolbox(IDirect3DDevice9* pDevice);
 
 	//------ Public methods ------//
 public:
 	static GWToolbox& instance() { return *instance_; }
-
-	inline bool initialized() { return initialized_; }
+	static GWToolbox* instanceptr() { return instance_; }
 
 	inline bool capture_input() { return capture_input_; }
 	inline void set_capture_input(bool capture) { capture_input_ = capture; }
-	inline void set_adjust_on_resize(bool active) { adjust_on_resize_ = active; }
 
 	ChatFilter* chat_filter;
 	ChatCommands* chat_commands;
@@ -102,12 +83,10 @@ private:
 
 	//------ Private Fields ------//
 private:
-	bool initialized_;		// true after initialization
 	bool capture_input_;
 	bool right_mouse_pressed_;	// if true right mouse has been pressed, ignore move events
 	bool must_self_destruct_;	// is true when toolbox should quit
 	
-	bool adjust_on_resize_; // if true toolbox windows will try to adjust position on gw window resize
 	bool must_resize_;		// true when a resize event is sent, is checked by render thread
 	OSHGui::Drawing::SizeI old_screen_size_;
 	OSHGui::Drawing::SizeI new_screen_size_;

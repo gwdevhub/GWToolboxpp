@@ -104,13 +104,14 @@
     <ClInclude Include="GWToolbox\ChatCommands.h" />
     <ClInclude Include="GWToolbox\ChatFilter.h" />
     <ClInclude Include="GWToolbox\ChatLogger.h" />
+    <ClInclude Include="GWToolbox\Color.h" />
     <ClInclude Include="GWToolbox\Config.h" />
     <ClInclude Include="GWToolbox\Defines.h" />
     <ClInclude Include="GWToolbox\DialogPanel.h" />
     <ClInclude Include="GWToolbox\DistanceWindow.h" />
+    <ClInclude Include="GWToolbox\Key.h" />
     <ClInclude Include="GWToolbox\Minimap.h" />
     <ClInclude Include="GWToolbox\D3DVertex.h" />
-    <ClInclude Include="GWToolbox\MinimapUtils.h" />
     <ClInclude Include="GWToolbox\OtherSettings.h" />
     <ClInclude Include="GWToolbox\PartyDamage.h" />
     <ClInclude Include="GWToolbox\PingsLinesRenderer.h" />
@@ -138,7 +139,6 @@
     <ClInclude Include="GWToolbox\TimerWindow.h" />
     <ClInclude Include="GWToolbox\ToolboxPanel.h" />
     <ClInclude Include="GWToolbox\TravelPanel.h" />
-    <ClInclude Include="GWToolbox\Viewer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Dependencies\imgui\examples\directx9_example\imgui_impl_dx9.cpp" />
@@ -164,6 +164,7 @@
     <ClCompile Include="GWToolbox\SettingManager.cpp" />
     <ClCompile Include="GWToolbox\Settings.cpp" />
     <ClCompile Include="GWToolbox\SymbolsRenderer.cpp" />
+    <ClCompile Include="GWToolbox\ToolboxModule.cpp" />
     <ClCompile Include="GWToolbox\ToolboxWindow.cpp" />
     <ClCompile Include="GWToolbox\GWToolbox.cpp" />
     <ClCompile Include="GWToolbox\HotkeyPanel.cpp" />
@@ -177,7 +178,6 @@
     <ClCompile Include="GWToolbox\HealthWindow.cpp" />
     <ClCompile Include="GWToolbox\TimerWindow.cpp" />
     <ClCompile Include="GWToolbox\TravelPanel.cpp" />
-    <ClCompile Include="GWToolbox\Viewer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Dependencies\OSHGui\OSHGui.vcxproj">

@@ -11,90 +11,156 @@
 #include <GWCA\Managers\CameraMgr.h>
 #include "Config.h"
 #include "logger.h"
+#include "GWToolbox.h"
 
 Minimap::Minimap() 
 	: range_renderer(RangeRenderer()),
 	pmap_renderer(PmapRenderer()),
 	agent_renderer(AgentRenderer()),
 	symbols_renderer(SymbolsRenderer()),
-	mousedown_(false),
-	freeze_(false),
-	loading_(false),
-	visible_(false),
-	mapfile(0) {
+	mousedown(false),
+	loading(false),
+	mapfile(0),
+	translation(0, 0),
+	location(0, 0) {
 
 	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P391_InstanceLoadFile>(
 		[this](GW::Packet::StoC::P391_InstanceLoadFile* packet) -> bool {
 		mapfile = packet->map_fileID;
 		pmap_renderer.Invalidate();
-		loading_ = false;
+		loading = false;
 		return false;
 	});
 
 	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P406>(
 		[&](GW::Packet::StoC::P406* pak) -> bool {
-		loading_ = true;
+		loading = true;
 		return false;
 	});
 
-	int x = Config::IniRead(Minimap::IniSection(), Minimap::IniKeyX(), 50l);
-	int y = Config::IniRead(Minimap::IniSection(), Minimap::IniKeyY(), 50l);
-	int size = Config::IniRead(Minimap::IniSection(), Minimap::IniKeySize(), 600l);
-	double scale = Config::IniRead(Minimap::IniSection(), Minimap::IniKeyScale(), 1.0);
-	SetLocation(x, y);
-	SetSize(size, size);
+	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P133>(
+		[&](GW::Packet::StoC::P133* pak) -> bool {
+		if (visible) {
+			pingslines_renderer.P133Callback(pak);
+		}
+		return false;
+	});
 
-	SetTranslation(0.0f, 0.0f);
-	SetScale((float)scale);
-	last_moved_ = TBTimer::init();
+	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P041>(
+		[&](GW::Packet::StoC::P041* pak) -> bool {
+		if (visible) {
+			pingslines_renderer.P041Callback(pak);
+		}
+		return false;
+	});
 
-	SetVisible(Config::IniRead(Minimap::IniSection(), Minimap::InikeyShow(), false));
+	last_moved = TBTimer::init();
 
 	pmap_renderer.Invalidate();
 }
 
-void Minimap::Render(IDirect3DDevice9* device) {
+void Minimap::DrawSettings() {
+	if (ImGui::CollapsingHeader(Name())) {
+		ImGui::Text("General");
+		ImGui::DragInt("X", &location.x);
+		ImGui::DragInt("Y", &location.y);
+		ImGui::DragInt("Size", &size);
+		ImGui::DragFloat("Scale", &scale);
+		ImGui::Text("Agents");
+		agent_renderer.DrawSettings();
+		ImGui::Text("Ranges");
+		range_renderer.DrawSettings();
+		ImGui::Text("Pings and drawings");
+		pingslines_renderer.DrawSettings();
+		ImGui::Text("Symbols");
+		symbols_renderer.DrawSettings();
+		ImGui::Text("Map");
+		pmap_renderer.DrawSettings();
+	}
+}
+
+void Minimap::LoadSettings(CSimpleIni* ini) {
+	location.x = ini->GetLongValue(Name(), "x", 50);
+	location.y = ini->GetLongValue(Name(), "y", 50);
+	size = ini->GetLongValue(Name(), "size", 600);
+	scale = (float)ini->GetDoubleValue(Name(), "scale", 1.0);
+	LoadSettingVisible(ini);
+	range_renderer.LoadSettings(ini, Name());
+	pmap_renderer.LoadSettings(ini, Name());
+	agent_renderer.LoadSettings(ini, Name());
+	pingslines_renderer.LoadSettings(ini, Name());
+	symbols_renderer.LoadSettings(ini, Name());
+}
+
+void Minimap::SaveSettings(CSimpleIni* ini) const {
+	ini->SetLongValue(Name(), "x", location.x);
+	ini->SetLongValue(Name(), "y", location.y);
+	ini->SetLongValue(Name(), "size", size);
+	ini->SetDoubleValue(Name(), "scale", scale);
+	SaveSettingVisible(ini);
+	range_renderer.SaveSettings(ini, Name());
+	pmap_renderer.SaveSettings(ini, Name());
+	agent_renderer.SaveSettings(ini, Name());
+	pingslines_renderer.SaveSettings(ini, Name());
+	symbols_renderer.SaveSettings(ini, Name());
+}
+
+void Minimap::Draw(IDirect3DDevice9* device) {
 	if (!IsActive()) return;
 
 	GW::Agent* me = GW::Agents().GetPlayer();
 	if (me == nullptr) return;
 
-	const long ms_before_back = 1000;
-	const float acceleration = 0.5f;
-	const float max_speed = 15.0f; // game units per frame
-	if ((translation_x_ != 0 || translation_y_ != 0) 
+	// if not center and want to move, move center towards player
+	if ((translation.x != 0 || translation.y != 0) 
 		&& (me->MoveX != 0 || me->MoveY != 0)
-		&& TBTimer::diff(last_moved_) > ms_before_back) {
-		GW::Vector2f v(translation_x_, translation_y_);
-		float speed = std::min((TBTimer::diff(last_moved_) - ms_before_back) * acceleration, 500.0f);
+		&& TBTimer::diff(last_moved) > ms_before_back) {
+		GW::Vector2f v(translation.x, translation.y);
+		float speed = std::min((TBTimer::diff(last_moved) - ms_before_back) * acceleration, 500.0f);
 		float n = v.Norm();
 		GW::Vector2f d = v.Normalized() * speed;
-		if (std::abs(d.x) > std::abs(v.x)) SetTranslation(0, 0);
-		else Translate(-d.x, -d.y);
+		if (std::abs(d.x) > std::abs(v.x)) {
+			translation = GW::Vector2f(0, 0);
+		} else {
+			translation -= d;
+		}
 	}
 
-	D3DXMATRIX old_view, old_world, old_projection;
-	DWORD old_fvf, old_mutlisample, old_fillmode, old_lighting, old_scissortest;
-	device->GetTransform(D3DTS_WORLD, &old_world);
-	device->GetTransform(D3DTS_VIEW, &old_view);
-	device->GetTransform(D3DTS_PROJECTION, &old_projection);
-	device->GetFVF(&old_fvf);
+	// Backup the DX9 state
+	IDirect3DStateBlock9* d3d9_state_block = NULL;
+	if (device->CreateStateBlock(D3DSBT_ALL, &d3d9_state_block) < 0)
+		return;
+
+	// Setup render state: fixed-pipeline, alpha-blending, no face culling, no depth testing
 	device->SetFVF(D3DFVF_CUSTOMVERTEX);
-	device->GetRenderState(D3DRS_MULTISAMPLEANTIALIAS, &old_mutlisample);
-	device->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, TRUE);
-	device->GetRenderState(D3DRS_FILLMODE, &old_fillmode);
+	device->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, true);
 	device->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
-	device->GetRenderState(D3DRS_LIGHTING, &old_lighting);
-	device->SetRenderState(D3DRS_LIGHTING, FALSE);	
-	device->GetRenderState(D3DRS_SCISSORTESTENABLE, &old_scissortest);
-	device->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
+	device->SetPixelShader(NULL);
+	device->SetVertexShader(NULL);
+	device->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
+	device->SetRenderState(D3DRS_LIGHTING, false);
+	device->SetRenderState(D3DRS_ZENABLE, false);
+	device->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
+	device->SetRenderState(D3DRS_ALPHATESTENABLE, false);
+	device->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
+	device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
+	device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+	device->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
+	device->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
+	device->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
+	device->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
+	device->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
+	device->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
+	device->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
+	device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+	device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
 
 	RECT old_clipping, clipping;
 	device->GetScissorRect(&old_clipping);
-	clipping.left = location_x_ < 0 ? 0 : location_x_;
-	clipping.right = location_x_ + width_ + 1;
-	clipping.top = location_y_ < 0 ? 0 : location_y_;
-	clipping.bottom = location_y_ + height_ + 1;
+	clipping.left = location.x > 0 ? location.x : 0;
+	clipping.right = location.x + size + 1;
+	clipping.top = location.y > 0 ? location.y : 0;
+	clipping.bottom = location.y + size + 1;
 	device->SetScissorRect(&clipping);
 	device->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
 	RenderSetupProjection(device);
@@ -111,11 +177,11 @@ void Minimap::Render(IDirect3DDevice9* device) {
 	D3DXMATRIX rotate_char;
 	D3DXMatrixRotationZ(&rotate_char, -GW::Cameramgr().GetYaw() + (float)M_PI_2);
 
-	D3DXMATRIX scale, trans;
-	D3DXMatrixScaling(&scale, scale_, scale_, 1.0f);
-	D3DXMatrixTranslation(&trans, translation_x_, translation_y_, 0);
+	D3DXMATRIX scaleM, translationM;
+	D3DXMatrixScaling(&scaleM, scale, scale, 1.0f);
+	D3DXMatrixTranslation(&translationM, translation.x, translation.y, 0);
 
-	view = translate_char * rotate_char * scale * trans;
+	view = translate_char * rotate_char * scaleM * translationM;
 	device->SetTransform(D3DTS_VIEW, &view);
 
 	pmap_renderer.Render(device);	
@@ -126,8 +192,8 @@ void Minimap::Render(IDirect3DDevice9* device) {
 	range_renderer.Render(device);
 	device->SetTransform(D3DTS_WORLD, &identity);
 
-	if (translation_x_ != 0 || translation_y_ != 0) {
-		D3DXMATRIX view2 = scale;
+	if (translation.x != 0 || translation.y != 0) {
+		D3DXMATRIX view2 = scaleM;
 		device->SetTransform(D3DTS_VIEW, &view2);
 		range_renderer.SetDrawCenter(true);
 		range_renderer.Render(device);
@@ -142,68 +208,62 @@ void Minimap::Render(IDirect3DDevice9* device) {
 
 	pingslines_renderer.Render(device);
 
-	device->SetFVF(old_fvf);
-	device->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, old_mutlisample);
-	device->SetRenderState(D3DRS_FILLMODE, old_fillmode);
-	device->SetRenderState(D3DRS_LIGHTING, old_lighting);
-	device->SetRenderState(D3DRS_SCISSORTESTENABLE, old_scissortest);
-	device->SetScissorRect(&old_clipping);
-	device->SetTransform(D3DTS_WORLD, &old_world);
-	device->SetTransform(D3DTS_VIEW, &old_view);
-	device->SetTransform(D3DTS_PROJECTION, &old_projection);
+	// Restore the DX9 state
+	d3d9_state_block->Apply();
+	d3d9_state_block->Release();
 }
 
-GW::Vector2f Minimap::InterfaceToWorldPoint(int x, int y) const {
+GW::Vector2f Minimap::InterfaceToWorldPoint(Vec2i pos) const {
 	GW::Agent* me = GW::Agents().GetPlayer();
 	if (me == nullptr) return GW::Vector2f(0, 0);
 	
+	GW::Vector2f v((float)pos.x, (float)pos.y);
+
 	// Invert viewport projection
-	x = x - GetX();
-	y = GetY() - y;
+	v.x = v.x - location.x;
+	v.y = location.y - v.y;
 
 	// go from [0, width][0, height] to [-1, 1][-1, 1]
-	float x2 = (2.0f * x / GetWidth() - 1.0f);
-	float y2 = (2.0f * y / GetHeight() + 1.0f);
+	v.x = (2.0f * v.x / size - 1.0f);
+	v.y = (2.0f * v.y / size + 1.0f);
 
 	// scale up to [-w, w]
 	float w = 5000.0f;
-	x2 *= w;
-	y2 *= w;
+	v *= w;
 
 	// translate by camera
-	x2 -= translation_x_;
-	y2 -= translation_y_;
+	v -= translation;
 
 	// scale by camera
-	x2 /= scale_;
-	y2 /= scale_;
+	v /= scale;
 
 	// rotate by current camera rotation
 	float angle = GW::Cameramgr().GetYaw() - (float)M_PI_2;
-	float x3 = x2 * std::cos(angle) - y2 * std::sin(angle);
-	float y3 = x2 * std::sin(angle) + y2 * std::cos(angle);
+	float x1 = v.x * std::cos(angle) - v.y * std::sin(angle);
+	float y1 = v.x * std::sin(angle) + v.y * std::cos(angle);
+	v = GW::Vector2f(x1, y1);
 
 	// translate by character position
-	x3 += me->X;
-	y3 += me->Y;
+	v += GW::Vector2f(me->X, me->Y);
 
-	return GW::Vector2f(x3, y3);
+	return v;
 }
 
-GW::Vector2f Minimap::InterfaceToWorldVector(int x, int y) const {
+GW::Vector2f Minimap::InterfaceToWorldVector(Vec2i pos) const {
+	GW::Vector2f v((float)pos.x, (float)pos.y);
+
 	// Invert y direction
-	y = -y;
+	v.y = -v.y;
 
 	// go from [0, width][0, height] to [-1, 1][-1, 1]
-	float x2 = (2.0f * x / GetWidth());
-	float y2 = (2.0f * y / GetHeight());
+	v.x = (2.0f * v.x / size);
+	v.y = (2.0f * v.y / size);
 
 	// scale up to [-w, w]
 	float w = 5000.0f;
-	x2 *= w;
-	y2 *= w;
+	v *= w;
 
-	return GW::Vector2f(x2, y2);
+	return v;
 }
 
 void Minimap::SelectTarget(GW::Vector2f pos) {
@@ -231,126 +291,125 @@ void Minimap::SelectTarget(GW::Vector2f pos) {
 	}
 }
 
-bool Minimap::OnMouseDown(MSG msg) {
+bool Minimap::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
+	switch (Message) {
+	case WM_MOUSEMOVE: return OnMouseMove(Message, wParam, lParam);
+	case WM_LBUTTONDOWN: return OnMouseDown(Message, wParam, lParam);
+	case WM_MOUSEWHEEL: return OnMouseWheel(Message, wParam, lParam);
+	case WM_LBUTTONDBLCLK: return OnMouseDblClick(Message, wParam, lParam);
+	case WM_LBUTTONUP: return OnMouseUp(Message, wParam, lParam);
+	default:
+		return false;
+	}
+}
+bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam) {
 	if (!IsActive()) return false;
 
-	int x = GET_X_LPARAM(msg.lParam);
-	int y = GET_Y_LPARAM(msg.lParam);
+	int x = GET_X_LPARAM(lParam);
+	int y = GET_Y_LPARAM(lParam);
 	if (!IsInside(x, y)) return false;
 
-	mousedown_ = true;
+	mousedown = true;
 
-	if (msg.wParam & MK_CONTROL) {
-		SelectTarget(InterfaceToWorldPoint(x, y));
+	if (wParam & MK_CONTROL) {
+		SelectTarget(InterfaceToWorldPoint(Vec2i(x, y)));
 		return true;
 	}
 
-	drag_start_x_ = x;
-	drag_start_y_ = y;
+	drag_start.x = x;
+	drag_start.y = y;
 
-	if (msg.wParam & MK_SHIFT) return true;
+	if (wParam & MK_SHIFT) return true;
 
-	if (!freeze_) return true;
+	if (!GWToolbox::instance().other_settings->freeze_widgets) return true;
 
-	GW::Vector2f v = InterfaceToWorldPoint(x, y);
+	GW::Vector2f v = InterfaceToWorldPoint(Vec2i(x, y));
 	pingslines_renderer.OnMouseDown(v.x, v.y);
 
 	return true;
 }
 
-bool Minimap::OnMouseDblClick(MSG msg) {
+bool Minimap::OnMouseDblClick(UINT Message, WPARAM wParam, LPARAM lParam) {
 	if (!IsActive()) return false;
 
-	int x = GET_X_LPARAM(msg.lParam);
-	int y = GET_Y_LPARAM(msg.lParam);
+	int x = GET_X_LPARAM(lParam);
+	int y = GET_Y_LPARAM(lParam);
 	if (!IsInside(x, y)) return false;
 
-	if (msg.wParam & MK_CONTROL) {
-		SelectTarget(InterfaceToWorldPoint(x, y));
+	if (wParam & MK_CONTROL) {
+		SelectTarget(InterfaceToWorldPoint(Vec2i(x, y)));
 		return true;
 	}
 
 	return true;
 }
 
-bool Minimap::OnMouseUp(MSG msg) {
+bool Minimap::OnMouseUp(UINT Message, WPARAM wParam, LPARAM lParam) {
 	if (!IsActive()) return false;
 
-	if (!mousedown_) return false;
+	if (!mousedown) return false;
 
-	mousedown_ = false;
-	
-	if (!freeze_) {
-		Config::IniWrite(Minimap::IniSection(), Minimap::IniKeyX(), GetX());
-		Config::IniWrite(Minimap::IniSection(), Minimap::IniKeyY(), GetY());
-	}
+	mousedown = false;
 
 	return pingslines_renderer.OnMouseUp();
 }
 
-bool Minimap::OnMouseMove(MSG msg) {
+bool Minimap::OnMouseMove(UINT Message, WPARAM wParam, LPARAM lParam) {
 	if (!IsActive()) return false;
 
-	if (!mousedown_) return false;
+	if (!mousedown) return false;
 	
-	int x = GET_X_LPARAM(msg.lParam);
-	int y = GET_Y_LPARAM(msg.lParam);
+	int x = GET_X_LPARAM(lParam);
+	int y = GET_Y_LPARAM(lParam);
 	//if (!IsInside(x, y)) return false;
 
-	if (msg.wParam & MK_CONTROL) {
-		SelectTarget(InterfaceToWorldPoint(x, y));
+	if (wParam & MK_CONTROL) {
+		SelectTarget(InterfaceToWorldPoint(Vec2i(x, y)));
 		return true;
 	}
 
-	if (msg.wParam & MK_SHIFT) {
-		int diff_x = x - drag_start_x_;
-		int diff_y = y - drag_start_y_;
-		GW::Vector2f trans = InterfaceToWorldVector(diff_x, diff_y);
-		Translate(trans.x, trans.y);
-		drag_start_x_ = x;
-		drag_start_y_ = y;
-		last_moved_ = TBTimer::init();
+	if (wParam & MK_SHIFT) {
+		Vec2i diff = Vec2i(x - drag_start.x, y - drag_start.y);
+		translation += InterfaceToWorldVector(diff);
+		drag_start = Vec2i(x, y);
+		last_moved = TBTimer::init();
 		return true;
 	}
 
-	if (!freeze_) {
-		int diff_x = x - drag_start_x_;
-		int diff_y = y - drag_start_y_;
-		SetX(GetX() + diff_x);
-		SetY(GetY() + diff_y);
-		drag_start_x_ = x;
-		drag_start_y_ = y;
+	if (!GWToolbox::instance().other_settings->freeze_widgets) {
+		int diff_x = x - drag_start.x;
+		int diff_y = y - drag_start.y;
+		location.x += diff_x;
+		location.y += diff_y;
+		drag_start = Vec2i(x, y);
 		return true;
 	}
 
-	GW::Vector2f v = InterfaceToWorldPoint(x, y);
+	GW::Vector2f v = InterfaceToWorldPoint(Vec2i(x, y));
 	return pingslines_renderer.OnMouseMove(v.x, v.y);
 }
 
-bool Minimap::OnMouseWheel(MSG msg) {
+bool Minimap::OnMouseWheel(UINT Message, WPARAM wParam, LPARAM lParam) {
 	if (!IsActive()) return false;
 
-	int x = GET_X_LPARAM(msg.lParam);
-	int y = GET_Y_LPARAM(msg.lParam);
+	int x = GET_X_LPARAM(lParam);
+	int y = GET_Y_LPARAM(lParam);
 	if (!IsInside(x, y)) return false;
 	
-	int zDelta = GET_WHEEL_DELTA_WPARAM(msg.wParam);
+	int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
 
-	if (msg.wParam & MK_SHIFT) {
+	if (wParam & MK_SHIFT) {
 		float delta = zDelta > 0 ? 1.024f : 0.9765625f;
-		Scale(delta);
-		Config::IniWrite(Minimap::IniSection(), Minimap::IniKeyScale(), GetScale());
+		scale *= delta;
 		return true;
 	}
 
-	if (!freeze_) {
+	if (!GWToolbox::instance().other_settings->freeze_widgets) {
 		int delta = zDelta > 0 ? 2 : -2;
-		SetWidth(GetWidth() + delta * 2);
-		SetHeight(GetHeight() + delta * 2);
-		SetX(GetX() - delta);
-		SetY(GetY() - delta);
-
-		Config::IniWrite(Minimap::IniSection(), Minimap::IniKeySize(), GetWidth());
+		size += delta * 2;
+		size += delta * 2;
+		location.x -= delta;
+		location.y -= delta;
 
 		return true;
 	}
@@ -359,19 +418,52 @@ bool Minimap::OnMouseWheel(MSG msg) {
 
 bool Minimap::IsInside(int x, int y) const {
 	// if centered, use radar range, otherwise use square
-	if (translation_x_ == 0 && translation_y_ == 0) {
-		GW::Vector2f gamepos = InterfaceToWorldPoint(x, y);
+	if (translation.x == 0 && translation.y == 0) {
+		GW::Vector2f gamepos = InterfaceToWorldPoint(Vec2i(x, y));
 		GW::Agent* me = GW::Agents().GetPlayer();
 		return me && GW::Agents().GetSqrDistance(me->pos, gamepos) < GW::Constants::SqrRange::Compass;
 	} else {
-		return (x >= GetX() && x < GetX() + GetWidth()
-			&& y >= GetY() && y < GetY() + GetHeight());
+		return (x >= location.x && x < location.x + size
+			&& y >= location.y && y < location.y + size);
 	}
 }
 bool Minimap::IsActive() const {
-	return visible_
-		&& !loading_
+	return visible
+		&& !loading
 		&& GW::Map().IsMapLoaded()
 		&& GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading
 		&& GW::Agents().GetPlayerId() != 0;
+}
+
+void Minimap::RenderSetupProjection(IDirect3DDevice9* device) {
+	D3DVIEWPORT9 viewport;
+	device->GetViewport(&viewport);
+
+	float w = 5000.0f * 2;
+	// IMPORTANT: we are setting z-near to 0.0f and z-far to 1.0f
+	D3DXMATRIX ortho_matrix(
+		2 / w, 0, 0, 0,
+		0, 2 / w, 0, 0,
+		0, 0, 1, 0,
+		0, 0, 0, 1
+	);
+
+	//// note: manually craft the projection to viewport instead of using
+	//// SetViewport to allow target regions outside the viewport 
+	//// e.g. negative x/y for slightly offscreen map
+	float xscale = (float)size / viewport.Width;
+	float yscale = (float)size / viewport.Height;
+	float xtrans = (float)(location.x * 2 + size) / viewport.Width - 1.0f;
+	float ytrans = -(float)(location.y * 2 + size) / viewport.Height + 1.0f;
+	////IMPORTANT: we are basically setting z-near to 0 and z-far to 1
+	D3DXMATRIX viewport_matrix(
+		xscale, 0, 0, 0,
+		0, yscale, 0, 0,
+		0, 0, 1, 0,
+		xtrans, ytrans, 0, 1
+	);
+
+	D3DXMATRIX proj = ortho_matrix * viewport_matrix;
+
+	device->SetTransform(D3DTS_PROJECTION, &proj);
 }

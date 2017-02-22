@@ -8,72 +8,25 @@
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Packets\CtoS.h>
 
-#include "MinimapUtils.h"
+#include "GuiUtils.h"
 
-PingsLinesRenderer::PingsLinesRenderer() : 
-	vertices(nullptr),
-	visible_(false) {
+void PingsLinesRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
+	color_drawings = Colors::IniGet(ini, section, "color_drawings", 0x00FFFFFF);
+	ping_circle.color_pings = Colors::IniGet(ini, section, "color_pings", 0xFFFF0000);
+	Invalidate();
+}
+void PingsLinesRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
+	Colors::IniSet(ini, section, "color_drawings", color_drawings);
+	Colors::IniSet(ini, section, "color_pings", ping_circle.color_pings);
+}
+void PingsLinesRenderer::DrawSettings() {
+	Colors::DrawSetting("Drawings", &color_drawings, false);
+	if (Colors::DrawSetting("Pings", &ping_circle.color_pings, false)) {
+		ping_circle.Invalidate();
+	}
+}
 
-	color_drawings = MinimapUtils::IniReadColor("color_drawings", "0x00FFFFFF");
-
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P133>(
-		[&](GW::Packet::StoC::P133* pak) -> bool {
-
-		if (!visible_) return false;
-
-		bool new_session;
-		if (drawings[pak->Player].player == pak->Player) {
-			new_session = drawings[pak->Player].session != pak->SessionID;
-			drawings[pak->Player].session = pak->SessionID;
-		} else {
-			drawings[pak->Player].player = pak->Player;
-			drawings[pak->Player].session = pak->SessionID;
-			new_session = true;
-		}
-		
-		if (new_session && pak->NumberPts == 1) {
-			pings.push_front(new TerrainPing(
-				pak->points[0].x * drawing_scale,
-				pak->points[0].y * drawing_scale));
-			return false;
-		} 
-
-		if (new_session) {
-			for (unsigned int i = 0; i < pak->NumberPts - 1; ++i) {
-				DrawingLine l;
-				l.x1 = pak->points[i + 0].x * drawing_scale;
-				l.y1 = pak->points[i + 0].y * drawing_scale;
-				l.x2 = pak->points[i + 1].x * drawing_scale;
-				l.y2 = pak->points[i + 1].y * drawing_scale;
-				drawings[pak->Player].lines.push_back(l);
-			}
-		} else {
-			if (drawings[pak->Player].lines.empty()) return false;
-			for (unsigned int i = 0; i < pak->NumberPts; ++i) {
-				DrawingLine l;
-				if (i == 0) {
-					l.x1 = drawings[pak->Player].lines.back().x2;
-					l.y1 = drawings[pak->Player].lines.back().y2;
-				} else {
-					l.x1 = pak->points[i - 1].x * drawing_scale;
-					l.y1 = pak->points[i - 1].y * drawing_scale;
-				}
-				l.x2 = pak->points[i].x * drawing_scale;
-				l.y2 = pak->points[i].y * drawing_scale;
-				drawings[pak->Player].lines.push_back(l);
-			}
-		}
-
-		return false;
-	});
-
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P041>(
-		[&](GW::Packet::StoC::P041* pak) -> bool {
-		if (!visible_) return false;
-		pings.push_front(new AgentPing(pak->agent_id));
-		return false;
-	});
-
+PingsLinesRenderer::PingsLinesRenderer() : vertices(nullptr) {
 	mouse_down = false;
 	mouse_moved = false;
 	mouse_x = 0;
@@ -82,6 +35,55 @@ PingsLinesRenderer::PingsLinesRenderer() :
 	lastshown = TBTimer::init();
 	lastsent = TBTimer::init();
 	lastqueued = TBTimer::init();
+}
+
+void PingsLinesRenderer::P041Callback(GW::Packet::StoC::P041* pak) {
+	pings.push_front(new AgentPing(pak->agent_id));
+}
+
+void PingsLinesRenderer::P133Callback(GW::Packet::StoC::P133* pak) {
+	bool new_session;
+	if (drawings[pak->Player].player == pak->Player) {
+		new_session = drawings[pak->Player].session != pak->SessionID;
+		drawings[pak->Player].session = pak->SessionID;
+	} else {
+		drawings[pak->Player].player = pak->Player;
+		drawings[pak->Player].session = pak->SessionID;
+		new_session = true;
+	}
+
+	if (new_session && pak->NumberPts == 1) {
+		pings.push_front(new TerrainPing(
+			pak->points[0].x * drawing_scale,
+			pak->points[0].y * drawing_scale));
+		return;
+	}
+
+	if (new_session) {
+		for (unsigned int i = 0; i < pak->NumberPts - 1; ++i) {
+			DrawingLine l;
+			l.x1 = pak->points[i + 0].x * drawing_scale;
+			l.y1 = pak->points[i + 0].y * drawing_scale;
+			l.x2 = pak->points[i + 1].x * drawing_scale;
+			l.y2 = pak->points[i + 1].y * drawing_scale;
+			drawings[pak->Player].lines.push_back(l);
+		}
+	} else {
+		if (drawings[pak->Player].lines.empty()) return;
+		for (unsigned int i = 0; i < pak->NumberPts; ++i) {
+			DrawingLine l;
+			if (i == 0) {
+				l.x1 = drawings[pak->Player].lines.back().x2;
+				l.y1 = drawings[pak->Player].lines.back().y2;
+			} else {
+				l.x1 = pak->points[i - 1].x * drawing_scale;
+				l.y1 = pak->points[i - 1].y * drawing_scale;
+			}
+			l.x2 = pak->points[i].x * drawing_scale;
+			l.y2 = pak->points[i].y * drawing_scale;
+			drawings[pak->Player].lines.push_back(l);
+		}
+	}
 }
 
 void PingsLinesRenderer::Initialize(IDirect3DDevice9* device) {
@@ -182,23 +184,21 @@ void PingsLinesRenderer::PingCircle::Initialize(IDirect3DDevice9* device) {
 	vertex_count = count_ + 2;
 	vertices = nullptr;
 
-	DWORD color = MinimapUtils::IniReadColor("color_pings", "0x00FF0000");
-
-
 	if (buffer_) buffer_->Release();
 	device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, 0,
 		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer_, NULL);
 	buffer_->Lock(0, sizeof(D3DVertex) * vertex_count,
 		(VOID**)&vertices, D3DLOCK_DISCARD);
 	
+	const float PI = 3.1415927f;
 	for (size_t i = 0; i < count_; ++i) {
-		float angle = i * (2 * fPI / count_);
+		float angle = i * (2 * PI / count_);
 		bool outer = (i % 2 == 0);
 		float radius = outer ? 1.0f : 0.8f;
 		vertices[i].x = radius * std::cos(angle);
 		vertices[i].y = radius * std::sin(angle);
 		vertices[i].z = 0.0f;
-		vertices[i].color = (D3DCOLOR_ARGB(outer ? 150 : 0, 0, 0, 0) | color);
+		vertices[i].color = (D3DCOLOR_ARGB(outer ? 150 : 0, 0, 0, 0) | color_pings);
 	}
 	vertices[count_] = vertices[0];
 	vertices[count_ + 1] = vertices[1];

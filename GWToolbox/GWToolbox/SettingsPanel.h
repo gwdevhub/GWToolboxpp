@@ -10,7 +10,7 @@
 
 class SettingsPanel : public ToolboxPanel {
 public:
-	const char* Name() override { return "Settings Panel"; }
+	const char* Name() const override { return "Settings Panel"; }
 
 	SettingsPanel();
 
@@ -21,7 +21,6 @@ public:
 	void Draw(IDirect3DDevice9* pDevice) override;
 
 	inline void Close() { if (location_file_.is_open()) location_file_.close(); }
-
 private:
 	// === location stuff ===
 	clock_t location_timer_;

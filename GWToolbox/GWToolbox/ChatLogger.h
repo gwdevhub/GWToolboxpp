@@ -13,48 +13,30 @@ public:
 		GW::Chat().SetMessageColor(GW::Channel::CHANNEL_GWCA5, 0xFFFF4444);
 	}
 
-	inline static void Err(const std::wstring msg) {
-		std::wstring s1 = std::wstring(L"<c=#00ccff>GWToolbox++</c>: ") + msg;
-		std::wstring s2 = std::wstring(L"[Warning]: ") + msg;
-		GW::Chat().WriteChat(GW::Channel::CHANNEL_GWCA5, s1.c_str());
-		GW::Chat().WriteChat(GW::Channel::CHANNEL_GWCA4, s2.c_str());
-	}
-
-	static void ErrF(const wchar_t* format, ...) {
+	static void Err(const char* format, ...) {
+		char buf1[256];
 		va_list vl;
 		va_start(vl, format);
-		size_t szbuf = _vscwprintf(format, vl) + 1;
-		wchar_t* chat = new wchar_t[szbuf];
-		vswprintf_s(chat, szbuf, format, vl);
+		vsprintf_s(buf1, format, vl);
 		va_end(vl);
-
-		Err(std::wstring(chat));
-
-		delete[] chat;
-	}
-
-	inline static void Log(const std::wstring msg) {
-		std::wstring s = std::wstring(L"<c=#00ccff>GWToolbox++</c>: ") + msg;
-		GW::Chat().WriteChat(GW::Channel::CHANNEL_GWCA3, s.c_str());
-	}
-	inline static void Log(const std::string msg) {
-		Log(std::wstring(msg.begin(), msg.end()));
-	}
-
-	inline static void Log(const wchar_t* msg) {
-		Log(std::wstring(msg));
-	}
-
-	static void LogF(const wchar_t* format, ...) {
-		va_list vl;
-		va_start(vl, format);
-		size_t szbuf = _vscwprintf(format, vl) + 1;
-		wchar_t* chat = new wchar_t[szbuf];
-		vswprintf_s(chat, szbuf, format, vl);
-		va_end(vl);
-
-		Log(std::wstring(chat));
 		
-		delete[] chat;
+		char buf2a[256];
+		char buf2b[256];
+		sprintf_s(buf2a, "<c=#00ccff>GWToolbox++</c>: %s", buf1);
+		sprintf_s(buf2b, "[Warning] %s", buf1);
+		GW::Chat().WriteChat(GW::Channel::CHANNEL_GWCA5, buf2a);
+		GW::Chat().WriteChat(GW::Channel::CHANNEL_GWCA4, buf2b);
+	}
+
+	static void Log(const char* format, ...) {
+		char buf1[256];
+		va_list vl;
+		va_start(vl, format);
+		vsprintf_s(buf1, format, vl);
+		va_end(vl);
+		
+		char buf2[256];
+		sprintf_s(buf2, "<c=#00ccff>GWToolbox++</c>: %s", buf1);
+		GW::Chat().WriteChat(GW::Channel::CHANNEL_GWCA3, buf2);
 	}
 };

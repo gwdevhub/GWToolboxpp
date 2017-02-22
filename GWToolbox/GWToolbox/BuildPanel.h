@@ -19,17 +19,20 @@ private:
 		char code[64];
 	};
 	struct TeamBuild {
-		TeamBuild(const char* n = "") {
+		static unsigned int cur_ui_id;
+		TeamBuild(const char* n = "")
+			: ui_id(++cur_ui_id) {
 			sprintf_s(name, "%s", n);
 		}
 		bool edit_open = false;
 		bool show_numbers = false;
 		char name[64];
 		std::vector<Build> builds;
+		unsigned int ui_id; // should be const but then assignment operator doesn't get created automatically, and I'm too lazy to redefine it, so just don't change this value, okay?
 	};
 
 public:
-	const char* Name() override { return "Build Panel"; }
+	const char* Name() const override { return "Build Panel"; }
 
 	BuildPanel();
 
@@ -41,9 +44,11 @@ public:
 
 	void DrawSettings() override;
 	void LoadSettings(CSimpleIni* ini) override;
-	void SaveSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) const override;
 
 	void Send(unsigned int idx);
+	const char* BuildName(unsigned int idx) const;
+	inline unsigned int BuildCount() const { return teambuilds.size(); }
 private:
 	// Send a teambuild
 	void Send(const TeamBuild& tbuild);

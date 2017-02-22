@@ -62,9 +62,9 @@ void DistanceWindow::Draw(IDirect3DDevice9* pDevice) {
 
 
 void DistanceWindow::LoadSettings(CSimpleIni* ini) {
-	visible = ini->GetBoolValue(Name(), "show", true);
+	LoadSettingVisible(ini);
 }
 
-void DistanceWindow::SaveSettings(CSimpleIni* ini) {
-	ini->SetBoolValue(Name(), "show", visible);
+void DistanceWindow::SaveSettings(CSimpleIni* ini) const {
+	SaveSettingVisible(ini);
 }

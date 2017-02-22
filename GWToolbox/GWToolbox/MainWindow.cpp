@@ -18,12 +18,12 @@ using namespace OSHGui;
 
 MainWindow::MainWindow() : 
 	pcon_panel_(*new PconPanel(this)),
-	hotkey_panel_(*new HotkeyPanel(this)),
+	hotkey_panel_(*new HotkeyPanel()),
 	build_panel_(*new BuildPanel()),
 	travel_panel_(*new TravelPanel()),
 	dialog_panel_(*new DialogPanel()),
 	info_panel_(*new InfoPanel()),
-	materials_panel_(*new MaterialsPanel(this)),
+	materials_panel_(*new MaterialsPanel()),
 	settings_panel_(*new SettingsPanel()),
 
 	use_minimized_alt_pos(false, IniSection(), "minimize_alt_position"),
@@ -40,7 +40,6 @@ MainWindow::MainWindow() :
 
 	panels = std::vector<ToolboxPanel*>();
 	tab_buttons = std::vector<TabButton*>();
-	current_panel_ = -1;
 	minimized_ = false;
 	hidden_ = false;
 	clip_ = Clipping::None;
@@ -172,7 +171,6 @@ void MainWindow::SetMinimized(bool minimized) {
 	minimized_ = minimized;
 
 	if (minimized_) {
-		if (current_panel_ >= 0) OpenClosePanel(current_panel_);
 		SetSize(SizeI(WIDTH, TITLE_HEIGHT));
 		if (use_minimized_alt_pos.value) {
 			int xlocation = Config::IniRead(MainWindow::IniSection(), MainWindow::IniKeyMinimizedAltX(), 100l);
@@ -199,7 +197,6 @@ void MainWindow::SetHidden(bool hidden) {
 	hidden_ = hidden;
 
 	if (hidden) {
-		if (current_panel_ >= 0) OpenClosePanel(current_panel_);
 		SetSize(SizeI(0, 0));
 		main_panel_->SetVisible(false);
 		SetVisible(false);
@@ -223,39 +220,29 @@ void MainWindow::UpdatePconToggleButton(bool active) {
 	}
 }
 
-bool MainWindow::Intersect(const Drawing::PointI &point) const {
-	if (minimized_) {
-		return Intersection::TestRectangleI(absoluteLocation_,
-			SizeI(GetWidth(), TITLE_HEIGHT), point);
-	} else if (current_panel_ >= 0) {
-		return containerPanel_->Intersect(point) || panels[current_panel_]->Intersect(point);
-	} else {
-		return containerPanel_->Intersect(point);
-	}
-}
-
 void MainWindow::OpenClosePanel(size_t index) {
-	if (current_panel_ >= 0) {
-		if (current_panel_ > (int)panels.size()) {
-			LOG("ERROR bad current_panel! %d\n", current_panel_);
-		} else {
-			panels[current_panel_]->SetVisible(false);
-			panels[current_panel_]->SetEnabled(false);
-			tab_buttons[current_panel_]->SetBackColor(Drawing::Color::Empty());
-		}
-	}
-
-	if (index == current_panel_) {
-		current_panel_ = -1;
+	if (panels[index]->visible) {
+		// if it was open, close it
+		panels[index]->SetVisible(false);
+		panels[index]->SetEnabled(false);
+		panels[index]->visible = false;
+		tab_buttons[index]->SetBackColor(Drawing::Color::Empty());
 	} else {
-		if (index >= 0 && index < (int)panels.size()) {
-			current_panel_ = index;
-			tab_buttons[current_panel_]->SetBackColor(tab_buttons[current_panel_]->GetMouseOverFocusColor());
-			panels[current_panel_]->SetVisible(true);
-			panels[current_panel_]->SetEnabled(true);
-		} else {
-			LOG("ERROR bad panel index! %d\n", index);
+		// otherwise open it
+
+		// however, if only one is allowed to be open at the same time, close all others
+		for (unsigned int i = 0; i < panels.size(); ++i) {
+			panels[i]->SetVisible(false);
+			panels[i]->SetEnabled(false);
+			panels[i]->visible = false;
+			tab_buttons[i]->SetBackColor(Drawing::Color::Empty());
 		}
+		
+		// now open it
+		tab_buttons[index]->SetBackColor(tab_buttons[index]->GetMouseOverFocusColor());
+		panels[index]->SetVisible(true);
+		panels[index]->SetEnabled(true);
+		panels[index]->visible = true;
 	}
 }
 
@@ -300,7 +287,7 @@ void MainWindow::LoadSettings(CSimpleIni* ini) {
 	}
 }
 
-void MainWindow::SaveSettings(CSimpleIni* ini) {
+void MainWindow::SaveSettings(CSimpleIni* ini) const {
 	for (ToolboxPanel* panel : panels) {
 		panel->SaveSettings(ini);
 	}
@@ -308,7 +295,7 @@ void MainWindow::SaveSettings(CSimpleIni* ini) {
 
 void MainWindow::Draw(IDirect3DDevice9* pDevice) {
 	static bool open = true;
-	ImGui::SetNextWindowSize(ImVec2(WIDTH, HEIGHT));
+	ImGui::SetNextWindowSize(ImVec2(100.0f, 300.0f));
 	if (ImGui::Begin("Toolbox++", &open, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar)) {
 		if (!open) GWToolbox::instance().StartSelfDestruct();
 		ImVec2 button_size(WIDTH - 2 * ImGui::GetStyle().WindowPadding.x, 0);
@@ -318,7 +305,7 @@ void MainWindow::Draw(IDirect3DDevice9* pDevice) {
 
 		for (int i = 0; i < 8; ++i) {
 			if (i > 0) ImGui::Separator();
-			if (i == current_panel_) {
+			if (panels[i]->visible) {
 				ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered]);
 				if (ImGui::Button(tab_button_text[i], button_size)) {
 					OpenClosePanel(i);
@@ -336,16 +323,16 @@ void MainWindow::Draw(IDirect3DDevice9* pDevice) {
 			}
 		}
 		ImGui::PopStyleColor();
-
-		if (current_panel_ >= 0) {
-			panels[current_panel_]->Draw(pDevice);
-		}
 	}
 	ImGui::End();
+
+	for (ToolboxPanel* panel : panels) {
+		if (panel->visible) panel->Draw(pDevice);
+	}
 }
 
 void MainWindow::DrawSettings() {
-	if (ImGui::CollapsingHeader("Main Window")) {
+	if (ImGui::CollapsingHeader(Name())) {
 		use_minimized_alt_pos.Draw();
 		tick_with_pcons.Draw();
 		tabs_left.Draw();

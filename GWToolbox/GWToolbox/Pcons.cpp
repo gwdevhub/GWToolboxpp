@@ -99,7 +99,7 @@ void Pcon::CheckUpdateTimer() {
 		this->scanInventory();
 		update_timer = 0;
 		if (old_enabled != enabled) {
-			ChatLogger::ErrF(L"Cannot find %ls", chatName);
+			ChatLogger::Err("Cannot find %ls", chatName);
 		}
 	}
 }
@@ -118,7 +118,7 @@ bool Pcon::checkAndUse() {
 				this->update_timer = TBTimer::init();
 			} else {
 				// this should never happen, it should be disabled before
-				ChatLogger::ErrF(L"Cannot find %ls", chatName);
+				ChatLogger::Err("Cannot find %s", chatName);
 				this->scanInventory();
 			}
 			return used;
@@ -151,7 +151,7 @@ bool PconCons::checkAndUse() {
 				this->timer = TBTimer::init();
 				this->update_timer = TBTimer::init();
 			} else {
-				ChatLogger::ErrF(L"Cannot find %ls", chatName);
+				ChatLogger::Err("Cannot find %s", chatName);
 				this->scanInventory();
 			}
 			return used;
@@ -184,7 +184,7 @@ bool PconCity::checkAndUse() {
 					this->timer = TBTimer::init();
 					this->update_timer = TBTimer::init();
 				} else {
-					ChatLogger::Err(L"Cannot find a city speedboost");
+					ChatLogger::Err("Cannot find a city speedboost");
 					this->scanInventory();
 				}
 				return used;
@@ -220,7 +220,7 @@ bool PconAlcohol::checkAndUse() {
 				this->timer = TBTimer::init();
 				this->update_timer = TBTimer::init();
 			} else {
-				ChatLogger::Err(L"Cannot find Alcohol");
+				ChatLogger::Err("Cannot find Alcohol");
 				this->scanInventory();
 			}
 			return used;
@@ -248,7 +248,7 @@ bool PconLunar::checkAndUse() {
 				this->timer = TBTimer::init();
 				this->update_timer = TBTimer::init();
 			} else {
-				ChatLogger::Err(L"Cannot find Lunar Fortunes");
+				ChatLogger::Err("Cannot find Lunar Fortunes");
 				this->scanInventory();
 			}
 			return used;

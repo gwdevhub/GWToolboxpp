@@ -11,22 +11,24 @@
 #include "D3DVertex.h"
 #include "Config.h"
 
-PmapRenderer::PmapRenderer() : VBuffer() {
-	auto IniReadColor = [](char* key, char* def) -> DWORD {
-		const char* wc = Config::IniRead("minimap", key, def);
-		Config::IniWrite("minimap", key, wc);
-		DWORD c = std::stoul(wc, nullptr, 16);
-		if (c == LONG_MAX) return D3DCOLOR_ARGB(0xFF, 0x0, 0x0, 0x0);
-		return c;
-	};
-
-	color_map = IniReadColor("color_map", "0xFF999999");
-	color_mapshadow = IniReadColor("color_mapshadow", "0xFF120808");
+void PmapRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
+	color_map = Colors::IniGet(ini, section, "color_map", 0xFF999999);
+	color_mapshadow = Colors::IniGet(ini, section, "color_mapshadow", 0xFF120808);
 	shadow_show = (((color_mapshadow >> 24) & 0xFF) > 0);
+	Invalidate();
+}
+
+void PmapRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
+	Colors::IniSet(ini, section, "color_map", color_map);
+	Colors::IniSet(ini, section, "color_mapshadow", color_mapshadow);
+}
+
+void PmapRenderer::DrawSettings() {
+	if (Colors::DrawSetting("Map", &color_map)) Invalidate();
+	if (Colors::DrawSetting("Shadow", &color_mapshadow)) Invalidate();
 }
 
 void PmapRenderer::Initialize(IDirect3DDevice9* device) {
-
 	GW::PathingMapArray path_map;
 	if (GW::Map().IsMapLoaded()) {
 		path_map = GW::Map().GetPathingMap();

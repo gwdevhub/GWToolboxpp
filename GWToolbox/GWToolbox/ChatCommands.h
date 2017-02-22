@@ -13,7 +13,7 @@ class ChatCommands : public ToolboxModule {
 	const float DEFAULT_CAM_SPEED = 25.0f;
 
 public:
-	const char* Name() override { return "Chat Commands"; }
+	const char* Name() const override { return "Chat Commands"; }
 
 	ChatCommands();
 

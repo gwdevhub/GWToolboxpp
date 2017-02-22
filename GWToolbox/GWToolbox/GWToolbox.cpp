@@ -3,6 +3,8 @@
 #include "Defines.h"
 
 #include <string>
+#include <Windows.h>
+#include <windowsx.h>
 
 #include <OSHGui\OSHGui.hpp>
 
@@ -38,7 +40,6 @@ GW::DirectXHooker* GWToolbox::dx_hooker = nullptr;
 OSHGui::Drawing::Direct3D9Renderer* GWToolbox::renderer = nullptr;
 OSHGui::Input::WindowsMessage GWToolbox::input;
 long GWToolbox::OldWndProc = 0;
-HMODULE GWToolbox::dllmodule = 0;
 
 
 void GWToolbox::SafeThreadEntry(HMODULE dllmodule) {
@@ -49,15 +50,11 @@ void GWToolbox::SafeThreadEntry(HMODULE dllmodule) {
 	}
 }
 
-void GWToolbox::ThreadEntry(HMODULE _dllmodule) {
-	if (instance_) return;
-
-	dllmodule = _dllmodule;
-
+void GWToolbox::ThreadEntry(HMODULE dllmodule) {
 	LOG("Initializing API\n");
 	if (!GW::Api::Initialize()){
 		MessageBoxA(0, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0);
-		FreeLibraryAndExitThread(_dllmodule, EXIT_SUCCESS);
+		FreeLibraryAndExitThread(dllmodule, EXIT_SUCCESS);
 	}
 
 	GW::Gamethread();
@@ -81,10 +78,6 @@ void GWToolbox::ThreadEntry(HMODULE _dllmodule) {
 	LOG("Creating Config\n");
 	Config::Initialize();
 
-	LOG("Creating GWToolbox++\n");
-	instance_ = new GWToolbox();
-	GWToolbox& tb = GWToolbox::instance();
-
 	LOG("Installing dx hooks\n");
 	dx_hooker->AddHook(GW::dx9::kEndScene, (void*)endScene);
 	dx_hooker->AddHook(GW::dx9::kReset, (void*)resetScene);
@@ -103,29 +96,17 @@ void GWToolbox::ThreadEntry(HMODULE _dllmodule) {
 
 	ChatLogger::Init();
 
-	if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading
-		&& GW::Agents().GetAgentArray().valid()
-		&& GW::Agents().GetPlayer() != nullptr) {
-
-		DWORD playerNumber = GW::Agents().GetPlayer()->PlayerNumber;
-		ChatLogger::LogF(L"Hello %ls!", GW::Agents().GetPlayerNameByLoginNumber(playerNumber));
-	}
-
 	Application* app = Application::InstancePtr();
 
-	while (!tb.must_self_destruct_) { // wait until destruction
+	while (instanceptr() == nullptr || !instance().must_self_destruct_) { // wait until destruction
 		Sleep(10);
 
 #ifdef _DEBUG
-		if (GetAsyncKeyState(VK_END) & 1) {
-			tb.StartSelfDestruct();
-			break;
-		}
+		//if (GetAsyncKeyState(VK_END) & 1) {
+		//	instance().must_self_destruct_ = true;
+		//	break;
+		//}
 #endif
-	}
-
-	if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading) {
-		ChatLogger::Log(L"Bye!");
 	}
 
 	LOG("Destroying GWToolbox++\n");
@@ -139,13 +120,13 @@ void GWToolbox::ThreadEntry(HMODULE _dllmodule) {
 		LOG("Disabling GUI\n");
 		Application::InstancePtr()->Disable();
 		LOG("Closing settings\n");
-		tb.main_window->settings_panel().Close();
+		instance().main_window->settings_panel().Close();
 		LOG("saving health log\n");
-		tb.party_damage->SaveIni();
+		instance().party_damage->SaveIni();
 	}
 	Sleep(100);
 	LOG("Deleting config\n");
-	delete tb.chat_commands;
+	delete instance().chat_commands;
 	Sleep(100);
 	LOG("Restoring input hook\n");
 	SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
@@ -191,20 +172,28 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 		ImGuiIO& io = ImGui::GetIO();
 		switch (Message) {
 		case WM_LBUTTONDOWN: io.MouseDown[0] = true; break;
-		case WM_MBUTTONDOWN: io.MouseDown[2] = true; break;
-		case WM_MBUTTONUP: io.MouseDown[2] = false; break;
+		case WM_LBUTTONUP: io.MouseDown[0] = false; break;
+
+		case WM_MBUTTONDOWN: 
+			io.KeysDown[VK_MBUTTON] = true;
+			io.MouseDown[2] = true; 
+			break;
+		case WM_MBUTTONUP: 
+			io.KeysDown[VK_MBUTTON] = false;
+			io.MouseDown[2] = false; 
+			break;
 		case WM_MOUSEWHEEL: io.MouseWheel += GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f; break;
 		case WM_MOUSEMOVE:
-			io.MousePos.x = (signed short)(lParam);
-			io.MousePos.y = (signed short)(lParam >> 16);
+			io.MousePos.x = (float)GET_X_LPARAM(lParam);
+			io.MousePos.y = (float)GET_Y_LPARAM(lParam);
 			break;
 		case WM_KEYDOWN:
 			if (wParam < 256)
-				io.KeysDown[wParam] = 1;
+				io.KeysDown[wParam] = true;
 			break;
 		case WM_KEYUP:
 			if (wParam < 256)
-				io.KeysDown[wParam] = 0;
+				io.KeysDown[wParam] = false;
 			break;
 		case WM_CHAR: // You can also use ToAscii()+GetKeyboardState() to retrieve characters.
 			if (wParam > 0 && wParam < 0x10000)
@@ -221,29 +210,23 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 
 		// Send button up mouse events to both gw and osh, to avoid gw being stuck on mouse-down
 		case WM_LBUTTONUP:
-			io.MouseDown[0] = false;
 			input.ProcessMouseMessage(&msg);
-			tb.minimap->OnMouseUp(msg);
+			tb.minimap->WndProc(Message, wParam, lParam); 
+			//tb.minimap->OnMouseUp(msg);
 			break;
 		
 		// Send other mouse events to osh first and consume them if used
 		case WM_LBUTTONDOWN:
-			io.MouseDown[0] = true;
 		case WM_MOUSEMOVE:
 		case WM_LBUTTONDBLCLK:
 		case WM_MOUSEWHEEL:
-			if (GWToolbox::instance().right_mouse_pressed_) break;
+			if (tb.right_mouse_pressed_) break;
 			if (input.ProcessMouseMessage(&msg)) {
 				return true;
 			} else {
 				Application::Instance().clearFocus();
 			}
-			switch (Message) {
-			case WM_MOUSEMOVE: if (tb.minimap->OnMouseMove(msg)) return true; break;
-			case WM_LBUTTONDOWN: if (tb.minimap->OnMouseDown(msg)) return true; break;
-			case WM_MOUSEWHEEL: if (tb.minimap->OnMouseWheel(msg)) return true; break;
-			case WM_LBUTTONDBLCLK: if (tb.minimap->OnMouseDblClick(msg)) return true; break;
-			}
+			if (tb.minimap->WndProc(Message, wParam, lParam)) return true;
 			break;
 
 		// send keyboard messages to gw, osh and toolbox
@@ -259,21 +242,21 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 		case WM_MBUTTONDOWN:
 		case WM_MBUTTONUP:
 			// send input to OSHgui for creating hotkeys and general UI stuff
-			if (GWToolbox::instance().capture_input()) {
+			if (tb.capture_input()) {
 				input.ProcessMessage(&msg);
 				return true;
 			}
 
 			// send input to chat commands for camera movement
-			if (GWToolbox::instance().chat_commands->ProcessMessage(&msg)) {
+			if (tb.chat_commands->ProcessMessage(&msg)) {
 				return true;
 			}
 
 			// send input to toolbox to trigger hotkeys
-			GWToolbox::instance().main_window->hotkey_panel().ProcessMessage(&msg);
+			tb.main_window->hotkey_panel().ProcessMessage(&msg);
 
 			// block alt-enter if in borderless to avoid graphic glitches (no reason to go fullscreen anyway)
-			if (GWToolbox::instance().other_settings->borderless_window
+			if (tb.other_settings->borderless_window
 				&& (GetAsyncKeyState(VK_MENU) < 0)
 				&& (GetAsyncKeyState(VK_RETURN) < 0)) {
 				return true;
@@ -282,9 +265,9 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 			break;
 
 		case WM_SIZE:
-			GWToolbox::instance().new_screen_size_ = SizeI(LOWORD(lParam), HIWORD(lParam));
-			if (GWToolbox::instance().new_screen_size_ != GWToolbox::instance().old_screen_size_) {
-				GWToolbox::instance().must_resize_ = true;
+			tb.new_screen_size_ = SizeI(LOWORD(lParam), HIWORD(lParam));
+			if (tb.new_screen_size_ != tb.old_screen_size_) {
+				tb.must_resize_ = true;
 			}
 			break;
 
@@ -302,87 +285,83 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 	return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
 }
 
-void GWToolbox::CreateGui(IDirect3DDevice9* pDevice) {
+GWToolbox::GWToolbox(IDirect3DDevice9* pDevice) : 
+	must_self_destruct_(false),
+	capture_input_(false),
+	right_mouse_pressed_(false),
+	must_resize_(false) {
 
 	LOG("Creating GUI\n");
 	LOG("Creating Renderer\n");
 	renderer = new Direct3D9Renderer(pDevice);
 
-	GWToolbox::instance().old_screen_size_ = renderer->GetDisplaySize();
-	GWToolbox::instance().new_screen_size_ = renderer->GetDisplaySize();
+	old_screen_size_ = renderer->GetDisplaySize();
+	new_screen_size_ = renderer->GetDisplaySize();
 
 	LOG("Creating OSH Application\n");
 	Application::Initialize(std::unique_ptr<Direct3D9Renderer>(renderer));
 
 	Application& app = Application::Instance();
 
-	GWToolbox::instance().LoadTheme();
-	
+	LoadTheme();
+
 	LOG("Loading font\n");
 	app.SetDefaultFont(GuiUtils::getTBFont(10.0f, true));
 	app.SetCursorEnabled(false);
-	try {
 
-		LOG("Creating main window\n");
-		GWToolbox& tb = GWToolbox::instance();
-		tb.main_window = new MainWindow();
-		tb.main_window->SetFont(app.GetDefaultFont());
-		std::shared_ptr<MainWindow> shared_ptr = std::shared_ptr<MainWindow>(tb.main_window);
-		app.Run(shared_ptr);
+	LOG("Creating main window\n");
+	main_window = new MainWindow();
+	main_window->SetFont(app.GetDefaultFont());
+	std::shared_ptr<MainWindow> shared_ptr = std::shared_ptr<MainWindow>(main_window);
+	app.Run(shared_ptr);
 
-		tb.modules.push_back(tb.chat_filter = new ChatFilter());
-		tb.modules.push_back(tb.chat_commands = new ChatCommands());
-		tb.modules.push_back(tb.other_settings = new OtherSettings());
+	modules.push_back(chat_filter = new ChatFilter());
+	modules.push_back(chat_commands = new ChatCommands());
+	modules.push_back(other_settings = new OtherSettings());
 
-		tb.modules.push_back(tb.timer_window = new TimerWindow());
-		tb.modules.push_back(tb.health_window = new HealthWindow());
-		tb.modules.push_back(tb.distance_window = new DistanceWindow());
-		tb.modules.push_back(tb.main_window);
-		tb.bonds_window = new BondsWindow();
-		tb.party_damage = new PartyDamage();
-		tb.minimap = new Minimap();
+	modules.push_back(timer_window = new TimerWindow());
+	modules.push_back(health_window = new HealthWindow());
+	modules.push_back(distance_window = new DistanceWindow());
+	modules.push_back(minimap = new Minimap());
+	modules.push_back(main_window);
+	bonds_window = new BondsWindow();
+	party_damage = new PartyDamage();
 
-		LOG("Enabling app\n");
-		app.Enable();
-		tb.initialized_ = true;
-		LOG("Gui Created\n");
-		LOG("Saving theme\n");
-		tb.SaveTheme();
+	LOG("Enabling app\n");
+	app.Enable();
+	LOG("Gui Created\n");
+	LOG("Saving theme\n");
+	SaveTheme();
 
-		[]() {
-			for (ToolboxModule* module : GWToolbox::instance().modules) {
-				module->LoadSettings(Config::inifile_);
-			}
-		}();
-		SettingManager::LoadAll();
-		SettingManager::ApplyAll();
+	for (ToolboxModule* module : modules) {
+		module->LoadSettings(Config::inifile_);
+	}
 
-	} catch (Misc::FileNotFoundException e) {
-		LOG("Error: file not found %s\n", e.what());
-		GWToolbox::instance().StartSelfDestruct();
+	SettingManager::LoadAll();
+	SettingManager::ApplyAll();
+
+	if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading
+		&& GW::Agents().GetAgentArray().valid()
+		&& GW::Agents().GetPlayer() != nullptr) {
+
+		DWORD playerNumber = GW::Agents().GetPlayer()->PlayerNumber;
+		ChatLogger::Log("Hello %ls!", GW::Agents().GetPlayerNameByLoginNumber(playerNumber));
 	}
 }
 
 // All rendering done here.
 HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 
-	static bool init = false;
-	if (!init) {
-		init = true;
-		__try {
-			GWToolbox::CreateGui(pDevice);
-		} __except (EXCEPT_EXPRESSION_LOOP) {
-			LOG("Badness happened! (creating gui)\n");
-		}
+	if (instanceptr() == nullptr) {
 
-		[&pDevice]() {
-			ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), pDevice);
-			ImGuiIO& io = ImGui::GetIO();
-			io.MouseDrawCursor = false;
-			static std::string imgui_inifile = GuiUtils::getPath("interface.ini");
-			io.IniFilename = imgui_inifile.c_str();
-			GuiUtils::LoadFonts();
-		}();
+		instance_ = new GWToolbox(pDevice);
+
+		ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), pDevice);
+		ImGuiIO& io = ImGui::GetIO();
+		io.MouseDrawCursor = false;
+		static std::string imgui_inifile = GuiUtils::getPath("interface.ini");
+		io.IniFilename = imgui_inifile.c_str();
+		GuiUtils::LoadFonts();
 	}
 
 	GWToolbox& tb = GWToolbox::instance();
@@ -416,42 +395,31 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 		if (location != tb.main_window->GetLocation()) {
 			tb.main_window->SetLocation(location);
 		}
+		ImGui_ImplDX9_NewFrame();
 
-		if (tb.initialized_) {
-			ImGui_ImplDX9_NewFrame();
-
-			__try {
-				[]() {
-					for (ToolboxModule* module : GWToolbox::instance().modules) {
-						module->Update();
-					}
-				}();
-				tb.bonds_window->Main();
-				tb.party_damage->Main();
-			} __except (EXCEPT_EXPRESSION_LOOP) {
-				LOG("Badness happened! (in main thread)\n");
-			}
-
-			__try {
-				[](IDirect3DDevice9* pDevice) {
-					for (ToolboxModule* module : GWToolbox::instance().modules) {
-						module->Draw(pDevice);
-					}
-				}(pDevice);
-				tb.party_damage->Draw();
-				tb.bonds_window->Draw();
-			} __except (EXCEPT_EXPRESSION_LOOP) {
-				LOG("Badness happened! (in render thread)\n");
-			}
-			ImGui::ShowTestWindow();
-			ImGui::Render();
+		for (ToolboxModule* module : tb.modules) {
+			module->Update();
 		}
+		tb.bonds_window->Main();
+		tb.party_damage->Main();
 
-		tb.minimap->Render(pDevice);
+		for (ToolboxModule* module : tb.modules) {
+			module->Draw(pDevice);
+		}
+		tb.party_damage->Draw();
+		tb.bonds_window->Draw();
+		ImGui::ShowTestWindow();
+		ImGui::Render();
 
 		renderer->BeginRendering();
 		Application::InstancePtr()->Render();
 		renderer->EndRendering();
+
+		if (tb.must_self_destruct_) {
+			if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading) {
+				ChatLogger::Log("Bye!");
+			}
+		}
 	}
 
 	GW::dx9::EndScene_t endscene_orig = dx_hooker->original<GW::dx9::EndScene_t>(GW::dx9::kEndScene);
@@ -481,7 +449,7 @@ HRESULT WINAPI GWToolbox::resetScene(IDirect3DDevice9* pDevice,
 }
 
 void GWToolbox::ResizeUI() {
-	if (initialized_ && adjust_on_resize_) {
+	if (GWToolbox::instanceptr()) {
 		main_window->ResizeUI(old_screen_size_, new_screen_size_);
 		//timer_window_->ResizeUI(old_screen_size_, new_screen_size_);
 		//health_window_->ResizeUI(old_screen_size_, new_screen_size_);

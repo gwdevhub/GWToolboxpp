@@ -1,17 +1,23 @@
 #pragma once
 
+#include "Color.h"
+
 #include "VBuffer.h"
+
 
 class RangeRenderer : public VBuffer {
 private:
 	static const int num_circles = 5;
 	static const int circle_points = 64;
 	static const int circle_vertices = 65;
-public:
-	RangeRenderer();
 
+public:
 	void Render(IDirect3DDevice9* device) override;
 	void SetDrawCenter(bool b) { draw_center_ = b; }
+
+	void DrawSettings();
+	void LoadSettings(CSimpleIni* ini, const char* section);
+	void SaveSettings(CSimpleIni* ini, const char* section) const;
 
 private:
 	void CreateCircle(D3DVertex* vertices, float radius, DWORD color);
@@ -19,14 +25,14 @@ private:
 
 	bool HaveHos();
 
-	bool checkforhos_;
-	bool havehos_;
+	bool checkforhos_ = true;
+	bool havehos_ = false;
 
-	bool draw_center_;
+	bool draw_center_ = false;
 
-	DWORD color_range_hos;
-	DWORD color_range_aggro;
-	DWORD color_range_cast;
-	DWORD color_range_spirit;
-	DWORD color_range_compass;
+	Color_t color_range_hos;
+	Color_t color_range_aggro;
+	Color_t color_range_cast;
+	Color_t color_range_spirit;
+	Color_t color_range_compass;
 };

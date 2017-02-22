@@ -7,11 +7,21 @@
 #include <GWCA\Context\GameContext.h>
 #include <GWCA\Context\WorldContext.h>
 
-#include "MinimapUtils.h"
-
-SymbolsRenderer::SymbolsRenderer() {
-	color_quest = MinimapUtils::IniReadColor2("color_quest", "0xFF22EF22");
-	color_north = MinimapUtils::IniReadColor2("color_north", "0xFFFF8000");
+void SymbolsRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
+	color_quest = Colors::IniGet(ini, section, "color_quest", 0xFF22EF22);
+	color_north = Colors::IniGet(ini, section, "color_north", 0xFFFF8000);
+	color_modifier = Colors::IniGet(ini, section, "color_symbols_modifier", 0x001E1E1E);
+	Invalidate();
+}
+void SymbolsRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
+	Colors::IniSet(ini, section, "color_quest", color_quest);
+	Colors::IniSet(ini, section, "color_north", color_north);
+	Colors::IniSet(ini, section, "color_symbols_modifier", color_modifier);
+}
+void SymbolsRenderer::DrawSettings() {
+	if (Colors::DrawSetting("Quest Marker", &color_quest)) Invalidate();
+	if (Colors::DrawSetting("North Marker", &color_north)) Invalidate();
+	if (Colors::DrawSetting("Symbol Modifier", &color_modifier, false)) Invalidate();
 }
 
 void SymbolsRenderer::Initialize(IDirect3DDevice9* device) {
@@ -26,53 +36,49 @@ void SymbolsRenderer::Initialize(IDirect3DDevice9* device) {
 	buffer_->Lock(0, sizeof(D3DVertex) * vertex_count,
 		(VOID**)&vertices, D3DLOCK_DISCARD);
 
-	auto AddVertex = [&vertices, &offset](float x, float y, MinimapUtils::Color color) -> void {
+	auto AddVertex = [&vertices, &offset](float x, float y, Color_t color) -> void {
 		vertices[0].x = x;
 		vertices[0].y = y;
 		vertices[0].z = 0.0f;
-		vertices[0].color = color.GetDXColor();
+		vertices[0].color = color;
 		++vertices;
 		++offset;
 	};
 
-	MinimapUtils::Color color_outside = MinimapUtils::Color(0, -30, -30, -30);
-	MinimapUtils::Color color_middle = MinimapUtils::Color(0, 0, 0, 0);
-	MinimapUtils::Color color_center = MinimapUtils::Color(0, 30, 30, 30);
-
 	// === Star ===
 	star_offset = offset;
+	const float PI = 3.1415927f;
 	float star_size_big = 300.0f;
 	float star_size_small = 150.0f;
 	for (unsigned int i = 0; i < star_ntriangles; ++i) {
-		float angle1 = 2 * (i + 0) * fPI / star_ntriangles;
-		float angle2 = 2 * (i + 1) * fPI / star_ntriangles;
+		float angle1 = 2 * (i + 0) * PI / star_ntriangles;
+		float angle2 = 2 * (i + 1) * PI / star_ntriangles;
 		float size1 = ((i + 0) % 2 == 0 ? star_size_small : star_size_big);
 		float size2 = ((i + 1) % 2 == 0 ? star_size_small : star_size_big);
-		MinimapUtils::Color c1 = ((i + 0) % 2 == 0 ? color_middle : color_outside);
-		MinimapUtils::Color c2 = ((i + 1) % 2 == 0 ? color_middle : color_outside);
-		AddVertex(std::cos(angle1) * size1, std::sin(angle1) * size1, c1 + color_quest);
-		AddVertex(std::cos(angle2) * size2, std::sin(angle2) * size2, c2 + color_quest);
-		AddVertex(0.0f, 0.0f, color_center + color_quest);
+		Color_t c1 = ((i + 0) % 2 == 0 ? color_quest : Colors::Sub(color_quest, color_modifier));
+		Color_t c2 = ((i + 1) % 2 == 0 ? color_quest : Colors::Sub(color_quest, color_modifier));
+		AddVertex(std::cos(angle1) * size1, std::sin(angle1) * size1, c1);
+		AddVertex(std::cos(angle2) * size2, std::sin(angle2) * size2, c2);
+		AddVertex(0.0f, 0.0f, Colors::Add(color_quest, color_modifier));
 	}
 
 	// === Arrow (quest) ===
 	arrow_offset = offset;
-	AddVertex(   0.0f, -125.0f, color_center + color_quest);
-	AddVertex( 250.0f, -250.0f, color_middle + color_quest);
-	AddVertex(   0.0f,  250.0f, color_middle + color_quest);
-	AddVertex(   0.0f,  250.0f, color_middle + color_quest);
-	AddVertex(-250.0f, -250.0f, color_middle + color_quest);
-	AddVertex(   0.0f, -125.0f, color_center + color_quest);
-
+	AddVertex(   0.0f, -125.0f, Colors::Add(color_quest, color_modifier));
+	AddVertex( 250.0f, -250.0f, color_quest);
+	AddVertex(   0.0f,  250.0f, color_quest);
+	AddVertex(   0.0f,  250.0f, color_quest);
+	AddVertex(-250.0f, -250.0f, color_quest);
+	AddVertex(   0.0f, -125.0f, Colors::Add(color_quest, color_modifier));
 
 	// === Arrow (north) ===
 	north_offset = offset;
-	AddVertex(   0.0f, -375.0f, color_center + color_north);
-	AddVertex( 250.0f, -500.0f, color_middle + color_north);
-	AddVertex(   0.0f,    0.0f, color_middle + color_north);
-	AddVertex(   0.0f,    0.0f, color_middle + color_north);
-	AddVertex(-250.0f, -500.0f, color_middle + color_north);
-	AddVertex(   0.0f, -375.0f, color_center + color_north);
+	AddVertex(   0.0f, -375.0f, Colors::Add(color_north, color_modifier));
+	AddVertex( 250.0f, -500.0f, color_north);
+	AddVertex(   0.0f,    0.0f, color_north);
+	AddVertex(   0.0f,    0.0f, color_north);
+	AddVertex(-250.0f, -500.0f, color_north);
+	AddVertex(   0.0f, -375.0f, Colors::Add(color_north, color_modifier));
 
 	buffer_->Unlock();
 }
@@ -89,9 +95,10 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device) {
 	device->SetFVF(D3DFVF_CUSTOMVERTEX);
 	device->SetStreamSource(0, buffer_, 0, sizeof(D3DVertex));
 
+	const float PI = 3.1415927f;
 	static float tau = 0.0f;
 	tau += 0.05f;
-	if (tau > 10 * fPI) tau -= 10 * fPI;
+	if (tau > 10 * PI) tau -= 10 * PI;
 	D3DXMATRIX translate, scale, rotate, world;
 
 	

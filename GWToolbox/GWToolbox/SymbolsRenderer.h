@@ -5,20 +5,25 @@
 #include <GWCA\GameEntities\Position.h>
 
 #include "VBuffer.h"
-#include "MinimapUtils.h"
+#include "Color.h"
 
 class SymbolsRenderer : public VBuffer {
 public:
-	SymbolsRenderer();
+	SymbolsRenderer() {}
 
 	void Render(IDirect3DDevice9* device) override;
+
+	void DrawSettings();
+	void LoadSettings(CSimpleIni* ini, const char* section);
+	void SaveSettings(CSimpleIni* ini, const char* section) const;
 
 private:
 
 	void Initialize(IDirect3DDevice9* device) override;
 
-	MinimapUtils::Color color_quest;
-	MinimapUtils::Color color_north;
+	Color_t color_quest;
+	Color_t color_north;
+	Color_t color_modifier;
 
 	const DWORD star_ntriangles = 16;
 	DWORD star_offset;

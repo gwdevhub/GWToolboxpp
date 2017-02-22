@@ -14,7 +14,7 @@
 class TravelPanel : public ToolboxPanel {
 public:
 	const int n_outposts = 181;
-	const char* Name() override { return "Travel Panel"; }
+	const char* Name() const override { return "Travel Panel"; }
 
 	TravelPanel();
 
@@ -25,15 +25,18 @@ public:
 
 	void DrawSettings() override;
 	void LoadSettings(CSimpleIni* ini) override;
-	void SaveSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) const override;
 
 private:
+	// ==== Helpers ====
 	void TravelButton(const char* text, int x_idx, GW::Constants::MapID mapid);
 	GW::Constants::MapID IndexToOutpostID(int index);
 
+	// ==== Travel variables ====
 	GW::Constants::District district;
 	int district_number;
 
+	// ==== Favorites ====
 	int fav_count;
 	std::vector<int> fav_index;
 };

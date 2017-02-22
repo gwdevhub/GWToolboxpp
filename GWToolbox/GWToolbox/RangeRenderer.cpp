@@ -2,24 +2,39 @@
 
 #include <d3dx9math.h>
 
+#include <imgui.h>
+
 #include <GWCA\GWCA.h>
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\Managers\SkillbarMgr.h>
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\CameraMgr.h>
 
-#include "MinimapUtils.h"
+#include "GuiUtils.h"
 
-RangeRenderer::RangeRenderer() {
-	color_range_hos = MinimapUtils::IniReadColor("color_range_hos", "0xFF881188");
-	color_range_aggro = MinimapUtils::IniReadColor("color_range_aggro", "0xFF994444");
-	color_range_cast = MinimapUtils::IniReadColor("color_range_cast", "0xFF117777");
-	color_range_spirit = MinimapUtils::IniReadColor("color_range_spirit", "0xFF337733");
-	color_range_compass = MinimapUtils::IniReadColor("color_range_compass", "0xFF666611");
-
-	checkforhos_ = true;
-	havehos_ = false;
-	draw_center_ = false;
+void RangeRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
+	color_range_hos = Colors::IniGet(ini, section, "color_range_hos", 0xFF881188);
+	color_range_aggro = Colors::IniGet(ini, section, "color_range_aggro", 0xFF994444);
+	color_range_cast = Colors::IniGet(ini, section, "color_range_cast", 0xFF117777);
+	color_range_spirit = Colors::IniGet(ini, section, "color_range_spirit", 0xFF337733);
+	color_range_compass = Colors::IniGet(ini, section, "color_range_compass", 0xFF666611);
+	Invalidate();
+}
+void RangeRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
+	Colors::IniSet(ini, section, "color_range_hos", color_range_hos);
+	Colors::IniSet(ini, section, "color_range_aggro", color_range_aggro);
+	Colors::IniSet(ini, section, "color_range_cast", color_range_cast);
+	Colors::IniSet(ini, section, "color_range_spirit", color_range_spirit);
+	Colors::IniSet(ini, section, "color_range_compass", color_range_compass);
+}
+void RangeRenderer::DrawSettings() {
+	bool changed = false;
+	changed |= Colors::DrawSetting("HoS range", &color_range_hos);
+	changed |= Colors::DrawSetting("Aggro range", &color_range_aggro);
+	changed |= Colors::DrawSetting("Cast range", &color_range_cast);
+	changed |= Colors::DrawSetting("Spirit range", &color_range_spirit);
+	changed |= Colors::DrawSetting("Compass range", &color_range_compass);
+	if (changed) Invalidate();
 }
 
 void RangeRenderer::CreateCircle(D3DVertex* vertices, float radius, DWORD color) {

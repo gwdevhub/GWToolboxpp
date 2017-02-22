@@ -15,645 +15,311 @@
 #include "Config.h"
 #include "BuildPanel.h"
 
+unsigned int TBHotkey::cur_ui_id = 0;
 
-using namespace OSHGui;
+TBHotkey* TBHotkey::HotkeyFactory(CSimpleIni* ini, const char* section) {
+	std::string str(section);
+	if (str.compare(0, 6, "hotkey") != 0) return nullptr;
+	size_t first_sep = 6;
+	size_t second_sep = str.find(L':', first_sep);
+	std::string id = str.substr(first_sep + 1, second_sep - first_sep - 1);
+	std::string type = str.substr(second_sep + 1);
 
-TBHotkey::TBHotkey(OSHGui::Control* parent, Key key, Key modifier, bool active, std::string ini_section)
-	: OSHGui::Panel(parent), active_(active), key_(key), modifier_(modifier), ini_section_(ini_section) {
-
-	pressed_ = false;
-
-	SetBackColor(Drawing::Color::Empty());
-	SetSize(SizeI(WIDTH, HEIGHT));
-
-	CheckBox* checkbox = new CheckBox(this);
-	checkbox->SetChecked(active);
-	checkbox->SetText("");
-	checkbox->SetLocation(PointI(HOTKEY_X, HOTKEY_Y + 5));
-	checkbox->GetCheckedChangedEvent() += CheckedChangedEventHandler([this, checkbox, ini_section](Control*) {
-		this->set_active(checkbox->GetChecked());
-		Config::IniWrite(ini_section.c_str(), TBHotkey::IniKeyActive(), checkbox->GetChecked());
-	});
-	AddControl(checkbox);
-
-	HotkeyControl* hotkey_button = new HotkeyControl(this);
-	hotkey_button->SetSize(SizeI(WIDTH - checkbox->GetRight() - 60 - HSPACE * 2, LINE_HEIGHT));
-	hotkey_button->SetLocation(PointI(checkbox->GetRight() + HSPACE, HOTKEY_Y));
-	hotkey_button->SetHotkey(key);
-	hotkey_button->SetHotkeyModifier(modifier);
-	hotkey_button->GetFocusGotEvent() += FocusGotEventHandler([hotkey_button](Control*) {
-		GWToolbox::instance().set_capture_input(true);
-		hotkey_button->SetBackColor(Drawing::Color::Red());
-	});
-	hotkey_button->GetFocusLostEvent() += FocusLostEventHandler([hotkey_button, this](Control*, Control*) {
-		GWToolbox::instance().set_capture_input(false);
-		Misc::AnsiString controltype = Control::ControlTypeToString(GetType());
-		Drawing::Theme::ControlTheme theme = Application::Instance().GetTheme().GetControlColorTheme(controltype);
-		hotkey_button->SetBackColor(theme.BackColor);
-	});
-	hotkey_button->GetHotkeyChangedEvent() += HotkeyChangedEventHandler(
-		[this, hotkey_button, ini_section](Control*) {
-		Key key = hotkey_button->GetHotkey();
-		Key modifier = hotkey_button->GetHotkeyModifier();
-		this->set_key(key);
-		this->set_modifier(modifier);
-		Config::IniWrite(ini_section.c_str(),
-			this->IniKeyHotkey(), (long)key);
-		Config::IniWrite(ini_section.c_str(),
-			this->IniKeyModifier(), (long)modifier);
-	});
-	AddControl(hotkey_button);
-
-	Button* run_button = new Button(this);
-	run_button->SetText("Run");
-	run_button->SetSize(SizeI(60, LINE_HEIGHT));
-	run_button->SetLocation(PointI(WIDTH - 60, HOTKEY_Y));
-	run_button->GetClickEvent() += ClickEventHandler([this](Control*) {
-		this->exec();
-	});
-	AddControl(run_button);
-}
-
-bool TBHotkey::isLoading() const {
-	return GW::Map().GetInstanceType() == GW::Constants::InstanceType::Loading;
-}
-
-bool TBHotkey::isExplorable() const {
-	return GW::Map().GetInstanceType() == GW::Constants::InstanceType::Explorable;
-}
-bool TBHotkey::isOutpost() const {
-	return GW::Map().GetInstanceType() == GW::Constants::InstanceType::Outpost;
-}
-
-void TBHotkey::PopulateGeometry() {
-	Panel::PopulateGeometry();
-	Graphics g(*geometry_);
-	g.DrawLine(GetForeColor(), PointI(0, 1), PointI(WIDTH, 1));
-}
-
-HotkeySendChat::HotkeySendChat(OSHGui::Control* parent, Key key, Key modifier, 
-	bool active, std::string ini_section, std::string msg, char channel)
-	: TBHotkey(parent, key, modifier, active, ini_section), msg_(msg), channel_(channel) {
-	
-	Label* label = new Label(this);
-	label->SetLocation(PointI(ITEM_X, LABEL_Y));
-	label->SetText("Send Chat");
-	AddControl(label);
-
-	ComboBox* combo = new ComboBox(this);
-	combo->AddItem("/");
-	combo->AddItem("!");
-	combo->AddItem("@");
-	combo->AddItem("#");
-	combo->AddItem("$");
-	combo->AddItem("%");
-	combo->SetSelectedIndex(ChannelToIndex(channel));
-	combo->SetSize(SizeI(30, LINE_HEIGHT));
-	combo->SetLocation(PointI(label->GetRight() + HSPACE, ITEM_Y));
-	combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
-		[this, combo, ini_section](Control*) {
-		char channel = this->IndexToChannel(combo->GetSelectedIndex());
-		this->set_channel(channel);
-		Config::IniWrite(ini_section.c_str(),
-			this->IniKeyChannel(), std::string(1, channel).c_str());
-		GWToolbox::instance().main_window->hotkey_panel().UpdateDeleteCombo();
-	});
-	controls_.push_front(combo);
-	
-	TextBox* text_box = new TextBox(this);
-	text_box->SetText(msg);
-	text_box->SetSize(SizeI(WIDTH - combo->GetRight() - HSPACE, LINE_HEIGHT));
-	text_box->SetLocation(PointI(combo->GetRight() + HSPACE, ITEM_Y));
-	text_box->GetTextChangedEvent() += TextChangedEventHandler(
-		[this, text_box, ini_section](Control*) {
-		std::string text = text_box->GetText();
-		this->set_msg(text);
-		Config::IniWrite(ini_section.c_str(),
-			this->IniKeyMsg(), text.c_str());
-		GWToolbox::instance().main_window->hotkey_panel().UpdateDeleteCombo();
-	});
-	text_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::instance().set_capture_input(true);
-	});
-	text_box->GetFocusLostEvent() += FocusLostEventHandler([](Control*, Control*) {
-		GWToolbox::instance().set_capture_input(false);
-	});
-	AddControl(text_box);
-}
-
-int HotkeySendChat::ChannelToIndex(char channel) {
-	switch (channel) {
-	case '/': return 0;
-	case '!': return 1;
-	case '@': return 2;
-	case '#': return 3;
-	case '$': return 4;
-	case '%': return 5;
-	default:
-		LOG("Warning - bad channel %lc\n", channel);
-		return 0;
+	if (type.compare(HotkeySendChat::IniSection()) == 0) {
+		return new HotkeySendChat(ini, section);
+	} else if (type.compare(HotkeyUseItem::IniSection()) == 0) {
+		return new HotkeyUseItem(ini, section);
+	} else if (type.compare(HotkeyDropUseBuff::IniSection()) == 0) {
+		return new HotkeyDropUseBuff(ini, section);
+	} else if (type.compare(HotkeyToggle::IniSection()) == 0) {
+		return new HotkeyToggle(ini, section);
+	} else if (type.compare(HotkeyAction::IniSection()) == 0) {
+		return new HotkeyAction(ini, section);
+	} else if (type.compare(HotkeyTarget::IniSection()) == 0) {
+		return new HotkeyTarget(ini, section);
+	} else if (type.compare(HotkeyMove::IniSection()) == 0) {
+		return new HotkeyMove(ini, section);
+	} else if (type.compare(HotkeyDialog::IniSection()) == 0) {
+		return new HotkeyDialog(ini, section);
+	} else if (type.compare(HotkeyPingBuild::IniSection()) == 0) {
+		return new HotkeyPingBuild(ini, section);
+	} else {
+		return nullptr;
 	}
 }
 
-char HotkeySendChat::IndexToChannel(int index) {
-	switch (index) {
-	case 0: return '/';
-	case 1: return '!';
-	case 2: return '@';
-	case 3: return '#';
-	case 4: return '$';
-	case 5: return '%';
-	default:
-		LOG("Warning - bad index %d\n", index);
-		return '/';
-	}
+TBHotkey::TBHotkey(CSimpleIni* ini, const char* section) : ui_id(++cur_ui_id) {
+	key = ini ? ini->GetLongValue(section, "hotkey", 0) : 0;
+	modifier = ini ? ini->GetLongValue(section, "modifier", 0) : 0;
+	active = ini ? ini->GetBoolValue(section, "active", true) : true;
 }
+void TBHotkey::Save(CSimpleIni* ini, const char* section) const {
+	ini->SetLongValue(section, "hotkey", (int)key);
+	ini->SetLongValue(section, "modifier", (int)modifier);
+	ini->SetBoolValue(section, "active", active);
+}
+void TBHotkey::Draw(Op* op) {
+	// === Header ===
+	char header[256];
+	char desbuf[128];
+	char keybuf[128];
+	Description(desbuf, 128);
+	ModKeyName((long)modifier, (long)key, keybuf, 128);
+	sprintf_s(header, "%s [%s]###header%u", desbuf, keybuf, ui_id);
+	if (ImGui::CollapsingHeader(header)) {
+		ImGui::PushID(ui_id);
+		ImGui::PushItemWidth(-70.0f);
+		// === Specific section ===
+		//ImGui::Text("Functionality:");
+		Draw();
 
-HotkeyUseItem::HotkeyUseItem(OSHGui::Control* parent, Key key, Key modifier, 
-	bool active, std::string ini_section, UINT item_id_, std::string item_name_) :
-	TBHotkey(parent, key, modifier, active, ini_section), 
-	item_id_(item_id_), 
-	item_name_(item_name_) {
-
-	Label* label = new Label(this);
-	label->SetLocation(PointI(ITEM_X, LABEL_Y));
-	label->SetText("Use Item");
-	AddControl(label);
-
-	Label* label_id = new Label(this);
-	label_id->SetLocation(PointI(label->GetRight() + HSPACE, LABEL_Y));
-	label_id->SetText("ID:");
-	AddControl(label_id);
-
-	int width_left = WIDTH - label_id->GetRight();
-	TextBox* id_box = new TextBox(this);
-	id_box->SetText(std::to_string(item_id_));
-	id_box->SetSize(SizeI(width_left / 2 - HSPACE / 2, LINE_HEIGHT));
-	id_box->SetLocation(PointI(label_id->GetRight(), ITEM_Y));
-	id_box->GetTextChangedEvent() += TextChangedEventHandler(
-		[this, id_box, ini_section](Control*) {
-		try {
-			long id = std::stol(id_box->GetText());
-			this->set_item_id((UINT)id);
-			Config::IniWrite(ini_section.c_str(),
-				this->IniKeyItemID(), id);
-			GWToolbox::instance().main_window->hotkey_panel().UpdateDeleteCombo();
-		} catch (...) {}
-	});
-	id_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::instance().set_capture_input(true);
-	});
-	id_box->GetFocusLostEvent() += FocusLostEventHandler([id_box](Control*, Control*) {
-		GWToolbox::instance().set_capture_input(false);
-		try {
-			std::stol(id_box->GetText());
-			GWToolbox::instance().main_window->hotkey_panel().UpdateDeleteCombo();
-		} catch (...) {
-			id_box->SetText("0");
+		// === Hotkey section ===
+		ImGui::Separator();
+		//ImGui::Text("Hotkey:");
+		ImGui::Checkbox("###active", &active);
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("The hotkey can trigger only when selected");
+		ImGui::SameLine();
+		static LONG newkey = 0;
+		char keybuf2[128];
+		sprintf_s(keybuf2, "Hotkey: %s", keybuf);
+		if (ImGui::Button(keybuf2, ImVec2(-70.0f, 0))) {
+			ImGui::OpenPopup("Select Hotkey");
+			newkey = 0;
 		}
-	});
-	AddControl(id_box);
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Click to change hotkey");
+		if (ImGui::BeginPopup("Select Hotkey")) {
+			*op = Op_BlockInput;
+			ImGui::Text("Press key");
+			int newmod = 0;
+			if (ImGui::GetIO().KeyCtrl) newmod |= Key_Control;
+			if (ImGui::GetIO().KeyAlt) newmod |= Key_Alt;
+			if (ImGui::GetIO().KeyShift) newmod |= Key_Shift;
 
-	TextBox* name_box = new TextBox(this);
-	name_box->SetText(item_name_.c_str());
-	name_box->SetSize(SizeI(width_left / 2 - HSPACE / 2, LINE_HEIGHT));
-	name_box->SetLocation(PointI(id_box->GetRight() + HSPACE , ITEM_Y));
-	name_box->GetTextChangedEvent() += TextChangedEventHandler(
-		[this, name_box, ini_section](Control*) {
-		std::string text = name_box->GetText();
-		this->set_item_name(text);
-		Config::IniWrite(ini_section.c_str(),
-			this->IniKeyItemName(), text.c_str());
-		GWToolbox::instance().main_window->hotkey_panel().UpdateDeleteCombo();
-	});
-	name_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::instance().set_capture_input(true);
-	});
-	name_box->GetFocusLostEvent() += FocusLostEventHandler([](Control*, Control*) {
-		GWToolbox::instance().set_capture_input(false);
-	});
-	AddControl(name_box);
-}
-
-HotkeyDropUseBuff::HotkeyDropUseBuff(OSHGui::Control* parent, Key key, Key modifier, 
-	bool active, std::string ini_section, GW::Constants::SkillID id) :
-	TBHotkey(parent, key, modifier, active, ini_section), id_(id) {
-
-	Label* label = new Label(this);
-	label->SetLocation(PointI(ITEM_X, LABEL_Y));
-	label->SetText("Drop / Use Buff");
-	AddControl(label);
-
-	ComboBox* combo = new ComboBox(this);
-	combo->AddItem("Recall");
-	combo->AddItem("UA");
-	combo->SetSize(SizeI(WIDTH - label->GetRight() - HSPACE, LINE_HEIGHT));
-	combo->SetLocation(PointI(label->GetRight() + HSPACE, ITEM_Y));
-	switch (id) {
-	case GW::Constants::SkillID::Recall:
-		combo->SetSelectedIndex(0);
-		break;
-	case GW::Constants::SkillID::Unyielding_Aura:
-		combo->SetSelectedIndex(1);
-		break;
-	default:
-		combo->AddItem(std::to_string(static_cast<int>(id)));
-		combo->SetSelectedIndex(2);
-		break;
-	}
-	combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
-		[this, combo, ini_section](Control*) {
-		GW::Constants::SkillID skillID = this->IndexToSkillID(combo->GetSelectedIndex());
-		this->set_id(skillID);
-		Config::IniWrite(ini_section.c_str(),
-			this->IniKeySkillID(), (long)skillID);
-		GWToolbox::instance().main_window->hotkey_panel().UpdateDeleteCombo();
-	});
-	combo_ = combo;
-	controls_.push_front(combo);
-}
-
-GW::Constants::SkillID HotkeyDropUseBuff::IndexToSkillID(int index) {
-	switch (index) {
-	case 0: return GW::Constants::SkillID::Recall;
-	case 1: return GW::Constants::SkillID::Unyielding_Aura;
-	case 2: 
-		if (combo_->GetItemsCount() == 3) {
-			std::string s = combo_->GetItem(2);
-			try {
-				int i = std::stoi(s);
-				return static_cast<GW::Constants::SkillID>(i);
-			} catch (...) {
-				return GW::Constants::SkillID::No_Skill;
+			if (newkey == 0) { // we are looking for the key
+				for (int i = 0; i < 512; ++i) {
+					if (i == VK_CONTROL) continue;
+					if (i == VK_SHIFT) continue;
+					if (i == VK_MENU) continue;
+					if (ImGui::GetIO().KeysDown[i]) {
+						newkey = i;
+					}
+				}
+			} else { // key was pressed, close if it's released
+				if (!ImGui::GetIO().KeysDown[newkey]) {
+					key = newkey;
+					modifier = newmod;
+					ImGui::CloseCurrentPopup();
+				}
 			}
+
+			// write the key
+			char newkey_buf[256];
+			ModKeyName(newmod, newkey, newkey_buf, 256);
+			ImGui::Text("%s", newkey_buf);
+			if (ImGui::Button("Cancel")) ImGui::CloseCurrentPopup();
+			ImGui::EndPopup();
 		}
-	default:
-		LOG("Warning. bad skill id %d\n", index);
-		return GW::Constants::SkillID::Recall;
+		ImGui::SameLine();
+		if (ImGui::Button("Run", ImVec2(70.0f, 0.0f))) {
+			Execute();
+		}
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Execute the hotkey now");
+
+		// === Move and delete buttons ===
+		if (ImGui::Button("Move Up", ImVec2(ImGui::GetWindowContentRegionWidth() / 3.0f, 0))) {
+			*op = Op_MoveUp;
+		}
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move the hotkey up in the list");
+		ImGui::SameLine();
+		if (ImGui::Button("Move Down", ImVec2(ImGui::GetWindowContentRegionWidth() / 3.0f, 0))) {
+			*op = Op_MoveDown;
+		}
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move the hotkey down in the list");
+		ImGui::SameLine();
+		if (ImGui::Button("Delete", ImVec2(ImGui::GetWindowContentRegionWidth() / 3.0f, 0))) {
+			ImGui::OpenPopup("Delete Hotkey?");
+		}
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete the hotkey");
+		if (ImGui::BeginPopupModal("Delete Hotkey?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+			ImGui::Text("Are you sure?\nThis operation cannot be undone\n\n", Name());
+			if (ImGui::Button("OK", ImVec2(120, 0))) {
+				*op = Op_Delete;
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::EndPopup();
+		}
+		ImGui::PopItemWidth();
+		ImGui::PopID();
 	}
 }
 
-HotkeyToggle::HotkeyToggle(OSHGui::Control* parent, Key key, Key modifier, 
-	bool active, std::string ini_section, long toggle_id)
-	: TBHotkey(parent, key, modifier, active, ini_section) {
-
-	target_ = static_cast<HotkeyToggle::Toggle>(toggle_id);
-
-	Label* label = new Label(this);
-	label->SetLocation(PointI(ITEM_X, LABEL_Y));
-	label->SetText("Toggle...");
-	AddControl(label);
-
-	ComboBox* combo = new ComboBox(this);
-	combo->SetSize(SizeI(WIDTH - label->GetRight() - HSPACE, LINE_HEIGHT));
-	combo->SetLocation(PointI(label->GetRight() + HSPACE, ITEM_Y));
-	combo->AddItem("Clicker");
-	combo->AddItem("Pcons");
-	combo->AddItem("Coin drop");
-	combo->SetSelectedIndex(toggle_id);
-	combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
-		[this, combo, ini_section](Control*) {
-		int index = combo->GetSelectedIndex();
-		Toggle target = static_cast<HotkeyToggle::Toggle>(index);
-		this->set_target(target);
-		Config::IniWrite(ini_section.c_str(),
-			this->IniKeyToggleID(), index);
-		GWToolbox::instance().main_window->hotkey_panel().UpdateDeleteCombo();
-	});
-	controls_.push_front(combo);
+HotkeySendChat::HotkeySendChat(CSimpleIni* ini, const char* section) 
+	: TBHotkey(ini, section) {
+	strcpy_s(message, ini ? ini->GetValue(section, "msg", "") : "");
+	channel = ini ? ini->GetValue(section, "channel", "/")[0] : '/';
 }
-
-HotkeyAction::HotkeyAction(OSHGui::Control* parent, Key key, Key modifier, 
-	bool active, std::string ini_section, long action_id)
-	: TBHotkey(parent, key, modifier, active, ini_section) {
-
-	action_ = static_cast<HotkeyAction::Action>(action_id);
-
-	Label* label = new Label(this);
-	label->SetLocation(PointI(ITEM_X, LABEL_Y));
-	label->SetText("Execute...");
-	AddControl(label);
-
-	ComboBox* combo = new ComboBox(this);
-	combo->SetSize(SizeI(WIDTH - label->GetRight() - HSPACE, LINE_HEIGHT));
-	combo->SetLocation(PointI(label->GetRight() + HSPACE, ITEM_Y));
-	combo->AddItem("Open Xunlai Chest");
-	combo->AddItem("Open Locked Chest");
-	combo->AddItem("Drop Gold Coin");
-	combo->AddItem("Reapply LB Title");
-	combo->SetSelectedIndex(action_id);
-	combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
-		[this, combo, ini_section](Control*) {
-		int index = combo->GetSelectedIndex();
-		Action action = static_cast<HotkeyAction::Action>(index);
-		this->set_action(action);
-		Config::IniWrite(ini_section.c_str(),
-			this->IniKeyActionID(), index);
-		GWToolbox::instance().main_window->hotkey_panel().UpdateDeleteCombo();
-	});
-	controls_.push_front(combo);
+void HotkeySendChat::Save(CSimpleIni* ini, const char* section) const {
+	TBHotkey::Save(ini, section);
+	ini->SetValue(section, "msg", message);
+	char buf[8];
+	sprintf_s(buf, "%c", channel);
+	ini->SetValue(section, "channel", buf);
 }
-
-HotkeyTarget::HotkeyTarget(OSHGui::Control* parent, Key key, Key modifier, 
-	bool active, std::string ini_section, UINT targetID, std::string target_name)
-	: TBHotkey(parent, key, modifier, active, ini_section), id_(targetID), name_(target_name) {
-
-	Label* label = new Label(this);
-	label->SetLocation(PointI(ITEM_X, LABEL_Y));
-	label->SetText("Target");
-	AddControl(label);
-
-	Label* label_id = new Label(this);
-	label_id->SetLocation(PointI(label->GetRight() + HSPACE, LABEL_Y));
-	label_id->SetText("ID:");
-	AddControl(label_id);
-
-	int width_left = WIDTH - label_id->GetRight();
-	TextBox* id_box = new TextBox(this);
-	id_box->SetText(std::to_string(id_));
-	id_box->SetSize(SizeI(width_left / 2 - HSPACE / 2, LINE_HEIGHT));
-	id_box->SetLocation(PointI(label_id->GetRight(), ITEM_Y));
-	id_box->GetTextChangedEvent() += TextChangedEventHandler(
-		[this, id_box, ini_section](Control*) {
-		try {
-			long id = std::stol(id_box->GetText());
-			this->set_id((UINT)id);
-			Config::IniWrite(ini_section.c_str(),
-				this->IniKeyTargetID(), id);
-			GWToolbox::instance().main_window->hotkey_panel().UpdateDeleteCombo();
-		} catch (...) {}
-	});
-	id_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::instance().set_capture_input(true);
-	});
-	id_box->GetFocusLostEvent() += FocusLostEventHandler([id_box](Control*, Control*) {
-		GWToolbox::instance().set_capture_input(false);
-		try {
-			std::stol(id_box->GetText());
-			GWToolbox::instance().main_window->hotkey_panel().UpdateDeleteCombo();
-		} catch (...) {
-			id_box->SetText("0");
-		}
-	});
-	AddControl(id_box);
-
-	TextBox* name_box = new TextBox(this);
-	name_box->SetText(name_.c_str());
-	name_box->SetSize(SizeI(width_left / 2 - HSPACE / 2, LINE_HEIGHT));
-	name_box->SetLocation(PointI(id_box->GetRight() + HSPACE, ITEM_Y));
-	name_box->GetTextChangedEvent() += TextChangedEventHandler(
-		[this, name_box, ini_section](Control*) {
-		std::string text = name_box->GetText();
-		this->set_name(text);
-		Config::IniWrite(ini_section.c_str(),
-			this->IniKeyTargetName(), text.c_str());
-		GWToolbox::instance().main_window->hotkey_panel().UpdateDeleteCombo();
-	});
-	name_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::instance().set_capture_input(true);
-	});
-	name_box->GetFocusLostEvent() += FocusLostEventHandler([](Control*, Control*) {
-		GWToolbox::instance().set_capture_input(false);
-	});
-	AddControl(name_box);
+void HotkeySendChat::Description(char* buf, int bufsz) const {
+	sprintf_s(buf, bufsz, "Send chat '%c%s'", channel, message);
 }
-
-HotkeyMove::HotkeyMove(OSHGui::Control* parent, Key key, Key modifier, 
-	bool active, std::string ini_section, float x, float y, std::string name)
-	: TBHotkey(parent, key, modifier, active, ini_section), x_(x), y_(y), name_(name) {
-
-	Label* label = new Label(this);
-	label->SetLocation(PointI(ITEM_X, LABEL_Y));
-	label->SetText("Move");
-	AddControl(label);
-
-	Label* label_x = new Label(this);
-	label_x->SetLocation(PointI(label->GetRight() + HSPACE, LABEL_Y));
-	label_x->SetText("X");
-	AddControl(label_x);
-
-	std::stringstream ss;
-	TextBox* box_x = new TextBox(this);
-	ss.clear();
-	ss << x;
-	box_x->SetText(ss.str());
-	box_x->SetSize(SizeI(50, LINE_HEIGHT));
-	box_x->SetLocation(PointI(label_x->GetRight(), ITEM_Y));
-	box_x->GetTextChangedEvent() += TextChangedEventHandler(
-		[this, box_x, ini_section](Control*) {
-		try {
-			float x = std::stof(box_x->GetText());
-			this->set_x(x);
-			Config::IniWrite(ini_section.c_str(),
-				this->IniKeyX(), x);
-			GWToolbox::instance().main_window->hotkey_panel().UpdateDeleteCombo();
-		} catch (...) {}
-	});
-	box_x->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::instance().set_capture_input(true);
-	});
-	box_x->GetFocusLostEvent() += FocusLostEventHandler([box_x](Control*, Control*) {
-		GWToolbox::instance().set_capture_input(false);
-		try {
-			std::stof(box_x->GetText());
-			GWToolbox::instance().main_window->hotkey_panel().UpdateDeleteCombo();
-		} catch (...) {
-			box_x->SetText("0.0");
-		}
-	});
-	AddControl(box_x);
-
-	Label* label_y = new Label(this);
-	label_y->SetLocation(PointI(box_x->GetRight() + HSPACE, LABEL_Y));
-	label_y->SetText("Y");
-	AddControl(label_y);
-
-	TextBox* box_y = new TextBox(this);
-	ss.clear();
-	ss << y;
-	box_y->SetText(ss.str());
-	box_y->SetSize(SizeI(50, LINE_HEIGHT));
-	box_y->SetLocation(PointI(label_y->GetRight(), ITEM_Y));
-	box_y->GetTextChangedEvent() += TextChangedEventHandler(
-		[this, box_y, ini_section](Control*) {
-		try {
-			float y = std::stof(box_y->GetText());
-			this->set_y(y);
-			Config::IniWrite(ini_section.c_str(),
-				this->IniKeyY(), y);
-			GWToolbox::instance().main_window->hotkey_panel().UpdateDeleteCombo();
-		} catch (...) {}
-	});
-	box_y->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::instance().set_capture_input(true);
-	});
-	box_y->GetFocusLostEvent() += FocusLostEventHandler([box_y](Control*, Control*) {
-		GWToolbox::instance().set_capture_input(false);
-		try {
-			std::stof(box_y->GetText());
-			GWToolbox::instance().main_window->hotkey_panel().UpdateDeleteCombo();
-		} catch (...) {
-			box_y->SetText("0.0");
-		}
-	});
-	AddControl(box_y);
-
-	TextBox* name_box = new TextBox(this);
-	name_box->SetText(name_.c_str());
-	name_box->SetSize(SizeI(WIDTH - box_y->GetRight() - HSPACE, LINE_HEIGHT));
-	name_box->SetLocation(PointI(box_y->GetRight() + HSPACE, ITEM_Y));
-	name_box->GetTextChangedEvent() += TextChangedEventHandler(
-		[this, name_box, ini_section](Control*) {
-		std::string text = name_box->GetText();
-		this->set_name(text);
-		Config::IniWrite(ini_section.c_str(),
-			this->IniKeyName(), text.c_str());
-		GWToolbox::instance().main_window->hotkey_panel().UpdateDeleteCombo();
-	});
-	name_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::instance().set_capture_input(true);
-	});
-	name_box->GetFocusLostEvent() += FocusLostEventHandler([](Control*, Control*) {
-		GWToolbox::instance().set_capture_input(false);
-	});
-	AddControl(name_box);
-}
-
-HotkeyDialog::HotkeyDialog(OSHGui::Control* parent, Key key, Key modifier, 
-	bool active, std::string ini_section, UINT id, std::string name)
-	: TBHotkey(parent, key, modifier, active, ini_section), id_(id), name_(name) {
-
-	Label* label = new Label(this);
-	label->SetLocation(PointI(ITEM_X, LABEL_Y));
-	label->SetText("Dialog");
-	AddControl(label);
-
-	Label* label_id = new Label(this);
-	label_id->SetLocation(PointI(label->GetRight() + HSPACE, LABEL_Y));
-	label_id->SetText("ID:");
-	AddControl(label_id);
-
-	int width_left = WIDTH - label_id->GetRight();
-	TextBox* id_box = new TextBox(this);
-	id_box->SetText(std::to_string(id_));
-	id_box->SetSize(SizeI(width_left / 2 - HSPACE / 2, LINE_HEIGHT));
-	id_box->SetLocation(PointI(label_id->GetRight(), ITEM_Y));
-	id_box->GetTextChangedEvent() += TextChangedEventHandler(
-		[this, id_box, ini_section](Control*) {
-		try {
-			long id = std::stol(id_box->GetText(), 0, 0);
-			this->set_id((UINT)id);
-			Config::IniWrite(ini_section.c_str(),
-				this->IniKeyDialogID(), id);
-			GWToolbox::instance().main_window->hotkey_panel().UpdateDeleteCombo();
-		} catch (...) {}
-	});
-	id_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::instance().set_capture_input(true);
-	});
-	id_box->GetFocusLostEvent() += FocusLostEventHandler([id_box](Control*, Control*) {
-		GWToolbox::instance().set_capture_input(false);
-		try {
-			std::stol(id_box->GetText(), 0, 0);
-			GWToolbox::instance().main_window->hotkey_panel().UpdateDeleteCombo();
-		} catch (...) {
-			id_box->SetText("0");
-		}
-	});
-	AddControl(id_box);
-
-	TextBox* name_box = new TextBox(this);
-	name_box->SetText(name_.c_str());
-	name_box->SetSize(SizeI(width_left / 2 - HSPACE / 2, LINE_HEIGHT));
-	name_box->SetLocation(PointI(id_box->GetRight() + HSPACE, ITEM_Y));
-	name_box->GetTextChangedEvent() += TextChangedEventHandler(
-		[this, name_box, ini_section](Control*) {
-		std::string text = name_box->GetText();
-		this->set_name(text);
-		Config::IniWrite(ini_section.c_str(),
-			this->IniKeyDialogName(), text.c_str());
-		GWToolbox::instance().main_window->hotkey_panel().UpdateDeleteCombo();
-	});
-	name_box->GetFocusGotEvent() += FocusGotEventHandler([](Control*) {
-		GWToolbox::instance().set_capture_input(true);
-	});
-	name_box->GetFocusLostEvent() += FocusLostEventHandler([](Control*, Control*) {
-		GWToolbox::instance().set_capture_input(false);
-	});
-	AddControl(name_box);
-}
-
-HotkeyPingBuild::HotkeyPingBuild(OSHGui::Control* parent, Key key, Key modifier, 
-	bool active, std::string ini_section, long index)
-	: TBHotkey(parent, key, modifier, active, ini_section), index_(index) {
-	
-	Label* label = new Label(this);
-	label->SetLocation(PointI(ITEM_X, LABEL_Y));
-	label->SetText("Ping...");
-	AddControl(label);
-
-	ComboBox* combo = new ComboBox(this);
-	combo->SetSize(SizeI(WIDTH - label->GetRight() - HSPACE, LINE_HEIGHT));
-	combo->SetLocation(PointI(label->GetRight() + HSPACE, ITEM_Y));
-	for (int i = 0; i < 16; ++i) {
-		int index = i + 1;
-		std::string section = std::string("builds") + std::to_string(index);
-		std::string name = Config::IniRead(section.c_str(), "buildname", "");
-		if (name.empty()) name = std::string("<Build ") + std::to_string(index);
-		combo->AddItem(name);
+void HotkeySendChat::Draw() {
+	int index = 0;
+	switch (channel) {
+	case '/': index = 0; break;
+	case '!': index = 1; break;
+	case '@': index = 2; break;
+	case '#': index = 3; break;
+	case '$': index = 4; break;
+	case '%': index = 5; break;
 	}
-	combo->SetSelectedIndex(index);
-	combo->GetSelectedIndexChangedEvent() += SelectedIndexChangedEventHandler(
-		[this, combo, ini_section](Control*) {
-		long index = combo->GetSelectedIndex();
-		this->set_index(index);
-		Config::IniWrite(ini_section.c_str(),
-			this->IniKeyBuildIndex(), index);
-		GWToolbox::instance().main_window->hotkey_panel().UpdateDeleteCombo();
-	});
-	controls_.push_front(combo);
-}
-
-void HotkeyUseItem::exec() {
-	if (!isExplorable()) return;
-	if (item_id_ <= 0) return;
-	if (!GW::Items().UseItemByModelId(item_id_)) {
-		std::string name = item_name_.empty() ? std::to_string(item_id_) : item_name_;
-		ChatLogger::LogF(L"[Warning] %ls not found!", name.c_str());
+	if (ImGui::Combo("Channel", &index, "/\0!\0@\0#\0$\0%")) {
+		switch (index) {
+		case 0: channel = '/'; break;
+		case 1: channel = '!'; break;
+		case 2: channel = '@'; break;
+		case 3: channel = '#'; break;
+		case 4: channel = '$'; break;
+		case 5: channel = '%'; break;
+		default: channel = '/';break;
+		}
 	}
+	ImGui::InputText("Message", message, 139);
 }
-
-void HotkeySendChat::exec() {
+void HotkeySendChat::Execute() {
 	if (isLoading()) return;
-	if (msg_.empty()) return;
-	if (channel_ == L'/') {
-		//ChatLogger::LogF(L"/%ls", msg_.c_str());
-		ChatLogger::Log("/" + msg_);
+	if (channel == L'/') {
+		ChatLogger::Log("/%s", message);
 	}
-	GW::Chat().SendChat(msg_.c_str(), channel_);
+	GW::Chat().SendChat(message, channel);
 }
 
-void HotkeyDropUseBuff::exec() {
+HotkeyUseItem::HotkeyUseItem(CSimpleIni* ini, const char* section) : TBHotkey(ini, section) {
+	item_id = ini ? ini->GetLongValue(section, "ItemID", 0) : 0;
+	strcpy_s(name, ini ? ini->GetValue(section, "ItemName", "") : "");
+}
+void HotkeyUseItem::Save(CSimpleIni* ini, const char* section) const {
+	TBHotkey::Save(ini, section);
+	ini->SetLongValue(section, "ItemID", item_id);
+	ini->SetValue(section, "ItemName", name);
+}
+void HotkeyUseItem::Description(char* buf, int bufsz) const {
+	sprintf_s(buf, bufsz, "Use %s", name);
+}
+void HotkeyUseItem::Draw() {
+	ImGui::InputInt("Item ID", (int*)&item_id);
+	ImGui::InputText("Item Name", name, 140);
+}
+void HotkeyUseItem::Execute() {
+	if (isLoading()) return;
+	if (item_id == 0) return;
+	if (!GW::Items().UseItemByModelId(item_id)) {
+		ChatLogger::Log("[Warning] %s not found!", name);
+	}
+}
+
+bool HotkeyDropUseBuff::GetText(void* data, int idx, const char** out_text) {
+	static char other_buf[64];
+	switch ((SkillIndex)idx) {
+	case Recall: *out_text = "Recall"; break;
+	case UA: *out_text = "UA"; break;
+	case HolyVeil: *out_text = "Holy Veil"; break;
+	default:
+		sprintf_s(other_buf, "Skill#%d", (int)data);
+		*out_text = other_buf;
+		break;
+	}
+	return true;
+}
+HotkeyDropUseBuff::SkillIndex HotkeyDropUseBuff::GetIndex() const {
+	switch (id) {
+	case GW::Constants::SkillID::Recall: return Recall;
+	case GW::Constants::SkillID::Unyielding_Aura: return UA;
+	case GW::Constants::SkillID::Holy_Veil: return HolyVeil;
+	default: return Other;
+	}
+}
+HotkeyDropUseBuff::HotkeyDropUseBuff(CSimpleIni* ini, const char* section) : TBHotkey(ini, section) {
+	id = ini ? (GW::Constants::SkillID)ini->GetLongValue(
+		section, "SkillID", (long)GW::Constants::SkillID::Recall) : GW::Constants::SkillID::Recall;
+}
+void HotkeyDropUseBuff::Save(CSimpleIni* ini, const char* section) const {
+	TBHotkey::Save(ini, section);
+	ini->SetLongValue(section, "SkillID", (long)id);
+}
+void HotkeyDropUseBuff::Description(char* buf, int bufsz) const {
+	const char* skillname;
+	GetText((void*)id, GetIndex(), &skillname);
+	sprintf_s(buf, bufsz, "Drop/Use %s", skillname);
+}
+void HotkeyDropUseBuff::Draw() {
+	SkillIndex index = GetIndex();
+	if (ImGui::Combo("Skill", (int*)&index, GetText, (void*)id, 4)) {
+		switch (index) {
+		case HotkeyDropUseBuff::Recall: id = GW::Constants::SkillID::Recall; break;
+		case HotkeyDropUseBuff::UA: id = GW::Constants::SkillID::Unyielding_Aura; break;
+		case HotkeyDropUseBuff::HolyVeil: id = GW::Constants::SkillID::Holy_Veil; break;
+		case HotkeyDropUseBuff::Other: /* don't change id */ break;
+		default: break;
+		}
+	}
+	if (index == Other) {
+		ImGui::InputInt("Skill ID", (int*)&id);
+	}
+}
+void HotkeyDropUseBuff::Execute() {
 	if (!isExplorable()) return;
 
-	GW::Buff buff = GW::Effects().GetPlayerBuffBySkillId(id_);
+	GW::Buff buff = GW::Effects().GetPlayerBuffBySkillId(id);
 	if (buff.SkillId) {
 		GW::Effects().DropBuff(buff.BuffId);
 	} else {
-		int slot = GW::Skillbarmgr().GetSkillSlot(id_);
+		int slot = GW::Skillbarmgr().GetSkillSlot(id);
 		if (slot >= 0 && GW::Skillbar::GetPlayerSkillbar().Skills[slot].Recharge == 0) {
 			GW::Skillbarmgr().UseSkill(slot, GW::Agents().GetTargetId());
 		}
 	}
 }
 
-void HotkeyToggle::exec() {
+bool HotkeyToggle::GetText(void*, int idx, const char** out_text) {
+	switch ((Toggle)idx) {
+	case Clicker: *out_text = "Clicker"; return true;
+	case Pcons: *out_text = "Pcons"; return true;
+	case CoinDrop: *out_text = "Coin Drop"; return true;
+	default: return false;
+	}
+}
+HotkeyToggle::HotkeyToggle(CSimpleIni* ini, const char* section) : TBHotkey(ini, section) {
+	target = ini ? (Toggle)ini->GetLongValue(section, "ToggleID", (long)Clicker) : Clicker;
+}
+void HotkeyToggle::Save(CSimpleIni* ini, const char* section) const {
+	TBHotkey::Save(ini, section);
+	ini->SetLongValue(section, "ToggleID", (long)target);
+}
+void HotkeyToggle::Description(char* buf, int bufsz) const {
+	const char* name;
+	GetText(nullptr, (int)target, &name);
+	sprintf_s(buf, bufsz, "Toggle %s", name);
+}
+void HotkeyToggle::Draw() {
+	ImGui::Combo("Toggle###combo", (int*)&target, GetText, nullptr, n_targets);
+}
+void HotkeyToggle::Execute() {
 	GWToolbox& tb = GWToolbox::instance();
 	bool active;
-	switch (target_) {
+	switch (target) {
 	case HotkeyToggle::Clicker:
 		active = tb.main_window->hotkey_panel().ToggleClicker();
-		ChatLogger::LogF(L"Clicker is %ls", active ? L"active" : L"disabled");
+		ChatLogger::Log("Clicker is %s", active ? "active" : "disabled");
 		break;
 	case HotkeyToggle::Pcons:
 		tb.main_window->pcon_panel().ToggleActive();
@@ -661,14 +327,38 @@ void HotkeyToggle::exec() {
 		break;
 	case HotkeyToggle::CoinDrop:
 		active = tb.main_window->hotkey_panel().ToggleCoinDrop();
-		ChatLogger::LogF(L"Coin dropper is %ls", active ? L"active" : L"disabled");
+		ChatLogger::Log("Coin dropper is %s", active ? "active" : "disabled");
 		break;
 	}
 }
 
-void HotkeyAction::exec() {
+bool HotkeyAction::GetText(void*, int idx, const char** out_text) {
+	switch ((Action)idx) {
+	case OpenXunlaiChest: *out_text = "Open Xunlai Chest"; return true;
+	case OpenLockedChest: *out_text = "Open Locked Chest"; return true;
+	case DropGoldCoin: *out_text = "Drop Gold Coin"; return true;
+	case ReapplyLBTitle: *out_text = "Reapply Lightbringer Title"; return true;
+	default: return false;
+	}
+}
+HotkeyAction::HotkeyAction(CSimpleIni* ini, const char* section) : TBHotkey(ini, section) {
+	action = ini ? (Action)ini->GetLongValue(section, "ActionID", (long)OpenXunlaiChest) : OpenXunlaiChest;
+}
+void HotkeyAction::Save(CSimpleIni* ini, const char* section) const {
+	TBHotkey::Save(ini, section);
+	ini->SetLongValue(section, "ActionID", (long)action);
+}
+void HotkeyAction::Description(char* buf, int bufsz) const {
+	const char* name;
+	GetText(nullptr, (int)action, &name);
+	sprintf_s(buf, bufsz, "%s", name);
+}
+void HotkeyAction::Draw() {
+	ImGui::Combo("Action###combo", (int*)&action, GetText, nullptr, n_actions);
+}
+void HotkeyAction::Execute() {
 	if (isLoading()) return;
-	switch (action_) {
+	switch (action) {
 	case HotkeyAction::OpenXunlaiChest:
 		if (isOutpost()) {
 			GW::Items().OpenXunlaiWindow();
@@ -696,9 +386,25 @@ void HotkeyAction::exec() {
 	}
 }
 
-void HotkeyTarget::exec() {
+HotkeyTarget::HotkeyTarget(CSimpleIni* ini, const char* section) : TBHotkey(ini, section) {
+	id = ini ? ini->GetLongValue(section, "TargetID", 0) : 0;
+	strcpy_s(name, ini ? ini->GetValue(section, "TargetName", "") : "");
+}
+void HotkeyTarget::Save(CSimpleIni* ini, const char* section) const {
+	TBHotkey::Save(ini, section);
+	ini->SetLongValue(section, "TargetID", id);
+	ini->SetValue(section, "TargetName", name);
+}
+void HotkeyTarget::Description(char* buf, int bufsz) const {
+	sprintf_s(buf, bufsz, "Target %s", name);
+}
+void HotkeyTarget::Draw() {
+	ImGui::InputInt("Target ID", (int*)&id);
+	ImGui::InputText("Target Name", name, 140);
+}
+void HotkeyTarget::Execute() {
 	if (isLoading()) return;
-	if (id_ <= 0) return;
+	if (id == 0) return;
 
 	GW::AgentArray agents = GW::Agents().GetAgentArray();
 	if (!agents.valid()) {
@@ -714,7 +420,7 @@ void HotkeyTarget::exec() {
 	for (size_t i = 0; i < agents.size(); ++i) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
-		if (agent->PlayerNumber == id_ && agent->HP > 0) {
+		if (agent->PlayerNumber == id && agent->HP > 0) {
 			float newDistance = GW::Agents().GetSqrDistance(me->pos, agents[i]->pos);
 			if (newDistance < distance) {
 				closest = i;
@@ -727,105 +433,85 @@ void HotkeyTarget::exec() {
 	}
 }
 
-void HotkeyMove::exec() {
+HotkeyMove::HotkeyMove(CSimpleIni* ini, const char* section) : TBHotkey(ini, section) {
+	x = ini ? (float)ini->GetDoubleValue(section, "x", 0.0) : 0.0f;
+	y = ini ? (float)ini->GetDoubleValue(section, "y", 0.0) : 0.0f;
+	strcpy_s(name, ini ? ini->GetValue(section, "name", "") : "");
+}
+void HotkeyMove::Save(CSimpleIni* ini, const char* section) const {
+	TBHotkey::Save(ini, section);
+	ini->SetDoubleValue(section, "x", x);
+	ini->SetDoubleValue(section, "y", y);
+	ini->SetValue(section, "name", name);
+}
+void HotkeyMove::Description(char* buf, int bufsz) const {
+	sprintf_s(buf, bufsz, "Move %s", name);
+}
+void HotkeyMove::Draw() {
+	ImGui::InputFloat("x", &x, 0.0f, 0.0f, 3);
+	ImGui::InputFloat("y", &y, 0.0f, 0.0f, 3);
+	ImGui::InputText("Name", name, 140);
+}
+void HotkeyMove::Execute() {
 	if (!isExplorable()) return;
 
 	GW::Agent* me = GW::Agents().GetPlayer();
-	double sqrDist = (me->X - x_) * (me->X - x_) + (me->Y - y_) * (me->Y - y_);
+	double sqrDist = (me->X - x) * (me->X - x) + (me->Y - y) * (me->Y - y);
 	if (sqrDist < GW::Constants::SqrRange::Compass) {
-		GW::Agents().Move(x_, y_);
-		ChatLogger::Log(L"Movement macro activated");
+		GW::Agents().Move(x, y);
+		ChatLogger::Log("%s movement macro activated", name);
 	}
 }
 
-void HotkeyDialog::exec() {
+HotkeyDialog::HotkeyDialog(CSimpleIni* ini, const char* section) : TBHotkey(ini, section) {
+	id = ini ? ini->GetLongValue(section, "DialogID", 0) : 0;
+	strcpy_s(name, ini ? ini->GetValue(section, "DialogName", "") : "");
+}
+void HotkeyDialog::Save(CSimpleIni* ini, const char* section) const {
+	TBHotkey::Save(ini, section);
+	ini->SetLongValue(section, "DialogID", id);
+	ini->SetValue(section, "DialogName", name);
+}
+void HotkeyDialog::Description(char* buf, int bufsz) const {
+	sprintf_s(buf, bufsz, "Dialog %s", name);
+}
+void HotkeyDialog::Draw() {
+	ImGui::InputInt("Dialog ID", (int*)&id);
+	ImGui::InputText("Dialog Name", name, 140);
+}
+void HotkeyDialog::Execute() {
 	if (isLoading()) return;
-	if (id_ <= 0) return;
+	if (id == 0) return;
 
-	GW::Agents().Dialog(id_);
+	GW::Agents().Dialog(id);
+	ChatLogger::Log("Sent dialog %s (%d)", name, id);
 }
 
-void HotkeyPingBuild::exec() {
+bool HotkeyPingBuild::GetText(void*, int idx, const char** out_text) {
+	BuildPanel& bp = GWToolbox::instance().main_window->build_panel();
+	if (idx >= (int)bp.BuildCount()) return false;
+	*out_text = bp.BuildName(idx);
+	return true;
+}
+HotkeyPingBuild::HotkeyPingBuild(CSimpleIni* ini, const char* section) : TBHotkey(ini, section) {
+	index = ini ? ini->GetLongValue(section, "BuildIndex", 0) : 0;
+}
+void HotkeyPingBuild::Save(CSimpleIni* ini, const char* section) const {
+	TBHotkey::Save(ini, section);
+	ini->SetLongValue(section, "BuildIndex", index);
+}
+void HotkeyPingBuild::Description(char* buf, int bufsz) const {
+	const BuildPanel& bp = GWToolbox::instance().main_window->build_panel();
+	const char* buildname = bp.BuildName(index);
+	if (buildname == nullptr) buildname = "<not found>";
+	sprintf_s(buf, bufsz, "Ping build '%s'", buildname);
+}
+void HotkeyPingBuild::Draw() {
+	const BuildPanel& bp = GWToolbox::instance().main_window->build_panel();
+	ImGui::Combo("Build", &index, GetText, nullptr, bp.BuildCount());
+}
+void HotkeyPingBuild::Execute() {
 	if (isLoading()) return;
 
-	GWToolbox::instance().main_window->build_panel().Send(index_);
-}
-
-std::string HotkeySendChat::GetDescription() {
-	return std::string("Send ") + channel_ + msg_;
-}
-
-std::string HotkeyUseItem::GetDescription() {
-	if (item_name_.empty()) {
-		return std::string("Use Item #") + std::to_string(item_id_);
-	} else {
-		return std::string("Use ") + item_name_;
-	}
-}
-
-std::string HotkeyDropUseBuff::GetDescription() {
-	switch (id_) {
-	case GW::Constants::SkillID::Recall:
-		return std::string("Drop/Use Recall");
-	case GW::Constants::SkillID::Unyielding_Aura:
-		return std::string("Drop/Use UA");
-	default:
-		return std::string("Drop/Use Skill #") + std::to_string(static_cast<long>(id_));
-	}
-}
-
-std::string HotkeyToggle::GetDescription() {
-	switch (target_) {
-	case HotkeyToggle::Clicker:
-		return std::string("Toggle Clicker");
-	case HotkeyToggle::Pcons:
-		return std::string("Toggle Pcons");
-	case HotkeyToggle::CoinDrop:
-		return std::string("Toggle Coin Drop");
-	default:
-		return std::string("error :(");
-	}
-}
-
-std::string HotkeyAction::GetDescription() {
-	switch (action_) {
-	case HotkeyAction::OpenXunlaiChest:
-		return std::string("Open Xunlai Chest");
-	case HotkeyAction::OpenLockedChest:
-		return std::string("Open Locked Chest");
-	case HotkeyAction::DropGoldCoin:
-		return std::string("Drop Gold Coin");
-	case HotkeyAction::ReapplyLBTitle:
-		return std::string("Reapply LB Title");
-	default:
-		return std::string("<Action Hotkey>");
-	}
-}
-
-std::string HotkeyTarget::GetDescription() {
-	if (name_.empty()) {
-		return std::string("Target ") + std::to_string(id_);
-	} else {
-		return std::string("Target ") + name_;
-	}
-}
-
-std::string HotkeyMove::GetDescription() {
-	if (name_.empty()) {
-		return std::string("Move (") + std::to_string(lroundf(x_)) + ", " + std::to_string(lroundf(y_)) + ")";
-	} else {
-		return std::string("Move ") + name_;
-	}
-}
-
-std::string HotkeyDialog::GetDescription() {
-	if (name_.empty()) {
-		return std::string("Dialog ") + std::to_string(id_);
-	} else {
-		return std::string("Dialog ") + name_;
-	}
-}
-
-std::string HotkeyPingBuild::GetDescription() {
-	return std::string("Ping Build #") + std::to_string(index_);
+	GWToolbox::instance().main_window->build_panel().Send(index);
 }

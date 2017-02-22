@@ -275,7 +275,7 @@ bool PconPanel::SetActive(bool active) {
 	GWToolbox& tb = GWToolbox::instance();
 	tb.main_window->UpdatePconToggleButton(enabled);
 	if (tb.main_window->minimized() || !tb.main_window->GetVisible()) {
-		ChatLogger::LogF(L"Pcons %ls", active ? L"enabled" : L"disabled");
+		ChatLogger::Log("Pcons %s", active ? "enabled" : "disabled");
 	}
 	return enabled;
 }
