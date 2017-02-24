@@ -40,34 +40,34 @@ private:
 	void Initialize(IDirect3DDevice9* device) override;
 
 	void Enqueue(GW::Agent* agent);
-	Color_t GetColor(GW::Agent* agent) const;
+	Color GetColor(GW::Agent* agent) const;
 	float GetSize(GW::Agent* agent) const;
 	Shape_e GetShape(GW::Agent* agent) const;
 
-	void Enqueue(Shape_e shape, GW::Agent* agent, float size, Color_t color);
+	void Enqueue(Shape_e shape, GW::Agent* agent, float size, Color color);
 
 	D3DVertex* vertices;		// vertices array
 	unsigned int vertices_count;// count of vertices
 	unsigned int vertices_max;	// max number of vertices to draw in one call
 	unsigned int max_shape_verts;// max number of triangles in a single shape
 
-	Color_t modifier;
-	Color_t color_eoe;
-	Color_t color_qz;
-	Color_t color_target;
-	Color_t color_player;
-	Color_t color_player_dead;
-	Color_t color_signpost;
-	Color_t color_item;
-	Color_t color_hostile;
-	Color_t color_hostile_damaged;
-	Color_t color_hostile_dead;
-	Color_t color_neutral;
-	Color_t color_ally_party;
-	Color_t color_ally_npc;
-	Color_t color_ally_spirit;
-	Color_t color_ally_minion;
-	Color_t color_ally_dead;
+	Color modifier;
+	Color color_eoe;
+	Color color_qz;
+	Color color_target;
+	Color color_player;
+	Color color_player_dead;
+	Color color_signpost;
+	Color color_item;
+	Color color_hostile;
+	Color color_hostile_damaged;
+	Color color_hostile_dead;
+	Color color_neutral;
+	Color color_ally_party;
+	Color color_ally_npc;
+	Color color_ally_spirit;
+	Color color_ally_minion;
+	Color color_ally_dead;
 
 	float size_default;
 	float size_player;

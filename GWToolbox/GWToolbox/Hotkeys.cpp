@@ -318,15 +318,15 @@ void HotkeyToggle::Execute() {
 	bool active;
 	switch (target) {
 	case HotkeyToggle::Clicker:
-		active = tb.main_window->hotkey_panel().ToggleClicker();
+		active = tb.main_window->hotkey_panel->ToggleClicker();
 		ChatLogger::Log("Clicker is %s", active ? "active" : "disabled");
 		break;
 	case HotkeyToggle::Pcons:
-		tb.main_window->pcon_panel().ToggleActive();
+		tb.main_window->pcon_panel->ToggleEnable();
 		// writing to chat is done by ToggleActive if needed
 		break;
 	case HotkeyToggle::CoinDrop:
-		active = tb.main_window->hotkey_panel().ToggleCoinDrop();
+		active = tb.main_window->hotkey_panel->ToggleCoinDrop();
 		ChatLogger::Log("Coin dropper is %s", active ? "active" : "disabled");
 		break;
 	}
@@ -488,9 +488,9 @@ void HotkeyDialog::Execute() {
 }
 
 bool HotkeyPingBuild::GetText(void*, int idx, const char** out_text) {
-	BuildPanel& bp = GWToolbox::instance().main_window->build_panel();
-	if (idx >= (int)bp.BuildCount()) return false;
-	*out_text = bp.BuildName(idx);
+	const BuildPanel* bp = GWToolbox::instance().main_window->build_panel;
+	if (idx >= (int)bp->BuildCount()) return false;
+	*out_text = bp->BuildName(idx);
 	return true;
 }
 HotkeyPingBuild::HotkeyPingBuild(CSimpleIni* ini, const char* section) : TBHotkey(ini, section) {
@@ -501,17 +501,17 @@ void HotkeyPingBuild::Save(CSimpleIni* ini, const char* section) const {
 	ini->SetLongValue(section, "BuildIndex", index);
 }
 void HotkeyPingBuild::Description(char* buf, int bufsz) const {
-	const BuildPanel& bp = GWToolbox::instance().main_window->build_panel();
-	const char* buildname = bp.BuildName(index);
+	const BuildPanel* bp = GWToolbox::instance().main_window->build_panel;
+	const char* buildname = bp->BuildName(index);
 	if (buildname == nullptr) buildname = "<not found>";
 	sprintf_s(buf, bufsz, "Ping build '%s'", buildname);
 }
 void HotkeyPingBuild::Draw() {
-	const BuildPanel& bp = GWToolbox::instance().main_window->build_panel();
-	ImGui::Combo("Build", &index, GetText, nullptr, bp.BuildCount());
+	const BuildPanel* bp = GWToolbox::instance().main_window->build_panel;
+	ImGui::Combo("Build", &index, GetText, nullptr, bp->BuildCount());
 }
 void HotkeyPingBuild::Execute() {
 	if (isLoading()) return;
 
-	GWToolbox::instance().main_window->build_panel().Send(index);
+	GWToolbox::instance().main_window->build_panel->Send(index);
 }

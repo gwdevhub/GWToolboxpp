@@ -1,12 +1,11 @@
 #pragma once
 
-#include "OSHGui\OSHGui.hpp"
-
 #include "ToolboxModule.h"
 
 class DistanceWindow : public ToolboxModule {
 public:
 	DistanceWindow() {};
+	~DistanceWindow() {};
 
 	const char* Name() const override { return "Distance"; }
 

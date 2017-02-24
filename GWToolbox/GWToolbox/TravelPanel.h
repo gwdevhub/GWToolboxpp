@@ -1,12 +1,11 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include <Windows.h>
 
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\Constants\Maps.h>
-
-#include <OSHGui\OSHGui.hpp>
 
 #include "ToolboxPanel.h"
 #include "logger.h"
@@ -15,8 +14,10 @@ class TravelPanel : public ToolboxPanel {
 public:
 	const int n_outposts = 181;
 	const char* Name() const override { return "Travel Panel"; }
+	const char* TabButtonText() const override { return "Travel"; }
 
-	TravelPanel();
+	TravelPanel(IDirect3DDevice9* pDevice);
+	~TravelPanel() {};
 
 	bool TravelFavorite(unsigned int idx);
 

@@ -66,9 +66,6 @@
     <ClInclude Include="GWToolbox\MainWindow.h">
       <Filter>Windows</Filter>
     </ClInclude>
-    <ClInclude Include="GWToolbox\ToolboxWindow.h">
-      <Filter>Windows</Filter>
-    </ClInclude>
     <ClInclude Include="GWToolbox\BuildPanel.h">
       <Filter>Panels\Builds</Filter>
     </ClInclude>
@@ -182,9 +179,6 @@
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
     <ClCompile Include="GWToolbox\MainWindow.cpp">
-      <Filter>Windows</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\ToolboxWindow.cpp">
       <Filter>Windows</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\BuildPanel.cpp">

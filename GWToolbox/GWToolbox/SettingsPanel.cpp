@@ -14,16 +14,11 @@
 #include "SettingManager.h"
 
 
-SettingsPanel::SettingsPanel() {
-	//SettingsPanel::SettingsPanel(OSHGui::Control* parent) : ToolboxPanel(parent),
-	//	save_location_data(false, MainWindow::IniSection(), "save_location") {
-	//
-	//	save_location_data.SetText("Save location data");
-	//	save_location_data.SetTooltip("When enabled, toolbox will save character location every second in a file in settings folder / location logs");
-	//}
+SettingsPanel::SettingsPanel(IDirect3DDevice9* device) {
+	D3DXCreateTextureFromFile(device, GuiUtils::getSubPath("cupcake.png", "img").c_str(), &texture);
+
 	save_location_data = false;
 }
-
 
 void SettingsPanel::Update() {
 	// save location data

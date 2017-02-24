@@ -1,5 +1,7 @@
 #include "Pcons.h"
 
+#include <d3dx9tex.h>
+
 #include <GWCA\GWCA.h>
 #include <GWCA\Managers\EffectMgr.h>
 #include <GWCA\Managers\ItemMgr.h>
@@ -9,88 +11,60 @@
 #include "Config.h"
 #include "GuiUtils.h"
 
-using namespace OSHGui;
-using namespace OSHGui::Drawing;
 using namespace GW::Constants;
 
-Pcon::Pcon(OSHGui::Control* parent, const char* ini) : Button(parent),
-	pic(new PictureBox(this)),
-	tick(new PictureBox(this)),
-	shadow(new Label(this)),
-	itemID(0),
-	effectID(SkillID::No_Skill),
-	threshold(0),
-	timer(TBTimer::init()),
-	update_timer(0),
-	quantity(-1), /* to force a redraw when first created */
-	chatName(ini), // will be set later, but its a good temporary value
-	iniName(ini) {
+const float Pcon::size = 46.0f;
 
-	enabled = Config::IniRead("pcons", ini, false);;
+Pcon::Pcon(IDirect3DDevice9* device, const char* file, ImVec2 uv0_, ImVec2 uv1_, 
+	const char* name, DWORD item, GW::Constants::SkillID effect, int threshold_) :
+	chatName(name),
+	itemID(item),
+	effectID(effect),
+	threshold(threshold_),
+	uv0(uv0_),
+	uv1(uv1_),
+	texture(nullptr) {
 
-	tick->SetBackColor(Drawing::Color::Empty());
-	tick->SetStretch(true);
-	tick->SetEnabled(false);
-	tick->SetLocation(PointI(0, 0));
-	tick->SetSize(SizeI(WIDTH, HEIGHT));
-	tick->SetImage(Drawing::Image::FromFile(GuiUtils::getSubPath("Tick.png", "img")));
-	AddControl(tick);
+	D3DXCreateTextureFromFile(device, GuiUtils::getSubPath(file, "img").c_str(), &texture);
+	
+	enabled = false;
+	quantity = -1;
+}
 
-	pic->SetBackColor(Drawing::Color::Empty());
-	pic->SetStretch(true);
-	pic->SetEnabled(false);
-	AddControl(pic);
+void Pcon::Draw(IDirect3DDevice9* device) {
+	if (texture == nullptr) return;
+	ImVec2 pos = ImGui::GetCursorPos();
+	ImVec2 s(size, size);
+	ImVec4 bg = enabled ? ImVec4(0.0f, 1.0f, 0.0f, 0.4f) : ImVec4(0, 0, 0, 0);
+	ImVec4 tint(1, 1, 1, 1);
+	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+	if (ImGui::ImageButton((ImTextureID)texture, s, uv0, uv1, -1, bg, tint)) {
+		toggleActive();
+	}
+	if (ImGui::IsItemHovered()) {
+		ImGui::SetTooltip("%s\nQuantity: %d", chatName, quantity);
+	}
+	ImGui::PopStyleColor();
 
-	int text_x = 5;
-	int text_y = 3;
-	shadow->SetText(std::to_string(quantity));
-	shadow->SetFont(GuiUtils::getTBFont(11.0f, true));
-	shadow->SetForeColor(Drawing::Color::Black());
-	shadow->SetLocation(PointI(text_x + 1, text_y + 1));
-	AddControl(shadow);
+	ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[GuiUtils::FontSize::f12]);
+	ImVec4 color;
+	if (quantity == 0) color = ImVec4(1, 0, 0, 1);
+	else if (quantity < threshold) color = ImVec4(1, 1, 0, 1);
+	else color = ImVec4(0, 1, 0, 1);
 
-	label_->SetText(std::to_string(quantity));
-	label_->SetFont(GuiUtils::getTBFont(11.0f, true));
-	label_->SetLocation(PointI(text_x, text_y));
-	AddControl(label_);
+	ImGui::SetCursorPos(ImVec2(pos.x + 3, pos.y + 3));
+	ImGui::TextColored(ImVec4(0, 0, 0, 1), "%d", quantity);
+	ImGui::SetCursorPos(ImVec2(pos.x + 2, pos.y + 2));
+	ImGui::TextColored(color, "%d", quantity);
+	ImGui::PopFont();
 
-	SetSize(SizeI(WIDTH, HEIGHT));
-	SetBackColor(Drawing::Color::Empty());
-	SetMouseOverFocusColor(GuiUtils::getMouseOverColor());
-
-	GetClickEvent() += ClickEventHandler([this](Control*) { this->toggleActive(); });
+	ImGui::SetCursorPos(pos);
+	ImGui::Dummy(ImVec2(size, size));
 }
 
 void Pcon::toggleActive() {
 	enabled = !enabled;
 	scanInventory();
-	update_ui = true;
-	Config::IniWrite("pcons", iniName, enabled);
-}
-
-void Pcon::setIcon(const char* icon, int xOff, int yOff, int size) {
-	pic->SetSize(SizeI(size, size));
-	pic->SetLocation(PointI(xOff, yOff));
-	pic->SetImage(Drawing::Image::FromFile(GuiUtils::getSubPath(icon, "img")));
-}
-
-void Pcon::UpdateUI() {
-	if (update_ui) {
-		label_->SetText(std::to_string(quantity));
-		shadow->SetText(std::to_string(quantity));
-
-		if (quantity == 0) {
-			label_->SetForeColor(Color(1.0, 1.0, 0.0, 0.0));
-		} else if (quantity < threshold) {
-			label_->SetForeColor(Color(1.0, 1.0, 1.0, 0.0));
-		} else {
-			label_->SetForeColor(Color(1.0, 0.0, 1.0, 0.0));
-		}
-
-		tick->SetVisible(enabled);
-
-		update_ui = false;
-	}
 }
 
 void Pcon::CheckUpdateTimer() {
@@ -281,8 +255,6 @@ void Pcon::scanInventory() {
 	}
 
 	enabled = enabled && quantity > 0;
-	
-	if (old_quantity != quantity || old_enabled != enabled) update_ui = true;
 }
 
 void PconCity::scanInventory() {
@@ -313,8 +285,6 @@ void PconCity::scanInventory() {
 	}
 
 	enabled = enabled && quantity > 0;
-
-	if (old_quantity != quantity || old_enabled != enabled) update_ui = true;
 }
 
 void PconAlcohol::scanInventory() {
@@ -358,8 +328,6 @@ void PconAlcohol::scanInventory() {
 	}
 
 	enabled = enabled && quantity > 0;
-	
-	if (old_quantity != quantity || old_enabled != enabled) update_ui = true;
 }
 
 void PconLunar::scanInventory() {
@@ -396,6 +364,4 @@ void PconLunar::scanInventory() {
 	}
 
 	enabled = enabled && quantity > 0;
-	
-	if (old_quantity != quantity || old_enabled != enabled) update_ui = true;
 }

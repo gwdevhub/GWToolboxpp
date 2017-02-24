@@ -18,8 +18,9 @@
 class HotkeyPanel : public ToolboxPanel {
 public:
 	const char* Name() const override { return "Hotkey Panel"; }
+	const char* TabButtonText() const override { return "Hotkeys"; }
 
-	HotkeyPanel();
+	HotkeyPanel(IDirect3DDevice9* pDevice);
 	~HotkeyPanel();
 	
 	inline bool ToggleClicker() { return clickerActive = !clickerActive; }

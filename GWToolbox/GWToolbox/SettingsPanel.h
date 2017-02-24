@@ -11,8 +11,10 @@
 class SettingsPanel : public ToolboxPanel {
 public:
 	const char* Name() const override { return "Settings Panel"; }
+	const char* TabButtonText() const override { return "Settings"; }
 
-	SettingsPanel();
+	SettingsPanel(IDirect3DDevice9* pDevice);
+	~SettingsPanel() {};
 
 	// Update. Will always be called every frame.
 	void Update() override;

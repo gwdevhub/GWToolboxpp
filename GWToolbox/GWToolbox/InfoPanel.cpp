@@ -17,19 +17,22 @@
 #include "PartyDamage.h"
 #include "Minimap.h"
 
+InfoPanel::InfoPanel(IDirect3DDevice9* device) {
+	D3DXCreateTextureFromFile(device, GuiUtils::getSubPath("info.png", "img").c_str(), &texture);
+}
+
 void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 	ImGui::Begin(Name(), &visible);
 	ImGui::Checkbox("Timer", &GWToolbox::instance().timer_window->visible);
 	GuiUtils::ShowHelp("Time the instance has been active");
 	ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
-	static bool tmp = true;
 	ImGui::Checkbox("Minimap", &GWToolbox::instance().minimap->visible); // &GWToolbox::instance().minimap->visible);
 	GuiUtils::ShowHelp("An alternative to the default compass");
-	ImGui::Checkbox("Bonds", &tmp); // &GWToolbox::instance().bonds_window->isVisible_);
+	ImGui::Checkbox("Bonds", &GWToolbox::instance().bonds_window->visible); // &GWToolbox::instance().bonds_window->isVisible_);
 	GuiUtils::ShowHelp("Show the bonds maintained by you.\nOnly works on human players");
 	ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
-	ImGui::Checkbox("Damage", &tmp);
+	ImGui::Checkbox("Damage", &GWToolbox::instance().party_damage->visible);
 	GuiUtils::ShowHelp("Show the damage done by each player in your party.\nOnly works on the damage done within your radar range.");
 	ImGui::Checkbox("Health", &GWToolbox::instance().health_window->visible);
 	GuiUtils::ShowHelp("Displays the health of the target.\nMax health is only computed and refreshed when you directly damage or heal your target");
@@ -123,9 +126,9 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 	}
 	if (ImGui::CollapsingHeader("Items")) {
 		static char modelid[32] = "";
-		static char itemid[32] = "";
+		//static char itemid[32] = "";
 		strcpy_s(modelid, "-");
-		strcpy_s(itemid, "-");
+		//strcpy_s(itemid, "-");
 		GW::Bag** bags = GW::Items().GetBagArray();
 		if (bags) {
 			GW::Bag* bag1 = bags[1];
@@ -135,14 +138,14 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 					GW::Item* item = items[0];
 					if (item) {
 						sprintf_s(modelid, "%d", item->ModelId);
-						sprintf_s(itemid, "%d", item->ItemId);
+						//sprintf_s(itemid, "%d", item->ItemId);
 					}
 				}
 			}
 		}
 		ImGui::PushItemWidth(-80.0f);
 		ImGui::InputText("First item ModelID", modelid, 32, ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputText("First item ItemID", itemid, 32, ImGuiInputTextFlags_ReadOnly);
+		//ImGui::InputText("First item ItemID", itemid, 32, ImGuiInputTextFlags_ReadOnly);
 		ImGui::PopItemWidth();
 	}
 	if (ImGui::CollapsingHeader("Mob count")) {

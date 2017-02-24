@@ -1,6 +1,6 @@
 #pragma once
 
-#include "OSHGui\OSHGui.hpp"
+#include <d3dx9tex.h>
 
 #include "ToolboxModule.h"
 
@@ -13,11 +13,25 @@ This class provides the abstraction to group all such panels,
 and a function to draw their main window button.
 */
 
-class ToolboxPanel : public OSHGui::Panel, public ToolboxModule {
+class ToolboxPanel : public ToolboxModule {
 public:
-	ToolboxPanel(OSHGui::Control* parent) : OSHGui::Panel(parent) {}
-	ToolboxPanel() : OSHGui::Panel(nullptr) {}
+	ToolboxPanel() {};
+	virtual ~ToolboxPanel() {
+		if (texture) texture->Release(); texture = nullptr;
+	}
 
-	// Create user interface
-	virtual void BuildUI() {};
+	virtual const char* TabButtonText() const = 0;
+
+	// returns true if clicked
+	virtual bool DrawTabButton(IDirect3DDevice9* device) {
+		ImGui::PushStyleColor(ImGuiCol_Button, visible ? 
+			ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered] : ImVec4(0, 0, 0, 0));
+		bool clicked = ImGui::Button(TabButtonText(), ImVec2(ImGui::GetWindowContentRegionWidth(), 0));
+		if (clicked) visible = !visible;
+		ImGui::PopStyleColor();
+		return clicked;
+	}
+
+protected:
+	IDirect3DTexture9* texture = nullptr;
 };

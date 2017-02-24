@@ -5,14 +5,11 @@
 
 #include <imgui.h>
 
-#include <OSHGui\OSHGui.hpp>
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\Utilities\PatternScanner.h>
 
 #include <string>
 #include "logger.h"
-
-using namespace OSHGui::Drawing;
 
 class GuiUtils {
 public:
@@ -46,11 +43,6 @@ public:
 		}
 	}
 
-	// Returns the default on hover color.
-	static Color getMouseOverColor() {
-		return OSHGui::Application::InstancePtr()->GetTheme().GetControlColorTheme("mouseover").ForeColor;
-	}
-
 	// Returns the settings folder as std::string
 	static std::string getSettingsFolder() {
 		CHAR szPath[MAX_PATH];
@@ -68,24 +60,6 @@ public:
 	// in the settings folder as string
 	static std::string getSubPath(std::string file, std::string subdir) {
 		return getSettingsFolder() + "\\" + subdir + "\\" + file;
-	}
-
-	// Get the default toolbox font with given size and antialiased
-	static FontPtr getTBFont(float size, bool antialiased) {
-		FontPtr font;
-		try {
-			std::string path = GuiUtils::getPath("Font.ttf");
-			font = FontManager::LoadFontFromFile(path, size, antialiased);
-		} catch (OSHGui::Misc::FileNotFoundException e) {
-			LOG("ERROR - font file not found, falling back to Arial\n");
-			font = FontManager::LoadFont("Arial", size, false);
-		}
-
-		if (font == NULL) {
-			LOG("ERROR loading font, falling back to Arial\n");
-			font = FontManager::LoadFont("Arial", size, false);
-		}
-		return font;
 	}
 
 	static int ComputeX(int container_width, int horizontal_amount, int grid_x) {

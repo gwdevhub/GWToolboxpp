@@ -33,8 +33,10 @@ private:
 
 public:
 	const char* Name() const override { return "Build Panel"; }
+	const char* TabButtonText() const override { return "Builds"; }
 
-	BuildPanel();
+	BuildPanel(IDirect3DDevice9* pDevice);
+	~BuildPanel() {};
 
 	// Update. Will always be called every frame.
 	void Update() override;

@@ -12,15 +12,15 @@
 #include "Config.h"
 
 void PmapRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
-	color_map = Colors::IniGet(ini, section, "color_map", 0xFF999999);
-	color_mapshadow = Colors::IniGet(ini, section, "color_mapshadow", 0xFF120808);
-	shadow_show = (((color_mapshadow >> 24) & 0xFF) > 0);
+	color_map = Colors::Load(ini, section, "color_map", 0xFF999999);
+	color_mapshadow = Colors::Load(ini, section, "color_mapshadow", 0xFF120808);
+	shadow_show = ((color_mapshadow & IM_COL32_A_MASK) == 0);
 	Invalidate();
 }
 
 void PmapRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
-	Colors::IniSet(ini, section, "color_map", color_map);
-	Colors::IniSet(ini, section, "color_mapshadow", color_mapshadow);
+	Colors::Save(ini, section, "color_map", color_map);
+	Colors::Save(ini, section, "color_mapshadow", color_mapshadow);
 }
 
 void PmapRenderer::DrawSettings() {

@@ -7,23 +7,23 @@
 #include "GuiUtils.h"
 
 void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
-	modifier = Colors::IniGet(ini, section, "color_agent_modifier", 0x001E1E1E);
-	color_eoe = Colors::IniGet(ini, section, "color_eoe", 0x3200FF00);
-	color_qz = Colors::IniGet(ini, section, "color_qz", 0x320000FF);
-	color_target = Colors::IniGet(ini, section, "color_target", 0xFFFFFF00);
-	color_player = Colors::IniGet(ini, section, "color_player", 0xFFFF8000);
-	color_player_dead = Colors::IniGet(ini, section, "color_player_dead", 0x64FF8000);
-	color_signpost = Colors::IniGet(ini, section, "color_signpost", 0xFF0000C8);
-	color_item = Colors::IniGet(ini, section, "color_item", 0xFF0000F0);
-	color_hostile = Colors::IniGet(ini, section, "color_hostile", 0xFFF00000);
-	color_hostile_damaged = Colors::IniGet(ini, section, "color_hostile_damaged", 0xFF800000);
-	color_hostile_dead = Colors::IniGet(ini, section, "color_hostile_dead", 0xFF320000);
-	color_neutral = Colors::IniGet(ini, section, "color_neutral", 0xFF0000DC);
-	color_ally_party = Colors::IniGet(ini, section, "color_ally", 0xFF00B300);
-	color_ally_npc = Colors::IniGet(ini, section, "color_ally_npc", 0xFF99FF99);
-	color_ally_spirit = Colors::IniGet(ini, section, "color_ally_spirit", 0xFF608000);
-	color_ally_minion = Colors::IniGet(ini, section, "color_ally_minion", 0xFF008060);
-	color_ally_dead = Colors::IniGet(ini, section, "color_ally_dead", 0x64006400);
+	modifier = Colors::Load(ini, section, "color_agent_modifier", 0x001E1E1E);
+	color_eoe = Colors::Load(ini, section, "color_eoe", 0x3200FF00);
+	color_qz = Colors::Load(ini, section, "color_qz", 0x320000FF);
+	color_target = Colors::Load(ini, section, "color_target", 0xFFFFFF00);
+	color_player = Colors::Load(ini, section, "color_player", 0xFFFF8000);
+	color_player_dead = Colors::Load(ini, section, "color_player_dead", 0x64FF8000);
+	color_signpost = Colors::Load(ini, section, "color_signpost", 0xFF0000C8);
+	color_item = Colors::Load(ini, section, "color_item", 0xFF0000F0);
+	color_hostile = Colors::Load(ini, section, "color_hostile", 0xFFF00000);
+	color_hostile_damaged = Colors::Load(ini, section, "color_hostile_damaged", 0xFF800000);
+	color_hostile_dead = Colors::Load(ini, section, "color_hostile_dead", 0xFF320000);
+	color_neutral = Colors::Load(ini, section, "color_neutral", 0xFF0000DC);
+	color_ally_party = Colors::Load(ini, section, "color_ally", 0xFF00B300);
+	color_ally_npc = Colors::Load(ini, section, "color_ally_npc", 0xFF99FF99);
+	color_ally_spirit = Colors::Load(ini, section, "color_ally_spirit", 0xFF608000);
+	color_ally_minion = Colors::Load(ini, section, "color_ally_minion", 0xFF008060);
+	color_ally_dead = Colors::Load(ini, section, "color_ally_dead", 0x64006400);
 
 	size_default = (float)ini->GetDoubleValue(section, "size_default", 75.0);
 	size_player = (float)ini->GetDoubleValue(section, "size_player", 100.0);
@@ -36,23 +36,23 @@ void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 }
 
 void AgentRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
-	Colors::IniSet(ini, section, "color_agent_modifier", modifier);
-	Colors::IniSet(ini, section, "color_eoe", color_eoe);
-	Colors::IniSet(ini, section, "color_qz", color_qz);
-	Colors::IniSet(ini, section, "color_target", color_target);
-	Colors::IniSet(ini, section, "color_player", color_player);
-	Colors::IniSet(ini, section, "color_player_dead", color_player_dead);
-	Colors::IniSet(ini, section, "color_signpost", color_signpost);
-	Colors::IniSet(ini, section, "color_item", color_item);
-	Colors::IniSet(ini, section, "color_hostile", color_hostile);
-	Colors::IniSet(ini, section, "color_hostile_damaged", color_hostile_damaged);
-	Colors::IniSet(ini, section, "color_hostile_dead", color_hostile_dead);
-	Colors::IniSet(ini, section, "color_neutral", color_neutral);
-	Colors::IniSet(ini, section, "color_ally", color_ally_party);
-	Colors::IniSet(ini, section, "color_ally_npc", color_ally_npc);
-	Colors::IniSet(ini, section, "color_ally_spirit", color_ally_spirit);
-	Colors::IniSet(ini, section, "color_ally_minion", color_ally_minion);
-	Colors::IniSet(ini, section, "color_ally_dead", color_ally_dead);
+	Colors::Save(ini, section, "color_agent_modifier", modifier);
+	Colors::Save(ini, section, "color_eoe", color_eoe);
+	Colors::Save(ini, section, "color_qz", color_qz);
+	Colors::Save(ini, section, "color_target", color_target);
+	Colors::Save(ini, section, "color_player", color_player);
+	Colors::Save(ini, section, "color_player_dead", color_player_dead);
+	Colors::Save(ini, section, "color_signpost", color_signpost);
+	Colors::Save(ini, section, "color_item", color_item);
+	Colors::Save(ini, section, "color_hostile", color_hostile);
+	Colors::Save(ini, section, "color_hostile_damaged", color_hostile_damaged);
+	Colors::Save(ini, section, "color_hostile_dead", color_hostile_dead);
+	Colors::Save(ini, section, "color_neutral", color_neutral);
+	Colors::Save(ini, section, "color_ally", color_ally_party);
+	Colors::Save(ini, section, "color_ally_npc", color_ally_npc);
+	Colors::Save(ini, section, "color_ally_spirit", color_ally_spirit);
+	Colors::Save(ini, section, "color_ally_minion", color_ally_minion);
+	Colors::Save(ini, section, "color_ally_dead", color_ally_dead);
 
 	ini->SetDoubleValue(section, "size_default", size_default);
 	ini->SetDoubleValue(section, "size_player", size_player);
@@ -266,7 +266,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 }
 
 void AgentRenderer::Enqueue(GW::Agent* agent) {
-	Color_t color = GetColor(agent);
+	Color color = GetColor(agent);
 	float size = GetSize(agent);
 	Shape_e shape = GetShape(agent);
 
@@ -277,7 +277,7 @@ void AgentRenderer::Enqueue(GW::Agent* agent) {
 	Enqueue(shape, agent, size, color);
 }
 
-Color_t AgentRenderer::GetColor(GW::Agent* agent) const {
+Color AgentRenderer::GetColor(GW::Agent* agent) const {
 	if (agent->Id == GW::Agents().GetPlayerId()) {
 		if (agent->GetIsDead()) return color_player_dead;
 		else return color_player;
@@ -393,7 +393,7 @@ AgentRenderer::Shape_e AgentRenderer::GetShape(GW::Agent* agent) const {
 	return Tear;
 }
 
-void AgentRenderer::Enqueue(Shape_e shape, GW::Agent* agent, float size, Color_t color) {
+void AgentRenderer::Enqueue(Shape_e shape, GW::Agent* agent, float size, Color color) {
 	if ((color & IM_COL32_A_MASK) == 0) return;
 
 	GW::Vector2f translate(agent->X, agent->Y);
@@ -401,7 +401,7 @@ void AgentRenderer::Enqueue(Shape_e shape, GW::Agent* agent, float size, Color_t
 	for (i = 0; i < shapes[shape].vertices.size(); ++i) {
 		const Shape_Vertex& vert = shapes[shape].vertices[i];
 		GW::Vector2f pos = vert.Rotated(agent->Rotation_cos, agent->Rotation_sin) * size + translate;
-		Color_t vcolor = color;
+		Color vcolor = color;
 		switch (vert.modifier) {
 		case Dark: vcolor = Colors::Sub(color, modifier); break;
 		case Light: vcolor = Colors::Add(color, modifier); break;

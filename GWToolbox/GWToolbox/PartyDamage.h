@@ -4,32 +4,22 @@
 #include <string>
 #include <map>
 
-#include <OSHGui\OSHGui.hpp>
 #include <GWCA\GWCA.h>
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\Packets\StoC.h>
 
 #include <SimpleIni.h>
 
-#include "ToolboxWindow.h"
 #include "Timer.h"
 #include "GuiUtils.h"
+#include "ToolboxModule.h"
 
-class PartyDamage : public ToolboxWindow {
+class PartyDamage : public ToolboxModule {
 	const char* inifilename = "healthlog.ini";
 	const char* inisection = "health";
 
 	static const int MAX_PLAYERS = 12;
-	static const int ABS_WIDTH = 50;
-	static const int PERC_WIDTH = 50;
-	static const int WIDTH = ABS_WIDTH + PERC_WIDTH;
-	static const int RECENT_HEIGHT = 6;
 	static const int RECENT_MAX_TIME = 7000;
-
-	const OSHGui::Drawing::Color default_forecolor = OSHGui::Drawing::Color(1, 1, 1, 1);
-	const OSHGui::Drawing::Color default_backcolor = OSHGui::Drawing::Color(0.3f, 0, 0, 0);
-	const OSHGui::Drawing::Color default_forebarcolor = OSHGui::Drawing::Color(0.8f, 0.4f, 0.6f, 0.9f);
-	const OSHGui::Drawing::Color default_backbarcolor = OSHGui::Drawing::Color(0.4f, 0.8f, 0.4f, 0.2f);
 
 	struct PlayerDamage {
 		long damage = 0;
@@ -51,37 +41,24 @@ class PartyDamage : public ToolboxWindow {
 	};
 
 public:
+	const char* Name() const override { return "Damage"; }
+
 	PartyDamage();
 	~PartyDamage();
 
-	inline static const char* IniSection() { return "damage"; }
-	inline static const char* IniKeyX() { return "x"; }
-	inline static const char* IniKeyY() { return "y"; }
-	inline static const char* InikeyShow() { return "show"; }
-	inline static const char* ThemeKey() { return "damage"; }
-	inline static const char* ThemeBarsKey() { return "damagebars"; }
-
-	// Update. Will always be called every frame.
-	void Main() override;
-
 	// Draw user interface. Will be called every frame if the element is visible
-	void Draw() override;
+	void Draw(IDirect3DDevice9* pDevice) override;
 
-	void SetVisible(bool visible) override {
-		Control::SetVisible(visible);
-		party_size_ = 0;
-	}
+	void Update() override;
 
-	void SetFreeze(bool b);
-	void SetTransparentBackColor(bool b);
+	void LoadSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) const override;
+	void DrawSettings() override;
 
 	void WritePartyDamage();
 	void WriteDamageOf(int index, int rank = 0); // party index from 0 to 12
 	void WriteOwnDamage();
 	void ResetDamage();
-
-	void LoadIni();
-	void SaveIni();
 
 private:
 	bool DamagePacketCallback(GW::Packet::StoC::P151* packet);
@@ -89,7 +66,6 @@ private:
 
 	void CreatePartyIndexMap();
 
-	void SaveLocation();
 	float GetPartOfTotal(long dmg) const;
 	inline float GetPercentageOfTotal(long dmg) const
 	{ return GetPartOfTotal(dmg) * 100.0f; };
@@ -100,20 +76,11 @@ private:
 	std::map<DWORD, long> hp_map;
 	std::map<DWORD, int> party_index;
 
-	// UI elements
-	int line_height_;
-	int party_size_;
-	DragButton* absolute[MAX_PLAYERS];
-	DragButton* percent[MAX_PLAYERS];
-	OSHGui::Panel* bar[MAX_PLAYERS];
-	OSHGui::Panel* recent[MAX_PLAYERS];
-	OSHGui::Drawing::Color labelcolor;
-
 	// main routine variables
 	bool in_explorable = false;
 	clock_t send_timer;
 	std::queue<std::wstring> send_queue;
 
 	// ini
-	CSimpleIni* inifile_;
+	CSimpleIni* inifile = nullptr;
 };

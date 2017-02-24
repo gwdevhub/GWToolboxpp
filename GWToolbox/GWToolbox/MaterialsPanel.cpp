@@ -10,6 +10,7 @@
 #include <GWCA\Context\GameContext.h>
 
 #include "GuiUtils.h"
+#include "ChatLogger.h"
 
 void MaterialsPanel::Update() {
 	if (!quotequeue.empty()) {
@@ -26,20 +27,28 @@ void MaterialsPanel::Update() {
 		}
 	} else if (!purchasequeue.empty()) {
 		if (last_request_type == None) {
-			int itemid = RequestQuote(purchasequeue.front());
-			if (itemid > 0) {
-				purchasequeue.pop_front();
-				last_request_itemid = itemid;
-				last_request_type = Purchase;
-			} else {
-				quotequeue.clear(); // panic
+			int* price = GetPricePtr(purchasequeue.front());
+			if (*price > 0 && (DWORD)(*price) > GW::Items().GetGoldAmountOnCharacter()) {
+				ChatLogger::Err("Cannot purchase, not enough gold!");
 				purchasequeue.clear();
+			} else {
+				int itemid = RequestQuote(purchasequeue.front());
+				if (itemid > 0) {
+					purchasequeue.pop_front();
+					last_request_itemid = itemid;
+					last_request_type = Purchase;
+				} else {
+					quotequeue.clear(); // panic
+					purchasequeue.clear();
+				}
 			}
 		}
 	}
 }
 
-MaterialsPanel::MaterialsPanel() {
+MaterialsPanel::MaterialsPanel(IDirect3DDevice9* device) {
+	D3DXCreateTextureFromFile(device, GuiUtils::getSubPath("feather.png", "img").c_str(), &texture);
+
 	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P235_QuotedItemPrice>(
 		[&](GW::Packet::StoC::P235_QuotedItemPrice* pak) -> bool {
 		GW::ItemArray items = GW::Items().GetItemArray();

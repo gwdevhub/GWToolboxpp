@@ -2,13 +2,33 @@
 
 #include <SimpleIni.h>
 #include <imgui.h>
-#include <imgui_internal.h>
 
-typedef DWORD Color_t;
+#ifdef RGB
+#undef RGB
+#endif
+
+typedef ImU32 Color;
 
 namespace Colors {
 
-	static Color_t IniGet(CSimpleIni* ini, const char* section, const char* key, Color_t def) {
+	static Color ARGB(int a, int r, int g, int b) {
+		return (a << IM_COL32_A_SHIFT)
+			| (r << IM_COL32_R_SHIFT)
+			| (g << IM_COL32_G_SHIFT)
+			| (b << IM_COL32_B_SHIFT);
+	}
+
+	static Color RGB(int r, int g, int b) {
+		return (0xFF << IM_COL32_A_SHIFT)
+			| (r << IM_COL32_R_SHIFT)
+			| (g << IM_COL32_G_SHIFT)
+			| (b << IM_COL32_B_SHIFT);
+	}
+
+	static Color Red() { return 0xFFFF0000; }
+	static Color Purple() { return 0xFFFF00FF; }
+
+	static Color Load(CSimpleIni* ini, const char* section, const char* key, Color def) {
 		try {
 			const char* wc = ini->GetValue(section, key, nullptr);
 			if (wc == nullptr) return def;
@@ -18,32 +38,32 @@ namespace Colors {
 		}
 	}
 
-	static void IniSet(CSimpleIni* ini, const char* section, const char* key, Color_t val) {
+	static void Save(CSimpleIni* ini, const char* section, const char* key, Color val) {
 		char buf[64];
 		sprintf_s(buf, "0x%X", val);
 		ini->SetValue(section, key, buf);
 	}
 
-	static void u32_to_int4(Color_t color, int* i) {
-		i[0] = ((color >> 24) & 0xFF);
-		i[1] = ((color >> 16) & 0xFF);
-		i[2] = ((color >> 8) & 0xFF);
-		i[3] = ((color) & 0xFF);
+	static void ConvertU32ToInt4(Color color, int* i) {
+		i[0] = ((color >> IM_COL32_A_SHIFT) & 0xFF);
+		i[1] = ((color >> IM_COL32_R_SHIFT) & 0xFF);
+		i[2] = ((color >> IM_COL32_G_SHIFT) & 0xFF);
+		i[3] = ((color >> IM_COL32_B_SHIFT) & 0xFF);
 	}
 
-	static Color_t int4_to_u32(const int* i) {
-		return ((i[0] & 0xFF) << 24)
-			| ((i[1] & 0xFF) << 16)
-			| ((i[2] & 0xFF) << 8)
-			| ((i[3] & 0xFF));
+	static Color ConvertInt4ToU32(const int* i) {
+		return ((i[0] & 0xFF) << IM_COL32_A_SHIFT)
+			| ((i[1] & 0xFF) << IM_COL32_R_SHIFT)
+			| ((i[2] & 0xFF) << IM_COL32_G_SHIFT)
+			| ((i[3] & 0xFF) << IM_COL32_B_SHIFT);
 	}
 
-	static bool DrawSetting(const char* text, Color_t* color, bool alpha = true) {
+	static bool DrawSetting(const char* text, Color* color, bool alpha = true) {
 		int i[4];
-		u32_to_int4(*color, i);
+		ConvertU32ToInt4(*color, i);
 
 		ImGuiContext* context = ImGui::GetCurrentContext();
-		const ImGuiStyle& style = context->Style;
+		const ImGuiStyle& style = ImGui::GetStyle();
 
 		const int n_components = alpha ? 4 : 4;
 		const int first_component = alpha ? 0 : 1;
@@ -52,7 +72,7 @@ namespace Colors {
 		bool value_changed = false;
 
 		const float w_full = ImGui::CalcItemWidth();
-		const float square_sz = context->FontSize + style.FramePadding.y * 2.0f;
+		const float square_sz = ImGui::GetFontSize() + style.FramePadding.y * 2.0f;
 
 		const float w_items_all = w_full - (square_sz + style.ItemInnerSpacing.x);
 		const float w_item_one = std::round((w_items_all - (style.ItemInnerSpacing.x) * (n_components - 1)) / (float)n_components);
@@ -75,9 +95,7 @@ namespace Colors {
 		ImGui::PopItemWidth();
 
 		ImGui::SameLine(0, style.ItemInnerSpacing.x);
-		float s = 1.0f / 255.0f;
-		const ImVec4 col_display(i[1] * s, i[2] * s, i[3] * s, 1.0f);
-		ImGui::ColorButton(col_display);
+		ImGui::ColorButton(ImColor(i[1], i[2], i[3]));
 
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color:\n0x%02X%02X%02X%02X", i[0], i[1], i[2], i[3]);
 
@@ -87,31 +105,31 @@ namespace Colors {
 		ImGui::PopID();
 		ImGui::EndGroup();
 
-		if (value_changed) *color = int4_to_u32(i);
+		if (value_changed) *color = ConvertInt4ToU32(i);
 
 		return value_changed;
 	}
 
-	static Color_t Add(const Color_t c1, const Color_t c2) {
+	static Color Add(const Color c1, const Color c2) {
 		int i1[4]; int i2[4];
-		u32_to_int4(c1, i1);
-		u32_to_int4(c2, i2);
+		ConvertU32ToInt4(c1, i1);
+		ConvertU32ToInt4(c2, i2);
 		for (int i = 0; i < 4; ++i) {
 			i1[i] += i2[i];
 			if (i1[i] < 0) i1[i] = 0;
 			if (i1[i] > 0xFF) i1[i] = 0xFF;
 		}
-		return int4_to_u32(i1);
+		return ConvertInt4ToU32(i1);
 	}
-	static Color_t Sub(const Color_t c1, const Color_t c2) {
+	static Color Sub(const Color c1, const Color c2) {
 		int i1[4]; int i2[4];
-		u32_to_int4(c1, i1);
-		u32_to_int4(c2, i2);
+		ConvertU32ToInt4(c1, i1);
+		ConvertU32ToInt4(c2, i2);
 		for (int i = 0; i < 4; ++i) {
 			i1[i] -= i2[i];
 			if (i1[i] < 0) i1[i] = 0;
 			if (i1[i] > 0xFF) i1[i] = 0xFF;
 		}
-		return int4_to_u32(i1);
+		return ConvertInt4ToU32(i1);
 	}
 }

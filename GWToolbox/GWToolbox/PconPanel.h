@@ -10,6 +10,25 @@
 #include "ToolboxPanel.h"
 
 class PconPanel : public ToolboxPanel {
+public:
+	const char* Name() const override { return "Pcon Panel"; }
+	const char* TabButtonText() const override { return "Pcons"; }
+
+	PconPanel(IDirect3DDevice9* device);
+	~PconPanel() {};
+
+	bool SetEnabled(bool b);
+	inline void ToggleEnable() { SetEnabled(!enabled); }
+
+	void Update() override;
+
+	bool DrawTabButton(IDirect3DDevice9* device) override;
+	void Draw(IDirect3DDevice9* pDevice) override;
+
+	void DrawSettings() override;
+	void LoadSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) const override;
+
 private:
 	Pcon* essence;
 	Pcon* grail;
@@ -30,24 +49,15 @@ private:
 	Pcon* pahnai;
 	Pcon* city;
 	std::vector<Pcon*> pcons;
-	bool initialized;	// true if the feature is initialized
-	bool enabled;		// true if the feature is enabled, false otherwise 
 	GW::Constants::InstanceType current_map_type;
 	clock_t scan_inventory_timer;
-
-public:
-	const char* Name() const override { return "Pcon Panel"; }
-
-	PconPanel(OSHGui::Control* parent);
-
-	bool SetActive(bool active);
-	inline void ToggleActive() { SetActive(!enabled); }
-
-	void BuildUI() override;
-
-	// Update. Will always be called every frame.
-	void Update() override;
-
-	// Draw user interface. Will be called every frame if the element is visible
-	void Draw(IDirect3DDevice9* pDevice) override;
+	bool enabled = false;
+	
+	bool tick_with_pcons = false;
+	int items_per_row = 3;
+	int pcons_delay = 5000;
+	// todo: disable when not found
+	// todo: tonic pop?
+	// todo: morale / dp removal
+	// todo: replenish character pcons from chest?
 };

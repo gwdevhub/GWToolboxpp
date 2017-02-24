@@ -21,9 +21,9 @@ private:
 
 	void Initialize(IDirect3DDevice9* device) override;
 
-	Color_t color_quest;
-	Color_t color_north;
-	Color_t color_modifier;
+	Color color_quest;
+	Color color_north;
+	Color color_modifier;
 
 	const DWORD star_ntriangles = 16;
 	DWORD star_offset;

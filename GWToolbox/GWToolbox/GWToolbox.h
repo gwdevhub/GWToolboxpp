@@ -5,9 +5,6 @@
 #include <GWCA\GWCA.h>
 #include <GWCA_DX\DirectXHooker.h>
 
-#include <OSHGui\OSHGui.hpp>
-#include <OSHGui\Input\WindowsMessage.hpp>
-
 #include "ChatFilter.h"
 #include "ChatCommands.h"
 #include "OtherSettings.h"
@@ -25,8 +22,6 @@ class GWToolbox {
 private:
 	static GWToolbox* instance_;
 	static GW::DirectXHooker* dx_hooker;
-	static OSHGui::Drawing::Direct3D9Renderer* renderer;
-	static OSHGui::Input::WindowsMessage input;
 	static long OldWndProc;
 
 	//------ Static Methods ------//
@@ -54,9 +49,6 @@ public:
 	static GWToolbox& instance() { return *instance_; }
 	static GWToolbox* instanceptr() { return instance_; }
 
-	inline bool capture_input() { return capture_input_; }
-	inline void set_capture_input(bool capture) { capture_input_ = capture; }
-
 	ChatFilter* chat_filter;
 	ChatCommands* chat_commands;
 	OtherSettings* other_settings;
@@ -78,16 +70,10 @@ public:
 private:
 	void ResizeUI();
 
-	void LoadTheme();
-	void SaveTheme();
-
 	//------ Private Fields ------//
 private:
-	bool capture_input_;
 	bool right_mouse_pressed_;	// if true right mouse has been pressed, ignore move events
 	bool must_self_destruct_;	// is true when toolbox should quit
 	
 	bool must_resize_;		// true when a resize event is sent, is checked by render thread
-	OSHGui::Drawing::SizeI old_screen_size_;
-	OSHGui::Drawing::SizeI new_screen_size_;
 };

@@ -13,19 +13,19 @@
 #include "GuiUtils.h"
 
 void RangeRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
-	color_range_hos = Colors::IniGet(ini, section, "color_range_hos", 0xFF881188);
-	color_range_aggro = Colors::IniGet(ini, section, "color_range_aggro", 0xFF994444);
-	color_range_cast = Colors::IniGet(ini, section, "color_range_cast", 0xFF117777);
-	color_range_spirit = Colors::IniGet(ini, section, "color_range_spirit", 0xFF337733);
-	color_range_compass = Colors::IniGet(ini, section, "color_range_compass", 0xFF666611);
+	color_range_hos = Colors::Load(ini, section, "color_range_hos", 0xFF881188);
+	color_range_aggro = Colors::Load(ini, section, "color_range_aggro", 0xFF994444);
+	color_range_cast = Colors::Load(ini, section, "color_range_cast", 0xFF117777);
+	color_range_spirit = Colors::Load(ini, section, "color_range_spirit", 0xFF337733);
+	color_range_compass = Colors::Load(ini, section, "color_range_compass", 0xFF666611);
 	Invalidate();
 }
 void RangeRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
-	Colors::IniSet(ini, section, "color_range_hos", color_range_hos);
-	Colors::IniSet(ini, section, "color_range_aggro", color_range_aggro);
-	Colors::IniSet(ini, section, "color_range_cast", color_range_cast);
-	Colors::IniSet(ini, section, "color_range_spirit", color_range_spirit);
-	Colors::IniSet(ini, section, "color_range_compass", color_range_compass);
+	Colors::Save(ini, section, "color_range_hos", color_range_hos);
+	Colors::Save(ini, section, "color_range_aggro", color_range_aggro);
+	Colors::Save(ini, section, "color_range_cast", color_range_cast);
+	Colors::Save(ini, section, "color_range_spirit", color_range_spirit);
+	Colors::Save(ini, section, "color_range_compass", color_range_compass);
 }
 void RangeRenderer::DrawSettings() {
 	bool changed = false;

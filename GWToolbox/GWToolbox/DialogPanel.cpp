@@ -6,16 +6,18 @@
 #include "GuiUtils.h"
 #include "GWToolbox.h"
 
-DialogPanel::DialogPanel() {
+DialogPanel::DialogPanel(IDirect3DDevice9* device) {
+	D3DXCreateTextureFromFile(device, GuiUtils::getSubPath("comment.png", "img").c_str(), &texture);
+
 	fav_count = 3;
 	fav_index.resize(fav_count, 0);
 }
 
 void DialogPanel::Draw(IDirect3DDevice9* pDevice) {
 	auto DialogButton = [](int x_idx, int x_qty, const char* text, const char* help, DWORD dialog) -> void {
-		if (x_idx != 0) ImGui::SameLine();
+		if (x_idx != 0) ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 		float w = (ImGui::GetWindowContentRegionWidth() 
-			- ImGui::GetStyle().WindowPadding.x * (x_qty - 1)) / x_qty;
+			- ImGui::GetStyle().ItemInnerSpacing.x * (x_qty - 1)) / x_qty;
 		if (ImGui::Button(text, ImVec2(w, 0))) {
 			GW::Agents().Dialog(dialog);
 		}
@@ -72,14 +74,14 @@ void DialogPanel::Draw(IDirect3DDevice9* pDevice) {
 		"DoA - Foundry 2: Foundry Of Failed Creations" };
 	for (int i = 0; i < fav_count; ++i) {
 		ImGui::PushID(i);
-		ImGui::PushItemWidth(-100.0f - ImGui::GetStyle().WindowPadding.x * 2);
+		ImGui::PushItemWidth(-100.0f - ImGui::GetStyle().ItemInnerSpacing.x * 2);
 		ImGui::Combo("", &fav_index[i], questnames, n_quests);
 		ImGui::PopItemWidth();
-		ImGui::SameLine();
+		ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 		if (ImGui::Button("Take", ImVec2(40.0f, 0))) {
 			GW::Agents().Dialog(QuestAcceptDialog(IndexToQuestID(fav_index[i])));
 		}
-		ImGui::SameLine();
+		ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 		if (ImGui::Button("Reward", ImVec2(60.0f, 0))) {
 			GW::Agents().Dialog(QuestRewardDialog(IndexToDialogID(fav_index[i])));
 		}
@@ -103,10 +105,10 @@ void DialogPanel::Draw(IDirect3DDevice9* pDevice) {
 		"Docks -> LA Gate @ Mhenlo",
 		"LA Gate -> LA @ Neiro" };
 	static int dialogindex = 0;
-	ImGui::PushItemWidth(-60.0f - ImGui::GetStyle().WindowPadding.x);
+	ImGui::PushItemWidth(-60.0f - ImGui::GetStyle().ItemInnerSpacing.x);
 	ImGui::Combo("###dialogcombo", &dialogindex, dialognames, n_dialogs);
 	ImGui::PopItemWidth();
-	ImGui::SameLine();
+	ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 	if (ImGui::Button("Send", ImVec2(60.0f, 0))) {
 		GW::Agents().Dialog(IndexToDialogID(dialogindex));
 	}
@@ -129,12 +131,12 @@ void DialogPanel::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::SetTooltip(hex ? "Dialog ID is in hexadecimal value\nClick to convert to decimal"
 			: "Dialog ID is in decimal value\nClick to convert to hexadecimal");
 	}
-	ImGui::SameLine();
+	ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 	ImGuiInputTextFlags flag = (hex ? ImGuiInputTextFlags_CharsHexadecimal : ImGuiInputTextFlags_CharsDecimal);
-	ImGui::PushItemWidth(-60.0f - ImGui::GetStyle().WindowPadding.x);
+	ImGui::PushItemWidth(-60.0f - ImGui::GetStyle().ItemInnerSpacing.x);
 	ImGui::InputText("###dialoginput", customdialogbuf, 64, flag);
 	ImGui::PopItemWidth();
-	ImGui::SameLine();
+	ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 	if (ImGui::Button("Send", ImVec2(60.0f, 0))) {
 		try {
 			long id = std::stol(customdialogbuf, 0, hex ? 16 : 10);

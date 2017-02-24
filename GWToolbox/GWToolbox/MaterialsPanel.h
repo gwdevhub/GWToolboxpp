@@ -16,8 +16,9 @@ class MaterialsPanel : public ToolboxPanel {
 
 public:
 	const char* Name() const override { return "Materials Panel"; }
+	const char* TabButtonText() const override { return "Materials"; }
 
-	MaterialsPanel();
+	MaterialsPanel(IDirect3DDevice9* pDevice);
 	~MaterialsPanel();
 	
 	// Update. Will always be called every frame.

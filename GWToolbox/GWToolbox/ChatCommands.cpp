@@ -52,31 +52,36 @@ ChatCommands::ChatCommands() {
 bool ChatCommands::ProcessMessage(LPMSG msg) {
 	if (!GW::Cameramgr().GetCameraUnlock() || IsTyping()) return false;
 
+	const DWORD keyA = 0x41;
+	const DWORD keyD = 0x44;
+	const DWORD keyS = 0x53;
+	const DWORD keyW = 0x57;
+	const DWORD keyX = 0x58;
+	const DWORD keyZ = 0x5A;
+
 	switch (msg->message) {
 	case WM_KEYDOWN: {
-		OSHGui::Key key = (OSHGui::Key)msg->wParam;
-		switch (key) {
-		case OSHGui::Key::W: move_forward = 1; return true;
-		case OSHGui::Key::S: move_forward = -1; return true;
-		case OSHGui::Key::D: move_side = 1; return true;
-		case OSHGui::Key::A: move_side = -1; return true;
-		case OSHGui::Key::X: move_up = 1; return true;
-		case OSHGui::Key::Z: move_up = -1; return true;
+		switch (msg->wParam) {
+		case keyW: move_forward = 1; return true;
+		case keyS: move_forward = -1; return true;
+		case keyD: move_side = 1; return true;
+		case keyA: move_side = -1; return true;
+		case keyX: move_up = 1; return true;
+		case keyZ: move_up = -1; return true;
 		}
 	}
 	case WM_KEYUP: {
-		OSHGui::Key key = (OSHGui::Key)msg->wParam;
-		switch (key) {
-		case OSHGui::Key::W:
-		case OSHGui::Key::S:
+		switch (msg->wParam) {
+		case keyW:
+		case keyS:
 			move_forward = 0; 
 			return true;
-		case OSHGui::Key::D:
-		case OSHGui::Key::A:
+		case keyD:
+		case keyA:
 			move_side = 0;
 			return true;
-		case OSHGui::Key::X:
-		case OSHGui::Key::Z:
+		case keyX:
+		case keyZ:
 			move_up = 0;
 			return true;
 		default:
@@ -131,15 +136,15 @@ bool ChatCommands::CmdAge2(std::wstring& cmd, std::vector<std::wstring>& args) {
 }
 
 bool ChatCommands::CmdPcons(std::wstring& cmd, std::vector<std::wstring>& args) {
-	PconPanel& pcons = GWToolbox::instance().main_window->pcon_panel();
+	PconPanel* pcons = GWToolbox::instance().main_window->pcon_panel;
 	if (args.empty()) {
-		pcons.ToggleActive();
+		pcons->ToggleEnable();
 	} else { // we are ignoring parameters after the first
 		std::wstring arg = GetLowerCaseArg(args, 0);
 		if (arg == L"on") {
-			pcons.SetActive(true);
+			pcons->SetEnabled(true);
 		} else if (arg == L"off") {
-			pcons.SetActive(false);
+			pcons->SetEnabled(false);
 		} else {
 			ChatLogger::Log("[Error] Invalid argument '%ls', please use /pcons [|on|off]", args[0].c_str());
 		}
@@ -171,21 +176,21 @@ bool ChatCommands::CmdChest(std::wstring& cmd, std::vector<std::wstring>& args) 
 
 bool ChatCommands::CmdTB(std::wstring& cmd, std::vector<std::wstring>& args) {
 	if (args.empty()) {
-		GWToolbox::instance().main_window->ToggleHidden();
+		GWToolbox::instance().main_window->ToggleVisible();
 	} else {
 		std::wstring arg = GetLowerCaseArg(args, 0);
 		if (arg == L"age") {
 			CmdAge2(cmd, args);
 		} else if (arg == L"hide") {
-			GWToolbox::instance().main_window->SetHidden(true);
+			GWToolbox::instance().main_window->visible = false;
 		} else if (arg == L"show") {
-			GWToolbox::instance().main_window->SetHidden(false);
+			GWToolbox::instance().main_window->visible = true;
 		} else if (arg == L"reset") {
-			GWToolbox::instance().main_window->SetLocation(PointI(0, 0));
+			//GWToolbox::instance().main_window->SetLocation(PointI(0, 0));
 		} else if (arg == L"mini" || arg == L"minimize") {
-			GWToolbox::instance().main_window->SetMinimized(true);
+			GWToolbox::instance().main_window->minimized = true;
 		} else if (arg == L"maxi" || arg == L"maximize") {
-			GWToolbox::instance().main_window->SetMinimized(false);
+			GWToolbox::instance().main_window->minimized = false;
 		} else if (arg == L"close" || arg == L"quit" || arg == L"exit") {
 			GWToolbox::instance().StartSelfDestruct();
 		}
@@ -236,11 +241,11 @@ bool ChatCommands::CmdTP(std::wstring& cmd, std::vector<std::wstring>& args) {
 		} else if (town == L"deep") {
 			GW::Map().Travel(GW::Constants::MapID::The_Deep, district, district_number);
 		} else if (town == L"fav1") {
-			GWToolbox::instance().main_window->travel_panel().TravelFavorite(0);
+			GWToolbox::instance().main_window->travel_panel->TravelFavorite(0);
 		} else if (town == L"fav2") {
-			GWToolbox::instance().main_window->travel_panel().TravelFavorite(1);
+			GWToolbox::instance().main_window->travel_panel->TravelFavorite(1);
 		} else if (town == L"fav3") {
-			GWToolbox::instance().main_window->travel_panel().TravelFavorite(2);
+			GWToolbox::instance().main_window->travel_panel->TravelFavorite(2);
 		} else if (town == L"gh") {
 			GW::Guildmgr().TravelGH();
 		}

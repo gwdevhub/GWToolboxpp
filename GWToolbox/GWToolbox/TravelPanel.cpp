@@ -12,7 +12,9 @@
 
 bool travelpanel_arraygetter(void* data, int idx, const char** out_text);
 
-TravelPanel::TravelPanel() {
+TravelPanel::TravelPanel(IDirect3DDevice9* device) {
+	D3DXCreateTextureFromFile(device, GuiUtils::getSubPath("plane.png", "img").c_str(), &texture);
+
 	fav_count = 3;
 	fav_index.resize(fav_count, n_outposts - 1);
 	district = district = GW::Constants::District::Current;
@@ -20,8 +22,8 @@ TravelPanel::TravelPanel() {
 }
 
 void TravelPanel::TravelButton(const char* text, int x_idx, GW::Constants::MapID mapid) {
-	if (x_idx != 0) ImGui::SameLine();
-	float w = (ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().WindowPadding.x) / 2;
+	if (x_idx != 0) ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+	float w = (ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().ItemInnerSpacing.x) / 2;
 	if (ImGui::Button(text, ImVec2(w, 0))) {
 		GW::Map().Travel(mapid, district, district_number);
 	}
@@ -90,10 +92,10 @@ void TravelPanel::Draw(IDirect3DDevice9* pDevice) {
 
 	for (int i = 0; i < fav_count; ++i) {
 		ImGui::PushID(i);
-		ImGui::PushItemWidth(-40.0f - ImGui::GetStyle().WindowPadding.x);
+		ImGui::PushItemWidth(-40.0f - ImGui::GetStyle().ItemInnerSpacing.x);
 		ImGui::Combo("", &fav_index[i], travelpanel_arraygetter, nullptr, n_outposts);
 		ImGui::PopItemWidth();
-		ImGui::SameLine();
+		ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 		if (ImGui::Button("Go", ImVec2(40.0f, 0))) {
 			TravelFavorite(i);
 		}

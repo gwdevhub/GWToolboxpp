@@ -5,11 +5,13 @@
 #include <GWCA\Managers\MapMgr.h>
 
 #include "Config.h"
+#include "GuiUtils.h"
 
 unsigned int BuildPanel::TeamBuild::cur_ui_id = 0;
 
-BuildPanel::BuildPanel() {
-	teambuilds = std::vector<TeamBuild>();
+BuildPanel::BuildPanel(IDirect3DDevice9* device) {
+	D3DXCreateTextureFromFile(device, GuiUtils::getSubPath("list.png", "img").c_str(), &texture);
+
 	send_timer = clock();
 }
 
@@ -24,7 +26,7 @@ void BuildPanel::Draw(IDirect3DDevice9* pDevice) {
 		if (ImGui::IsItemHovered()) {
 			ImGui::SetTooltip("Click to send teambuild to chat");
 		}
-		ImGui::SameLine();
+		ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 		if (ImGui::Button("Edit", ImVec2(60.0f, 0))) {
 			tbuild.edit_open = true;
 		}
@@ -53,17 +55,17 @@ void BuildPanel::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::Text("#%d", j + 1);
 			ImGui::SameLine(30.0f);
 			ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 24.0f - 50.0f - 30.0f
-				- ImGui::GetStyle().WindowPadding.x * 3) / 2);
+				- ImGui::GetStyle().ItemInnerSpacing.x * 3) / 2);
 			ImGui::InputText("###name", build.name, 64);
-			ImGui::SameLine();
+			ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 			ImGui::InputText("###code", build.code, 64);
 			ImGui::PopItemWidth();
-			ImGui::SameLine();
+			ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 			if (ImGui::Button("Send", ImVec2(50.0f, 0))) {
 				Send(tbuild, j);
 			}
 			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Send to team chat");
-			ImGui::SameLine();
+			ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 			if (ImGui::Button("x", ImVec2(24.0f, 0))) {
 				tbuild.builds.erase(tbuild.builds.begin() + j);
 			}

@@ -9,10 +9,9 @@
 #include "GuiUtils.h"
 #include "Config.h"
 
-using namespace OSHGui;
-using namespace OSHGui::Drawing;
+HotkeyPanel::HotkeyPanel(IDirect3DDevice9* device) {
+	D3DXCreateTextureFromFile(device, GuiUtils::getSubPath("keyboard.png", "img").c_str(), &texture);
 
-HotkeyPanel::HotkeyPanel() : ToolboxPanel() {
 	clickerTimer = TBTimer::init();
 	dropCoinsTimer = TBTimer::init();
 	hotkeys = std::vector<TBHotkey*>();

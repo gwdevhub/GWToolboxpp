@@ -58,7 +58,7 @@ class PingsLinesRenderer : public VBuffer {
 		unsigned int vertex_count;
 		void Initialize(IDirect3DDevice9* device) override;
 	public:
-		DWORD color_pings;
+		Color color_pings;
 	};
 
 public:
@@ -110,7 +110,7 @@ private:
 	clock_t lastqueued;
 	std::vector<ShortPos> queue;
 
-	DWORD color_drawings;
+	Color color_drawings;
 
 	// for the gpu
 	D3DVertex* vertices;		// vertices array

@@ -11,13 +11,13 @@
 #include "GuiUtils.h"
 
 void PingsLinesRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
-	color_drawings = Colors::IniGet(ini, section, "color_drawings", 0x00FFFFFF);
-	ping_circle.color_pings = Colors::IniGet(ini, section, "color_pings", 0xFFFF0000);
+	color_drawings = Colors::Load(ini, section, "color_drawings", 0x00FFFFFF);
+	ping_circle.color_pings = Colors::Load(ini, section, "color_pings", 0xFFFF0000);
 	Invalidate();
 }
 void PingsLinesRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
-	Colors::IniSet(ini, section, "color_drawings", color_drawings);
-	Colors::IniSet(ini, section, "color_pings", ping_circle.color_pings);
+	Colors::Save(ini, section, "color_drawings", color_drawings);
+	Colors::Save(ini, section, "color_pings", ping_circle.color_pings);
 }
 void PingsLinesRenderer::DrawSettings() {
 	Colors::DrawSetting("Drawings", &color_drawings, false);

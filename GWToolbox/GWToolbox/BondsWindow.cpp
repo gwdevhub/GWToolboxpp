@@ -2,8 +2,7 @@
 
 #include <sstream>
 #include <string>
-
-#include <OSHGui\OSHGui.hpp>
+#include <d3dx9tex.h>
 
 #include <GWCA\GWCA.h>
 #include <GWCA\Managers\EffectMgr.h>
@@ -14,211 +13,33 @@
 #include "Config.h"
 #include "GuiUtils.h"
 
-
-using namespace OSHGui;
-
-BondsWindow::BondsWindow() {
+BondsWindow::BondsWindow(IDirect3DDevice9* device) {
+	for (int i = 0; i < MAX_BONDS; ++i) textures[i] = nullptr;
+	D3DXCreateTextureFromFile(device, GuiUtils::getSubPath("balthspirit.jpg", "img").c_str(), &textures[0]);
+	D3DXCreateTextureFromFile(device, GuiUtils::getSubPath("lifebond.jpg", "img").c_str(), &textures[1]);
+	D3DXCreateTextureFromFile(device, GuiUtils::getSubPath("protbond.jpg", "img").c_str(), &textures[2]);
 
 	int img_size = GuiUtils::GetPartyHealthbarHeight();
-	int width = img_size * MAX_BONDS;
-	int height = img_size * MAX_PLAYERS;
-
-	int x = Config::IniRead(BondsWindow::IniSection(), BondsWindow::IniKeyX(), 400);
-	int y = Config::IniRead(BondsWindow::IniSection(), BondsWindow::IniKeyY(), 100);
-
-	SetLocation(PointI(x, y));
-	SetSize(Drawing::SizeI(width, height));
-
-	SetTransparentBackColor(false);
-
-	monitor = new BondsMonitor(this, img_size);
-	monitor->SetLocation(PointI(0, 0));
-	monitor->SetSize(SizeI(width, height));
-	AddControl(monitor);
-
-	std::shared_ptr<BondsWindow> self = std::shared_ptr<BondsWindow>(this);
-	Form::Show(self);
-
-	bool show = Config::IniRead(BondsWindow::IniSection(), BondsWindow::IniKeyShow(), false);
-	SetVisible(show);
 }
 
-void BondsWindow::SetTransparentBackColor(bool b) {
-	if (b) {
-		SetBackColor(Color::Empty());
-	} else {
-		Drawing::Theme::ControlTheme theme = Application::InstancePtr()
-			->GetTheme().GetControlColorTheme(BondsWindow::ThemeKey());
-		SetBackColor(theme.BackColor);
-	}
-}
-
-BondsWindow::BondsMonitor::BondsMonitor(OSHGui::Control* parent, int img_size) : 
-	DragButton(parent), 
-	img_size_(img_size) {
-
-	isFocusable_ = true;
-	SetEnabled(true);
-	hovered_player = -1;
-	hovered_bond = -1;
-	party_size = MAX_PLAYERS; // initialize at max, upcate will take care of shrinking as needed.
-	pressed = false;
-
-	for (int i = 0; i < MAX_PLAYERS; ++i) {
-		for (int j = 0; j < MAX_BONDS; ++j) {
-			buff_id[i][j] = 0;
-			pics[i][j] = new PictureBox(this);
-			pics[i][j]->SetLocation(PointI(j * img_size_ + 1, i *img_size_ + 1));
-			pics[i][j]->SetSize(SizeI(img_size_ - 2, img_size_ - 2));
-			pics[i][j]->SetStretch(true);
-			pics[i][j]->SetVisible(false);
-			pics[i][j]->SetEnabled(false);
-			pics[i][j]->SetClip(Clipping::OnParent); // so they dont modify clipping
-			AddControl(pics[i][j]);
+BondsWindow::~BondsWindow() {
+	for (int i = 0; i < MAX_BONDS; ++i) {
+		if (textures[i]) {
+			textures[i]->Release();
+			textures[i] = nullptr;
 		}
 	}
-	for (int i = 0; i < MAX_PLAYERS; ++i) {
-		pics[i][0]->SetImage(Image::FromFile(GuiUtils::getSubPath("balthspirit.jpg", "img")));
-		pics[i][1]->SetImage(Image::FromFile(GuiUtils::getSubPath("lifebond.jpg", "img")));
-		pics[i][2]->SetImage(Image::FromFile(GuiUtils::getSubPath("protbond.jpg", "img")));
-	}
-
-	GetMouseUpEvent() += MouseUpEventHandler([this](Control*, MouseEventArgs) {
-		SaveLocation();
-	});
 }
 
-void BondsWindow::BondsMonitor::Render(OSHGui::Drawing::RenderContext &context) {
-	if (!isVisible_) return;
-
-	for (Control* control : controls_) {
-		control->Render(context);
-	}
-
-	DrawSelf(context);
-}
-
-void BondsWindow::BondsMonitor::PopulateGeometry() {
-	if (hovered_player != -1 && hovered_bond != -1) {
-		Graphics g(*geometry_);
-		Drawing::Color c = GetForeColor();
-		if (pressed) c = c - Drawing::Color::FromARGB(50, 50, 50, 50);
-		g.DrawRectangle(c, img_size_ * hovered_bond, img_size_ * hovered_player, img_size_, img_size_);
-	}
-}
-
-int BondsWindow::BondsMonitor::GetBond(int xcoord) {
-	return (xcoord - absoluteLocation_.X) / img_size_;
-}
-
-int BondsWindow::BondsMonitor::GetPlayer(int ycoord) {
-	return (ycoord - absoluteLocation_.Y) / img_size_;
-}
-
-void BondsWindow::BondsMonitor::OnMouseDown(const OSHGui::MouseMessage &mouse) {
-	if (freezed) {
-		Control::OnMouseDown(mouse);
-	} else {
-		DragButton::OnMouseDown(mouse);
-	}
-
-	pressed = true;
-	Invalidate();
-}
-void BondsWindow::BondsMonitor::OnMouseMove(const OSHGui::MouseMessage &mouse) {
-	if (freezed) {
-		Control::OnMouseMove(mouse);
-	} else {
-		DragButton::OnMouseMove(mouse);
-	}
-
-	int player = GetPlayer(mouse.GetLocation().Y);
-	int bond = GetBond(mouse.GetLocation().X);
-	if (hovered_player != player || hovered_bond != bond) {
-		hovered_player = player;
-		hovered_bond = bond;
-		pressed = false;
-		Invalidate();
-	}
-}
-void BondsWindow::BondsMonitor::OnMouseUp(const OSHGui::MouseMessage &mouse) {
-	if (freezed) {
-		Control::OnMouseUp(mouse);
-	} else {
-		DragButton::OnMouseUp(mouse);
-	}
-
-	if (pressed) {
-		int player = GetPlayer(mouse.GetLocation().Y);
-		int bond = GetBond(mouse.GetLocation().X);
-
-		if (player >= 0 && player < MAX_PLAYERS
-			&& bond >= 0 && bond < MAX_BONDS) {
-			
-			DropUseBuff(bond, player);
-		}
-	}
-
-	pressed = false;
-	Invalidate();
-}
-
-void BondsWindow::BondsMonitor::DropUseBuff(int bond, int player) {
-	if (pics[player][bond]->GetVisible()) {
-		if (buff_id[player][bond] > 0) {
-			GW::Effects().DropBuff(buff_id[player][bond]);
-		}
-	} else {
-		// cast bond on player
-		GW::Constants::SkillID buff;
-		switch (static_cast<Bond>(bond)) {
-		case Bond::Balth: buff = GW::Constants::SkillID::Balthazars_Spirit; break;
-		case Bond::Life: buff = GW::Constants::SkillID::Life_Bond; break;
-		case Bond::Prot: buff = GW::Constants::SkillID::Protective_Bond; break;
-		}
-
-		int target = GW::Agents().GetAgentIdByLoginNumber(player + 1);
-		if (target <= 0) return;
-
-		int slot = GW::Skillbarmgr().GetSkillSlot(buff);
-		if (slot <= 0) return;
-		if (GW::Skillbar::GetPlayerSkillbar().Skills[slot].Recharge != 0) return;
-
-		GW::Skillbarmgr().UseSkill(slot, target);
-	}
-}
-
-void BondsWindow::BondsMonitor::OnMouseLeave(const OSHGui::MouseMessage &mouse) {
-	DragButton::OnMouseLeave(mouse);
-	hovered_player = -1;
-	hovered_bond = -1;
-	Invalidate();
-}
-
-void BondsWindow::BondsMonitor::SaveLocation() {
-	CalculateAbsoluteLocation();
-	int x = absoluteLocation_.X;
-	int y = absoluteLocation_.Y;
-	Config::IniWrite(BondsWindow::IniSection(), BondsWindow::IniKeyX(), x);
-	Config::IniWrite(BondsWindow::IniSection(), BondsWindow::IniKeyY(), y);
-}
-
-void BondsWindow::BondsMonitor::Draw() {
-	if (!isVisible_) return;
+void BondsWindow::Draw(IDirect3DDevice9* device) {
+	if (!visible) return;
+	int img_size = GuiUtils::GetPartyHealthbarHeight();
+	int party_size = GW::Partymgr().GetPartySize();
 
 	int size = GW::Partymgr().GetPartySize();
 	if (size > MAX_PLAYERS) size = MAX_PLAYERS;
-	if (party_size != size) {
-		party_size = size;
-		SetSize(SizeI(MAX_BONDS * img_size_, party_size * img_size_));
-		parent_->SetSize(GetSize());
-	}
 
-	for (int i = 0; i < MAX_PLAYERS; ++i) {
-		for (int j = 0; j < MAX_BONDS; ++j) {
-			show[i][j] = false;
-		}
-	}
+	int buff_id[MAX_PLAYERS][MAX_BONDS] = {};
 
 	GW::AgentEffectsArray effects = GW::Effects().GetPartyEffectArray();
 	if (effects.valid()) {
@@ -244,17 +65,74 @@ void BondsWindow::BondsMonitor::Draw() {
 				}
 				if (bond == -1) continue;
 
-				show[player][bond] = true;
 				buff_id[player][bond] = buffs[i].BuffId;
 			}
 		}
 	}
-
-	for (int i = 0; i < MAX_PLAYERS; ++i) {
-		for (int j = 0; j < MAX_BONDS; ++j) {
-			if (pics[i][j]->GetVisible() != show[i][j]) {
-				pics[i][j]->SetVisible(show[i][j]);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(background));
+	ImGui::SetNextWindowSize(ImVec2((float)(MAX_BONDS * img_size), (float)(party_size * img_size)));
+	ImGui::Begin(Name(), &visible, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize);
+	float x = ImGui::GetWindowPos().x;
+	float y = ImGui::GetWindowPos().y;
+	for (int player = 0; player < party_size; ++player) {
+		for (int bond = 0; bond < MAX_BONDS; ++bond) {
+			ImVec2 tl(x + (bond + 0) * img_size, y + (player + 0) * img_size);
+			ImVec2 br(x + (bond + 1) * img_size, y + (player + 1) * img_size);
+			if (buff_id[player][bond] > 0) {
+				ImGui::GetWindowDrawList()->AddImage((ImTextureID)textures[bond],
+					ImVec2(tl.x + 1, tl.y + 1),
+					ImVec2(br.x - 2, br.y - 2));
+			}
+			if (ImGui::IsMouseHoveringRect(tl, br)) {
+				ImGui::GetWindowDrawList()->AddRect(tl, br, IM_COL32(255, 255, 255, 255));
+				if (ImGui::IsMouseReleased(0)) {
+					if (buff_id[player][bond] > 0) {
+						GW::Effects().DropBuff(buff_id[player][bond]);
+					} else {
+						UseBuff(player, bond);
+					}
+				}
 			}
 		}
 	}
+	ImGui::End();
+	ImGui::PopStyleColor(); // window bg
+	ImGui::PopStyleVar(2);
+}
+
+void BondsWindow::UseBuff(int player, int bond) {
+	if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Explorable) return;
+
+	const GW::Constants::SkillID buff = [](int bond) -> GW::Constants::SkillID {
+		switch (bond) {
+		case 0: return GW::Constants::SkillID::Balthazars_Spirit;
+		case 1: return GW::Constants::SkillID::Life_Bond;
+		default: return GW::Constants::SkillID::Protective_Bond;
+		}
+	}(bond);
+
+	DWORD target = GW::Agents().GetAgentIdByLoginNumber(player + 1);
+	if (target == 0) return;
+
+	int slot = GW::Skillbarmgr().GetSkillSlot(buff);
+	if (slot < 0) return;
+	if (GW::Skillbar::GetPlayerSkillbar().Skills[slot].Recharge != 0) return;
+
+	GW::Skillbarmgr().UseSkill(slot, target);
+}
+
+void BondsWindow::LoadSettings(CSimpleIni* ini) {
+	ToolboxModule::LoadSettingVisible(ini);
+	background = Colors::Load(ini, Name(), "background", Colors::ARGB(76, 0, 0, 0));
+}
+
+void BondsWindow::SaveSettings(CSimpleIni* ini) const {
+	ToolboxModule::SaveSettingVisible(ini);
+	Colors::Save(ini, Name(), "background", background);
+}
+
+void BondsWindow::DrawSettings() {
+	Colors::DrawSetting("Background", &background);
 }

@@ -8,15 +8,15 @@
 #include <GWCA\Context\WorldContext.h>
 
 void SymbolsRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
-	color_quest = Colors::IniGet(ini, section, "color_quest", 0xFF22EF22);
-	color_north = Colors::IniGet(ini, section, "color_north", 0xFFFF8000);
-	color_modifier = Colors::IniGet(ini, section, "color_symbols_modifier", 0x001E1E1E);
+	color_quest = Colors::Load(ini, section, "color_quest", 0xFF22EF22);
+	color_north = Colors::Load(ini, section, "color_north", 0xFFFF8000);
+	color_modifier = Colors::Load(ini, section, "color_symbols_modifier", 0x001E1E1E);
 	Invalidate();
 }
 void SymbolsRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
-	Colors::IniSet(ini, section, "color_quest", color_quest);
-	Colors::IniSet(ini, section, "color_north", color_north);
-	Colors::IniSet(ini, section, "color_symbols_modifier", color_modifier);
+	Colors::Save(ini, section, "color_quest", color_quest);
+	Colors::Save(ini, section, "color_north", color_north);
+	Colors::Save(ini, section, "color_symbols_modifier", color_modifier);
 }
 void SymbolsRenderer::DrawSettings() {
 	if (Colors::DrawSetting("Quest Marker", &color_quest)) Invalidate();
@@ -36,7 +36,7 @@ void SymbolsRenderer::Initialize(IDirect3DDevice9* device) {
 	buffer_->Lock(0, sizeof(D3DVertex) * vertex_count,
 		(VOID**)&vertices, D3DLOCK_DISCARD);
 
-	auto AddVertex = [&vertices, &offset](float x, float y, Color_t color) -> void {
+	auto AddVertex = [&vertices, &offset](float x, float y, Color color) -> void {
 		vertices[0].x = x;
 		vertices[0].y = y;
 		vertices[0].z = 0.0f;
@@ -55,8 +55,8 @@ void SymbolsRenderer::Initialize(IDirect3DDevice9* device) {
 		float angle2 = 2 * (i + 1) * PI / star_ntriangles;
 		float size1 = ((i + 0) % 2 == 0 ? star_size_small : star_size_big);
 		float size2 = ((i + 1) % 2 == 0 ? star_size_small : star_size_big);
-		Color_t c1 = ((i + 0) % 2 == 0 ? color_quest : Colors::Sub(color_quest, color_modifier));
-		Color_t c2 = ((i + 1) % 2 == 0 ? color_quest : Colors::Sub(color_quest, color_modifier));
+		Color c1 = ((i + 0) % 2 == 0 ? color_quest : Colors::Sub(color_quest, color_modifier));
+		Color c2 = ((i + 1) % 2 == 0 ? color_quest : Colors::Sub(color_quest, color_modifier));
 		AddVertex(std::cos(angle1) * size1, std::sin(angle1) * size1, c1);
 		AddVertex(std::cos(angle2) * size2, std::sin(angle2) * size2, c2);
 		AddVertex(0.0f, 0.0f, Colors::Add(color_quest, color_modifier));

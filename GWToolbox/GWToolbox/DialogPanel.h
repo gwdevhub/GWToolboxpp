@@ -8,8 +8,10 @@
 class DialogPanel : public ToolboxPanel {
 public:
 	const char* Name() const override { return "Dialog Panel"; }
+	const char* TabButtonText() const override { return "Dialogs"; }
 
-	DialogPanel();
+	DialogPanel(IDirect3DDevice9* pDevice);
+	~DialogPanel() {}
 
 	// Draw user interface. Will be called every frame if the element is visible
 	void Draw(IDirect3DDevice9* pDevice) override;

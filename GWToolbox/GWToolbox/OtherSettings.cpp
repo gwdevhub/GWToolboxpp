@@ -33,18 +33,18 @@ void OtherSettings::DrawSettings() {
 }
 
 void OtherSettings::LoadSettings(CSimpleIni* ini) {
-	freeze_widgets = ini->GetBoolValue(MainWindow::IniSection(), "freeze_widgets", false);
-	open_template_links = ini->GetBoolValue(MainWindow::IniSection(), "openlinks", true);
-	borderless_window = ini->GetBoolValue(MainWindow::IniSection(), "borderlesswindow", false);
+	freeze_widgets = ini->GetBoolValue("main_window", "freeze_widgets", false);
+	open_template_links = ini->GetBoolValue("main_window", "openlinks", true);
+	borderless_window = ini->GetBoolValue("main_window", "borderlesswindow", false);
 
 	ApplyBorderless(borderless_window);
 	GW::Chat().SetOpenLinks(open_template_links);
 }
 
 void OtherSettings::SaveSettings(CSimpleIni* ini) const {
-	ini->SetBoolValue(MainWindow::IniSection(), "freeze_widgets", freeze_widgets);
-	ini->SetBoolValue(MainWindow::IniSection(), "openlinks", open_template_links);
-	ini->SetBoolValue(MainWindow::IniSection(), "borderlesswindow", borderless_window);
+	ini->SetBoolValue("main_window", "freeze_widgets", freeze_widgets);
+	ini->SetBoolValue("main_window", "openlinks", open_template_links);
+	ini->SetBoolValue("main_window", "borderlesswindow", borderless_window);
 }
 
 void OtherSettings::ApplyBorderless(bool value) {

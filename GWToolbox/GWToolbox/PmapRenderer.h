@@ -20,8 +20,8 @@ protected:
 	void Initialize(IDirect3DDevice9* device) override;
 
 private:
-	Color_t color_map;
-	Color_t color_mapshadow;
+	Color color_map;
+	Color color_mapshadow;
 	bool shadow_show;
 
 	size_t trapez_count_;

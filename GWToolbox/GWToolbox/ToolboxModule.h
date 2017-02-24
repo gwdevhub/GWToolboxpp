@@ -6,6 +6,9 @@
 
 class ToolboxModule {
 public:
+	ToolboxModule() {}
+	virtual ~ToolboxModule() {};
+
 	// name of the window and the ini section
 	virtual const char* Name() const = 0;
 
@@ -27,6 +30,7 @@ public:
 	// Save settings to ini
 	virtual void SaveSettings(CSimpleIni* ini) const {};
 
+	virtual bool ToggleVisible() { return visible = !visible; };
 	// true if the interface (usually window) is visible, unused if the module has no interface
 	bool visible = false;
 

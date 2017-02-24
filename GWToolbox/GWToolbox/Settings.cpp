@@ -19,13 +19,13 @@ Setting::Setting(const char* inisection_,
 }
 
 void SettingBool::Load() {
-	value = Config::IniRead(MainWindow::IniSection(), inikey, default_value);
+	value = Config::IniRead("main_window", inikey, default_value);
 }
 void SettingBool::Save() const {
-	Config::IniWrite(MainWindow::IniSection(), inikey, value);
+	Config::IniWrite("main_window", inikey, value);
 }
 
 void NoBackgroundWidgets::Apply() {
-	GWToolbox::instance().bonds_window->SetTransparentBackColor(value);
-	GWToolbox::instance().party_damage->SetTransparentBackColor(value);
+	//GWToolbox::instance().bonds_window->SetTransparentBackColor(value);
+	//GWToolbox::instance().party_damage->SetTransparentBackColor(value);
 }

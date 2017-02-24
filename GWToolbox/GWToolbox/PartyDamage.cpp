@@ -7,15 +7,10 @@
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Managers\PartyMgr.h>
 
-#include <OSHGui\OSHGui.hpp>
-
 #include "GuiUtils.h"
 #include "Config.h"
 
-using namespace OSHGui;
-
 PartyDamage::PartyDamage() {
-
 	total = 0;
 	send_timer = TBTimer::init();
 
@@ -25,86 +20,16 @@ PartyDamage::PartyDamage() {
 	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P230>(
 		std::bind(&PartyDamage::MapLoadedCallback, this, std::placeholders::_1));
 
-	int x = Config::IniRead(PartyDamage::IniSection(), PartyDamage::IniKeyX(), 400l);
-	int y = Config::IniRead(PartyDamage::IniSection(), PartyDamage::IniKeyY(), 100l);
-	SetLocation(PointI(x, y));
-
-	line_height_ = GuiUtils::GetPartyHealthbarHeight();
-	SetSize(OSHGui::Drawing::SizeI(ABS_WIDTH + PERC_WIDTH, line_height_ * MAX_PLAYERS));
-
-	if (!Application::Instance().GetTheme().ContainsColorTheme(PartyDamage::ThemeKey())) {
-		Drawing::Theme::ControlTheme ctheme(default_forecolor, default_backcolor);
-		Drawing::Theme::ControlTheme barctheme(default_forebarcolor, default_backbarcolor);
-		Drawing::Theme& theme = Application::Instance().GetTheme();
-		theme.SetControlColorTheme(PartyDamage::ThemeKey(), ctheme);
-		theme.SetControlColorTheme(PartyDamage::ThemeBarsKey(), barctheme);
-	}
-
-	Drawing::Theme::ControlTheme theme = Application::Instance()
-		.GetTheme().GetControlColorTheme(PartyDamage::ThemeKey());
-	Drawing::Theme::ControlTheme bartheme = Application::Instance()
-		.GetTheme().GetControlColorTheme(PartyDamage::ThemeBarsKey());
-
-	SetTransparentBackColor(false);
-	labelcolor = theme.ForeColor;
-
-	int offsetX = 2;
-	int offsetY = 2;
-	float fontsize = 9.0f;
 	for (int i = 0; i < MAX_PLAYERS; ++i) {
 		damage[i].damage= 0;
 		damage[i].recent_damage = 0;
 		damage[i].last_damage = TBTimer::init();
-
-		absolute[i] = new DragButton(containerPanel_);
-		absolute[i]->SetText("0 %");
-		absolute[i]->SetSize(SizeI(ABS_WIDTH, line_height_ - RECENT_HEIGHT / 2));
-		absolute[i]->SetLocation(PointI(0, i * line_height_));
-		absolute[i]->SetFont(GuiUtils::getTBFont(fontsize, true));
-		absolute[i]->SetBackColor(Drawing::Color::Empty());
-		absolute[i]->SetForeColor(theme.ForeColor);
-		absolute[i]->GetMouseUpEvent() += MouseUpEventHandler([this](Control*, MouseEventArgs) {
-			SaveLocation();
-		});
-		AddControl(absolute[i]);
-
-		percent[i] = new DragButton(containerPanel_);
-		percent[i]->SetText("");
-		percent[i]->SetSize(SizeI(PERC_WIDTH, line_height_ - RECENT_HEIGHT / 2));
-		percent[i]->SetLocation(PointI(ABS_WIDTH, i * line_height_));
-		percent[i]->SetFont(GuiUtils::getTBFont(fontsize, true));
-		percent[i]->SetBackColor(Drawing::Color::Empty());
-		percent[i]->SetForeColor(theme.ForeColor);
-		percent[i]->GetMouseUpEvent() += MouseUpEventHandler([this](Control*, MouseEventArgs) {
-			SaveLocation();
-		});
-		AddControl(percent[i]);
-
-		recent[i] = new Panel(containerPanel_);
-		recent[i]->SetSize(SizeI(WIDTH, RECENT_HEIGHT));
-		recent[i]->SetLocation(PointI(0, (i + 1) * line_height_ - RECENT_HEIGHT));
-		recent[i]->SetBackColor(bartheme.ForeColor);
-		AddControl(recent[i]);
-
-		bar[i] = new Panel(containerPanel_);
-		bar[i]->SetSize(SizeI(WIDTH, line_height_));
-		bar[i]->SetLocation(PointI(0, i * line_height_));
-		bar[i]->SetBackColor(bartheme.BackColor);
-		AddControl(bar[i]);
 	}
-
-	std::shared_ptr<PartyDamage> self = std::shared_ptr<PartyDamage>(this);
-	Form::Show(self);
-
-	bool show = Config::IniRead(PartyDamage::IniSection(), PartyDamage::InikeyShow(), false);
-	SetVisible(show);
-
-	LoadIni();
 }
 
 PartyDamage::~PartyDamage() {
-	inifile_->Reset();
-	delete inifile_;
+	inifile->Reset();
+	delete inifile;
 }
 
 bool PartyDamage::MapLoadedCallback(GW::Packet::StoC::P230* packet) {
@@ -192,14 +117,14 @@ bool PartyDamage::DamagePacketCallback(GW::Packet::StoC::P151* packet) {
 	damage[index].damage += dmg;
 	total += dmg;
 
-	if (isVisible_) {
+	if (visible) {
 		damage[index].recent_damage += dmg;
 		damage[index].last_damage = TBTimer::init();
 	}
 	return false;
 }
 
-void PartyDamage::Main() {
+void PartyDamage::Update() {
 	if (!send_queue.empty() && TBTimer::diff(send_timer) > 600) {
 		send_timer = TBTimer::init();
 		if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading
@@ -211,6 +136,13 @@ void PartyDamage::Main() {
 
 	if (party_index.empty()) {
 		CreatePartyIndexMap();
+	}
+
+	// reset recent if needed
+	for (int i = 0; i < MAX_PLAYERS; ++i) {
+		if (TBTimer::diff(damage[i].last_damage) > RECENT_MAX_TIME) {
+			damage[i].recent_damage = 0;
+		}
 	}
 }
 
@@ -236,29 +168,13 @@ void PartyDamage::CreatePartyIndexMap() {
 	}
 }
 
-void PartyDamage::Draw() {
-	if (!isVisible_) return;
+void PartyDamage::Draw(IDirect3DDevice9* device) {
+	if (!visible) return;
+	
+	int line_height = GuiUtils::GetPartyHealthbarHeight();
 
 	int size = GW::Partymgr().GetPartySize();
 	if (size > MAX_PLAYERS) size = MAX_PLAYERS;
-	if (party_size_ != size) {
-		party_size_ = size;
-		SetSize(Drawing::SizeI(WIDTH, party_size_ * line_height_));
-		for (int i = 0; i < MAX_PLAYERS; ++i) {
-			bool visible = (i < party_size_);
-			absolute[i]->SetVisible(visible);
-			percent[i]->SetVisible(visible);
-			bar[i]->SetVisible(visible);
-			recent[i]->SetVisible(visible);
-		}
-	}
-
-	// reset recent if needed
-	for (int i = 0; i < MAX_PLAYERS; ++i) {
-		if (TBTimer::diff(damage[i].last_damage) > RECENT_MAX_TIME) {
-			damage[i].recent_damage = 0;
-		}
-	}
 
 	long max_recent = 0;
 	for (int i = 0; i < MAX_PLAYERS; ++i) {
@@ -274,59 +190,58 @@ void PartyDamage::Draw() {
 		}
 	}
 
-	const int BUF_SIZE = 10;
-	char buff[BUF_SIZE];
-	for (int i = 0; i < party_size_; ++i) {
-		if (damage[i].damage < 1000) {
-			sprintf_s(buff, BUF_SIZE, "%d", damage[i].damage);
-		} else if (damage[i].damage < 1000 * 10) {
-			sprintf_s(buff, BUF_SIZE, "%.2f k", (float)damage[i].damage / 1000);
-		} else if (damage[i].damage < 1000 * 1000) {
-			sprintf_s(buff, BUF_SIZE, "%.1f k", (float)damage[i].damage / 1000);
-		} else {
-			sprintf_s(buff, BUF_SIZE, "%.2f m", (float)damage[i].damage / 1000000);
-		}
-		absolute[i]->SetText(buff);
-
-		float perc_of_total = GetPercentageOfTotal(damage[i].damage);
-		sprintf_s(buff, BUF_SIZE, "%.1f %%", perc_of_total);
-		percent[i]->SetText(buff);
-
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0.3f));
+	ImGui::Begin(Name(), &visible, ImGuiWindowFlags_NoTitleBar);
+	ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[GuiUtils::FontSize::f10]); // should be 9
+	float x = ImGui::GetWindowPos().x;
+	float y = ImGui::GetWindowPos().y;
+	float width = ImGui::GetWindowWidth();
+	const int BUF_SIZE = 16;
+	char buf[BUF_SIZE];
+	for (int i = 0; i < size; ++i) {
 		float part_of_max = 0;
 		if (max > 0) {
 			part_of_max = (float)(damage[i].damage) / max;
 		}
-		bar[i]->SetSize(SizeI(std::lround(WIDTH * part_of_max), line_height_));
-		bar[i]->SetLocation(PointI(std::lround(WIDTH * (1 - part_of_max)), i * line_height_));
+		ImGui::GetWindowDrawList()->AddRectFilled(
+			ImVec2(x + width * (1.0f - part_of_max), y + i * line_height),
+			ImVec2(x + width, y + (i + 1) * line_height),
+			IM_COL32(205, 102, 51, 102));
 
 		float part_of_recent = 0;
 		if (max_recent > 0) {
 			part_of_recent = (float)(damage[i].recent_damage) / max_recent;
 		}
-		recent[i]->SetSize(SizeI(std::lround(WIDTH * part_of_recent), RECENT_HEIGHT));
-		recent[i]->SetLocation(PointI(std::lround(WIDTH * (1 - part_of_recent)),
-			(i + 1) * line_height_ - RECENT_HEIGHT));
+		ImGui::GetWindowDrawList()->AddRectFilled(
+			ImVec2(x + width * (1.0f - part_of_recent), y + (i + 1) * line_height - 6),
+			ImVec2(x + width, y + (i + 1) * line_height),
+			IM_COL32(102, 153, 230, 205));
 
-		Drawing::Color inactive = labelcolor - Drawing::Color(0.0f, 0.3f, 0.3f, 0.3f);
-		if (damage[i].damage == 0 
-			|| GW::Map().GetInstanceType() == GW::Constants::InstanceType::Outpost
-			|| GW::Agents().GetAgentByID(damage[i].agent_id) == nullptr) {
-
-			absolute[i]->SetForeColor(inactive);
-			percent[i]->SetForeColor(inactive);
+		if (damage[i].damage < 1000) {
+			sprintf_s(buf, BUF_SIZE, "%d", damage[i].damage);
+		} else if (damage[i].damage < 1000 * 10) {
+			sprintf_s(buf, BUF_SIZE, "%.2f k", (float)damage[i].damage / 1000);
+		} else if (damage[i].damage < 1000 * 1000) {
+			sprintf_s(buf, BUF_SIZE, "%.1f k", (float)damage[i].damage / 1000);
 		} else {
-			absolute[i]->SetForeColor(labelcolor);
-			percent[i]->SetForeColor(labelcolor);
+			sprintf_s(buf, BUF_SIZE, "%.2f m", (float)damage[i].damage / (1000 * 1000));
 		}
-	}
-}
+		ImGui::GetWindowDrawList()->AddText(
+			ImVec2(x + ImGui::GetStyle().WindowPadding.x, y + i * line_height), 
+			IM_COL32(255, 255, 255, 255), buf);
 
-void PartyDamage::SaveLocation() {
-	CalculateAbsoluteLocation();
-	int x = absoluteLocation_.X;
-	int y = absoluteLocation_.Y;
-	Config::IniWrite(PartyDamage::IniSection(), PartyDamage::IniKeyX(), x);
-	Config::IniWrite(PartyDamage::IniSection(), PartyDamage::IniKeyY(), y);
+		float perc_of_total = GetPercentageOfTotal(damage[i].damage);
+		sprintf_s(buf, BUF_SIZE, "%.1f %%", perc_of_total);
+		ImGui::GetWindowDrawList()->AddText(
+			ImVec2(x + width / 2, y + i * line_height),
+			IM_COL32(255, 255, 255, 255), buf);
+	}
+	ImGui::PopFont();
+	ImGui::End();
+	ImGui::PopStyleColor(); // window bg
+	ImGui::PopStyleVar(2);
 }
 
 float PartyDamage::GetPartOfTotal(long dmg) const {
@@ -393,35 +308,17 @@ void PartyDamage::ResetDamage() {
 	}
 }
 
-void PartyDamage::SetFreeze(bool b) {
-	Control::SetEnabled(!b);
-	containerPanel_->SetEnabled(!b);
-	for (int i = 0; i < MAX_PLAYERS; ++i) {
-		absolute[i]->SetEnabled(!b);
-		percent[i]->SetEnabled(!b);
-	}
-}
-
-void PartyDamage::SetTransparentBackColor(bool b) {
-	if (b) {
-		SetBackColor(Color::Empty());
-	} else {
-		Drawing::Theme::ControlTheme theme = Application::InstancePtr()
-			->GetTheme().GetControlColorTheme(PartyDamage::ThemeKey());
-		SetBackColor(theme.BackColor);
-	}
-}
-
-void PartyDamage::LoadIni() {
-	inifile_ = new CSimpleIni(false, false, false);
-	inifile_->LoadFile(GuiUtils::getPath(inifilename).c_str());
+void PartyDamage::LoadSettings(CSimpleIni* ini) {
+	ToolboxModule::LoadSettingVisible(ini);
+	if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
+	inifile->LoadFile(GuiUtils::getPath(inifilename).c_str());
 	CSimpleIni::TNamesDepend keys;
-	inifile_->GetAllKeys(inisection, keys);
+	inifile->GetAllKeys(inisection, keys);
 	for (CSimpleIni::Entry key : keys) {
 		try {
 			long lkey = std::stol(key.pItem);
 			if (lkey <= 0) continue;
-			long lval = inifile_->GetLongValue(inisection, key.pItem, 0);
+			long lval = inifile->GetLongValue(inisection, key.pItem, 0);
 			if (lval <= 0) continue;
 			hp_map[lkey] = lval;
 		} catch (...) {
@@ -430,10 +327,15 @@ void PartyDamage::LoadIni() {
 	}
 }
 
-void PartyDamage::SaveIni() {
+void PartyDamage::SaveSettings(CSimpleIni* ini) const {
+	ToolboxModule::SaveSettingVisible(ini);
 	for (const std::pair<DWORD, long>& item : hp_map) {
 		std::string key = std::to_string(item.first);
-		inifile_->SetLongValue(inisection, key.c_str(), item.second, 0, false, true);
+		inifile->SetLongValue(inisection, key.c_str(), item.second, 0, false, true);
 	}
-	inifile_->SaveFile(GuiUtils::getPath(inifilename).c_str());
+	inifile->SaveFile(GuiUtils::getPath(inifilename).c_str());
+}
+
+void PartyDamage::DrawSettings() {
+
 }
