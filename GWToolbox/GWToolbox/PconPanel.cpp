@@ -96,11 +96,7 @@ PconPanel::PconPanel(IDirect3DDevice9* device) : ToolboxPanel() {
 }
 
 bool PconPanel::DrawTabButton(IDirect3DDevice9* device) {
-	ImGui::PushStyleColor(ImGuiCol_Button, visible ? 
-		ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered] : ImVec4(0, 0, 0, 0));
-	bool clicked = ImGui::Button("Pcons", ImVec2(ImGui::GetWindowContentRegionWidth(), 0));
-	if (clicked) visible = !visible;
-	ImGui::PopStyleColor();
+	bool clicked = ToolboxPanel::DrawTabButton(device);
 
 	ImGui::PushStyleColor(ImGuiCol_Text, enabled ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
 	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
@@ -128,10 +124,10 @@ void PconPanel::Draw(IDirect3DDevice9* device) {
 void PconPanel::Update() {
 	if (current_map_type != GW::Map().GetInstanceType()) {
 		current_map_type = GW::Map().GetInstanceType();
-		scan_inventory_timer = TBTimer::init();
+		scan_inventory_timer = TIMER_INIT();
 	}
 
-	if (scan_inventory_timer > 0 && TBTimer::diff(scan_inventory_timer) > 2000) {
+	if (scan_inventory_timer > 0 && TIMER_DIFF(scan_inventory_timer) > 2000) {
 		scan_inventory_timer = 0;
 
 		for (Pcon* pcon : pcons) {
@@ -196,7 +192,7 @@ void PconPanel::LoadSettings(CSimpleIni* ini) {
 	ini->GetLongValue(Name(), "pcons_delay", 5000);
 }
 
-void PconPanel::SaveSettings(CSimpleIni* ini) const {
+void PconPanel::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), "essence", essence->enabled);
 	ini->SetBoolValue(Name(), "grail", grail->enabled);
 	ini->SetBoolValue(Name(), "armor", armor->enabled);

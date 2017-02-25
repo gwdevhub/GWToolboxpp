@@ -8,8 +8,6 @@
 
 #include "ToolboxModule.h"
 
-#include "Settings.h"
-
 class ChatFilter : public ToolboxModule {
 public:
 	const char* Name() const override { return "Chat Filter"; }
@@ -19,7 +17,7 @@ public:
 	void DrawSettings() override;
 
 	void LoadSettings(CSimpleIni* ini) override;
-	void SaveSettings(CSimpleIni* ini) const override;
+	void SaveSettings(CSimpleIni* ini) override;
 
 private:
 	const wchar_t* Get1stSegment(GW::Packet::StoC::P081* pak) const;

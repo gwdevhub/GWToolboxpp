@@ -20,6 +20,7 @@ public:
 
 	enum FontSize {
 		f10,
+		f11,
 		f12,
 		f16,
 		f26,
@@ -29,6 +30,7 @@ public:
 		std::string fontfile = GuiUtils::getPath("Font.ttf");
 		ImGuiIO& io = ImGui::GetIO();
 		ImFont* f10 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 16.0f);
+		ImFont* f11 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 18.0f);
 		ImFont* f12 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 19.0f);
 		ImFont* f16 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 24.0f);
 		ImFont* f26 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 42.0f);
@@ -60,25 +62,6 @@ public:
 	// in the settings folder as string
 	static std::string getSubPath(std::string file, std::string subdir) {
 		return getSettingsFolder() + "\\" + subdir + "\\" + file;
-	}
-
-	static int ComputeX(int container_width, int horizontal_amount, int grid_x) {
-		float item_width = ComputeWidthF(container_width, horizontal_amount);
-		return std::lroundf(SPACE + grid_x * (item_width + SPACE));
-	}
-
-	static int ComputeY(int grid_y) {
-		return SPACE + grid_y * (ROW_HEIGHT + SPACE);
-	}
-
-	static float ComputeWidthF(int container_width, int horizontal_amount, int grid_width = 1) {
-		float item_width = (float)(container_width - SPACE) / horizontal_amount - SPACE;
-		return item_width * grid_width + (grid_width - 1) * SPACE;
-	}
-
-	static int ComputeWidth(int container_width, int horizontal_amount, int grid_width = 1) {
-		float item_width = (float)(container_width - SPACE) / horizontal_amount - SPACE;
-		return std::lroundf(std::floor(item_width * grid_width + (grid_width - 1) * SPACE));
 	}
 
 	static int GetPartyHealthbarHeight() {

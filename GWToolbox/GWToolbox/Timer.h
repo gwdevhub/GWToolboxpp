@@ -2,25 +2,15 @@
 
 #include <time.h>
 
-/* This class makes using timers easier
+/* 
+This class makes using timers easier
 
-timer type is timer_t
+clock type is clock_t
 
-create a timer with Timer::init()
+create a timer with TIMER_INIT()
 
-find the difference in milliseconds with Timer::diff(click_t timer)
+find the difference in milliseconds with TIMER_DIFF(clock_t timer)
 */
 
-class TBTimer {
-	
-public:
-	// Initializes a new timer (saves current time)
-	static clock_t init() {
-		return clock();
-	}
-
-	// Returns the time elapsed since the timer (in milliseconds)
-	static long diff(clock_t timer) {
-		return (clock() - timer);
-	}
-};
+#define TIMER_INIT() (clock())
+#define TIMER_DIFF(t) (clock() - t)

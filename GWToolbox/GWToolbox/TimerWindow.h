@@ -13,5 +13,5 @@ public:
 	void Draw(IDirect3DDevice9* pDevice) override;
 
 	void LoadSettings(CSimpleIni* ini) override;
-	void SaveSettings(CSimpleIni* ini) const override;
+	void SaveSettings(CSimpleIni* ini) override;
 };

@@ -2,7 +2,6 @@
 
 #include <GWCA\GWCA.h>
 
-#include "Config.h"
 #include "GuiUtils.h"
 #include "GWToolbox.h"
 
@@ -170,7 +169,7 @@ void DialogPanel::LoadSettings(CSimpleIni* ini) {
 	}
 }
 
-void DialogPanel::SaveSettings(CSimpleIni* ini) const {
+void DialogPanel::SaveSettings(CSimpleIni* ini) {
 	ini->SetLongValue(Name(), "fav_count", fav_count);
 	for (int i = 0; i < fav_count; ++i) {
 		char key[32];

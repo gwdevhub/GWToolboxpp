@@ -8,11 +8,11 @@
 #include <GWCA\Managers\PartyMgr.h>
 
 #include "GuiUtils.h"
-#include "Config.h"
+#include "GWToolbox.h"
 
 PartyDamage::PartyDamage() {
 	total = 0;
-	send_timer = TBTimer::init();
+	send_timer = TIMER_INIT();
 
 	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P151>(
 		std::bind(&PartyDamage::DamagePacketCallback, this, std::placeholders::_1));
@@ -23,7 +23,7 @@ PartyDamage::PartyDamage() {
 	for (int i = 0; i < MAX_PLAYERS; ++i) {
 		damage[i].damage= 0;
 		damage[i].recent_damage = 0;
-		damage[i].last_damage = TBTimer::init();
+		damage[i].last_damage = TIMER_INIT();
 	}
 }
 
@@ -119,14 +119,14 @@ bool PartyDamage::DamagePacketCallback(GW::Packet::StoC::P151* packet) {
 
 	if (visible) {
 		damage[index].recent_damage += dmg;
-		damage[index].last_damage = TBTimer::init();
+		damage[index].last_damage = TIMER_INIT();
 	}
 	return false;
 }
 
 void PartyDamage::Update() {
-	if (!send_queue.empty() && TBTimer::diff(send_timer) > 600) {
-		send_timer = TBTimer::init();
+	if (!send_queue.empty() && TIMER_DIFF(send_timer) > 600) {
+		send_timer = TIMER_INIT();
 		if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading
 			&& GW::Agents().GetPlayer()) {
 			GW::Chat().SendChat(send_queue.front().c_str(), L'#');
@@ -140,7 +140,7 @@ void PartyDamage::Update() {
 
 	// reset recent if needed
 	for (int i = 0; i < MAX_PLAYERS; ++i) {
-		if (TBTimer::diff(damage[i].last_damage) > RECENT_MAX_TIME) {
+		if (TIMER_DIFF(damage[i].last_damage) > recent_max_time) {
 			damage[i].recent_damage = 0;
 		}
 	}
@@ -192,8 +192,14 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0.3f));
-	ImGui::Begin(Name(), &visible, ImGuiWindowFlags_NoTitleBar);
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(color_background));
+	ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar 
+		| ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoResize;
+	if (GWToolbox::instance().WidgetsFreezed()) {
+		flags |= ImGuiWindowFlags_NoInputs;
+	}
+	ImGui::SetNextWindowSize(ImVec2(width, (float)(size * line_height)));
+	ImGui::Begin(Name(), &visible, flags);
 	ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[GuiUtils::FontSize::f10]); // should be 9
 	float x = ImGui::GetWindowPos().x;
 	float y = ImGui::GetWindowPos().y;
@@ -205,19 +211,29 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 		if (max > 0) {
 			part_of_max = (float)(damage[i].damage) / max;
 		}
-		ImGui::GetWindowDrawList()->AddRectFilled(
-			ImVec2(x + width * (1.0f - part_of_max), y + i * line_height),
-			ImVec2(x + width, y + (i + 1) * line_height),
-			IM_COL32(205, 102, 51, 102));
+		float bar_left = bars_left ? (x + width * (1.0f - part_of_max)) : (x);
+		float bar_right = bars_left ? (x + width) : (x + width * part_of_max);
+		ImGui::GetWindowDrawList()->AddRectFilledMultiColor(
+			ImVec2(bar_left, y + i * line_height),
+			ImVec2(bar_right, y + (i + 1) * line_height),
+			Colors::Add(color_damage, Colors::ARGB(0, 20, 20, 20)), 
+			Colors::Add(color_damage, Colors::ARGB(0, 20, 20, 20)),
+			Colors::Sub(color_damage, Colors::ARGB(0, 20, 20, 20)),
+			Colors::Sub(color_damage, Colors::ARGB(0, 20, 20, 20)));
 
 		float part_of_recent = 0;
 		if (max_recent > 0) {
 			part_of_recent = (float)(damage[i].recent_damage) / max_recent;
 		}
-		ImGui::GetWindowDrawList()->AddRectFilled(
-			ImVec2(x + width * (1.0f - part_of_recent), y + (i + 1) * line_height - 6),
-			ImVec2(x + width, y + (i + 1) * line_height),
-			IM_COL32(102, 153, 230, 205));
+		float recent_left = bars_left ? (x + width * (1.0f - part_of_recent)) : (x);
+		float recent_right = bars_left ? (x + width) : (x + width * part_of_recent);
+		ImGui::GetWindowDrawList()->AddRectFilledMultiColor(
+			ImVec2(recent_left, y + (i + 1) * line_height - 6),
+			ImVec2(recent_right, y + (i + 1) * line_height),
+			Colors::Add(color_recent, Colors::ARGB(0, 20, 20, 20)),
+			Colors::Add(color_recent, Colors::ARGB(0, 20, 20, 20)),
+			Colors::Sub(color_recent, Colors::ARGB(0, 20, 20, 20)),
+			Colors::Sub(color_recent, Colors::ARGB(0, 20, 20, 20)));
 
 		if (damage[i].damage < 1000) {
 			sprintf_s(buf, BUF_SIZE, "%d", damage[i].damage);
@@ -229,7 +245,7 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 			sprintf_s(buf, BUF_SIZE, "%.2f m", (float)damage[i].damage / (1000 * 1000));
 		}
 		ImGui::GetWindowDrawList()->AddText(
-			ImVec2(x + ImGui::GetStyle().WindowPadding.x, y + i * line_height), 
+			ImVec2(x + ImGui::GetStyle().ItemSpacing.x, y + i * line_height), 
 			IM_COL32(255, 255, 255, 255), buf);
 
 		float perc_of_total = GetPercentageOfTotal(damage[i].damage);
@@ -310,6 +326,13 @@ void PartyDamage::ResetDamage() {
 
 void PartyDamage::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettingVisible(ini);
+	width = (float)ini->GetDoubleValue(Name(), "width", 100.0f);
+	bars_left = ini->GetBoolValue(Name(), "bars_left", true);
+	recent_max_time = ini->GetLongValue(Name(), "recent_max_time", 7000);
+	color_background = Colors::Load(ini, Name(), "color_background", Colors::ARGB(76, 0, 0, 0));
+	color_damage = Colors::Load(ini, Name(), "color_damage", Colors::ARGB(102, 205, 102, 51));
+	color_recent = Colors::Load(ini, Name(), "color_recent", Colors::ARGB(205, 102, 153, 230));
+
 	if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
 	inifile->LoadFile(GuiUtils::getPath(inifilename).c_str());
 	CSimpleIni::TNamesDepend keys;
@@ -327,8 +350,15 @@ void PartyDamage::LoadSettings(CSimpleIni* ini) {
 	}
 }
 
-void PartyDamage::SaveSettings(CSimpleIni* ini) const {
+void PartyDamage::SaveSettings(CSimpleIni* ini) {
 	ToolboxModule::SaveSettingVisible(ini);
+	ini->SetDoubleValue(Name(), "width", width);
+	ini->SetBoolValue(Name(), "bars_left", bars_left);
+	ini->GetLongValue(Name(), "recent_max_time", recent_max_time);
+	Colors::Save(ini, Name(), "color_background", color_background);
+	Colors::Save(ini, Name(), "color_damage", color_damage);
+	Colors::Save(ini, Name(), "color_recent", color_recent);
+
 	for (const std::pair<DWORD, long>& item : hp_map) {
 		std::string key = std::to_string(item.first);
 		inifile->SetLongValue(inisection, key.c_str(), item.second, 0, false, true);
@@ -337,5 +367,16 @@ void PartyDamage::SaveSettings(CSimpleIni* ini) const {
 }
 
 void PartyDamage::DrawSettings() {
-
+	if (ImGui::CollapsingHeader(Name())) {
+		ImGui::Checkbox("Bars towards the left", &bars_left);
+		ImGui::DragFloat("Width", &width, 1.0f, 50.0f, 0.0f, "%.0f");
+		GuiUtils::ShowHelp("If unchecked, they will expand to the right");
+		if (width <= 0) width = 1.0f;
+		ImGui::DragInt("Recent Damage Timeout", &recent_max_time, 10.0f, 1000, 10 * 1000, "%.0f milliseconds");
+		if (recent_max_time < 0) recent_max_time = 0;
+		GuiUtils::ShowHelp("After this amount of time, each player recent damage (blue bar) will be reset");
+		Colors::DrawSetting("Background", &color_background);
+		Colors::DrawSetting("Damage", &color_damage);
+		Colors::DrawSetting("Recent", &color_recent);
+	}
 }

@@ -3,7 +3,6 @@
 #include <GWCA\GWCA.h>
 #include <GWCA\Managers\AgentMgr.h>
 
-#include "Config.h"
 #include "GuiUtils.h"
 
 void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {

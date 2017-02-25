@@ -20,7 +20,7 @@ public:
 	void Draw(IDirect3DDevice9* device) override;
 
 	void LoadSettings(CSimpleIni* ini) override;
-	void SaveSettings(CSimpleIni* ini) const override;
+	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettings() override;
 
 private:

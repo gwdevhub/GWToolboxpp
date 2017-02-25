@@ -8,7 +8,6 @@
 #include <GWCA\Managers\PartyMgr.h>
 
 #include "ChatLogger.h"
-#include "Config.h"
 #include "GuiUtils.h"
 
 using namespace GW::Constants;
@@ -68,7 +67,7 @@ void Pcon::toggleActive() {
 }
 
 void Pcon::CheckUpdateTimer() {
-	if (update_timer != 0 && TBTimer::diff(update_timer) > 2000) {
+	if (update_timer != 0 && TIMER_DIFF(update_timer) > 2000) {
 		bool old_enabled = enabled;
 		this->scanInventory();
 		update_timer = 0;
@@ -81,15 +80,15 @@ void Pcon::CheckUpdateTimer() {
 bool Pcon::checkAndUse() {
 	CheckUpdateTimer();
 
-	if (enabled && TBTimer::diff(this->timer) > 5000) {
+	if (enabled && TIMER_DIFF(this->timer) > 5000) {
 
 		GW::Effect effect = GW::Effects().GetPlayerEffectById(effectID);
 
 		if (effect.SkillId == 0 || effect.GetTimeRemaining() < 1000) {
 			bool used = GW::Items().UseItemByModelId(itemID);
 			if (used) {
-				this->timer = TBTimer::init();
-				this->update_timer = TBTimer::init();
+				this->timer = TIMER_INIT();
+				this->update_timer = TIMER_INIT();
 			} else {
 				// this should never happen, it should be disabled before
 				ChatLogger::Err("Cannot find %s", chatName);
@@ -104,7 +103,7 @@ bool Pcon::checkAndUse() {
 bool PconCons::checkAndUse() {
 	CheckUpdateTimer();
 
-	if (enabled && TBTimer::diff(this->timer) > 5000) {
+	if (enabled && TIMER_DIFF(this->timer) > 5000) {
 		GW::Effect effect = GW::Effects().GetPlayerEffectById(effectID);
 		if (effect.SkillId == 0 || effect.GetTimeRemaining() < 1000) {
 
@@ -122,8 +121,8 @@ bool PconCons::checkAndUse() {
 
 			bool used = GW::Items().UseItemByModelId(itemID);
 			if (used) {
-				this->timer = TBTimer::init();
-				this->update_timer = TBTimer::init();
+				this->timer = TIMER_INIT();
+				this->update_timer = TIMER_INIT();
 			} else {
 				ChatLogger::Err("Cannot find %s", chatName);
 				this->scanInventory();
@@ -137,7 +136,7 @@ bool PconCons::checkAndUse() {
 bool PconCity::checkAndUse() {
 	CheckUpdateTimer();
 
-	if (enabled	&& TBTimer::diff(this->timer) > 5000) {
+	if (enabled	&& TIMER_DIFF(this->timer) > 5000) {
 		if (GW::Agents().GetPlayer() &&
 			(GW::Agents().GetPlayer()->MoveX > 0 || GW::Agents().GetPlayer()->MoveY > 0)) {
 			if (GW::Effects().GetPlayerEffectById(SkillID::Sugar_Rush_short).SkillId
@@ -155,8 +154,8 @@ bool PconCity::checkAndUse() {
 					|| GW::Items().UseItemByModelId(ItemID::RedBeanCake)
 					|| GW::Items().UseItemByModelId(ItemID::JarOfHoney);
 				if (used) {
-					this->timer = TBTimer::init();
-					this->update_timer = TBTimer::init();
+					this->timer = TIMER_INIT();
+					this->update_timer = TIMER_INIT();
 				} else {
 					ChatLogger::Err("Cannot find a city speedboost");
 					this->scanInventory();
@@ -171,7 +170,7 @@ bool PconCity::checkAndUse() {
 bool PconAlcohol::checkAndUse() {
 	CheckUpdateTimer();
 
-	if (enabled && TBTimer::diff(this->timer) > 5000) {
+	if (enabled && TIMER_DIFF(this->timer) > 5000) {
 		if (GW::Effects().GetAlcoholLevel() <= 1) {
 			// use an alcohol item. Because of logical-OR only the first one will be used
 			bool used = GW::Items().UseItemByModelId(ItemID::Eggnog)
@@ -191,8 +190,8 @@ bool PconAlcohol::checkAndUse() {
 				|| GW::Items().UseItemByModelId(ItemID::FlaskOfFirewater)
 				|| GW::Items().UseItemByModelId(ItemID::KrytanBrandy);
 			if (used) {
-				this->timer = TBTimer::init();
-				this->update_timer = TBTimer::init();
+				this->timer = TIMER_INIT();
+				this->update_timer = TIMER_INIT();
 			} else {
 				ChatLogger::Err("Cannot find Alcohol");
 				this->scanInventory();
@@ -206,7 +205,7 @@ bool PconAlcohol::checkAndUse() {
 bool PconLunar::checkAndUse() {
 	CheckUpdateTimer();
 
-	if (enabled	&& TBTimer::diff(this->timer) > 500) {
+	if (enabled	&& TIMER_DIFF(this->timer) > 500) {
 		if (GW::Effects().GetPlayerEffectById(SkillID::Lunar_Blessing).SkillId == 0) {
 			bool used = GW::Items().UseItemByModelId(ItemID::LunarRat)
 				|| GW::Items().UseItemByModelId(ItemID::LunarOx)
@@ -219,8 +218,8 @@ bool PconLunar::checkAndUse() {
 				|| GW::Items().UseItemByModelId(ItemID::LunarMonkey)
 				|| GW::Items().UseItemByModelId(ItemID::LunarRooster);
 			if (used) {
-				this->timer = TBTimer::init();
-				this->update_timer = TBTimer::init();
+				this->timer = TIMER_INIT();
+				this->update_timer = TIMER_INIT();
 			} else {
 				ChatLogger::Err("Cannot find Lunar Fortunes");
 				this->scanInventory();

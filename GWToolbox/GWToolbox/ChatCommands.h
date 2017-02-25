@@ -17,7 +17,7 @@ public:
 
 	ChatCommands();
 
-	bool ProcessMessage(LPMSG msg);
+	bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam);
 
 	// Update. Will always be called every frame.
 	void Update() override;

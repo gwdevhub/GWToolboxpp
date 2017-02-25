@@ -1,11 +1,12 @@
-#include "OtherSettings.h"
+#include "GameSettings.h"
 
 #include <GWCA\Managers\ChatMgr.h>
 
 #include "MainWindow.h"
 #include "ChatLogger.h"
+#include "GuiUtils.h"
 
-OtherSettings::OtherSettings() {
+GameSettings::GameSettings() {
 	patches.push_back(new GW::MemoryPatcher((void*)0x0067D7C8,
 		(BYTE*)"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90", 16));
 	patches.push_back(new GW::MemoryPatcher((void*)0x0067D320, (BYTE*)"\xEB", 1));
@@ -20,20 +21,19 @@ OtherSettings::OtherSettings() {
 	patches.push_back(new GW::MemoryPatcher((void*)0x0067D65E, a, 10));
 }
 
-void OtherSettings::DrawSettings() {
-	ImGui::Checkbox("Freeze Widgets", &freeze_widgets);
-	GuiUtils::ShowHelp("Widgets such as timer, health, minimap will not move");
-	if (ImGui::Checkbox("Open web links from templates", &open_template_links)) {
-		GW::Chat().SetOpenLinks(open_template_links);
-	}
+void GameSettings::DrawSettings() {
+	if (ImGui::CollapsingHeader(Name())) {
+		if (ImGui::Checkbox("Open web links from templates", &open_template_links)) {
+			GW::Chat().SetOpenLinks(open_template_links);
+		}
 
-	if (ImGui::Checkbox("Borderless Window", &borderless_window)) {
-		ApplyBorderless(borderless_window);
+		if (ImGui::Checkbox("Borderless Window", &borderless_window)) {
+			ApplyBorderless(borderless_window);
+		}
 	}
 }
 
-void OtherSettings::LoadSettings(CSimpleIni* ini) {
-	freeze_widgets = ini->GetBoolValue("main_window", "freeze_widgets", false);
+void GameSettings::LoadSettings(CSimpleIni* ini) {
 	open_template_links = ini->GetBoolValue("main_window", "openlinks", true);
 	borderless_window = ini->GetBoolValue("main_window", "borderlesswindow", false);
 
@@ -41,13 +41,12 @@ void OtherSettings::LoadSettings(CSimpleIni* ini) {
 	GW::Chat().SetOpenLinks(open_template_links);
 }
 
-void OtherSettings::SaveSettings(CSimpleIni* ini) const {
-	ini->SetBoolValue("main_window", "freeze_widgets", freeze_widgets);
+void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue("main_window", "openlinks", open_template_links);
 	ini->SetBoolValue("main_window", "borderlesswindow", borderless_window);
 }
 
-void OtherSettings::ApplyBorderless(bool value) {
+void GameSettings::ApplyBorderless(bool value) {
 	DWORD current_style = GetWindowLong(GW::MemoryMgr::GetGWWindowHandle(), GWL_STYLE);
 
 	if ((current_style & WS_POPUP) != 0) { // borderless or fullscreen

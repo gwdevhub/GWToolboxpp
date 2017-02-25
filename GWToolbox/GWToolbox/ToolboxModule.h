@@ -19,7 +19,7 @@ public:
 	virtual void Draw(IDirect3DDevice9* pDevice) {};
 
 	// This is provided (and called), but use ImGui::GetIO() during update/render if possible instead.
-	virtual bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) { return false;  };
+	virtual bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) { return false; };
 
 	// Draw settings interface. Will be called if the setting panel is visible
 	virtual void DrawSettings() {};
@@ -28,7 +28,7 @@ public:
 	virtual void LoadSettings(CSimpleIni* ini) {};
 
 	// Save settings to ini
-	virtual void SaveSettings(CSimpleIni* ini) const {};
+	virtual void SaveSettings(CSimpleIni* ini) {};
 
 	virtual bool ToggleVisible() { return visible = !visible; };
 	// true if the interface (usually window) is visible, unused if the module has no interface

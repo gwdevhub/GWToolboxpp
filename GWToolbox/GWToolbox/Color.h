@@ -25,8 +25,13 @@ namespace Colors {
 			| (b << IM_COL32_B_SHIFT);
 	}
 
+	static Color Black() { return 0xFF000000; }
+	static Color White() { return 0xFFFFFFFF; }
+	static Color Empty() { return 0x00000000; }
+
 	static Color Red() { return 0xFFFF0000; }
-	static Color Purple() { return 0xFFFF00FF; }
+	static Color Green() { return 0xFF00FF00; }
+	static Color Blue() { return 0xFF0000FF; }
 
 	static Color Load(CSimpleIni* ini, const char* section, const char* key, Color def) {
 		try {
@@ -34,7 +39,7 @@ namespace Colors {
 			if (wc == nullptr) return def;
 			return std::stoul(wc, nullptr, 16);
 		} catch (...) { // invalid argument, out of range, whatever
-			return 0xFF000000;
+			return Black();
 		}
 	}
 
@@ -85,13 +90,27 @@ namespace Colors {
 		ImGui::PushID(text);
 		
 		ImGui::PushItemWidth(w_item_one);
-		if (!alpha) ImGui::SetCursorPosX(ImGui::GetCursorPosX() + w_item_one + style.ItemInnerSpacing.x);
-		for (int n = first_component; n < last_component; ++n) {
-			if (n > first_component) ImGui::SameLine(0, style.ItemInnerSpacing.x);
-			if (n + 1 == last_component) ImGui::PushItemWidth(w_item_last);
-			value_changed |= ImGui::DragInt(ids[n], &i[n], 1.0f, 0, 255, fmt[n]);
+		if (alpha) {
+			value_changed |= ImGui::DragInt("##A", &i[0], 1.0f, 0, 255, "A:%3.0f");
+			ImGui::SameLine(0, style.ItemInnerSpacing.x);
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Alpha channel (0 - 255)\n0 is transparent, 255 is solid color");
+		} else {
+			if (!alpha) ImGui::SetCursorPosX(ImGui::GetCursorPosX() + w_item_one + style.ItemInnerSpacing.x);
 		}
+
+		value_changed |= ImGui::DragInt("##R", &i[1], 1.0f, 0, 255, "R:%3.0f");
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Red channel (0 - 255)");
+
+		ImGui::SameLine(0, style.ItemInnerSpacing.x);
+		value_changed |= ImGui::DragInt("##G", &i[2], 1.0f, 0, 255, "G:%3.0f");
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Green channel (0 - 255)");
+
 		ImGui::PopItemWidth();
+
+		ImGui::SameLine(0, style.ItemInnerSpacing.x);
+		ImGui::PushItemWidth(w_item_last);
+		value_changed |= ImGui::DragInt("##B", &i[3], 1.0f, 0, 255, "B:%3.0f");
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Blue channel (0 - 255)");
 		ImGui::PopItemWidth();
 
 		ImGui::SameLine(0, style.ItemInnerSpacing.x);
@@ -110,26 +129,34 @@ namespace Colors {
 		return value_changed;
 	}
 
+	static void Clamp(int c[4]) {
+		for (int i = 0; i < 4; ++i) {
+			if (c[i] < 0) c[i] = 0;
+			if (c[i] > 0xFF) c[i] = 0xFF;
+		}
+	}
 	static Color Add(const Color c1, const Color c2) {
-		int i1[4]; int i2[4];
+		int i1[4]; 
+		int i2[4];
+		int i3[4];
 		ConvertU32ToInt4(c1, i1);
 		ConvertU32ToInt4(c2, i2);
 		for (int i = 0; i < 4; ++i) {
-			i1[i] += i2[i];
-			if (i1[i] < 0) i1[i] = 0;
-			if (i1[i] > 0xFF) i1[i] = 0xFF;
+			i3[i] = i1[i] + i2[i];
 		}
-		return ConvertInt4ToU32(i1);
+		Clamp(i3);
+		return ConvertInt4ToU32(i3);
 	}
 	static Color Sub(const Color c1, const Color c2) {
-		int i1[4]; int i2[4];
+		int i1[4]; 
+		int i2[4];
+		int i3[4];
 		ConvertU32ToInt4(c1, i1);
 		ConvertU32ToInt4(c2, i2);
 		for (int i = 0; i < 4; ++i) {
-			i1[i] -= i2[i];
-			if (i1[i] < 0) i1[i] = 0;
-			if (i1[i] > 0xFF) i1[i] = 0xFF;
+			i3[i] = i1[i] - i2[i];
 		}
-		return ConvertInt4ToU32(i1);
+		Clamp(i3);
+		return ConvertInt4ToU32(i3);
 	}
 }

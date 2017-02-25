@@ -5,7 +5,6 @@
 
 #include "logger.h"
 #include "GuiUtils.h"
-#include "Config.h"
 #include "GWToolbox.h"
 
 #include <imgui.h>
@@ -41,7 +40,7 @@ void MainWindow::LoadSettings(CSimpleIni* ini) {
 	one_panel_at_time_only = ini->GetBoolValue(Name(), "one_panel_at_time_only", true);
 }
 
-void MainWindow::SaveSettings(CSimpleIni* ini) const {
+void MainWindow::SaveSettings(CSimpleIni* ini) {
 	for (ToolboxPanel* panel : panels) {
 		panel->SaveSettings(ini);
 	}
@@ -64,10 +63,11 @@ void MainWindow::Draw(IDirect3DDevice9* device) {
 	static bool open = true;
 	ImGui::SetNextWindowSize(ImVec2(100.0f, 300.0f), ImGuiSetCond_Always);
 	if (ImGui::Begin("Toolbox++", &open, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar)) {
-		if (!open) GWToolbox::instance().StartSelfDestruct();
 
+		ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[GuiUtils::f11]);
 		for (unsigned int i = 0; i < panels.size(); ++i) {
 			if (i > 0) ImGui::Separator();
+			ImGui::PushID(i);
 			if (panels[i]->DrawTabButton(device)) {
 				if (panels[i]->visible && one_panel_at_time_only) {
 					for (unsigned int j = 0; j < panels.size(); ++j) {
@@ -75,12 +75,15 @@ void MainWindow::Draw(IDirect3DDevice9* device) {
 					}
 				}
 			}
+			ImGui::PopID();
 		}
+		ImGui::PopFont();
 	}
 	ImGui::End();
+
+	if (!open) GWToolbox::instance().StartSelfDestruct();
 
 	for (ToolboxPanel* panel : panels) {
 		if (panel->visible) panel->Draw(device);
 	}
 }
-

@@ -21,7 +21,7 @@ class PingsLinesRenderer : public VBuffer {
 		short y;
 	};
 	struct DrawingLine {
-		DrawingLine() : start(TBTimer::init()) {}
+		DrawingLine() : start(TIMER_INIT()) {}
 		clock_t start;
 		float x1, y1;
 		float x2, y2;
@@ -33,7 +33,7 @@ class PingsLinesRenderer : public VBuffer {
 		std::deque<DrawingLine> lines;
 	};
 	struct Ping {
-		Ping() : start(TBTimer::init()) {}
+		Ping() : start(TIMER_INIT()) {}
 		clock_t start;
 		virtual float GetX() = 0;
 		virtual float GetY() = 0;
@@ -58,7 +58,14 @@ class PingsLinesRenderer : public VBuffer {
 		unsigned int vertex_count;
 		void Initialize(IDirect3DDevice9* device) override;
 	public:
-		Color color_pings;
+		Color color;
+	};
+	class Marker : public VBuffer {
+		D3DVertex* vertices;
+		unsigned int vertex_count;
+		void Initialize(IDirect3DDevice9* device) override;
+	public:
+		Color color;
 	};
 
 public:
@@ -86,6 +93,13 @@ public:
 private:
 	void Initialize(IDirect3DDevice9* device) override;
 
+	void DrawPings(IDirect3DDevice9* device);
+	void DrawShadowstepMarker(IDirect3DDevice9* device);
+	void DrawShadowstepLine(IDirect3DDevice9* device);
+	void DrawRecallLine(IDirect3DDevice9* device);
+	void DrawDrawings(IDirect3DDevice9* device);
+	void EnqueueVertex(float x, float y, Color color);
+
 	inline short ToShortPos(float n) {
 		return static_cast<short>(std::lroundf(n / drawing_scale));
 	}
@@ -111,6 +125,12 @@ private:
 	std::vector<ShortPos> queue;
 
 	Color color_drawings;
+	Color color_shadowstep_line;
+
+	// for markers
+	Marker marker;
+	GW::Vector2f shadowstep_location;
+	DWORD recall_target = 0;
 
 	// for the gpu
 	D3DVertex* vertices;		// vertices array

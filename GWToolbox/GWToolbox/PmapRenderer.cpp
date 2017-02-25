@@ -9,7 +9,6 @@
 #include <GWCA\Managers\CameraMgr.h>
 
 #include "D3DVertex.h"
-#include "Config.h"
 
 void PmapRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	color_map = Colors::Load(ini, section, "color_map", 0xFF999999);

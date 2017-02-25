@@ -6,22 +6,21 @@
 
 #include "ToolboxModule.h"
 
-class OtherSettings : public ToolboxModule {
+class GameSettings : public ToolboxModule {
 public:
-	const char* Name() const override { return "Other Settings"; }
+	const char* Name() const override { return "Game Settings"; }
 
-	OtherSettings();
+	GameSettings();
 
 	void DrawSettings() override;
 
 	void LoadSettings(CSimpleIni* ini) override;
-	void SaveSettings(CSimpleIni* ini) const override;
+	void SaveSettings(CSimpleIni* ini) override;
 
 	// some settings that are either referenced from multiple places
 	// or have nowhere else to be
 	bool borderless_window;
 	bool open_template_links;
-	bool freeze_widgets;
 
 private:
 	std::vector<GW::MemoryPatcher*> patches;

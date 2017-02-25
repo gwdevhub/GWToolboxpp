@@ -18,7 +18,7 @@ public:
 
 	void DrawSettings() override;
 	void LoadSettings(CSimpleIni* ini) override;
-	void SaveSettings(CSimpleIni* ini) const override;
+	void SaveSettings(CSimpleIni* ini) override;
 
 private:
 	inline DWORD QuestAcceptDialog(DWORD quest) { return (quest << 8) | 0x800001; }

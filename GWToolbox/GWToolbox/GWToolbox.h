@@ -7,7 +7,8 @@
 
 #include "ChatFilter.h"
 #include "ChatCommands.h"
-#include "OtherSettings.h"
+#include "ToolboxSettings.h"
+#include "GameSettings.h"
 
 #include "MainWindow.h"
 #include "TimerWindow.h"
@@ -16,6 +17,8 @@
 #include "DistanceWindow.h"
 #include "PartyDamage.h"
 #include "Minimap.h"
+#include "ClockWindow.h"
+#include "NotePadWindow.h"
 
 class GWToolbox {
 	//------ Static Fields ------//
@@ -43,6 +46,7 @@ private:
 	//------ Constructor ------//
 private:
 	GWToolbox(IDirect3DDevice9* pDevice);
+	~GWToolbox();
 
 	//------ Public methods ------//
 public:
@@ -51,7 +55,8 @@ public:
 
 	ChatFilter* chat_filter;
 	ChatCommands* chat_commands;
-	OtherSettings* other_settings;
+	ToolboxSettings* toolbox_settings;
+	GameSettings* game_settings;
 
 	MainWindow* main_window;
 	TimerWindow* timer_window;
@@ -59,21 +64,18 @@ public:
 	HealthWindow* health_window;
 	DistanceWindow* distance_window;
 	PartyDamage* party_damage;
-
 	Minimap* minimap;
+	ClockWindow* clock_window;
+	NotePadWindow* notepad_window;
 
 	std::vector<ToolboxModule*> modules;
 
-	void StartSelfDestruct() { must_self_destruct_ = true; }
-
-	//------ Private Methods ------//
-private:
-	void ResizeUI();
+	void StartSelfDestruct() { must_self_destruct = true; }
+	bool WidgetsFreezed() { return toolbox_settings->freeze_widgets; }
 
 	//------ Private Fields ------//
 private:
-	bool right_mouse_pressed_;	// if true right mouse has been pressed, ignore move events
-	bool must_self_destruct_;	// is true when toolbox should quit
+	bool must_self_destruct;	// is true when toolbox should quit
 	
-	bool must_resize_;		// true when a resize event is sent, is checked by render thread
+	CSimpleIni* inifile = nullptr;
 };

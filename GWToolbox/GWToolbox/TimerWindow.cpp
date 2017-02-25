@@ -4,7 +4,6 @@
 #include <GWCA\Managers\MapMgr.h>
 
 #include "GuiUtils.h"
-#include "OtherSettings.h"
 #include "GWToolbox.h"
 
 void TimerWindow::Draw(IDirect3DDevice9* pDevice) {
@@ -15,7 +14,7 @@ void TimerWindow::Draw(IDirect3DDevice9* pDevice) {
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(0, 0, 0, 0));
 	ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar
 		| ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar;
-	if (GWToolbox::instance().other_settings->freeze_widgets) {
+	if (GWToolbox::instance().WidgetsFreezed()) {
 		flags |= ImGuiWindowFlags_NoInputs;
 	}
 	ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f));
@@ -56,6 +55,6 @@ void TimerWindow::LoadSettings(CSimpleIni* ini) {
 	LoadSettingVisible(ini);
 }
 
-void TimerWindow::SaveSettings(CSimpleIni* ini) const {
+void TimerWindow::SaveSettings(CSimpleIni* ini) {
 	SaveSettingVisible(ini);
 }

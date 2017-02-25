@@ -52,12 +52,17 @@
     <Filter Include="imgui">
       <UniqueIdentifier>{4db1808e-6b4d-496d-8308-1167ab00639e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Windows\Clock">
+      <UniqueIdentifier>{b6fa97a6-cc38-4a69-bc4b-672f192a2c67}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\Notepad">
+      <UniqueIdentifier>{f2c5506d-d857-49bc-a04c-fda72918c542}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GWToolbox\ToolboxPanel.h">
       <Filter>Panels</Filter>
     </ClInclude>
-    <ClInclude Include="GWToolbox\Config.h" />
     <ClInclude Include="GWToolbox\GuiUtils.h" />
     <ClInclude Include="GWToolbox\GWToolbox.h" />
     <ClInclude Include="GWToolbox\logger.h" />
@@ -76,9 +81,6 @@
       <Filter>Panels\Hotkeys</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\SettingsPanel.h">
-      <Filter>Panels\Settings</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\Settings.h">
       <Filter>Panels\Settings</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\PconPanel.h">
@@ -164,17 +166,23 @@
     <ClInclude Include="..\Dependencies\imgui\examples\directx9_example\imgui_impl_dx9.h">
       <Filter>imgui</Filter>
     </ClInclude>
-    <ClInclude Include="GWToolbox\SettingManager.h">
-      <Filter>Panels\Settings</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\OtherSettings.h">
-      <Filter>Panels\Settings</Filter>
-    </ClInclude>
     <ClInclude Include="GWToolbox\ToolboxModule.h" />
     <ClInclude Include="GWToolbox\Key.h">
       <Filter>Panels\Hotkeys</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\Color.h" />
+    <ClInclude Include="GWToolbox\GameSettings.h">
+      <Filter>Panels\Settings</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\ToolboxSettings.h">
+      <Filter>Panels\Settings</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\ClockWindow.h">
+      <Filter>Windows\Clock</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\NotePadWindow.h">
+      <Filter>Windows\Notepad</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -247,7 +255,6 @@
       <Filter>Windows\Minimap</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\ChatCommands.cpp" />
-    <ClCompile Include="GWToolbox\Config.cpp" />
     <ClCompile Include="GWToolbox\SymbolsRenderer.cpp">
       <Filter>Windows\Minimap</Filter>
     </ClCompile>
@@ -263,15 +270,18 @@
     <ClCompile Include="..\Dependencies\imgui\examples\directx9_example\imgui_impl_dx9.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
-    <ClCompile Include="GWToolbox\Settings.cpp">
-      <Filter>Panels\Settings</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\SettingManager.cpp">
-      <Filter>Panels\Settings</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\OtherSettings.cpp">
-      <Filter>Panels\Settings</Filter>
-    </ClCompile>
     <ClCompile Include="GWToolbox\ToolboxModule.cpp" />
+    <ClCompile Include="GWToolbox\GameSettings.cpp">
+      <Filter>Panels\Settings</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\ToolboxSettings.cpp">
+      <Filter>Panels\Settings</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\ClockWindow.cpp">
+      <Filter>Windows\Clock</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\NotePadWindow.cpp">
+      <Filter>Windows\Notepad</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

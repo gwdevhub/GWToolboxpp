@@ -10,8 +10,8 @@
 #include <GWCA\Managers\PartyMgr.h>
 #include <GWCA\GWStructures.h>
 
-#include "Config.h"
 #include "GuiUtils.h"
+#include "GWToolbox.h"
 
 BondsWindow::BondsWindow(IDirect3DDevice9* device) {
 	for (int i = 0; i < MAX_BONDS; ++i) textures[i] = nullptr;
@@ -73,7 +73,12 @@ void BondsWindow::Draw(IDirect3DDevice9* device) {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(background));
 	ImGui::SetNextWindowSize(ImVec2((float)(MAX_BONDS * img_size), (float)(party_size * img_size)));
-	ImGui::Begin(Name(), &visible, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize);
+	ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar
+		| ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoResize;
+	if (GWToolbox::instance().WidgetsFreezed()) {
+		flags |= ImGuiWindowFlags_NoMove;
+	}
+	ImGui::Begin(Name(), &visible, flags);
 	float x = ImGui::GetWindowPos().x;
 	float y = ImGui::GetWindowPos().y;
 	for (int player = 0; player < party_size; ++player) {
@@ -128,11 +133,13 @@ void BondsWindow::LoadSettings(CSimpleIni* ini) {
 	background = Colors::Load(ini, Name(), "background", Colors::ARGB(76, 0, 0, 0));
 }
 
-void BondsWindow::SaveSettings(CSimpleIni* ini) const {
+void BondsWindow::SaveSettings(CSimpleIni* ini) {
 	ToolboxModule::SaveSettingVisible(ini);
 	Colors::Save(ini, Name(), "background", background);
 }
 
 void BondsWindow::DrawSettings() {
-	Colors::DrawSetting("Background", &background);
+	if (ImGui::CollapsingHeader(Name())) {
+		Colors::DrawSetting("Background", &background);
+	}
 }

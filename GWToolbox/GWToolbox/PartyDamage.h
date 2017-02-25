@@ -13,13 +13,13 @@
 #include "Timer.h"
 #include "GuiUtils.h"
 #include "ToolboxModule.h"
+#include "Color.h"
 
 class PartyDamage : public ToolboxModule {
 	const char* inifilename = "healthlog.ini";
 	const char* inisection = "health";
 
 	static const int MAX_PLAYERS = 12;
-	static const int RECENT_MAX_TIME = 7000;
 
 	struct PlayerDamage {
 		long damage = 0;
@@ -52,7 +52,7 @@ public:
 	void Update() override;
 
 	void LoadSettings(CSimpleIni* ini) override;
-	void SaveSettings(CSimpleIni* ini) const override;
+	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettings() override;
 
 	void WritePartyDamage();
@@ -83,4 +83,10 @@ private:
 
 	// ini
 	CSimpleIni* inifile = nullptr;
+	Color color_background;
+	Color color_damage;
+	Color color_recent;
+	float width;
+	bool bars_left;
+	int recent_max_time;
 };

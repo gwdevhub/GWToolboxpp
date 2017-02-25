@@ -46,7 +46,7 @@ public:
 
 	void DrawSettings() override;
 	void LoadSettings(CSimpleIni* ini) override;
-	void SaveSettings(CSimpleIni* ini) const override;
+	void SaveSettings(CSimpleIni* ini) override;
 
 	void Send(unsigned int idx);
 	const char* BuildName(unsigned int idx) const;

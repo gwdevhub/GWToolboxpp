@@ -2,12 +2,12 @@
 
 #include "ToolboxModule.h"
 
-class HealthWindow : public ToolboxModule {
+class ClockWindow : public ToolboxModule {
 public:
-	const char* Name() const override { return "Target Health"; }
+	const char* Name() const override { return "Clock"; }
 
-	HealthWindow() {};
-	~HealthWindow() {};
+	ClockWindow() {};
+	~ClockWindow() {};
 
 	// Draw user interface. Will be called every frame if the element is visible
 	void Draw(IDirect3DDevice9* pDevice) override;

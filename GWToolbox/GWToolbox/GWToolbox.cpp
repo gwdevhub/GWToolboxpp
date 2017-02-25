@@ -28,15 +28,15 @@
 #include "Timer.h"
 #include "MainWindow.h"
 #include "TimerWindow.h"
-#include "Settings.h"
 #include "ChatLogger.h"
 #include "logger.h"
-#include "SettingManager.h"
 
 GWToolbox* GWToolbox::instance_ = nullptr;
 GW::DirectXHooker* GWToolbox::dx_hooker = nullptr;
 long GWToolbox::OldWndProc = 0;
 
+bool tb_initialized = false;
+bool tb_destroyed = false;
 
 void GWToolbox::SafeThreadEntry(HMODULE dllmodule) {
 	__try {
@@ -51,6 +51,7 @@ void GWToolbox::ThreadEntry(HMODULE dllmodule) {
 	if (!GW::Api::Initialize()){
 		MessageBoxA(0, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0);
 		FreeLibraryAndExitThread(dllmodule, EXIT_SUCCESS);
+		return;
 	}
 
 	GW::Gamethread();
@@ -71,9 +72,6 @@ void GWToolbox::ThreadEntry(HMODULE dllmodule) {
 	dx_hooker = new GW::DirectXHooker();
 	printf("DxDevice = %X\n", dx_hooker->device());
 
-	LOG("Creating Config\n");
-	Config::Initialize();
-
 	LOG("Installing dx hooks\n");
 	dx_hooker->AddHook(GW::dx9::kEndScene, (void*)endScene);
 	dx_hooker->AddHook(GW::dx9::kReset, (void*)resetScene);
@@ -85,47 +83,27 @@ void GWToolbox::ThreadEntry(HMODULE dllmodule) {
 	LOG("oldwndproc %X\n", OldWndProc);
 	LOG("Installed input event handler\n");
 
-	Config::IniWrite("launcher", "dllversion", GWTOOLBOX_VERSION);
-
 	ChatLogger::Init();
 
-	while (instanceptr() == nullptr || !instance().must_self_destruct_) { // wait until destruction
-		Sleep(10);
+	while (!tb_destroyed) { // wait until destruction
+		Sleep(100);
 
 #ifdef _DEBUG
 		if (GetAsyncKeyState(VK_END) & 1) {
-			instance().must_self_destruct_ = true;
+			instance().StartSelfDestruct();
 			break;
 		}
 #endif
 	}
-
-	LOG("Destroying GWToolbox++\n");
-
-	Sleep(100);
-
-	for (ToolboxModule* module : GWToolbox::instance().modules) {
-		module->SaveSettings(Config::inifile_);
-	}
-	LOG("Closing settings\n");
-	instance().main_window->settings_panel->Close();
-	LOG("saving health log\n");
 	
-	Sleep(100);
-	LOG("Deleting config\n");
-	delete instance().chat_commands;
 	Sleep(100);
 	LOG("Restoring input hook\n");
 	SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
-	ImGui_ImplDX9_Shutdown();
 	Sleep(100);
 	LOG("Destroying API\n");
 	GW::Api::Destruct();
 	LOG("Destroying directX hook\n");
 	delete dx_hooker;
-	SettingManager::SaveAll();
-	LOG("Destroying Config\n");
-	Config::Destroy();
 	LOG("Closing log/console, bye!\n");
 	Logger::Close();
 	Sleep(100);
@@ -141,134 +119,140 @@ LRESULT CALLBACK GWToolbox::SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, 
 }
 
 LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) {
-	
-	if (Message == WM_QUIT || Message == WM_CLOSE) {
-		Config::Save();
+	static bool right_mouse_down = false;
+
+	if (instance_ == nullptr) {
 		return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
 	}
 
-	MSG msg;
-	msg.hwnd = hWnd;
-	msg.message = Message;
-	msg.wParam = wParam;
-	msg.lParam = lParam;
-
-	GWToolbox& tb = GWToolbox::instance();
-
-	ImGuiIO& io = ImGui::GetIO();
-	switch (Message) {
-	case WM_LBUTTONDOWN: io.MouseDown[0] = true; break;
-	case WM_LBUTTONUP: io.MouseDown[0] = false; break;
-
-	case WM_MBUTTONDOWN: 
-		io.KeysDown[VK_MBUTTON] = true;
-		io.MouseDown[2] = true; 
-		break;
-	case WM_MBUTTONUP: 
-		io.KeysDown[VK_MBUTTON] = false;
-		io.MouseDown[2] = false; 
-		break;
-	case WM_MOUSEWHEEL: io.MouseWheel += GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f; break;
-	case WM_MOUSEMOVE:
-		io.MousePos.x = (float)GET_X_LPARAM(lParam);
-		io.MousePos.y = (float)GET_Y_LPARAM(lParam);
-		break;
-	case WM_KEYDOWN:
-		if (wParam < 256)
-			io.KeysDown[wParam] = true;
-		break;
-	case WM_KEYUP:
-		if (wParam < 256)
-			io.KeysDown[wParam] = false;
-		break;
-	case WM_CHAR: // You can also use ToAscii()+GetKeyboardState() to retrieve characters.
-		if (wParam > 0 && wParam < 0x10000)
-			io.AddInputCharacter((unsigned short)wParam);
-		break;
-	default:
-		break;
+	if (Message == WM_QUIT || Message == WM_CLOSE) {
+		// todo: save
+		return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
 	}
 
-	switch (Message) {
-	// Send right mouse button events to gw (move view around) and don't mess with them
-	case WM_RBUTTONDOWN: tb.right_mouse_pressed_ = true; break;
-	case WM_RBUTTONUP: tb.right_mouse_pressed_ = false; break;
+	if (Message == WM_RBUTTONDOWN) right_mouse_down = true;
+	if (Message == WM_RBUTTONDBLCLK) right_mouse_down = true;
+	if (Message == WM_RBUTTONUP) right_mouse_down = false;
 
+	// === Send events to ImGui ===
+	ImGuiIO& io = ImGui::GetIO();
+	if (!right_mouse_down) {
+		switch (Message) {
+		case WM_LBUTTONDOWN:
+		case WM_LBUTTONDBLCLK:
+			io.MouseDown[0] = true; 
+			break;
+		case WM_LBUTTONUP: 
+			io.MouseDown[0] = false; 
+			break;
+		case WM_MBUTTONDOWN:
+		case WM_MBUTTONDBLCLK:
+			io.KeysDown[VK_MBUTTON] = true;
+			io.MouseDown[2] = true;
+			break;
+		case WM_MBUTTONUP:
+			io.KeysDown[VK_MBUTTON] = false;
+			io.MouseDown[2] = false;
+			break;
+		case WM_MOUSEWHEEL: io.MouseWheel += GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f; break;
+		case WM_MOUSEMOVE:
+			io.MousePos.x = (float)GET_X_LPARAM(lParam);
+			io.MousePos.y = (float)GET_Y_LPARAM(lParam);
+			break;
+		case WM_KEYDOWN:
+			if (wParam < 256)
+				io.KeysDown[wParam] = true;
+			break;
+		case WM_KEYUP:
+			if (wParam < 256)
+				io.KeysDown[wParam] = false;
+			break;
+		case WM_CHAR: // You can also use ToAscii()+GetKeyboardState() to retrieve characters.
+			if (wParam > 0 && wParam < 0x10000)
+				io.AddInputCharacter((unsigned short)wParam);
+			break;
+		default:
+			break;
+		}
+	}
+
+	// === Send events to toolbox ===
+	GWToolbox& tb = GWToolbox::instance();
+	switch (Message) {
 	// Send button up mouse events to both gw and imgui, to avoid gw being stuck on mouse-down
 	case WM_LBUTTONUP:
 		tb.minimap->WndProc(Message, wParam, lParam); 
-		//tb.minimap->OnMouseUp(msg);
 		break;
 		
 	// Send other mouse events to imgui first and consume them if used
 	case WM_LBUTTONDOWN:
-	case WM_MOUSEMOVE:
 	case WM_LBUTTONDBLCLK:
+	case WM_MOUSEMOVE:
 	case WM_MOUSEWHEEL:
-		if (tb.right_mouse_pressed_) break;
-		if (tb.minimap->WndProc(Message, wParam, lParam)) return true;
+		if (!right_mouse_down) {
+			if (tb.minimap->WndProc(Message, wParam, lParam)) return true;
+			if (io.WantCaptureMouse) return true;
+		}
 		break;
 
 	// send keyboard messages to gw, imgui and toolbox
-	case WM_KEYDOWN:
-	case WM_SYSKEYDOWN:
 	case WM_KEYUP:
 	case WM_SYSKEYUP:
+		if (io.WantTextInput) break; // send keyup events to gw
+		// else fallthrough
+	case WM_KEYDOWN:
+	case WM_SYSKEYDOWN:
 	case WM_CHAR:
 	case WM_SYSCHAR:
 	case WM_IME_CHAR:
 	case WM_XBUTTONDOWN:
+	case WM_XBUTTONDBLCLK:
 	case WM_XBUTTONUP:
 	case WM_MBUTTONDOWN:
+	case WM_MBUTTONDBLCLK:
 	case WM_MBUTTONUP:
+		if (io.WantTextInput) return true;
+
 		// send input to chat commands for camera movement
-		if (tb.chat_commands->ProcessMessage(&msg)) {
+		if (tb.chat_commands->WndProc(Message, wParam, lParam)) {
 			return true;
 		}
 
 		// send input to toolbox to trigger hotkeys
-		tb.main_window->hotkey_panel->ProcessMessage(&msg);
+		tb.main_window->hotkey_panel->WndProc(Message, wParam, lParam);
 
 		// block alt-enter if in borderless to avoid graphic glitches (no reason to go fullscreen anyway)
-		if (tb.other_settings->borderless_window
+		if (tb.game_settings->borderless_window
 			&& (GetAsyncKeyState(VK_MENU) < 0)
 			&& (GetAsyncKeyState(VK_RETURN) < 0)) {
 			return true;
 		}
-
 		break;
 
 	case WM_SIZE:
-		//tb.new_screen_size_ = SizeI(LOWORD(lParam), HIWORD(lParam));
-		//if (tb.new_screen_size_ != tb.old_screen_size_) {
-		//	tb.must_resize_ = true;
-		//}
 		break;
 
 	default:
 		break;
-	}
-
-	if (!tb.right_mouse_pressed_ && Message != WM_RBUTTONUP) {
-		if (ImGui::GetIO().WantCaptureMouse) return true;
-		if (ImGui::GetIO().WantCaptureKeyboard) return true;
-		if (ImGui::GetIO().WantTextInput) return true;
 	}
 	
 	return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
 }
 
-GWToolbox::GWToolbox(IDirect3DDevice9* device) : 
-	must_self_destruct_(false),
-	right_mouse_pressed_(false),
-	must_resize_(false) {
+GWToolbox::GWToolbox(IDirect3DDevice9* device) : must_self_destruct(false) {
+	LOG("Creating Toolbox\n");
 
-	LOG("Creating GWToolbox\n");
+	LOG("Opening ini file\n");
+	inifile = new CSimpleIni(false, false, false);
+	inifile->LoadFile(GuiUtils::getPath("GWToolbox.ini").c_str());
+	inifile->SetValue("launcher", "dllversion", GWTOOLBOX_VERSION);
 
+	LOG("Creating Modules\n");
+	modules.push_back(game_settings = new GameSettings());
+	modules.push_back(toolbox_settings = new ToolboxSettings());
 	modules.push_back(main_window = new MainWindow(device));
 	modules.push_back(chat_filter = new ChatFilter());
 	modules.push_back(chat_commands = new ChatCommands());
-	modules.push_back(other_settings = new OtherSettings());
 
 	modules.push_back(timer_window = new TimerWindow());
 	modules.push_back(health_window = new HealthWindow());
@@ -276,13 +260,12 @@ GWToolbox::GWToolbox(IDirect3DDevice9* device) :
 	modules.push_back(minimap = new Minimap());
 	modules.push_back(party_damage = new PartyDamage());
 	modules.push_back(bonds_window = new BondsWindow(device));
+	modules.push_back(clock_window = new ClockWindow());
+	modules.push_back(notepad_window = new NotePadWindow());
 
 	for (ToolboxModule* module : modules) {
-		module->LoadSettings(Config::inifile_);
+		module->LoadSettings(inifile);
 	}
-
-	SettingManager::LoadAll();
-	SettingManager::ApplyAll();
 
 	if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading
 		&& GW::Agents().GetAgentArray().valid()
@@ -293,11 +276,25 @@ GWToolbox::GWToolbox(IDirect3DDevice9* device) :
 	}
 }
 
+GWToolbox::~GWToolbox() {
+	for (ToolboxModule* module : modules) {
+		module->SaveSettings(inifile);
+	}
+
+	inifile->SaveFile(GuiUtils::getPath("GWToolbox.ini").c_str());
+	inifile->Reset();
+	delete inifile;
+
+	if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading) {
+		ChatLogger::Log("Bye!");
+	}
+}
+
 // All rendering done here.
 HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 
-	if (instanceptr() == nullptr) {
-
+	// === initialization ===
+	if (!tb_initialized) {
 		instance_ = new GWToolbox(pDevice);
 
 		ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), pDevice);
@@ -306,36 +303,14 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 		static std::string imgui_inifile = GuiUtils::getPath("interface.ini");
 		io.IniFilename = imgui_inifile.c_str();
 		GuiUtils::LoadFonts();
+
+		tb_initialized = true;
 	}
 
-	GWToolbox& tb = GWToolbox::instance();
+	// === runtime ===
+	if (instance_) {
+		GWToolbox& tb = *instance_;
 
-	if (!tb.must_self_destruct_) {
-		
-		if (tb.must_resize_) {
-			tb.must_resize_ = false;
-			tb.ResizeUI();
-			//tb.old_screen_size_ = tb.new_screen_size_;
-		}
-
-		//D3DVIEWPORT9 viewport;
-		//pDevice->GetViewport(&viewport);
-
-		//if (location.X < 0) {
-		//	location.X = 0;
-		//}
-		//if (location.Y < 0) {
-		//	location.Y = 0;
-		//}
-		//if (location.X > static_cast<int>(viewport.Width) - size.GetWidth()) {
-		//	location.X = static_cast<int>(viewport.Width) - size.GetWidth();
-		//}
-		//if (location.Y > static_cast<int>(viewport.Height) - size.GetHeight()) {
-		//	location.Y = static_cast<int>(viewport.Height) - size.GetHeight();
-		//}
-		//if (location != tb.main_window->GetLocation()) {
-		//	tb.main_window->SetLocation(location);
-		//}
 		ImGui_ImplDX9_NewFrame();
 
 		for (ToolboxModule* module : tb.modules) {
@@ -347,13 +322,18 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 		}
 
 		ImGui::ShowTestWindow();
-		ImGui::Render();
 
-		if (tb.must_self_destruct_) {
-			if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading) {
-				ChatLogger::Log("Bye!");
-			}
-		}
+		ImGui::Render();
+	}
+
+	// === destruction ===
+	if (instance_ && instance_->must_self_destruct) {
+		delete instance_;
+		instance_ = nullptr;
+
+		ImGui_ImplDX9_Shutdown();
+
+		tb_destroyed = true;
 	}
 
 	GW::dx9::EndScene_t endscene_orig = dx_hooker->original<GW::dx9::EndScene_t>(GW::dx9::kEndScene);
@@ -367,15 +347,4 @@ HRESULT WINAPI GWToolbox::resetScene(IDirect3DDevice9* pDevice,
 
 	GW::dx9::Reset_t reset_orig = dx_hooker->original<GW::dx9::Reset_t>(GW::dx9::kReset);
 	return reset_orig(pDevice, pPresentationParameters);
-}
-
-void GWToolbox::ResizeUI() {
-	if (GWToolbox::instanceptr()) {
-		//main_window->ResizeUI(old_screen_size_, new_screen_size_);
-		//timer_window_->ResizeUI(old_screen_size_, new_screen_size_);
-		//health_window_->ResizeUI(old_screen_size_, new_screen_size_);
-		//distance_window_->ResizeUI(old_screen_size_, new_screen_size_);
-		//party_damage->ResizeUI(old_screen_size_, new_screen_size_);
-		//bonds_window->ResizeUI(old_screen_size_, new_screen_size_);
-	}
 }

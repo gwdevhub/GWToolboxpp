@@ -4,7 +4,6 @@
 
 #include "GuiUtils.h"
 #include "GWToolbox.h"
-#include "OtherSettings.h"
 
 void DistanceWindow::Draw(IDirect3DDevice9* pDevice) {
 	if (!visible) return;
@@ -12,7 +11,7 @@ void DistanceWindow::Draw(IDirect3DDevice9* pDevice) {
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(0, 0, 0, 0));
 	ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar
 		| ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar;
-	if (GWToolbox::instance().other_settings->freeze_widgets) {
+	if (GWToolbox::instance().WidgetsFreezed()) {
 		flags |= ImGuiWindowFlags_NoInputs;
 	}
 	ImGui::SetNextWindowSize(ImVec2(150, 100));
@@ -65,6 +64,6 @@ void DistanceWindow::LoadSettings(CSimpleIni* ini) {
 	LoadSettingVisible(ini);
 }
 
-void DistanceWindow::SaveSettings(CSimpleIni* ini) const {
+void DistanceWindow::SaveSettings(CSimpleIni* ini) {
 	SaveSettingVisible(ini);
 }

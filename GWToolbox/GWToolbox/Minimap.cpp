@@ -9,7 +9,6 @@
 #include <GWCA\GWCA.h>
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Managers\CameraMgr.h>
-#include "Config.h"
 #include "logger.h"
 #include "GWToolbox.h"
 
@@ -54,7 +53,7 @@ Minimap::Minimap()
 		return false;
 	});
 
-	last_moved = TBTimer::init();
+	last_moved = TIMER_INIT();
 
 	pmap_renderer.Invalidate();
 }
@@ -92,7 +91,7 @@ void Minimap::LoadSettings(CSimpleIni* ini) {
 	symbols_renderer.LoadSettings(ini, Name());
 }
 
-void Minimap::SaveSettings(CSimpleIni* ini) const {
+void Minimap::SaveSettings(CSimpleIni* ini) {
 	ini->SetLongValue(Name(), "x", location.x);
 	ini->SetLongValue(Name(), "y", location.y);
 	ini->SetLongValue(Name(), "size", size);
@@ -114,9 +113,9 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 	// if not center and want to move, move center towards player
 	if ((translation.x != 0 || translation.y != 0) 
 		&& (me->MoveX != 0 || me->MoveY != 0)
-		&& TBTimer::diff(last_moved) > ms_before_back) {
+		&& TIMER_DIFF(last_moved) > ms_before_back) {
 		GW::Vector2f v(translation.x, translation.y);
-		float speed = std::min((TBTimer::diff(last_moved) - ms_before_back) * acceleration, 500.0f);
+		float speed = std::min((TIMER_DIFF(last_moved) - ms_before_back) * acceleration, 500.0f);
 		float n = v.Norm();
 		GW::Vector2f d = v.Normalized() * speed;
 		if (std::abs(d.x) > std::abs(v.x)) {
@@ -321,7 +320,7 @@ bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam) {
 
 	if (wParam & MK_SHIFT) return true;
 
-	if (!GWToolbox::instance().other_settings->freeze_widgets) return true;
+	if (!GWToolbox::instance().toolbox_settings->freeze_widgets) return true;
 
 	GW::Vector2f v = InterfaceToWorldPoint(Vec2i(x, y));
 	pingslines_renderer.OnMouseDown(v.x, v.y);
@@ -372,11 +371,11 @@ bool Minimap::OnMouseMove(UINT Message, WPARAM wParam, LPARAM lParam) {
 		Vec2i diff = Vec2i(x - drag_start.x, y - drag_start.y);
 		translation += InterfaceToWorldVector(diff);
 		drag_start = Vec2i(x, y);
-		last_moved = TBTimer::init();
+		last_moved = TIMER_INIT();
 		return true;
 	}
 
-	if (!GWToolbox::instance().other_settings->freeze_widgets) {
+	if (!GWToolbox::instance().toolbox_settings->freeze_widgets) {
 		int diff_x = x - drag_start.x;
 		int diff_y = y - drag_start.y;
 		location.x += diff_x;
@@ -404,7 +403,7 @@ bool Minimap::OnMouseWheel(UINT Message, WPARAM wParam, LPARAM lParam) {
 		return true;
 	}
 
-	if (!GWToolbox::instance().other_settings->freeze_widgets) {
+	if (!GWToolbox::instance().toolbox_settings->freeze_widgets) {
 		int delta = zDelta > 0 ? 2 : -2;
 		size += delta * 2;
 		size += delta * 2;

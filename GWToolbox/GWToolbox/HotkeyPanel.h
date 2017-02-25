@@ -33,10 +33,10 @@ public:
 	// Draw user interface. Will be called every frame if the element is visible
 	void Draw(IDirect3DDevice9* pDevice) override;
 
-	bool ProcessMessage(LPMSG msg);
+	bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
 
 	void LoadSettings(CSimpleIni* ini) override;
-	void SaveSettings(CSimpleIni* ini) const override;
+	void SaveSettings(CSimpleIni* ini) override;
 
 private:
 	std::vector<TBHotkey*> hotkeys;				// list of hotkeys

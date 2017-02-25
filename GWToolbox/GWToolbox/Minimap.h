@@ -35,7 +35,7 @@ public:
 
 	void DrawSettings() override;
 	void LoadSettings(CSimpleIni* ini) override;
-	void SaveSettings(CSimpleIni* ini) const override;
+	void SaveSettings(CSimpleIni* ini) override;
 
 	DWORD mapfile;
 

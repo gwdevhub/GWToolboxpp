@@ -7,7 +7,6 @@
 
 #include "MainWindow.h"
 #include "GWToolbox.h"
-#include "Config.h"
 #include "GuiUtils.h"
 
 bool travelpanel_arraygetter(void* data, int idx, const char** out_text);
@@ -136,7 +135,7 @@ void TravelPanel::LoadSettings(CSimpleIni* ini) {
 	}
 }
 
-void TravelPanel::SaveSettings(CSimpleIni* ini) const {
+void TravelPanel::SaveSettings(CSimpleIni* ini) {
 	ini->SetLongValue(Name(), "fav_count", fav_count);
 	for (int i = 0; i < fav_count; ++i) {
 		char key[32];

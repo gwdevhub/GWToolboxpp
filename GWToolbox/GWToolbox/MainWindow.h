@@ -2,8 +2,6 @@
 
 #include <vector>
 
-#include "Settings.h"
-
 #include "ToolboxModule.h"
 #include "PconPanel.h"
 #include "HotkeyPanel.h"
@@ -38,7 +36,7 @@ public:
 	void DrawSettings() override;
 
 	void LoadSettings(CSimpleIni* ini) override;
-	void SaveSettings(CSimpleIni* ini) const override;
+	void SaveSettings(CSimpleIni* ini) override;
 
 public:
 	bool minimized;

@@ -8,7 +8,6 @@
 #include <GWCA\Constants\Constants.h>
 
 #include "GWToolbox.h"
-#include "Config.h"
 #include "GuiUtils.h"
 
 #include "HealthWindow.h"
@@ -16,6 +15,7 @@
 #include "BondsWindow.h"
 #include "PartyDamage.h"
 #include "Minimap.h"
+#include "ClockWindow.h"
 
 InfoPanel::InfoPanel(IDirect3DDevice9* device) {
 	D3DXCreateTextureFromFile(device, GuiUtils::getSubPath("info.png", "img").c_str(), &texture);
@@ -39,6 +39,12 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 	ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
 	ImGui::Checkbox("Distance", &GWToolbox::instance().distance_window->visible);
 	GuiUtils::ShowHelp("Displays the distance to your target.\n1010 = Earshot / Aggro\n1248 = Cast range\n2500 = Spirit range\n5000 = Radar range");
+	ImGui::Checkbox("Clock", &GWToolbox::instance().clock_window->visible);
+	GuiUtils::ShowHelp("Displays the system time (hour : minutes)");
+	ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
+	ImGui::Checkbox("Notepad", &GWToolbox::instance().notepad_window->visible);
+	GuiUtils::ShowHelp("A simple in-game text editor");
+
 	if (ImGui::Button("Open Xunlai Chest", ImVec2(-1.0f, 0))) {
 		GW::Items().OpenXunlaiWindow();
 	}

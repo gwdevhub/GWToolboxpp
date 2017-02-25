@@ -4,7 +4,6 @@
 #include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\MapMgr.h>
 
-#include "Config.h"
 #include "GuiUtils.h"
 
 unsigned int BuildPanel::TeamBuild::cur_ui_id = 0;
@@ -166,11 +165,11 @@ void BuildPanel::Send(const TeamBuild& tbuild, unsigned int idx) {
 }
 
 void BuildPanel::Update() {
-	if (!queue.empty() && TBTimer::diff(send_timer) > 600) {
+	if (!queue.empty() && TIMER_DIFF(send_timer) > 600) {
 		if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading
 			&& GW::Agents().GetPlayer()) {
 
-			send_timer = TBTimer::init();
+			send_timer = TIMER_INIT();
 			GW::Chat().SendChat(queue.front().c_str(), '#');
 			queue.pop();
 		}
@@ -216,7 +215,7 @@ void BuildPanel::LoadSettings(CSimpleIni* ini) {
 	}
 }
 
-void BuildPanel::SaveSettings(CSimpleIni* ini) const {
+void BuildPanel::SaveSettings(CSimpleIni* ini) {
 	for (unsigned int i = 0; i < teambuilds.size(); ++i) {
 		const TeamBuild& tbuild = teambuilds[i];
 		char section[16];

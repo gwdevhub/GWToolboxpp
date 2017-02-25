@@ -6,6 +6,7 @@
 #include <GWCA\Managers\StoCMgr.h>
 
 #include <imgui.h>
+#include "GuiUtils.h"
 
 ChatFilter::ChatFilter() {
 
@@ -377,7 +378,7 @@ void ChatFilter::LoadSettings(CSimpleIni* ini) {
 	ByAuthor_ParseBuf();
 }
 
-void ChatFilter::SaveSettings(CSimpleIni* ini) const {
+void ChatFilter::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), "self_common_drops", self_common_drops);
 	ini->SetBoolValue(Name(), "ally_common_drops", ally_common_drops);
 	ini->SetBoolValue(Name(), "self_rare_drops", self_rare_drops);

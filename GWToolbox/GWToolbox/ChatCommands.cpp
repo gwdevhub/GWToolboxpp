@@ -49,7 +49,7 @@ ChatCommands::ChatCommands() {
 	GW::Chat().RegisterCommand(L"skilluse", ChatCommands::CmdUseSkill);
 }
 
-bool ChatCommands::ProcessMessage(LPMSG msg) {
+bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 	if (!GW::Cameramgr().GetCameraUnlock() || IsTyping()) return false;
 
 	const DWORD keyA = 0x41;
@@ -59,9 +59,9 @@ bool ChatCommands::ProcessMessage(LPMSG msg) {
 	const DWORD keyX = 0x58;
 	const DWORD keyZ = 0x5A;
 
-	switch (msg->message) {
+	switch (Message) {
 	case WM_KEYDOWN: {
-		switch (msg->wParam) {
+		switch (wParam) {
 		case keyW: move_forward = 1; return true;
 		case keyS: move_forward = -1; return true;
 		case keyD: move_side = 1; return true;
@@ -71,7 +71,7 @@ bool ChatCommands::ProcessMessage(LPMSG msg) {
 		}
 	}
 	case WM_KEYUP: {
-		switch (msg->wParam) {
+		switch (wParam) {
 		case keyW:
 		case keyS:
 			move_forward = 0; 

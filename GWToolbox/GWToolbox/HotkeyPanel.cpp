@@ -7,13 +7,12 @@
 
 #include "logger.h"
 #include "GuiUtils.h"
-#include "Config.h"
 
 HotkeyPanel::HotkeyPanel(IDirect3DDevice9* device) {
 	D3DXCreateTextureFromFile(device, GuiUtils::getSubPath("keyboard.png", "img").c_str(), &texture);
 
-	clickerTimer = TBTimer::init();
-	dropCoinsTimer = TBTimer::init();
+	clickerTimer = TIMER_INIT();
+	dropCoinsTimer = TIMER_INIT();
 	hotkeys = std::vector<TBHotkey*>();
 }
 HotkeyPanel::~HotkeyPanel() {
@@ -116,7 +115,7 @@ void HotkeyPanel::LoadSettings(CSimpleIni* ini) {
 		}
 	}
 }
-void HotkeyPanel::SaveSettings(CSimpleIni* ini) const {
+void HotkeyPanel::SaveSettings(CSimpleIni* ini) {
 	char buf[256];
 	for (unsigned int i = 0; i < hotkeys.size(); ++i) {
 		sprintf_s(buf, "hotkey-%03d:%s", i, hotkeys[i]->Name());
@@ -124,20 +123,20 @@ void HotkeyPanel::SaveSettings(CSimpleIni* ini) const {
 	}
 }
 
-bool HotkeyPanel::ProcessMessage(LPMSG msg) {
+bool HotkeyPanel::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 	long keyData = 0;
-	switch (msg->message) {
+	switch (Message) {
 	case WM_KEYDOWN:
 	case WM_SYSKEYDOWN:
 	case WM_KEYUP:
 	case WM_SYSKEYUP:
-		keyData = msg->wParam;
+		keyData = wParam;
 		break;
 	case WM_XBUTTONDOWN:
 	case WM_MBUTTONDOWN:
-		if (LOWORD(msg->wParam) & MK_MBUTTON) keyData = VK_MBUTTON;
-		if (LOWORD(msg->wParam) & MK_XBUTTON1) keyData = VK_XBUTTON1;
-		if (LOWORD(msg->wParam) & MK_XBUTTON2) keyData = VK_XBUTTON2;
+		if (LOWORD(wParam) & MK_MBUTTON) keyData = VK_MBUTTON;
+		if (LOWORD(wParam) & MK_XBUTTON1) keyData = VK_XBUTTON1;
+		if (LOWORD(wParam) & MK_XBUTTON2) keyData = VK_XBUTTON2;
 		break;
 	case WM_XBUTTONUP:
 	case WM_MBUTTONUP:
@@ -147,7 +146,7 @@ bool HotkeyPanel::ProcessMessage(LPMSG msg) {
 		break;
 	}
 
-	switch (msg->message) {
+	switch (Message) {
 	case WM_KEYDOWN:
 	case WM_SYSKEYDOWN:
 	case WM_XBUTTONDOWN:
@@ -203,8 +202,8 @@ bool HotkeyPanel::ProcessMessage(LPMSG msg) {
 
 
 void HotkeyPanel::Update() {
-	if (clickerActive && TBTimer::diff(clickerTimer) > 20) {
-		clickerTimer = TBTimer::init();
+	if (clickerActive && TIMER_DIFF(clickerTimer) > 20) {
+		clickerTimer = TIMER_INIT();
 		INPUT input;
 		input.type = INPUT_MOUSE;
 		input.mi.dx = 0;
@@ -217,9 +216,9 @@ void HotkeyPanel::Update() {
 		SendInput(1, &input, sizeof(INPUT));
 	}
 
-	if (dropCoinsActive && TBTimer::diff(dropCoinsTimer) > 500) {
+	if (dropCoinsActive && TIMER_DIFF(dropCoinsTimer) > 500) {
 		if (GW::Map().GetInstanceType() == GW::Constants::InstanceType::Explorable) {
-			dropCoinsTimer = TBTimer::init();
+			dropCoinsTimer = TIMER_INIT();
 			GW::Items().DropGold(1);
 		}
 	}

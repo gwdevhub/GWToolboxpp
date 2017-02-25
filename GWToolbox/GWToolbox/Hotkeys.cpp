@@ -12,7 +12,6 @@
 #include "logger.h"
 #include "ChatLogger.h"
 #include "GWToolbox.h"
-#include "Config.h"
 #include "BuildPanel.h"
 
 unsigned int TBHotkey::cur_ui_id = 0;
