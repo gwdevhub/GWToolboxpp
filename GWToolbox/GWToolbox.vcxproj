@@ -42,12 +42,12 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(SolutionDir)Dependencies;$(SolutionDir)Dependencies\GWCA_DX;$(SolutionDir)Dependencies\GWCA;$(SolutionDir)Dependencies\imgui;$(SolutionDir)Dependencies\DirectX\Include\;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)GWToolbox;$(SolutionDir)Dependencies;$(SolutionDir)Dependencies\GWCA_DX;$(SolutionDir)Dependencies\GWCA;$(SolutionDir)Dependencies\imgui;$(SolutionDir)Dependencies\DirectX\Include\;$(IncludePath)</IncludePath>
     <LibraryPath>$(OutDir);$(SolutionDir)Dependencies\DirectX\Lib\x86\;$(SolutionDir)Dependencies\GWCA\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(SolutionDir)Dependencies;$(SolutionDir)Dependencies\GWCA_DX;$(SolutionDir)Dependencies\GWCA;$(SolutionDir)Dependencies\imgui;$(SolutionDir)Dependencies\DirectX\Include\;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)GWToolbox;$(SolutionDir)Dependencies;$(SolutionDir)Dependencies\GWCA_DX;$(SolutionDir)Dependencies\GWCA;$(SolutionDir)Dependencies\imgui;$(SolutionDir)Dependencies\DirectX\Include\;$(IncludePath)</IncludePath>
     <LibraryPath>$(OutDir);$(SolutionDir)Dependencies\DirectX\Lib\x86\;$(SolutionDir)Dependencies\GWCA\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -62,7 +62,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCA_DX.lib;GWCAd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCA_DX.lib;GWCAd.lib;Shlwapi.lib;Urlmon.lib;Wininet.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -87,7 +87,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCA_DX.lib;GWCA.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCA_DX.lib;GWCA.lib;Shlwapi.lib;Urlmon.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -98,84 +98,90 @@
     <ClInclude Include="..\Dependencies\imgui\stb_rect_pack.h" />
     <ClInclude Include="..\Dependencies\imgui\stb_textedit.h" />
     <ClInclude Include="..\Dependencies\imgui\stb_truetype.h" />
-    <ClInclude Include="GWToolbox\AgentRenderer.h" />
-    <ClInclude Include="GWToolbox\BondsWindow.h" />
-    <ClInclude Include="GWToolbox\BuildPanel.h" />
-    <ClInclude Include="GWToolbox\ChatCommands.h" />
-    <ClInclude Include="GWToolbox\ChatFilter.h" />
     <ClInclude Include="GWToolbox\ChatLogger.h" />
-    <ClInclude Include="GWToolbox\ClockWindow.h" />
     <ClInclude Include="GWToolbox\Color.h" />
     <ClInclude Include="GWToolbox\Defines.h" />
-    <ClInclude Include="GWToolbox\DialogPanel.h" />
-    <ClInclude Include="GWToolbox\DistanceWindow.h" />
     <ClInclude Include="GWToolbox\Key.h" />
-    <ClInclude Include="GWToolbox\Minimap.h" />
-    <ClInclude Include="GWToolbox\D3DVertex.h" />
-    <ClInclude Include="GWToolbox\GameSettings.h" />
-    <ClInclude Include="GWToolbox\NotePadWindow.h" />
-    <ClInclude Include="GWToolbox\PartyDamage.h" />
-    <ClInclude Include="GWToolbox\PingsLinesRenderer.h" />
-    <ClInclude Include="GWToolbox\PmapRenderer.h" />
-    <ClInclude Include="GWToolbox\RangeRenderer.h" />
-    <ClInclude Include="GWToolbox\SymbolsRenderer.h" />
+    <ClInclude Include="GWToolbox\OtherModules\ChatCommands.h" />
+    <ClInclude Include="GWToolbox\OtherModules\ChatFilter.h" />
+    <ClInclude Include="GWToolbox\OtherModules\GameSettings.h" />
+    <ClInclude Include="GWToolbox\OtherModules\Resources.h" />
+    <ClInclude Include="GWToolbox\OtherModules\ToolboxSettings.h" />
+    <ClInclude Include="GWToolbox\Panels\BuildPanel.h" />
+    <ClInclude Include="GWToolbox\Panels\DialogPanel.h" />
+    <ClInclude Include="GWToolbox\Panels\HotkeyPanel.h" />
+    <ClInclude Include="GWToolbox\Panels\Hotkeys.h" />
+    <ClInclude Include="GWToolbox\Panels\InfoPanel.h" />
+    <ClInclude Include="GWToolbox\Panels\MaterialsPanel.h" />
+    <ClInclude Include="GWToolbox\Panels\PconPanel.h" />
+    <ClInclude Include="GWToolbox\Panels\Pcons.h" />
+    <ClInclude Include="GWToolbox\Panels\SettingsPanel.h" />
+    <ClInclude Include="GWToolbox\Panels\TravelPanel.h" />
     <ClInclude Include="GWToolbox\ToolboxModule.h" />
-    <ClInclude Include="GWToolbox\ToolboxSettings.h" />
-    <ClInclude Include="GWToolbox\VBuffer.h" />
     <ClInclude Include="GWToolbox\GuiUtils.h" />
     <ClInclude Include="GWToolbox\GWToolbox.h" />
-    <ClInclude Include="GWToolbox\HotkeyPanel.h" />
-    <ClInclude Include="GWToolbox\Hotkeys.h" />
     <ClInclude Include="GWToolbox\logger.h" />
-    <ClInclude Include="GWToolbox\MaterialsPanel.h" />
-    <ClInclude Include="GWToolbox\InfoPanel.h" />
-    <ClInclude Include="GWToolbox\PconPanel.h" />
-    <ClInclude Include="GWToolbox\Pcons.h" />
-    <ClInclude Include="GWToolbox\MainWindow.h" />
-    <ClInclude Include="GWToolbox\SettingsPanel.h" />
-    <ClInclude Include="GWToolbox\HealthWindow.h" />
     <ClInclude Include="GWToolbox\Timer.h" />
-    <ClInclude Include="GWToolbox\TimerWindow.h" />
     <ClInclude Include="GWToolbox\ToolboxPanel.h" />
-    <ClInclude Include="GWToolbox\TravelPanel.h" />
+    <ClInclude Include="GWToolbox\ToolboxWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\BondsWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\ClockWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\DistanceWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\HealthWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\MainWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\Minimap\AgentRenderer.h" />
+    <ClInclude Include="GWToolbox\Windows\Minimap\D3DVertex.h" />
+    <ClInclude Include="GWToolbox\Windows\Minimap\Minimap.h" />
+    <ClInclude Include="GWToolbox\Windows\Minimap\PingsLinesRenderer.h" />
+    <ClInclude Include="GWToolbox\Windows\Minimap\PmapRenderer.h" />
+    <ClInclude Include="GWToolbox\Windows\Minimap\RangeRenderer.h" />
+    <ClInclude Include="GWToolbox\Windows\Minimap\SymbolsRenderer.h" />
+    <ClInclude Include="GWToolbox\Windows\Minimap\VBuffer.h" />
+    <ClInclude Include="GWToolbox\Windows\NotePadWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\PartyDamage.h" />
+    <ClInclude Include="GWToolbox\Windows\TimerWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Dependencies\imgui\examples\directx9_example\imgui_impl_dx9.cpp" />
     <ClCompile Include="..\Dependencies\imgui\imgui.cpp" />
     <ClCompile Include="..\Dependencies\imgui\imgui_demo.cpp" />
     <ClCompile Include="..\Dependencies\imgui\imgui_draw.cpp" />
-    <ClCompile Include="GWToolbox\AgentRenderer.cpp" />
-    <ClCompile Include="GWToolbox\BondsWindow.cpp" />
-    <ClCompile Include="GWToolbox\BuildPanel.cpp" />
-    <ClCompile Include="GWToolbox\ChatCommands.cpp" />
-    <ClCompile Include="GWToolbox\ChatFilter.cpp" />
-    <ClCompile Include="GWToolbox\ClockWindow.cpp" />
-    <ClCompile Include="GWToolbox\DialogPanel.cpp" />
-    <ClCompile Include="GWToolbox\DistanceWindow.cpp" />
+    <ClCompile Include="GWToolbox\GuiUtils.cpp" />
     <ClCompile Include="GWToolbox\logger.cpp" />
     <ClCompile Include="GWToolbox\main.cpp" />
-    <ClCompile Include="GWToolbox\Minimap.cpp" />
-    <ClCompile Include="GWToolbox\GameSettings.cpp" />
-    <ClCompile Include="GWToolbox\NotePadWindow.cpp" />
-    <ClCompile Include="GWToolbox\PartyDamage.cpp" />
-    <ClCompile Include="GWToolbox\PingsLinesRenderer.cpp" />
-    <ClCompile Include="GWToolbox\PmapRenderer.cpp" />
-    <ClCompile Include="GWToolbox\RangeRenderer.cpp" />
-    <ClCompile Include="GWToolbox\SymbolsRenderer.cpp" />
+    <ClCompile Include="GWToolbox\OtherModules\ChatCommands.cpp" />
+    <ClCompile Include="GWToolbox\OtherModules\ChatFilter.cpp" />
+    <ClCompile Include="GWToolbox\OtherModules\GameSettings.cpp" />
+    <ClCompile Include="GWToolbox\OtherModules\Resources.cpp" />
+    <ClCompile Include="GWToolbox\OtherModules\ToolboxSettings.cpp" />
+    <ClCompile Include="GWToolbox\Panels\BuildPanel.cpp" />
+    <ClCompile Include="GWToolbox\Panels\DialogPanel.cpp" />
+    <ClCompile Include="GWToolbox\Panels\HotkeyPanel.cpp" />
+    <ClCompile Include="GWToolbox\Panels\Hotkeys.cpp" />
+    <ClCompile Include="GWToolbox\Panels\InfoPanel.cpp" />
+    <ClCompile Include="GWToolbox\Panels\MaterialsPanel.cpp" />
+    <ClCompile Include="GWToolbox\Panels\PconPanel.cpp" />
+    <ClCompile Include="GWToolbox\Panels\Pcons.cpp" />
+    <ClCompile Include="GWToolbox\Panels\SettingsPanel.cpp" />
+    <ClCompile Include="GWToolbox\Panels\TravelPanel.cpp" />
     <ClCompile Include="GWToolbox\ToolboxModule.cpp" />
     <ClCompile Include="GWToolbox\GWToolbox.cpp" />
-    <ClCompile Include="GWToolbox\HotkeyPanel.cpp" />
-    <ClCompile Include="GWToolbox\Hotkeys.cpp" />
-    <ClCompile Include="GWToolbox\MaterialsPanel.cpp" />
-    <ClCompile Include="GWToolbox\InfoPanel.cpp" />
-    <ClCompile Include="GWToolbox\PconPanel.cpp" />
-    <ClCompile Include="GWToolbox\Pcons.cpp" />
-    <ClCompile Include="GWToolbox\MainWindow.cpp" />
-    <ClCompile Include="GWToolbox\SettingsPanel.cpp" />
-    <ClCompile Include="GWToolbox\HealthWindow.cpp" />
-    <ClCompile Include="GWToolbox\TimerWindow.cpp" />
-    <ClCompile Include="GWToolbox\ToolboxSettings.cpp" />
-    <ClCompile Include="GWToolbox\TravelPanel.cpp" />
+    <ClCompile Include="GWToolbox\ToolboxPanel.cpp" />
+    <ClCompile Include="GWToolbox\ToolboxWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\BondsWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\ClockWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\DistanceWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\HealthWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\MainWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\Minimap\AgentRenderer.cpp" />
+    <ClCompile Include="GWToolbox\Windows\Minimap\Minimap.cpp" />
+    <ClCompile Include="GWToolbox\Windows\Minimap\PingsLinesRenderer.cpp" />
+    <ClCompile Include="GWToolbox\Windows\Minimap\PmapRenderer.cpp" />
+    <ClCompile Include="GWToolbox\Windows\Minimap\RangeRenderer.cpp" />
+    <ClCompile Include="GWToolbox\Windows\Minimap\SymbolsRenderer.cpp" />
+    <ClCompile Include="GWToolbox\Windows\NotePadWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\PartyDamage.cpp" />
+    <ClCompile Include="GWToolbox\Windows\TimerWindow.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -25,11 +25,26 @@
 #include <imgui.h>
 #include <imgui\examples\directx9_example\imgui_impl_dx9.h>
 
-#include "Timer.h"
-#include "MainWindow.h"
-#include "TimerWindow.h"
 #include "ChatLogger.h"
 #include "logger.h"
+
+#include <OtherModules\ChatCommands.h>
+#include <OtherModules\ChatFilter.h>
+#include <OtherModules\GameSettings.h>
+#include <OtherModules\ToolboxSettings.h>
+#include <OtherModules\Resources.h>
+
+#include <Windows\MainWindow.h>
+#include <Windows\TimerWindow.h>
+#include <Windows\BondsWindow.h>
+#include <Windows\HealthWindow.h>
+#include <Windows\DistanceWindow.h>
+#include <Windows\PartyDamage.h>
+#include <Windows\Minimap\Minimap.h>
+#include <Windows\ClockWindow.h>
+#include <Windows\NotePadWindow.h>
+
+#include <Panels\HotkeyPanel.h>
 
 GWToolbox* GWToolbox::instance_ = nullptr;
 GW::DirectXHooker* GWToolbox::dx_hooker = nullptr;
@@ -90,7 +105,7 @@ void GWToolbox::ThreadEntry(HMODULE dllmodule) {
 
 #ifdef _DEBUG
 		if (GetAsyncKeyState(VK_END) & 1) {
-			instance().StartSelfDestruct();
+			Instance().StartSelfDestruct();
 			break;
 		}
 #endif
@@ -177,7 +192,7 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 	}
 
 	// === Send events to toolbox ===
-	GWToolbox& tb = GWToolbox::instance();
+	GWToolbox& tb = GWToolbox::Instance();
 	switch (Message) {
 	// Send button up mouse events to both gw and imgui, to avoid gw being stuck on mouse-down
 	case WM_LBUTTONUP:
@@ -241,6 +256,7 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 
 GWToolbox::GWToolbox(IDirect3DDevice9* device) : must_self_destruct(false) {
 	LOG("Creating Toolbox\n");
+	instance_ = this;
 
 	LOG("Opening ini file\n");
 	inifile = new CSimpleIni(false, false, false);
@@ -248,9 +264,10 @@ GWToolbox::GWToolbox(IDirect3DDevice9* device) : must_self_destruct(false) {
 	inifile->SetValue("launcher", "dllversion", GWTOOLBOX_VERSION);
 
 	LOG("Creating Modules\n");
+	modules.push_back(resources = new Resources());
 	modules.push_back(game_settings = new GameSettings());
 	modules.push_back(toolbox_settings = new ToolboxSettings());
-	modules.push_back(main_window = new MainWindow(device));
+	modules.push_back(main_window = new MainWindow());
 	modules.push_back(chat_filter = new ChatFilter());
 	modules.push_back(chat_commands = new ChatCommands());
 
@@ -259,9 +276,11 @@ GWToolbox::GWToolbox(IDirect3DDevice9* device) : must_self_destruct(false) {
 	modules.push_back(distance_window = new DistanceWindow());
 	modules.push_back(minimap = new Minimap());
 	modules.push_back(party_damage = new PartyDamage());
-	modules.push_back(bonds_window = new BondsWindow(device));
+	modules.push_back(bonds_window = new BondsWindow());
 	modules.push_back(clock_window = new ClockWindow());
 	modules.push_back(notepad_window = new NotePadWindow());
+
+	resources->EndLoading();
 
 	for (ToolboxModule* module : modules) {
 		module->LoadSettings(inifile);
@@ -279,6 +298,10 @@ GWToolbox::GWToolbox(IDirect3DDevice9* device) : must_self_destruct(false) {
 GWToolbox::~GWToolbox() {
 	for (ToolboxModule* module : modules) {
 		module->SaveSettings(inifile);
+	}
+
+	for (ToolboxModule* module : modules) {
+		delete module;
 	}
 
 	inifile->SaveFile(GuiUtils::getPath("GWToolbox.ini").c_str());
@@ -321,7 +344,7 @@ HRESULT WINAPI GWToolbox::endScene(IDirect3DDevice9* pDevice) {
 			module->Draw(pDevice);
 		}
 
-		ImGui::ShowTestWindow();
+		//ImGui::ShowTestWindow();
 
 		ImGui::Render();
 	}

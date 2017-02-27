@@ -1,7 +1,7 @@
 #pragma once
 
 #include <imgui.h>
-#include <DirectX\Include\d3d9.h>
+#include <d3d9.h>
 #include <SimpleIni.h>
 
 class ToolboxModule {
@@ -22,19 +22,15 @@ public:
 	virtual bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) { return false; };
 
 	// Draw settings interface. Will be called if the setting panel is visible
-	virtual void DrawSettings() {};
+	virtual void DrawSettings();
 
 	// Load settings from ini
-	virtual void LoadSettings(CSimpleIni* ini) {};
+	virtual void LoadSettings(CSimpleIni* ini);
 
 	// Save settings to ini
-	virtual void SaveSettings(CSimpleIni* ini) {};
+	virtual void SaveSettings(CSimpleIni* ini);
 
-	virtual bool ToggleVisible() { return visible = !visible; };
-	// true if the interface (usually window) is visible, unused if the module has no interface
-	bool visible = false;
-
-protected:
-	void LoadSettingVisible(CSimpleIni* ini);
-	void SaveSettingVisible(CSimpleIni* ini) const;
+	virtual void LoadSettingInternal(CSimpleIni* ini) {};
+	virtual void SaveSettingInternal(CSimpleIni* ini) {};
+	virtual void DrawSettingInternal() {};
 };

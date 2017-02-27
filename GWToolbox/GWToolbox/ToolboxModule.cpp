@@ -1,9 +1,15 @@
 #include "ToolboxModule.h"
 
-void ToolboxModule::LoadSettingVisible(CSimpleIni* ini) {
-	visible = ini->GetBoolValue(Name(), "visible", false);
+void ToolboxModule::LoadSettings(CSimpleIni* ini) {
+	LoadSettingInternal(ini);
 }
 
-void ToolboxModule::SaveSettingVisible(CSimpleIni* ini) const {
-	ini->SetBoolValue(Name(), "visible", visible);
+void ToolboxModule::SaveSettings(CSimpleIni* ini) {
+	SaveSettingInternal(ini);
+}
+
+void ToolboxModule::DrawSettings() {
+	if (ImGui::CollapsingHeader(Name())) {
+		DrawSettingInternal();
+	}
 }

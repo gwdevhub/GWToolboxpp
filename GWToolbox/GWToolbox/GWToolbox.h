@@ -5,20 +5,24 @@
 #include <GWCA\GWCA.h>
 #include <GWCA_DX\DirectXHooker.h>
 
-#include "ChatFilter.h"
-#include "ChatCommands.h"
-#include "ToolboxSettings.h"
-#include "GameSettings.h"
+#include "ToolboxModule.h"
 
-#include "MainWindow.h"
-#include "TimerWindow.h"
-#include "BondsWindow.h"
-#include "HealthWindow.h"
-#include "DistanceWindow.h"
-#include "PartyDamage.h"
-#include "Minimap.h"
-#include "ClockWindow.h"
-#include "NotePadWindow.h"
+// forward declarations
+class ChatCommands;
+class ChatFilter;
+class GameSettings;
+class ToolboxSettings;
+class Resources;
+
+class MainWindow;
+class TimerWindow;
+class BondsWindow;
+class HealthWindow;
+class DistanceWindow;
+class PartyDamage;
+class Minimap;
+class ClockWindow;
+class NotePadWindow;
 
 class GWToolbox {
 	//------ Static Fields ------//
@@ -50,13 +54,14 @@ private:
 
 	//------ Public methods ------//
 public:
-	static GWToolbox& instance() { return *instance_; }
-	static GWToolbox* instanceptr() { return instance_; }
+	static GWToolbox& Instance() { return *instance_; }
+	static GWToolbox* InstancePtr() { return instance_; }
 
 	ChatFilter* chat_filter;
 	ChatCommands* chat_commands;
 	ToolboxSettings* toolbox_settings;
 	GameSettings* game_settings;
+	Resources* resources;
 
 	MainWindow* main_window;
 	TimerWindow* timer_window;
@@ -71,7 +76,6 @@ public:
 	std::vector<ToolboxModule*> modules;
 
 	void StartSelfDestruct() { must_self_destruct = true; }
-	bool WidgetsFreezed() { return toolbox_settings->freeze_widgets; }
 
 	//------ Private Fields ------//
 private:
