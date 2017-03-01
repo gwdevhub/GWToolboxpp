@@ -6,23 +6,42 @@
 #include <d3d9.h>
 #include <d3dx9math.h>
 
+#include <imgui_internal.h>
 #include <GWCA\GWCA.h>
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Managers\CameraMgr.h>
 #include "logger.h"
 #include "OtherModules\ToolboxSettings.h"
 
-Minimap::Minimap() 
-	: range_renderer(RangeRenderer()),
-	pmap_renderer(PmapRenderer()),
-	agent_renderer(AgentRenderer()),
-	symbols_renderer(SymbolsRenderer()),
-	mousedown(false),
-	loading(false),
-	mapfile(0),
-	translation(0, 0),
-	location(0, 0) {
-
+void Minimap::Initialize() {
+	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P041>(
+		[&](GW::Packet::StoC::P041* pak) -> bool {
+		if (visible) {
+			pingslines_renderer.P041Callback(pak);
+		}
+		return false;
+	});
+	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P133>(
+		[&](GW::Packet::StoC::P133* pak) -> bool {
+		if (visible) {
+			pingslines_renderer.P133Callback(pak);
+		}
+		return false;
+	});
+	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P148>(
+		[&](GW::Packet::StoC::P148* pak) -> bool {
+		if (visible) {
+			pingslines_renderer.P148Callback(pak);
+		}
+		return false;
+	});
+	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P216>(
+		[&](GW::Packet::StoC::P216* pak) -> bool {
+		if (visible) {
+			pingslines_renderer.P216Callback(pak);
+		}
+		return false;
+	});
 	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P391_InstanceLoadFile>(
 		[this](GW::Packet::StoC::P391_InstanceLoadFile* packet) -> bool {
 		mapfile = packet->map_fileID;
@@ -37,33 +56,24 @@ Minimap::Minimap()
 		return false;
 	});
 
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P133>(
-		[&](GW::Packet::StoC::P133* pak) -> bool {
-		if (visible) {
-			pingslines_renderer.P133Callback(pak);
-		}
-		return false;
-	});
-
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P041>(
-		[&](GW::Packet::StoC::P041* pak) -> bool {
-		if (visible) {
-			pingslines_renderer.P041Callback(pak);
-		}
-		return false;
-	});
-
 	last_moved = TIMER_INIT();
 
 	pmap_renderer.Invalidate();
 }
 
+void Minimap::DrawSettings() {
+	if (ImGui::CollapsingHeader(Name(), ImGuiTreeNodeFlags_AllowOverlapMode)) {
+		ShowVisibleRadio();
+		ImGui::DragInt2("Position", (int*)&location, 1.0f, 0, 0, "%.0f");
+		DrawSettingInternal();
+	} else {
+		ShowVisibleRadio();
+	}
+}
 void Minimap::DrawSettingInternal() {
 	ImGui::Text("General");
-	ImGui::DragInt("X", &location.x);
-	ImGui::DragInt("Y", &location.y);
 	ImGui::DragInt("Size", &size);
-	ImGui::DragFloat("Scale", &scale);
+	ImGui::DragFloat("Scale", &scale, 0.01f, 0.1f);
 	ImGui::Text("Agents");
 	agent_renderer.DrawSettings();
 	ImGui::Text("Ranges");
@@ -74,9 +84,12 @@ void Minimap::DrawSettingInternal() {
 	symbols_renderer.DrawSettings();
 	ImGui::Text("Map");
 	pmap_renderer.DrawSettings();
+	ImGui::Text("Custom Markers");
+	custom_renderer.DrawSettings();
 }
 
-void Minimap::LoadSettingInternal(CSimpleIni* ini) {
+void Minimap::LoadSettings(CSimpleIni* ini) {
+	ToolboxWindow::LoadSettings(ini);
 	location.x = ini->GetLongValue(Name(), "x", 50);
 	location.y = ini->GetLongValue(Name(), "y", 50);
 	size = ini->GetLongValue(Name(), "size", 600);
@@ -86,9 +99,11 @@ void Minimap::LoadSettingInternal(CSimpleIni* ini) {
 	agent_renderer.LoadSettings(ini, Name());
 	pingslines_renderer.LoadSettings(ini, Name());
 	symbols_renderer.LoadSettings(ini, Name());
+	custom_renderer.LoadSettings(ini, Name());
 }
 
-void Minimap::SaveSettingInternal(CSimpleIni* ini) {
+void Minimap::SaveSettings(CSimpleIni* ini) {
+	ToolboxWindow::SaveSettings(ini);
 	ini->SetLongValue(Name(), "x", location.x);
 	ini->SetLongValue(Name(), "y", location.y);
 	ini->SetLongValue(Name(), "size", size);
@@ -98,6 +113,7 @@ void Minimap::SaveSettingInternal(CSimpleIni* ini) {
 	agent_renderer.SaveSettings(ini, Name());
 	pingslines_renderer.SaveSettings(ini, Name());
 	symbols_renderer.SaveSettings(ini, Name());
+	custom_renderer.SaveSettings(ini, Name());
 }
 
 void Minimap::Draw(IDirect3DDevice9* device) {
@@ -180,6 +196,8 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 	device->SetTransform(D3DTS_VIEW, &view);
 
 	pmap_renderer.Render(device);	
+
+	custom_renderer.Render(device);
 
 	// move the rings to the char position
 	D3DXMatrixTranslation(&translate_char, me->X, me->Y, 0);
@@ -316,7 +334,7 @@ bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam) {
 
 	if (wParam & MK_SHIFT) return true;
 
-	if (!ToolboxSettings::Instance()->freeze_widgets) return true;
+	if (!ToolboxSettings::Instance().freeze_widgets) return true;
 
 	GW::Vector2f v = InterfaceToWorldPoint(Vec2i(x, y));
 	pingslines_renderer.OnMouseDown(v.x, v.y);
@@ -371,7 +389,7 @@ bool Minimap::OnMouseMove(UINT Message, WPARAM wParam, LPARAM lParam) {
 		return true;
 	}
 
-	if (!ToolboxSettings::Instance()->freeze_widgets) {
+	if (!ToolboxSettings::Instance().freeze_widgets) {
 		int diff_x = x - drag_start.x;
 		int diff_y = y - drag_start.y;
 		location.x += diff_x;
@@ -399,7 +417,7 @@ bool Minimap::OnMouseWheel(UINT Message, WPARAM wParam, LPARAM lParam) {
 		return true;
 	}
 
-	if (!ToolboxSettings::Instance()->freeze_widgets) {
+	if (!ToolboxSettings::Instance().freeze_widgets) {
 		int delta = zDelta > 0 ? 2 : -2;
 		size += delta * 2;
 		size += delta * 2;
@@ -412,15 +430,20 @@ bool Minimap::OnMouseWheel(UINT Message, WPARAM wParam, LPARAM lParam) {
 }
 
 bool Minimap::IsInside(int x, int y) const {
-	// if centered, use radar range, otherwise use square
+	// if outside square, return false
+	if (x < location.x) return false;
+	if (x > location.x + size) return false;
+	if (y < location.y) return false;
+	if (y > location.y + size) return false;
+
+	// if centered, use radar range
 	if (translation.x == 0 && translation.y == 0) {
 		GW::Vector2f gamepos = InterfaceToWorldPoint(Vec2i(x, y));
 		GW::Agent* me = GW::Agents().GetPlayer();
-		return me && GW::Agents().GetSqrDistance(me->pos, gamepos) < GW::Constants::SqrRange::Compass;
-	} else {
-		return (x >= location.x && x < location.x + size
-			&& y >= location.y && y < location.y + size);
+		float sqrdst = GW::Agents().GetSqrDistance(me->pos, gamepos);
+		return me && sqrdst < GW::Constants::SqrRange::Compass;
 	}
+	return true;
 }
 bool Minimap::IsActive() const {
 	return visible

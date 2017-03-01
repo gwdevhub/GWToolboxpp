@@ -12,33 +12,36 @@ class BuildPanel : public ToolboxPanel {
 private:
 	struct Build {
 		Build(const char* n = "", const char* c = "") {
-			sprintf_s(name, "%s", n);
-			sprintf_s(code, "%s", c);
+			_snprintf_s(name, 128, "%s", n);
+			_snprintf_s(code, 128, "%s", c);
 		}
-		char name[64];
-		char code[64];
+		char name[128];
+		char code[128];
 	};
 	struct TeamBuild {
 		static unsigned int cur_ui_id;
 		TeamBuild(const char* n = "")
 			: ui_id(++cur_ui_id) {
-			sprintf_s(name, "%s", n);
+			_snprintf_s(name, 128, "%s", n);
 		}
 		bool edit_open = false;
 		bool show_numbers = false;
-		char name[64];
+		char name[128];
 		std::vector<Build> builds;
 		unsigned int ui_id; // should be const but then assignment operator doesn't get created automatically, and I'm too lazy to redefine it, so just don't change this value, okay?
 	};
 
-public:
-	static BuildPanel* Instance();
-
-	const char* Name() const override { return "Build Panel"; }
-	const char* TabButtonText() const override { return "Builds"; }
-
-	BuildPanel();
+	BuildPanel() {};
 	~BuildPanel() {};
+public:
+	static BuildPanel& Instance() {
+		static BuildPanel instance;
+		return instance;
+	}
+
+	const char* Name() const override { return "Builds"; }
+
+	void Initialize() override;
 
 	// Update. Will always be called every frame.
 	void Update() override;
@@ -47,8 +50,8 @@ public:
 	void Draw(IDirect3DDevice9* pDevice) override;
 
 	void DrawSettings() override {};
-	void LoadSettingInternal(CSimpleIni* ini) override;
-	void SaveSettingInternal(CSimpleIni* ini) override;
+	void LoadSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) override;
 
 	void Send(unsigned int idx);
 	const char* BuildName(unsigned int idx) const;

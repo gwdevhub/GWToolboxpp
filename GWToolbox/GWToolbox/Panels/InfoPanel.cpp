@@ -20,32 +20,34 @@
 #include <Windows\NotepadWindow.h>
 #include <OtherModules\Resources.h>
 
-InfoPanel::InfoPanel() {
-	Resources::Instance()->LoadTextureAsync(&texture, "info.png", "img");
+void InfoPanel::Initialize() {
+	ToolboxPanel::Initialize();
+	Resources::Instance().LoadTextureAsync(&texture, "info.png", "img");
 }
 
 void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
 	ImGui::Begin(Name(), &visible);
-	ImGui::Checkbox("Timer", &GWToolbox::Instance().timer_window->visible);
+	ImGui::Checkbox("Timer", &TimerWindow::Instance().visible);
 	ImGui::ShowHelp("Time the instance has been active");
 	ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
-	ImGui::Checkbox("Minimap", &GWToolbox::Instance().minimap->visible);
+	ImGui::Checkbox("Minimap", &Minimap::Instance().visible);
 	ImGui::ShowHelp("An alternative to the default compass");
-	ImGui::Checkbox("Bonds", &GWToolbox::Instance().bonds_window->visible);
+	ImGui::Checkbox("Bonds", &BondsWindow::Instance().visible);
 	ImGui::ShowHelp("Show the bonds maintained by you.\nOnly works on human players");
 	ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
-	ImGui::Checkbox("Damage", &GWToolbox::Instance().party_damage->visible);
+	ImGui::Checkbox("Damage", &PartyDamage::Instance().visible);
 	ImGui::ShowHelp("Show the damage done by each player in your party.\nOnly works on the damage done within your radar range.");
-	ImGui::Checkbox("Health", &GWToolbox::Instance().health_window->visible);
+	ImGui::Checkbox("Health", &HealthWindow::Instance().visible);
 	ImGui::ShowHelp("Displays the health of the target.\nMax health is only computed and refreshed when you directly damage or heal your target");
 	ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
-	ImGui::Checkbox("Distance", &GWToolbox::Instance().distance_window->visible);
+	ImGui::Checkbox("Distance", &DistanceWindow::Instance().visible);
 	ImGui::ShowHelp("Displays the distance to your target.\n1010 = Earshot / Aggro\n1248 = Cast range\n2500 = Spirit range\n5000 = Radar range");
-	ImGui::Checkbox("Clock", &GWToolbox::Instance().clock_window->visible);
+	ImGui::Checkbox("Clock", &ClockWindow::Instance().visible);
 	ImGui::ShowHelp("Displays the system time (hour : minutes)");
 	ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
-	ImGui::Checkbox("Notepad", &GWToolbox::Instance().notepad_window->visible);
+	ImGui::Checkbox("Notepad", &NotePadWindow::Instance().visible);
 	ImGui::ShowHelp("A simple in-game text editor");
 
 	if (ImGui::Button("Open Xunlai Chest", ImVec2(-1.0f, 0))) {
@@ -117,7 +119,7 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 		case GW::Constants::InstanceType::Explorable: type = "Explorable"; break;
 		case GW::Constants::InstanceType::Loading: type = "Loading\0\0\0"; break;
 		}
-		sprintf_s(file_buf, "%d", GWToolbox::Instance().minimap->mapfile);
+		sprintf_s(file_buf, "%d", Minimap::Instance().mapfile);
 		ImGui::PushItemWidth(-80.0f);
 		ImGui::InputText("Map ID", id_buf, 32, ImGuiInputTextFlags_ReadOnly);
 		ImGui::ShowHelp("Map ID is unique for each area");
@@ -134,6 +136,7 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::PopItemWidth();
 	}
 	if (ImGui::CollapsingHeader("Items")) {
+		ImGui::Text("First item in inventory");
 		static char modelid[32] = "";
 		//static char itemid[32] = "";
 		strcpy_s(modelid, "-");
@@ -153,8 +156,8 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 			}
 		}
 		ImGui::PushItemWidth(-80.0f);
-		ImGui::InputText("First item ModelID", modelid, 32, ImGuiInputTextFlags_ReadOnly);
-		//ImGui::InputText("First item ItemID", itemid, 32, ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputText("ModelID", modelid, 32, ImGuiInputTextFlags_ReadOnly);
+		//ImGui::InputText("ItemID", itemid, 32, ImGuiInputTextFlags_ReadOnly);
 		ImGui::PopItemWidth();
 	}
 	if (ImGui::CollapsingHeader("Mob count")) {

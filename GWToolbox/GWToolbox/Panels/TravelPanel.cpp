@@ -9,13 +9,14 @@
 #include "GuiUtils.h"
 #include <OtherModules\Resources.h>
 
+#define N_OUTPOSTS 181
+#define N_DISTRICTS 14
+
 bool travelpanel_arraygetter(void* data, int idx, const char** out_text);
 
-TravelPanel::TravelPanel() {
-	Resources::Instance()->LoadTextureAsync(&texture, "plane.png", "img");
+void TravelPanel::Initialize() {
+	Resources::Instance().LoadTextureAsync(&texture, "plane.png", "img");
 
-	fav_count = 3;
-	fav_index.resize(fav_count, n_outposts - 1);
 	district = district = GW::Constants::District::Current;
 	district_number = 0;
 }
@@ -30,13 +31,14 @@ void TravelPanel::TravelButton(const char* text, int x_idx, GW::Constants::MapID
 
 void TravelPanel::Draw(IDirect3DDevice9* pDevice) {
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
 	ImGui::Begin(Name(), &visible);
 	ImGui::PushItemWidth(-1.0f);
-	static int travelto_index = n_outposts - 1;
-	if (ImGui::Combo("###travelto", &travelto_index, travelpanel_arraygetter, nullptr, n_outposts)) {
+	static int travelto_index = N_OUTPOSTS - 1;
+	if (ImGui::Combo("###travelto", &travelto_index, travelpanel_arraygetter, nullptr, N_OUTPOSTS)) {
 		GW::Constants::MapID id = IndexToOutpostID(travelto_index);
 		GW::Map().Travel(id, district, district_number);
-		travelto_index = n_outposts - 1;
+		travelto_index = N_OUTPOSTS - 1;
 	}
 
 	static int district_index = 0;
@@ -54,7 +56,7 @@ void TravelPanel::Draw(IDirect3DDevice9* pDevice) {
 		"Asian Korean",
 		"Asia Chinese",
 		"Asia Japanese", };
-	if (ImGui::Combo("###district", &district_index, district_words, 14)) {
+	if (ImGui::Combo("###district", &district_index, district_words, N_DISTRICTS)) {
 		district_number = 0;
 		switch (district_index) {
 		case 0: district = GW::Constants::District::Current; break;
@@ -92,7 +94,7 @@ void TravelPanel::Draw(IDirect3DDevice9* pDevice) {
 	for (int i = 0; i < fav_count; ++i) {
 		ImGui::PushID(i);
 		ImGui::PushItemWidth(-40.0f - ImGui::GetStyle().ItemInnerSpacing.x);
-		ImGui::Combo("", &fav_index[i], travelpanel_arraygetter, nullptr, n_outposts);
+		ImGui::Combo("", &fav_index[i], travelpanel_arraygetter, nullptr, N_OUTPOSTS);
 		ImGui::PopItemWidth();
 		ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 		if (ImGui::Button("Go", ImVec2(40.0f, 0))) {
@@ -117,22 +119,24 @@ void TravelPanel::DrawSettingInternal() {
 	if (ImGui::InputInt("Number of favorites", &fav_count)) {
 		if (fav_count < 0) fav_count = 0;
 		if (fav_count > 100) fav_count = 100;
-		fav_index.resize(fav_count, n_outposts - 1);
+		fav_index.resize(fav_count, N_OUTPOSTS - 1);
 	}
 	ImGui::PopItemWidth();
 }
 
-void TravelPanel::LoadSettingInternal(CSimpleIni* ini) {
+void TravelPanel::LoadSettings(CSimpleIni* ini) {
+	ToolboxPanel::LoadSettings(ini);
 	fav_count = ini->GetLongValue(Name(), "fav_count", 3);
-	fav_index.resize(fav_count, n_outposts - 1);
+	fav_index.resize(fav_count, N_OUTPOSTS - 1);
 	for (int i = 0; i < fav_count; ++i) {
 		char key[32];
 		sprintf_s(key, "Town%d", i);
-		fav_index[i] = ini->GetLongValue(Name(), key, n_outposts - 1);
+		fav_index[i] = ini->GetLongValue(Name(), key, N_OUTPOSTS - 1);
 	}
 }
 
-void TravelPanel::SaveSettingInternal(CSimpleIni* ini) {
+void TravelPanel::SaveSettings(CSimpleIni* ini) {
+	ToolboxPanel::SaveSettings(ini);
 	ini->SetLongValue(Name(), "fav_count", fav_count);
 	for (int i = 0; i < fav_count; ++i) {
 		char key[32];

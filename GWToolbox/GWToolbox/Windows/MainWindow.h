@@ -15,14 +15,18 @@ class MaterialsPanel;
 class SettingsPanel;
 
 class MainWindow : public ToolboxWindow {
+	MainWindow() {};
+	~MainWindow() {};
 public:
-	static MainWindow* Instance();
+	static MainWindow& Instance() {
+		static MainWindow instance;
+		return instance;
+	}
 
-	const char* Name() const override { return "Main Window"; }
-	const char* GuiName() const { return "Toolbox++"; }
+	const char* Name() const { return "Toolbox"; }
 
-	MainWindow();
-	~MainWindow();
+	void Initialize() override;
+	void Terminate() override;
 	
 	// Update. Will always be called every frame.
 	void Update() override;
@@ -32,24 +36,10 @@ public:
 
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
-	void LoadSettingInternal(CSimpleIni* ini) override;
-	void SaveSettingInternal(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
-
-public:
-	PconPanel* pcon_panel;
-	HotkeyPanel* hotkey_panel;
-	BuildPanel* build_panel;
-	TravelPanel* travel_panel;
-	DialogPanel* dialog_panel;
-	InfoPanel* info_panel;
-	MaterialsPanel* materials_panel;
-	SettingsPanel* settings_panel;
 
 private:
 	std::vector<ToolboxPanel*> panels;
 
-	//SettingBool use_minimized_alt_pos;
-	//SettingBool tabs_left;
 	bool one_panel_at_time_only;
 };

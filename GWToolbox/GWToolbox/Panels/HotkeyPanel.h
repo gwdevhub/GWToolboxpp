@@ -16,14 +16,18 @@
 
 // class used to keep a list of hotkeys, capture keyboard event and fire hotkeys as needed
 class HotkeyPanel : public ToolboxPanel {
+	HotkeyPanel() {};
+	~HotkeyPanel() {};
 public:
-	static HotkeyPanel* Instance();
+	static HotkeyPanel& Instance() {
+		static HotkeyPanel instance;
+		return instance;
+	}
 
-	const char* Name() const override { return "Hotkey Panel"; }
-	const char* TabButtonText() const override { return "Hotkeys"; }
+	const char* Name() const override { return "Hotkeys"; }
 
-	HotkeyPanel();
-	~HotkeyPanel();
+	void Initialize() override;
+	void Terminate() override;
 	
 	inline bool ToggleClicker() { return clickerActive = !clickerActive; }
 	inline bool ToggleCoinDrop() { return dropCoinsActive = !dropCoinsActive; }
@@ -38,8 +42,8 @@ public:
 	bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
 
 	void DrawSettings() override {};
-	void LoadSettingInternal(CSimpleIni* ini) override;
-	void SaveSettingInternal(CSimpleIni* ini) override;
+	void LoadSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) override;
 
 private:
 	std::vector<TBHotkey*> hotkeys;				// list of hotkeys

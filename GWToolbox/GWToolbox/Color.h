@@ -80,7 +80,7 @@ namespace Colors {
 		const float square_sz = ImGui::GetFontSize() + style.FramePadding.y * 2.0f;
 
 		const float w_items_all = w_full - (square_sz + style.ItemInnerSpacing.x);
-		const float w_item_one = std::round((w_items_all - (style.ItemInnerSpacing.x) * (n_components - 1)) / (float)n_components);
+		const float w_item_one = std::round((w_items_all - style.ItemInnerSpacing.x * (n_components - 1)) / (float)n_components);
 		const float w_item_last = std::round(w_items_all - (w_item_one + style.ItemInnerSpacing.x) * (n_components - 1));
 		
 		const char* ids[4] = { "##X", "##Y", "##Z", "##W" };

@@ -6,18 +6,22 @@
 #include "ToolboxPanel.h"
 
 class DialogPanel : public ToolboxPanel {
+	DialogPanel() {};
+	~DialogPanel() {};
 public:
-	const char* Name() const override { return "Dialog Panel"; }
-	const char* TabButtonText() const override { return "Dialogs"; }
+	static DialogPanel& Instance() {
+		static DialogPanel instance;
+		return instance;
+	}
 
-	DialogPanel();
-	~DialogPanel() {}
+	const char* Name() const override { return "Dialogs"; }
 
-	// Draw user interface. Will be called every frame if the element is visible
+	void Initialize() override;
+
 	void Draw(IDirect3DDevice9* pDevice) override;
 
-	void LoadSettingInternal(CSimpleIni* ini) override;
-	void SaveSettingInternal(CSimpleIni* ini) override;
+	void LoadSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
 
 private:

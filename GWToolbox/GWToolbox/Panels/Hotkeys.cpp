@@ -65,7 +65,7 @@ void TBHotkey::Draw(Op* op) {
 	char keybuf[128];
 	Description(desbuf, 128);
 	ModKeyName((long)modifier, (long)key, keybuf, 128);
-	sprintf_s(header, "%s [%s]###header%u", desbuf, keybuf, ui_id);
+	_snprintf_s(header, 128, "%s [%s]###header%u", desbuf, keybuf, ui_id);
 	if (ImGui::CollapsingHeader(header)) {
 		ImGui::PushID(ui_id);
 		ImGui::PushItemWidth(-70.0f);
@@ -81,7 +81,7 @@ void TBHotkey::Draw(Op* op) {
 		ImGui::SameLine();
 		static LONG newkey = 0;
 		char keybuf2[128];
-		sprintf_s(keybuf2, "Hotkey: %s", keybuf);
+		_snprintf_s(keybuf2, 128, "Hotkey: %s", keybuf);
 		if (ImGui::Button(keybuf2, ImVec2(-70.0f, 0))) {
 			ImGui::OpenPopup("Select Hotkey");
 			newkey = 0;
@@ -170,7 +170,7 @@ void HotkeySendChat::Save(CSimpleIni* ini, const char* section) const {
 	ini->SetValue(section, "channel", buf);
 }
 void HotkeySendChat::Description(char* buf, int bufsz) const {
-	sprintf_s(buf, bufsz, "Send chat '%c%s'", channel, message);
+	_snprintf(buf, bufsz, "Send chat '%c%s'", channel, message);
 }
 void HotkeySendChat::Draw() {
 	int index = 0;
@@ -213,7 +213,7 @@ void HotkeyUseItem::Save(CSimpleIni* ini, const char* section) const {
 	ini->SetValue(section, "ItemName", name);
 }
 void HotkeyUseItem::Description(char* buf, int bufsz) const {
-	sprintf_s(buf, bufsz, "Use %s", name);
+	_snprintf(buf, bufsz, "Use %s", name);
 }
 void HotkeyUseItem::Draw() {
 	ImGui::InputInt("Item ID", (int*)&item_id);
@@ -234,7 +234,7 @@ bool HotkeyDropUseBuff::GetText(void* data, int idx, const char** out_text) {
 	case UA: *out_text = "UA"; break;
 	case HolyVeil: *out_text = "Holy Veil"; break;
 	default:
-		sprintf_s(other_buf, "Skill#%d", (int)data);
+		_snprintf_s(other_buf, 64, "Skill#%d", (int)data);
 		*out_text = other_buf;
 		break;
 	}
@@ -259,7 +259,7 @@ void HotkeyDropUseBuff::Save(CSimpleIni* ini, const char* section) const {
 void HotkeyDropUseBuff::Description(char* buf, int bufsz) const {
 	const char* skillname;
 	GetText((void*)id, GetIndex(), &skillname);
-	sprintf_s(buf, bufsz, "Drop/Use %s", skillname);
+	_snprintf(buf, bufsz, "Drop/Use %s", skillname);
 }
 void HotkeyDropUseBuff::Draw() {
 	SkillIndex index = GetIndex();
@@ -308,7 +308,7 @@ void HotkeyToggle::Save(CSimpleIni* ini, const char* section) const {
 void HotkeyToggle::Description(char* buf, int bufsz) const {
 	const char* name;
 	GetText(nullptr, (int)target, &name);
-	sprintf_s(buf, bufsz, "Toggle %s", name);
+	_snprintf(buf, bufsz, "Toggle %s", name);
 }
 void HotkeyToggle::Draw() {
 	ImGui::Combo("Toggle###combo", (int*)&target, GetText, nullptr, n_targets);
@@ -317,15 +317,15 @@ void HotkeyToggle::Execute() {
 	bool active;
 	switch (target) {
 	case HotkeyToggle::Clicker:
-		active = HotkeyPanel::Instance()->ToggleClicker();
+		active = HotkeyPanel::Instance().ToggleClicker();
 		ChatLogger::Log("Clicker is %s", active ? "active" : "disabled");
 		break;
 	case HotkeyToggle::Pcons:
-		PconPanel::Instance()->ToggleEnable();
+		PconPanel::Instance().ToggleEnable();
 		// writing to chat is done by ToggleActive if needed
 		break;
 	case HotkeyToggle::CoinDrop:
-		active = HotkeyPanel::Instance()->ToggleCoinDrop();
+		active = HotkeyPanel::Instance().ToggleCoinDrop();
 		ChatLogger::Log("Coin dropper is %s", active ? "active" : "disabled");
 		break;
 	}
@@ -350,7 +350,7 @@ void HotkeyAction::Save(CSimpleIni* ini, const char* section) const {
 void HotkeyAction::Description(char* buf, int bufsz) const {
 	const char* name;
 	GetText(nullptr, (int)action, &name);
-	sprintf_s(buf, bufsz, "%s", name);
+	_snprintf(buf, bufsz, "%s", name);
 }
 void HotkeyAction::Draw() {
 	ImGui::Combo("Action###combo", (int*)&action, GetText, nullptr, n_actions);
@@ -395,7 +395,7 @@ void HotkeyTarget::Save(CSimpleIni* ini, const char* section) const {
 	ini->SetValue(section, "TargetName", name);
 }
 void HotkeyTarget::Description(char* buf, int bufsz) const {
-	sprintf_s(buf, bufsz, "Target %s", name);
+	_snprintf(buf, bufsz, "Target %s", name);
 }
 void HotkeyTarget::Draw() {
 	ImGui::InputInt("Target ID", (int*)&id);
@@ -444,7 +444,7 @@ void HotkeyMove::Save(CSimpleIni* ini, const char* section) const {
 	ini->SetValue(section, "name", name);
 }
 void HotkeyMove::Description(char* buf, int bufsz) const {
-	sprintf_s(buf, bufsz, "Move %s", name);
+	_snprintf(buf, bufsz, "Move to %s", name);
 }
 void HotkeyMove::Draw() {
 	ImGui::InputFloat("x", &x, 0.0f, 0.0f, 3);
@@ -472,7 +472,7 @@ void HotkeyDialog::Save(CSimpleIni* ini, const char* section) const {
 	ini->SetValue(section, "DialogName", name);
 }
 void HotkeyDialog::Description(char* buf, int bufsz) const {
-	sprintf_s(buf, bufsz, "Dialog %s", name);
+	_snprintf(buf, bufsz, "Dialog %s", name);
 }
 void HotkeyDialog::Draw() {
 	ImGui::InputInt("Dialog ID", (int*)&id);
@@ -487,9 +487,8 @@ void HotkeyDialog::Execute() {
 }
 
 bool HotkeyPingBuild::GetText(void*, int idx, const char** out_text) {
-	BuildPanel* bp = BuildPanel::Instance();
-	if (idx >= (int)bp->BuildCount()) return false;
-	*out_text = bp->BuildName(idx);
+	if (idx >= (int)BuildPanel::Instance().BuildCount()) return false;
+	*out_text = BuildPanel::Instance().BuildName(idx);
 	return true;
 }
 HotkeyPingBuild::HotkeyPingBuild(CSimpleIni* ini, const char* section) : TBHotkey(ini, section) {
@@ -500,15 +499,15 @@ void HotkeyPingBuild::Save(CSimpleIni* ini, const char* section) const {
 	ini->SetLongValue(section, "BuildIndex", index);
 }
 void HotkeyPingBuild::Description(char* buf, int bufsz) const {
-	const char* buildname = BuildPanel::Instance()->BuildName(index);
+	const char* buildname = BuildPanel::Instance().BuildName(index);
 	if (buildname == nullptr) buildname = "<not found>";
-	sprintf_s(buf, bufsz, "Ping build '%s'", buildname);
+	_snprintf(buf, bufsz, "Ping build '%s'", buildname);
 }
 void HotkeyPingBuild::Draw() {
-	ImGui::Combo("Build", &index, GetText, nullptr, BuildPanel::Instance()->BuildCount());
+	ImGui::Combo("Build", &index, GetText, nullptr, BuildPanel::Instance().BuildCount());
 }
 void HotkeyPingBuild::Execute() {
 	if (isLoading()) return;
 
-	BuildPanel::Instance()->Send(index);
+	BuildPanel::Instance().Send(index);
 }

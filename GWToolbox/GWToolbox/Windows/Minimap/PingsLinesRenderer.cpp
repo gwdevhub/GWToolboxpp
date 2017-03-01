@@ -25,6 +25,14 @@ void PingsLinesRenderer::SaveSettings(CSimpleIni* ini, const char* section) cons
 	Colors::Save(ini, section, "color_shadowstep_line", color_shadowstep_line);
 }
 void PingsLinesRenderer::DrawSettings() {
+	if (ImGui::SmallButton("Restore Defaults")) {
+		color_drawings = Colors::ARGB(0, 0xFF, 0xFF, 0xFF);
+		ping_circle.color = Colors::ARGB(0xFF, 0xFF, 0, 0);
+		marker.color = Colors::ARGB(200, 128, 0, 128);
+		color_shadowstep_line = Colors::ARGB(48, 128, 0, 128);
+		ping_circle.Invalidate();
+		marker.Invalidate();
+	}
 	Colors::DrawSetting("Drawings", &color_drawings, false);
 	if (Colors::DrawSetting("Pings", &ping_circle.color, false)) {
 		ping_circle.Invalidate();
@@ -46,25 +54,6 @@ PingsLinesRenderer::PingsLinesRenderer() : vertices(nullptr) {
 	lastqueued = TIMER_INIT();
 
 	shadowstep_location = GW::Vector2f(0, 0);
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P148>(
-		[this](GW::Packet::StoC::P148* pak) -> bool {
-		if (pak->Value_id == 20
-			&& pak->caster == GW::Agents().GetPlayerId()
-			&& pak->value == 928) {
-			recall_target = pak->target;
-		}
-		return false;
-	});
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P216>(
-		[this](GW::Packet::StoC::P216* pak) -> bool {
-		if (pak->agent_id == GW::Agents().GetPlayerId()) {
-			if (pak->skill_id == (DWORD)GW::Constants::SkillID::Shadow_of_Haste
-				|| pak->skill_id == (DWORD)GW::Constants::SkillID::Shadow_Walk) {
-				shadowstep_location = GW::Agents().GetPlayer()->pos;
-			}
-		}
-		return false;
-	});
 }
 
 void PingsLinesRenderer::P041Callback(GW::Packet::StoC::P041* pak) {
@@ -116,23 +105,39 @@ return;
 	}
 }
 
-void PingsLinesRenderer::Initialize(IDirect3DDevice9* device) {
-	type_ = D3DPT_LINELIST;
+void PingsLinesRenderer::P148Callback(GW::Packet::StoC::P148* pak) {
+	if (pak->Value_id == 20
+		&& pak->caster == GW::Agents().GetPlayerId()
+		&& pak->value == 928) {
+		recall_target = pak->target;
+	}
+};
+void PingsLinesRenderer::P216Callback(GW::Packet::StoC::P216* pak) {
+	if (pak->agent_id == GW::Agents().GetPlayerId()) {
+		if (pak->skill_id == (DWORD)GW::Constants::SkillID::Shadow_of_Haste
+			|| pak->skill_id == (DWORD)GW::Constants::SkillID::Shadow_Walk) {
+			shadowstep_location = GW::Agents().GetPlayer()->pos;
+		}
+	}
+};
 
-	vertices_max = 0x1000; // support for up to 2048 line segments, should be enough
+void PingsLinesRenderer::Initialize(IDirect3DDevice9* device) {
+	type = D3DPT_LINELIST;
+
+	vertices_max = 0x1000; // support for up to 4096 line segments, should be enough
 
 	vertices = nullptr;
 
 	HRESULT hr = device->CreateVertexBuffer(sizeof(D3DVertex) * vertices_max, 0,
-		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer_, NULL);
+		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
 	if (FAILED(hr)) {
 		printf("Error setting up PingsLinesRenderer vertex buffer: %d\n", hr);
 	}
 }
 
 void PingsLinesRenderer::Render(IDirect3DDevice9* device) {
-	if (!initialized_) {
-		initialized_ = true;
+	if (!initialized) {
+		initialized = true;
 		Initialize(device);
 	}
 
@@ -141,7 +146,7 @@ void PingsLinesRenderer::Render(IDirect3DDevice9* device) {
 	DrawShadowstepMarker(device);
 
 	vertices_count = 0;
-	HRESULT res = buffer_->Lock(0, sizeof(D3DVertex) * vertices_max, (VOID**)&vertices, D3DLOCK_DISCARD);
+	HRESULT res = buffer->Lock(0, sizeof(D3DVertex) * vertices_max, (VOID**)&vertices, D3DLOCK_DISCARD);
 	if (FAILED(res)) printf("PingsLinesRenderer Lock() error: %d\n", res);
 
 	DrawShadowstepLine(device);
@@ -154,10 +159,10 @@ void PingsLinesRenderer::Render(IDirect3DDevice9* device) {
 	D3DXMatrixIdentity(&i);
 	device->SetTransform(D3DTS_WORLD, &i);
 
-	buffer_->Unlock();
+	buffer->Unlock();
 	if (vertices_count != 0) {
-		device->SetStreamSource(0, buffer_, 0, sizeof(D3DVertex));
-		device->DrawPrimitive(type_, 0, vertices_count / 2);
+		device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
+		device->DrawPrimitive(type, 0, vertices_count / 2);
 		vertices_count = 0;
 	}
 }
@@ -247,7 +252,7 @@ void PingsLinesRenderer::DrawShadowstepMarker(IDirect3DDevice9* device) {
 
 	D3DXMATRIX translate, scale, world;
 	D3DXMatrixTranslation(&translate, shadowstep_location.x, shadowstep_location.y, 0.0f);
-	D3DXMatrixScaling(&scale, drawing_scale, drawing_scale, 1.0f);
+	D3DXMatrixScaling(&scale, 100.0f, 100.0f, 1.0f);
 	world = scale * translate;
 	device->SetTransform(D3DTS_WORLD, &world);
 	marker.Render(device);
@@ -294,20 +299,20 @@ void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9* device) {
 
 
 void PingsLinesRenderer::PingCircle::Initialize(IDirect3DDevice9* device) {
-	type_ = D3DPT_TRIANGLESTRIP;
-	count_ = 48; // polycount
-	vertex_count = count_ + 2;
-	vertices = nullptr;
+	type = D3DPT_TRIANGLESTRIP;
+	count = 48; // polycount
+	unsigned int vertex_count = count + 2;
+	D3DVertex* vertices = nullptr;
 
-	if (buffer_) buffer_->Release();
+	if (buffer) buffer->Release();
 	device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, 0,
-		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer_, NULL);
-	buffer_->Lock(0, sizeof(D3DVertex) * vertex_count,
+		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
+	buffer->Lock(0, sizeof(D3DVertex) * vertex_count,
 		(VOID**)&vertices, D3DLOCK_DISCARD);
 	
 	const float PI = 3.1415927f;
-	for (size_t i = 0; i < count_; ++i) {
-		float angle = i * (2 * PI / count_);
+	for (size_t i = 0; i < count; ++i) {
+		float angle = i * (2 * PI / count);
 		bool outer = (i % 2 == 0);
 		float radius = outer ? 1.0f : 0.8f;
 		vertices[i].x = radius * std::cos(angle);
@@ -315,21 +320,21 @@ void PingsLinesRenderer::PingCircle::Initialize(IDirect3DDevice9* device) {
 		vertices[i].z = 0.0f;
 		vertices[i].color = ((outer ? 150 : 0) << IM_COL32_A_SHIFT) | color;
 	}
-	vertices[count_] = vertices[0];
-	vertices[count_ + 1] = vertices[1];
+	vertices[count] = vertices[0];
+	vertices[count + 1] = vertices[1];
 
-	buffer_->Unlock();
+	buffer->Unlock();
 }
 void PingsLinesRenderer::Marker::Initialize(IDirect3DDevice9* device) {
-	type_ = D3DPT_TRIANGLEFAN;
-	count_ = 16; // polycount
-	vertex_count = count_ + 2;
-	vertices = nullptr;
+	type = D3DPT_TRIANGLEFAN;
+	count = 16; // polycount
+	unsigned int vertex_count = count + 2;
+	D3DVertex* vertices = nullptr;
 
-	if (buffer_) buffer_->Release();
+	if (buffer) buffer->Release();
 	device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, 0,
-		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer_, NULL);
-	buffer_->Lock(0, sizeof(D3DVertex) * vertex_count,
+		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
+	buffer->Lock(0, sizeof(D3DVertex) * vertex_count,
 		(VOID**)&vertices, D3DLOCK_DISCARD);
 
 	const float PI = 3.1415927f;
@@ -338,14 +343,14 @@ void PingsLinesRenderer::Marker::Initialize(IDirect3DDevice9* device) {
 	vertices[0].z = 0.0f;
 	vertices[0].color = Colors::Sub(color, Colors::ARGB(50, 0, 0, 0));
 	for (size_t i = 1; i < vertex_count; ++i) {
-		float angle = (i-1) * (2 * PI / count_);
+		float angle = (i-1) * (2 * PI / count);
 		vertices[i].x = std::cos(angle);
 		vertices[i].y = std::sin(angle);
 		vertices[i].z = 0.0f;
 		vertices[i].color = color;
 	}
 
-	buffer_->Unlock();
+	buffer->Unlock();
 }
 
 float PingsLinesRenderer::AgentPing::GetX() {

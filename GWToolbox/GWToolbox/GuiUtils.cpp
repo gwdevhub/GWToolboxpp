@@ -53,11 +53,3 @@ int GuiUtils::GetPartyHealthbarHeight() {
 		return GW::Constants::HealthbarHeight::Normal;
 	}
 }
-
-void ImGui::ShowHelp(const char* help) {
-	ImGui::SameLine();
-	ImGui::TextDisabled("(?)");
-	if (ImGui::IsItemHovered()) {
-		ImGui::SetTooltip(help);
-	}
-}

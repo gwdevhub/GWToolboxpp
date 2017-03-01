@@ -3,12 +3,17 @@
 #include "ToolboxPanel.h"
 
 class SettingsPanel : public ToolboxPanel {
-public:
-	const char* Name() const override { return "Settings Panel"; }
-	const char* TabButtonText() const override { return "Settings"; }
-
-	SettingsPanel();
+	SettingsPanel() {};
 	~SettingsPanel() {};
+public:
+	static SettingsPanel& Instance() {
+		static SettingsPanel instance;
+		return instance;
+	}
+
+	const char* Name() const override { return "Settings"; }
+
+	void Initialize() override;
 
 	// Draw user interface. Will be called every frame if the element is visible
 	void Draw(IDirect3DDevice9* pDevice) override;

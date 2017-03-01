@@ -6,22 +6,24 @@
 #include "GuiUtils.h"
 #include "GWToolbox.h"
 
-ToolboxSettings* ToolboxSettings::Instance() {
-	return GWToolbox::Instance().toolbox_settings;
-}
-
 void ToolboxSettings::DrawSettingInternal() {
-	ImGui::Checkbox("Freeze Widgets", &freeze_widgets);
-	ImGui::ShowHelp("Widgets such as timer, health, minimap will not move");
+	DrawFreezeSetting();
 	ImGui::Checkbox("Save Location Data", &save_location_data);
 	ImGui::ShowHelp("Toolbox will save your location every second in an file in Settings Folder.");
 }
 
-void ToolboxSettings::LoadSettingInternal(CSimpleIni* ini) {
+void ToolboxSettings::DrawFreezeSetting() {
+	ImGui::Checkbox("Freeze Widgets", &freeze_widgets);
+	ImGui::ShowHelp("Widgets such as timer, health, minimap will not move");
+}
+
+void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
+	ToolboxModule::LoadSettings(ini);
 	freeze_widgets = ini->GetBoolValue("main_window", "freeze_widgets", false);
 }
 
-void ToolboxSettings::SaveSettingInternal(CSimpleIni* ini) {
+void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
+	ToolboxModule::SaveSettings(ini);
 	ini->SetBoolValue("main_window", "freeze_widgets", freeze_widgets);
 
 	if (location_file.is_open()) location_file.close();

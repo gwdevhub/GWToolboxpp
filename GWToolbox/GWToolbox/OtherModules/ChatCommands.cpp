@@ -19,15 +19,8 @@
 #include "GWToolbox.h"
 #include "ChatLogger.h"
 
-ChatCommands::ChatCommands() {
-	move_forward = 0;
-	move_side = 0;
-	move_up = 0;
-	cam_speed_ = DEFAULT_CAM_SPEED;
-
-	skill_to_use = 0;
-	skill_usage_delay = 1.0f;
-	skill_timer = clock();
+void ChatCommands::Initialize() {
+	ToolboxModule::Initialize();
 
 	GW::Chat().RegisterCommand(L"age2", ChatCommands::CmdAge2);
 	GW::Chat().RegisterCommand(L"pcons", ChatCommands::CmdPcons);
@@ -46,7 +39,6 @@ ChatCommands::ChatCommands() {
 	GW::Chat().RegisterCommand(L"afk", ChatCommands::CmdAfk);
 	GW::Chat().RegisterCommand(L"target", ChatCommands::CmdTarget);
 	GW::Chat().RegisterCommand(L"tgt", ChatCommands::CmdTarget);
-
 	GW::Chat().RegisterCommand(L"useskill", ChatCommands::CmdUseSkill);
 	GW::Chat().RegisterCommand(L"skilluse", ChatCommands::CmdUseSkill);
 }
@@ -130,7 +122,7 @@ std::wstring ChatCommands::GetLowerCaseArg(std::vector<std::wstring> args, size_
 }
 
 bool ChatCommands::CmdAge2(std::wstring& cmd, std::vector<std::wstring>& args) {
-	char buffer[30];
+	char buffer[32];
 	DWORD second = GW::Map().GetInstanceTime() / 1000;
 	sprintf_s(buffer, "%02u:%02u:%02u", (second / 3600), (second / 60) % 60, second % 60);
 	ChatLogger::Log(buffer);
@@ -139,13 +131,13 @@ bool ChatCommands::CmdAge2(std::wstring& cmd, std::vector<std::wstring>& args) {
 
 bool ChatCommands::CmdPcons(std::wstring& cmd, std::vector<std::wstring>& args) {
 	if (args.empty()) {
-		PconPanel::Instance()->ToggleEnable();
+		PconPanel::Instance().ToggleEnable();
 	} else { // we are ignoring parameters after the first
 		std::wstring arg = GetLowerCaseArg(args, 0);
 		if (arg == L"on") {
-			PconPanel::Instance()->SetEnabled(true);
+			PconPanel::Instance().SetEnabled(true);
 		} else if (arg == L"off") {
-			PconPanel::Instance()->SetEnabled(false);
+			PconPanel::Instance().SetEnabled(false);
 		} else {
 			ChatLogger::Log("[Error] Invalid argument '%ls', please use /pcons [|on|off]", args[0].c_str());
 		}
@@ -177,21 +169,21 @@ bool ChatCommands::CmdChest(std::wstring& cmd, std::vector<std::wstring>& args) 
 
 bool ChatCommands::CmdTB(std::wstring& cmd, std::vector<std::wstring>& args) {
 	if (args.empty()) {
-		MainWindow::Instance()->ToggleVisible();
+		MainWindow::Instance().ToggleVisible();
 	} else {
 		std::wstring arg = GetLowerCaseArg(args, 0);
 		if (arg == L"age") {
 			CmdAge2(cmd, args);
 		} else if (arg == L"hide") {
-			MainWindow::Instance()->visible = false;
+			MainWindow::Instance().visible = false;
 		} else if (arg == L"show") {
-			MainWindow::Instance()->visible = true;
+			MainWindow::Instance().visible = true;
 		} else if (arg == L"reset") {
-			ImGui::SetWindowPos(MainWindow::Instance()->GuiName(), ImVec2(50.0f, 50.0f));
+			ImGui::SetWindowPos(MainWindow::Instance().Name(), ImVec2(50.0f, 50.0f));
 		} else if (arg == L"mini" || arg == L"minimize") {
-			ImGui::SetWindowCollapsed(MainWindow::Instance()->GuiName(), true);
+			ImGui::SetWindowCollapsed(MainWindow::Instance().Name(), true);
 		} else if (arg == L"maxi" || arg == L"maximize") {
-			ImGui::SetWindowCollapsed(MainWindow::Instance()->GuiName(), false);
+			ImGui::SetWindowCollapsed(MainWindow::Instance().Name(), false);
 		} else if (arg == L"close" || arg == L"quit" || arg == L"exit") {
 			GWToolbox::Instance().StartSelfDestruct();
 		}
@@ -242,11 +234,11 @@ bool ChatCommands::CmdTP(std::wstring& cmd, std::vector<std::wstring>& args) {
 		} else if (town == L"deep") {
 			GW::Map().Travel(GW::Constants::MapID::The_Deep, district, district_number);
 		} else if (town == L"fav1") {
-			MainWindow::Instance()->travel_panel->TravelFavorite(0);
+			TravelPanel::Instance().TravelFavorite(0);
 		} else if (town == L"fav2") {
-			MainWindow::Instance()->travel_panel->TravelFavorite(1);
+			TravelPanel::Instance().TravelFavorite(1);
 		} else if (town == L"fav3") {
-			MainWindow::Instance()->travel_panel->TravelFavorite(2);
+			TravelPanel::Instance().TravelFavorite(2);
 		} else if (town == L"gh") {
 			GW::Guildmgr().TravelGH();
 		}
@@ -313,13 +305,12 @@ bool ChatCommands::CmdCamera(std::wstring& cmd, std::vector<std::wstring>& args)
 			}
 		} else if (arg0 == L"speed") {
 			std::wstring arg1 = GetLowerCaseArg(args, 1);
-			ChatCommands* self = GWToolbox::Instance().chat_commands;
 			if (arg1 == L"default") {
-				self->cam_speed_ = self->DEFAULT_CAM_SPEED;
+				Instance().cam_speed_ = Instance().DEFAULT_CAM_SPEED;
 			} else {
 				try {
 					float speed = std::stof(arg1);
-					self->cam_speed_ = speed;
+					Instance().cam_speed_ = speed;
 					ChatLogger::Log("Camera speed is now %f", speed);
 				} catch (...) {
 					ChatLogger::Log("[Error] Invalid argument '%ls', please use a float value", args[1].c_str());
@@ -337,21 +328,21 @@ bool ChatCommands::CmdDamage(std::wstring& cmd, std::vector<std::wstring>& args)
 	if (args.empty() || arg0 == L"print" || arg0 == L"report") {
 		if (args.size() <= 1) {
 			// if no argument or just one, print the whole party
-			PartyDamage::Instance()->WritePartyDamage();
+			PartyDamage::Instance().WritePartyDamage();
 		} else {
 			// else print a specific party member
 			std::wstring arg1 = GetLowerCaseArg(args, 1);
 			if (arg1 == L"me") {
-				PartyDamage::Instance()->WriteOwnDamage();
+				PartyDamage::Instance().WriteOwnDamage();
 			} else {
 				try {
 					long idx = std::stol(arg1);
-					PartyDamage::Instance()->WriteDamageOf(idx - 1);
+					PartyDamage::Instance().WriteDamageOf(idx - 1);
 				} catch (...) {}
 			}
 		}
 	} else if (arg0 == L"reset") {
-		PartyDamage::Instance()->ResetDamage();
+		PartyDamage::Instance().ResetDamage();
 	}
 	return true;
 }
@@ -410,17 +401,16 @@ bool ChatCommands::CmdTarget(std::wstring& cmd, std::vector<std::wstring>& args)
 }
 
 bool ChatCommands::CmdUseSkill(std::wstring& cmd, std::vector<std::wstring>& args) {
-	ChatCommands* self = GWToolbox::Instance().chat_commands;
 	if (args.empty()) {
-		self->skill_to_use = 0;
+		Instance().skill_to_use = 0;
 	} else if (args.size() == 1) {
 		std::wstring arg0 = GetLowerCaseArg(args, 0);
 		if (arg0 == L"stop" || arg0 == L"off") {
-			self->skill_to_use = 0;
+			Instance().skill_to_use = 0;
 		} else {
 			try {
 				int skill = std::stoi(args[0]);
-				if (skill >= 0 && skill <= 8) self->skill_to_use = skill;
+				if (skill >= 0 && skill <= 8) Instance().skill_to_use = skill;
 			} catch (...) {
 				ChatLogger::Log("[Error] Invalid argument '%ls', please use an integer value", args[0].c_str());
 			}

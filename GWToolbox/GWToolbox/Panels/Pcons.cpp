@@ -24,9 +24,9 @@ Pcon::Pcon(const char* file,
 	const char* name, int threshold_) 
 	: chatName(name), threshold(threshold_),
 	uv0(uv0_), uv1(uv1_), texture(nullptr),
-	enabled(false), quantity(-1) {
+	enabled(false), quantity(-1), timer(TIMER_INIT()) {
 
-	Resources::Instance()->LoadTextureAsync(&texture, file, "img");
+	Resources::Instance().LoadTextureAsync(&texture, file, "img");
 }
 void Pcon::Draw(IDirect3DDevice9* device) {
 	if (texture == nullptr) return;
@@ -39,9 +39,9 @@ void Pcon::Draw(IDirect3DDevice9* device) {
 		enabled = !enabled;
 		ScanInventory();
 	}
-	if (ImGui::IsItemHovered()) {
-		ImGui::SetTooltip("%s\nQuantity: %d", chatName, quantity);
-	}
+	//if (ImGui::IsItemHovered()) {
+	//	ImGui::SetTooltip("%s\nQuantity: %d", chatName, quantity);
+	//}
 	ImGui::PopStyleColor();
 
 	ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[GuiUtils::FontSize::f12]);
@@ -65,7 +65,7 @@ void Pcon::Update() {
 	GW::Agent* player = GW::Agents().GetPlayer();
 
 	 // === Use item if possible ===
-	if (player 
+	if (player != nullptr
 		&& !player->GetIsDead()
 		&& (player_id == 0 || player->Id == player_id)
 		&& TIMER_DIFF(timer) > delay
@@ -147,6 +147,12 @@ int Pcon::CheckInventory(bool* used) const {
 }
 bool Pcon::CanUseByInstanceType() const {
 	return GW::Map().GetInstanceType() == GW::Constants::InstanceType::Explorable;
+}
+void Pcon::LoadSettings(CSimpleIni* ini, const char* section) {
+	enabled = ini->GetBoolValue(section, chatName);
+}
+void Pcon::SaveSettings(CSimpleIni* ini, const char* section) {
+	ini->SetBoolValue(section, chatName, enabled);
 }
 
 // ================================================

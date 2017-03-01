@@ -9,25 +9,29 @@
 #include "ToolboxModule.h"
 
 class ChatFilter : public ToolboxModule {
+	ChatFilter() {};
+	~ChatFilter() {};
 public:
+	static ChatFilter& Instance() {
+		static ChatFilter instance;
+		return instance;
+	}
+
 	const char* Name() const override { return "Chat Filter"; }
 
-	ChatFilter();
-
-	void LoadSettingInternal(CSimpleIni* ini) override;
-	void SaveSettingInternal(CSimpleIni* ini) override;
+	void Initialize() override;
+	void LoadSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
 
 private:
 	const wchar_t* Get1stSegment(GW::Packet::StoC::P081* pak) const;
 	const wchar_t* Get2ndSegment(GW::Packet::StoC::P081* pak) const;
-	bool FullMatch(GW::Packet::StoC::P081* pak, 
-		const std::initializer_list<wchar_t>& msg) const;
-
+	bool FullMatch(const wchar_t* p, const std::initializer_list<wchar_t>& msg) const;
 
 	DWORD GetNumericSegment(GW::Packet::StoC::P081* pak) const;
 	bool ShouldIgnoreByAgentThatDropped(const wchar_t* agent_segment) const;
-	bool ShouldIgnoreItem(const wchar_t* item_segment) const;
+	bool IsRare(const wchar_t* item_segment) const;
 	bool ShouldIgnore(GW::Packet::StoC::P081* pak);
 
 	bool suppress_next_message;

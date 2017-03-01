@@ -7,6 +7,7 @@
 #include "RangeRenderer.h"
 #include "PingsLinesRenderer.h"
 #include "SymbolsRenderer.h"
+#include "CustomRenderer.h"
 
 class Minimap : public ToolboxWindow {
 	struct Vec2i {
@@ -14,14 +15,21 @@ class Minimap : public ToolboxWindow {
 		Vec2i() : x(0), y(0) {}
 		int x, y;
 	};
+	Minimap() {};
+	~Minimap() {};
 public:
+	static Minimap& Instance() {
+		static Minimap instance;
+		return instance;
+	}
+
 	const int ms_before_back = 1000; // time before we snap back to player
 	const float acceleration = 0.5f;
 	const float max_speed = 15.0f; // game units per frame
 
 	const char* Name() const override { return "Minimap"; }
-	Minimap();
-	~Minimap() {};
+
+	void Initialize() override;
 
 	void Draw(IDirect3DDevice9* device) override;
 	void RenderSetupProjection(IDirect3DDevice9* device);
@@ -33,11 +41,12 @@ public:
 	bool OnMouseWheel(UINT Message, WPARAM wParam, LPARAM lParam);
 	bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
 
-	void LoadSettingInternal(CSimpleIni* ini) override;
-	void SaveSettingInternal(CSimpleIni* ini) override;
+	void DrawSettings() override;
+	void LoadSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
 
-	DWORD mapfile;
+	DWORD mapfile = 0;
 
 private:
 	bool IsInside(int x, int y) const;
@@ -48,7 +57,7 @@ private:
 	GW::Vector2f InterfaceToWorldVector(Vec2i pos) const;
 	void SelectTarget(GW::Vector2f pos);
 
-	bool mousedown;
+	bool mousedown = false;
 
 	Vec2i location;
 	int size;
@@ -60,11 +69,12 @@ private:
 	// vars for minimap movement
 	clock_t last_moved;
 
-	bool loading; // only consider some cases but still good
+	bool loading = false; // only consider some cases but still good
 
 	RangeRenderer range_renderer;
 	PmapRenderer pmap_renderer;
 	AgentRenderer agent_renderer;
 	PingsLinesRenderer pingslines_renderer;
 	SymbolsRenderer symbols_renderer;
+	CustomRenderer custom_renderer;
 };

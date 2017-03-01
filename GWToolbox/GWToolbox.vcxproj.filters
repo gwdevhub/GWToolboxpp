@@ -76,6 +76,12 @@
     <Filter Include="Modules\ChatFilter">
       <UniqueIdentifier>{3be842ce-7fa1-4260-a177-73f1e231242f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Modules\Resources">
+      <UniqueIdentifier>{ca154081-28c5-4b2b-93d2-dcf9ab2c396d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Modules\Theme">
+      <UniqueIdentifier>{36b6fd26-3bd4-4b3f-a6a7-0a9a973a3b0c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GWToolbox\GuiUtils.h" />
@@ -198,11 +204,18 @@
     <ClInclude Include="GWToolbox\Windows\Minimap\VBuffer.h">
       <Filter>Windows\Minimap</Filter>
     </ClInclude>
-    <ClInclude Include="GWToolbox\OtherModules\Resources.h">
-      <Filter>Modules</Filter>
-    </ClInclude>
     <ClInclude Include="GWToolbox\ToolboxWindow.h" />
     <ClInclude Include="GWToolbox\ToolboxPanel.h" />
+    <ClInclude Include="GWToolbox\Windows\Minimap\CustomRenderer.h">
+      <Filter>Windows\Minimap</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\ImGuiAddons.h" />
+    <ClInclude Include="GWToolbox\OtherModules\Resources.h">
+      <Filter>Modules\Resources</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\OtherModules\ToolboxTheme.h">
+      <Filter>Modules\Theme</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -306,10 +319,17 @@
       <Filter>Windows\Minimap</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\GuiUtils.cpp" />
-    <ClCompile Include="GWToolbox\OtherModules\Resources.cpp">
-      <Filter>Modules</Filter>
-    </ClCompile>
     <ClCompile Include="GWToolbox\ToolboxWindow.cpp" />
     <ClCompile Include="GWToolbox\ToolboxPanel.cpp" />
+    <ClCompile Include="GWToolbox\Windows\Minimap\CustomRenderer.cpp">
+      <Filter>Windows\Minimap</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\ImGuiAddons.cpp" />
+    <ClCompile Include="GWToolbox\OtherModules\Resources.cpp">
+      <Filter>Modules\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\OtherModules\ToolboxTheme.cpp">
+      <Filter>Modules\Theme</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

@@ -7,16 +7,22 @@
 #include "ToolboxModule.h"
 
 class GameSettings : public ToolboxModule {
+	GameSettings() {};
+	~GameSettings() {};
 public:
-	static GameSettings* Instance();
+	static GameSettings& Instance() {
+		static GameSettings instance;
+		return instance;
+	}
 
 	const char* Name() const override { return "Game Settings"; }
 
-	GameSettings();
-
-	void LoadSettingInternal(CSimpleIni* ini) override;
-	void SaveSettingInternal(CSimpleIni* ini) override;
+	void Initialize() override;
+	void LoadSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
+
+	void DrawBorderlessSetting();
 
 	// some settings that are either referenced from multiple places
 	// or have nowhere else to be

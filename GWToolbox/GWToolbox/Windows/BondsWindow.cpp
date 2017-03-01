@@ -14,16 +14,17 @@
 #include "OtherModules\ToolboxSettings.h"
 #include <OtherModules\Resources.h>
 
-BondsWindow::BondsWindow() {
+void BondsWindow::Initialize() {
+	ToolboxWindow::Initialize();
 	for (int i = 0; i < MAX_BONDS; ++i) textures[i] = nullptr;
-	Resources::Instance()->LoadTextureAsync(&textures[0], "balthspirit.jpg", "img");
-	Resources::Instance()->LoadTextureAsync(&textures[1], "lifebond.jpg", "img");
-	Resources::Instance()->LoadTextureAsync(&textures[2], "protbond.jpg", "img");
+	Resources::Instance().LoadTextureAsync(&textures[0], "balthspirit.jpg", "img");
+	Resources::Instance().LoadTextureAsync(&textures[1], "lifebond.jpg", "img");
+	Resources::Instance().LoadTextureAsync(&textures[2], "protbond.jpg", "img");
 
 	int img_size = GuiUtils::GetPartyHealthbarHeight();
 }
 
-BondsWindow::~BondsWindow() {
+void BondsWindow::Terminate() {
 	for (int i = 0; i < MAX_BONDS; ++i) {
 		if (textures[i]) {
 			textures[i]->Release();
@@ -76,7 +77,7 @@ void BondsWindow::Draw(IDirect3DDevice9* device) {
 	ImGui::SetNextWindowSize(ImVec2((float)(MAX_BONDS * img_size), (float)(party_size * img_size)));
 	ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar
 		| ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoResize;
-	if (ToolboxSettings::Instance()->freeze_widgets) {
+	if (ToolboxSettings::Instance().freeze_widgets) {
 		flags |= ImGuiWindowFlags_NoInputs;
 	}
 	ImGui::Begin(Name(), &visible, flags);
@@ -129,11 +130,13 @@ void BondsWindow::UseBuff(int player, int bond) {
 	GW::Skillbarmgr().UseSkill(slot, target);
 }
 
-void BondsWindow::LoadSettingInternal(CSimpleIni* ini) {
+void BondsWindow::LoadSettings(CSimpleIni* ini) {
+	ToolboxWindow::LoadSettings(ini);
 	background = Colors::Load(ini, Name(), "background", Colors::ARGB(76, 0, 0, 0));
 }
 
-void BondsWindow::SaveSettingInternal(CSimpleIni* ini) {
+void BondsWindow::SaveSettings(CSimpleIni* ini) {
+	ToolboxWindow::SaveSettings(ini);
 	Colors::Save(ini, Name(), "background", background);
 }
 

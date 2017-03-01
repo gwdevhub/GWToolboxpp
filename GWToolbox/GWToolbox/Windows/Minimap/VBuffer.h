@@ -23,33 +23,32 @@ you can call Invalidate() to have the initialize be called again on render
 class VBuffer {
 public:
 	VBuffer()
-		: initialized_(false), buffer_(nullptr), 
-		type_(D3DPT_TRIANGLELIST), count_(0) {}
+		: initialized(false), buffer(nullptr), 
+		type(D3DPT_TRIANGLELIST), count(0) {}
 
-	~VBuffer() {
-		if (buffer_) buffer_->Release();
+	virtual ~VBuffer() {
+		if (buffer) buffer->Release();
 	}
 
-	inline void Invalidate() { initialized_ = false; }
+	virtual void Invalidate() { initialized = false; }
 
 	virtual void Render(IDirect3DDevice9* device) {
-		if (!initialized_) {
-			initialized_ = true;
+		if (!initialized) {
+			initialized = true;
 			Initialize(device);
 		}
 
 		device->SetFVF(D3DFVF_CUSTOMVERTEX);
-		device->SetStreamSource(0, buffer_, 0, sizeof(D3DVertex));
-		device->DrawPrimitive(type_, 0, count_);
+		device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
+		device->DrawPrimitive(type, 0, count);
 	}
 
 protected:
-	IDirect3DVertexBuffer9* buffer_;
-	D3DPRIMITIVETYPE type_;
-	unsigned long count_;
-	bool initialized_;
+	IDirect3DVertexBuffer9* buffer;
+	D3DPRIMITIVETYPE type;
+	unsigned long count;
+	bool initialized;
 
 private:
 	virtual void Initialize(IDirect3DDevice9* device) = 0;
-
 };

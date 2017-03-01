@@ -20,28 +20,28 @@
 #include "Panels\MaterialsPanel.h"
 #include "Panels\SettingsPanel.h"
 
-MainWindow* MainWindow::Instance() {
-	return GWToolbox::Instance().main_window;
-}
+void MainWindow::Initialize() {
+	ToolboxWindow::Initialize();
 
-MainWindow::MainWindow() {	
-	panels.push_back(pcon_panel = new PconPanel());
-	panels.push_back(hotkey_panel = new HotkeyPanel());
-	panels.push_back(build_panel = new BuildPanel());
-	panels.push_back(travel_panel = new TravelPanel());
-	panels.push_back(dialog_panel = new DialogPanel());
-	panels.push_back(info_panel = new InfoPanel());
-	panels.push_back(materials_panel = new MaterialsPanel());
-	panels.push_back(settings_panel = new SettingsPanel());
-	visible = true;
-}
+	panels.push_back(&PconPanel::Instance());
+	panels.push_back(&HotkeyPanel::Instance());
+	panels.push_back(&BuildPanel::Instance());
+	panels.push_back(&TravelPanel::Instance());
+	panels.push_back(&DialogPanel::Instance());
+	panels.push_back(&InfoPanel::Instance());
+	panels.push_back(&MaterialsPanel::Instance());
+	panels.push_back(&SettingsPanel::Instance());
 
-MainWindow::~MainWindow() {
 	for (ToolboxPanel* panel : panels) {
-		delete panel;
+		panel->Initialize();
 	}
 }
-
+void MainWindow::Terminate() {
+	ToolboxWindow::Terminate();
+	for (ToolboxPanel* panel : panels) {
+		panel->Terminate();
+	}
+}
 void MainWindow::Update() {
 	for (ToolboxPanel* panel : panels) {
 		panel->Update();
@@ -49,32 +49,24 @@ void MainWindow::Update() {
 }
 
 void MainWindow::LoadSettings(CSimpleIni* ini) {
+	ToolboxModule::LoadSettings(ini); // don't load visible
 	visible = true;
-	LoadSettingInternal(ini);
-}
 
-void MainWindow::SaveSettings(CSimpleIni* ini) {
-	// don't save visible
-	SaveSettingInternal(ini);
-}
-void MainWindow::LoadSettingInternal(CSimpleIni* ini) {
 	for (ToolboxPanel* panel : panels) {
 		panel->LoadSettings(ini);
 	}
 	one_panel_at_time_only = ini->GetBoolValue(Name(), "one_panel_at_time_only", true);
 }
 
-void MainWindow::SaveSettingInternal(CSimpleIni* ini) {
+void MainWindow::SaveSettings(CSimpleIni* ini) {
+	ToolboxModule::SaveSettings(ini); // don't save visible
+
 	for (ToolboxPanel* panel : panels) {
 		panel->SaveSettings(ini);
 	}
 	ini->SetBoolValue(Name(), "one_panel_at_time_only", one_panel_at_time_only);
 }
-
 void MainWindow::DrawSettingInternal() {
-	//use_minimized_alt_pos.Draw();
-	//tabs_left.Draw();
-	
 	ImGui::Checkbox("One panel at a time", &one_panel_at_time_only);
 	for (ToolboxPanel* panel : panels) {
 		panel->DrawSettings();
@@ -86,7 +78,7 @@ void MainWindow::Draw(IDirect3DDevice9* device) {
 
 	static bool open = true;
 	ImGui::SetNextWindowSize(ImVec2(100.0f, 300.0f), ImGuiSetCond_Always);
-	if (ImGui::Begin(GuiName(), &open, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar)) {
+	if (ImGui::Begin(Name(), &open, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar)) {
 
 		ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[GuiUtils::f11]);
 		for (unsigned int i = 0; i < panels.size(); ++i) {

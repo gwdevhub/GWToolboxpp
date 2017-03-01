@@ -11,11 +11,12 @@
 #include <GuiUtils.h>
 #include <OtherModules\ToolboxSettings.h>
 
-PartyDamage* PartyDamage::Instance() {
-	return GWToolbox::Instance().party_damage;
-}
+#define IniFilename "healthlog.ini"
+#define IniSection "health"
 
-PartyDamage::PartyDamage() {
+void PartyDamage::Initialize() {
+	ToolboxWindow::Initialize();
+
 	total = 0;
 	send_timer = TIMER_INIT();
 
@@ -32,7 +33,7 @@ PartyDamage::PartyDamage() {
 	}
 }
 
-PartyDamage::~PartyDamage() {
+void PartyDamage::Terminate() {
 	inifile->Reset();
 	delete inifile;
 }
@@ -200,7 +201,7 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(color_background));
 	ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar 
 		| ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoResize;
-	if (ToolboxSettings::Instance()->freeze_widgets) {
+	if (ToolboxSettings::Instance().freeze_widgets) {
 		flags |= ImGuiWindowFlags_NoInputs;
 	}
 	ImGui::SetNextWindowSize(ImVec2(width, (float)(size * line_height)));
@@ -329,7 +330,8 @@ void PartyDamage::ResetDamage() {
 	}
 }
 
-void PartyDamage::LoadSettingInternal(CSimpleIni* ini) {
+void PartyDamage::LoadSettings(CSimpleIni* ini) {
+	ToolboxWindow::LoadSettings(ini);
 	width = (float)ini->GetDoubleValue(Name(), "width", 100.0f);
 	bars_left = ini->GetBoolValue(Name(), "bars_left", true);
 	recent_max_time = ini->GetLongValue(Name(), "recent_max_time", 7000);
@@ -338,14 +340,14 @@ void PartyDamage::LoadSettingInternal(CSimpleIni* ini) {
 	color_recent = Colors::Load(ini, Name(), "color_recent", Colors::ARGB(205, 102, 153, 230));
 
 	if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
-	inifile->LoadFile(GuiUtils::getPath(inifilename).c_str());
+	inifile->LoadFile(GuiUtils::getPath(IniFilename).c_str());
 	CSimpleIni::TNamesDepend keys;
-	inifile->GetAllKeys(inisection, keys);
+	inifile->GetAllKeys(IniSection, keys);
 	for (CSimpleIni::Entry key : keys) {
 		try {
 			long lkey = std::stol(key.pItem);
 			if (lkey <= 0) continue;
-			long lval = inifile->GetLongValue(inisection, key.pItem, 0);
+			long lval = inifile->GetLongValue(IniSection, key.pItem, 0);
 			if (lval <= 0) continue;
 			hp_map[lkey] = lval;
 		} catch (...) {
@@ -354,7 +356,8 @@ void PartyDamage::LoadSettingInternal(CSimpleIni* ini) {
 	}
 }
 
-void PartyDamage::SaveSettingInternal(CSimpleIni* ini) {
+void PartyDamage::SaveSettings(CSimpleIni* ini) {
+	ToolboxWindow::SaveSettings(ini);
 	ini->SetDoubleValue(Name(), "width", width);
 	ini->SetBoolValue(Name(), "bars_left", bars_left);
 	ini->GetLongValue(Name(), "recent_max_time", recent_max_time);
@@ -364,9 +367,9 @@ void PartyDamage::SaveSettingInternal(CSimpleIni* ini) {
 
 	for (const std::pair<DWORD, long>& item : hp_map) {
 		std::string key = std::to_string(item.first);
-		inifile->SetLongValue(inisection, key.c_str(), item.second, 0, false, true);
+		inifile->SetLongValue(IniSection, key.c_str(), item.second, 0, false, true);
 	}
-	inifile->SaveFile(GuiUtils::getPath(inifilename).c_str());
+	inifile->SaveFile(GuiUtils::getPath(IniFilename).c_str());
 }
 
 void PartyDamage::DrawSettingInternal() {

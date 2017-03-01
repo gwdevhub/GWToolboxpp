@@ -14,12 +14,18 @@ class MaterialsPanel : public ToolboxPanel {
 		Any
 	};
 
+	MaterialsPanel() {};
+	~MaterialsPanel() {};
 public:
-	const char* Name() const override { return "Materials Panel"; }
-	const char* TabButtonText() const override { return "Materials"; }
+	static MaterialsPanel& Instance() {
+		static MaterialsPanel instance;
+		return instance;
+	}
 
-	MaterialsPanel();
-	~MaterialsPanel();
+	const char* Name() const override { return "Materials"; }
+
+	void Initialize() override;
+	void Terminate() override;
 	
 	// Update. Will always be called every frame.
 	void Update() override;

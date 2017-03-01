@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include "ImGuiAddons.h"
 
 namespace GuiUtils {
 	// Returns the settings folder as std::string
@@ -27,8 +28,3 @@ namespace GuiUtils {
 
 	int GetPartyHealthbarHeight();
 };
-
-namespace ImGui {
-	// Shows '(?)' and the helptext when hovered
-	void ShowHelp(const char* help);
-}

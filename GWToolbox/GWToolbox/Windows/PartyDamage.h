@@ -16,9 +16,6 @@
 #include "Color.h"
 
 class PartyDamage : public ToolboxWindow {
-	const char* inifilename = "healthlog.ini";
-	const char* inisection = "health";
-
 	static const int MAX_PLAYERS = 12;
 
 	struct PlayerDamage {
@@ -40,21 +37,26 @@ class PartyDamage : public ToolboxWindow {
 		}
 	};
 
+	PartyDamage() {};
+	~PartyDamage() {};
 public:
-	static PartyDamage* Instance();
+	static PartyDamage& Instance() {
+		static PartyDamage instance;
+		return instance;
+	}
 
 	const char* Name() const override { return "Damage"; }
 
-	PartyDamage();
-	~PartyDamage();
+	void Initialize() override;
+	void Terminate() override;
 
 	// Draw user interface. Will be called every frame if the element is visible
 	void Draw(IDirect3DDevice9* pDevice) override;
 
 	void Update() override;
 
-	void LoadSettingInternal(CSimpleIni* ini) override;
-	void SaveSettingInternal(CSimpleIni* ini) override;
+	void LoadSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
 
 	void WritePartyDamage();

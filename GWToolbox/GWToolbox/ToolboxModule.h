@@ -9,8 +9,15 @@ public:
 	ToolboxModule() {}
 	virtual ~ToolboxModule() {};
 
+public:
 	// name of the window and the ini section
 	virtual const char* Name() const = 0;
+
+	// Initialize module
+	virtual void Initialize() {};
+
+	// Terminate module
+	virtual void Terminate() {};
 
 	// Update. Will always be called once every frame.
 	virtual void Update() {};
@@ -18,19 +25,16 @@ public:
 	// Draw user interface. Will be called every frame if the element is visible
 	virtual void Draw(IDirect3DDevice9* pDevice) {};
 
-	// This is provided (and called), but use ImGui::GetIO() during update/render if possible instead.
+	// This is provided (and called), but use ImGui::GetIO() during update/render if possible.
 	virtual bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) { return false; };
 
-	// Draw settings interface. Will be called if the setting panel is visible
+	// Load what is needed from ini
+	virtual void LoadSettings(CSimpleIni* ini) {};
+
+	// Save what is needed to ini
+	virtual void SaveSettings(CSimpleIni* ini) {};
+
+	// Draw settings interface. Will be called if the setting panel is visible, calls DrawSettingsInternal()
 	virtual void DrawSettings();
-
-	// Load settings from ini
-	virtual void LoadSettings(CSimpleIni* ini);
-
-	// Save settings to ini
-	virtual void SaveSettings(CSimpleIni* ini);
-
-	virtual void LoadSettingInternal(CSimpleIni* ini) {};
-	virtual void SaveSettingInternal(CSimpleIni* ini) {};
 	virtual void DrawSettingInternal() {};
 };

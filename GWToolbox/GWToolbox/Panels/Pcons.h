@@ -3,6 +3,7 @@
 #include <Windows.h>
 #include <d3d9.h>
 
+#include <SimpleIni.h>
 #include <imgui.h>
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\GameEntities\Item.h>
@@ -23,9 +24,12 @@ protected:
 
 public:
 	void Draw(IDirect3DDevice9* device);
-	virtual void Update();
+	void Update();
 	void ScanInventory();
 	inline void Toggle() { enabled = !enabled; }
+
+	void LoadSettings(CSimpleIni* ini, const char* section);
+	void SaveSettings(CSimpleIni* ini, const char* section);
 
 public:
 	bool enabled = false;
@@ -46,7 +50,6 @@ protected:
 	int quantity = 0;
 
 	clock_t timer;
-	clock_t update_timer;
 
 private:
 	IDirect3DTexture9* texture = nullptr;

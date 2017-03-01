@@ -22,6 +22,11 @@ void PmapRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 }
 
 void PmapRenderer::DrawSettings() {
+	if (ImGui::SmallButton("Restore Defaults")) {
+		color_map = 0xFF999999;
+		color_mapshadow = 0xFF120808;
+		Invalidate();
+	}
 	if (Colors::DrawSetting("Map", &color_map)) Invalidate();
 	if (Colors::DrawSetting("Shadow", &color_mapshadow)) Invalidate();
 }
@@ -31,7 +36,7 @@ void PmapRenderer::Initialize(IDirect3DDevice9* device) {
 	if (GW::Map().IsMapLoaded()) {
 		path_map = GW::Map().GetPathingMap();
 	} else {
-		initialized_ = false;
+		initialized = false;
 		return; // no map loaded yet, so don't render anything
 	}
 	bool shadow_show = ((color_mapshadow & IM_COL32_A_MASK) > 0);
@@ -49,14 +54,14 @@ void PmapRenderer::Initialize(IDirect3DDevice9* device) {
 	vert_count_ = tri_count_ * 3;
 	total_vert_count_ = total_tri_count_ * 3;
 
-	type_ = D3DPT_TRIANGLELIST;
+	type = D3DPT_TRIANGLELIST;
 	D3DVertex* vertices = nullptr;
 
 	// allocate new vertex buffer
-	if (buffer_) buffer_->Release();
+	if (buffer) buffer->Release();
 	device->CreateVertexBuffer(sizeof(D3DVertex) * total_vert_count_, D3DUSAGE_WRITEONLY,
-		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer_, NULL);
-	buffer_->Lock(0, sizeof(D3DVertex) * total_vert_count_,
+		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
+	buffer->Lock(0, sizeof(D3DVertex) * total_vert_count_,
 		(VOID**)&vertices, D3DLOCK_DISCARD);
 
 	D3DVertex* vertices_begin = vertices;
@@ -94,12 +99,12 @@ void PmapRenderer::Initialize(IDirect3DDevice9* device) {
 		}
 	}
 
-	buffer_->Unlock();
+	buffer->Unlock();
 }
 
 void PmapRenderer::Render(IDirect3DDevice9* device) {
-	if (!initialized_) {
-		initialized_ = true;
+	if (!initialized) {
+		initialized = true;
 		Initialize(device);
 	}
 
@@ -111,15 +116,15 @@ void PmapRenderer::Render(IDirect3DDevice9* device) {
 		device->SetTransform(D3DTS_VIEW, &newview);
 
 		device->SetFVF(D3DFVF_CUSTOMVERTEX);
-		device->SetStreamSource(0, buffer_, 0, sizeof(D3DVertex));
-		device->DrawPrimitive(type_, 0, tri_count_);
+		device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
+		device->DrawPrimitive(type, 0, tri_count_);
 
 		device->SetTransform(D3DTS_VIEW, &oldview);
 
-		device->DrawPrimitive(type_, vert_count_ , tri_count_);
+		device->DrawPrimitive(type, vert_count_ , tri_count_);
 	} else {
 		device->SetFVF(D3DFVF_CUSTOMVERTEX);
-		device->SetStreamSource(0, buffer_, 0, sizeof(D3DVertex));
-		device->DrawPrimitive(type_, 0, tri_count_);
+		device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
+		device->DrawPrimitive(type, 0, tri_count_);
 	}
 }

@@ -8,16 +8,23 @@
 #include "ToolboxModule.h"
 
 class ToolboxSettings : public ToolboxModule {
+	ToolboxSettings() {};
+	~ToolboxSettings() {};
 public:
-	static ToolboxSettings* Instance();
+	static ToolboxSettings& Instance() {
+		static ToolboxSettings instance;
+		return instance;
+	}
 
 	const char* Name() const override { return "Toolbox Settings"; }
 
 	void Update() override;
 
-	void LoadSettingInternal(CSimpleIni* ini) override;
-	void SaveSettingInternal(CSimpleIni* ini) override;
+	void LoadSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
+
+	void DrawFreezeSetting();
 
 	bool freeze_widgets;
 

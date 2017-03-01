@@ -29,6 +29,14 @@ void RangeRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 }
 void RangeRenderer::DrawSettings() {
 	bool changed = false;
+	if (ImGui::Button("Restore Defaults")) {
+		changed = true;
+		color_range_hos = 0xFF881188;
+		color_range_aggro = 0xFF994444;
+		color_range_cast = 0xFF117777;
+		color_range_spirit = 0xFF337733;
+		color_range_compass = 0xFF666611;
+	}
 	changed |= Colors::DrawSetting("HoS range", &color_range_hos);
 	changed |= Colors::DrawSetting("Aggro range", &color_range_aggro);
 	changed |= Colors::DrawSetting("Cast range", &color_range_cast);
@@ -49,19 +57,19 @@ void RangeRenderer::CreateCircle(D3DVertex* vertices, float radius, DWORD color)
 }
 
 void RangeRenderer::Initialize(IDirect3DDevice9* device) {
-	count_ = circle_points * num_circles; // radar range, spirit range, aggro range
-	type_ = D3DPT_LINESTRIP;
+	count = circle_points * num_circles; // radar range, spirit range, aggro range
+	type = D3DPT_LINESTRIP;
 	float radius;
 
 	checkforhos_ = true;
 	havehos_ = false;
 
 	D3DVertex* vertices = nullptr;
-	unsigned int vertex_count = count_ + num_circles + 6;
+	unsigned int vertex_count = count + num_circles + num_circles + 1;
 
 	device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, D3DUSAGE_WRITEONLY,
-		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer_, NULL);
-	buffer_->Lock(0, sizeof(D3DVertex) * vertex_count,
+		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
+	buffer->Lock(0, sizeof(D3DVertex) * vertex_count,
 		(VOID**)&vertices, D3DLOCK_DISCARD);
 
 	radius = GW::Constants::Range::Compass;
@@ -102,12 +110,12 @@ void RangeRenderer::Initialize(IDirect3DDevice9* device) {
 	vertices[5].x = 0.0f;
 	vertices[5].y = 150.0f;
 
-	buffer_->Unlock();
+	buffer->Unlock();
 }
 
 void RangeRenderer::Render(IDirect3DDevice9* device) {
-	if (!initialized_) {
-		initialized_ = true;
+	if (!initialized) {
+		initialized = true;
 		Initialize(device);
 	}
 
@@ -131,13 +139,13 @@ void RangeRenderer::Render(IDirect3DDevice9* device) {
 	}
 
 	device->SetFVF(D3DFVF_CUSTOMVERTEX);
-	device->SetStreamSource(0, buffer_, 0, sizeof(D3DVertex));
+	device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
 	for (int i = 0; i < num_circles - 1; ++i) {
-		device->DrawPrimitive(type_, circle_vertices * i, circle_points);
+		device->DrawPrimitive(type, circle_vertices * i, circle_points);
 	}
 
 	if (HaveHos()) {
-		device->DrawPrimitive(type_, circle_vertices * (num_circles - 1), circle_points);
+		device->DrawPrimitive(type, circle_vertices * (num_circles - 1), circle_points);
 
 		GW::Agent* me = GW::Agents().GetPlayer();
 		GW::Agent* tgt = GW::Agents().GetTarget();
@@ -159,14 +167,14 @@ void RangeRenderer::Render(IDirect3DDevice9* device) {
 			D3DXMatrixRotationZ(&rotate, angle);
 			newworld = rotate * oldworld;
 			device->SetTransform(D3DTS_WORLD, &newworld);
-			device->DrawPrimitive(type_, circle_vertices * num_circles, 1);
+			device->DrawPrimitive(type, circle_vertices * num_circles, 1);
 			device->SetTransform(D3DTS_WORLD, &oldworld);
 		}
 	}
 
 	if (draw_center_) {
-		device->DrawPrimitive(type_, circle_vertices * num_circles + 2, 1);
-		device->DrawPrimitive(type_, circle_vertices * num_circles + 4, 1);
+		device->DrawPrimitive(type, circle_vertices * num_circles + 2, 1);
+		device->DrawPrimitive(type, circle_vertices * num_circles + 4, 1);
 	}
 }
 

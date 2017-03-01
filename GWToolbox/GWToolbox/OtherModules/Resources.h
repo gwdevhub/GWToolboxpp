@@ -8,17 +8,23 @@
 #include "ToolboxModule.h"
 
 class Resources : public ToolboxModule {
+	Resources() {};
+	~Resources() {};
 public:
-	static Resources* Instance();
+	static Resources& Instance() {
+		static Resources instance;
+		return instance;
+	}
 
 	const char* Name() const override { return "Resources"; }
-	Resources();
-	~Resources();
+
+	void Initialize() override;
+	void Terminate() override;
 
 	void DrawSettings() override {};
 	void Draw(IDirect3DDevice9* device) override;
 
-	bool EnsureFileExists(const char* name, const char* folder = nullptr);
+	//bool EnsureFileExists(const char* name, const char* folder = nullptr);
 
 	void LoadTextureAsync(IDirect3DTexture9** tex,
 		const char* name, const char* folder = nullptr);

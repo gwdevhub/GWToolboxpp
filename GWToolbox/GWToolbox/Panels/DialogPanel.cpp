@@ -6,11 +6,9 @@
 #include "GWToolbox.h"
 #include <OtherModules\Resources.h>
 
-DialogPanel::DialogPanel() {
-	Resources::Instance()->LoadTextureAsync(&texture, "comment.png", "img");
-
-	fav_count = 3;
-	fav_index.resize(fav_count, 0);
+void DialogPanel::Initialize() {
+	ToolboxPanel::Initialize();
+	Resources::Instance().LoadTextureAsync(&texture, "comment.png", "img");
 }
 
 void DialogPanel::Draw(IDirect3DDevice9* pDevice) {
@@ -27,6 +25,7 @@ void DialogPanel::Draw(IDirect3DDevice9* pDevice) {
 	};
 
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
 	ImGui::Begin(Name(), &visible);
 
 	if (show_common) {
@@ -59,7 +58,7 @@ void DialogPanel::Draw(IDirect3DDevice9* pDevice) {
 		"UW - Restore",
 		"UW - Vale",
 		"FoW - Defend",
-		"FoW - Army Of Darknesses",
+		"FoW - Army Of Darkness",
 		"FoW - WailingLord",
 		"FoW - Griffons",
 		"FoW - Slaves",
@@ -70,13 +69,14 @@ void DialogPanel::Draw(IDirect3DDevice9* pDevice) {
 		"FoW - Toc",
 		"FoW - Khobay",
 		"DoA - Gloom 1: Deathbringer Company",
-		"DoA - Gloom 2: Rift Between Us",
+		"DoA - Gloom 2: The Rifts Between Us",
 		"DoA - Gloom 3: To The Rescue",
 		"DoA - City",
 		"DoA - Veil 1: Breaching Stygian Veil",
 		"DoA - Veil 2: Brood Wars",
-		"DoA - Foundry 1: Foundry Breakout",
-		"DoA - Foundry 2: Foundry Of Failed Creations" };
+		"DoA - Foundry 1: Foundry Of Failed Creations",
+		"DoA - Foundry 2: Foundry Breakout"
+	};
 	if (show_favorites) {
 		for (int i = 0; i < fav_count; ++i) {
 			ImGui::PushID(i);
@@ -170,7 +170,8 @@ void DialogPanel::DrawSettingInternal() {
 	ImGui::Checkbox("Custom", &show_custom);
 }
 
-void DialogPanel::LoadSettingInternal(CSimpleIni* ini) {
+void DialogPanel::LoadSettings(CSimpleIni* ini) {
+	ToolboxPanel::LoadSettings(ini);
 	fav_count = ini->GetLongValue(Name(), "fav_count", 3);
 	fav_index.resize(fav_count, 0);
 	for (int i = 0; i < fav_count; ++i) {
@@ -184,7 +185,8 @@ void DialogPanel::LoadSettingInternal(CSimpleIni* ini) {
 	show_custom = ini->GetBoolValue(Name(), "show_custom", true);
 }
 
-void DialogPanel::SaveSettingInternal(CSimpleIni* ini) {
+void DialogPanel::SaveSettings(CSimpleIni* ini) {
+	ToolboxPanel::SaveSettings(ini);
 	ini->SetLongValue(Name(), "fav_count", fav_count);
 	for (int i = 0; i < fav_count; ++i) {
 		char key[32];
@@ -226,8 +228,8 @@ DWORD DialogPanel::IndexToQuestID(int index) {
 	case 24: return GW::Constants::QuestID::Doa::City;
 	case 25: return GW::Constants::QuestID::Doa::BreachingStygianVeil;
 	case 26: return GW::Constants::QuestID::Doa::BroodWars;
-	case 27: return GW::Constants::QuestID::Doa::FoundryBreakout;
-	case 28: return GW::Constants::QuestID::Doa::FoundryOfFailedCreations;
+	case 27: return GW::Constants::QuestID::Doa::FoundryOfFailedCreations;
+	case 28: return GW::Constants::QuestID::Doa::FoundryBreakout;
 	default: return 0;
 	}
 }

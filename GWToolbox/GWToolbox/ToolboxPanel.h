@@ -15,17 +15,16 @@ and a function to draw their main window button.
 
 class ToolboxPanel : public ToolboxWindow {
 public:
-	ToolboxPanel() {};
-	virtual ~ToolboxPanel() {
-		if (texture) texture->Release(); texture = nullptr;
+	// Terminate module, save what is needed to ini
+	virtual void Terminate() {
+		ToolboxWindow::Terminate();
+		if (texture) texture->Release();
 	}
 
 	// Draw settings interface. Will be called if the setting panel is visible
 	// By default, encapsulate settings into an ImGui::CollapsingHeader(Name()), 
 	// show a reset position button and a 'visible' checkbox
 	virtual void DrawSettings() override;
-
-	virtual const char* TabButtonText() const = 0;
 
 	// returns true if clicked
 	virtual bool DrawTabButton(IDirect3DDevice9* device);

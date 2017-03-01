@@ -19,21 +19,27 @@ void SymbolsRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 	Colors::Save(ini, section, "color_symbols_modifier", color_modifier);
 }
 void SymbolsRenderer::DrawSettings() {
+	if (ImGui::Button("Restore Defaults")) {
+		color_quest = 0xFF22EF22;
+		color_north = 0xFFFF8000;
+		color_modifier = 0x001E1E1E;
+		Invalidate();
+	}
 	if (Colors::DrawSetting("Quest Marker", &color_quest)) Invalidate();
 	if (Colors::DrawSetting("North Marker", &color_north)) Invalidate();
 	if (Colors::DrawSetting("Symbol Modifier", &color_modifier, false)) Invalidate();
 }
 
 void SymbolsRenderer::Initialize(IDirect3DDevice9* device) {
-	type_ = D3DPT_TRIANGLELIST;
+	type = D3DPT_TRIANGLELIST;
 
 	D3DVertex* vertices = nullptr;
 	DWORD vertex_count = (star_ntriangles + arrow_ntriangles + north_ntriangles) * 3;
 	DWORD offset = 0;
 
 	device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, D3DUSAGE_WRITEONLY,
-		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer_, NULL);
-	buffer_->Lock(0, sizeof(D3DVertex) * vertex_count,
+		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
+	buffer->Lock(0, sizeof(D3DVertex) * vertex_count,
 		(VOID**)&vertices, D3DLOCK_DISCARD);
 
 	auto AddVertex = [&vertices, &offset](float x, float y, Color color) -> void {
@@ -80,12 +86,12 @@ void SymbolsRenderer::Initialize(IDirect3DDevice9* device) {
 	AddVertex(-250.0f, -500.0f, color_north);
 	AddVertex(   0.0f, -375.0f, Colors::Add(color_north, color_modifier));
 
-	buffer_->Unlock();
+	buffer->Unlock();
 }
 
 void SymbolsRenderer::Render(IDirect3DDevice9* device) {
-	if (!initialized_) {
-		initialized_ = true;
+	if (!initialized) {
+		initialized = true;
 		Initialize(device);
 	}
 
@@ -93,7 +99,7 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device) {
 	if (me == nullptr) return;
 
 	device->SetFVF(D3DFVF_CUSTOMVERTEX);
-	device->SetStreamSource(0, buffer_, 0, sizeof(D3DVertex));
+	device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
 
 	const float PI = 3.1415927f;
 	static float tau = 0.0f;
@@ -122,7 +128,7 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device) {
 			D3DXMatrixTranslation(&translate, qpos.x, qpos.y, 0);
 			world = rotate * scale * translate;
 			device->SetTransform(D3DTS_WORLD, &world);
-			device->DrawPrimitive(type_, star_offset, star_ntriangles);
+			device->DrawPrimitive(type, star_offset, star_ntriangles);
 
 			GW::Vector2f mypos = me->pos;
 			GW::Vector2f v = qpos - mypos;
@@ -136,7 +142,7 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device) {
 				D3DXMatrixTranslation(&translate, me->X + v.x, me->Y + v.y, 0);
 				world = rotate * scale * translate;
 				device->SetTransform(D3DTS_WORLD, &world);
-				device->DrawPrimitive(type_, arrow_offset, arrow_ntriangles);
+				device->DrawPrimitive(type, arrow_offset, arrow_ntriangles);
 			}
 		}
 	}
@@ -144,5 +150,5 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device) {
 	D3DXMatrixTranslation(&translate, me->X, me->Y + 5000.0f, 0);
 	world = translate;
 	device->SetTransform(D3DTS_WORLD, &world);
-	device->DrawPrimitive(type_, north_offset, north_ntriangles);
+	device->DrawPrimitive(type, north_offset, north_ntriangles);
 }

@@ -10,18 +10,13 @@
 #include <GuiUtils.h>
 #include <OtherModules\Resources.h>
 
-HotkeyPanel* HotkeyPanel::Instance() {
-	return MainWindow::Instance()->hotkey_panel;
-}
-
-HotkeyPanel::HotkeyPanel() {
-	Resources::Instance()->LoadTextureAsync(&texture, "keyboard.png", "img");
+void HotkeyPanel::Initialize() {
+	Resources::Instance().LoadTextureAsync(&texture, "keyboard.png", "img");
 
 	clickerTimer = TIMER_INIT();
 	dropCoinsTimer = TIMER_INIT();
-	hotkeys = std::vector<TBHotkey*>();
 }
-HotkeyPanel::~HotkeyPanel() {
+void HotkeyPanel::Terminate() {
 	for (TBHotkey* hotkey : hotkeys) {
 		delete hotkey;
 	}
@@ -30,6 +25,7 @@ HotkeyPanel::~HotkeyPanel() {
 void HotkeyPanel::Draw(IDirect3DDevice9* pDevice) {
 	// === hotkey panel ===
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(300, 400), ImGuiSetCond_FirstUseEver);
 	ImGui::Begin(Name(), &visible);
 	if (ImGui::Button("Create Hotkey...")) {
 		ImGui::OpenPopup("Create Hotkey");
@@ -110,7 +106,8 @@ void HotkeyPanel::Draw(IDirect3DDevice9* pDevice) {
 	ImGui::End();
 }
 
-void HotkeyPanel::LoadSettingInternal(CSimpleIni* ini) {
+void HotkeyPanel::LoadSettings(CSimpleIni* ini) {
+	ToolboxPanel::LoadSettings(ini);
 	CSimpleIni::TNamesDepend entries;
 	ini->GetAllSections(entries);
 	for (CSimpleIni::Entry& entry : entries) {
@@ -121,7 +118,8 @@ void HotkeyPanel::LoadSettingInternal(CSimpleIni* ini) {
 		}
 	}
 }
-void HotkeyPanel::SaveSettingInternal(CSimpleIni* ini) {
+void HotkeyPanel::SaveSettings(CSimpleIni* ini) {
+	ToolboxPanel::SaveSettings(ini);
 	char buf[256];
 	for (unsigned int i = 0; i < hotkeys.size(); ++i) {
 		sprintf_s(buf, "hotkey-%03d:%s", i, hotkeys[i]->Name());

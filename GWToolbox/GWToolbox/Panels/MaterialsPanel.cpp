@@ -46,13 +46,13 @@ void MaterialsPanel::Update() {
 	}
 }
 
-MaterialsPanel::MaterialsPanel() {
-	Resources::Instance()->LoadTextureAsync(&texture, "feather.png", "img");
-	Resources::Instance()->LoadTextureAsync(&tex_essence, "Essence_of_Celerity.png", "img");
-	Resources::Instance()->LoadTextureAsync(&tex_grail, "Grail_of_Might.png", "img");
-	Resources::Instance()->LoadTextureAsync(&tex_armor, "Armor_of_Salvation.png", "img");
-	Resources::Instance()->LoadTextureAsync(&tex_powerstone, "Powerstone_of_Courage.png", "img");
-	Resources::Instance()->LoadTextureAsync(&tex_resscroll, "Scroll_of_Resurrection.png", "img");
+void MaterialsPanel::Initialize() {
+	Resources::Instance().LoadTextureAsync(&texture, "feather.png", "img");
+	Resources::Instance().LoadTextureAsync(&tex_essence, "Essence_of_Celerity.png", "img");
+	Resources::Instance().LoadTextureAsync(&tex_grail, "Grail_of_Might.png", "img");
+	Resources::Instance().LoadTextureAsync(&tex_armor, "Armor_of_Salvation.png", "img");
+	Resources::Instance().LoadTextureAsync(&tex_powerstone, "Powerstone_of_Courage.png", "img");
+	Resources::Instance().LoadTextureAsync(&tex_resscroll, "Scroll_of_Resurrection.png", "img");
 	
 	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P235_QuotedItemPrice>(
 		[&](GW::Packet::StoC::P235_QuotedItemPrice* pak) -> bool {
@@ -100,7 +100,7 @@ MaterialsPanel::MaterialsPanel() {
 	});
 }
 
-MaterialsPanel::~MaterialsPanel() {
+void MaterialsPanel::Terminate() {
 	if (tex_essence) tex_essence->Release(); tex_essence = nullptr;
 	if (tex_grail) tex_grail->Release(); tex_grail = nullptr;
 	if (tex_armor) tex_armor->Release(); tex_armor = nullptr;
@@ -108,8 +108,10 @@ MaterialsPanel::~MaterialsPanel() {
 	if (tex_resscroll) tex_resscroll->Release(); tex_resscroll = nullptr;
 }
 
+
 void MaterialsPanel::Draw(IDirect3DDevice9* pDevice) {
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
 	ImGui::Begin(Name(), &visible);
 
 	float x, y, h;

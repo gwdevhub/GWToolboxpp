@@ -6,11 +6,7 @@
 #include "GuiUtils.h"
 #include <GWToolbox.h>
 
-GameSettings* GameSettings::Instance() {
-	return GWToolbox::Instance().game_settings;
-}
-
-GameSettings::GameSettings() {
+void GameSettings::Initialize() {
 	patches.push_back(new GW::MemoryPatcher((void*)0x0067D7C8,
 		(BYTE*)"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90", 16));
 	patches.push_back(new GW::MemoryPatcher((void*)0x0067D320, (BYTE*)"\xEB", 1));
@@ -25,15 +21,9 @@ GameSettings::GameSettings() {
 	patches.push_back(new GW::MemoryPatcher((void*)0x0067D65E, a, 10));
 }
 
-void GameSettings::DrawSettingInternal() {
-	// don't draw 'borderless window', it's done top-level by settings panel
+void GameSettings::LoadSettings(CSimpleIni* ini) {
+	ToolboxModule::LoadSettings(ini);
 
-	if (ImGui::Checkbox("Open web links from templates", &open_template_links)) {
-		GW::Chat().SetOpenLinks(open_template_links);
-	}
-}
-
-void GameSettings::LoadSettingInternal(CSimpleIni* ini) {
 	open_template_links = ini->GetBoolValue("main_window", "openlinks", true);
 	borderless_window = ini->GetBoolValue("main_window", "borderlesswindow", false);
 
@@ -41,9 +31,24 @@ void GameSettings::LoadSettingInternal(CSimpleIni* ini) {
 	GW::Chat().SetOpenLinks(open_template_links);
 }
 
-void GameSettings::SaveSettingInternal(CSimpleIni* ini) {
+void GameSettings::SaveSettings(CSimpleIni* ini) {
+	ToolboxModule::SaveSettings(ini);
 	ini->SetBoolValue("main_window", "openlinks", open_template_links);
 	ini->SetBoolValue("main_window", "borderlesswindow", borderless_window);
+}
+
+void GameSettings::DrawSettingInternal() {
+	DrawBorderlessSetting();
+
+	if (ImGui::Checkbox("Open web links from templates", &open_template_links)) {
+		GW::Chat().SetOpenLinks(open_template_links);
+	}
+}
+
+void GameSettings::DrawBorderlessSetting() {
+	if (ImGui::Checkbox("Borderless Window", &borderless_window)) {
+		ApplyBorderless(borderless_window);
+	}
 }
 
 void GameSettings::ApplyBorderless(bool value) {

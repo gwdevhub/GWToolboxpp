@@ -54,15 +54,11 @@ class PingsLinesRenderer : public VBuffer {
 		float GetScale() override;
 	};
 	class PingCircle : public VBuffer {
-		D3DVertex* vertices;
-		unsigned int vertex_count;
 		void Initialize(IDirect3DDevice9* device) override;
 	public:
 		Color color;
 	};
 	class Marker : public VBuffer {
-		D3DVertex* vertices;
-		unsigned int vertex_count;
 		void Initialize(IDirect3DDevice9* device) override;
 	public:
 		Color color;
@@ -85,6 +81,8 @@ public:
 
 	void P041Callback(GW::Packet::StoC::P041* pak);
 	void P133Callback(GW::Packet::StoC::P133* pak);
+	void P148Callback(GW::Packet::StoC::P148* pak);
+	void P216Callback(GW::Packet::StoC::P216* pak);
 
 	void DrawSettings();
 	void LoadSettings(CSimpleIni* ini, const char* section);

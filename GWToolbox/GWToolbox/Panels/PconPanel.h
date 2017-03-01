@@ -10,14 +10,17 @@
 #include "ToolboxPanel.h"
 
 class PconPanel : public ToolboxPanel {
-public:
-	static PconPanel* Instance();
-
-	const char* Name() const override { return "Pcon Panel"; }
-	const char* TabButtonText() const override { return "Pcons"; }
-
-	PconPanel();
+	PconPanel() {};
 	~PconPanel() {};
+public:
+	static PconPanel& Instance() {
+		static PconPanel instance;
+		return instance;
+	}
+
+	const char* Name() const override { return "Pcons"; }
+
+	void Initialize() override;
 
 	bool SetEnabled(bool b);
 	inline void ToggleEnable() { SetEnabled(!enabled); }
@@ -27,29 +30,11 @@ public:
 	bool DrawTabButton(IDirect3DDevice9* device) override;
 	void Draw(IDirect3DDevice9* pDevice) override;
 
-	void LoadSettingInternal(CSimpleIni* ini) override;
-	void SaveSettingInternal(CSimpleIni* ini) override;
+	void LoadSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
 
 private:
-	Pcon* essence;
-	Pcon* grail;
-	Pcon* armor;
-	Pcon* alcohol;
-	Pcon* redrock;
-	Pcon* bluerock;
-	Pcon* greenrock;
-	Pcon* pie;
-	Pcon* cupcake;
-	Pcon* apple;
-	Pcon* corn;
-	Pcon* egg;
-	Pcon* kabob;
-	Pcon* warsupply;
-	Pcon* lunars;
-	Pcon* skalesoup;
-	Pcon* pahnai;
-	Pcon* city;
 	std::vector<Pcon*> pcons;
 	GW::Constants::InstanceType current_map_type;
 	clock_t scan_inventory_timer;

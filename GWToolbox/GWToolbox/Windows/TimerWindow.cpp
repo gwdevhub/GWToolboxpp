@@ -8,13 +8,14 @@
 
 void TimerWindow::Draw(IDirect3DDevice9* pDevice) {
 	if (!visible) return;
+	if (GW::Map().GetInstanceType() == GW::Constants::InstanceType::Loading) return;
 
 	unsigned long time = GW::Map().GetInstanceTime() / 1000;
 
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(0, 0, 0, 0));
 	ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar
 		| ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar;
-	if (ToolboxSettings::Instance()->freeze_widgets) {
+	if (ToolboxSettings::Instance().freeze_widgets) {
 		flags |= ImGuiWindowFlags_NoInputs;
 	}
 	ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f));

@@ -9,11 +9,7 @@
 #include <Defines.h>
 #include "GWToolbox.h"
 
-Resources* Resources::Instance() {
-	return GWToolbox::Instance().resources;
-}
-
-Resources::Resources() {
+void Resources::Initialize() {
 	worker = std::thread([this]() {
 		while (!should_stop) {
 			if (todo.empty()) {
@@ -25,7 +21,7 @@ Resources::Resources() {
 		}
 	});
 }
-Resources::~Resources() {
+void Resources::Terminate() {
 	should_stop = true;
 	if (worker.joinable()) worker.join();
 }

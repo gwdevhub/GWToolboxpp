@@ -7,11 +7,18 @@ class BondsWindow : public ToolboxWindow {
 	static const int MAX_PLAYERS = 12;
 	static const int MAX_BONDS = 3;
 
+	BondsWindow() {};
+	~BondsWindow() {};
 public:
+	static BondsWindow& Instance() {
+		static BondsWindow instance;
+		return instance;
+	}
+
 	const char* Name() const override { return "Bonds Window"; }
 
-	BondsWindow();
-	~BondsWindow();
+	void Initialize() override;
+	void Terminate() override;
 
 	// Update. Will always be called every frame.
 	void Update() override {};
@@ -19,8 +26,8 @@ public:
 	// Draw user interface. Will be called every frame if the element is visible
 	void Draw(IDirect3DDevice9* device) override;
 
-	void LoadSettingInternal(CSimpleIni* ini) override;
-	void SaveSettingInternal(CSimpleIni* ini) override;
+	void LoadSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
 
 private:

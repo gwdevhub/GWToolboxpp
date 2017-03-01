@@ -12,10 +12,19 @@
 class ChatCommands : public ToolboxModule {
 	const float DEFAULT_CAM_SPEED = 25.0f;
 
+	ChatCommands() : move_forward(0), move_side(0), move_up(0),
+		cam_speed_(DEFAULT_CAM_SPEED),
+		skill_to_use(0), skill_usage_delay(1.0f), skill_timer(clock()) {};
+	~ChatCommands() {};
 public:
+	static ChatCommands& Instance() {
+		static ChatCommands instance;
+		return instance;
+	}
+
 	const char* Name() const override { return "Chat Commands"; }
 
-	ChatCommands();
+	void Initialize() override;
 
 	void DrawSettings() override {};
 

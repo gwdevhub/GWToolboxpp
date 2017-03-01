@@ -22,7 +22,6 @@ void Logger::Init() {
 	SetConsoleTitleA("GWTB++ Debug Console");
 #else
 	freopen_s(&Logger::logfile, GuiUtils::getPath("log.txt").c_str(), "w", stdout);
-	//freopen_s(&logfile, GuiUtils::getPathA("log.txt").c_str(), "w", stderr);
 #endif
 }
 

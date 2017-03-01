@@ -62,6 +62,31 @@ void AgentRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 }
 
 void AgentRenderer::DrawSettings() {
+	if (ImGui::SmallButton("Restore Defaults")) {
+		modifier = 0x001E1E1E;
+		color_eoe = 0x3200FF00;
+		color_qz = 0x320000FF;
+		color_target = 0xFFFFFF00;
+		color_player = 0xFFFF8000;
+		color_player_dead = 0x64FF8000;
+		color_signpost = 0xFF0000C8;
+		color_item = 0xFF0000F0;
+		color_hostile = 0xFFF00000;
+		color_hostile_damaged = 0xFF800000;
+		color_hostile_dead = 0xFF320000;
+		color_neutral = 0xFF0000DC;
+		color_ally_party = 0xFF00B300;
+		color_ally_npc = 0xFF99FF99;
+		color_ally_spirit = 0xFF608000;
+		color_ally_minion = 0xFF008060;
+		color_ally_dead = 0x64006400;
+		size_default = 75.0f;
+		size_player = 100.0f;
+		size_signpost = 50.0f;
+		size_item = 25.0f;
+		size_boss = 125.0f;
+		size_minion = 50.0f;
+	}
 	Colors::DrawSetting("EoE", &color_eoe);
 	ImGui::ShowHelp("This is the color at the edge, the color in the middle is the same, with alpha-50");
 	Colors::DrawSetting("QZ", &color_qz);
@@ -163,24 +188,21 @@ void AgentRenderer::Shape_t::AddVertex(float x, float y, AgentRenderer::Color_Mo
 
 
 void AgentRenderer::Initialize(IDirect3DDevice9* device) {
-	type_ = D3DPT_TRIANGLELIST;
-
+	type = D3DPT_TRIANGLELIST;
 	vertices_max = max_shape_verts * 0x200; // support for up to 512 agents, should be enough
-
 	vertices = nullptr;
-
 	HRESULT hr = device->CreateVertexBuffer(sizeof(D3DVertex) * vertices_max, 0,
-		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer_, NULL);
+		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
 	if (FAILED(hr)) printf("Error: %ls\n", hr);
 }
 
 void AgentRenderer::Render(IDirect3DDevice9* device) {
-	if (!initialized_) {
+	if (!initialized) {
 		Initialize(device);
-		initialized_ = true;
+		initialized = true;
 	}
 
-	HRESULT res = buffer_->Lock(0, sizeof(D3DVertex) * vertices_max, (VOID**)&vertices, D3DLOCK_DISCARD);
+	HRESULT res = buffer->Lock(0, sizeof(D3DVertex) * vertices_max, (VOID**)&vertices, D3DLOCK_DISCARD);
 	if (FAILED(res)) printf("AgentRenderer Lock() error: %d\n", res);
 
 	vertices_count = 0;
@@ -255,10 +277,10 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 		Enqueue(player);
 	}
 
-	buffer_->Unlock();
+	buffer->Unlock();
 
 	if (vertices_count != 0) {
-		device->SetStreamSource(0, buffer_, 0, sizeof(D3DVertex));
+		device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
 		device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, vertices_count / 3);
 		vertices_count = 0;
 	}

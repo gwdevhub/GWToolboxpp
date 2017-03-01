@@ -10,18 +10,14 @@
 
 unsigned int BuildPanel::TeamBuild::cur_ui_id = 0;
 
-BuildPanel* BuildPanel::Instance() {
-	return MainWindow::Instance()->build_panel;
-}
-
-BuildPanel::BuildPanel() {
-	Resources::Instance()->LoadTextureAsync(&texture, "list.png", "img");
-
-	send_timer = clock();
+void BuildPanel::Initialize() {
+	Resources::Instance().LoadTextureAsync(&texture, "list.png", "img");
+	send_timer = TIMER_INIT();
 }
 
 void BuildPanel::Draw(IDirect3DDevice9* pDevice) {
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
 	ImGui::Begin(Name(), &visible);
 	for (TeamBuild& tbuild : teambuilds) {
 		ImGui::PushID(tbuild.ui_id);
@@ -47,12 +43,13 @@ void BuildPanel::Draw(IDirect3DDevice9* pDevice) {
 	for (unsigned int i = 0; i < teambuilds.size(); ++i) {
 		if (!teambuilds[i].edit_open) continue;
 		TeamBuild& tbuild = teambuilds[i];
-		char winname[64];
-		sprintf_s(winname, "%s###build%d", tbuild.name, tbuild.ui_id);
+		char winname[128];
+		_snprintf_s(winname, 128, "%s###build%d", tbuild.name, tbuild.ui_id);
 		ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
+		ImGui::SetNextWindowSize(ImVec2(500, 0), ImGuiSetCond_FirstUseEver);
 		ImGui::Begin(winname, &tbuild.edit_open);
 		ImGui::PushItemWidth(-120.0f);
-		ImGui::InputText("Build Name", tbuild.name, 64);
+		ImGui::InputText("Build Name", tbuild.name, 128);
 		ImGui::PopItemWidth();
 		for (unsigned int j = 0; j < tbuild.builds.size(); ++j) {
 			Build& build = tbuild.builds[j];
@@ -61,9 +58,9 @@ void BuildPanel::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::SameLine(30.0f);
 			ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 24.0f - 50.0f - 30.0f
 				- ImGui::GetStyle().ItemInnerSpacing.x * 3) / 2);
-			ImGui::InputText("###name", build.name, 64);
+			ImGui::InputText("###name", build.name, 128);
 			ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-			ImGui::InputText("###code", build.code, 64);
+			ImGui::InputText("###code", build.code, 128);
 			ImGui::PopItemWidth();
 			ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 			if (ImGui::Button("Send", ImVec2(50.0f, 0))) {
@@ -151,21 +148,23 @@ void BuildPanel::Send(const TeamBuild& tbuild, unsigned int idx) {
 	const std::string name(build.name);
 	const std::string code(build.code);
 
-	char buf[140];
+	const int buf_size = 139;
+	char buf[buf_size];
 	if (name.empty() && code.empty()) {
 		return; // nothing to do here
 	} else if (name.empty()) {
 		// name is empty, fill it with the teambuild name
-		sprintf_s(buf, "[%s %d;%s]", tbuild.name, idx + 1, build.code);
+		
+		_snprintf_s(buf, buf_size, "[%s %d;%s]", tbuild.name, idx + 1, build.code);
 	} else if (code.empty()) {
 		// code is empty, just print the name without template format
-		sprintf_s(buf, "%s", build.name);
+		_snprintf_s(buf, buf_size, "%s", build.name);
 	} else if (tbuild.show_numbers) {
 		// add numbers in front of name
-		sprintf_s(buf, "[%d - %s;%s]", idx + 1, build.name, build.code);
+		_snprintf_s(buf, buf_size, "[%d - %s;%s]", idx + 1, build.name, build.code);
 	} else {
 		// simple template
-		sprintf_s(buf, "[%s;%s]", build.name, build.code);
+		_snprintf_s(buf, buf_size, "[%s;%s]", build.name, build.code);
 	}
 	queue.push(buf);
 }
@@ -182,7 +181,8 @@ void BuildPanel::Update() {
 	}
 }
 
-void BuildPanel::LoadSettingInternal(CSimpleIni* ini) {
+void BuildPanel::LoadSettings(CSimpleIni* ini) {
+	ToolboxPanel::LoadSettings(ini);
 	CSimpleIni::TNamesDepend entries;
 	ini->GetAllSections(entries);
 	for (CSimpleIni::Entry& entry : entries) {
@@ -217,7 +217,8 @@ void BuildPanel::LoadSettingInternal(CSimpleIni* ini) {
 	}
 }
 
-void BuildPanel::SaveSettingInternal(CSimpleIni* ini) {
+void BuildPanel::SaveSettings(CSimpleIni* ini) {
+	ToolboxPanel::SaveSettings(ini);
 	for (unsigned int i = 0; i < teambuilds.size(); ++i) {
 		const TeamBuild& tbuild = teambuilds[i];
 		char section[16];
