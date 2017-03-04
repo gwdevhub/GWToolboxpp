@@ -16,29 +16,33 @@ void BuildPanel::Initialize() {
 }
 
 void BuildPanel::Draw(IDirect3DDevice9* pDevice) {
-	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-	ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
-	ImGui::Begin(Name(), &visible);
-	for (TeamBuild& tbuild : teambuilds) {
-		ImGui::PushID(tbuild.ui_id);
-		if (ImGui::Button(tbuild.name, ImVec2(ImGui::GetWindowContentRegionWidth() - 60.0f, 0))) {
-			Send(tbuild);
+	if (visible) {
+		ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
+		ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
+		if (ImGui::Begin(Name(), &visible)) {
+			for (TeamBuild& tbuild : teambuilds) {
+				ImGui::PushID(tbuild.ui_id);
+				if (ImGui::Button(tbuild.name, ImVec2(ImGui::GetWindowContentRegionWidth()
+					-ImGui::GetStyle().ItemInnerSpacing.x - 60.0f, 0))) {
+					Send(tbuild);
+				}
+				if (ImGui::IsItemHovered()) {
+					ImGui::SetTooltip("Click to send teambuild to chat");
+				}
+				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+				if (ImGui::Button("Edit", ImVec2(60.0f, 0))) {
+					tbuild.edit_open = true;
+				}
+				ImGui::PopID();
+			}
+			if (ImGui::Button("Add Teambuild", ImVec2(ImGui::GetWindowContentRegionWidth(), 0))) {
+				teambuilds.push_back(TeamBuild());
+				teambuilds.back().edit_open = true; // open by default
+				teambuilds.back().builds.resize(4, Build());
+			}
 		}
-		if (ImGui::IsItemHovered()) {
-			ImGui::SetTooltip("Click to send teambuild to chat");
-		}
-		ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-		if (ImGui::Button("Edit", ImVec2(60.0f, 0))) {
-			tbuild.edit_open = true;
-		}
-		ImGui::PopID();
+		ImGui::End();
 	}
-	if (ImGui::Button("Add Teambuild")) {
-		teambuilds.push_back(TeamBuild());
-		teambuilds.back().edit_open = true; // open by default
-		teambuilds.back().builds.resize(4, Build());
-	}
-	ImGui::End();
 
 	for (unsigned int i = 0; i < teambuilds.size(); ++i) {
 		if (!teambuilds[i].edit_open) continue;
@@ -47,75 +51,75 @@ void BuildPanel::Draw(IDirect3DDevice9* pDevice) {
 		_snprintf_s(winname, 128, "%s###build%d", tbuild.name, tbuild.ui_id);
 		ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 		ImGui::SetNextWindowSize(ImVec2(500, 0), ImGuiSetCond_FirstUseEver);
-		ImGui::Begin(winname, &tbuild.edit_open);
-		ImGui::PushItemWidth(-120.0f);
-		ImGui::InputText("Build Name", tbuild.name, 128);
-		ImGui::PopItemWidth();
-		for (unsigned int j = 0; j < tbuild.builds.size(); ++j) {
-			Build& build = tbuild.builds[j];
-			ImGui::PushID(j);
-			ImGui::Text("#%d", j + 1);
-			ImGui::SameLine(30.0f);
-			ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 24.0f - 50.0f - 30.0f
-				- ImGui::GetStyle().ItemInnerSpacing.x * 3) / 2);
-			ImGui::InputText("###name", build.name, 128);
-			ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-			ImGui::InputText("###code", build.code, 128);
+		if (ImGui::Begin(winname, &tbuild.edit_open)) {
+			ImGui::PushItemWidth(-120.0f);
+			ImGui::InputText("Build Name", tbuild.name, 128);
 			ImGui::PopItemWidth();
-			ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-			if (ImGui::Button("Send", ImVec2(50.0f, 0))) {
-				Send(tbuild, j);
+			for (unsigned int j = 0; j < tbuild.builds.size(); ++j) {
+				Build& build = tbuild.builds[j];
+				ImGui::PushID(j);
+				ImGui::Text("#%d", j + 1);
+				ImGui::SameLine(30.0f);
+				ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 24.0f - 50.0f - 30.0f
+					- ImGui::GetStyle().ItemInnerSpacing.x * 3) / 2);
+				ImGui::InputText("###name", build.name, 128);
+				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+				ImGui::InputText("###code", build.code, 128);
+				ImGui::PopItemWidth();
+				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+				if (ImGui::Button("Send", ImVec2(50.0f, 0))) {
+					Send(tbuild, j);
+				}
+				if (ImGui::IsItemHovered()) ImGui::SetTooltip("Send to team chat");
+				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+				if (ImGui::Button("x", ImVec2(24.0f, 0))) {
+					tbuild.builds.erase(tbuild.builds.begin() + j);
+				}
+				if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete build");
+				ImGui::PopID();
 			}
-			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Send to team chat");
-			ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-			if (ImGui::Button("x", ImVec2(24.0f, 0))) {
-				tbuild.builds.erase(tbuild.builds.begin() + j);
+			ImGui::Checkbox("Show numbers", &tbuild.show_numbers);
+			ImGui::SameLine(ImGui::GetWindowContentRegionWidth() * 0.6f);
+			if (ImGui::Button("Add Build", ImVec2(ImGui::GetWindowContentRegionWidth() * 0.4f, 0))) {
+				tbuild.builds.push_back(Build());
 			}
-			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete build");
-			ImGui::PopID();
-		}
-		ImGui::Checkbox("Show numbers", &tbuild.show_numbers);
-		ImGui::SameLine(ImGui::GetWindowContentRegionWidth() * 0.6f);
-		if (ImGui::Button("Add Build", ImVec2(ImGui::GetWindowContentRegionWidth() * 0.4f, 0))) {
-			tbuild.builds.push_back(Build());
-		}
-		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Add another player build row");
-		ImGui::Spacing();
-		// issue: moving a teambuild up or down will change the teambuild window id
-		// which will make the window change size, which is pretty annoying
-		if (ImGui::SmallButton("Up") && i > 0) {
-			std::swap(teambuilds[i - 1], teambuilds[i]);
-		}
-		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move the teambuild up in the list");
-		ImGui::SameLine();
-		if (ImGui::SmallButton("Down") && i + 1 < teambuilds.size()) {
-			std::swap(teambuilds[i], teambuilds[i + 1]);
-		}
-		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move the teambuild down in the list");
-		ImGui::SameLine();
-		if (ImGui::SmallButton("Delete")) {
-			ImGui::OpenPopup("Delete Teambuild?");
-		}
-		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete the teambuild");
-		ImGui::SameLine(ImGui::GetWindowContentRegionWidth() * 0.6f);
-		if (ImGui::Button("Close", ImVec2(ImGui::GetWindowContentRegionWidth() * 0.4f, 0))) {
-			tbuild.edit_open = false;
-		}
-		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Close this window");
-
-		if (ImGui::BeginPopupModal("Delete Teambuild?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-			ImGui::Text("Are you sure?\nThis operation cannot be undone.\n\n");
-			if (ImGui::Button("OK", ImVec2(120, 0))) {
-				teambuilds.erase(teambuilds.begin() + i);
-				ImGui::CloseCurrentPopup();
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Add another player build row");
+			ImGui::Spacing();
+			// issue: moving a teambuild up or down will change the teambuild window id
+			// which will make the window change size, which is pretty annoying
+			if (ImGui::SmallButton("Up") && i > 0) {
+				std::swap(teambuilds[i - 1], teambuilds[i]);
 			}
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move the teambuild up in the list");
 			ImGui::SameLine();
-			if (ImGui::Button("Cancel", ImVec2(120, 0))) { 
-				ImGui::CloseCurrentPopup(); 
+			if (ImGui::SmallButton("Down") && i + 1 < teambuilds.size()) {
+				std::swap(teambuilds[i], teambuilds[i + 1]);
 			}
-			ImGui::EndPopup();
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move the teambuild down in the list");
+			ImGui::SameLine();
+			if (ImGui::SmallButton("Delete")) {
+				ImGui::OpenPopup("Delete Teambuild?");
+			}
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete the teambuild");
+			ImGui::SameLine(ImGui::GetWindowContentRegionWidth() * 0.6f);
+			if (ImGui::Button("Close", ImVec2(ImGui::GetWindowContentRegionWidth() * 0.4f, 0))) {
+				tbuild.edit_open = false;
+			}
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Close this window");
+
+			if (ImGui::BeginPopupModal("Delete Teambuild?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+				ImGui::Text("Are you sure?\nThis operation cannot be undone.\n\n");
+				if (ImGui::Button("OK", ImVec2(120, 0))) {
+					teambuilds.erase(teambuilds.begin() + i);
+					ImGui::CloseCurrentPopup();
+				}
+				ImGui::SameLine();
+				if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+					ImGui::CloseCurrentPopup();
+				}
+				ImGui::EndPopup();
+			}
 		}
-		
 		ImGui::End();
 	}
 }

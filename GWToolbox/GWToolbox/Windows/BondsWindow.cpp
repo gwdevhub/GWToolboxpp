@@ -35,6 +35,7 @@ void BondsWindow::Terminate() {
 
 void BondsWindow::Draw(IDirect3DDevice9* device) {
 	if (!visible) return;
+	
 	int img_size = GuiUtils::GetPartyHealthbarHeight();
 	int party_size = GW::Partymgr().GetPartySize();
 
@@ -78,27 +79,28 @@ void BondsWindow::Draw(IDirect3DDevice9* device) {
 	ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar
 		| ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoResize;
 	if (ToolboxSettings::Instance().freeze_widgets) {
-		flags |= ImGuiWindowFlags_NoInputs;
+		flags |= ImGuiWindowFlags_NoMove;
 	}
-	ImGui::Begin(Name(), &visible, flags);
-	float x = ImGui::GetWindowPos().x;
-	float y = ImGui::GetWindowPos().y;
-	for (int player = 0; player < party_size; ++player) {
-		for (int bond = 0; bond < MAX_BONDS; ++bond) {
-			ImVec2 tl(x + (bond + 0) * img_size, y + (player + 0) * img_size);
-			ImVec2 br(x + (bond + 1) * img_size, y + (player + 1) * img_size);
-			if (buff_id[player][bond] > 0) {
-				ImGui::GetWindowDrawList()->AddImage((ImTextureID)textures[bond],
-					ImVec2(tl.x + 1, tl.y + 1),
-					ImVec2(br.x - 2, br.y - 2));
-			}
-			if (ImGui::IsMouseHoveringRect(tl, br)) {
-				ImGui::GetWindowDrawList()->AddRect(tl, br, IM_COL32(255, 255, 255, 255));
-				if (ImGui::IsMouseReleased(0)) {
-					if (buff_id[player][bond] > 0) {
-						GW::Effects().DropBuff(buff_id[player][bond]);
-					} else {
-						UseBuff(player, bond);
+	if (ImGui::Begin(Name(), &visible, flags)) {
+		float x = ImGui::GetWindowPos().x;
+		float y = ImGui::GetWindowPos().y;
+		for (int player = 0; player < party_size; ++player) {
+			for (int bond = 0; bond < MAX_BONDS; ++bond) {
+				ImVec2 tl(x + (bond + 0) * img_size, y + (player + 0) * img_size);
+				ImVec2 br(x + (bond + 1) * img_size, y + (player + 1) * img_size);
+				if (buff_id[player][bond] > 0) {
+					ImGui::GetWindowDrawList()->AddImage((ImTextureID)textures[bond],
+						ImVec2(tl.x + 1, tl.y + 1),
+						ImVec2(br.x - 2, br.y - 2));
+				}
+				if (ImGui::IsMouseHoveringRect(tl, br)) {
+					ImGui::GetWindowDrawList()->AddRect(tl, br, IM_COL32(255, 255, 255, 255));
+					if (ImGui::IsMouseReleased(0)) {
+						if (buff_id[player][bond] > 0) {
+							GW::Effects().DropBuff(buff_id[player][bond]);
+						} else {
+							UseBuff(player, bond);
+						}
 					}
 				}
 			}

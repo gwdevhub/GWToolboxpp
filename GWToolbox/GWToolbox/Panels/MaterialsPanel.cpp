@@ -110,233 +110,234 @@ void MaterialsPanel::Terminate() {
 
 
 void MaterialsPanel::Draw(IDirect3DDevice9* pDevice) {
+	if (!visible) return;
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
-	ImGui::Begin(Name(), &visible);
+	if (ImGui::Begin(Name(), &visible)) {
 
-	float x, y, h;
+		float x, y, h;
 
-	// note: textures are 64 x 64, but both off-center 
-	// and with a bunch of empty space. We want to center the image
-	// while minimizing the rescaling
+		// note: textures are 64 x 64, but both off-center 
+		// and with a bunch of empty space. We want to center the image
+		// while minimizing the rescaling
 
-	// === Essence ===
-	ImGui::Image((ImTextureID)tex_essence, ImVec2(50, 50), 
-		ImVec2(4.0f/64, 9.0f/64), ImVec2(47.0f/64, 52.0f/64));
-	if (ImGui::IsItemHovered()) ImGui::SetTooltip("Essence of Celerity\nFeathers and Dust");
-	ImGui::SameLine();
-	x = ImGui::GetCursorPosX();
-	y = ImGui::GetCursorPosY();
-	ImGui::Text(GetPrice(price_feathers, 5.0f, price_dust, 5.0f, 250).c_str());
-	FullConsPriceTooltip();
-	ImGui::SameLine(ImGui::GetWindowWidth() -100.0f - ImGui::GetStyle().WindowPadding.x);
-	if (ImGui::Button("Price Check###essencepc", ImVec2(100.0f, 0))) {
-		EnqueueQuote(GW::Constants::ItemID::Feathers);
-		EnqueueQuote(GW::Constants::ItemID::Dust);
-	}
-	h = ImGui::GetCurrentWindow()->DC.LastItemRect.GetHeight();
-	static int qty_essence = 1;
-	ImGui::SetCursorPosX(x);
-	ImGui::SetCursorPosY(y + h + ImGui::GetStyle().ItemSpacing.y);
-	ImGui::PushItemWidth(-100.0f - ImGui::GetStyle().ItemSpacing.x);
-	ImGui::InputInt("###essenceqty", &qty_essence);
-	if (qty_essence < 1) qty_essence = 1;
-	ImGui::PopItemWidth();
-	ImGui::SameLine();
-	if (ImGui::Button("Buy###essencebuy", ImVec2(100.0f, 0))) {
-		for (int i = 0; i < 5 * qty_essence; ++i) {
-			EnqueuePurchase(GW::Constants::ItemID::Feathers);
-			EnqueuePurchase(GW::Constants::ItemID::Dust);
+		// === Essence ===
+		ImGui::Image((ImTextureID)tex_essence, ImVec2(50, 50),
+			ImVec2(4.0f / 64, 9.0f / 64), ImVec2(47.0f / 64, 52.0f / 64));
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Essence of Celerity\nFeathers and Dust");
+		ImGui::SameLine();
+		x = ImGui::GetCursorPosX();
+		y = ImGui::GetCursorPosY();
+		ImGui::Text(GetPrice(price_feathers, 5.0f, price_dust, 5.0f, 250).c_str());
+		FullConsPriceTooltip();
+		ImGui::SameLine(ImGui::GetWindowWidth() - 100.0f - ImGui::GetStyle().WindowPadding.x);
+		if (ImGui::Button("Price Check###essencepc", ImVec2(100.0f, 0))) {
+			EnqueueQuote(GW::Constants::ItemID::Feathers);
+			EnqueueQuote(GW::Constants::ItemID::Dust);
 		}
-	}
-
-	ImGui::Separator();
-	// === Grail ===
-	ImGui::Image((ImTextureID)tex_grail, ImVec2(50, 50),
-		ImVec2(3.0f/64, 11.0f/64), ImVec2(49.0f/64, 57.0f/64));
-	if (ImGui::IsItemHovered()) ImGui::SetTooltip("Grail of Might\nIron and Dust");
-	ImGui::SameLine();
-	x = ImGui::GetCursorPosX();
-	y = ImGui::GetCursorPosY();
-	ImGui::Text(GetPrice(price_iron, 5.0f, price_dust, 5.0f, 250).c_str());
-	FullConsPriceTooltip();
-	ImGui::SameLine(ImGui::GetWindowWidth() - 100.0f - ImGui::GetStyle().WindowPadding.x);
-	if (ImGui::Button("Price Check###grailpc", ImVec2(100.0f, 0))) {
-		EnqueueQuote(GW::Constants::ItemID::Iron);
-		EnqueueQuote(GW::Constants::ItemID::Dust);
-	}
-	h = ImGui::GetCurrentWindow()->DC.LastItemRect.GetHeight();
-	static int qty_grail = 1;
-	ImGui::SetCursorPosX(x);
-	ImGui::SetCursorPosY(y + h + ImGui::GetStyle().ItemSpacing.y);
-	ImGui::PushItemWidth(-100.0f - ImGui::GetStyle().ItemSpacing.x);
-	ImGui::InputInt("###grailqty", &qty_grail);
-	if (qty_grail < 1) qty_grail = 1;
-	ImGui::PopItemWidth();
-	ImGui::SameLine();
-	if (ImGui::Button("Buy###grailbuy", ImVec2(100.0f, 0))) {
-		for (int i = 0; i < 5 * qty_grail; ++i) {
-			EnqueuePurchase(GW::Constants::ItemID::Iron);
-			EnqueuePurchase(GW::Constants::ItemID::Dust);
+		h = ImGui::GetCurrentWindow()->DC.LastItemRect.GetHeight();
+		static int qty_essence = 1;
+		ImGui::SetCursorPosX(x);
+		ImGui::SetCursorPosY(y + h + ImGui::GetStyle().ItemSpacing.y);
+		ImGui::PushItemWidth(-100.0f - ImGui::GetStyle().ItemSpacing.x);
+		ImGui::InputInt("###essenceqty", &qty_essence);
+		if (qty_essence < 1) qty_essence = 1;
+		ImGui::PopItemWidth();
+		ImGui::SameLine();
+		if (ImGui::Button("Buy###essencebuy", ImVec2(100.0f, 0))) {
+			for (int i = 0; i < 5 * qty_essence; ++i) {
+				EnqueuePurchase(GW::Constants::ItemID::Feathers);
+				EnqueuePurchase(GW::Constants::ItemID::Dust);
+			}
 		}
-	}
 
-	ImGui::Separator();
-	// === Armor ===
-	ImGui::Image((ImTextureID)tex_armor, ImVec2(50, 50), 
-		ImVec2(0, 1.0f / 64), ImVec2(59.0f / 64, 60.0f / 64));
-	if (ImGui::IsItemHovered()) ImGui::SetTooltip("Armor of Salvation\nIron and Bones");
-	ImGui::SameLine();
-	x = ImGui::GetCursorPosX();
-	y = ImGui::GetCursorPosY();
-	ImGui::Text(GetPrice(price_iron, 5.0f, price_bones, 5.0f, 250).c_str());
-	FullConsPriceTooltip();
-	ImGui::SameLine(ImGui::GetWindowWidth() - 100.0f - ImGui::GetStyle().WindowPadding.x);
-	if (ImGui::Button("Price Check###armorpc", ImVec2(100.0f, 0))) {
-		EnqueueQuote(GW::Constants::ItemID::Iron);
-		EnqueueQuote(GW::Constants::ItemID::Bones);
-	}
-	h = ImGui::GetCurrentWindow()->DC.LastItemRect.GetHeight();
-	static int qty_armor = 1;
-	ImGui::SetCursorPosX(x);
-	ImGui::SetCursorPosY(y + h + ImGui::GetStyle().ItemSpacing.y);
-	ImGui::PushItemWidth(-100.0f - ImGui::GetStyle().ItemSpacing.x);
-	ImGui::InputInt("###armorqty", &qty_armor); 
-	if (qty_armor < 1) qty_armor = 1;
-	ImGui::PopItemWidth();
-	ImGui::SameLine();
-	if (ImGui::Button("Buy###armorbuy", ImVec2(100.0f, 0))) {
-		for (int i = 0; i < 5 * qty_armor; ++i) {
-			EnqueuePurchase(GW::Constants::ItemID::Iron);
-			EnqueuePurchase(GW::Constants::ItemID::Bones);
+		ImGui::Separator();
+		// === Grail ===
+		ImGui::Image((ImTextureID)tex_grail, ImVec2(50, 50),
+			ImVec2(3.0f / 64, 11.0f / 64), ImVec2(49.0f / 64, 57.0f / 64));
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Grail of Might\nIron and Dust");
+		ImGui::SameLine();
+		x = ImGui::GetCursorPosX();
+		y = ImGui::GetCursorPosY();
+		ImGui::Text(GetPrice(price_iron, 5.0f, price_dust, 5.0f, 250).c_str());
+		FullConsPriceTooltip();
+		ImGui::SameLine(ImGui::GetWindowWidth() - 100.0f - ImGui::GetStyle().WindowPadding.x);
+		if (ImGui::Button("Price Check###grailpc", ImVec2(100.0f, 0))) {
+			EnqueueQuote(GW::Constants::ItemID::Iron);
+			EnqueueQuote(GW::Constants::ItemID::Dust);
 		}
-	}
-
-	ImGui::Separator();
-	// === Powerstone ===
-	ImGui::Image((ImTextureID)tex_powerstone, ImVec2(50, 50), 
-		ImVec2(0, 6.0f/64), ImVec2(54.0f/64, 60.0f/64));
-	if (ImGui::IsItemHovered()) ImGui::SetTooltip("Powerstone of Courage\nGranite and Dust");
-	ImGui::SameLine();
-	x = ImGui::GetCursorPosX();
-	y = ImGui::GetCursorPosY();
-	ImGui::Text(GetPrice(price_granite, 10.0f, price_dust, 10.0f, 1000).c_str());
-	ImGui::SameLine(ImGui::GetWindowWidth() - 100.0f - ImGui::GetStyle().WindowPadding.x);
-	if (ImGui::Button("Price Check###pstonepc", ImVec2(100.0f, 0))) {
-		EnqueueQuote(GW::Constants::ItemID::Granite);
-		EnqueueQuote(GW::Constants::ItemID::Dust);
-	}
-	h = ImGui::GetCurrentWindow()->DC.LastItemRect.GetHeight();
-	static int qty_pstone = 1;
-	ImGui::SetCursorPosX(x);
-	ImGui::SetCursorPosY(y + h + ImGui::GetStyle().ItemSpacing.y);
-	ImGui::PushItemWidth(-100.0f - ImGui::GetStyle().ItemSpacing.x);
-	ImGui::InputInt("###pstoneqty", &qty_pstone);
-	if (qty_pstone < 1) qty_pstone = 1;
-	ImGui::PopItemWidth();
-	ImGui::SameLine();
-	if (ImGui::Button("Buy###pstonebuy", ImVec2(100.0f, 0))) {
-		for (int i = 0; i < 10 * qty_pstone; ++i) {
-			EnqueuePurchase(GW::Constants::ItemID::Granite);
-			EnqueuePurchase(GW::Constants::ItemID::Dust);
+		h = ImGui::GetCurrentWindow()->DC.LastItemRect.GetHeight();
+		static int qty_grail = 1;
+		ImGui::SetCursorPosX(x);
+		ImGui::SetCursorPosY(y + h + ImGui::GetStyle().ItemSpacing.y);
+		ImGui::PushItemWidth(-100.0f - ImGui::GetStyle().ItemSpacing.x);
+		ImGui::InputInt("###grailqty", &qty_grail);
+		if (qty_grail < 1) qty_grail = 1;
+		ImGui::PopItemWidth();
+		ImGui::SameLine();
+		if (ImGui::Button("Buy###grailbuy", ImVec2(100.0f, 0))) {
+			for (int i = 0; i < 5 * qty_grail; ++i) {
+				EnqueuePurchase(GW::Constants::ItemID::Iron);
+				EnqueuePurchase(GW::Constants::ItemID::Dust);
+			}
 		}
-	}
 
-	ImGui::Separator();
-	// === Res scroll ===
-	ImGui::Image((ImTextureID)tex_resscroll, ImVec2(50, 50),
-		ImVec2(1.0f/64, 4.0f/64), ImVec2(56.0f/64, 59.0f/64));
-	if (ImGui::IsItemHovered()) ImGui::SetTooltip("Scroll of Resurrection\nFibers and Bones");
-	ImGui::SameLine();
-	x = ImGui::GetCursorPosX();
-	y = ImGui::GetCursorPosY();
-	ImGui::Text(GetPrice(price_fibers, 2.5f, price_bones, 2.5f, 250).c_str());
-	ImGui::SameLine(ImGui::GetWindowWidth() - 100.0f - ImGui::GetStyle().WindowPadding.x);
-	if (ImGui::Button("Price Check###resscrollpc", ImVec2(100.0f, 0))) {
-		EnqueueQuote(GW::Constants::ItemID::Fibers);
-		EnqueueQuote(GW::Constants::ItemID::Bones);
-	}
-	h = ImGui::GetCurrentWindow()->DC.LastItemRect.GetHeight();
-	static int qty_resscroll = 1;
-	ImGui::SetCursorPosX(x);
-	ImGui::SetCursorPosY(y + h + ImGui::GetStyle().ItemSpacing.y);
-	ImGui::PushItemWidth(-100.0f - ImGui::GetStyle().ItemSpacing.x);
-	ImGui::InputInt("###resscrollqty", &qty_resscroll);
-	if (qty_resscroll < 1) qty_resscroll = 1;
-	ImGui::PopItemWidth();
-	ImGui::SameLine();
-	if (ImGui::Button("Buy###resscrollbuy", ImVec2(100.0f, 0))) {
-		for (int i = 0; i < qty_resscroll; ++i) { // for each scroll
-			int qty = (i % 2 == 0 ? 2 : 3);
-			for (int j = 0; j < qty; ++j) {
-				EnqueuePurchase(GW::Constants::ItemID::Fibers);
+		ImGui::Separator();
+		// === Armor ===
+		ImGui::Image((ImTextureID)tex_armor, ImVec2(50, 50),
+			ImVec2(0, 1.0f / 64), ImVec2(59.0f / 64, 60.0f / 64));
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Armor of Salvation\nIron and Bones");
+		ImGui::SameLine();
+		x = ImGui::GetCursorPosX();
+		y = ImGui::GetCursorPosY();
+		ImGui::Text(GetPrice(price_iron, 5.0f, price_bones, 5.0f, 250).c_str());
+		FullConsPriceTooltip();
+		ImGui::SameLine(ImGui::GetWindowWidth() - 100.0f - ImGui::GetStyle().WindowPadding.x);
+		if (ImGui::Button("Price Check###armorpc", ImVec2(100.0f, 0))) {
+			EnqueueQuote(GW::Constants::ItemID::Iron);
+			EnqueueQuote(GW::Constants::ItemID::Bones);
+		}
+		h = ImGui::GetCurrentWindow()->DC.LastItemRect.GetHeight();
+		static int qty_armor = 1;
+		ImGui::SetCursorPosX(x);
+		ImGui::SetCursorPosY(y + h + ImGui::GetStyle().ItemSpacing.y);
+		ImGui::PushItemWidth(-100.0f - ImGui::GetStyle().ItemSpacing.x);
+		ImGui::InputInt("###armorqty", &qty_armor);
+		if (qty_armor < 1) qty_armor = 1;
+		ImGui::PopItemWidth();
+		ImGui::SameLine();
+		if (ImGui::Button("Buy###armorbuy", ImVec2(100.0f, 0))) {
+			for (int i = 0; i < 5 * qty_armor; ++i) {
+				EnqueuePurchase(GW::Constants::ItemID::Iron);
 				EnqueuePurchase(GW::Constants::ItemID::Bones);
 			}
 		}
-	}
 
-	ImGui::Separator();
-	// === generic materials ===
-	static int index_mats = 0;
-	static int qty_mats = 1;
-	static const char* mats[] = {
-		"10 Bones",
-		"10 Iron Ingots",
-		"10 Tanned Hide Squares",
-		"10 Scales",
-		"10 Chitin Fragments",
-		"10 Bolts of Cloth",
-		"10 Wood Planks",
-		"10 Granite Slabs",
-		"10 Piles of Glittering Dust",
-		"10 Feathers",
-		"10 Fibers",
-	};
-	ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() -100.0f 
-		- ImGui::GetStyle().ItemSpacing.x * 2) / 2);
-	ImGui::Combo("###material", &index_mats, mats, 11);
-	ImGui::SameLine();
-	ImGui::InputInt("###matsqty", &qty_mats);
-	if (qty_mats < 1) qty_mats = 1;
-	// todo: add count and change layout. maybe popup?
-	ImGui::PopItemWidth();
-	ImGui::SameLine();
-	if (ImGui::Button("Buy###materialbuy", ImVec2(100.0f, 0))) {
-		DWORD id = 0;
-		switch (index_mats) {
-		case 0: id = GW::Constants::ItemID::Bones; break;
-		case 1: id = GW::Constants::ItemID::Iron; break;
-		case 2: id = GW::Constants::ItemID::TannedHideSquares; break;
-		case 3: id = GW::Constants::ItemID::Scales; break;
-		case 4: id = GW::Constants::ItemID::ChitinFragments; break;
-		case 5: id = GW::Constants::ItemID::BoltsOfCloth; break;
-		case 6: id = GW::Constants::ItemID::WoodPlanks; break;
-		case 7: id = GW::Constants::ItemID::Granite; break;
-		case 8: id = GW::Constants::ItemID::Dust; break;
-		case 9: id = GW::Constants::ItemID::Feathers; break;
-		case 10: id = GW::Constants::ItemID::Fibers; break;
-		default: break;
+		ImGui::Separator();
+		// === Powerstone ===
+		ImGui::Image((ImTextureID)tex_powerstone, ImVec2(50, 50),
+			ImVec2(0, 6.0f / 64), ImVec2(54.0f / 64, 60.0f / 64));
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Powerstone of Courage\nGranite and Dust");
+		ImGui::SameLine();
+		x = ImGui::GetCursorPosX();
+		y = ImGui::GetCursorPosY();
+		ImGui::Text(GetPrice(price_granite, 10.0f, price_dust, 10.0f, 1000).c_str());
+		ImGui::SameLine(ImGui::GetWindowWidth() - 100.0f - ImGui::GetStyle().WindowPadding.x);
+		if (ImGui::Button("Price Check###pstonepc", ImVec2(100.0f, 0))) {
+			EnqueueQuote(GW::Constants::ItemID::Granite);
+			EnqueueQuote(GW::Constants::ItemID::Dust);
 		}
-		for (int i = 0; i < qty_mats; ++i) {
-			EnqueuePurchase(id);
+		h = ImGui::GetCurrentWindow()->DC.LastItemRect.GetHeight();
+		static int qty_pstone = 1;
+		ImGui::SetCursorPosX(x);
+		ImGui::SetCursorPosY(y + h + ImGui::GetStyle().ItemSpacing.y);
+		ImGui::PushItemWidth(-100.0f - ImGui::GetStyle().ItemSpacing.x);
+		ImGui::InputInt("###pstoneqty", &qty_pstone);
+		if (qty_pstone < 1) qty_pstone = 1;
+		ImGui::PopItemWidth();
+		ImGui::SameLine();
+		if (ImGui::Button("Buy###pstonebuy", ImVec2(100.0f, 0))) {
+			for (int i = 0; i < 10 * qty_pstone; ++i) {
+				EnqueuePurchase(GW::Constants::ItemID::Granite);
+				EnqueuePurchase(GW::Constants::ItemID::Dust);
+			}
 		}
-	}
 
-	ImGui::Separator();
-	int to_do = quotequeue.size() + purchasequeue.size();
-	int done = max - to_do;
-	float progress = 0.0f;
-	if (max > 0) progress = (float)(done) / max;
-	char buf[256];
-	sprintf_s(buf, "%.2f [%d / %d]", progress * 100.0f, done, max);
-	ImGui::ProgressBar(progress, ImVec2(ImGui::GetWindowContentRegionWidth()
-		- 100.0f - ImGui::GetStyle().ItemSpacing.x, 0), buf);
-	ImGui::SameLine();
-	if (ImGui::Button("Cancel", ImVec2(100.0f, 0))) {
-		purchasequeue.clear();
-	}
-	if (ImGui::IsItemHovered()) ImGui::SetTooltip("Cancel the current price check and purchase queue");
+		ImGui::Separator();
+		// === Res scroll ===
+		ImGui::Image((ImTextureID)tex_resscroll, ImVec2(50, 50),
+			ImVec2(1.0f / 64, 4.0f / 64), ImVec2(56.0f / 64, 59.0f / 64));
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Scroll of Resurrection\nFibers and Bones");
+		ImGui::SameLine();
+		x = ImGui::GetCursorPosX();
+		y = ImGui::GetCursorPosY();
+		ImGui::Text(GetPrice(price_fibers, 2.5f, price_bones, 2.5f, 250).c_str());
+		ImGui::SameLine(ImGui::GetWindowWidth() - 100.0f - ImGui::GetStyle().WindowPadding.x);
+		if (ImGui::Button("Price Check###resscrollpc", ImVec2(100.0f, 0))) {
+			EnqueueQuote(GW::Constants::ItemID::Fibers);
+			EnqueueQuote(GW::Constants::ItemID::Bones);
+		}
+		h = ImGui::GetCurrentWindow()->DC.LastItemRect.GetHeight();
+		static int qty_resscroll = 1;
+		ImGui::SetCursorPosX(x);
+		ImGui::SetCursorPosY(y + h + ImGui::GetStyle().ItemSpacing.y);
+		ImGui::PushItemWidth(-100.0f - ImGui::GetStyle().ItemSpacing.x);
+		ImGui::InputInt("###resscrollqty", &qty_resscroll);
+		if (qty_resscroll < 1) qty_resscroll = 1;
+		ImGui::PopItemWidth();
+		ImGui::SameLine();
+		if (ImGui::Button("Buy###resscrollbuy", ImVec2(100.0f, 0))) {
+			for (int i = 0; i < qty_resscroll; ++i) { // for each scroll
+				int qty = (i % 2 == 0 ? 2 : 3);
+				for (int j = 0; j < qty; ++j) {
+					EnqueuePurchase(GW::Constants::ItemID::Fibers);
+					EnqueuePurchase(GW::Constants::ItemID::Bones);
+				}
+			}
+		}
 
+		ImGui::Separator();
+		// === generic materials ===
+		static int index_mats = 0;
+		static int qty_mats = 1;
+		static const char* mats[] = {
+			"10 Bones",
+			"10 Iron Ingots",
+			"10 Tanned Hide Squares",
+			"10 Scales",
+			"10 Chitin Fragments",
+			"10 Bolts of Cloth",
+			"10 Wood Planks",
+			"10 Granite Slabs",
+			"10 Piles of Glittering Dust",
+			"10 Feathers",
+			"10 Fibers",
+		};
+		ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 100.0f
+			- ImGui::GetStyle().ItemSpacing.x * 2) / 2);
+		ImGui::Combo("###material", &index_mats, mats, 11);
+		ImGui::SameLine();
+		ImGui::InputInt("###matsqty", &qty_mats);
+		if (qty_mats < 1) qty_mats = 1;
+		// todo: add count and change layout. maybe popup?
+		ImGui::PopItemWidth();
+		ImGui::SameLine();
+		if (ImGui::Button("Buy###materialbuy", ImVec2(100.0f, 0))) {
+			DWORD id = 0;
+			switch (index_mats) {
+			case 0: id = GW::Constants::ItemID::Bones; break;
+			case 1: id = GW::Constants::ItemID::Iron; break;
+			case 2: id = GW::Constants::ItemID::TannedHideSquares; break;
+			case 3: id = GW::Constants::ItemID::Scales; break;
+			case 4: id = GW::Constants::ItemID::ChitinFragments; break;
+			case 5: id = GW::Constants::ItemID::BoltsOfCloth; break;
+			case 6: id = GW::Constants::ItemID::WoodPlanks; break;
+			case 7: id = GW::Constants::ItemID::Granite; break;
+			case 8: id = GW::Constants::ItemID::Dust; break;
+			case 9: id = GW::Constants::ItemID::Feathers; break;
+			case 10: id = GW::Constants::ItemID::Fibers; break;
+			default: break;
+			}
+			for (int i = 0; i < qty_mats; ++i) {
+				EnqueuePurchase(id);
+			}
+		}
+
+		ImGui::Separator();
+		int to_do = quotequeue.size() + purchasequeue.size();
+		int done = max - to_do;
+		float progress = 0.0f;
+		if (max > 0) progress = (float)(done) / max;
+		char buf[256];
+		sprintf_s(buf, "%.2f [%d / %d]", progress * 100.0f, done, max);
+		ImGui::ProgressBar(progress, ImVec2(ImGui::GetWindowContentRegionWidth()
+			- 100.0f - ImGui::GetStyle().ItemSpacing.x, 0), buf);
+		ImGui::SameLine();
+		if (ImGui::Button("Cancel", ImVec2(100.0f, 0))) {
+			purchasequeue.clear();
+		}
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Cancel the current price check and purchase queue");
+	}
 	ImGui::End();
 }
 

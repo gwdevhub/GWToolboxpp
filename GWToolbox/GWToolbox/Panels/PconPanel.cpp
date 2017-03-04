@@ -7,6 +7,7 @@
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\PartyMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
+#include <imgui_internal.h>
 
 #include "ChatLogger.h"
 #include "GuiUtils.h"
@@ -21,77 +22,77 @@ void PconPanel::Initialize() {
 
 	const float s = 64.0f; // all icons are 64x64
 
-	pcons.push_back(new PconCons("Essence_of_Celerity.png",
+	pcons.push_back(new PconCons("Essence of Celerity", "essence", "Essence_of_Celerity.png",
 		ImVec2(5 / s , 10 / s), ImVec2(46 / s, 51 / s),
-		"Essence of Celerity", ItemID::ConsEssence, SkillID::Essence_of_Celerity_item_effect, 5));
+		ItemID::ConsEssence, SkillID::Essence_of_Celerity_item_effect, 5));
 
-	pcons.push_back(new PconCons("Grail_of_Might.png",
+	pcons.push_back(new PconCons("Grail of Might", "grail", "Grail_of_Might.png",
 		ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s),
-		"Grail of Might", ItemID::ConsGrail, SkillID::Grail_of_Might_item_effect, 5));
+		ItemID::ConsGrail, SkillID::Grail_of_Might_item_effect, 5));
 
-	pcons.push_back(new PconCons("Armor_of_Salvation.png",
+	pcons.push_back(new PconCons("Armor of Salvation", "armor", "Armor_of_Salvation.png",
 		ImVec2(0 / s, 2 / s), ImVec2(56 / s, 58 / s),
-		"Armor of Salvation", ItemID::ConsArmor, SkillID::Armor_of_Salvation_item_effect, 5));
+		ItemID::ConsArmor, SkillID::Armor_of_Salvation_item_effect, 5));
 
-	pcons.push_back(new PconGeneric("Red_Rock_Candy.png",
+	pcons.push_back(new PconGeneric("Red Rock Candy", "redrock", "Red_Rock_Candy.png",
 		ImVec2(0 / s, 4 / s), ImVec2(52 / s, 56 / s),
-		"Red Rock Candy", ItemID::RRC, SkillID::Red_Rock_Candy_Rush, 5));
+		ItemID::RRC, SkillID::Red_Rock_Candy_Rush, 5));
 
-	pcons.push_back(new PconGeneric("Blue_Rock_Candy.png",
+	pcons.push_back(new PconGeneric("Blue Rock Candy", "bluerock", "Blue_Rock_Candy.png",
 		ImVec2(0 / s, 4 / s), ImVec2(52 / s, 56 / s),
-		"Blue Rock Candy", ItemID::BRC, SkillID::Blue_Rock_Candy_Rush, 10));
+		ItemID::BRC, SkillID::Blue_Rock_Candy_Rush, 10));
 
-	pcons.push_back(new PconGeneric("Green_Rock_Candy.png",
+	pcons.push_back(new PconGeneric("Green Rock Candy", "greenrock", "Green_Rock_Candy.png",
 		ImVec2(0 / s, 4 / s), ImVec2(52 / s, 56 / s),
-		"Green Rock Candy", ItemID::GRC, SkillID::Green_Rock_Candy_Rush, 15));
+		ItemID::GRC, SkillID::Green_Rock_Candy_Rush, 15));
 
-	pcons.push_back(new PconGeneric("Golden_Egg.png",
+	pcons.push_back(new PconGeneric("Golden Egg", "egg", "Golden_Egg.png",
 		ImVec2(1 / s, 8 / s), ImVec2(48 / s, 55 / s),
-		"Golden Egg", ItemID::Eggs, SkillID::Golden_Egg_skill, 20));
+		ItemID::Eggs, SkillID::Golden_Egg_skill, 20));
 
-	pcons.push_back(new PconGeneric("Candy_Apple.png",
+	pcons.push_back(new PconGeneric("Candy Apple", "apple", "Candy_Apple.png",
 		ImVec2(0 / s, 7 / s), ImVec2(50 / s, 57 / s),
-		"Candy Apple", ItemID::Apples, SkillID::Candy_Apple_skill, 10));
+		ItemID::Apples, SkillID::Candy_Apple_skill, 10));
 
-	pcons.push_back(new PconGeneric("Candy_Corn.png",
+	pcons.push_back(new PconGeneric("Candy Corn", "corn", "Candy_Corn.png",
 		ImVec2(5 / s, 10 / s), ImVec2(48 / s, 53 / s),
-		"Candy Corn", ItemID::Corns, SkillID::Candy_Corn_skill, 10));
+		ItemID::Corns, SkillID::Candy_Corn_skill, 10));
 
-	pcons.push_back(new PconGeneric("Birthday_Cupcake.png",
+	pcons.push_back(new PconGeneric("Birthday Cupcake", "cupcake", "Birthday_Cupcake.png",
 		ImVec2(1 / s, 5 / s), ImVec2(51 / s, 55 / s),
-		"Birthday Cupcake", ItemID::Cupcakes, SkillID::Birthday_Cupcake_skill, 10));
+		ItemID::Cupcakes, SkillID::Birthday_Cupcake_skill, 10));
 
-	pcons.push_back(new PconGeneric("Slice_of_Pumpkin_Pie.png",
+	pcons.push_back(new PconGeneric("Slice of Pumpkin Pie", "pie", "Slice_of_Pumpkin_Pie.png",
 		ImVec2(0 / s, 7 / s), ImVec2(52 / s, 59 / s),
-		"Slice of Pumpkin Pie", ItemID::Pies, SkillID::Pie_Induced_Ecstasy, 10));
+		ItemID::Pies, SkillID::Pie_Induced_Ecstasy, 10));
 
-	pcons.push_back(new PconGeneric("War_Supplies.png",
+	pcons.push_back(new PconGeneric("War Supplies", "warsupply", "War_Supplies.png",
 		ImVec2(0 / s, 0 / s), ImVec2(63/s, 63/s),
-		"War Supplies", ItemID::Warsupplies, SkillID::Well_Supplied, 20));
+		ItemID::Warsupplies, SkillID::Well_Supplied, 20));
 
-	pcons.push_back(new PconAlcohol("Dwarven_Ale.png",
+	pcons.push_back(new PconAlcohol("Alcohol", "alcohol", "Dwarven_Ale.png",
 		ImVec2(-5 / s, 1 / s), ImVec2(57 / s, 63 / s),
-		"Alcohol", 10));
+		10));
 
-	pcons.push_back(new PconLunar("Lunar_Fortune.png",
+	pcons.push_back(new PconLunar("Lunar Fortunes", "lunars", "Lunar_Fortune.png",
 		ImVec2(1 / s, 4 / s), ImVec2(56 / s, 59 / s),
-		"Lunar Fortunes", 10));
+		10));
 
-	pcons.push_back(new PconCity("Sugary_Blue_Drink.png",
+	pcons.push_back(new PconCity("City speedboost", "city", "Sugary_Blue_Drink.png",
 		ImVec2(0 / s, 1 / s), ImVec2(61 / s, 62 / s),
-		"City speedboost", 20));
+		20));
 
-	pcons.push_back(new PconGeneric("Drake_Kabob.png",
+	pcons.push_back(new PconGeneric("Drake Kabob", "kabob", "Drake_Kabob.png",
 		ImVec2(0 / s, 0 / s), ImVec2(64 / s, 64 / s),
-		"Drake Kabob", ItemID::Kabobs, SkillID::Drake_Skin, 10));
+		ItemID::Kabobs, SkillID::Drake_Skin, 10));
 
-	pcons.push_back(new PconGeneric("Bowl_of_Skalefin_Soup.png",
+	pcons.push_back(new PconGeneric("Bowl of Skalefin Soup", "soup", "Bowl_of_Skalefin_Soup.png",
 		ImVec2(2 / s, 5 / s), ImVec2(51 / s, 54 / s),
-		"Bowl of Skalefin Soup", ItemID::SkalefinSoup, SkillID::Skale_Vigor, 10));
+		ItemID::SkalefinSoup, SkillID::Skale_Vigor, 10));
 
-	pcons.push_back(new PconGeneric("Pahnai_Salad.png",
+	pcons.push_back(new PconGeneric("Pahnai Salad", "salad", "Pahnai_Salad.png",
 		ImVec2(0 / s, 5 / s), ImVec2(49 / s, 54 / s),
-		"Pahnai Salad", ItemID::PahnaiSalad, SkillID::Pahnai_Salad_item_effect, 10));
+		ItemID::PahnaiSalad, SkillID::Pahnai_Salad_item_effect, 10));
 
 	for (Pcon* pcon : pcons) {
 		pcon->ScanInventory();
@@ -119,13 +120,25 @@ bool PconPanel::DrawTabButton(IDirect3DDevice9* device) {
 }
 
 void PconPanel::Draw(IDirect3DDevice9* device) {
+	if (!visible) return;
+	
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-	ImGui::Begin(Name(), &visible);
-	for (unsigned int i = 0; i < pcons.size(); ++i) {
-		if (i % items_per_row > 0) {
-			ImGui::SameLine();
+	if (ImGui::Begin(Name(), &visible)) {
+		ImGui::PushStyleColor(ImGuiCol_Text, enabled ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
+		if (ImGui::Button(enabled ? "Enabled###pconstoggle" : "Disabled###pconstoggle",
+			ImVec2(ImGui::GetWindowContentRegionWidth(), 0))) {
+			ToggleEnable();
 		}
-		pcons[i]->Draw(device);
+		ImGui::PopStyleColor();
+		int j = 0;
+		for (unsigned int i = 0; i < pcons.size(); ++i) {
+			if (pcons[i]->visible) {
+				if (j++ % items_per_row > 0) {
+					ImGui::SameLine();
+				}
+				pcons[i]->Draw(device);
+			}
+		}
 	}
 	ImGui::End();
 }
@@ -153,8 +166,14 @@ void PconPanel::Update() {
 
 bool PconPanel::SetEnabled(bool b) {
 	enabled = b;
-	if (!MainWindow::Instance().visible && !visible) {
-		ChatLogger::Log("Pcons %s", enabled ? "enabled" : "disabled");
+	if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading) {
+		ImGuiWindow* main = ImGui::FindWindowByName(MainWindow::Instance().Name());
+		ImGuiWindow* pcon = ImGui::FindWindowByName(Name());
+		if ((pcon == nullptr || pcon->Collapsed || !visible)
+			&& (main == nullptr || main->Collapsed || !MainWindow::Instance().visible)) {
+
+			ChatLogger::Log("Pcons %s", enabled ? "enabled" : "disabled");
+		}
 	}
 	if (tick_with_pcons && GW::Map().GetInstanceType() == GW::Constants::InstanceType::Outpost) {
 		GW::Partymgr().Tick(enabled);
@@ -171,7 +190,8 @@ void PconPanel::LoadSettings(CSimpleIni* ini) {
 	
 	tick_with_pcons = ini->GetBoolValue(Name(), "tick_with_pcons", true);
 	items_per_row = ini->GetLongValue(Name(), "items_per_row", 3);
-	Pcon::delay = ini->GetLongValue(Name(), "pcons_delay", 5000);
+	Pcon::pcons_delay = ini->GetLongValue(Name(), "pcons_delay", 5000);
+	Pcon::lunar_delay = ini->GetLongValue(Name(), "lunar_delay", 500);
 	Pcon::size = (float)ini->GetDoubleValue(Name(), "pconsize", 46.0);
 	Pcon::disable_when_not_found = ini->GetBoolValue(Name(), "disable_when_not_found", true);
 }
@@ -185,7 +205,8 @@ void PconPanel::SaveSettings(CSimpleIni* ini) {
 
 	ini->SetBoolValue(Name(), "tick_with_pcons", tick_with_pcons);
 	ini->SetLongValue(Name(), "items_per_row", items_per_row);
-	ini->SetLongValue(Name(), "pcons_delay", Pcon::delay);
+	ini->SetLongValue(Name(), "pcons_delay", Pcon::pcons_delay);
+	ini->SetLongValue(Name(), "lunar_delay", Pcon::lunar_delay);
 	ini->SetDoubleValue(Name(), "pconsize", Pcon::size);
 	ini->SetBoolValue(Name(), "disable_when_not_found", Pcon::disable_when_not_found);
 }
@@ -197,10 +218,25 @@ void PconPanel::DrawSettingInternal() {
 	ImGui::DragFloat("Pcon Size", &Pcon::size, 1.0f, 10.0f, 0.0f);
 	ImGui::ShowHelp("Size of each Pcon icon in the interface");
 	if (Pcon::size <= 1.0f) Pcon::size = 1.0f;
-	ImGui::SliderInt("Pcons delay", &Pcon::delay, 0, 5000);
+	ImGui::SliderInt("Pcons delay", &Pcon::pcons_delay, 100, 5000);
 	ImGui::ShowHelp(
 		"This value is used to prevent Toolbox from using the \n"
 		"same pcon twice, before it gets activated.\n"
 		"Decrease this value if you have good ping and you die a lot.");
+	ImGui::SliderInt("Lunars delay", &Pcon::lunar_delay, 100, 500);
 	ImGui::Checkbox("Disable when not found", &Pcon::disable_when_not_found);
+	ImGui::ShowHelp("Toolbx will disable a pcon if it is not found in the inventory");
+	if (ImGui::TreeNode("Thresholds")) {
+		ImGui::Text("When you have less than this amount:\n-The number in the interface becomes yellow.\n-Warning message is displayed when zoning into outpost.");
+		for (Pcon* pcon : pcons) {
+			ImGui::SliderInt(pcon->chat, &pcon->threshold, 0, 250);
+		}
+		ImGui::TreePop();
+	}
+	if (ImGui::TreeNode("Visibility")) {
+		for (Pcon* pcon : pcons) {
+			ImGui::Checkbox(pcon->chat, &pcon->visible);
+		}
+		ImGui::TreePop();
+	}
 }

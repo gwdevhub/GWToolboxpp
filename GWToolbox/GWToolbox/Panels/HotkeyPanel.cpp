@@ -23,84 +23,86 @@ void HotkeyPanel::Terminate() {
 }
 
 void HotkeyPanel::Draw(IDirect3DDevice9* pDevice) {
+	if (!visible) return;
 	// === hotkey panel ===
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(300, 400), ImGuiSetCond_FirstUseEver);
-	ImGui::Begin(Name(), &visible);
-	if (ImGui::Button("Create Hotkey...")) {
-		ImGui::OpenPopup("Create Hotkey");
-	}
-	if (ImGui::BeginPopup("Create Hotkey")) {
-		if (ImGui::Selectable("Send chat")) {
-			hotkeys.push_back(new HotkeySendChat(nullptr, nullptr));
+	if (ImGui::Begin(Name(), &visible)) {
+		if (ImGui::Button("Create Hotkey...", ImVec2(ImGui::GetWindowContentRegionWidth(), 0))) {
+			ImGui::OpenPopup("Create Hotkey");
 		}
-		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Send a message or command to chat");
-		if (ImGui::Selectable("Use Item")) {
-			hotkeys.push_back(new HotkeyUseItem(nullptr, nullptr));
-		}
-		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Use an item from your inventory");
-		if (ImGui::Selectable("Drop of Use Buff")) {
-			hotkeys.push_back(new HotkeyDropUseBuff(nullptr, nullptr));
-		}
-		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Use or cancel a skill such as Recall or UA");
-		if (ImGui::Selectable("Toggle...")) {
-			hotkeys.push_back(new HotkeyToggle(nullptr, nullptr));
-		}
-		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Toggle a GWToolbox++ functionality such as clicker\nor open/close a Toolbox++ window or widget");
-		if (ImGui::Selectable("Execute...")) {
-			hotkeys.push_back(new HotkeyAction(nullptr, nullptr));
-		}
-		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Execute a single task such as opening chests\nor reapplying lightbringer title");
-		if (ImGui::Selectable("Target")) {
-			hotkeys.push_back(new HotkeyTarget(nullptr, nullptr));
-		}
-		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Target a game entity by its ID");
-		if (ImGui::Selectable("Move to")) {
-			hotkeys.push_back(new HotkeyMove(nullptr, nullptr));
-		}
-		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move to a specific (x,y) coordinate");
-		if (ImGui::Selectable("Dialog")) {
-			hotkeys.push_back(new HotkeyDialog(nullptr, nullptr));
-		}
-		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Send a Dialog");
-		if (ImGui::Selectable("Ping build")) {
-			hotkeys.push_back(new HotkeyPingBuild(nullptr, nullptr));
-		}
-		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Ping a build from the Build Panel");
-		ImGui::EndPopup();
-	}
-
-	// === each hotkey ===
-	block_hotkeys = false;
-	for (unsigned int i = 0; i < hotkeys.size(); ++i) {
-		TBHotkey::Op op = TBHotkey::Op_None;
-		hotkeys[i]->Draw(&op);
-		switch (op) {
-		case TBHotkey::Op_None: break;
-		case TBHotkey::Op_MoveUp:
-			if (i > 0) std::swap(hotkeys[i], hotkeys[i - 1]);
-			break;
-		case TBHotkey::Op_MoveDown:
-			if (i < hotkeys.size() - 1) {
-				std::swap(hotkeys[i], hotkeys[i + 1]);
-				// render the moved one and increase i
-				TBHotkey::Op op2;
-				hotkeys[i++]->Draw(&op2);
+		if (ImGui::BeginPopup("Create Hotkey")) {
+			if (ImGui::Selectable("Send chat")) {
+				hotkeys.push_back(new HotkeySendChat(nullptr, nullptr));
 			}
-			break;
-		case TBHotkey::Op_Delete: {
-			TBHotkey* hk = hotkeys[i];
-			hotkeys.erase(hotkeys.begin() + i);
-			delete hk;
-			--i;
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Send a message or command to chat");
+			if (ImGui::Selectable("Use Item")) {
+				hotkeys.push_back(new HotkeyUseItem(nullptr, nullptr));
+			}
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Use an item from your inventory");
+			if (ImGui::Selectable("Drop of Use Buff")) {
+				hotkeys.push_back(new HotkeyDropUseBuff(nullptr, nullptr));
+			}
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Use or cancel a skill such as Recall or UA");
+			if (ImGui::Selectable("Toggle...")) {
+				hotkeys.push_back(new HotkeyToggle(nullptr, nullptr));
+			}
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Toggle a GWToolbox++ functionality such as clicker\nor open/close a Toolbox++ window or widget");
+			if (ImGui::Selectable("Execute...")) {
+				hotkeys.push_back(new HotkeyAction(nullptr, nullptr));
+			}
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Execute a single task such as opening chests\nor reapplying lightbringer title");
+			if (ImGui::Selectable("Target")) {
+				hotkeys.push_back(new HotkeyTarget(nullptr, nullptr));
+			}
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Target a game entity by its ID");
+			if (ImGui::Selectable("Move to")) {
+				hotkeys.push_back(new HotkeyMove(nullptr, nullptr));
+			}
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move to a specific (x,y) coordinate");
+			if (ImGui::Selectable("Dialog")) {
+				hotkeys.push_back(new HotkeyDialog(nullptr, nullptr));
+			}
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Send a Dialog");
+			if (ImGui::Selectable("Ping build")) {
+				hotkeys.push_back(new HotkeyPingBuild(nullptr, nullptr));
+			}
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Ping a build from the Build Panel");
+			ImGui::EndPopup();
 		}
-			break;
-		case TBHotkey::Op_BlockInput:
-			block_hotkeys = true;
-			break;
 
-		default:
-			break;
+		// === each hotkey ===
+		block_hotkeys = false;
+		for (unsigned int i = 0; i < hotkeys.size(); ++i) {
+			TBHotkey::Op op = TBHotkey::Op_None;
+			hotkeys[i]->Draw(&op);
+			switch (op) {
+			case TBHotkey::Op_None: break;
+			case TBHotkey::Op_MoveUp:
+				if (i > 0) std::swap(hotkeys[i], hotkeys[i - 1]);
+				break;
+			case TBHotkey::Op_MoveDown:
+				if (i < hotkeys.size() - 1) {
+					std::swap(hotkeys[i], hotkeys[i + 1]);
+					// render the moved one and increase i
+					TBHotkey::Op op2;
+					hotkeys[i++]->Draw(&op2);
+				}
+				break;
+			case TBHotkey::Op_Delete: {
+				TBHotkey* hk = hotkeys[i];
+				hotkeys.erase(hotkeys.begin() + i);
+				delete hk;
+				--i;
+			}
+									  break;
+			case TBHotkey::Op_BlockInput:
+				block_hotkeys = true;
+				break;
+
+			default:
+				break;
+			}
 		}
 	}
 	ImGui::End();

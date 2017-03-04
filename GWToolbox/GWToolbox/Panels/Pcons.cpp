@@ -14,19 +14,21 @@
 using namespace GW::Constants;
 
 float Pcon::size = 46.0f;
-int Pcon::delay = 5000;
+int Pcon::pcons_delay = 5000;
+int Pcon::lunar_delay = 500;
 bool Pcon::disable_when_not_found = true;
 DWORD Pcon::player_id = 0;
 
 // ================================================
-Pcon::Pcon(const char* file, 
-	ImVec2 uv0_, ImVec2 uv1_, 
-	const char* name, int threshold_) 
-	: chatName(name), threshold(threshold_),
+Pcon::Pcon(const char* chatname,
+	const char* ininame,
+	const char* filename,
+	ImVec2 uv0_, ImVec2 uv1_, int threshold_)
+	: chat(chatname), ini(ininame), threshold(threshold_),
 	uv0(uv0_), uv1(uv1_), texture(nullptr),
 	enabled(false), quantity(-1), timer(TIMER_INIT()) {
 
-	Resources::Instance().LoadTextureAsync(&texture, file, "img");
+	Resources::Instance().LoadTextureAsync(&texture, filename, "img");
 }
 void Pcon::Draw(IDirect3DDevice9* device) {
 	if (texture == nullptr) return;
@@ -59,8 +61,9 @@ void Pcon::Draw(IDirect3DDevice9* device) {
 	ImGui::SetCursorPos(pos);
 	ImGui::Dummy(ImVec2(size, size));
 }
-void Pcon::Update() {
+void Pcon::Update(int delay) {
 	if (!enabled) return; // not enabled, do nothing
+	if (delay < 0) delay = Pcon::pcons_delay;
 
 	GW::Agent* player = GW::Agents().GetPlayer();
 
@@ -82,7 +85,7 @@ void Pcon::Update() {
 				if (quantity == 0) { // if we just used the last one
 					mapid = GW::Map().GetMapID();
 					maptype = GW::Map().GetInstanceType();
-					ChatLogger::Err("Just used the last %s", chatName);
+					ChatLogger::Err("Just used the last %s", chat);
 					if (disable_when_not_found) enabled = false;
 				}
 			} else {
@@ -92,7 +95,7 @@ void Pcon::Update() {
 					|| maptype != GW::Map().GetInstanceType()) { // only yell at the user once
 					mapid = GW::Map().GetMapID();
 					maptype = GW::Map().GetInstanceType();
-					ChatLogger::Err("Cannot find %s", chatName);
+					ChatLogger::Err("Cannot find %s", chat);
 				}
 			}
 		}
@@ -106,9 +109,9 @@ void Pcon::Update() {
 		maptype = GW::Map().GetInstanceType();
 
 		if (quantity == 0) {
-			ChatLogger::Log("[Warning] Cannot find %s, please refill or disable", chatName);
+			ChatLogger::Log("[Warning] Cannot find %s, please refill or disable", chat);
 		} else if (quantity < threshold) {
-			ChatLogger::Log("[Warning] Low on %s, please refill or disable", chatName);
+			ChatLogger::Log("[Warning] Low on %s, please refill or disable", chat);
 		}
 	}
 }
@@ -149,10 +152,26 @@ bool Pcon::CanUseByInstanceType() const {
 	return GW::Map().GetInstanceType() == GW::Constants::InstanceType::Explorable;
 }
 void Pcon::LoadSettings(CSimpleIni* ini, const char* section) {
-	enabled = ini->GetBoolValue(section, chatName);
+	char buf_active[256];
+	char buf_threshold[256];
+	char buf_visible[256];
+	sprintf_s(buf_active, "%s_active", ini);
+	sprintf_s(buf_threshold, "%s_threshold", ini);
+	sprintf_s(buf_visible, "%s_visible", ini);
+	enabled = ini->GetBoolValue(section, buf_active);
+	threshold = ini->GetLongValue(section, buf_threshold, threshold);
+	visible = ini->GetBoolValue(section, buf_visible, true);
 }
 void Pcon::SaveSettings(CSimpleIni* ini, const char* section) {
-	ini->SetBoolValue(section, chatName, enabled);
+	char buf_active[256];
+	char buf_threshold[256];
+	char buf_visible[256];
+	sprintf_s(buf_active, "%s_active", ini);
+	sprintf_s(buf_threshold, "%s_threshold", ini);
+	sprintf_s(buf_visible, "%s_visible", ini);
+	ini->SetBoolValue(section, buf_active, enabled);
+	ini->SetLongValue(section, buf_threshold, threshold);
+	ini->SetBoolValue(section, buf_visible, visible);
 }
 
 // ================================================
@@ -265,11 +284,8 @@ int PconAlcohol::QuantityForEach(const GW::Item* item) const {
 }
 
 // ================================================
-void PconLunar::Update() {
-	int cur_delay = Pcon::delay;
-	Pcon::delay = 500;
-	Pcon::Update();
-	Pcon::delay = cur_delay;
+void PconLunar::Update(int delay) {
+	Pcon::Update(Pcon::lunar_delay);
 }
 int PconLunar::QuantityForEach(const GW::Item* item) const {
 	switch (item->ModelId) {

@@ -143,9 +143,6 @@ bool ChatFilter::FullMatch(const wchar_t* s, const std::initializer_list<wchar_t
 
 
 bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) {
-		//for (size_t i = 0; pak->message[i] != 0; ++i) printf(" 0x%X", pak->message[i]);
-		//printf("\n");
-
 	if (messagebycontent && ((pak->message[0] == 0x108)
 		|| (pak->message[0] == 0x8102 && pak->message[1] == 0xEFE))) {
 
@@ -282,6 +279,9 @@ bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) {
 	//	printf("\n");
 	//	return false;
 	}
+
+	//for (size_t i = 0; pak->message[i] != 0; ++i) printf(" 0x%X", pak->message[i]);
+	//printf("\n");
 
 	return false;
 }

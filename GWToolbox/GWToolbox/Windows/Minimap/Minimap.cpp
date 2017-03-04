@@ -44,7 +44,6 @@ void Minimap::Initialize() {
 	});
 	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P391_InstanceLoadFile>(
 		[this](GW::Packet::StoC::P391_InstanceLoadFile* packet) -> bool {
-		mapfile = packet->map_fileID;
 		pmap_renderer.Invalidate();
 		loading = false;
 		return false;

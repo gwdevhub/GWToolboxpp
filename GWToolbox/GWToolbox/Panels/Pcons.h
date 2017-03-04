@@ -11,20 +11,22 @@
 
 class Pcon {
 public:
-	static int delay;
+	static int pcons_delay;
+	static int lunar_delay;
 	static float size;
 	static bool disable_when_not_found;
 
 	static DWORD player_id;
 
 protected:
-	Pcon(const char* filename, 
-		ImVec2 uv0, ImVec2 uv1, 
-		const char* name, int threshold);
+	Pcon(const char* chatname,
+		const char* ininame, 
+		const char* filename, 
+		ImVec2 uv0, ImVec2 uv1, int threshold);
 
 public:
 	void Draw(IDirect3DDevice9* device);
-	void Update();
+	virtual void Update(int delay = -1);
 	void ScanInventory();
 	inline void Toggle() { enabled = !enabled; }
 
@@ -32,7 +34,15 @@ public:
 	void SaveSettings(CSimpleIni* ini, const char* section);
 
 public:
+	bool visible = true;
 	bool enabled = false;
+	int threshold; // quantity at which the number color goes from green to yellow and warning starts being displayed
+	int quantity = 0;
+
+	clock_t timer;
+
+	const char* const chat;
+	const char* const ini;
 
 protected:
 	void CheckUpdateTimer();
@@ -47,29 +57,25 @@ protected:
 	virtual bool CanUseByEffect() const = 0;
 	virtual int QuantityForEach(const GW::Item* item) const = 0;
 
-	int quantity = 0;
-
-	clock_t timer;
-
 private:
 	IDirect3DTexture9* texture = nullptr;
 	const ImVec2 uv0;
 	const ImVec2 uv1;
 
-	const char* const chatName;
-	const int threshold; // quantity at which the number color goes from green to yellow
-
 	GW::Constants::MapID mapid = GW::Constants::MapID::None;
 	GW::Constants::InstanceType maptype = GW::Constants::InstanceType::Loading;
-
 };
 
 // A generic Pcon has an item_id and effect_id
 class PconGeneric : public Pcon {
 public:
-	PconGeneric(const char* filename, ImVec2 uv0, ImVec2 uv1,
-		const char* name, DWORD item, GW::Constants::SkillID effect, int threshold)
-		: Pcon(filename, uv0, uv1, name, threshold),
+	PconGeneric(const char* chat,
+		const char* ini,
+		const char* file,
+		ImVec2 uv0, ImVec2 uv1,
+		DWORD item, GW::Constants::SkillID effect, 
+		int threshold)
+		: Pcon(chat, ini, file, uv0, uv1, threshold),
 		itemID(item), effectID(effect) {}
 
 protected:
@@ -84,17 +90,25 @@ private:
 // Same as generic pcon, but with more restrictions on usage
 class PconCons : public PconGeneric {
 public:
-	PconCons(const char* filename, ImVec2 uv0, ImVec2 uv1, 
-		const char* name, DWORD item, GW::Constants::SkillID effect, int threshold)
-		: PconGeneric(filename, uv0, uv1, name, item, effect, threshold) {}
+	PconCons(const char* chat,
+		const char* ini,
+		const char* file, 
+		ImVec2 uv0, ImVec2 uv1,
+		DWORD item, GW::Constants::SkillID effect, 
+		int threshold)
+		: PconGeneric(chat, ini, file, uv0, uv1, item, effect, threshold) {}
 
 	bool CanUseByEffect() const override;
 };
 
 class PconCity : public Pcon {
 public:
-	PconCity(const char* filename, ImVec2 uv0, ImVec2 uv1, const char* name, int threshold)
-		: Pcon(filename, uv0, uv1, name, threshold) {}
+	PconCity(const char* chat,
+		const char* ini,
+		const char* file, 
+		ImVec2 uv0, ImVec2 uv1, 
+		int threshold)
+		: Pcon(chat, ini, file, uv0, uv1, threshold) {}
 
 	bool CanUseByInstanceType() const;
 	bool CanUseByEffect() const override;
@@ -103,9 +117,12 @@ public:
 
 class PconAlcohol : public Pcon {
 public:
-	PconAlcohol(const char* filename, 
-		ImVec2 uv0, ImVec2 uv1, const char* name, int threshold)
-		: Pcon(filename, uv0, uv1, name, threshold) {}
+	PconAlcohol(const char* chat,
+		const char* ini,
+		const char* file,
+		ImVec2 uv0, ImVec2 uv1,
+		int threshold)
+		: Pcon(chat, ini, file, uv0, uv1, threshold) {}
 
 	bool CanUseByEffect() const override;
 	int QuantityForEach(const GW::Item* item) const override;
@@ -113,11 +130,14 @@ public:
 
 class PconLunar : public Pcon {
 public:
-	PconLunar(const char* filename, 
-		ImVec2 uv0, ImVec2 uv1, const char* name, int threshold)
-		: Pcon(filename, uv0, uv1, name, threshold) {}
+	PconLunar(const char* chat,
+		const char* ini,
+		const char* file,
+		ImVec2 uv0, ImVec2 uv1, 
+		int threshold)
+		: Pcon(chat, ini, file, uv0, uv1, threshold) {}
 
-	void Update();
+	void Update(int delay = -1) override;
 	bool CanUseByEffect() const override;
 	int QuantityForEach(const GW::Item* item) const override;
 };

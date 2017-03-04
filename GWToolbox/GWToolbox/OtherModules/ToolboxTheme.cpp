@@ -6,6 +6,35 @@
 #define IniFilename "Theme.ini"
 #define IniSection "Theme"
 
+ToolboxTheme::ToolboxTheme() {
+	ini_style = ImGuiStyle();
+	ini_style.WindowRounding = 6.0f;
+	ini_style.FrameRounding = 2.0f;
+	ini_style.ScrollbarSize = 16.0f;
+	ini_style.ScrollbarRounding = 4.0f;
+	ini_style.GrabMinSize = 17.0f;
+	ini_style.GrabRounding = 2.0f;
+	ini_style.Colors[ImGuiCol_WindowBg] = ImColor(0xD0000000);
+	ini_style.Colors[ImGuiCol_TitleBg] = ImColor(0xD7282828);
+	ini_style.Colors[ImGuiCol_TitleBgCollapsed] = ImColor(0x82282828);
+	ini_style.Colors[ImGuiCol_TitleBgActive] = ImColor(0xFF282828);
+	ini_style.Colors[ImGuiCol_MenuBarBg] = ImColor(0xFF000000);
+	ini_style.Colors[ImGuiCol_ScrollbarBg] = ImColor(0xCC141414);
+	ini_style.Colors[ImGuiCol_ScrollbarGrab] = ImColor(0xB3424954);
+	ini_style.Colors[ImGuiCol_ScrollbarGrabHovered] = ImColor(0xFF424954);
+	ini_style.Colors[ImGuiCol_ScrollbarGrabActive] = ImColor(0xFF565D68);
+	ini_style.Colors[ImGuiCol_SliderGrabActive] = ImColor(0xFFC8C8FF);
+	ini_style.Colors[ImGuiCol_Button] = ImColor(0x99344870);
+	ini_style.Colors[ImGuiCol_ButtonHovered] = ImColor(0xFF344870);
+	ini_style.Colors[ImGuiCol_ButtonActive] = ImColor(0xFF283C68);
+	ini_style.Colors[ImGuiCol_CloseButton] = ImColor(0x80808080);
+	ini_style.Colors[ImGuiCol_Header] = ImColor(0x73E62800);
+	ini_style.Colors[ImGuiCol_HeaderHovered] = ImColor(0xCCF03200);
+	ini_style.Colors[ImGuiCol_HeaderActive] = ImColor(0xCCFA3C00);
+	ini_style.Colors[ImGuiCol_CloseButtonHovered] = ImColor(0x99BDBDBD);
+	ini_style.Colors[ImGuiCol_CloseButtonActive] = ImColor(0xFFBDBDBD);
+}
+
 void ToolboxTheme::Terminate() {
 	ToolboxModule::Terminate();
 	if (inifile) inifile->Reset();
@@ -82,6 +111,8 @@ void ToolboxTheme::SaveSettings(CSimpleIni* ini) {
 	}
 
 	inifile->SaveFile(GuiUtils::getPath(IniFilename).c_str());
+
+	ini_style = style;
 }
 
 void ToolboxTheme::DrawSettingInternal() {

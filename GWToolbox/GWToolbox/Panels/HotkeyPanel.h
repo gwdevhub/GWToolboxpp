@@ -41,7 +41,6 @@ public:
 
 	bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
 
-	void DrawSettings() override {};
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
 

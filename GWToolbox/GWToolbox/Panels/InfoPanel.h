@@ -1,5 +1,8 @@
 #pragma once
 
+#include <vector>
+#include <string>
+
 #include "ToolboxPanel.h"
 
 class InfoPanel : public ToolboxPanel {
@@ -16,6 +19,8 @@ public:
 	void Initialize() override;
 
 	void Draw(IDirect3DDevice9* pDevice) override;
-	
-	void DrawSettings() override {};
+
+private:
+	DWORD mapfile = 0;
+	std::vector<std::string> resigned;
 };

@@ -34,17 +34,18 @@ void TimerWindow::Draw(IDirect3DDevice9* pDevice) {
 			&& GW::Map().GetInstanceType() == GW::Constants::InstanceType::Explorable) {
 			ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[GuiUtils::FontSize::f16]);
 			ImVec2 cur = ImGui::GetCursorPos();
+			int temp = (time - 1) % 25;
+			if (temp < 15) {
+				sprintf_s(urgoz_timer, "Open - %d", 15 - temp);
+			}  else {
+				sprintf_s(urgoz_timer, "Closed - %d", 25 - temp);
+			}
+
 			ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
 			ImGui::TextColored(ImColor(0, 0, 0), urgoz_timer);
 			ImGui::SetCursorPos(cur);
-			int temp = (time - 1) % 25;
-			if (temp < 15) {
-				sprintf_s(urgoz_timer, "Open - %02d", 15 - temp);
-				ImGui::TextColored(ImColor(0, 1, 0), urgoz_timer);
-			} else {
-				sprintf_s(urgoz_timer, "Closed - %02d", 25 - temp);
-				ImGui::TextColored(ImColor(1, 0, 0), urgoz_timer);
-			}
+			ImColor color = temp < 15 ? ImColor(0, 255, 0) : ImColor(255, 0, 0);
+			ImGui::TextColored(color, urgoz_timer);
 			ImGui::PopFont();
 		}
 	}

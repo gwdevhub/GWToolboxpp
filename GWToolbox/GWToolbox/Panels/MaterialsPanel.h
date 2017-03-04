@@ -33,8 +33,6 @@ public:
 	// Draw user interface. Will be called every frame if the element is visible
 	void Draw(IDirect3DDevice9* pDevice) override;
 
-	void DrawSettings() override {};
-
 private:
 	int* GetPricePtr(DWORD modelid);
 	std::string GetPrice(int p1, float m1,

@@ -46,8 +46,6 @@ public:
 	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
 
-	DWORD mapfile = 0;
-
 private:
 	bool IsInside(int x, int y) const;
 	// returns true if the map is visible, valid, not loading, etc

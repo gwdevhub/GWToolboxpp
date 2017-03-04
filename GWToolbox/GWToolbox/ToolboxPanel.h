@@ -21,11 +21,6 @@ public:
 		if (texture) texture->Release();
 	}
 
-	// Draw settings interface. Will be called if the setting panel is visible
-	// By default, encapsulate settings into an ImGui::CollapsingHeader(Name()), 
-	// show a reset position button and a 'visible' checkbox
-	virtual void DrawSettings() override;
-
 	// returns true if clicked
 	virtual bool DrawTabButton(IDirect3DDevice9* device);
 

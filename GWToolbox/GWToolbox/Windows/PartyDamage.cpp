@@ -174,11 +174,10 @@ void PartyDamage::CreatePartyIndexMap() {
 	}
 }
 
-void PartyDamage::Draw(IDirect3DDevice9* device) {
+void PartyDamage::Draw(IDirect3DDevice9* device) {	
 	if (!visible) return;
 	
 	int line_height = GuiUtils::GetPartyHealthbarHeight();
-
 	int size = GW::Partymgr().GetPartySize();
 	if (size > MAX_PLAYERS) size = MAX_PLAYERS;
 
@@ -205,62 +204,63 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 		flags |= ImGuiWindowFlags_NoInputs;
 	}
 	ImGui::SetNextWindowSize(ImVec2(width, (float)(size * line_height)));
-	ImGui::Begin(Name(), &visible, flags);
-	ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[GuiUtils::FontSize::f10]); // should be 9
-	float x = ImGui::GetWindowPos().x;
-	float y = ImGui::GetWindowPos().y;
-	float width = ImGui::GetWindowWidth();
-	const int BUF_SIZE = 16;
-	char buf[BUF_SIZE];
-	for (int i = 0; i < size; ++i) {
-		float part_of_max = 0;
-		if (max > 0) {
-			part_of_max = (float)(damage[i].damage) / max;
-		}
-		float bar_left = bars_left ? (x + width * (1.0f - part_of_max)) : (x);
-		float bar_right = bars_left ? (x + width) : (x + width * part_of_max);
-		ImGui::GetWindowDrawList()->AddRectFilledMultiColor(
-			ImVec2(bar_left, y + i * line_height),
-			ImVec2(bar_right, y + (i + 1) * line_height),
-			Colors::Add(color_damage, Colors::ARGB(0, 20, 20, 20)), 
-			Colors::Add(color_damage, Colors::ARGB(0, 20, 20, 20)),
-			Colors::Sub(color_damage, Colors::ARGB(0, 20, 20, 20)),
-			Colors::Sub(color_damage, Colors::ARGB(0, 20, 20, 20)));
+	if (ImGui::Begin(Name(), &visible, flags)) {
+		ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[GuiUtils::FontSize::f10]); // should be 9
+		float x = ImGui::GetWindowPos().x;
+		float y = ImGui::GetWindowPos().y;
+		float width = ImGui::GetWindowWidth();
+		const int BUF_SIZE = 16;
+		char buf[BUF_SIZE];
+		for (int i = 0; i < size; ++i) {
+			float part_of_max = 0;
+			if (max > 0) {
+				part_of_max = (float)(damage[i].damage) / max;
+			}
+			float bar_left = bars_left ? (x + width * (1.0f - part_of_max)) : (x);
+			float bar_right = bars_left ? (x + width) : (x + width * part_of_max);
+			ImGui::GetWindowDrawList()->AddRectFilledMultiColor(
+				ImVec2(bar_left, y + i * line_height),
+				ImVec2(bar_right, y + (i + 1) * line_height),
+				Colors::Add(color_damage, Colors::ARGB(0, 20, 20, 20)),
+				Colors::Add(color_damage, Colors::ARGB(0, 20, 20, 20)),
+				Colors::Sub(color_damage, Colors::ARGB(0, 20, 20, 20)),
+				Colors::Sub(color_damage, Colors::ARGB(0, 20, 20, 20)));
 
-		float part_of_recent = 0;
-		if (max_recent > 0) {
-			part_of_recent = (float)(damage[i].recent_damage) / max_recent;
-		}
-		float recent_left = bars_left ? (x + width * (1.0f - part_of_recent)) : (x);
-		float recent_right = bars_left ? (x + width) : (x + width * part_of_recent);
-		ImGui::GetWindowDrawList()->AddRectFilledMultiColor(
-			ImVec2(recent_left, y + (i + 1) * line_height - 6),
-			ImVec2(recent_right, y + (i + 1) * line_height),
-			Colors::Add(color_recent, Colors::ARGB(0, 20, 20, 20)),
-			Colors::Add(color_recent, Colors::ARGB(0, 20, 20, 20)),
-			Colors::Sub(color_recent, Colors::ARGB(0, 20, 20, 20)),
-			Colors::Sub(color_recent, Colors::ARGB(0, 20, 20, 20)));
+			float part_of_recent = 0;
+			if (max_recent > 0) {
+				part_of_recent = (float)(damage[i].recent_damage) / max_recent;
+			}
+			float recent_left = bars_left ? (x + width * (1.0f - part_of_recent)) : (x);
+			float recent_right = bars_left ? (x + width) : (x + width * part_of_recent);
+			ImGui::GetWindowDrawList()->AddRectFilledMultiColor(
+				ImVec2(recent_left, y + (i + 1) * line_height - 6),
+				ImVec2(recent_right, y + (i + 1) * line_height),
+				Colors::Add(color_recent, Colors::ARGB(0, 20, 20, 20)),
+				Colors::Add(color_recent, Colors::ARGB(0, 20, 20, 20)),
+				Colors::Sub(color_recent, Colors::ARGB(0, 20, 20, 20)),
+				Colors::Sub(color_recent, Colors::ARGB(0, 20, 20, 20)));
 
-		if (damage[i].damage < 1000) {
-			sprintf_s(buf, BUF_SIZE, "%d", damage[i].damage);
-		} else if (damage[i].damage < 1000 * 10) {
-			sprintf_s(buf, BUF_SIZE, "%.2f k", (float)damage[i].damage / 1000);
-		} else if (damage[i].damage < 1000 * 1000) {
-			sprintf_s(buf, BUF_SIZE, "%.1f k", (float)damage[i].damage / 1000);
-		} else {
-			sprintf_s(buf, BUF_SIZE, "%.2f m", (float)damage[i].damage / (1000 * 1000));
-		}
-		ImGui::GetWindowDrawList()->AddText(
-			ImVec2(x + ImGui::GetStyle().ItemSpacing.x, y + i * line_height), 
-			IM_COL32(255, 255, 255, 255), buf);
+			if (damage[i].damage < 1000) {
+				sprintf_s(buf, BUF_SIZE, "%d", damage[i].damage);
+			} else if (damage[i].damage < 1000 * 10) {
+				sprintf_s(buf, BUF_SIZE, "%.2f k", (float)damage[i].damage / 1000);
+			} else if (damage[i].damage < 1000 * 1000) {
+				sprintf_s(buf, BUF_SIZE, "%.1f k", (float)damage[i].damage / 1000);
+			} else {
+				sprintf_s(buf, BUF_SIZE, "%.2f m", (float)damage[i].damage / (1000 * 1000));
+			}
+			ImGui::GetWindowDrawList()->AddText(
+				ImVec2(x + ImGui::GetStyle().ItemSpacing.x, y + i * line_height),
+				IM_COL32(255, 255, 255, 255), buf);
 
-		float perc_of_total = GetPercentageOfTotal(damage[i].damage);
-		sprintf_s(buf, BUF_SIZE, "%.1f %%", perc_of_total);
-		ImGui::GetWindowDrawList()->AddText(
-			ImVec2(x + width / 2, y + i * line_height),
-			IM_COL32(255, 255, 255, 255), buf);
+			float perc_of_total = GetPercentageOfTotal(damage[i].damage);
+			sprintf_s(buf, BUF_SIZE, "%.1f %%", perc_of_total);
+			ImGui::GetWindowDrawList()->AddText(
+				ImVec2(x + width / 2, y + i * line_height),
+				IM_COL32(255, 255, 255, 255), buf);
+		}
+		ImGui::PopFont();
 	}
-	ImGui::PopFont();
 	ImGui::End();
 	ImGui::PopStyleColor(); // window bg
 	ImGui::PopStyleVar(2);

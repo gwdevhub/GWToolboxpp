@@ -45,7 +45,14 @@
 #include <Windows\ClockWindow.h>
 #include <Windows\NotePadWindow.h>
 
-#include <Panels\HotkeyPanel.h>
+#include "Panels\PconPanel.h"
+#include "Panels\HotkeyPanel.h"
+#include "Panels\TravelPanel.h"
+#include "Panels\BuildPanel.h"
+#include "Panels\DialogPanel.h"
+#include "Panels\InfoPanel.h"
+#include "Panels\MaterialsPanel.h"
+#include "Panels\SettingsPanel.h"
 
 HRESULT WINAPI EndScene(IDirect3DDevice9* pDevice);
 HRESULT WINAPI ResetScene(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETERS* pPresentationParameters);
@@ -266,6 +273,15 @@ void GWToolbox::Initialize() {
 	modules.push_back(&ToolboxTheme::Instance());
 
 	modules.push_back(&MainWindow::Instance());
+	modules.push_back(&PconPanel::Instance());
+	modules.push_back(&HotkeyPanel::Instance());
+	modules.push_back(&BuildPanel::Instance());
+	modules.push_back(&TravelPanel::Instance());
+	modules.push_back(&DialogPanel::Instance());
+	modules.push_back(&InfoPanel::Instance());
+	modules.push_back(&MaterialsPanel::Instance());
+	modules.push_back(&SettingsPanel::Instance());
+
 	modules.push_back(&TimerWindow::Instance());
 	modules.push_back(&HealthWindow::Instance());
 	modules.push_back(&DistanceWindow::Instance());

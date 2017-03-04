@@ -3,7 +3,7 @@
 #include <ToolboxModule.h>
 
 class ToolboxTheme : public ToolboxModule {
-	ToolboxTheme() {};
+	ToolboxTheme();
 	~ToolboxTheme() {};
 public:
 	static ToolboxTheme& Instance() {

@@ -30,77 +30,80 @@ void TravelPanel::TravelButton(const char* text, int x_idx, GW::Constants::MapID
 }
 
 void TravelPanel::Draw(IDirect3DDevice9* pDevice) {
+	if (!visible) return;
+	
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
-	ImGui::Begin(Name(), &visible);
-	ImGui::PushItemWidth(-1.0f);
-	static int travelto_index = N_OUTPOSTS - 1;
-	if (ImGui::Combo("###travelto", &travelto_index, travelpanel_arraygetter, nullptr, N_OUTPOSTS)) {
-		GW::Constants::MapID id = IndexToOutpostID(travelto_index);
-		GW::Map().Travel(id, district, district_number);
-		travelto_index = N_OUTPOSTS - 1;
-	}
-
-	static int district_index = 0;
-	static const char* const district_words[] = { "Current District",
-		"International",
-		"American",
-		"American District 1",
-		"Europe English",
-		"Europe French",
-		"Europe German",
-		"Europe Italian",
-		"Europe Spanish",
-		"Europe Polish",
-		"Europe Russian",
-		"Asian Korean",
-		"Asia Chinese",
-		"Asia Japanese", };
-	if (ImGui::Combo("###district", &district_index, district_words, N_DISTRICTS)) {
-		district_number = 0;
-		switch (district_index) {
-		case 0: district = GW::Constants::District::Current; break;
-		case 1: district = GW::Constants::District::International; break;
-		case 2: district = GW::Constants::District::American; break;
-		case 3: // American District 1
-			district = GW::Constants::District::American;
-			district_number = 1;
-			break;
-		case 4: district = GW::Constants::District::EuropeEnglish; break;
-		case 5: district = GW::Constants::District::EuropeFrench; break;
-		case 6: district = GW::Constants::District::EuropeGerman; break;
-		case 7: district = GW::Constants::District::EuropeItalian; break;
-		case 8: district = GW::Constants::District::EuropeSpanish; break;
-		case 9: district = GW::Constants::District::EuropePolish; break;
-		case 10: district = GW::Constants::District::EuropeRussian; break;
-		case 11: district = GW::Constants::District::AsiaKorean; break;
-		case 12: district = GW::Constants::District::AsiaChinese; break;
-		case 13: district = GW::Constants::District::AsiaJapanese; break;
-		default:
-			break;
+	if (ImGui::Begin(Name(), &visible)) {
+		ImGui::PushItemWidth(-1.0f);
+		static int travelto_index = N_OUTPOSTS - 1;
+		if (ImGui::Combo("###travelto", &travelto_index, travelpanel_arraygetter, nullptr, N_OUTPOSTS)) {
+			GW::Constants::MapID id = IndexToOutpostID(travelto_index);
+			GW::Map().Travel(id, district, district_number);
+			travelto_index = N_OUTPOSTS - 1;
 		}
-	}
-	ImGui::PopItemWidth();
 
-	TravelButton("ToA", 0, GW::Constants::MapID::Temple_of_the_Ages);
-	TravelButton("DoA", 1, GW::Constants::MapID::Domain_of_Anguish);
-	TravelButton("Kamadan", 0, GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost);
-	TravelButton("Embark", 1, GW::Constants::MapID::Embark_Beach);
-	TravelButton("Vlox's", 0, GW::Constants::MapID::Vloxs_Falls);
-	TravelButton("Gadd's", 1, GW::Constants::MapID::Gadds_Encampment_outpost);
-	TravelButton("Urgoz", 0, GW::Constants::MapID::Urgozs_Warren);
-	TravelButton("Deep", 1, GW::Constants::MapID::The_Deep);
-
-	for (int i = 0; i < fav_count; ++i) {
-		ImGui::PushID(i);
-		ImGui::PushItemWidth(-40.0f - ImGui::GetStyle().ItemInnerSpacing.x);
-		ImGui::Combo("", &fav_index[i], travelpanel_arraygetter, nullptr, N_OUTPOSTS);
+		static int district_index = 0;
+		static const char* const district_words[] = { "Current District",
+			"International",
+			"American",
+			"American District 1",
+			"Europe English",
+			"Europe French",
+			"Europe German",
+			"Europe Italian",
+			"Europe Spanish",
+			"Europe Polish",
+			"Europe Russian",
+			"Asian Korean",
+			"Asia Chinese",
+			"Asia Japanese", };
+		if (ImGui::Combo("###district", &district_index, district_words, N_DISTRICTS)) {
+			district_number = 0;
+			switch (district_index) {
+			case 0: district = GW::Constants::District::Current; break;
+			case 1: district = GW::Constants::District::International; break;
+			case 2: district = GW::Constants::District::American; break;
+			case 3: // American District 1
+				district = GW::Constants::District::American;
+				district_number = 1;
+				break;
+			case 4: district = GW::Constants::District::EuropeEnglish; break;
+			case 5: district = GW::Constants::District::EuropeFrench; break;
+			case 6: district = GW::Constants::District::EuropeGerman; break;
+			case 7: district = GW::Constants::District::EuropeItalian; break;
+			case 8: district = GW::Constants::District::EuropeSpanish; break;
+			case 9: district = GW::Constants::District::EuropePolish; break;
+			case 10: district = GW::Constants::District::EuropeRussian; break;
+			case 11: district = GW::Constants::District::AsiaKorean; break;
+			case 12: district = GW::Constants::District::AsiaChinese; break;
+			case 13: district = GW::Constants::District::AsiaJapanese; break;
+			default:
+				break;
+			}
+		}
 		ImGui::PopItemWidth();
-		ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-		if (ImGui::Button("Go", ImVec2(40.0f, 0))) {
-			TravelFavorite(i);
+
+		TravelButton("ToA", 0, GW::Constants::MapID::Temple_of_the_Ages);
+		TravelButton("DoA", 1, GW::Constants::MapID::Domain_of_Anguish);
+		TravelButton("Kamadan", 0, GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost);
+		TravelButton("Embark", 1, GW::Constants::MapID::Embark_Beach);
+		TravelButton("Vlox's", 0, GW::Constants::MapID::Vloxs_Falls);
+		TravelButton("Gadd's", 1, GW::Constants::MapID::Gadds_Encampment_outpost);
+		TravelButton("Urgoz", 0, GW::Constants::MapID::Urgozs_Warren);
+		TravelButton("Deep", 1, GW::Constants::MapID::The_Deep);
+
+		for (int i = 0; i < fav_count; ++i) {
+			ImGui::PushID(i);
+			ImGui::PushItemWidth(-40.0f - ImGui::GetStyle().ItemInnerSpacing.x);
+			ImGui::Combo("", &fav_index[i], travelpanel_arraygetter, nullptr, N_OUTPOSTS);
+			ImGui::PopItemWidth();
+			ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+			if (ImGui::Button("Go", ImVec2(40.0f, 0))) {
+				TravelFavorite(i);
+			}
+			ImGui::PopID();
 		}
-		ImGui::PopID();
 	}
 	ImGui::End();
 }

@@ -1,15 +1,8 @@
 #include "ToolboxPanel.h"
 
-void ToolboxPanel::DrawSettings() {
-	if (ImGui::TreeNode(Name())) {
-		DrawSettingInternal();
-		ImGui::TreePop();
-	}
-}
-
 bool ToolboxPanel::DrawTabButton(IDirect3DDevice9* device) {
 	ImGui::PushStyleColor(ImGuiCol_Button, visible ?
-		ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered] : ImVec4(0, 0, 0, 0));
+		ImGui::GetStyle().Colors[ImGuiCol_Button] : ImVec4(0, 0, 0, 0));
 	ImVec2 pos = ImGui::GetCursorScreenPos();
 	ImVec2 textsize = ImGui::CalcTextSize(Name());
 	float width = ImGui::GetWindowContentRegionWidth();

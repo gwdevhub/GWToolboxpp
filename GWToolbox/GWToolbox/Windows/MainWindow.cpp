@@ -31,46 +31,20 @@ void MainWindow::Initialize() {
 	panels.push_back(&InfoPanel::Instance());
 	panels.push_back(&MaterialsPanel::Instance());
 	panels.push_back(&SettingsPanel::Instance());
-
-	for (ToolboxPanel* panel : panels) {
-		panel->Initialize();
-	}
-}
-void MainWindow::Terminate() {
-	ToolboxWindow::Terminate();
-	for (ToolboxPanel* panel : panels) {
-		panel->Terminate();
-	}
-}
-void MainWindow::Update() {
-	for (ToolboxPanel* panel : panels) {
-		panel->Update();
-	}
 }
 
 void MainWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini); // don't load visible
 	visible = true;
-
-	for (ToolboxPanel* panel : panels) {
-		panel->LoadSettings(ini);
-	}
 	one_panel_at_time_only = ini->GetBoolValue(Name(), "one_panel_at_time_only", true);
 }
 
 void MainWindow::SaveSettings(CSimpleIni* ini) {
 	ToolboxModule::SaveSettings(ini); // don't save visible
-
-	for (ToolboxPanel* panel : panels) {
-		panel->SaveSettings(ini);
-	}
 	ini->SetBoolValue(Name(), "one_panel_at_time_only", one_panel_at_time_only);
 }
 void MainWindow::DrawSettingInternal() {
 	ImGui::Checkbox("One panel at a time", &one_panel_at_time_only);
-	for (ToolboxPanel* panel : panels) {
-		panel->DrawSettings();
-	}
 }
 
 void MainWindow::Draw(IDirect3DDevice9* device) {
@@ -98,8 +72,4 @@ void MainWindow::Draw(IDirect3DDevice9* device) {
 	ImGui::End();
 
 	if (!open) GWToolbox::Instance().StartSelfDestruct();
-
-	for (ToolboxPanel* panel : panels) {
-		if (panel->visible) panel->Draw(device);
-	}
 }

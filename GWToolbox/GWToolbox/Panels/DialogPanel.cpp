@@ -12,6 +12,7 @@ void DialogPanel::Initialize() {
 }
 
 void DialogPanel::Draw(IDirect3DDevice9* pDevice) {
+	if (!visible) return;
 	auto DialogButton = [](int x_idx, int x_qty, const char* text, const char* help, DWORD dialog) -> void {
 		if (x_idx != 0) ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 		float w = (ImGui::GetWindowContentRegionWidth()
@@ -26,130 +27,131 @@ void DialogPanel::Draw(IDirect3DDevice9* pDevice) {
 
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
-	ImGui::Begin(Name(), &visible);
+	if (ImGui::Begin(Name(), &visible)) {
 
-	if (show_common) {
-		DialogButton(0, 2, "Four Horseman", "Take quest in Planes", QuestAcceptDialog(GW::Constants::QuestID::UW::Planes));
-		DialogButton(1, 2, "Demon Assassin", "Take quest in Mountains", QuestAcceptDialog(GW::Constants::QuestID::UW::Mnt));
-		DialogButton(0, 2, "Tower of Strength", "Take quest", QuestAcceptDialog(GW::Constants::QuestID::Fow::Tos));
-		DialogButton(1, 2, "Foundry Reward", "Accept quest reward", QuestRewardDialog(GW::Constants::QuestID::Doa::FoundryBreakout));
-		ImGui::Separator();
-	}
-	if (show_uwteles) {
-		DialogButton(0, 4, "Lab", "Teleport Lab", GW::Constants::DialogID::UwTeleLab);
-		DialogButton(1, 4, "Vale", "Teleport Vale", GW::Constants::DialogID::UwTeleVale);
-		DialogButton(2, 4, "Pits", "Teleport Pits", GW::Constants::DialogID::UwTelePits);
-		DialogButton(3, 4, "Pools", "Teleport Pools", GW::Constants::DialogID::UwTelePools);
+		if (show_common) {
+			DialogButton(0, 2, "Four Horseman", "Take quest in Planes", QuestAcceptDialog(GW::Constants::QuestID::UW::Planes));
+			DialogButton(1, 2, "Demon Assassin", "Take quest in Mountains", QuestAcceptDialog(GW::Constants::QuestID::UW::Mnt));
+			DialogButton(0, 2, "Tower of Strength", "Take quest", QuestAcceptDialog(GW::Constants::QuestID::Fow::Tos));
+			DialogButton(1, 2, "Foundry Reward", "Accept quest reward", QuestRewardDialog(GW::Constants::QuestID::Doa::FoundryBreakout));
+			ImGui::Separator();
+		}
+		if (show_uwteles) {
+			DialogButton(0, 4, "Lab", "Teleport Lab", GW::Constants::DialogID::UwTeleLab);
+			DialogButton(1, 4, "Vale", "Teleport Vale", GW::Constants::DialogID::UwTeleVale);
+			DialogButton(2, 4, "Pits", "Teleport Pits", GW::Constants::DialogID::UwTelePits);
+			DialogButton(3, 4, "Pools", "Teleport Pools", GW::Constants::DialogID::UwTelePools);
 
-		DialogButton(0, 3, "Planes", "Teleport Planes", GW::Constants::DialogID::UwTelePlanes);
-		DialogButton(1, 3, "Wastes", "Telport Wastes", GW::Constants::DialogID::UwTeleWastes);
-		DialogButton(2, 3, "Mountains", "Teleport Mountains\nThis is NOT the mountains quest", GW::Constants::DialogID::UwTeleMnt);
-		ImGui::Separator();
-	}
-	const int n_quests = 29;
-	static const char* const questnames[] = { "UW - Chamber",
-		"UW - Wastes",
-		"UW - UWG",
-		"UW - Mnt",
-		"UW - Pits",
-		"UW - Planes",
-		"UW - Pools",
-		"UW - Escort",
-		"UW - Restore",
-		"UW - Vale",
-		"FoW - Defend",
-		"FoW - Army Of Darkness",
-		"FoW - WailingLord",
-		"FoW - Griffons",
-		"FoW - Slaves",
-		"FoW - Restore",
-		"FoW - Hunt",
-		"FoW - Forgemaster",
-		"FoW - Tos",
-		"FoW - Toc",
-		"FoW - Khobay",
-		"DoA - Gloom 1: Deathbringer Company",
-		"DoA - Gloom 2: The Rifts Between Us",
-		"DoA - Gloom 3: To The Rescue",
-		"DoA - City",
-		"DoA - Veil 1: Breaching Stygian Veil",
-		"DoA - Veil 2: Brood Wars",
-		"DoA - Foundry 1: Foundry Of Failed Creations",
-		"DoA - Foundry 2: Foundry Breakout"
-	};
-	if (show_favorites) {
-		for (int i = 0; i < fav_count; ++i) {
-			ImGui::PushID(i);
-			ImGui::PushItemWidth(-100.0f - ImGui::GetStyle().ItemInnerSpacing.x * 2);
-			ImGui::Combo("", &fav_index[i], questnames, n_quests);
+			DialogButton(0, 3, "Planes", "Teleport Planes", GW::Constants::DialogID::UwTelePlanes);
+			DialogButton(1, 3, "Wastes", "Telport Wastes", GW::Constants::DialogID::UwTeleWastes);
+			DialogButton(2, 3, "Mountains", "Teleport Mountains\nThis is NOT the mountains quest", GW::Constants::DialogID::UwTeleMnt);
+			ImGui::Separator();
+		}
+		const int n_quests = 29;
+		static const char* const questnames[] = { "UW - Chamber",
+			"UW - Wastes",
+			"UW - UWG",
+			"UW - Mnt",
+			"UW - Pits",
+			"UW - Planes",
+			"UW - Pools",
+			"UW - Escort",
+			"UW - Restore",
+			"UW - Vale",
+			"FoW - Defend",
+			"FoW - Army Of Darkness",
+			"FoW - WailingLord",
+			"FoW - Griffons",
+			"FoW - Slaves",
+			"FoW - Restore",
+			"FoW - Hunt",
+			"FoW - Forgemaster",
+			"FoW - Tos",
+			"FoW - Toc",
+			"FoW - Khobay",
+			"DoA - Gloom 1: Deathbringer Company",
+			"DoA - Gloom 2: The Rifts Between Us",
+			"DoA - Gloom 3: To The Rescue",
+			"DoA - City",
+			"DoA - Veil 1: Breaching Stygian Veil",
+			"DoA - Veil 2: Brood Wars",
+			"DoA - Foundry 1: Foundry Of Failed Creations",
+			"DoA - Foundry 2: Foundry Breakout"
+		};
+		if (show_favorites) {
+			for (int i = 0; i < fav_count; ++i) {
+				ImGui::PushID(i);
+				ImGui::PushItemWidth(-100.0f - ImGui::GetStyle().ItemInnerSpacing.x * 2);
+				ImGui::Combo("", &fav_index[i], questnames, n_quests);
+				ImGui::PopItemWidth();
+				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+				if (ImGui::Button("Take", ImVec2(40.0f, 0))) {
+					GW::Agents().Dialog(QuestAcceptDialog(IndexToQuestID(fav_index[i])));
+				}
+				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+				if (ImGui::Button("Reward", ImVec2(60.0f, 0))) {
+					GW::Agents().Dialog(QuestRewardDialog(IndexToDialogID(fav_index[i])));
+				}
+				ImGui::PopID();
+			}
+			ImGui::Separator();
+		}
+		if (show_custom) {
+			const int n_dialogs = 15;
+			static const char* const dialognames[] = { "Craft fow armor",
+				"Prof Change - Warrior",
+				"Prof Change - Ranger",
+				"Prof Change - Monk",
+				"Prof Change - Necro",
+				"Prof Change - Mesmer",
+				"Prof Change - Elementalist",
+				"Prof Change - Assassin",
+				"Prof Change - Rirtualist",
+				"Prof Change - Paragon",
+				"Prof Change - Dervish",
+				"Kama -> Docks @ Hahnna",
+				"Docks -> Kaineng @ Mhenlo",
+				"Docks -> LA Gate @ Mhenlo",
+				"LA Gate -> LA @ Neiro" };
+			static int dialogindex = 0;
+			ImGui::PushItemWidth(-60.0f - ImGui::GetStyle().ItemInnerSpacing.x);
+			ImGui::Combo("###dialogcombo", &dialogindex, dialognames, n_dialogs);
 			ImGui::PopItemWidth();
 			ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-			if (ImGui::Button("Take", ImVec2(40.0f, 0))) {
-				GW::Agents().Dialog(QuestAcceptDialog(IndexToQuestID(fav_index[i])));
+			if (ImGui::Button("Send", ImVec2(60.0f, 0))) {
+				GW::Agents().Dialog(IndexToDialogID(dialogindex));
+			}
+
+			static bool hex = false;
+			static char customdialogbuf[64] = "";
+			if (ImGui::Button(hex ? "Hex" : "Dec", ImVec2(32.0f, 0))) {
+				try {
+					if (hex) { // was hex, convert to dec
+						long id = std::stol(customdialogbuf, 0, 16);
+						sprintf_s(customdialogbuf, "%d", id);
+					} else { // was dec, convert to hex
+						long id = std::stol(customdialogbuf, 0, 10);
+						sprintf_s(customdialogbuf, "%X", id);
+					}
+				} catch (...) {}
+				hex = !hex;
+			}
+			if (ImGui::IsItemHovered()) {
+				ImGui::SetTooltip(hex ? "Dialog ID is in hexadecimal value\nClick to convert to decimal"
+					: "Dialog ID is in decimal value\nClick to convert to hexadecimal");
 			}
 			ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-			if (ImGui::Button("Reward", ImVec2(60.0f, 0))) {
-				GW::Agents().Dialog(QuestRewardDialog(IndexToDialogID(fav_index[i])));
+			ImGuiInputTextFlags flag = (hex ? ImGuiInputTextFlags_CharsHexadecimal : ImGuiInputTextFlags_CharsDecimal);
+			ImGui::PushItemWidth(-60.0f - ImGui::GetStyle().ItemInnerSpacing.x);
+			ImGui::InputText("###dialoginput", customdialogbuf, 64, flag);
+			ImGui::PopItemWidth();
+			ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+			if (ImGui::Button("Send", ImVec2(60.0f, 0))) {
+				try {
+					long id = std::stol(customdialogbuf, 0, hex ? 16 : 10);
+					GW::Agents().Dialog(id);
+				} catch (...) {}
 			}
-			ImGui::PopID();
-		}
-		ImGui::Separator();
-	}
-	if (show_custom) {
-		const int n_dialogs = 15;
-		static const char* const dialognames[] = { "Craft fow armor",
-			"Prof Change - Warrior",
-			"Prof Change - Ranger",
-			"Prof Change - Monk",
-			"Prof Change - Necro",
-			"Prof Change - Mesmer",
-			"Prof Change - Elementalist",
-			"Prof Change - Assassin",
-			"Prof Change - Rirtualist",
-			"Prof Change - Paragon",
-			"Prof Change - Dervish",
-			"Kama -> Docks @ Hahnna",
-			"Docks -> Kaineng @ Mhenlo",
-			"Docks -> LA Gate @ Mhenlo",
-			"LA Gate -> LA @ Neiro" };
-		static int dialogindex = 0;
-		ImGui::PushItemWidth(-60.0f - ImGui::GetStyle().ItemInnerSpacing.x);
-		ImGui::Combo("###dialogcombo", &dialogindex, dialognames, n_dialogs);
-		ImGui::PopItemWidth();
-		ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-		if (ImGui::Button("Send", ImVec2(60.0f, 0))) {
-			GW::Agents().Dialog(IndexToDialogID(dialogindex));
-		}
-
-		static bool hex = false;
-		static char customdialogbuf[64] = "";
-		if (ImGui::Button(hex ? "Hex" : "Dec", ImVec2(32.0f, 0))) {
-			try {
-				if (hex) { // was hex, convert to dec
-					long id = std::stol(customdialogbuf, 0, 16);
-					sprintf_s(customdialogbuf, "%d", id);
-				} else { // was dec, convert to hex
-					long id = std::stol(customdialogbuf, 0, 10);
-					sprintf_s(customdialogbuf, "%X", id);
-				}
-			} catch (...) {}
-			hex = !hex;
-		}
-		if (ImGui::IsItemHovered()) {
-			ImGui::SetTooltip(hex ? "Dialog ID is in hexadecimal value\nClick to convert to decimal"
-				: "Dialog ID is in decimal value\nClick to convert to hexadecimal");
-		}
-		ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-		ImGuiInputTextFlags flag = (hex ? ImGuiInputTextFlags_CharsHexadecimal : ImGuiInputTextFlags_CharsDecimal);
-		ImGui::PushItemWidth(-60.0f - ImGui::GetStyle().ItemInnerSpacing.x);
-		ImGui::InputText("###dialoginput", customdialogbuf, 64, flag);
-		ImGui::PopItemWidth();
-		ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-		if (ImGui::Button("Send", ImVec2(60.0f, 0))) {
-			try {
-				long id = std::stol(customdialogbuf, 0, hex ? 16 : 10);
-				GW::Agents().Dialog(id);
-			} catch (...) {}
 		}
 	}
 	ImGui::End();

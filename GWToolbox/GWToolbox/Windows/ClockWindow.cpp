@@ -5,7 +5,7 @@
 
 void ClockWindow::Draw(IDirect3DDevice9* pDevice) {
 	if (!visible) return;
-
+	
 	SYSTEMTIME time;
 	GetLocalTime(&time);
 
