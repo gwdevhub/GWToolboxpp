@@ -73,18 +73,30 @@ void Minimap::DrawSettingInternal() {
 	ImGui::Text("General");
 	ImGui::DragInt("Size", &size);
 	ImGui::DragFloat("Scale", &scale, 0.01f, 0.1f);
-	ImGui::Text("Agents");
-	agent_renderer.DrawSettings();
-	ImGui::Text("Ranges");
-	range_renderer.DrawSettings();
-	ImGui::Text("Pings and drawings");
-	pingslines_renderer.DrawSettings();
-	ImGui::Text("Symbols");
-	symbols_renderer.DrawSettings();
-	ImGui::Text("Map");
-	pmap_renderer.DrawSettings();
-	ImGui::Text("Custom Markers");
-	custom_renderer.DrawSettings();
+	if (ImGui::TreeNode("Agents")) {
+		agent_renderer.DrawSettings();
+		ImGui::TreePop();
+	}
+	if (ImGui::TreeNode("Ranges")) {
+		range_renderer.DrawSettings();
+		ImGui::TreePop();
+	}
+	if (ImGui::TreeNode("Pings and drawings")) {
+		pingslines_renderer.DrawSettings();
+		ImGui::TreePop();
+	}
+	if (ImGui::TreeNode("Symbols")) {
+		symbols_renderer.DrawSettings();
+		ImGui::TreePop();
+	}
+	if (ImGui::TreeNode("Map")) {
+		pmap_renderer.DrawSettings();
+		ImGui::TreePop();
+	}
+	if (ImGui::TreeNode("Custom Markers")) {
+		custom_renderer.DrawSettings();
+		ImGui::TreePop();
+	}
 }
 
 void Minimap::LoadSettings(CSimpleIni* ini) {

@@ -43,6 +43,7 @@ private:
 	// Interface Settings
 	bool tick_with_pcons = false;
 	int items_per_row = 3;
+	bool show_enable_button = true;
 
 	// Pcon Settings
 	// todo: tonic pop?

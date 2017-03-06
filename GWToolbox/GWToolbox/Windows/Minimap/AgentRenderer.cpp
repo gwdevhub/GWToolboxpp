@@ -193,7 +193,7 @@ void AgentRenderer::Initialize(IDirect3DDevice9* device) {
 	vertices = nullptr;
 	HRESULT hr = device->CreateVertexBuffer(sizeof(D3DVertex) * vertices_max, 0,
 		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
-	if (FAILED(hr)) printf("Error: %ls\n", hr);
+	if (FAILED(hr)) printf("AgentRenderer initialize error: %d\n", hr);
 }
 
 void AgentRenderer::Render(IDirect3DDevice9* device) {

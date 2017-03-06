@@ -1,6 +1,7 @@
 #include "ChatFilter.h"
 
 #include <locale>
+#include <fstream>
 
 #include <GWCA\GWCA.h>
 #include <GWCA\Managers\StoCMgr.h>
@@ -8,14 +9,39 @@
 #include <imgui.h>
 #include "GuiUtils.h"
 
+//#define PRINT_CHAT_PACKETS
+
+static void printchar(wchar_t c) {
+	if (c >= L' ' && c <= L'~') {
+		printf("%lc", c);
+	} else {
+		printf("0x%X ", c);
+	}
+}
+
 void ChatFilter::Initialize() {
 	ToolboxModule::Initialize();
 
 	strcpy_s(bycontent_buf, "");
-	strcpy_s(byauthor_buf, "");
+	//strcpy_s(byauthor_buf, "");
 
 	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P081>(
 		[&](GW::Packet::StoC::P081* pak) -> bool {
+
+#ifdef PRINT_CHAT_PACKETS
+		printf("P081: ");
+		for (int i = 0; i < 122 && pak->message[i]; ++i) printchar(pak->message[i]);
+		printf("\n");
+#endif // PRINT_CHAT_PACKETS
+
+		if (kill_next_p081) {
+			kill_next_p081 = false;
+#ifdef PRINT_CHAT_PACKETS
+			printf("   ` killed (because of previous)\n");
+#endif // PRINT_CHAT_PACKETS
+			return true;
+		}
+
 		if ((ally_common_drops
 			|| self_common_drops
 			|| ally_rare_drops
@@ -27,26 +53,66 @@ void ChatFilter::Initialize() {
 			|| ninerings
 			|| messagebycontent) 
 			&& ShouldIgnore(pak)) {
-			suppress_next_message = true;
+
+#ifdef PRINT_CHAT_PACKETS
+			printf("  ` killed \n");
+#endif // PRINT_CHAT_PACKETS
+
+			// check if the message contains start string (0x107) but not end string(0x1)
+			kill_next_p081 = false;
+			for (int i = 0; i < 122 && pak->message[i]; ++i) {
+				if (pak->message[i] == 0x107) {
+					kill_next_p081 = true;
+				} else if (pak->message[i] == 0x1) {
+					kill_next_p081 = false;
+					break;
+				}
+			}
+			kill_next_msgdelivery = true;
 			return true;
 		}
 		return false;
 	});
-
 	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P082>(
 		[&](GW::Packet::StoC::P082* pak) -> bool {
-		if (suppress_next_message) {
-			suppress_next_message = false;
+#ifdef PRINT_CHAT_PACKETS
+		printf("P082: id %d, type %d %s", pak->id, pak->type, kill_next_msgdelivery ? "(killed)" : "");
+#endif // PRINT_CHAT_PACKETS
+		if (kill_next_msgdelivery) {
+			kill_next_msgdelivery = false;
 			return true;
 		}
+		printf("\n");
 		return false;
 	});
+#ifdef PRINT_CHAT_PACKETS
+	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P083>(
+		[](GW::Packet::StoC::P083* pak) -> bool {
+		printf("P081: agent_id %d, unk1 %d, unk2 ", pak->agent_id, pak->unk1);
+		for (int i = 0; i < 8 && pak->unk2[i]; ++i) printchar(pak->unk2[i]);
+		printf("\n");
+		return false;
+	});
+	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P084>(
+		[](GW::Packet::StoC::P084* pak) -> bool {
+		printf("P081: id %d, name ", pak->id);
+		for (int i = 0; i < 32 && pak->sender_name[i]; ++i) printchar(pak->sender_name[i]);
+		printf(", guild ");
+		for (int i = 0; i < 6 && pak->sender_guild[i]; ++i) printchar(pak->sender_guild[i]);
+		printf("\n");
+		return false;
+	});
+#endif // PRINT_CHAT_PACKETS
 
 	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P085>([&](GW::Packet::StoC::P085* pak) -> bool {
-		if (suppress_next_message) {
-			suppress_next_message = false;
+#ifdef PRINT_CHAT_PACKETS
+		printf("P085: id %d, type %d %s", pak->id, pak->type, kill_next_msgdelivery ? "(killed)" : "");
+#endif // PRINT_CHAT_PACKETS
+		if (kill_next_msgdelivery) {
+			kill_next_msgdelivery = false;
 			return true;
 		}
+		printf("\n");
 		return false;
 	});
 }
@@ -65,14 +131,23 @@ void ChatFilter::LoadSettings(CSimpleIni* ini) {
 	noonehearsyou = ini->GetBoolValue(Name(), "noonehearsyou", true);
 	lunars = ini->GetBoolValue(Name(), "lunars", true);
 	playeraway = ini->GetBoolValue(Name(), "playeraway", false);
-
 	messagebycontent = ini->GetBoolValue(Name(), "messagebycontent", false);
-	strcpy_s(bycontent_buf, ini->GetValue(Name(), "bycontentwords", ""));
-	ByContent_ParseBuf();
 
-	messagebyauthor = ini->GetBoolValue(Name(), "messagebyauthor", false);
-	strcpy_s(byauthor_buf, ini->GetValue(Name(), "byauthorwords", ""));
-	ByAuthor_ParseBuf();
+	std::ifstream bycontent_file;
+	bycontent_file.open(GuiUtils::getPath("FilterByContent.txt"));
+	if (bycontent_file.is_open()) {
+		bycontent_file.get(bycontent_buf, FILTER_BUF_SIZE, '\0');
+		bycontent_file.close();
+		ByContent_ParseBuf();
+	}
+
+	//std::ifstream byauthor_file;
+	//byauthor_file.open(GuiUtils::getPath("FilterByAuthor.txt"));
+	//if (byauthor_file.is_open()) {
+	//	byauthor_file.get(byauthor_buf, FILTER_BUF_SIZE, '\0');
+	//	byauthor_file.close();
+	//	ByAuthor_ParseBuf();
+	//}
 }
 
 void ChatFilter::SaveSettings(CSimpleIni* ini) {
@@ -90,9 +165,27 @@ void ChatFilter::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), "lunars", lunars);
 	ini->SetBoolValue(Name(), "playeraway", playeraway);
 	ini->SetBoolValue(Name(), "messagebycontent", messagebycontent);
-	ini->SetBoolValue(Name(), "messagebyauthor", messagebyauthor);
-	ini->SetValue(Name(), "bycontentwords", bycontent_buf);
-	ini->SetValue(Name(), "byauthorwords", "");
+	//ini->SetBoolValue(Name(), "messagebyauthor", messagebyauthor);
+
+	if (bycontent_filedirty) {
+		std::ofstream bycontent_file;
+		bycontent_file.open(GuiUtils::getPath("FilterByContent.txt"));
+		if (bycontent_file.is_open()) {
+			bycontent_file.write(bycontent_buf, strlen(bycontent_buf));
+			bycontent_file.close();
+			bycontent_filedirty = false;
+		}
+	}
+
+	//if (byauthor_filedirty) {
+	//	std::ofstream byauthor_file;
+	//	byauthor_file.open(GuiUtils::getPath("FilterByAuthor.txt"));
+	//	if (byauthor_file.is_open()) {
+	//		byauthor_file.write(byauthor_buf, strlen(byauthor_buf));
+	//		byauthor_file.close();
+	//		byauthor_filedirty = false;
+	//	}
+	//}
 }
 
 
@@ -141,68 +234,12 @@ bool ChatFilter::FullMatch(const wchar_t* s, const std::initializer_list<wchar_t
 	return true;
 }
 
-
 bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) {
-	if (messagebycontent && ((pak->message[0] == 0x108)
-		|| (pak->message[0] == 0x8102 && pak->message[1] == 0xEFE))) {
-
-		wchar_t* start = &pak->message[1];
-		bool found_start = false;
-		wchar_t* end = &pak->message[122];
-		bool found_end = false;
-		for (int i = 0; pak->message[i] != 0; ++i) {
-			if (pak->message[i] == 0x107) {
-				start = &pak->message[i + 1];
-				found_start = true;
-			}
-			end = &pak->message[i + 1];
-			if (pak->message[i] == 0x1) {
-				end = &pak->message[i];
-				found_end = true;
-				break;
-			}
-		}
-		if (!found_start && !found_end) return false;
-		if (start >= end) return false;
-		std::string text(start, end);
-		std::transform(text.begin(), text.end(), text.begin(), ::tolower);
-		printf("'%s'", text.c_str());
-		if (!found_start && suppress_next_p081) {
-			suppress_next_p081 = false;
-			printf(" blocked (because previous)\n");
-			return true;
-		}
-
-		for (std::string s : bycontent_words) {
-			if (text.find(s) != std::string::npos) {
-				printf(" ...blocked ('%s')\n", s.c_str());
-				if (!found_end) suppress_next_p081 = true;
-				return true;
-			}
-		}
-		printf(" ...ok\n");
-		return false;
-	}
+	if (ShouldIgnoreByContent(pak)) return true;
 
 	switch (pak->message[0]) {
 		// ==== Messages not ignored ====
-	case 0x108: { // player message
-		//for (size_t i = 0; pak->message[i] != 0; ++i) {
-		//	if (pak->message[i] == 0x108) {
-		//		printf("|");
-		//	} else if (pak->message[i] == 0x107) {
-		//		printf(">");
-		//	} else if (pak->message[i] == 0x1) {
-		//		printf("<");
-		//	} else {
-		//		printf("%lc", pak->message[i]);
-		//	}
-		//}
-		//printf("\n");
-		//return false;
-		break;
-	}
-
+	case 0x108: return false; // player message
 	case 0x777: return false; // I'm level x and x% of the way earning my next skill point	(author is not part of the message)
 	case 0x778: return false; // I'm following x			(author is not part of the message)
 	case 0x77B: return false; // I'm talking to x			(author is not part of the message)
@@ -210,6 +247,14 @@ bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) {
 	case 0x77D: return false; // I'm wielding x and y		(author is not part of the message)
 	case 0x781: return false; // I'm targeting x			(author is not part of the message)
 	case 0x783: return false; // I'm targeting myself!	(author is not part of the message)
+	case 0x791: return false; // emote agree
+	case 0x792: return false; // emote attention
+	case 0x793: return false; // emote beckon
+	case 0x794: return false; // emote beg
+	case 0x795: return false; // emote boo
+		// all other emotes, in alphabetical order
+	case 0x7BE: return false; // emote yawn
+	case 0x7BF: return false; // emote yes
 	case 0x7CC:
 		if (FullMatch(&pak->message[1], { 0x962D, 0xFEB5, 0x1D08, 0x10A, 0xAC2, 0x101, 0x164, 0x1 })) return lunars; // you receive 100 gold
 		break;
@@ -265,7 +310,7 @@ bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) {
 
 	case 0x8102:
 		switch (pak->message[1]) {
-		// 0xEFE is a player message
+		// 0xEFE is a player message (wtf anet?)
 		case 0x4650: return pvp_messages; // skill has been updated for pvp
 		case 0x4651: return pvp_messages; // a hero skill has been updated for pvp
 		case 0x223B: return hoh; // a party won hall of heroes	
@@ -283,6 +328,32 @@ bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) {
 	//for (size_t i = 0; pak->message[i] != 0; ++i) printf(" 0x%X", pak->message[i]);
 	//printf("\n");
 
+	return false;
+}
+
+bool ChatFilter::ShouldIgnoreByContent(GW::Packet::StoC::P081* pak) {
+	if (!messagebycontent) return false;
+	if (!(pak->message[0] == 0x108 && pak->message[1] == 0x107)
+		&& !(pak->message[0] == 0x8102 && pak->message[1] == 0xEFE && pak->message[2] == 0x107)) return false;
+	wchar_t* start = nullptr;
+	wchar_t* end = &pak->message[122];
+	for (int i = 0; i < 122 && pak->message[i] != 0; ++i) {
+		if (pak->message[i] == 0x107) {
+			start = &pak->message[i + 1];
+		} else if (pak->message[i] == 0x1) {
+			end = &pak->message[i];
+		}
+	}
+	if (start == nullptr) return false; // no string segment in this packet
+
+	std::string text(start, end);
+	std::transform(text.begin(), text.end(), text.begin(), ::tolower);
+
+	for (std::string s : bycontent_words) {
+		if (text.find(s) != std::string::npos) {
+			return true;
+		}
+	}
 	return false;
 }
 
@@ -307,21 +378,22 @@ void ChatFilter::DrawSettingInternal() {
 	ImGui::Separator();
 	ImGui::Checkbox("Hide any messages containing:", &messagebycontent);
 	ImGui::Indent();
-	ImGui::TextDisabled("(Each in a separate line)");
-	ImGui::TextDisabled("(Warning: has bugs, ignores more stuff)");
+	ImGui::TextDisabled("(Each in a separate line. Not case sensitive)");
 	if (ImGui::InputTextMultiline("##bycontentfilter", bycontent_buf, FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0f))) {
 		ByContent_ParseBuf();
+		bycontent_filedirty = true;
 	}
 	ImGui::Unindent();
 
-	ImGui::Separator();
-	ImGui::Checkbox("Hide any messages from: ", &messagebyauthor);
-	ImGui::Indent();
-	ImGui::TextDisabled("(Each in a separate line)");
-	ImGui::TextDisabled("(Not implemented)");
-	if (ImGui::InputTextMultiline("##byauthorfilter", byauthor_buf, FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0f))) {
-		ByAuthor_ParseBuf();
-	}
+	//ImGui::Separator();
+	//ImGui::Checkbox("Hide any messages from: ", &messagebyauthor);
+	//ImGui::Indent();
+	//ImGui::TextDisabled("(Each in a separate line)");
+	//ImGui::TextDisabled("(Not implemented)");
+	//if (ImGui::InputTextMultiline("##byauthorfilter", byauthor_buf, FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0f))) {
+	//	ByAuthor_ParseBuf();
+	//	byauthor_filedirty = true;
+	//}
 	ImGui::Unindent();
 }
 
@@ -345,10 +417,5 @@ void ChatFilter::ParseBuffer(const char* buf, std::set<std::string>& words) {
 	if (!s.empty()) {
 		std::transform(s.begin(), s.end(), s.begin(), ::tolower);
 		words.insert(s);
-	}
-
-	printf("filter words are:\n");
-	for (std::string s : words) {
-		printf("%s\n", s.c_str());
 	}
 }

@@ -124,12 +124,14 @@ void PconPanel::Draw(IDirect3DDevice9* device) {
 	
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), &visible)) {
-		ImGui::PushStyleColor(ImGuiCol_Text, enabled ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
-		if (ImGui::Button(enabled ? "Enabled###pconstoggle" : "Disabled###pconstoggle",
-			ImVec2(ImGui::GetWindowContentRegionWidth(), 0))) {
-			ToggleEnable();
+		if (show_enable_button) {
+			ImGui::PushStyleColor(ImGuiCol_Text, enabled ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
+			if (ImGui::Button(enabled ? "Enabled###pconstoggle" : "Disabled###pconstoggle",
+				ImVec2(ImGui::GetWindowContentRegionWidth(), 0))) {
+				ToggleEnable();
+			}
+			ImGui::PopStyleColor();
 		}
-		ImGui::PopStyleColor();
 		int j = 0;
 		for (unsigned int i = 0; i < pcons.size(); ++i) {
 			if (pcons[i]->visible) {
@@ -194,6 +196,8 @@ void PconPanel::LoadSettings(CSimpleIni* ini) {
 	Pcon::lunar_delay = ini->GetLongValue(Name(), "lunar_delay", 500);
 	Pcon::size = (float)ini->GetDoubleValue(Name(), "pconsize", 46.0);
 	Pcon::disable_when_not_found = ini->GetBoolValue(Name(), "disable_when_not_found", true);
+	Pcon::enabled_bg_color = Colors::Load(ini, Name(), "enabled_bg_color", Pcon::enabled_bg_color);
+	ini->SetBoolValue(Name(), "show_enable_button", show_enable_button);
 }
 
 void PconPanel::SaveSettings(CSimpleIni* ini) {
@@ -209,23 +213,23 @@ void PconPanel::SaveSettings(CSimpleIni* ini) {
 	ini->SetLongValue(Name(), "lunar_delay", Pcon::lunar_delay);
 	ini->SetDoubleValue(Name(), "pconsize", Pcon::size);
 	ini->SetBoolValue(Name(), "disable_when_not_found", Pcon::disable_when_not_found);
+	Colors::Save(ini, Name(), "enabled_bg_color", Pcon::enabled_bg_color);
+	ini->SetBoolValue(Name(), "show_enable_button", show_enable_button);
 }
 
 void PconPanel::DrawSettingInternal() {
+	ImGui::Separator();
+	ImGui::Text("Functionality:");
 	ImGui::Checkbox("Tick with pcons", &tick_with_pcons);
 	ImGui::ShowHelp("Enabling or disabling pcons will also Tick or Untick in party list");
-	ImGui::SliderInt("Items per row", &items_per_row, 1, 18);
-	ImGui::DragFloat("Pcon Size", &Pcon::size, 1.0f, 10.0f, 0.0f);
-	ImGui::ShowHelp("Size of each Pcon icon in the interface");
-	if (Pcon::size <= 1.0f) Pcon::size = 1.0f;
-	ImGui::SliderInt("Pcons delay", &Pcon::pcons_delay, 100, 5000);
+	ImGui::Checkbox("Disable when not found", &Pcon::disable_when_not_found);
+	ImGui::ShowHelp("Toolbx will disable a pcon if it is not found in the inventory");
+	ImGui::SliderInt("Pcons delay", &Pcon::pcons_delay, 100, 5000, "%.0f milliseconds");
 	ImGui::ShowHelp(
 		"This value is used to prevent Toolbox from using the \n"
 		"same pcon twice, before it gets activated.\n"
 		"Decrease this value if you have good ping and you die a lot.");
-	ImGui::SliderInt("Lunars delay", &Pcon::lunar_delay, 100, 500);
-	ImGui::Checkbox("Disable when not found", &Pcon::disable_when_not_found);
-	ImGui::ShowHelp("Toolbx will disable a pcon if it is not found in the inventory");
+	ImGui::SliderInt("Lunars delay", &Pcon::lunar_delay, 100, 500, "%.0f milliseconds");
 	if (ImGui::TreeNode("Thresholds")) {
 		ImGui::Text("When you have less than this amount:\n-The number in the interface becomes yellow.\n-Warning message is displayed when zoning into outpost.");
 		for (Pcon* pcon : pcons) {
@@ -233,7 +237,15 @@ void PconPanel::DrawSettingInternal() {
 		}
 		ImGui::TreePop();
 	}
+	ImGui::Separator();
+	ImGui::Text("Interface:");
+	ImGui::SliderInt("Items per row", &items_per_row, 1, 18);
+	ImGui::DragFloat("Pcon Size", &Pcon::size, 1.0f, 10.0f, 0.0f);
+	ImGui::ShowHelp("Size of each Pcon icon in the interface");
+	Colors::DrawSetting("Enabled-Background", &Pcon::enabled_bg_color);
+	if (Pcon::size <= 1.0f) Pcon::size = 1.0f;
 	if (ImGui::TreeNode("Visibility")) {
+		ImGui::Checkbox("Enable/Disable button", &show_enable_button);
 		for (Pcon* pcon : pcons) {
 			ImGui::Checkbox(pcon->chat, &pcon->visible);
 		}

@@ -91,14 +91,16 @@ void CustomRenderer::DrawSettings() {
 		ImGui::InputInt("##map", (int*)&line.map, 0);
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Map ID");
 		ImGui::SameLine(0.0f, spacing);
+		ImGui::PopItemWidth();
+		ImGui::PushItemWidth(ImGui::GetWindowContentRegionWidth() - ImGui::GetCursorPosX() - spacing - 20.0f);
 		ImGui::InputText("##name", line.name, 128);
+		ImGui::PopItemWidth();
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Name");
 		ImGui::SameLine(0.0f, spacing);
-		if (ImGui::Button("x##delete")) {
+		if (ImGui::Button("x##delete", ImVec2(20.0f, 0))) {
 			remove = true;
 		}
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete");
-		ImGui::PopItemWidth();
 		ImGui::PopID();
 		if (remove) lines.erase(lines.begin() + i);
 	}
@@ -129,15 +131,16 @@ void CustomRenderer::DrawSettings() {
 		ImGui::InputInt("##map", (int*)&marker.map, 0);
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Map ID");
 		ImGui::SameLine(0.0f, spacing);
-
+		ImGui::PopItemWidth();
+		ImGui::PushItemWidth(ImGui::GetWindowContentRegionWidth() - ImGui::GetCursorPosX() - spacing - 20.0f);
 		ImGui::InputText("##name", marker.name, 128);
+		ImGui::PopItemWidth();
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Name");
 		ImGui::SameLine(0.0f, spacing);
-		if (ImGui::Button("x##delete")) {
+		if (ImGui::Button("x##delete", ImVec2(20.0f, 0))) {
 			remove = true;
 		}
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete");
-		ImGui::PopItemWidth();
 		ImGui::PopID();
 		if (remove) markers.erase(markers.begin() + i);
 	}

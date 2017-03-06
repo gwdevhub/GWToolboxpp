@@ -94,7 +94,7 @@ void GWToolbox::ThreadEntry(HMODULE dllmodule) {
 	GW::Cameramgr();
 
 	dx_hooker = new GW::DirectXHooker();
-	printf("DxDevice = %X\n", dx_hooker->device());
+	printf("DxDevice = %X\n", (unsigned int)(dx_hooker->device()));
 
 	LOG("Installing dx hooks\n");
 	dx_hooker->AddHook(GW::dx9::kEndScene, (void*)EndScene);

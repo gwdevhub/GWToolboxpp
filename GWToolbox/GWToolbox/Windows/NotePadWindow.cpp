@@ -1,5 +1,11 @@
 #include "NotePadWindow.h"
 
+#include <fstream>
+
+#include <GuiUtils.h>
+
+#define TEXT_SIZE 2024 * 16
+
 void NotePadWindow::Draw(IDirect3DDevice9* pDevice) {
 	if (!visible) return;
 
@@ -8,9 +14,36 @@ void NotePadWindow::Draw(IDirect3DDevice9* pDevice) {
 	if (ImGui::Begin(Name(), &visible)) {
 		ImVec2 cmax = ImGui::GetWindowContentRegionMax();
 		ImVec2 cmin = ImGui::GetWindowContentRegionMin();
-		ImGui::InputTextMultiline("##source", text, 2024 * 16,
-			ImVec2(cmax.x - cmin.x, cmax.y - cmin.y), ImGuiInputTextFlags_AllowTabInput);
+		if (ImGui::InputTextMultiline("##source", text, TEXT_SIZE,
+			ImVec2(cmax.x - cmin.x, cmax.y - cmin.y), ImGuiInputTextFlags_AllowTabInput)) {
+			filedirty = true;
+		}
 	}
 	ImGui::End();
 	ImGui::PopStyleVar();
+}
+
+void NotePadWindow::LoadSettings(CSimpleIni* ini) {
+	ToolboxWindow::LoadSettings(ini);
+
+	std::ifstream file;
+	file.open(GuiUtils::getPath("Notepad.txt"));
+	if (file.is_open()) {
+		file.get(text, TEXT_SIZE, '\0');
+		file.close();
+	}
+}
+
+void NotePadWindow::SaveSettings(CSimpleIni* ini) {
+	ToolboxWindow::SaveSettings(ini);
+
+	if (filedirty) {
+		std::ofstream file;
+		file.open(GuiUtils::getPath("Notepad.txt"));
+		if (file.is_open()) {
+			file.write(text, strlen(text));
+			file.close();
+			filedirty = false;
+		}
+	}
 }

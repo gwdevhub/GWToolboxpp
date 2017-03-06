@@ -9,7 +9,7 @@
 #include "GuiUtils.h"
 #include <OtherModules\Resources.h>
 
-#define N_OUTPOSTS 181
+#define N_OUTPOSTS 180
 #define N_DISTRICTS 14
 
 bool travelpanel_arraygetter(void* data, int idx, const char** out_text);
@@ -26,6 +26,7 @@ void TravelPanel::TravelButton(const char* text, int x_idx, GW::Constants::MapID
 	float w = (ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().ItemInnerSpacing.x) / 2;
 	if (ImGui::Button(text, ImVec2(w, 0))) {
 		GW::Map().Travel(mapid, district, district_number);
+		if (close_on_travel) visible = false;
 	}
 }
 
@@ -36,11 +37,12 @@ void TravelPanel::Draw(IDirect3DDevice9* pDevice) {
 	ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), &visible)) {
 		ImGui::PushItemWidth(-1.0f);
-		static int travelto_index = N_OUTPOSTS - 1;
-		if (ImGui::Combo("###travelto", &travelto_index, travelpanel_arraygetter, nullptr, N_OUTPOSTS)) {
+		static int travelto_index = -1;
+		if (ImGui::MyCombo("Travel To...", &travelto_index, travelpanel_arraygetter, nullptr, N_OUTPOSTS)) {
 			GW::Constants::MapID id = IndexToOutpostID(travelto_index);
 			GW::Map().Travel(id, district, district_number);
-			travelto_index = N_OUTPOSTS - 1;
+			travelto_index = -1;
+			if (close_on_travel) visible = false;
 		}
 
 		static int district_index = 0;
@@ -96,7 +98,7 @@ void TravelPanel::Draw(IDirect3DDevice9* pDevice) {
 		for (int i = 0; i < fav_count; ++i) {
 			ImGui::PushID(i);
 			ImGui::PushItemWidth(-40.0f - ImGui::GetStyle().ItemInnerSpacing.x);
-			ImGui::Combo("", &fav_index[i], travelpanel_arraygetter, nullptr, N_OUTPOSTS);
+			ImGui::MyCombo("Select a favorite", &fav_index[i], travelpanel_arraygetter, nullptr, N_OUTPOSTS);
 			ImGui::PopItemWidth();
 			ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 			if (ImGui::Button("Go", ImVec2(40.0f, 0))) {
@@ -111,6 +113,7 @@ void TravelPanel::Draw(IDirect3DDevice9* pDevice) {
 bool TravelPanel::TravelFavorite(unsigned int idx) {
 	if (idx >= 0 && idx < fav_index.size()) {
 		GW::Map().Travel(IndexToOutpostID(fav_index[idx]), district, district_number);
+		if (close_on_travel) visible = false;
 		return true;
 	} else {
 		return false;
@@ -118,11 +121,13 @@ bool TravelPanel::TravelFavorite(unsigned int idx) {
 }
 
 void TravelPanel::DrawSettingInternal() {
+	ImGui::Checkbox("Close on travel", &close_on_travel);
+	ImGui::ShowHelp("Will close the travel window when clicking on a travel destination");
 	ImGui::PushItemWidth(100.0f);
 	if (ImGui::InputInt("Number of favorites", &fav_count)) {
 		if (fav_count < 0) fav_count = 0;
 		if (fav_count > 100) fav_count = 100;
-		fav_index.resize(fav_count, N_OUTPOSTS - 1);
+		fav_index.resize(fav_count, -1);
 	}
 	ImGui::PopItemWidth();
 }
@@ -130,12 +135,13 @@ void TravelPanel::DrawSettingInternal() {
 void TravelPanel::LoadSettings(CSimpleIni* ini) {
 	ToolboxPanel::LoadSettings(ini);
 	fav_count = ini->GetLongValue(Name(), "fav_count", 3);
-	fav_index.resize(fav_count, N_OUTPOSTS - 1);
+	fav_index.resize(fav_count, -1);
 	for (int i = 0; i < fav_count; ++i) {
 		char key[32];
-		sprintf_s(key, "Town%d", i);
-		fav_index[i] = ini->GetLongValue(Name(), key, N_OUTPOSTS - 1);
+		sprintf_s(key, "Fav%d", i);
+		fav_index[i] = ini->GetLongValue(Name(), key, -1);
 	}
+	close_on_travel = ini->GetBoolValue(Name(), "close_on_travel", false);
 }
 
 void TravelPanel::SaveSettings(CSimpleIni* ini) {
@@ -143,9 +149,10 @@ void TravelPanel::SaveSettings(CSimpleIni* ini) {
 	ini->SetLongValue(Name(), "fav_count", fav_count);
 	for (int i = 0; i < fav_count; ++i) {
 		char key[32];
-		sprintf_s(key, "Town%d", i);
+		sprintf_s(key, "Fav%d", i);
 		ini->SetLongValue(Name(), key, fav_index[i]);
 	}
+	ini->SetBoolValue(Name(), "close_on_travel", close_on_travel);
 }
 
 GW::Constants::MapID TravelPanel::IndexToOutpostID(int index) {
@@ -517,7 +524,6 @@ bool travelpanel_arraygetter(void* data, int idx, const char** out_text) {
 	case 177: *out_text = "Zen Daijun";					break;
 	case 178: *out_text = "Zin Ku Corridor";			break;
 	case 179: *out_text = "Zos Shivros Channel";		break;
-	case 180: *out_text = "Travel To:";					break;
 	default: *out_text = "";
 	}
 	return true;

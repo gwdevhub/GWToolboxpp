@@ -35,11 +35,14 @@ void InfoPanel::Initialize() {
 			const int offset = 5;
 			int i = 0;
 			char buf[256];
+			unsigned long time = GW::Map().GetInstanceTime() / 1000;
+			sprintf_s(buf, "[%d:%02d:%02d] ", time / (60 * 60), (time / 60) % 60, time % 60);
+			int len = strlen(buf);
 			while (i < 256 && pak->message[i + offset] != 0x1 && pak->message[i + offset] != 0) {
-				buf[i] = (char)(pak->message[i + offset]);
+				buf[len + i] = (char)(pak->message[offset + i]);
 				++i;
 			}
-			buf[i] = '\0';
+			buf[len + i] = '\0';
 			resigned.push_back(std::string(buf));
 		}
 		return false;
@@ -57,31 +60,36 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), &visible)) {
-		ImGui::Checkbox("Timer", &TimerWindow::Instance().visible);
-		ImGui::ShowHelp("Time the instance has been active");
-		ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
-		ImGui::Checkbox("Minimap", &Minimap::Instance().visible);
-		ImGui::ShowHelp("An alternative to the default compass");
-		ImGui::Checkbox("Bonds", &BondsWindow::Instance().visible);
-		ImGui::ShowHelp("Show the bonds maintained by you.\nOnly works on human players");
-		ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
-		ImGui::Checkbox("Damage", &PartyDamage::Instance().visible);
-		ImGui::ShowHelp("Show the damage done by each player in your party.\nOnly works on the damage done within your radar range.");
-		ImGui::Checkbox("Health", &HealthWindow::Instance().visible);
-		ImGui::ShowHelp("Displays the health of the target.\nMax health is only computed and refreshed when you directly damage or heal your target");
-		ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
-		ImGui::Checkbox("Distance", &DistanceWindow::Instance().visible);
-		ImGui::ShowHelp("Displays the distance to your target.\n1010 = Earshot / Aggro\n1248 = Cast range\n2500 = Spirit range\n5000 = Radar range");
-		ImGui::Checkbox("Clock", &ClockWindow::Instance().visible);
-		ImGui::ShowHelp("Displays the system time (hour : minutes)");
-		ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
-		ImGui::Checkbox("Notepad", &NotePadWindow::Instance().visible);
-		ImGui::ShowHelp("A simple in-game text editor");
-
-		if (ImGui::Button("Open Xunlai Chest", ImVec2(-1.0f, 0))) {
-			GW::Items().OpenXunlaiWindow();
+		if (show_widgets) {
+			ImGui::Checkbox("Timer", &TimerWindow::Instance().visible);
+			ImGui::ShowHelp("Time the instance has been active");
+			ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
+			ImGui::Checkbox("Minimap", &Minimap::Instance().visible);
+			ImGui::ShowHelp("An alternative to the default compass");
+			ImGui::Checkbox("Bonds", &BondsWindow::Instance().visible);
+			ImGui::ShowHelp("Show the bonds maintained by you.\nOnly works on human players");
+			ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
+			ImGui::Checkbox("Damage", &PartyDamage::Instance().visible);
+			ImGui::ShowHelp("Show the damage done by each player in your party.\nOnly works on the damage done within your radar range.");
+			ImGui::Checkbox("Health", &HealthWindow::Instance().visible);
+			ImGui::ShowHelp("Displays the health of the target.\nMax health is only computed and refreshed when you directly damage or heal your target");
+			ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
+			ImGui::Checkbox("Distance", &DistanceWindow::Instance().visible);
+			ImGui::ShowHelp("Displays the distance to your target.\n1010 = Earshot / Aggro\n1248 = Cast range\n2500 = Spirit range\n5000 = Radar range");
+			ImGui::Checkbox("Clock", &ClockWindow::Instance().visible);
+			ImGui::ShowHelp("Displays the system time (hour : minutes)");
+			ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
+			ImGui::Checkbox("Notepad", &NotePadWindow::Instance().visible);
+			ImGui::ShowHelp("A simple in-game text editor");
 		}
-		if (ImGui::CollapsingHeader("Player")) {
+
+		if (show_open_chest) {
+			if (ImGui::Button("Open Xunlai Chest", ImVec2(-1.0f, 0))) {
+				GW::Items().OpenXunlaiWindow();
+			}
+		}
+
+		if (show_player && ImGui::CollapsingHeader("Player")) {
 			static char x_buf[32] = "";
 			static char y_buf[32] = "";
 			static char s_buf[32] = "";
@@ -106,7 +114,7 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::ShowHelp("Player ID is unique for each human player in the instance.");
 			ImGui::PopItemWidth();
 		}
-		if (ImGui::CollapsingHeader("Target")) {
+		if (show_target && ImGui::CollapsingHeader("Target")) {
 			static char x_buf[32] = "";
 			static char y_buf[32] = "";
 			static char s_buf[32] = "";
@@ -137,7 +145,7 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::ShowHelp("Model ID is unique for each kind of agent.\nIt is static and shared by the same agents.\nWhen targeting players, this is Player ID instead, unique for each player in the instance.\nFor the purpose of targeting hotkeys and commands, use this value");
 			ImGui::PopItemWidth();
 		}
-		if (ImGui::CollapsingHeader("Map")) {
+		if (show_map && ImGui::CollapsingHeader("Map")) {
 			static char id_buf[32] = "";
 			char* type = "";
 			static char file_buf[32] = "";
@@ -156,14 +164,14 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::ShowHelp("Map file is unique for each pathing map (e.g. used by minimap).\nMany different maps use the same map file");
 			ImGui::PopItemWidth();
 		}
-		if (ImGui::CollapsingHeader("Dialog")) {
+		if (show_dialog && ImGui::CollapsingHeader("Dialog")) {
 			static char id_buf[32] = "";
 			sprintf_s(id_buf, "0x%X", GW::Agents().GetLastDialogId());
 			ImGui::PushItemWidth(-80.0f);
 			ImGui::InputText("Last Dialog", id_buf, 32, ImGuiInputTextFlags_ReadOnly);
 			ImGui::PopItemWidth();
 		}
-		if (ImGui::CollapsingHeader("Items")) {
+		if (show_item && ImGui::CollapsingHeader("Items")) {
 			ImGui::Text("First item in inventory");
 			static char modelid[32] = "";
 			//static char itemid[32] = "";
@@ -188,7 +196,7 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 			//ImGui::InputText("ItemID", itemid, 32, ImGuiInputTextFlags_ReadOnly);
 			ImGui::PopItemWidth();
 		}
-		if (ImGui::CollapsingHeader("Mob count")) {
+		if (show_mobcount && ImGui::CollapsingHeader("Mob count")) {
 			int cast_count = 0;
 			int spirit_count = 0;
 			int compass_count = 0;
@@ -214,7 +222,7 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::Text("%d in spirit range", spirit_count);
 			ImGui::Text("%d in compass range", compass_count);
 		}
-		if (ImGui::CollapsingHeader("Resigns")) {
+		if (show_resignlog && ImGui::CollapsingHeader("Resign log")) {
 			if (resigned.empty()) {
 				ImGui::Text("<none>");
 			} else {
@@ -225,4 +233,42 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 		}
 	}
 	ImGui::End();
+}
+
+void InfoPanel::DrawSettingInternal() {
+	ImGui::Checkbox("Show widget toggles", &show_widgets);
+	ImGui::Checkbox("Show 'open xunlai chest' button", &show_open_chest);
+	ImGui::Checkbox("Show Player", &show_player);
+	ImGui::Checkbox("Show target", &show_target);
+	ImGui::Checkbox("Show map", &show_map);
+	ImGui::Checkbox("Show dialog", &show_dialog);
+	ImGui::Checkbox("Show item", &show_item);
+	ImGui::Checkbox("Show mobcount", &show_mobcount);
+	ImGui::Checkbox("Show resign log", &show_resignlog);
+}
+
+void InfoPanel::LoadSettings(CSimpleIni* ini) {
+	ToolboxPanel::LoadSettings(ini);
+	show_widgets = ini->GetBoolValue(Name(), "show_widgets", true);
+	show_open_chest = ini->GetBoolValue(Name(), "show_open_chest", true);
+	show_player = ini->GetBoolValue(Name(), "show_player", true);
+	show_target = ini->GetBoolValue(Name(), "show_target", true);
+	show_map = ini->GetBoolValue(Name(), "show_map", true);
+	show_dialog = ini->GetBoolValue(Name(), "show_dialog", true);
+	show_item = ini->GetBoolValue(Name(), "show_item", true);
+	show_mobcount = ini->GetBoolValue(Name(), "show_mobcount", true);
+	show_resignlog = ini->GetBoolValue(Name(), "show_resignlog", true);
+}
+
+void InfoPanel::SaveSettings(CSimpleIni* ini) {
+	ToolboxPanel::SaveSettings(ini);
+	ini->SetBoolValue(Name(), "show_widgets", show_widgets);
+	ini->SetBoolValue(Name(), "show_open_chest", show_open_chest);
+	ini->SetBoolValue(Name(), "show_player", show_player);
+	ini->SetBoolValue(Name(), "show_target", show_target);
+	ini->SetBoolValue(Name(), "show_map", show_map);
+	ini->SetBoolValue(Name(), "show_dialog", show_dialog);
+	ini->SetBoolValue(Name(), "show_item", show_item);
+	ini->SetBoolValue(Name(), "show_mobcount", show_mobcount);
+	ini->SetBoolValue(Name(), "show_resignlog", show_resignlog);
 }

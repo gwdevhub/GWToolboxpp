@@ -3,6 +3,9 @@
 #include <algorithm>
 #include <cctype>
 
+#include <imgui.h>
+#include <imgui_internal.h>
+
 #include <GWCA\Constants\Skills.h>
 #include <GWCA\Managers\CameraMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
@@ -13,9 +16,23 @@
 #include <GWCA\Managers\SkillbarMgr.h>
 
 #include <Windows\MainWindow.h>
+#include <Windows\TimerWindow.h>
+#include <Windows\BondsWindow.h>
+#include <Windows\HealthWindow.h>
+#include <Windows\DistanceWindow.h>
 #include <Windows\PartyDamage.h>
-#include <Panels\TravelPanel.h>
-#include <Panels\PconPanel.h>
+#include <Windows\Minimap\Minimap.h>
+#include <Windows\ClockWindow.h>
+#include <Windows\NotePadWindow.h>
+
+#include "Panels\PconPanel.h"
+#include "Panels\HotkeyPanel.h"
+#include "Panels\TravelPanel.h"
+#include "Panels\BuildPanel.h"
+#include "Panels\DialogPanel.h"
+#include "Panels\InfoPanel.h"
+#include "Panels\MaterialsPanel.h"
+#include "Panels\SettingsPanel.h"
 #include "GWToolbox.h"
 #include "ChatLogger.h"
 
@@ -25,6 +42,7 @@ void ChatCommands::Initialize() {
 	GW::Chat().RegisterCommand(L"age2", ChatCommands::CmdAge2);
 	GW::Chat().RegisterCommand(L"pcons", ChatCommands::CmdPcons);
 	GW::Chat().RegisterCommand(L"dialog", ChatCommands::CmdDialog);
+	GW::Chat().RegisterCommand(L"show", ChatCommands::CmdShow);
 	GW::Chat().RegisterCommand(L"tb", ChatCommands::CmdTB);
 	GW::Chat().RegisterCommand(L"tp", ChatCommands::CmdTP);
 	GW::Chat().RegisterCommand(L"to", ChatCommands::CmdTP);
@@ -180,12 +198,101 @@ bool ChatCommands::CmdTB(std::wstring& cmd, std::vector<std::wstring>& args) {
 			MainWindow::Instance().visible = true;
 		} else if (arg == L"reset") {
 			ImGui::SetWindowPos(MainWindow::Instance().Name(), ImVec2(50.0f, 50.0f));
+			ImGui::SetWindowPos(SettingsPanel::Instance().Name(), ImVec2(50.0f, 50.0f));
 		} else if (arg == L"mini" || arg == L"minimize") {
 			ImGui::SetWindowCollapsed(MainWindow::Instance().Name(), true);
 		} else if (arg == L"maxi" || arg == L"maximize") {
 			ImGui::SetWindowCollapsed(MainWindow::Instance().Name(), false);
 		} else if (arg == L"close" || arg == L"quit" || arg == L"exit") {
 			GWToolbox::Instance().StartSelfDestruct();
+		}
+	}
+	return true;
+}
+
+bool ChatCommands::CmdShow(std::wstring& cmd, std::vector<std::wstring>& args) {
+	if (args.empty()) {
+		MainWindow::Instance().visible = true;
+	} else {
+		std::wstring arg = GetLowerCaseArg(args, 0);
+		if (arg == L"mainwindow" || arg == L"toolbox") {
+			MainWindow::Instance().visible = true;
+		} else if (arg == L"pcons") {
+			PconPanel::Instance().visible = true;
+		} else if (arg == L"hotkeys") {
+			HotkeyPanel::Instance().visible = true;
+		} else if (arg == L"builds") {
+			BuildPanel::Instance().visible = true;
+		} else if (arg == L"travel") {
+			TravelPanel::Instance().visible = true;
+		} else if (arg == L"dialogs") {
+			DialogPanel::Instance().visible = true;
+		} else if (arg == L"info") {
+			InfoPanel::Instance().visible = true;
+		} else if (arg == L"materials") {
+			MaterialsPanel::Instance().visible = true;
+		} else if (arg == L"settings") {
+			SettingsPanel::Instance().visible = true;
+		} else if (arg == L"timer") {
+			TimerWindow::Instance().visible = true;
+		} else if (arg == L"health") {
+			HealthWindow::Instance().visible = true;
+		} else if (arg == L"distance") {
+			DistanceWindow::Instance().visible = true;
+		} else if (arg == L"minimap") {
+			Minimap::Instance().visible = true;
+		} else if (arg == L"damage") {
+			PartyDamage::Instance().visible = true;
+		} else if (arg == L"bonds") {
+			BondsWindow::Instance().visible = true;
+		} else if (arg == L"clock") {
+			ClockWindow::Instance().visible = true;
+		} else if (arg == L"notepad") {
+			NotePadWindow::Instance().visible = true;
+		}
+	}
+	return true;
+}
+
+bool ChatCommands::CmdHide(std::wstring& cmd, std::vector<std::wstring>& args) {
+	if (args.empty()) {
+		MainWindow::Instance().visible = false;
+	} else {
+		std::wstring arg = GetLowerCaseArg(args, 0);
+		if (arg == L"mainwindow" || arg == L"toolbox") {
+			MainWindow::Instance().visible = false;
+		} else if (arg == L"pcons") {
+			PconPanel::Instance().visible = false;
+		} else if (arg == L"hotkeys") {
+			HotkeyPanel::Instance().visible = false;
+		} else if (arg == L"builds") {
+			BuildPanel::Instance().visible = false;
+		} else if (arg == L"travel") {
+			TravelPanel::Instance().visible = false;
+		} else if (arg == L"dialogs") {
+			DialogPanel::Instance().visible = false;
+		} else if (arg == L"info") {
+			InfoPanel::Instance().visible = false;
+		} else if (arg == L"materials") {
+			MaterialsPanel::Instance().visible = false;
+		} else if (arg == L"settings") {
+			SettingsPanel::Instance().visible = false;
+		} else if (arg == L"timer") {
+			TimerWindow::Instance().visible = false;
+		} else if (arg == L"health") {
+			HealthWindow::Instance().visible = false;
+		} else if (arg == L"distance") {
+			DistanceWindow::Instance().visible = false;
+		} else if (arg == L"minimap") {
+			Minimap::Instance().visible = false;
+		} else if (arg == L"damage") {
+			PartyDamage::Instance().visible = false;
+		} else if (arg == L"bonds") {
+			BondsWindow::Instance().visible = false;
+		} else if (arg == L"clock") {
+			ClockWindow::Instance().visible = false;
+		} else if (arg == L"notepad") {
+			NotePadWindow::Instance().visible = false;
 		}
 	}
 	return true;

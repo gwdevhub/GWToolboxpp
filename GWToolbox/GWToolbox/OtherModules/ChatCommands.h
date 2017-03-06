@@ -48,7 +48,8 @@ private:
 	static bool CmdAfk(std::wstring& cmd, std::vector<std::wstring>& args);
 	static bool CmdTarget(std::wstring& cmd, std::vector<std::wstring>& args);
 	static bool CmdUseSkill(std::wstring& cmd, std::vector<std::wstring>& args);
-
+	static bool CmdShow(std::wstring& cmd, std::vector<std::wstring>& args);
+	static bool CmdHide(std::wstring& cmd, std::vector<std::wstring>& args);
 	static bool CmdZoom(std::wstring& cmd, std::vector<std::wstring>& args);
 	static bool CmdCamera(std::wstring& cmd, std::vector<std::wstring>& args);
 

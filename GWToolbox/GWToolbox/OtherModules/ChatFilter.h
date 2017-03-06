@@ -33,9 +33,10 @@ private:
 	bool ShouldIgnoreByAgentThatDropped(const wchar_t* agent_segment) const;
 	bool IsRare(const wchar_t* item_segment) const;
 	bool ShouldIgnore(GW::Packet::StoC::P081* pak);
+	bool ShouldIgnoreByContent(GW::Packet::StoC::P081* pak);
 
-	bool suppress_next_message;
-	bool suppress_next_p081;
+	bool kill_next_msgdelivery;
+	bool kill_next_p081 = false;
 
 	bool self_common_drops;
 	bool ally_common_drops;
@@ -53,17 +54,19 @@ private:
 	bool messagebycontent;
 #define FILTER_BUF_SIZE 1024*16
 	char bycontent_buf[FILTER_BUF_SIZE];
+	bool bycontent_filedirty = false;
 	std::set<std::string> bycontent_words;
 
-	bool messagebyauthor;
-	char byauthor_buf[FILTER_BUF_SIZE];
-	std::set<std::string> byauthor_words;
+	//bool messagebyauthor;
+	//char byauthor_buf[FILTER_BUF_SIZE];
+	//bool byauthor_filedirty = false;
+	//std::set<std::string> byauthor_words;
 
 	void ParseBuffer(const char* buf, std::set<std::string>& words);
 	void ByContent_ParseBuf() {
 		ParseBuffer(bycontent_buf, bycontent_words);
 	}
-	void ByAuthor_ParseBuf() {
-		ParseBuffer(byauthor_buf, byauthor_words);
-	}
+	//void ByAuthor_ParseBuf() {
+	//	ParseBuffer(byauthor_buf, byauthor_words);
+	//}
 };

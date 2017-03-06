@@ -29,7 +29,7 @@ void RangeRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 }
 void RangeRenderer::DrawSettings() {
 	bool changed = false;
-	if (ImGui::Button("Restore Defaults")) {
+	if (ImGui::SmallButton("Restore Defaults")) {
 		changed = true;
 		color_range_hos = 0xFF881188;
 		color_range_aggro = 0xFF994444;

@@ -8,6 +8,7 @@
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\GameEntities\Item.h>
 #include "Timer.h"
+#include <Color.h>
 
 class Pcon {
 public:
@@ -15,7 +16,7 @@ public:
 	static int lunar_delay;
 	static float size;
 	static bool disable_when_not_found;
-
+	static Color enabled_bg_color;
 	static DWORD player_id;
 
 protected:

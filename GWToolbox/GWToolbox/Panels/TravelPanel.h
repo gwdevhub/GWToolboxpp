@@ -44,4 +44,7 @@ private:
 	// ==== Favorites ====
 	int fav_count;
 	std::vector<int> fav_index;
+
+	// ==== options ====
+	bool close_on_travel = false;
 };

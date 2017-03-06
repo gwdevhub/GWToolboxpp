@@ -18,6 +18,7 @@ int Pcon::pcons_delay = 5000;
 int Pcon::lunar_delay = 500;
 bool Pcon::disable_when_not_found = true;
 DWORD Pcon::player_id = 0;
+Color Pcon::enabled_bg_color = Colors::ARGB(102, 0, 255, 0);
 
 // ================================================
 Pcon::Pcon(const char* chatname,
@@ -34,16 +35,13 @@ void Pcon::Draw(IDirect3DDevice9* device) {
 	if (texture == nullptr) return;
 	ImVec2 pos = ImGui::GetCursorPos();
 	ImVec2 s(size, size);
-	ImVec4 bg = enabled ? ImVec4(0.0f, 1.0f, 0.0f, 0.4f) : ImVec4(0, 0, 0, 0);
+	ImVec4 bg = enabled ? ImColor(enabled_bg_color) : ImVec4(0, 0, 0, 0);
 	ImVec4 tint(1, 1, 1, 1);
 	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
 	if (ImGui::ImageButton((ImTextureID)texture, s, uv0, uv1, -1, bg, tint)) {
 		enabled = !enabled;
 		ScanInventory();
 	}
-	//if (ImGui::IsItemHovered()) {
-	//	ImGui::SetTooltip("%s\nQuantity: %d", chatName, quantity);
-	//}
 	ImGui::PopStyleColor();
 
 	ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[GuiUtils::FontSize::f12]);
@@ -151,27 +149,27 @@ int Pcon::CheckInventory(bool* used) const {
 bool Pcon::CanUseByInstanceType() const {
 	return GW::Map().GetInstanceType() == GW::Constants::InstanceType::Explorable;
 }
-void Pcon::LoadSettings(CSimpleIni* ini, const char* section) {
+void Pcon::LoadSettings(CSimpleIni* inifile, const char* section) {
 	char buf_active[256];
 	char buf_threshold[256];
 	char buf_visible[256];
 	sprintf_s(buf_active, "%s_active", ini);
 	sprintf_s(buf_threshold, "%s_threshold", ini);
 	sprintf_s(buf_visible, "%s_visible", ini);
-	enabled = ini->GetBoolValue(section, buf_active);
-	threshold = ini->GetLongValue(section, buf_threshold, threshold);
-	visible = ini->GetBoolValue(section, buf_visible, true);
+	enabled = inifile->GetBoolValue(section, buf_active);
+	threshold = inifile->GetLongValue(section, buf_threshold, threshold);
+	visible = inifile->GetBoolValue(section, buf_visible, true);
 }
-void Pcon::SaveSettings(CSimpleIni* ini, const char* section) {
+void Pcon::SaveSettings(CSimpleIni* inifile, const char* section) {
 	char buf_active[256];
 	char buf_threshold[256];
 	char buf_visible[256];
 	sprintf_s(buf_active, "%s_active", ini);
 	sprintf_s(buf_threshold, "%s_threshold", ini);
 	sprintf_s(buf_visible, "%s_visible", ini);
-	ini->SetBoolValue(section, buf_active, enabled);
-	ini->SetLongValue(section, buf_threshold, threshold);
-	ini->SetBoolValue(section, buf_visible, visible);
+	inifile->SetBoolValue(section, buf_active, enabled);
+	inifile->SetLongValue(section, buf_threshold, threshold);
+	inifile->SetBoolValue(section, buf_visible, visible);
 }
 
 // ================================================
