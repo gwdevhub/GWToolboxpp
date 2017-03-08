@@ -150,10 +150,11 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(0, 0, 0, 0));
 	ImGui::SetNextWindowSize(ImVec2(500.0f, 500.0f), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), nullptr, GetWinFlags())) {
-		location.x = ImGui::GetWindowPos().x;
-		location.y = ImGui::GetWindowPos().y;
-		size.x = ImGui::GetWindowSize().x;
-		size.y = ImGui::GetWindowSize().y;
+		// window pos are already rounded by imgui, so casting is no big deal
+		location.x = (int)ImGui::GetWindowPos().x;
+		location.y = (int)ImGui::GetWindowPos().y;
+		size.x = (int)ImGui::GetWindowSize().x;
+		size.y = (int)ImGui::GetWindowSize().y;
 	}
 	ImGui::End();
 	ImGui::PopStyleColor();
