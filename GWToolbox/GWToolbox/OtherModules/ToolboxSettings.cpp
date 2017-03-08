@@ -6,6 +6,8 @@
 #include "GuiUtils.h"
 #include "GWToolbox.h"
 
+bool ToolboxSettings::move_all;
+
 void ToolboxSettings::DrawSettingInternal() {
 	DrawFreezeSetting();
 	ImGui::Checkbox("Save Location Data", &save_location_data);
@@ -13,19 +15,17 @@ void ToolboxSettings::DrawSettingInternal() {
 }
 
 void ToolboxSettings::DrawFreezeSetting() {
-	ImGui::Checkbox("Freeze Widgets", &freeze_widgets);
-	ImGui::ShowHelp("Widgets such as timer, health, minimap will not move");
+	ImGui::Checkbox("Unlock Move All", &move_all);
+	ImGui::ShowHelp("Will allow movement and resize of all widgets and windows");
 }
 
 void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini);
-	freeze_widgets = ini->GetBoolValue("main_window", "freeze_widgets", false);
+	move_all = false;
 }
 
 void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
 	ToolboxModule::SaveSettings(ini);
-	ini->SetBoolValue("main_window", "freeze_widgets", freeze_widgets);
-
 	if (location_file.is_open()) location_file.close();
 }
 

@@ -13,6 +13,21 @@ class MaterialsPanel : public ToolboxPanel {
 		ResScroll,
 		Any
 	};
+	enum CommonMat {
+		Bones,
+		Iron,
+		TannedHideSquares,
+		Scales,
+		Chitin,
+		Cloth,
+		Wood,
+		Granite,
+		Dust,
+		Feathers,
+		Fibers,
+		
+		N_MATS
+	};
 
 	MaterialsPanel() {};
 	~MaterialsPanel() {};
@@ -35,8 +50,8 @@ public:
 
 private:
 	int* GetPricePtr(DWORD modelid);
-	std::string GetPrice(int p1, float m1,
-		int p2, float m2, int extra) const;
+	std::string GetPrice(CommonMat mat1, float fac1,
+		CommonMat mat2, float fac2, int extra) const;
 
 	void EnqueueQuote(DWORD modelid);
 	void EnqueuePurchase(DWORD modelid);
@@ -57,12 +72,7 @@ private:
 	static const int PRICE_COMPUTING_QUEUE = -2;
 	static const int PRICE_COMPUTING_SENT = -3;
 	static const int PRICE_NOT_AVAILABLE = -4;
-	int price_feathers = -1;
-	int price_dust = -1;
-	int price_fibers = -1;
-	int price_bones = -1;
-	int price_iron = -1;
-	int price_granite = -1;
+	int price[N_MATS];
 
 	int max = 0;
 	std::deque<DWORD> quotequeue;

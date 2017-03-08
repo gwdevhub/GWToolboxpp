@@ -1,8 +1,8 @@
 #pragma once
 
-#include "ToolboxWindow.h"
+#include "ToolboxWidget.h"
 
-class HealthWindow : public ToolboxWindow {
+class HealthWindow : public ToolboxWidget {
 	HealthWindow() {};
 	~HealthWindow() {};
 public:

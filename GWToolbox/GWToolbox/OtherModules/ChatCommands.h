@@ -7,7 +7,8 @@
 #include <Windows.h>
 #include <time.h>
 
-#include "ToolboxModule.h"
+#include <ToolboxModule.h>
+#include <ToolboxUIElement.h>
 
 class ChatCommands : public ToolboxModule {
 	const float DEFAULT_CAM_SPEED = 25.0f;
@@ -37,6 +38,7 @@ private:
 	bool IsTyping() { return false; /* (*(DWORD*)0xA377C8) != 0;*/ } // broken
 	
 	static std::wstring GetLowerCaseArg(std::vector<std::wstring>, size_t index);
+	static std::string ToLower(std::string);
 
 	static bool CmdAge2(std::wstring& cmd, std::vector<std::wstring>& args);
 	static bool CmdPcons(std::wstring& cmd, std::vector<std::wstring>& args);
@@ -52,6 +54,7 @@ private:
 	static bool CmdHide(std::wstring& cmd, std::vector<std::wstring>& args);
 	static bool CmdZoom(std::wstring& cmd, std::vector<std::wstring>& args);
 	static bool CmdCamera(std::wstring& cmd, std::vector<std::wstring>& args);
+	static bool CmdBorderless(std::wstring& cmd, std::vector<std::wstring>& args);
 
 	int move_forward;
 	int move_side;
@@ -61,4 +64,6 @@ private:
 	int skill_to_use;
 	float skill_usage_delay;
 	clock_t skill_timer;
+
+	std::vector<ToolboxUIElement*> windows;
 };

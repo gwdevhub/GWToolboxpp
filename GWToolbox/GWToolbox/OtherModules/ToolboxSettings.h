@@ -26,8 +26,7 @@ public:
 
 	void DrawFreezeSetting();
 
-	bool freeze_widgets;
-
+	static bool move_all;
 private:
 	// === location stuff ===
 	clock_t location_timer;

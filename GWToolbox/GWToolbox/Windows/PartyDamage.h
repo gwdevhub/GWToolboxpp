@@ -8,14 +8,12 @@
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\Packets\StoC.h>
 
-#include <SimpleIni.h>
-
+#include "ToolboxWidget.h"
 #include "Timer.h"
 #include "GuiUtils.h"
-#include "ToolboxWindow.h"
 #include "Color.h"
 
-class PartyDamage : public ToolboxWindow {
+class PartyDamage : public ToolboxWidget {
 	static const int MAX_PLAYERS = 12;
 
 	struct PlayerDamage {

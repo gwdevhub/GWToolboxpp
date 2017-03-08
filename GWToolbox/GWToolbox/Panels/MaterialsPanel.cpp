@@ -28,7 +28,7 @@ void MaterialsPanel::Update() {
 	} else if (!purchasequeue.empty()) {
 		if (last_request_type == None) {
 			int* price = GetPricePtr(purchasequeue.front());
-			if (*price > 0 && (DWORD)(*price) > GW::Items().GetGoldAmountOnCharacter()) {
+			if (price && *price > 0 && (DWORD)(*price) > GW::Items().GetGoldAmountOnCharacter()) {
 				ChatLogger::Err("Cannot purchase, not enough gold!");
 				purchasequeue.clear();
 			} else {
@@ -47,6 +47,7 @@ void MaterialsPanel::Update() {
 }
 
 void MaterialsPanel::Initialize() {
+	ToolboxPanel::Initialize();
 	Resources::Instance().LoadTextureAsync(&texture, "feather.png", "img");
 	Resources::Instance().LoadTextureAsync(&tex_essence, "Essence_of_Celerity.png", "img");
 	Resources::Instance().LoadTextureAsync(&tex_grail, "Grail_of_Might.png", "img");
@@ -113,7 +114,7 @@ void MaterialsPanel::Draw(IDirect3DDevice9* pDevice) {
 	if (!visible) return;
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
-	if (ImGui::Begin(Name(), &visible)) {
+	if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
 
 		float x, y, h;
 
@@ -128,7 +129,7 @@ void MaterialsPanel::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::SameLine();
 		x = ImGui::GetCursorPosX();
 		y = ImGui::GetCursorPosY();
-		ImGui::Text(GetPrice(price_feathers, 5.0f, price_dust, 5.0f, 250).c_str());
+		ImGui::Text(GetPrice(Feathers, 5.0f, Dust, 5.0f, 250).c_str());
 		FullConsPriceTooltip();
 		ImGui::SameLine(ImGui::GetWindowWidth() - 100.0f - ImGui::GetStyle().WindowPadding.x);
 		if (ImGui::Button("Price Check###essencepc", ImVec2(100.0f, 0))) {
@@ -159,7 +160,7 @@ void MaterialsPanel::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::SameLine();
 		x = ImGui::GetCursorPosX();
 		y = ImGui::GetCursorPosY();
-		ImGui::Text(GetPrice(price_iron, 5.0f, price_dust, 5.0f, 250).c_str());
+		ImGui::Text(GetPrice(Iron, 5.0f, Dust, 5.0f, 250).c_str());
 		FullConsPriceTooltip();
 		ImGui::SameLine(ImGui::GetWindowWidth() - 100.0f - ImGui::GetStyle().WindowPadding.x);
 		if (ImGui::Button("Price Check###grailpc", ImVec2(100.0f, 0))) {
@@ -190,7 +191,7 @@ void MaterialsPanel::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::SameLine();
 		x = ImGui::GetCursorPosX();
 		y = ImGui::GetCursorPosY();
-		ImGui::Text(GetPrice(price_iron, 5.0f, price_bones, 5.0f, 250).c_str());
+		ImGui::Text(GetPrice(Iron, 5.0f, Bones, 5.0f, 250).c_str());
 		FullConsPriceTooltip();
 		ImGui::SameLine(ImGui::GetWindowWidth() - 100.0f - ImGui::GetStyle().WindowPadding.x);
 		if (ImGui::Button("Price Check###armorpc", ImVec2(100.0f, 0))) {
@@ -221,7 +222,7 @@ void MaterialsPanel::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::SameLine();
 		x = ImGui::GetCursorPosX();
 		y = ImGui::GetCursorPosY();
-		ImGui::Text(GetPrice(price_granite, 10.0f, price_dust, 10.0f, 1000).c_str());
+		ImGui::Text(GetPrice(Granite, 10.0f, Dust, 10.0f, 1000).c_str());
 		ImGui::SameLine(ImGui::GetWindowWidth() - 100.0f - ImGui::GetStyle().WindowPadding.x);
 		if (ImGui::Button("Price Check###pstonepc", ImVec2(100.0f, 0))) {
 			EnqueueQuote(GW::Constants::ItemID::Granite);
@@ -251,7 +252,7 @@ void MaterialsPanel::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::SameLine();
 		x = ImGui::GetCursorPosX();
 		y = ImGui::GetCursorPosY();
-		ImGui::Text(GetPrice(price_fibers, 2.5f, price_bones, 2.5f, 250).c_str());
+		ImGui::Text(GetPrice(Fibers, 2.5f, Bones, 2.5f, 250).c_str());
 		ImGui::SameLine(ImGui::GetWindowWidth() - 100.0f - ImGui::GetStyle().WindowPadding.x);
 		if (ImGui::Button("Price Check###resscrollpc", ImVec2(100.0f, 0))) {
 			EnqueueQuote(GW::Constants::ItemID::Fibers);
@@ -343,12 +344,17 @@ void MaterialsPanel::Draw(IDirect3DDevice9* pDevice) {
 
 int* MaterialsPanel::GetPricePtr(DWORD modelid) {
 	switch (modelid) {
-	case GW::Constants::ItemID::Feathers: return &price_feathers;
-	case GW::Constants::ItemID::Dust:     return &price_dust;
-	case GW::Constants::ItemID::Fibers:   return &price_fibers;
-	case GW::Constants::ItemID::Bones:    return &price_bones;
-	case GW::Constants::ItemID::Iron:     return &price_iron;
-	case GW::Constants::ItemID::Granite:  return &price_granite;
+	case GW::Constants::ItemID::Bones:		return &price[Bones];
+	case GW::Constants::ItemID::Iron:		return &price[Iron];
+	case GW::Constants::ItemID::TannedHideSquares: return &price[TannedHideSquares];
+	case GW::Constants::ItemID::Scales:		return &price[Scales];
+	case GW::Constants::ItemID::ChitinFragments: return &price[Chitin];
+	case GW::Constants::ItemID::BoltsOfCloth: return &price[Cloth];
+	case GW::Constants::ItemID::WoodPlanks: return &price[Wood];
+	case GW::Constants::ItemID::Granite:	return &price[Granite];
+	case GW::Constants::ItemID::Dust:		return &price[Dust];
+	case GW::Constants::ItemID::Feathers:	return &price[Feathers];
+	case GW::Constants::ItemID::Fibers:		return &price[Fibers];
 	}
 	return nullptr;
 }
@@ -403,7 +409,10 @@ int MaterialsPanel::RequestQuote(DWORD modelid) {
 	return itemid;
 }
 
-std::string MaterialsPanel::GetPrice(int p1, float m1, int p2, float m2, int extra) const {
+std::string MaterialsPanel::GetPrice(CommonMat mat1, float fac1,
+	CommonMat mat2, float fac2, int extra) const {
+	int p1 = price[mat1];
+	int p2 = price[mat2];
 	if (p1 == PRICE_NOT_AVAILABLE || p2 == PRICE_NOT_AVAILABLE) {
 		return "Price: (Material not available)";
 	} else if (p1 == PRICE_DEFAULT || p2 == PRICE_DEFAULT) {
@@ -414,7 +423,7 @@ std::string MaterialsPanel::GetPrice(int p1, float m1, int p2, float m2, int ext
 		return "Price: Computing (in queue)";
 	} else {
 		char buf[128];
-		sprintf_s(buf, "Price: %g k", (p1 * m1 + p2 * m2 + extra) / 1000.0f);
+		sprintf_s(buf, "Price: %g k", (p1 * fac1 + p2 * fac2 + extra) / 1000.0f);
 		return std::string(buf);
 	}
 }
@@ -422,19 +431,20 @@ std::string MaterialsPanel::GetPrice(int p1, float m1, int p2, float m2, int ext
 void MaterialsPanel::FullConsPriceTooltip() const {
 	if (ImGui::IsItemHovered()) {
 		char buf[256];
-		if (price_feathers == PRICE_NOT_AVAILABLE
-			|| price_dust == PRICE_NOT_AVAILABLE
-			|| price_iron == PRICE_NOT_AVAILABLE
-			|| price_bones == PRICE_NOT_AVAILABLE) {
+		if (price[Feathers] == PRICE_NOT_AVAILABLE
+			|| price[Dust] == PRICE_NOT_AVAILABLE
+			|| price[Iron] == PRICE_NOT_AVAILABLE
+			|| price[Bones] == PRICE_NOT_AVAILABLE) {
 			strcpy_s(buf, "Full Conset Price: (Material not available)");
-		} else if (price_feathers < 0
-			|| price_dust < 0
-			|| price_iron < 0
-			|| price_bones < 0) {
+		} else if (price[Feathers] < 0
+			|| price[Dust] < 0
+			|| price[Iron] < 0
+			|| price[Bones] < 0) {
 			strcpy_s(buf, "Full Conset Price: -");
 		} else {
-			int price = price_iron * 10 + price_dust * 10 + price_bones * 5 + price_feathers * 5 + 750;
-			sprintf_s(buf, "Full Conset Price: %g k", price / 1000.0f);
+			int p = price[Iron] * 10 + price[Dust] * 10 + 
+				price[Bones] * 5 + price[Feathers] * 5 + 750;
+			sprintf_s(buf, "Full Conset Price: %g k", p / 1000.0f);
 		}
 		ImGui::SetTooltip(buf);
 	}

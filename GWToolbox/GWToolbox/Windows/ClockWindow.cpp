@@ -10,13 +10,8 @@ void ClockWindow::Draw(IDirect3DDevice9* pDevice) {
 	GetLocalTime(&time);
 
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(0, 0, 0, 0));
-	ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar
-		| ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar;
-	if (ToolboxSettings::Instance().freeze_widgets) {
-		flags |= ImGuiWindowFlags_NoInputs;
-	}
-	ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f));
-	if (ImGui::Begin(Name(), nullptr, flags)) {
+	ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiSetCond_FirstUseEver);
+	if (ImGui::Begin(Name(), nullptr, GetWinFlags())) {
 		static char timer[32];
 		if (use_24h_clock) {
 			sprintf_s(timer, "%02d:%02d", time.wHour, time.wMinute);
@@ -38,12 +33,12 @@ void ClockWindow::Draw(IDirect3DDevice9* pDevice) {
 }
 
 void ClockWindow::LoadSettings(CSimpleIni* ini) {
-	ToolboxWindow::LoadSettings(ini);
+	ToolboxWidget::LoadSettings(ini);
 	use_24h_clock = ini->GetBoolValue(Name(), "use_24h_clock", true);
 }
 
 void ClockWindow::SaveSettings(CSimpleIni* ini) {
-	ToolboxWindow::LoadSettings(ini);
+	ToolboxWidget::LoadSettings(ini);
 	ini->SetBoolValue(Name(), "use_24h_clock", use_24h_clock);
 }
 

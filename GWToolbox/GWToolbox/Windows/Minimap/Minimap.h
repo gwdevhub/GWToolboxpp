@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ToolboxWindow.h"
+#include "ToolboxWidget.h"
 #include "VBuffer.h"
 #include "PmapRenderer.h"
 #include "AgentRenderer.h"
@@ -9,7 +9,7 @@
 #include "SymbolsRenderer.h"
 #include "CustomRenderer.h"
 
-class Minimap : public ToolboxWindow {
+class Minimap : public ToolboxWidget {
 	struct Vec2i {
 		Vec2i(int _x, int _y) : x(_x), y(_y) {}
 		Vec2i() : x(0), y(0) {}
@@ -58,7 +58,7 @@ private:
 	bool mousedown = false;
 
 	Vec2i location;
-	int size;
+	Vec2i size;
 
 	Vec2i drag_start;
 	GW::Vector2f translation;

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "ToolboxWindow.h"
+#include "ToolboxWidget.h"
 
-class ClockWindow : public ToolboxWindow {
+class ClockWindow : public ToolboxWidget {
 	ClockWindow() {};
 	~ClockWindow() {};
 public:

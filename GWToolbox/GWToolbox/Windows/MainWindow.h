@@ -34,6 +34,10 @@ public:
 	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
 
+	void RegisterPanel(ToolboxPanel* panel) {
+		panels.push_back(panel);
+	}
+
 private:
 	std::vector<ToolboxPanel*> panels;
 

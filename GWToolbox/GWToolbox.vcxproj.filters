@@ -216,6 +216,8 @@
     <ClInclude Include="GWToolbox\OtherModules\ToolboxTheme.h">
       <Filter>Modules\Theme</Filter>
     </ClInclude>
+    <ClInclude Include="GWToolbox\ToolboxUIElement.h" />
+    <ClInclude Include="GWToolbox\ToolboxWidget.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -319,7 +321,6 @@
       <Filter>Windows\Minimap</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\GuiUtils.cpp" />
-    <ClCompile Include="GWToolbox\ToolboxWindow.cpp" />
     <ClCompile Include="GWToolbox\ToolboxPanel.cpp" />
     <ClCompile Include="GWToolbox\Windows\Minimap\CustomRenderer.cpp">
       <Filter>Windows\Minimap</Filter>
@@ -331,5 +332,7 @@
     <ClCompile Include="GWToolbox\OtherModules\ToolboxTheme.cpp">
       <Filter>Modules\Theme</Filter>
     </ClCompile>
+    <ClCompile Include="GWToolbox\ToolboxWidget.cpp" />
+    <ClCompile Include="GWToolbox\ToolboxWindow.cpp" />
   </ItemGroup>
 </Project>

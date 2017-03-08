@@ -59,7 +59,7 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 	if (!visible) return;
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
-	if (ImGui::Begin(Name(), &visible)) {
+	if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
 		if (show_widgets) {
 			ImGui::Checkbox("Timer", &TimerWindow::Instance().visible);
 			ImGui::ShowHelp("Time the instance has been active");
@@ -196,7 +196,7 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 			//ImGui::InputText("ItemID", itemid, 32, ImGuiInputTextFlags_ReadOnly);
 			ImGui::PopItemWidth();
 		}
-		if (show_mobcount && ImGui::CollapsingHeader("Mob count")) {
+		if (show_mobcount && ImGui::CollapsingHeader("Enemy count")) {
 			int cast_count = 0;
 			int spirit_count = 0;
 			int compass_count = 0;
@@ -243,7 +243,7 @@ void InfoPanel::DrawSettingInternal() {
 	ImGui::Checkbox("Show map", &show_map);
 	ImGui::Checkbox("Show dialog", &show_dialog);
 	ImGui::Checkbox("Show item", &show_item);
-	ImGui::Checkbox("Show mobcount", &show_mobcount);
+	ImGui::Checkbox("Show enemy count", &show_mobcount);
 	ImGui::Checkbox("Show resign log", &show_resignlog);
 }
 
@@ -256,7 +256,7 @@ void InfoPanel::LoadSettings(CSimpleIni* ini) {
 	show_map = ini->GetBoolValue(Name(), "show_map", true);
 	show_dialog = ini->GetBoolValue(Name(), "show_dialog", true);
 	show_item = ini->GetBoolValue(Name(), "show_item", true);
-	show_mobcount = ini->GetBoolValue(Name(), "show_mobcount", true);
+	show_mobcount = ini->GetBoolValue(Name(), "show_enemycount", true);
 	show_resignlog = ini->GetBoolValue(Name(), "show_resignlog", true);
 }
 
@@ -269,6 +269,6 @@ void InfoPanel::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), "show_map", show_map);
 	ini->SetBoolValue(Name(), "show_dialog", show_dialog);
 	ini->SetBoolValue(Name(), "show_item", show_item);
-	ini->SetBoolValue(Name(), "show_mobcount", show_mobcount);
+	ini->SetBoolValue(Name(), "show_enemycount", show_mobcount);
 	ini->SetBoolValue(Name(), "show_resignlog", show_resignlog);
 }

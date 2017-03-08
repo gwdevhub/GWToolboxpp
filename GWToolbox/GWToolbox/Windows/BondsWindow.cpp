@@ -14,8 +14,10 @@
 #include "OtherModules\ToolboxSettings.h"
 #include <OtherModules\Resources.h>
 
+DWORD BondsWindow::buff_id[MAX_PLAYERS][MAX_BONDS] = { 0 };
+
 void BondsWindow::Initialize() {
-	ToolboxWindow::Initialize();
+	ToolboxWidget::Initialize();
 	for (int i = 0; i < MAX_BONDS; ++i) textures[i] = nullptr;
 	Resources::Instance().LoadTextureAsync(&textures[0], "balthspirit.jpg", "img");
 	Resources::Instance().LoadTextureAsync(&textures[1], "lifebond.jpg", "img");
@@ -41,8 +43,8 @@ void BondsWindow::Draw(IDirect3DDevice9* device) {
 
 	int size = GW::Partymgr().GetPartySize();
 	if (size > MAX_PLAYERS) size = MAX_PLAYERS;
-
-	int buff_id[MAX_PLAYERS][MAX_BONDS] = {};
+	
+	memset(buff_id, 0, sizeof(DWORD) * MAX_PLAYERS * MAX_BONDS);
 
 	GW::AgentEffectsArray effects = GW::Effects().GetPartyEffectArray();
 	if (effects.valid()) {
@@ -76,12 +78,8 @@ void BondsWindow::Draw(IDirect3DDevice9* device) {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(background));
 	ImGui::SetNextWindowSize(ImVec2((float)(MAX_BONDS * img_size), (float)(party_size * img_size)));
-	ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar
-		| ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoResize;
-	if (ToolboxSettings::Instance().freeze_widgets) {
-		flags |= ImGuiWindowFlags_NoMove;
-	}
-	if (ImGui::Begin(Name(), &visible, flags)) {
+	if (ImGui::Begin(Name(), &visible, GetWinFlags(
+		ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar, true))) {
 		float x = ImGui::GetWindowPos().x;
 		float y = ImGui::GetWindowPos().y;
 		for (int player = 0; player < party_size; ++player) {
@@ -133,12 +131,12 @@ void BondsWindow::UseBuff(int player, int bond) {
 }
 
 void BondsWindow::LoadSettings(CSimpleIni* ini) {
-	ToolboxWindow::LoadSettings(ini);
+	ToolboxWidget::LoadSettings(ini);
 	background = Colors::Load(ini, Name(), "background", Colors::ARGB(76, 0, 0, 0));
 }
 
 void BondsWindow::SaveSettings(CSimpleIni* ini) {
-	ToolboxWindow::SaveSettings(ini);
+	ToolboxWidget::SaveSettings(ini);
 	Colors::Save(ini, Name(), "background", background);
 }
 

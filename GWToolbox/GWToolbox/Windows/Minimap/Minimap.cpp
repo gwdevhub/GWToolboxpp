@@ -7,6 +7,7 @@
 #include <d3dx9math.h>
 
 #include <imgui_internal.h>
+#include <ImGuiAddons.h>
 #include <GWCA\GWCA.h>
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Managers\CameraMgr.h>
@@ -62,17 +63,36 @@ void Minimap::Initialize() {
 
 void Minimap::DrawSettings() {
 	if (ImGui::CollapsingHeader(Name(), ImGuiTreeNodeFlags_AllowOverlapMode)) {
+		ImGui::PushID(Name());
 		ShowVisibleRadio();
-		ImGui::DragInt2("Position", (int*)&location, 1.0f, 0, 0, "%.0f");
+		ImVec2 pos(0, 0);
+		ImVec2 size(0, 0);
+		if (ImGuiWindow* window = ImGui::FindWindowByName(Name())) {
+			pos = window->Pos;
+			size = window->Size;
+		}
+		if (ImGui::DragFloat2("Position", (float*)&pos, 1.0f, 0.0f, 0.0f, "%.0f")) {
+			ImGui::SetWindowPos(Name(), pos);
+		}
+		ImGui::ShowHelp("You need to show the window for this control to work");
+		if (ImGui::DragFloat2("Size", (float*)&size, 1.0f, 0.0f, 0.0f, "%.0f")) {
+			ImGui::SetWindowSize(Name(), size);
+		}
+		ImGui::ShowHelp("You need to show the window for this control to work");
+		ImGui::Checkbox("Lock Position", &lock_move);
+		ImGui::SameLine();
+		ImGui::Checkbox("Lock Size", &lock_size);
 		DrawSettingInternal();
+		ImGui::PopID();
 	} else {
 		ShowVisibleRadio();
 	}
 }
+
 void Minimap::DrawSettingInternal() {
 	ImGui::Text("General");
-	ImGui::DragInt("Size", &size);
 	ImGui::DragFloat("Scale", &scale, 0.01f, 0.1f);
+	ImGui::Text("You can set the color alpha to 0 to disable any minimap feature");
 	if (ImGui::TreeNode("Agents")) {
 		agent_renderer.DrawSettings();
 		ImGui::TreePop();
@@ -100,10 +120,7 @@ void Minimap::DrawSettingInternal() {
 }
 
 void Minimap::LoadSettings(CSimpleIni* ini) {
-	ToolboxWindow::LoadSettings(ini);
-	location.x = ini->GetLongValue(Name(), "x", 50);
-	location.y = ini->GetLongValue(Name(), "y", 50);
-	size = ini->GetLongValue(Name(), "size", 600);
+	ToolboxWidget::LoadSettings(ini);
 	scale = (float)ini->GetDoubleValue(Name(), "scale", 1.0);
 	range_renderer.LoadSettings(ini, Name());
 	pmap_renderer.LoadSettings(ini, Name());
@@ -114,10 +131,7 @@ void Minimap::LoadSettings(CSimpleIni* ini) {
 }
 
 void Minimap::SaveSettings(CSimpleIni* ini) {
-	ToolboxWindow::SaveSettings(ini);
-	ini->SetLongValue(Name(), "x", location.x);
-	ini->SetLongValue(Name(), "y", location.y);
-	ini->SetLongValue(Name(), "size", size);
+	ToolboxWidget::SaveSettings(ini);
 	ini->SetDoubleValue(Name(), "scale", scale);
 	range_renderer.SaveSettings(ini, Name());
 	pmap_renderer.SaveSettings(ini, Name());
@@ -133,8 +147,19 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 	GW::Agent* me = GW::Agents().GetPlayer();
 	if (me == nullptr) return;
 
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(0, 0, 0, 0));
+	ImGui::SetNextWindowSize(ImVec2(500.0f, 500.0f), ImGuiSetCond_FirstUseEver);
+	if (ImGui::Begin(Name(), nullptr, GetWinFlags())) {
+		location.x = ImGui::GetWindowPos().x;
+		location.y = ImGui::GetWindowPos().y;
+		size.x = ImGui::GetWindowSize().x;
+		size.y = ImGui::GetWindowSize().y;
+	}
+	ImGui::End();
+	ImGui::PopStyleColor();
+
 	// if not center and want to move, move center towards player
-	if ((translation.x != 0 || translation.y != 0) 
+	if ((translation.x != 0 || translation.y != 0)
 		&& (me->MoveX != 0 || me->MoveY != 0)
 		&& TIMER_DIFF(last_moved) > ms_before_back) {
 		GW::Vector2f v(translation.x, translation.y);
@@ -180,9 +205,9 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 	RECT old_clipping, clipping;
 	device->GetScissorRect(&old_clipping);
 	clipping.left = location.x > 0 ? location.x : 0;
-	clipping.right = location.x + size + 1;
+	clipping.right = location.x + size.x + 1;
 	clipping.top = location.y > 0 ? location.y : 0;
-	clipping.bottom = location.y + size + 1;
+	clipping.bottom = location.y + size.y + 1;
 	device->SetScissorRect(&clipping);
 	device->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
 	RenderSetupProjection(device);
@@ -195,7 +220,7 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 
 	D3DXMATRIX translate_char;
 	D3DXMatrixTranslation(&translate_char, -me->X, -me->Y, 0);
-	
+
 	D3DXMATRIX rotate_char;
 	D3DXMatrixRotationZ(&rotate_char, -GW::Cameramgr().GetYaw() + (float)M_PI_2);
 
@@ -206,13 +231,13 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 	view = translate_char * rotate_char * scaleM * translationM;
 	device->SetTransform(D3DTS_VIEW, &view);
 
-	pmap_renderer.Render(device);	
+	pmap_renderer.Render(device);
 
 	custom_renderer.Render(device);
 
 	// move the rings to the char position
 	D3DXMatrixTranslation(&translate_char, me->X, me->Y, 0);
-	device->SetTransform(D3DTS_WORLD, &translate_char); 
+	device->SetTransform(D3DTS_WORLD, &translate_char);
 	range_renderer.Render(device);
 	device->SetTransform(D3DTS_WORLD, &identity);
 
@@ -226,7 +251,7 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 	}
 
 	symbols_renderer.Render(device);
-	
+
 	device->SetTransform(D3DTS_WORLD, &identity);
 	agent_renderer.Render(device);
 
@@ -248,8 +273,8 @@ GW::Vector2f Minimap::InterfaceToWorldPoint(Vec2i pos) const {
 	v.y = location.y - v.y;
 
 	// go from [0, width][0, height] to [-1, 1][-1, 1]
-	v.x = (2.0f * v.x / size - 1.0f);
-	v.y = (2.0f * v.y / size + 1.0f);
+	v.x = (2.0f * v.x / size.x - 1.0f);
+	v.y = (2.0f * v.y / size.x + 1.0f);
 
 	// scale up to [-w, w]
 	float w = 5000.0f;
@@ -280,8 +305,8 @@ GW::Vector2f Minimap::InterfaceToWorldVector(Vec2i pos) const {
 	v.y = -v.y;
 
 	// go from [0, width][0, height] to [-1, 1][-1, 1]
-	v.x = (2.0f * v.x / size);
-	v.y = (2.0f * v.y / size);
+	v.x = (2.0f * v.x / size.x);
+	v.y = (2.0f * v.y / size.x);
 
 	// scale up to [-w, w]
 	float w = 5000.0f;
@@ -345,7 +370,7 @@ bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam) {
 
 	if (wParam & MK_SHIFT) return true;
 
-	if (!ToolboxSettings::Instance().freeze_widgets) return true;
+	if (!lock_move) return true;
 
 	GW::Vector2f v = InterfaceToWorldPoint(Vec2i(x, y));
 	pingslines_renderer.OnMouseDown(v.x, v.y);
@@ -400,15 +425,6 @@ bool Minimap::OnMouseMove(UINT Message, WPARAM wParam, LPARAM lParam) {
 		return true;
 	}
 
-	if (!ToolboxSettings::Instance().freeze_widgets) {
-		int diff_x = x - drag_start.x;
-		int diff_y = y - drag_start.y;
-		location.x += diff_x;
-		location.y += diff_y;
-		drag_start = Vec2i(x, y);
-		return true;
-	}
-
 	GW::Vector2f v = InterfaceToWorldPoint(Vec2i(x, y));
 	return pingslines_renderer.OnMouseMove(v.x, v.y);
 }
@@ -428,24 +444,15 @@ bool Minimap::OnMouseWheel(UINT Message, WPARAM wParam, LPARAM lParam) {
 		return true;
 	}
 
-	if (!ToolboxSettings::Instance().freeze_widgets) {
-		int delta = zDelta > 0 ? 2 : -2;
-		size += delta * 2;
-		size += delta * 2;
-		location.x -= delta;
-		location.y -= delta;
-
-		return true;
-	}
 	return false;
 }
 
 bool Minimap::IsInside(int x, int y) const {
 	// if outside square, return false
 	if (x < location.x) return false;
-	if (x > location.x + size) return false;
+	if (x > location.x + size.x) return false;
 	if (y < location.y) return false;
-	if (y > location.y + size) return false;
+	if (y > location.y + size.y) return false;
 
 	// if centered, use radar range
 	if (translation.x == 0 && translation.y == 0) {
@@ -480,10 +487,10 @@ void Minimap::RenderSetupProjection(IDirect3DDevice9* device) {
 	//// note: manually craft the projection to viewport instead of using
 	//// SetViewport to allow target regions outside the viewport 
 	//// e.g. negative x/y for slightly offscreen map
-	float xscale = (float)size / viewport.Width;
-	float yscale = (float)size / viewport.Height;
-	float xtrans = (float)(location.x * 2 + size) / viewport.Width - 1.0f;
-	float ytrans = -(float)(location.y * 2 + size) / viewport.Height + 1.0f;
+	float xscale = (float)size.x / viewport.Width;
+	float yscale = (float)size.x / viewport.Height;
+	float xtrans = (float)(location.x * 2 + size.x) / viewport.Width - 1.0f;
+	float ytrans = -(float)(location.y * 2 + size.x) / viewport.Height + 1.0f;
 	////IMPORTANT: we are basically setting z-near to 0 and z-far to 1
 	D3DXMATRIX viewport_matrix(
 		xscale, 0, 0, 0,

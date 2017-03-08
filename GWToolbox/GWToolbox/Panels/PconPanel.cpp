@@ -123,7 +123,7 @@ void PconPanel::Draw(IDirect3DDevice9* device) {
 	if (!visible) return;
 	
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-	if (ImGui::Begin(Name(), &visible)) {
+	if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
 		if (show_enable_button) {
 			ImGui::PushStyleColor(ImGuiCol_Text, enabled ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
 			if (ImGui::Button(enabled ? "Enabled###pconstoggle" : "Disabled###pconstoggle",

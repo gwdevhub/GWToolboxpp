@@ -19,7 +19,7 @@ unsigned int TBHotkey::cur_ui_id = 0;
 
 TBHotkey* TBHotkey::HotkeyFactory(CSimpleIni* ini, const char* section) {
 	std::string str(section);
-	if (str.compare(0, 6, "hotkey") != 0) return nullptr;
+	if (str.compare(0, 7, "hotkey-") != 0) return nullptr;
 	size_t first_sep = 6;
 	size_t second_sep = str.find(L':', first_sep);
 	std::string id = str.substr(first_sep + 1, second_sep - first_sep - 1);

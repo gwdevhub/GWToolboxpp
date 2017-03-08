@@ -1,5 +1,12 @@
 #include "ToolboxPanel.h"
 
+#include <Windows\MainWindow.h>
+
+void ToolboxPanel::Initialize() {
+	ToolboxWindow::Initialize();
+	MainWindow::Instance().RegisterPanel(this);
+}
+
 bool ToolboxPanel::DrawTabButton(IDirect3DDevice9* device) {
 	ImGui::PushStyleColor(ImGuiCol_Button, visible ?
 		ImGui::GetStyle().Colors[ImGuiCol_Button] : ImVec4(0, 0, 0, 0));

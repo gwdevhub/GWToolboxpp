@@ -12,8 +12,10 @@
 #include "GuiUtils.h"
 
 void PingsLinesRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
-	color_drawings = Colors::Load(ini, section, "color_drawings", Colors::ARGB(0, 0xFF, 0xFF, 0xFF));
-	ping_circle.color = Colors::Load(ini, section, "color_pings", Colors::ARGB(0xFF, 0xFF, 0, 0));
+	color_drawings = Colors::Load(ini, section, "color_drawings", Colors::ARGB(0xFF, 0xFF, 0xFF, 0xFF));
+	if ((color_drawings & IM_COL32_A_MASK) == 0) color_drawings |= Colors::ARGB(255, 0, 0, 0);
+	ping_circle.color = Colors::Load(ini, section, "color_pings", Colors::ARGB(128, 255, 0, 0));
+	if ((ping_circle.color & IM_COL32_A_MASK) == 0) ping_circle.color |= Colors::ARGB(128, 0, 0, 0);
 	marker.color = Colors::Load(ini, section, "color_shadowstep_mark", Colors::ARGB(200, 128, 0, 128));
 	color_shadowstep_line = Colors::Load(ini, section, "color_shadowstep_line", Colors::ARGB(48, 128, 0, 128));
 	Invalidate();
@@ -26,15 +28,15 @@ void PingsLinesRenderer::SaveSettings(CSimpleIni* ini, const char* section) cons
 }
 void PingsLinesRenderer::DrawSettings() {
 	if (ImGui::SmallButton("Restore Defaults")) {
-		color_drawings = Colors::ARGB(0, 0xFF, 0xFF, 0xFF);
-		ping_circle.color = Colors::ARGB(0xFF, 0xFF, 0, 0);
+		color_drawings = Colors::ARGB(0xFF, 0xFF, 0xFF, 0xFF);
+		ping_circle.color = Colors::ARGB(128, 255, 0, 0);
 		marker.color = Colors::ARGB(200, 128, 0, 128);
 		color_shadowstep_line = Colors::ARGB(48, 128, 0, 128);
 		ping_circle.Invalidate();
 		marker.Invalidate();
 	}
-	Colors::DrawSetting("Drawings", &color_drawings, false);
-	if (Colors::DrawSetting("Pings", &ping_circle.color, false)) {
+	Colors::DrawSetting("Drawings", &color_drawings);
+	if (Colors::DrawSetting("Pings", &ping_circle.color)) {
 		ping_circle.Invalidate();
 	}
 	if (Colors::DrawSetting("Shadowstep Marker", &marker.color)) {
@@ -210,11 +212,12 @@ void PingsLinesRenderer::DrawDrawings(IDirect3DDevice9* device) {
 
 		if (vertices_count < vertices_max - 2) {
 			for (const DrawingLine& line : lines) {
+				int max_alpha = (color_drawings & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT;
 				int left = 5000 - TIMER_DIFF(line.start);
-				int alpha = left * 255 / 2000;
+				int alpha = left * max_alpha / 2000;
 				if (alpha < 0) alpha = 0;
-				if (alpha > 255) alpha = 255;
-				Color color = (alpha << IM_COL32_A_SHIFT) | color_drawings;
+				if (alpha > max_alpha) alpha = max_alpha;
+				Color color = (color_drawings & 0x00FFFFFF) | (alpha << IM_COL32_A_SHIFT);
 				EnqueueVertex(line.x1, line.y1, color);
 				EnqueueVertex(line.x2, line.y2, color);
 
@@ -318,7 +321,7 @@ void PingsLinesRenderer::PingCircle::Initialize(IDirect3DDevice9* device) {
 		vertices[i].x = radius * std::cos(angle);
 		vertices[i].y = radius * std::sin(angle);
 		vertices[i].z = 0.0f;
-		vertices[i].color = ((outer ? 150 : 0) << IM_COL32_A_SHIFT) | color;
+		vertices[i].color = (outer ? color : Colors::Sub(color, 0xFF000000));
 	}
 	vertices[count] = vertices[0];
 	vertices[count + 1] = vertices[1];

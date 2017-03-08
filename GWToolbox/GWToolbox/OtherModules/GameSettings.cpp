@@ -52,6 +52,7 @@ void GameSettings::DrawBorderlessSetting() {
 }
 
 void GameSettings::ApplyBorderless(bool value) {
+	borderless_window = value;
 	DWORD current_style = GetWindowLong(GW::MemoryMgr::GetGWWindowHandle(), GWL_STYLE);
 
 	if ((current_style & WS_POPUP) != 0) { // borderless or fullscreen

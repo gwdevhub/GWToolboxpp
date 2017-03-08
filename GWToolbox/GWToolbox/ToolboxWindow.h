@@ -1,27 +1,36 @@
 #pragma once
 
-#include "ToolboxModule.h"
+#include "ToolboxUIElement.h"
 
 /*
 A ToolboxWindow is a module which also has an interface
 */
-class ToolboxWindow : public ToolboxModule {
+class ToolboxWindow : public ToolboxUIElement {
 public:
-	// save 'visible' field
-	virtual void LoadSettings(CSimpleIni* ini) override;
+	virtual void LoadSettings(CSimpleIni* ini) override {
+		ToolboxModule::LoadSettings(ini);
+		visible = ini->GetBoolValue(Name(), "visible", false);
+		lock_move = ini->GetBoolValue(Name(), "lock_move", false);
+		lock_size = ini->GetBoolValue(Name(), "lock_size", false);
+	}
 
-	// load 'visible' field
-	virtual void SaveSettings(CSimpleIni* ini) override;
+	virtual void SaveSettings(CSimpleIni* ini) override {
+		ToolboxModule::SaveSettings(ini);
+		ini->SetBoolValue(Name(), "visible", visible);
+		ini->SetBoolValue(Name(), "lock_move", lock_move);
+		ini->SetBoolValue(Name(), "lock_size", lock_size);
+	}
 
 	// Encapsulate settings into an ImGui::CollapsingHeader(Name()), 
 	// show a reset position button and a 'visible' checkbox
 	virtual void DrawSettings() override;
 
-	virtual bool ToggleVisible() { return visible = !visible; };
+	bool show_closebutton = true;
 
-	// true if the interface is visible
-	bool visible = false;
+	ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0) const;
 
-protected:
-	void ShowVisibleRadio();
+	bool* GetVisiblePtr(bool force_show = false) {
+		if (show_closebutton || force_show) return &visible;
+		return nullptr;
+	}
 };

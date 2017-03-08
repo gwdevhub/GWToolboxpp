@@ -26,7 +26,7 @@ void ChatFilter::Initialize() {
 	//strcpy_s(byauthor_buf, "");
 
 	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P081>(
-		[&](GW::Packet::StoC::P081* pak) -> bool {
+		[this](GW::Packet::StoC::P081* pak) -> bool {
 
 #ifdef PRINT_CHAT_PACKETS
 		printf("P081: ");
@@ -39,6 +39,22 @@ void ChatFilter::Initialize() {
 #ifdef PRINT_CHAT_PACKETS
 			printf("   ` killed (because of previous)\n");
 #endif // PRINT_CHAT_PACKETS
+			return true;
+		}
+
+		if (GW::Map().GetInstanceType() == GW::Constants::InstanceType::Outpost
+			&& messagebycontent && ShouldIgnoreByContent(pak)) {
+			// check if the message contains start string (0x107) but not end string(0x1)
+			kill_next_p081 = false;
+			for (int i = 0; i < 122 && pak->message[i]; ++i) {
+				if (pak->message[i] == 0x107) {
+					kill_next_p081 = true;
+				} else if (pak->message[i] == 0x1) {
+					kill_next_p081 = false;
+					break;
+				}
+			}
+			kill_next_msgdelivery = true;
 			return true;
 		}
 
@@ -58,31 +74,20 @@ void ChatFilter::Initialize() {
 			printf("  ` killed \n");
 #endif // PRINT_CHAT_PACKETS
 
-			// check if the message contains start string (0x107) but not end string(0x1)
-			kill_next_p081 = false;
-			for (int i = 0; i < 122 && pak->message[i]; ++i) {
-				if (pak->message[i] == 0x107) {
-					kill_next_p081 = true;
-				} else if (pak->message[i] == 0x1) {
-					kill_next_p081 = false;
-					break;
-				}
-			}
 			kill_next_msgdelivery = true;
 			return true;
 		}
 		return false;
 	});
 	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P082>(
-		[&](GW::Packet::StoC::P082* pak) -> bool {
+		[this](GW::Packet::StoC::P082* pak) -> bool {
 #ifdef PRINT_CHAT_PACKETS
-		printf("P082: id %d, type %d %s", pak->id, pak->type, kill_next_msgdelivery ? "(killed)" : "");
+		printf("P082: id %d, type %d %s\n", pak->id, pak->type, kill_next_msgdelivery ? "(killed)" : "");
 #endif // PRINT_CHAT_PACKETS
 		if (kill_next_msgdelivery) {
 			kill_next_msgdelivery = false;
 			return true;
 		}
-		printf("\n");
 		return false;
 	});
 #ifdef PRINT_CHAT_PACKETS
@@ -104,15 +109,15 @@ void ChatFilter::Initialize() {
 	});
 #endif // PRINT_CHAT_PACKETS
 
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P085>([&](GW::Packet::StoC::P085* pak) -> bool {
+	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P085>(
+		[this](GW::Packet::StoC::P085* pak) -> bool {
 #ifdef PRINT_CHAT_PACKETS
-		printf("P085: id %d, type %d %s", pak->id, pak->type, kill_next_msgdelivery ? "(killed)" : "");
+		printf("P085: id %d, type %d %s\n", pak->id, pak->type, kill_next_msgdelivery ? "(killed)" : "");
 #endif // PRINT_CHAT_PACKETS
 		if (kill_next_msgdelivery) {
 			kill_next_msgdelivery = false;
 			return true;
 		}
-		printf("\n");
 		return false;
 	});
 }
@@ -235,8 +240,6 @@ bool ChatFilter::FullMatch(const wchar_t* s, const std::initializer_list<wchar_t
 }
 
 bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) {
-	if (ShouldIgnoreByContent(pak)) return true;
-
 	switch (pak->message[0]) {
 		// ==== Messages not ignored ====
 	case 0x108: return false; // player message

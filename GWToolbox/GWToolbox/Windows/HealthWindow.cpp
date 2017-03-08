@@ -9,13 +9,8 @@ void HealthWindow::Draw(IDirect3DDevice9* pDevice) {
 	if (!visible) return;
 
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(0, 0, 0, 0));
-	ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar
-		| ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar;
-	if (ToolboxSettings::Instance().freeze_widgets) {
-		flags |= ImGuiWindowFlags_NoInputs;
-	}
-	ImGui::SetNextWindowSize(ImVec2(150, 100));
-	if (ImGui::Begin(Name(), nullptr, flags)) {
+	ImGui::SetNextWindowSize(ImVec2(150, 100), ImGuiSetCond_FirstUseEver);
+	if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, true))) {
 		static char health_perc[32];
 		static char health_abs[32];
 		GW::Agent* target = GW::Agents().GetTarget();

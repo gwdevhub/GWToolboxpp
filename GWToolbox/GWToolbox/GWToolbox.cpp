@@ -123,8 +123,10 @@ void GWToolbox::ThreadEntry(HMODULE dllmodule) {
 	Sleep(100);
 	LOG("Restoring input hook\n");
 	SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
-	Sleep(100);
 	LOG("Destroying directX hook\n");
+	dx_hooker->RemoveHook(GW::dx9::kEndScene);
+	dx_hooker->RemoveHook(GW::dx9::kReset);
+	Sleep(100);
 	delete dx_hooker;
 	LOG("Closing log/console, bye!\n");
 	Logger::Close();
@@ -148,7 +150,9 @@ LRESULT CALLBACK GWToolbox::WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPAR
 	}
 
 	if (Message == WM_QUIT || Message == WM_CLOSE) {
-		// todo: save
+		GWToolbox::Instance().SaveSettings();
+		GWToolbox::Instance().Terminate();
+		ImGui_ImplDX9_Shutdown();
 		return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
 	}
 

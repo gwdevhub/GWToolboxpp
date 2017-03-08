@@ -1,8 +1,8 @@
 #pragma once
 
-#include "ToolboxWindow.h"
+#include "ToolboxWidget.h"
 
-class TimerWindow : public ToolboxWindow {
+class TimerWindow : public ToolboxWidget {
 	TimerWindow() {};
 	~TimerWindow() {};
 public:

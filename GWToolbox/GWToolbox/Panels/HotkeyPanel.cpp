@@ -5,14 +5,13 @@
 
 #include <GWCA\Managers\ItemMgr.h>
 
-#include <Windows\MainWindow.h>
 #include <logger.h>
 #include <GuiUtils.h>
 #include <OtherModules\Resources.h>
 
 void HotkeyPanel::Initialize() {
+	ToolboxPanel::Initialize();
 	Resources::Instance().LoadTextureAsync(&texture, "keyboard.png", "img");
-
 	clickerTimer = TIMER_INIT();
 	dropCoinsTimer = TIMER_INIT();
 }
@@ -27,7 +26,7 @@ void HotkeyPanel::Draw(IDirect3DDevice9* pDevice) {
 	// === hotkey panel ===
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(300, 400), ImGuiSetCond_FirstUseEver);
-	if (ImGui::Begin(Name(), &visible)) {
+	if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
 		if (ImGui::Button("Create Hotkey...", ImVec2(ImGui::GetWindowContentRegionWidth(), 0))) {
 			ImGui::OpenPopup("Create Hotkey");
 		}
@@ -110,18 +109,34 @@ void HotkeyPanel::Draw(IDirect3DDevice9* pDevice) {
 
 void HotkeyPanel::LoadSettings(CSimpleIni* ini) {
 	ToolboxPanel::LoadSettings(ini);
+
+	// clear hotkeys from toolbox
+	for (TBHotkey* hotkey : hotkeys) {
+		delete hotkey;
+	}
+	hotkeys.clear();
+
+	// then load again
 	CSimpleIni::TNamesDepend entries;
 	ini->GetAllSections(entries);
 	for (CSimpleIni::Entry& entry : entries) {
 		TBHotkey* hk = TBHotkey::HotkeyFactory(ini, entry.pItem);
-		if (hk) {
-			hotkeys.push_back(hk);
-			ini->Delete(entry.pItem, nullptr);
-		}
+		if (hk) hotkeys.push_back(hk);
 	}
 }
 void HotkeyPanel::SaveSettings(CSimpleIni* ini) {
 	ToolboxPanel::SaveSettings(ini);
+
+	// clear hotkeys from ini
+	CSimpleIni::TNamesDepend entries;
+	ini->GetAllSections(entries);
+	for (CSimpleIni::Entry& entry : entries) {
+		if (strncmp(entry.pItem, "hotkey-", 7) == 0) {
+			ini->Delete(entry.pItem, nullptr);
+		}
+	}
+
+	// then save again
 	char buf[256];
 	for (unsigned int i = 0; i < hotkeys.size(); ++i) {
 		sprintf_s(buf, "hotkey-%03d:%s", i, hotkeys[i]->Name());

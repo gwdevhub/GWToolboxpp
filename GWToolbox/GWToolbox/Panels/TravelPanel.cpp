@@ -15,6 +15,7 @@
 bool travelpanel_arraygetter(void* data, int idx, const char** out_text);
 
 void TravelPanel::Initialize() {
+	ToolboxPanel::Initialize();
 	Resources::Instance().LoadTextureAsync(&texture, "plane.png", "img");
 
 	district = district = GW::Constants::District::Current;
@@ -35,7 +36,7 @@ void TravelPanel::Draw(IDirect3DDevice9* pDevice) {
 	
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
-	if (ImGui::Begin(Name(), &visible)) {
+	if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
 		ImGui::PushItemWidth(-1.0f);
 		static int travelto_index = -1;
 		if (ImGui::MyCombo("Travel To...", &travelto_index, travelpanel_arraygetter, nullptr, N_OUTPOSTS)) {

@@ -5,21 +5,26 @@
 #include <GWCA\Managers\MapMgr.h>
 
 #include "GuiUtils.h"
-#include <Windows\MainWindow.h>
 #include <OtherModules\Resources.h>
 
 unsigned int BuildPanel::TeamBuild::cur_ui_id = 0;
 
 void BuildPanel::Initialize() {
+	ToolboxPanel::Initialize();
 	Resources::Instance().LoadTextureAsync(&texture, "list.png", "img");
 	send_timer = TIMER_INIT();
+}
+
+void BuildPanel::Terminate() {
+	ToolboxPanel::Terminate();
+	teambuilds.clear();
 }
 
 void BuildPanel::Draw(IDirect3DDevice9* pDevice) {
 	if (visible) {
 		ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 		ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
-		if (ImGui::Begin(Name(), &visible)) {
+		if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
 			for (TeamBuild& tbuild : teambuilds) {
 				ImGui::PushID(tbuild.ui_id);
 				if (ImGui::Button(tbuild.name, ImVec2(ImGui::GetWindowContentRegionWidth()
@@ -187,6 +192,11 @@ void BuildPanel::Update() {
 
 void BuildPanel::LoadSettings(CSimpleIni* ini) {
 	ToolboxPanel::LoadSettings(ini);
+
+	// clear builds from toolbox
+	teambuilds.clear();
+
+	// then load
 	CSimpleIni::TNamesDepend entries;
 	ini->GetAllSections(entries);
 	for (CSimpleIni::Entry& entry : entries) {
@@ -214,15 +224,23 @@ void BuildPanel::LoadSettings(CSimpleIni* ini) {
 					tbuild.builds.push_back(Build(nameval, templateval));
 				}
 			}
-
-			// after we loaded the build delete it
-			ini->Delete(entry.pItem, nullptr);
 		}
 	}
 }
 
 void BuildPanel::SaveSettings(CSimpleIni* ini) {
 	ToolboxPanel::SaveSettings(ini);
+
+	// clear builds from ini
+	CSimpleIni::TNamesDepend entries;
+	ini->GetAllSections(entries);
+	for (CSimpleIni::Entry& entry : entries) {
+		if (strncmp(entry.pItem, "builds", 6) == 0) {
+			ini->Delete(entry.pItem, nullptr);
+		}
+	}
+
+	// then save
 	for (unsigned int i = 0; i < teambuilds.size(); ++i) {
 		const TeamBuild& tbuild = teambuilds[i];
 		char section[16];

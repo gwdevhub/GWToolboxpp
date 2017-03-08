@@ -1,9 +1,9 @@
 #pragma once
 
 #include "Color.h"
-#include "ToolboxWindow.h"
+#include "ToolboxWidget.h"
 
-class BondsWindow : public ToolboxWindow {
+class BondsWindow : public ToolboxWidget {
 	static const int MAX_PLAYERS = 12;
 	static const int MAX_BONDS = 3;
 
@@ -15,7 +15,7 @@ public:
 		return instance;
 	}
 
-	const char* Name() const override { return "Bonds Window"; }
+	const char* Name() const override { return "Bonds"; }
 
 	void Initialize() override;
 	void Terminate() override;
@@ -35,4 +35,6 @@ private:
 
 	IDirect3DTexture9* textures[MAX_BONDS];
 	Color background;
+
+	static DWORD buff_id[MAX_PLAYERS][MAX_BONDS];
 };

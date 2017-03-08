@@ -15,7 +15,7 @@
 #define IniSection "health"
 
 void PartyDamage::Initialize() {
-	ToolboxWindow::Initialize();
+	ToolboxWidget::Initialize();
 
 	total = 0;
 	send_timer = TIMER_INIT();
@@ -34,6 +34,7 @@ void PartyDamage::Initialize() {
 }
 
 void PartyDamage::Terminate() {
+	ToolboxWidget::Terminate();
 	inifile->Reset();
 	delete inifile;
 }
@@ -198,13 +199,8 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(color_background));
-	ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar 
-		| ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoResize;
-	if (ToolboxSettings::Instance().freeze_widgets) {
-		flags |= ImGuiWindowFlags_NoInputs;
-	}
 	ImGui::SetNextWindowSize(ImVec2(width, (float)(size * line_height)));
-	if (ImGui::Begin(Name(), &visible, flags)) {
+	if (ImGui::Begin(Name(), &visible, GetWinFlags(0, true))) {
 		ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[GuiUtils::FontSize::f10]); // should be 9
 		float x = ImGui::GetWindowPos().x;
 		float y = ImGui::GetWindowPos().y;
@@ -331,7 +327,8 @@ void PartyDamage::ResetDamage() {
 }
 
 void PartyDamage::LoadSettings(CSimpleIni* ini) {
-	ToolboxWindow::LoadSettings(ini);
+	ToolboxWidget::LoadSettings(ini);
+
 	width = (float)ini->GetDoubleValue(Name(), "width", 100.0f);
 	bars_left = ini->GetBoolValue(Name(), "bars_left", true);
 	recent_max_time = ini->GetLongValue(Name(), "recent_max_time", 7000);
@@ -357,7 +354,7 @@ void PartyDamage::LoadSettings(CSimpleIni* ini) {
 }
 
 void PartyDamage::SaveSettings(CSimpleIni* ini) {
-	ToolboxWindow::SaveSettings(ini);
+	ToolboxWidget::SaveSettings(ini);
 	ini->SetDoubleValue(Name(), "width", width);
 	ini->SetBoolValue(Name(), "bars_left", bars_left);
 	ini->GetLongValue(Name(), "recent_max_time", recent_max_time);

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "ToolboxWindow.h"
+#include "ToolboxWidget.h"
 
-class DistanceWindow : public ToolboxWindow {
+class DistanceWindow : public ToolboxWidget {
 	DistanceWindow() {};
 	~DistanceWindow() {};
 public:
