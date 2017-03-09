@@ -78,8 +78,7 @@ void BondsWindow::Draw(IDirect3DDevice9* device) {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(background));
 	ImGui::SetNextWindowSize(ImVec2((float)(MAX_BONDS * img_size), (float)(party_size * img_size)));
-	if (ImGui::Begin(Name(), &visible, GetWinFlags(
-		ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar, true))) {
+	if (ImGui::Begin(Name(), &visible, GetWinFlags(0, !click_to_use))) {
 		float x = ImGui::GetWindowPos().x;
 		float y = ImGui::GetWindowPos().y;
 		for (int player = 0; player < party_size; ++player) {
@@ -91,13 +90,15 @@ void BondsWindow::Draw(IDirect3DDevice9* device) {
 						ImVec2(tl.x + 1, tl.y + 1),
 						ImVec2(br.x - 2, br.y - 2));
 				}
-				if (ImGui::IsMouseHoveringRect(tl, br)) {
-					ImGui::GetWindowDrawList()->AddRect(tl, br, IM_COL32(255, 255, 255, 255));
-					if (ImGui::IsMouseReleased(0)) {
-						if (buff_id[player][bond] > 0) {
-							GW::Effects().DropBuff(buff_id[player][bond]);
-						} else {
-							UseBuff(player, bond);
+				if (click_to_use) {
+					if (ImGui::IsMouseHoveringRect(tl, br)) {
+						ImGui::GetWindowDrawList()->AddRect(tl, br, IM_COL32(255, 255, 255, 255));
+						if (ImGui::IsMouseReleased(0)) {
+							if (buff_id[player][bond] > 0) {
+								GW::Effects().DropBuff(buff_id[player][bond]);
+							} else {
+								UseBuff(player, bond);
+							}
 						}
 					}
 				}
@@ -133,13 +134,16 @@ void BondsWindow::UseBuff(int player, int bond) {
 void BondsWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxWidget::LoadSettings(ini);
 	background = Colors::Load(ini, Name(), "background", Colors::ARGB(76, 0, 0, 0));
+	click_to_use = ini->GetBoolValue(Name(), "click_to_use", true);
 }
 
 void BondsWindow::SaveSettings(CSimpleIni* ini) {
 	ToolboxWidget::SaveSettings(ini);
 	Colors::Save(ini, Name(), "background", background);
+	ini->SetBoolValue(Name(), "click_to_use", click_to_use);
 }
 
 void BondsWindow::DrawSettingInternal() {
 	Colors::DrawSetting("Background", &background);
+	ImGui::Checkbox("Click to Drop/Use", &click_to_use);
 }

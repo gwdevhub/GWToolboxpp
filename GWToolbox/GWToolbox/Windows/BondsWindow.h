@@ -36,5 +36,7 @@ private:
 	IDirect3DTexture9* textures[MAX_BONDS];
 	Color background;
 
+	bool click_to_use = true;
+
 	static DWORD buff_id[MAX_PLAYERS][MAX_BONDS];
 };

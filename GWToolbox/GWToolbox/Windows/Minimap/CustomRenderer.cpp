@@ -9,6 +9,12 @@ Color CustomRenderer::color = 0xFF00FFFF;
 void CustomRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	color = Colors::Load(ini, section, "color_custom_markers", 0xFFFFFFFF);
 	Invalidate();
+
+	// clear current markers
+	lines.clear();
+	markers.clear();
+
+	// then load new
 	CSimpleIni::TNamesDepend entries;
 	ini->GetAllSections(entries);
 	for (CSimpleIni::Entry& entry : entries) {
@@ -35,6 +41,22 @@ void CustomRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 }
 void CustomRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 	Colors::Save(ini, section, "color_custom_markers", color);
+
+	// clear markers from ini
+	// then load new
+	CSimpleIni::TNamesDepend entries;
+	ini->GetAllSections(entries);
+	for (CSimpleIni::Entry& entry : entries) {
+		const char* section = entry.pItem;
+		if (strncmp(section, "customline", 10) == 0) {
+			ini->Delete(section, nullptr);
+		}
+		if (strncmp(section, "custommarker", 12) == 0) {
+			ini->Delete(section, nullptr);
+		}
+	}
+
+	// then save
 	for (unsigned i = 0; i < lines.size(); ++i) {
 		const CustomLine& line = lines[i];
 		char section[32];

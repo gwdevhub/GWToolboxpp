@@ -397,7 +397,7 @@ void ChatFilter::DrawSettingInternal() {
 	//	ByAuthor_ParseBuf();
 	//	byauthor_filedirty = true;
 	//}
-	ImGui::Unindent();
+	//ImGui::Unindent();
 }
 
 void ChatFilter::ParseBuffer(const char* buf, std::set<std::string>& words) {

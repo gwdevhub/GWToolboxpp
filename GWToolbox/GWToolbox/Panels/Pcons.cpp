@@ -222,10 +222,7 @@ bool PconCity::CanUseByEffect() const {
 	if (player == nullptr) return false;
 	if (player->MoveX == 0.0f && player->MoveY == 0.0f) return false;
 
-	GW::AgentEffectsArray AgEffects = GW::Effects().GetPartyEffectArray();
-	if (!AgEffects.valid()) return false; // don't know
-
-	GW::EffectArray effects = AgEffects[0].Effects;
+	GW::EffectArray effects = GW::Effects().GetPlayerEffectArray();
 	if (!effects.valid()) return false; // don't know
 
 	for (DWORD i = 0; i < effects.size(); i++) {

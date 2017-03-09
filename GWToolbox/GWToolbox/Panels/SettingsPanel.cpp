@@ -63,19 +63,19 @@ void SettingsPanel::Draw(IDirect3DDevice9* pDevice) {
 			}
 			if (ImGui::TreeNode("Opening and closing windows")) {
 				ImGui::Text("There are several ways to open and close toolbox windows and widgets:");
-				ImGui::BulletText("Press the buttons in the main window.");
-				ImGui::BulletText("Use the checkboxes in the Info window.");
-				ImGui::BulletText("Use the checkboxes on the right of each setting header below.");
-				ImGui::BulletText("Use chat command '/hide <name>' to hide a window or widget.");
-				ImGui::BulletText("Use chat command '/show <name>' to show a window or widget.");
-				ImGui::BulletText("Use chat command '/tb <name>' to toggle a window or widget.");
+				ImGui::BulletText("Buttons in the main window.");
+				ImGui::BulletText("Checkboxes in the Info window.");
+				ImGui::BulletText("Checkboxes on the right of each setting header below.");
+				ImGui::BulletText("Chat command '/hide <name>' to hide a window or widget.");
+				ImGui::BulletText("Chat command '/show <name>' to show a window or widget.");
+				ImGui::BulletText("Chat command '/tb <name>' to toggle a window or widget.");
 				ImGui::Indent();
 				ImGui::Text("In the commands above, <name> is the title of the window as shown\n"
-					"(for example, try '/hide settings' and '/show settings').");
+					"in the title bar. For example, try '/hide settings' and '/show settings'.");
 				ImGui::Text("Note: the names of the widgets without a visible title bar are\n"
-					"the same as the setting headers below.");
+					"the same as in the setting headers below.");
 				ImGui::Unindent();
-				ImGui::BulletText("Create a Send Chat hotkey to enter one of the commands above.");
+				ImGui::BulletText("Send Chat hotkey to enter one of the commands above.");
 				ImGui::TreePop();
 			}
 			if (ImGui::TreeNode("Chat Commands")) {
