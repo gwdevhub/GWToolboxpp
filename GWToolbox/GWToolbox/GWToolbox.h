@@ -7,6 +7,15 @@
 
 #include "ToolboxModule.h"
 
+DWORD __stdcall SafeThreadEntry(LPVOID mod);
+DWORD __stdcall ThreadEntry(LPVOID dllmodule);
+
+LRESULT CALLBACK SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam);
+
+HRESULT WINAPI EndScene(IDirect3DDevice9* pDevice);
+HRESULT WINAPI ResetScene(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETERS* pPresentationParameters);
+
 class GWToolbox {
 	GWToolbox() {};
 	~GWToolbox() {};
@@ -16,22 +25,7 @@ public:
 		return instance;
 	}
 
-	// will create a new toolbox object and run it, can be used as argument for createThread
-	static void SafeThreadEntry(HMODULE mod);
-private:
-	static void ThreadEntry(HMODULE dllmodule);
-
-	//// DirectX event handlers declaration
-	//static HRESULT WINAPI endScene(IDirect3DDevice9* pDevice);
-	//static HRESULT WINAPI resetScene(IDirect3DDevice9* pDevice,
-	//	D3DPRESENT_PARAMETERS* pPresentationParameters);
-
-	// Input event handler
-	static LRESULT CALLBACK SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam);
-	static LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam);
-
-	//------ Public methods ------//
-public:
+	static void EndScene(IDirect3DDevice9* device);
 
 	void Initialize();
 	void Terminate();

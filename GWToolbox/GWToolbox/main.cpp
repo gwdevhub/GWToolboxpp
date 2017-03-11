@@ -17,7 +17,7 @@ void init(HMODULE hModule){
 		}
 		
 		LOG("Creating toolbox thread\n");
-		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)GWToolbox::SafeThreadEntry, hModule, 0, 0);
+		CreateThread(0, 0, SafeThreadEntry, hModule, 0, 0);
 	} __except ( EXCEPT_EXPRESSION_ENTRY ) {
 	}
 }
