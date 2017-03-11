@@ -38,7 +38,7 @@ void ClockWindow::LoadSettings(CSimpleIni* ini) {
 }
 
 void ClockWindow::SaveSettings(CSimpleIni* ini) {
-	ToolboxWidget::LoadSettings(ini);
+	ToolboxWidget::SaveSettings(ini);
 	ini->SetBoolValue(Name(), "use_24h_clock", use_24h_clock);
 }
 

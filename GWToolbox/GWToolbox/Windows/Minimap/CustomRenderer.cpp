@@ -286,6 +286,27 @@ void CustomRenderer::DrawCustomMarkers(IDirect3DDevice9* device) {
 				}
 			}
 		}
+
+		GW::HeroFlagArray& flags = GW::GameContext::instance()->world->hero_flags;
+		if (flags.valid()) {
+			for (unsigned i = 0; i < flags.size(); ++i) {
+				GW::HeroFlag& flag = flags[i];
+
+				D3DXMATRIX translate, scale, world;
+				D3DXMatrixTranslation(&translate, flag.flag.x, flag.flag.y, 0.0f);
+				D3DXMatrixScaling(&scale, 250.0f, 250.0f, 1.0f);
+				world = scale * translate;
+				device->SetTransform(D3DTS_WORLD, &world);
+				linecircle.Render(device);
+			}
+		}
+		GW::GamePos allflag = GW::GameContext::instance()->world->all_flag;
+		D3DXMATRIX translate, scale, world;
+		D3DXMatrixTranslation(&translate, allflag.x, allflag.y, 0.0f);
+		D3DXMatrixScaling(&scale, 300.0f, 300.0f, 1.0f);
+		world = scale * translate;
+		device->SetTransform(D3DTS_WORLD, &world);
+		linecircle.Render(device);
 	}
 }
 

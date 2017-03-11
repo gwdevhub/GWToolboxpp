@@ -75,4 +75,7 @@ private:
 	PingsLinesRenderer pingslines_renderer;
 	SymbolsRenderer symbols_renderer;
 	CustomRenderer custom_renderer;
+
+	bool show_hero_flag_controls = false;
+	bool flagging[9];
 };

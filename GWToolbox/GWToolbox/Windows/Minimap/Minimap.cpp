@@ -6,11 +6,13 @@
 #include <d3d9.h>
 #include <d3dx9math.h>
 
+#include <imgui.h>
 #include <imgui_internal.h>
 #include <ImGuiAddons.h>
 #include <GWCA\GWCA.h>
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Managers\CameraMgr.h>
+#include <GWCA\Managers\PartyMgr.h>
 #include "logger.h"
 #include "OtherModules\ToolboxSettings.h"
 
@@ -92,6 +94,7 @@ void Minimap::DrawSettings() {
 void Minimap::DrawSettingInternal() {
 	ImGui::Text("General");
 	ImGui::DragFloat("Scale", &scale, 0.01f, 0.1f);
+	ImGui::Checkbox("Show hero flag controls", &show_hero_flag_controls);
 	ImGui::Text("You can set the color alpha to 0 to disable any minimap feature");
 	if (ImGui::TreeNode("Agents")) {
 		agent_renderer.DrawSettings();
@@ -122,6 +125,7 @@ void Minimap::DrawSettingInternal() {
 void Minimap::LoadSettings(CSimpleIni* ini) {
 	ToolboxWidget::LoadSettings(ini);
 	scale = (float)ini->GetDoubleValue(Name(), "scale", 1.0);
+	show_hero_flag_controls = ini->GetBoolValue(Name(), "show_hero_flag_controls", true);
 	range_renderer.LoadSettings(ini, Name());
 	pmap_renderer.LoadSettings(ini, Name());
 	agent_renderer.LoadSettings(ini, Name());
@@ -133,6 +137,7 @@ void Minimap::LoadSettings(CSimpleIni* ini) {
 void Minimap::SaveSettings(CSimpleIni* ini) {
 	ToolboxWidget::SaveSettings(ini);
 	ini->SetDoubleValue(Name(), "scale", scale);
+	ini->SetBoolValue(Name(), "show_hero_flag_controls", show_hero_flag_controls);
 	range_renderer.SaveSettings(ini, Name());
 	pmap_renderer.SaveSettings(ini, Name());
 	agent_renderer.SaveSettings(ini, Name());
@@ -146,18 +151,6 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 
 	GW::Agent* me = GW::Agents().GetPlayer();
 	if (me == nullptr) return;
-
-	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(0, 0, 0, 0));
-	ImGui::SetNextWindowSize(ImVec2(500.0f, 500.0f), ImGuiSetCond_FirstUseEver);
-	if (ImGui::Begin(Name(), nullptr, GetWinFlags())) {
-		// window pos are already rounded by imgui, so casting is no big deal
-		location.x = (int)ImGui::GetWindowPos().x;
-		location.y = (int)ImGui::GetWindowPos().y;
-		size.x = (int)ImGui::GetWindowSize().x;
-		size.y = (int)ImGui::GetWindowSize().y;
-	}
-	ImGui::End();
-	ImGui::PopStyleColor();
 
 	// if not center and want to move, move center towards player
 	if ((translation.x != 0 || translation.y != 0)
@@ -174,93 +167,162 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 		}
 	}
 
-	// Backup the DX9 state
-	IDirect3DStateBlock9* d3d9_state_block = NULL;
-	if (device->CreateStateBlock(D3DSBT_ALL, &d3d9_state_block) < 0)
-		return;
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(0, 0, 0, 0));
+	ImGui::SetNextWindowSize(ImVec2(500.0f, 500.0f), ImGuiSetCond_FirstUseEver);
+	if (ImGui::Begin(Name(), nullptr, GetWinFlags(ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoBringToFrontOnFocus))) {
+		// window pos are already rounded by imgui, so casting is no big deal
+		location.x = (int)ImGui::GetWindowPos().x;
+		location.y = (int)ImGui::GetWindowPos().y;
+		size.x = (int)ImGui::GetWindowSize().x;
+		size.y = (int)ImGui::GetWindowSize().y;
+		ImGui::GetWindowDrawList()->AddCallback([](const ImDrawList* parent_list, const ImDrawCmd* cmd) -> void {
 
-	// Setup render state: fixed-pipeline, alpha-blending, no face culling, no depth testing
-	device->SetFVF(D3DFVF_CUSTOMVERTEX);
-	device->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, true);
-	device->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
-	device->SetPixelShader(NULL);
-	device->SetVertexShader(NULL);
-	device->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
-	device->SetRenderState(D3DRS_LIGHTING, false);
-	device->SetRenderState(D3DRS_ZENABLE, false);
-	device->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
-	device->SetRenderState(D3DRS_ALPHATESTENABLE, false);
-	device->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
-	device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
-	device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-	device->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
-	device->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
-	device->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
-	device->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
-	device->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
-	device->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
-	device->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
-	device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
-	device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+			IDirect3DDevice9* device = (IDirect3DDevice9*)cmd->UserCallbackData;
+			GW::Agent* me = GW::Agents().GetPlayer();
+			if (me == nullptr) return;
 
-	RECT old_clipping, clipping;
-	device->GetScissorRect(&old_clipping);
-	clipping.left = location.x > 0 ? location.x : 0;
-	clipping.right = location.x + size.x + 1;
-	clipping.top = location.y > 0 ? location.y : 0;
-	clipping.bottom = location.y + size.y + 1;
-	device->SetScissorRect(&clipping);
-	device->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
-	RenderSetupProjection(device);
+			// Backup the DX9 state
+			IDirect3DStateBlock9* d3d9_state_block = NULL;
+			if (device->CreateStateBlock(D3DSBT_ALL, &d3d9_state_block) < 0)
+				return;
 
-	D3DXMATRIX view;
-	D3DXMATRIX identity;
-	D3DXMatrixIdentity(&identity);
-	device->SetTransform(D3DTS_WORLD, &identity);
-	device->SetTransform(D3DTS_VIEW, &identity);
+			// Setup render state: fixed-pipeline, alpha-blending, no face culling, no depth testing
+			device->SetFVF(D3DFVF_CUSTOMVERTEX);
+			device->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, true);
+			device->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
+			device->SetPixelShader(NULL);
+			device->SetVertexShader(NULL);
+			device->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
+			device->SetRenderState(D3DRS_LIGHTING, false);
+			device->SetRenderState(D3DRS_ZENABLE, false);
+			device->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
+			device->SetRenderState(D3DRS_ALPHATESTENABLE, false);
+			device->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
+			device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
+			device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+			device->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
+			device->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
+			device->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
+			device->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
+			device->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
+			device->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
+			device->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
+			device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+			device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
 
-	D3DXMATRIX translate_char;
-	D3DXMatrixTranslation(&translate_char, -me->X, -me->Y, 0);
+			ImGuiStyle& style = ImGui::GetStyle();
+			RECT old_clipping, clipping;
+			device->GetScissorRect(&old_clipping);
+			clipping.left = (long)(cmd->ClipRect.x - style.WindowPadding.x / 2); // > 0 ? cmd->ClipRect.x : 0);
+			clipping.right = (long)(cmd->ClipRect.z + style.WindowPadding.x / 2 + 1);
+			clipping.top = (long)(cmd->ClipRect.y);
+			clipping.bottom = (long)(cmd->ClipRect.w);
+			device->SetScissorRect(&clipping);
+			device->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
+			Instance().RenderSetupProjection(device);
 
-	D3DXMATRIX rotate_char;
-	D3DXMatrixRotationZ(&rotate_char, -GW::Cameramgr().GetYaw() + (float)M_PI_2);
+			D3DXMATRIX view;
+			D3DXMATRIX identity;
+			D3DXMatrixIdentity(&identity);
+			device->SetTransform(D3DTS_WORLD, &identity);
+			device->SetTransform(D3DTS_VIEW, &identity);
 
-	D3DXMATRIX scaleM, translationM;
-	D3DXMatrixScaling(&scaleM, scale, scale, 1.0f);
-	D3DXMatrixTranslation(&translationM, translation.x, translation.y, 0);
+			D3DXMATRIX translate_char;
+			D3DXMatrixTranslation(&translate_char, -me->X, -me->Y, 0);
 
-	view = translate_char * rotate_char * scaleM * translationM;
-	device->SetTransform(D3DTS_VIEW, &view);
+			D3DXMATRIX rotate_char;
+			D3DXMatrixRotationZ(&rotate_char, -GW::Cameramgr().GetYaw() + (float)M_PI_2);
 
-	pmap_renderer.Render(device);
+			D3DXMATRIX scaleM, translationM;
+			D3DXMatrixScaling(&scaleM, Instance().scale, Instance().scale, 1.0f);
+			D3DXMatrixTranslation(&translationM, Instance().translation.x, Instance().translation.y, 0);
 
-	custom_renderer.Render(device);
+			view = translate_char * rotate_char * scaleM * translationM;
+			device->SetTransform(D3DTS_VIEW, &view);
 
-	// move the rings to the char position
-	D3DXMatrixTranslation(&translate_char, me->X, me->Y, 0);
-	device->SetTransform(D3DTS_WORLD, &translate_char);
-	range_renderer.Render(device);
-	device->SetTransform(D3DTS_WORLD, &identity);
+			Instance().pmap_renderer.Render(device);
 
-	if (translation.x != 0 || translation.y != 0) {
-		D3DXMATRIX view2 = scaleM;
-		device->SetTransform(D3DTS_VIEW, &view2);
-		range_renderer.SetDrawCenter(true);
-		range_renderer.Render(device);
-		range_renderer.SetDrawCenter(false);
-		device->SetTransform(D3DTS_VIEW, &view);
+			Instance().custom_renderer.Render(device);
+
+			// move the rings to the char position
+			D3DXMatrixTranslation(&translate_char, me->X, me->Y, 0);
+			device->SetTransform(D3DTS_WORLD, &translate_char);
+			Instance().range_renderer.Render(device);
+			device->SetTransform(D3DTS_WORLD, &identity);
+
+			if (Instance().translation.x != 0 || Instance().translation.y != 0) {
+				D3DXMATRIX view2 = scaleM;
+				device->SetTransform(D3DTS_VIEW, &view2);
+				Instance().range_renderer.SetDrawCenter(true);
+				Instance().range_renderer.Render(device);
+				Instance().range_renderer.SetDrawCenter(false);
+				device->SetTransform(D3DTS_VIEW, &view);
+			}
+
+			Instance().symbols_renderer.Render(device);
+
+			device->SetTransform(D3DTS_WORLD, &identity);
+			Instance().agent_renderer.Render(device);
+
+			Instance().pingslines_renderer.Render(device);
+
+			// Restore the DX9 state
+			d3d9_state_block->Apply();
+			d3d9_state_block->Release();
+
+		}, (void*)device);
 	}
+	ImGui::End();
+	ImGui::PopStyleColor();
 
-	symbols_renderer.Render(device);
+	if (show_hero_flag_controls && GW::Agents().GetHeroAgentID(1) > 0) {
+		ImGui::SetNextWindowPos(ImVec2((float)location.x, (float)(location.y + size.y)));
+		ImGui::SetNextWindowSize(ImVec2((float)size.x, 40.0f));
+		if (ImGui::Begin("Hero Controls", nullptr, GetWinFlags(0, false))) {
+			static const char* flag_txt[] = {
+				"All", "1", "2", "3", "4", "5", "6", "7", "8"
+			};
+			GW::GamePos allflag = GW::GameContext::instance()->world->all_flag;
+			GW::HeroFlagArray& flags = GW::GameContext::instance()->world->hero_flags;
+			auto heroarray = GW::GameContext::instance()->party->partyinfo->heroes;
+			unsigned int num_heroflags = 9;
+			if (heroarray.valid()) num_heroflags = heroarray.size() + 1;
+			float w_but = (ImGui::GetWindowContentRegionWidth() 
+				- ImGui::GetStyle().ItemSpacing.x * (num_heroflags)) / (num_heroflags + 1);
 
-	device->SetTransform(D3DTS_WORLD, &identity);
-	agent_renderer.Render(device);
+			for (unsigned int i = 0; i < num_heroflags; ++i) {
+				if (i > 0) ImGui::SameLine();
+				bool old_flagging = flagging[i];
+				if (flagging[i]) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered]);
 
-	pingslines_renderer.Render(device);
+				bool flagged = (i == 0) ?
+					(!std::isinf(allflag.x) || !std::isinf(allflag.y)) :
+					(flags.valid() && i - 1 < flags.size() && (!std::isinf(flags[i - 1].flag.x) || !std::isinf(flags[i - 1].flag.y)));
+				if (flagged) ImGui::GetCurrentWindow()->Flags ^= ImGuiWindowFlags_ShowBorders;
 
-	// Restore the DX9 state
-	d3d9_state_block->Apply();
-	d3d9_state_block->Release();
+				if (ImGui::Button(flag_txt[i], ImVec2(w_but, 0))) {
+					flagging[i] ^= 1;
+				}
+				if (old_flagging) ImGui::PopStyleColor();
+				if (flagged) ImGui::GetCurrentWindow()->Flags ^= ImGuiWindowFlags_ShowBorders;
+
+				if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
+					if (i == 0) GW::Partymgr().UnflagAll();
+					else GW::Partymgr().UnflagHero(i);
+				}
+
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Clear", ImVec2(-1, 0))) {
+				GW::Partymgr().UnflagAll();
+				for (unsigned int i = 1; i < num_heroflags; ++i) {
+					GW::Partymgr().UnflagHero(i);
+				}
+			}
+
+		}
+		ImGui::End();
+	}
 }
 
 GW::Vector2f Minimap::InterfaceToWorldPoint(Vec2i pos) const {
@@ -365,6 +427,21 @@ bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam) {
 		SelectTarget(InterfaceToWorldPoint(Vec2i(x, y)));
 		return true;
 	}
+
+	bool flagged = false;
+	if (flagging[0]) {
+		flagging[0] = false;
+		GW::Partymgr().FlagAll(GW::GamePos(InterfaceToWorldPoint(Vec2i(x, y))));
+		flagged = true;
+	}
+	for (int i = 1; i < 9; ++i) {
+		if (flagging[i]) {
+			flagging[i] = false;
+			flagged = true;
+			GW::Partymgr().FlagHero(i, GW::GamePos(InterfaceToWorldPoint(Vec2i(x, y))));
+		}
+	}
+	if (flagged) return true;
 
 	drag_start.x = x;
 	drag_start.y = y;

@@ -24,8 +24,8 @@ void GameSettings::Initialize() {
 void GameSettings::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini);
 
-	open_template_links = ini->GetBoolValue("main_window", "openlinks", true);
-	borderless_window = ini->GetBoolValue("main_window", "borderlesswindow", false);
+	open_template_links = ini->GetBoolValue(Name(), "openlinks", true);
+	borderless_window = ini->GetBoolValue(Name(), "borderlesswindow", false);
 
 	ApplyBorderless(borderless_window);
 	GW::Chat().SetOpenLinks(open_template_links);
@@ -33,8 +33,8 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
 void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ToolboxModule::SaveSettings(ini);
-	ini->SetBoolValue("main_window", "openlinks", open_template_links);
-	ini->SetBoolValue("main_window", "borderlesswindow", borderless_window);
+	ini->SetBoolValue(Name(), "openlinks", open_template_links);
+	ini->SetBoolValue(Name(), "borderlesswindow", borderless_window);
 }
 
 void GameSettings::DrawSettingInternal() {

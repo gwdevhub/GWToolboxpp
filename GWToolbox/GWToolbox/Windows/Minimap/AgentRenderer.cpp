@@ -238,7 +238,10 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
 		if (agent->PlayerNumber <= 12) continue;
-		if (agent->PlayerNumber == 33280) continue; // signposts in foundry
+		if (agent->GetIsSignpostType() && GW::Map().GetMapID() == GW::Constants::MapID::Domain_of_Anguish) {
+			if (agent->PlayerNumber == 33280) continue; // signposts in foundry
+			if (agent->PlayerNumber == 8448) continue;
+		}
 		if (agent->GetIsLivingType()
 			&& agent->IsNPC()
 			&& agent->PlayerNumber < npcs.size()

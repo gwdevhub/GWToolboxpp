@@ -15,14 +15,12 @@ void MainWindow::Initialize() {
 }
 
 void MainWindow::LoadSettings(CSimpleIni* ini) {
-	ToolboxUIElement::LoadSettings(ini); // don't load visible
-	visible = true;
-	lock_size = true;
+	ToolboxWindow::LoadSettings(ini); // don't load visible
 	one_panel_at_time_only = ini->GetBoolValue(Name(), "one_panel_at_time_only", true);
 }
 
 void MainWindow::SaveSettings(CSimpleIni* ini) {
-	ToolboxUIElement::SaveSettings(ini);
+	ToolboxWindow::SaveSettings(ini);
 	ini->SetBoolValue(Name(), "one_panel_at_time_only", one_panel_at_time_only);
 }
 void MainWindow::DrawSettingInternal() {

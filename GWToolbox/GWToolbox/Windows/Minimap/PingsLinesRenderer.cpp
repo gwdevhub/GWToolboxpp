@@ -445,20 +445,20 @@ bool PingsLinesRenderer::OnMouseUp() {
 }
 
 void PingsLinesRenderer::SendQueue() {
-	static GW::Packet::P037* packet = new GW::Packet::P037();
+	static GW::Packet::CtoS::P037 packet = GW::Packet::CtoS::P037();
 
 	//printf("sending %d pos [%d]\n", queue.size(), session_id);
 
 	if (queue.size() > 0 && queue.size() < 8) {
 
-		packet->NumberPts = queue.size();
-		packet->session_id = session_id;
+		packet.NumberPts = queue.size();
+		packet.session_id = session_id;
 		for (unsigned int i = 0; i < queue.size(); ++i) {
-			packet->points[i].x = queue[i].x;
-			packet->points[i].y = queue[i].y;
+			packet.points[i].x = queue[i].x;
+			packet.points[i].y = queue[i].y;
 		}
 
-		GW::CtoS().SendPacket<GW::Packet::P037>(packet);
+		GW::CtoS().SendPacket(&packet);
 	}
 
 	queue.clear();
