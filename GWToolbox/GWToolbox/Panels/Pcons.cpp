@@ -27,7 +27,7 @@ Pcon::Pcon(const char* chatname,
 	ImVec2 uv0_, ImVec2 uv1_, int threshold_)
 	: chat(chatname), ini(ininame), threshold(threshold_),
 	uv0(uv0_), uv1(uv1_), texture(nullptr),
-	enabled(false), quantity(-1), timer(TIMER_INIT()) {
+	enabled(false), quantity(0), timer(TIMER_INIT()) {
 
 	Resources::Instance().LoadTextureAsync(&texture, filename, "img");
 }
