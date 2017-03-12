@@ -52,6 +52,7 @@ void ToolboxTheme::LoadSettings(CSimpleIni* ini) {
 	if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
 	inifile->LoadFile(GuiUtils::getPath(IniFilename).c_str());
 	
+	ImGui::GetIO().FontGlobalScale = (float)inifile->GetDoubleValue(IniSection, "FontGlobalScale", 1.0);
 	ini_style.Alpha = (float)inifile->GetDoubleValue(IniSection, "GlobalAlpha", ini_style.Alpha);
 	ini_style.WindowPadding.x = (float)inifile->GetDoubleValue(IniSection, "WindowPaddingX", ini_style.WindowPadding.x);
 	ini_style.WindowPadding.y = (float)inifile->GetDoubleValue(IniSection, "WindowPaddingY", ini_style.WindowPadding.y);
@@ -72,7 +73,6 @@ void ToolboxTheme::LoadSettings(CSimpleIni* ini) {
 	ini_style.WindowTitleAlign.y = (float)inifile->GetDoubleValue(IniSection, "WindowTitleAlignY", ini_style.WindowTitleAlign.y);
 	ini_style.ButtonTextAlign.x = (float)inifile->GetDoubleValue(IniSection, "ButtonTextAlignX", ini_style.ButtonTextAlign.x);
 	ini_style.ButtonTextAlign.y = (float)inifile->GetDoubleValue(IniSection, "ButtonTextAlignY", ini_style.ButtonTextAlign.y);
-
 	for (int i = 0; i < ImGuiCol_COUNT; ++i) {
 		const char* name = ImGui::GetStyleColName(i);
 		Color color = Colors::Load(inifile, IniSection, name, ImColor(ini_style.Colors[i]));
@@ -86,6 +86,7 @@ void ToolboxTheme::SaveSettings(CSimpleIni* ini) {
 	ToolboxModule::SaveSettings(ini);
 
 	ImGuiStyle& style = ImGui::GetStyle();
+	if (ImGui::GetIO().FontGlobalScale != 1.0f) inifile->SetDoubleValue(IniSection, "FontGlobalScale", ImGui::GetIO().FontGlobalScale);
 	if (style.Alpha != ini_style.Alpha) inifile->SetDoubleValue(IniSection, "GlobalAlpha", style.Alpha);
 	if (style.WindowPadding.x != ini_style.WindowPadding.x) inifile->SetDoubleValue(IniSection, "WindowPaddingX", style.WindowPadding.x);
 	if (style.WindowPadding.y != ini_style.WindowPadding.y) inifile->SetDoubleValue(IniSection, "WindowPaddingY", style.WindowPadding.y);
@@ -128,6 +129,7 @@ void ToolboxTheme::DrawSettingInternal() {
 	}
 
 	ImGui::DragFloat("Global Alpha", &style.Alpha, 0.005f, 0.20f, 1.0f, "%.2f");
+	ImGui::DragFloat("Global Font Scale", &ImGui::GetIO().FontGlobalScale, 0.005f, 0.3f, 2.0f, "%.1f");
 	ImGui::Text("Sizes");
 	ImGui::SliderFloat2("Window Padding", (float*)&style.WindowPadding, 0.0f, 20.0f, "%.0f");
 	ImGui::SliderFloat("Window Rounding", &style.WindowRounding, 0.0f, 16.0f, "%.0f");

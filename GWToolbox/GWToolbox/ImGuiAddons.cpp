@@ -9,59 +9,6 @@
 #include <Key.h>
 #include <Timer.h>
 
-// copies of imgui funcs that are not exposed here
-// It's ugly I know but I'd rather not change ImGui files
-static bool IsPopupOpen(ImGuiID id) {
-	ImGuiContext& g = *GImGui;
-	return g.OpenPopupStack.Size > g.CurrentPopupStack.Size && g.OpenPopupStack[g.CurrentPopupStack.Size].PopupId == id;
-}
-static void ClosePopupToLevel(int remaining) {
-	ImGuiContext& g = *GImGui;
-	if (remaining > 0)
-		ImGui::FocusWindow(g.OpenPopupStack[remaining - 1].Window);
-	else
-		ImGui::FocusWindow(g.OpenPopupStack[0].ParentWindow);
-	g.OpenPopupStack.resize(remaining);
-}
-static void ClosePopup(ImGuiID id) {
-	if (!IsPopupOpen(id))
-		return;
-	ImGuiContext& g = *GImGui;
-	ClosePopupToLevel(g.OpenPopupStack.Size - 1);
-}
-static inline void ClearSetNextWindowData() {
-	ImGuiContext& g = *GImGui;
-	g.SetNextWindowPosCond = g.SetNextWindowSizeCond = g.SetNextWindowContentSizeCond = g.SetNextWindowCollapsedCond = 0;
-	g.SetNextWindowSizeConstraint = g.SetNextWindowFocus = false;
-}
-static bool BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags) {
-	ImGuiContext& g = *GImGui;
-	ImGuiWindow* window = g.CurrentWindow;
-	const ImGuiID id = window->GetID(str_id);
-	if (!IsPopupOpen(id)) {
-		ClearSetNextWindowData(); // We behave like Begin() and need to consume those values
-		return false;
-	}
-
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-	ImGuiWindowFlags flags = extra_flags | ImGuiWindowFlags_Popup | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize;
-
-	char name[20];
-	if (flags & ImGuiWindowFlags_ChildMenu)
-		ImFormatString(name, IM_ARRAYSIZE(name), "##menu_%d", g.CurrentPopupStack.Size);    // Recycle windows based on depth
-	else
-		ImFormatString(name, IM_ARRAYSIZE(name), "##popup_%08x", id); // Not recycling, so we can close/open during the same frame
-
-	bool is_open = ImGui::Begin(name, NULL, flags);
-	if (!(window->Flags & ImGuiWindowFlags_ShowBorders))
-		g.CurrentWindow->Flags &= ~ImGuiWindowFlags_ShowBorders;
-	if (!is_open) // NB: is_open can be 'false' when the popup is completely clipped (e.g. zero size display)
-		ImGui::EndPopup();
-
-	return is_open;
-}
-// ===========================================
-
 void ImGui::ShowHelp(const char* help) {
 	ImGui::SameLine();
 	ImGui::TextDisabled("(?)");
@@ -172,6 +119,9 @@ bool ImGui::MyCombo(const char* label, int* current_item, bool(*items_getter)(vo
 		if (IsKeyPressed(VK_RETURN) && keyboard_selected >= 0) {
 			*current_item = keyboard_selected;
 			value_changed = true;
+			if (IsPopupOpen(id)) {
+				ClosePopup(id);
+			}
 		}
 		if (IsKeyPressed(VK_UP) && keyboard_selected >= 0 && keyboard_selected < items_count - 1) {
 			--keyboard_selected;

@@ -24,7 +24,8 @@ void MainWindow::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), "one_panel_at_time_only", one_panel_at_time_only);
 }
 void MainWindow::DrawSettingInternal() {
-	ImGui::Checkbox("One panel at a time", &one_panel_at_time_only);
+	ImGui::Checkbox("Close other panels when opening a new one", &one_panel_at_time_only);
+	ImGui::ShowHelp("Only affects the button in the Toolbox window");
 }
 
 void MainWindow::Draw(IDirect3DDevice9* device) {

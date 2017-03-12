@@ -6,12 +6,15 @@
 #include "GuiUtils.h"
 #include "GWToolbox.h"
 
-bool ToolboxSettings::move_all;
+bool ToolboxSettings::move_all = false;
+bool ToolboxSettings::clamp_window_positions = false;
 
 void ToolboxSettings::DrawSettingInternal() {
 	DrawFreezeSetting();
 	ImGui::Checkbox("Save Location Data", &save_location_data);
 	ImGui::ShowHelp("Toolbox will save your location every second in an file in Settings Folder.");
+	ImGui::Checkbox("Keep windows on screen", &clamp_window_positions);
+	ImGui::ShowHelp("Windows will not move off-screen.\nThis might also move windows on bottom and right side\nof the screen slightly towards the center during rezone.");
 }
 
 void ToolboxSettings::DrawFreezeSetting() {
@@ -22,10 +25,12 @@ void ToolboxSettings::DrawFreezeSetting() {
 void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini);
 	move_all = false;
+	clamp_window_positions = ini->GetBoolValue(Name(), "clamp_window_positions", false);
 }
 
 void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
 	ToolboxModule::SaveSettings(ini);
+	ini->SetBoolValue(Name(), "clamp_window_positions", clamp_window_positions);
 	if (location_file.is_open()) location_file.close();
 }
 

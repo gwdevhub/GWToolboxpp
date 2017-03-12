@@ -30,6 +30,7 @@ ImGuiWindowFlags ToolboxWidget::GetWinFlags(
 	ImGuiWindowFlags flags, bool noinput_if_frozen) const {
 	flags |= ImGuiWindowFlags_NoTitleBar;
 	flags |= ImGuiWindowFlags_NoScrollbar;
+	if (!ToolboxSettings::clamp_window_positions) flags |= ImGuiWindowFlags_NoClampPosition;
 	if (ToolboxSettings::move_all) {
 		flags |= ImGuiWindowFlags_ShowBorders;
 	} else {

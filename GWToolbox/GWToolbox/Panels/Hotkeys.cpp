@@ -214,7 +214,11 @@ void HotkeyUseItem::Save(CSimpleIni* ini, const char* section) const {
 	ini->SetValue(section, "ItemName", name);
 }
 void HotkeyUseItem::Description(char* buf, int bufsz) const {
-	_snprintf(buf, bufsz, "Use %s", name);
+	if (name[0] == '\0') {
+		_snprintf(buf, bufsz, "Use #%d", item_id);
+	} else {
+		_snprintf(buf, bufsz, "Use %s", name);
+	}
 }
 void HotkeyUseItem::Draw() {
 	ImGui::InputInt("Item ID", (int*)&item_id);
@@ -264,12 +268,12 @@ void HotkeyDropUseBuff::Description(char* buf, int bufsz) const {
 }
 void HotkeyDropUseBuff::Draw() {
 	SkillIndex index = GetIndex();
-	if (ImGui::Combo("Skill", (int*)&index, GetText, (void*)id, 4)) {
+	if (ImGui::Combo("Skill", (int*)&index, "Recall\0Unyielding Aura\0Holy Veil\0Other", 4)) {
 		switch (index) {
 		case HotkeyDropUseBuff::Recall: id = GW::Constants::SkillID::Recall; break;
 		case HotkeyDropUseBuff::UA: id = GW::Constants::SkillID::Unyielding_Aura; break;
 		case HotkeyDropUseBuff::HolyVeil: id = GW::Constants::SkillID::Holy_Veil; break;
-		case HotkeyDropUseBuff::Other: /* don't change id */ break;
+		case HotkeyDropUseBuff::Other: id = (GW::Constants::SkillID)0; break;
 		default: break;
 		}
 	}
@@ -396,11 +400,15 @@ void HotkeyTarget::Save(CSimpleIni* ini, const char* section) const {
 	ini->SetValue(section, "TargetName", name);
 }
 void HotkeyTarget::Description(char* buf, int bufsz) const {
-	_snprintf(buf, bufsz, "Target %s", name);
+	if (name[0] == '\0') {
+		_snprintf(buf, bufsz, "Target #%d", id);
+	} else {
+		_snprintf(buf, bufsz, "Target %s", name);
+	}
 }
 void HotkeyTarget::Draw() {
 	ImGui::InputInt("Target ID", (int*)&id);
-	ImGui::InputText("Target Name", name, 140);
+	ImGui::InputText("Name", name, 140);
 }
 void HotkeyTarget::Execute() {
 	if (isLoading()) return;
@@ -449,7 +457,11 @@ void HotkeyMove::Save(CSimpleIni* ini, const char* section) const {
 	ini->SetValue(section, "name", name);
 }
 void HotkeyMove::Description(char* buf, int bufsz) const {
-	_snprintf(buf, bufsz, "Move to %s", name);
+	if (name[0] == '\0') {
+		_snprintf(buf, bufsz, "Move to (%.0f, %.0f)", x, y);
+	} else {
+		_snprintf(buf, bufsz, "Move to %s", name);
+	}
 }
 void HotkeyMove::Draw() {
 	ImGui::InputFloat("x", &x, 0.0f, 0.0f, 3);
@@ -481,7 +493,11 @@ void HotkeyDialog::Save(CSimpleIni* ini, const char* section) const {
 	ini->SetValue(section, "DialogName", name);
 }
 void HotkeyDialog::Description(char* buf, int bufsz) const {
-	_snprintf(buf, bufsz, "Dialog %s", name);
+	if (name[0] == '\0') {
+		_snprintf(buf, bufsz, "Dialog #%d", id);
+	} else {
+		_snprintf(buf, bufsz, "Dialog %s", name);
+	}
 }
 void HotkeyDialog::Draw() {
 	ImGui::InputInt("Dialog ID", (int*)&id);

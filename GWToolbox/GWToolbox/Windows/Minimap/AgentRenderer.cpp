@@ -105,7 +105,7 @@ void AgentRenderer::DrawSettings() {
 	Colors::DrawSetting("Ally (spirit)", &color_ally_spirit);
 	Colors::DrawSetting("Ally (minion)", &color_ally_minion);
 	Colors::DrawSetting("Ally (dead)", &color_ally_dead);
-	Colors::DrawSetting("Agent modifier", &modifier, false);
+	Colors::DrawSetting("Agent modifier", &modifier);
 	ImGui::ShowHelp("Each agent has this value removed on the border and added at the center\nZero makes agents have solid color, while a high number makes them appear more shaded.");
 
 	ImGui::DragFloat("Default Size", &size_default, 1.0f, 1.0f, 0.0f, "%.0f");

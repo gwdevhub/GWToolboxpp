@@ -27,7 +27,7 @@ void SymbolsRenderer::DrawSettings() {
 	}
 	if (Colors::DrawSetting("Quest Marker", &color_quest)) Invalidate();
 	if (Colors::DrawSetting("North Marker", &color_north)) Invalidate();
-	if (Colors::DrawSetting("Symbol Modifier", &color_modifier, false)) Invalidate();
+	if (Colors::DrawSetting("Symbol Modifier", &color_modifier)) Invalidate();
 }
 
 void SymbolsRenderer::Initialize(IDirect3DDevice9* device) {

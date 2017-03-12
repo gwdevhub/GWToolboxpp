@@ -27,6 +27,7 @@ public:
 	void DrawFreezeSetting();
 
 	static bool move_all;
+	static bool clamp_window_positions;
 private:
 	// === location stuff ===
 	clock_t location_timer;
