@@ -14,6 +14,7 @@
 #include "BuildPanel.h"
 #include "HotkeyPanel.h"
 #include "PconPanel.h"
+#include <ImGuiAddons.h>
 
 unsigned int TBHotkey::cur_ui_id = 0;
 
@@ -435,12 +436,16 @@ void HotkeyTarget::Execute() {
 HotkeyMove::HotkeyMove(CSimpleIni* ini, const char* section) : TBHotkey(ini, section) {
 	x = ini ? (float)ini->GetDoubleValue(section, "x", 0.0) : 0.0f;
 	y = ini ? (float)ini->GetDoubleValue(section, "y", 0.0) : 0.0f;
+	distance = ini ? (float)ini->GetDoubleValue(section, "distance", 0.0) : 0.0f;
+	mapid = ini ? ini->GetLongValue(section, "mapid", 0) : 0;
 	strcpy_s(name, ini ? ini->GetValue(section, "name", "") : "");
 }
 void HotkeyMove::Save(CSimpleIni* ini, const char* section) const {
 	TBHotkey::Save(ini, section);
 	ini->SetDoubleValue(section, "x", x);
 	ini->SetDoubleValue(section, "y", y);
+	ini->SetDoubleValue(section, "distance", distance);
+	ini->SetLongValue(section, "mapid", mapid);
 	ini->SetValue(section, "name", name);
 }
 void HotkeyMove::Description(char* buf, int bufsz) const {
@@ -449,17 +454,21 @@ void HotkeyMove::Description(char* buf, int bufsz) const {
 void HotkeyMove::Draw() {
 	ImGui::InputFloat("x", &x, 0.0f, 0.0f, 3);
 	ImGui::InputFloat("y", &y, 0.0f, 0.0f, 3);
+	ImGui::InputFloat("Distance", &distance, 0.0f, 0.0f, 0);
+	ImGui::ShowHelp("The hotkey will only trigger within this range.\nUse 0 for no limit.");
+	ImGui::InputInt("Map", (int*)&mapid, 0);
+	ImGui::ShowHelp("The hotkey will only trigger in this map.\nUse 0 for any map.");
 	ImGui::InputText("Name", name, 140);
 }
 void HotkeyMove::Execute() {
 	if (!isExplorable()) return;
 
 	GW::Agent* me = GW::Agents().GetPlayer();
-	double sqrDist = (me->X - x) * (me->X - x) + (me->Y - y) * (me->Y - y);
-	if (sqrDist < GW::Constants::SqrRange::Compass) {
-		GW::Agents().Move(x, y);
-		ChatLogger::Log("%s movement macro activated", name);
-	}
+	if (mapid != 0 && mapid != (DWORD)GW::Map().GetMapID()) return;
+	double dist = GW::Agents().GetDistance(me->pos, GW::Vector2f(x, y));
+	if (distance != 0 && dist > distance) return;
+	GW::Agents().Move(x, y);
+	ChatLogger::Log("%s movement macro activated", name);
 }
 
 HotkeyDialog::HotkeyDialog(CSimpleIni* ini, const char* section) : TBHotkey(ini, section) {
