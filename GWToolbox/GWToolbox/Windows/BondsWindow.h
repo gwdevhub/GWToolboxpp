@@ -37,6 +37,7 @@ private:
 	Color background;
 
 	bool click_to_use = true;
+	int row_height = 0;
 
 	static DWORD buff_id[MAX_PLAYERS][MAX_BONDS];
 };

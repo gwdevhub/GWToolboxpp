@@ -9,7 +9,9 @@
 
 class Resources : public ToolboxModule {
 	Resources() {};
-	~Resources() {};
+	~Resources() {
+		if (worker.joinable()) worker.join();
+	};
 public:
 	static Resources& Instance() {
 		static Resources instance;

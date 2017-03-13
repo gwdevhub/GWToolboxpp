@@ -91,4 +91,5 @@ private:
 	float width;
 	bool bars_left;
 	int recent_max_time;
+	int row_height = 0;
 };

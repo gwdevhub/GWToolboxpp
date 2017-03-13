@@ -22,8 +22,6 @@ void BondsWindow::Initialize() {
 	Resources::Instance().LoadTextureAsync(&textures[0], "balthspirit.jpg", "img");
 	Resources::Instance().LoadTextureAsync(&textures[1], "lifebond.jpg", "img");
 	Resources::Instance().LoadTextureAsync(&textures[2], "protbond.jpg", "img");
-
-	int img_size = GuiUtils::GetPartyHealthbarHeight();
 }
 
 void BondsWindow::Terminate() {
@@ -38,7 +36,7 @@ void BondsWindow::Terminate() {
 void BondsWindow::Draw(IDirect3DDevice9* device) {
 	if (!visible) return;
 	
-	int img_size = GuiUtils::GetPartyHealthbarHeight();
+	int img_size = row_height > 0 ? row_height : GuiUtils::GetPartyHealthbarHeight();
 	int party_size = GW::Partymgr().GetPartySize();
 
 	int size = GW::Partymgr().GetPartySize();
@@ -135,15 +133,19 @@ void BondsWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxWidget::LoadSettings(ini);
 	background = Colors::Load(ini, Name(), "background", Colors::ARGB(76, 0, 0, 0));
 	click_to_use = ini->GetBoolValue(Name(), "click_to_use", true);
+	row_height = ini->GetLongValue(Name(), "row_height", 0);
 }
 
 void BondsWindow::SaveSettings(CSimpleIni* ini) {
 	ToolboxWidget::SaveSettings(ini);
 	Colors::Save(ini, Name(), "background", background);
 	ini->SetBoolValue(Name(), "click_to_use", click_to_use);
+	ini->SetLongValue(Name(), "row_height", row_height);
 }
 
 void BondsWindow::DrawSettingInternal() {
 	Colors::DrawSetting("Background", &background);
 	ImGui::Checkbox("Click to Drop/Use", &click_to_use);
+	ImGui::InputInt("Row Height", &row_height);
+	ImGui::ShowHelp("Height of each row, leave 0 for default");
 }

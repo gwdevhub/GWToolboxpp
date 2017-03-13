@@ -178,7 +178,7 @@ void PartyDamage::CreatePartyIndexMap() {
 void PartyDamage::Draw(IDirect3DDevice9* device) {	
 	if (!visible) return;
 	
-	int line_height = GuiUtils::GetPartyHealthbarHeight();
+	int line_height = row_height > 0 ? row_height : GuiUtils::GetPartyHealthbarHeight();
 	int size = GW::Partymgr().GetPartySize();
 	if (size > MAX_PLAYERS) size = MAX_PLAYERS;
 
@@ -331,6 +331,7 @@ void PartyDamage::LoadSettings(CSimpleIni* ini) {
 
 	width = (float)ini->GetDoubleValue(Name(), "width", 100.0f);
 	bars_left = ini->GetBoolValue(Name(), "bars_left", true);
+	row_height = ini->GetLongValue(Name(), "row_height", 0);
 	recent_max_time = ini->GetLongValue(Name(), "recent_max_time", 7000);
 	color_background = Colors::Load(ini, Name(), "color_background", Colors::ARGB(76, 0, 0, 0));
 	color_damage = Colors::Load(ini, Name(), "color_damage", Colors::ARGB(102, 205, 102, 51));
@@ -357,6 +358,7 @@ void PartyDamage::SaveSettings(CSimpleIni* ini) {
 	ToolboxWidget::SaveSettings(ini);
 	ini->SetDoubleValue(Name(), "width", width);
 	ini->SetBoolValue(Name(), "bars_left", bars_left);
+	ini->SetLongValue(Name(), "row_height", row_height);
 	ini->GetLongValue(Name(), "recent_max_time", recent_max_time);
 	Colors::Save(ini, Name(), "color_background", color_background);
 	Colors::Save(ini, Name(), "color_damage", color_damage);
@@ -373,6 +375,8 @@ void PartyDamage::DrawSettingInternal() {
 	ImGui::Checkbox("Bars towards the left", &bars_left);
 	ImGui::ShowHelp("If unchecked, they will expand to the right");
 	ImGui::DragFloat("Width", &width, 1.0f, 50.0f, 0.0f, "%.0f");
+	ImGui::InputInt("Row Height", &row_height);
+	ImGui::ShowHelp("Height of each row, leave 0 for default");
 	if (width <= 0) width = 1.0f;
 	ImGui::DragInt("Timeout", &recent_max_time, 10.0f, 1000, 10 * 1000, "%.0f milliseconds");
 	if (recent_max_time < 0) recent_max_time = 0;

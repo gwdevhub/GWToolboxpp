@@ -13,6 +13,7 @@
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Managers\CameraMgr.h>
 #include <GWCA\Managers\PartyMgr.h>
+#include <GWCA\Managers\MapMgr.h>
 #include "logger.h"
 #include "OtherModules\ToolboxSettings.h"
 
@@ -275,7 +276,9 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 	ImGui::End();
 	ImGui::PopStyleColor();
 
-	if (show_hero_flag_controls && GW::Agents().GetHeroAgentID(1) > 0) {
+	if (show_hero_flag_controls 
+		&& GW::Map().GetInstanceType() == GW::Constants::InstanceType::Explorable
+		&& GW::Agents().GetHeroAgentID(1) > 0) {
 		ImGui::SetNextWindowPos(ImVec2((float)location.x, (float)(location.y + size.y)));
 		ImGui::SetNextWindowSize(ImVec2((float)size.x, 40.0f));
 		if (ImGui::Begin("Hero Controls", nullptr, GetWinFlags(0, false))) {
