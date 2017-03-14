@@ -1,5 +1,6 @@
 #include "logger.h"
 
+#include <stdio.h>
 #include <strsafe.h>
 #include <dbghelp.h>
 #include <time.h>
@@ -14,7 +15,12 @@
 #define CHAN_INFO GW::Channel::CHANNEL_GWCA3
 #define CHAN_ERROR GW::Channel::CHANNEL_GWCA4
 
-static FILE* logfile = nullptr;
+#if _DEBUG
+#define LOGFILE stdout
+#else
+#define LOGFILE logfile
+static FILE* LOGFILE = nullptr;
+#endif
 
 // === Setup and cleanup ====
 void Log::InitializeLog() {
@@ -23,9 +29,10 @@ void Log::InitializeLog() {
 	FILE* fh;
 	freopen_s(&fh, "CONOUT$", "w", stdout);
 	freopen_s(&fh, "CONOUT$", "w", stderr);
-	SetConsoleTitleA("GWTB++ Debug Console");
+	SetConsoleTitle("GWTB++ Debug Console");
 #else
-	freopen_s(&logfile, GuiUtils::getPath("log.txt").c_str(), "w", stdout);
+	errno_t err = fopen_s(&LOGFILE, GuiUtils::getPath("log.txt").c_str(), "w");
+	if (err) { LOGFILE = nullptr; }
 #endif
 }
 
@@ -39,7 +46,7 @@ void Log::Terminate() {
 #if _DEBUG
 	FreeConsole();
 #else
-	if (logfile) {
+	if (LOGFILE) {
 		fflush(logfile);
 		fclose(logfile);
 	}
@@ -61,29 +68,23 @@ static void PrintTimestamp() {
 }
 
 void Log::Log(const char* msg, ...) {
+	if (!LOGFILE) return;
 	PrintTimestamp();
 
 	va_list args;
 	va_start(args, msg);
 	vfprintf(stdout, msg, args);
 	va_end(args);
-
-#ifndef _DEBUG
-	fflush(logfile);
-#endif
 }
 
 void Log::LogW(const wchar_t* msg, ...) {
+	if (!LOGFILE) return;
 	PrintTimestamp();
 
 	va_list args;
 	va_start(args, msg);
 	vfwprintf(stdout, msg, args);
 	va_end(args);
-
-#ifndef _DEBUG
-	fflush(logfile);
-#endif
 }
 
 // === Game chat logging ===

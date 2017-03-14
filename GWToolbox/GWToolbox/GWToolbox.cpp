@@ -139,8 +139,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 
 	if (Message == WM_QUIT || Message == WM_CLOSE) {
 		GWToolbox::Instance().SaveSettings();
-		GWToolbox::Instance().Terminate();
-		ImGui_ImplDX9_Shutdown();
 		return CallWindowProc((WNDPROC)OldWndProc, hWnd, Message, wParam, lParam);
 	}
 

@@ -12,7 +12,7 @@ bool ToolboxSettings::clamp_window_positions = false;
 void ToolboxSettings::DrawSettingInternal() {
 	DrawFreezeSetting();
 	ImGui::Checkbox("Save Location Data", &save_location_data);
-	ImGui::ShowHelp("Toolbox will save your location every second in an file in Settings Folder.");
+	ImGui::ShowHelp("Toolbox will save your location every second in a file in Settings Folder.");
 	ImGui::Checkbox("Keep windows on screen", &clamp_window_positions);
 	ImGui::ShowHelp("Windows will not move off-screen.\nThis might also move windows on bottom and right side\nof the screen slightly towards the center during rezone.");
 }
