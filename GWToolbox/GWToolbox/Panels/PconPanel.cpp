@@ -197,8 +197,7 @@ void PconPanel::Initialize() {
 		if (m[0] == 0x8101 && m[1] == 0x6695 && m[2] == 0x8ED8 && m[3] == 0xD572) return true; // "Klaatu...barada...necktie?"
 		if (m[0] == 0x8101 && m[1] == 0x6696 && m[2] == 0xE883 && m[3] == 0xFED7) return true; // "You're disgusting, but I love you!"
 		if (m[0] == 0x8101 && m[1] == 0x68BA && m[2] == 0xA875 && m[3] == 0xA785) return true; // "Cross over, children. All are welcome. All welcome. Go into the light. There is peace and serenity in the light."
-
-		printf("m[0] == 0x%X && m[1] == 0x%X && m[2] == 0x%X && m[3] == 0x%X\n", m[0], m[1], m[2], m[3]);
+		//printf("m[0] == 0x%X && m[1] == 0x%X && m[2] == 0x%X && m[3] == 0x%X\n", m[0], m[1], m[2], m[3]);
 		return false;
 	});
 }

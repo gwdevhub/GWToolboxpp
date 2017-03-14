@@ -9,7 +9,7 @@
 #include <imgui.h>
 #include "GuiUtils.h"
 
-#define PRINT_CHAT_PACKETS
+//#define PRINT_CHAT_PACKETS
 
 static void printchar(wchar_t c) {
 	if (c >= L' ' && c <= L'~') {

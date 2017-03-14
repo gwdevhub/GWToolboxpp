@@ -93,7 +93,7 @@ DWORD __stdcall ThreadEntry(LPVOID dllmodule) {
 	printf("DxDevice = %X\n", (unsigned int)(GW::DirectXHooker::Initialize()));
 
 	Log::Log("Installing dx hooks\n");
-	GW::DirectXHooker::Instance().AddHook(GW::dx9::kEndScene, (void*)EndScene);
+	GW::DirectXHooker::Instance().AddHook(GW::dx9::kPresent, (void*)Present);
 	GW::DirectXHooker::Instance().AddHook(GW::dx9::kReset, (void*)ResetScene);
 	Log::Log("Installed dx hooks\n");
 
@@ -332,19 +332,25 @@ void GWToolbox::Terminate() {
 	}
 }
 
-HRESULT WINAPI EndScene(IDirect3DDevice9* pDevice) {
+HRESULT WINAPI Present(IDirect3DDevice9* pDev, 
+	CONST RECT* pSourceRect, 
+	CONST RECT* pDestRect, 
+	HWND hDestWindowOverride, 
+	CONST RGNDATA* pDirtyRegion) {
+
 	if (!tb_destroyed) {
 		__try {
-			GWToolbox::EndScene(pDevice);
+			GWToolbox::Draw(pDev);
 		} __except (EXCEPT_EXPRESSION_LOOP) {
 			Log::Log("Badness happened in EndScene!\n");
 		}
 	}
 
-	return GW::DirectXHooker::Instance().original<GW::dx9::EndScene_t>(GW::dx9::kEndScene)(pDevice); 
+	return GW::DirectXHooker::Instance().original<GW::dx9::Present_t>(GW::dx9::kPresent)(pDev,
+		pSourceRect, pDestRect, hDestWindowOverride, pDirtyRegion);
 }
 
-void GWToolbox::EndScene(IDirect3DDevice9* pDevice) {
+void GWToolbox::Draw(IDirect3DDevice9* device) {
 
 	static HWND gw_window_handle = 0;
 
@@ -354,7 +360,7 @@ void GWToolbox::EndScene(IDirect3DDevice9* pDevice) {
 		gw_window_handle = GW::MemoryMgr::GetGWWindowHandle();
 		OldWndProc = SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)SafeWndProc);
 
-		ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), pDevice);
+		ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), device);
 		ImGuiIO& io = ImGui::GetIO();
 		io.MouseDrawCursor = false;
 		static std::string imgui_inifile = GuiUtils::getPath("interface.ini");
@@ -375,7 +381,7 @@ void GWToolbox::EndScene(IDirect3DDevice9* pDevice) {
 		}
 
 		for (ToolboxModule* module : GWToolbox::Instance().modules) {
-			module->Draw(pDevice);
+			module->Draw(device);
 		}
 
 		//ImGui::ShowTestWindow();
