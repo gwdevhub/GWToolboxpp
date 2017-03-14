@@ -36,6 +36,7 @@ public:
 
 private:
 	std::vector<Pcon*> pcons;
+	PconAlcohol* pcon_alcohol = nullptr;
 	GW::Constants::InstanceType current_map_type;
 	clock_t scan_inventory_timer;
 	bool enabled = false;

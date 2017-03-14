@@ -9,7 +9,7 @@
 #include <imgui.h>
 #include "GuiUtils.h"
 
-//#define PRINT_CHAT_PACKETS
+#define PRINT_CHAT_PACKETS
 
 static void printchar(wchar_t c) {
 	if (c >= L' ' && c <= L'~') {
@@ -58,16 +58,17 @@ void ChatFilter::Initialize() {
 			return true;
 		}
 
-		if ((ally_common_drops
-			|| self_common_drops
-			|| ally_rare_drops
+		if ((self_common_drops
+			|| ally_common_drops
 			|| self_rare_drops
+			|| ally_rare_drops
 			|| skill_points
 			|| pvp_messages
 			|| hoh
 			|| favor
 			|| ninerings
-			|| messagebycontent) 
+			|| noonehearsyou
+			|| lunars)
 			&& ShouldIgnore(pak)) {
 
 #ifdef PRINT_CHAT_PACKETS
@@ -98,16 +99,22 @@ void ChatFilter::Initialize() {
 		printf("\n");
 		return false;
 	});
+#endif // PRINT_CHAT_PACKETS
 	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P084>(
-		[](GW::Packet::StoC::P084* pak) -> bool {
+		[&](GW::Packet::StoC::P084* pak) -> bool {
+#ifdef PRINT_CHAT_PACKETS
 		printf("P081: id %d, name ", pak->id);
 		for (int i = 0; i < 32 && pak->sender_name[i]; ++i) printchar(pak->sender_name[i]);
 		printf(", guild ");
 		for (int i = 0; i < 6 && pak->sender_guild[i]; ++i) printchar(pak->sender_guild[i]);
 		printf("\n");
+#endif // PRINT_CHAT_PACKETS
+		if (kill_next_msgdelivery) {
+			kill_next_msgdelivery = false;
+			return true;
+		}
 		return false;
 	});
-#endif // PRINT_CHAT_PACKETS
 
 	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P085>(
 		[this](GW::Packet::StoC::P085* pak) -> bool {
@@ -135,7 +142,6 @@ void ChatFilter::LoadSettings(CSimpleIni* ini) {
 	ninerings = ini->GetBoolValue(Name(), "ninerings", true);
 	noonehearsyou = ini->GetBoolValue(Name(), "noonehearsyou", true);
 	lunars = ini->GetBoolValue(Name(), "lunars", true);
-	playeraway = ini->GetBoolValue(Name(), "playeraway", false);
 	messagebycontent = ini->GetBoolValue(Name(), "messagebycontent", false);
 
 	std::ifstream bycontent_file;
@@ -168,7 +174,6 @@ void ChatFilter::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), "ninerings", ninerings);
 	ini->SetBoolValue(Name(), "noonehearsyou", noonehearsyou);
 	ini->SetBoolValue(Name(), "lunars", lunars);
-	ini->SetBoolValue(Name(), "playeraway", playeraway);
 	ini->SetBoolValue(Name(), "messagebycontent", messagebycontent);
 	//ini->SetBoolValue(Name(), "messagebyauthor", messagebyauthor);
 
@@ -328,7 +333,7 @@ bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) {
 	//	return false;
 	}
 
-	//for (size_t i = 0; pak->message[i] != 0; ++i) printf(" 0x%X", pak->message[i]);
+	//for (size_t i = 0; pak->message[i] != 0; ++i) printchar(pak->message[i]);
 	//printf("\n");
 
 	return false;
@@ -376,7 +381,6 @@ void ChatFilter::DrawSettingInternal() {
 	ImGui::Checkbox("9 Rings messages", &ninerings);
 	ImGui::Checkbox("'No one hears you...'", &noonehearsyou);
 	ImGui::Checkbox("Lunar fortunes messages", &lunars);
-	ImGui::Checkbox("Player x might not reply...", &playeraway);
 
 	ImGui::Separator();
 	ImGui::Checkbox("Hide any messages containing:", &messagebycontent);

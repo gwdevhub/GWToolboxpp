@@ -88,7 +88,6 @@
     <ClInclude Include="GWToolbox\GWToolbox.h" />
     <ClInclude Include="GWToolbox\logger.h" />
     <ClInclude Include="GWToolbox\Timer.h" />
-    <ClInclude Include="GWToolbox\ChatLogger.h" />
     <ClInclude Include="GWToolbox\Defines.h" />
     <ClInclude Include="..\Dependencies\imgui\imconfig.h">
       <Filter>imgui</Filter>

@@ -2,18 +2,22 @@
 
 #include <strsafe.h>
 #include <dbghelp.h>
-#include <shellapi.h>
-#include <shlobj.h>
-#include <stdarg.h>
 #include <time.h>
 
-#include "GuiUtils.h"
+#include <GWCA\GWCA.h>
+#include <GWCA\Managers\ChatMgr.h>
 
 #include "Defines.h"
+#include "GuiUtils.h"
 
-FILE* Logger::logfile = NULL;
+#define CHAN_WARNING GW::Channel::CHANNEL_GWCA2
+#define CHAN_INFO GW::Channel::CHANNEL_GWCA3
+#define CHAN_ERROR GW::Channel::CHANNEL_GWCA4
 
-void Logger::Init() {
+static FILE* logfile = nullptr;
+
+// === Setup and cleanup ====
+void Log::InitializeLog() {
 #if _DEBUG
 	AllocConsole();
 	FILE* fh;
@@ -21,19 +25,29 @@ void Logger::Init() {
 	freopen_s(&fh, "CONOUT$", "w", stderr);
 	SetConsoleTitleA("GWTB++ Debug Console");
 #else
-	freopen_s(&Logger::logfile, GuiUtils::getPath("log.txt").c_str(), "w", stdout);
+	freopen_s(&logfile, GuiUtils::getPath("log.txt").c_str(), "w", stdout);
 #endif
 }
 
-void Logger::Close() {
+void Log::InitializeChat() {
+	GW::Chat().SetMessageColor(CHAN_WARNING, 0xFFFFFF44); // warning
+	GW::Chat().SetMessageColor(CHAN_INFO, 0xFFFFFFFF); // info
+	GW::Chat().SetMessageColor(CHAN_ERROR, 0xFFFF4444); // error
+}
+
+void Log::Terminate() {
 #if _DEBUG
 	FreeConsole();
 #else
-	if (logfile) fclose(logfile);
+	if (logfile) {
+		fflush(logfile);
+		fclose(logfile);
+	}
 #endif
 }
 
-void Logger::PrintTimestamp() {
+// === File/console logging ===
+static void PrintTimestamp() {
 	time_t rawtime;
 	time(&rawtime);
 	
@@ -46,7 +60,7 @@ void Logger::PrintTimestamp() {
 	fprintf(stdout, "[%s] ", buffer);
 }
 
-void Logger::Log(const char* msg, ...) {
+void Log::Log(const char* msg, ...) {
 	PrintTimestamp();
 
 	va_list args;
@@ -59,7 +73,7 @@ void Logger::Log(const char* msg, ...) {
 #endif
 }
 
-void Logger::LogW(const wchar_t* msg, ...) {
+void Log::LogW(const wchar_t* msg, ...) {
 	PrintTimestamp();
 
 	va_list args;
@@ -72,7 +86,49 @@ void Logger::LogW(const wchar_t* msg, ...) {
 #endif
 }
 
-LONG WINAPI Logger::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers) {
+// === Game chat logging ===
+static void _vchatlog(GW::Channel chan, const char* format, va_list argv) {
+	char buf1[256];
+	vsprintf_s(buf1, format, argv);
+
+	char buf2[256];
+	_snprintf(buf2, 256, "<c=#00ccff>GWToolbox++</c>: %s", buf1);
+	GW::Chat().WriteChat(chan, buf2);
+
+	const char* c = [](GW::Channel chan) -> const char* {
+		switch (chan) {
+		case CHAN_INFO: return "Info";
+		case CHAN_WARNING: return "Warning";
+		case CHAN_ERROR: return "Error";
+		default: return "";
+		}
+	}(chan);
+	Log::Log("[%s] %s\n", c, buf1);
+}
+
+void Log::Info(const char* format, ...) {
+	va_list vl;
+	va_start(vl, format);
+	_vchatlog(CHAN_INFO, format, vl);
+	va_end(vl);
+}
+
+void Log::Error(const char* format, ...) {
+	va_list vl;
+	va_start(vl, format);
+	_vchatlog(CHAN_ERROR, format, vl);
+	va_end(vl);
+}
+
+void Log::Warning(const char* format, ...) {
+	va_list vl;
+	va_start(vl, format);
+	_vchatlog(CHAN_WARNING, format, vl);
+	va_end(vl);
+}
+
+// === Crash Dump ===
+LONG WINAPI Log::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers) {
 	BOOL bMiniDumpSuccessful;
 	CHAR szFileName[MAX_PATH];
 	HANDLE hDumpFile;
@@ -82,7 +138,7 @@ LONG WINAPI Logger::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers) {
 	GetLocalTime(&stLocalTime);
 
 	StringCchPrintf(szFileName, MAX_PATH, "%s\\%s-%04d%02d%02d-%02d%02d%02d-%ld-%ld.dmp",
-		GuiUtils::getSettingsFolder().c_str() , GWTOOLBOX_VERSION,
+		GuiUtils::getSettingsFolder().c_str(), GWTOOLBOX_VERSION,
 		stLocalTime.wYear, stLocalTime.wMonth, stLocalTime.wDay,
 		stLocalTime.wHour, stLocalTime.wMinute, stLocalTime.wSecond,
 		GetCurrentProcessId(), GetCurrentThreadId());
@@ -112,11 +168,6 @@ LONG WINAPI Logger::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers) {
 			"I don't really know what to do, sorry, contact the developers.\n",
 			"GWToolbox++ Crash!", 0);
 	}
-	
-	return EXCEPTION_EXECUTE_HANDLER;
-}
 
-void Logger::FlushFile()
-{
-	fflush(logfile);
+	return EXCEPTION_EXECUTE_HANDLER;
 }

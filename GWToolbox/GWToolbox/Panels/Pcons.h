@@ -19,6 +19,12 @@ public:
 	static Color enabled_bg_color;
 	static DWORD player_id;
 
+	static DWORD alcohol_level;
+	static bool suppress_drunk_effect;
+	static bool suppress_drunk_text;
+	static bool suppress_drunk_emotes;
+	static bool suppress_lunar_skills;
+
 protected:
 	Pcon(const char* chatname,
 		const char* ininame, 

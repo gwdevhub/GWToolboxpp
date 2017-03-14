@@ -1,36 +1,37 @@
 #pragma once
 
 #include <Windows.h>
-#include <stdio.h>
-#include <time.h>
 
-#define LOG(msg, ...) Logger::Log(msg, ##__VA_ARGS__)
-#define LOGW(msg, ...) Logger::LogW(msg, ##__VA_ARGS__)
-
-class Logger {
-private:
-	static FILE* logfile;
-	static void PrintTimestamp();
-
-public:
+namespace Log {
+	// === Setup and cleanup ====
 	// in release redirects stdout and stderr to log file
 	// in debug creates console
-	static void Init();
+	void InitializeLog();
+	void InitializeChat();
+	void Terminate();
 
+	// === File/console logging ===
 	// printf-style log
-	static void Log(const char* msg, ...);
+	void Log(const char* msg, ...);
 	
 	// printf-style wide-string log
-	static void LogW(const wchar_t* msg, ...);
+	void LogW(const wchar_t* msg, ...);
 
 	// flushes log file.
-	static void FlushFile();
+	//static void FlushFile() { fflush(logfile); }
 
-	// in release it closes the file
-	// in debug frees the console
-	static void Close();
+	// === Game chat logging ===
+	// Shows to the user in the form of a white chat message from toolbox
+	void Info(const char* format, ...);
 
+	// Shows to the user in the form of a red chat message from toolbox
+	void Error(const char* format, ...);
+
+	// Shows to the user in the form of a yellow chat message from toolbox
+	void Warning(const char* format, ...);
+
+	// === Crash Dump ===
 	// Creates minidump, to be called from within __except()
-	static LONG WINAPI GenerateDump(
+	LONG WINAPI GenerateDump(
 		EXCEPTION_POINTERS* pExceptionPointers);
 };

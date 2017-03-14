@@ -8,9 +8,10 @@
 #include <GWCA\Managers\EffectMgr.h>
 #include <GWCA\Managers\PlayerMgr.h>
 #include <GWCA\Managers\SkillbarMgr.h>
+#include <GWCA\Managers\ChatMgr.h>
 
 #include "logger.h"
-#include "ChatLogger.h"
+#include <logger.h>
 #include "BuildPanel.h"
 #include "HotkeyPanel.h"
 #include "PconPanel.h"
@@ -199,7 +200,7 @@ void HotkeySendChat::Draw() {
 void HotkeySendChat::Execute() {
 	if (isLoading()) return;
 	if (channel == L'/') {
-		ChatLogger::Log("/%s", message);
+		Log::Info("/%s", message);
 	}
 	GW::Chat().SendChat(message, channel);
 }
@@ -228,7 +229,11 @@ void HotkeyUseItem::Execute() {
 	if (isLoading()) return;
 	if (item_id == 0) return;
 	if (!GW::Items().UseItemByModelId(item_id)) {
-		ChatLogger::Log("[Warning] %s not found!", name);
+		if (name[0] == '\0') {
+			Log::Error("Item #%d not found!", item_id);
+		} else {
+			Log::Error("%s not found!", name);
+		}
 	}
 }
 
@@ -323,7 +328,7 @@ void HotkeyToggle::Execute() {
 	switch (target) {
 	case HotkeyToggle::Clicker:
 		active = HotkeyPanel::Instance().ToggleClicker();
-		ChatLogger::Log("Clicker is %s", active ? "active" : "disabled");
+		Log::Info("Clicker is %s", active ? "active" : "disabled");
 		break;
 	case HotkeyToggle::Pcons:
 		PconPanel::Instance().ToggleEnable();
@@ -331,7 +336,7 @@ void HotkeyToggle::Execute() {
 		break;
 	case HotkeyToggle::CoinDrop:
 		active = HotkeyPanel::Instance().ToggleCoinDrop();
-		ChatLogger::Log("Coin dropper is %s", active ? "active" : "disabled");
+		Log::Info("Coin dropper is %s", active ? "active" : "disabled");
 		break;
 	}
 }
@@ -480,7 +485,11 @@ void HotkeyMove::Execute() {
 	double dist = GW::Agents().GetDistance(me->pos, GW::Vector2f(x, y));
 	if (distance != 0 && dist > distance) return;
 	GW::Agents().Move(x, y);
-	ChatLogger::Log("%s movement macro activated", name);
+	if (name[0] == '\0') {
+		Log::Info("Moving to (%.0f, %.0f)", x, y);
+	} else {
+		Log::Info("Moving to %s", name);
+	}
 }
 
 HotkeyDialog::HotkeyDialog(CSimpleIni* ini, const char* section) : TBHotkey(ini, section) {
@@ -506,9 +515,8 @@ void HotkeyDialog::Draw() {
 void HotkeyDialog::Execute() {
 	if (isLoading()) return;
 	if (id == 0) return;
-
 	GW::Agents().Dialog(id);
-	ChatLogger::Log("Sent dialog %s (%d)", name, id);
+	Log::Info("Sent dialog %s (%d)", name, id);
 }
 
 bool HotkeyPingBuild::GetText(void*, int idx, const char** out_text) {

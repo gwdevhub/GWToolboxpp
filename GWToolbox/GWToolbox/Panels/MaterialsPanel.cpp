@@ -9,7 +9,7 @@
 #include <GWCA\Context\GameContext.h>
 
 #include "GuiUtils.h"
-#include "ChatLogger.h"
+#include <logger.h>
 #include <OtherModules\Resources.h>
 
 void MaterialsPanel::Update() {
@@ -29,7 +29,7 @@ void MaterialsPanel::Update() {
 		if (last_request_type == None) {
 			int* price = GetPricePtr(purchasequeue.front());
 			if (price && *price > 0 && (DWORD)(*price) > GW::Items().GetGoldAmountOnCharacter()) {
-				ChatLogger::Err("Cannot purchase, not enough gold!");
+				Log::Error("Cannot purchase, not enough gold!");
 				purchasequeue.clear();
 			} else {
 				int itemid = RequestQuote(purchasequeue.front());

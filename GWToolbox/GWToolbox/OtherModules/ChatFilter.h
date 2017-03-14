@@ -49,7 +49,6 @@ private:
 	bool ninerings;
 	bool noonehearsyou;
 	bool lunars;
-	bool playeraway;
 
 	bool messagebycontent;
 #define FILTER_BUF_SIZE 1024*16

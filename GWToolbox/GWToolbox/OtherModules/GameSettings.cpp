@@ -2,7 +2,7 @@
 
 #include <GWCA\Managers\ChatMgr.h>
 
-#include "ChatLogger.h"
+#include <logger.h>
 #include "GuiUtils.h"
 #include <GWToolbox.h>
 
@@ -58,7 +58,7 @@ void GameSettings::ApplyBorderless(bool value) {
 	if ((current_style & WS_POPUP) != 0) { // borderless or fullscreen
 		if ((current_style & WS_MAXIMIZEBOX) == 0) { // fullscreen
 			if (value) {
-				ChatLogger::Log("Please enable Borderless while in Windowed mode");
+				Log::Info("Please enable Borderless while in Windowed mode");
 				value = false;
 			}
 			return;

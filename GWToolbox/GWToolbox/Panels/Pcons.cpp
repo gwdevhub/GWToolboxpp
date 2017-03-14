@@ -7,7 +7,7 @@
 #include <GWCA\Managers\ItemMgr.h>
 #include <GWCA\Managers\PartyMgr.h>
 
-#include "ChatLogger.h"
+#include <logger.h>
 #include "GuiUtils.h"
 #include <OtherModules\Resources.h>
 
@@ -19,6 +19,12 @@ int Pcon::lunar_delay = 500;
 bool Pcon::disable_when_not_found = true;
 DWORD Pcon::player_id = 0;
 Color Pcon::enabled_bg_color = Colors::ARGB(102, 0, 255, 0);
+
+DWORD Pcon::alcohol_level = 0;
+bool Pcon::suppress_drunk_effect = false;
+bool Pcon::suppress_drunk_text = false;
+bool Pcon::suppress_drunk_emotes = false;
+bool Pcon::suppress_lunar_skills = false;
 
 // ================================================
 Pcon::Pcon(const char* chatname,
@@ -83,7 +89,7 @@ void Pcon::Update(int delay) {
 				if (quantity == 0) { // if we just used the last one
 					mapid = GW::Map().GetMapID();
 					maptype = GW::Map().GetInstanceType();
-					ChatLogger::Err("Just used the last %s", chat);
+					Log::Warning("Just used the last %s", chat);
 					if (disable_when_not_found) enabled = false;
 				}
 			} else {
@@ -93,7 +99,7 @@ void Pcon::Update(int delay) {
 					|| maptype != GW::Map().GetInstanceType()) { // only yell at the user once
 					mapid = GW::Map().GetMapID();
 					maptype = GW::Map().GetInstanceType();
-					ChatLogger::Err("Cannot find %s", chat);
+					Log::Error("Cannot find %s", chat);
 				}
 			}
 		}
@@ -107,9 +113,9 @@ void Pcon::Update(int delay) {
 		maptype = GW::Map().GetInstanceType();
 
 		if (quantity == 0) {
-			ChatLogger::Log("[Warning] Cannot find %s, please refill or disable", chat);
+			Log::Error("Cannot find %s, please refill or disable", chat);
 		} else if (quantity < threshold) {
-			ChatLogger::Log("[Warning] Low on %s, please refill or disable", chat);
+			Log::Warning("Low on %s, please refill or disable", chat);
 		}
 	}
 }
@@ -228,6 +234,7 @@ bool PconCity::CanUseByEffect() const {
 	for (DWORD i = 0; i < effects.size(); i++) {
 		if (effects[i].GetTimeRemaining() < 1000) continue;
 		if (effects[i].SkillId == (DWORD)SkillID::Sugar_Rush_short
+			|| effects[i].SkillId == (DWORD)SkillID::Sugar_Rush_medium
 			|| effects[i].SkillId == (DWORD)SkillID::Sugar_Rush_long
 			|| effects[i].SkillId == (DWORD)SkillID::Sugar_Jolt_short
 			|| effects[i].SkillId == (DWORD)SkillID::Sugar_Jolt_long) {
@@ -252,7 +259,7 @@ int PconCity::QuantityForEach(const GW::Item* item) const {
 
 // ================================================
 bool PconAlcohol::CanUseByEffect() const {
-	return GW::Effects().GetAlcoholLevel() <= 1;
+	return Pcon::alcohol_level <= 1;
 }
 int PconAlcohol::QuantityForEach(const GW::Item* item) const {
 	switch (item->ModelId) {

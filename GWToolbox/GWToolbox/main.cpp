@@ -10,13 +10,13 @@ void init(HMODULE hModule){
 			FreeLibraryAndExitThread(hModule, EXIT_SUCCESS);
 		}
 
-		Logger::Init();
-		LOG("Waiting for logged character\n");
+		Log::InitializeLog();
+		Log::Log("Waiting for logged character\n");
 		while (*(void**)0xA2B294 == nullptr) {
 			Sleep(100);
 		}
 		
-		LOG("Creating toolbox thread\n");
+		Log::Log("Creating toolbox thread\n");
 		CreateThread(0, 0, SafeThreadEntry, hModule, 0, 0);
 	} __except ( EXCEPT_EXPRESSION_ENTRY ) {
 	}

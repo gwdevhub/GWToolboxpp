@@ -35,7 +35,7 @@
 #include "Panels\SettingsPanel.h"
 #include <OtherModules\GameSettings.h>
 #include "GWToolbox.h"
-#include "ChatLogger.h"
+#include <logger.h>
 
 void ChatCommands::Initialize() {
 	ToolboxModule::Initialize();
@@ -169,7 +169,7 @@ bool ChatCommands::CmdAge2(std::wstring& cmd, std::vector<std::wstring>& args) {
 	char buffer[32];
 	DWORD second = GW::Map().GetInstanceTime() / 1000;
 	sprintf_s(buffer, "%02u:%02u:%02u", (second / 3600), (second / 60) % 60, second % 60);
-	ChatLogger::Log(buffer);
+	Log::Info(buffer);
 	return true;
 }
 
@@ -183,7 +183,7 @@ bool ChatCommands::CmdPcons(std::wstring& cmd, std::vector<std::wstring>& args) 
 		} else if (arg == L"off") {
 			PconPanel::Instance().SetEnabled(false);
 		} else {
-			ChatLogger::Log("[Error] Invalid argument '%ls', please use /pcons [|on|off]", args[0].c_str());
+			Log::Error("Invalid argument '%ls', please use /pcons [|on|off]", args[0].c_str());
 		}
 	}
 	return true;
@@ -199,7 +199,7 @@ bool ChatCommands::CmdBorderless(std::wstring& cmd, std::vector<std::wstring>& a
 		} else if (arg == L"off") {
 			GameSettings::Instance().ApplyBorderless(false);
 		} else {
-			ChatLogger::Log("[Error] Invalid argument '%ls', please use /borderless [|on|off]", args[0].c_str());
+			Log::Error("Invalid argument '%ls', please use /borderless [|on|off]", args[0].c_str());
 		}
 	}
 	return true;
@@ -207,14 +207,14 @@ bool ChatCommands::CmdBorderless(std::wstring& cmd, std::vector<std::wstring>& a
 
 bool ChatCommands::CmdDialog(std::wstring& cmd, std::vector<std::wstring>& args) {
 	if (args.empty()) {
-		ChatLogger::Log("[Error] Please provide an integer or hex argument");
+		Log::Error("Please provide an integer or hex argument");
 	} else {
 		try {
 			long id = std::stol(args[0], 0, 0);
 			GW::Agents().Dialog(id);
-			ChatLogger::Log("Sent Dialog 0x%X", id);
+			Log::Info("Sent Dialog 0x%X", id);
 		} catch (...) {
-			ChatLogger::Log("[Error] Invalid argument '%ls', please use an integer or hex value", args[0].c_str());
+			Log::Error("Invalid argument '%ls', please use an integer or hex value", args[0].c_str());
 		}
 	}
 	return true;
@@ -315,7 +315,7 @@ bool ChatCommands::CmdHide(std::wstring& cmd, std::vector<std::wstring>& args) {
 
 bool ChatCommands::CmdTP(std::wstring& cmd, std::vector<std::wstring>& args) {
 	if (args.empty()) {
-		ChatLogger::Log("[Error] Please provide an argument");
+		Log::Error("[Error] Please provide an argument");
 	} else {
 		std::wstring town = GetLowerCaseArg(args, 0);
 
@@ -335,7 +335,7 @@ bool ChatCommands::CmdTP(std::wstring& cmd, std::vector<std::wstring>& args) {
 			} else if (dis == L"int") {
 				district = GW::Constants::District::International;
 			} else {
-				ChatLogger::Log("Invalid district '%ls'", dis.c_str());
+				Log::Error("Invalid district '%ls'", dis.c_str());
 			}
 		}
 
@@ -377,11 +377,11 @@ bool ChatCommands::CmdZoom(std::wstring& cmd, std::vector<std::wstring>& args) {
 			if (distance > 0) {
 				GW::Cameramgr().SetMaxDist(static_cast<float>(distance));
 			} else {
-				ChatLogger::Log("[Error] Invalid argument '%ls', please use a positive integer value", args[0].c_str());
+				Log::Error("Invalid argument '%ls', please use a positive integer value", args[0].c_str());
 			}
 			
 		} catch (...) {
-			ChatLogger::Log("[Error] Invalid argument '%ls', please use an integer value", args[0].c_str());
+			Log::Error("Invalid argument '%ls', please use an integer value", args[0].c_str());
 		}
 	}
 	return true;
@@ -396,7 +396,7 @@ bool ChatCommands::CmdCamera(std::wstring& cmd, std::vector<std::wstring>& args)
 			GW::Cameramgr().UnlockCam(false);
 		} else if (arg0 == L"unlock") {
 			GW::Cameramgr().UnlockCam(true);
-			ChatLogger::Log("Use W,A,S,D,X,Z for camera movement");
+			Log::Info("Use W,A,S,D,X,Z for camera movement");
 		} else if (arg0 == L"fog") {
 			std::wstring arg1 = GetLowerCaseArg(args, 1);
 			if (arg1 == L"on") {
@@ -416,12 +416,12 @@ bool ChatCommands::CmdCamera(std::wstring& cmd, std::vector<std::wstring>& args)
 						float fovnew = std::stof(arg1);
 						if (fovnew > 0) {
 							GW::Cameramgr().SetFieldOfView(fovnew);
-							ChatLogger::Log("Field of View is %f", fovnew);
+							Log::Info("Field of View is %f", fovnew);
 						} else {
-							ChatLogger::Log("[Error] Invalid argument '%ls', please use a positive value", args[1].c_str());
+							Log::Error("Invalid argument '%ls', please use a positive value", args[1].c_str());
 						}
 					} catch (...) {
-						ChatLogger::Log("[Error] Invalid argument '%ls', please use a float value", args[1].c_str());
+						Log::Error("Invalid argument '%ls', please use a float value", args[1].c_str());
 					}
 				}
 			}
@@ -433,13 +433,13 @@ bool ChatCommands::CmdCamera(std::wstring& cmd, std::vector<std::wstring>& args)
 				try {
 					float speed = std::stof(arg1);
 					Instance().cam_speed_ = speed;
-					ChatLogger::Log("Camera speed is now %f", speed);
+					Log::Info("Camera speed is now %f", speed);
 				} catch (...) {
-					ChatLogger::Log("[Error] Invalid argument '%ls', please use a float value", args[1].c_str());
+					Log::Error("Invalid argument '%ls', please use a float value", args[1].c_str());
 				}
 			}
 		} else {
-			ChatLogger::Log("[Error] Invalid argument.");
+			Log::Error("Invalid argument.");
 		}
 	}
 	return true;
@@ -506,16 +506,16 @@ bool ChatCommands::CmdTarget(std::wstring& cmd, std::vector<std::wstring>& args)
 		} else if (arg0 == L"getid") {
 			GW::Agent* target = GW::Agents().GetTarget();
 			if (target == nullptr) {
-				ChatLogger::Log("No target selected!");
+				Log::Error("No target selected!");
 			} else {
-				ChatLogger::Log("Target model id (PlayerNumber) is %d", target->PlayerNumber);
+				Log::Info("Target model id (PlayerNumber) is %d", target->PlayerNumber);
 			}
 		} else if (arg0 == L"getpos") {
 			GW::Agent* target = GW::Agents().GetTarget();
 			if (target == nullptr) {
-				ChatLogger::Log("No target selected!");
+				Log::Error("No target selected!");
 			} else {
-				ChatLogger::Log("Target coordinates are (%f, %f)", target->X, target->Y);
+				Log::Info("Target coordinates are (%f, %f)", target->X, target->Y);
 			}
 		}
 	}
@@ -534,7 +534,7 @@ bool ChatCommands::CmdUseSkill(std::wstring& cmd, std::vector<std::wstring>& arg
 				int skill = std::stoi(args[0]);
 				if (skill >= 0 && skill <= 8) Instance().skill_to_use = skill;
 			} catch (...) {
-				ChatLogger::Log("[Error] Invalid argument '%ls', please use an integer value", args[0].c_str());
+				Log::Error("Invalid argument '%ls', please use an integer value", args[0].c_str());
 			}
 		}
 	}

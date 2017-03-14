@@ -78,7 +78,7 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -98,7 +98,6 @@
     <ClInclude Include="..\Dependencies\imgui\stb_rect_pack.h" />
     <ClInclude Include="..\Dependencies\imgui\stb_textedit.h" />
     <ClInclude Include="..\Dependencies\imgui\stb_truetype.h" />
-    <ClInclude Include="GWToolbox\ChatLogger.h" />
     <ClInclude Include="GWToolbox\Color.h" />
     <ClInclude Include="GWToolbox\Defines.h" />
     <ClInclude Include="GWToolbox\ImGuiAddons.h" />

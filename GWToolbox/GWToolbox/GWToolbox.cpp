@@ -25,7 +25,6 @@
 #include <imgui.h>
 #include <imgui\examples\directx9_example\imgui_impl_dx9.h>
 
-#include "ChatLogger.h"
 #include "logger.h"
 
 #include <OtherModules\Resources.h>
@@ -63,13 +62,13 @@ DWORD __stdcall SafeThreadEntry(LPVOID dllmodule) {
 	__try {
 		return ThreadEntry(dllmodule);
 	} __except ( EXCEPT_EXPRESSION_ENTRY ) {
-		LOG("SafeThreadEntry __except body\n");
+		Log::Log("SafeThreadEntry __except body\n");
 		return EXIT_SUCCESS;
 	}
 }
 
 DWORD __stdcall ThreadEntry(LPVOID dllmodule) {
-	LOG("Initializing API\n");
+	Log::Log("Initializing API\n");
 	if (!GW::Api::Initialize()){
 		MessageBoxA(0, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0);
 		FreeLibraryAndExitThread((HMODULE)dllmodule, EXIT_SUCCESS);
@@ -93,15 +92,15 @@ DWORD __stdcall ThreadEntry(LPVOID dllmodule) {
 
 	printf("DxDevice = %X\n", (unsigned int)(GW::DirectXHooker::Initialize()));
 
-	LOG("Installing dx hooks\n");
+	Log::Log("Installing dx hooks\n");
 	GW::DirectXHooker::Instance().AddHook(GW::dx9::kEndScene, (void*)EndScene);
 	GW::DirectXHooker::Instance().AddHook(GW::dx9::kReset, (void*)ResetScene);
-	LOG("Installed dx hooks\n");
+	Log::Log("Installed dx hooks\n");
 
-	LOG("oldwndproc %X\n", OldWndProc);
-	LOG("Installed input event handler\n");
+	Log::Log("oldwndproc %X\n", OldWndProc);
+	Log::Log("Installed input event handler\n");
 
-	ChatLogger::Init();
+	Log::InitializeChat();
 
 	while (!tb_destroyed) { // wait until destruction
 		Sleep(100);
@@ -117,8 +116,8 @@ DWORD __stdcall ThreadEntry(LPVOID dllmodule) {
 	Sleep(100);
 
 	Sleep(100);
-	LOG("Closing log/console, bye!\n");
-	Logger::Close();
+	Log::Log("Closing log/console, bye!\n");
+	Log::Terminate();
 	Sleep(100);
 	FreeLibraryAndExitThread((HMODULE)dllmodule, EXIT_SUCCESS);
 }
@@ -255,9 +254,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 }
 
 void GWToolbox::Initialize() {
-	LOG("Creating Toolbox\n");
+	Log::Log("Creating Toolbox\n");
 
-	LOG("Creating Modules\n");
+	Log::Log("Creating Modules\n");
 	modules.push_back(&Resources::Instance());
 	modules.push_back(&GameSettings::Instance());
 	modules.push_back(&ToolboxSettings::Instance());
@@ -297,12 +296,12 @@ void GWToolbox::Initialize() {
 		&& GW::Agents().GetPlayer() != nullptr) {
 
 		DWORD playerNumber = GW::Agents().GetPlayer()->PlayerNumber;
-		ChatLogger::Log("Hello %ls!", GW::Agents().GetPlayerNameByLoginNumber(playerNumber));
+		Log::Info("Hello %ls!", GW::Agents().GetPlayerNameByLoginNumber(playerNumber));
 	}
 }
 
 void GWToolbox::LoadSettings() {
-	LOG("Opening ini file\n");
+	Log::Log("Opening ini file\n");
 	if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
 	inifile->LoadFile(GuiUtils::getPath("GWToolbox.ini").c_str());
 	inifile->SetValue("launcher", "dllversion", GWTOOLBOX_VERSION);
@@ -329,7 +328,7 @@ void GWToolbox::Terminate() {
 	}
 
 	if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading) {
-		ChatLogger::Log("Bye!");
+		Log::Info("Bye!");
 	}
 }
 
@@ -338,7 +337,7 @@ HRESULT WINAPI EndScene(IDirect3DDevice9* pDevice) {
 		__try {
 			GWToolbox::EndScene(pDevice);
 		} __except (EXCEPT_EXPRESSION_LOOP) {
-			Logger::Log("Badness happened in EndScene!\n");
+			Log::Log("Badness happened in EndScene!\n");
 		}
 	}
 
@@ -392,12 +391,12 @@ void GWToolbox::EndScene(IDirect3DDevice9* pDevice) {
 
 		ImGui_ImplDX9_Shutdown();
 
-		LOG("Destroying API\n");
+		Log::Log("Destroying API\n");
 		GW::Api::Destruct();
 
-		LOG("Restoring input hook\n");
+		Log::Log("Restoring input hook\n");
 		SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
-		LOG("Destroying directX hook\n");
+		Log::Log("Destroying directX hook\n");
 		GW::DirectXHooker::Instance().RemoveAllHooks();
 	}
 }
