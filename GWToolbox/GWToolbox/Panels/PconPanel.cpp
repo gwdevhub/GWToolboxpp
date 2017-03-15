@@ -333,9 +333,9 @@ void PconPanel::DrawSettingInternal() {
 	ImGui::ShowHelp("Toolbx will disable a pcon if it is not found in the inventory");
 	ImGui::SliderInt("Pcons delay", &Pcon::pcons_delay, 100, 5000, "%.0f milliseconds");
 	ImGui::ShowHelp(
-		"This value is used to prevent Toolbox from using the \n"
-		"same pcon twice, before it gets activated.\n"
-		"Decrease this value if you have good ping and you die a lot.");
+		"After using a pcon, toolbox will not use it again for this amount of time.\n"
+		"It is needed to prevent toolbox from using a pcon twice, before it activates.\n"
+		"Decrease the value if you have good ping and you die a lot.");
 	ImGui::SliderInt("Lunars delay", &Pcon::lunar_delay, 100, 500, "%.0f milliseconds");
 	if (ImGui::TreeNode("Thresholds")) {
 		ImGui::Text("When you have less than this amount:\n-The number in the interface becomes yellow.\n-Warning message is displayed when zoning into outpost.");

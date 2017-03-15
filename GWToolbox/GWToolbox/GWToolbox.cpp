@@ -53,10 +53,20 @@
 #include "Panels\MaterialsPanel.h"
 #include "Panels\SettingsPanel.h"
 
-long OldWndProc = 0;
-bool tb_initialized = false;
-bool tb_destroyed = false;
-GW::dx9::EndScene_t endscene_orig = nullptr;
+namespace {
+	long OldWndProc = 0;
+	bool tb_initialized = false;
+	bool tb_destroyed = false;
+	GW::dx9::EndScene_t endscene_orig = nullptr;
+
+	bool drawing_world = 0;
+	int drawing_passes = 0;
+	int last_drawing_passes = 0;
+}
+
+HRESULT WINAPI Present(IDirect3DDevice9* pDev, CONST RECT* pSourceRect, CONST RECT* pDestRect, HWND hDestWindowOverride, CONST RGNDATA* pDirtyRegion);
+HRESULT WINAPI EndScene(IDirect3DDevice9* dev);
+HRESULT WINAPI ResetScene(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETERS* pPresentationParameters);
 
 DWORD __stdcall SafeThreadEntry(LPVOID dllmodule) {
 	__try {
@@ -93,8 +103,9 @@ DWORD __stdcall ThreadEntry(LPVOID dllmodule) {
 	printf("DxDevice = %X\n", (unsigned int)(GW::DirectXHooker::Initialize()));
 
 	Log::Log("Installing dx hooks\n");
-	GW::DirectXHooker::Instance().AddHook(GW::dx9::kPresent, (void*)Present);
-	GW::DirectXHooker::Instance().AddHook(GW::dx9::kReset, (void*)ResetScene);
+	GW::DirectXHooker::AddHook(GW::dx9::kPresent, Present);
+	GW::DirectXHooker::AddHook(GW::dx9::kEndScene, EndScene);
+	GW::DirectXHooker::AddHook(GW::dx9::kReset, ResetScene);
 	Log::Log("Installed dx hooks\n");
 
 	Log::Log("oldwndproc %X\n", OldWndProc);
@@ -330,21 +341,32 @@ void GWToolbox::Terminate() {
 	}
 }
 
+HRESULT WINAPI EndScene(IDirect3DDevice9* device) {
+	++drawing_passes;
+	if (last_drawing_passes == 2 && drawing_world) {
+		drawing_world = false;
+	} else if (!tb_destroyed) {
+		__try {
+			GWToolbox::Draw(device);
+		} __except (EXCEPT_EXPRESSION_LOOP) {
+			Log::Log("Badness happened in EndScene!\n");
+		}
+	}
+
+	return GW::DirectXHooker::Original<GW::dx9::EndScene_t>(GW::dx9::kEndScene)(device);
+}
+
 HRESULT WINAPI Present(IDirect3DDevice9* pDev, 
 	CONST RECT* pSourceRect, 
 	CONST RECT* pDestRect, 
 	HWND hDestWindowOverride, 
 	CONST RGNDATA* pDirtyRegion) {
 
-	if (!tb_destroyed) {
-		__try {
-			GWToolbox::Draw(pDev);
-		} __except (EXCEPT_EXPRESSION_LOOP) {
-			Log::Log("Badness happened in EndScene!\n");
-		}
-	}
+	drawing_world = true;
+	last_drawing_passes = drawing_passes;
+	drawing_passes = 0;
 
-	return GW::DirectXHooker::Instance().original<GW::dx9::Present_t>(GW::dx9::kPresent)(pDev,
+	return GW::DirectXHooker::Original<GW::dx9::Present_t>(GW::dx9::kPresent)(pDev,
 		pSourceRect, pDestRect, hDestWindowOverride, pDirtyRegion);
 }
 
@@ -401,7 +423,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 		Log::Log("Restoring input hook\n");
 		SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
 		Log::Log("Destroying directX hook\n");
-		GW::DirectXHooker::Instance().RemoveAllHooks();
+		GW::DirectXHooker::RemoveAllHooks();
 	}
 }
 
@@ -410,6 +432,6 @@ HRESULT WINAPI ResetScene(IDirect3DDevice9* pDevice,
 
 	ImGui_ImplDX9_InvalidateDeviceObjects();
 
-	return GW::DirectXHooker::Instance().original<GW::dx9::Reset_t>(
+	return GW::DirectXHooker::Original<GW::dx9::Reset_t>(
 		GW::dx9::kReset)(pDevice, pPresentationParameters);
 }

@@ -15,7 +15,9 @@ void MainWindow::Initialize() {
 }
 
 void MainWindow::LoadSettings(CSimpleIni* ini) {
-	ToolboxWindow::LoadSettings(ini); // don't load visible
+	bool v = ini->GetBoolValue(Name(), "visible", true);
+	ToolboxWindow::LoadSettings(ini);
+	visible = v;
 	one_panel_at_time_only = ini->GetBoolValue(Name(), "one_panel_at_time_only", true);
 }
 

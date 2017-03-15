@@ -1,7 +1,7 @@
 #pragma once
 
 #define GWTOOLBOX_VERSION "1.11"
-#define BETA_VERSION " - beta 8"
+#define BETA_VERSION " - beta 9"
 #define GWTOOLBOX_HOST "http://fbgmguild.com/GWToolboxpp/"
 #define GWTOOLBOX_WEBSITE "http://tools.fbgmguild.com/"
 
