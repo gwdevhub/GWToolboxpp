@@ -144,7 +144,10 @@ void ChatCommands::Update() {
 		if (skillbar.IsValid()) {
 			GW::SkillbarSkill skill = skillbar.Skills[skill_to_use - 1]; // -1 to switch range [1,8] -> [0,7]
 			if (skill.GetRecharge() == 0) {
-				GW::Skillbarmgr().UseSkill(skill_to_use - 1, GW::Agents().GetTargetId());
+				int slot = skill_to_use - 1;
+				GW::Gamethread().Enqueue([slot] {
+					GW::Skillbarmgr().UseSkill(slot, GW::Agents().GetTargetId());
+				});
 
 				GW::Skill skilldata = GW::Skillbarmgr().GetSkillConstantData(skill.SkillId);
 				skill_usage_delay = skilldata.Activation + skilldata.Aftercast + 1.0f; // one additional second to account for ping and to avoid spamming in case of bad target
@@ -532,7 +535,10 @@ bool ChatCommands::CmdUseSkill(std::wstring& cmd, std::vector<std::wstring>& arg
 		} else {
 			try {
 				int skill = std::stoi(args[0]);
-				if (skill >= 0 && skill <= 8) Instance().skill_to_use = skill;
+				if (skill >= 0 && skill <= 8) {
+					Instance().skill_to_use = skill;
+					Log::Info("Using skill %d on recharge. Use /useskill to stop", skill);
+				}
 			} catch (...) {
 				Log::Error("Invalid argument '%ls', please use an integer value", args[0].c_str());
 			}

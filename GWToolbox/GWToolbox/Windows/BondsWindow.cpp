@@ -55,9 +55,29 @@ void BondsWindow::Draw(IDirect3DDevice9* device) {
 	int size = GW::Partymgr().GetPartySize();
 	if (size > MAX_PLAYERS) size = MAX_PLAYERS;
 	
-	UpdateSkillbarBonds();
+	static bool update_build = true;
+	switch (GW::Map().GetInstanceType()) {
+	case GW::Constants::InstanceType::Explorable:
+		if (update_build) {
+			if (UpdateSkillbarBonds()) update_build = false;
+		}
+		break;
+	case GW::Constants::InstanceType::Outpost:
+		update_build = true;
+		UpdateSkillbarBonds();
+		break;
+	case GW::Constants::InstanceType::Loading:
+		update_build = true;
+		break;
+	default:
+		break;
+	}
 
-	memset(buff_id, 0, sizeof(DWORD) * MAX_PLAYERS * n_bonds);
+	for (int i = 0; i < MAX_PLAYERS; ++i) {
+		for (int j = 0; j < n_bonds; ++j) {
+			buff_id[i][j] = 0;
+		}
+	}
 
 	GW::AgentEffectsArray effects = GW::Effects().GetPartyEffectArray();
 	if (effects.valid()) {
@@ -134,7 +154,9 @@ void BondsWindow::UseBuff(int player, int bond) {
 	if (!skillbar.IsValid()) return;
 	if (skillbar.Skills[slot].Recharge != 0) return;
 
-	GW::Skillbarmgr().UseSkill(slot, target);
+	GW::Gamethread().Enqueue([slot, target] {
+		GW::Skillbarmgr().UseSkill(slot, target);
+	});
 }
 
 void BondsWindow::LoadSettings(CSimpleIni* ini) {
