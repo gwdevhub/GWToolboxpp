@@ -100,7 +100,7 @@ DWORD __stdcall ThreadEntry(LPVOID dllmodule) {
 	GW::FriendListmgr();
 	GW::Cameramgr();
 
-	printf("DxDevice = %X\n", (unsigned int)(GW::DirectXHooker::Initialize()));
+	printf("DxDevice = %X\n", (DWORD)(GW::DirectXHooker::Initialize()));
 
 	Log::Log("Installing dx hooks\n");
 	GW::DirectXHooker::AddHook(GW::dx9::kPresent, Present);
