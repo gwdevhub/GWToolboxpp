@@ -1,11 +1,33 @@
 #pragma once
 
+#include <vector>
+
+#include <GWCA\Constants\Skills.h>
+
 #include "Color.h"
 #include "ToolboxWidget.h"
 
 class BondsWindow : public ToolboxWidget {
+	static const int MAX_BONDS = 15;
+	enum Bond {
+		BalthazarSpirit,
+		EssenceBond,
+		HolyVeil,
+		LifeAttunement,
+		LifeBarrier,
+		LifeBond,
+		LiveVicariously,
+		Mending,
+		ProtectiveBond,
+		PurifyingVeil,
+		Retribution,
+		StrengthOfHonor,
+		Succor,
+		VitalBlessing,
+		WatchfulSpirit,
+	};
+
 	static const int MAX_PLAYERS = 12;
-	static const int MAX_BONDS = 3;
 
 	BondsWindow() {};
 	~BondsWindow() {};
@@ -32,6 +54,8 @@ public:
 
 private:
 	void UseBuff(int player, int bond);
+	GW::Constants::SkillID GetSkillID(Bond bond) const;
+	bool UpdateSkillbarBonds();
 
 	IDirect3DTexture9* textures[MAX_BONDS];
 	Color background;
@@ -40,4 +64,9 @@ private:
 	int row_height = 0;
 
 	static DWORD buff_id[MAX_PLAYERS][MAX_BONDS];
+
+	int n_bonds;
+	std::vector<int> skillbar_bond_idx;
+	std::vector<int> skillbar_bond_slot;
+	std::vector<DWORD> skillbar_bond_skillid;
 };
