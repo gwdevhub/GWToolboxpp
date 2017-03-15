@@ -124,7 +124,6 @@ void BondsWindow::Draw(IDirect3DDevice9* device) {
 }
 
 void BondsWindow::UseBuff(int player, int bond) {
-	printf("casting %d on %d\n", bond, player);
 	if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Explorable) return;
 
 	DWORD target = GW::Agents().GetAgentIdByLoginNumber(player + 1);
