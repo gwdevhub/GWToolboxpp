@@ -55,6 +55,7 @@ private:
 	static bool CmdZoom(std::wstring& cmd, std::vector<std::wstring>& args);
 	static bool CmdCamera(std::wstring& cmd, std::vector<std::wstring>& args);
 	static bool CmdBorderless(std::wstring& cmd, std::vector<std::wstring>& args);
+	static bool CmdFlag(std::wstring& cmd, std::vector<std::wstring>& args);
 
 	int move_forward;
 	int move_side;

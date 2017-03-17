@@ -113,6 +113,8 @@ DWORD __stdcall ThreadEntry(LPVOID dllmodule) {
 
 	Log::InitializeChat();
 
+	Log::Log("Installed chat hooks\n");
+
 	while (!tb_destroyed) { // wait until destruction
 		Sleep(100);
 
@@ -429,6 +431,8 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 
 HRESULT WINAPI ResetScene(IDirect3DDevice9* pDevice,
 	D3DPRESENT_PARAMETERS* pPresentationParameters) {
+
+	drawing_world = true;
 
 	ImGui_ImplDX9_InvalidateDeviceObjects();
 

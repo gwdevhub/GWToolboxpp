@@ -110,7 +110,7 @@ void PconPanel::Initialize() {
 			&& pak->receiver_id == 0
 			&& (pak->skill_id == (DWORD)GW::Constants::SkillID::Spiritual_Possession
 				|| pak->skill_id == (DWORD)GW::Constants::SkillID::Lucky_Aura)) {
-			printf("blocked skill %d\n", pak->skill_id);
+			//printf("blocked skill %d\n", pak->skill_id);
 			return true;
 		}
 		return false;
@@ -118,7 +118,7 @@ void PconPanel::Initialize() {
 	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P095>(
 		[&](GW::Packet::StoC::P095* pak) -> bool {
 		PconAlcohol::alcohol_level = pak->level;
-		pcon_alcohol->Update();
+		if (enabled) pcon_alcohol->Update();
 		return PconAlcohol::suppress_drunk_effect;
 	});
 

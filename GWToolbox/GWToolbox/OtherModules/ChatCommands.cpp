@@ -62,6 +62,7 @@ void ChatCommands::Initialize() {
 	GW::Chat().RegisterCommand(L"useskill", ChatCommands::CmdUseSkill);
 	GW::Chat().RegisterCommand(L"skilluse", ChatCommands::CmdUseSkill);
 	GW::Chat().RegisterCommand(L"borderless", ChatCommands::CmdBorderless);
+	GW::Chat().RegisterCommand(L"flag", ChatCommands::CmdFlag);
 
 	windows.push_back(&MainWindow::Instance());
 	windows.push_back(&PconPanel::Instance());
@@ -256,6 +257,9 @@ bool ChatCommands::CmdTB(std::wstring& cmd, std::vector<std::wstring>& args) {
 		} else if (arg == L"reset") {
 			ImGui::SetWindowPos(MainWindow::Instance().Name(), ImVec2(50.0f, 50.0f));
 			ImGui::SetWindowPos(SettingsPanel::Instance().Name(), ImVec2(50.0f, 50.0f));
+		} else if (arg == L"settings") {
+			SettingsPanel::Instance().visible = true;
+			ImGui::SetWindowPos(SettingsPanel::Instance().Name(), ImVec2(50.0f, 50.0f));
 		} else if (arg == L"mini" || arg == L"minimize") {
 			ImGui::SetWindowCollapsed(MainWindow::Instance().Name(), true);
 		} else if (arg == L"maxi" || arg == L"maximize") {
@@ -326,12 +330,18 @@ bool ChatCommands::CmdTP(std::wstring& cmd, std::vector<std::wstring>& args) {
 		int district_number = 0;
 		if (args.size() >= 2) {
 			std::wstring dis = GetLowerCaseArg(args, 1);
-			if (dis == L"ae1") {
+			if (dis == L"ae") {
+				district = GW::Constants::District::American;
+			} else if (dis == L"ae1") {
 				district = GW::Constants::District::American;
 				district_number = 1;
+			} else if (dis == L"ee") {
+				district = GW::Constants::District::EuropeEnglish;
 			} else if (dis == L"ee1") {
 				district = GW::Constants::District::EuropeEnglish;
 				district_number = 1;
+			} else if (dis == L"eg") {
+				district = GW::Constants::District::EuropeGerman;
 			} else if (dis == L"eg1" || dis == L"dd1") {  // dd1 is german: deutche dist
 				district = GW::Constants::District::EuropeGerman;
 				district_number = 1;
@@ -350,6 +360,8 @@ bool ChatCommands::CmdTP(std::wstring& cmd, std::vector<std::wstring>& args) {
 			GW::Map().Travel(GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost, district, district_number);
 		} else if (town == L"embark") {
 			GW::Map().Travel(GW::Constants::MapID::Embark_Beach, district, district_number);
+		} else if (town == L"eee") {
+			GW::Map().Travel(GW::Constants::MapID::Embark_Beach, GW::Constants::District::EuropeEnglish, 0);
 		} else if (town == L"vlox" || town == L"vloxs") {
 			GW::Map().Travel(GW::Constants::MapID::Vloxs_Falls, district, district_number);
 		} else if (town == L"gadd" || town == L"gadds") {
@@ -449,25 +461,22 @@ bool ChatCommands::CmdCamera(std::wstring& cmd, std::vector<std::wstring>& args)
 }
 
 bool ChatCommands::CmdDamage(std::wstring& cmd, std::vector<std::wstring>& args) {
-	std::wstring arg0 = GetLowerCaseArg(args, 0);
-	if (args.empty() || arg0 == L"print" || arg0 == L"report") {
-		if (args.size() <= 1) {
-			// if no argument or just one, print the whole party
+	if (args.empty()) {
+		PartyDamage::Instance().WritePartyDamage();
+	} else {
+		std::wstring arg0 = GetLowerCaseArg(args, 0);
+		if (arg0 == L"print" || arg0 == L"report") {
 			PartyDamage::Instance().WritePartyDamage();
+		} else if (arg0 == L"me") {
+			PartyDamage::Instance().WriteOwnDamage();
+		} else if (arg0 == L"reset") {
+			PartyDamage::Instance().ResetDamage();
 		} else {
-			// else print a specific party member
-			std::wstring arg1 = GetLowerCaseArg(args, 1);
-			if (arg1 == L"me") {
-				PartyDamage::Instance().WriteOwnDamage();
-			} else {
-				try {
-					long idx = std::stol(arg1);
-					PartyDamage::Instance().WriteDamageOf(idx - 1);
-				} catch (...) {}
-			}
+			try {
+				long idx = std::stol(arg0);
+				PartyDamage::Instance().WriteDamageOf(idx - 1);
+			} catch (...) {}
 		}
-	} else if (arg0 == L"reset") {
-		PartyDamage::Instance().ResetDamage();
 	}
 	return true;
 }
@@ -542,6 +551,31 @@ bool ChatCommands::CmdUseSkill(std::wstring& cmd, std::vector<std::wstring>& arg
 			} catch (...) {
 				Log::Error("Invalid argument '%ls', please use an integer value", args[0].c_str());
 			}
+		}
+	}
+	return true;
+}
+
+bool ChatCommands::CmdFlag(std::wstring& cmd, std::vector<std::wstring>& args) {
+	if (args.empty()) {
+		Minimap::Instance().FlagHero(0);
+	} else {
+		std::wstring arg0 = GetLowerCaseArg(args, 0);
+		// partially laziness, and partially safety
+		if (arg0 == L"1") {
+			Minimap::Instance().FlagHero(1);
+		} else if (arg0 == L"2") {
+			Minimap::Instance().FlagHero(2);
+		} else if (arg0 == L"3") {
+			Minimap::Instance().FlagHero(3);
+		} else if (arg0 == L"4") {
+			Minimap::Instance().FlagHero(4);
+		} else if (arg0 == L"5") {
+			Minimap::Instance().FlagHero(5);
+		} else if (arg0 == L"6") {
+			Minimap::Instance().FlagHero(6);
+		} else if (arg0 == L"7") {
+			Minimap::Instance().FlagHero(7);
 		}
 	}
 	return true;

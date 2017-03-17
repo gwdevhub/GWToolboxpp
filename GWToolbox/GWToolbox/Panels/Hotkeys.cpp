@@ -184,7 +184,14 @@ void HotkeySendChat::Draw() {
 	case '$': index = 4; break;
 	case '%': index = 5; break;
 	}
-	if (ImGui::Combo("Channel", &index, "/\0!\0@\0#\0$\0%")) {
+	static const char* channels[] = {
+		"/ Commands",
+		"! All",
+		"@ Guild",
+		"# Trade",
+		"% Alliance"
+	};
+	if (ImGui::Combo("Channel", &index, channels, 5)) {
 		switch (index) {
 		case 0: channel = '/'; break;
 		case 1: channel = '!'; break;
@@ -449,7 +456,7 @@ void HotkeyTarget::Execute() {
 HotkeyMove::HotkeyMove(CSimpleIni* ini, const char* section) : TBHotkey(ini, section) {
 	x = ini ? (float)ini->GetDoubleValue(section, "x", 0.0) : 0.0f;
 	y = ini ? (float)ini->GetDoubleValue(section, "y", 0.0) : 0.0f;
-	distance = ini ? (float)ini->GetDoubleValue(section, "distance", 0.0) : 0.0f;
+	range = ini ? (float)ini->GetDoubleValue(section, "distance", 5000.0f) : 5000.0f;
 	mapid = ini ? ini->GetLongValue(section, "mapid", 0) : 0;
 	strcpy_s(name, ini ? ini->GetValue(section, "name", "") : "");
 }
@@ -457,7 +464,7 @@ void HotkeyMove::Save(CSimpleIni* ini, const char* section) const {
 	TBHotkey::Save(ini, section);
 	ini->SetDoubleValue(section, "x", x);
 	ini->SetDoubleValue(section, "y", y);
-	ini->SetDoubleValue(section, "distance", distance);
+	ini->SetDoubleValue(section, "distance", range);
 	ini->SetLongValue(section, "mapid", mapid);
 	ini->SetValue(section, "name", name);
 }
@@ -471,7 +478,7 @@ void HotkeyMove::Description(char* buf, int bufsz) const {
 void HotkeyMove::Draw() {
 	ImGui::InputFloat("x", &x, 0.0f, 0.0f, 3);
 	ImGui::InputFloat("y", &y, 0.0f, 0.0f, 3);
-	ImGui::InputFloat("Distance", &distance, 0.0f, 0.0f, 0);
+	ImGui::InputFloat("Range", &range, 0.0f, 0.0f, 0);
 	ImGui::ShowHelp("The hotkey will only trigger within this range.\nUse 0 for no limit.");
 	ImGui::InputInt("Map", (int*)&mapid, 0);
 	ImGui::ShowHelp("The hotkey will only trigger in this map.\nUse 0 for any map.");
@@ -483,7 +490,7 @@ void HotkeyMove::Execute() {
 	GW::Agent* me = GW::Agents().GetPlayer();
 	if (mapid != 0 && mapid != (DWORD)GW::Map().GetMapID()) return;
 	double dist = GW::Agents().GetDistance(me->pos, GW::Vector2f(x, y));
-	if (distance != 0 && dist > distance) return;
+	if (range != 0 && dist > range) return;
 	GW::Agents().Move(x, y);
 	if (name[0] == '\0') {
 		Log::Info("Moving to (%.0f, %.0f)", x, y);

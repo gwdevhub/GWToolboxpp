@@ -163,15 +163,19 @@ void PartyDamage::CreatePartyIndexMap() {
 	if (!players.valid()) return;
 
 	int index = 0;
-	for (GW::PlayerPartyMember player : info->players) {
+	for (GW::PlayerPartyMember& player : info->players) {
 		long id = players[player.loginnumber].AgentID;
+		if (id == GW::Agents().GetPlayerId()) player_index = index;
 		party_index[id] = index++;
 
-		for (GW::HeroPartyMember hero : info->heroes) {
+		for (GW::HeroPartyMember& hero : info->heroes) {
 			if (hero.ownerplayerid == player.loginnumber) {
 				party_index[hero.agentid] = index++;
 			}
 		}
+	}
+	for (GW::HenchmanPartyMember& hench : info->henchmen) {
+		party_index[hench.agentid] = index++;
 	}
 }
 
@@ -309,14 +313,7 @@ void PartyDamage::WriteDamageOf(int index, int rank) {
 
 
 void PartyDamage::WriteOwnDamage() {
-	GW::Agent* me = GW::Agents().GetPlayer();
-	if (me == nullptr) return;
-
-	auto cause_it = party_index.find(me->Id);
-	if (cause_it == party_index.end()) return;
-
-	int index = cause_it->second;
-	WriteDamageOf(index);
+	WriteDamageOf(player_index);
 }
 
 void PartyDamage::ResetDamage() {

@@ -46,6 +46,11 @@ public:
 	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
 
+	// 0 is 'all' flag, 1 to 7 is each hero
+	void FlagHero(unsigned int idx) {
+		if (idx < 0) flagging[idx] ^= 1;
+	}
+
 private:
 	bool IsInside(int x, int y) const;
 	// returns true if the map is visible, valid, not loading, etc
@@ -76,6 +81,7 @@ private:
 	SymbolsRenderer symbols_renderer;
 	CustomRenderer custom_renderer;
 
-	bool show_hero_flag_controls = false;
+	bool hero_flag_controls_show = false;
+	Color hero_flag_window_background;
 	bool flagging[9];
 };

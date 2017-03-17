@@ -195,7 +195,7 @@ class HotkeyMove : public TBHotkey {
 public:
 	float x = 0.0;
 	float y = 0.0;
-	float distance = 0.0;
+	float range = 0.0;
 	DWORD mapid = 0;
 	char name[140];
 

@@ -77,6 +77,7 @@ private:
 	PlayerDamage damage[MAX_PLAYERS];
 	std::map<DWORD, long> hp_map;
 	std::map<DWORD, int> party_index;
+	int player_index = 0;
 
 	// main routine variables
 	bool in_explorable = false;

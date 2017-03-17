@@ -95,7 +95,6 @@ void Minimap::DrawSettings() {
 void Minimap::DrawSettingInternal() {
 	ImGui::Text("General");
 	ImGui::DragFloat("Scale", &scale, 0.01f, 0.1f);
-	ImGui::Checkbox("Show hero flag controls", &show_hero_flag_controls);
 	ImGui::Text("You can set the color alpha to 0 to disable any minimap feature");
 	if (ImGui::TreeNode("Agents")) {
 		agent_renderer.DrawSettings();
@@ -121,12 +120,19 @@ void Minimap::DrawSettingInternal() {
 		custom_renderer.DrawSettings();
 		ImGui::TreePop();
 	}
+	if (ImGui::TreeNode("Hero flagging")) {
+		ImGui::Checkbox("Show hero flag controls", &hero_flag_controls_show);
+		Colors::DrawSetting("Background", &hero_flag_window_background);
+		ImGui::TreePop();
+	}
 }
 
 void Minimap::LoadSettings(CSimpleIni* ini) {
 	ToolboxWidget::LoadSettings(ini);
 	scale = (float)ini->GetDoubleValue(Name(), "scale", 1.0);
-	show_hero_flag_controls = ini->GetBoolValue(Name(), "show_hero_flag_controls", true);
+	hero_flag_controls_show = ini->GetBoolValue(Name(), "hero_flag_controls_show", true);
+	hero_flag_window_background = Colors::Load(ini, Name(), "hero_flag_controls_background",
+		ImColor(ImGui::GetStyle().Colors[ImGuiCol_WindowBg]));
 	range_renderer.LoadSettings(ini, Name());
 	pmap_renderer.LoadSettings(ini, Name());
 	agent_renderer.LoadSettings(ini, Name());
@@ -138,7 +144,8 @@ void Minimap::LoadSettings(CSimpleIni* ini) {
 void Minimap::SaveSettings(CSimpleIni* ini) {
 	ToolboxWidget::SaveSettings(ini);
 	ini->SetDoubleValue(Name(), "scale", scale);
-	ini->SetBoolValue(Name(), "show_hero_flag_controls", show_hero_flag_controls);
+	ini->SetBoolValue(Name(), "hero_flag_controls_show", hero_flag_controls_show);
+	Colors::Save(ini, Name(), "hero_flag_controls_background", hero_flag_window_background);
 	range_renderer.SaveSettings(ini, Name());
 	pmap_renderer.SaveSettings(ini, Name());
 	agent_renderer.SaveSettings(ini, Name());
@@ -276,11 +283,13 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 	ImGui::End();
 	ImGui::PopStyleColor();
 
-	if (show_hero_flag_controls 
+	if (hero_flag_controls_show
 		&& GW::Map().GetInstanceType() == GW::Constants::InstanceType::Explorable
 		&& GW::Agents().GetHeroAgentID(1) > 0) {
+
 		ImGui::SetNextWindowPos(ImVec2((float)location.x, (float)(location.y + size.y)));
 		ImGui::SetNextWindowSize(ImVec2((float)size.x, 40.0f));
+		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(hero_flag_window_background));
 		if (ImGui::Begin("Hero Controls", nullptr, GetWinFlags(0, false))) {
 			static const char* flag_txt[] = {
 				"All", "1", "2", "3", "4", "5", "6", "7", "8"
@@ -296,7 +305,7 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 			for (unsigned int i = 0; i < num_heroflags; ++i) {
 				if (i > 0) ImGui::SameLine();
 				bool old_flagging = flagging[i];
-				if (flagging[i]) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered]);
+				if (old_flagging) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered]);
 
 				bool flagged = (i == 0) ?
 					(!std::isinf(allflag.x) || !std::isinf(allflag.y)) :
@@ -322,9 +331,9 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 					GW::Partymgr().UnflagHero(i);
 				}
 			}
-
 		}
 		ImGui::End();
+		ImGui::PopStyleColor();
 	}
 }
 

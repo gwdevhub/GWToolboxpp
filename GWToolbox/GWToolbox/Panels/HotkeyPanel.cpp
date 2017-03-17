@@ -107,6 +107,11 @@ void HotkeyPanel::Draw(IDirect3DDevice9* pDevice) {
 	ImGui::End();
 }
 
+void HotkeyPanel::DrawSettingInternal() {
+	ToolboxPanel::DrawSettingInternal();
+	// just in case we need stuff
+}
+
 void HotkeyPanel::LoadSettings(CSimpleIni* ini) {
 	ToolboxPanel::LoadSettings(ini);
 
