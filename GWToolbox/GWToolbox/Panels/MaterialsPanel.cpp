@@ -13,33 +13,50 @@
 #include <OtherModules\Resources.h>
 
 void MaterialsPanel::Update() {
+	if (cancelled) return;
 	if (!quotequeue.empty()) {
 		if (last_request_type == None) { // no requests are active
-			int itemid = RequestQuote(quotequeue.front());
+			const Material mat = quotequeue.front();
+			int itemid = RequestPurchaseQuote(mat);
 			if (itemid > 0) {
 				quotequeue.pop_front();
 				last_request_itemid = itemid;
 				last_request_type = Quote;
 			} else {
 				quotequeue.clear(); // panic
-				purchasequeue.clear();
+			}
+		}
+	} else if (!sellqueue.empty()) {
+		if (last_request_type == None) {
+			const Material mat = sellqueue.front();
+			if (price[mat] > 0 && GW::Items().GetGoldAmountOnCharacter() + (DWORD)price[mat] > 100 * 1000) {
+				Log::Error("Cannot sell, too much gold!");
+				sellqueue.clear();
+			} else {
+				int itemid = RequestSellQuote(mat);
+				if (itemid > 0) {
+					sellqueue.pop_front();
+					last_request_itemid = itemid;
+					last_request_type = Sell;
+				} else {
+					sellqueue.clear(); // panic
+				}
 			}
 		}
 	} else if (!purchasequeue.empty()) {
 		if (last_request_type == None) {
-			int* price = GetPricePtr(purchasequeue.front());
-			if (price && *price > 0 && (DWORD)(*price) > GW::Items().GetGoldAmountOnCharacter()) {
+			const Material mat = purchasequeue.front();
+			if (price[mat] > 0 && (DWORD)price[mat] > GW::Items().GetGoldAmountOnCharacter()) {
 				Log::Error("Cannot purchase, not enough gold!");
 				purchasequeue.clear();
 			} else {
-				int itemid = RequestQuote(purchasequeue.front());
+				int itemid = RequestPurchaseQuote(mat);
 				if (itemid > 0) {
 					purchasequeue.pop_front();
 					last_request_itemid = itemid;
 					last_request_type = Purchase;
 				} else {
-					quotequeue.clear(); // panic
-					purchasequeue.clear();
+					purchasequeue.clear(); // panic
 				}
 			}
 		}
@@ -54,6 +71,10 @@ void MaterialsPanel::Initialize() {
 	Resources::Instance().LoadTextureAsync(&tex_armor, "Armor_of_Salvation.png", "img");
 	Resources::Instance().LoadTextureAsync(&tex_powerstone, "Powerstone_of_Courage.png", "img");
 	Resources::Instance().LoadTextureAsync(&tex_resscroll, "Scroll_of_Resurrection.png", "img");
+
+	for (int i = 0; i < N_MATS; ++i) {
+		price[i] = PRICE_DEFAULT;
+	}
 	
 	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P235_QuotedItemPrice>(
 		[&](GW::Packet::StoC::P235_QuotedItemPrice* pak) -> bool {
@@ -62,18 +83,16 @@ void MaterialsPanel::Initialize() {
 		if (pak->itemid >= items.size()) return false;
 		GW::Item* item = items[pak->itemid];
 		if (item == nullptr) return false;
-		int* price = GetPricePtr(item->ModelId);
-		if (price) *price = pak->price;
-		printf("Received price %d for %d (%d)\n", pak->price, item->ModelId, pak->itemid);
+		price[GetMaterial(item->ModelId)] = pak->price;
+		//printf("Received price %d for %d (item %d)\n", pak->price, item->ModelId, pak->itemid);
 
-		if (last_request_itemid == pak->itemid) {
+		if (last_request_itemid == pak->itemid && !cancelled) {
 			if (last_request_type == Quote) {
 				// everything is ok already
 				last_request_type = None;
 			} else if (last_request_type == Purchase) {
 				// buy the item
 				last_request_price = pak->price;
-
 				GW::TransactionInfo give;
 				give.itemcount = 0;
 				give.itemids = nullptr;
@@ -83,18 +102,39 @@ void MaterialsPanel::Initialize() {
 				recv.itemids = &pak->itemid;
 				recv.itemquantities = nullptr;
 				GW::Merchant().TransactItems(GW::TransactionType::TraderBuy, pak->price, give, 0, recv);
-				printf("sending purchase request for %d\n", item->ModelId);
+				//printf("sending purchase request for %d (price=%d)\n", item->ModelId, pak->price);
+			} else if (last_request_type == Sell) {
+				// sell the item
+				last_request_price = pak->price;
+
+				GW::TransactionInfo give;
+				give.itemcount = 1;
+				give.itemids = &pak->itemid;
+				give.itemquantities = nullptr;
+				GW::TransactionInfo recv;
+				recv.itemcount = 0;
+				recv.itemids = nullptr;
+				recv.itemquantities = nullptr;
+				GW::Merchant().TransactItems(GW::TransactionType::TraderSell, 0, give, pak->price, recv);
+				//printf("sending sell request for %d (price=%d)\n", item->ModelId, pak->price);
 			}
 		}
+		return false;
+	});
 
+	// Those 2 are just gold update packets, but we use them to know when the transaction
+	// was successful. Hopefully people won't deposit or widthrawal exactly that amount while buying.
+	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P310>(
+		[&](GW::Packet::StoC::P310* pak) -> bool {
+		if (last_request_type == Sell && last_request_price == pak->gold) {
+			last_request_type = None;
+		}
 		return false;
 	});
 	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P325>(
 		[&](GW::Packet::StoC::P325* pak) -> bool {
-		// this is just a gold removed update packet, but we use it to know when the transaction
-		// was successful. Hopefully people won't deposit exactly that amount while buying.
+		//printf("Removed %d gold\n", pak->gold);
 		if (last_request_type == Purchase && last_request_price == pak->gold) {
-			// purchase successful and complete
 			last_request_type = None;
 		}
 		return false;
@@ -129,12 +169,12 @@ void MaterialsPanel::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::SameLine();
 		x = ImGui::GetCursorPosX();
 		y = ImGui::GetCursorPosY();
-		ImGui::Text(GetPrice(Feathers, 5.0f, Dust, 5.0f, 250).c_str());
+		ImGui::Text(GetPrice(Feather, 5.0f, PileofGlitteringDust, 5.0f, 250).c_str());
 		FullConsPriceTooltip();
 		ImGui::SameLine(ImGui::GetWindowWidth() - 100.0f - ImGui::GetStyle().WindowPadding.x);
-		if (ImGui::Button("Price Check###essencepc", ImVec2(100.0f, 0))) {
-			EnqueueQuote(GW::Constants::ItemID::Feathers);
-			EnqueueQuote(GW::Constants::ItemID::Dust);
+		if (ImGui::Button("Price Check##essence", ImVec2(100.0f, 0))) {
+			EnqueueQuote(Feather);
+			EnqueueQuote(PileofGlitteringDust);
 		}
 		h = ImGui::GetCurrentWindow()->DC.LastItemRect.GetHeight();
 		static int qty_essence = 1;
@@ -145,10 +185,10 @@ void MaterialsPanel::Draw(IDirect3DDevice9* pDevice) {
 		if (qty_essence < 1) qty_essence = 1;
 		ImGui::PopItemWidth();
 		ImGui::SameLine();
-		if (ImGui::Button("Buy###essencebuy", ImVec2(100.0f, 0))) {
+		if (ImGui::Button("Buy##essence", ImVec2(100.0f, 0))) {
 			for (int i = 0; i < 5 * qty_essence; ++i) {
-				EnqueuePurchase(GW::Constants::ItemID::Feathers);
-				EnqueuePurchase(GW::Constants::ItemID::Dust);
+				EnqueuePurchase(Feather);
+				EnqueuePurchase(PileofGlitteringDust);
 			}
 		}
 
@@ -160,12 +200,12 @@ void MaterialsPanel::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::SameLine();
 		x = ImGui::GetCursorPosX();
 		y = ImGui::GetCursorPosY();
-		ImGui::Text(GetPrice(Iron, 5.0f, Dust, 5.0f, 250).c_str());
+		ImGui::Text(GetPrice(IronIngot, 5.0f, PileofGlitteringDust, 5.0f, 250).c_str());
 		FullConsPriceTooltip();
 		ImGui::SameLine(ImGui::GetWindowWidth() - 100.0f - ImGui::GetStyle().WindowPadding.x);
-		if (ImGui::Button("Price Check###grailpc", ImVec2(100.0f, 0))) {
-			EnqueueQuote(GW::Constants::ItemID::Iron);
-			EnqueueQuote(GW::Constants::ItemID::Dust);
+		if (ImGui::Button("Price Check##grail", ImVec2(100.0f, 0))) {
+			EnqueueQuote(IronIngot);
+			EnqueueQuote(PileofGlitteringDust);
 		}
 		h = ImGui::GetCurrentWindow()->DC.LastItemRect.GetHeight();
 		static int qty_grail = 1;
@@ -176,10 +216,10 @@ void MaterialsPanel::Draw(IDirect3DDevice9* pDevice) {
 		if (qty_grail < 1) qty_grail = 1;
 		ImGui::PopItemWidth();
 		ImGui::SameLine();
-		if (ImGui::Button("Buy###grailbuy", ImVec2(100.0f, 0))) {
+		if (ImGui::Button("Buy##grail", ImVec2(100.0f, 0))) {
 			for (int i = 0; i < 5 * qty_grail; ++i) {
-				EnqueuePurchase(GW::Constants::ItemID::Iron);
-				EnqueuePurchase(GW::Constants::ItemID::Dust);
+				EnqueuePurchase(IronIngot);
+				EnqueuePurchase(PileofGlitteringDust);
 			}
 		}
 
@@ -191,12 +231,12 @@ void MaterialsPanel::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::SameLine();
 		x = ImGui::GetCursorPosX();
 		y = ImGui::GetCursorPosY();
-		ImGui::Text(GetPrice(Iron, 5.0f, Bones, 5.0f, 250).c_str());
+		ImGui::Text(GetPrice(IronIngot, 5.0f, Bone, 5.0f, 250).c_str());
 		FullConsPriceTooltip();
 		ImGui::SameLine(ImGui::GetWindowWidth() - 100.0f - ImGui::GetStyle().WindowPadding.x);
-		if (ImGui::Button("Price Check###armorpc", ImVec2(100.0f, 0))) {
-			EnqueueQuote(GW::Constants::ItemID::Iron);
-			EnqueueQuote(GW::Constants::ItemID::Bones);
+		if (ImGui::Button("Price Check##armor", ImVec2(100.0f, 0))) {
+			EnqueueQuote(IronIngot);
+			EnqueueQuote(Bone);
 		}
 		h = ImGui::GetCurrentWindow()->DC.LastItemRect.GetHeight();
 		static int qty_armor = 1;
@@ -207,10 +247,10 @@ void MaterialsPanel::Draw(IDirect3DDevice9* pDevice) {
 		if (qty_armor < 1) qty_armor = 1;
 		ImGui::PopItemWidth();
 		ImGui::SameLine();
-		if (ImGui::Button("Buy###armorbuy", ImVec2(100.0f, 0))) {
+		if (ImGui::Button("Buy##armor", ImVec2(100.0f, 0))) {
 			for (int i = 0; i < 5 * qty_armor; ++i) {
-				EnqueuePurchase(GW::Constants::ItemID::Iron);
-				EnqueuePurchase(GW::Constants::ItemID::Bones);
+				EnqueuePurchase(IronIngot);
+				EnqueuePurchase(Bone);
 			}
 		}
 
@@ -222,11 +262,11 @@ void MaterialsPanel::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::SameLine();
 		x = ImGui::GetCursorPosX();
 		y = ImGui::GetCursorPosY();
-		ImGui::Text(GetPrice(Granite, 10.0f, Dust, 10.0f, 1000).c_str());
+		ImGui::Text(GetPrice(GraniteSlab, 10.0f, PileofGlitteringDust, 10.0f, 1000).c_str());
 		ImGui::SameLine(ImGui::GetWindowWidth() - 100.0f - ImGui::GetStyle().WindowPadding.x);
-		if (ImGui::Button("Price Check###pstonepc", ImVec2(100.0f, 0))) {
-			EnqueueQuote(GW::Constants::ItemID::Granite);
-			EnqueueQuote(GW::Constants::ItemID::Dust);
+		if (ImGui::Button("Price Check##pstone", ImVec2(100.0f, 0))) {
+			EnqueueQuote(GraniteSlab);
+			EnqueueQuote(PileofGlitteringDust);
 		}
 		h = ImGui::GetCurrentWindow()->DC.LastItemRect.GetHeight();
 		static int qty_pstone = 1;
@@ -237,10 +277,10 @@ void MaterialsPanel::Draw(IDirect3DDevice9* pDevice) {
 		if (qty_pstone < 1) qty_pstone = 1;
 		ImGui::PopItemWidth();
 		ImGui::SameLine();
-		if (ImGui::Button("Buy###pstonebuy", ImVec2(100.0f, 0))) {
+		if (ImGui::Button("Buy##pstone", ImVec2(100.0f, 0))) {
 			for (int i = 0; i < 10 * qty_pstone; ++i) {
-				EnqueuePurchase(GW::Constants::ItemID::Granite);
-				EnqueuePurchase(GW::Constants::ItemID::Dust);
+				EnqueuePurchase(GraniteSlab);
+				EnqueuePurchase(PileofGlitteringDust);
 			}
 		}
 
@@ -252,11 +292,11 @@ void MaterialsPanel::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::SameLine();
 		x = ImGui::GetCursorPosX();
 		y = ImGui::GetCursorPosY();
-		ImGui::Text(GetPrice(Fibers, 2.5f, Bones, 2.5f, 250).c_str());
+		ImGui::Text(GetPrice(PlantFiber, 2.5f, Bone, 2.5f, 250).c_str());
 		ImGui::SameLine(ImGui::GetWindowWidth() - 100.0f - ImGui::GetStyle().WindowPadding.x);
-		if (ImGui::Button("Price Check###resscrollpc", ImVec2(100.0f, 0))) {
-			EnqueueQuote(GW::Constants::ItemID::Fibers);
-			EnqueueQuote(GW::Constants::ItemID::Bones);
+		if (ImGui::Button("Price Check##resscroll", ImVec2(100.0f, 0))) {
+			EnqueueQuote(PlantFiber);
+			EnqueueQuote(Bone);
 		}
 		h = ImGui::GetCurrentWindow()->DC.LastItemRect.GetHeight();
 		static int qty_resscroll = 1;
@@ -267,21 +307,25 @@ void MaterialsPanel::Draw(IDirect3DDevice9* pDevice) {
 		if (qty_resscroll < 1) qty_resscroll = 1;
 		ImGui::PopItemWidth();
 		ImGui::SameLine();
-		if (ImGui::Button("Buy###resscrollbuy", ImVec2(100.0f, 0))) {
+		if (ImGui::Button("Buy##resscroll", ImVec2(100.0f, 0))) {
 			for (int i = 0; i < qty_resscroll; ++i) { // for each scroll
 				int qty = (i % 2 == 0 ? 2 : 3);
 				for (int j = 0; j < qty; ++j) {
-					EnqueuePurchase(GW::Constants::ItemID::Fibers);
-					EnqueuePurchase(GW::Constants::ItemID::Bones);
+					EnqueuePurchase(PlantFiber);
+					EnqueuePurchase(Bone);
 				}
 			}
 		}
 
 		ImGui::Separator();
+
+		float width2 = 100.0f;
+		float width1 = (ImGui::GetWindowContentRegionWidth() - width2 - 100.0f - ImGui::GetStyle().ItemSpacing.x * 2);
+
 		// === generic materials ===
-		static int index_mats = 0;
-		static int qty_mats = 1;
-		static const char* mats[] = {
+		static int common_idx = 0;
+		static int common_qty = 1;
+		static const char* common_names[] = {
 			"10 Bones",
 			"10 Iron Ingots",
 			"10 Tanned Hide Squares",
@@ -294,83 +338,124 @@ void MaterialsPanel::Draw(IDirect3DDevice9* pDevice) {
 			"10 Feathers",
 			"10 Fibers",
 		};
-		ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 100.0f
-			- ImGui::GetStyle().ItemSpacing.x * 2) / 2);
-		ImGui::Combo("###material", &index_mats, mats, 11);
-		ImGui::SameLine();
-		ImGui::InputInt("###matsqty", &qty_mats);
-		if (qty_mats < 1) qty_mats = 1;
-		// todo: add count and change layout. maybe popup?
+		ImGui::PushItemWidth(width1);
+		ImGui::Combo("##commoncombo", &common_idx, common_names, 11);
 		ImGui::PopItemWidth();
 		ImGui::SameLine();
-		if (ImGui::Button("Buy###materialbuy", ImVec2(100.0f, 0))) {
-			DWORD id = 0;
-			switch (index_mats) {
-			case 0: id = GW::Constants::ItemID::Bones; break;
-			case 1: id = GW::Constants::ItemID::Iron; break;
-			case 2: id = GW::Constants::ItemID::TannedHideSquares; break;
-			case 3: id = GW::Constants::ItemID::Scales; break;
-			case 4: id = GW::Constants::ItemID::ChitinFragments; break;
-			case 5: id = GW::Constants::ItemID::BoltsOfCloth; break;
-			case 6: id = GW::Constants::ItemID::WoodPlanks; break;
-			case 7: id = GW::Constants::ItemID::Granite; break;
-			case 8: id = GW::Constants::ItemID::Dust; break;
-			case 9: id = GW::Constants::ItemID::Feathers; break;
-			case 10: id = GW::Constants::ItemID::Fibers; break;
-			default: break;
+		ImGui::PushItemWidth(width2);
+		ImGui::InputInt("##commonqty", &common_qty);
+		ImGui::PopItemWidth();
+		if (common_qty < 1) common_qty = 1;
+		ImGui::SameLine();
+		if (ImGui::Button("Buy##common", ImVec2(50.0f - ImGui::GetStyle().ItemSpacing.x / 2, 0))) {
+			for (int i = 0; i < common_qty; ++i) {
+				EnqueuePurchase((Material)common_idx);
 			}
-			for (int i = 0; i < qty_mats; ++i) {
-				EnqueuePurchase(id);
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Sell##common", ImVec2(50.0f - ImGui::GetStyle().ItemSpacing.x / 2, 0))) {
+			for (int i = 0; i < common_qty; ++i) {
+				EnqueueSell((Material)common_idx);
+			}
+		}
+
+		// === Rare materials ===
+		static int rare_idx = 0;
+		static int rare_qty = 1;
+		static const char* rare_names[] = { "Amber Chunk",
+			"Bolt of Damask",
+			"Bolt of Linen",
+			"Bolt of Silk",
+			"Deldrimor Steel Ingot",
+			"Diamond",
+			"Elonian Leather Square",
+			"Fur Square",
+			"Glob of Ectoplasm",
+			"Jadeite Shard",
+			"Leather Square",
+			"Lump of Charcoal",
+			"Monstrous Claw",
+			"Monstrous Eye",
+			"Monstrous Fang",
+			"Obsidian Shard",
+			"Onyx Gemstone",
+			"Roll of Parchment",
+			"Roll of Vellum",
+			"Ruby",
+			"Sapphire",
+			"Spiritwood Plank",
+			"Steel Ingot",
+			"Tempered Glass Vial",
+			"Vial of Ink"
+		};
+		ImGui::PushItemWidth(width1);
+		ImGui::Combo("##rarecombo", &rare_idx, rare_names, 25);
+		ImGui::PopItemWidth();
+		ImGui::SameLine();
+		ImGui::PushItemWidth(width2);
+		ImGui::InputInt("##rareqty", &rare_qty);
+		ImGui::PopItemWidth();
+		if (rare_qty < 1) rare_qty = 1;
+		ImGui::SameLine();
+		if (ImGui::Button("Buy##rare", ImVec2(50.0f - ImGui::GetStyle().ItemSpacing.x / 2, 0))) {
+			for (int i = 0; i < rare_qty; ++i) {
+				EnqueuePurchase((Material)(rare_idx + AmberChunk));
+			}
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Sell##rare", ImVec2(50.0f - ImGui::GetStyle().ItemSpacing.x / 2, 0))) {
+			for (int i = 0; i < rare_qty; ++i) {
+				EnqueueSell((Material)(rare_idx + AmberChunk));
 			}
 		}
 
 		ImGui::Separator();
-		int to_do = quotequeue.size() + purchasequeue.size();
-		int done = max - to_do;
+		int to_do = quotequeue.size() + purchasequeue.size() + sellqueue.size();;
+		int done = cancelled ? cancelled_progress : max - to_do;
 		float progress = 0.0f;
 		if (max > 0) progress = (float)(done) / max;
-		char buf[256];
-		sprintf_s(buf, "%.2f [%d / %d]", progress * 100.0f, done, max);
-		ImGui::ProgressBar(progress, ImVec2(ImGui::GetWindowContentRegionWidth()
-			- 100.0f - ImGui::GetStyle().ItemSpacing.x, 0), buf);
+		const char* status = "";
+		if (cancelled) status = "Cancelled";
+		else if (to_do > 0) status = "Working";
+		else status = "Ready";
+		ImGui::Text("%s [%d / %d]", status, done, max);
+		ImGui::SameLine(width1 + ImGui::GetStyle().WindowPadding.x + ImGui::GetStyle().ItemSpacing.x);
+		ImGui::ProgressBar(progress, ImVec2(width2, 0));
 		ImGui::SameLine();
 		if (ImGui::Button("Cancel", ImVec2(100.0f, 0))) {
 			purchasequeue.clear();
+			quotequeue.clear();
+			sellqueue.clear();
+			cancelled = true;
+			cancelled_progress = done;
+			last_request_type = None;
 		}
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Cancel the current price check and purchase queue");
 	}
 	ImGui::End();
 }
 
-int* MaterialsPanel::GetPricePtr(DWORD modelid) {
-	switch (modelid) {
-	case GW::Constants::ItemID::Bones:		return &price[Bones];
-	case GW::Constants::ItemID::Iron:		return &price[Iron];
-	case GW::Constants::ItemID::TannedHideSquares: return &price[TannedHideSquares];
-	case GW::Constants::ItemID::Scales:		return &price[Scales];
-	case GW::Constants::ItemID::ChitinFragments: return &price[Chitin];
-	case GW::Constants::ItemID::BoltsOfCloth: return &price[Cloth];
-	case GW::Constants::ItemID::WoodPlanks: return &price[Wood];
-	case GW::Constants::ItemID::Granite:	return &price[Granite];
-	case GW::Constants::ItemID::Dust:		return &price[Dust];
-	case GW::Constants::ItemID::Feathers:	return &price[Feathers];
-	case GW::Constants::ItemID::Fibers:		return &price[Fibers];
-	}
-	return nullptr;
-}
-
-void MaterialsPanel::EnqueueQuote(DWORD modelid) {
-	if (quotequeue.empty() && purchasequeue.empty()) max = 0;
-	quotequeue.push_back(modelid);
+void MaterialsPanel::EnqueueQuote(Material material) {
+	if (quotequeue.empty() && purchasequeue.empty() && sellqueue.empty()) max = 0;
+	quotequeue.push_back(material);
+	cancelled = false;
 	++max;
 }
-void MaterialsPanel::EnqueuePurchase(DWORD modelid) {
-	if (quotequeue.empty() && purchasequeue.empty()) max = 0;
-	purchasequeue.push_back(modelid);
+void MaterialsPanel::EnqueuePurchase(Material material) {
+	if (quotequeue.empty() && purchasequeue.empty() && sellqueue.empty()) max = 0;
+	purchasequeue.push_back(material);
+	cancelled = false;
+	++max;
+}
+void MaterialsPanel::EnqueueSell(Material material) {
+	if (quotequeue.empty() && purchasequeue.empty() && sellqueue.empty()) max = 0;
+	sellqueue.push_back(material);
+	cancelled = false;
 	++max;
 }
 
-int MaterialsPanel::RequestQuote(DWORD modelid) {
+DWORD MaterialsPanel::RequestPurchaseQuote(Material material) {
+	DWORD modelid = GetModelID(material);
 	GW::Item* item = nullptr;
 	GW::ItemArray items = GW::Items().GetItemArray();
 	if (!items.valid()) return false;
@@ -378,16 +463,17 @@ int MaterialsPanel::RequestQuote(DWORD modelid) {
 		GW::Item* cur = items[i];
 		if (cur 
 			&& cur->ModelId == modelid 
-			&& cur->bag == nullptr 
-			&& cur->AgentId == 0) {
+			&& cur->AgentId == 0
+			&& cur->bag == nullptr
+			&& cur->interaction == 8200
+			&& cur->Quantity == 1) {
 			item = cur;
 			break;
 		}
 	}
 
 	if (item == nullptr) { // mark the price as 'cannot compute'
-		int* price = GetPricePtr(modelid);
-		if (price && *price < 0) *price = PRICE_NOT_AVAILABLE;
+		if (price[material] < 0) price[material] = PRICE_NOT_AVAILABLE;
 		return 0;
 	}
 
@@ -401,16 +487,54 @@ int MaterialsPanel::RequestQuote(DWORD modelid) {
 	recv.itemcount = 1;
 	recv.itemids = &itemid;
 	GW::Merchant().RequestQuote(GW::TransactionType::TraderBuy, give, recv);
-	printf("Sent request for %d (%d)\n", modelid, itemid);
+	//printf("Sent purchase request for %d (item %d)\n", modelid, itemid);
 
-	int* price = GetPricePtr(modelid);
-	if (price && *price < 0) *price = PRICE_COMPUTING_SENT;
+	if (price[material] < 0) price[material] = PRICE_COMPUTING_SENT;
+	return itemid;
+}
+
+DWORD MaterialsPanel::RequestSellQuote(Material material) {
+	DWORD modelid = GetModelID(material);
+	GW::Item* item = nullptr;
+	GW::ItemArray items = GW::Items().GetItemArray();
+	if (!items.valid()) return false;
+	for (DWORD i = 0; i < items.size(); ++i) {
+		GW::Item* cur = items[i];
+		if (cur 
+			&& cur->ModelId == modelid 
+			&& cur->AgentId == 0
+			&& cur->bag != nullptr
+			&& cur->bag->index < 5
+			&& cur->interaction == 8200) {
+			item = cur;
+			break;
+		}
+	}
+
+	if (item == nullptr) { // mark the price as 'cannot compute'
+		if (price[material] < 0) price[material] = PRICE_NOT_AVAILABLE;
+		return 0;
+	}
+
+	DWORD itemid = item->ItemId;
+	GW::QuoteInfo give;
+	give.unknown = 0;
+	give.itemcount = 1;
+	give.itemids = &itemid;
+	GW::QuoteInfo recv;
+	recv.unknown = 0;
+	recv.itemcount = 0;
+	recv.itemids = nullptr;
+	GW::Merchant().RequestQuote(GW::TransactionType::TraderSell, give, recv);
+	//printf("Sent sell request for %d (item %d)\n", modelid, itemid);
+
+	if (price[material] < 0) price[material] = PRICE_COMPUTING_SENT;
 
 	return itemid;
 }
 
-std::string MaterialsPanel::GetPrice(CommonMat mat1, float fac1,
-	CommonMat mat2, float fac2, int extra) const {
+std::string MaterialsPanel::GetPrice(MaterialsPanel::Material mat1, float fac1,
+	MaterialsPanel::Material mat2, float fac2, int extra) const {
 	int p1 = price[mat1];
 	int p2 = price[mat2];
 	if (p1 == PRICE_NOT_AVAILABLE || p2 == PRICE_NOT_AVAILABLE) {
@@ -431,21 +555,105 @@ std::string MaterialsPanel::GetPrice(CommonMat mat1, float fac1,
 void MaterialsPanel::FullConsPriceTooltip() const {
 	if (ImGui::IsItemHovered()) {
 		char buf[256];
-		if (price[Feathers] == PRICE_NOT_AVAILABLE
-			|| price[Dust] == PRICE_NOT_AVAILABLE
-			|| price[Iron] == PRICE_NOT_AVAILABLE
-			|| price[Bones] == PRICE_NOT_AVAILABLE) {
+		if (price[Feather] == PRICE_NOT_AVAILABLE
+			|| price[PileofGlitteringDust] == PRICE_NOT_AVAILABLE
+			|| price[IronIngot] == PRICE_NOT_AVAILABLE
+			|| price[Bone] == PRICE_NOT_AVAILABLE) {
 			strcpy_s(buf, "Full Conset Price: (Material not available)");
-		} else if (price[Feathers] < 0
-			|| price[Dust] < 0
-			|| price[Iron] < 0
-			|| price[Bones] < 0) {
+		} else if (price[Feather] < 0
+			|| price[PileofGlitteringDust] < 0
+			|| price[IronIngot] < 0
+			|| price[Bone] < 0) {
 			strcpy_s(buf, "Full Conset Price: -");
 		} else {
-			int p = price[Iron] * 10 + price[Dust] * 10 + 
-				price[Bones] * 5 + price[Feathers] * 5 + 750;
+			int p = price[IronIngot] * 10 + price[PileofGlitteringDust] * 10 +
+				price[Bone] * 5 + price[Feather] * 5 + 750;
 			sprintf_s(buf, "Full Conset Price: %g k", p / 1000.0f);
 		}
 		ImGui::SetTooltip(buf);
+	}
+}
+
+MaterialsPanel::Material MaterialsPanel::GetMaterial(DWORD modelid) {
+	switch (modelid) {
+	case GW::Constants::ItemID::BoltofCloth: 			return BoltofCloth;
+	case GW::Constants::ItemID::Bone: 					return Bone;
+	case GW::Constants::ItemID::ChitinFragment: 		return ChitinFragment;
+	case GW::Constants::ItemID::Feather: 				return Feather;
+	case GW::Constants::ItemID::GraniteSlab: 			return GraniteSlab;
+	case GW::Constants::ItemID::IronIngot: 				return IronIngot;
+	case GW::Constants::ItemID::PileofGlitteringDust:	return PileofGlitteringDust;
+	case GW::Constants::ItemID::PlantFiber: 			return PlantFiber;
+	case GW::Constants::ItemID::Scale: 					return Scale;
+	case GW::Constants::ItemID::TannedHideSquare: 		return TannedHideSquare;
+	case GW::Constants::ItemID::WoodPlank: 				return WoodPlank;
+	case GW::Constants::ItemID::AmberChunk: 			return AmberChunk;
+	case GW::Constants::ItemID::BoltofDamask: 			return BoltofDamask;
+	case GW::Constants::ItemID::BoltofLinen: 			return BoltofLinen;
+	case GW::Constants::ItemID::BoltofSilk: 			return BoltofSilk;
+	case GW::Constants::ItemID::DeldrimorSteelIngot:	return DeldrimorSteelIngot;
+	case GW::Constants::ItemID::Diamond: 				return Diamond;
+	case GW::Constants::ItemID::ElonianLeatherSquare:	return ElonianLeatherSquare;
+	case GW::Constants::ItemID::FurSquare: 				return FurSquare;
+	case GW::Constants::ItemID::GlobofEctoplasm: 		return GlobofEctoplasm;
+	case GW::Constants::ItemID::JadeiteShard: 			return JadeiteShard;
+	case GW::Constants::ItemID::LeatherSquare: 			return LeatherSquare;
+	case GW::Constants::ItemID::LumpofCharcoal: 		return LumpofCharcoal;
+	case GW::Constants::ItemID::MonstrousClaw: 			return MonstrousClaw;
+	case GW::Constants::ItemID::MonstrousEye: 			return MonstrousEye;
+	case GW::Constants::ItemID::MonstrousFang: 			return MonstrousFang;
+	case GW::Constants::ItemID::ObsidianShard: 			return ObsidianShard;
+	case GW::Constants::ItemID::OnyxGemstone: 			return OnyxGemstone;
+	case GW::Constants::ItemID::RollofParchment: 		return RollofParchment;
+	case GW::Constants::ItemID::RollofVellum: 			return RollofVellum;
+	case GW::Constants::ItemID::Ruby: 					return Ruby;
+	case GW::Constants::ItemID::Sapphire: 				return Sapphire;
+	case GW::Constants::ItemID::SpiritwoodPlank: 		return SpiritwoodPlank;
+	case GW::Constants::ItemID::SteelIngot: 			return SteelIngot;
+	case GW::Constants::ItemID::TemperedGlassVial: 		return TemperedGlassVial;
+	case GW::Constants::ItemID::VialofInk: 				return VialofInk;
+	default:											return BoltofCloth;
+	}
+}
+
+DWORD MaterialsPanel::GetModelID(MaterialsPanel::Material mat) const {
+	switch (mat) {
+	case BoltofCloth: 			return GW::Constants::ItemID::BoltofCloth;
+	case Bone: 					return GW::Constants::ItemID::Bone;
+	case ChitinFragment: 		return GW::Constants::ItemID::ChitinFragment;
+	case Feather: 				return GW::Constants::ItemID::Feather;
+	case GraniteSlab: 			return GW::Constants::ItemID::GraniteSlab;
+	case IronIngot: 			return GW::Constants::ItemID::IronIngot;
+	case PileofGlitteringDust:	return GW::Constants::ItemID::PileofGlitteringDust;
+	case PlantFiber: 			return GW::Constants::ItemID::PlantFiber;
+	case Scale: 				return GW::Constants::ItemID::Scale;
+	case TannedHideSquare: 		return GW::Constants::ItemID::TannedHideSquare;
+	case WoodPlank: 			return GW::Constants::ItemID::WoodPlank;
+	case AmberChunk: 			return GW::Constants::ItemID::AmberChunk;
+	case BoltofDamask: 			return GW::Constants::ItemID::BoltofDamask;
+	case BoltofLinen: 			return GW::Constants::ItemID::BoltofLinen;
+	case BoltofSilk: 			return GW::Constants::ItemID::BoltofSilk;
+	case DeldrimorSteelIngot:	return GW::Constants::ItemID::DeldrimorSteelIngot;
+	case Diamond: 				return GW::Constants::ItemID::Diamond;
+	case ElonianLeatherSquare:	return GW::Constants::ItemID::ElonianLeatherSquare;
+	case FurSquare: 			return GW::Constants::ItemID::FurSquare;
+	case GlobofEctoplasm: 		return GW::Constants::ItemID::GlobofEctoplasm;
+	case JadeiteShard: 			return GW::Constants::ItemID::JadeiteShard;
+	case LeatherSquare: 		return GW::Constants::ItemID::LeatherSquare;
+	case LumpofCharcoal: 		return GW::Constants::ItemID::LumpofCharcoal;
+	case MonstrousClaw: 		return GW::Constants::ItemID::MonstrousClaw;
+	case MonstrousEye: 			return GW::Constants::ItemID::MonstrousEye;
+	case MonstrousFang: 		return GW::Constants::ItemID::MonstrousFang;
+	case ObsidianShard: 		return GW::Constants::ItemID::ObsidianShard;
+	case OnyxGemstone: 			return GW::Constants::ItemID::OnyxGemstone;
+	case RollofParchment: 		return GW::Constants::ItemID::RollofParchment;
+	case RollofVellum: 			return GW::Constants::ItemID::RollofVellum;
+	case Ruby: 					return GW::Constants::ItemID::Ruby;
+	case Sapphire: 				return GW::Constants::ItemID::Sapphire;
+	case SpiritwoodPlank: 		return GW::Constants::ItemID::SpiritwoodPlank;
+	case SteelIngot: 			return GW::Constants::ItemID::SteelIngot;
+	case TemperedGlassVial: 	return GW::Constants::ItemID::TemperedGlassVial;
+	case VialofInk: 			return GW::Constants::ItemID::VialofInk;
+	default: return 0;
 	}
 }

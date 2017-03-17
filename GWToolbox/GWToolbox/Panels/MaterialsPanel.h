@@ -1,5 +1,7 @@
 #pragma once
 
+#include <GWCA\Managers\MerchantMgr.h>
+
 #include <deque>
 
 #include "ToolboxPanel.h"
@@ -13,18 +15,21 @@ class MaterialsPanel : public ToolboxPanel {
 		ResScroll,
 		Any
 	};
-	enum CommonMat {
-		Bones,
-		Iron,
-		TannedHideSquares,
-		Scales,
-		Chitin,
-		Cloth,
-		Wood,
-		Granite,
-		Dust,
-		Feathers,
-		Fibers,
+	enum Material {
+		BoltofCloth, Bone, ChitinFragment,
+		Feather, GraniteSlab, IronIngot,
+		PileofGlitteringDust, PlantFiber,
+		Scale, TannedHideSquare, WoodPlank,
+
+		AmberChunk, BoltofDamask, BoltofLinen,
+		BoltofSilk, DeldrimorSteelIngot,
+		Diamond, ElonianLeatherSquare, FurSquare,
+		GlobofEctoplasm, JadeiteShard, LeatherSquare,
+		LumpofCharcoal, MonstrousClaw, MonstrousEye,
+		MonstrousFang, ObsidianShard, OnyxGemstone,
+		RollofParchment, RollofVellum, Ruby,
+		Sapphire, SpiritwoodPlank, SteelIngot,
+		TemperedGlassVial, VialofInk,
 		
 		N_MATS
 	};
@@ -49,17 +54,20 @@ public:
 	void Draw(IDirect3DDevice9* pDevice) override;
 
 private:
-	int* GetPricePtr(DWORD modelid);
-	std::string GetPrice(CommonMat mat1, float fac1,
-		CommonMat mat2, float fac2, int extra) const;
+	DWORD GetModelID(Material mat) const;
+	Material GetMaterial(DWORD modelid);
+	std::string GetPrice(Material mat1, float fac1,
+		Material mat2, float fac2, int extra) const;
 
-	void EnqueueQuote(DWORD modelid);
-	void EnqueuePurchase(DWORD modelid);
+	void EnqueueQuote(Material material);
+	void EnqueuePurchase(Material material);
+	void EnqueueSell(Material material);
 
 	void FullConsPriceTooltip() const;
 
 	// returns item id if successful, 0 if error
-	int RequestQuote(DWORD modelid);
+	DWORD RequestPurchaseQuote(Material material);
+	DWORD RequestSellQuote(Material material);
 
 	IDirect3DTexture9* tex_essence = nullptr;
 	IDirect3DTexture9* tex_grail = nullptr;
@@ -75,14 +83,18 @@ private:
 	int price[N_MATS];
 
 	int max = 0;
-	std::deque<DWORD> quotequeue;
-	std::deque<DWORD> purchasequeue;
+	std::deque<Material> quotequeue;
+	std::deque<Material> purchasequeue;
+	std::deque<Material> sellqueue;
+	bool cancelled = false;
+	int cancelled_progress = 0;
 
 	DWORD last_request_itemid = 0;
 	DWORD last_request_price = 0;
 	enum RequestType {
 		None,
 		Quote,
-		Purchase
+		Purchase,
+		Sell
 	} last_request_type = None;
 };
