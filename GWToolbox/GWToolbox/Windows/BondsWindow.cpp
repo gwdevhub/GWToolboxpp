@@ -48,13 +48,7 @@ void BondsWindow::Terminate() {
 
 void BondsWindow::Draw(IDirect3DDevice9* device) {
 	if (!visible) return;
-	
-	int img_size = row_height > 0 ? row_height : GuiUtils::GetPartyHealthbarHeight();
-	int party_size = GW::Partymgr().GetPartySize();
 
-	int size = GW::Partymgr().GetPartySize();
-	if (size > MAX_PLAYERS) size = MAX_PLAYERS;
-	
 	static bool update_build = true;
 	switch (GW::Map().GetInstanceType()) {
 	case GW::Constants::InstanceType::Explorable:
@@ -68,10 +62,17 @@ void BondsWindow::Draw(IDirect3DDevice9* device) {
 		break;
 	case GW::Constants::InstanceType::Loading:
 		update_build = true;
+		return;
 		break;
 	default:
 		break;
 	}
+	
+	int img_size = row_height > 0 ? row_height : GuiUtils::GetPartyHealthbarHeight();
+	int party_size = GW::Partymgr().GetPartySize();
+
+	int size = GW::Partymgr().GetPartySize();
+	if (size > MAX_PLAYERS) size = MAX_PLAYERS;
 
 	for (int i = 0; i < MAX_PLAYERS; ++i) {
 		for (int j = 0; j < n_bonds; ++j) {

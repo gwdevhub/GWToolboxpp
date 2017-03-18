@@ -181,6 +181,7 @@ void PartyDamage::CreatePartyIndexMap() {
 
 void PartyDamage::Draw(IDirect3DDevice9* device) {	
 	if (!visible) return;
+	if (GW::Map().GetInstanceType() == GW::Constants::InstanceType::Loading) return;
 	
 	int line_height = row_height > 0 ? row_height : GuiUtils::GetPartyHealthbarHeight();
 	int size = GW::Partymgr().GetPartySize();
