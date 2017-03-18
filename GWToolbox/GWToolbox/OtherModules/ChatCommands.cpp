@@ -37,6 +37,43 @@
 #include "GWToolbox.h"
 #include <logger.h>
 
+void ChatCommands::DrawHelp() {
+	ImGui::Text("You can create a 'Send Chat' hotkey to perform any command.");
+	ImGui::TextDisabled("Below, <xyz> denotes an argument, use an appropriate value without the quotes.\n"
+		"(on|off) denotes a mandatory argument, in this case 'on' or 'off'.\n"
+		"[on|off] denotes an optional argument, in this case nothing, 'on' or 'off'.");
+
+	//ImGui::BulletText("'/afk' to /sit and set your status to 'Away'.");
+	ImGui::Bullet(); ImGui::Text("'/age2' prints the instance time to chat.");
+	ImGui::Bullet(); ImGui::Text("'/borderless [on|off]' toggles, enables or disables borderless window.");
+	ImGui::Bullet(); ImGui::Text("'/camera (lock|unlock)' to lock or unlock the camera.");
+	ImGui::Bullet(); ImGui::Text("'/camera fog (on|off)' sets game fog effect on or off.");
+	ImGui::Bullet(); ImGui::Text("'/camera fov <value>' sets the field of view. '/camera fov' resets to default.");
+	ImGui::Bullet(); ImGui::Text("'/camera speed <value>' sets the unlocked camera speed.");
+	ImGui::Bullet(); ImGui::Text("'/chest' opens xunlai in outposts and locked chests in explorables.");
+	ImGui::Bullet(); ImGui::Text("'/damage' or '/dmg' to print party damage to chat.\n"
+		"'/damage me' sends your own damage only.\n"
+		"'/damage <number>' sends the damage of a party member (e.g. '/damage 3').\n"
+		"'/damage reset' resets the damage in party window.");
+	ImGui::Bullet(); ImGui::Text("'/dialog <id>' sends a dialog.");
+	ImGui::Bullet(); ImGui::Text("'/flag [all|<number>]' to flag a hero in the minimap (same a using the buttons by the minimap).");
+	ImGui::Bullet(); ImGui::Text("'/hide <name>' closes the window or widget titled <name>.");
+	ImGui::Bullet(); ImGui::Text("'/pcons [on|off]' toggles, enables or disables pcons.");
+	ImGui::Bullet(); ImGui::Text("'/show <name>' opens the window or widget titled <name>.");
+	ImGui::Bullet(); ImGui::Text("'/target closest' to target the closest agent to you.");
+	ImGui::Bullet(); ImGui::Text("'/tb <name>' toggles the window or widget titled <name>.");
+	ImGui::Bullet(); ImGui::Text("'/tb reset' moves Toolbox and Settings window to the top-left corner.");
+	ImGui::Bullet(); ImGui::Text("'/tb quit' or '/tb exit' completely closes toolbox and all its windows.");
+	ImGui::Bullet(); ImGui::Text("'/travel <town> [dis]', '/tp <town> [dis]' or '/to <arg> [dis]' to travel to a destination. \n"
+		"<town> can be any of: doa, kamadan/kama, embark, vlox, gadds, urgoz, deep, gtob, fav1, fav2, fav3.\n"
+		"[dis] can be any of: ae, ae1, ee, ee1, eg, eg1, int");
+	ImGui::Bullet(); ImGui::Text("'/useskill <skill>' starts using the skill on recharge. "
+		"Use the skill number instead of <skill> (e.g. '/useskill 5'). "
+		"Use empty '/useskill', '/useskill 0' or '/useskill stop' to stop.");
+	ImGui::Bullet(); ImGui::Text("'/zoom <value>' to change the maximum zoom to the value. "
+		"use empty '/zoom' to reset to the default value of 750.");
+}
+
 void ChatCommands::Initialize() {
 	ToolboxModule::Initialize();
 
@@ -377,6 +414,8 @@ bool ChatCommands::CmdTP(std::wstring& cmd, std::vector<std::wstring>& args) {
 			GW::Map().Travel(GW::Constants::MapID::Urgozs_Warren, district, district_number);
 		} else if (town == L"deep") {
 			GW::Map().Travel(GW::Constants::MapID::The_Deep, district, district_number);
+		} else if (town == L"gtob") {
+			GW::Map().Travel(GW::Constants::MapID::Great_Temple_of_Balthazar_outpost, district, district_number);
 		} else if (town == L"fav1") {
 			TravelPanel::Instance().TravelFavorite(0);
 		} else if (town == L"fav2") {

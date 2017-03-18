@@ -29,6 +29,8 @@ public:
 
 	void DrawSettings() override {};
 
+	void DrawHelp();
+
 	bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam);
 
 	// Update. Will always be called every frame.

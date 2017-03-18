@@ -1,5 +1,6 @@
 #include "SymbolsRenderer.h"
 
+#include <ImGuiAddons.h>
 #include <d3dx9math.h>
 
 #include <GWCA\GWCA.h>
@@ -28,6 +29,7 @@ void SymbolsRenderer::DrawSettings() {
 	if (Colors::DrawSetting("Quest Marker", &color_quest)) Invalidate();
 	if (Colors::DrawSetting("North Marker", &color_north)) Invalidate();
 	if (Colors::DrawSetting("Symbol Modifier", &color_modifier)) Invalidate();
+	ImGui::ShowHelp("Each symbol has this value removed on the border and added at the center\nZero makes them have solid color, while a high number makes them appear more shaded.");
 }
 
 void SymbolsRenderer::Initialize(IDirect3DDevice9* device) {
