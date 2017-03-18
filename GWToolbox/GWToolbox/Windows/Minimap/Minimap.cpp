@@ -122,6 +122,8 @@ void Minimap::DrawSettingInternal() {
 	}
 	if (ImGui::TreeNode("Hero flagging")) {
 		ImGui::Checkbox("Show hero flag controls", &hero_flag_controls_show);
+		ImGui::Checkbox("Attach to minimap", &hero_flag_window_attach);
+		ImGui::ShowHelp("When disabled, you can move/resize the window with the global move all.");
 		Colors::DrawSetting("Background", &hero_flag_window_background);
 		ImGui::TreePop();
 	}
@@ -131,6 +133,7 @@ void Minimap::LoadSettings(CSimpleIni* ini) {
 	ToolboxWidget::LoadSettings(ini);
 	scale = (float)ini->GetDoubleValue(Name(), "scale", 1.0);
 	hero_flag_controls_show = ini->GetBoolValue(Name(), "hero_flag_controls_show", true);
+	hero_flag_window_attach = ini->GetBoolValue(Name(), "hero_flag_window_attach", true);
 	hero_flag_window_background = Colors::Load(ini, Name(), "hero_flag_controls_background",
 		ImColor(ImGui::GetStyle().Colors[ImGuiCol_WindowBg]));
 	range_renderer.LoadSettings(ini, Name());
@@ -145,6 +148,7 @@ void Minimap::SaveSettings(CSimpleIni* ini) {
 	ToolboxWidget::SaveSettings(ini);
 	ini->SetDoubleValue(Name(), "scale", scale);
 	ini->SetBoolValue(Name(), "hero_flag_controls_show", hero_flag_controls_show);
+	ini->SetBoolValue(Name(), "hero_flag_window_attach", hero_flag_window_attach);
 	Colors::Save(ini, Name(), "hero_flag_controls_background", hero_flag_window_background);
 	range_renderer.SaveSettings(ini, Name());
 	pmap_renderer.SaveSettings(ini, Name());
@@ -287,10 +291,13 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 		&& GW::Map().GetInstanceType() == GW::Constants::InstanceType::Explorable
 		&& GW::Agents().GetHeroAgentID(1) > 0) {
 
-		ImGui::SetNextWindowPos(ImVec2((float)location.x, (float)(location.y + size.y)));
-		ImGui::SetNextWindowSize(ImVec2((float)size.x, 40.0f));
+		if (hero_flag_window_attach) {
+			ImGui::SetNextWindowPos(ImVec2((float)location.x, (float)(location.y + size.y)));
+			ImGui::SetNextWindowSize(ImVec2((float)size.x, 40.0f));
+		}
 		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(hero_flag_window_background));
-		if (ImGui::Begin("Hero Controls", nullptr, GetWinFlags(0, false))) {
+		if (ImGui::Begin("Hero Controls", nullptr, GetWinFlags(
+			hero_flag_window_attach ? ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove : 0, false))) {
 			static const char* flag_txt[] = {
 				"All", "1", "2", "3", "4", "5", "6", "7", "8"
 			};

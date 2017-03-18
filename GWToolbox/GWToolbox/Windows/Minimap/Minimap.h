@@ -82,6 +82,7 @@ private:
 	CustomRenderer custom_renderer;
 
 	bool hero_flag_controls_show = false;
+	bool hero_flag_window_attach = true;
 	Color hero_flag_window_background;
 	bool flagging[9];
 };
