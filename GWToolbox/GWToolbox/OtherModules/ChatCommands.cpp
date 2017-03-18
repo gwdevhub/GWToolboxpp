@@ -64,6 +64,13 @@ void ChatCommands::Initialize() {
 	GW::Chat().RegisterCommand(L"borderless", ChatCommands::CmdBorderless);
 	GW::Chat().RegisterCommand(L"flag", ChatCommands::CmdFlag);
 
+	GW::Chat().RegisterCommand(L"scwiki", 
+		[](std::wstring& cmd, std::vector<std::wstring>& args) -> bool {
+		CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+		ShellExecute(NULL, "open", "http://wiki.fbgmguild.com/Main_Page", NULL, NULL, SW_SHOWNORMAL);
+		return true;
+	});
+
 	windows.push_back(&MainWindow::Instance());
 	windows.push_back(&PconPanel::Instance());
 	windows.push_back(&HotkeyPanel::Instance());
