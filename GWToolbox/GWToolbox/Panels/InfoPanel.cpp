@@ -85,7 +85,9 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 
 		if (show_open_chest) {
 			if (ImGui::Button("Open Xunlai Chest", ImVec2(-1.0f, 0))) {
-				GW::Items().OpenXunlaiWindow();
+				GW::Gamethread().Enqueue([]() {
+					GW::Items().OpenXunlaiWindow();
+				});
 			}
 		}
 
