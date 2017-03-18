@@ -326,17 +326,17 @@ void MaterialsPanel::Draw(IDirect3DDevice9* pDevice) {
 		static int common_idx = 0;
 		static int common_qty = 1;
 		static const char* common_names[] = {
-			"10 Bones",
-			"10 Iron Ingots",
-			"10 Tanned Hide Squares",
-			"10 Scales",
-			"10 Chitin Fragments",
 			"10 Bolts of Cloth",
-			"10 Wood Planks",
-			"10 Granite Slabs",
-			"10 Piles of Glittering Dust",
+			"10 Bones",
+			"10 Chitin Fragments",
 			"10 Feathers",
-			"10 Fibers",
+			"10 Granite Slabs",
+			"10 Iron Ingots",
+			"10 Piles of Glittering Dust",
+			"10 Plant Fibers",
+			"10 Scales",
+			"10 Tanned Hide Squares",
+			"10 Wood Planks",
 		};
 		ImGui::PushItemWidth(width1);
 		ImGui::Combo("##commoncombo", &common_idx, common_names, 11);
