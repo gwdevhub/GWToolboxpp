@@ -41,5 +41,5 @@ public:
 private:
 	std::vector<ToolboxPanel*> panels;
 
-	bool one_panel_at_time_only;
+	bool one_panel_at_time_only = false;
 };
