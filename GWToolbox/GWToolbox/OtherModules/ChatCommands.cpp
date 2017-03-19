@@ -430,8 +430,9 @@ bool ChatCommands::CmdTP(std::wstring& cmd, std::vector<std::wstring>& args) {
 			GW::Map().Travel(GW::Constants::MapID::Eye_of_the_North_outpost, district, district_number);
 		} else if (town == L"sif" || town == L"sifhalla") {
 			GW::Map().Travel(GW::Constants::MapID::Sifhalla_outpost, district, district_number);
-		}
-		else {
+		} else if (town == L"doom" || town == L"doomlore") {
+			GW::Map().Travel(GW::Constants::MapID::Doomlore_Shrine_outpost, district, district_number);
+		} else {
 			int mapid = wcstol(town.c_str(), nullptr, 0);
 			if (mapid) {
 				GW::Map().Travel((GW::Constants::MapID)mapid, district, district_number);
