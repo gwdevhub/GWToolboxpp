@@ -64,7 +64,7 @@ void ChatCommands::DrawHelp() {
 	ImGui::Bullet(); ImGui::Text("'/tb <name>' toggles the window or widget titled <name>.");
 	ImGui::Bullet(); ImGui::Text("'/tb reset' moves Toolbox and Settings window to the top-left corner.");
 	ImGui::Bullet(); ImGui::Text("'/tb quit' or '/tb exit' completely closes toolbox and all its windows.");
-	ImGui::Bullet(); ImGui::Text("'/travel <town> [dis]', '/tp <town> [dis]' or '/to <arg> [dis]' to travel to a destination. \n"
+	ImGui::Bullet(); ImGui::Text("'/travel <town> [dis]', '/tp <town> [dis]' or '/to <town> [dis]' to travel to a destination. \n"
 		"<town> can be any of: doa, kamadan/kama, embark, vlox, gadds, urgoz, deep, gtob, fav1, fav2, fav3.\n"
 		"[dis] can be any of: ae, ae1, ee, ee1, eg, eg1, int");
 	ImGui::Bullet(); ImGui::Text("'/useskill <skill>' starts using the skill on recharge. "
@@ -396,7 +396,13 @@ bool ChatCommands::CmdTP(std::wstring& cmd, std::vector<std::wstring>& args) {
 			}
 		}
 
-		if (town == L"toa") {
+		if (town == L"fav1") {
+			TravelPanel::Instance().TravelFavorite(0);
+		} else if (town == L"fav2") {
+			TravelPanel::Instance().TravelFavorite(1);
+		} else if (town == L"fav3") {
+			TravelPanel::Instance().TravelFavorite(2);
+		} else if (town == L"toa") {
 			GW::Map().Travel(GW::Constants::MapID::Temple_of_the_Ages, district, district_number);
 		} else if (town == L"doa") {
 			GW::Map().Travel(GW::Constants::MapID::Domain_of_Anguish, district, district_number);
@@ -416,14 +422,14 @@ bool ChatCommands::CmdTP(std::wstring& cmd, std::vector<std::wstring>& args) {
 			GW::Map().Travel(GW::Constants::MapID::The_Deep, district, district_number);
 		} else if (town == L"gtob") {
 			GW::Map().Travel(GW::Constants::MapID::Great_Temple_of_Balthazar_outpost, district, district_number);
-		} else if (town == L"fav1") {
-			TravelPanel::Instance().TravelFavorite(0);
-		} else if (town == L"fav2") {
-			TravelPanel::Instance().TravelFavorite(1);
-		} else if (town == L"fav3") {
-			TravelPanel::Instance().TravelFavorite(2);
-		} else if (town == L"gh") {
-			GW::Guildmgr().TravelGH();
+		} else if (town == L"la") {
+			GW::Map().Travel(GW::Constants::MapID::Lions_Arch_outpost, district, district_number);
+		} else if (town == L"kaineng") {
+			GW::Map().Travel(GW::Constants::MapID::Kaineng_Center_outpost, district, district_number);
+		} else if (town == L"eotn") {
+			GW::Map().Travel(GW::Constants::MapID::Eye_of_the_North_outpost, district, district_number);
+		} else if (town == L"sif" || town == L"sifhalla") {
+			GW::Map().Travel(GW::Constants::MapID::Sifhalla_outpost, district, district_number);
 		}
 	}
 	return true;
