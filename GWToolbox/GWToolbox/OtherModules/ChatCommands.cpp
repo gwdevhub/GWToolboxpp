@@ -431,6 +431,12 @@ bool ChatCommands::CmdTP(std::wstring& cmd, std::vector<std::wstring>& args) {
 		} else if (town == L"sif" || town == L"sifhalla") {
 			GW::Map().Travel(GW::Constants::MapID::Sifhalla_outpost, district, district_number);
 		}
+		else {
+			int mapid = wcstol(town.c_str(), nullptr, 0);
+			if (mapid) {
+				GW::Map().Travel((GW::Constants::MapID)mapid, district, district_number);
+			}
+		}
 	}
 	return true;
 }
