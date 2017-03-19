@@ -14,7 +14,7 @@ public:
 	virtual const char* Name() const = 0;
 
 	// Initialize module
-	virtual void Initialize() {};
+	virtual void Initialize();
 
 	// Terminate module
 	virtual void Terminate() {};

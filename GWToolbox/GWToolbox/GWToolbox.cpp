@@ -268,35 +268,31 @@ void GWToolbox::Initialize() {
 	Log::Log("Creating Toolbox\n");
 
 	Log::Log("Creating Modules\n");
-	modules.push_back(&Resources::Instance());
-	modules.push_back(&GameSettings::Instance());
-	modules.push_back(&ToolboxSettings::Instance());
-	modules.push_back(&ChatFilter::Instance());
-	modules.push_back(&ChatCommands::Instance());
-	modules.push_back(&ToolboxTheme::Instance());
+	Resources::Instance().Initialize();
+	GameSettings::Instance().Initialize();
+	ToolboxSettings::Instance().Initialize();
+	ChatFilter::Instance().Initialize();
+	ChatCommands::Instance().Initialize();
+	ToolboxTheme::Instance().Initialize();
 
-	modules.push_back(&MainWindow::Instance());
-	modules.push_back(&PconPanel::Instance());
-	modules.push_back(&HotkeyPanel::Instance());
-	modules.push_back(&BuildPanel::Instance());
-	modules.push_back(&TravelPanel::Instance());
-	modules.push_back(&DialogPanel::Instance());
-	modules.push_back(&InfoPanel::Instance());
-	modules.push_back(&MaterialsPanel::Instance());
-	modules.push_back(&SettingsPanel::Instance());
+	MainWindow::Instance().Initialize();
+	PconPanel::Instance().Initialize();
+	HotkeyPanel::Instance().Initialize();
+	BuildPanel::Instance().Initialize();
+	TravelPanel::Instance().Initialize();
+	DialogPanel::Instance().Initialize();
+	InfoPanel::Instance().Initialize();
+	MaterialsPanel::Instance().Initialize();
+	SettingsPanel::Instance().Initialize();
 
-	modules.push_back(&TimerWindow::Instance());
-	modules.push_back(&HealthWindow::Instance());
-	modules.push_back(&DistanceWindow::Instance());
-	modules.push_back(&Minimap::Instance());
-	modules.push_back(&PartyDamage::Instance());
-	modules.push_back(&BondsWindow::Instance());
-	modules.push_back(&ClockWindow::Instance());
-	modules.push_back(&NotePadWindow::Instance());
-
-	for (ToolboxModule* module : modules) {
-		module->Initialize();
-	}
+	TimerWindow::Instance().Initialize();
+	HealthWindow::Instance().Initialize();
+	DistanceWindow::Instance().Initialize();
+	Minimap::Instance().Initialize();
+	PartyDamage::Instance().Initialize();
+	BondsWindow::Instance().Initialize();
+	ClockWindow::Instance().Initialize();
+	NotePadWindow::Instance().Initialize();
 
 	LoadSettings();
 

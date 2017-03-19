@@ -30,10 +30,12 @@ public:
 	void LoadSettings();
 	void SaveSettings();
 
-	std::vector<ToolboxModule*> modules;
-
 	void StartSelfDestruct() { must_self_destruct = true; }
 	bool must_self_destruct = false;	// is true when toolbox should quit
+
+	void RegisterModule(ToolboxModule* m) { modules.push_back(m); }
+
+	std::vector<ToolboxModule*> modules;
 
 private:
 	CSimpleIni* inifile = nullptr;

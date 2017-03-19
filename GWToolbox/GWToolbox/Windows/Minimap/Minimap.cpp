@@ -18,6 +18,7 @@
 #include "OtherModules\ToolboxSettings.h"
 
 void Minimap::Initialize() {
+	ToolboxWidget::Initialize();
 	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P041>(
 		[&](GW::Packet::StoC::P041* pak) -> bool {
 		if (visible) {

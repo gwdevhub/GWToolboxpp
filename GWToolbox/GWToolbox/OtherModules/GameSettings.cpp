@@ -7,6 +7,7 @@
 #include <GWToolbox.h>
 
 void GameSettings::Initialize() {
+	ToolboxModule::Initialize();
 	patches.push_back(new GW::MemoryPatcher((void*)0x0067D7C8,
 		(BYTE*)"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90", 16));
 	patches.push_back(new GW::MemoryPatcher((void*)0x0067D320, (BYTE*)"\xEB", 1));

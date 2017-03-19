@@ -10,6 +10,7 @@
 #include "GWToolbox.h"
 
 void Resources::Initialize() {
+	ToolboxModule::Initialize();
 	worker = std::thread([this]() {
 		while (!should_stop) {
 			if (todo.empty()) {
