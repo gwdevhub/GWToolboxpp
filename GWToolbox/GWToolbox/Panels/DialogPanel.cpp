@@ -1,6 +1,7 @@
 #include "DialogPanel.h"
 
-#include <GWCA\GWCA.h>
+#include <GWCA\Constants\QuestIDs.h>
+#include <GWCA\Managers\AgentMgr.h>
 
 #include "GuiUtils.h"
 #include "GWToolbox.h"

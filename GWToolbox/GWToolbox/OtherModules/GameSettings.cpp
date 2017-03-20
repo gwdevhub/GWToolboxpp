@@ -2,6 +2,7 @@
 
 #include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\PartyMgr.h>
+#include <GWCA\Managers\AgentMgr.h>
 
 #include <logger.h>
 #include "GuiUtils.h"

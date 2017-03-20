@@ -2,7 +2,8 @@
 
 #include <d3dx9tex.h>
 
-#include <GWCA\GWCA.h>
+#include <GWCA\Managers\MapMgr.h>
+#include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\EffectMgr.h>
 #include <GWCA\Managers\ItemMgr.h>
 #include <GWCA\Managers\PartyMgr.h>
@@ -82,27 +83,7 @@ void Pcon::Update(int delay) {
 		bool used = false;
 		int qty = CheckInventory(&used);
 
-		if (qty >= 0) { // if not, bag was undefined and we just ignore everything
-			quantity = qty;
-			if (used) {
-				timer = TIMER_INIT();
-				if (quantity == 0) { // if we just used the last one
-					mapid = GW::Map::GetMapID();
-					maptype = GW::Map::GetInstanceType();
-					Log::Warning("Just used the last %s", chat);
-					if (disable_when_not_found) enabled = false;
-				}
-			} else {
-				// we should have used but didn't find the item
-				if (disable_when_not_found) enabled = false;
-				if (mapid != GW::Map::GetMapID()
-					|| maptype != GW::Map::GetInstanceType()) { // only yell at the user once
-					mapid = GW::Map::GetMapID();
-					maptype = GW::Map::GetInstanceType();
-					Log::Error("Cannot find %s", chat);
-				}
-			}
-		}
+		AfterUsed(used, qty);
 	}
 
 	// === Warn the user if zoning into outpost with quantity = 0 or low ===
@@ -119,11 +100,34 @@ void Pcon::Update(int delay) {
 		}
 	}
 }
+void Pcon::AfterUsed(bool used, int qty) {
+	if (qty >= 0) { // if not, bag was undefined and we just ignore everything
+		quantity = qty;
+		if (used) {
+			timer = TIMER_INIT();
+			if (quantity == 0) { // if we just used the last one
+				mapid = GW::Map::GetMapID();
+				maptype = GW::Map::GetInstanceType();
+				Log::Warning("Just used the last %s", chat);
+				if (disable_when_not_found) enabled = false;
+			}
+		} else {
+			// we should have used but didn't find the item
+			if (disable_when_not_found) enabled = false;
+			if (mapid != GW::Map::GetMapID()
+				|| maptype != GW::Map::GetInstanceType()) { // only yell at the user once
+				mapid = GW::Map::GetMapID();
+				maptype = GW::Map::GetInstanceType();
+				Log::Error("Cannot find %s", chat);
+			}
+		}
+	}
+}
 void Pcon::ScanInventory() {
 	int qty = CheckInventory();
 	if (qty >= 0) quantity = qty;
 }
-int Pcon::CheckInventory(bool* used) const {
+int Pcon::CheckInventory(bool* used, int* used_qty_ptr) const {
 	int count = 0;
 	int used_qty = 0;
 	GW::Bag** bags = GW::Items::GetBagArray();
@@ -150,6 +154,7 @@ int Pcon::CheckInventory(bool* used) const {
 			}			
 		}
 	}
+	if (used_qty_ptr) *used_qty_ptr = used_qty;
 	return count - used_qty;
 }
 bool Pcon::CanUseByInstanceType() const {
@@ -184,7 +189,7 @@ int PconGeneric::QuantityForEach(const GW::Item* item) const {
 	return 0;
 }
 bool PconGeneric::CanUseByEffect() const {
-	GW::AgentEffectsArray AgEffects = GW::Effects().GetPartyEffectArray();
+	GW::AgentEffectsArray AgEffects = GW::Effects::GetPartyEffectArray();
 	if (!AgEffects.valid()) return false; // don't know
 
 	GW::EffectArray effects = AgEffects[0].Effects;
@@ -228,7 +233,7 @@ bool PconCity::CanUseByEffect() const {
 	if (player == nullptr) return false;
 	if (player->MoveX == 0.0f && player->MoveY == 0.0f) return false;
 
-	GW::EffectArray effects = GW::Effects().GetPlayerEffectArray();
+	GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
 	if (!effects.valid()) return false; // don't know
 
 	for (DWORD i = 0; i < effects.size(); i++) {
@@ -284,6 +289,22 @@ int PconAlcohol::QuantityForEach(const GW::Item* item) const {
 		return 0;
 	}
 }
+void PconAlcohol::ForceUse() {
+	GW::Agent* player = GW::Agents::GetPlayer();
+	if (player != nullptr
+		&& !player->GetIsDead()
+		&& (player_id == 0 || player->Id == player_id)) {
+		bool used = false;
+		int used_qty = 0;
+		int qty = CheckInventory(&used, &used_qty);
+		if (used_qty == 1) {
+			bool used2 = false;
+			qty = CheckInventory(&used2, &used_qty); // use another!
+		}
+
+		AfterUsed(used, qty);
+	}
+}
 
 // ================================================
 void PconLunar::Update(int delay) {
@@ -307,7 +328,7 @@ int PconLunar::QuantityForEach(const GW::Item* item) const {
 	}
 }
 bool PconLunar::CanUseByEffect() const {
-	GW::AgentEffectsArray AgEffects = GW::Effects().GetPartyEffectArray();
+	GW::AgentEffectsArray AgEffects = GW::Effects::GetPartyEffectArray();
 	if (!AgEffects.valid()) return false; // don't know
 
 	GW::EffectArray effects = AgEffects[0].Effects;

@@ -4,8 +4,8 @@
 
 #include <imgui.h>
 
-#include <GWCA\GWCA.h>
 #include <GWCA\Constants\Constants.h>
+#include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\SkillbarMgr.h>
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\CameraMgr.h>

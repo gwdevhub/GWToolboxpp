@@ -9,11 +9,13 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <ImGuiAddons.h>
-#include <GWCA\GWCA.h>
+
+#include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Managers\CameraMgr.h>
 #include <GWCA\Managers\PartyMgr.h>
 #include <GWCA\Managers\MapMgr.h>
+
 #include "logger.h"
 #include "OtherModules\ToolboxSettings.h"
 

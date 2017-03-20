@@ -4,12 +4,13 @@
 #include <string>
 #include <d3dx9tex.h>
 
-#include <GWCA\GWCA.h>
+#include <GWCA\Managers\GameThreadMgr.h>
+#include <GWCA\Managers\MapMgr.h>
+#include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\EffectMgr.h>
 #include <GWCA\Managers\SkillbarMgr.h>
 #include <GWCA\Managers\PartyMgr.h>
 #include <GWCA\Managers\SkillbarMgr.h>
-#include <GWCA\GWStructures.h>
 
 #include "GuiUtils.h"
 #include "OtherModules\ToolboxSettings.h"
@@ -82,7 +83,7 @@ void BondsWindow::Draw(IDirect3DDevice9* device) {
 		}
 	}
 
-	GW::AgentEffectsArray effects = GW::Effects().GetPartyEffectArray();
+	GW::AgentEffectsArray effects = GW::Effects::GetPartyEffectArray();
 	if (effects.valid()) {
 		GW::BuffArray buffs = effects[0].Buffs;
 		GW::AgentArray agents = GW::Agents::GetAgentArray();
@@ -143,7 +144,7 @@ void BondsWindow::Draw(IDirect3DDevice9* device) {
 						ImGui::GetWindowDrawList()->AddRect(tl, br, IM_COL32(255, 255, 255, 255));
 						if (ImGui::IsMouseReleased(0)) {
 							if (buff_id[p][b] > 0) {
-								GW::Effects().DropBuff(buff_id[p][b]);
+								GW::Effects::DropBuff(buff_id[p][b]);
 							} else {
 								GW::AgentID target;
 								if (p < agentids.size()) {
@@ -155,8 +156,8 @@ void BondsWindow::Draw(IDirect3DDevice9* device) {
 									int slot = skillbar_bond_slot[b];
 									GW::Skillbar skillbar = GW::Skillbar::GetPlayerSkillbar();
 									if (skillbar.IsValid() && skillbar.Skills[slot].Recharge == 0) {
-										GW::Gamethread().Enqueue([slot, target] {
-											GW::Skillbarmgr().UseSkill(slot, target);
+										GW::GameThread::Enqueue([slot, target] {
+											GW::SkillbarMgr::UseSkill(slot, target);
 										});
 									}
 								}
@@ -214,8 +215,8 @@ void BondsWindow::UseBuff(PartyIndex player, BondIndex bond) {
 	if (!skillbar.IsValid()) return;
 	if (skillbar.Skills[slot].Recharge != 0) return;
 
-	GW::Gamethread().Enqueue([slot, target] {
-		GW::Skillbarmgr().UseSkill(slot, target);
+	GW::GameThread::Enqueue([slot, target] {
+		GW::SkillbarMgr::UseSkill(slot, target);
 	});
 }
 

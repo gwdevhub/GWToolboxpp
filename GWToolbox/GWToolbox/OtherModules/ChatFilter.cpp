@@ -3,8 +3,9 @@
 #include <locale>
 #include <fstream>
 
-#include <GWCA\GWCA.h>
+#include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
+#include <GWCA\Managers\MapMgr.h>
 
 #include <imgui.h>
 #include "GuiUtils.h"

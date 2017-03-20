@@ -79,15 +79,11 @@ DWORD __stdcall SafeThreadEntry(LPVOID dllmodule) {
 
 DWORD __stdcall ThreadEntry(LPVOID dllmodule) {
 	Log::Log("Initializing API\n");
-	if (!GW::Api::Initialize()){
+	if (!GW::Initialize()){
 		MessageBoxA(0, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0);
 		FreeLibraryAndExitThread((HMODULE)dllmodule, EXIT_SUCCESS);
 		return EXIT_SUCCESS;
 	}
-
-	GW::Gamethread();
-	GW::Skillbarmgr();
-	GW::Effects();
 
 	printf("DxDevice = %X\n", (DWORD)(GW::DirectXHooker::Initialize()));
 
@@ -405,7 +401,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 		ImGui_ImplDX9_Shutdown();
 
 		Log::Log("Destroying API\n");
-		GW::Api::Destruct();
+		GW::Terminate();
 
 		Log::Log("Restoring input hook\n");
 		SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);

@@ -1,7 +1,7 @@
 #include "ToolboxSettings.h"
 
-#include <GWCA\GWCA.h>
 #include <GWCA\Managers\AgentMgr.h>
+#include <GWCA\Managers\MapMgr.h>
 
 #include "GuiUtils.h"
 #include "GWToolbox.h"

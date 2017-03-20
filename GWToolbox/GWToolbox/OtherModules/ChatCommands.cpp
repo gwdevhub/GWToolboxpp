@@ -14,6 +14,8 @@
 #include <GWCA\Managers\FriendListMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Managers\SkillbarMgr.h>
+#include <GWCA\Managers\GameThreadMgr.h>
+#include <GWCA\Managers\AgentMgr.h>
 
 #include <Windows\MainWindow.h>
 #include <Windows\TimerWindow.h>
@@ -189,11 +191,11 @@ void ChatCommands::Update() {
 			GW::SkillbarSkill skill = skillbar.Skills[skill_to_use - 1]; // -1 to switch range [1,8] -> [0,7]
 			if (skill.GetRecharge() == 0) {
 				int slot = skill_to_use - 1;
-				GW::Gamethread().Enqueue([slot] {
-					GW::Skillbarmgr().UseSkill(slot, GW::Agents::GetTargetId());
+				GW::GameThread::Enqueue([slot] {
+					GW::SkillbarMgr::UseSkill(slot, GW::Agents::GetTargetId());
 				});
 
-				GW::Skill skilldata = GW::Skillbarmgr().GetSkillConstantData(skill.SkillId);
+				GW::Skill skilldata = GW::SkillbarMgr::GetSkillConstantData(skill.SkillId);
 				skill_usage_delay = skilldata.Activation + skilldata.Aftercast + 1.0f; // one additional second to account for ping and to avoid spamming in case of bad target
 				skill_timer = clock();
 			}

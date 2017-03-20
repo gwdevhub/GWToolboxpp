@@ -1,6 +1,6 @@
 #include "BuildPanel.h"
 
-#include <GWCA\GWCA.h>
+#include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\MapMgr.h>
 

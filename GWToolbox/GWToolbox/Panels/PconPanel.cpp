@@ -3,7 +3,7 @@
 #include <string>
 #include <functional>
 
-#include <GWCA\GWCA.h>
+#include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\PartyMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
@@ -118,6 +118,7 @@ void PconPanel::Initialize() {
 	GW::StoC::AddCallback<GW::Packet::StoC::P095>(
 		[&](GW::Packet::StoC::P095* pak) -> bool {
 		PconAlcohol::alcohol_level = pak->level;
+		//printf("Level = %d, tint = %d\n", pak->level, pak->tint);
 		if (enabled) pcon_alcohol->Update();
 		return PconAlcohol::suppress_drunk_effect;
 	});
@@ -218,6 +219,8 @@ bool PconPanel::DrawTabButton(IDirect3DDevice9* device) {
 
 void PconPanel::Draw(IDirect3DDevice9* device) {
 	if (!visible) return;
+
+	bool alcohol_enabled_before = pcon_alcohol->enabled;
 	
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
@@ -240,6 +243,10 @@ void PconPanel::Draw(IDirect3DDevice9* device) {
 		}
 	}
 	ImGui::End();
+
+	if (!alcohol_enabled_before && pcon_alcohol->enabled) {
+		CheckIfWeJustEnabledAlcoholWithLunarsOn();
+	}
 }
 
 void PconPanel::Update() {
@@ -277,7 +284,21 @@ bool PconPanel::SetEnabled(bool b) {
 	if (tick_with_pcons && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
 		GW::PartyMgr::Tick(enabled);
 	}
+	CheckIfWeJustEnabledAlcoholWithLunarsOn();
 	return enabled;
+}
+
+void PconPanel::CheckIfWeJustEnabledAlcoholWithLunarsOn() {
+	if (enabled
+		&& GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable
+		&& pcon_alcohol->enabled
+		&& Pcon::alcohol_level == 5) {
+		// we just re-enabled pcons and we need to pop alcohol, but the alcohol level 
+		// is 5 already, which means it's very likely that we have Spiritual Possession on.
+		// Force usage of alcohol to be sure.
+		// Note: if we're dead this will fail and alcohol will never be used.
+		pcon_alcohol->ForceUse();
+	}
 }
 
 void PconPanel::LoadSettings(CSimpleIni* ini) {

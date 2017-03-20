@@ -3,11 +3,11 @@
 #include <d3dx9math.h>
 #include <d3d9.h>
 
-#include <GWCA\GWCA.h>
-#include <GWCA\GameEntities\Agent.h>
+#include <GWCA\Packets\CtoS.h>
+#include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Managers\EffectMgr.h>
-#include <GWCA\Packets\CtoS.h>
+#include <GWCA\Managers\CtoSMgr.h>
 
 #include "GuiUtils.h"
 
@@ -235,7 +235,7 @@ void PingsLinesRenderer::DrawShadowstepMarker(IDirect3DDevice9* device) {
 	if (shadowstep_location.x == 0.0f && shadowstep_location.y == 0.0f) return;
 	if ((marker.color & IM_COL32_A_MASK) == 0) return;
 
-	GW::EffectArray effects = GW::Effects().GetPlayerEffectArray();
+	GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
 	if (!effects.valid()) {
 		shadowstep_location = GW::Vector2f();
 		return;
@@ -291,7 +291,7 @@ void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9* device) {
 		recall_target = 0;
 		return;
 	}
-	GW::Buff recall = GW::Effects().GetPlayerBuffBySkillId(GW::Constants::SkillID::Recall);
+	GW::Buff recall = GW::Effects::GetPlayerBuffBySkillId(GW::Constants::SkillID::Recall);
 	if (recall.SkillId == 0) {
 		recall_target = 0;
 		return;

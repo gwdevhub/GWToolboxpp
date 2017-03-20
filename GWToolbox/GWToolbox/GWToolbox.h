@@ -2,6 +2,8 @@
 
 #include <Windows.h>
 
+#include <vector>
+
 #include <GWCA\GWCA.h>
 #include <GWCA_DX\DirectXHooker.h>
 

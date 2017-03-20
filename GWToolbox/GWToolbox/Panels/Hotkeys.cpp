@@ -3,7 +3,7 @@
 #include <iostream>
 #include <sstream>
 
-#include <GWCA\GWCA.h>
+#include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\ItemMgr.h>
 #include <GWCA\Managers\EffectMgr.h>
 #include <GWCA\Managers\PlayerMgr.h>
@@ -296,13 +296,13 @@ void HotkeyDropUseBuff::Draw() {
 void HotkeyDropUseBuff::Execute() {
 	if (!isExplorable()) return;
 
-	GW::Buff buff = GW::Effects().GetPlayerBuffBySkillId(id);
+	GW::Buff buff = GW::Effects::GetPlayerBuffBySkillId(id);
 	if (buff.SkillId) {
-		GW::Effects().DropBuff(buff.BuffId);
+		GW::Effects::DropBuff(buff.BuffId);
 	} else {
-		int slot = GW::Skillbarmgr().GetSkillSlot(id);
+		int slot = GW::SkillbarMgr::GetSkillSlot(id);
 		if (slot >= 0 && GW::Skillbar::GetPlayerSkillbar().Skills[slot].Recharge == 0) {
-			GW::Skillbarmgr().UseSkill(slot, GW::Agents::GetTargetId());
+			GW::SkillbarMgr::UseSkill(slot, GW::Agents::GetTargetId());
 		}
 	}
 }

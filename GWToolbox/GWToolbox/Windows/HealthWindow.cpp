@@ -1,6 +1,6 @@
 #include "HealthWindow.h"
 
-#include <GWCA\GWCA.h>
+#include <GWCA\Managers\AgentMgr.h>
 
 #include "GuiUtils.h"
 #include "OtherModules\ToolboxSettings.h"

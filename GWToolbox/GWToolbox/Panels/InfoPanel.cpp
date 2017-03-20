@@ -11,6 +11,10 @@
 #include "GWToolbox.h"
 #include "GuiUtils.h"
 
+#include <GWCA\Managers\AgentMgr.h>
+#include <GWCA\Managers\MapMgr.h>
+#include <GWCA\Managers\GameThreadMgr.h>
+
 #include <Windows\TimerWindow.h>
 #include <Windows\HealthWindow.h>
 #include <Windows\DistanceWindow.h>
@@ -88,7 +92,7 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 
 		if (show_open_chest) {
 			if (ImGui::Button("Open Xunlai Chest", ImVec2(-1.0f, 0))) {
-				GW::Gamethread().Enqueue([]() {
+				GW::GameThread::Enqueue([]() {
 					GW::Items::OpenXunlaiWindow();
 				});
 			}

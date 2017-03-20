@@ -35,6 +35,7 @@ public:
 	void Draw(IDirect3DDevice9* device);
 	virtual void Update(int delay = -1);
 	void ScanInventory();
+	void AfterUsed(bool used, int qty);
 	inline void Toggle() { enabled = !enabled; }
 
 	void LoadSettings(CSimpleIni* ini, const char* section);
@@ -58,7 +59,7 @@ protected:
 	// if 'used' is not null, it will also use the first item found,
 	// and, if so, used *used to true
 	// returns the number of items found, or -1 in case of error
-	int CheckInventory(bool* used = nullptr) const;
+	int CheckInventory(bool* used = nullptr, int* used_qty = nullptr) const;
 
 	virtual bool CanUseByInstanceType() const;
 	virtual bool CanUseByEffect() const = 0;
@@ -133,6 +134,7 @@ public:
 
 	bool CanUseByEffect() const override;
 	int QuantityForEach(const GW::Item* item) const override;
+	void ForceUse();
 };
 
 class PconLunar : public Pcon {
