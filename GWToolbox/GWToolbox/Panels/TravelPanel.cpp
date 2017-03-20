@@ -16,7 +16,7 @@ bool travelpanel_arraygetter(void* data, int idx, const char** out_text);
 
 void TravelPanel::Initialize() {
 	ToolboxPanel::Initialize();
-	Resources::Instance().LoadTextureAsync(&texture, "plane.png", "img");
+	Resources::Instance().LoadTextureAsync(&texture, "airplane.png", "img/icons");
 
 	district = district = GW::Constants::District::Current;
 	district_number = 0;
@@ -26,7 +26,7 @@ void TravelPanel::TravelButton(const char* text, int x_idx, GW::Constants::MapID
 	if (x_idx != 0) ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 	float w = (ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().ItemInnerSpacing.x) / 2;
 	if (ImGui::Button(text, ImVec2(w, 0))) {
-		GW::Map().Travel(mapid, district, district_number);
+		GW::Map::Travel(mapid, district, district_number);
 		if (close_on_travel) visible = false;
 	}
 }
@@ -41,7 +41,7 @@ void TravelPanel::Draw(IDirect3DDevice9* pDevice) {
 		static int travelto_index = -1;
 		if (ImGui::MyCombo("Travel To...", &travelto_index, travelpanel_arraygetter, nullptr, N_OUTPOSTS)) {
 			GW::Constants::MapID id = IndexToOutpostID(travelto_index);
-			GW::Map().Travel(id, district, district_number);
+			GW::Map::Travel(id, district, district_number);
 			travelto_index = -1;
 			if (close_on_travel) visible = false;
 		}
@@ -113,7 +113,7 @@ void TravelPanel::Draw(IDirect3DDevice9* pDevice) {
 
 bool TravelPanel::TravelFavorite(unsigned int idx) {
 	if (idx >= 0 && idx < fav_index.size()) {
-		GW::Map().Travel(IndexToOutpostID(fav_index[idx]), district, district_number);
+		GW::Map::Travel(IndexToOutpostID(fav_index[idx]), district, district_number);
 		if (close_on_travel) visible = false;
 		return true;
 	} else {

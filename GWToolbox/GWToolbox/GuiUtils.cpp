@@ -5,7 +5,7 @@
 
 #include <imgui.h>
 #include <GWCA\Constants\Constants.h>
-#include <GWCA\Utilities\PatternScanner.h>
+#include <GWCA\Utilities\Scanner.h>
 
 std::string GuiUtils::getSettingsFolder() {
 	CHAR szPath[MAX_PATH];
@@ -36,8 +36,7 @@ void GuiUtils::LoadFonts() {
 int GuiUtils::GetPartyHealthbarHeight() {
 	static DWORD* optionarray = nullptr;
 	if (!optionarray) {
-		GW::PatternScanner scan(0x401000, 0x49a000);
-		optionarray = (DWORD*)scan.FindPattern("\x8B\x4D\x08\x85\xC9\x74\x0A", "xxxxxxx", -9);
+		optionarray = (DWORD*)GW::Scanner::Find("\x8B\x4D\x08\x85\xC9\x74\x0A", "xxxxxxx", -9);
 		if (optionarray)
 			optionarray = *(DWORD**)optionarray;
 	}

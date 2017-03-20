@@ -49,7 +49,7 @@ void BondsWindow::Terminate() {
 void BondsWindow::Draw(IDirect3DDevice9* device) {
 	if (!visible) return;
 
-	switch (GW::Map().GetInstanceType()) {
+	switch (GW::Map::GetInstanceType()) {
 	case GW::Constants::InstanceType::Explorable:
 		if (update) {
 			update = false;
@@ -68,7 +68,7 @@ void BondsWindow::Draw(IDirect3DDevice9* device) {
 		break;
 	}
 	
-	GW::PartyInfo* info = GW::Partymgr().GetPartyInfo();
+	GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
 	if (info == nullptr) return;
 	GW::gw_array<GW::AgentID>& allies = info->others;
 	
@@ -85,7 +85,7 @@ void BondsWindow::Draw(IDirect3DDevice9* device) {
 	GW::AgentEffectsArray effects = GW::Effects().GetPartyEffectArray();
 	if (effects.valid()) {
 		GW::BuffArray buffs = effects[0].Buffs;
-		GW::AgentArray agents = GW::Agents().GetAgentArray();
+		GW::AgentArray agents = GW::Agents::GetAgentArray();
 
 		if (buffs.valid() && agents.valid() && effects.valid()) {
 			for (size_t i = 0; i < buffs.size(); ++i) {
@@ -176,10 +176,10 @@ bool BondsWindow::UpdatePartyIndexMap() {
 	party_index.clear();
 	agentids.clear();
 
-	GW::PartyInfo* info = GW::Partymgr().GetPartyInfo();
+	GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
 	if (info == nullptr) return false;
 
-	GW::PlayerArray players = GW::Agents().GetPlayerArray();
+	GW::PlayerArray players = GW::Agents::GetPlayerArray();
 	if (!players.valid()) return false;
 
 	int index = 0;
@@ -204,7 +204,7 @@ bool BondsWindow::UpdatePartyIndexMap() {
 }
 
 void BondsWindow::UseBuff(PartyIndex player, BondIndex bond) {
-	if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Explorable) return;
+	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return;
 
 	DWORD target = agentids[player];
 	if (target == 0) return;

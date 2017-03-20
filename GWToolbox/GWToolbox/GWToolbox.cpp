@@ -86,19 +86,8 @@ DWORD __stdcall ThreadEntry(LPVOID dllmodule) {
 	}
 
 	GW::Gamethread();
-	GW::CtoS();
-	GW::StoC();
-	GW::Agents();
-	GW::Partymgr();
-	GW::Items();
 	GW::Skillbarmgr();
 	GW::Effects();
-	GW::Chat();
-	GW::Merchant();
-	GW::Guildmgr();
-	GW::Map();
-	GW::FriendListmgr();
-	GW::Cameramgr();
 
 	printf("DxDevice = %X\n", (DWORD)(GW::DirectXHooker::Initialize()));
 
@@ -298,12 +287,12 @@ void GWToolbox::Initialize() {
 
 	Resources::Instance().EndLoading();
 
-	if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading
-		&& GW::Agents().GetAgentArray().valid()
-		&& GW::Agents().GetPlayer() != nullptr) {
+	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
+		&& GW::Agents::GetAgentArray().valid()
+		&& GW::Agents::GetPlayer() != nullptr) {
 
-		DWORD playerNumber = GW::Agents().GetPlayer()->PlayerNumber;
-		Log::Info("Hello %ls!", GW::Agents().GetPlayerNameByLoginNumber(playerNumber));
+		DWORD playerNumber = GW::Agents::GetPlayer()->PlayerNumber;
+		Log::Info("Hello %ls!", GW::Agents::GetPlayerNameByLoginNumber(playerNumber));
 	}
 }
 
@@ -334,7 +323,7 @@ void GWToolbox::Terminate() {
 		module->Terminate();
 	}
 
-	if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading) {
+	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
 		Log::Info("Bye!");
 	}
 }

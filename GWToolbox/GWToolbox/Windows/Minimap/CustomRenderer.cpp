@@ -271,9 +271,9 @@ void CustomRenderer::Render(IDirect3DDevice9* device) {
 }
 
 void CustomRenderer::DrawCustomMarkers(IDirect3DDevice9* device) {
-	if (GW::Map().GetInstanceType() == GW::Constants::InstanceType::Explorable) {
+	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
 		for (const CustomMarker& marker : markers) {
-			if (marker.map == GW::Constants::MapID::None || marker.map == GW::Map().GetMapID()) {
+			if (marker.map == GW::Constants::MapID::None || marker.map == GW::Map::GetMapID()) {
 				D3DXMATRIX translate, scale, world;
 				D3DXMatrixTranslation(&translate, marker.pos.x, marker.pos.y, 0.0f);
 				D3DXMatrixScaling(&scale, marker.size, marker.size, 1.0f);
@@ -311,9 +311,9 @@ void CustomRenderer::DrawCustomMarkers(IDirect3DDevice9* device) {
 }
 
 void CustomRenderer::DrawCustomLines(IDirect3DDevice9* device) {
-	if (GW::Map().GetInstanceType() == GW::Constants::InstanceType::Explorable) {
+	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
 		for (const CustomLine& line : lines) {
-			if (line.map == GW::Constants::MapID::None || line.map == GW::Map().GetMapID()) {
+			if (line.map == GW::Constants::MapID::None || line.map == GW::Map::GetMapID()) {
 				EnqueueVertex(line.p1.x, line.p1.y, color);
 				EnqueueVertex(line.p2.x, line.p2.y, color);
 			}

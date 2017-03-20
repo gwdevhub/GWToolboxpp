@@ -23,8 +23,11 @@
 
 void InfoPanel::Initialize() {
 	ToolboxPanel::Initialize();
-	Resources::Instance().LoadTextureAsync(&texture, "info.png", "img");
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P081>(
+
+	GW::Agents::SetupLastDialogHook();
+
+	Resources::Instance().LoadTextureAsync(&texture, "info.png", "img/icons");
+	GW::StoC::AddCallback<GW::Packet::StoC::P081>(
 		[this](GW::Packet::StoC::P081* pak) {
 		if (pak->message[0] == 0x7BFF
 			&& pak->message[1] == 0xC9C4
@@ -35,7 +38,7 @@ void InfoPanel::Initialize() {
 			const int offset = 5;
 			int i = 0;
 			char buf[256];
-			unsigned long time = GW::Map().GetInstanceTime() / 1000;
+			unsigned long time = GW::Map::GetInstanceTime() / 1000;
 			sprintf_s(buf, "[%d:%02d:%02d] ", time / (60 * 60), (time / 60) % 60, time % 60);
 			int len = strlen(buf);
 			while (i < 256 && pak->message[i + offset] != 0x1 && pak->message[i + offset] != 0) {
@@ -47,7 +50,7 @@ void InfoPanel::Initialize() {
 		}
 		return false;
 	});
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P391_InstanceLoadFile>(
+	GW::StoC::AddCallback<GW::Packet::StoC::P391_InstanceLoadFile>(
 		[this](GW::Packet::StoC::P391_InstanceLoadFile* packet) -> bool {
 		mapfile = packet->map_fileID;
 		resigned.clear();
@@ -86,7 +89,7 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 		if (show_open_chest) {
 			if (ImGui::Button("Open Xunlai Chest", ImVec2(-1.0f, 0))) {
 				GW::Gamethread().Enqueue([]() {
-					GW::Items().OpenXunlaiWindow();
+					GW::Items::OpenXunlaiWindow();
 				});
 			}
 		}
@@ -97,7 +100,7 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 			static char s_buf[32] = "";
 			static char agentid_buf[32] = "";
 			static char modelid_buf[32] = "";
-			GW::Agent* player = GW::Agents().GetPlayer();
+			GW::Agent* player = GW::Agents::GetPlayer();
 			if (player) {
 				sprintf_s(x_buf, "%.2f", player->X);
 				sprintf_s(y_buf, "%.2f", player->Y);
@@ -122,7 +125,7 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 			static char s_buf[32] = "";
 			static char agentid_buf[32] = "";
 			static char modelid_buf[32] = "";
-			GW::Agent* target = GW::Agents().GetTarget();
+			GW::Agent* target = GW::Agents::GetTarget();
 			if (target) {
 				sprintf_s(x_buf, "%.2f", target->X);
 				sprintf_s(y_buf, "%.2f", target->Y);
@@ -151,8 +154,8 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 			static char id_buf[32] = "";
 			char* type = "";
 			static char file_buf[32] = "";
-			sprintf_s(id_buf, "%d", GW::Map().GetMapID());
-			switch (GW::Map().GetInstanceType()) {
+			sprintf_s(id_buf, "%d", GW::Map::GetMapID());
+			switch (GW::Map::GetInstanceType()) {
 			case GW::Constants::InstanceType::Outpost: type = "Outpost\0\0\0"; break;
 			case GW::Constants::InstanceType::Explorable: type = "Explorable"; break;
 			case GW::Constants::InstanceType::Loading: type = "Loading\0\0\0"; break;
@@ -168,7 +171,7 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 		}
 		if (show_dialog && ImGui::CollapsingHeader("Dialog")) {
 			static char id_buf[32] = "";
-			sprintf_s(id_buf, "0x%X", GW::Agents().GetLastDialogId());
+			sprintf_s(id_buf, "0x%X", GW::Agents::GetLastDialogId());
 			ImGui::PushItemWidth(-80.0f);
 			ImGui::InputText("Last Dialog", id_buf, 32, ImGuiInputTextFlags_ReadOnly);
 			ImGui::PopItemWidth();
@@ -179,7 +182,7 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 			//static char itemid[32] = "";
 			strcpy_s(modelid, "-");
 			//strcpy_s(itemid, "-");
-			GW::Bag** bags = GW::Items().GetBagArray();
+			GW::Bag** bags = GW::Items::GetBagArray();
 			if (bags) {
 				GW::Bag* bag1 = bags[1];
 				if (bag1) {
@@ -202,9 +205,9 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 			int cast_count = 0;
 			int spirit_count = 0;
 			int compass_count = 0;
-			GW::AgentArray agents = GW::Agents().GetAgentArray();
-			GW::Agent* player = GW::Agents().GetPlayer();
-			if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading
+			GW::AgentArray agents = GW::Agents::GetAgentArray();
+			GW::Agent* player = GW::Agents::GetPlayer();
+			if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
 				&& agents.valid()
 				&& player != nullptr) {
 
@@ -213,7 +216,7 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 					if (agent == nullptr) continue; // ignore nothings
 					if (agent->Allegiance != 0x3) continue; // ignore non-hostiles
 					if (agent->GetIsDead()) continue; // ignore dead 
-					float sqrd = GW::Agents().GetSqrDistance(player->pos, agent->pos);
+					float sqrd = GW::Agents::GetSqrDistance(player->pos, agent->pos);
 					if (sqrd < GW::Constants::SqrRange::Spellcast) ++cast_count;
 					if (sqrd < GW::Constants::SqrRange::Spirit) ++spirit_count;
 					++compass_count;

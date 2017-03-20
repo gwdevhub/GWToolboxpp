@@ -119,7 +119,7 @@ void RangeRenderer::Render(IDirect3DDevice9* device) {
 		Initialize(device);
 	}
 
-	switch (GW::Map().GetInstanceType()) {
+	switch (GW::Map::GetInstanceType()) {
 	case GW::Constants::InstanceType::Explorable:
 		if (checkforhos_) {
 			checkforhos_ = false;
@@ -147,8 +147,8 @@ void RangeRenderer::Render(IDirect3DDevice9* device) {
 	if (HaveHos()) {
 		device->DrawPrimitive(type, circle_vertices * (num_circles - 1), circle_points);
 
-		GW::Agent* me = GW::Agents().GetPlayer();
-		GW::Agent* tgt = GW::Agents().GetTarget();
+		GW::Agent* me = GW::Agents::GetPlayer();
+		GW::Agent* tgt = GW::Agents::GetTarget();
 
 		if (!draw_center_
 			&& me != nullptr
@@ -157,7 +157,7 @@ void RangeRenderer::Render(IDirect3DDevice9* device) {
 			&& tgt->GetIsLivingType()
 			&& !me->GetIsDead()
 			&& !tgt->GetIsDead()
-			&& GW::Agents().GetSqrDistance(tgt->pos, me->pos) < GW::Constants::SqrRange::Spellcast) {
+			&& GW::Agents::GetSqrDistance(tgt->pos, me->pos) < GW::Constants::SqrRange::Spellcast) {
 			
 			GW::Vector2f v = me->pos - tgt->pos;
 			float angle = std::atan2(v.y, v.x);

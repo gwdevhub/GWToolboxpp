@@ -208,14 +208,14 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 	vertices_count = 0;
 
 	// get stuff
-	GW::AgentArray agents = GW::Agents().GetAgentArray();
+	GW::AgentArray agents = GW::Agents::GetAgentArray();
 	if (!agents.valid()) return;
 
-	GW::NPCArray npcs = GW::Agents().GetNPCArray();
+	GW::NPCArray npcs = GW::Agents::GetNPCArray();
 	if (!npcs.valid()) return;
 
-	GW::Agent* player = GW::Agents().GetPlayer();
-	GW::Agent* target = GW::Agents().GetTarget();
+	GW::Agent* player = GW::Agents::GetPlayer();
+	GW::Agent* target = GW::Agents::GetTarget();
 
 	// 1. eoes
 	for (size_t i = 0; i < agents.size(); ++i) {
@@ -239,7 +239,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 		if (agent == nullptr) continue;
 		if (agent->PlayerNumber <= 12) continue;
 		if (agent->GetIsSignpostType()
-			&& GW::Map().GetMapID() == GW::Constants::MapID::Domain_of_Anguish
+			&& GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish
 			&& agent->ExtraType == 7602) continue;
 		if (agent->GetIsLivingType()
 			&& agent->IsNPC()
@@ -293,7 +293,7 @@ void AgentRenderer::Enqueue(GW::Agent* agent) {
 	float size = GetSize(agent);
 	Shape_e shape = GetShape(agent);
 
-	if (GW::Agents().GetTargetId() == agent->Id) {
+	if (GW::Agents::GetTargetId() == agent->Id) {
 		Enqueue(shape, agent, size + 50.0f, color_target);
 	}
 
@@ -301,7 +301,7 @@ void AgentRenderer::Enqueue(GW::Agent* agent) {
 }
 
 Color AgentRenderer::GetColor(GW::Agent* agent) const {
-	if (agent->Id == GW::Agents().GetPlayerId()) {
+	if (agent->Id == GW::Agents::GetPlayerId()) {
 		if (agent->GetIsDead()) return color_player_dead;
 		else return color_player;
 	}
@@ -310,7 +310,7 @@ Color AgentRenderer::GetColor(GW::Agent* agent) const {
 	if (agent->GetIsItemType()) return color_item;
 
 	// don't draw dead spirits
-	auto npcs = GW::Agents().GetNPCArray();
+	auto npcs = GW::Agents::GetNPCArray();
 	if (agent->GetIsDead() && npcs.valid() && agent->PlayerNumber < npcs.size()) {
 		GW::NPC& npc = npcs[agent->PlayerNumber];
 		switch (npc.modelfileid) {
@@ -347,7 +347,7 @@ Color AgentRenderer::GetColor(GW::Agent* agent) const {
 }
 
 float AgentRenderer::GetSize(GW::Agent* agent) const {
-	if (agent->Id == GW::Agents().GetPlayerId()) return size_player;
+	if (agent->Id == GW::Agents::GetPlayerId()) return size_player;
 	if (agent->GetIsSignpostType()) return size_signpost;
 	if (agent->GetIsItemType()) return size_item;
 	if (agent->GetHasBossGlow()) return size_boss;
@@ -400,7 +400,7 @@ AgentRenderer::Shape_e AgentRenderer::GetShape(GW::Agent* agent) const {
 	if (agent->LoginNumber > 0) return Tear;	// players
 	if (!agent->GetIsLivingType()) return Quad; // shouldn't happen but just in case
 
-	auto npcs = GW::Agents().GetNPCArray();
+	auto npcs = GW::Agents::GetNPCArray();
 	if (npcs.valid() && agent->PlayerNumber < npcs.size()) {
 		GW::NPC& npc = npcs[agent->PlayerNumber];
 		switch (npc.modelfileid) {

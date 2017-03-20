@@ -12,7 +12,7 @@
 
 void SettingsPanel::Initialize() {
 	ToolboxPanel::Initialize();
-	Resources::Instance().LoadTextureAsync(&texture, "settings.png", "img");
+	Resources::Instance().LoadTextureAsync(&texture, "settings.png", "img/icons");
 }
 
 void SettingsPanel::Draw(IDirect3DDevice9* pDevice) {

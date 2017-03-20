@@ -29,7 +29,7 @@ void MaterialsPanel::Update() {
 	} else if (!sellqueue.empty()) {
 		if (last_request_type == None) {
 			const Material mat = sellqueue.front();
-			if (price[mat] > 0 && GW::Items().GetGoldAmountOnCharacter() + (DWORD)price[mat] > 100 * 1000) {
+			if (price[mat] > 0 && GW::Items::GetGoldAmountOnCharacter() + (DWORD)price[mat] > 100 * 1000) {
 				Log::Error("Cannot sell, too much gold!");
 				sellqueue.clear();
 			} else {
@@ -46,7 +46,7 @@ void MaterialsPanel::Update() {
 	} else if (!purchasequeue.empty()) {
 		if (last_request_type == None) {
 			const Material mat = purchasequeue.front();
-			if (price[mat] > 0 && (DWORD)price[mat] > GW::Items().GetGoldAmountOnCharacter()) {
+			if (price[mat] > 0 && (DWORD)price[mat] > GW::Items::GetGoldAmountOnCharacter()) {
 				Log::Error("Cannot purchase, not enough gold!");
 				purchasequeue.clear();
 			} else {
@@ -65,7 +65,7 @@ void MaterialsPanel::Update() {
 
 void MaterialsPanel::Initialize() {
 	ToolboxPanel::Initialize();
-	Resources::Instance().LoadTextureAsync(&texture, "feather.png", "img");
+	Resources::Instance().LoadTextureAsync(&texture, "feather.png", "img/icons");
 	Resources::Instance().LoadTextureAsync(&tex_essence, "Essence_of_Celerity.png", "img");
 	Resources::Instance().LoadTextureAsync(&tex_grail, "Grail_of_Might.png", "img");
 	Resources::Instance().LoadTextureAsync(&tex_armor, "Armor_of_Salvation.png", "img");
@@ -76,9 +76,9 @@ void MaterialsPanel::Initialize() {
 		price[i] = PRICE_DEFAULT;
 	}
 	
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P235_QuotedItemPrice>(
+	GW::StoC::AddCallback<GW::Packet::StoC::P235_QuotedItemPrice>(
 		[&](GW::Packet::StoC::P235_QuotedItemPrice* pak) -> bool {
-		GW::ItemArray items = GW::Items().GetItemArray();
+		GW::ItemArray items = GW::Items::GetItemArray();
 		if (!items.valid()) return false;
 		if (pak->itemid >= items.size()) return false;
 		GW::Item* item = items[pak->itemid];
@@ -93,29 +93,29 @@ void MaterialsPanel::Initialize() {
 			} else if (last_request_type == Purchase) {
 				// buy the item
 				last_request_price = pak->price;
-				GW::TransactionInfo give;
+				GW::Merchant::TransactionInfo give;
 				give.itemcount = 0;
 				give.itemids = nullptr;
 				give.itemquantities = nullptr;
-				GW::TransactionInfo recv;
+				GW::Merchant::TransactionInfo recv;
 				recv.itemcount = 1;
 				recv.itemids = &pak->itemid;
 				recv.itemquantities = nullptr;
-				GW::Merchant().TransactItems(GW::TransactionType::TraderBuy, pak->price, give, 0, recv);
+				GW::Merchant::TransactItems(GW::Merchant::TransactionType::TraderBuy, pak->price, give, 0, recv);
 				//printf("sending purchase request for %d (price=%d)\n", item->ModelId, pak->price);
 			} else if (last_request_type == Sell) {
 				// sell the item
 				last_request_price = pak->price;
 
-				GW::TransactionInfo give;
+				GW::Merchant::TransactionInfo give;
 				give.itemcount = 1;
 				give.itemids = &pak->itemid;
 				give.itemquantities = nullptr;
-				GW::TransactionInfo recv;
+				GW::Merchant::TransactionInfo recv;
 				recv.itemcount = 0;
 				recv.itemids = nullptr;
 				recv.itemquantities = nullptr;
-				GW::Merchant().TransactItems(GW::TransactionType::TraderSell, 0, give, pak->price, recv);
+				GW::Merchant::TransactItems(GW::Merchant::TransactionType::TraderSell, 0, give, pak->price, recv);
 				//printf("sending sell request for %d (price=%d)\n", item->ModelId, pak->price);
 			}
 		}
@@ -124,14 +124,14 @@ void MaterialsPanel::Initialize() {
 
 	// Those 2 are just gold update packets, but we use them to know when the transaction
 	// was successful. Hopefully people won't deposit or widthrawal exactly that amount while buying.
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P310>(
+	GW::StoC::AddCallback<GW::Packet::StoC::P310>(
 		[&](GW::Packet::StoC::P310* pak) -> bool {
 		if (last_request_type == Sell && last_request_price == pak->gold) {
 			last_request_type = None;
 		}
 		return false;
 	});
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P325>(
+	GW::StoC::AddCallback<GW::Packet::StoC::P325>(
 		[&](GW::Packet::StoC::P325* pak) -> bool {
 		//printf("Removed %d gold\n", pak->gold);
 		if (last_request_type == Purchase && last_request_price == pak->gold) {
@@ -457,7 +457,7 @@ void MaterialsPanel::EnqueueSell(Material material) {
 DWORD MaterialsPanel::RequestPurchaseQuote(Material material) {
 	DWORD modelid = GetModelID(material);
 	GW::Item* item = nullptr;
-	GW::ItemArray items = GW::Items().GetItemArray();
+	GW::ItemArray items = GW::Items::GetItemArray();
 	if (!items.valid()) return false;
 	for (DWORD i = 0; i < items.size(); ++i) {
 		GW::Item* cur = items[i];
@@ -478,15 +478,15 @@ DWORD MaterialsPanel::RequestPurchaseQuote(Material material) {
 	}
 
 	DWORD itemid = item->ItemId;
-	GW::QuoteInfo give;
+	GW::Merchant::QuoteInfo give;
 	give.unknown = 0;
 	give.itemcount = 0;
 	give.itemids = nullptr;
-	GW::QuoteInfo recv;
+	GW::Merchant::QuoteInfo recv;
 	recv.unknown = 0;
 	recv.itemcount = 1;
 	recv.itemids = &itemid;
-	GW::Merchant().RequestQuote(GW::TransactionType::TraderBuy, give, recv);
+	GW::Merchant::RequestQuote(GW::Merchant::TransactionType::TraderBuy, give, recv);
 	//printf("Sent purchase request for %d (item %d)\n", modelid, itemid);
 
 	if (price[material] < 0) price[material] = PRICE_COMPUTING_SENT;
@@ -496,7 +496,7 @@ DWORD MaterialsPanel::RequestPurchaseQuote(Material material) {
 DWORD MaterialsPanel::RequestSellQuote(Material material) {
 	DWORD modelid = GetModelID(material);
 	GW::Item* item = nullptr;
-	GW::ItemArray items = GW::Items().GetItemArray();
+	GW::ItemArray items = GW::Items::GetItemArray();
 	if (!items.valid()) return false;
 	for (DWORD i = 0; i < items.size(); ++i) {
 		GW::Item* cur = items[i];
@@ -517,15 +517,15 @@ DWORD MaterialsPanel::RequestSellQuote(Material material) {
 	}
 
 	DWORD itemid = item->ItemId;
-	GW::QuoteInfo give;
+	GW::Merchant::QuoteInfo give;
 	give.unknown = 0;
 	give.itemcount = 1;
 	give.itemids = &itemid;
-	GW::QuoteInfo recv;
+	GW::Merchant::QuoteInfo recv;
 	recv.unknown = 0;
 	recv.itemcount = 0;
 	recv.itemids = nullptr;
-	GW::Merchant().RequestQuote(GW::TransactionType::TraderSell, give, recv);
+	GW::Merchant::RequestQuote(GW::Merchant::TransactionType::TraderSell, give, recv);
 	//printf("Sent sell request for %d (item %d)\n", modelid, itemid);
 
 	if (price[material] < 0) price[material] = PRICE_COMPUTING_SENT;

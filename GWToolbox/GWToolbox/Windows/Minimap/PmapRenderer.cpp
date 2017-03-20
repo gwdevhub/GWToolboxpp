@@ -33,8 +33,8 @@ void PmapRenderer::DrawSettings() {
 
 void PmapRenderer::Initialize(IDirect3DDevice9* device) {
 	GW::PathingMapArray path_map;
-	if (GW::Map().IsMapLoaded()) {
-		path_map = GW::Map().GetPathingMap();
+	if (GW::Map::IsMapLoaded()) {
+		path_map = GW::Map::GetPathingMap();
 	} else {
 		initialized = false;
 		return; // no map loaded yet, so don't render anything

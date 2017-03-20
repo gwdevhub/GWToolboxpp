@@ -19,42 +19,42 @@
 
 void Minimap::Initialize() {
 	ToolboxWidget::Initialize();
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P041>(
+	GW::StoC::AddCallback<GW::Packet::StoC::P041>(
 		[&](GW::Packet::StoC::P041* pak) -> bool {
 		if (visible) {
 			pingslines_renderer.P041Callback(pak);
 		}
 		return false;
 	});
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P133>(
+	GW::StoC::AddCallback<GW::Packet::StoC::P133>(
 		[&](GW::Packet::StoC::P133* pak) -> bool {
 		if (visible) {
 			pingslines_renderer.P133Callback(pak);
 		}
 		return false;
 	});
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P148>(
+	GW::StoC::AddCallback<GW::Packet::StoC::P148>(
 		[&](GW::Packet::StoC::P148* pak) -> bool {
 		if (visible) {
 			pingslines_renderer.P148Callback(pak);
 		}
 		return false;
 	});
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P216>(
+	GW::StoC::AddCallback<GW::Packet::StoC::P216>(
 		[&](GW::Packet::StoC::P216* pak) -> bool {
 		if (visible) {
 			pingslines_renderer.P216Callback(pak);
 		}
 		return false;
 	});
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P391_InstanceLoadFile>(
+	GW::StoC::AddCallback<GW::Packet::StoC::P391_InstanceLoadFile>(
 		[this](GW::Packet::StoC::P391_InstanceLoadFile* packet) -> bool {
 		pmap_renderer.Invalidate();
 		loading = false;
 		return false;
 	});
 
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P406>(
+	GW::StoC::AddCallback<GW::Packet::StoC::P406>(
 		[&](GW::Packet::StoC::P406* pak) -> bool {
 		loading = true;
 		return false;
@@ -162,7 +162,7 @@ void Minimap::SaveSettings(CSimpleIni* ini) {
 void Minimap::Draw(IDirect3DDevice9* device) {
 	if (!IsActive()) return;
 
-	GW::Agent* me = GW::Agents().GetPlayer();
+	GW::Agent* me = GW::Agents::GetPlayer();
 	if (me == nullptr) return;
 
 	// if not center and want to move, move center towards player
@@ -191,7 +191,7 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 		ImGui::GetWindowDrawList()->AddCallback([](const ImDrawList* parent_list, const ImDrawCmd* cmd) -> void {
 
 			IDirect3DDevice9* device = (IDirect3DDevice9*)cmd->UserCallbackData;
-			GW::Agent* me = GW::Agents().GetPlayer();
+			GW::Agent* me = GW::Agents::GetPlayer();
 			if (me == nullptr) return;
 
 			// Backup the DX9 state
@@ -244,7 +244,7 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 			D3DXMatrixTranslation(&translate_char, -me->X, -me->Y, 0);
 
 			D3DXMATRIX rotate_char;
-			D3DXMatrixRotationZ(&rotate_char, -GW::Cameramgr().GetYaw() + (float)M_PI_2);
+			D3DXMatrixRotationZ(&rotate_char, -GW::CameraMgr::GetYaw() + (float)M_PI_2);
 
 			D3DXMATRIX scaleM, translationM;
 			D3DXMatrixScaling(&scaleM, Instance().scale, Instance().scale, 1.0f);
@@ -289,8 +289,8 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 	ImGui::PopStyleColor();
 
 	if (hero_flag_controls_show
-		&& GW::Map().GetInstanceType() == GW::Constants::InstanceType::Explorable
-		&& GW::Agents().GetHeroAgentID(1) > 0) {
+		&& GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable
+		&& GW::Agents::GetHeroAgentID(1) > 0) {
 
 		if (hero_flag_window_attach) {
 			ImGui::SetNextWindowPos(ImVec2((float)location.x, (float)(location.y + size.y)));
@@ -327,16 +327,16 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 				if (flagged) ImGui::GetCurrentWindow()->Flags ^= ImGuiWindowFlags_ShowBorders;
 
 				if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
-					if (i == 0) GW::Partymgr().UnflagAll();
-					else GW::Partymgr().UnflagHero(i);
+					if (i == 0) GW::PartyMgr::UnflagAll();
+					else GW::PartyMgr::UnflagHero(i);
 				}
 
 			}
 			ImGui::SameLine();
 			if (ImGui::Button("Clear", ImVec2(-1, 0))) {
-				GW::Partymgr().UnflagAll();
+				GW::PartyMgr::UnflagAll();
 				for (unsigned int i = 1; i < num_heroflags; ++i) {
-					GW::Partymgr().UnflagHero(i);
+					GW::PartyMgr::UnflagHero(i);
 				}
 			}
 		}
@@ -346,7 +346,7 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 }
 
 GW::Vector2f Minimap::InterfaceToWorldPoint(Vec2i pos) const {
-	GW::Agent* me = GW::Agents().GetPlayer();
+	GW::Agent* me = GW::Agents::GetPlayer();
 	if (me == nullptr) return GW::Vector2f(0, 0);
 	
 	GW::Vector2f v((float)pos.x, (float)pos.y);
@@ -370,7 +370,7 @@ GW::Vector2f Minimap::InterfaceToWorldPoint(Vec2i pos) const {
 	v /= scale;
 
 	// rotate by current camera rotation
-	float angle = GW::Cameramgr().GetYaw() - (float)M_PI_2;
+	float angle = GW::CameraMgr::GetYaw() - (float)M_PI_2;
 	float x1 = v.x * std::cos(angle) - v.y * std::sin(angle);
 	float y1 = v.x * std::sin(angle) + v.y * std::cos(angle);
 	v = GW::Vector2f(x1, y1);
@@ -399,7 +399,7 @@ GW::Vector2f Minimap::InterfaceToWorldVector(Vec2i pos) const {
 }
 
 void Minimap::SelectTarget(GW::Vector2f pos) {
-	GW::AgentArray agents = GW::Agents().GetAgentArray();
+	GW::AgentArray agents = GW::Agents::GetAgentArray();
 	if (!agents.valid()) return;
 
 	float distance = 600.0f * 600.0f;
@@ -411,7 +411,7 @@ void Minimap::SelectTarget(GW::Vector2f pos) {
 		if (agent->GetIsLivingType() && agent->GetIsDead()) continue;
 		if (agent->GetIsItemType()) continue;
 		if (agent->GetIsSignpostType() && agent->ExtraType != 8141) continue; // allow locked chests
-		float newDistance = GW::Agents().GetSqrDistance(pos, agents[i]->pos);
+		float newDistance = GW::Agents::GetSqrDistance(pos, agents[i]->pos);
 		if (distance > newDistance) {
 			distance = newDistance;
 			closest = i;
@@ -419,7 +419,7 @@ void Minimap::SelectTarget(GW::Vector2f pos) {
 	}
 
 	if (closest > 0) {
-		GW::Agents().ChangeTarget(agents[closest]);
+		GW::Agents::ChangeTarget(agents[closest]);
 	}
 }
 
@@ -451,14 +451,14 @@ bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam) {
 	bool flagged = false;
 	if (flagging[0]) {
 		flagging[0] = false;
-		GW::Partymgr().FlagAll(GW::GamePos(InterfaceToWorldPoint(Vec2i(x, y))));
+		GW::PartyMgr::FlagAll(GW::GamePos(InterfaceToWorldPoint(Vec2i(x, y))));
 		flagged = true;
 	}
 	for (int i = 1; i < 9; ++i) {
 		if (flagging[i]) {
 			flagging[i] = false;
 			flagged = true;
-			GW::Partymgr().FlagHero(i, GW::GamePos(InterfaceToWorldPoint(Vec2i(x, y))));
+			GW::PartyMgr::FlagHero(i, GW::GamePos(InterfaceToWorldPoint(Vec2i(x, y))));
 		}
 	}
 	if (flagged) return true;
@@ -555,8 +555,8 @@ bool Minimap::IsInside(int x, int y) const {
 	// if centered, use radar range
 	if (translation.x == 0 && translation.y == 0) {
 		GW::Vector2f gamepos = InterfaceToWorldPoint(Vec2i(x, y));
-		GW::Agent* me = GW::Agents().GetPlayer();
-		float sqrdst = GW::Agents().GetSqrDistance(me->pos, gamepos);
+		GW::Agent* me = GW::Agents::GetPlayer();
+		float sqrdst = GW::Agents::GetSqrDistance(me->pos, gamepos);
 		return me && sqrdst < GW::Constants::SqrRange::Compass;
 	}
 	return true;
@@ -564,9 +564,9 @@ bool Minimap::IsInside(int x, int y) const {
 bool Minimap::IsActive() const {
 	return visible
 		&& !loading
-		&& GW::Map().IsMapLoaded()
-		&& GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading
-		&& GW::Agents().GetPlayerId() != 0;
+		&& GW::Map::IsMapLoaded()
+		&& GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
+		&& GW::Agents::GetPlayerId() != 0;
 }
 
 void Minimap::RenderSetupProjection(IDirect3DDevice9* device) {

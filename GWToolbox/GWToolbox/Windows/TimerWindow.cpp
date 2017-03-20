@@ -8,9 +8,9 @@
 
 void TimerWindow::Draw(IDirect3DDevice9* pDevice) {
 	if (!visible) return;
-	if (GW::Map().GetInstanceType() == GW::Constants::InstanceType::Loading) return;
+	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
 
-	unsigned long time = GW::Map().GetInstanceTime() / 1000;
+	unsigned long time = GW::Map::GetInstanceTime() / 1000;
 
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(0, 0, 0, 0));
 	ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiSetCond_FirstUseEver);
@@ -25,8 +25,8 @@ void TimerWindow::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::SetCursorPos(cur);
 		ImGui::Text(timer);
 		ImGui::PopFont();
-		if (GW::Map().GetMapID() == GW::Constants::MapID::Urgozs_Warren
-			&& GW::Map().GetInstanceType() == GW::Constants::InstanceType::Explorable) {
+		if (GW::Map::GetMapID() == GW::Constants::MapID::Urgozs_Warren
+			&& GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
 			ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[GuiUtils::FontSize::f16]);
 			ImVec2 cur = ImGui::GetCursorPos();
 			int temp = (time - 1) % 25;

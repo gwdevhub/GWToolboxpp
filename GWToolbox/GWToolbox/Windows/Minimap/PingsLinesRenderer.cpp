@@ -109,16 +109,16 @@ return;
 
 void PingsLinesRenderer::P148Callback(GW::Packet::StoC::P148* pak) {
 	if (pak->Value_id == 20
-		&& pak->caster == GW::Agents().GetPlayerId()
+		&& pak->caster == GW::Agents::GetPlayerId()
 		&& pak->value == 928) {
 		recall_target = pak->target;
 	}
 };
 void PingsLinesRenderer::P216Callback(GW::Packet::StoC::P216* pak) {
-	if (pak->agent_id == GW::Agents().GetPlayerId()) {
+	if (pak->agent_id == GW::Agents::GetPlayerId()) {
 		if (pak->skill_id == (DWORD)GW::Constants::SkillID::Shadow_of_Haste
 			|| pak->skill_id == (DWORD)GW::Constants::SkillID::Shadow_Walk) {
-			shadowstep_location = GW::Agents().GetPlayer()->pos;
+			shadowstep_location = GW::Agents::GetPlayer()->pos;
 		}
 	}
 };
@@ -266,7 +266,7 @@ void PingsLinesRenderer::DrawShadowstepLine(IDirect3DDevice9* device) {
 	if (shadowstep_location.x == 0.0f && shadowstep_location.y == 0.0f) return;
 	if ((color_shadowstep_line & IM_COL32_A_MASK) == 0) return;
 
-	GW::Agent* player = GW::Agents().GetPlayer();
+	GW::Agent* player = GW::Agents::GetPlayer();
 	if (player == nullptr) return;
 
 	EnqueueVertex(shadowstep_location.x, shadowstep_location.y, color_shadowstep_line);
@@ -277,10 +277,10 @@ void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9* device) {
 	if (recall_target == 0) return;
 	if ((color_shadowstep_line & IM_COL32_A_MASK) == 0) return;
 
-	GW::Agent* player = GW::Agents().GetPlayer();
+	GW::Agent* player = GW::Agents::GetPlayer();
 	if (player == nullptr) return;
 
-	GW::AgentArray agents = GW::Agents().GetAgentArray();
+	GW::AgentArray agents = GW::Agents::GetAgentArray();
 	if (!agents.valid()) return;
 	if (recall_target > agents.size()) {
 		recall_target = 0;
@@ -357,19 +357,19 @@ void PingsLinesRenderer::Marker::Initialize(IDirect3DDevice9* device) {
 }
 
 float PingsLinesRenderer::AgentPing::GetX() {
-	GW::Agent* agent = GW::Agents().GetAgentByID(id);
+	GW::Agent* agent = GW::Agents::GetAgentByID(id);
 	if (agent == nullptr) return 0.0f;
 	return agent->X;
 }
 
 float PingsLinesRenderer::AgentPing::GetY() {
-	GW::Agent* agent = GW::Agents().GetAgentByID(id);
+	GW::Agent* agent = GW::Agents::GetAgentByID(id);
 	if (agent == nullptr) return 0.0f;
 	return agent->Y;
 }
 
 float PingsLinesRenderer::AgentPing::GetScale() {
-	GW::Agent* agent = GW::Agents().GetAgentByID(id);
+	GW::Agent* agent = GW::Agents::GetAgentByID(id);
 	if (agent == nullptr) return 0.0f;
 	return 1.0f;
 }
@@ -387,7 +387,7 @@ bool PingsLinesRenderer::OnMouseDown(float x, float y) {
 bool PingsLinesRenderer::OnMouseMove(float x, float y) {
 	if (!mouse_down) return false;
 
-	GW::Agent* me = GW::Agents().GetPlayer();
+	GW::Agent* me = GW::Agents::GetPlayer();
 	if (me == nullptr) return false;
 
 
@@ -434,7 +434,7 @@ bool PingsLinesRenderer::OnMouseUp() {
 		lastsent = TIMER_INIT();
 	} else {
 		BumpSessionID();
-		GW::Agent* me = GW::Agents().GetPlayer();
+		GW::Agent* me = GW::Agents::GetPlayer();
 		queue.push_back(ShortPos(ToShortPos(mouse_x), ToShortPos(mouse_y)));
 		pings.push_front(new TerrainPing(mouse_x, mouse_y));
 	}
@@ -458,7 +458,7 @@ void PingsLinesRenderer::SendQueue() {
 			packet.points[i].y = queue[i].y;
 		}
 
-		GW::CtoS().SendPacket(&packet);
+		GW::CtoS::SendPacket(&packet);
 	}
 
 	queue.clear();

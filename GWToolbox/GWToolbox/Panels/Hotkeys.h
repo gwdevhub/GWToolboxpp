@@ -42,9 +42,9 @@ public:
 	virtual void Execute() = 0;
 
 protected:
-	inline bool isLoading() const { return GW::Map().GetInstanceType() == GW::Constants::InstanceType::Loading; }
-	inline bool isExplorable() const { return GW::Map().GetInstanceType() == GW::Constants::InstanceType::Explorable; }
-	inline bool isOutpost() const { return GW::Map().GetInstanceType() == GW::Constants::InstanceType::Outpost; }
+	inline bool isLoading() const { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading; }
+	inline bool isExplorable() const { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable; }
+	inline bool isOutpost() const { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost; }
 
 	const unsigned int ui_id = 0;	// an internal id to ensure interface consistency
 

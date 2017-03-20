@@ -20,10 +20,10 @@ void PartyDamage::Initialize() {
 	total = 0;
 	send_timer = TIMER_INIT();
 
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P151>(
+	GW::StoC::AddCallback<GW::Packet::StoC::P151>(
 		std::bind(&PartyDamage::DamagePacketCallback, this, std::placeholders::_1));
 
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P230>(
+	GW::StoC::AddCallback<GW::Packet::StoC::P230>(
 		std::bind(&PartyDamage::MapLoadedCallback, this, std::placeholders::_1));
 
 	for (int i = 0; i < MAX_PLAYERS; ++i) {
@@ -40,7 +40,7 @@ void PartyDamage::Terminate() {
 }
 
 bool PartyDamage::MapLoadedCallback(GW::Packet::StoC::P230* packet) {
-	switch (GW::Map().GetInstanceType()) {
+	switch (GW::Map::GetInstanceType()) {
 	case GW::Constants::InstanceType::Outpost:
 		in_explorable = false;
 		break;
@@ -73,7 +73,7 @@ bool PartyDamage::DamagePacketCallback(GW::Packet::StoC::P151* packet) {
 	// ignore heals
 	if (packet->value >= 0) return false;
 
-	GW::AgentArray agents = GW::Agents().GetAgentArray();
+	GW::AgentArray agents = GW::Agents::GetAgentArray();
 
 	// get cause agent
 	GW::Agent* cause = agents[packet->cause_id];
@@ -113,7 +113,7 @@ bool PartyDamage::DamagePacketCallback(GW::Packet::StoC::P151* packet) {
 	if (damage[index].damage == 0) {
 		damage[index].agent_id = packet->cause_id;
 		if (cause->LoginNumber > 0) {
-			damage[index].name = GW::Agents().GetPlayerNameByLoginNumber(cause->LoginNumber);
+			damage[index].name = GW::Agents::GetPlayerNameByLoginNumber(cause->LoginNumber);
 		} else {
 			damage[index].name = L"<A Hero>";
 		}
@@ -134,9 +134,9 @@ bool PartyDamage::DamagePacketCallback(GW::Packet::StoC::P151* packet) {
 void PartyDamage::Update() {
 	if (!send_queue.empty() && TIMER_DIFF(send_timer) > 600) {
 		send_timer = TIMER_INIT();
-		if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading
-			&& GW::Agents().GetPlayer()) {
-			GW::Chat().SendChat(send_queue.front().c_str(), L'#');
+		if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
+			&& GW::Agents::GetPlayer()) {
+			GW::Chat::SendChat(send_queue.front().c_str(), L'#');
 			send_queue.pop();
 		}
 	}
@@ -154,18 +154,18 @@ void PartyDamage::Update() {
 }
 
 void PartyDamage::CreatePartyIndexMap() {
-	if (!GW::Partymgr().GetIsPartyLoaded()) return;
+	if (!GW::PartyMgr::GetIsPartyLoaded()) return;
 	
-	GW::PartyInfo* info = GW::Partymgr().GetPartyInfo();
+	GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
 	if (info == nullptr) return;
 
-	GW::PlayerArray players = GW::Agents().GetPlayerArray();
+	GW::PlayerArray players = GW::Agents::GetPlayerArray();
 	if (!players.valid()) return;
 
 	int index = 0;
 	for (GW::PlayerPartyMember& player : info->players) {
 		long id = players[player.loginnumber].AgentID;
-		if (id == GW::Agents().GetPlayerId()) player_index = index;
+		if (id == GW::Agents::GetPlayerId()) player_index = index;
 		party_index[id] = index++;
 
 		for (GW::HeroPartyMember& hero : info->heroes) {
@@ -181,10 +181,10 @@ void PartyDamage::CreatePartyIndexMap() {
 
 void PartyDamage::Draw(IDirect3DDevice9* device) {	
 	if (!visible) return;
-	if (GW::Map().GetInstanceType() == GW::Constants::InstanceType::Loading) return;
+	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
 	
 	int line_height = row_height > 0 ? row_height : GuiUtils::GetPartyHealthbarHeight();
-	int size = GW::Partymgr().GetPartySize();
+	int size = GW::PartyMgr::GetPartySize();
 	if (size > MAX_PLAYERS) size = MAX_PLAYERS;
 
 	long max_recent = 0;

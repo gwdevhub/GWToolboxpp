@@ -18,7 +18,7 @@ using namespace GW::Constants;
 
 void PconPanel::Initialize() {
 	ToolboxPanel::Initialize();
-	Resources::Instance().LoadTextureAsync(&texture, "cupcake.png", "img");
+	Resources::Instance().LoadTextureAsync(&texture, "cupcake.png", "img/icons");
 
 	const float s = 64.0f; // all icons are 64x64
 
@@ -98,15 +98,15 @@ void PconPanel::Initialize() {
 		pcon->ScanInventory();
 	}
 
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P023>(
+	GW::StoC::AddCallback<GW::Packet::StoC::P023>(
 		[](GW::Packet::StoC::P023* pak) -> bool {
 		Pcon::player_id = pak->unk1;
 		return false;
 	});
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P053_AddExternalBond>(
+	GW::StoC::AddCallback<GW::Packet::StoC::P053_AddExternalBond>(
 		[](GW::Packet::StoC::P053_AddExternalBond* pak) -> bool {
 		if (PconAlcohol::suppress_lunar_skills
-			&& pak->caster_id == GW::Agents().GetPlayerId()
+			&& pak->caster_id == GW::Agents::GetPlayerId()
 			&& pak->receiver_id == 0
 			&& (pak->skill_id == (DWORD)GW::Constants::SkillID::Spiritual_Possession
 				|| pak->skill_id == (DWORD)GW::Constants::SkillID::Lucky_Aura)) {
@@ -115,17 +115,17 @@ void PconPanel::Initialize() {
 		}
 		return false;
 	});
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P095>(
+	GW::StoC::AddCallback<GW::Packet::StoC::P095>(
 		[&](GW::Packet::StoC::P095* pak) -> bool {
 		PconAlcohol::alcohol_level = pak->level;
 		if (enabled) pcon_alcohol->Update();
 		return PconAlcohol::suppress_drunk_effect;
 	});
 
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P147>(
+	GW::StoC::AddCallback<GW::Packet::StoC::P147>(
 		[](GW::Packet::StoC::P147 * pak) -> bool {
 		if (PconAlcohol::suppress_drunk_emotes
-			&& pak->agent_id == GW::Agents().GetPlayerId()
+			&& pak->agent_id == GW::Agents::GetPlayerId()
 			&& pak->unk1 == 22) {
 
 			if (pak->unk2 == 0x33E807E5) pak->unk2 = 0; // kneel
@@ -137,17 +137,17 @@ void PconPanel::Initialize() {
 		}
 		return false;
 	});
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P229>(
+	GW::StoC::AddCallback<GW::Packet::StoC::P229>(
 		[](GW::Packet::StoC::P229* pak) -> bool {
 		if (PconAlcohol::suppress_drunk_emotes
-			&& pak->agent_id == GW::Agents().GetPlayerId()
+			&& pak->agent_id == GW::Agents::GetPlayerId()
 			&& pak->state & 0x2000) { 
 
 			pak->state ^= 0x2000; 
 		}
 		return false;
 	});
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P153>(
+	GW::StoC::AddCallback<GW::Packet::StoC::P153>(
 		[](GW::Packet::StoC::P153* pak) -> bool {
 		if (!PconAlcohol::suppress_drunk_text) return false;
 		wchar_t* m = pak->message;
@@ -243,8 +243,8 @@ void PconPanel::Draw(IDirect3DDevice9* device) {
 }
 
 void PconPanel::Update() {
-	if (current_map_type != GW::Map().GetInstanceType()) {
-		current_map_type = GW::Map().GetInstanceType();
+	if (current_map_type != GW::Map::GetInstanceType()) {
+		current_map_type = GW::Map::GetInstanceType();
 		scan_inventory_timer = TIMER_INIT();
 	}
 
@@ -265,7 +265,7 @@ void PconPanel::Update() {
 
 bool PconPanel::SetEnabled(bool b) {
 	enabled = b;
-	if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading) {
+	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
 		ImGuiWindow* main = ImGui::FindWindowByName(MainWindow::Instance().Name());
 		ImGuiWindow* pcon = ImGui::FindWindowByName(Name());
 		if ((pcon == nullptr || pcon->Collapsed || !visible)
@@ -274,8 +274,8 @@ bool PconPanel::SetEnabled(bool b) {
 			Log::Info("Pcons %s", enabled ? "enabled" : "disabled");
 		}
 	}
-	if (tick_with_pcons && GW::Map().GetInstanceType() == GW::Constants::InstanceType::Outpost) {
-		GW::Partymgr().Tick(enabled);
+	if (tick_with_pcons && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+		GW::PartyMgr::Tick(enabled);
 	}
 	return enabled;
 }

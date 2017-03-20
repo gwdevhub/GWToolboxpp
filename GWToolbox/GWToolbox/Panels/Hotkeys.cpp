@@ -209,7 +209,7 @@ void HotkeySendChat::Execute() {
 	if (channel == L'/') {
 		Log::Info("/%s", message);
 	}
-	GW::Chat().SendChat(message, channel);
+	GW::Chat::SendChat(message, channel);
 }
 
 HotkeyUseItem::HotkeyUseItem(CSimpleIni* ini, const char* section) : TBHotkey(ini, section) {
@@ -235,7 +235,7 @@ void HotkeyUseItem::Draw() {
 void HotkeyUseItem::Execute() {
 	if (isLoading()) return;
 	if (item_id == 0) return;
-	if (!GW::Items().UseItemByModelId(item_id)) {
+	if (!GW::Items::UseItemByModelId(item_id)) {
 		if (name[0] == '\0') {
 			Log::Error("Item #%d not found!", item_id);
 		} else {
@@ -302,7 +302,7 @@ void HotkeyDropUseBuff::Execute() {
 	} else {
 		int slot = GW::Skillbarmgr().GetSkillSlot(id);
 		if (slot >= 0 && GW::Skillbar::GetPlayerSkillbar().Skills[slot].Recharge == 0) {
-			GW::Skillbarmgr().UseSkill(slot, GW::Agents().GetTargetId());
+			GW::Skillbarmgr().UseSkill(slot, GW::Agents::GetTargetId());
 		}
 	}
 }
@@ -377,27 +377,27 @@ void HotkeyAction::Execute() {
 	switch (action) {
 	case HotkeyAction::OpenXunlaiChest:
 		if (isOutpost()) {
-			GW::Items().OpenXunlaiWindow();
+			GW::Items::OpenXunlaiWindow();
 		}
 		break;
 	case HotkeyAction::OpenLockedChest: {
 		if (isExplorable()) {
-			GW::Agent* target = GW::Agents().GetTarget();
+			GW::Agent* target = GW::Agents::GetTarget();
 			if (target && target->Type == 0x200) {
-				GW::Agents().GoSignpost(target);
-				GW::Items().OpenLockedChest();
+				GW::Agents::GoSignpost(target);
+				GW::Items::OpenLockedChest();
 			}
 		}
 		break;
 	}
 	case HotkeyAction::DropGoldCoin:
 		if (isExplorable()) {
-			GW::Items().DropGold(1);
+			GW::Items::DropGold(1);
 		}
 		break;
 	case HotkeyAction::ReapplyLBTitle:
-		GW::Playermgr().RemoveActiveTitle();
-		GW::Playermgr().SetActiveTitle(GW::Constants::TitleID::Lightbringer);
+		GW::PlayerMgr::RemoveActiveTitle();
+		GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Lightbringer);
 		break;
 	}
 }
@@ -426,12 +426,12 @@ void HotkeyTarget::Execute() {
 	if (isLoading()) return;
 	if (id == 0) return;
 
-	GW::AgentArray agents = GW::Agents().GetAgentArray();
+	GW::AgentArray agents = GW::Agents::GetAgentArray();
 	if (!agents.valid()) {
 		return;
 	}
 
-	GW::Agent* me = agents[GW::Agents().GetPlayerId()];
+	GW::Agent* me = agents[GW::Agents::GetPlayerId()];
 	if (me == nullptr) return;
 
 	float distance = GW::Constants::SqrRange::Compass;
@@ -441,7 +441,7 @@ void HotkeyTarget::Execute() {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
 		if (agent->PlayerNumber == id && agent->HP > 0) {
-			float newDistance = GW::Agents().GetSqrDistance(me->pos, agents[i]->pos);
+			float newDistance = GW::Agents::GetSqrDistance(me->pos, agents[i]->pos);
 			if (newDistance < distance) {
 				closest = i;
 				distance = newDistance;
@@ -449,7 +449,7 @@ void HotkeyTarget::Execute() {
 		}
 	}
 	if (closest > 0) {
-		GW::Agents().ChangeTarget(agents[closest]);
+		GW::Agents::ChangeTarget(agents[closest]);
 	}
 }
 
@@ -487,11 +487,11 @@ void HotkeyMove::Draw() {
 void HotkeyMove::Execute() {
 	if (!isExplorable()) return;
 
-	GW::Agent* me = GW::Agents().GetPlayer();
-	if (mapid != 0 && mapid != (DWORD)GW::Map().GetMapID()) return;
-	double dist = GW::Agents().GetDistance(me->pos, GW::Vector2f(x, y));
+	GW::Agent* me = GW::Agents::GetPlayer();
+	if (mapid != 0 && mapid != (DWORD)GW::Map::GetMapID()) return;
+	double dist = GW::Agents::GetDistance(me->pos, GW::Vector2f(x, y));
 	if (range != 0 && dist > range) return;
-	GW::Agents().Move(x, y);
+	GW::Agents::Move(x, y);
 	if (name[0] == '\0') {
 		Log::Info("Moving to (%.0f, %.0f)", x, y);
 	} else {
@@ -522,7 +522,7 @@ void HotkeyDialog::Draw() {
 void HotkeyDialog::Execute() {
 	if (isLoading()) return;
 	if (id == 0) return;
-	GW::Agents().Dialog(id);
+	GW::Agents::Dialog(id);
 	Log::Info("Sent dialog %s (%d)", name, id);
 }
 

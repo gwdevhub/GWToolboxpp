@@ -11,7 +11,7 @@
 
 void HotkeyPanel::Initialize() {
 	ToolboxPanel::Initialize();
-	Resources::Instance().LoadTextureAsync(&texture, "keyboard.png", "img");
+	Resources::Instance().LoadTextureAsync(&texture, "keyboard.png", "img/icons");
 	clickerTimer = TIMER_INIT();
 	dropCoinsTimer = TIMER_INIT();
 }
@@ -243,9 +243,9 @@ void HotkeyPanel::Update() {
 	}
 
 	if (dropCoinsActive && TIMER_DIFF(dropCoinsTimer) > 500) {
-		if (GW::Map().GetInstanceType() == GW::Constants::InstanceType::Explorable) {
+		if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
 			dropCoinsTimer = TIMER_INIT();
-			GW::Items().DropGold(1);
+			GW::Items::DropGold(1);
 		}
 	}
 

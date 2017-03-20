@@ -97,7 +97,7 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device) {
 		Initialize(device);
 	}
 
-	GW::Agent* me = GW::Agents().GetPlayer();
+	GW::Agent* me = GW::Agents::GetPlayer();
 	if (me == nullptr) return;
 
 	device->SetFVF(D3DFVF_CUSTOMVERTEX);

@@ -77,31 +77,31 @@ void ChatCommands::DrawHelp() {
 void ChatCommands::Initialize() {
 	ToolboxModule::Initialize();
 
-	GW::Chat().RegisterCommand(L"age2", ChatCommands::CmdAge2);
-	GW::Chat().RegisterCommand(L"pcons", ChatCommands::CmdPcons);
-	GW::Chat().RegisterCommand(L"dialog", ChatCommands::CmdDialog);
-	GW::Chat().RegisterCommand(L"show", ChatCommands::CmdShow);
-	GW::Chat().RegisterCommand(L"hide", ChatCommands::CmdHide);
-	GW::Chat().RegisterCommand(L"tb", ChatCommands::CmdTB);
-	GW::Chat().RegisterCommand(L"tp", ChatCommands::CmdTP);
-	GW::Chat().RegisterCommand(L"to", ChatCommands::CmdTP);
-	GW::Chat().RegisterCommand(L"travel", ChatCommands::CmdTP);
-	GW::Chat().RegisterCommand(L"zoom", ChatCommands::CmdZoom);
-	GW::Chat().RegisterCommand(L"camera", ChatCommands::CmdCamera);
-	GW::Chat().RegisterCommand(L"cam", ChatCommands::CmdCamera);
-	GW::Chat().RegisterCommand(L"damage", ChatCommands::CmdDamage);
-	GW::Chat().RegisterCommand(L"dmg", ChatCommands::CmdDamage);
-	GW::Chat().RegisterCommand(L"chest", ChatCommands::CmdChest);
-	GW::Chat().RegisterCommand(L"xunlai", ChatCommands::CmdChest);
-	GW::Chat().RegisterCommand(L"afk", ChatCommands::CmdAfk);
-	GW::Chat().RegisterCommand(L"target", ChatCommands::CmdTarget);
-	GW::Chat().RegisterCommand(L"tgt", ChatCommands::CmdTarget);
-	GW::Chat().RegisterCommand(L"useskill", ChatCommands::CmdUseSkill);
-	GW::Chat().RegisterCommand(L"skilluse", ChatCommands::CmdUseSkill);
-	GW::Chat().RegisterCommand(L"borderless", ChatCommands::CmdBorderless);
-	GW::Chat().RegisterCommand(L"flag", ChatCommands::CmdFlag);
+	GW::Chat::RegisterCommand(L"age2", ChatCommands::CmdAge2);
+	GW::Chat::RegisterCommand(L"pcons", ChatCommands::CmdPcons);
+	GW::Chat::RegisterCommand(L"dialog", ChatCommands::CmdDialog);
+	GW::Chat::RegisterCommand(L"show", ChatCommands::CmdShow);
+	GW::Chat::RegisterCommand(L"hide", ChatCommands::CmdHide);
+	GW::Chat::RegisterCommand(L"tb", ChatCommands::CmdTB);
+	GW::Chat::RegisterCommand(L"tp", ChatCommands::CmdTP);
+	GW::Chat::RegisterCommand(L"to", ChatCommands::CmdTP);
+	GW::Chat::RegisterCommand(L"travel", ChatCommands::CmdTP);
+	GW::Chat::RegisterCommand(L"zoom", ChatCommands::CmdZoom);
+	GW::Chat::RegisterCommand(L"camera", ChatCommands::CmdCamera);
+	GW::Chat::RegisterCommand(L"cam", ChatCommands::CmdCamera);
+	GW::Chat::RegisterCommand(L"damage", ChatCommands::CmdDamage);
+	GW::Chat::RegisterCommand(L"dmg", ChatCommands::CmdDamage);
+	GW::Chat::RegisterCommand(L"chest", ChatCommands::CmdChest);
+	GW::Chat::RegisterCommand(L"xunlai", ChatCommands::CmdChest);
+	GW::Chat::RegisterCommand(L"afk", ChatCommands::CmdAfk);
+	GW::Chat::RegisterCommand(L"target", ChatCommands::CmdTarget);
+	GW::Chat::RegisterCommand(L"tgt", ChatCommands::CmdTarget);
+	GW::Chat::RegisterCommand(L"useskill", ChatCommands::CmdUseSkill);
+	GW::Chat::RegisterCommand(L"skilluse", ChatCommands::CmdUseSkill);
+	GW::Chat::RegisterCommand(L"borderless", ChatCommands::CmdBorderless);
+	GW::Chat::RegisterCommand(L"flag", ChatCommands::CmdFlag);
 
-	GW::Chat().RegisterCommand(L"scwiki", 
+	GW::Chat::RegisterCommand(L"scwiki", 
 		[](std::wstring& cmd, std::vector<std::wstring>& args) -> bool {
 		CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 		ShellExecute(NULL, "open", "http://wiki.fbgmguild.com/Main_Page", NULL, NULL, SW_SHOWNORMAL);
@@ -129,7 +129,7 @@ void ChatCommands::Initialize() {
 }
 
 bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
-	if (!GW::Cameramgr().GetCameraUnlock() || IsTyping()) return false;
+	if (!GW::CameraMgr::GetCameraUnlock() || IsTyping()) return false;
 
 	const DWORD keyA = 0x41;
 	const DWORD keyD = 0x44;
@@ -173,16 +173,15 @@ bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 }
 
 void ChatCommands::Update() {
-	GW::CameraMgr cam = GW::Cameramgr();
-	if (cam.GetCameraUnlock() && !IsTyping()) {
-		cam.ForwardMovement(cam_speed_ * move_forward);
-		cam.VerticalMovement(-cam_speed_ * move_up);
-		cam.SideMovement(-cam_speed_ * move_side);
-		cam.UpdateCameraPos();
+	if (GW::CameraMgr::GetCameraUnlock() && !IsTyping()) {
+		GW::CameraMgr::ForwardMovement(cam_speed_ * move_forward);
+		GW::CameraMgr::VerticalMovement(-cam_speed_ * move_up);
+		GW::CameraMgr::SideMovement(-cam_speed_ * move_side);
+		GW::CameraMgr::UpdateCameraPos();
 	}
 
 	if (skill_to_use > 0 && skill_to_use < 9 
-		&& GW::Map().GetInstanceType() == GW::Constants::InstanceType::Explorable
+		&& GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable
 		&& clock() - skill_timer / 1000.0f > skill_usage_delay) {
 
 		GW::Skillbar skillbar = GW::Skillbar::GetPlayerSkillbar();
@@ -191,7 +190,7 @@ void ChatCommands::Update() {
 			if (skill.GetRecharge() == 0) {
 				int slot = skill_to_use - 1;
 				GW::Gamethread().Enqueue([slot] {
-					GW::Skillbarmgr().UseSkill(slot, GW::Agents().GetTargetId());
+					GW::Skillbarmgr().UseSkill(slot, GW::Agents::GetTargetId());
 				});
 
 				GW::Skill skilldata = GW::Skillbarmgr().GetSkillConstantData(skill.SkillId);
@@ -215,7 +214,7 @@ std::wstring ChatCommands::GetLowerCaseArg(std::vector<std::wstring> args, size_
 
 bool ChatCommands::CmdAge2(std::wstring& cmd, std::vector<std::wstring>& args) {
 	char buffer[32];
-	DWORD second = GW::Map().GetInstanceTime() / 1000;
+	DWORD second = GW::Map::GetInstanceTime() / 1000;
 	sprintf_s(buffer, "%02u:%02u:%02u", (second / 3600), (second / 60) % 60, second % 60);
 	Log::Info(buffer);
 	return true;
@@ -259,7 +258,7 @@ bool ChatCommands::CmdDialog(std::wstring& cmd, std::vector<std::wstring>& args)
 	} else {
 		try {
 			long id = std::stol(args[0], 0, 0);
-			GW::Agents().Dialog(id);
+			GW::Agents::Dialog(id);
 			Log::Info("Sent Dialog 0x%X", id);
 		} catch (...) {
 			Log::Error("Invalid argument '%ls', please use an integer or hex value", args[0].c_str());
@@ -269,15 +268,15 @@ bool ChatCommands::CmdDialog(std::wstring& cmd, std::vector<std::wstring>& args)
 }
 
 bool ChatCommands::CmdChest(std::wstring& cmd, std::vector<std::wstring>& args) {
-	switch (GW::Map().GetInstanceType()) {
+	switch (GW::Map::GetInstanceType()) {
 	case GW::Constants::InstanceType::Outpost:
-		GW::Items().OpenXunlaiWindow();
+		GW::Items::OpenXunlaiWindow();
 		break;
 	case GW::Constants::InstanceType::Explorable: {
-		GW::Agent* target = GW::Agents().GetTarget();
+		GW::Agent* target = GW::Agents::GetTarget();
 		if (target && target->Type == 0x200) {
-			GW::Agents().GoSignpost(target);
-			GW::Items().OpenLockedChest();
+			GW::Agents::GoSignpost(target);
+			GW::Items::OpenLockedChest();
 		}
 	}
 		break;
@@ -403,39 +402,39 @@ bool ChatCommands::CmdTP(std::wstring& cmd, std::vector<std::wstring>& args) {
 		} else if (town == L"fav3") {
 			TravelPanel::Instance().TravelFavorite(2);
 		} else if (town == L"toa") {
-			GW::Map().Travel(GW::Constants::MapID::Temple_of_the_Ages, district, district_number);
+			GW::Map::Travel(GW::Constants::MapID::Temple_of_the_Ages, district, district_number);
 		} else if (town == L"doa") {
-			GW::Map().Travel(GW::Constants::MapID::Domain_of_Anguish, district, district_number);
+			GW::Map::Travel(GW::Constants::MapID::Domain_of_Anguish, district, district_number);
 		} else if (town == L"kamadan" || town == L"kama") {
-			GW::Map().Travel(GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost, district, district_number);
+			GW::Map::Travel(GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost, district, district_number);
 		} else if (town == L"embark") {
-			GW::Map().Travel(GW::Constants::MapID::Embark_Beach, district, district_number);
+			GW::Map::Travel(GW::Constants::MapID::Embark_Beach, district, district_number);
 		} else if (town == L"eee") {
-			GW::Map().Travel(GW::Constants::MapID::Embark_Beach, GW::Constants::District::EuropeEnglish, 0);
+			GW::Map::Travel(GW::Constants::MapID::Embark_Beach, GW::Constants::District::EuropeEnglish, 0);
 		} else if (town == L"vlox" || town == L"vloxs") {
-			GW::Map().Travel(GW::Constants::MapID::Vloxs_Falls, district, district_number);
+			GW::Map::Travel(GW::Constants::MapID::Vloxs_Falls, district, district_number);
 		} else if (town == L"gadd" || town == L"gadds") {
-			GW::Map().Travel(GW::Constants::MapID::Gadds_Encampment_outpost, district, district_number);
+			GW::Map::Travel(GW::Constants::MapID::Gadds_Encampment_outpost, district, district_number);
 		} else if (town == L"urgoz") {
-			GW::Map().Travel(GW::Constants::MapID::Urgozs_Warren, district, district_number);
+			GW::Map::Travel(GW::Constants::MapID::Urgozs_Warren, district, district_number);
 		} else if (town == L"deep") {
-			GW::Map().Travel(GW::Constants::MapID::The_Deep, district, district_number);
+			GW::Map::Travel(GW::Constants::MapID::The_Deep, district, district_number);
 		} else if (town == L"gtob") {
-			GW::Map().Travel(GW::Constants::MapID::Great_Temple_of_Balthazar_outpost, district, district_number);
+			GW::Map::Travel(GW::Constants::MapID::Great_Temple_of_Balthazar_outpost, district, district_number);
 		} else if (town == L"la") {
-			GW::Map().Travel(GW::Constants::MapID::Lions_Arch_outpost, district, district_number);
+			GW::Map::Travel(GW::Constants::MapID::Lions_Arch_outpost, district, district_number);
 		} else if (town == L"kaineng") {
-			GW::Map().Travel(GW::Constants::MapID::Kaineng_Center_outpost, district, district_number);
+			GW::Map::Travel(GW::Constants::MapID::Kaineng_Center_outpost, district, district_number);
 		} else if (town == L"eotn") {
-			GW::Map().Travel(GW::Constants::MapID::Eye_of_the_North_outpost, district, district_number);
+			GW::Map::Travel(GW::Constants::MapID::Eye_of_the_North_outpost, district, district_number);
 		} else if (town == L"sif" || town == L"sifhalla") {
-			GW::Map().Travel(GW::Constants::MapID::Sifhalla_outpost, district, district_number);
+			GW::Map::Travel(GW::Constants::MapID::Sifhalla_outpost, district, district_number);
 		} else if (town == L"doom" || town == L"doomlore") {
-			GW::Map().Travel(GW::Constants::MapID::Doomlore_Shrine_outpost, district, district_number);
+			GW::Map::Travel(GW::Constants::MapID::Doomlore_Shrine_outpost, district, district_number);
 		} else {
 			int mapid = wcstol(town.c_str(), nullptr, 0);
 			if (mapid) {
-				GW::Map().Travel((GW::Constants::MapID)mapid, district, district_number);
+				GW::Map::Travel((GW::Constants::MapID)mapid, district, district_number);
 			}
 		}
 	}
@@ -444,12 +443,12 @@ bool ChatCommands::CmdTP(std::wstring& cmd, std::vector<std::wstring>& args) {
 
 bool ChatCommands::CmdZoom(std::wstring& cmd, std::vector<std::wstring>& args) {
 	if (args.empty()) {
-		GW::Cameramgr().SetMaxDist(750.0f);
+		GW::CameraMgr::SetMaxDist();
 	} else {
 		try {
 			long distance = std::stol(args[0]);
 			if (distance > 0) {
-				GW::Cameramgr().SetMaxDist(static_cast<float>(distance));
+				GW::CameraMgr::SetMaxDist(static_cast<float>(distance));
 			} else {
 				Log::Error("Invalid argument '%ls', please use a positive integer value", args[0].c_str());
 			}
@@ -463,33 +462,33 @@ bool ChatCommands::CmdZoom(std::wstring& cmd, std::vector<std::wstring>& args) {
 
 bool ChatCommands::CmdCamera(std::wstring& cmd, std::vector<std::wstring>& args) {
 	if (args.empty()) {
-		GW::Cameramgr().UnlockCam(false);
+		GW::CameraMgr::UnlockCam(false);
 	} else {
 		std::wstring arg0 = GetLowerCaseArg(args, 0);
 		if (arg0 == L"lock") {
-			GW::Cameramgr().UnlockCam(false);
+			GW::CameraMgr::UnlockCam(false);
 		} else if (arg0 == L"unlock") {
-			GW::Cameramgr().UnlockCam(true);
+			GW::CameraMgr::UnlockCam(true);
 			Log::Info("Use W,A,S,D,X,Z for camera movement");
 		} else if (arg0 == L"fog") {
 			std::wstring arg1 = GetLowerCaseArg(args, 1);
 			if (arg1 == L"on") {
-				GW::Cameramgr().SetFog(true);
+				GW::CameraMgr::SetFog(true);
 			} else if (arg1 == L"off") {
-				GW::Cameramgr().SetFog(false);
+				GW::CameraMgr::SetFog(false);
 			}
 		} else if (arg0 == L"fov") {
 			if (args.size() == 1) {
-				GW::Cameramgr().SetFieldOfView(1.308997f);
+				GW::CameraMgr::SetFieldOfView(1.308997f);
 			} else {
 				std::wstring arg1 = GetLowerCaseArg(args, 1);
 				if (arg1 == L"default") {
-					GW::Cameramgr().SetFieldOfView(1.308997f);
+					GW::CameraMgr::SetFieldOfView(1.308997f);
 				} else {
 					try {
 						float fovnew = std::stof(arg1);
 						if (fovnew > 0) {
-							GW::Cameramgr().SetFieldOfView(fovnew);
+							GW::CameraMgr::SetFieldOfView(fovnew);
 							Log::Info("Field of View is %f", fovnew);
 						} else {
 							Log::Error("Invalid argument '%ls', please use a positive value", args[1].c_str());
@@ -541,7 +540,7 @@ bool ChatCommands::CmdDamage(std::wstring& cmd, std::vector<std::wstring>& args)
 }
 
 bool ChatCommands::CmdAfk(std::wstring& cmd, std::vector<std::wstring>& args) {
-	GW::FriendListmgr().SetFriendListStatus(GW::Constants::OnlineStatus::AWAY);
+	GW::FriendListMgr::SetFriendListStatus(GW::Constants::OnlineStatus::AWAY);
 	return false;
 }
 
@@ -550,10 +549,10 @@ bool ChatCommands::CmdTarget(std::wstring& cmd, std::vector<std::wstring>& args)
 		std::wstring arg0 = GetLowerCaseArg(args, 0);
 		if (arg0 == L"closest" || arg0 == L"nearest") {
 			// target nearest agent
-			GW::AgentArray agents = GW::Agents().GetAgentArray();
+			GW::AgentArray agents = GW::Agents::GetAgentArray();
 			if (!agents.valid()) return true;
 
-			GW::Agent* me = GW::Agents().GetPlayer();
+			GW::Agent* me = GW::Agents::GetPlayer();
 			if (me == nullptr) return true;
 
 			float distance = GW::Constants::SqrRange::Compass;
@@ -563,7 +562,7 @@ bool ChatCommands::CmdTarget(std::wstring& cmd, std::vector<std::wstring>& args)
 				GW::Agent* agent = agents[i];
 				if (agent == nullptr) continue;
 				if (agent->PlayerNumber != me->PlayerNumber) {
-					float newDistance = GW::Agents().GetSqrDistance(me->pos, agents[i]->pos);
+					float newDistance = GW::Agents::GetSqrDistance(me->pos, agents[i]->pos);
 					if (newDistance < distance) {
 						closest = i;
 						distance = newDistance;
@@ -571,18 +570,18 @@ bool ChatCommands::CmdTarget(std::wstring& cmd, std::vector<std::wstring>& args)
 				}
 			}
 			if (closest > 0) {
-				GW::Agents().ChangeTarget(agents[closest]);
+				GW::Agents::ChangeTarget(agents[closest]);
 			}
 
 		} else if (arg0 == L"getid") {
-			GW::Agent* target = GW::Agents().GetTarget();
+			GW::Agent* target = GW::Agents::GetTarget();
 			if (target == nullptr) {
 				Log::Error("No target selected!");
 			} else {
 				Log::Info("Target model id (PlayerNumber) is %d", target->PlayerNumber);
 			}
 		} else if (arg0 == L"getpos") {
-			GW::Agent* target = GW::Agents().GetTarget();
+			GW::Agent* target = GW::Agents::GetTarget();
 			if (target == nullptr) {
 				Log::Error("No target selected!");
 			} else {

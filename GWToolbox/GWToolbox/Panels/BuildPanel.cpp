@@ -11,7 +11,7 @@ unsigned int BuildPanel::TeamBuild::cur_ui_id = 0;
 
 void BuildPanel::Initialize() {
 	ToolboxPanel::Initialize();
-	Resources::Instance().LoadTextureAsync(&texture, "list.png", "img");
+	Resources::Instance().LoadTextureAsync(&texture, "list.png", "img/icons");
 	send_timer = TIMER_INIT();
 }
 
@@ -180,11 +180,11 @@ void BuildPanel::Send(const TeamBuild& tbuild, unsigned int idx) {
 
 void BuildPanel::Update() {
 	if (!queue.empty() && TIMER_DIFF(send_timer) > 600) {
-		if (GW::Map().GetInstanceType() != GW::Constants::InstanceType::Loading
-			&& GW::Agents().GetPlayer()) {
+		if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
+			&& GW::Agents::GetPlayer()) {
 
 			send_timer = TIMER_INIT();
-			GW::Chat().SendChat(queue.front().c_str(), '#');
+			GW::Chat::SendChat(queue.front().c_str(), '#');
 			queue.pop();
 		}
 	}

@@ -25,7 +25,7 @@ void ChatFilter::Initialize() {
 	strcpy_s(bycontent_buf, "");
 	//strcpy_s(byauthor_buf, "");
 
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P081>(
+	GW::StoC::AddCallback<GW::Packet::StoC::P081>(
 		[this](GW::Packet::StoC::P081* pak) -> bool {
 
 #ifdef PRINT_CHAT_PACKETS
@@ -42,7 +42,7 @@ void ChatFilter::Initialize() {
 			return true;
 		}
 
-		if (GW::Map().GetInstanceType() == GW::Constants::InstanceType::Outpost
+		if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost
 			&& messagebycontent && ShouldIgnoreByContent(pak)) {
 			// check if the message contains start string (0x107) but not end string(0x1)
 			kill_next_p081 = false;
@@ -80,7 +80,7 @@ void ChatFilter::Initialize() {
 		}
 		return false;
 	});
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P082>(
+	GW::StoC::AddCallback<GW::Packet::StoC::P082>(
 		[this](GW::Packet::StoC::P082* pak) -> bool {
 #ifdef PRINT_CHAT_PACKETS
 		printf("P082: id %d, type %d %s\n", pak->id, pak->type, kill_next_msgdelivery ? "(killed)" : "");
@@ -92,7 +92,7 @@ void ChatFilter::Initialize() {
 		return false;
 	});
 #ifdef PRINT_CHAT_PACKETS
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P083>(
+	GW::StoC::AddCallback<GW::Packet::StoC::P083>(
 		[](GW::Packet::StoC::P083* pak) -> bool {
 		printf("P081: agent_id %d, unk1 %d, unk2 ", pak->agent_id, pak->unk1);
 		for (int i = 0; i < 8 && pak->unk2[i]; ++i) printchar(pak->unk2[i]);
@@ -100,7 +100,7 @@ void ChatFilter::Initialize() {
 		return false;
 	});
 #endif // PRINT_CHAT_PACKETS
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P084>(
+	GW::StoC::AddCallback<GW::Packet::StoC::P084>(
 		[&](GW::Packet::StoC::P084* pak) -> bool {
 #ifdef PRINT_CHAT_PACKETS
 		printf("P081: id %d, name ", pak->id);
@@ -116,7 +116,7 @@ void ChatFilter::Initialize() {
 		return false;
 	});
 
-	GW::StoC().AddGameServerEvent<GW::Packet::StoC::P085>(
+	GW::StoC::AddCallback<GW::Packet::StoC::P085>(
 		[this](GW::Packet::StoC::P085* pak) -> bool {
 #ifdef PRINT_CHAT_PACKETS
 		printf("P085: id %d, type %d %s\n", pak->id, pak->type, kill_next_msgdelivery ? "(killed)" : "");
@@ -280,7 +280,7 @@ bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) {
 				  // 0x7F1 0x9A9D 0xE943 0xB33 0x10A <monster> 0x1 0x10B <rarity> 0x10A <item> 0x1 0x1 0x10F <assignee: playernumber + 0x100>
 				  // <monster> is wchar_t id of several wchars
 				  // <rarity> is 0x108 for common, 0xA40 gold, 0xA42 purple, 0xA43 green
-		GW::Agent* me = GW::Agents().GetPlayer();
+		GW::Agent* me = GW::Agents::GetPlayer();
 		bool forplayer = (me && me->PlayerNumber == GetNumericSegment(pak));
 		bool rare = IsRare(Get2ndSegment(pak));
 		if (forplayer && rare) return self_rare_drops;

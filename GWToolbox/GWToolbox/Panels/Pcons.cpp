@@ -69,7 +69,7 @@ void Pcon::Update(int delay) {
 	if (!enabled) return; // not enabled, do nothing
 	if (delay < 0) delay = Pcon::pcons_delay;
 
-	GW::Agent* player = GW::Agents().GetPlayer();
+	GW::Agent* player = GW::Agents::GetPlayer();
 
 	 // === Use item if possible ===
 	if (player != nullptr
@@ -87,18 +87,18 @@ void Pcon::Update(int delay) {
 			if (used) {
 				timer = TIMER_INIT();
 				if (quantity == 0) { // if we just used the last one
-					mapid = GW::Map().GetMapID();
-					maptype = GW::Map().GetInstanceType();
+					mapid = GW::Map::GetMapID();
+					maptype = GW::Map::GetInstanceType();
 					Log::Warning("Just used the last %s", chat);
 					if (disable_when_not_found) enabled = false;
 				}
 			} else {
 				// we should have used but didn't find the item
 				if (disable_when_not_found) enabled = false;
-				if (mapid != GW::Map().GetMapID()
-					|| maptype != GW::Map().GetInstanceType()) { // only yell at the user once
-					mapid = GW::Map().GetMapID();
-					maptype = GW::Map().GetInstanceType();
+				if (mapid != GW::Map::GetMapID()
+					|| maptype != GW::Map::GetInstanceType()) { // only yell at the user once
+					mapid = GW::Map::GetMapID();
+					maptype = GW::Map::GetInstanceType();
 					Log::Error("Cannot find %s", chat);
 				}
 			}
@@ -107,10 +107,10 @@ void Pcon::Update(int delay) {
 
 	// === Warn the user if zoning into outpost with quantity = 0 or low ===
 	// todo: refill automatically ?
-	if (GW::Map().GetInstanceType() == GW::Constants::InstanceType::Outpost
-		&& (mapid != GW::Map().GetMapID() || maptype != GW::Map().GetInstanceType())) {
-		mapid = GW::Map().GetMapID();
-		maptype = GW::Map().GetInstanceType();
+	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost
+		&& (mapid != GW::Map::GetMapID() || maptype != GW::Map::GetInstanceType())) {
+		mapid = GW::Map::GetMapID();
+		maptype = GW::Map::GetInstanceType();
 
 		if (quantity == 0) {
 			Log::Error("Cannot find %s, please refill or disable", chat);
@@ -126,7 +126,7 @@ void Pcon::ScanInventory() {
 int Pcon::CheckInventory(bool* used) const {
 	int count = 0;
 	int used_qty = 0;
-	GW::Bag** bags = GW::Items().GetBagArray();
+	GW::Bag** bags = GW::Items::GetBagArray();
 	if (bags == nullptr) return -1;
 	for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
 		GW::Bag* bag = bags[bagIndex];
@@ -139,7 +139,7 @@ int Pcon::CheckInventory(bool* used) const {
 						int qtyea = QuantityForEach(item);
 						if (qtyea > 0) {
 							if (used != nullptr && !*used) {
-								GW::Items().UseItem(item);
+								GW::Items::UseItem(item);
 								*used = true;
 								used_qty = qtyea;
 							}
@@ -153,7 +153,7 @@ int Pcon::CheckInventory(bool* used) const {
 	return count - used_qty;
 }
 bool Pcon::CanUseByInstanceType() const {
-	return GW::Map().GetInstanceType() == GW::Constants::InstanceType::Explorable;
+	return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable;
 }
 void Pcon::LoadSettings(CSimpleIni* inifile, const char* section) {
 	char buf_active[256];
@@ -203,14 +203,14 @@ bool PconGeneric::CanUseByEffect() const {
 bool PconCons::CanUseByEffect() const {
 	if (!PconGeneric::CanUseByEffect()) return false;
 
-	if (!GW::Partymgr().GetIsPartyLoaded()) return false;
+	if (!GW::PartyMgr::GetIsPartyLoaded()) return false;
 
-	GW::MapAgentArray mapAgents = GW::Agents().GetMapAgentArray();
+	GW::MapAgentArray mapAgents = GW::Agents::GetMapAgentArray();
 	if (!mapAgents.valid()) return false;
 
-	int n_players = GW::Agents().GetAmountOfPlayersInInstance();
+	int n_players = GW::Agents::GetAmountOfPlayersInInstance();
 	for (int i = 1; i <= n_players; ++i) {
-		DWORD currentPlayerAgID = GW::Agents().GetAgentIdByLoginNumber(i);
+		DWORD currentPlayerAgID = GW::Agents::GetAgentIdByLoginNumber(i);
 		if (currentPlayerAgID <= 0) return false;
 		if (currentPlayerAgID >= mapAgents.size()) return false;
 		if (mapAgents[currentPlayerAgID].GetIsDead()) return false;
@@ -221,10 +221,10 @@ bool PconCons::CanUseByEffect() const {
 
 // ================================================
 bool PconCity::CanUseByInstanceType() const {
-	return GW::Map().GetInstanceType() == GW::Constants::InstanceType::Outpost;
+	return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost;
 }
 bool PconCity::CanUseByEffect() const {
-	GW::Agent* player = GW::Agents().GetPlayer();
+	GW::Agent* player = GW::Agents::GetPlayer();
 	if (player == nullptr) return false;
 	if (player->MoveX == 0.0f && player->MoveY == 0.0f) return false;
 

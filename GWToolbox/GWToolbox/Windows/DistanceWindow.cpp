@@ -13,10 +13,10 @@ void DistanceWindow::Draw(IDirect3DDevice9* pDevice) {
 	if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, true))) {
 		static char dist_perc[32];
 		static char dist_abs[32];
-		GW::Agent* me = GW::Agents().GetPlayer();
-		GW::Agent* target = GW::Agents().GetTarget();
+		GW::Agent* me = GW::Agents::GetPlayer();
+		GW::Agent* target = GW::Agents::GetTarget();
 		if (me && target && me != target) {
-			float dist = GW::Agents().GetDistance(me->pos, target->pos);
+			float dist = GW::Agents::GetDistance(me->pos, target->pos);
 			sprintf_s(dist_perc, "%2.0f %s", dist * 100 / GW::Constants::Range::Compass, "%%");
 			sprintf_s(dist_abs, "%.0f", dist);
 

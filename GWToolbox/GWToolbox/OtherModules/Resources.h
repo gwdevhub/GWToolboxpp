@@ -28,6 +28,7 @@ public:
 
 	//bool EnsureFileExists(const char* name, const char* folder = nullptr);
 
+	// folder should not contain a trailing slash
 	void LoadTextureAsync(IDirect3DTexture9** tex,
 		const char* name, const char* folder = nullptr);
 

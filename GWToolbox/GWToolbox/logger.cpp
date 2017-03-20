@@ -11,9 +11,9 @@
 #include "Defines.h"
 #include "GuiUtils.h"
 
-#define CHAN_WARNING GW::Channel::CHANNEL_GWCA2
-#define CHAN_INFO GW::Channel::CHANNEL_GWCA3
-#define CHAN_ERROR GW::Channel::CHANNEL_GWCA4
+#define CHAN_WARNING GW::Chat::Channel::CHANNEL_GWCA2
+#define CHAN_INFO GW::Chat::Channel::CHANNEL_GWCA3
+#define CHAN_ERROR GW::Chat::Channel::CHANNEL_GWCA4
 
 #if _DEBUG
 #define LOGFILE stdout
@@ -37,9 +37,9 @@ void Log::InitializeLog() {
 }
 
 void Log::InitializeChat() {
-	GW::Chat().SetMessageColor(CHAN_WARNING, 0xFFFFFF44); // warning
-	GW::Chat().SetMessageColor(CHAN_INFO, 0xFFFFFFFF); // info
-	GW::Chat().SetMessageColor(CHAN_ERROR, 0xFFFF4444); // error
+	GW::Chat::SetMessageColor(CHAN_WARNING, 0xFFFFFF44); // warning
+	GW::Chat::SetMessageColor(CHAN_INFO, 0xFFFFFFFF); // info
+	GW::Chat::SetMessageColor(CHAN_ERROR, 0xFFFF4444); // error
 }
 
 void Log::Terminate() {
@@ -88,15 +88,15 @@ void Log::LogW(const wchar_t* msg, ...) {
 }
 
 // === Game chat logging ===
-static void _vchatlog(GW::Channel chan, const char* format, va_list argv) {
+static void _vchatlog(GW::Chat::Channel chan, const char* format, va_list argv) {
 	char buf1[256];
 	vsprintf_s(buf1, format, argv);
 
 	char buf2[256];
 	_snprintf(buf2, 256, "<c=#00ccff>GWToolbox++</c>: %s", buf1);
-	GW::Chat().WriteChat(chan, buf2);
+	GW::Chat::WriteChat(chan, buf2);
 
-	const char* c = [](GW::Channel chan) -> const char* {
+	const char* c = [](GW::Chat::Channel chan) -> const char* {
 		switch (chan) {
 		case CHAN_INFO: return "Info";
 		case CHAN_WARNING: return "Warning";

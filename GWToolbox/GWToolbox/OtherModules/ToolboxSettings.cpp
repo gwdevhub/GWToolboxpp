@@ -41,10 +41,10 @@ void ToolboxSettings::Update() {
 	// save location data
 	if (save_location_data && TIMER_DIFF(location_timer) > 1000) {
 		location_timer = TIMER_INIT();
-		if (GW::Map().GetInstanceType() == GW::Constants::InstanceType::Explorable
-			&& GW::Agents().GetPlayer() != nullptr
-			&& GW::Map().GetInstanceTime() > 3000) {
-			GW::Constants::MapID current = GW::Map().GetMapID();
+		if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable
+			&& GW::Agents::GetPlayer() != nullptr
+			&& GW::Map::GetInstanceTime() > 3000) {
+			GW::Constants::MapID current = GW::Map::GetMapID();
 			if (location_current_map != current) {
 				location_current_map = current;
 
@@ -70,7 +70,7 @@ void ToolboxSettings::Update() {
 				}
 
 				std::string prof_string = "";
-				GW::Agent* me = GW::Agents().GetPlayer();
+				GW::Agent* me = GW::Agents::GetPlayer();
 				if (me) {
 					prof_string += " - ";
 					prof_string += GW::Constants::GetProfessionAcronym(
@@ -96,9 +96,9 @@ void ToolboxSettings::Update() {
 				location_file.open(GuiUtils::getSubPath(filename, "location logs").c_str());
 			}
 
-			GW::Agent* me = GW::Agents().GetPlayer();
+			GW::Agent* me = GW::Agents::GetPlayer();
 			if (location_file.is_open() && me != nullptr) {
-				location_file << "Time=" << GW::Map().GetInstanceTime();
+				location_file << "Time=" << GW::Map::GetInstanceTime();
 				location_file << " X=" << me->X;
 				location_file << " Y=" << me->Y;
 				location_file << "\n";
