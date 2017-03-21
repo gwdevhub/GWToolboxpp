@@ -52,7 +52,7 @@ void SettingsPanel::Draw(IDirect3DDevice9* pDevice) {
 					ImGui::Bullet(); ImGui::Text("CTRL+Mouse Wheel to zoom window contents.");
 				}
 				ImGui::Bullet(); ImGui::Text("TAB/SHIFT+TAB to cycle through keyboard editable fields.");
-				ImGui::Bullet(); ImGui::Text("CTRL+Click on a slider or drag box to input text.");
+				ImGui::Bullet(); ImGui::Text("CTRL+Click or Double Click on a slider or drag box to input text.");
 				ImGui::Bullet(); ImGui::Text(
 					"While editing text:\n"
 					"- Hold SHIFT or use mouse to select text\n"
