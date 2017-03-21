@@ -33,6 +33,7 @@ void CustomRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 			lines.back().p2.x = (float)inifile->GetDoubleValue(section, "x2", 0.0);
 			lines.back().p2.y = (float)inifile->GetDoubleValue(section, "y2", 0.0);
 			lines.back().map = (GW::Constants::MapID)inifile->GetLongValue(section, "map", 0);
+			lines.back().visible = inifile->GetBoolValue(section, "visible", true);
 			inifile->Delete(section, nullptr);
 		}
 		if (strncmp(section, "custommarker", 12) == 0) {
@@ -42,6 +43,7 @@ void CustomRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 			markers.back().size = (float)inifile->GetDoubleValue(section, "size", 0.0);
 			markers.back().shape = (Shape)inifile->GetLongValue(section, "shape", 0);
 			markers.back().map = (GW::Constants::MapID)inifile->GetLongValue(section, "map", 0);
+			markers.back().visible = inifile->GetBoolValue(section, "visible", true);
 			inifile->Delete(section, nullptr);
 		}
 	}
@@ -74,6 +76,7 @@ void CustomRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 		inifile->SetDoubleValue(section, "x2", line.p2.x);
 		inifile->SetDoubleValue(section, "y2", line.p2.y);
 		inifile->SetLongValue(section, "map", (long)line.map);
+		inifile->SetBoolValue(section, "visible", line.visible);
 	}
 	for (unsigned i = 0; i < markers.size(); ++i) {
 		const CustomMarker& marker = markers[i];
@@ -85,6 +88,7 @@ void CustomRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 		inifile->SetDoubleValue(section, "size", marker.size);
 		inifile->SetLongValue(section, "shape", marker.shape);
 		inifile->SetLongValue(section, "map", (long)marker.map);
+		inifile->SetBoolValue(section, "visible", marker.visible);
 	}
 
 	inifile->SaveFile(GuiUtils::getPath(IniFilename).c_str());
@@ -100,13 +104,17 @@ void CustomRenderer::DrawSettings() {
 		Invalidate();
 	}
 	if (Colors::DrawSetting("Color", &color)) Invalidate();
+	ImGui::Text("Note: custom markers are stored in 'Markers.ini' in settings folder. You can share the file with other players or paste other people's markers into it.");
 	float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
 	ImGui::PushID("lines");
 	for (unsigned i = 0; i < lines.size(); ++i) {
 		bool remove = false;
 		CustomLine& line = lines[i];
 		ImGui::PushID(i);
-		ImGui::PushItemWidth((ImGui::CalcItemWidth() - spacing * 4) / 5);
+		ImGui::Checkbox("##visible", &line.visible);
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Visible");
+		ImGui::SameLine(0.0f, spacing);
+		ImGui::PushItemWidth((ImGui::CalcItemWidth() - ImGui::GetTextLineHeightWithSpacing() - spacing * 5) / 5);
 		ImGui::DragFloat("##x1", &line.p1.x, 1.0f, 0.0f, 0.0f, "%.0f");
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Line X 1");
 		ImGui::SameLine(0.0f, spacing);
@@ -141,7 +149,10 @@ void CustomRenderer::DrawSettings() {
 		bool remove = false;
 		CustomMarker& marker = markers[i];
 		ImGui::PushID(i);
-		ImGui::PushItemWidth((ImGui::CalcItemWidth() - spacing * 4) / 5);
+		ImGui::Checkbox("##visible", &marker.visible);
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Visible");
+		ImGui::SameLine(0.0f, spacing);
+		ImGui::PushItemWidth((ImGui::CalcItemWidth() - ImGui::GetTextLineHeightWithSpacing() - spacing * 5) / 5);
 		ImGui::DragFloat("##x", &marker.pos.x, 1.0f, 0.0f, 0.0f, "%.0f");
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Marker X Position");
 		ImGui::SameLine(0.0f, spacing);

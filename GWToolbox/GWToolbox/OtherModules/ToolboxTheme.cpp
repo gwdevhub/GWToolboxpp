@@ -127,7 +127,7 @@ void ToolboxTheme::DrawSettingInternal() {
 		const ImGuiStyle default_style = DefaultTheme(); // Default style
 		style = default_style;
 	}
-
+	ImGui::Text("Note: theme is stored in 'Theme.ini' in settings folder. You can share the file or parts of it with other people.");
 	ImGui::DragFloat("Global Alpha", &style.Alpha, 0.005f, 0.20f, 1.0f, "%.2f");
 	ImGui::DragFloat("Global Font Scale", &ImGui::GetIO().FontGlobalScale, 0.005f, 0.3f, 2.0f, "%.1f");
 	ImGui::Text("Sizes");
