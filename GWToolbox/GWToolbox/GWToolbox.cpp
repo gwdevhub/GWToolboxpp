@@ -74,7 +74,7 @@ namespace {
 		char pad_00A4[4048]; //0x00A4
 	}; //Size: 0x1074
 
-	typedef bool(__fastcall *GwEndScene_t)(gwdx* ctx);
+	typedef bool(__fastcall *GwEndScene_t)(gwdx* ctx, void* unk);
 	typedef bool(__fastcall *GwReset_t)(gwdx* ctx);
 
 	GW::THook<GwEndScene_t> endscene_hook;
@@ -87,13 +87,13 @@ HRESULT WINAPI Present(IDirect3DDevice9* pDev, CONST RECT* pSourceRect, CONST RE
 HRESULT WINAPI EndScene(IDirect3DDevice9* dev);
 HRESULT WINAPI ResetScene(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETERS* pPresentationParameters);
 
-bool __fastcall GwEndScene(gwdx* ctx) {
+bool __fastcall GwEndScene(gwdx* ctx, void* unk) {
 	static GwEndScene_t original = endscene_hook.Original();
 	GWToolbox::Draw(ctx->device);
 	if (endscene_hook.Valid()) {
-		return original(ctx);
+		return original(ctx, unk);
 	} else {
-		return original_func(ctx);
+		return original_func(ctx, unk);
 	}
 }
 
@@ -119,7 +119,7 @@ DWORD __stdcall ThreadEntry(LPVOID dllmodule) {
 		return EXIT_SUCCESS;
 	}
 
-	printf("DxDevice = %X\n", (DWORD)(GW::DirectXHooker::Initialize()));
+	//printf("DxDevice = %X\n", (DWORD)(GW::DirectXHooker::Initialize()));
 
 	Log::Log("Installing dx hooks\n");
 	//GW::DirectXHooker::AddHook(GW::dx9::kPresent, Present);
