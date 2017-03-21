@@ -4,9 +4,6 @@
 
 #include <vector>
 
-#include <GWCA\GWCA.h>
-#include <GWCA_DX\DirectXHooker.h>
-
 #include "ToolboxModule.h"
 
 DWORD __stdcall SafeThreadEntry(LPVOID mod);

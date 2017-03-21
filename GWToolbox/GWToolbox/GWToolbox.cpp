@@ -20,7 +20,7 @@
 #include <GWCA\Managers\PlayerMgr.h>
 #include <GWCA\Managers\SkillbarMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
-#include <GWCA_DX\DirectXHooker.h>
+#include <GWCA\Managers\Render.h>
 
 #include <imgui.h>
 #include <imgui\examples\directx9_example\imgui_impl_dx9.h>
@@ -61,45 +61,6 @@ namespace {
 	bool drawing_world = 0;
 	int drawing_passes = 0;
 	int last_drawing_passes = 0;
-
-	struct gwdx {
-		char pad_0000[24]; //0x0000
-		void* unk; //0x0018 might not be a func pointer, seems like it tho lol
-		char pad_001C[44]; //0x001C
-		wchar_t gpuname[32]; //0x0048
-		char pad_0088[8]; //0x0088
-		IDirect3DDevice9* device; //0x0090 IDirect3DDevice9*
-		char pad_0094[12]; //0x0094
-		unsigned int framecount; //0x00A0
-		char pad_00A4[4048]; //0x00A4
-	}; //Size: 0x1074
-
-	typedef bool(__fastcall *GwEndScene_t)(gwdx* ctx, void* unk);
-	typedef bool(__fastcall *GwReset_t)(gwdx* ctx);
-
-	GW::THook<GwEndScene_t> endscene_hook;
-	GW::THook<GwReset_t> reset_hook;
-
-	GwEndScene_t original_func = nullptr;
-}
-
-HRESULT WINAPI Present(IDirect3DDevice9* pDev, CONST RECT* pSourceRect, CONST RECT* pDestRect, HWND hDestWindowOverride, CONST RGNDATA* pDirtyRegion);
-HRESULT WINAPI EndScene(IDirect3DDevice9* dev);
-HRESULT WINAPI ResetScene(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETERS* pPresentationParameters);
-
-bool __fastcall GwEndScene(gwdx* ctx, void* unk) {
-	static GwEndScene_t original = endscene_hook.Original();
-	GWToolbox::Draw(ctx->device);
-	if (endscene_hook.Valid()) {
-		return original(ctx, unk);
-	} else {
-		return original_func(ctx, unk);
-	}
-}
-
-bool __fastcall GwReset(gwdx* ctx) {
-	ImGui_ImplDX9_InvalidateDeviceObjects();
-	return reset_hook.Original()(ctx);
 }
 
 DWORD __stdcall SafeThreadEntry(LPVOID dllmodule) {
@@ -119,21 +80,13 @@ DWORD __stdcall ThreadEntry(LPVOID dllmodule) {
 		return EXIT_SUCCESS;
 	}
 
-	//printf("DxDevice = %X\n", (DWORD)(GW::DirectXHooker::Initialize()));
-
 	Log::Log("Installing dx hooks\n");
-	//GW::DirectXHooker::AddHook(GW::dx9::kPresent, Present);
-	//GW::DirectXHooker::AddHook(GW::dx9::kEndScene, EndScene);
-	//GW::DirectXHooker::AddHook(GW::dx9::kReset, ResetScene);
-	//GW::Render::DetourEndScene(GwEndScene);
-	//GW::Render::DetourReset(GwReset);
-	original_func = (GwEndScene_t)GW::Scanner::Find("\x55\x8B\xEC\x83\xEC\x28\x56\x8B\xF1\x57\x89\x55\xF8", "xxxxxxxxxxxxx", 0);
-	printf("GW EndScene address = 0x%X\n", (DWORD)original_func);
-	endscene_hook.Detour(original_func, GwEndScene);
-
-	GwReset_t original_reset = (GwReset_t)GW::Scanner::Find("\x55\x8B\xEC\x81\xEC\x98\x00\x00\x00\x53\x56\x57\x8B\xF1\x33\xD2", "xxxxxxxxxxxxxxxx", 0);
-	printf("GW Reset address = 0x%X\n", (DWORD)original_reset);
-	reset_hook.Detour(original_reset, GwReset);
+	GW::Render::SetRenderCallback([](IDirect3DDevice9* device) {
+		GWToolbox::Instance().Draw(device);
+	});
+	GW::Render::SetResetCallback([](IDirect3DDevice9* device) {
+		ImGui_ImplDX9_InvalidateDeviceObjects();
+	});
 
 	Log::Log("Installed dx hooks\n");
 
@@ -372,24 +325,6 @@ void GWToolbox::Terminate() {
 	}
 }
 
-HRESULT WINAPI EndScene(IDirect3DDevice9* device) {
-	printf("[%d] EndScene\n", clock());
-
-	return GW::DirectXHooker::Original<GW::dx9::EndScene_t>(GW::dx9::kEndScene)(device);
-}
-
-HRESULT WINAPI Present(IDirect3DDevice9* pDev, 
-	CONST RECT* pSourceRect, 
-	CONST RECT* pDestRect, 
-	HWND hDestWindowOverride, 
-	CONST RGNDATA* pDirtyRegion) {
-
-	printf("[%d] Present\n", clock());
-
-	return GW::DirectXHooker::Original<GW::dx9::Present_t>(GW::dx9::kPresent)(pDev,
-		pSourceRect, pDestRect, hDestWindowOverride, pDirtyRegion);
-}
-
 void GWToolbox::Draw(IDirect3DDevice9* device) {
 
 	static HWND gw_window_handle = 0;
@@ -443,18 +378,5 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 		Log::Log("Restoring input hook\n");
 		SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
 		Log::Log("Destroying directX hook\n");
-		endscene_hook.Retour();
-		reset_hook.Retour();
 	}
-}
-
-HRESULT WINAPI ResetScene(IDirect3DDevice9* pDevice,
-	D3DPRESENT_PARAMETERS* pPresentationParameters) {
-
-	drawing_world = true;
-
-	ImGui_ImplDX9_InvalidateDeviceObjects();
-
-	return GW::DirectXHooker::Original<GW::dx9::Reset_t>(
-		GW::dx9::kReset)(pDevice, pPresentationParameters);
 }
