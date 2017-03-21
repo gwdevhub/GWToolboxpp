@@ -90,9 +90,6 @@ DWORD __stdcall ThreadEntry(LPVOID dllmodule) {
 
 	Log::Log("Installed dx hooks\n");
 
-	Log::Log("oldwndproc %X\n", OldWndProc);
-	Log::Log("Installed input event handler\n");
-
 	Log::InitializeChat();
 
 	Log::Log("Installed chat hooks\n");
@@ -332,8 +329,10 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 	// === initialization ===
 	if (!tb_initialized && !GWToolbox::Instance().must_self_destruct) {
 
+		Log::Log("installing event handler\n");
 		gw_window_handle = GW::MemoryMgr::GetGWWindowHandle();
 		OldWndProc = SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)SafeWndProc);
+		Log::Log("Installed input event handler, oldwndproc = %d\n", OldWndProc);
 
 		ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), device);
 		ImGuiIO& io = ImGui::GetIO();

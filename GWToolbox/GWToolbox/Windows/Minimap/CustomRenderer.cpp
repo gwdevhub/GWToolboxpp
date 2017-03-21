@@ -4,7 +4,11 @@
 #include <GWCA\GWCA.h>
 #include <GWCA\Managers\MapMgr.h>
 
+#include <GuiUtils.h>
+
 Color CustomRenderer::color = 0xFF00FFFF;
+
+#define IniFilename "Markers.ini"
 
 void CustomRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	color = Colors::Load(ini, section, "color_custom_markers", 0xFFFFFFFF);
@@ -14,28 +18,31 @@ void CustomRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	lines.clear();
 	markers.clear();
 
+	if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
+	inifile->LoadFile(GuiUtils::getPath(IniFilename).c_str());
+
 	// then load new
 	CSimpleIni::TNamesDepend entries;
-	ini->GetAllSections(entries);
+	inifile->GetAllSections(entries);
 	for (CSimpleIni::Entry& entry : entries) {
 		const char* section = entry.pItem;
 		if (strncmp(section, "customline", 10) == 0) {
-			lines.push_back(CustomLine(ini->GetValue(section, "name", "line")));
-			lines.back().p1.x = (float)ini->GetDoubleValue(section, "x1", 0.0);
-			lines.back().p1.y = (float)ini->GetDoubleValue(section, "y1", 0.0);
-			lines.back().p2.x = (float)ini->GetDoubleValue(section, "x2", 0.0);
-			lines.back().p2.y = (float)ini->GetDoubleValue(section, "y2", 0.0);
-			lines.back().map = (GW::Constants::MapID)ini->GetLongValue(section, "map", 0);
-			ini->Delete(section, nullptr);
+			lines.push_back(CustomLine(inifile->GetValue(section, "name", "line")));
+			lines.back().p1.x = (float)inifile->GetDoubleValue(section, "x1", 0.0);
+			lines.back().p1.y = (float)inifile->GetDoubleValue(section, "y1", 0.0);
+			lines.back().p2.x = (float)inifile->GetDoubleValue(section, "x2", 0.0);
+			lines.back().p2.y = (float)inifile->GetDoubleValue(section, "y2", 0.0);
+			lines.back().map = (GW::Constants::MapID)inifile->GetLongValue(section, "map", 0);
+			inifile->Delete(section, nullptr);
 		}
 		if (strncmp(section, "custommarker", 12) == 0) {
-			markers.push_back(CustomMarker(ini->GetValue(section, "name", "marker")));
-			markers.back().pos.x = (float)ini->GetDoubleValue(section, "x", 0.0);
-			markers.back().pos.y = (float)ini->GetDoubleValue(section, "y", 0.0);
-			markers.back().size = (float)ini->GetDoubleValue(section, "size", 0.0);
-			markers.back().shape = (Shape)ini->GetLongValue(section, "shape", 0);
-			markers.back().map = (GW::Constants::MapID)ini->GetLongValue(section, "map", 0);
-			ini->Delete(section, nullptr);
+			markers.push_back(CustomMarker(inifile->GetValue(section, "name", "marker")));
+			markers.back().pos.x = (float)inifile->GetDoubleValue(section, "x", 0.0);
+			markers.back().pos.y = (float)inifile->GetDoubleValue(section, "y", 0.0);
+			markers.back().size = (float)inifile->GetDoubleValue(section, "size", 0.0);
+			markers.back().shape = (Shape)inifile->GetLongValue(section, "shape", 0);
+			markers.back().map = (GW::Constants::MapID)inifile->GetLongValue(section, "map", 0);
+			inifile->Delete(section, nullptr);
 		}
 	}
 }
@@ -45,14 +52,14 @@ void CustomRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 	// clear markers from ini
 	// then load new
 	CSimpleIni::TNamesDepend entries;
-	ini->GetAllSections(entries);
+	inifile->GetAllSections(entries);
 	for (CSimpleIni::Entry& entry : entries) {
 		const char* section = entry.pItem;
 		if (strncmp(section, "customline", 10) == 0) {
-			ini->Delete(section, nullptr);
+			inifile->Delete(section, nullptr);
 		}
 		if (strncmp(section, "custommarker", 12) == 0) {
-			ini->Delete(section, nullptr);
+			inifile->Delete(section, nullptr);
 		}
 	}
 
@@ -61,24 +68,26 @@ void CustomRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 		const CustomLine& line = lines[i];
 		char section[32];
 		sprintf_s(section, "customline%03d", i);
-		ini->SetValue(section, "name", line.name);
-		ini->SetDoubleValue(section, "x1", line.p1.x);
-		ini->SetDoubleValue(section, "y1", line.p1.y);
-		ini->SetDoubleValue(section, "x2", line.p2.x);
-		ini->SetDoubleValue(section, "y2", line.p2.y);
-		ini->SetLongValue(section, "map", (long)line.map);
+		inifile->SetValue(section, "name", line.name);
+		inifile->SetDoubleValue(section, "x1", line.p1.x);
+		inifile->SetDoubleValue(section, "y1", line.p1.y);
+		inifile->SetDoubleValue(section, "x2", line.p2.x);
+		inifile->SetDoubleValue(section, "y2", line.p2.y);
+		inifile->SetLongValue(section, "map", (long)line.map);
 	}
 	for (unsigned i = 0; i < markers.size(); ++i) {
 		const CustomMarker& marker = markers[i];
 		char section[32];
 		sprintf_s(section, "custommarker%03d", i);
-		ini->SetValue(section, "name", marker.name);
-		ini->SetDoubleValue(section, "x", marker.pos.x);
-		ini->SetDoubleValue(section, "y", marker.pos.y);
-		ini->SetDoubleValue(section, "size", marker.size);
-		ini->SetLongValue(section, "shape", marker.shape);
-		ini->SetLongValue(section, "map", (long)marker.map);
+		inifile->SetValue(section, "name", marker.name);
+		inifile->SetDoubleValue(section, "x", marker.pos.x);
+		inifile->SetDoubleValue(section, "y", marker.pos.y);
+		inifile->SetDoubleValue(section, "size", marker.size);
+		inifile->SetLongValue(section, "shape", marker.shape);
+		inifile->SetLongValue(section, "map", (long)marker.map);
 	}
+
+	inifile->SaveFile(GuiUtils::getPath(IniFilename).c_str());
 }
 void CustomRenderer::Invalidate() {
 	initialized = false;

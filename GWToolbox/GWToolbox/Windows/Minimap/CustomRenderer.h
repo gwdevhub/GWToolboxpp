@@ -66,4 +66,6 @@ private:
 
 	std::vector<CustomLine> lines;
 	std::vector<CustomMarker> markers;
+
+	CSimpleIni* inifile = nullptr;
 };
