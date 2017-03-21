@@ -57,16 +57,50 @@ namespace {
 	long OldWndProc = 0;
 	bool tb_initialized = false;
 	bool tb_destroyed = false;
-	GW::dx9::EndScene_t endscene_orig = nullptr;
 
 	bool drawing_world = 0;
 	int drawing_passes = 0;
 	int last_drawing_passes = 0;
+
+	struct gwdx {
+		char pad_0000[24]; //0x0000
+		void* unk; //0x0018 might not be a func pointer, seems like it tho lol
+		char pad_001C[44]; //0x001C
+		wchar_t gpuname[32]; //0x0048
+		char pad_0088[8]; //0x0088
+		IDirect3DDevice9* device; //0x0090 IDirect3DDevice9*
+		char pad_0094[12]; //0x0094
+		unsigned int framecount; //0x00A0
+		char pad_00A4[4048]; //0x00A4
+	}; //Size: 0x1074
+
+	typedef bool(__fastcall *GwEndScene_t)(gwdx* ctx);
+	typedef bool(__fastcall *GwReset_t)(gwdx* ctx);
+
+	GW::THook<GwEndScene_t> endscene_hook;
+	GW::THook<GwReset_t> reset_hook;
+
+	GwEndScene_t original_func = nullptr;
 }
 
 HRESULT WINAPI Present(IDirect3DDevice9* pDev, CONST RECT* pSourceRect, CONST RECT* pDestRect, HWND hDestWindowOverride, CONST RGNDATA* pDirtyRegion);
 HRESULT WINAPI EndScene(IDirect3DDevice9* dev);
 HRESULT WINAPI ResetScene(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETERS* pPresentationParameters);
+
+bool __fastcall GwEndScene(gwdx* ctx) {
+	static GwEndScene_t original = endscene_hook.Original();
+	GWToolbox::Draw(ctx->device);
+	if (endscene_hook.Valid()) {
+		return original(ctx);
+	} else {
+		return original_func(ctx);
+	}
+}
+
+bool __fastcall GwReset(gwdx* ctx) {
+	ImGui_ImplDX9_InvalidateDeviceObjects();
+	return reset_hook.Original()(ctx);
+}
 
 DWORD __stdcall SafeThreadEntry(LPVOID dllmodule) {
 	__try {
@@ -88,9 +122,19 @@ DWORD __stdcall ThreadEntry(LPVOID dllmodule) {
 	printf("DxDevice = %X\n", (DWORD)(GW::DirectXHooker::Initialize()));
 
 	Log::Log("Installing dx hooks\n");
-	GW::DirectXHooker::AddHook(GW::dx9::kPresent, Present);
-	GW::DirectXHooker::AddHook(GW::dx9::kEndScene, EndScene);
-	GW::DirectXHooker::AddHook(GW::dx9::kReset, ResetScene);
+	//GW::DirectXHooker::AddHook(GW::dx9::kPresent, Present);
+	//GW::DirectXHooker::AddHook(GW::dx9::kEndScene, EndScene);
+	//GW::DirectXHooker::AddHook(GW::dx9::kReset, ResetScene);
+	//GW::Render::DetourEndScene(GwEndScene);
+	//GW::Render::DetourReset(GwReset);
+	original_func = (GwEndScene_t)GW::Scanner::Find("\x55\x8B\xEC\x83\xEC\x28\x56\x8B\xF1\x57\x89\x55\xF8", "xxxxxxxxxxxxx", 0);
+	printf("GW EndScene address = 0x%X\n", (DWORD)original_func);
+	endscene_hook.Detour(original_func, GwEndScene);
+
+	GwReset_t original_reset = (GwReset_t)GW::Scanner::Find("\x55\x8B\xEC\x81\xEC\x98\x00\x00\x00\x53\x56\x57\x8B\xF1\x33\xD2", "xxxxxxxxxxxxxxxx", 0);
+	printf("GW Reset address = 0x%X\n", (DWORD)original_reset);
+	reset_hook.Detour(original_reset, GwReset);
+
 	Log::Log("Installed dx hooks\n");
 
 	Log::Log("oldwndproc %X\n", OldWndProc);
@@ -112,6 +156,10 @@ DWORD __stdcall ThreadEntry(LPVOID dllmodule) {
 	}
 	
 	Sleep(100);
+
+	//GW::Render::EndSceneHook()->Cleanup();
+	//GW::Render::ResetHook()->Cleanup();
+
 
 	Sleep(100);
 	Log::Log("Closing log/console, bye!\n");
@@ -325,16 +373,7 @@ void GWToolbox::Terminate() {
 }
 
 HRESULT WINAPI EndScene(IDirect3DDevice9* device) {
-	++drawing_passes;
-	if (last_drawing_passes == 2 && drawing_world) {
-		drawing_world = false;
-	} else if (!tb_destroyed) {
-		__try {
-			GWToolbox::Draw(device);
-		} __except (EXCEPT_EXPRESSION_LOOP) {
-			Log::Log("Badness happened in EndScene!\n");
-		}
-	}
+	printf("[%d] EndScene\n", clock());
 
 	return GW::DirectXHooker::Original<GW::dx9::EndScene_t>(GW::dx9::kEndScene)(device);
 }
@@ -345,9 +384,7 @@ HRESULT WINAPI Present(IDirect3DDevice9* pDev,
 	HWND hDestWindowOverride, 
 	CONST RGNDATA* pDirtyRegion) {
 
-	drawing_world = true;
-	last_drawing_passes = drawing_passes;
-	drawing_passes = 0;
+	printf("[%d] Present\n", clock());
 
 	return GW::DirectXHooker::Original<GW::dx9::Present_t>(GW::dx9::kPresent)(pDev,
 		pSourceRect, pDestRect, hDestWindowOverride, pDirtyRegion);
@@ -406,7 +443,8 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 		Log::Log("Restoring input hook\n");
 		SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
 		Log::Log("Destroying directX hook\n");
-		GW::DirectXHooker::RemoveAllHooks();
+		endscene_hook.Retour();
+		reset_hook.Retour();
 	}
 }
 
