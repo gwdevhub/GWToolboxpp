@@ -69,7 +69,8 @@ void ChatFilter::Initialize() {
 			|| favor
 			|| ninerings
 			|| noonehearsyou
-			|| lunars)
+			|| lunars
+			|| away)
 			&& ShouldIgnore(pak->message)) {
 
 #ifdef PRINT_CHAT_PACKETS
@@ -144,6 +145,7 @@ void ChatFilter::LoadSettings(CSimpleIni* ini) {
 	noonehearsyou = ini->GetBoolValue(Name(), "noonehearsyou", true);
 	lunars = ini->GetBoolValue(Name(), "lunars", true);
 	messagebycontent = ini->GetBoolValue(Name(), "messagebycontent", false);
+	away = ini->GetBoolValue(Name(), "away", false);
 
 	std::ifstream bycontent_file;
 	bycontent_file.open(GuiUtils::getPath("FilterByContent.txt"));
@@ -177,6 +179,7 @@ void ChatFilter::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), "lunars", lunars);
 	ini->SetBoolValue(Name(), "messagebycontent", messagebycontent);
 	//ini->SetBoolValue(Name(), "messagebyauthor", messagebyauthor);
+	ini->SetBoolValue(Name(), "away", away);
 
 	if (bycontent_filedirty) {
 		std::ofstream bycontent_file;
@@ -301,7 +304,7 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 	case 0x846: return false; // 'Screenshot saved as <path>'.
 	case 0x87B: return noonehearsyou; // 'no one hears you.' (outpost)
 	case 0x87C: return noonehearsyou; // 'no one hears you... ' (explorable)
-	case 0x87D: return false; // 'Player <name> might not reply...' (Away)
+	case 0x87D: return away; // 'Player <name> might not reply...' (Away)
 	case 0x87F: return false; // 'Failed to send whisper to player <name>...' (Do not disturb)
 	case 0x880: return false; // 'Player name <name> is invalid.'. (Anyone actually saw it ig ?)
 	case 0x881: return false; // 'Player <name> is not online.' (Offline)
@@ -389,6 +392,7 @@ void ChatFilter::DrawSettingInternal() {
 	ImGui::Checkbox("9 Rings messages", &ninerings);
 	ImGui::Checkbox("'No one hears you...'", &noonehearsyou);
 	ImGui::Checkbox("Lunar fortunes messages", &lunars);
+	ImGui::Checkbox("'Player is away' messages", &away);
 
 	ImGui::Separator();
 	ImGui::Checkbox("Hide any messages containing:", &messagebycontent);
