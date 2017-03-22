@@ -45,9 +45,8 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <EmbeddedResource Include="Resources\DefaultSettings.ini" />
-    <EmbeddedResource Include="Resources\Friz_Quadrata_Regular.ttf" />
     <None Include="app.manifest" />
+    <None Include="Resources\Font.ttf" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CharSelector.cs">
@@ -86,50 +85,16 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
+      <SubType>Designer</SubType>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
     <EmbeddedResource Include="Updater.resx">
       <DependentUpon>Updater.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
-    <EmbeddedResource Include="Resources\Tick_v1.png" />
-    <EmbeddedResource Include="Resources\Tick_v0.png" />
-    <EmbeddedResource Include="Resources\War_Supplies.png" />
-    <EmbeddedResource Include="Resources\Tick_v2.png" />
-    <EmbeddedResource Include="Resources\Sugary_Blue_Drink.png" />
-    <EmbeddedResource Include="Resources\Slice_of_Pumpkin_Pie.png" />
-    <EmbeddedResource Include="Resources\settings.png" />
-    <EmbeddedResource Include="Resources\Scroll_of_Resurrection.png" />
-    <EmbeddedResource Include="Resources\Red_Rock_Candy.png" />
-    <EmbeddedResource Include="Resources\protbond.jpg" />
-    <EmbeddedResource Include="Resources\plane.png" />
-    <EmbeddedResource Include="Resources\Pahnai_Salad.png" />
-    <EmbeddedResource Include="Resources\Lunar_Fortune.png" />
-    <EmbeddedResource Include="Resources\list.png" />
-    <EmbeddedResource Include="Resources\lifebond.jpg" />
-    <EmbeddedResource Include="Resources\keyboard.png" />
-    <EmbeddedResource Include="Resources\info.png" />
-    <EmbeddedResource Include="Resources\Green_Rock_Candy.png" />
-    <EmbeddedResource Include="Resources\Grail_of_Might.png" />
-    <EmbeddedResource Include="Resources\Golden_Egg.png" />
-    <EmbeddedResource Include="Resources\Fruitcake.png" />
-    <EmbeddedResource Include="Resources\feather.png" />
-    <EmbeddedResource Include="Resources\Essence_of_Celerity.png" />
-    <EmbeddedResource Include="Resources\Dwarven_Ale.png" />
-    <EmbeddedResource Include="Resources\Drake_Kabob.png" />
-    <EmbeddedResource Include="Resources\DefaultTheme.txt" />
-    <EmbeddedResource Include="Resources\cupcake.png" />
-    <EmbeddedResource Include="Resources\comment.png" />
-    <EmbeddedResource Include="Resources\Candy_Corn.png" />
-    <EmbeddedResource Include="Resources\Candy_Apple.png" />
-    <EmbeddedResource Include="Resources\Bowl_of_Skalefin_Soup.png" />
-    <EmbeddedResource Include="Resources\Bottle_of_Grog.png" />
-    <EmbeddedResource Include="Resources\Blue_Rock_Candy.png" />
-    <EmbeddedResource Include="Resources\Birthday_Cupcake.png" />
-    <EmbeddedResource Include="Resources\balthspirit.jpg" />
-    <EmbeddedResource Include="Resources\Armor_of_Salvation.png" />
-    <EmbeddedResource Include="Resources\gwtoolbox.ico" />
+    <None Include="Resources\gwtoolbox.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
