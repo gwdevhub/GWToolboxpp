@@ -44,7 +44,7 @@ void ChatFilter::Initialize() {
 		}
 
 		if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost
-			&& messagebycontent && ShouldIgnoreByContent(pak)) {
+			&& messagebycontent && ShouldIgnoreByContent(pak->message)) {
 			// check if the message contains start string (0x107) but not end string(0x1)
 			kill_next_p081 = false;
 			for (int i = 0; i < 122 && pak->message[i]; ++i) {
@@ -203,23 +203,23 @@ void ChatFilter::SaveSettings(CSimpleIni* ini) {
 }
 
 
-const wchar_t* ChatFilter::Get1stSegment(GW::Packet::StoC::P081* pak) const {
-	for (size_t i = 0; pak->message[i] != 0; ++i) {
-		if (pak->message[i] == 0x10A) return pak->message + i + 1;
+const wchar_t* ChatFilter::Get1stSegment(const wchar_t *message) const {
+	for (size_t i = 0; message[i] != 0; ++i) {
+		if (message[i] == 0x10A) return message + i + 1;
 	}
 	return nullptr;
 };
 
-const wchar_t* ChatFilter::Get2ndSegment(GW::Packet::StoC::P081* pak) const {
-	for (size_t i = 0; pak->message[i] != 0; ++i) {
-		if (pak->message[i] == 0x10B) return pak->message + i + 1;
+const wchar_t* ChatFilter::Get2ndSegment(const wchar_t *message) const {
+	for (size_t i = 0; message[i] != 0; ++i) {
+		if (message[i] == 0x10B) return message + i + 1;
 	}
 	return nullptr;
 }
 
-DWORD ChatFilter::GetNumericSegment(GW::Packet::StoC::P081* pak) const {
-	for (size_t i = 0; pak->message[i] != 0; ++i) {
-		if (pak->message[i] == 0x10F) return (pak->message[i + 1] & 0xFF);
+DWORD ChatFilter::GetNumericSegment(const wchar_t *message) const {
+	for (size_t i = 0; message[i] != 0; ++i) {
+		if (message[i] == 0x10F) return (message[i + 1] & 0xFF);
 	}
 	return 0;
 }
@@ -277,8 +277,8 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 	case 0x7DF: return self_common_drops; // party shares gold ?
 	case 0x7F0: { // monster/player x drops item y (no assignment)
 				  // first segment describes the agent who dropped, second segment describes the item dropped
-		if (!ShouldIgnoreByAgentThatDropped(Get1stSegment(pak))) return false;
-		bool rare = IsRare(Get2ndSegment(pak));
+		if (!ShouldIgnoreByAgentThatDropped(Get1stSegment(message))) return false;
+		bool rare = IsRare(Get2ndSegment(message));
 		if (rare) return self_rare_drops;
 		else return self_common_drops;
 	}
@@ -287,8 +287,8 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 				  // <monster> is wchar_t id of several wchars
 				  // <rarity> is 0x108 for common, 0xA40 gold, 0xA42 purple, 0xA43 green
 		GW::Agent* me = GW::Agents::GetPlayer();
-		bool forplayer = (me && me->PlayerNumber == GetNumericSegment(pak));
-		bool rare = IsRare(Get2ndSegment(pak));
+		bool forplayer = (me && me->PlayerNumber == GetNumericSegment(message));
+		bool rare = IsRare(Get2ndSegment(message));
 		if (forplayer && rare) return self_rare_drops;
 		if (forplayer && !rare) return self_common_drops;
 		if (!forplayer && rare) return ally_rare_drops;
@@ -350,17 +350,17 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 	return false;
 }
 
-bool ChatFilter::ShouldIgnoreByContent(GW::Packet::StoC::P081* pak) {
+bool ChatFilter::ShouldIgnoreByContent(const wchar_t *message) {
 	if (!messagebycontent) return false;
-	if (!(pak->message[0] == 0x108 && pak->message[1] == 0x107)
-		&& !(pak->message[0] == 0x8102 && pak->message[1] == 0xEFE && pak->message[2] == 0x107)) return false;
-	wchar_t* start = nullptr;
-	wchar_t* end = &pak->message[122];
-	for (int i = 0; i < 122 && pak->message[i] != 0; ++i) {
-		if (pak->message[i] == 0x107) {
-			start = &pak->message[i + 1];
-		} else if (pak->message[i] == 0x1) {
-			end = &pak->message[i];
+	if (!(message[0] == 0x108 && message[1] == 0x107)
+		&& !(message[0] == 0x8102 && message[1] == 0xEFE && message[2] == 0x107)) return false;
+	const wchar_t* start = nullptr;
+	const wchar_t* end = &message[122];
+	for (int i = 0; i < 122 && message[i] != 0; ++i) {
+		if (message[i] == 0x107) {
+			start = &message[i + 1];
+		} else if (message[i] == 0x1) {
+			end = &message[i];
 		}
 	}
 	if (start == nullptr) return false; // no string segment in this packet
@@ -392,7 +392,7 @@ void ChatFilter::DrawSettingInternal() {
 	ImGui::Checkbox("9 Rings messages", &ninerings);
 	ImGui::Checkbox("'No one hears you...'", &noonehearsyou);
 	ImGui::Checkbox("Lunar fortunes messages", &lunars);
-	ImGui::Checkbox("'Player is away' messages", &away);
+	ImGui::Checkbox("Player is away messages", &away);
 
 	ImGui::Separator();
 	ImGui::Checkbox("Hide any messages containing:", &messagebycontent);
