@@ -6,6 +6,7 @@
 #include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Managers\MapMgr.h>
+#include <GWCA\Managers\ChatMgr.h>
 
 #include <imgui.h>
 #include "GuiUtils.h"
@@ -69,8 +70,7 @@ void ChatFilter::Initialize() {
 			|| favor
 			|| ninerings
 			|| noonehearsyou
-			|| lunars
-			|| away)
+			|| lunars)
 			&& ShouldIgnore(pak->message)) {
 
 #ifdef PRINT_CHAT_PACKETS
@@ -128,6 +128,14 @@ void ChatFilter::Initialize() {
 			return true;
 		}
 		return false;
+	});
+
+	GW::Chat::SetLocalMessageCallback(
+		[this](int channel, wchar_t *message) -> bool {
+		if (away && ShouldIgnore(message)) {
+			return false;
+		}
+		return true;
 	});
 }
 
