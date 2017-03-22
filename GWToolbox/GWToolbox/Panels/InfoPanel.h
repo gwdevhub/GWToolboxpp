@@ -36,5 +36,6 @@ private:
 	bool show_dialog = true;
 	bool show_item = true;
 	bool show_mobcount = true;
+	bool show_quest = true;
 	bool show_resignlog = true;
 };

@@ -205,6 +205,20 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 			//ImGui::InputText("ItemID", itemid, 32, ImGuiInputTextFlags_ReadOnly);
 			ImGui::PopItemWidth();
 		}
+		if (show_quest && ImGui::CollapsingHeader("Quest")) {
+			GW::QuestLog qlog = GW::GameContext::instance()->world->questlog;
+			DWORD qid = GW::GameContext::instance()->world->activequestid;
+			if (qid && qlog.valid()) {
+				for (unsigned int i = 0; i < qlog.size(); ++i) {
+					GW::Quest q = qlog[i];
+					if (q.questid == qid) {
+						ImGui::Text("ID: 0x%X", q.questid);
+						ImGui::Text("Marker: (%.0f, %.0f)", q.marker.x, q.marker.y);
+						break;
+					}
+				}
+			}
+		}
 		if (show_mobcount && ImGui::CollapsingHeader("Enemy count")) {
 			int cast_count = 0;
 			int spirit_count = 0;
@@ -252,6 +266,7 @@ void InfoPanel::DrawSettingInternal() {
 	ImGui::Checkbox("Show map", &show_map);
 	ImGui::Checkbox("Show dialog", &show_dialog);
 	ImGui::Checkbox("Show item", &show_item);
+	ImGui::Checkbox("Show Quest", &show_quest);
 	ImGui::Checkbox("Show enemy count", &show_mobcount);
 	ImGui::Checkbox("Show resign log", &show_resignlog);
 }
@@ -265,6 +280,7 @@ void InfoPanel::LoadSettings(CSimpleIni* ini) {
 	show_map = ini->GetBoolValue(Name(), "show_map", true);
 	show_dialog = ini->GetBoolValue(Name(), "show_dialog", true);
 	show_item = ini->GetBoolValue(Name(), "show_item", true);
+	show_quest = ini->GetBoolValue(Name(), "show_quest", true);
 	show_mobcount = ini->GetBoolValue(Name(), "show_enemycount", true);
 	show_resignlog = ini->GetBoolValue(Name(), "show_resignlog", true);
 }
@@ -278,6 +294,7 @@ void InfoPanel::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), "show_map", show_map);
 	ini->SetBoolValue(Name(), "show_dialog", show_dialog);
 	ini->SetBoolValue(Name(), "show_item", show_item);
+	ini->SetBoolValue(Name(), "show_quest", show_quest);
 	ini->SetBoolValue(Name(), "show_enemycount", show_mobcount);
 	ini->SetBoolValue(Name(), "show_resignlog", show_resignlog);
 }
