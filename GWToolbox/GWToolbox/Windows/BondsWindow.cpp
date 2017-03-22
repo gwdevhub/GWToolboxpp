@@ -61,6 +61,7 @@ void BondsWindow::Draw(IDirect3DDevice9* device) {
 	case GW::Constants::InstanceType::Outpost:
 		update = true;
 		UpdateSkillbarBonds();
+		UpdatePartyIndexMap();
 		break;
 	case GW::Constants::InstanceType::Loading:
 		update = true;
@@ -183,11 +184,13 @@ bool BondsWindow::UpdatePartyIndexMap() {
 	GW::PlayerArray players = GW::Agents::GetPlayerArray();
 	if (!players.valid()) return false;
 
+	bool success = true;
 	int index = 0;
 	for (GW::PlayerPartyMember& player : info->players) {
 		long id = players[player.loginnumber].AgentID;
 		party_index[id] = index++;
 		agentids.push_back(id);
+		if (id == 0) success = false;
 
 		for (GW::HeroPartyMember& hero : info->heroes) {
 			if (hero.ownerplayerid == player.loginnumber) {
@@ -201,7 +204,7 @@ bool BondsWindow::UpdatePartyIndexMap() {
 		agentids.push_back(hench.agentid);
 	}
 
-	return true;
+	return success;
 }
 
 void BondsWindow::UseBuff(PartyIndex player, BondIndex bond) {
