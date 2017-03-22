@@ -98,7 +98,7 @@ void Minimap::DrawSettings() {
 void Minimap::DrawSettingInternal() {
 	ImGui::Text("General");
 	ImGui::DragFloat("Scale", &scale, 0.01f, 0.1f);
-	ImGui::Text("You can set the color alpha to 0 to disable any minimap feature");
+	ImGui::Text("You can set the color alpha to 0 to disable any minimap feature.");
 	if (ImGui::TreeNode("Agents")) {
 		agent_renderer.DrawSettings();
 		ImGui::TreePop();
@@ -115,7 +115,7 @@ void Minimap::DrawSettingInternal() {
 		symbols_renderer.DrawSettings();
 		ImGui::TreePop();
 	}
-	if (ImGui::TreeNode("Map")) {
+	if (ImGui::TreeNode("Terrain")) {
 		pmap_renderer.DrawSettings();
 		ImGui::TreePop();
 	}
@@ -126,7 +126,7 @@ void Minimap::DrawSettingInternal() {
 	if (ImGui::TreeNode("Hero flagging")) {
 		ImGui::Checkbox("Show hero flag controls", &hero_flag_controls_show);
 		ImGui::Checkbox("Attach to minimap", &hero_flag_window_attach);
-		ImGui::ShowHelp("When disabled, you can move/resize the window with the global move all.");
+		ImGui::ShowHelp("If disabled, you can move/resize the window with 'Unlock Move All'.");
 		Colors::DrawSetting("Background", &hero_flag_window_background);
 		ImGui::TreePop();
 	}
