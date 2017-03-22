@@ -249,6 +249,8 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 	switch (message[0]) {
 		// ==== Messages not ignored ====
 	case 0x108: return false; // player message
+	case 0x76D: return false; // whisper received.
+	case 0x76E: return false; // whisper sended.
 	case 0x777: return false; // I'm level x and x% of the way earning my next skill point	(author is not part of the message)
 	case 0x778: return false; // I'm following x			(author is not part of the message)
 	case 0x77B: return false; // I'm talking to x			(author is not part of the message)
@@ -296,8 +298,13 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 	case 0x807: return false; // player joined the game
 	case 0x816: return skill_points; // you gain a skill point
 	case 0x817: return skill_points; // player x gained a skill point
+	case 0x846: return false; // 'Screenshot saved as <path>'.
 	case 0x87B: return noonehearsyou; // 'no one hears you.' (outpost)
 	case 0x87C: return noonehearsyou; // 'no one hears you... ' (explorable)
+	case 0x87D: return false; // 'Player <name> might not reply...' (Away)
+	case 0x87F: return false; // 'Failed to send whisper to player <name>...' (Do not disturb)
+	case 0x880: return false; // 'Player name <name> is invalid.'. (Anyone actually saw it ig ?)
+	case 0x881: return false; // 'Player <name> is not online.' (Offline)
 
 	case 0x8101:
 		switch (message[1]) {
