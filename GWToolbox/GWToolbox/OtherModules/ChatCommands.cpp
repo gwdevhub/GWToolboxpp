@@ -68,7 +68,7 @@ void ChatCommands::DrawHelp() {
 	ImGui::Bullet(); ImGui::Text("'/tb quit' or '/tb exit' completely closes toolbox and all its windows.");
 	ImGui::Bullet(); ImGui::Text("'/travel <town> [dis]', '/tp <town> [dis]' or '/to <town> [dis]' to travel to a destination. \n"
 		"<town> can be any of: doa, kamadan/kama, embark, vlox, gadds, urgoz, deep, gtob, fav1, fav2, fav3.\n"
-		"[dis] can be any of: ae, ae1, ee, ee1, eg, eg1, int");
+		"[dis] can be any of: ae, ae1, ee, eg, int, etc");
 	ImGui::Bullet(); ImGui::Text("'/useskill <skill>' starts using the skill on recharge. "
 		"Use the skill number instead of <skill> (e.g. '/useskill 5'). "
 		"Use empty '/useskill', '/useskill 0' or '/useskill stop' to stop.");
@@ -380,18 +380,28 @@ bool ChatCommands::CmdTP(std::wstring& cmd, std::vector<std::wstring>& args) {
 			} else if (dis == L"ae1") {
 				district = GW::Constants::District::American;
 				district_number = 1;
-			} else if (dis == L"ee") {
-				district = GW::Constants::District::EuropeEnglish;
-			} else if (dis == L"ee1") {
-				district = GW::Constants::District::EuropeEnglish;
-				district_number = 1;
-			} else if (dis == L"eg") {
-				district = GW::Constants::District::EuropeGerman;
-			} else if (dis == L"eg1" || dis == L"dd1") {  // dd1 is german: deutche dist
-				district = GW::Constants::District::EuropeGerman;
-				district_number = 1;
 			} else if (dis == L"int") {
 				district = GW::Constants::District::International;
+			} else if (dis == L"ee") {
+				district = GW::Constants::District::EuropeEnglish;
+			} else if (dis == L"eg" || dis == L"dd") {
+				district = GW::Constants::District::EuropeGerman;
+			} else if (dis == L"ef") {
+				district = GW::Constants::District::EuropeFrench;
+			} else if (dis == L"ei") {
+				district = GW::Constants::District::EuropeItalian;
+			} else if (dis == L"es") {
+				district = GW::Constants::District::EuropeSpanish;
+			} else if (dis == L"ep") {
+				district = GW::Constants::District::EuropePolish;
+			} else if (dis == L"er") {
+				district = GW::Constants::District::EuropeRussian;
+			} else if (dis == L"ak") {
+				district = GW::Constants::District::AsiaKorean;
+			} else if (dis == L"ac" || dis == L"atc") {
+				district = GW::Constants::District::AsiaChinese;
+			} else if (dis == L"aj") {
+				district = GW::Constants::District::AsiaJapanese;
 			} else {
 				Log::Error("Invalid district '%ls'", dis.c_str());
 			}
