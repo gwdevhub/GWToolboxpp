@@ -70,7 +70,7 @@ void ChatFilter::Initialize() {
 			|| ninerings
 			|| noonehearsyou
 			|| lunars)
-			&& ShouldIgnore(pak)) {
+			&& ShouldIgnore(pak->message)) {
 
 #ifdef PRINT_CHAT_PACKETS
 			printf("  ` killed \n");
@@ -245,8 +245,8 @@ bool ChatFilter::FullMatch(const wchar_t* s, const std::initializer_list<wchar_t
 	return true;
 }
 
-bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) {
-	switch (pak->message[0]) {
+bool ChatFilter::ShouldIgnore(const wchar_t *message) {
+	switch (message[0]) {
 		// ==== Messages not ignored ====
 	case 0x108: return false; // player message
 	case 0x777: return false; // I'm level x and x% of the way earning my next skill point	(author is not part of the message)
@@ -265,7 +265,7 @@ bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) {
 	case 0x7BE: return false; // emote yawn
 	case 0x7BF: return false; // emote yes
 	case 0x7CC:
-		if (FullMatch(&pak->message[1], { 0x962D, 0xFEB5, 0x1D08, 0x10A, 0xAC2, 0x101, 0x164, 0x1 })) return lunars; // you receive 100 gold
+		if (FullMatch(&message[1], { 0x962D, 0xFEB5, 0x1D08, 0x10A, 0xAC2, 0x101, 0x164, 0x1 })) return lunars; // you receive 100 gold
 		break;
 	case 0x7E0: return self_common_drops; // party shares gold
 	case 0x7ED: return false; // opening the chest reveals x, which your party reserves for y
@@ -300,7 +300,7 @@ bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) {
 	case 0x87C: return noonehearsyou; // 'no one hears you... ' (explorable)
 
 	case 0x8101:
-		switch (pak->message[1]) {
+		switch (message[1]) {
 		case 0x1868: // teilah takes 10 festival tickets
 		case 0x1867: // stay where you are, nine rings is about to begin
 		case 0x1869: // big winner! 55 tickets
@@ -310,15 +310,15 @@ bool ChatFilter::ShouldIgnore(GW::Packet::StoC::P081* pak) {
 		case 0x186D: // did not win 9rings
 			return ninerings;
 		}
-		if (FullMatch(&pak->message[1], { 0x6649, 0xA2F9, 0xBBFA, 0x3C27 })) return lunars; // you will celebrate a festive new year (rocket or popper)
-		if (FullMatch(&pak->message[1], { 0x664B, 0xDBAB, 0x9F4C, 0x6742 })) return lunars; // something special is in your future! (lucky aura)
-		if (FullMatch(&pak->message[1], { 0x6648, 0xB765, 0xBC0D, 0x1F73 })) return lunars; // you will have a prosperous new year! (gain 100 gold)
-		if (FullMatch(&pak->message[1], { 0x664C, 0xD634, 0x91F8, 0x76EF })) return lunars; // your new year will be a blessed one (lunar blessing)
-		if (FullMatch(&pak->message[1], { 0x664A, 0xEFB8, 0xDE25, 0x363 })) return lunars; // You will find bad luck in this new year... or bad luck will find you
+		if (FullMatch(&message[1], { 0x6649, 0xA2F9, 0xBBFA, 0x3C27 })) return lunars; // you will celebrate a festive new year (rocket or popper)
+		if (FullMatch(&message[1], { 0x664B, 0xDBAB, 0x9F4C, 0x6742 })) return lunars; // something special is in your future! (lucky aura)
+		if (FullMatch(&message[1], { 0x6648, 0xB765, 0xBC0D, 0x1F73 })) return lunars; // you will have a prosperous new year! (gain 100 gold)
+		if (FullMatch(&message[1], { 0x664C, 0xD634, 0x91F8, 0x76EF })) return lunars; // your new year will be a blessed one (lunar blessing)
+		if (FullMatch(&message[1], { 0x664A, 0xEFB8, 0xDE25, 0x363 })) return lunars; // You will find bad luck in this new year... or bad luck will find you
 		break;
 
 	case 0x8102:
-		switch (pak->message[1]) {
+		switch (message[1]) {
 		// 0xEFE is a player message (wtf anet?)
 		case 0x4650: return pvp_messages; // skill has been updated for pvp
 		case 0x4651: return pvp_messages; // a hero skill has been updated for pvp
