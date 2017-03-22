@@ -69,6 +69,7 @@ private:
 	// settings
 	bool click_to_use = true;
 	bool show_allies = true;
+	bool flip_bonds = false;
 	int row_height = 0;
 
 	static BuffID buff_id[MAX_PARTYSIZE][MAX_BONDS];

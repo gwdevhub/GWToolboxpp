@@ -132,8 +132,9 @@ void BondsWindow::Draw(IDirect3DDevice9* device) {
 			float ytop = y + (p + 0 + extra) * img_size;
 			float ybot = y + (p + 1 + extra) * img_size;
 			for (BondIndex b = 0; b < n_bonds; ++b) {
-				ImVec2 tl(x + (b + 0) * img_size, ytop);
-				ImVec2 br(x + (b + 1) * img_size, ybot);
+				BondIndex i = (flip_bonds ? (n_bonds - 1 - b) : b);
+				ImVec2 tl(x + (i + 0) * img_size, ytop);
+				ImVec2 br(x + (i + 1) * img_size, ybot);
 				if (buff_id[p][b] > 0) {
 					ImGui::GetWindowDrawList()->AddImage(
 						(ImTextureID)textures[skillbar_bond_idx[b]],
@@ -228,6 +229,7 @@ void BondsWindow::LoadSettings(CSimpleIni* ini) {
 	background = Colors::Load(ini, Name(), "background", Colors::ARGB(76, 0, 0, 0));
 	click_to_use = ini->GetBoolValue(Name(), "click_to_use", true);
 	show_allies = ini->GetBoolValue(Name(), "show_allies", true);
+	flip_bonds = ini->GetBoolValue(Name(), "flip_bonds", false);
 	row_height = ini->GetLongValue(Name(), "row_height", 0);
 }
 
@@ -236,6 +238,7 @@ void BondsWindow::SaveSettings(CSimpleIni* ini) {
 	Colors::Save(ini, Name(), "background", background);
 	ini->SetBoolValue(Name(), "click_to_use", click_to_use);
 	ini->SetBoolValue(Name(), "show_allies", show_allies);
+	ini->SetBoolValue(Name(), "flip_bonds", flip_bonds);
 	ini->SetLongValue(Name(), "row_height", row_height);
 }
 
@@ -243,6 +246,9 @@ void BondsWindow::DrawSettingInternal() {
 	Colors::DrawSetting("Background", &background);
 	ImGui::Checkbox("Click to Drop/Use", &click_to_use);
 	ImGui::Checkbox("Show bonds for Allies", &show_allies);
+	ImGui::ShowHelp("'Allies' meaning the ones that show in party window, such as summoning stones");
+	ImGui::Checkbox("Flip bond order (left/right)", &flip_bonds);
+	ImGui::ShowHelp("Bond order is based on your build. Check this to flip them left <-> right");
 	ImGui::InputInt("Row Height", &row_height);
 	if (row_height < 0) row_height = 0;
 	ImGui::ShowHelp("Height of each row, leave 0 for default");
