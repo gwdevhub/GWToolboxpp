@@ -34,7 +34,7 @@ void MainWindow::Draw(IDirect3DDevice9* device) {
 	if (!visible) return;
 
 	static bool open = true;
-	ImGui::SetNextWindowSize(ImVec2(100.0f, 300.0f), ImGuiSetCond_Once);
+	ImGui::SetNextWindowSize(ImVec2(110.0f, 300.0f), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), show_closebutton ? &open : nullptr, GetWinFlags())) {
 
 		ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[GuiUtils::f11]);
