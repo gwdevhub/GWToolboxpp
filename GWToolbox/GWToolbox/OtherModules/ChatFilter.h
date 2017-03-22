@@ -25,15 +25,15 @@ public:
 	void DrawSettingInternal() override;
 
 private:
-	const wchar_t* Get1stSegment(GW::Packet::StoC::P081* pak) const;
-	const wchar_t* Get2ndSegment(GW::Packet::StoC::P081* pak) const;
+	const wchar_t* Get1stSegment(const wchar_t *message) const;
+	const wchar_t* Get2ndSegment(const wchar_t *message) const;
 	bool FullMatch(const wchar_t* p, const std::initializer_list<wchar_t>& msg) const;
 
-	DWORD GetNumericSegment(GW::Packet::StoC::P081* pak) const;
+	DWORD GetNumericSegment(const wchar_t *message) const;
 	bool ShouldIgnoreByAgentThatDropped(const wchar_t* agent_segment) const;
 	bool IsRare(const wchar_t* item_segment) const;
-	bool ShouldIgnore(GW::Packet::StoC::P081* pak);
-	bool ShouldIgnoreByContent(GW::Packet::StoC::P081* pak);
+	bool ShouldIgnore(const wchar_t *message);
+	bool ShouldIgnoreByContent(const wchar_t *message);
 
 	bool kill_next_msgdelivery;
 	bool kill_next_p081 = false;
@@ -49,6 +49,7 @@ private:
 	bool ninerings;
 	bool noonehearsyou;
 	bool lunars;
+	bool away;
 
 	bool messagebycontent;
 #define FILTER_BUF_SIZE 1024*16
