@@ -66,11 +66,11 @@ void MaterialsPanel::Update() {
 void MaterialsPanel::Initialize() {
 	ToolboxPanel::Initialize();
 	Resources::Instance().LoadTextureAsync(&texture, "feather.png", "img/icons");
-	Resources::Instance().LoadTextureAsync(&tex_essence, "Essence_of_Celerity.png", "img");
-	Resources::Instance().LoadTextureAsync(&tex_grail, "Grail_of_Might.png", "img");
-	Resources::Instance().LoadTextureAsync(&tex_armor, "Armor_of_Salvation.png", "img");
-	Resources::Instance().LoadTextureAsync(&tex_powerstone, "Powerstone_of_Courage.png", "img");
-	Resources::Instance().LoadTextureAsync(&tex_resscroll, "Scroll_of_Resurrection.png", "img");
+	Resources::Instance().LoadTextureAsync(&tex_essence, "Essence_of_Celerity.png", "img/materials");
+	Resources::Instance().LoadTextureAsync(&tex_grail, "Grail_of_Might.png", "img/materials");
+	Resources::Instance().LoadTextureAsync(&tex_armor, "Armor_of_Salvation.png", "img/materials");
+	Resources::Instance().LoadTextureAsync(&tex_powerstone, "Powerstone_of_Courage.png", "img/materials");
+	Resources::Instance().LoadTextureAsync(&tex_resscroll, "Scroll_of_Resurrection.png", "img/materials");
 
 	for (int i = 0; i < N_MATS; ++i) {
 		price[i] = PRICE_DEFAULT;
@@ -153,7 +153,7 @@ void MaterialsPanel::Terminate() {
 void MaterialsPanel::Draw(IDirect3DDevice9* pDevice) {
 	if (!visible) return;
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-	ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(400, 0), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
 
 		float x, y, h;

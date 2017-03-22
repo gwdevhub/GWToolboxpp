@@ -45,6 +45,8 @@ public:
 	void DrawSettings();
 	void LoadSettings(CSimpleIni* ini, const char* section);
 	void SaveSettings(CSimpleIni* ini, const char* section) const;
+	void LoadMarkers();
+	void SaveMarkers() const;
 
 private:
 	void Invalidate() override;

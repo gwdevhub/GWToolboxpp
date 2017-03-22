@@ -36,7 +36,7 @@ Pcon::Pcon(const char* chatname,
 	uv0(uv0_), uv1(uv1_), texture(nullptr),
 	enabled(false), quantity(0), timer(TIMER_INIT()) {
 
-	Resources::Instance().LoadTextureAsync(&texture, filename, "img");
+	Resources::Instance().LoadTextureAsync(&texture, filename, "img/pcons");
 }
 void Pcon::Draw(IDirect3DDevice9* device) {
 	if (texture == nullptr) return;
@@ -51,7 +51,7 @@ void Pcon::Draw(IDirect3DDevice9* device) {
 	}
 	ImGui::PopStyleColor();
 
-	ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[GuiUtils::FontSize::f12]);
+	ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f20));
 	ImVec4 color;
 	if (quantity == 0) color = ImVec4(1, 0, 0, 1);
 	else if (quantity < threshold) color = ImVec4(1, 1, 0, 1);

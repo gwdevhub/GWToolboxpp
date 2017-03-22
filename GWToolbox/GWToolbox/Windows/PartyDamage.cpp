@@ -207,7 +207,7 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(color_background));
 	ImGui::SetNextWindowSize(ImVec2(width, (float)(size * line_height)));
 	if (ImGui::Begin(Name(), &visible, GetWinFlags(0, true))) {
-		ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[GuiUtils::FontSize::f10]); // should be 9
+		ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f16));
 		float x = ImGui::GetWindowPos().x;
 		float y = ImGui::GetWindowPos().y;
 		float width = ImGui::GetWindowWidth();

@@ -249,6 +249,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 
 void GWToolbox::Initialize() {
 	Log::Log("Creating Toolbox\n");
+	Resources::Instance().EnsureSubPathExists("img");
+	Resources::Instance().EnsureSubPathExists("location_logs");
+	Resources::Instance().EnsureFileExists("GWToolbox.ini", nullptr, []() {
+		GWToolbox::Instance().LoadSettings();
+	});
+	Resources::Instance().EnsureFileExists("Markers.ini", nullptr, []() {
+		Minimap::Instance().custom_renderer.LoadMarkers();
+	});
 
 	Log::Log("Creating Modules\n");
 	Resources::Instance().Initialize();
@@ -339,7 +347,10 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 		io.MouseDrawCursor = false;
 		static std::string imgui_inifile = GuiUtils::getPath("interface.ini");
 		io.IniFilename = imgui_inifile.c_str();
-		GuiUtils::LoadFonts();
+
+		Resources::Instance().EnsureFileExists("Font.ttf", nullptr, []() {
+			GuiUtils::LoadFonts();
+		});
 
 		GWToolbox::Instance().Initialize();
 

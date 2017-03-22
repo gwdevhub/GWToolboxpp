@@ -21,21 +21,21 @@ DWORD BondsWindow::buff_id[MAX_PARTYSIZE][MAX_BONDS] = { 0 };
 void BondsWindow::Initialize() {
 	ToolboxWidget::Initialize();
 	for (int i = 0; i < MAX_BONDS; ++i) textures[i] = nullptr;
-	Resources::Instance().LoadTextureAsync(&textures[BalthazarSpirit], "Balthazar's_Spirit.jpg", "img");
-	Resources::Instance().LoadTextureAsync(&textures[EssenceBond], "Essence_Bond.jpg", "img");
-	Resources::Instance().LoadTextureAsync(&textures[HolyVeil], "Holy_Veil.jpg", "img");
-	Resources::Instance().LoadTextureAsync(&textures[LifeAttunement], "Life_Attunement.jpg", "img");
-	Resources::Instance().LoadTextureAsync(&textures[LifeBarrier], "Life_Barrier.jpg", "img");
-	Resources::Instance().LoadTextureAsync(&textures[LifeBond], "Life_Bond.jpg", "img");
-	Resources::Instance().LoadTextureAsync(&textures[LiveVicariously], "Live_Vicariously.jpg", "img");
-	Resources::Instance().LoadTextureAsync(&textures[Mending], "Mending.jpg", "img");
-	Resources::Instance().LoadTextureAsync(&textures[ProtectiveBond], "Protective_Bond.jpg", "img");
-	Resources::Instance().LoadTextureAsync(&textures[PurifyingVeil], "Purifying_Veil.jpg", "img");
-	Resources::Instance().LoadTextureAsync(&textures[Retribution], "Retribution.jpg", "img");
-	Resources::Instance().LoadTextureAsync(&textures[StrengthOfHonor], "Strength_of_Honor.jpg", "img");
-	Resources::Instance().LoadTextureAsync(&textures[Succor], "Succor.jpg", "img");
-	Resources::Instance().LoadTextureAsync(&textures[VitalBlessing], "Vital_Blessing.jpg", "img");
-	Resources::Instance().LoadTextureAsync(&textures[WatchfulSpirit], "Watchful_Spirit.jpg", "img");
+	Resources::Instance().LoadTextureAsync(&textures[BalthazarSpirit], "Balthazar's_Spirit.jpg", "img/bonds");
+	Resources::Instance().LoadTextureAsync(&textures[EssenceBond], "Essence_Bond.jpg", "img/bonds");
+	Resources::Instance().LoadTextureAsync(&textures[HolyVeil], "Holy_Veil.jpg", "img/bonds");
+	Resources::Instance().LoadTextureAsync(&textures[LifeAttunement], "Life_Attunement.jpg", "img/bonds");
+	Resources::Instance().LoadTextureAsync(&textures[LifeBarrier], "Life_Barrier.jpg", "img/bonds");
+	Resources::Instance().LoadTextureAsync(&textures[LifeBond], "Life_Bond.jpg", "img/bonds");
+	Resources::Instance().LoadTextureAsync(&textures[LiveVicariously], "Live_Vicariously.jpg", "img/bonds");
+	Resources::Instance().LoadTextureAsync(&textures[Mending], "Mending.jpg", "img/bonds");
+	Resources::Instance().LoadTextureAsync(&textures[ProtectiveBond], "Protective_Bond.jpg", "img/bonds");
+	Resources::Instance().LoadTextureAsync(&textures[PurifyingVeil], "Purifying_Veil.jpg", "img/bonds");
+	Resources::Instance().LoadTextureAsync(&textures[Retribution], "Retribution.jpg", "img/bonds");
+	Resources::Instance().LoadTextureAsync(&textures[StrengthOfHonor], "Strength_of_Honor.jpg", "img/bonds");
+	Resources::Instance().LoadTextureAsync(&textures[Succor], "Succor.jpg", "img/bonds");
+	Resources::Instance().LoadTextureAsync(&textures[VitalBlessing], "Vital_Blessing.jpg", "img/bonds");
+	Resources::Instance().LoadTextureAsync(&textures[WatchfulSpirit], "Watchful_Spirit.jpg", "img/bonds");
 }
 
 void BondsWindow::Terminate() {

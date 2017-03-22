@@ -13,7 +13,9 @@ Color CustomRenderer::color = 0xFF00FFFF;
 void CustomRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	color = Colors::Load(ini, section, "color_custom_markers", 0xFFFFFFFF);
 	Invalidate();
-
+	LoadMarkers();
+}
+void CustomRenderer::LoadMarkers() {
 	// clear current markers
 	lines.clear();
 	markers.clear();
@@ -50,7 +52,9 @@ void CustomRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 }
 void CustomRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 	Colors::Save(ini, section, "color_custom_markers", color);
-
+	SaveMarkers();
+}
+void CustomRenderer::SaveMarkers() const {
 	// clear markers from ini
 	// then load new
 	CSimpleIni::TNamesDepend entries;

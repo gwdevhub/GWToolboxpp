@@ -266,11 +266,11 @@ static const char* KeyName(long vkey) {
 //	return GetKeyNameText(scanCode << 16, buf, bufsz);
 //}
 
-inline int ModKeyName(LONG mod, LONG vkey, CHAR* buf, int bufsz) {
+inline int ModKeyName(CHAR* buf, int bufsz, LONG mod, LONG vkey, const char* ifempty = "") {
 	return sprintf_s(buf, bufsz, "%s%s%s%s",
 		(mod & Key_Control) ? "Control + " : "",
 		(mod & Key_Alt) ? "Alt + " : "",
 		(mod & Key_Shift) ? "Shift + " : "",
-		vkey > 0 ? KeyName(vkey) : "");
+		vkey > 0 ? KeyName(vkey) : ifempty);
 }
 

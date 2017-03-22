@@ -56,8 +56,8 @@ TBHotkey::TBHotkey(CSimpleIni* ini, const char* section) : ui_id(++cur_ui_id) {
 	active = ini ? ini->GetBoolValue(section, "active", true) : true;
 }
 void TBHotkey::Save(CSimpleIni* ini, const char* section) const {
-	ini->SetLongValue(section, "hotkey", (int)key);
-	ini->SetLongValue(section, "modifier", (int)modifier);
+	ini->SetLongValue(section, "hotkey", key);
+	ini->SetLongValue(section, "modifier", modifier);
 	ini->SetBoolValue(section, "active", active);
 }
 void TBHotkey::Draw(Op* op) {
@@ -66,9 +66,14 @@ void TBHotkey::Draw(Op* op) {
 	char desbuf[128];
 	char keybuf[128];
 	Description(desbuf, 128);
-	ModKeyName((long)modifier, (long)key, keybuf, 128);
+	ModKeyName(keybuf, 128, modifier, key, "<None>");
 	_snprintf_s(header, 128, "%s [%s]###header%u", desbuf, keybuf, ui_id);
-	if (ImGui::CollapsingHeader(header)) {
+	if (!ImGui::CollapsingHeader(header, ImGuiTreeNodeFlags_AllowOverlapMode)) {
+		ImGui::SameLine(ImGui::GetWindowContentRegionWidth() - ImGui::GetTextLineHeight());
+		ImGui::Checkbox("##active2", &active);
+	} else {
+		ImGui::SameLine(ImGui::GetWindowContentRegionWidth() - ImGui::GetTextLineHeight());
+		ImGui::Checkbox("##active2", &active);
 		ImGui::PushID(ui_id);
 		ImGui::PushItemWidth(-70.0f);
 		// === Specific section ===
@@ -116,9 +121,9 @@ void TBHotkey::Draw(Op* op) {
 
 			// write the key
 			char newkey_buf[256];
-			ModKeyName(newmod, newkey, newkey_buf, 256);
+			ModKeyName(newkey_buf, 256, newmod, newkey);
 			ImGui::Text("%s", newkey_buf);
-			if (ImGui::Button("Cancel")) ImGui::CloseCurrentPopup();
+			if (ImGui::Button("Cancel", ImVec2(-1.0f, 0))) ImGui::CloseCurrentPopup();
 			ImGui::EndPopup();
 		}
 		ImGui::SameLine();

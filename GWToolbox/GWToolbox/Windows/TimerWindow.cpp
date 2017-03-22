@@ -18,7 +18,7 @@ void TimerWindow::Draw(IDirect3DDevice9* pDevice) {
 		static char timer[32];
 		static char urgoz_timer[32];
 		sprintf_s(timer, "%d:%02d:%02d", time / (60 * 60), (time / 60) % 60, time % 60);
-		ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[GuiUtils::FontSize::f30]);
+		ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f48));
 		ImVec2 cur = ImGui::GetCursorPos();
 		ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
 		ImGui::TextColored(ImColor(0, 0, 0), timer);
@@ -27,7 +27,7 @@ void TimerWindow::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::PopFont();
 		if (GW::Map::GetMapID() == GW::Constants::MapID::Urgozs_Warren
 			&& GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
-			ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[GuiUtils::FontSize::f16]);
+			ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f24));
 			ImVec2 cur = ImGui::GetCursorPos();
 			int temp = (time - 1) % 25;
 			if (temp < 15) {

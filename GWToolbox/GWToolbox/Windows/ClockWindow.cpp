@@ -20,7 +20,7 @@ void ClockWindow::Draw(IDirect3DDevice9* pDevice) {
 			if (hour == 0) hour = 12;
 			sprintf_s(timer, "%d:%02d %s", hour, time.wMinute, (time.wHour >= 12 ? "p.m." : "a.m."));
 		}
-		ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[GuiUtils::FontSize::f30]);
+		ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f48));
 		ImVec2 cur = ImGui::GetCursorPos();
 		ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
 		ImGui::TextColored(ImColor(0, 0, 0), timer);

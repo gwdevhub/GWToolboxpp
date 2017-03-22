@@ -23,7 +23,7 @@ void BuildPanel::Terminate() {
 void BuildPanel::Draw(IDirect3DDevice9* pDevice) {
 	if (visible) {
 		ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-		ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
+		ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiSetCond_FirstUseEver);
 		if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
 			for (TeamBuild& tbuild : teambuilds) {
 				ImGui::PushID(tbuild.ui_id);

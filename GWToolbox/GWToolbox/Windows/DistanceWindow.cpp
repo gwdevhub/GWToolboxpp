@@ -23,7 +23,7 @@ void DistanceWindow::Draw(IDirect3DDevice9* pDevice) {
 			ImVec2 cur;
 
 			// 'distance'
-			ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[GuiUtils::FontSize::f12]);
+			ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f20));
 			cur = ImGui::GetCursorPos();
 			ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
 			ImGui::TextColored(ImColor(0, 0, 0), "Distance");
@@ -32,7 +32,7 @@ void DistanceWindow::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::PopFont();
 
 			// perc
-			ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[GuiUtils::FontSize::f26]);
+			ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f42));
 			cur = ImGui::GetCursorPos();
 			ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
 			ImGui::TextColored(ImColor(0, 0, 0), dist_perc);
@@ -41,7 +41,7 @@ void DistanceWindow::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::PopFont();
 
 			// abs
-			ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[GuiUtils::FontSize::f16]);
+			ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f24));
 			cur = ImGui::GetCursorPos();
 			ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
 			ImGui::TextColored(ImColor(0, 0, 0), dist_abs);

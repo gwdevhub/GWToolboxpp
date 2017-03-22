@@ -15,16 +15,15 @@ namespace GuiUtils {
 	std::string getSubPath(std::string file, std::string subdir);
 
 	enum FontSize {
-		f10,
-		f11,
-		f12,
 		f16,
-		f26,
-		f30
+		f18,
+		f20,
+		f24,
+		f42,
+		f48
 	};
 	void LoadFonts();
-
-	
+	ImFont* GetFont(FontSize size);
 
 	int GetPartyHealthbarHeight();
 };

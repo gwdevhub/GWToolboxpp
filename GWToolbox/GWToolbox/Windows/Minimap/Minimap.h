@@ -51,6 +51,13 @@ public:
 		if (idx < 0) flagging[idx] ^= 1;
 	}
 
+	RangeRenderer range_renderer;
+	PmapRenderer pmap_renderer;
+	AgentRenderer agent_renderer;
+	PingsLinesRenderer pingslines_renderer;
+	SymbolsRenderer symbols_renderer;
+	CustomRenderer custom_renderer;
+
 private:
 	bool IsInside(int x, int y) const;
 	// returns true if the map is visible, valid, not loading, etc
@@ -73,13 +80,6 @@ private:
 	clock_t last_moved;
 
 	bool loading = false; // only consider some cases but still good
-
-	RangeRenderer range_renderer;
-	PmapRenderer pmap_renderer;
-	AgentRenderer agent_renderer;
-	PingsLinesRenderer pingslines_renderer;
-	SymbolsRenderer symbols_renderer;
-	CustomRenderer custom_renderer;
 
 	bool hero_flag_controls_show = false;
 	bool hero_flag_window_attach = true;
