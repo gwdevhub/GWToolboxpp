@@ -76,7 +76,20 @@ void BondsWindow::Draw(IDirect3DDevice9* device) {
 	
 	int img_size = row_height > 0 ? row_height : GuiUtils::GetPartyHealthbarHeight();
 	unsigned int party = agentids.size();
-	unsigned int full_party = party + (show_allies ? allies.size() : 0);
+	unsigned int full_party = party;
+	static std::vector<DWORD> allies_id;
+	if (show_allies) {
+		allies_id.clear();
+		for (DWORD id : allies) {
+			GW::Agent* agent = GW::Agents::GetAgentByID(id);
+			if (agent 
+				&& agent->GetCanBeViewedInPartyWindow()
+				&& !agent->GetIsSpawned()) {
+				++full_party;
+				allies_id.push_back(id);
+			}
+		}
+	}
 
 	for (PartyIndex p = 0; p < full_party && p < MAX_PARTYSIZE; ++p) {
 		for (BondIndex b = 0; b < n_bonds; ++b) {
@@ -97,8 +110,8 @@ void BondsWindow::Draw(IDirect3DDevice9* device) {
 					p = party_index[id];
 				} else if (show_allies) {
 					// check allies
-					for (unsigned int j = 0; j < allies.size(); ++j) {
-						if (allies[j] == id) {
+					for (unsigned int j = 0; j < allies_id.size(); ++j) {
+						if (allies_id[j] == id) {
 							p = party + j;
 						}
 					}
@@ -151,8 +164,8 @@ void BondsWindow::Draw(IDirect3DDevice9* device) {
 								GW::AgentID target;
 								if (p < agentids.size()) {
 									target = agentids[p];
-								} else if (p - party >= 0 && p - party < allies.size()) {
-									target = allies[p - party];
+								} else if (p - party >= 0 && p - party < allies_id.size()) {
+									target = allies_id[p - party];
 								}
 								if (target > 0) {
 									int slot = skillbar_bond_slot[b];

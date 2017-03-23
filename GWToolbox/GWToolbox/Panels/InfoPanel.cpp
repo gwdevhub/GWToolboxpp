@@ -153,6 +153,40 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::InputText("Model ID##target", modelid_buf, 32, ImGuiInputTextFlags_ReadOnly);
 			ImGui::ShowHelp("Model ID is unique for each kind of agent.\nIt is static and shared by the same agents.\nWhen targeting players, this is Player ID instead, unique for each player in the instance.\nFor the purpose of targeting hotkeys and commands, use this value");
 			ImGui::PopItemWidth();
+			if (ImGui::TreeNode("Advanced##target")) {
+				ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() / 2);
+				if (target) {
+					ImGui::LabelText("Id", "%d", target->Id);
+					ImGui::LabelText("Z", "%f", target->Z);
+					ImGui::LabelText("Width", "%f", target->Width1);
+					ImGui::LabelText("Height", "%f", target->Height1);
+					ImGui::LabelText("Rotation", "%f", target->Rotation_angle);
+					ImGui::LabelText("NameProperties", "0x%X", target->NameProperties);
+					ImGui::LabelText("X", "%f", target->pos.x);
+					ImGui::LabelText("Y", "%f", target->pos.y);
+					ImGui::LabelText("Zplane", "%d", target->pos.zplane);
+					ImGui::LabelText("Type", "0x%X", target->Type);
+					ImGui::LabelText("Owner", "%d", target->Owner);
+					ImGui::LabelText("ItemId", "%d", target->itemid);
+					ImGui::LabelText("ExtraType", "%d", target->ExtraType);
+					ImGui::LabelText("AS of Weapon", "%f", target->WeaponAttackSpeed);
+					ImGui::LabelText("AS modifier", "%f", target->AttackSpeedModifier);
+					ImGui::LabelText("PlayerNumber", "%d", target->PlayerNumber);
+					ImGui::LabelText("Primary Prof", "%d", target->Primary);
+					ImGui::LabelText("Secondary Prof", "%d", target->Secondary);
+					ImGui::LabelText("Level", "%d", target->Level);
+					ImGui::LabelText("TeamId", "%d", target->TeamId);
+					ImGui::LabelText("Effects", "0x%X", target->Effects);
+					ImGui::LabelText("ModelState", "0x%X", target->ModelState);
+					ImGui::LabelText("typeMap", "0x%X", target->TypeMap);
+					ImGui::LabelText("LoginNumber", "%d", target->LoginNumber);
+					ImGui::LabelText("Allegiance", "%d", target->Allegiance);
+					ImGui::LabelText("WeaponType", "%d", target->WeaponType);
+					ImGui::LabelText("Skill", "%d", target->Skill);
+				}
+				ImGui::PopItemWidth();
+				ImGui::TreePop();
+			}
 		}
 		if (show_map && ImGui::CollapsingHeader("Map")) {
 			static char id_buf[32] = "";
