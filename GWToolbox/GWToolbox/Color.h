@@ -159,4 +159,16 @@ namespace Colors {
 		Clamp(i3);
 		return ConvertInt4ToU32(i3);
 	}
+
+	static Color Slerp(const Color c1, const Color c2, float t) {
+		int i1[4];
+		int i2[4];
+		int i3[4];
+		ConvertU32ToInt4(c1, i1);
+		ConvertU32ToInt4(c2, i2);
+		for (int i = 0; i < 4; ++i) {
+			i3[i] = (int)(i1[i] + (i2[i] - i1[i]) * t);
+		}
+		return ConvertInt4ToU32(i3);
+	}
 }

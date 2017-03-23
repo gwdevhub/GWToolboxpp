@@ -124,6 +124,9 @@ private:
 
 	Color color_drawings;
 	Color color_shadowstep_line;
+	Color color_shadowstep_line_maxrange;
+	float maxrange_interp_begin = 0.85f;
+	float maxrange_interp_end = 0.95f;
 
 	// for markers
 	Marker marker;

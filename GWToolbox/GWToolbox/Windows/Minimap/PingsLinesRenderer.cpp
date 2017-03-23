@@ -17,7 +17,10 @@ void PingsLinesRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	ping_circle.color = Colors::Load(ini, section, "color_pings", Colors::ARGB(128, 255, 0, 0));
 	if ((ping_circle.color & IM_COL32_A_MASK) == 0) ping_circle.color |= Colors::ARGB(128, 0, 0, 0);
 	marker.color = Colors::Load(ini, section, "color_shadowstep_mark", Colors::ARGB(200, 128, 0, 128));
-	color_shadowstep_line = Colors::Load(ini, section, "color_shadowstep_line", Colors::ARGB(48, 128, 0, 128));
+	color_shadowstep_line = Colors::Load(ini, section, "color_shadowstep_line", Colors::ARGB(155, 128, 0, 128));
+	color_shadowstep_line_maxrange = Colors::Load(ini, section, "color_shadowstep_line_maxrange", Colors::ARGB(255, 255, 0, 128));
+	maxrange_interp_begin = (float)ini->GetDoubleValue(section, "maxrange_interp_begin", 0.85);
+	maxrange_interp_end = (float)ini->GetDoubleValue(section, "maxrange_interp_end", 0.95);
 	Invalidate();
 }
 void PingsLinesRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
@@ -25,6 +28,9 @@ void PingsLinesRenderer::SaveSettings(CSimpleIni* ini, const char* section) cons
 	Colors::Save(ini, section, "color_pings", ping_circle.color);
 	Colors::Save(ini, section, "color_shadowstep_mark", marker.color);
 	Colors::Save(ini, section, "color_shadowstep_line", color_shadowstep_line);
+	Colors::Save(ini, section, "color_shadowstep_line_maxrange", color_shadowstep_line_maxrange);
+	ini->SetDoubleValue(section, "maxrange_interp_begin", maxrange_interp_begin);
+	ini->SetDoubleValue(section, "maxrange_interp_end", maxrange_interp_end);
 }
 void PingsLinesRenderer::DrawSettings() {
 	if (ImGui::SmallButton("Restore Defaults")) {
@@ -32,6 +38,7 @@ void PingsLinesRenderer::DrawSettings() {
 		ping_circle.color = Colors::ARGB(128, 255, 0, 0);
 		marker.color = Colors::ARGB(200, 128, 0, 128);
 		color_shadowstep_line = Colors::ARGB(48, 128, 0, 128);
+		color_shadowstep_line_maxrange = Colors::ARGB(48, 128, 0, 128);
 		ping_circle.Invalidate();
 		marker.Invalidate();
 	}
@@ -43,6 +50,15 @@ void PingsLinesRenderer::DrawSettings() {
 		marker.Invalidate();
 	}
 	Colors::DrawSetting("Shadowstep Line", &color_shadowstep_line);
+	Colors::DrawSetting("Shadowstep Line (Max range)", &color_shadowstep_line_maxrange);
+	if (ImGui::SliderFloat("Max range start", &maxrange_interp_begin, 0.0f, 1.0f)
+		&& maxrange_interp_end < maxrange_interp_begin) {
+		maxrange_interp_end = maxrange_interp_begin;
+	}
+	if (ImGui::SliderFloat("Max range end", &maxrange_interp_end, 0.0f, 1.0f)
+		&& maxrange_interp_begin > maxrange_interp_end) {
+		maxrange_interp_begin = maxrange_interp_end;
+	}
 }
 
 PingsLinesRenderer::PingsLinesRenderer() : vertices(nullptr) {
@@ -277,6 +293,11 @@ void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9* device) {
 	if (recall_target == 0) return;
 	if ((color_shadowstep_line & IM_COL32_A_MASK) == 0) return;
 
+	GW::Buff recall = GW::Effects::GetPlayerBuffBySkillId(GW::Constants::SkillID::Recall);
+	if (recall.SkillId == 0) {
+		recall_target = 0;
+		return;
+	}
 	GW::Agent* player = GW::Agents::GetPlayer();
 	if (player == nullptr) return;
 
@@ -287,17 +308,23 @@ void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9* device) {
 		return;
 	}
 	GW::Agent* target = agents[recall_target];
-	if (target == nullptr) {
-		recall_target = 0;
-		return;
+	static GW::GamePos targetpos(0.0f, 0.0f);
+	if (target) { targetpos = target->pos; }
+
+	float distance = GW::Agents::GetDistance(targetpos, player->pos);
+	float distance_perc = distance / GW::Constants::Range::Compass;
+	Color c;
+	if (distance_perc < maxrange_interp_begin) {
+		c = color_shadowstep_line;
+	} else if (distance_perc < maxrange_interp_end && (maxrange_interp_end - maxrange_interp_begin > 0)) {
+		float t = (distance_perc - maxrange_interp_begin) / (maxrange_interp_end - maxrange_interp_begin);
+		c = Colors::Slerp(color_shadowstep_line, color_shadowstep_line_maxrange, t);
+	} else {
+		c = color_shadowstep_line_maxrange;
 	}
-	GW::Buff recall = GW::Effects::GetPlayerBuffBySkillId(GW::Constants::SkillID::Recall);
-	if (recall.SkillId == 0) {
-		recall_target = 0;
-		return;
-	}
-	EnqueueVertex(target->X, target->Y, color_shadowstep_line);
-	EnqueueVertex(player->X, player->Y, color_shadowstep_line);
+
+	EnqueueVertex(targetpos.x, targetpos.y, c);
+	EnqueueVertex(player->X, player->Y, c);
 }
 
 
