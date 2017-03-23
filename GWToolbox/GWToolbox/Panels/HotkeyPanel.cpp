@@ -109,11 +109,14 @@ void HotkeyPanel::Draw(IDirect3DDevice9* pDevice) {
 
 void HotkeyPanel::DrawSettingInternal() {
 	ToolboxPanel::DrawSettingInternal();
-	// just in case we need stuff
+	ImGui::Checkbox("Show 'Active' checkbox in header", &TBHotkey::show_active_in_header);
+	ImGui::Checkbox("Show 'Run' button in header", &TBHotkey::show_run_in_header);
 }
 
 void HotkeyPanel::LoadSettings(CSimpleIni* ini) {
 	ToolboxPanel::LoadSettings(ini);
+	TBHotkey::show_active_in_header = ini->GetBoolValue(Name(), "show_active_in_header", false);
+	TBHotkey::show_run_in_header = ini->GetBoolValue(Name(), "show_run_in_header", false);
 
 	// clear hotkeys from toolbox
 	for (TBHotkey* hotkey : hotkeys) {
@@ -131,6 +134,8 @@ void HotkeyPanel::LoadSettings(CSimpleIni* ini) {
 }
 void HotkeyPanel::SaveSettings(CSimpleIni* ini) {
 	ToolboxPanel::SaveSettings(ini);
+	ini->SetBoolValue(Name(), "show_active_in_header", TBHotkey::show_active_in_header);
+	ini->SetBoolValue(Name(), "show_run_in_header", TBHotkey::show_run_in_header);
 
 	// clear hotkeys from ini
 	CSimpleIni::TNamesDepend entries;

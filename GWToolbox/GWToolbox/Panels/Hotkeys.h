@@ -21,6 +21,9 @@ public:
 		Op_BlockInput,
 	};
 
+	static bool show_active_in_header;
+	static bool show_run_in_header;
+
 	static TBHotkey* HotkeyFactory(CSimpleIni* ini, const char* section);
 
 	bool pressed = false;	// if the key has been pressed

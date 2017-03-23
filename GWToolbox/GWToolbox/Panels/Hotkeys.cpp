@@ -17,6 +17,8 @@
 #include "PconPanel.h"
 #include <ImGuiAddons.h>
 
+bool TBHotkey::show_active_in_header = true;
+bool TBHotkey::show_run_in_header = true;
 unsigned int TBHotkey::cur_ui_id = 0;
 
 TBHotkey* TBHotkey::HotkeyFactory(CSimpleIni* ini, const char* section) {
@@ -61,6 +63,30 @@ void TBHotkey::Save(CSimpleIni* ini, const char* section) const {
 	ini->SetBoolValue(section, "active", active);
 }
 void TBHotkey::Draw(Op* op) {
+	auto ShowHeaderButtons = [&]() {
+		if (show_active_in_header || show_run_in_header) {
+			ImGui::PushID(ui_id);
+			ImGui::PushID("header");
+			ImGuiStyle& style = ImGui::GetStyle();
+			if (show_active_in_header) {
+				ImGui::SameLine(ImGui::GetContentRegionAvailWidth() 
+					- ImGui::GetTextLineHeight() 
+					- style.FramePadding.y * 2
+					- (show_run_in_header ? (50.0f + ImGui::GetStyle().ItemSpacing.x) : 0));
+				ImGui::Checkbox("", &active);
+				if (ImGui::IsItemHovered()) ImGui::SetTooltip("The hotkey can trigger only when selected");
+			}
+			if (show_run_in_header) {
+				ImGui::SameLine(ImGui::GetContentRegionAvailWidth() - 50.0f);
+				if (ImGui::Button("Run", ImVec2(50.0f, 0.0f))) {
+					Execute();
+				}
+			}
+			ImGui::PopID();
+			ImGui::PopID();
+		}
+	};
+
 	// === Header ===
 	char header[256];
 	char desbuf[128];
@@ -68,21 +94,19 @@ void TBHotkey::Draw(Op* op) {
 	Description(desbuf, 128);
 	ModKeyName(keybuf, 128, modifier, key, "<None>");
 	_snprintf_s(header, 128, "%s [%s]###header%u", desbuf, keybuf, ui_id);
-	if (!ImGui::CollapsingHeader(header, ImGuiTreeNodeFlags_AllowOverlapMode)) {
-		ImGui::SameLine(ImGui::GetWindowContentRegionWidth() - ImGui::GetTextLineHeight());
-		ImGui::Checkbox("##active2", &active);
+	ImGuiTreeNodeFlags flags = (show_active_in_header || show_run_in_header) 
+		? ImGuiTreeNodeFlags_AllowOverlapMode : 0;
+	if (!ImGui::CollapsingHeader(header, flags)) {
+		ShowHeaderButtons();
 	} else {
-		ImGui::SameLine(ImGui::GetWindowContentRegionWidth() - ImGui::GetTextLineHeight());
-		ImGui::Checkbox("##active2", &active);
+		ShowHeaderButtons();
 		ImGui::PushID(ui_id);
 		ImGui::PushItemWidth(-70.0f);
 		// === Specific section ===
-		//ImGui::Text("Functionality:");
 		Draw();
 
 		// === Hotkey section ===
 		ImGui::Separator();
-		//ImGui::Text("Hotkey:");
 		ImGui::Checkbox("###active", &active);
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("The hotkey can trigger only when selected");
 		ImGui::SameLine();

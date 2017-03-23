@@ -24,9 +24,12 @@ public:
 
 protected:
 	void ShowVisibleRadio() {
-		ImGui::SameLine(ImGui::GetWindowContentRegionWidth() - ImGui::GetTextLineHeight());
+		ImGui::SameLine(ImGui::GetContentRegionAvailWidth() 
+			- ImGui::GetTextLineHeight() 
+			- ImGui::GetStyle().FramePadding.y * 2);
 		ImGui::PushID(Name());
 		ImGui::Checkbox("##check", &visible);
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Visible");
 		ImGui::PopID();
 	}
 };
