@@ -15,24 +15,21 @@
 #define CHAN_INFO GW::Chat::Channel::CHANNEL_GWCA3
 #define CHAN_ERROR GW::Chat::Channel::CHANNEL_GWCA4
 
-#if _DEBUG
-#define LOGFILE stdout
-#else
-#define LOGFILE logfile
-static FILE* LOGFILE = nullptr;
-#endif
+namespace {
+	FILE* logfile = nullptr;
+}
 
 // === Setup and cleanup ====
 void Log::InitializeLog() {
 #if _DEBUG
+	logfile = stdout;
 	AllocConsole();
 	FILE* fh;
 	freopen_s(&fh, "CONOUT$", "w", stdout);
 	freopen_s(&fh, "CONOUT$", "w", stderr);
 	SetConsoleTitle("GWTB++ Debug Console");
 #else
-	errno_t err = fopen_s(&LOGFILE, GuiUtils::getPath("log.txt").c_str(), "w");
-	if (err) { LOGFILE = nullptr; }
+	logfile = freopen(GuiUtils::getPath("log.txt").c_str(), "w", stdout);
 #endif
 }
 
@@ -46,7 +43,7 @@ void Log::Terminate() {
 #if _DEBUG
 	FreeConsole();
 #else
-	if (LOGFILE) {
+	if (logfile) {
 		fflush(logfile);
 		fclose(logfile);
 	}
@@ -64,26 +61,26 @@ static void PrintTimestamp() {
 	char buffer[16];
 	strftime(buffer, sizeof(buffer), "%H:%M:%S", &timeinfo);
 
-	fprintf(stdout, "[%s] ", buffer);
+	fprintf(logfile, "[%s] ", buffer);
 }
 
 void Log::Log(const char* msg, ...) {
-	if (!LOGFILE) return;
+	if (!logfile) return;
 	PrintTimestamp();
 
 	va_list args;
 	va_start(args, msg);
-	vfprintf(stdout, msg, args);
+	vfprintf(logfile, msg, args);
 	va_end(args);
 }
 
 void Log::LogW(const wchar_t* msg, ...) {
-	if (!LOGFILE) return;
+	if (!logfile) return;
 	PrintTimestamp();
 
 	va_list args;
 	va_start(args, msg);
-	vfwprintf(stdout, msg, args);
+	vfwprintf(logfile, msg, args);
 	va_end(args);
 }
 
