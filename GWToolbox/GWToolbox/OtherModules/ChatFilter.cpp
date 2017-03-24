@@ -397,7 +397,7 @@ bool ChatFilter::ShouldIgnoreByContent(const wchar_t *message) {
 
 void ChatFilter::DrawSettingInternal() {
 	ImGui::Text("Hide the following messages:");
-	ImGui::TextDisabled("'Rare' stands for Golt item, Ecto or Obby shard");
+	ImGui::TextDisabled("'Rare' stands for Gold item, Ecto or Obby shard");
 	ImGui::Checkbox("A rare item drops for you", &self_drop_rare);
 	ImGui::Checkbox("A common item drops for you", &self_drop_common);
 	ImGui::Checkbox("A rare item drops for an ally", &ally_drop_rare);
