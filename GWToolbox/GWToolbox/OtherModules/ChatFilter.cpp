@@ -233,7 +233,8 @@ const wchar_t* ChatFilter::Get2ndSegment(const wchar_t *message) const {
 
 DWORD ChatFilter::GetNumericSegment(const wchar_t *message) const {
 	for (size_t i = 0; message[i] != 0; ++i) {
-		if (message[i] == 0x10F) return (message[i + 1] & 0xFF);
+		if ((0x100 < message[i] && message[i] < 0x107) || (0x10D < message[i] && message[i] < 0x110))
+			return (message[i + 1] - 0x100);
 	}
 	return 0;
 }
