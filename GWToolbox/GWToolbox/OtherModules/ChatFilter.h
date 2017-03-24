@@ -38,10 +38,12 @@ private:
 	bool kill_next_msgdelivery;
 	bool kill_next_p081 = false;
 
-	bool self_common_drops;
-	bool ally_common_drops;
-	bool self_rare_drops;
-	bool ally_rare_drops;
+	bool self_drop_rare;
+	bool self_drop_common;
+	bool ally_drop_rare;
+	bool ally_drop_common;
+	bool ally_pickup_rare;
+	bool ally_pickup_common;
 	bool skill_points;
 	bool pvp_messages;
 	bool hoh;

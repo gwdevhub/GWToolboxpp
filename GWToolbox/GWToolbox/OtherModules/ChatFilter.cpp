@@ -60,10 +60,12 @@ void ChatFilter::Initialize() {
 			return true;
 		}
 
-		if ((self_common_drops
-			|| ally_common_drops
-			|| self_rare_drops
-			|| ally_rare_drops
+		if ((self_drop_rare
+			|| self_drop_common
+			|| ally_drop_rare
+			|| ally_drop_common
+			|| ally_pickup_rare
+			|| ally_pickup_common
 			|| skill_points
 			|| pvp_messages
 			|| hoh
@@ -141,10 +143,12 @@ void ChatFilter::Initialize() {
 
 void ChatFilter::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini);
-	self_common_drops = ini->GetBoolValue(Name(), "self_common_drops", false);
-	ally_common_drops = ini->GetBoolValue(Name(), "ally_common_drops", false);
-	self_rare_drops = ini->GetBoolValue(Name(), "self_rare_drops", false);
-	ally_rare_drops = ini->GetBoolValue(Name(), "ally_rare_drops", false);
+	self_drop_rare = ini->GetBoolValue(Name(), "self_drop_rare", false);
+	self_drop_common = ini->GetBoolValue(Name(), "self_drop_common", false);
+	ally_drop_rare = ini->GetBoolValue(Name(), "ally_drop_rare", false);
+	ally_drop_common = ini->GetBoolValue(Name(), "ally_drop_common", false);
+	ally_pickup_rare = ini->GetBoolValue(Name(), "ally_pickup_rare", false);
+	ally_pickup_common = ini->GetBoolValue(Name(), "ally_pickup_common", false);
 	skill_points = ini->GetBoolValue(Name(), "skill_points", false);
 	pvp_messages = ini->GetBoolValue(Name(), "pvp_messages", true);
 	hoh = ini->GetBoolValue(Name(), "hoh_messages", false);
@@ -174,10 +178,12 @@ void ChatFilter::LoadSettings(CSimpleIni* ini) {
 
 void ChatFilter::SaveSettings(CSimpleIni* ini) {
 	ToolboxModule::SaveSettings(ini);
-	ini->SetBoolValue(Name(), "self_common_drops", self_common_drops);
-	ini->SetBoolValue(Name(), "ally_common_drops", ally_common_drops);
-	ini->SetBoolValue(Name(), "self_rare_drops", self_rare_drops);
-	ini->SetBoolValue(Name(), "ally_rare_drops", ally_rare_drops);
+	ini->SetBoolValue(Name(), "self_drop_rare", self_drop_rare);
+	ini->SetBoolValue(Name(), "self_drop_common", self_drop_common);
+	ini->SetBoolValue(Name(), "ally_drop_rare", ally_drop_rare);
+	ini->SetBoolValue(Name(), "ally_drop_common", ally_drop_common);
+	ini->SetBoolValue(Name(), "ally_pickup_rare", ally_pickup_rare);
+	ini->SetBoolValue(Name(), "ally_pickup_common", ally_pickup_common);
 	ini->SetBoolValue(Name(), "skill_points", skill_points);
 	ini->SetBoolValue(Name(), "pvp_messages", pvp_messages);
 	ini->SetBoolValue(Name(), "hoh_messages", hoh);
@@ -280,15 +286,15 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 	case 0x7CC:
 		if (FullMatch(&message[1], { 0x962D, 0xFEB5, 0x1D08, 0x10A, 0xAC2, 0x101, 0x164, 0x1 })) return lunars; // you receive 100 gold
 		break;
-	case 0x7E0: return self_common_drops; // party shares gold
+	case 0x7E0: return ally_pickup_common; // party shares gold
 	case 0x7ED: return false; // opening the chest reveals x, which your party reserves for y
-	case 0x7DF: return self_common_drops; // party shares gold ?
+	case 0x7DF: return ally_pickup_common; // party shares gold ?
 	case 0x7F0: { // monster/player x drops item y (no assignment)
 				  // first segment describes the agent who dropped, second segment describes the item dropped
 		if (!ShouldIgnoreByAgentThatDropped(Get1stSegment(message))) return false;
 		bool rare = IsRare(Get2ndSegment(message));
-		if (rare) return self_rare_drops;
-		else return self_common_drops;
+		if (rare) return self_drop_rare;
+		else return self_drop_common;
 	}
 	case 0x7F1: { // monster x drops item y, your party assigns to player z
 				  // 0x7F1 0x9A9D 0xE943 0xB33 0x10A <monster> 0x1 0x10B <rarity> 0x10A <item> 0x1 0x1 0x10F <assignee: playernumber + 0x100>
@@ -297,14 +303,19 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 		GW::Agent* me = GW::Agents::GetPlayer();
 		bool forplayer = (me && me->PlayerNumber == GetNumericSegment(message));
 		bool rare = IsRare(Get2ndSegment(message));
-		if (forplayer && rare) return self_rare_drops;
-		if (forplayer && !rare) return self_common_drops;
-		if (!forplayer && rare) return ally_rare_drops;
-		if (!forplayer && !rare) return ally_common_drops;
+		if (forplayer && rare) return self_drop_rare;
+		if (forplayer && !rare) return self_drop_common;
+		if (!forplayer && rare) return ally_drop_rare;
+		if (!forplayer && !rare) return ally_drop_common;
 		return false;
 	}
 	case 0x7F2: return false; // you drop item x
-	case 0x7F6: return ally_common_drops; // player x picks up item y (note: item can be unassigned gold)
+	case 0x7F6: { // player x picks up item y (note: item can be unassigned gold)
+		bool rare = IsRare(Get2ndSegment(message));
+		if (rare) return ally_pickup_rare;
+		if (!rare) return ally_pickup_common;
+		return false;
+	}
 	case 0x7FC: return false; // you pick up item y (note: item can be unassigned gold)
 	case 0x807: return false; // player joined the game
 	case 0x816: return skill_points; // you gain a skill point
@@ -386,12 +397,13 @@ bool ChatFilter::ShouldIgnoreByContent(const wchar_t *message) {
 
 void ChatFilter::DrawSettingInternal() {
 	ImGui::Text("Hide the following messages:");
-	ImGui::Checkbox("Common drops for you", &self_common_drops);
-	ImGui::Checkbox("Common drops for allies", &ally_common_drops);
-	ImGui::Checkbox("Rare drops for you", &self_rare_drops);
-	ImGui::ShowHelp("'Rare' here stands for Gold item, Ecto or Obby shard");
-	ImGui::Checkbox("Rare drops for allies", &ally_rare_drops);
-	ImGui::ShowHelp("'Rare' here stands for Gold item, Ecto or Obby shard");
+	ImGui::TextDisabled("'Rare' stands for Golt item, Ecto or Obby shard");
+	ImGui::Checkbox("A rare item drops for you", &self_drop_rare);
+	ImGui::Checkbox("A common item drops for you", &self_drop_common);
+	ImGui::Checkbox("A rare item drops for an ally", &ally_drop_rare);
+	ImGui::Checkbox("A common item drops for an ally", &ally_drop_common);
+	ImGui::Checkbox("An ally picks up a rare item", &ally_pickup_rare);
+	ImGui::Checkbox("An ally picks up a common item", &ally_pickup_common);
 	ImGui::Checkbox("Earning skill points", &skill_points);
 	ImGui::Checkbox("PvP messages", &pvp_messages);
 	ImGui::ShowHelp("Such as 'A skill was updated for pvp!'");
@@ -400,7 +412,7 @@ void ChatFilter::DrawSettingInternal() {
 	ImGui::Checkbox("9 Rings messages", &ninerings);
 	ImGui::Checkbox("'No one hears you...'", &noonehearsyou);
 	ImGui::Checkbox("Lunar fortunes messages", &lunars);
-	ImGui::Checkbox("Player is away messages", &away);
+	ImGui::Checkbox("'Player x might not reply because his/her status is set to away'", &away);
 
 	ImGui::Separator();
 	ImGui::Checkbox("Hide any messages containing:", &messagebycontent);
