@@ -25,8 +25,19 @@ public:
 	void SaveSettings(CSimpleIni* ini) override;
 
 private:
+	void DrawResignlog();
+
 	DWORD mapfile = 0;
-	std::vector<std::string> resigned;
+
+	enum Status {
+		Unknown,
+		NotYetConnected,
+		Connected,
+		Resigned,
+		Left
+	};
+	std::vector<Status> status;
+	std::vector<unsigned long> timestamp;
 
 	bool show_widgets = true;
 	bool show_open_chest = true;

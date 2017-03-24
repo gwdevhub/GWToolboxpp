@@ -3,10 +3,10 @@
 #include <string>
 #include <cmath>
 
-#include <GWCA\GWCA.h>
+#include <GWCA\Constants\Constants.h>
 #include <GWCA\Managers\ItemMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
-#include <GWCA\Constants\Constants.h>
+#include <GWCA\Managers\PartyMgr.h>
 
 #include "GWToolbox.h"
 #include "GuiUtils.h"
@@ -14,6 +14,7 @@
 #include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\GameThreadMgr.h>
+#include <GWCA\Managers\ChatMgr.h>
 
 #include <Windows\TimerWindow.h>
 #include <Windows\HealthWindow.h>
@@ -39,25 +40,43 @@ void InfoPanel::Initialize() {
 			&& pak->message[3] == 0x1B9B
 			&& pak->message[4] == 0x107) { // 0x107 is the "start string" marker
 			
+			// Prepare the name
 			const int offset = 5;
 			int i = 0;
-			char buf[256];
-			unsigned long time = GW::Map::GetInstanceTime() / 1000;
-			sprintf_s(buf, "[%d:%02d:%02d] ", time / (60 * 60), (time / 60) % 60, time % 60);
-			int len = strlen(buf);
+			wchar_t buf[128];
 			while (i < 256 && pak->message[i + offset] != 0x1 && pak->message[i + offset] != 0) {
-				buf[len + i] = (char)(pak->message[offset + i]);
+				buf[i] = (pak->message[offset + i]);
 				++i;
 			}
-			buf[len + i] = '\0';
-			resigned.push_back(std::string(buf));
+			buf[i] = '\0';
+
+			// get all the data
+			GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
+			if (info == nullptr) return false;
+			GW::PlayerPartyMemberArray partymembers = info->players;
+			if (!partymembers.valid()) return false;
+			GW::PlayerArray players = GW::Agents::GetPlayerArray();
+			if (!players.valid()) return false;
+
+			// set the right index in party
+			for (unsigned i = 0; i < partymembers.size(); ++i) {
+				if (i >= status.size()) continue;
+				if (partymembers[i].loginnumber >= players.size()) continue;
+				if (wcscmp(players[partymembers[i].loginnumber].Name, buf) == 0) {
+					status[i] = Resigned;
+					timestamp[i] = GW::Map::GetInstanceTime();
+				}
+			}
 		}
 		return false;
 	});
 	GW::StoC::AddCallback<GW::Packet::StoC::P391_InstanceLoadFile>(
 		[this](GW::Packet::StoC::P391_InstanceLoadFile* packet) -> bool {
 		mapfile = packet->map_fileID;
-		resigned.clear();
+		for (unsigned i = 0; i < status.size(); ++i) {
+			status[i] = NotYetConnected;
+			timestamp[i] = 0;
+		}
 		return false;
 	});
 }
@@ -280,16 +299,71 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::Text("%d in compass range", compass_count);
 		}
 		if (show_resignlog && ImGui::CollapsingHeader("Resign log")) {
-			if (resigned.empty()) {
-				ImGui::Text("<none>");
-			} else {
-				for (std::string& s : resigned) {
-					ImGui::Text(s.c_str());
-				}
-			}
+			DrawResignlog();
 		}
 	}
 	ImGui::End();
+}
+
+void InfoPanel::DrawResignlog() {
+	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
+	GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
+	if (info == nullptr) return;
+	GW::PlayerPartyMemberArray partymembers = info->players;
+	if (!partymembers.valid()) return;
+	if (partymembers.size() != status.size()) {
+		status.resize(partymembers.size(), Unknown);
+		timestamp.resize(partymembers.size(), 0);
+	}
+	GW::PlayerArray players = GW::Agents::GetPlayerArray();
+	if (!players.valid()) return;
+	for (unsigned i = 0; i < partymembers.size(); ++i) {
+		GW::PlayerPartyMember& partymember = partymembers[i];
+		if (partymember.connected()) {
+			if (status[i] == NotYetConnected) {
+				status[i] = Connected;
+				timestamp[i] = GW::Map::GetInstanceTime();
+			}
+		} else {
+			if (status[i] == Connected || status[i] == Resigned) {
+				status[i] = Left;
+				timestamp[i] = GW::Map::GetInstanceTime();
+			}
+		}
+		if (partymember.loginnumber >= players.size()) continue;
+		GW::Player& player = players[partymember.loginnumber];
+		const char* status_str = [](Status status) -> const char* {
+			switch (status) {
+			case InfoPanel::Unknown: return "Unknown";
+			case InfoPanel::NotYetConnected: return "Not connected";
+			case InfoPanel::Connected: return "Connected";
+			case InfoPanel::Resigned: return "Resigned";
+			case InfoPanel::Left: return "Left";
+			default: return "";
+			}
+		}(status[i]);
+		ImGui::PushID(i);
+		if (ImGui::Button("Send")) {
+			// Todo: wording probably needs improvement
+			char buf[256];
+			sprintf_s(buf, "%d. %S - %s", i + 1, player.Name,
+				(status[i] == Connected 
+					&& GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) 
+				? "Connected (not resigned)" : status_str);
+			GW::Chat::SendChat(buf, '#');
+		}
+		ImGui::SameLine();
+		ImGui::Text("%d. %S - %s", i + 1, player.Name, status_str);
+		if (status[i] != Unknown) {
+			ImGui::SameLine();
+			ImGui::TextDisabled("[%d:%02d:%02d.%03d]",
+				(timestamp[i] / (60 * 60 * 1000)),
+				(timestamp[i] / (60 * 1000)) % 60,
+				(timestamp[i] / (1000)) % 60,
+				(timestamp[i]) % 1000);
+		}
+		ImGui::PopID();
+	}
 }
 
 void InfoPanel::DrawSettingInternal() {
