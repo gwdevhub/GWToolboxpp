@@ -11,6 +11,7 @@
 class ChatFilter : public ToolboxModule {
 	ChatFilter() {};
 	~ChatFilter() {};
+
 public:
 	static ChatFilter& Instance() {
 		static ChatFilter instance;
@@ -52,6 +53,8 @@ private:
 	bool noonehearsyou;
 	bool lunars;
 	bool away;
+	bool you_have_been_playing_for;
+	bool player_has_achieved_title;
 
 	bool messagebycontent;
 #define FILTER_BUF_SIZE 1024*16

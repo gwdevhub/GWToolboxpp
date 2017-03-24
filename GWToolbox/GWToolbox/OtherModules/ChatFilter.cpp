@@ -12,6 +12,7 @@
 #include "GuiUtils.h"
 
 //#define PRINT_CHAT_PACKETS
+#define VAR_NAME(v) (#v)
 
 static void printchar(wchar_t c) {
 	if (c >= L' ' && c <= L'~') {
@@ -143,21 +144,23 @@ void ChatFilter::Initialize() {
 
 void ChatFilter::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini);
-	self_drop_rare = ini->GetBoolValue(Name(), "self_drop_rare", false);
-	self_drop_common = ini->GetBoolValue(Name(), "self_drop_common", false);
-	ally_drop_rare = ini->GetBoolValue(Name(), "ally_drop_rare", false);
-	ally_drop_common = ini->GetBoolValue(Name(), "ally_drop_common", false);
-	ally_pickup_rare = ini->GetBoolValue(Name(), "ally_pickup_rare", false);
-	ally_pickup_common = ini->GetBoolValue(Name(), "ally_pickup_common", false);
-	skill_points = ini->GetBoolValue(Name(), "skill_points", false);
-	pvp_messages = ini->GetBoolValue(Name(), "pvp_messages", true);
-	hoh = ini->GetBoolValue(Name(), "hoh_messages", false);
-	favor = ini->GetBoolValue(Name(), "favor", false);
-	ninerings = ini->GetBoolValue(Name(), "ninerings", true);
-	noonehearsyou = ini->GetBoolValue(Name(), "noonehearsyou", true);
-	lunars = ini->GetBoolValue(Name(), "lunars", true);
-	messagebycontent = ini->GetBoolValue(Name(), "messagebycontent", false);
-	away = ini->GetBoolValue(Name(), "away", false);
+	self_drop_rare = ini->GetBoolValue(Name(), VAR_NAME(self_drop_rare), false);
+	self_drop_common = ini->GetBoolValue(Name(), VAR_NAME(self_drop_common), false);
+	ally_drop_rare = ini->GetBoolValue(Name(), VAR_NAME(ally_drop_rare), false);
+	ally_drop_common = ini->GetBoolValue(Name(), VAR_NAME(ally_drop_common), false);
+	ally_pickup_rare = ini->GetBoolValue(Name(), VAR_NAME(ally_pickup_rare), false);
+	ally_pickup_common = ini->GetBoolValue(Name(), VAR_NAME(ally_pickup_common), false);
+	skill_points = ini->GetBoolValue(Name(), VAR_NAME(skill_points), false);
+	pvp_messages = ini->GetBoolValue(Name(), VAR_NAME(pvp_messages), true);
+	hoh = ini->GetBoolValue(Name(), VAR_NAME(hoh_messages), false);
+	favor = ini->GetBoolValue(Name(), VAR_NAME(favor), false);
+	ninerings = ini->GetBoolValue(Name(), VAR_NAME(ninerings), true);
+	noonehearsyou = ini->GetBoolValue(Name(), VAR_NAME(noonehearsyou), true);
+	lunars = ini->GetBoolValue(Name(), VAR_NAME(lunars), true);
+	messagebycontent = ini->GetBoolValue(Name(), VAR_NAME(messagebycontent), false);
+	away = ini->GetBoolValue(Name(), VAR_NAME(away), false);
+	you_have_been_playing_for = ini->GetBoolValue(Name(), VAR_NAME(you_have_been_playing_for), false);
+	player_has_achieved_title = ini->GetBoolValue(Name(), VAR_NAME(player_has_achieved_title), false);
 
 	std::ifstream bycontent_file;
 	bycontent_file.open(GuiUtils::getPath("FilterByContent.txt"));
@@ -178,22 +181,23 @@ void ChatFilter::LoadSettings(CSimpleIni* ini) {
 
 void ChatFilter::SaveSettings(CSimpleIni* ini) {
 	ToolboxModule::SaveSettings(ini);
-	ini->SetBoolValue(Name(), "self_drop_rare", self_drop_rare);
-	ini->SetBoolValue(Name(), "self_drop_common", self_drop_common);
-	ini->SetBoolValue(Name(), "ally_drop_rare", ally_drop_rare);
-	ini->SetBoolValue(Name(), "ally_drop_common", ally_drop_common);
-	ini->SetBoolValue(Name(), "ally_pickup_rare", ally_pickup_rare);
-	ini->SetBoolValue(Name(), "ally_pickup_common", ally_pickup_common);
-	ini->SetBoolValue(Name(), "skill_points", skill_points);
-	ini->SetBoolValue(Name(), "pvp_messages", pvp_messages);
-	ini->SetBoolValue(Name(), "hoh_messages", hoh);
-	ini->SetBoolValue(Name(), "favor", favor);
-	ini->SetBoolValue(Name(), "ninerings", ninerings);
-	ini->SetBoolValue(Name(), "noonehearsyou", noonehearsyou);
-	ini->SetBoolValue(Name(), "lunars", lunars);
-	ini->SetBoolValue(Name(), "messagebycontent", messagebycontent);
-	//ini->SetBoolValue(Name(), "messagebyauthor", messagebyauthor);
-	ini->SetBoolValue(Name(), "away", away);
+	ini->SetBoolValue(Name(), VAR_NAME(self_drop_rare), self_drop_rare);
+	ini->SetBoolValue(Name(), VAR_NAME(self_drop_common), self_drop_common);
+	ini->SetBoolValue(Name(), VAR_NAME(ally_drop_rare), ally_drop_rare);
+	ini->SetBoolValue(Name(), VAR_NAME(ally_drop_common), ally_drop_common);
+	ini->SetBoolValue(Name(), VAR_NAME(ally_pickup_rare), ally_pickup_rare);
+	ini->SetBoolValue(Name(), VAR_NAME(ally_pickup_common), ally_pickup_common);
+	ini->SetBoolValue(Name(), VAR_NAME(skill_points), skill_points);
+	ini->SetBoolValue(Name(), VAR_NAME(pvp_messages), pvp_messages);
+	ini->SetBoolValue(Name(), VAR_NAME(hoh_messages), hoh);
+	ini->SetBoolValue(Name(), VAR_NAME(favor), favor);
+	ini->SetBoolValue(Name(), VAR_NAME(ninerings), ninerings);
+	ini->SetBoolValue(Name(), VAR_NAME(noonehearsyou), noonehearsyou);
+	ini->SetBoolValue(Name(), VAR_NAME(lunars), lunars);
+	ini->SetBoolValue(Name(), VAR_NAME(messagebycontent), messagebycontent);
+	ini->SetBoolValue(Name(), VAR_NAME(away), away);
+	ini->SetBoolValue(Name(), VAR_NAME(you_have_been_playing_for), you_have_been_playing_for);
+	ini->SetBoolValue(Name(), VAR_NAME(player_has_achieved_title), player_has_achieved_title);
 
 	if (bycontent_filedirty) {
 		std::ofstream bycontent_file;
@@ -329,8 +333,8 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 	case 0x880: return false; // 'Player name <name> is invalid.'. (Anyone actually saw it ig ?)
 	case 0x881: return false; // 'Player <name> is not online.' (Offline)
 
-	case 0x7BF4: return false; // You have been playing for x time.
-	case 0x7BF5: return false; // You have been playinf for x time. Please take a break.
+	case 0x7BF4: return you_have_been_playing_for; // You have been playing for x time.
+	case 0x7BF5: return you_have_been_playing_for; // You have been playinf for x time. Please take a break.
 
 	case 0x8101:
 		switch (message[1]) {
@@ -357,7 +361,7 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 		case 0x4651: return pvp_messages; // a hero skill has been updated for pvp
 		case 0x223B: return hoh; // a party won hall of heroes	
 		case 0x23E4: return favor; // 0xF8AA 0x95CD 0x2766 // the world no longer has the favor of the gods
-		case 0x2E36: return false; // 0xEA8C 0xE05B 0x330F // Player has achieved the title...
+		case 0x2E36: return player_has_achieved_title; // 0xEA8C 0xE05B 0x330F // Player has achieved the title...
 		case 0x3772: return false; // I'm under the effect of x
 		}
 		break;
@@ -402,21 +406,32 @@ bool ChatFilter::ShouldIgnoreByContent(const wchar_t *message) {
 
 void ChatFilter::DrawSettingInternal() {
 	ImGui::Text("Hide the following messages:");
-	ImGui::TextDisabled("'Rare' stands for Gold item, Ecto or Obby shard");
+	ImGui::Separator();
+	ImGui::Text("Drops");
+	ImGui::SameLine();
+	ImGui::TextDisabled("('Rare' stands for Gold item, Ecto or Obby shard)");
 	ImGui::Checkbox("A rare item drops for you", &self_drop_rare);
 	ImGui::Checkbox("A common item drops for you", &self_drop_common);
 	ImGui::Checkbox("A rare item drops for an ally", &ally_drop_rare);
 	ImGui::Checkbox("A common item drops for an ally", &ally_drop_common);
 	ImGui::Checkbox("An ally picks up a rare item", &ally_pickup_rare);
 	ImGui::Checkbox("An ally picks up a common item", &ally_pickup_common);
+
+	ImGui::Separator();
+	ImGui::Text("Announcements");
+	ImGui::Checkbox("Hall of Heroes winners", &hoh);
+	ImGui::Checkbox("Favor of the Gods announcements", &favor);
+	ImGui::Checkbox("'You have been playing for...'", &you_have_been_playing_for);
+	ImGui::Checkbox("'Player x has achieved title...'", &player_has_achieved_title);
+
+	ImGui::Separator();
+	ImGui::Text("Others");
 	ImGui::Checkbox("Earning skill points", &skill_points);
 	ImGui::Checkbox("PvP messages", &pvp_messages);
 	ImGui::ShowHelp("Such as 'A skill was updated for pvp!'");
-	ImGui::Checkbox("Hall of Heroes winners", &hoh);
-	ImGui::Checkbox("Favor of the Gods announcements", &favor);
 	ImGui::Checkbox("9 Rings messages", &ninerings);
-	ImGui::Checkbox("'No one hears you...'", &noonehearsyou);
 	ImGui::Checkbox("Lunar fortunes messages", &lunars);
+	ImGui::Checkbox("'No one hears you...'", &noonehearsyou);
 	ImGui::Checkbox("'Player x might not reply because his/her status is set to away'", &away);
 
 	ImGui::Separator();
