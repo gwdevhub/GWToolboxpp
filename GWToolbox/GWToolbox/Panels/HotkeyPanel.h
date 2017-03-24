@@ -6,8 +6,6 @@
 #include <Windows.h>
 #include <string>
 
-#include <GWCA\GWCA.h>
-
 #include "Key.h"
 #include "ToolboxPanel.h"
 #include "logger.h"

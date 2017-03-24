@@ -4,17 +4,16 @@
 
 class ToolboxUIElement : public ToolboxModule {
 public:
+	// Draw user interface. Will be called every frame if the element is visible
+	virtual void Draw(IDirect3DDevice9* pDevice) {};
+
+	virtual void Initialize() override;
+
 	// save 'visible' field
-	virtual void LoadSettings(CSimpleIni* ini) override {
-		ToolboxModule::LoadSettings(ini);
-		visible = ini->GetBoolValue(Name(), "visible", false);
-	}
+	virtual void LoadSettings(CSimpleIni* ini) override;
 
 	// load 'visible' field
-	virtual void SaveSettings(CSimpleIni* ini) override {
-		ToolboxModule::SaveSettings(ini);
-		ini->SetBoolValue(Name(), "visible", visible);
-	}
+	virtual void SaveSettings(CSimpleIni* ini) override;
 
 	virtual bool ToggleVisible() { return visible = !visible; }
 
@@ -23,13 +22,5 @@ public:
 	bool lock_size;
 
 protected:
-	void ShowVisibleRadio() {
-		ImGui::SameLine(ImGui::GetContentRegionAvailWidth() 
-			- ImGui::GetTextLineHeight() 
-			- ImGui::GetStyle().FramePadding.y * 2);
-		ImGui::PushID(Name());
-		ImGui::Checkbox("##check", &visible);
-		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Visible");
-		ImGui::PopID();
-	}
+	void ShowVisibleRadio();
 };

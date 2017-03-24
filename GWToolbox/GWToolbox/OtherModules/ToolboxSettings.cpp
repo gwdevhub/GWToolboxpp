@@ -4,10 +4,50 @@
 #include <GWCA\Managers\MapMgr.h>
 
 #include "GuiUtils.h"
-#include "GWToolbox.h"
+#include <GWToolbox.h>
+#include <Windows\MainWindow.h>
+#include <Panels\PconPanel.h>
+#include <Panels\HotkeyPanel.h>
+#include <Panels\BuildPanel.h>
+#include <Panels\TravelPanel.h>
+#include <Panels\DialogPanel.h>
+#include <Panels\InfoPanel.h>
+#include <Panels\MaterialsPanel.h>
+#include <Panels\SettingsPanel.h>
+#include <Windows\TimerWindow.h>
+#include <Windows\HealthWindow.h>
+#include <Windows\DistanceWindow.h>
+#include <Windows\Minimap\Minimap.h>
+#include <Windows\PartyDamage.h>
+#include <Windows\BondsWindow.h>
+#include <Windows\ClockWindow.h>
+#include <Windows\NotePadWindow.h>
 
 bool ToolboxSettings::move_all = false;
 bool ToolboxSettings::clamp_window_positions = false;
+
+void ToolboxSettings::InitializeModules() {
+	MainWindow::Instance().Initialize();
+	if (use_pcons) PconPanel::Instance().Initialize();
+	if (use_hotkeys) HotkeyPanel::Instance().Initialize();
+	if (use_builds) BuildPanel::Instance().Initialize();
+	if (use_travel) TravelPanel::Instance().Initialize();
+	if (use_dialogs) DialogPanel::Instance().Initialize();
+	if (use_info) InfoPanel::Instance().Initialize();
+	if (use_materials) MaterialsPanel::Instance().Initialize();
+
+	SettingsPanel::Instance().Initialize();
+	SettingsPanel::Instance().separator = GWToolbox::Instance().GetModules().size();
+
+	if (use_timer) TimerWindow::Instance().Initialize();
+	if (use_health)  HealthWindow::Instance().Initialize();
+	if (use_distance) DistanceWindow::Instance().Initialize();
+	if (use_minimap) Minimap::Instance().Initialize();
+	if (use_damage) PartyDamage::Instance().Initialize();
+	if (use_bonds) BondsWindow::Instance().Initialize();
+	if (use_clock) ClockWindow::Instance().Initialize();
+	if (use_notepad) NotePadWindow::Instance().Initialize();
+}
 
 void ToolboxSettings::DrawSettingInternal() {
 	DrawFreezeSetting();
@@ -18,6 +58,24 @@ void ToolboxSettings::DrawSettingInternal() {
 		"This might also move windows on bottom and right side\n"
 		"of the screen slightly towards the center during rezone.\n"
 		"Might also cause windows to move when minimizing.");
+
+	ImGui::Text("Enable the following features:");
+	ImGui::TextDisabled("Unticking will completely disable a feature from initializing and running. Requires toolbox restart.");
+	ImGui::Checkbox("Pcons", &use_pcons);
+	ImGui::Checkbox("Hotkeys", &use_hotkeys);
+	ImGui::Checkbox("Builds", &use_builds);
+	ImGui::Checkbox("Travel", &use_travel);
+	ImGui::Checkbox("Dialogs", &use_dialogs);
+	ImGui::Checkbox("Info", &use_info);
+	ImGui::Checkbox("Materials", &use_materials);
+	ImGui::Checkbox("Timer", &use_timer);
+	ImGui::Checkbox("Health", &use_health);
+	ImGui::Checkbox("Distance", &use_distance);
+	ImGui::Checkbox("Minimap", &use_minimap);
+	ImGui::Checkbox("Damage", &use_damage);
+	ImGui::Checkbox("Bonds", &use_bonds);
+	ImGui::Checkbox("Clock", &use_clock);
+	ImGui::Checkbox("Notepad", &use_notepad);
 }
 
 void ToolboxSettings::DrawFreezeSetting() {
@@ -29,12 +87,42 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini);
 	move_all = false;
 	clamp_window_positions = ini->GetBoolValue(Name(), "clamp_window_positions", false);
+	use_pcons = ini->GetBoolValue(Name(), "use_pcons", true);
+	use_hotkeys = ini->GetBoolValue(Name(), "use_hotkeys", true);
+	use_builds = ini->GetBoolValue(Name(), "use_builds", true);
+	use_travel = ini->GetBoolValue(Name(), "use_travel", true);
+	use_dialogs = ini->GetBoolValue(Name(), "use_dialogs", true);
+	use_info = ini->GetBoolValue(Name(), "use_info", true);
+	use_materials = ini->GetBoolValue(Name(), "use_materials", true);
+	use_timer = ini->GetBoolValue(Name(), "use_timer", true);
+	use_health = ini->GetBoolValue(Name(), "use_health", true);
+	use_distance = ini->GetBoolValue(Name(), "use_distance", true);
+	use_minimap = ini->GetBoolValue(Name(), "use_minimap", true);
+	use_damage = ini->GetBoolValue(Name(), "use_damage", true);
+	use_bonds = ini->GetBoolValue(Name(), "use_bonds", true);
+	use_clock = ini->GetBoolValue(Name(), "use_clock", true);
+	use_notepad = ini->GetBoolValue(Name(), "use_notepad", true);
 }
 
 void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
 	ToolboxModule::SaveSettings(ini);
 	ini->SetBoolValue(Name(), "clamp_window_positions", clamp_window_positions);
 	if (location_file.is_open()) location_file.close();
+	ini->SetBoolValue(Name(), "use_pcons", use_pcons);
+	ini->SetBoolValue(Name(), "use_hotkeys", use_hotkeys);
+	ini->SetBoolValue(Name(), "use_builds", use_builds);
+	ini->SetBoolValue(Name(), "use_travel", use_travel);
+	ini->SetBoolValue(Name(), "use_dialogs", use_dialogs);
+	ini->SetBoolValue(Name(), "use_info", use_info);
+	ini->SetBoolValue(Name(), "use_materials", use_materials);
+	ini->SetBoolValue(Name(), "use_timer", use_timer);
+	ini->SetBoolValue(Name(), "use_health", use_health);
+	ini->SetBoolValue(Name(), "use_distance", use_distance);
+	ini->SetBoolValue(Name(), "use_minimap", use_minimap);
+	ini->SetBoolValue(Name(), "use_damage", use_damage);
+	ini->SetBoolValue(Name(), "use_bonds", use_bonds);
+	ini->SetBoolValue(Name(), "use_clock", use_clock);
+	ini->SetBoolValue(Name(), "use_notepad", use_notepad);
 }
 
 void ToolboxSettings::Update() {

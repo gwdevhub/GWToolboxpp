@@ -16,27 +16,17 @@
 #include <GWCA\Managers\SkillbarMgr.h>
 #include <GWCA\Managers\GameThreadMgr.h>
 #include <GWCA\Managers\AgentMgr.h>
+#include <GWCA\Managers\MapMgr.h>
 
+#include <GuiUtils.h>
+#include "GWToolbox.h"
 #include <Windows\MainWindow.h>
-#include <Windows\TimerWindow.h>
-#include <Windows\BondsWindow.h>
-#include <Windows\HealthWindow.h>
-#include <Windows\DistanceWindow.h>
+#include <Panels\SettingsPanel.h>
 #include <Windows\PartyDamage.h>
-#include <Windows\Minimap\Minimap.h>
-#include <Windows\ClockWindow.h>
-#include <Windows\NotePadWindow.h>
 
-#include "Panels\PconPanel.h"
-#include "Panels\HotkeyPanel.h"
 #include "Panels\TravelPanel.h"
 #include "Panels\BuildPanel.h"
-#include "Panels\DialogPanel.h"
-#include "Panels\InfoPanel.h"
-#include "Panels\MaterialsPanel.h"
-#include "Panels\SettingsPanel.h"
-#include <OtherModules\GameSettings.h>
-#include "GWToolbox.h"
+
 #include <logger.h>
 
 void ChatCommands::DrawHelp() {
@@ -80,7 +70,6 @@ void ChatCommands::Initialize() {
 	ToolboxModule::Initialize();
 
 	GW::Chat::RegisterCommand(L"age2", ChatCommands::CmdAge2);
-	GW::Chat::RegisterCommand(L"pcons", ChatCommands::CmdPcons);
 	GW::Chat::RegisterCommand(L"dialog", ChatCommands::CmdDialog);
 	GW::Chat::RegisterCommand(L"show", ChatCommands::CmdShow);
 	GW::Chat::RegisterCommand(L"hide", ChatCommands::CmdHide);
@@ -100,8 +89,6 @@ void ChatCommands::Initialize() {
 	GW::Chat::RegisterCommand(L"tgt", ChatCommands::CmdTarget);
 	GW::Chat::RegisterCommand(L"useskill", ChatCommands::CmdUseSkill);
 	GW::Chat::RegisterCommand(L"skilluse", ChatCommands::CmdUseSkill);
-	GW::Chat::RegisterCommand(L"borderless", ChatCommands::CmdBorderless);
-	GW::Chat::RegisterCommand(L"flag", ChatCommands::CmdFlag);
 
 	GW::Chat::RegisterCommand(L"scwiki", 
 		[](std::wstring& cmd, std::vector<std::wstring>& args) -> bool {
@@ -109,25 +96,6 @@ void ChatCommands::Initialize() {
 		ShellExecute(NULL, "open", "http://wiki.fbgmguild.com/Main_Page", NULL, NULL, SW_SHOWNORMAL);
 		return true;
 	});
-
-	windows.push_back(&MainWindow::Instance());
-	windows.push_back(&PconPanel::Instance());
-	windows.push_back(&HotkeyPanel::Instance());
-	windows.push_back(&BuildPanel::Instance());
-	windows.push_back(&TravelPanel::Instance());
-	windows.push_back(&DialogPanel::Instance());
-	windows.push_back(&InfoPanel::Instance());
-	windows.push_back(&MaterialsPanel::Instance());
-	windows.push_back(&SettingsPanel::Instance());
-
-	windows.push_back(&TimerWindow::Instance());
-	windows.push_back(&HealthWindow::Instance());
-	windows.push_back(&DistanceWindow::Instance());
-	windows.push_back(&Minimap::Instance());
-	windows.push_back(&PartyDamage::Instance());
-	windows.push_back(&BondsWindow::Instance());
-	windows.push_back(&ClockWindow::Instance());
-	windows.push_back(&NotePadWindow::Instance());
 }
 
 bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
@@ -203,10 +171,6 @@ void ChatCommands::Update() {
 	}
 }
 
-std::string ChatCommands::ToLower(std::string s) {
-	std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-	return s;
-}
 std::wstring ChatCommands::GetLowerCaseArg(std::vector<std::wstring> args, size_t index) {
 	if (index >= args.size()) return L"";
 	std::wstring arg = args[index];
@@ -219,38 +183,6 @@ bool ChatCommands::CmdAge2(std::wstring& cmd, std::vector<std::wstring>& args) {
 	DWORD second = GW::Map::GetInstanceTime() / 1000;
 	sprintf_s(buffer, "%02u:%02u:%02u", (second / 3600), (second / 60) % 60, second % 60);
 	Log::Info(buffer);
-	return true;
-}
-
-bool ChatCommands::CmdPcons(std::wstring& cmd, std::vector<std::wstring>& args) {
-	if (args.empty()) {
-		PconPanel::Instance().ToggleEnable();
-	} else { // we are ignoring parameters after the first
-		std::wstring arg = GetLowerCaseArg(args, 0);
-		if (arg == L"on") {
-			PconPanel::Instance().SetEnabled(true);
-		} else if (arg == L"off") {
-			PconPanel::Instance().SetEnabled(false);
-		} else {
-			Log::Error("Invalid argument '%ls', please use /pcons [|on|off]", args[0].c_str());
-		}
-	}
-	return true;
-}
-
-bool ChatCommands::CmdBorderless(std::wstring& cmd, std::vector<std::wstring>& args) {
-	if (args.empty()) {
-		GameSettings::Instance().ApplyBorderless(!GameSettings::Instance().borderless_window);
-	} else { // we are ignoring parameters after the first
-		std::wstring arg = GetLowerCaseArg(args, 0);
-		if (arg == L"on") {
-			GameSettings::Instance().ApplyBorderless(true);
-		} else if (arg == L"off") {
-			GameSettings::Instance().ApplyBorderless(false);
-		} else {
-			Log::Error("Invalid argument '%ls', please use /borderless [|on|off]", args[0].c_str());
-		}
-	}
 	return true;
 }
 
@@ -313,8 +245,8 @@ bool ChatCommands::CmdTB(std::wstring& cmd, std::vector<std::wstring>& args) {
 			GWToolbox::Instance().StartSelfDestruct();
 		} else {
 			std::string name = std::string(arg.begin(), arg.end());
-			for (ToolboxUIElement* window : ChatCommands::Instance().windows) {
-				if (name == ToLower(window->Name())) {
+			for (ToolboxUIElement* window : GWToolbox::Instance().GetUIElements()) {
+				if (name == GuiUtils::ToLower(window->Name())) {
 					window->visible ^= 1;
 				}
 			}
@@ -323,43 +255,47 @@ bool ChatCommands::CmdTB(std::wstring& cmd, std::vector<std::wstring>& args) {
 	return true;
 }
 
-bool ChatCommands::CmdShow(std::wstring& cmd, std::vector<std::wstring>& args) {
+std::vector<ToolboxUIElement*> ChatCommands::MatchingWindows(std::vector<std::wstring>& args) {
+	std::vector<ToolboxUIElement*> ret;
 	if (args.empty()) {
-		MainWindow::Instance().visible = true;
+		ret.push_back(&MainWindow::Instance());
 	} else {
 		std::wstring arg = GetLowerCaseArg(args, 0);
 		if (arg == L"all") {
-			for (ToolboxUIElement* window : ChatCommands::Instance().windows) {
-				window->visible = true;
+			for (ToolboxUIElement* window : GWToolbox::Instance().GetUIElements()) {
+				ret.push_back(window);
 			}
 		} else {
 			std::string name = std::string(arg.begin(), arg.end());
-			for (ToolboxUIElement* window : ChatCommands::Instance().windows) {
-				if (name == ToLower(window->Name())) {
-					window->visible = true;
+			for (ToolboxUIElement* window : GWToolbox::Instance().GetUIElements()) {
+				if (name == GuiUtils::ToLower(window->Name())) {
+					ret.push_back(window);
 				}
 			}
+		}
+	}
+	return ret;
+}
+
+bool ChatCommands::CmdShow(std::wstring& cmd, std::vector<std::wstring>& args) {
+	auto windows = MatchingWindows(args);
+	if (windows.empty()) {
+		Log::Error("Cannot find window '%ls'", args.empty() ? L"" : args[0].c_str());
+	} else {
+		for (ToolboxUIElement* window : windows) {
+			window->visible = true;
 		}
 	}
 	return true;
 }
 
 bool ChatCommands::CmdHide(std::wstring& cmd, std::vector<std::wstring>& args) {
-	if (args.empty()) {
-		MainWindow::Instance().visible = false;
+	auto windows = MatchingWindows(args);
+	if (windows.empty()) {
+		Log::Error("Cannot find window '%ls'", args.empty() ? L"" : args[0].c_str());
 	} else {
-		std::wstring arg = GetLowerCaseArg(args, 0);
-		if (arg == L"all") {
-			for (ToolboxUIElement* window : ChatCommands::Instance().windows) {
-				window->visible = false;
-			}
-		} else {
-			std::string name = std::string(arg.begin(), arg.end());
-			for (ToolboxUIElement* window : ChatCommands::Instance().windows) {
-				if (name == ToLower(window->Name())) {
-					window->visible = false;
-				}
-			}
+		for (ToolboxUIElement* window : windows) {
+			window->visible = false;
 		}
 	}
 	return true;
@@ -621,31 +557,6 @@ bool ChatCommands::CmdUseSkill(std::wstring& cmd, std::vector<std::wstring>& arg
 			} catch (...) {
 				Log::Error("Invalid argument '%ls', please use an integer value", args[0].c_str());
 			}
-		}
-	}
-	return true;
-}
-
-bool ChatCommands::CmdFlag(std::wstring& cmd, std::vector<std::wstring>& args) {
-	if (args.empty()) {
-		Minimap::Instance().FlagHero(0);
-	} else {
-		std::wstring arg0 = GetLowerCaseArg(args, 0);
-		// partially laziness, and partially safety
-		if (arg0 == L"1") {
-			Minimap::Instance().FlagHero(1);
-		} else if (arg0 == L"2") {
-			Minimap::Instance().FlagHero(2);
-		} else if (arg0 == L"3") {
-			Minimap::Instance().FlagHero(3);
-		} else if (arg0 == L"4") {
-			Minimap::Instance().FlagHero(4);
-		} else if (arg0 == L"5") {
-			Minimap::Instance().FlagHero(5);
-		} else if (arg0 == L"6") {
-			Minimap::Instance().FlagHero(6);
-		} else if (arg0 == L"7") {
-			Minimap::Instance().FlagHero(7);
 		}
 	}
 	return true;

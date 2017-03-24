@@ -1,5 +1,6 @@
 #include "GuiUtils.h"
 
+#include <algorithm>
 #include <Shlobj.h>
 #include <Shlwapi.h>
 
@@ -78,4 +79,13 @@ int GuiUtils::GetPartyHealthbarHeight() {
 	default:
 		return GW::Constants::HealthbarHeight::Normal;
 	}
+}
+
+std::string GuiUtils::ToLower(std::string s) {
+	std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+	return s;
+}
+std::wstring GuiUtils::ToLower(std::wstring s) {
+	std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+	return s;
 }

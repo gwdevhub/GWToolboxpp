@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "ToolboxModule.h"
+#include "ToolboxUIElement.h"
 
 DWORD __stdcall SafeThreadEntry(LPVOID mod);
 DWORD __stdcall ThreadEntry(LPVOID dllmodule);
@@ -33,9 +34,14 @@ public:
 	bool must_self_destruct = false;	// is true when toolbox should quit
 
 	void RegisterModule(ToolboxModule* m) { modules.push_back(m); }
+	void RegisterUIElement(ToolboxUIElement* e) { uielements.push_back(e); }
 
-	std::vector<ToolboxModule*> modules;
+	const std::vector<ToolboxModule*>& GetModules() const { return modules; }
+	const std::vector<ToolboxUIElement*>& GetUIElements() const { return uielements; }
 
 private:
+	std::vector<ToolboxModule*> modules;
+	std::vector<ToolboxUIElement*> uielements;
+
 	CSimpleIni* inifile = nullptr;
 };

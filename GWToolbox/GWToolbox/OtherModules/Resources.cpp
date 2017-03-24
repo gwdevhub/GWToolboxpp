@@ -120,7 +120,7 @@ void Resources::EnsureFileExists(const char* name,
 	}
 }
 
-void Resources::Draw(IDirect3DDevice9* device) {
+void Resources::DxUpdate(IDirect3DDevice9* device) {
 	while (!toload.empty()) {
 		toload.front()(device);
 		toload.pop();

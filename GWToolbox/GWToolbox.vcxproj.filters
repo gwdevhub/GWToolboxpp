@@ -333,5 +333,6 @@
     </ClCompile>
     <ClCompile Include="GWToolbox\ToolboxWidget.cpp" />
     <ClCompile Include="GWToolbox\ToolboxWindow.cpp" />
+    <ClCompile Include="GWToolbox\ToolboxUIElement.cpp" />
   </ItemGroup>
 </Project>

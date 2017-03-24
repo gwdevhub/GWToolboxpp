@@ -85,10 +85,10 @@ void SettingsPanel::Draw(IDirect3DDevice9* pDevice) {
 			}
 		}
 
-		for (unsigned i = 0; i < GWToolbox::Instance().modules.size(); ++i) {
+		for (unsigned i = 0; i < GWToolbox::Instance().GetModules().size(); ++i) {
 			if (i == 6) ImGui::Text("Main Window / Panels:");
-			if (i == 15) ImGui::Text("Windows / Widgets:");
-			GWToolbox::Instance().modules[i]->DrawSettings();
+			if (i == separator) ImGui::Text("Windows / Widgets:");
+			GWToolbox::Instance().GetModules()[i]->DrawSettings();
 		}
 
 		if (ImGui::Button("Save Now", ImVec2(w, 0))) {

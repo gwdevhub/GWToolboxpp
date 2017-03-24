@@ -23,6 +23,23 @@ void GameSettings::Initialize() {
 	patches.push_back(new GW::MemoryPatcher((void*)0x0067D5D6, a, 10));
 	patches.push_back(new GW::MemoryPatcher((void*)0x0067D622, a, 10));
 	patches.push_back(new GW::MemoryPatcher((void*)0x0067D65E, a, 10));
+
+	GW::Chat::RegisterCommand(L"borderless", 
+		[&](std::wstring& cmd, std::vector<std::wstring>& args) -> bool {
+		if (args.empty()) {
+			ApplyBorderless(!borderless_window);
+		} else {
+			std::wstring arg = GuiUtils::ToLower(args[0]);
+			if (arg == L"on") {
+				ApplyBorderless(true);
+			} else if (arg == L"off") {
+				ApplyBorderless(false);
+			} else {
+				Log::Error("Invalid argument '%ls', please use /borderless [|on|off]", args[0].c_str());
+			}
+		}
+		return true;
+	});
 }
 
 void GameSettings::Terminate() {
@@ -95,7 +112,7 @@ void GameSettings::DrawSettingInternal() {
 		GW::Chat::SetChatEventCallback(select_with_chat_doubleclick ? 
 			&ChatEvent : [](DWORD, DWORD, wchar_t*, void*) {});
 	}
-	ImGui::ShowHelp("Double clicking on the author of a message in chat will target the player");
+	ImGui::ShowHelp("Double clicking on the author of a message in chat will target the author");
 }
 
 void GameSettings::DrawBorderlessSetting() {

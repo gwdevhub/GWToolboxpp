@@ -10,7 +10,6 @@
 
 #include "ToolboxWidget.h"
 #include "Timer.h"
-#include "GuiUtils.h"
 #include "Color.h"
 
 class PartyDamage : public ToolboxWidget {

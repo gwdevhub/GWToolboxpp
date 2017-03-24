@@ -173,6 +173,7 @@
     <ClCompile Include="GWToolbox\ToolboxModule.cpp" />
     <ClCompile Include="GWToolbox\GWToolbox.cpp" />
     <ClCompile Include="GWToolbox\ToolboxPanel.cpp" />
+    <ClCompile Include="GWToolbox\ToolboxUIElement.cpp" />
     <ClCompile Include="GWToolbox\ToolboxWidget.cpp" />
     <ClCompile Include="GWToolbox\ToolboxWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\BondsWindow.cpp" />

@@ -24,7 +24,7 @@ public:
 	void Terminate() override;
 
 	void DrawSettings() override {};
-	void Draw(IDirect3DDevice9* device) override;
+	void DxUpdate(IDirect3DDevice9* device);
 
 	//bool EnsureFileExists(const char* name, const char* folder = nullptr);
 

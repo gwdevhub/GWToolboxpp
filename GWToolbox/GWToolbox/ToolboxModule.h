@@ -22,9 +22,6 @@ public:
 	// Update. Will always be called once every frame.
 	virtual void Update() {};
 
-	// Draw user interface. Will be called every frame if the element is visible
-	virtual void Draw(IDirect3DDevice9* pDevice) {};
-
 	// This is provided (and called), but use ImGui::GetIO() during update/render if possible.
 	virtual bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) { return false; };
 

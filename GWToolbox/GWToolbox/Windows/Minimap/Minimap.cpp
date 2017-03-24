@@ -10,11 +10,13 @@
 #include <imgui_internal.h>
 #include <ImGuiAddons.h>
 
+#include <GuiUtils.h>
 #include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Managers\CameraMgr.h>
 #include <GWCA\Managers\PartyMgr.h>
 #include <GWCA\Managers\MapMgr.h>
+#include <GWCA\Managers\ChatMgr.h>
 
 #include "logger.h"
 #include "OtherModules\ToolboxSettings.h"
@@ -65,6 +67,32 @@ void Minimap::Initialize() {
 	last_moved = TIMER_INIT();
 
 	pmap_renderer.Invalidate();
+
+	GW::Chat::RegisterCommand(L"flag", 
+		[this](std::wstring& cmd, std::vector<std::wstring>& args) {
+		if (args.empty()) {
+			FlagHero(0);
+		} else {
+			std::wstring arg0 = GuiUtils::ToLower(args[0]);
+			// partially laziness, and partially safety
+			if (arg0 == L"1") {
+				FlagHero(1);
+			} else if (arg0 == L"2") {
+				FlagHero(2);
+			} else if (arg0 == L"3") {
+				FlagHero(3);
+			} else if (arg0 == L"4") {
+				FlagHero(4);
+			} else if (arg0 == L"5") {
+				FlagHero(5);
+			} else if (arg0 == L"6") {
+				FlagHero(6);
+			} else if (arg0 == L"7") {
+				FlagHero(7);
+			}
+		}
+		return true;
+	});
 }
 
 void Minimap::DrawSettings() {

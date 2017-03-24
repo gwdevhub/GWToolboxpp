@@ -7,6 +7,7 @@
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\PartyMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
+#include <GWCA\Managers\ChatMgr.h>
 #include <imgui_internal.h>
 
 #include <logger.h>
@@ -200,6 +201,23 @@ void PconPanel::Initialize() {
 		if (m[0] == 0x8101 && m[1] == 0x68BA && m[2] == 0xA875 && m[3] == 0xA785) return true; // "Cross over, children. All are welcome. All welcome. Go into the light. There is peace and serenity in the light."
 		//printf("m[0] == 0x%X && m[1] == 0x%X && m[2] == 0x%X && m[3] == 0x%X\n", m[0], m[1], m[2], m[3]);
 		return false;
+	});
+
+	GW::Chat::RegisterCommand(L"pcons",
+		[this](std::wstring& cmd, std::vector<std::wstring>& args) -> bool {
+		if (args.empty()) {
+			ToggleEnable();
+		} else { // we are ignoring parameters after the first
+			std::wstring arg = GuiUtils::ToLower(args[0]);
+			if (arg == L"on") {
+				SetEnabled(true);
+			} else if (arg == L"off") {
+				SetEnabled(false);
+			} else {
+				Log::Error("Invalid argument '%ls', please use /pcons [|on|off]", args[0].c_str());
+			}
+		}
+		return true;
 	});
 }
 

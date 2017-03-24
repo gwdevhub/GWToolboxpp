@@ -34,24 +34,11 @@
 #include <OtherModules\ToolboxSettings.h>
 #include <OtherModules\ToolboxTheme.h>
 
-#include <Windows\MainWindow.h>
-#include <Windows\TimerWindow.h>
-#include <Windows\BondsWindow.h>
-#include <Windows\HealthWindow.h>
-#include <Windows\DistanceWindow.h>
-#include <Windows\PartyDamage.h>
 #include <Windows\Minimap\Minimap.h>
-#include <Windows\ClockWindow.h>
-#include <Windows\NotePadWindow.h>
 
-#include "Panels\PconPanel.h"
 #include "Panels\HotkeyPanel.h"
-#include "Panels\TravelPanel.h"
-#include "Panels\BuildPanel.h"
-#include "Panels\DialogPanel.h"
-#include "Panels\InfoPanel.h"
-#include "Panels\MaterialsPanel.h"
-#include "Panels\SettingsPanel.h"
+
+#include "GuiUtils.h"
 
 namespace {
 	long OldWndProc = 0;
@@ -266,26 +253,14 @@ void GWToolbox::Initialize() {
 	ChatCommands::Instance().Initialize();
 	ToolboxTheme::Instance().Initialize();
 
-	MainWindow::Instance().Initialize();
-	PconPanel::Instance().Initialize();
-	HotkeyPanel::Instance().Initialize();
-	BuildPanel::Instance().Initialize();
-	TravelPanel::Instance().Initialize();
-	DialogPanel::Instance().Initialize();
-	InfoPanel::Instance().Initialize();
-	MaterialsPanel::Instance().Initialize();
-	SettingsPanel::Instance().Initialize();
-
-	TimerWindow::Instance().Initialize();
-	HealthWindow::Instance().Initialize();
-	DistanceWindow::Instance().Initialize();
-	Minimap::Instance().Initialize();
-	PartyDamage::Instance().Initialize();
-	BondsWindow::Instance().Initialize();
-	ClockWindow::Instance().Initialize();
-	NotePadWindow::Instance().Initialize();
-
 	LoadSettings();
+
+	ToolboxSettings::Instance().InitializeModules();
+	
+	// only load on uielements.
+	for (ToolboxModule* module : uielements) {
+		module->LoadSettings(inifile);
+	}
 
 	Resources::Instance().EndLoading();
 
@@ -364,9 +339,10 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 		for (ToolboxModule* module : GWToolbox::Instance().modules) {
 			module->Update();
 		}
+		Resources::Instance().DxUpdate(device);
 
-		for (ToolboxModule* module : GWToolbox::Instance().modules) {
-			module->Draw(device);
+		for (ToolboxUIElement* uielement : GWToolbox::Instance().uielements) {
+			uielement->Draw(device);
 		}
 
 		//ImGui::ShowTestWindow();

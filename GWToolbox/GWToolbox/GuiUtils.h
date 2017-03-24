@@ -26,4 +26,7 @@ namespace GuiUtils {
 	ImFont* GetFont(FontSize size);
 
 	int GetPartyHealthbarHeight();
+
+	std::string ToLower(std::string s);
+	std::wstring ToLower(std::wstring s);
 };
