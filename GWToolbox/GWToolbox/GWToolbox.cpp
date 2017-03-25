@@ -315,7 +315,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 		Log::Log("installing event handler\n");
 		gw_window_handle = GW::MemoryMgr::GetGWWindowHandle();
 		OldWndProc = SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)SafeWndProc);
-		Log::Log("Installed input event handler, oldwndproc = %d\n", OldWndProc);
+		Log::Log("Installed input event handler, oldwndproc = 0x%X\n", OldWndProc);
 
 		ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), device);
 		ImGuiIO& io = ImGui::GetIO();

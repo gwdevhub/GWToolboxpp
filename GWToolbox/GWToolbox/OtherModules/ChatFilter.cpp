@@ -268,6 +268,9 @@ bool ChatFilter::FullMatch(const wchar_t* s, const std::initializer_list<wchar_t
 }
 
 bool ChatFilter::ShouldIgnore(const wchar_t *message) {
+	//for (size_t i = 0; message[i] != 0; ++i) printchar(message[i]);
+	//printf("\n");
+
 	switch (message[0]) {
 		// ==== Messages not ignored ====
 	case 0x108: return false; // player message
@@ -371,9 +374,6 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 	//	printf("\n");
 	//	return false;
 	}
-
-	//for (size_t i = 0; pak->message[i] != 0; ++i) printchar(pak->message[i]);
-	//printf("\n");
 
 	return false;
 }
