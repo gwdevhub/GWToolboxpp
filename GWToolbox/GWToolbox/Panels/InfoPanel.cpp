@@ -305,31 +305,45 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 	ImGui::End();
 }
 
+void InfoPanel::Update() {
+	if (show_resignlog
+		&& GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
+		&& GW::PartyMgr::GetPartyInfo()) {
+
+		GW::PlayerPartyMemberArray partymembers = GW::PartyMgr::GetPartyInfo()->players;
+		if (partymembers.valid()) {
+			if (partymembers.size() != status.size()) {
+				status.resize(partymembers.size(), Unknown);
+				timestamp.resize(partymembers.size(), 0);
+			}
+		}
+		for (unsigned i = 0; i < partymembers.size(); ++i) {
+			GW::PlayerPartyMember& partymember = partymembers[i];
+			if (partymember.connected()) {
+				if (status[i] == NotYetConnected || status[i] == Unknown) {
+					status[i] = Connected;
+					timestamp[i] = GW::Map::GetInstanceTime();
+				}
+			} else {
+				if (status[i] == Connected || status[i] == Resigned) {
+					status[i] = Left;
+					timestamp[i] = GW::Map::GetInstanceTime();
+				}
+			}
+		}
+	}
+}
+
 void InfoPanel::DrawResignlog() {
 	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
 	GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
 	if (info == nullptr) return;
 	GW::PlayerPartyMemberArray partymembers = info->players;
 	if (!partymembers.valid()) return;
-	if (partymembers.size() != status.size()) {
-		status.resize(partymembers.size(), Unknown);
-		timestamp.resize(partymembers.size(), 0);
-	}
 	GW::PlayerArray players = GW::Agents::GetPlayerArray();
 	if (!players.valid()) return;
 	for (unsigned i = 0; i < partymembers.size(); ++i) {
 		GW::PlayerPartyMember& partymember = partymembers[i];
-		if (partymember.connected()) {
-			if (status[i] == NotYetConnected) {
-				status[i] = Connected;
-				timestamp[i] = GW::Map::GetInstanceTime();
-			}
-		} else {
-			if (status[i] == Connected || status[i] == Resigned) {
-				status[i] = Left;
-				timestamp[i] = GW::Map::GetInstanceTime();
-			}
-		}
 		if (partymember.loginnumber >= players.size()) continue;
 		GW::Player& player = players[partymember.loginnumber];
 		const char* status_str = [](Status status) -> const char* {
