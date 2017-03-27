@@ -82,6 +82,9 @@
     <Filter Include="Modules\Theme">
       <UniqueIdentifier>{36b6fd26-3bd4-4b3f-a6a7-0a9a973a3b0c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Windows\Vanquish">
+      <UniqueIdentifier>{acc877c6-0def-46a0-b03b-cd84a555ed68}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GWToolbox\GuiUtils.h" />
@@ -217,6 +220,9 @@
     </ClInclude>
     <ClInclude Include="GWToolbox\ToolboxUIElement.h" />
     <ClInclude Include="GWToolbox\ToolboxWidget.h" />
+    <ClInclude Include="GWToolbox\Windows\VanquishWindow.h">
+      <Filter>Windows\Vanquish</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -334,5 +340,8 @@
     <ClCompile Include="GWToolbox\ToolboxWidget.cpp" />
     <ClCompile Include="GWToolbox\ToolboxWindow.cpp" />
     <ClCompile Include="GWToolbox\ToolboxUIElement.cpp" />
+    <ClCompile Include="GWToolbox\Windows\VanquishWindow.cpp">
+      <Filter>Windows\Vanquish</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

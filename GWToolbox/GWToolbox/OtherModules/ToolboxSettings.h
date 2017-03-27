@@ -52,4 +52,5 @@ private:
 	bool use_bonds = true;
 	bool use_clock = true;
 	bool use_notepad = true;
+	bool use_vanquish = true;
 };
