@@ -119,7 +119,7 @@ void DialogPanel::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::Combo("###dialogcombo", &dialogindex, dialognames, n_dialogs);
 			ImGui::PopItemWidth();
 			ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-			if (ImGui::Button("Send", ImVec2(60.0f, 0))) {
+			if (ImGui::Button("Send##1", ImVec2(60.0f, 0))) {
 				GW::Agents::Dialog(IndexToDialogID(dialogindex));
 			}
 
@@ -147,7 +147,7 @@ void DialogPanel::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::InputText("###dialoginput", customdialogbuf, 64, flag);
 			ImGui::PopItemWidth();
 			ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-			if (ImGui::Button("Send", ImVec2(60.0f, 0))) {
+			if (ImGui::Button("Send##2", ImVec2(60.0f, 0))) {
 				try {
 					long id = std::stol(customdialogbuf, 0, hex ? 16 : 10);
 					GW::Agents::Dialog(id);
