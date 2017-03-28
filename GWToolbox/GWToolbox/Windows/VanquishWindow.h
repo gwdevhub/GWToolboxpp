@@ -4,8 +4,8 @@
 
 class VanquishWindow : public ToolboxWidget {
 
-    VanquishWindow() {};
-    ~VanquishWindow() {};
+	VanquishWindow() {};
+	~VanquishWindow() {};
 
 public:
 	static VanquishWindow& Instance() {
@@ -13,7 +13,7 @@ public:
 		return instance;
 	}
 
-    const char* Name() const override { return "Vanquish"; }
+	const char* Name() const override { return "Vanquish"; }
 
-    void Draw(IDirect3DDevice9* pDevice) override;
+	void Draw(IDirect3DDevice9* pDevice) override;
 };
