@@ -6,7 +6,7 @@
 
 ## How to download and run
 1. Clone *recursively* the repository. Make sure you also cloned the submodule GWCA++.
-2. Open GWToolboxpp.sln. You can use any Visual Studio version, but you need to have Visual Studio 2013 (v120) toolset installed.
+2. Open GWToolboxpp.sln with Visual Studio. Toolbox is developed under VS2015, but earlier versions should work too.
 3. Set to Debug mode, Win32 and compile.
 4. If it's not already, set CSLauncher as the startup project, and run.
 
