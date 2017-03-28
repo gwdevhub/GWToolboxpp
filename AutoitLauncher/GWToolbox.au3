@@ -1,4 +1,7 @@
 #RequireAdmin
+
+#AutoIt3Wrapper_Icon=..\resources\gwtoolbox.ico
+
 #include <File.au3>
 #include <ComboConstants.au3>
 #include <MsgBoxConstants.au3>
@@ -29,11 +32,19 @@ Global Const $locationLogsFolder = $folder & "location logs\"
 Global $mKernelHandle, $mGWProcHandle, $mCharname
 Global $gui = 0, $label = 0, $progress = 0, $changelabel = 0, $height = 0
 
+Func EnsureFolderExists($folder)
+	If Not FileExists($folder) Then DirCreate($folder)
+EndFunc
+
 ; ==== Create directories ====
-If Not FileExists($folder) Then DirCreate($folder)
+EnsureFolderExists($folder)
 If Not FileExists($folder) Then Error("failed to create installation folder")
-If Not FileExists($imgFolder) Then DirCreate($imgFolder)
-if Not FileExists($locationLogsFolder) Then DirCreate($locationLogsFolder)
+EnsureFolderExists($folder & "img\")
+EnsureFolderExists($folder & "img\bonds\")
+EnsureFolderExists($folder & "img\materials\")
+EnsureFolderExists($folder & "img\icons\")
+EnsureFolderExists($folder & "img\pcons\")
+EnsureFolderExists($folder & "location logs\")
 
 ; ==== Disclaimer ====
 If Not FileExists($dllpath) Then
@@ -152,14 +163,61 @@ EndFunc
 #Region fileinstalls
 ; ==== Install resources ====
 ; various
-If $debug Then
-	FileCopy("..\Debug\GWToolbox.dll", $dllpath, $FC_OVERWRITE)
-Else
-	FileInstall("..\Release\GWToolbox.dll", $dllpath, $FC_NOOVERWRITE)
-EndIf
+FileInstall("..\Release\GWToolbox.dll", $dllpath)
 If Not FileExists($dllpath) Then Error("Failed to install GWToolbox.dll")
-FileInstall("..\resources\Friz_Quadrata_Regular.ttf", $folder & "Font.ttf")
+FileInstall("..\resources\Font.ttf", $folder & "Font.ttf")
 FileInstall("..\resources\GWToolbox.ini", $folder & "GWToolbox.ini")
+FileInstall("..\resources\Markers.ini", $folder & "Markers.ini")
+
+FileInstall("..\resources\bonds\Balthazar's_Spirit.jpg", $folder & "img\bonds\Balthazar's_Spirit.jpg")
+FileInstall("..\resources\bonds\Essence_Bond.jpg", $folder & "img\bonds\Essence_Bond.jpg")
+FileInstall("..\resources\bonds\Holy_Veil.jpg", $folder & "img\bonds\Holy_Veil.jpg")
+FileInstall("..\resources\bonds\Life_Attunement.jpg", $folder & "img\bonds\Life_Attunement.jpg")
+FileInstall("..\resources\bonds\Life_Barrier.jpg", $folder & "img\bonds\Life_Barrier.jpg")
+FileInstall("..\resources\bonds\Life_Bond.jpg", $folder & "img\bonds\Life_Bond.jpg")
+FileInstall("..\resources\bonds\Live_Vicariously.jpg", $folder & "img\bonds\Live_Vicariously.jpg")
+FileInstall("..\resources\bonds\Mending.jpg", $folder & "img\bonds\Mending.jpg")
+FileInstall("..\resources\bonds\Protective_Bond.jpg", $folder & "img\bonds\Protective_Bond.jpg")
+FileInstall("..\resources\bonds\Purifying_Veil.jpg", $folder & "img\bonds\Purifying_Veil.jpg")
+FileInstall("..\resources\bonds\Retribution.jpg", $folder & "img\bonds\Retribution.jpg")
+FileInstall("..\resources\bonds\Strength_of_Honor.jpg", $folder & "img\bonds\Strength_of_Honor.jpg")
+FileInstall("..\resources\bonds\Succor.jpg", $folder & "img\bonds\Succor.jpg")
+FileInstall("..\resources\bonds\Vital_Blessing.jpg", $folder & "img\bonds\Vital_Blessing.jpg")
+FileInstall("..\resources\bonds\Watchful_Spirit.jpg", $folder & "img\bonds\Watchful_Spirit.jpg")
+
+FileInstall("..\resources\icons\airplane.png", $folder & "img\icons\airplane.png")
+FileInstall("..\resources\icons\cupcake.png", $folder & "img\icons\cupcake.png")
+FileInstall("..\resources\icons\dialogue.png", $folder & "img\icons\dialogue.png")
+FileInstall("..\resources\icons\feather.png", $folder & "img\icons\feather.png")
+FileInstall("..\resources\icons\info.png", $folder & "img\icons\info.png")
+FileInstall("..\resources\icons\keyboard.png", $folder & "img\icons\keyboard.png")
+FileInstall("..\resources\icons\list.png", $folder & "img\icons\list.png")
+FileInstall("..\resources\icons\settings.png", $folder & "img\icons\settings.png")
+
+FileInstall("..\resources\materials\Essence_of_Celerity.png", $folder & "img\materials\Essence_of_Celerity.png")
+FileInstall("..\resources\materials\Grail_of_Might.png", $folder & "img\materials\Grail_of_Might.png")
+FileInstall("..\resources\materials\Armor_of_Salvation.png", $folder & "img\materials\Armor_of_Salvation.png")
+FileInstall("..\resources\materials\Powerstone_of_Courage.png", $folder & "img\materials\Powerstone_of_Courage.png")
+FileInstall("..\resources\materials\Scroll_of_Resurrection.png", $folder & "img\materials\Scroll_of_Resurrection.png")
+
+FileInstall("..\resources\pcons\Essence_of_Celerity.png", $folder & "img\pcons\Essence_of_Celerity.png")
+FileInstall("..\resources\pcons\Grail_of_Might.png", $folder & "img\pcons\Grail_of_Might.png")
+FileInstall("..\resources\pcons\Armor_of_Salvation.png", $folder & "img\pcons\Armor_of_Salvation.png")
+FileInstall("..\resources\pcons\Red_Rock_Candy.png", $folder & "img\pcons\Red_Rock_Candy.png")
+FileInstall("..\resources\pcons\Blue_Rock_Candy.png", $folder & "img\pcons\Blue_Rock_Candy.png")
+FileInstall("..\resources\pcons\Green_Rock_Candy.png", $folder & "img\pcons\Green_Rock_Candy.png")
+FileInstall("..\resources\pcons\Golden_Egg.png", $folder & "img\pcons\Golden_Egg.png")
+FileInstall("..\resources\pcons\Candy_Apple.png", $folder & "img\pcons\Candy_Apple.png")
+FileInstall("..\resources\pcons\Candy_Corn.png", $folder & "img\pcons\Candy_Corn.png")
+FileInstall("..\resources\pcons\Birthday_Cupcake.png", $folder & "img\pcons\Birthday_Cupcake.png")
+FileInstall("..\resources\pcons\Slice_of_Pumpkin_Pie.png", $folder & "img\pcons\Slice_of_Pumpkin_Pie.png")
+FileInstall("..\resources\pcons\War_Supplies.png", $folder & "img\pcons\War_Supplies.png")
+FileInstall("..\resources\pcons\Dwarven_Ale.png", $folder & "img\pcons\Dwarven_Ale.png")
+FileInstall("..\resources\pcons\Lunar_Fortune.png", $folder & "img\pcons\Lunar_Fortune.png")
+FileInstall("..\resources\pcons\Sugary_Blue_Drink.png", $folder & "img\pcons\Sugary_Blue_Drink.png")
+FileInstall("..\resources\pcons\Drake_Kabob.png", $folder & "img\pcons\Drake_Kabob.png")
+FileInstall("..\resources\pcons\Bowl_of_Skalefin_Soup.png", $folder & "img\pcons\Bowl_of_Skalefin_Soup.png")
+FileInstall("..\resources\pcons\Pahnai_Salad.png", $folder & "img\pcons\Pahnai_Salad.png")
 #EndRegion
 
 ; === Client selection ===
