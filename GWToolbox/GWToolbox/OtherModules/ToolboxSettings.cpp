@@ -22,6 +22,7 @@
 #include <Windows\BondsWindow.h>
 #include <Windows\ClockWindow.h>
 #include <Windows\NotePadWindow.h>
+#include <Windows\VanquishWindow.h>
 
 bool ToolboxSettings::move_all = false;
 bool ToolboxSettings::clamp_window_positions = false;
@@ -47,6 +48,7 @@ void ToolboxSettings::InitializeModules() {
 	if (use_bonds) BondsWindow::Instance().Initialize();
 	if (use_clock) ClockWindow::Instance().Initialize();
 	if (use_notepad) NotePadWindow::Instance().Initialize();
+	if (use_vanquish) VanquishWindow::Instance().Initialize();
 }
 
 void ToolboxSettings::DrawSettingInternal() {
@@ -76,6 +78,7 @@ void ToolboxSettings::DrawSettingInternal() {
 	ImGui::Checkbox("Bonds", &use_bonds);
 	ImGui::Checkbox("Clock", &use_clock);
 	ImGui::Checkbox("Notepad", &use_notepad);
+	ImGui::Checkbox("Vanquish", &use_vanquish);
 }
 
 void ToolboxSettings::DrawFreezeSetting() {
@@ -102,6 +105,7 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
 	use_bonds = ini->GetBoolValue(Name(), "use_bonds", true);
 	use_clock = ini->GetBoolValue(Name(), "use_clock", true);
 	use_notepad = ini->GetBoolValue(Name(), "use_notepad", true);
+	use_vanquish = ini->GetBoolValue(Name(), "use_vanquish", true);
 }
 
 void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
@@ -123,6 +127,7 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), "use_bonds", use_bonds);
 	ini->SetBoolValue(Name(), "use_clock", use_clock);
 	ini->SetBoolValue(Name(), "use_notepad", use_notepad);
+	ini->SetBoolValue(Name(), "use_vanquish", use_vanquish);
 }
 
 void ToolboxSettings::Update() {

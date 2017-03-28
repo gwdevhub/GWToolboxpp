@@ -29,6 +29,7 @@ public:
 	// or have nowhere else to be
 	bool borderless_window = false;
 	bool open_template_links = false;
+	bool auto_transform_url;
 	bool tick_is_toggle = false;
 	bool select_with_chat_doubleclick = false;
 

@@ -144,6 +144,7 @@
     <ClInclude Include="GWToolbox\Windows\NotePadWindow.h" />
     <ClInclude Include="GWToolbox\Windows\PartyDamage.h" />
     <ClInclude Include="GWToolbox\Windows\TimerWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\VanquishWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Dependencies\imgui\examples\directx9_example\imgui_impl_dx9.cpp" />
@@ -191,6 +192,7 @@
     <ClCompile Include="GWToolbox\Windows\NotePadWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\PartyDamage.cpp" />
     <ClCompile Include="GWToolbox\Windows\TimerWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\VanquishWindow.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
