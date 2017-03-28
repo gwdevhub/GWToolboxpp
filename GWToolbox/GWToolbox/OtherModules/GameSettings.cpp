@@ -40,6 +40,25 @@ void GameSettings::Initialize() {
 		}
 		return true;
 	});
+
+	GW::Chat::SetSendChatCallback(
+		[this](GW::Chat::Channel chan, wchar_t msg[139]) -> void
+	{
+		if (!auto_transform_url || !msg) return;
+		if (wcsncmp(msg, L"http://", 7) && wcsncmp(msg, L"https://", 8)) return;
+
+		size_t len = wcslen(msg);
+		if (len + 5 < 139) {
+			for (int i = len; i > 0; i--)
+				msg[i] = msg[i - 1];
+			msg[0] = '[';
+			msg[len + 1] = ';';
+			msg[len + 2] = 'x';
+			msg[len + 3] = 'x';
+			msg[len + 4] = ']';
+			msg[len + 5] = 0;
+		}
+	});
 }
 
 void GameSettings::Terminate() {
@@ -74,6 +93,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini);
 	borderless_window = ini->GetBoolValue(Name(), "borderlesswindow", false);
 	open_template_links = ini->GetBoolValue(Name(), "openlinks", true);
+	auto_transform_url = ini->GetBoolValue(Name(), "auto_url", true);
 	tick_is_toggle = ini->GetBoolValue(Name(), "tick_is_toggle", true);
 	select_with_chat_doubleclick = ini->GetBoolValue(Name(), "select_with_chat_doubleclick", true);
 
@@ -87,6 +107,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ToolboxModule::SaveSettings(ini);
 	ini->SetBoolValue(Name(), "borderlesswindow", borderless_window);
 	ini->SetBoolValue(Name(), "openlinks", open_template_links);
+	ini->SetBoolValue(Name(), "auto_url", auto_transform_url);
 	ini->SetBoolValue(Name(), "tick_is_toggle", tick_is_toggle);
 	ini->SetBoolValue(Name(), "select_with_chat_doubleclick", select_with_chat_doubleclick);
 }
@@ -98,6 +119,9 @@ void GameSettings::DrawSettingInternal() {
 		GW::Chat::SetOpenLinks(open_template_links);
 	}
 	ImGui::ShowHelp("Clicking on template that has a URL as name will open that URL in your browser");
+
+	ImGui::Checkbox("Automaticly change urls into build templates.", &auto_transform_url);
+	// ImGui::ShowHelp("");
 
 	if (ImGui::Checkbox("Tick is a toggle", &tick_is_toggle)) {
 		if (tick_is_toggle) {
