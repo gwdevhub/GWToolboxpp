@@ -1,2 +1,3 @@
-repository: haskha/gwtoolboxpp.github.io
+repository: HasKha/GWToolboxpp
 theme: jekyll-theme-minimal
+show_downloads: true
