@@ -23,3 +23,5 @@ ipch/
 *.opendb
 GWToolboxpp.VC.db
 Dependencies/OSHGui/Include
+docs/_site/
+Gemfile.lock
