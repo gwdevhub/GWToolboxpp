@@ -352,8 +352,8 @@ bool travelpanel_arraygetter(void* data, int idx, const char** out_text) {
 	case 4: *out_text = "Amnoon Oasis, The";			break;
 	case 5: *out_text = "Arborstone";					break;
 	case 6: *out_text = "Ascalon City";					break;
-	case 7: *out_text = "Aspenwood Gate (Kurzick";		break;
-	case 8: *out_text = "Aspenwood Gate (Luxon";		break;
+	case 7: *out_text = "Aspenwood Gate (Kurzick)";		break;
+	case 8: *out_text = "Aspenwood Gate (Luxon)";		break;
 	case 9: *out_text = "Astralarium, The";				break;
 	case 10: *out_text = "Augury Rock";					break;
 	case 11: *out_text = "Aurios Mines, The";			break;
@@ -404,8 +404,8 @@ bool travelpanel_arraygetter(void* data, int idx, const char** out_text) {
 	case 56: *out_text = "Eternal Grove, The";			break;
 	case 57: *out_text = "Eye of the North";			break;
 	case 58: *out_text = "Fishermen's Haven";			break;
-	case 59: *out_text = "Fort Aspenwood (Kurzick";		break;
-	case 60: *out_text = "Fort Aspenwood (Luxon";		break;
+	case 59: *out_text = "Fort Aspenwood (Kurzick)";		break;
+	case 60: *out_text = "Fort Aspenwood (Luxon)";		break;
 	case 61: *out_text = "Fort Ranik";					break;
 	case 62: *out_text = "Frontier Gate";				break;
 	case 63: *out_text = "Frost Gate, The";				break;
@@ -437,10 +437,10 @@ bool travelpanel_arraygetter(void* data, int idx, const char** out_text) {
 	case 89: *out_text = "Ice Tooth Cave";				break;
 	case 90: *out_text = "Imperial Sanctum";			break;
 	case 91: *out_text = "Iron Mines of Moladune";		break;
-	case 92: *out_text = "Jade Flats (Kurzick";			break;
-	case 93: *out_text = "Jade Flats (Luxon";			break;
-	case 94: *out_text = "Jade Quarry (Kurzick, The";	break;
-	case 95: *out_text = "Jade Quarry (Luxon, The";		break;
+	case 92: *out_text = "Jade Flats (Kurzick)";			break;
+	case 93: *out_text = "Jade Flats (Luxon)";			break;
+	case 94: *out_text = "Jade Quarry (Kurzick), The";	break;
+	case 95: *out_text = "Jade Quarry (Luxon), The";		break;
 	case 96: *out_text = "Jennur's Horde";				break;
 	case 97: *out_text = "Jokanur Diggings";			break;
 	case 98: *out_text = "Kaineng Center";				break;
@@ -505,8 +505,8 @@ bool travelpanel_arraygetter(void* data, int idx, const char** out_text) {
 	case 157: *out_text = "Tomb of the Primeval Kings";	break;
 	case 158: *out_text = "Tsumei Village";				break;
 	case 159: *out_text = "Umbral Grotto";				break;
-	case 160: *out_text = "Unwaking Waters (Kurzick";	break;
-	case 161: *out_text = "Unwaking Waters (Luxon";		break;
+	case 160: *out_text = "Unwaking Waters (Kurzick)";	break;
+	case 161: *out_text = "Unwaking Waters (Luxon)";		break;
 	case 162: *out_text = "Urgoz's Warren";				break;
 	case 163: *out_text = "Vasburg Armory";				break;
 	case 164: *out_text = "Venta Cemetery";				break;
