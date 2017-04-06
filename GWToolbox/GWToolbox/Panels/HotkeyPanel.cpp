@@ -31,7 +31,7 @@ void HotkeyPanel::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::OpenPopup("Create Hotkey");
 		}
 		if (ImGui::BeginPopup("Create Hotkey")) {
-			if (ImGui::Selectable("Send chat")) {
+			if (ImGui::Selectable("Send Chat")) {
 				hotkeys.push_back(new HotkeySendChat(nullptr, nullptr));
 			}
 			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Send a message or command to chat");
@@ -63,7 +63,7 @@ void HotkeyPanel::Draw(IDirect3DDevice9* pDevice) {
 				hotkeys.push_back(new HotkeyDialog(nullptr, nullptr));
 			}
 			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Send a Dialog");
-			if (ImGui::Selectable("Ping build")) {
+			if (ImGui::Selectable("Ping Build")) {
 				hotkeys.push_back(new HotkeyPingBuild(nullptr, nullptr));
 			}
 			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Ping a build from the Build Panel");
