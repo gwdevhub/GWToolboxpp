@@ -39,7 +39,7 @@ void HotkeyPanel::Draw(IDirect3DDevice9* pDevice) {
 				hotkeys.push_back(new HotkeyUseItem(nullptr, nullptr));
 			}
 			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Use an item from your inventory");
-			if (ImGui::Selectable("Drop of Use Buff")) {
+			if (ImGui::Selectable("Drop or Use Buff")) {
 				hotkeys.push_back(new HotkeyDropUseBuff(nullptr, nullptr));
 			}
 			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Use or cancel a skill such as Recall or UA");
