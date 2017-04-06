@@ -19,9 +19,9 @@ Launcher <!-- version: {{site.data.versions.launcher}} --> - [Download Launcher]
 
 * [Pcons](pages/pcons): Automatically maintain selected pcons
 * [Hotkeys](pages/hotkeys): Set hotkeys for typing commands into chat (e.g. /stuck), using or cancelling Recall and UA, using an item, targeting an agent, and much more.
-* Teambuilds - Send team builds to your party
+* [Builds](pages/builds) - Send team builds to your party.
 * [Fast Travel](pages/travel): Directly travel to any previously visited outpost
-* Show widgets such as [instance timer](pages/timer), target health, distance, clock
+* Show [widgets](pages/widgets) such as [instance timer](pages/timer), target health, distance, clock
 * [Bonds](pages/bonds): Show maintained bonds on the party, and cast and dismiss bonds with a single click
 * [Damage](pages/damage): Show the amount of damage done by each member of your party
 * Customize camera zoom or unlock camera
