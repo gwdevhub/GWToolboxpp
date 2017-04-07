@@ -2,7 +2,7 @@
 layout: default
 ---
 
-# Fast Travel
+# Travel
 
 ## Overview
 
@@ -10,7 +10,7 @@ The Travel window allows you to travel directly to any outpost in the game, so l
 
 ## Usage
 
-Select an outpost from the drop-down menu and you will instantly travel there. You can type the first letter of the outpost to find it in the list faster. The word "The" is not considered for alphabetical order.
+Select an outpost from the drop-down menu and you will instantly travel there. You can start typying in the name of the outpost to find it in the list faster, and use your arrow keys to scroll up and down. The word "The" is not considered for alphabetical order.
 
 There are also 8 default outpost buttons to choose from. If you want more, you can add your favourite outposts, using the dropdown menus at the bottom. You can change the number of favourites in [Settings](settings).
 
@@ -18,6 +18,6 @@ If you want to go to a particular district, make sure you choose it from the dis
 
 There is also an option in [Settings](settings) to make the Travel window close when you travel, although this is off by default.
 
-## Bug
+## Known Bug
 
 Traveling from anywhere in Factions to an elite area outpost (The Deep, Urgoz, or DoA) will not work. The only workaround currently known is to first map to somewhere outside Factions.
