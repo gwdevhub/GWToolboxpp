@@ -20,4 +20,4 @@ There is also an option in [Settings](settings) to make the Travel window close 
 
 ## Known Bug
 
-Traveling from anywhere in Factions to an elite area outpost (The Deep, Urgoz, or DoA) will not work. The only workaround currently known is to first map to somewhere outside Factions.
+* Traveling from anywhere in Factions to an elite area outpost (The Deep, Urgoz, or DoA) will not work. The only workaround currently known is to first map to somewhere outside Factions.
