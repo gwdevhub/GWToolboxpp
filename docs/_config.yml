@@ -1,6 +1,5 @@
-repository: HasKha/GWToolboxpp
-theme: jekyll-theme-minimal
+title: Midnight theme
+description: Midnight is a theme for GitHub Pages.
 show_downloads: true
-
-title: GWToolbox++
-description: Tools for Guild Wars players
+google_analytics:
+theme: 
