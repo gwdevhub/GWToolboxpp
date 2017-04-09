@@ -2,8 +2,8 @@
 layout: default
 ---
 
-## Welcome to another page
+# Chat Commands
 
-_yay_
+_work in progress_
 
 [back](./)
