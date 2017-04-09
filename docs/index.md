@@ -7,12 +7,16 @@ GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancemen
 
 # [](#downloads)Download
 
+
 ## [GWToolbox++.exe](http://github.com/HasKha/GWToolboxpp/releases/download/2.0-launcher/GWToolbox.exe)
 
+
 ### Versions
-> GWToolbox++: {{site.data.versions.toolbox}}
-> Launcher: {{site.data.versions.launcher}}
-> [Version History](version-history)
+GWToolbox++: {{site.data.versions.toolbox}}
+
+Launcher: {{site.data.versions.launcher}}
+
+[Version History](version-history)
 
 _Important: we are working on migrating server. Afterwards, you will need to re-download the launcher to receive GWToolbox++ updates_
 
