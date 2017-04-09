@@ -32,4 +32,4 @@ _Important: we are working on migrating server. Afterwards, you will need to re-
 * [Custom Camera](camera) - Customize camera zoom or unlock camera
 * [Borderless Window](borderless) - Set the game to run in borderless windowed mode
 
-[Frequently Asked Questions](faq)
+# [Frequently Asked Questions](faq)
