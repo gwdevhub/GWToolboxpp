@@ -3,8 +3,20 @@ layout: default
 ---
 
 # Widgets
+Unlike [Windows](windows), widgets are designed to stay open all the time, as part of your user interface. Mostly widgets are non-interactive, and just display information.
 
-*work in progress*
+All widgets have options in [Settings](settings) to specify the exact co-ordinates of their on-screen position and prevent the widget from being moved around or re-sized.
+
+## Interface
+* Click and drag on the lower right corner to re-size a widget.
+* Click and drag anywhere to move a widget.
+  
+There are several ways to open and close widgets:
+* Checkboxes in the [Info](info) window.
+* Checkboxes in the right of each header on [Settings](settings).
+* Chat command `/hide (name of widget)`.
+* Chat command `/show (name of widget)`.
+* Chat command `/tb (name of widdget)` to toggle show/hide.
 
 ## Timer
 The timer shows the *instance time* of the current map, meaning for how long the instance/map/district has been running.
@@ -21,8 +33,10 @@ The distance monitor shows your distance from your target as a percentage of com
 The minimap is an improved version of the default Guild Wars compass, with such features as targeting, zoom, and accurate pathing maps.
 
 ## Damage
+*work in progress*
 
 ## Bonds
+*work in progress*
 
 ## Clock
 The clock simply shows your local time of day. You can choose 12 or 24-hour clock.
