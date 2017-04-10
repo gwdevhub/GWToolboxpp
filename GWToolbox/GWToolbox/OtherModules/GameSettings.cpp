@@ -59,6 +59,10 @@ void GameSettings::Initialize() {
 			msg[len + 5] = 0;
 		}
 	});
+
+	GW::Chat::SetWhisperCallback([](const wchar_t from[20], const wchar_t msg[140]) -> void {
+		GWToolbox::Instance().FlashGwTray();
+	});
 }
 
 void GameSettings::Terminate() {

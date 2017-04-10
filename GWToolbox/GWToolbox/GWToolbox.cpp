@@ -81,10 +81,6 @@ DWORD __stdcall ThreadEntry(LPVOID dllmodule) {
 
 	Log::Log("Installed chat hooks\n");
 
-	GW::Chat::SetWhisperCallback([](const wchar_t from[20], const wchar_t msg[140]) {
-		GWToolbox::Instance().FlashGwTray();
-	});
-
 	while (!tb_destroyed) { // wait until destruction
 		Sleep(100);
 
