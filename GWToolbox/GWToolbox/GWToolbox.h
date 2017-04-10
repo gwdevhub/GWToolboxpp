@@ -39,6 +39,8 @@ public:
 	const std::vector<ToolboxModule*>& GetModules() const { return modules; }
 	const std::vector<ToolboxUIElement*>& GetUIElements() const { return uielements; }
 
+	void FlashGwTray() const;
+
 private:
 	std::vector<ToolboxModule*> modules;
 	std::vector<ToolboxUIElement*> uielements;

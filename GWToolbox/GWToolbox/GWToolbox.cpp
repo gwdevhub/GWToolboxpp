@@ -81,6 +81,10 @@ DWORD __stdcall ThreadEntry(LPVOID dllmodule) {
 
 	Log::Log("Installed chat hooks\n");
 
+	GW::Chat::SetWhisperCallback([](const wchar_t from[20], const wchar_t msg[140]) {
+		GWToolbox::Instance().FlashGwTray();
+	});
+
 	while (!tb_destroyed) { // wait until destruction
 		Sleep(100);
 
@@ -96,7 +100,6 @@ DWORD __stdcall ThreadEntry(LPVOID dllmodule) {
 
 	//GW::Render::EndSceneHook()->Cleanup();
 	//GW::Render::ResetHook()->Cleanup();
-
 
 	Sleep(100);
 	Log::Log("Closing log/console, bye!\n");
@@ -365,4 +368,14 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 		SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
 		Log::Log("Destroying directX hook\n");
 	}
+}
+
+void GWToolbox::FlashGwTray() const {
+	FLASHWINFO flashInfo = { 0 };
+	flashInfo.cbSize = sizeof(FLASHWINFO);
+	flashInfo.hwnd = GW::MemoryMgr::GetGWWindowHandle();
+	flashInfo.dwFlags = FLASHW_TIMER | FLASHW_TRAY | FLASHW_TIMERNOFG;
+	flashInfo.uCount = 0;
+	flashInfo.dwTimeout = 0;
+	FlashWindowEx(&flashInfo);
 }
