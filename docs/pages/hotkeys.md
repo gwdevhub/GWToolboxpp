@@ -69,7 +69,7 @@ This will click on a pre-specified point on the map, so that your character move
 
 You can specify the range in which the hotkey will work; by default this is 5000, which means that it will work so long as you are in compass range of the destination, but no further. Change this value to 0 to make the limit infinite.
 
-You can specify on which map the hotkey will work; use the Map tab on the [Info](info) window to find the Map ID. By default this is 0, which means that it will work on any map.
+You can specify on which map the hotkey will work; use the Map tab on the [Info](info) window to find the Map ID. By default this is 0, which means that it will work on any map. Note that movement hotkeys never work in outposts.
 
 ## Dialog
 Use the Dialog tab on the [Info](info) window to find the ID number of the dialog you want. Type, or copy (Ctrl+C) and paste (Ctrl+V) in the ID.
