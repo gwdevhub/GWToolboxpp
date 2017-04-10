@@ -6,7 +6,7 @@ layout: default
 
 Unlike [Widgets](widgets), windows are designed to be opened when needed, and hidden when not in use.
 
-The header (colored bar at the top, with the window's name) can be used to move the window around by clicking and dragging. Double-clicking the header minimizes the window. The button on the right side of the header closes the window.
+The header (colored bar at the top, with the window's name) can be used to move the window around by clicking and dragging. Double-clicking the header minimizes the window. The button on the right side of the header closes the window. Windows can also be shown or hidden using [chat commands](chat_commands).
 
 All windows have options in [Settings](settings) to specify the exact co-ordinates of their on-screen position, prevent the window from being moved around or re-sized, and to remove the close button.
 
