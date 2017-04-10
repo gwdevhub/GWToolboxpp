@@ -3,7 +3,7 @@
 #define GWTOOLBOX_VERSION "2.0"
 #define BETA_VERSION ""
 #define GWTOOLBOX_HOST "http://fbgmguild.com/GWToolboxpp/"
-#define GWTOOLBOX_WEBSITE "http://tools.fbgmguild.com/"
+#define GWTOOLBOX_WEBSITE "https://haskha.github.io/GWToolboxpp/"
 
 /* 
 Notes: 

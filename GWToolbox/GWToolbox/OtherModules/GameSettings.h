@@ -32,6 +32,7 @@ public:
 	bool auto_transform_url;
 	bool tick_is_toggle = false;
 	bool select_with_chat_doubleclick = false;
+	bool flash_window_on_pm = false;
 
 	void ApplyBorderless(bool value);
 private:

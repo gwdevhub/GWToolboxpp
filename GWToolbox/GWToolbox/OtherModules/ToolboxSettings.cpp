@@ -38,6 +38,9 @@ void ToolboxSettings::InitializeModules() {
 	if (use_materials) MaterialsPanel::Instance().Initialize();
 
 	SettingsPanel::Instance().Initialize();
+
+	if (use_notepad) NotePadWindow::Instance().Initialize();
+
 	SettingsPanel::Instance().separator = GWToolbox::Instance().GetModules().size();
 
 	if (use_timer) TimerWindow::Instance().Initialize();
@@ -47,7 +50,6 @@ void ToolboxSettings::InitializeModules() {
 	if (use_damage) PartyDamage::Instance().Initialize();
 	if (use_bonds) BondsWindow::Instance().Initialize();
 	if (use_clock) ClockWindow::Instance().Initialize();
-	if (use_notepad) NotePadWindow::Instance().Initialize();
 	if (use_vanquish) VanquishWindow::Instance().Initialize();
 }
 
@@ -62,7 +64,7 @@ void ToolboxSettings::DrawSettingInternal() {
 		"Might also cause windows to move when minimizing.");
 
 	ImGui::Text("Enable the following features:");
-	ImGui::TextDisabled("Unticking will completely disable a feature from initializing and running. Requires toolbox restart.");
+	ImGui::TextDisabled("Unticking will completely disable a feature from initializing and running. Requires Toolbox restart.");
 	ImGui::Checkbox("Pcons", &use_pcons);
 	ImGui::Checkbox("Hotkeys", &use_hotkeys);
 	ImGui::Checkbox("Builds", &use_builds);

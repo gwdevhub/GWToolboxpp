@@ -4,6 +4,7 @@
 
 #include <vector>
 
+#include <SimpleIni.h>
 #include "ToolboxModule.h"
 #include "ToolboxUIElement.h"
 
@@ -38,8 +39,6 @@ public:
 
 	const std::vector<ToolboxModule*>& GetModules() const { return modules; }
 	const std::vector<ToolboxUIElement*>& GetUIElements() const { return uielements; }
-
-	void FlashGwTray() const;
 
 private:
 	std::vector<ToolboxModule*> modules;

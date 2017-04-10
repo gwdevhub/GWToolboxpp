@@ -60,8 +60,16 @@ void GameSettings::Initialize() {
 		}
 	});
 
-	GW::Chat::SetWhisperCallback([](const wchar_t from[20], const wchar_t msg[140]) -> void {
-		GWToolbox::Instance().FlashGwTray();
+	GW::Chat::SetWhisperCallback([this](const wchar_t from[20], const wchar_t msg[140]) -> void {
+		if (!flash_window_on_pm) return;
+
+		FLASHWINFO flashInfo = { 0 };
+		flashInfo.cbSize = sizeof(FLASHWINFO);
+		flashInfo.hwnd = GW::MemoryMgr::GetGWWindowHandle();
+		flashInfo.dwFlags = FLASHW_TIMER | FLASHW_TRAY | FLASHW_TIMERNOFG;
+		flashInfo.uCount = 0;
+		flashInfo.dwTimeout = 0;
+		FlashWindowEx(&flashInfo);
 	});
 }
 
@@ -100,6 +108,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	auto_transform_url = ini->GetBoolValue(Name(), "auto_url", true);
 	tick_is_toggle = ini->GetBoolValue(Name(), "tick_is_toggle", true);
 	select_with_chat_doubleclick = ini->GetBoolValue(Name(), "select_with_chat_doubleclick", true);
+	flash_window_on_pm = ini->GetBoolValue(Name(), "flash_window_on_pm", true);
 
 	ApplyBorderless(borderless_window);
 	if (open_template_links) GW::Chat::SetOpenLinks(open_template_links);
@@ -114,6 +123,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), "auto_url", auto_transform_url);
 	ini->SetBoolValue(Name(), "tick_is_toggle", tick_is_toggle);
 	ini->SetBoolValue(Name(), "select_with_chat_doubleclick", select_with_chat_doubleclick);
+	ini->SetBoolValue(Name(), "flash_window_on_pm", flash_window_on_pm);
 }
 
 void GameSettings::DrawSettingInternal() {
@@ -125,7 +135,7 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::ShowHelp("Clicking on template that has a URL as name will open that URL in your browser");
 
 	ImGui::Checkbox("Automaticly change urls into build templates.", &auto_transform_url);
-	// ImGui::ShowHelp("");
+	ImGui::ShowHelp("When you write a message starting with 'http://' or 'https://', it will be converted in template format");
 
 	if (ImGui::Checkbox("Tick is a toggle", &tick_is_toggle)) {
 		if (tick_is_toggle) {
@@ -141,6 +151,8 @@ void GameSettings::DrawSettingInternal() {
 			&ChatEvent : [](DWORD, DWORD, wchar_t*, void*) {});
 	}
 	ImGui::ShowHelp("Double clicking on the author of a message in chat will target the author");
+
+	ImGui::Checkbox("Flash Guild Wars taskbar window when receiving a pm", &flash_window_on_pm);
 }
 
 void GameSettings::DrawBorderlessSetting() {

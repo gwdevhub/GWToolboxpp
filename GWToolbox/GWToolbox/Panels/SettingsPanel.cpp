@@ -44,14 +44,14 @@ void SettingsPanel::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::Text("General:");
 		if (ImGui::CollapsingHeader("Help")) {
 			if (ImGui::TreeNode("General Interface")) {
-				ImGui::Bullet(); ImGui::Text("Double-click on title bar to collapse a window.");
-				ImGui::Bullet(); ImGui::Text("Click and drag on lower right corner to resize a window.");
+				ImGui::Bullet(); ImGui::Text("Double-click on the title bar to collapse a window.");
+				ImGui::Bullet(); ImGui::Text("Click and drag on the lower right corner to resize a window.");
 				ImGui::Bullet(); ImGui::Text("Click and drag on any empty space to move a window.");
 				ImGui::Bullet(); ImGui::Text("Mouse Wheel to scroll.");
 				if (ImGui::GetIO().FontAllowUserScaling) {
 					ImGui::Bullet(); ImGui::Text("CTRL+Mouse Wheel to zoom window contents.");
 				}
-				ImGui::Bullet(); ImGui::Text("TAB/SHIFT+TAB to cycle through keyboard editable fields.");
+				ImGui::Bullet(); ImGui::Text("TAB or SHIFT+TAB to cycle through keyboard editable fields.");
 				ImGui::Bullet(); ImGui::Text("CTRL+Click or Double Click on a slider or drag box to input text.");
 				ImGui::Bullet(); ImGui::Text(
 					"While editing text:\n"
@@ -86,8 +86,8 @@ void SettingsPanel::Draw(IDirect3DDevice9* pDevice) {
 		}
 
 		for (unsigned i = 0; i < GWToolbox::Instance().GetModules().size(); ++i) {
-			if (i == 6) ImGui::Text("Main Window / Panels:");
-			if (i == separator) ImGui::Text("Windows / Widgets:");
+			if (i == 6) ImGui::Text("Windows:");
+			if (i == separator) ImGui::Text("Widgets:");
 			GWToolbox::Instance().GetModules()[i]->DrawSettings();
 		}
 

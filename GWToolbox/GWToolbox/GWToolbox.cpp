@@ -365,13 +365,3 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 		Log::Log("Destroying directX hook\n");
 	}
 }
-
-void GWToolbox::FlashGwTray() const {
-	FLASHWINFO flashInfo = { 0 };
-	flashInfo.cbSize = sizeof(FLASHWINFO);
-	flashInfo.hwnd = GW::MemoryMgr::GetGWWindowHandle();
-	flashInfo.dwFlags = FLASHW_TIMER | FLASHW_TRAY | FLASHW_TIMERNOFG;
-	flashInfo.uCount = 0;
-	flashInfo.dwTimeout = 0;
-	FlashWindowEx(&flashInfo);
-}
