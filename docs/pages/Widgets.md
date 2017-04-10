@@ -26,6 +26,3 @@ The minimap is an improved version of the default Guild Wars compass, with such 
 
 ## Clock
 The clock simply shows your local time of day. You can choose 12 or 24-hour clock.
-
-## Notepad
-The notepad is just a space where you can write (or copy/paste) anything you want, such as complicated instructions to remember. Anything you write will still be there when you restart Toolbox or Guild Wars.
