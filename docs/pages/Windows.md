@@ -4,9 +4,7 @@ layout: default
 
 # Windows
 
-*work in progress*
-
-Unlike [Widgets]{widgets), windows are designed to be opened when needed, and hidden when not in use.
+Unlike [Widgets](widgets), windows are designed to be opened when needed, and hidden when not in use.
 
 The header (colored bar at the top, with the window's name) can be used to move the window around by clicking and dragging. Double-clicking the header minimizes the window. The button on the right side of the header closes the window.
 
