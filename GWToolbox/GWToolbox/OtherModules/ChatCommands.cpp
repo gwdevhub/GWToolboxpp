@@ -93,7 +93,19 @@ void ChatCommands::Initialize() {
 	GW::Chat::RegisterCommand(L"scwiki", 
 		[](std::wstring& cmd, std::vector<std::wstring>& args) -> bool {
 		CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-		ShellExecute(NULL, "open", "http://wiki.fbgmguild.com/Main_Page", NULL, NULL, SW_SHOWNORMAL);
+		if (args.size() == 0) {
+			ShellExecuteW(NULL, L"open", L"http://wiki.fbgmguild.com/Main_Page", NULL, NULL, SW_SHOWNORMAL);
+		} else {
+			// the buffer is large enough, because you can type only 120 characters at once in the chat.
+			wchar_t link[256] = L"http://wiki.fbgmguild.com/index.php?search=";
+			size_t i;
+			for (i = 0; i < args.size() - 1; i++) {
+				wcscat_s(link, args[i].c_str());
+				wcscat_s(link, L"+");
+			}
+			wcscat_s(link, args[i].c_str());
+			ShellExecuteW(NULL, L"open", link, NULL, NULL, SW_SHOWNORMAL);
+		}
 		return true;
 	});
 }
