@@ -21,7 +21,7 @@ TexMod, uMod, screen recording software (in game capture mode) and Toolbox all u
 * TexMod or uMod *should* work. You probably want to run them first, and Toolbox++ later. uMod with dll-drop method is recommended.
 * Screen recording software *should* work. You probably want to launch them last, after Toolbox. We recommend using "window capture" and not "game capture".
 
-**I run the launcher and then nothing happens / Guild Wars closes / crashes**
+**I run the launcher and then nothing happens / Guild Wars closes / crashes**.
 
 There may be different reasons for this. Try the following, in no particular order:
 * Launch both Guild Wars and Toolbox as administrator.
@@ -29,7 +29,7 @@ There may be different reasons for this. Try the following, in no particular ord
 * Avoid using other programs that interact with Guild Wars (TexMod, uMod, MultiLaunch, screen recording software, game overlays such as steam, fraps, etc)
 * Add GWToolbox.exe and gw.exe to your antivirus whitelist.
 
-**I run the launcher and I get the message “GWToolbox.dll was not loaded, unknown error”**
+**I run the launcher and I get the message “GWToolbox.dll was not loaded, unknown error”**.
 
 This error typically means that some security feature is preventing Toolbox to access Guild Wars. One such feature is Data Execution Prevention, it is disabled by default but if enabled you need to add gw.exe to its whitelist. The other security programs causing this is any particularly zealous antivirus software. You typically need to add both GWToolbox.exe and gw.exe to its whitelist.
 
