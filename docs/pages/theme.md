@@ -3,7 +3,6 @@ layout: default
 ---
 
 # Theme
-
 Toolbox's appearance can be greatly customized. Many individual features have some separate options for this, but the controls that affect everything are all in the Theme menu in [Settings](settings). Usually it's best to see the effects of these controls for yourself by tweaking them, but you can also read about them here.
 
 It's possible to share all or part of your theme with someone else by copying from the Theme.ini file in the [Settings folder](settings_folder).
@@ -41,3 +40,48 @@ Grabs are the things you click-and-drag to move a slider.
 * **Button Text Align** determines the position of text on some buttons.
 
 ## Colors
+The color channels control the levels of red, green, blue, and opacity of each element:
+* **Text**: most text in Toolbox.
+* **TextDisabled**: a few other pieces of text, such as tooltip help markers.
+
+* **WindowBg**: the background of windows.
+* **ChildWindowBg**: does nothing.
+* **PopupBg**: the background of mouseover tooltips.<br /><br />
+* **Border**: border lines on the main window, materials window, dialogs window, and the chat filter.
+* **BorderShadow**: does nothing.<br /><br />
+* **FrameBg**: the background of frames, when out of focus.
+* **FrameBgHovered**: the background of frames, when moused over.
+* **FrameBgActive**: the background of frames, when clicked on.<br /><br />
+* **TitleBg**: the title bar of windows that are out of focus.
+* **TitleBgCollapsed**: the title bar of collapsed windows.
+* **TitleBgActive**: the title bar of the window in focus.<br /><br />
+* **MenuBarBg**: does nothing.<br /><br />
+* **ScrollbarBg**: the background on scrollbars.
+* **ScrollbarGrab**: the thing you click on to move a scrollbar, when out of focus.
+* **ScrollbarGrabHovered**: the thing you click on to move a scrollbar, when moused over.
+* **ScrollbarGrabActive**: the thing you click on to move a scrollbar, when clicked on.<br /><br />
+* **ComboBg**: the background on drop-down menus.<br /><br />
+* **CheckMark**: the circles inside checkboxes.<br /><br />
+* **SliderGrab**: the thing you click on to move a slider, when out of focus.
+* **SliderGrabActive**: the thing you click on to move a slider, when clicked on.<br /><br />
+* **Button**: buttons, when out of focus.
+* **ButtonHovered**: buttons, when moused over.
+* **ButtonActive**: buttons, when clicked.<br /><br />
+* **Header**: headers, when out of focus.
+* **HeaderHovered**: headers, when moused over.
+* **HeaderActive**: headers, when clicked on.<br /><br />
+* **Column**: does nothing.
+* **ColumnHovered**: does nothing.
+* **ColumnActive**: does nothing.<br /><br />
+* **ResizeGrip**: the triangle for re-sizing windows and widgets, when out of focus.
+* **ResizeGripHovered**: the triangle for re-sizing windows and widgets, when moused over.
+* **ResizeGripActive**: the triangle for re-sizing windows and widgets, when clicked on.<br /><br />
+* **CloseButton**: a window's close button, when out of focus.
+* **CloseButtonHovered**: a window's close button, when moused over.
+* **CloseButtonActive**: a window's close button, when clicked on.<br /><br />
+* **PlotLines**: does nothing.
+* **PlotLinesHovered**: does nothing.
+* **PlotHistogram**: does nothing.
+* **PlotHistogramHovered**: does nothing.
+* **TextSelectedBg**: the background of highlighted text.
+* **ModalWindowDarkening**: does nothing.
