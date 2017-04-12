@@ -53,7 +53,9 @@ This triggers one of four Toolbox features:
 
 * **Open Xunlai Chest** opens your storage, wherever you are in any outpost. This is even possible on new characters that haven't yet unlocked a storage account (such as in pre-Searing), but these will be unable to access any of the items; you can only look.
 
-* **Open Locked Chest** automatically uses a lockpick to open a targeted chest, without you having to walk over to it. The item will still spawn next to the chest as usual. \\ This will fail if you do not have a lockpick in your inventory, or if someone else is using the chest at the same time. \\ This works on other chests, but there is no option to use a key; a lockpick will always be used.
+* **Open Locked Chest** automatically uses a lockpick to open a targeted chest, without you having to walk over to it. The item will still spawn next to the chest as usual.  
+ This will fail if you do not have a lockpick in your inventory, or if someone else is using the chest at the same time.  
+ This works on other chests, but there is no option to use a key; a lockpick will always be used.
 
 * **Drop Gold Coin** drops a single gold coin on the ground.
 
