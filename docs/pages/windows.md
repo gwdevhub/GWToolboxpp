@@ -14,7 +14,7 @@ All windows have options in [Settings](settings) to specify the exact co-ordinat
 * Click and drag on any empty space to move a window.
 * `Mouse wheel` to scroll.
 * `TAB`/`SHIFT+TAB` to cycle through keyboard editable fields.
-* `Ctrl+Click` or `double click` on a slider or drag box to input text.
+* `Ctrl+Click` on a slider or drag box to input text. You can also `double click` on a drag box.
 * While editing text:
   * Hold `SHIFT` or use mouse to select text.
   * `Ctrl+Left/Right` to word jump.
