@@ -25,10 +25,10 @@ It's possible to share all or part of your theme with someone else by copying fr
 
 Frames are the areas within windows that contain text, including headers, sliders, and text input fields.
 * **Frame Padding** controls the empty space around the edge of frames.
-* **Frame Rounding** determines the sharpness of frames' corners.<br />
+* **Frame Rounding** determines the sharpness of frames' corners.<br /><br />
 * **Item Spacing** controls the space between items.
-* **Item InnerSpacing** controls the space between the separate parts of the each item.<br />
-* **Indent Spacing** controls the width of indents.<br />
+* **Item InnerSpacing** controls the space between the separate parts of the each item.<br /><br />
+* **Indent Spacing** controls the width of indents.<br /><br />
 * **Scrollbar Size** controls the thickness of scrollbars.
 * **Scrollbar Rounding** determines the sharpness of scrollbars' corners.
 
