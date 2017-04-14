@@ -11,7 +11,8 @@
 
 void HotkeyPanel::Initialize() {
 	ToolboxPanel::Initialize();
-	Resources::Instance().LoadTextureAsync(&texture, "keyboard.png", "img/icons");
+	Resources::Instance().LoadTextureAsync(&texture, "keyboard.png", "img/icons", 
+		"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/icons/keyboard.png");
 	clickerTimer = TIMER_INIT();
 	dropCoinsTimer = TIMER_INIT();
 }
@@ -131,26 +132,30 @@ void HotkeyPanel::LoadSettings(CSimpleIni* ini) {
 		TBHotkey* hk = TBHotkey::HotkeyFactory(ini, entry.pItem);
 		if (hk) hotkeys.push_back(hk);
 	}
+
+	TBHotkey::hotkeys_changed = false;
 }
 void HotkeyPanel::SaveSettings(CSimpleIni* ini) {
 	ToolboxPanel::SaveSettings(ini);
 	ini->SetBoolValue(Name(), "show_active_in_header", TBHotkey::show_active_in_header);
 	ini->SetBoolValue(Name(), "show_run_in_header", TBHotkey::show_run_in_header);
 
-	// clear hotkeys from ini
-	CSimpleIni::TNamesDepend entries;
-	ini->GetAllSections(entries);
-	for (CSimpleIni::Entry& entry : entries) {
-		if (strncmp(entry.pItem, "hotkey-", 7) == 0) {
-			ini->Delete(entry.pItem, nullptr);
+	if (TBHotkey::hotkeys_changed) {
+		// clear hotkeys from ini
+		CSimpleIni::TNamesDepend entries;
+		ini->GetAllSections(entries);
+		for (CSimpleIni::Entry& entry : entries) {
+			if (strncmp(entry.pItem, "hotkey-", 7) == 0) {
+				ini->Delete(entry.pItem, nullptr);
+			}
 		}
-	}
 
-	// then save again
-	char buf[256];
-	for (unsigned int i = 0; i < hotkeys.size(); ++i) {
-		sprintf_s(buf, "hotkey-%03d:%s", i, hotkeys[i]->Name());
-		hotkeys[i]->Save(ini, buf);
+		// then save again
+		char buf[256];
+		for (unsigned int i = 0; i < hotkeys.size(); ++i) {
+			sprintf_s(buf, "hotkey-%03d:%s", i, hotkeys[i]->Name());
+			hotkeys[i]->Save(ini, buf);
+		}
 	}
 }
 

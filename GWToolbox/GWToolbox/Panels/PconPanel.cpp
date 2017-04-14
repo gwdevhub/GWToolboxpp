@@ -19,7 +19,8 @@ using namespace GW::Constants;
 
 void PconPanel::Initialize() {
 	ToolboxPanel::Initialize();
-	Resources::Instance().LoadTextureAsync(&texture, "cupcake.png", "img/icons");
+	Resources::Instance().LoadTextureAsync(&texture, "cupcake.png", "img/icons", 
+		"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/icons/cupcake.png");
 
 	const float s = 64.0f; // all icons are 64x64
 

@@ -49,6 +49,8 @@ void CustomRenderer::LoadMarkers() {
 			inifile->Delete(section, nullptr);
 		}
 	}
+
+	markers_changed = false;
 }
 void CustomRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 	Colors::Save(ini, section, "color_custom_markers", color);
@@ -57,45 +59,47 @@ void CustomRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 void CustomRenderer::SaveMarkers() const {
 	// clear markers from ini
 	// then load new
-	CSimpleIni::TNamesDepend entries;
-	inifile->GetAllSections(entries);
-	for (CSimpleIni::Entry& entry : entries) {
-		const char* section = entry.pItem;
-		if (strncmp(section, "customline", 10) == 0) {
-			inifile->Delete(section, nullptr);
+	if (markers_changed) {
+		CSimpleIni::TNamesDepend entries;
+		inifile->GetAllSections(entries);
+		for (CSimpleIni::Entry& entry : entries) {
+			const char* section = entry.pItem;
+			if (strncmp(section, "customline", 10) == 0) {
+				inifile->Delete(section, nullptr);
+			}
+			if (strncmp(section, "custommarker", 12) == 0) {
+				inifile->Delete(section, nullptr);
+			}
 		}
-		if (strncmp(section, "custommarker", 12) == 0) {
-			inifile->Delete(section, nullptr);
+
+		// then save
+		for (unsigned i = 0; i < lines.size(); ++i) {
+			const CustomLine& line = lines[i];
+			char section[32];
+			sprintf_s(section, "customline%03d", i);
+			inifile->SetValue(section, "name", line.name);
+			inifile->SetDoubleValue(section, "x1", line.p1.x);
+			inifile->SetDoubleValue(section, "y1", line.p1.y);
+			inifile->SetDoubleValue(section, "x2", line.p2.x);
+			inifile->SetDoubleValue(section, "y2", line.p2.y);
+			inifile->SetLongValue(section, "map", (long)line.map);
+			inifile->SetBoolValue(section, "visible", line.visible);
 		}
-	}
+		for (unsigned i = 0; i < markers.size(); ++i) {
+			const CustomMarker& marker = markers[i];
+			char section[32];
+			sprintf_s(section, "custommarker%03d", i);
+			inifile->SetValue(section, "name", marker.name);
+			inifile->SetDoubleValue(section, "x", marker.pos.x);
+			inifile->SetDoubleValue(section, "y", marker.pos.y);
+			inifile->SetDoubleValue(section, "size", marker.size);
+			inifile->SetLongValue(section, "shape", marker.shape);
+			inifile->SetLongValue(section, "map", (long)marker.map);
+			inifile->SetBoolValue(section, "visible", marker.visible);
+		}
 
-	// then save
-	for (unsigned i = 0; i < lines.size(); ++i) {
-		const CustomLine& line = lines[i];
-		char section[32];
-		sprintf_s(section, "customline%03d", i);
-		inifile->SetValue(section, "name", line.name);
-		inifile->SetDoubleValue(section, "x1", line.p1.x);
-		inifile->SetDoubleValue(section, "y1", line.p1.y);
-		inifile->SetDoubleValue(section, "x2", line.p2.x);
-		inifile->SetDoubleValue(section, "y2", line.p2.y);
-		inifile->SetLongValue(section, "map", (long)line.map);
-		inifile->SetBoolValue(section, "visible", line.visible);
+		inifile->SaveFile(GuiUtils::getPath(IniFilename).c_str());
 	}
-	for (unsigned i = 0; i < markers.size(); ++i) {
-		const CustomMarker& marker = markers[i];
-		char section[32];
-		sprintf_s(section, "custommarker%03d", i);
-		inifile->SetValue(section, "name", marker.name);
-		inifile->SetDoubleValue(section, "x", marker.pos.x);
-		inifile->SetDoubleValue(section, "y", marker.pos.y);
-		inifile->SetDoubleValue(section, "size", marker.size);
-		inifile->SetLongValue(section, "shape", marker.shape);
-		inifile->SetLongValue(section, "map", (long)marker.map);
-		inifile->SetBoolValue(section, "visible", marker.visible);
-	}
-
-	inifile->SaveFile(GuiUtils::getPath(IniFilename).c_str());
 }
 void CustomRenderer::Invalidate() {
 	initialized = false;
@@ -115,33 +119,34 @@ void CustomRenderer::DrawSettings() {
 		bool remove = false;
 		CustomLine& line = lines[i];
 		ImGui::PushID(i);
-		ImGui::Checkbox("##visible", &line.visible);
+		if (ImGui::Checkbox("##visible", &line.visible)) markers_changed = true;
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Visible");
 		ImGui::SameLine(0.0f, spacing);
 		ImGui::PushItemWidth((ImGui::CalcItemWidth() - ImGui::GetTextLineHeightWithSpacing() - spacing * 5) / 5);
-		ImGui::DragFloat("##x1", &line.p1.x, 1.0f, 0.0f, 0.0f, "%.0f");
+		if (ImGui::DragFloat("##x1", &line.p1.x, 1.0f, 0.0f, 0.0f, "%.0f")) markers_changed = true;
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Line X 1");
 		ImGui::SameLine(0.0f, spacing);
-		ImGui::DragFloat("##y1", &line.p1.y, 1.0f, 0.0f, 0.0f, "%.0f");
+		if (ImGui::DragFloat("##y1", &line.p1.y, 1.0f, 0.0f, 0.0f, "%.0f")) markers_changed = true;
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Line Y 1");
 		ImGui::SameLine(0.0f, spacing);
-		ImGui::DragFloat("##x2", &line.p2.x, 1.0f, 0.0f, 0.0f, "%.0f");
+		if (ImGui::DragFloat("##x2", &line.p2.x, 1.0f, 0.0f, 0.0f, "%.0f")) markers_changed = true;
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Line X 2");
 		ImGui::SameLine(0.0f, spacing);
-		ImGui::DragFloat("##y2", &line.p2.y, 1.0f, 0.0f, 0.0f, "%.0f");
+		if (ImGui::DragFloat("##y2", &line.p2.y, 1.0f, 0.0f, 0.0f, "%.0f")) markers_changed = true;
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Line Y 2");
 		ImGui::SameLine(0.0f, spacing);
-		ImGui::InputInt("##map", (int*)&line.map, 0);
+		if (ImGui::InputInt("##map", (int*)&line.map, 0)) markers_changed = true;
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Map ID");
 		ImGui::SameLine(0.0f, spacing);
 		ImGui::PopItemWidth();
 		ImGui::PushItemWidth(ImGui::GetWindowContentRegionWidth() - ImGui::GetCursorPosX() - spacing - 20.0f);
-		ImGui::InputText("##name", line.name, 128);
+		if (ImGui::InputText("##name", line.name, 128)) markers_changed = true;
 		ImGui::PopItemWidth();
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Name");
 		ImGui::SameLine(0.0f, spacing);
 		if (ImGui::Button("x##delete", ImVec2(20.0f, 0))) {
 			remove = true;
+			markers_changed = true;
 		}
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete");
 		ImGui::PopID();
@@ -157,13 +162,13 @@ void CustomRenderer::DrawSettings() {
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Visible");
 		ImGui::SameLine(0.0f, spacing);
 		ImGui::PushItemWidth((ImGui::CalcItemWidth() - ImGui::GetTextLineHeightWithSpacing() - spacing * 5) / 5);
-		ImGui::DragFloat("##x", &marker.pos.x, 1.0f, 0.0f, 0.0f, "%.0f");
+		if (ImGui::DragFloat("##x", &marker.pos.x, 1.0f, 0.0f, 0.0f, "%.0f")) markers_changed = true;
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Marker X Position");
 		ImGui::SameLine(0.0f, spacing);
-		ImGui::DragFloat("##y", &marker.pos.y, 1.0f, 0.0f, 0.0f, "%.0f");
+		if (ImGui::DragFloat("##y", &marker.pos.y, 1.0f, 0.0f, 0.0f, "%.0f")) markers_changed = true;
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Marker Y Position");
 		ImGui::SameLine(0.0f, spacing);
-		ImGui::DragFloat("##size", &marker.size, 1.0f, 0.0f, 0.0f, "%.0f");
+		if (ImGui::DragFloat("##size", &marker.size, 1.0f, 0.0f, 0.0f, "%.0f")) markers_changed = true;
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Size");
 		ImGui::SameLine(0.0f, spacing);
 
@@ -171,20 +176,21 @@ void CustomRenderer::DrawSettings() {
 			"Circle",
 			"FillCircle"
 		};
-		ImGui::Combo("##type", (int*)&marker.shape, types, 2);
+		if (ImGui::Combo("##type", (int*)&marker.shape, types, 2)) markers_changed = true;
 		ImGui::SameLine(0.0f, spacing);
 
-		ImGui::InputInt("##map", (int*)&marker.map, 0);
+		if (ImGui::InputInt("##map", (int*)&marker.map, 0)) markers_changed = true;
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Map ID");
 		ImGui::SameLine(0.0f, spacing);
 		ImGui::PopItemWidth();
 		ImGui::PushItemWidth(ImGui::GetWindowContentRegionWidth() - ImGui::GetCursorPosX() - spacing - 20.0f);
-		ImGui::InputText("##name", marker.name, 128);
+		if (ImGui::InputText("##name", marker.name, 128)) markers_changed = true;
 		ImGui::PopItemWidth();
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Name");
 		ImGui::SameLine(0.0f, spacing);
 		if (ImGui::Button("x##delete", ImVec2(20.0f, 0))) {
 			remove = true;
+			markers_changed = true;
 		}
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete");
 		ImGui::PopID();
@@ -196,12 +202,14 @@ void CustomRenderer::DrawSettings() {
 		char buf[32];
 		sprintf_s(buf, "line%d", lines.size());
 		lines.push_back(CustomLine(buf));
+		markers_changed = true;
 	}
 	ImGui::SameLine(0.0f, ImGui::GetStyle().ItemSpacing.x);
 	if (ImGui::Button("Add Marker", ImVec2(button_width, 0.0f))) {
 		char buf[32];
 		sprintf_s(buf, "marker%d", markers.size());
 		markers.push_back(CustomMarker(buf));
+		markers_changed = true;
 	}
 }
 

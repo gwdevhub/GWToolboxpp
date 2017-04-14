@@ -21,21 +21,26 @@ DWORD BondsWindow::buff_id[MAX_PARTYSIZE][MAX_BONDS] = { 0 };
 void BondsWindow::Initialize() {
 	ToolboxWidget::Initialize();
 	for (int i = 0; i < MAX_BONDS; ++i) textures[i] = nullptr;
-	Resources::Instance().LoadTextureAsync(&textures[BalthazarSpirit], "Balthazar's_Spirit.jpg", "img/bonds");
-	Resources::Instance().LoadTextureAsync(&textures[EssenceBond], "Essence_Bond.jpg", "img/bonds");
-	Resources::Instance().LoadTextureAsync(&textures[HolyVeil], "Holy_Veil.jpg", "img/bonds");
-	Resources::Instance().LoadTextureAsync(&textures[LifeAttunement], "Life_Attunement.jpg", "img/bonds");
-	Resources::Instance().LoadTextureAsync(&textures[LifeBarrier], "Life_Barrier.jpg", "img/bonds");
-	Resources::Instance().LoadTextureAsync(&textures[LifeBond], "Life_Bond.jpg", "img/bonds");
-	Resources::Instance().LoadTextureAsync(&textures[LiveVicariously], "Live_Vicariously.jpg", "img/bonds");
-	Resources::Instance().LoadTextureAsync(&textures[Mending], "Mending.jpg", "img/bonds");
-	Resources::Instance().LoadTextureAsync(&textures[ProtectiveBond], "Protective_Bond.jpg", "img/bonds");
-	Resources::Instance().LoadTextureAsync(&textures[PurifyingVeil], "Purifying_Veil.jpg", "img/bonds");
-	Resources::Instance().LoadTextureAsync(&textures[Retribution], "Retribution.jpg", "img/bonds");
-	Resources::Instance().LoadTextureAsync(&textures[StrengthOfHonor], "Strength_of_Honor.jpg", "img/bonds");
-	Resources::Instance().LoadTextureAsync(&textures[Succor], "Succor.jpg", "img/bonds");
-	Resources::Instance().LoadTextureAsync(&textures[VitalBlessing], "Vital_Blessing.jpg", "img/bonds");
-	Resources::Instance().LoadTextureAsync(&textures[WatchfulSpirit], "Watchful_Spirit.jpg", "img/bonds");
+	auto LoadBondTexture = [](IDirect3DTexture9** tex, const char* name) -> void {
+		char url[256] = "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/bonds/";
+		strcat_s(url, name);
+		Resources::Instance().LoadTextureAsync(tex, name, "img/bonds", url);
+	};
+	LoadBondTexture(&textures[BalthazarSpirit], "Balthazar's_Spirit.jpg");
+	LoadBondTexture(&textures[EssenceBond], "Essence_Bond.jpg");
+	LoadBondTexture(&textures[HolyVeil], "Holy_Veil.jpg");
+	LoadBondTexture(&textures[LifeAttunement], "Life_Attunement.jpg");
+	LoadBondTexture(&textures[LifeBarrier], "Life_Barrier.jpg");
+	LoadBondTexture(&textures[LifeBond], "Life_Bond.jpg");
+	LoadBondTexture(&textures[LiveVicariously], "Live_Vicariously.jpg");
+	LoadBondTexture(&textures[Mending], "Mending.jpg");
+	LoadBondTexture(&textures[ProtectiveBond], "Protective_Bond.jpg");
+	LoadBondTexture(&textures[PurifyingVeil], "Purifying_Veil.jpg");
+	LoadBondTexture(&textures[Retribution], "Retribution.jpg");
+	LoadBondTexture(&textures[StrengthOfHonor], "Strength_of_Honor.jpg");
+	LoadBondTexture(&textures[Succor], "Succor.jpg");
+	LoadBondTexture(&textures[VitalBlessing], "Vital_Blessing.jpg");
+	LoadBondTexture(&textures[WatchfulSpirit], "Watchful_Spirit.jpg");
 }
 
 void BondsWindow::Terminate() {

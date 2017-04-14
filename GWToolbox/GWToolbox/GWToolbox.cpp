@@ -94,9 +94,6 @@ DWORD __stdcall ThreadEntry(LPVOID dllmodule) {
 	
 	Sleep(100);
 
-	//GW::Render::EndSceneHook()->Cleanup();
-	//GW::Render::ResetHook()->Cleanup();
-
 	Sleep(100);
 	Log::Log("Closing log/console, bye!\n");
 	Log::Terminate();
@@ -236,11 +233,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 void GWToolbox::Initialize() {
 	Log::Log("Creating Toolbox\n");
 	Resources::Instance().EnsureSubPathExists("img");
-	Resources::Instance().EnsureSubPathExists("location_logs");
-	Resources::Instance().EnsureFileExists("GWToolbox.ini", nullptr, []() {
+	Resources::Instance().EnsureSubPathExists("location logs");
+	Resources::Instance().EnsureFileExists("GWToolbox.ini", nullptr, 
+		"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/GWToolbox.ini", 
+		[](bool success) {
 		GWToolbox::Instance().LoadSettings();
 	});
-	Resources::Instance().EnsureFileExists("Markers.ini", nullptr, []() {
+	Resources::Instance().EnsureFileExists("Markers.ini", nullptr, 
+		"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Markers.ini", 
+		[](bool success) {
 		Minimap::Instance().custom_renderer.LoadMarkers();
 	});
 
@@ -322,8 +323,14 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 		static std::string imgui_inifile = GuiUtils::getPath("interface.ini");
 		io.IniFilename = imgui_inifile.c_str();
 
-		Resources::Instance().EnsureFileExists("Font.ttf", nullptr, []() {
-			GuiUtils::LoadFonts();
+		Resources::Instance().EnsureFileExists("Font.ttf", nullptr,
+			"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Font.ttf", 
+			[](bool success) {
+			if (success) {
+				GuiUtils::LoadFonts();
+			} else {
+				Log::Error("Cannot load font!");
+			}
 		});
 
 		GWToolbox::Instance().Initialize();

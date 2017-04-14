@@ -26,18 +26,17 @@ public:
 	void DrawSettings() override {};
 	void DxUpdate(IDirect3DDevice9* device);
 
-	//bool EnsureFileExists(const char* name, const char* folder = nullptr);
-
 	// folder should not contain a trailing slash
 	void LoadTextureAsync(IDirect3DTexture9** tex,
-		const char* name, const char* folder = nullptr);
+		const char* name, const char* folder, const char* url);
 
 	// checks if file exists, and downloads from server if it doesn't.
 	// If the file exists, executes callback immediately,
 	// otherwise execute callback on download completion.
 	// folder should not contain a trailing slash
 	void EnsureFileExists(const char* name, 
-		const char* folder = nullptr, std::function<void()> callback = []() {});
+		const char* folder, const char* url, 
+		std::function<void(bool)> callback = [](bool success) {});
 
 	void EnsureSubPathExists(const char* path) const;
 	void EnsureFullPathExists(const char* path) const;
@@ -47,7 +46,6 @@ public:
 
 private:
 	bool GetPath(CHAR* path, const char* folder = nullptr) const;
-	bool GetURL(CHAR* url, const char* name, const char* folder = nullptr) const;
 
 	std::queue<std::function<void()>> todo;
 	std::queue<std::function<void(IDirect3DDevice9*)>> toload;

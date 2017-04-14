@@ -38,16 +38,6 @@ bool Resources::GetPath(CHAR* path, const char* folder) const {
 	return true;
 }
 
-bool Resources::GetURL(CHAR* url, const char* name, const char* folder) const {
-	// todo: find a better way that doesn't break if folder has a trailing slash
-	if (folder) {
-		sprintf_s(url, MAX_PATH, "%s%s/%s", GWTOOLBOX_HOST, folder, name);
-	} else {
-		sprintf_s(url, MAX_PATH, "%s%s", GWTOOLBOX_HOST, name);
-	}
-	return true;
-}
-
 void Resources::EnsureFullPathExists(const char* path) const {
 	if (!PathFileExists(path)) {
 		CreateDirectory(path, NULL);
@@ -61,7 +51,8 @@ void Resources::EnsureSubPathExists(const char* sub) const {
 	}
 }
 
-void Resources::LoadTextureAsync(IDirect3DTexture9** texture, const char* name, const char* folder) {
+void Resources::LoadTextureAsync(IDirect3DTexture9** texture, 
+	const char* name, const char* folder, const char* url) {
 	CHAR* path = new CHAR[MAX_PATH];
 	if (!GetPath(path, folder)) return;
 	EnsureFullPathExists(path);
@@ -73,27 +64,27 @@ void Resources::LoadTextureAsync(IDirect3DTexture9** texture, const char* name, 
 			delete[] path;
 		});
 	} else {
-		CHAR* url = new CHAR[MAX_PATH];
-		GetURL(url, name, folder);
-		todo.push([this, url, path, texture]() {
-			DeleteUrlCacheEntry(url);
-			Log::Log("Downloading %s\n", url);
-			if (URLDownloadToFile(NULL, url, path, 0, NULL) == S_OK) {
+		CHAR* url_copy = new CHAR[MAX_PATH];
+		strcpy_s(url_copy, MAX_PATH, url);
+		todo.push([this, url_copy, path, texture]() {
+			DeleteUrlCacheEntry(url_copy);
+			Log::Log("Downloading %s\n", url_copy);
+			if (URLDownloadToFile(NULL, url_copy, path, 0, NULL) == S_OK) {
 				toload.push([path, texture](IDirect3DDevice9* device) {
 					D3DXCreateTextureFromFile(device, path, texture);
 					delete[] path;
 				});
 			} else {
 				delete[] path;
-				Log::Log("Error downloading %s\n", url);
+				Log::Log("Error downloading %s\n", url_copy);
 			}
-			delete[] url;
+			delete[] url_copy;
 		});
 	}
 }
 
 void Resources::EnsureFileExists(const char* name, 
-	const char* folder, std::function<void()> callback) {
+	const char* folder, const char* url, std::function<void(bool)> callback) {
 
 	CHAR* path = new CHAR[MAX_PATH];
 	if (!GetPath(path, folder)) return;
@@ -101,21 +92,22 @@ void Resources::EnsureFileExists(const char* name,
 	PathAppend(path, name);
 
 	if (PathFileExists(path)) {
-		callback();
+		callback(true);
 		delete[] path;
 	} else {
-		CHAR* url = new CHAR[MAX_PATH];
-		GetURL(url, name, folder);
-		todo.push([this, url, path, callback]() {
-			DeleteUrlCacheEntry(url);
-			Log::Log("Downloading %s\n", url);
-			if (URLDownloadToFile(NULL, url, path, 0, NULL) == S_OK) {
-				callback();
+		CHAR* url_copy = new CHAR[MAX_PATH];
+		strcpy_s(url_copy, MAX_PATH, url);
+		todo.push([this, url_copy, path, callback]() {
+			DeleteUrlCacheEntry(url_copy);
+			Log::Log("Downloading %s\n", url_copy);
+			if (URLDownloadToFile(NULL, url_copy, path, 0, NULL) == S_OK) {
+				callback(true);
 			} else {
-				Log::Log("Error downloading %s\n", url);
+				callback(false);
+				Log::Log("Error downloading %s\n", url_copy);
 			}
-			delete[] url;
 			delete[] path;
+			delete[] url_copy;
 		});
 	}
 }

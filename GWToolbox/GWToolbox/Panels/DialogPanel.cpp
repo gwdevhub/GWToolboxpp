@@ -9,7 +9,8 @@
 
 void DialogPanel::Initialize() {
 	ToolboxPanel::Initialize();
-	Resources::Instance().LoadTextureAsync(&texture, "dialogue.png", "img/icons");
+	Resources::Instance().LoadTextureAsync(&texture, "dialogue.png", "img/icons", 
+		"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/icons/dialogue.png");
 }
 
 void DialogPanel::Draw(IDirect3DDevice9* pDevice) {

@@ -68,6 +68,7 @@ private:
 	unsigned int vertices_count;
 	unsigned int vertices_max;
 
+	bool markers_changed = false;
 	std::vector<CustomLine> lines;
 	std::vector<CustomMarker> markers;
 
