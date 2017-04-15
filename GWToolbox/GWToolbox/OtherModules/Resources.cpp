@@ -82,8 +82,8 @@ std::string Resources::Download(std::string url) const {
 		chars[size] = '\0';
 		ret = std::string(chars);
 		delete[] chars;
+		stream->Release();
 	}
-	stream->Release();
 	return ret;
 }
 void Resources::Download(std::string url, std::function<void(std::string)> callback) {

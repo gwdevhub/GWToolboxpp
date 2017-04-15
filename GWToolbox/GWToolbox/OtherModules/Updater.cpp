@@ -57,6 +57,11 @@ void Updater::CheckForUpdate() {
 		std::string s = Resources::Instance().Download(
 			std::string("https://api.github.com/repos/HasKha/GWToolboxpp/releases/tags/") + version + "_Release");
 
+		if (s.empty()) {
+			step = Done;
+			return;
+		}
+
 		using Json = nlohmann::json;
 		Json json = Json::parse(s.c_str());
 
