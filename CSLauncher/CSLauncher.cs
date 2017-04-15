@@ -66,8 +66,8 @@ namespace CSLauncher {
                 string toolboxdir = Environment.GetEnvironmentVariable("LocalAppData") + "\\GWToolboxpp\\";
                 WebClient host = new WebClient();
                 string remoteversion = host.DownloadString(
-                    "http://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/toolboxversion.txt");
-                string dllurl = "http://github.com/HasKha/GWToolboxpp/releases/download/" 
+                    "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/toolboxversion.txt");
+                string dllurl = "https://github.com/HasKha/GWToolboxpp/releases/download/" 
                     + remoteversion + "_Release/GWToolbox.dll";
                 host.DownloadFile(dllurl, toolboxdir + "GWToolbox.dll");
             }
