@@ -1,6 +1,6 @@
 #include "ToolboxTheme.h"
 
-#include <GuiUtils.h>
+#include <OtherModules\Resources.h>
 #include <Color.h>
 
 #define IniFilename "Theme.ini"
@@ -50,7 +50,7 @@ void ToolboxTheme::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini);
 
 	if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
-	inifile->LoadFile(GuiUtils::getPath(IniFilename).c_str());
+	inifile->LoadFile(Resources::GetPath(IniFilename).c_str());
 	
 	ImGui::GetIO().FontGlobalScale = (float)inifile->GetDoubleValue(IniSection, "FontGlobalScale", 1.0);
 	ini_style.Alpha = (float)inifile->GetDoubleValue(IniSection, "GlobalAlpha", ini_style.Alpha);
@@ -116,7 +116,7 @@ void ToolboxTheme::SaveSettings(CSimpleIni* ini) {
 		}
 	}
 
-	inifile->SaveFile(GuiUtils::getPath(IniFilename).c_str());
+	inifile->SaveFile(Resources::GetPath(IniFilename).c_str());
 
 	ini_style = style;
 }

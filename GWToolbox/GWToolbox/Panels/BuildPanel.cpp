@@ -11,7 +11,7 @@ unsigned int BuildPanel::TeamBuild::cur_ui_id = 0;
 
 void BuildPanel::Initialize() {
 	ToolboxPanel::Initialize();
-	Resources::Instance().LoadTextureAsync(&texture, "list.png", "img/icons", 
+	Resources::Instance().LoadTextureAsync(&texture, Resources::GetPath("img/icons", "list.png"), 
 		"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/icons/list.png");
 	send_timer = TIMER_INIT();
 }

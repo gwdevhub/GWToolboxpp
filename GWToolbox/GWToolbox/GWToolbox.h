@@ -9,7 +9,7 @@
 #include "ToolboxUIElement.h"
 
 DWORD __stdcall SafeThreadEntry(LPVOID mod);
-DWORD __stdcall ThreadEntry(LPVOID dllmodule);
+DWORD __stdcall ThreadEntry(LPVOID);
 
 LRESULT CALLBACK SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam);
@@ -23,12 +23,14 @@ public:
 		return instance;
 	}
 
+	static HMODULE GetDLLModule();
 	static void Draw(IDirect3DDevice9* device);
 
 	void Initialize();
 	void Terminate();
 
-	void LoadSettings();
+	void OpenSettingsFile();
+	void LoadModuleSettings();
 	void SaveSettings();
 
 	void StartSelfDestruct() { must_self_destruct = true; }
@@ -39,6 +41,7 @@ public:
 
 	const std::vector<ToolboxModule*>& GetModules() const { return modules; }
 	const std::vector<ToolboxUIElement*>& GetUIElements() const { return uielements; }
+
 
 private:
 	std::vector<ToolboxModule*> modules;

@@ -22,9 +22,8 @@ void BondsWindow::Initialize() {
 	ToolboxWidget::Initialize();
 	for (int i = 0; i < MAX_BONDS; ++i) textures[i] = nullptr;
 	auto LoadBondTexture = [](IDirect3DTexture9** tex, const char* name) -> void {
-		char url[256] = "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/bonds/";
-		strcat_s(url, name);
-		Resources::Instance().LoadTextureAsync(tex, name, "img/bonds", url);
+		const std::string base_url = "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/bonds/";
+		Resources::Instance().LoadTextureAsync(tex, Resources::GetPath("img/bonds", name), base_url + name);
 	};
 	LoadBondTexture(&textures[BalthazarSpirit], "Balthazar's_Spirit.jpg");
 	LoadBondTexture(&textures[EssenceBond], "Essence_Bond.jpg");

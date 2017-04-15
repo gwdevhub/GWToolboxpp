@@ -8,20 +8,7 @@
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\Utilities\Scanner.h>
 
-std::string GuiUtils::getSettingsFolder() {
-	CHAR szPath[MAX_PATH];
-	szPath[0] = '\0';
-	SHGetFolderPath(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, szPath);
-	return std::string(szPath) + "\\GWToolboxpp";
-}
-
-std::string GuiUtils::getPath(std::string file) {
-	return getSettingsFolder() + "\\" + file;
-}
-
-std::string GuiUtils::getSubPath(std::string file, std::string subdir) {
-	return getSettingsFolder() + "\\" + subdir + "\\" + file;
-}
+#include <OtherModules\Resources.h>
 
 namespace {
 	ImFont* font16 = nullptr;
@@ -33,7 +20,7 @@ namespace {
 }
 
 void GuiUtils::LoadFonts() {
-	std::string fontfile = getPath("Font.ttf");
+	std::string fontfile = Resources::GetPath("Font.ttf");
 	ImGuiIO& io = ImGui::GetIO();
 	font16 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 16.0f);
 	font18 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 18.0f);

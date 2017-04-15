@@ -4,6 +4,7 @@
 #include <functional>
 #include <thread>
 #include <d3d9.h>
+#include <string>
 
 #include "ToolboxModule.h"
 
@@ -24,31 +25,52 @@ public:
 	void Terminate() override;
 
 	void DrawSettings() override {};
+	void Update() override;
 	void DxUpdate(IDirect3DDevice9* device);
+
+	static std::string GetSettingsFolderPath();
+	static std::string GetPath(std::string file);
+	static std::string GetPath(std::string folder, std::string file);
+	static void EnsureFolderExists(std::string path);
 
 	// folder should not contain a trailing slash
 	void LoadTextureAsync(IDirect3DTexture9** tex,
-		const char* name, const char* folder, const char* url);
+		std::string path_to_file, std::string url);
 
 	// checks if file exists, and downloads from server if it doesn't.
 	// If the file exists, executes callback immediately,
 	// otherwise execute callback on download completion.
 	// folder should not contain a trailing slash
-	void EnsureFileExists(const char* name, 
-		const char* folder, const char* url, 
-		std::function<void(bool)> callback = [](bool success) {});
+	void EnsureFileExists(std::string path_to_file, std::string url,
+		std::function<void(bool)> callback);
 
-	void EnsureSubPathExists(const char* path) const;
-	void EnsureFullPathExists(const char* path) const;
+	// download to file, blocking
+	bool Download(std::string path_to_file, std::string url) const;
+	// download to file, async, calls callback on completion
+	void Download(std::string path_to_file,	std::string url, 
+		std::function<void(bool)> callback);
+
+	// download to memory, blocking
+	std::string Download(std::string url) const;
+	// download to memory, async, calls callback on completion
+	void Download(std::string url, 
+		std::function<void(std::string file)> callback);
+
+	void EnqueueWorkerTask(std::function<void()> f) { thread_jobs.push(f); }
+	void EnqueueMainTask(std::function<void()> f) { todo.push(f); }
 
 	// Stops the worker thread once it's done with the current jobs.
 	void EndLoading();
 
 private:
-	bool GetPath(CHAR* path, const char* folder = nullptr) const;
+	// tasks to be done async by the worker thread
+	std::queue<std::function<void()>> thread_jobs;
 
-	std::queue<std::function<void()>> todo;
+	// tasks to be done in the render thread
 	std::queue<std::function<void(IDirect3DDevice9*)>> toload;
+
+	// tasks to be done in main thread
+	std::queue<std::function<void()>> todo;
 
 	bool should_stop = false;
 	std::thread worker;

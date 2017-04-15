@@ -16,7 +16,7 @@ bool travelpanel_arraygetter(void* data, int idx, const char** out_text);
 
 void TravelPanel::Initialize() {
 	ToolboxPanel::Initialize();
-	Resources::Instance().LoadTextureAsync(&texture, "airplane.png", "img/icons", 
+	Resources::Instance().LoadTextureAsync(&texture, Resources::GetPath("img/icons", "airplane.png"), 
 		"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/icons/airplane.png");
 
 	district = district = GW::Constants::District::Current;

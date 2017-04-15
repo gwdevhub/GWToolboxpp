@@ -14,11 +14,11 @@ void Resources::Initialize() {
 	ToolboxModule::Initialize();
 	worker = std::thread([this]() {
 		while (!should_stop) {
-			if (todo.empty()) {
+			if (thread_jobs.empty()) {
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			} else {
-				todo.front()();
-				todo.pop();
+				thread_jobs.front()();
+				thread_jobs.pop();
 			}
 		}
 	});
@@ -28,86 +28,98 @@ void Resources::Terminate() {
 	if (worker.joinable()) worker.join();
 }
 void Resources::EndLoading() {
-	todo.push([this]() { should_stop = true; });
+	thread_jobs.push([this]() { should_stop = true; });
 }
 
-bool Resources::GetPath(CHAR* path, const char* folder) const {
-	if (!SUCCEEDED(SHGetFolderPath(NULL, CSIDL_LOCAL_APPDATA | CSIDL_FLAG_CREATE, NULL, 0, path))) return false;
+std::string Resources::GetSettingsFolderPath() {
+	CHAR path[MAX_PATH];
+	SHGetFolderPath(NULL, CSIDL_LOCAL_APPDATA | CSIDL_FLAG_CREATE, NULL, 0, path);
 	PathAppend(path, "GWToolboxpp");
-	if (folder) PathAppend(path, folder);
-	return true;
+	return std::string(path);
+
+}
+std::string Resources::GetPath(std::string file) {
+	return GetSettingsFolderPath() + "\\" + file;
+}
+std::string Resources::GetPath(std::string folder, std::string file) {
+	return GetSettingsFolderPath() + "\\" + folder + "\\" + file;
 }
 
-void Resources::EnsureFullPathExists(const char* path) const {
-	if (!PathFileExists(path)) {
-		CreateDirectory(path, NULL);
+void Resources::EnsureFolderExists(std::string path) {
+	if (!PathFileExists(path.c_str())) {
+		CreateDirectory(path.c_str(), NULL);
 	}
 }
 
-void Resources::EnsureSubPathExists(const char* sub) const {
-	CHAR path[MAX_PATH];
-	if (GetPath(path, sub)) {
-		EnsureFullPathExists(path);
+bool Resources::Download(std::string path_to_file, std::string url) const {
+	DeleteUrlCacheEntry(url.c_str());
+	Log::Log("Downloading %s\n", url.c_str());
+	return (URLDownloadToFile(NULL, url.c_str(), path_to_file.c_str(), 0, NULL) == S_OK);
+}
+void Resources::Download(std::string path_to_file, 
+	std::string url, std::function<void(bool)> callback) {
+
+	thread_jobs.push([this, url, path_to_file, callback]() {
+		bool success = Download(path_to_file, url);
+		// and call the callback in the main thread
+		todo.push([callback, success]() { callback(success); });
+		if (!success) {
+			Log::Log("Error downloading %s\n", url.c_str());
+		}
+	});
+}
+
+std::string Resources::Download(std::string url) const {
+	DeleteUrlCacheEntry(url.c_str());
+	IStream* stream;
+	std::string ret = "";
+	if (SUCCEEDED(URLOpenBlockingStream(NULL, url.c_str(), &stream, 0, NULL))) {
+		STATSTG stats;
+		stream->Stat(&stats, STATFLAG_NONAME);
+		DWORD size = stats.cbSize.LowPart;
+		CHAR* chars = new CHAR[size + 1];
+		stream->Read(chars, size, NULL);
+		chars[size] = '\0';
+		ret = std::string(chars);
+		delete[] chars;
+	}
+	stream->Release();
+	return ret;
+}
+void Resources::Download(std::string url, std::function<void(std::string)> callback) {
+	thread_jobs.push([this, url, callback]() {
+		std::string s = Download(url);
+		todo.push([callback, s]() { callback(s); });
+	});
+}
+
+void Resources::EnsureFileExists(std::string path_to_file, 
+	std::string url, std::function<void(bool)> callback) {
+
+	if (PathFileExists(path_to_file.c_str())) {
+		// if file exists, run the callback immediately in the same thread
+		callback(true);
+	} else {
+		// otherwise try to download it in the worker
+		Download(path_to_file, url, callback);
 	}
 }
 
 void Resources::LoadTextureAsync(IDirect3DTexture9** texture, 
-	const char* name, const char* folder, const char* url) {
-	CHAR* path = new CHAR[MAX_PATH];
-	if (!GetPath(path, folder)) return;
-	EnsureFullPathExists(path);
-	PathAppend(path, name);
+	std::string path_to_file, std::string url) {
 
-	if (PathFileExists(path)) {
-		toload.push([path, texture](IDirect3DDevice9* device) {
-			D3DXCreateTextureFromFile(device, path, texture);
-			delete[] path;
+	if (PathFileExists(path_to_file.c_str())) {
+		toload.push([path_to_file, texture](IDirect3DDevice9* device) {
+			D3DXCreateTextureFromFile(device, path_to_file.c_str(), texture);
 		});
 	} else {
-		CHAR* url_copy = new CHAR[MAX_PATH];
-		strcpy_s(url_copy, MAX_PATH, url);
-		todo.push([this, url_copy, path, texture]() {
-			DeleteUrlCacheEntry(url_copy);
-			Log::Log("Downloading %s\n", url_copy);
-			if (URLDownloadToFile(NULL, url_copy, path, 0, NULL) == S_OK) {
-				toload.push([path, texture](IDirect3DDevice9* device) {
-					D3DXCreateTextureFromFile(device, path, texture);
-					delete[] path;
+		Download(path_to_file, url, 
+			[this, path_to_file, texture](bool success) {
+			if (success) {
+				toload.push([path_to_file, texture](IDirect3DDevice9* device) {
+					D3DXCreateTextureFromFile(device, path_to_file.c_str(), texture);
 				});
-			} else {
-				delete[] path;
-				Log::Log("Error downloading %s\n", url_copy);
 			}
-			delete[] url_copy;
-		});
-	}
-}
-
-void Resources::EnsureFileExists(const char* name, 
-	const char* folder, const char* url, std::function<void(bool)> callback) {
-
-	CHAR* path = new CHAR[MAX_PATH];
-	if (!GetPath(path, folder)) return;
-	EnsureFullPathExists(path);
-	PathAppend(path, name);
-
-	if (PathFileExists(path)) {
-		callback(true);
-		delete[] path;
-	} else {
-		CHAR* url_copy = new CHAR[MAX_PATH];
-		strcpy_s(url_copy, MAX_PATH, url);
-		todo.push([this, url_copy, path, callback]() {
-			DeleteUrlCacheEntry(url_copy);
-			Log::Log("Downloading %s\n", url_copy);
-			if (URLDownloadToFile(NULL, url_copy, path, 0, NULL) == S_OK) {
-				callback(true);
-			} else {
-				callback(false);
-				Log::Log("Error downloading %s\n", url_copy);
-			}
-			delete[] path;
-			delete[] url_copy;
 		});
 	}
 }
@@ -116,5 +128,12 @@ void Resources::DxUpdate(IDirect3DDevice9* device) {
 	while (!toload.empty()) {
 		toload.front()(device);
 		toload.pop();
+	}
+}
+
+void Resources::Update() {
+	while (!todo.empty()) {
+		todo.front()();
+		todo.pop();
 	}
 }

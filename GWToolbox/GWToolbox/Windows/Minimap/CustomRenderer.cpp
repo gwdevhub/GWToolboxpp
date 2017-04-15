@@ -4,7 +4,7 @@
 #include <GWCA\GWCA.h>
 #include <GWCA\Managers\MapMgr.h>
 
-#include <GuiUtils.h>
+#include <OtherModules\Resources.h>
 
 Color CustomRenderer::color = 0xFF00FFFF;
 
@@ -21,7 +21,7 @@ void CustomRenderer::LoadMarkers() {
 	markers.clear();
 
 	if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
-	inifile->LoadFile(GuiUtils::getPath(IniFilename).c_str());
+	inifile->LoadFile(Resources::GetPath(IniFilename).c_str());
 
 	// then load new
 	CSimpleIni::TNamesDepend entries;
@@ -98,7 +98,7 @@ void CustomRenderer::SaveMarkers() const {
 			inifile->SetBoolValue(section, "visible", marker.visible);
 		}
 
-		inifile->SaveFile(GuiUtils::getPath(IniFilename).c_str());
+		inifile->SaveFile(Resources::GetPath(IniFilename).c_str());
 	}
 }
 void CustomRenderer::Invalidate() {

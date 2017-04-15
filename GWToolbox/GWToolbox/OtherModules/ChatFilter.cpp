@@ -9,7 +9,8 @@
 #include <GWCA\Managers\ChatMgr.h>
 
 #include <imgui.h>
-#include "GuiUtils.h"
+#include <ImGuiAddons.h>
+#include <OtherModules\Resources.h>
 
 //#define PRINT_CHAT_PACKETS
 #define VAR_NAME(v) (#v)
@@ -163,7 +164,7 @@ void ChatFilter::LoadSettings(CSimpleIni* ini) {
 	player_has_achieved_title = ini->GetBoolValue(Name(), VAR_NAME(player_has_achieved_title), false);
 
 	std::ifstream bycontent_file;
-	bycontent_file.open(GuiUtils::getPath("FilterByContent.txt"));
+	bycontent_file.open(Resources::GetPath("FilterByContent.txt"));
 	if (bycontent_file.is_open()) {
 		bycontent_file.get(bycontent_buf, FILTER_BUF_SIZE, '\0');
 		bycontent_file.close();
@@ -201,7 +202,7 @@ void ChatFilter::SaveSettings(CSimpleIni* ini) {
 
 	if (bycontent_filedirty) {
 		std::ofstream bycontent_file;
-		bycontent_file.open(GuiUtils::getPath("FilterByContent.txt"));
+		bycontent_file.open(Resources::GetPath("FilterByContent.txt"));
 		if (bycontent_file.is_open()) {
 			bycontent_file.write(bycontent_buf, strlen(bycontent_buf));
 			bycontent_file.close();

@@ -40,45 +40,14 @@ void GameSettings::Initialize() {
 		}
 		return true;
 	});
-
-	GW::Chat::SetSendChatCallback(
-		[this](GW::Chat::Channel chan, wchar_t msg[139]) -> void
-	{
-		if (!auto_transform_url || !msg) return;
-		if (wcsncmp(msg, L"http://", 7) && wcsncmp(msg, L"https://", 8)) return;
-
-		size_t len = wcslen(msg);
-		if (len + 5 < 139) {
-			for (int i = len; i > 0; i--)
-				msg[i] = msg[i - 1];
-			msg[0] = '[';
-			msg[len + 1] = ';';
-			msg[len + 2] = 'x';
-			msg[len + 3] = 'x';
-			msg[len + 4] = ']';
-			msg[len + 5] = 0;
-		}
-	});
-
-	GW::Chat::SetWhisperCallback([this](const wchar_t from[20], const wchar_t msg[140]) -> void {
-		if (!flash_window_on_pm) return;
-
-		FLASHWINFO flashInfo = { 0 };
-		flashInfo.cbSize = sizeof(FLASHWINFO);
-		flashInfo.hwnd = GW::MemoryMgr::GetGWWindowHandle();
-		flashInfo.dwFlags = FLASHW_TIMER | FLASHW_TRAY | FLASHW_TIMERNOFG;
-		flashInfo.uCount = 0;
-		flashInfo.dwTimeout = 0;
-		FlashWindowEx(&flashInfo);
-	});
 }
 
 void GameSettings::Terminate() {
 	ToolboxModule::Terminate();
 }
 
-void GameSettings::ChatEvent(DWORD id, DWORD type, wchar_t* info, void* unk) {
-	if (type == 0x29) {
+void GameSettings::ChatEventCallback(DWORD id, DWORD type, wchar_t* info, void* unk) {
+	if (type == 0x29 && Instance().select_with_chat_doubleclick) {
 		static wchar_t last_name[64] = L"";
 		static clock_t timer = TIMER_INIT();
 		if (TIMER_DIFF(timer) < 500 && wcscmp(last_name, info) == 0) {
@@ -100,6 +69,33 @@ void GameSettings::ChatEvent(DWORD id, DWORD type, wchar_t* info, void* unk) {
 		}
 	}
 }
+void GameSettings::SendChatCallback(GW::Chat::Channel chan, wchar_t msg[139]) {
+	if (!Instance().auto_transform_url || !msg) return;
+	if (wcsncmp(msg, L"http://", 7) && wcsncmp(msg, L"https://", 8)) return;
+
+	size_t len = wcslen(msg);
+	if (len + 5 < 139) {
+		for (int i = len; i > 0; i--)
+			msg[i] = msg[i - 1];
+		msg[0] = '[';
+		msg[len + 1] = ';';
+		msg[len + 2] = 'x';
+		msg[len + 3] = 'x';
+		msg[len + 4] = ']';
+		msg[len + 5] = 0;
+	}
+}
+void GameSettings::WhisperCallback(const wchar_t from[20], const wchar_t msg[140]) {
+	if (!Instance().flash_window_on_pm) return;
+
+	FLASHWINFO flashInfo = { 0 };
+	flashInfo.cbSize = sizeof(FLASHWINFO);
+	flashInfo.hwnd = GW::MemoryMgr::GetGWWindowHandle();
+	flashInfo.dwFlags = FLASHW_TIMER | FLASHW_TRAY | FLASHW_TIMERNOFG;
+	flashInfo.uCount = 0;
+	flashInfo.dwTimeout = 0;
+	FlashWindowEx(&flashInfo);
+}
 
 void GameSettings::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini);
@@ -113,7 +109,9 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	ApplyBorderless(borderless_window);
 	if (open_template_links) GW::Chat::SetOpenLinks(open_template_links);
 	if (tick_is_toggle) GW::PartyMgr::SetTickToggle();
-	if (select_with_chat_doubleclick) GW::Chat::SetChatEventCallback(&ChatEvent);
+	if (select_with_chat_doubleclick) GW::Chat::SetChatEventCallback(&ChatEventCallback);
+	if (auto_transform_url) GW::Chat::SetSendChatCallback(&SendChatCallback);
+	if (flash_window_on_pm) GW::Chat::SetWhisperCallback(&WhisperCallback);
 }
 
 void GameSettings::SaveSettings(CSimpleIni* ini) {
@@ -134,7 +132,9 @@ void GameSettings::DrawSettingInternal() {
 	}
 	ImGui::ShowHelp("Clicking on template that has a URL as name will open that URL in your browser");
 
-	ImGui::Checkbox("Automaticly change urls into build templates.", &auto_transform_url);
+	if (ImGui::Checkbox("Automaticly change urls into build templates.", &auto_transform_url)) {
+		GW::Chat::SetSendChatCallback(&SendChatCallback);
+	}
 	ImGui::ShowHelp("When you write a message starting with 'http://' or 'https://', it will be converted in template format");
 
 	if (ImGui::Checkbox("Tick is a toggle", &tick_is_toggle)) {
@@ -147,12 +147,14 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::ShowHelp("Ticking in party window will work as a toggle instead of opening the menu");
 
 	if (ImGui::Checkbox("Target with double-click on message author", &select_with_chat_doubleclick)) {
-		GW::Chat::SetChatEventCallback(select_with_chat_doubleclick ? 
-			&ChatEvent : [](DWORD, DWORD, wchar_t*, void*) {});
+		GW::Chat::SetChatEventCallback(&ChatEventCallback);
 	}
 	ImGui::ShowHelp("Double clicking on the author of a message in chat will target the author");
 
-	ImGui::Checkbox("Flash Guild Wars taskbar window when receiving a pm", &flash_window_on_pm);
+	if (ImGui::Checkbox("Flash GW in taskbar when receiving a pm", &flash_window_on_pm)) {
+		GW::Chat::SetWhisperCallback(&WhisperCallback);
+	}
+	ImGui::ShowHelp("Triggers when receiving a private message while Guild Wars is not in foreground");
 }
 
 void GameSettings::DrawBorderlessSetting() {

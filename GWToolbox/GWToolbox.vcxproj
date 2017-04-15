@@ -108,6 +108,7 @@
     <ClInclude Include="GWToolbox\OtherModules\Resources.h" />
     <ClInclude Include="GWToolbox\OtherModules\ToolboxSettings.h" />
     <ClInclude Include="GWToolbox\OtherModules\ToolboxTheme.h" />
+    <ClInclude Include="GWToolbox\OtherModules\Updater.h" />
     <ClInclude Include="GWToolbox\Panels\BuildPanel.h" />
     <ClInclude Include="GWToolbox\Panels\DialogPanel.h" />
     <ClInclude Include="GWToolbox\Panels\HotkeyPanel.h" />
@@ -161,6 +162,7 @@
     <ClCompile Include="GWToolbox\OtherModules\Resources.cpp" />
     <ClCompile Include="GWToolbox\OtherModules\ToolboxSettings.cpp" />
     <ClCompile Include="GWToolbox\OtherModules\ToolboxTheme.cpp" />
+    <ClCompile Include="GWToolbox\OtherModules\Updater.cpp" />
     <ClCompile Include="GWToolbox\Panels\BuildPanel.cpp" />
     <ClCompile Include="GWToolbox\Panels\DialogPanel.cpp" />
     <ClCompile Include="GWToolbox\Panels\HotkeyPanel.cpp" />

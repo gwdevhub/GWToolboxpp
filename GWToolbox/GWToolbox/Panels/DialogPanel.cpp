@@ -9,7 +9,7 @@
 
 void DialogPanel::Initialize() {
 	ToolboxPanel::Initialize();
-	Resources::Instance().LoadTextureAsync(&texture, "dialogue.png", "img/icons", 
+	Resources::Instance().LoadTextureAsync(&texture, Resources::GetPath("img/icons", "dialogue.png"),
 		"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/icons/dialogue.png");
 }
 

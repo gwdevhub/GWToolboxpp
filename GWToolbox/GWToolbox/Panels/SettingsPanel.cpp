@@ -8,11 +8,12 @@
 #include <OtherModules\ChatCommands.h>
 #include <OtherModules\ToolboxSettings.h>
 #include <OtherModules\GameSettings.h>
+#include <OtherModules\Updater.h>
 #include <OtherModules\Resources.h>
 
 void SettingsPanel::Initialize() {
 	ToolboxPanel::Initialize();
-	Resources::Instance().LoadTextureAsync(&texture, "settings.png", "img/icons", 
+	Resources::Instance().LoadTextureAsync(&texture, Resources::GetPath("img/icons", "settings.png"),
 		"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/icons/settings.png");
 }
 
@@ -23,14 +24,25 @@ void SettingsPanel::Draw(IDirect3DDevice9* pDevice) {
 	ImGui::SetNextWindowSize(ImVec2(450, 600), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
 		ImGui::PushTextWrapPos();
-		ImGui::Text("GWToolbox++ version "
-			GWTOOLBOX_VERSION
-			" by Has and KAOS"
-			BETA_VERSION);
+		ImGui::Text("GWToolbox++ version %s by Has and KAOS", GWTOOLBOX_VERSION);
+		if (BETA_VERSION[0]) {
+			ImGui::SameLine();
+			ImGui::Text("%s", BETA_VERSION);
+		} else {
+			const std::string server_version = Updater::Instance().GetServerVersion();
+			if (!server_version.empty()) {
+				if (server_version.compare(GWTOOLBOX_VERSION) == 0) {
+					ImGui::SameLine();
+					ImGui::Text("(Up to date)");
+				} else {
+					ImGui::Text("Version %s is available!", server_version.c_str());
+				}
+			}
+		}
 		float w = (ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().ItemSpacing.x) / 2;
 		if (ImGui::Button("Open Settings Folder", ImVec2(w, 0))) {
 			CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-			ShellExecute(NULL, "open", GuiUtils::getSettingsFolder().c_str(), NULL, NULL, SW_SHOWNORMAL);
+			ShellExecute(NULL, "open", Resources::GetSettingsFolderPath().c_str(), NULL, NULL, SW_SHOWNORMAL);
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Open GWToolbox++ Website", ImVec2(w, 0))) {
@@ -87,8 +99,8 @@ void SettingsPanel::Draw(IDirect3DDevice9* pDevice) {
 		}
 
 		for (unsigned i = 0; i < GWToolbox::Instance().GetModules().size(); ++i) {
-			if (i == 6) ImGui::Text("Windows:");
-			if (i == separator) ImGui::Text("Widgets:");
+			if (i == sep_windows) ImGui::Text("Windows:");
+			if (i == sep_widgets) ImGui::Text("Widgets:");
 			GWToolbox::Instance().GetModules()[i]->DrawSettings();
 		}
 
@@ -98,7 +110,7 @@ void SettingsPanel::Draw(IDirect3DDevice9* pDevice) {
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Toolbox normally saves settings on exit.\nClick to save to disk now.");
 		ImGui::SameLine();
 		if (ImGui::Button("Load Now", ImVec2(w, 0))) {
-			GWToolbox::Instance().LoadSettings();
+			GWToolbox::Instance().LoadModuleSettings();
 		}
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Toolbox normally loads settings on launch.\nClick to re-load from disk now.");
 		ImGui::PopTextWrapPos();

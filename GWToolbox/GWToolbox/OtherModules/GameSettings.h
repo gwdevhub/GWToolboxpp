@@ -3,6 +3,7 @@
 #include <vector>
 
 #include <GWCA\Utilities\MemoryPatcher.h>
+#include <GWCA\Managers\ChatMgr.h>
 
 #include "ToolboxModule.h"
 
@@ -38,5 +39,7 @@ public:
 private:
 	std::vector<GW::MemoryPatcher*> patches;
 
-	static void ChatEvent(DWORD id, DWORD type, wchar_t* info, void* unk);
+	static void ChatEventCallback(DWORD id, DWORD type, wchar_t* info, void* unk);
+	static void SendChatCallback(GW::Chat::Channel chan, wchar_t msg[139]);
+	static void WhisperCallback(const wchar_t from[20], const wchar_t msg[140]);
 };

@@ -36,9 +36,9 @@ Pcon::Pcon(const char* chatname,
 	uv0(uv0_), uv1(uv1_), texture(nullptr),
 	enabled(false), quantity(0), timer(TIMER_INIT()) {
 
-	char url[256] = "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/pcons/";
-	strcat_s(url, filename);
-	Resources::Instance().LoadTextureAsync(&texture, filename, "img/pcons", url);
+	const std::string base_url = "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/pcons/";
+	Resources::Instance().LoadTextureAsync(&texture, 
+		Resources::GetPath("img/pcons", filename), base_url + filename);
 }
 void Pcon::Draw(IDirect3DDevice9* device) {
 	if (texture == nullptr) return;
