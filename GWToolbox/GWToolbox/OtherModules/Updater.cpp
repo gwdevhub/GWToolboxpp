@@ -77,14 +77,20 @@ void Updater::CheckForUpdate() {
 
 void Updater::Draw(IDirect3DDevice9* device) {
 	if (step == Asking && !server_version.empty()) {
+		static bool notified = false;
+		if (!notified) {
+			notified = true;
+			Log::Warning("GWToolbox++ version %s is available! You have %s.",
+				server_version.c_str(), GWTOOLBOX_VERSION);
+		}
+
 		switch (mode) {
 		case 0: // no updating
 			step = Done;
 			break;
 
 		case 1: // check and warn
-			Log::Warning("GWToolbox++ version %s is available! You have %s",
-				server_version.c_str(), GWTOOLBOX_VERSION);
+
 			step = Done;
 			break;
 
@@ -121,14 +127,51 @@ void Updater::Draw(IDirect3DDevice9* device) {
 		default:
 			break;
 		}
+
+	} else if (step == Downloading) {
+		static bool visible = true;
+		if (mode == 2 && visible) {
+			ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiSetCond_Appearing);
+			ImGui::SetNextWindowPosCenter(ImGuiSetCond_Appearing);
+			ImGui::Begin("Toolbox Update!", &visible);
+			ImGui::Text("GWToolbox++ version %s is available! You have %s",
+				server_version.c_str(), GWTOOLBOX_VERSION);
+			ImGui::Text("Changes:");
+			ImGui::Text(changelog.c_str());
+
+			ImGui::Text("");
+			ImGui::Text("Downloading update...");
+			if (ImGui::Button("Hide", ImVec2(100, 0))) {
+				visible = false;
+			}
+			ImGui::End();
+		}
+	} else if (step == Success) {
+		static bool visible = true;
+		if (mode >= 2 && visible) {
+			ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiSetCond_Appearing);
+			ImGui::SetNextWindowPosCenter(ImGuiSetCond_Appearing);
+			ImGui::Begin("Toolbox Update!", &visible);
+			ImGui::Text("GWToolbox++ version %s is available! You have %s",
+				server_version.c_str(), GWTOOLBOX_VERSION);
+			ImGui::Text("Changes:");
+			ImGui::Text(changelog.c_str());
+
+			ImGui::Text("");
+			ImGui::Text("Update successful, please restart toolbox.");
+			if (ImGui::Button("OK", ImVec2(100, 0))) {
+				visible = false;
+			}
+			ImGui::End();
+		}
 	}
 
-	// TODO: if step==Downloading show something
-
-	// TODO: if step==Success show something
+	// if step == Done do nothing
 }
 
 void Updater::DoUpdate() {
+	Log::Warning("Downloading update...");
+
 	step = Downloading;
 
 	// 0. find toolbox dll path
@@ -158,8 +201,9 @@ void Updater::DoUpdate() {
 		[this, dllfile, dllold](bool success) {
 		if (success) {
 			step = Success;
+			Log::Warning("Update successful, please restart toolbox.");
 		} else {
-			Log::Error("Updated error - cannot download new GWToolbox.dll");
+			Log::Error("Updated error - cannot download GWToolbox.dll");
 			MoveFile(dllold, dllfile);
 			step = Done;
 		}
