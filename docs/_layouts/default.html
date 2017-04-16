@@ -3,9 +3,9 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <title>{{ site.title | default: site.github.repository_name }} by {{ site.github.owner_name }}</title>
+    <title>{{ site.title | default: site.github.repository_name }}</title>
     <link rel="stylesheet" href="{{ '/assets/css/style.css?v=' | append: site.github.build_revision | relative_url }}">
-	<link rel="shortcut icon" type="image/x-icon" href="./favicon.ico">
+    <link rel="shortcut icon" type="image/x-icon" href="./favicon.ico">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
     <script src="{{ '/assets/js/respond.js' | relative_url }}"></script>
     <!--[if lt IE 9]>
@@ -21,7 +21,8 @@
       <div id="header">
         <nav>
           <li class="fork"><a href="{{ site.github.repository_url }}">View On GitHub</a></li>
-          <li id="faq"><a href="faq">FAQ</a></li>
+          <li class="button-left"><a href="https://discord.gg/pGS5pFn">Discrod</a></li>
+          <li class="button-left"><a href="faq">FAQ</a></li>
           {% if site.show_downloads %}
             <li class="downloads"><a href="history">older Versions</a></li>
             <li class="downloads"><a href="{{ site.download_url }}">GWToolbox++ {{ site.toolbox_version }}</a></li>
