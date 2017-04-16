@@ -10,7 +10,7 @@ GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancemen
 
 
 GWToolbox++ version: {{site.data.versions.toolbox}} \\
-Launcher <!-- version: {{site.data.versions.launcher}} --> - [Download Launcher](http://github.com/HasKha/GWToolboxpp/releases/download/2.0-launcher/GWToolbox.exe)
+Launcher <!-- version: {{site.data.versions.launcher}} --> - [Download Launcher](http://github.com/HasKha/GWToolboxpp/releases/download/2.1_Release/GWToolbox.exe)
 
 [Version History](pages/version_history)
 
