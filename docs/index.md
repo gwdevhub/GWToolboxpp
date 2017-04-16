@@ -29,4 +29,4 @@ GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancemen
 * [Widgets](widgets) - Such as [instance timer](timer), [target health](health), [target distance](distance), [vanquish counter](vanquish), [clock](clock) and [notepad](notepad).
 * [Windows](windows) - _lorem ipsum_
 
-# Want a new feature? Add it to the [Issue Tracker]({{ site.github.issues_url }})!
+# Want a new feature? Add it to the [Issue Tracker](https://github.com/HasKha/GWToolboxpp/issues)!
