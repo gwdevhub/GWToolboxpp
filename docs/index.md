@@ -2,12 +2,7 @@
 layout: default
 ---
 
-_Important: we are working on migrating server. Afterwards, you will need to re-download the launcher to receive GWToolbox++ updates_
-
-
-# [](#download-gwtoolbox++)[Download GWToolbox++ {{site.data.versions.toolbox}}](http://github.com/HasKha/GWToolboxpp/releases/download/2.0-launcher/GWToolbox.exe)
-
-### [](#download-gwtoolbox++)[See older versions](version-history)
+> Important: We are working on migrating server. Afterwards, you will need to re-download the launcher to receive GWToolbox++ updates
 
 # [](#what-is-gwtoolbox++)What is GWToolbox++?
 GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancements for the original Guild Wars. It adds features that should exist in a modern game and tools to visualize information and improve the player experience.
@@ -31,10 +26,10 @@ GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancemen
 * [Pcons](pcons) - Automatically maintain selected pcons
 * [Travel](travel) - Directly travel to any previously visited outpost.
 * [Widgets](widgets) - Such as [instance timer](timer), [target health](health), [target distance](distance), [clock](clock) and [notepad](notepad).
+* [Windows](windows) - _lorem ipsum_
 
 # [](#list-of-features)List of GWToolbox++ stuff
 
-* [Settings](settings)
-* [Settings Folder](settings-folder)
-* [Theme](theme)
-* [Windows](windows)
+* [Settings](settings) - _lorem ipsum_
+* [Settings Folder](settings-folder) - _lorem ipsum_
+* [Theme](theme) - _lorem ipsum_

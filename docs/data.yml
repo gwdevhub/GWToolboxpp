@@ -1,9 +1,3 @@
-title: GWToolbox++
-description: Tools for Guild Wars.
-show_downloads: true
-google_analytics: UA-75239620-2
-theme: jekyll-theme-midnight
-
 download_url: http://github.com/HasKha/GWToolboxpp/releases/download/2.0-launcher/GWToolbox.exe
 toolbox_version: 2.0
 launcher_version: 1.0
