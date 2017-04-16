@@ -3,7 +3,6 @@ layout: default
 ---
 
 # Widgets
-
 Unlike [Windows](windows), widgets are designed to stay open all the time, as part of your user interface. Mostly widgets are non-interactive, and just display information.
 
 All widgets have options in [Settings](settings) to specify the exact co-ordinates of their on-screen position and prevent the widget from being moved around or re-sized.

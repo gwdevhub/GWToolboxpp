@@ -3,11 +3,9 @@ layout: default
 ---
 
 # Materials
-
 The Materials window allows you to automatically buy and sell rare and common materials from the traders. It is also possible to check the price for the exact amount needed to craft consets, powerstones, and res scrolls, and to buy as many of these as you want.
 
 ## Usage
-
 To buy materials, you must stand next to the trader. Enter the amount you want to buy, and either click "Price Check" to get up-to-date prices of each item, or just "Buy" straight away. You will immediately start buying the materials at a fast rate, and the prices displayed will repeatedly update as the information is available. Bear in mind that as you buy materials, the trader's price increases, so 100 res scrolls will probably cost slightly more than 100 times the price displayed.
 
 Selling items works just the same. If you don't have enough of the item you're trying to sell, you'll just sell all you have and then stop.
@@ -19,9 +17,7 @@ Clicking "Cancel" will cancel all orders that are currently queued.
 If you run out of cash or fill up to 100K, the entire queue will be cancelled.
 
 ## Known Bugs
-
 * Sometimes the materials trader will keep working even if you move away from the NPC; other times it won't, and sometimes it'll just stop. If moving back to the NPC doesn't fix it, re-zone or change district and try again.
-
 * If you try to sell a common material, and the first stack of it in your inventory contains less than 10, the queue will fail, even if you have more stacks with enough to sell. Make sure when selling that the stacks in your inventory are in multiples of 10.
 
 [back](./)

@@ -3,7 +3,6 @@ layout: default
 ---
 
 # Frequently Asked Questions
-
 **Will I get banned for using GWToolbox++?** \\
 We can’t say. Toolbox is not a bot as it it does not play the game for you, however it does use the same technology that bots use. What we can say, though, is that as far as we know no one has ever been banned for it since it was created in 2013.
 
