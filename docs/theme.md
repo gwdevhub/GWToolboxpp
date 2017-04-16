@@ -5,7 +5,7 @@ layout: default
 # Theme
 Toolbox's appearance can be greatly customized. Many individual features have some separate options for this, but the controls that affect everything are all in the Theme menu in [Settings](settings). Usually it's best to see the effects of these controls for yourself by tweaking them, but you can also read about them here.
 
-It's possible to share all or part of your theme with someone else by copying from the Theme.ini file in the [Settings folder](settings_folder).
+It's possible to share all or part of your theme with someone else by copying from the Theme.ini file in the [Settings folder](folder).
 
 ## Basic controls
 **Restore Default** returns all Theme settings to the Toolbox standard.

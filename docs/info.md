@@ -14,7 +14,7 @@ Here you can switch each of your widgets on and off.
 ## Open Xunlai Chest
 This is simply a button to open your storage, wherever you are in any outpost. This is even possible on new characters that haven't yet unlocked a storage account (such as in pre-Searing), but these will be unable to access any of the items; you can only look.
 
-This function is also available as a [chat command](chat_commands) or a [hotkey](hotkeys).
+This function is also available as a [chat command](commands) or a [hotkey](hotkeys).
 
 ## Player
 Here you can see your exact position on the map, and how fast you are moving (normal walking forwards with no speed boost is 1.000).
