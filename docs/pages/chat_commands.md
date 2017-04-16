@@ -53,7 +53,6 @@ Toolbox supports a variety of chat commands; you can use them by typing in chat 
 * `urgoz`
 * `deep`
 * `fav1`, `fav2`, `fav3` for your favorite locations
-* `gh` for guild hall
 
 You can also specify the district with a third argument: possible values are `ae1`, `ee1`, `eg1` (or `dd1`) and `int`. For example, `/tp embark ee1` will make you travel to Embark Beach Europe English District 1.
 
