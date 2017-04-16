@@ -28,7 +28,12 @@ There may be different reasons for this. Try the following, in no particular ord
 **I run the launcher and I get the message “GWToolbox.dll was not loaded, unknown error”** \\
 This error typically means that some security feature is preventing Toolbox to access Guild Wars. One such feature is Data Execution Prevention, it is disabled by default but if enabled you need to add gw.exe to its whitelist. The other security programs causing this is any particularly zealous antivirus software. You typically need to add both GWToolbox.exe and gw.exe to its whitelist.
 
-**GWToolbox++ just crashed and set my grandmas hair on fire! Help!** \\
+**How do I target a Boo!?** \\
+You can use Toolbox to target and interact with lots of agents that wouldn't normally be targetable. There are a couple of ways to do this:
+* `Ctrl+click` on the [minimap](minimap). You can target agents that aren't visible, so long as you know where they are.
+* Use the [Info](info) window to find the ID of the agent (a Boo! is 7445), and then create a [hotkey](hotkeys) to target it.
+
+**GWToolbox++ just crashed and set my grandma's hair on fire! Help!** \\
 Oops. Please start a bug issue at the repository issue tracker here immediately. If the error was not critical, a message box should have displayed with the title “GWToolbox++ Crash!”. If the message box states that the dump file generated sucessfully, please go to your start menu search bar and type %LOCALAPPDATA%. Press enter, and your appdata folder should open. Navigate to the GWToolboxpp folder and find the most recent .dmp file created. If you are able to find the file, attach this file on your issue as it can help greatly with fixing the issue. Be sure to also include what you were doing in game at the time of the crash, and any other information that might help. If it is an issue we can solve we will get to fixing it when we can.
 
 **I have an feature request/non-bug issue with GWToolbox++. Where can I voice it?** \\
