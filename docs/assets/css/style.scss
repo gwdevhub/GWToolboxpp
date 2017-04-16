@@ -4,3 +4,4 @@
 @import "{{ site.theme }}";
 .wrapper {max-width: 1080px;margin: 0 auto;position: relative;padding: 0 20px;}
 section {max-width: 1080px;padding: 30px 0px 50px 0px;margin: 20px 0;margin-top: 70px;}
+code {font-family: 'Lucida Sans', Monaco, Bitstream Vera Sans Mono, Lucida Console, Terminal, monospace;color: #efefef;font-size: 13px;/* margin: 0 4px; *//* padding: 4px 6px; */border-radius: 2px;}
