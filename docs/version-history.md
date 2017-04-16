@@ -5,7 +5,8 @@ layout: default
 
 # Version History
 
-Previous releases are provided as dll files. In order to use it, you need to use an alternative launcher which must be placed in the same directory as the dll. If you are looking for the latest version, go to the [Home Page](..) instead \\
+Previous releases are provided as dll files. In order to use it, you need to use an alternative launcher which must be placed in the same directory as the dll. If you are looking for the latest version, go to the [Home Page](./) instead \\
+
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
 ## Version 2.0

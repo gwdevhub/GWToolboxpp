@@ -26,5 +26,5 @@ GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancemen
 * [Theme](theme) - _lorem ipsum_
 * [Toolbox Folder](toolbox-folder) - _lorem ipsum_
 * [Travel](travel) - Directly travel to any previously visited outpost.
-* [Widgets](widgets) - Such as [instance timer](timer), [target health](health), [target distance](distance), [vanquish](vanquish counter), [clock](clock) and [notepad](notepad).
+* [Widgets](widgets) - Such as [instance timer](timer), [target health](health), [target distance](distance), [vanquish counter](vanquish), [clock](clock) and [notepad](notepad).
 * [Windows](windows) - _lorem ipsum_

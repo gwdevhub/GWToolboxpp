@@ -53,7 +53,7 @@ Fast travel to any outpost in the game.
 ## Dialogs
 Sends dialogs to NPCs.
 
-## Info](info)
+## Info
 Displays various pieces of useful information.
 
 ## Materials
