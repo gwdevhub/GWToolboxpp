@@ -2,7 +2,7 @@
 
 ## A set of tools for Guild Wars Speed Clearers
 
-[http://tools.fbgmguild.com/](http://tools.fbgmguild.com/)
+[https://haskha.github.io/GWToolboxpp/](https://haskha.github.io/GWToolboxpp/)
 
 ## How to download and run
 1. Clone *recursively* the repository. Make sure you also cloned the submodule GWCA++.
