@@ -3,7 +3,6 @@ layout: default
 ---
 
 # Hotkeys
-
 The Hotkeys window offers a large selection of Toolbox functions that can be mapped to a key on your keyboard or mouse, so that when you press the key, you will perform that action.
 
 Click "Create Hotkey..." and select the type of hotkey you want to create. A new row will appear in the list of hotkeys, and you can now edit this hotkey.

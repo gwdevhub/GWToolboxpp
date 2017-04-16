@@ -3,7 +3,6 @@ layout: default
 ---
 
 # Chat Filter
-
 Toolbox can filter out chat messages you do not wish to see:
 
 ## Drops
@@ -23,7 +22,6 @@ Toolbox can filter out chat messages you do not wish to see:
 * "[Player X] has achieved [title]..."
 
 ## Others
-
 * Earning skill points
 * PvP messages such as "[Skill] was updated for PvP!"
 * Nine Rings messages
@@ -32,7 +30,6 @@ Toolbox can filter out chat messages you do not wish to see:
 * "[Player X] might not reply because his or her status is set to away."
 
 ## Custom filters
-
 You can set any messages with specific content to be filtered out. Just type in the content you don't want to see, each on a separate line, and any message containing that exact quote (not case sensitive) will be completely filtered out.
 
 [back](./)

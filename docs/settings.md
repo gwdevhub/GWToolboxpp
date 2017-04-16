@@ -2,8 +2,8 @@
 layout: default
 ---
 
-# Toolbox Folder
-The Toolbox Settings Folder is found under `C:\Users\[Username]\AppData\Local`. You can open it by clicking the button at the top of the [Settings](settings) window.
+# Settings
+A section explaining how to open it
 
 A section explaining what each file is
 

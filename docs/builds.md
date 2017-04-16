@@ -3,9 +3,7 @@ layout: default
 ---
 
 # Builds
-
 The Builds window allows you to create and edit teambuilds, which can then be sent directly to party chat. Clicking on the name of one of your teambuilds will send the name, followed by each build in a loadable template.
-
 
 To create a new teambuild, click "Add Teambuild", or "Edit" to edit an existing teambuild. This will open a new window, which can be independently moved and re-sized. You can have multiple windows open at once. In these windows, you can write the name of the team and the individual builds, and paste in the template codes.
 

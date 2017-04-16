@@ -3,7 +3,6 @@ layout: default
 ---
 
 # Minimap
-
 * Display the heading of each ally and foe.
 * Display the real pathing map where you and enemies can walk.
 * Display the ranges: Hearth of Shadow, Aggro, Cast, Spirit and Compass.

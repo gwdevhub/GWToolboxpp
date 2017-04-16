@@ -3,7 +3,6 @@ layout: default
 ---
 
 # Windows
-
 Unlike [Widgets](widgets), windows are designed to be opened when needed, and hidden when not in use.
 
 All windows have options in [Settings](settings) to specify the exact co-ordinates of their on-screen position, prevent the window from being moved around or re-sized, and to remove the close button.
