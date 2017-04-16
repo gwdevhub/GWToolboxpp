@@ -4,8 +4,6 @@ layout: default
 
 # Materials
 
-## Overview
-
 The Materials window allows you to automatically buy and sell rare and common materials from the traders. It is also possible to check the price for the exact amount needed to craft consets, powerstones, and res scrolls, and to buy as many of these as you want.
 
 ## Usage

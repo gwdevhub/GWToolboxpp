@@ -2,7 +2,7 @@
 layout: default
 ---
 
-# Camera
+# Vanquish Counter
 
 _work in progress_
 

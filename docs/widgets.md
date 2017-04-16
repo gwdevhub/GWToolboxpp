@@ -30,8 +30,8 @@ Until you directly affect the health of an agent (see a pop-up number over it), 
 ## Distance
 The distance monitor shows your distance from your target as a percentage of compass range and in GW distance units (gwinches).
 
-## [Minimap](minimap)
-The minimap is an improved version of the default Guild Wars compass, with such features as targeting, zoom, and accurate pathing maps.
+## Minimap
+The [minimap](minimap) is an improved version of the default Guild Wars compass, with such features as targeting, zoom, and accurate pathing maps.
 
 ## Damage
 The damage monitor records how much damage has been dealt by each party member and displays it as a number, as a percentage of the party's total, and as a thick horizontal bar.

@@ -2,7 +2,7 @@
 layout: default
 ---
 
-# Damage
+# Damage Monitor
 
 _work in progress_
 

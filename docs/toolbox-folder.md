@@ -2,7 +2,7 @@
 layout: default
 ---
 
-# Settings
+# Toolbox Folder
 
 A section explaining how to open it
 

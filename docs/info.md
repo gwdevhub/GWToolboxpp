@@ -4,8 +4,6 @@ layout: default
 
 # Info
 
-## Overview
-
 The Info window is the hub for information, which can be be highlighted, and copied with Ctrl+C. Most of this is displayed in drop-down menus.
 
 Each of these individual components can be removed in [Settings](settings).

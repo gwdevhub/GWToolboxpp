@@ -4,8 +4,6 @@ layout: default
 
 # Travel
 
-## Overview
-
 The Travel window allows you to travel directly to any outpost in the game, so long as you've already unlocked that outpost.
 
 ## Usage
