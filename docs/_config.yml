@@ -1,8 +1,11 @@
+repository: HasKha/GWToolboxpp
+
 title: GWToolbox++
-description: Tools for Guild Wars.
+description: Tools for Guild Wars
 show_downloads: true
 google_analytics: UA-75239620-2
 theme: jekyll-theme-midnight
 
-download_url: http://github.com/HasKha/GWToolboxpp/releases/download/2.0-launcher/GWToolbox.exe
-toolbox_version: 2.0
+download_url: http://github.com/HasKha/GWToolboxpp/releases/download/2.1_Release/GWToolbox.exe
+discord_url: https://discord.gg/pGS5pFn
+toolbox_version: 2.1

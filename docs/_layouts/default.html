@@ -21,10 +21,10 @@
       <div id="header">
         <nav>
           <li class="fork"><a href="{{ site.github.repository_url }}">View On GitHub</a></li>
-          <li class="button-left"><a href="https://discord.gg/pGS5pFn">Discord</a></li>
+          <li class="button-left"><a href="{{ site.discord_url }}">Discord</a></li>
           <li class="button-left"><a href="faq">FAQ</a></li>
           {% if site.show_downloads %}
-            <li class="downloads"><a href="history">older Versions</a></li>
+            <li class="downloads"><a href="history">Older Versions</a></li>
             <li class="downloads"><a href="{{ site.download_url }}">GWToolbox++ {{ site.toolbox_version }}</a></li>
             <li class="title">DOWNLOADS</li>
           {% endif %}
@@ -38,8 +38,14 @@
           <h1><a href="{{ site.github.url }}">{{ site.title | default: site.github.repository_name }}</a></h1>
           <p>{{ site.description | default: site.github.project_tagline }}</p>
           <hr>
-          <span class="credits left">Project maintained by <a href="{{ site.github.owner_url }}">{{ site.github.owner_name }}</a>, <a href="https://github.com/reduf">reduf</a>, <a href="https://github.com/MikeJerred">MikeJerred</a>, <a href="https://github.com/Hour-of-the-Owl">Hour-of-the-Owl</a>, <a href="https://github.com/DarkManic">DarkManic</a></span>
-          <!-- <span class="credits right">Hosted on GitHub Pages &mdash; Theme by <a href="https://twitter.com/michigangraham">mattgraham</a></span> -->
+          <span class="credits left">Project maintained by 
+            <a href="{{ site.github.owner_url }}">{{ site.github.owner_name }}</a>, 
+            <a href="https://github.com/GregLando113"> GregLando113</a>,
+            <a href="https://github.com/reduf">reduf</a>, 
+            <a href="https://github.com/MikeJerred">MikeJerred</a>, 
+            <a href="https://github.com/Hour-of-the-Owl">Hour-of-the-Owl</a>, 
+            <a href="https://github.com/DarkManic">DarkManic</a>
+          </span>
         </div>
 
         {{ content }}

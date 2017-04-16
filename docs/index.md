@@ -13,7 +13,7 @@ GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancemen
 * [Borderless Window](borderless) - Set the game to run in borderless windowed mode.
 * [Builds](builds) - Send team builds to your party.
 * [Customizable Camera](camera) - Customize camera zoom or unlock camera.
-* [Chat Commands](commands) - _lorem ipsum_
+* [Chat Commands](chat_commands) - _lorem ipsum_
 * [Chat Filter](filter) - Keep chat clean by hiding in-game chat spam such as common drops, or filter player messages by content.
 * [Damage Monitor](damage) - Show the amount of damage done by each member of your party.
 * [Dialogs](dialogs) - _lorem ipsum_
