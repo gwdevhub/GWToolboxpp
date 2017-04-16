@@ -85,6 +85,9 @@
     <Filter Include="Windows\Vanquish">
       <UniqueIdentifier>{acc877c6-0def-46a0-b03b-cd84a555ed68}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Modules\Updater">
+      <UniqueIdentifier>{6dc61691-4f75-4ff0-b2f7-5b6139a727c7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GWToolbox\GuiUtils.h" />
@@ -223,6 +226,9 @@
     <ClInclude Include="GWToolbox\Windows\VanquishWindow.h">
       <Filter>Windows\Vanquish</Filter>
     </ClInclude>
+    <ClInclude Include="GWToolbox\OtherModules\Updater.h">
+      <Filter>Modules\Updater</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -342,6 +348,9 @@
     <ClCompile Include="GWToolbox\ToolboxUIElement.cpp" />
     <ClCompile Include="GWToolbox\Windows\VanquishWindow.cpp">
       <Filter>Windows\Vanquish</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\OtherModules\Updater.cpp">
+      <Filter>Modules\Updater</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

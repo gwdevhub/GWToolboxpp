@@ -19,6 +19,7 @@
 
 bool TBHotkey::show_active_in_header = true;
 bool TBHotkey::show_run_in_header = true;
+bool TBHotkey::hotkeys_changed = false;
 unsigned int TBHotkey::cur_ui_id = 0;
 
 TBHotkey* TBHotkey::HotkeyFactory(CSimpleIni* ini, const char* section) {
@@ -73,7 +74,7 @@ void TBHotkey::Draw(Op* op) {
 					- ImGui::GetTextLineHeight() 
 					- style.FramePadding.y * 2
 					- (show_run_in_header ? (50.0f + ImGui::GetStyle().ItemSpacing.x) : 0));
-				ImGui::Checkbox("", &active);
+				if (ImGui::Checkbox("", &active)) hotkeys_changed = true;
 				if (ImGui::IsItemHovered()) ImGui::SetTooltip("The hotkey can trigger only when selected");
 			}
 			if (show_run_in_header) {
@@ -107,7 +108,7 @@ void TBHotkey::Draw(Op* op) {
 
 		// === Hotkey section ===
 		ImGui::Separator();
-		ImGui::Checkbox("###active", &active);
+		if (ImGui::Checkbox("###active", &active)) hotkeys_changed = true;
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("The hotkey can trigger only when selected");
 		ImGui::SameLine();
 		static LONG newkey = 0;
@@ -140,6 +141,7 @@ void TBHotkey::Draw(Op* op) {
 					key = newkey;
 					modifier = newmod;
 					ImGui::CloseCurrentPopup();
+					hotkeys_changed = true;
 				}
 			}
 
@@ -159,11 +161,13 @@ void TBHotkey::Draw(Op* op) {
 		// === Move and delete buttons ===
 		if (ImGui::Button("Move Up", ImVec2(ImGui::GetWindowContentRegionWidth() / 3.0f, 0))) {
 			*op = Op_MoveUp;
+			hotkeys_changed = true;
 		}
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move the hotkey up in the list");
 		ImGui::SameLine();
 		if (ImGui::Button("Move Down", ImVec2(ImGui::GetWindowContentRegionWidth() / 3.0f, 0))) {
 			*op = Op_MoveDown;
+			hotkeys_changed = true;
 		}
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move the hotkey down in the list");
 		ImGui::SameLine();
@@ -175,6 +179,7 @@ void TBHotkey::Draw(Op* op) {
 			ImGui::Text("Are you sure?\nThis operation cannot be undone\n\n", Name());
 			if (ImGui::Button("OK", ImVec2(120, 0))) {
 				*op = Op_Delete;
+				hotkeys_changed = true;
 				ImGui::CloseCurrentPopup();
 			}
 			ImGui::SameLine();

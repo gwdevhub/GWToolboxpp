@@ -62,6 +62,7 @@ private:
 	// Send a specific build from a teambuild
 	void Send(const TeamBuild& tbuild, unsigned int idx);
 
+	bool builds_changed = false;
 	std::vector<TeamBuild> teambuilds;
 
 	clock_t send_timer;

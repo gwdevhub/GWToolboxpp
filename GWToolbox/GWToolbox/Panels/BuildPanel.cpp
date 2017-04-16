@@ -11,7 +11,8 @@ unsigned int BuildPanel::TeamBuild::cur_ui_id = 0;
 
 void BuildPanel::Initialize() {
 	ToolboxPanel::Initialize();
-	Resources::Instance().LoadTextureAsync(&texture, "list.png", "img/icons");
+	Resources::Instance().LoadTextureAsync(&texture, Resources::GetPath("img/icons", "list.png"), 
+		"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/icons/list.png");
 	send_timer = TIMER_INIT();
 }
 
@@ -44,6 +45,7 @@ void BuildPanel::Draw(IDirect3DDevice9* pDevice) {
 				teambuilds.push_back(TeamBuild());
 				teambuilds.back().edit_open = true; // open by default
 				teambuilds.back().builds.resize(4, Build());
+				builds_changed = true;
 			}
 		}
 		ImGui::End();
@@ -58,7 +60,7 @@ void BuildPanel::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::SetNextWindowSize(ImVec2(500, 0), ImGuiSetCond_FirstUseEver);
 		if (ImGui::Begin(winname, &tbuild.edit_open)) {
 			ImGui::PushItemWidth(-120.0f);
-			ImGui::InputText("Build Name", tbuild.name, 128);
+			if (ImGui::InputText("Build Name", tbuild.name, 128)) builds_changed = true;
 			ImGui::PopItemWidth();
 			for (unsigned int j = 0; j < tbuild.builds.size(); ++j) {
 				Build& build = tbuild.builds[j];
@@ -67,9 +69,9 @@ void BuildPanel::Draw(IDirect3DDevice9* pDevice) {
 				ImGui::SameLine(30.0f);
 				ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 24.0f - 50.0f - 30.0f
 					- ImGui::GetStyle().ItemInnerSpacing.x * 3) / 2);
-				ImGui::InputText("###name", build.name, 128);
+				if (ImGui::InputText("###name", build.name, 128)) builds_changed = true;
 				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-				ImGui::InputText("###code", build.code, 128);
+				if (ImGui::InputText("###code", build.code, 128)) builds_changed = true;
 				ImGui::PopItemWidth();
 				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 				if (ImGui::Button("Send", ImVec2(50.0f, 0))) {
@@ -79,14 +81,16 @@ void BuildPanel::Draw(IDirect3DDevice9* pDevice) {
 				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 				if (ImGui::Button("x", ImVec2(24.0f, 0))) {
 					tbuild.builds.erase(tbuild.builds.begin() + j);
+					builds_changed = true;
 				}
 				if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete build");
 				ImGui::PopID();
 			}
-			ImGui::Checkbox("Show numbers", &tbuild.show_numbers);
+			if (ImGui::Checkbox("Show numbers", &tbuild.show_numbers)) builds_changed = true;
 			ImGui::SameLine(ImGui::GetWindowContentRegionWidth() * 0.6f);
 			if (ImGui::Button("Add Build", ImVec2(ImGui::GetWindowContentRegionWidth() * 0.4f, 0))) {
 				tbuild.builds.push_back(Build());
+				builds_changed = true;
 			}
 			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Add another player build row");
 			ImGui::Spacing();
@@ -94,11 +98,13 @@ void BuildPanel::Draw(IDirect3DDevice9* pDevice) {
 			// which will make the window change size, which is pretty annoying
 			if (ImGui::SmallButton("Up") && i > 0) {
 				std::swap(teambuilds[i - 1], teambuilds[i]);
+				builds_changed = true;
 			}
 			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move the teambuild up in the list");
 			ImGui::SameLine();
 			if (ImGui::SmallButton("Down") && i + 1 < teambuilds.size()) {
 				std::swap(teambuilds[i], teambuilds[i + 1]);
+				builds_changed = true;
 			}
 			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move the teambuild down in the list");
 			ImGui::SameLine();
@@ -116,6 +122,7 @@ void BuildPanel::Draw(IDirect3DDevice9* pDevice) {
 				ImGui::Text("Are you sure?\nThis operation cannot be undone.\n\n");
 				if (ImGui::Button("OK", ImVec2(120, 0))) {
 					teambuilds.erase(teambuilds.begin() + i);
+					builds_changed = true;
 					ImGui::CloseCurrentPopup();
 				}
 				ImGui::SameLine();
@@ -226,36 +233,40 @@ void BuildPanel::LoadSettings(CSimpleIni* ini) {
 			}
 		}
 	}
+
+	builds_changed = false;
 }
 
 void BuildPanel::SaveSettings(CSimpleIni* ini) {
 	ToolboxPanel::SaveSettings(ini);
 
-	// clear builds from ini
-	CSimpleIni::TNamesDepend entries;
-	ini->GetAllSections(entries);
-	for (CSimpleIni::Entry& entry : entries) {
-		if (strncmp(entry.pItem, "builds", 6) == 0) {
-			ini->Delete(entry.pItem, nullptr);
+	if (builds_changed) {
+		// clear builds from ini
+		CSimpleIni::TNamesDepend entries;
+		ini->GetAllSections(entries);
+		for (CSimpleIni::Entry& entry : entries) {
+			if (strncmp(entry.pItem, "builds", 6) == 0) {
+				ini->Delete(entry.pItem, nullptr);
+			}
 		}
-	}
 
-	// then save
-	for (unsigned int i = 0; i < teambuilds.size(); ++i) {
-		const TeamBuild& tbuild = teambuilds[i];
-		char section[16];
-		sprintf_s(section, "builds%03d", i);
-		ini->SetValue(section, "buildname", tbuild.name);
-		ini->SetBoolValue(section, "showNumbers", tbuild.show_numbers);
-		ini->SetLongValue(section, "count", tbuild.builds.size());
-		for (unsigned int j = 0; j < tbuild.builds.size(); ++j) {
-			const Build& build = tbuild.builds[j];
-			char namekey[16];
-			char templatekey[16];
-			sprintf_s(namekey, "name%d", j);
-			sprintf_s(templatekey, "template%d", j);
-			ini->SetValue(section, namekey, build.name);
-			ini->SetValue(section, templatekey, build.code);
+		// then save
+		for (unsigned int i = 0; i < teambuilds.size(); ++i) {
+			const TeamBuild& tbuild = teambuilds[i];
+			char section[16];
+			sprintf_s(section, "builds%03d", i);
+			ini->SetValue(section, "buildname", tbuild.name);
+			ini->SetBoolValue(section, "showNumbers", tbuild.show_numbers);
+			ini->SetLongValue(section, "count", tbuild.builds.size());
+			for (unsigned int j = 0; j < tbuild.builds.size(); ++j) {
+				const Build& build = tbuild.builds[j];
+				char namekey[16];
+				char templatekey[16];
+				sprintf_s(namekey, "name%d", j);
+				sprintf_s(templatekey, "template%d", j);
+				ini->SetValue(section, namekey, build.name);
+				ini->SetValue(section, templatekey, build.code);
+			}
 		}
 	}
 }

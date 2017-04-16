@@ -33,6 +33,7 @@
 #include <OtherModules\GameSettings.h>
 #include <OtherModules\ToolboxSettings.h>
 #include <OtherModules\ToolboxTheme.h>
+#include <OtherModules\Updater.h>
 
 #include <Windows\Minimap\Minimap.h>
 
@@ -41,6 +42,8 @@
 #include "GuiUtils.h"
 
 namespace {
+	HMODULE dllmodule = 0;
+
 	long OldWndProc = 0;
 	bool tb_initialized = false;
 	bool tb_destroyed = false;
@@ -50,20 +53,25 @@ namespace {
 	int last_drawing_passes = 0;
 }
 
-DWORD __stdcall SafeThreadEntry(LPVOID dllmodule) {
+HMODULE GWToolbox::GetDLLModule() {
+	return dllmodule;
+}
+
+DWORD __stdcall SafeThreadEntry(LPVOID module) {
+	dllmodule = (HMODULE)module;
 	__try {
-		return ThreadEntry(dllmodule);
+		return ThreadEntry(nullptr);
 	} __except ( EXCEPT_EXPRESSION_ENTRY ) {
 		Log::Log("SafeThreadEntry __except body\n");
 		return EXIT_SUCCESS;
 	}
 }
 
-DWORD __stdcall ThreadEntry(LPVOID dllmodule) {
+DWORD __stdcall ThreadEntry(LPVOID) {
 	Log::Log("Initializing API\n");
 	if (!GW::Initialize()){
 		MessageBoxA(0, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0);
-		FreeLibraryAndExitThread((HMODULE)dllmodule, EXIT_SUCCESS);
+		FreeLibraryAndExitThread(dllmodule, EXIT_SUCCESS);
 		return EXIT_SUCCESS;
 	}
 
@@ -94,15 +102,11 @@ DWORD __stdcall ThreadEntry(LPVOID dllmodule) {
 	
 	Sleep(100);
 
-	//GW::Render::EndSceneHook()->Cleanup();
-	//GW::Render::ResetHook()->Cleanup();
-
-
 	Sleep(100);
 	Log::Log("Closing log/console, bye!\n");
 	Log::Terminate();
 	Sleep(100);
-	FreeLibraryAndExitThread((HMODULE)dllmodule, EXIT_SUCCESS);
+	FreeLibraryAndExitThread(dllmodule, EXIT_SUCCESS);
 }
 
 LRESULT CALLBACK SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) {
@@ -236,33 +240,46 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 
 void GWToolbox::Initialize() {
 	Log::Log("Creating Toolbox\n");
-	Resources::Instance().EnsureSubPathExists("img");
-	Resources::Instance().EnsureSubPathExists("location_logs");
-	Resources::Instance().EnsureFileExists("GWToolbox.ini", nullptr, []() {
-		GWToolbox::Instance().LoadSettings();
+	Resources::Instance().EnsureFolderExists("img");
+	Resources::Instance().EnsureFolderExists("img\\bonds");
+	Resources::Instance().EnsureFolderExists("img\\icons");
+	Resources::Instance().EnsureFolderExists("img\\materials");
+	Resources::Instance().EnsureFolderExists("img\\pcons");
+	Resources::Instance().EnsureFolderExists("location logs");
+	Resources::Instance().EnsureFileExists(Resources::GetPath("GWToolbox.ini"), 
+		"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/GWToolbox.ini", 
+		[](bool success) {
+		if (success) {
+			GWToolbox::Instance().OpenSettingsFile();
+			GWToolbox::Instance().LoadModuleSettings();
+		}
 	});
-	Resources::Instance().EnsureFileExists("Markers.ini", nullptr, []() {
+	// if the file does not exist we'll load module settings once downloaded, but we need the file open
+	// in order to read defaults
+	OpenSettingsFile();
+	Resources::Instance().EnsureFileExists(Resources::GetPath("Markers.ini"), 
+		"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Markers.ini", 
+		[](bool success) {
 		Minimap::Instance().custom_renderer.LoadMarkers();
 	});
 
 	Log::Log("Creating Modules\n");
 	Resources::Instance().Initialize();
+	Updater::Instance().Initialize();
+
 	GameSettings::Instance().Initialize();
 	ToolboxSettings::Instance().Initialize();
 	ChatFilter::Instance().Initialize();
 	ChatCommands::Instance().Initialize();
 	ToolboxTheme::Instance().Initialize();
 
-	LoadSettings();
+	LoadModuleSettings(); // This will only read settings of the loaded modules above
 
 	ToolboxSettings::Instance().InitializeModules();
 	
-	// only load on uielements.
-	for (ToolboxModule* module : uielements) {
-		module->LoadSettings(inifile);
-	}
+	LoadModuleSettings(); // Read settings of all modules.
 
-	Resources::Instance().EndLoading();
+	Updater::Instance().CheckForUpdate();
 
 	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
 		&& GW::Agents::GetAgentArray().valid()
@@ -273,12 +290,13 @@ void GWToolbox::Initialize() {
 	}
 }
 
-void GWToolbox::LoadSettings() {
+void GWToolbox::OpenSettingsFile() {
 	Log::Log("Opening ini file\n");
 	if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
-	inifile->LoadFile(GuiUtils::getPath("GWToolbox.ini").c_str());
+	inifile->LoadFile(Resources::GetPath("GWToolbox.ini").c_str());
 	inifile->SetValue("launcher", "dllversion", GWTOOLBOX_VERSION);
-
+}
+void GWToolbox::LoadModuleSettings() {
 	for (ToolboxModule* module : modules) {
 		module->LoadSettings(inifile);
 	}
@@ -288,7 +306,7 @@ void GWToolbox::SaveSettings() {
 	for (ToolboxModule* module : modules) {
 		module->SaveSettings(inifile);
 	}
-	if (inifile) inifile->SaveFile(GuiUtils::getPath("GWToolbox.ini").c_str());
+	if (inifile) inifile->SaveFile(Resources::GetPath("GWToolbox.ini").c_str());
 }
 
 void GWToolbox::Terminate() {
@@ -320,11 +338,17 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 		ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), device);
 		ImGuiIO& io = ImGui::GetIO();
 		io.MouseDrawCursor = false;
-		static std::string imgui_inifile = GuiUtils::getPath("interface.ini");
+		static std::string imgui_inifile = Resources::GetPath("interface.ini");
 		io.IniFilename = imgui_inifile.c_str();
 
-		Resources::Instance().EnsureFileExists("Font.ttf", nullptr, []() {
-			GuiUtils::LoadFonts();
+		Resources::Instance().EnsureFileExists(Resources::GetPath("Font.ttf"),
+			"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Font.ttf", 
+			[](bool success) {
+			if (success) {
+				GuiUtils::LoadFonts();
+			} else {
+				Log::Error("Cannot load font!");
+			}
 		});
 
 		GWToolbox::Instance().Initialize();

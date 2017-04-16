@@ -31,7 +31,8 @@ void InfoPanel::Initialize() {
 
 	GW::Agents::SetupLastDialogHook();
 
-	Resources::Instance().LoadTextureAsync(&texture, "info.png", "img/icons");
+	Resources::Instance().LoadTextureAsync(&texture, Resources::GetPath("img/icons", "info.png"),
+		"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/icons/info.png");
 	GW::StoC::AddCallback<GW::Packet::StoC::P081>(
 		[this](GW::Packet::StoC::P081* pak) {
 		if (pak->message[0] == 0x7BFF

@@ -93,7 +93,19 @@ void ChatCommands::Initialize() {
 	GW::Chat::RegisterCommand(L"scwiki", 
 		[](std::wstring& cmd, std::vector<std::wstring>& args) -> bool {
 		CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-		ShellExecute(NULL, "open", "http://wiki.fbgmguild.com/Main_Page", NULL, NULL, SW_SHOWNORMAL);
+		if (args.size() == 0) {
+			ShellExecuteW(NULL, L"open", L"http://wiki.fbgmguild.com/Main_Page", NULL, NULL, SW_SHOWNORMAL);
+		} else {
+			// the buffer is large enough, because you can type only 120 characters at once in the chat.
+			wchar_t link[256] = L"http://wiki.fbgmguild.com/index.php?search=";
+			size_t i;
+			for (i = 0; i < args.size() - 1; i++) {
+				wcscat_s(link, args[i].c_str());
+				wcscat_s(link, L"+");
+			}
+			wcscat_s(link, args[i].c_str());
+			ShellExecuteW(NULL, L"open", link, NULL, NULL, SW_SHOWNORMAL);
+		}
 		return true;
 	});
 }
@@ -343,12 +355,14 @@ bool ChatCommands::CmdTP(std::wstring& cmd, std::vector<std::wstring>& args) {
 			}
 		}
 
-		if (town == L"fav1") {
-			TravelPanel::Instance().TravelFavorite(0);
-		} else if (town == L"fav2") {
-			TravelPanel::Instance().TravelFavorite(1);
-		} else if (town == L"fav3") {
-			TravelPanel::Instance().TravelFavorite(2);
+		if (town.compare(0, 3, L"fav", 3) == 0) {
+			std::wstring fav_s_num = town.substr(3, std::wstring::npos);
+			if (fav_s_num.empty()) {
+				TravelPanel::Instance().TravelFavorite(0);
+			} else {
+				int fav_num = wcstol(fav_s_num.c_str(), nullptr, 0);
+				TravelPanel::Instance().TravelFavorite(fav_num);
+			}
 		} else if (town == L"toa") {
 			GW::Map::Travel(GW::Constants::MapID::Temple_of_the_Ages, district, district_number);
 		} else if (town == L"doa") {

@@ -36,7 +36,8 @@ public:
 	void Update() override;
 
 private:
-	bool IsTyping() { return false; /* (*(DWORD*)0xA377C8) != 0;*/ } // broken
+	// 0xA37890 is a mirror of 0xA377C8.
+	bool IsTyping() { return (*(DWORD*)0xA377C8) != 0; } 
 	
 	static std::wstring GetLowerCaseArg(std::vector<std::wstring>, size_t index);
 

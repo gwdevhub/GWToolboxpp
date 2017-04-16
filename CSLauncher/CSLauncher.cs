@@ -7,9 +7,9 @@ using System.Windows.Forms;
 using System.Diagnostics;
 using System.Threading;
 using System.IO;
-using GWCA.Memory;
+using System.Net;
 using System.Security.Principal;
-using INI;
+using GWCA.Memory;
 
 namespace CSLauncher {
     static class CSLauncher {
@@ -51,27 +51,25 @@ namespace CSLauncher {
             string localappdata = Environment.GetEnvironmentVariable("LocalAppData");
             string settingsfolder = localappdata + "\\GWToolboxpp\\";
             string inifile = settingsfolder + "GWToolbox.ini";
-#if DEBUG
-            string dllfile = "GWToolbox.dll"; // same folder where the launcher is built
-#else
-            string dllfile = settingsfolder + "GWToolbox.dll";
-#endif
 
             // Install resources
             ResInstaller installer = new ResInstaller();
             installer.Install();
 
-            INI_Reader ini = new INI_Reader(inifile);
-            Updater updater = new Updater();
-
 #if DEBUG
             // do nothing, we'll use GWToolbox.dll in /Debug
+            string dllfile = "GWToolbox.dll"; // same folder where the launcher is built
 #else
             // Download or update if needed
+            string dllfile = settingsfolder + "GWToolbox.dll";
             if (!File.Exists(dllfile)) {
-                updater.DownloadDLL();
-            } else {
-                updater.CheckForUpdates();
+                string toolboxdir = Environment.GetEnvironmentVariable("LocalAppData") + "\\GWToolboxpp\\";
+                WebClient host = new WebClient();
+                string remoteversion = host.DownloadString(
+                    "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/toolboxversion.txt");
+                string dllurl = "https://github.com/HasKha/GWToolboxpp/releases/download/" 
+                    + remoteversion + "_Release/GWToolbox.dll";
+                host.DownloadFile(dllurl, toolboxdir + "GWToolbox.dll");
             }
 #endif
             // check again after download/update/build

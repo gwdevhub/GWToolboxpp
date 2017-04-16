@@ -1,10 +1,16 @@
 #include "ToolboxSettings.h"
 
+#include <fstream>
+
 #include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\MapMgr.h>
 
+#include <Defines.h>
 #include "GuiUtils.h"
 #include <GWToolbox.h>
+#include <OtherModules\Resources.h>
+#include <OtherModules\Updater.h>
+
 #include <Windows\MainWindow.h>
 #include <Panels\PconPanel.h>
 #include <Panels\HotkeyPanel.h>
@@ -28,6 +34,8 @@ bool ToolboxSettings::move_all = false;
 bool ToolboxSettings::clamp_window_positions = false;
 
 void ToolboxSettings::InitializeModules() {
+	SettingsPanel::Instance().sep_windows = GWToolbox::Instance().GetModules().size();
+
 	MainWindow::Instance().Initialize();
 	if (use_pcons) PconPanel::Instance().Initialize();
 	if (use_hotkeys) HotkeyPanel::Instance().Initialize();
@@ -38,7 +46,10 @@ void ToolboxSettings::InitializeModules() {
 	if (use_materials) MaterialsPanel::Instance().Initialize();
 
 	SettingsPanel::Instance().Initialize();
-	SettingsPanel::Instance().separator = GWToolbox::Instance().GetModules().size();
+
+	if (use_notepad) NotePadWindow::Instance().Initialize();
+
+	SettingsPanel::Instance().sep_widgets = GWToolbox::Instance().GetModules().size();
 
 	if (use_timer) TimerWindow::Instance().Initialize();
 	if (use_health)  HealthWindow::Instance().Initialize();
@@ -47,11 +58,13 @@ void ToolboxSettings::InitializeModules() {
 	if (use_damage) PartyDamage::Instance().Initialize();
 	if (use_bonds) BondsWindow::Instance().Initialize();
 	if (use_clock) ClockWindow::Instance().Initialize();
-	if (use_notepad) NotePadWindow::Instance().Initialize();
 	if (use_vanquish) VanquishWindow::Instance().Initialize();
 }
 
 void ToolboxSettings::DrawSettingInternal() {
+	Updater::Instance().DrawSettingInternal();
+
+	ImGui::Separator();
 	DrawFreezeSetting();
 	ImGui::Checkbox("Save Location Data", &save_location_data);
 	ImGui::ShowHelp("Toolbox will save your location every second in a file in Settings Folder.");
@@ -61,8 +74,9 @@ void ToolboxSettings::DrawSettingInternal() {
 		"of the screen slightly towards the center during rezone.\n"
 		"Might also cause windows to move when minimizing.");
 
+	ImGui::Separator();
 	ImGui::Text("Enable the following features:");
-	ImGui::TextDisabled("Unticking will completely disable a feature from initializing and running. Requires toolbox restart.");
+	ImGui::TextDisabled("Unticking will completely disable a feature from initializing and running. Requires Toolbox restart.");
 	ImGui::Checkbox("Pcons", &use_pcons);
 	ImGui::Checkbox("Hotkeys", &use_hotkeys);
 	ImGui::Checkbox("Builds", &use_builds);
@@ -78,7 +92,7 @@ void ToolboxSettings::DrawSettingInternal() {
 	ImGui::Checkbox("Bonds", &use_bonds);
 	ImGui::Checkbox("Clock", &use_clock);
 	ImGui::Checkbox("Notepad", &use_notepad);
-	ImGui::Checkbox("Vanquish", &use_vanquish);
+	ImGui::Checkbox("Vanquish counter", &use_vanquish);
 }
 
 void ToolboxSettings::DrawFreezeSetting() {
@@ -186,7 +200,7 @@ void ToolboxSettings::Update() {
 				if (location_file && location_file.is_open()) {
 					location_file.close();
 				}
-				location_file.open(GuiUtils::getSubPath(filename, "location logs").c_str());
+				location_file.open(Resources::GetPath(filename, "location logs").c_str());
 			}
 
 			GW::Agent* me = GW::Agents::GetPlayer();
@@ -202,3 +216,4 @@ void ToolboxSettings::Update() {
 		}
 	}
 }
+

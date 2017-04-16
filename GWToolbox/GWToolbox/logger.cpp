@@ -9,7 +9,7 @@
 #include <GWCA\Managers\ChatMgr.h>
 
 #include "Defines.h"
-#include "GuiUtils.h"
+#include <OtherModules\Resources.h>
 
 #define CHAN_WARNING GW::Chat::Channel::CHANNEL_GWCA2
 #define CHAN_INFO GW::Chat::Channel::CHANNEL_GWCA3
@@ -29,7 +29,7 @@ void Log::InitializeLog() {
 	freopen_s(&fh, "CONOUT$", "w", stderr);
 	SetConsoleTitle("GWTB++ Debug Console");
 #else
-	logfile = freopen(GuiUtils::getPath("log.txt").c_str(), "w", stdout);
+	logfile = freopen(Resources::GetPath("log.txt").c_str(), "w", stdout);
 #endif
 }
 
@@ -136,7 +136,7 @@ LONG WINAPI Log::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers) {
 	GetLocalTime(&stLocalTime);
 
 	StringCchPrintf(szFileName, MAX_PATH, "%s\\%s-%04d%02d%02d-%02d%02d%02d-%ld-%ld.dmp",
-		GuiUtils::getSettingsFolder().c_str(), GWTOOLBOX_VERSION,
+		Resources::GetSettingsFolderPath().c_str(), GWTOOLBOX_VERSION,
 		stLocalTime.wYear, stLocalTime.wMonth, stLocalTime.wDay,
 		stLocalTime.wHour, stLocalTime.wMinute, stLocalTime.wSecond,
 		GetCurrentProcessId(), GetCurrentThreadId());

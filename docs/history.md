@@ -9,7 +9,21 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
-## Version 2.0
+## Version 2.1
+In this patch we change the update server to GitHub and fix minor bugs from 2.0 and add a Vanquish counter.
+
+* [New] Toolbox can now self-update (or not). Check the options in Settings->Toolbox Settings
+* [New] Added a vanquish counter
+* [New] /scwiki now accepts parameters, (e.g. /scwiki doa)
+* [New] you can now /tp fav to any number of favorites (e.g. /tp fav5).
+* [New] Added an option to flash your guild wars taskbar when receiving a private message
+* [New] Added an option to automatically add [;xx] to links you write in chat, but only if they are in their own message!
+* [Fix] Custom dialog now works properly
+* [Fix] Fixed several typos and minor issues
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.1_Release/GWToolbox.dll)
+
+## Version 2.0 - New interface
 * [New] Rewrote interface
 * [New] Materials Panel
 * [New] Chat filter by content

@@ -3,7 +3,6 @@ layout: default
 ---
 
 # Dialogs
-
 The Dialogs window allows you to send dialogs directly to NPCs without actually having to talk to them, and in some cases without having completed all the pre-requisites to make that dialog available.
 
 You still have to interact with the NPC (press space) in order to activate the dialog, but you can do so even while they refuse to talk to you because they're in combat. You can move away from the NPC, and so long as you don't go beyond compass range or interact with another, sending the dialog will make you walk back.

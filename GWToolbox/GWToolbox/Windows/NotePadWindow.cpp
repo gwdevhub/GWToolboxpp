@@ -2,7 +2,7 @@
 
 #include <fstream>
 
-#include <GuiUtils.h>
+#include <OtherModules\Resources.h>
 
 #define TEXT_SIZE 2024 * 16
 
@@ -26,9 +26,8 @@ void NotePadWindow::Draw(IDirect3DDevice9* pDevice) {
 void NotePadWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxWindow::LoadSettings(ini);
 
-	std::ifstream file;
-	file.open(GuiUtils::getPath("Notepad.txt"));
-	if (file.is_open()) {
+	std::ifstream file(Resources::GetPath("Notepad.txt"));
+	if (file) {
 		file.get(text, TEXT_SIZE, '\0');
 		file.close();
 	}
@@ -38,9 +37,8 @@ void NotePadWindow::SaveSettings(CSimpleIni* ini) {
 	ToolboxWindow::SaveSettings(ini);
 
 	if (filedirty) {
-		std::ofstream file;
-		file.open(GuiUtils::getPath("Notepad.txt"));
-		if (file.is_open()) {
+		std::ofstream file(Resources::GetPath("Notepad.txt"));
+		if (file) {
 			file.write(text, strlen(text));
 			file.close();
 			filedirty = false;

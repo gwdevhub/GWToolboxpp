@@ -65,12 +65,18 @@ void MaterialsPanel::Update() {
 
 void MaterialsPanel::Initialize() {
 	ToolboxPanel::Initialize();
-	Resources::Instance().LoadTextureAsync(&texture, "feather.png", "img/icons");
-	Resources::Instance().LoadTextureAsync(&tex_essence, "Essence_of_Celerity.png", "img/materials");
-	Resources::Instance().LoadTextureAsync(&tex_grail, "Grail_of_Might.png", "img/materials");
-	Resources::Instance().LoadTextureAsync(&tex_armor, "Armor_of_Salvation.png", "img/materials");
-	Resources::Instance().LoadTextureAsync(&tex_powerstone, "Powerstone_of_Courage.png", "img/materials");
-	Resources::Instance().LoadTextureAsync(&tex_resscroll, "Scroll_of_Resurrection.png", "img/materials");
+	Resources::Instance().LoadTextureAsync(&texture, Resources::GetPath("img/icons", "feather.png"),
+		"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/icons/feather.png");
+	Resources::Instance().LoadTextureAsync(&tex_essence, Resources::GetPath("img/materials", "Essence_of_Celerity.png"),
+		"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/materials/Essence_of_Celerity.png");
+	Resources::Instance().LoadTextureAsync(&tex_grail, Resources::GetPath("img/materials", "Grail_of_Might.png"),
+		"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/materials/Grail_of_Might.png");
+	Resources::Instance().LoadTextureAsync(&tex_armor, Resources::GetPath("img/materials", "Armor_of_Salvation.png"),
+		"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/materials/Armor_of_Salvation.png");
+	Resources::Instance().LoadTextureAsync(&tex_powerstone, Resources::GetPath("img/materials", "Powerstone_of_Courage.png"),
+		"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/materials/Powerstone_of_Courage.png");
+	Resources::Instance().LoadTextureAsync(&tex_resscroll, Resources::GetPath("img/materials", "Scroll_of_Resurrection.png"),
+		"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/materials/Scroll_of_Resurrection.png");
 
 	for (int i = 0; i < N_MATS; ++i) {
 		price[i] = PRICE_DEFAULT;
