@@ -355,12 +355,14 @@ bool ChatCommands::CmdTP(std::wstring& cmd, std::vector<std::wstring>& args) {
 			}
 		}
 
-		if (town == L"fav1") {
-			TravelPanel::Instance().TravelFavorite(0);
-		} else if (town == L"fav2") {
-			TravelPanel::Instance().TravelFavorite(1);
-		} else if (town == L"fav3") {
-			TravelPanel::Instance().TravelFavorite(2);
+		if (town.compare(0, 3, L"fav", 3) == 0) {
+			std::wstring fav_s_num = town.substr(3, std::wstring::npos);
+			if (fav_s_num.empty()) {
+				TravelPanel::Instance().TravelFavorite(0);
+			} else {
+				int fav_num = wcstol(fav_s_num.c_str(), nullptr, 0);
+				TravelPanel::Instance().TravelFavorite(fav_num);
+			}
 		} else if (town == L"toa") {
 			GW::Map::Travel(GW::Constants::MapID::Temple_of_the_Ages, district, district_number);
 		} else if (town == L"doa") {
