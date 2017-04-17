@@ -17,11 +17,11 @@ GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancemen
 * [Dialogs](dialogs) - _lorem ipsum_
 * [Hotkeys](hotkeys) - Set hotkeys for typing commands into chat (e.g. /stuck), using or cancelling Recall and UA, using an item, targeting an agent, and much more.
 * [Info](info) - _lorem ipsum_
-* [Materials](materials) - _lorem ipsum_
+* [Materials](materials) - Automatically buy and sell materials from the trader NPC.
 * [Minimap](minimap) - Display an improved in-game minimap that shows clear terrain.
 * [Pcons](pcons) - Automatically maintain selected pcons.
 * [Settings](settings) - _lorem ipsum_
-* [Theme](theme) - _lorem ipsum_
+* [Theme](theme) - Change the appearance of Toolbox.
 * [Toolbox Folder](folder) - _lorem ipsum_
 * [Travel](travel) - Directly travel to any previously visited outpost.
 * [Widgets](widgets) - Such as [instance timer](timer), [target health](health), [target distance](distance), [vanquish counter](vanquish), [clock](clock) and [notepad](notepad).
