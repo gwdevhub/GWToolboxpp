@@ -42,7 +42,7 @@ Toolbox supports a variety of chat commands; you can use them by typing in chat 
 
 `/tb reset` moves [Settings](settings) and the main Toolbox window to the top-left corner of the screen.
 
-`/to [dest]`, `/tp [dest]` or `/travel [dest]` will map travel you to the `[dest]` outpost. You can use the following values instead of `[dest]`:
+`/to [dest]`, `/tp [dest]`, or `/travel [dest]` will map travel you to the `[dest]` outpost. You can use the following values instead of `[dest]`:
 * `toa`
 * `doa`
 * `kamadan` or `kama`
