@@ -361,7 +361,7 @@ bool ChatCommands::CmdTP(std::wstring& cmd, std::vector<std::wstring>& args) {
 				TravelPanel::Instance().TravelFavorite(0);
 			} else {
 				int fav_num = wcstol(fav_s_num.c_str(), nullptr, 0);
-				TravelPanel::Instance().TravelFavorite(fav_num);
+				TravelPanel::Instance().TravelFavorite(fav_num - 1);
 			}
 		} else if (town == L"toa") {
 			GW::Map::Travel(GW::Constants::MapID::Temple_of_the_Ages, district, district_number);
