@@ -57,4 +57,9 @@ You can customize the background color of the monitor in [Settings](settings). Y
 ## Clock
 The clock simply shows your local time of day. You can choose 12 or 24-hour clock.
 
+## Vanquish
+The vanquish monitor shows how many enemies are in a zone, and how many have already been killed. This updates whenever you spawn additional enemies e.g. from quests or pop-ups.
+
+This widget will not appear unless you are in an explorable area and in Hard Mode. In areas that cannot be vanquished, such as missions and dungeons, the counter will show 0/0.
+
 [back](./)
