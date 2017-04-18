@@ -22,7 +22,6 @@ GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancemen
 * [Pcons](pcons) - Automatically maintain selected pcons.
 * [Settings](settings) - Adjust Toolbox's settings and access other features.
 * [Theme](theme) - Change the appearance of Toolbox.
-* [Toolbox Folder](folder) - _lorem ipsum_ 
 * [Travel](travel) - Directly travel to any previously visited outpost.
 * [Widgets](widgets) - Such as [instance timer](timer), [target health](health), [target distance](distance), [vanquish counter](vanquish), [clock](clock) and [notepad](notepad).
 
