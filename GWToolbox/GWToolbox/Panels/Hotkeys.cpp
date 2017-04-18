@@ -235,8 +235,9 @@ void HotkeySendChat::Draw() {
 		case 5: channel = '%'; break;
 		default: channel = '/';break;
 		}
+		hotkeys_changed = true;
 	}
-	ImGui::InputText("Message", message, 139);
+	if (ImGui::InputText("Message", message, 139)) hotkeys_changed = true;
 }
 void HotkeySendChat::Execute() {
 	if (isLoading()) return;
@@ -263,8 +264,8 @@ void HotkeyUseItem::Description(char* buf, int bufsz) const {
 	}
 }
 void HotkeyUseItem::Draw() {
-	ImGui::InputInt("Item ID", (int*)&item_id);
-	ImGui::InputText("Item Name", name, 140);
+	if (ImGui::InputInt("Item ID", (int*)&item_id)) hotkeys_changed = true;
+	if (ImGui::InputText("Item Name", name, 140)) hotkeys_changed = true;
 }
 void HotkeyUseItem::Execute() {
 	if (isLoading()) return;
@@ -322,9 +323,10 @@ void HotkeyDropUseBuff::Draw() {
 		case HotkeyDropUseBuff::Other: id = (GW::Constants::SkillID)0; break;
 		default: break;
 		}
+		hotkeys_changed = true;
 	}
 	if (index == Other) {
-		ImGui::InputInt("Skill ID", (int*)&id);
+		if (ImGui::InputInt("Skill ID", (int*)&id)) hotkeys_changed = true;
 	}
 }
 void HotkeyDropUseBuff::Execute() {
@@ -362,7 +364,7 @@ void HotkeyToggle::Description(char* buf, int bufsz) const {
 	_snprintf(buf, bufsz, "Toggle %s", name);
 }
 void HotkeyToggle::Draw() {
-	ImGui::Combo("Toggle###combo", (int*)&target, GetText, nullptr, n_targets);
+	if (ImGui::Combo("Toggle###combo", (int*)&target, GetText, nullptr, n_targets)) hotkeys_changed = true;
 }
 void HotkeyToggle::Execute() {
 	bool active;
@@ -404,7 +406,7 @@ void HotkeyAction::Description(char* buf, int bufsz) const {
 	_snprintf(buf, bufsz, "%s", name);
 }
 void HotkeyAction::Draw() {
-	ImGui::Combo("Action###combo", (int*)&action, GetText, nullptr, n_actions);
+	if (ImGui::Combo("Action###combo", (int*)&action, GetText, nullptr, n_actions)) hotkeys_changed = true;
 }
 void HotkeyAction::Execute() {
 	if (isLoading()) return;
@@ -453,8 +455,8 @@ void HotkeyTarget::Description(char* buf, int bufsz) const {
 	}
 }
 void HotkeyTarget::Draw() {
-	ImGui::InputInt("Target ID", (int*)&id);
-	ImGui::InputText("Name", name, 140);
+	if (ImGui::InputInt("Target ID", (int*)&id)) hotkeys_changed = true;
+	if (ImGui::InputText("Name", name, 140)) hotkeys_changed = true;
 }
 void HotkeyTarget::Execute() {
 	if (isLoading()) return;
@@ -510,13 +512,13 @@ void HotkeyMove::Description(char* buf, int bufsz) const {
 	}
 }
 void HotkeyMove::Draw() {
-	ImGui::InputFloat("x", &x, 0.0f, 0.0f, 3);
-	ImGui::InputFloat("y", &y, 0.0f, 0.0f, 3);
-	ImGui::InputFloat("Range", &range, 0.0f, 0.0f, 0);
+	if (ImGui::InputFloat("x", &x, 0.0f, 0.0f, 3)) hotkeys_changed = true;
+	if (ImGui::InputFloat("y", &y, 0.0f, 0.0f, 3)) hotkeys_changed = true;
+	if (ImGui::InputFloat("Range", &range, 0.0f, 0.0f, 0)) hotkeys_changed = true;
 	ImGui::ShowHelp("The hotkey will only trigger within this range.\nUse 0 for no limit.");
-	ImGui::InputInt("Map", (int*)&mapid, 0);
+	if (ImGui::InputInt("Map", (int*)&mapid, 0)) hotkeys_changed = true;
 	ImGui::ShowHelp("The hotkey will only trigger in this map.\nUse 0 for any map.");
-	ImGui::InputText("Name", name, 140);
+	if (ImGui::InputText("Name", name, 140)) hotkeys_changed = true;
 }
 void HotkeyMove::Execute() {
 	if (!isExplorable()) return;
@@ -550,8 +552,8 @@ void HotkeyDialog::Description(char* buf, int bufsz) const {
 	}
 }
 void HotkeyDialog::Draw() {
-	ImGui::InputInt("Dialog ID", (int*)&id);
-	ImGui::InputText("Dialog Name", name, 140);
+	if (ImGui::InputInt("Dialog ID", (int*)&id)) hotkeys_changed = true;
+	if (ImGui::InputText("Dialog Name", name, 140)) hotkeys_changed = true;
 }
 void HotkeyDialog::Execute() {
 	if (isLoading()) return;
@@ -578,7 +580,7 @@ void HotkeyPingBuild::Description(char* buf, int bufsz) const {
 	_snprintf(buf, bufsz, "Ping build '%s'", buildname);
 }
 void HotkeyPingBuild::Draw() {
-	ImGui::Combo("Build", &index, GetText, nullptr, BuildPanel::Instance().BuildCount());
+	if (ImGui::Combo("Build", &index, GetText, nullptr, BuildPanel::Instance().BuildCount())) hotkeys_changed = true;
 }
 void HotkeyPingBuild::Execute() {
 	if (isLoading()) return;
