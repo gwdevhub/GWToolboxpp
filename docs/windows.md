@@ -37,28 +37,28 @@ The main Toolbox window contains the buttons to open each of the other windows (
 
 The close button on the top-right of the main window closes the whole of Toolbox.
 
-## Pcons
+## Pcons ([more info](pcons))
 Automatically pops cons and pcons.
 
-## Hotkeys
+## Hotkeys ([more info](hotkeys))
 Sets up hotkeys for various Toolbox functions.
 
-## Builds
+## Builds ([more info](builds))
 Sends team builds to party chat.
 
-## Travel
+## Travel ([more info](travel))
 Fast travel to any outpost in the game.
 
-## Dialogs
+## Dialogs ([more info](dialogs))
 Sends dialogs to NPCs.
 
-## Info
+## Info ([more info](info))
 Displays various pieces of useful information.
 
-## Materials
+## Materials ([more info](materials))
 Automatically buys materials from the trader.
 
-## Settings
+## Settings ([more info](settings))
 All Toolbox settings can be found here.
 
 ## Notepad
