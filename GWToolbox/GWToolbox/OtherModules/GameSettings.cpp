@@ -132,7 +132,7 @@ void GameSettings::DrawSettingInternal() {
 	}
 	ImGui::ShowHelp("Clicking on template that has a URL as name will open that URL in your browser");
 
-	if (ImGui::Checkbox("Automaticly change urls into build templates.", &auto_transform_url)) {
+	if (ImGui::Checkbox("Automatically change urls into build templates.", &auto_transform_url)) {
 		GW::Chat::SetSendChatCallback(&SendChatCallback);
 	}
 	ImGui::ShowHelp("When you write a message starting with 'http://' or 'https://', it will be converted in template format");
@@ -151,7 +151,7 @@ void GameSettings::DrawSettingInternal() {
 	}
 	ImGui::ShowHelp("Double clicking on the author of a message in chat will target the author");
 
-	if (ImGui::Checkbox("Flash GW in taskbar when receiving a pm", &flash_window_on_pm)) {
+	if (ImGui::Checkbox("Flash GW in taskbar when receiving a PM", &flash_window_on_pm)) {
 		GW::Chat::SetWhisperCallback(&WhisperCallback);
 	}
 	ImGui::ShowHelp("Triggers when receiving a private message while Guild Wars is not in foreground");
