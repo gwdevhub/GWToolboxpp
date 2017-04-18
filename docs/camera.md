@@ -14,6 +14,7 @@ Toolbox has several features that interact with the game's camera, allowing you 
 ## Other features
 * `/cam fog on` or `/cam fog off` to enable or disable fog.
 * `/cam fov [amount]` to change the Field-of-View, or `/cam fov default` to reset it.
-* `/zoom [value]` to change the maximum zoom to the value. Use just `/zoom` to reset to the default value of 750.
+* `/zoom [value]` to change the maximum zoom to the value. Use just `/zoom` to reset to the default value of 750.  
+ All of these reset to default when you zone.
 
 [back](./)
