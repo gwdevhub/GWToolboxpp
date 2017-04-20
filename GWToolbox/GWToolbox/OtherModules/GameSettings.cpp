@@ -71,10 +71,26 @@ void GameSettings::ChatEventCallback(DWORD id, DWORD type, wchar_t* info, void* 
 }
 void GameSettings::SendChatCallback(GW::Chat::Channel chan, wchar_t msg[139]) {
 	if (!Instance().auto_transform_url || !msg) return;
+	size_t len = wcslen(msg);
+	size_t max_len = 139;
+	
+	if (chan == GW::Chat::CHANNEL_WHISPER) {
+		// msg == "Whisper Target Name,msg"
+		size_t i;
+		for (i = 0; i < len; i++)
+			if (msg[i] == ',')
+				break;
+
+		if (i < len) {
+			msg		+= i + 1;
+			len		-= i + 1;
+			max_len -= i + 1;
+		}
+	}
+
 	if (wcsncmp(msg, L"http://", 7) && wcsncmp(msg, L"https://", 8)) return;
 
-	size_t len = wcslen(msg);
-	if (len + 5 < 139) {
+	if (len + 5 < max_len) {
 		for (int i = len; i > 0; i--)
 			msg[i] = msg[i - 1];
 		msg[0] = '[';
