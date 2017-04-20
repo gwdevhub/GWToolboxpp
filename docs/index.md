@@ -23,6 +23,6 @@ GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancemen
 * [Settings](settings) - Adjust Toolbox's settings and access other features.
 * [Theme](theme) - Change the appearance of Toolbox.
 * [Travel](travel) - Directly travel to any previously visited outpost.
-* [Widgets](widgets) - Such as [instance timer](timer), [target health](health), [target distance](distance), [vanquish counter](vanquish), [clock](clock) and [notepad](notepad).
+* [Widgets](widgets) - Such as instance timer, target health, target distance, vanquish counter, and a clock.
 
 # Want a new feature? Add it to the [Issue Tracker](https://github.com/HasKha/GWToolboxpp/issues)!
