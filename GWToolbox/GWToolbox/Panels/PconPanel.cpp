@@ -370,7 +370,7 @@ void PconPanel::DrawSettingInternal() {
 	ImGui::Checkbox("Tick with pcons", &tick_with_pcons);
 	ImGui::ShowHelp("Enabling or disabling pcons will also Tick or Untick in party list");
 	ImGui::Checkbox("Disable when not found", &Pcon::disable_when_not_found);
-	ImGui::ShowHelp("Toolbx will disable a pcon if it is not found in the inventory");
+	ImGui::ShowHelp("Toolbox will disable a pcon if it is not found in the inventory");
 	ImGui::SliderInt("Pcons delay", &Pcon::pcons_delay, 100, 5000, "%.0f milliseconds");
 	ImGui::ShowHelp(
 		"After using a pcon, toolbox will not use it again for this amount of time.\n"
