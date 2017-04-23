@@ -89,7 +89,7 @@ These are the colors of the range circles.
 
 ### Terrain
 * **Map** is the area agents can move within.
-* **Shadow** is the same as the map area, but moved down several pixels, to create a textured appearance.
+* **Shadow** is the same as the map area, but moved down several pixels, to create an illusion of thickness, which makes the map appear more solid.
 
 ### Custom Markers
 Custom markers are lines between 2 points, or circles radiating from one point, drawn on the minimap to to replace points of reference from the textures of the default compass.
