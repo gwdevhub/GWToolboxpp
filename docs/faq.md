@@ -32,6 +32,14 @@ You can use Toolbox to target and interact with lots of agents that wouldn't nor
 * `Ctrl+click` on the [minimap](minimap). You can target agents that aren't visible, so long as you know where they are.
 * Use the [Info](info) window to find the ID of the agent (a Boo! is 7445), and then create a [hotkey](hotkeys) to target it.
 
+**Can I bind the same hotkey to perform multiple actions?** \\
+You sure as heck can! Just create a second hotkey for the second action and assign the same key bind. When you press the key, you will perform all of the assigned actions in the order the hotkeys appear in the list.
+
+You can also bind multiple keys to the same action, again by creating extra hotkeys, this time with the same action and different key binds.
+
+**One of my windows has collapsed! I can only see the title bar. How do I get the window back?** \\
+You probably minimized it by accident. Double-click on the title bar to expand it, or to collapse it again.
+
 **GWToolbox++ just crashed and set my grandma's hair on fire! Help!** \\
 Oops. Please start a bug issue at the repository issue tracker here immediately. If the error was not critical, a message box should have displayed with the title “GWToolbox++ Crash!”. If the message box states that the dump file generated sucessfully, please go to your start menu search bar and type %LOCALAPPDATA%. Press enter, and your appdata folder should open. Navigate to the GWToolboxpp folder and find the most recent .dmp file created. If you are able to find the file, attach this file on your issue as it can help greatly with fixing the issue. Be sure to also include what you were doing in game at the time of the crash, and any other information that might help. If it is an issue we can solve we will get to fixing it when we can.
 
