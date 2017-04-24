@@ -78,10 +78,4 @@ You can also type in a description of the dialog; this is just to help you remem
 ## Ping Build
 Select a teambuild from the list of [Builds](builds). Using the hotkey will send it to party chat.
 
-## FAQs
-**Can I bind the same key to perform multiple actions?** \\
-You sure as heck can! Just create a second hotkey for the second action and assign the same key bind. When you press the key, you will perform all of the assigned actions in the order the hotkeys appear in the list.
-
-You can also bind multiple keys to the same action, again by creating extra hotkeys, this time with the same action and different key binds.
-
 [back](./)
