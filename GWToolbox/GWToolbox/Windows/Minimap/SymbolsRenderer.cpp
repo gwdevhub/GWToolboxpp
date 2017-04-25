@@ -7,6 +7,7 @@
 #include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Context\GameContext.h>
 #include <GWCA\Context\WorldContext.h>
+#include "Minimap.h"
 
 void SymbolsRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	color_quest = Colors::Load(ini, section, "color_quest", 0xFF22EF22);
@@ -125,8 +126,10 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device) {
 		}
 
 		if (qfound) {
+			const float compass_scale = Minimap::Instance().Scale();
+			const float marker_scale = (1.0f / compass_scale);
 			D3DXMatrixRotationZ(&rotate, -tau / 5);
-			D3DXMatrixScaling(&scale, 1.0f + std::sin(tau) * 0.3f, 1.0f + std::sin(tau) * 0.3f, 1.0f);
+			D3DXMatrixScaling(&scale, marker_scale + std::sin(tau) * 0.3f * marker_scale, marker_scale + std::sin(tau) * 0.3f * marker_scale, 1.0f);
 			D3DXMatrixTranslation(&translate, qpos.x, qpos.y, 0);
 			world = rotate * scale * translate;
 			device->SetTransform(D3DTS_WORLD, &world);
@@ -134,13 +137,14 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device) {
 
 			GW::Vector2f mypos = me->pos;
 			GW::Vector2f v = qpos - mypos;
-			const float max_quest_range = GW::Constants::Range::Compass - 250.0f;
+			const float max_quest_range = (GW::Constants::Range::Compass - 250.0f) / compass_scale;
 			const float max_quest_range_sqr = max_quest_range * max_quest_range;
 			if (v.SquaredNorm() > max_quest_range_sqr) {
 				v = v.Normalized() * max_quest_range;
+				
 				float angle = std::atan2(v.y, v.x);
 				D3DXMatrixRotationZ(&rotate, angle - (float)M_PI_2);
-				D3DXMatrixScaling(&scale, 1.0f + std::sin(tau) * 0.3f, 1.0f + std::sin(tau) * 0.3f, 1.0f);
+				D3DXMatrixScaling(&scale, marker_scale + std::sin(tau) * 0.3f * marker_scale, marker_scale + std::sin(tau) * 0.3f * marker_scale, 1.0f);
 				D3DXMatrixTranslation(&translate, me->X + v.x, me->Y + v.y, 0);
 				world = rotate * scale * translate;
 				device->SetTransform(D3DTS_WORLD, &world);

@@ -29,6 +29,8 @@ public:
 
 	const char* Name() const override { return "Minimap"; }
 
+	float Scale() const { return scale; }
+
 	void Initialize() override;
 
 	void Draw(IDirect3DDevice9* device) override;
