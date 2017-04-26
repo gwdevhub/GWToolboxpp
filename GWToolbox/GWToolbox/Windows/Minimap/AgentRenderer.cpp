@@ -100,7 +100,7 @@ void AgentRenderer::DrawSettings() {
 	Colors::DrawSetting("Hostile (<90%%)", &color_hostile_damaged);
 	Colors::DrawSetting("Hostile (dead)", &color_hostile_dead);
 	Colors::DrawSetting("Neutral", &color_neutral);
-	Colors::DrawSetting("Ally (party member)", &color_ally_party);
+	Colors::DrawSetting("Ally (player)", &color_ally_party);
 	Colors::DrawSetting("Ally (NPC)", &color_ally_npc);
 	Colors::DrawSetting("Ally (spirit)", &color_ally_spirit);
 	Colors::DrawSetting("Ally (minion)", &color_ally_minion);
@@ -379,6 +379,7 @@ float AgentRenderer::GetSize(GW::Agent* agent) const {
 		case GW::Constants::ModelID::UW::Slayer:
 
 		case GW::Constants::ModelID::FoW::ShardWolf:
+		case GW::Constants::ModelID::FoW::SeedOfCorruption:
 
 		case GW::Constants::ModelID::SoO::Brigand:
 		case GW::Constants::ModelID::SoO::Fendi:
