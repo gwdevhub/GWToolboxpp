@@ -2,6 +2,8 @@
 
 #include <sstream>
 
+#include <imgui_internal.h>
+
 #include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
@@ -328,6 +330,7 @@ void PartyDamage::ResetDamage() {
 
 void PartyDamage::LoadSettings(CSimpleIni* ini) {
 	ToolboxWidget::LoadSettings(ini);
+	lock_move = ini->GetBoolValue(Name(), "lock_move", true);
 
 	width = (float)ini->GetDoubleValue(Name(), "width", 100.0f);
 	bars_left = ini->GetBoolValue(Name(), "bars_left", true);
@@ -356,6 +359,8 @@ void PartyDamage::LoadSettings(CSimpleIni* ini) {
 
 void PartyDamage::SaveSettings(CSimpleIni* ini) {
 	ToolboxWidget::SaveSettings(ini);
+	ini->SetBoolValue(Name(), "lock_move", lock_move);
+
 	ini->SetDoubleValue(Name(), "width", width);
 	ini->SetBoolValue(Name(), "bars_left", bars_left);
 	ini->SetLongValue(Name(), "row_height", row_height);
@@ -369,6 +374,24 @@ void PartyDamage::SaveSettings(CSimpleIni* ini) {
 		inifile->SetLongValue(IniSection, key.c_str(), item.second, 0, false, true);
 	}
 	inifile->SaveFile(Resources::GetPath(IniFilename).c_str());
+}
+
+void PartyDamage::DrawSettings() {
+	if (ImGui::CollapsingHeader(Name(), ImGuiTreeNodeFlags_AllowOverlapMode)) {
+		ImGui::PushID(Name());
+		ShowVisibleRadio();
+		ImVec2 pos(0, 0);
+		if (ImGuiWindow* window = ImGui::FindWindowByName(Name())) pos = window->Pos;
+		if (ImGui::DragFloat2("Position", (float*)&pos, 1.0f, 0.0f, 0.0f, "%.0f")) {
+			ImGui::SetWindowPos(Name(), pos);
+		}
+		ImGui::ShowHelp("You need to show the widget for this control to work");
+		ImGui::Checkbox("Lock Position", &lock_move);
+		DrawSettingInternal();
+		ImGui::PopID();
+	} else {
+		ShowVisibleRadio();
+	}
 }
 
 void PartyDamage::DrawSettingInternal() {

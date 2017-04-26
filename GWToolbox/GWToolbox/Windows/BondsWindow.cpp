@@ -4,6 +4,8 @@
 #include <string>
 #include <d3dx9tex.h>
 
+#include <imgui_internal.h>
+
 #include <GWCA\Managers\GameThreadMgr.h>
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\AgentMgr.h>
@@ -243,6 +245,8 @@ void BondsWindow::UseBuff(PartyIndex player, BondIndex bond) {
 
 void BondsWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxWidget::LoadSettings(ini);
+	lock_move = ini->GetBoolValue(Name(), "lock_move", true);
+
 	background = Colors::Load(ini, Name(), "background", Colors::ARGB(76, 0, 0, 0));
 	click_to_use = ini->GetBoolValue(Name(), "click_to_use", true);
 	show_allies = ini->GetBoolValue(Name(), "show_allies", true);
@@ -252,11 +256,31 @@ void BondsWindow::LoadSettings(CSimpleIni* ini) {
 
 void BondsWindow::SaveSettings(CSimpleIni* ini) {
 	ToolboxWidget::SaveSettings(ini);
+	ini->SetBoolValue(Name(), "lock_move", lock_move);
+
 	Colors::Save(ini, Name(), "background", background);
 	ini->SetBoolValue(Name(), "click_to_use", click_to_use);
 	ini->SetBoolValue(Name(), "show_allies", show_allies);
 	ini->SetBoolValue(Name(), "flip_bonds", flip_bonds);
 	ini->SetLongValue(Name(), "row_height", row_height);
+}
+
+void BondsWindow::DrawSettings() {
+	if (ImGui::CollapsingHeader(Name(), ImGuiTreeNodeFlags_AllowOverlapMode)) {
+		ImGui::PushID(Name());
+		ShowVisibleRadio();
+		ImVec2 pos(0, 0);
+		if (ImGuiWindow* window = ImGui::FindWindowByName(Name())) pos = window->Pos;
+		if (ImGui::DragFloat2("Position", (float*)&pos, 1.0f, 0.0f, 0.0f, "%.0f")) {
+			ImGui::SetWindowPos(Name(), pos);
+		}
+		ImGui::ShowHelp("You need to show the widget for this control to work");
+		ImGui::Checkbox("Lock Position", &lock_move);
+		DrawSettingInternal();
+		ImGui::PopID();
+	} else {
+		ShowVisibleRadio();
+	}
 }
 
 void BondsWindow::DrawSettingInternal() {
