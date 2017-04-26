@@ -366,6 +366,8 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 		case 0x4651: return pvp_messages; // a hero skill has been updated for pvp
 		case 0x223B: return hoh; // a party won hall of heroes	
 		case 0x23E4: return favor; // 0xF8AA 0x95CD 0x2766 // the world no longer has the favor of the gods
+		case 0x23E5: return player_has_achieved_title;
+		case 0x23E6: return player_has_achieved_title;
 		case 0x2E35: return player_has_achieved_title; // Player has achieved the title...
 		case 0x2E36: return player_has_achieved_title; // Player has achieved the title...
 		case 0x3772: return false; // I'm under the effect of x
