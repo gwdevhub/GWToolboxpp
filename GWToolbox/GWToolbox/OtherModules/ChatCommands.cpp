@@ -292,7 +292,11 @@ std::vector<ToolboxUIElement*> ChatCommands::MatchingWindows(std::vector<std::ws
 bool ChatCommands::CmdShow(std::wstring& cmd, std::vector<std::wstring>& args) {
 	auto windows = MatchingWindows(args);
 	if (windows.empty()) {
-		Log::Error("Cannot find window '%ls'", args.empty() ? L"" : args[0].c_str());
+		if (args.size() == 1 && args[0] == L"settings") {
+			SettingsPanel::Instance().visible = true;
+		} else {
+			Log::Error("Cannot find window '%ls'", args.empty() ? L"" : args[0].c_str());
+		}
 	} else {
 		for (ToolboxUIElement* window : windows) {
 			window->visible = true;
