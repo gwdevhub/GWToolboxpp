@@ -7,7 +7,10 @@ The Pcons window can maintain your choice of cons and pcons, provided you have t
 
 Each pcon will pop whenever you are alive and do not have the pcon's effect. Note that whilst most pcons' effects expire on death, and will re-pop immediately on resurrection, some (such as war supplies and alcohol) persist and do not need to be popped again.
 
-City speedboosts, represented by the Sugary Blue Drink icon, 
+## City Speedboost
+City speedboosts, represented by the Sugary Blue Drink icon, will pop as soon as you move in an outpost.
+
+Only the ones in your inventory (not your storage) will be used.
 
 ## Consets
 Your Essence of Celerity, Grail of Might, and Armor of Salvation will only pop when the entire party has loaded into the area.
