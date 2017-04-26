@@ -34,12 +34,12 @@ public:
 	bool tick_is_toggle = false;
 	bool select_with_chat_doubleclick = false;
 	bool flash_window_on_pm = false;
+	bool flash_window_on_party_invite = false;
+	bool flash_window_on_zoning = false;
 
 	void ApplyBorderless(bool value);
+
 private:
 	std::vector<GW::MemoryPatcher*> patches;
-
-	static void ChatEventCallback(DWORD id, DWORD type, wchar_t* info, void* unk);
-	static void SendChatCallback(GW::Chat::Channel chan, wchar_t msg[139]);
-	static void WhisperCallback(const wchar_t from[20], const wchar_t msg[140]);
+	
 };

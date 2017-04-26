@@ -3,11 +3,85 @@
 #include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\PartyMgr.h>
 #include <GWCA\Managers\AgentMgr.h>
+#include <GWCA\Managers\StoCMgr.h>
 
 #include <logger.h>
 #include "GuiUtils.h"
 #include <GWToolbox.h>
 #include <Timer.h>
+
+namespace {
+	void ChatEventCallback(DWORD id, DWORD type, wchar_t* info, void* unk) {
+		if (type == 0x29 && GameSettings::Instance().select_with_chat_doubleclick) {
+			static wchar_t last_name[64] = L"";
+			static clock_t timer = TIMER_INIT();
+			if (TIMER_DIFF(timer) < 500 && wcscmp(last_name, info) == 0) {
+				GW::PlayerArray players = GW::Agents::GetPlayerArray();
+				if (players.valid()) {
+					for (unsigned i = 0; i < players.size(); ++i) {
+						GW::Player& player = players[i];
+						wchar_t* name = player.Name;
+						if (player.AgentID > 0
+							&& name != nullptr
+							&& wcscmp(info, name) == 0) {
+							GW::Agents::ChangeTarget(players[i].AgentID);
+						}
+					}
+				}
+			} else {
+				timer = TIMER_INIT();
+				wcscpy_s(last_name, info);
+			}
+		}
+	}
+
+	void SendChatCallback(GW::Chat::Channel chan, wchar_t msg[139]) {
+		if (!GameSettings::Instance().auto_transform_url || !msg) return;
+		size_t len = wcslen(msg);
+		size_t max_len = 139;
+
+		if (chan == GW::Chat::CHANNEL_WHISPER) {
+			// msg == "Whisper Target Name,msg"
+			size_t i;
+			for (i = 0; i < len; i++)
+				if (msg[i] == ',')
+					break;
+
+			if (i < len) {
+				msg += i + 1;
+				len -= i + 1;
+				max_len -= i + 1;
+			}
+		}
+
+		if (wcsncmp(msg, L"http://", 7) && wcsncmp(msg, L"https://", 8)) return;
+
+		if (len + 5 < max_len) {
+			for (int i = len; i > 0; i--)
+				msg[i] = msg[i - 1];
+			msg[0] = '[';
+			msg[len + 1] = ';';
+			msg[len + 2] = 'x';
+			msg[len + 3] = 'x';
+			msg[len + 4] = ']';
+			msg[len + 5] = 0;
+		}
+	}
+
+	void FlashWindow() {
+		FLASHWINFO flashInfo = { 0 };
+		flashInfo.cbSize = sizeof(FLASHWINFO);
+		flashInfo.hwnd = GW::MemoryMgr::GetGWWindowHandle();
+		flashInfo.dwFlags = FLASHW_TIMER | FLASHW_TRAY | FLASHW_TIMERNOFG;
+		flashInfo.uCount = 0;
+		flashInfo.dwTimeout = 0;
+		FlashWindowEx(&flashInfo);
+	}
+
+	void WhisperCallback(const wchar_t from[20], const wchar_t msg[140]) {
+		if (GameSettings::Instance().flash_window_on_pm) FlashWindow();
+	}
+}
 
 void GameSettings::Initialize() {
 	ToolboxModule::Initialize();
@@ -40,77 +114,23 @@ void GameSettings::Initialize() {
 		}
 		return true;
 	});
+
+	GW::StoC::AddCallback<GW::Packet::StoC::P444>(
+		[](GW::Packet::StoC::P444*) -> bool {
+		printf("Received P444\n");
+		if (GameSettings::Instance().flash_window_on_party_invite) FlashWindow();
+		return false;
+	});
+
+	GW::StoC::AddCallback<GW::Packet::StoC::P391_InstanceLoadFile>(
+		[](GW::Packet::StoC::P391_InstanceLoadFile*) -> bool {
+		if (GameSettings::Instance().flash_window_on_zoning) FlashWindow();
+		return false;
+	});
 }
 
 void GameSettings::Terminate() {
 	ToolboxModule::Terminate();
-}
-
-void GameSettings::ChatEventCallback(DWORD id, DWORD type, wchar_t* info, void* unk) {
-	if (type == 0x29 && Instance().select_with_chat_doubleclick) {
-		static wchar_t last_name[64] = L"";
-		static clock_t timer = TIMER_INIT();
-		if (TIMER_DIFF(timer) < 500 && wcscmp(last_name, info) == 0) {
-			GW::PlayerArray players = GW::Agents::GetPlayerArray();
-			if (players.valid()) {
-				for (unsigned i = 0; i < players.size(); ++i) {
-					GW::Player& player = players[i];
-					wchar_t* name = player.Name;
-					if (player.AgentID > 0
-						&& name != nullptr
-						&& wcscmp(info, name) == 0) {
-						GW::Agents::ChangeTarget(players[i].AgentID);
-					}
-				}
-			}
-		} else {
-			timer = TIMER_INIT();
-			wcscpy_s(last_name, info);
-		}
-	}
-}
-void GameSettings::SendChatCallback(GW::Chat::Channel chan, wchar_t msg[139]) {
-	if (!Instance().auto_transform_url || !msg) return;
-	size_t len = wcslen(msg);
-	size_t max_len = 139;
-	
-	if (chan == GW::Chat::CHANNEL_WHISPER) {
-		// msg == "Whisper Target Name,msg"
-		size_t i;
-		for (i = 0; i < len; i++)
-			if (msg[i] == ',')
-				break;
-
-		if (i < len) {
-			msg		+= i + 1;
-			len		-= i + 1;
-			max_len -= i + 1;
-		}
-	}
-
-	if (wcsncmp(msg, L"http://", 7) && wcsncmp(msg, L"https://", 8)) return;
-
-	if (len + 5 < max_len) {
-		for (int i = len; i > 0; i--)
-			msg[i] = msg[i - 1];
-		msg[0] = '[';
-		msg[len + 1] = ';';
-		msg[len + 2] = 'x';
-		msg[len + 3] = 'x';
-		msg[len + 4] = ']';
-		msg[len + 5] = 0;
-	}
-}
-void GameSettings::WhisperCallback(const wchar_t from[20], const wchar_t msg[140]) {
-	if (!Instance().flash_window_on_pm) return;
-
-	FLASHWINFO flashInfo = { 0 };
-	flashInfo.cbSize = sizeof(FLASHWINFO);
-	flashInfo.hwnd = GW::MemoryMgr::GetGWWindowHandle();
-	flashInfo.dwFlags = FLASHW_TIMER | FLASHW_TRAY | FLASHW_TIMERNOFG;
-	flashInfo.uCount = 0;
-	flashInfo.dwTimeout = 0;
-	FlashWindowEx(&flashInfo);
 }
 
 void GameSettings::LoadSettings(CSimpleIni* ini) {
@@ -121,6 +141,8 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	tick_is_toggle = ini->GetBoolValue(Name(), "tick_is_toggle", true);
 	select_with_chat_doubleclick = ini->GetBoolValue(Name(), "select_with_chat_doubleclick", true);
 	flash_window_on_pm = ini->GetBoolValue(Name(), "flash_window_on_pm", true);
+	flash_window_on_party_invite = ini->GetBoolValue(Name(), "flash_window_on_party_invite", true);
+	flash_window_on_zoning = ini->GetBoolValue(Name(), "flash_window_on_zoning", true);
 
 	ApplyBorderless(borderless_window);
 	if (open_template_links) GW::Chat::SetOpenLinks(open_template_links);
@@ -138,6 +160,8 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), "tick_is_toggle", tick_is_toggle);
 	ini->SetBoolValue(Name(), "select_with_chat_doubleclick", select_with_chat_doubleclick);
 	ini->SetBoolValue(Name(), "flash_window_on_pm", flash_window_on_pm);
+	ini->SetBoolValue(Name(), "flash_window_on_party_invite", flash_window_on_party_invite);
+	ini->SetBoolValue(Name(), "flash_window_on_zoning", flash_window_on_zoning);
 }
 
 void GameSettings::DrawSettingInternal() {
@@ -167,10 +191,13 @@ void GameSettings::DrawSettingInternal() {
 	}
 	ImGui::ShowHelp("Double clicking on the author of a message in chat will target the author");
 
-	if (ImGui::Checkbox("Flash GW in taskbar when receiving a PM", &flash_window_on_pm)) {
+	ImGui::Text("Flash GW taskbar icon when:");
+	ImGui::ShowHelp("Only triggers when Guild Wars is not the active window");
+	if (ImGui::Checkbox("receiving a private message", &flash_window_on_pm)) {
 		GW::Chat::SetWhisperCallback(&WhisperCallback);
 	}
-	ImGui::ShowHelp("Triggers when receiving a private message while Guild Wars is not in foreground");
+	ImGui::Checkbox("receiving a party invite", &flash_window_on_party_invite);
+	ImGui::Checkbox("Zoning in a new map", &flash_window_on_zoning);
 }
 
 void GameSettings::DrawBorderlessSetting() {
