@@ -17,4 +17,7 @@ If you leave a template code blank, it will simply appear as a message, instead 
 
 "Up" and "Down" change the teambuild's position in the list of teambuilds, and "Delete" will delete the entire teambuild from the list.
 
+## Known Bug ##
+Sometimes new builds will not save correctly if you close Guild Wars without first closing Toolbox. To prevent this from happening, either manually save your Toolbox [settings](settings), or close Toolbox before Guild Wars.
+
 [back](./)
