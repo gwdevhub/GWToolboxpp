@@ -38,8 +38,17 @@ You sure as heck can! Just create a second hotkey for the second action and assi
 
 You can also bind multiple keys to the same action, again by creating extra hotkeys, this time with the same action and different key binds.
 
+**The icons on the [Pcons](pcons), [Materials](materials), and [Toolbox](windows#toolbox_window) window aren't showing up. How do I get them back?** \\
+This is a bug that causes the Toolbox launcher to not download the icons. Delete your `GWToolbox.exe` and replace it with [this one](https://github.com/HasKha/GWToolboxpp/releases/download/2.0-launcher/GWToolbox.exe).
+
 **One of my windows has collapsed! I can only see the title bar. How do I get the window back?** \\
 You probably minimized it by accident. Double-click on the title bar to expand it, or to collapse it again.
+
+**Why isn't Toolbox remembering my settings when I restart?** \\
+Toolbox settings are saved to the files in the [settings folder](settings#storage) when you close Toolbox or click "Save Now" at the bottom of the [Settings window](settings). Settings are loaded from those files when you launch Toolbox or click "Load Now".
+* Sometimes, closing Guild Wars without first closing Toolbox will result in settings not saving. To prevent this from happening, either use the "Save Now" button, or close Toolbox before Guild Wars.
+* If you adjust settings and then load another copy of Toolbox before saving, it will load the old settings. If you then close the first copy of Toolbox, thus saving the new settings, the second copy will still have the old settings loaded. When you close that copy, the old settings will be saved, overwriting the new ones.  
+ Prevent this by loading the new settings onto the second copy of Toolbox before you close.
 
 **My Toolbox is gone! How do I get it back?** \\
 There are a few different things that could have happened. Here's how to fix them:
