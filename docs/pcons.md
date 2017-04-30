@@ -12,6 +12,8 @@ City speedboosts, represented by the Sugary Blue Drink icon, will pop as soon as
 
 Only the ones in your inventory (not your storage) will be used.
 
+**BUG**: If you don't currently have any effects on you, the city speedboost will not auto-pop. To work around this, always display a title that gives an effect (Lightbringer or one of the Eye of the North reputation titles).
+
 ## Consets
 Your Essence of Celerity, Grail of Might, and Armor of Salvation will only pop when the entire party has loaded into the area.
 
