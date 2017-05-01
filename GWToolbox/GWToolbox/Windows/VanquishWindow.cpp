@@ -7,11 +7,13 @@
 
 void VanquishWindow::Draw(IDirect3DDevice9 *pDevice) {
 	if (!visible) return;
-	if ((GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) ||
-		!GW::PartyMgr::GetIsPartyInHardMode()) return;
 
-	DWORD killed = GW::Map::GetFoesKilled();
 	DWORD tokill = GW::Map::GetFoesToKill();
+	DWORD killed = GW::Map::GetFoesKilled();
+
+	if ((GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) ||
+		!GW::PartyMgr::GetIsPartyInHardMode() ||
+		tokill <= 0) return;
 
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(0, 0, 0, 0));
 	ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiSetCond_FirstUseEver);
