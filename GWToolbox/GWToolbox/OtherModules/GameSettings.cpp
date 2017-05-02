@@ -191,12 +191,12 @@ void GameSettings::DrawSettingInternal() {
 	}
 	ImGui::ShowHelp("Double clicking on the author of a message in chat will target the author");
 
-	ImGui::Text("Flash GW taskbar icon when:");
+	ImGui::Text("Flash Guild Wars taskbar icon when:");
 	ImGui::ShowHelp("Only triggers when Guild Wars is not the active window");
-	if (ImGui::Checkbox("receiving a private message", &flash_window_on_pm)) {
+	if (ImGui::Checkbox("Receiving a private message", &flash_window_on_pm)) {
 		GW::Chat::SetWhisperCallback(&WhisperCallback);
 	}
-	ImGui::Checkbox("receiving a party invite", &flash_window_on_party_invite);
+	ImGui::Checkbox("Receiving a party invite", &flash_window_on_party_invite);
 	ImGui::Checkbox("Zoning in a new map", &flash_window_on_zoning);
 }
 
