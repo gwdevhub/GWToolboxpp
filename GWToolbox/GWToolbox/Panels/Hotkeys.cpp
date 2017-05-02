@@ -271,7 +271,13 @@ void HotkeyUseItem::Draw() {
 void HotkeyUseItem::Execute() {
 	if (isLoading()) return;
 	if (item_id == 0) return;
-	if (!GW::Items::UseItemByModelId(item_id)) {
+
+	bool used = GW::Items::UseItemByModelId(item_id, 1, 4);
+	if (!used && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+		used = GW::Items::UseItemByModelId(item_id, 8, 16);
+	}
+
+	if (!used) {
 		if (name[0] == '\0') {
 			Log::Error("Item #%d not found!", item_id);
 		} else {
