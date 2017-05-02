@@ -16,4 +16,6 @@ public:
 	const char* Name() const override { return "Vanquish"; }
 
 	void Draw(IDirect3DDevice9* pDevice) override;
+
+	void DrawSettingInternal() override;
 };
