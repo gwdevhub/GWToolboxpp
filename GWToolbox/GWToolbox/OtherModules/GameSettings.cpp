@@ -4,6 +4,7 @@
 #include <GWCA\Managers\PartyMgr.h>
 #include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
+#include <GWCA\Managers\FriendListMgr.h>
 
 #include <logger.h>
 #include "GuiUtils.h"
@@ -117,7 +118,6 @@ void GameSettings::Initialize() {
 
 	GW::StoC::AddCallback<GW::Packet::StoC::P444>(
 		[](GW::Packet::StoC::P444*) -> bool {
-		printf("Received P444\n");
 		if (GameSettings::Instance().flash_window_on_party_invite) FlashWindow();
 		return false;
 	});
@@ -127,10 +127,6 @@ void GameSettings::Initialize() {
 		if (GameSettings::Instance().flash_window_on_zoning) FlashWindow();
 		return false;
 	});
-}
-
-void GameSettings::Terminate() {
-	ToolboxModule::Terminate();
 }
 
 void GameSettings::LoadSettings(CSimpleIni* ini) {
@@ -143,6 +139,9 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	flash_window_on_pm = ini->GetBoolValue(Name(), "flash_window_on_pm", true);
 	flash_window_on_party_invite = ini->GetBoolValue(Name(), "flash_window_on_party_invite", true);
 	flash_window_on_zoning = ini->GetBoolValue(Name(), "flash_window_on_zoning", true);
+	auto_set_away = ini->GetBoolValue(Name(), "auto_set_away", false);
+	auto_set_away_delay = ini->GetLongValue(Name(), "auto_set_away_delay", 10);
+	auto_set_online = ini->GetBoolValue(Name(), "auto_set_online", false);
 
 	ApplyBorderless(borderless_window);
 	if (open_template_links) GW::Chat::SetOpenLinks(open_template_links);
@@ -162,6 +161,9 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), "flash_window_on_pm", flash_window_on_pm);
 	ini->SetBoolValue(Name(), "flash_window_on_party_invite", flash_window_on_party_invite);
 	ini->SetBoolValue(Name(), "flash_window_on_zoning", flash_window_on_zoning);
+	ini->SetBoolValue(Name(), "auto_set_away", auto_set_away);
+	ini->SetLongValue(Name(), "auto_set_away_delay", auto_set_away_delay);
+	ini->SetBoolValue(Name(), "auto_set_online", auto_set_online);
 }
 
 void GameSettings::DrawSettingInternal() {
@@ -192,12 +194,26 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::ShowHelp("Double clicking on the author of a message in chat will target the author");
 
 	ImGui::Text("Flash Guild Wars taskbar icon when:");
+	ImGui::Indent();
 	ImGui::ShowHelp("Only triggers when Guild Wars is not the active window");
 	if (ImGui::Checkbox("Receiving a private message", &flash_window_on_pm)) {
 		GW::Chat::SetWhisperCallback(&WhisperCallback);
 	}
 	ImGui::Checkbox("Receiving a party invite", &flash_window_on_party_invite);
 	ImGui::Checkbox("Zoning in a new map", &flash_window_on_zoning);
+	ImGui::Unindent();
+
+	ImGui::Checkbox("Automatically set 'Away' after ", &auto_set_away);
+	ImGui::SameLine();
+	ImGui::PushItemWidth(50);
+	ImGui::InputInt("##awaydelay", &auto_set_away_delay, 0);
+	ImGui::PopItemWidth();
+	ImGui::SameLine();
+	ImGui::Text("minutes of inactivity");
+	ImGui::ShowHelp("Only if you were 'Online'");
+
+	ImGui::Checkbox("Automatically set 'Online' after an input to Guild Wars", &auto_set_online);
+	ImGui::ShowHelp("Only if you were 'Away'");
 }
 
 void GameSettings::DrawBorderlessSetting() {
@@ -240,4 +256,27 @@ void GameSettings::ApplyBorderless(bool value) {
 			MoveWindow(GW::MemoryMgr::GetGWWindowHandle(), size.top, size.left, size.right, size.bottom, TRUE);
 		}
 	}
+}
+
+void GameSettings::Update() {
+	if (auto_set_away 
+		&& TIMER_DIFF(activity_timer) > auto_set_away_delay * 60000
+		&& GW::FriendListMgr::GetMyStatus() == (DWORD)GW::Constants::OnlineStatus::ONLINE) {
+		GW::FriendListMgr::SetFriendListStatus(GW::Constants::OnlineStatus::AWAY);
+		activity_timer = TIMER_INIT(); // refresh the timer to avoid spamming in case the set status call fails
+	}
+}
+
+bool GameSettings::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
+
+	activity_timer = TIMER_INIT();
+	static clock_t set_online_timer = TIMER_INIT();
+	if (auto_set_online
+		&& TIMER_DIFF(set_online_timer) > 5000 // to avoid spamming in case of failure
+		&& GW::FriendListMgr::GetMyStatus() == (DWORD)GW::Constants::OnlineStatus::AWAY) {
+		GW::FriendListMgr::SetFriendListStatus(GW::Constants::OnlineStatus::ONLINE);
+		set_online_timer = TIMER_INIT();
+	}
+
+	return false;
 }

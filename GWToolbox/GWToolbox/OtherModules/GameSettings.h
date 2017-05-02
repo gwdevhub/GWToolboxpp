@@ -6,6 +6,7 @@
 #include <GWCA\Managers\ChatMgr.h>
 
 #include "ToolboxModule.h"
+#include <Timer.h>
 
 class GameSettings : public ToolboxModule {
 	GameSettings() {};
@@ -19,10 +20,13 @@ public:
 	const char* Name() const override { return "Game Settings"; }
 
 	void Initialize() override;
-	void Terminate() override;
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
+
+	void Update() override;
+	bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam);
+
 
 	void DrawBorderlessSetting();
 
@@ -33,9 +37,15 @@ public:
 	bool auto_transform_url;
 	bool tick_is_toggle = false;
 	bool select_with_chat_doubleclick = false;
+
 	bool flash_window_on_pm = false;
 	bool flash_window_on_party_invite = false;
 	bool flash_window_on_zoning = false;
+
+	bool auto_set_away = false;
+	int auto_set_away_delay = 10;
+	bool auto_set_online = false;
+	clock_t activity_timer = 0;
 
 	void ApplyBorderless(bool value);
 

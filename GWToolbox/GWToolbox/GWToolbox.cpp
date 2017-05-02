@@ -37,8 +37,6 @@
 
 #include <Windows\Minimap\Minimap.h>
 
-#include "Panels\HotkeyPanel.h"
-
 #include "GuiUtils.h"
 
 namespace {
@@ -180,7 +178,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 	switch (Message) {
 	// Send button up mouse events to both gw and imgui, to avoid gw being stuck on mouse-down
 	case WM_LBUTTONUP:
-		Minimap::Instance().WndProc(Message, wParam, lParam); 
+		for (ToolboxModule* m : tb.GetModules()) {
+			m->WndProc(Message, wParam, lParam);
+		}
 		break;
 		
 	// Send other mouse events to imgui first and consume them if used
@@ -190,7 +190,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 	case WM_MOUSEWHEEL:
 		if (!right_mouse_down) {
 			if (io.WantCaptureMouse) return true;
-			if (Minimap::Instance().WndProc(Message, wParam, lParam)) return true;
+			bool captured = false;
+			for (ToolboxModule* m : tb.GetModules()) {
+				if (m->WndProc(Message, wParam, lParam)) captured = true;
+			}
+			if (captured) return true;
 		}
 		break;
 
@@ -217,8 +221,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 			return true;
 		}
 
-		// send input to toolbox to trigger hotkeys
-		HotkeyPanel::Instance().WndProc(Message, wParam, lParam);
+		// send to toolbox modules
+		for (ToolboxModule* m : tb.GetModules()) {
+			m->WndProc(Message, wParam, lParam);
+		}
 
 		// block alt-enter if in borderless to avoid graphic glitches (no reason to go fullscreen anyway)
 		if (GameSettings::Instance().borderless_window
