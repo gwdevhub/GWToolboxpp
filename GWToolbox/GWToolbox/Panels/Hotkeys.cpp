@@ -222,10 +222,11 @@ void HotkeySendChat::Draw() {
 		"/ Commands",
 		"! All",
 		"@ Guild",
-		"# Trade",
+		"# Group",
+		"$ Trade",
 		"% Alliance"
 	};
-	if (ImGui::Combo("Channel", &index, channels, 5)) {
+	if (ImGui::Combo("Channel", &index, channels, 6)) {
 		switch (index) {
 		case 0: channel = '/'; break;
 		case 1: channel = '!'; break;
