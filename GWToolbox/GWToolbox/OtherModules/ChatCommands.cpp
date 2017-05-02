@@ -183,6 +183,15 @@ void ChatCommands::Update() {
 	}
 }
 
+namespace {
+	std::wstring WStringToLower(std::wstring str) {
+		std::wstring result = str;
+		for (size_t i = 0; i < result.size(); i++)
+			 result[i] = ::towlower(result[i]);
+		return result;
+	}
+}
+
 std::wstring ChatCommands::GetLowerCaseArg(std::vector<std::wstring> args, size_t index) {
 	if (index >= args.size()) return L"";
 	std::wstring arg = args[index];
@@ -325,7 +334,7 @@ bool ChatCommands::CmdTP(std::wstring& cmd, std::vector<std::wstring>& args) {
 
 		GW::Constants::District district = GW::Constants::District::Current;
 		int district_number = 0;
-		if (args.size() >= 2) {
+		if (args.size() >= 2 && town != L"gh") {
 			std::wstring dis = GetLowerCaseArg(args, 1);
 			if (dis == L"ae") {
 				district = GW::Constants::District::American;
@@ -397,6 +406,19 @@ bool ChatCommands::CmdTP(std::wstring& cmd, std::vector<std::wstring>& args) {
 			GW::Map::Travel(GW::Constants::MapID::Sifhalla_outpost, district, district_number);
 		} else if (town == L"doom" || town == L"doomlore") {
 			GW::Map::Travel(GW::Constants::MapID::Doomlore_Shrine_outpost, district, district_number);
+		} else if (town == L"gh") {
+			if (args.size() < 2) {
+				GW::GuildMgr::TravelGH();
+			} else {
+				std::wstring tag = GetLowerCaseArg(args, 1);
+				GW::GuildArray guilds = GW::GuildMgr::GetGuildArray();
+				for (auto guild : guilds) {
+					if (guild && WStringToLower(guild->tag()) == tag) {
+						GW::GuildMgr::TravelGH(guild->key);
+						break;
+					}
+				}
+			}
 		} else {
 			int mapid = wcstol(town.c_str(), nullptr, 0);
 			if (mapid) {
@@ -579,3 +601,5 @@ bool ChatCommands::CmdUseSkill(std::wstring& cmd, std::vector<std::wstring>& arg
 	}
 	return true;
 }
+
+
