@@ -222,7 +222,7 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::PushItemWidth(-80.0f);
 			ImGui::InputText("Map ID", id_buf, 32, ImGuiInputTextFlags_ReadOnly);
 			ImGui::ShowHelp("Map ID is unique for each area");
-			ImGui::InputText("Map Type", type, 11);
+			ImGui::InputText("Map Type", type, 11, ImGuiInputTextFlags_ReadOnly);
 			ImGui::InputText("Map file", file_buf, 32, ImGuiInputTextFlags_ReadOnly);
 			ImGui::ShowHelp("Map file is unique for each pathing map (e.g. used by minimap).\nMany different maps use the same map file");
 			ImGui::PopItemWidth();
