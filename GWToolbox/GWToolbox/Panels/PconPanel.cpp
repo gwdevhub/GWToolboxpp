@@ -205,7 +205,8 @@ void PconPanel::Initialize() {
 	});
 
 	GW::Chat::RegisterCommand(L"pcons",
-		[this](std::wstring& cmd, std::vector<std::wstring>& args) -> bool {
+		[this](std::wstring& cmd, std::wstring& a) -> bool {
+		std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
 		if (args.empty()) {
 			ToggleEnable();
 		} else { // we are ignoring parameters after the first

@@ -100,7 +100,8 @@ void GameSettings::Initialize() {
 	patches.push_back(new GW::MemoryPatcher((void*)0x0067D65E, a, 10));
 
 	GW::Chat::RegisterCommand(L"borderless", 
-		[&](std::wstring& cmd, std::vector<std::wstring>& args) -> bool {
+		[&](std::wstring& cmd, std::wstring& a) -> bool {
+		std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
 		if (args.empty()) {
 			ApplyBorderless(!borderless_window);
 		} else {
