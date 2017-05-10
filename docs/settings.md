@@ -21,7 +21,13 @@ These are several quality-of-life features that can simply be toggled on or off:
  A link is any message that starts with `https://` or `http://`.<br /><br />  
 * **Tick is a toggle** makes the "Ready" check on the party window immediately tick/untick when you click on it, instead of offering a drop-down menu.<br /><br />
 * **Target with double-click on message author** targets a player when you double-click their name in the chat.<br /><br />
-* **Flash GW in taskbar when receiving a PM** causes the Guild Wars icon in the taskbar to flash when you have received a whisper while Guild Wars is not in focus.
+* **Flash Guild Wars taskbar icon when:** causes the Guild Wars icon in the taskbar to flash when...
+    * **Receiving a private message** - you receive a whisper
+    * **Receiving a party invite** - you receive a party invite, (BUG: this also happens when your party leader invites someone else or someone accepts an invite to your party)
+    * **Zoning in a new map** - when you switch to another map
+<br /><br />
+* **Automatically set "Away" after ___ minutes of inactivity** sets your status to Away after ___ minutes of no input (including moving the mouse) to Guild Wars. This will only happen if you were set to Online.
+* **Automatically set "Online" after an input to Guild Wars** immediately sets your status to Online after any input (including moving the mouse) to Guild Wars. This will only happen if you were set to Away.
 
 ## Toolbox Settings
 These options change some of the ways Toolbox function:
