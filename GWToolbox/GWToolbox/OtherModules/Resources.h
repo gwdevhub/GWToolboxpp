@@ -45,7 +45,7 @@ public:
 		std::function<void(bool)> callback);
 
 	// download to file, blocking
-	bool Download(std::string path_to_file, std::string url) const;
+	bool Download(std::string path_to_file, std::string url);
 	// download to file, async, calls callback on completion
 	void Download(std::string path_to_file,	std::string url, 
 		std::function<void(bool)> callback);
