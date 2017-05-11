@@ -27,7 +27,8 @@ These are several quality-of-life features that can simply be toggled on or off:
     * **Zoning in a new map** - when you switch to another map
 <br /><br />
 * **Automatically set "Away" after ___ minutes of inactivity** sets your status to Away after ___ minutes of no input (including moving the mouse) to Guild Wars. This will only happen if you were set to Online.
-* **Automatically set "Online" after an input to Guild Wars** immediately sets your status to Online after any input (including moving the mouse) to Guild Wars. This will only happen if you were set to Away.
+* **Automatically set "Online" after an input to Guild Wars** immediately sets your status to Online after any input (including moving the mouse) to Guild Wars. This will only happen if you were set to Away.  
+Note that you will not see either of these status changes on your own friend list, but your status will have changed, and other players will see this.
 
 ## Toolbox Settings
 These options change some of the ways Toolbox function:
