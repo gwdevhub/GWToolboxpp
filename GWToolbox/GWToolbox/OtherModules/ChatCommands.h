@@ -40,7 +40,8 @@ private:
 	bool IsTyping() { return (*(DWORD*)0xA377C8) != 0; } 
 	
 	static std::wstring GetLowerCaseArg(std::vector<std::wstring>, size_t index);
-	static std::wstring ChatCommands::WStrToLower(std::wstring str);
+	static std::wstring WStrToLower(std::wstring str);
+	static bool ReadTemplateFile(std::wstring path, char *buff, size_t buffSize);
 
 	static bool CmdAge2(std::wstring& cmd, std::wstring& args);
 	static bool CmdDialog(std::wstring& cmd, std::wstring& args);

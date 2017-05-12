@@ -91,20 +91,6 @@ void ChatCommands::Initialize() {
 	GW::Chat::RegisterCommand(L"skilluse", ChatCommands::CmdUseSkill);
 	GW::Chat::RegisterCommand(L"scwiki", ChatCommands::CmdSCWiki);
 	GW::Chat::RegisterCommand(L"load", ChatCommands::CmdLoad);
-
-	/*
-	GW::Chat::RegisterCommand(L"load", [](std::wstring& cmd, std::wstring& a) -> bool {
-		int (__fastcall *GetPersonalDir)(size_t size, wchar_t *dir) = 0;
-		*(DWORD*)&GetPersonalDir = 0x005AAB60;
-
-		wchar_t dir[260] = L"";
-		GetPersonalDir(260, dir);
-
-		Log::Info("%S", dir);
-
-		return true;
-	});
-	*/
 }
 
 bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
@@ -180,19 +166,33 @@ void ChatCommands::Update() {
 	}
 }
 
-std::wstring ChatCommands::WStrToLower(std::wstring str) {
-	std::wstring result = str;
-	size_t size = result.size();
-	for (size_t i = 0; i < size; i++)
-		 result[i] = ::towlower(result[i]);
-	return result;
-}
-
 std::wstring ChatCommands::GetLowerCaseArg(std::vector<std::wstring> args, size_t index) {
 	if (index >= args.size()) return L"";
 	std::wstring arg = args[index];
 	std::transform(arg.begin(), arg.end(), arg.begin(), ::tolower);
 	return arg;
+}
+
+std::wstring ChatCommands::WStrToLower(std::wstring str) {
+	std::wstring result = str;
+	size_t size = result.size();
+	for (size_t i = 0; i < size; i++)
+		result[i] = ::towlower(result[i]);
+	return result;
+}
+
+bool ChatCommands::ReadTemplateFile(std::wstring path, char *buff, size_t buffSize) {
+	HANDLE fileHandle = CreateFileW(path.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (fileHandle == INVALID_HANDLE_VALUE) return false;
+	DWORD fileSize = GetFileSize(fileHandle, NULL);
+	if (fileSize > buffSize - 1) {
+		CloseHandle(fileHandle);
+		return false;
+	}
+	ReadFile(fileHandle, buff, fileSize, NULL, NULL);
+	buff[fileSize] = 0;
+	CloseHandle(fileHandle);
+	return true;
 }
 
 bool ChatCommands::CmdAge2(std::wstring& cmd, std::wstring& a) {
@@ -628,5 +628,19 @@ bool ChatCommands::CmdSCWiki(std::wstring& cmd, std::wstring& a) {
 }
 
 bool ChatCommands::CmdLoad(std::wstring& cmd, std::wstring& args) {
-	return false;
+	// We will & should move that to GWCA.
+	static int(__fastcall *GetPersonalDir)(size_t size, wchar_t *dir) = 0;
+	if (!GetPersonalDir) *(DWORD*)&GetPersonalDir = 0x005AAB60;
+	if (args == L"") return false;
+
+	wchar_t dir[512];
+	GetPersonalDir(512, dir);
+	wcscat_s(dir, L"/GUILD WARS/Templates/Skills/");
+	wcscat_s(dir, args.c_str());
+	wcscat_s(dir, L".txt");
+
+	char temp[64];
+	ReadTemplateFile(dir, temp, 64);
+	Log::Info("Template Code: %s", temp);
+	return true;
 }
