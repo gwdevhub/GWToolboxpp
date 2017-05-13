@@ -631,7 +631,10 @@ bool ChatCommands::CmdLoad(std::wstring& cmd, std::wstring& args) {
 	// We will & should move that to GWCA.
 	static int(__fastcall *GetPersonalDir)(size_t size, wchar_t *dir) = 0;
 	if (!GetPersonalDir) *(DWORD*)&GetPersonalDir = 0x005AAB60;
-	if (args == L"") return false;
+	if (args == L"") {
+		// if the command has no args we might want to open the skills templates "folder" in gw.
+		return false;
+	}
 
 	wchar_t dir[512];
 	GetPersonalDir(512, dir);
@@ -640,7 +643,15 @@ bool ChatCommands::CmdLoad(std::wstring& cmd, std::wstring& args) {
 	wcscat_s(dir, L".txt");
 
 	char temp[64];
-	ReadTemplateFile(dir, temp, 64);
-	Log::Info("Template Code: %s", temp);
+	if (!ReadTemplateFile(dir, temp, 64)) {
+		// If it failed, we will interpret the input as the code models.
+		size_t len = args.size();
+		if (len > 64) return false;
+		for (size_t i = 0; i < len; i++)
+			temp[i] = (char)args[i];
+		temp[len] = 0;
+	}
+
+	GW::SkillbarMgr::LoadSkillTemplate(temp);
 	return true;
 }
