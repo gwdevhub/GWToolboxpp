@@ -27,13 +27,11 @@ bool AlcoholWindow::AlcUpdate(GW::Packet::StoC::P095* packet) {
 		// add drink time
 		alcohol_time += 60 * (int)(packet->level - alcohol_level);
 		last_alcohol = time(NULL);
+	} else if (packet->level <= alcohol_level) {
+		alcohol_time = 60 * (int)packet->level;
+		last_alcohol = time(NULL);
 	}
 	alcohol_level = packet->level;
-	// alcohol ran out
-	if (alcohol_level == 0) {
-		// 0 out timer
-		alcohol_time = 0;
-	}
 	return false;
 }
 
