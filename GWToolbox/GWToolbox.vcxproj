@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -15,19 +15,19 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>API</RootNamespace>
     <ProjectName>GWToolbox</ProjectName>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -128,6 +128,7 @@
     <ClInclude Include="GWToolbox\ToolboxUIElement.h" />
     <ClInclude Include="GWToolbox\ToolboxWidget.h" />
     <ClInclude Include="GWToolbox\ToolboxWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\AlcoholWindow.h" />
     <ClInclude Include="GWToolbox\Windows\BondsWindow.h" />
     <ClInclude Include="GWToolbox\Windows\ClockWindow.h" />
     <ClInclude Include="GWToolbox\Windows\DistanceWindow.h" />
@@ -146,6 +147,7 @@
     <ClInclude Include="GWToolbox\Windows\PartyDamage.h" />
     <ClInclude Include="GWToolbox\Windows\TimerWindow.h" />
     <ClInclude Include="GWToolbox\Windows\VanquishWindow.h" />
+    <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Dependencies\imgui\examples\directx9_example\imgui_impl_dx9.cpp" />
@@ -179,6 +181,7 @@
     <ClCompile Include="GWToolbox\ToolboxUIElement.cpp" />
     <ClCompile Include="GWToolbox\ToolboxWidget.cpp" />
     <ClCompile Include="GWToolbox\ToolboxWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\AlcoholWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\BondsWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\ClockWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\DistanceWindow.cpp" />
@@ -195,6 +198,9 @@
     <ClCompile Include="GWToolbox\Windows\PartyDamage.cpp" />
     <ClCompile Include="GWToolbox\Windows\TimerWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\VanquishWindow.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="GWToolbox.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

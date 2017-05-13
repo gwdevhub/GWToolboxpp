@@ -54,4 +54,5 @@ private:
 	bool use_clock = true;
 	bool use_notepad = true;
 	bool use_vanquish = true;
+	bool use_alcohol = true;
 };
