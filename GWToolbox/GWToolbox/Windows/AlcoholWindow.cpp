@@ -7,7 +7,9 @@
 
 void AlcoholWindow::Initialize() {
 	ToolboxWidget::Initialize();
+	// how much time was queued up with drinks
 	alcohol_time = 0;
+	// last time the player used a drink
 	last_alcohol = 0;
 	alcohol_level = 0;
 	GW::StoC::AddCallback<GW::Packet::StoC::P095>(
@@ -15,15 +17,23 @@ void AlcoholWindow::Initialize() {
 }
 
 bool AlcoholWindow::AlcUpdate(GW::Packet::StoC::P095* packet) {
-	int old_level = 0;
+	// if the player used a drink
 	if (packet->level > alcohol_level){
+		// if the player already had a drink going
 		if (alcohol_level) {
+			// set remaining time
 			alcohol_time = (int)((long)alcohol_time + (long)last_alcohol - (long)time(NULL));
 		}
+		// add drink time
 		alcohol_time += 60 * (int)(packet->level - alcohol_level);
 		last_alcohol = time(NULL);
 	}
 	alcohol_level = packet->level;
+	// alcohol ran out
+	if (alcohol_level == 0) {
+		// 0 out timer
+		alcohol_time = 0;
+	}
 	return false;
 }
 

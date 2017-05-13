@@ -20,7 +20,7 @@ public:
 
 	const char* Name() const override { return "Alcohol"; }
 
-	virtual void Initialize() override;
+	void Initialize() override;
 
 	bool AlcUpdate(GW::Packet::StoC::P095 * packet);
 
