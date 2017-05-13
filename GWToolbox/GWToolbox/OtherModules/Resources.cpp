@@ -51,7 +51,7 @@ void Resources::EnsureFolderExists(std::string path) {
 	}
 }
 
-bool Resources::Download(std::string path_to_file, std::string url) const {
+bool Resources::Download(std::string path_to_file, std::string url) {
 	DeleteUrlCacheEntry(url.c_str());
 	Log::Log("Downloading %s\n", url.c_str());
 	return (URLDownloadToFile(NULL, url.c_str(), path_to_file.c_str(), 0, NULL) == S_OK);

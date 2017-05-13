@@ -40,20 +40,24 @@ private:
 	bool IsTyping() { return (*(DWORD*)0xA377C8) != 0; } 
 	
 	static std::wstring GetLowerCaseArg(std::vector<std::wstring>, size_t index);
+	static std::wstring WStrToLower(std::wstring str);
+	static bool ReadTemplateFile(std::wstring path, char *buff, size_t buffSize);
 
-	static bool CmdAge2(std::wstring& cmd, std::vector<std::wstring>& args);
-	static bool CmdDialog(std::wstring& cmd, std::vector<std::wstring>& args);
-	static bool CmdTB(std::wstring& cmd, std::vector<std::wstring>& args);
-	static bool CmdTP(std::wstring& cmd, std::vector<std::wstring>& args);
-	static bool CmdDamage(std::wstring& cmd, std::vector<std::wstring>& args);
-	static bool CmdChest(std::wstring& cmd, std::vector<std::wstring>& args);
-	static bool CmdAfk(std::wstring& cmd, std::vector<std::wstring>& args);
-	static bool CmdTarget(std::wstring& cmd, std::vector<std::wstring>& args);
-	static bool CmdUseSkill(std::wstring& cmd, std::vector<std::wstring>& args);
-	static bool CmdShow(std::wstring& cmd, std::vector<std::wstring>& args);
-	static bool CmdHide(std::wstring& cmd, std::vector<std::wstring>& args);
-	static bool CmdZoom(std::wstring& cmd, std::vector<std::wstring>& args);
-	static bool CmdCamera(std::wstring& cmd, std::vector<std::wstring>& args);
+	static bool CmdAge2(std::wstring& cmd, std::wstring& args);
+	static bool CmdDialog(std::wstring& cmd, std::wstring& args);
+	static bool CmdTB(std::wstring& cmd, std::wstring& args);
+	static bool CmdTP(std::wstring& cmd, std::wstring& args);
+	static bool CmdDamage(std::wstring& cmd, std::wstring& args);
+	static bool CmdChest(std::wstring& cmd, std::wstring& args);
+	static bool CmdAfk(std::wstring& cmd, std::wstring& args);
+	static bool CmdTarget(std::wstring& cmd, std::wstring& args);
+	static bool CmdUseSkill(std::wstring& cmd, std::wstring& args);
+	static bool CmdShow(std::wstring& cmd, std::wstring& args);
+	static bool CmdHide(std::wstring& cmd, std::wstring& args);
+	static bool CmdZoom(std::wstring& cmd, std::wstring& args);
+	static bool CmdCamera(std::wstring& cmd, std::wstring& args);
+	static bool CmdSCWiki(std::wstring& cmd, std::wstring& args);
+	static bool CmdLoad(std::wstring& cmd, std::wstring& args);
 
 	static std::vector<ToolboxUIElement*> MatchingWindows(std::vector<std::wstring>& args);
 
