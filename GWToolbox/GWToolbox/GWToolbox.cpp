@@ -27,15 +27,15 @@
 
 #include "logger.h"
 
-#include <OtherModules\Resources.h>
-#include <OtherModules\ChatCommands.h>
-#include <OtherModules\ChatFilter.h>
-#include <OtherModules\GameSettings.h>
-#include <OtherModules\ToolboxSettings.h>
-#include <OtherModules\ToolboxTheme.h>
-#include <OtherModules\Updater.h>
+#include <Modules\Resources.h>
+#include <Modules\ChatCommands.h>
+#include <Modules\ChatFilter.h>
+#include <Modules\GameSettings.h>
+#include <Modules\ToolboxSettings.h>
+#include <Modules\ToolboxTheme.h>
+#include <Modules\Updater.h>
 
-#include <Windows\Minimap\Minimap.h>
+#include <Widgets\Minimap\Minimap.h>
 
 #include "GuiUtils.h"
 
