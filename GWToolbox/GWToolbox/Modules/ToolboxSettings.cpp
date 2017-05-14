@@ -46,10 +46,9 @@ void ToolboxSettings::InitializeModules() {
 	if (use_dialogs) DialogsWindow::Instance().Initialize();
 	if (use_info) InfoWindow::Instance().Initialize();
 	if (use_materials) MaterialsWindow::Instance().Initialize();
+	if (use_notepad) NotePadWindow::Instance().Initialize();
 
 	SettingsWindow::Instance().Initialize();
-
-	if (use_notepad) NotePadWindow::Instance().Initialize();
 
 	SettingsWindow::Instance().sep_widgets = GWToolbox::Instance().GetModules().size();
 
@@ -80,6 +79,7 @@ void ToolboxSettings::DrawSettingInternal() {
 	ImGui::Separator();
 	ImGui::Text("Enable the following features:");
 	ImGui::TextDisabled("Unticking will completely disable a feature from initializing and running. Requires Toolbox restart.");
+	ImGui::Text("Windows:");
 	ImGui::Checkbox("Pcons", &use_pcons);
 	ImGui::Checkbox("Hotkeys", &use_hotkeys);
 	ImGui::Checkbox("Builds", &use_builds);
@@ -87,6 +87,8 @@ void ToolboxSettings::DrawSettingInternal() {
 	ImGui::Checkbox("Dialogs", &use_dialogs);
 	ImGui::Checkbox("Info", &use_info);
 	ImGui::Checkbox("Materials", &use_materials);
+	ImGui::Checkbox("Notepad", &use_notepad);
+	ImGui::Text("Widgets:");
 	ImGui::Checkbox("Timer", &use_timer);
 	ImGui::Checkbox("Health", &use_health);
 	ImGui::Checkbox("Distance", &use_distance);
@@ -94,8 +96,8 @@ void ToolboxSettings::DrawSettingInternal() {
 	ImGui::Checkbox("Damage", &use_damage);
 	ImGui::Checkbox("Bonds", &use_bonds);
 	ImGui::Checkbox("Clock", &use_clock);
-	ImGui::Checkbox("Notepad", &use_notepad);
 	ImGui::Checkbox("Vanquish counter", &use_vanquish);
+	ImGui::Checkbox("Alcohol monitor", &use_alcohol);
 }
 
 void ToolboxSettings::DrawFreezeSetting() {
