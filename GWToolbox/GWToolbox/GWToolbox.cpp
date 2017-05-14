@@ -246,12 +246,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 
 void GWToolbox::Initialize() {
 	Log::Log("Creating Toolbox\n");
-	Resources::Instance().EnsureFolderExists("img");
-	Resources::Instance().EnsureFolderExists("img\\bonds");
-	Resources::Instance().EnsureFolderExists("img\\icons");
-	Resources::Instance().EnsureFolderExists("img\\materials");
-	Resources::Instance().EnsureFolderExists("img\\pcons");
-	Resources::Instance().EnsureFolderExists("location logs");
+	Resources::Instance().EnsureFolderExists(Resources::GetPath("img"));
+	Resources::Instance().EnsureFolderExists(Resources::GetPath("img\\bonds"));
+	Resources::Instance().EnsureFolderExists(Resources::GetPath("img\\icons"));
+	Resources::Instance().EnsureFolderExists(Resources::GetPath("img\\materials"));
+	Resources::Instance().EnsureFolderExists(Resources::GetPath("img\\pcons"));
+	Resources::Instance().EnsureFolderExists(Resources::GetPath("location logs"));
 	Resources::Instance().EnsureFileExists(Resources::GetPath("GWToolbox.ini"), 
 		"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/GWToolbox.ini", 
 		[](bool success) {
