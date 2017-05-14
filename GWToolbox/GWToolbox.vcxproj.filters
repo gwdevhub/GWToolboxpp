@@ -88,6 +88,9 @@
     <Filter Include="Modules\Updater">
       <UniqueIdentifier>{6dc61691-4f75-4ff0-b2f7-5b6139a727c7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Windows\Alcohol">
+      <UniqueIdentifier>{686bc0d4-37d4-43ce-8569-cb7d9dfd1e28}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GWToolbox\GuiUtils.h" />
@@ -229,6 +232,9 @@
     <ClInclude Include="GWToolbox\OtherModules\Updater.h">
       <Filter>Modules\Updater</Filter>
     </ClInclude>
+    <ClInclude Include="GWToolbox\Windows\AlcoholWindow.h">
+      <Filter>Windows\Alcohol</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -351,6 +357,9 @@
     </ClCompile>
     <ClCompile Include="GWToolbox\OtherModules\Updater.cpp">
       <Filter>Modules\Updater</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Windows\AlcoholWindow.cpp">
+      <Filter>Windows\Alcohol</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

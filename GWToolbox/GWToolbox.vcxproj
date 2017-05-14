@@ -128,6 +128,7 @@
     <ClInclude Include="GWToolbox\ToolboxUIElement.h" />
     <ClInclude Include="GWToolbox\ToolboxWidget.h" />
     <ClInclude Include="GWToolbox\ToolboxWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\AlcoholWindow.h" />
     <ClInclude Include="GWToolbox\Windows\BondsWindow.h" />
     <ClInclude Include="GWToolbox\Windows\ClockWindow.h" />
     <ClInclude Include="GWToolbox\Windows\DistanceWindow.h" />
@@ -179,6 +180,7 @@
     <ClCompile Include="GWToolbox\ToolboxUIElement.cpp" />
     <ClCompile Include="GWToolbox\ToolboxWidget.cpp" />
     <ClCompile Include="GWToolbox\ToolboxWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\AlcoholWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\BondsWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\ClockWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\DistanceWindow.cpp" />

@@ -29,6 +29,7 @@
 #include <Windows\ClockWindow.h>
 #include <Windows\NotePadWindow.h>
 #include <Windows\VanquishWindow.h>
+#include <Windows\AlcoholWindow.h>
 
 bool ToolboxSettings::move_all = false;
 bool ToolboxSettings::clamp_window_positions = false;
@@ -59,6 +60,7 @@ void ToolboxSettings::InitializeModules() {
 	if (use_bonds) BondsWindow::Instance().Initialize();
 	if (use_clock) ClockWindow::Instance().Initialize();
 	if (use_vanquish) VanquishWindow::Instance().Initialize();
+	if (use_alcohol) AlcoholWindow::Instance().Initialize();
 }
 
 void ToolboxSettings::DrawSettingInternal() {
@@ -120,6 +122,7 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
 	use_clock = ini->GetBoolValue(Name(), "use_clock", true);
 	use_notepad = ini->GetBoolValue(Name(), "use_notepad", true);
 	use_vanquish = ini->GetBoolValue(Name(), "use_vanquish", true);
+	use_alcohol = ini->GetBoolValue(Name(), "use_alcohol", true);
 }
 
 void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
@@ -142,6 +145,7 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), "use_clock", use_clock);
 	ini->SetBoolValue(Name(), "use_notepad", use_notepad);
 	ini->SetBoolValue(Name(), "use_vanquish", use_vanquish);
+	ini->SetBoolValue(Name(), "use_alcohol", use_alcohol);
 }
 
 void ToolboxSettings::Update() {

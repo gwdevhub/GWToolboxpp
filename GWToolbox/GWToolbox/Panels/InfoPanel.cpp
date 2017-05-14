@@ -24,6 +24,7 @@
 #include <Windows\Minimap\Minimap.h>
 #include <Windows\ClockWindow.h>
 #include <Windows\NotepadWindow.h>
+#include <Windows\AlcoholWindow.h>
 #include <OtherModules\Resources.h>
 
 void InfoPanel::Initialize() {
@@ -108,6 +109,8 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
 			ImGui::Checkbox("Notepad", &NotePadWindow::Instance().visible);
 			ImGui::ShowHelp("A simple in-game text editor");
+			ImGui::Checkbox("Alcohol", &AlcoholWindow::Instance().visible);
+			ImGui::ShowHelp("Shows a countdown timer for alcohol");
 		}
 
 		if (show_open_chest) {
