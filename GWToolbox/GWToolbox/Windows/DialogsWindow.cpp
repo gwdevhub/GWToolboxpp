@@ -108,7 +108,7 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
 				"Prof Change - Mesmer",
 				"Prof Change - Elementalist",
 				"Prof Change - Assassin",
-				"Prof Change - Rirtualist",
+				"Prof Change - Ritualist",
 				"Prof Change - Paragon",
 				"Prof Change - Dervish",
 				"Kama -> Docks @ Hahnna",
