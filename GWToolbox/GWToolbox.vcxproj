@@ -105,6 +105,7 @@
     <ClInclude Include="GWToolbox\Modules\ChatCommands.h" />
     <ClInclude Include="GWToolbox\Modules\ChatFilter.h" />
     <ClInclude Include="GWToolbox\Modules\GameSettings.h" />
+    <ClInclude Include="GWToolbox\Modules\LUAInterface.h" />
     <ClInclude Include="GWToolbox\Modules\Resources.h" />
     <ClInclude Include="GWToolbox\Modules\ToolboxSettings.h" />
     <ClInclude Include="GWToolbox\Modules\ToolboxTheme.h" />
@@ -160,6 +161,7 @@
     <ClCompile Include="GWToolbox\Modules\ChatCommands.cpp" />
     <ClCompile Include="GWToolbox\Modules\ChatFilter.cpp" />
     <ClCompile Include="GWToolbox\Modules\GameSettings.cpp" />
+    <ClCompile Include="GWToolbox\Modules\LUAInterface.cpp" />
     <ClCompile Include="GWToolbox\Modules\Resources.cpp" />
     <ClCompile Include="GWToolbox\Modules\ToolboxSettings.cpp" />
     <ClCompile Include="GWToolbox\Modules\ToolboxTheme.cpp" />
@@ -197,6 +199,14 @@
     <ClCompile Include="GWToolbox\Windows\Pcons.cpp" />
     <ClCompile Include="GWToolbox\Windows\SettingsWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\TravelWindow.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Dependencies\GWCA\GWCA.2015.vcxproj">
+      <Project>{b3359f05-68cf-4e7f-b9d6-d106f6d48a38}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\LUA\LUA.vcxproj">
+      <Project>{07e36ee0-d8a8-48f0-a872-681512e93ccd}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

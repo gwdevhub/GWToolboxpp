@@ -91,6 +91,9 @@
     <Filter Include="Windows\Notepad">
       <UniqueIdentifier>{f2c5506d-d857-49bc-a04c-fda72918c542}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Modules\LUACommands">
+      <UniqueIdentifier>{d96b2770-9882-4e70-bd22-7c1e640d9f0f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GWToolbox\GuiUtils.h" />
@@ -235,6 +238,9 @@
     <ClInclude Include="GWToolbox\Widgets\VanquishWidget.h">
       <Filter>Widgets\Vanquish</Filter>
     </ClInclude>
+    <ClInclude Include="GWToolbox\Modules\LUAInterface.h">
+      <Filter>Modules\LUACommands</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -360,6 +366,9 @@
     </ClCompile>
     <ClCompile Include="GWToolbox\Widgets\VanquishWidget.cpp">
       <Filter>Widgets\Vanquish</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Modules\LUAInterface.cpp">
+      <Filter>Modules\LUACommands</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

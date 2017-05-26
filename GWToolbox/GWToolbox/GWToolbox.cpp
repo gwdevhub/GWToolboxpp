@@ -33,6 +33,7 @@
 #include <Modules\GameSettings.h>
 #include <Modules\ToolboxSettings.h>
 #include <Modules\ToolboxTheme.h>
+#include <Modules\LUAInterface.h>
 #include <Modules\Updater.h>
 
 #include <Widgets\Minimap\Minimap.h>
@@ -272,7 +273,7 @@ void GWToolbox::Initialize() {
 	Log::Log("Creating Modules\n");
 	Resources::Instance().Initialize();
 	Updater::Instance().Initialize();
-
+	LUAInterface::Instance().Initialize();
 	GameSettings::Instance().Initialize();
 	ToolboxSettings::Instance().Initialize();
 	ChatFilter::Instance().Initialize();
