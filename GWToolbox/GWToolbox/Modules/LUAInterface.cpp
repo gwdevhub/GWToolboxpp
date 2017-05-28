@@ -44,9 +44,6 @@ static int cmdSendChat(lua_State* L)
 
 static int cmdPrint(lua_State* L)
 {
-	if (!g_inst.consoleopen)
-		return 0;
-
 	g_inst.buf_.append("< ");
 	int argc = lua_gettop(L);
 	for (int i = 1; i <= argc; ++i)
@@ -76,7 +73,14 @@ static int cmdSleep(lua_State* L)
 static int cmdGetAgent(lua_State* L)
 {
 	int id = luaL_checkinteger(L, 1);
-	auto ag = GW::Agents::GetAgentByID(id);
+
+	GW::Agent* ag;
+	switch (id) {
+	case -1: ag = GW::Agents::GetTarget(); break;
+	case -2: ag = GW::Agents::GetPlayer(); break;
+	default: ag = GW::Agents::GetAgentByID(id); break;
+	}
+	
 	if (!ag)
 		return 0;
 
@@ -96,7 +100,14 @@ static int cmdGetAgent(lua_State* L)
 static int cmdGetAgentPos(lua_State* L)
 {
 	int id = luaL_checkinteger(L, 1);
-	auto ag = GW::Agents::GetAgentByID(id);
+
+	GW::Agent* ag;
+	switch (id) {
+	case -1: ag = GW::Agents::GetTarget(); break;
+	case -2: ag = GW::Agents::GetPlayer(); break;
+	default: ag = GW::Agents::GetAgentByID(id); break;
+	}
+
 	if (ag) 
 	{
 		lua_pushnumber(L, ag->X);
@@ -108,14 +119,18 @@ static int cmdGetAgentPos(lua_State* L)
 		lua_pushnumber(L, 0);
 	}
 	return 2;
+} 
+
+static int cmdTargetAgent(lua_State* L)
+{
+	int id = luaL_checkinteger(L, 1);
+	GW::Agents::ChangeTarget(id);
+	return 0;
 }
 
 
 void LUAInterface::Initialize()
 {
-	GW::Chat::RegisterCommand(L"lua", 
-		[&](std::wstring&, std::wstring&) -> bool { consoleopen = true; return true; });
-
 	lua_ = (void*)luaL_newstate();
 	luaL_openlibs((lua_State*)lua_);
 
@@ -126,31 +141,34 @@ void LUAInterface::Initialize()
 		{"GetMapId", cmdGetMapId },
 		{"GetAgent", cmdGetAgent},
 		{"GetPos", cmdGetAgentPos},
+		{"TargetAgent", cmdTargetAgent },
 		{nullptr, nullptr}
 	};
+
+	luaL_newlib((lua_State*)lua_, gwlib);
+	lua_setglobal((lua_State*)lua_, "GW");
+
+#if 0
 	static luaL_Reg utillib[] = 
 	{
 		{"Sleep",cmdSleep},
 		{ nullptr, nullptr }
 	};
 
+	luaL_newlib((lua_State*)lua_, utillib);
+	lua_setglobal((lua_State*)lua_, "util");
+#endif
+
 	static const struct luaL_Reg printlib[] = {
 		{ "print", cmdPrint },
 		{ nullptr, nullptr }
 	};
 
-
-	luaL_newlib((lua_State*)lua_, gwlib);
-	lua_setglobal((lua_State*)lua_, "GW");
-
-	luaL_newlib((lua_State*)lua_, utillib);
-	lua_setglobal((lua_State*)lua_, "util");
-
 	lua_getglobal((lua_State*)lua_, "_G");
 	luaL_setfuncs((lua_State*)lua_, printlib, 0);
 	lua_pop((lua_State*)lua_, 1);
 
-	ToolboxModule::Initialize();
+	ToolboxWindow::Initialize();
 }
 
 void LUAInterface::Terminate()
@@ -158,9 +176,9 @@ void LUAInterface::Terminate()
 	lua_close((lua_State*)lua_);
 }
 
-void LUAInterface::Update()
+void LUAInterface::Draw(IDirect3DDevice9*)
 {
-	if (consoleopen)
+	if (visible)
 	{
 		ShowConsole();
 	}
@@ -171,7 +189,7 @@ void LUAInterface::ShowConsole()
 	static char input[0x100];
 
 	ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiSetCond_FirstUseEver);
-	ImGui::Begin("LUA Console", &g_inst.consoleopen);
+	ImGui::Begin("LUA Console");
 	if (ImGui::Button("Clear")) g_inst.buf_.clear();
 	ImGui::SameLine();
 	if (ImGui::InputText("Input", input, 0x100, ImGuiInputTextFlags_EnterReturnsTrue))
@@ -179,6 +197,8 @@ void LUAInterface::ShowConsole()
 		buf_.append("> %s\n", input);
 		RunString(input);
 		scrolltobottom_ = true;
+		input[0] = '\0';
+		ImGui::SetWindowFocus();
 	}
 	ImGui::Separator();
 	ImGui::BeginChild("LUA_Output");

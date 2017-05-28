@@ -1,22 +1,22 @@
 #pragma once
 
 
-#include "ToolboxModule.h"
+#include "ToolboxWindow.h"
 
 
 class LUAInterface 
-	: public ToolboxModule
+	: public ToolboxWindow
 {
 public:
 
 	static LUAInterface& Instance();
 
-	const char* Name() const override { return "LUA Interface"; }
+	const char* Name() const override { return "LUA"; }
 
 	void Initialize() override;
 	void Terminate() override;
 
-	void Update() override;
+	void Draw(IDirect3DDevice9*) override;
 
 	void ShowConsole();
 
@@ -31,8 +31,6 @@ public:
 public:
 
 	ImGuiTextBuffer     buf_;
-
-	bool		    consoleopen;
 	bool            scrolltobottom_;
 
 private:
