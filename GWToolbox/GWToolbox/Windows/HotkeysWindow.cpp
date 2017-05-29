@@ -68,6 +68,10 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
 				hotkeys.push_back(new HotkeyPingBuild(nullptr, nullptr));
 			}
 			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Ping a build from the Build Panel");
+			if (ImGui::Selectable("LUA Command")) {
+				hotkeys.push_back(new HotkeyLUACmd(nullptr, nullptr));
+			}
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Execute a LUA command");
 			ImGui::EndPopup();
 		}
 

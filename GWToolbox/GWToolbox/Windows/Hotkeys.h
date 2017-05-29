@@ -249,3 +249,21 @@ public:
 	void Description(char* buf, int bufsz) const;
 	void Execute() override;
 };
+
+class HotkeyLUACmd : public TBHotkey {
+
+public:
+	mutable char cmd[0x200];
+	bool editopen;
+
+	static const char* IniSection() { return "LUACmd"; }
+	const char* Name() const override { return IniSection(); }
+
+	HotkeyLUACmd(CSimpleIni* ini, const char* section);
+
+	void Save(CSimpleIni* ini, const char* section) const override;
+
+	void Draw() override;
+	void Description(char* buf, int bufsz) const;
+	void Execute() override;
+};

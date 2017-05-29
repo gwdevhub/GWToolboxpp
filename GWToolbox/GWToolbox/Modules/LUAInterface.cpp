@@ -6,6 +6,7 @@
 #include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\MapMgr.h>
+#include <GWCA\Managers\SkillbarMgr.h>
 
 
 
@@ -118,6 +119,24 @@ static int cmdTargetAgent(lua_State* L)
 	return 0;
 }
 
+static int cmdUseSkill(lua_State* L)
+{
+	int skill = luaL_checkinteger(L, 1);
+	int agent = luaL_checkinteger(L, 2);
+
+
+	if (skill < 1 || skill > 8)
+		return 0;
+	switch (agent) {
+	case -1: agent = GW::Agents::GetTargetId(); break;
+	case -2: agent = GW::Agents::GetPlayerId(); break;
+	}
+
+	GW::SkillbarMgr::UseSkill(skill, agent);
+
+	return 0;
+}
+
 
 // Overrides
 static int cmdPrint(lua_State* L)
@@ -162,6 +181,7 @@ void LUAInterface::Initialize()
 		{"GetAgent", cmdGetAgent},
 		{"GetPos", cmdGetAgentPos},
 		{"TargetAgent", cmdTargetAgent },
+		{"UseSkill", cmdUseSkill },
 		{nullptr, nullptr}
 	};
 
