@@ -10,11 +10,14 @@
 
 
 static LUAInterface g_inst;
+static char			g_tbscriptdir[0x160];
+static char*		g_tbscriptptr = nullptr;
 LUAInterface& LUAInterface::Instance() 
 {
 	return g_inst;
 }
 
+#pragma region cmds
 #define LUA_NEWTABLE(l, count) lua_createtable(l, 0, count)
 #define LUA_TABLEINT(l, name,val)    lua_pushinteger(l, val); lua_setfield(l, -2, name)
 #define LUA_TABLEFLOAT(l, name,val)    lua_pushnumber(l, val); lua_setfield(l, -2, name)
@@ -42,22 +45,6 @@ static int cmdSendChat(lua_State* L)
 	return 0;
 }
 
-static int cmdPrint(lua_State* L)
-{
-	g_inst.buf_.append("< ");
-	int argc = lua_gettop(L);
-	for (int i = 1; i <= argc; ++i)
-	{
-		if (lua_isstring(L, i)) {
-			const char* s = lua_tostring(L, i);
-			g_inst.buf_.append(s);
-		}
-	}
-	g_inst.buf_.append("\n");
-	g_inst.scrolltobottom_ = true;
-	return 0;
-}
-
 static int cmdGetMapId(lua_State* L)
 {
 	lua_pushinteger(L, (lua_Integer)GW::Map::GetMapID());
@@ -81,8 +68,11 @@ static int cmdGetAgent(lua_State* L)
 	default: ag = GW::Agents::GetAgentByID(id); break;
 	}
 	
-	if (!ag)
+	if (!ag) {
+		lua_pushinteger(L, 0);
 		return 0;
+	}
+		
 
 	LUA_NEWTABLE(L, 6);
 	{
@@ -129,6 +119,36 @@ static int cmdTargetAgent(lua_State* L)
 }
 
 
+// Overrides
+static int cmdPrint(lua_State* L)
+{
+	g_inst.buf_.append("< ");
+	int argc = lua_gettop(L);
+	for (int i = 1; i <= argc; ++i)
+	{
+		if (lua_isstring(L, i)) {
+			const char* s = lua_tostring(L, i);
+			g_inst.buf_.append(s);
+		}
+	}
+	g_inst.buf_.append("\n");
+	g_inst.scrolltobottom_ = true;
+	return 0;
+}
+
+static int cmdDoFile(lua_State* L)
+{
+	const char* name = luaL_checkstring(L, 1);
+	if (name && strlen(name) <= 20) 
+	{
+		strcpy(g_tbscriptptr, name);
+		luaL_dofile(L, g_tbscriptdir);
+	}
+	return 0;
+}
+
+#pragma endregion
+
 void LUAInterface::Initialize()
 {
 	lua_ = (void*)luaL_newstate();
@@ -159,14 +179,22 @@ void LUAInterface::Initialize()
 	lua_setglobal((lua_State*)lua_, "util");
 #endif
 
-	static const struct luaL_Reg printlib[] = {
+	static const struct luaL_Reg globallib[] = {
 		{ "print", cmdPrint },
+		{ "dofile", cmdDoFile },
 		{ nullptr, nullptr }
 	};
 
 	lua_getglobal((lua_State*)lua_, "_G");
-	luaL_setfuncs((lua_State*)lua_, printlib, 0);
+	luaL_setfuncs((lua_State*)lua_, globallib, 0);
 	lua_pop((lua_State*)lua_, 1);
+
+	{
+		DWORD count = GetEnvironmentVariableA("LOCALAPPDATA", g_tbscriptdir, 0x160);
+		g_tbscriptptr = g_tbscriptdir + count;
+		strcpy(g_tbscriptptr, "\\GWToolboxpp\\scripts\\");
+		g_tbscriptptr += sizeof("\\GWToolboxpp\\scripts\\") - 1;
+	}
 
 	ToolboxWindow::Initialize();
 }
@@ -198,7 +226,6 @@ void LUAInterface::ShowConsole()
 		RunString(input);
 		scrolltobottom_ = true;
 		input[0] = '\0';
-		ImGui::SetWindowFocus();
 	}
 	ImGui::Separator();
 	ImGui::BeginChild("LUA_Output");
