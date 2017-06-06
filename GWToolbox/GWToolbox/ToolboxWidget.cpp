@@ -4,7 +4,7 @@
 #include <imgui_internal.h>
 #include "ImGuiAddons.h"
 
-#include "OtherModules\ToolboxSettings.h"
+#include "Modules\ToolboxSettings.h"
 
 void ToolboxWidget::DrawSettings() {
 	if (ImGui::CollapsingHeader(Name(), ImGuiTreeNodeFlags_AllowOverlapMode)) {

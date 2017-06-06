@@ -8,7 +8,7 @@
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\Utilities\Scanner.h>
 
-#include <OtherModules\Resources.h>
+#include <Modules\Resources.h>
 
 namespace {
 	ImFont* font16 = nullptr;
