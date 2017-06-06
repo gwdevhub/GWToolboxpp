@@ -78,7 +78,7 @@ void BondsWindow::Draw(IDirect3DDevice9* device) {
 	
 	GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
 	if (info == nullptr) return;
-	GW::gw_array<GW::AgentID>& allies = info->others;
+	GW::Array<GW::AgentID>& allies = info->others;
 	
 	int img_size = row_height > 0 ? row_height : GuiUtils::GetPartyHealthbarHeight();
 	unsigned int party = agentids.size();
