@@ -187,7 +187,7 @@ void InfoPanel::Draw(IDirect3DDevice9* pDevice) {
 					ImGui::LabelText("Zplane", "%d", target->pos.zplane);
 					ImGui::LabelText("Type", "0x%X", target->Type);
 					ImGui::LabelText("Owner", "%d", target->Owner);
-					ImGui::LabelText("ItemId", "%d", target->itemid);
+					ImGui::LabelText("ItemId", "%d", target->ItemID);
 					ImGui::LabelText("ExtraType", "%d", target->ExtraType);
 					ImGui::LabelText("AS of Weapon", "%f", target->WeaponAttackSpeed);
 					ImGui::LabelText("AS modifier", "%f", target->AttackSpeedModifier);

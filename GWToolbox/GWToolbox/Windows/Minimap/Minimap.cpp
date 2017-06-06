@@ -439,9 +439,9 @@ void Minimap::SelectTarget(GW::Vector2f pos) {
 	for (size_t i = 0; i < agents.size(); ++i) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
-		if (agent->GetIsLivingType() && agent->GetIsDead()) continue;
+		if (agent->GetIsCharacterType() && agent->GetIsDead()) continue;
 		if (agent->GetIsItemType()) continue;
-		if (agent->GetIsSignpostType() && agent->ExtraType != 8141) continue; // allow locked chests
+		if (agent->GetIsGadgetType() && agent->ExtraType != 8141) continue; // allow locked chests
 		float newDistance = GW::Agents::GetSqrDistance(pos, agents[i]->pos);
 		if (distance > newDistance) {
 			distance = newDistance;

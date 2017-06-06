@@ -470,8 +470,8 @@ DWORD MaterialsPanel::RequestPurchaseQuote(Material material) {
 		if (cur 
 			&& cur->ModelId == modelid 
 			&& cur->AgentId == 0
-			&& cur->bag == nullptr
-			&& cur->interaction == 8200
+			&& cur->Bag == nullptr
+			&& cur->Interaction == 8200
 			&& cur->Quantity == 1) {
 			item = cur;
 			break;
@@ -509,9 +509,9 @@ DWORD MaterialsPanel::RequestSellQuote(Material material) {
 		if (cur 
 			&& cur->ModelId == modelid 
 			&& cur->AgentId == 0
-			&& cur->bag != nullptr
-			&& cur->bag->index < 5
-			&& cur->interaction == 8200) {
+			&& cur->Bag != nullptr
+			&& cur->Bag->index < 5
+			&& cur->Interaction == 8200) {
 			item = cur;
 			break;
 		}

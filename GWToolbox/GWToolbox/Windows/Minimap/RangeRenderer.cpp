@@ -154,7 +154,7 @@ void RangeRenderer::Render(IDirect3DDevice9* device) {
 			&& me != nullptr
 			&& tgt != nullptr
 			&& me != tgt
-			&& tgt->GetIsLivingType()
+			&& tgt->GetIsCharacterType()
 			&& !me->GetIsDead()
 			&& !tgt->GetIsDead()
 			&& GW::Agents::GetSqrDistance(tgt->pos, me->pos) < GW::Constants::SqrRange::Spellcast) {

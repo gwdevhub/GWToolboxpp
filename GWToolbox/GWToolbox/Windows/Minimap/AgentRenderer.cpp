@@ -238,13 +238,13 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
 		if (agent->PlayerNumber <= 12) continue;
-		if (agent->GetIsSignpostType()
+		if (agent->GetIsGadgetType()
 			&& GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish
 			&& agent->ExtraType == 7602) continue;
-		if (agent->GetIsLivingType()
+		if (agent->GetIsCharacterType()
 			&& agent->IsNPC()
 			&& agent->PlayerNumber < npcs.size()
-			&& (npcs[agent->PlayerNumber].npcflags & 0x10000) > 0) continue;
+			&& (npcs[agent->PlayerNumber].NpcFlags & 0x10000) > 0) continue;
 		if (target == agent) continue; // will draw target at the end
 
 		Enqueue(agent);
@@ -306,14 +306,14 @@ Color AgentRenderer::GetColor(GW::Agent* agent) const {
 		else return color_player;
 	}
 
-	if (agent->GetIsSignpostType()) return color_signpost;
+	if (agent->GetIsGadgetType()) return color_signpost;
 	if (agent->GetIsItemType()) return color_item;
 
 	// don't draw dead spirits
 	auto npcs = GW::Agents::GetNPCArray();
 	if (agent->GetIsDead() && npcs.valid() && agent->PlayerNumber < npcs.size()) {
 		GW::NPC& npc = npcs[agent->PlayerNumber];
-		switch (npc.modelfileid) {
+		switch (npc.ModelFileID) {
 		case 0x22A34: // nature rituals
 		case 0x2D0E4: // defensive binding rituals
 		case 0x2D07E: // offensive binding rituals
@@ -348,7 +348,7 @@ Color AgentRenderer::GetColor(GW::Agent* agent) const {
 
 float AgentRenderer::GetSize(GW::Agent* agent) const {
 	if (agent->Id == GW::Agents::GetPlayerId()) return size_player;
-	if (agent->GetIsSignpostType()) return size_signpost;
+	if (agent->GetIsGadgetType()) return size_signpost;
 	if (agent->GetIsItemType()) return size_item;
 	if (agent->GetHasBossGlow()) return size_boss;
 
@@ -397,16 +397,16 @@ float AgentRenderer::GetSize(GW::Agent* agent) const {
 }
 
 AgentRenderer::Shape_e AgentRenderer::GetShape(GW::Agent* agent) const {
-	if (agent->GetIsSignpostType()) return Quad;
+	if (agent->GetIsGadgetType()) return Quad;
 	if (agent->GetIsItemType()) return Quad;
 
 	if (agent->LoginNumber > 0) return Tear;	// players
-	if (!agent->GetIsLivingType()) return Quad; // shouldn't happen but just in case
+	if (!agent->GetIsCharacterType()) return Quad; // shouldn't happen but just in case
 
 	auto npcs = GW::Agents::GetNPCArray();
 	if (npcs.valid() && agent->PlayerNumber < npcs.size()) {
 		GW::NPC& npc = npcs[agent->PlayerNumber];
-		switch (npc.modelfileid) {
+		switch (npc.ModelFileID) {
 		case 0x22A34: // nature rituals
 		case 0x2D0E4: // defensive binding rituals
 		case 0x2963E: // dummies

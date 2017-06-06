@@ -14,7 +14,7 @@ void HealthWindow::Draw(IDirect3DDevice9* pDevice) {
 		static char health_perc[32];
 		static char health_abs[32];
 		GW::Agent* target = GW::Agents::GetTarget();
-		if (target && target->GetIsLivingType()) {
+		if (target && target->GetIsCharacterType()) {
 			if (target->HP >= 0) {
 				sprintf_s(health_perc, "%.0f %s", target->HP * 100, "%%");
 			} else {
