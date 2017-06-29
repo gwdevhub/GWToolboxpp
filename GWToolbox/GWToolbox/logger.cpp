@@ -9,11 +9,11 @@
 #include <GWCA\Managers\ChatMgr.h>
 
 #include "Defines.h"
-#include <OtherModules\Resources.h>
+#include <Modules\Resources.h>
 
 #define CHAN_WARNING GW::Chat::Channel::CHANNEL_GWCA2
-#define CHAN_INFO GW::Chat::Channel::CHANNEL_GWCA3
-#define CHAN_ERROR GW::Chat::Channel::CHANNEL_GWCA4
+#define CHAN_INFO GW::Chat::Channel::CHANNEL_EMOTE
+#define CHAN_ERROR GW::Chat::Channel::CHANNEL_GWCA3
 
 namespace {
 	FILE* logfile = nullptr;

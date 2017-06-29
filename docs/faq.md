@@ -31,6 +31,29 @@ This error typically means that some security feature is preventing Toolbox to a
 You can use Toolbox to target and interact with lots of agents that wouldn't normally be targetable. There are a couple of ways to do this:
 * `Ctrl+click` on the [minimap](minimap). You can target agents that aren't visible, so long as you know where they are.
 * Use the [Info](info) window to find the ID of the agent (a Boo! is 7445), and then create a [hotkey](hotkeys) to target it.
+* The chat command `/target closest` will work, so long as the Boo! is the nearest agent, which should generally be the case.
+
+**Can I bind the same hotkey to perform multiple actions?** \\
+You sure as heck can! Just create a second hotkey for the second action and assign the same key bind. When you press the key, you will perform all of the assigned actions in the order the hotkeys appear in the list.
+
+You can also bind multiple keys to the same action, again by creating extra hotkeys, this time with the same action and different key binds.
+
+**The icons on the [Pcons](pcons), [Materials](materials), and [Toolbox](windows#toolbox_window) window aren't showing up. How do I get them back?** \\
+This is a bug that causes the Toolbox launcher to not download the icons. Delete your `GWToolbox.exe` and replace it with [this one](https://github.com/HasKha/GWToolboxpp/releases/download/2.0-launcher/GWToolbox.exe).
+
+**One of my windows has collapsed! I can only see the title bar. How do I get the window back?** \\
+You probably minimized it by accident. Double-click on the title bar to expand it, or to collapse it again.
+
+**Why isn't Toolbox remembering my settings when I restart?** \\
+Toolbox settings are saved to the files in the [settings folder](settings#storage) when you close Toolbox or click "Save Now" at the bottom of the [Settings window](settings). Settings are loaded from those files when you launch Toolbox or click "Load Now".
+* Sometimes, closing Guild Wars without first closing Toolbox will result in settings not saving. To prevent this from happening, either use the "Save Now" button, or close Toolbox before Guild Wars.
+* If you adjust settings and then load another copy of Toolbox before saving, it will load the old settings. If you then close the first copy of Toolbox, thus saving the new settings, the second copy will still have the old settings loaded. When you close that copy, the old settings will be saved, overwriting the new ones.  
+ Prevent this by loading the new settings onto the second copy of Toolbox before you close.
+
+**My Toolbox is gone! How do I get it back?** \\
+There are a few different things that could have happened. Here's how to fix them:
+* Enter `/tb reset` and `/show settings`, in case you just moved the windows off-screen or hid all windows.
+* Enter `/tb exit` to close Toolbox, open the `theme.ini` file in `C:\Users\[User]\Appdata\GWToolboxpp`, and delete the line that says `GlobalAlpha`. Save the file and restart Toolbox.
 
 **GWToolbox++ just crashed and set my grandma's hair on fire! Help!** \\
 Oops. Please start a bug issue at the repository issue tracker here immediately. If the error was not critical, a message box should have displayed with the title “GWToolbox++ Crash!”. If the message box states that the dump file generated sucessfully, please go to your start menu search bar and type %LOCALAPPDATA%. Press enter, and your appdata folder should open. Navigate to the GWToolboxpp folder and find the most recent .dmp file created. If you are able to find the file, attach this file on your issue as it can help greatly with fixing the issue. Be sure to also include what you were doing in game at the time of the crash, and any other information that might help. If it is an issue we can solve we will get to fixing it when we can.

@@ -5,15 +5,6 @@
 #include <ToolboxWindow.h>
 #include <ToolboxPanel.h>
 
-class PconPanel;
-class HotkeyPanel;
-class TravelPanel;
-class BuildPanel;
-class DialogPanel;
-class InfoPanel;
-class MaterialsPanel;
-class SettingsPanel;
-
 class MainWindow : public ToolboxWindow {
 	MainWindow() {};
 	~MainWindow() {};

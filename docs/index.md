@@ -7,24 +7,16 @@ GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancemen
 
 # List of Features
 
-* [Bonds Monitor](bonds) - Show maintained bonds on the party, and cast and dismiss bonds with a single click.
-* [Borderless Window](borderless) - Set the game to run in borderless windowed mode.
-* [Builds](builds) - Send team builds to your party.
-* [Customizable Camera](camera) - Customize camera zoom or unlock camera.
-* [Chat Commands](commands) - _lorem ipsum_
-* [Chat Filter](filter) - Keep chat clean by hiding in-game chat spam such as common drops, or filter player messages by content.
-* [Damage Monitor](damage) - Show the amount of damage done by each member of your party.
-* [Dialogs](dialogs) - _lorem ipsum_
-* [Hotkeys](hotkeys) - Set hotkeys for typing commands into chat (e.g. /stuck), using or cancelling Recall and UA, using an item, targeting an agent, and much more.
-* [Info](info) - _lorem ipsum_
-* [Materials](materials) - _lorem ipsum_
-* [Minimap](minimap) - Display an improved in-game minimap that shows clear terrain.
-* [Pcons](pcons) - Automatically maintain selected pcons.
-* [Settings](settings) - _lorem ipsum_
-* [Theme](theme) - _lorem ipsum_
-* [Toolbox Folder](folder) - _lorem ipsum_
-* [Travel](travel) - Directly travel to any previously visited outpost.
-* [Widgets](widgets) - Such as [instance timer](timer), [target health](health), [target distance](distance), [vanquish counter](vanquish), [clock](clock) and [notepad](notepad).
-* [Windows](windows) - _lorem ipsum_
+| [Windows](windows) | [Widgets](widgets) | Other Features  |
+| ------------- |-------------| -----|
+| [Builds](builds) | [Bonds Monitor](widgets#bonds) | [Borderless Window](settings#game_settings) |
+| [Dialogs](dialogs) | [Clock](widgets#clock) | [Customizable Camera](camera) |
+| [Hotkeys](hotkeys) | [Damage Monitor](widgets#damage) | [Chat Commands](commands) |
+| [Info](info) | [Distance Monitor](widgets#distance) | [Chat Filter](filter) |
+| [Materials Buyer](materials) | [Health Monitor](widgets#health) | [Flash GW in taskbar when receiving a PM](settings#game_settings) |
+| [Notepad](windows#notepad) | [Instance Timer](widgets#timer) | [Save Location Data](settings#toolbox_settings) |
+| [Auto Pcons](pcons) | [Minimap](minimap) | [Target with double-click on message author](settings#game_settings) |
+| [Settings](settings) | [Vanquish Monitor](widgets#vanquish) | [Theme editor](theme) |
+| [Travel](travel) |  | [URLs in equipment templates](settings#game_settings) |
 
 # Want a new feature? Add it to the [Issue Tracker](https://github.com/HasKha/GWToolboxpp/issues)!

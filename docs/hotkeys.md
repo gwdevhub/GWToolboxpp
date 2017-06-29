@@ -27,14 +27,14 @@ Use the Items tab on the [Info](info) window to find the ID number of the item y
 
 You can also type in the name of the item; this is just to help you remember what the hotkey does, since the item ID isn't very descriptive by itself.
 
-This only works for consumable items; not equipment. It also doesn't work on items in your Xunlai storage.
+This only works for consumable items; not equipment. It works on items in your Xunlai storage so long as you're in an outpost.
 
-You will receive an error message if the item is not in your inventory.
+You will receive an error message if the item is not available.
 
 ## Drop or Use Buff
 This has a dual function: if you are currently maintaining the selected enchantment, you will dismiss it. Otherwise, you will cast it on the target. If you are maintaining multiple copies, the first one you cast is the one you'll dismiss.
 
-As well as the default options of Recall, Unyielding Aura, and Holy Veil, you can select another skill of your choice. To do this, you'll need to find the skill ID on this page: https://wiki.guildwars.com/wiki/Skill_template_format/Skill_list
+As well as the default options of Recall, Unyielding Aura, and Holy Veil, you can select another skill of your choice. To do this, you'll need to find the skill ID on this page: [https://wiki.guildwars.com/wiki/Skill_template_format/Skill_list](https://wiki.guildwars.com/wiki/Skill_template_format/Skill_list)
 
 ## Toggle...
 This activates and de-activates one of three Toolbox features:
@@ -77,11 +77,5 @@ You can also type in a description of the dialog; this is just to help you remem
 
 ## Ping Build
 Select a teambuild from the list of [Builds](builds). Using the hotkey will send it to party chat.
-
-## FAQs
-**Can I bind the same key to perform multiple actions?** \\
-You sure as heck can! Just create a second hotkey for the second action and assign the same key bind. When you press the key, you will perform all of the assigned actions in the order the hotkeys appear in the list.
-
-You can also bind multiple keys to the same action, again by creating extra hotkeys, this time with the same action and different key binds.
 
 [back](./)

@@ -8,6 +8,20 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
+## Version 2.2
+* [New] You can now /tp gh [tag] to any guild in your alliance.
+* [New] Added options to make Guild Wars flash in the taskbar when invited to a party or when your party zones.
+* [New] Added options to automatically set away after a delay and/or online when back.
+* [New] "Use item" hotkey can now use items from the chest in outposts.
+* [Fix] VQ counter now only appears in areas that can be vanquished.
+* [Fix] /tp fav now starts counting at 1 instead of 0.
+* [Fix] Automatically changing URLs to templates now also works in PMs.
+* [Fix] Fixed bug where hotkeys would not save properly.
+* [Fix] Quest marker will now appear correctly on the minimap.
+* [Fix] Fixed several typos and minor issues.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.2_Release/GWToolbox.dll)
+
 ## Version 2.1
 In this patch we change the update server to GitHub and fix minor bugs from 2.0 and add a Vanquish counter.
 

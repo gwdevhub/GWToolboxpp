@@ -27,17 +27,16 @@
 
 #include "logger.h"
 
-#include <OtherModules\Resources.h>
-#include <OtherModules\ChatCommands.h>
-#include <OtherModules\ChatFilter.h>
-#include <OtherModules\GameSettings.h>
-#include <OtherModules\ToolboxSettings.h>
-#include <OtherModules\ToolboxTheme.h>
-#include <OtherModules\Updater.h>
+#include <Modules\Resources.h>
+#include <Modules\ChatCommands.h>
+#include <Modules\ChatFilter.h>
+#include <Modules\GameSettings.h>
+#include <Modules\ToolboxSettings.h>
+#include <Modules\ToolboxTheme.h>
+#include <Modules\LUAInterface.h>
+#include <Modules\Updater.h>
 
-#include <Windows\Minimap\Minimap.h>
-
-#include "Panels\HotkeyPanel.h"
+#include <Widgets\Minimap\Minimap.h>
 
 #include "GuiUtils.h"
 
@@ -180,7 +179,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 	switch (Message) {
 	// Send button up mouse events to both gw and imgui, to avoid gw being stuck on mouse-down
 	case WM_LBUTTONUP:
-		Minimap::Instance().WndProc(Message, wParam, lParam); 
+		for (ToolboxModule* m : tb.GetModules()) {
+			m->WndProc(Message, wParam, lParam);
+		}
 		break;
 		
 	// Send other mouse events to imgui first and consume them if used
@@ -190,7 +191,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 	case WM_MOUSEWHEEL:
 		if (!right_mouse_down) {
 			if (io.WantCaptureMouse) return true;
-			if (Minimap::Instance().WndProc(Message, wParam, lParam)) return true;
+			bool captured = false;
+			for (ToolboxModule* m : tb.GetModules()) {
+				if (m->WndProc(Message, wParam, lParam)) captured = true;
+			}
+			if (captured) return true;
 		}
 		break;
 
@@ -217,8 +222,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 			return true;
 		}
 
-		// send input to toolbox to trigger hotkeys
-		HotkeyPanel::Instance().WndProc(Message, wParam, lParam);
+		// send to toolbox modules
+		for (ToolboxModule* m : tb.GetModules()) {
+			m->WndProc(Message, wParam, lParam);
+		}
 
 		// block alt-enter if in borderless to avoid graphic glitches (no reason to go fullscreen anyway)
 		if (GameSettings::Instance().borderless_window
@@ -240,12 +247,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 
 void GWToolbox::Initialize() {
 	Log::Log("Creating Toolbox\n");
-	Resources::Instance().EnsureFolderExists("img");
-	Resources::Instance().EnsureFolderExists("img\\bonds");
-	Resources::Instance().EnsureFolderExists("img\\icons");
-	Resources::Instance().EnsureFolderExists("img\\materials");
-	Resources::Instance().EnsureFolderExists("img\\pcons");
-	Resources::Instance().EnsureFolderExists("location logs");
+	Resources::Instance().EnsureFolderExists(Resources::GetPath("img"));
+	Resources::Instance().EnsureFolderExists(Resources::GetPath("img\\bonds"));
+	Resources::Instance().EnsureFolderExists(Resources::GetPath("img\\icons"));
+	Resources::Instance().EnsureFolderExists(Resources::GetPath("img\\materials"));
+	Resources::Instance().EnsureFolderExists(Resources::GetPath("img\\pcons"));
+	Resources::Instance().EnsureFolderExists(Resources::GetPath("location logs"));
 	Resources::Instance().EnsureFileExists(Resources::GetPath("GWToolbox.ini"), 
 		"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/GWToolbox.ini", 
 		[](bool success) {
@@ -266,7 +273,7 @@ void GWToolbox::Initialize() {
 	Log::Log("Creating Modules\n");
 	Resources::Instance().Initialize();
 	Updater::Instance().Initialize();
-
+	LUAInterface::Instance().Initialize();
 	GameSettings::Instance().Initialize();
 	ToolboxSettings::Instance().Initialize();
 	ChatFilter::Instance().Initialize();

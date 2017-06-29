@@ -2,7 +2,7 @@
 
 #include <fstream>
 
-#include <OtherModules\Resources.h>
+#include <Modules\Resources.h>
 
 #define TEXT_SIZE 2024 * 16
 
