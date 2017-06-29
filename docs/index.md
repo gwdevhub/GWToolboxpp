@@ -23,4 +23,4 @@ GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancemen
 
 
 
-> Known bug (version 2.1+): menu and pcon icons missing -> [solution](https://github.com/HasKha/GWToolboxpp/issues/92)
+> # Known bug (version 2.1+): menu and pcon icons missing -> [solution](https://github.com/HasKha/GWToolboxpp/issues/92)
