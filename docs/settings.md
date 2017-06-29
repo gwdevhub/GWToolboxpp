@@ -69,7 +69,6 @@ There are a number of files in this folder:
 * `Markers.ini` contains your custom minimap markers.
 * `Theme.ini` contains any changes you make to the default theme.
 
-
 ## Backup
 You can (and should!) backup your Toolbox settings by saving some of the files above, and copy them over to the new installation. You definitely want to backup `GWToolbox.ini`, `Markers.ini` and `Theme.ini`. Optionally you can also backup all the `.ini` and `.txt` files.
 
