@@ -22,4 +22,4 @@ GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancemen
 | [Settings](settings) | [Vanquish Monitor](widgets#vanquish) | [Theme editor](theme) |
 | [Travel](travel) |  | [URLs in equipment templates](settings#game_settings) |
 
-# Want a new feature? Add it to the [Issue Tracker](https://github.com/HasKha/GWToolboxpp/issues)!
+## Want a new feature? Add it to the [Issue Tracker](https://github.com/HasKha/GWToolboxpp/issues)!
