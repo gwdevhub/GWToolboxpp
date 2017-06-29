@@ -2,6 +2,8 @@
 layout: default
 ---
 
+> ### Known bug (version 2.1+): Missing icons in menu and pcons window ([Solution](https://github.com/HasKha/GWToolboxpp/issues/92))
+
 # What is GWToolbox++?
 GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancements for the original Guild Wars. It adds features that should exist in a modern game and tools to visualize information and improve the player experience.
 
@@ -20,5 +22,3 @@ GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancemen
 | [Travel](travel) |  | [URLs in equipment templates](settings#game_settings) |
 
 # Want a new feature? Add it to the [Issue Tracker](https://github.com/HasKha/GWToolboxpp/issues)!
-
-> ### Known bug (version 2.1+): menu and pcon icons missing => [solution](https://github.com/HasKha/GWToolboxpp/issues/92)
