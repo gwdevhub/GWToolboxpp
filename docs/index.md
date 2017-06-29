@@ -2,7 +2,7 @@
 layout: default
 ---
 
-> ### Known bug (version 2.1+): Missing icons in menu and pcons window ([Solution](https://github.com/HasKha/GWToolboxpp/issues/92))
+> ### Known bug (version 2.1+): Missing icons in menu and pcons window => [Solution](https://github.com/HasKha/GWToolboxpp/issues/92)
 
 <br>
 # What is GWToolbox++?
