@@ -223,35 +223,105 @@ void GameSettings::DrawBorderlessSetting() {
 	}
 }
 
-void GameSettings::ApplyBorderless(bool value) {
-	borderless_window = value;
-	DWORD current_style = GetWindowLong(GW::MemoryMgr::GetGWWindowHandle(), GWL_STYLE);
+bool GameSettings::RectEquals(RECT a, RECT b)
+{
+	return  a.left == b.left &&
+			a.top == b.top &&
+			a.right == b.right &&
+			a.bottom == b.bottom;
+}
 
-	if ((current_style & WS_POPUP) != 0) { // borderless or fullscreen
-		if ((current_style & WS_MAXIMIZEBOX) == 0) { // fullscreen
-			if (value) {
-				Log::Info("Please enable Borderless while in Windowed mode");
-				value = false;
+bool GameSettings::RectMultiscreen(RECT desktop, RECT gw)
+{
+	return gw.right > desktop.right || gw.bottom > desktop.bottom;
+}
+
+
+void GameSettings::ApplyBorderless(bool borderless) 
+{
+	Log::Info("BL (%d)", borderless);
+
+	borderless_window = borderless;
+
+	HWND gwHandle = GW::MemoryMgr::GetGWWindowHandle();
+	DWORD current_style = GetWindowLong(gwHandle, GWL_STYLE);
+
+	RECT windowRect, desktopRect;
+	GetWindowRect(gwHandle, &windowRect);
+	GetWindowRect(GetDesktopWindow(), &desktopRect);
+
+	//fullscreen or borderless
+	if (RectEquals(windowRect, desktopRect))
+	{
+		if ((current_style & WS_MAXIMIZEBOX) != 0)
+		{
+			//borderless
+			if (borderless)
+			{
+				//trying to activate borderless while already in borderless
+				Log::Info("Already in Borderless mode");
+				return;
 			}
+		}
+		else
+		{
+			//fullscreen
+			Log::Info("Please enable Borderless while in Windowed mode");
+			borderless = false;
+			borderless_window = false;
 			return;
 		}
 	}
+	else if (RectMultiscreen(desktopRect, windowRect))
+	{
+		//borderless multiscreen
+		if (borderless)
+		{
+			//trying to activate borderless while already in borderless
+			Log::Info("Already in Borderless mode (multiscreen)");
+		}
+	}
+	else if ((current_style & WS_BORDER) == 0 && (current_style & WS_THICKFRAME) == 0)
+	{
+		//Borderless with window size smaller than Desktop
+		//borderless multiscreen
+		if (borderless)
+		{
+			//trying to activate borderless while already in borderless
+			Log::Info("Already in Borderless mode");
+		}
+	}
+	else
+	{
+		//window
+		if (!borderless)
+		{
+			//trying to deactivate borderless in window mode
+			//Log::Info("Already in Window mode");
+			//FIXME for some reason function gets called twice on tb startup with param false.. comment out not to confuse user
+		}
+	}
 
-	DWORD style = value ? WS_POPUP | WS_VISIBLE | WS_MINIMIZEBOX | WS_CLIPSIBLINGS | WS_MAXIMIZEBOX
+
+	DWORD style = borderless ? WS_POPUP | WS_VISIBLE | WS_MINIMIZEBOX | WS_CLIPSIBLINGS | WS_MAXIMIZEBOX
 		: WS_SIZEBOX | WS_SYSMENU | WS_CAPTION | WS_VISIBLE | WS_MAXIMIZEBOX | WS_MINIMIZEBOX | WS_CLIPSIBLINGS;
 
 	//printf("old 0x%X, new 0x%X\n", current_style, style);
 
-	if (current_style != style) {
-		for (GW::MemoryPatcher* patch : patches) patch->TooglePatch(value);
+	if (current_style != style) 
+	{
+		for (GW::MemoryPatcher* patch : patches) patch->TooglePatch(borderless);
 
 		SetWindowLong(GW::MemoryMgr::GetGWWindowHandle(), GWL_STYLE, style);
 
-		if (value) {
+		if (borderless) 
+		{
 			int width = GetSystemMetrics(SM_CXSCREEN);
 			int height = GetSystemMetrics(SM_CYSCREEN);
 			MoveWindow(GW::MemoryMgr::GetGWWindowHandle(), 0, 0, width, height, TRUE);
-		} else {
+		}
+		else 
+		{
 			RECT size;
 			SystemParametersInfoW(SPI_GETWORKAREA, 0, &size, 0);
 			MoveWindow(GW::MemoryMgr::GetGWWindowHandle(), size.top, size.left, size.right, size.bottom, TRUE);

@@ -51,5 +51,7 @@ public:
 
 private:
 	std::vector<GW::MemoryPatcher*> patches;
+	bool RectEquals(RECT a, RECT b);
+	bool RectMultiscreen(RECT desktop, RECT gw);
 	
 };
