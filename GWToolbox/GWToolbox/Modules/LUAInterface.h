@@ -26,7 +26,7 @@ public:
 	int RunFile(std::string path);
 	int RunFile(const char* path);
 
-	int ClearVM();
+	void ClearVM();
 
 public:
 

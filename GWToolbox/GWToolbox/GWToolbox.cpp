@@ -271,20 +271,31 @@ void GWToolbox::Initialize() {
 	});
 
 	Log::Log("Creating Modules\n");
-	Resources::Instance().Initialize();
-	Updater::Instance().Initialize();
-	LUAInterface::Instance().Initialize();
-	GameSettings::Instance().Initialize();
-	ToolboxSettings::Instance().Initialize();
-	ChatFilter::Instance().Initialize();
-	ChatCommands::Instance().Initialize();
-	ToolboxTheme::Instance().Initialize();
+	std::vector<ToolboxModule*> core_modules;
+	core_modules.push_back(&Resources::Instance());
+	core_modules.push_back(&Updater::Instance());
+	core_modules.push_back(&LUAInterface::Instance());
+	core_modules.push_back(&GameSettings::Instance());
+	core_modules.push_back(&ToolboxSettings::Instance());
+	core_modules.push_back(&ChatFilter::Instance());
+	core_modules.push_back(&ChatCommands::Instance());
+	core_modules.push_back(&ToolboxTheme::Instance());
 
-	LoadModuleSettings(); // This will only read settings of the loaded modules above
+	for (ToolboxModule* core : core_modules) {
+		core->Initialize();
+	}
+	LoadModuleSettings(); // This will only read settings of the core modules (specified above)
 
-	ToolboxSettings::Instance().InitializeModules();
-	
-	LoadModuleSettings(); // Read settings of all modules.
+	ToolboxSettings::Instance().InitializeModules(); // initialize all other modules as specified by the user
+
+	// Only read settings of non-core modules
+	for (ToolboxModule* module : modules) {
+		bool is_core = false;
+		for (ToolboxModule* core : core_modules) {
+			if (module == core) is_core = true;
+		}
+		if (!is_core) module->LoadSettings(inifile);
+	}
 
 	Updater::Instance().CheckForUpdate();
 

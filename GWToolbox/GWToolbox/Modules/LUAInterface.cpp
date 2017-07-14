@@ -81,7 +81,7 @@ static int cmdGetAgent(lua_State* L)
 		LUA_TABLEFLOAT(L, "x", ag->X);
 		LUA_TABLEFLOAT(L, "y", ag->Y);
 		LUA_TABLEINT(L, "plane", ag->Ground);
-		LUA_TABLEINT(L, "dead", ag->Effects & 0x10 > 0);
+		LUA_TABLEINT(L, "dead", (ag->Effects & 0x10) > 0);
 		LUA_TABLEINT(L, "modelidx", ag->PlayerNumber);
 	}
 
@@ -279,7 +279,7 @@ int LUAInterface::RunFile(const char * path)
 	return luaL_dofile((lua_State*)lua_, path);
 }
 
-int LUAInterface::ClearVM()
+void LUAInterface::ClearVM()
 {
 	Terminate();
 	Initialize();

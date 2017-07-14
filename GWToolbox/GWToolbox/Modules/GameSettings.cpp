@@ -223,23 +223,20 @@ void GameSettings::DrawBorderlessSetting() {
 	}
 }
 
-bool GameSettings::RectEquals(RECT a, RECT b)
-{
+bool GameSettings::RectEquals(RECT a, RECT b) {
 	return  a.left == b.left &&
 			a.top == b.top &&
 			a.right == b.right &&
 			a.bottom == b.bottom;
 }
 
-bool GameSettings::RectMultiscreen(RECT desktop, RECT gw)
-{
+bool GameSettings::RectMultiscreen(RECT desktop, RECT gw) {
 	return gw.right > desktop.right || gw.bottom > desktop.bottom;
 }
 
 
-void GameSettings::ApplyBorderless(bool borderless) 
-{
-	Log::Info("BL (%d)", borderless);
+void GameSettings::ApplyBorderless(bool borderless)  {
+	Log::Log("ApplyBorderless(%d)\n", borderless);
 
 	borderless_window = borderless;
 
@@ -251,51 +248,37 @@ void GameSettings::ApplyBorderless(bool borderless)
 	GetWindowRect(GetDesktopWindow(), &desktopRect);
 
 	//fullscreen or borderless
-	if (RectEquals(windowRect, desktopRect))
-	{
-		if ((current_style & WS_MAXIMIZEBOX) != 0)
-		{
+	if (RectEquals(windowRect, desktopRect)) {
+		if ((current_style & WS_MAXIMIZEBOX) != 0) {
 			//borderless
-			if (borderless)
-			{
+			if (borderless) {
 				//trying to activate borderless while already in borderless
 				Log::Info("Already in Borderless mode");
 				return;
 			}
-		}
-		else
-		{
+		} else {
 			//fullscreen
 			Log::Info("Please enable Borderless while in Windowed mode");
 			borderless = false;
 			borderless_window = false;
 			return;
 		}
-	}
-	else if (RectMultiscreen(desktopRect, windowRect))
-	{
+	} else if (RectMultiscreen(desktopRect, windowRect)) {
 		//borderless multiscreen
-		if (borderless)
-		{
+		if (borderless) {
 			//trying to activate borderless while already in borderless
 			Log::Info("Already in Borderless mode (multiscreen)");
 		}
-	}
-	else if ((current_style & WS_BORDER) == 0 && (current_style & WS_THICKFRAME) == 0)
-	{
+	} else if ((current_style & WS_BORDER) == 0 && (current_style & WS_THICKFRAME) == 0) {
 		//Borderless with window size smaller than Desktop
 		//borderless multiscreen
-		if (borderless)
-		{
+		if (borderless) {
 			//trying to activate borderless while already in borderless
 			Log::Info("Already in Borderless mode");
 		}
-	}
-	else
-	{
+	} else {
 		//window
-		if (!borderless)
-		{
+		if (!borderless) {
 			//trying to deactivate borderless in window mode
 			//Log::Info("Already in Window mode");
 			//FIXME for some reason function gets called twice on tb startup with param false.. comment out not to confuse user
@@ -308,20 +291,16 @@ void GameSettings::ApplyBorderless(bool borderless)
 
 	//printf("old 0x%X, new 0x%X\n", current_style, style);
 
-	if (current_style != style) 
-	{
+	if (current_style != style) {
 		for (GW::MemoryPatcher* patch : patches) patch->TooglePatch(borderless);
 
 		SetWindowLong(GW::MemoryMgr::GetGWWindowHandle(), GWL_STYLE, style);
 
-		if (borderless) 
-		{
+		if (borderless) {
 			int width = GetSystemMetrics(SM_CXSCREEN);
 			int height = GetSystemMetrics(SM_CYSCREEN);
 			MoveWindow(GW::MemoryMgr::GetGWWindowHandle(), 0, 0, width, height, TRUE);
-		}
-		else 
-		{
+		} else {
 			RECT size;
 			SystemParametersInfoW(SPI_GETWORKAREA, 0, &size, 0);
 			MoveWindow(GW::MemoryMgr::GetGWWindowHandle(), size.top, size.left, size.right, size.bottom, TRUE);
