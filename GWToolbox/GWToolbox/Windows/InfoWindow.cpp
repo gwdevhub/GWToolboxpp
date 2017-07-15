@@ -129,8 +129,8 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			static char modelid_buf[32] = "";
 			GW::Agent* player = GW::Agents::GetPlayer();
 			if (player) {
-				sprintf_s(x_buf, "%.2f", player->X);
-				sprintf_s(y_buf, "%.2f", player->Y);
+				sprintf_s(x_buf, "%.2f", player->pos.x);
+				sprintf_s(y_buf, "%.2f", player->pos.y);
 				float s = sqrtf(player->MoveX * player->MoveX + player->MoveY * player->MoveY);
 				sprintf_s(s_buf, "%.3f", s / 288.0f);
 				sprintf_s(agentid_buf, "%d", player->Id);
@@ -154,8 +154,8 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			static char modelid_buf[32] = "";
 			GW::Agent* target = GW::Agents::GetTarget();
 			if (target) {
-				sprintf_s(x_buf, "%.2f", target->X);
-				sprintf_s(y_buf, "%.2f", target->Y);
+				sprintf_s(x_buf, "%.2f", target->pos.x);
+				sprintf_s(y_buf, "%.2f", target->pos.y);
 				float s = sqrtf(target->MoveX * target->MoveX + target->MoveY * target->MoveY);
 				sprintf_s(s_buf, "%.3f", s / 288.0f);
 				sprintf_s(agentid_buf, "%d", target->Id);
@@ -187,7 +187,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 					ImGui::LabelText("NameProperties", "0x%X", target->NameProperties);
 					ImGui::LabelText("X", "%f", target->pos.x);
 					ImGui::LabelText("Y", "%f", target->pos.y);
-					ImGui::LabelText("Zplane", "%d", target->pos.zplane);
+					ImGui::LabelText("plane", "%d", target->plane);
 					ImGui::LabelText("Type", "0x%X", target->Type);
 					ImGui::LabelText("Owner", "%d", target->Owner);
 					ImGui::LabelText("ItemId", "%d", target->ItemID);

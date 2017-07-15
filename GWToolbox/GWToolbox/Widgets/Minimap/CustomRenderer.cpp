@@ -333,7 +333,7 @@ void CustomRenderer::DrawCustomMarkers(IDirect3DDevice9* device) {
 				linecircle.Render(device);
 			}
 		}
-		GW::GamePos allflag = GW::GameContext::instance()->world->all_flag;
+		GW::Vector3f allflag = GW::GameContext::instance()->world->all_flag;
 		D3DXMATRIX translate, scale, world;
 		D3DXMatrixTranslation(&translate, allflag.x, allflag.y, 0.0f);
 		D3DXMatrixScaling(&scale, 300.0f, 300.0f, 1.0f);

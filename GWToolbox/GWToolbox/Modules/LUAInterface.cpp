@@ -78,9 +78,9 @@ static int cmdGetAgent(lua_State* L)
 	LUA_NEWTABLE(L, 6);
 	{
 		LUA_TABLEINT(L,   "id", ag->Id);
-		LUA_TABLEFLOAT(L, "x", ag->X);
-		LUA_TABLEFLOAT(L, "y", ag->Y);
-		LUA_TABLEINT(L, "plane", ag->Ground);
+		LUA_TABLEFLOAT(L, "x", ag->pos.x);
+		LUA_TABLEFLOAT(L, "y", ag->pos.y);
+		LUA_TABLEINT(L, "plane", ag->plane);
 		LUA_TABLEINT(L, "dead", (ag->Effects & 0x10) > 0);
 		LUA_TABLEINT(L, "modelidx", ag->PlayerNumber);
 	}
@@ -101,8 +101,8 @@ static int cmdGetAgentPos(lua_State* L)
 
 	if (ag) 
 	{
-		lua_pushnumber(L, ag->X);
-		lua_pushnumber(L, ag->Y);
+		lua_pushnumber(L, ag->pos.x);
+		lua_pushnumber(L, ag->pos.y);
 	}
 	else
 	{

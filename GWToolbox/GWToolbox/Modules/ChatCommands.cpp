@@ -412,8 +412,8 @@ bool ChatCommands::CmdTP(std::wstring& cmd, std::wstring& a) {
 			} else {
 				std::wstring tag = GetLowerCaseArg(args, 1);
 				GW::GuildArray guilds = GW::GuildMgr::GetGuildArray();
-				for (auto guild : guilds) {
-					if (guild && WStrToLower(guild->tag()) == tag) {
+				for (GW::Guild* guild : guilds) {
+					if (guild && WStrToLower(guild->tag) == tag) {
 						GW::GuildMgr::TravelGH(guild->key);
 						break;
 					}
@@ -577,7 +577,7 @@ bool ChatCommands::CmdTarget(std::wstring& cmd, std::wstring& a) {
 			if (target == nullptr) {
 				Log::Error("No target selected!");
 			} else {
-				Log::Info("Target coordinates are (%f, %f)", target->X, target->Y);
+				Log::Info("Target coordinates are (%f, %f)", target->pos.x, target->pos.y);
 			}
 		}
 	}

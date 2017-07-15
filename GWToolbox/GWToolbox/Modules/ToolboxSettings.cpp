@@ -213,8 +213,8 @@ void ToolboxSettings::Update() {
 			GW::Agent* me = GW::Agents::GetPlayer();
 			if (location_file.is_open() && me != nullptr) {
 				location_file << "Time=" << GW::Map::GetInstanceTime();
-				location_file << " X=" << me->X;
-				location_file << " Y=" << me->Y;
+				location_file << " X=" << me->pos.x;
+				location_file << " Y=" << me->pos.y;
 				location_file << "\n";
 			}
 		} else {

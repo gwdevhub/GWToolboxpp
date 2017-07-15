@@ -272,7 +272,7 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 			device->SetTransform(D3DTS_VIEW, &identity);
 
 			D3DXMATRIX translate_char;
-			D3DXMatrixTranslation(&translate_char, -me->X, -me->Y, 0);
+			D3DXMatrixTranslation(&translate_char, -me->pos.x, -me->pos.y, 0);
 
 			D3DXMATRIX rotate_char;
 			D3DXMatrixRotationZ(&rotate_char, -GW::CameraMgr::GetYaw() + (float)M_PI_2);
@@ -289,7 +289,7 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 			Instance().custom_renderer.Render(device);
 
 			// move the rings to the char position
-			D3DXMatrixTranslation(&translate_char, me->X, me->Y, 0);
+			D3DXMatrixTranslation(&translate_char, me->pos.x, me->pos.y, 0);
 			device->SetTransform(D3DTS_WORLD, &translate_char);
 			Instance().range_renderer.Render(device);
 			device->SetTransform(D3DTS_WORLD, &identity);
@@ -333,7 +333,7 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 			static const char* flag_txt[] = {
 				"All", "1", "2", "3", "4", "5", "6", "7", "8"
 			};
-			GW::GamePos allflag = GW::GameContext::instance()->world->all_flag;
+			GW::Vector3f allflag = GW::GameContext::instance()->world->all_flag;
 			GW::HeroFlagArray& flags = GW::GameContext::instance()->world->hero_flags;
 			auto heroarray = GW::GameContext::instance()->party->partyinfo->heroes;
 			unsigned int num_heroflags = 9;
@@ -407,7 +407,7 @@ GW::Vector2f Minimap::InterfaceToWorldPoint(Vec2i pos) const {
 	v = GW::Vector2f(x1, y1);
 
 	// translate by character position
-	v += GW::Vector2f(me->X, me->Y);
+	v += me->pos;
 
 	return v;
 }

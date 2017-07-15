@@ -422,11 +422,10 @@ AgentRenderer::Shape_e AgentRenderer::GetShape(GW::Agent* agent) const {
 void AgentRenderer::Enqueue(Shape_e shape, GW::Agent* agent, float size, Color color) {
 	if ((color & IM_COL32_A_MASK) == 0) return;
 
-	GW::Vector2f translate(agent->X, agent->Y);
 	unsigned int i;
 	for (i = 0; i < shapes[shape].vertices.size(); ++i) {
 		const Shape_Vertex& vert = shapes[shape].vertices[i];
-		GW::Vector2f pos = vert.Rotated(agent->Rotation_cos, agent->Rotation_sin) * size + translate;
+		GW::Vector2f pos = vert.Rotated(agent->Rotation_cos, agent->Rotation_sin) * size + agent->pos;
 		Color vcolor = color;
 		switch (vert.modifier) {
 		case Dark: vcolor = Colors::Sub(color, modifier); break;

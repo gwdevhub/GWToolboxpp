@@ -119,7 +119,7 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device) {
 		for (unsigned int i = 0; i < qlog.size(); ++i) {
 			GW::Quest q = qlog[i];
 			if (q.questid == qid) {
-				qpos = q.marker;
+				qpos = GW::Vector2f(q.marker.x, q.marker.y);
 				qfound = true;
 				break;
 			}
@@ -145,7 +145,7 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device) {
 				float angle = std::atan2(v.y, v.x);
 				D3DXMatrixRotationZ(&rotate, angle - (float)M_PI_2);
 				D3DXMatrixScaling(&scale, marker_scale + std::sin(tau) * 0.3f * marker_scale, marker_scale + std::sin(tau) * 0.3f * marker_scale, 1.0f);
-				D3DXMatrixTranslation(&translate, me->X + v.x, me->Y + v.y, 0);
+				D3DXMatrixTranslation(&translate, me->pos.x + v.x, me->pos.y + v.y, 0);
 				world = rotate * scale * translate;
 				device->SetTransform(D3DTS_WORLD, &world);
 				device->DrawPrimitive(type, arrow_offset, arrow_ntriangles);
@@ -153,7 +153,7 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device) {
 		}
 	}
 
-	D3DXMatrixTranslation(&translate, me->X, me->Y + 5000.0f, 0);
+	D3DXMatrixTranslation(&translate, me->pos.x, me->pos.y + 5000.0f, 0);
 	world = translate;
 	device->SetTransform(D3DTS_WORLD, &world);
 	device->DrawPrimitive(type, north_offset, north_ntriangles);

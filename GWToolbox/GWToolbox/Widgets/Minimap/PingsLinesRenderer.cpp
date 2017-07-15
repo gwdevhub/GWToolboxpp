@@ -286,7 +286,7 @@ void PingsLinesRenderer::DrawShadowstepLine(IDirect3DDevice9* device) {
 	if (player == nullptr) return;
 
 	EnqueueVertex(shadowstep_location.x, shadowstep_location.y, color_shadowstep_line);
-	EnqueueVertex(player->X, player->Y, color_shadowstep_line);
+	EnqueueVertex(player->pos.x, player->pos.y, color_shadowstep_line);
 }
 
 void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9* device) {
@@ -324,7 +324,7 @@ void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9* device) {
 	}
 
 	EnqueueVertex(targetpos.x, targetpos.y, c);
-	EnqueueVertex(player->X, player->Y, c);
+	EnqueueVertex(player->pos.x, player->pos.y, c);
 }
 
 
@@ -386,13 +386,13 @@ void PingsLinesRenderer::Marker::Initialize(IDirect3DDevice9* device) {
 float PingsLinesRenderer::AgentPing::GetX() {
 	GW::Agent* agent = GW::Agents::GetAgentByID(id);
 	if (agent == nullptr) return 0.0f;
-	return agent->X;
+	return agent->pos.x;
 }
 
 float PingsLinesRenderer::AgentPing::GetY() {
 	GW::Agent* agent = GW::Agents::GetAgentByID(id);
 	if (agent == nullptr) return 0.0f;
-	return agent->Y;
+	return agent->pos.y;
 }
 
 float PingsLinesRenderer::AgentPing::GetScale() {
