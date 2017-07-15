@@ -11,8 +11,7 @@
 
 void HotkeysWindow::Initialize() {
 	ToolboxPanel::Initialize();
-	Resources::Instance().LoadTextureAsync(&texture, Resources::GetPath("img/icons", "keyboard.png"),
-		"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/icons/keyboard.png");
+	Resources::Instance().LoadTextureAsync(&texture, Resources::GetPath("img/icons", "keyboard.png"), IDB_Icon_Keyboard);
 	clickerTimer = TIMER_INIT();
 	dropCoinsTimer = TIMER_INIT();
 }

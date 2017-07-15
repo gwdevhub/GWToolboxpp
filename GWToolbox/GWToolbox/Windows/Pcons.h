@@ -29,6 +29,7 @@ protected:
 	Pcon(const char* chatname,
 		const char* ininame, 
 		const char* filename, 
+		WORD res_id, // you can use 0 and it will not load texture from resource, only from file.
 		ImVec2 uv0, ImVec2 uv1, int threshold);
 
 public:
@@ -80,10 +81,11 @@ public:
 	PconGeneric(const char* chat,
 		const char* ini,
 		const char* file,
+		WORD res_id,
 		ImVec2 uv0, ImVec2 uv1,
 		DWORD item, GW::Constants::SkillID effect, 
 		int threshold)
-		: Pcon(chat, ini, file, uv0, uv1, threshold),
+		: Pcon(chat, ini, file, res_id, uv0, uv1, threshold),
 		itemID(item), effectID(effect) {}
 
 protected:
@@ -101,10 +103,11 @@ public:
 	PconCons(const char* chat,
 		const char* ini,
 		const char* file, 
+		WORD res_id,
 		ImVec2 uv0, ImVec2 uv1,
 		DWORD item, GW::Constants::SkillID effect, 
 		int threshold)
-		: PconGeneric(chat, ini, file, uv0, uv1, item, effect, threshold) {}
+		: PconGeneric(chat, ini, file, res_id, uv0, uv1, item, effect, threshold) {}
 
 	bool CanUseByEffect() const override;
 };
@@ -114,9 +117,10 @@ public:
 	PconCity(const char* chat,
 		const char* ini,
 		const char* file, 
+		WORD res_id,
 		ImVec2 uv0, ImVec2 uv1, 
 		int threshold)
-		: Pcon(chat, ini, file, uv0, uv1, threshold) {}
+		: Pcon(chat, ini, file, res_id, uv0, uv1, threshold) {}
 
 	bool CanUseByInstanceType() const;
 	bool CanUseByEffect() const override;
@@ -128,9 +132,10 @@ public:
 	PconAlcohol(const char* chat,
 		const char* ini,
 		const char* file,
+		WORD res_id,
 		ImVec2 uv0, ImVec2 uv1,
 		int threshold)
-		: Pcon(chat, ini, file, uv0, uv1, threshold) {}
+		: Pcon(chat, ini, file, res_id, uv0, uv1, threshold) {}
 
 	bool CanUseByEffect() const override;
 	int QuantityForEach(const GW::Item* item) const override;
@@ -142,9 +147,10 @@ public:
 	PconLunar(const char* chat,
 		const char* ini,
 		const char* file,
+		WORD res_id,
 		ImVec2 uv0, ImVec2 uv1, 
 		int threshold)
-		: Pcon(chat, ini, file, uv0, uv1, threshold) {}
+		: Pcon(chat, ini, file, res_id, uv0, uv1, threshold) {}
 
 	void Update(int delay = -1) override;
 	bool CanUseByEffect() const override;

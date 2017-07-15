@@ -148,6 +148,7 @@
     <ClInclude Include="GWToolbox\Windows\Pcons.h" />
     <ClInclude Include="GWToolbox\Windows\SettingsWindow.h" />
     <ClInclude Include="GWToolbox\Windows\TravelWindow.h" />
+    <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Dependencies\imgui\examples\directx9_example\imgui_impl_dx9.cpp" />
@@ -207,6 +208,59 @@
     <ProjectReference Include="..\LUA\LUA.vcxproj">
       <Project>{07e36ee0-d8a8-48f0-a872-681512e93ccd}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="GWToolbox.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\resources\bonds\Balthazar%27s_Spirit.png" />
+    <Image Include="..\resources\bonds\Essence_Bond.png" />
+    <Image Include="..\resources\bonds\Holy_Veil.png" />
+    <Image Include="..\resources\bonds\Life_Attunement.png" />
+    <Image Include="..\resources\bonds\Life_Barrier.png" />
+    <Image Include="..\resources\bonds\Life_Bond.png" />
+    <Image Include="..\resources\bonds\Live_Vicariously.png" />
+    <Image Include="..\resources\bonds\Mending.png" />
+    <Image Include="..\resources\bonds\Protective_Bond.png" />
+    <Image Include="..\resources\bonds\Purifying_Veil.png" />
+    <Image Include="..\resources\bonds\Retribution.png" />
+    <Image Include="..\resources\bonds\Strength_of_Honor.png" />
+    <Image Include="..\resources\bonds\Succor.png" />
+    <Image Include="..\resources\bonds\Vital_Blessing.png" />
+    <Image Include="..\resources\bonds\Watchful_Spirit.png" />
+    <Image Include="..\resources\icons\airplane.png" />
+    <Image Include="..\resources\icons\cupcake.png" />
+    <Image Include="..\resources\icons\dialogue.png" />
+    <Image Include="..\resources\icons\feather.png" />
+    <Image Include="..\resources\icons\info.png" />
+    <Image Include="..\resources\icons\keyboard.png" />
+    <Image Include="..\resources\icons\list.png" />
+    <Image Include="..\resources\icons\settings.png" />
+    <Image Include="..\resources\materials\Armor_of_Salvation.png" />
+    <Image Include="..\resources\materials\Essence_of_Celerity.png" />
+    <Image Include="..\resources\materials\Grail_of_Might.png" />
+    <Image Include="..\resources\materials\Powerstone_of_Courage.png" />
+    <Image Include="..\resources\materials\Scroll_of_Resurrection.png" />
+    <Image Include="..\resources\pcons\Armor_of_Salvation.png" />
+    <Image Include="..\resources\pcons\Birthday_Cupcake.png" />
+    <Image Include="..\resources\pcons\Blue_Rock_Candy.png" />
+    <Image Include="..\resources\pcons\Bottle_of_Grog.png" />
+    <Image Include="..\resources\pcons\Bowl_of_Skalefin_Soup.png" />
+    <Image Include="..\resources\pcons\Candy_Apple.png" />
+    <Image Include="..\resources\pcons\Candy_Corn.png" />
+    <Image Include="..\resources\pcons\Drake_Kabob.png" />
+    <Image Include="..\resources\pcons\Dwarven_Ale.png" />
+    <Image Include="..\resources\pcons\Essence_of_Celerity.png" />
+    <Image Include="..\resources\pcons\Fruitcake.png" />
+    <Image Include="..\resources\pcons\Golden_Egg.png" />
+    <Image Include="..\resources\pcons\Grail_of_Might.png" />
+    <Image Include="..\resources\pcons\Green_Rock_Candy.png" />
+    <Image Include="..\resources\pcons\Lunar_Fortune.png" />
+    <Image Include="..\resources\pcons\Pahnai_Salad.png" />
+    <Image Include="..\resources\pcons\Red_Rock_Candy.png" />
+    <Image Include="..\resources\pcons\Slice_of_Pumpkin_Pie.png" />
+    <Image Include="..\resources\pcons\Sugary_Blue_Drink.png" />
+    <Image Include="..\resources\pcons\War_Supplies.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

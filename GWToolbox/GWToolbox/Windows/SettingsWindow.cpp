@@ -13,8 +13,7 @@
 
 void SettingsWindow::Initialize() {
 	ToolboxPanel::Initialize();
-	Resources::Instance().LoadTextureAsync(&texture, Resources::GetPath("img/icons", "settings.png"),
-		"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/icons/settings.png");
+	Resources::Instance().LoadTextureAsync(&texture, Resources::GetPath("img/icons", "settings.png"), IDB_Icon_Settings);
 }
 
 void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {

@@ -105,21 +105,39 @@ void Resources::EnsureFileExists(std::string path_to_file,
 	}
 }
 
-void Resources::LoadTextureAsync(IDirect3DTexture9** texture, 
-	std::string path_to_file, std::string url) {
+void Resources::LoadTextureAsync(IDirect3DTexture9** texture,
+	std::string path_to_file) {
 
 	if (PathFileExists(path_to_file.c_str())) {
 		toload.push([path_to_file, texture](IDirect3DDevice9* device) {
 			D3DXCreateTextureFromFile(device, path_to_file.c_str(), texture);
 		});
-	} else {
-		Download(path_to_file, url, 
-			[this, path_to_file, texture](bool success) {
-			if (success) {
-				toload.push([path_to_file, texture](IDirect3DDevice9* device) {
-					D3DXCreateTextureFromFile(device, path_to_file.c_str(), texture);
-				});
-			}
+	}
+}
+
+void Resources::LoadTextureAsync(IDirect3DTexture9** texture, 
+	std::string path_to_file, WORD id) {
+
+	if (PathFileExists(path_to_file.c_str())) {
+		// if file exists load it
+		toload.push([path_to_file, texture](IDirect3DDevice9* device) {
+			D3DXCreateTextureFromFile(device, path_to_file.c_str(), texture);
+		});
+	} else if (id > 0) {
+		// otherwise try to install it from resource
+		HRSRC hResInfo = FindResource(GWToolbox::GetDLLModule(), MAKEINTRESOURCE(id), RT_RCDATA);
+		HGLOBAL hRes = LoadResource(GWToolbox::GetDLLModule(), hResInfo);
+		DWORD size = SizeofResource(GWToolbox::GetDLLModule(), hResInfo);
+
+		// write to file so the user can customize his icons
+		HANDLE hFile = CreateFile(path_to_file.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		WriteFile(hFile, hRes, size, NULL, NULL);
+		CloseHandle(hFile);
+		// Note: this WILL fail for some users. Don't care, it's only needed for customization.
+
+		// finally load the texture from the resource
+		toload.push([id, texture](IDirect3DDevice9* device) {
+			HRESULT res = D3DXCreateTextureFromResource(device, GWToolbox::GetDLLModule(), MAKEINTRESOURCE(id), texture);
 		});
 	}
 }

@@ -94,6 +94,21 @@
     <Filter Include="Modules\LUACommands">
       <UniqueIdentifier>{d96b2770-9882-4e70-bd22-7c1e640d9f0f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resources">
+      <UniqueIdentifier>{554c14f1-8688-4e1d-a4db-5e272596d3e3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\Icons">
+      <UniqueIdentifier>{ae651573-e7e7-4562-b764-31bd964c36fe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\pcons">
+      <UniqueIdentifier>{8261b255-947a-4fca-a447-4b7ca9a981df}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\materials">
+      <UniqueIdentifier>{597e0ccc-c99f-4f62-bb91-5a1491776c53}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\bonds">
+      <UniqueIdentifier>{8deb1198-ba79-4d65-9a5f-6c6d5935a32c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GWToolbox\GuiUtils.h" />
@@ -241,6 +256,9 @@
     <ClInclude Include="GWToolbox\Modules\LUAInterface.h">
       <Filter>Modules\LUACommands</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Resources</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -370,5 +388,156 @@
     <ClCompile Include="GWToolbox\Modules\LUAInterface.cpp">
       <Filter>Modules\LUACommands</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="GWToolbox.rc">
+      <Filter>Resources</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\resources\materials\Armor_of_Salvation.png">
+      <Filter>Resources\materials</Filter>
+    </Image>
+    <Image Include="..\resources\materials\Powerstone_of_Courage.png">
+      <Filter>Resources\materials</Filter>
+    </Image>
+    <Image Include="..\resources\materials\Scroll_of_Resurrection.png">
+      <Filter>Resources\materials</Filter>
+    </Image>
+    <Image Include="..\resources\materials\Grail_of_Might.png">
+      <Filter>Resources\materials</Filter>
+    </Image>
+    <Image Include="..\resources\materials\Essence_of_Celerity.png">
+      <Filter>Resources\materials</Filter>
+    </Image>
+    <Image Include="..\resources\icons\airplane.png">
+      <Filter>Resources\Icons</Filter>
+    </Image>
+    <Image Include="..\resources\icons\cupcake.png">
+      <Filter>Resources\Icons</Filter>
+    </Image>
+    <Image Include="..\resources\icons\dialogue.png">
+      <Filter>Resources\Icons</Filter>
+    </Image>
+    <Image Include="..\resources\icons\feather.png">
+      <Filter>Resources\Icons</Filter>
+    </Image>
+    <Image Include="..\resources\icons\info.png">
+      <Filter>Resources\Icons</Filter>
+    </Image>
+    <Image Include="..\resources\icons\keyboard.png">
+      <Filter>Resources\Icons</Filter>
+    </Image>
+    <Image Include="..\resources\icons\list.png">
+      <Filter>Resources\Icons</Filter>
+    </Image>
+    <Image Include="..\resources\icons\settings.png">
+      <Filter>Resources\Icons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Armor_of_Salvation.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Birthday_Cupcake.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Blue_Rock_Candy.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Bottle_of_Grog.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Bowl_of_Skalefin_Soup.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Candy_Apple.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Candy_Corn.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Drake_Kabob.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Dwarven_Ale.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Essence_of_Celerity.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Fruitcake.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Golden_Egg.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Grail_of_Might.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Green_Rock_Candy.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Lunar_Fortune.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Pahnai_Salad.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Red_Rock_Candy.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Slice_of_Pumpkin_Pie.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Sugary_Blue_Drink.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\War_Supplies.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Balthazar%27s_Spirit.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Essence_Bond.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Vital_Blessing.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Watchful_Spirit.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Succor.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Strength_of_Honor.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Retribution.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Purifying_Veil.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Protective_Bond.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Mending.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Live_Vicariously.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Life_Bond.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Life_Barrier.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Life_Attunement.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Holy_Veil.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
   </ItemGroup>
 </Project>

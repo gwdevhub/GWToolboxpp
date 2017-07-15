@@ -31,14 +31,14 @@ bool Pcon::suppress_lunar_skills = false;
 Pcon::Pcon(const char* chatname,
 	const char* ininame,
 	const char* filename,
+	WORD res_id,
 	ImVec2 uv0_, ImVec2 uv1_, int threshold_)
 	: chat(chatname), ini(ininame), threshold(threshold_),
 	uv0(uv0_), uv1(uv1_), texture(nullptr),
 	enabled(false), quantity(0), timer(TIMER_INIT()) {
 
-	const std::string base_url = "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/pcons/";
 	Resources::Instance().LoadTextureAsync(&texture, 
-		Resources::GetPath("img/pcons", filename), base_url + filename);
+		Resources::GetPath("img/pcons", filename), res_id);
 }
 void Pcon::Draw(IDirect3DDevice9* device) {
 	if (texture == nullptr) return;

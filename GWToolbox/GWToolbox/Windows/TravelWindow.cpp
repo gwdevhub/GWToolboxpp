@@ -18,8 +18,7 @@ namespace {
 
 void TravelWindow::Initialize() {
 	ToolboxPanel::Initialize();
-	Resources::Instance().LoadTextureAsync(&texture, Resources::GetPath("img/icons", "airplane.png"), 
-		"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/icons/airplane.png");
+	Resources::Instance().LoadTextureAsync(&texture, Resources::GetPath("img/icons", "airplane.png"), IDB_Icon_Airplane);
 
 	district = district = GW::Constants::District::Current;
 	district_number = 0;
