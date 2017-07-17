@@ -10,6 +10,10 @@
 #include "ToolboxPanel.h"
 #include "logger.h"
 
+namespace SearingTest {
+	int IsPresearing();
+}
+
 class TravelWindow : public ToolboxPanel {
 	TravelWindow() {};
 	~TravelWindow() {};
