@@ -190,7 +190,7 @@ void BuildsWindow::Update() {
 			&& GW::Agents::GetPlayer()) {
 
 			send_timer = TIMER_INIT();
-			GW::Chat::SendChat(queue.front().c_str(), '#');
+			GW::Chat::SendChat('#', queue.front().c_str());
 			queue.pop();
 		}
 	}

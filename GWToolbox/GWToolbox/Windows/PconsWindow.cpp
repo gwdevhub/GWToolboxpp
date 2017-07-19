@@ -203,7 +203,7 @@ void PconsWindow::Initialize() {
 		return false;
 	});
 
-	GW::Chat::RegisterCommand(L"pcons",
+	GW::Chat::CreateCommand(L"pcons",
 		[this](std::wstring& cmd, std::wstring& a) -> bool {
 		std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
 		if (args.empty()) {

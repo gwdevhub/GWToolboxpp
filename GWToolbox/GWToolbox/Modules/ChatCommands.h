@@ -43,21 +43,21 @@ private:
 	static std::wstring WStrToLower(std::wstring str);
 	static bool ReadTemplateFile(std::wstring path, char *buff, size_t buffSize);
 
-	static bool CmdAge2(std::wstring& cmd, std::wstring& args);
-	static bool CmdDialog(std::wstring& cmd, std::wstring& args);
-	static bool CmdTB(std::wstring& cmd, std::wstring& args);
-	static bool CmdTP(std::wstring& cmd, std::wstring& args);
-	static bool CmdDamage(std::wstring& cmd, std::wstring& args);
-	static bool CmdChest(std::wstring& cmd, std::wstring& args);
-	static bool CmdAfk(std::wstring& cmd, std::wstring& args);
-	static bool CmdTarget(std::wstring& cmd, std::wstring& args);
-	static bool CmdUseSkill(std::wstring& cmd, std::wstring& args);
-	static bool CmdShow(std::wstring& cmd, std::wstring& args);
-	static bool CmdHide(std::wstring& cmd, std::wstring& args);
-	static bool CmdZoom(std::wstring& cmd, std::wstring& args);
-	static bool CmdCamera(std::wstring& cmd, std::wstring& args);
-	static bool CmdSCWiki(std::wstring& cmd, std::wstring& args);
-	static bool CmdLoad(std::wstring& cmd, std::wstring& args);
+	static void CmdAge2(std::wstring& cmd, std::wstring& args);
+	static void CmdDialog(std::wstring& cmd, std::wstring& args);
+	static void CmdTB(std::wstring& cmd, std::wstring& args);
+	static void CmdTP(std::wstring& cmd, std::wstring& args);
+	static void CmdDamage(std::wstring& cmd, std::wstring& args);
+	static void CmdChest(std::wstring& cmd, std::wstring& args);
+	static void CmdAfk(std::wstring& cmd, std::wstring& args);
+	static void CmdTarget(std::wstring& cmd, std::wstring& args);
+	static void CmdUseSkill(std::wstring& cmd, std::wstring& args);
+	static void CmdShow(std::wstring& cmd, std::wstring& args);
+	static void CmdHide(std::wstring& cmd, std::wstring& args);
+	static void CmdZoom(std::wstring& cmd, std::wstring& args);
+	static void CmdCamera(std::wstring& cmd, std::wstring& args);
+	static void CmdSCWiki(std::wstring& cmd, std::wstring& args);
+	static void CmdLoad(std::wstring& cmd, std::wstring& args);
 
 	static std::vector<ToolboxUIElement*> MatchingWindows(std::vector<std::wstring>& args);
 

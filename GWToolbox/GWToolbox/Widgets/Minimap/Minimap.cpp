@@ -68,7 +68,7 @@ void Minimap::Initialize() {
 
 	pmap_renderer.Invalidate();
 
-	GW::Chat::RegisterCommand(L"flag", 
+	GW::Chat::CreateCommand(L"flag",
 		[this](std::wstring& cmd, std::wstring& a) {
 		std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
 		if (args.empty()) {

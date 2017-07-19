@@ -246,7 +246,7 @@ void HotkeySendChat::Execute() {
 	if (channel == L'/') {
 		Log::Info("/%s", message);
 	}
-	GW::Chat::SendChat(message, channel);
+	GW::Chat::SendChat(channel, message);
 }
 
 HotkeyUseItem::HotkeyUseItem(CSimpleIni* ini, const char* section) : TBHotkey(ini, section) {

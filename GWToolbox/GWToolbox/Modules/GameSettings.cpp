@@ -36,10 +36,10 @@ namespace {
 		}
 	}
 
-	void SendChatCallback(GW::Chat::Channel chan, wchar_t msg[139]) {
+	void SendChatCallback(GW::Chat::Channel chan, wchar_t msg[120]) {
 		if (!GameSettings::Instance().auto_transform_url || !msg) return;
 		size_t len = wcslen(msg);
-		size_t max_len = 139;
+		size_t max_len = 120;
 
 		if (chan == GW::Chat::CHANNEL_WHISPER) {
 			// msg == "Whisper Target Name,msg"
@@ -99,7 +99,7 @@ void GameSettings::Initialize() {
 	patches.push_back(new GW::MemoryPatcher((void*)0x0067D622, a, 10));
 	patches.push_back(new GW::MemoryPatcher((void*)0x0067D65E, a, 10));
 
-	GW::Chat::RegisterCommand(L"borderless", 
+	GW::Chat::CreateCommand(L"borderless",
 		[&](std::wstring& cmd, std::wstring& a) -> bool {
 		std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
 		if (args.empty()) {

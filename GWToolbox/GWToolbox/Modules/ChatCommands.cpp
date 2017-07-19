@@ -68,28 +68,28 @@ void ChatCommands::DrawHelp() {
 void ChatCommands::Initialize() {
 	ToolboxModule::Initialize();
 
-	GW::Chat::RegisterCommand(L"age2", ChatCommands::CmdAge2);
-	GW::Chat::RegisterCommand(L"dialog", ChatCommands::CmdDialog);
-	GW::Chat::RegisterCommand(L"show", ChatCommands::CmdShow);
-	GW::Chat::RegisterCommand(L"hide", ChatCommands::CmdHide);
-	GW::Chat::RegisterCommand(L"tb", ChatCommands::CmdTB);
-	GW::Chat::RegisterCommand(L"tp", ChatCommands::CmdTP);
-	GW::Chat::RegisterCommand(L"to", ChatCommands::CmdTP);
-	GW::Chat::RegisterCommand(L"travel", ChatCommands::CmdTP);
-	GW::Chat::RegisterCommand(L"zoom", ChatCommands::CmdZoom);
-	GW::Chat::RegisterCommand(L"camera", ChatCommands::CmdCamera);
-	GW::Chat::RegisterCommand(L"cam", ChatCommands::CmdCamera);
-	GW::Chat::RegisterCommand(L"damage", ChatCommands::CmdDamage);
-	GW::Chat::RegisterCommand(L"dmg", ChatCommands::CmdDamage);
-	GW::Chat::RegisterCommand(L"chest", ChatCommands::CmdChest);
-	GW::Chat::RegisterCommand(L"xunlai", ChatCommands::CmdChest);
-	GW::Chat::RegisterCommand(L"afk", ChatCommands::CmdAfk);
-	GW::Chat::RegisterCommand(L"target", ChatCommands::CmdTarget);
-	GW::Chat::RegisterCommand(L"tgt", ChatCommands::CmdTarget);
-	GW::Chat::RegisterCommand(L"useskill", ChatCommands::CmdUseSkill);
-	GW::Chat::RegisterCommand(L"skilluse", ChatCommands::CmdUseSkill);
-	GW::Chat::RegisterCommand(L"scwiki", ChatCommands::CmdSCWiki);
-	GW::Chat::RegisterCommand(L"load", ChatCommands::CmdLoad);
+	GW::Chat::CreateCommand(L"age2", ChatCommands::CmdAge2);
+	GW::Chat::CreateCommand(L"dialog", ChatCommands::CmdDialog);
+	GW::Chat::CreateCommand(L"show", ChatCommands::CmdShow);
+	GW::Chat::CreateCommand(L"hide", ChatCommands::CmdHide);
+	GW::Chat::CreateCommand(L"tb", ChatCommands::CmdTB);
+	GW::Chat::CreateCommand(L"tp", ChatCommands::CmdTP);
+	GW::Chat::CreateCommand(L"to", ChatCommands::CmdTP);
+	GW::Chat::CreateCommand(L"travel", ChatCommands::CmdTP);
+	GW::Chat::CreateCommand(L"zoom", ChatCommands::CmdZoom);
+	GW::Chat::CreateCommand(L"camera", ChatCommands::CmdCamera);
+	GW::Chat::CreateCommand(L"cam", ChatCommands::CmdCamera);
+	GW::Chat::CreateCommand(L"damage", ChatCommands::CmdDamage);
+	GW::Chat::CreateCommand(L"dmg", ChatCommands::CmdDamage);
+	GW::Chat::CreateCommand(L"chest", ChatCommands::CmdChest);
+	GW::Chat::CreateCommand(L"xunlai", ChatCommands::CmdChest);
+	GW::Chat::CreateCommand(L"afk", ChatCommands::CmdAfk);
+	GW::Chat::CreateCommand(L"target", ChatCommands::CmdTarget);
+	GW::Chat::CreateCommand(L"tgt", ChatCommands::CmdTarget);
+	GW::Chat::CreateCommand(L"useskill", ChatCommands::CmdUseSkill);
+	GW::Chat::CreateCommand(L"skilluse", ChatCommands::CmdUseSkill);
+	GW::Chat::CreateCommand(L"scwiki", ChatCommands::CmdSCWiki);
+	GW::Chat::CreateCommand(L"load", ChatCommands::CmdLoad);
 }
 
 bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
@@ -194,15 +194,14 @@ bool ChatCommands::ReadTemplateFile(std::wstring path, char *buff, size_t buffSi
 	return true;
 }
 
-bool ChatCommands::CmdAge2(std::wstring& cmd, std::wstring& a) {
+void ChatCommands::CmdAge2(std::wstring& cmd, std::wstring& a) {
 	char buffer[32];
 	DWORD second = GW::Map::GetInstanceTime() / 1000;
 	sprintf_s(buffer, "%02u:%02u:%02u", (second / 3600), (second / 60) % 60, second % 60);
 	Log::Info(buffer);
-	return true;
 }
 
-bool ChatCommands::CmdDialog(std::wstring& cmd, std::wstring& a) {
+void ChatCommands::CmdDialog(std::wstring& cmd, std::wstring& a) {
 	std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
 	if (args.empty()) {
 		Log::Error("Please provide an integer or hex argument");
@@ -215,10 +214,9 @@ bool ChatCommands::CmdDialog(std::wstring& cmd, std::wstring& a) {
 			Log::Error("Invalid argument '%ls', please use an integer or hex value", args[0].c_str());
 		}
 	}
-	return true;
 }
 
-bool ChatCommands::CmdChest(std::wstring& cmd, std::wstring& a) {
+void ChatCommands::CmdChest(std::wstring& cmd, std::wstring& a) {
 	switch (GW::Map::GetInstanceType()) {
 	case GW::Constants::InstanceType::Outpost:
 		GW::Items::OpenXunlaiWindow();
@@ -234,10 +232,9 @@ bool ChatCommands::CmdChest(std::wstring& cmd, std::wstring& a) {
 	default:
 		break;
 	}
-	return true;
 }
 
-bool ChatCommands::CmdTB(std::wstring& cmd, std::wstring& a) {
+void ChatCommands::CmdTB(std::wstring& cmd, std::wstring& a) {
 	std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
 	if (args.empty()) {
 		MainWindow::Instance().visible ^= 1;
@@ -270,7 +267,6 @@ bool ChatCommands::CmdTB(std::wstring& cmd, std::wstring& a) {
 			}
 		}
 	}
-	return true;
 }
 
 std::vector<ToolboxUIElement*> ChatCommands::MatchingWindows(std::vector<std::wstring>& args) {
@@ -295,7 +291,7 @@ std::vector<ToolboxUIElement*> ChatCommands::MatchingWindows(std::vector<std::ws
 	return ret;
 }
 
-bool ChatCommands::CmdShow(std::wstring& cmd, std::wstring& a) {
+void ChatCommands::CmdShow(std::wstring& cmd, std::wstring& a) {
 	std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
 	auto windows = MatchingWindows(args);
 	if (windows.empty()) {
@@ -309,10 +305,9 @@ bool ChatCommands::CmdShow(std::wstring& cmd, std::wstring& a) {
 			window->visible = true;
 		}
 	}
-	return true;
 }
 
-bool ChatCommands::CmdHide(std::wstring& cmd, std::wstring& a) {
+void ChatCommands::CmdHide(std::wstring& cmd, std::wstring& a) {
 	std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
 	auto windows = MatchingWindows(args);
 	if (windows.empty()) {
@@ -322,10 +317,9 @@ bool ChatCommands::CmdHide(std::wstring& cmd, std::wstring& a) {
 			window->visible = false;
 		}
 	}
-	return true;
 }
 
-bool ChatCommands::CmdTP(std::wstring& cmd, std::wstring& a) {
+void ChatCommands::CmdTP(std::wstring& cmd, std::wstring& a) {
 	std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
 	if (args.empty()) {
 		Log::Error("[Error] Please provide an argument");
@@ -426,10 +420,9 @@ bool ChatCommands::CmdTP(std::wstring& cmd, std::wstring& a) {
 			}
 		}
 	}
-	return true;
 }
 
-bool ChatCommands::CmdZoom(std::wstring& cmd, std::wstring& a) {
+void ChatCommands::CmdZoom(std::wstring& cmd, std::wstring& a) {
 	std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
 	if (args.empty()) {
 		GW::CameraMgr::SetMaxDist();
@@ -446,10 +439,9 @@ bool ChatCommands::CmdZoom(std::wstring& cmd, std::wstring& a) {
 			Log::Error("Invalid argument '%ls', please use an integer value", args[0].c_str());
 		}
 	}
-	return true;
 }
 
-bool ChatCommands::CmdCamera(std::wstring& cmd, std::wstring& a) {
+void ChatCommands::CmdCamera(std::wstring& cmd, std::wstring& a) {
 	std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
 	if (args.empty()) {
 		GW::CameraMgr::UnlockCam(false);
@@ -505,10 +497,9 @@ bool ChatCommands::CmdCamera(std::wstring& cmd, std::wstring& a) {
 			Log::Error("Invalid argument.");
 		}
 	}
-	return true;
 }
 
-bool ChatCommands::CmdDamage(std::wstring& cmd, std::wstring& a) {
+void ChatCommands::CmdDamage(std::wstring& cmd, std::wstring& a) {
 	std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
 	if (args.empty()) {
 		PartyDamage::Instance().WritePartyDamage();
@@ -527,25 +518,23 @@ bool ChatCommands::CmdDamage(std::wstring& cmd, std::wstring& a) {
 			} catch (...) {}
 		}
 	}
-	return true;
 }
 
-bool ChatCommands::CmdAfk(std::wstring& cmd, std::wstring& args) {
+void ChatCommands::CmdAfk(std::wstring& cmd, std::wstring& args) {
 	GW::FriendListMgr::SetFriendListStatus(GW::Constants::OnlineStatus::AWAY);
-	return false;
 }
 
-bool ChatCommands::CmdTarget(std::wstring& cmd, std::wstring& a) {
+void ChatCommands::CmdTarget(std::wstring& cmd, std::wstring& a) {
 	std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
 	if (!args.empty()) {
 		std::wstring arg0 = GetLowerCaseArg(args, 0);
 		if (arg0 == L"closest" || arg0 == L"nearest") {
 			// target nearest agent
 			GW::AgentArray agents = GW::Agents::GetAgentArray();
-			if (!agents.valid()) return true;
+			if (!agents.valid()) return;
 
 			GW::Agent* me = GW::Agents::GetPlayer();
-			if (me == nullptr) return true;
+			if (me == nullptr) return;
 
 			float distance = GW::Constants::SqrRange::Compass;
 			int closest = -1;
@@ -581,10 +570,9 @@ bool ChatCommands::CmdTarget(std::wstring& cmd, std::wstring& a) {
 			}
 		}
 	}
-	return true;
 }
 
-bool ChatCommands::CmdUseSkill(std::wstring& cmd, std::wstring& a) {
+void ChatCommands::CmdUseSkill(std::wstring& cmd, std::wstring& a) {
 	std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
 	if (args.empty()) {
 		Instance().skill_to_use = 0;
@@ -604,10 +592,9 @@ bool ChatCommands::CmdUseSkill(std::wstring& cmd, std::wstring& a) {
 			}
 		}
 	}
-	return true;
 }
 
-bool ChatCommands::CmdSCWiki(std::wstring& cmd, std::wstring& a) {
+void ChatCommands::CmdSCWiki(std::wstring& cmd, std::wstring& a) {
 	std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
 	CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 	if (args.size() == 0) {
@@ -623,16 +610,15 @@ bool ChatCommands::CmdSCWiki(std::wstring& cmd, std::wstring& a) {
 		wcscat_s(link, args[i].c_str());
 		ShellExecuteW(NULL, L"open", link, NULL, NULL, SW_SHOWNORMAL);
 	}
-	return true;
 }
 
-bool ChatCommands::CmdLoad(std::wstring& cmd, std::wstring& args) {
+void ChatCommands::CmdLoad(std::wstring& cmd, std::wstring& args) {
 	// We will & should move that to GWCA.
 	static int(__fastcall *GetPersonalDir)(size_t size, wchar_t *dir) = 0;
 	if (!GetPersonalDir) *(DWORD*)&GetPersonalDir = 0x005AAB60;
 	if (args == L"") {
 		// if the command has no args we might want to open the skills templates "folder" in gw.
-		return false;
+		return;
 	}
 
 	wchar_t dir[512];
@@ -645,12 +631,11 @@ bool ChatCommands::CmdLoad(std::wstring& cmd, std::wstring& args) {
 	if (!ReadTemplateFile(dir, temp, 64)) {
 		// If it failed, we will interpret the input as the code models.
 		size_t len = args.size();
-		if (len > 64) return false;
+		if (len > 64) return;
 		for (size_t i = 0; i < len; i++)
 			temp[i] = (char)args[i];
 		temp[len] = 0;
 	}
 
 	GW::SkillbarMgr::LoadSkillTemplate(temp);
-	return true;
 }

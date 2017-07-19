@@ -140,7 +140,7 @@ void PartyDamage::Update() {
 		send_timer = TIMER_INIT();
 		if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
 			&& GW::Agents::GetPlayer()) {
-			GW::Chat::SendChat(send_queue.front().c_str(), L'#');
+			GW::Chat::SendChat('#', send_queue.front().c_str());
 			send_queue.pop();
 		}
 	}

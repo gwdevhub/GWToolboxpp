@@ -41,7 +41,7 @@ static int cmdSendChat(lua_State* L)
 	const char* c = luaL_checkstring(L, 2);
 	if (s && c)
 	{
-		GW::Chat::SendChat(s, *c);
+		GW::Chat::SendChat(*c, s);
 	}
 	return 0;
 }

@@ -367,7 +367,7 @@ void InfoWindow::DrawResignlog() {
 				(status[i] == Connected 
 					&& GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) 
 				? "Connected (not resigned)" : status_str);
-			GW::Chat::SendChat(buf, '#');
+			GW::Chat::SendChat('#', buf);
 		}
 		ImGui::SameLine();
 		ImGui::Text("%d. %S - %s", i + 1, player.Name, status_str);
