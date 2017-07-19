@@ -2,6 +2,11 @@
 layout: default
 ---
 
+<figure>
+<img src="https://user-images.githubusercontent.com/11432831/28233524-4cf116ee-68ac-11e7-9a97-1a4bcc2d2659.PNG"/>
+<figcaption>Dialogs Window</figcaption>
+</figure>
+
 # Dialogs
 The Dialogs window allows you to send dialogs directly to NPCs without actually having to talk to them, and in some cases without having completed all the pre-requisites to make that dialog available.
 

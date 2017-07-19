@@ -2,6 +2,11 @@
 layout: default
 ---
 
+<figure>
+<img src="https://user-images.githubusercontent.com/11432831/28233502-2e281406-68ac-11e7-9a00-a48186f45cce.PNG"/>
+<figcaption>Edit Teambuild Window</figcaption>
+</figure>
+
 # Builds
 The Builds window allows you to create and edit teambuilds, which can then be sent directly to party chat. Clicking on the name of one of your teambuilds will send the name, followed by each build in a loadable template.
 

@@ -2,6 +2,11 @@
 layout: default
 ---
 
+<figure>
+<img src="https://user-images.githubusercontent.com/11432831/28382699-ed34bf1e-6c73-11e7-8280-bdfa85d90ae0.PNG"/>
+<figcaption>Minimap</figcaption>
+</figure>
+
 # Minimap
 The Minimap widget is an advanced version of the Guild Wars compass.
 
@@ -33,6 +38,11 @@ The Minimap widget is an advanced version of the Guild Wars compass.
   * Cursed Brigand
   * Fendi Nin
   * Soul of Fendi Nin
+
+<figure>
+<img src="https://user-images.githubusercontent.com/11432831/28233561-79208cae-68ac-11e7-8e7e-af4bb1b1264e.PNG"/>
+<figcaption>Minimap Settings</figcaption>
+</figure>
 
 ## Customizing appearance
 All of these settings can be adjusted in [Settings](settings) or in the `GWToolbox.ini` file in the settings folder.

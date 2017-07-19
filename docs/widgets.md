@@ -10,6 +10,11 @@ All widgets have options in [Settings](settings) to specify the exact co-ordinat
 ## Interface
 * Click and drag on the lower right corner to re-size a widget.
 * Click and drag anywhere to move a widget.
+
+<figure>
+<img src="https://user-images.githubusercontent.com/11432831/28233476-fa86197c-68ab-11e7-85ac-f9c21f4e30db.PNG"/>
+<figcaption>Timer Widget</figcaption>
+</figure>
   
 There are several ways to open and close widgets:
 * Checkboxes in the [Info](info) window.
@@ -18,6 +23,11 @@ There are several ways to open and close widgets:
 * Chat command `/show (name of widget)`.
 * Chat command `/tb (name of widdget)` to toggle show/hide.
 
+<figure>
+<img src="https://user-images.githubusercontent.com/11432831/28233454-decaf91e-68ab-11e7-8547-e584bd499628.PNG"/>
+<figcaption>Health Widget</figcaption>
+</figure>
+
 ## Timer
 The timer shows the *instance time* of the current map, meaning for how long the instance/map/district has been running.
 
@@ -25,6 +35,11 @@ The timer shows the *instance time* of the current map, meaning for how long the
 The health monitor shows your target's current health, maximum health, and health as a percentage.
 
 Until you directly affect the health of an agent (see a pop-up number over it), you will only be able to see the percentage. If its maximum health changes (e.g. a player using a cupcake or getting a morale boost), the health monitor won't show this until you affect its health again.
+
+<figure>
+<img src="https://user-images.githubusercontent.com/11432831/28233453-dcab43f0-68ab-11e7-9788-c5e39799d0ee.PNG"/>
+<figcaption>Distance Widget</figcaption>
+</figure>
 
 ## Distance
 The distance monitor shows your distance from your target as a percentage of compass range and in GW distance units (gwinches).

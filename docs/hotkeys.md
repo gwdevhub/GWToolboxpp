@@ -2,6 +2,11 @@
 layout: default
 ---
 
+<figure>
+<img src="https://user-images.githubusercontent.com/11432831/28233491-14e981f0-68ac-11e7-9164-11b9ee781647.PNG"/>
+<figcaption>Hotkeys Window</figcaption>
+</figure>
+
 # Hotkeys
 The Hotkeys window offers a large selection of Toolbox functions that can be mapped to a key on your keyboard or mouse, so that when you press the key, you will perform that action.
 
