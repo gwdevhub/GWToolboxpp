@@ -133,13 +133,18 @@ void GameSettings::Initialize() {
 void GameSettings::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini);
 	borderless_window = ini->GetBoolValue(Name(), "borderlesswindow", false);
+	tick_is_toggle = ini->GetBoolValue(Name(), "tick_is_toggle", true);
+
+	show_timestamps = ini->GetBoolValue(Name(), "show_timestamps", true);
+	keep_chat_history = ini->GetBoolValue(Name(), "keep_chat_history", true);
 	open_template_links = ini->GetBoolValue(Name(), "openlinks", true);
 	auto_transform_url = ini->GetBoolValue(Name(), "auto_url", true);
-	tick_is_toggle = ini->GetBoolValue(Name(), "tick_is_toggle", true);
 	select_with_chat_doubleclick = ini->GetBoolValue(Name(), "select_with_chat_doubleclick", true);
+
 	flash_window_on_pm = ini->GetBoolValue(Name(), "flash_window_on_pm", true);
 	flash_window_on_party_invite = ini->GetBoolValue(Name(), "flash_window_on_party_invite", true);
 	flash_window_on_zoning = ini->GetBoolValue(Name(), "flash_window_on_zoning", true);
+
 	auto_set_away = ini->GetBoolValue(Name(), "auto_set_away", false);
 	auto_set_away_delay = ini->GetLongValue(Name(), "auto_set_away_delay", 10);
 	auto_set_online = ini->GetBoolValue(Name(), "auto_set_online", false);
@@ -150,18 +155,26 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	if (select_with_chat_doubleclick) GW::Chat::SetChatEventCallback(&ChatEventCallback);
 	if (auto_transform_url) GW::Chat::SetSendChatCallback(&SendChatCallback);
 	if (flash_window_on_pm) GW::Chat::SetWhisperCallback(&WhisperCallback);
+	
+	GW::Chat::KeepChatLog = keep_chat_history;
+	GW::Chat::ShowTimestamp = show_timestamps;
 }
 
 void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ToolboxModule::SaveSettings(ini);
 	ini->SetBoolValue(Name(), "borderlesswindow", borderless_window);
+	ini->SetBoolValue(Name(), "tick_is_toggle", tick_is_toggle);
+
+	ini->SetBoolValue(Name(), "show_timestamps", show_timestamps);
+	ini->SetBoolValue(Name(), "keep_chat_history", keep_chat_history);
 	ini->SetBoolValue(Name(), "openlinks", open_template_links);
 	ini->SetBoolValue(Name(), "auto_url", auto_transform_url);
-	ini->SetBoolValue(Name(), "tick_is_toggle", tick_is_toggle);
 	ini->SetBoolValue(Name(), "select_with_chat_doubleclick", select_with_chat_doubleclick);
+
 	ini->SetBoolValue(Name(), "flash_window_on_pm", flash_window_on_pm);
 	ini->SetBoolValue(Name(), "flash_window_on_party_invite", flash_window_on_party_invite);
 	ini->SetBoolValue(Name(), "flash_window_on_zoning", flash_window_on_zoning);
+
 	ini->SetBoolValue(Name(), "auto_set_away", auto_set_away);
 	ini->SetLongValue(Name(), "auto_set_away_delay", auto_set_away_delay);
 	ini->SetBoolValue(Name(), "auto_set_online", auto_set_online);
@@ -169,6 +182,15 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 
 void GameSettings::DrawSettingInternal() {
 	DrawBorderlessSetting();
+
+	if (ImGui::Checkbox("Show chat messages timestamp.", &show_timestamps)) {
+		GW::Chat::ShowTimestamp = show_timestamps;
+	}
+
+	if (ImGui::Checkbox("Keep chat history.", &keep_chat_history)) {
+		GW::Chat::KeepChatLog = keep_chat_history;
+	}
+	ImGui::ShowHelp("Messages in the chat do not disappear on character change.");
 
 	if (ImGui::Checkbox("Open web links from templates", &open_template_links)) {
 		GW::Chat::SetOpenLinks(open_template_links);

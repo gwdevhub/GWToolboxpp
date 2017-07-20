@@ -33,9 +33,12 @@ public:
 	// some settings that are either referenced from multiple places
 	// or have nowhere else to be
 	bool borderless_window = false;
-	bool open_template_links = false;
-	bool auto_transform_url;
 	bool tick_is_toggle = false;
+
+	bool show_timestamps = false;
+	bool keep_chat_history = false;
+	bool open_template_links = false;
+	bool auto_transform_url = false;
 	bool select_with_chat_doubleclick = false;
 
 	bool flash_window_on_pm = false;
