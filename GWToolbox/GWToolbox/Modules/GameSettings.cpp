@@ -156,8 +156,8 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	if (auto_transform_url) GW::Chat::SetSendChatCallback(&SendChatCallback);
 	if (flash_window_on_pm) GW::Chat::SetWhisperCallback(&WhisperCallback);
 	
-	GW::Chat::KeepChatLog = keep_chat_history;
-	GW::Chat::ShowTimestamp = show_timestamps;
+	GW::Chat::KeepChatHistory = keep_chat_history;
+	GW::Chat::ShowTimestamps  = show_timestamps;
 }
 
 void GameSettings::SaveSettings(CSimpleIni* ini) {
@@ -184,11 +184,11 @@ void GameSettings::DrawSettingInternal() {
 	DrawBorderlessSetting();
 
 	if (ImGui::Checkbox("Show chat messages timestamp.", &show_timestamps)) {
-		GW::Chat::ShowTimestamp = show_timestamps;
+		GW::Chat::ShowTimestamps = show_timestamps;
 	}
 
 	if (ImGui::Checkbox("Keep chat history.", &keep_chat_history)) {
-		GW::Chat::KeepChatLog = keep_chat_history;
+		GW::Chat::KeepChatHistory = keep_chat_history;
 	}
 	ImGui::ShowHelp("Messages in the chat do not disappear on character change.");
 
