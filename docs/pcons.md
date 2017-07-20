@@ -2,6 +2,11 @@
 layout: default
 ---
 
+<figure>
+<img src="https://user-images.githubusercontent.com/11432831/28233488-0d9a3e30-68ac-11e7-8a23-850cbd44735b.PNG"/>
+<figcaption>Pcons Window</figcaption>
+</figure>
+
 # Pcons
 The Pcons window can maintain your choice of cons and pcons, provided you have them in your inventory.
 
@@ -18,6 +23,11 @@ Only the ones in your inventory (not your storage) will be used.
 Your Essence of Celerity, Grail of Might, and Armor of Salvation will only pop when the entire party has loaded into the area.
 
 If any players are dead, cons will not pop. A player leaving the party or losing communication with the server will not prevent cons from popping.
+
+<figure>
+<img src="https://user-images.githubusercontent.com/11432831/28233558-77976cb8-68ac-11e7-90a3-cebe2015f2cf.PNG"/>
+<figcaption>Pcons Settings</figcaption>
+</figure>
 
 ## Settings
 The Pcons windows is highly customizable in the [Settings](settings) window. As well as the usual window options, there are several extra settings to be adjusted:

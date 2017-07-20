@@ -2,6 +2,11 @@
 layout: default
 ---
 
+<figure>
+<img src="https://user-images.githubusercontent.com/11432831/28233518-40a6f0d4-68ac-11e7-96c5-5c4fab47a107.PNG"/>
+<figcaption>Travel Window</figcaption>
+</figure>
+
 # Travel
 The Travel window allows you to travel directly to any outpost in the game, so long as you've already unlocked that outpost.
 

@@ -11,6 +11,11 @@ The buttons at the bottom save and load your Toolbox settings to and from the se
 ## Help
 This section contains some information about how to use Toolbox, along with a list of some of the more important chat commands. All of this information can be found, often in more detail, on this website.
 
+<figure>
+<img src="https://user-images.githubusercontent.com/11432831/28233546-6e8dde4a-68ac-11e7-8bc9-20de80416296.PNG"/>
+<figcaption>Game Settings</figcaption>
+</figure>
+
 ## Game Settings
 These are several quality-of-life features that can simply be toggled on or off:
 * **Borderless Window** makes the Guild Wars window appear full-screen, while still functioning as a window. This prevents the graphics glitch that occurs when tabbing out and back in to Guild Wars in full-screen, and frees the mouse from being locked to the Guild Wars window.  
@@ -29,6 +34,11 @@ These are several quality-of-life features that can simply be toggled on or off:
 * **Automatically set "Away" after ___ minutes of inactivity** sets your status to Away after ___ minutes of no input (including moving the mouse) to Guild Wars. This will only happen if you were set to Online.
 * **Automatically set "Online" after an input to Guild Wars** immediately sets your status to Online after any input (including moving the mouse) to Guild Wars. This will only happen if you were set to Away.  
 Note that you will not see either of these status changes on your own friend list, but your status will have changed, and other players will see this.
+
+<figure>
+<img src="https://user-images.githubusercontent.com/11432831/28233555-719397f6-68ac-11e7-82e5-8a18f4c7c44e.PNG"/>
+<figcaption>Toolbox Settings</figcaption>
+</figure>
 
 ## Toolbox Settings
 These options change some of the ways Toolbox function:

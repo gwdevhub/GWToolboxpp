@@ -2,6 +2,11 @@
 layout: default
 ---
 
+<figure>
+<img src="https://user-images.githubusercontent.com/11432831/28233535-5b479466-68ac-11e7-910a-a58a3d755578.PNG"/>
+<figcaption>Info Window</figcaption>
+</figure>
+
 # Info
 The Info window is the hub for information, which can be be highlighted, and copied with Ctrl+C. Most of this is displayed in drop-down menus.
 
