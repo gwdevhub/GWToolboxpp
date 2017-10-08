@@ -181,14 +181,26 @@ std::wstring ChatCommands::WStrToLower(std::wstring str) {
 }
 
 bool ChatCommands::ReadTemplateFile(std::wstring path, char *buff, size_t buffSize) {
-	HANDLE fileHandle = CreateFileW(path.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	if (fileHandle == INVALID_HANDLE_VALUE) return false;
+	HANDLE fileHandle = CreateFileW(path.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
+	if (fileHandle == INVALID_HANDLE_VALUE) {
+		// Log::Error("Failed openning file '%S'", path.c_str());
+		return false;
+	}
+
 	DWORD fileSize = GetFileSize(fileHandle, NULL);
-	if (fileSize > buffSize - 1) {
+	if (fileSize >= buffSize) {
+		// Log::Error("Template buffer size too small, file size is %d", fileSize);
 		CloseHandle(fileHandle);
 		return false;
 	}
-	ReadFile(fileHandle, buff, fileSize, NULL, NULL);
+
+	DWORD bytesReaded; // @Remark, necessary !!!!! failed on some Windows 7.
+	if (ReadFile(fileHandle, buff, fileSize, &bytesReaded, NULL) == FALSE) {
+		// Log::Error("ReadFile failed ! (%u)", GetLastError());
+		CloseHandle(fileHandle);
+		return false;
+	}
+
 	buff[fileSize] = 0;
 	CloseHandle(fileHandle);
 	return true;
@@ -615,14 +627,14 @@ void ChatCommands::CmdSCWiki(std::wstring& cmd, std::wstring& a) {
 void ChatCommands::CmdLoad(std::wstring& cmd, std::wstring& args) {
 	// We will & should move that to GWCA.
 	static int(__fastcall *GetPersonalDir)(size_t size, wchar_t *dir) = 0;
-	if (!GetPersonalDir) *(DWORD*)&GetPersonalDir = 0x005AAB60;
-	if (args == L"") {
+	if (!GetPersonalDir) *(DWORD*)&GetPersonalDir = 0x005AAB60; // Need scan!
+	if (args.empty()) {
 		// if the command has no args we might want to open the skills templates "folder" in gw.
 		return;
 	}
 
 	wchar_t dir[512];
-	GetPersonalDir(512, dir);
+	GetPersonalDir(512, dir); // @Fix, GetPersonalDir failed on Windows7, return path without slashes
 	wcscat_s(dir, L"/GUILD WARS/Templates/Skills/");
 	wcscat_s(dir, args.c_str());
 	wcscat_s(dir, L".txt");
@@ -637,5 +649,6 @@ void ChatCommands::CmdLoad(std::wstring& cmd, std::wstring& args) {
 		temp[len] = 0;
 	}
 
+	// @Enhancement, LoadSkillTemplate do very little check.
 	GW::SkillbarMgr::LoadSkillTemplate(temp);
 }

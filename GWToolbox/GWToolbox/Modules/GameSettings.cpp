@@ -266,8 +266,15 @@ void GameSettings::ApplyBorderless(bool borderless)  {
 	DWORD current_style = GetWindowLong(gwHandle, GWL_STYLE);
 
 	RECT windowRect, desktopRect;
-	GetWindowRect(gwHandle, &windowRect);
-	GetWindowRect(GetDesktopWindow(), &desktopRect);
+	if (!GetWindowRect(gwHandle, &windowRect)) {
+		// Log::Error("GetWindowRect failed ! (%u)\n", GetLastError());
+		return;
+	}
+
+	if (!GetWindowRect(GetDesktopWindow(), &desktopRect)) {
+		// Log::Error("GetWindowRect failed ! (%u)\n", GetLastError());
+		return;
+	}
 
 	//fullscreen or borderless
 	if (RectEquals(windowRect, desktopRect)) {
