@@ -135,7 +135,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	borderless_window = ini->GetBoolValue(Name(), "borderlesswindow", false);
 	tick_is_toggle = ini->GetBoolValue(Name(), "tick_is_toggle", true);
 
-	show_timestamps = ini->GetBoolValue(Name(), "show_timestamps", true);
+	show_timestamps = ini->GetBoolValue(Name(), "show_timestamps", false);
 	keep_chat_history = ini->GetBoolValue(Name(), "keep_chat_history", true);
 	open_template_links = ini->GetBoolValue(Name(), "openlinks", true);
 	auto_transform_url = ini->GetBoolValue(Name(), "auto_url", true);
@@ -265,15 +265,16 @@ void GameSettings::ApplyBorderless(bool borderless)  {
 	HWND gwHandle = GW::MemoryMgr::GetGWWindowHandle();
 	DWORD current_style = GetWindowLong(gwHandle, GWL_STYLE);
 
+	bool failed_rect = false;
 	RECT windowRect, desktopRect;
 	if (!GetWindowRect(gwHandle, &windowRect)) {
 		// Log::Error("GetWindowRect failed ! (%u)\n", GetLastError());
-		return;
+		failed_rect = true; // if we can't get sizes, skip the check. Unsafe, but allows users to still have borderless functionality. 
 	}
 
 	if (!GetWindowRect(GetDesktopWindow(), &desktopRect)) {
 		// Log::Error("GetWindowRect failed ! (%u)\n", GetLastError());
-		return;
+		failed_rect = true;
 	}
 
 	//fullscreen or borderless
@@ -283,7 +284,7 @@ void GameSettings::ApplyBorderless(bool borderless)  {
 			if (borderless) {
 				//trying to activate borderless while already in borderless
 				Log::Info("Already in Borderless mode");
-				return;
+				//return;
 			}
 		} else {
 			//fullscreen
