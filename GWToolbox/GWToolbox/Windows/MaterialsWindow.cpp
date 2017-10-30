@@ -431,7 +431,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice) {
 			cancelled_progress = done;
 			last_request_type = None;
 		}
-		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Cancel the current price check and purchase queue");
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Cancel the current queue of operations");
 	}
 	ImGui::End();
 }
