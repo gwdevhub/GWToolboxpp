@@ -235,28 +235,29 @@ void LUAInterface::Draw(IDirect3DDevice9*)
 void LUAInterface::ShowConsole()
 {
 	static char input[0x100];
-
-	ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiSetCond_FirstUseEver);
-	ImGui::Begin("LUA Console");
-	if (ImGui::Button("Clear")) g_inst.buf_.clear();
-	ImGui::SameLine();
-	if (ImGui::InputText("Input", input, 0x100, ImGuiInputTextFlags_EnterReturnsTrue))
-	{
-		buf_.append("> %s\n", input);
-		RunString(input);
-		scrolltobottom_ = true;
-		input[0] = '\0';
+	if (visible) {
+		ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiSetCond_FirstUseEver);
+		ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags());
+		if (ImGui::Button("Clear")) g_inst.buf_.clear();
+		ImGui::SameLine();
+		if (ImGui::InputText("Input", input, 0x100, ImGuiInputTextFlags_EnterReturnsTrue))
+		{
+			buf_.append("> %s\n", input);
+			RunString(input);
+			scrolltobottom_ = true;
+			input[0] = '\0';
+		}
+		ImGui::Separator();
+		ImGui::BeginChild("LUA_Output");
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 1));
+		ImGui::TextUnformatted(buf_.begin(), buf_.end());
+		if (scrolltobottom_)
+			ImGui::SetScrollHere(1.0f);
+		scrolltobottom_ = false;
+		ImGui::PopStyleVar();
+		ImGui::EndChild();
+		ImGui::End();
 	}
-	ImGui::Separator();
-	ImGui::BeginChild("LUA_Output");
-	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 1));
-	ImGui::TextUnformatted(buf_.begin(),buf_.end());
-	if (scrolltobottom_)
-		ImGui::SetScrollHere(1.0f);
-	scrolltobottom_ = false;
-	ImGui::PopStyleVar();
-	ImGui::EndChild();
-	ImGui::End();
 }
 
 int LUAInterface::RunString(std::string cmds)
