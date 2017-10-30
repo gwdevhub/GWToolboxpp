@@ -627,10 +627,10 @@ void ChatCommands::CmdSCWiki(std::wstring& cmd, std::wstring& a) {
 void ChatCommands::CmdLoad(std::wstring& cmd, std::wstring& args) {
 	// We will & should move that to GWCA.
 	static int(__fastcall *GetPersonalDir)(size_t size, wchar_t *dir) = 0;
-	if (!GetPersonalDir) *(DWORD*)&GetPersonalDir = 0x005AAB60; // Need scan!
+	if (!GetPersonalDir) *(DWORD*)&GetPersonalDir = 0x005AAB60; // need scan!
 	if (args.empty()) {
 		typedef void(__fastcall *SendUIMessage_t)(int id, void *param1, void *param2);
-		SendUIMessage_t SendUIMessage = SendUIMessage_t(0x00605AC0); // Need scan!
+		SendUIMessage_t SendUIMessage = SendUIMessage_t(0x00605AC0); // need scan!
 		int32_t param[2] = { 0, 2 };
 		SendUIMessage(0x100001B4, param, NULL);
 		return;
@@ -652,6 +652,5 @@ void ChatCommands::CmdLoad(std::wstring& cmd, std::wstring& args) {
 		temp[len] = 0;
 	}
 
-	// @Enhancement, LoadSkillTemplate do very little check.
 	GW::SkillbarMgr::LoadSkillTemplate(temp);
 }
