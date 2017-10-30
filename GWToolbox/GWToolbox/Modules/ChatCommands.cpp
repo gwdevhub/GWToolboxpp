@@ -629,7 +629,10 @@ void ChatCommands::CmdLoad(std::wstring& cmd, std::wstring& args) {
 	static int(__fastcall *GetPersonalDir)(size_t size, wchar_t *dir) = 0;
 	if (!GetPersonalDir) *(DWORD*)&GetPersonalDir = 0x005AAB60; // Need scan!
 	if (args.empty()) {
-		// if the command has no args we might want to open the skills templates "folder" in gw.
+		typedef void(__fastcall *SendUIMessage_t)(int id, void *param1, void *param2);
+		SendUIMessage_t SendUIMessage = SendUIMessage_t(0x00605AC0); // Need scan!
+		int32_t param[2] = { 0, 2 };
+		SendUIMessage(0x100001B4, param, NULL);
 		return;
 	}
 
