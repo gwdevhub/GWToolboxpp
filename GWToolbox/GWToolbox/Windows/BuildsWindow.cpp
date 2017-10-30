@@ -3,6 +3,7 @@
 #include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\MapMgr.h>
+#include <GWCA\Managers\SkillbarMgr.h>
 
 #include "GuiUtils.h"
 #include <Modules\Resources.h>
@@ -66,8 +67,8 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 				ImGui::PushID(j);
 				ImGui::Text("#%d", j + 1);
 				ImGui::SameLine(30.0f);
-				ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 24.0f - 50.0f - 30.0f
-					- ImGui::GetStyle().ItemInnerSpacing.x * 3) / 2);
+				ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 24.0f - 50.0f - 50.0f - 30.0f
+					- ImGui::GetStyle().ItemInnerSpacing.x * 4) / 2);
 				if (ImGui::InputText("###name", build.name, 128)) builds_changed = true;
 				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 				if (ImGui::InputText("###code", build.code, 128)) builds_changed = true;
@@ -77,6 +78,11 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 					Send(tbuild, j);
 				}
 				if (ImGui::IsItemHovered()) ImGui::SetTooltip("Send to team chat");
+				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+				if (ImGui::Button("Load", ImVec2(50.0f, 0))) {
+					GW::SkillbarMgr::LoadSkillTemplate(build.code);
+				}
+				if (ImGui::IsItemHovered()) ImGui::SetTooltip("Load build on your character");
 				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 				if (ImGui::Button("x", ImVec2(24.0f, 0))) {
 					tbuild.builds.erase(tbuild.builds.begin() + j);
