@@ -18,25 +18,25 @@ ImGuiStyle ToolboxTheme::DefaultTheme() {
 	style.ScrollbarRounding = 4.0f;
 	style.GrabMinSize = 17.0f;
 	style.GrabRounding = 2.0f;
-	style.Colors[ImGuiCol_WindowBg] = ImColor(0xD0000000);
-	style.Colors[ImGuiCol_TitleBg] = ImColor(0xD7282828);
-	style.Colors[ImGuiCol_TitleBgCollapsed] = ImColor(0x82282828);
-	style.Colors[ImGuiCol_TitleBgActive] = ImColor(0xFF282828);
-	style.Colors[ImGuiCol_MenuBarBg] = ImColor(0xFF000000);
-	style.Colors[ImGuiCol_ScrollbarBg] = ImColor(0xCC141414);
-	style.Colors[ImGuiCol_ScrollbarGrab] = ImColor(0xB3424954);
-	style.Colors[ImGuiCol_ScrollbarGrabHovered] = ImColor(0xFF424954);
-	style.Colors[ImGuiCol_ScrollbarGrabActive] = ImColor(0xFF565D68);
-	style.Colors[ImGuiCol_SliderGrabActive] = ImColor(0xFFC8C8FF);
-	style.Colors[ImGuiCol_Button] = ImColor(0x99344870);
-	style.Colors[ImGuiCol_ButtonHovered] = ImColor(0xFF344870);
-	style.Colors[ImGuiCol_ButtonActive] = ImColor(0xFF283C68);
-	style.Colors[ImGuiCol_CloseButton] = ImColor(0x80808080);
-	style.Colors[ImGuiCol_Header] = ImColor(0x73E62800);
-	style.Colors[ImGuiCol_HeaderHovered] = ImColor(0xCCF03200);
-	style.Colors[ImGuiCol_HeaderActive] = ImColor(0xCCFA3C00);
-	style.Colors[ImGuiCol_CloseButtonHovered] = ImColor(0x99BDBDBD);
-	style.Colors[ImGuiCol_CloseButtonActive] = ImColor(0xFFBDBDBD);
+	style.Colors[ImGuiCol_WindowBg] = ImColor(Colors::SwapRB(0xD0000000));
+	style.Colors[ImGuiCol_TitleBg] = ImColor(Colors::SwapRB(0xD7282828));
+	style.Colors[ImGuiCol_TitleBgCollapsed] = ImColor(Colors::SwapRB(0x82282828));
+	style.Colors[ImGuiCol_TitleBgActive] = ImColor(Colors::SwapRB(0xFF282828));
+	style.Colors[ImGuiCol_MenuBarBg] = ImColor(Colors::SwapRB(0xFF000000));
+	style.Colors[ImGuiCol_ScrollbarBg] = ImColor(Colors::SwapRB(0xCC141414));
+	style.Colors[ImGuiCol_ScrollbarGrab] = ImColor(Colors::SwapRB(0xB3424954));
+	style.Colors[ImGuiCol_ScrollbarGrabHovered] = ImColor(Colors::SwapRB(0xFF424954));
+	style.Colors[ImGuiCol_ScrollbarGrabActive] = ImColor(Colors::SwapRB(0xFF565D68));
+	style.Colors[ImGuiCol_SliderGrabActive] = ImColor(Colors::SwapRB(0xFFC8C8FF));
+	style.Colors[ImGuiCol_Button] = ImColor(Colors::SwapRB(0x99344870));
+	style.Colors[ImGuiCol_ButtonHovered] = ImColor(Colors::SwapRB(0xFF344870));
+	style.Colors[ImGuiCol_ButtonActive] = ImColor(Colors::SwapRB(0xFF283C68));
+	style.Colors[ImGuiCol_CloseButton] = ImColor(Colors::SwapRB(0x80808080));
+	style.Colors[ImGuiCol_Header] = ImColor(Colors::SwapRB(0x73E62800));
+	style.Colors[ImGuiCol_HeaderHovered] = ImColor(Colors::SwapRB(0xCCF03200));
+	style.Colors[ImGuiCol_HeaderActive] = ImColor(Colors::SwapRB(0xCCFA3C00));
+	style.Colors[ImGuiCol_CloseButtonHovered] = ImColor(Colors::SwapRB(0x99BDBDBD));
+	style.Colors[ImGuiCol_CloseButtonActive] = ImColor(Colors::SwapRB(0xFFBDBDBD));
 	return style;
 }
 
@@ -74,7 +74,7 @@ void ToolboxTheme::LoadSettings(CSimpleIni* ini) {
 	ini_style.ButtonTextAlign.x = (float)inifile->GetDoubleValue(IniSection, "ButtonTextAlignX", ini_style.ButtonTextAlign.x);
 	ini_style.ButtonTextAlign.y = (float)inifile->GetDoubleValue(IniSection, "ButtonTextAlignY", ini_style.ButtonTextAlign.y);
 	for (int i = 0; i < ImGuiCol_COUNT; ++i) {
-		const char* name = ImGui::GetStyleColName(i);
+		const char* name = ImGui::GetStyleColorName(i);
 		Color color = Colors::Load(inifile, IniSection, name, ImColor(ini_style.Colors[i]));
 		ini_style.Colors[i] = ImColor(color);
 	}
@@ -108,7 +108,7 @@ void ToolboxTheme::SaveSettings(CSimpleIni* ini) {
 	if (style.ButtonTextAlign.x != ini_style.ButtonTextAlign.x) inifile->SetDoubleValue(IniSection, "ButtonTextAlignX", style.ButtonTextAlign.x);
 	if (style.ButtonTextAlign.y != ini_style.ButtonTextAlign.y) inifile->SetDoubleValue(IniSection, "ButtonTextAlignY", style.ButtonTextAlign.y);
 	for (int i = 0; i < ImGuiCol_COUNT; ++i) {
-		const char* name = ImGui::GetStyleColName(i);
+		const char* name = ImGui::GetStyleColorName(i);
 		Color cur = ImColor(style.Colors[i]);
 		if (cur != ImColor(ini_style.Colors[i])) {
 			Color color = ImColor(style.Colors[i]);
@@ -147,7 +147,7 @@ void ToolboxTheme::DrawSettingInternal() {
 	ImGui::SliderFloat2("Button Text Align", (float*)&style.ButtonTextAlign, 0.0f, 1.0f, "%.2f");
 	ImGui::Text("Colors");
 	for (int i = 0; i < ImGuiCol_COUNT; ++i) {
-		const char* name = ImGui::GetStyleColName(i);
+		const char* name = ImGui::GetStyleColorName(i);
 		ImGui::PushID(i);
 		ImGui::ColorEdit4(name, (float*)&style.Colors[i]);
 		Color cur = ImColor(style.Colors[i]);

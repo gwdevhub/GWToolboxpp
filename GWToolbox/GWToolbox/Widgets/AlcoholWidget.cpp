@@ -38,7 +38,7 @@ bool AlcoholWidget::AlcUpdate(GW::Packet::StoC::P095* packet) {
 void AlcoholWidget::Draw(IDirect3DDevice9* pDevice) {
 	if (!visible) return;
 
-	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(0, 0, 0, 0));
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
 	ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, true))) {
 		static char timer[32];

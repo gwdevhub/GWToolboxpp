@@ -1,7 +1,7 @@
-[submodule "imgui"]
-	path = Dependencies/imgui
-	url = https://github.com/HasKha/imgui.git
 [submodule "Dependencies/GWCA"]
 	path = Dependencies/GWCA
 	url = https://github.com/GregLando113/GWCA.git
 	
+[submodule "Dependencies/imgui"]
+	path = Dependencies/imgui
+	url = https://github.com/ocornut/imgui.git

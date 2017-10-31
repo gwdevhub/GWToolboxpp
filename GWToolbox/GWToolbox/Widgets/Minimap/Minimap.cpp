@@ -211,7 +211,7 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 		}
 	}
 
-	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(0, 0, 0, 0));
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
 	ImGui::SetNextWindowSize(ImVec2(500.0f, 500.0f), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), nullptr, GetWinFlags(ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoBringToFrontOnFocus))) {
 		// window pos are already rounded by imgui, so casting is no big deal
@@ -327,7 +327,7 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 			ImGui::SetNextWindowPos(ImVec2((float)location.x, (float)(location.y + size.y)));
 			ImGui::SetNextWindowSize(ImVec2((float)size.x, 40.0f));
 		}
-		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(hero_flag_window_background));
+		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(hero_flag_window_background).Value);
 		if (ImGui::Begin("Hero Controls", nullptr, GetWinFlags(
 			hero_flag_window_attach ? ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove : 0, false))) {
 			static const char* flag_txt[] = {

@@ -9,7 +9,7 @@ void ClockWidget::Draw(IDirect3DDevice9* pDevice) {
 	SYSTEMTIME time;
 	GetLocalTime(&time);
 
-	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(0, 0, 0, 0));
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
 	ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), nullptr, GetWinFlags())) {
 		static char timer[32];

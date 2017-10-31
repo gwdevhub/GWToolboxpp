@@ -35,8 +35,6 @@ public:
 	bool borderless_window = false;
 	bool tick_is_toggle = false;
 
-	bool show_timestamps = false;
-	bool keep_chat_history = false;
 	bool open_template_links = false;
 	bool auto_transform_url = false;
 	bool select_with_chat_doubleclick = false;

@@ -274,7 +274,7 @@ void GWToolbox::Initialize() {
 	std::vector<ToolboxModule*> core_modules;
 	core_modules.push_back(&Resources::Instance());
 	core_modules.push_back(&Updater::Instance());
-	core_modules.push_back(&LUAInterface::Instance());
+	//core_modules.push_back(&LUAInterface::Instance());
 	core_modules.push_back(&GameSettings::Instance());
 	core_modules.push_back(&ToolboxSettings::Instance());
 	core_modules.push_back(&ChatFilter::Instance());

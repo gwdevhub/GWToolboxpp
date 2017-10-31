@@ -10,6 +10,7 @@
 #include "GuiUtils.h"
 #include <GWToolbox.h>
 #include <Timer.h>
+#include <Color.h>
 
 namespace {
 	void ChatEventCallback(DWORD id, DWORD type, wchar_t* info, void* unk) {
@@ -135,8 +136,10 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	borderless_window = ini->GetBoolValue(Name(), "borderlesswindow", false);
 	tick_is_toggle = ini->GetBoolValue(Name(), "tick_is_toggle", true);
 
-	show_timestamps = ini->GetBoolValue(Name(), "show_timestamps", false);
-	keep_chat_history = ini->GetBoolValue(Name(), "keep_chat_history", true);
+	GW::Chat::ShowTimestamps = ini->GetBoolValue(Name(), "show_timestamps", false);
+	GW::Chat::TimestampsColor = Colors::Load(ini, Name(), "timestamps_color", Colors::White());
+
+	GW::Chat::KeepChatHistory = ini->GetBoolValue(Name(), "keep_chat_history", true);
 	open_template_links = ini->GetBoolValue(Name(), "openlinks", true);
 	auto_transform_url = ini->GetBoolValue(Name(), "auto_url", true);
 	select_with_chat_doubleclick = ini->GetBoolValue(Name(), "select_with_chat_doubleclick", true);
@@ -155,9 +158,6 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	if (select_with_chat_doubleclick) GW::Chat::SetChatEventCallback(&ChatEventCallback);
 	if (auto_transform_url) GW::Chat::SetSendChatCallback(&SendChatCallback);
 	if (flash_window_on_pm) GW::Chat::SetWhisperCallback(&WhisperCallback);
-	
-	GW::Chat::KeepChatHistory = keep_chat_history;
-	GW::Chat::ShowTimestamps  = show_timestamps;
 }
 
 void GameSettings::SaveSettings(CSimpleIni* ini) {
@@ -165,8 +165,10 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), "borderlesswindow", borderless_window);
 	ini->SetBoolValue(Name(), "tick_is_toggle", tick_is_toggle);
 
-	ini->SetBoolValue(Name(), "show_timestamps", show_timestamps);
-	ini->SetBoolValue(Name(), "keep_chat_history", keep_chat_history);
+	ini->SetBoolValue(Name(), "show_timestamps", GW::Chat::ShowTimestamps);
+	Colors::Save(ini, Name(), "timestamps_color", GW::Chat::TimestampsColor);
+
+	ini->SetBoolValue(Name(), "keep_chat_history", GW::Chat::KeepChatHistory);
 	ini->SetBoolValue(Name(), "openlinks", open_template_links);
 	ini->SetBoolValue(Name(), "auto_url", auto_transform_url);
 	ini->SetBoolValue(Name(), "select_with_chat_doubleclick", select_with_chat_doubleclick);
@@ -183,13 +185,16 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 void GameSettings::DrawSettingInternal() {
 	DrawBorderlessSetting();
 
-	if (ImGui::Checkbox("Show chat messages timestamp.", &show_timestamps)) {
-		GW::Chat::ShowTimestamps = show_timestamps;
+	ImGui::Checkbox("Show chat messages timestamp. Color:", &GW::Chat::ShowTimestamps);
+	ImGui::SameLine();
+	
+	ImVec4 col = ImGui::ColorConvertU32ToFloat4(Colors::SwapRB(GW::Chat::TimestampsColor));
+	if (ImGui::ColorEdit4("Color:", &col.x, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel)) {
+		GW::Chat::TimestampsColor = Colors::SwapRB(ImGui::ColorConvertFloat4ToU32(col));
 	}
+	ImGui::ShowHelp("Show timestamps in message history. \nNote: experimental and might be unstable. Disable in case of crashes.");
 
-	if (ImGui::Checkbox("Keep chat history.", &keep_chat_history)) {
-		GW::Chat::KeepChatHistory = keep_chat_history;
-	}
+	ImGui::Checkbox("Keep chat history.", &GW::Chat::KeepChatHistory);
 	ImGui::ShowHelp("Messages in the chat do not disappear on character change.");
 
 	if (ImGui::Checkbox("Open web links from templates", &open_template_links)) {

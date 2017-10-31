@@ -33,7 +33,6 @@
 #include <Widgets\AlcoholWidget.h>
 
 bool ToolboxSettings::move_all = false;
-bool ToolboxSettings::clamp_window_positions = false;
 
 void ToolboxSettings::InitializeModules() {
 	SettingsWindow::Instance().sep_windows = GWToolbox::Instance().GetModules().size();
@@ -70,11 +69,6 @@ void ToolboxSettings::DrawSettingInternal() {
 	DrawFreezeSetting();
 	ImGui::Checkbox("Save Location Data", &save_location_data);
 	ImGui::ShowHelp("Toolbox will save your location every second in a file in Settings Folder.");
-	ImGui::Checkbox("Keep windows on screen", &clamp_window_positions);
-	ImGui::ShowHelp("Windows will not move off-screen.\n"
-		"This might also move windows on bottom and right side\n"
-		"of the screen slightly towards the center during rezone.\n"
-		"Might also cause windows to move when minimizing.");
 
 	ImGui::Separator();
 	ImGui::Text("Enable the following features:");
@@ -108,7 +102,6 @@ void ToolboxSettings::DrawFreezeSetting() {
 void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini);
 	move_all = false;
-	clamp_window_positions = ini->GetBoolValue(Name(), "clamp_window_positions", false);
 	use_pcons = ini->GetBoolValue(Name(), "use_pcons", true);
 	use_hotkeys = ini->GetBoolValue(Name(), "use_hotkeys", true);
 	use_builds = ini->GetBoolValue(Name(), "use_builds", true);
@@ -130,7 +123,6 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
 
 void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
 	ToolboxModule::SaveSettings(ini);
-	ini->SetBoolValue(Name(), "clamp_window_positions", clamp_window_positions);
 	if (location_file.is_open()) location_file.close();
 	ini->SetBoolValue(Name(), "use_pcons", use_pcons);
 	ini->SetBoolValue(Name(), "use_hotkeys", use_hotkeys);

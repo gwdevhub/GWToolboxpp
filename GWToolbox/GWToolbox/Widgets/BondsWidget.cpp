@@ -139,7 +139,7 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
 	}
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(background));
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(background).Value);
 	ImGui::SetNextWindowSize(ImVec2((float)(n_bonds * img_size), 
 		(float)((full_party + (full_party > party ? 1 : 0)) * img_size)));
 	if (ImGui::Begin(Name(), &visible, GetWinFlags(0, !click_to_use))) {
