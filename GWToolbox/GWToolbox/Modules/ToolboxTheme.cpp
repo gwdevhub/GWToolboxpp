@@ -18,6 +18,7 @@ ImGuiStyle ToolboxTheme::DefaultTheme() {
 	style.ScrollbarRounding = 4.0f;
 	style.GrabMinSize = 17.0f;
 	style.GrabRounding = 2.0f;
+	//fixme: rewrite the colors to remove the need for SwapRB
 	style.Colors[ImGuiCol_WindowBg] = ImColor(Colors::SwapRB(0xD0000000));
 	style.Colors[ImGuiCol_TitleBg] = ImColor(Colors::SwapRB(0xD7282828));
 	style.Colors[ImGuiCol_TitleBgCollapsed] = ImColor(Colors::SwapRB(0x82282828));

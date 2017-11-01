@@ -1,6 +1,7 @@
 #include "Updater.h"
 
 #include <json.hpp>
+#include <GWCA\Managers\GameThreadMgr.h>
 
 #include <GWToolbox.h>
 #include <Defines.h>
@@ -41,14 +42,40 @@ void Updater::CheckForUpdate() {
 			"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/toolboxversion.txt");
 
 		if (version.compare(GWTOOLBOX_VERSION) == 0) {
-			// up-to-date
-			server_version = version;
+			// server and client versions match
+			if (BETA_VERSION[0]) {
+				// we are a beta/pre-release version. Version is the same, do update (e.g. 1.0 BETA -> 1.0).
+				// do update
+			} else {
+				// We are a release version, up to date
+				server_version = version;
+				step = Done;
+				return;
+			} 
+		} else if (version.empty()) {
+			// Error getting server version. Server down? We can do nothing.
+			GW::GameThread::Enqueue([]() {
+				Log::Info("Error checking for updates");
+			});
 			step = Done;
 			return;
+		} else {
+			// Server and client version mismatch. 
+			if (BETA_VERSION[0]) {
+				// we are beta/pre-release of next version, don't update
+				server_version = version;
+				step = Done;
+				return;
+			} else {
+				// we are a release version, do update.
+			}
 		}
 
+
 		if (version.empty()) {
-			Log::Info("Error checking for updates");
+			GW::GameThread::Enqueue([]() {
+				Log::Info("Error checking for updates");
+			});
 			step = Done;
 			return;
 		}
@@ -85,8 +112,8 @@ void Updater::Draw(IDirect3DDevice9* device) {
 		static bool notified = false;
 		if (!notified) {
 			notified = true;
-			Log::Warning("GWToolbox++ version %s is available! You have %s.",
-				server_version.c_str(), GWTOOLBOX_VERSION);
+			Log::Warning("GWToolbox++ version %s is available! You have %s%s.",
+				server_version.c_str(), GWTOOLBOX_VERSION, BETA_VERSION);
 		}
 
 		switch (mode) {
@@ -104,8 +131,8 @@ void Updater::Draw(IDirect3DDevice9* device) {
 			ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiSetCond_Appearing);
 			ImGui::SetNextWindowPosCenter(ImGuiSetCond_Appearing);
 			ImGui::Begin("Toolbox Update!", &visible);
-			ImGui::Text("GWToolbox++ version %s is available! You have %s",
-				server_version.c_str(), GWTOOLBOX_VERSION);
+			ImGui::Text("GWToolbox++ version %s is available! You have %s%s",
+				server_version.c_str(), GWTOOLBOX_VERSION, BETA_VERSION);
 			ImGui::Text("Changes:");
 			ImGui::Text(changelog.c_str());
 
