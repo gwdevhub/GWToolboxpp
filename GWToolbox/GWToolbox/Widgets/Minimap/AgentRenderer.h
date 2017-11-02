@@ -51,7 +51,7 @@ private:
 	unsigned int vertices_max;	// max number of vertices to draw in one call
 	unsigned int max_shape_verts;// max number of triangles in a single shape
 
-	Color modifier;
+	Color color_agent_modifier;
 	Color color_eoe;
 	Color color_qz;
 	Color color_target;
@@ -63,7 +63,7 @@ private:
 	Color color_hostile_damaged;
 	Color color_hostile_dead;
 	Color color_neutral;
-	Color color_ally_party;
+	Color color_ally;
 	Color color_ally_npc;
 	Color color_ally_spirit;
 	Color color_ally_minion;

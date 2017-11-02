@@ -11,9 +11,9 @@
 #include <imgui.h>
 #include <ImGuiAddons.h>
 #include <Modules\Resources.h>
+#include <Defines.h>
 
 //#define PRINT_CHAT_PACKETS
-#define VAR_NAME(v) (#v)
 
 static void printchar(wchar_t c) {
 	if (c >= L' ' && c <= L'~') {
