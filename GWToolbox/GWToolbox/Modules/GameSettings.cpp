@@ -188,9 +188,9 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::Checkbox("Show chat messages timestamp. Color:", &GW::Chat::ShowTimestamps);
 	ImGui::SameLine();
 	
-	ImVec4 col = ImGui::ColorConvertU32ToFloat4(Colors::SwapRB(GW::Chat::TimestampsColor));
+	ImVec4 col = ImGui::ColorConvertU32ToFloat4(GW::Chat::TimestampsColor);
 	if (ImGui::ColorEdit4("Color:", &col.x, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel)) {
-		GW::Chat::TimestampsColor = Colors::SwapRB(ImGui::ColorConvertFloat4ToU32(col));
+		GW::Chat::TimestampsColor = ImGui::ColorConvertFloat4ToU32(col);
 	}
 	ImGui::ShowHelp("Show timestamps in message history. \nNote: experimental and might be unstable. Disable in case of crashes.");
 

@@ -23,7 +23,7 @@
 #include <GWCA\Managers\Render.h>
 
 #include <imgui.h>
-#include <imgui\examples\directx9_example\imgui_impl_dx9.h>
+#include <imgui_impl_dx9.h>
 
 #include "logger.h"
 

@@ -33,18 +33,13 @@ namespace Colors {
 	static Color Green() { return RGB(0x0, 0xFF, 0x0); }
 	static Color Blue() { return RGB(0x0, 0x0, 0xFF); }
 
-	// Swap red and blue channels
-	static Color SwapRB(Color c) {
-		return (c & 0xFF00FF00) | ((c & 0xFF0000) >> 16) | ((c & 0xFF) << 16);
-	}
-
 	static Color Load(CSimpleIni* ini, const char* section, const char* key, Color def) {
 		try {
 			const char* wc = ini->GetValue(section, key, nullptr);
 			if (wc == nullptr) return def;
 			unsigned long c = std::stoul(wc, nullptr, 16);
 			// swap red and blue channels
-			return SwapRB(c);
+			return c;
 		} catch (...) { // invalid argument, out of range, whatever
 			return Black();
 		}
@@ -52,7 +47,7 @@ namespace Colors {
 
 	static void Save(CSimpleIni* ini, const char* section, const char* key, Color val) {
 		char buf[64];
-		sprintf_s(buf, "0x%X", SwapRB(val));
+		sprintf_s(buf, "0x%X", val);
 		ini->SetValue(section, key, buf);
 	}
 

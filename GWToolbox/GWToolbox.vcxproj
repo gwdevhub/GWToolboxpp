@@ -56,7 +56,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;API_EXPORTS;_USE_MATH_DEFINES;NOMINMAX;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;API_EXPORTS;_USE_MATH_DEFINES;NOMINMAX;_CRT_SECURE_NO_WARNINGS;IMGUI_USE_BGRA_PACKED_COLOR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -73,7 +73,7 @@
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;API_EXPORTS;_USE_MATH_DEFINES;NOMINMAX;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;API_EXPORTS;_USE_MATH_DEFINES;NOMINMAX;_CRT_SECURE_NO_WARNINGS;IMGUI_USE_BGRA_PACKED_COLOR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <AdditionalIncludeDirectories>
@@ -91,7 +91,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\Dependencies\imgui\examples\directx9_example\imgui_impl_dx9.h" />
     <ClInclude Include="..\Dependencies\imgui\imconfig.h" />
     <ClInclude Include="..\Dependencies\imgui\imgui.h" />
     <ClInclude Include="..\Dependencies\imgui\imgui_internal.h" />
@@ -101,6 +100,7 @@
     <ClInclude Include="GWToolbox\Color.h" />
     <ClInclude Include="GWToolbox\Defines.h" />
     <ClInclude Include="GWToolbox\ImGuiAddons.h" />
+    <ClInclude Include="GWToolbox\imgui_impl_dx9.h" />
     <ClInclude Include="GWToolbox\Key.h" />
     <ClInclude Include="GWToolbox\Modules\ChatCommands.h" />
     <ClInclude Include="GWToolbox\Modules\ChatFilter.h" />
@@ -151,12 +151,12 @@
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\Dependencies\imgui\examples\directx9_example\imgui_impl_dx9.cpp" />
     <ClCompile Include="..\Dependencies\imgui\imgui.cpp" />
     <ClCompile Include="..\Dependencies\imgui\imgui_demo.cpp" />
     <ClCompile Include="..\Dependencies\imgui\imgui_draw.cpp" />
     <ClCompile Include="GWToolbox\GuiUtils.cpp" />
     <ClCompile Include="GWToolbox\ImGuiAddons.cpp" />
+    <ClCompile Include="GWToolbox\imgui_impl_dx9.cpp" />
     <ClCompile Include="GWToolbox\logger.cpp" />
     <ClCompile Include="GWToolbox\main.cpp" />
     <ClCompile Include="GWToolbox\Modules\ChatCommands.cpp" />

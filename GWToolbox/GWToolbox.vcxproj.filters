@@ -134,9 +134,6 @@
     <ClInclude Include="..\Dependencies\imgui\stb_truetype.h">
       <Filter>imgui</Filter>
     </ClInclude>
-    <ClInclude Include="..\Dependencies\imgui\examples\directx9_example\imgui_impl_dx9.h">
-      <Filter>imgui</Filter>
-    </ClInclude>
     <ClInclude Include="GWToolbox\ToolboxModule.h" />
     <ClInclude Include="GWToolbox\Color.h" />
     <ClInclude Include="GWToolbox\Key.h" />
@@ -259,6 +256,9 @@
     <ClInclude Include="resource.h">
       <Filter>Resources</Filter>
     </ClInclude>
+    <ClInclude Include="GWToolbox\imgui_impl_dx9.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -271,9 +271,6 @@
       <Filter>imgui</Filter>
     </ClCompile>
     <ClCompile Include="..\Dependencies\imgui\imgui_draw.cpp">
-      <Filter>imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Dependencies\imgui\examples\directx9_example\imgui_impl_dx9.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\ToolboxModule.cpp" />
@@ -387,6 +384,9 @@
     </ClCompile>
     <ClCompile Include="GWToolbox\Modules\LUAInterface.cpp">
       <Filter>Modules\LUACommands</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\imgui_impl_dx9.cpp">
+      <Filter>imgui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
