@@ -629,10 +629,13 @@ void ChatCommands::CmdLoad(std::wstring& cmd, std::wstring& args) {
 	static int(__fastcall *GetPersonalDir)(size_t size, wchar_t *dir) = 0;
 	if (!GetPersonalDir) *(DWORD*)&GetPersonalDir = 0x005AAB60; // need scan!
 	if (args.empty()) {
+		// It open the build window, click on build will make Gw crash.
+		/*
 		typedef void(__fastcall *SendUIMessage_t)(int id, void *param1, void *param2);
 		SendUIMessage_t SendUIMessage = SendUIMessage_t(0x00605AC0); // need scan!
 		int32_t param[2] = { 0, 2 };
 		SendUIMessage(0x100001B4, param, NULL);
+		*/
 		return;
 	}
 

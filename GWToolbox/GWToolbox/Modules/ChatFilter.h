@@ -34,7 +34,7 @@ private:
 	bool ShouldIgnoreByAgentThatDropped(const wchar_t* agent_segment) const;
 	bool IsRare(const wchar_t* item_segment) const;
 	bool ShouldIgnore(const wchar_t *message);
-	bool ShouldIgnoreByContent(const wchar_t *message);
+	bool ShouldIgnoreByContent(const wchar_t *message, size_t size);
 
 	bool kill_next_msgdelivery;
 	bool kill_next_p081 = false;

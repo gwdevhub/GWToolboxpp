@@ -7,6 +7,7 @@
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
+#include <GWCA\Context\GameContext.h>
 
 #include <imgui.h>
 #include <ImGuiAddons.h>
@@ -29,74 +30,22 @@ void ChatFilter::Initialize() {
 	strcpy_s(bycontent_buf, "");
 	//strcpy_s(byauthor_buf, "");
 
-	GW::StoC::AddCallback<GW::Packet::StoC::P081>(
-		[this](GW::Packet::StoC::P081* pak) -> bool {
-
-#ifdef PRINT_CHAT_PACKETS
-		printf("P081: ");
-		for (int i = 0; i < 122 && pak->message[i]; ++i) printchar(pak->message[i]);
-		printf("\n");
-#endif // PRINT_CHAT_PACKETS
-
-		if (kill_next_p081) {
-			kill_next_p081 = false;
-#ifdef PRINT_CHAT_PACKETS
-			printf("   ` killed (because of previous)\n");
-#endif // PRINT_CHAT_PACKETS
-			return true;
-		}
-
-		if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost
-			&& messagebycontent && ShouldIgnoreByContent(pak->message)) {
-			// check if the message contains start string (0x107) but not end string(0x1)
-			kill_next_p081 = false;
-			for (int i = 0; i < 122 && pak->message[i]; ++i) {
-				if (pak->message[i] == 0x107) {
-					kill_next_p081 = true;
-				} else if (pak->message[i] == 0x1) {
-					kill_next_p081 = false;
-					break;
-				}
-			}
-			kill_next_msgdelivery = true;
-			return true;
-		}
-
-		if ((self_drop_rare
-			|| self_drop_common
-			|| ally_drop_rare
-			|| ally_drop_common
-			|| ally_pickup_rare
-			|| ally_pickup_common
-			|| skill_points
-			|| pvp_messages
-			|| hoh
-			|| favor
-			|| ninerings
-			|| noonehearsyou
-			|| lunars)
-			&& ShouldIgnore(pak->message)) {
-
-#ifdef PRINT_CHAT_PACKETS
-			printf("  ` killed \n");
-#endif // PRINT_CHAT_PACKETS
-
-			kill_next_msgdelivery = true;
-			return true;
-		}
-		return false;
-	});
+	// server messages
 	GW::StoC::AddCallback<GW::Packet::StoC::P082>(
 		[this](GW::Packet::StoC::P082* pak) -> bool {
 #ifdef PRINT_CHAT_PACKETS
 		printf("P082: id %d, type %d %s\n", pak->id, pak->type, kill_next_msgdelivery ? "(killed)" : "");
 #endif // PRINT_CHAT_PACKETS
-		if (kill_next_msgdelivery) {
-			kill_next_msgdelivery = false;
+
+		GW::Array<wchar_t> *buff = &GW::GameContext::instance()->world->message_buff;
+		if (ShouldIgnore(buff->begin()) || ShouldIgnoreByContent(buff->begin(), buff->size())) {
+			buff->clear();
 			return true;
 		}
+
 		return false;
 	});
+
 #ifdef PRINT_CHAT_PACKETS
 	GW::StoC::AddCallback<GW::Packet::StoC::P083>(
 		[](GW::Packet::StoC::P083* pak) -> bool {
@@ -106,6 +55,8 @@ void ChatFilter::Initialize() {
 		return false;
 	});
 #endif // PRINT_CHAT_PACKETS
+
+	// global messages
 	GW::StoC::AddCallback<GW::Packet::StoC::P084>(
 		[&](GW::Packet::StoC::P084* pak) -> bool {
 #ifdef PRINT_CHAT_PACKETS
@@ -115,22 +66,29 @@ void ChatFilter::Initialize() {
 		for (int i = 0; i < 6 && pak->sender_guild[i]; ++i) printchar(pak->sender_guild[i]);
 		printf("\n");
 #endif // PRINT_CHAT_PACKETS
-		if (kill_next_msgdelivery) {
-			kill_next_msgdelivery = false;
+
+		GW::Array<wchar_t> *buff = &GW::GameContext::instance()->world->message_buff;
+		if (ShouldIgnore(buff->begin()) || ShouldIgnoreByContent(buff->begin(), buff->size())) {
+			buff->clear();
 			return true;
 		}
+
 		return false;
 	});
 
+	// local messages
 	GW::StoC::AddCallback<GW::Packet::StoC::P085>(
 		[this](GW::Packet::StoC::P085* pak) -> bool {
 #ifdef PRINT_CHAT_PACKETS
 		printf("P085: id %d, type %d %s\n", pak->id, pak->type, kill_next_msgdelivery ? "(killed)" : "");
 #endif // PRINT_CHAT_PACKETS
-		if (kill_next_msgdelivery) {
-			kill_next_msgdelivery = false;
+
+		GW::Array<wchar_t> *buff = &GW::GameContext::instance()->world->message_buff;
+		if (ShouldIgnore(buff->begin()) || ShouldIgnoreByContent(buff->begin(), buff->size())) {
+			buff->clear();
 			return true;
 		}
+
 		return false;
 	});
 
@@ -383,13 +341,13 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 	return false;
 }
 
-bool ChatFilter::ShouldIgnoreByContent(const wchar_t *message) {
+bool ChatFilter::ShouldIgnoreByContent(const wchar_t *message, size_t size) {
 	if (!messagebycontent) return false;
 	if (!(message[0] == 0x108 && message[1] == 0x107)
 		&& !(message[0] == 0x8102 && message[1] == 0xEFE && message[2] == 0x107)) return false;
 	const wchar_t* start = nullptr;
-	const wchar_t* end = &message[122];
-	for (int i = 0; i < 122 && message[i] != 0; ++i) {
+	const wchar_t* end = &message[size];
+	for (int i = 0; i < (int)size && message[i] != 0; ++i) {
 		if (message[i] == 0x107) {
 			start = &message[i + 1];
 		} else if (message[i] == 0x1) {
