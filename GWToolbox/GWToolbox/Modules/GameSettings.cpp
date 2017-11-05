@@ -6,6 +6,8 @@
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Managers\FriendListMgr.h>
 
+#include <GWCA\Context\GameContext.h>
+
 #include <logger.h>
 #include "GuiUtils.h"
 #include <GWToolbox.h>
@@ -122,11 +124,17 @@ void GameSettings::Initialize() {
 		return false;
 	});
 
-	GW::StoC::AddCallback<GW::Packet::StoC::P391_InstanceLoadFile>(
-		[](GW::Packet::StoC::P391_InstanceLoadFile *pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::P406_GameSrvTransfer>(
+		[](GW::Packet::StoC::P406_GameSrvTransfer *pak) -> bool {
+
+		GW::CharContext *ctx = GW::GameContext::instance()->character;
 		if (GameSettings::Instance().flash_window_on_zoning) FlashWindow();
-		if (GameSettings::Instance().focus_window_on_zoning)
-			SetFocus(GW::MemoryMgr::GetGWWindowHandle());
+		if (GameSettings::Instance().focus_window_on_zoning && pak->is_outpost) {
+			HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
+			ShowWindow(hwnd, SW_RESTORE);
+			SetForegroundWindow(hwnd);
+		}
+
 		return false;
 	});
 }
@@ -233,7 +241,8 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::Checkbox("Zoning in a new map", &flash_window_on_zoning);
 	ImGui::Unindent();
 
-	ImGui::Checkbox("Bring Guild Wars on top when zoning.", &focus_window_on_zoning);
+	ImGui::Checkbox("Allow window restore", &focus_window_on_zoning);
+	ImGui::ShowHelp("When enabled, Guild Wars will automatically restore when entering explorable zone.");
 
 	ImGui::Checkbox("Automatically set 'Away' after ", &auto_set_away);
 	ImGui::SameLine();

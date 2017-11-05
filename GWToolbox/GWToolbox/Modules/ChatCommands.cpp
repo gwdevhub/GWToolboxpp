@@ -165,21 +165,6 @@ void ChatCommands::Update() {
 	}
 }
 
-std::wstring ChatCommands::GetLowerCaseArg(std::vector<std::wstring> args, size_t index) {
-	if (index >= args.size()) return L"";
-	std::wstring arg = args[index];
-	std::transform(arg.begin(), arg.end(), arg.begin(), ::tolower);
-	return arg;
-}
-
-std::wstring ChatCommands::WStrToLower(std::wstring str) {
-	std::wstring result = str;
-	size_t size = result.size();
-	for (size_t i = 0; i < size; i++)
-		result[i] = ::towlower(result[i]);
-	return result;
-}
-
 bool ChatCommands::ReadTemplateFile(std::wstring path, char *buff, size_t buffSize) {
 	HANDLE fileHandle = CreateFileW(path.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
 	if (fileHandle == INVALID_HANDLE_VALUE) {
@@ -249,7 +234,7 @@ void ChatCommands::CmdTB(int argc, LPWSTR *argv) {
 	if (argc <= 1) {
 		MainWindow::Instance().visible ^= 1;
 	} else {
-		std::wstring arg = WStrToLower(argv[1]);
+		std::wstring arg = GuiUtils::ToLower(argv[1]);
 		if (arg == L"age") {
 			CmdAge2(0, argv);
 		} else if (arg == L"hide") {
@@ -286,7 +271,7 @@ std::vector<ToolboxUIElement*> ChatCommands::MatchingWindows(int argc, LPWSTR *a
 	if (argc <= 1) {
 		ret.push_back(&MainWindow::Instance());
 	} else {
-		std::wstring arg = WStrToLower(argv[1]);
+		std::wstring arg = GuiUtils::ToLower(argv[1]);
 		if (arg == L"all") {
 			for (ToolboxUIElement* window : GWToolbox::Instance().GetUIElements()) {
 				ret.push_back(window);
@@ -333,12 +318,12 @@ void ChatCommands::CmdTP(int argc, LPWSTR *argv) {
 	if (argc == 1) {
 		Log::Error("[Error] Please provide an argument");
 	} else {
-		std::wstring town = WStrToLower(argv[1]);
+		std::wstring town = GuiUtils::ToLower(argv[1]);
 
 		GW::Constants::District district = GW::Constants::District::Current;
 		int district_number = 0;
 		if (argc > 2 && town != L"gh") {
-			std::wstring dis = WStrToLower(argv[2]);
+			std::wstring dis = GuiUtils::ToLower(argv[2]);
 			if (dis == L"ae") {
 				district = GW::Constants::District::American;
 			} else if (dis == L"ae1") {
@@ -413,10 +398,10 @@ void ChatCommands::CmdTP(int argc, LPWSTR *argv) {
 			if (argc == 2) {
 				GW::GuildMgr::TravelGH();
 			} else {
-				std::wstring tag = WStrToLower(argv[2]);
+				std::wstring tag = GuiUtils::ToLower(argv[2]);
 				GW::GuildArray guilds = GW::GuildMgr::GetGuildArray();
 				for (GW::Guild* guild : guilds) {
-					if (guild && WStrToLower(guild->tag) == tag) {
+					if (guild && GuiUtils::ToLower(guild->tag) == tag) {
 						GW::GuildMgr::TravelGH(guild->key);
 						break;
 					}
@@ -453,14 +438,14 @@ void ChatCommands::CmdCamera(int argc, LPWSTR *argv) {
 	if (argc == 1) {
 		GW::CameraMgr::UnlockCam(false);
 	} else {
-		std::wstring arg1 = WStrToLower(argv[1]);
+		std::wstring arg1 = GuiUtils::ToLower(argv[1]);
 		if (arg1 == L"lock") {
 			GW::CameraMgr::UnlockCam(false);
 		} else if (arg1 == L"unlock") {
 			GW::CameraMgr::UnlockCam(true);
 			Log::Info("Use W,A,S,D,X,Z for camera movement");
 		} else if (arg1 == L"fog") {
-			std::wstring arg2 = WStrToLower(argv[2]);
+			std::wstring arg2 = GuiUtils::ToLower(argv[2]);
 			if (arg2 == L"on") {
 				GW::CameraMgr::SetFog(true);
 			} else if (arg2 == L"off") {
@@ -470,7 +455,7 @@ void ChatCommands::CmdCamera(int argc, LPWSTR *argv) {
 			if (argc == 2) {
 				GW::CameraMgr::SetFieldOfView(1.308997f);
 			} else {
-				std::wstring arg2 = WStrToLower(argv[2]);
+				std::wstring arg2 = GuiUtils::ToLower(argv[2]);
 				if (arg2 == L"default") {
 					GW::CameraMgr::SetFieldOfView(1.308997f);
 				} else {
@@ -491,7 +476,7 @@ void ChatCommands::CmdCamera(int argc, LPWSTR *argv) {
 			if (argc < 3) {
 				Instance().cam_speed_ = Instance().DEFAULT_CAM_SPEED;
 			} else {
-				std::wstring arg2 = WStrToLower(argv[2]);
+				std::wstring arg2 = GuiUtils::ToLower(argv[2]);
 				if (arg2 == L"default") {
 					Instance().cam_speed_ = Instance().DEFAULT_CAM_SPEED;
 				} else {
@@ -514,7 +499,7 @@ void ChatCommands::CmdDamage(int argc, LPWSTR *argv) {
 	if (argc <= 1) {
 		PartyDamage::Instance().WritePartyDamage();
 	} else {
-		std::wstring arg1 = WStrToLower(argv[1]);
+		std::wstring arg1 = GuiUtils::ToLower(argv[1]);
 		if (arg1 == L"print" || arg1 == L"report") {
 			PartyDamage::Instance().WritePartyDamage();
 		} else if (arg1 == L"me") {
@@ -536,7 +521,7 @@ void ChatCommands::CmdAfk(int argc, LPWSTR *argv) {
 
 void ChatCommands::CmdTarget(int argc, LPWSTR *argv) {
 	if (argc > 1) {
-		std::wstring arg1 = WStrToLower(argv[2]);
+		std::wstring arg1 = GuiUtils::ToLower(argv[2]);
 		if (arg1 == L"closest" || arg1 == L"nearest") {
 			// target nearest agent
 			GW::AgentArray agents = GW::Agents::GetAgentArray();
@@ -585,7 +570,7 @@ void ChatCommands::CmdUseSkill(int argc, LPWSTR *argv) {
 	if (argc == 1) {
 		Instance().skill_to_use = 0;
 	} else if (argc == 2) {
-		std::wstring arg1 = WStrToLower(argv[1]);
+		std::wstring arg1 = GuiUtils::ToLower(argv[1]);
 		if (arg1 == L"stop" || arg1 == L"off") {
 			Instance().skill_to_use = 0;
 		} else {

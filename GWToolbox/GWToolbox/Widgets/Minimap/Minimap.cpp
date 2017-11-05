@@ -58,8 +58,8 @@ void Minimap::Initialize() {
 		return false;
 	});
 
-	GW::StoC::AddCallback<GW::Packet::StoC::P406>(
-		[&](GW::Packet::StoC::P406* pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::P406_GameSrvTransfer>(
+		[&](GW::Packet::StoC::P406_GameSrvTransfer* pak) -> bool {
 		loading = true;
 		return false;
 	});

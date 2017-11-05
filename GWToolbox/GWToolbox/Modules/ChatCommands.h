@@ -39,8 +39,6 @@ private:
 	// 0xA37890 is a mirror of 0xA377C8.
 	bool IsTyping() { return (*(DWORD*)0xA377C8) != 0; } 
 	
-	static std::wstring GetLowerCaseArg(std::vector<std::wstring>, size_t index);
-	static std::wstring WStrToLower(std::wstring str);
 	static bool ReadTemplateFile(std::wstring path, char *buff, size_t buffSize);
 
 	static void CmdAge2(int argc, LPWSTR *argv);
