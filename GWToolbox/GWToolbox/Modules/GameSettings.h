@@ -42,6 +42,7 @@ public:
 	bool flash_window_on_pm = false;
 	bool flash_window_on_party_invite = false;
 	bool flash_window_on_zoning = false;
+	bool focus_window_on_zoning = false;
 
 	bool auto_set_away = false;
 	int auto_set_away_delay = 10;

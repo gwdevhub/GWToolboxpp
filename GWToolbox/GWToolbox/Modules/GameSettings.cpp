@@ -123,8 +123,10 @@ void GameSettings::Initialize() {
 	});
 
 	GW::StoC::AddCallback<GW::Packet::StoC::P391_InstanceLoadFile>(
-		[](GW::Packet::StoC::P391_InstanceLoadFile*) -> bool {
+		[](GW::Packet::StoC::P391_InstanceLoadFile *pak) -> bool {
 		if (GameSettings::Instance().flash_window_on_zoning) FlashWindow();
+		if (GameSettings::Instance().focus_window_on_zoning)
+			SetFocus(GW::MemoryMgr::GetGWWindowHandle());
 		return false;
 	});
 }
@@ -145,6 +147,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	flash_window_on_pm = ini->GetBoolValue(Name(), "flash_window_on_pm", true);
 	flash_window_on_party_invite = ini->GetBoolValue(Name(), "flash_window_on_party_invite", true);
 	flash_window_on_zoning = ini->GetBoolValue(Name(), "flash_window_on_zoning", true);
+	focus_window_on_zoning = ini->GetBoolValue(Name(), "focus_window_on_zoning", false);
 
 	auto_set_away = ini->GetBoolValue(Name(), "auto_set_away", false);
 	auto_set_away_delay = ini->GetLongValue(Name(), "auto_set_away_delay", 10);
@@ -174,6 +177,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), "flash_window_on_pm", flash_window_on_pm);
 	ini->SetBoolValue(Name(), "flash_window_on_party_invite", flash_window_on_party_invite);
 	ini->SetBoolValue(Name(), "flash_window_on_zoning", flash_window_on_zoning);
+	ini->SetBoolValue(Name(), "focus_window_on_zoning", focus_window_on_zoning);
 
 	ini->SetBoolValue(Name(), "auto_set_away", auto_set_away);
 	ini->SetLongValue(Name(), "auto_set_away_delay", auto_set_away_delay);
@@ -228,6 +232,8 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::Checkbox("Receiving a party invite", &flash_window_on_party_invite);
 	ImGui::Checkbox("Zoning in a new map", &flash_window_on_zoning);
 	ImGui::Unindent();
+
+	ImGui::Checkbox("Bring Guild Wars on top when zoning.", &focus_window_on_zoning);
 
 	ImGui::Checkbox("Automatically set 'Away' after ", &auto_set_away);
 	ImGui::SameLine();
