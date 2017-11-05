@@ -68,7 +68,10 @@ void ChatFilter::Initialize() {
 #endif // PRINT_CHAT_PACKETS
 
 		GW::Array<wchar_t> *buff = &GW::GameContext::instance()->world->message_buff;
-		if (ShouldIgnore(buff->begin()) || ShouldIgnoreByContent(buff->begin(), buff->size())) {
+
+		if (ShouldIgnore(buff->begin()) ||
+			ShouldIgnoreByContent(buff->begin(), buff->size())) {
+
 			buff->clear();
 			return true;
 		}
@@ -84,7 +87,12 @@ void ChatFilter::Initialize() {
 #endif // PRINT_CHAT_PACKETS
 
 		GW::Array<wchar_t> *buff = &GW::GameContext::instance()->world->message_buff;
-		if (ShouldIgnore(buff->begin()) || ShouldIgnoreByContent(buff->begin(), buff->size())) {
+		wchar_t *sender = GW::Agents::GetPlayerNameByLoginNumber(pak->id);
+
+		if (ShouldIgnore(buff->begin()) ||
+			ShouldIgnoreBySender(sender, 32) ||
+			ShouldIgnoreByContent(buff->begin(), buff->size())) {
+
 			buff->clear();
 			return true;
 		}
@@ -364,6 +372,14 @@ bool ChatFilter::ShouldIgnoreByContent(const wchar_t *message, size_t size) {
 			return true;
 		}
 	}
+	return false;
+}
+
+bool ChatFilter::ShouldIgnoreBySender(const wchar_t *sender, size_t size)
+{
+	if (sender == nullptr) return false;
+	if (ignored_players.find(sender) != ignored_players.end())
+		return true;
 	return false;
 }
 

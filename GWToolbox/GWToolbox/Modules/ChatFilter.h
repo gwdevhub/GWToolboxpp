@@ -35,9 +35,7 @@ private:
 	bool IsRare(const wchar_t* item_segment) const;
 	bool ShouldIgnore(const wchar_t *message);
 	bool ShouldIgnoreByContent(const wchar_t *message, size_t size);
-
-	bool kill_next_msgdelivery;
-	bool kill_next_p081 = false;
+	bool ShouldIgnoreBySender(const wchar_t *sender, size_t size);
 
 	bool self_drop_rare;
 	bool self_drop_common;
@@ -61,6 +59,8 @@ private:
 	char bycontent_buf[FILTER_BUF_SIZE];
 	bool bycontent_filedirty = false;
 	std::set<std::string> bycontent_words;
+
+	std::set<std::wstring> ignored_players;
 
 	//bool messagebyauthor;
 	//char byauthor_buf[FILTER_BUF_SIZE];
