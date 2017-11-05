@@ -69,12 +69,11 @@ void Minimap::Initialize() {
 	pmap_renderer.Invalidate();
 
 	GW::Chat::CreateCommand(L"flag",
-		[this](std::wstring& cmd, std::wstring& a) {
-		std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
-		if (args.empty()) {
+		[this](int argc, LPWSTR *argv) {
+		if (argc == 0) {
 			FlagHero(0);
 		} else {
-			std::wstring arg0 = GuiUtils::ToLower(args[0]);
+			std::wstring arg0 = GuiUtils::ToLower(argv[1]);
 			// partially laziness, and partially safety
 			if (arg0 == L"1") {
 				FlagHero(1);

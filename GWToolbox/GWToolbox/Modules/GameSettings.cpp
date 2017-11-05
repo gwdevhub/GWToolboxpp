@@ -101,21 +101,19 @@ void GameSettings::Initialize() {
 	patches.push_back(new GW::MemoryPatcher((void*)0x0067D65E, a, 10));
 
 	GW::Chat::CreateCommand(L"borderless",
-		[&](std::wstring& cmd, std::wstring& a) -> bool {
-		std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
-		if (args.empty()) {
+		[&](int argc, LPWSTR *argv) {
+		if (argc) {
 			ApplyBorderless(!borderless_window);
 		} else {
-			std::wstring arg = GuiUtils::ToLower(args[0]);
-			if (arg == L"on") {
+			std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+			if (arg1 == L"on") {
 				ApplyBorderless(true);
-			} else if (arg == L"off") {
+			} else if (arg1 == L"off") {
 				ApplyBorderless(false);
 			} else {
-				Log::Error("Invalid argument '%ls', please use /borderless [|on|off]", args[0].c_str());
+				Log::Error("Invalid argument '%ls', please use /borderless [|on|off]", argv[1]);
 			}
 		}
-		return true;
 	});
 
 	GW::StoC::AddCallback<GW::Packet::StoC::P444>(

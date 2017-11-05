@@ -206,29 +206,28 @@ bool ChatCommands::ReadTemplateFile(std::wstring path, char *buff, size_t buffSi
 	return true;
 }
 
-void ChatCommands::CmdAge2(std::wstring& cmd, std::wstring& a) {
+void ChatCommands::CmdAge2(int argc, LPWSTR *argv) {
 	char buffer[32];
 	DWORD second = GW::Map::GetInstanceTime() / 1000;
 	sprintf_s(buffer, "%02u:%02u:%02u", (second / 3600), (second / 60) % 60, second % 60);
 	Log::Info(buffer);
 }
 
-void ChatCommands::CmdDialog(std::wstring& cmd, std::wstring& a) {
-	std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
-	if (args.empty()) {
+void ChatCommands::CmdDialog(int argc, LPWSTR *argv) {
+	if (argc <= 1) {
 		Log::Error("Please provide an integer or hex argument");
 	} else {
 		try {
-			long id = std::stol(args[0], 0, 0);
+			long id = std::stol(argv[1], 0, 0);
 			GW::Agents::Dialog(id);
 			Log::Info("Sent Dialog 0x%X", id);
 		} catch (...) {
-			Log::Error("Invalid argument '%ls', please use an integer or hex value", args[0].c_str());
+			Log::Error("Invalid argument '%ls', please use an integer or hex value", argv[0]);
 		}
 	}
 }
 
-void ChatCommands::CmdChest(std::wstring& cmd, std::wstring& a) {
+void ChatCommands::CmdChest(int argc, LPWSTR *argv) {
 	switch (GW::Map::GetInstanceType()) {
 	case GW::Constants::InstanceType::Outpost:
 		GW::Items::OpenXunlaiWindow();
@@ -246,14 +245,13 @@ void ChatCommands::CmdChest(std::wstring& cmd, std::wstring& a) {
 	}
 }
 
-void ChatCommands::CmdTB(std::wstring& cmd, std::wstring& a) {
-	std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
-	if (args.empty()) {
+void ChatCommands::CmdTB(int argc, LPWSTR *argv) {
+	if (argc <= 1) {
 		MainWindow::Instance().visible ^= 1;
 	} else {
-		std::wstring arg = GetLowerCaseArg(args, 0);
+		std::wstring arg = WStrToLower(argv[1]);
 		if (arg == L"age") {
-			CmdAge2(cmd, a);
+			CmdAge2(0, argv);
 		} else if (arg == L"hide") {
 			MainWindow::Instance().visible = false;
 		} else if (arg == L"show") {
@@ -270,6 +268,8 @@ void ChatCommands::CmdTB(std::wstring& cmd, std::wstring& a) {
 			ImGui::SetWindowCollapsed(MainWindow::Instance().Name(), false);
 		} else if (arg == L"close" || arg == L"quit" || arg == L"exit") {
 			GWToolbox::Instance().StartSelfDestruct();
+		} else if (arg == L"ignore") {
+
 		} else {
 			std::string name = std::string(arg.begin(), arg.end());
 			for (ToolboxUIElement* window : GWToolbox::Instance().GetUIElements()) {
@@ -281,12 +281,12 @@ void ChatCommands::CmdTB(std::wstring& cmd, std::wstring& a) {
 	}
 }
 
-std::vector<ToolboxUIElement*> ChatCommands::MatchingWindows(std::vector<std::wstring>& args) {
+std::vector<ToolboxUIElement*> ChatCommands::MatchingWindows(int argc, LPWSTR *argv) {
 	std::vector<ToolboxUIElement*> ret;
-	if (args.empty()) {
+	if (argc <= 1) {
 		ret.push_back(&MainWindow::Instance());
 	} else {
-		std::wstring arg = GetLowerCaseArg(args, 0);
+		std::wstring arg = WStrToLower(argv[1]);
 		if (arg == L"all") {
 			for (ToolboxUIElement* window : GWToolbox::Instance().GetUIElements()) {
 				ret.push_back(window);
@@ -303,14 +303,13 @@ std::vector<ToolboxUIElement*> ChatCommands::MatchingWindows(std::vector<std::ws
 	return ret;
 }
 
-void ChatCommands::CmdShow(std::wstring& cmd, std::wstring& a) {
-	std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
-	auto windows = MatchingWindows(args);
+void ChatCommands::CmdShow(int argc, LPWSTR *argv) {
+	auto windows = MatchingWindows(argc, argv);
 	if (windows.empty()) {
-		if (args.size() == 1 && args[0] == L"settings") {
+		if (argc == 2 && argv[1] == L"settings") {
 			SettingsWindow::Instance().visible = true;
 		} else {
-			Log::Error("Cannot find window '%ls'", args.empty() ? L"" : args[0].c_str());
+			Log::Error("Cannot find window '%ls'", argc > 1 ? argv[1] : L"");
 		}
 	} else {
 		for (ToolboxUIElement* window : windows) {
@@ -319,11 +318,10 @@ void ChatCommands::CmdShow(std::wstring& cmd, std::wstring& a) {
 	}
 }
 
-void ChatCommands::CmdHide(std::wstring& cmd, std::wstring& a) {
-	std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
-	auto windows = MatchingWindows(args);
+void ChatCommands::CmdHide(int argc, LPWSTR *argv) {
+	auto windows = MatchingWindows(argc, argv);
 	if (windows.empty()) {
-		Log::Error("Cannot find window '%ls'", args.empty() ? L"" : args[0].c_str());
+		Log::Error("Cannot find window '%ls'", argc > 1 ? argv[1] : L"");
 	} else {
 		for (ToolboxUIElement* window : windows) {
 			window->visible = false;
@@ -331,17 +329,16 @@ void ChatCommands::CmdHide(std::wstring& cmd, std::wstring& a) {
 	}
 }
 
-void ChatCommands::CmdTP(std::wstring& cmd, std::wstring& a) {
-	std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
-	if (args.empty()) {
+void ChatCommands::CmdTP(int argc, LPWSTR *argv) {
+	if (argc == 1) {
 		Log::Error("[Error] Please provide an argument");
 	} else {
-		std::wstring town = GetLowerCaseArg(args, 0);
+		std::wstring town = WStrToLower(argv[1]);
 
 		GW::Constants::District district = GW::Constants::District::Current;
 		int district_number = 0;
-		if (args.size() >= 2 && town != L"gh") {
-			std::wstring dis = GetLowerCaseArg(args, 1);
+		if (argc > 2 && town != L"gh") {
+			std::wstring dis = WStrToLower(argv[2]);
 			if (dis == L"ae") {
 				district = GW::Constants::District::American;
 			} else if (dis == L"ae1") {
@@ -413,10 +410,10 @@ void ChatCommands::CmdTP(std::wstring& cmd, std::wstring& a) {
 		} else if (town == L"doom" || town == L"doomlore") {
 			GW::Map::Travel(GW::Constants::MapID::Doomlore_Shrine_outpost, district, district_number);
 		} else if (town == L"gh") {
-			if (args.size() < 2) {
+			if (argc == 2) {
 				GW::GuildMgr::TravelGH();
 			} else {
-				std::wstring tag = GetLowerCaseArg(args, 1);
+				std::wstring tag = WStrToLower(argv[2]);
 				GW::GuildArray guilds = GW::GuildMgr::GetGuildArray();
 				for (GW::Guild* guild : guilds) {
 					if (guild && WStrToLower(guild->tag) == tag) {
@@ -434,75 +431,73 @@ void ChatCommands::CmdTP(std::wstring& cmd, std::wstring& a) {
 	}
 }
 
-void ChatCommands::CmdZoom(std::wstring& cmd, std::wstring& a) {
-	std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
-	if (args.empty()) {
+void ChatCommands::CmdZoom(int argc, LPWSTR *argv) {
+	if (argc <= 1) {
 		GW::CameraMgr::SetMaxDist();
 	} else {
 		try {
-			long distance = std::stol(args[0]);
+			long distance = std::stol(argv[1]);
 			if (distance > 0) {
 				GW::CameraMgr::SetMaxDist(static_cast<float>(distance));
 			} else {
-				Log::Error("Invalid argument '%ls', please use a positive integer value", args[0].c_str());
+				Log::Error("Invalid argument '%ls', please use a positive integer value", argv[1]);
 			}
 			
 		} catch (...) {
-			Log::Error("Invalid argument '%ls', please use an integer value", args[0].c_str());
+			Log::Error("Invalid argument '%ls', please use an integer value", argv[1]);
 		}
 	}
 }
 
-void ChatCommands::CmdCamera(std::wstring& cmd, std::wstring& a) {
-	std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
-	if (args.empty()) {
+void ChatCommands::CmdCamera(int argc, LPWSTR *argv) {
+	if (argc == 1) {
 		GW::CameraMgr::UnlockCam(false);
 	} else {
-		std::wstring arg0 = GetLowerCaseArg(args, 0);
-		if (arg0 == L"lock") {
+		std::wstring arg1 = WStrToLower(argv[1]);
+		if (arg1 == L"lock") {
 			GW::CameraMgr::UnlockCam(false);
-		} else if (arg0 == L"unlock") {
+		} else if (arg1 == L"unlock") {
 			GW::CameraMgr::UnlockCam(true);
 			Log::Info("Use W,A,S,D,X,Z for camera movement");
-		} else if (arg0 == L"fog") {
-			std::wstring arg1 = GetLowerCaseArg(args, 1);
-			if (arg1 == L"on") {
+		} else if (arg1 == L"fog") {
+			std::wstring arg2 = WStrToLower(argv[2]);
+			if (arg2 == L"on") {
 				GW::CameraMgr::SetFog(true);
-			} else if (arg1 == L"off") {
+			} else if (arg2 == L"off") {
 				GW::CameraMgr::SetFog(false);
 			}
-		} else if (arg0 == L"fov") {
-			if (args.size() == 1) {
+		} else if (arg1 == L"fov") {
+			if (argc == 2) {
 				GW::CameraMgr::SetFieldOfView(1.308997f);
 			} else {
-				std::wstring arg1 = GetLowerCaseArg(args, 1);
-				if (arg1 == L"default") {
+				std::wstring arg2 = WStrToLower(argv[2]);
+				if (arg2 == L"default") {
 					GW::CameraMgr::SetFieldOfView(1.308997f);
 				} else {
 					try {
-						float fovnew = std::stof(arg1);
+						float fovnew = std::stof(arg2);
 						if (fovnew > 0) {
 							GW::CameraMgr::SetFieldOfView(fovnew);
 							Log::Info("Field of View is %f", fovnew);
 						} else {
-							Log::Error("Invalid argument '%ls', please use a positive value", args[1].c_str());
+							Log::Error("Invalid argument '%ls', please use a positive value", argv[2]);
 						}
 					} catch (...) {
-						Log::Error("Invalid argument '%ls', please use a float value", args[1].c_str());
+						Log::Error("Invalid argument '%ls', please use a float value", argv[2]);
 					}
 				}
 			}
-		} else if (arg0 == L"speed") {
-			std::wstring arg1 = GetLowerCaseArg(args, 1);
-			if (arg1 == L"default") {
+		} else if (arg1 == L"speed") {
+			std::wstring arg2 = WStrToLower(argv[2]);
+			if (arg2 == L"default") {
 				Instance().cam_speed_ = Instance().DEFAULT_CAM_SPEED;
 			} else {
 				try {
-					float speed = std::stof(arg1);
+					float speed = std::stof(arg2);
 					Instance().cam_speed_ = speed;
 					Log::Info("Camera speed is now %f", speed);
 				} catch (...) {
-					Log::Error("Invalid argument '%ls', please use a float value", args[1].c_str());
+					Log::Error("Invalid argument '%ls', please use a float value", argv[2]);
 				}
 			}
 		} else {
@@ -511,36 +506,34 @@ void ChatCommands::CmdCamera(std::wstring& cmd, std::wstring& a) {
 	}
 }
 
-void ChatCommands::CmdDamage(std::wstring& cmd, std::wstring& a) {
-	std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
-	if (args.empty()) {
+void ChatCommands::CmdDamage(int argc, LPWSTR *argv) {
+	if (argc <= 1) {
 		PartyDamage::Instance().WritePartyDamage();
 	} else {
-		std::wstring arg0 = GetLowerCaseArg(args, 0);
-		if (arg0 == L"print" || arg0 == L"report") {
+		std::wstring arg1 = WStrToLower(argv[1]);
+		if (arg1 == L"print" || arg1 == L"report") {
 			PartyDamage::Instance().WritePartyDamage();
-		} else if (arg0 == L"me") {
+		} else if (arg1 == L"me") {
 			PartyDamage::Instance().WriteOwnDamage();
-		} else if (arg0 == L"reset") {
+		} else if (arg1 == L"reset") {
 			PartyDamage::Instance().ResetDamage();
 		} else {
 			try {
-				long idx = std::stol(arg0);
+				long idx = std::stol(arg1);
 				PartyDamage::Instance().WriteDamageOf(idx - 1);
 			} catch (...) {}
 		}
 	}
 }
 
-void ChatCommands::CmdAfk(std::wstring& cmd, std::wstring& args) {
+void ChatCommands::CmdAfk(int argc, LPWSTR *argv) {
 	GW::FriendListMgr::SetFriendListStatus(GW::Constants::OnlineStatus::AWAY);
 }
 
-void ChatCommands::CmdTarget(std::wstring& cmd, std::wstring& a) {
-	std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
-	if (!args.empty()) {
-		std::wstring arg0 = GetLowerCaseArg(args, 0);
-		if (arg0 == L"closest" || arg0 == L"nearest") {
+void ChatCommands::CmdTarget(int argc, LPWSTR *argv) {
+	if (argc > 1) {
+		std::wstring arg1 = WStrToLower(argv[2]);
+		if (arg1 == L"closest" || arg1 == L"nearest") {
 			// target nearest agent
 			GW::AgentArray agents = GW::Agents::GetAgentArray();
 			if (!agents.valid()) return;
@@ -566,14 +559,14 @@ void ChatCommands::CmdTarget(std::wstring& cmd, std::wstring& a) {
 				GW::Agents::ChangeTarget(agents[closest]);
 			}
 
-		} else if (arg0 == L"getid") {
+		} else if (arg1 == L"getid") {
 			GW::Agent* target = GW::Agents::GetTarget();
 			if (target == nullptr) {
 				Log::Error("No target selected!");
 			} else {
 				Log::Info("Target model id (PlayerNumber) is %d", target->PlayerNumber);
 			}
-		} else if (arg0 == L"getpos") {
+		} else if (arg1 == L"getpos") {
 			GW::Agent* target = GW::Agents::GetTarget();
 			if (target == nullptr) {
 				Log::Error("No target selected!");
@@ -584,51 +577,49 @@ void ChatCommands::CmdTarget(std::wstring& cmd, std::wstring& a) {
 	}
 }
 
-void ChatCommands::CmdUseSkill(std::wstring& cmd, std::wstring& a) {
-	std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
-	if (args.empty()) {
+void ChatCommands::CmdUseSkill(int argc, LPWSTR *argv) {
+	if (argc == 1) {
 		Instance().skill_to_use = 0;
-	} else if (args.size() == 1) {
-		std::wstring arg0 = GetLowerCaseArg(args, 0);
-		if (arg0 == L"stop" || arg0 == L"off") {
+	} else if (argc == 2) {
+		std::wstring arg1 = WStrToLower(argv[1]);
+		if (arg1 == L"stop" || arg1 == L"off") {
 			Instance().skill_to_use = 0;
 		} else {
 			try {
-				int skill = std::stoi(args[0]);
+				int skill = std::stoi(argv[1]);
 				if (skill >= 0 && skill <= 8) {
 					Instance().skill_to_use = skill;
 					Log::Info("Using skill %d on recharge. Use /useskill to stop", skill);
 				}
 			} catch (...) {
-				Log::Error("Invalid argument '%ls', please use an integer value", args[0].c_str());
+				Log::Error("Invalid argument '%ls', please use an integer value", argv[1]);
 			}
 		}
 	}
 }
 
-void ChatCommands::CmdSCWiki(std::wstring& cmd, std::wstring& a) {
-	std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
+void ChatCommands::CmdSCWiki(int argc, LPWSTR *argv) {
 	CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-	if (args.size() == 0) {
+	if (argc == 1) {
 		ShellExecuteW(NULL, L"open", L"http://wiki.fbgmguild.com/Main_Page", NULL, NULL, SW_SHOWNORMAL);
 	} else {
 		// the buffer is large enough, because you can type only 120 characters at once in the chat.
 		wchar_t link[256] = L"http://wiki.fbgmguild.com/index.php?search=";
-		size_t i;
-		for (i = 0; i < args.size() - 1; i++) {
-			wcscat_s(link, args[i].c_str());
+		int i;
+		for (i = 1; i < argc - 1; i++) {
+			wcscat_s(link, argv[i]);
 			wcscat_s(link, L"+");
 		}
-		wcscat_s(link, args[i].c_str());
+		wcscat_s(link, argv[i]);
 		ShellExecuteW(NULL, L"open", link, NULL, NULL, SW_SHOWNORMAL);
 	}
 }
 
-void ChatCommands::CmdLoad(std::wstring& cmd, std::wstring& args) {
+void ChatCommands::CmdLoad(int argc, LPWSTR *argv) {
 	// We will & should move that to GWCA.
 	static int(__fastcall *GetPersonalDir)(size_t size, wchar_t *dir) = 0;
 	if (!GetPersonalDir) *(DWORD*)&GetPersonalDir = 0x005AAB60; // need scan!
-	if (args.empty()) {
+	if (argc == 1) {
 		// It open the build window, click on build will make Gw crash.
 		/*
 		typedef void(__fastcall *SendUIMessage_t)(int id, void *param1, void *param2);
@@ -636,22 +627,31 @@ void ChatCommands::CmdLoad(std::wstring& cmd, std::wstring& args) {
 		int32_t param[2] = { 0, 2 };
 		SendUIMessage(0x100001B4, param, NULL);
 		*/
+		GW::AgentArray agents = GW::Agents::GetAgentArray();
+		for (GW::Agent *a : agents) {
+			if (!a || !a->GetIsGadgetType())
+				continue;
+
+			std::wstring name = GW::Agents::GetAgentName(a);
+		}
+
 		return;
 	}
 
+	LPWSTR arg1 = argv[1];
 	wchar_t dir[512];
 	GetPersonalDir(512, dir); // @Fix, GetPersonalDir failed on Windows7, return path without slashes
 	wcscat_s(dir, L"/GUILD WARS/Templates/Skills/");
-	wcscat_s(dir, args.c_str());
+	wcscat_s(dir, arg1);
 	wcscat_s(dir, L".txt");
 
 	char temp[64];
 	if (!ReadTemplateFile(dir, temp, 64)) {
 		// If it failed, we will interpret the input as the code models.
-		size_t len = args.size();
+		size_t len = wcslen(arg1);
 		if (len > 64) return;
 		for (size_t i = 0; i < len; i++)
-			temp[i] = (char)args[i];
+			temp[i] = (char)arg1[i];
 		temp[len] = 0;
 	}
 

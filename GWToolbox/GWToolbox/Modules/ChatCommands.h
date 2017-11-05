@@ -43,23 +43,23 @@ private:
 	static std::wstring WStrToLower(std::wstring str);
 	static bool ReadTemplateFile(std::wstring path, char *buff, size_t buffSize);
 
-	static void CmdAge2(std::wstring& cmd, std::wstring& args);
-	static void CmdDialog(std::wstring& cmd, std::wstring& args);
-	static void CmdTB(std::wstring& cmd, std::wstring& args);
-	static void CmdTP(std::wstring& cmd, std::wstring& args);
-	static void CmdDamage(std::wstring& cmd, std::wstring& args);
-	static void CmdChest(std::wstring& cmd, std::wstring& args);
-	static void CmdAfk(std::wstring& cmd, std::wstring& args);
-	static void CmdTarget(std::wstring& cmd, std::wstring& args);
-	static void CmdUseSkill(std::wstring& cmd, std::wstring& args);
-	static void CmdShow(std::wstring& cmd, std::wstring& args);
-	static void CmdHide(std::wstring& cmd, std::wstring& args);
-	static void CmdZoom(std::wstring& cmd, std::wstring& args);
-	static void CmdCamera(std::wstring& cmd, std::wstring& args);
-	static void CmdSCWiki(std::wstring& cmd, std::wstring& args);
-	static void CmdLoad(std::wstring& cmd, std::wstring& args);
+	static void CmdAge2(int argc, LPWSTR *argv);
+	static void CmdDialog(int argc, LPWSTR *argv);
+	static void CmdTB(int argc, LPWSTR *argv);
+	static void CmdTP(int argc, LPWSTR *argv);
+	static void CmdDamage(int argc, LPWSTR *argv);
+	static void CmdChest(int argc, LPWSTR *argv);
+	static void CmdAfk(int argc, LPWSTR *argv);
+	static void CmdTarget(int argc, LPWSTR *argv);
+	static void CmdUseSkill(int argc, LPWSTR *argv);
+	static void CmdShow(int argc, LPWSTR *argv);
+	static void CmdHide(int argc, LPWSTR *argv);
+	static void CmdZoom(int argc, LPWSTR *argv);
+	static void CmdCamera(int argc, LPWSTR *argv);
+	static void CmdSCWiki(int argc, LPWSTR *argv);
+	static void CmdLoad(int argc, LPWSTR *argv);
 
-	static std::vector<ToolboxUIElement*> MatchingWindows(std::vector<std::wstring>& args);
+	static std::vector<ToolboxUIElement*> MatchingWindows(int argc, LPWSTR *argv);
 
 	int move_forward;
 	int move_side;

@@ -204,21 +204,19 @@ void PconsWindow::Initialize() {
 	});
 
 	GW::Chat::CreateCommand(L"pcons",
-		[this](std::wstring& cmd, std::wstring& a) -> bool {
-		std::vector<std::wstring> args = GW::Chat::SplitString(a, ' ');
-		if (args.empty()) {
+		[this](int argc, LPWSTR *argv) {
+		if (argc == 0) {
 			ToggleEnable();
 		} else { // we are ignoring parameters after the first
-			std::wstring arg = GuiUtils::ToLower(args[0]);
+			std::wstring arg = GuiUtils::ToLower(argv[1]);
 			if (arg == L"on") {
 				SetEnabled(true);
 			} else if (arg == L"off") {
 				SetEnabled(false);
 			} else {
-				Log::Error("Invalid argument '%ls', please use /pcons [|on|off]", args[0].c_str());
+				Log::Error("Invalid argument '%ls', please use /pcons [|on|off]", argv[1]);
 			}
 		}
-		return true;
 	});
 }
 
