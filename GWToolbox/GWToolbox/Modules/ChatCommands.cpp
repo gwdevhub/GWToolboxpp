@@ -631,14 +631,6 @@ void ChatCommands::CmdLoad(int argc, LPWSTR *argv) {
 		int32_t param[2] = { 0, 2 };
 		SendUIMessage(0x100001B4, param, NULL);
 		*/
-		GW::AgentArray agents = GW::Agents::GetAgentArray();
-		for (GW::Agent *a : agents) {
-			if (!a || !a->GetIsGadgetType())
-				continue;
-
-			std::wstring name = GW::Agents::GetAgentName(a);
-		}
-
 		return;
 	}
 
