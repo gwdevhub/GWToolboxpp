@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Defines.h>
 #include "ToolboxWidget.h"
 #include "VBuffer.h"
 #include "PmapRenderer.h"

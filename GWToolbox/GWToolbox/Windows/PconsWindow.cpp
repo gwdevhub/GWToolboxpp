@@ -325,19 +325,18 @@ void PconsWindow::LoadSettings(CSimpleIni* ini) {
 		pcon->LoadSettings(ini, Name());
 	}
 	
-	tick_with_pcons = ini->GetBoolValue(Name(), "tick_with_pcons", true);
-	items_per_row = ini->GetLongValue(Name(), "items_per_row", 3);
-	Pcon::pcons_delay = ini->GetLongValue(Name(), "pcons_delay", 5000);
-	Pcon::lunar_delay = ini->GetLongValue(Name(), "lunar_delay", 500);
+	tick_with_pcons = ini->GetBoolValue(Name(), VAR_NAME(tick_with_pcons), true);
+	items_per_row = ini->GetLongValue(Name(), VAR_NAME(items_per_row), 3);
+	Pcon::pcons_delay = ini->GetLongValue(Name(), VAR_NAME(pcons_delay), 5000);
+	Pcon::lunar_delay = ini->GetLongValue(Name(), VAR_NAME(lunar_delay), 500);
 	Pcon::size = (float)ini->GetDoubleValue(Name(), "pconsize", 46.0);
-	Pcon::disable_when_not_found = ini->GetBoolValue(Name(), "disable_when_not_found", true);
-	Pcon::enabled_bg_color = Colors::Load(ini, Name(), "enabled_bg_color", Pcon::enabled_bg_color);
-	ini->SetBoolValue(Name(), "show_enable_button", show_enable_button);
-
-	Pcon::suppress_drunk_effect = ini->GetBoolValue(Name(), "suppress_drunk_effect", false);
-	Pcon::suppress_drunk_text = ini->GetBoolValue(Name(), "suppress_drunk_text", false);
-	Pcon::suppress_drunk_emotes = ini->GetBoolValue(Name(), "suppress_drunk_emotes", false);
-	Pcon::suppress_lunar_skills = ini->GetBoolValue(Name(), "suppress_lunar_skills", false);
+	Pcon::disable_when_not_found = ini->GetBoolValue(Name(), VAR_NAME(disable_when_not_found), true);
+	Pcon::enabled_bg_color = Colors::Load(ini, Name(), VAR_NAME(enabled_bg_color), Pcon::enabled_bg_color);
+	ini->SetBoolValue(Name(), VAR_NAME(show_enable_button), show_enable_button);
+	Pcon::suppress_drunk_effect = ini->GetBoolValue(Name(), VAR_NAME(suppress_drunk_effect), false);
+	Pcon::suppress_drunk_text = ini->GetBoolValue(Name(), VAR_NAME(suppress_drunk_text), false);
+	Pcon::suppress_drunk_emotes = ini->GetBoolValue(Name(), VAR_NAME(suppress_drunk_emotes), false);
+	Pcon::suppress_lunar_skills = ini->GetBoolValue(Name(), VAR_NAME(suppress_lunar_skills), false);
 }
 
 void PconsWindow::SaveSettings(CSimpleIni* ini) {
@@ -347,19 +346,19 @@ void PconsWindow::SaveSettings(CSimpleIni* ini) {
 		pcon->SaveSettings(ini, Name());
 	}
 
-	ini->SetBoolValue(Name(), "tick_with_pcons", tick_with_pcons);
-	ini->SetLongValue(Name(), "items_per_row", items_per_row);
-	ini->SetLongValue(Name(), "pcons_delay", Pcon::pcons_delay);
-	ini->SetLongValue(Name(), "lunar_delay", Pcon::lunar_delay);
+	ini->SetBoolValue(Name(), VAR_NAME(tick_with_pcons), tick_with_pcons);
+	ini->SetLongValue(Name(), VAR_NAME(items_per_row), items_per_row);
+	ini->SetLongValue(Name(), VAR_NAME(pcons_delay), Pcon::pcons_delay);
+	ini->SetLongValue(Name(), VAR_NAME(lunar_delay), Pcon::lunar_delay);
 	ini->SetDoubleValue(Name(), "pconsize", Pcon::size);
-	ini->SetBoolValue(Name(), "disable_when_not_found", Pcon::disable_when_not_found);
-	Colors::Save(ini, Name(), "enabled_bg_color", Pcon::enabled_bg_color);
-	ini->SetBoolValue(Name(), "show_enable_button", show_enable_button);
+	ini->SetBoolValue(Name(), VAR_NAME(disable_when_not_found), Pcon::disable_when_not_found);
+	Colors::Save(ini, Name(), VAR_NAME(enabled_bg_color), Pcon::enabled_bg_color);
+	ini->SetBoolValue(Name(), VAR_NAME(show_enable_button), show_enable_button);
 
-	ini->SetBoolValue(Name(), "suppress_drunk_effect", Pcon::suppress_drunk_effect);
-	ini->SetBoolValue(Name(), "suppress_drunk_text", Pcon::suppress_drunk_text);
-	ini->SetBoolValue(Name(), "suppress_drunk_emotes", Pcon::suppress_drunk_emotes);
-	ini->SetBoolValue(Name(), "suppress_lunar_skills", Pcon::suppress_lunar_skills);
+	ini->SetBoolValue(Name(), VAR_NAME(suppress_drunk_effect), Pcon::suppress_drunk_effect);
+	ini->SetBoolValue(Name(), VAR_NAME(suppress_drunk_text), Pcon::suppress_drunk_text);
+	ini->SetBoolValue(Name(), VAR_NAME(suppress_drunk_emotes), Pcon::suppress_drunk_emotes);
+	ini->SetBoolValue(Name(), VAR_NAME(suppress_lunar_skills), Pcon::suppress_lunar_skills);
 }
 
 void PconsWindow::DrawSettingInternal() {

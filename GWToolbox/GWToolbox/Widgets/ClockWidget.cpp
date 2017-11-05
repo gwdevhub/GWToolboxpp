@@ -34,12 +34,12 @@ void ClockWidget::Draw(IDirect3DDevice9* pDevice) {
 
 void ClockWidget::LoadSettings(CSimpleIni* ini) {
 	ToolboxWidget::LoadSettings(ini);
-	use_24h_clock = ini->GetBoolValue(Name(), "use_24h_clock", true);
+	use_24h_clock = ini->GetBoolValue(Name(), VAR_NAME(use_24h_clock), true);
 }
 
 void ClockWidget::SaveSettings(CSimpleIni* ini) {
 	ToolboxWidget::SaveSettings(ini);
-	ini->SetBoolValue(Name(), "use_24h_clock", use_24h_clock);
+	ini->SetBoolValue(Name(), VAR_NAME(use_24h_clock), use_24h_clock);
 }
 
 void ClockWidget::DrawSettingInternal() {

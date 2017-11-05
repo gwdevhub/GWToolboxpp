@@ -37,29 +37,29 @@ void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 
 void AgentRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 	Colors::Save(ini, section, VAR_NAME(color_agent_modifier), color_agent_modifier);
-	Colors::Save(ini, section, "color_eoe", color_eoe);
-	Colors::Save(ini, section, "color_qz", color_qz);
-	Colors::Save(ini, section, "color_target", color_target);
-	Colors::Save(ini, section, "color_player", color_player);
-	Colors::Save(ini, section, "color_player_dead", color_player_dead);
-	Colors::Save(ini, section, "color_signpost", color_signpost);
-	Colors::Save(ini, section, "color_item", color_item);
-	Colors::Save(ini, section, "color_hostile", color_hostile);
-	Colors::Save(ini, section, "color_hostile_damaged", color_hostile_damaged);
-	Colors::Save(ini, section, "color_hostile_dead", color_hostile_dead);
-	Colors::Save(ini, section, "color_neutral", color_neutral);
-	Colors::Save(ini, section, "color_ally", color_ally);
-	Colors::Save(ini, section, "color_ally_npc", color_ally_npc);
-	Colors::Save(ini, section, "color_ally_spirit", color_ally_spirit);
-	Colors::Save(ini, section, "color_ally_minion", color_ally_minion);
-	Colors::Save(ini, section, "color_ally_dead", color_ally_dead);
+	Colors::Save(ini, section, VAR_NAME(color_eoe), color_eoe);
+	Colors::Save(ini, section, VAR_NAME(color_qz), color_qz);
+	Colors::Save(ini, section, VAR_NAME(color_target), color_target);
+	Colors::Save(ini, section, VAR_NAME(color_player), color_player);
+	Colors::Save(ini, section, VAR_NAME(color_player_dead), color_player_dead);
+	Colors::Save(ini, section, VAR_NAME(color_signpost), color_signpost);
+	Colors::Save(ini, section, VAR_NAME(color_item), color_item);
+	Colors::Save(ini, section, VAR_NAME(color_hostile), color_hostile);
+	Colors::Save(ini, section, VAR_NAME(color_hostile_damaged), color_hostile_damaged);
+	Colors::Save(ini, section, VAR_NAME(color_hostile_dead), color_hostile_dead);
+	Colors::Save(ini, section, VAR_NAME(color_neutral), color_neutral);
+	Colors::Save(ini, section, VAR_NAME(color_ally), color_ally);
+	Colors::Save(ini, section, VAR_NAME(color_ally_npc), color_ally_npc);
+	Colors::Save(ini, section, VAR_NAME(color_ally_spirit), color_ally_spirit);
+	Colors::Save(ini, section, VAR_NAME(color_ally_minion), color_ally_minion);
+	Colors::Save(ini, section, VAR_NAME(color_ally_dead), color_ally_dead);
 
-	ini->SetDoubleValue(section, "size_default", size_default);
-	ini->SetDoubleValue(section, "size_player", size_player);
-	ini->SetDoubleValue(section, "size_signpost", size_signpost);
-	ini->SetDoubleValue(section, "size_item", size_item);
-	ini->SetDoubleValue(section, "size_boss", size_boss);
-	ini->SetDoubleValue(section, "size_minion", size_minion);
+	ini->SetDoubleValue(section, VAR_NAME(size_default), size_default);
+	ini->SetDoubleValue(section, VAR_NAME(size_player), size_player);
+	ini->SetDoubleValue(section, VAR_NAME(size_signpost), size_signpost);
+	ini->SetDoubleValue(section, VAR_NAME(size_item), size_item);
+	ini->SetDoubleValue(section, VAR_NAME(size_boss), size_boss);
+	ini->SetDoubleValue(section, VAR_NAME(size_minion), size_minion);
 }
 
 void AgentRenderer::DrawSettings() {

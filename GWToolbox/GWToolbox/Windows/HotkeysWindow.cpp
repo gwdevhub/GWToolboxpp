@@ -201,7 +201,7 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 		bool triggered = false;
 		for (TBHotkey* hk : hotkeys) {
 			if (!block_hotkeys && hk->active 
-				&& !hk->pressed && keyData == hk->key 
+				&& !hk->pressed && keyData == hk->hotkey
 				&& modifier == hk->modifier) {
 
 				hk->pressed = true;
@@ -215,7 +215,7 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 	case WM_KEYUP:
 	case WM_SYSKEYUP:
 		for (TBHotkey* hk : hotkeys) {
-			if (hk->pressed && keyData == hk->key) {
+			if (hk->pressed && keyData == hk->hotkey) {
 				hk->pressed = false;
 			}
 		}
@@ -223,14 +223,14 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 
 	case WM_XBUTTONUP:
 		for (TBHotkey* hk : hotkeys) {
-			if (hk->pressed && (hk->key == VK_XBUTTON1 || hk->key == VK_XBUTTON2)) {
+			if (hk->pressed && (hk->hotkey == VK_XBUTTON1 || hk->hotkey == VK_XBUTTON2)) {
 				hk->pressed = false;
 			}
 		}
 		return false;
 	case WM_MBUTTONUP:
 		for (TBHotkey* hk : hotkeys) {
-			if (hk->pressed && hk->key == VK_MBUTTON) {
+			if (hk->pressed && hk->hotkey == VK_MBUTTON) {
 				hk->pressed = false;
 			}
 		}

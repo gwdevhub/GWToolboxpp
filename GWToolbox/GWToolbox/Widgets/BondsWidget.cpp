@@ -244,24 +244,24 @@ void BondsWidget::UseBuff(PartyIndex player, BondIndex bond) {
 
 void BondsWidget::LoadSettings(CSimpleIni* ini) {
 	ToolboxWidget::LoadSettings(ini);
-	lock_move = ini->GetBoolValue(Name(), "lock_move", true);
+	lock_move = ini->GetBoolValue(Name(), VAR_NAME(lock_move), true);
 
-	background = Colors::Load(ini, Name(), "background", Colors::ARGB(76, 0, 0, 0));
-	click_to_use = ini->GetBoolValue(Name(), "click_to_use", true);
-	show_allies = ini->GetBoolValue(Name(), "show_allies", true);
-	flip_bonds = ini->GetBoolValue(Name(), "flip_bonds", false);
-	row_height = ini->GetLongValue(Name(), "row_height", 0);
+	background = Colors::Load(ini, Name(), VAR_NAME(background), Colors::ARGB(76, 0, 0, 0));
+	click_to_use = ini->GetBoolValue(Name(), VAR_NAME(click_to_use), true);
+	show_allies = ini->GetBoolValue(Name(), VAR_NAME(show_allies), true);
+	flip_bonds = ini->GetBoolValue(Name(), VAR_NAME(flip_bonds), false);
+	row_height = ini->GetLongValue(Name(), VAR_NAME(row_height), 0);
 }
 
 void BondsWidget::SaveSettings(CSimpleIni* ini) {
 	ToolboxWidget::SaveSettings(ini);
-	ini->SetBoolValue(Name(), "lock_move", lock_move);
-
-	Colors::Save(ini, Name(), "background", background);
-	ini->SetBoolValue(Name(), "click_to_use", click_to_use);
-	ini->SetBoolValue(Name(), "show_allies", show_allies);
-	ini->SetBoolValue(Name(), "flip_bonds", flip_bonds);
-	ini->SetLongValue(Name(), "row_height", row_height);
+	ini->SetBoolValue(Name(), VAR_NAME(lock_move), lock_move);
+	
+	Colors::Save(ini, Name(), VAR_NAME(background), background);
+	ini->SetBoolValue(Name(), VAR_NAME(click_to_use), click_to_use);
+	ini->SetBoolValue(Name(), VAR_NAME(show_allies), show_allies);
+	ini->SetBoolValue(Name(), VAR_NAME(flip_bonds), flip_bonds);
+	ini->SetLongValue(Name(), VAR_NAME(row_height), row_height);
 }
 
 void BondsWidget::DrawSettings() {

@@ -55,14 +55,14 @@ TBHotkey* TBHotkey::HotkeyFactory(CSimpleIni* ini, const char* section) {
 }
 
 TBHotkey::TBHotkey(CSimpleIni* ini, const char* section) : ui_id(++cur_ui_id) {
-	key = ini ? ini->GetLongValue(section, "hotkey", 0) : 0;
-	modifier = ini ? ini->GetLongValue(section, "modifier", 0) : 0;
-	active = ini ? ini->GetBoolValue(section, "active", true) : true;
+	hotkey = ini ? ini->GetLongValue(section, VAR_NAME(hotkey), 0) : 0;
+	modifier = ini ? ini->GetLongValue(section, VAR_NAME(modifier), 0) : 0;
+	active = ini ? ini->GetBoolValue(section, VAR_NAME(active), true) : true;
 }
 void TBHotkey::Save(CSimpleIni* ini, const char* section) const {
-	ini->SetLongValue(section, "hotkey", key);
-	ini->SetLongValue(section, "modifier", modifier);
-	ini->SetBoolValue(section, "active", active);
+	ini->SetLongValue(section, VAR_NAME(hotkey), hotkey);
+	ini->SetLongValue(section, VAR_NAME(modifier), modifier);
+	ini->SetBoolValue(section, VAR_NAME(active), active);
 }
 void TBHotkey::Draw(Op* op) {
 	auto ShowHeaderButtons = [&]() {
@@ -94,7 +94,7 @@ void TBHotkey::Draw(Op* op) {
 	char desbuf[128];
 	char keybuf[128];
 	Description(desbuf, 128);
-	ModKeyName(keybuf, 128, modifier, key, "<None>");
+	ModKeyName(keybuf, 128, modifier, hotkey, "<None>");
 	_snprintf_s(header, 128, "%s [%s]###header%u", desbuf, keybuf, ui_id);
 	ImGuiTreeNodeFlags flags = (show_active_in_header || show_run_in_header) 
 		? ImGuiTreeNodeFlags_AllowOverlapMode : 0;
@@ -139,7 +139,7 @@ void TBHotkey::Draw(Op* op) {
 				}
 			} else { // key was pressed, close if it's released
 				if (!ImGui::GetIO().KeysDown[newkey]) {
-					key = newkey;
+					hotkey = newkey;
 					modifier = newmod;
 					ImGui::CloseCurrentPopup();
 					hotkeys_changed = true;

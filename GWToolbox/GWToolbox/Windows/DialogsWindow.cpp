@@ -175,17 +175,17 @@ void DialogsWindow::DrawSettingInternal() {
 
 void DialogsWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxPanel::LoadSettings(ini);
-	fav_count = ini->GetLongValue(Name(), "fav_count", 3);
+	fav_count = ini->GetLongValue(Name(), VAR_NAME(fav_count), 3);
 	fav_index.resize(fav_count, 0);
 	for (int i = 0; i < fav_count; ++i) {
 		char key[32];
 		sprintf_s(key, "Quest%d", i);
 		fav_index[i] = ini->GetLongValue(Name(), key, 0);
 	}
-	show_common = ini->GetBoolValue(Name(), "show_common", true);
-	show_uwteles = ini->GetBoolValue(Name(), "show_uwteles", true);
-	show_favorites = ini->GetBoolValue(Name(), "show_favorites", true);
-	show_custom = ini->GetBoolValue(Name(), "show_custom", true);
+	show_common = ini->GetBoolValue(Name(), VAR_NAME(show_common), true);
+	show_uwteles = ini->GetBoolValue(Name(), VAR_NAME(show_uwteles), true);
+	show_favorites = ini->GetBoolValue(Name(), VAR_NAME(show_favorites), true);
+	show_custom = ini->GetBoolValue(Name(), VAR_NAME(show_custom), true);
 }
 
 void DialogsWindow::SaveSettings(CSimpleIni* ini) {
@@ -196,10 +196,10 @@ void DialogsWindow::SaveSettings(CSimpleIni* ini) {
 		sprintf_s(key, "Quest%d", i);
 		ini->SetLongValue(Name(), key, fav_index[i]);
 	}
-	ini->SetBoolValue(Name(), "show_common", show_common);
-	ini->SetBoolValue(Name(), "show_uwteles", show_uwteles);
-	ini->SetBoolValue(Name(), "show_favorites", show_favorites);
-	ini->SetBoolValue(Name(), "show_custom", show_custom);
+	ini->SetBoolValue(Name(), VAR_NAME(show_common), show_common);
+	ini->SetBoolValue(Name(), VAR_NAME(show_uwteles), show_uwteles);
+	ini->SetBoolValue(Name(), VAR_NAME(show_favorites), show_favorites);
+	ini->SetBoolValue(Name(), VAR_NAME(show_custom), show_custom);
 }
 
 DWORD DialogsWindow::IndexToQuestID(int index) {

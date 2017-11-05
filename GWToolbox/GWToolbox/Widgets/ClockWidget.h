@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Defines.h>
 #include "ToolboxWidget.h"
 
 class ClockWidget : public ToolboxWidget {

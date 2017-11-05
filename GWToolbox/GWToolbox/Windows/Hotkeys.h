@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <Defines.h>
 
 #include <GWCA\GWCA.h>
 #include <GWCA\Constants\Skills.h>
@@ -30,7 +31,7 @@ public:
 	bool pressed = false;	// if the key has been pressed
 	bool active = true;		// if the hotkey is enabled/active
 
-	long key = 0;
+	long hotkey = 0;
 	long modifier = 0;
 
 	// Create hotkey, load from file if 'ini' is not null

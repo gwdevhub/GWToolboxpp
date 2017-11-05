@@ -330,15 +330,14 @@ void PartyDamage::ResetDamage() {
 
 void PartyDamage::LoadSettings(CSimpleIni* ini) {
 	ToolboxWidget::LoadSettings(ini);
-	lock_move = ini->GetBoolValue(Name(), "lock_move", true);
-
-	width = (float)ini->GetDoubleValue(Name(), "width", 100.0f);
-	bars_left = ini->GetBoolValue(Name(), "bars_left", true);
-	row_height = ini->GetLongValue(Name(), "row_height", 0);
-	recent_max_time = ini->GetLongValue(Name(), "recent_max_time", 7000);
-	color_background = Colors::Load(ini, Name(), "color_background", Colors::ARGB(76, 0, 0, 0));
-	color_damage = Colors::Load(ini, Name(), "color_damage", Colors::ARGB(102, 205, 102, 51));
-	color_recent = Colors::Load(ini, Name(), "color_recent", Colors::ARGB(205, 102, 153, 230));
+	lock_move = ini->GetBoolValue(Name(), VAR_NAME(lock_move), true);
+	width = (float)ini->GetDoubleValue(Name(), VAR_NAME(width), 100.0f);
+	bars_left = ini->GetBoolValue(Name(), VAR_NAME(bars_left), true);
+	row_height = ini->GetLongValue(Name(), VAR_NAME(row_height), 0);
+	recent_max_time = ini->GetLongValue(Name(), VAR_NAME(recent_max_time), 7000);
+	color_background = Colors::Load(ini, Name(), VAR_NAME(color_background), Colors::ARGB(76, 0, 0, 0));
+	color_damage = Colors::Load(ini, Name(), VAR_NAME(color_damage), Colors::ARGB(102, 205, 102, 51));
+	color_recent = Colors::Load(ini, Name(), VAR_NAME(color_recent), Colors::ARGB(205, 102, 153, 230));
 
 	if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
 	inifile->LoadFile(Resources::GetPath(IniFilename).c_str());
@@ -361,13 +360,13 @@ void PartyDamage::SaveSettings(CSimpleIni* ini) {
 	ToolboxWidget::SaveSettings(ini);
 	ini->SetBoolValue(Name(), "lock_move", lock_move);
 
-	ini->SetDoubleValue(Name(), "width", width);
-	ini->SetBoolValue(Name(), "bars_left", bars_left);
-	ini->SetLongValue(Name(), "row_height", row_height);
-	ini->GetLongValue(Name(), "recent_max_time", recent_max_time);
-	Colors::Save(ini, Name(), "color_background", color_background);
-	Colors::Save(ini, Name(), "color_damage", color_damage);
-	Colors::Save(ini, Name(), "color_recent", color_recent);
+	ini->SetDoubleValue(Name(), VAR_NAME(width), width);
+	ini->SetBoolValue(Name(), VAR_NAME(bars_left), bars_left);
+	ini->SetLongValue(Name(), VAR_NAME(row_height), row_height);
+	ini->GetLongValue(Name(), VAR_NAME(recent_max_time), recent_max_time);
+	Colors::Save(ini, Name(), VAR_NAME(color_background), color_background);
+	Colors::Save(ini, Name(), VAR_NAME(color_damage), color_damage);
+	Colors::Save(ini, Name(), VAR_NAME(color_recent), color_recent);
 
 	for (const std::pair<DWORD, long>& item : hp_map) {
 		std::string key = std::to_string(item.first);

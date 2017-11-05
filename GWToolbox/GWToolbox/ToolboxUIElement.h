@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Defines.h>
 #include "ToolboxModule.h"
 
 class ToolboxUIElement : public ToolboxModule {

@@ -1,12 +1,13 @@
 #pragma once
 
 #include <vector>
+#include <Timer.h>
+#include <Defines.h>
 
 #include <GWCA\Utilities\MemoryPatcher.h>
 #include <GWCA\Managers\ChatMgr.h>
 
 #include "ToolboxModule.h"
-#include <Timer.h>
 
 class GameSettings : public ToolboxModule {
 	GameSettings() {};
@@ -32,11 +33,11 @@ public:
 
 	// some settings that are either referenced from multiple places
 	// or have nowhere else to be
-	bool borderless_window = false;
+	bool borderlesswindow = false;
 	bool tick_is_toggle = false;
 
-	bool open_template_links = false;
-	bool auto_transform_url = false;
+	bool openlinks = false;
+	bool auto_url = false;
 	bool select_with_chat_doubleclick = false;
 
 	bool flash_window_on_pm = false;

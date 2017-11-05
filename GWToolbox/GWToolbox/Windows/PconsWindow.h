@@ -2,6 +2,7 @@
 
 #include <list>
 #include <vector>
+#include <Defines.h>
 
 #include <GWCA\Constants\Constants.h>
 

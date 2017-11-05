@@ -162,9 +162,9 @@ void Minimap::DrawSettingInternal() {
 
 void Minimap::LoadSettings(CSimpleIni* ini) {
 	ToolboxWidget::LoadSettings(ini);
-	scale = (float)ini->GetDoubleValue(Name(), "scale", 1.0);
-	hero_flag_controls_show = ini->GetBoolValue(Name(), "hero_flag_controls_show", true);
-	hero_flag_window_attach = ini->GetBoolValue(Name(), "hero_flag_window_attach", true);
+	scale = (float)ini->GetDoubleValue(Name(), VAR_NAME(scale), 1.0);
+	hero_flag_controls_show = ini->GetBoolValue(Name(), VAR_NAME(hero_flag_controls_show), true);
+	hero_flag_window_attach = ini->GetBoolValue(Name(), VAR_NAME(hero_flag_window_attach), true);
 	hero_flag_window_background = Colors::Load(ini, Name(), "hero_flag_controls_background",
 		ImColor(ImGui::GetStyle().Colors[ImGuiCol_WindowBg]));
 	range_renderer.LoadSettings(ini, Name());
@@ -177,9 +177,9 @@ void Minimap::LoadSettings(CSimpleIni* ini) {
 
 void Minimap::SaveSettings(CSimpleIni* ini) {
 	ToolboxWidget::SaveSettings(ini);
-	ini->SetDoubleValue(Name(), "scale", scale);
-	ini->SetBoolValue(Name(), "hero_flag_controls_show", hero_flag_controls_show);
-	ini->SetBoolValue(Name(), "hero_flag_window_attach", hero_flag_window_attach);
+	ini->SetDoubleValue(Name(), VAR_NAME(scale), scale);
+	ini->SetBoolValue(Name(), VAR_NAME(hero_flag_controls_show), hero_flag_controls_show);
+	ini->SetBoolValue(Name(), VAR_NAME(hero_flag_window_attach), hero_flag_window_attach);
 	Colors::Save(ini, Name(), "hero_flag_controls_background", hero_flag_window_background);
 	range_renderer.SaveSettings(ini, Name());
 	pmap_renderer.SaveSettings(ini, Name());

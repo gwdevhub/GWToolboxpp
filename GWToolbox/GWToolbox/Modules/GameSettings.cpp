@@ -38,7 +38,7 @@ namespace {
 	}
 
 	void SendChatCallback(GW::Chat::Channel chan, wchar_t msg[120]) {
-		if (!GameSettings::Instance().auto_transform_url || !msg) return;
+		if (!GameSettings::Instance().auto_url || !msg) return;
 		size_t len = wcslen(msg);
 		size_t max_len = 120;
 
@@ -103,7 +103,7 @@ void GameSettings::Initialize() {
 	GW::Chat::CreateCommand(L"borderless",
 		[&](int argc, LPWSTR *argv) {
 		if (argc) {
-			ApplyBorderless(!borderless_window);
+			ApplyBorderless(!borderlesswindow);
 		} else {
 			std::wstring arg1 = GuiUtils::ToLower(argv[1]);
 			if (arg1 == L"on") {
@@ -133,55 +133,55 @@ void GameSettings::Initialize() {
 
 void GameSettings::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini);
-	borderless_window = ini->GetBoolValue(Name(), "borderlesswindow", false);
-	tick_is_toggle = ini->GetBoolValue(Name(), "tick_is_toggle", true);
+	borderlesswindow = ini->GetBoolValue(Name(), VAR_NAME(borderlesswindow), false);
+	tick_is_toggle = ini->GetBoolValue(Name(), VAR_NAME(tick_is_toggle), true);
 
 	GW::Chat::ShowTimestamps = ini->GetBoolValue(Name(), "show_timestamps", false);
 	GW::Chat::TimestampsColor = Colors::Load(ini, Name(), "timestamps_color", Colors::White());
-
 	GW::Chat::KeepChatHistory = ini->GetBoolValue(Name(), "keep_chat_history", true);
-	open_template_links = ini->GetBoolValue(Name(), "openlinks", true);
-	auto_transform_url = ini->GetBoolValue(Name(), "auto_url", true);
-	select_with_chat_doubleclick = ini->GetBoolValue(Name(), "select_with_chat_doubleclick", true);
 
-	flash_window_on_pm = ini->GetBoolValue(Name(), "flash_window_on_pm", true);
-	flash_window_on_party_invite = ini->GetBoolValue(Name(), "flash_window_on_party_invite", true);
-	flash_window_on_zoning = ini->GetBoolValue(Name(), "flash_window_on_zoning", true);
-	focus_window_on_zoning = ini->GetBoolValue(Name(), "focus_window_on_zoning", false);
+	openlinks = ini->GetBoolValue(Name(), VAR_NAME(openlinks), true);
+	auto_url = ini->GetBoolValue(Name(), VAR_NAME(auto_url), true);
+	select_with_chat_doubleclick = ini->GetBoolValue(Name(), VAR_NAME(select_with_chat_doubleclick), true);
 
-	auto_set_away = ini->GetBoolValue(Name(), "auto_set_away", false);
-	auto_set_away_delay = ini->GetLongValue(Name(), "auto_set_away_delay", 10);
-	auto_set_online = ini->GetBoolValue(Name(), "auto_set_online", false);
+	flash_window_on_pm = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_pm), true);
+	flash_window_on_party_invite = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_party_invite), true);
+	flash_window_on_zoning = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_zoning), true);
+	focus_window_on_zoning = ini->GetBoolValue(Name(), VAR_NAME(focus_window_on_zoning), false);
 
-	ApplyBorderless(borderless_window);
-	if (open_template_links) GW::Chat::SetOpenLinks(open_template_links);
+	auto_set_away = ini->GetBoolValue(Name(), VAR_NAME(auto_set_away), false);
+	auto_set_away_delay = ini->GetLongValue(Name(), VAR_NAME(auto_set_away_delay), 10);
+	auto_set_online = ini->GetBoolValue(Name(), VAR_NAME(auto_set_online), false);
+
+	ApplyBorderless(borderlesswindow);
+	if (openlinks) GW::Chat::SetOpenLinks(openlinks);
 	if (tick_is_toggle) GW::PartyMgr::SetTickToggle();
 	if (select_with_chat_doubleclick) GW::Chat::SetChatEventCallback(&ChatEventCallback);
-	if (auto_transform_url) GW::Chat::SetSendChatCallback(&SendChatCallback);
+	if (auto_url) GW::Chat::SetSendChatCallback(&SendChatCallback);
 	if (flash_window_on_pm) GW::Chat::SetWhisperCallback(&WhisperCallback);
 }
 
 void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ToolboxModule::SaveSettings(ini);
-	ini->SetBoolValue(Name(), "borderlesswindow", borderless_window);
-	ini->SetBoolValue(Name(), "tick_is_toggle", tick_is_toggle);
+	ini->SetBoolValue(Name(), VAR_NAME(borderlesswindow), borderlesswindow);
+	ini->SetBoolValue(Name(), VAR_NAME(tick_is_toggle), tick_is_toggle);
 
 	ini->SetBoolValue(Name(), "show_timestamps", GW::Chat::ShowTimestamps);
 	Colors::Save(ini, Name(), "timestamps_color", GW::Chat::TimestampsColor);
-
 	ini->SetBoolValue(Name(), "keep_chat_history", GW::Chat::KeepChatHistory);
-	ini->SetBoolValue(Name(), "openlinks", open_template_links);
-	ini->SetBoolValue(Name(), "auto_url", auto_transform_url);
-	ini->SetBoolValue(Name(), "select_with_chat_doubleclick", select_with_chat_doubleclick);
 
-	ini->SetBoolValue(Name(), "flash_window_on_pm", flash_window_on_pm);
-	ini->SetBoolValue(Name(), "flash_window_on_party_invite", flash_window_on_party_invite);
-	ini->SetBoolValue(Name(), "flash_window_on_zoning", flash_window_on_zoning);
-	ini->SetBoolValue(Name(), "focus_window_on_zoning", focus_window_on_zoning);
+	ini->SetBoolValue(Name(), VAR_NAME(openlinks), openlinks);
+	ini->SetBoolValue(Name(), VAR_NAME(auto_url), auto_url);
+	ini->SetBoolValue(Name(), VAR_NAME(select_with_chat_doubleclick), select_with_chat_doubleclick);
 
-	ini->SetBoolValue(Name(), "auto_set_away", auto_set_away);
-	ini->SetLongValue(Name(), "auto_set_away_delay", auto_set_away_delay);
-	ini->SetBoolValue(Name(), "auto_set_online", auto_set_online);
+	ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_pm), flash_window_on_pm);
+	ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_party_invite), flash_window_on_party_invite);
+	ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_zoning), flash_window_on_zoning);
+	ini->SetBoolValue(Name(), VAR_NAME(focus_window_on_zoning), focus_window_on_zoning);
+
+	ini->SetBoolValue(Name(), VAR_NAME(auto_set_away), auto_set_away);
+	ini->SetLongValue(Name(), VAR_NAME(auto_set_away_delay), auto_set_away_delay);
+	ini->SetBoolValue(Name(), VAR_NAME(auto_set_online), auto_set_online);
 }
 
 void GameSettings::DrawSettingInternal() {
@@ -199,12 +199,12 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::Checkbox("Keep chat history.", &GW::Chat::KeepChatHistory);
 	ImGui::ShowHelp("Messages in the chat do not disappear on character change.");
 
-	if (ImGui::Checkbox("Open web links from templates", &open_template_links)) {
-		GW::Chat::SetOpenLinks(open_template_links);
+	if (ImGui::Checkbox("Open web links from templates", &openlinks)) {
+		GW::Chat::SetOpenLinks(openlinks);
 	}
 	ImGui::ShowHelp("Clicking on template that has a URL as name will open that URL in your browser");
 
-	if (ImGui::Checkbox("Automatically change urls into build templates.", &auto_transform_url)) {
+	if (ImGui::Checkbox("Automatically change urls into build templates.", &openlinks)) {
 		GW::Chat::SetSendChatCallback(&SendChatCallback);
 	}
 	ImGui::ShowHelp("When you write a message starting with 'http://' or 'https://', it will be converted in template format");
@@ -249,8 +249,8 @@ void GameSettings::DrawSettingInternal() {
 }
 
 void GameSettings::DrawBorderlessSetting() {
-	if (ImGui::Checkbox("Borderless Window", &borderless_window)) {
-		ApplyBorderless(borderless_window);
+	if (ImGui::Checkbox("Borderless Window", &borderlesswindow)) {
+		ApplyBorderless(borderlesswindow);
 	}
 }
 
@@ -268,8 +268,8 @@ bool GameSettings::RectMultiscreen(RECT desktop, RECT gw) {
 
 void GameSettings::ApplyBorderless(bool borderless)  {
 	Log::Log("ApplyBorderless(%d)\n", borderless);
-
-	borderless_window = borderless;
+	
+	borderlesswindow = borderless;
 
 	HWND gwHandle = GW::MemoryMgr::GetGWWindowHandle();
 	DWORD current_style = GetWindowLong(gwHandle, GWL_STYLE);
@@ -299,7 +299,7 @@ void GameSettings::ApplyBorderless(bool borderless)  {
 			//fullscreen
 			Log::Info("Please enable Borderless while in Windowed mode");
 			borderless = false;
-			borderless_window = false;
+			borderlesswindow = false;
 			return;
 		}
 	} else if (RectMultiscreen(desktopRect, windowRect)) {

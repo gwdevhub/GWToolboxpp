@@ -152,25 +152,25 @@ void TravelWindow::DrawSettingInternal() {
 
 void TravelWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxPanel::LoadSettings(ini);
-	fav_count = ini->GetLongValue(Name(), "fav_count", 3);
+	fav_count = ini->GetLongValue(Name(), VAR_NAME(fav_count), 3);
 	fav_index.resize(fav_count, -1);
 	for (int i = 0; i < fav_count; ++i) {
 		char key[32];
 		sprintf_s(key, "Fav%d", i);
 		fav_index[i] = ini->GetLongValue(Name(), key, -1);
 	}
-	close_on_travel = ini->GetBoolValue(Name(), "close_on_travel", false);
+	close_on_travel = ini->GetBoolValue(Name(), VAR_NAME(close_on_travel), false);
 }
 
 void TravelWindow::SaveSettings(CSimpleIni* ini) {
 	ToolboxPanel::SaveSettings(ini);
-	ini->SetLongValue(Name(), "fav_count", fav_count);
+	ini->SetLongValue(Name(), VAR_NAME(fav_count), fav_count);
 	for (int i = 0; i < fav_count; ++i) {
 		char key[32];
 		sprintf_s(key, "Fav%d", i);
 		ini->SetLongValue(Name(), key, fav_index[i]);
 	}
-	ini->SetBoolValue(Name(), "close_on_travel", close_on_travel);
+	ini->SetBoolValue(Name(), VAR_NAME(close_on_travel), close_on_travel);
 }
 
 GW::Constants::MapID TravelWindow::IndexToOutpostID(int index) {

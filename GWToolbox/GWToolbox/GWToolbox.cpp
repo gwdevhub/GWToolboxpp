@@ -228,7 +228,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 		}
 
 		// block alt-enter if in borderless to avoid graphic glitches (no reason to go fullscreen anyway)
-		if (GameSettings::Instance().borderless_window
+		if (GameSettings::Instance().borderlesswindow
 			&& (GetAsyncKeyState(VK_MENU) < 0)
 			&& (GetAsyncKeyState(VK_RETURN) < 0)) {
 			return true;

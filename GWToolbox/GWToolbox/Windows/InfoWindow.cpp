@@ -398,28 +398,28 @@ void InfoWindow::DrawSettingInternal() {
 
 void InfoWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxPanel::LoadSettings(ini);
-	show_widgets = ini->GetBoolValue(Name(), "show_widgets", true);
-	show_open_chest = ini->GetBoolValue(Name(), "show_open_chest", true);
-	show_player = ini->GetBoolValue(Name(), "show_player", true);
-	show_target = ini->GetBoolValue(Name(), "show_target", true);
-	show_map = ini->GetBoolValue(Name(), "show_map", true);
-	show_dialog = ini->GetBoolValue(Name(), "show_dialog", true);
-	show_item = ini->GetBoolValue(Name(), "show_item", true);
-	show_quest = ini->GetBoolValue(Name(), "show_quest", true);
-	show_mobcount = ini->GetBoolValue(Name(), "show_enemycount", true);
-	show_resignlog = ini->GetBoolValue(Name(), "show_resignlog", true);
+	show_widgets = ini->GetBoolValue(Name(), VAR_NAME(show_widgets), true);
+	show_open_chest = ini->GetBoolValue(Name(), VAR_NAME(show_open_chest), true);
+	show_player = ini->GetBoolValue(Name(), VAR_NAME(show_player), true);
+	show_target = ini->GetBoolValue(Name(), VAR_NAME(show_target), true);
+	show_map = ini->GetBoolValue(Name(), VAR_NAME(show_map), true);
+	show_dialog = ini->GetBoolValue(Name(), VAR_NAME(show_dialog), true);
+	show_item = ini->GetBoolValue(Name(), VAR_NAME(show_item), true);
+	show_quest = ini->GetBoolValue(Name(), VAR_NAME(show_quest), true);
+	show_mobcount = ini->GetBoolValue(Name(), VAR_NAME(show_enemycount), true);
+	show_resignlog = ini->GetBoolValue(Name(), VAR_NAME(show_resignlog), true);
 }
 
 void InfoWindow::SaveSettings(CSimpleIni* ini) {
 	ToolboxPanel::SaveSettings(ini);
-	ini->SetBoolValue(Name(), "show_widgets", show_widgets);
-	ini->SetBoolValue(Name(), "show_open_chest", show_open_chest);
-	ini->SetBoolValue(Name(), "show_player", show_player);
-	ini->SetBoolValue(Name(), "show_target", show_target);
-	ini->SetBoolValue(Name(), "show_map", show_map);
-	ini->SetBoolValue(Name(), "show_dialog", show_dialog);
-	ini->SetBoolValue(Name(), "show_item", show_item);
-	ini->SetBoolValue(Name(), "show_quest", show_quest);
-	ini->SetBoolValue(Name(), "show_enemycount", show_mobcount);
-	ini->SetBoolValue(Name(), "show_resignlog", show_resignlog);
+	ini->SetBoolValue(Name(), VAR_NAME(show_widgets), show_widgets);
+	ini->SetBoolValue(Name(), VAR_NAME(show_open_chest), show_open_chest);
+	ini->SetBoolValue(Name(), VAR_NAME(show_player), show_player);
+	ini->SetBoolValue(Name(), VAR_NAME(show_target), show_target);
+	ini->SetBoolValue(Name(), VAR_NAME(show_map), show_map);
+	ini->SetBoolValue(Name(), VAR_NAME(show_dialog), show_dialog);
+	ini->SetBoolValue(Name(), VAR_NAME(show_item), show_item);
+	ini->SetBoolValue(Name(), VAR_NAME(show_quest), show_quest);
+	ini->SetBoolValue(Name(), VAR_NAME(show_enemycount), show_mobcount);
+	ini->SetBoolValue(Name(), VAR_NAME(show_resignlog), show_resignlog);
 }

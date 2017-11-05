@@ -2,6 +2,7 @@
 
 #include <Windows.h>
 #include <vector>
+#include <Defines.h>
 
 #include "ToolboxPanel.h"
 

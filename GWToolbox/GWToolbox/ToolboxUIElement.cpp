@@ -9,13 +9,13 @@ void ToolboxUIElement::Initialize() {
 
 void ToolboxUIElement::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini);
-	visible = ini->GetBoolValue(Name(), "visible", false);
+	visible = ini->GetBoolValue(Name(), VAR_NAME(visible), false);
 }
 
 // load 'visible' field
 void ToolboxUIElement::SaveSettings(CSimpleIni* ini) {
 	ToolboxModule::SaveSettings(ini);
-	ini->SetBoolValue(Name(), "visible", visible);
+	ini->SetBoolValue(Name(), VAR_NAME(visible), visible);
 }
 
 void ToolboxUIElement::ShowVisibleRadio() {

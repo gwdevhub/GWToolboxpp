@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <Defines.h>
 
 #include <GWCA\GameEntities\Agent.h>
 #include <GWCA\Constants\Skills.h>
