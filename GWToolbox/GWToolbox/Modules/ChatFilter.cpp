@@ -30,9 +30,11 @@ void ChatFilter::Initialize() {
 	strcpy_s(bycontent_buf, "");
 	//strcpy_s(byauthor_buf, "");
 
+	/*
 	ignored_players.insert(L"Armbraces Shop");
 	ignored_players.insert(L"Beneath Dying Skies");
 	ignored_players.insert(L"Consumable Shop");
+	ignored_players.insert(L"Conor Stevenson");
 	ignored_players.insert(L"Ecto Shop");
 	ignored_players.insert(L"Ecto Store A");
 	ignored_players.insert(L"Ecto Market");
@@ -45,6 +47,7 @@ void ChatFilter::Initialize() {
 	ignored_players.insert(L"Mmo Gamers Market M");
 	ignored_players.insert(L"Mmo Gamers Market X");
 	ignored_players.insert(L"Rando Bilau");
+	*/
 
 	// server messages
 	GW::StoC::AddCallback<GW::Packet::StoC::P082>(

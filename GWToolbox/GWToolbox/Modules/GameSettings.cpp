@@ -202,7 +202,7 @@ void GameSettings::DrawSettingInternal() {
 	if (ImGui::ColorEdit4("Color:", &col.x, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel)) {
 		GW::Chat::TimestampsColor = ImGui::ColorConvertFloat4ToU32(col);
 	}
-	ImGui::ShowHelp("Show timestamps in message history. \nNote: experimental and might be unstable. Disable in case of crashes.");
+	ImGui::ShowHelp("Show timestamps in message history.");
 
 	ImGui::Checkbox("Keep chat history.", &GW::Chat::KeepChatHistory);
 	ImGui::ShowHelp("Messages in the chat do not disappear on character change.");
@@ -242,7 +242,9 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::Unindent();
 
 	ImGui::Checkbox("Allow window restore", &focus_window_on_zoning);
-	ImGui::ShowHelp("When enabled, Guild Wars will automatically restore when entering explorable zone.");
+	ImGui::ShowHelp("When enabled, GWToolbox++ can automatically restore\n"
+					"the window from a minimized state when important events\n"
+					"occur, such as entering instances.");
 
 	ImGui::Checkbox("Automatically set 'Away' after ", &auto_set_away);
 	ImGui::SameLine();
