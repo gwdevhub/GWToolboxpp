@@ -15,7 +15,9 @@
 #include "BuildsWindow.h"
 #include "HotkeysWindow.h"
 #include "PconsWindow.h"
-#include "..\Modules\LUAInterface.h"
+#ifdef _ENABLE_LUA
+#  include <Modules\LUAInterface.h>
+#endif
 #include <ImGuiAddons.h>
 
 bool TBHotkey::show_active_in_header = true;
@@ -596,6 +598,7 @@ void HotkeyPingBuild::Execute() {
 	BuildsWindow::Instance().Send(index);
 }
 
+#ifdef ENABLE_LUA
 HotkeyLUACmd::HotkeyLUACmd(CSimpleIni * ini, const char * section)
 	:TBHotkey(ini, section)
 {
@@ -667,3 +670,4 @@ void HotkeyLUACmd::Execute()
 {
 	LUAInterface::Instance().RunString(cmd);
 }
+#endif

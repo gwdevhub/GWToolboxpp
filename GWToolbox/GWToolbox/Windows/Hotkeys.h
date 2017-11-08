@@ -251,6 +251,7 @@ public:
 	void Execute() override;
 };
 
+#ifdef ENABLE_LUA
 class HotkeyLUACmd : public TBHotkey {
 
 public:
@@ -268,3 +269,4 @@ public:
 	void Description(char* buf, int bufsz) const;
 	void Execute() override;
 };
+#endif

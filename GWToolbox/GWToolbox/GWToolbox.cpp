@@ -33,7 +33,9 @@
 #include <Modules\GameSettings.h>
 #include <Modules\ToolboxSettings.h>
 #include <Modules\ToolboxTheme.h>
-#include <Modules\LUAInterface.h>
+#ifdef ENABLE_LUA
+#  include <Modules\LUAInterface.h>
+#endif
 #include <Modules\Updater.h>
 
 #include <Widgets\Minimap\Minimap.h>
@@ -274,7 +276,9 @@ void GWToolbox::Initialize() {
 	std::vector<ToolboxModule*> core_modules;
 	core_modules.push_back(&Resources::Instance());
 	core_modules.push_back(&Updater::Instance());
-	//core_modules.push_back(&LUAInterface::Instance());
+#ifdef ENABLE_LUA
+	core_modules.push_back(&LUAInterface::Instance());
+#endif
 	core_modules.push_back(&GameSettings::Instance());
 	core_modules.push_back(&ToolboxSettings::Instance());
 	core_modules.push_back(&ChatFilter::Instance());
