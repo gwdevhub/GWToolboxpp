@@ -3,9 +3,8 @@
 
 #include "ToolboxWindow.h"
 
-
-class LUAInterface 
-	: public ToolboxWindow
+struct lua_State;
+class LUAInterface  : public ToolboxWindow
 {
 public:
 
@@ -34,6 +33,7 @@ public:
 	bool            scrolltobottom_;
 
 private:
-	void*				lua_;
+	lua_State *state;
 
+	std::string commands[256];
 };

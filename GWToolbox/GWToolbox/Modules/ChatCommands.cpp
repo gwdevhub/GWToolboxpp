@@ -63,6 +63,7 @@ void ChatCommands::DrawHelp() {
 		"Use empty '/useskill', '/useskill 0' or '/useskill stop' to stop.");
 	ImGui::Bullet(); ImGui::Text("'/zoom <value>' to change the maximum zoom to the value. "
 		"use empty '/zoom' to reset to the default value of 750.");
+	ImGui::Bullet(); ImGui::Text("'/load [build template|build name]' loads a build. The build name must be between \"\"\" if it contains spaces.");
 }
 
 void ChatCommands::Initialize() {
@@ -168,20 +169,20 @@ void ChatCommands::Update() {
 bool ChatCommands::ReadTemplateFile(std::wstring path, char *buff, size_t buffSize) {
 	HANDLE fileHandle = CreateFileW(path.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
 	if (fileHandle == INVALID_HANDLE_VALUE) {
-		// Log::Error("Failed openning file '%S'", path.c_str());
+		Log::Error("Failed openning file '%S'", path.c_str());
 		return false;
 	}
 
 	DWORD fileSize = GetFileSize(fileHandle, NULL);
 	if (fileSize >= buffSize) {
-		// Log::Error("Template buffer size too small, file size is %d", fileSize);
+		Log::Error("Buffer size too small, file size is %d", fileSize);
 		CloseHandle(fileHandle);
 		return false;
 	}
 
 	DWORD bytesReaded; // @Remark, necessary !!!!! failed on some Windows 7.
 	if (ReadFile(fileHandle, buff, fileSize, &bytesReaded, NULL) == FALSE) {
-		// Log::Error("ReadFile failed ! (%u)", GetLastError());
+		Log::Error("ReadFile failed ! (%u)", GetLastError());
 		CloseHandle(fileHandle);
 		return false;
 	}
@@ -202,6 +203,15 @@ void ChatCommands::CmdDialog(int argc, LPWSTR *argv) {
 	if (argc <= 1) {
 		Log::Error("Please provide an integer or hex argument");
 	} else {
+	#if 1
+		int id;
+		if (GuiUtils::ParseInt(argv[1], &id)) {
+			GW::Agents::Dialog(id);
+			Log::Info("Sent Dialog 0x%X", id);
+		} else {
+			Log::Error("Invalid argument '%ls', please use an integer or hex value", argv[0]);
+		}
+	#else
 		try {
 			long id = std::stol(argv[1], 0, 0);
 			GW::Agents::Dialog(id);
@@ -209,6 +219,7 @@ void ChatCommands::CmdDialog(int argc, LPWSTR *argv) {
 		} catch (...) {
 			Log::Error("Invalid argument '%ls', please use an integer or hex value", argv[0]);
 		}
+	#endif
 	}
 }
 
@@ -420,6 +431,18 @@ void ChatCommands::CmdZoom(int argc, LPWSTR *argv) {
 	if (argc <= 1) {
 		GW::CameraMgr::SetMaxDist();
 	} else {
+	#if 1
+		int distance;
+		if (GuiUtils::ParseInt(argv[1], &distance)) {
+			if (distance > 0) {
+				GW::CameraMgr::SetMaxDist(static_cast<float>(distance));
+			} else {
+				Log::Error("Invalid argument '%ls', please use a positive integer value", argv[1]);
+			}
+		} else {
+			Log::Error("Invalid argument '%ls', please use an integer value", argv[1]);
+		}
+	#else
 		try {
 			long distance = std::stol(argv[1]);
 			if (distance > 0) {
@@ -431,6 +454,7 @@ void ChatCommands::CmdZoom(int argc, LPWSTR *argv) {
 		} catch (...) {
 			Log::Error("Invalid argument '%ls', please use an integer value", argv[1]);
 		}
+	#endif
 	}
 }
 
@@ -507,10 +531,18 @@ void ChatCommands::CmdDamage(int argc, LPWSTR *argv) {
 		} else if (arg1 == L"reset") {
 			PartyDamage::Instance().ResetDamage();
 		} else {
+		#if 1
+			int idx;
+			if (GuiUtils::ParseInt(argv[1], &idx)) {
+				PartyDamage::Instance().WriteDamageOf(idx - 1);
+			} else {
+			}
+		#else
 			try {
 				long idx = std::stol(arg1);
 				PartyDamage::Instance().WriteDamageOf(idx - 1);
 			} catch (...) {}
+		#endif
 		}
 	}
 }

@@ -3,16 +3,24 @@
 #include <ctime>
 
 #include <lua\lua.hpp>
+#include <lua\lstate.h>
 #include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\SkillbarMgr.h>
 
+/*
+ - Execute(const char *str);
+   - pushstring
+   -
+*/
 
+#define LUA_CFUNC_SIG(name) int (name)(lua_State *state)
 
 static LUAInterface g_inst;
 static char			g_tbscriptdir[0x160];
 static char*		g_tbscriptptr = nullptr;
+
 LUAInterface& LUAInterface::Instance() 
 {
 	return g_inst;
@@ -25,8 +33,8 @@ LUAInterface& LUAInterface::Instance()
 
 static int cmdMove(lua_State* L) 
 {
-	float x = luaL_checknumber(L, 1);
-	float y = luaL_checknumber(L, 2);
+	float x = (float)luaL_checknumber(L, 1);
+	float y = (float)luaL_checknumber(L, 2);
 
 	if (GW::Agents::GetAgentArray().size() > 0)
 	{
@@ -60,13 +68,13 @@ static int cmdSleep(lua_State* L)
 
 static int cmdGetAgent(lua_State* L)
 {
-	int id = luaL_checkinteger(L, 1);
+	lua_Integer id = luaL_checkinteger(L, 1);
 
 	GW::Agent* ag;
 	switch (id) {
 	case -1: ag = GW::Agents::GetTarget(); break;
 	case -2: ag = GW::Agents::GetPlayer(); break;
-	default: ag = GW::Agents::GetAgentByID(id); break;
+	default: ag = GW::Agents::GetAgentByID((DWORD)id); break;
 	}
 	
 	if (!ag) {
@@ -90,13 +98,13 @@ static int cmdGetAgent(lua_State* L)
 
 static int cmdGetAgentPos(lua_State* L)
 {
-	int id = luaL_checkinteger(L, 1);
+	lua_Integer id = luaL_checkinteger(L, 1);
 
 	GW::Agent* ag;
 	switch (id) {
 	case -1: ag = GW::Agents::GetTarget(); break;
 	case -2: ag = GW::Agents::GetPlayer(); break;
-	default: ag = GW::Agents::GetAgentByID(id); break;
+	default: ag = GW::Agents::GetAgentByID((DWORD)id); break;
 	}
 
 	if (ag) 
@@ -114,15 +122,15 @@ static int cmdGetAgentPos(lua_State* L)
 
 static int cmdTargetAgent(lua_State* L)
 {
-	int id = luaL_checkinteger(L, 1);
-	GW::Agents::ChangeTarget(id);
+	lua_Integer id = luaL_checkinteger(L, 1);
+	GW::Agents::ChangeTarget((DWORD)id);
 	return 0;
 }
 
 static int cmdUseSkill(lua_State* L)
 {
-	int skill = luaL_checkinteger(L, 1);
-	int agent = luaL_checkinteger(L, 2);
+	lua_Integer skill = luaL_checkinteger(L, 1);
+	lua_Integer agent = luaL_checkinteger(L, 2);
 
 
 	if (skill < 1 || skill > 8)
@@ -132,7 +140,7 @@ static int cmdUseSkill(lua_State* L)
 	case -2: agent = GW::Agents::GetPlayerId(); break;
 	}
 
-	GW::SkillbarMgr::UseSkill(skill, agent);
+	GW::SkillbarMgr::UseSkill((DWORD)skill, (DWORD)agent);
 
 	return 0;
 }
@@ -166,27 +174,159 @@ static int cmdDoFile(lua_State* L)
 	return 0;
 }
 
+static int cmdGetTargetId(lua_State *L)
+{
+	GW::Agent *a = GW::Agents::GetTarget();
+	if (!a) lua_pushnil(L);
+	else    lua_pushinteger(L, a->PlayerNumber);
+	return 1;
+}
+
+LUA_CFUNC_SIG(Dialog) {
+	lua_Integer dialog_id = luaL_checkinteger(state, 1);
+	GW::Agents::Dialog((DWORD)dialog_id);
+	return 0;
+}
+
+LUA_CFUNC_SIG(Travel) {
+	int argc = lua_gettop(state);
+
+	GW::Constants::District district;
+
+	lua_Integer town = luaL_checkinteger(state, 1);
+	const char *dis = luaL_checkstring(state, 2);
+
+	// GetRegion(), GetLanguage()
+	GW::Map::Travel((GW::Constants::MapID)town);
+
+	return 0;
+}
+
+static lua_Integer ParseAgentId(lua_State *state, int arg) {
+	lua_Integer agent_id = -1;
+	if (lua_isstring(state, arg)) {
+		const char *s = lua_tostring(state, arg);
+		// "player", "target", "mouseover", "pet", "npc", "party1" .. "party12", "arena1" .. "arena8"
+		if (!strcmp(s, "player")) {
+			agent_id = GW::Agents::GetPlayerId();
+		} else if (!strcmp(s, "target")) {
+			agent_id = GW::Agents::GetTargetId();
+		} else if (!strcmp(s, "mouseover")) {
+			agent_id = GW::Agents::GetMouseoverId();
+		} else if (!strcmp(s, "pet")) {
+
+		} else if (!strcmp(s, "npc")) {
+
+		} else if (!strcmp(s, "party1")) {
+
+		} else if (!strcmp(s, "party2")) {
+
+		} else if (!strcmp(s, "party3")) {
+
+		} else if (!strcmp(s, "party4")) {
+
+		} else if (!strcmp(s, "party5")) {
+
+		} else if (!strcmp(s, "party6")) {
+
+		} else if (!strcmp(s, "party7")) {
+
+		} else if (!strcmp(s, "party8")) {
+
+		} else if (!strcmp(s, "party9")) {
+
+		} else if (!strcmp(s, "party10")) {
+
+		} else if (!strcmp(s, "party11")) {
+
+		} else if (!strcmp(s, "party12")) {
+
+		}
+	}
+	return agent_id;
+}
+
+LUA_CFUNC_SIG(AgentExists) {
+	lua_Integer agent = ParseAgentId(state, 1);
+	lua_pushboolean(state, agent != -1);
+	return 1;
+}
+
+LUA_CFUNC_SIG(AgentWorldId) {
+	lua_Integer agent = ParseAgentId(state, 1);
+	if (agent == -1) {
+		lua_pushnil(state);
+	} else {
+		lua_pushinteger(state, agent);
+	}
+	return 1;
+}
+
+LUA_CFUNC_SIG(AgentName) {
+	return 0;
+}
+
+LUA_CFUNC_SIG(AgentGUID) {
+	return 0;
+}
+
+LUA_CFUNC_SIG(AgentProfession) {
+	return 0;
+}
+
+LUA_CFUNC_SIG(AgentHealth) {
+	return 0;
+}
+
+LUA_CFUNC_SIG(AgentHealthMax) {
+	return 0;
+}
+
+LUA_CFUNC_SIG(AgentEnergy) {
+	return 0;
+}
+
+LUA_CFUNC_SIG(AgentEnergyMax) {
+	return 0;
+}
+
 #pragma endregion
 
 void LUAInterface::Initialize()
 {
-	lua_ = (void*)luaL_newstate();
-	luaL_openlibs((lua_State*)lua_);
+	state = luaL_newstate();
 
-	static luaL_Reg gwlib[] = 
-	{
-		{"Move", cmdMove },
-		{"SendChat", cmdSendChat },
-		{"GetMapId", cmdGetMapId },
-		{"GetAgent", cmdGetAgent},
-		{"GetPos", cmdGetAgentPos},
-		{"TargetAgent", cmdTargetAgent },
-		{"UseSkill", cmdUseSkill },
-		{nullptr, nullptr}
-	};
+	// Fix that
+	luaL_openlibs(state);
 
-	luaL_newlib((lua_State*)lua_, gwlib);
-	lua_setglobal((lua_State*)lua_, "GW");
+	lua_register(state, "Move", cmdMove);
+	lua_register(state, "SendChat", cmdSendChat);
+
+	lua_register(state, "Dialog", Dialog);
+	lua_register(state, "Travel", Travel);
+
+	lua_register(state, "AgentExists", AgentExists);
+	lua_register(state, "AgentName", AgentName);
+	lua_register(state, "AgentGUID", AgentGUID);
+	lua_register(state, "AgentHealth", AgentHealth);
+	lua_register(state, "AgentHealthMax", AgentHealthMax);
+	lua_register(state, "AgentHealth", AgentEnergy);
+	lua_register(state, "AgentHealth", AgentEnergyMax);
+	lua_register(state, "AgentProfession", AgentProfession);
+
+	/*
+	 * CreateCommand
+	 * DeleteCommand
+	 * LoadBuild
+	 * Travel(474, "ee", 1)
+	 * SendChat
+	 *
+	 * agentID = "player", "target", "mouseover", "pet", "npc", "party1" .. "party12", "arena1" .. "arena8"
+	 *
+	 * AgentName(agentID)
+	 * AgentGUID(name)
+	 *
+	 */
 
 #if 0
 	static luaL_Reg utillib[] = 
@@ -205,9 +345,9 @@ void LUAInterface::Initialize()
 		{ nullptr, nullptr }
 	};
 
-	lua_getglobal((lua_State*)lua_, "_G");
-	luaL_setfuncs((lua_State*)lua_, globallib, 0);
-	lua_pop((lua_State*)lua_, 1);
+	lua_getglobal(state, "_G");
+	luaL_setfuncs(state, globallib, 0);
+	lua_pop(state, 1);
 
 	{
 		DWORD count = GetEnvironmentVariableA("LOCALAPPDATA", g_tbscriptdir, 0x160);
@@ -221,7 +361,7 @@ void LUAInterface::Initialize()
 
 void LUAInterface::Terminate()
 {
-	lua_close((lua_State*)lua_);
+	lua_close(state);
 }
 
 void LUAInterface::Draw(IDirect3DDevice9*)
@@ -267,7 +407,18 @@ int LUAInterface::RunString(std::string cmds)
 
 int LUAInterface::RunString(const char * cmds)
 {
-	return luaL_dostring((lua_State*)lua_, cmds);
+// lua_sethook(L, f, LUA_MASKRET, 0);
+	int old_top = lua_gettop(state);
+	luaL_loadstring(state, cmds);
+
+	int err = lua_pcall(state, 0, LUA_MULTRET, 0);
+	StkId returns = state->ci->func;
+
+	TValue *r1 = returns + 1;
+	if (ttisnumber(r1))
+		lua_Integer i = r1->value_.i;
+
+	return err;
 }
 
 int LUAInterface::RunFile(std::string path)
@@ -277,7 +428,7 @@ int LUAInterface::RunFile(std::string path)
 
 int LUAInterface::RunFile(const char * path)
 {
-	return luaL_dofile((lua_State*)lua_, path);
+	return luaL_dofile(state, path);
 }
 
 void LUAInterface::ClearVM()

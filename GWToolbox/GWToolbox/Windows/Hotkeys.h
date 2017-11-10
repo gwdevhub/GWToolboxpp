@@ -255,6 +255,10 @@ public:
 class HotkeyLUACmd : public TBHotkey {
 
 public:
+	/*
+	char name[60] = "";
+	char command[512] = "";
+	*/
 	mutable char cmd[0x200];
 	bool editopen;
 

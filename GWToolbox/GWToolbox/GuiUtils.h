@@ -19,4 +19,7 @@ namespace GuiUtils {
 
 	std::string ToLower(std::string s);
 	std::wstring ToLower(std::wstring s);
+
+	bool ParseInt(const char *str, int *val);
+	bool ParseInt(const wchar_t *str, int *val);
 };

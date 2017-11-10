@@ -15,7 +15,7 @@
 #include "BuildsWindow.h"
 #include "HotkeysWindow.h"
 #include "PconsWindow.h"
-#ifdef _ENABLE_LUA
+#ifdef ENABLE_LUA
 #  include <Modules\LUAInterface.h>
 #endif
 #include <ImGuiAddons.h>

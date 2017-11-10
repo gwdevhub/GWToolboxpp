@@ -76,3 +76,14 @@ std::wstring GuiUtils::ToLower(std::wstring s) {
 	std::transform(s.begin(), s.end(), s.begin(), ::tolower);
 	return s;
 }
+
+bool GuiUtils::ParseInt(const char *str, int *val) {
+	char *end;
+	*val = strtol(str, &end, 0);
+	return *end == 0;
+}
+bool GuiUtils::ParseInt(const wchar_t *str, int *val) {
+	wchar_t *end;
+	*val = wcstol(str, &end, 0);
+	return *end == 0;
+}
