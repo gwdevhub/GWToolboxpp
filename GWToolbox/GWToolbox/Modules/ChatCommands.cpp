@@ -63,7 +63,7 @@ void ChatCommands::DrawHelp() {
 		"Use empty '/useskill', '/useskill 0' or '/useskill stop' to stop.");
 	ImGui::Bullet(); ImGui::Text("'/zoom <value>' to change the maximum zoom to the value. "
 		"use empty '/zoom' to reset to the default value of 750.");
-	ImGui::Bullet(); ImGui::Text("'/load [build template|build name]' loads a build. The build name must be between \"\"\" if it contains spaces.");
+	ImGui::Bullet(); ImGui::Text("'/load [build template|build name]' loads a build. The build name must be between quotes if it contains spaces.");
 }
 
 void ChatCommands::Initialize() {
@@ -94,7 +94,7 @@ void ChatCommands::Initialize() {
 }
 
 bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
-	if (!GW::CameraMgr::GetCameraUnlock() || IsTyping()) return false;
+	if (!GW::CameraMgr::GetCameraUnlock() || GW::Chat::IsTyping()) return false;
 
 	const DWORD keyA = 0x41;
 	const DWORD keyD = 0x44;
@@ -138,7 +138,7 @@ bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 }
 
 void ChatCommands::Update() {
-	if (GW::CameraMgr::GetCameraUnlock() && !IsTyping()) {
+	if (GW::CameraMgr::GetCameraUnlock() && !GW::Chat::IsTyping()) {
 		GW::CameraMgr::ForwardMovement(cam_speed_ * move_forward);
 		GW::CameraMgr::VerticalMovement(-cam_speed_ * move_up);
 		GW::CameraMgr::SideMovement(-cam_speed_ * move_side);
