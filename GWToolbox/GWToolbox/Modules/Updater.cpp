@@ -1,6 +1,6 @@
 #include "Updater.h"
 
-// #include <json.hpp>
+#include <json.hpp>
 #include <GWCA\Managers\GameThreadMgr.h>
 
 #include <GWToolbox.h>
@@ -27,7 +27,6 @@ void Updater::DrawSettingInternal() {
 }
 
 void Updater::CheckForUpdate() {
-#if 0
 	step = Checking;
 
 	if (mode == 0) {
@@ -106,7 +105,6 @@ void Updater::CheckForUpdate() {
 		server_version = version;
 		step = Asking;
 	});
-#endif
 }
 
 void Updater::Draw(IDirect3DDevice9* device) {
