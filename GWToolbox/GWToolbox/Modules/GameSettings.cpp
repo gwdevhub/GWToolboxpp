@@ -129,7 +129,7 @@ void GameSettings::Initialize() {
 
 		GW::CharContext *ctx = GW::GameContext::instance()->character;
 		if (GameSettings::Instance().flash_window_on_zoning) FlashWindow();
-		if (GameSettings::Instance().focus_window_on_zoning && pak->is_outpost) {
+		if (GameSettings::Instance().focus_window_on_zoning && pak->is_explorable) {
 			HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
 			ShowWindow(hwnd, SW_RESTORE);
 			SetForegroundWindow(hwnd);
