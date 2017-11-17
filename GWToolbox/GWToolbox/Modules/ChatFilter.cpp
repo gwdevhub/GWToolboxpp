@@ -88,6 +88,7 @@ void ChatFilter::Initialize() {
 
 		GW::Array<wchar_t> *buff = &GW::GameContext::instance()->world->message_buff;
 		wchar_t *sender = GW::Agents::GetPlayerNameByLoginNumber(pak->id);
+		if (!sender) return false;
 
 		if (ShouldIgnore(buff->begin()) ||
 			ShouldIgnoreBySender(sender, 32) ||
