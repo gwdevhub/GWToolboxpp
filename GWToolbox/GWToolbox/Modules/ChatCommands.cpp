@@ -553,7 +553,7 @@ void ChatCommands::CmdAfk(int argc, LPWSTR *argv) {
 
 void ChatCommands::CmdTarget(int argc, LPWSTR *argv) {
 	if (argc > 1) {
-		std::wstring arg1 = GuiUtils::ToLower(argv[2]);
+		std::wstring arg1 = GuiUtils::ToLower(argv[1]);
 		if (arg1 == L"closest" || arg1 == L"nearest") {
 			// target nearest agent
 			GW::AgentArray agents = GW::Agents::GetAgentArray();

@@ -80,6 +80,7 @@ bool PartyDamage::DamagePacketCallback(GW::Packet::StoC::P151* packet) {
 	GW::AgentArray agents = GW::Agents::GetAgentArray();
 
 	// get cause agent
+	if (packet->cause_id >= agents.size()) return false;
 	GW::Agent* cause = agents[packet->cause_id];
 	
 	if (cause == nullptr) return false;
