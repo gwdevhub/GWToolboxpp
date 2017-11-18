@@ -131,7 +131,14 @@ void Resources::LoadTextureAsync(IDirect3DTexture9** texture,
 
 		// write to file so the user can customize his icons
 		HANDLE hFile = CreateFile(path_to_file.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-		WriteFile(hFile, hRes, size, NULL, NULL);
+		DWORD bytesWritten;
+		BOOL wfRes = WriteFile(hFile, hRes, size, &bytesWritten, NULL);
+		if (wfRes != TRUE) {
+			DWORD wfErr = GetLastError();
+			Log::Log("Error writing file %s - Error is %lu", path_to_file.c_str(), wfErr);
+		} else if (bytesWritten != size) {
+			Log::Log("Wrote %lu of %lu bytes for %s", bytesWritten, size, path_to_file.c_str());
+		}
 		CloseHandle(hFile);
 		// Note: this WILL fail for some users. Don't care, it's only needed for customization.
 
