@@ -639,15 +639,11 @@ void ChatCommands::CmdSCWiki(int argc, LPWSTR *argv) {
 void ChatCommands::CmdLoad(int argc, LPWSTR *argv) {
 	// We will & should move that to GWCA.
 	static int(__fastcall *GetPersonalDir)(size_t size, wchar_t *dir) = 0;
-	if (!GetPersonalDir) *(DWORD*)&GetPersonalDir = 0x005AAB60; // need scan!
+	*(BYTE**)&GetPersonalDir = GW::MemoryMgr::GetPersonalDirPtr;
 	if (argc == 1) {
-		// It open the build window, click on build will make Gw crash.
-		/*
-		typedef void(__fastcall *SendUIMessage_t)(int id, void *param1, void *param2);
-		SendUIMessage_t SendUIMessage = SendUIMessage_t(0x00605AC0); // need scan!
-		int32_t param[2] = { 0, 2 };
-		SendUIMessage(0x100001B4, param, NULL);
-		*/
+		// We could open the build template window, but any interaction with it would make gw crash.
+		// int32_t param[2] = { 0, 2 };
+		// SendUIMessage(0x100001B4, param, NULL);
 		return;
 	}
 

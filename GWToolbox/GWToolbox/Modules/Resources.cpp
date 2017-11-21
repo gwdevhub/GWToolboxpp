@@ -135,9 +135,9 @@ void Resources::LoadTextureAsync(IDirect3DTexture9** texture,
 		BOOL wfRes = WriteFile(hFile, hRes, size, &bytesWritten, NULL);
 		if (wfRes != TRUE) {
 			DWORD wfErr = GetLastError();
-			Log::Log("Error writing file %s - Error is %lu", path_to_file.c_str(), wfErr);
+			Log::Error("Error writing file %s - Error is %lu", path_to_file.c_str(), wfErr);
 		} else if (bytesWritten != size) {
-			Log::Log("Wrote %lu of %lu bytes for %s", bytesWritten, size, path_to_file.c_str());
+			Log::Error("Wrote %lu of %lu bytes for %s", bytesWritten, size, path_to_file.c_str());
 		}
 		CloseHandle(hFile);
 		// Note: this WILL fail for some users. Don't care, it's only needed for customization.
