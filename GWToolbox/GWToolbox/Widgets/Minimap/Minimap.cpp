@@ -70,7 +70,7 @@ void Minimap::Initialize() {
 
 	GW::Chat::CreateCommand(L"flag",
 		[this](int argc, LPWSTR *argv) {
-		if (argc == 0) {
+		if (argc <= 1) {
 			FlagHero(0);
 		} else {
 			std::wstring arg0 = GuiUtils::ToLower(argv[1]);

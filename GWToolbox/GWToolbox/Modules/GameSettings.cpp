@@ -104,7 +104,7 @@ void GameSettings::Initialize() {
 
 	GW::Chat::CreateCommand(L"borderless",
 		[&](int argc, LPWSTR *argv) {
-		if (argc) {
+		if (argc <= 1) {
 			ApplyBorderless(!borderlesswindow);
 		} else {
 			std::wstring arg1 = GuiUtils::ToLower(argv[1]);
