@@ -49,6 +49,7 @@ void ChatCommands::DrawHelp() {
 	ImGui::Bullet(); ImGui::Text("'/dialog <id>' sends a dialog.");
 	ImGui::Bullet(); ImGui::Text("'/flag [all|<number>]' to flag a hero in the minimap (same a using the buttons by the minimap).");
 	ImGui::Bullet(); ImGui::Text("'/hide <name>' closes the window or widget titled <name>.");
+	ImGui::Bullet(); ImGui::Text("'/load [build template|build name]' loads a build. The build name must be between quotes if it contains spaces.");
 	ImGui::Bullet(); ImGui::Text("'/pcons [on|off]' toggles, enables or disables pcons.");
 	ImGui::Bullet(); ImGui::Text("'/show <name>' opens the window or widget titled <name>.");
 	ImGui::Bullet(); ImGui::Text("'/target closest' to target the closest agent to you.");
@@ -63,7 +64,6 @@ void ChatCommands::DrawHelp() {
 		"Use empty '/useskill', '/useskill 0' or '/useskill stop' to stop.");
 	ImGui::Bullet(); ImGui::Text("'/zoom <value>' to change the maximum zoom to the value. "
 		"use empty '/zoom' to reset to the default value of 750.");
-	ImGui::Bullet(); ImGui::Text("'/load [build template|build name]' loads a build. The build name must be between quotes if it contains spaces.");
 }
 
 void ChatCommands::Initialize() {
