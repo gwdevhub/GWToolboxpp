@@ -147,7 +147,7 @@ void ChatCommands::Update() {
 
 	if (skill_to_use > 0 && skill_to_use < 9 
 		&& GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable
-		&& clock() - skill_timer / 1000.0f > skill_usage_delay) {
+		&& (clock() - skill_timer) / 1000.0f > skill_usage_delay) {
 
 		GW::Skillbar skillbar = GW::Skillbar::GetPlayerSkillbar();
 		if (skillbar.IsValid()) {
@@ -159,7 +159,7 @@ void ChatCommands::Update() {
 				});
 
 				GW::Skill skilldata = GW::SkillbarMgr::GetSkillConstantData(skill.SkillId);
-				skill_usage_delay = skilldata.Activation + skilldata.Aftercast + 1.0f; // one additional second to account for ping and to avoid spamming in case of bad target
+				skill_usage_delay = skilldata.Activation + skilldata.Aftercast + 0.3f; // a small flat delay of .3s for ping and to avoid spamming in case of bad target
 				skill_timer = clock();
 			}
 		}
