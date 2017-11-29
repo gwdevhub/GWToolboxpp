@@ -7,6 +7,16 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
+## Version 2.3
+* [New] Added `/load <build name>` command to load builds from your saved templates.
+* [New] Added an option to display chat message timestamps.
+* [New] Added an option to retain chat history after changing map.
+* [New] Added an option to restore GW window from mimized state and bring to focus when zoning into explorables.
+* [New] Added an alcohol duration widget. 
+* [Fix] Fixed several minor bugs
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.3_Release/GWToolbox.dll)
+
 ## Version 2.2
 * [New] You can now /tp gh [tag] to any guild in your alliance.
 * [New] Added options to make Guild Wars flash in the taskbar when invited to a party or when your party zones.
