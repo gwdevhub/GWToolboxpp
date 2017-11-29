@@ -1,6 +1,6 @@
 #pragma once
 
-#define GWTOOLBOX_VERSION "2.3"
+#define GWTOOLBOX_VERSION "2.4"
 #define BETA_VERSION ""
 #define GWTOOLBOX_WEBSITE "https://haskha.github.io/GWToolboxpp/"
 

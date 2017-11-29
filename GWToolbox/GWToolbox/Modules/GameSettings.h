@@ -28,12 +28,16 @@ public:
 	void Update() override;
 	bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam);
 
-
 	void DrawBorderlessSetting();
 
 	// some settings that are either referenced from multiple places
 	// or have nowhere else to be
-	bool borderlesswindow = false;
+	enum { 
+		Ok,
+		WantBorderless,
+		WantWindowed
+	} borderless_status = Ok; // current actual status of borderless
+	bool borderlesswindow = false; // status of the borderless checkbox and setting
 	bool tick_is_toggle = false;
 
 	bool openlinks = false;
@@ -53,8 +57,6 @@ public:
 	void ApplyBorderless(bool value);
 
 private:
-	std::vector<GW::MemoryPatcher*> patches;
-	bool RectEquals(RECT a, RECT b);
-	bool RectMultiscreen(RECT desktop, RECT gw);
-	
+	void UpdateBorderless();
+	std::vector<GW::MemoryPatcher*> patches;	
 };
