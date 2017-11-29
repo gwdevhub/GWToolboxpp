@@ -131,8 +131,8 @@ void GameSettings::Initialize() {
 		if (GameSettings::Instance().flash_window_on_zoning) FlashWindow();
 		if (GameSettings::Instance().focus_window_on_zoning && pak->is_explorable) {
 			HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
-			ShowWindow(hwnd, SW_RESTORE);
 			SetForegroundWindow(hwnd);
+			ShowWindow(hwnd, SW_RESTORE);
 		}
 
 		return false;
