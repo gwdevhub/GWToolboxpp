@@ -258,6 +258,7 @@ int PconCity::QuantityForEach(const GW::Item* item) const {
 	case ItemID::SugaryBlueDrink:
 	case ItemID::RedBeanCake:
 	case ItemID::JarOfHoney:
+	case ItemID::KrytalLokum:
 		return 1;
 	default:
 		return 0;
