@@ -3,9 +3,14 @@ layout: default
 ---
 
 # Version History
-Previous releases are provided as dll files. In order to use it, you need to use an alternative launcher which must be placed in the same directory as the dll. If you are looking for the latest version, go to the [Home Page](./) instead.
+Previous releases are provided as dll files. In order to use it, you need to use a different launcher which must be placed in the same directory as the dll. If you are looking for the latest version, go to the [Home Page](./) instead.
 
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
+
+## Version 2.4
+* [Fix] Fixed bug where GW would freeze when launching Toolbox while in fullscreen mode.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.4_Release/GWToolbox.dll)
 
 ## Version 2.3
 * [New] Added `/load <build name>` command to load builds from your saved templates.
@@ -13,7 +18,7 @@ Previous releases are provided as dll files. In order to use it, you need to use
 * [New] Added an option to retain chat history after changing map.
 * [New] Added an option to restore GW window from mimized state and bring to focus when zoning into explorables.
 * [New] Added an alcohol duration widget. 
-* [Fix] Fixed several minor bugs
+* [Fix] Fixed several minor bugs.
 
 [Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.3_Release/GWToolbox.dll)
 
