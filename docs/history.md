@@ -7,6 +7,11 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
+## Version 2.5
+* [Fix] Fixed bug where toolbox window positions would reset when restoring from an alt-tabbed fullscreen GW.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.5_Release/GWToolbox.dll)
+
 ## Version 2.4
 * [Fix] Fixed bug where GW would freeze when launching Toolbox while in fullscreen mode.
 

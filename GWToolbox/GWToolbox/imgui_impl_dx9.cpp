@@ -342,7 +342,7 @@ void ImGui_ImplDX9_InvalidateDeviceObjects()
     io.Fonts->TexID = NULL;
 }
 
-void ImGui_ImplDX9_NewFrame()
+void ImGui_ImplDX9_NewFrame(int client_width, int client_height)
 {
     if (!g_FontTexture)
         ImGui_ImplDX9_CreateDeviceObjects();
@@ -352,7 +352,7 @@ void ImGui_ImplDX9_NewFrame()
     // Setup display size (every frame to accommodate for window resizing)
     RECT rect;
     GetClientRect(g_hWnd, &rect);
-    io.DisplaySize = ImVec2((float)(rect.right - rect.left), (float)(rect.bottom - rect.top));
+	io.DisplaySize = ImVec2(client_width, client_height); // ImVec2((float)(rect.right - rect.left), (float)(rect.bottom - rect.top));
 
     // Setup time step
     INT64 current_time;

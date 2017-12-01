@@ -379,8 +379,12 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 	}
 
 	// === runtime ===
-	if (tb_initialized && !GWToolbox::Instance().must_self_destruct) {
-		ImGui_ImplDX9_NewFrame();
+	if (tb_initialized 
+		&& !GWToolbox::Instance().must_self_destruct
+		&& GW::Render::GetViewportWidth() > 0
+		&& GW::Render::GetViewportHeight() > 0) {
+
+		ImGui_ImplDX9_NewFrame(GW::Render::GetViewportWidth(), GW::Render::GetViewportHeight());
 
 		for (ToolboxModule* module : GWToolbox::Instance().modules) {
 			module->Update();
