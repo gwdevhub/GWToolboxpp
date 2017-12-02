@@ -1,7 +1,9 @@
 #include "AlcoholWidget.h"
-#include <GWCA\Managers\StoCMgr.h>
-#include <GuiUtils.h>
 
+#include <GWCA\Managers\StoCMgr.h>
+#include <GWCA\Managers\MapMgr.h>
+
+#include <GuiUtils.h>
 
 #include <ctime>
 
@@ -38,6 +40,8 @@ bool AlcoholWidget::AlcUpdate(GW::Packet::StoC::P095* packet) {
 void AlcoholWidget::Draw(IDirect3DDevice9* pDevice) {
 	if (!visible) return;
 
+	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return;
+
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
 	ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, true))) {
@@ -68,4 +72,8 @@ void AlcoholWidget::Draw(IDirect3DDevice9* pDevice) {
 	}
 	ImGui::End();
 	ImGui::PopStyleColor();
+}
+
+void AlcoholWidget::DrawSettingInternal() {
+	ImGui::Text("Note: only visible in explorable areas.");
 }
