@@ -159,6 +159,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 			io.MousePos.x = (float)GET_X_LPARAM(lParam);
 			io.MousePos.y = (float)GET_Y_LPARAM(lParam);
 			break;
+		case WM_XBUTTONDOWN:
+			if (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) io.KeysDown[VK_XBUTTON1] = true;
+			if (GET_XBUTTON_WPARAM(wParam) == XBUTTON2) io.KeysDown[VK_XBUTTON2] = true;
+			break;
+		case WM_XBUTTONUP:
+			if (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) io.KeysDown[VK_XBUTTON1] = false;
+			if (GET_XBUTTON_WPARAM(wParam) == XBUTTON2) io.KeysDown[VK_XBUTTON2] = false;
+			break;
 		case WM_KEYDOWN:
 			if (wParam < 256)
 				io.KeysDown[wParam] = true;
