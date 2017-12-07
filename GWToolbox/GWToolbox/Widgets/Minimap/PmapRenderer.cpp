@@ -32,6 +32,9 @@ void PmapRenderer::DrawSettings() {
 }
 
 void PmapRenderer::Initialize(IDirect3DDevice9* device) {
+
+// #define WIREFRAME_MODE
+
 	GW::PathingMapArray path_map;
 	if (GW::Map::IsMapLoaded()) {
 		path_map = GW::Map::GetPathingMap();
@@ -48,13 +51,24 @@ void PmapRenderer::Initialize(IDirect3DDevice9* device) {
 	}
 	if (trapez_count_ == 0) return;
 
+#ifdef WIREFRAME_MODE
+
+	total_tri_count_ = tri_count_ = trapez_count_ * 4;
+	if (shadow_show) total_tri_count_ = tri_count_ * 2;
+
+	vert_count_ = tri_count_ * 2;
+	total_vert_count_ = total_tri_count_ * 2;
+
+#else
+
 	total_tri_count_ = tri_count_ = trapez_count_ * 2;
 	if (shadow_show) total_tri_count_ = tri_count_ * 2;
 
 	vert_count_ = tri_count_ * 3;
 	total_vert_count_ = total_tri_count_ * 3;
 
-	type = D3DPT_TRIANGLELIST;
+#endif
+	
 	D3DVertex* vertices = nullptr;
 
 	// allocate new vertex buffer
@@ -66,28 +80,55 @@ void PmapRenderer::Initialize(IDirect3DDevice9* device) {
 
 	D3DVertex* vertices_begin = vertices;
 
+
+
+#ifdef WIREFRAME_MODE
+	type = D3DPT_LINELIST;
+
 	// populate vertex buffer
 	for (int k = 0; k < (shadow_show ? 2 : 1); ++k) {
 		for (size_t i = 0; i < path_map.size(); ++i) {
 			GW::PathingMap pmap = path_map[i];
 			for (size_t j = 0; j < pmap.trapezoidcount; ++j) {
 				GW::PathingTrapezoid& trap = pmap.trapezoids[j];
-				vertices[0].x = trap.XTL;
-				vertices[0].y = trap.YT;
-				vertices[1].x = trap.XTR;
-				vertices[1].y = trap.YT;
-				vertices[2].x = trap.XBL;
-				vertices[2].y = trap.YB;
-				vertices[3].x = trap.XBL;
-				vertices[3].y = trap.YB;
-				vertices[4].x = trap.XTR;
-				vertices[4].y = trap.YT;
-				vertices[5].x = trap.XBR;
-				vertices[5].y = trap.YB;
+				vertices[0].x = trap.XTL; vertices[0].y = trap.YT;
+				vertices[1].x = trap.XTR; vertices[1].y = trap.YT;
+
+				vertices[2].x = trap.XTR; vertices[2].y = trap.YT;
+				vertices[3].x = trap.XBR; vertices[3].y = trap.YB;
+
+				vertices[4].x = trap.XBR; vertices[4].y = trap.YB;
+				vertices[5].x = trap.XBL; vertices[5].y = trap.YB;
+
+				vertices[6].x = trap.XBL; vertices[6].y = trap.YB;
+				vertices[7].x = trap.XTL; vertices[7].y = trap.YT;
+
+				vertices += 8;
+			}
+		}
+	}
+#else
+	type = D3DPT_TRIANGLELIST;
+
+	// populate vertex buffer
+	for (int k = 0; k < (shadow_show ? 2 : 1); ++k) {
+		for (size_t i = 0; i < path_map.size(); ++i) {
+			GW::PathingMap pmap = path_map[i];
+			for (size_t j = 0; j < pmap.trapezoidcount; ++j) {
+				GW::PathingTrapezoid& trap = pmap.trapezoids[j];
+
+				vertices[0].x = trap.XTL; vertices[0].y = trap.YT;
+				vertices[1].x = trap.XTR; vertices[1].y = trap.YT;
+				vertices[2].x = trap.XBL; vertices[2].y = trap.YB;
+
+				vertices[3].x = trap.XBL; vertices[3].y = trap.YB;
+				vertices[4].x = trap.XTR; vertices[4].y = trap.YT;
+				vertices[5].x = trap.XBR; vertices[5].y = trap.YB;
 				vertices += 6;
 			}
 		}
 	}
+#endif
 
 	vertices = vertices_begin;
 	for (unsigned int i = 0; i < total_vert_count_; ++i) {

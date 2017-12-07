@@ -259,6 +259,7 @@
     <ClInclude Include="GWToolbox\imgui_impl_dx9.h">
       <Filter>imgui</Filter>
     </ClInclude>
+    <ClInclude Include="GWToolbox\CursorFix.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -388,6 +389,7 @@
     <ClCompile Include="GWToolbox\imgui_impl_dx9.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
+    <ClCompile Include="GWToolbox\CursorFix.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GWToolbox.rc">

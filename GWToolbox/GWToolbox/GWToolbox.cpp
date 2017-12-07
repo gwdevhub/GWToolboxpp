@@ -26,6 +26,7 @@
 #include <imgui_impl_dx9.h>
 
 #include "logger.h"
+#include "CursorFix.h"
 
 #include <Modules\Resources.h>
 #include <Modules\ChatCommands.h>
@@ -76,6 +77,11 @@ DWORD __stdcall ThreadEntry(LPVOID) {
 		return EXIT_SUCCESS;
 	}
 
+
+	Log::Log("Installing Cursor Fix\n");
+
+	InstallCursorFix();
+
 	Log::Log("Installing dx hooks\n");
 	GW::Render::SetRenderCallback([](IDirect3DDevice9* device) {
 		GWToolbox::Instance().Draw(device);
@@ -102,7 +108,8 @@ DWORD __stdcall ThreadEntry(LPVOID) {
 	}
 	
 	Sleep(100);
-
+	Log::Log("Removing Cursor Fix\n");
+	UninstallCursorFix();
 	Sleep(100);
 	Log::Log("Closing log/console, bye!\n");
 	Log::Terminate();

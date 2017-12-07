@@ -65,6 +65,9 @@
       <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCAd.lib;Shlwapi.lib;Urlmon.lib;Wininet.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ProgramDatabaseFile>$(OutDir)$(TargetFileName).pdb</ProgramDatabaseFile>
     </Link>
+    <PostBuildEvent>
+      <Command>inject.x86 --inject --module-name "$(TargetPath)" --window-name "K A O S Theory"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -90,6 +93,9 @@
       <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCA.lib;Shlwapi.lib;Urlmon.lib;Wininet.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>copy "$(TargetPath)" "C:\GW\GW1\bin\gwtoolbox.dll"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\Dependencies\imgui\imconfig.h" />
@@ -99,6 +105,7 @@
     <ClInclude Include="..\Dependencies\imgui\stb_textedit.h" />
     <ClInclude Include="..\Dependencies\imgui\stb_truetype.h" />
     <ClInclude Include="GWToolbox\Color.h" />
+    <ClInclude Include="GWToolbox\CursorFix.h" />
     <ClInclude Include="GWToolbox\Defines.h" />
     <ClInclude Include="GWToolbox\ImGuiAddons.h" />
     <ClInclude Include="GWToolbox\imgui_impl_dx9.h" />
@@ -155,6 +162,7 @@
     <ClCompile Include="..\Dependencies\imgui\imgui.cpp" />
     <ClCompile Include="..\Dependencies\imgui\imgui_demo.cpp" />
     <ClCompile Include="..\Dependencies\imgui\imgui_draw.cpp" />
+    <ClCompile Include="GWToolbox\CursorFix.cpp" />
     <ClCompile Include="GWToolbox\GuiUtils.cpp" />
     <ClCompile Include="GWToolbox\ImGuiAddons.cpp" />
     <ClCompile Include="GWToolbox\imgui_impl_dx9.cpp" />
