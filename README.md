@@ -18,3 +18,22 @@
 * First of all make sure you take a look at the code and respect the somewhat consistent code conventions.
 * Create a new branch and commit the changes relevant to your contribution. Please make sure you don't commit unrelated lines.
 * Finally submit a pull request and let us review your code. Stay updated in the pull request page for feedback and comments.
+
+## Credits
+
+ **Sai Itecka** 
+ 	- Original creator of a damage monitor, which inspired the toolbox damage monitor.
+    - Created original implementation of the Cursor Fix.
+
+ **Ziox**   
+ 	- Implementation of the vast majority of the chat-based features, such as custom chats and the chat timestamps.
+ 	- Major contributor to the GW API used, reverse engineering work.
+
+ **KAOS**
+ 	- Original creator of the GW API used, reverse engineering work.
+ 	- Several minor additions.
+
+ **Misty/DarkManic**
+ 	- Extensive work on the site and documentation.
+
+ **and everyone working/suggesting ideas!**
