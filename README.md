@@ -21,17 +21,19 @@
 
 ## Credits
 
- **Itecka** 
- * Original creator of a damage monitor, which inspired the toolbox damage monitor.
- * Created original implementation of the Cursor Fix.
+ **KAOS**
+ * Original creator of the GW API used, reverse engineering work.
+ * Several minor additions.
 
  **Ziox**   
  * Implementation of the vast majority of the chat-based features, such as custom chats and the chat timestamps.
  * Major contributor to the GW API used, reverse engineering work.
 
- **KAOS**
- * Original creator of the GW API used, reverse engineering work.
- * Several minor additions.
+ **Itecka** 
+ * Original creator of a damage monitor, which inspired the toolbox damage monitor.
+ * Created original implementation of the Cursor Fix.
+
+ **everyone who [proposed a PR](https://github.com/HasKha/GWToolboxpp/pulls?q=is%3Apr+is%3Aclosed)**
 
  **Misty/DarkManic**
  * Extensive work on the site and documentation.
