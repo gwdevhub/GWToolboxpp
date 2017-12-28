@@ -19,22 +19,28 @@ TexMod, uMod, screen recording software (in game capture mode) and Toolbox all u
 
 **I run the launcher and then nothing happens / Guild Wars closes / crashes** \\
 There may be different reasons for this. Try the following, in no particular order:
+
 * Launch both Guild Wars and Toolbox as administrator.
 * Launch Toolbox while Guild Wars is running in windowed mode, not minimized or fullscreen.
 * Avoid using other programs that interact with Guild Wars (TexMod, uMod, MultiLaunch, screen recording software, game overlays such as steam, fraps, etc)
 * Add GWToolbox.exe and gw.exe to your antivirus whitelist.
 
-**I run the launcher and I get the message “GWToolbox.dll was not loaded, unknown error”** \\
-This error typically means that some security feature is preventing Toolbox to access Guild Wars. One such feature is Data Execution Prevention, it is disabled by default but if enabled you need to add gw.exe to its whitelist. The other security programs causing this is any particularly zealous antivirus software. You typically need to add both GWToolbox.exe and gw.exe to its whitelist.
+**I run the launcher and I get the message “GWToolbox.dll was not loaded, unknown error” or "exit code 0"** \\
+This error typically means that some security feature is preventing Toolbox to access Guild Wars. It might be caused by any of the following:
+
+* Data Execution Prevention. It is disabled by default but if enabled you need to add gw.exe to its whitelist. 
+* Security programs such as Windows Defender or any particularly zealous antivirus software. You typically need to add both GWToolbox.exe and gw.exe to its whitelist.
+* Missing DirectX 2010 redistributable. Download from [here](http://www.microsoft.com/en-us/download/details.aspx?id=8109) and install. 
 
 **How do I target a Boo!?** \\
 You can use Toolbox to target and interact with lots of agents that wouldn't normally be targetable. There are a couple of ways to do this:
+
 * `Ctrl+click` on the [minimap](minimap). You can target agents that aren't visible, so long as you know where they are.
 * Use the [Info](info) window to find the ID of the agent (a Boo! is 7445), and then create a [hotkey](hotkeys) to target it.
 * The chat command `/target closest` will work, so long as the Boo! is the nearest agent, which should generally be the case.
 
 **Can I bind the same hotkey to perform multiple actions?** \\
-You sure as heck can! Just create a second hotkey for the second action and assign the same key bind. When you press the key, you will perform all of the assigned actions in the order the hotkeys appear in the list.
+You sure can! Just create a second hotkey for the second action and assign the same key bind. When you press the key, you will perform all of the assigned actions in the order the hotkeys appear in the list.
 
 You can also bind multiple keys to the same action, again by creating extra hotkeys, this time with the same action and different key binds.
 
