@@ -13,6 +13,7 @@
 #include "logger.h"
 #include <logger.h>
 #include "BuildsWindow.h"
+#include "HeroBuildsWindow.h"
 #include "HotkeysWindow.h"
 #include "PconsWindow.h"
 #ifdef ENABLE_LUA
@@ -51,6 +52,8 @@ TBHotkey* TBHotkey::HotkeyFactory(CSimpleIni* ini, const char* section) {
 		return new HotkeyDialog(ini, section);
 	} else if (type.compare(HotkeyPingBuild::IniSection()) == 0) {
 		return new HotkeyPingBuild(ini, section);
+	} else if (type.compare(HotkeyHeroTeamBuild::IniSection()) == 0) {
+		return new HotkeyHeroTeamBuild(ini, section);
 	} else {
 		return nullptr;
 	}
@@ -597,6 +600,33 @@ void HotkeyPingBuild::Execute() {
 
 	BuildsWindow::Instance().Send(index);
 }
+
+bool HotkeyHeroTeamBuild::GetText(void*, int idx, const char** out_text) {
+	if (idx >= (int)HeroBuildsWindow::Instance().BuildCount()) return false;
+	*out_text = HeroBuildsWindow::Instance().BuildName(idx);
+	return true;
+}
+HotkeyHeroTeamBuild::HotkeyHeroTeamBuild(CSimpleIni* ini, const char* section) : TBHotkey(ini, section) {
+	index = ini ? ini->GetLongValue(section, "BuildIndex", 0) : 0;
+}
+void HotkeyHeroTeamBuild::Save(CSimpleIni* ini, const char* section) const {
+	TBHotkey::Save(ini, section);
+	ini->SetLongValue(section, "BuildIndex", index);
+}
+void HotkeyHeroTeamBuild::Description(char* buf, int bufsz) const {
+	const char* buildname = HeroBuildsWindow::Instance().BuildName(index);
+	if (buildname == nullptr) buildname = "<not found>";
+	_snprintf(buf, bufsz, "Load Team Hero Build '%s'", buildname);
+}
+void HotkeyHeroTeamBuild::Draw() {
+	if (ImGui::Combo("Build", &index, GetText, nullptr, BuildsWindow::Instance().BuildCount())) hotkeys_changed = true;
+}
+void HotkeyHeroTeamBuild::Execute() {
+	if (isLoading()) return;
+
+	HeroBuildsWindow::Instance().Load(index);
+}
+
 
 #ifdef ENABLE_LUA
 HotkeyLUACmd::HotkeyLUACmd(CSimpleIni * ini, const char * section)

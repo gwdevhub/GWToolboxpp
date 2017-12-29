@@ -251,6 +251,24 @@ public:
 	void Execute() override;
 };
 
+class HotkeyHeroTeamBuild : public TBHotkey {
+	static bool GetText(void*, int idx, const char** out_text);
+
+public:
+	int index = 0;
+
+	static const char* IniSection() { return "HeroTeamBuild"; }
+	const char* Name() const override { return IniSection(); }
+
+	HotkeyHeroTeamBuild(CSimpleIni* ini, const char* section);
+
+	void Save(CSimpleIni* ini, const char* section) const override;
+
+	void Draw() override;
+	void Description(char* buf, int bufsz) const;
+	void Execute() override;
+};
+
 #ifdef ENABLE_LUA
 class HotkeyLUACmd : public TBHotkey {
 
