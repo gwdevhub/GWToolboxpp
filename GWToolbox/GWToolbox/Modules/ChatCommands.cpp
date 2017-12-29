@@ -49,7 +49,7 @@ void ChatCommands::DrawHelp() {
 	ImGui::Bullet(); ImGui::Text("'/dialog <id>' sends a dialog.");
 	ImGui::Bullet(); ImGui::Text("'/flag [all|<number>]' to flag a hero in the minimap (same a using the buttons by the minimap).");
 	ImGui::Bullet(); ImGui::Text("'/hide <name>' closes the window or widget titled <name>.");
-	ImGui::Bullet(); ImGui::Text("'/load [build template|build name]' loads a build. The build name must be between quotes if it contains spaces.");
+	ImGui::Bullet(); ImGui::Text("'/load [build template|build name] [Hero index]' loads a build. The build name must be between quotes if it contains spaces. First Hero index is 1, last is 7. Leave out for player");
 	ImGui::Bullet(); ImGui::Text("'/pcons [on|off]' toggles, enables or disables pcons.");
 	ImGui::Bullet(); ImGui::Text("'/show <name>' opens the window or widget titled <name>.");
 	ImGui::Bullet(); ImGui::Text("'/target closest' to target the closest agent to you.");
@@ -61,7 +61,9 @@ void ChatCommands::DrawHelp() {
 		"[dis] can be any of: ae, ae1, ee, eg, int, etc");
 	ImGui::Bullet(); ImGui::Text("'/useskill <skill>' starts using the skill on recharge. "
 		"Use the skill number instead of <skill> (e.g. '/useskill 5'). "
-		"Use empty '/useskill', '/useskill 0' or '/useskill stop' to stop.");
+		"It's possible to use more than one skill on recharge. "
+		"Use empty '/useskill' or '/useskill stop' to stop all. "
+		"Use '/useskill <skill>' to stop the skill.");
 	ImGui::Bullet(); ImGui::Text("'/zoom <value>' to change the maximum zoom to the value. "
 		"use empty '/zoom' to reset to the default value of 750.");
 }
@@ -145,22 +147,22 @@ void ChatCommands::Update() {
 		GW::CameraMgr::UpdateCameraPos();
 	}
 
-	if (skill_to_use > 0 && skill_to_use < 9 
-		&& GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable
-		&& (clock() - skill_timer) / 1000.0f > skill_usage_delay) {
+	for (int i = 0; i < 8; i++) {
+		if (skill_to_use[i]	&& GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable
+			&& (clock() - skill_timer[i]) / 1000.0f > skill_usage_delay[i]) {
+			GW::Skillbar skillbar = GW::Skillbar::GetPlayerSkillbar();
+			if (skillbar.IsValid()) {
+				GW::SkillbarSkill skill = skillbar.Skills[i];
+				if (skill.GetRecharge() == 0) {
+					int slot = i;
+					GW::GameThread::Enqueue([slot] {
+						GW::SkillbarMgr::UseSkill(slot, GW::Agents::GetTargetId());
+					});
 
-		GW::Skillbar skillbar = GW::Skillbar::GetPlayerSkillbar();
-		if (skillbar.IsValid()) {
-			GW::SkillbarSkill skill = skillbar.Skills[skill_to_use - 1]; // -1 to switch range [1,8] -> [0,7]
-			if (skill.GetRecharge() == 0) {
-				int slot = skill_to_use - 1;
-				GW::GameThread::Enqueue([slot] {
-					GW::SkillbarMgr::UseSkill(slot, GW::Agents::GetTargetId());
-				});
-
-				GW::Skill skilldata = GW::SkillbarMgr::GetSkillConstantData(skill.SkillId);
-				skill_usage_delay = skilldata.Activation + skilldata.Aftercast + 0.3f; // a small flat delay of .3s for ping and to avoid spamming in case of bad target
-				skill_timer = clock();
+					GW::Skill skilldata = GW::SkillbarMgr::GetSkillConstantData(skill.SkillId);
+					skill_usage_delay[i] = skilldata.Activation + skilldata.Aftercast + 0.3f; // a small flat delay of .3s for ping and to avoid spamming in case of bad target
+					skill_timer[i] = clock();
+				}
 			}
 		}
 	}
@@ -600,17 +602,27 @@ void ChatCommands::CmdTarget(int argc, LPWSTR *argv) {
 
 void ChatCommands::CmdUseSkill(int argc, LPWSTR *argv) {
 	if (argc == 1) {
-		Instance().skill_to_use = 0;
+		for (int i = 0; i < 8; i++) {
+			Instance().skill_to_use[i] = false;
+		}
 	} else if (argc == 2) {
 		std::wstring arg1 = GuiUtils::ToLower(argv[1]);
 		if (arg1 == L"stop" || arg1 == L"off") {
-			Instance().skill_to_use = 0;
+			for (int i = 0; i < 8; i++) {
+				Instance().skill_to_use[i] = false;
+			}
 		} else {
 			try {
 				int skill = std::stoi(argv[1]);
 				if (skill >= 0 && skill <= 8) {
-					Instance().skill_to_use = skill;
-					Log::Info("Using skill %d on recharge. Use /useskill to stop", skill);
+					if (Instance().skill_to_use[skill - 1]) {
+						Instance().skill_to_use[skill - 1] = false;
+						Log::Info("Stoping skill %d on recharge.", skill);
+					}
+					else {
+						Instance().skill_to_use[skill - 1] = true;
+						Log::Info("Using skill %d on recharge. Use /useskill to stop all or use /useskill %d to stop %d", skill, skill, skill);
+					}
 				}
 			} catch (...) {
 				Log::Error("Invalid argument '%ls', please use an integer value", argv[1]);
@@ -663,6 +675,8 @@ void ChatCommands::CmdLoad(int argc, LPWSTR *argv) {
 			temp[i] = (char)arg1[i];
 		temp[len] = 0;
 	}
-
-	GW::SkillbarMgr::LoadSkillTemplate(temp);
+	if (argc == 2)
+		GW::SkillbarMgr::LoadSkillTemplate(temp);	
+	else if (argc == 3)
+		GW::SkillbarMgr::LoadSkillTemplate(temp, std::stoi(argv[2]));
 }
