@@ -15,6 +15,7 @@
 #include <Windows\PconsWindow.h>
 #include <Windows\HotkeysWindow.h>
 #include <Windows\BuildsWindow.h>
+#include <Windows\HeroBuildsWindow.h>
 #include <Windows\TravelWindow.h>
 #include <Windows\DialogsWindow.h>
 #include <Windows\InfoWindow.h>
@@ -41,6 +42,7 @@ void ToolboxSettings::InitializeModules() {
 	if (use_pcons) PconsWindow::Instance().Initialize();
 	if (use_hotkeys) HotkeysWindow::Instance().Initialize();
 	if (use_builds) BuildsWindow::Instance().Initialize();
+	if (use_herobuilds) HeroBuildsWindow::Instance().Initialize();
 	if (use_travel) TravelWindow::Instance().Initialize();
 	if (use_dialogs) DialogsWindow::Instance().Initialize();
 	if (use_info) InfoWindow::Instance().Initialize();
@@ -77,6 +79,7 @@ void ToolboxSettings::DrawSettingInternal() {
 	ImGui::Checkbox("Pcons", &use_pcons);
 	ImGui::Checkbox("Hotkeys", &use_hotkeys);
 	ImGui::Checkbox("Builds", &use_builds);
+	ImGui::Checkbox("Hero Builds", &use_herobuilds);
 	ImGui::Checkbox("Travel", &use_travel);
 	ImGui::Checkbox("Dialogs", &use_dialogs);
 	ImGui::Checkbox("Info", &use_info);
@@ -105,6 +108,7 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
 	use_pcons = ini->GetBoolValue(Name(), VAR_NAME(use_pcons), true);
 	use_hotkeys = ini->GetBoolValue(Name(), VAR_NAME(use_hotkeys), true);
 	use_builds = ini->GetBoolValue(Name(), VAR_NAME(use_builds), true);
+	use_herobuilds = ini->GetBoolValue(Name(), VAR_NAME(use_herobuilds), true);
 	use_travel = ini->GetBoolValue(Name(), VAR_NAME(use_travel), true);
 	use_dialogs = ini->GetBoolValue(Name(), VAR_NAME(use_dialogs), true);
 	use_info = ini->GetBoolValue(Name(), VAR_NAME(use_info), true);
@@ -127,6 +131,7 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(use_pcons), use_pcons);
 	ini->SetBoolValue(Name(), VAR_NAME(use_hotkeys), use_hotkeys);
 	ini->SetBoolValue(Name(), VAR_NAME(use_builds), use_builds);
+	ini->SetBoolValue(Name(), VAR_NAME(use_herobuilds), use_herobuilds);
 	ini->SetBoolValue(Name(), VAR_NAME(use_travel), use_travel);
 	ini->SetBoolValue(Name(), VAR_NAME(use_dialogs), use_dialogs);
 	ini->SetBoolValue(Name(), VAR_NAME(use_info), use_info);
