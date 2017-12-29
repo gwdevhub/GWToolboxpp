@@ -162,12 +162,15 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	auto_set_away_delay = ini->GetLongValue(Name(), VAR_NAME(auto_set_away_delay), 10);
 	auto_set_online = ini->GetBoolValue(Name(), VAR_NAME(auto_set_online), false);
 
+	auto_set_hardmode = ini->GetBoolValue(Name(), VAR_NAME(auto_set_hardmode), false);
+
 	if (borderlesswindow) ApplyBorderless(borderlesswindow);
 	if (openlinks) GW::Chat::SetOpenLinks(openlinks);
 	if (tick_is_toggle) GW::PartyMgr::SetTickToggle();
 	if (select_with_chat_doubleclick) GW::Chat::SetChatEventCallback(&ChatEventCallback);
 	if (auto_url) GW::Chat::SetSendChatCallback(&SendChatCallback);
 	if (flash_window_on_pm) GW::Chat::SetWhisperCallback(&WhisperCallback);
+	if (auto_set_hardmode) GW::PartyMgr::SetHardMode(true);
 }
 
 void GameSettings::SaveSettings(CSimpleIni* ini) {
@@ -191,6 +194,8 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(auto_set_away), auto_set_away);
 	ini->SetLongValue(Name(), VAR_NAME(auto_set_away_delay), auto_set_away_delay);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_set_online), auto_set_online);
+	
+	ini->SetBoolValue(Name(), VAR_NAME(auto_set_hardmode), auto_set_hardmode);
 }
 
 void GameSettings::DrawSettingInternal() {
@@ -258,6 +263,8 @@ void GameSettings::DrawSettingInternal() {
 
 	ImGui::Checkbox("Automatically set 'Online' after an input to Guild Wars", &auto_set_online);
 	ImGui::ShowHelp("Only if you were 'Away'");
+
+	ImGui::Checkbox("Automatically set 'Hard Mode' after logging into Guild Wars", &auto_set_hardmode);
 }
 
 void GameSettings::DrawBorderlessSetting() {
@@ -382,3 +389,4 @@ bool GameSettings::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 
 	return false;
 }
+
