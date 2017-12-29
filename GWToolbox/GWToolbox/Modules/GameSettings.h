@@ -54,8 +54,6 @@ public:
 	bool auto_set_online = false;
 	clock_t activity_timer = 0;
 
-	bool auto_set_hardmode = false;
-
 	void ApplyBorderless(bool value);
 
 private:
