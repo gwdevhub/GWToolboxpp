@@ -99,7 +99,7 @@ void TBHotkey::Draw(Op* op) {
 	ModKeyName(keybuf, 128, modifier, hotkey, "<None>");
 	_snprintf_s(header, 128, "%s [%s]###header%u", desbuf, keybuf, ui_id);
 	ImGuiTreeNodeFlags flags = (show_active_in_header || show_run_in_header) 
-		? ImGuiTreeNodeFlags_AllowOverlapMode : 0;
+		? ImGuiTreeNodeFlags_AllowItemOverlap : 0;
 	if (!ImGui::CollapsingHeader(header, flags)) {
 		ShowHeaderButtons();
 	} else {

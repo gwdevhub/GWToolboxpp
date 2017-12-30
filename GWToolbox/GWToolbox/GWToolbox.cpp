@@ -413,6 +413,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 #ifdef _DEBUG
 		// Feel free to uncomment to play with ImGui's features
 		//ImGui::ShowDemoWindow();
+		//ImGui::ShowStyleEditor(); // Warning, this WILL change your theme. Back up theme.ini first!
 #endif
 
 		ImGui::Render();

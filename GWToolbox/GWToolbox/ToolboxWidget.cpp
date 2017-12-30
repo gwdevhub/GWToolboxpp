@@ -7,7 +7,7 @@
 #include "Modules\ToolboxSettings.h"
 
 void ToolboxWidget::DrawSettings() {
-	if (ImGui::CollapsingHeader(Name(), ImGuiTreeNodeFlags_AllowOverlapMode)) {
+	if (ImGui::CollapsingHeader(Name(), ImGuiTreeNodeFlags_AllowItemOverlap)) {
 		ImGui::PushID(Name());
 		ShowVisibleRadio();
 		ImVec2 pos(0, 0);
