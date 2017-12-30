@@ -21,12 +21,15 @@ bool ImGui::MyCombo(const char* label, const char* preview_text, int* current_it
 	void* data, int items_count, int height_in_items) {
 
 	ImGuiContext& g = *GImGui;
+	const float word_building_delay = .5f; // after this many seconds, typing will make a new search
 
-	if (*current_item >= 0 && *current_item < items_count)
+	if (*current_item >= 0 && *current_item < items_count) {
 		items_getter(data, *current_item, &preview_text);
+	}
 
-	if (!BeginCombo(label, preview_text))
+	if (!BeginCombo(label, preview_text)) {
 		return false;
+	}
 
 	GetIO().WantTextInput = true;
 	static char word[64] = "";
@@ -41,7 +44,7 @@ bool ImGui::MyCombo(const char* label, const char* preview_text, int* current_it
 				|| (c >= 'a' && c <= 'z')) {
 
 				// build temporary word
-				if (time_since_last_update < .5f) { // append
+				if (time_since_last_update < word_building_delay) { // append
 					const int i = strnlen(word, 64);
 					if (i + 1 < 64) {
 						word[i] = c;
@@ -93,23 +96,25 @@ bool ImGui::MyCombo(const char* label, const char* preview_text, int* current_it
 	}
 
 	// Display items
-	// FIXME-OPT: Use clipper
 	bool value_changed = false;
 	for (int i = 0; i < items_count; i++) {
 		PushID((void*)(intptr_t)i);
 		const bool item_selected = (i == *current_item);
 		const bool item_keyboard_selected = (i == keyboard_selected);
 		const char* item_text;
-		if (!items_getter(data, i, &item_text))
+		if (!items_getter(data, i, &item_text)) {
 			item_text = "*Unknown item*";
+		}
 		if (Selectable(item_text, item_selected || item_keyboard_selected)) {
 			value_changed = true;
 			*current_item = i;
 		}
-		if (item_selected && IsWindowAppearing())
+		if (item_selected && IsWindowAppearing()) {
 			SetScrollHere();
-		if (item_keyboard_selected && keyboard_selected_now)
+		}
+		if (item_keyboard_selected && keyboard_selected_now) {
 			SetScrollHere();
+		}
 		PopID();
 	}
 
