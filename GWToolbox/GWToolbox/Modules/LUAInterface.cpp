@@ -149,16 +149,16 @@ static int cmdUseSkill(lua_State* L)
 // Overrides
 static int cmdPrint(lua_State* L)
 {
-	g_inst.buf_.append("< ");
+	g_inst.buf_.appendf("< ");
 	int argc = lua_gettop(L);
 	for (int i = 1; i <= argc; ++i)
 	{
 		if (lua_isstring(L, i)) {
 			const char* s = lua_tostring(L, i);
-			g_inst.buf_.append(s);
+			g_inst.buf_.appendf(s);
 		}
 	}
-	g_inst.buf_.append("\n");
+	g_inst.buf_.appendf("\n");
 	g_inst.scrolltobottom_ = true;
 	return 0;
 }
@@ -382,7 +382,7 @@ void LUAInterface::ShowConsole()
 		ImGui::SameLine();
 		if (ImGui::InputText("Input", input, 0x100, ImGuiInputTextFlags_EnterReturnsTrue))
 		{
-			buf_.append("> %s\n", input);
+			buf_.appendf("> %s\n", input);
 			RunString(input);
 			scrolltobottom_ = true;
 			input[0] = '\0';

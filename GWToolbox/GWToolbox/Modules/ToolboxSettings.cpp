@@ -95,7 +95,9 @@ void ToolboxSettings::DrawSettingInternal() {
 }
 
 void ToolboxSettings::DrawFreezeSetting() {
-	ImGui::Checkbox("Unlock Move All", &move_all);
+	if (ImGui::Checkbox("Unlock Move All", &move_all)) {
+		ImGui::GetStyle().WindowBorderSize = (move_all ? 1.0f : 0.0f);
+	}
 	ImGui::ShowHelp("Will allow movement and resize of all widgets and windows");
 }
 

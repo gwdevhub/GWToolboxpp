@@ -29,9 +29,7 @@ void ToolboxWindow::DrawSettings() {
 }
 
 ImGuiWindowFlags ToolboxWindow::GetWinFlags(ImGuiWindowFlags flags) const {
-	if (ToolboxSettings::move_all) {
-		flags |= ImGuiWindowFlags_ShowBorders;
-	} else {
+	if (!ToolboxSettings::move_all) {
 		if (lock_move) flags |= ImGuiWindowFlags_NoMove;
 		if (lock_size) flags |= ImGuiWindowFlags_NoResize;
 	}

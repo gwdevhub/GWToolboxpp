@@ -17,22 +17,15 @@ void ImGui::ShowHelp(const char* help) {
 	}
 }
 
-bool ImGui::Combo(const char* label, const char* preview_text, int* current_item, bool(*items_getter)(void*, int, const char**), 
+bool ImGui::MyCombo(const char* label, const char* preview_text, int* current_item, bool(*items_getter)(void*, int, const char**), 
 	void* data, int items_count, int height_in_items) {
 
 	ImGuiContext& g = *GImGui;
-	const ImGuiStyle& style = g.Style;
 
-	//const char* preview_text = NULL;
 	if (*current_item >= 0 && *current_item < items_count)
 		items_getter(data, *current_item, &preview_text);
 
-	// Size default to hold ~7 items
-	if (height_in_items < 0)
-		height_in_items = 7;
-	float popup_height = (g.FontSize + style.ItemSpacing.y) * ImMin(items_count, height_in_items) + (style.FramePadding.y * 3);
-
-	if (!BeginCombo(label, preview_text, ImVec2(0.0f, popup_height)))
+	if (!BeginCombo(label, preview_text))
 		return false;
 
 	GetIO().WantTextInput = true;
@@ -85,16 +78,16 @@ bool ImGui::Combo(const char* label, const char* preview_text, int* current_item
 		}
 	}
 
-	if (IsKeyPressed(0x0D) && keyboard_selected >= 0) {
+	if (IsKeyPressed(VK_RETURN) && keyboard_selected >= 0) {
 		*current_item = keyboard_selected;
 		EndCombo();
 		return true;
 	}
-	if (IsKeyPressed(0x26) && keyboard_selected > 0) {
+	if (IsKeyPressed(VK_UP) && keyboard_selected > 0) {
 		--keyboard_selected;
 		keyboard_selected_now = true;
 	}
-	if (IsKeyPressed(0x28) && keyboard_selected < items_count - 1) {
+	if (IsKeyPressed(VK_DOWN) && keyboard_selected < items_count - 1) {
 		++keyboard_selected;
 		keyboard_selected_now = true;
 	}

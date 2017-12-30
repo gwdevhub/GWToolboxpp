@@ -410,7 +410,10 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 			uielement->Draw(device);
 		}
 
-		//ImGui::ShowTestWindow();
+#ifdef _DEBUG
+		// Feel free to uncomment to play with ImGui's features
+		//ImGui::ShowDemoWindow();
+#endif
 
 		ImGui::Render();
 	}

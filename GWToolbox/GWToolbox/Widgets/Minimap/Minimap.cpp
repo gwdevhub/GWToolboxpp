@@ -348,13 +348,11 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 				bool flagged = (i == 0) ?
 					(!std::isinf(allflag.x) || !std::isinf(allflag.y)) :
 					(flags.valid() && i - 1 < flags.size() && (!std::isinf(flags[i - 1].flag.x) || !std::isinf(flags[i - 1].flag.y)));
-				if (flagged) ImGui::GetCurrentWindow()->Flags ^= ImGuiWindowFlags_ShowBorders;
 
 				if (ImGui::Button(flag_txt[i], ImVec2(w_but, 0))) {
 					flagging[i] ^= 1;
 				}
 				if (old_flagging) ImGui::PopStyleColor();
-				if (flagged) ImGui::GetCurrentWindow()->Flags ^= ImGuiWindowFlags_ShowBorders;
 
 				if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
 					if (i == 0) GW::PartyMgr::UnflagAll();

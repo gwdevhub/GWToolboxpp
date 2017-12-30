@@ -55,7 +55,7 @@ void TravelWindow::Draw(IDirect3DDevice9* pDevice) {
 		if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
 			ImGui::PushItemWidth(-1.0f);
 			static int travelto_index = -1;
-			if (ImGui::Combo("travelto", "Travel To...", &travelto_index, outpost_name_array_getter, nullptr, N_OUTPOSTS)) {
+			if (ImGui::MyCombo("travelto", "Travel To...", &travelto_index, outpost_name_array_getter, nullptr, N_OUTPOSTS)) {
 				GW::Constants::MapID id = IndexToOutpostID(travelto_index);
 				GW::Map::Travel(id, district, district_number);
 				travelto_index = -1;
@@ -115,7 +115,7 @@ void TravelWindow::Draw(IDirect3DDevice9* pDevice) {
 			for (int i = 0; i < fav_count; ++i) {
 				ImGui::PushID(i);
 				ImGui::PushItemWidth(-40.0f - ImGui::GetStyle().ItemInnerSpacing.x);
-				ImGui::Combo("", "Select a favorite", &fav_index[i], outpost_name_array_getter, nullptr, N_OUTPOSTS);
+				ImGui::MyCombo("", "Select a favorite", &fav_index[i], outpost_name_array_getter, nullptr, N_OUTPOSTS);
 				ImGui::PopItemWidth();
 				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 				if (ImGui::Button("Go", ImVec2(40.0f, 0))) {
