@@ -143,65 +143,75 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 
 	// === Send events to ImGui ===
 	ImGuiIO& io = ImGui::GetIO();
-	if (!right_mouse_down) {
-		switch (Message) {
-		case WM_LBUTTONDOWN:
-		case WM_LBUTTONDBLCLK:
-			io.MouseDown[0] = true; 
-			break;
-		case WM_LBUTTONUP: 
-			io.MouseDown[0] = false; 
-			break;
-		case WM_MBUTTONDOWN:
-		case WM_MBUTTONDBLCLK:
+	switch (Message) {
+	case WM_LBUTTONDOWN:
+	case WM_LBUTTONDBLCLK:
+		if (!right_mouse_down) io.MouseDown[0] = true;
+		break;
+	case WM_LBUTTONUP: 
+		io.MouseDown[0] = false; 
+		break;
+	case WM_MBUTTONDOWN:
+	case WM_MBUTTONDBLCLK:
+		if (!right_mouse_down) {
 			io.KeysDown[VK_MBUTTON] = true;
 			io.MouseDown[2] = true;
-			break;
-		case WM_MBUTTONUP:
-			io.KeysDown[VK_MBUTTON] = false;
-			io.MouseDown[2] = false;
-			break;
-		case WM_MOUSEWHEEL: io.MouseWheel += GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f; break;
-		case WM_MOUSEMOVE:
+		}
+		break;
+	case WM_MBUTTONUP:
+		io.KeysDown[VK_MBUTTON] = false;
+		io.MouseDown[2] = false;
+		break;
+	case WM_MOUSEWHEEL: 
+		if (!right_mouse_down) io.MouseWheel += GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f; 
+		break;
+	case WM_MOUSEMOVE:
+		if (!right_mouse_down) {
 			io.MousePos.x = (float)GET_X_LPARAM(lParam);
 			io.MousePos.y = (float)GET_Y_LPARAM(lParam);
-			break;
-		case WM_XBUTTONDOWN:
+		}
+		break;
+	case WM_XBUTTONDOWN:
+		if (!right_mouse_down) {
 			if (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) io.KeysDown[VK_XBUTTON1] = true;
 			if (GET_XBUTTON_WPARAM(wParam) == XBUTTON2) io.KeysDown[VK_XBUTTON2] = true;
-			break;
-		case WM_XBUTTONUP:
-			if (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) io.KeysDown[VK_XBUTTON1] = false;
-			if (GET_XBUTTON_WPARAM(wParam) == XBUTTON2) io.KeysDown[VK_XBUTTON2] = false;
-			break;
-		case WM_KEYDOWN:
-			if (wParam < 256)
-				io.KeysDown[wParam] = true;
-			break;
-		case WM_KEYUP:
-			if (wParam < 256)
-				io.KeysDown[wParam] = false;
-			break;
-		case WM_CHAR: // You can also use ToAscii()+GetKeyboardState() to retrieve characters.
-			if (wParam > 0 && wParam < 0x10000)
-				io.AddInputCharacter((unsigned short)wParam);
-			break;
-		default:
-			break;
 		}
+		break;
+	case WM_XBUTTONUP:
+		if (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) io.KeysDown[VK_XBUTTON1] = false;
+		if (GET_XBUTTON_WPARAM(wParam) == XBUTTON2) io.KeysDown[VK_XBUTTON2] = false;
+		break;
+	case WM_KEYDOWN:
+		if (wParam < 256)
+			io.KeysDown[wParam] = true;
+		break;
+	case WM_KEYUP:
+		if (wParam < 256)
+			io.KeysDown[wParam] = false;
+		break;
+	case WM_CHAR: // You can also use ToAscii()+GetKeyboardState() to retrieve characters.
+		if (wParam > 0 && wParam < 0x10000)
+			io.AddInputCharacter((unsigned short)wParam);
+		break;
+	default:
+		break;
 	}
 
 	// === Send events to toolbox ===
 	GWToolbox& tb = GWToolbox::Instance();
 	switch (Message) {
-	// Send button up mouse events to both gw and imgui, to avoid gw being stuck on mouse-down
+	// Send button up mouse events to everything, to avoid being stuck on mouse-down
 	case WM_LBUTTONUP:
 		for (ToolboxModule* m : tb.GetModules()) {
 			m->WndProc(Message, wParam, lParam);
 		}
 		break;
 		
-	// Send other mouse events to imgui first and consume them if used
+	// Other mouse events:
+	// - If right mouse down, leave it to gw
+	// - ImGui first (above), if WantCaptureMouse that's it
+	// - Toolbox module second (e.g.: minimap), if captured, that's it
+	// - otherwise pass to gw
 	case WM_LBUTTONDOWN:
 	case WM_LBUTTONDBLCLK:
 	case WM_MOUSEMOVE:
@@ -216,10 +226,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 		}
 		break;
 
-	// send keyboard messages to gw, imgui and toolbox
+	// keyboard messages
 	case WM_KEYUP:
 	case WM_SYSKEYUP:
-		if (io.WantTextInput) break; // send keyup events to gw
+		if (io.WantTextInput) break; // if imgui wants them, send to imgui (above) and to gw
 		// else fallthrough
 	case WM_KEYDOWN:
 	case WM_SYSKEYDOWN:
@@ -232,7 +242,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 	case WM_MBUTTONDOWN:
 	case WM_MBUTTONDBLCLK:
 	case WM_MBUTTONUP:
-		if (io.WantTextInput) return true;
+		if (io.WantTextInput) return true; // if imgui wants them, send just to imgui (above)
 
 		// send input to chat commands for camera movement
 		if (ChatCommands::Instance().WndProc(Message, wParam, lParam)) {
@@ -243,6 +253,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 		for (ToolboxModule* m : tb.GetModules()) {
 			m->WndProc(Message, wParam, lParam);
 		}
+		// note: capturing those events would prevent typing if you have a hotkey assigned to normal letters. 
+		// We may want to not send events to toolbox if the player is typing in-game
+		// Otherwise, we may want to capture events. 
+		// For that, we may want to only capture *successfull* hotkey activations.
 
 		// block alt-enter if in borderless to avoid graphic glitches (no reason to go fullscreen anyway)
 		if (GameSettings::Instance().borderlesswindow
@@ -253,6 +267,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 		break;
 
 	case WM_SIZE:
+		// ImGui doesn't need this, it reads the viewport size directly
 		break;
 
 	default:
