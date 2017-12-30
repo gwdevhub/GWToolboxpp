@@ -1,13 +1,9 @@
 #include "ImGuiAddons.h"
 
+#include <Windows.h>
+
 #include <imgui.h>
 #include <imgui_internal.h>
-
-#include <time.h>
-#include <ctype.h>
-
-#include <Key.h>
-#include <Timer.h>
 
 void ImGui::ShowHelp(const char* help) {
 	ImGui::SameLine();
