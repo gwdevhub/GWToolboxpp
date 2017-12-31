@@ -90,7 +90,6 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 				if (ImGui::InputText("###code", build.code, 128)) builds_changed = true;
 				if (j != 0) {
 					ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-					//if (ImGui::InputText("###heroid", build.heroid, 128)) builds_changed = true;
 					if (ImGui::MyCombo("###heroid", "Choose Hero", &build.heroid, 
 						[](void* data, int idx, const char** out_text) -> bool {
 						if (idx < 0) return false;
@@ -100,15 +99,17 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 					}, nullptr, hero_count)) {
 						builds_changed = true;
 					}
-					//if (ImGui::ListBox("###heroid", &build.heroid, listbox_items, IM_ARRAYSIZE(listbox_items), 4)) builds_changed = true;
 				}
 				ImGui::PopItemWidth();
 				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 				if (ImGui::Button("Load", ImVec2(50.0f, 0))) {
 					Load(tbuild, j);
 				}
-				if (j == 0) { if (ImGui::IsItemHovered()) ImGui::SetTooltip("Load Build on Player"); }
-				else { if (ImGui::IsItemHovered()) ImGui::SetTooltip("Load Build on Hero"); }
+				if (j == 0) { 
+					if (ImGui::IsItemHovered()) ImGui::SetTooltip("Load Build on Player"); 
+				} else { 
+					if (ImGui::IsItemHovered()) ImGui::SetTooltip("Load Build on Hero"); 
+				}
 				if (j != 0) {
 					ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 					if (ImGui::Button("x", ImVec2(24.0f, 0))) {
@@ -167,8 +168,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 const char* HeroBuildsWindow::BuildName(unsigned int idx) const {
 	if (idx < teambuilds.size()) {
 		return teambuilds[idx].name;
-	}
-	else {
+	} else {
 		return nullptr;
 	}
 }
@@ -183,21 +183,26 @@ void HeroBuildsWindow::Load(const HeroBuildsWindow::TeamHeroBuild& tbuild) {
 	for (unsigned int i = 0; i < tbuild.builds.size(); ++i) {
 		Load(tbuild, i);
 	}
+	send_timer = TIMER_INIT(); // give GW time to update the hero structs after adding them. 
 }
 
 void HeroBuildsWindow::Load(const TeamHeroBuild& tbuild, unsigned int idx) {
 	if (idx >= tbuild.builds.size()) return;
 	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) return;
 	const HeroBuild& build = tbuild.builds[idx];
-	const std::string name(build.name);
 	const std::string code(build.code);
-	const long heroid(build.heroid);
+	const int heroid = build.heroid + 1;
 
-	if (code.empty()) {	return; } //No Template
-	if (heroid == 0) { GW::SkillbarMgr::LoadSkillTemplate(build.code); return; } //Player
-	
-	GW::PartyMgr::AddHero(heroid);
-	queue.push(CodeOnHero(code.c_str(), (idx - 1)));
+	if (idx == 0) { // Player 
+		if (!code.empty()) {
+			GW::SkillbarMgr::LoadSkillTemplate(build.code);
+		}
+	} else if (heroid > 0 && heroid < hero_count) {
+		GW::PartyMgr::AddHero(heroid);
+		if (!code.empty()) {
+			queue.push(CodeOnHero(code.c_str(), idx));
+		}
+	}
 }
 
 void HeroBuildsWindow::Update() {
