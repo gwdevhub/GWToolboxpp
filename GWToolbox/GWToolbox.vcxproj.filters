@@ -144,7 +144,6 @@
       <Filter>Windows\Notepad</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\ToolboxWindow.h" />
-    <ClInclude Include="GWToolbox\ToolboxPanel.h" />
     <ClInclude Include="GWToolbox\ImGuiAddons.h" />
     <ClInclude Include="GWToolbox\ToolboxUIElement.h" />
     <ClInclude Include="GWToolbox\ToolboxWidget.h" />
@@ -282,7 +281,6 @@
       <Filter>Windows\Notepad</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\GuiUtils.cpp" />
-    <ClCompile Include="GWToolbox\ToolboxPanel.cpp" />
     <ClCompile Include="GWToolbox\ImGuiAddons.cpp" />
     <ClCompile Include="GWToolbox\ToolboxWidget.cpp" />
     <ClCompile Include="GWToolbox\ToolboxWindow.cpp" />

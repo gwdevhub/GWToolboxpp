@@ -125,7 +125,6 @@
     <ClInclude Include="GWToolbox\GWToolbox.h" />
     <ClInclude Include="GWToolbox\logger.h" />
     <ClInclude Include="GWToolbox\Timer.h" />
-    <ClInclude Include="GWToolbox\ToolboxPanel.h" />
     <ClInclude Include="GWToolbox\ToolboxUIElement.h" />
     <ClInclude Include="GWToolbox\ToolboxWidget.h" />
     <ClInclude Include="GWToolbox\ToolboxWindow.h" />
@@ -180,7 +179,6 @@
     <ClCompile Include="GWToolbox\Modules\Updater.cpp" />
     <ClCompile Include="GWToolbox\ToolboxModule.cpp" />
     <ClCompile Include="GWToolbox\GWToolbox.cpp" />
-    <ClCompile Include="GWToolbox\ToolboxPanel.cpp" />
     <ClCompile Include="GWToolbox\ToolboxUIElement.cpp" />
     <ClCompile Include="GWToolbox\ToolboxWidget.cpp" />
     <ClCompile Include="GWToolbox\ToolboxWindow.cpp" />

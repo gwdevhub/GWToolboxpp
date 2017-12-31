@@ -7,13 +7,13 @@
 #include <string>
 
 #include "Key.h"
-#include "ToolboxPanel.h"
+#include "ToolboxWindow.h"
 #include "logger.h"
 #include "Timer.h"
 #include "Hotkeys.h"
 
 // class used to keep a list of hotkeys, capture keyboard event and fire hotkeys as needed
-class HotkeysWindow : public ToolboxPanel {
+class HotkeysWindow : public ToolboxWindow {
 	HotkeysWindow() {};
 	~HotkeysWindow() {};
 public:

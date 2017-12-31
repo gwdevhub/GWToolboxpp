@@ -8,8 +8,8 @@
 #include <Modules\Resources.h>
 
 void DialogsWindow::Initialize() {
-	ToolboxPanel::Initialize();
-	Resources::Instance().LoadTextureAsync(&texture, Resources::GetPath("img/icons", "dialogue.png"), IDB_Icon_Dialogue);
+	ToolboxWindow::Initialize();
+	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath("img/icons", "dialogue.png"), IDB_Icon_Dialogue);
 }
 
 void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
@@ -174,7 +174,9 @@ void DialogsWindow::DrawSettingInternal() {
 }
 
 void DialogsWindow::LoadSettings(CSimpleIni* ini) {
-	ToolboxPanel::LoadSettings(ini);
+	ToolboxWindow::LoadSettings(ini);
+	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
+
 	fav_count = ini->GetLongValue(Name(), VAR_NAME(fav_count), 3);
 	fav_index.resize(fav_count, 0);
 	for (int i = 0; i < fav_count; ++i) {
@@ -189,7 +191,7 @@ void DialogsWindow::LoadSettings(CSimpleIni* ini) {
 }
 
 void DialogsWindow::SaveSettings(CSimpleIni* ini) {
-	ToolboxPanel::SaveSettings(ini);
+	ToolboxWindow::SaveSettings(ini);
 	ini->SetLongValue(Name(), "fav_count", fav_count);
 	for (int i = 0; i < fav_count; ++i) {
 		char key[32];

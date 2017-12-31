@@ -8,9 +8,9 @@
 
 #include "Timer.h"
 #include "Pcons.h"
-#include "ToolboxPanel.h"
+#include "ToolboxWindow.h"
 
-class PconsWindow : public ToolboxPanel {
+class PconsWindow : public ToolboxWindow {
 	PconsWindow() {};
 	~PconsWindow() {};
 public:
@@ -28,7 +28,7 @@ public:
 
 	void Update() override;
 
-	bool DrawTabButton(IDirect3DDevice9* device) override;
+	bool DrawTabButton(IDirect3DDevice9* device, bool show_icon, bool show_text) override;
 	void Draw(IDirect3DDevice9* pDevice) override;
 
 	void LoadSettings(CSimpleIni* ini) override;

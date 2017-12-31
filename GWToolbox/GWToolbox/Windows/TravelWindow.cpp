@@ -19,8 +19,8 @@ namespace {
 }
 
 void TravelWindow::Initialize() {
-	ToolboxPanel::Initialize();
-	Resources::Instance().LoadTextureAsync(&texture, Resources::GetPath("img/icons", "airplane.png"), IDB_Icon_Airplane);
+	ToolboxWindow::Initialize();
+	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath("img/icons", "airplane.png"), IDB_Icon_Airplane);
 
 	district = district = GW::Constants::District::Current;
 	district_number = 0;
@@ -151,7 +151,9 @@ void TravelWindow::DrawSettingInternal() {
 }
 
 void TravelWindow::LoadSettings(CSimpleIni* ini) {
-	ToolboxPanel::LoadSettings(ini);
+	ToolboxWindow::LoadSettings(ini);
+	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
+
 	fav_count = ini->GetLongValue(Name(), VAR_NAME(fav_count), 3);
 	fav_index.resize(fav_count, -1);
 	for (int i = 0; i < fav_count; ++i) {
@@ -163,7 +165,7 @@ void TravelWindow::LoadSettings(CSimpleIni* ini) {
 }
 
 void TravelWindow::SaveSettings(CSimpleIni* ini) {
-	ToolboxPanel::SaveSettings(ini);
+	ToolboxWindow::SaveSettings(ini);
 	ini->SetLongValue(Name(), VAR_NAME(fav_count), fav_count);
 	for (int i = 0; i < fav_count; ++i) {
 		char key[32];

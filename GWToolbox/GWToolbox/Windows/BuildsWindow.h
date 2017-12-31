@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ToolboxPanel.h"
+#include "ToolboxWindow.h"
 
 #include <vector>
 #include <queue>
@@ -8,7 +8,7 @@
 
 #include "Timer.h"
 
-class BuildsWindow : public ToolboxPanel {
+class BuildsWindow : public ToolboxWindow {
 private:
 	struct Build {
 		Build(const char* n = "", const char* c = "") {

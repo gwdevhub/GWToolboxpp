@@ -7,10 +7,10 @@
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\Constants\Maps.h>
 
-#include "ToolboxPanel.h"
+#include "ToolboxWindow.h"
 #include "logger.h"
 
-class TravelWindow : public ToolboxPanel {
+class TravelWindow : public ToolboxWindow {
 	TravelWindow() {};
 	~TravelWindow() {};
 public:

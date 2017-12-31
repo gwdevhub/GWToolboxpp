@@ -1,5 +1,7 @@
 #pragma once
 
+#include <d3dx9tex.h>
+
 #include "ToolboxUIElement.h"
 
 /*
@@ -25,12 +27,12 @@ public:
 	// show a reset position button and a 'visible' checkbox
 	virtual void DrawSettings() override;
 
-	bool show_closebutton = true;
-
 	ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0) const;
 
 	bool* GetVisiblePtr(bool force_show = false) {
 		if (show_closebutton || force_show) return &visible;
 		return nullptr;
 	}
+
+	bool show_closebutton = true;
 };

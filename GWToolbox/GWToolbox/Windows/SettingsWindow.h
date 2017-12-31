@@ -1,8 +1,8 @@
 #pragma once
 
-#include "ToolboxPanel.h"
+#include "ToolboxWindow.h"
 
-class SettingsWindow : public ToolboxPanel {
+class SettingsWindow : public ToolboxWindow {
 	SettingsWindow() {};
 	~SettingsWindow() {};
 public:
@@ -14,6 +14,8 @@ public:
 	const char* Name() const override { return "Settings"; }
 
 	void Initialize() override;
+
+	void LoadSettings(CSimpleIni* ini) override;
 
 	// Draw user interface. Will be called every frame if the element is visible
 	void Draw(IDirect3DDevice9* pDevice) override;

@@ -18,8 +18,8 @@
 using namespace GW::Constants;
 
 void PconsWindow::Initialize() {
-	ToolboxPanel::Initialize();
-	Resources::Instance().LoadTextureAsync(&texture, Resources::GetPath("img/icons", "cupcake.png"), IDB_Icon_Cupcake);
+	ToolboxWindow::Initialize();
+	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath("img/icons", "cupcake.png"), IDB_Icon_Cupcake);
 
 	const float s = 64.0f; // all icons are 64x64
 
@@ -220,8 +220,10 @@ void PconsWindow::Initialize() {
 	});
 }
 
-bool PconsWindow::DrawTabButton(IDirect3DDevice9* device) {
-	bool clicked = ToolboxPanel::DrawTabButton(device);
+bool PconsWindow::DrawTabButton(IDirect3DDevice9* device, 
+	bool show_icon, bool show_text) {
+
+	bool clicked = ToolboxWindow::DrawTabButton(device, show_icon, show_text);
 
 	ImGui::PushStyleColor(ImGuiCol_Text, enabled ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
 	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
@@ -319,7 +321,8 @@ void PconsWindow::CheckIfWeJustEnabledAlcoholWithLunarsOn() {
 }
 
 void PconsWindow::LoadSettings(CSimpleIni* ini) {
-	ToolboxPanel::LoadSettings(ini);
+	ToolboxWindow::LoadSettings(ini);
+	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
 
 	for (Pcon* pcon : pcons) {
 		pcon->LoadSettings(ini, Name());
@@ -340,7 +343,7 @@ void PconsWindow::LoadSettings(CSimpleIni* ini) {
 }
 
 void PconsWindow::SaveSettings(CSimpleIni* ini) {
-	ToolboxPanel::SaveSettings(ini);
+	ToolboxWindow::SaveSettings(ini);
 
 	for (Pcon* pcon : pcons) {
 		pcon->SaveSettings(ini, Name());

@@ -3,7 +3,6 @@
 #include <vector>
 
 #include <ToolboxWindow.h>
-#include <ToolboxPanel.h>
 
 class MainWindow : public ToolboxWindow {
 	MainWindow() {};
@@ -25,12 +24,6 @@ public:
 	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
 
-	void RegisterPanel(ToolboxPanel* panel) {
-		panels.push_back(panel);
-	}
-
 private:
-	std::vector<ToolboxPanel*> panels;
-
 	bool one_panel_at_time_only = false;
 };

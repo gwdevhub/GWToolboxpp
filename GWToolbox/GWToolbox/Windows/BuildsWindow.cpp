@@ -11,13 +11,13 @@
 unsigned int BuildsWindow::TeamBuild::cur_ui_id = 0;
 
 void BuildsWindow::Initialize() {
-	ToolboxPanel::Initialize();
-	Resources::Instance().LoadTextureAsync(&texture, Resources::GetPath("img/icons", "list.png"), IDB_Icon_list);
+	ToolboxWindow::Initialize();
+	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath("img/icons", "list.png"), IDB_Icon_list);
 	send_timer = TIMER_INIT();
 }
 
 void BuildsWindow::Terminate() {
-	ToolboxPanel::Terminate();
+	ToolboxWindow::Terminate();
 	teambuilds.clear();
 }
 
@@ -203,7 +203,8 @@ void BuildsWindow::Update() {
 }
 
 void BuildsWindow::LoadSettings(CSimpleIni* ini) {
-	ToolboxPanel::LoadSettings(ini);
+	ToolboxWindow::LoadSettings(ini);
+	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
 
 	// clear builds from toolbox
 	teambuilds.clear();
@@ -243,7 +244,7 @@ void BuildsWindow::LoadSettings(CSimpleIni* ini) {
 }
 
 void BuildsWindow::SaveSettings(CSimpleIni* ini) {
-	ToolboxPanel::SaveSettings(ini);
+	ToolboxWindow::SaveSettings(ini);
 
 	if (builds_changed) {
 		// clear builds from ini

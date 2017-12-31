@@ -64,8 +64,8 @@ void MaterialsWindow::Update() {
 }
 
 void MaterialsWindow::Initialize() {
-	ToolboxPanel::Initialize();
-	Resources::Instance().LoadTextureAsync(&texture, Resources::GetPath("img/icons", "feather.png"), IDB_Icon_Feather);
+	ToolboxWindow::Initialize();
+	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath("img/icons", "feather.png"), IDB_Icon_Feather);
 
 	Resources::Instance().LoadTextureAsync(&tex_essence, Resources::GetPath("img/materials", "Essence_of_Celerity.png"), IDB_Mat_Essence);
 	Resources::Instance().LoadTextureAsync(&tex_grail, Resources::GetPath("img/materials", "Grail_of_Might.png"), IDB_Mat_Grail);
@@ -150,6 +150,10 @@ void MaterialsWindow::Terminate() {
 	if (tex_resscroll) tex_resscroll->Release(); tex_resscroll = nullptr;
 }
 
+void MaterialsWindow::LoadSettings(CSimpleIni* ini) {
+	ToolboxWindow::LoadSettings(ini);
+	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
+}
 
 void MaterialsWindow::Draw(IDirect3DDevice9* pDevice) {
 	if (!visible) return;

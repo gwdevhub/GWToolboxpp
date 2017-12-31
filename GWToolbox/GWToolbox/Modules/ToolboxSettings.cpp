@@ -52,7 +52,7 @@ void ToolboxSettings::InitializeModules() {
 	SettingsWindow::Instance().sep_widgets = GWToolbox::Instance().GetModules().size();
 
 	if (use_timer) TimerWidget::Instance().Initialize();
-	if (use_health)  HealthWidget::Instance().Initialize();
+	if (use_health) HealthWidget::Instance().Initialize();
 	if (use_distance) DistanceWidget::Instance().Initialize();
 	if (use_minimap) Minimap::Instance().Initialize();
 	if (use_damage) PartyDamage::Instance().Initialize();
@@ -71,27 +71,54 @@ void ToolboxSettings::DrawSettingInternal() {
 	ImGui::ShowHelp("Toolbox will save your location every second in a file in Settings Folder.");
 
 	ImGui::Separator();
+	ImGui::PushID("global_enable");
 	ImGui::Text("Enable the following features:");
 	ImGui::TextDisabled("Unticking will completely disable a feature from initializing and running. Requires Toolbox restart.");
-	ImGui::Text("Windows:");
 	ImGui::Checkbox("Pcons", &use_pcons);
+	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
 	ImGui::Checkbox("Hotkeys", &use_hotkeys);
 	ImGui::Checkbox("Builds", &use_builds);
+	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
 	ImGui::Checkbox("Travel", &use_travel);
 	ImGui::Checkbox("Dialogs", &use_dialogs);
+	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
 	ImGui::Checkbox("Info", &use_info);
 	ImGui::Checkbox("Materials", &use_materials);
+	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
 	ImGui::Checkbox("Notepad", &use_notepad);
-	ImGui::Text("Widgets:");
 	ImGui::Checkbox("Timer", &use_timer);
+	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
 	ImGui::Checkbox("Health", &use_health);
 	ImGui::Checkbox("Distance", &use_distance);
+	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
 	ImGui::Checkbox("Minimap", &use_minimap);
 	ImGui::Checkbox("Damage", &use_damage);
+	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
 	ImGui::Checkbox("Bonds", &use_bonds);
 	ImGui::Checkbox("Clock", &use_clock);
+	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
 	ImGui::Checkbox("Vanquish counter", &use_vanquish);
-	ImGui::Checkbox("Alcohol monitor", &use_alcohol);
+	ImGui::Checkbox("Alcohol", &use_alcohol);
+	ImGui::PopID();
+
+	ImGui::PushID("menubuttons");
+	ImGui::Separator();
+	ImGui::Text("Show the following in the main window:");
+	bool odd = true;
+	auto ui = GWToolbox::Instance().GetUIElements();
+	for (unsigned int i = 0; i < ui.size(); ++i) {
+		auto window = ui[i];
+		if (window == &Updater::Instance()) continue;
+		if (window == &MainWindow::Instance()) continue;
+
+		ImGui::Checkbox(window ->Name(), &window->show_menubutton);
+
+		if (i < ui.size() - 1) {
+			if (odd) ImGui::SameLine(ImGui::GetWindowWidth() / 2);
+			odd = !odd; // cannot use i%2 because we skip some elements
+		}
+	}
+	ImGui::PopID();
 }
 
 void ToolboxSettings::DrawFreezeSetting() {

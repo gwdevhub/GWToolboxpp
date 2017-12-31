@@ -4,9 +4,9 @@
 #include <string>
 #include <Defines.h>
 
-#include "ToolboxPanel.h"
+#include "ToolboxWindow.h"
 
-class InfoWindow : public ToolboxPanel {
+class InfoWindow : public ToolboxWindow {
 	InfoWindow() {};
 	~InfoWindow() {};
 public:

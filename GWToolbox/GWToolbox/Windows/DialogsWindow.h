@@ -4,9 +4,9 @@
 #include <vector>
 #include <Defines.h>
 
-#include "ToolboxPanel.h"
+#include "ToolboxWindow.h"
 
-class DialogsWindow : public ToolboxPanel {
+class DialogsWindow : public ToolboxWindow {
 	DialogsWindow() {};
 	~DialogsWindow() {};
 public:

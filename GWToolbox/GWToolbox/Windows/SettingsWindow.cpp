@@ -12,8 +12,13 @@
 #include <Modules\Resources.h>
 
 void SettingsWindow::Initialize() {
-	ToolboxPanel::Initialize();
-	Resources::Instance().LoadTextureAsync(&texture, Resources::GetPath("img/icons", "settings.png"), IDB_Icon_Settings);
+	ToolboxWindow::Initialize();
+	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath("img/icons", "settings.png"), IDB_Icon_Settings);
+}
+
+void SettingsWindow::LoadSettings(CSimpleIni* ini) {
+	ToolboxWindow::LoadSettings(ini);
+	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
 }
 
 void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {

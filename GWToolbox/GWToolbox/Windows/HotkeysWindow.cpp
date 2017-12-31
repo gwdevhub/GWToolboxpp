@@ -10,8 +10,8 @@
 #include <Modules\Resources.h>
 
 void HotkeysWindow::Initialize() {
-	ToolboxPanel::Initialize();
-	Resources::Instance().LoadTextureAsync(&texture, Resources::GetPath("img/icons", "keyboard.png"), IDB_Icon_Keyboard);
+	ToolboxWindow::Initialize();
+	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath("img/icons", "keyboard.png"), IDB_Icon_Keyboard);
 	clickerTimer = TIMER_INIT();
 	dropCoinsTimer = TIMER_INIT();
 }
@@ -114,13 +114,15 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
 }
 
 void HotkeysWindow::DrawSettingInternal() {
-	ToolboxPanel::DrawSettingInternal();
+	ToolboxWindow::DrawSettingInternal();
 	ImGui::Checkbox("Show 'Active' checkbox in header", &TBHotkey::show_active_in_header);
 	ImGui::Checkbox("Show 'Run' button in header", &TBHotkey::show_run_in_header);
 }
 
 void HotkeysWindow::LoadSettings(CSimpleIni* ini) {
-	ToolboxPanel::LoadSettings(ini);
+	ToolboxWindow::LoadSettings(ini);
+	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
+
 	TBHotkey::show_active_in_header = ini->GetBoolValue(Name(), "show_active_in_header", false);
 	TBHotkey::show_run_in_header = ini->GetBoolValue(Name(), "show_run_in_header", false);
 
@@ -141,7 +143,7 @@ void HotkeysWindow::LoadSettings(CSimpleIni* ini) {
 	TBHotkey::hotkeys_changed = false;
 }
 void HotkeysWindow::SaveSettings(CSimpleIni* ini) {
-	ToolboxPanel::SaveSettings(ini);
+	ToolboxWindow::SaveSettings(ini);
 	ini->SetBoolValue(Name(), "show_active_in_header", TBHotkey::show_active_in_header);
 	ini->SetBoolValue(Name(), "show_run_in_header", TBHotkey::show_run_in_header);
 

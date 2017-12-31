@@ -4,9 +4,9 @@
 
 #include <deque>
 
-#include "ToolboxPanel.h"
+#include "ToolboxWindow.h"
 
-class MaterialsWindow : public ToolboxPanel {
+class MaterialsWindow : public ToolboxWindow {
 	enum Item {
 		Essence,
 		Grail,
@@ -46,6 +46,8 @@ public:
 
 	void Initialize() override;
 	void Terminate() override;
+
+	void LoadSettings(CSimpleIni* ini) override;
 	
 	// Update. Will always be called every frame.
 	void Update() override;

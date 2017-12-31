@@ -11,22 +11,24 @@
 #include "GWToolbox.h"
 
 void MainWindow::Initialize() {
+	// skip the Window initialize to avoid registering with ourselves
 	ToolboxWindow::Initialize();
 }
 
 void MainWindow::LoadSettings(CSimpleIni* ini) {
-	bool v = ini->GetBoolValue(Name(), "visible", true);
+	bool v = ini->GetBoolValue(Name(), VAR_NAME(visible), true);
 	ToolboxWindow::LoadSettings(ini);
+	show_menubutton = false;
 	visible = v;
-	one_panel_at_time_only = ini->GetBoolValue(Name(), "one_panel_at_time_only", false);
+	one_panel_at_time_only = ini->GetBoolValue(Name(), VAR_NAME(one_panel_at_time_only), false);
 }
 
 void MainWindow::SaveSettings(CSimpleIni* ini) {
 	ToolboxWindow::SaveSettings(ini);
-	ini->SetBoolValue(Name(), "one_panel_at_time_only", one_panel_at_time_only);
+	ini->SetBoolValue(Name(), VAR_NAME(one_panel_at_time_only), one_panel_at_time_only);
 }
 void MainWindow::DrawSettingInternal() {
-	ImGui::Checkbox("Close other panels when opening a new one", &one_panel_at_time_only);
+	ImGui::Checkbox("Close other windows when opening a new one", &one_panel_at_time_only);
 	ImGui::ShowHelp("Only affects the button in the Toolbox window");
 }
 
@@ -38,13 +40,18 @@ void MainWindow::Draw(IDirect3DDevice9* device) {
 	if (ImGui::Begin(Name(), show_closebutton ? &open : nullptr, GetWinFlags())) {
 
 		ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f18));
-		for (unsigned int i = 0; i < panels.size(); ++i) {
-			if (i > 0) ImGui::Separator();
+		const std::vector<ToolboxUIElement*>& ui = GWToolbox::Instance().GetUIElements();
+		bool drawn = false;
+		for (unsigned int i = 0; i < ui.size(); ++i) {
 			ImGui::PushID(i);
-			if (panels[i]->DrawTabButton(device)) {
-				if (panels[i]->visible && one_panel_at_time_only) {
-					for (unsigned int j = 0; j < panels.size(); ++j) {
-						if (j != i) panels[j]->visible = false;
+			if (ui[i]->show_menubutton) {
+				if (drawn) ImGui::Separator();
+				drawn = true;
+				if (ui[i]->DrawTabButton(device)) {
+					if (ui[i]->visible && one_panel_at_time_only) {
+						for (unsigned int j = 0; j < ui.size(); ++j) {
+							if (j != i) ui[j]->visible = false;
+						}
 					}
 				}
 			}

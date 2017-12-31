@@ -28,11 +28,11 @@
 #include <Modules\Resources.h>
 
 void InfoWindow::Initialize() {
-	ToolboxPanel::Initialize();
+	ToolboxWindow::Initialize();
 
 	GW::Agents::SetupLastDialogHook();
 
-	Resources::Instance().LoadTextureAsync(&texture, Resources::GetPath("img/icons", "info.png"), IDB_Icon_Info);
+	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath("img/icons", "info.png"), IDB_Icon_Info);
 	GW::StoC::AddCallback<GW::Packet::StoC::P081>(
 		[this](GW::Packet::StoC::P081* pak) {
 		if (pak->message[0] == 0x7BFF
@@ -397,7 +397,9 @@ void InfoWindow::DrawSettingInternal() {
 }
 
 void InfoWindow::LoadSettings(CSimpleIni* ini) {
-	ToolboxPanel::LoadSettings(ini);
+	ToolboxWindow::LoadSettings(ini);
+	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
+
 	show_widgets = ini->GetBoolValue(Name(), VAR_NAME(show_widgets), true);
 	show_open_chest = ini->GetBoolValue(Name(), VAR_NAME(show_open_chest), true);
 	show_player = ini->GetBoolValue(Name(), VAR_NAME(show_player), true);
@@ -411,7 +413,7 @@ void InfoWindow::LoadSettings(CSimpleIni* ini) {
 }
 
 void InfoWindow::SaveSettings(CSimpleIni* ini) {
-	ToolboxPanel::SaveSettings(ini);
+	ToolboxWindow::SaveSettings(ini);
 	ini->SetBoolValue(Name(), VAR_NAME(show_widgets), show_widgets);
 	ini->SetBoolValue(Name(), VAR_NAME(show_open_chest), show_open_chest);
 	ini->SetBoolValue(Name(), VAR_NAME(show_player), show_player);
