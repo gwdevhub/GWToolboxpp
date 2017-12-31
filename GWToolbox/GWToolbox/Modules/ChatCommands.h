@@ -14,7 +14,7 @@ class ChatCommands : public ToolboxModule {
 
 	ChatCommands() : move_forward(0), move_side(0), move_up(0),
 		cam_speed_(DEFAULT_CAM_SPEED),
-		skill_to_use(0), skill_usage_delay(1.0f), skill_timer(clock()) {};
+		skill_to_use(), skill_usage_delay(), skill_timer() {};
 	~ChatCommands() {};
 public:
 	static ChatCommands& Instance() {
@@ -61,7 +61,7 @@ private:
 	int move_up;
 	float cam_speed_;
 
-	int skill_to_use;
-	float skill_usage_delay;
-	clock_t skill_timer;
+	bool skill_to_use[8];
+	float skill_usage_delay[8] = { 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f };
+	clock_t skill_timer[8] = { clock(), clock(), clock(), clock(), clock(), clock(), clock(), clock() };
 };

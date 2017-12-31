@@ -67,6 +67,10 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
 				hotkeys.push_back(new HotkeyPingBuild(nullptr, nullptr));
 			}
 			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Ping a build from the Build Panel");
+			if (ImGui::Selectable("Load Hero Team Build")) {
+				hotkeys.push_back(new HotkeyHeroTeamBuild(nullptr, nullptr));
+			}
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Load a team hero build from the Hero Build Panel");
 		#ifdef ENABLE_LUA
 			if (ImGui::Selectable("LUA Command")) {
 				hotkeys.push_back(new HotkeyLUACmd(nullptr, nullptr));

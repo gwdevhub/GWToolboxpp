@@ -147,6 +147,7 @@
     <ClInclude Include="GWToolbox\Widgets\VanquishWidget.h" />
     <ClInclude Include="GWToolbox\Windows\BuildsWindow.h" />
     <ClInclude Include="GWToolbox\Windows\DialogsWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\HeroBuildsWindow.h" />
     <ClInclude Include="GWToolbox\Windows\HotkeysWindow.h" />
     <ClInclude Include="GWToolbox\Windows\Hotkeys.h" />
     <ClInclude Include="GWToolbox\Windows\InfoWindow.h" />
@@ -199,6 +200,7 @@
     <ClCompile Include="GWToolbox\Widgets\VanquishWidget.cpp" />
     <ClCompile Include="GWToolbox\Windows\BuildsWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\DialogsWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\HeroBuildsWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\HotkeysWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\Hotkeys.cpp" />
     <ClCompile Include="GWToolbox\Windows\InfoWindow.cpp" />

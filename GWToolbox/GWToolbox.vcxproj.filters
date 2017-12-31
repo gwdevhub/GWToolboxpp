@@ -109,6 +109,9 @@
     <Filter Include="Resources\bonds">
       <UniqueIdentifier>{8deb1198-ba79-4d65-9a5f-6c6d5935a32c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Windows\HeroBuilds">
+      <UniqueIdentifier>{9453adc8-19e1-455a-8fbe-0385b23a387f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GWToolbox\GuiUtils.h" />
@@ -259,6 +262,9 @@
       <Filter>imgui</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\CursorFix.h" />
+    <ClInclude Include="GWToolbox\Windows\HeroBuildsWindow.h">
+      <Filter>Windows\HeroBuilds</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -388,6 +394,9 @@
       <Filter>imgui</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\CursorFix.cpp" />
+    <ClCompile Include="GWToolbox\Windows\HeroBuildsWindow.cpp">
+      <Filter>Windows\HeroBuilds</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GWToolbox.rc">

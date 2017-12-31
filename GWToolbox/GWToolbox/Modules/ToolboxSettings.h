@@ -40,6 +40,7 @@ private:
 	bool use_pcons = true;
 	bool use_hotkeys = true;
 	bool use_builds = true;
+	bool use_herobuilds = true;
 	bool use_travel = true;
 	bool use_dialogs = true;
 	bool use_info = true;
