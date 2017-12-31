@@ -11,6 +11,20 @@
 
 unsigned int HeroBuildsWindow::TeamHeroBuild::cur_ui_id = 0;
 
+namespace {
+	const int hero_count = 37;
+	const char* hero_names[hero_count] = { "Norgu", "Goren", "Tahlkora", 
+		"Master Of Whispers", "Acolyte Jin", "Koss", "Dunkoro", 
+		"Acolyte Sousuke", "Melonni", "Zhed Shadowhoof", 
+		"General Morgahn", "Magrid The Sly", "Zenmai", 
+		"Olias", "Razah", "MOX", "Jora", "Keiran Thackeray", 
+		"Pyre Fierceshot", "Anton", "Livia", "Hayda", 
+		"Kahmu", "Gwen", "Xandra", "Vekk", "Ogden", 
+		"Mercenary Hero 1", "Mercenary Hero 2", "Mercenary Hero 3", 
+		"Mercenary Hero 4", "Mercenary Hero 5", "Mercenary Hero 6", 
+		"Mercenary Hero 7", "Mercenary Hero 8", "Miku", "Zei Ri" };
+}
+
 void HeroBuildsWindow::Initialize() {
 	ToolboxWindow::Initialize();
 	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath("img/icons", "list.png"), IDB_Icon_list);
@@ -56,7 +70,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 		if (!teambuilds[i].edit_open) continue;
 		TeamHeroBuild& tbuild = teambuilds[i];
 		char winname[128];
-		_snprintf_s(winname, 128, "%s###build%d", tbuild.name, tbuild.ui_id);
+		_snprintf_s(winname, 128, "%s###herobuild%d", tbuild.name, tbuild.ui_id);
 		ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 		ImGui::SetNextWindowSize(ImVec2(500, 0), ImGuiSetCond_FirstUseEver);
 		if (ImGui::Begin(winname, &tbuild.edit_open)) {
@@ -77,8 +91,16 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 				if (j != 0) {
 					ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 					//if (ImGui::InputText("###heroid", build.heroid, 128)) builds_changed = true;
-					if(ImGui::ListBox("###heroid", &build.heroid, listbox_items, IM_ARRAYSIZE(listbox_items), 4)) builds_changed = true;
-					if (ImGui::IsItemHovered()) ImGui::SetTooltip("Set the hero for this template");
+					if (ImGui::MyCombo("###heroid", "Choose Hero", &build.heroid, 
+						[](void* data, int idx, const char** out_text) -> bool {
+						if (idx < 0) return false;
+						if (idx >= hero_count) return false;
+						*out_text = hero_names[idx];
+						return true;
+					}, nullptr, hero_count)) {
+						builds_changed = true;
+					}
+					//if (ImGui::ListBox("###heroid", &build.heroid, listbox_items, IM_ARRAYSIZE(listbox_items), 4)) builds_changed = true;
 				}
 				ImGui::PopItemWidth();
 				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
@@ -164,7 +186,8 @@ void HeroBuildsWindow::Load(const HeroBuildsWindow::TeamHeroBuild& tbuild) {
 }
 
 void HeroBuildsWindow::Load(const TeamHeroBuild& tbuild, unsigned int idx) {
-	if (idx >= tbuild.builds.size() && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) return;
+	if (idx >= tbuild.builds.size()) return;
+	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) return;
 	const HeroBuild& build = tbuild.builds[idx];
 	const std::string name(build.name);
 	const std::string code(build.code);

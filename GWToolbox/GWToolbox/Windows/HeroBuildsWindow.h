@@ -11,7 +11,7 @@
 class HeroBuildsWindow : public ToolboxWindow {
 private:
 	struct HeroBuild {
-		HeroBuild(const char* n = "", const char* c = "", const int i = 0) {
+		HeroBuild(const char* n = "", const char* c = "", const int i = -1) {
 			_snprintf_s(name, 128, "%s", n);
 			_snprintf_s(code, 128, "%s", c);
 			heroid = i;
@@ -76,7 +76,6 @@ private:
 		int heroind;
 	};
 
-	const char* listbox_items[38] = { "Choose Hero", "Norgu", "Goren", "Tahlkora", "Master Of Whispers", "Acolyte Jin", "Koss", "Dunkoro", "Acolyte Sousuke", "Melonni", "Zhed Shadowhoof", "General Morgahn", "Magrid The Sly", "Zenmai", "Olias", "Razah", "MOX", "Jora", "Keiran Thackeray", "Pyre Fierceshot", "Anton", "Livia", "Hayda", "Kahmu", "Gwen", "Xandra", "Vekk", "Ogden", "Mercenary Hero 1", "Mercenary Hero 2", "Mercenary Hero 3", "Mercenary Hero 4", "Mercenary Hero 5", "Mercenary Hero 6", "Mercenary Hero 7", "Mercenary Hero 8", "Miku", "Zei Ri" };
 
 	clock_t send_timer;
 	std::queue<CodeOnHero> queue;
