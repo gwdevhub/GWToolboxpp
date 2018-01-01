@@ -147,21 +147,20 @@ void ChatCommands::Update() {
 		GW::CameraMgr::UpdateCameraPos();
 	}
 
-	for (int i = 0; i < 8; i++) {
-		if (skill_to_use[i]	&& GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable
-			&& (clock() - skill_timer[i]) / 1000.0f > skill_usage_delay[i]) {
+	for (int slot : skills_to_use) {
+		if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable
+			&& (clock() - skill_timer) / 1000.0f > skill_usage_delay) {
 			GW::Skillbar skillbar = GW::Skillbar::GetPlayerSkillbar();
 			if (skillbar.IsValid()) {
-				GW::SkillbarSkill skill = skillbar.Skills[i];
+				GW::SkillbarSkill skill = skillbar.Skills[slot];
 				if (skill.GetRecharge() == 0) {
-					int slot = i;
 					GW::GameThread::Enqueue([slot] {
 						GW::SkillbarMgr::UseSkill(slot, GW::Agents::GetTargetId());
 					});
 
 					GW::Skill skilldata = GW::SkillbarMgr::GetSkillConstantData(skill.SkillId);
-					skill_usage_delay[i] = skilldata.Activation + skilldata.Aftercast + 0.3f; // a small flat delay of .3s for ping and to avoid spamming in case of bad target
-					skill_timer[i] = clock();
+					skill_usage_delay = std::max(skilldata.Activation + skilldata.Aftercast, 0.25f); // a small flat delay of .3s for ping and to avoid spamming in case of bad target
+					skill_timer = clock();
 				}
 			}
 		}
@@ -600,32 +599,38 @@ void ChatCommands::CmdTarget(int argc, LPWSTR *argv) {
 	}
 }
 
+void ChatCommands::ToggleSkill(int skill) {
+	if (skill <= 0 || skill > 8) return;
+	auto i = std::find(skills_to_use.begin(), skills_to_use.end(), skill - 1);
+	if (i == skills_to_use.end()) {
+		skills_to_use.push_front(skill - 1);
+	} else {
+		skills_to_use.erase(i);
+	}
+}
+
 void ChatCommands::CmdUseSkill(int argc, LPWSTR *argv) {
 	if (argc == 1) {
-		for (int i = 0; i < 8; i++) {
-			Instance().skill_to_use[i] = false;
-		}
-	} else if (argc == 2) {
+		Instance().skills_to_use.clear();
+	} else if (argc >= 2) {
 		std::wstring arg1 = GuiUtils::ToLower(argv[1]);
-		if (arg1 == L"stop" || arg1 == L"off") {
-			for (int i = 0; i < 8; i++) {
-				Instance().skill_to_use[i] = false;
-			}
+		if (arg1 == L"stop" || arg1 == L"off" || arg1 == L"0") {
+			Instance().skills_to_use.clear();
 		} else {
-			try {
-				int skill = std::stoi(argv[1]);
-				if (skill >= 0 && skill <= 8) {
-					if (Instance().skill_to_use[skill - 1]) {
-						Instance().skill_to_use[skill - 1] = false;
-						Log::Info("Stoping skill %d on recharge.", skill);
+			for (int i = argc - 1; i > 0; --i) {
+				try {
+					int num = std::stoi(argv[i]);
+					if (num >= 0) {
+						// note: num can be one or more skills
+						while (num > 10) {
+							Instance().ToggleSkill(num % 10);
+							num = num / 10;
+						}
+						Instance().ToggleSkill(num);
 					}
-					else {
-						Instance().skill_to_use[skill - 1] = true;
-						Log::Info("Using skill %d on recharge. Use /useskill to stop all or use /useskill %d to stop %d", skill, skill, skill);
-					}
+				} catch (...) {
+					Log::Error("Invalid argument '%ls', please use an integer value", argv[1]);
 				}
-			} catch (...) {
-				Log::Error("Invalid argument '%ls', please use an integer value", argv[1]);
 			}
 		}
 	}
