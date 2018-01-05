@@ -36,6 +36,8 @@ void HeroBuildsWindow::Initialize() {
 void HeroBuildsWindow::Terminate() {
 	ToolboxWindow::Terminate();
 	teambuilds.clear();
+	inifile->Reset();
+	delete inifile;
 }
 
 void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
