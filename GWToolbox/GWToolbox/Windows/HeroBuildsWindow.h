@@ -55,6 +55,9 @@ public:
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
 
+	void LoadFromFile();
+	void SaveToFile();
+
 	void Load(unsigned int idx);
 	const char* BuildName(unsigned int idx) const;
 	inline unsigned int BuildCount() const { return teambuilds.size(); }
@@ -79,4 +82,6 @@ private:
 
 	clock_t send_timer;
 	std::queue<CodeOnHero> queue;
+
+	CSimpleIni* inifile = nullptr;
 };

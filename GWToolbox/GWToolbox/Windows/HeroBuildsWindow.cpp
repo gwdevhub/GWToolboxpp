@@ -11,9 +11,11 @@
 
 unsigned int HeroBuildsWindow::TeamHeroBuild::cur_ui_id = 0;
 
+#define INI_FILENAME "herobuilds.ini"
+
 namespace {
-	const int hero_count = 37;
-	const char* hero_names[hero_count] = { "Norgu", "Goren", "Tahlkora", 
+	const int hero_count = 38;
+	const char* hero_names[hero_count] = { "No Hero", "Norgu", "Goren", "Tahlkora", 
 		"Master Of Whispers", "Acolyte Jin", "Koss", "Dunkoro", 
 		"Acolyte Sousuke", "Melonni", "Zhed Shadowhoof", 
 		"General Morgahn", "Magrid The Sly", "Zenmai", 
@@ -83,13 +85,15 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 				if(j==0)ImGui::Text("P");
 				else ImGui::Text("H#%d", j);
 				ImGui::SameLine(37.0f);
-				ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 24.0f - 50.0f - 50.0f - 30.0f
+				ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 50.0f - 24.0f
 					- ImGui::GetStyle().ItemInnerSpacing.x * 4) / 3);
 				if (ImGui::InputText("###name", build.name, 128)) builds_changed = true;
 				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 				if (ImGui::InputText("###code", build.code, 128)) builds_changed = true;
-				if (j != 0) {
-					ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+				if (j == 0) {
+					ImGui::Text("Player");
+				} else {
 					if (ImGui::MyCombo("###heroid", "Choose Hero", &build.heroid, 
 						[](void* data, int idx, const char** out_text) -> bool {
 						if (idx < 0) return false;
@@ -101,7 +105,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 					}
 				}
 				ImGui::PopItemWidth();
-				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+				ImGui::SameLine(ImGui::GetWindowWidth() -50.0f - ImGui::GetStyle().WindowPadding.x);
 				if (ImGui::Button("Load", ImVec2(50.0f, 0))) {
 					Load(tbuild, j);
 				}
@@ -109,14 +113,6 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 					if (ImGui::IsItemHovered()) ImGui::SetTooltip("Load Build on Player"); 
 				} else { 
 					if (ImGui::IsItemHovered()) ImGui::SetTooltip("Load Build on Hero"); 
-				}
-				if (j != 0) {
-					ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-					if (ImGui::Button("x", ImVec2(24.0f, 0))) {
-						tbuild.builds.erase(tbuild.builds.begin() + j);
-						builds_changed = true;
-					}
-					if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete build");
 				}
 				ImGui::PopID();
 			}
@@ -141,7 +137,8 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete the teambuild");
 			ImGui::SameLine();
 			ImGui::Checkbox("Hard Mode?", &tbuild.hardmode);
-			ImGui::SameLine(ImGui::GetWindowContentRegionWidth() * 0.6f);
+			ImGui::SameLine(ImGui::GetWindowWidth() - 
+				ImGui::GetStyle().WindowPadding.x - ImGui::GetWindowContentRegionWidth() * 0.4f);
 			if (ImGui::Button("Close", ImVec2(ImGui::GetWindowContentRegionWidth() * 0.4f, 0))) {
 				tbuild.edit_open = false;
 			}
@@ -191,13 +188,13 @@ void HeroBuildsWindow::Load(const TeamHeroBuild& tbuild, unsigned int idx) {
 	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) return;
 	const HeroBuild& build = tbuild.builds[idx];
 	const std::string code(build.code);
-	const int heroid = build.heroid + 1;
+	const int heroid = build.heroid;
 
 	if (idx == 0) { // Player 
 		if (!code.empty()) {
 			GW::SkillbarMgr::LoadSkillTemplate(build.code);
 		}
-	} else if (heroid > 0 && heroid <= hero_count) {
+	} else if (heroid > 0 && heroid < hero_count) {
 		GW::PartyMgr::AddHero(heroid);
 		if (!code.empty()) {
 			queue.push(CodeOnHero(code.c_str(), idx));
@@ -214,45 +211,57 @@ void HeroBuildsWindow::Update() {
 			send_timer = TIMER_INIT();
 		}
 	}
+
+	// if we open the window, load from file. If we close the window, save to file. 
+	static bool _visible = false;
+	if (visible != _visible) {
+		_visible = visible;
+		if (visible) {
+			LoadFromFile();
+		} else {
+			SaveToFile();
+		}
+	}
 }
 
 void HeroBuildsWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxWindow::LoadSettings(ini);
+	LoadFromFile();
+}
+
+void HeroBuildsWindow::SaveSettings(CSimpleIni* ini) {
+	ToolboxWindow::SaveSettings(ini);
+	SaveToFile();
+}
+
+void HeroBuildsWindow::LoadFromFile() {
+	if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
+	inifile->LoadFile(Resources::GetPath(INI_FILENAME).c_str());
 
 	// clear builds from toolbox
 	teambuilds.clear();
 
 	// then load
 	CSimpleIni::TNamesDepend entries;
-	ini->GetAllSections(entries);
+	inifile->GetAllSections(entries);
 	for (CSimpleIni::Entry& entry : entries) {
 		const char* section = entry.pItem;
-		if (strncmp(section, "herobuilds", 10) == 0) {
+		if (strncmp(section, "builds", 6) == 0) {
 			// default to -1 because we didn't have the count field before
-			int count = ini->GetLongValue(section, "count", -1);
-			int count2 = (count >= 0 ? count : 8);
-			teambuilds.push_back(TeamHeroBuild(ini->GetValue(section, "herobuildname", "")));
+			teambuilds.push_back(TeamHeroBuild(inifile->GetValue(section, "buildname", "")));
 			TeamHeroBuild& tbuild = teambuilds.back();
-			tbuild.hardmode = ini->GetBoolValue(section, "hardmode", "");
-			for (int i = 0; i < count2; ++i) {
+			tbuild.hardmode = inifile->GetBoolValue(section, "hardmode", false);
+			for (int i = 0; i < 8; ++i) {
 				char namekey[16];
 				char templatekey[16];
 				char heroidkey[16];
 				sprintf_s(namekey, "name%d", i);
 				sprintf_s(templatekey, "template%d", i);
 				sprintf_s(heroidkey, "heroid%d", i);
-				const char* nameval = ini->GetValue(section, namekey, "");
-				const char* templateval = ini->GetValue(section, templatekey, "");
-				const int heroidval = atoi(ini->GetValue(section, heroidkey, ""));
-				if (count == -1) {
-					// only add if nonempty
-					if (strcmp(nameval, "") || strcmp(templateval, "") || heroidval == 0L) {
-						tbuild.builds.push_back(HeroBuild(nameval, templateval, heroidval));
-					}
-				}
-				else {
-					tbuild.builds.push_back(HeroBuild(nameval, templateval, heroidval));
-				}
+				const char* nameval = inifile->GetValue(section, namekey, "");
+				const char* templateval = inifile->GetValue(section, templatekey, "");
+				const int heroidval = inifile->GetLongValue(section, heroidkey, -1);
+				tbuild.builds.push_back(HeroBuild(nameval, templateval, heroidval));
 			}
 		}
 	}
@@ -260,27 +269,22 @@ void HeroBuildsWindow::LoadSettings(CSimpleIni* ini) {
 	builds_changed = false;
 }
 
-void HeroBuildsWindow::SaveSettings(CSimpleIni* ini) {
-	ToolboxWindow::SaveSettings(ini);
-
+void HeroBuildsWindow::SaveToFile() {
 	if (builds_changed) {
 		// clear builds from ini
 		CSimpleIni::TNamesDepend entries;
-		ini->GetAllSections(entries);
+		inifile->GetAllSections(entries);
 		for (CSimpleIni::Entry& entry : entries) {
-			if (strncmp(entry.pItem, "herobuilds", 6) == 0) {
-				ini->Delete(entry.pItem, nullptr);
-			}
+			inifile->Delete(entry.pItem, nullptr);
 		}
 
 		// then save
 		for (unsigned int i = 0; i < teambuilds.size(); ++i) {
 			const TeamHeroBuild& tbuild = teambuilds[i];
 			char section[16];
-			sprintf_s(section, "herobuilds%03d", i);
-			ini->SetValue(section, "herobuildname", tbuild.name);
-			ini->SetLongValue(section, "count", tbuild.builds.size());
-			ini->SetBoolValue(section, "hardmode", tbuild.hardmode);
+			sprintf_s(section, "builds%03d", i);
+			inifile->SetValue(section, "buildname", tbuild.name);
+			inifile->SetBoolValue(section, "hardmode", tbuild.hardmode);
 			for (unsigned int j = 0; j < tbuild.builds.size(); ++j) {
 				const HeroBuild& build = tbuild.builds[j];
 				char namekey[16];
@@ -289,10 +293,11 @@ void HeroBuildsWindow::SaveSettings(CSimpleIni* ini) {
 				sprintf_s(namekey, "name%d", j);
 				sprintf_s(templatekey, "template%d", j);
 				sprintf_s(heroidkey, "heroid%d", j);
-				ini->SetValue(section, namekey, build.name);
-				ini->SetValue(section, templatekey, build.code);
-				ini->SetValue(section, heroidkey, std::to_string(build.heroid).c_str());
+				inifile->SetValue(section, namekey, build.name);
+				inifile->SetValue(section, templatekey, build.code);
+				inifile->SetLongValue(section, heroidkey, build.heroid);
 			}
 		}
+		inifile->SaveFile(Resources::GetPath(INI_FILENAME).c_str());
 	}
 }

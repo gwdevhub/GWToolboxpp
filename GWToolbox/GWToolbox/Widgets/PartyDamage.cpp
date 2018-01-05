@@ -15,7 +15,7 @@
 #include <Modules\Resources.h>
 #include <Modules\ToolboxSettings.h>
 
-#define IniFilename "healthlog.ini"
+#define INI_FILENAME "healthlog.ini"
 #define IniSection "health"
 
 void PartyDamage::Initialize() {
@@ -341,7 +341,7 @@ void PartyDamage::LoadSettings(CSimpleIni* ini) {
 	color_recent = Colors::Load(ini, Name(), VAR_NAME(color_recent), Colors::ARGB(205, 102, 153, 230));
 
 	if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
-	inifile->LoadFile(Resources::GetPath(IniFilename).c_str());
+	inifile->LoadFile(Resources::GetPath(INI_FILENAME).c_str());
 	CSimpleIni::TNamesDepend keys;
 	inifile->GetAllKeys(IniSection, keys);
 	for (CSimpleIni::Entry key : keys) {
@@ -383,7 +383,7 @@ void PartyDamage::SaveSettings(CSimpleIni* ini) {
 		std::string key = std::to_string(item.first);
 		inifile->SetLongValue(IniSection, key.c_str(), item.second, 0, false, true);
 	}
-	inifile->SaveFile(Resources::GetPath(IniFilename).c_str());
+	inifile->SaveFile(Resources::GetPath(INI_FILENAME).c_str());
 }
 
 void PartyDamage::DrawSettings() {
