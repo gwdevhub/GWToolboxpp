@@ -248,23 +248,20 @@ void HeroBuildsWindow::LoadFromFile() {
 	inifile->GetAllSections(entries);
 	for (CSimpleIni::Entry& entry : entries) {
 		const char* section = entry.pItem;
-		if (strncmp(section, "builds", 6) == 0) {
-			// default to -1 because we didn't have the count field before
-			teambuilds.push_back(TeamHeroBuild(inifile->GetValue(section, "buildname", "")));
-			TeamHeroBuild& tbuild = teambuilds.back();
-			tbuild.hardmode = inifile->GetBoolValue(section, "hardmode", false);
-			for (int i = 0; i < 8; ++i) {
-				char namekey[16];
-				char templatekey[16];
-				char heroidkey[16];
-				sprintf_s(namekey, "name%d", i);
-				sprintf_s(templatekey, "template%d", i);
-				sprintf_s(heroidkey, "heroid%d", i);
-				const char* nameval = inifile->GetValue(section, namekey, "");
-				const char* templateval = inifile->GetValue(section, templatekey, "");
-				const int heroidval = inifile->GetLongValue(section, heroidkey, -1);
-				tbuild.builds.push_back(HeroBuild(nameval, templateval, heroidval));
-			}
+		teambuilds.push_back(TeamHeroBuild(inifile->GetValue(section, "buildname", "")));
+		TeamHeroBuild& tbuild = teambuilds.back();
+		tbuild.hardmode = inifile->GetBoolValue(section, "hardmode", false);
+		for (int i = 0; i < 8; ++i) {
+			char namekey[16];
+			char templatekey[16];
+			char heroidkey[16];
+			sprintf_s(namekey, "name%d", i);
+			sprintf_s(templatekey, "template%d", i);
+			sprintf_s(heroidkey, "heroid%d", i);
+			const char* nameval = inifile->GetValue(section, namekey, "");
+			const char* templateval = inifile->GetValue(section, templatekey, "");
+			const int heroidval = inifile->GetLongValue(section, heroidkey, -1);
+			tbuild.builds.push_back(HeroBuild(nameval, templateval, heroidval));
 		}
 	}
 

@@ -53,6 +53,10 @@ public:
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
 
+	void LoadFromFile();
+	void SaveToFile();
+	bool MoveOldBuilds(CSimpleIni* ini);
+
 	void Send(unsigned int idx);
 	const char* BuildName(unsigned int idx) const;
 	inline unsigned int BuildCount() const { return teambuilds.size(); }
@@ -67,4 +71,6 @@ private:
 
 	clock_t send_timer;
 	std::queue<std::string> queue;
+
+	CSimpleIni* inifile = nullptr;
 };

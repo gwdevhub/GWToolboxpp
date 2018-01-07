@@ -10,6 +10,8 @@
 
 unsigned int BuildsWindow::TeamBuild::cur_ui_id = 0;
 
+#define INI_FILENAME "builds.ini"
+
 void BuildsWindow::Initialize() {
 	ToolboxWindow::Initialize();
 	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath("img/icons", "list.png"), IDB_Icon_list);
@@ -19,6 +21,8 @@ void BuildsWindow::Initialize() {
 void BuildsWindow::Terminate() {
 	ToolboxWindow::Terminate();
 	teambuilds.clear();
+	inifile->Reset();
+	delete inifile;
 }
 
 void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
@@ -200,79 +204,126 @@ void BuildsWindow::Update() {
 			queue.pop();
 		}
 	}
+
+	// if we open the window, load from file. If we close the window, save to file. 
+	static bool _visible = false;
+	if (visible != _visible) {
+		_visible = visible;
+		if (visible) {
+			LoadFromFile();
+		} else {
+			SaveToFile();
+		}
+	}
 }
 
 void BuildsWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxWindow::LoadSettings(ini);
 	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
+	if (MoveOldBuilds(ini)) {
+		// loaded
+	} else {
+		LoadFromFile();
+	}
+}
 
-	// clear builds from toolbox
-	teambuilds.clear();
+void BuildsWindow::SaveSettings(CSimpleIni* ini) {
+	ToolboxWindow::SaveSettings(ini);
+	SaveToFile();
+}
 
-	// then load
-	CSimpleIni::TNamesDepend entries;
-	ini->GetAllSections(entries);
-	for (CSimpleIni::Entry& entry : entries) {
-		const char* section = entry.pItem;
+bool BuildsWindow::MoveOldBuilds(CSimpleIni* ini) {
+	if (!teambuilds.empty()) return false; // builds are already loaded, skip
+
+	bool found_old_build = false;
+	CSimpleIni::TNamesDepend oldentries;
+	ini->GetAllSections(oldentries);
+	for (CSimpleIni::Entry& oldentry : oldentries) {
+		const char* section = oldentry.pItem;
 		if (strncmp(section, "builds", 6) == 0) {
-			// default to -1 because we didn't have the count field before
-			int count = ini->GetLongValue(section, "count", -1); 
-			int count2 = (count >= 0 ? count : 12);
+			int count = ini->GetLongValue(section, "count", 12);
 			teambuilds.push_back(TeamBuild(ini->GetValue(section, "buildname", "")));
 			TeamBuild& tbuild = teambuilds.back();
 			tbuild.show_numbers = ini->GetBoolValue(section, "showNumbers", true);
-			for (int i = 0; i < count2; ++i) {
+			for (int i = 0; i < count; ++i) {
 				char namekey[16];
 				char templatekey[16];
 				sprintf_s(namekey, "name%d", i);
 				sprintf_s(templatekey, "template%d", i);
 				const char* nameval = ini->GetValue(section, namekey, "");
 				const char* templateval = ini->GetValue(section, templatekey, "");
-				if (count == -1) {
-					// only add if nonempty
-					if (strcmp(nameval, "") || strcmp(templateval, "")) {
-						tbuild.builds.push_back(Build(nameval, templateval));
-					}
-				} else {
-					tbuild.builds.push_back(Build(nameval, templateval));
-				}
+				tbuild.builds.push_back(Build(nameval, templateval));
 			}
+			found_old_build = true;
+			ini->Delete(section, nullptr);
+		}
+	}
+
+	if (found_old_build) {
+		builds_changed = true;
+		SaveToFile();
+		return true;
+	} else {
+		return false;
+	}
+}
+
+void BuildsWindow::LoadFromFile() {
+	// clear builds from toolbox
+	teambuilds.clear();
+
+	if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
+	inifile->LoadFile(Resources::GetPath(INI_FILENAME).c_str());
+
+	// then load
+	CSimpleIni::TNamesDepend entries;
+	inifile->GetAllSections(entries);
+	for (CSimpleIni::Entry& entry : entries) {
+		const char* section = entry.pItem;
+		int count = inifile->GetLongValue(section, "count", 12);
+		teambuilds.push_back(TeamBuild(inifile->GetValue(section, "buildname", "")));
+		TeamBuild& tbuild = teambuilds.back();
+		tbuild.show_numbers = inifile->GetBoolValue(section, "showNumbers", true);
+		for (int i = 0; i < count; ++i) {
+			char namekey[16];
+			char templatekey[16];
+			sprintf_s(namekey, "name%d", i);
+			sprintf_s(templatekey, "template%d", i);
+			const char* nameval = inifile->GetValue(section, namekey, "");
+			const char* templateval = inifile->GetValue(section, templatekey, "");
+			tbuild.builds.push_back(Build(nameval, templateval));
 		}
 	}
 
 	builds_changed = false;
 }
 
-void BuildsWindow::SaveSettings(CSimpleIni* ini) {
-	ToolboxWindow::SaveSettings(ini);
+void BuildsWindow::SaveToFile() {
+	if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
 
 	if (builds_changed) {
 		// clear builds from ini
-		CSimpleIni::TNamesDepend entries;
-		ini->GetAllSections(entries);
-		for (CSimpleIni::Entry& entry : entries) {
-			if (strncmp(entry.pItem, "builds", 6) == 0) {
-				ini->Delete(entry.pItem, nullptr);
-			}
-		}
+		inifile->Reset();
 
 		// then save
 		for (unsigned int i = 0; i < teambuilds.size(); ++i) {
 			const TeamBuild& tbuild = teambuilds[i];
 			char section[16];
 			sprintf_s(section, "builds%03d", i);
-			ini->SetValue(section, "buildname", tbuild.name);
-			ini->SetBoolValue(section, "showNumbers", tbuild.show_numbers);
-			ini->SetLongValue(section, "count", tbuild.builds.size());
+			inifile->SetValue(section, "buildname", tbuild.name);
+			inifile->SetBoolValue(section, "showNumbers", tbuild.show_numbers);
+			inifile->SetLongValue(section, "count", tbuild.builds.size());
 			for (unsigned int j = 0; j < tbuild.builds.size(); ++j) {
 				const Build& build = tbuild.builds[j];
 				char namekey[16];
 				char templatekey[16];
 				sprintf_s(namekey, "name%d", j);
 				sprintf_s(templatekey, "template%d", j);
-				ini->SetValue(section, namekey, build.name);
-				ini->SetValue(section, templatekey, build.code);
+				inifile->SetValue(section, namekey, build.name);
+				inifile->SetValue(section, templatekey, build.code);
 			}
 		}
+
+		inifile->SaveFile(Resources::GetPath(INI_FILENAME).c_str());
 	}
 }

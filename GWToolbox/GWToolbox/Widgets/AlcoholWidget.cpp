@@ -43,7 +43,7 @@ void AlcoholWidget::Draw(IDirect3DDevice9* pDevice) {
 	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return;
 
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
-	ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiSetCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(200.0f, 90.0f), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, true))) {
 		static char timer[32];
 		ImVec2 cur;
