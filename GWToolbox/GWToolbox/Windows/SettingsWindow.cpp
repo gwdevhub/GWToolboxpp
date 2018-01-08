@@ -31,7 +31,7 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::Text("GWToolbox++ version %s by Has and KAOS", GWTOOLBOX_VERSION);
 		if (BETA_VERSION[0]) {
 			ImGui::SameLine();
-			ImGui::Text("%s", BETA_VERSION);
+			ImGui::Text("- %s", BETA_VERSION);
 		} else {
 			const std::string server_version = Updater::Instance().GetServerVersion();
 			if (!server_version.empty()) {
