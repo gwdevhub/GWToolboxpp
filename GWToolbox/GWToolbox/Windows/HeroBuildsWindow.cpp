@@ -177,6 +177,7 @@ void HeroBuildsWindow::Load(unsigned int idx) {
 	}
 }
 void HeroBuildsWindow::Load(const HeroBuildsWindow::TeamHeroBuild& tbuild) {
+	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) return;
 	GW::PartyMgr::KickAllHeroes();
 	GW::PartyMgr::SetHardMode(tbuild.hardmode);
 	for (unsigned int i = 0; i < tbuild.builds.size(); ++i) {
@@ -211,6 +212,8 @@ void HeroBuildsWindow::Update() {
 			GW::SkillbarMgr::LoadSkillTemplate(queue.front().code, queue.front().heroind);
 			queue.pop();
 			send_timer = TIMER_INIT();
+		} else {
+			queue.empty(); 
 		}
 	}
 
