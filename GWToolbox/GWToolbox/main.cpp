@@ -20,6 +20,7 @@ DWORD WINAPI init(HMODULE hModule){
 		SafeThreadEntry(hModule);
 	} __except ( EXCEPT_EXPRESSION_ENTRY ) {
 	}
+	return 0;
 }
 
 // DLL entry point, dont do things in this thread unless you know what you are doing.
