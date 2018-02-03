@@ -325,6 +325,7 @@ int PconLunar::QuantityForEach(const GW::Item* item) const {
 	case ItemID::LunarSnake:
 	case ItemID::LunarMonkey:
 	case ItemID::LunarRooster:
+	case ItemID::LunarDog:
 		return 1;
 	default:
 		return 0;

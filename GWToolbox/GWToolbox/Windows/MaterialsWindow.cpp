@@ -509,7 +509,7 @@ DWORD MaterialsWindow::RequestSellQuote(Material material) {
 			&& cur->ModelId == modelid 
 			&& cur->AgentId == 0
 			&& cur->Bag != nullptr
-			&& cur->Bag->index < 5
+			&& cur->Bag->Index < 5
 			&& cur->Interaction == 8200) {
 			item = cur;
 			break;
