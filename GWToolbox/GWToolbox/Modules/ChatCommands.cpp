@@ -470,11 +470,13 @@ void ChatCommands::CmdCamera(int argc, LPWSTR *argv) {
 			GW::CameraMgr::UnlockCam(true);
 			Log::Info("Use W,A,S,D,X,Z for camera movement");
 		} else if (arg1 == L"fog") {
-			std::wstring arg2 = GuiUtils::ToLower(argv[2]);
-			if (arg2 == L"on") {
-				GW::CameraMgr::SetFog(true);
-			} else if (arg2 == L"off") {
-				GW::CameraMgr::SetFog(false);
+			if (argc == 3) {
+				std::wstring arg2 = GuiUtils::ToLower(argv[2]);
+				if (arg2 == L"on") {
+					GW::CameraMgr::SetFog(true);
+				} else if (arg2 == L"off") {
+					GW::CameraMgr::SetFog(false);
+				}
 			}
 		} else if (arg1 == L"fov") {
 			if (argc == 2) {
