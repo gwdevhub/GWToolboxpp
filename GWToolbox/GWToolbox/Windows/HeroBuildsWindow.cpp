@@ -15,15 +15,55 @@ unsigned int HeroBuildsWindow::TeamHeroBuild::cur_ui_id = 0;
 
 namespace {
 	const int hero_count = 38;
-	const char* hero_names[hero_count] = { "No Hero", "Norgu", "Goren", "Tahlkora", 
-		"Master Of Whispers", "Acolyte Jin", "Koss", "Dunkoro", 
-		"Acolyte Sousuke", "Melonni", "Zhed Shadowhoof", 
-		"General Morgahn", "Magrid The Sly", "Zenmai", 
-		"Olias", "Razah", "MOX", "Jora", "Keiran Thackeray", 
-		"Pyre Fierceshot", "Anton", "Livia", "Hayda", 
-		"Kahmu", "Gwen", "Xandra", "Vekk", "Ogden", 
-		"Mercenary Hero 1", "Mercenary Hero 2", "Mercenary Hero 3", 
-		"Mercenary Hero 4", "Mercenary Hero 5", "Mercenary Hero 6", 
+
+	const int HeroIndexToID[] = {
+		GW::Constants::HeroID::Goren,
+		GW::Constants::HeroID::Koss,
+		GW::Constants::HeroID::Jora,
+		GW::Constants::HeroID::AcolyteJin,
+		GW::Constants::HeroID::MargridTheSly,
+		GW::Constants::HeroID::PyreFierceshot,
+		GW::Constants::HeroID::Tahlkora,
+		GW::Constants::HeroID::Dunkoro,
+		GW::Constants::HeroID::Ogden,
+		GW::Constants::HeroID::MasterOfWhispers,
+		GW::Constants::HeroID::Olias,
+		GW::Constants::HeroID::Livia,
+		GW::Constants::HeroID::Norgu,
+		GW::Constants::HeroID::Razah,
+		GW::Constants::HeroID::Gwen,
+		GW::Constants::HeroID::AcolyteSousuke,
+		GW::Constants::HeroID::ZhedShadowhoof,
+		GW::Constants::HeroID::Vekk,
+		GW::Constants::HeroID::Zenmai,
+		GW::Constants::HeroID::Anton,
+		GW::Constants::HeroID::Miku,
+		GW::Constants::HeroID::Xandra,
+		GW::Constants::HeroID::GeneralMorgahn,
+		GW::Constants::HeroID::KeiranThackeray,
+		GW::Constants::HeroID::Hayda,
+		GW::Constants::HeroID::Melonni,
+		GW::Constants::HeroID::MOX,
+		GW::Constants::HeroID::Kahmu,
+		GW::Constants::HeroID::Merc1,
+		GW::Constants::HeroID::Merc2,
+		GW::Constants::HeroID::Merc3,
+		GW::Constants::HeroID::Merc4,
+		GW::Constants::HeroID::Merc5,
+		GW::Constants::HeroID::Merc6,
+		GW::Constants::HeroID::Merc7,
+		GW::Constants::HeroID::Merc8
+	};
+
+	const char* HeroName[] = { "No Hero", "Norgu", "Goren", "Tahlkora",
+		"Master Of Whispers", "Acolyte Jin", "Koss", "Dunkoro",
+		"Acolyte Sousuke", "Melonni", "Zhed Shadowhoof",
+		"General Morgahn", "Magrid The Sly", "Zenmai",
+		"Olias", "Razah", "MOX", "Jora", "Keiran Thackeray",
+		"Pyre Fierceshot", "Anton", "Livia", "Hayda",
+		"Kahmu", "Gwen", "Xandra", "Vekk", "Ogden",
+		"Mercenary Hero 1", "Mercenary Hero 2", "Mercenary Hero 3",
+		"Mercenary Hero 4", "Mercenary Hero 5", "Mercenary Hero 6",
 		"Mercenary Hero 7", "Mercenary Hero 8", "Miku", "Zei Ri" };
 }
 
@@ -96,11 +136,11 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 				if (j == 0) {
 					ImGui::Text("Player");
 				} else {
-					if (ImGui::MyCombo("###heroid", "Choose Hero", &build.heroid, 
+					if (ImGui::MyCombo("###heroid", "Choose Hero", &build.heroidx,
 						[](void* data, int idx, const char** out_text) -> bool {
 						if (idx < 0) return false;
 						if (idx >= hero_count) return false;
-						*out_text = hero_names[idx];
+						*out_text = HeroName[HeroIndexToID[idx]];
 						return true;
 					}, nullptr, hero_count)) {
 						builds_changed = true;
@@ -191,7 +231,7 @@ void HeroBuildsWindow::Load(const TeamHeroBuild& tbuild, unsigned int idx) {
 	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) return;
 	const HeroBuild& build = tbuild.builds[idx];
 	const std::string code(build.code);
-	const int heroid = build.heroid;
+	const int heroid = HeroIndexToID[build.heroidx];
 
 	if (idx == 0) { // Player 
 		if (!code.empty()) {
@@ -297,7 +337,7 @@ void HeroBuildsWindow::SaveToFile() {
 				sprintf_s(heroidkey, "heroid%d", j);
 				inifile->SetValue(section, namekey, build.name);
 				inifile->SetValue(section, templatekey, build.code);
-				inifile->SetLongValue(section, heroidkey, build.heroid);
+				inifile->SetLongValue(section, heroidkey, build.heroidx);
 			}
 		}
 		inifile->SaveFile(Resources::GetPath(INI_FILENAME).c_str());

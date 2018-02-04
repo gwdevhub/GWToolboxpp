@@ -23,6 +23,12 @@ bool ImGui::MyCombo(const char* label, const char* preview_text, int* current_it
 		items_getter(data, *current_item, &preview_text);
 	}
 
+	// this is actually shared between all combos. It's kinda ok because there is
+	// only one combo open at any given time, however it causes a problem where
+	// if you open combo -> keyboard select (but no enter) and close, the 
+	// keyboard_selected will stay as-is when re-opening the combo, or even others.
+	static int keyboard_selected = -1;
+
 	if (!BeginCombo(label, preview_text)) {
 		return false;
 	}
@@ -58,7 +64,6 @@ bool ImGui::MyCombo(const char* label, const char* preview_text, int* current_it
 
 	// find best keyboard match
 	int best = -1;
-	static int keyboard_selected = -1;
 	bool keyboard_selected_now = false;
 	if (update_keyboard_match) {
 		for (int i = 0; i < items_count; ++i) {
@@ -79,6 +84,8 @@ bool ImGui::MyCombo(const char* label, const char* preview_text, int* current_it
 
 	if (IsKeyPressed(VK_RETURN) && keyboard_selected >= 0) {
 		*current_item = keyboard_selected;
+		keyboard_selected = -1;
+		CloseCurrentPopup();
 		EndCombo();
 		return true;
 	}
@@ -104,6 +111,7 @@ bool ImGui::MyCombo(const char* label, const char* preview_text, int* current_it
 		if (Selectable(item_text, item_selected || item_keyboard_selected)) {
 			value_changed = true;
 			*current_item = i;
+			keyboard_selected = -1;
 		}
 		if (item_selected && IsWindowAppearing()) {
 			SetScrollHere();

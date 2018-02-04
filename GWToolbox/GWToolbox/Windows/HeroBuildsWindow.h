@@ -14,11 +14,11 @@ private:
 		HeroBuild(const char* n = "", const char* c = "", const int i = -1) {
 			_snprintf_s(name, 128, "%s", n);
 			_snprintf_s(code, 128, "%s", c);
-			heroid = i;
+			heroidx = i;
 		}
 		char name[128];
 		char code[128];
-		int heroid;
+		int heroidx;
 	};
 	struct TeamHeroBuild {
 		static unsigned int cur_ui_id;
