@@ -34,7 +34,7 @@ void ChatFilter::Initialize() {
 	GW::StoC::AddCallback<GW::Packet::StoC::P082>(
 		[this](GW::Packet::StoC::P082* pak) -> bool {
 #ifdef PRINT_CHAT_PACKETS
-		printf("P082: id %d, type %d %s\n", pak->id, pak->type, kill_next_msgdelivery ? "(killed)" : "");
+		printf("P082: id %d, type %d\n", pak->id, pak->type);
 #endif // PRINT_CHAT_PACKETS
 
 		GW::Array<wchar_t> *buff = &GW::GameContext::instance()->world->message_buff;
@@ -83,7 +83,7 @@ void ChatFilter::Initialize() {
 	GW::StoC::AddCallback<GW::Packet::StoC::P085>(
 		[this](GW::Packet::StoC::P085* pak) -> bool {
 #ifdef PRINT_CHAT_PACKETS
-		printf("P085: id %d, type %d %s\n", pak->id, pak->type, kill_next_msgdelivery ? "(killed)" : "");
+		printf("P085: id %d, type %d\n", pak->id, pak->type);
 #endif // PRINT_CHAT_PACKETS
 
 		GW::Array<wchar_t> *buff = &GW::GameContext::instance()->world->message_buff;
@@ -236,8 +236,10 @@ bool ChatFilter::FullMatch(const wchar_t* s, const std::initializer_list<wchar_t
 }
 
 bool ChatFilter::ShouldIgnore(const wchar_t *message) {
-	//for (size_t i = 0; message[i] != 0; ++i) printchar(message[i]);
-	//printf("\n");
+#ifdef PRINT_CHAT_PACKETS
+	for (size_t i = 0; message[i] != 0; ++i) printchar(message[i]);
+	printf("\n");
+#endif // PRINT_CHAT_PACKETS
 
 	switch (message[0]) {
 		// ==== Messages not ignored ====
@@ -309,13 +311,20 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 
 	case 0x8101:
 		switch (message[1]) {
-		case 0x1868: // teilah takes 10 festival tickets
+			// nine rings
 		case 0x1867: // stay where you are, nine rings is about to begin
+		case 0x1868: // teilah takes 10 festival tickets
 		case 0x1869: // big winner! 55 tickets
 		case 0x186A: // you win 40 tickets
 		case 0x186B: // you win 25 festival tickets
 		case 0x186C: // you win 15 festival tickets
 		case 0x186D: // did not win 9rings
+			// rings of fortune
+		case 0x1526: // The rings of fortune did not favor you this time. Stay in the area to try again. 
+		case 0x1529: // Pan takes 2 festival tickets
+		case 0x152A: // stay right were you are! rings of fortune is about to begin!
+		case 0x152B: // you win 12 festival tickets
+		case 0x152C: // You win 3 festival tickets
 			return ninerings;
 		}
 		if (FullMatch(&message[1], { 0x6649, 0xA2F9, 0xBBFA, 0x3C27 })) return lunars; // you will celebrate a festive new year (rocket or popper)
