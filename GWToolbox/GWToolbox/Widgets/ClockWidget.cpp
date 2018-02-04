@@ -14,11 +14,11 @@ void ClockWidget::Draw(IDirect3DDevice9* pDevice) {
 	if (ImGui::Begin(Name(), nullptr, GetWinFlags())) {
 		static char timer[32];
 		if (use_24h_clock) {
-			sprintf_s(timer, "%02d:%02d", time.wHour, time.wMinute);
+			snprintf(timer, 32, "%02d:%02d", time.wHour, time.wMinute);
 		} else {
 			int hour = time.wHour % 12;
 			if (hour == 0) hour = 12;
-			sprintf_s(timer, "%d:%02d %s", hour, time.wMinute, (time.wHour >= 12 ? "p.m." : "a.m."));
+			snprintf(timer, 32, "%d:%02d %s", hour, time.wMinute, (time.wHour >= 12 ? "p.m." : "a.m."));
 		}
 		ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f48));
 		ImVec2 cur = ImGui::GetCursorPos();

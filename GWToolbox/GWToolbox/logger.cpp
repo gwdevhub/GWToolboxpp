@@ -90,7 +90,7 @@ static void _vchatlog(GW::Chat::Channel chan, const char* format, va_list argv) 
 	vsprintf_s(buf1, format, argv);
 
 	char buf2[256];
-	_snprintf(buf2, 256, "<c=#00ccff>GWToolbox++</c>: %s", buf1);
+	snprintf(buf2, 256, "<c=#00ccff>GWToolbox++</c>: %s", buf1);
 	GW::Chat::WriteChat(chan, buf2);
 
 	const char* c = [](GW::Chat::Channel chan) -> const char* {

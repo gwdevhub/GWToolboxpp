@@ -164,7 +164,7 @@ void HotkeysWindow::SaveSettings(CSimpleIni* ini) {
 		// then save again
 		char buf[256];
 		for (unsigned int i = 0; i < hotkeys.size(); ++i) {
-			sprintf_s(buf, "hotkey-%03d:%s", i, hotkeys[i]->Name());
+			snprintf(buf, 256, "hotkey-%03d:%s", i, hotkeys[i]->Name());
 			hotkeys[i]->Save(ini, buf);
 		}
 	}

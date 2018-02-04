@@ -52,7 +52,7 @@ void AlcoholWidget::Draw(IDirect3DDevice9* pDevice) {
 		if (alcohol_level) {
 			t = (long)((int)last_alcohol + ((int)alcohol_time)) - (long)time(NULL);
 		}
-		sprintf_s(timer, "%1ld:%02ld", (t / 60) % 60, t % 60);
+		snprintf(timer, 32, "%1ld:%02ld", (t / 60) % 60, t % 60);
 
 		ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f20));
 		cur = ImGui::GetCursorPos();

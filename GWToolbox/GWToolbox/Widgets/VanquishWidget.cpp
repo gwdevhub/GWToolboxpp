@@ -19,7 +19,7 @@ void VanquishWidget::Draw(IDirect3DDevice9 *pDevice) {
 	ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), nullptr, GetWinFlags())) {
 		static char foes_count[32] = "";
-		sprintf_s(foes_count, "%u / %u", killed, tokill + killed);
+		snprintf(foes_count, 32, "%u / %u", killed, tokill + killed);
 
 		// vanquished
 		ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f20));

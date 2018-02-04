@@ -47,7 +47,7 @@ namespace Colors {
 
 	static void Save(CSimpleIni* ini, const char* section, const char* key, Color val) {
 		char buf[64];
-		sprintf_s(buf, "0x%X", val);
+		snprintf(buf, 64, "0x%X", val);
 		ini->SetValue(section, key, buf);
 	}
 

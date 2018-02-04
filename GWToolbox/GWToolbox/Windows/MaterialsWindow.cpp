@@ -552,7 +552,7 @@ std::string MaterialsWindow::GetPrice(MaterialsWindow::Material mat1, float fac1
 		return "Price: Computing (in queue)";
 	} else {
 		char buf[128];
-		sprintf_s(buf, "Price: %g k", (p1 * fac1 + p2 * fac2 + extra) / 1000.0f);
+		snprintf(buf, 128, "Price: %g k", (p1 * fac1 + p2 * fac2 + extra) / 1000.0f);
 		return std::string(buf);
 	}
 }
@@ -573,7 +573,7 @@ void MaterialsWindow::FullConsPriceTooltip() const {
 		} else {
 			int p = price[IronIngot] * 10 + price[PileofGlitteringDust] * 10 +
 				price[Bone] * 5 + price[Feather] * 5 + 750;
-			sprintf_s(buf, "Full Conset Price: %g k", p / 1000.0f);
+			snprintf(buf, 256, "Full Conset Price: %g k", p / 1000.0f);
 		}
 		ImGui::SetTooltip(buf);
 	}

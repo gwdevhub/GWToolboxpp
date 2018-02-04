@@ -247,20 +247,20 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 				Colors::Sub(color_recent, Colors::ARGB(0, 20, 20, 20)));
 
 			if (damage[i].damage < 1000) {
-				sprintf_s(buf, BUF_SIZE, "%d", damage[i].damage);
+				snprintf(buf, BUF_SIZE, "%d", damage[i].damage);
 			} else if (damage[i].damage < 1000 * 10) {
-				sprintf_s(buf, BUF_SIZE, "%.2f k", (float)damage[i].damage / 1000);
+				snprintf(buf, BUF_SIZE, "%.2f k", (float)damage[i].damage / 1000);
 			} else if (damage[i].damage < 1000 * 1000) {
-				sprintf_s(buf, BUF_SIZE, "%.1f k", (float)damage[i].damage / 1000);
+				snprintf(buf, BUF_SIZE, "%.1f k", (float)damage[i].damage / 1000);
 			} else {
-				sprintf_s(buf, BUF_SIZE, "%.2f m", (float)damage[i].damage / (1000 * 1000));
+				snprintf(buf, BUF_SIZE, "%.2f m", (float)damage[i].damage / (1000 * 1000));
 			}
 			ImGui::GetWindowDrawList()->AddText(
 				ImVec2(x + ImGui::GetStyle().ItemSpacing.x, y + i * line_height),
 				IM_COL32(255, 255, 255, 255), buf);
 
 			float perc_of_total = GetPercentageOfTotal(damage[i].damage);
-			sprintf_s(buf, BUF_SIZE, "%.1f %%", perc_of_total);
+			snprintf(buf, BUF_SIZE, "%.1f %%", perc_of_total);
 			ImGui::GetWindowDrawList()->AddText(
 				ImVec2(x + width / 2, y + i * line_height),
 				IM_COL32(255, 255, 255, 255), buf);

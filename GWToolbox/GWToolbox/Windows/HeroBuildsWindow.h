@@ -12,8 +12,8 @@ class HeroBuildsWindow : public ToolboxWindow {
 private:
 	struct HeroBuild {
 		HeroBuild(const char* n = "", const char* c = "", const int i = -1) {
-			_snprintf_s(name, 128, "%s", n);
-			_snprintf_s(code, 128, "%s", c);
+			snprintf(name, 128, "%s", n);
+			snprintf(code, 128, "%s", c);
 			heroidx = i;
 		}
 		char name[128];
@@ -24,7 +24,7 @@ private:
 		static unsigned int cur_ui_id;
 		TeamHeroBuild(const char* n = "")
 			: ui_id(++cur_ui_id) {
-			_snprintf_s(name, 128, "%s", n);
+			snprintf(name, 128, "%s", n);
 		}
 		bool edit_open = false;
 		char name[128];
@@ -72,7 +72,7 @@ private:
 
 	struct CodeOnHero {
 		CodeOnHero(const char* c = "", int i = 0) {
-			_snprintf_s(code, 128, "%s", c);
+			snprintf(code, 128, "%s", c);
 			heroind = i;
 		}
 		char code[128];

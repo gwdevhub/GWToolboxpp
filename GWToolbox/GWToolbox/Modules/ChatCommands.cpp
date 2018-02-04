@@ -198,7 +198,7 @@ bool ChatCommands::ReadTemplateFile(std::wstring path, char *buff, size_t buffSi
 void ChatCommands::CmdAge2(int argc, LPWSTR *argv) {
 	char buffer[32];
 	DWORD second = GW::Map::GetInstanceTime() / 1000;
-	sprintf_s(buffer, "%02u:%02u:%02u", (second / 3600), (second / 60) % 60, second % 60);
+	snprintf(buffer, 32, "%02u:%02u:%02u", (second / 3600), (second / 60) % 60, second % 60);
 	Log::Info(buffer);
 }
 

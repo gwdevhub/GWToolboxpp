@@ -129,10 +129,10 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
 				try {
 					if (hex) { // was hex, convert to dec
 						long id = std::stol(customdialogbuf, 0, 16);
-						sprintf_s(customdialogbuf, "%d", id);
+						snprintf(customdialogbuf, 64, "%d", id);
 					} else { // was dec, convert to hex
 						long id = std::stol(customdialogbuf, 0, 10);
-						sprintf_s(customdialogbuf, "%X", id);
+						snprintf(customdialogbuf, 64, "%X", id);
 					}
 				} catch (...) {}
 				hex = !hex;
@@ -181,7 +181,7 @@ void DialogsWindow::LoadSettings(CSimpleIni* ini) {
 	fav_index.resize(fav_count, 0);
 	for (int i = 0; i < fav_count; ++i) {
 		char key[32];
-		sprintf_s(key, "Quest%d", i);
+		snprintf(key, 32, "Quest%d", i);
 		fav_index[i] = ini->GetLongValue(Name(), key, 0);
 	}
 	show_common = ini->GetBoolValue(Name(), VAR_NAME(show_common), true);
@@ -195,7 +195,7 @@ void DialogsWindow::SaveSettings(CSimpleIni* ini) {
 	ini->SetLongValue(Name(), "fav_count", fav_count);
 	for (int i = 0; i < fav_count; ++i) {
 		char key[32];
-		sprintf_s(key, "Quest%d", i);
+		snprintf(key, 32, "Quest%d", i);
 		ini->SetLongValue(Name(), key, fav_index[i]);
 	}
 	ini->SetBoolValue(Name(), VAR_NAME(show_common), show_common);

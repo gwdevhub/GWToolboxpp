@@ -267,7 +267,7 @@ static const char* KeyName(long vkey) {
 //}
 
 inline int ModKeyName(CHAR* buf, int bufsz, LONG mod, LONG vkey, const char* ifempty = "") {
-	return sprintf_s(buf, bufsz, "%s%s%s%s",
+	return snprintf(buf, bufsz, "%s%s%s%s",
 		(mod & Key_Control) ? "Control + " : "",
 		(mod & Key_Alt) ? "Alt + " : "",
 		(mod & Key_Shift) ? "Shift + " : "",

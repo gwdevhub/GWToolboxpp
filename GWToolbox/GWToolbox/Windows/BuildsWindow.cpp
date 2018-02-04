@@ -59,7 +59,7 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 		if (!teambuilds[i].edit_open) continue;
 		TeamBuild& tbuild = teambuilds[i];
 		char winname[128];
-		_snprintf_s(winname, 128, "%s###build%d", tbuild.name, tbuild.ui_id);
+		snprintf(winname, 128, "%s###build%d", tbuild.name, tbuild.ui_id);
 		ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 		ImGui::SetNextWindowSize(ImVec2(500, 0), ImGuiSetCond_FirstUseEver);
 		if (ImGui::Begin(winname, &tbuild.edit_open)) {
@@ -180,16 +180,16 @@ void BuildsWindow::Send(const TeamBuild& tbuild, unsigned int idx) {
 	} else if (name.empty()) {
 		// name is empty, fill it with the teambuild name
 		
-		_snprintf_s(buf, buf_size, "[%s %d;%s]", tbuild.name, idx + 1, build.code);
+		snprintf(buf, buf_size, "[%s %d;%s]", tbuild.name, idx + 1, build.code);
 	} else if (code.empty()) {
 		// code is empty, just print the name without template format
-		_snprintf_s(buf, buf_size, "%s", build.name);
+		snprintf(buf, buf_size, "%s", build.name);
 	} else if (tbuild.show_numbers) {
 		// add numbers in front of name
-		_snprintf_s(buf, buf_size, "[%d - %s;%s]", idx + 1, build.name, build.code);
+		snprintf(buf, buf_size, "[%d - %s;%s]", idx + 1, build.name, build.code);
 	} else {
 		// simple template
-		_snprintf_s(buf, buf_size, "[%s;%s]", build.name, build.code);
+		snprintf(buf, buf_size, "[%s;%s]", build.name, build.code);
 	}
 	queue.push(buf);
 }
@@ -248,8 +248,8 @@ bool BuildsWindow::MoveOldBuilds(CSimpleIni* ini) {
 			for (int i = 0; i < count; ++i) {
 				char namekey[16];
 				char templatekey[16];
-				sprintf_s(namekey, "name%d", i);
-				sprintf_s(templatekey, "template%d", i);
+				snprintf(namekey, 16, "name%d", i);
+				snprintf(templatekey, 16, "template%d", i);
 				const char* nameval = ini->GetValue(section, namekey, "");
 				const char* templateval = ini->GetValue(section, templatekey, "");
 				tbuild.builds.push_back(Build(nameval, templateval));
@@ -287,8 +287,8 @@ void BuildsWindow::LoadFromFile() {
 		for (int i = 0; i < count; ++i) {
 			char namekey[16];
 			char templatekey[16];
-			sprintf_s(namekey, "name%d", i);
-			sprintf_s(templatekey, "template%d", i);
+			snprintf(namekey, 16, "name%d", i);
+			snprintf(templatekey, 16, "template%d", i);
 			const char* nameval = inifile->GetValue(section, namekey, "");
 			const char* templateval = inifile->GetValue(section, templatekey, "");
 			tbuild.builds.push_back(Build(nameval, templateval));
@@ -309,7 +309,7 @@ void BuildsWindow::SaveToFile() {
 		for (unsigned int i = 0; i < teambuilds.size(); ++i) {
 			const TeamBuild& tbuild = teambuilds[i];
 			char section[16];
-			sprintf_s(section, "builds%03d", i);
+			snprintf(section, 16, "builds%03d", i);
 			inifile->SetValue(section, "buildname", tbuild.name);
 			inifile->SetBoolValue(section, "showNumbers", tbuild.show_numbers);
 			inifile->SetLongValue(section, "count", tbuild.builds.size());
@@ -317,8 +317,8 @@ void BuildsWindow::SaveToFile() {
 				const Build& build = tbuild.builds[j];
 				char namekey[16];
 				char templatekey[16];
-				sprintf_s(namekey, "name%d", j);
-				sprintf_s(templatekey, "template%d", j);
+				snprintf(namekey, 16, "name%d", j);
+				snprintf(templatekey, 16, "template%d", j);
 				inifile->SetValue(section, namekey, build.name);
 				inifile->SetValue(section, templatekey, build.code);
 			}

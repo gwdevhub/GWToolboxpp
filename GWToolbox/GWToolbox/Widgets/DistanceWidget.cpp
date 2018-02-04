@@ -17,8 +17,8 @@ void DistanceWidget::Draw(IDirect3DDevice9* pDevice) {
 		GW::Agent* target = GW::Agents::GetTarget();
 		if (me && target && me != target) {
 			float dist = GW::Agents::GetDistance(me->pos, target->pos);
-			sprintf_s(dist_perc, "%2.0f %s", dist * 100 / GW::Constants::Range::Compass, "%%");
-			sprintf_s(dist_abs, "%.0f", dist);
+			snprintf(dist_perc, 32, "%2.0f %s", dist * 100 / GW::Constants::Range::Compass, "%%");
+			snprintf(dist_abs, 32, "%.0f", dist);
 
 			ImVec2 cur;
 

@@ -12,8 +12,8 @@ class BuildsWindow : public ToolboxWindow {
 private:
 	struct Build {
 		Build(const char* n = "", const char* c = "") {
-			_snprintf_s(name, 128, "%s", n);
-			_snprintf_s(code, 128, "%s", c);
+			snprintf(name, 128, "%s", n);
+			snprintf(code, 128, "%s", c);
 		}
 		char name[128];
 		char code[128];
@@ -22,7 +22,7 @@ private:
 		static unsigned int cur_ui_id;
 		TeamBuild(const char* n = "")
 			: ui_id(++cur_ui_id) {
-			_snprintf_s(name, 128, "%s", n);
+			snprintf(name, 128, "%s", n);
 		}
 		bool edit_open = false;
 		bool show_numbers = false;

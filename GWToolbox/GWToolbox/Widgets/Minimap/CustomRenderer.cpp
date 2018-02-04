@@ -76,7 +76,7 @@ void CustomRenderer::SaveMarkers() const {
 		for (unsigned i = 0; i < lines.size(); ++i) {
 			const CustomLine& line = lines[i];
 			char section[32];
-			sprintf_s(section, "customline%03d", i);
+			snprintf(section, 32, "customline%03d", i);
 			inifile->SetValue(section, "name", line.name);
 			inifile->SetDoubleValue(section, "x1", line.p1.x);
 			inifile->SetDoubleValue(section, "y1", line.p1.y);
@@ -88,7 +88,7 @@ void CustomRenderer::SaveMarkers() const {
 		for (unsigned i = 0; i < markers.size(); ++i) {
 			const CustomMarker& marker = markers[i];
 			char section[32];
-			sprintf_s(section, "custommarker%03d", i);
+			snprintf(section, 32, "custommarker%03d", i);
 			inifile->SetValue(section, "name", marker.name);
 			inifile->SetDoubleValue(section, "x", marker.pos.x);
 			inifile->SetDoubleValue(section, "y", marker.pos.y);
@@ -200,14 +200,14 @@ void CustomRenderer::DrawSettings() {
 	float button_width = (ImGui::CalcItemWidth() - ImGui::GetStyle().ItemSpacing.x) / 2;
 	if (ImGui::Button("Add Line", ImVec2(button_width, 0.0f))) {
 		char buf[32];
-		sprintf_s(buf, "line%d", lines.size());
+		snprintf(buf, 32, "line%d", lines.size());
 		lines.push_back(CustomLine(buf));
 		markers_changed = true;
 	}
 	ImGui::SameLine(0.0f, ImGui::GetStyle().ItemSpacing.x);
 	if (ImGui::Button("Add Marker", ImVec2(button_width, 0.0f))) {
 		char buf[32];
-		sprintf_s(buf, "marker%d", markers.size());
+		snprintf(buf, 32, "marker%d", markers.size());
 		markers.push_back(CustomMarker(buf));
 		markers_changed = true;
 	}

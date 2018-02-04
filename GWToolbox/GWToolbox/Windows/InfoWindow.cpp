@@ -128,12 +128,12 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			static char modelid_buf[32] = "";
 			GW::Agent* player = GW::Agents::GetPlayer();
 			if (player) {
-				sprintf_s(x_buf, "%.2f", player->pos.x);
-				sprintf_s(y_buf, "%.2f", player->pos.y);
+				snprintf(x_buf, 32, "%.2f", player->pos.x);
+				snprintf(y_buf, 32, "%.2f", player->pos.y);
 				float s = sqrtf(player->MoveX * player->MoveX + player->MoveY * player->MoveY);
-				sprintf_s(s_buf, "%.3f", s / 288.0f);
-				sprintf_s(agentid_buf, "%d", player->Id);
-				sprintf_s(modelid_buf, "%d", player->PlayerNumber);
+				snprintf(s_buf, 32, "%.3f", s / 288.0f);
+				snprintf(agentid_buf, 32, "%d", player->Id);
+				snprintf(modelid_buf, 32, "%d", player->PlayerNumber);
 			}
 			ImGui::PushItemWidth(-80.0f);
 			ImGui::InputText("X pos##player", x_buf, 32, ImGuiInputTextFlags_ReadOnly);
@@ -153,18 +153,18 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			static char modelid_buf[32] = "";
 			GW::Agent* target = GW::Agents::GetTarget();
 			if (target) {
-				sprintf_s(x_buf, "%.2f", target->pos.x);
-				sprintf_s(y_buf, "%.2f", target->pos.y);
+				snprintf(x_buf, 32, "%.2f", target->pos.x);
+				snprintf(y_buf, 32, "%.2f", target->pos.y);
 				float s = sqrtf(target->MoveX * target->MoveX + target->MoveY * target->MoveY);
-				sprintf_s(s_buf, "%.3f", s / 288.0f);
-				sprintf_s(agentid_buf, "%d", target->Id);
-				sprintf_s(modelid_buf, "%d", target->PlayerNumber);
+				snprintf(s_buf, 32, "%.3f", s / 288.0f);
+				snprintf(agentid_buf, 32, "%d", target->Id);
+				snprintf(modelid_buf, 32, "%d", target->PlayerNumber);
 			} else {
-				sprintf_s(x_buf, "-");
-				sprintf_s(y_buf, "-");
-				sprintf_s(s_buf, "-");
-				sprintf_s(agentid_buf, "-");
-				sprintf_s(modelid_buf, "-");
+				snprintf(x_buf, 32, "-");
+				snprintf(y_buf, 32, "-");
+				snprintf(s_buf, 32, "-");
+				snprintf(agentid_buf, 32, "-");
+				snprintf(modelid_buf, 32, "-");
 			}
 			ImGui::PushItemWidth(-80.0f);
 			ImGui::InputText("X pos##target", x_buf, 32, ImGuiInputTextFlags_ReadOnly);
@@ -214,13 +214,13 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			static char id_buf[32] = "";
 			char* type = "";
 			static char file_buf[32] = "";
-			sprintf_s(id_buf, "%d", GW::Map::GetMapID());
+			snprintf(id_buf, 32, "%d", GW::Map::GetMapID());
 			switch (GW::Map::GetInstanceType()) {
 			case GW::Constants::InstanceType::Outpost: type = "Outpost\0\0\0"; break;
 			case GW::Constants::InstanceType::Explorable: type = "Explorable"; break;
 			case GW::Constants::InstanceType::Loading: type = "Loading\0\0\0"; break;
 			}
-			sprintf_s(file_buf, "%d", mapfile);
+			snprintf(file_buf, 32, "%d", mapfile);
 			ImGui::PushItemWidth(-80.0f);
 			ImGui::InputText("Map ID", id_buf, 32, ImGuiInputTextFlags_ReadOnly);
 			ImGui::ShowHelp("Map ID is unique for each area");
@@ -231,7 +231,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 		}
 		if (show_dialog && ImGui::CollapsingHeader("Dialog")) {
 			static char id_buf[32] = "";
-			sprintf_s(id_buf, "0x%X", GW::Agents::GetLastDialogId());
+			snprintf(id_buf, 32, "0x%X", GW::Agents::GetLastDialogId());
 			ImGui::PushItemWidth(-80.0f);
 			ImGui::InputText("Last Dialog", id_buf, 32, ImGuiInputTextFlags_ReadOnly);
 			ImGui::PopItemWidth();
@@ -239,9 +239,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 		if (show_item && ImGui::CollapsingHeader("Items")) {
 			ImGui::Text("First item in inventory");
 			static char modelid[32] = "";
-			//static char itemid[32] = "";
 			strcpy_s(modelid, "-");
-			//strcpy_s(itemid, "-");
 			GW::Bag** bags = GW::Items::GetBagArray();
 			if (bags) {
 				GW::Bag* bag1 = bags[1];
@@ -250,8 +248,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 					if (items.valid()) {
 						GW::Item* item = items[0];
 						if (item) {
-							sprintf_s(modelid, "%d", item->ModelId);
-							//sprintf_s(itemid, "%d", item->ItemId);
+							snprintf(modelid, 32, "%d", item->ModelId);
 						}
 					}
 				}
@@ -363,7 +360,7 @@ void InfoWindow::DrawResignlog() {
 		if (ImGui::Button("Send")) {
 			// Todo: wording probably needs improvement
 			char buf[256];
-			sprintf_s(buf, "%d. %S - %s", i + 1, player.Name,
+			snprintf(buf, 256, "%d. %S - %s", i + 1, player.Name,
 				(status[i] == Connected 
 					&& GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) 
 				? "Connected (not resigned)" : status_str);

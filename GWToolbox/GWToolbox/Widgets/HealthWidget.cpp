@@ -16,15 +16,15 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
 		GW::Agent* target = GW::Agents::GetTarget();
 		if (target && target->GetIsCharacterType()) {
 			if (target->HP >= 0) {
-				sprintf_s(health_perc, "%.0f %s", target->HP * 100, "%%");
+				snprintf(health_perc, 32, "%.0f %s", target->HP * 100, "%%");
 			} else {
-				sprintf_s(health_perc, "-");
+				snprintf(health_perc, 32, "-");
 			}
 			if (target->MaxHP > 0) {
 				float abs = target->HP * target->MaxHP;
-				sprintf_s(health_abs, "%.0f / %d", abs, target->MaxHP);
+				snprintf(health_abs, 32, "%.0f / %d", abs, target->MaxHP);
 			} else {
-				sprintf_s(health_abs, "-");
+				snprintf(health_abs, 32, "-");
 			}
 
 			ImVec2 cur;

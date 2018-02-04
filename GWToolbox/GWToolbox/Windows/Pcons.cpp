@@ -166,9 +166,9 @@ void Pcon::LoadSettings(CSimpleIni* inifile, const char* section) {
 	char buf_active[256];
 	char buf_threshold[256];
 	char buf_visible[256];
-	sprintf_s(buf_active, "%s_active", ini);
-	sprintf_s(buf_threshold, "%s_threshold", ini);
-	sprintf_s(buf_visible, "%s_visible", ini);
+	snprintf(buf_active, 256, "%s_active", ini);
+	snprintf(buf_threshold, 256, "%s_threshold", ini);
+	snprintf(buf_visible, 256, "%s_visible", ini);
 	enabled = inifile->GetBoolValue(section, buf_active);
 	threshold = inifile->GetLongValue(section, buf_threshold, threshold);
 	visible = inifile->GetBoolValue(section, buf_visible, true);
@@ -177,9 +177,9 @@ void Pcon::SaveSettings(CSimpleIni* inifile, const char* section) {
 	char buf_active[256];
 	char buf_threshold[256];
 	char buf_visible[256];
-	sprintf_s(buf_active, "%s_active", ini);
-	sprintf_s(buf_threshold, "%s_threshold", ini);
-	sprintf_s(buf_visible, "%s_visible", ini);
+	snprintf(buf_active, 256, "%s_active", ini);
+	snprintf(buf_threshold, 256, "%s_threshold", ini);
+	snprintf(buf_visible, 256, "%s_visible", ini);
 	inifile->SetBoolValue(section, buf_active, enabled);
 	inifile->SetLongValue(section, buf_threshold, threshold);
 	inifile->SetBoolValue(section, buf_visible, visible);

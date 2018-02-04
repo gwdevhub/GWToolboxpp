@@ -114,7 +114,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 		if (!teambuilds[i].edit_open) continue;
 		TeamHeroBuild& tbuild = teambuilds[i];
 		char winname[128];
-		_snprintf_s(winname, 128, "%s###herobuild%d", tbuild.name, tbuild.ui_id);
+		snprintf(winname, 128, "%s###herobuild%d", tbuild.name, tbuild.ui_id);
 		ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 		ImGui::SetNextWindowSize(ImVec2(500, 0), ImGuiSetCond_FirstUseEver);
 		if (ImGui::Begin(winname, &tbuild.edit_open)) {
@@ -298,9 +298,9 @@ void HeroBuildsWindow::LoadFromFile() {
 			char namekey[16];
 			char templatekey[16];
 			char heroidkey[16];
-			sprintf_s(namekey, "name%d", i);
-			sprintf_s(templatekey, "template%d", i);
-			sprintf_s(heroidkey, "heroid%d", i);
+			snprintf(namekey, 16, "name%d", i);
+			snprintf(templatekey, 16, "template%d", i);
+			snprintf(heroidkey, 16, "heroid%d", i);
 			const char* nameval = inifile->GetValue(section, namekey, "");
 			const char* templateval = inifile->GetValue(section, templatekey, "");
 			const int heroidval = inifile->GetLongValue(section, heroidkey, -1);
@@ -324,7 +324,7 @@ void HeroBuildsWindow::SaveToFile() {
 		for (unsigned int i = 0; i < teambuilds.size(); ++i) {
 			const TeamHeroBuild& tbuild = teambuilds[i];
 			char section[16];
-			sprintf_s(section, "builds%03d", i);
+			snprintf(section, 16, "builds%03d", i);
 			inifile->SetValue(section, "buildname", tbuild.name);
 			inifile->SetBoolValue(section, "hardmode", tbuild.hardmode);
 			for (unsigned int j = 0; j < tbuild.builds.size(); ++j) {
@@ -332,9 +332,9 @@ void HeroBuildsWindow::SaveToFile() {
 				char namekey[16];
 				char templatekey[16];
 				char heroidkey[16];
-				sprintf_s(namekey, "name%d", j);
-				sprintf_s(templatekey, "template%d", j);
-				sprintf_s(heroidkey, "heroid%d", j);
+				snprintf(namekey, 16, "name%d", j);
+				snprintf(templatekey, 16, "template%d", j);
+				snprintf(heroidkey, 16, "heroid%d", j);
 				inifile->SetValue(section, namekey, build.name);
 				inifile->SetValue(section, templatekey, build.code);
 				inifile->SetLongValue(section, heroidkey, build.heroidx);

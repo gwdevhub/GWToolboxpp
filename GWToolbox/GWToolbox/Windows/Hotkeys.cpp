@@ -100,7 +100,7 @@ void TBHotkey::Draw(Op* op) {
 	char keybuf[128];
 	Description(desbuf, 128);
 	ModKeyName(keybuf, 128, modifier, hotkey, "<None>");
-	_snprintf_s(header, 128, "%s [%s]###header%u", desbuf, keybuf, ui_id);
+	snprintf(header, 128, "%s [%s]###header%u", desbuf, keybuf, ui_id);
 	ImGuiTreeNodeFlags flags = (show_active_in_header || show_run_in_header) 
 		? ImGuiTreeNodeFlags_AllowItemOverlap : 0;
 	if (!ImGui::CollapsingHeader(header, flags)) {
@@ -119,7 +119,7 @@ void TBHotkey::Draw(Op* op) {
 		ImGui::SameLine();
 		static LONG newkey = 0;
 		char keybuf2[128];
-		_snprintf_s(keybuf2, 128, "Hotkey: %s", keybuf);
+		snprintf(keybuf2, 128, "Hotkey: %s", keybuf);
 		if (ImGui::Button(keybuf2, ImVec2(-70.0f, 0))) {
 			ImGui::OpenPopup("Select Hotkey");
 			newkey = 0;
@@ -208,11 +208,11 @@ void HotkeySendChat::Save(CSimpleIni* ini, const char* section) const {
 	TBHotkey::Save(ini, section);
 	ini->SetValue(section, "msg", message);
 	char buf[8];
-	sprintf_s(buf, "%c", channel);
+	snprintf(buf, 8, "%c", channel);
 	ini->SetValue(section, "channel", buf);
 }
 void HotkeySendChat::Description(char* buf, int bufsz) const {
-	_snprintf(buf, bufsz, "Send chat '%c%s'", channel, message);
+	snprintf(buf, bufsz, "Send chat '%c%s'", channel, message);
 }
 void HotkeySendChat::Draw() {
 	int index = 0;
@@ -265,9 +265,9 @@ void HotkeyUseItem::Save(CSimpleIni* ini, const char* section) const {
 }
 void HotkeyUseItem::Description(char* buf, int bufsz) const {
 	if (name[0] == '\0') {
-		_snprintf(buf, bufsz, "Use #%d", item_id);
+		snprintf(buf, bufsz, "Use #%d", item_id);
 	} else {
-		_snprintf(buf, bufsz, "Use %s", name);
+		snprintf(buf, bufsz, "Use %s", name);
 	}
 }
 void HotkeyUseItem::Draw() {
@@ -299,7 +299,7 @@ bool HotkeyDropUseBuff::GetText(void* data, int idx, const char** out_text) {
 	case UA: *out_text = "UA"; break;
 	case HolyVeil: *out_text = "Holy Veil"; break;
 	default:
-		_snprintf_s(other_buf, 64, "Skill#%d", (int)data);
+		snprintf(other_buf, 64, "Skill#%d", (int)data);
 		*out_text = other_buf;
 		break;
 	}
@@ -324,7 +324,7 @@ void HotkeyDropUseBuff::Save(CSimpleIni* ini, const char* section) const {
 void HotkeyDropUseBuff::Description(char* buf, int bufsz) const {
 	const char* skillname;
 	GetText((void*)id, GetIndex(), &skillname);
-	_snprintf(buf, bufsz, "Drop/Use %s", skillname);
+	snprintf(buf, bufsz, "Drop/Use %s", skillname);
 }
 void HotkeyDropUseBuff::Draw() {
 	SkillIndex index = GetIndex();
@@ -374,7 +374,7 @@ void HotkeyToggle::Save(CSimpleIni* ini, const char* section) const {
 void HotkeyToggle::Description(char* buf, int bufsz) const {
 	const char* name;
 	GetText(nullptr, (int)target, &name);
-	_snprintf(buf, bufsz, "Toggle %s", name);
+	snprintf(buf, bufsz, "Toggle %s", name);
 }
 void HotkeyToggle::Draw() {
 	if (ImGui::Combo("Toggle###combo", (int*)&target, GetText, nullptr, n_targets)) hotkeys_changed = true;
@@ -416,7 +416,7 @@ void HotkeyAction::Save(CSimpleIni* ini, const char* section) const {
 void HotkeyAction::Description(char* buf, int bufsz) const {
 	const char* name;
 	GetText(nullptr, (int)action, &name);
-	_snprintf(buf, bufsz, "%s", name);
+	snprintf(buf, bufsz, "%s", name);
 }
 void HotkeyAction::Draw() {
 	if (ImGui::Combo("Action###combo", (int*)&action, GetText, nullptr, n_actions)) hotkeys_changed = true;
@@ -462,9 +462,9 @@ void HotkeyTarget::Save(CSimpleIni* ini, const char* section) const {
 }
 void HotkeyTarget::Description(char* buf, int bufsz) const {
 	if (name[0] == '\0') {
-		_snprintf(buf, bufsz, "Target #%d", id);
+		snprintf(buf, bufsz, "Target #%d", id);
 	} else {
-		_snprintf(buf, bufsz, "Target %s", name);
+		snprintf(buf, bufsz, "Target %s", name);
 	}
 }
 void HotkeyTarget::Draw() {
@@ -519,9 +519,9 @@ void HotkeyMove::Save(CSimpleIni* ini, const char* section) const {
 }
 void HotkeyMove::Description(char* buf, int bufsz) const {
 	if (name[0] == '\0') {
-		_snprintf(buf, bufsz, "Move to (%.0f, %.0f)", x, y);
+		snprintf(buf, bufsz, "Move to (%.0f, %.0f)", x, y);
 	} else {
-		_snprintf(buf, bufsz, "Move to %s", name);
+		snprintf(buf, bufsz, "Move to %s", name);
 	}
 }
 void HotkeyMove::Draw() {
@@ -559,9 +559,9 @@ void HotkeyDialog::Save(CSimpleIni* ini, const char* section) const {
 }
 void HotkeyDialog::Description(char* buf, int bufsz) const {
 	if (name[0] == '\0') {
-		_snprintf(buf, bufsz, "Dialog #%d", id);
+		snprintf(buf, bufsz, "Dialog #%d", id);
 	} else {
-		_snprintf(buf, bufsz, "Dialog %s", name);
+		snprintf(buf, bufsz, "Dialog %s", name);
 	}
 }
 void HotkeyDialog::Draw() {
@@ -590,7 +590,7 @@ void HotkeyPingBuild::Save(CSimpleIni* ini, const char* section) const {
 void HotkeyPingBuild::Description(char* buf, int bufsz) const {
 	const char* buildname = BuildsWindow::Instance().BuildName(index);
 	if (buildname == nullptr) buildname = "<not found>";
-	_snprintf(buf, bufsz, "Ping build '%s'", buildname);
+	snprintf(buf, bufsz, "Ping build '%s'", buildname);
 }
 void HotkeyPingBuild::Draw() {
 	if (ImGui::Combo("Build", &index, GetText, nullptr, BuildsWindow::Instance().BuildCount())) hotkeys_changed = true;
@@ -616,7 +616,7 @@ void HotkeyHeroTeamBuild::Save(CSimpleIni* ini, const char* section) const {
 void HotkeyHeroTeamBuild::Description(char* buf, int bufsz) const {
 	const char* buildname = HeroBuildsWindow::Instance().BuildName(index);
 	if (buildname == nullptr) buildname = "<not found>";
-	_snprintf(buf, bufsz, "Load Team Hero Build '%s'", buildname);
+	snprintf(buf, bufsz, "Load Team Hero Build '%s'", buildname);
 }
 void HotkeyHeroTeamBuild::Draw() {
 	if (ImGui::Combo("Build", &index, GetText, nullptr, BuildsWindow::Instance().BuildCount())) hotkeys_changed = true;
