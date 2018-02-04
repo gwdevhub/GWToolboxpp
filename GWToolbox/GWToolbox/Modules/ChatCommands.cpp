@@ -17,6 +17,7 @@
 #include <GWCA\Managers\GameThreadMgr.h>
 #include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\MapMgr.h>
+#include <GWCA\Context\GameContext.h>
 
 #include <GuiUtils.h>
 #include "GWToolbox.h"
@@ -93,6 +94,7 @@ void ChatCommands::Initialize() {
 	GW::Chat::CreateCommand(L"skilluse", ChatCommands::CmdUseSkill);
 	GW::Chat::CreateCommand(L"scwiki", ChatCommands::CmdSCWiki);
 	GW::Chat::CreateCommand(L"load", ChatCommands::CmdLoad);
+	GW::Chat::CreateCommand(L"transmo", ChatCommands::CmdTransmo);
 }
 
 bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
@@ -686,4 +688,88 @@ void ChatCommands::CmdLoad(int argc, LPWSTR *argv) {
 		GW::SkillbarMgr::LoadSkillTemplate(temp);	
 	else if (argc == 3)
 		GW::SkillbarMgr::LoadSkillTemplate(temp, std::stoi(argv[2]));
+}
+
+void ChatCommands::CmdTransmo(int argc, LPWSTR *argv) {
+	int scale = 0;
+	if (argc == 2) {
+		GuiUtils::ParseInt(argv[1], &scale);
+		if (scale < 6 || scale > 255) {
+			Log::Error("scale must be between [6, 255]");
+			return;
+		}
+	}
+
+	GW::Agent *target = GW::Agents::GetTarget();
+	if (!target || !target->GetIsCharacterType()) return;
+
+	DWORD npc_id = 0;
+	if (target->IsPlayer()) {
+		npc_id = target->TransmogNpcId & 0x0FFFFFFF;
+	} else {
+		npc_id = target->PlayerNumber;
+	}
+
+	if (!npc_id) return;
+	GW::NPCArray &npcs = GW::GameContext::instance()->world->npcs;
+	GW::NPC &npc = npcs[npc_id];
+
+#if 0
+	// Those 2 packets (P074 & P075) are used to create a new model, for instance if we want to "use" a tonic.
+	// We have to find the data that are in the NPC structure and feed them to those 2 packets.
+
+	GW::GameThread::Enqueue([npc_id, npc]()
+	{
+		GW::Packet::StoC::P074_NpcGeneralStats packet;
+		packet.header = 74;
+		packet.npc_id = npc_id;
+		packet.file_id = npc.ModelFileID;
+		packet.data1 = 0;
+		packet.scale = npc.scale;
+		packet.data2 = 0;
+		packet.flags = npc.NpcFlags;
+		packet.profession = npc.Profession;
+		packet.level = 0;
+		packet.name[0] = 0;
+
+		GW::StoC::EmulatePacket((GW::Packet::StoC::PacketBase *)&packet);
+	});
+
+	GW::GameThread::Enqueue([npc_id, npc]()
+	{
+		GW::Packet::StoC::P075 packet;
+		packet.header = 75;
+		packet.npc_id = npc_id;
+
+		// If we found a npc that have more than 1 ModelFiles, we can determine which one of h0028, h002C are size and capacity.
+		assert((npc.h0028 <= 1) && (npc.h002C <= 1));
+		if (npc.ModelFiles) {
+			packet.count = 1;
+			packet.data[0] = npc.ModelFiles[0];
+		} else {
+			packet.count = 0;
+		}
+
+		GW::StoC::EmulatePacket((GW::Packet::StoC::PacketBase *)&packet);
+	});
+#endif
+
+	GW::GameThread::Enqueue([scale]()
+	{
+		GW::Packet::StoC::P142 packet;
+		packet.header = 142;
+		packet.agent_id = GW::Agents::GetPlayerId();
+		packet.scale = (DWORD)scale << 24;
+
+		GW::StoC::EmulatePacket((GW::Packet::StoC::PacketBase *)&packet);
+	});
+
+	GW::GameThread::Enqueue([npc_id]()
+	{
+		GW::Packet::StoC::P162 packet;
+		packet.header = 162;
+		packet.agent_id = GW::Agents::GetPlayerId();
+		packet.model_id = npc_id;
+		GW::StoC::EmulatePacket((GW::Packet::StoC::PacketBase *)&packet);
+	});
 }

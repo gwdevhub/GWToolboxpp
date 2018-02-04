@@ -52,6 +52,7 @@ private:
 	static void CmdCamera(int argc, LPWSTR *argv);
 	static void CmdSCWiki(int argc, LPWSTR *argv);
 	static void CmdLoad(int argc, LPWSTR *argv);
+	static void CmdTransmo(int argc, LPWSTR *argv);
 
 	static std::vector<ToolboxUIElement*> MatchingWindows(int argc, LPWSTR *argv);
 
