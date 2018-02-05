@@ -113,8 +113,8 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 	for (unsigned int i = 0; i < teambuilds.size(); ++i) {
 		if (!teambuilds[i].edit_open) continue;
 		TeamHeroBuild& tbuild = teambuilds[i];
-		char winname[128];
-		snprintf(winname, 128, "%s###herobuild%d", tbuild.name, tbuild.ui_id);
+		char winname[256];
+		snprintf(winname, 256, "%s###herobuild%d", tbuild.name, tbuild.ui_id);
 		ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 		ImGui::SetNextWindowSize(ImVec2(500, 0), ImGuiSetCond_FirstUseEver);
 		if (ImGui::Begin(winname, &tbuild.edit_open)) {

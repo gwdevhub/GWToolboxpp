@@ -21,8 +21,13 @@ Opt("MustDeclareVars", True)
 Opt("GuiResizeMode", BitOR($GUI_DOCKSIZE, $GUI_DOCKTOP, $GUI_DOCKLEFT))
 
 ; ==== Globals ====
+Global Const $debug = True And Not @Compiled
+Global Const $no_update = True
+Global Const $host = "http://fbgmguild.com/GWToolboxpp/"
 Global Const $folder = @LocalAppDataDir & "\GWToolboxpp\"
 Global Const $dllpath = $folder & "GWToolbox.dll"
+Global Const $imgFolder = $folder & "img\"
+Global Const $locationLogsFolder = $folder & "location logs\"
 
 Global $mKernelHandle, $mGWProcHandle, $mCharname
 Global $gui = 0, $label = 0, $progress = 0, $changelabel = 0, $height = 0
@@ -32,9 +37,14 @@ Func EnsureFolderExists($folder)
 EndFunc
 
 ; ==== Create directories ====
-If Not FileExists($folder) Then
-	DirCreate($folder)
-EndIf
+EnsureFolderExists($folder)
+If Not FileExists($folder) Then Error("failed to create installation folder")
+EnsureFolderExists($folder & "img\")
+EnsureFolderExists($folder & "img\bonds\")
+EnsureFolderExists($folder & "img\materials\")
+EnsureFolderExists($folder & "img\icons\")
+EnsureFolderExists($folder & "img\pcons\")
+EnsureFolderExists($folder & "location logs\")
 
 ; ==== Disclaimer ====
 If Not FileExists($dllpath) Then
@@ -46,20 +56,169 @@ If Not FileExists($dllpath) Then
 EndIf
 
 ; ==== Updates ====
-Download()
-Func Download()
-	If FileExists($dllpath) Then Return
+Update()
+Func Update()
+	If $debug And $no_update Then Return
 
-	Local $version = BinaryToString(InetRead("https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/toolboxversion.txt"))
-	ConsoleWrite("Remote version is " & $version)
+	Local $width = 300
+	$height = 60
+	$gui = GUICreate("GWToolbox++", $width, $height)
+	$label = GUICtrlCreateLabel("Checking for Updates...", 8, 8, 284, 17, Default, $GUI_WS_EX_PARENTDRAG)
+	$progress = GUICtrlCreateProgress(8, 27, 284, 25)
+	GUISetState(@SW_SHOW, $gui)
 
-	Local $dll_download = InetGet("https://github.com/HasKha/GWToolboxpp/releases/download/" & $version & "_Release/GWToolbox.dll", $dllpath, BitOR($INET_FORCERELOAD, $INET_FORCEBYPASS))
+	If FileExists($dllpath) Then ; otherwise don't even check version, we have to download anyway
 
-	If Not FileExists($dllpath) Then
-		MsgBox($MB_ICONERROR, "GWToolbox++", "Error downloading GWToolbox.dll")
-		Exit
+		Local $version_tmp = $folder & "tmp.txt"
+		Local $version_download = InetGet($host & "version.txt", $version_tmp, BitOR($INET_FORCERELOAD, $INET_FORCEBYPASS), $INET_DOWNLOADBACKGROUND)
+		Local $version_data
+		While True
+			$version_data = InetGetInfo($version_download)
+
+			GUICtrlSetData($Label, "Checking for Updates... " & $version_data[$INET_DOWNLOADREAD] & " / " & $version_data[$INET_DOWNLOADSIZE] & " bytes")
+			If $version_data[$INET_DOWNLOADSIZE] > 0 Then GUICtrlSetData($Progress, $version_data[$INET_DOWNLOADREAD] / $version_data[$INET_DOWNLOADSIZE] * 100)
+			If $version_data[$INET_DOWNLOADCOMPLETE] Then
+				GUICtrlSetData($Progress, 100)
+				GUICtrlSetData($Label, "Checking for Updates... Done (" & Round($version_data[$INET_DOWNLOADREAD]) & " bytes")
+				ExitLoop
+			EndIf
+
+			If GUIGetMsg() == $GUI_EVENT_CLOSE Then
+				InetClose($version_download)
+				FileDelete($version_tmp)
+				Exit
+			EndIf
+		WEnd
+
+		If $version_data[$INET_DOWNLOADERROR] Then Return MsgBox($MB_ICONERROR, "GWToolbox++", "Error checking for updates (1)")
+
+		Local $remote_version = FileRead($version_tmp)
+		InetClose($version_download)
+		FileDelete($version_tmp)
+		Local $local_version = IniRead($folder & "GWToolbox.ini", "launcher", "dllversion", "0")
+		If $remote_version == "" Or $local_version == "" Then Return MsgBox($MB_ICONERROR, "GWToolbox++", "Error checking for updates (2)")
+
+		If $remote_version == $local_version Then
+			GUIDelete($gui)
+			$gui = 0
+			Return ; updated, we're done
+		EndIf
 	EndIf
+
+	GUICtrlSetData($Label, "Updating...")
+	GUICtrlSetData($Progress, 0)
+
+	Local $dll_tmp = $folder & "tmp.dll"
+	Local $dll_download = InetGet($host & "GWToolbox.dll", $dll_tmp, BitOR($INET_FORCERELOAD, $INET_FORCEBYPASS), $INET_DOWNLOADBACKGROUND)
+	Local $dll_data
+	Local $changelog_tmp = $folder & "tmp.txt"
+	Local $changelog_download = InetGet($host & "changelog.txt", $changelog_tmp, BitOR($INET_FORCERELOAD, $INET_FORCEBYPASS), $INET_DOWNLOADBACKGROUND)
+	Local $changelog_data
+	While True
+		$dll_data = InetGetInfo($dll_download)
+		$changelog_data = InetGetInfo($changelog_download)
+
+		If $changelabel == 0 And $changelog_data[$INET_DOWNLOADCOMPLETE] And $changelog_data[$INET_DOWNLOADSUCCESS] Then
+			Local $changelog = FileRead($changelog_tmp)
+			Local $changelog_height = Int(StringLeft($changelog, 4))
+			Local $changelog_message = StringTrimLeft($changelog, 4)
+			Local $pos = WinGetPos($gui)
+			WinMove($gui, "", $pos[0], $pos[1], $pos[2], $pos[3] + $changelog_height)
+			$changelabel = GUICtrlCreateLabel("Change log:" & @CRLF & $changelog_message, 8, $height, $width - 2 * 8, $changelog_height, Default, $GUI_WS_EX_PARENTDRAG)
+			$height += $changelog_height
+		EndIf
+
+		GUICtrlSetData($Label, "Updating... " & Round($dll_data[$INET_DOWNLOADREAD] / 1024) & " / " & Round($dll_data[$INET_DOWNLOADSIZE] / 1024) & " Kbytes")
+		If $dll_data[$INET_DOWNLOADSIZE] > 0 Then GUICtrlSetData($Progress, $dll_data[$INET_DOWNLOADREAD] / $dll_data[$INET_DOWNLOADSIZE] * 100)
+		If $dll_data[$INET_DOWNLOADCOMPLETE] And $changelog_data[$INET_DOWNLOADCOMPLETE] Then
+			GUICtrlSetData($Progress, 100)
+			GUICtrlSetData($Label, "Updating... Done (" & Round($dll_data[$INET_DOWNLOADREAD] / 1024) & " Kbytes)")
+			ExitLoop
+		EndIf
+
+		If GUIGetMsg() == $GUI_EVENT_CLOSE Then
+			InetClose($dll_download)
+			InetClose($changelog_download)
+			FileDelete($dll_tmp)
+			FileDelete($changelog_tmp)
+			Exit
+		EndIf
+	WEnd
+
+	If $dll_data[$INET_DOWNLOADERROR] Then Return MsgBox($MB_ICONERROR, "GWToolbox++", "Error checking for updates(3)")
+
+	Sleep(50)
+
+	FileDelete($dllpath)
+	FileMove($dll_tmp, $dllpath)
+
+	Sleep(50)
+
+	InetClose($dll_download)
+	InetClose($changelog_download)
+	FileDelete($dll_tmp)
+	FileDelete($changelog_tmp)
 EndFunc
+
+#Region fileinstalls
+; ==== Install resources ====
+; various
+FileInstall("..\Release\GWToolbox.dll", $dllpath)
+If Not FileExists($dllpath) Then Error("Failed to install GWToolbox.dll")
+FileInstall("..\resources\Font.ttf", $folder & "Font.ttf")
+FileInstall("..\resources\GWToolbox.ini", $folder & "GWToolbox.ini")
+FileInstall("..\resources\Markers.ini", $folder & "Markers.ini")
+
+FileInstall("..\resources\bonds\Balthazar's_Spirit.jpg", $folder & "img\bonds\Balthazar's_Spirit.jpg")
+FileInstall("..\resources\bonds\Essence_Bond.jpg", $folder & "img\bonds\Essence_Bond.jpg")
+FileInstall("..\resources\bonds\Holy_Veil.jpg", $folder & "img\bonds\Holy_Veil.jpg")
+FileInstall("..\resources\bonds\Life_Attunement.jpg", $folder & "img\bonds\Life_Attunement.jpg")
+FileInstall("..\resources\bonds\Life_Barrier.jpg", $folder & "img\bonds\Life_Barrier.jpg")
+FileInstall("..\resources\bonds\Life_Bond.jpg", $folder & "img\bonds\Life_Bond.jpg")
+FileInstall("..\resources\bonds\Live_Vicariously.jpg", $folder & "img\bonds\Live_Vicariously.jpg")
+FileInstall("..\resources\bonds\Mending.jpg", $folder & "img\bonds\Mending.jpg")
+FileInstall("..\resources\bonds\Protective_Bond.jpg", $folder & "img\bonds\Protective_Bond.jpg")
+FileInstall("..\resources\bonds\Purifying_Veil.jpg", $folder & "img\bonds\Purifying_Veil.jpg")
+FileInstall("..\resources\bonds\Retribution.jpg", $folder & "img\bonds\Retribution.jpg")
+FileInstall("..\resources\bonds\Strength_of_Honor.jpg", $folder & "img\bonds\Strength_of_Honor.jpg")
+FileInstall("..\resources\bonds\Succor.jpg", $folder & "img\bonds\Succor.jpg")
+FileInstall("..\resources\bonds\Vital_Blessing.jpg", $folder & "img\bonds\Vital_Blessing.jpg")
+FileInstall("..\resources\bonds\Watchful_Spirit.jpg", $folder & "img\bonds\Watchful_Spirit.jpg")
+
+FileInstall("..\resources\icons\airplane.png", $folder & "img\icons\airplane.png")
+FileInstall("..\resources\icons\cupcake.png", $folder & "img\icons\cupcake.png")
+FileInstall("..\resources\icons\dialogue.png", $folder & "img\icons\dialogue.png")
+FileInstall("..\resources\icons\feather.png", $folder & "img\icons\feather.png")
+FileInstall("..\resources\icons\info.png", $folder & "img\icons\info.png")
+FileInstall("..\resources\icons\keyboard.png", $folder & "img\icons\keyboard.png")
+FileInstall("..\resources\icons\list.png", $folder & "img\icons\list.png")
+FileInstall("..\resources\icons\settings.png", $folder & "img\icons\settings.png")
+
+FileInstall("..\resources\materials\Essence_of_Celerity.png", $folder & "img\materials\Essence_of_Celerity.png")
+FileInstall("..\resources\materials\Grail_of_Might.png", $folder & "img\materials\Grail_of_Might.png")
+FileInstall("..\resources\materials\Armor_of_Salvation.png", $folder & "img\materials\Armor_of_Salvation.png")
+FileInstall("..\resources\materials\Powerstone_of_Courage.png", $folder & "img\materials\Powerstone_of_Courage.png")
+FileInstall("..\resources\materials\Scroll_of_Resurrection.png", $folder & "img\materials\Scroll_of_Resurrection.png")
+
+FileInstall("..\resources\pcons\Essence_of_Celerity.png", $folder & "img\pcons\Essence_of_Celerity.png")
+FileInstall("..\resources\pcons\Grail_of_Might.png", $folder & "img\pcons\Grail_of_Might.png")
+FileInstall("..\resources\pcons\Armor_of_Salvation.png", $folder & "img\pcons\Armor_of_Salvation.png")
+FileInstall("..\resources\pcons\Red_Rock_Candy.png", $folder & "img\pcons\Red_Rock_Candy.png")
+FileInstall("..\resources\pcons\Blue_Rock_Candy.png", $folder & "img\pcons\Blue_Rock_Candy.png")
+FileInstall("..\resources\pcons\Green_Rock_Candy.png", $folder & "img\pcons\Green_Rock_Candy.png")
+FileInstall("..\resources\pcons\Golden_Egg.png", $folder & "img\pcons\Golden_Egg.png")
+FileInstall("..\resources\pcons\Candy_Apple.png", $folder & "img\pcons\Candy_Apple.png")
+FileInstall("..\resources\pcons\Candy_Corn.png", $folder & "img\pcons\Candy_Corn.png")
+FileInstall("..\resources\pcons\Birthday_Cupcake.png", $folder & "img\pcons\Birthday_Cupcake.png")
+FileInstall("..\resources\pcons\Slice_of_Pumpkin_Pie.png", $folder & "img\pcons\Slice_of_Pumpkin_Pie.png")
+FileInstall("..\resources\pcons\War_Supplies.png", $folder & "img\pcons\War_Supplies.png")
+FileInstall("..\resources\pcons\Dwarven_Ale.png", $folder & "img\pcons\Dwarven_Ale.png")
+FileInstall("..\resources\pcons\Lunar_Fortune.png", $folder & "img\pcons\Lunar_Fortune.png")
+FileInstall("..\resources\pcons\Sugary_Blue_Drink.png", $folder & "img\pcons\Sugary_Blue_Drink.png")
+FileInstall("..\resources\pcons\Drake_Kabob.png", $folder & "img\pcons\Drake_Kabob.png")
+FileInstall("..\resources\pcons\Bowl_of_Skalefin_Soup.png", $folder & "img\pcons\Bowl_of_Skalefin_Soup.png")
+FileInstall("..\resources\pcons\Pahnai_Salad.png", $folder & "img\pcons\Pahnai_Salad.png")
+#EndRegion
 
 ; === Client selection ===
 Global $WinList = WinList("[CLASS:ArenaNet_Dx_Window_Class]")
