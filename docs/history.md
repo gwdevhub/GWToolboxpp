@@ -7,6 +7,19 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
+##Version 2.6
+* [New] You can now add or remove any window to the main toolbox window - check Settings -> Toolbox Settings. 
+* [New] Added a new Window to create and load hero team builds.
+* [New] Added support for the new Lunars (year of the dog). 
+* [New] Added cursor fix: mouse should no longer jump between monitors when right clicking. 
+* [New] You can now use multiple skills with `/useskill`.
+* [New] Added rings of fortune messages to the chat filter. 
+* [Fix] Alcohol monitor is now only visible in explorable areas.
+* [Fix] You can now once again set up hotkeys on mouse buttons x1 and x2 (forward and back).
+* [Fix] Fixed various small issues. 
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.6_Release/GWToolbox.dll)
+
 ## Version 2.5
 * [Fix] Fixed bug where toolbox window positions would reset when restoring from an alt-tabbed fullscreen GW.
 
