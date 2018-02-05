@@ -619,7 +619,7 @@ void HotkeyHeroTeamBuild::Description(char* buf, int bufsz) const {
 	snprintf(buf, bufsz, "Load Team Hero Build '%s'", buildname);
 }
 void HotkeyHeroTeamBuild::Draw() {
-	if (ImGui::Combo("Build", &index, GetText, nullptr, BuildsWindow::Instance().BuildCount())) hotkeys_changed = true;
+	if (ImGui::Combo("Build", &index, GetText, nullptr, HeroBuildsWindow::Instance().BuildCount())) hotkeys_changed = true;
 }
 void HotkeyHeroTeamBuild::Execute() {
 	if (isLoading()) return;
