@@ -112,9 +112,6 @@
     <Filter Include="Windows\HeroBuilds">
       <UniqueIdentifier>{9453adc8-19e1-455a-8fbe-0385b23a387f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="sqlite3">
-      <UniqueIdentifier>{6eaa0f75-b51f-4cd9-987b-e95493ab34c5}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GWToolbox\GuiUtils.h" />
@@ -268,9 +265,6 @@
     <ClInclude Include="GWToolbox\Windows\HeroBuildsWindow.h">
       <Filter>Windows\HeroBuilds</Filter>
     </ClInclude>
-    <ClInclude Include="..\Dependencies\sqlite3\sqlite3.h">
-      <Filter>sqlite3</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -402,9 +396,6 @@
     <ClCompile Include="GWToolbox\CursorFix.cpp" />
     <ClCompile Include="GWToolbox\Windows\HeroBuildsWindow.cpp">
       <Filter>Windows\HeroBuilds</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Dependencies\sqlite3\sqlite3.c">
-      <Filter>sqlite3</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

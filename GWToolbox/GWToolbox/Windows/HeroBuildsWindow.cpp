@@ -262,6 +262,8 @@ void HeroBuildsWindow::Load(const TeamHeroBuild& tbuild, unsigned int idx) {
 		if (!code.empty())
 			GW::SkillbarMgr::LoadSkillTemplate(build.code);
 	} else {
+		if (heroid == HeroID::NoHero) return;
+
 		GW::PartyMgr::AddHero(heroid);
 		if (!code.empty()) {
 			queue.push(CodeOnHero(code.c_str(), idx));
