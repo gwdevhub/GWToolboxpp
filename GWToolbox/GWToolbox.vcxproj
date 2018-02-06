@@ -106,6 +106,7 @@
     <ClInclude Include="..\Dependencies\imgui\stb_rect_pack.h" />
     <ClInclude Include="..\Dependencies\imgui\stb_textedit.h" />
     <ClInclude Include="..\Dependencies\imgui\stb_truetype.h" />
+    <ClInclude Include="..\Dependencies\sqlite3\sqlite3.h" />
     <ClInclude Include="GWToolbox\Color.h" />
     <ClInclude Include="GWToolbox\CursorFix.h" />
     <ClInclude Include="GWToolbox\Defines.h" />
@@ -164,6 +165,7 @@
     <ClCompile Include="..\Dependencies\imgui\imgui.cpp" />
     <ClCompile Include="..\Dependencies\imgui\imgui_demo.cpp" />
     <ClCompile Include="..\Dependencies\imgui\imgui_draw.cpp" />
+    <ClCompile Include="..\Dependencies\sqlite3\sqlite3.c" />
     <ClCompile Include="GWToolbox\CursorFix.cpp" />
     <ClCompile Include="GWToolbox\GuiUtils.cpp" />
     <ClCompile Include="GWToolbox\ImGuiAddons.cpp" />

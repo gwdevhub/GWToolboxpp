@@ -11,26 +11,16 @@
 class HeroBuildsWindow : public ToolboxWindow {
 private:
 	struct HeroBuild {
-		HeroBuild(const char* n = "", const char* c = "", const int i = -1) {
-			snprintf(name, 128, "%s", n);
-			snprintf(code, 128, "%s", c);
-			heroidx = i;
-		}
-		char name[128];
-		char code[128];
-		int heroidx;
+		char name[128] = "";
+		char code[128] = "";
+		int  hero_index = 0;
 	};
+
 	struct TeamHeroBuild {
-		static unsigned int cur_ui_id;
-		TeamHeroBuild(const char* n = "")
-			: ui_id(++cur_ui_id) {
-			snprintf(name, 128, "%s", n);
-		}
-		bool edit_open = false;
-		char name[128];
-		std::vector<HeroBuild> builds;
+		size_t id;
+		char name[128] = "";
 		bool hardmode = false;
-		unsigned int ui_id; // should be const but then assignment operator doesn't get created automatically, and I'm too lazy to redefine it, so just don't change this value, okay?
+		std::vector<HeroBuild> builds;
 	};
 
 	HeroBuildsWindow() {};
@@ -69,6 +59,9 @@ private:
 
 	bool builds_changed = false;
 	std::vector<TeamHeroBuild> teambuilds;
+
+	TeamHeroBuild *build_in_edit;
+	bool edit_open; // This may seem redundant, but that's how we know if the user close the window.
 
 	struct CodeOnHero {
 		CodeOnHero(const char* c = "", int i = 0) {
