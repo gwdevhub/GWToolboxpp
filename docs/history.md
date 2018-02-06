@@ -7,7 +7,13 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
-##Version 2.6
+## Version 2.7
+* [New] Can now omit the town in `/tp [town] [district] to change district. 
+* [Fix] Fixed the "Close other windows..." option.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.7_Release/GWToolbox.dll)
+
+## Version 2.6
 * [New] You can now add or remove any window to the main toolbox window - check Settings -> Toolbox Settings. 
 * [New] Added a new Window to create and load hero team builds.
 * [New] Added support for the new Lunars (year of the dog). 
