@@ -23,6 +23,9 @@ public:
 
 	virtual bool ToggleVisible() { return visible = !visible; }
 
+	virtual bool IsWindow() const { return false; }
+	virtual bool IsWidget() const { return false; }
+
 	bool visible;
 	bool lock_move;
 	bool lock_size;

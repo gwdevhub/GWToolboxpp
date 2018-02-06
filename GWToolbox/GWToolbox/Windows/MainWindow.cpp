@@ -29,7 +29,7 @@ void MainWindow::SaveSettings(CSimpleIni* ini) {
 }
 void MainWindow::DrawSettingInternal() {
 	ImGui::Checkbox("Close other windows when opening a new one", &one_panel_at_time_only);
-	ImGui::ShowHelp("Only affects the button in the Toolbox window");
+	ImGui::ShowHelp("Only affects windows (with a title bar), not widgets");
 }
 
 void MainWindow::Draw(IDirect3DDevice9* device) {
@@ -48,9 +48,9 @@ void MainWindow::Draw(IDirect3DDevice9* device) {
 				if (drawn) ImGui::Separator();
 				drawn = true;
 				if (ui[i]->DrawTabButton(device)) {
-					if (ui[i]->visible && one_panel_at_time_only) {
+					if (one_panel_at_time_only && ui[i]->visible) {
 						for (unsigned int j = 0; j < ui.size(); ++j) {
-							if (j != i) ui[j]->visible = false;
+							if (j != i && ui[j]->IsWindow() && ui[j] != this) ui[j]->visible = false;
 						}
 					}
 				}
