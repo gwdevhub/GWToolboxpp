@@ -9,6 +9,8 @@ A ToolboxWindow is a module which also has an interface
 */
 class ToolboxWindow : public ToolboxUIElement {
 public:
+	bool IsWindow() const override { return true; }
+
 	virtual void LoadSettings(CSimpleIni* ini) override {
 		ToolboxUIElement::LoadSettings(ini);
 		lock_move = ini->GetBoolValue(Name(), VAR_NAME(lock_move), false);

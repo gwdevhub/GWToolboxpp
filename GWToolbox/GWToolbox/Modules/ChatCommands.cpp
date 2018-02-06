@@ -328,104 +328,131 @@ void ChatCommands::CmdHide(int argc, LPWSTR *argv) {
 	}
 }
 
+void ChatCommands::ParseDistrict(const std::wstring& s, GW::Constants::District& district, int& number) {
+	district = GW::Constants::District::Current;
+	number = 0;
+	if (s == L"ae") {
+		district = GW::Constants::District::American;
+	} else if (s == L"ae1") {
+		district = GW::Constants::District::American;
+		number = 1;
+	} else if (s == L"int") {
+		district = GW::Constants::District::International;
+	} else if (s == L"ee") {
+		district = GW::Constants::District::EuropeEnglish;
+	} else if (s == L"eg" || s == L"dd") {
+		district = GW::Constants::District::EuropeGerman;
+	} else if (s == L"ef") {
+		district = GW::Constants::District::EuropeFrench;
+	} else if (s == L"ei") {
+		district = GW::Constants::District::EuropeItalian;
+	} else if (s == L"es") {
+		district = GW::Constants::District::EuropeSpanish;
+	} else if (s == L"ep") {
+		district = GW::Constants::District::EuropePolish;
+	} else if (s == L"er") {
+		district = GW::Constants::District::EuropeRussian;
+	} else if (s == L"ak") {
+		district = GW::Constants::District::AsiaKorean;
+	} else if (s == L"ac" || s == L"atc") {
+		district = GW::Constants::District::AsiaChinese;
+	} else if (s == L"aj") {
+		district = GW::Constants::District::AsiaJapanese;
+	}
+}
+
 void ChatCommands::CmdTP(int argc, LPWSTR *argv) {
+	// zero argument error
 	if (argc == 1) {
 		Log::Error("[Error] Please provide an argument");
-	} else {
-		std::wstring town = GuiUtils::ToLower(argv[1]);
+		return;
+	}
 
-		GW::Constants::District district = GW::Constants::District::Current;
-		int district_number = 0;
-		if (argc > 2 && town != L"gh") {
-			std::wstring dis = GuiUtils::ToLower(argv[2]);
-			if (dis == L"ae") {
-				district = GW::Constants::District::American;
-			} else if (dis == L"ae1") {
-				district = GW::Constants::District::American;
-				district_number = 1;
-			} else if (dis == L"int") {
-				district = GW::Constants::District::International;
-			} else if (dis == L"ee") {
-				district = GW::Constants::District::EuropeEnglish;
-			} else if (dis == L"eg" || dis == L"dd") {
-				district = GW::Constants::District::EuropeGerman;
-			} else if (dis == L"ef") {
-				district = GW::Constants::District::EuropeFrench;
-			} else if (dis == L"ei") {
-				district = GW::Constants::District::EuropeItalian;
-			} else if (dis == L"es") {
-				district = GW::Constants::District::EuropeSpanish;
-			} else if (dis == L"ep") {
-				district = GW::Constants::District::EuropePolish;
-			} else if (dis == L"er") {
-				district = GW::Constants::District::EuropeRussian;
-			} else if (dis == L"ak") {
-				district = GW::Constants::District::AsiaKorean;
-			} else if (dis == L"ac" || dis == L"atc") {
-				district = GW::Constants::District::AsiaChinese;
-			} else if (dis == L"aj") {
-				district = GW::Constants::District::AsiaJapanese;
-			} else {
-				Log::Error("Invalid district '%ls'", dis.c_str());
+	std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+
+	// own guild hall
+	if (arg1 == L"gh" && argc == 2) {
+		GW::GuildMgr::TravelGH();
+		return;
+	}
+	// ally guild hall
+	if (arg1 == L"gh" && argc > 2) {
+		std::wstring tag = GuiUtils::ToLower(argv[2]);
+		GW::GuildArray guilds = GW::GuildMgr::GetGuildArray();
+		for (GW::Guild* guild : guilds) {
+			if (guild && GuiUtils::ToLower(guild->tag) == tag) {
+				GW::GuildMgr::TravelGH(guild->key);
+				return;
 			}
 		}
+		Log::Error("[Error] Did not recognize guild '%ls'\n", argv[2]);
+		return;
+	}
 
-		if (town.compare(0, 3, L"fav", 3) == 0) {
-			std::wstring fav_s_num = town.substr(3, std::wstring::npos);
-			if (fav_s_num.empty()) {
-				TravelWindow::Instance().TravelFavorite(0);
-			} else {
-				int fav_num = wcstol(fav_s_num.c_str(), nullptr, 0);
-				TravelWindow::Instance().TravelFavorite(fav_num - 1);
-			}
-		} else if (town == L"toa") {
-			GW::Map::Travel(GW::Constants::MapID::Temple_of_the_Ages, district, district_number);
-		} else if (town == L"doa") {
-			GW::Map::Travel(GW::Constants::MapID::Domain_of_Anguish, district, district_number);
-		} else if (town == L"kamadan" || town == L"kama") {
-			GW::Map::Travel(GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost, district, district_number);
-		} else if (town == L"embark") {
-			GW::Map::Travel(GW::Constants::MapID::Embark_Beach, district, district_number);
-		} else if (town == L"eee") {
-			GW::Map::Travel(GW::Constants::MapID::Embark_Beach, GW::Constants::District::EuropeEnglish, 0);
-		} else if (town == L"vlox" || town == L"vloxs") {
-			GW::Map::Travel(GW::Constants::MapID::Vloxs_Falls, district, district_number);
-		} else if (town == L"gadd" || town == L"gadds") {
-			GW::Map::Travel(GW::Constants::MapID::Gadds_Encampment_outpost, district, district_number);
-		} else if (town == L"urgoz") {
-			GW::Map::Travel(GW::Constants::MapID::Urgozs_Warren, district, district_number);
-		} else if (town == L"deep") {
-			GW::Map::Travel(GW::Constants::MapID::The_Deep, district, district_number);
-		} else if (town == L"gtob") {
-			GW::Map::Travel(GW::Constants::MapID::Great_Temple_of_Balthazar_outpost, district, district_number);
-		} else if (town == L"la") {
-			GW::Map::Travel(GW::Constants::MapID::Lions_Arch_outpost, district, district_number);
-		} else if (town == L"kaineng") {
-			GW::Map::Travel(GW::Constants::MapID::Kaineng_Center_outpost, district, district_number);
-		} else if (town == L"eotn") {
-			GW::Map::Travel(GW::Constants::MapID::Eye_of_the_North_outpost, district, district_number);
-		} else if (town == L"sif" || town == L"sifhalla") {
-			GW::Map::Travel(GW::Constants::MapID::Sifhalla_outpost, district, district_number);
-		} else if (town == L"doom" || town == L"doomlore") {
-			GW::Map::Travel(GW::Constants::MapID::Doomlore_Shrine_outpost, district, district_number);
-		} else if (town == L"gh") {
-			if (argc == 2) {
-				GW::GuildMgr::TravelGH();
-			} else {
-				std::wstring tag = GuiUtils::ToLower(argv[2]);
-				GW::GuildArray guilds = GW::GuildMgr::GetGuildArray();
-				for (GW::Guild* guild : guilds) {
-					if (guild && GuiUtils::ToLower(guild->tag) == tag) {
-						GW::GuildMgr::TravelGH(guild->key);
-						break;
-					}
-				}
-			}
+	// current outpost - different district
+	GW::Constants::District district;
+	int district_number;
+	ParseDistrict(arg1, district, district_number);
+	if (district != GW::Constants::District::Current) {
+		// we have a match
+		GW::Constants::MapID current = GW::Map::GetMapID();
+		GW::Map::Travel(current, district, district_number);
+		return;
+	}
+	
+	// different outpost - district optional
+	if (argc > 2) {
+		std::wstring dis = GuiUtils::ToLower(argv[2]);
+		ParseDistrict(dis, district, district_number);
+		if (district == GW::Constants::District::Current) {
+			// did not match district, but continue with travel anyway
+			Log::Error("Invalid district '%ls'", dis.c_str());
+		}
+	}
+
+	std::wstring town = GuiUtils::ToLower(argv[1]);
+	if (town.compare(0, 3, L"fav", 3) == 0) {
+		std::wstring fav_s_num = town.substr(3, std::wstring::npos);
+		if (fav_s_num.empty()) {
+			TravelWindow::Instance().TravelFavorite(0);
 		} else {
-			int mapid = wcstol(town.c_str(), nullptr, 0);
-			if (mapid) {
-				GW::Map::Travel((GW::Constants::MapID)mapid, district, district_number);
-			}
+			int fav_num = wcstol(fav_s_num.c_str(), nullptr, 0);
+			TravelWindow::Instance().TravelFavorite(fav_num - 1);
+		}
+	} else if (town == L"toa") {
+		GW::Map::Travel(GW::Constants::MapID::Temple_of_the_Ages, district, district_number);
+	} else if (town == L"doa") {
+		GW::Map::Travel(GW::Constants::MapID::Domain_of_Anguish, district, district_number);
+	} else if (town == L"kamadan" || town == L"kama") {
+		GW::Map::Travel(GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost, district, district_number);
+	} else if (town == L"embark") {
+		GW::Map::Travel(GW::Constants::MapID::Embark_Beach, district, district_number);
+	} else if (town == L"eee") {
+		GW::Map::Travel(GW::Constants::MapID::Embark_Beach, GW::Constants::District::EuropeEnglish, 0);
+	} else if (town == L"vlox" || town == L"vloxs") {
+		GW::Map::Travel(GW::Constants::MapID::Vloxs_Falls, district, district_number);
+	} else if (town == L"gadd" || town == L"gadds") {
+		GW::Map::Travel(GW::Constants::MapID::Gadds_Encampment_outpost, district, district_number);
+	} else if (town == L"urgoz") {
+		GW::Map::Travel(GW::Constants::MapID::Urgozs_Warren, district, district_number);
+	} else if (town == L"deep") {
+		GW::Map::Travel(GW::Constants::MapID::The_Deep, district, district_number);
+	} else if (town == L"gtob") {
+		GW::Map::Travel(GW::Constants::MapID::Great_Temple_of_Balthazar_outpost, district, district_number);
+	} else if (town == L"la") {
+		GW::Map::Travel(GW::Constants::MapID::Lions_Arch_outpost, district, district_number);
+	} else if (town == L"kaineng") {
+		GW::Map::Travel(GW::Constants::MapID::Kaineng_Center_outpost, district, district_number);
+	} else if (town == L"eotn") {
+		GW::Map::Travel(GW::Constants::MapID::Eye_of_the_North_outpost, district, district_number);
+	} else if (town == L"sif" || town == L"sifhalla") {
+		GW::Map::Travel(GW::Constants::MapID::Sifhalla_outpost, district, district_number);
+	} else if (town == L"doom" || town == L"doomlore") {
+		GW::Map::Travel(GW::Constants::MapID::Doomlore_Shrine_outpost, district, district_number);
+	} else {
+		int mapid = wcstol(town.c_str(), nullptr, 0);
+		if (mapid) {
+			GW::Map::Travel((GW::Constants::MapID)mapid, district, district_number);
 		}
 	}
 }

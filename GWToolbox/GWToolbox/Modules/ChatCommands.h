@@ -6,6 +6,8 @@
 #include <Windows.h>
 #include <time.h>
 
+#include <GWCA\Constants\Constants.h>
+
 #include <ToolboxModule.h>
 #include <ToolboxUIElement.h>
 
@@ -36,6 +38,7 @@ public:
 
 private:
 	static bool ReadTemplateFile(std::wstring path, char *buff, size_t buffSize);
+	static void ParseDistrict(const std::wstring& s, GW::Constants::District& district, int& number);
 
 	static void CmdAge2(int argc, LPWSTR *argv);
 	static void CmdDialog(int argc, LPWSTR *argv);
