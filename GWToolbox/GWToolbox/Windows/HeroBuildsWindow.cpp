@@ -344,6 +344,8 @@ void HeroBuildsWindow::LoadFromFile() {
 		}
 
 		// Check the binary to see if we should instead take the ptr to read everything to avoid the copy
+		// But this might not matter at all, because we would do copy anyway for each element and hence
+		// as much copy.
 		teambuilds.push_back(tb);
 	}
 
