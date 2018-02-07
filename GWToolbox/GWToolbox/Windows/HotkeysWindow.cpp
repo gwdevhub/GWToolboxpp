@@ -248,7 +248,7 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 }
 
 
-void HotkeysWindow::Update() {
+void HotkeysWindow::Update(DWORD delta) {
 	if (clickerActive && TIMER_DIFF(clickerTimer) > 20) {
 		clickerTimer = TIMER_INIT();
 		INPUT input;

@@ -20,7 +20,7 @@ public:
 
 	void InitializeModules();
 	
-	void Update() override;
+	void Update(DWORD delta) override;
 
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;

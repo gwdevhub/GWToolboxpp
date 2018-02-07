@@ -136,7 +136,7 @@ bool PartyDamage::DamagePacketCallback(GW::Packet::StoC::P151* packet) {
 	return false;
 }
 
-void PartyDamage::Update() {
+void PartyDamage::Update(DWORD delta) {
 	if (!send_queue.empty() && TIMER_DIFF(send_timer) > 600) {
 		send_timer = TIMER_INIT();
 		if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading

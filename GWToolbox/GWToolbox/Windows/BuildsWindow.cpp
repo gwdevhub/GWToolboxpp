@@ -194,7 +194,7 @@ void BuildsWindow::Send(const TeamBuild& tbuild, unsigned int idx) {
 	queue.push(buf);
 }
 
-void BuildsWindow::Update() {
+void BuildsWindow::Update(DWORD delta) {
 	if (!queue.empty() && TIMER_DIFF(send_timer) > 600) {
 		if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
 			&& GW::Agents::GetPlayer()) {

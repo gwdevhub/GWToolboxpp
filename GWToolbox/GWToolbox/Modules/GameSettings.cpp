@@ -274,7 +274,7 @@ void GameSettings::ApplyBorderless(bool borderless) {
 	}
 }
 
-void GameSettings::Update() {
+void GameSettings::Update(DWORD delta) {
 	if (auto_set_away 
 		&& TIMER_DIFF(activity_timer) > auto_set_away_delay * 60000
 		&& GW::FriendListMgr::GetMyStatus() == (DWORD)GW::Constants::OnlineStatus::ONLINE) {

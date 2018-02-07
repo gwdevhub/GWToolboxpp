@@ -12,10 +12,11 @@
 #include <ToolboxUIElement.h>
 
 class ChatCommands : public ToolboxModule {
-	const float DEFAULT_CAM_SPEED = 25.0f;
+	const float DEFAULT_CAM_SPEED = 600.f; // 600 units per sec
+	const float ROTATION_SPEED = (float)M_PI / 3.f; // 6 seconds for full rotation
 
 	ChatCommands() : move_forward(0), move_side(0), move_up(0),
-		cam_speed_(DEFAULT_CAM_SPEED) {};
+		cam_speed(DEFAULT_CAM_SPEED) {};
 	~ChatCommands() {};
 public:
 	static ChatCommands& Instance() {
@@ -34,7 +35,7 @@ public:
 	bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam);
 
 	// Update. Will always be called every frame.
-	void Update() override;
+	void Update(DWORD delta) override;
 
 private:
 	static bool ReadTemplateFile(std::wstring path, char *buff, size_t buffSize);
@@ -62,7 +63,7 @@ private:
 	int move_forward;
 	int move_side;
 	int move_up;
-	float cam_speed_;
+	float cam_speed;
 
 	void ToggleSkill(int skill); // 1-8 range
 	std::list<int> skills_to_use; // 0-7 range

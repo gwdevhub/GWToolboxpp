@@ -112,8 +112,8 @@ bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 		switch (wParam) {
 		case keyW: move_forward = 1; return true;
 		case keyS: move_forward = -1; return true;
-		case keyD: move_side = 1; return true;
-		case keyA: move_side = -1; return true;
+		case keyD: move_side = -1; return true;
+		case keyA: move_side = 1; return true;
 		case keyX: move_up = 1; return true;
 		case keyZ: move_up = -1; return true;
 		}
@@ -141,11 +141,15 @@ bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 	return false;
 }
 
-void ChatCommands::Update() {
+void ChatCommands::Update(DWORD delta) {
+	float delta_float = (float)delta / 1000.f;
+	float dist_dist = delta_float * cam_speed;
+	float dist_rot  = delta_float * ROTATION_SPEED;
+
 	if (GW::CameraMgr::GetCameraUnlock() && !GW::Chat::IsTyping()) {
-		GW::CameraMgr::ForwardMovement(cam_speed_ * move_forward);
-		GW::CameraMgr::VerticalMovement(-cam_speed_ * move_up);
-		GW::CameraMgr::SideMovement(-cam_speed_ * move_side);
+		GW::CameraMgr::ForwardMovement(  dist_dist * move_forward);
+		GW::CameraMgr::VerticalMovement(-dist_dist * move_up);
+		GW::CameraMgr::RotateMovement(move_side * dist_rot);
 		GW::CameraMgr::UpdateCameraPos();
 	}
 
@@ -530,15 +534,15 @@ void ChatCommands::CmdCamera(int argc, LPWSTR *argv) {
 			}
 		} else if (arg1 == L"speed") {
 			if (argc < 3) {
-				Instance().cam_speed_ = Instance().DEFAULT_CAM_SPEED;
+				Instance().cam_speed = Instance().DEFAULT_CAM_SPEED;
 			} else {
 				std::wstring arg2 = GuiUtils::ToLower(argv[2]);
 				if (arg2 == L"default") {
-					Instance().cam_speed_ = Instance().DEFAULT_CAM_SPEED;
+					Instance().cam_speed = Instance().DEFAULT_CAM_SPEED;
 				} else {
 					try {
 						float speed = std::stof(arg2);
-						Instance().cam_speed_ = speed;
+						Instance().cam_speed = speed;
 						Log::Info("Camera speed is now %f", speed);
 					} catch (...) {
 						Log::Error("Invalid argument '%ls', please use a float value", argv[2]);

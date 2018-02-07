@@ -20,7 +20,7 @@ public:
 	virtual void Terminate() {};
 
 	// Update. Will always be called once every frame.
-	virtual void Update() {};
+	virtual void Update(DWORD delta) {};
 
 	// This is provided (and called), but use ImGui::GetIO() during update/render if possible.
 	virtual bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) { return false; };

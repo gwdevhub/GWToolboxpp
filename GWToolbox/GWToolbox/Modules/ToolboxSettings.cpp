@@ -178,7 +178,7 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(use_alcohol), use_alcohol);
 }
 
-void ToolboxSettings::Update() {
+void ToolboxSettings::Update(DWORD delta) {
 	// save location data
 	if (save_location_data && TIMER_DIFF(location_timer) > 1000) {
 		location_timer = TIMER_INIT();

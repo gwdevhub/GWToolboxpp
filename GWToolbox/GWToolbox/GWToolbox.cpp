@@ -378,6 +378,7 @@ void GWToolbox::Terminate() {
 void GWToolbox::Draw(IDirect3DDevice9* device) {
 
 	static HWND gw_window_handle = 0;
+	static DWORD last_tick_count;
 
 	// === initialization ===
 	if (!tb_initialized && !GWToolbox::Instance().must_self_destruct) {
@@ -405,6 +406,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 
 		GWToolbox::Instance().Initialize();
 
+		last_tick_count = GetTickCount();
 		tb_initialized = true;
 	}
 
@@ -416,9 +418,13 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 
 		ImGui_ImplDX9_NewFrame(GW::Render::GetViewportWidth(), GW::Render::GetViewportHeight());
 
+		DWORD tick = GetTickCount();
+		DWORD delta = tick - last_tick_count;
 		for (ToolboxModule* module : GWToolbox::Instance().modules) {
-			module->Update();
+			module->Update(delta);
 		}
+		last_tick_count = tick;
+
 		Resources::Instance().DxUpdate(device);
 
 		for (ToolboxUIElement* uielement : GWToolbox::Instance().uielements) {

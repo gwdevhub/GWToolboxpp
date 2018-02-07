@@ -50,7 +50,7 @@ public:
 	void LoadSettings(CSimpleIni* ini) override;
 	
 	// Update. Will always be called every frame.
-	void Update() override;
+	void Update(DWORD delta) override;
 
 	// Draw user interface. Will be called every frame if the element is visible
 	void Draw(IDirect3DDevice9* pDevice) override;

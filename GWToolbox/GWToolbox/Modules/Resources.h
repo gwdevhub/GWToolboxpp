@@ -27,7 +27,7 @@ public:
 	void Terminate() override;
 
 	void DrawSettings() override {};
-	void Update() override;
+	void Update(DWORD delta) override;
 	void DxUpdate(IDirect3DDevice9* device);
 
 	static std::string GetSettingsFolderPath();
