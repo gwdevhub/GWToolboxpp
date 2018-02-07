@@ -69,6 +69,11 @@ void ChatCommands::DrawHelp() {
 		"use empty '/zoom' to reset to the default value of 750.");
 }
 
+void ChatCommands::DrawSettingInternal() {
+	ImGui::Checkbox("Fix height when moving forward", &forward_fix_z);
+	ImGui::InputFloat("Camera speed", &cam_speed, 0.0f, 0.0f, 3);
+}
+
 void ChatCommands::Initialize() {
 	ToolboxModule::Initialize();
 
@@ -156,12 +161,12 @@ void ChatCommands::Update(float delta) {
 		if (ImGui::IsKeyDown(KEY_R)) keep_forward = true;
 		if (ImGui::IsKeyDown(KEY_W) || ImGui::IsKeyDown(KEY_S) || ImGui::IsKeyDown(KEY_ESC)) keep_forward = false;
 
-		if (ImGui::IsMouseDown(1) && (rotate != 0.f)) {
+		if (GWToolbox::Instance().right_mouse_down && (rotate != 0.f)) {
 			side = rotate;
 			rotate = 0.f;
 		}
 
-		GW::CameraMgr::ForwardMovement(forward * delta * cam_speed, true);
+		GW::CameraMgr::ForwardMovement(forward * delta * cam_speed, !forward_fix_z);
 		GW::CameraMgr::VerticalMovement(vertical * delta * cam_speed);
 		GW::CameraMgr::RotateMovement(rotate * delta * ROTATION_SPEED);
 		GW::CameraMgr::SideMovement(side * delta * cam_speed);

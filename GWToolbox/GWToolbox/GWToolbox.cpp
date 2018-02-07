@@ -141,9 +141,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 	if (Message == WM_RBUTTONDBLCLK) right_mouse_down = true;
 	if (Message == WM_RBUTTONUP) right_mouse_down = false;
 
+	GWToolbox::Instance().right_mouse_down = right_mouse_down;
+
 	// === Send events to ImGui ===
 	ImGuiIO& io = ImGui::GetIO();
-	io.MouseDown[1] = right_mouse_down;
 
 	switch (Message) {
 	case WM_LBUTTONDOWN:
