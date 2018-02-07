@@ -7,6 +7,14 @@ ipch/
 *.sdf
 *.opensdf
 *.suo
+*.exp
+*.db
+*.pdb
+*.idb
+*.ilk
+*.opendb
+*.log
+*.lastbuildstate
 
 # Compiled files
 *.slo
@@ -23,8 +31,7 @@ ipch/
 *.opendb
 
 # Visual studio stuff
-*.vcxproj.user*
-GWToolboxpp.VC.db
+*.user
 
 Dependencies/OSHGui/Include
 docs/_site/
