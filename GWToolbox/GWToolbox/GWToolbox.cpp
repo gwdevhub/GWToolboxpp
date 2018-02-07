@@ -143,12 +143,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 
 	// === Send events to ImGui ===
 	ImGuiIO& io = ImGui::GetIO();
+	io.MouseDown[1] = right_mouse_down;
+
 	switch (Message) {
 	case WM_LBUTTONDOWN:
 	case WM_LBUTTONDBLCLK:
 		if (!right_mouse_down) io.MouseDown[0] = true;
 		break;
-	case WM_LBUTTONUP: 
+	case WM_LBUTTONUP:
 		io.MouseDown[0] = false; 
 		break;
 	case WM_MBUTTONDOWN:

@@ -97,14 +97,16 @@ void ChatCommands::Initialize() {
 	GW::Chat::CreateCommand(L"transmo", ChatCommands::CmdTransmo);
 }
 
-#define KEY_A 0x41
-#define KEY_D 0x44
-#define KEY_E 0x45
-#define KEY_Q 0x51
-#define KEY_S 0x53
-#define KEY_W 0x57
-#define KEY_X 0x58
-#define KEY_Z 0x5A
+#define KEY_ESC 0x1B
+#define KEY_A   0x41
+#define KEY_D   0x44
+#define KEY_E   0x45
+#define KEY_Q   0x51
+#define KEY_R   0x52
+#define KEY_S   0x53
+#define KEY_W   0x57
+#define KEY_X   0x58
+#define KEY_Z   0x5A
 
 bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 	if (!GW::CameraMgr::GetCameraUnlock()) return false;
@@ -112,24 +114,26 @@ bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 	if (ImGui::GetIO().WantTextInput) return false;
 
 	switch (Message) {
-	case WM_KEYDOWN: 
-	case WM_KEYUP:
-		switch (wParam) {
-			case KEY_A:
-			case KEY_D:
-			case KEY_E:
-			case KEY_Q:
-			case KEY_S:
-			case KEY_W:
-			case KEY_X:
-			case KEY_Z:
-				return true;
+		case WM_KEYDOWN:
+		case WM_KEYUP:
+			switch (wParam) {
+				case KEY_A:
+				case KEY_D:
+				case KEY_E:
+				case KEY_Q:
+				case KEY_R:
+				case KEY_S:
+				case KEY_W:
+				case KEY_X:
+				case KEY_Z:
+					return true;
 			}
 	}
 	return false;
 }
 
 void ChatCommands::Update(float delta) {
+	static bool keep_forward;
 	float dist_dist = delta * cam_speed;
 	float dist_rot  = delta * ROTATION_SPEED;
 
@@ -141,15 +145,23 @@ void ChatCommands::Update(float delta) {
 		float vertical = 0;
 		float rotate = 0;
 		float side = 0;
+		if (ImGui::IsKeyDown(KEY_W) || keep_forward) forward += 1.0f;
+		if (ImGui::IsKeyDown(KEY_S)) forward -= 1.0f;
 		if (ImGui::IsKeyDown(KEY_Q)) side += 1.0f;
 		if (ImGui::IsKeyDown(KEY_E)) side -= 1.0f;
-		if (ImGui::IsKeyDown(KEY_W)) forward += 1.0f;
-		if (ImGui::IsKeyDown(KEY_S)) forward -= 1.0f;
-		if (ImGui::IsKeyDown(KEY_A)) rotate += 1.0f;
-		if (ImGui::IsKeyDown(KEY_D)) rotate -= 1.0f;
 		if (ImGui::IsKeyDown(KEY_Z)) vertical -= 1.0f;
 		if (ImGui::IsKeyDown(KEY_X)) vertical += 1.0f;
-		GW::CameraMgr::ForwardMovement(forward * delta * cam_speed, false);
+		if (ImGui::IsKeyDown(KEY_A)) rotate += 1.0f;
+		if (ImGui::IsKeyDown(KEY_D)) rotate -= 1.0f;
+		if (ImGui::IsKeyDown(KEY_R)) keep_forward = true;
+		if (ImGui::IsKeyDown(KEY_W) || ImGui::IsKeyDown(KEY_S) || ImGui::IsKeyDown(KEY_ESC)) keep_forward = false;
+
+		if (ImGui::IsMouseDown(1) && (rotate != 0.f)) {
+			side = rotate;
+			rotate = 0.f;
+		}
+
+		GW::CameraMgr::ForwardMovement(forward * delta * cam_speed, true);
 		GW::CameraMgr::VerticalMovement(vertical * delta * cam_speed);
 		GW::CameraMgr::RotateMovement(rotate * delta * ROTATION_SPEED);
 		GW::CameraMgr::SideMovement(side * delta * cam_speed);
