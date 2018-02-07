@@ -103,15 +103,19 @@ void ChatCommands::Initialize() {
 }
 
 #define KEY_ESC 0x1B
-#define KEY_A   0x41
-#define KEY_D   0x44
-#define KEY_E   0x45
-#define KEY_Q   0x51
-#define KEY_R   0x52
-#define KEY_S   0x53
-#define KEY_W   0x57
-#define KEY_X   0x58
-#define KEY_Z   0x5A
+#define KEY_A 0x41
+#define KEY_D 0x44
+#define KEY_E 0x45
+#define KEY_Q 0x51
+#define KEY_R 0x52
+#define KEY_S 0x53
+#define KEY_W 0x57
+#define KEY_X 0x58
+#define KEY_Z 0x5A
+#define KEY_LEFT 0x25
+#define KEY_UP 0x26
+#define KEY_RIGHT 0x27
+#define KEY_DOWN 0x28
 
 bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 	if (!GW::CameraMgr::GetCameraUnlock()) return false;
@@ -150,14 +154,14 @@ void ChatCommands::Update(float delta) {
 		float vertical = 0;
 		float rotate = 0;
 		float side = 0;
-		if (ImGui::IsKeyDown(KEY_W) || keep_forward) forward += 1.0f;
-		if (ImGui::IsKeyDown(KEY_S)) forward -= 1.0f;
+		if (ImGui::IsKeyDown(KEY_W) || ImGui::IsKeyDown(KEY_UP) || keep_forward) forward += 1.0f;
+		if (ImGui::IsKeyDown(KEY_S) || ImGui::IsKeyDown(KEY_DOWN)) forward -= 1.0f;
 		if (ImGui::IsKeyDown(KEY_Q)) side += 1.0f;
 		if (ImGui::IsKeyDown(KEY_E)) side -= 1.0f;
 		if (ImGui::IsKeyDown(KEY_Z)) vertical -= 1.0f;
 		if (ImGui::IsKeyDown(KEY_X)) vertical += 1.0f;
-		if (ImGui::IsKeyDown(KEY_A)) rotate += 1.0f;
-		if (ImGui::IsKeyDown(KEY_D)) rotate -= 1.0f;
+		if (ImGui::IsKeyDown(KEY_A) || ImGui::IsKeyDown(KEY_LEFT)) rotate += 1.0f;
+		if (ImGui::IsKeyDown(KEY_D) || ImGui::IsKeyDown(KEY_RIGHT)) rotate -= 1.0f;
 		if (ImGui::IsKeyDown(KEY_R)) keep_forward = true;
 		if (ImGui::IsKeyDown(KEY_W) || ImGui::IsKeyDown(KEY_S) || ImGui::IsKeyDown(KEY_ESC)) keep_forward = false;
 
