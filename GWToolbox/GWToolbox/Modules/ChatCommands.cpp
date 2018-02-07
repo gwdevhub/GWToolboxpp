@@ -97,47 +97,35 @@ void ChatCommands::Initialize() {
 	GW::Chat::CreateCommand(L"transmo", ChatCommands::CmdTransmo);
 }
 
-bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
-	if (!GW::CameraMgr::GetCameraUnlock() || GW::Chat::IsTyping()) return false;
+#define KEY_A 0x41
+#define KEY_D 0x44
+#define KEY_E 0x45
+#define KEY_Q 0x51
+#define KEY_S 0x53
+#define KEY_W 0x57
+#define KEY_X 0x58
+#define KEY_Z 0x5A
 
-	const DWORD keyA = 0x41;
-	const DWORD keyD = 0x44;
-	const DWORD keyS = 0x53;
-	const DWORD keyW = 0x57;
-	const DWORD keyX = 0x58;
-	const DWORD keyZ = 0x5A;
+bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
+	if (!GW::CameraMgr::GetCameraUnlock()) return false;
+	if (GW::Chat::IsTyping()) return false;
+	if (ImGui::GetIO().WantTextInput) return false;
 
 	switch (Message) {
-	case WM_KEYDOWN: {
+	case WM_KEYDOWN: 
+	case WM_KEYUP:
 		switch (wParam) {
-		case keyW: move_forward = 1; return true;
-		case keyS: move_forward = -1; return true;
-		case keyD: move_side = -1; return true;
-		case keyA: move_side = 1; return true;
-		case keyX: move_up = 1; return true;
-		case keyZ: move_up = -1; return true;
-		}
+			case KEY_A:
+			case KEY_D:
+			case KEY_E:
+			case KEY_Q:
+			case KEY_S:
+			case KEY_W:
+			case KEY_X:
+			case KEY_Z:
+				return true;
+			}
 	}
-	case WM_KEYUP: {
-		switch (wParam) {
-		case keyW:
-		case keyS:
-			move_forward = 0; 
-			return true;
-		case keyD:
-		case keyA:
-			move_side = 0;
-			return true;
-		case keyX:
-		case keyZ:
-			move_up = 0;
-			return true;
-		default:
-			break;
-		}
-	}
-	}
-
 	return false;
 }
 
@@ -145,10 +133,26 @@ void ChatCommands::Update(float delta) {
 	float dist_dist = delta * cam_speed;
 	float dist_rot  = delta * ROTATION_SPEED;
 
-	if (GW::CameraMgr::GetCameraUnlock() && !GW::Chat::IsTyping()) {
-		GW::CameraMgr::ForwardMovement(  dist_dist * move_forward);
-		GW::CameraMgr::VerticalMovement(-dist_dist * move_up);
-		GW::CameraMgr::RotateMovement(move_side * dist_rot);
+	if (GW::CameraMgr::GetCameraUnlock() 
+		&& !GW::Chat::IsTyping() 
+		&& !ImGui::GetIO().WantTextInput) {
+
+		float forward = 0;
+		float vertical = 0;
+		float rotate = 0;
+		float side = 0;
+		if (ImGui::IsKeyDown(KEY_Q)) side += 1.0f;
+		if (ImGui::IsKeyDown(KEY_E)) side -= 1.0f;
+		if (ImGui::IsKeyDown(KEY_W)) forward += 1.0f;
+		if (ImGui::IsKeyDown(KEY_S)) forward -= 1.0f;
+		if (ImGui::IsKeyDown(KEY_A)) rotate += 1.0f;
+		if (ImGui::IsKeyDown(KEY_D)) rotate -= 1.0f;
+		if (ImGui::IsKeyDown(KEY_Z)) vertical -= 1.0f;
+		if (ImGui::IsKeyDown(KEY_X)) vertical += 1.0f;
+		GW::CameraMgr::ForwardMovement(forward * delta * cam_speed, false);
+		GW::CameraMgr::VerticalMovement(vertical * delta * cam_speed);
+		GW::CameraMgr::RotateMovement(rotate * delta * ROTATION_SPEED);
+		GW::CameraMgr::SideMovement(side * delta * cam_speed);
 		GW::CameraMgr::UpdateCameraPos();
 	}
 
@@ -500,7 +504,7 @@ void ChatCommands::CmdCamera(int argc, LPWSTR *argv) {
 			GW::CameraMgr::UnlockCam(false);
 		} else if (arg1 == L"unlock") {
 			GW::CameraMgr::UnlockCam(true);
-			Log::Info("Use W,A,S,D,X,Z for camera movement");
+			Log::Info("Use Q/E, A/D, W/S, X/Z for camera movement");
 		} else if (arg1 == L"fog") {
 			if (argc == 3) {
 				std::wstring arg2 = GuiUtils::ToLower(argv[2]);
