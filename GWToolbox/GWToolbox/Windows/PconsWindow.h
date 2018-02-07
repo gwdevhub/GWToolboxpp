@@ -26,7 +26,7 @@ public:
 	bool SetEnabled(bool b);
 	inline void ToggleEnable() { SetEnabled(!enabled); }
 
-	void Update(DWORD delta) override;
+	void Update(float delta) override;
 
 	bool DrawTabButton(IDirect3DDevice9* device, bool show_icon, bool show_text) override;
 	void Draw(IDirect3DDevice9* pDevice) override;

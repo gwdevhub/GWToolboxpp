@@ -305,7 +305,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 	ImGui::End();
 }
 
-void InfoWindow::Update(DWORD delta) {
+void InfoWindow::Update(float delta) {
 	if (show_resignlog
 		&& GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
 		&& GW::PartyMgr::GetPartyInfo()) {

@@ -268,7 +268,7 @@ void PconsWindow::Draw(IDirect3DDevice9* device) {
 	}
 }
 
-void PconsWindow::Update(DWORD delta) {
+void PconsWindow::Update(float delta) {
 	if (current_map_type != GW::Map::GetInstanceType()) {
 		current_map_type = GW::Map::GetInstanceType();
 		scan_inventory_timer = TIMER_INIT();

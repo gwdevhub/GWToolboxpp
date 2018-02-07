@@ -20,7 +20,7 @@ public:
 	void Initialize() override;
 
 	void Draw(IDirect3DDevice9* pDevice) override;
-	void Update(DWORD delta) override;
+	void Update(float delta) override;
 
 	void DrawSettingInternal() override;
 	void LoadSettings(CSimpleIni* ini) override;

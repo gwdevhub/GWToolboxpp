@@ -141,10 +141,9 @@ bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 	return false;
 }
 
-void ChatCommands::Update(DWORD delta) {
-	float delta_float = (float)delta / 1000.f;
-	float dist_dist = delta_float * cam_speed;
-	float dist_rot  = delta_float * ROTATION_SPEED;
+void ChatCommands::Update(float delta) {
+	float dist_dist = delta * cam_speed;
+	float dist_rot  = delta * ROTATION_SPEED;
 
 	if (GW::CameraMgr::GetCameraUnlock() && !GW::Chat::IsTyping()) {
 		GW::CameraMgr::ForwardMovement(  dist_dist * move_forward);

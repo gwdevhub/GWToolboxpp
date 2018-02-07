@@ -156,7 +156,7 @@ void Resources::DxUpdate(IDirect3DDevice9* device) {
 	}
 }
 
-void Resources::Update(DWORD delta) {
+void Resources::Update(float delta) {
 	while (!todo.empty()) {
 		todo.front()();
 		todo.pop();

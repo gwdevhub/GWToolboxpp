@@ -25,7 +25,7 @@ public:
 	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
 
-	void Update(DWORD delta) override;
+	void Update(float delta) override;
 	bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam);
 
 	void DrawBorderlessSetting();

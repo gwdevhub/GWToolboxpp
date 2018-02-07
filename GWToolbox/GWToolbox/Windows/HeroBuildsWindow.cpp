@@ -271,7 +271,7 @@ void HeroBuildsWindow::Load(const TeamHeroBuild& tbuild, unsigned int idx) {
 	}
 }
 
-void HeroBuildsWindow::Update(DWORD delta) {
+void HeroBuildsWindow::Update(float delta) {
 	if (!queue.empty() && TIMER_DIFF(send_timer) > 600) {
 		if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost
 			&& GW::Agents::GetPlayer()) {

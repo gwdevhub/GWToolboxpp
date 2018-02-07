@@ -418,10 +418,13 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 
 		ImGui_ImplDX9_NewFrame(GW::Render::GetViewportWidth(), GW::Render::GetViewportHeight());
 
+		// Improve precision with QueryPerformanceCounter
 		DWORD tick = GetTickCount();
 		DWORD delta = tick - last_tick_count;
+		float delta_f = delta / 1000.f;
+
 		for (ToolboxModule* module : GWToolbox::Instance().modules) {
-			module->Update(delta);
+			module->Update(delta_f);
 		}
 		last_tick_count = tick;
 

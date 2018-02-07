@@ -35,7 +35,7 @@ public:
 	bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam);
 
 	// Update. Will always be called every frame.
-	void Update(DWORD delta) override;
+	void Update(float delta) override;
 
 private:
 	static bool ReadTemplateFile(std::wstring path, char *buff, size_t buffSize);

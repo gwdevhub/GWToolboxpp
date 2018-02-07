@@ -12,7 +12,7 @@
 #include <logger.h>
 #include <Modules\Resources.h>
 
-void MaterialsWindow::Update(DWORD delta) {
+void MaterialsWindow::Update(float delta) {
 	if (cancelled) return;
 	if (!quotequeue.empty()) {
 		if (last_request_type == None) { // no requests are active
