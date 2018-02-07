@@ -7,6 +7,11 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
+## Version 2.8
+* [Fix] Fixed a crash bug in the hero build window. 
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.8_Release/GWToolbox.dll)
+
 ## Version 2.7
 * [New] Can now omit the town in `/tp [town] [district] to change district. 
 * [Fix] Fixed the "Close other windows..." option.
