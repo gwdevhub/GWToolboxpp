@@ -342,7 +342,7 @@ void ChatCommands::ParseDistrict(const std::wstring& s, GW::Constants::District&
 		district = GW::Constants::District::EuropeEnglish;
 	} else if (s == L"eg" || s == L"dd") {
 		district = GW::Constants::District::EuropeGerman;
-	} else if (s == L"ef") {
+	} else if (s == L"ef" || s == L"fr") {
 		district = GW::Constants::District::EuropeFrench;
 	} else if (s == L"ei") {
 		district = GW::Constants::District::EuropeItalian;
@@ -742,6 +742,11 @@ void ChatCommands::CmdTransmo(int argc, LPWSTR *argv) {
 	GW::NPC &npc = npcs[npc_id];
 
 #if 0
+	npc_id = 12;
+	GW::NPC npc = {0};
+	npc.ModelFileID = 193245;
+	npc.scale = 0x64000000; // I think, 2 highest order bytes are percent of size, so 0x64000000 is 100%
+
 	// Those 2 packets (P074 & P075) are used to create a new model, for instance if we want to "use" a tonic.
 	// We have to find the data that are in the NPC structure and feed them to those 2 packets.
 
@@ -755,7 +760,7 @@ void ChatCommands::CmdTransmo(int argc, LPWSTR *argv) {
 		packet.scale = npc.scale;
 		packet.data2 = 0;
 		packet.flags = npc.NpcFlags;
-		packet.profession = npc.Profession;
+		packet.profession = npc.Primary;
 		packet.level = 0;
 		packet.name[0] = 0;
 
@@ -769,13 +774,10 @@ void ChatCommands::CmdTransmo(int argc, LPWSTR *argv) {
 		packet.npc_id = npc_id;
 
 		// If we found a npc that have more than 1 ModelFiles, we can determine which one of h0028, h002C are size and capacity.
-		assert((npc.h0028 <= 1) && (npc.h002C <= 1));
-		if (npc.ModelFiles) {
-			packet.count = 1;
-			packet.data[0] = npc.ModelFiles[0];
-		} else {
-			packet.count = 0;
-		}
+		assert(npc.FilesCount <= 8);
+		packet.count = npc.FilesCount;
+		for (size_t i = 0; i < npc.FilesCount; i++)
+			packet.data[i] = npc.ModelFiles[i];
 
 		GW::StoC::EmulatePacket((GW::Packet::StoC::PacketBase *)&packet);
 	});
