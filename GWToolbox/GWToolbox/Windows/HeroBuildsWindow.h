@@ -2,6 +2,7 @@
 
 #include "ToolboxWindow.h"
 
+#include <array>
 #include <vector>
 #include <queue>
 #include <string>
@@ -10,17 +11,32 @@
 
 class HeroBuildsWindow : public ToolboxWindow {
 private:
+	// hero_index is:
+	// -2 for player (although it doesn't really matter),
+	// -1 for 'choose hero', 
+	// 0 for 'no hero', 
+	// and 1+ for heroes, order is in HeroIndexToID array
 	struct HeroBuild {
-		char name[128] = "";
-		char code[128] = "";
-		int  hero_index = 0;
+		HeroBuild(const char* n = "", const char* c = "", int index = -1) {
+			strncpy(name, n, 128);
+			strncpy(code, c, 128);
+		}
+		char name[128];
+		char code[128];
+		int  hero_index;
 	};
 
 	struct TeamHeroBuild {
-		size_t id;
-		char name[128] = "";
+		static unsigned int cur_ui_id;
+		TeamHeroBuild(const char* n = "")
+			: ui_id(++cur_ui_id) {
+			strncpy(name, n, 128);
+		}
+		bool edit_open = false;
 		bool hardmode = false;
+		char name[128];
 		std::vector<HeroBuild> builds;
+		unsigned int ui_id; // should be const but then assignment operator doesn't get created automatically, and I'm too lazy to redefine it, so just don't change this value, okay?
 	};
 
 	HeroBuildsWindow() {};
@@ -59,9 +75,6 @@ private:
 
 	bool builds_changed = false;
 	std::vector<TeamHeroBuild> teambuilds;
-
-	TeamHeroBuild *build_in_edit;
-	bool edit_open; // This may seem redundant, but that's how we know if the user close the window.
 
 	struct CodeOnHero {
 		CodeOnHero(const char* c = "", int i = 0) {

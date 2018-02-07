@@ -6,6 +6,7 @@
 #include <GWCA\Managers\PartyMgr.h>
 #include <GWCA\Managers\SkillbarMgr.h>
 
+#include <logger.h>
 #include "GuiUtils.h"
 #include <Modules\Resources.h>
 
@@ -14,37 +15,40 @@
 namespace {
 	using GW::Constants::HeroID;
 
+	// hero index is an arbitrary index. 
+	// We aim to have the same order as in the gw client. 
+	// Razah is after the mesmers because all players that don't have mercs have it set as mesmer. 
 	HeroID HeroIndexToID[] = {
 		HeroID::NoHero,
-		HeroID::Norgu,
 		HeroID::Goren,
-		HeroID::Tahlkora,
-		HeroID::MasterOfWhispers,
-		HeroID::AcolyteJin,
 		HeroID::Koss,
-		HeroID::Dunkoro,
-		HeroID::AcolyteSousuke,
-		HeroID::Melonni,
-		HeroID::ZhedShadowhoof,
-		HeroID::GeneralMorgahn,
-		HeroID::MargridTheSly,
-		HeroID::Zenmai,
-		HeroID::Olias,
-		HeroID::Razah,
-		HeroID::MOX,
 		HeroID::Jora,
-		HeroID::KeiranThackeray,
+		HeroID::AcolyteJin,
+		HeroID::MargridTheSly,
 		HeroID::PyreFierceshot,
-		HeroID::Anton,
-		HeroID::Livia,
-		HeroID::Hayda,
-		HeroID::Kahmu,
-		HeroID::Gwen,
-		HeroID::Xandra,
-		HeroID::Vekk,
+		HeroID::Tahlkora,
+		HeroID::Dunkoro,
 		HeroID::Ogden,
+		HeroID::MasterOfWhispers,
+		HeroID::Olias,
+		HeroID::Livia,
+		HeroID::Norgu,
+		HeroID::Razah,
+		HeroID::Gwen,
+		HeroID::AcolyteSousuke,
+		HeroID::ZhedShadowhoof,
+		HeroID::Vekk,
+		HeroID::Zenmai,
+		HeroID::Anton,
 		HeroID::Miku,
+		HeroID::Xandra,
 		HeroID::ZeiRi,
+		HeroID::GeneralMorgahn,
+		HeroID::KeiranThackeray,
+		HeroID::Hayda,
+		HeroID::Melonni,
+		HeroID::MOX,
+		HeroID::Kahmu,
 		HeroID::Merc1,
 		HeroID::Merc2,
 		HeroID::Merc3,
@@ -64,12 +68,14 @@ namespace {
 		"General Morgahn", "Magrid The Sly", "Zenmai",
 		"Olias", "Razah", "MOX", "Jora", "Keiran Thackeray",
 		"Pyre Fierceshot", "Anton", "Livia", "Hayda",
-		"Kahmu", "Gwen", "Xandra", "Vekk", "Ogden", "Miku", "Zei Ri",
+		"Kahmu", "Gwen", "Xandra", "Vekk", "Ogden",
 		"Mercenary Hero 1", "Mercenary Hero 2", "Mercenary Hero 3",
 		"Mercenary Hero 4", "Mercenary Hero 5", "Mercenary Hero 6",
-		"Mercenary Hero 7", "Mercenary Hero 8"
+		"Mercenary Hero 7", "Mercenary Hero 8", "Miku", "Zei Ri"
 	};
 }
+
+unsigned int HeroBuildsWindow::TeamHeroBuild::cur_ui_id = 0;
 
 void HeroBuildsWindow::Initialize() {
 	ToolboxWindow::Initialize();
@@ -89,57 +95,60 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 		ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiSetCond_FirstUseEver);
 		if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-			for (size_t i = 0; i < teambuilds.size(); i++) {
-				TeamHeroBuild &team_build = teambuilds[i];
-				ImGui::PushID(i);
-				if (ImGui::Button(team_build.name, ImVec2(ImGui::GetWindowContentRegionWidth()
+			for (TeamHeroBuild& tbuild : teambuilds) {
+				ImGui::PushID(tbuild.ui_id);
+				if (ImGui::Button(tbuild.name, ImVec2(ImGui::GetWindowContentRegionWidth()
 					- ImGui::GetStyle().ItemInnerSpacing.x - 60.0f, 0))) {
-					Load(team_build);
+					Load(tbuild);
 				}
 				if (ImGui::IsItemHovered()) {
 					ImGui::SetTooltip("Click to load builds to heroes and player");
 				}
 				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 				if (ImGui::Button("Edit", ImVec2(60.0f, 0))) {
-					build_in_edit = &team_build;
-					edit_open = true;
+					tbuild.edit_open = true;
 				}
 				ImGui::PopID();
 			}
 			if (ImGui::Button("Add Teambuild", ImVec2(ImGui::GetWindowContentRegionWidth(), 0))) {
-				TeamHeroBuild tb = {};
-				tb.id = teambuilds.size();
+				TeamHeroBuild tb = TeamHeroBuild();
 				tb.builds.reserve(8); // at this point why don't we use a static array ??
+				tb.builds.push_back(HeroBuild("", "", -2));
+				for (int i = 0; i < 7; ++i) {
+					tb.builds.push_back(HeroBuild());
+				}
 
-				HeroBuild empty = {};
-				for (int i = 0; i < 8; i++)
-					tb.builds.push_back(empty);
 				builds_changed = true;
 
 				teambuilds.push_back(tb);
-				build_in_edit = &teambuilds.back();
-				edit_open = true;
 			}
 		}
 		ImGui::End();
 	}
 
-	if (build_in_edit) {
+	for (size_t i = 0; i < teambuilds.size(); ++i) {
+		if (!teambuilds[i].edit_open) continue;
+		TeamHeroBuild& tbuild = teambuilds[i];
 		char winname[256];
-		snprintf(winname, 256, "%s###herobuild%d", build_in_edit->name, build_in_edit->id);
+		snprintf(winname, 256, "%s###herobuild%d", tbuild.name, tbuild.ui_id);
 		ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 		ImGui::SetNextWindowSize(ImVec2(500, 0), ImGuiSetCond_FirstUseEver);
-		if (ImGui::Begin(winname, &edit_open)) {
+		if (ImGui::Begin(winname, &tbuild.edit_open)) {
 			ImGui::PushItemWidth(-120.0f);
-			if (ImGui::InputText("Hero Build Name", build_in_edit->name, 128)) builds_changed = true;
+			if (ImGui::InputText("Hero Build Name", tbuild.name, 128)) builds_changed = true;
 			ImGui::PopItemWidth();
-
-			auto &builds = build_in_edit->builds;
-			for (size_t j = 0; j < builds.size(); ++j) {
-				HeroBuild& build = builds[j];
+			ImGui::SetCursorPosX(37.0f);
+			ImGui::Text("Name");
+			ImGui::SameLine(10.0f + ImGui::GetWindowContentRegionWidth() / 3);
+			ImGui::Text("Template");
+			for (size_t j = 0; j < tbuild.builds.size(); ++j) {
+				HeroBuild& build = tbuild.builds[j];
 				ImGui::PushID(j);
-				if (j == 0) ImGui::Text("P");
-				else ImGui::Text("H#%d", j);
+				if (j == 0) {
+					ImGui::Text("P");
+				} else {
+					ImGui::Text("H#%d", j);
+				}
 				ImGui::SameLine(37.0f);
 				ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 50.0f - 24.0f
 					- ImGui::GetStyle().ItemInnerSpacing.x * 4) / 3);
@@ -151,11 +160,10 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 					ImGui::Text("Player");
 				} else {
 					if (ImGui::MyCombo("###heroid", "Choose Hero", &build.hero_index,
-						[](void* data, int idx, const char** out_text) -> bool
-					{
+						[](void* data, int idx, const char** out_text) -> bool {
 						if (idx < 0) return false;
 						if (idx >= hero_count) return false;
-						*out_text = HeroName[idx];
+						*out_text = HeroName[HeroIndexToID[idx]];
 						return true;
 					}, nullptr, hero_count)) {
 						builds_changed = true;
@@ -164,7 +172,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 				ImGui::PopItemWidth();
 				ImGui::SameLine(ImGui::GetWindowWidth() - 50.0f - ImGui::GetStyle().WindowPadding.x);
 				if (ImGui::Button("Load", ImVec2(50.0f, 0))) {
-					Load(*build_in_edit, j);
+					Load(tbuild, j);
 				}
 				if (j == 0) {
 					if (ImGui::IsItemHovered()) ImGui::SetTooltip("Load Build on Player");
@@ -175,9 +183,6 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 			}
 			ImGui::Spacing();
 
-			// issue: moving a teambuild up or down will change the teambuild window id
-			// which will make the window change size, which is pretty annoying
-			int i = build_in_edit->id;
 			if (ImGui::SmallButton("Up") && i > 0) {
 				std::swap(teambuilds[i - 1], teambuilds[i]);
 				builds_changed = true;
@@ -195,11 +200,11 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 			}
 			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete the teambuild");
 			ImGui::SameLine();
-			ImGui::Checkbox("Hard Mode?", &build_in_edit->hardmode);
+			ImGui::Checkbox("Hard Mode?", &tbuild.hardmode);
 			ImGui::SameLine(ImGui::GetWindowWidth() -
 				ImGui::GetStyle().WindowPadding.x - ImGui::GetWindowContentRegionWidth() * 0.4f);
 			if (ImGui::Button("Close", ImVec2(ImGui::GetWindowContentRegionWidth() * 0.4f, 0))) {
-				edit_open = false;
+				tbuild.edit_open = false;
 			}
 			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Close this window");
 
@@ -207,10 +212,6 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 				ImGui::Text("Are you sure?\nThis operation cannot be undone.\n\n");
 				if (ImGui::Button("OK", ImVec2(120, 0))) {
 					teambuilds.erase(teambuilds.begin() + i);
-					if (i < (int)teambuilds.size())
-						teambuilds[i].id = i;
-
-					edit_open = false;
 					builds_changed = true;
 					ImGui::CloseCurrentPopup();
 				}
@@ -222,8 +223,6 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 			}
 		}
 		ImGui::End();
-
-		if (!edit_open) build_in_edit = nullptr;
 	}
 }
 
@@ -255,13 +254,15 @@ void HeroBuildsWindow::Load(const TeamHeroBuild& tbuild, unsigned int idx) {
 	const HeroBuild& build = tbuild.builds[idx];
 	const std::string code(build.code);
 
-	assert(0 <= build.hero_index && build.hero_index <= hero_count);
-	GW::Constants::HeroID heroid = HeroIndexToID[build.hero_index];
-
 	if (idx == 0) { // Player 
-		if (!code.empty())
-			GW::SkillbarMgr::LoadSkillTemplate(build.code);
+		// note: build.hero_index should be -1
+		if (!code.empty()) GW::SkillbarMgr::LoadSkillTemplate(build.code);
 	} else {
+		if (build.hero_index < 0 || build.hero_index >= hero_count) {
+			Log::Error("Bad hero index '%d' for build '%s'", build.hero_index, build.name);
+		}
+		GW::Constants::HeroID heroid = HeroIndexToID[build.hero_index];
+
 		if (heroid == HeroID::NoHero) return;
 
 		GW::PartyMgr::AddHero(heroid);
@@ -320,25 +321,24 @@ void HeroBuildsWindow::LoadFromFile() {
 
 		TeamHeroBuild tb;
 		strncpy(tb.name, inifile->GetValue(section, "buildname", ""), 128);
-		tb.id = teambuilds.size();
 		tb.hardmode = inifile->GetBoolValue(section, "hardmode", false);
 		tb.builds.reserve(8);
 
 		for (int i = 0; i < 8; ++i) {
 			char namekey[16];
 			char templatekey[16];
-			char heroidkey[16];
+			char heroindexkey[16];
 			snprintf(namekey, 16, "name%d", i);
 			snprintf(templatekey, 16, "template%d", i);
-			snprintf(heroidkey, 16, "heroid%d", i);
+			snprintf(heroindexkey, 16, "heroindex%d", i);
 			const char* nameval = inifile->GetValue(section, namekey, "");
 			const char* templateval = inifile->GetValue(section, templatekey, "");
-			const int heroidval = inifile->GetLongValue(section, heroidkey, -1);
+			const int hero_index = inifile->GetLongValue(section, heroindexkey, -1);
 
 			HeroBuild build;
 			strncpy(build.name, nameval, 128);
 			strncpy(build.code, templateval, 128);
-			build.hero_index = heroidval; // odd and probably bad (We should save the hero_id, not the hero_index)
+			build.hero_index = hero_index;
 
 			tb.builds.push_back(build);
 		}
@@ -372,13 +372,13 @@ void HeroBuildsWindow::SaveToFile() {
 				const HeroBuild& build = tbuild.builds[j];
 				char namekey[16];
 				char templatekey[16];
-				char heroidkey[16];
+				char heroindexkey[16];
 				snprintf(namekey, 16, "name%d", j);
 				snprintf(templatekey, 16, "template%d", j);
-				snprintf(heroidkey, 16, "heroid%d", j);
+				snprintf(heroindexkey, 16, "heroindex%d", j);
 				inifile->SetValue(section, namekey, build.name);
 				inifile->SetValue(section, templatekey, build.code);
-				inifile->SetLongValue(section, heroidkey, build.hero_index);
+				inifile->SetLongValue(section, heroindexkey, build.hero_index);
 			}
 		}
 		inifile->SaveFile(Resources::GetPath(INI_FILENAME).c_str());

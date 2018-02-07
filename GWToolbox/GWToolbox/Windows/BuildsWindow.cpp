@@ -66,6 +66,10 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::PushItemWidth(-120.0f);
 			if (ImGui::InputText("Build Name", tbuild.name, 128)) builds_changed = true;
 			ImGui::PopItemWidth();
+			ImGui::SetCursorPosX(30.0f);
+			ImGui::Text("Name");
+			ImGui::SameLine(-50.0f + ImGui::GetWindowContentRegionWidth() / 2);
+			ImGui::Text("Template");
 			for (unsigned int j = 0; j < tbuild.builds.size(); ++j) {
 				Build& build = tbuild.builds[j];
 				ImGui::PushID(j);
@@ -103,8 +107,7 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 			}
 			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Add another player build row");
 			ImGui::Spacing();
-			// issue: moving a teambuild up or down will change the teambuild window id
-			// which will make the window change size, which is pretty annoying
+
 			if (ImGui::SmallButton("Up") && i > 0) {
 				std::swap(teambuilds[i - 1], teambuilds[i]);
 				builds_changed = true;
