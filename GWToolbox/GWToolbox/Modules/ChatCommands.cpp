@@ -163,7 +163,13 @@ void ChatCommands::Update(float delta) {
 		if (ImGui::IsKeyDown(KEY_A) || ImGui::IsKeyDown(KEY_LEFT)) rotate += 1.0f;
 		if (ImGui::IsKeyDown(KEY_D) || ImGui::IsKeyDown(KEY_RIGHT)) rotate -= 1.0f;
 		if (ImGui::IsKeyDown(KEY_R)) keep_forward = true;
-		if (ImGui::IsKeyDown(KEY_W) || ImGui::IsKeyDown(KEY_S) || ImGui::IsKeyDown(KEY_ESC)) keep_forward = false;
+
+		if (ImGui::IsKeyDown(KEY_W) || ImGui::IsKeyDown(KEY_UP) ||
+			ImGui::IsKeyDown(KEY_S) || ImGui::IsKeyDown(KEY_DOWN) ||
+			ImGui::IsKeyDown(KEY_ESC))
+		{
+			keep_forward = false;
+		}
 
 		if (GWToolbox::Instance().right_mouse_down && (rotate != 0.f)) {
 			side = rotate;
