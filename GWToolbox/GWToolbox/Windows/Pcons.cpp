@@ -236,7 +236,7 @@ bool PconCity::CanUseByEffect() const {
 	if (player->MoveX == 0.0f && player->MoveY == 0.0f) return false;
 
 	GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
-	if (!effects.valid()) return false; // don't know
+	if (!effects.valid()) return true; // When the player doesn't have any effect, the array is not created.
 
 	for (DWORD i = 0; i < effects.size(); i++) {
 		if (effects[i].GetTimeRemaining() < 1000) continue;
