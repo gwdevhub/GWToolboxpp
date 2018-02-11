@@ -257,9 +257,10 @@ void HeroBuildsWindow::Load(const TeamHeroBuild& tbuild, unsigned int idx) {
 	if (idx == 0) { // Player 
 		// note: build.hero_index should be -1
 		if (!code.empty()) GW::SkillbarMgr::LoadSkillTemplate(build.code);
-	} else {
+	} else if (build.hero_index > 0) {
 		if (build.hero_index < 0 || build.hero_index >= hero_count) {
 			Log::Error("Bad hero index '%d' for build '%s'", build.hero_index, build.name);
+			return;
 		}
 		GW::Constants::HeroID heroid = HeroIndexToID[build.hero_index];
 
