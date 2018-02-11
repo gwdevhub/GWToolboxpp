@@ -439,6 +439,7 @@ void Minimap::SelectTarget(GW::Vector2f pos) {
 		if (agent->GetIsCharacterType() && agent->GetIsDead()) continue;
 		if (agent->GetIsItemType()) continue;
 		if (agent->GetIsGadgetType() && agent->ExtraType != 8141) continue; // allow locked chests
+		if (agent->PlayerNumber >= 230 && agent->PlayerNumber <= 346) continue; // block all useless minis
 		float newDistance = GW::Agents::GetSqrDistance(pos, agents[i]->pos);
 		if (distance > newDistance) {
 			distance = newDistance;
