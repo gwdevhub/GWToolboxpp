@@ -71,12 +71,13 @@ DWORD __stdcall SafeThreadEntry(LPVOID module) {
 
 DWORD __stdcall ThreadEntry(LPVOID) {
 	Log::Log("Initializing API\n");
+
+	GW::HookBase::Initialize();
 	if (!GW::Initialize()){
 		MessageBoxA(0, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0);
 		FreeLibraryAndExitThread(dllmodule, EXIT_SUCCESS);
 		return EXIT_SUCCESS;
 	}
-
 
 	Log::Log("Installing Cursor Fix\n");
 
@@ -95,6 +96,10 @@ DWORD __stdcall ThreadEntry(LPVOID) {
 	Log::InitializeChat();
 
 	Log::Log("Installed chat hooks\n");
+
+	GW::HookBase::EnableHooks();
+
+	Log::Log("Hooks Enabled!\n");
 
 	while (!tb_destroyed) { // wait until destruction
 		Sleep(100);
@@ -450,15 +455,19 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 	if (tb_initialized && GWToolbox::Instance().must_self_destruct) {
 		tb_destroyed = true;
 
+		
+
 		GWToolbox::Instance().Terminate();
 
 		ImGui_ImplDX9_Shutdown();
 
-		Log::Log("Destroying API\n");
-		GW::Terminate();
-
 		Log::Log("Restoring input hook\n");
 		SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
 		Log::Log("Destroying directX hook\n");
+		GW::Render::RestoreHooks();
+		Log::Log("Destroying API\n");
+		GW::Terminate();
+
+		GW::HookBase::Deinitialize();
 	}
 }

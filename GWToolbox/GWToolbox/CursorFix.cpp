@@ -19,7 +19,7 @@ void InstallCursorFix()
         Log::Warning("Cursor Fix not installed, message devs about this!");
         return;
     }
-    g_hkGetClipCursor.Detour(fn, fnGetClipCursor, GW::HookInternal::CalculateDetourLength((BYTE*)fn));
+    g_hkGetClipCursor.Detour(fn, fnGetClipCursor);
 }
 
 void UninstallCursorFix()
