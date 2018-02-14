@@ -25,5 +25,5 @@ void InstallCursorFix()
 void UninstallCursorFix()
 {
     if (g_hkGetClipCursor.Valid())
-        g_hkGetClipCursor.Retour();
+		GW::HookBase::DisableHooks(&g_hkGetClipCursor);
 }

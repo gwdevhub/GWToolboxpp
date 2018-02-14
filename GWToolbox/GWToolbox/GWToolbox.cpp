@@ -113,7 +113,7 @@ DWORD __stdcall ThreadEntry(LPVOID) {
 		}
 #endif
 	}
-	
+
 	Sleep(100);
 	Log::Log("Removing Cursor Fix\n");
 	UninstallCursorFix();
@@ -121,6 +121,8 @@ DWORD __stdcall ThreadEntry(LPVOID) {
 	Log::Log("Closing log/console, bye!\n");
 	Log::Terminate();
 	Sleep(100);
+
+	GW::HookBase::Deinitialize(); // At this point every hook should be disable, so we only need to free the memory
 	FreeLibraryAndExitThread(dllmodule, EXIT_SUCCESS);
 }
 
@@ -469,7 +471,5 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 		GW::Render::RestoreHooks();
 		Log::Log("Destroying API\n");
 		GW::Terminate();
-
-		GW::HookBase::Deinitialize();
 	}
 }
