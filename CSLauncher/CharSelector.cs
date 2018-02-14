@@ -44,7 +44,7 @@ namespace CSLauncher
                 GWCAMemory mem = new GWCAMemory(proc);
                 if (mem.Read<Int32>(new IntPtr(0x00DE0000)) != 0)
                     continue;
-                if (mem.HasModule("GWToolbox.dll"))
+                if (mem.HaveModule("GWToolbox.dll"))
                     continue;
                 string charname = mem.ReadWString(charnameAddr,30);
                 comboBox1.Items.Add(charname);

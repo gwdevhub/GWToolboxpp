@@ -209,7 +209,7 @@ namespace GWCA
             }
             #endregion
 
-            public bool HasModule(string name)
+            public bool HaveModule(string name)
             {
                 ProcessModuleCollection modules = process.Modules;
                 foreach (ProcessModule module in modules)
