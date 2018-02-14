@@ -149,6 +149,8 @@ bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 
 void ChatCommands::Update(float delta) {
 	static bool keep_forward;
+
+	if (delta == 0.f) return;
 	float dist_dist = delta * cam_speed;
 	float dist_rot  = delta * ROTATION_SPEED;
 

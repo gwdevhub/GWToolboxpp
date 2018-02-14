@@ -69,6 +69,104 @@ DWORD __stdcall SafeThreadEntry(LPVOID module) {
 	}
 }
 
+static void move_item_to_storage(GW::Item *item, int current_storage) {
+	assert(0 <= current_storage && current_storage <= 8);
+	assert(item);
+
+	int bag_id_for_storage = current_storage + 8;
+
+	GW::Bag **bags = GW::Items::GetBagArray();
+	if (!bags) return;
+	GW::Bag *bag = bags[bag_id_for_storage];
+	if (!bag) return;
+	GW::ItemArray items_storage = bag->Items;
+	if (!items_storage.valid()) return;
+
+	int remaining = item->Quantity;
+	assert(remaining > 0);
+
+	for (auto *it : items_storage) {
+		if (!it) continue;
+		if (it->ModelId == item->ModelId) {
+			int availaible = 250 - it->Quantity;
+			int move_count = availaible < remaining ? availaible : remaining;
+
+			if (move_count > 0) {
+				GW::Items::MoveItem(item, it, move_count);
+				remaining -= move_count;
+			}
+
+			if (remaining == 0) break;
+		}
+	}
+
+	if (remaining > 0) {
+		size_t slot;
+		for (slot = 0; slot < items_storage.size(); slot++) {
+			if (!items_storage[slot]) break;
+		}
+
+		if (slot < items_storage.size()) {
+			GW::Items::MoveItem(item, bag, slot);
+		}
+	}
+}
+
+static void move_item_to_inventory(GW::Item *item) {
+	assert(item);
+
+	GW::Bag **bags = GW::Items::GetBagArray();
+	if (!bags) return;
+
+	int remaining = item->Quantity;
+	assert(remaining > 0);
+
+	for (int i = 1; i <= 4; i++) {
+		GW::Bag *bag = bags[i];
+		if (!bag) continue;
+		GW::ItemArray items_storage = bag->Items;
+		if (!items_storage.valid()) continue;
+
+		for (auto *it : items_storage) {
+			if (!it) continue;
+			if (it->ModelId == item->ModelId) {
+				int availaible = 250 - it->Quantity;
+				int move_count = availaible < remaining ? availaible : remaining;
+
+				if (move_count > 0) {
+					GW::Items::MoveItem(item, it, move_count);
+					remaining -= move_count;
+				}
+
+				if (remaining == 0) break;
+			}
+		}
+	}
+
+	if (remaining > 0) {
+		size_t slot = -1;
+		GW::Bag *bag;
+
+		for (int i = 1; i < 4; i++) {
+			bag = bags[i];
+			if (!bag) continue;
+			GW::ItemArray items_storage = bag->Items;
+			if (!items_storage.valid()) continue;
+			for (size_t i = 0; i < items_storage.size(); i++) {
+				if (!items_storage[i]) {
+					slot = i;
+					break;
+				}
+			}
+			if (slot != -1) break;
+		}
+
+		if (slot != -1) {
+			GW::Items::MoveItem(item, bag, slot);
+		}
+	}
+}
+
 DWORD __stdcall ThreadEntry(LPVOID) {
 	Log::Log("Initializing API\n");
 
@@ -96,6 +194,41 @@ DWORD __stdcall ThreadEntry(LPVOID) {
 	Log::InitializeChat();
 
 	Log::Log("Installed chat hooks\n");
+
+	GW::Items::SetOnItemClick([](uint32_t type, uint32_t slot, uint32_t bag) {
+		if (!ImGui::IsKeyDown(VK_CONTROL)) return;
+		if (type != 7) return;
+
+		// Expected behaviors
+		//  When clicking on item in inventory
+		//   - If there is a incomplete stack in the current chess pannel, complete it
+		//   - If all stacks of the given item are full and there is at least 1 empty slot, put it in the next availaible slot
+		// When clicking on item in chest
+		//   - If there is a incomplete stack in the inventory, complete it
+		//   - If all stacks of the given item are full and there is at least 1 empty slot, put it in the next availaible slot
+
+		bool is_inventory_item = (bag <= (DWORD)GW::Constants::Bag::Bag_2);
+		bool chest_is_open = true; // @TODO
+		bool inventory_is_open = true; // @TODO
+		if (is_inventory_item && !chest_is_open) return;
+		if (!is_inventory_item && !inventory_is_open) return;
+
+		GW::Bag **bags = GW::Items::GetBagArray();
+		if (!bags) return;
+		GW::Bag *bag_src = bags[bag + 1];
+		if (!bag_src) return;
+		GW::Item *item = bag_src->Items[slot];
+		if (!item) return;
+
+		int current_storage = GW::Items::GetCurrentStoragePannel();
+		if (is_inventory_item) {
+			move_item_to_storage(item, current_storage);
+		} else {
+			move_item_to_inventory(item);
+		}
+
+		printf("type: %u, slot: %u, bag: %u\n", type, slot, bag);
+	});
 
 	GW::HookBase::EnableHooks();
 
