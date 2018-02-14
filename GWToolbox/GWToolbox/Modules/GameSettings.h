@@ -5,6 +5,7 @@
 #include <Defines.h>
 
 #include <GWCA\Utilities\MemoryPatcher.h>
+#include <GWCA\GameEntities\Item.h>
 #include <GWCA\Managers\ChatMgr.h>
 
 #include "ToolboxModule.h"
@@ -56,7 +57,7 @@ public:
 
 	void ApplyBorderless(bool value);
 
-	static void ItemClickCallback(uint32_t type, uint32_t slot, uint32_t bag);
+	static void ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag);
 
 private:
 	void UpdateBorderless();

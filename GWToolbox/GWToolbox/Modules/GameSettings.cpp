@@ -482,7 +482,7 @@ bool GameSettings::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 	return false;
 }
 
-void GameSettings::ItemClickCallback(uint32_t type, uint32_t slot, uint32_t bag)
+void GameSettings::ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag)
 {
 	if (!ImGui::IsKeyDown(VK_CONTROL)) return;
 	if (type != 7) return;
@@ -495,25 +495,20 @@ void GameSettings::ItemClickCallback(uint32_t type, uint32_t slot, uint32_t bag)
 	//   - If there is a incomplete stack in the inventory, complete it
 	//   - If all stacks of the given item are full and there is at least 1 empty slot, put it in the next availaible slot
 
-	bool is_inventory_item = (bag <= (DWORD)GW::Constants::Bag::Bag_2);
+	bool is_inventory_item = bag->IsInventoryBag();
+	bool is_storage_item = bag->IsStorageBag();
+	if (!is_inventory_item && !is_storage_item) return;
+
 	bool chest_is_open = true; // @TODO
 	bool inventory_is_open = true; // @TODO
 	if (is_inventory_item && !chest_is_open) return;
 	if (!is_inventory_item && !inventory_is_open) return;
 
-	GW::Bag **bags = GW::Items::GetBagArray();
-	if (!bags) return;
-	GW::Bag *bag_src = bags[bag + 1];
-	if (!bag_src) return;
-	GW::Item *item = bag_src->Items[slot];
-	if (!item) return;
-
+	GW::Item *item = GW::Items::GetItemBySlot(bag, slot + 1);
 	int current_storage = GW::Items::GetCurrentStoragePannel();
 	if (is_inventory_item) {
 		move_item_to_storage(item, current_storage);
 	} else {
 		move_item_to_inventory(item);
 	}
-
-	printf("type: %u, slot: %u, bag: %u\n", type, slot, bag);
 }
