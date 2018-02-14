@@ -56,6 +56,8 @@ public:
 
 	void ApplyBorderless(bool value);
 
+	static void ItemClickCallback(uint32_t type, uint32_t slot, uint32_t bag);
+
 private:
 	void UpdateBorderless();
 	std::vector<GW::MemoryPatcher*> patches;	
