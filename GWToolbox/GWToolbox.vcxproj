@@ -130,6 +130,7 @@
     <ClInclude Include="GWToolbox\ToolboxUIElement.h" />
     <ClInclude Include="GWToolbox\ToolboxWidget.h" />
     <ClInclude Include="GWToolbox\ToolboxWindow.h" />
+    <ClInclude Include="GWToolbox\Utf8.h" />
     <ClInclude Include="GWToolbox\Widgets\AlcoholWidget.h" />
     <ClInclude Include="GWToolbox\Widgets\BondsWidget.h" />
     <ClInclude Include="GWToolbox\Widgets\ClockWidget.h" />
@@ -185,6 +186,7 @@
     <ClCompile Include="GWToolbox\ToolboxUIElement.cpp" />
     <ClCompile Include="GWToolbox\ToolboxWidget.cpp" />
     <ClCompile Include="GWToolbox\ToolboxWindow.cpp" />
+    <ClCompile Include="GWToolbox\Utf8.cpp" />
     <ClCompile Include="GWToolbox\Widgets\AlcoholWidget.cpp" />
     <ClCompile Include="GWToolbox\Widgets\BondsWidget.cpp" />
     <ClCompile Include="GWToolbox\Widgets\ClockWidget.cpp" />
