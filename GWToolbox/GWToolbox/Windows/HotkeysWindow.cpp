@@ -47,7 +47,7 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
 			if (ImGui::Selectable("Toggle...")) {
 				hotkeys.push_back(new HotkeyToggle(nullptr, nullptr));
 			}
-			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Toggle a GWToolbox++ functionality such as clicker\nor open/close a Toolbox++ window or widget");
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Toggle a GWToolbox++ functionality such as clicker");
 			if (ImGui::Selectable("Execute...")) {
 				hotkeys.push_back(new HotkeyAction(nullptr, nullptr));
 			}

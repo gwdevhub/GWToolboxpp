@@ -33,10 +33,9 @@
 void ChatCommands::DrawHelp() {
 	ImGui::Text("You can create a 'Send Chat' hotkey to perform any command.");
 	ImGui::TextDisabled("Below, <xyz> denotes an argument, use an appropriate value without the quotes.\n"
-		"(on|off) denotes a mandatory argument, in this case 'on' or 'off'.\n"
-		"[on|off] denotes an optional argument, in this case nothing, 'on' or 'off'.");
+		"(a|b) denotes a mandatory argument, in this case 'a' or 'b'.\n"
+		"[a|b] denotes an optional argument, in this case nothing, 'a' or 'b'.");
 
-	//ImGui::BulletText("'/afk' to /sit and set your status to 'Away'.");
 	ImGui::Bullet(); ImGui::Text("'/age2' prints the instance time to chat.");
 	ImGui::Bullet(); ImGui::Text("'/borderless [on|off]' toggles, enables or disables borderless window.");
 	ImGui::Bullet(); ImGui::Text("'/camera (lock|unlock)' to lock or unlock the camera.");
@@ -49,7 +48,7 @@ void ChatCommands::DrawHelp() {
 		"'/damage <number>' sends the damage of a party member (e.g. '/damage 3').\n"
 		"'/damage reset' resets the damage in party window.");
 	ImGui::Bullet(); ImGui::Text("'/dialog <id>' sends a dialog.");
-	ImGui::Bullet(); ImGui::Text("'/flag [all|<number>]' to flag a hero in the minimap (same a using the buttons by the minimap).");
+	ImGui::Bullet(); ImGui::Text("'/flag [all|clear|<number>]' to flag a hero in the minimap (same as using the buttons by the minimap).");
 	ImGui::Bullet(); ImGui::Text("'/hide <name>' closes the window or widget titled <name>.");
 	ImGui::Bullet(); ImGui::Text("'/load [build template|build name] [Hero index]' loads a build. The build name must be between quotes if it contains spaces. First Hero index is 1, last is 7. Leave out for player");
 	ImGui::Bullet(); ImGui::Text("'/pcons [on|off]' toggles, enables or disables pcons.");
@@ -225,17 +224,14 @@ bool ChatCommands::ReadTemplateFile(std::wstring path, char *buff, size_t buffSi
 }
 
 void ChatCommands::CmdAge2(int argc, LPWSTR *argv) {
-	char buffer[32];
 	DWORD second = GW::Map::GetInstanceTime() / 1000;
-	snprintf(buffer, 32, "%02u:%02u:%02u", (second / 3600), (second / 60) % 60, second % 60);
-	Log::Info(buffer);
+	Log::Info("%02u:%02u:%02u", (second / 3600), (second / 60) % 60, second % 60);
 }
 
 void ChatCommands::CmdDialog(int argc, LPWSTR *argv) {
 	if (argc <= 1) {
 		Log::Error("Please provide an integer or hex argument");
 	} else {
-	#if 1
 		int id;
 		if (GuiUtils::ParseInt(argv[1], &id)) {
 			GW::Agents::Dialog(id);
@@ -243,15 +239,6 @@ void ChatCommands::CmdDialog(int argc, LPWSTR *argv) {
 		} else {
 			Log::Error("Invalid argument '%ls', please use an integer or hex value", argv[0]);
 		}
-	#else
-		try {
-			long id = std::stol(argv[1], 0, 0);
-			GW::Agents::Dialog(id);
-			Log::Info("Sent Dialog 0x%X", id);
-		} catch (...) {
-			Log::Error("Invalid argument '%ls', please use an integer or hex value", argv[0]);
-		}
-	#endif
 	}
 }
 
@@ -287,9 +274,10 @@ void ChatCommands::CmdTB(int argc, LPWSTR *argv) {
 		} else if (arg == L"reset") {
 			ImGui::SetWindowPos(MainWindow::Instance().Name(), ImVec2(50.0f, 50.0f));
 			ImGui::SetWindowPos(SettingsWindow::Instance().Name(), ImVec2(50.0f, 50.0f));
+			MainWindow::Instance().visible = false;
+			SettingsWindow::Instance().visible = true;
 		} else if (arg == L"settings") {
 			SettingsWindow::Instance().visible = true;
-			ImGui::SetWindowPos(SettingsWindow::Instance().Name(), ImVec2(50.0f, 50.0f));
 		} else if (arg == L"mini" || arg == L"minimize") {
 			ImGui::SetWindowCollapsed(MainWindow::Instance().Name(), true);
 		} else if (arg == L"maxi" || arg == L"maximize") {
@@ -490,7 +478,6 @@ void ChatCommands::CmdZoom(int argc, LPWSTR *argv) {
 	if (argc <= 1) {
 		GW::CameraMgr::SetMaxDist();
 	} else {
-	#if 1
 		int distance;
 		if (GuiUtils::ParseInt(argv[1], &distance)) {
 			if (distance > 0) {
@@ -501,19 +488,6 @@ void ChatCommands::CmdZoom(int argc, LPWSTR *argv) {
 		} else {
 			Log::Error("Invalid argument '%ls', please use an integer value", argv[1]);
 		}
-	#else
-		try {
-			long distance = std::stol(argv[1]);
-			if (distance > 0) {
-				GW::CameraMgr::SetMaxDist(static_cast<float>(distance));
-			} else {
-				Log::Error("Invalid argument '%ls', please use a positive integer value", argv[1]);
-			}
-			
-		} catch (...) {
-			Log::Error("Invalid argument '%ls', please use an integer value", argv[1]);
-		}
-	#endif
 	}
 }
 
@@ -592,18 +566,10 @@ void ChatCommands::CmdDamage(int argc, LPWSTR *argv) {
 		} else if (arg1 == L"reset") {
 			PartyDamage::Instance().ResetDamage();
 		} else {
-		#if 1
 			int idx;
 			if (GuiUtils::ParseInt(argv[1], &idx)) {
 				PartyDamage::Instance().WriteDamageOf(idx - 1);
-			} else {
 			}
-		#else
-			try {
-				long idx = std::stol(arg1);
-				PartyDamage::Instance().WriteDamageOf(idx - 1);
-			} catch (...) {}
-		#endif
 		}
 	}
 }
