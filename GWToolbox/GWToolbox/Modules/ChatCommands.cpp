@@ -97,7 +97,6 @@ void ChatCommands::Initialize() {
 	GW::Chat::CreateCommand(L"target", ChatCommands::CmdTarget);
 	GW::Chat::CreateCommand(L"tgt", ChatCommands::CmdTarget);
 	GW::Chat::CreateCommand(L"useskill", ChatCommands::CmdUseSkill);
-	GW::Chat::CreateCommand(L"skilluse", ChatCommands::CmdUseSkill);
 	GW::Chat::CreateCommand(L"scwiki", ChatCommands::CmdSCWiki);
 	GW::Chat::CreateCommand(L"load", ChatCommands::CmdLoad);
 	GW::Chat::CreateCommand(L"transmo", ChatCommands::CmdTransmo);
@@ -660,23 +659,21 @@ void ChatCommands::CmdTarget(int argc, LPWSTR *argv) {
 	}
 }
 
-void ChatCommands::ToggleSkill(int skill) {
+void ChatCommands::AddSkillToUse(int skill) {
 	if (skill <= 0 || skill > 8) return;
 	auto i = std::find(skills_to_use.begin(), skills_to_use.end(), skill - 1);
 	if (i == skills_to_use.end()) {
 		skills_to_use.push_front(skill - 1);
-	} else {
-		skills_to_use.erase(i);
 	}
 }
 
 void ChatCommands::CmdUseSkill(int argc, LPWSTR *argv) {
-	if (argc == 1) {
-		Instance().skills_to_use.clear();
-	} else if (argc >= 2) {
+	Instance().skills_to_use.clear();
+
+	if (argc > 1) {
 		std::wstring arg1 = GuiUtils::ToLower(argv[1]);
 		if (arg1 == L"stop" || arg1 == L"off" || arg1 == L"0") {
-			Instance().skills_to_use.clear();
+			// do nothing, already cleared skills_to_use
 		} else {
 			for (int i = argc - 1; i > 0; --i) {
 				try {
@@ -684,10 +681,10 @@ void ChatCommands::CmdUseSkill(int argc, LPWSTR *argv) {
 					if (num >= 0) {
 						// note: num can be one or more skills
 						while (num > 10) {
-							Instance().ToggleSkill(num % 10);
+							Instance().AddSkillToUse(num % 10);
 							num = num / 10;
 						}
-						Instance().ToggleSkill(num);
+						Instance().AddSkillToUse(num);
 					}
 				} catch (...) {
 					Log::Error("Invalid argument '%ls', please use an integer value", argv[1]);
