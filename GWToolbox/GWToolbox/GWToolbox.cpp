@@ -403,8 +403,8 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 		ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), device);
 		ImGuiIO& io = ImGui::GetIO();
 		io.MouseDrawCursor = false;
-		static Utf8 imgui_inifile = Resources::GetPathUtf8(L"interface.ini");
-		io.IniFilename = imgui_inifile.bytes;
+		static std::string imgui_inifile = Resources::GetPath("interface.ini");
+		io.IniFilename = imgui_inifile.c_str();
 
 		Resources::Instance().EnsureFileExists(Resources::GetPath("Font.ttf"),
 			"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Font.ttf", 

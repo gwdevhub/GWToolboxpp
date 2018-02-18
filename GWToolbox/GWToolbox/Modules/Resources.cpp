@@ -43,13 +43,6 @@ std::string Resources::GetPath(std::string file) {
 std::string Resources::GetPath(std::string folder, std::string file) {
 	return GetSettingsFolderPath() + "\\" + folder + "\\" + file;
 }
-Utf8 Resources::GetPathUtf8(std::wstring file) {
-	WCHAR path[MAX_PATH];
-	SHGetFolderPathW(NULL, CSIDL_LOCAL_APPDATA | CSIDL_FLAG_CREATE, NULL, 0, path);
-	PathAppendW(path, L"GWToolboxpp");
-	PathAppendW(path, file.c_str());
-	return Utf8(path);
-}
 
 void Resources::EnsureFolderExists(std::string path) {
 	if (!PathFileExists(path.c_str())) {

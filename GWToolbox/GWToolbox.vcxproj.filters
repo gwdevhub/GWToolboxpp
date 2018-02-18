@@ -265,7 +265,6 @@
       <Filter>Windows\HeroBuilds</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\Keys.h" />
-    <ClInclude Include="GWToolbox\Utf8.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -398,7 +397,6 @@
     <ClCompile Include="GWToolbox\Windows\HeroBuildsWindow.cpp">
       <Filter>Windows\HeroBuilds</Filter>
     </ClCompile>
-    <ClCompile Include="GWToolbox\Utf8.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GWToolbox.rc">

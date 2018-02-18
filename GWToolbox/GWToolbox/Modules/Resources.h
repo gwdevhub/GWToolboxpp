@@ -8,7 +8,6 @@
 
 #include <../resource.h>
 
-#include "../Utf8.h"
 #include "ToolboxModule.h"
 
 class Resources : public ToolboxModule {
@@ -34,8 +33,6 @@ public:
 	static std::string GetSettingsFolderPath();
 	static std::string GetPath(std::string file);
 	static std::string GetPath(std::string folder, std::string file);
-
-	static Utf8 GetPathUtf8(std::wstring file);
 
 	static void EnsureFolderExists(std::string path);
 
