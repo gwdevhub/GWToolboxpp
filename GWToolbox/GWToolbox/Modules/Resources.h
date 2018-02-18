@@ -33,6 +33,9 @@ public:
 	static std::string GetSettingsFolderPath();
 	static std::string GetPath(std::string file);
 	static std::string GetPath(std::string folder, std::string file);
+
+	static char *GetPathUtf8(std::string file);
+
 	static void EnsureFolderExists(std::string path);
 
 	// folder should not contain a trailing slash
