@@ -62,7 +62,7 @@ private:
 	float cam_speed;
 	bool forward_fix_z;
 
-	void ToggleSkill(int skill); // 1-8 range
+	void AddSkillToUse(int skill); // 1-8 range
 	std::list<int> skills_to_use; // 0-7 range
 	float skill_usage_delay = 1.0f;
 	clock_t skill_timer = clock();

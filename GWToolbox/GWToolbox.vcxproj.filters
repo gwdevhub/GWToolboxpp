@@ -139,7 +139,6 @@
     </ClInclude>
     <ClInclude Include="GWToolbox\ToolboxModule.h" />
     <ClInclude Include="GWToolbox\Color.h" />
-    <ClInclude Include="GWToolbox\Key.h" />
     <ClInclude Include="GWToolbox\Windows\MainWindow.h">
       <Filter>Windows\MainWindow</Filter>
     </ClInclude>
@@ -265,6 +264,7 @@
     <ClInclude Include="GWToolbox\Windows\HeroBuildsWindow.h">
       <Filter>Windows\HeroBuilds</Filter>
     </ClInclude>
+    <ClInclude Include="GWToolbox\Keys.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
