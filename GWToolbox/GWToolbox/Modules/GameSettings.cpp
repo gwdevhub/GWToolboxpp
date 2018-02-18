@@ -505,6 +505,8 @@ void GameSettings::ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag)
 	if (!is_inventory_item && !inventory_is_open) return;
 
 	GW::Item *item = GW::Items::GetItemBySlot(bag, slot + 1);
+	if (!item) return;
+
 	int current_storage = GW::Items::GetCurrentStoragePannel();
 	if (is_inventory_item) {
 		move_item_to_storage(item, current_storage);
