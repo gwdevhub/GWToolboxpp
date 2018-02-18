@@ -418,6 +418,9 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 
 		GWToolbox::Instance().Initialize();
 
+		// Maybe temporary...
+		GW::HookBase::EnableHooks();
+
 		last_tick_count = GetTickCount();
 		tb_initialized = true;
 	}

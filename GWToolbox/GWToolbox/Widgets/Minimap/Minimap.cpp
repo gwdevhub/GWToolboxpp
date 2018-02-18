@@ -76,7 +76,7 @@ void Minimap::Initialize() {
 			std::wstring arg0 = GuiUtils::ToLower(argv[1]);
 			// partially laziness, and partially safety
 			if (arg0 == L"clear") {
-				auto heroarray = GW::GameContext::instance()->party->partyinfo->heroes;
+				auto heroarray = GW::GameContext::instance()->party->playerparty->heroes;
 				unsigned int num_heroflags = 9;
 				if (heroarray.valid()) num_heroflags = heroarray.size() + 1;
 				GW::PartyMgr::UnflagAll();
@@ -344,7 +344,7 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 			};
 			GW::Vector3f allflag = GW::GameContext::instance()->world->all_flag;
 			GW::HeroFlagArray& flags = GW::GameContext::instance()->world->hero_flags;
-			auto heroarray = GW::GameContext::instance()->party->partyinfo->heroes;
+			auto heroarray = GW::GameContext::instance()->party->playerparty->heroes;
 			unsigned int num_heroflags = 9;
 			if (heroarray.valid()) num_heroflags = heroarray.size() + 1;
 			float w_but = (ImGui::GetWindowContentRegionWidth() 
