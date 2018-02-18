@@ -6,7 +6,6 @@
 #include <Windows.h>
 #include <string>
 
-#include "Key.h"
 #include "ToolboxWindow.h"
 #include "logger.h"
 #include "Timer.h"

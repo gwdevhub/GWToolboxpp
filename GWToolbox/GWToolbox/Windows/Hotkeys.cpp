@@ -11,7 +11,7 @@
 #include <GWCA\Managers\ChatMgr.h>
 
 #include "logger.h"
-#include <logger.h>
+#include <Keys.h>
 #include "BuildsWindow.h"
 #include "HeroBuildsWindow.h"
 #include "HotkeysWindow.h"
@@ -129,9 +129,9 @@ void TBHotkey::Draw(Op* op) {
 			*op = Op_BlockInput;
 			ImGui::Text("Press key");
 			int newmod = 0;
-			if (ImGui::GetIO().KeyCtrl) newmod |= Key_Control;
-			if (ImGui::GetIO().KeyAlt) newmod |= Key_Alt;
-			if (ImGui::GetIO().KeyShift) newmod |= Key_Shift;
+			if (ImGui::GetIO().KeyCtrl) newmod |= ModKey_Control;
+			if (ImGui::GetIO().KeyAlt) newmod |= ModKey_Alt;
+			if (ImGui::GetIO().KeyShift) newmod |= ModKey_Shift;
 
 			if (newkey == 0) { // we are looking for the key
 				for (int i = 0; i < 512; ++i) {

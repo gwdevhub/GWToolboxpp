@@ -5,6 +5,7 @@
 
 #include <GWCA\Managers\ItemMgr.h>
 
+#include <Keys.h>
 #include <logger.h>
 #include <GuiUtils.h>
 #include <Modules\Resources.h>
@@ -200,11 +201,11 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 	case WM_MBUTTONDOWN: {
 		long modifier = 0;
 		if (GetKeyState(VK_CONTROL) < 0)
-			modifier |= Key_Control;
+			modifier |= ModKey_Control;
 		if (GetKeyState(VK_SHIFT) < 0)
-			modifier |= Key_Shift;
+			modifier |= ModKey_Shift;
 		if (GetKeyState(VK_MENU) < 0)
-			modifier |= Key_Alt;
+			modifier |= ModKey_Alt;
 
 		bool triggered = false;
 		for (TBHotkey* hk : hotkeys) {

@@ -113,7 +113,7 @@
     <ClInclude Include="GWToolbox\Defines.h" />
     <ClInclude Include="GWToolbox\ImGuiAddons.h" />
     <ClInclude Include="GWToolbox\imgui_impl_dx9.h" />
-    <ClInclude Include="GWToolbox\Key.h" />
+    <ClInclude Include="GWToolbox\Keys.h" />
     <ClInclude Include="GWToolbox\Modules\ChatCommands.h" />
     <ClInclude Include="GWToolbox\Modules\ChatFilter.h" />
     <ClInclude Include="GWToolbox\Modules\GameSettings.h" />
