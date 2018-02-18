@@ -75,7 +75,17 @@ void Minimap::Initialize() {
 		} else {
 			std::wstring arg0 = GuiUtils::ToLower(argv[1]);
 			// partially laziness, and partially safety
-			if (arg0 == L"1") {
+			if (arg0 == L"clear") {
+				auto heroarray = GW::GameContext::instance()->party->partyinfo->heroes;
+				unsigned int num_heroflags = 9;
+				if (heroarray.valid()) num_heroflags = heroarray.size() + 1;
+				GW::PartyMgr::UnflagAll();
+				for (unsigned int i = 1; i < num_heroflags; ++i) {
+					GW::PartyMgr::UnflagHero(i);
+				}
+			} else if (arg0 == L"all") {
+				FlagHero(0);
+			} else if (arg0 == L"1") {
 				FlagHero(1);
 			} else if (arg0 == L"2") {
 				FlagHero(2);

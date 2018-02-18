@@ -51,7 +51,7 @@ public:
 
 	// 0 is 'all' flag, 1 to 7 is each hero
 	void FlagHero(unsigned int idx) {
-		if (idx < 0) flagging[idx] ^= 1;
+		if (idx >= 0 && idx < 8) flagging[idx] ^= 1;
 	}
 
 	RangeRenderer range_renderer;
