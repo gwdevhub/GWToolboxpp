@@ -31,38 +31,38 @@ public:
 	void Update(float delta) override;
 	void DxUpdate(IDirect3DDevice9* device);
 
-	static std::string GetSettingsFolderPath();
-	static std::string GetPath(std::string file);
-	static std::string GetPath(std::string folder, std::string file);
+	static std::wstring GetSettingsFolderPath();
+	static std::wstring GetPath(std::wstring file);
+	static std::wstring GetPath(std::wstring folder, std::wstring file);
 
 	static Utf8 GetPathUtf8(std::wstring file);
 
-	static void EnsureFolderExists(std::string path);
+	static void EnsureFolderExists(std::wstring path);
 
 	// folder should not contain a trailing slash
 	void LoadTextureAsync(IDirect3DTexture9** tex,
-		std::string path_to_file);
+		std::wstring path_to_file);
 	void LoadTextureAsync(IDirect3DTexture9** tex, 
-		std::string path_to_file, WORD id);
+		std::wstring path_to_file, WORD id);
 
 
 	// checks if file exists, and downloads from server if it doesn't.
 	// If the file exists, executes callback immediately,
 	// otherwise execute callback on download completion.
 	// folder should not contain a trailing slash
-	void EnsureFileExists(std::string path_to_file, std::string url,
+	void EnsureFileExists(std::wstring path_to_file, std::wstring url,
 		std::function<void(bool)> callback);
 
 	// download to file, blocking
-	bool Download(std::string path_to_file, std::string url);
+	bool Download(std::wstring path_to_file, std::wstring url);
 	// download to file, async, calls callback on completion
-	void Download(std::string path_to_file,	std::string url, 
+	void Download(std::wstring path_to_file, std::wstring url, 
 		std::function<void(bool)> callback);
 
 	// download to memory, blocking
-	std::string Download(std::string url) const;
+	std::string Download(std::wstring url) const;
 	// download to memory, async, calls callback on completion
-	void Download(std::string url, 
+	void Download(std::wstring url, 
 		std::function<void(std::string file)> callback);
 
 	void EnqueueWorkerTask(std::function<void()> f) { thread_jobs.push(f); }

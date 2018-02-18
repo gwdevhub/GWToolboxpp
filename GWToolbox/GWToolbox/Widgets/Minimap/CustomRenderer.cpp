@@ -8,7 +8,7 @@
 
 Color CustomRenderer::color = 0xFF00FFFF;
 
-#define IniFilename "Markers.ini"
+#define IniFilename L"Markers.ini"
 
 void CustomRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	color = Colors::Load(ini, section, "color_custom_markers", 0xFFFFFFFF);

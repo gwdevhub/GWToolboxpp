@@ -9,7 +9,7 @@
 
 void DialogsWindow::Initialize() {
 	ToolboxWindow::Initialize();
-	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath("img/icons", "dialogue.png"), IDB_Icon_Dialogue);
+	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"dialogue.png"), IDB_Icon_Dialogue);
 }
 
 void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
