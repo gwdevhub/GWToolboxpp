@@ -5,6 +5,9 @@
 #include <string.h>
 #include <stdlib.h>
 
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+
 static size_t compute_required_size(const wchar_t *str, size_t max_len);
 
 Utf8::~Utf8()
@@ -24,9 +27,8 @@ bool Utf8::init(const wchar_t *str, size_t len)
 	allocated = required_size + 1;
 	length = len;
 	size = required_size;
-	wcstombs(bytes, str, size);
-	bytes[size] = 0;
-
+	
+	WideCharToMultiByte(CP_UTF8, 0, str, len, bytes, required_size, NULL, NULL);
 	return true;
 }
 
@@ -47,12 +49,7 @@ Utf8::Utf8(const wchar_t *str, size_t length)
 
 static size_t compute_required_size(const wchar_t *str, size_t max_len)
 {
-	char buffer[4 /* MB_CUR_MAX */];
-	size_t total = 0;
-	for (size_t i = 0; i < max_len; i++) {
-		int len = wctomb(buffer, str[i]);
-		if (len < 0) return 0;
-		total += len;
-	}
-	return total;
+	int res = WideCharToMultiByte(CP_UTF8, 0, str, max_len, NULL, 0, NULL, NULL);
+	if (!res) return 0;
+	return res;
 }
