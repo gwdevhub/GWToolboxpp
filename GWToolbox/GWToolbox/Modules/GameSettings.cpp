@@ -7,6 +7,7 @@
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Managers\FriendListMgr.h>
 #include <GWCA\Managers\Render.h>
+#include <GWCA\Managers\CameraMgr.h>
 
 #include <GWCA\Context\GameContext.h>
 
@@ -242,6 +243,8 @@ void GameSettings::Initialize() {
 void GameSettings::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini);
 	borderlesswindow = ini->GetBoolValue(Name(), VAR_NAME(borderlesswindow), false);
+	maintain_fov = ini->GetBoolValue(Name(), VAR_NAME(maintain_fov), false);
+	fov = ini->GetDoubleValue(Name(), VAR_NAME(fov), 1.308997f);
 	tick_is_toggle = ini->GetBoolValue(Name(), VAR_NAME(tick_is_toggle), true);
 
 	GW::Chat::ShowTimestamps = ini->GetBoolValue(Name(), "show_timestamps", false);
@@ -272,6 +275,8 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ToolboxModule::SaveSettings(ini);
 	ini->SetBoolValue(Name(), VAR_NAME(borderlesswindow), borderlesswindow);
+	ini->SetBoolValue(Name(), VAR_NAME(maintain_fov), maintain_fov);
+	ini->SetDoubleValue(Name(), VAR_NAME(fov), fov);
 	ini->SetBoolValue(Name(), VAR_NAME(tick_is_toggle), tick_is_toggle);
 
 	ini->SetBoolValue(Name(), "show_timestamps", GW::Chat::ShowTimestamps);
@@ -294,6 +299,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 
 void GameSettings::DrawSettingInternal() {
 	DrawBorderlessSetting();
+	DrawFOVSetting();
 
 	ImGui::Checkbox("Show chat messages timestamp. Color:", &GW::Chat::ShowTimestamps);
 	ImGui::SameLine();
@@ -380,8 +386,19 @@ void GameSettings::Update(float delta) {
 		GW::FriendListMgr::SetFriendListStatus(GW::Constants::OnlineStatus::AWAY);
 		activity_timer = TIMER_INIT(); // refresh the timer to avoid spamming in case the set status call fails
 	}
-
+	UpdateFOV();
 	UpdateBorderless();
+}
+
+void GameSettings::DrawFOVSetting() {
+	ImGui::Checkbox("Maintain FOV", &maintain_fov);
+	ImGui::ShowHelp("GWToolbox will save and maintain the FOV setting used with /cam fov <value>");
+}
+
+void GameSettings::UpdateFOV() {
+	if (maintain_fov && GW::CameraMgr::GetFieldOfView() != fov) {
+		GW::CameraMgr::SetFieldOfView(fov);
+	}
 }
 
 void GameSettings::UpdateBorderless() {

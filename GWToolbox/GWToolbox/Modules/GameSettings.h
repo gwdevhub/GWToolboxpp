@@ -30,6 +30,9 @@ public:
 	bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam);
 
 	void DrawBorderlessSetting();
+	void DrawFOVSetting();
+	bool maintain_fov = false;
+	float fov = 1.308997f; // default fov
 
 	// some settings that are either referenced from multiple places
 	// or have nowhere else to be
@@ -61,5 +64,6 @@ public:
 
 private:
 	void UpdateBorderless();
+	void UpdateFOV();
 	std::vector<GW::MemoryPatcher*> patches;	
 };
