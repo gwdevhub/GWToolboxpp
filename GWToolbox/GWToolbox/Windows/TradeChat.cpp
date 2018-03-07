@@ -46,7 +46,7 @@ void TradeChat::fetch(){
 
 void TradeChat::stop() {
 	if (ws_active) {
-		Log::Info("Destroying connection to trade chat");
+		Log::Log("Destroying connection to trade chat\n");
 		delete ws;
 		WSACleanup();
 		ws_active = false;

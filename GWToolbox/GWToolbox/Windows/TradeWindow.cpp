@@ -17,13 +17,6 @@ void TradeWindow::Initialize() {
 	ToolboxWindow::Initialize();
 }
 
-void TradeWindow::LoadSettings(CSimpleIni* ini) {
-
-}
-
-void TradeWindow::SaveSettings(CSimpleIni* ini) {
-
-}
 void TradeWindow::DrawSettingInternal() {
 
 }
@@ -60,6 +53,15 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		ImGui::PopTextWrapPos();
 	}
 	ImGui::End();
+}
+
+void TradeWindow::LoadSettings(CSimpleIni* ini) {
+	ToolboxWindow::LoadSettings(ini);
+	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
+}
+
+void TradeWindow::SaveSettings(CSimpleIni* ini) {
+	ToolboxWindow::SaveSettings(ini);
 }
 
 void TradeWindow::Terminate() {
