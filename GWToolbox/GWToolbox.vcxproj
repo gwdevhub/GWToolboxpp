@@ -43,12 +43,12 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <IncludePath>$(ProjectDir)GWToolbox;$(SolutionDir)Dependencies;$(SolutionDir)Dependencies\GWCA;$(SolutionDir)Dependencies\imgui;$(SolutionDir)Dependencies\DirectX\Include\;$(IncludePath)</IncludePath>
-    <LibraryPath>$(OutDir);$(SolutionDir)Dependencies\DirectX\Lib\x86\;$(SolutionDir)Dependencies\GWCA\;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(OutDir);$(SolutionDir)Dependencies\DirectX\Lib\x86\;$(SolutionDir)Dependencies\GWCA\;$(SolutionDir)Dependencies\openssl\lib\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>$(ProjectDir)GWToolbox;$(SolutionDir)Dependencies;$(SolutionDir)Dependencies\GWCA;$(SolutionDir)Dependencies\imgui;$(SolutionDir)Dependencies\DirectX\Include\;$(IncludePath)</IncludePath>
-    <LibraryPath>$(OutDir);$(SolutionDir)Dependencies\DirectX\Lib\x86\;$(SolutionDir)Dependencies\GWCA\;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(OutDir);$(SolutionDir)Dependencies\DirectX\Lib\x86\;$(SolutionDir)Dependencies\GWCA\;$(SolutionDir)Dependencies\openssl\lib\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -56,14 +56,15 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;API_EXPORTS;_USE_MATH_DEFINES;NOMINMAX;_CRT_SECURE_NO_WARNINGS;IMGUI_USE_BGRA_PACKED_COLOR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_WINSOCKAPI_;_DEBUG;_WINDOWS;_USRDLL;API_EXPORTS;_USE_MATH_DEFINES;NOMINMAX;_CRT_SECURE_NO_WARNINGS;IMGUI_USE_BGRA_PACKED_COLOR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <ForcedIncludeFiles>GWCA\Utilities\Export.h</ForcedIncludeFiles>
+      <ShowIncludes>false</ShowIncludes>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCAd.lib;Shlwapi.lib;Urlmon.lib;Wininet.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCAd.lib;Shlwapi.lib;Urlmon.lib;Wininet.lib;libeay32.lib;ssleay32.lib;user32.lib;gdi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ProgramDatabaseFile>$(OutDir)$(TargetFileName).pdb</ProgramDatabaseFile>
     </Link>
     <PostBuildEvent>
@@ -79,7 +80,7 @@
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;API_EXPORTS;_USE_MATH_DEFINES;NOMINMAX;_CRT_SECURE_NO_WARNINGS;IMGUI_USE_BGRA_PACKED_COLOR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_WINSOCKAPI_;NDEBUG;_WINDOWS;_USRDLL;API_EXPORTS;_USE_MATH_DEFINES;NOMINMAX;_CRT_SECURE_NO_WARNINGS;IMGUI_USE_BGRA_PACKED_COLOR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <AdditionalIncludeDirectories>
@@ -94,7 +95,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCA.lib;Shlwapi.lib;Urlmon.lib;Wininet.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCAd.lib;Shlwapi.lib;Urlmon.lib;Wininet.lib;libeay32.lib;ssleay32.lib;user32.lib;gdi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>
@@ -159,10 +160,13 @@
     <ClInclude Include="GWToolbox\Windows\PconsWindow.h" />
     <ClInclude Include="GWToolbox\Windows\Pcons.h" />
     <ClInclude Include="GWToolbox\Windows\SettingsWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\TradeChat.h" />
+    <ClInclude Include="GWToolbox\Windows\TradeWindow.h" />
     <ClInclude Include="GWToolbox\Windows\TravelWindow.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\Dependencies\easywsclient\easywsclient.cpp" />
     <ClCompile Include="..\Dependencies\imgui\imgui.cpp" />
     <ClCompile Include="..\Dependencies\imgui\imgui_demo.cpp" />
     <ClCompile Include="..\Dependencies\imgui\imgui_draw.cpp" />
@@ -212,6 +216,8 @@
     <ClCompile Include="GWToolbox\Windows\PconsWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\Pcons.cpp" />
     <ClCompile Include="GWToolbox\Windows\SettingsWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\TradeChat.cpp" />
+    <ClCompile Include="GWToolbox\Windows\TradeWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\TravelWindow.cpp" />
   </ItemGroup>
   <ItemGroup>

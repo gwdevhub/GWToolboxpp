@@ -86,9 +86,6 @@ namespace { // private module-only namespace
 	};
 	
 socket_t hostname_connect(const std::string& hostname, int port) {
-    wVersionRequested = MAKEWORD(2, 2);
-
-    int err = WSAStartup(wVersionRequested, &wsaData);
     struct addrinfo hints;
     struct addrinfo *result;
     struct addrinfo *p;

@@ -22,6 +22,7 @@
 #include <Windows\MaterialsWindow.h>
 #include <Windows\SettingsWindow.h>
 #include <Windows\NotePadWindow.h>
+#include <Windows\TradeWindow.h>
 
 #include <Widgets\TimerWidget.h>
 #include <Widgets\HealthWidget.h>
@@ -47,6 +48,7 @@ void ToolboxSettings::InitializeModules() {
 	if (use_dialogs) DialogsWindow::Instance().Initialize();
 	if (use_info) InfoWindow::Instance().Initialize();
 	if (use_materials) MaterialsWindow::Instance().Initialize();
+	if (use_trade) TradeWindow::Instance().Initialize();
 	if (use_notepad) NotePadWindow::Instance().Initialize();
 
 	SettingsWindow::Instance().Initialize();
@@ -103,6 +105,7 @@ void ToolboxSettings::DrawSettingInternal() {
 	ImGui::Checkbox("Vanquish counter", &use_vanquish);
 	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
 	ImGui::Checkbox("Alcohol", &use_alcohol);
+	ImGui::Checkbox("Trade", &use_trade);
 	ImGui::PopID();
 
 	ImGui::PushID("menubuttons");
@@ -153,6 +156,7 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
 	use_notepad = ini->GetBoolValue(Name(), VAR_NAME(use_notepad), true);
 	use_vanquish = ini->GetBoolValue(Name(), VAR_NAME(use_vanquish), true);
 	use_alcohol = ini->GetBoolValue(Name(), VAR_NAME(use_alcohol), true);
+	use_trade = ini->GetBoolValue(Name(), VAR_NAME(use_trade), true);
 }
 
 void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
@@ -176,6 +180,7 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(use_notepad), use_notepad);
 	ini->SetBoolValue(Name(), VAR_NAME(use_vanquish), use_vanquish);
 	ini->SetBoolValue(Name(), VAR_NAME(use_alcohol), use_alcohol);
+	ini->SetBoolValue(Name(), VAR_NAME(use_trade), use_trade);
 }
 
 void ToolboxSettings::Update(float delta) {
