@@ -4,6 +4,7 @@
 
 #include <ToolboxWindow.h>
 #include <iostream>
+#include <vector>
 #include <thread>
 
 class TradeWindow : public ToolboxWindow {
@@ -14,6 +15,16 @@ public:
 		static TradeWindow instance;
 		return instance;
 	}
+
+	struct Alert {
+		static unsigned int uid_count;
+		Alert(const char* match = "") {
+			strncpy(match_string, match, 128);
+			uid = uid_count++;
+		}
+		char match_string[128];
+		unsigned int uid;
+	};
 
 	const char* Name() const { return "Trade"; }
 
@@ -30,5 +41,7 @@ public:
 	void DrawSettingInternal() override;
 
 private:
+	std::vector<Alert> alerts;
+	bool show_alert_window = false;
 	TradeChat chat;
 };

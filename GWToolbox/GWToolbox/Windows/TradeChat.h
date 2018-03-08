@@ -20,6 +20,7 @@ public:
 	std::string latest_name;
 	void fetch();
 	void stop();
+	std::vector <nlohmann::json> new_messages;
 	std::vector <nlohmann::json> messages;
 
 private:

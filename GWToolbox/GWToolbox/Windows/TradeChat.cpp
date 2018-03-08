@@ -1,8 +1,5 @@
 #include "TradeChat.h"
 
-#pragma warning(push)
-#pragma warning(disable: 4503 4996)
-
 #include <iostream>
 #include <thread>
 #include <WinSock2.h>
@@ -24,16 +21,19 @@ TradeChat::TradeChat() {
 }
 
 void TradeChat::fetch(){
+	new_messages.clear();
 	ws->poll();
 	ws->dispatch([this](const std::string & message) {
 		nlohmann::json chat_json = nlohmann::json::parse(message.c_str());
 		if (chat_json.is_object()) {
 			if (chat_json["results"].is_array()) {
 				for (nlohmann::json::iterator it = chat_json["results"].begin(); it != chat_json["results"].end(); ++it) {
+					new_messages.insert(new_messages.begin(), *it);
 					messages.insert(messages.begin(), *it);
 				}
 			}
 			else {
+				new_messages.insert(new_messages.begin(), chat_json);
 				messages.insert(messages.begin(), chat_json);
 			}
 		}
@@ -56,5 +56,3 @@ void TradeChat::stop() {
 TradeChat::~TradeChat() {
 	stop();
 }
-
-#pragma warning(pop)
