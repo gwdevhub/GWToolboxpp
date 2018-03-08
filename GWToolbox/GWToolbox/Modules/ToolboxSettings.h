@@ -45,6 +45,7 @@ private:
 	bool use_dialogs = true;
 	bool use_info = true;
 	bool use_materials = true;
+	bool use_trade = true;
 	bool use_timer = true;
 	bool use_health = true;
 	bool use_distance = true;
