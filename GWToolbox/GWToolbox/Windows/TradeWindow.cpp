@@ -60,6 +60,12 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		if (ImGui::Button("Alerts", ImVec2(ImGui::GetWindowContentRegionWidth(), 0))) {
 			show_alert_window = true;
 		}
+		ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 90.0f - ImGui::GetStyle().ItemInnerSpacing.x * 4));
+		ImGui::InputText("", search_buffer, 256);
+		ImGui::SameLine();
+		if (ImGui::Button("Search", ImVec2(90.0f, 0))) {
+			chat.search(search_buffer);
+		}
 		ImGui::BeginChild("trade_scroll");
 		ImGui::Columns(2);
 		ImGui::Text("Player Name");
@@ -82,7 +88,9 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 				});
 			}
 			ImGui::NextColumn();
+			ImGui::PushTextWrapPos();
 			ImGui::Text("%s", message.c_str());
+			ImGui::PopTextWrapPos();
 			ImGui::NextColumn();
 			ImGui::PopID();
 		}

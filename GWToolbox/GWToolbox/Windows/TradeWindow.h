@@ -44,6 +44,7 @@ public:
 	void DrawSettingInternal() override;
 
 private:
+	char search_buffer[256];
 	CSimpleIni* alert_ini = nullptr;
 	std::string ini_filename = "trade_alerts.ini";
 	std::vector<Alert> alerts;
