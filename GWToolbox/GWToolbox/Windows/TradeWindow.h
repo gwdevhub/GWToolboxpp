@@ -36,11 +36,16 @@ public:
 	// Draw user interface. Will be called every frame if the element is visible
 	void Draw(IDirect3DDevice9* pDevice) override;
 
+
+	void LoadAlerts();
+	void SaveAlerts();
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
 
 private:
+	CSimpleIni* alert_ini = nullptr;
+	std::string ini_filename = "trade_alerts.ini";
 	std::vector<Alert> alerts;
 	bool show_alert_window = false;
 	TradeChat chat;
