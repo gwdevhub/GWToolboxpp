@@ -95,7 +95,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCAd.lib;Shlwapi.lib;Urlmon.lib;Wininet.lib;libeay32.lib;ssleay32.lib;user32.lib;gdi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCA.lib;Shlwapi.lib;Urlmon.lib;Wininet.lib;libeay32.lib;ssleay32.lib;user32.lib;gdi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>
