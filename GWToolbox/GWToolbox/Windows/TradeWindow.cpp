@@ -33,7 +33,7 @@ void TradeWindow::Update(float delta) {
 		std::transform(message.begin(), message.end(), message.begin(), ::tolower);
 		for (unsigned j = 0; j < alerts.size(); j++) {
 			// ensure the alert isnt empty
-			if (strncmp(alerts.at(i).match_string, "", 128)) {
+			if (strncmp(alerts.at(j).match_string, "", 128)) {
 				if (message.find(alerts.at(j).match_string) != std::string::npos) {
 					final_chat_message = "<c=#f96677><a=1> " + chat.new_messages.at(i)["name"].get<std::string>() + "</a>: " +
 						chat.new_messages.at(i)["message"].get<std::string>() + "</c>";
