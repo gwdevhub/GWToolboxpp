@@ -54,7 +54,7 @@ void TradeChat::fetch(){
 			if (chat_json["results"].is_array()) {
 				for (nlohmann::json::iterator it = chat_json["results"].begin(); it != chat_json["results"].end(); ++it) {
 					//new_messages.insert(new_messages.begin(), *it);
-					messages.insert(messages.begin(), *it);
+					messages.push_back(*it);
 				}
 			}
 			else {

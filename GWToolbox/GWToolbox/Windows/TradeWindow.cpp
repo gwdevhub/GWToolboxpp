@@ -60,32 +60,64 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		if (ImGui::Button("Alerts", ImVec2(ImGui::GetWindowContentRegionWidth(), 0))) {
 			show_alert_window = true;
 		}
-		ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 90.0f - ImGui::GetStyle().ItemInnerSpacing.x * 4));
-		ImGui::InputText("", search_buffer, 256);
-		ImGui::SameLine();
-		if (ImGui::Button("Search", ImVec2(90.0f, 0))) {
+		ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 80.0f - 80.0f - ImGui::GetStyle().ItemInnerSpacing.x * 4));
+		if (ImGui::InputText("", search_buffer, 256, ImGuiInputTextFlags_EnterReturnsTrue)) {
 			chat.search(search_buffer);
 		}
+		ImGui::SameLine();
+		if (ImGui::Button("Search", ImVec2(80.0f, 0))) {
+			chat.search(search_buffer);
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Clear", ImVec2(80.0f, 0))) {
+			strncpy(search_buffer, "", 256);
+			chat.search("");
+		}
 		ImGui::BeginChild("trade_scroll");
-		ImGui::Columns(2);
+		ImGui::Columns(3);
 		ImGui::Text("Player Name");
 		ImGui::SetColumnWidth(-1, 175);
+		ImGui::NextColumn();
+		ImGui::Text("Time");
+		ImGui::SetColumnWidth(-1, 140);
 		ImGui::NextColumn();
 		ImGui::Text("Message");
 		ImGui::SetColumnWidth(-1, 500);
 		ImGui::NextColumn();
 		std::string name;
 		std::string message;
+		time_t now = time(0);
 		for (unsigned int i = 0; i < chat.messages.size(); i++) {
 			ImGui::PushID(i);
 			name = chat.messages.at(i)["name"].get<std::string>();
 			message = chat.messages.at(i)["message"].get<std::string>();
+			
+
 			if (ImGui::Button(name.c_str())) {
 				GW::GameThread::Enqueue([name]() {
 					wchar_t ws[100];
 					swprintf(ws, 100, L"%hs", name.c_str());
 					GW::UI::SendUIMessage(GW::UI::kOpenWhisper, ws, nullptr);
 				});
+			}
+			ImGui::NextColumn();
+			// add 5 so we dont get negative numbers from server not being synced
+			int time_since_message = 5 + (int)now - stoi(chat.messages.at(i)["timestamp"].get<std::string>());
+
+			if ((int)(time_since_message / (60 * 60 * 24))) {
+				int days = (int)(time_since_message / (60 * 60 * 24));
+				ImGui::Text("%d %s ago", days, days > 1 ? "days" : "day");
+			}
+			else if ((int)(time_since_message / (60 * 60))) {
+				int hours = (int)(time_since_message / (60 * 60));
+				ImGui::Text("%d %s ago", hours, hours > 1 ? "hours" : "hour");
+			}
+			else if ((int)(time_since_message / (60))) {
+				int minutes = (int)(time_since_message / 60);
+				ImGui::Text("%d %s ago", minutes, minutes > 1 ? "minutes" : "minute");
+			}
+			else {
+				ImGui::Text("%d %s ago", time_since_message, time_since_message > 1 ? "seconds" : "second");
 			}
 			ImGui::NextColumn();
 			ImGui::PushTextWrapPos();
@@ -105,11 +137,12 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 						"Click to add a new keyword.\n" \
 						"\t- Trade messages with matched keywords will be send to the Guild Wars chat.\n" \
 						"\t- The keywords are not case sensitive.\n" \
-						"\t- The Trade checkbox must be selected for messages to show up."
+						"\t- The Trade checkbox in the Guild Wars chat must be selected for messages to show up."
 					);
 				}
 				for (unsigned int i = 0; i < alerts.size(); i++) {
 					ImGui::PushID(alerts.at(i).uid);
+					ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 24.0f - ImGui::GetStyle().ItemInnerSpacing.x * 2));
 					ImGui::InputText("", alerts.at(i).match_string, 128);
 					ImGui::SameLine();
 					if (ImGui::Button("x", ImVec2(24.0f, 0))) {
