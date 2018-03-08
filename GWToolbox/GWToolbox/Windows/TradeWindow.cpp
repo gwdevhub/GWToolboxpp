@@ -1,7 +1,9 @@
 #include "TradeWindow.h"
 
 #include <GWCA\GWCA.h>
+#include <GWCA\Managers\UIMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
+#include <GWCA\Managers\GameThreadMgr.h>
 #include <Modules\Resources.h>
 
 #include <imgui.h>
@@ -69,14 +71,20 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		std::string name;
 		std::string message;
 		for (unsigned int i = 0; i < chat.messages.size(); i++) {
+			ImGui::PushID(i);
 			name = chat.messages.at(i)["name"].get<std::string>();
 			message = chat.messages.at(i)["message"].get<std::string>();
 			if (ImGui::Button(name.c_str())) {
-				// TODO open whisper to the player when that functionality is added
+				GW::GameThread::Enqueue([name]() {
+					wchar_t ws[100];
+					swprintf(ws, 100, L"%hs", name.c_str());
+					GW::UI::SendUIMessage(GW::UI::kOpenWhisper, ws, nullptr);
+				});
 			}
 			ImGui::NextColumn();
 			ImGui::Text("%s", message.c_str());
 			ImGui::NextColumn();
+			ImGui::PopID();
 		}
 		ImGui::EndChild();
 		if (show_alert_window) {
