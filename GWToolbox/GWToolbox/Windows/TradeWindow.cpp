@@ -4,6 +4,7 @@
 #include <GWCA\Managers\UIMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\GameThreadMgr.h>
+#include <GWCA\Managers\MapMgr.h>
 #include <Modules\Resources.h>
 
 #include <imgui.h>
@@ -33,6 +34,7 @@ void TradeWindow::DrawSettingInternal() {
 void TradeWindow::Update(float delta) {
 	all_trade.fetch();
 	trade_searcher.fetch();
+	if (GW::Map::GetMapID() == GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost) return;
 	std::string message;
 	std::string final_chat_message;
 	for (unsigned int i = 0; i < all_trade.new_messages.size(); i++) {
