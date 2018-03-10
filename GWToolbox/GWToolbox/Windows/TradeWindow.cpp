@@ -78,15 +78,16 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		if (ImGui::Button("Alerts", ImVec2(80.0f, 0))) {
 			show_alert_window = true;
 		}
-		ImGui::BeginChild("trade_scroll");
-		ImGui::Columns(3);
-		ImGui::Text("Player Name");
+		ImGui::BeginChild("trade_scroll", ImVec2(0, -20.0f - ImGui::GetStyle().ItemInnerSpacing.y));
+		ImGui::Columns(3, NULL, false);
+		/* HasKha didn't want these headers */
+		//ImGui::Text("Time");
+		ImGui::SetColumnWidth(-1, 100);
+		ImGui::NextColumn();
+		//ImGui::Text("Player Name");
 		ImGui::SetColumnWidth(-1, 175);
 		ImGui::NextColumn();
-		ImGui::Text("Time");
-		ImGui::SetColumnWidth(-1, 140);
-		ImGui::NextColumn();
-		ImGui::Text("Message");
+		//ImGui::Text("Message");
 		ImGui::SetColumnWidth(-1, 500);
 		ImGui::NextColumn();
 		std::string name;
@@ -95,21 +96,14 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 
 		for (unsigned int i = 0; i < trade_searcher.messages.size(); i++) {
 			ImGui::PushID(i);
-			name = trade_searcher.messages.at(i)["name"].get<std::string>();
-			message = trade_searcher.messages.at(i)["message"].get<std::string>();
 			
+			// negative numbers have came from this before, it is probably just server client desync
+			int time_since_message = (int)now - stoi(trade_searcher.messages.at(i)["timestamp"].get<std::string>());
 
-			if (ImGui::Button(name.c_str())) {
-				GW::GameThread::Enqueue([name]() {
-					wchar_t ws[100];
-					swprintf(ws, 100, L"%hs", name.c_str());
-					GW::UI::SendUIMessage(GW::UI::kOpenWhisper, ws, nullptr);
-				});
-			}
-			ImGui::NextColumn();
-			// add 5 so we dont get negative numbers from server not being synced
-			int time_since_message = 5 + (int)now - stoi(trade_searcher.messages.at(i)["timestamp"].get<std::string>());
-
+			ImFont* small_font = (ImFont*)malloc(sizeof(ImFont));
+			memcpy(small_font, ImGui::GetFont(), sizeof(ImFont));
+			small_font->Scale = 0.83f;
+			ImGui::PushFont(small_font);
 			if ((int)(time_since_message / (60 * 60 * 24))) {
 				int days = (int)(time_since_message / (60 * 60 * 24));
 				ImGui::Text("%d %s ago", days, days > 1 ? "days" : "day");
@@ -125,7 +119,21 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			else {
 				ImGui::Text("%d %s ago", time_since_message, time_since_message > 1 ? "seconds" : "second");
 			}
+			ImGui::PopFont();
 			ImGui::NextColumn();
+
+			name = trade_searcher.messages.at(i)["name"].get<std::string>();
+
+			if (ImGui::Button(name.c_str())) {
+				GW::GameThread::Enqueue([name]() {
+					wchar_t ws[100];
+					swprintf(ws, 100, L"%hs", name.c_str());
+					GW::UI::SendUIMessage(GW::UI::kOpenWhisper, ws, nullptr);
+				});
+			}
+
+			ImGui::NextColumn();
+			message = trade_searcher.messages.at(i)["message"].get<std::string>();
 			ImGui::PushTextWrapPos();
 			ImGui::Text("%s", message.c_str());
 			ImGui::PopTextWrapPos();
@@ -134,6 +142,11 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		}
 
 		ImGui::EndChild();
+		if (ImGui::Button("https://kamadan.decltype.org", ImVec2(ImGui::GetWindowContentRegionWidth(), 20.0f))){ 
+			CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+			ShellExecute(NULL, "open", "https://kamadan.decltype.org", NULL, NULL, SW_SHOWNORMAL);
+		}
+
 		if (show_alert_window) {
 			if (ImGui::Begin("Trade Alerts", &show_alert_window)) {
 				if (ImGui::Button("New Alert", ImVec2(ImGui::GetWindowContentRegionWidth(), 0))) {
