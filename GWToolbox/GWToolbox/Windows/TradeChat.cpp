@@ -20,9 +20,9 @@ std::string ReplaceString(std::string subject, const std::string& search, const 
 
 TradeChat::TradeChat() {
 	WSA_prereq();
-	search("");
 }
 
+// strange name as I didn't want to overlap any existing WSA function names
 void TradeChat::WSA_prereq() {
 	INT rc;
 	WSADATA wsaData;

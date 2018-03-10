@@ -23,6 +23,7 @@ void TradeWindow::Initialize() {
 	ToolboxWindow::Initialize();
 	alert_ini = new CSimpleIni(false, false, false);
 	alert_ini->LoadFile(Resources::GetPath(ini_filename).c_str());
+	all_trade.search("");
 }
 
 void TradeWindow::DrawSettingInternal() {
@@ -40,7 +41,7 @@ void TradeWindow::Update(float delta) {
 		for (unsigned j = 0; j < alerts.size(); j++) {
 			// ensure the alert isnt empty
 			if (strncmp(alerts.at(j).match_string, "", 128)) {
-				if (message.find(alerts.at(j).match_string) != std::string::npos) {
+				if (message.find(alerts.at(j).match_string) != std::string::npos || all_keyword.compare(alerts.at(j).match_string) == 0) {
 					final_chat_message = "<c=#" + chat_color + "><a=1>" + all_trade.new_messages.at(i)["name"].get<std::string>() + "</a>: " +
 						all_trade.new_messages.at(i)["message"].get<std::string>() + "</c>";
 					GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, final_chat_message.c_str());
@@ -54,14 +55,13 @@ void TradeWindow::Update(float delta) {
 
 void TradeWindow::Draw(IDirect3DDevice9* device) {
 	if (!visible) { return; }
+	if (!trade_searcher.is_active()) trade_searcher.search("");
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
 		ImGui::PushTextWrapPos();
-		if (ImGui::Button("Alerts", ImVec2(ImGui::GetWindowContentRegionWidth(), 0))) {
-			show_alert_window = true;
-		}
-		ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 80.0f - 80.0f - ImGui::GetStyle().ItemInnerSpacing.x * 4));
+		
+		ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 80.0f - 80.0f - 80.0f - ImGui::GetStyle().ItemInnerSpacing.x * 6));
 		if (ImGui::InputText("", search_buffer, 256, ImGuiInputTextFlags_EnterReturnsTrue)) {
 			trade_searcher.search(search_buffer);
 		}
@@ -73,6 +73,10 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		if (ImGui::Button("Clear", ImVec2(80.0f, 0))) {
 			strncpy(search_buffer, "", 256);
 			trade_searcher.search("");
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Alerts", ImVec2(80.0f, 0))) {
+			show_alert_window = true;
 		}
 		ImGui::BeginChild("trade_scroll");
 		ImGui::Columns(3);
@@ -88,6 +92,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		std::string name;
 		std::string message;
 		time_t now = time(0);
+
 		for (unsigned int i = 0; i < trade_searcher.messages.size(); i++) {
 			ImGui::PushID(i);
 			name = trade_searcher.messages.at(i)["name"].get<std::string>();
@@ -127,6 +132,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			ImGui::NextColumn();
 			ImGui::PopID();
 		}
+
 		ImGui::EndChild();
 		if (show_alert_window) {
 			if (ImGui::Begin("Trade Alerts", &show_alert_window)) {
@@ -134,12 +140,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 					alerts.insert(alerts.begin(), Alert());
 				}
 				if (ImGui::IsItemHovered()) {
-					ImGui::SetTooltip(
-						"Click to add a new keyword.\n" \
-						"\t- Trade messages with matched keywords will be send to the Guild Wars chat.\n" \
-						"\t- The keywords are not case sensitive.\n" \
-						"\t- The Trade checkbox in the Guild Wars chat must be selected for messages to show up."
-					);
+					ImGui::SetTooltip(alerts_tooltip.c_str());
 				}
 				for (unsigned int i = 0; i < alerts.size(); i++) {
 					ImGui::PushID(alerts.at(i).uid);

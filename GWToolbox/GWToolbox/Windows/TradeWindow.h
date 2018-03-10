@@ -44,6 +44,7 @@ public:
 	void DrawSettingInternal() override;
 
 private:
+	std::string all_keyword = "ALL";
 	std::string chat_color = "f96677";
 	char search_buffer[256];
 	CSimpleIni* alert_ini = nullptr;
@@ -52,4 +53,11 @@ private:
 	bool show_alert_window = false;
 	TradeChat all_trade;
 	TradeChat trade_searcher;
+
+	std::string alerts_tooltip = \
+		"Click to add a new keyword.\n" \
+		"\t- Trade messages with matched keywords will be send to the Guild Wars chat.\n" \
+		"\t- The keywords are not case sensitive.\n" \
+		"\t- The Trade checkbox in the Guild Wars chat must be selected for messages to show up.\n" \
+		"\t- To match every message, create an alert with the only keyword: ALL";
 };
