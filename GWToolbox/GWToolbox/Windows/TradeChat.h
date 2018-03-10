@@ -32,7 +32,7 @@ private:
 	easywsclient::WebSocket::pointer ws;
 	Connection status = not_connected;
 	int reconnect_attempt_max = 3;
-	size_t max_messages = 100; // size_t fixes unsigned/signed mismatch when comparing to vector.size()
+	size_t max_messages = 100; // size_t fixes unsigned/signed warning when comparing to vector.size()
 	std::thread connector;
 	std::string base_uri = "wss://kamadan.decltype.org/ws/";
 

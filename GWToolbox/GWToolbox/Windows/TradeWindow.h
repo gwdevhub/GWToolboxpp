@@ -32,10 +32,7 @@ public:
 	void Terminate() override;
 
 	void Update(float delta) override;
-
-	// Draw user interface. Will be called every frame if the element is visible
 	void Draw(IDirect3DDevice9* pDevice) override;
-
 
 	void LoadAlerts();
 	void SaveAlerts();
@@ -44,8 +41,10 @@ public:
 	void DrawSettingInternal() override;
 
 private:
+	// if the player has an alert with exactly this keyword, all messages will be matched
 	std::string all_keyword = "ALL";
 	std::string chat_color = "f96677";
+	// buffer for the search input
 	char search_buffer[256];
 	CSimpleIni* alert_ini = nullptr;
 	std::string ini_filename = "trade_alerts.ini";
