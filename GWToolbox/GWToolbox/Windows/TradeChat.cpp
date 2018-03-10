@@ -42,8 +42,10 @@ void TradeChat::search(std::string search_string) {
 	status = connecting;
 	connector = std::thread([this, search_string]() {
 		std::string uri_with_search = search_string.empty() ? base_uri : base_uri + "search/" + search_string;
-		this->ws = easywsclient::WebSocket::from_url(uri_with_search);
-		this->status = connected;
+		for (int i = 0; i < reconnect_attempt_max && ws == nullptr; i++) {
+			this->ws = easywsclient::WebSocket::from_url(uri_with_search);
+		}
+		this->status = ws != nullptr ? connected : timeout;
 	});
 }
 
@@ -74,6 +76,7 @@ void TradeChat::disconnect() {
 	if (status != not_connected) {
 		Log::Log("Destroying connection to trade chat\n");
 		delete ws;
+		ws = nullptr;
 		connector.join();
 		status = not_connected;
 	}
@@ -87,6 +90,14 @@ void TradeChat::stop() {
 
 bool TradeChat::is_active() {
 	return status != not_connected;
+}
+
+bool TradeChat::is_connecting() {
+	return status == connecting;
+}
+
+bool TradeChat::is_timed_out() {
+	return status == timeout;
 }
 
 TradeChat::~TradeChat() {

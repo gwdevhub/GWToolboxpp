@@ -32,6 +32,7 @@ void TradeWindow::DrawSettingInternal() {
 }
 
 void TradeWindow::Update(float delta) {
+	if (all_trade.is_timed_out()) all_trade.search("");
 	all_trade.fetch();
 	trade_searcher.fetch();
 	if (GW::Map::GetMapID() == GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost) return;
@@ -62,7 +63,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 	ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
 		ImGui::PushTextWrapPos();
-		
+
 		ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 80.0f - 80.0f - 80.0f - ImGui::GetStyle().ItemInnerSpacing.x * 6));
 		if (ImGui::InputText("", search_buffer, 256, ImGuiInputTextFlags_EnterReturnsTrue)) {
 			trade_searcher.search(search_buffer);
@@ -81,6 +82,28 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			show_alert_window = true;
 		}
 		ImGui::BeginChild("trade_scroll", ImVec2(0, -20.0f - ImGui::GetStyle().ItemInnerSpacing.y));
+
+		if (trade_searcher.is_timed_out()) {
+			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("The connection to kamadan.decltype.com has timed out.").x) / 2);
+			ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
+			ImGui::Text("The connection to kamadan.decltype.com has timed out.");
+			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Click to reconnect").x) / 2);
+			if (ImGui::Button("Click to reconnect")) {
+				trade_searcher.search(search_buffer);
+			}
+			ImGui::End();
+			ImGui::End();
+			return;
+		}
+		else if (trade_searcher.is_connecting()) {
+			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Connecting...").x)/2);
+			ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
+			ImGui::Text("Connecting...");
+			ImGui::End();
+			ImGui::End();
+			return;
+		}
+
 		ImGui::Columns(3, NULL, false);
 		/* HasKha didn't want these headers */
 		//ImGui::Text("Time");
