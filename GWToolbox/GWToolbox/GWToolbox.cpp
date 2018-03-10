@@ -404,7 +404,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 		ImGuiIO& io = ImGui::GetIO();
 		io.MouseDrawCursor = false;
 		static Utf8 imgui_inifile = Resources::GetPathUtf8(L"interface.ini");
-		io.IniFilename = imgui_inifile.bytes;
+		io.IniFilename = imgui_inifile.c_str();
 
 		Resources::Instance().EnsureFileExists(Resources::GetPath(L"Font.ttf"),
 			L"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Font.ttf",

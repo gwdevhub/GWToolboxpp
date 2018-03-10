@@ -43,18 +43,16 @@ std::wstring Resources::GetPath(std::wstring file) {
 std::wstring Resources::GetPath(std::wstring folder, std::wstring file) {
 	return GetSettingsFolderPath() + L"\\" + folder + L"\\" + file;
 }
-Utf8 Resources::GetPathUtf8(std::wstring file) {
-	WCHAR path[MAX_PATH];
-	SHGetFolderPathW(NULL, CSIDL_LOCAL_APPDATA | CSIDL_FLAG_CREATE, NULL, 0, path);
-	PathAppendW(path, L"GWToolboxpp");
-	PathAppendW(path, file.c_str());
-	return Utf8(path);
-}
 
 void Resources::EnsureFolderExists(std::wstring path) {
 	if (!PathFileExistsW(path.c_str())) {
 		CreateDirectoryW(path.c_str(), NULL);
 	}
+}
+
+Utf8 Resources::GetPathUtf8(std::wstring file) {
+	std::wstring path = GetPath(file);
+	return Utf8(path.c_str());
 }
 
 bool Resources::Download(std::wstring path_to_file, std::wstring url) {

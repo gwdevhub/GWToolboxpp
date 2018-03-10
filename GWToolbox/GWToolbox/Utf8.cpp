@@ -29,6 +29,7 @@ bool Utf8::init(const wchar_t *str, size_t len)
 	size = required_size;
 	
 	WideCharToMultiByte(CP_UTF8, 0, str, len, bytes, required_size, NULL, NULL);
+	bytes[size] = 0;
 	return true;
 }
 

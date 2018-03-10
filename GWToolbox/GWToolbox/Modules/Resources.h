@@ -8,7 +8,7 @@
 
 #include <../resource.h>
 
-#include "../Utf8.h"
+#include <Utf8.h>
 #include "ToolboxModule.h"
 
 class Resources : public ToolboxModule {
@@ -36,7 +36,6 @@ public:
 	static std::wstring GetPath(std::wstring folder, std::wstring file);
 
 	static Utf8 GetPathUtf8(std::wstring file);
-
 	static void EnsureFolderExists(std::wstring path);
 
 	// folder should not contain a trailing slash
