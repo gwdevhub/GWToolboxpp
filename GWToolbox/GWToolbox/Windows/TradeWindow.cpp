@@ -35,7 +35,7 @@ void TradeWindow::Update(float delta) {
 	if (all_trade.is_timed_out()) all_trade.search("");
 	all_trade.fetch();
 	trade_searcher.fetch();
-	if (GW::Map::GetMapID() == GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost) return;
+	if (GW::Map::GetMapID() == GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost && GW::Map::GetDistrict() == 1) return;
 	std::string message;
 	std::string final_chat_message;
 	for (unsigned int i = 0; i < all_trade.new_messages.size(); i++) {
