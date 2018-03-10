@@ -19,6 +19,11 @@ std::string ReplaceString(std::string subject, const std::string& search, const 
 }
 
 TradeChat::TradeChat() {
+	WSA_prereq();
+	search("");
+}
+
+void TradeChat::WSA_prereq() {
 	INT rc;
 	WSADATA wsaData;
 
@@ -27,33 +32,30 @@ TradeChat::TradeChat() {
 		printf("WSAStartup Failed.\n");
 		return;
 	}
-	search("");
 }
 
-void TradeChat::search(std::string search_string=nullptr) {
+void TradeChat::search(std::string search_string) {
 	if (status == connecting) return;
 	search_string = ReplaceString(search_string, " ", "%20");
-	stop_current();
+	disconnect();
+	messages.clear();
 	status = connecting;
 	connector = std::thread([this, search_string]() {
-		std::string uri_with_search = search_string.empty() ? uri : uri + "search/" + search_string;
-		std::cout << uri_with_search << std::endl;
+		std::string uri_with_search = search_string.empty() ? base_uri : base_uri + "search/" + search_string;
 		this->ws = easywsclient::WebSocket::from_url(uri_with_search);
-
 		this->status = connected;
 	});
 }
 
 void TradeChat::fetch(){
-	new_messages.clear();
 	if (status != connected) return;
+	new_messages.clear();
 	ws->poll();
 	ws->dispatch([this](const std::string & message) {
 		nlohmann::json chat_json = nlohmann::json::parse(message.c_str());
 		if (chat_json.is_object()) {
 			if (chat_json["results"].is_array()) {
 				for (nlohmann::json::iterator it = chat_json["results"].begin(); it != chat_json["results"].end(); ++it) {
-					//new_messages.insert(new_messages.begin(), *it);
 					messages.push_back(*it);
 				}
 			}
@@ -62,17 +64,15 @@ void TradeChat::fetch(){
 				messages.insert(messages.begin(), chat_json);
 			}
 		}
-			
-		while (messages.size() > 25) {
+		while (messages.size() > max_messages) {
 			messages.pop_back();
 		}
 	});
 }
 
-void TradeChat::stop_current() {
+void TradeChat::disconnect() {
 	if (status != not_connected) {
 		Log::Log("Destroying connection to trade chat\n");
-		messages.clear();
 		delete ws;
 		connector.join();
 		status = not_connected;
@@ -81,7 +81,7 @@ void TradeChat::stop_current() {
 
 void TradeChat::stop() {
 	while (status == connecting) {}
-	stop_current();
+	disconnect();
 	WSACleanup();
 }
 

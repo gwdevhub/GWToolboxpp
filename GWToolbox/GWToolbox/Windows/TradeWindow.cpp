@@ -30,18 +30,19 @@ void TradeWindow::DrawSettingInternal() {
 }
 
 void TradeWindow::Update(float delta) {
-	chat.fetch();
+	all_trade.fetch();
+	trade_searcher.fetch();
 	std::string message;
 	std::string final_chat_message;
-	for (unsigned int i = 0; i < chat.new_messages.size(); i++) {
-		message = chat.new_messages.at(i)["message"].dump();
+	for (unsigned int i = 0; i < all_trade.new_messages.size(); i++) {
+		message = all_trade.new_messages.at(i)["message"].dump();
 		std::transform(message.begin(), message.end(), message.begin(), ::tolower);
 		for (unsigned j = 0; j < alerts.size(); j++) {
 			// ensure the alert isnt empty
 			if (strncmp(alerts.at(j).match_string, "", 128)) {
 				if (message.find(alerts.at(j).match_string) != std::string::npos) {
-					final_chat_message = "<c=#f96677><a=1> " + chat.new_messages.at(i)["name"].get<std::string>() + "</a>: " +
-						chat.new_messages.at(i)["message"].get<std::string>() + "</c>";
+					final_chat_message = "<c=#" + chat_color + "><a=1>" + all_trade.new_messages.at(i)["name"].get<std::string>() + "</a>: " +
+						all_trade.new_messages.at(i)["message"].get<std::string>() + "</c>";
 					GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, final_chat_message.c_str());
 					// break to stop multiple alerts triggering the same message
 					break;
@@ -62,16 +63,16 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		}
 		ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 80.0f - 80.0f - ImGui::GetStyle().ItemInnerSpacing.x * 4));
 		if (ImGui::InputText("", search_buffer, 256, ImGuiInputTextFlags_EnterReturnsTrue)) {
-			chat.search(search_buffer);
+			trade_searcher.search(search_buffer);
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Search", ImVec2(80.0f, 0))) {
-			chat.search(search_buffer);
+			trade_searcher.search(search_buffer);
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Clear", ImVec2(80.0f, 0))) {
 			strncpy(search_buffer, "", 256);
-			chat.search("");
+			trade_searcher.search("");
 		}
 		ImGui::BeginChild("trade_scroll");
 		ImGui::Columns(3);
@@ -87,10 +88,10 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		std::string name;
 		std::string message;
 		time_t now = time(0);
-		for (unsigned int i = 0; i < chat.messages.size(); i++) {
+		for (unsigned int i = 0; i < trade_searcher.messages.size(); i++) {
 			ImGui::PushID(i);
-			name = chat.messages.at(i)["name"].get<std::string>();
-			message = chat.messages.at(i)["message"].get<std::string>();
+			name = trade_searcher.messages.at(i)["name"].get<std::string>();
+			message = trade_searcher.messages.at(i)["message"].get<std::string>();
 			
 
 			if (ImGui::Button(name.c_str())) {
@@ -102,7 +103,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			}
 			ImGui::NextColumn();
 			// add 5 so we dont get negative numbers from server not being synced
-			int time_since_message = 5 + (int)now - stoi(chat.messages.at(i)["timestamp"].get<std::string>());
+			int time_since_message = 5 + (int)now - stoi(trade_searcher.messages.at(i)["timestamp"].get<std::string>());
 
 			if ((int)(time_since_message / (60 * 60 * 24))) {
 				int days = (int)(time_since_message / (60 * 60 * 24));
@@ -194,6 +195,7 @@ void TradeWindow::SaveAlerts() {
 }
 
 void TradeWindow::Terminate() {
-	chat.stop();
+	all_trade.stop();
+	trade_searcher.stop();
 	ToolboxWindow::Terminate();
 }

@@ -44,10 +44,12 @@ public:
 	void DrawSettingInternal() override;
 
 private:
+	std::string chat_color = "f96677";
 	char search_buffer[256];
 	CSimpleIni* alert_ini = nullptr;
 	std::string ini_filename = "trade_alerts.ini";
 	std::vector<Alert> alerts;
 	bool show_alert_window = false;
-	TradeChat chat;
+	TradeChat all_trade;
+	TradeChat trade_searcher;
 };
