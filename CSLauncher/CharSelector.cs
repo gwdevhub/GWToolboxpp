@@ -16,15 +16,12 @@ namespace CSLauncher
     {
         private Process[] procs;
 
-        private Process selected_process;
-        public Process SelectedProcess
-        {
-            get { return selected_process; }
-        }
+        public List<Process> SelectedProcesses { get; private set; }
 
         public CharSelector()
         {
             InitializeComponent();
+			SelectedProcesses = new List<Process>();
         }
 
         private void CharSelector_Load(object sender, EventArgs e)
@@ -47,15 +44,42 @@ namespace CSLauncher
                 if (mem.HaveModule("GWToolbox.dll"))
                     continue;
                 string charname = mem.ReadWString(charnameAddr,30);
-                comboBox1.Items.Add(charname);
+	            checkedListBox1.Items.Add(charname, CheckState.Unchecked);
             }
-            comboBox1.SelectedIndex = 0;
         }
 
         private void buttonLaunch_Click(object sender, EventArgs e)
         {
-            selected_process = procs[comboBox1.SelectedIndex];
+			SelectedProcesses.Clear();
+
+	        foreach (int index in checkedListBox1.CheckedIndices)
+	        {
+				SelectedProcesses.Add(procs[index]);
+	        }
+
+	        if (SelectedProcesses.Count == 0)
+	        {
+		        MessageBox.Show("Please select at least one process", "Error No Process Selected", MessageBoxButtons.OK);
+		        return;
+	        }
+
             this.Close();
         }
-    }
+
+		private void buttonCheckAll_Click(object sender, EventArgs e)
+		{
+			for (int i = 0; i < checkedListBox1.Items.Count; i++)
+			{
+				checkedListBox1.SetItemCheckState(i, CheckState.Checked);
+			}
+		}
+
+		private void buttonUncheckAll_Click(object sender, EventArgs e)
+		{
+			for (int i = 0; i < checkedListBox1.Items.Count; i++)
+			{
+				checkedListBox1.SetItemCheckState(i, CheckState.Unchecked);
+			}
+		}
+	}
 }

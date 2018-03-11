@@ -28,7 +28,7 @@ namespace CSLauncher {
         };
 
 
-        static Process proctoinject = null;
+        //static Process proctoinject = null;
  
         [STAThread]
         static void Main(string[] args) {
@@ -81,6 +81,7 @@ namespace CSLauncher {
 
             // Look for gw processes.
             Process[] gwprocs = Process.GetProcessesByName("Gw");
+			List<Process> processesToInject = new List<Process>();
 
             switch(gwprocs.Length) {
                 case 0: // No gw processes found.
@@ -91,7 +92,7 @@ namespace CSLauncher {
                                     MessageBoxIcon.Error);
                     break;
                 case 1: // Only one process found, injecting.
-                    proctoinject = gwprocs[0];
+					processesToInject.Add(gwprocs[0]);
                     break;
                 default: // More than one found, make user select client.
 
@@ -99,29 +100,42 @@ namespace CSLauncher {
 
                     Application.Run(chargui);
                     
-                    proctoinject = chargui.SelectedProcess;
+                    //proctoinject = chargui.SelectedProcess;
+					processesToInject.AddRange(chargui.SelectedProcesses);
                     break;
             }
 
-            if (proctoinject == null) return;
+            if (processesToInject.Count == 0) return;//should never happen anyway
 
-            IntPtr dll_return;
-            GWCAMemory mem = new GWCAMemory(proctoinject);
-            GWCAMemory.LOADMODULERESULT result = mem.LoadModule(dllfile,out dll_return);
-            if (result == GWCAMemory.LOADMODULERESULT.SUCCESSFUL && dll_return != IntPtr.Zero) return;
-            if (result == GWCAMemory.LOADMODULERESULT.SUCCESSFUL){
-                MessageBox.Show("Error loading DLL: ExitCode " + dll_return,
-                                "GWToolbox++ Error",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Error);
-            }
-            else {
-                MessageBox.Show("Module Load Error.\n" +
-                                LOADMODULE_RESULT_MESSAGES[(uint)result] + "\n",
-                                "GWToolbox++ Error",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Error);
-            }
+
+
+	        for(int i = 0; i < processesToInject.Count; i++)
+	        {
+				IntPtr dll_return;
+		        GWCAMemory mem = new GWCAMemory(processesToInject[i]);
+		        GWCAMemory.LOADMODULERESULT result = mem.LoadModule(dllfile, out dll_return);
+
+		        if (result == GWCAMemory.LOADMODULERESULT.SUCCESSFUL && dll_return != IntPtr.Zero)
+			        continue;
+
+		        if (result == GWCAMemory.LOADMODULERESULT.SUCCESSFUL)
+		        {
+			        MessageBox.Show("[Process " + i + "]: Error loading DLL: ExitCode " + dll_return,
+				        "GWToolbox++ Error",
+				        MessageBoxButtons.OK,
+				        MessageBoxIcon.Error);
+		        }
+		        else
+		        {
+			        MessageBox.Show("[Process " + i + "]: Module Load Error.\n" +
+			                        LOADMODULE_RESULT_MESSAGES[(uint)result] + "\n",
+				        "GWToolbox++ Error",
+				        MessageBoxButtons.OK,
+				        MessageBoxIcon.Error);
+		        }
+			}
+
+
         }
     }
 }
