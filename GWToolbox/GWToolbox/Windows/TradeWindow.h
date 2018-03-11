@@ -32,10 +32,7 @@ public:
 	void Terminate() override;
 
 	void Update(float delta) override;
-
-	// Draw user interface. Will be called every frame if the element is visible
 	void Draw(IDirect3DDevice9* pDevice) override;
-
 
 	void LoadAlerts();
 	void SaveAlerts();
@@ -44,10 +41,22 @@ public:
 	void DrawSettingInternal() override;
 
 private:
+	// if the player has an alert with exactly this keyword, all messages will be matched
+	std::string all_keyword = "ALL";
+	std::string chat_color = "f96677";
+	// buffer for the search input
 	char search_buffer[256];
 	CSimpleIni* alert_ini = nullptr;
 	std::string ini_filename = "trade_alerts.ini";
 	std::vector<Alert> alerts;
 	bool show_alert_window = false;
-	TradeChat chat;
+	TradeChat all_trade;
+	TradeChat trade_searcher;
+
+	std::string alerts_tooltip = \
+		"Click to add a new keyword.\n" \
+		"\t- Trade messages with matched keywords will be send to the Guild Wars chat.\n" \
+		"\t- The keywords are not case sensitive.\n" \
+		"\t- The Trade checkbox in the Guild Wars chat must be selected for messages to show up.\n" \
+		"\t- To match every message, create an alert with the only keyword: ALL";
 };
