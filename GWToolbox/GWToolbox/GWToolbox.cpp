@@ -291,14 +291,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 
 void GWToolbox::Initialize() {
 	Log::Log("Creating Toolbox\n");
-	Resources::Instance().EnsureFolderExists(Resources::GetPath("img"));
-	Resources::Instance().EnsureFolderExists(Resources::GetPath("img\\bonds"));
-	Resources::Instance().EnsureFolderExists(Resources::GetPath("img\\icons"));
-	Resources::Instance().EnsureFolderExists(Resources::GetPath("img\\materials"));
-	Resources::Instance().EnsureFolderExists(Resources::GetPath("img\\pcons"));
-	Resources::Instance().EnsureFolderExists(Resources::GetPath("location logs"));
-	Resources::Instance().EnsureFileExists(Resources::GetPath("GWToolbox.ini"), 
-		"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/GWToolbox.ini", 
+	Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img"));
+	Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img\\bonds"));
+	Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img\\icons"));
+	Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img\\materials"));
+	Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img\\pcons"));
+	Resources::Instance().EnsureFolderExists(Resources::GetPath(L"location logs"));
+	Resources::Instance().EnsureFileExists(Resources::GetPath(L"GWToolbox.ini"),
+		L"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/GWToolbox.ini",
 		[](bool success) {
 		if (success) {
 			GWToolbox::Instance().OpenSettingsFile();
@@ -308,8 +308,8 @@ void GWToolbox::Initialize() {
 	// if the file does not exist we'll load module settings once downloaded, but we need the file open
 	// in order to read defaults
 	OpenSettingsFile();
-	Resources::Instance().EnsureFileExists(Resources::GetPath("Markers.ini"), 
-		"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Markers.ini", 
+	Resources::Instance().EnsureFileExists(Resources::GetPath(L"Markers.ini"),
+		L"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Markers.ini",
 		[](bool success) {
 		Minimap::Instance().custom_renderer.LoadMarkers();
 	});
@@ -357,7 +357,7 @@ void GWToolbox::Initialize() {
 void GWToolbox::OpenSettingsFile() {
 	Log::Log("Opening ini file\n");
 	if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
-	inifile->LoadFile(Resources::GetPath("GWToolbox.ini").c_str());
+	inifile->LoadFile(Resources::GetPath(L"GWToolbox.ini").c_str());
 	inifile->SetValue("launcher", "dllversion", GWTOOLBOX_VERSION);
 }
 void GWToolbox::LoadModuleSettings() {
@@ -370,7 +370,7 @@ void GWToolbox::SaveSettings() {
 	for (ToolboxModule* module : modules) {
 		module->SaveSettings(inifile);
 	}
-	if (inifile) inifile->SaveFile(Resources::GetPath("GWToolbox.ini").c_str());
+	if (inifile) inifile->SaveFile(Resources::GetPath(L"GWToolbox.ini").c_str());
 }
 
 void GWToolbox::Terminate() {
@@ -403,11 +403,11 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 		ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), device);
 		ImGuiIO& io = ImGui::GetIO();
 		io.MouseDrawCursor = false;
-		static std::string imgui_inifile = Resources::GetPath("interface.ini");
+		static Utf8 imgui_inifile = Resources::GetPathUtf8(L"interface.ini");
 		io.IniFilename = imgui_inifile.c_str();
 
-		Resources::Instance().EnsureFileExists(Resources::GetPath("Font.ttf"),
-			"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Font.ttf", 
+		Resources::Instance().EnsureFileExists(Resources::GetPath(L"Font.ttf"),
+			L"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Font.ttf",
 			[](bool success) {
 			if (success) {
 				GuiUtils::LoadFonts();

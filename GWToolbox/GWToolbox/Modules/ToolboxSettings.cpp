@@ -189,52 +189,52 @@ void ToolboxSettings::Update(float delta) {
 			if (location_current_map != current) {
 				location_current_map = current;
 
-				std::string map_string;
+				std::wstring map_string;
 				switch (current) {
 				case GW::Constants::MapID::Domain_of_Anguish:
-					map_string = "DoA";
+					map_string = L"DoA";
 					break;
 				case GW::Constants::MapID::Urgozs_Warren:
-					map_string = "Urgoz";
+					map_string = L"Urgoz";
 					break;
 				case GW::Constants::MapID::The_Deep:
-					map_string = "Deep";
+					map_string = L"Deep";
 					break;
 				case GW::Constants::MapID::The_Underworld:
-					map_string = "UW";
+					map_string = L"UW";
 					break;
 				case GW::Constants::MapID::The_Fissure_of_Woe:
-					map_string = "FoW";
+					map_string = L"FoW";
 					break;
 				default:
-					map_string = std::string("Map-") + std::to_string(static_cast<long>(current));
+					map_string = std::wstring(L"Map-") + std::to_wstring(static_cast<long>(current));
 				}
 
-				std::string prof_string = "";
+				std::wstring prof_string = L"";
 				GW::Agent* me = GW::Agents::GetPlayer();
 				if (me) {
-					prof_string += " - ";
-					prof_string += GW::Constants::GetProfessionAcronym(
+					prof_string += L" - ";
+					prof_string += GW::Constants::GetWProfessionAcronym(
 						static_cast<GW::Constants::Profession>(me->Primary));
-					prof_string += "-";
-					prof_string += GW::Constants::GetProfessionAcronym(
+					prof_string += L"-";
+					prof_string += GW::Constants::GetWProfessionAcronym(
 						static_cast<GW::Constants::Profession>(me->Secondary));
 				}
 
 				SYSTEMTIME localtime;
 				GetLocalTime(&localtime);
-				std::string filename = std::to_string(localtime.wYear)
-					+ "-" + std::to_string(localtime.wMonth)
-					+ "-" + std::to_string(localtime.wDay)
-					+ " - " + std::to_string(localtime.wHour)
-					+ "-" + std::to_string(localtime.wMinute)
-					+ "-" + std::to_string(localtime.wSecond)
-					+ " - " + map_string + prof_string + ".log";
+				std::wstring filename = std::to_wstring(localtime.wYear)
+					+ L"-" + std::to_wstring(localtime.wMonth)
+					+ L"-" + std::to_wstring(localtime.wDay)
+					+ L" - " + std::to_wstring(localtime.wHour)
+					+ L"-" + std::to_wstring(localtime.wMinute)
+					+ L"-" + std::to_wstring(localtime.wSecond)
+					+ L" - " + map_string + prof_string + L".log";
 
 				if (location_file && location_file.is_open()) {
 					location_file.close();
 				}
-				location_file.open(Resources::GetPath(filename, "location logs").c_str());
+				location_file.open(Resources::GetPath(filename, L"location logs").c_str());
 			}
 
 			GW::Agent* me = GW::Agents::GetPlayer();

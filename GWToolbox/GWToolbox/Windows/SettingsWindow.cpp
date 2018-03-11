@@ -13,7 +13,7 @@
 
 void SettingsWindow::Initialize() {
 	ToolboxWindow::Initialize();
-	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath("img/icons", "settings.png"), IDB_Icon_Settings);
+	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"settings.png"), IDB_Icon_Settings);
 }
 
 void SettingsWindow::LoadSettings(CSimpleIni* ini) {
@@ -46,7 +46,7 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
 		float w = (ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().ItemSpacing.x) / 2;
 		if (ImGui::Button("Open Settings Folder", ImVec2(w, 0))) {
 			CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-			ShellExecute(NULL, "open", Resources::GetSettingsFolderPath().c_str(), NULL, NULL, SW_SHOWNORMAL);
+			ShellExecuteW(NULL, L"open", Resources::GetSettingsFolderPath().c_str(), NULL, NULL, SW_SHOWNORMAL);
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Open GWToolbox++ Website", ImVec2(w, 0))) {

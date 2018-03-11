@@ -30,7 +30,7 @@ bool Pcon::suppress_lunar_skills = false;
 // ================================================
 Pcon::Pcon(const char* chatname,
 	const char* ininame,
-	const char* filename,
+	const wchar_t* filename,
 	WORD res_id,
 	ImVec2 uv0_, ImVec2 uv1_, int threshold_)
 	: chat(chatname), ini(ininame), threshold(threshold_),
@@ -38,7 +38,7 @@ Pcon::Pcon(const char* chatname,
 	enabled(false), quantity(0), timer(TIMER_INIT()) {
 
 	Resources::Instance().LoadTextureAsync(&texture, 
-		Resources::GetPath("img/pcons", filename), res_id);
+		Resources::GetPath(L"img/pcons", filename), res_id);
 }
 void Pcon::Draw(IDirect3DDevice9* device) {
 	if (texture == nullptr) return;

@@ -15,7 +15,7 @@
 #include <Modules\Resources.h>
 #include <Modules\ToolboxSettings.h>
 
-#define INI_FILENAME "healthlog.ini"
+#define INI_FILENAME L"healthlog.ini"
 #define IniSection "health"
 
 void PartyDamage::Initialize() {

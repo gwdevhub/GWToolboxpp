@@ -12,7 +12,7 @@
 
 void HotkeysWindow::Initialize() {
 	ToolboxWindow::Initialize();
-	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath("img/icons", "keyboard.png"), IDB_Icon_Keyboard);
+	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"keyboard.png"), IDB_Icon_Keyboard);
 	clickerTimer = TIMER_INIT();
 	dropCoinsTimer = TIMER_INIT();
 }

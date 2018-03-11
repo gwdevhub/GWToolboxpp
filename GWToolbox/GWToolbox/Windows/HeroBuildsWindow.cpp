@@ -10,7 +10,7 @@
 #include "GuiUtils.h"
 #include <Modules\Resources.h>
 
-#define INI_FILENAME "herobuilds.ini"
+#define INI_FILENAME L"herobuilds.ini"
 
 namespace {
 	using GW::Constants::HeroID;
@@ -79,7 +79,7 @@ unsigned int HeroBuildsWindow::TeamHeroBuild::cur_ui_id = 0;
 
 void HeroBuildsWindow::Initialize() {
 	ToolboxWindow::Initialize();
-	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath("img/icons", "list.png"), IDB_Icon_list);
+	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"list.png"), IDB_Icon_list);
 	send_timer = TIMER_INIT();
 }
 
