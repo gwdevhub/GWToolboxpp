@@ -112,6 +112,9 @@
     <Filter Include="Windows\HeroBuilds">
       <UniqueIdentifier>{9453adc8-19e1-455a-8fbe-0385b23a387f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Windows\Trade">
+      <UniqueIdentifier>{7895c2d6-b2da-4eab-8bc7-de0dffbed27b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GWToolbox\GuiUtils.h" />
@@ -265,6 +268,12 @@
       <Filter>Windows\HeroBuilds</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\Keys.h" />
+    <ClInclude Include="GWToolbox\Windows\TradeWindow.h">
+      <Filter>Windows\Trade</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Windows\TradeChat.h">
+      <Filter>Windows\Trade</Filter>
+    </ClInclude>
     <ClInclude Include="GWToolbox\Utf8.h" />
   </ItemGroup>
   <ItemGroup>
@@ -397,6 +406,15 @@
     <ClCompile Include="GWToolbox\CursorFix.cpp" />
     <ClCompile Include="GWToolbox\Windows\HeroBuildsWindow.cpp">
       <Filter>Windows\HeroBuilds</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Windows\TradeWindow.cpp">
+      <Filter>Windows\Trade</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Windows\TradeChat.cpp">
+      <Filter>Windows\Trade</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\easywsclient\easywsclient.cpp">
+      <Filter>Windows\Trade</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\Utf8.cpp" />
   </ItemGroup>

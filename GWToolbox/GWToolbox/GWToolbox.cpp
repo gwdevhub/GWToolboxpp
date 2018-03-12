@@ -3,6 +3,7 @@
 #include "Defines.h"
 
 #include <string>
+#include <winsock2.h>
 #include <Windows.h>
 #include <windowsx.h>
 
@@ -460,10 +461,6 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 
 	// === destruction ===
 	if (tb_initialized && GWToolbox::Instance().must_self_destruct) {
-		tb_destroyed = true;
-
-		
-
 		GWToolbox::Instance().Terminate();
 
 		ImGui_ImplDX9_Shutdown();
@@ -474,5 +471,6 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 		GW::Render::RestoreHooks();
 		Log::Log("Destroying API\n");
 		GW::Terminate();
+		tb_destroyed = true;
 	}
 }
