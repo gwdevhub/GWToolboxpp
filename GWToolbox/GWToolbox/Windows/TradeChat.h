@@ -8,35 +8,34 @@
 #include <iostream>
 #include <list>
 
-
 class TradeChat {
 public:
-	static TradeChat& Instance() {
-		static TradeChat instance;
-		return instance;
-	}
-
 	TradeChat();
 	~TradeChat();
-	std::string latest;
-	std::string latest_name;
+
+	std::vector <nlohmann::json> messages;
+	std::vector <nlohmann::json> new_messages;
+
 	void search(std::string);
 	void fetch();
 	void stop();
 	bool is_active();
-	std::vector <nlohmann::json> new_messages;
-	std::vector <nlohmann::json> messages;
-
+	bool is_connecting();
+	bool is_timed_out();
 private:
 	enum Connection : unsigned int {
-		not_connected = 0,
-		connecting = 1,
-		connected = 2,
+		not_connected,
+		connecting,
+		connected,
+		timeout,
 	};
-	Connection status;
+	easywsclient::WebSocket::pointer ws;
+	Connection status = not_connected;
+	int reconnect_attempt_max = 3;
+	size_t max_messages = 100; // size_t fixes unsigned/signed warning when comparing to vector.size()
 	std::thread connector;
-	easywsclient::WebSocket::pointer ws = NULL;
-	std::string uri = "wss://kamadan.decltype.org/ws/";	
+	std::string base_uri = "wss://kamadan.decltype.org/ws/";
 
-	void stop_current();
+	void disconnect();
+	void WSA_prereq();
 };
