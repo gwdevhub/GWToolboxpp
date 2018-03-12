@@ -8,14 +8,6 @@
 #include <thread>
 
 class TradeWindow : public ToolboxWindow {
-	TradeWindow() {};
-	~TradeWindow() {};
-public:
-	static TradeWindow& Instance() {
-		static TradeWindow instance;
-		return instance;
-	}
-
 	struct Alert {
 		static unsigned int uid_count;
 		Alert(const char* match = "") {
@@ -25,6 +17,14 @@ public:
 		char match_string[128];
 		unsigned int uid;
 	};
+
+	TradeWindow() {};
+	~TradeWindow() {};
+public:
+	static TradeWindow& Instance() {
+		static TradeWindow instance;
+		return instance;
+	}
 
 	const char* Name() const { return "Trade"; }
 
@@ -47,7 +47,7 @@ private:
 	// buffer for the search input
 	char search_buffer[256];
 	CSimpleIni* alert_ini = nullptr;
-	std::string ini_filename = "trade_alerts.ini";
+	std::wstring ini_filename = L"trade_alerts.ini";
 	std::vector<Alert> alerts;
 	bool show_alert_window = false;
 	TradeChat all_trade;
