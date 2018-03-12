@@ -23,24 +23,24 @@ DWORD BondsWidget::buff_id[MAX_PARTYSIZE][MAX_BONDS] = { 0 };
 void BondsWidget::Initialize() {
 	ToolboxWidget::Initialize();
 	for (int i = 0; i < MAX_BONDS; ++i) textures[i] = nullptr;
-	auto LoadBondTexture = [](IDirect3DTexture9** tex, const char* name, WORD id) -> void {
-		Resources::Instance().LoadTextureAsync(tex, Resources::GetPath("img/bonds", name), id);
+	auto LoadBondTexture = [](IDirect3DTexture9** tex, const wchar_t* name, WORD id) -> void {
+		Resources::Instance().LoadTextureAsync(tex, Resources::GetPath(L"img/bonds", name), id);
 	};
-	LoadBondTexture(&textures[BalthazarSpirit], "Balthazar's_Spirit.jpg", IDB_Bond_BalthazarsSpirit);
-	LoadBondTexture(&textures[EssenceBond], "Essence_Bond.jpg", IDB_Bond_EssenceBond);
-	LoadBondTexture(&textures[HolyVeil], "Holy_Veil.jpg", IDB_Bond_HolyVeil);
-	LoadBondTexture(&textures[LifeAttunement], "Life_Attunement.jpg", IDB_Bond_LifeAttunement);
-	LoadBondTexture(&textures[LifeBarrier], "Life_Barrier.jpg", IDB_Bond_LifeBarrier);
-	LoadBondTexture(&textures[LifeBond], "Life_Bond.jpg", IDB_Bond_LifeBond);
-	LoadBondTexture(&textures[LiveVicariously], "Live_Vicariously.jpg", IDB_Bond_LiveVicariously);
-	LoadBondTexture(&textures[Mending], "Mending.jpg", IDB_Bond_Mending);
-	LoadBondTexture(&textures[ProtectiveBond], "Protective_Bond.jpg", IDB_Bond_ProtectiveBond);
-	LoadBondTexture(&textures[PurifyingVeil], "Purifying_Veil.jpg", IDB_Bond_PurifyingVeil);
-	LoadBondTexture(&textures[Retribution], "Retribution.jpg", IDB_Bond_Retribution);
-	LoadBondTexture(&textures[StrengthOfHonor], "Strength_of_Honor.jpg", IDB_Bond_StrengthOfHonor);
-	LoadBondTexture(&textures[Succor], "Succor.jpg", IDB_Bond_Succor);
-	LoadBondTexture(&textures[VitalBlessing], "Vital_Blessing.jpg", IDB_Bond_VitalBlessing);
-	LoadBondTexture(&textures[WatchfulSpirit], "Watchful_Spirit.jpg", IDB_Bond_WatchfulSpirit);
+	LoadBondTexture(&textures[BalthazarSpirit], L"Balthazar's_Spirit.jpg", IDB_Bond_BalthazarsSpirit);
+	LoadBondTexture(&textures[EssenceBond], L"Essence_Bond.jpg", IDB_Bond_EssenceBond);
+	LoadBondTexture(&textures[HolyVeil], L"Holy_Veil.jpg", IDB_Bond_HolyVeil);
+	LoadBondTexture(&textures[LifeAttunement], L"Life_Attunement.jpg", IDB_Bond_LifeAttunement);
+	LoadBondTexture(&textures[LifeBarrier], L"Life_Barrier.jpg", IDB_Bond_LifeBarrier);
+	LoadBondTexture(&textures[LifeBond], L"Life_Bond.jpg", IDB_Bond_LifeBond);
+	LoadBondTexture(&textures[LiveVicariously], L"Live_Vicariously.jpg", IDB_Bond_LiveVicariously);
+	LoadBondTexture(&textures[Mending], L"Mending.jpg", IDB_Bond_Mending);
+	LoadBondTexture(&textures[ProtectiveBond], L"Protective_Bond.jpg", IDB_Bond_ProtectiveBond);
+	LoadBondTexture(&textures[PurifyingVeil], L"Purifying_Veil.jpg", IDB_Bond_PurifyingVeil);
+	LoadBondTexture(&textures[Retribution], L"Retribution.jpg", IDB_Bond_Retribution);
+	LoadBondTexture(&textures[StrengthOfHonor], L"Strength_of_Honor.jpg", IDB_Bond_StrengthOfHonor);
+	LoadBondTexture(&textures[Succor], L"Succor.jpg", IDB_Bond_Succor);
+	LoadBondTexture(&textures[VitalBlessing], L"Vital_Blessing.jpg", IDB_Bond_VitalBlessing);
+	LoadBondTexture(&textures[WatchfulSpirit], L"Watchful_Spirit.jpg", IDB_Bond_WatchfulSpirit);
 }
 
 void BondsWidget::Terminate() {

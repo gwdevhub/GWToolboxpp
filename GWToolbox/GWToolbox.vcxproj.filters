@@ -274,6 +274,7 @@
     <ClInclude Include="GWToolbox\Windows\TradeChat.h">
       <Filter>Windows\Trade</Filter>
     </ClInclude>
+    <ClInclude Include="GWToolbox\Utf8.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -415,6 +416,7 @@
     <ClCompile Include="..\Dependencies\easywsclient\easywsclient.cpp">
       <Filter>Windows\Trade</Filter>
     </ClCompile>
+    <ClCompile Include="GWToolbox\Utf8.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GWToolbox.rc">

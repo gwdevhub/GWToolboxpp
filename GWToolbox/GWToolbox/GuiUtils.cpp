@@ -20,7 +20,7 @@ namespace {
 }
 
 void GuiUtils::LoadFonts() {
-	std::string fontfile = Resources::GetPath("Font.ttf");
+	Utf8 fontfile = Resources::GetPathUtf8(L"Font.ttf");
 	ImGuiIO& io = ImGui::GetIO();
 	font16 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 16.0f);
 	font18 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 18.0f);
@@ -87,7 +87,12 @@ bool GuiUtils::ParseInt(const wchar_t *str, int *val) {
 	*val = wcstol(str, &end, 0);
 	return *end == 0;
 }
-
+std::wstring GuiUtils::ToWstr(std::string &s) {
+	std::wstring result;
+	result.reserve(s.size() + 1);
+	for (char c : s) result.push_back(c);
+	return result;
+}
 int GuiUtils::ConvertToUtf8(const wchar_t *str, char *output, size_t max_size) {
 	size_t len = wcslen(str);
 	if (len > max_size) return 0;

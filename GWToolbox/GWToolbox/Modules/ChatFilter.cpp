@@ -131,7 +131,7 @@ void ChatFilter::LoadSettings(CSimpleIni* ini) {
 	player_has_achieved_title = ini->GetBoolValue(Name(), VAR_NAME(player_has_achieved_title), false);
 
 	std::ifstream bycontent_file;
-	bycontent_file.open(Resources::GetPath("FilterByContent.txt"));
+	bycontent_file.open(Resources::GetPath(L"FilterByContent.txt"));
 	if (bycontent_file.is_open()) {
 		bycontent_file.get(bycontent_buf, FILTER_BUF_SIZE, '\0');
 		bycontent_file.close();
@@ -169,7 +169,7 @@ void ChatFilter::SaveSettings(CSimpleIni* ini) {
 
 	if (bycontent_filedirty) {
 		std::ofstream bycontent_file;
-		bycontent_file.open(Resources::GetPath("FilterByContent.txt"));
+		bycontent_file.open(Resources::GetPath(L"FilterByContent.txt"));
 		if (bycontent_file.is_open()) {
 			bycontent_file.write(bycontent_buf, strlen(bycontent_buf));
 			bycontent_file.close();
@@ -326,6 +326,9 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 		case 0x152B: // you win 12 festival tickets
 		case 0x152C: // You win 3 festival tickets
 			return ninerings;
+		case 0x7B91:	// x minutes of favor of the gods remaining. Note: full message is 0x8101 0x7B91 0xC686 0xE490 0x6922 0x101 0x100+value
+		case 0x7B92:	// x more achievements must be performed to earn the favor of the gods. // 0x8101 0x7B92 0x8B0A 0x8DB5 0x5135 0x101 0x100+value
+			return favor;
 		}
 		if (FullMatch(&message[1], { 0x6649, 0xA2F9, 0xBBFA, 0x3C27 })) return lunars; // you will celebrate a festive new year (rocket or popper)
 		if (FullMatch(&message[1], { 0x664B, 0xDBAB, 0x9F4C, 0x6742 })) return lunars; // something special is in your future! (lucky aura)
@@ -336,10 +339,11 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 
 	case 0x8102:
 		switch (message[1]) {
-		// 0xEFE is a player message (wtf anet?)
+		// 0xEFE is a player message
 		case 0x1443: return player_has_achieved_title; // Player has achieved the title...
 		case 0x4650: return pvp_messages; // skill has been updated for pvp
 		case 0x4651: return pvp_messages; // a hero skill has been updated for pvp
+		case 0x223F: return false; // "x minutes of favor of the gods remaining" as a result of /favor command
 		case 0x223B: return hoh; // a party won hall of heroes	
 		case 0x23E4: return favor; // 0xF8AA 0x95CD 0x2766 // the world no longer has the favor of the gods
 		case 0x23E5: return player_has_achieved_title;

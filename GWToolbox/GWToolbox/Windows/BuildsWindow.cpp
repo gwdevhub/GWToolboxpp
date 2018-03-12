@@ -10,11 +10,11 @@
 
 unsigned int BuildsWindow::TeamBuild::cur_ui_id = 0;
 
-#define INI_FILENAME "builds.ini"
+#define INI_FILENAME L"builds.ini"
 
 void BuildsWindow::Initialize() {
 	ToolboxWindow::Initialize();
-	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath("img/icons", "list.png"), IDB_Icon_list);
+	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"list.png"), IDB_Icon_list);
 	send_timer = TIMER_INIT();
 }
 

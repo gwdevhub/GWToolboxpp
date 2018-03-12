@@ -244,7 +244,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini);
 	borderlesswindow = ini->GetBoolValue(Name(), VAR_NAME(borderlesswindow), false);
 	maintain_fov = ini->GetBoolValue(Name(), VAR_NAME(maintain_fov), false);
-	fov = ini->GetDoubleValue(Name(), VAR_NAME(fov), 1.308997f);
+	fov = (float)ini->GetDoubleValue(Name(), VAR_NAME(fov), 1.308997f);
 	tick_is_toggle = ini->GetBoolValue(Name(), VAR_NAME(tick_is_toggle), true);
 
 	GW::Chat::ShowTimestamps = ini->GetBoolValue(Name(), "show_timestamps", false);
