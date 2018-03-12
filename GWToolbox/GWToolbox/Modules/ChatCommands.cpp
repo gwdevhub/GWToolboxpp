@@ -23,6 +23,7 @@
 #include "GWToolbox.h"
 #include <Keys.h>
 #include <logger.h>
+#include <Modules\GameSettings.h>
 #include <Windows\MainWindow.h>
 #include <Windows\SettingsWindow.h>
 #include <Windows\TravelWindow.h>
@@ -513,15 +514,18 @@ void ChatCommands::CmdCamera(int argc, LPWSTR *argv) {
 		} else if (arg1 == L"fov") {
 			if (argc == 2) {
 				GW::CameraMgr::SetFieldOfView(1.308997f);
+				GameSettings::Instance().fov = 1.308997f;
 			} else {
 				std::wstring arg2 = GuiUtils::ToLower(argv[2]);
 				if (arg2 == L"default") {
 					GW::CameraMgr::SetFieldOfView(1.308997f);
+					GameSettings::Instance().fov = 1.308997f;
 				} else {
 					try {
 						float fovnew = std::stof(arg2);
 						if (fovnew > 0) {
 							GW::CameraMgr::SetFieldOfView(fovnew);
+							GameSettings::Instance().fov = fovnew;
 							Log::Info("Field of View is %f", fovnew);
 						} else {
 							Log::Error("Invalid argument '%ls', please use a positive value", argv[2]);
