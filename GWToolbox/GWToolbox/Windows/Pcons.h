@@ -27,8 +27,8 @@ public:
 
 protected:
 	Pcon(const char* chatname,
-		const char* ininame, 
-		const char* filename, 
+		const char* ininame,
+		const wchar_t* filename, 
 		WORD res_id, // you can use 0 and it will not load texture from resource, only from file.
 		ImVec2 uv0, ImVec2 uv1, int threshold);
 
@@ -80,7 +80,7 @@ class PconGeneric : public Pcon {
 public:
 	PconGeneric(const char* chat,
 		const char* ini,
-		const char* file,
+		const wchar_t* file,
 		WORD res_id,
 		ImVec2 uv0, ImVec2 uv1,
 		DWORD item, GW::Constants::SkillID effect, 
@@ -102,7 +102,7 @@ class PconCons : public PconGeneric {
 public:
 	PconCons(const char* chat,
 		const char* ini,
-		const char* file, 
+		const wchar_t* file,
 		WORD res_id,
 		ImVec2 uv0, ImVec2 uv1,
 		DWORD item, GW::Constants::SkillID effect, 
@@ -116,7 +116,7 @@ class PconCity : public Pcon {
 public:
 	PconCity(const char* chat,
 		const char* ini,
-		const char* file, 
+		const wchar_t* file,
 		WORD res_id,
 		ImVec2 uv0, ImVec2 uv1, 
 		int threshold)
@@ -131,7 +131,7 @@ class PconAlcohol : public Pcon {
 public:
 	PconAlcohol(const char* chat,
 		const char* ini,
-		const char* file,
+		const wchar_t* file,
 		WORD res_id,
 		ImVec2 uv0, ImVec2 uv1,
 		int threshold)
@@ -146,7 +146,7 @@ class PconLunar : public Pcon {
 public:
 	PconLunar(const char* chat,
 		const char* ini,
-		const char* file,
+		const wchar_t* file,
 		WORD res_id,
 		ImVec2 uv0, ImVec2 uv1, 
 		int threshold)

@@ -8,7 +8,7 @@
 
 Color CustomRenderer::color = 0xFF00FFFF;
 
-#define IniFilename "Markers.ini"
+#define IniFilename L"Markers.ini"
 
 void CustomRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	color = Colors::Load(ini, section, "color_custom_markers", 0xFFFFFFFF);
@@ -324,10 +324,9 @@ void CustomRenderer::DrawCustomMarkers(IDirect3DDevice9* device) {
 		if (flags.valid()) {
 			for (unsigned i = 0; i < flags.size(); ++i) {
 				GW::HeroFlag& flag = flags[i];
-
 				D3DXMATRIX translate, scale, world;
 				D3DXMatrixTranslation(&translate, flag.flag.x, flag.flag.y, 0.0f);
-				D3DXMatrixScaling(&scale, 250.0f, 250.0f, 1.0f);
+				D3DXMatrixScaling(&scale, 200.0f, 200.0f, 1.0f);
 				world = scale * translate;
 				device->SetTransform(D3DTS_WORLD, &world);
 				linecircle.Render(device);

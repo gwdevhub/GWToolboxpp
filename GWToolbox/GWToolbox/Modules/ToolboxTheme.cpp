@@ -3,7 +3,7 @@
 #include <Modules\Resources.h>
 #include <Color.h>
 
-#define IniFilename "Theme.ini"
+#define IniFilename L"Theme.ini"
 #define IniSection "Theme"
 
 ToolboxTheme::ToolboxTheme() {

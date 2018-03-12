@@ -31,32 +31,37 @@ void Resources::EndLoading() {
 	thread_jobs.push([this]() { should_stop = true; });
 }
 
-std::string Resources::GetSettingsFolderPath() {
-	CHAR path[MAX_PATH];
-	SHGetFolderPath(NULL, CSIDL_LOCAL_APPDATA | CSIDL_FLAG_CREATE, NULL, 0, path);
-	PathAppend(path, "GWToolboxpp");
-	return std::string(path);
+std::wstring Resources::GetSettingsFolderPath() {
+	WCHAR path[MAX_PATH];
+	SHGetFolderPathW(NULL, CSIDL_LOCAL_APPDATA | CSIDL_FLAG_CREATE, NULL, 0, path);
+	PathAppendW(path, L"GWToolboxpp");
+	return std::wstring(path);
 }
-std::string Resources::GetPath(std::string file) {
-	return GetSettingsFolderPath() + "\\" + file;
+std::wstring Resources::GetPath(std::wstring file) {
+	return GetSettingsFolderPath() + L"\\" + file;
 }
-std::string Resources::GetPath(std::string folder, std::string file) {
-	return GetSettingsFolderPath() + "\\" + folder + "\\" + file;
+std::wstring Resources::GetPath(std::wstring folder, std::wstring file) {
+	return GetSettingsFolderPath() + L"\\" + folder + L"\\" + file;
 }
 
-void Resources::EnsureFolderExists(std::string path) {
-	if (!PathFileExists(path.c_str())) {
-		CreateDirectory(path.c_str(), NULL);
+void Resources::EnsureFolderExists(std::wstring path) {
+	if (!PathFileExistsW(path.c_str())) {
+		CreateDirectoryW(path.c_str(), NULL);
 	}
 }
 
-bool Resources::Download(std::string path_to_file, std::string url) {
-	DeleteUrlCacheEntry(url.c_str());
-	Log::Log("Downloading %s\n", url.c_str());
-	return (URLDownloadToFile(NULL, url.c_str(), path_to_file.c_str(), 0, NULL) == S_OK);
+Utf8 Resources::GetPathUtf8(std::wstring file) {
+	std::wstring path = GetPath(file);
+	return Utf8(path.c_str());
 }
-void Resources::Download(std::string path_to_file, 
-	std::string url, std::function<void(bool)> callback) {
+
+bool Resources::Download(std::wstring path_to_file, std::wstring url) {
+	DeleteUrlCacheEntryW(url.c_str());
+	Log::Log("Downloading %s\n", url.c_str());
+	return (URLDownloadToFileW(NULL, url.c_str(), path_to_file.c_str(), 0, NULL) == S_OK);
+}
+void Resources::Download(std::wstring path_to_file, 
+	std::wstring url, std::function<void(bool)> callback) {
 
 	thread_jobs.push([this, url, path_to_file, callback]() {
 		bool success = Download(path_to_file, url);
@@ -68,11 +73,11 @@ void Resources::Download(std::string path_to_file,
 	});
 }
 
-std::string Resources::Download(std::string url) const {
-	DeleteUrlCacheEntry(url.c_str());
+std::string Resources::Download(std::wstring url) const {
+	DeleteUrlCacheEntryW(url.c_str());
 	IStream* stream;
 	std::string ret = "";
-	if (SUCCEEDED(URLOpenBlockingStream(NULL, url.c_str(), &stream, 0, NULL))) {
+	if (SUCCEEDED(URLOpenBlockingStreamW(NULL, url.c_str(), &stream, 0, NULL))) {
 		STATSTG stats;
 		stream->Stat(&stats, STATFLAG_NONAME);
 		DWORD size = stats.cbSize.LowPart;
@@ -85,17 +90,17 @@ std::string Resources::Download(std::string url) const {
 	}
 	return ret;
 }
-void Resources::Download(std::string url, std::function<void(std::string)> callback) {
+void Resources::Download(std::wstring url, std::function<void(std::string)> callback) {
 	thread_jobs.push([this, url, callback]() {
 		std::string s = Download(url);
 		todo.push([callback, s]() { callback(s); });
 	});
 }
 
-void Resources::EnsureFileExists(std::string path_to_file, 
-	std::string url, std::function<void(bool)> callback) {
+void Resources::EnsureFileExists(std::wstring path_to_file, 
+	std::wstring url, std::function<void(bool)> callback) {
 
-	if (PathFileExists(path_to_file.c_str())) {
+	if (PathFileExistsW(path_to_file.c_str())) {
 		// if file exists, run the callback immediately in the same thread
 		callback(true);
 	} else {
@@ -105,22 +110,22 @@ void Resources::EnsureFileExists(std::string path_to_file,
 }
 
 void Resources::LoadTextureAsync(IDirect3DTexture9** texture,
-	std::string path_to_file) {
+	std::wstring path_to_file) {
 
-	if (PathFileExists(path_to_file.c_str())) {
+	if (PathFileExistsW(path_to_file.c_str())) {
 		toload.push([path_to_file, texture](IDirect3DDevice9* device) {
-			D3DXCreateTextureFromFile(device, path_to_file.c_str(), texture);
+			D3DXCreateTextureFromFileW(device, path_to_file.c_str(), texture);
 		});
 	}
 }
 
 void Resources::LoadTextureAsync(IDirect3DTexture9** texture, 
-	std::string path_to_file, WORD id) {
+	std::wstring path_to_file, WORD id) {
 
-	if (PathFileExists(path_to_file.c_str())) {
+	if (PathFileExistsW(path_to_file.c_str())) {
 		// if file exists load it
 		toload.push([path_to_file, texture](IDirect3DDevice9* device) {
-			D3DXCreateTextureFromFile(device, path_to_file.c_str(), texture);
+			D3DXCreateTextureFromFileW(device, path_to_file.c_str(), texture);
 		});
 	} else if (id > 0) {
 		// otherwise try to install it from resource
@@ -129,7 +134,7 @@ void Resources::LoadTextureAsync(IDirect3DTexture9** texture,
 		DWORD size = SizeofResource(GWToolbox::GetDLLModule(), hResInfo);
 
 		// write to file so the user can customize his icons
-		HANDLE hFile = CreateFile(path_to_file.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		HANDLE hFile = CreateFileW(path_to_file.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 		DWORD bytesWritten;
 		BOOL wfRes = WriteFile(hFile, hRes, size, &bytesWritten, NULL);
 		if (wfRes != TRUE) {

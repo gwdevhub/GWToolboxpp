@@ -34,7 +34,7 @@ private:
 	// === location stuff ===
 	clock_t location_timer;
 	GW::Constants::MapID location_current_map;
-	std::ofstream location_file;
+	std::wofstream location_file;
 	bool save_location_data;
 
 	bool use_pcons = true;

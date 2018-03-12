@@ -32,7 +32,7 @@ void InfoWindow::Initialize() {
 
 	GW::Agents::SetupLastDialogHook();
 
-	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath("img/icons", "info.png"), IDB_Icon_Info);
+	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"info.png"), IDB_Icon_Info);
 	GW::StoC::AddCallback<GW::Packet::StoC::P081>(
 		[this](GW::Packet::StoC::P081* pak) {
 		if (pak->message[0] == 0x7BFF
@@ -273,6 +273,8 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			}
 		}
 		if (show_mobcount && ImGui::CollapsingHeader("Enemy count")) {
+			const float sqr_soul_range = 1400.0f * 1400.0f;
+			int soul_count = 0;
 			int cast_count = 0;
 			int spirit_count = 0;
 			int compass_count = 0;
@@ -288,12 +290,17 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 					if (agent->Allegiance != 0x3) continue; // ignore non-hostiles
 					if (agent->GetIsDead()) continue; // ignore dead 
 					float sqrd = GW::Agents::GetSqrDistance(player->pos, agent->pos);
+					if (agent->PlayerNumber == GW::Constants::ModelID::DoA::SoulTormentor
+						|| agent->PlayerNumber == GW::Constants::ModelID::DoA::VeilSoulTormentor) {
+						if (sqrd < sqr_soul_range) ++soul_count;
+					}
 					if (sqrd < GW::Constants::SqrRange::Spellcast) ++cast_count;
 					if (sqrd < GW::Constants::SqrRange::Spirit) ++spirit_count;
 					++compass_count;
 				}
 			}
 
+			ImGui::Text("%d Soul Tormentors", &soul_count);
 			ImGui::Text("%d in casting range", cast_count);
 			ImGui::Text("%d in spirit range", spirit_count);
 			ImGui::Text("%d in compass range", compass_count);

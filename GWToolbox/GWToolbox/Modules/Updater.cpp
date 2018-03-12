@@ -6,6 +6,7 @@
 #include <GWToolbox.h>
 #include <Defines.h>
 #include <logger.h>
+#include <GuiUtils.h>
 #include <Modules\Resources.h>
 
 void Updater::LoadSettings(CSimpleIni* ini) {
@@ -39,7 +40,7 @@ void Updater::CheckForUpdate() {
 		// Here we are in the worker thread and can do blocking operations
 		// Reminder: do not send stuff to gw chat from this thread!
 		std::string version = Resources::Instance().Download(
-			"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/toolboxversion.txt");
+			L"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/toolboxversion.txt");
 
 		if (version.compare(GWTOOLBOX_VERSION) == 0) {
 			// server and client versions match
@@ -82,7 +83,7 @@ void Updater::CheckForUpdate() {
 
 		// get json release manifest
 		std::string s = Resources::Instance().Download(
-			std::string("https://api.github.com/repos/HasKha/GWToolboxpp/releases/tags/") + version + "_Release");
+			std::wstring(L"https://api.github.com/repos/HasKha/GWToolboxpp/releases/tags/") + GuiUtils::ToWstr(version) + L"_Release");
 
 		if (s.empty()) {
 			step = Done;
@@ -208,8 +209,8 @@ void Updater::DoUpdate() {
 
 	// 0. find toolbox dll path
 	HMODULE module = GWToolbox::GetDLLModule();
-	CHAR* dllfile = new CHAR[MAX_PATH];
-	DWORD size = GetModuleFileName(module, dllfile, MAX_PATH);
+	WCHAR* dllfile = new WCHAR[MAX_PATH];
+	DWORD size = GetModuleFileNameW(module, dllfile, MAX_PATH);
 	if (size == 0) {
 		Log::Error("Updater error - cannot find GWToolbox.dll path");
 		step = Done;
@@ -218,25 +219,25 @@ void Updater::DoUpdate() {
 	Log::Log("dll file name is %s\n", dllfile);
 
 	// 1. rename toolbox dll
-	CHAR* dllold = new CHAR[MAX_PATH];
-	strcpy_s(dllold, MAX_PATH, dllfile);
-	strcat_s(dllold, MAX_PATH, ".old");
+	WCHAR* dllold = new WCHAR[MAX_PATH];
+	wcsncpy(dllold, dllfile, MAX_PATH);
+	wcsncat(dllold, L".old", MAX_PATH);
 	Log::Log("moving to %s\n", dllold);
-	DeleteFile(dllold);
-	MoveFile(dllfile, dllold);
+	DeleteFileW(dllold);
+	MoveFileW(dllfile, dllold);
 
 	// 2. download new dll
 	Resources::Instance().Download(
 		dllfile,
-		std::string("https://github.com/HasKha/GWToolboxpp/releases/download/") 
-			+ server_version + "_Release/GWToolbox.dll", 
+		std::wstring(L"https://github.com/HasKha/GWToolboxpp/releases/download/") 
+			+ GuiUtils::ToWstr(server_version) + L"_Release/GWToolbox.dll", 
 		[this, dllfile, dllold](bool success) {
 		if (success) {
 			step = Success;
 			Log::Warning("Update successful, please restart toolbox.");
 		} else {
 			Log::Error("Updated error - cannot download GWToolbox.dll");
-			MoveFile(dllold, dllfile);
+			MoveFileW(dllold, dllfile);
 			step = Done;
 		}
 		delete[] dllfile;
