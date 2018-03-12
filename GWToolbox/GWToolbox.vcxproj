@@ -103,6 +103,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\Dependencies\easywsclient\easywsclient.hpp" />
     <ClInclude Include="..\Dependencies\imgui\imconfig.h" />
     <ClInclude Include="..\Dependencies\imgui\imgui.h" />
     <ClInclude Include="..\Dependencies\imgui\imgui_internal.h" />
