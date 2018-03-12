@@ -20,7 +20,6 @@
 unsigned int TradeWindow::Alert::uid_count = 0;
 
 void TradeWindow::Initialize() {
-	// skip the Window initialize to avoid registering with ourselves
 	ToolboxWindow::Initialize();
 	alert_ini = new CSimpleIni(false, false, false);
 	alert_ini->LoadFile(Resources::GetPath(ini_filename).c_str());

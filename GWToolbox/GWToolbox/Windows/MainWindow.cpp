@@ -10,11 +10,6 @@
 #include "GuiUtils.h"
 #include "GWToolbox.h"
 
-void MainWindow::Initialize() {
-	// skip the Window initialize to avoid registering with ourselves
-	ToolboxWindow::Initialize();
-}
-
 void MainWindow::LoadSettings(CSimpleIni* ini) {
 	bool v = ini->GetBoolValue(Name(), VAR_NAME(visible), true);
 	ToolboxWindow::LoadSettings(ini);
