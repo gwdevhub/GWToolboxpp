@@ -46,9 +46,9 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 				ImGui::PopID();
 			}
 			if (ImGui::Button("Add Teambuild", ImVec2(ImGui::GetWindowContentRegionWidth(), 0))) {
-				teambuilds.push_back(TeamBuild());
+				teambuilds.push_back(TeamBuild(""));
 				teambuilds.back().edit_open = true; // open by default
-				teambuilds.back().builds.resize(4, Build());
+				teambuilds.back().builds.resize(4, Build("", ""));
 				builds_changed = true;
 			}
 		}
@@ -102,7 +102,7 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 			if (ImGui::Checkbox("Show numbers", &tbuild.show_numbers)) builds_changed = true;
 			ImGui::SameLine(ImGui::GetWindowContentRegionWidth() * 0.6f);
 			if (ImGui::Button("Add Build", ImVec2(ImGui::GetWindowContentRegionWidth() * 0.4f, 0))) {
-				tbuild.builds.push_back(Build());
+				tbuild.builds.push_back(Build("", ""));
 				builds_changed = true;
 			}
 			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Add another player build row");
@@ -209,10 +209,16 @@ void BuildsWindow::Update(float delta) {
 	}
 
 	// if we open the window, load from file. If we close the window, save to file. 
-	static bool _visible = false;
-	if (visible != _visible) {
-		_visible = visible;
-		if (visible) {
+	static bool old_visible = false;
+	bool cur_visible = false;
+	cur_visible |= visible;
+	for (TeamBuild& tbuild : teambuilds) {
+		cur_visible |= tbuild.edit_open;
+	}
+
+	if (cur_visible != old_visible) {
+		old_visible = cur_visible;
+		if (cur_visible) {
 			LoadFromFile();
 		} else {
 			SaveToFile();
@@ -302,9 +308,9 @@ void BuildsWindow::LoadFromFile() {
 }
 
 void BuildsWindow::SaveToFile() {
-	if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
-
 	if (builds_changed) {
+		if (inifile == nullptr) inifile = new CSimpleIni();
+
 		// clear builds from ini
 		inifile->Reset();
 

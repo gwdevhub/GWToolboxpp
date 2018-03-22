@@ -3,7 +3,6 @@
 #include "Defines.h"
 
 #include <string>
-#include <winsock2.h>
 #include <Windows.h>
 #include <windowsx.h>
 

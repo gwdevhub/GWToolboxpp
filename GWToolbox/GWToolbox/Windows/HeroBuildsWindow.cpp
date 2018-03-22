@@ -111,11 +111,11 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 				ImGui::PopID();
 			}
 			if (ImGui::Button("Add Teambuild", ImVec2(ImGui::GetWindowContentRegionWidth(), 0))) {
-				TeamHeroBuild tb = TeamHeroBuild();
+				TeamHeroBuild tb = TeamHeroBuild("");
 				tb.builds.reserve(8); // at this point why don't we use a static array ??
 				tb.builds.push_back(HeroBuild("", "", -2));
 				for (int i = 0; i < 7; ++i) {
-					tb.builds.push_back(HeroBuild());
+					tb.builds.push_back(HeroBuild("", ""));
 				}
 
 				builds_changed = true;
@@ -286,10 +286,16 @@ void HeroBuildsWindow::Update(float delta) {
 	}
 
 	// if we open the window, load from file. If we close the window, save to file. 
-	static bool _visible = false;
-	if (visible != _visible) {
-		_visible = visible;
-		if (visible) {
+	static bool old_visible = false;
+	bool cur_visible = false;
+	cur_visible |= visible;
+	for (TeamHeroBuild& tbuild : teambuilds) {
+		cur_visible |= tbuild.edit_open;
+	}
+
+	if (cur_visible != old_visible) {
+		old_visible = cur_visible;
+		if (cur_visible) {
 			LoadFromFile();
 		} else {
 			SaveToFile();
@@ -308,11 +314,11 @@ void HeroBuildsWindow::SaveSettings(CSimpleIni* ini) {
 }
 
 void HeroBuildsWindow::LoadFromFile() {
-	if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
-	inifile->LoadFile(Resources::GetPath(INI_FILENAME).c_str());
-
 	// clear builds from toolbox
 	teambuilds.clear();
+
+	if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
+	inifile->LoadFile(Resources::GetPath(INI_FILENAME).c_str());
 
 	// then load
 	CSimpleIni::TNamesDepend entries;
@@ -320,8 +326,7 @@ void HeroBuildsWindow::LoadFromFile() {
 	for (CSimpleIni::Entry& entry : entries) {
 		const char* section = entry.pItem;
 
-		TeamHeroBuild tb;
-		strncpy(tb.name, inifile->GetValue(section, "buildname", ""), 128);
+		TeamHeroBuild tb(inifile->GetValue(section, "buildname", ""));
 		tb.hardmode = inifile->GetBoolValue(section, "hardmode", false);
 		tb.builds.reserve(8);
 
@@ -335,12 +340,7 @@ void HeroBuildsWindow::LoadFromFile() {
 			const char* nameval = inifile->GetValue(section, namekey, "");
 			const char* templateval = inifile->GetValue(section, templatekey, "");
 			const int hero_index = inifile->GetLongValue(section, heroindexkey, -1);
-
-			HeroBuild build;
-			strncpy(build.name, nameval, 128);
-			strncpy(build.code, templateval, 128);
-			build.hero_index = hero_index;
-
+			HeroBuild build(nameval, templateval, hero_index);
 			tb.builds.push_back(build);
 		}
 
@@ -355,12 +355,10 @@ void HeroBuildsWindow::LoadFromFile() {
 
 void HeroBuildsWindow::SaveToFile() {
 	if (builds_changed) {
+		if (inifile == nullptr) inifile = new CSimpleIni();
+
 		// clear builds from ini
-		CSimpleIni::TNamesDepend entries;
-		inifile->GetAllSections(entries);
-		for (CSimpleIni::Entry& entry : entries) {
-			inifile->Delete(entry.pItem, nullptr);
-		}
+		inifile->Reset();
 
 		// then save
 		for (unsigned int i = 0; i < teambuilds.size(); ++i) {
@@ -382,6 +380,7 @@ void HeroBuildsWindow::SaveToFile() {
 				inifile->SetLongValue(section, heroindexkey, build.hero_index);
 			}
 		}
+
 		inifile->SaveFile(Resources::GetPath(INI_FILENAME).c_str());
 	}
 }

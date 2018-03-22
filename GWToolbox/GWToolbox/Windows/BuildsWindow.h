@@ -11,7 +11,7 @@
 class BuildsWindow : public ToolboxWindow {
 private:
 	struct Build {
-		Build(const char* n = "", const char* c = "") {
+		Build(const char* n, const char* c) {
 			strncpy(name, n, 128);
 			strncpy(code, c, 128);
 		}
@@ -20,7 +20,7 @@ private:
 	};
 	struct TeamBuild {
 		static unsigned int cur_ui_id;
-		TeamBuild(const char* n = "")
+		TeamBuild(const char* n)
 			: ui_id(++cur_ui_id) {
 			strncpy(name, n, 128);
 		}

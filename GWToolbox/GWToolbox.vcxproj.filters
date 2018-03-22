@@ -275,6 +275,9 @@
       <Filter>Windows\Trade</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\Utf8.h" />
+    <ClInclude Include="..\Dependencies\easywsclient\easywsclient.hpp">
+      <Filter>Windows\Trade</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
