@@ -29,7 +29,7 @@ void Log::InitializeLog() {
 	freopen_s(&fh, "CONOUT$", "w", stderr);
 	SetConsoleTitle("GWTB++ Debug Console");
 #else
-	logfile = freopen(Resources::GetPath("log.txt").c_str(), "w", stdout);
+	logfile = _wfreopen(Resources::GetPath(L"log.txt").c_str(), L"w", stdout);
 #endif
 }
 
