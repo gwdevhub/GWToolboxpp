@@ -249,7 +249,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 
 void TradeWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxWindow::LoadSettings(ini);
-	alert_ini = new CSimpleIni(false, false, false);
+	if (alert_ini == nullptr) alert_ini = new CSimpleIni(false, false, false);
 	alert_ini->LoadFile(Resources::GetPath(ini_filename).c_str());
 	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
 
