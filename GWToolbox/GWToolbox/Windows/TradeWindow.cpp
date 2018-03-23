@@ -21,9 +21,11 @@ unsigned int TradeWindow::Alert::uid_count = 0;
 
 void TradeWindow::Initialize() {
 	ToolboxWindow::Initialize();
-	alert_ini = new CSimpleIni(false, false, false);
-	alert_ini->LoadFile(Resources::GetPath(ini_filename).c_str());
-	all_trade.search("");
+	// used for the alerts
+	all_trade = new TradeChat();
+	// used for the window
+	trade_searcher = new TradeChat();
+	//all_trade->search("");
 }
 
 void TradeWindow::DrawSettingInternal() {
@@ -31,9 +33,23 @@ void TradeWindow::DrawSettingInternal() {
 }
 
 void TradeWindow::Update(float delta) {
-	if (all_trade.is_timed_out()) all_trade.search("");
-	all_trade.fetch();
-	trade_searcher.fetch();
+	if (all_trade == nullptr || trade_searcher == nullptr) { return;  }
+	all_trade->fetch();
+
+	if (all_trade->is_timed_out() && alerts.size() > 0) {
+		all_trade->search("");
+	}
+	if (!visible && trade_searcher->is_active()) {
+		trade_searcher->stop();
+	}
+	else if (visible && trade_searcher->is_timed_out()) {
+		trade_searcher->search(search_buffer);
+	}
+
+	if (trade_searcher->is_active()) {
+		trade_searcher->fetch();
+	} 
+	
 	// do not display trade chat while in kamadan AE district 1
 	if (GW::Map::GetMapID() == GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost &&
 		GW::Map::GetDistrict() == 1 &&
@@ -42,16 +58,16 @@ void TradeWindow::Update(float delta) {
 	}
 	std::string message;
 	std::string final_chat_message;
-	for (unsigned int i = 0; i < all_trade.new_messages.size(); i++) {
-		message = all_trade.new_messages.at(i)["message"].dump();
+	for (unsigned int i = 0; i < all_trade->new_messages.size(); i++) {
+		message = all_trade->new_messages.at(i)["message"].dump();
 		std::transform(message.begin(), message.end(), message.begin(), ::tolower);
 		for (unsigned j = 0; j < alerts.size(); j++) {
 			// ensure the alert isnt empty
 			if (strncmp(alerts.at(j).match_string, "", 128)) {
 				// check if the trade message matches the keyword, or if the alert matches the all messages keyword
 				if (message.find(alerts.at(j).match_string) != std::string::npos || all_keyword.compare(alerts.at(j).match_string) == 0) {
-					final_chat_message = "<c=#" + chat_color + "><a=1>" + all_trade.new_messages.at(i)["name"].get<std::string>() + "</a>: " +
-						all_trade.new_messages.at(i)["message"].get<std::string>() + "</c>";
+					final_chat_message = "<c=#" + chat_color + "><a=1>" + all_trade->new_messages.at(i)["name"].get<std::string>() + "</a>: " +
+						all_trade->new_messages.at(i)["message"].get<std::string>() + "</c>";
 					GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, final_chat_message.c_str());
 					// break to stop multiple alerts triggering the same message
 					break;
@@ -64,7 +80,7 @@ void TradeWindow::Update(float delta) {
 void TradeWindow::Draw(IDirect3DDevice9* device) {
 	if (!visible) { return; }
 	// start the trade_searcher if its not active
-	if (!trade_searcher.is_active()) trade_searcher.search("");
+	//if (!trade_searcher->is_active()) trade_searcher->search("");
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
@@ -73,16 +89,16 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		/* Search bar header */
 		ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 80.0f - 80.0f - 80.0f - ImGui::GetStyle().ItemInnerSpacing.x * 6));
 		if (ImGui::InputText("", search_buffer, 256, ImGuiInputTextFlags_EnterReturnsTrue)) {
-			trade_searcher.search(search_buffer);
+			trade_searcher->search(search_buffer);
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Search", ImVec2(80.0f, 0))) {
-			trade_searcher.search(search_buffer);
+			trade_searcher->search(search_buffer);
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Clear", ImVec2(80.0f, 0))) {
 			strncpy(search_buffer, "", 256);
-			trade_searcher.search("");
+			trade_searcher->search("");
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Alerts", ImVec2(80.0f, 0))) {
@@ -93,19 +109,19 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		ImGui::BeginChild("trade_scroll", ImVec2(0, -20.0f - ImGui::GetStyle().ItemInnerSpacing.y));
 
 		/* Connection checks */
-		if (trade_searcher.is_timed_out()) {
+		if (trade_searcher->is_timed_out()) {
 			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("The connection to kamadan.decltype.com has timed out.").x) / 2);
 			ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
 			ImGui::Text("The connection to kamadan.decltype.com has timed out.");
 			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Click to reconnect").x) / 2);
 			if (ImGui::Button("Click to reconnect")) {
-				trade_searcher.search(search_buffer);
+				trade_searcher->search(search_buffer);
 			}
 			ImGui::End();
 			ImGui::End();
 			return;
 		}
-		else if (trade_searcher.is_connecting()) {
+		else if (trade_searcher->is_connecting()) {
 			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Connecting...").x)/2);
 			ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
 			ImGui::Text("Connecting...");
@@ -130,11 +146,11 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		std::string message;
 		time_t now = time(0);
 
-		for (unsigned int i = 0; i < trade_searcher.messages.size(); i++) {
+		for (unsigned int i = 0; i < trade_searcher->messages.size(); i++) {
 			ImGui::PushID(i);
 			
 			// negative numbers have came from this before, it is probably just server client desync
-			int time_since_message = (int)now - stoi(trade_searcher.messages.at(i)["timestamp"].get<std::string>());
+			int time_since_message = (int)now - stoi(trade_searcher->messages.at(i)["timestamp"].get<std::string>());
 
 			// smaller font for time column
 			ImFont* small_font = (ImFont*)malloc(sizeof(ImFont));
@@ -162,7 +178,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			ImGui::PopFont();
 			ImGui::NextColumn();
 
-			name = trade_searcher.messages.at(i)["name"].get<std::string>();
+			name = trade_searcher->messages.at(i)["name"].get<std::string>();
 
 			if (ImGui::Button(name.c_str())) {
 				// open whisper to player
@@ -174,7 +190,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			}
 
 			ImGui::NextColumn();
-			message = trade_searcher.messages.at(i)["message"].get<std::string>();
+			message = trade_searcher->messages.at(i)["message"].get<std::string>();
 			ImGui::PushTextWrapPos();
 			ImGui::Text("%s", message.c_str());
 			ImGui::PopTextWrapPos();
@@ -218,6 +234,8 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 
 void TradeWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxWindow::LoadSettings(ini);
+	alert_ini = new CSimpleIni(false, false, false);
+	alert_ini->LoadFile(Resources::GetPath(ini_filename).c_str());
 	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
 
 	LoadAlerts();
@@ -252,7 +270,7 @@ void TradeWindow::SaveAlerts() {
 }
 
 void TradeWindow::Terminate() {
-	all_trade.stop();
-	trade_searcher.stop();
+	all_trade->stop();
+	trade_searcher->stop();
 	ToolboxWindow::Terminate();
 }

@@ -50,8 +50,8 @@ private:
 	std::wstring ini_filename = L"trade_alerts.ini";
 	std::vector<Alert> alerts;
 	bool show_alert_window = false;
-	TradeChat all_trade;
-	TradeChat trade_searcher;
+	TradeChat* all_trade = nullptr;
+	TradeChat* trade_searcher = nullptr;
 
 	std::string alerts_tooltip = \
 		"Click to add a new keyword.\n" \
