@@ -25,7 +25,7 @@ void TradeWindow::Initialize() {
 	all_trade = new TradeChat();
 	// used for the window
 	trade_searcher = new TradeChat();
-	//all_trade->search("");
+	all_trade->search("");
 }
 
 void TradeWindow::DrawSettingInternal() {
@@ -33,11 +33,13 @@ void TradeWindow::DrawSettingInternal() {
 }
 
 void TradeWindow::Update(float delta) {
-	if (all_trade == nullptr || trade_searcher == nullptr) { return;  }
 	all_trade->fetch();
 
-	if (all_trade->is_timed_out() && alerts.size() > 0) {
+	if (!all_trade->is_active() && alerts.size() > 0) {
 		all_trade->search("");
+	}
+	else if (all_trade->is_active() && alerts.size() == 0) {
+		all_trade->stop();
 	}
 	if (!visible && trade_searcher->is_active()) {
 		trade_searcher->stop();
@@ -80,7 +82,7 @@ void TradeWindow::Update(float delta) {
 void TradeWindow::Draw(IDirect3DDevice9* device) {
 	if (!visible) { return; }
 	// start the trade_searcher if its not active
-	//if (!trade_searcher->is_active()) trade_searcher->search("");
+	if (!trade_searcher->is_active()) trade_searcher->search("");
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
@@ -107,7 +109,6 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 
 		/* Main trade chat area */
 		ImGui::BeginChild("trade_scroll", ImVec2(0, -20.0f - ImGui::GetStyle().ItemInnerSpacing.y));
-
 		/* Connection checks */
 		if (trade_searcher->is_timed_out()) {
 			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("The connection to kamadan.decltype.com has timed out.").x) / 2);

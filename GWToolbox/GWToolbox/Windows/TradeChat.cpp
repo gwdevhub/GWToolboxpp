@@ -42,14 +42,16 @@ void TradeChat::search(std::string search_string) {
 	disconnect();
 	messages.clear();
 	status = connecting;
+	
 	connector = std::thread([this, search_string]() {
 		std::string uri_with_search = search_string.empty() ? base_uri : base_uri + "search/" + search_string;
 		// try reconnects if initial connection doesnt work
-		for (int i = 0; i < reconnect_attempt_max && ws == nullptr; i++) {
+		for (int i = 0; i < reconnect_attempt_max && this->ws == nullptr; i++) {
 			this->ws = easywsclient::WebSocket::from_url(uri_with_search);
 		}
-		this->status = ws != nullptr ? connected : timeout;
+		this->status = this->ws != nullptr ? connected : timeout;
 	});
+	
 }
 
 void TradeChat::fetch(){
