@@ -5,6 +5,7 @@
 #include <ToolboxWindow.h>
 #include <iostream>
 #include <vector>
+#include <set>
 #include <thread>
 
 class TradeWindow : public ToolboxWindow {
@@ -42,21 +43,26 @@ public:
 
 private:
 	// if the player has an alert with exactly this keyword, all messages will be matched
-	std::string all_keyword = "ALL";
+	bool alert_all = false;
 	std::string chat_color = "f96677";
 	// buffer for the search input
 	char search_buffer[256];
 	CSimpleIni* alert_ini = nullptr;
 	std::wstring ini_filename = L"trade_alerts.ini";
-	std::vector<Alert> alerts;
+	#define ALERT_BUF_SIZE 1024 * 16
+	char alert_buf[ALERT_BUF_SIZE];
+	bool alertfile_dirty = false;
+	wchar_t* alertfilename = L"AlertKeywords.txt";
+	std::set<std::string> alerts;
 	bool show_alert_window = false;
 	TradeChat* all_trade = nullptr;
 	TradeChat* trade_searcher = nullptr;
 
 	std::string alerts_tooltip = \
-		"Click to add a new keyword.\n" \
-		"\t- Trade messages with matched keywords will be send to the Guild Wars chat.\n" \
-		"\t- The keywords are not case sensitive.\n" \
-		"\t- The Trade checkbox in the Guild Wars chat must be selected for messages to show up.\n" \
-		"\t- To match every message, create an alert with the only keyword: ALL";
+		"Trade messages with matched keywords will be send to the Guild Wars chat.\n" \
+		"Each line is a new keyword and the keywords are not case sensitive.\n" \
+		"The Trade checkbox in the Guild Wars chat must be selected for messages to show up.\n";
+
+	std::string ReplaceString(std::string, const std::string&, const std::string&);
+	void ParseBuffer(const char *, std::set<std::string>&);
 };

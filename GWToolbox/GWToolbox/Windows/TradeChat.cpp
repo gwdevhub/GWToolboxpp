@@ -8,16 +8,6 @@
 
 #include <logger.h>
 
-// https://stackoverflow.com/questions/5343190/how-do-i-replace-all-instances-of-a-string-with-another-string
-std::string ReplaceString(std::string subject, const std::string& search, const std::string& replace) {
-	size_t pos = 0;
-	while ((pos = subject.find(search, pos)) != std::string::npos) {
-		subject.replace(pos, search.length(), replace);
-		pos += replace.length();
-	}
-	return subject;
-}
-
 TradeChat::TradeChat() {
 	WSA_prereq();
 }
@@ -34,6 +24,16 @@ void TradeChat::WSA_prereq() {
 	}
 }
 
+// https://stackoverflow.com/questions/5343190/how-do-i-replace-all-instances-of-a-string-with-another-string
+std::string TradeChat::ReplaceString(std::string subject, const std::string& search, const std::string& replace) {
+	size_t pos = 0;
+	while ((pos = subject.find(search, pos)) != std::string::npos) {
+		subject.replace(pos, search.length(), replace);
+		pos += replace.length();
+	}
+	return subject;
+}
+
 void TradeChat::search(std::string search_string) {
 	// don't spam connection
 	if (status == connecting) return;
@@ -42,7 +42,7 @@ void TradeChat::search(std::string search_string) {
 	disconnect();
 	messages.clear();
 	status = connecting;
-	
+
 	connector = std::thread([this, search_string]() {
 		std::string uri_with_search = search_string.empty() ? base_uri : base_uri + "search/" + search_string;
 		// try reconnects if initial connection doesnt work
@@ -51,7 +51,6 @@ void TradeChat::search(std::string search_string) {
 		}
 		this->status = this->ws != nullptr ? connected : timeout;
 	});
-	
 }
 
 void TradeChat::fetch(){

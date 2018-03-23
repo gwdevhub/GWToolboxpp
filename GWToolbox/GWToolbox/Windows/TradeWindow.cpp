@@ -16,8 +16,7 @@
 #include "GWToolbox.h"
 
 #include <list>
-
-unsigned int TradeWindow::Alert::uid_count = 0;
+#include <fstream>
 
 void TradeWindow::Initialize() {
 	ToolboxWindow::Initialize();
@@ -25,7 +24,16 @@ void TradeWindow::Initialize() {
 	all_trade = new TradeChat();
 	// used for the window
 	trade_searcher = new TradeChat();
-	all_trade->search("");
+}
+
+// https://stackoverflow.com/questions/5343190/how-do-i-replace-all-instances-of-a-string-with-another-string
+std::string TradeWindow::ReplaceString(std::string subject, const std::string& search, const std::string& replace) {
+	size_t pos = 0;
+	while ((pos = subject.find(search, pos)) != std::string::npos) {
+		subject.replace(pos, search.length(), replace);
+		pos += replace.length();
+	}
+	return subject;
 }
 
 void TradeWindow::DrawSettingInternal() {
@@ -35,10 +43,10 @@ void TradeWindow::DrawSettingInternal() {
 void TradeWindow::Update(float delta) {
 	all_trade->fetch();
 
-	if (!all_trade->is_active() && alerts.size() > 0) {
+	if (!all_trade->is_active() && (alerts.size() > 0 || alert_all)) {
 		all_trade->search("");
 	}
-	else if (all_trade->is_active() && alerts.size() == 0) {
+	else if (all_trade->is_active() && alerts.size() == 0 && !alert_all) {
 		all_trade->stop();
 	}
 	if (!visible && trade_searcher->is_active()) {
@@ -63,16 +71,29 @@ void TradeWindow::Update(float delta) {
 	for (unsigned int i = 0; i < all_trade->new_messages.size(); i++) {
 		message = all_trade->new_messages.at(i)["message"].dump();
 		std::transform(message.begin(), message.end(), message.begin(), ::tolower);
-		for (unsigned j = 0; j < alerts.size(); j++) {
-			// ensure the alert isnt empty
-			if (strncmp(alerts.at(j).match_string, "", 128)) {
-				// check if the trade message matches the keyword, or if the alert matches the all messages keyword
-				if (message.find(alerts.at(j).match_string) != std::string::npos || all_keyword.compare(alerts.at(j).match_string) == 0) {
-					final_chat_message = "<c=#" + chat_color + "><a=1>" + all_trade->new_messages.at(i)["name"].get<std::string>() + "</a>: " +
-						all_trade->new_messages.at(i)["message"].get<std::string>() + "</c>";
-					GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, final_chat_message.c_str());
-					// break to stop multiple alerts triggering the same message
-					break;
+		// actual trade chat message
+		std::string chat_message = all_trade->new_messages.at(i)["message"].get<std::string>();
+		// do not know how to escape '<' and '>' that people include in their chat messages
+		// they get taken as tags by GW, so we must remove them
+		chat_message = ReplaceString(chat_message, "<", "");
+		chat_message = ReplaceString(chat_message, ">", "");
+		final_chat_message = "<c=#" + chat_color + "><a=1>" + all_trade->new_messages.at(i)["name"].get<std::string>() +
+			"</a>: " + chat_message + "</c>";
+
+		if (alert_all) {
+			GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, final_chat_message.c_str());
+		}
+		else {
+			// check user-defined alerts
+			for (std::string a : alerts) {
+				// ensure the alert isnt empty
+				if (strncmp(a.c_str(), "", 128)) {
+					// check if the trade message matches the keyword, or if the alert matches the all messages keyword
+					if (message.find(a) != std::string::npos || alert_all) {
+						GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, final_chat_message.c_str());
+						// break to stop multiple alerts triggering the same message
+						break;
+					}
 				}
 			}
 		}
@@ -82,7 +103,7 @@ void TradeWindow::Update(float delta) {
 void TradeWindow::Draw(IDirect3DDevice9* device) {
 	if (!visible) { return; }
 	// start the trade_searcher if its not active
-	if (!trade_searcher->is_active()) trade_searcher->search("");
+	if (!trade_searcher->is_active() && !trade_searcher->is_timed_out()) trade_searcher->search("");
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
@@ -208,22 +229,15 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 
 		/* Alerts window */
 		if (show_alert_window) {
+			ImGui::SetNextWindowSize(ImVec2(200, 220));
 			if (ImGui::Begin("Trade Alerts", &show_alert_window)) {
-				if (ImGui::Button("New Alert", ImVec2(ImGui::GetWindowContentRegionWidth(), 0))) {
-					alerts.insert(alerts.begin(), Alert());
-				}
-				if (ImGui::IsItemHovered()) {
-					ImGui::SetTooltip(alerts_tooltip.c_str());
-				}
-				for (unsigned int i = 0; i < alerts.size(); i++) {
-					ImGui::PushID(alerts.at(i).uid);
-					ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 24.0f - ImGui::GetStyle().ItemInnerSpacing.x * 2));
-					ImGui::InputText("", alerts.at(i).match_string, 128);
-					ImGui::SameLine();
-					if (ImGui::Button("x", ImVec2(24.0f, 0))) {
-						alerts.erase(alerts.begin() + i);
-					}
-					ImGui::PopID();
+				ImGui::Text("Alerts");
+				ImGui::ShowHelp(alerts_tooltip.c_str());
+				//ImGui::SameLine();
+				ImGui::Checkbox("Alert all messages", &alert_all);
+				if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE, ImVec2(-1.0f, 0.0f))) {
+					ParseBuffer(alert_buf, alerts);
+					alertfile_dirty = true;
 				}
 			}
 			ImGui::End();
@@ -243,15 +257,14 @@ void TradeWindow::LoadSettings(CSimpleIni* ini) {
 }
 
 void TradeWindow::LoadAlerts() {
-	alerts.clear();
-	CSimpleIni::TNamesDepend sections;
-	alert_ini->GetAllSections(sections);
-	for (CSimpleIni::Entry& ini_alert : sections) {
-		const char* section = ini_alert.pItem;
-		if (strncmp(section, "alert", 5) == 0) {
-			alerts.push_back(Alert(alert_ini->GetValue(section, "match_string", "")));
-		}
+	std::ifstream alert_file;
+	alert_file.open(Resources::GetPath(alertfilename));
+	if (alert_file.is_open()) {
+		alert_file.get(alert_buf, ALERT_BUF_SIZE, '\0');
+		alert_file.close();
+		ParseBuffer(alert_buf, alerts);
 	}
+	alert_file.close();
 }
 
 void TradeWindow::SaveSettings(CSimpleIni* ini) {
@@ -261,13 +274,38 @@ void TradeWindow::SaveSettings(CSimpleIni* ini) {
 }
 
 void TradeWindow::SaveAlerts() {
-	alert_ini->Reset();
-	for (unsigned int i = 0; i < alerts.size(); i++) {
-		char section[16];
-		snprintf(section, 16, "alert%03d", i);
-		alert_ini->SetValue(section, "match_string", alerts.at(i).match_string);
+	if (alertfile_dirty) {
+		std::ofstream bycontent_file;
+		bycontent_file.open(Resources::GetPath(alertfilename));
+		if (bycontent_file.is_open()) {
+			bycontent_file.write(alert_buf, strlen(alert_buf));
+			bycontent_file.close();
+			alertfile_dirty = false;
+		}
 	}
-	alert_ini->SaveFile(Resources::GetPath(ini_filename).c_str());
+}
+
+void TradeWindow::ParseBuffer(const char* buf, std::set<std::string>& words) {
+	words.clear();
+	std::string text(buf);
+	char separator = '\n';
+	size_t pos = text.find(separator);
+	size_t initialpos = 0;
+
+	while (pos != std::string::npos) {
+		std::string s = text.substr(initialpos, pos - initialpos);
+		if (!s.empty()) {
+			std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+			words.insert(s);
+		}
+		initialpos = pos + 1;
+		pos = text.find(separator, initialpos);
+	}
+	std::string s = text.substr(initialpos, std::min(pos, text.size() - initialpos));
+	if (!s.empty()) {
+		std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+		words.insert(s);
+	}
 }
 
 void TradeWindow::Terminate() {

@@ -38,4 +38,5 @@ private:
 
 	void disconnect();
 	void WSA_prereq();
+	std::string ReplaceString(std::string, const std::string&, const std::string&);
 };
