@@ -77,8 +77,8 @@ void MaterialsWindow::Initialize() {
 		price[i] = PRICE_DEFAULT;
 	}
 	
-	GW::StoC::AddCallback<GW::Packet::StoC::P235_QuotedItemPrice>(
-		[&](GW::Packet::StoC::P235_QuotedItemPrice* pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::QuotedItemPrice>(
+		[&](GW::Packet::StoC::QuotedItemPrice *pak) -> bool {
 		GW::ItemArray items = GW::Items::GetItemArray();
 		if (!items.valid()) return false;
 		if (pak->itemid >= items.size()) return false;
@@ -125,15 +125,15 @@ void MaterialsWindow::Initialize() {
 
 	// Those 2 are just gold update packets, but we use them to know when the transaction
 	// was successful. Hopefully people won't deposit or widthrawal exactly that amount while buying.
-	GW::StoC::AddCallback<GW::Packet::StoC::P310>(
-		[&](GW::Packet::StoC::P310* pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::P315>(
+		[&](GW::Packet::StoC::P315 *pak) -> bool {
 		if (last_request_type == Sell && last_request_price == pak->gold) {
 			last_request_type = None;
 		}
 		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::P325>(
-		[&](GW::Packet::StoC::P325* pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::P330>(
+		[&](GW::Packet::StoC::P330 *pak) -> bool {
 		//printf("Removed %d gold\n", pak->gold);
 		if (last_request_type == Purchase && last_request_price == pak->gold) {
 			last_request_type = None;

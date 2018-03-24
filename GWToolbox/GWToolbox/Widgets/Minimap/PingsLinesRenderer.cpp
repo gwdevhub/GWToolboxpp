@@ -74,11 +74,11 @@ PingsLinesRenderer::PingsLinesRenderer() : vertices(nullptr) {
 	shadowstep_location = GW::Vector2f(0, 0);
 }
 
-void PingsLinesRenderer::P041Callback(GW::Packet::StoC::P041* pak) {
+void PingsLinesRenderer::P046Callback(GW::Packet::StoC::P046 *pak) {
 	pings.push_front(new AgentPing(pak->agent_id));
 }
 
-void PingsLinesRenderer::P133Callback(GW::Packet::StoC::P133* pak) {
+void PingsLinesRenderer::P138Callback(GW::Packet::StoC::P138 *pak) {
 	bool new_session;
 	if (drawings[pak->Player].player == pak->Player) {
 		new_session = drawings[pak->Player].session != pak->SessionID;
@@ -123,14 +123,14 @@ return;
 	}
 }
 
-void PingsLinesRenderer::P148Callback(GW::Packet::StoC::P148* pak) {
+void PingsLinesRenderer::P153Callback(GW::Packet::StoC::P153 *pak) {
 	if (pak->Value_id == 20
 		&& pak->caster == GW::Agents::GetPlayerId()
 		&& pak->value == 928) {
 		recall_target = pak->target;
 	}
 };
-void PingsLinesRenderer::P216Callback(GW::Packet::StoC::P216* pak) {
+void PingsLinesRenderer::P221Callback(GW::Packet::StoC::P221 *pak) {
 	if (pak->agent_id == GW::Agents::GetPlayerId()) {
 		if (pak->skill_id == (DWORD)GW::Constants::SkillID::Shadow_of_Haste
 			|| pak->skill_id == (DWORD)GW::Constants::SkillID::Shadow_Walk) {
@@ -472,7 +472,7 @@ bool PingsLinesRenderer::OnMouseUp() {
 }
 
 void PingsLinesRenderer::SendQueue() {
-	static GW::Packet::CtoS::P037 packet = GW::Packet::CtoS::P037();
+	static GW::Packet::CtoS::P043 packet = GW::Packet::CtoS::P043();
 
 	//printf("sending %d pos [%d]\n", queue.size(), session_id);
 

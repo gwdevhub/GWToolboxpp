@@ -31,8 +31,8 @@ void ChatFilter::Initialize() {
 	//strcpy_s(byauthor_buf, "");
 
 	// server messages
-	GW::StoC::AddCallback<GW::Packet::StoC::P082>(
-		[this](GW::Packet::StoC::P082* pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::P087>(
+		[this](GW::Packet::StoC::P087 *pak) -> bool {
 #ifdef PRINT_CHAT_PACKETS
 		printf("P082: id %d, type %d\n", pak->id, pak->type);
 #endif // PRINT_CHAT_PACKETS
@@ -47,8 +47,8 @@ void ChatFilter::Initialize() {
 	});
 
 #ifdef PRINT_CHAT_PACKETS
-	GW::StoC::AddCallback<GW::Packet::StoC::P083>(
-		[](GW::Packet::StoC::P083* pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::P088>(
+		[](GW::Packet::StoC::P088 *pak) -> bool {
 		printf("P081: agent_id %d, unk1 %d, unk2 ", pak->agent_id, pak->unk1);
 		for (int i = 0; i < 8 && pak->unk2[i]; ++i) printchar(pak->unk2[i]);
 		printf("\n");
@@ -57,8 +57,8 @@ void ChatFilter::Initialize() {
 #endif // PRINT_CHAT_PACKETS
 
 	// global messages
-	GW::StoC::AddCallback<GW::Packet::StoC::P084>(
-		[&](GW::Packet::StoC::P084* pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::P089>(
+		[&](GW::Packet::StoC::P089* pak) -> bool {
 #ifdef PRINT_CHAT_PACKETS
 		printf("P081: id %d, name ", pak->id);
 		for (int i = 0; i < 32 && pak->sender_name[i]; ++i) printchar(pak->sender_name[i]);
@@ -80,8 +80,8 @@ void ChatFilter::Initialize() {
 	});
 
 	// local messages
-	GW::StoC::AddCallback<GW::Packet::StoC::P085>(
-		[this](GW::Packet::StoC::P085* pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::P090>(
+		[this](GW::Packet::StoC::P090 *pak) -> bool {
 #ifdef PRINT_CHAT_PACKETS
 		printf("P085: id %d, type %d\n", pak->id, pak->type);
 #endif // PRINT_CHAT_PACKETS

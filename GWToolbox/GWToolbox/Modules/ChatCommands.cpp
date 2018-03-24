@@ -749,8 +749,8 @@ void ChatCommands::CmdTransmo(int argc, LPWSTR *argv) {
 
 	GW::GameThread::Enqueue([npc_id, npc]()
 	{
-		GW::Packet::StoC::P074_NpcGeneralStats packet;
-		packet.header = 74;
+		GW::Packet::StoC::NpcGeneralStats packet;
+		packet.header = 79;
 		packet.npc_id = npc_id;
 		packet.file_id = npc.ModelFileID;
 		packet.data1 = 0;
@@ -766,8 +766,8 @@ void ChatCommands::CmdTransmo(int argc, LPWSTR *argv) {
 
 	GW::GameThread::Enqueue([npc_id, npc]()
 	{
-		GW::Packet::StoC::P075 packet;
-		packet.header = 75;
+		GW::Packet::StoC::P080 packet;
+		packet.header = 80;
 		packet.npc_id = npc_id;
 
 		// If we found a npc that have more than 1 ModelFiles, we can determine which one of h0028, h002C are size and capacity.
@@ -782,8 +782,8 @@ void ChatCommands::CmdTransmo(int argc, LPWSTR *argv) {
 
 	GW::GameThread::Enqueue([scale]()
 	{
-		GW::Packet::StoC::P142 packet;
-		packet.header = 142;
+		GW::Packet::StoC::P147 packet;
+		packet.header = 147;
 		packet.agent_id = GW::Agents::GetPlayerId();
 		packet.scale = (DWORD)scale << 24;
 
@@ -792,8 +792,8 @@ void ChatCommands::CmdTransmo(int argc, LPWSTR *argv) {
 
 	GW::GameThread::Enqueue([npc_id]()
 	{
-		GW::Packet::StoC::P162 packet;
-		packet.header = 162;
+		GW::Packet::StoC::P167 packet;
+		packet.header = 167;
 		packet.agent_id = GW::Agents::GetPlayerId();
 		packet.model_id = npc_id;
 		GW::StoC::EmulatePacket((GW::Packet::StoC::PacketBase *)&packet);

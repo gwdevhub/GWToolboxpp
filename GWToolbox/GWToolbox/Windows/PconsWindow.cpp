@@ -99,13 +99,13 @@ void PconsWindow::Initialize() {
 		pcon->ScanInventory();
 	}
 
-	GW::StoC::AddCallback<GW::Packet::StoC::P023>(
-		[](GW::Packet::StoC::P023* pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::P028>(
+		[](GW::Packet::StoC::P028 *pak) -> bool {
 		Pcon::player_id = pak->unk1;
 		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::P053_AddExternalBond>(
-		[](GW::Packet::StoC::P053_AddExternalBond* pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::AddExternalBond>(
+		[](GW::Packet::StoC::AddExternalBond *pak) -> bool {
 		if (PconAlcohol::suppress_lunar_skills
 			&& pak->caster_id == GW::Agents::GetPlayerId()
 			&& pak->receiver_id == 0
@@ -116,16 +116,16 @@ void PconsWindow::Initialize() {
 		}
 		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::P095>(
-		[&](GW::Packet::StoC::P095* pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::P100>(
+		[&](GW::Packet::StoC::P100 *pak) -> bool {
 		PconAlcohol::alcohol_level = pak->level;
 		//printf("Level = %d, tint = %d\n", pak->level, pak->tint);
 		if (enabled) pcon_alcohol->Update();
 		return PconAlcohol::suppress_drunk_effect;
 	});
 
-	GW::StoC::AddCallback<GW::Packet::StoC::P147>(
-		[](GW::Packet::StoC::P147 * pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::P152>(
+		[](GW::Packet::StoC::P152 *pak) -> bool {
 		if (PconAlcohol::suppress_drunk_emotes
 			&& pak->agent_id == GW::Agents::GetPlayerId()
 			&& pak->unk1 == 22) {
@@ -139,8 +139,8 @@ void PconsWindow::Initialize() {
 		}
 		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::P229>(
-		[](GW::Packet::StoC::P229* pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::P234>(
+		[](GW::Packet::StoC::P234 *pak) -> bool {
 		if (PconAlcohol::suppress_drunk_emotes
 			&& pak->agent_id == GW::Agents::GetPlayerId()
 			&& pak->state & 0x2000) { 
@@ -149,8 +149,8 @@ void PconsWindow::Initialize() {
 		}
 		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::P153>(
-		[](GW::Packet::StoC::P153* pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::P158>(
+		[](GW::Packet::StoC::P158 *pak) -> bool {
 		if (!PconAlcohol::suppress_drunk_text) return false;
 		wchar_t* m = pak->message;
 		if (m[0] == 0x8CA && m[1] == 0xA4F7 && m[2] == 0xF552 && m[3] == 0xA32) return true; // i love you man!

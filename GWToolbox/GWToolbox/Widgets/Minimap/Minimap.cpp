@@ -23,43 +23,43 @@
 
 void Minimap::Initialize() {
 	ToolboxWidget::Initialize();
-	GW::StoC::AddCallback<GW::Packet::StoC::P041>(
-		[&](GW::Packet::StoC::P041* pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::P046>(
+		[&](GW::Packet::StoC::P046 *pak) -> bool {
 		if (visible) {
-			pingslines_renderer.P041Callback(pak);
+			pingslines_renderer.P046Callback(pak);
 		}
 		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::P133>(
-		[&](GW::Packet::StoC::P133* pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::P138>(
+		[&](GW::Packet::StoC::P138 *pak) -> bool {
 		if (visible) {
-			pingslines_renderer.P133Callback(pak);
+			pingslines_renderer.P138Callback(pak);
 		}
 		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::P148>(
-		[&](GW::Packet::StoC::P148* pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::P153>(
+		[&](GW::Packet::StoC::P153 *pak) -> bool {
 		if (visible) {
-			pingslines_renderer.P148Callback(pak);
+			pingslines_renderer.P153Callback(pak);
 		}
 		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::P216>(
-		[&](GW::Packet::StoC::P216* pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::P221>(
+		[&](GW::Packet::StoC::P221 *pak) -> bool {
 		if (visible) {
-			pingslines_renderer.P216Callback(pak);
+			pingslines_renderer.P221Callback(pak);
 		}
 		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::P391_InstanceLoadFile>(
-		[this](GW::Packet::StoC::P391_InstanceLoadFile* packet) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::InstanceLoadFile>(
+		[this](GW::Packet::StoC::InstanceLoadFile *packet) -> bool {
 		pmap_renderer.Invalidate();
 		loading = false;
 		return false;
 	});
 
-	GW::StoC::AddCallback<GW::Packet::StoC::P406_GameSrvTransfer>(
-		[&](GW::Packet::StoC::P406_GameSrvTransfer* pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::GameSrvTransfer>(
+		[&](GW::Packet::StoC::GameSrvTransfer *pak) -> bool {
 		loading = true;
 		return false;
 	});

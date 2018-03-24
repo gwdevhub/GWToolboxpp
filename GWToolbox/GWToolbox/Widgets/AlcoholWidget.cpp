@@ -14,11 +14,11 @@ void AlcoholWidget::Initialize() {
 	// last time the player used a drink
 	last_alcohol = 0;
 	alcohol_level = 0;
-	GW::StoC::AddCallback<GW::Packet::StoC::P095>(
+	GW::StoC::AddCallback<GW::Packet::StoC::P100>(
 		std::bind(&AlcoholWidget::AlcUpdate, this, std::placeholders::_1));
 }
 
-bool AlcoholWidget::AlcUpdate(GW::Packet::StoC::P095* packet) {
+bool AlcoholWidget::AlcUpdate(GW::Packet::StoC::P100 *packet) {
 	// if the player used a drink
 	if (packet->level > alcohol_level){
 		// if the player already had a drink going

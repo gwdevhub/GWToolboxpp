@@ -219,14 +219,14 @@ void GameSettings::Initialize() {
 		}
 	});
 
-	GW::StoC::AddCallback<GW::Packet::StoC::P444>(
-		[](GW::Packet::StoC::P444*) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::P451>(
+		[](GW::Packet::StoC::P451*) -> bool {
 		if (GameSettings::Instance().flash_window_on_party_invite) FlashWindow();
 		return false;
 	});
 
-	GW::StoC::AddCallback<GW::Packet::StoC::P406_GameSrvTransfer>(
-		[](GW::Packet::StoC::P406_GameSrvTransfer *pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::GameSrvTransfer>(
+		[](GW::Packet::StoC::GameSrvTransfer *pak) -> bool {
 
 		GW::CharContext *ctx = GW::GameContext::instance()->character;
 		if (GameSettings::Instance().flash_window_on_zoning) FlashWindow();

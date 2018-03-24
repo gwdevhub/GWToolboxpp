@@ -22,7 +22,7 @@ public:
 
 	void Initialize() override;
 
-	bool AlcUpdate(GW::Packet::StoC::P095 * packet);
+	bool AlcUpdate(GW::Packet::StoC::P100 *packet);
 
 	// Draw user interface. Will be called every frame if the element is visible
 	void Draw(IDirect3DDevice9* pDevice) override;

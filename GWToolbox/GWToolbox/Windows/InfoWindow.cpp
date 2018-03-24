@@ -33,8 +33,8 @@ void InfoWindow::Initialize() {
 	GW::Agents::SetupLastDialogHook();
 
 	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"info.png"), IDB_Icon_Info);
-	GW::StoC::AddCallback<GW::Packet::StoC::P081>(
-		[this](GW::Packet::StoC::P081* pak) {
+	GW::StoC::AddCallback<GW::Packet::StoC::P086>(
+		[this](GW::Packet::StoC::P086 *pak) {
 		if (pak->message[0] == 0x7BFF
 			&& pak->message[1] == 0xC9C4
 			&& pak->message[2] == 0xAeAA
@@ -71,8 +71,8 @@ void InfoWindow::Initialize() {
 		}
 		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::P391_InstanceLoadFile>(
-		[this](GW::Packet::StoC::P391_InstanceLoadFile* packet) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::InstanceLoadFile>(
+		[this](GW::Packet::StoC::InstanceLoadFile *packet) -> bool {
 		mapfile = packet->map_fileID;
 		for (unsigned i = 0; i < status.size(); ++i) {
 			status[i] = NotYetConnected;

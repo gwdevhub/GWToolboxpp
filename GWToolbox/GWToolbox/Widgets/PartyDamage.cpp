@@ -24,10 +24,10 @@ void PartyDamage::Initialize() {
 	total = 0;
 	send_timer = TIMER_INIT();
 
-	GW::StoC::AddCallback<GW::Packet::StoC::P151>(
+	GW::StoC::AddCallback<GW::Packet::StoC::P156>(
 		std::bind(&PartyDamage::DamagePacketCallback, this, std::placeholders::_1));
 
-	GW::StoC::AddCallback<GW::Packet::StoC::P230>(
+	GW::StoC::AddCallback<GW::Packet::StoC::P235>(
 		std::bind(&PartyDamage::MapLoadedCallback, this, std::placeholders::_1));
 
 	for (int i = 0; i < MAX_PLAYERS; ++i) {
@@ -43,7 +43,7 @@ void PartyDamage::Terminate() {
 	delete inifile;
 }
 
-bool PartyDamage::MapLoadedCallback(GW::Packet::StoC::P230* packet) {
+bool PartyDamage::MapLoadedCallback(GW::Packet::StoC::P235 *packet) {
 	switch (GW::Map::GetInstanceType()) {
 	case GW::Constants::InstanceType::Outpost:
 		in_explorable = false;
@@ -62,13 +62,13 @@ bool PartyDamage::MapLoadedCallback(GW::Packet::StoC::P230* packet) {
 	return false;
 }
 
-bool PartyDamage::DamagePacketCallback(GW::Packet::StoC::P151* packet) {
+bool PartyDamage::DamagePacketCallback(GW::Packet::StoC::P156* packet) {
 
 	// ignore non-damage packets
 	switch (packet->type) {
-	case GW::Packet::StoC::P151_Type::damage:
-	case GW::Packet::StoC::P151_Type::critical:
-	case GW::Packet::StoC::P151_Type::armorignoring:
+	case GW::Packet::StoC::P156_Type::damage:
+	case GW::Packet::StoC::P156_Type::critical:
+	case GW::Packet::StoC::P156_Type::armorignoring:
 		break;
 	default:
 		return false;
