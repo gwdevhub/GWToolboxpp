@@ -82,8 +82,7 @@ void TradeWindow::Update(float delta) {
 
 		if (alert_all) {
 			GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, final_chat_message.c_str());
-		}
-		else {
+		} else {
 			// check user-defined alerts
 			for (std::string a : alerts) {
 				// ensure the alert isnt empty
@@ -142,8 +141,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			ImGui::End();
 			ImGui::End();
 			return;
-		}
-		else if (trade_searcher->is_connecting()) {
+		} else if (trade_searcher->is_connecting()) {
 			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Connecting...").x)/2);
 			ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
 			ImGui::Text("Connecting...");
@@ -153,20 +151,21 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		}
 
 		/* Display trade messages */
-		ImGui::Columns(3, NULL, false);
-		// HasKha didn't want these headers
-		//ImGui::Text("Time");
-		ImGui::SetColumnWidth(-1, 100);
-		ImGui::NextColumn();
-		//ImGui::Text("Player Name");
-		ImGui::SetColumnWidth(-1, 175);
-		ImGui::NextColumn();
-		//ImGui::Text("Message");
-		ImGui::SetColumnWidth(-1, 500);
-		ImGui::NextColumn();
+		//ImGui::Columns(3, NULL, false);
+		//ImGui::SetColumnWidth(-1, 100);
+		//ImGui::NextColumn();
+		//ImGui::SetColumnWidth(-1, 175);
+		//ImGui::NextColumn();
+		//ImGui::SetColumnWidth(-1, 500);
+		//ImGui::NextColumn();
+		char timetext[128];
 		std::string name;
 		std::string message;
 		time_t now = time(0);
+
+		const float x1 = 120.0f; // player button left align
+		const float playernamewidth = 160.0f;
+		const float x2 = x1 + playernamewidth + ImGui::GetStyle().ItemInnerSpacing.x;
 
 		for (unsigned int i = 0; i < trade_searcher->messages.size(); i++) {
 			ImGui::PushID(i);
@@ -175,34 +174,31 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			int time_since_message = (int)now - stoi(trade_searcher->messages.at(i)["timestamp"].get<std::string>());
 
 			// smaller font for time column
-			ImFont* small_font = (ImFont*)malloc(sizeof(ImFont));
-			memcpy(small_font, ImGui::GetFont(), sizeof(ImFont));
-			small_font->Scale = 0.83f;
-			ImGui::PushFont(small_font);
-
+			ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f16));
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(.7f, .7f, .7f, 1.0f));
+			
 			// decide if days, hours, minutes, seconds...
 			if ((int)(time_since_message / (60 * 60 * 24))) {
 				int days = (int)(time_since_message / (60 * 60 * 24));
-				ImGui::Text("%d %s ago", days, days > 1 ? "days" : "day");
-			}
-			else if ((int)(time_since_message / (60 * 60))) {
+				_snprintf(timetext, 128, "%d %s ago", days, days > 1 ? "days" : "day");
+			} else if ((int)(time_since_message / (60 * 60))) {
 				int hours = (int)(time_since_message / (60 * 60));
-				ImGui::Text("%d %s ago", hours, hours > 1 ? "hours" : "hour");
-			}
-			else if ((int)(time_since_message / (60))) {
+				_snprintf(timetext, 128, "%d %s ago", hours, hours > 1 ? "hours" : "hour");
+			} else if ((int)(time_since_message / (60))) {
 				int minutes = (int)(time_since_message / 60);
-				ImGui::Text("%d %s ago", minutes, minutes > 1 ? "minutes" : "minute");
+				_snprintf(timetext, 128, "%d %s ago", minutes, minutes > 1 ? "minutes" : "minute");
+			} else {
+				_snprintf(timetext, 128, "%d %s ago", time_since_message, time_since_message > 1 ? "seconds" : "second");
 			}
-			else {
-				ImGui::Text("%d %s ago", time_since_message, time_since_message > 1 ? "seconds" : "second");
-			}
+			ImGui::SetCursorPosX(x1 - ImGui::GetStyle().ItemInnerSpacing.x - ImGui::CalcTextSize(timetext).x);
+			ImGui::Text(timetext);
 
+			ImGui::PopStyleColor();
 			ImGui::PopFont();
-			ImGui::NextColumn();
 
+			ImGui::SameLine(x1);
 			name = trade_searcher->messages.at(i)["name"].get<std::string>();
-
-			if (ImGui::Button(name.c_str())) {
+			if (ImGui::Button(name.c_str(), ImVec2(playernamewidth, 0))) {
 				// open whisper to player
 				GW::GameThread::Enqueue([name]() {
 					wchar_t ws[100];
@@ -211,12 +207,9 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 				});
 			}
 
-			ImGui::NextColumn();
+			ImGui::SameLine(x2);
 			message = trade_searcher->messages.at(i)["message"].get<std::string>();
-			ImGui::PushTextWrapPos();
-			ImGui::Text("%s", message.c_str());
-			ImGui::PopTextWrapPos();
-			ImGui::NextColumn();
+			ImGui::TextWrapped("%s", message.c_str());
 			ImGui::PopID();
 		}
 		ImGui::EndChild();
