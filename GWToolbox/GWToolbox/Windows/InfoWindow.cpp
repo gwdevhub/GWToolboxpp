@@ -300,7 +300,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 				}
 			}
 
-			ImGui::Text("%d Soul Tormentors", &soul_count);
+			ImGui::Text("%d Soul Tormentors", soul_count);
 			ImGui::Text("%d in casting range", cast_count);
 			ImGui::Text("%d in spirit range", spirit_count);
 			ImGui::Text("%d in compass range", compass_count);
