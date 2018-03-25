@@ -190,18 +190,18 @@ namespace {
 
 void GameSettings::Initialize() {
 	ToolboxModule::Initialize();
-	patches.push_back(new GW::MemoryPatcher((void*)0x0067D7E8,
+	patches.push_back(new GW::MemoryPatcher((void*)0x0067D9D8,
 		(BYTE*)"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90", 16));
-	patches.push_back(new GW::MemoryPatcher((void*)0x0067D340, (BYTE*)"\xEB", 1));
-	patches.push_back(new GW::MemoryPatcher((void*)0x0067D35D, (BYTE*)"\xEB", 1));
+	patches.push_back(new GW::MemoryPatcher((void*)0x0067D530, (BYTE*)"\xEB", 1));
+	patches.push_back(new GW::MemoryPatcher((void*)0x0067D54D, (BYTE*)"\xEB", 1));
 
 	BYTE* a = (BYTE*)"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90";
-	patches.push_back(new GW::MemoryPatcher((void*)0x00669866, a, 10));
-	patches.push_back(new GW::MemoryPatcher((void*)0x006698B2, a, 10));
-	patches.push_back(new GW::MemoryPatcher((void*)0x006698EE, a, 10));
-	patches.push_back(new GW::MemoryPatcher((void*)0x0067D5F6, a, 10));
-	patches.push_back(new GW::MemoryPatcher((void*)0x0067D642, a, 10));
-	patches.push_back(new GW::MemoryPatcher((void*)0x0067D67E, a, 10));
+	patches.push_back(new GW::MemoryPatcher((void*)0x00669A56, a, 10));
+	patches.push_back(new GW::MemoryPatcher((void*)0x00669AA2, a, 10));
+	patches.push_back(new GW::MemoryPatcher((void*)0x00669ADE, a, 10));
+	patches.push_back(new GW::MemoryPatcher((void*)0x0067D7E6, a, 10));
+	patches.push_back(new GW::MemoryPatcher((void*)0x0067D832, a, 10));
+	patches.push_back(new GW::MemoryPatcher((void*)0x0067D86E, a, 10));
 
 	GW::Chat::CreateCommand(L"borderless",
 		[&](int argc, LPWSTR *argv) {
