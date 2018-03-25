@@ -47,6 +47,7 @@ public:
 	bool openlinks = false;
 	bool auto_url = false;
 	bool select_with_chat_doubleclick = false;
+	bool move_item_on_ctrl_click = false;
 
 	bool flash_window_on_pm = false;
 	bool flash_window_on_party_invite = false;
