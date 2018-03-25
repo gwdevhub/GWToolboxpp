@@ -29,7 +29,7 @@ private:
 		connected,
 		timeout,
 	};
-	easywsclient::WebSocket::pointer ws;
+	easywsclient::WebSocket::pointer ws = nullptr;
 	Connection status = not_connected;
 	int reconnect_attempt_max = 3;
 	size_t max_messages = 100; // size_t fixes unsigned/signed warning when comparing to vector.size()
@@ -38,4 +38,5 @@ private:
 
 	void disconnect();
 	void WSA_prereq();
+	std::string ReplaceString(std::string, const std::string&, const std::string&);
 };
