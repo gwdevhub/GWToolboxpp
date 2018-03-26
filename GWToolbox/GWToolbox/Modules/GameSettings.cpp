@@ -166,11 +166,12 @@ namespace {
 			}
 		}
 
+		#if 0
 		if (remaining > 0) {
 			size_t slot = -1;
 			GW::Bag *bag;
 
-			for (int i = 1; i < 4; i++) {
+			for (int i = 1; i <= 4; i++) {
 				bag = bags[i];
 				if (!bag) continue;
 				GW::ItemArray items_storage = bag->Items;
@@ -188,6 +189,7 @@ namespace {
 				GW::Items::MoveItem(item, bag, slot);
 			}
 		}
+		#endif
 	}
 
 	// April's Fool
