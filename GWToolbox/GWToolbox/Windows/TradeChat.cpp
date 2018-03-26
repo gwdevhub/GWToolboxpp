@@ -41,6 +41,8 @@ void TradeChat::connect() {
         return;
     }
 
+    messages.clear();
+    queries.clear();
     status = connected;
 }
 
@@ -132,12 +134,22 @@ void TradeChat::onMessage(const std::string& msg) {
     if (res.find("results") == res.end())
         return;
 
-    json_vec results = res["results"].get<json_vec>();
+    if (res["num_results"].get<std::string>() == "0")
+        return;
 
-    queries.reserve(results.size());
-    for (auto &it : results) {
-        Message msg = parse_json_message(it);
-        queries.push_back(msg);
+    json_vec results = res["results"].get<json_vec>();
+    if (res["query"].get<std::string>() == "") {
+        messages.clear();
+        for (auto& it : results) {
+            Message msg = parse_json_message(it);
+            messages.add(msg);
+        }
+    } else {
+        queries.reserve(results.size());
+        for (auto &it : results) {
+            Message msg = parse_json_message(it);
+            queries.push_back(msg);
+        }
     }
 }
 
