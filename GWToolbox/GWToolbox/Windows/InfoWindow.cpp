@@ -292,7 +292,10 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 					float sqrd = GW::Agents::GetSqrDistance(player->pos, agent->pos);
 					if (agent->PlayerNumber == GW::Constants::ModelID::DoA::SoulTormentor
 						|| agent->PlayerNumber == GW::Constants::ModelID::DoA::VeilSoulTormentor) {
-						if (sqrd < sqr_soul_range) ++soul_count;
+						if (GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish
+							&& sqrd < sqr_soul_range) {
+							++soul_count;
+						}
 					}
 					if (sqrd < GW::Constants::SqrRange::Spellcast) ++cast_count;
 					if (sqrd < GW::Constants::SqrRange::Spirit) ++spirit_count;
@@ -301,9 +304,10 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			}
 
 			ImGui::Text("%d Soul Tormentors", soul_count);
-			ImGui::Text("%d in casting range", cast_count);
-			ImGui::Text("%d in spirit range", spirit_count);
-			ImGui::Text("%d in compass range", compass_count);
+			ImGui::ShowHelp("Only in Domain of Anguish, within 1400 range");
+			ImGui::Text("%d foes in casting range", cast_count);
+			ImGui::Text("%d foes in spirit range", spirit_count);
+			ImGui::Text("%d foes in compass range", compass_count);
 		}
 		if (show_resignlog && ImGui::CollapsingHeader("Resign log")) {
 			DrawResignlog();
