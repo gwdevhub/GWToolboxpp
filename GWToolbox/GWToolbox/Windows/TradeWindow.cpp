@@ -106,8 +106,6 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-		ImGui::PushTextWrapPos();
-
 		/* Search bar header */
 		ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 80.0f - 80.0f - 80.0f - ImGui::GetStyle().ItemInnerSpacing.x * 6));
 		if (ImGui::InputText("", search_buffer, 256, ImGuiInputTextFlags_EnterReturnsTrue)) {
@@ -138,104 +136,91 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			if (ImGui::Button("Click to reconnect")) {
 				trade_searcher->search(search_buffer);
 			}
-			ImGui::End();
-			ImGui::End();
-			return;
 		} else if (trade_searcher->is_connecting()) {
 			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Connecting...").x)/2);
 			ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
 			ImGui::Text("Connecting...");
-			ImGui::End();
-			ImGui::End();
-			return;
-		}
+		} else {
+			/* Display trade messages */
+			char timetext[128];
+			std::string name;
+			std::string message;
+			time_t now = time(nullptr);
 
-		/* Display trade messages */
-		//ImGui::Columns(3, NULL, false);
-		//ImGui::SetColumnWidth(-1, 100);
-		//ImGui::NextColumn();
-		//ImGui::SetColumnWidth(-1, 175);
-		//ImGui::NextColumn();
-		//ImGui::SetColumnWidth(-1, 500);
-		//ImGui::NextColumn();
-		char timetext[128];
-		std::string name;
-		std::string message;
-		time_t now = time(0);
+			const float x1 = 120.0f; // player button left align
+			const float playernamewidth = 160.0f;
+			const float x2 = x1 + playernamewidth + ImGui::GetStyle().ItemInnerSpacing.x;
 
-		const float x1 = 120.0f; // player button left align
-		const float playernamewidth = 160.0f;
-		const float x2 = x1 + playernamewidth + ImGui::GetStyle().ItemInnerSpacing.x;
+			for (unsigned int i = 0; i < trade_searcher->messages.size(); i++) {
+				ImGui::PushID(i);
 
-		for (unsigned int i = 0; i < trade_searcher->messages.size(); i++) {
-			ImGui::PushID(i);
-			
-			// negative numbers have came from this before, it is probably just server client desync
-			int time_since_message = (int)now - stoi(trade_searcher->messages.at(i)["timestamp"].get<std::string>());
+				// ==== time elapsed column ====
+				// negative numbers have came from this before, it is probably just server client desync
+				int time_since_message = (int)now - stoi(trade_searcher->messages.at(i)["timestamp"].get<std::string>());
 
-			// smaller font for time column
-			ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f16));
-			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(.7f, .7f, .7f, 1.0f));
-			
-			// decide if days, hours, minutes, seconds...
-			if ((int)(time_since_message / (60 * 60 * 24))) {
-				int days = (int)(time_since_message / (60 * 60 * 24));
-				_snprintf(timetext, 128, "%d %s ago", days, days > 1 ? "days" : "day");
-			} else if ((int)(time_since_message / (60 * 60))) {
-				int hours = (int)(time_since_message / (60 * 60));
-				_snprintf(timetext, 128, "%d %s ago", hours, hours > 1 ? "hours" : "hour");
-			} else if ((int)(time_since_message / (60))) {
-				int minutes = (int)(time_since_message / 60);
-				_snprintf(timetext, 128, "%d %s ago", minutes, minutes > 1 ? "minutes" : "minute");
-			} else {
-				_snprintf(timetext, 128, "%d %s ago", time_since_message, time_since_message > 1 ? "seconds" : "second");
+				ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f16));
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(.7f, .7f, .7f, 1.0f));
+
+				// decide if days, hours, minutes, seconds...
+				if ((int)(time_since_message / (60 * 60 * 24))) {
+					int days = (int)(time_since_message / (60 * 60 * 24));
+					_snprintf(timetext, 128, "%d %s ago", days, days > 1 ? "days" : "day");
+				} else if ((int)(time_since_message / (60 * 60))) {
+					int hours = (int)(time_since_message / (60 * 60));
+					_snprintf(timetext, 128, "%d %s ago", hours, hours > 1 ? "hours" : "hour");
+				} else if ((int)(time_since_message / (60))) {
+					int minutes = (int)(time_since_message / 60);
+					_snprintf(timetext, 128, "%d %s ago", minutes, minutes > 1 ? "minutes" : "minute");
+				} else {
+					_snprintf(timetext, 128, "%d %s ago", time_since_message, time_since_message > 1 ? "seconds" : "second");
+				}
+				ImGui::SetCursorPosX(x1 - ImGui::GetStyle().ItemInnerSpacing.x - ImGui::CalcTextSize(timetext).x);
+				ImGui::Text(timetext);
+				ImGui::PopStyleColor();
+				ImGui::PopFont();
+
+				// ==== Sender name column ====
+				ImGui::SameLine(x1);
+				name = trade_searcher->messages.at(i)["name"].get<std::string>();
+				if (ImGui::Button(name.c_str(), ImVec2(playernamewidth, 0))) {
+					// open whisper to player
+					GW::GameThread::Enqueue([name]() {
+						wchar_t ws[100];
+						swprintf(ws, 100, L"%hs", name.c_str());
+						GW::UI::SendUIMessage(GW::UI::kOpenWhisper, ws, nullptr);
+					});
+				}
+
+				// ==== Message column ====
+				ImGui::SameLine(x2);
+				message = trade_searcher->messages.at(i)["message"].get<std::string>();
+				ImGui::TextWrapped("%s", message.c_str());
+				ImGui::PopID();
 			}
-			ImGui::SetCursorPosX(x1 - ImGui::GetStyle().ItemInnerSpacing.x - ImGui::CalcTextSize(timetext).x);
-			ImGui::Text(timetext);
-
-			ImGui::PopStyleColor();
-			ImGui::PopFont();
-
-			ImGui::SameLine(x1);
-			name = trade_searcher->messages.at(i)["name"].get<std::string>();
-			if (ImGui::Button(name.c_str(), ImVec2(playernamewidth, 0))) {
-				// open whisper to player
-				GW::GameThread::Enqueue([name]() {
-					wchar_t ws[100];
-					swprintf(ws, 100, L"%hs", name.c_str());
-					GW::UI::SendUIMessage(GW::UI::kOpenWhisper, ws, nullptr);
-				});
-			}
-
-			ImGui::SameLine(x2);
-			message = trade_searcher->messages.at(i)["message"].get<std::string>();
-			ImGui::TextWrapped("%s", message.c_str());
-			ImGui::PopID();
 		}
 		ImGui::EndChild();
 
 		/* Link to website footer */
-		if (ImGui::Button("https://kamadan.decltype.org", ImVec2(ImGui::GetWindowContentRegionWidth(), 20.0f))){ 
+		if (ImGui::Button("https://kamadan.decltype.org", ImVec2(ImGui::GetWindowContentRegionWidth(), 18.0f))){ 
 			CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 			ShellExecute(NULL, "open", "https://kamadan.decltype.org", NULL, NULL, SW_SHOWNORMAL);
 		}
 
 		/* Alerts window */
 		if (show_alert_window) {
-			ImGui::SetNextWindowSize(ImVec2(200, 220));
+			ImGui::SetNextWindowSize(ImVec2(250, 220), ImGuiCond_FirstUseEver);
 			if (ImGui::Begin("Trade Alerts", &show_alert_window)) {
 				ImGui::Text("Alerts");
 				ImGui::ShowHelp(alerts_tooltip.c_str());
 				//ImGui::SameLine();
 				ImGui::Checkbox("Alert all messages", &alert_all);
-				if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE, ImVec2(-1.0f, 0.0f))) {
+				if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE, ImVec2(-1.0f, -1.0f))) {
 					ParseBuffer(alert_buf, alerts);
 					alertfile_dirty = true;
 				}
 			}
 			ImGui::End();
 		}
-		ImGui::PopTextWrapPos();
 	}
 	ImGui::End();
 }

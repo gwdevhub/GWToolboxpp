@@ -59,7 +59,7 @@ private:
 	TradeChat* trade_searcher = nullptr;
 
 	std::string alerts_tooltip = \
-		"Trade messages with matched keywords will be send to the Guild Wars chat.\n" \
+		"Trade messages with matched keywords will be send to the Guild Wars Trade chat.\n" \
 		"Each line is a new keyword and the keywords are not case sensitive.\n" \
 		"The Trade checkbox in the Guild Wars chat must be selected for messages to show up.\n";
 
