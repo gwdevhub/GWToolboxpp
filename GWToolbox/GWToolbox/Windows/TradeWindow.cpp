@@ -26,10 +26,10 @@ static const char ws_host[] = "wss://kamadan.decltype.org/ws/";
 void TradeWindow::Initialize() {
 	ToolboxWindow::Initialize();
 
-    messages = CircularBuffer<Message>(50);
+	messages = CircularBuffer<Message>(50);
 
-    should_stop = false;
-    worker = std::thread([this]() {
+	should_stop = false;
+	worker = std::thread([this]() {
 		while (!should_stop) {
 			if (thread_jobs.empty()) {
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -40,9 +40,9 @@ void TradeWindow::Initialize() {
 		}
 	});
 
-    // Add an option here.
-    print_chat = true;
-    if (print_chat) AsyncChatConnect();
+	// Add an option here.
+	print_chat = true;
+	if (print_chat) AsyncChatConnect();
 }
 
 // https://stackoverflow.com/questions/5343190/how-do-i-replace-all-instances-of-a-string-with-another-string
@@ -56,123 +56,123 @@ std::string TradeWindow::ReplaceString(std::string subject, const std::string& s
 }
 
 void TradeWindow::Update(float delta) {
-    if (!print_chat) return;
+	if (!print_chat) return;
 
-    if (ws_chat && ws_chat->getReadyState() == WebSocket::CLOSED) {
-        delete ws_chat;
-        ws_chat = nullptr;
-    }
+	if (ws_chat && ws_chat->getReadyState() == WebSocket::CLOSED) {
+		delete ws_chat;
+		ws_chat = nullptr;
+	}
 
 	// do not display trade chat while in kamadan AE district 1
 	if (GW::Map::GetMapID() == GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost &&
 		GW::Map::GetDistrict() == 1 &&
 		GW::Map::GetRegion() == GW::Constants::Region::America) {
-        if (ws_chat) ws_chat->close();
+		if (ws_chat) ws_chat->close();
 		return;
 	}
-    
-    if (!ws_chat && !ws_chat_connecting) {
-        AsyncChatConnect();
-        return;
-    }
+	
+	if (!ws_chat && !ws_chat_connecting) {
+		AsyncChatConnect();
+		return;
+	}
 
-    if (!ws_chat || ws_chat->getReadyState() != WebSocket::OPEN)
-        return;
+	if (!ws_chat || ws_chat->getReadyState() != WebSocket::OPEN)
+		return;
 
-    ws_chat->poll();
-    ws_chat->dispatch([this](const std::string& data) {
-        char buffer[512];
-        json res = json::parse(data);
+	ws_chat->poll();
+	ws_chat->dispatch([this](const std::string& data) {
+		char buffer[512];
+		json res = json::parse(data);
 
-        // We don't support queries in the chat
-        if (res.find("query") != res.end())
-            return;
+		// We don't support queries in the chat
+		if (res.find("query") != res.end())
+			return;
 
-        std::string name = res["name"].get<std::string>();
-        std::string msg  = res["message"].get<std::string>();
+		std::string name = res["name"].get<std::string>();
+		std::string msg  = res["message"].get<std::string>();
 
-        snprintf(buffer, sizeof(buffer), "<a=1>%s</a>: <c=#f96677>%s</c>", name.c_str(), msg.c_str());
-        GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, buffer);
-    });
+		snprintf(buffer, sizeof(buffer), "<a=1>%s</a>: <c=#f96677><quote>%s", name.c_str(), msg.c_str());
+		GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, buffer);
+	});
 }
 
 TradeWindow::Message TradeWindow::parse_json_message(json js)
 {
-    TradeWindow::Message msg;
-    msg.name = js["name"].get<std::string>();
-    msg.message = js["message"].get<std::string>();
-    msg.timestamp = stoi(js["timestamp"].get<std::string>());
-    return msg;
+	TradeWindow::Message msg;
+	msg.name = js["name"].get<std::string>();
+	msg.message = js["message"].get<std::string>();
+	msg.timestamp = stoi(js["timestamp"].get<std::string>());
+	return msg;
 }
 
 void TradeWindow::fetch() {
-    assert(ws_window && ws_window->getReadyState() == WebSocket::OPEN);
-    
-    ws_window->poll();
-    ws_window->dispatch([this](const std::string& data) {
-        json res = json::parse(data);
-        if (res.find("query") == res.end()) {
-            // It's a new message
-            Message msg = parse_json_message(res);
-            messages.add(msg);
-        } else {
-            search_pending = false;
-            if (res["num_results"].get<std::string>() == "0")
-                return;
-            json_vec results = res["results"].get<json_vec>();
-            messages.clear();
-            for (auto it = results.rbegin(); it != results.rend(); it++) {
-                Message msg = parse_json_message(*it);
-                messages.add(msg);
-            }
-        }
-    });
+	assert(ws_window && ws_window->getReadyState() == WebSocket::OPEN);
+	
+	ws_window->poll();
+	ws_window->dispatch([this](const std::string& data) {
+		json res = json::parse(data);
+		if (res.find("query") == res.end()) {
+			// It's a new message
+			Message msg = parse_json_message(res);
+			messages.add(msg);
+		} else {
+			search_pending = false;
+			if (res["num_results"].get<std::string>() == "0")
+				return;
+			json_vec results = res["results"].get<json_vec>();
+			messages.clear();
+			for (auto it = results.rbegin(); it != results.rend(); it++) {
+				Message msg = parse_json_message(*it);
+				messages.add(msg);
+			}
+		}
+	});
 }
 
 void TradeWindow::search(std::string query) {
-    static std::string search_uri = "wss://kamadan.decltype.org/ws/search";
+	static std::string search_uri = "wss://kamadan.decltype.org/ws/search";
 
-    if (!ws_window || ws_window->getReadyState() != WebSocket::OPEN)
-        return;
+	if (!ws_window || ws_window->getReadyState() != WebSocket::OPEN)
+		return;
 
-    // for now we won't allow to enqueue more than 1 search, it shouldn't change anything because how fast we get the answers
-    if (search_pending)
-        return;
+	// for now we won't allow to enqueue more than 1 search, it shouldn't change anything because how fast we get the answers
+	if (search_pending)
+		return;
 
-    search_pending = true;
+	search_pending = true;
 	std::string uri = search_uri + query;
 
-    /*
-     * The protocol is the following:
-     *  - From a connected web socket, we send a Json formated packet with the format
-     *  {
-     *   "query":  str($query$),
-     *   "offset": int($page$),
-     *   "sugest": int(1 or 2)
-     *  }
-     */
+	/*
+	 * The protocol is the following:
+	 *  - From a connected web socket, we send a Json formated packet with the format
+	 *  {
+	 *   "query":  str($query$),
+	 *   "offset": int($page$),
+	 *   "sugest": int(1 or 2)
+	 *  }
+	 */
 
-    json request;
-    request["query"] = query;
-    request["offset"] = 0;
-    request["suggest"] = 0;
-    ws_window->send(request.dump());
+	json request;
+	request["query"] = query;
+	request["offset"] = 0;
+	request["suggest"] = 0;
+	ws_window->send(request.dump());
 }
 
 void TradeWindow::Draw(IDirect3DDevice9* device) {
-    if (!visible) {
-        if (ws_window) {
-            ws_window->close();
-            delete ws_window;
-            ws_window = nullptr;
-        }
-        return;
-    }
-    
-    if (ws_window && ws_window->getReadyState() == WebSocket::CLOSED) {
-        delete ws_window;
-        ws_window = nullptr;
-    }
+	if (!visible) {
+		if (ws_window) {
+			ws_window->close();
+			delete ws_window;
+			ws_window = nullptr;
+		}
+		return;
+	}
+	
+	if (ws_window && ws_window->getReadyState() == WebSocket::CLOSED) {
+		delete ws_window;
+		ws_window = nullptr;
+	}
 
 	// start the trade_searcher if its not active
 	// if (!trade_searcher->is_active() && !trade_searcher->is_timed_out()) trade_searcher->search("");
@@ -207,7 +207,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			ImGui::Text("The connection to kamadan.decltype.com has timed out.");
 			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Click to reconnect").x) / 2);
 			if (ImGui::Button("Click to reconnect")) {
-                AsyncWindowConnect();
+				AsyncWindowConnect();
 			}
 			ImGui::End();
 			ImGui::End();
@@ -229,10 +229,10 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			const float playernamewidth = 160.0f;
 			const float message_left = playername_left + playernamewidth + innerspacing;
 
-            fetch();
-            size_t size = messages.size();
+			fetch();
+			size_t size = messages.size();
 			for (unsigned int i = size - 1; i < size; i--) {
-                Message &msg = messages[i];
+				Message &msg = messages[i];
 				ImGui::PushID(i);
 
 				// ==== time elapsed column ====
@@ -360,33 +360,33 @@ void TradeWindow::ParseBuffer(const char* buf, std::set<std::string>& words) {
 }
 
 void TradeWindow::AsyncChatConnect() {
-    assert(!ws_chat);
-    if (ws_chat_connecting) return;
-    ws_chat_connecting = true;
-    thread_jobs.push([this]() {
-        if (!(ws_chat = WebSocket::from_url(ws_host))) {
-            printf("Couldn't connect to the host '%s'", ws_host);
-        }
-        ws_chat_connecting = false;
-    });
+	assert(!ws_chat);
+	if (ws_chat_connecting) return;
+	ws_chat_connecting = true;
+	thread_jobs.push([this]() {
+		if (!(ws_chat = WebSocket::from_url(ws_host))) {
+			printf("Couldn't connect to the host '%s'", ws_host);
+		}
+		ws_chat_connecting = false;
+	});
 }
 
 void TradeWindow::AsyncWindowConnect() {
-    assert(!ws_window);
-    if (ws_window_connecting) return;
-    ws_window_connecting = true;
-    thread_jobs.push([this]() {
-        if (!(ws_window = WebSocket::from_url(ws_host))) {
-            printf("Couldn't connect to the host '%s'", ws_host);
-        }
-        ws_window_connecting = false;
-    });
+	assert(!ws_window);
+	if (ws_window_connecting) return;
+	ws_window_connecting = true;
+	thread_jobs.push([this]() {
+		if (!(ws_window = WebSocket::from_url(ws_host))) {
+			printf("Couldn't connect to the host '%s'", ws_host);
+		}
+		ws_window_connecting = false;
+	});
 }
 
 void TradeWindow::Terminate() {
-	// all_trade.stop();
-	// trade_searcher.stop();
-    should_stop = true;
-    if (worker.joinable()) worker.join();
+	should_stop = true;
+	if (worker.joinable()) worker.join();
+	if (ws_chat) delete ws_chat;
+	if (ws_window) delete ws_window;
 	ToolboxWindow::Terminate();
 }
