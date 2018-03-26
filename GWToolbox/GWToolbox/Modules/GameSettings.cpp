@@ -163,6 +163,7 @@ namespace {
 			}
 		}
 
+		#if 0
 		if (remaining > 0) {
 			size_t slot = -1;
 			GW::Bag *bag;
@@ -185,6 +186,7 @@ namespace {
 				GW::Items::MoveItem(item, bag, slot);
 			}
 		}
+		#endif
 	}
 }
 
