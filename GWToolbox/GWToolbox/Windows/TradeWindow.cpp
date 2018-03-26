@@ -33,7 +33,7 @@ void TradeWindow::Initialize() {
 		return;
 	}
 
-	messages = CircularBuffer<Message>(50);
+	messages = CircularBuffer<Message>(100);
 
 	should_stop = false;
 	worker = std::thread([this]() {
@@ -50,16 +50,6 @@ void TradeWindow::Initialize() {
 	// Add an option here.
 	print_chat = true;
 	if (print_chat) AsyncChatConnect();
-}
-
-// https://stackoverflow.com/questions/5343190/how-do-i-replace-all-instances-of-a-string-with-another-string
-std::string TradeWindow::ReplaceString(std::string subject, const std::string& search, const std::string& replace) {
-	size_t pos = 0;
-	while ((pos = subject.find(search, pos)) != std::string::npos) {
-		subject.replace(pos, search.length(), replace);
-		pos += replace.length();
-	}
-	return subject;
 }
 
 void TradeWindow::Update(float delta) {
@@ -95,9 +85,18 @@ void TradeWindow::Update(float delta) {
 		if (res.find("query") != res.end())
 			return;
 
-		std::string name = res["name"].get<std::string>();
-		std::string msg  = res["message"].get<std::string>();
+		std::string msg = res["message"].get<std::string>();
+		if (filter_alerts) {
+			for (auto& word : alert_words) {
+				auto found = std::search(msg.begin(), msg.end(), word.begin(), word.end(), [](char c1, char c2) -> bool {
+					return tolower(c1) == c2;
+				});
+				if (found != msg.end())
+					return;
+			}
+		}
 
+		std::string name = res["name"].get<std::string>();
 		snprintf(buffer, sizeof(buffer), "<a=1>%s</a>: <c=#f96677><quote>%s", name.c_str(), msg.c_str());
 		GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, buffer);
 	});
@@ -302,9 +301,11 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			if (ImGui::Begin("Trade Alerts", &show_alert_window)) {
 				ImGui::Text("Alerts");
 				ImGui::ShowHelp(alerts_tooltip.c_str());
-				ImGui::Checkbox("Alert all messages", &alert_all);
+				ImGui::Checkbox("Print in game chat", &print_chat);
+				ImGui::Checkbox("Only include messages containing:", &filter_alerts);
+
 				if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE, ImVec2(-1.0f, -1.0f))) {
-					ParseBuffer(alert_buf, alerts);
+					alert_words = ParseBuffer(alert_buf);
 					alertfile_dirty = true;
 				}
 			}
@@ -319,11 +320,11 @@ void TradeWindow::LoadSettings(CSimpleIni* ini) {
 	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
 
 	std::ifstream alert_file;
-	alert_file.open(Resources::GetPath(alertfilename));
+	alert_file.open(Resources::GetPath(L"AlertKeywords.txt"));
 	if (alert_file.is_open()) {
 		alert_file.get(alert_buf, ALERT_BUF_SIZE, '\0');
 		alert_file.close();
-		ParseBuffer(alert_buf, alerts);
+		alert_words = ParseBuffer(alert_buf);
 	}
 	alert_file.close();
 }
@@ -334,7 +335,7 @@ void TradeWindow::SaveSettings(CSimpleIni* ini) {
 
 	if (alertfile_dirty) {
 		std::ofstream bycontent_file;
-		bycontent_file.open(Resources::GetPath(alertfilename));
+		bycontent_file.open(Resources::GetPath(L"AlertKeywords.txt"));
 		if (bycontent_file.is_open()) {
 			bycontent_file.write(alert_buf, strlen(alert_buf));
 			bycontent_file.close();
@@ -343,27 +344,27 @@ void TradeWindow::SaveSettings(CSimpleIni* ini) {
 	}
 }
 
-void TradeWindow::ParseBuffer(const char* buf, std::set<std::string>& words) {
-	words.clear();
-	std::string text(buf);
-	char separator = '\n';
-	size_t pos = text.find(separator);
-	size_t initialpos = 0;
+std::vector<std::string> TradeWindow::ParseBuffer(const char *text) {
+	std::vector<std::string> words;
+	std::istringstream stream(text);
+	std::string word;
+	while (std::getline(stream, word)) {
+		for (size_t i = 0; i < word.length(); i++)
+			word[i] = tolower(word[i]);
+		words.push_back(word);
+	}
+	return words;
+}
 
-	while (pos != std::string::npos) {
-		std::string s = text.substr(initialpos, pos - initialpos);
-		if (!s.empty()) {
-			std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-			words.insert(s);
-		}
-		initialpos = pos + 1;
-		pos = text.find(separator, initialpos);
+std::vector<std::string> TradeWindow::ParseBuffer(std::fstream stream) {
+	std::vector<std::string> words;
+	std::string word;
+	while (std::getline(stream, word)) {
+		for (size_t i = 0; i < word.length(); i++)
+			word[i] = tolower(word[i]);
+		words.push_back(word);
 	}
-	std::string s = text.substr(initialpos, std::min(pos, text.size() - initialpos));
-	if (!s.empty()) {
-		std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-		words.insert(s);
-	}
+	return words;
 }
 
 void TradeWindow::AsyncChatConnect() {
@@ -396,5 +397,6 @@ void TradeWindow::Terminate() {
 	if (ws_chat) delete ws_chat;
 	if (ws_window) delete ws_window;
 	WSACleanup();
+
 	ToolboxWindow::Terminate();
 }

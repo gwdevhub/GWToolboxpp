@@ -13,16 +13,6 @@
 #include <CircurlarBuffer.h>
 
 class TradeWindow : public ToolboxWindow {
-	struct Alert {
-		static unsigned int uid_count;
-		Alert(const char* match = "") {
-			strncpy(match_string, match, 128);
-			uid = uid_count++;
-		}
-		char match_string[128];
-		unsigned int uid;
-	};
-
 	TradeWindow() {};
 	~TradeWindow() {};
 public:
@@ -49,17 +39,19 @@ private:
         std::string message;
     };
 
-	// if the player has an alert with exactly this keyword, all messages will be matched
-	bool alert_all = false;
-	std::string chat_color = "f96677";
-	// buffer for the search input
+	// Search bar in trade window
 	char search_buffer[256];
+
+	bool show_alert_window = false;
+
 	#define ALERT_BUF_SIZE 1024 * 16
 	char alert_buf[ALERT_BUF_SIZE];
+	// enable when the alert_buf was modified
 	bool alertfile_dirty = false;
-	wchar_t* alertfilename = L"AlertKeywords.txt";
-	std::set<std::string> alerts;
-	bool show_alert_window = false;
+
+	// if enable, we won't print the messages containing word from alert_words
+	bool filter_alerts = false;
+	std::vector<std::string> alert_words;
 
     // if we need to print in the chat
     bool print_chat = false;
@@ -90,6 +82,6 @@ private:
 		"Each line is a new keyword and the keywords are not case sensitive.\n" \
 		"The Trade checkbox in the Guild Wars chat must be selected for messages to show up.\n";
 
-	std::string ReplaceString(std::string, const std::string&, const std::string&);
-	void ParseBuffer(const char *, std::set<std::string>&);
+	std::vector<std::string> ParseBuffer(const char *text);
+	std::vector<std::string> ParseBuffer(std::fstream stream);
 };
