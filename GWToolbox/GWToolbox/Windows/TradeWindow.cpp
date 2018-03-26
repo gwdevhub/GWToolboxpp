@@ -54,14 +54,14 @@ void TradeWindow::Update(float delta) {
 		return;
 	}
 
-    char buffer[256];
+    char buffer[512];
     chat_conn->fetchAll();
 
     size_t size = chat_conn->messages.size();
     assert(chat_conn->append_count < size);
 	for (size_t i = size - chat_conn->append_count; i < size; i++) {
         auto &msg = chat_conn->messages[i];
-        snprintf(buffer, 256, "<c=#f96677>%s</c>", msg.message.c_str());
+        snprintf(buffer, 256, "<a=1>%s</a>: <c=#f96677>%s</c>", msg.name.c_str(), msg.message.c_str());
         GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, buffer);
 	}
 }
