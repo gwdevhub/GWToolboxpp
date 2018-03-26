@@ -51,7 +51,8 @@ private:
 	std::set<std::string> alerts;
 	bool show_alert_window = false;
 
-	TradeChat *connection = nullptr;
+	TradeChat *window_conn = nullptr;
+    TradeChat *chat_conn = nullptr;
 
 	std::string alerts_tooltip = \
 		"Trade messages with matched keywords will be send to the Guild Wars Trade chat.\n" \

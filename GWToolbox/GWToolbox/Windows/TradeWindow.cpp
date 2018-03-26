@@ -21,7 +21,11 @@
 void TradeWindow::Initialize() {
 	ToolboxWindow::Initialize();
 	// used for the alerts
-	connection = new TradeChat();
+	window_conn = new TradeChat();
+    chat_conn = new TradeChat();
+
+    // Add option for that probably
+    chat_conn->connectAsync();
 
     // uncomment if we want to connect automaticly
     // connection->connectAsync();
@@ -38,7 +42,7 @@ std::string TradeWindow::ReplaceString(std::string subject, const std::string& s
 }
 
 void TradeWindow::Update(float delta) {
-    if (connection->status != TradeChat::connected)
+    if (chat_conn->status != TradeChat::connected)
         return;
 
 	// do not display trade chat while in kamadan AE district 1
@@ -46,17 +50,17 @@ void TradeWindow::Update(float delta) {
 		GW::Map::GetDistrict() == 1 &&
 		GW::Map::GetRegion() == GW::Constants::Region::America) {
 
-        connection->dismiss();
+        chat_conn->dismiss();
 		return;
 	}
 
     char buffer[256];
-    connection->fetchAll();
+    chat_conn->fetchAll();
 
-    size_t size = connection->messages.size();
-    assert(connection->append_count < size);
-	for (size_t i = size - connection->append_count; i < size; i++) {
-        auto &msg = connection->messages[i];
+    size_t size = chat_conn->messages.size();
+    assert(chat_conn->append_count < size);
+	for (size_t i = size - chat_conn->append_count; i < size; i++) {
+        auto &msg = chat_conn->messages[i];
         snprintf(buffer, 256, "<c=#f96677>%s</c>", msg.message.c_str());
         GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, buffer);
 	}
@@ -72,16 +76,16 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		/* Search bar header */
 		ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 80.0f - 80.0f - 80.0f - ImGui::GetStyle().ItemInnerSpacing.x * 6));
 		if (ImGui::InputText("", search_buffer, 256, ImGuiInputTextFlags_EnterReturnsTrue)) {
-			connection->search(search_buffer);
+			window_conn->search(search_buffer);
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Search", ImVec2(80.0f, 0))) {
-			connection->search(search_buffer);
+			window_conn->search(search_buffer);
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Clear", ImVec2(80.0f, 0))) {
 			strncpy(search_buffer, "", 256);
-			connection->search("");
+			window_conn->search("");
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Alerts", ImVec2(80.0f, 0))) {
@@ -91,18 +95,18 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		/* Main trade chat area */
 		ImGui::BeginChild("trade_scroll", ImVec2(0, -20.0f - ImGui::GetStyle().ItemInnerSpacing.y));
 		/* Connection checks */
-		if (connection->status == TradeChat::disconnected) {
+		if (window_conn->status == TradeChat::disconnected) {
 			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("The connection to kamadan.decltype.com has timed out.").x) / 2);
 			ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
 			ImGui::Text("The connection to kamadan.decltype.com has timed out.");
 			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Click to reconnect").x) / 2);
 			if (ImGui::Button("Click to reconnect")) {
-				connection->connectAsync();
+				window_conn->connectAsync();
 			}
 			ImGui::End();
 			ImGui::End();
 			return;
-		} else if (connection->status == TradeChat::connecting) {
+		} else if (window_conn->status == TradeChat::connecting) {
 			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Connecting...").x)/2);
 			ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
 			ImGui::Text("Connecting...");
@@ -119,9 +123,11 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			const float playernamewidth = 160.0f;
 			const float message_left = playername_left + playernamewidth + innerspacing;
 
-            size_t size = connection->messages.size();
+            window_conn->fetchAll();
+
+            size_t size = window_conn->messages.size();
 			for (unsigned int i = size - 1; i < size; i--) {
-                TradeChat::Message &msg = connection->messages[i];
+                TradeChat::Message &msg = window_conn->messages[i];
 				ImGui::PushID(i);
 
 				// ==== time elapsed column ====
