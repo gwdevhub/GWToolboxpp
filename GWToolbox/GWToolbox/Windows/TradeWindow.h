@@ -1,12 +1,16 @@
 #pragma once
 
-#include "TradeChat.h"
-
 #include <ToolboxWindow.h>
 #include <iostream>
 #include <vector>
 #include <set>
+
+#include <queue>
 #include <thread>
+
+#include <json.hpp>
+#include <easywsclient\easywsclient.hpp>
+#include <CircurlarBuffer.h>
 
 class TradeWindow : public ToolboxWindow {
 	struct Alert {
@@ -38,7 +42,15 @@ public:
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
 
+    bool ToggleVisible() override;
+
 private:
+    struct Message {
+        uint32_t    timestamp;
+        std::string name;
+        std::string message;
+    };
+
 	// if the player has an alert with exactly this keyword, all messages will be matched
 	bool alert_all = false;
 	std::string chat_color = "f96677";
@@ -51,8 +63,29 @@ private:
 	std::set<std::string> alerts;
 	bool show_alert_window = false;
 
-	TradeChat *window_conn = nullptr;
-    TradeChat *chat_conn = nullptr;
+    // if we need to print in the chat
+    bool print_chat = false;
+
+    // Since we are connecting in an other thread, the following attributes/methods avoid spamming connection requests
+    void AsyncChatConnect();
+    void AsyncWindowConnect();
+    bool ws_chat_connecting = false;
+    bool ws_window_connecting = false;
+
+    easywsclient::WebSocket *ws_chat = NULL;
+    easywsclient::WebSocket *ws_window = NULL;
+
+    bool search_pending;
+    void search(std::string);
+    void fetch();
+
+    static Message parse_json_message(nlohmann::json js);
+    CircularBuffer<Message> messages;
+
+    // tasks to be done async by the worker thread
+	std::queue<std::function<void()>> thread_jobs;
+    bool should_stop = false;
+	std::thread worker;
 
 	std::string alerts_tooltip = \
 		"Trade messages with matched keywords will be send to the Guild Wars Trade chat.\n" \

@@ -271,9 +271,6 @@
     <ClInclude Include="GWToolbox\Windows\TradeWindow.h">
       <Filter>Windows\Trade</Filter>
     </ClInclude>
-    <ClInclude Include="GWToolbox\Windows\TradeChat.h">
-      <Filter>Windows\Trade</Filter>
-    </ClInclude>
     <ClInclude Include="GWToolbox\Utf8.h" />
     <ClInclude Include="..\Dependencies\easywsclient\easywsclient.hpp">
       <Filter>Windows\Trade</Filter>
@@ -412,9 +409,6 @@
       <Filter>Windows\HeroBuilds</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\Windows\TradeWindow.cpp">
-      <Filter>Windows\Trade</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\Windows\TradeChat.cpp">
       <Filter>Windows\Trade</Filter>
     </ClCompile>
     <ClCompile Include="..\Dependencies\easywsclient\easywsclient.cpp">

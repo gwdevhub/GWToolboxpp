@@ -163,7 +163,6 @@
     <ClInclude Include="GWToolbox\Windows\PconsWindow.h" />
     <ClInclude Include="GWToolbox\Windows\Pcons.h" />
     <ClInclude Include="GWToolbox\Windows\SettingsWindow.h" />
-    <ClInclude Include="GWToolbox\Windows\TradeChat.h" />
     <ClInclude Include="GWToolbox\Windows\TradeWindow.h" />
     <ClInclude Include="GWToolbox\Windows\TravelWindow.h" />
     <ClInclude Include="resource.h" />
@@ -220,7 +219,6 @@
     <ClCompile Include="GWToolbox\Windows\PconsWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\Pcons.cpp" />
     <ClCompile Include="GWToolbox\Windows\SettingsWindow.cpp" />
-    <ClCompile Include="GWToolbox\Windows\TradeChat.cpp" />
     <ClCompile Include="GWToolbox\Windows\TradeWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\TravelWindow.cpp" />
   </ItemGroup>
