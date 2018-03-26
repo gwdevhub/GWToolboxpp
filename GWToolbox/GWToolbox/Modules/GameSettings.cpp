@@ -138,7 +138,8 @@ namespace {
 		GW::Bag **bags = GW::Items::GetBagArray();
 		if (!bags) return;
 
-		int remaining = item->Quantity;
+		int total = item->Quantity;
+		int remaining = total;
 		assert(remaining > 0);
 
 		for (int i = 1; i <= 4; i++) {
@@ -163,8 +164,7 @@ namespace {
 			}
 		}
 
-		#if 0
-		if (remaining > 0) {
+		if (remaining == total) {
 			size_t slot = -1;
 			GW::Bag *bag;
 
@@ -186,7 +186,6 @@ namespace {
 				GW::Items::MoveItem(item, bag, slot);
 			}
 		}
-		#endif
 	}
 }
 
