@@ -35,11 +35,8 @@ public:
 	void Update(float delta) override;
 	void Draw(IDirect3DDevice9* pDevice) override;
 
-	void LoadAlerts();
-	void SaveAlerts();
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
-	void DrawSettingInternal() override;
 
 private:
 	// if the player has an alert with exactly this keyword, all messages will be matched
@@ -47,8 +44,6 @@ private:
 	std::string chat_color = "f96677";
 	// buffer for the search input
 	char search_buffer[256];
-	CSimpleIni* alert_ini = nullptr;
-	std::wstring ini_filename = L"trade_alerts.ini";
 	#define ALERT_BUF_SIZE 1024 * 16
 	char alert_buf[ALERT_BUF_SIZE];
 	bool alertfile_dirty = false;

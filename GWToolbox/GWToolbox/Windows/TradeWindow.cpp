@@ -36,10 +36,6 @@ std::string TradeWindow::ReplaceString(std::string subject, const std::string& s
 	return subject;
 }
 
-void TradeWindow::DrawSettingInternal() {
-
-}
-
 void TradeWindow::Update(float delta) {
 	all_trade->fetch();
 
@@ -220,7 +216,6 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			if (ImGui::Begin("Trade Alerts", &show_alert_window)) {
 				ImGui::Text("Alerts");
 				ImGui::ShowHelp(alerts_tooltip.c_str());
-				//ImGui::SameLine();
 				ImGui::Checkbox("Alert all messages", &alert_all);
 				if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE, ImVec2(-1.0f, -1.0f))) {
 					ParseBuffer(alert_buf, alerts);
@@ -235,14 +230,8 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 
 void TradeWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxWindow::LoadSettings(ini);
-	if (alert_ini == nullptr) alert_ini = new CSimpleIni(false, false, false);
-	alert_ini->LoadFile(Resources::GetPath(ini_filename).c_str());
 	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
 
-	LoadAlerts();
-}
-
-void TradeWindow::LoadAlerts() {
 	std::ifstream alert_file;
 	alert_file.open(Resources::GetPath(alertfilename));
 	if (alert_file.is_open()) {
@@ -253,13 +242,10 @@ void TradeWindow::LoadAlerts() {
 	alert_file.close();
 }
 
+
 void TradeWindow::SaveSettings(CSimpleIni* ini) {
 	ToolboxWindow::SaveSettings(ini);
 
-	SaveAlerts();
-}
-
-void TradeWindow::SaveAlerts() {
 	if (alertfile_dirty) {
 		std::ofstream bycontent_file;
 		bycontent_file.open(Resources::GetPath(alertfilename));
