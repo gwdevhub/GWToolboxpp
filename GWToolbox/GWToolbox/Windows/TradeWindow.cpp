@@ -18,8 +18,8 @@
 #include <list>
 #include <fstream>
 
-using namespace easywsclient;
-using namespace nlohmann;
+using easywsclient::WebSocket;
+using nlohmann::json;
 using json_vec = std::vector<json>;
 
 static const char ws_host[] = "wss://kamadan.decltype.org/ws/";
@@ -79,31 +79,36 @@ void TradeWindow::Update(float delta) {
 	ws_chat->poll();
 	ws_chat->dispatch([this](const std::string& data) {
 		char buffer[512];
-		json res = json::parse(data);
+		json res = json::parse(data.c_str());
 
 		// We don't support queries in the chat
 		if (res.find("query") != res.end())
 			return;
 
 		std::string msg = res["message"].get<std::string>();
+		bool print_message = true;
 		if (filter_alerts) {
+			print_message = false; // filtered unless allowed by words
 			for (auto& word : alert_words) {
 				auto found = std::search(msg.begin(), msg.end(), word.begin(), word.end(), [](char c1, char c2) -> bool {
 					return tolower(c1) == c2;
 				});
-				if (found != msg.end())
-					return;
+				if (found != msg.end()) {
+					print_message = true;
+					break; // don't need to check other words
+				}
 			}
 		}
 
-		std::string name = res["name"].get<std::string>();
-		snprintf(buffer, sizeof(buffer), "<a=1>%s</a>: <c=#f96677><quote>%s", name.c_str(), msg.c_str());
-		GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, buffer);
+		if (print_message) {
+			std::string name = res["name"].get<std::string>();
+			snprintf(buffer, sizeof(buffer), "<a=1>%s</a>: <c=#f96677><quote>%s", name.c_str(), msg.c_str());
+			GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, buffer);
+		}
 	});
 }
 
-TradeWindow::Message TradeWindow::parse_json_message(json js)
-{
+TradeWindow::Message TradeWindow::parse_json_message(json js) {
 	TradeWindow::Message msg;
 	msg.name = js["name"].get<std::string>();
 	msg.message = js["message"].get<std::string>();
@@ -112,11 +117,12 @@ TradeWindow::Message TradeWindow::parse_json_message(json js)
 }
 
 void TradeWindow::fetch() {
-	assert(ws_window && ws_window->getReadyState() == WebSocket::OPEN);
+	if (ws_window == nullptr) return;
+	if (ws_window->getReadyState() != WebSocket::OPEN) return;
 	
 	ws_window->poll();
 	ws_window->dispatch([this](const std::string& data) {
-		json res = json::parse(data);
+		json res = json::parse(data.c_str());
 		if (res.find("query") == res.end()) {
 			// It's a new message
 			Message msg = parse_json_message(res);
@@ -136,8 +142,6 @@ void TradeWindow::fetch() {
 }
 
 void TradeWindow::search(std::string query) {
-	static std::string search_uri = "wss://kamadan.decltype.org/ws/search";
-
 	if (!ws_window || ws_window->getReadyState() != WebSocket::OPEN)
 		return;
 
@@ -146,7 +150,6 @@ void TradeWindow::search(std::string query) {
 		return;
 
 	search_pending = true;
-	std::string uri = search_uri + query;
 
 	/*
 	 * The protocol is the following:
@@ -166,7 +169,11 @@ void TradeWindow::search(std::string query) {
 }
 
 void TradeWindow::Draw(IDirect3DDevice9* device) {
-	if (!visible) {
+	if (visible) {
+		if (ws_window == nullptr) {
+			AsyncWindowConnect();
+		}
+	} else { // not visible
 		if (ws_window) {
 			ws_window->close();
 			delete ws_window;
@@ -215,7 +222,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			if (ImGui::Button("Click to reconnect")) {
 				AsyncWindowConnect();
 			}
-		} else if (ws_window->getReadyState() == WebSocket::CONNECTING) {
+		} else if (ws_window_connecting || ws_window->getReadyState() == WebSocket::CONNECTING) {
 			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Connecting...").x)/2);
 			ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
 			ImGui::Text("Connecting...");
@@ -369,7 +376,7 @@ std::vector<std::string> TradeWindow::ParseBuffer(std::fstream stream) {
 }
 
 void TradeWindow::AsyncChatConnect() {
-	assert(!ws_chat);
+	if (ws_chat) return;
 	if (ws_chat_connecting) return;
 	ws_chat_connecting = true;
 	thread_jobs.push([this]() {
@@ -381,7 +388,7 @@ void TradeWindow::AsyncChatConnect() {
 }
 
 void TradeWindow::AsyncWindowConnect() {
-	assert(!ws_window);
+	if (ws_window) return;
 	if (ws_window_connecting) return;
 	ws_window_connecting = true;
 	thread_jobs.push([this]() {
