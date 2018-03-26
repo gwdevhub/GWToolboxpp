@@ -55,6 +55,9 @@ void TradeChat::close() {
 void TradeChat::search(std::string query) {
     static std::string search_uri = "wss://kamadan.decltype.org/ws/search";
 
+    if (status != connected)
+        return;
+
     // for now we won't allow to enqueue more than 1 search, it shouldn't change anything because how fast we get the answers
     if (search_pending)
         return;

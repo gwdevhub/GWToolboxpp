@@ -37,7 +37,6 @@ public:
 
 private:
     std::thread thread;
-
     void onMessage(const std::string& msg);
 	easywsclient::WebSocket *ws = NULL;
     bool search_pending = false;
