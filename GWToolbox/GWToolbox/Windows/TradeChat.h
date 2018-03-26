@@ -3,6 +3,7 @@
 #include <easywsclient\easywsclient.hpp>
 
 #include <vector>
+#include <thread>
 #include <stdint.h>
 
 class TradeChat {
@@ -11,11 +12,18 @@ public:
 	~TradeChat();
 
     struct Message {
-        std::string timestamp;
+        uint32_t    timestamp;
         std::string name;
         std::string message;
     };
 
+   enum Status {
+		disconnected,
+		connecting,
+		connected,
+	};
+
+    void connectAsync();
     void connect();
     void close();
 
@@ -23,22 +31,14 @@ public:
     void fetchAll();
     void dismiss();
 
+	Status status = disconnected;
     std::vector<Message> messages;
     std::vector<Message> queries;
+
 private:
-	enum Status {
-		disconnected,
-		connecting,
-		connected,
-		timeout,
-	};
+    std::thread thread;
 
     void onMessage(const std::string& msg);
-
-	easywsclient::WebSocket *ws;
-	Status status = disconnected;
-
+	easywsclient::WebSocket *ws = NULL;
     bool search_pending = false;
-
-	std::string ReplaceString(std::string, const std::string&, const std::string&);
 };

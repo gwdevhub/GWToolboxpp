@@ -14,15 +14,6 @@ using namespace nlohmann;
 
 using json_vec = std::vector<json>;
 
-std::string TradeChat::ReplaceString(std::string subject, const std::string& search, const std::string& replace) {
-	size_t pos = 0;
-	while ((pos = subject.find(search, pos)) != std::string::npos) {
-		subject.replace(pos, search.length(), replace);
-		pos += replace.length();
-	}
-	return subject;
-}
-
 TradeChat::TradeChat() {
 	WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
@@ -31,10 +22,22 @@ TradeChat::TradeChat() {
     }
 }
 
+void TradeChat::connectAsync() {
+    // Not what we would want, but it shouldn't be call often and it will avoid to rewrite a websocket layer.
+    thread = std::thread([](TradeChat *self){
+        self->connect();
+    }, this);
+    thread.detach();
+}
+
 void TradeChat::connect() {
-    const char host[] = "wss://kamadan.decltype.org/ws/";
+    // We really don't want to do that, but 
+    static const char host[] = "wss://kamadan.decltype.org/ws/";
+    status = connecting;
+
     if (!(ws = WebSocket::from_url(host))) {
         printf("Couldn't connect to the host '%s'", host);
+        status = disconnected;
         return;
     }
 
@@ -52,12 +55,11 @@ void TradeChat::close() {
 void TradeChat::search(std::string query) {
     static std::string search_uri = "wss://kamadan.decltype.org/ws/search";
 
+    // for now we won't allow to enqueue more than 1 search, it shouldn't change anything because how fast we get the answers
     if (search_pending)
         return;
+
     search_pending = true;
-    
-    // This function has terrible performance.
-	query = ReplaceString(query, " ", "%20");
 	std::string uri = search_uri + query;
 
     /*
@@ -82,13 +84,23 @@ static void do_nothing(const std::string& msg)
 }
 
 void TradeChat::dismiss() {
-    assert(ws && ws->getReadyState() == WebSocket::OPEN);
+    assert(ws != NULL && status == connected);
+    if (ws->getReadyState() != WebSocket::OPEN) {
+        status = disconnected;
+        return;
+    }
+
     ws->poll();
+    // Can we dismiss without dispatching ?
     ws->dispatch(do_nothing);
 }
 
 void TradeChat::fetchAll() {
-    assert(ws && ws->getReadyState() == WebSocket::OPEN);
+    assert(ws != NULL && status == connected);
+    if (ws->getReadyState() != WebSocket::OPEN) {
+        status = disconnected;
+        return;
+    }
 
     messages.clear();
     ws->poll();
@@ -100,7 +112,7 @@ static TradeChat::Message parse_json_message(json js)
     TradeChat::Message msg;
     msg.name = js["name"].get<std::string>();
     msg.message = js["message"].get<std::string>();
-    msg.timestamp = js["timestamp"].get<std::string>();
+    msg.timestamp = stoi(js["timestamp"].get<std::string>());
     return msg;
 }
 

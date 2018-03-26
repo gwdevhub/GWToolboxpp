@@ -71,8 +71,21 @@ void ChatCommands::DrawHelp() {
 }
 
 void ChatCommands::DrawSettingInternal() {
+	ImGui::Text("'/cam unlock' options");
+	ImGui::Indent();
 	ImGui::Checkbox("Fix height when moving forward", &forward_fix_z);
 	ImGui::InputFloat("Camera speed", &cam_speed, 0.0f, 0.0f, 3);
+	ImGui::Unindent();
+}
+
+void ChatCommands::LoadSettings(CSimpleIni* ini) {
+	forward_fix_z = ini->GetBoolValue(Name(), VAR_NAME(forward_fix_z), true);
+	cam_speed = (float)ini->GetDoubleValue(Name(), VAR_NAME(cam_speed), DEFAULT_CAM_SPEED);
+}
+
+void ChatCommands::SaveSettings(CSimpleIni* ini) {
+	ini->SetBoolValue(Name(), VAR_NAME(forward_fix_z), forward_fix_z);
+	ini->SetDoubleValue(Name(), VAR_NAME(cam_speed), cam_speed);
 }
 
 void ChatCommands::Initialize() {

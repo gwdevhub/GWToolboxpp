@@ -26,7 +26,8 @@ public:
 	const char* Name() const override { return "Chat Commands"; }
 
 	void Initialize() override;
-
+	void LoadSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
 
 	void DrawHelp();

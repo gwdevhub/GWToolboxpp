@@ -254,6 +254,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	openlinks = ini->GetBoolValue(Name(), VAR_NAME(openlinks), true);
 	auto_url = ini->GetBoolValue(Name(), VAR_NAME(auto_url), true);
 	select_with_chat_doubleclick = ini->GetBoolValue(Name(), VAR_NAME(select_with_chat_doubleclick), true);
+	move_item_on_ctrl_click = ini->GetBoolValue(Name(), VAR_NAME(move_item_on_ctrl_click), true);
 
 	flash_window_on_pm = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_pm), true);
 	flash_window_on_party_invite = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_party_invite), true);
@@ -270,6 +271,8 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	if (select_with_chat_doubleclick) GW::Chat::SetChatEventCallback(&ChatEventCallback);
 	if (auto_url) GW::Chat::SetSendChatCallback(&SendChatCallback);
 	if (flash_window_on_pm) GW::Chat::SetWhisperCallback(&WhisperCallback);
+	if (move_item_on_ctrl_click) GW::Items::SetOnItemClick(GameSettings::ItemClickCallback);
+
 }
 
 void GameSettings::SaveSettings(CSimpleIni* ini) {
@@ -286,6 +289,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(openlinks), openlinks);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_url), auto_url);
 	ini->SetBoolValue(Name(), VAR_NAME(select_with_chat_doubleclick), select_with_chat_doubleclick);
+	ini->SetBoolValue(Name(), VAR_NAME(move_item_on_ctrl_click), move_item_on_ctrl_click);
 
 	ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_pm), flash_window_on_pm);
 	ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_party_invite), flash_window_on_party_invite);
@@ -303,7 +307,7 @@ void GameSettings::DrawSettingInternal() {
 
 	ImGui::Checkbox("Show chat messages timestamp. Color:", &GW::Chat::ShowTimestamps);
 	ImGui::SameLine();
-	
+
 	ImVec4 col = ImGui::ColorConvertU32ToFloat4(GW::Chat::TimestampsColor);
 	if (ImGui::ColorEdit4("Color:", &col.x, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel)) {
 		GW::Chat::TimestampsColor = ImGui::ColorConvertFloat4ToU32(col);
@@ -337,6 +341,10 @@ void GameSettings::DrawSettingInternal() {
 	}
 	ImGui::ShowHelp("Double clicking on the author of a message in chat will target the author");
 
+	if (ImGui::Checkbox("Move items from/to storage with Control+Click", &move_item_on_ctrl_click)) {
+		GW::Items::SetOnItemClick(GameSettings::ItemClickCallback);
+	}
+
 	ImGui::Text("Flash Guild Wars taskbar icon when:");
 	ImGui::Indent();
 	ImGui::ShowHelp("Only triggers when Guild Wars is not the active window");
@@ -349,8 +357,8 @@ void GameSettings::DrawSettingInternal() {
 
 	ImGui::Checkbox("Allow window restore", &focus_window_on_zoning);
 	ImGui::ShowHelp("When enabled, GWToolbox++ can automatically restore\n"
-					"the window from a minimized state when important events\n"
-					"occur, such as entering instances.");
+		"the window from a minimized state when important events\n"
+		"occur, such as entering instances.");
 
 	ImGui::Checkbox("Automatically set 'Away' after ", &auto_set_away);
 	ImGui::SameLine();
@@ -380,7 +388,7 @@ void GameSettings::ApplyBorderless(bool borderless) {
 }
 
 void GameSettings::Update(float delta) {
-	if (auto_set_away 
+	if (auto_set_away
 		&& TIMER_DIFF(activity_timer) > auto_set_away_delay * 60000
 		&& GW::FriendListMgr::GetMyStatus() == (DWORD)GW::Constants::OnlineStatus::ONLINE) {
 		GW::FriendListMgr::SetFriendListStatus(GW::Constants::OnlineStatus::AWAY);
@@ -461,7 +469,7 @@ void GameSettings::UpdateBorderless() {
 	}
 
 	DWORD current_style = GetWindowLong(GW::MemoryMgr::GetGWWindowHandle(), GWL_STYLE);
-	DWORD new_style = borderless ? WS_POPUP | WS_VISIBLE | WS_MAXIMIZEBOX |WS_MINIMIZEBOX | WS_CLIPSIBLINGS
+	DWORD new_style = borderless ? WS_POPUP | WS_VISIBLE | WS_MAXIMIZEBOX | WS_MINIMIZEBOX | WS_CLIPSIBLINGS
 		: WS_SIZEBOX | WS_SYSMENU | WS_CAPTION | WS_VISIBLE | WS_MAXIMIZEBOX | WS_MINIMIZEBOX | WS_CLIPSIBLINGS;
 
 	//printf("old 0x%X, new 0x%X\n", current_style, new_style);
@@ -499,8 +507,8 @@ bool GameSettings::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 	return false;
 }
 
-void GameSettings::ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag)
-{
+void GameSettings::ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag) {
+	if (!GameSettings::Instance().move_item_on_ctrl_click) return;
 	// ImGui::IsKeyDown doesn't work (probably unitialize value)
 	if (!(GetKeyState(VK_CONTROL) & 0x8000)) return;
 	if (type != 7) return;

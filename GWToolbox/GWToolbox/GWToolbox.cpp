@@ -8,17 +8,7 @@
 
 #include <GWCA\GWCA.h>
 #include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\CameraMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\Managers\EffectMgr.h>
-#include <GWCA\Managers\FriendListMgr.h>
-#include <GWCA\Managers\GuildMgr.h>
-#include <GWCA\Managers\ItemMgr.h>
 #include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\MerchantMgr.h>
-#include <GWCA\Managers\PartyMgr.h>
-#include <GWCA\Managers\PlayerMgr.h>
-#include <GWCA\Managers\SkillbarMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Managers\Render.h>
 
@@ -96,8 +86,6 @@ DWORD __stdcall ThreadEntry(LPVOID) {
 	Log::InitializeChat();
 
 	Log::Log("Installed chat hooks\n");
-
-	GW::Items::SetOnItemClick(GameSettings::ItemClickCallback);
 
 	GW::HookBase::EnableHooks();
 
