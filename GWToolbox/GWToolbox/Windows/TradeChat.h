@@ -1,42 +1,44 @@
 #pragma once
 
 #include <easywsclient\easywsclient.hpp>
-#include <json.hpp>
 
-#include <thread>
-#include <cstdlib>
-#include <iostream>
-#include <list>
+#include <vector>
+#include <stdint.h>
 
 class TradeChat {
 public:
 	TradeChat();
 	~TradeChat();
 
-	std::vector <nlohmann::json> messages;
-	std::vector <nlohmann::json> new_messages;
+    struct Message {
+        std::string timestamp;
+        std::string name;
+        std::string message;
+    };
+
+    void connect();
+    void close();
 
 	void search(std::string);
-	void fetch();
-	void stop();
-	bool is_active();
-	bool is_connecting();
-	bool is_timed_out();
+    void fetchAll();
+    void dismiss();
+
+    std::vector<Message> messages;
+    std::vector<Message> queries;
 private:
-	enum Connection : unsigned int {
-		not_connected,
+	enum Status {
+		disconnected,
 		connecting,
 		connected,
 		timeout,
 	};
-	easywsclient::WebSocket::pointer ws = nullptr;
-	Connection status = not_connected;
-	int reconnect_attempt_max = 3;
-	size_t max_messages = 100; // size_t fixes unsigned/signed warning when comparing to vector.size()
-	std::thread connector;
-	std::string base_uri = "wss://kamadan.decltype.org/ws/";
 
-	void disconnect();
-	void WSA_prereq();
+    void onMessage(const std::string& msg);
+
+	easywsclient::WebSocket *ws;
+	Status status = disconnected;
+
+    bool search_pending = false;
+
 	std::string ReplaceString(std::string, const std::string&, const std::string&);
 };

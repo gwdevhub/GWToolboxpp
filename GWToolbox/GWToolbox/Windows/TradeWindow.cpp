@@ -21,9 +21,8 @@
 void TradeWindow::Initialize() {
 	ToolboxWindow::Initialize();
 	// used for the alerts
-	all_trade = new TradeChat();
-	// used for the window
-	trade_searcher = new TradeChat();
+	connection = new TradeChat();
+    connection->connect();
 }
 
 // https://stackoverflow.com/questions/5343190/how-do-i-replace-all-instances-of-a-string-with-another-string
@@ -34,6 +33,8 @@ std::string TradeWindow::ReplaceString(std::string subject, const std::string& s
 		pos += replace.length();
 	}
 	return subject;
+	alert_ini = new CSimpleIni(false, false, false);
+	alert_ini->LoadFile(Resources::GetPath(ini_filename).c_str());
 }
 
 void TradeWindow::DrawSettingInternal() {
@@ -41,68 +42,28 @@ void TradeWindow::DrawSettingInternal() {
 }
 
 void TradeWindow::Update(float delta) {
-	all_trade->fetch();
-
-	if (!all_trade->is_active() && (alerts.size() > 0 || alert_all)) {
-		all_trade->search("");
-	}
-	else if (all_trade->is_active() && alerts.size() == 0 && !alert_all) {
-		all_trade->stop();
-	}
-	if (!visible && trade_searcher->is_active()) {
-		trade_searcher->stop();
-	}
-	else if (visible && trade_searcher->is_timed_out()) {
-		trade_searcher->search(search_buffer);
-	}
-
-	if (trade_searcher->is_active()) {
-		trade_searcher->fetch();
-	} 
-	
 	// do not display trade chat while in kamadan AE district 1
 	if (GW::Map::GetMapID() == GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost &&
 		GW::Map::GetDistrict() == 1 &&
 		GW::Map::GetRegion() == GW::Constants::Region::America) {
+
+        connection->dismiss();
 		return;
 	}
-	std::string message;
-	std::string final_chat_message;
-	for (unsigned int i = 0; i < all_trade->new_messages.size(); i++) {
-		message = all_trade->new_messages.at(i)["message"].dump();
-		std::transform(message.begin(), message.end(), message.begin(), ::tolower);
-		// actual trade chat message
-		std::string chat_message = all_trade->new_messages.at(i)["message"].get<std::string>();
-		// do not know how to escape '<' and '>' that people include in their chat messages
-		// they get taken as tags by GW, so we must remove them
-		chat_message = ReplaceString(chat_message, "<", "");
-		chat_message = ReplaceString(chat_message, ">", "");
-		final_chat_message = "<c=#" + chat_color + "><a=1>" + all_trade->new_messages.at(i)["name"].get<std::string>() +
-			"</a>: " + chat_message + "</c>";
 
-		if (alert_all) {
-			GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, final_chat_message.c_str());
-		} else {
-			// check user-defined alerts
-			for (std::string a : alerts) {
-				// ensure the alert isnt empty
-				if (strncmp(a.c_str(), "", 128)) {
-					// check if the trade message matches the keyword, or if the alert matches the all messages keyword
-					if (message.find(a) != std::string::npos || alert_all) {
-						GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, final_chat_message.c_str());
-						// break to stop multiple alerts triggering the same message
-						break;
-					}
-				}
-			}
-		}
+    connection->fetchAll();
+    char buffer[256];
+
+	for (auto &msg : connection->messages) {
+        snprintf(buffer, 256, "<c=#f96677>%s</c>", msg.message.c_str());
+        GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, buffer);
 	}
 }
 
 void TradeWindow::Draw(IDirect3DDevice9* device) {
-	if (!visible) { return; }
+	if (!visible) return;
 	// start the trade_searcher if its not active
-	if (!trade_searcher->is_active() && !trade_searcher->is_timed_out()) trade_searcher->search("");
+	// if (!trade_searcher->is_active() && !trade_searcher->is_timed_out()) trade_searcher->search("");
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
@@ -111,26 +72,27 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		/* Search bar header */
 		ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 80.0f - 80.0f - 80.0f - ImGui::GetStyle().ItemInnerSpacing.x * 6));
 		if (ImGui::InputText("", search_buffer, 256, ImGuiInputTextFlags_EnterReturnsTrue)) {
-			trade_searcher->search(search_buffer);
+			connection->search(search_buffer);
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Search", ImVec2(80.0f, 0))) {
-			trade_searcher->search(search_buffer);
+			connection->search(search_buffer);
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Clear", ImVec2(80.0f, 0))) {
 			strncpy(search_buffer, "", 256);
-			trade_searcher->search("");
+			connection->search("");
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Alerts", ImVec2(80.0f, 0))) {
 			show_alert_window = true;
 		}
 
+#if 0
 		/* Main trade chat area */
 		ImGui::BeginChild("trade_scroll", ImVec2(0, -20.0f - ImGui::GetStyle().ItemInnerSpacing.y));
 		/* Connection checks */
-		if (trade_searcher->is_timed_out()) {
+		if (0 /* trade_searcher.is_timed_out() */) {
 			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("The connection to kamadan.decltype.com has timed out.").x) / 2);
 			ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
 			ImGui::Text("The connection to kamadan.decltype.com has timed out.");
@@ -141,7 +103,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			ImGui::End();
 			ImGui::End();
 			return;
-		} else if (trade_searcher->is_connecting()) {
+		} else if (0 /* trade_searcher.is_connecting() */) {
 			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Connecting...").x)/2);
 			ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
 			ImGui::Text("Connecting...");
@@ -236,6 +198,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			ImGui::End();
 		}
 		ImGui::PopTextWrapPos();
+#endif
 	}
 	ImGui::End();
 }
@@ -302,7 +265,7 @@ void TradeWindow::ParseBuffer(const char* buf, std::set<std::string>& words) {
 }
 
 void TradeWindow::Terminate() {
-	all_trade->stop();
-	trade_searcher->stop();
+	// all_trade.stop();
+	// trade_searcher.stop();
 	ToolboxWindow::Terminate();
 }

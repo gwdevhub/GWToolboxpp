@@ -1,30 +1,19 @@
 #include "TradeChat.h"
 
-#include <iostream>
-#include <thread>
 #include <string>
 #include <algorithm>
+#include <functional>
+
 #include <WinSock2.h>
 
 #include <logger.h>
+#include <json.hpp>
 
-TradeChat::TradeChat() {
-	WSA_prereq();
-}
+using namespace easywsclient;
+using namespace nlohmann;
 
-// strange name as I didn't want to overlap any existing WSA function names
-void TradeChat::WSA_prereq() {
-	INT rc;
-	WSADATA wsaData;
+using json_vec = std::vector<json>;
 
-	rc = WSAStartup(MAKEWORD(2, 2), &wsaData);
-	if (rc) {
-		printf("WSAStartup Failed.\n");
-		return;
-	}
-}
-
-// https://stackoverflow.com/questions/5343190/how-do-i-replace-all-instances-of-a-string-with-another-string
 std::string TradeChat::ReplaceString(std::string subject, const std::string& search, const std::string& replace) {
 	size_t pos = 0;
 	while ((pos = subject.find(search, pos)) != std::string::npos) {
@@ -34,80 +23,112 @@ std::string TradeChat::ReplaceString(std::string subject, const std::string& sea
 	return subject;
 }
 
-void TradeChat::search(std::string search_string) {
-	// don't spam connection
-	if (status == connecting) return;
-	// encode spaces for url
-	search_string = ReplaceString(search_string, " ", "%20");
-	disconnect();
-	messages.clear();
-	status = connecting;
-
-	connector = std::thread([this, search_string]() {
-		std::string uri_with_search = search_string.empty() ? base_uri : base_uri + "search/" + search_string;
-		// try reconnects if initial connection doesnt work
-		for (int i = 0; i < reconnect_attempt_max && this->ws == nullptr; i++) {
-			this->ws = easywsclient::WebSocket::from_url(uri_with_search);
-		}
-		this->status = this->ws != nullptr ? connected : timeout;
-	});
+TradeChat::TradeChat() {
+	WSADATA wsaData;
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+        printf("[Error] Couldn't initialize Winsock2 (%lu)\n", WSAGetLastError());
+        return;
+    }
 }
 
-void TradeChat::fetch(){
-	if (status != connected) return;
-	new_messages.clear();
-	ws->poll();
-	ws->dispatch([this](const std::string & message) {
-		// get json from message
-		nlohmann::json chat_json = nlohmann::json::parse(message.c_str());
-		if (chat_json.is_object()) {
-			// bulk messages
-			if (chat_json["results"].is_array()) {
-				for (nlohmann::json::iterator it = chat_json["results"].begin(); it != chat_json["results"].end(); ++it) {
-					messages.push_back(*it);
-				}
-			}
-			// single message
-			else {
-				new_messages.insert(new_messages.begin(), chat_json);
-				messages.insert(messages.begin(), chat_json);
-			}
-		}
-		// prune old messages
-		while (messages.size() > max_messages) {
-			messages.pop_back();
-		}
-	});
+void TradeChat::connect() {
+    const char host[] = "wss://kamadan.decltype.org/ws/";
+    if (!(ws = WebSocket::from_url(host))) {
+        printf("Couldn't connect to the host '%s'", host);
+        return;
+    }
+
+    status = connected;
 }
 
-void TradeChat::disconnect() {
-	if (status != not_connected) {
-		Log::Log("Destroying connection to trade chat\n");
-		delete ws;
-		ws = nullptr;
-		connector.join();
-		status = not_connected;
-	}
+void TradeChat::close() {
+    if (ws != NULL) {
+        ws->close();
+        ws = NULL;
+    }
+    status = disconnected;
 }
 
-void TradeChat::stop() {
-	while (status == connecting) {}
-	disconnect();
-	WSACleanup();
+void TradeChat::search(std::string query) {
+    static std::string search_uri = "wss://kamadan.decltype.org/ws/search";
+
+    if (search_pending)
+        return;
+    search_pending = true;
+    
+    // This function has terrible performance.
+	query = ReplaceString(query, " ", "%20");
+	std::string uri = search_uri + query;
+
+    /*
+     * The protocol is the following:
+     *  - From a connected web socket, we send a Json formated packet with the format
+     *  {
+     *   "query":  str($query$),
+     *   "offset": int($page$),
+     *   "sugest": int(1 or 2)
+     *  }
+     */
+
+    json request;
+    request["query"] = query;
+    request["offset"] = 0;
+    request["suggest"] = 0;
+    ws->send(request.dump());
 }
 
-bool TradeChat::is_active() {
-	return status != not_connected;
+static void do_nothing(const std::string& msg)
+{
 }
 
-bool TradeChat::is_connecting() {
-	return status == connecting;
+void TradeChat::dismiss() {
+    assert(ws && ws->getReadyState() == WebSocket::OPEN);
+    ws->poll();
+    ws->dispatch(do_nothing);
 }
 
-bool TradeChat::is_timed_out() {
-	return status == timeout;
+void TradeChat::fetchAll() {
+    assert(ws && ws->getReadyState() == WebSocket::OPEN);
+
+    messages.clear();
+    ws->poll();
+    ws->dispatch(std::bind(&TradeChat::onMessage, this, std::placeholders::_1));
+}
+
+static TradeChat::Message parse_json_message(json js)
+{
+    TradeChat::Message msg;
+    msg.name = js["name"].get<std::string>();
+    msg.message = js["message"].get<std::string>();
+    msg.timestamp = js["timestamp"].get<std::string>();
+    return msg;
+}
+
+void TradeChat::onMessage(const std::string& msg) {
+    json res = json::parse(msg);
+
+    if (res.find("query") == res.end()) {
+        // TODO: Handle op, etc etc...
+        Message msg = parse_json_message(res);
+        messages.push_back(msg);
+        return;
+    }
+    
+    search_pending = false;
+    if (res.find("results") == res.end())
+        return;
+
+    json_vec results = res["results"].get<json_vec>();
+    queries.clear();
+    queries.reserve(results.size());
+
+    for (auto &it : results) {
+        Message msg = parse_json_message(it);
+        queries.push_back(msg);
+    }
 }
 
 TradeChat::~TradeChat() {
-	stop();
+    close();
+    WSACleanup();
 }

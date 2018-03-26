@@ -55,8 +55,8 @@ private:
 	wchar_t* alertfilename = L"AlertKeywords.txt";
 	std::set<std::string> alerts;
 	bool show_alert_window = false;
-	TradeChat* all_trade = nullptr;
-	TradeChat* trade_searcher = nullptr;
+
+	TradeChat *connection = nullptr;
 
 	std::string alerts_tooltip = \
 		"Trade messages with matched keywords will be send to the Guild Wars chat.\n" \
