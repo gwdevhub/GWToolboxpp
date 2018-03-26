@@ -37,7 +37,6 @@ public:
 
 	Status status = disconnected;
     CircularBuffer<Message> messages;
-    std::vector<Message> queries;
 
 private:
     std::thread thread;
