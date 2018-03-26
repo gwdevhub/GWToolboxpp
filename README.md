@@ -4,6 +4,9 @@
 
 [https://haskha.github.io/GWToolboxpp/](https://haskha.github.io/GWToolboxpp/)
 
+## Announcement
+A recent game update broke compatibility of APIs such as the included dependency and subrepository 'GWCA'. GWCA has been fixed, but its authors and I decided to keep the fixes private in order to not ease and promote botting. GWCA is currently private. This means that **you are not currently able to successfully compile GWToolbox**. I apologize for the inconvenience. The author is working on re-releasing GWCA publicly as headers and compiled .lib. When that happens, you will be able once again to compile your own GWToolbox. 
+
 ## How to download and run
 1. Clone *recursively* the repository. On command line, use: `git clone --recursive https://github.com/HasKha/GWToolboxpp.git`.
 2. Open GWToolboxpp.sln with Visual Studio. Toolbox is developed under VS2015, but earlier or later versions should work too.
