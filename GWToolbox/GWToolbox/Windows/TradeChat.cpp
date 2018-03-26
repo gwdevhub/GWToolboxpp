@@ -14,7 +14,7 @@ using namespace nlohmann;
 
 using json_vec = std::vector<json>;
 
-TradeChat::TradeChat() {
+TradeChat::TradeChat() : messages(50) {
 	WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
         printf("[Error] Couldn't initialize Winsock2 (%lu)\n", WSAGetLastError());
@@ -105,7 +105,6 @@ void TradeChat::fetchAll() {
         return;
     }
 
-    messages.clear();
     ws->poll();
     ws->dispatch(std::bind(&TradeChat::onMessage, this, std::placeholders::_1));
 }
@@ -125,7 +124,7 @@ void TradeChat::onMessage(const std::string& msg) {
     if (res.find("query") == res.end()) {
         // TODO: Handle op, etc etc...
         Message msg = parse_json_message(res);
-        messages.push_back(msg);
+        messages.add(msg);
         return;
     }
     
@@ -134,9 +133,8 @@ void TradeChat::onMessage(const std::string& msg) {
         return;
 
     json_vec results = res["results"].get<json_vec>();
-    queries.clear();
-    queries.reserve(results.size());
 
+    queries.reserve(results.size());
     for (auto &it : results) {
         Message msg = parse_json_message(it);
         queries.push_back(msg);

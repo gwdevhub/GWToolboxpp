@@ -5,6 +5,7 @@
 #include <vector>
 #include <thread>
 #include <stdint.h>
+#include <CircurlarBuffer.h>
 
 class TradeChat {
 public:
@@ -32,7 +33,7 @@ public:
     void dismiss();
 
 	Status status = disconnected;
-    std::vector<Message> messages;
+    CircularBuffer<Message> messages;
     std::vector<Message> queries;
 
 private:

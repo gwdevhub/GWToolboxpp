@@ -53,9 +53,10 @@ void TradeWindow::Update(float delta) {
     connection->fetchAll();
     char buffer[256];
 
-	for (auto &msg : connection->messages) {
-        snprintf(buffer, 256, "<c=#f96677>%s</c>", msg.message.c_str());
-        GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, buffer);
+	for (size_t i = 0; i < connection->messages.size(); i++) {
+        auto &msg = connection->messages[i];
+        // snprintf(buffer, 256, "<c=#f96677>%s</c>", msg.message.c_str());
+        // GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, buffer);
 	}
 }
 

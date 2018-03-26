@@ -278,6 +278,7 @@
     <ClInclude Include="..\Dependencies\easywsclient\easywsclient.hpp">
       <Filter>Windows\Trade</Filter>
     </ClInclude>
+    <ClInclude Include="GWToolbox\CircurlarBuffer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />

@@ -110,6 +110,7 @@
     <ClInclude Include="..\Dependencies\imgui\stb_rect_pack.h" />
     <ClInclude Include="..\Dependencies\imgui\stb_textedit.h" />
     <ClInclude Include="..\Dependencies\imgui\stb_truetype.h" />
+    <ClInclude Include="GWToolbox\CircurlarBuffer.h" />
     <ClInclude Include="GWToolbox\Color.h" />
     <ClInclude Include="GWToolbox\CursorFix.h" />
     <ClInclude Include="GWToolbox\Defines.h" />
