@@ -47,8 +47,6 @@ void TradeWindow::Initialize() {
 		}
 	});
 
-	// Add an option here.
-	print_game_chat = true;
 	if (print_game_chat) AsyncChatConnect();
 }
 
@@ -193,6 +191,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 	ImGui::SetNextWindowSize(ImVec2(700, 400), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
 		/* Search bar header */
+		static char search_buffer[256];
 		ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 80.0f - 80.0f - 80.0f - ImGui::GetStyle().ItemInnerSpacing.x * 6));
 		if (ImGui::InputText("", search_buffer, 256, ImGuiInputTextFlags_EnterReturnsTrue)) {
 			search(search_buffer);
@@ -214,7 +213,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		/* Main trade chat area */
 		ImGui::BeginChild("trade_scroll", ImVec2(0, -20.0f - ImGui::GetStyle().ItemInnerSpacing.y));
 		/* Connection checks */
-		if (!ws_window) {
+		if (!ws_window && !ws_window_connecting) {
 			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("The connection to kamadan.decltype.com has timed out.").x) / 2);
 			ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
 			ImGui::Text("The connection to kamadan.decltype.com has timed out.");
@@ -222,7 +221,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			if (ImGui::Button("Click to reconnect")) {
 				AsyncWindowConnect();
 			}
-		} else if (ws_window_connecting || ws_window->getReadyState() == WebSocket::CONNECTING) {
+		} else if (ws_window_connecting || (ws_window && ws_window->getReadyState() == WebSocket::CONNECTING)) {
 			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Connecting...").x)/2);
 			ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
 			ImGui::Text("Connecting...");
@@ -303,20 +302,29 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		if (show_alert_window) {
 			ImGui::SetNextWindowSize(ImVec2(250, 220), ImGuiCond_FirstUseEver);
 			if (ImGui::Begin("Trade Alerts", &show_alert_window)) {
-				ImGui::Text("Alerts");
-				ImGui::ShowHelp(alerts_tooltip.c_str());
-				ImGui::Checkbox("Print in game chat", &print_game_chat);
-				ImGui::Checkbox("Only include messages containing:", &filter_alerts);
-
-				if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE, ImVec2(-1.0f, -1.0f))) {
-					alert_words = ParseBuffer(alert_buf);
-					alertfile_dirty = true;
-				}
+				DrawAlertsWindowContent(true);
 			}
 			ImGui::End();
 		}
 	}
 	ImGui::End();
+}
+
+void TradeWindow::DrawAlertsWindowContent(bool ownwindow) {
+	ImGui::Text("Alerts");
+	ImGui::Checkbox("Send Kamadan ad1 trade chat to your trade chat", &print_game_chat);
+	ImGui::Checkbox("Only show messages containing:", &filter_alerts);
+	ImGui::TextDisabled("(Each line is a separate keyword. Not case sensitive.)");
+	if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE, 
+		ImVec2(-1.0f, ownwindow ? -1.0f : 0.0f))) {
+
+		alert_words = ParseBuffer(alert_buf);
+		alertfile_dirty = true;
+	}
+}
+
+void TradeWindow::DrawSettingInternal() {
+	DrawAlertsWindowContent(false);
 }
 
 void TradeWindow::LoadSettings(CSimpleIni* ini) {

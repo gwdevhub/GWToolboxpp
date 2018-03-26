@@ -31,6 +31,7 @@ public:
 
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
+	void DrawSettingInternal() override;
 
 private:
     struct Message {
@@ -39,22 +40,22 @@ private:
         std::string message;
     };
 
-	// Search bar in trade window
-	char search_buffer[256];
-
 	bool show_alert_window = false;
 
-	#define ALERT_BUF_SIZE 1024 * 16
-	char alert_buf[ALERT_BUF_SIZE];
-	// enable when the alert_buf was modified
-	bool alertfile_dirty = false;
+	// if we need to print in the chat
+	bool print_game_chat = false;
 
 	// if enable, we won't print the messages containing word from alert_words
 	bool filter_alerts = false;
+
+	#define ALERT_BUF_SIZE 1024 * 16
+	char alert_buf[ALERT_BUF_SIZE];
+	// set when the alert_buf was modified
+	bool alertfile_dirty = false;
+
 	std::vector<std::string> alert_words;
 
-    // if we need to print in the chat
-    bool print_game_chat = false;
+	void DrawAlertsWindowContent(bool ownwindow);
 
     // Since we are connecting in an other thread, the following attributes/methods avoid spamming connection requests
     void AsyncChatConnect();
@@ -76,11 +77,6 @@ private:
 	std::queue<std::function<void()>> thread_jobs;
     bool should_stop = false;
 	std::thread worker;
-
-	std::string alerts_tooltip = \
-		"Trade messages with matched keywords will be send to the Guild Wars Trade chat.\n" \
-		"Each line is a new keyword and the keywords are not case sensitive.\n" \
-		"The Trade checkbox in the Guild Wars chat must be selected for messages to show up.\n";
 
 	std::vector<std::string> ParseBuffer(const char *text);
 	std::vector<std::string> ParseBuffer(std::fstream stream);
