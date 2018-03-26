@@ -514,7 +514,7 @@ void ChatCommands::CmdCamera(int argc, LPWSTR *argv) {
 			GW::CameraMgr::UnlockCam(false);
 		} else if (arg1 == L"unlock") {
 			GW::CameraMgr::UnlockCam(true);
-			Log::Info("Use Q/E, A/D, W/S, X/Z for camera movement");
+			Log::Info("Use Q/E, A/D, W/S, X/Z, R and arrows for camera movement");
 		} else if (arg1 == L"fog") {
 			if (argc == 3) {
 				std::wstring arg2 = GuiUtils::ToLower(argv[2]);
