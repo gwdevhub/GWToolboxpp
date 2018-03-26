@@ -50,13 +50,15 @@ void TradeWindow::Update(float delta) {
 		return;
 	}
 
-    connection->fetchAll();
     char buffer[256];
+    connection->fetchAll();
 
-	for (size_t i = 0; i < connection->messages.size(); i++) {
+    size_t size = connection->messages.size();
+    assert(connection->append_count < size);
+	for (size_t i = size - connection->append_count; i < size; i++) {
         auto &msg = connection->messages[i];
-        // snprintf(buffer, 256, "<c=#f96677>%s</c>", msg.message.c_str());
-        // GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, buffer);
+        snprintf(buffer, 256, "<c=#f96677>%s</c>", msg.message.c_str());
+        GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, buffer);
 	}
 }
 
@@ -117,7 +119,8 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			const float playernamewidth = 160.0f;
 			const float message_left = playername_left + playernamewidth + innerspacing;
 
-			for (unsigned int i = 0; i < connection->messages.size(); i++) {
+            size_t size = connection->messages.size();
+			for (unsigned int i = size - 1; i < size; i--) {
                 TradeChat::Message &msg = connection->messages[i];
 				ImGui::PushID(i);
 

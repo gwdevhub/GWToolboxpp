@@ -29,8 +29,11 @@ public:
     void close();
 
 	void search(std::string);
-    void fetchAll();
     void dismiss();
+    void fetchAll();
+
+    // temp: used to print only the new message to the char.
+    size_t append_count;
 
 	Status status = disconnected;
     CircularBuffer<Message> messages;

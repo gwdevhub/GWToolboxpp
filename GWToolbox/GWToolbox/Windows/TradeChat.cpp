@@ -107,6 +107,7 @@ void TradeChat::fetchAll() {
         return;
     }
 
+    append_count = 0;
     ws->poll();
     ws->dispatch(std::bind(&TradeChat::onMessage, this, std::placeholders::_1));
 }
@@ -127,6 +128,7 @@ void TradeChat::onMessage(const std::string& msg) {
         // TODO: Handle op, etc etc...
         Message msg = parse_json_message(res);
         messages.add(msg);
+        append_count += 1;
         return;
     }
     
@@ -140,8 +142,8 @@ void TradeChat::onMessage(const std::string& msg) {
     json_vec results = res["results"].get<json_vec>();
     if (res["query"].get<std::string>() == "") {
         messages.clear();
-        for (auto& it : results) {
-            Message msg = parse_json_message(it);
+        for (auto it = results.rbegin(); it != results.rend(); it++) {
+            Message msg = parse_json_message(*it);
             messages.add(msg);
         }
     } else {
