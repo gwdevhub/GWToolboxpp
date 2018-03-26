@@ -7,6 +7,23 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
+## Version 2.9
+* [Fix] Fixed toolbox functionality after March 23 2018 game update.
+* [New] Added a new Trade chat window containing Kamadan Trade Chat. Powered by `https://kamadan.decltype.org/`.
+* [New] Added a Soul Tormentor counter to the Info window. 
+* [New] Improved camera unlock movement functionality and added an option to keep camera height fixed while moving.
+* [New] Minimap targeting (Control+Click) now ignores all but the targetable minipets.
+* [New] Added an option to move items to/from chest by Control+click.
+* [New] Added an option to maintain `/cam fov` after a map change.
+* [New] Each `/useskill` will now reset the skills to use, not add to the previous ones.
+* [Fix] Fixed `/flag` functionality. Added `/flag all` and `/flag clear`. 
+* [Fix] Fixed a bug where hero flags would not show in the minimap. Reduced size of the circle of individual hero flag. 
+* [Fix] Fixed a bug where settings would not be loaded/saved properly on systems with a username containing non-standard characters.
+* [Fix] Fixed a bug where pcons would sometimes not be used if the player had no other effects. 
+* [Fix] Fixed a crash bug when sending Hero Builds to <No Hero>.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.9_Release/GWToolbox.dll)
+
 ## Version 2.8
 * [Fix] Fixed a crash bug in the hero build window. 
 
