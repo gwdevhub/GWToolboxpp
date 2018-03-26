@@ -2,7 +2,7 @@
 layout: default
 ---
 
-> IMPORTANT: Toolbox version 2.9 is released, however since usually the update is performed by toolbox itself, which probably crashes your game, you'll have to update manually. To do so, download the new GWToolbox.dll from [https://github.com/HasKha/GWToolboxpp/releases/tag/2.9_Release]() and replace your file in `C:\Users\%USERNAME%\AppData\Local\GWToolboxpp`.
+> IMPORTANT: Toolbox version 2.9 is released, however since usually the update is performed by toolbox itself, which probably crashes your game, you'll have to update manually. To do so, download the new GWToolbox.dll from [here](https://github.com/HasKha/GWToolboxpp/releases/tag/2.9_Release) and replace your file in `C:\Users\%USERNAME%\AppData\Local\GWToolboxpp`. Make sure to check the patch notes there as well!
 
 # What is GWToolbox++?
 GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancements for the original Guild Wars. It adds features that should exist in a modern game and tools to visualize information and improve the player experience.
