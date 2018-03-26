@@ -54,7 +54,7 @@ private:
 	std::vector<std::string> alert_words;
 
     // if we need to print in the chat
-    bool print_chat = false;
+    bool print_game_chat = false;
 
     // Since we are connecting in an other thread, the following attributes/methods avoid spamming connection requests
     void AsyncChatConnect();

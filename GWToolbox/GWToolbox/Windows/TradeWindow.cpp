@@ -48,12 +48,12 @@ void TradeWindow::Initialize() {
 	});
 
 	// Add an option here.
-	print_chat = true;
-	if (print_chat) AsyncChatConnect();
+	print_game_chat = true;
+	if (print_game_chat) AsyncChatConnect();
 }
 
 void TradeWindow::Update(float delta) {
-	if (!print_chat) return;
+	if (!print_game_chat) return;
 
 	if (ws_chat && ws_chat->getReadyState() == WebSocket::CLOSED) {
 		delete ws_chat;
@@ -215,9 +215,6 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			if (ImGui::Button("Click to reconnect")) {
 				AsyncWindowConnect();
 			}
-			ImGui::End();
-			ImGui::End();
-			return;
 		} else if (ws_window->getReadyState() == WebSocket::CONNECTING) {
 			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Connecting...").x)/2);
 			ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
@@ -301,7 +298,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			if (ImGui::Begin("Trade Alerts", &show_alert_window)) {
 				ImGui::Text("Alerts");
 				ImGui::ShowHelp(alerts_tooltip.c_str());
-				ImGui::Checkbox("Print in game chat", &print_chat);
+				ImGui::Checkbox("Print in game chat", &print_game_chat);
 				ImGui::Checkbox("Only include messages containing:", &filter_alerts);
 
 				if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE, ImVec2(-1.0f, -1.0f))) {
@@ -317,7 +314,8 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 
 void TradeWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxWindow::LoadSettings(ini);
-	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
+	print_game_chat = ini->GetBoolValue(Name(), VAR_NAME(print_game_chat), false);
+	filter_alerts   = ini->GetBoolValue(Name(), VAR_NAME(filter_alerts), false);
 
 	std::ifstream alert_file;
 	alert_file.open(Resources::GetPath(L"AlertKeywords.txt"));
@@ -332,6 +330,9 @@ void TradeWindow::LoadSettings(CSimpleIni* ini) {
 
 void TradeWindow::SaveSettings(CSimpleIni* ini) {
 	ToolboxWindow::SaveSettings(ini);
+
+	ini->SetBoolValue(Name(), VAR_NAME(print_game_chat), print_game_chat);
+	ini->SetBoolValue(Name(), VAR_NAME(filter_alerts), filter_alerts);
 
 	if (alertfile_dirty) {
 		std::ofstream bycontent_file;
