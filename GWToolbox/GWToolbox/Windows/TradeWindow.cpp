@@ -40,6 +40,7 @@ void TradeWindow::Initialize() {
 		}
 	});
 
+    // Add an option here.
     print_chat = true;
     if (print_chat) AsyncChatConnect();
 }
@@ -54,33 +55,21 @@ std::string TradeWindow::ReplaceString(std::string subject, const std::string& s
 	return subject;
 }
 
-bool TradeWindow::ToggleVisible() {
-    visible = !visible;
-    if (!visible && ws_window && ws_window->getReadyState() == WebSocket::OPEN) {
-        ws_window->close();
-        delete ws_window;
-        ws_window = nullptr;
-    }
-    return visible;
-};
-
 void TradeWindow::Update(float delta) {
     if (!print_chat) return;
-
-	// do not display trade chat while in kamadan AE district 1
-	if (GW::Map::GetMapID() == GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost &&
-		GW::Map::GetDistrict() == 1 &&
-		GW::Map::GetRegion() == GW::Constants::Region::America) {
-        ws_chat->close();
-        delete ws_chat;
-        ws_chat = nullptr;
-		return;
-	}
 
     if (ws_chat && ws_chat->getReadyState() == WebSocket::CLOSED) {
         delete ws_chat;
         ws_chat = nullptr;
     }
+
+	// do not display trade chat while in kamadan AE district 1
+	if (GW::Map::GetMapID() == GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost &&
+		GW::Map::GetDistrict() == 1 &&
+		GW::Map::GetRegion() == GW::Constants::Region::America) {
+        if (ws_chat) ws_chat->close();
+		return;
+	}
     
     if (!ws_chat && !ws_chat_connecting) {
         AsyncChatConnect();
@@ -171,8 +160,15 @@ void TradeWindow::search(std::string query) {
 }
 
 void TradeWindow::Draw(IDirect3DDevice9* device) {
-	if (!visible) return;
-
+    if (!visible) {
+        if (ws_window) {
+            ws_window->close();
+            delete ws_window;
+            ws_window = nullptr;
+        }
+        return;
+    }
+    
     if (ws_window && ws_window->getReadyState() == WebSocket::CLOSED) {
         delete ws_window;
         ws_window = nullptr;

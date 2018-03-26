@@ -42,8 +42,6 @@ public:
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
 
-    bool ToggleVisible() override;
-
 private:
     struct Message {
         uint32_t    timestamp;
