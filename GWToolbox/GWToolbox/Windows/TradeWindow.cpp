@@ -109,8 +109,6 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			bool show_time = ImGui::GetWindowWidth() > 600.0f;
 
 			char timetext[128];
-			std::string name;
-			std::string message;
 			time_t now = time(nullptr);
 
 			const float innerspacing = ImGui::GetStyle().ItemInnerSpacing.x;
@@ -156,9 +154,9 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 				}
 				if (ImGui::Button(msg.name.c_str(), ImVec2(playernamewidth, 0))) {
 					// open whisper to player
-					GW::GameThread::Enqueue([name]() {
+					GW::GameThread::Enqueue([&msg]() {
 						wchar_t ws[100];
-						swprintf(ws, 100, L"%hs", name.c_str());
+						swprintf(ws, 100, L"%hs", msg.name.c_str());
 						GW::UI::SendUIMessage(GW::UI::kOpenWhisper, ws, nullptr);
 					});
 				}
