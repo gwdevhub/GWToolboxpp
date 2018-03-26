@@ -1,3 +1,4 @@
+#include <WinSock2.h>
 #include "TradeWindow.h"
 
 #include <GWCA\GWCA.h>
@@ -25,6 +26,12 @@ static const char ws_host[] = "wss://kamadan.decltype.org/ws/";
 
 void TradeWindow::Initialize() {
 	ToolboxWindow::Initialize();
+
+	WSADATA wsaData;
+	if (WSAStartup(MAKEWORD(2, 2), &wsaData)) {
+		printf("WSAStartup Failed.\n");
+		return;
+	}
 
 	messages = CircularBuffer<Message>(50);
 
@@ -388,5 +395,6 @@ void TradeWindow::Terminate() {
 	if (worker.joinable()) worker.join();
 	if (ws_chat) delete ws_chat;
 	if (ws_window) delete ws_window;
+	WSACleanup();
 	ToolboxWindow::Terminate();
 }
