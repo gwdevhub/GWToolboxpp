@@ -72,7 +72,7 @@ void AgentRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 	CSimpleIni::TNamesDepend entries;
 	ini->GetAllKeys(colorsSection.c_str(), entries);
 	for (auto& entry : entries) {
-		ini->Delete(entry.pItem, entry.pItem);
+		ini->Delete(colorsSection.c_str(), entry.pItem);
 	}
 
 	// then save again
