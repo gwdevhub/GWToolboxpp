@@ -139,7 +139,7 @@ void AgentRenderer::DrawSettings() {
 	Colors::DrawSetting("Agent modifier", &color_agent_modifier);
 	ImGui::ShowHelp("Each agent has this value removed on the border and added at the center\nZero makes agents have solid color, while a high number makes them appear more shaded.");
 
-	if (ImGui::Button("Add Custom", ImVec2(ImGui::GetWindowContentRegionWidth(), 0))) {
+	if (ImGui::SmallButton("Add Custom")) {
 		colors_custom.push_back(std::pair<DWORD, Color>(0, 0xFFF00000));
 	}
 
@@ -147,6 +147,9 @@ void AgentRenderer::DrawSettings() {
 		ImGui::InputInt("ModelID: ", (int*)&customColor.first);
 		Colors::DrawSetting("", &customColor.second);
 	}
+
+	ImGui::Spacing();
+	ImGui::Spacing();
 
 	ImGui::DragFloat("Default Size", &size_default, 1.0f, 1.0f, 0.0f, "%.0f");
 	ImGui::DragFloat("Player Size", &size_player, 1.0f, 1.0f, 0.0f, "%.0f");
@@ -221,7 +224,7 @@ AgentRenderer::AgentRenderer() : vertices(nullptr) {
 		}
 	}
 
-	colors_custom = std::vector<std::pair<DWORD, Color>>();
+	//colors_custom = std::vector<std::pair<DWORD, Color>>();
 }
 
 void AgentRenderer::Shape_t::AddVertex(float x, float y, AgentRenderer::Color_Modifier mod) {
@@ -395,6 +398,11 @@ Color AgentRenderer::GetColor(GW::Agent* agent) const {
 		default:
 			break;
 		}
+	}
+
+	auto it = std::find_if(colors_custom.cbegin(), colors_custom.cend(), [=](const std::pair<DWORD, Color>& pair) { return pair.first == agent->PlayerNumber; });
+	if (it != colors_custom.cend()) {
+		return it->second;
 	}
 
 	// hostiles
