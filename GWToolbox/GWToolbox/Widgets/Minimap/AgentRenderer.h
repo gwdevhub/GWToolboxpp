@@ -69,6 +69,7 @@ private:
 	Color color_ally_spirit;
 	Color color_ally_minion;
 	Color color_ally_dead;
+	std::vector<std::pair<DWORD, Color>> colors_custom;
 
 	float size_default;
 	float size_player;

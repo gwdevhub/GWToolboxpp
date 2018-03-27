@@ -26,6 +26,17 @@ void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	color_ally_minion = Colors::Load(ini, section, VAR_NAME(color_ally_minion), 0xFF008060);
 	color_ally_dead = Colors::Load(ini, section, VAR_NAME(color_ally_dead), 0x64006400);
 
+	// custom colors are in a section called "Minimap-custom-colors"
+	const auto colorsSection = std::string(section) + std::string("-custom-colors");
+	colors_custom.clear();
+	CSimpleIni::TNamesDepend entries;
+	if (ini->GetAllKeys(colorsSection.c_str(), entries)) {
+		for (auto& entry : entries) {
+			auto color = Colors::Load(ini, colorsSection.c_str(), entry.pItem, 0x00000000);
+			colors_custom.push_back(std::pair<DWORD, Color>(std::atoi(entry.pItem), std::move(color)));
+		}
+	}
+
 	size_default = (float)ini->GetDoubleValue(section, VAR_NAME(size_default), 75.0);
 	size_player = (float)ini->GetDoubleValue(section, VAR_NAME(size_player), 100.0);
 	size_signpost = (float)ini->GetDoubleValue(section, VAR_NAME(size_signpost), 50.0);
@@ -56,6 +67,19 @@ void AgentRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 	Colors::Save(ini, section, VAR_NAME(color_ally_minion), color_ally_minion);
 	Colors::Save(ini, section, VAR_NAME(color_ally_dead), color_ally_dead);
 
+	// clear hotkeys from ini
+	const auto colorsSection = std::string(section) + std::string("-custom-colors");
+	CSimpleIni::TNamesDepend entries;
+	ini->GetAllKeys(colorsSection.c_str(), entries);
+	for (auto& entry : entries) {
+		ini->Delete(entry.pItem, entry.pItem);
+	}
+
+	// then save again
+	for (auto pair : colors_custom) {
+		Colors::Save(ini, colorsSection.c_str(), std::to_string(pair.first).c_str(), pair.second);
+	}
+
 	ini->SetDoubleValue(section, VAR_NAME(size_default), size_default);
 	ini->SetDoubleValue(section, VAR_NAME(size_player), size_player);
 	ini->SetDoubleValue(section, VAR_NAME(size_signpost), size_signpost);
@@ -84,6 +108,7 @@ void AgentRenderer::DrawSettings() {
 		color_ally_spirit = 0xFF608000;
 		color_ally_minion = 0xFF008060;
 		color_ally_dead = 0x64006400;
+		colors_custom.clear();
 		size_default = 75.0f;
 		size_player = 100.0f;
 		size_signpost = 50.0f;
@@ -113,6 +138,15 @@ void AgentRenderer::DrawSettings() {
 	Colors::DrawSetting("Ally (dead)", &color_ally_dead);
 	Colors::DrawSetting("Agent modifier", &color_agent_modifier);
 	ImGui::ShowHelp("Each agent has this value removed on the border and added at the center\nZero makes agents have solid color, while a high number makes them appear more shaded.");
+
+	if (ImGui::Button("Add Custom", ImVec2(ImGui::GetWindowContentRegionWidth(), 0))) {
+		colors_custom.push_back(std::pair<DWORD, Color>(0, 0xFFF00000));
+	}
+
+	for (auto& customColor : colors_custom) {
+		ImGui::InputInt("ModelID: ", (int*)&customColor.first);
+		Colors::DrawSetting("", &customColor.second);
+	}
 
 	ImGui::DragFloat("Default Size", &size_default, 1.0f, 1.0f, 0.0f, "%.0f");
 	ImGui::DragFloat("Player Size", &size_player, 1.0f, 1.0f, 0.0f, "%.0f");
@@ -186,6 +220,8 @@ AgentRenderer::AgentRenderer() : vertices(nullptr) {
 			max_shape_verts = shapes[shape].vertices.size();
 		}
 	}
+
+	colors_custom = std::vector<std::pair<DWORD, Color>>();
 }
 
 void AgentRenderer::Shape_t::AddVertex(float x, float y, AgentRenderer::Color_Modifier mod) {
@@ -243,6 +279,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 		}
 	}
 	// 2. non-player agents
+	std::vector<GW::Agent*> custom_agents;
 	for (size_t i = 0; i < agents.size(); ++i) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
@@ -256,16 +293,44 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 			&& (npcs[agent->PlayerNumber].NpcFlags & 0x10000) > 0) continue;
 		if (target == agent) continue; // will draw target at the end
 
+		bool hasCustomColor = false;
+		for (auto& pair : colors_custom) {
+			if (pair.first == agent->PlayerNumber) {
+				custom_agents.push_back(agent);
+				hasCustomColor = true;
+				break;
+			}
+		}
+
+		if (hasCustomColor)
+			continue;
+
 		Enqueue(agent);
 
 		if (vertices_count >= vertices_max - 16 * max_shape_verts) break;
 	}
-	// 3. target if it's a non-player
+	// 3. custom colored models
+	std::sort(custom_agents.begin(), custom_agents.end(), [&](const GW::Agent* agentA, const GW::Agent* agentB) {
+		for (auto& pair : colors_custom) {
+			if (pair.first == agentA->PlayerNumber)
+				return true;
+			if (pair.first == agentB->PlayerNumber)
+				return false;
+		}
+
+		return false;
+	});
+	for (auto agent : custom_agents) {
+		Enqueue(agent);
+		if (vertices_count >= vertices_max - 16 * max_shape_verts) break;
+	}
+
+	// 4. target if it's a non-player
 	if (target && target->PlayerNumber > 12) {
 		Enqueue(target);
 	}
 
-	// 4. players
+	// 5. players
 	for (size_t i = 0; i < agents.size(); ++i) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
@@ -278,12 +343,12 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 		if (vertices_count >= vertices_max - 4 * max_shape_verts) break;
 	}
 
-	// 5. target if it's a player
+	// 6. target if it's a player
 	if (target && target != player && target->PlayerNumber <= 12) {
 		Enqueue(target);
 	}
 
-	// 6. player
+	// 7. player
 	if (player) {
 		Enqueue(player);
 	}
