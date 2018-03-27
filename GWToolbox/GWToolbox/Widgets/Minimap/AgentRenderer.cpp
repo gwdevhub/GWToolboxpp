@@ -10,6 +10,7 @@ void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	color_agent_modifier = Colors::Load(ini, section, VAR_NAME(color_agent_modifier), 0x001E1E1E);
 	color_eoe = Colors::Load(ini, section, VAR_NAME(color_eoe), 0x3200FF00);
 	color_qz = Colors::Load(ini, section, VAR_NAME(color_qz), 0x320000FF);
+	color_winnowing = Colors::Load(ini, section, VAR_NAME(color_winnowing), 0x3200FFFF);
 	color_target = Colors::Load(ini, section, VAR_NAME(color_target), 0xFFFFFF00);
 	color_player = Colors::Load(ini, section, VAR_NAME(color_player), 0xFFFF8000);
 	color_player_dead = Colors::Load(ini, section, VAR_NAME(color_player_dead), 0x64FF8000);
@@ -39,6 +40,7 @@ void AgentRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 	Colors::Save(ini, section, VAR_NAME(color_agent_modifier), color_agent_modifier);
 	Colors::Save(ini, section, VAR_NAME(color_eoe), color_eoe);
 	Colors::Save(ini, section, VAR_NAME(color_qz), color_qz);
+	Colors::Save(ini, section, VAR_NAME(color_winnowing), color_winnowing);
 	Colors::Save(ini, section, VAR_NAME(color_target), color_target);
 	Colors::Save(ini, section, VAR_NAME(color_player), color_player);
 	Colors::Save(ini, section, VAR_NAME(color_player_dead), color_player_dead);
@@ -67,6 +69,7 @@ void AgentRenderer::DrawSettings() {
 		color_agent_modifier = 0x001E1E1E;
 		color_eoe = 0x3200FF00;
 		color_qz = 0x320000FF;
+		color_winnowing = 0x3200FFFF;
 		color_target = 0xFFFFFF00;
 		color_player = 0xFFFF8000;
 		color_player_dead = 0x64FF8000;
@@ -91,6 +94,8 @@ void AgentRenderer::DrawSettings() {
 	Colors::DrawSetting("EoE", &color_eoe);
 	ImGui::ShowHelp("This is the color at the edge, the color in the middle is the same, with alpha-50");
 	Colors::DrawSetting("QZ", &color_qz);
+	ImGui::ShowHelp("This is the color at the edge, the color in the middle is the same, with alpha-50");
+	Colors::DrawSetting("Winnowing", &color_winnowing);
 	ImGui::ShowHelp("This is the color at the edge, the color in the middle is the same, with alpha-50");
 	Colors::DrawSetting("Target", &color_target);
 	Colors::DrawSetting("Player (alive)", &color_player);
@@ -229,6 +234,9 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 			break;
 		case GW::Constants::ModelID::QZ:
 			Enqueue(BigCircle, agent, GW::Constants::Range::Spirit, color_qz);
+			break;
+		case GW::Constants::ModelID::Winnowing:
+			Enqueue(BigCircle, agent, GW::Constants::Range::Spirit, color_winnowing);
 			break;
 		default:
 			break;

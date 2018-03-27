@@ -54,6 +54,7 @@ private:
 	Color color_agent_modifier;
 	Color color_eoe;
 	Color color_qz;
+	Color color_winnowing;
 	Color color_target;
 	Color color_player;
 	Color color_player_dead;
