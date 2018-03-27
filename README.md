@@ -42,3 +42,7 @@ A recent game update broke compatibility of APIs such as the included dependency
  * Extensive work on the site and documentation.
 
  **and everyone working/suggesting ideas!**
+
+**Images:**
+All images in `resources/bonds`, `resources/materials`, and `resources/pcons` are property of ArenaNet.
+All images in `resources/icons` are from www.flaticon.com 
