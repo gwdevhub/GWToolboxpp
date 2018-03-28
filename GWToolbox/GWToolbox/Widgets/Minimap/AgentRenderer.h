@@ -2,7 +2,6 @@
 
 #include <memory>
 #include <vector>
-#include <Defines.h>
 
 #include <GWCA\GameEntities\Agent.h>
 #include <SimpleIni.h>
