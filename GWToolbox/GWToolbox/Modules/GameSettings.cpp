@@ -89,6 +89,49 @@ namespace {
 		if (GameSettings::Instance().flash_window_on_pm) FlashWindow();
 	}
 
+	bool get_is_item_stackable(GW::Item *item) {
+		switch (item->Type) {
+			case 0:  return false; // Salvage
+			case 1:  return false; // LeadHand
+			case 2:  return false; // Axe
+			case 3:  return false; // Bag
+			case 4:  return false; // Feet
+			case 5:  return false; // Bow
+			case 6:  return false; // Bundle
+			case 7:  return false; // Chest
+			case 8:  return false; // Rune
+			case 9:  return true;  // Consumable
+			case 10: return true;  // Dye
+			case 11: return true;  // Material
+			case 12: return false; // Focus
+			case 13: return false; // Arms
+			case 14: return true;  // Sigil
+			case 15: return false; // Hammer
+			case 16: return false; // Head
+			case 17: return false; // SalvageItem
+			case 18: return true;  // Key
+			case 19: return false; // Legs
+			case 20: return true;  // Coins
+			case 21: return false; // QuestItem
+			case 22: return false; // Wand
+			case 24: return false; // Shield
+			case 26: return false; // Staff
+			case 27: return false; // Sword
+			case 29: return false; // Kit
+			case 30: return true;  // Trophy
+			case 31: return true;  // Scroll
+			case 32: return false; // Daggers
+			case 33: return true;  // Present
+			case 34: return false; // Minipet
+			case 35: return false; // Scythe
+			case 36: return false; // Spear
+			case 43: return false; // Handbook
+			case 44: return false; // CostumeBody
+			case 45: return false; // CostumeHead
+			default: return false;
+		};
+	}
+
 	void move_item_to_storage(GW::Item *item, int current_storage) {
 		assert(0 <= current_storage && current_storage <= 8);
 		assert(item);
@@ -105,25 +148,29 @@ namespace {
 		int remaining = item->Quantity;
 		assert(remaining > 0);
 
-		for (auto *it : items_storage) {
-			if (!it) continue;
-			if (it->ModelId == item->ModelId) {
-				int availaible = 250 - it->Quantity;
-				int move_count = availaible < remaining ? availaible : remaining;
+		if (get_is_item_stackable(item)) {
+			for (auto *it : items_storage) {
+				if (!it) continue;
+				if (it->ModelId == item->ModelId) {
+					int availaible = 250 - it->Quantity;
+					int move_count = availaible < remaining ? availaible : remaining;
 
-				if (move_count > 0) {
-					GW::Items::MoveItem(item, it, move_count);
-					remaining -= move_count;
+					if (move_count > 0) {
+						GW::Items::MoveItem(item, it, move_count);
+						remaining -= move_count;
+					}
+
+					if (remaining == 0)
+						break;
 				}
-
-				if (remaining == 0) break;
 			}
 		}
 
 		if (remaining > 0) {
 			size_t slot;
 			for (slot = 0; slot < items_storage.size(); slot++) {
-				if (!items_storage[slot]) break;
+				if (!items_storage[slot])
+					break;
 			}
 
 			if (slot < items_storage.size()) {
@@ -142,24 +189,26 @@ namespace {
 		int remaining = total;
 		assert(remaining > 0);
 
-		for (int i = 1; i <= 4; i++) {
-			GW::Bag *bag = bags[i];
-			if (!bag) continue;
-			GW::ItemArray items_storage = bag->Items;
-			if (!items_storage.valid()) continue;
+		if (get_is_item_stackable(item)) {
+			for (int i = 1; i <= 4; i++) {
+				GW::Bag *bag = bags[i];
+				if (!bag) continue;
+				GW::ItemArray items_storage = bag->Items;
+				if (!items_storage.valid()) continue;
 
-			for (auto *it : items_storage) {
-				if (!it) continue;
-				if (it->ModelId == item->ModelId) {
-					int availaible = 250 - it->Quantity;
-					int move_count = availaible < remaining ? availaible : remaining;
+				for (auto *it : items_storage) {
+					if (!it) continue;
+					if (it->ModelId == item->ModelId) {
+						int availaible = 250 - it->Quantity;
+						int move_count = availaible < remaining ? availaible : remaining;
 
-					if (move_count > 0) {
-						GW::Items::MoveItem(item, it, move_count);
-						remaining -= move_count;
+						if (move_count > 0) {
+							GW::Items::MoveItem(item, it, move_count);
+							remaining -= move_count;
+						}
+
+						if (remaining == 0) break;
 					}
-
-					if (remaining == 0) break;
 				}
 			}
 		}
