@@ -182,6 +182,9 @@ void AgentRenderer::DrawSettings() {
 				std::swap(colors_custom_map[colors_custom[i]->modelId], it->second);
 				colors_custom_map.erase(it);
 			}
+			else {
+				colors_custom_map[colors_custom[i]->modelId] = colors_custom[i];
+			}
 			break;
 		}
 		default:
