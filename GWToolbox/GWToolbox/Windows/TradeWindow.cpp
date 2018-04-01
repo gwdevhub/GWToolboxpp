@@ -207,7 +207,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Alerts", ImVec2(80.0f, 0))) {
-			show_alert_window = true;
+			show_alert_window = !show_alert_window;
 		}
 
 		/* Main trade chat area */
