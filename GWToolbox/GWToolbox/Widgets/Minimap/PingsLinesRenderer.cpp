@@ -472,7 +472,7 @@ bool PingsLinesRenderer::OnMouseUp() {
 }
 
 void PingsLinesRenderer::SendQueue() {
-	static GW::Packet::CtoS::P043 packet = GW::Packet::CtoS::P043();
+	static GW::Packet::CtoS::DrawMap packet = GW::Packet::CtoS::DrawMap();
 
 	//printf("sending %d pos [%d]\n", queue.size(), session_id);
 
