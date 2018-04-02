@@ -12,7 +12,7 @@ DWORD WINAPI init(HMODULE hModule){
 
 		Log::InitializeLog();
 		Log::Log("Waiting for logged character\n");
-		while (*(void**)0xA2B294 == nullptr) {
+		while (*(void**)0x00A2B278 == nullptr) { // @Cleanup, add pattern
 			Sleep(100);
 		}
 		
