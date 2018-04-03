@@ -269,8 +269,8 @@ void GameSettings::Initialize() {
 		}
 	});
 
-	GW::StoC::AddCallback<GW::Packet::StoC::P451>(
-		[](GW::Packet::StoC::P451*) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::PartyPlayerAdd>(
+		[](GW::Packet::StoC::PartyPlayerAdd*) -> bool {
 		if (GameSettings::Instance().flash_window_on_party_invite) FlashWindow();
 		return false;
 	});
