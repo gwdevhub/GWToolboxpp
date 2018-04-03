@@ -10,6 +10,8 @@ Previous releases are provided as dll files. In order to use it, you need to use
 ## Version 2.10
 * [Fix] Fixed toolbox functionality after April 2 2018 game update.
 
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.10_Release/GWToolbox.dll)
+
 ## Version 2.9
 * [Fix] Fixed toolbox functionality after March 23 2018 game update.
 * [New] Added a new Trade chat window containing Kamadan Trade Chat. Powered by `https://kamadan.decltype.org/`.
