@@ -7,6 +7,9 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
+## Version 2.10
+* [Fix] Fixed toolbox functionality after April 2 2018 game update.
+
 ## Version 2.9
 * [Fix] Fixed toolbox functionality after March 23 2018 game update.
 * [New] Added a new Trade chat window containing Kamadan Trade Chat. Powered by `https://kamadan.decltype.org/`.
