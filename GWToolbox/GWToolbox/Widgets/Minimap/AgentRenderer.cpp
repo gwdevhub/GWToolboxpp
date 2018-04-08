@@ -6,17 +6,20 @@
 #include "GuiUtils.h"
 #include <Defines.h>
 
+unsigned int AgentRenderer::Custom_Color::cur_ui_id = 0;
+
 void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	color_agent_modifier = Colors::Load(ini, section, VAR_NAME(color_agent_modifier), 0x001E1E1E);
+	color_agent_damaged_modifier = Colors::Load(ini, section, VAR_NAME(color_agent_lowhp_modifier), 0x00505050);
 	color_eoe = Colors::Load(ini, section, VAR_NAME(color_eoe), 0x3200FF00);
 	color_qz = Colors::Load(ini, section, VAR_NAME(color_qz), 0x320000FF);
+	color_winnowing = Colors::Load(ini, section, VAR_NAME(color_winnowing), 0x3200FFFF);
 	color_target = Colors::Load(ini, section, VAR_NAME(color_target), 0xFFFFFF00);
 	color_player = Colors::Load(ini, section, VAR_NAME(color_player), 0xFFFF8000);
 	color_player_dead = Colors::Load(ini, section, VAR_NAME(color_player_dead), 0x64FF8000);
 	color_signpost = Colors::Load(ini, section, VAR_NAME(color_signpost), 0xFF0000C8);
 	color_item = Colors::Load(ini, section, VAR_NAME(color_item), 0xFF0000F0);
 	color_hostile = Colors::Load(ini, section, VAR_NAME(color_hostile), 0xFFF00000);
-	color_hostile_damaged = Colors::Load(ini, section, VAR_NAME(color_hostile_damaged), 0xFF800000);
 	color_hostile_dead = Colors::Load(ini, section, VAR_NAME(color_hostile_dead), 0xFF320000);
 	color_neutral = Colors::Load(ini, section, VAR_NAME(color_neutral), 0xFF0000DC);
 	color_ally = Colors::Load(ini, section, VAR_NAME(color_ally), 0xFF00B300);
@@ -24,6 +27,22 @@ void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	color_ally_spirit = Colors::Load(ini, section, VAR_NAME(color_ally_spirit), 0xFF608000);
 	color_ally_minion = Colors::Load(ini, section, VAR_NAME(color_ally_minion), 0xFF008060);
 	color_ally_dead = Colors::Load(ini, section, VAR_NAME(color_ally_dead), 0x64006400);
+
+	// custom colors are in a sections called e.g. "Minimap-custom-color-001"
+	const auto colorsSection = std::string(section) + std::string("-custom-color-");
+	colors_custom.clear();
+	colors_custom_map.clear();
+	CSimpleIni::TNamesDepend entries;
+	ini->GetAllSections(entries);
+	for (auto& entry : entries) {
+		auto section = std::string(entry.pItem);
+		if (section.compare(0, colorsSection.length(), colorsSection) != 0) continue;
+
+		auto customColor = new Custom_Color(ini, entry.pItem);
+
+		colors_custom.push_back(std::shared_ptr<Custom_Color>(customColor));
+		colors_custom_map[customColor->modelId] = std::shared_ptr<Custom_Color>(customColor);
+	}
 
 	size_default = (float)ini->GetDoubleValue(section, VAR_NAME(size_default), 75.0);
 	size_player = (float)ini->GetDoubleValue(section, VAR_NAME(size_player), 100.0);
@@ -37,15 +56,16 @@ void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 
 void AgentRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 	Colors::Save(ini, section, VAR_NAME(color_agent_modifier), color_agent_modifier);
+	Colors::Save(ini, section, VAR_NAME(color_agent_damaged_modifier), color_agent_damaged_modifier);
 	Colors::Save(ini, section, VAR_NAME(color_eoe), color_eoe);
 	Colors::Save(ini, section, VAR_NAME(color_qz), color_qz);
+	Colors::Save(ini, section, VAR_NAME(color_winnowing), color_winnowing);
 	Colors::Save(ini, section, VAR_NAME(color_target), color_target);
 	Colors::Save(ini, section, VAR_NAME(color_player), color_player);
 	Colors::Save(ini, section, VAR_NAME(color_player_dead), color_player_dead);
 	Colors::Save(ini, section, VAR_NAME(color_signpost), color_signpost);
 	Colors::Save(ini, section, VAR_NAME(color_item), color_item);
 	Colors::Save(ini, section, VAR_NAME(color_hostile), color_hostile);
-	Colors::Save(ini, section, VAR_NAME(color_hostile_damaged), color_hostile_damaged);
 	Colors::Save(ini, section, VAR_NAME(color_hostile_dead), color_hostile_dead);
 	Colors::Save(ini, section, VAR_NAME(color_neutral), color_neutral);
 	Colors::Save(ini, section, VAR_NAME(color_ally), color_ally);
@@ -53,6 +73,23 @@ void AgentRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 	Colors::Save(ini, section, VAR_NAME(color_ally_spirit), color_ally_spirit);
 	Colors::Save(ini, section, VAR_NAME(color_ally_minion), color_ally_minion);
 	Colors::Save(ini, section, VAR_NAME(color_ally_dead), color_ally_dead);
+
+	// clear colors from ini
+	const auto colorsSection = std::string(section) + std::string("-custom-color-");
+	CSimpleIni::TNamesDepend entries;
+	ini->GetAllSections(entries);
+	for (auto& entry : entries) {
+		auto section = std::string(entry.pItem);
+		if (section.compare(0, colorsSection.length(), colorsSection) == 0)
+			ini->Delete(entry.pItem, nullptr);
+	}
+
+	// then save again
+	char buf[256];
+	for (unsigned int i = 0; i < colors_custom.size(); ++i) {
+		snprintf(buf, 256, (colorsSection + "%03d").c_str(), i);
+		colors_custom[i]->SaveSettings(ini, buf);
+	}
 
 	ini->SetDoubleValue(section, VAR_NAME(size_default), size_default);
 	ini->SetDoubleValue(section, VAR_NAME(size_player), size_player);
@@ -65,15 +102,16 @@ void AgentRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 void AgentRenderer::DrawSettings() {
 	if (ImGui::SmallButton("Restore Defaults")) {
 		color_agent_modifier = 0x001E1E1E;
+		color_agent_damaged_modifier = 0x00505050;
 		color_eoe = 0x3200FF00;
 		color_qz = 0x320000FF;
+		color_winnowing = 0x3200FFFF;
 		color_target = 0xFFFFFF00;
 		color_player = 0xFFFF8000;
 		color_player_dead = 0x64FF8000;
 		color_signpost = 0xFF0000C8;
 		color_item = 0xFF0000F0;
 		color_hostile = 0xFFF00000;
-		color_hostile_damaged = 0xFF800000;
 		color_hostile_dead = 0xFF320000;
 		color_neutral = 0xFF0000DC;
 		color_ally = 0xFF00B300;
@@ -81,6 +119,8 @@ void AgentRenderer::DrawSettings() {
 		color_ally_spirit = 0xFF608000;
 		color_ally_minion = 0xFF008060;
 		color_ally_dead = 0x64006400;
+		colors_custom.clear();
+		colors_custom_map.clear();
 		size_default = 75.0f;
 		size_player = 100.0f;
 		size_signpost = 50.0f;
@@ -92,13 +132,14 @@ void AgentRenderer::DrawSettings() {
 	ImGui::ShowHelp("This is the color at the edge, the color in the middle is the same, with alpha-50");
 	Colors::DrawSetting("QZ", &color_qz);
 	ImGui::ShowHelp("This is the color at the edge, the color in the middle is the same, with alpha-50");
+	Colors::DrawSetting("Winnowing", &color_winnowing);
+	ImGui::ShowHelp("This is the color at the edge, the color in the middle is the same, with alpha-50");
 	Colors::DrawSetting("Target", &color_target);
 	Colors::DrawSetting("Player (alive)", &color_player);
 	Colors::DrawSetting("Player (dead)", &color_player_dead);
 	Colors::DrawSetting("Signpost", &color_signpost);
 	Colors::DrawSetting("Item", &color_item);
 	Colors::DrawSetting("Hostile (>90%%)", &color_hostile);
-	Colors::DrawSetting("Hostile (<90%%)", &color_hostile_damaged);
 	Colors::DrawSetting("Hostile (dead)", &color_hostile_dead);
 	Colors::DrawSetting("Neutral", &color_neutral);
 	Colors::DrawSetting("Ally (player)", &color_ally);
@@ -108,6 +149,51 @@ void AgentRenderer::DrawSettings() {
 	Colors::DrawSetting("Ally (dead)", &color_ally_dead);
 	Colors::DrawSetting("Agent modifier", &color_agent_modifier);
 	ImGui::ShowHelp("Each agent has this value removed on the border and added at the center\nZero makes agents have solid color, while a high number makes them appear more shaded.");
+	Colors::DrawSetting("Agent damaged modifier", &color_agent_damaged_modifier);
+	ImGui::ShowHelp("Each agent has this value subtracted from it when under 90% HP.");
+
+	ImGui::Spacing();
+
+	if (ImGui::SmallButton("Add Custom")) {
+		colors_custom.push_back(std::shared_ptr<Custom_Color>(new Custom_Color(0, color_hostile, "")));
+	}
+
+	for (int i = 0; i < colors_custom.size(); ++i) {
+		auto modelId = colors_custom[i]->modelId;
+
+		switch (colors_custom[i]->DrawSettings()) {
+		case Custom_Color::Operation::MoveUp:
+			if (i > 0) std::swap(colors_custom[i], colors_custom[i - 1]);
+			break;
+		case Custom_Color::Operation::MoveDown:
+			if (i < colors_custom.size() - 1) {
+				std::swap(colors_custom[i], colors_custom[i + 1]);
+				colors_custom[i++]->DrawSettings();
+			}
+			break;
+		case Custom_Color::Operation::Delete:
+			colors_custom_map.erase(colors_custom[i]->modelId);
+			colors_custom.erase(colors_custom.begin() + i--);
+			break;
+		case Custom_Color::Operation::ModelIdChange:
+		{
+			auto it = colors_custom_map.find(modelId);
+			if (it != colors_custom_map.end()) {
+				std::swap(colors_custom_map[colors_custom[i]->modelId], it->second);
+				colors_custom_map.erase(it);
+			}
+			else {
+				colors_custom_map[colors_custom[i]->modelId] = colors_custom[i];
+			}
+			break;
+		}
+		default:
+			break;
+		}
+	}
+
+	ImGui::Spacing();
+	ImGui::Spacing();
 
 	ImGui::DragFloat("Default Size", &size_default, 1.0f, 1.0f, 0.0f, "%.0f");
 	ImGui::DragFloat("Player Size", &size_player, 1.0f, 1.0f, 0.0f, "%.0f");
@@ -230,11 +316,15 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 		case GW::Constants::ModelID::QZ:
 			Enqueue(BigCircle, agent, GW::Constants::Range::Spirit, color_qz);
 			break;
+		case GW::Constants::ModelID::Winnowing:
+			Enqueue(BigCircle, agent, GW::Constants::Range::Spirit, color_winnowing);
+			break;
 		default:
 			break;
 		}
 	}
 	// 2. non-player agents
+	std::vector<GW::Agent*> custom_agents;
 	for (size_t i = 0; i < agents.size(); ++i) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
@@ -248,16 +338,37 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 			&& (npcs[agent->PlayerNumber].NpcFlags & 0x10000) > 0) continue;
 		if (target == agent) continue; // will draw target at the end
 
+		if (colors_custom_map.find(agent->PlayerNumber) != colors_custom_map.end()) {
+			custom_agents.push_back(agent);
+			continue;
+		}
+
 		Enqueue(agent);
 
 		if (vertices_count >= vertices_max - 16 * max_shape_verts) break;
 	}
-	// 3. target if it's a non-player
+	// 3. custom colored models
+	std::sort(custom_agents.begin(), custom_agents.end(), [&](const GW::Agent* agentA, const GW::Agent* agentB) {
+		for (auto& customColor : colors_custom) {
+			if (customColor->modelId == agentA->PlayerNumber)
+				return false;
+			if (customColor->modelId == agentB->PlayerNumber)
+				return true;
+		}
+
+		return true;
+	});
+	for (auto agent : custom_agents) {
+		Enqueue(agent);
+		if (vertices_count >= vertices_max - 16 * max_shape_verts) break;
+	}
+
+	// 4. target if it's a non-player
 	if (target && target->PlayerNumber > 12) {
 		Enqueue(target);
 	}
 
-	// 4. players
+	// 5. players
 	for (size_t i = 0; i < agents.size(); ++i) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
@@ -270,12 +381,12 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 		if (vertices_count >= vertices_max - 4 * max_shape_verts) break;
 	}
 
-	// 5. target if it's a player
+	// 6. target if it's a player
 	if (target && target != player && target->PlayerNumber <= 12) {
 		Enqueue(target);
 	}
 
-	// 6. player
+	// 7. player
 	if (player) {
 		Enqueue(player);
 	}
@@ -324,10 +435,21 @@ Color AgentRenderer::GetColor(GW::Agent* agent) const {
 		}
 	}
 
+	if (colors_custom_map.find(agent->PlayerNumber) != colors_custom_map.end()) {
+		auto customColor = colors_custom_map.at(agent->PlayerNumber);
+
+		if (customColor->active) {
+			if (agent->HP > 0.9f)
+				return customColor->color;
+			if (agent->HP > 0.0f)
+				return Colors::Sub(customColor->color, color_agent_damaged_modifier);
+		}
+	}
+
 	// hostiles
 	if (agent->Allegiance == 0x3) {
 		if (agent->HP > 0.9f) return color_hostile;
-		if (agent->HP > 0.0f) return color_hostile_damaged;
+		if (agent->HP > 0.0f) return Colors::Sub(color_hostile, color_agent_damaged_modifier);
 		return color_hostile_dead;
 	}
 
@@ -441,4 +563,101 @@ void AgentRenderer::Enqueue(Shape_e shape, GW::Agent* agent, float size, Color c
 	}
 	vertices += shapes[shape].vertices.size();
 	vertices_count += shapes[shape].vertices.size();
+}
+
+
+AgentRenderer::Custom_Color::Custom_Color(CSimpleIni* ini, const char* section) : ui_id(++cur_ui_id) {
+	modelId = ini->GetLongValue(section, VAR_NAME(modelId), 0);
+	color = Colors::Load(ini, section, VAR_NAME(color), 0xFFF00000);
+	name = ini->GetValue(section, VAR_NAME(name), "");
+	active = ini->GetBoolValue(section, VAR_NAME(active));
+}
+
+void AgentRenderer::Custom_Color::SaveSettings(CSimpleIni* ini, const char* section) const {
+	ini->SetLongValue(section, VAR_NAME(modelId), modelId);
+	Colors::Save(ini, section, VAR_NAME(color), color);
+	ini->SetValue(section, VAR_NAME(name), name.c_str());
+	ini->SetBoolValue(section, VAR_NAME(active), active);
+}
+
+AgentRenderer::Custom_Color::Operation AgentRenderer::Custom_Color::DrawSettings() {
+	auto operation = Operation::None;
+
+	auto drawHeader = [&]() {
+		ImGui::PushID(ui_id);
+		ImGui::PushID("header");
+		ImGui::SameLine(ImGui::GetContentRegionAvailWidth() - ImGui::GetStyle().FramePadding.x);
+
+		int i[4];
+		Colors::ConvertU32ToInt4(color, i);
+
+		ImGui::ColorButton("", ImColor(i[1], i[2], i[3]));
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color:\n0x%02X%02X%02X%02X", i[0], i[1], i[2], i[3]);
+		ImGui::PopID();
+		ImGui::PopID();
+	};
+
+	char headerText[256];
+	snprintf(headerText, 256, "%s ###header%u", name.c_str(), ui_id);
+	if (!ImGui::CollapsingHeader(headerText, ImGuiTreeNodeFlags_AllowItemOverlap)) {
+		drawHeader();
+	}
+	else {
+		drawHeader();
+
+		ImGui::PushID(ui_id);
+		ImGui::BeginGroup();
+		ImGui::PushItemWidth(-70.0f);
+
+		ImGui::Checkbox("###active", &active);
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("The color will show only if selected");
+		ImGui::SameLine();
+
+		if (ImGui::InputInt("ModelID", (int*)&modelId)) {
+			operation = Operation::ModelIdChange;
+		}
+
+		char _name[140];
+		strcpy_s(_name, 140, name.c_str());
+		if (ImGui::InputText("Name", _name, 140)) {
+			name = _name;
+		}
+		Colors::DrawSetting("", &color);
+
+		ImGui::Separator();
+
+		// === Move and delete buttons ===
+		if (ImGui::Button("Move Up", ImVec2(ImGui::GetContentRegionAvailWidth() / 3.0f, 0))) {
+			operation = Operation::MoveUp;
+		}
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move the color up in the list");
+		ImGui::SameLine();
+		if (ImGui::Button("Move Down", ImVec2(ImGui::GetContentRegionAvailWidth() / 2.0f, 0))) {
+			operation = Operation::MoveDown;
+		}
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move the color down in the list");
+		ImGui::SameLine();
+		if (ImGui::Button("Delete", ImVec2(ImGui::GetContentRegionAvailWidth(), 0))) {
+			ImGui::OpenPopup("Delete Color?");
+		}
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete the color");
+		if (ImGui::BeginPopupModal("Delete Color?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+			ImGui::Text("Are you sure?\nThis operation cannot be undone\n\n");
+			if (ImGui::Button("OK", ImVec2(120, 0))) {
+				operation = Operation::Delete;
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::EndPopup();
+		}
+
+		ImGui::PopItemWidth();
+		ImGui::EndGroup();
+		ImGui::PopID();
+	}
+
+	return operation;
 }

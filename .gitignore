@@ -42,3 +42,4 @@ GWToolbox.aps
 # Sublime Text stuff
 *.sublime-project*
 *.sublime-workspace*
+.vs/
