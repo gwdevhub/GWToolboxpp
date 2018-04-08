@@ -17,7 +17,7 @@ private:
 	// 0 for 'no hero', 
 	// and 1+ for heroes, order is in HeroIndexToID array
 	struct HeroBuild {
-		HeroBuild(const char* n, const char* c, int index = -1) {
+		HeroBuild(const char* n, const char* c, int index = -1) : hero_index(index) {
 			strncpy(name, n, 128);
 			strncpy(code, c, 128);
 		}
