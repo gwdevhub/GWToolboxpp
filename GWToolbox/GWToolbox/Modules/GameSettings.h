@@ -66,5 +66,6 @@ public:
 private:
 	void UpdateBorderless();
 	void UpdateFOV();
-	std::vector<GW::MemoryPatcher*> patches;	
+	std::vector<GW::MemoryPatcher*> patches;
+	GW::MemoryPatcher *ctrl_click_patch;
 };

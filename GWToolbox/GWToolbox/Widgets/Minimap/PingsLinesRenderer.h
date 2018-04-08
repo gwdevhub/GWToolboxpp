@@ -79,10 +79,10 @@ public:
 	bool OnMouseMove(float x, float y);
 	bool OnMouseUp();
 
-	void P046Callback(GW::Packet::StoC::P046 *pak);
-	void P138Callback(GW::Packet::StoC::P138 *pak);
-	void P153Callback(GW::Packet::StoC::P153 *pak);
-	void P221Callback(GW::Packet::StoC::P221 *pak);
+	void P046Callback(GW::Packet::StoC::AgentPinged *pak);
+	void P138Callback(GW::Packet::StoC::CompassEvent *pak);
+	void P153Callback(GW::Packet::StoC::GenericValueTarget *pak);
+	void P221Callback(GW::Packet::StoC::SkillActivate *pak);
 
 	void DrawSettings();
 	void LoadSettings(CSimpleIni* ini, const char* section);

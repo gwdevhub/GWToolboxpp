@@ -125,15 +125,15 @@ void MaterialsWindow::Initialize() {
 
 	// Those 2 are just gold update packets, but we use them to know when the transaction
 	// was successful. Hopefully people won't deposit or widthrawal exactly that amount while buying.
-	GW::StoC::AddCallback<GW::Packet::StoC::P315>(
-		[&](GW::Packet::StoC::P315 *pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::CharacterAddGold>(
+		[&](GW::Packet::StoC::CharacterAddGold *pak) -> bool {
 		if (last_request_type == Sell && last_request_price == pak->gold) {
 			last_request_type = None;
 		}
 		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::P330>(
-		[&](GW::Packet::StoC::P330 *pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::StorageAddGold>(
+		[&](GW::Packet::StoC::StorageAddGold *pak) -> bool {
 		//printf("Removed %d gold\n", pak->gold);
 		if (last_request_type == Purchase && last_request_price == pak->gold) {
 			last_request_type = None;

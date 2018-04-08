@@ -23,29 +23,29 @@
 
 void Minimap::Initialize() {
 	ToolboxWidget::Initialize();
-	GW::StoC::AddCallback<GW::Packet::StoC::P046>(
-		[&](GW::Packet::StoC::P046 *pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::AgentPinged>(
+		[&](GW::Packet::StoC::AgentPinged *pak) -> bool {
 		if (visible) {
 			pingslines_renderer.P046Callback(pak);
 		}
 		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::P138>(
-		[&](GW::Packet::StoC::P138 *pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::CompassEvent>(
+		[&](GW::Packet::StoC::CompassEvent *pak) -> bool {
 		if (visible) {
 			pingslines_renderer.P138Callback(pak);
 		}
 		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::P153>(
-		[&](GW::Packet::StoC::P153 *pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::GenericValueTarget>(
+		[&](GW::Packet::StoC::GenericValueTarget *pak) -> bool {
 		if (visible) {
 			pingslines_renderer.P153Callback(pak);
 		}
 		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::P221>(
-		[&](GW::Packet::StoC::P221 *pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::SkillActivate>(
+		[&](GW::Packet::StoC::SkillActivate *pak) -> bool {
 		if (visible) {
 			pingslines_renderer.P221Callback(pak);
 		}

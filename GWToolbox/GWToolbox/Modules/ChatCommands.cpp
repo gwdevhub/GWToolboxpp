@@ -214,7 +214,8 @@ void ChatCommands::Update(float delta) {
 bool ChatCommands::ReadTemplateFile(std::wstring path, char *buff, size_t buffSize) {
 	HANDLE fileHandle = CreateFileW(path.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
 	if (fileHandle == INVALID_HANDLE_VALUE) {
-		Log::Error("Failed openning file '%S'", path.c_str());
+		// We don't print that error, because we can /load [template]
+		// Log::Error("Failed openning file '%S'", path.c_str());
 		return false;
 	}
 
@@ -781,7 +782,7 @@ void ChatCommands::CmdTransmo(int argc, LPWSTR *argv) {
 	{
 		GW::Packet::StoC::P080 packet;
 		packet.header = 80;
-		packet.npc_id = npc_id;
+		packet.npc_id = npc_id;I 
 
 		// If we found a npc that have more than 1 ModelFiles, we can determine which one of h0028, h002C are size and capacity.
 		assert(npc.FilesCount <= 8);
@@ -795,20 +796,18 @@ void ChatCommands::CmdTransmo(int argc, LPWSTR *argv) {
 
 	GW::GameThread::Enqueue([scale]()
 	{
-		GW::Packet::StoC::P147 packet;
-		packet.header = 147;
+		GW::Packet::StoC::AgentScale packet;
 		packet.agent_id = GW::Agents::GetPlayerId();
 		packet.scale = (DWORD)scale << 24;
 
-		GW::StoC::EmulatePacket((GW::Packet::StoC::PacketBase *)&packet);
+		GW::StoC::EmulatePacket(&packet);
 	});
 
 	GW::GameThread::Enqueue([npc_id]()
 	{
-		GW::Packet::StoC::P167 packet;
-		packet.header = 167;
+		GW::Packet::StoC::AgentModel packet;
 		packet.agent_id = GW::Agents::GetPlayerId();
 		packet.model_id = npc_id;
-		GW::StoC::EmulatePacket((GW::Packet::StoC::PacketBase *)&packet);
+		GW::StoC::EmulatePacket(&packet);
 	});
 }

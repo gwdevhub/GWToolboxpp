@@ -99,8 +99,8 @@ void PconsWindow::Initialize() {
 		pcon->ScanInventory();
 	}
 
-	GW::StoC::AddCallback<GW::Packet::StoC::P028>(
-		[](GW::Packet::StoC::P028 *pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::AgentSetPlayer>(
+		[](GW::Packet::StoC::AgentSetPlayer *pak) -> bool {
 		Pcon::player_id = pak->unk1;
 		return false;
 	});
@@ -116,16 +116,16 @@ void PconsWindow::Initialize() {
 		}
 		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::P100>(
-		[&](GW::Packet::StoC::P100 *pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::PostProcess>(
+		[&](GW::Packet::StoC::PostProcess *pak) -> bool {
 		PconAlcohol::alcohol_level = pak->level;
 		//printf("Level = %d, tint = %d\n", pak->level, pak->tint);
 		if (enabled) pcon_alcohol->Update();
 		return PconAlcohol::suppress_drunk_effect;
 	});
 
-	GW::StoC::AddCallback<GW::Packet::StoC::P152>(
-		[](GW::Packet::StoC::P152 *pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::GenericValue>(
+		[](GW::Packet::StoC::GenericValue *pak) -> bool {
 		if (PconAlcohol::suppress_drunk_emotes
 			&& pak->agent_id == GW::Agents::GetPlayerId()
 			&& pak->unk1 == 22) {
@@ -139,8 +139,8 @@ void PconsWindow::Initialize() {
 		}
 		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::P234>(
-		[](GW::Packet::StoC::P234 *pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::AgentState>(
+		[](GW::Packet::StoC::AgentState *pak) -> bool {
 		if (PconAlcohol::suppress_drunk_emotes
 			&& pak->agent_id == GW::Agents::GetPlayerId()
 			&& pak->state & 0x2000) { 
@@ -149,8 +149,8 @@ void PconsWindow::Initialize() {
 		}
 		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::P158>(
-		[](GW::Packet::StoC::P158 *pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::SpeechBubble>(
+		[](GW::Packet::StoC::SpeechBubble *pak) -> bool {
 		if (!PconAlcohol::suppress_drunk_text) return false;
 		wchar_t* m = pak->message;
 		if (m[0] == 0x8CA && m[1] == 0xA4F7 && m[2] == 0xF552 && m[3] == 0xA32) return true; // i love you man!

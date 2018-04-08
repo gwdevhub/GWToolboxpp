@@ -33,8 +33,8 @@ void InfoWindow::Initialize() {
 	GW::Agents::SetupLastDialogHook();
 
 	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"info.png"), IDB_Icon_Info);
-	GW::StoC::AddCallback<GW::Packet::StoC::P086>(
-		[this](GW::Packet::StoC::P086 *pak) {
+	GW::StoC::AddCallback<GW::Packet::StoC::MessageCore>(
+		[this](GW::Packet::StoC::MessageCore *pak) {
 		if (pak->message[0] == 0x7BFF
 			&& pak->message[1] == 0xC9C4
 			&& pak->message[2] == 0xAeAA

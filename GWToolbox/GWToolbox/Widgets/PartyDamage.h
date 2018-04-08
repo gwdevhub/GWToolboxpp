@@ -64,8 +64,8 @@ public:
 	void ResetDamage();
 
 private:
-	bool DamagePacketCallback(GW::Packet::StoC::P156 *packet);
-	bool MapLoadedCallback(GW::Packet::StoC::P235 *packet);
+	bool DamagePacketCallback(GW::Packet::StoC::GenericModifier *packet);
+	bool MapLoadedCallback(GW::Packet::StoC::MapLoaded *packet);
 
 	void CreatePartyIndexMap();
 
