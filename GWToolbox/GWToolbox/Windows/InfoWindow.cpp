@@ -303,8 +303,10 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 				}
 			}
 
-			ImGui::Text("%d Soul Tormentors", soul_count);
-			ImGui::ShowHelp("Only in Domain of Anguish, within 1400 range");
+			if (GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish) {
+				ImGui::Text("%d Soul Tormentors", soul_count);
+				ImGui::ShowHelp("Only in Domain of Anguish, within 1400 range");
+			}
 			ImGui::Text("%d foes in casting range", cast_count);
 			ImGui::Text("%d foes in spirit range", spirit_count);
 			ImGui::Text("%d foes in compass range", compass_count);

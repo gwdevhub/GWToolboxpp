@@ -1,8 +1,10 @@
 #pragma once
 
+#include <memory>
 #include <vector>
 
 #include <GWCA\GameEntities\Agent.h>
+#include <SimpleIni.h>
 
 #include "Color.h"
 #include "VBuffer.h"
@@ -52,15 +54,16 @@ private:
 	unsigned int max_shape_verts;// max number of triangles in a single shape
 
 	Color color_agent_modifier;
+	Color color_agent_damaged_modifier;
 	Color color_eoe;
 	Color color_qz;
+	Color color_winnowing;
 	Color color_target;
 	Color color_player;
 	Color color_player_dead;
 	Color color_signpost;
 	Color color_item;
 	Color color_hostile;
-	Color color_hostile_damaged;
 	Color color_hostile_dead;
 	Color color_neutral;
 	Color color_ally;
@@ -68,6 +71,35 @@ private:
 	Color color_ally_spirit;
 	Color color_ally_minion;
 	Color color_ally_dead;
+
+	class Custom_Color {
+	public:
+		DWORD modelId;
+		Color color;
+		std::string name;
+		bool active;
+		const unsigned int ui_id;
+
+
+		enum class Operation {
+			None,
+			MoveUp,
+			MoveDown,
+			Delete,
+			ModelIdChange
+		};
+
+		Custom_Color(CSimpleIni* ini, const char* section);
+		Custom_Color(DWORD _modelId, Color _color, std::string _name) : modelId(_modelId), color(_color), name(_name), active(true), ui_id(++cur_ui_id) {}
+
+		Operation DrawSettings();
+		void SaveSettings(CSimpleIni* ini, const char* section) const;
+	private:
+		static unsigned int cur_ui_id;
+	};
+
+	std::vector<std::shared_ptr<Custom_Color>> colors_custom;
+	std::map<DWORD, std::shared_ptr<Custom_Color>> colors_custom_map;
 
 	float size_default;
 	float size_player;
