@@ -249,6 +249,9 @@ namespace {
 		}
 	}
 
+	/*  This whole section is commented because packets are not up to date after the update. 
+		Should still work if you match the right packets.
+
 	// April's Fool
 	namespace AF {
 		void CreateXunlaiAgentFromGameThread(void) {
@@ -356,7 +359,8 @@ namespace {
 				appliedpatches = true;
 			}
 		}
-	}
+	} 
+	*/
 }
 
 void GameSettings::Initialize() {
@@ -418,7 +422,7 @@ void GameSettings::Initialize() {
 		return false;
 	});
 
-	AF::ApplyPatchesIfItsTime();
+	//AF::ApplyPatchesIfItsTime();
 }
 
 void GameSettings::LoadSettings(CSimpleIni* ini) {
@@ -577,7 +581,7 @@ void GameSettings::Update(float delta) {
 	}
 	UpdateFOV();
 	UpdateBorderless();
-	AF::ApplyPatchesIfItsTime();
+	//AF::ApplyPatchesIfItsTime();
 }
 
 void GameSettings::DrawFOVSetting() {
