@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <vector>
+#include <unordered_map>
 
 #include <GWCA\GameEntities\Agent.h>
 #include <SimpleIni.h>
@@ -12,12 +13,15 @@
 class AgentRenderer : public VBuffer {
 public:
 	AgentRenderer();
+	virtual ~AgentRenderer();
 
 	void Render(IDirect3DDevice9* device) override;
 
 	void DrawSettings();
 	void LoadSettings(CSimpleIni* ini, const char* section);
 	void SaveSettings(CSimpleIni* ini, const char* section) const;
+	void LoadAgentColors();
+	void SaveAgentColors() const;
 
 private:
 	static const size_t shape_size = 4;
@@ -72,15 +76,8 @@ private:
 	Color color_ally_minion;
 	Color color_ally_dead;
 
-	class Custom_Color {
+	class CustomAgent {
 	public:
-		DWORD modelId;
-		Color color;
-		std::string name;
-		bool active;
-		const unsigned int ui_id;
-
-
 		enum class Operation {
 			None,
 			MoveUp,
@@ -89,17 +86,31 @@ private:
 			ModelIdChange
 		};
 
-		Custom_Color(CSimpleIni* ini, const char* section);
-		Custom_Color(DWORD _modelId, Color _color, std::string _name) : modelId(_modelId), color(_color), name(_name), active(true), ui_id(++cur_ui_id) {}
+		CustomAgent(CSimpleIni* ini, const char* section);
+		CustomAgent(DWORD _modelId, Color _color, const char* _name);
 
-		Operation DrawSettings();
+		void DrawHeader();
+		bool DrawSettings(Operation& op);
 		void SaveSettings(CSimpleIni* ini, const char* section) const;
-	private:
-		static unsigned int cur_ui_id;
+
+		// utility
+		size_t index = 0; // index in the array. Used for faster sorting.
+
+		// define the agent
+		bool active = true;
+		char name[128];
+		DWORD modelId = 0;
+		DWORD mapId = 0; // 0 for 'any map'
+
+		// attributes to change
+		Color color;
+		int shape = 0; // 0=default, 1=tear, 2=circle, 3=quad
+		float size = 0; // 0=default
 	};
 
-	std::vector<std::shared_ptr<Custom_Color>> colors_custom;
-	std::map<DWORD, std::shared_ptr<Custom_Color>> colors_custom_map;
+	std::vector<CustomAgent*> custom_agents;
+	std::unordered_map<DWORD, CustomAgent*> custom_agents_map;
+	const CustomAgent* FindValidCustomAgent(DWORD modelid) const;
 
 	float size_default;
 	float size_player;
@@ -107,4 +118,7 @@ private:
 	float size_item;
 	float size_boss;
 	float size_minion;
+
+	bool agentcolors_changed = false;
+	CSimpleIni* agentcolorinifile = nullptr;
 };

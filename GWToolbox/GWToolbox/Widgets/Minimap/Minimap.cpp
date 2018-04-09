@@ -137,10 +137,8 @@ void Minimap::DrawSettingInternal() {
 	ImGui::Text("General");
 	ImGui::DragFloat("Scale", &scale, 0.01f, 0.1f);
 	ImGui::Text("You can set the color alpha to 0 to disable any minimap feature.");
-	if (ImGui::TreeNode("Agents")) {
-		agent_renderer.DrawSettings();
-		ImGui::TreePop();
-	}
+	// agent_rendered has its own TreeNodes
+	agent_renderer.DrawSettings();
 	if (ImGui::TreeNode("Ranges")) {
 		range_renderer.DrawSettings();
 		ImGui::TreePop();
