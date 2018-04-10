@@ -22,19 +22,25 @@ Opt("GuiResizeMode", BitOR($GUI_DOCKSIZE, $GUI_DOCKTOP, $GUI_DOCKLEFT))
 
 ; ==== Globals ====
 Global Const $folder = @LocalAppDataDir & "\GWToolboxpp\"
-Global Const $dllpath = $folder & "GWToolbox.dll"
+Global $dllpath = $folder & "GWToolbox.dll"
+Global Const $inipath = $folder & "GWToolbox.ini"
+Global Const $fontpath = $folder & "Font.ttf"
 
 Global $mKernelHandle, $mGWProcHandle, $mCharname
 Global $gui = 0, $label = 0, $progress = 0, $changelabel = 0, $height = 0
 
-Func EnsureFolderExists($folder)
-	If Not FileExists($folder) Then DirCreate($folder)
-EndFunc
-
 ; ==== Create directories ====
-If Not FileExists($folder) Then
-	DirCreate($folder)
-EndIf
+If Not FileExists($folder) Then DirCreate($folder)
+If Not FileExists($folder) Then Exit MsgBox($MB_ICONERROR, "GWToolbox++ Launcher Error", "GWToolbox++ Launcher was unable to create the folder '" & $folder & "'." & @CRLF & _
+	"Make sure you have admin rights and your antivirus is not blocking GWToolbox++. Quitting.")
+
+; ==== Install default files if needed ====
+If Not FileExists($inipath) Then FileInstall("..\resources\GWToolbox.ini", $inipath, $FC_NOOVERWRITE)
+If Not FileExists($fontpath) Then FileInstall("..\resources\Font.ttf", $fontpath, $FC_NOOVERWRITE)
+
+; ==== Update information from ini ====
+Global Const $updatemode = IniRead($inipath, "Updater", "update_mode", "2")
+$dllpath = IniRead($inipath, "Updater", "dllpath", $dllpath)
 
 ; ==== Disclaimer ====
 If Not FileExists($dllpath) Then
@@ -45,20 +51,80 @@ If Not FileExists($dllpath) Then
 	'By clicking the OK button you agree with all the above.') <> $IDOK Then Exit
 EndIf
 
-; ==== Updates ====
+; ==== Update mode ====
+Global $check_remote_version = False
+Global $notify_update = False
+Global $do_update = False
+Switch $updatemode
+	Case 0 ; do nothing
+		ConsoleWrite("Do Nothing")
+	Case 1 ; check and warn
+		$check_remote_version = True
+		$notify_update = True
+	Case 2 ; check and ask
+		$check_remote_version = True
+		$notify_update = True
+	Case 3 ; check and do
+		$check_remote_version = True
+		$do_update = True
+EndSwitch
+
+; ==== Version information ====
+Global Const $localversion = IniRead($inipath, "Updater", "dllversion", "0")
+Global $remoteversion = "0"
+
+CheckRemoteVersion()
+Func CheckRemoteVersion()
+	If Not $check_remote_version Then Return
+	Local $data = InetRead("https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/toolboxversion.txt", $INET_FORCERELOAD)
+	If @error Then
+		MsgBox($MB_ICONERROR, "GWToolbox++ Launcher Error", _
+			"I am unable to read the toolbox version from the remote server (cannot download)." & @CRLF & _
+			"Either the server is offline or some software is blocking me." & @CRLF & _
+			"I will try to launch the local version, but it might be not up-to-date.")
+		$do_update = False
+		$notify_update = False
+		Return
+	EndIf
+
+	$remoteversion = BinaryToString($data)
+	If @error Then
+		MsgBox($MB_ICONERROR, "GWToolbox++ Launcher Error", _
+			"I am unable to read the toolbox version from the remote server (corrupt file)." & @CRLF & _
+			"Either the server is offline or some software is blocking me." & @CRLF & _
+			"I will try to launch the local version, but it might be not up-to-date.")
+		$do_update = False
+		$notify_update = False
+		Return
+	EndIf
+EndFunc
+
+NotifyUpdate()
+Func NotifyUpdate()
+	If Not $check_remote_version Then Return
+	If Not $notify_update Then Return
+	If $remoteversion == $localversion Then Return
+	; todo: download and display changelog.
+	; if $updatemode==1, that's it
+	; if $updatemode==2, ask, and if uses says yes, then set $do_update = True
+EndFunc
+
 Download()
 Func Download()
-	If FileExists($dllpath) Then Return
+	If Not $do_update Then Return
+	If $remoteversion == $localversion Then Return
 
-	Local $version = BinaryToString(InetRead("https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/toolboxversion.txt"))
-	ConsoleWrite("Remote version is " & $version)
+	If FileExists($dllpath) Then Return ; todo: remove this line
 
-	Local $dll_download = InetGet("https://github.com/HasKha/GWToolboxpp/releases/download/" & $version & "_Release/GWToolbox.dll", $dllpath, BitOR($INET_FORCERELOAD, $INET_FORCEBYPASS))
+	Local $dll_download = InetGet("https://github.com/HasKha/GWToolboxpp/releases/download/" & $remoteversion & "_Release/GWToolbox.dll", $dllpath, BitOR($INET_FORCERELOAD, $INET_FORCEBYPASS))
+	; todo: error checking
 
 	If Not FileExists($dllpath) Then
 		MsgBox($MB_ICONERROR, "GWToolbox++", "Error downloading GWToolbox.dll")
 		Exit
 	EndIf
+
+	; todo (maybe): check with file size or some better file validation
 EndFunc
 
 ; === Client selection ===

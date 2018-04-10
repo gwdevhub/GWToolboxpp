@@ -22,6 +22,7 @@ void MainWindow::SaveSettings(CSimpleIni* ini) {
 	ToolboxWindow::SaveSettings(ini);
 	ini->SetBoolValue(Name(), VAR_NAME(one_panel_at_time_only), one_panel_at_time_only);
 }
+
 void MainWindow::DrawSettingInternal() {
 	ImGui::Checkbox("Close other windows when opening a new one", &one_panel_at_time_only);
 	ImGui::ShowHelp("Only affects windows (with a title bar), not widgets");
