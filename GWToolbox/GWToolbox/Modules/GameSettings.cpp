@@ -171,24 +171,25 @@ namespace {
 		const int storage1 = (int)GW::Constants::Bag::Storage_1;
 		const int storage9 = (int)GW::Constants::Bag::Storage_9;
 
-		// We try to complete stacks in any storage page
+		// If item is stackable, try to complete similar stack
 		if (remaining == 0) return;
-		const int model_id = item->ModelId;
-		for (int i = storage1; i < storage9; i++) {
-			GW::Bag *bag = bags[i];
-			if (!bag) continue;
-			size_t slot = bag->find(model_id);
-			while (slot != GW::Bag::npos) {
-				GW::Item *b_item = bag->Items[slot];
-				assert(b_item);
-				int availaible = 250 - b_item->Quantity;
-				int will_move = std::min(availaible, remaining);
-				if (will_move != 0) {
-					GW::Items::MoveItem(item, b_item, will_move);
-					remaining -= will_move;
+		if (item->GetIsStackable()) {
+			for (int i = storage1; i < storage9; i++) {
+				GW::Bag *bag = bags[i];
+				if (!bag) continue;
+				size_t slot = bag->find(item->ModelId);
+				while (slot != GW::Bag::npos) {
+					GW::Item *b_item = bag->Items[slot];
+					assert(b_item);
+					int availaible = 250 - b_item->Quantity;
+					int will_move = std::min(availaible, remaining);
+					if (will_move != 0) {
+						GW::Items::MoveItem(item, b_item, will_move);
+						remaining -= will_move;
+					}
+					if (remaining == 0) break;
+					slot = bag->find(item->ModelId, slot + 1);
 				}
-				if (remaining == 0) break;
-				slot = bag->find(model_id, slot + 1);
 			}
 		}
 
@@ -217,7 +218,7 @@ namespace {
 		int total = item->Quantity;
 		int remaining = total;
 
-		// If item is stackable, try to fill every stack of the same type
+		// If item is stackable, try to complete similar stack
 		if (item->GetIsStackable()) {
 			for (int i = backpack; i <= bag2; i++) {
 				GW::Bag *bag = bags[i];
@@ -252,15 +253,16 @@ namespace {
 		}
 	}
 
-	/*  This whole section is commented because packets are not up to date after the update. 
-		Should still work if you match the right packets.
+	// This whole section is commented because packets are not up to date after the update. 
+	// Should still work if you match the right packets.
 
-	// April's Fool
+#if 0 // April's Fool
 	namespace AF {
+		using namespace GW::Packet::StoC;
 		void CreateXunlaiAgentFromGameThread(void) {
 			{
-				GW::Packet::StoC::NpcGeneralStats packet;
-				packet.header = 79;
+				NpcGeneralStats packet;
+				packet.header = NpcGeneralStats::STATIC_HEADER;
 				packet.npc_id = 221;
 				packet.file_id = 0x0001c601;
 				packet.data1 = 0;
@@ -275,14 +277,13 @@ namespace {
 			}
 
 			{
-				GW::Packet::StoC::P080 packet;
-				packet.header = 80;
+				NPCModelFile packet;
+				packet.header = NPCModelFile::STATIC_HEADER;
 				packet.npc_id = 221;
 				packet.count = 1;
 				packet.data[0] = 0x0001fc56;
 
 				GW::StoC::EmulatePacket((GW::Packet::StoC::PacketBase *)&packet);
->>>>>>> origin/master
 			}
 		}
 
@@ -309,8 +310,8 @@ namespace {
 				if (!movement) return;
 				if (movement->h001C != 1) return;
 
-				GW::Packet::StoC::P167 packet;
-				packet.header = 167;
+				AgentModel packet;
+				packet.header = AgentModel::STATIC_HEADER;
 				packet.agent_id = agent->Id;
 				packet.model_id = npc_id;
 				GW::StoC::EmulatePacket((GW::Packet::StoC::PacketBase *)&packet);
@@ -329,8 +330,8 @@ namespace {
 		}
 		void ApplyPatches() {
 			// apply skin on agent spawn
-			GW::StoC::AddCallback<GW::Packet::StoC::P065>(
-				[](GW::Packet::StoC::P065 *packet) -> bool {
+			GW::StoC::AddCallback<DisplayCape>(
+				[](DisplayCape *packet) -> bool {
 				DWORD agent_id = packet->agent_id;
 				GW::Agent *agent = GW::Agents::GetAgentByID(agent_id);
 				ApplySkinSafe(agent, 221);
@@ -338,8 +339,8 @@ namespace {
 			});
 
 			// override tonic usage
-			GW::StoC::AddCallback<GW::Packet::StoC::P167>(
-				[](GW::Packet::StoC::P167 *packet) -> bool {
+			GW::StoC::AddCallback<AgentModel>(
+				[](AgentModel *packet) -> bool {
 				GW::Agent *agent = GW::Agents::GetAgentByID(packet->agent_id);
 				if (!(agent && agent->IsPlayer())) return false;
 				GW::GameContext *game_ctx = GW::GameContext::instance();
@@ -364,29 +365,38 @@ namespace {
 			}
 		}
 	} 
-	*/
+#endif // April's Fool
 }
 
 void GameSettings::Initialize() {
 	ToolboxModule::Initialize();
-	patches.push_back(new GW::MemoryPatcher((void*)0x0067D9D8,
-		(BYTE*)"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90", 16));
-	patches.push_back(new GW::MemoryPatcher((void*)0x0067D530, (BYTE*)"\xEB", 1));
-	patches.push_back(new GW::MemoryPatcher((void*)0x0067D54D, (BYTE*)"\xEB", 1));
+	patches.push_back(new GW::MemoryPatcher(0x0067D9D8,
+		"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90", 16));
+	patches.push_back(new GW::MemoryPatcher(0x0067D530, "\xEB", 1));
+	patches.push_back(new GW::MemoryPatcher(0x0067D54D, "\xEB", 1));
 
-	BYTE* a = (BYTE*)"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90";
-	patches.push_back(new GW::MemoryPatcher((void*)0x00669A56, a, 10));
-	patches.push_back(new GW::MemoryPatcher((void*)0x00669AA2, a, 10));
-	patches.push_back(new GW::MemoryPatcher((void*)0x00669ADE, a, 10));
-	patches.push_back(new GW::MemoryPatcher((void*)0x0067D7E6, a, 10));
-	patches.push_back(new GW::MemoryPatcher((void*)0x0067D832, a, 10));
-	patches.push_back(new GW::MemoryPatcher((void*)0x0067D86E, a, 10));
+	void *patch = "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90";
+	patches.push_back(new GW::MemoryPatcher(0x00669A56, patch, 10));
+	patches.push_back(new GW::MemoryPatcher(0x00669AA2, patch, 10));
+	patches.push_back(new GW::MemoryPatcher(0x00669ADE, patch, 10));
+	patches.push_back(new GW::MemoryPatcher(0x0067D7E6, patch, 10));
+	patches.push_back(new GW::MemoryPatcher(0x0067D832, patch, 10));
+	patches.push_back(new GW::MemoryPatcher(0x0067D86E, patch, 10));
 
 	{
 		// Patch that allow storage page (and Anniversary page) to work... (ask Ziox for more info)
 		uintptr_t found = GW::Scanner::Find("\xEB\x20\x33\xC0\xBE\x06", "xxxxxx", -4);
 		printf("[SCAN] StoragePatch = %p\n", (void *)found);
-		ctrl_click_patch = new GW::MemoryPatcher((void*)found, (BYTE *)"\x09", 1);
+
+		// Xunlai Chest has a behavior where if you
+		// 1. Open chest on page 1 to 8
+		// 2. Close chest & open it again
+		// -> You should still be on the same page
+		// But, if you try with the material page (or anniversary page in the case when you bought all other storage page)
+		// you will get back the the page 1. I think it was a intended use for material page & forgot to fix it
+		// when they added anniversary page so we do it ourself.
+		DWORD page_max = 8;
+		ctrl_click_patch = new GW::MemoryPatcher(found, &page_max, 1);
 		ctrl_click_patch->TooglePatch(true);
 	}
 
