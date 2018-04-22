@@ -491,11 +491,8 @@ Color AgentRenderer::GetColor(GW::Agent* agent) const {
 
 	const CustomAgent* custom_agent = FindValidCustomAgent(agent->PlayerNumber);
 	if (custom_agent) {
-		if (agent->HP > 0.9f) {
-			return custom_agent->color;
-		} else {
-			return Colors::Sub(custom_agent->color, color_agent_damaged_modifier);
-		}
+		if (agent->HP > 0.9f) return custom_agent->color;
+		if (agent->HP > 0.0f) return Colors::Sub(custom_agent->color, color_agent_damaged_modifier);
 	}
 
 	// hostiles
