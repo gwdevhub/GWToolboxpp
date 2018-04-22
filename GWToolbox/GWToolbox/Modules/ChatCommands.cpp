@@ -13,10 +13,11 @@
 #include <GWCA\Managers\GuildMgr.h>
 #include <GWCA\Managers\FriendListMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
+#include <GWCA\Managers\MapMgr.h>
+#include <GWCA\Managers\AgentMgr.h>
+#include <GWCA\Managers\PlayerMgr.h>
 #include <GWCA\Managers\SkillbarMgr.h>
 #include <GWCA\Managers\GameThreadMgr.h>
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Context\GameContext.h>
 
 #include <GuiUtils.h>
@@ -624,7 +625,6 @@ void ChatCommands::CmdTarget(int argc, LPWSTR *argv) {
 			if (closest > 0) {
 				GW::Agents::ChangeTarget(agents[closest]);
 			}
-
 		} else if (arg1 == L"getid") {
 			GW::Agent* target = GW::Agents::GetTarget();
 			if (target == nullptr) {
@@ -638,6 +638,14 @@ void ChatCommands::CmdTarget(int argc, LPWSTR *argv) {
 				Log::Error("No target selected!");
 			} else {
 				Log::Info("Target coordinates are (%f, %f)", target->pos.x, target->pos.y);
+			}
+		} else {
+			GW::Player *target = GW::PlayerMgr::GetPlayerByName(arg1.c_str());
+			if (target != NULL) {
+				GW::Agent *agent = GW::Agents::GetAgentByID(target->AgentID);
+				if (agent) {
+					GW::Agents::ChangeTarget(agent);
+				}
 			}
 		}
 	}
