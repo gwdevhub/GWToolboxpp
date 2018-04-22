@@ -2,8 +2,8 @@
 
 #include <set>
 #include <string>
+#include <vector>
 #include <initializer_list>
-
 #include <GWCA\Packets\StoC.h>
 
 #include "ToolboxModule.h"
@@ -55,23 +55,31 @@ private:
 	bool player_has_achieved_title;
 
 	bool messagebycontent;
-#define FILTER_BUF_SIZE 1024*16
+
+	static const size_t FILTER_BUF_SIZE = 1024*16;
+
+	// Chat filter
+	std::vector<std::string> bycontent_words;
 	char bycontent_buf[FILTER_BUF_SIZE];
 	bool bycontent_filedirty = false;
-	std::set<std::string> bycontent_words;
 
-	std::set<std::wstring> ignored_players;
+#ifdef EXTENDED_IGNORE_LIST
+	bool messagebyauthor;
+	std::set<std::string> byauthor_words;
+	char byauthor_buf[FILTER_BUF_SIZE];
+	bool byauthor_filedirty = false;
+#endif
 
-	//bool messagebyauthor;
-	//char byauthor_buf[FILTER_BUF_SIZE];
-	//bool byauthor_filedirty = false;
-	//std::set<std::string> byauthor_words;
+	static void ParseBuffer(const char *text, std::vector<std::string> &words);
+	static void ParseBuffer(const char *text, std::set<std::string>    &words);
 
-	void ParseBuffer(const char* buf, std::set<std::string>& words);
 	void ByContent_ParseBuf() {
 		ParseBuffer(bycontent_buf, bycontent_words);
 	}
-	//void ByAuthor_ParseBuf() {
-	//	ParseBuffer(byauthor_buf, byauthor_words);
-	//}
+
+#ifdef EXTENDED_IGNORE_LIST
+	void ByAuthor_ParseBuf() {
+		ParseBuffer(byauthor_buf, byauthor_words);
+	}
+#endif
 };
