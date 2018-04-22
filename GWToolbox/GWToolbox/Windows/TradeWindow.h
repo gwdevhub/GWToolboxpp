@@ -78,6 +78,6 @@ private:
     bool should_stop = false;
 	std::thread worker;
 
-	std::vector<std::string> ParseBuffer(const char *text);
-	std::vector<std::string> ParseBuffer(std::fstream stream);
+	void ParseBuffer(const char *text, std::vector<std::string> &words);
+	void ParseBuffer(std::fstream stream, std::vector<std::string>& words);
 };

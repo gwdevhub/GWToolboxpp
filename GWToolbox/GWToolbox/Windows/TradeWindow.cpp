@@ -318,7 +318,7 @@ void TradeWindow::DrawAlertsWindowContent(bool ownwindow) {
 	if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE, 
 		ImVec2(-1.0f, ownwindow ? -1.0f : 0.0f))) {
 
-		alert_words = ParseBuffer(alert_buf);
+		ParseBuffer(alert_buf, alert_words);
 		alertfile_dirty = true;
 	}
 }
@@ -337,7 +337,7 @@ void TradeWindow::LoadSettings(CSimpleIni* ini) {
 	if (alert_file.is_open()) {
 		alert_file.get(alert_buf, ALERT_BUF_SIZE, '\0');
 		alert_file.close();
-		alert_words = ParseBuffer(alert_buf);
+		ParseBuffer(alert_buf, alert_words);
 	}
 	alert_file.close();
 }
@@ -360,8 +360,8 @@ void TradeWindow::SaveSettings(CSimpleIni* ini) {
 	}
 }
 
-std::vector<std::string> TradeWindow::ParseBuffer(const char *text) {
-	std::vector<std::string> words;
+void TradeWindow::ParseBuffer(const char *text, std::vector<std::string>& words) {
+	words.clear();
 	std::istringstream stream(text);
 	std::string word;
 	while (std::getline(stream, word)) {
@@ -369,18 +369,16 @@ std::vector<std::string> TradeWindow::ParseBuffer(const char *text) {
 			word[i] = tolower(word[i]);
 		words.push_back(word);
 	}
-	return words;
 }
 
-std::vector<std::string> TradeWindow::ParseBuffer(std::fstream stream) {
-	std::vector<std::string> words;
+void TradeWindow::ParseBuffer(std::fstream stream, std::vector<std::string>& words) {
+	words.clear();
 	std::string word;
 	while (std::getline(stream, word)) {
 		for (size_t i = 0; i < word.length(); i++)
 			word[i] = tolower(word[i]);
 		words.push_back(word);
 	}
-	return words;
 }
 
 void TradeWindow::AsyncChatConnect() {
