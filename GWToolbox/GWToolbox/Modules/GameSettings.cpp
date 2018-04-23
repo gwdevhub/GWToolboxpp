@@ -370,18 +370,34 @@ namespace {
 
 void GameSettings::Initialize() {
 	ToolboxModule::Initialize();
-	patches.push_back(new GW::MemoryPatcher(0x0067D9D8,
-		"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90", 16));
-	patches.push_back(new GW::MemoryPatcher(0x0067D530, "\xEB", 1));
-	patches.push_back(new GW::MemoryPatcher(0x0067D54D, "\xEB", 1));
 
-	void *patch = "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90";
-	patches.push_back(new GW::MemoryPatcher(0x00669A56, patch, 10));
-	patches.push_back(new GW::MemoryPatcher(0x00669AA2, patch, 10));
-	patches.push_back(new GW::MemoryPatcher(0x00669ADE, patch, 10));
-	patches.push_back(new GW::MemoryPatcher(0x0067D7E6, patch, 10));
-	patches.push_back(new GW::MemoryPatcher(0x0067D832, patch, 10));
-	patches.push_back(new GW::MemoryPatcher(0x0067D86E, patch, 10));
+	{
+		uintptr_t found = GW::Scanner::Find("\x8B\x9E\xCC\x0C\x00\x00\x03\xD9\x03\xFB\xEB\x03", "xxxxxxxxxxxx", 69);
+		patches.push_back(new GW::MemoryPatcher(found,
+			"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90", 16));
+	}
+
+	{
+		uintptr_t found = GW::Scanner::Find("\x8B\x96\x7C\x0C\x00\x00\x2B\xC2\x8B", "xxxxxxxxx", 0);
+		patches.push_back(new GW::MemoryPatcher(found - 0xB,  "\xEB", 1));
+		patches.push_back(new GW::MemoryPatcher(found + 0x12, "\xEB", 1));
+	}
+
+	{
+		uintptr_t found = GW::Scanner::Find("\x56\x57\x8B\xF9\x8B\x87\x00\x02\x00\x00\x85\xC0\x75\x14", "xxxxxxxxxxxxxx", 0);
+		void *patch = "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90";
+		patches.push_back(new GW::MemoryPatcher(found + 0x86,  patch, 10));
+		patches.push_back(new GW::MemoryPatcher(found + 0xD2,  patch, 10));
+		patches.push_back(new GW::MemoryPatcher(found + 0x10E, patch, 10));
+	}
+
+	{
+		uintptr_t found = GW::Scanner::Find("\x56\x57\x8B\xF9\x8B\x87\xF4\x0C\x00\x00\x85\xC0\x75\x14", "xxxxxxxxxxxxxx", 0);
+		void *patch = "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90";
+		patches.push_back(new GW::MemoryPatcher(found + 0x86,  patch, 10));
+		patches.push_back(new GW::MemoryPatcher(found + 0xD2,  patch, 10));
+		patches.push_back(new GW::MemoryPatcher(found + 0x10E, patch, 10));
+	}
 
 	{
 		// Patch that allow storage page (and Anniversary page) to work... (ask Ziox for more info)
