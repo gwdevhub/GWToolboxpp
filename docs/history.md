@@ -7,6 +7,12 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
+## Version 2.11
+* [Fix] Fixed toolbox functionality after April 23 2018 game update.
+* [Fix] Improved overall robustness.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.11_Release/GWToolbox.dll)
+
 ## Version 2.10
 * [Fix] Fixed toolbox functionality after April 2 2018 game update.
 
