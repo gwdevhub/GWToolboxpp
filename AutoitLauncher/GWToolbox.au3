@@ -39,6 +39,46 @@ If Not (FileExists($dllpath) Or FileExists($inipath) Or FileExists($fontpath)) T
 	'By clicking the OK button you agree with all the above.') <> $IDOK Then Exit
 EndIf
 
+; ==== Install Visual Studio C++ 2015 Runtime ====
+Func CheckVCRedist()
+	Local $Key
+	If @CPUArch == "X64" Then
+		$Key = RegRead("HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\VisualStudio\14.0\VC\Runtimes\x86", "Installed")
+	Else
+		$Key = RegRead("HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x86", "Installed")
+	EndIf
+	If $Key == 1 Then Return False; Already installed
+
+	If MsgBox($MB_YESNO, "GWToolbox++ Launcher", "You do not have The Visual C++ Runtime (vc_redist.x86) required for Toolbox to run. Would you like me to open where to download it?") == $IDYES Then
+		ShellExecute('https://www.microsoft.com/en-us/download/details.aspx?id=48145')
+	EndIf
+
+	Return True
+EndFunc
+
+; ==== Install DirectX 9.0c Runtime ====
+Func CheckDirectX()
+	Local $Key
+	If @CPUArch == "X64" Then
+		$Key = RegRead("HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\DirectX", "Version")
+	Else
+		$Key = RegRead("HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\DirectX", "Version")
+	EndIf
+	If $Key == '4.09.00.0904' Then Return False; Already installed
+
+	If MsgBox($MB_YESNO, "GWToolbox++ Launcher", "You do not have The DirectX 9.0c Runtime required for Toolbox to run. Would you like me to open where to download it?") == $IDYES Then
+		ShellExecute('https://www.microsoft.com/en-us/download/details.aspx?id=35')
+	EndIf
+
+	Return True
+EndFunc
+
+If CheckVCRedist() Or CheckDirectX() Then
+	MsgBox(0, "GWToolbox++", "Please install the runtimes you were prompted to install, then run this launcher again.")
+	Exit
+EndIf
+
+
 ; ==== Create directories ====
 Out("Creating directories and reading .ini... ", false)
 If Not FileExists($folder) Then DirCreate($folder)
@@ -239,35 +279,42 @@ For $i = 1 To $modules[0][0]
 	If $modules[$i][1] == $dllpath Then Error("GWToolbox++ already in specified process")
 Next
 
-Local $hProcess = DllCall($Kernel32, "DWORD", "OpenProcess", "DWORD", 0x1F0FFF, "int", 0, "DWORD", $gwPID)
+Local $hProcess = DllCall($Kernel32, "DWORD", "OpenProcess", "DWORD", 0x1F0FFF, "int", 0, "DWORD", $gwPID)[0]
 If @error Then Error1("Failed to DllCall OpenProcess", @error)
 If $hProcess == 0 Then Error2("OpenProcess failed", _WinAPI_GetLastError(), $hProcess)
 
-Local $hModule = DllCall($Kernel32, "DWORD", "GetModuleHandleA", "str", "kernel32.dll")
+Local $hModule = DllCall($Kernel32, "DWORD", "GetModuleHandleA", "str", "kernel32.dll")[0]
 If @error Then Error1("Failed to DllCall GetModuleHandleA", @error)
 If $hModule == 0 Then Error2("GetModuleHandle failed", _WinAPI_GetLastError(), $hModule)
 
-Local $lpStartAddress = DllCall($Kernel32, "DWORD", "GetProcAddress", "DWORD", $hModule[0], "str", "LoadLibraryA")
+Local $lpStartAddress = DllCall($Kernel32, "DWORD", "GetProcAddress", "DWORD", $hModule, "str", "LoadLibraryA")[0]
 If @error Then Error1("Failed to DllCall GetProcAddress", @error)
 If $lpStartAddress == 0 Then Error2("GetProcAddress failed", _WinAPI_GetLastError(), $lpStartAddress)
 
-Local $lpParameter = DllCall($Kernel32, "DWORD", "VirtualAllocEx", "int", $hProcess[0], "int", 0, "ULONG_PTR", DllStructGetSize($DLL_Path), "DWORD", 0x3000, "int", 4)
+Local $lpParameter = DllCall($Kernel32, "DWORD", "VirtualAllocEx", "int", $hProcess, "int", 0, "ULONG_PTR", DllStructGetSize($DLL_Path), "DWORD", 0x3000, "int", 4)[0]
 If @error Then Error1("Failed to DllCall VirtualAllocEx", @error)
 If $lpParameter == 0 Then Error2("VirtualAllocEx failed", _WinAPI_GetLastError(), $lpParameter)
 
-Local $writeProcMem_ret = DllCall($Kernel32, "BOOL", "WriteProcessMemory", "int", $hProcess[0], "DWORD", $lpParameter[0], "str", $sDLLFullPath, "ULONG_PTR", DllStructGetSize($DLL_Path), "int", 0)
+Local $writeProcMem_ret = DllCall($Kernel32, "BOOL", "WriteProcessMemory", "int", $hProcess, "DWORD", $lpParameter, "str", $sDLLFullPath, "ULONG_PTR", DllStructGetSize($DLL_Path), "int", 0)[0]
 If @error Then Error1("Failed to DllCall WriteProcessMemory", @error)
 If $writeProcMem_ret == 0 Then Error2("WriteProcessMemory failed", _WinAPI_GetLastError(), $writeProcMem_ret)
 
-Local $hThread = DllCall($Kernel32, "int", "CreateRemoteThread", "DWORD", $hProcess[0], "int", 0, "int", 0, "DWORD", $lpStartAddress[0], "DWORD", $lpParameter[0], "int", 0, "int", 0)
+Local $hThread = DllCall($Kernel32, "int", "CreateRemoteThread", "DWORD", $hProcess, "int", 0, "int", 0, "DWORD", $lpStartAddress, "DWORD", $lpParameter, "int", 0, "int", 0)[0]
 If @error Then Error1("Failed to DllCall CreateRemoteThread", @error)
 If $hThread == 0 Then Error2("CreateRemoteThread failed", _WinAPI_GetLastError(), $hThread)
 
-Local $closehandle_ret = DllCall($Kernel32, "BOOL", "CloseHandle", "DWORD", $hProcess[0])
+Local $nWaitEvent = DllCall($Kernel32, "DWORD", "WaitForSingleObject", "HANDLE", $hThread, "DWORD", 1000)[0]
+If @error Then Error1("Failed to DllCall WaitForSingleObject", @error)
+If $nWaitEvent <> 0 Then Error2("WaitForSingleObject timed out", _WinAPI_GetLastError(), Hex($nWaitEvent))
+
+Local $nExitCode = 0
+Local $hTBModule = DllCall($Kernel32, "HANDLE", "GetExitCodeThread", "HANDLE", $hThread, "DWORD*", $nExitCode)[0]
+If @error Then Error1("Failed to DllCall GetExitCodeThread", @error)
+If $hTBModule == 0 Then Error2("GetExitCodeThread failed", _WinAPI_GetLastError(), $nExitCode)
+
+Local $closehandle_ret = DllCall($Kernel32, "BOOL", "CloseHandle", "DWORD", $hProcess)[0]
 If @error Then Error1("Failed to DllCall CloseHandle", @error)
 If $closehandle_ret == 0 Then Error2("CloseHandle failed", _WinAPI_GetLastError(), $closehandle_ret)
-
-DllClose($Kernel32)
 
 Local $found = False
 Local $deadlock = TimerInit()
