@@ -10,6 +10,8 @@
 
 #define AGENTCOLOR_INIFILENAME L"AgentColors.ini"
 
+unsigned int AgentRenderer::CustomAgent::cur_ui_id = 0;
+
 void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	color_agent_modifier = Colors::Load(ini, section, VAR_NAME(color_agent_modifier), 0x001E1E1E);
 	color_agent_damaged_modifier = Colors::Load(ini, section, VAR_NAME(color_agent_lowhp_modifier), 0x00505050);
@@ -57,8 +59,8 @@ void AgentRenderer::LoadAgentColors() {
 		CustomAgent* customAgent = new CustomAgent(agentcolorinifile, entry.pItem);
 		customAgent->index = custom_agents.size();
 		custom_agents.push_back(customAgent);
-		custom_agents_map[customAgent->modelId] = customAgent;
 	}
+	BuildCustomAgentsMap();
 	agentcolors_changed = false;
 }
 
@@ -186,10 +188,11 @@ void AgentRenderer::DrawSettings() {
 	if (ImGui::TreeNode("Custom Agents")) {
 		bool changed = false;
 		for (unsigned i = 0; i < custom_agents.size(); ++i) {
-			ImGui::PushID(i);
 
 			CustomAgent* custom = custom_agents[i];
 			DWORD modelId = custom->modelId;
+
+			ImGui::PushID(custom->ui_id);
 
 			CustomAgent::Operation op = CustomAgent::Operation::None;
 			if (custom->DrawSettings(op)) changed = true;
@@ -201,31 +204,24 @@ void AgentRenderer::DrawSettings() {
 				break;
 			case CustomAgent::Operation::MoveUp:
 				if (i > 0) std::swap(custom_agents[i], custom_agents[i - 1]);
-				changed = true;
 				break;
 			case CustomAgent::Operation::MoveDown:
 				if (i < custom_agents.size() - 1) {
 					std::swap(custom_agents[i], custom_agents[i + 1]);
 					// render the moved one and increase i
 					++i;
-					ImGui::PushID(i);
+					ImGui::PushID(custom_agents[i]->ui_id);
 					CustomAgent::Operation op2 = CustomAgent::Operation::None;
 					custom_agents[i]->DrawSettings(op2);
 					ImGui::PopID();
 				}
-				changed = true;
 				break;
 			case CustomAgent::Operation::Delete:
-				custom_agents_map.erase(custom->modelId);
 				custom_agents.erase(custom_agents.begin() + i);
 				delete custom;
 				--i;
-				changed = true;
 				break;
 			case CustomAgent::Operation::ModelIdChange: {
-				auto it = custom_agents_map.find(modelId);
-				if (it != custom_agents_map.end()) custom_agents_map.erase(it);
-				custom_agents_map[custom->modelId] = custom;
 				changed = true;
 				break;
 			}
@@ -237,12 +233,16 @@ void AgentRenderer::DrawSettings() {
 			case AgentRenderer::CustomAgent::Operation::MoveUp:
 			case AgentRenderer::CustomAgent::Operation::MoveDown:
 			case AgentRenderer::CustomAgent::Operation::Delete: 
-				for (size_t i = 0; i < custom_agents.size(); ++i) custom_agents[i]->index = i;
+				for (size_t i = 0; i < custom_agents.size(); ++i) {
+					custom_agents[i]->index = i;
+				}
+				changed = true;
 			default: break;
 			}
 		}
 		if (changed) {
 			agentcolors_changed = true;
+			BuildCustomAgentsMap();
 		}
 		if (ImGui::Button("Add Agent Custom Color")) {
 			custom_agents.push_back(new CustomAgent(0, color_hostile, "<name>"));
@@ -330,7 +330,6 @@ void AgentRenderer::Shape_t::AddVertex(float x, float y, AgentRenderer::Color_Mo
 	vertices.push_back(Shape_Vertex(x, y, mod));
 }
 
-
 void AgentRenderer::Initialize(IDirect3DDevice9* device) {
 	type = D3DPT_TRIANGLELIST;
 	vertices_max = max_shape_verts * 0x200; // support for up to 512 agents, should be enough
@@ -381,7 +380,31 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 		}
 	}
 	// 2. non-player agents
-	std::vector<GW::Agent*> custom_agents_to_draw;
+	static std::vector<std::pair<const GW::Agent*, const CustomAgent*>> custom_agents_to_draw;
+	custom_agents_to_draw.clear();
+
+	// some helper lambads
+	auto AddCustomAgentsToDraw = [this](const GW::Agent* agent) -> bool {
+		const auto it = custom_agents_map.find(agent->PlayerNumber);
+		bool found_custom_agent = false;
+		if (it != custom_agents_map.end()) {
+			for (const CustomAgent* ca : it->second) {
+				if (!ca->active) continue;
+				if (ca->mapId > 0 && ca->mapId != (DWORD)GW::Map::GetMapID()) continue;
+				custom_agents_to_draw.push_back({ agent, ca });
+				found_custom_agent = true;
+			}
+		}
+		return found_custom_agent;
+	};
+	auto SortCustomAgentsToDraw = []() -> void {
+		std::sort(custom_agents_to_draw.begin(), custom_agents_to_draw.end(), 
+			[&](const std::pair<const GW::Agent*, const CustomAgent*>& pA,
+			const std::pair<const GW::Agent*, const CustomAgent*>& pB) -> bool {
+			return pA.second->index > pB.second->index;
+		});
+	};
+
 	for (size_t i = 0; i < agents.size(); ++i) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
@@ -395,32 +418,37 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 			&& (npcs[agent->PlayerNumber].NpcFlags & 0x10000) > 0) continue;
 		if (target == agent) continue; // will draw target at the end
 
-		if (custom_agents_map.find(agent->PlayerNumber) != custom_agents_map.end()) {
-			custom_agents_to_draw.push_back(agent);
-			continue;
+		if (AddCustomAgentsToDraw(agent)) {
+			// found a custom agent to draw, we'll draw them later
+		} else {
+			Enqueue(agent);
 		}
-
-		Enqueue(agent);
 
 		if (vertices_count >= vertices_max - 16 * max_shape_verts) break;
 	}
 	// 3. custom colored models
-	std::sort(custom_agents_to_draw.begin(), custom_agents_to_draw.end(), 
-		[&](const GW::Agent* agentA, const GW::Agent* agentB) {
-		const auto& itA = custom_agents_map[agentA->PlayerNumber];
-		const auto& itB = custom_agents_map[agentB->PlayerNumber];
-		if (itA && itB) return itA->index > itB->index;
-		return true;
-	});
-	for (auto agent : custom_agents_to_draw) {
-		Enqueue(agent);
+	SortCustomAgentsToDraw();
+	for (const auto pair : custom_agents_to_draw) {
+		Enqueue(pair.first, pair.second);
 		if (vertices_count >= vertices_max - 16 * max_shape_verts) break;
 	}
+	custom_agents_to_draw.clear();
 
 	// 4. target if it's a non-player
 	if (target && target->PlayerNumber > 12) {
-		Enqueue(target);
+		if (AddCustomAgentsToDraw(target)) {
+			SortCustomAgentsToDraw();
+			for (const auto pair : custom_agents_to_draw) {
+				Enqueue(pair.first, pair.second);
+				if (vertices_count >= vertices_max - 16 * max_shape_verts) break;
+			}
+			custom_agents_to_draw.clear();
+		} else {
+			Enqueue(target);
+		}
 	}
+
+	// note: we don't support custom agents for players
 
 	// 5. players
 	for (size_t i = 0; i < agents.size(); ++i) {
@@ -454,10 +482,10 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 	}
 }
 
-void AgentRenderer::Enqueue(GW::Agent* agent) {
-	Color color = GetColor(agent);
-	float size = GetSize(agent);
-	Shape_e shape = GetShape(agent);
+void AgentRenderer::Enqueue(const GW::Agent* agent, const CustomAgent* ca) {
+	Color color = GetColor(agent, ca);
+	float size = GetSize(agent, ca);
+	Shape_e shape = GetShape(agent, ca);
 
 	if (GW::Agents::GetTargetId() == agent->Id) {
 		Enqueue(shape, agent, size + 50.0f, color_target);
@@ -466,7 +494,7 @@ void AgentRenderer::Enqueue(GW::Agent* agent) {
 	Enqueue(shape, agent, size, color);
 }
 
-Color AgentRenderer::GetColor(GW::Agent* agent) const {
+Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) const {
 	if (agent->Id == GW::Agents::GetPlayerId()) {
 		if (agent->GetIsDead()) return color_player_dead;
 		else return color_player;
@@ -489,10 +517,11 @@ Color AgentRenderer::GetColor(GW::Agent* agent) const {
 		}
 	}
 
-	const CustomAgent* custom_agent = FindValidCustomAgent(agent->PlayerNumber);
-	if (custom_agent) {
-		if (agent->HP > 0.9f) return custom_agent->color;
-		if (agent->HP > 0.0f) return Colors::Sub(custom_agent->color, color_agent_damaged_modifier);
+	if (ca && ca->color_active) {
+		if (agent->Allegiance == 0x3 && agent->HP > 0.0f && agent->HP <= 0.9f) {
+			return Colors::Sub(ca->color, color_agent_damaged_modifier);
+		}
+		if (agent->HP > 0.0f) return ca->color;
 	}
 
 	// hostiles
@@ -518,13 +547,12 @@ Color AgentRenderer::GetColor(GW::Agent* agent) const {
 	return IM_COL32(0, 0, 0, 0);
 }
 
-float AgentRenderer::GetSize(GW::Agent* agent) const {
+float AgentRenderer::GetSize(const GW::Agent* agent, const CustomAgent* ca) const {
 	if (agent->Id == GW::Agents::GetPlayerId()) return size_player;
 	if (agent->GetIsGadgetType()) return size_signpost;
 	if (agent->GetIsItemType()) return size_item;
 
-	const CustomAgent* custom_agent = FindValidCustomAgent(agent->PlayerNumber);
-	if (custom_agent && custom_agent->size > 0) return custom_agent->size;
+	if (ca && ca->size_active && ca->size >= 0) return ca->size;
 
 	if (agent->GetHasBossGlow()) return size_boss;
 
@@ -553,13 +581,16 @@ float AgentRenderer::GetSize(GW::Agent* agent) const {
 		case GW::Constants::ModelID::UW::KeeperOfSouls:
 		case GW::Constants::ModelID::UW::FourHorseman:
 		case GW::Constants::ModelID::UW::Slayer:
+		case GW::Constants::ModelID::UW::TerrorwebQueen:
+		case GW::Constants::ModelID::UW::Dhuum:
 
 		case GW::Constants::ModelID::FoW::ShardWolf:
 		case GW::Constants::ModelID::FoW::SeedOfCorruption:
+		case GW::Constants::ModelID::FoW::LordKhobay:
 
 		case GW::Constants::ModelID::Deep::Kanaxai:
 		case GW::Constants::ModelID::Deep::KanaxaiAspect:
-		//case GW::Constants::ModelID::Urgoz::Urgoz: // need this
+		case GW::Constants::ModelID::Urgoz::Urgoz:
 
 		case GW::Constants::ModelID::SoO::Brigand:
 		case GW::Constants::ModelID::SoO::Fendi:
@@ -580,21 +611,15 @@ float AgentRenderer::GetSize(GW::Agent* agent) const {
 	}
 }
 
-AgentRenderer::Shape_e AgentRenderer::GetShape(GW::Agent* agent) const {
+AgentRenderer::Shape_e AgentRenderer::GetShape(const GW::Agent* agent, const CustomAgent* ca) const {
 	if (agent->GetIsGadgetType()) return Quad;
 	if (agent->GetIsItemType()) return Quad;
 
 	if (agent->LoginNumber > 0) return Tear;	// players
 	if (!agent->GetIsCharacterType()) return Quad; // shouldn't happen but just in case
 
-	const CustomAgent* custom_agent = FindValidCustomAgent(agent->PlayerNumber);
-	if (custom_agent && custom_agent->shape > 0) {
-		switch (custom_agent->shape) {
-		case 1: return Tear;
-		case 2: return Circle;
-		case 3: return Quad;
-		default: break;
-		}
+	if (ca && ca->shape_active) {
+		return ca->shape;
 	}
 
 	auto npcs = GW::Agents::GetNPCArray();
@@ -613,7 +638,7 @@ AgentRenderer::Shape_e AgentRenderer::GetShape(GW::Agent* agent) const {
 	return Tear;
 }
 
-void AgentRenderer::Enqueue(Shape_e shape, GW::Agent* agent, float size, Color color) {
+void AgentRenderer::Enqueue(Shape_e shape, const GW::Agent* agent, float size, Color color) {
 	if ((color & IM_COL32_A_MASK) == 0) return;
 
 	unsigned int i;
@@ -636,27 +661,44 @@ void AgentRenderer::Enqueue(Shape_e shape, GW::Agent* agent, float size, Color c
 	vertices_count += shapes[shape].vertices.size();
 }
 
-const AgentRenderer::CustomAgent* AgentRenderer::FindValidCustomAgent(DWORD modelid) const {
-	const auto& it = custom_agents_map.find(modelid);
-	if (it == custom_agents_map.end()) return nullptr;
-	const auto& custom = it->second;
-	if (!custom->active) return nullptr;
-	if (custom->mapId != 0 && custom->mapId != (DWORD)GW::Map::GetMapID()) return nullptr;
-	return custom;
+void AgentRenderer::BuildCustomAgentsMap() {
+	custom_agents_map.clear();
+	for (const CustomAgent* ca : custom_agents) {
+		const auto it = custom_agents_map.find(ca->modelId);
+		if (it == custom_agents_map.end()) {
+			custom_agents_map[ca->modelId] = std::vector<const CustomAgent*>();
+		}
+		custom_agents_map[ca->modelId].push_back(ca);
+	}
 }
 
-AgentRenderer::CustomAgent::CustomAgent(CSimpleIni* ini, const char* section) {
+AgentRenderer::CustomAgent::CustomAgent(CSimpleIni* ini, const char* section)
+	: ui_id(++cur_ui_id) {
+
 	active = ini->GetBoolValue(section, VAR_NAME(active));
 	strncpy(name, ini->GetValue(section, VAR_NAME(name), ""), 128);
 	modelId = ini->GetLongValue(section, VAR_NAME(modelId), 0);
 	mapId = ini->GetLongValue(section, VAR_NAME(mapId), 0);
 
 	color = Colors::Load(ini, section, VAR_NAME(color), 0xFFF00000);
-	shape = ini->GetLongValue(section, VAR_NAME(shape), 0);
+	int s = ini->GetLongValue(section, VAR_NAME(shape), 0);
+	if (s >= 1 && s <= 4) {
+		// this is a small hack because we used to have shape=0 -> default, now we just cast to Shape_e.
+		// but shape=1 on file is still tear (which is Shape_e::Tear == 0).
+		shape = (Shape_e)(s - 1);
+	} else {
+		shape = Tear;
+	}
 	size = (float)ini->GetDoubleValue(section, VAR_NAME(size), 0.0f);
+
+	color_active = ini->GetBoolValue(section, VAR_NAME(color_active), true);
+	shape_active = ini->GetBoolValue(section, VAR_NAME(shape_active), true);
+	size_active = ini->GetBoolValue(section, VAR_NAME(size_active), true);
 }
 
-AgentRenderer::CustomAgent::CustomAgent(DWORD _modelId, Color _color, const char* _name) {
+AgentRenderer::CustomAgent::CustomAgent(DWORD _modelId, Color _color, const char* _name)
+	: ui_id(++cur_ui_id) {
+
 	modelId = _modelId;
 	color = _color;
 	strncpy(name, _name, 128);
@@ -670,49 +712,70 @@ void AgentRenderer::CustomAgent::SaveSettings(CSimpleIni* ini, const char* secti
 	ini->SetLongValue(section, VAR_NAME(mapId), mapId);
 
 	Colors::Save(ini, section, VAR_NAME(color), color);
-	ini->SetLongValue(section, VAR_NAME(shape), shape);
+	ini->SetLongValue(section, VAR_NAME(shape), shape + 1);
 	ini->SetDoubleValue(section, VAR_NAME(size), size);
+
+	ini->SetBoolValue(section, VAR_NAME(color_active), color_active);
+	ini->SetBoolValue(section, VAR_NAME(shape_active), shape_active);
+	ini->SetBoolValue(section, VAR_NAME(size_active), size_active);
 }
 
-void AgentRenderer::CustomAgent::DrawHeader() {
+bool AgentRenderer::CustomAgent::DrawHeader() {
 	ImGui::SameLine(0, 18);
-	ImGui::Checkbox("##visible", &active);
+	bool changed = ImGui::Checkbox("##visible", &active);
 	ImGui::SameLine();
 	int color_i4[4];
 	Colors::ConvertU32ToInt4(color, color_i4);
 	ImGui::ColorButton("", ImColor(color_i4[1], color_i4[2], color_i4[3]));
 	ImGui::SameLine();
 	ImGui::Text(name);
+	return changed;
 }
 bool AgentRenderer::CustomAgent::DrawSettings(AgentRenderer::CustomAgent::Operation& op) {
 	bool changed = false;
 
 	if (ImGui::TreeNode("##params")) {
-		DrawHeader();
+		ImGui::PushID(ui_id);
 
+		changed |= DrawHeader();
+
+		if (ImGui::Checkbox("##visible", &active)) changed = true;
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("If this custom agent is active");
+		ImGui::SameLine();
+		float x = ImGui::GetCursorPosX();
 		if (ImGui::InputText("Name", name, 128)) changed = true;
 		ImGui::ShowHelp("A name to help you remember what this is. Optional.");
+		ImGui::SetCursorPosX(x);
 		if (ImGui::InputInt("Model ID", (int*)(&modelId))) {
 			op = Operation::ModelIdChange;
 			changed = true;
 		}
 		ImGui::ShowHelp("The Agent to which this custom attributes will be applied. Required.");
+		ImGui::SetCursorPosX(x);
 		if (ImGui::InputInt("Map ID", (int*)&mapId)) changed = true;
 		ImGui::ShowHelp("The map where it will be applied. Optional. Leave 0 for any map");
 
 		ImGui::Spacing();
 
+		if (ImGui::Checkbox("##color_active", &color_active)) changed = true;
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("If unchecked, the default color will be used");
+		ImGui::SameLine();
 		if (Colors::DrawSetting("Color", &color)) changed = true;
-		ImGui::ShowHelp("The custom color for this agent. Required. Default is (255, 240, 0, 0).");
+		ImGui::ShowHelp("The custom color for this agent.");
+
+		if (ImGui::Checkbox("##size_active", &size_active)) changed = true;
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("If unchecked, the default size will be used");
+		ImGui::SameLine();
 		if (ImGui::DragFloat("Size", &size, 1.0f, 0.0f, 200.0f)) changed = true;
-		ImGui::ShowHelp("The size for this agent. Leave 0 for default");
-		if (ImGui::RadioButton("Default", &shape, 0)) changed = true;
+		ImGui::ShowHelp("The size for this agent.");
+
+		if (ImGui::Checkbox("##shape_active", &shape_active)) changed = true;
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("If unchecked, the default shape will be used");
 		ImGui::SameLine();
-		if (ImGui::RadioButton("Teal", &shape, 1)) changed = true;
-		ImGui::SameLine();
-		if (ImGui::RadioButton("Circle", &shape, 2)) changed = true;
-		ImGui::SameLine();
-		if (ImGui::RadioButton("Square", &shape, 3)) changed = true;
+		static const char* items[] = { "Tear", "Circle", "Square", "Big Circle" };
+		if (ImGui::Combo("Shape", (int*)&shape, items, 4)) {
+			changed = true;
+		}
 		ImGui::ShowHelp("The shape of this agent.");
 
 		ImGui::Spacing();
@@ -734,7 +797,6 @@ bool AgentRenderer::CustomAgent::DrawSettings(AgentRenderer::CustomAgent::Operat
 			ImGui::OpenPopup("Delete Color?");
 		}
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete the color");
-		ImGui::TreePop();
 
 		if (ImGui::BeginPopupModal("Delete Color?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
 			ImGui::Text("Are you sure?\nThis operation cannot be undone\n\n");
@@ -748,8 +810,11 @@ bool AgentRenderer::CustomAgent::DrawSettings(AgentRenderer::CustomAgent::Operat
 			}
 			ImGui::EndPopup();
 		}
+
+		ImGui::TreePop();
+		ImGui::PopID();
 	} else {
-		DrawHeader();
+		changed |= DrawHeader();
 	}
 	return changed;
 }
