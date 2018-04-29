@@ -503,8 +503,10 @@ void ChatFilter::ParseBuffer(const char *text, std::vector<std::string> &words) 
 	std::istringstream stream(text);
 	std::string word;
 	while (std::getline(stream, word)) {
-		std::transform(word.begin(), word.end(), word.begin(), ::tolower);
-		words.push_back(word);
+		if (!word.empty()) {
+			std::transform(word.begin(), word.end(), word.begin(), ::tolower);
+			words.push_back(word);
+		}
 	}
 }
 
@@ -513,12 +515,13 @@ void ChatFilter::ParseBuffer(const char *text, std::vector<std::regex> &regex) c
 	std::istringstream stream(text);
 	std::string word;
 	while (std::getline(stream, word)) {
-		std::transform(word.begin(), word.end(), word.begin(), ::tolower);
-		try {
-			regex.push_back(std::regex(word));
-		} catch (...) {
-			Log::Warning("Cannot parse regular expression '%s'", word.c_str());
+		if (!word.empty()) {
+			std::transform(word.begin(), word.end(), word.begin(), ::tolower);
+			try {
+				regex.push_back(std::regex(word));
+			} catch (...) {
+				Log::Warning("Cannot parse regular expression '%s'", word.c_str());
+			}
 		}
-		
 	}
 }
