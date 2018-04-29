@@ -487,7 +487,7 @@ void AgentRenderer::Enqueue(const GW::Agent* agent, const CustomAgent* ca) {
 	float size = GetSize(agent, ca);
 	Shape_e shape = GetShape(agent, ca);
 
-	if (GW::Agents::GetTargetId() == agent->Id) {
+	if (GW::Agents::GetTargetId() == agent->Id && shape != BigCircle) {
 		Enqueue(shape, agent, size + 50.0f, color_target);
 	}
 
@@ -739,7 +739,7 @@ bool AgentRenderer::CustomAgent::DrawSettings(AgentRenderer::CustomAgent::Operat
 
 		changed |= DrawHeader();
 
-		if (ImGui::Checkbox("##visible", &active)) changed = true;
+		if (ImGui::Checkbox("##visible2", &active)) changed = true;
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("If this custom agent is active");
 		ImGui::SameLine();
 		float x = ImGui::GetCursorPosX();
