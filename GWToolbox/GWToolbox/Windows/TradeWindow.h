@@ -14,7 +14,7 @@
 
 class TradeWindow : public ToolboxWindow {
 	TradeWindow() {};
-	~TradeWindow() {};
+	~TradeWindow();
 public:
 	static TradeWindow& Instance() {
 		static TradeWindow instance;

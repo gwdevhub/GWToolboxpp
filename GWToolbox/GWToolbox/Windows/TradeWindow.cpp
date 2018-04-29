@@ -50,6 +50,25 @@ void TradeWindow::Initialize() {
 	if (print_game_chat) AsyncChatConnect();
 }
 
+void TradeWindow::Terminate() {
+	should_stop = true;
+	if (worker.joinable()) worker.join();
+	if (ws_chat) delete ws_chat;
+	if (ws_window) delete ws_window;
+	if (ws_chat || ws_window) {
+		ws_chat = nullptr;
+		ws_window = nullptr;
+		WSACleanup();
+	}
+
+	ToolboxWindow::Terminate();
+}
+
+TradeWindow::~TradeWindow() {
+	Terminate();
+}
+
+
 void TradeWindow::Update(float delta) {
 	if (!print_game_chat) return;
 
@@ -403,14 +422,4 @@ void TradeWindow::AsyncWindowConnect() {
 		}
 		ws_window_connecting = false;
 	});
-}
-
-void TradeWindow::Terminate() {
-	should_stop = true;
-	if (worker.joinable()) worker.join();
-	if (ws_chat) delete ws_chat;
-	if (ws_window) delete ws_window;
-	WSACleanup();
-
-	ToolboxWindow::Terminate();
 }
