@@ -4,7 +4,8 @@
 #include <vector>
 #include <map>
 
-#include <GWCA\Packets\StoC.h>
+#include <GWCA\Managers\StoCMgr.h>
+#include <GWCA\Managers\UIMgr.h>
 
 #include "VBuffer.h"
 #include "Timer.h"
@@ -14,12 +15,6 @@
 class PingsLinesRenderer : public VBuffer {
 	const float drawing_scale = 96.0f;
 
-	struct ShortPos {
-		ShortPos() : x(0), y(0) {}
-		ShortPos(short _x, short _y) : x(_x), y(_y) {}
-		short x;
-		short y;
-	};
 	struct DrawingLine {
 		DrawingLine() : start(TIMER_INIT()) {}
 		clock_t start;
@@ -120,7 +115,7 @@ private:
 	clock_t lastshown;
 	clock_t lastsent;
 	clock_t lastqueued;
-	std::vector<ShortPos> queue;
+	std::vector<GW::UI::CompassPoint> queue;
 
 	Color color_drawings;
 	Color color_shadowstep_line;

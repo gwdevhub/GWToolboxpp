@@ -3,11 +3,12 @@
 #include <d3dx9math.h>
 #include <d3d9.h>
 
-#include <GWCA\Packets\CtoS.h>
 #include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Managers\EffectMgr.h>
 #include <GWCA\Managers\CtoSMgr.h>
+#include <GWCA\Managers\UIMgr.h>
+#include <GWCA\Managers\StoCMgr.h>
 
 #include "GuiUtils.h"
 
@@ -441,7 +442,7 @@ bool PingsLinesRenderer::OnMouseMove(float x, float y) {
 			|| TIMER_DIFF(lastsent) > send_interval) {
 			lastqueued = TIMER_INIT();
 
-			queue.push_back(ShortPos(ToShortPos(x), ToShortPos(y)));
+			queue.push_back(GW::UI::CompassPoint(ToShortPos(x), ToShortPos(y)));
 
 			if (queue.size() == 7 || TIMER_DIFF(lastsent) > send_interval) {
 				lastsent = TIMER_INIT();
@@ -462,7 +463,7 @@ bool PingsLinesRenderer::OnMouseUp() {
 	} else {
 		BumpSessionID();
 		GW::Agent* me = GW::Agents::GetPlayer();
-		queue.push_back(ShortPos(ToShortPos(mouse_x), ToShortPos(mouse_y)));
+		queue.push_back(GW::UI::CompassPoint(ToShortPos(mouse_x), ToShortPos(mouse_y)));
 		pings.push_front(new TerrainPing(mouse_x, mouse_y));
 	}
 
@@ -472,20 +473,12 @@ bool PingsLinesRenderer::OnMouseUp() {
 }
 
 void PingsLinesRenderer::SendQueue() {
-	static GW::Packet::CtoS::DrawMap packet = GW::Packet::CtoS::DrawMap();
-
-	//printf("sending %d pos [%d]\n", queue.size(), session_id);
-
 	if (queue.size() > 0 && queue.size() < 8) {
-
-		packet.NumberPts = queue.size();
-		packet.session_id = session_id;
+		GW::UI::CompassPoint pts[8];
 		for (unsigned int i = 0; i < queue.size(); ++i) {
-			packet.points[i].x = queue[i].x;
-			packet.points[i].y = queue[i].y;
+			pts[i] = queue[i];
 		}
-
-		GW::CtoS::SendPacket(&packet);
+		GW::UI::DrawOnCompass(session_id, queue.size(), pts);
 	}
 
 	queue.clear();
