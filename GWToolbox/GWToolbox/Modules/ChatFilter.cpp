@@ -12,6 +12,7 @@
 
 #include <imgui.h>
 #include <ImGuiAddons.h>
+#include <logger.h>
 
 #include <Modules\Resources.h>
 #include <Defines.h>
@@ -29,7 +30,8 @@ static void printchar(wchar_t c) {
 void ChatFilter::Initialize() {
 	ToolboxModule::Initialize();
 
-	strcpy_s(bycontent_buf, "");
+	strcpy_s(bycontent_word_buf, "");
+	strcpy_s(bycontent_regex_buf, "");
 	//strcpy_s(byauthor_buf, "");
 
 	// server messages
@@ -132,12 +134,23 @@ void ChatFilter::LoadSettings(CSimpleIni* ini) {
 	you_have_been_playing_for = ini->GetBoolValue(Name(), VAR_NAME(you_have_been_playing_for), false);
 	player_has_achieved_title = ini->GetBoolValue(Name(), VAR_NAME(player_has_achieved_title), false);
 
-	std::ifstream bycontent_file;
-	bycontent_file.open(Resources::GetPath(L"FilterByContent.txt"));
-	if (bycontent_file.is_open()) {
-		bycontent_file.get(bycontent_buf, FILTER_BUF_SIZE, '\0');
-		bycontent_file.close();
-		ByContent_ParseBuf();
+	{
+		std::ifstream file;
+		file.open(Resources::GetPath(L"FilterByContent.txt"));
+		if (file.is_open()) {
+			file.get(bycontent_word_buf, FILTER_BUF_SIZE, '\0');
+			file.close();
+			ParseBuffer(bycontent_word_buf, bycontent_words);
+		}
+	}
+	{
+		std::ifstream file;
+		file.open(Resources::GetPath(L"FilterByContent_regex.txt"));
+		if (file.is_open()) {
+			file.get(bycontent_regex_buf, FILTER_BUF_SIZE, '\0');
+			file.close();
+			ParseBuffer(bycontent_regex_buf, bycontent_regex);
+		}
 	}
 
 #ifdef EXTENDED_IGNORE_LIST
@@ -172,13 +185,19 @@ void ChatFilter::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(player_has_achieved_title), player_has_achieved_title);
 
 	if (bycontent_filedirty) {
-		std::ofstream bycontent_file;
-		bycontent_file.open(Resources::GetPath(L"FilterByContent.txt"));
-		if (bycontent_file.is_open()) {
-			bycontent_file.write(bycontent_buf, strlen(bycontent_buf));
-			bycontent_file.close();
-			bycontent_filedirty = false;
+		std::ofstream file1;
+		file1.open(Resources::GetPath(L"FilterByContent.txt"));
+		if (file1.is_open()) {
+			file1.write(bycontent_word_buf, strlen(bycontent_word_buf));
+			file1.close();
 		}
+		std::ofstream file2;
+		file2.open(Resources::GetPath(L"FilterByContent_regex.txt"));
+		if (file2.is_open()) {
+			file2.write(bycontent_regex_buf, strlen(bycontent_regex_buf));
+			file2.close();
+		}
+		bycontent_filedirty = false;
 	}
 
 #ifdef EXTENDED_IGNORE_LIST
@@ -392,11 +411,16 @@ bool ChatFilter::ShouldIgnoreByContent(const wchar_t *message, size_t size) {
 			return true;
 		}
 	}
+	for (const std::regex& r : bycontent_regex) {
+		if (std::regex_match(text, r)) {
+			return true;
+		}
+	}
+
 	return false;
 }
 
-bool ChatFilter::ShouldIgnoreBySender(const wchar_t *sender, size_t size)
-{
+bool ChatFilter::ShouldIgnoreBySender(const wchar_t *sender, size_t size) {
 #ifdef EXTENDED_IGNORE_LIST
 	if (sender == nullptr) return false;
 	char s[32];
@@ -446,8 +470,16 @@ void ChatFilter::DrawSettingInternal() {
 	ImGui::Checkbox("Hide any messages containing:", &messagebycontent);
 	ImGui::Indent();
 	ImGui::TextDisabled("(Each in a separate line. Not case sensitive)");
-	if (ImGui::InputTextMultiline("##bycontentfilter", bycontent_buf, FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0f))) {
-		ByContent_ParseBuf();
+	if (ImGui::InputTextMultiline("##bycontentfilter", bycontent_word_buf, 
+		FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0f))) {
+		ParseBuffer(bycontent_word_buf, bycontent_words);
+		bycontent_filedirty = true;
+	}
+	ImGui::Text("And messages matching regular expressions:");
+	ImGui::ShowHelp("Regular expressions allow you to specify wildcards and express more.\nThe syntax is described at www.cplusplus.com/reference/regex/ECMAScript\nNote that the whole message needs to be matched, so for example you might want .* at the end.");
+	if (ImGui::InputTextMultiline("##bycontentfilter_regex", bycontent_regex_buf,
+		FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0))) {
+		ParseBuffer(bycontent_regex_buf, bycontent_regex);
 		bycontent_filedirty = true;
 	}
 	ImGui::Unindent();
@@ -466,24 +498,30 @@ void ChatFilter::DrawSettingInternal() {
 #endif // EXTENDED_IGNORE_LIST
 }
 
-void ChatFilter::ParseBuffer(const char *text, std::vector<std::string> &words) {
+void ChatFilter::ParseBuffer(const char *text, std::vector<std::string> &words) const {
 	words.clear();
 	std::istringstream stream(text);
 	std::string word;
 	while (std::getline(stream, word)) {
-		for (size_t i = 0; i < word.length(); i++)
-			word[i] = tolower(word[i]);
-		words.push_back(word);
+		if (!word.empty()) {
+			std::transform(word.begin(), word.end(), word.begin(), ::tolower);
+			words.push_back(word);
+		}
 	}
 }
 
-void ChatFilter::ParseBuffer(const char *text, std::set<std::string> &words) {
-	words.clear();
+void ChatFilter::ParseBuffer(const char *text, std::vector<std::regex> &regex) const {
+	regex.clear();
 	std::istringstream stream(text);
 	std::string word;
 	while (std::getline(stream, word)) {
-		for (size_t i = 0; i < word.length(); i++)
-			word[i] = tolower(word[i]);
-		words.insert(word);
+		if (!word.empty()) {
+			std::transform(word.begin(), word.end(), word.begin(), ::tolower);
+			try {
+				regex.push_back(std::regex(word));
+			} catch (...) {
+				Log::Warning("Cannot parse regular expression '%s'", word.c_str());
+			}
+		}
 	}
 }

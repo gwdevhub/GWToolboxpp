@@ -2,8 +2,10 @@
 
 #include <set>
 #include <string>
+#include <regex>
 #include <vector>
 #include <initializer_list>
+
 #include <GWCA\Packets\StoC.h>
 
 #include "ToolboxModule.h"
@@ -60,7 +62,9 @@ private:
 
 	// Chat filter
 	std::vector<std::string> bycontent_words;
-	char bycontent_buf[FILTER_BUF_SIZE];
+	std::vector<std::regex> bycontent_regex;
+	char bycontent_word_buf[FILTER_BUF_SIZE];
+	char bycontent_regex_buf[FILTER_BUF_SIZE];
 	bool bycontent_filedirty = false;
 
 #ifdef EXTENDED_IGNORE_LIST
@@ -70,12 +74,15 @@ private:
 	bool byauthor_filedirty = false;
 #endif
 
-	static void ParseBuffer(const char *text, std::vector<std::string> &words);
-	static void ParseBuffer(const char *text, std::set<std::string>    &words);
+	void ParseBuffer(const char *text, std::vector<std::string> &words) const;
+	void ParseBuffer(const char* text, std::vector<std::regex> &regex) const;
 
-	void ByContent_ParseBuf() {
-		ParseBuffer(bycontent_buf, bycontent_words);
-	}
+	//void ByContent_ParseBuf() {
+	//		ParseBuffer(bycontent_buf, bycontent_regex);
+	//	} else {
+	//		ParseBuffer(bycontent_buf, bycontent_words);
+	//	}
+	//}
 
 #ifdef EXTENDED_IGNORE_LIST
 	void ByAuthor_ParseBuf() {
