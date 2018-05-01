@@ -15,6 +15,7 @@
 #include <ProgressConstants.au3>
 #include <StaticConstants.au3>
 #include <WindowsConstants.au3>
+#include "StringSize.au3"
 
 ; dx runtime: http://www.microsoft.com/en-us/download/details.aspx?id=8109
 
@@ -26,9 +27,14 @@ Global Const $folder = @LocalAppDataDir & "\GWToolboxpp\"
 Global $dllpath = $folder & "GWToolbox.dll"
 Global Const $inipath = $folder & "GWToolbox.ini"
 Global Const $fontpath = $folder & "Font.ttf"
-
-Global $mKernelHandle, $mGWProcHandle, $mCharname
-Global $gui = 0, $label = 0, $progress = 0, $changelabel = 0, $height = 0
+Global $logstring = ""
+Func FlushLog()
+	Out("Flushing log, bye!")
+	Local Const $file = FileOpen($folder & "launcher_log.txt", $FO_OVERWRITE)
+	FileWrite($file, $logstring)
+	FileClose($file)
+EndFunc
+OnAutoItExitRegister("FlushLog")
 
 ; ==== Disclaimer ====
 If Not (FileExists($dllpath) Or FileExists($inipath) Or FileExists($fontpath)) Then
@@ -80,7 +86,7 @@ EndIf
 
 
 ; ==== Create directories ====
-Out("Creating directories and reading .ini... ", false)
+Out("Creating directories and reading .ini... ")
 If Not FileExists($folder) Then DirCreate($folder)
 If Not FileExists($folder) Then Exit MsgBox($MB_ICONERROR, "GWToolbox++ Launcher Error", "GWToolbox++ Launcher was unable to create the folder '" & $folder & "'." & @CRLF & _
 	"Make sure you have admin rights and your antivirus is not blocking GWToolbox++. Quitting.")
@@ -92,7 +98,7 @@ If Not FileExists($fontpath) Then FileInstall("..\resources\Font.ttf", $fontpath
 ; ==== Update information from ini ====
 Global Const $updatemode = IniRead($inipath, "Updater", "update_mode", "2")
 $dllpath = IniRead($inipath, "Updater", "dllpath", $dllpath)
-Out("done.")
+Out("done reading ini.")
 
 ; ==== Update mode ====
 Global $check_remote_version = False
@@ -114,7 +120,7 @@ Switch $updatemode
 		$do_update = False ; unless user specifies otherwise
 	Case 3 ; check and do
 		$check_remote_version = True
-		$notify_update = False
+		$notify_update = True
 		$do_update = True
 EndSwitch
 
@@ -128,7 +134,8 @@ Global Const $localversion = IniRead($inipath, "Updater", "dllversion", "0")
 Out("dll version: "&$localversion)
 Global $remoteversion = "0"
 
-Out("Checking remote version... ", False)
+Global $changelog = ""
+Out("Checking remote version... ")
 CheckRemoteVersion()
 Func CheckRemoteVersion()
 	If Not $check_remote_version Then Return
@@ -143,7 +150,7 @@ Func CheckRemoteVersion()
 		Return
 	EndIf
 
-	$remoteversion = BinaryToString($data)
+	Local Const $remotetxtversion = BinaryToString($data)
 	If @error Then
 		MsgBox($MB_ICONERROR, "GWToolbox++ Error", _
 			"I am unable to read the toolbox version from the remote server (corrupt file)." & @CRLF & _
@@ -153,9 +160,40 @@ Func CheckRemoteVersion()
 		$notify_update = False
 		Return
 	EndIf
-EndFunc
-Out("done: "&$remoteversion)
 
+	Out("toolboxversion.txt is " & $remotetxtversion)
+	If $remotetxtversion == $localversion Then
+		$remoteversion = $remotetxtversion
+		Return Out("remote and local versions match")
+	EndIf
+
+	$data = InetRead("https://api.github.com/repos/HasKha/GWToolboxpp/releases/tags/" & $remotetxtversion & "_Release", $INET_FORCERELOAD)
+	Local Const $json = BinaryToString($data)
+	Out("Json :" & $json)
+
+	Local Const $tag_name_search = '"tag_name":"'
+	Local Const $tag_name_search_begin = StringInStr($json, $tag_name_search, $STR_CASESENSE, 1)
+	if $tag_name_search_begin == 0 Then Return Out("tag_name_search_begin == 0")
+	Local Const $tag_name_begin = $tag_name_search_begin + StringLen($tag_name_search)
+	Local Const $tag_name_end = StringInStr($json, '"', $STR_CASESENSE, 1, $tag_name_begin + 1)
+	Local Const $tag_name = StringMid($json, $tag_name_begin, $tag_name_end - $tag_name_begin)
+	Out("tag_name: '"&$tag_name&"'")
+	If StringCompare($tag_name, $remotetxtversion & "_Release") <> 0 Then Return Out("tag and version mismatch")
+	Out("tag and version match")
+	$remoteversion = $remotetxtversion
+
+	Local Const $body_search = '"body":"'
+	Local Const $body_search_begin = StringInStr($json, $body_search, $STR_CASESENSE, 1, $tag_name_end)
+	If $body_search_begin == 0 Then Return Out("body_search_begin == 0") ; note returning here or later will still proceed with the update, it just won't show patch notes
+	Local Const $body_begin = $body_search_begin + StringLen($body_search)
+	Local Const $body_end = StringInStr($json, '"', $STR_CASESENSE, 1, $body_begin + 1)
+	Local Const $body = StringMid($json, $body_begin, $body_end - $body_begin)
+	$changelog = $body
+	Out("changelog: '"&$changelog&"'")
+EndFunc
+Out("remoteversion: "&$remoteversion)
+
+Global $gui = 0, $label = 0, $progressbar = 0, $progresslabel = 0, $changelabel = 0, $height = 0
 NotifyUpdate()
 Func NotifyUpdate()
 	If Not $check_remote_version Then Return
@@ -164,12 +202,57 @@ Func NotifyUpdate()
 	Out("Displaying changelog.")
 
 	; todo: download and display changelog.
+	Local Const $width = 500 + 16
+	$height = 60
+	$gui = GUICreate("GWToolbox++", $width, $height)
 
-	; if $updatemode==1, that's it
+	$changelog = StringReplace($changelog, "\r\n", @CRLF)
+	$changelog = StringReplace($changelog, "\\", "\")
+	Local Const $format = _StringSize($changelog, Default, Default, Default, Default, 500)
+	Out("format: "& $format & ". error: "&@error&". extended: "&@extended)
+
+	If $format <> 0 Then
+		Local $pos = WinGetPos($gui)
+		WinMove($gui, "", $pos[0], $pos[1], $pos[2], $pos[3] + $format[3])
+		$label = GUICtrlCreateLabel("GWToolbox++ " & $remoteversion & " is available!", 8, 8, 500, 17, Default, $GUI_WS_EX_PARENTDRAG)
+		$changelabel = GUICtrlCreateLabel($format[0], 8, 24, $format[2], $format[3], Default, $GUI_WS_EX_PARENTDRAG)
+	EndIf
+	GUISetState(@SW_SHOW, $gui)
+
+	; if $updatemode==1, that's it (nvm, we shouldn't, but we do ask for update)
 	; if $updatemode==2, ask, and if uses says yes, then set $do_update = True
 	; if $updatemode==3, start the download
+	If $updatemode == 3 Then
+		$do_update = True
+	Else
+		Local Const $downloadbutton = GUICtrlCreateButton("Download", 300, 24 + $format[3], 100, 28)
+		Local Const $skipbutton = GUICtrlCreateButton("Skip for now", 408, 24 + $format[3], 100, 28)
 
-	If $updatemode == 3 Then $do_update = True
+		While 1
+			Switch GUIGetMsg()
+				Case $GUI_EVENT_CLOSE
+					Out("Exiting from NotifyUpdate loop")
+					Exit
+				Case $downloadbutton
+					$do_update = True
+					GUICtrlSetState($downloadbutton, $GUI_HIDE)
+					GUICtrlSetState($skipbutton, $GUI_HIDE)
+					ExitLoop
+				Case $skipbutton
+					$do_update = False
+					GUIDelete($gui)
+					$gui = 0
+					ExitLoop
+			EndSwitch
+		WEnd
+	EndIf
+
+	If $do_update Then
+		; prepare the gui for the download
+		$progressbar = GUICtrlCreateProgress(8, 44 + $format[3], 500, 12)
+		$progresslabel = GUICtrlCreateLabel("Downloading...", 8, 26 + $format[3], 500, 16)
+		GUICtrlSetData($progressbar, 0)
+	EndIf
 EndFunc
 Out("do_update: "&$do_update)
 
@@ -183,10 +266,25 @@ Func Download()
 
 	Local Const $hDownload = InetGet($sUrl, $dllpath, BitOR($INET_FORCERELOAD, $INET_FORCEBYPASS), $INET_DOWNLOADBACKGROUND)
 	Do
-		Sleep(100)
+		If $gui <> 0 Then
+			Switch GUIGetMsg()
+				Case $GUI_EVENT_CLOSE
+					Out("Exiting from Download loop")
+					Exit
+			EndSwitch
+			Local $bytesread = InetGetInfo($hDownload, $INET_DOWNLOADREAD)
+			Local $bytestotal = InetGetInfo($hDownload, $INET_DOWNLOADSIZE)
+			If ($bytestotal > 0) Then
+				GUICtrlSetData($progressbar, ($bytesread / $bytestotal * 100))
+				GUICtrlSetData($progresslabel, "Downloading... " & ($bytesread / 1024) & "KB / " & ($bytestotal / 1024) & " KB")
+			Else
+				GUICtrlSetData($progresslabel, "Downloading... " & ($bytesread / 1024) & " KB")
+			EndIf
+		EndIf
 	Until InetGetInfo($hDownload, $INET_DOWNLOADCOMPLETE)
-	Sleep(100)
 	Local $BytesSize = InetGetInfo($hDownload, $INET_DOWNLOADREAD)
+	If $progresslabel > 0 Then GUICtrlSetData($progresslabel, "Downloading... done (" & ($BytesSize / 1024) & " KB)")
+	Sleep(100)
 	Local $FileSize = FileGetSize($dllpath)
 	InetClose($hDownload)
 
@@ -206,9 +304,15 @@ EndFunc
 ; this is in case the user moved the gwtoolbox.dll to another location, for example, while playing around with gwlauncher plugins, or simply renaming gwtoolbox.dll to whydopeopledothis.dll
 If Not FileExists($dllpath) Then
 	Local Const $msgbutton = MsgBox(BitOR($MB_ICONWARNING, $MB_OKCANCEL), "GWToolbox++", "Error: Cannot find GWToolbox.dll in "&$dllpath&"."&@CRLF&"Please help me find GWToolbox.dll")
-	If ($msgbutton <> $IDOK) Then Exit
+	If ($msgbutton <> $IDOK) Then
+		Out("User did not want to help me find a dll :(")
+		Exit
+	EndIf
 	$dllpath = FileOpenDialog("GWToolbox++: Please locate GWToolbox.dll", $folder, "Dll (*.dll)", $FD_FILEMUSTEXIST + $FD_PATHMUSTEXIST)
-	If @error Then Exit
+	If @error Then
+		Out("User did not help me find the dll :(")
+		Exit
+	EndIf
 EndIf
 
 ; again?!?
@@ -217,6 +321,7 @@ If Not FileExists($dllpath) Then Error("Cannot find GWToolbox dll in "&$dllpath)
 If FileGetSize($dllpath) == 0 Then Error("GWToolbox dll in "&$dllpath&" is an empty file!")
 
 ; === Client selection ===
+Global $mKernelHandle, $mGWProcHandle, $mCharname
 Global $WinList = WinList("[CLASS:ArenaNet_Dx_Window_Class]")
 Global $gwPID
 Switch $WinList[0][0]
@@ -241,13 +346,15 @@ Switch $WinList[0][0]
 		Local Const $selection_gui = GUICreate("GWToolbox++", 150, 60)
 		Local Const $comboCharname = GUICtrlCreateCombo("", 6, 6, 138, 25, $CBS_DROPDOWNLIST)
 		GUICtrlSetData(-1, $lComboStr, $lFirstChar)
-		Local Const $button = GUICtrlCreateButton("Launch", 6, 31, 138, 24)
+		Local Const $launchbutton = GUICtrlCreateButton("Launch", 6, 31, 138, 24)
 		GUISetState(@SW_SHOW, $selection_gui)
 		While True
 			Switch GUIGetMsg()
-				Case $button
+				Case $launchbutton
+					GUIDelete($selection_gui)
 					ExitLoop
 				Case $GUI_EVENT_CLOSE
+					Out("Exiting from client selection gui")
 					Exit
 			EndSwitch
 			Sleep(10)
@@ -341,7 +448,7 @@ If Not $found Then
 EndIf
 
 If $gui > 0 Then
-	GUICtrlCreateLabel("You can close me, but please read me first!", 8, $height - 25, 284, 17, $SS_CENTER, $GUI_WS_EX_PARENTDRAG)
+	GUICtrlSetData($progresslabel, GUICtrlRead($progresslabel) & ". You can close this window.")
 
 	While GUIGetMsg() <> $GUI_EVENT_CLOSE
 		Sleep(0)
@@ -349,22 +456,26 @@ If $gui > 0 Then
 EndIf
 
 #Region error message boxes
-Func Out($msg, $enter_newline = True)
-	ConsoleWrite($msg)
-	If $enter_newline Then ConsoleWrite(@CRLF)
+Func Out($msg)
+	ConsoleWrite($msg & @CRLF)
+	$logstring &= ($msg & @CRLF)
 EndFunc
 Func Warning($msg)
+	Out("Warning: "&$msg)
 	MsgBox($MB_ICONWARNING, "GWToolbox++", "Warning: " & $msg)
 EndFunc
 Func Error($msg)
+	Out("Error: "&$msg)
 	MsgBox($MB_ICONERROR, "GWToolbox++", "Error: " & $msg)
 	Exit
 EndFunc
 Func Error1($msg, $err)
+	Out("Error: "&$msg&" code: "&$err)
 	MsgBox($MB_ICONERROR, "GWToolbox++", "Error: " & $msg & @CRLF & "Error code: " & $err)
 	Exit
 EndFunc
 Func Error2($msg, $err, $ret)
+	Out("Error: "&$msg&" code: "&$err&" return: "&$ret)
 	MsgBox($MB_ICONERROR, "GWToolbox++","Error: " & $msg & @CRLF & "Error code: " & $err & @CRLF & "Return value: " & $ret)
 	Exit
 EndFunc
