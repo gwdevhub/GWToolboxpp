@@ -23,6 +23,7 @@ Opt("MustDeclareVars", True)
 Opt("GuiResizeMode", BitOR($GUI_DOCKSIZE, $GUI_DOCKTOP, $GUI_DOCKLEFT))
 
 ; ==== Globals ====
+Global Const $laucher_version = 1.0 ; only shown in log, but w/e. Feel free to increase
 Global Const $folder = @LocalAppDataDir & "\GWToolboxpp\"
 Global $dllpath = $folder & "GWToolbox.dll"
 Global Const $inipath = $folder & "GWToolbox.ini"
@@ -34,6 +35,7 @@ Func FlushLog()
 	FileWrite($file, $logstring)
 	FileClose($file)
 EndFunc
+Out("Launcher version: "&$laucher_version)
 OnAutoItExitRegister("FlushLog")
 
 ; ==== Disclaimer ====
