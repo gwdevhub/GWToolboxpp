@@ -389,7 +389,7 @@ void ChatCommands::ParseDistrict(const std::wstring& s, GW::Constants::District&
 		district = GW::Constants::District::AsiaKorean;
 	} else if (s == L"ac" || s == L"atc" || s == L"ch") {
 		district = GW::Constants::District::AsiaChinese;
-	} else if (s == L"aj" || L"jp") {
+	} else if (s == L"aj" || s == L"jp") {
 		district = GW::Constants::District::AsiaJapanese;
 	}
 }
