@@ -132,7 +132,7 @@ namespace {
 
 		// if the item is stackable we try to complete stack that already exist in the current storage page
 		if (item->GetIsStackable()) {
-			size_t slot = bag->find(item->ModelId);
+			size_t slot = bag->find(item->ModelId, 0, item->ExtraId);
 			while (slot != GW::Bag::npos) {
 				GW::Item *b_item = bag->Items[slot];
 				assert(b_item && (b_item->ModelId == item->ModelId));
@@ -143,7 +143,7 @@ namespace {
 					remaining -= will_move;
 				}
 				if (remaining == 0) break;
-				slot = bag->find(item->ModelId, slot + 1);
+				slot = bag->find(item->ModelId, slot + 1, item->ExtraId);
 			}
 		}
 
@@ -177,7 +177,7 @@ namespace {
 			for (int i = storage1; i < storage9; i++) {
 				GW::Bag *bag = bags[i];
 				if (!bag) continue;
-				size_t slot = bag->find(item->ModelId);
+				size_t slot = bag->find(item->ModelId, 0, item->ExtraId);
 				while (slot != GW::Bag::npos) {
 					GW::Item *b_item = bag->Items[slot];
 					assert(b_item);
@@ -188,7 +188,7 @@ namespace {
 						remaining -= will_move;
 					}
 					if (remaining == 0) break;
-					slot = bag->find(item->ModelId, slot + 1);
+					slot = bag->find(item->ModelId, slot + 1, item->ExtraId);
 				}
 			}
 		}
@@ -223,7 +223,7 @@ namespace {
 			for (int i = backpack; i <= bag2; i++) {
 				GW::Bag *bag = bags[i];
 				if (!bag) continue;
-				size_t slot = bag->find(item->ModelId);
+				size_t slot = bag->find(item->ModelId, 0, item->ExtraId);
 				while (slot != GW::Bag::npos) {
 					GW::Item *b_item = bag->Items[slot];
 					assert(b_item);
@@ -234,7 +234,7 @@ namespace {
 						remaining -= will_move;
 					}
 					if (remaining == 0) break;
-					slot = bag->find(item->ModelId, slot + 1);
+					slot = bag->find(item->ModelId, slot + 1, item->ExtraId);
 				}
 			}
 		}
