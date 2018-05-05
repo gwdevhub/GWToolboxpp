@@ -117,11 +117,14 @@ bool PartyDamage::DamagePacketCallback(GW::Packet::StoC::GenericModifier* packet
 	if (index >= MAX_PLAYERS) return false; // something went very wrong.
 	if (damage[index].damage == 0) {
 		damage[index].agent_id = packet->cause_id;
+		GW::Agents::AsyncGetAgentName(cause, damage[index].name);
+		/*
 		if (cause->LoginNumber > 0) {
 			damage[index].name = GW::Agents::GetPlayerNameByLoginNumber(cause->LoginNumber);
 		} else {
 			damage[index].name = L"<A Hero>";
 		}
+		*/
 		damage[index].primary = static_cast<GW::Constants::Profession>(cause->Primary);
 		damage[index].secondary = static_cast<GW::Constants::Profession>(cause->Secondary);
 	}
