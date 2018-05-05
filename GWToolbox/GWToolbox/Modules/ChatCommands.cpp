@@ -377,19 +377,19 @@ void ChatCommands::ParseDistrict(const std::wstring& s, GW::Constants::District&
 		district = GW::Constants::District::EuropeGerman;
 	} else if (s == L"ef" || s == L"fr") {
 		district = GW::Constants::District::EuropeFrench;
-	} else if (s == L"ei") {
+	} else if (s == L"ei" || s == L"it") {
 		district = GW::Constants::District::EuropeItalian;
 	} else if (s == L"es") {
 		district = GW::Constants::District::EuropeSpanish;
-	} else if (s == L"ep") {
+	} else if (s == L"ep" || s == L"pl") {
 		district = GW::Constants::District::EuropePolish;
-	} else if (s == L"er") {
+	} else if (s == L"er" || s == L"ru") {
 		district = GW::Constants::District::EuropeRussian;
-	} else if (s == L"ak") {
+	} else if (s == L"ak" || s == L"kr") {
 		district = GW::Constants::District::AsiaKorean;
-	} else if (s == L"ac" || s == L"atc") {
+	} else if (s == L"ac" || s == L"atc" || s == L"ch") {
 		district = GW::Constants::District::AsiaChinese;
-	} else if (s == L"aj") {
+	} else if (s == L"aj" || L"jp") {
 		district = GW::Constants::District::AsiaJapanese;
 	}
 }
