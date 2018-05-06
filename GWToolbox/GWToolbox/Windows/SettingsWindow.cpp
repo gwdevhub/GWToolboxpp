@@ -1,6 +1,7 @@
 #include "SettingsWindow.h"
 
 #include <Windows.h>
+#include <ShellApi.h>
 
 #include "Defines.h"
 #include "GuiUtils.h" 

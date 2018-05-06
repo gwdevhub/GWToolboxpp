@@ -1,5 +1,7 @@
-#include <WinSock2.h>
 #include "TradeWindow.h"
+
+#include <ShellApi.h>
+#include <WinSock2.h>
 
 #include <GWCA\GWCA.h>
 #include <GWCA\Managers\UIMgr.h>
@@ -314,7 +316,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		/* Link to website footer */
 		if (ImGui::Button("Powered by https://kamadan.decltype.org", ImVec2(ImGui::GetWindowContentRegionWidth(), 20.0f))){ 
 			CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-			ShellExecute(NULL, "open", "https://kamadan.decltype.org", NULL, NULL, SW_SHOWNORMAL);
+			ShellExecuteA(NULL, "open", "https://kamadan.decltype.org", NULL, NULL, SW_SHOWNORMAL);
 		}
 
 		/* Alerts window */

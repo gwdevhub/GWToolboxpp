@@ -1,5 +1,7 @@
 #include "ChatCommands.h"
 
+#include <ShellApi.h>
+
 #include <algorithm>
 #include <cctype>
 
