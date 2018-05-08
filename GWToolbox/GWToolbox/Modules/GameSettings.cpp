@@ -733,6 +733,12 @@ void GameSettings::ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag)
 	GW::Item *item = GW::Items::GetItemBySlot(bag, slot + 1);
 	if (!item) return;
 
+	// @Cleanup: Bad
+	if (item->ModelFileID == 0x0002f301) {
+		Log::Error("Ctrl+click doesn't work with birthday presents yet");
+		return;
+	}
+
 	if (is_inventory_item) {
 		if (GW::Items::IsStorageOpen()) {
 			int current_storage = GW::Items::GetStoragePage();
