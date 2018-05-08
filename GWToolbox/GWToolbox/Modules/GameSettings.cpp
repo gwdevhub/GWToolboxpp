@@ -106,6 +106,50 @@ namespace {
 		return will_move;
 	}
 
+	// From bag_first to bag_last (included) i.e. [bag_first, bag_last]
+	// Returns the amount moved
+	int complete_existing_stack(GW::Item *item, int bag_first, int bag_last, int remaining) {
+		if (!item->GetIsStackable() || remaining == 0) return 0;
+		int remaining_start = remaining;
+		for (int bag_i = bag_first; bag_i <= bag_last; bag_i++) {
+			GW::Bag *bag = GW::Items::GetBag(bag_i);
+			if (!bag) continue;
+			size_t slot = bag->find(item->ModelId);
+			while (slot != GW::Bag::npos) {
+				GW::Item *b_item = bag->Items[slot];
+				// b_item can be null in the case of birthday present for instance.
+				if (b_item != nullptr) {
+					int availaible = 250 - b_item->Quantity;
+					int will_move = std::min(availaible, remaining);
+					if (will_move > 0) {
+						GW::Items::MoveItem(item, b_item, will_move);
+						remaining -= will_move;
+					}
+					if (remaining == 0)
+						return remaining_start;
+				}
+				slot = bag->find(item->ModelId, slot + 1);
+			}
+		}
+		return remaining_start - remaining;
+	}
+
+	void move_to_first_empty_slot(GW::Item *item, int bag_first, int bag_last) {
+		for (int bag_i = bag_first; bag_i <= bag_last; bag_i++) {
+			GW::Bag *bag = GW::Items::GetBag(bag_i);
+			if (!bag) continue;
+			size_t slot = bag->find(0);
+			// The reason why we test if the slot has no item is because birthday present have ModelId == 0
+			while (slot != GW::Bag::npos) {
+				if (bag->Items[slot] == nullptr) {
+					GW::Items::MoveItem(item, bag, slot);
+					return;
+				}
+				slot = bag->find(0, slot + 1);
+			}
+		}
+	}
+
 	void move_item_to_storage_page(GW::Item *item, int page) {
 		assert(item && item->Quantity);
 		// 9 being the material storage
@@ -119,8 +163,8 @@ namespace {
 
 		assert(0 <= page && page < 9);
 		const int storage1 = (int)GW::Constants::Bag::Storage_1;
-		GW::Bag *bag = GW::Items::GetBag(storage1 + page);
-		if (!bag) return;
+		const int bag_index = storage1 + page;
+		assert(GW::Items::GetBag(bag_index));
 
 		int remaining = item->Quantity;
 
@@ -131,27 +175,12 @@ namespace {
 		}
 
 		// if the item is stackable we try to complete stack that already exist in the current storage page
-		if (item->GetIsStackable()) {
-			size_t slot = bag->find(item->ModelId);
-			while (slot != GW::Bag::npos) {
-				GW::Item *b_item = bag->Items[slot];
-				assert(b_item && (b_item->ModelId == item->ModelId));
-				int availaible = 250 - b_item->Quantity;
-				int will_move = std::min(availaible, remaining);
-				if (will_move > 0) {
-					GW::Items::MoveItem(item, b_item, will_move);
-					remaining -= will_move;
-				}
-				if (remaining == 0) break;
-				slot = bag->find(item->ModelId, slot + 1);
-			}
-		}
+		int moved = complete_existing_stack(item, bag_index, bag_index, remaining);
+		remaining -= moved;
 
 		// if there is still item, we find the first empty slot and move everything there
-		if (remaining == 0) return;
-		size_t slot = bag->find(0);
-		if (slot != GW::Bag::npos) {
-			GW::Items::MoveItem(item, bag, slot);
+		if (remaining) {
+			move_to_first_empty_slot(item, bag_index, bag_index);
 		}
 	}
 
@@ -173,36 +202,12 @@ namespace {
 
 		// If item is stackable, try to complete similar stack
 		if (remaining == 0) return;
-		if (item->GetIsStackable()) {
-			for (int i = storage1; i < storage9; i++) {
-				GW::Bag *bag = bags[i];
-				if (!bag) continue;
-				size_t slot = bag->find(item->ModelId);
-				while (slot != GW::Bag::npos) {
-					GW::Item *b_item = bag->Items[slot];
-					assert(b_item);
-					int availaible = 250 - b_item->Quantity;
-					int will_move = std::min(availaible, remaining);
-					if (will_move != 0) {
-						GW::Items::MoveItem(item, b_item, will_move);
-						remaining -= will_move;
-					}
-					if (remaining == 0) break;
-					slot = bag->find(item->ModelId, slot + 1);
-				}
-			}
-		}
+		int moved = complete_existing_stack(item, storage1, storage9, remaining);
+		remaining -= moved;
 
 		// We find the first empty slot and put the remaining there
-		if (remaining == 0) return;
-		for (int i = storage1; i < storage9; i++) {
-			GW::Bag *bag = bags[i];
-			if (!bag) continue;
-			size_t slot = bag->find(0);
-			if (slot != GW::Bag::npos) {
-				GW::Items::MoveItem(item, bag, slot, remaining);
-				return;
-			}
+		if (remaining) {
+			move_to_first_empty_slot(item, storage1, storage9);
 		}
 	}
 
@@ -212,44 +217,16 @@ namespace {
 		const int backpack = (int)GW::Constants::Bag::Backpack;
 		const int bag2 = (int)GW::Constants::Bag::Bag_2;
 
-		GW::Bag **bags = GW::Items::GetBagArray();
-		if (!bags) return;
-
 		int total = item->Quantity;
 		int remaining = total;
 
 		// If item is stackable, try to complete similar stack
-		if (item->GetIsStackable()) {
-			for (int i = backpack; i <= bag2; i++) {
-				GW::Bag *bag = bags[i];
-				if (!bag) continue;
-				size_t slot = bag->find(item->ModelId);
-				while (slot != GW::Bag::npos) {
-					GW::Item *b_item = bag->Items[slot];
-					assert(b_item);
-					int availaible = 250 - b_item->Quantity;
-					int will_move = std::min(availaible, remaining);
-					if (will_move != 0) {
-						GW::Items::MoveItem(item, b_item, will_move);
-						remaining -= will_move;
-					}
-					if (remaining == 0) break;
-					slot = bag->find(item->ModelId, slot + 1);
-				}
-			}
-		}
+		int moved = complete_existing_stack(item, backpack, bag2, remaining);
+		remaining -= moved;
 
 		// If we didn't move any item (i.e. there was no stack to complete), move the stack to first empty slot
 		if (remaining == total) {
-			for (int i = backpack; i <= bag2; i++) {
-				GW::Bag *bag = bags[i];
-				if (!bag) continue;
-				size_t slot = bag->find(0);
-				if (slot != GW::Bag::npos) {
-					GW::Items::MoveItem(item, bag, slot);	
-					return;
-				}
-			}
+			move_to_first_empty_slot(item, backpack, bag2);
 		}
 	}
 
