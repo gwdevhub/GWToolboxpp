@@ -348,6 +348,8 @@ namespace {
 void GameSettings::Initialize() {
 	ToolboxModule::Initialize();
 
+// This borderless code is no longer needed!
+#if 0
 	{
 		uintptr_t found = GW::Scanner::Find("\x8B\x9E\xCC\x0C\x00\x00\x03\xD9\x03\xFB\xEB\x03", "xxxxxxxxxxxx", 69);
 		patches.push_back(new GW::MemoryPatcher(found,
@@ -375,7 +377,7 @@ void GameSettings::Initialize() {
 		patches.push_back(new GW::MemoryPatcher(found + 0xD2,  patch, 10));
 		patches.push_back(new GW::MemoryPatcher(found + 0x10E, patch, 10));
 	}
-
+#endif 
 	{
 		// Patch that allow storage page (and Anniversary page) to work... (ask Ziox for more info)
 		uintptr_t found = GW::Scanner::Find("\xEB\x20\x33\xC0\xBE\x06", "xxxxxx", -4);
@@ -392,7 +394,7 @@ void GameSettings::Initialize() {
 		ctrl_click_patch = new GW::MemoryPatcher(found, &page_max, 1);
 		ctrl_click_patch->TooglePatch(true);
 	}
-
+#if 0
 	GW::Chat::CreateCommand(L"borderless",
 		[&](int argc, LPWSTR *argv) {
 		if (argc <= 1) {
@@ -408,7 +410,7 @@ void GameSettings::Initialize() {
 			}
 		}
 	});
-
+#endif
 	GW::StoC::AddCallback<GW::Packet::StoC::PartyPlayerAdd>(
 		[](GW::Packet::StoC::PartyPlayerAdd*) -> bool {
 		if (GameSettings::Instance().flash_window_on_party_invite) FlashWindow();
@@ -434,7 +436,7 @@ void GameSettings::Initialize() {
 
 void GameSettings::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini);
-	borderlesswindow = ini->GetBoolValue(Name(), VAR_NAME(borderlesswindow), false);
+//	borderlesswindow = ini->GetBoolValue(Name(), VAR_NAME(borderlesswindow), false);
 	maintain_fov = ini->GetBoolValue(Name(), VAR_NAME(maintain_fov), false);
 	fov = (float)ini->GetDoubleValue(Name(), VAR_NAME(fov), 1.308997f);
 	tick_is_toggle = ini->GetBoolValue(Name(), VAR_NAME(tick_is_toggle), true);
@@ -457,7 +459,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	auto_set_away_delay = ini->GetLongValue(Name(), VAR_NAME(auto_set_away_delay), 10);
 	auto_set_online = ini->GetBoolValue(Name(), VAR_NAME(auto_set_online), false);
 
-	if (borderlesswindow) ApplyBorderless(borderlesswindow);
+	//if (borderlesswindow) ApplyBorderless(borderlesswindow);
 	if (openlinks) GW::Chat::SetOpenLinks(openlinks);
 	if (tick_is_toggle) GW::PartyMgr::SetTickToggle();
 	if (select_with_chat_doubleclick) GW::Chat::SetChatEventCallback(&ChatEventCallback);
@@ -469,7 +471,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
 void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ToolboxModule::SaveSettings(ini);
-	ini->SetBoolValue(Name(), VAR_NAME(borderlesswindow), borderlesswindow);
+	//ini->SetBoolValue(Name(), VAR_NAME(borderlesswindow), borderlesswindow);
 	ini->SetBoolValue(Name(), VAR_NAME(maintain_fov), maintain_fov);
 	ini->SetDoubleValue(Name(), VAR_NAME(fov), fov);
 	ini->SetBoolValue(Name(), VAR_NAME(tick_is_toggle), tick_is_toggle);
@@ -494,7 +496,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 }
 
 void GameSettings::DrawSettingInternal() {
-	DrawBorderlessSetting();
+	//DrawBorderlessSetting();
 	DrawFOVSetting();
 
 	ImGui::Checkbox("Show chat messages timestamp. Color:", &GW::Chat::ShowTimestamps);
@@ -587,7 +589,7 @@ void GameSettings::Update(float delta) {
 		activity_timer = TIMER_INIT(); // refresh the timer to avoid spamming in case the set status call fails
 	}
 	UpdateFOV();
-	UpdateBorderless();
+	//UpdateBorderless();
 	//AF::ApplyPatchesIfItsTime();
 }
 
