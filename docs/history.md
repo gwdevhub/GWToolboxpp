@@ -7,6 +7,12 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
+## Version 2.12.1
+* [Fix] Removed Borderless Windowed mode, use official implementation instead :)
+* [Fix] Fixed crash bug on toolbox start.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.12.1_Release/GWToolbox.dll)
+
 ## Version 2.12
 * [Fix] Fixed toolbox functionality after April 30 2018 game update.
 * [New] Added an option in the chat filter to match messages with regular expressions.
