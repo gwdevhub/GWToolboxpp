@@ -114,7 +114,7 @@ namespace {
 		for (int bag_i = bag_first; bag_i <= bag_last; bag_i++) {
 			GW::Bag *bag = GW::Items::GetBag(bag_i);
 			if (!bag) continue;
-			size_t slot = bag->find(item->ModelId);
+			size_t slot = bag->find2(item);
 			while (slot != GW::Bag::npos) {
 				GW::Item *b_item = bag->Items[slot];
 				// b_item can be null in the case of birthday present for instance.
@@ -128,7 +128,7 @@ namespace {
 					if (remaining == 0)
 						return remaining_start;
 				}
-				slot = bag->find(item->ModelId, slot + 1);
+				slot = bag->find2(item, slot + 1);
 			}
 		}
 		return remaining_start - remaining;
@@ -138,14 +138,14 @@ namespace {
 		for (int bag_i = bag_first; bag_i <= bag_last; bag_i++) {
 			GW::Bag *bag = GW::Items::GetBag(bag_i);
 			if (!bag) continue;
-			size_t slot = bag->find(0);
+			size_t slot = bag->find1(0);
 			// The reason why we test if the slot has no item is because birthday present have ModelId == 0
 			while (slot != GW::Bag::npos) {
 				if (bag->Items[slot] == nullptr) {
 					GW::Items::MoveItem(item, bag, slot);
 					return;
 				}
-				slot = bag->find(0, slot + 1);
+				slot = bag->find1(0, slot + 1);
 			}
 		}
 	}
