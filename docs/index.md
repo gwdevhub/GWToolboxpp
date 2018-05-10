@@ -2,8 +2,6 @@
 layout: default
 ---
 
-> IMPORTANT: Toolbox is currently broken and will crash your game, we are working on an update, stay tuned. 
-
 > Note: we released a new launcher, you can download it [here](https://github.com/HasKha/GWToolboxpp/releases/download/2.12_Release/GWToolbox.exe). The new launcher will update the dll automatically.
 
 # What is GWToolbox++?
