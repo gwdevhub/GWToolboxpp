@@ -191,8 +191,6 @@ LUA_CFUNC_SIG(Dialog) {
 LUA_CFUNC_SIG(Travel) {
 	int argc = lua_gettop(state);
 
-	GW::Constants::District district;
-
 	lua_Integer town = luaL_checkinteger(state, 1);
 	const char *dis = luaL_checkstring(state, 2);
 
