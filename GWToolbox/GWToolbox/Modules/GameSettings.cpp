@@ -233,7 +233,7 @@ namespace {
 	// This whole section is commented because packets are not up to date after the update. 
 	// Should still work if you match the right packets.
 
-#if 0 // April's Fool
+#ifdef APRIL_FOOLS
 	namespace AF {
 		using namespace GW::Packet::StoC;
 		void CreateXunlaiAgentFromGameThread(void) {
@@ -342,22 +342,22 @@ namespace {
 			}
 		}
 	} 
-#endif // April's Fool
+#endif // APRIL_FOOLS
 }
 
 void GameSettings::Initialize() {
 	ToolboxModule::Initialize();
 
 // This borderless code is no longer needed!
-#if 0
+#ifdef ENABLE_BORDERLESS
 	{
-		uintptr_t found = GW::Scanner::Find("\x8B\x9E\xCC\x0C\x00\x00\x03\xD9\x03\xFB\xEB\x03", "xxxxxxxxxxxx", 69);
+		uintptr_t found = GW::Scanner::Find("\x8B\x9E\xCC\x0C\x00\x00\x03\xD9\x03\xFB\xEB\x03", "xxxxxxxxxxxx", 0x42);
 		patches.push_back(new GW::MemoryPatcher(found,
-			"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90", 16));
+			"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90", 0x13));
 	}
 
 	{
-		uintptr_t found = GW::Scanner::Find("\x8B\x96\x7C\x0C\x00\x00\x2B\xC2\x8B", "xxxxxxxxx", 0);
+		uintptr_t found = GW::Scanner::Find("\x8B\x9E\x7C\x0C\x00\x00\x2B\xC3\x8B", "xxxxxxxxx", 0);
 		patches.push_back(new GW::MemoryPatcher(found - 0xB,  "\xEB", 1));
 		patches.push_back(new GW::MemoryPatcher(found + 0x12, "\xEB", 1));
 	}
@@ -374,10 +374,10 @@ void GameSettings::Initialize() {
 		uintptr_t found = GW::Scanner::Find("\x56\x57\x8B\xF9\x8B\x87\xF4\x0C\x00\x00\x85\xC0\x75\x14", "xxxxxxxxxxxxxx", 0);
 		void *patch = "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90";
 		patches.push_back(new GW::MemoryPatcher(found + 0x86,  patch, 10));
-		patches.push_back(new GW::MemoryPatcher(found + 0xD2,  patch, 10));
-		patches.push_back(new GW::MemoryPatcher(found + 0x10E, patch, 10));
+		patches.push_back(new GW::MemoryPatcher(found + 0x100, patch, 10));
+		patches.push_back(new GW::MemoryPatcher(found + 0x13F, patch, 10));
 	}
-#endif 
+#endif // ENABLE_BORDERLESS
 	{
 		// Patch that allow storage page (and Anniversary page) to work... (ask Ziox for more info)
 		uintptr_t found = GW::Scanner::Find("\xEB\x20\x33\xC0\xBE\x06", "xxxxxx", -4);
@@ -394,7 +394,7 @@ void GameSettings::Initialize() {
 		ctrl_click_patch = new GW::MemoryPatcher(found, &page_max, 1);
 		ctrl_click_patch->TooglePatch(true);
 	}
-#if 0
+#ifdef ENABLE_BORDERLESS
 	GW::Chat::CreateCommand(L"borderless",
 		[&](int argc, LPWSTR *argv) {
 		if (argc <= 1) {
@@ -431,12 +431,16 @@ void GameSettings::Initialize() {
 		return false;
 	});
 
-	//AF::ApplyPatchesIfItsTime();
+#ifdef APRIL_FOOLS
+	AF::ApplyPatchesIfItsTime();
+#endif
 }
 
 void GameSettings::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini);
-//	borderlesswindow = ini->GetBoolValue(Name(), VAR_NAME(borderlesswindow), false);
+#ifdef ENABLE_BORDERLESS
+	borderlesswindow = ini->GetBoolValue(Name(), VAR_NAME(borderlesswindow), false);
+#endif
 	maintain_fov = ini->GetBoolValue(Name(), VAR_NAME(maintain_fov), false);
 	fov = (float)ini->GetDoubleValue(Name(), VAR_NAME(fov), 1.308997f);
 	tick_is_toggle = ini->GetBoolValue(Name(), VAR_NAME(tick_is_toggle), true);
@@ -459,7 +463,9 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	auto_set_away_delay = ini->GetLongValue(Name(), VAR_NAME(auto_set_away_delay), 10);
 	auto_set_online = ini->GetBoolValue(Name(), VAR_NAME(auto_set_online), false);
 
-	//if (borderlesswindow) ApplyBorderless(borderlesswindow);
+#ifdef ENABLE_BORDERLESS
+	if (borderlesswindow) ApplyBorderless(borderlesswindow);
+#endif
 	if (openlinks) GW::Chat::SetOpenLinks(openlinks);
 	if (tick_is_toggle) GW::PartyMgr::SetTickToggle();
 	if (select_with_chat_doubleclick) GW::Chat::SetChatEventCallback(&ChatEventCallback);
@@ -471,7 +477,9 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
 void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ToolboxModule::SaveSettings(ini);
-	//ini->SetBoolValue(Name(), VAR_NAME(borderlesswindow), borderlesswindow);
+#ifdef ENABLE_BORDERLESS
+	ini->SetBoolValue(Name(), VAR_NAME(borderlesswindow), borderlesswindow);
+#endif
 	ini->SetBoolValue(Name(), VAR_NAME(maintain_fov), maintain_fov);
 	ini->SetDoubleValue(Name(), VAR_NAME(fov), fov);
 	ini->SetBoolValue(Name(), VAR_NAME(tick_is_toggle), tick_is_toggle);
@@ -496,7 +504,9 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 }
 
 void GameSettings::DrawSettingInternal() {
-	//DrawBorderlessSetting();
+#ifdef ENABLE_BORDERLESS
+	DrawBorderlessSetting();
+#endif
 	DrawFOVSetting();
 
 	ImGui::Checkbox("Show chat messages timestamp. Color:", &GW::Chat::ShowTimestamps);
@@ -589,8 +599,13 @@ void GameSettings::Update(float delta) {
 		activity_timer = TIMER_INIT(); // refresh the timer to avoid spamming in case the set status call fails
 	}
 	UpdateFOV();
-	//UpdateBorderless();
-	//AF::ApplyPatchesIfItsTime();
+#ifdef ENABLE_BORDERLESS
+	UpdateBorderless();
+#endif
+
+#ifdef APRIL_FOOLS
+	AF::ApplyPatchesIfItsTime();
+#endif
 }
 
 void GameSettings::DrawFOVSetting() {

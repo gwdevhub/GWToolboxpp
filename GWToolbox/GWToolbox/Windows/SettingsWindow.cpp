@@ -56,8 +56,10 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
 		}
 
 		ToolboxSettings::Instance().DrawFreezeSetting();
-		//ImGui::SameLine(ImGui::GetWindowWidth() / 2 + ImGui::GetStyle().ItemSpacing.x / 2);
-		//GameSettings::Instance().DrawBorderlessSetting();
+	#ifdef ENABLE_BORDERLESS
+		ImGui::SameLine(ImGui::GetWindowWidth() / 2 + ImGui::GetStyle().ItemSpacing.x / 2);
+		GameSettings::Instance().DrawBorderlessSetting();
+	#endif
 
 		ImGui::Text("General:");
 		if (ImGui::CollapsingHeader("Help")) {
