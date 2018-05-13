@@ -11,7 +11,7 @@ Previous releases are provided as dll files. In order to use it, you need to use
 * [Fix] Fixed toolbox functionality after May 9 2018 game update.
 * [New] The damage report will now print the names of the npcs.
 * [Minor] You can now use iso alpha 2 country codes for district with the command `/tp`.
-* [Minor] You can now target player with the command `/tp "Player Name"`. (with quotes)
+* [Minor] You can now target player with the command `/target "Player Name"`. (with quotes)
 
 [Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.13_Release/GWToolbox.dll)
 
