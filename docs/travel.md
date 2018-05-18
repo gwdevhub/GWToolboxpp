@@ -14,6 +14,8 @@ If you want to go to a particular district, make sure you choose it from the dis
 
 There is also an option in [Settings](settings) to make the Travel window close when you travel, although this is off by default.
 
+In pre-Searing Ascalon, the only available buttons are the 5 pre-Searing outposts. District selection is not available.
+
 ## Known Bug
 * Traveling from anywhere in Factions to an elite area outpost (The Deep, Urgoz, or DoA) will not work. The only workaround currently known is to first map to somewhere outside Factions.
 
