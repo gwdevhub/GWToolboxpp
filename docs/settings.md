@@ -13,9 +13,9 @@ This section contains some information about how to use Toolbox, along with a li
 
 ## Game Settings
 These are several quality-of-life features that can simply be toggled on or off:
-* **Borderless Window** makes the Guild Wars window appear full-screen, while still functioning as a window. This prevents the graphics glitch that occurs when tabbing out and back in to Guild Wars in full-screen, and frees the mouse from being locked to the Guild Wars window.  
- This will only work if Guild Wars resolution is set to *Window*.  
- This feature can also be toggled from the top of the Settings window.<br /><br />
+* **Maintain FOV** saves and maintains the FOV setting used with `/cam fov [value]`.
+* **Show chat messages timestamp** shows the time of each message in the chat history. Click the color box to choose a color for the timestamps.
+* **Keep chat history** prevents the chat history from being deleted when changing characters.
 * **Open web links from templates** automatically opens any links in templates you click on, instead of opening the template.
 * **Automatically change URLs into build templates** puts links into equipment templates whenever you send them to chat.  
  A link is any message that starts with `https://` or `http://`.<br /><br />  
@@ -43,13 +43,15 @@ These options change some of the ways Toolbox function:
   
 * **Save Location Data** saves your co-ordinates every second to a file in the settings folder.
 
-* **Keep windows on screen** prevents windows and widgets from being moved completely off the screen.  
- Rezoning or minimizing Guild Wars may cause windows on the bottom or right side of the screen to be moved slightly towards the center.
-
 * Each window and widget (except the main window and Settings) can be completely turned off. When you restart Toolbox, your choice of disabled features will not load, and their buttons on the main window will no longer appear.
+
+* Each window and widget (except the main window itself) can be set to appear as a button in the main window or not. No restart is required.
 
 ## Chat Filter ([more info](filter))
 Here you can choose messages to filter out of the chat.
+
+## Chat Commands
+Here you can adjust the settings of the [`cam unlock` feature](camera).
 
 ## Theme ([more info](theme))
 Here you can adjust the appearance of Toolbox.
