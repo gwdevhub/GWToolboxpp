@@ -17,7 +17,7 @@ GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancemen
 | [Notepad](windows#notepad) | [Instance Timer](widgets#timer) | [Target with double-click on message author](settings#game_settings) |
 | [Auto Pcons](pcons) | [Minimap](minimap) | [Theme editor](theme) |
 | [Settings](settings) | [Vanquish Monitor](widgets#vanquish) | [URLs in equipment templates](settings#game_settings) |
-| [Travel](travel) | [Alcohol Monitor](widgets#alcohol) | [Transmogrification](transmo) |
+| [Travel](travel) | [Alcohol Monitor](widgets#alcohol) |  |
 | [Hero Builds](hero) | | 
 | [Trade](trade) | |
 
