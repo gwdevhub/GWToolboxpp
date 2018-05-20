@@ -2,6 +2,19 @@
 
 #AutoIt3Wrapper_Icon=..\resources\gwtoolbox.ico
 
+#cs
+Changelog:
+1.0
+- initial release
+
+1.1
+- included StringSize.au3
+- added more log strings related to architecture and runtime checks
+- added flag to optionally skip runtime checks
+- added message box to optionally set the above flag
+
+#ce
+
 #include <File.au3>
 #include <ComboConstants.au3>
 #include <FileConstants.au3>
@@ -23,7 +36,7 @@ Opt("MustDeclareVars", True)
 Opt("GuiResizeMode", BitOR($GUI_DOCKSIZE, $GUI_DOCKTOP, $GUI_DOCKLEFT))
 
 ; ==== Globals ====
-Global Const $laucher_version = 1.0 ; only shown in log, but w/e. Feel free to increase
+Global Const $laucher_version = 1.1 ; only shown in log, but w/e. Feel free to increase
 Global Const $folder = @LocalAppDataDir & "\GWToolboxpp\"
 Global $dllpath = $folder & "GWToolbox.dll"
 Global Const $inipath = $folder & "GWToolbox.ini"
@@ -40,6 +53,7 @@ OnAutoItExitRegister("FlushLog")
 
 ; ==== Disclaimer ====
 If Not (FileExists($dllpath) Or FileExists($inipath) Or FileExists($fontpath)) Then
+   Out("Showing disclaimer")
 	If MsgBox($MB_OKCANCEL, "GWToolbox++", 'DISCLAIMER:'&@CRLF& _
 	'THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESSED OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF ' & _
 	'FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY ' & _
@@ -47,18 +61,27 @@ If Not (FileExists($dllpath) Or FileExists($inipath) Or FileExists($fontpath)) T
 	'By clicking the OK button you agree with all the above.') <> $IDOK Then Exit
 EndIf
 
+Global Const $skip_runtime_checks = (IniRead($inipath, "Updater", "skip_runtime_checks", "False") == "True")
 ; ==== Install Visual Studio C++ 2015 Runtime ====
 Func CheckVCRedist()
+	Out("Checking visual studio redistributable")
 	Local $Key
 	If @CPUArch == "X64" Then
+		Out("x64")
 		$Key = RegRead("HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\VisualStudio\14.0\VC\Runtimes\x86", "Installed")
 	Else
+		Out("x86")
 		$Key = RegRead("HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x86", "Installed")
 	EndIf
+	Out("key is " & $Key)
 	If $Key == 1 Then Return False; Already installed
 
 	If MsgBox($MB_YESNO, "GWToolbox++ Launcher", "You do not have The Visual C++ Runtime (vc_redist.x86) required for Toolbox to run. Would you like me to open where to download it?") == $IDYES Then
+		Out("Launching vs redistr website")
 		ShellExecute('https://www.microsoft.com/en-us/download/details.aspx?id=48145')
+	ElseIf MsgBox($MB_YESNO, "GWToolbox++ Launcher", "Would you like to skip this check in the future?") == $IDYES Then
+		IniWrite($inipath, "Updater", "skip_runtime_checks", True)
+		Return False
 	EndIf
 
 	Return True
@@ -66,26 +89,37 @@ EndFunc
 
 ; ==== Install DirectX 9.0c Runtime ====
 Func CheckDirectX()
+	Out("Checking visual studio redistributable")
 	Local $Key
 	If @CPUArch == "X64" Then
+		Out("x64")
 		$Key = RegRead("HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\DirectX", "Version")
 	Else
+		Out("x86")
 		$Key = RegRead("HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\DirectX", "Version")
 	EndIf
+	Out("key is " & $Key)
 	If $Key == '4.09.00.0904' Then Return False; Already installed
 
 	If MsgBox($MB_YESNO, "GWToolbox++ Launcher", "You do not have The DirectX 9.0c Runtime required for Toolbox to run. Would you like me to open where to download it?") == $IDYES Then
+		Out("Launching directx website")
 		ShellExecute('https://www.microsoft.com/en-us/download/details.aspx?id=35')
+	ElseIf MsgBox($MB_YESNO, "GWToolbox++ Launcher", "Would you like to skip this check in the future?") == $IDYES Then
+		IniWrite($inipath, "Updater", "skip_runtime_checks", True)
+		Return False
 	EndIf
 
 	Return True
 EndFunc
 
-If CheckVCRedist() Or CheckDirectX() Then
-	MsgBox(0, "GWToolbox++", "Please install the runtimes you were prompted to install, then run this launcher again.")
-	Exit
+If $skip_runtime_checks Then
+	Out("Skipping runtime checks")
+	Else
+	If CheckVCRedist() Or CheckDirectX() Then
+		MsgBox(0, "GWToolbox++", "Please install the runtimes you were prompted to install, then run this launcher again.")
+		Exit
+	EndIf
 EndIf
-
 
 ; ==== Create directories ====
 Out("Creating directories and reading .ini... ")
