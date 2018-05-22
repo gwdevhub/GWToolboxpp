@@ -82,6 +82,8 @@ public:
 	void DrawSettings();
 	void LoadSettings(CSimpleIni* ini, const char* section);
 	void SaveSettings(CSimpleIni* ini, const char* section) const;
+	
+	bool display_pings = true;
 
 private:
 	void Initialize(IDirect3DDevice9* device) override;
