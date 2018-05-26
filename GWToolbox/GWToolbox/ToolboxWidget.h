@@ -4,6 +4,8 @@
 
 class ToolboxWidget : public ToolboxUIElement {
 public:
+	bool IsWidget() const override { return true; }
+
 	virtual void LoadSettings(CSimpleIni* ini) override {
 		ToolboxUIElement::LoadSettings(ini);
 		lock_move = true;

@@ -4,10 +4,10 @@
 #include <imgui_internal.h>
 #include "ImGuiAddons.h"
 
-#include <OtherModules\ToolboxSettings.h>
+#include <Modules\ToolboxSettings.h>
 
 void ToolboxWindow::DrawSettings() {
-	if (ImGui::CollapsingHeader(Name(), ImGuiTreeNodeFlags_AllowOverlapMode)) {
+	if (ImGui::CollapsingHeader(Name(), ImGuiTreeNodeFlags_AllowItemOverlap)) {
 		ImGui::PushID(Name());
 		ShowVisibleRadio();
 		ImVec2 pos(0, 0);
@@ -29,10 +29,7 @@ void ToolboxWindow::DrawSettings() {
 }
 
 ImGuiWindowFlags ToolboxWindow::GetWinFlags(ImGuiWindowFlags flags) const {
-	if (!ToolboxSettings::clamp_window_positions) flags |= ImGuiWindowFlags_NoClampPosition;
-	if (ToolboxSettings::move_all) {
-		flags |= ImGuiWindowFlags_ShowBorders;
-	} else {
+	if (!ToolboxSettings::move_all) {
 		if (lock_move) flags |= ImGuiWindowFlags_NoMove;
 		if (lock_size) flags |= ImGuiWindowFlags_NoResize;
 	}

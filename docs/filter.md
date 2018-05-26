@@ -2,6 +2,11 @@
 layout: default
 ---
 
+<figure>
+<img src="https://user-images.githubusercontent.com/11432831/28233542-6b11b3cc-68ac-11e7-99f2-844298639b79.PNG"/>
+<figcaption>Chat Filter Settings</figcaption>
+</figure>
+
 # Chat Filter
 Toolbox can filter out chat messages you do not wish to see:
 

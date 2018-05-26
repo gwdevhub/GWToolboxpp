@@ -11,6 +11,11 @@ The buttons at the bottom save and load your Toolbox settings to and from the se
 ## Help
 This section contains some information about how to use Toolbox, along with a list of some of the more important chat commands. All of this information can be found, often in more detail, on this website.
 
+<figure>
+<img src="https://user-images.githubusercontent.com/11432831/28233546-6e8dde4a-68ac-11e7-8bc9-20de80416296.PNG"/>
+<figcaption>Game Settings</figcaption>
+</figure>
+
 ## Game Settings
 These are several quality-of-life features that can simply be toggled on or off:
 * **Maintain FOV** saves and maintains the FOV setting used with `/cam fov [value]`.
@@ -29,6 +34,11 @@ These are several quality-of-life features that can simply be toggled on or off:
 * **Automatically set "Away" after ___ minutes of inactivity** sets your status to Away after ___ minutes of no input (including moving the mouse) to Guild Wars. This will only happen if you were set to Online.
 * **Automatically set "Online" after an input to Guild Wars** immediately sets your status to Online after any input (including moving the mouse) to Guild Wars. This will only happen if you were set to Away.  
 Note that you will not see either of these status changes on your own friend list, but your status will have changed, and other players will see this.
+
+<figure>
+<img src="https://user-images.githubusercontent.com/11432831/28233555-719397f6-68ac-11e7-82e5-8a18f4c7c44e.PNG"/>
+<figcaption>Toolbox Settings</figcaption>
+</figure>
 
 ## Toolbox Settings
 These options change some of the ways Toolbox function:
@@ -70,7 +80,6 @@ There are a number of files in this folder:
 * `interface.ini` contains information about the interface, such as position and size of your windows.
 * `Markers.ini` contains your custom minimap markers.
 * `Theme.ini` contains any changes you make to the default theme.
-
 
 ## Backup
 You can (and should!) backup your Toolbox settings by saving some of the files above, and copy them over to the new installation. You definitely want to backup `GWToolbox.ini`, `Markers.ini` and `Theme.ini`. Optionally you can also backup all the `.ini` and `.txt` files.

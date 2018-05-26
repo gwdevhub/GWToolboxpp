@@ -15,16 +15,14 @@ namespace CSLauncher
     public partial class CharSelector : Form
     {
         private Process[] procs;
+        private bool expanded = false;
 
-        private Process selected_process;
-        public Process SelectedProcess
-        {
-            get { return selected_process; }
-        }
+        public List<Process> SelectedProcesses { get; private set; }
 
         public CharSelector()
         {
             InitializeComponent();
+            SelectedProcesses = new List<Process>();
         }
 
         private void CharSelector_Load(object sender, EventArgs e)
@@ -42,16 +40,67 @@ namespace CSLauncher
             foreach (Process proc in procs)
             {
                 GWCAMemory mem = new GWCAMemory(proc);
+                if (mem.Read<Int32>(new IntPtr(0x00DE0000)) != 0)
+                    continue;
+                if (mem.HaveModule("GWToolbox.dll"))
+                    continue;
                 string charname = mem.ReadWString(charnameAddr,30);
-                comboBox1.Items.Add(charname);
+                comboBox.Items.Add(charname);
+                checkedListBox.Items.Add(charname, CheckState.Unchecked);
             }
-            comboBox1.SelectedIndex = 0;
+            comboBox.SelectedIndex = 0;
+            if (checkedListBox.Items.Count > 0) {
+                checkedListBox.SetItemCheckState(0, CheckState.Checked);
+            }
         }
 
         private void buttonLaunch_Click(object sender, EventArgs e)
         {
-            selected_process = procs[comboBox1.SelectedIndex];
+            SelectedProcesses.Clear();
+            if (expanded) {
+                foreach (int index in checkedListBox.CheckedIndices) {
+                    SelectedProcesses.Add(procs[index]);
+                }
+                if (SelectedProcesses.Count == 0) {
+                    MessageBox.Show("Please select at least one process", "Error: No process selected", MessageBoxButtons.OK);
+                    return;
+                }
+                
+            } else {
+                SelectedProcesses.Add(procs[comboBox.SelectedIndex]);
+            }
             this.Close();
+        }
+
+        private void buttonExpand_Click(object sender, EventArgs e) {
+            this.expanded = !this.expanded;
+            if (this.expanded) {
+                this.groupBoxCharSelect.Size = new Size(264, 216);
+                this.ClientSize = new System.Drawing.Size(288, 240);
+                this.groupBoxCharSelect.Controls.Add(this.buttonCheckAll);
+                this.groupBoxCharSelect.Controls.Add(this.buttonUncheckAll);
+                this.groupBoxCharSelect.Controls.Add(this.checkedListBox);
+                this.groupBoxCharSelect.Controls.Remove(this.comboBox);
+            } else {
+                this.groupBoxCharSelect.Size = new Size(264, 54);
+                this.ClientSize = new System.Drawing.Size(288, 78);
+                this.groupBoxCharSelect.Controls.Remove(this.buttonCheckAll);
+                this.groupBoxCharSelect.Controls.Remove(this.buttonUncheckAll);
+                this.groupBoxCharSelect.Controls.Remove(this.checkedListBox);
+                this.groupBoxCharSelect.Controls.Add(this.comboBox);
+            }
+        }
+
+        private void buttonCheckAll_Click(object sender, EventArgs e) {
+            for (int i = 0; i < checkedListBox.Items.Count; ++i) {
+                checkedListBox.SetItemCheckState(i, CheckState.Checked);
+            }
+        }
+
+        private void buttonUncheckAll_Click(object sender, EventArgs e) {
+            for (int i = 0; i < checkedListBox.Items.Count; ++i) {
+                checkedListBox.SetItemCheckState(i, CheckState.Unchecked);
+            }
         }
     }
 }

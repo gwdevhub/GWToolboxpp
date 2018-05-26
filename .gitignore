@@ -2,11 +2,20 @@
 Debug/
 Release/
 ipch/
+Archive/
 
 # Bloated Windows Databases
 *.sdf
 *.opensdf
 *.suo
+*.exp
+*.db
+*.pdb
+*.idb
+*.ilk
+*.opendb
+*.log
+*.lastbuildstate
 
 # Compiled files
 *.slo
@@ -21,7 +30,17 @@ ipch/
 *.idb
 *.pdb
 *.opendb
-GWToolboxpp.VC.db
+
+# Visual studio stuff
+*.user
+
 Dependencies/OSHGui/Include
 docs/_site/
 Gemfile.lock
+GWToolbox/~*.tmp
+GWToolbox.aps
+
+# Sublime Text stuff
+*.sublime-project*
+*.sublime-workspace*
+.vs/

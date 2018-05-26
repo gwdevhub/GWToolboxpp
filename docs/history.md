@@ -2,11 +2,126 @@
 layout: default
 ---
 
-
 # Version History
-Previous releases are provided as dll files. In order to use it, you need to use an alternative launcher which must be placed in the same directory as the dll. If you are looking for the latest version, go to the [Home Page](./) instead.
+Previous releases are provided as dll files. In order to use it, you need to use a different launcher which must be placed in the same directory as the dll. If you are looking for the latest version, go to the [Home Page](./) instead.
 
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
+
+## Version 2.14
+* [Fix] Fixed toolbox functionality after May 9 2018 game update.
+* [Fix] Fixed bug with ctrl+click & dyes.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.14_Release/GWToolbox.dll)
+
+## Version 2.13
+* [Fix] Fixed toolbox functionality after May 9 2018 game update.
+* [New] The damage report will now print the names of the npcs.
+* [Minor] You can now use iso alpha 2 country codes for district with the command `/tp`.
+* [Minor] You can now target player with the command `/target "Player Name"`. (with quotes)
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.13_Release/GWToolbox.dll)
+
+## Version 2.12.1
+* [Fix] Removed Borderless Windowed mode, use official implementation instead :)
+* [Fix] Fixed crash bug on toolbox start.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.12.1_Release/GWToolbox.dll)
+
+## Version 2.12
+* [Fix] Fixed toolbox functionality after April 30 2018 game update.
+* [New] Added an option in the chat filter to match messages with regular expressions.
+* [New] Improved custom agent rendering functionality. 
+* [Fix] Empty lines in the chat filter will not ignore everything any more.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.12_Release/GWToolbox.dll)
+
+## Version 2.11
+* [New] Added the option to set custom color for specific agents in the minimap. 
+* [Fix] Fixed toolbox functionality after April 23 2018 game update.
+* [Fix] Improved overall robustness.
+* [Fix] Improved ctrl+click (move items) behaviors.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.11_Release/GWToolbox.dll)
+
+## Version 2.10
+* [Fix] Fixed toolbox functionality after April 2 2018 game update.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.10_Release/GWToolbox.dll)
+
+## Version 2.9
+* [Fix] Fixed toolbox functionality after March 23 2018 game update.
+* [New] Added a new Trade chat window containing Kamadan Trade Chat. Powered by `https://kamadan.decltype.org/`.
+* [New] Added a Soul Tormentor counter to the Info window. 
+* [New] Improved camera unlock movement functionality and added an option to keep camera height fixed while moving.
+* [New] Minimap targeting (Control+Click) now ignores all but the targetable minipets.
+* [New] Added an option to move items to/from chest by Control+click.
+* [New] Added an option to maintain `/cam fov` after a map change.
+* [New] Each `/useskill` will now reset the skills to use, not add to the previous ones.
+* [Fix] Fixed `/flag` functionality. Added `/flag all` and `/flag clear`. 
+* [Fix] Fixed a bug where hero flags would not show in the minimap. Reduced size of the circle of individual hero flag. 
+* [Fix] Fixed a bug where settings would not be loaded/saved properly on systems with a username containing non-standard characters.
+* [Fix] Fixed a bug where pcons would sometimes not be used if the player had no other effects. 
+* [Fix] Fixed a crash bug when sending Hero Builds to <No Hero>.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.9_Release/GWToolbox.dll)
+
+## Version 2.8
+* [Fix] Fixed a crash bug in the hero build window. 
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.8_Release/GWToolbox.dll)
+
+## Version 2.7
+* [New] Can now omit the town in `/tp [town] [district] to change district. 
+* [Fix] Fixed the "Close other windows..." option.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.7_Release/GWToolbox.dll)
+
+## Version 2.6
+* [New] You can now add or remove any window to the main toolbox window - check Settings -> Toolbox Settings. 
+* [New] Added a new Window to create and load hero team builds.
+* [New] Added support for the new Lunars (year of the dog). 
+* [New] Added cursor fix: mouse should no longer jump between monitors when right clicking. 
+* [New] You can now use multiple skills with `/useskill`.
+* [New] Added rings of fortune messages to the chat filter. 
+* [Fix] Alcohol monitor is now only visible in explorable areas.
+* [Fix] You can now once again set up hotkeys on mouse buttons x1 and x2 (forward and back).
+* [Fix] Fixed various small issues. 
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.6_Release/GWToolbox.dll)
+
+## Version 2.5
+* [Fix] Fixed bug where toolbox window positions would reset when restoring from an alt-tabbed fullscreen GW.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.5_Release/GWToolbox.dll)
+
+## Version 2.4
+* [Fix] Fixed bug where GW would freeze when launching Toolbox while in fullscreen mode.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.4_Release/GWToolbox.dll)
+
+## Version 2.3
+* [New] Added `/load <build name>` command to load builds from your saved templates.
+* [New] Added an option to display chat message timestamps.
+* [New] Added an option to retain chat history after changing map.
+* [New] Added an option to restore GW window from mimized state and bring to focus when zoning into explorables.
+* [New] Added an alcohol duration widget. 
+* [Fix] Fixed several minor bugs.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.3_Release/GWToolbox.dll)
+
+## Version 2.2
+* [New] You can now /tp gh [tag] to any guild in your alliance.
+* [New] Added options to make Guild Wars flash in the taskbar when invited to a party or when your party zones.
+* [New] Added options to automatically set away after a delay and/or online when back.
+* [New] "Use item" hotkey can now use items from the chest in outposts.
+* [Fix] VQ counter now only appears in areas that can be vanquished.
+* [Fix] /tp fav now starts counting at 1 instead of 0.
+* [Fix] Automatically changing URLs to templates now also works in PMs.
+* [Fix] Fixed bug where hotkeys would not save properly.
+* [Fix] Quest marker will now appear correctly on the minimap.
+* [Fix] Fixed several typos and minor issues.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.2_Release/GWToolbox.dll)
 
 ## Version 2.1
 In this patch we change the update server to GitHub and fix minor bugs from 2.0 and add a Vanquish counter.

@@ -9,11 +9,11 @@
 #include <GWCA\Managers\ChatMgr.h>
 
 #include "Defines.h"
-#include <OtherModules\Resources.h>
+#include <Modules\Resources.h>
 
-#define CHAN_WARNING GW::Chat::Channel::CHANNEL_GWCA2
-#define CHAN_INFO GW::Chat::Channel::CHANNEL_GWCA3
-#define CHAN_ERROR GW::Chat::Channel::CHANNEL_GWCA4
+#define CHAN_WARNING GW::Chat::CHANNEL_GWCA2
+#define CHAN_INFO    GW::Chat::CHANNEL_EMOTE
+#define CHAN_ERROR   GW::Chat::CHANNEL_GWCA3
 
 namespace {
 	FILE* logfile = nullptr;
@@ -29,7 +29,7 @@ void Log::InitializeLog() {
 	freopen_s(&fh, "CONOUT$", "w", stderr);
 	SetConsoleTitle("GWTB++ Debug Console");
 #else
-	logfile = freopen(Resources::GetPath("log.txt").c_str(), "w", stdout);
+	logfile = _wfreopen(Resources::GetPath(L"log.txt").c_str(), L"w", stdout);
 #endif
 }
 
@@ -90,7 +90,7 @@ static void _vchatlog(GW::Chat::Channel chan, const char* format, va_list argv) 
 	vsprintf_s(buf1, format, argv);
 
 	char buf2[256];
-	_snprintf(buf2, 256, "<c=#00ccff>GWToolbox++</c>: %s", buf1);
+	snprintf(buf2, 256, "<c=#00ccff>GWToolbox++</c>: %s", buf1);
 	GW::Chat::WriteChat(chan, buf2);
 
 	const char* c = [](GW::Chat::Channel chan) -> const char* {

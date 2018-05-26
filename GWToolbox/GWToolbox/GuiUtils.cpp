@@ -8,7 +8,7 @@
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\Utilities\Scanner.h>
 
-#include <OtherModules\Resources.h>
+#include <Modules\Resources.h>
 
 namespace {
 	ImFont* font16 = nullptr;
@@ -20,7 +20,7 @@ namespace {
 }
 
 void GuiUtils::LoadFonts() {
-	std::string fontfile = Resources::GetPath("Font.ttf");
+	Utf8 fontfile = Resources::GetPathUtf8(L"Font.ttf");
 	ImGuiIO& io = ImGui::GetIO();
 	font16 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 16.0f);
 	font18 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 18.0f);
@@ -75,4 +75,43 @@ std::string GuiUtils::ToLower(std::string s) {
 std::wstring GuiUtils::ToLower(std::wstring s) {
 	std::transform(s.begin(), s.end(), s.begin(), ::tolower);
 	return s;
+}
+
+bool GuiUtils::ParseInt(const char *str, int *val) {
+	char *end;
+	*val = strtol(str, &end, 0);
+	return *end == 0;
+}
+bool GuiUtils::ParseInt(const wchar_t *str, int *val) {
+	wchar_t *end;
+	*val = wcstol(str, &end, 0);
+	return *end == 0;
+}
+std::wstring GuiUtils::ToWstr(std::string &s) {
+	std::wstring result;
+	result.reserve(s.size() + 1);
+	for (char c : s) result.push_back(c);
+	return result;
+}
+int GuiUtils::ConvertToUtf8(const wchar_t *str, char *output, size_t max_size) {
+	size_t len = wcslen(str);
+	if (len > max_size) return 0;
+	int nbytes = WideCharToMultiByte(CP_UTF8, 0, str, -1, output, max_size, NULL, NULL);
+	return nbytes;
+}
+
+int GuiUtils::ConvertToUtf8(const std::wstring& str, char *output, size_t max_size) {
+	return ConvertToUtf8(str.c_str(), output, max_size);
+}
+
+size_t GuiUtils::wcstostr(char *dest, const wchar_t *src, size_t n) {
+	size_t i;
+    unsigned char *d = (unsigned char *)dest;
+    for (i = 0; i < n; i++) {
+        if (src[i] & ~0x7f)
+            return 0;
+        d[i] = src[i] & 0x7f;
+        if (src[i] == 0) break;
+    }
+    return i;
 }

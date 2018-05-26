@@ -25,19 +25,21 @@ namespace Colors {
 			| (b << IM_COL32_B_SHIFT);
 	}
 
-	static Color Black() { return 0xFF000000; }
-	static Color White() { return 0xFFFFFFFF; }
-	static Color Empty() { return 0x00000000; }
+	static Color Black() { return RGB(0, 0, 0); }
+	static Color White() { return RGB(0xFF, 0xFF, 0xFF); }
+	static Color Empty() { return ARGB(0, 0, 0, 0); }
 
-	static Color Red() { return 0xFFFF0000; }
-	static Color Green() { return 0xFF00FF00; }
-	static Color Blue() { return 0xFF0000FF; }
+	static Color Red() { return RGB(0xFF, 0x0, 0x0); }
+	static Color Green() { return RGB(0x0, 0xFF, 0x0); }
+	static Color Blue() { return RGB(0x0, 0x0, 0xFF); }
 
 	static Color Load(CSimpleIni* ini, const char* section, const char* key, Color def) {
 		try {
 			const char* wc = ini->GetValue(section, key, nullptr);
 			if (wc == nullptr) return def;
-			return std::stoul(wc, nullptr, 16);
+			unsigned long c = std::stoul(wc, nullptr, 16);
+			// swap red and blue channels
+			return c;
 		} catch (...) { // invalid argument, out of range, whatever
 			return Black();
 		}
@@ -45,7 +47,7 @@ namespace Colors {
 
 	static void Save(CSimpleIni* ini, const char* section, const char* key, Color val) {
 		char buf[64];
-		sprintf_s(buf, "0x%X", val);
+		snprintf(buf, 64, "0x%X", val);
 		ini->SetValue(section, key, buf);
 	}
 
@@ -114,7 +116,7 @@ namespace Colors {
 		ImGui::PopItemWidth();
 
 		ImGui::SameLine(0, style.ItemInnerSpacing.x);
-		ImGui::ColorButton(ImColor(i[1], i[2], i[3]));
+		ImGui::ColorButton("", ImColor(i[1], i[2], i[3]));
 
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Color:\n0x%02X%02X%02X%02X", i[0], i[1], i[2], i[3]);
 

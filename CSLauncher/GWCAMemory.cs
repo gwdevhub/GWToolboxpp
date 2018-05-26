@@ -209,6 +209,17 @@ namespace GWCA
             }
             #endregion
 
+            public bool HaveModule(string name)
+            {
+                ProcessModuleCollection modules = process.Modules;
+                foreach (ProcessModule module in modules)
+                {
+                    if (String.Equals(module.ModuleName, "GWToolbox.dll", StringComparison.OrdinalIgnoreCase))
+                        return true;
+                }
+                return false;
+            }
+
             #region Memory Scanner
             /// <summary>
             /// Initialize scanner range, dump memory block for scan.

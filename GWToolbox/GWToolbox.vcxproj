@@ -43,12 +43,12 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <IncludePath>$(ProjectDir)GWToolbox;$(SolutionDir)Dependencies;$(SolutionDir)Dependencies\GWCA;$(SolutionDir)Dependencies\imgui;$(SolutionDir)Dependencies\DirectX\Include\;$(IncludePath)</IncludePath>
-    <LibraryPath>$(OutDir);$(SolutionDir)Dependencies\DirectX\Lib\x86\;$(SolutionDir)Dependencies\GWCA\;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(OutDir);$(SolutionDir)Dependencies\DirectX\Lib\x86\;$(SolutionDir)Dependencies\GWCA\;$(SolutionDir)Dependencies\openssl\lib\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>$(ProjectDir)GWToolbox;$(SolutionDir)Dependencies;$(SolutionDir)Dependencies\GWCA;$(SolutionDir)Dependencies\imgui;$(SolutionDir)Dependencies\DirectX\Include\;$(IncludePath)</IncludePath>
-    <LibraryPath>$(OutDir);$(SolutionDir)Dependencies\DirectX\Lib\x86\;$(SolutionDir)Dependencies\GWCA\;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(OutDir);$(SolutionDir)Dependencies\DirectX\Lib\x86\;$(SolutionDir)Dependencies\GWCA\;$(SolutionDir)Dependencies\openssl\lib\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -56,14 +56,22 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;API_EXPORTS;_USE_MATH_DEFINES;NOMINMAX;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32_LEAN_AND_MEAN;WIN32;_DEBUG;_WINDOWS;_USRDLL;API_EXPORTS;_USE_MATH_DEFINES;NOMINMAX;_CRT_SECURE_NO_WARNINGS;IMGUI_USE_BGRA_PACKED_COLOR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <ForcedIncludeFiles>GWCA\Utilities\Export.h</ForcedIncludeFiles>
+      <ShowIncludes>false</ShowIncludes>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCAd.lib;Shlwapi.lib;Urlmon.lib;Wininet.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCAd.lib;Shlwapi.lib;Urlmon.lib;Wininet.lib;libeay32.lib;ssleay32.lib;user32.lib;gdi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ProgramDatabaseFile>$(OutDir)$(TargetFileName).pdb</ProgramDatabaseFile>
+      <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
     </Link>
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -73,12 +81,13 @@
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;API_EXPORTS;_USE_MATH_DEFINES;NOMINMAX;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32_LEAN_AND_MEAN;WIN32;NDEBUG;_WINDOWS;_USRDLL;API_EXPORTS;_USE_MATH_DEFINES;NOMINMAX;_CRT_SECURE_NO_WARNINGS;IMGUI_USE_BGRA_PACKED_COLOR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <ForcedIncludeFiles>GWCA\Utilities\Export.h</ForcedIncludeFiles>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -87,114 +96,194 @@
       <OptimizeReferences>true</OptimizeReferences>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCA.lib;Shlwapi.lib;Urlmon.lib;Wininet.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCA.lib;Shlwapi.lib;Urlmon.lib;Wininet.lib;libeay32.lib;ssleay32.lib;user32.lib;gdi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
     </Link>
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\Dependencies\imgui\examples\directx9_example\imgui_impl_dx9.h" />
+    <ClInclude Include="..\Dependencies\easywsclient\easywsclient.hpp" />
     <ClInclude Include="..\Dependencies\imgui\imconfig.h" />
     <ClInclude Include="..\Dependencies\imgui\imgui.h" />
     <ClInclude Include="..\Dependencies\imgui\imgui_internal.h" />
     <ClInclude Include="..\Dependencies\imgui\stb_rect_pack.h" />
     <ClInclude Include="..\Dependencies\imgui\stb_textedit.h" />
     <ClInclude Include="..\Dependencies\imgui\stb_truetype.h" />
+    <ClInclude Include="GWToolbox\CircurlarBuffer.h" />
     <ClInclude Include="GWToolbox\Color.h" />
+    <ClInclude Include="GWToolbox\CursorFix.h" />
     <ClInclude Include="GWToolbox\Defines.h" />
     <ClInclude Include="GWToolbox\ImGuiAddons.h" />
-    <ClInclude Include="GWToolbox\Key.h" />
-    <ClInclude Include="GWToolbox\OtherModules\ChatCommands.h" />
-    <ClInclude Include="GWToolbox\OtherModules\ChatFilter.h" />
-    <ClInclude Include="GWToolbox\OtherModules\GameSettings.h" />
-    <ClInclude Include="GWToolbox\OtherModules\Resources.h" />
-    <ClInclude Include="GWToolbox\OtherModules\ToolboxSettings.h" />
-    <ClInclude Include="GWToolbox\OtherModules\ToolboxTheme.h" />
-    <ClInclude Include="GWToolbox\OtherModules\Updater.h" />
-    <ClInclude Include="GWToolbox\Panels\BuildPanel.h" />
-    <ClInclude Include="GWToolbox\Panels\DialogPanel.h" />
-    <ClInclude Include="GWToolbox\Panels\HotkeyPanel.h" />
-    <ClInclude Include="GWToolbox\Panels\Hotkeys.h" />
-    <ClInclude Include="GWToolbox\Panels\InfoPanel.h" />
-    <ClInclude Include="GWToolbox\Panels\MaterialsPanel.h" />
-    <ClInclude Include="GWToolbox\Panels\PconPanel.h" />
-    <ClInclude Include="GWToolbox\Panels\Pcons.h" />
-    <ClInclude Include="GWToolbox\Panels\SettingsPanel.h" />
-    <ClInclude Include="GWToolbox\Panels\TravelPanel.h" />
+    <ClInclude Include="GWToolbox\imgui_impl_dx9.h" />
+    <ClInclude Include="GWToolbox\Keys.h" />
+    <ClInclude Include="GWToolbox\Modules\ChatCommands.h" />
+    <ClInclude Include="GWToolbox\Modules\ChatFilter.h" />
+    <ClInclude Include="GWToolbox\Modules\GameSettings.h" />
+    <ClInclude Include="GWToolbox\Modules\LUAInterface.h" />
+    <ClInclude Include="GWToolbox\Modules\Resources.h" />
+    <ClInclude Include="GWToolbox\Modules\ToolboxSettings.h" />
+    <ClInclude Include="GWToolbox\Modules\ToolboxTheme.h" />
+    <ClInclude Include="GWToolbox\Modules\Updater.h" />
     <ClInclude Include="GWToolbox\ToolboxModule.h" />
     <ClInclude Include="GWToolbox\GuiUtils.h" />
     <ClInclude Include="GWToolbox\GWToolbox.h" />
     <ClInclude Include="GWToolbox\logger.h" />
     <ClInclude Include="GWToolbox\Timer.h" />
-    <ClInclude Include="GWToolbox\ToolboxPanel.h" />
     <ClInclude Include="GWToolbox\ToolboxUIElement.h" />
     <ClInclude Include="GWToolbox\ToolboxWidget.h" />
     <ClInclude Include="GWToolbox\ToolboxWindow.h" />
-    <ClInclude Include="GWToolbox\Windows\BondsWindow.h" />
-    <ClInclude Include="GWToolbox\Windows\ClockWindow.h" />
-    <ClInclude Include="GWToolbox\Windows\DistanceWindow.h" />
-    <ClInclude Include="GWToolbox\Windows\HealthWindow.h" />
+    <ClInclude Include="GWToolbox\Utf8.h" />
+    <ClInclude Include="GWToolbox\Widgets\AlcoholWidget.h" />
+    <ClInclude Include="GWToolbox\Widgets\BondsWidget.h" />
+    <ClInclude Include="GWToolbox\Widgets\ClockWidget.h" />
+    <ClInclude Include="GWToolbox\Widgets\DistanceWidget.h" />
+    <ClInclude Include="GWToolbox\Widgets\HealthWidget.h" />
+    <ClInclude Include="GWToolbox\Widgets\Minimap\AgentRenderer.h" />
+    <ClInclude Include="GWToolbox\Widgets\Minimap\CustomRenderer.h" />
+    <ClInclude Include="GWToolbox\Widgets\Minimap\D3DVertex.h" />
+    <ClInclude Include="GWToolbox\Widgets\Minimap\Minimap.h" />
+    <ClInclude Include="GWToolbox\Widgets\Minimap\PingsLinesRenderer.h" />
+    <ClInclude Include="GWToolbox\Widgets\Minimap\PmapRenderer.h" />
+    <ClInclude Include="GWToolbox\Widgets\Minimap\RangeRenderer.h" />
+    <ClInclude Include="GWToolbox\Widgets\Minimap\SymbolsRenderer.h" />
+    <ClInclude Include="GWToolbox\Widgets\Minimap\VBuffer.h" />
+    <ClInclude Include="GWToolbox\Widgets\PartyDamage.h" />
+    <ClInclude Include="GWToolbox\Widgets\TimerWidget.h" />
+    <ClInclude Include="GWToolbox\Widgets\VanquishWidget.h" />
+    <ClInclude Include="GWToolbox\Windows\BuildsWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\DialogsWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\HeroBuildsWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\HotkeysWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\Hotkeys.h" />
+    <ClInclude Include="GWToolbox\Windows\InfoWindow.h" />
     <ClInclude Include="GWToolbox\Windows\MainWindow.h" />
-    <ClInclude Include="GWToolbox\Windows\Minimap\AgentRenderer.h" />
-    <ClInclude Include="GWToolbox\Windows\Minimap\CustomRenderer.h" />
-    <ClInclude Include="GWToolbox\Windows\Minimap\D3DVertex.h" />
-    <ClInclude Include="GWToolbox\Windows\Minimap\Minimap.h" />
-    <ClInclude Include="GWToolbox\Windows\Minimap\PingsLinesRenderer.h" />
-    <ClInclude Include="GWToolbox\Windows\Minimap\PmapRenderer.h" />
-    <ClInclude Include="GWToolbox\Windows\Minimap\RangeRenderer.h" />
-    <ClInclude Include="GWToolbox\Windows\Minimap\SymbolsRenderer.h" />
-    <ClInclude Include="GWToolbox\Windows\Minimap\VBuffer.h" />
+    <ClInclude Include="GWToolbox\Windows\MaterialsWindow.h" />
     <ClInclude Include="GWToolbox\Windows\NotePadWindow.h" />
-    <ClInclude Include="GWToolbox\Windows\PartyDamage.h" />
-    <ClInclude Include="GWToolbox\Windows\TimerWindow.h" />
-    <ClInclude Include="GWToolbox\Windows\VanquishWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\PconsWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\Pcons.h" />
+    <ClInclude Include="GWToolbox\Windows\SettingsWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\TradeWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\TravelWindow.h" />
+    <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\Dependencies\imgui\examples\directx9_example\imgui_impl_dx9.cpp" />
+    <ClCompile Include="..\Dependencies\easywsclient\easywsclient.cpp" />
     <ClCompile Include="..\Dependencies\imgui\imgui.cpp" />
     <ClCompile Include="..\Dependencies\imgui\imgui_demo.cpp" />
     <ClCompile Include="..\Dependencies\imgui\imgui_draw.cpp" />
+    <ClCompile Include="GWToolbox\CursorFix.cpp" />
     <ClCompile Include="GWToolbox\GuiUtils.cpp" />
     <ClCompile Include="GWToolbox\ImGuiAddons.cpp" />
+    <ClCompile Include="GWToolbox\imgui_impl_dx9.cpp" />
     <ClCompile Include="GWToolbox\logger.cpp" />
     <ClCompile Include="GWToolbox\main.cpp" />
-    <ClCompile Include="GWToolbox\OtherModules\ChatCommands.cpp" />
-    <ClCompile Include="GWToolbox\OtherModules\ChatFilter.cpp" />
-    <ClCompile Include="GWToolbox\OtherModules\GameSettings.cpp" />
-    <ClCompile Include="GWToolbox\OtherModules\Resources.cpp" />
-    <ClCompile Include="GWToolbox\OtherModules\ToolboxSettings.cpp" />
-    <ClCompile Include="GWToolbox\OtherModules\ToolboxTheme.cpp" />
-    <ClCompile Include="GWToolbox\OtherModules\Updater.cpp" />
-    <ClCompile Include="GWToolbox\Panels\BuildPanel.cpp" />
-    <ClCompile Include="GWToolbox\Panels\DialogPanel.cpp" />
-    <ClCompile Include="GWToolbox\Panels\HotkeyPanel.cpp" />
-    <ClCompile Include="GWToolbox\Panels\Hotkeys.cpp" />
-    <ClCompile Include="GWToolbox\Panels\InfoPanel.cpp" />
-    <ClCompile Include="GWToolbox\Panels\MaterialsPanel.cpp" />
-    <ClCompile Include="GWToolbox\Panels\PconPanel.cpp" />
-    <ClCompile Include="GWToolbox\Panels\Pcons.cpp" />
-    <ClCompile Include="GWToolbox\Panels\SettingsPanel.cpp" />
-    <ClCompile Include="GWToolbox\Panels\TravelPanel.cpp" />
+    <ClCompile Include="GWToolbox\Modules\ChatCommands.cpp" />
+    <ClCompile Include="GWToolbox\Modules\ChatFilter.cpp" />
+    <ClCompile Include="GWToolbox\Modules\GameSettings.cpp" />
+    <ClCompile Include="GWToolbox\Modules\LUAInterface.cpp" />
+    <ClCompile Include="GWToolbox\Modules\Resources.cpp" />
+    <ClCompile Include="GWToolbox\Modules\ToolboxSettings.cpp" />
+    <ClCompile Include="GWToolbox\Modules\ToolboxTheme.cpp" />
+    <ClCompile Include="GWToolbox\Modules\Updater.cpp" />
     <ClCompile Include="GWToolbox\ToolboxModule.cpp" />
     <ClCompile Include="GWToolbox\GWToolbox.cpp" />
-    <ClCompile Include="GWToolbox\ToolboxPanel.cpp" />
     <ClCompile Include="GWToolbox\ToolboxUIElement.cpp" />
     <ClCompile Include="GWToolbox\ToolboxWidget.cpp" />
     <ClCompile Include="GWToolbox\ToolboxWindow.cpp" />
-    <ClCompile Include="GWToolbox\Windows\BondsWindow.cpp" />
-    <ClCompile Include="GWToolbox\Windows\ClockWindow.cpp" />
-    <ClCompile Include="GWToolbox\Windows\DistanceWindow.cpp" />
-    <ClCompile Include="GWToolbox\Windows\HealthWindow.cpp" />
+    <ClCompile Include="GWToolbox\Utf8.cpp" />
+    <ClCompile Include="GWToolbox\Widgets\AlcoholWidget.cpp" />
+    <ClCompile Include="GWToolbox\Widgets\BondsWidget.cpp" />
+    <ClCompile Include="GWToolbox\Widgets\ClockWidget.cpp" />
+    <ClCompile Include="GWToolbox\Widgets\DistanceWidget.cpp" />
+    <ClCompile Include="GWToolbox\Widgets\HealthWidget.cpp" />
+    <ClCompile Include="GWToolbox\Widgets\Minimap\AgentRenderer.cpp" />
+    <ClCompile Include="GWToolbox\Widgets\Minimap\CustomRenderer.cpp" />
+    <ClCompile Include="GWToolbox\Widgets\Minimap\Minimap.cpp" />
+    <ClCompile Include="GWToolbox\Widgets\Minimap\PingsLinesRenderer.cpp" />
+    <ClCompile Include="GWToolbox\Widgets\Minimap\PmapRenderer.cpp" />
+    <ClCompile Include="GWToolbox\Widgets\Minimap\RangeRenderer.cpp" />
+    <ClCompile Include="GWToolbox\Widgets\Minimap\SymbolsRenderer.cpp" />
+    <ClCompile Include="GWToolbox\Widgets\PartyDamage.cpp" />
+    <ClCompile Include="GWToolbox\Widgets\TimerWidget.cpp" />
+    <ClCompile Include="GWToolbox\Widgets\VanquishWidget.cpp" />
+    <ClCompile Include="GWToolbox\Windows\BuildsWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\DialogsWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\HeroBuildsWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\HotkeysWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\Hotkeys.cpp" />
+    <ClCompile Include="GWToolbox\Windows\InfoWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\MainWindow.cpp" />
-    <ClCompile Include="GWToolbox\Windows\Minimap\AgentRenderer.cpp" />
-    <ClCompile Include="GWToolbox\Windows\Minimap\CustomRenderer.cpp" />
-    <ClCompile Include="GWToolbox\Windows\Minimap\Minimap.cpp" />
-    <ClCompile Include="GWToolbox\Windows\Minimap\PingsLinesRenderer.cpp" />
-    <ClCompile Include="GWToolbox\Windows\Minimap\PmapRenderer.cpp" />
-    <ClCompile Include="GWToolbox\Windows\Minimap\RangeRenderer.cpp" />
-    <ClCompile Include="GWToolbox\Windows\Minimap\SymbolsRenderer.cpp" />
+    <ClCompile Include="GWToolbox\Windows\MaterialsWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\NotePadWindow.cpp" />
-    <ClCompile Include="GWToolbox\Windows\PartyDamage.cpp" />
-    <ClCompile Include="GWToolbox\Windows\TimerWindow.cpp" />
-    <ClCompile Include="GWToolbox\Windows\VanquishWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\PconsWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\Pcons.cpp" />
+    <ClCompile Include="GWToolbox\Windows\SettingsWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\TradeWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\TravelWindow.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Dependencies\GWCA\GWCA.2015.vcxproj">
+      <Project>{b3359f05-68cf-4e7f-b9d6-d106f6d48a38}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\LUA\LUA.vcxproj">
+      <Project>{07e36ee0-d8a8-48f0-a872-681512e93ccd}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="GWToolbox.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\resources\bonds\Balthazar%27s_Spirit.png" />
+    <Image Include="..\resources\bonds\Essence_Bond.png" />
+    <Image Include="..\resources\bonds\Holy_Veil.png" />
+    <Image Include="..\resources\bonds\Life_Attunement.png" />
+    <Image Include="..\resources\bonds\Life_Barrier.png" />
+    <Image Include="..\resources\bonds\Life_Bond.png" />
+    <Image Include="..\resources\bonds\Live_Vicariously.png" />
+    <Image Include="..\resources\bonds\Mending.png" />
+    <Image Include="..\resources\bonds\Protective_Bond.png" />
+    <Image Include="..\resources\bonds\Purifying_Veil.png" />
+    <Image Include="..\resources\bonds\Retribution.png" />
+    <Image Include="..\resources\bonds\Strength_of_Honor.png" />
+    <Image Include="..\resources\bonds\Succor.png" />
+    <Image Include="..\resources\bonds\Vital_Blessing.png" />
+    <Image Include="..\resources\bonds\Watchful_Spirit.png" />
+    <Image Include="..\resources\icons\airplane.png" />
+    <Image Include="..\resources\icons\cupcake.png" />
+    <Image Include="..\resources\icons\dialogue.png" />
+    <Image Include="..\resources\icons\feather.png" />
+    <Image Include="..\resources\icons\info.png" />
+    <Image Include="..\resources\icons\keyboard.png" />
+    <Image Include="..\resources\icons\list.png" />
+    <Image Include="..\resources\icons\settings.png" />
+    <Image Include="..\resources\materials\Armor_of_Salvation.png" />
+    <Image Include="..\resources\materials\Essence_of_Celerity.png" />
+    <Image Include="..\resources\materials\Grail_of_Might.png" />
+    <Image Include="..\resources\materials\Powerstone_of_Courage.png" />
+    <Image Include="..\resources\materials\Scroll_of_Resurrection.png" />
+    <Image Include="..\resources\pcons\Armor_of_Salvation.png" />
+    <Image Include="..\resources\pcons\Birthday_Cupcake.png" />
+    <Image Include="..\resources\pcons\Blue_Rock_Candy.png" />
+    <Image Include="..\resources\pcons\Bottle_of_Grog.png" />
+    <Image Include="..\resources\pcons\Bowl_of_Skalefin_Soup.png" />
+    <Image Include="..\resources\pcons\Candy_Apple.png" />
+    <Image Include="..\resources\pcons\Candy_Corn.png" />
+    <Image Include="..\resources\pcons\Drake_Kabob.png" />
+    <Image Include="..\resources\pcons\Dwarven_Ale.png" />
+    <Image Include="..\resources\pcons\Essence_of_Celerity.png" />
+    <Image Include="..\resources\pcons\Fruitcake.png" />
+    <Image Include="..\resources\pcons\Golden_Egg.png" />
+    <Image Include="..\resources\pcons\Grail_of_Might.png" />
+    <Image Include="..\resources\pcons\Green_Rock_Candy.png" />
+    <Image Include="..\resources\pcons\Lunar_Fortune.png" />
+    <Image Include="..\resources\pcons\Pahnai_Salad.png" />
+    <Image Include="..\resources\pcons\Red_Rock_Candy.png" />
+    <Image Include="..\resources\pcons\Slice_of_Pumpkin_Pie.png" />
+    <Image Include="..\resources\pcons\Sugary_Blue_Drink.png" />
+    <Image Include="..\resources\pcons\War_Supplies.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
