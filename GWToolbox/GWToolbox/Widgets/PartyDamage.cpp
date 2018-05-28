@@ -24,10 +24,10 @@ void PartyDamage::Initialize() {
 	total = 0;
 	send_timer = TIMER_INIT();
 
-	GW::StoC::AddCallback<GW::Packet::StoC::P156>(
+	GW::StoC::AddCallback<GW::Packet::StoC::GenericModifier>(
 		std::bind(&PartyDamage::DamagePacketCallback, this, std::placeholders::_1));
 
-	GW::StoC::AddCallback<GW::Packet::StoC::P235>(
+	GW::StoC::AddCallback<GW::Packet::StoC::MapLoaded>(
 		std::bind(&PartyDamage::MapLoadedCallback, this, std::placeholders::_1));
 
 	for (int i = 0; i < MAX_PLAYERS; ++i) {
@@ -43,7 +43,7 @@ void PartyDamage::Terminate() {
 	delete inifile;
 }
 
-bool PartyDamage::MapLoadedCallback(GW::Packet::StoC::P235 *packet) {
+bool PartyDamage::MapLoadedCallback(GW::Packet::StoC::MapLoaded *packet) {
 	switch (GW::Map::GetInstanceType()) {
 	case GW::Constants::InstanceType::Outpost:
 		in_explorable = false;
@@ -62,7 +62,7 @@ bool PartyDamage::MapLoadedCallback(GW::Packet::StoC::P235 *packet) {
 	return false;
 }
 
-bool PartyDamage::DamagePacketCallback(GW::Packet::StoC::P156* packet) {
+bool PartyDamage::DamagePacketCallback(GW::Packet::StoC::GenericModifier* packet) {
 
 	// ignore non-damage packets
 	switch (packet->type) {
@@ -117,11 +117,14 @@ bool PartyDamage::DamagePacketCallback(GW::Packet::StoC::P156* packet) {
 	if (index >= MAX_PLAYERS) return false; // something went very wrong.
 	if (damage[index].damage == 0) {
 		damage[index].agent_id = packet->cause_id;
+		GW::Agents::AsyncGetAgentName(cause, damage[index].name);
+		/*
 		if (cause->LoginNumber > 0) {
 			damage[index].name = GW::Agents::GetPlayerNameByLoginNumber(cause->LoginNumber);
 		} else {
 			damage[index].name = L"<A Hero>";
 		}
+		*/
 		damage[index].primary = static_cast<GW::Constants::Profession>(cause->Primary);
 		damage[index].secondary = static_cast<GW::Constants::Profession>(cause->Secondary);
 	}

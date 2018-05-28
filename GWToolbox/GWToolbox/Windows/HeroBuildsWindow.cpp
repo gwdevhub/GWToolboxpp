@@ -79,7 +79,7 @@ unsigned int HeroBuildsWindow::TeamHeroBuild::cur_ui_id = 0;
 
 void HeroBuildsWindow::Initialize() {
 	ToolboxWindow::Initialize();
-	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"list.png"), IDB_Icon_list);
+	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"party.png"));
 	send_timer = TIMER_INIT();
 }
 
@@ -339,7 +339,10 @@ void HeroBuildsWindow::LoadFromFile() {
 			snprintf(heroindexkey, 16, "heroindex%d", i);
 			const char* nameval = inifile->GetValue(section, namekey, "");
 			const char* templateval = inifile->GetValue(section, templatekey, "");
-			const int hero_index = inifile->GetLongValue(section, heroindexkey, -1);
+			int hero_index = inifile->GetLongValue(section, heroindexkey, -1);
+			if (hero_index < -2) {
+				hero_index = -1; // can happen due to an old bug
+			}
 			HeroBuild build(nameval, templateval, hero_index);
 			tb.builds.push_back(build);
 		}

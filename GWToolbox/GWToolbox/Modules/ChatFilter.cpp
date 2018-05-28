@@ -2,6 +2,7 @@
 
 #include <locale>
 #include <fstream>
+#include <sstream>
 
 #include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
@@ -11,6 +12,8 @@
 
 #include <imgui.h>
 #include <ImGuiAddons.h>
+#include <logger.h>
+
 #include <Modules\Resources.h>
 #include <Defines.h>
 
@@ -27,12 +30,13 @@ static void printchar(wchar_t c) {
 void ChatFilter::Initialize() {
 	ToolboxModule::Initialize();
 
-	strcpy_s(bycontent_buf, "");
+	strcpy_s(bycontent_word_buf, "");
+	strcpy_s(bycontent_regex_buf, "");
 	//strcpy_s(byauthor_buf, "");
 
 	// server messages
-	GW::StoC::AddCallback<GW::Packet::StoC::P087>(
-		[this](GW::Packet::StoC::P087 *pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::MessageServer>(
+		[this](GW::Packet::StoC::MessageServer *pak) -> bool {
 #ifdef PRINT_CHAT_PACKETS
 		printf("P082: id %d, type %d\n", pak->id, pak->type);
 #endif // PRINT_CHAT_PACKETS
@@ -57,8 +61,8 @@ void ChatFilter::Initialize() {
 #endif // PRINT_CHAT_PACKETS
 
 	// global messages
-	GW::StoC::AddCallback<GW::Packet::StoC::P089>(
-		[&](GW::Packet::StoC::P089* pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::MessageGlobal>(
+		[&](GW::Packet::StoC::MessageGlobal* pak) -> bool {
 #ifdef PRINT_CHAT_PACKETS
 		printf("P081: id %d, name ", pak->id);
 		for (int i = 0; i < 32 && pak->sender_name[i]; ++i) printchar(pak->sender_name[i]);
@@ -80,8 +84,8 @@ void ChatFilter::Initialize() {
 	});
 
 	// local messages
-	GW::StoC::AddCallback<GW::Packet::StoC::P090>(
-		[this](GW::Packet::StoC::P090 *pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::MessageLocal>(
+		[this](GW::Packet::StoC::MessageLocal *pak) -> bool {
 #ifdef PRINT_CHAT_PACKETS
 		printf("P085: id %d, type %d\n", pak->id, pak->type);
 #endif // PRINT_CHAT_PACKETS
@@ -130,21 +134,34 @@ void ChatFilter::LoadSettings(CSimpleIni* ini) {
 	you_have_been_playing_for = ini->GetBoolValue(Name(), VAR_NAME(you_have_been_playing_for), false);
 	player_has_achieved_title = ini->GetBoolValue(Name(), VAR_NAME(player_has_achieved_title), false);
 
-	std::ifstream bycontent_file;
-	bycontent_file.open(Resources::GetPath(L"FilterByContent.txt"));
-	if (bycontent_file.is_open()) {
-		bycontent_file.get(bycontent_buf, FILTER_BUF_SIZE, '\0');
-		bycontent_file.close();
-		ByContent_ParseBuf();
+	{
+		std::ifstream file;
+		file.open(Resources::GetPath(L"FilterByContent.txt"));
+		if (file.is_open()) {
+			file.get(bycontent_word_buf, FILTER_BUF_SIZE, '\0');
+			file.close();
+			ParseBuffer(bycontent_word_buf, bycontent_words);
+		}
+	}
+	{
+		std::ifstream file;
+		file.open(Resources::GetPath(L"FilterByContent_regex.txt"));
+		if (file.is_open()) {
+			file.get(bycontent_regex_buf, FILTER_BUF_SIZE, '\0');
+			file.close();
+			ParseBuffer(bycontent_regex_buf, bycontent_regex);
+		}
 	}
 
-	//std::ifstream byauthor_file;
-	//byauthor_file.open(GuiUtils::getPath("FilterByAuthor.txt"));
-	//if (byauthor_file.is_open()) {
-	//	byauthor_file.get(byauthor_buf, FILTER_BUF_SIZE, '\0');
-	//	byauthor_file.close();
-	//	ByAuthor_ParseBuf();
-	//}
+#ifdef EXTENDED_IGNORE_LIST
+	std::ifstream byauthor_file;
+	byauthor_file.open(Resources::GetPath(L"FilterByAuthor.txt"));
+	if (byauthor_file.is_open()) {
+		byauthor_file.get(byauthor_buf, FILTER_BUF_SIZE, '\0');
+		byauthor_file.close();
+		ByAuthor_ParseBuf();
+	}
+#endif
 }
 
 void ChatFilter::SaveSettings(CSimpleIni* ini) {
@@ -168,24 +185,32 @@ void ChatFilter::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(player_has_achieved_title), player_has_achieved_title);
 
 	if (bycontent_filedirty) {
-		std::ofstream bycontent_file;
-		bycontent_file.open(Resources::GetPath(L"FilterByContent.txt"));
-		if (bycontent_file.is_open()) {
-			bycontent_file.write(bycontent_buf, strlen(bycontent_buf));
-			bycontent_file.close();
-			bycontent_filedirty = false;
+		std::ofstream file1;
+		file1.open(Resources::GetPath(L"FilterByContent.txt"));
+		if (file1.is_open()) {
+			file1.write(bycontent_word_buf, strlen(bycontent_word_buf));
+			file1.close();
 		}
+		std::ofstream file2;
+		file2.open(Resources::GetPath(L"FilterByContent_regex.txt"));
+		if (file2.is_open()) {
+			file2.write(bycontent_regex_buf, strlen(bycontent_regex_buf));
+			file2.close();
+		}
+		bycontent_filedirty = false;
 	}
 
-	//if (byauthor_filedirty) {
-	//	std::ofstream byauthor_file;
-	//	byauthor_file.open(GuiUtils::getPath("FilterByAuthor.txt"));
-	//	if (byauthor_file.is_open()) {
-	//		byauthor_file.write(byauthor_buf, strlen(byauthor_buf));
-	//		byauthor_file.close();
-	//		byauthor_filedirty = false;
-	//	}
-	//}
+#ifdef EXTENDED_IGNORE_LIST
+	if (byauthor_filedirty) {
+		std::ofstream byauthor_file;
+		byauthor_file.open(Resources::GetPath(L"FilterByAuthor.txt"));
+		if (byauthor_file.is_open()) {
+			byauthor_file.write(byauthor_buf, strlen(byauthor_buf));
+			byauthor_file.close();
+			byauthor_filedirty = false;
+		}
+	}
+#endif
 }
 
 
@@ -381,19 +406,33 @@ bool ChatFilter::ShouldIgnoreByContent(const wchar_t *message, size_t size) {
 	std::string text(start, end);
 	std::transform(text.begin(), text.end(), text.begin(), ::tolower);
 
-	for (std::string s : bycontent_words) {
+	for (const std::string& s : bycontent_words) {
 		if (text.find(s) != std::string::npos) {
 			return true;
 		}
 	}
+	for (const std::regex& r : bycontent_regex) {
+		if (std::regex_match(text, r)) {
+			return true;
+		}
+	}
+
 	return false;
 }
 
-bool ChatFilter::ShouldIgnoreBySender(const wchar_t *sender, size_t size)
-{
+bool ChatFilter::ShouldIgnoreBySender(const wchar_t *sender, size_t size) {
+#ifdef EXTENDED_IGNORE_LIST
 	if (sender == nullptr) return false;
-	if (ignored_players.find(sender) != ignored_players.end())
+	char s[32];
+	for (size_t i = 0; i < size; i++) {
+		if (sender[i] & ~0xff) return false; // We currently don't support non-ascii names
+		s[i] = tolower(sender[i]);
+		if (sender[i] == 0)
+			break;
+	}
+	if (byauthor_words.find(s) != byauthor_words.end())
 		return true;
+#endif
 	return false;
 }
 
@@ -431,43 +470,58 @@ void ChatFilter::DrawSettingInternal() {
 	ImGui::Checkbox("Hide any messages containing:", &messagebycontent);
 	ImGui::Indent();
 	ImGui::TextDisabled("(Each in a separate line. Not case sensitive)");
-	if (ImGui::InputTextMultiline("##bycontentfilter", bycontent_buf, FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0f))) {
-		ByContent_ParseBuf();
+	if (ImGui::InputTextMultiline("##bycontentfilter", bycontent_word_buf, 
+		FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0f))) {
+		ParseBuffer(bycontent_word_buf, bycontent_words);
+		bycontent_filedirty = true;
+	}
+	ImGui::Text("And messages matching regular expressions:");
+	ImGui::ShowHelp("Regular expressions allow you to specify wildcards and express more.\nThe syntax is described at www.cplusplus.com/reference/regex/ECMAScript\nNote that the whole message needs to be matched, so for example you might want .* at the end.");
+	if (ImGui::InputTextMultiline("##bycontentfilter_regex", bycontent_regex_buf,
+		FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0))) {
+		ParseBuffer(bycontent_regex_buf, bycontent_regex);
 		bycontent_filedirty = true;
 	}
 	ImGui::Unindent();
 
-	//ImGui::Separator();
-	//ImGui::Checkbox("Hide any messages from: ", &messagebyauthor);
-	//ImGui::Indent();
-	//ImGui::TextDisabled("(Each in a separate line)");
-	//ImGui::TextDisabled("(Not implemented)");
-	//if (ImGui::InputTextMultiline("##byauthorfilter", byauthor_buf, FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0f))) {
-	//	ByAuthor_ParseBuf();
-	//	byauthor_filedirty = true;
-	//}
-	//ImGui::Unindent();
+#ifdef EXTENDED_IGNORE_LIST
+	ImGui::Separator();
+	ImGui::Checkbox("Hide any messages from: ", &messagebyauthor);
+	ImGui::Indent();
+	ImGui::TextDisabled("(Each in a separate line)");
+	ImGui::TextDisabled("(Not implemented)");
+	if (ImGui::InputTextMultiline("##byauthorfilter", byauthor_buf, FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0f))) {
+		ByAuthor_ParseBuf();
+		byauthor_filedirty = true;
+	}
+	ImGui::Unindent();
+#endif // EXTENDED_IGNORE_LIST
 }
 
-void ChatFilter::ParseBuffer(const char* buf, std::set<std::string>& words) {
+void ChatFilter::ParseBuffer(const char *text, std::vector<std::string> &words) const {
 	words.clear();
-	std::string text(buf);
-	char separator = '\n';
-	size_t pos = text.find(separator);
-	size_t initialpos = 0;
-
-	while (pos != std::string::npos) {
-		std::string s = text.substr(initialpos, pos - initialpos);
-		if (!s.empty()) {
-			std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-			words.insert(s);
+	std::istringstream stream(text);
+	std::string word;
+	while (std::getline(stream, word)) {
+		if (!word.empty()) {
+			std::transform(word.begin(), word.end(), word.begin(), ::tolower);
+			words.push_back(word);
 		}
-		initialpos = pos + 1;
-		pos = text.find(separator, initialpos);
 	}
-	std::string s = text.substr(initialpos, std::min(pos, text.size() - initialpos));
-	if (!s.empty()) {
-		std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-		words.insert(s);
+}
+
+void ChatFilter::ParseBuffer(const char *text, std::vector<std::regex> &regex) const {
+	regex.clear();
+	std::istringstream stream(text);
+	std::string word;
+	while (std::getline(stream, word)) {
+		if (!word.empty()) {
+			std::transform(word.begin(), word.end(), word.begin(), ::tolower);
+			try {
+				regex.push_back(std::regex(word));
+			} catch (...) {
+				Log::Warning("Cannot parse regular expression '%s'", word.c_str());
+			}
+		}
 	}
 }

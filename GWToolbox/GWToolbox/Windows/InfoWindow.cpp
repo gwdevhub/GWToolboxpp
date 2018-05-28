@@ -33,8 +33,8 @@ void InfoWindow::Initialize() {
 	GW::Agents::SetupLastDialogHook();
 
 	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"info.png"), IDB_Icon_Info);
-	GW::StoC::AddCallback<GW::Packet::StoC::P086>(
-		[this](GW::Packet::StoC::P086 *pak) {
+	GW::StoC::AddCallback<GW::Packet::StoC::MessageCore>(
+		[this](GW::Packet::StoC::MessageCore *pak) {
 		if (pak->message[0] == 0x7BFF
 			&& pak->message[1] == 0xC9C4
 			&& pak->message[2] == 0xAeAA
@@ -303,8 +303,10 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 				}
 			}
 
-			ImGui::Text("%d Soul Tormentors", soul_count);
-			ImGui::ShowHelp("Only in Domain of Anguish, within 1400 range");
+			if (GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish) {
+				ImGui::Text("%d Soul Tormentors", soul_count);
+				ImGui::ShowHelp("Only in Domain of Anguish, within 1400 range");
+			}
 			ImGui::Text("%d foes in casting range", cast_count);
 			ImGui::Text("%d foes in spirit range", spirit_count);
 			ImGui::Text("%d foes in compass range", compass_count);

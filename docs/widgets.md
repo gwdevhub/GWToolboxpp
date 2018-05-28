@@ -77,4 +77,7 @@ The vanquish monitor shows how many enemies are in a zone, and how many have alr
 
 This widget will not appear unless you are in an explorable area and in Hard Mode. In areas that cannot be vanquished, such as missions and dungeons, the counter will show 0/0.
 
+## Alcohol
+When in an explorable area, the alcohol monitor displays a timer of how long before the drunkenness effect wears off.
+
 [back](./)

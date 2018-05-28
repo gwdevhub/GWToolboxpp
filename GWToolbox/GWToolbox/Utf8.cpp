@@ -5,7 +5,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
 static size_t compute_required_size(const wchar_t *str, size_t max_len);

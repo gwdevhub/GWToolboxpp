@@ -3,11 +3,12 @@
 #include <d3dx9math.h>
 #include <d3d9.h>
 
-#include <GWCA\Packets\CtoS.h>
 #include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Managers\EffectMgr.h>
 #include <GWCA\Managers\CtoSMgr.h>
+#include <GWCA\Managers\UIMgr.h>
+#include <GWCA\Managers\StoCMgr.h>
 
 #include "GuiUtils.h"
 
@@ -74,11 +75,11 @@ PingsLinesRenderer::PingsLinesRenderer() : vertices(nullptr) {
 	shadowstep_location = GW::Vector2f(0, 0);
 }
 
-void PingsLinesRenderer::P046Callback(GW::Packet::StoC::P046 *pak) {
+void PingsLinesRenderer::P046Callback(GW::Packet::StoC::AgentPinged *pak) {
 	pings.push_front(new AgentPing(pak->agent_id));
 }
 
-void PingsLinesRenderer::P138Callback(GW::Packet::StoC::P138 *pak) {
+void PingsLinesRenderer::P138Callback(GW::Packet::StoC::CompassEvent *pak) {
 	bool new_session;
 	if (drawings[pak->Player].player == pak->Player) {
 		new_session = drawings[pak->Player].session != pak->SessionID;
@@ -123,14 +124,14 @@ return;
 	}
 }
 
-void PingsLinesRenderer::P153Callback(GW::Packet::StoC::P153 *pak) {
+void PingsLinesRenderer::P153Callback(GW::Packet::StoC::GenericValueTarget *pak) {
 	if (pak->Value_id == 20
 		&& pak->caster == GW::Agents::GetPlayerId()
 		&& pak->value == 928) {
 		recall_target = pak->target;
 	}
 };
-void PingsLinesRenderer::P221Callback(GW::Packet::StoC::P221 *pak) {
+void PingsLinesRenderer::P221Callback(GW::Packet::StoC::SkillActivate *pak) {
 	if (pak->agent_id == GW::Agents::GetPlayerId()) {
 		if (pak->skill_id == (DWORD)GW::Constants::SkillID::Shadow_of_Haste
 			|| pak->skill_id == (DWORD)GW::Constants::SkillID::Shadow_Walk) {
@@ -441,7 +442,7 @@ bool PingsLinesRenderer::OnMouseMove(float x, float y) {
 			|| TIMER_DIFF(lastsent) > send_interval) {
 			lastqueued = TIMER_INIT();
 
-			queue.push_back(ShortPos(ToShortPos(x), ToShortPos(y)));
+			queue.push_back(GW::UI::CompassPoint(ToShortPos(x), ToShortPos(y)));
 
 			if (queue.size() == 7 || TIMER_DIFF(lastsent) > send_interval) {
 				lastsent = TIMER_INIT();
@@ -462,7 +463,7 @@ bool PingsLinesRenderer::OnMouseUp() {
 	} else {
 		BumpSessionID();
 		GW::Agent* me = GW::Agents::GetPlayer();
-		queue.push_back(ShortPos(ToShortPos(mouse_x), ToShortPos(mouse_y)));
+		queue.push_back(GW::UI::CompassPoint(ToShortPos(mouse_x), ToShortPos(mouse_y)));
 		pings.push_front(new TerrainPing(mouse_x, mouse_y));
 	}
 
@@ -472,20 +473,12 @@ bool PingsLinesRenderer::OnMouseUp() {
 }
 
 void PingsLinesRenderer::SendQueue() {
-	static GW::Packet::CtoS::P043 packet = GW::Packet::CtoS::P043();
-
-	//printf("sending %d pos [%d]\n", queue.size(), session_id);
-
 	if (queue.size() > 0 && queue.size() < 8) {
-
-		packet.NumberPts = queue.size();
-		packet.session_id = session_id;
+		GW::UI::CompassPoint pts[8];
 		for (unsigned int i = 0; i < queue.size(); ++i) {
-			packet.points[i].x = queue[i].x;
-			packet.points[i].y = queue[i].y;
+			pts[i] = queue[i];
 		}
-
-		GW::CtoS::SendPacket(&packet);
+		GW::UI::DrawOnCompass(session_id, queue.size(), pts);
 	}
 
 	queue.clear();

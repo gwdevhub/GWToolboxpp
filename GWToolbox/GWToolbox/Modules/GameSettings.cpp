@@ -1,5 +1,8 @@
 #include "GameSettings.h"
 
+#include <ctime>
+
+#include <GWCA\Managers\GameThreadMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\PartyMgr.h>
 #include <GWCA\Managers\ItemMgr.h>
@@ -89,170 +92,309 @@ namespace {
 		if (GameSettings::Instance().flash_window_on_pm) FlashWindow();
 	}
 
-	bool get_is_item_stackable(GW::Item *item) {
-		switch (item->Type) {
-			case 0:  return false; // Salvage
-			case 1:  return false; // LeadHand
-			case 2:  return false; // Axe
-			case 3:  return false; // Bag
-			case 4:  return false; // Feet
-			case 5:  return false; // Bow
-			case 6:  return false; // Bundle
-			case 7:  return false; // Chest
-			case 8:  return false; // Rune
-			case 9:  return true;  // Consumable
-			case 10: return true;  // Dye
-			case 11: return true;  // Material
-			case 12: return false; // Focus
-			case 13: return false; // Arms
-			case 14: return true;  // Sigil
-			case 15: return false; // Hammer
-			case 16: return false; // Head
-			case 17: return false; // SalvageItem
-			case 18: return true;  // Key
-			case 19: return false; // Legs
-			case 20: return true;  // Coins
-			case 21: return false; // QuestItem
-			case 22: return false; // Wand
-			case 24: return false; // Shield
-			case 26: return false; // Staff
-			case 27: return false; // Sword
-			case 29: return false; // Kit
-			case 30: return true;  // Trophy
-			case 31: return true;  // Scroll
-			case 32: return false; // Daggers
-			case 33: return true;  // Present
-			case 34: return false; // Minipet
-			case 35: return false; // Scythe
-			case 36: return false; // Spear
-			case 43: return false; // Handbook
-			case 44: return false; // CostumeBody
-			case 45: return false; // CostumeHead
-			default: return false;
-		};
+	int move_materials_to_storage(GW::Item *item) {
+		assert(item && item->Quantity);
+		assert(item->GetIsMaterial());
+
+		int slot = GW::Items::GetMaterialSlot(item);
+		if (slot < 0 || (int)GW::Constants::N_MATS <= slot) return 0;
+		int availaible = 250;
+		GW::Item *b_item = GW::Items::GetItemBySlot(GW::Constants::Bag::Material_Storage, slot + 1);
+		if (b_item) availaible = 250 - b_item->Quantity;
+		int will_move = std::min((int)item->Quantity, availaible);
+		if (will_move) GW::Items::MoveItem(item, GW::Constants::Bag::Material_Storage, slot, will_move);
+		return will_move;
 	}
 
-	void move_item_to_storage(GW::Item *item, int current_storage) {
-		assert(0 <= current_storage && current_storage <= 8);
-		assert(item);
+	// From bag_first to bag_last (included) i.e. [bag_first, bag_last]
+	// Returns the amount moved
+	int complete_existing_stack(GW::Item *item, int bag_first, int bag_last, int remaining) {
+		if (!item->GetIsStackable() || remaining == 0) return 0;
+		int remaining_start = remaining;
+		for (int bag_i = bag_first; bag_i <= bag_last; bag_i++) {
+			GW::Bag *bag = GW::Items::GetBag(bag_i);
+			if (!bag) continue;
+			size_t slot = bag->find2(item);
+			while (slot != GW::Bag::npos) {
+				GW::Item *b_item = bag->Items[slot];
+				// b_item can be null in the case of birthday present for instance.
+				if (b_item != nullptr) {
+					int availaible = 250 - b_item->Quantity;
+					int will_move = std::min(availaible, remaining);
+					if (will_move > 0) {
+						GW::Items::MoveItem(item, b_item, will_move);
+						remaining -= will_move;
+					}
+					if (remaining == 0)
+						return remaining_start;
+				}
+				slot = bag->find2(item, slot + 1);
+			}
+		}
+		return remaining_start - remaining;
+	}
 
-		int bag_id_for_storage = current_storage + 8;
+	void move_to_first_empty_slot(GW::Item *item, int bag_first, int bag_last) {
+		for (int bag_i = bag_first; bag_i <= bag_last; bag_i++) {
+			GW::Bag *bag = GW::Items::GetBag(bag_i);
+			if (!bag) continue;
+			size_t slot = bag->find1(0);
+			// The reason why we test if the slot has no item is because birthday present have ModelId == 0
+			while (slot != GW::Bag::npos) {
+				if (bag->Items[slot] == nullptr) {
+					GW::Items::MoveItem(item, bag, slot);
+					return;
+				}
+				slot = bag->find1(0, slot + 1);
+			}
+		}
+	}
+
+	void move_item_to_storage_page(GW::Item *item, int page) {
+		assert(item && item->Quantity);
+		// 9 being the material storage
+		if (page < 0 || 9 < page) return;
+
+		if (page == 9) {
+			if (!item->GetIsMaterial()) return;
+			move_materials_to_storage(item);
+			return;
+		}
+
+		assert(0 <= page && page < 9);
+		const int storage1 = (int)GW::Constants::Bag::Storage_1;
+		const int bag_index = storage1 + page;
+		assert(GW::Items::GetBag(bag_index));
+
+		int remaining = item->Quantity;
+
+		// For materials, we always try to move what we can into the material page
+		if (item->GetIsMaterial()) {
+			int moved = move_materials_to_storage(item);
+			remaining -= moved;
+		}
+
+		// if the item is stackable we try to complete stack that already exist in the current storage page
+		int moved = complete_existing_stack(item, bag_index, bag_index, remaining);
+		remaining -= moved;
+
+		// if there is still item, we find the first empty slot and move everything there
+		if (remaining) {
+			move_to_first_empty_slot(item, bag_index, bag_index);
+		}
+	}
+
+	void move_item_to_storage(GW::Item *item) {
+		assert(item && item->Quantity);
 
 		GW::Bag **bags = GW::Items::GetBagArray();
 		if (!bags) return;
-		GW::Bag *bag = bags[bag_id_for_storage];
-		if (!bag) return;
-		GW::ItemArray items_storage = bag->Items;
-		if (!items_storage.valid()) return;
-
 		int remaining = item->Quantity;
-		assert(remaining > 0);
 
-		if (get_is_item_stackable(item)) {
-			for (auto *it : items_storage) {
-				if (!it) continue;
-				if (it->ModelId == item->ModelId) {
-					int availaible = 250 - it->Quantity;
-					int move_count = availaible < remaining ? availaible : remaining;
-
-					if (move_count > 0) {
-						GW::Items::MoveItem(item, it, move_count);
-						remaining -= move_count;
-					}
-
-					if (remaining == 0)
-						break;
-				}
-			}
+		// We try to move to the material storage
+		if (item->GetIsMaterial()) {
+			int moved = move_materials_to_storage(item);
+			remaining -= moved;
 		}
 
-		if (remaining > 0) {
-			size_t slot;
-			for (slot = 0; slot < items_storage.size(); slot++) {
-				if (!items_storage[slot])
-					break;
-			}
+		const int storage1 = (int)GW::Constants::Bag::Storage_1;
+		const int storage9 = (int)GW::Constants::Bag::Storage_9;
 
-			if (slot < items_storage.size()) {
-				GW::Items::MoveItem(item, bag, slot);
-			}
+		// If item is stackable, try to complete similar stack
+		if (remaining == 0) return;
+		int moved = complete_existing_stack(item, storage1, storage9, remaining);
+		remaining -= moved;
+
+		// We find the first empty slot and put the remaining there
+		if (remaining) {
+			move_to_first_empty_slot(item, storage1, storage9);
 		}
 	}
 
 	void move_item_to_inventory(GW::Item *item) {
-		assert(item);
+		assert(item && item->Quantity);
 
-		GW::Bag **bags = GW::Items::GetBagArray();
-		if (!bags) return;
+		const int backpack = (int)GW::Constants::Bag::Backpack;
+		const int bag2 = (int)GW::Constants::Bag::Bag_2;
 
 		int total = item->Quantity;
 		int remaining = total;
-		assert(remaining > 0);
 
-		if (get_is_item_stackable(item)) {
-			for (int i = 1; i <= 4; i++) {
-				GW::Bag *bag = bags[i];
-				if (!bag) continue;
-				GW::ItemArray items_storage = bag->Items;
-				if (!items_storage.valid()) continue;
+		// If item is stackable, try to complete similar stack
+		int moved = complete_existing_stack(item, backpack, bag2, remaining);
+		remaining -= moved;
 
-				for (auto *it : items_storage) {
-					if (!it) continue;
-					if (it->ModelId == item->ModelId) {
-						int availaible = 250 - it->Quantity;
-						int move_count = availaible < remaining ? availaible : remaining;
-
-						if (move_count > 0) {
-							GW::Items::MoveItem(item, it, move_count);
-							remaining -= move_count;
-						}
-
-						if (remaining == 0) break;
-					}
-				}
-			}
-		}
-
+		// If we didn't move any item (i.e. there was no stack to complete), move the stack to first empty slot
 		if (remaining == total) {
-			size_t slot = -1;
-			GW::Bag *bag;
-
-			for (int i = 1; i <= 4; i++) {
-				bag = bags[i];
-				if (!bag) continue;
-				GW::ItemArray items_storage = bag->Items;
-				if (!items_storage.valid()) continue;
-				for (size_t i = 0; i < items_storage.size(); i++) {
-					if (!items_storage[i]) {
-						slot = i;
-						break;
-					}
-				}
-				if (slot != -1) break;
-			}
-
-			if (slot != -1) {
-				GW::Items::MoveItem(item, bag, slot);
-			}
+			move_to_first_empty_slot(item, backpack, bag2);
 		}
 	}
+
+	// This whole section is commented because packets are not up to date after the update. 
+	// Should still work if you match the right packets.
+
+#ifdef APRIL_FOOLS
+	namespace AF {
+		using namespace GW::Packet::StoC;
+		void CreateXunlaiAgentFromGameThread(void) {
+			{
+				NpcGeneralStats packet;
+				packet.header = NpcGeneralStats::STATIC_HEADER;
+				packet.npc_id = 221;
+				packet.file_id = 0x0001c601;
+				packet.data1 = 0;
+				packet.scale = 0x64000000;
+				packet.data2 = 0;
+				packet.flags = 0x0000020c;
+				packet.profession = 3;
+				packet.level = 15;
+				wcsncpy(packet.name, L"\x8101\x1f4e\xd020\x87c8\x35a8\x0000", 8);
+
+				GW::StoC::EmulatePacket((GW::Packet::StoC::PacketBase *)&packet);
+			}
+
+			{
+				NPCModelFile packet;
+				packet.header = NPCModelFile::STATIC_HEADER;
+				packet.npc_id = 221;
+				packet.count = 1;
+				packet.data[0] = 0x0001fc56;
+
+				GW::StoC::EmulatePacket((GW::Packet::StoC::PacketBase *)&packet);
+			}
+		}
+
+		void ApplySkinSafe(GW::Agent *agent, DWORD npc_id) {
+			if (!agent) return;
+
+			GW::GameContext *game_ctx = GW::GameContext::instance();
+			if (game_ctx && game_ctx->character && game_ctx->character->is_explorable)
+				return;
+
+			GW::NPCArray &npcs = GW::GameContext::instance()->world->npcs;
+			if (!npcs.valid() || npc_id >= npcs.size() || npcs[npc_id].ModelFileID == 0) {
+				GW::GameThread::Enqueue([]() {
+					CreateXunlaiAgentFromGameThread();
+				});
+			}
+
+			GW::GameThread::Enqueue([npc_id, agent]() {
+				if (!agent->IsPlayer()) return;
+
+				GW::Array<GW::AgentMovement *> &movements = GW::GameContext::instance()->agent->agentmovement;
+				if (agent->Id >= movements.size()) return;
+				auto movement = movements[agent->Id];
+				if (!movement) return;
+				if (movement->h001C != 1) return;
+
+				AgentModel packet;
+				packet.header = AgentModel::STATIC_HEADER;
+				packet.agent_id = agent->Id;
+				packet.model_id = npc_id;
+				GW::StoC::EmulatePacket((GW::Packet::StoC::PacketBase *)&packet);
+			});
+		}
+		bool IsItTime() {
+			time_t t = time(nullptr);
+			tm* utc_tm = gmtime(&t);
+			int hour = utc_tm->tm_hour; // 0-23 range
+			int day = utc_tm->tm_mday; // 1-31 range
+			int month = utc_tm->tm_mon; // 0-11 range
+			const int target_month = 3;
+			const int target_day = 1;
+			if (month != target_month) return false;
+			return (day == target_day && hour >= 7) || (day == target_day + 1 && hour < 7);
+		}
+		void ApplyPatches() {
+			// apply skin on agent spawn
+			GW::StoC::AddCallback<DisplayCape>(
+				[](DisplayCape *packet) -> bool {
+				DWORD agent_id = packet->agent_id;
+				GW::Agent *agent = GW::Agents::GetAgentByID(agent_id);
+				ApplySkinSafe(agent, 221);
+				return false;
+			});
+
+			// override tonic usage
+			GW::StoC::AddCallback<AgentModel>(
+				[](AgentModel *packet) -> bool {
+				GW::Agent *agent = GW::Agents::GetAgentByID(packet->agent_id);
+				if (!(agent && agent->IsPlayer())) return false;
+				GW::GameContext *game_ctx = GW::GameContext::instance();
+				if (game_ctx && game_ctx->character && game_ctx->character->is_explorable) return false;
+				return true; // do not process
+			});
+
+			// This apply when you start to everyone in the map
+			GW::GameContext *game_ctx = GW::GameContext::instance();
+			if (game_ctx && game_ctx->character && !game_ctx->character->is_explorable) {
+				GW::AgentArray &agents = GW::Agents::GetAgentArray();
+				for (auto agent : agents) {
+					ApplySkinSafe(agent, 221);
+				}
+			}
+		}
+		void ApplyPatchesIfItsTime() {
+			static bool appliedpatches = false;
+			if (!appliedpatches && IsItTime()) {
+				ApplyPatches();
+				appliedpatches = true;
+			}
+		}
+	} 
+#endif // APRIL_FOOLS
 }
 
 void GameSettings::Initialize() {
 	ToolboxModule::Initialize();
-	patches.push_back(new GW::MemoryPatcher((void*)0x0067D9D8,
-		(BYTE*)"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90", 16));
-	patches.push_back(new GW::MemoryPatcher((void*)0x0067D530, (BYTE*)"\xEB", 1));
-	patches.push_back(new GW::MemoryPatcher((void*)0x0067D54D, (BYTE*)"\xEB", 1));
 
-	BYTE* a = (BYTE*)"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90";
-	patches.push_back(new GW::MemoryPatcher((void*)0x00669A56, a, 10));
-	patches.push_back(new GW::MemoryPatcher((void*)0x00669AA2, a, 10));
-	patches.push_back(new GW::MemoryPatcher((void*)0x00669ADE, a, 10));
-	patches.push_back(new GW::MemoryPatcher((void*)0x0067D7E6, a, 10));
-	patches.push_back(new GW::MemoryPatcher((void*)0x0067D832, a, 10));
-	patches.push_back(new GW::MemoryPatcher((void*)0x0067D86E, a, 10));
+// This borderless code is no longer needed!
+#ifdef ENABLE_BORDERLESS
+	{
+		uintptr_t found = GW::Scanner::Find("\x8B\x9E\xCC\x0C\x00\x00\x03\xD9\x03\xFB\xEB\x03", "xxxxxxxxxxxx", 0x42);
+		patches.push_back(new GW::MemoryPatcher(found,
+			"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90", 0x13));
+	}
 
+	{
+		uintptr_t found = GW::Scanner::Find("\x8B\x9E\x7C\x0C\x00\x00\x2B\xC3\x8B", "xxxxxxxxx", 0);
+		patches.push_back(new GW::MemoryPatcher(found - 0xB,  "\xEB", 1));
+		patches.push_back(new GW::MemoryPatcher(found + 0x12, "\xEB", 1));
+	}
+
+	{
+		uintptr_t found = GW::Scanner::Find("\x56\x57\x8B\xF9\x8B\x87\x00\x02\x00\x00\x85\xC0\x75\x14", "xxxxxxxxxxxxxx", 0);
+		void *patch = "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90";
+		patches.push_back(new GW::MemoryPatcher(found + 0x86,  patch, 10));
+		patches.push_back(new GW::MemoryPatcher(found + 0xD2,  patch, 10));
+		patches.push_back(new GW::MemoryPatcher(found + 0x10E, patch, 10));
+	}
+
+	{
+		uintptr_t found = GW::Scanner::Find("\x56\x57\x8B\xF9\x8B\x87\xF4\x0C\x00\x00\x85\xC0\x75\x14", "xxxxxxxxxxxxxx", 0);
+		void *patch = "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90";
+		patches.push_back(new GW::MemoryPatcher(found + 0x86,  patch, 10));
+		patches.push_back(new GW::MemoryPatcher(found + 0x100, patch, 10));
+		patches.push_back(new GW::MemoryPatcher(found + 0x13F, patch, 10));
+	}
+#endif // ENABLE_BORDERLESS
+	{
+		// Patch that allow storage page (and Anniversary page) to work... (ask Ziox for more info)
+		uintptr_t found = GW::Scanner::Find("\xEB\x20\x33\xC0\xBE\x06", "xxxxxx", -4);
+		printf("[SCAN] StoragePatch = %p\n", (void *)found);
+
+		// Xunlai Chest has a behavior where if you
+		// 1. Open chest on page 1 to 8
+		// 2. Close chest & open it again
+		// -> You should still be on the same page
+		// But, if you try with the material page (or anniversary page in the case when you bought all other storage page)
+		// you will get back the the page 1. I think it was a intended use for material page & forgot to fix it
+		// when they added anniversary page so we do it ourself.
+		DWORD page_max = 8;
+		ctrl_click_patch = new GW::MemoryPatcher(found, &page_max, 1);
+		ctrl_click_patch->TooglePatch(true);
+	}
+#ifdef ENABLE_BORDERLESS
 	GW::Chat::CreateCommand(L"borderless",
 		[&](int argc, LPWSTR *argv) {
 		if (argc <= 1) {
@@ -268,9 +410,9 @@ void GameSettings::Initialize() {
 			}
 		}
 	});
-
-	GW::StoC::AddCallback<GW::Packet::StoC::P451>(
-		[](GW::Packet::StoC::P451*) -> bool {
+#endif
+	GW::StoC::AddCallback<GW::Packet::StoC::PartyPlayerAdd>(
+		[](GW::Packet::StoC::PartyPlayerAdd*) -> bool {
 		if (GameSettings::Instance().flash_window_on_party_invite) FlashWindow();
 		return false;
 	});
@@ -288,11 +430,17 @@ void GameSettings::Initialize() {
 
 		return false;
 	});
+
+#ifdef APRIL_FOOLS
+	AF::ApplyPatchesIfItsTime();
+#endif
 }
 
 void GameSettings::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini);
+#ifdef ENABLE_BORDERLESS
 	borderlesswindow = ini->GetBoolValue(Name(), VAR_NAME(borderlesswindow), false);
+#endif
 	maintain_fov = ini->GetBoolValue(Name(), VAR_NAME(maintain_fov), false);
 	fov = (float)ini->GetDoubleValue(Name(), VAR_NAME(fov), 1.308997f);
 	tick_is_toggle = ini->GetBoolValue(Name(), VAR_NAME(tick_is_toggle), true);
@@ -315,7 +463,9 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	auto_set_away_delay = ini->GetLongValue(Name(), VAR_NAME(auto_set_away_delay), 10);
 	auto_set_online = ini->GetBoolValue(Name(), VAR_NAME(auto_set_online), false);
 
+#ifdef ENABLE_BORDERLESS
 	if (borderlesswindow) ApplyBorderless(borderlesswindow);
+#endif
 	if (openlinks) GW::Chat::SetOpenLinks(openlinks);
 	if (tick_is_toggle) GW::PartyMgr::SetTickToggle();
 	if (select_with_chat_doubleclick) GW::Chat::SetChatEventCallback(&ChatEventCallback);
@@ -327,7 +477,9 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
 void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ToolboxModule::SaveSettings(ini);
+#ifdef ENABLE_BORDERLESS
 	ini->SetBoolValue(Name(), VAR_NAME(borderlesswindow), borderlesswindow);
+#endif
 	ini->SetBoolValue(Name(), VAR_NAME(maintain_fov), maintain_fov);
 	ini->SetDoubleValue(Name(), VAR_NAME(fov), fov);
 	ini->SetBoolValue(Name(), VAR_NAME(tick_is_toggle), tick_is_toggle);
@@ -352,7 +504,9 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 }
 
 void GameSettings::DrawSettingInternal() {
+#ifdef ENABLE_BORDERLESS
 	DrawBorderlessSetting();
+#endif
 	DrawFOVSetting();
 
 	ImGui::Checkbox("Show chat messages timestamp. Color:", &GW::Chat::ShowTimestamps);
@@ -445,7 +599,13 @@ void GameSettings::Update(float delta) {
 		activity_timer = TIMER_INIT(); // refresh the timer to avoid spamming in case the set status call fails
 	}
 	UpdateFOV();
+#ifdef ENABLE_BORDERLESS
 	UpdateBorderless();
+#endif
+
+#ifdef APRIL_FOOLS
+	AF::ApplyPatchesIfItsTime();
+#endif
 }
 
 void GameSettings::DrawFOVSetting() {
@@ -565,27 +725,44 @@ void GameSettings::ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag)
 
 	// Expected behaviors
 	//  When clicking on item in inventory
-	//   - If there is a incomplete stack in the current chess pannel, complete it
-	//   - If all stacks of the given item are full and there is at least 1 empty slot, put it in the next availaible slot
-	// When clicking on item in chest
-	//   - If there is a incomplete stack in the inventory, complete it
-	//   - If all stacks of the given item are full and there is at least 1 empty slot, put it in the next availaible slot
+	//   case storage close:
+	//    - If the item is a material, it look if it can move it to the material page.
+	//    - If the item is stackable, search in all the storage if there is already similar items and completes the stack
+	//    - If not everything was moved, move the remaining in the first empty slot of the storage.
+	//   case storage open:
+	//    - If the item is a material, it look if it can move it to the material page.
+	//    - If the item is stackable, search for incomplete stacks in the current storage page and completes them
+	//    - If not everything was moved, move the remaining in the first empty slot of the current page.
+	//  When clicking on item in chest
+	//   - If the item is stackable, search for incomplete stacks in the inventory and completes them.
+	//   - If nothing was moved, move the stack in the first empty slot of the inventory.
+
+	// @Fix:
+	//  There is a bug in gw that doesn't "save" if the material storage
+	//  (or anniversary storage in the case when the player bought all other storage)
+	//  so we cannot know if they are the storage selected.
+	//  Sol: The solution is to patch the value 7 -> 9 at 0040E851 (EB 20 33 C0 BE 06 [-5])
 
 	bool is_inventory_item = bag->IsInventoryBag();
 	bool is_storage_item = bag->IsStorageBag();
 	if (!is_inventory_item && !is_storage_item) return;
 
-	bool chest_is_open = true; // @TODO
-	bool inventory_is_open = true; // @TODO
-	if (is_inventory_item && !chest_is_open) return;
-	if (!is_inventory_item && !inventory_is_open) return;
-
 	GW::Item *item = GW::Items::GetItemBySlot(bag, slot + 1);
 	if (!item) return;
 
-	int current_storage = GW::Items::GetCurrentStoragePannel();
+	// @Cleanup: Bad
+	if (item->ModelFileID == 0x0002f301) {
+		Log::Error("Ctrl+click doesn't work with birthday presents yet");
+		return;
+	}
+
 	if (is_inventory_item) {
-		move_item_to_storage(item, current_storage);
+		if (GW::Items::IsStorageOpen()) {
+			int current_storage = GW::Items::GetStoragePage();
+			move_item_to_storage_page(item, current_storage);
+		} else {
+			move_item_to_storage(item);
+		}
 	} else {
 		move_item_to_inventory(item);
 	}

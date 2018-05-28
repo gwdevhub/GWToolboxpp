@@ -23,29 +23,29 @@
 
 void Minimap::Initialize() {
 	ToolboxWidget::Initialize();
-	GW::StoC::AddCallback<GW::Packet::StoC::P046>(
-		[&](GW::Packet::StoC::P046 *pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::AgentPinged>(
+		[&](GW::Packet::StoC::AgentPinged *pak) -> bool {
 		if (visible) {
 			pingslines_renderer.P046Callback(pak);
 		}
 		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::P138>(
-		[&](GW::Packet::StoC::P138 *pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::CompassEvent>(
+		[&](GW::Packet::StoC::CompassEvent *pak) -> bool {
 		if (visible) {
 			pingslines_renderer.P138Callback(pak);
 		}
 		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::P153>(
-		[&](GW::Packet::StoC::P153 *pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::GenericValueTarget>(
+		[&](GW::Packet::StoC::GenericValueTarget *pak) -> bool {
 		if (visible) {
 			pingslines_renderer.P153Callback(pak);
 		}
 		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::P221>(
-		[&](GW::Packet::StoC::P221 *pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::SkillActivate>(
+		[&](GW::Packet::StoC::SkillActivate *pak) -> bool {
 		if (visible) {
 			pingslines_renderer.P221Callback(pak);
 		}
@@ -137,10 +137,8 @@ void Minimap::DrawSettingInternal() {
 	ImGui::Text("General");
 	ImGui::DragFloat("Scale", &scale, 0.01f, 0.1f);
 	ImGui::Text("You can set the color alpha to 0 to disable any minimap feature.");
-	if (ImGui::TreeNode("Agents")) {
-		agent_renderer.DrawSettings();
-		ImGui::TreePop();
-	}
+	// agent_rendered has its own TreeNodes
+	agent_renderer.DrawSettings();
 	if (ImGui::TreeNode("Ranges")) {
 		range_renderer.DrawSettings();
 		ImGui::TreePop();

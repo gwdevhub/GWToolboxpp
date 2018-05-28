@@ -1,5 +1,7 @@
 #include "ChatCommands.h"
 
+#include <ShellApi.h>
+
 #include <algorithm>
 #include <cctype>
 
@@ -13,10 +15,11 @@
 #include <GWCA\Managers\GuildMgr.h>
 #include <GWCA\Managers\FriendListMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
+#include <GWCA\Managers\MapMgr.h>
+#include <GWCA\Managers\AgentMgr.h>
+#include <GWCA\Managers\PlayerMgr.h>
 #include <GWCA\Managers\SkillbarMgr.h>
 #include <GWCA\Managers\GameThreadMgr.h>
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Context\GameContext.h>
 
 #include <GuiUtils.h>
@@ -214,7 +217,8 @@ void ChatCommands::Update(float delta) {
 bool ChatCommands::ReadTemplateFile(std::wstring path, char *buff, size_t buffSize) {
 	HANDLE fileHandle = CreateFileW(path.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
 	if (fileHandle == INVALID_HANDLE_VALUE) {
-		Log::Error("Failed openning file '%S'", path.c_str());
+		// We don't print that error, because we can /load [template]
+		// Log::Error("Failed openning file '%S'", path.c_str());
 		return false;
 	}
 
@@ -375,19 +379,19 @@ void ChatCommands::ParseDistrict(const std::wstring& s, GW::Constants::District&
 		district = GW::Constants::District::EuropeGerman;
 	} else if (s == L"ef" || s == L"fr") {
 		district = GW::Constants::District::EuropeFrench;
-	} else if (s == L"ei") {
+	} else if (s == L"ei" || s == L"it") {
 		district = GW::Constants::District::EuropeItalian;
 	} else if (s == L"es") {
 		district = GW::Constants::District::EuropeSpanish;
-	} else if (s == L"ep") {
+	} else if (s == L"ep" || s == L"pl") {
 		district = GW::Constants::District::EuropePolish;
-	} else if (s == L"er") {
+	} else if (s == L"er" || s == L"ru") {
 		district = GW::Constants::District::EuropeRussian;
-	} else if (s == L"ak") {
+	} else if (s == L"ak" || s == L"kr") {
 		district = GW::Constants::District::AsiaKorean;
-	} else if (s == L"ac" || s == L"atc") {
+	} else if (s == L"ac" || s == L"atc" || s == L"ch") {
 		district = GW::Constants::District::AsiaChinese;
-	} else if (s == L"aj") {
+	} else if (s == L"aj" || s == L"jp") {
 		district = GW::Constants::District::AsiaJapanese;
 	}
 }
@@ -623,7 +627,6 @@ void ChatCommands::CmdTarget(int argc, LPWSTR *argv) {
 			if (closest > 0) {
 				GW::Agents::ChangeTarget(agents[closest]);
 			}
-
 		} else if (arg1 == L"getid") {
 			GW::Agent* target = GW::Agents::GetTarget();
 			if (target == nullptr) {
@@ -637,6 +640,14 @@ void ChatCommands::CmdTarget(int argc, LPWSTR *argv) {
 				Log::Error("No target selected!");
 			} else {
 				Log::Info("Target coordinates are (%f, %f)", target->pos.x, target->pos.y);
+			}
+		} else {
+			GW::Player *target = GW::PlayerMgr::GetPlayerByName(arg1.c_str());
+			if (target != NULL) {
+				GW::Agent *agent = GW::Agents::GetAgentByID(target->AgentID);
+				if (agent) {
+					GW::Agents::ChangeTarget(agent);
+				}
 			}
 		}
 	}
@@ -781,7 +792,7 @@ void ChatCommands::CmdTransmo(int argc, LPWSTR *argv) {
 	{
 		GW::Packet::StoC::P080 packet;
 		packet.header = 80;
-		packet.npc_id = npc_id;
+		packet.npc_id = npc_id;I 
 
 		// If we found a npc that have more than 1 ModelFiles, we can determine which one of h0028, h002C are size and capacity.
 		assert(npc.FilesCount <= 8);
@@ -795,20 +806,18 @@ void ChatCommands::CmdTransmo(int argc, LPWSTR *argv) {
 
 	GW::GameThread::Enqueue([scale]()
 	{
-		GW::Packet::StoC::P147 packet;
-		packet.header = 147;
+		GW::Packet::StoC::AgentScale packet;
 		packet.agent_id = GW::Agents::GetPlayerId();
 		packet.scale = (DWORD)scale << 24;
 
-		GW::StoC::EmulatePacket((GW::Packet::StoC::PacketBase *)&packet);
+		GW::StoC::EmulatePacket(&packet);
 	});
 
 	GW::GameThread::Enqueue([npc_id]()
 	{
-		GW::Packet::StoC::P167 packet;
-		packet.header = 167;
+		GW::Packet::StoC::AgentModel packet;
 		packet.agent_id = GW::Agents::GetPlayerId();
 		packet.model_id = npc_id;
-		GW::StoC::EmulatePacket((GW::Packet::StoC::PacketBase *)&packet);
+		GW::StoC::EmulatePacket(&packet);
 	});
 }

@@ -1,5 +1,7 @@
-#include <WinSock2.h>
 #include "TradeWindow.h"
+
+#include <ShellApi.h>
+#include <WinSock2.h>
 
 #include <GWCA\GWCA.h>
 #include <GWCA\Managers\UIMgr.h>
@@ -26,6 +28,7 @@ static const char ws_host[] = "wss://kamadan.decltype.org/ws/";
 
 void TradeWindow::Initialize() {
 	ToolboxWindow::Initialize();
+	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"trade.png"));
 
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData)) {
@@ -49,6 +52,25 @@ void TradeWindow::Initialize() {
 
 	if (print_game_chat) AsyncChatConnect();
 }
+
+void TradeWindow::Terminate() {
+	should_stop = true;
+	if (worker.joinable()) worker.join();
+	if (ws_chat) delete ws_chat;
+	if (ws_window) delete ws_window;
+	if (ws_chat || ws_window) {
+		ws_chat = nullptr;
+		ws_window = nullptr;
+		WSACleanup();
+	}
+
+	ToolboxWindow::Terminate();
+}
+
+TradeWindow::~TradeWindow() {
+	Terminate();
+}
+
 
 void TradeWindow::Update(float delta) {
 	if (!print_game_chat) return;
@@ -207,7 +229,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Alerts", ImVec2(80.0f, 0))) {
-			show_alert_window = true;
+			show_alert_window = !show_alert_window;
 		}
 
 		/* Main trade chat area */
@@ -295,7 +317,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		/* Link to website footer */
 		if (ImGui::Button("Powered by https://kamadan.decltype.org", ImVec2(ImGui::GetWindowContentRegionWidth(), 20.0f))){ 
 			CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-			ShellExecute(NULL, "open", "https://kamadan.decltype.org", NULL, NULL, SW_SHOWNORMAL);
+			ShellExecuteA(NULL, "open", "https://kamadan.decltype.org", NULL, NULL, SW_SHOWNORMAL);
 		}
 
 		/* Alerts window */
@@ -318,7 +340,7 @@ void TradeWindow::DrawAlertsWindowContent(bool ownwindow) {
 	if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE, 
 		ImVec2(-1.0f, ownwindow ? -1.0f : 0.0f))) {
 
-		alert_words = ParseBuffer(alert_buf);
+		ParseBuffer(alert_buf, alert_words);
 		alertfile_dirty = true;
 	}
 }
@@ -337,7 +359,7 @@ void TradeWindow::LoadSettings(CSimpleIni* ini) {
 	if (alert_file.is_open()) {
 		alert_file.get(alert_buf, ALERT_BUF_SIZE, '\0');
 		alert_file.close();
-		alert_words = ParseBuffer(alert_buf);
+		ParseBuffer(alert_buf, alert_words);
 	}
 	alert_file.close();
 }
@@ -360,8 +382,8 @@ void TradeWindow::SaveSettings(CSimpleIni* ini) {
 	}
 }
 
-std::vector<std::string> TradeWindow::ParseBuffer(const char *text) {
-	std::vector<std::string> words;
+void TradeWindow::ParseBuffer(const char *text, std::vector<std::string>& words) {
+	words.clear();
 	std::istringstream stream(text);
 	std::string word;
 	while (std::getline(stream, word)) {
@@ -369,18 +391,16 @@ std::vector<std::string> TradeWindow::ParseBuffer(const char *text) {
 			word[i] = tolower(word[i]);
 		words.push_back(word);
 	}
-	return words;
 }
 
-std::vector<std::string> TradeWindow::ParseBuffer(std::fstream stream) {
-	std::vector<std::string> words;
+void TradeWindow::ParseBuffer(std::fstream stream, std::vector<std::string>& words) {
+	words.clear();
 	std::string word;
 	while (std::getline(stream, word)) {
 		for (size_t i = 0; i < word.length(); i++)
 			word[i] = tolower(word[i]);
 		words.push_back(word);
 	}
-	return words;
 }
 
 void TradeWindow::AsyncChatConnect() {
@@ -405,14 +425,4 @@ void TradeWindow::AsyncWindowConnect() {
 		}
 		ws_window_connecting = false;
 	});
-}
-
-void TradeWindow::Terminate() {
-	should_stop = true;
-	if (worker.joinable()) worker.join();
-	if (ws_chat) delete ws_chat;
-	if (ws_window) delete ws_window;
-	WSACleanup();
-
-	ToolboxWindow::Terminate();
 }

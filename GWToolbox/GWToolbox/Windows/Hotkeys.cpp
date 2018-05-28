@@ -223,6 +223,7 @@ void HotkeySendChat::Draw() {
 	case '#': index = 3; break;
 	case '$': index = 4; break;
 	case '%': index = 5; break;
+	case '"': index = 6; break;
 	}
 	static const char* channels[] = {
 		"/ Commands",
@@ -230,9 +231,10 @@ void HotkeySendChat::Draw() {
 		"@ Guild",
 		"# Group",
 		"$ Trade",
-		"% Alliance"
+		"% Alliance",
+		"\" Whisper"
 	};
-	if (ImGui::Combo("Channel", &index, channels, 6)) {
+	if (ImGui::Combo("Channel", &index, channels, 7)) {
 		switch (index) {
 		case 0: channel = '/'; break;
 		case 1: channel = '!'; break;
@@ -240,6 +242,7 @@ void HotkeySendChat::Draw() {
 		case 3: channel = '#'; break;
 		case 4: channel = '$'; break;
 		case 5: channel = '%'; break;
+		case 6: channel = '"'; break;
 		default: channel = '/';break;
 		}
 		hotkeys_changed = true;
