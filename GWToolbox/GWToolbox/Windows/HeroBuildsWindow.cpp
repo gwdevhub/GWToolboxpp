@@ -5,6 +5,7 @@
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\PartyMgr.h>
 #include <GWCA\Managers\SkillbarMgr.h>
+#include <GWCA\Context\GameContext.h>
 
 #include <logger.h>
 #include "GuiUtils.h"
@@ -73,6 +74,8 @@ namespace {
 		"Mercenary Hero 4", "Mercenary Hero 5", "Mercenary Hero 6",
 		"Mercenary Hero 7", "Mercenary Hero 8", "Miku", "Zei Ri"
 	};
+
+	char MercHeroNames[8][20] = { 0 };
 }
 
 unsigned int HeroBuildsWindow::TeamHeroBuild::cur_ui_id = 0;
@@ -163,7 +166,23 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 						[](void* data, int idx, const char** out_text) -> bool {
 						if (idx < 0) return false;
 						if (idx >= hero_count) return false;
-						*out_text = HeroName[HeroIndexToID[idx]];
+						auto id = HeroIndexToID[idx];
+						if (id < HeroID::Merc1 || id > HeroID::Merc8) {
+							*out_text = HeroName[HeroIndexToID[idx]];
+							return true;
+						}
+						bool match = false;
+						auto ctx = GW::GameContext::instance();
+						auto& hero_array = ctx->world->hero_info;
+						for (auto& hero : hero_array) {
+							if (hero.HeroID == id) {
+								match = true;
+								wcstombs(MercHeroNames[id - HeroID::Merc1], hero.name, 20);
+								*out_text = MercHeroNames[id - HeroID::Merc1];
+							}
+						}
+						if(!match)
+							*out_text = HeroName[id];
 						return true;
 					}, nullptr, hero_count)) {
 						builds_changed = true;
