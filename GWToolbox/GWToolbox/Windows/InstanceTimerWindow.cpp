@@ -122,7 +122,7 @@ void InstanceTimerWindow::Draw(IDirect3DDevice9* pDevice) {
 		&& GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish) {
 		if (doareset) {
 			for (int i = 0; i < 4; ++i) {
-				doaQ[i] = 0;
+				DOAD[i] = 0;
 			}
 			doareset = false;
 		}
