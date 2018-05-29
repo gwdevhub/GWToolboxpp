@@ -6,6 +6,11 @@
 
 #define TEXT_SIZE 2024 * 16
 
+void NotePadWindow::Initialize() {
+	ToolboxWindow::Initialize();
+	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"notepad.png"));
+}
+
 void NotePadWindow::Draw(IDirect3DDevice9* pDevice) {
 	if (!visible) return;
 

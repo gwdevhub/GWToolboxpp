@@ -7,10 +7,17 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
-## Version 2.13
+## Version 2.14
 * [Fix] Fixed toolbox functionality after May 9 2018 game update.
 * [Fix] Fixed bug with ctrl+click & dyes.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.14_Release/GWToolbox.dll)
+
+## Version 2.13
+* [Fix] Fixed toolbox functionality after May 9 2018 game update.
 * [New] The damage report will now print the names of the npcs.
+* [Minor] You can now use iso alpha 2 country codes for district with the command `/tp`.
+* [Minor] You can now target player with the command `/target "Player Name"`. (with quotes)
 
 [Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.13_Release/GWToolbox.dll)
 

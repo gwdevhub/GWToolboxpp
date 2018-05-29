@@ -190,6 +190,7 @@ void AgentRenderer::DrawSettings() {
 		for (unsigned i = 0; i < custom_agents.size(); ++i) {
 
 			CustomAgent* custom = custom_agents[i];
+			if (!custom) continue;
 			DWORD modelId = custom->modelId;
 
 			ImGui::PushID(custom->ui_id);
