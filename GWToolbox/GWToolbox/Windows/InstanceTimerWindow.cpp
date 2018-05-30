@@ -13,8 +13,101 @@
 
 #include <Modules\Resources.h>
 
+#define countof(arr) (sizeof(arr) / sizeof(arr[0]))
+static void Set(InstanceTimerWindow::Objective &obj, uint32_t id, const char *name);
+static uint32_t doa_get_next(uint32_t id);
+
 void InstanceTimerWindow::Initialize() {
 	ToolboxWindow::Initialize();
+
+	Set(obj_uw[0], 146, "Chamber");
+	Set(obj_uw[1], 147, "Restore");
+	Set(obj_uw[2], 148, "Escort");
+	Set(obj_uw[3], 149, "UWG");
+	Set(obj_uw[4], 150, "Vale");
+	Set(obj_uw[5], 151, "Waste");
+	Set(obj_uw[6], 152, "Pits");
+	Set(obj_uw[7], 153, "Planes");
+	Set(obj_uw[8], 154, "Mnts");
+	Set(obj_uw[9], 155, "Pools");
+	Set(obj_uw[10], 156, nullptr);
+	Set(obj_uw[11], 157, "Dhuum");
+
+	Set(obj_fow[0], 309, "ToC");
+	Set(obj_fow[1], 310, "Wailing Lord");
+	Set(obj_fow[2], 311, "Griffons");
+	Set(obj_fow[3], 312, "Defend");
+	Set(obj_fow[4], 313, "Camp");
+	Set(obj_fow[5], 314, "Menzies");
+	Set(obj_fow[6], 315, "Restore");
+	Set(obj_fow[7], 316, "Khobay");
+	Set(obj_fow[8], 317, "ToS");
+	Set(obj_fow[9], 318, "Burning Forest");
+	Set(obj_fow[10], 319, "The Hunt");
+
+	Set(obj_doa[0], 0x273F, "Foundry");
+	Set(obj_doa[1], 0x2740, "Veil");
+	Set(obj_doa[2], 0x2741, "Gloom");
+	Set(obj_doa[3], 0x2742, "City");
+
+	GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveAdd>(
+	[this](GW::Packet::StoC::ObjectiveAdd* packet) -> bool {
+		Objective *obj = get_objective(packet->objective_id);
+		obj->start = GW::Map::GetInstanceTime() / 1000;
+		DWORD t = obj->start;
+		snprintf(obj->cached_start, sizeof(obj->cached_start), "%02d:%02d:%02d", t / (60 * 60), (t / 60) % 60, t % 60);
+		return false;
+	});
+	
+	GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveDone>(
+	[this](GW::Packet::StoC::ObjectiveDone* packet) -> bool {
+		Objective *obj = get_objective(packet->objective_id);
+		obj->done = GW::Map::GetInstanceTime() / 1000;
+		DWORD t = obj->done;
+		snprintf(obj->cached_done, sizeof(obj->cached_done), "%02d:%02d:%02d", t / (60 * 60), (t / 60) % 60, t % 60);
+		return false;
+	});
+
+	GW::StoC::AddCallback<GW::Packet::StoC::DoACompleteZone>(
+	[this](GW::Packet::StoC::DoACompleteZone* packet) -> bool {
+		if (packet->message[0] != 0x8101)
+			return false;
+		uint32_t id = packet->message[1];
+		Objective *obj = get_objective(id);
+		obj->done = GW::Map::GetInstanceTime() / 1000;
+		DWORD t = obj->done;
+		snprintf(obj->cached_done, sizeof(obj->cached_done), "%02d:%02d:%02d", t / (60 * 60), (t / 60) % 60, t % 60);
+		uint32_t next_id = doa_get_next(id);
+		Objective *next = get_objective(next_id);
+		if (next && !next->done) {
+			next->start = t;
+			strncpy(next->cached_start, obj->cached_done, sizeof(next->cached_start));
+		}
+		return false;
+	});
+}
+
+void InstanceTimerWindow::DrawObjectives(IDirect3DDevice9* pDevice, const char *title, Objective *objectives, size_t count) {
+	if (ImGui::CollapsingHeader(title)) {
+		ImGui::SetCursorPosX(ImGui::GetWindowContentRegionWidth() / 3 + 15.0f);
+		ImGui::Text("Taken");
+		ImGui::SameLine(2 * ImGui::GetWindowContentRegionWidth() / 3 + 15.0f);
+		ImGui::Text("Done");
+
+		for (size_t i = 0; i < count; ++i) {
+			Objective *obj = &objectives[i];
+			if (!obj->name) continue;
+			if (ImGui::Button(obj->name, ImVec2((ImGui::GetWindowContentRegionWidth() / 3), 0))) {
+				snprintf(buf, 256, "[%s] ~ Taken: %s ~ Done: %s", obj->name, obj->cached_start, obj->cached_done);
+				GW::Chat::SendChat('#', buf);
+			}
+			ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().ItemInnerSpacing.x * 2) / 3);
+			ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+			ImGui::InputText("", obj->cached_start, 32, ImGuiInputTextFlags_ReadOnly);
+			ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+			ImGui::InputText("", obj->cached_done, 32, ImGuiInputTextFlags_ReadOnly);
+		}
+	}
 }
 
 void InstanceTimerWindow::Draw(IDirect3DDevice9* pDevice) {
@@ -23,243 +116,67 @@ void InstanceTimerWindow::Draw(IDirect3DDevice9* pDevice) {
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-		
-		//DoA Timer
-		if (show_doatimer && ImGui::CollapsingHeader("DoA Timer")) {
-			//All Areas			
-			for (int i = 0; i < 4; ++i) {
-				snprintf(doatime[i], 32, "%02d:%02d:%02d", DOAD[i] / (60 * 60), (DOAD[i] / 60) % 60, DOAD[i] % 60);
-				if (ImGui::Button(DoAArea[i], ImVec2((ImGui::GetWindowContentRegionWidth() / 2), 0))) {
-					snprintf(buf, 256, "%s: %02d:%02d:%02d", DoAArea[i], DOAD[i] / (60 * 60), (DOAD[i] / 60) % 60, DOAD[i] % 60);
-					GW::Chat::SendChat('#', buf);
-				}
-				ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth()) / 2 - ImGui::GetStyle().ItemInnerSpacing.x);
-				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-				ImGui::InputText("", doatime[i], 32, ImGuiInputTextFlags_ReadOnly);
-			}
-			//Send All Button
-			if (ImGui::Button("Send All", ImVec2((ImGui::GetWindowContentRegionWidth()), 0))) {
-				for (int i = 0; i < 4; ++i) {
-					snprintf(buf, 256, "%s: %02d:%02d:%02d", DoAArea[i], DOAD[i] / (60 * 60), (DOAD[i] / 60) % 60, DOAD[i] % 60);
-					GW::Chat::SendChat('#', buf);
-				}
-			}
-		}
-
-		//UW Timer
-		if (show_uwtimer && ImGui::CollapsingHeader("Underworld Timer")) {
-			
-			ImGui::SetCursorPosX(ImGui::GetWindowContentRegionWidth() / 3 + 15.0f);
-			ImGui::Text("Taken");
-			ImGui::SameLine(2 * ImGui::GetWindowContentRegionWidth() / 3 + 15.0f);
-			ImGui::Text("Done");
-
-			//All Areas
-			for (int i = 0; i < 10; ++i) {
-				snprintf(UWTtime[i], 32, "%02d:%02d:%02d", UWT[i] / (60 * 60), (UWT[i] / 60) % 60, UWT[i] % 60);
-				snprintf(UWDtime[i], 32, "%02d:%02d:%02d", UWD[i] / (60 * 60), (UWD[i] / 60) % 60, UWD[i] % 60);
-				if (ImGui::Button(UWArea[i], ImVec2((ImGui::GetWindowContentRegionWidth() / 3), 0))) {
-					snprintf(buf, 256, "[%s] ~ Taken: %02d:%02d:%02d ~ Done: %02d:%02d:%02d", UWArea[i], UWT[i] / (60 * 60), (UWT[i] / 60) % 60, UWT[i] % 60, UWD[i] / (60 * 60), (UWD[i] / 60) % 60, UWD[i] % 60);
-					GW::Chat::SendChat('#', buf);
-				}
-				ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().ItemInnerSpacing.x * 2) / 3);
-				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-				ImGui::InputText("", UWTtime[i], 32, ImGuiInputTextFlags_ReadOnly);
-				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-				ImGui::InputText("", UWDtime[i], 32, ImGuiInputTextFlags_ReadOnly);
-			}
-			ImGui::Separator();
-			
-			//Dhuum
-			ImGui::SetCursorPosX(ImGui::GetWindowContentRegionWidth() / 3 + 15.0f);
-			ImGui::Text("Started");
-			ImGui::SameLine(2 * ImGui::GetWindowContentRegionWidth() / 3 + 15.0f);
-			ImGui::Text("Done");
-
-			snprintf(DhuumStarttime, 32, "%02d:%02d:%02d", DhuumS / (60 * 60), (DhuumS / 60) % 60, DhuumS % 60);
-			snprintf(DhuumDonetime, 32, "%02d:%02d:%02d", DhuumD / (60 * 60), (DhuumD / 60) % 60, DhuumD % 60);
-			if (ImGui::Button("Dhuum", ImVec2((ImGui::GetWindowContentRegionWidth() / 3), 0))) {
-				snprintf(buf, 256, "[Dhuum] ~ Started: %02d:%02d:%02d ~ Done: %02d:%02d:%02d", DhuumS / (60 * 60), (DhuumS / 60) % 60, DhuumS % 60, DhuumD / (60 * 60), (DhuumD / 60) % 60, DhuumD % 60);
-				GW::Chat::SendChat('#', buf);
-			}
-			ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().ItemInnerSpacing.x * 2) / 3);
-			ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-			ImGui::InputText("", DhuumStarttime, 9, ImGuiInputTextFlags_ReadOnly);
-			ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-			ImGui::InputText("", DhuumDonetime, 9, ImGuiInputTextFlags_ReadOnly);
-
-		}
-
-		//FOW Timer
-		if (show_uwtimer && ImGui::CollapsingHeader("Fissure of Woe Timer")) {
-
-			ImGui::SetCursorPosX(ImGui::GetWindowContentRegionWidth() / 3 + 15.0f);
-			ImGui::Text("Taken");
-			ImGui::SameLine(2 * ImGui::GetWindowContentRegionWidth() / 3 + 15.0f);
-			ImGui::Text("Done");
-
-			//All Areas
-			for (int i = 0; i < 11; ++i) {
-				snprintf(FOWTtime[i], 32, "%02d:%02d:%02d", FOWT[i] / (60 * 60), (FOWT[i] / 60) % 60, FOWT[i] % 60);
-				snprintf(FOWDtime[i], 32, "%02d:%02d:%02d", FOWD[i] / (60 * 60), (FOWD[i] / 60) % 60, FOWD[i] % 60);
-				if (ImGui::Button(FOWArea[i], ImVec2((ImGui::GetWindowContentRegionWidth() / 3), 0))) {
-					snprintf(buf, 256, "[%s] ~ Taken: %02d:%02d:%02d ~ Done: %02d:%02d:%02d", FOWArea[i], FOWT[i] / (60 * 60), (FOWT[i] / 60) % 60, FOWT[i] % 60, FOWD[i] / (60 * 60), (FOWD[i] / 60) % 60, FOWD[i] % 60);
-					GW::Chat::SendChat('#', buf);
-				}
-				ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().ItemInnerSpacing.x * 2) / 3);
-				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-				ImGui::InputText("", FOWTtime[i], 32, ImGuiInputTextFlags_ReadOnly);
-				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-				ImGui::InputText("", FOWDtime[i], 32, ImGuiInputTextFlags_ReadOnly);
-			}
-		}
-	
+		if (show_doatimer)
+			DrawObjectives(pDevice, "DoA Timer", obj_doa, countof(obj_doa));
+		if (show_uwtimer)
+			DrawObjectives(pDevice, "Underworld Timer", obj_uw, countof(obj_uw));
+		if (show_fowtimer)
+			DrawObjectives(pDevice, "Fissure of Woe Timer", obj_fow, countof(obj_fow));
 	}
 	ImGui::End();
-
-	//DoA-Calculations
-	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable
-		&& GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish) {
-		if (doareset) {
-			for (int i = 0; i < 4; ++i) {
-				DOAD[i] = 0;
-			}
-			doareset = false;
-		}
-		GW::StoC::AddCallback<GW::Packet::StoC::P432>(
-			[&](GW::Packet::StoC::P432* packet) -> bool {
-			if ((packet->message[0]) == 0x8101) {
-				for (int i = 0; i < 4; ++i) {
-					if (DOAD[i] == 0) {
-						if ((packet->message[1]) == DOAIDs[i]) {
-							DOAD[i] = GW::Map::GetInstanceTime() / 1000;
-						}
-					}
-				}
-			}
-			return false;
-		});
-	}
-	else {
-		doareset = true;
-	}
-
-	//Underworld-Calculations
-	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable
-		&& GW::Map::GetMapID() == GW::Constants::MapID::The_Underworld) {
-		if (uwreset) {
-			for (int i = 0; i < 10; ++i) {
-				UWT[i] = 0;
-				UWD[i] = 0;
-			}
-			DhuumS = 0;
-			DhuumD = 0;
-			uwreset = false;
-		}
-		//Quest Taken
-		GW::StoC::AddCallback<GW::Packet::StoC::P190>(
-			[&](GW::Packet::StoC::P190* packet) -> bool {
-			for (int i = 0; i < 10; ++i) {
-				if (UWT[i] == 0) {
-					if (packet->quest_id == UWIDs[i]) {
-						UWT[i] = GW::Map::GetInstanceTime() / 1000;
-					}
-				}
-			}
-			return false;
-		});
-		//Quest Done
-		GW::StoC::AddCallback<GW::Packet::StoC::P189>(
-			[&](GW::Packet::StoC::P189* packet) -> bool {
-			for (int i = 0; i < 10; ++i) {
-				if (UWD[i] == 0) {
-					if (packet->quest_id == UWIDs[i]) {
-						UWD[i] = GW::Map::GetInstanceTime() / 1000;
-					}
-				}
-			}			
-			return false;
-		});
-		//Dhuum Started
-		GW::AgentArray agents = GW::Agents::GetAgentArray();
-		if (!agents.valid()) return;
-		for (unsigned int i = 0; i < agents.size(); ++i) {
-			GW::Agent* agent = agents[i];
-			if (agent == nullptr) continue; //Skip shit
-			if (DhuumS == 0) {
-				if (agent->PlayerNumber == 2342 && agent->Allegiance == 0x3) {
-					DhuumS = GW::Map::GetInstanceTime() / 1000;
-					break;
-				}
-			}
-			
-		}
-
-		//Dhuum Finished
-		GW::StoC::AddCallback<GW::Packet::StoC::P189>(
-			[&](GW::Packet::StoC::P189* packet) -> bool {
-			if (DhuumD == 0) {
-				if (packet->quest_id == 157) {
-					DhuumD = GW::Map::GetInstanceTime() / 1000;
-				}
-			}
-			return false;
-		});
-
-	}
-	else {
-		uwreset = true;
-	}
-
-	//FOW-Calculations
-	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable
-		&& GW::Map::GetMapID() == GW::Constants::MapID::The_Fissure_of_Woe) {
-		if (fowreset) {
-			for (int i = 0; i < 11; ++i) {
-				FOWT[i] = 0;
-				FOWD[i] = 0;
-			}
-			fowreset = false;
-		}
-		//Quest Taken
-		GW::StoC::AddCallback<GW::Packet::StoC::P190>(
-			[&](GW::Packet::StoC::P190* packet) -> bool {
-			for (int i = 0; i < 11; ++i) {
-				if (FOWT[i] == 0) {
-					if (packet->quest_id == FOWIDs[i]) {
-						FOWT[i] = GW::Map::GetInstanceTime() / 1000;
-					}
-				}
-			}
-			return false;
-		});
-		//Quest Done
-		GW::StoC::AddCallback<GW::Packet::StoC::P189>(
-			[&](GW::Packet::StoC::P189* packet) -> bool {
-			for (int i = 0; i < 11; ++i) {
-				if (FOWD[i] == 0) {
-					if (packet->quest_id == FOWIDs[i]) {
-						FOWD[i] = GW::Map::GetInstanceTime() / 1000;
-					}
-				}
-			}
-			return false;
-		});
-
-	}
-	else {
-		fowreset = true;
-	}
-
 }
 
-void InstanceTimerWindow::DrawSettingInternal() {
+static void Set(InstanceTimerWindow::Objective &obj, uint32_t id, const char *name) {
+	obj.id = id;
+	obj.name = name;
+	strncpy(obj.cached_done, "00:00:00", sizeof(obj.cached_done));
+	strncpy(obj.cached_start, "00:00:00", sizeof(obj.cached_start));
+}
+
+InstanceTimerWindow::Objective *InstanceTimerWindow::get_objective(uint32_t obj_id) {
+	Objective *objectives;
+	uint32_t id;
+	if (309 <= obj_id && obj_id <= 319) {
+		// fow
+		id = obj_id - 309;
+		if (id >= countof(obj_fow))
+			return nullptr;
+		objectives = obj_fow;
+	} else if (146 <= obj_id && obj_id <= 157) {
+		// uw
+		id = obj_id - 146;
+		if (id >= countof(obj_uw))
+			return nullptr;
+		objectives = obj_uw;
+	} else if (0x273F <= obj_id && obj_id <= 0x2742) {
+		id = obj_id - 0x273F;
+		if (id >= countof(obj_doa))
+			return nullptr;
+		objectives = obj_doa;
+	} else {
+		return nullptr;
+	}
+	Objective *obj = objectives + id;
+	if (obj_id != obj->id) {
+		fprintf(stderr, "Objective id mismatch (expected: %lu, received: %lu)\n", obj->id, obj_id);
+		return nullptr;
+	}
+	return obj;
+}
+
+static uint32_t doa_get_next(uint32_t id) {
+	switch (id) {
+	case 0x273F: return 0x2742; // foundry -> city;
+	case 0x2742: return 0x2740; // city -> veil
+	case 0x2740: return 0x2741; // veil -> gloom
+	case 0x2741: return 0x273F; // gloom -> foundry
+	}
+	return 0;
 }
 
 void InstanceTimerWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxWindow::LoadSettings(ini);
 	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
-
 	show_uwtimer = ini->GetBoolValue(Name(), VAR_NAME(show_uwtimer), true);
 	show_doatimer = ini->GetBoolValue(Name(), VAR_NAME(show_doatimer), true);
 }
