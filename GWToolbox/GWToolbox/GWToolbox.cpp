@@ -421,6 +421,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 		OldWndProc = SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)SafeWndProc);
 		Log::Log("Installed input event handler, oldwndproc = 0x%X\n", OldWndProc);
 
+        ImGui::CreateContext();
 		ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), device);
 		ImGuiIO& io = ImGui::GetIO();
 		io.MouseDrawCursor = false;
@@ -452,7 +453,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 		&& GW::Render::GetViewportWidth() > 0
 		&& GW::Render::GetViewportHeight() > 0) {
 
-		ImGui_ImplDX9_NewFrame(GW::Render::GetViewportWidth(), GW::Render::GetViewportHeight());
+		ImGui_ImplDX9_NewFrame();
 
 		// Improve precision with QueryPerformanceCounter
 		DWORD tick = GetTickCount();
@@ -477,6 +478,8 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 #endif
 
 		ImGui::Render();
+        ImDrawData* draw_data = ImGui::GetDrawData();
+        ImGui_ImplDX9_RenderDrawData(draw_data);
 	}
 
 	// === destruction ===
@@ -484,6 +487,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 		GWToolbox::Instance().Terminate();
 
 		ImGui_ImplDX9_Shutdown();
+        ImGui::DestroyContext();
 
 		Log::Log("Restoring input hook\n");
 		SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
