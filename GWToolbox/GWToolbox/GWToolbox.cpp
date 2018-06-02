@@ -453,6 +453,9 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 		&& GW::Render::GetViewportWidth() > 0
 		&& GW::Render::GetViewportHeight() > 0) {
 
+		if (!GW::UI::GetIsUIDrawn())
+			return;
+
 		ImGui_ImplDX9_NewFrame();
 
 		// Improve precision with QueryPerformanceCounter
