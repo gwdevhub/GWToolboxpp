@@ -23,7 +23,7 @@
 #include <Windows\SettingsWindow.h>
 #include <Windows\NotePadWindow.h>
 #include <Windows\TradeWindow.h>
-#include <Windows\InstanceTimerWindow.h>
+#include <Windows\ObjectiveTimerWindow.h>
 
 #include <Widgets\TimerWidget.h>
 #include <Widgets\HealthWidget.h>
@@ -51,7 +51,7 @@ void ToolboxSettings::InitializeModules() {
 	if (use_materials) MaterialsWindow::Instance().Initialize();
 	if (use_trade) TradeWindow::Instance().Initialize();
 	if (use_notepad) NotePadWindow::Instance().Initialize();
-	if (use_instancetimer) InstanceTimerWindow::Instance().Initialize();
+	if (use_objectivetimer) ObjectiveTimerWindow::Instance().Initialize();
 
 	SettingsWindow::Instance().Initialize();
 
@@ -94,7 +94,7 @@ void ToolboxSettings::DrawSettingInternal() {
 	ImGui::Checkbox("Materials", &use_materials);
 	ImGui::Checkbox("Notepad", &use_notepad);
 	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
-	ImGui::Checkbox("DoA Timer", &use_instancetimer);
+	ImGui::Checkbox("Objective Timer", &use_objectivetimer);
 	ImGui::Checkbox("Timer", &use_timer);
 	ImGui::Checkbox("Health", &use_health);
 	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
@@ -160,7 +160,7 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
 	use_vanquish = ini->GetBoolValue(Name(), VAR_NAME(use_vanquish), true);
 	use_alcohol = ini->GetBoolValue(Name(), VAR_NAME(use_alcohol), true);
 	use_trade = ini->GetBoolValue(Name(), VAR_NAME(use_trade), true);
-	use_instancetimer = ini->GetBoolValue(Name(), VAR_NAME(use_instancetimer), true);
+    use_objectivetimer = ini->GetBoolValue(Name(), VAR_NAME(use_instancetimer), true);
 }
 
 void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
@@ -185,7 +185,7 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(use_vanquish), use_vanquish);
 	ini->SetBoolValue(Name(), VAR_NAME(use_alcohol), use_alcohol);
 	ini->SetBoolValue(Name(), VAR_NAME(use_trade), use_trade);
-	ini->SetBoolValue(Name(), VAR_NAME(use_instancetimer), use_instancetimer);
+	ini->SetBoolValue(Name(), VAR_NAME(use_objectivetimer), use_objectivetimer);
 }
 
 void ToolboxSettings::Update(float delta) {
