@@ -30,7 +30,7 @@ private:
     class Objective {
     public:
 		uint32_t    id;
-		const char *name;
+		char        name[126];
 		DWORD       start;
 		DWORD       done;
         DWORD       duration;
@@ -38,7 +38,7 @@ private:
 		char cached_start[16];
         char cached_duration[16];
 
-        Objective(uint32_t id, const char* name);
+        Objective(uint32_t id, const char* name = "");
         void SetStarted(DWORD start_time = -1);
         void SetDone();
         void Draw();
@@ -48,19 +48,21 @@ private:
 
     class ObjectiveSet {
     public:
-        ObjectiveSet(const char* _name) {
-            strncpy(name, _name, sizeof(name));
+        ObjectiveSet() {
+			name[0] = 0;
+			GetLocalTime(&system_time);
         }
-        ~ObjectiveSet() { for (auto* o : objectives) delete o; }
+        // ~ObjectiveSet() { for (auto* o : objectives) delete o; }
 
+		SYSTEMTIME system_time;
         char name[256];
-        std::vector<Objective*> objectives;
+        std::vector<Objective> objectives;
 
         void Draw();
         // todo: print to file
     };
 
-    std::vector<ObjectiveSet*> objective_sets;
+    std::vector<ObjectiveSet *> objective_sets;
 
     Objective* GetCurrentObjective(uint32_t obj_id);
 
