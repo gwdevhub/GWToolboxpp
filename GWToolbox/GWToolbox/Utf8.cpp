@@ -53,3 +53,8 @@ static size_t compute_required_size(const wchar_t *str, size_t max_len)
 	if (!res) return 0;
 	return res;
 }
+
+size_t Utf8ToUnicode(const char *str, wchar_t *buffer, size_t count)
+{
+	return MultiByteToWideChar(CP_UTF8, 0, str, -1, buffer, count);
+}

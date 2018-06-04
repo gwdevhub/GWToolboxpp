@@ -1,6 +1,5 @@
 #include "ChatFilter.h"
 
-#include <locale>
 #include <fstream>
 #include <sstream>
 
@@ -403,19 +402,21 @@ bool ChatFilter::ShouldIgnoreByContent(const wchar_t *message, size_t size) {
 	}
 	if (start == nullptr) return false; // no string segment in this packet
 
-	std::string text(start, end);
+	std::wstring text(start, end);
 	std::transform(text.begin(), text.end(), text.begin(), ::tolower);
 
-	for (const std::string& s : bycontent_words) {
+	for (const auto& s : bycontent_words) {
 		if (text.find(s) != std::string::npos) {
 			return true;
 		}
 	}
+	/*
 	for (const std::regex& r : bycontent_regex) {
 		if (std::regex_match(text, r)) {
 			return true;
 		}
 	}
+	*/
 
 	return false;
 }
@@ -505,6 +506,19 @@ void ChatFilter::ParseBuffer(const char *text, std::vector<std::string> &words) 
 	while (std::getline(stream, word)) {
 		if (!word.empty()) {
 			std::transform(word.begin(), word.end(), word.begin(), ::tolower);
+			words.push_back(word);
+		}
+	}
+}
+
+void ChatFilter::ParseBuffer(const char *text, std::vector<std::wstring> &words) const {
+	words.clear();
+	wchar_t buffer[1024];
+	Utf8ToUnicode(text, buffer, 1024);
+	std::wstringstream stream(buffer);
+	std::wstring word;
+	while (std::getline(stream, word)) {
+		if (!word.empty()) {
 			words.push_back(word);
 		}
 	}

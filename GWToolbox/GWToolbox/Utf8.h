@@ -20,4 +20,6 @@ struct Utf8
 	const char *c_str() { return bytes; }
 };
 
+size_t Utf8ToUnicode(const char *str, wchar_t *buffer, size_t count);
+
 #endif // UTF8_H_INC

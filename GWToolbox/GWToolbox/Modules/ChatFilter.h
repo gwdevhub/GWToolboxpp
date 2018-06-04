@@ -61,7 +61,7 @@ private:
 	static const size_t FILTER_BUF_SIZE = 1024*16;
 
 	// Chat filter
-	std::vector<std::string> bycontent_words;
+	std::vector<std::wstring> bycontent_words;
 	std::vector<std::regex> bycontent_regex;
 	char bycontent_word_buf[FILTER_BUF_SIZE];
 	char bycontent_regex_buf[FILTER_BUF_SIZE];
@@ -74,7 +74,8 @@ private:
 	bool byauthor_filedirty = false;
 #endif
 
-	void ParseBuffer(const char *text, std::vector<std::string> &words) const;
+	void ParseBuffer(const char *text, std::vector<std::string>  &words) const;
+	void ParseBuffer(const char *text, std::vector<std::wstring> &words) const;
 	void ParseBuffer(const char* text, std::vector<std::regex> &regex) const;
 
 	//void ByContent_ParseBuf() {
