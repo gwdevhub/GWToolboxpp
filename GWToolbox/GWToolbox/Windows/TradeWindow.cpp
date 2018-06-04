@@ -28,6 +28,7 @@ static const char ws_host[] = "wss://kamadan.decltype.org/ws/";
 
 void TradeWindow::Initialize() {
 	ToolboxWindow::Initialize();
+	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"trade.png"));
 
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData)) {
