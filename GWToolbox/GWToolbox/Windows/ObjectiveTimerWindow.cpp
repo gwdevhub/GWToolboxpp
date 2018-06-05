@@ -16,12 +16,18 @@
 #define countof(arr) (sizeof(arr) / sizeof(arr[0]))
 
 namespace {
+    enum DoA_ObjId : DWORD {
+        Foundry = 0x273F,
+        Veil,
+        Gloom,
+        City
+    };
     uint32_t doa_get_next(uint32_t id) {
         switch (id) {
-        case 0x273F: return 0x2742; // foundry -> city;
-        case 0x2742: return 0x2740; // city -> veil
-        case 0x2740: return 0x2741; // veil -> gloom
-        case 0x2741: return 0x273F; // gloom -> foundry
+        case Foundry: return City;
+        case City: return Veil;
+        case Veil: return Gloom;
+        case Gloom: return Foundry;
         }
         return 0;
     }
@@ -67,7 +73,7 @@ void ObjectiveTimerWindow::Initialize() {
         if (obj) obj->SetDone();
 		uint32_t next_id = doa_get_next(id);
 		Objective *next = GetCurrentObjective(next_id);
-        if (next) obj->SetStarted();
+        if (next && !next->IsStarted()) obj->SetStarted();
 		return false;
 	});
 }

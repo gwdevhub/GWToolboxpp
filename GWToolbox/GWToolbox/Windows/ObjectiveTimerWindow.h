@@ -39,6 +39,8 @@ private:
         char cached_duration[16];
 
         Objective(uint32_t id, const char* name);
+        bool IsStarted() const { return start != -1; }
+        bool IsDone() const { return done != -1; }
         void SetStarted(DWORD start_time = -1);
         void SetDone();
         void Draw();
