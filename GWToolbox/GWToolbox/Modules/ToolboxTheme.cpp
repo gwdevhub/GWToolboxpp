@@ -32,12 +32,9 @@ ImGuiStyle ToolboxTheme::DefaultTheme() {
 	style.Colors[ImGuiCol_Button] = ImColor(0x99344870);
 	style.Colors[ImGuiCol_ButtonHovered] = ImColor(0xFF344870);
 	style.Colors[ImGuiCol_ButtonActive] = ImColor(0xFF283C68);
-	style.Colors[ImGuiCol_CloseButton] = ImColor(0x80808080);
 	style.Colors[ImGuiCol_Header] = ImColor(0x73E62800);
 	style.Colors[ImGuiCol_HeaderHovered] = ImColor(0xCCF03200);
 	style.Colors[ImGuiCol_HeaderActive] = ImColor(0xCCFA3C00);
-	style.Colors[ImGuiCol_CloseButtonHovered] = ImColor(0x99BDBDBD);
-	style.Colors[ImGuiCol_CloseButtonActive] = ImColor(0xFFBDBDBD);
 	return style;
 }
 

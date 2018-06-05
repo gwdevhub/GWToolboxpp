@@ -350,6 +350,8 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 		case 0x152B: // you win 12 festival tickets
 		case 0x152C: // You win 3 festival tickets
 			return ninerings;
+        case 0x39CD: // you have a special item available: <special item reward>
+            return ninerings;
 		case 0x7B91:	// x minutes of favor of the gods remaining. Note: full message is 0x8101 0x7B91 0xC686 0xE490 0x6922 0x101 0x100+value
 		case 0x7B92:	// x more achievements must be performed to earn the favor of the gods. // 0x8101 0x7B92 0x8B0A 0x8DB5 0x5135 0x101 0x100+value
 			return favor;
