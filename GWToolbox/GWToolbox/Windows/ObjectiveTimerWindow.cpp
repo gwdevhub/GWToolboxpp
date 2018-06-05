@@ -7,6 +7,7 @@
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
+#include <GWCA\Managers\UIMgr.h>
 
 #include "GuiUtils.h"
 #include "GWToolbox.h"
@@ -31,27 +32,51 @@ namespace {
         }
         return 0;
     }
+
+	void AsyncGetMapName(char *buffer, size_t n) {
+		static wchar_t enc_str[16];
+		GW::AreaInfo& info = GW::Map::GetCurrentMapInfo();
+		if (!GW::UI::UInt32ToEncStr(info.NameID, enc_str, n)) {
+			buffer[0] = 0;
+			return;
+		}
+		GW::UI::AsyncDecodeStr(enc_str, buffer, n);
+	}
 }
 
 void ObjectiveTimerWindow::Initialize() {
 	ToolboxWindow::Initialize();
 
-    // when we are entering an explorable (doa/uw/fow), create a new objective set
-    // in case of doa, also detect where we are starting
-    GW::StoC::AddCallback<GW::Packet::StoC::InstanceLoadFile>(
-        [this](GW::Packet::StoC::InstanceLoadFile *packet) -> bool {
-        switch (packet->map_fileID) {
-        case 219215: AddDoAObjectiveSet(packet->spawn_point); break;
-        case 63058: AddFoWObjectiveSet(); break;
-        case 63059: AddUWObjectiveSet(); break;
-        default:
-            break;
-        }
-        return false;
-    });
+	GW::StoC::AddCallback<GW::Packet::StoC::InstanceLoadFile>(
+	[this](GW::Packet::StoC::InstanceLoadFile *packet) -> bool {
+		// We would want to have a default type that can handle objective by using name in Guild Wars
+		// The only thing we miss is how to determine wether this map has a mission objectives.
+		// We could use packet 187, but this can be a little bit hairy to do. Ask Ziox for more info.
+		switch (packet->map_fileID) {
+		case 219215: AddDoAObjectiveSet(packet->spawn_point); break;
+		case 63058:  AddFoWObjectiveSet(); break;
+        case 63059:  AddUWObjectiveSet(); break;
+		}
+		return false;
+	});
 
 	GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveAdd>(
-	[this](GW::Packet::StoC::ObjectiveAdd* packet) -> bool {
+	[this](GW::Packet::StoC::ObjectiveAdd *packet) -> bool {
+		// type 12 is the "title" of the mission objective, should we ignore it or have a "title" objective ?
+		Objective *obj = GetCurrentObjective(packet->objective_id);
+		if (obj) return false;
+		ObjectiveSet *os = objective_sets.back();
+		os->objectives.emplace_back(packet->objective_id);
+		obj = &os->objectives.back();
+		GW::UI::AsyncDecodeStr(packet->name, obj->name, sizeof(obj->name));
+		// If the name isn't "???" we consider that the objective started
+		if (wcsncmp(packet->name, L"\x8102\x3236", 2))
+			obj->SetStarted();
+		return false;
+	});
+
+	GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveUpdateName>(
+	[this](GW::Packet::StoC::ObjectiveUpdateName* packet) -> bool {
 		Objective *obj = GetCurrentObjective(packet->objective_id);
         if (obj) obj->SetStarted();
         return false;
@@ -100,48 +125,53 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vector2f spawn) {
     }
     if (area == -1) return; // we're doing mallyx, not doa!
 
-    Objective* objs[n_areas];
-    objs[0] = new Objective(0x273F, "Foundry");
-    objs[1] = new Objective(0x2742, "City");
-    objs[2] = new Objective(0x2740, "Veil");
-    objs[3] = new Objective(0x2741, "Gloom");
+	ObjectiveSet *os = new ObjectiveSet;
+	::AsyncGetMapName(os->name, sizeof(os->name));
+    Objective objs[n_areas] = {
+		Objective(0x273F, "Foundry"),
+		Objective(0x2742, "City"),
+		Objective(0x2740, "Veil"),
+		Objective(0x2741, "Gloom")
+	};
 
-    ObjectiveSet* os = new ObjectiveSet("Domain of Anguish");
     for (int i = 0; i < n_areas; ++i) {
         os->objectives.push_back(objs[(area + i) % n_areas]);
     }
-    os->objectives.front()->SetStarted(0);
+
+    os->objectives.front().SetStarted(0);
     objective_sets.push_back(os);
 }
 void ObjectiveTimerWindow::AddFoWObjectiveSet() {
-    ObjectiveSet* os = new ObjectiveSet("Fissure of Woe");
-    os->objectives.push_back(new Objective(309, "ToC"));
-    os->objectives.push_back(new Objective(310, "Wailing Lord"));
-    os->objectives.push_back(new Objective(311, "Griffons"));
-    os->objectives.push_back(new Objective(312, "Defend"));
-    os->objectives.push_back(new Objective(313, "Camp"));
-    os->objectives.push_back(new Objective(314, "Menzies"));
-    os->objectives.push_back(new Objective(315, "Restore"));
-    os->objectives.push_back(new Objective(316, "Khobay"));
-    os->objectives.push_back(new Objective(317, "ToS"));
-    os->objectives.push_back(new Objective(318, "Burning Forest"));
-    os->objectives.push_back(new Objective(319, "The Hunt"));
-    objective_sets.push_back(os);
+	ObjectiveSet *os = new ObjectiveSet;
+	::AsyncGetMapName(os->name, sizeof(os->name));
+	os->objectives.emplace_back(309, "ToC");
+	os->objectives.emplace_back(310, "Wailing Lord");
+	os->objectives.emplace_back(311, "Griffons");
+	os->objectives.emplace_back(312, "Defend");
+	os->objectives.emplace_back(313, "Camp");
+	os->objectives.emplace_back(314, "Menzies");
+	os->objectives.emplace_back(315, "Restore");
+	os->objectives.emplace_back(316, "Khobay");
+	os->objectives.emplace_back(317, "ToS");
+	os->objectives.emplace_back(318, "Burning Forest");
+	os->objectives.emplace_back(319, "The Hunt");
+	objective_sets.push_back(os);
 }
 void ObjectiveTimerWindow::AddUWObjectiveSet() {
-    ObjectiveSet* os = new ObjectiveSet("The Underworld");
-    os->objectives.push_back(new Objective(146, "Chamber"));
-    os->objectives.push_back(new Objective(147, "Restore"));
-    os->objectives.push_back(new Objective(148, "Escort"));
-    os->objectives.push_back(new Objective(149, "UWG"));
-    os->objectives.push_back(new Objective(150, "Vale"));
-    os->objectives.push_back(new Objective(151, "Waste"));
-    os->objectives.push_back(new Objective(152, "Pits"));
-    os->objectives.push_back(new Objective(153, "Planes"));
-    os->objectives.push_back(new Objective(154, "Mnts"));
-    os->objectives.push_back(new Objective(155, "Pools"));
-    os->objectives.push_back(new Objective(157, "Dhuum"));
-    objective_sets.push_back(os);
+	ObjectiveSet *os = new ObjectiveSet;
+	::AsyncGetMapName(os->name, sizeof(os->name));
+	os->objectives.emplace_back(146, "Chamber");
+	os->objectives.emplace_back(147, "Restore");
+	os->objectives.emplace_back(148, "Escort");
+	os->objectives.emplace_back(149, "UWG");
+	os->objectives.emplace_back(150, "Vale");
+	os->objectives.emplace_back(151, "Waste");
+	os->objectives.emplace_back(152, "Pits");
+	os->objectives.emplace_back(153, "Planes");
+	os->objectives.emplace_back(154, "Mnts");
+	os->objectives.emplace_back(155, "Pools");
+	os->objectives.emplace_back(157, "Dhuum");
+	objective_sets.push_back(os);
 }
 
 void ObjectiveTimerWindow::Draw(IDirect3DDevice9* pDevice) {
@@ -154,8 +184,8 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9* pDevice) {
         if (objective_sets.empty()) {
             ImGui::Text("Enter DoA, FoW, or UW to begin");
         } else {
-            for (ObjectiveSet* os : objective_sets) {
-                os->Draw();
+            for (auto& it = objective_sets.rbegin(); it != objective_sets.rend(); it++) {
+                (*it)->Draw();
             }
         }
 	}
@@ -165,9 +195,9 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9* pDevice) {
 ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::GetCurrentObjective(uint32_t obj_id) {
     if (objective_sets.empty()) return nullptr;
 
-    for (Objective* objective : objective_sets.back()->objectives) {
-        if (objective->id == obj_id) {
-            return objective;
+    for (Objective& objective : objective_sets.back()->objectives) {
+        if (objective.id == obj_id) {
+            return &objective;
         }
     }
     return nullptr;
@@ -212,7 +242,7 @@ void ObjectiveTimerWindow::SaveSettings(CSimpleIni* ini) {
 
 ObjectiveTimerWindow::Objective::Objective(uint32_t _id, const char* _name) {
     id = _id;
-    name = _name;
+    strncpy(name, _name, sizeof(name));
     start = -1;
     done = -1;
     duration = -1;
@@ -256,8 +286,8 @@ void ObjectiveTimerWindow::ObjectiveSet::Draw() {
         ImGui::SameLine(GetGridItemX(3));
         ImGui::Text("Duration");
 
-        for (Objective* objective : objectives) {
-            objective->Draw();
+        for (Objective& objective : objectives) {
+            objective.Draw();
         }
     }
 }
