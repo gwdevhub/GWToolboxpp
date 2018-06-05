@@ -128,10 +128,10 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vector2f spawn) {
 	ObjectiveSet *os = new ObjectiveSet;
 	::AsyncGetMapName(os->name, sizeof(os->name));
     Objective objs[n_areas] = {
-		Objective(0x273F, "Foundry"),
-		Objective(0x2742, "City"),
-		Objective(0x2740, "Veil"),
-		Objective(0x2741, "Gloom")
+		Objective(Foundry, "Foundry"),
+		Objective(City, "City"),
+		Objective(Veil, "Veil"),
+		Objective(Gloom, "Gloom")
 	};
 
     for (int i = 0; i < n_areas; ++i) {
@@ -201,35 +201,6 @@ ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::GetCurrentObjective(uint3
         }
     }
     return nullptr;
-
-	//Objective *objectives;
-	//uint32_t id;
-	//if (309 <= obj_id && obj_id <= 319) {
-	//	// fow
-	//	id = obj_id - 309;
-	//	if (id >= countof(obj_fow))
-	//		return nullptr;
-	//	objectives = obj_fow;
-	//} else if (146 <= obj_id && obj_id <= 157) {
-	//	// uw
-	//	id = obj_id - 146;
-	//	if (id >= countof(obj_uw))
-	//		return nullptr;
-	//	objectives = obj_uw;
-	//} else if (0x273F <= obj_id && obj_id <= 0x2742) {
-	//	id = obj_id - 0x273F;
-	//	if (id >= countof(obj_doa))
-	//		return nullptr;
-	//	objectives = obj_doa;
-	//} else {
-	//	return nullptr;
-	//}
-	//Objective *obj = objectives + id;
-	//if (obj_id != obj->id) {
-	//	fprintf(stderr, "Objective id mismatch (expected: %lu, received: %lu)\n", obj->id, obj_id);
-	//	return nullptr;
-	//}
-	//return obj;
 }
 
 void ObjectiveTimerWindow::LoadSettings(CSimpleIni* ini) {
