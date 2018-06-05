@@ -326,7 +326,7 @@ void GWToolbox::Initialize() {
 
 	WIN32_FIND_DATAW find_data;
 	HANDLE find_handle = FindFirstFileW(Resources::GetPath(L"plugins\\*.dll").c_str(), &find_data);
-	if (find_handle) {
+	if (find_handle != INVALID_HANDLE_VALUE) {
 		do {
 			HMODULE dllmod = LoadLibraryW(find_data.cFileName);
 			if (!dllmod) {
