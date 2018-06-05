@@ -132,10 +132,8 @@ void ToolboxSettings::DrawSettingInternal() {
 }
 
 void ToolboxSettings::DrawFreezeSetting() {
-	if (ImGui::Checkbox("Unlock Move All", &move_all)) {
-		ImGui::GetStyle().WindowBorderSize = (move_all ? 1.0f : 0.0f);
-	}
-	ImGui::ShowHelp("Will allow movement and resize of all widgets and windows");
+    ImGui::Checkbox("Unlock Move All", &move_all);
+    ImGui::ShowHelp("Will allow movement and resize of all widgets and windows");
 }
 
 void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
@@ -189,6 +187,8 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
 }
 
 void ToolboxSettings::Update(float delta) {
+    ImGui::GetStyle().WindowBorderSize = (move_all ? 1.0f : 0.0f);
+
 	// save location data
 	if (save_location_data && TIMER_DIFF(location_timer) > 1000) {
 		location_timer = TIMER_INIT();

@@ -15,7 +15,7 @@
 namespace {
 	bool outpost_name_array_getter(void* data, int idx, const char** out_text);
 
-	bool ImInPresearing() { return GW::Map::GetCurrentMapInfo().Region == GW::Region::Presearing; }
+	bool ImInPresearing() { return GW::Map::GetCurrentMapInfo().Region == GW::Region_Presearing; }
 }
 
 void TravelWindow::Initialize() {
