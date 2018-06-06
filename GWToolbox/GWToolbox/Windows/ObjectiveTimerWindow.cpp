@@ -16,6 +16,10 @@
 
 #define countof(arr) (sizeof(arr) / sizeof(arr[0]))
 
+#define TIME_UNKNOWN -1
+
+unsigned int ObjectiveTimerWindow::ObjectiveSet::cur_ui_id = 0;
+
 namespace {
     enum DoA_ObjId : DWORD {
         Foundry = 0x273F,
@@ -33,6 +37,20 @@ namespace {
         return 0;
     }
 
+    void PrintTime(char* buf, size_t size, DWORD time, bool show_ms = true) {
+        if (time == TIME_UNKNOWN) {
+            strncpy(buf, "--:--", size);
+        } else {
+            DWORD sec = time / 1000;
+            if (show_ms) {
+                snprintf(buf, size, "%02d:%02d.%1d",
+                    (sec / 60), sec % 60, (time / 100) % 10);
+            } else {
+                snprintf(buf, size, "%02d:%02d", (sec / 60), sec % 60);
+            }
+        }
+    }
+
 	void AsyncGetMapName(char *buffer, size_t n) {
 		static wchar_t enc_str[16];
 		GW::AreaInfo& info = GW::Map::GetCurrentMapInfo();
@@ -42,6 +60,18 @@ namespace {
 		}
 		GW::UI::AsyncDecodeStr(enc_str, buffer, n);
 	}
+
+    float GetGridItemWidth() {
+        const int n_columns = 4;
+        return (ImGui::GetWindowContentRegionWidth()
+            - (ImGui::GetStyle().ItemInnerSpacing.x * (n_columns - 1))) / n_columns;
+    }
+
+    float GetGridItemX(int i) {
+        const int n_columns = 4;
+        const auto& style = ImGui::GetStyle();
+        return style.WindowPadding.x + (i * ImGui::GetWindowContentRegionWidth() / n_columns);
+    }
 }
 
 void ObjectiveTimerWindow::Initialize() {
@@ -56,6 +86,10 @@ void ObjectiveTimerWindow::Initialize() {
 		case 219215: AddDoAObjectiveSet(packet->spawn_point); break;
 		case 63058:  AddFoWObjectiveSet(); break;
         case 63059:  AddUWObjectiveSet(); break;
+        default: 
+            if (!objective_sets.empty()) {
+                objective_sets.back()->active = false;
+            }
 		}
 		return false;
 	});
@@ -85,7 +119,10 @@ void ObjectiveTimerWindow::Initialize() {
 	GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveDone>(
 	[this](GW::Packet::StoC::ObjectiveDone* packet) -> bool {
 		Objective *obj = GetCurrentObjective(packet->objective_id);
-        if (obj) obj->SetDone();
+        if (obj) {
+            obj->SetDone();
+            objective_sets.back()->CheckSetDone();
+        }
         return false;
 	});
 
@@ -95,10 +132,14 @@ void ObjectiveTimerWindow::Initialize() {
 
 		uint32_t id = packet->message[1];
 		Objective *obj = GetCurrentObjective(id);
-        if (obj) obj->SetDone();
-		uint32_t next_id = doa_get_next(id);
-		Objective *next = GetCurrentObjective(next_id);
-        if (next && !next->IsStarted()) obj->SetStarted();
+        if (obj) {
+            obj->SetDone();
+            objective_sets.back()->CheckSetDone();
+
+            uint32_t next_id = doa_get_next(id);
+            Objective *next = GetCurrentObjective(next_id);
+            if (next && !next->IsStarted()) obj->SetStarted();
+        }
 		return false;
 	});
 }
@@ -138,7 +179,7 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vector2f spawn) {
         os->objectives.push_back(objs[(area + i) % n_areas]);
     }
 
-    os->objectives.front().SetStarted(0);
+    os->objectives.front().SetStarted();
     objective_sets.push_back(os);
 }
 void ObjectiveTimerWindow::AddFoWObjectiveSet() {
@@ -174,6 +215,11 @@ void ObjectiveTimerWindow::AddUWObjectiveSet() {
 	objective_sets.push_back(os);
 }
 
+void ObjectiveTimerWindow::Update(float delta) {
+    if (!objective_sets.empty() && objective_sets.back()->active) {
+        objective_sets.back()->Update();
+    }
+}
 void ObjectiveTimerWindow::Draw(IDirect3DDevice9* pDevice) {
 	if (!visible) return;
 
@@ -194,6 +240,7 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9* pDevice) {
 
 ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::GetCurrentObjective(uint32_t obj_id) {
     if (objective_sets.empty()) return nullptr;
+    if (!objective_sets.back()->active) return nullptr;
 
     for (Objective& objective : objective_sets.back()->objectives) {
         if (objective.id == obj_id) {
@@ -211,69 +258,51 @@ void ObjectiveTimerWindow::SaveSettings(CSimpleIni* ini) {
 	ToolboxWindow::SaveSettings(ini);
 }
 
+
 ObjectiveTimerWindow::Objective::Objective(uint32_t _id, const char* _name) {
     id = _id;
     strncpy(name, _name, sizeof(name));
-    start = -1;
-    done = -1;
-    duration = -1;
-    strncpy(cached_done, "--:--", sizeof(cached_done));
-    strncpy(cached_start, "--:--", sizeof(cached_start));
-    strncpy(cached_duration, "--:--", sizeof(cached_duration));
+    start = TIME_UNKNOWN;
+    done = TIME_UNKNOWN;
+    duration = TIME_UNKNOWN;
+    PrintTime(cached_done, sizeof(cached_done), TIME_UNKNOWN);
+    PrintTime(cached_start, sizeof(cached_start), TIME_UNKNOWN);
+    PrintTime(cached_duration, sizeof(cached_duration), TIME_UNKNOWN);
 }
-void ObjectiveTimerWindow::Objective::SetStarted(DWORD start_time) {
-    if (start_time == -1) {
-        start = GW::Map::GetInstanceTime();
+
+bool ObjectiveTimerWindow::Objective::IsStarted() const { 
+    return start != TIME_UNKNOWN;
+}
+bool ObjectiveTimerWindow::Objective::IsDone() const { 
+    return done != TIME_UNKNOWN;
+}
+void ObjectiveTimerWindow::Objective::SetStarted() {
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
+        start = 0; // still loading, just set to 0
     } else {
-        start = start_time;
+        start = GW::Map::GetInstanceTime();
     }
     PrintTime(cached_start, sizeof(cached_start), start);
 }
 void ObjectiveTimerWindow::Objective::SetDone() {
+    if (start == TIME_UNKNOWN) SetStarted(); // something went wrong
     done = GW::Map::GetInstanceTime();
     PrintTime(cached_done, sizeof(cached_done), done);
     duration = done - start;
     PrintTime(cached_duration, sizeof(cached_duration), duration);
 }
-void ObjectiveTimerWindow::Objective::PrintTime(char* buf, size_t size, DWORD time) {
-    DWORD sec = time / 1000;
-    snprintf(buf, size, "%02d:%02d.%1d",
-        (sec / 60), sec % 60, (time / 100) % 10);
-}
 
-namespace {
-    float GetGridItemX(int i) {
-        const int n_columns = 4;
-        const auto& style = ImGui::GetStyle();
-        return style.WindowPadding.x + (i * ImGui::GetWindowContentRegionWidth() / n_columns);
-    }
-}
-void ObjectiveTimerWindow::ObjectiveSet::Draw() {
-    if (ImGui::CollapsingHeader(name, ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::SetCursorPosX(GetGridItemX(1));
-        ImGui::Text("Started");
-        ImGui::SameLine(GetGridItemX(2));
-        ImGui::Text("Completed");
-        ImGui::SameLine(GetGridItemX(3));
-        ImGui::Text("Duration");
-
-        for (Objective& objective : objectives) {
-            objective.Draw();
-        }
-    }
-}
-
-namespace {
-    float GetGridItemWidth() {
-        const int n_columns = 4;
-        return (ImGui::GetWindowContentRegionWidth()
-            - (ImGui::GetStyle().ItemInnerSpacing.x * (n_columns - 1))) / n_columns;
+void ObjectiveTimerWindow::Objective::Update() {
+    if (start == TIME_UNKNOWN) {
+        PrintTime(cached_duration, sizeof(cached_duration), TIME_UNKNOWN);
+    } else if (done == TIME_UNKNOWN) {
+        PrintTime(cached_duration, sizeof(cached_duration), GW::Map::GetInstanceTime() - start);
     }
 }
 void ObjectiveTimerWindow::Objective::Draw() {
     if (ImGui::Button(name, ImVec2(GetGridItemWidth(), 0))) {
         char buf[256];
-        snprintf(buf, 256, "[%s] ~ Started: %s ~ Completed: %s ~ Duration: %s", 
+        snprintf(buf, 256, "[%s] ~ Started: %s ~ Completed: %s ~ Duration: %s",
             name, cached_start, cached_done, cached_duration);
         GW::Chat::SendChat('#', buf);
     }
@@ -283,15 +312,55 @@ void ObjectiveTimerWindow::Objective::Draw() {
     ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
     ImGui::InputText("##done", cached_done, sizeof(cached_done), ImGuiInputTextFlags_ReadOnly);
     ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-    if (start == -1) {
-        char buf[16];
-        strncpy(buf, "--:--", sizeof(buf));
-        ImGui::InputText("##duration", buf, sizeof(buf), ImGuiInputTextFlags_ReadOnly);
-    } else if (duration == -1) {
-        char buf[16];
-        PrintTime(buf, sizeof(buf), GW::Map::GetInstanceTime() - start);
-        ImGui::InputText("##duration", buf, sizeof(buf), ImGuiInputTextFlags_ReadOnly);
-    } else {
-        ImGui::InputText("##duration", cached_duration, sizeof(cached_duration), ImGuiInputTextFlags_ReadOnly);
+    ImGui::InputText("##duration", cached_duration, sizeof(cached_duration), ImGuiInputTextFlags_ReadOnly);
+}
+
+
+void ObjectiveTimerWindow::ObjectiveSet::Update() {
+    if (!active) return;
+
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
+        time = GW::Map::GetInstanceTime();
+        PrintTime(cached_time, sizeof(cached_time), time, false);
+    }
+
+    for (Objective& obj : objectives) {
+        obj.Update();
+    }
+}
+void ObjectiveTimerWindow::ObjectiveSet::CheckSetDone() {
+    bool done = true;
+    for (const Objective& obj : objectives) {
+        if (obj.done == TIME_UNKNOWN) {
+            done = false;
+            break;
+        }
+    }
+    if (done) {
+        active = false;
+    }
+}
+void ObjectiveTimerWindow::ObjectiveSet::Draw() {
+    char buf[256];
+    snprintf(buf, sizeof(buf), "%s - %s###header%d", name, cached_time, ui_id);
+
+    bool is_open = true;
+    if (ImGui::CollapsingHeader(buf, &is_open, ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::PushID(ui_id);
+        ImGui::SetCursorPosX(GetGridItemX(1));
+        ImGui::Text("Started");
+        ImGui::SameLine(GetGridItemX(2));
+        ImGui::Text("Done");
+        ImGui::SameLine(GetGridItemX(3));
+        ImGui::Text("Duration");
+
+        for (Objective& objective : objectives) {
+            objective.Draw();
+        }
+
+        ImGui::PopID();
+    }
+    if (!is_open) {
+        // remove the set!
     }
 }

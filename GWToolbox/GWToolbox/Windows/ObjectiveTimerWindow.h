@@ -21,6 +21,7 @@ public:
 
 	void Initialize() override;
 
+    void Update(float delta) override;
 	void Draw(IDirect3DDevice9* pDevice) override;
 
 	void LoadSettings(CSimpleIni* ini) override;
@@ -39,29 +40,40 @@ private:
         char cached_duration[16];
         Objective(uint32_t id, const char* name = "");
 
-        bool IsStarted() const { return start != -1; }
-        bool IsDone() const { return done != -1; }
-        void SetStarted(DWORD start_time = -1);
+        bool IsStarted() const;
+        bool IsDone() const;
+        void SetStarted();
         void SetDone();
         void Draw();
-
-        static void PrintTime(char* buf, size_t size, DWORD time);
+        void Update();
 	};
 
     class ObjectiveSet {
     public:
-        ObjectiveSet() {
+        ObjectiveSet() : ui_id(cur_ui_id++) {
 			name[0] = 0;
+            cached_time[0] = 0;
 			GetLocalTime(&system_time);
         }
         // ~ObjectiveSet() { for (auto* o : objectives) delete o; }
 
 		SYSTEMTIME system_time;
+        DWORD time = -1;
+        char cached_time[16];
+
+        bool active = true;
         char name[256];
         std::vector<Objective> objectives;
 
+        void CheckSetDone();
         void Draw();
+        void Update();
         // todo: print to file
+
+    private:
+        // an internal id to ensure interface consistency
+        const unsigned int ui_id = 0;	
+        static unsigned int cur_ui_id;
     };
 
     std::vector<ObjectiveSet *> objective_sets;
