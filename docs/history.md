@@ -10,7 +10,7 @@ Previous releases are provided as dll files. In order to use it, you need to use
 ## Version 2.15
 * [Fix] Fixed toolbox functionality after June 07 2018 game update.
 * [New] GWToolbox will hide itself if you hide the game user interface. Will also work with "Shift+Print Screen".
-* [New] You can now send whisper with hotkeys. In the message text field use the format: <target name>,<message>.
+* [New] You can now send whisper with hotkeys. In the message text field use the format: ```<target name>,<message>```.
 
 [Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.15_Release/GWToolbox.dll)
 

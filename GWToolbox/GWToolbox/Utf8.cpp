@@ -7,10 +7,7 @@ string Unicode16ToUtf8(const wchar_t *str)
 {
 	string res = {0};
 	int size = WideCharToMultiByte(CP_UTF8, 0, str, -1, NULL, 0, NULL, NULL);
-	if (size < 0) {
-		printf("WideCharToMultiByte = %d\n", size);
-		return res;
-	}
+	if (size < 0) return res;
 	res.bytes = new char[size + 1];
 	res.count = size;
 	WideCharToMultiByte(CP_UTF8, 0, str, -1, res.bytes, size + 1, NULL, NULL);

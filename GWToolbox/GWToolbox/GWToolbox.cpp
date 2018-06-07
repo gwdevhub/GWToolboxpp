@@ -428,9 +428,6 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 		
 		GWToolbox& tb = GWToolbox::Instance();
 		tb.imgui_inifile = Resources::GetPathUtf8(L"interface.ini");
-		if (!tb.imgui_inifile.count) {
-			printf("@@@@@@@ %lu\n", GetLastError());
-		}
 		io.IniFilename = tb.imgui_inifile.bytes;
 
 		Resources::Instance().EnsureFileExists(Resources::GetPath(L"Font.ttf"),
