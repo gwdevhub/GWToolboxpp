@@ -21,14 +21,28 @@ namespace {
 
 void GuiUtils::LoadFonts() {
 	Utf8 fontfile = Resources::GetPathUtf8(L"Font.ttf");
+	Utf8 fontfile_jp = Resources::GetPathUtf8(L"NotoSansCJKjp-hinted/NotoSansCJKjp-Medium.otf");
+	Utf8 fontfile_kr = Resources::GetPathUtf8(L"NotoSansCJKkr-hinted/NotoSansCJKkr-Medium.otf");
+
 	ImGuiIO& io = ImGui::GetIO();
+	ImFontConfig config;
+	config.MergeMode = true;
+
 	font16 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 16.0f);
+	io.Fonts->AddFontFromFileTTF(fontfile_jp.c_str(), 16.0f, &config, io.Fonts->GetGlyphRangesJapanese());
+	io.Fonts->AddFontFromFileTTF(fontfile_kr.c_str(), 16.0f, &config, io.Fonts->GetGlyphRangesKorean());
 	font18 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 18.0f);
 	font20 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 20.0f);
 	font24 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 24.0f);
 	font42 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 42.0f);
 	font48 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 48.0f);
+
+	// font18 = io.Fonts->AddFontFromFileTTF(fontfile_jp.c_str(), 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
+	// font20 = io.Fonts->AddFontFromFileTTF(fontfile_jp.c_str(), 20.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
+	// font24 = io.Fonts->AddFontFromFileTTF(fontfile_jp.c_str(), 24.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
+	// font42 = io.Fonts->AddFontFromFileTTF(fontfile_jp.c_str(), 42.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
 }
+
 ImFont* GuiUtils::GetFont(GuiUtils::FontSize size) {
 	ImFont* font = [](FontSize size) -> ImFont* {
 		switch (size) {
