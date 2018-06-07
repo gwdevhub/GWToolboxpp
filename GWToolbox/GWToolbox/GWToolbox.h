@@ -46,6 +46,7 @@ public:
 private:
 	std::vector<ToolboxModule*> modules;
 	std::vector<ToolboxUIElement*> uielements;
+	std::vector<HANDLE> dllhandles;
 
 	CSimpleIni* inifile = nullptr;
 };

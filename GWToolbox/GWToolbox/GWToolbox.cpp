@@ -320,6 +320,40 @@ void GWToolbox::Initialize() {
 	}
 	LoadModuleSettings(); // This will only read settings of the core modules (specified above)
 
+						  // Loading all plugin modules.
+
+	std::vector<ToolboxModule*> plugin_modules;
+
+	WIN32_FIND_DATAW find_data;
+	HANDLE find_handle = FindFirstFileW(Resources::GetPath(L"plugins\\*.dll").c_str(), &find_data);
+	if (find_handle != INVALID_HANDLE_VALUE) {
+		do {
+			HMODULE dllmod = LoadLibraryW(find_data.cFileName);
+			if (!dllmod) {
+				Log::Warning("DLL plugin \"%S\" could not be loaded. LoadLibraryW Err %d", find_data.cFileName, GetLastError());
+				continue;
+			}
+			typedef ToolboxModule* InstanceFn_t();
+			InstanceFn_t* inst = (InstanceFn_t*)GetProcAddress(dllmod, "GWTB_Instance");
+			if (!inst) {
+				Log::Warning("DLL plugin \"%S\" could not be loaded. TB_Instance entry point not defined.", find_data.cFileName);
+				continue;
+			}
+			ToolboxModule* mod = inst();
+			if (!mod) {
+				Log::Warning("DLL plugin \"%S\" could not be loaded. Module does not exist.", find_data.cFileName);
+				continue;
+			}
+			dllhandles.push_back(dllmod);
+			plugin_modules.push_back(mod);
+			Log::LogW(L"DLL plugin \"%s\" loaded successfully.", find_data.cFileName);
+		} while (FindNextFileW(find_handle, &find_data));
+	}
+
+	for (ToolboxModule* plugin : plugin_modules) {
+		plugin->Initialize();
+	}
+
 	ToolboxSettings::Instance().InitializeModules(); // initialize all other modules as specified by the user
 
 	// Only read settings of non-core modules
@@ -387,6 +421,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 		OldWndProc = SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)SafeWndProc);
 		Log::Log("Installed input event handler, oldwndproc = 0x%X\n", OldWndProc);
 
+        ImGui::CreateContext();
 		ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), device);
 		ImGuiIO& io = ImGui::GetIO();
 		io.MouseDrawCursor = false;
@@ -418,7 +453,10 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 		&& GW::Render::GetViewportWidth() > 0
 		&& GW::Render::GetViewportHeight() > 0) {
 
-		ImGui_ImplDX9_NewFrame(GW::Render::GetViewportWidth(), GW::Render::GetViewportHeight());
+		if (!GW::UI::GetIsUIDrawn())
+			return;
+
+		ImGui_ImplDX9_NewFrame();
 
 		// Improve precision with QueryPerformanceCounter
 		DWORD tick = GetTickCount();
@@ -443,6 +481,8 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 #endif
 
 		ImGui::Render();
+        ImDrawData* draw_data = ImGui::GetDrawData();
+        ImGui_ImplDX9_RenderDrawData(draw_data);
 	}
 
 	// === destruction ===
@@ -450,6 +490,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 		GWToolbox::Instance().Terminate();
 
 		ImGui_ImplDX9_Shutdown();
+        ImGui::DestroyContext();
 
 		Log::Log("Restoring input hook\n");
 		SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
