@@ -357,9 +357,9 @@ void GameSettings::Initialize() {
 	}
 
 	{
-		uintptr_t found = GW::Scanner::Find("\x8B\x9E\x7C\x0C\x00\x00\x2B\xC3\x8B", "xxxxxxxxx", 0);
-		patches.push_back(new GW::MemoryPatcher(found - 0xB,  "\xEB", 1));
-		patches.push_back(new GW::MemoryPatcher(found + 0x12, "\xEB", 1));
+		uintptr_t found = GW::Scanner::Find("\x2B\x8E\x78\x0C\x00\x00\x3B\xC1\x7F", "xxxxxxxxx", 0);
+		patches.push_back(new GW::MemoryPatcher(found + 0xF,  "\xEB", 1));
+		patches.push_back(new GW::MemoryPatcher(found + 0x1E, "\xEB", 1));
 	}
 
 	{
@@ -371,16 +371,16 @@ void GameSettings::Initialize() {
 	}
 
 	{
-		uintptr_t found = GW::Scanner::Find("\x56\x57\x8B\xF9\x8B\x87\xF4\x0C\x00\x00\x85\xC0\x75\x14", "xxxxxxxxxxxxxx", 0);
+		uintptr_t found = GW::Scanner::Find("\x55\x8B\xEC\x51\x56\x57\x8B\xF9\x8B\x87\xF8\x0C\x00\x00", "xxxxxxxxxxxxxx", 0);
 		void *patch = "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90";
-		patches.push_back(new GW::MemoryPatcher(found + 0x86,  patch, 10));
-		patches.push_back(new GW::MemoryPatcher(found + 0x100, patch, 10));
-		patches.push_back(new GW::MemoryPatcher(found + 0x13F, patch, 10));
+		patches.push_back(new GW::MemoryPatcher(found + 0x8A,  patch, 10));
+		patches.push_back(new GW::MemoryPatcher(found + 0x10A, patch, 10));
+		patches.push_back(new GW::MemoryPatcher(found + 0x149, patch, 10));
 	}
 #endif // ENABLE_BORDERLESS
 	{
 		// Patch that allow storage page (and Anniversary page) to work... (ask Ziox for more info)
-		uintptr_t found = GW::Scanner::Find("\xEB\x20\x33\xC0\xBE\x06", "xxxxxx", -4);
+		uintptr_t found = GW::Scanner::Find("\xEB\x00\x33\xC0\xBE\x06", "x?xxxx", -4);
 		printf("[SCAN] StoragePatch = %p\n", (void *)found);
 
 		// Xunlai Chest has a behavior where if you
@@ -447,7 +447,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
 	GW::Chat::ShowTimestamps = ini->GetBoolValue(Name(), "show_timestamps", false);
 	GW::Chat::TimestampsColor = Colors::Load(ini, Name(), "timestamps_color", Colors::White());
-	GW::Chat::KeepChatHistory = ini->GetBoolValue(Name(), "keep_chat_history", true);
+	// GW::Chat::KeepChatHistory = ini->GetBoolValue(Name(), "keep_chat_history", true); @Deprecated
 
 	openlinks = ini->GetBoolValue(Name(), VAR_NAME(openlinks), true);
 	auto_url = ini->GetBoolValue(Name(), VAR_NAME(auto_url), true);
@@ -486,7 +486,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 
 	ini->SetBoolValue(Name(), "show_timestamps", GW::Chat::ShowTimestamps);
 	Colors::Save(ini, Name(), "timestamps_color", GW::Chat::TimestampsColor);
-	ini->SetBoolValue(Name(), "keep_chat_history", GW::Chat::KeepChatHistory);
+	// ini->SetBoolValue(Name(), "keep_chat_history", GW::Chat::KeepChatHistory); @Deprecated
 
 	ini->SetBoolValue(Name(), VAR_NAME(openlinks), openlinks);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_url), auto_url);
@@ -518,8 +518,8 @@ void GameSettings::DrawSettingInternal() {
 	}
 	ImGui::ShowHelp("Show timestamps in message history.");
 
-	ImGui::Checkbox("Keep chat history.", &GW::Chat::KeepChatHistory);
-	ImGui::ShowHelp("Messages in the chat do not disappear on character change.");
+	// ImGui::Checkbox("Keep chat history.", &GW::Chat::KeepChatHistory); @Deprecated
+	// ImGui::ShowHelp("Messages in the chat do not disappear on character change.");
 
 	if (ImGui::Checkbox("Open web links from templates", &openlinks)) {
 		GW::Chat::SetOpenLinks(openlinks);
