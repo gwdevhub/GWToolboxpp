@@ -34,7 +34,7 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.12.1_Release/GWToolbox.dll)
 
-## Version 2.12```
+## Version 2.12
 * [Fix] Fixed toolbox functionality after April 30 2018 game update.
 * [New] Added an option in the chat filter to match messages with regular expressions.
 * [New] Improved custom agent rendering functionality. 
