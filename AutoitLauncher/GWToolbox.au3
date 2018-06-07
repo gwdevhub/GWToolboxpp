@@ -1,6 +1,9 @@
 #RequireAdmin
 
 #AutoIt3Wrapper_Icon=..\resources\gwtoolbox.ico
+#AutoIt3Wrapper_Res_Description=GWToolbox++ Launcher
+#AutoIt3Wrapper_Res_Fileversion=1.2.0.0
+Global Const $laucher_version = 1.2 ; only shown in log. Increase after bugfixes to ease debugging of user issues.
 
 #cs
 Changelog:
@@ -12,6 +15,10 @@ Changelog:
 - added more log strings related to architecture and runtime checks
 - added flag to optionally skip runtime checks
 - added message box to optionally set the above flag
+
+1.2
+- fixed a bug with client selection
+- added more debug strings related to client selection
 
 #ce
 
@@ -35,7 +42,6 @@ Opt("MustDeclareVars", True)
 Opt("GuiResizeMode", BitOR($GUI_DOCKSIZE, $GUI_DOCKTOP, $GUI_DOCKLEFT))
 
 ; ==== Globals ====
-Global Const $laucher_version = 1.1 ; only shown in log, but w/e. Feel free to increase
 Global Const $folder = @LocalAppDataDir & "\GWToolboxpp\"
 Global $dllpath = $folder & "GWToolbox.dll"
 Global Const $inipath = $folder & "GWToolbox.ini"
@@ -364,7 +370,9 @@ Switch $WinList[0][0]
 		Error("Guild Wars not running")
 	Case 1
 		$gwPID = WinGetProcess($WinList[1][1])
+		Out("One copy of GW detected. PID: " & $gwPID)
 	Case Else
+		Out("Multiple copies of GW detected")
 		Local $char_names[$WinList[0][0]]
 		Local $lFirstChar
 		Local $lComboStr
@@ -383,9 +391,11 @@ Switch $WinList[0][0]
 		GUICtrlSetData(-1, $lComboStr, $lFirstChar)
 		Local Const $launchbutton = GUICtrlCreateButton("Launch", 6, 31, 138, 24)
 		GUISetState(@SW_SHOW, $selection_gui)
+		Local $index
 		While True
 			Switch GUIGetMsg()
 				Case $launchbutton
+					$index = _GUICtrlComboBox_GetCurSel($comboCharname) ; this needs to be before GUIDelete
 					GUIDelete($selection_gui)
 					ExitLoop
 				Case $GUI_EVENT_CLOSE
@@ -395,8 +405,8 @@ Switch $WinList[0][0]
 			Sleep(10)
 		WEnd
 
-		Local Const $index = _GUICtrlComboBox_GetCurSel($comboCharname)
 		$gwPID = WinGetProcess($WinList[$index + 1][1])
+		Out("Client (" & $index & ") selected. PID: " & $gwPID)
 EndSwitch
 
 If Not ProcessExists($gwPID) Then Error("Cannot find Guild Wars process")
