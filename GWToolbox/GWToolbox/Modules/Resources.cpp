@@ -50,9 +50,9 @@ void Resources::EnsureFolderExists(std::wstring path) {
 	}
 }
 
-Utf8 Resources::GetPathUtf8(std::wstring file) {
+string Resources::GetPathUtf8(std::wstring file) {
 	std::wstring path = GetPath(file);
-	return Utf8(path.c_str());
+	return Unicode16ToUtf8(path.c_str());
 }
 
 bool Resources::Download(std::wstring path_to_file, std::wstring url) {

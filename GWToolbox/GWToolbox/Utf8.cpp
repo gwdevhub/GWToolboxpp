@@ -1,55 +1,18 @@
 #include "Utf8.h"
 
-#include <uchar.h>
-#include <wchar.h>
-#include <string.h>
-#include <stdlib.h>
-
 #include <Windows.h>
+#include <stdio.h>
 
-static size_t compute_required_size(const wchar_t *str, size_t max_len);
-
-Utf8::~Utf8()
+string Unicode16ToUtf8(const wchar_t *str)
 {
-	if (bytes) delete bytes;
-}
-
-bool Utf8::init(const wchar_t *str, size_t len)
-{
-	// we alway put a null character
-	size_t required_size = compute_required_size(str, len);
-	if (!required_size) return false;
-
-	bytes = new char[required_size + 1];
-	if (!bytes) return false;
-
-	allocated = required_size + 1;
-	length = len;
-	size = required_size;
-	
-	WideCharToMultiByte(CP_UTF8, 0, str, len, bytes, required_size, NULL, NULL);
-	bytes[size] = 0;
-	return true;
-}
-
-Utf8::Utf8(const wchar_t *str)
-{
-	size_t len = wcslen(str);
-	if (!init(str, len)) {
-		bytes = nullptr;
+	string res = {0};
+	int size = WideCharToMultiByte(CP_UTF8, 0, str, -1, NULL, 0, NULL, NULL);
+	if (size < 0) {
+		printf("WideCharToMultiByte = %d\n", size);
+		return res;
 	}
-}
-
-Utf8::Utf8(const wchar_t *str, size_t length)
-{
-	if (!init(str, length)) {
-		bytes = nullptr;
-	}
-}
-
-static size_t compute_required_size(const wchar_t *str, size_t max_len)
-{
-	int res = WideCharToMultiByte(CP_UTF8, 0, str, max_len, NULL, 0, NULL, NULL);
-	if (!res) return 0;
+	res.bytes = new char[size + 1];
+	res.count = size;
+	WideCharToMultiByte(CP_UTF8, 0, str, -1, res.bytes, size + 1, NULL, NULL);
 	return res;
 }

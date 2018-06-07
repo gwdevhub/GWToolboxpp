@@ -3,8 +3,9 @@
 #include <Windows.h>
 
 #include <vector>
-
 #include <SimpleIni.h>
+
+#include "Utf8.h"
 #include "ToolboxModule.h"
 #include "ToolboxUIElement.h"
 
@@ -16,7 +17,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam);
 
 class GWToolbox {
 	GWToolbox() {};
-	~GWToolbox() {};
+	~GWToolbox() { free(imgui_inifile); };
 public:
 	static GWToolbox& Instance() {
 		static GWToolbox instance;
@@ -43,10 +44,12 @@ public:
 	const std::vector<ToolboxUIElement*>& GetUIElements() const { return uielements; }
 
 	bool right_mouse_down = false;
+
 private:
 	std::vector<ToolboxModule*> modules;
 	std::vector<ToolboxUIElement*> uielements;
 	std::vector<HANDLE> dllhandles;
 
+	string imgui_inifile;
 	CSimpleIni* inifile = nullptr;
 };

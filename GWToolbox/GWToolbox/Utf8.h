@@ -3,21 +3,15 @@
 
 #include <stddef.h>
 
-struct Utf8
-{
-	char  *bytes = nullptr;
-	size_t size;
-	size_t length;
-	size_t allocated;
-
-	bool init(const wchar_t *str, size_t length);
-
-	Utf8(const wchar_t *str);
-	Utf8(const wchar_t *str, size_t length);
-
-	~Utf8();
-
-	const char *c_str() { return bytes; }
+struct string {
+	char  *bytes;
+	size_t count;
 };
+
+static inline void free(string& s) {
+	if (s.bytes) delete s.bytes;
+}
+
+string Unicode16ToUtf8(const wchar_t *str);
 
 #endif // UTF8_H_INC
