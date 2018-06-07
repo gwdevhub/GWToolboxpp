@@ -20,6 +20,8 @@ DWORD WINAPI init(HMODULE hModule){
 		if (!(found && *found)) {
 			MessageBoxA(0, "We can't determine if the character is ingame.\nContact the developpers.", "GWToolbox++ - Clientside Error Detected", 0);
 			FreeLibraryAndExitThread(hModule, EXIT_SUCCESS);
+		} else {
+			printf("[SCAN] is_ingame = %p\n", found);
 		}
 
 		DWORD *is_ingame = *found;

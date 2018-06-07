@@ -17,7 +17,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GWCA", "Dependencies\GWCA\G
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LUA", "LUA\LUA.vcxproj", "{07E36EE0-D8A8-48F0-A872-681512E93CCD}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GWCA_Tests", "Dependencies\GWCA\Tests\GWCA_Tests.vcxproj", "{ECC70C1A-462D-4BF1-95CA-B8B95E6E01AC}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GWCA_Test_DLL", "Dependencies\GWCA\GWCA_Test_DLL\GWCA_Test_DLL.vcxproj", "{ECC70C1A-462D-4BF1-95CA-B8B95E6E01AC}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GWCA_Test_Static", "Dependencies\GWCA\GWCA_Test_Static\GWCA_Test_Static.vcxproj", "{A917F016-425B-485A-AB6B-9F0331B5CF5D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -45,6 +47,10 @@ Global
 		{ECC70C1A-462D-4BF1-95CA-B8B95E6E01AC}.Debug|Win32.Build.0 = Debug|Win32
 		{ECC70C1A-462D-4BF1-95CA-B8B95E6E01AC}.Release|Win32.ActiveCfg = Release|Win32
 		{ECC70C1A-462D-4BF1-95CA-B8B95E6E01AC}.Release|Win32.Build.0 = Release|Win32
+		{A917F016-425B-485A-AB6B-9F0331B5CF5D}.Debug|Win32.ActiveCfg = Debug|Win32
+		{A917F016-425B-485A-AB6B-9F0331B5CF5D}.Debug|Win32.Build.0 = Debug|Win32
+		{A917F016-425B-485A-AB6B-9F0331B5CF5D}.Release|Win32.ActiveCfg = Release|Win32
+		{A917F016-425B-485A-AB6B-9F0331B5CF5D}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
