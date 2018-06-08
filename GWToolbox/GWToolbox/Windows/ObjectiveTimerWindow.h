@@ -37,6 +37,7 @@ private:
 		char cached_done[16];
 		char cached_start[16];
         char cached_duration[16];
+		bool cancelled;
 
         Objective(uint32_t id, const char* name = "");
         void SetStarted(DWORD start_time = -1);
@@ -48,18 +49,20 @@ private:
 
     class ObjectiveSet {
     public:
-        ObjectiveSet() {
-			name[0] = 0;
-			GetLocalTime(&system_time);
-        }
-        // ~ObjectiveSet() { for (auto* o : objectives) delete o; }
+        ObjectiveSet();
 
 		SYSTEMTIME system_time;
         char name[256];
         std::vector<Objective> objectives;
+		unsigned int ui_id;
 
         void Draw();
+		void StopObjectives();
+		
+
+		static void PrintTime(char* buf, size_t size, SYSTEMTIME time);
         // todo: print to file
+		static unsigned int next_ui_id;
     };
 
     std::vector<ObjectiveSet *> objective_sets;

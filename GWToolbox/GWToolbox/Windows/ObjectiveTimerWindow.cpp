@@ -1,5 +1,7 @@
 #include "ObjectiveTimerWindow.h"
 
+#include <imgui_internal.h>
+
 #include <GWCA\Constants\QuestIDs.h>
 #include <GWCA\Constants\Constants.h>
 
@@ -15,6 +17,8 @@
 #include <Modules\Resources.h>
 
 #define countof(arr) (sizeof(arr) / sizeof(arr[0]))
+
+unsigned int ObjectiveTimerWindow::ObjectiveSet::next_ui_id = 0;
 
 namespace {
     uint32_t doa_get_next(uint32_t id) {
@@ -40,6 +44,24 @@ namespace {
 
 void ObjectiveTimerWindow::Initialize() {
 	ToolboxWindow::Initialize();
+
+	GW::StoC::AddCallback<GW::Packet::StoC::PartyDefeated>(
+	[this](GW::Packet::StoC::PartyDefeated *packet) -> bool {
+		if (objective_sets.size() > 0) {
+			ObjectiveSet *os = objective_sets.back();
+			os->StopObjectives();
+		}
+		return false;
+	});
+
+	GW::StoC::AddCallback<GW::Packet::StoC::GameSrvTransfer>(
+	[this](GW::Packet::StoC::GameSrvTransfer *packet) -> bool {
+		if (objective_sets.size() > 0) {
+			ObjectiveSet *os = objective_sets.back();
+			os->StopObjectives();
+		}
+		return false;
+	});
 
 	GW::StoC::AddCallback<GW::Packet::StoC::InstanceLoadFile>(
 	[this](GW::Packet::StoC::InstanceLoadFile *packet) -> bool {
@@ -95,6 +117,13 @@ void ObjectiveTimerWindow::Initialize() {
         if (next) obj->SetStarted();
 		return false;
 	});
+}
+
+void ObjectiveTimerWindow::ObjectiveSet::StopObjectives() {
+	for (Objective& obj : objectives) {
+		if (obj.done == -1)
+			obj.cancelled = true;
+	}
 }
 
 void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vector2f spawn) {
@@ -195,35 +224,6 @@ ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::GetCurrentObjective(uint3
         }
     }
     return nullptr;
-
-	//Objective *objectives;
-	//uint32_t id;
-	//if (309 <= obj_id && obj_id <= 319) {
-	//	// fow
-	//	id = obj_id - 309;
-	//	if (id >= countof(obj_fow))
-	//		return nullptr;
-	//	objectives = obj_fow;
-	//} else if (146 <= obj_id && obj_id <= 157) {
-	//	// uw
-	//	id = obj_id - 146;
-	//	if (id >= countof(obj_uw))
-	//		return nullptr;
-	//	objectives = obj_uw;
-	//} else if (0x273F <= obj_id && obj_id <= 0x2742) {
-	//	id = obj_id - 0x273F;
-	//	if (id >= countof(obj_doa))
-	//		return nullptr;
-	//	objectives = obj_doa;
-	//} else {
-	//	return nullptr;
-	//}
-	//Objective *obj = objectives + id;
-	//if (obj_id != obj->id) {
-	//	fprintf(stderr, "Objective id mismatch (expected: %lu, received: %lu)\n", obj->id, obj_id);
-	//	return nullptr;
-	//}
-	//return obj;
 }
 
 void ObjectiveTimerWindow::LoadSettings(CSimpleIni* ini) {
@@ -243,6 +243,7 @@ ObjectiveTimerWindow::Objective::Objective(uint32_t _id, const char* _name) {
     strncpy(cached_done, "--:--", sizeof(cached_done));
     strncpy(cached_start, "--:--", sizeof(cached_start));
     strncpy(cached_duration, "--:--", sizeof(cached_duration));
+	cancelled = false;
 }
 void ObjectiveTimerWindow::Objective::SetStarted(DWORD start_time) {
     if (start_time == -1) {
@@ -271,8 +272,21 @@ namespace {
         return style.WindowPadding.x + (i * ImGui::GetWindowContentRegionWidth() / n_columns);
     }
 }
+
+ObjectiveTimerWindow::ObjectiveSet::ObjectiveSet() {
+	name[0] = 0;
+	GetLocalTime(&system_time);
+	ui_id = next_ui_id;
+	next_ui_id++;
+}
+
 void ObjectiveTimerWindow::ObjectiveSet::Draw() {
-    if (ImGui::CollapsingHeader(name, ImGuiTreeNodeFlags_DefaultOpen)) {
+	char header[128];
+	char time[32];
+	PrintTime(time, 32, system_time);
+	snprintf(header, 128, "%s %s##%u", name, time, ui_id);
+
+    if (ImGui::CollapsingHeader(header, ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::SetCursorPosX(GetGridItemX(1));
         ImGui::Text("Started");
         ImGui::SameLine(GetGridItemX(2));
@@ -284,6 +298,10 @@ void ObjectiveTimerWindow::ObjectiveSet::Draw() {
             objective.Draw();
         }
     }
+}
+
+void ObjectiveTimerWindow::ObjectiveSet::PrintTime(char* buf, size_t size, SYSTEMTIME time) {
+	snprintf(buf, size, "%02d:%02d:%02d", time.wHour, time.wMinute, time.wMilliseconds / 60);
 }
 
 namespace {
@@ -306,10 +324,8 @@ void ObjectiveTimerWindow::Objective::Draw() {
     ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
     ImGui::InputText("##done", cached_done, sizeof(cached_done), ImGuiInputTextFlags_ReadOnly);
     ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-    if (start == -1) {
-        char buf[16];
-        strncpy(buf, "--:--", sizeof(buf));
-        ImGui::InputText("##duration", buf, sizeof(buf), ImGuiInputTextFlags_ReadOnly);
+    if (start == -1 || cancelled) {
+        ImGui::InputText("##duration", cached_duration, sizeof(cached_duration), ImGuiInputTextFlags_ReadOnly);
     } else if (duration == -1) {
         char buf[16];
         PrintTime(buf, sizeof(buf), GW::Map::GetInstanceTime() - start);
