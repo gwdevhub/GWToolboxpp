@@ -56,4 +56,5 @@ private:
 	bool use_notepad = true;
 	bool use_vanquish = true;
 	bool use_alcohol = true;
+	bool use_instancetimer = true;
 };
