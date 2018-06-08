@@ -20,14 +20,15 @@ namespace {
 }
 
 void GuiUtils::LoadFonts() {
-	Utf8 fontfile = Resources::GetPathUtf8(L"Font.ttf");
+	string fontfile = Resources::GetPathUtf8(L"Font.ttf");
 	ImGuiIO& io = ImGui::GetIO();
-	font16 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 16.0f);
-	font18 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 18.0f);
-	font20 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 20.0f);
-	font24 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 24.0f);
-	font42 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 42.0f);
-	font48 = io.Fonts->AddFontFromFileTTF(fontfile.c_str(), 48.0f);
+	font16 = io.Fonts->AddFontFromFileTTF(fontfile.bytes, 16.0f);
+	font18 = io.Fonts->AddFontFromFileTTF(fontfile.bytes, 18.0f);
+	font20 = io.Fonts->AddFontFromFileTTF(fontfile.bytes, 20.0f);
+	font24 = io.Fonts->AddFontFromFileTTF(fontfile.bytes, 24.0f);
+	font42 = io.Fonts->AddFontFromFileTTF(fontfile.bytes, 42.0f);
+	font48 = io.Fonts->AddFontFromFileTTF(fontfile.bytes, 48.0f);
+	free(fontfile);
 }
 ImFont* GuiUtils::GetFont(GuiUtils::FontSize size) {
 	ImFont* font = [](FontSize size) -> ImFont* {
