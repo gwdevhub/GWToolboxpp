@@ -533,7 +533,9 @@ void GameSettings::DrawSettingInternal() {
 
 	if (ImGui::Checkbox("Tick is a toggle", &tick_is_toggle)) {
 		if (tick_is_toggle) {
+			// @Cleanup: Maybe figure out a better we to hook in runtime vs hook in init time (we queue hooks and apply them in a batch)
 			GW::PartyMgr::SetTickToggle();
+			GW::Hook::EnableHooks();
 		} else {
 			GW::PartyMgr::RestoreTickToggle();
 		}
