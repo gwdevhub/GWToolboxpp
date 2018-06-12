@@ -3,6 +3,7 @@
 #include <GWCA\Managers\MerchantMgr.h>
 
 #include <deque>
+#include <vector>
 
 #include "ToolboxWindow.h"
 
@@ -61,10 +62,6 @@ private:
 	std::string GetPrice(Material mat1, float fac1,
 		Material mat2, float fac2, int extra) const;
 
-	void EnqueueQuote(Material material);
-	void EnqueuePurchase(Material material);
-	void EnqueueSell(Material material);
-
 	void FullConsPriceTooltip() const;
 
 	// returns item id if successful, 0 if error
@@ -84,19 +81,35 @@ private:
 	static const int PRICE_NOT_AVAILABLE = -4;
 	int price[N_MATS];
 
-	int max = 0;
-	std::deque<Material> quotequeue;
-	std::deque<Material> purchasequeue;
-	std::deque<Material> sellqueue;
-	bool cancelled = false;
-	int cancelled_progress = 0;
+	// int max = 0;
+	GW::MerchItemArray GetMerchItems() const;
+	GW::Item *GetMerchItem(Material mat) const;
+	GW::Item *GetBagItem(Material mat) const;
 
-	DWORD last_request_itemid = 0;
-	DWORD last_request_price = 0;
-	enum RequestType {
-		None,
-		Quote,
-		Purchase,
-		Sell
-	} last_request_type = None;
+	struct Transaction {
+		enum Type { Sell, Buy, Quote };
+		Type     type;
+		uint32_t item_id;
+		Material material;
+
+		Transaction(Type t, Material mat) : type(t), material(mat) {}
+	};
+
+	void Dequeue();
+	void Enqueue(Transaction::Type type, Material mat);
+	void EnqueueQuote(Material material);
+	void EnqueuePurchase(Material material);
+	void EnqueueSell(Material material);
+
+	std::vector<GW::ItemID> merch_items;
+
+	std::deque<Transaction> transactions;
+	bool quote_pending = false;
+	bool trans_pending = false;
+	DWORD quote_pending_time;
+	DWORD trans_pending_time;
+
+	bool cancelled = false;
+	size_t trans_queued;
+	size_t trans_done;
 };
