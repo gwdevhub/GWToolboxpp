@@ -116,8 +116,8 @@ void ChatCommands::Initialize() {
 	GW::Chat::CreateCommand(L"scwiki", ChatCommands::CmdSCWiki);
 	GW::Chat::CreateCommand(L"load", ChatCommands::CmdLoad);
 	GW::Chat::CreateCommand(L"transmo", ChatCommands::CmdTransmo);
+	GW::Chat::CreateCommand(L"resize", ChatCommands::CmdResize);
 }
-
 
 
 bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
@@ -820,4 +820,20 @@ void ChatCommands::CmdTransmo(int argc, LPWSTR *argv) {
 		packet.model_id = npc_id;
 		GW::StoC::EmulatePacket(&packet);
 	});
+}
+
+void ChatCommands::CmdResize(int argc, LPWSTR *argv) {
+	if (argc != 3) {
+		Log::Error("The syntax is /resize width height");
+		return;
+	}
+	int width, height;
+	if (!(GuiUtils::ParseInt(argv[1], &width) && GuiUtils::ParseInt(argv[2], &height))) {
+		Log::Error("The syntax is /resize width height");
+		return;
+	}
+	HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
+	RECT rect;
+	GetWindowRect(hwnd, &rect);
+	MoveWindow(hwnd, rect.left, rect.top, width, height, TRUE);
 }
