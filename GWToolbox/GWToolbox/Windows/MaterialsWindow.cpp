@@ -121,7 +121,11 @@ void MaterialsWindow::Initialize() {
 				trans_pending_time = GetTickCount() + MIN_TIME_BETWEEN_RETRY;
 				trans_pending = true;
 			} else {
-				GW::Items::WithdrawGold();
+				if (manage_gold) {
+					GW::Items::WithdrawGold();
+				} else {
+					Cancel();
+				}
 			}
 			// printf("sending purchase request for %d (price=%d)\n", item->ModelId, pak->price);
 		} else if (trans.type == Transaction::Sell) {
@@ -138,7 +142,11 @@ void MaterialsWindow::Initialize() {
 				trans_pending_time = GetTickCount() + MIN_TIME_BETWEEN_RETRY;
 				trans_pending = true;
 			} else {
-				GW::Items::DepositGold();
+				if (manage_gold) {
+					GW::Items::DepositGold();
+				} else {
+					Cancel();
+				}
 			}
 			// printf("sending sell request for %d (price=%d)\n", item->ModelId, pak->price);
 		}
@@ -458,13 +466,18 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::ProgressBar(progress, ImVec2(width2, 0));
 		ImGui::SameLine();
 		if (ImGui::Button("Cancel", ImVec2(100.0f, 0))) {
-			cancelled = true;
-			quote_pending = false;
-			transactions.clear();
+			Cancel();
 		}
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Cancel the current queue of operations");
 	}
 	ImGui::End();
+}
+
+void MaterialsWindow::Cancel() {
+	cancelled = true;
+	quote_pending = false;
+	trans_pending = false;
+	transactions.clear();
 }
 
 void MaterialsWindow::Dequeue() {

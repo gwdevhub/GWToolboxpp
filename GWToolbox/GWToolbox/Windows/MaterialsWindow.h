@@ -48,6 +48,7 @@ public:
 	void Initialize() override;
 	void Terminate() override;
 
+	void DrawSettingInternal() override;
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
 	
@@ -56,8 +57,6 @@ public:
 
 	// Draw user interface. Will be called every frame if the element is visible
 	void Draw(IDirect3DDevice9* pDevice) override;
-
-	void DrawSettingInternal() override;
 
 private:
 	DWORD GetModelID(Material mat) const;
@@ -98,6 +97,7 @@ private:
 		Transaction(Type t, Material mat) : type(t), material(mat) {}
 	};
 
+	void Cancel();
 	void Dequeue();
 	void Enqueue(Transaction::Type type, Material mat);
 	void EnqueueQuote(Material material);
