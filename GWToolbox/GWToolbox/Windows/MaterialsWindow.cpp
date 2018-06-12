@@ -102,12 +102,13 @@ void MaterialsWindow::Initialize() {
 			return false;
 		}
 
+		auto gold_character = GW::Items::GetGoldAmountOnCharacter();
 		if (trans.type == Transaction::Quote) {
 			price[trans.material] = pak->price;
 			Dequeue();
 		} else if (trans.type == Transaction::Buy) {
 			price[trans.material] = pak->price;
-			if (GW::Items::GetGoldAmountOnCharacter() >= pak->price) {
+			if (gold_character >= pak->price) {
 				GW::Merchant::TransactionInfo give, recv;
 				give.itemcount = 0;
 				give.itemids = nullptr;
@@ -119,10 +120,12 @@ void MaterialsWindow::Initialize() {
 				GW::Merchant::TransactItems(GW::Merchant::TransactionType::TraderBuy, pak->price, give, 0, recv);
 				trans_pending_time = GetTickCount() + MIN_TIME_BETWEEN_RETRY;
 				trans_pending = true;
+			} else {
+				GW::Items::WithdrawGold();
 			}
 			// printf("sending purchase request for %d (price=%d)\n", item->ModelId, pak->price);
 		} else if (trans.type == Transaction::Sell) {
-			if (GW::Items::GetGoldAmountOnCharacter() + pak->price <= 100 * 1000) {
+			if (gold_character + pak->price <= 100 * 1000) {
 				GW::Merchant::TransactionInfo give, recv;
 				give.itemcount = 1;
 				give.itemids = &pak->itemid;
@@ -134,6 +137,8 @@ void MaterialsWindow::Initialize() {
 				GW::Merchant::TransactItems(GW::Merchant::TransactionType::TraderSell, 0, give, pak->price, recv);
 				trans_pending_time = GetTickCount() + MIN_TIME_BETWEEN_RETRY;
 				trans_pending = true;
+			} else {
+				GW::Items::DepositGold();
 			}
 			// printf("sending sell request for %d (price=%d)\n", item->ModelId, pak->price);
 		}
@@ -172,6 +177,13 @@ void MaterialsWindow::Terminate() {
 void MaterialsWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxWindow::LoadSettings(ini);
 	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
+	manage_gold = ini->GetBoolValue(Name(), VAR_NAME(manage_gold), false);
+}
+
+void MaterialsWindow::SaveSettings(CSimpleIni* ini) {
+	ToolboxWindow::LoadSettings(ini);
+	ini->SetBoolValue(Name(), VAR_NAME(show_menubutton), show_menubutton);
+	ini->SetBoolValue(Name(), VAR_NAME(manage_gold), manage_gold);
 }
 
 void MaterialsWindow::Draw(IDirect3DDevice9* pDevice) {
@@ -548,6 +560,12 @@ void MaterialsWindow::FullConsPriceTooltip() const {
 		}
 		ImGui::SetTooltip(buf);
 	}
+}
+
+void MaterialsWindow::DrawSettingInternal() {
+	ToolboxWindow::DrawSettingInternal();
+	ImGui::Checkbox("Automaticly manage gold", &manage_gold);
+	ImGui::ShowHelp("It will automaticly withdraw and deposit gold while buying materials");
 }
 
 MaterialsWindow::Material MaterialsWindow::GetMaterial(DWORD modelid) {

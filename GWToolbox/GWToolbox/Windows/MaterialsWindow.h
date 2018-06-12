@@ -49,12 +49,15 @@ public:
 	void Terminate() override;
 
 	void LoadSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) override;
 	
 	// Update. Will always be called every frame.
 	void Update(float delta) override;
 
 	// Draw user interface. Will be called every frame if the element is visible
 	void Draw(IDirect3DDevice9* pDevice) override;
+
+	void DrawSettingInternal() override;
 
 private:
 	DWORD GetModelID(Material mat) const;
@@ -112,4 +115,6 @@ private:
 	bool cancelled = false;
 	size_t trans_queued;
 	size_t trans_done;
+
+	bool manage_gold;
 };
