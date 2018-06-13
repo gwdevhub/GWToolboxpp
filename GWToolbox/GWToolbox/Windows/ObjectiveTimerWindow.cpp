@@ -150,6 +150,7 @@ void ObjectiveTimerWindow::Initialize() {
 	GW::StoC::AddCallback<GW::Packet::StoC::DoACompleteZone>(
 	[this](GW::Packet::StoC::DoACompleteZone* packet) -> bool {
 		if (packet->message[0] != 0x8101) return false;
+		if (objective_sets.empty()) return false;
 
 		uint32_t id = packet->message[1];
 		Objective *obj = GetCurrentObjective(id);
