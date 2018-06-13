@@ -116,6 +116,7 @@ void ObjectiveTimerWindow::Initialize() {
 	GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveAdd>(
 	[this](GW::Packet::StoC::ObjectiveAdd *packet) -> bool {
 		// type 12 is the "title" of the mission objective, should we ignore it or have a "title" objective ?
+		/*
 		Objective *obj = GetCurrentObjective(packet->objective_id);
 		if (obj) return false;
 		ObjectiveSet *os = objective_sets.back();
@@ -125,6 +126,7 @@ void ObjectiveTimerWindow::Initialize() {
 		// If the name isn't "???" we consider that the objective started
 		if (wcsncmp(packet->name, L"\x8102\x3236", 2))
 			obj->SetStarted();
+		*/
 		return false;
 	});
 
