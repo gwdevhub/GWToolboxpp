@@ -30,15 +30,14 @@ public:
 private:
     class Objective {
     public:
-		uint32_t    id;
-		char        name[126];
-		DWORD       start;
-		DWORD       done;
-        DWORD       duration;
+		uint32_t id;
+		char     name[126];
+		DWORD    start;
+		DWORD    done;
+        DWORD    duration;
 		char cached_done[16];
 		char cached_start[16];
         char cached_duration[16];
-		bool cancelled;
 		bool is_open;
        
 	    Objective(uint32_t id, const char* name = "");
@@ -67,7 +66,6 @@ private:
         void Draw();
 		void StopObjectives();
 
-		static unsigned int next_ui_id;
         void Update();
         // todo: print to file
 

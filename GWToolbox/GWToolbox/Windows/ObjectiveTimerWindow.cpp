@@ -151,13 +151,14 @@ void ObjectiveTimerWindow::Initialize() {
 
 		uint32_t id = packet->message[1];
 		Objective *obj = GetCurrentObjective(id);
+		ObjectiveSet *os = objective_sets.back();
+
         if (obj) {
             obj->SetDone();
-            objective_sets.back()->CheckSetDone();
-
+            os->CheckSetDone();
             uint32_t next_id = doa_get_next(id);
             Objective *next = GetCurrentObjective(next_id);
-            if (next && !next->IsStarted()) obj->SetStarted();
+            if (next && !next->IsStarted()) next->SetStarted();
         }
 		return false;
 	});
@@ -166,7 +167,7 @@ void ObjectiveTimerWindow::Initialize() {
 void ObjectiveTimerWindow::ObjectiveSet::StopObjectives() {
 	for (Objective& obj : objectives) {
 		if (obj.done == -1)
-			obj.cancelled = true;
+			obj.is_open = false;
 	}
 }
 
@@ -194,12 +195,7 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vector2f spawn) {
 
 	ObjectiveSet *os = new ObjectiveSet;
 	::AsyncGetMapName(os->name, sizeof(os->name));
-    Objective objs[n_areas] = {
-		Objective(Foundry, "Foundry"),
-		Objective(City, "City"),
-		Objective(Veil, "Veil"),
-		Objective(Gloom, "Gloom")
-	};
+    Objective objs[n_areas] = {{Foundry, "Foundry"}, {City, "City"}, {Veil, "Veil"}, {Gloom, "Gloom"}};
 
     for (int i = 0; i < n_areas; ++i) {
         os->objectives.push_back(objs[(area + i) % n_areas]);
@@ -294,7 +290,7 @@ ObjectiveTimerWindow::Objective::Objective(uint32_t _id, const char* _name) {
     PrintTime(cached_done, sizeof(cached_done), TIME_UNKNOWN);
     PrintTime(cached_start, sizeof(cached_start), TIME_UNKNOWN);
     PrintTime(cached_duration, sizeof(cached_duration), TIME_UNKNOWN);
-	cancelled = false;
+	is_open = false;
 }
 
 bool ObjectiveTimerWindow::Objective::IsStarted() const { 
@@ -309,6 +305,7 @@ void ObjectiveTimerWindow::Objective::SetStarted() {
     } else {
         start = GW::Map::GetInstanceTime();
     }
+	is_open = true;
     PrintTime(cached_start, sizeof(cached_start), start);
 }
 void ObjectiveTimerWindow::Objective::SetDone() {
@@ -320,9 +317,9 @@ void ObjectiveTimerWindow::Objective::SetDone() {
 }
 
 void ObjectiveTimerWindow::Objective::Update() {
-    if (start == TIME_UNKNOWN || cancelled) {
+    if (start == TIME_UNKNOWN) {
         PrintTime(cached_duration, sizeof(cached_duration), TIME_UNKNOWN);
-    } else if (done == TIME_UNKNOWN) {
+    } else if (done == TIME_UNKNOWN && is_open) {
         PrintTime(cached_duration, sizeof(cached_duration), GW::Map::GetInstanceTime() - start);
     }
 }

@@ -157,6 +157,7 @@ void MaterialsWindow::Initialize() {
 
 	GW::StoC::AddCallback<GW::Packet::StoC::TransactionDone>(
 	[this](GW::Packet::StoC::TransactionDone *pak) -> bool {
+		if (transactions.empty()) return false;
 		trans_pending = false;
 		Dequeue();
 		return false;
@@ -481,7 +482,6 @@ void MaterialsWindow::Cancel() {
 }
 
 void MaterialsWindow::Dequeue() {
-	if (transactions.empty()) return;
 	trans_done++;
 	transactions.pop_front();
 }
