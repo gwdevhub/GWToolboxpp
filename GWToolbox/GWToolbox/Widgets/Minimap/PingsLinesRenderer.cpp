@@ -22,6 +22,7 @@ void PingsLinesRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	color_shadowstep_line_maxrange = Colors::Load(ini, section, "color_shadowstep_line_maxrange", Colors::ARGB(255, 255, 0, 128));
 	maxrange_interp_begin = (float)ini->GetDoubleValue(section, "maxrange_interp_begin", 0.85);
 	maxrange_interp_end = (float)ini->GetDoubleValue(section, "maxrange_interp_end", 0.95);
+	display_pings = ini->GetBoolValue(section, "display_pings", true);
 	Invalidate();
 }
 void PingsLinesRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
@@ -32,6 +33,7 @@ void PingsLinesRenderer::SaveSettings(CSimpleIni* ini, const char* section) cons
 	Colors::Save(ini, section, "color_shadowstep_line_maxrange", color_shadowstep_line_maxrange);
 	ini->SetDoubleValue(section, "maxrange_interp_begin", maxrange_interp_begin);
 	ini->SetDoubleValue(section, "maxrange_interp_end", maxrange_interp_end);
+	ini->SetBoolValue(section, "display_pings", display_pings);
 }
 void PingsLinesRenderer::DrawSettings() {
 	if (ImGui::SmallButton("Restore Defaults")) {
@@ -76,10 +78,14 @@ PingsLinesRenderer::PingsLinesRenderer() : vertices(nullptr) {
 }
 
 void PingsLinesRenderer::P046Callback(GW::Packet::StoC::AgentPinged *pak) {
+	if (!display_pings)
+		return;
 	pings.push_front(new AgentPing(pak->agent_id));
 }
 
 void PingsLinesRenderer::P138Callback(GW::Packet::StoC::CompassEvent *pak) {
+	if (!display_pings)
+		return;
 	bool new_session;
 	if (drawings[pak->Player].player == pak->Player) {
 		new_session = drawings[pak->Player].session != pak->SessionID;
@@ -91,10 +97,8 @@ void PingsLinesRenderer::P138Callback(GW::Packet::StoC::CompassEvent *pak) {
 	}
 
 	if (new_session && pak->NumberPts == 1) {
-		pings.push_front(new TerrainPing(
-			pak->points[0].x * drawing_scale,
-pak->points[0].y * drawing_scale));
-return;
+		pings.push_front(new TerrainPing(pak->points[0].x * drawing_scale, pak->points[0].y * drawing_scale));
+		return;
 	}
 
 	if (new_session) {

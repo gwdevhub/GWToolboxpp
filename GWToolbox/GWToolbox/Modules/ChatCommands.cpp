@@ -32,6 +32,7 @@
 #include <Windows\TravelWindow.h>
 #include <Windows\BuildsWindow.h>
 #include <Widgets\PartyDamage.h>
+#include <Windows\Minimap\Minimap.h>
 
 
 void ChatCommands::DrawHelp() {
@@ -71,6 +72,8 @@ void ChatCommands::DrawHelp() {
 		"Use '/useskill <skill>' to stop the skill.");
 	ImGui::Bullet(); ImGui::Text("'/zoom <value>' to change the maximum zoom to the value. "
 		"use empty '/zoom' to reset to the default value of 750.");
+	ImGui::Bullet(); ImGui::Text("'/pings on/off' to turn on/off pings on the toolbox minimap. "
+		"use empty '/pings' to toggle between on or off");
 }
 
 void ChatCommands::DrawSettingInternal() {
@@ -116,6 +119,7 @@ void ChatCommands::Initialize() {
 	GW::Chat::CreateCommand(L"scwiki", ChatCommands::CmdSCWiki);
 	GW::Chat::CreateCommand(L"load", ChatCommands::CmdLoad);
 	GW::Chat::CreateCommand(L"transmo", ChatCommands::CmdTransmo);
+	GW::Chat::CreateCommand(L"pings", ChatCommands::CmdTogglePings);
 }
 
 
@@ -820,4 +824,22 @@ void ChatCommands::CmdTransmo(int argc, LPWSTR *argv) {
 		packet.model_id = npc_id;
 		GW::StoC::EmulatePacket(&packet);
 	});
+}
+
+void ChatCommands::CmdTogglePings(int argc, LPWSTR *argv) {
+	PingsLinesRenderer* pingsLinesRenderer = Minimap::Instance().pingslines_renderer;
+	if (argc >= 1) {
+		switch (argv[1]) {
+			case "on": pingsLinesRenderer->display_pings = true;
+				break;
+			case "off": pingsLinesRenderer->display_pings = false;
+				break;
+			default:
+				Log::Error("Invalid argument '%ls', please use on/off or nothing", argv[1]);
+				break;
+		}
+	}
+	else {
+		pingsLinesRenderer->display_pings = !pingsLinesRenderer->display_pings;
+	}
 }
