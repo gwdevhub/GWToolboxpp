@@ -481,6 +481,7 @@ void MaterialsWindow::Cancel() {
 }
 
 void MaterialsWindow::Dequeue() {
+	if (transactions.empty()) return;
 	trans_done++;
 	transactions.pop_front();
 }
