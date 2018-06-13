@@ -3,6 +3,7 @@
 #include <logger.h>
 #include <GWCA\GWCA.h>
 #include <GWCA\Managers\MapMgr.h>
+#include <GWCA\Managers\ChatMgr.h>
 
 #include "GuiUtils.h"
 #include "Modules\ToolboxSettings.h"
@@ -65,7 +66,7 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
 			ImVec2 max(min.x + size.x, min.y + size.y);
 			bool ctrl_pressed = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
 			if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsMouseHoveringRect(min, max)) {
-				Log::Info(timer);
+				GW::Chat::SendChat('/', "age");
 			}
 		}
 	}
