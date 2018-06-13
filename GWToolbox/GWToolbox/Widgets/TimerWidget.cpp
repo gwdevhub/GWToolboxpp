@@ -29,9 +29,10 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
 
 	unsigned long time = GW::Map::GetInstanceTime() / 1000;
 
+	bool ctrl_pressed = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
 	ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiSetCond_FirstUseEver);
-	if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !click_to_print_time))) {
+	if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(click_to_print_time && ctrl_pressed)))) {
 		static char timer[32];
 		static char urgoz_timer[32];
 		snprintf(timer, 32, "%d:%02d:%02d", time / (60 * 60), (time / 60) % 60, time % 60);
@@ -64,7 +65,6 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
 			ImVec2 size = ImGui::GetWindowSize();
 			ImVec2 min = ImGui::GetWindowPos();
 			ImVec2 max(min.x + size.x, min.y + size.y);
-			bool ctrl_pressed = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
 			if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsMouseHoveringRect(min, max)) {
 				GW::Chat::SendChat('/', "age");
 			}
