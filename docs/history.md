@@ -7,6 +7,21 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
+## Version 2.16
+* [New] Objective timer for DoA, UW, FoW
+* [New] Option to automatically withdraw and deposit gold while buying materials. (disable by default)
+* [New] Option to ctrl+click on instance timer to `/age`. (disable by default)
+* [New] Command `/resize width height` to resize Guild Wars window. (Only works with borderless)
+* [Fix] Bug were GWToolbox UI was reseted when opening Guild Wars.
+* [Fix] Materials window won't stop buying materials anymore.
+* [Fix] Bug with "Tick is a toggle" that required a restart to work.
+* [Fix] Bug where toolbox wouldn't get input if UI was disable.
+* [Fix] "All flag" will be shown even if you only have henchmans in your group.
+* [Minor] Chat timestamps will work for older messages. (pre-inject)
+* [Minor] The real name of mercenary hero will be used in hero builds instead of "Mercenary Hero X".
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.16_Release/GWToolbox.dll)
+
 ## Version 2.15
 * [Fix] Fixed toolbox functionality after June 07 2018 game update.
 * [New] GWToolbox will hide itself if you hide the game user interface. Will also work with "Shift+Print Screen".
