@@ -41,13 +41,13 @@ GW::Item *MaterialsWindow::GetBagItem(Material mat) const {
 	if (!bags) return nullptr;
 	size_t bag_i = (size_t)GW::Constants::Bag::Backpack;
 	size_t bag_n = (size_t)GW::Constants::Bag::Bag_2;
-	for (size_t i = bag_i; i < bag_n; i++) {
+	for (size_t i = bag_i; i <= bag_n; i++) {
 		GW::Bag *bag = bags[i];
 		if (!bag) continue;
 		size_t pos = bag->find1(model_id, 0);
 		while (pos != GW::Bag::npos) {
 			GW::Item *item = bag->Items[pos];
-			if (item->Quantity != 0)
+			if (item->Quantity >= 10)
 				return item;
 			pos = bag->find1(model_id, pos + 1);
 		}
