@@ -327,8 +327,15 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 	ImGui::PopStyleColor();
 
 	if (hero_flag_controls_show && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
-		auto playerparty = GW::GameContext::instance()->party->playerparty;
-		if (playerparty->henchmen.size() || playerparty->heroes.size()) {
+		// @Cleanup: Maybe not lambda, but realy adapted in this case.
+		auto GetPlayerParty = [] () -> GW::PartyInfo* {
+			GW::GameContext *gamectx = GW::GameContext::instance();
+			if (!(gamectx && gamectx->party)) return nullptr;
+			return gamectx->party->playerparty;
+		};
+
+		auto playerparty = GetPlayerParty();
+		if (playerparty && (playerparty->henchmen.size() || playerparty->heroes.size())) {
 			if (hero_flag_window_attach) {
 				ImGui::SetNextWindowPos(ImVec2((float)location.x, (float)(location.y + size.y)));
 				ImGui::SetNextWindowSize(ImVec2((float)size.x, 40.0f));
