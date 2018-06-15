@@ -38,7 +38,12 @@ private:
 		char cached_done[16];
 		char cached_start[16];
         char cached_duration[16];
-		bool is_open;
+        enum Status {
+            NotStarted,
+            Started,
+            Completed,
+            Failed
+        } status = NotStarted;
        
 	    Objective(uint32_t id, const char* name = "");
 

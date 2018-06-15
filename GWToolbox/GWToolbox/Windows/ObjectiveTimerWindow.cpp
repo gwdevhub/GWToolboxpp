@@ -107,7 +107,7 @@ void ObjectiveTimerWindow::Initialize() {
         case 63059:  AddUWObjectiveSet(); break;
         default: 
             if (!objective_sets.empty()) {
-                objective_sets.back()->active = false;
+                objective_sets.back()->StopObjectives();
             }
 		}
 		return false;
@@ -168,9 +168,11 @@ void ObjectiveTimerWindow::Initialize() {
 }
 
 void ObjectiveTimerWindow::ObjectiveSet::StopObjectives() {
+    active = false;
 	for (Objective& obj : objectives) {
-		if (obj.done == -1)
-			obj.is_open = false;
+        if (obj.status == Objective::Started) {
+            obj.status = Objective::Failed;
+        }
 	}
 }
 
@@ -299,7 +301,6 @@ ObjectiveTimerWindow::Objective::Objective(uint32_t _id, const char* _name) {
     PrintTime(cached_done, sizeof(cached_done), TIME_UNKNOWN);
     PrintTime(cached_start, sizeof(cached_start), TIME_UNKNOWN);
     PrintTime(cached_duration, sizeof(cached_duration), TIME_UNKNOWN);
-	is_open = false;
 }
 
 bool ObjectiveTimerWindow::Objective::IsStarted() const { 
@@ -314,8 +315,8 @@ void ObjectiveTimerWindow::Objective::SetStarted() {
     } else {
         start = GW::Map::GetInstanceTime();
     }
-	is_open = true;
     PrintTime(cached_start, sizeof(cached_start), start);
+    status = Started;
 }
 void ObjectiveTimerWindow::Objective::SetDone() {
     if (start == TIME_UNKNOWN) SetStarted(); // something went wrong
@@ -323,29 +324,49 @@ void ObjectiveTimerWindow::Objective::SetDone() {
     PrintTime(cached_done, sizeof(cached_done), done);
     duration = done - start;
     PrintTime(cached_duration, sizeof(cached_duration), duration);
+    status = Completed;
 }
 
 void ObjectiveTimerWindow::Objective::Update() {
     if (start == TIME_UNKNOWN) {
         PrintTime(cached_duration, sizeof(cached_duration), TIME_UNKNOWN);
-    } else if (done == TIME_UNKNOWN && is_open) {
+    } else if (done == TIME_UNKNOWN) {
         PrintTime(cached_duration, sizeof(cached_duration), GW::Map::GetInstanceTime() - start);
     }
 }
 void ObjectiveTimerWindow::Objective::Draw() {
+
+    switch (status) {
+    case ObjectiveTimerWindow::Objective::NotStarted:
+        ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+        break;
+    case ObjectiveTimerWindow::Objective::Started:
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+        break;
+    case ObjectiveTimerWindow::Objective::Completed:
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 1.0f, 0.0f, 1.0f));
+        break;
+    case ObjectiveTimerWindow::Objective::Failed:
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+        break;
+    default:
+        break;
+    }
     if (ImGui::Button(name, ImVec2(GetGridItemWidth(), 0))) {
         char buf[256];
-        snprintf(buf, 256, "[%s] ~ Started: %s ~ Completed: %s ~ Duration: %s",
+        snprintf(buf, 256, "[%s] ~ Start: %s ~ End: %s ~ Time: %s",
             name, cached_start, cached_done, cached_duration);
         GW::Chat::SendChat('#', buf);
     }
+    ImGui::PopStyleColor();
+
     ImGui::PushItemWidth(GetGridItemWidth());
     ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
     ImGui::InputText("##start", cached_start, sizeof(cached_start), ImGuiInputTextFlags_ReadOnly);
     ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-    ImGui::InputText("##done", cached_done, sizeof(cached_done), ImGuiInputTextFlags_ReadOnly);
+    ImGui::InputText("##end", cached_done, sizeof(cached_done), ImGuiInputTextFlags_ReadOnly);
     ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-    ImGui::InputText("##duration", cached_duration, sizeof(cached_duration), ImGuiInputTextFlags_ReadOnly);
+    ImGui::InputText("##time", cached_duration, sizeof(cached_duration), ImGuiInputTextFlags_ReadOnly);
 }
 
 
@@ -387,11 +408,11 @@ bool ObjectiveTimerWindow::ObjectiveSet::Draw() {
     if (ImGui::CollapsingHeader(buf, &is_open, ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::PushID(ui_id);
         ImGui::SetCursorPosX(GetGridItemX(1));
-        ImGui::Text("Started");
+        ImGui::Text("Start");
         ImGui::SameLine(GetGridItemX(2));
-        ImGui::Text("Done");
+        ImGui::Text("End");
         ImGui::SameLine(GetGridItemX(3));
-        ImGui::Text("Duration");
+        ImGui::Text("Time");
 
         for (Objective& objective : objectives) {
             objective.Draw();
