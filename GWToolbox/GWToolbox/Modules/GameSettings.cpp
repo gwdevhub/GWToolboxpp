@@ -346,6 +346,29 @@ namespace {
 
     // used by chat colors grid
     float chat_colors_grid_x[] = { 0, 100, 160, 240 };
+
+	void SaveChannelColor(CSimpleIni *ini, const char *section, const char *chanstr, GW::Chat::Channel chan) {
+		char key[128];
+		GW::Chat::Color sender, message;
+		GW::Chat::GetChannelColors(chan, &sender, &message);
+		// @Cleanup: We relie on the fact the Color and GW::Chat::Color are the same format
+		snprintf(key, 128, "%s_color_sender", chanstr);
+		Colors::Save(ini, section, key, (Color)sender);
+		snprintf(key, 128, "%s_color_message", chanstr);
+		Colors::Save(ini, section, key, (Color)message);
+	}
+
+	void LoadChannelColor(CSimpleIni *ini, const char *section, const char *chanstr, GW::Chat::Channel chan) {
+		char key[128];
+		GW::Chat::Color sender, message;
+		GW::Chat::GetDefaultColors(chan, &sender, &message);
+		snprintf(key, 128, "%s_color_sender", chanstr);
+		sender = (GW::Chat::Color)Colors::Load(ini, section, key, (Color)sender);
+		GW::Chat::SetSenderColor(chan, sender);
+		snprintf(key, 128, "%s_color_message", chanstr);
+		message = (GW::Chat::Color)Colors::Load(ini, section, key, (Color)message);
+		GW::Chat::SetMessageColor(chan, message);
+	}
 }
 
 void GameSettings::Initialize() {
@@ -466,6 +489,13 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	auto_set_away_delay = ini->GetLongValue(Name(), VAR_NAME(auto_set_away_delay), 10);
 	auto_set_online = ini->GetBoolValue(Name(), VAR_NAME(auto_set_online), false);
 
+	::LoadChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
+	::LoadChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);
+	::LoadChannelColor(ini, Name(), "team", GW::Chat::CHANNEL_GROUP);
+	::LoadChannelColor(ini, Name(), "trade", GW::Chat::CHANNEL_TRADE);
+	::LoadChannelColor(ini, Name(), "alliance", GW::Chat::CHANNEL_ALLIANCE);
+	::LoadChannelColor(ini, Name(), "whispers", GW::Chat::CHANNEL_WHISPER);
+
 #ifdef ENABLE_BORDERLESS
 	if (borderlesswindow) ApplyBorderless(borderlesswindow);
 #endif
@@ -503,6 +533,13 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(auto_set_away), auto_set_away);
 	ini->SetLongValue(Name(), VAR_NAME(auto_set_away_delay), auto_set_away_delay);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_set_online), auto_set_online);
+
+	::SaveChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
+	::SaveChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);
+	::SaveChannelColor(ini, Name(), "team", GW::Chat::CHANNEL_GROUP);
+	::SaveChannelColor(ini, Name(), "trade", GW::Chat::CHANNEL_TRADE);
+	::SaveChannelColor(ini, Name(), "alliance", GW::Chat::CHANNEL_ALLIANCE);
+	::SaveChannelColor(ini, Name(), "whispers", GW::Chat::CHANNEL_WHISPER);
 }
 
 void GameSettings::DrawSettingInternal() {
