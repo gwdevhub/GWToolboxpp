@@ -63,7 +63,7 @@ private:
         std::vector<Objective> objectives;
 
         void CheckSetDone();
-        void Draw();
+        bool Draw(); // returns false when should be deleted
 		void StopObjectives();
 
         void Update();

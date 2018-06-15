@@ -256,7 +256,13 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9* pDevice) {
             ImGui::Text("Enter DoA, FoW, or UW to begin");
         } else {
             for (auto& it = objective_sets.rbegin(); it != objective_sets.rend(); it++) {
-                (*it)->Draw();
+                bool show = (*it)->Draw();
+                if (!show) {
+                    objective_sets.erase(--(it.base()));
+                    break; 
+                    // iterators go crazy, don't even bother, we're skipping a frame. NBD.
+                    // if you really want to draw the rest make sure you extensively test this.
+                }
             }
         }
 	}
@@ -373,7 +379,7 @@ ObjectiveTimerWindow::ObjectiveSet::ObjectiveSet() : ui_id(cur_ui_id++) {
 	GetLocalTime(&system_time);
 }
 
-void ObjectiveTimerWindow::ObjectiveSet::Draw() {
+bool ObjectiveTimerWindow::ObjectiveSet::Draw() {
     char buf[256];
     snprintf(buf, sizeof(buf), "%s - %s###header%d", name, cached_time, ui_id);
 
@@ -392,4 +398,5 @@ void ObjectiveTimerWindow::ObjectiveSet::Draw() {
         }
 		ImGui::PopID();
 	}
+    return is_open;
 }
