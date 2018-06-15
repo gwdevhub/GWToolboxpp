@@ -343,6 +343,9 @@ namespace {
 		}
 	} 
 #endif // APRIL_FOOLS
+
+    // used by chat colors grid
+    float chat_colors_grid_x[] = { 0, 100, 160, 240 };
 }
 
 void GameSettings::Initialize() {
@@ -472,7 +475,6 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	if (auto_url) GW::Chat::SetSendChatCallback(&SendChatCallback);
 	if (flash_window_on_pm) GW::Chat::SetWhisperCallback(&WhisperCallback);
 	if (move_item_on_ctrl_click) GW::Items::SetOnItemClick(GameSettings::ItemClickCallback);
-
 }
 
 void GameSettings::SaveSettings(CSimpleIni* ini) {
@@ -504,6 +506,25 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 }
 
 void GameSettings::DrawSettingInternal() {
+	if (ImGui::TreeNode("Chat Colors")) {
+        ImGui::Text("Channel");
+        ImGui::SameLine(chat_colors_grid_x[1]);
+        ImGui::Text("Sender");
+        ImGui::SameLine(chat_colors_grid_x[2]);
+        ImGui::Text("Message");
+        ImGui::Spacing();
+
+		DrawChannelColor("Local", GW::Chat::CHANNEL_ALL);
+		DrawChannelColor("Guild", GW::Chat::CHANNEL_GUILD);
+		DrawChannelColor("Team", GW::Chat::CHANNEL_GROUP);
+		DrawChannelColor("Trade", GW::Chat::CHANNEL_TRADE);
+		DrawChannelColor("Alliance", GW::Chat::CHANNEL_ALLIANCE);
+		DrawChannelColor("Whispers", GW::Chat::CHANNEL_WHISPER);
+
+        ImGui::TextDisabled("(Left-click on a color to edit it)");
+		ImGui::TreePop();
+        ImGui::Spacing();
+	}
 #ifdef ENABLE_BORDERLESS
 	DrawBorderlessSetting();
 #endif
@@ -512,10 +533,7 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::Checkbox("Show chat messages timestamp. Color:", &GW::Chat::ShowTimestamps);
 	ImGui::SameLine();
 
-	ImVec4 col = ImGui::ColorConvertU32ToFloat4(GW::Chat::TimestampsColor);
-	if (ImGui::ColorEdit4("Color:", &col.x, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel)) {
-		GW::Chat::TimestampsColor = ImGui::ColorConvertFloat4ToU32(col);
-	}
+    Colors::DrawSettingHueWheel("Color:", &GW::Chat::TimestampsColor);
 	ImGui::ShowHelp("Show timestamps in message history.");
 
 	// ImGui::Checkbox("Keep chat history.", &GW::Chat::KeepChatHistory); @Deprecated
@@ -769,3 +787,33 @@ void GameSettings::ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag)
 		move_item_to_inventory(item);
 	}
 }
+
+void GameSettings::DrawChannelColor(const char *name, GW::Chat::Channel chan) {
+    ImGui::PushID(chan);
+	ImGui::Text(name);
+	
+	GW::Chat::Color color, sender_col, message_col;
+	GW::Chat::GetChannelColors(chan, &sender_col, &message_col);
+
+	ImGui::SameLine(chat_colors_grid_x[1]);
+    color = sender_col;
+    if (Colors::DrawSettingHueWheel("Sender Color:", &color) && color != sender_col) {
+        GW::Chat::SetSenderColor(chan, color);
+    }
+
+	ImGui::SameLine(chat_colors_grid_x[2]);
+    color = message_col;
+    if (Colors::DrawSettingHueWheel("Message Color:", &color) && color != message_col) {
+        GW::Chat::SetMessageColor(chan, color);
+    }
+
+	ImGui::SameLine(chat_colors_grid_x[3]);
+	if (ImGui::Button("Reset")) {
+		GW::Chat::Color col1, col2;
+		GW::Chat::GetDefaultColors(chan, &col1, &col2);
+		GW::Chat::SetSenderColor(chan, col1);
+		GW::Chat::SetMessageColor(chan, col2);
+	}
+    ImGui::PopID();
+}
+
