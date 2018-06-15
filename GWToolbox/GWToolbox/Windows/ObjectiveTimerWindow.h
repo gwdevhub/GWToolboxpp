@@ -23,6 +23,7 @@ public:
 
     void Update(float delta) override;
 	void Draw(IDirect3DDevice9* pDevice) override;
+    void DrawSettingInternal() override;
 
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
@@ -38,7 +39,12 @@ private:
 		char cached_done[16];
 		char cached_start[16];
         char cached_duration[16];
-		bool is_open;
+        enum Status {
+            NotStarted,
+            Started,
+            Completed,
+            Failed
+        } status = NotStarted;
        
 	    Objective(uint32_t id, const char* name = "");
 
@@ -63,7 +69,7 @@ private:
         std::vector<Objective> objectives;
 
         void CheckSetDone();
-        void Draw();
+        bool Draw(); // returns false when should be deleted
 		void StopObjectives();
 
         void Update();
