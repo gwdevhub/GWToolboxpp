@@ -70,6 +70,4 @@ private:
 	GW::MemoryPatcher *ctrl_click_patch;
 
 	void DrawChannelColor(const char *name, GW::Chat::Channel chan);
-	static ImVec4 ConvertChatColorToFloat4(GW::Chat::Color color);
-	static GW::Chat::Color ConvertFloat4ToChatColor(ImVec4 color);
 };

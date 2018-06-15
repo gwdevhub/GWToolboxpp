@@ -344,19 +344,8 @@ namespace {
 	} 
 #endif // APRIL_FOOLS
 
-	float GetGridItemWidth() {
-        const int n_columns = 4;
-        return (ImGui::GetWindowContentRegionWidth()
-            - (ImGui::GetStyle().ItemInnerSpacing.x * (n_columns - 1))) / n_columns;
-    }
-
-    float GetGridItemX(int i) {
-        const int n_columns = 4;
-        const auto& style = ImGui::GetStyle();
-        // return style.WindowPadding.x + (i * ImGui::GetWindowContentRegionWidth() / n_columns);
-		float pos[] = {0, 100, 150, 200};
-		return pos[i] + style.WindowPadding.x;
-    }
+    // used by chat colors grid
+    float chat_colors_grid_x[] = { 0, 100, 160, 240 };
 }
 
 void GameSettings::Initialize() {
@@ -518,12 +507,12 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 
 void GameSettings::DrawSettingInternal() {
 	if (ImGui::TreeNode("Chat Colors")) {
-		// ImGui::SetCursorPosX(GetGridItemX(0));
         ImGui::Text("Channel");
-        ImGui::SameLine(GetGridItemX(1));
+        ImGui::SameLine(chat_colors_grid_x[1]);
         ImGui::Text("Sender");
-        ImGui::SameLine(GetGridItemX(2));
+        ImGui::SameLine(chat_colors_grid_x[2]);
         ImGui::Text("Message");
+        ImGui::Spacing();
 
 		DrawChannelColor("Local", GW::Chat::CHANNEL_ALL);
 		DrawChannelColor("Guild", GW::Chat::CHANNEL_GUILD);
@@ -532,7 +521,9 @@ void GameSettings::DrawSettingInternal() {
 		DrawChannelColor("Alliance", GW::Chat::CHANNEL_ALLIANCE);
 		DrawChannelColor("Whispers", GW::Chat::CHANNEL_WHISPER);
 
+        ImGui::TextDisabled("(Left-click on a color to edit it)");
 		ImGui::TreePop();
+        ImGui::Spacing();
 	}
 #ifdef ENABLE_BORDERLESS
 	DrawBorderlessSetting();
@@ -542,10 +533,7 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::Checkbox("Show chat messages timestamp. Color:", &GW::Chat::ShowTimestamps);
 	ImGui::SameLine();
 
-	ImVec4 col = ImGui::ColorConvertU32ToFloat4(GW::Chat::TimestampsColor);
-	if (ImGui::ColorEdit4("Color:", &col.x, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel)) {
-		GW::Chat::TimestampsColor = ImGui::ColorConvertFloat4ToU32(col);
-	}
+    Colors::DrawSettingHueWheel("Color:", &GW::Chat::TimestampsColor);
 	ImGui::ShowHelp("Show timestamps in message history.");
 
 	// ImGui::Checkbox("Keep chat history.", &GW::Chat::KeepChatHistory); @Deprecated
@@ -800,50 +788,32 @@ void GameSettings::ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag)
 	}
 }
 
-ImVec4 GameSettings::ConvertChatColorToFloat4(GW::Chat::Color color) {
-	// @Cleanup: It's fine since we use the same format, but might be buggy.
-	return ImGui::ColorConvertU32ToFloat4((ImU32)color);
-}
-
-GW::Chat::Color GameSettings::ConvertFloat4ToChatColor(ImVec4 color) {
-	return (GW::Chat::Color)ImGui::ColorConvertFloat4ToU32(color);
-}
-
 void GameSettings::DrawChannelColor(const char *name, GW::Chat::Channel chan) {
-	// ImGui::SetCursorPosX(GetGridItemX(0));
+    ImGui::PushID(chan);
 	ImGui::Text(name);
 	
-	GW::Chat::Color sender_col, message_col;
+	GW::Chat::Color color, sender_col, message_col;
 	GW::Chat::GetChannelColors(chan, &sender_col, &message_col);
 
-	ImGui::SameLine(GetGridItemX(1));
-	ImVec4 col1 = ConvertChatColorToFloat4(sender_col);
-	char buffer[128];
-	snprintf(buffer, 128, "Sender Color:##%d", chan);
-	if (ImGui::ColorEdit4(buffer, &col1.x, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel)) {
-		GW::Chat::Color new_col = ConvertFloat4ToChatColor(col1);
-		if (new_col != sender_col) {
-			GW::Chat::SetSenderColor(chan, new_col);
-		}
-	}
+	ImGui::SameLine(chat_colors_grid_x[1]);
+    color = sender_col;
+    if (Colors::DrawSettingHueWheel("Sender Color:", &color) && color != sender_col) {
+        GW::Chat::SetSenderColor(chan, color);
+    }
 
-	ImGui::SameLine(GetGridItemX(2));
-	ImVec4 col2 = ConvertChatColorToFloat4(message_col);
-	snprintf(buffer, 128, "Message Color:##%d", chan);
-	if (ImGui::ColorEdit4(buffer, &col2.x, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel)) {
-		GW::Chat::Color new_col = ConvertFloat4ToChatColor(col2);
-		if (new_col != message_col) {
-			GW::Chat::SetMessageColor(chan, new_col);
-		}
-	}
+	ImGui::SameLine(chat_colors_grid_x[2]);
+    color = message_col;
+    if (Colors::DrawSettingHueWheel("Message Color:", &color) && color != message_col) {
+        GW::Chat::SetMessageColor(chan, color);
+    }
 
-	ImGui::SameLine(GetGridItemX(3));
-	snprintf(buffer, 128, "Reset##%d", chan);
-	if (ImGui::Button(buffer)) {
+	ImGui::SameLine(chat_colors_grid_x[3]);
+	if (ImGui::Button("Reset")) {
 		GW::Chat::Color col1, col2;
 		GW::Chat::GetDefaultColors(chan, &col1, &col2);
 		GW::Chat::SetSenderColor(chan, col1);
 		GW::Chat::SetMessageColor(chan, col2);
 	}
+    ImGui::PopID();
 }
 
