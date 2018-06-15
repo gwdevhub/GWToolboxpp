@@ -22,6 +22,14 @@
 unsigned int ObjectiveTimerWindow::ObjectiveSet::cur_ui_id = 0;
 
 namespace {
+    // settings in the unnamed namespace. This is ugly. DO NOT COPY. 
+    // just doing it because Objective needs them and I'm too lazy to pass them all the way there.
+    int n_columns = 4;
+    bool show_decimal = false;
+    bool show_start_column = true;
+    bool show_end_column = true;
+    bool show_time_column = true;
+
     enum DoA_ObjId : DWORD {
         Foundry = 0x273F,
         Veil,
@@ -43,7 +51,7 @@ namespace {
             strncpy(buf, "--:--", size);
         } else {
             DWORD sec = time / 1000;
-            if (show_ms) {
+            if (show_ms && show_decimal) {
                 snprintf(buf, size, "%02d:%02d.%1d",
                     (sec / 60), sec % 60, (time / 100) % 10);
             } else {
@@ -62,16 +70,21 @@ namespace {
 		GW::UI::AsyncDecodeStr(enc_str, buffer, n);
 	}
 
+    void ComputeNColumns() {
+        n_columns = 1
+            + (show_start_column ? 1 : 0)
+            + (show_end_column ? 1 : 0)
+            + (show_time_column ? 1 : 0);
+    }
     float GetGridItemWidth() {
-        const int n_columns = 4;
         return (ImGui::GetWindowContentRegionWidth()
             - (ImGui::GetStyle().ItemInnerSpacing.x * (n_columns - 1))) / n_columns;
     }
 
     float GetGridItemX(int i) {
-        const int n_columns = 4;
         const auto& style = ImGui::GetStyle();
-        return style.WindowPadding.x + (i * ImGui::GetWindowContentRegionWidth() / n_columns);
+        return style.WindowPadding.x + ImGui::GetStyle().ItemInnerSpacing.x
+            + (i * ImGui::GetWindowContentRegionWidth() / n_columns);
     }
 }
 
@@ -283,12 +296,29 @@ ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::GetCurrentObjective(uint3
     return nullptr;
 }
 
+void ObjectiveTimerWindow::DrawSettingInternal() {
+    ImGui::Checkbox("Show second decimal", &show_decimal);
+    ImGui::Checkbox("Show 'Start' column", &show_start_column);
+    ImGui::Checkbox("Show 'End' column", &show_end_column);
+    ImGui::Checkbox("Show 'Time' column", &show_time_column);
+    ComputeNColumns();
+}
+
 void ObjectiveTimerWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxWindow::LoadSettings(ini);
+    show_decimal = ini->GetBoolValue(Name(), VAR_NAME(show_decimal), false);
+    show_start_column = ini->GetBoolValue(Name(), VAR_NAME(show_start_column), true);
+    show_end_column = ini->GetBoolValue(Name(), VAR_NAME(show_end_column), true);
+    show_time_column = ini->GetBoolValue(Name(), VAR_NAME(show_time_column), true);
+    ComputeNColumns();
 }
 
 void ObjectiveTimerWindow::SaveSettings(CSimpleIni* ini) {
 	ToolboxWindow::SaveSettings(ini);
+    ini->SetBoolValue(Name(), VAR_NAME(show_decimal), show_decimal);
+    ini->SetBoolValue(Name(), VAR_NAME(show_start_column), show_start_column);
+    ini->SetBoolValue(Name(), VAR_NAME(show_end_column), show_end_column);
+    ini->SetBoolValue(Name(), VAR_NAME(show_time_column), show_time_column);
 }
 
 
@@ -361,14 +391,19 @@ void ObjectiveTimerWindow::Objective::Draw() {
     ImGui::PopStyleColor();
 
     ImGui::PushItemWidth(GetGridItemWidth());
-    ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-    ImGui::InputText("##start", cached_start, sizeof(cached_start), ImGuiInputTextFlags_ReadOnly);
-    ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-    ImGui::InputText("##end", cached_done, sizeof(cached_done), ImGuiInputTextFlags_ReadOnly);
-    ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-    ImGui::InputText("##time", cached_duration, sizeof(cached_duration), ImGuiInputTextFlags_ReadOnly);
+    if (show_start_column) {
+        ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+        ImGui::InputText("##start", cached_start, sizeof(cached_start), ImGuiInputTextFlags_ReadOnly);
+    }
+    if (show_end_column) {
+        ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+        ImGui::InputText("##end", cached_done, sizeof(cached_done), ImGuiInputTextFlags_ReadOnly);
+    }
+    if (show_time_column) {
+        ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+        ImGui::InputText("##time", cached_duration, sizeof(cached_duration), ImGuiInputTextFlags_ReadOnly);
+    }
 }
-
 
 void ObjectiveTimerWindow::ObjectiveSet::Update() {
     if (!active) return;
@@ -407,13 +442,21 @@ bool ObjectiveTimerWindow::ObjectiveSet::Draw() {
     bool is_open = true;
     if (ImGui::CollapsingHeader(buf, &is_open, ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::PushID(ui_id);
-        ImGui::SetCursorPosX(GetGridItemX(1));
-        ImGui::Text("Start");
-        ImGui::SameLine(GetGridItemX(2));
-        ImGui::Text("End");
-        ImGui::SameLine(GetGridItemX(3));
-        ImGui::Text("Time");
-
+        int i = 1;
+        if (show_start_column) {
+            ImGui::SetCursorPosX(GetGridItemX(i++));
+            ImGui::Text("Start");
+        }
+        if (show_end_column) {
+            if (i > 1) ImGui::SameLine();
+            ImGui::SetCursorPosX(GetGridItemX(i++));
+            ImGui::Text("End");
+        }
+        if (show_time_column) {
+            if (i > 1) ImGui::SameLine();
+            ImGui::SetCursorPosX(GetGridItemX(i++));
+            ImGui::Text("Time");
+        }
         for (Objective& objective : objectives) {
             objective.Draw();
         }
