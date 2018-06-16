@@ -12,7 +12,7 @@ Previous releases are provided as dll files. In order to use it, you need to use
 * [Fix] The "x" in Objective Timer will now delete the record.
 * [Fix] Crash bug when zoning into an explorable.
 * [Fix] Bug were Materials window wouldn't save his settings.
-* [Minor] You can now choose which coloumn to show in Objective Timer.
+* [Minor] You can now choose which column to show in Objective Timer.
 
 [Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.17_Release/GWToolbox.dll)
 
