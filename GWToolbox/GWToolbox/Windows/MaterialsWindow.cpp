@@ -190,7 +190,7 @@ void MaterialsWindow::LoadSettings(CSimpleIni* ini) {
 }
 
 void MaterialsWindow::SaveSettings(CSimpleIni* ini) {
-	ToolboxWindow::LoadSettings(ini);
+	ToolboxWindow::SaveSettings(ini);
 	ini->SetBoolValue(Name(), VAR_NAME(show_menubutton), show_menubutton);
 	ini->SetBoolValue(Name(), VAR_NAME(manage_gold), manage_gold);
 }
