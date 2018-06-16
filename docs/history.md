@@ -7,6 +7,15 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
+## Version 2.17
+* [New] Options to change game messages color. (Under GameSettings)
+* [Fix] The "x" in Objective Timer will now delete the record.
+* [Fix] Crash bug when zoning into an explorable.
+* [Fix] Bug were Materials window wouldn't save his settings.
+* [Minor] You can now choose which coloumn to show in Objective Timer.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.17_Release/GWToolbox.dll)
+
 ## Version 2.16
 * [New] Objective timer for DoA, UW, FoW
 * [New] Option to automatically withdraw and deposit gold while buying materials. (disable by default)
