@@ -69,7 +69,7 @@ void Minimap::Initialize() {
 	pmap_renderer.Invalidate();
 
 	GW::Chat::CreateCommand(L"flag",
-		[this](int argc, LPWSTR *argv) {
+		[this](const wchar_t *message, int argc, LPWSTR *argv) {
 		if (argc <= 1) {
 			FlagHero(0);
 		} else {

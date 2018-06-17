@@ -422,7 +422,7 @@ void GameSettings::Initialize() {
 	}
 #ifdef ENABLE_BORDERLESS
 	GW::Chat::CreateCommand(L"borderless",
-		[&](int argc, LPWSTR *argv) {
+		[&](const wchar_t *message, int argc, LPWSTR *argv) {
 		if (argc <= 1) {
 			ApplyBorderless(!borderlesswindow);
 		} else {
