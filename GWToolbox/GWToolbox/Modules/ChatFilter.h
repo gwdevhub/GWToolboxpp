@@ -61,11 +61,12 @@ private:
 	static const size_t FILTER_BUF_SIZE = 1024*16;
 
 	// Chat filter
-	std::vector<std::wstring> bycontent_words;
-	std::vector<std::regex> bycontent_regex;
+	std::vector<std::string> bycontent_words;
 	char bycontent_word_buf[FILTER_BUF_SIZE];
-	char bycontent_regex_buf[FILTER_BUF_SIZE];
 	bool bycontent_filedirty = false;
+
+	std::vector<std::regex> bycontent_regex;
+	char bycontent_regex_buf[FILTER_BUF_SIZE];
 
 #ifdef EXTENDED_IGNORE_LIST
 	bool messagebyauthor;

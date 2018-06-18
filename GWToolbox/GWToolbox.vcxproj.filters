@@ -118,6 +118,9 @@
     <Filter Include="Windows\ObjectiveTimer">
       <UniqueIdentifier>{fbeb8ca4-3b54-4f10-81f7-e7fa90a8e7ac}</UniqueIdentifier>
     </Filter>
+    <Filter Include="utf8proc">
+      <UniqueIdentifier>{52973ab6-dfdc-4b2a-9368-285b25aad81d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GWToolbox\GuiUtils.h" />
@@ -282,6 +285,9 @@
     <ClInclude Include="GWToolbox\Windows\ObjectiveTimerWindow.h">
       <Filter>Windows\ObjectiveTimer</Filter>
     </ClInclude>
+    <ClInclude Include="..\Dependencies\utf8proc\utf8proc.h">
+      <Filter>utf8proc</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -423,6 +429,12 @@
     <ClCompile Include="GWToolbox\Utf8.cpp" />
     <ClCompile Include="GWToolbox\Windows\ObjectiveTimerWindow.cpp">
       <Filter>Windows\ObjectiveTimer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\utf8proc\utf8proc.c">
+      <Filter>utf8proc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\utf8proc\utf8proc_data.c">
+      <Filter>utf8proc</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
