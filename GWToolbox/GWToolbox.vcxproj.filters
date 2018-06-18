@@ -115,6 +115,9 @@
     <Filter Include="Windows\Trade">
       <UniqueIdentifier>{7895c2d6-b2da-4eab-8bc7-de0dffbed27b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Windows\ObjectiveTimer">
+      <UniqueIdentifier>{fbeb8ca4-3b54-4f10-81f7-e7fa90a8e7ac}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GWToolbox\GuiUtils.h" />
@@ -276,6 +279,9 @@
       <Filter>Windows\Trade</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\CircurlarBuffer.h" />
+    <ClInclude Include="GWToolbox\Windows\ObjectiveTimerWindow.h">
+      <Filter>Windows\ObjectiveTimer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -415,6 +421,9 @@
       <Filter>Windows\Trade</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\Utf8.cpp" />
+    <ClCompile Include="GWToolbox\Windows\ObjectiveTimerWindow.cpp">
+      <Filter>Windows\ObjectiveTimer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GWToolbox.rc">

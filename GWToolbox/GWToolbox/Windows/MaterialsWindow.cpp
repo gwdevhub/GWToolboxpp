@@ -12,54 +12,69 @@
 #include <logger.h>
 #include <Modules\Resources.h>
 
+static const DWORD MIN_TIME_BETWEEN_RETRY = 160; // 10 frames
+
+GW::MerchItemArray MaterialsWindow::GetMerchItems() const {
+	GW::MerchItemArray items = {};
+	GW::GameContext *game_ctx = GW::GameContext::instance();
+	if (!(game_ctx && game_ctx->world)) return items;
+	return game_ctx->world->merchitems;
+}
+
+GW::Item *MaterialsWindow::GetMerchItem(Material mat) const {
+	uint32_t model_id = GetModelID(mat);
+	GW::ItemArray& items = GW::Items::GetItemArray();
+	for (GW::ItemID item_id : merch_items) {
+		if (item_id >= items.size())
+			continue;
+		GW::Item *item = items[item_id];
+		if (!item) continue;
+		if (item->ModelId == model_id)
+			return item;
+	}
+	return nullptr;
+}
+
+GW::Item *MaterialsWindow::GetBagItem(Material mat) const {
+	uint32_t model_id = GetModelID(mat);
+	GW::Bag **bags = GW::Items::GetBagArray();
+	if (!bags) return nullptr;
+	size_t bag_i = (size_t)GW::Constants::Bag::Backpack;
+	size_t bag_n = (size_t)GW::Constants::Bag::Bag_2;
+	for (size_t i = bag_i; i <= bag_n; i++) {
+		GW::Bag *bag = bags[i];
+		if (!bag) continue;
+		size_t pos = bag->find1(model_id, 0);
+		while (pos != GW::Bag::npos) {
+			GW::Item *item = bag->Items[pos];
+			if (item->Quantity >= 10)
+				return item;
+			pos = bag->find1(model_id, pos + 1);
+		}
+	}
+	return nullptr;
+}
+
 void MaterialsWindow::Update(float delta) {
 	if (cancelled) return;
-	if (!quotequeue.empty()) {
-		if (last_request_type == None) { // no requests are active
-			const Material mat = quotequeue.front();
-			int itemid = RequestPurchaseQuote(mat);
-			if (itemid > 0) {
-				quotequeue.pop_front();
-				last_request_itemid = itemid;
-				last_request_type = Quote;
-			} else {
-				quotequeue.clear(); // panic
-			}
-		}
-	} else if (!sellqueue.empty()) {
-		if (last_request_type == None) {
-			const Material mat = sellqueue.front();
-			if (price[mat] > 0 && GW::Items::GetGoldAmountOnCharacter() + (DWORD)price[mat] > 100 * 1000) {
-				Log::Error("Cannot sell, too much gold!");
-				sellqueue.clear();
-			} else {
-				int itemid = RequestSellQuote(mat);
-				if (itemid > 0) {
-					sellqueue.pop_front();
-					last_request_itemid = itemid;
-					last_request_type = Sell;
-				} else {
-					sellqueue.clear(); // panic
-				}
-			}
-		}
-	} else if (!purchasequeue.empty()) {
-		if (last_request_type == None) {
-			const Material mat = purchasequeue.front();
-			if (price[mat] > 0 && (DWORD)price[mat] > GW::Items::GetGoldAmountOnCharacter()) {
-				Log::Error("Cannot purchase, not enough gold!");
-				purchasequeue.clear();
-			} else {
-				int itemid = RequestPurchaseQuote(mat);
-				if (itemid > 0) {
-					purchasequeue.pop_front();
-					last_request_itemid = itemid;
-					last_request_type = Purchase;
-				} else {
-					purchasequeue.clear(); // panic
-				}
-			}
-		}
+	DWORD tickcount = GetTickCount();
+	if (quote_pending && (tickcount < quote_pending_time)) return;
+	if (trans_pending && (tickcount < trans_pending_time)) return;
+	if (transactions.empty()) return;
+
+	Transaction& trans = transactions.front();
+
+	if (trans.type == Transaction::Buy || trans.type == Transaction::Quote) {
+		trans.item_id = RequestPurchaseQuote(trans.material);
+	} else if (trans.type == Transaction::Sell) {
+		trans.item_id = RequestSellQuote(trans.material);
+	}
+
+	if (trans.item_id) {
+		quote_pending_time = GetTickCount() + MIN_TIME_BETWEEN_RETRY;
+		quote_pending = true;
+	} else {
+		Dequeue();
 	}
 }
 
@@ -76,68 +91,86 @@ void MaterialsWindow::Initialize() {
 	for (int i = 0; i < N_MATS; ++i) {
 		price[i] = PRICE_DEFAULT;
 	}
-	
-	GW::StoC::AddCallback<GW::Packet::StoC::QuotedItemPrice>(
-		[&](GW::Packet::StoC::QuotedItemPrice *pak) -> bool {
-		GW::ItemArray items = GW::Items::GetItemArray();
-		if (!items.valid()) return false;
-		if (pak->itemid >= items.size()) return false;
-		GW::Item* item = items[pak->itemid];
-		if (item == nullptr) return false;
-		price[GetMaterial(item->ModelId)] = pak->price;
-		//printf("Received price %d for %d (item %d)\n", pak->price, item->ModelId, pak->itemid);
 
-		if (last_request_itemid == pak->itemid && !cancelled) {
-			if (last_request_type == Quote) {
-				// everything is ok already
-				last_request_type = None;
-			} else if (last_request_type == Purchase) {
-				// buy the item
-				last_request_price = pak->price;
-				GW::Merchant::TransactionInfo give;
+	GW::StoC::AddCallback<GW::Packet::StoC::QuotedItemPrice>(
+	[this](GW::Packet::StoC::QuotedItemPrice *pak) -> bool {
+		// printf("Received price %d for %d (item %d)\n", pak->price, item->ModelId, pak->itemid);
+		if (transactions.empty()) return false;
+		Transaction& trans = transactions.front();
+		if (cancelled || (trans.item_id != pak->itemid)) {
+			quote_pending = false;
+			return false;
+		}
+
+		auto gold_character = GW::Items::GetGoldAmountOnCharacter();
+		if (trans.type == Transaction::Quote) {
+			price[trans.material] = pak->price;
+			Dequeue();
+		} else if (trans.type == Transaction::Buy) {
+			price[trans.material] = pak->price;
+			if (gold_character >= pak->price) {
+				GW::Merchant::TransactionInfo give, recv;
 				give.itemcount = 0;
 				give.itemids = nullptr;
 				give.itemquantities = nullptr;
-				GW::Merchant::TransactionInfo recv;
 				recv.itemcount = 1;
 				recv.itemids = &pak->itemid;
 				recv.itemquantities = nullptr;
-				GW::Merchant::TransactItems(GW::Merchant::TransactionType::TraderBuy, pak->price, give, 0, recv);
-				//printf("sending purchase request for %d (price=%d)\n", item->ModelId, pak->price);
-			} else if (last_request_type == Sell) {
-				// sell the item
-				last_request_price = pak->price;
 
-				GW::Merchant::TransactionInfo give;
+				GW::Merchant::TransactItems(GW::Merchant::TransactionType::TraderBuy, pak->price, give, 0, recv);
+				trans_pending_time = GetTickCount() + MIN_TIME_BETWEEN_RETRY;
+				trans_pending = true;
+			} else {
+				if (manage_gold) {
+					GW::Items::WithdrawGold();
+				} else {
+					Cancel();
+				}
+			}
+			// printf("sending purchase request for %d (price=%d)\n", item->ModelId, pak->price);
+		} else if (trans.type == Transaction::Sell) {
+			if (gold_character + pak->price <= 100 * 1000) {
+				GW::Merchant::TransactionInfo give, recv;
 				give.itemcount = 1;
 				give.itemids = &pak->itemid;
 				give.itemquantities = nullptr;
-				GW::Merchant::TransactionInfo recv;
 				recv.itemcount = 0;
 				recv.itemids = nullptr;
 				recv.itemquantities = nullptr;
+
 				GW::Merchant::TransactItems(GW::Merchant::TransactionType::TraderSell, 0, give, pak->price, recv);
-				//printf("sending sell request for %d (price=%d)\n", item->ModelId, pak->price);
+				trans_pending_time = GetTickCount() + MIN_TIME_BETWEEN_RETRY;
+				trans_pending = true;
+			} else {
+				if (manage_gold) {
+					GW::Items::DepositGold();
+				} else {
+					Cancel();
+				}
 			}
+			// printf("sending sell request for %d (price=%d)\n", item->ModelId, pak->price);
 		}
+
+		quote_pending = false;
 		return false;
 	});
 
-	// Those 2 are just gold update packets, but we use them to know when the transaction
-	// was successful. Hopefully people won't deposit or widthrawal exactly that amount while buying.
-	GW::StoC::AddCallback<GW::Packet::StoC::CharacterAddGold>(
-		[&](GW::Packet::StoC::CharacterAddGold *pak) -> bool {
-		if (last_request_type == Sell && last_request_price == pak->gold) {
-			last_request_type = None;
-		}
+	GW::StoC::AddCallback<GW::Packet::StoC::TransactionDone>(
+	[this](GW::Packet::StoC::TransactionDone *pak) -> bool {
+		if (transactions.empty()) return false;
+		trans_pending = false;
+		Dequeue();
 		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::StorageAddGold>(
-		[&](GW::Packet::StoC::StorageAddGold *pak) -> bool {
-		//printf("Removed %d gold\n", pak->gold);
-		if (last_request_type == Purchase && last_request_price == pak->gold) {
-			last_request_type = None;
-		}
+
+	GW::StoC::AddCallback<GW::Packet::StoC::ItemStreamEnd>(
+	[this](GW::Packet::StoC::ItemStreamEnd *pak) -> bool {
+		// @Remark: unk1 = 13 means "selling" tab
+		if (pak->unk1 != 12) return false;
+		GW::MerchItemArray& items = GetMerchItems();
+		merch_items.clear();
+		for (size_t i = 0; i < items.size(); i++)
+			merch_items.push_back(items[i]);
 		return false;
 	});
 }
@@ -153,6 +186,13 @@ void MaterialsWindow::Terminate() {
 void MaterialsWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxWindow::LoadSettings(ini);
 	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
+	manage_gold = ini->GetBoolValue(Name(), VAR_NAME(manage_gold), false);
+}
+
+void MaterialsWindow::SaveSettings(CSimpleIni* ini) {
+	ToolboxWindow::SaveSettings(ini);
+	ini->SetBoolValue(Name(), VAR_NAME(show_menubutton), show_menubutton);
+	ini->SetBoolValue(Name(), VAR_NAME(manage_gold), manage_gold);
 }
 
 void MaterialsWindow::Draw(IDirect3DDevice9* pDevice) {
@@ -415,127 +455,84 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice) {
 		}
 
 		ImGui::Separator();
-		int to_do = quotequeue.size() + purchasequeue.size() + sellqueue.size();;
-		int done = cancelled ? cancelled_progress : max - to_do;
+		int to_do = trans_queued - trans_done;
 		float progress = 0.0f;
-		if (max > 0) progress = (float)(done) / max;
+		if (trans_queued > 0) progress = (float)(trans_done) / trans_queued;
 		const char* status = "";
 		if (cancelled) status = "Cancelled";
 		else if (to_do > 0) status = "Working";
 		else status = "Ready";
-		ImGui::Text("%s [%d / %d]", status, done, max);
+		ImGui::Text("%s [%d / %d]", status, trans_done, trans_queued);
 		ImGui::SameLine(width1 + ImGui::GetStyle().WindowPadding.x + ImGui::GetStyle().ItemSpacing.x);
 		ImGui::ProgressBar(progress, ImVec2(width2, 0));
 		ImGui::SameLine();
 		if (ImGui::Button("Cancel", ImVec2(100.0f, 0))) {
-			purchasequeue.clear();
-			quotequeue.clear();
-			sellqueue.clear();
-			cancelled = true;
-			cancelled_progress = done;
-			last_request_type = None;
+			Cancel();
 		}
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Cancel the current queue of operations");
 	}
 	ImGui::End();
 }
 
-void MaterialsWindow::EnqueueQuote(Material material) {
-	if (quotequeue.empty() && purchasequeue.empty() && sellqueue.empty()) max = 0;
-	quotequeue.push_back(material);
-	cancelled = false;
-	++max;
+void MaterialsWindow::Cancel() {
+	cancelled = true;
+	quote_pending = false;
+	trans_pending = false;
+	transactions.clear();
 }
-void MaterialsWindow::EnqueuePurchase(Material material) {
-	if (quotequeue.empty() && purchasequeue.empty() && sellqueue.empty()) max = 0;
-	purchasequeue.push_back(material);
+
+void MaterialsWindow::Dequeue() {
+	trans_done++;
+	transactions.pop_front();
+}
+
+void MaterialsWindow::Enqueue(Transaction::Type type, Material mat) {
+	if (transactions.empty()) {
+		trans_done = 0;
+		trans_queued = 0;
+	}
+	transactions.emplace_back(type, mat);
+	trans_queued++;
 	cancelled = false;
-	++max;
+}
+
+void MaterialsWindow::EnqueueQuote(Material material) {
+	Enqueue(Transaction::Quote, material);
+}
+
+void MaterialsWindow::EnqueuePurchase(Material material) {
+	Enqueue(Transaction::Buy, material);
 }
 void MaterialsWindow::EnqueueSell(Material material) {
-	if (quotequeue.empty() && purchasequeue.empty() && sellqueue.empty()) max = 0;
-	sellqueue.push_back(material);
-	cancelled = false;
-	++max;
+	Enqueue(Transaction::Sell, material);
 }
 
 DWORD MaterialsWindow::RequestPurchaseQuote(Material material) {
-	DWORD modelid = GetModelID(material);
-	GW::Item* item = nullptr;
-	GW::ItemArray items = GW::Items::GetItemArray();
-	if (!items.valid()) return false;
-	for (DWORD i = 0; i < items.size(); ++i) {
-		GW::Item* cur = items[i];
-		if (cur 
-			&& cur->ModelId == modelid 
-			&& cur->AgentId == 0
-			&& cur->Bag == nullptr
-			&& cur->Interaction == 8200
-			&& cur->Quantity == 1) {
-			item = cur;
-			break;
-		}
-	}
-
-	if (item == nullptr) { // mark the price as 'cannot compute'
-		if (price[material] < 0) price[material] = PRICE_NOT_AVAILABLE;
-		return 0;
-	}
-
-	DWORD itemid = item->ItemId;
-	GW::Merchant::QuoteInfo give;
+	GW::Item *item = GetMerchItem(material);
+	if (!item) return 0;
+	GW::Merchant::QuoteInfo give, recv;
 	give.unknown = 0;
 	give.itemcount = 0;
 	give.itemids = nullptr;
-	GW::Merchant::QuoteInfo recv;
 	recv.unknown = 0;
 	recv.itemcount = 1;
-	recv.itemids = &itemid;
+	recv.itemids = &item->ItemId;
 	GW::Merchant::RequestQuote(GW::Merchant::TransactionType::TraderBuy, give, recv);
-	//printf("Sent purchase request for %d (item %d)\n", modelid, itemid);
-
-	if (price[material] < 0) price[material] = PRICE_COMPUTING_SENT;
-	return itemid;
+	return item->ItemId;
 }
 
 DWORD MaterialsWindow::RequestSellQuote(Material material) {
-	DWORD modelid = GetModelID(material);
-	GW::Item* item = nullptr;
-	GW::ItemArray items = GW::Items::GetItemArray();
-	if (!items.valid()) return false;
-	for (DWORD i = 0; i < items.size(); ++i) {
-		GW::Item* cur = items[i];
-		if (cur 
-			&& cur->ModelId == modelid 
-			&& cur->AgentId == 0
-			&& cur->Bag != nullptr
-			&& cur->Bag->Index < 5
-			&& cur->Interaction == 8200) {
-			item = cur;
-			break;
-		}
-	}
-
-	if (item == nullptr) { // mark the price as 'cannot compute'
-		if (price[material] < 0) price[material] = PRICE_NOT_AVAILABLE;
-		return 0;
-	}
-
-	DWORD itemid = item->ItemId;
-	GW::Merchant::QuoteInfo give;
+	GW::Item *item = GetBagItem(material);
+	if (!item) return 0;
+	GW::Merchant::QuoteInfo give, recv;
 	give.unknown = 0;
 	give.itemcount = 1;
-	give.itemids = &itemid;
-	GW::Merchant::QuoteInfo recv;
+	give.itemids = &item->ItemId;
 	recv.unknown = 0;
 	recv.itemcount = 0;
 	recv.itemids = nullptr;
 	GW::Merchant::RequestQuote(GW::Merchant::TransactionType::TraderSell, give, recv);
-	//printf("Sent sell request for %d (item %d)\n", modelid, itemid);
-
-	if (price[material] < 0) price[material] = PRICE_COMPUTING_SENT;
-
-	return itemid;
+	return item->ItemId;
 }
 
 std::string MaterialsWindow::GetPrice(MaterialsWindow::Material mat1, float fac1,
@@ -577,6 +574,12 @@ void MaterialsWindow::FullConsPriceTooltip() const {
 		}
 		ImGui::SetTooltip(buf);
 	}
+}
+
+void MaterialsWindow::DrawSettingInternal() {
+	ToolboxWindow::DrawSettingInternal();
+	ImGui::Checkbox("Automatically manage gold", &manage_gold);
+	ImGui::ShowHelp("It will automaticly withdraw and deposit gold while buying materials");
 }
 
 MaterialsWindow::Material MaterialsWindow::GetMaterial(DWORD modelid) {

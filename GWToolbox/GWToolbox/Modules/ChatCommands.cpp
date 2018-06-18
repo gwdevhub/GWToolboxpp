@@ -33,6 +33,15 @@
 #include <Windows\BuildsWindow.h>
 #include <Widgets\PartyDamage.h>
 
+namespace {
+	const wchar_t *next_word(const wchar_t *str) {
+		while (*str && !isspace(*str))
+			str++;
+		while (*str && isspace(*str))
+			str++;
+		return *str ? str : NULL;
+	}
+}
 
 void ChatCommands::DrawHelp() {
 	ImGui::Text("You can create a 'Send Chat' hotkey to perform any command.");
@@ -116,8 +125,8 @@ void ChatCommands::Initialize() {
 	GW::Chat::CreateCommand(L"scwiki", ChatCommands::CmdSCWiki);
 	GW::Chat::CreateCommand(L"load", ChatCommands::CmdLoad);
 	GW::Chat::CreateCommand(L"transmo", ChatCommands::CmdTransmo);
+	GW::Chat::CreateCommand(L"resize", ChatCommands::CmdResize);
 }
-
 
 
 bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
@@ -241,12 +250,12 @@ bool ChatCommands::ReadTemplateFile(std::wstring path, char *buff, size_t buffSi
 	return true;
 }
 
-void ChatCommands::CmdAge2(int argc, LPWSTR *argv) {
+void ChatCommands::CmdAge2(const wchar_t *message, int argc, LPWSTR *argv) {
 	DWORD second = GW::Map::GetInstanceTime() / 1000;
 	Log::Info("%02u:%02u:%02u", (second / 3600), (second / 60) % 60, second % 60);
 }
 
-void ChatCommands::CmdDialog(int argc, LPWSTR *argv) {
+void ChatCommands::CmdDialog(const wchar_t *message, int argc, LPWSTR *argv) {
 	if (argc <= 1) {
 		Log::Error("Please provide an integer or hex argument");
 	} else {
@@ -260,7 +269,7 @@ void ChatCommands::CmdDialog(int argc, LPWSTR *argv) {
 	}
 }
 
-void ChatCommands::CmdChest(int argc, LPWSTR *argv) {
+void ChatCommands::CmdChest(const wchar_t *message, int argc, LPWSTR *argv) {
 	switch (GW::Map::GetInstanceType()) {
 	case GW::Constants::InstanceType::Outpost:
 		GW::Items::OpenXunlaiWindow();
@@ -278,13 +287,13 @@ void ChatCommands::CmdChest(int argc, LPWSTR *argv) {
 	}
 }
 
-void ChatCommands::CmdTB(int argc, LPWSTR *argv) {
+void ChatCommands::CmdTB(const wchar_t *message, int argc, LPWSTR *argv) {
 	if (argc <= 1) {
 		MainWindow::Instance().visible ^= 1;
 	} else {
 		std::wstring arg = GuiUtils::ToLower(argv[1]);
 		if (arg == L"age") {
-			CmdAge2(0, argv);
+			CmdAge2(message, 0, argv);
 		} else if (arg == L"hide") {
 			MainWindow::Instance().visible = false;
 		} else if (arg == L"show") {
@@ -315,12 +324,13 @@ void ChatCommands::CmdTB(int argc, LPWSTR *argv) {
 	}
 }
 
-std::vector<ToolboxUIElement*> ChatCommands::MatchingWindows(int argc, LPWSTR *argv) {
+std::vector<ToolboxUIElement*> ChatCommands::MatchingWindows(const wchar_t *message, int argc, LPWSTR *argv) {
 	std::vector<ToolboxUIElement*> ret;
 	if (argc <= 1) {
 		ret.push_back(&MainWindow::Instance());
 	} else {
-		std::wstring arg = GuiUtils::ToLower(argv[1]);
+		const wchar_t *tail = next_word(message);
+		std::wstring arg = GuiUtils::ToLower(tail);
 		if (arg == L"all") {
 			for (ToolboxUIElement* window : GWToolbox::Instance().GetUIElements()) {
 				ret.push_back(window);
@@ -337,8 +347,8 @@ std::vector<ToolboxUIElement*> ChatCommands::MatchingWindows(int argc, LPWSTR *a
 	return ret;
 }
 
-void ChatCommands::CmdShow(int argc, LPWSTR *argv) {
-	auto windows = MatchingWindows(argc, argv);
+void ChatCommands::CmdShow(const wchar_t *message, int argc, LPWSTR *argv) {
+	auto windows = MatchingWindows(message, argc, argv);
 	if (windows.empty()) {
 		if (argc == 2 && argv[1] == L"settings") {
 			SettingsWindow::Instance().visible = true;
@@ -352,8 +362,8 @@ void ChatCommands::CmdShow(int argc, LPWSTR *argv) {
 	}
 }
 
-void ChatCommands::CmdHide(int argc, LPWSTR *argv) {
-	auto windows = MatchingWindows(argc, argv);
+void ChatCommands::CmdHide(const wchar_t *message, int argc, LPWSTR *argv) {
+	auto windows = MatchingWindows(message, argc, argv);
 	if (windows.empty()) {
 		Log::Error("Cannot find window '%ls'", argc > 1 ? argv[1] : L"");
 	} else {
@@ -396,7 +406,7 @@ void ChatCommands::ParseDistrict(const std::wstring& s, GW::Constants::District&
 	}
 }
 
-void ChatCommands::CmdTP(int argc, LPWSTR *argv) {
+void ChatCommands::CmdTP(const wchar_t *message, int argc, LPWSTR *argv) {
 	// zero argument error
 	if (argc == 1) {
 		Log::Error("[Error] Please provide an argument");
@@ -492,7 +502,7 @@ void ChatCommands::CmdTP(int argc, LPWSTR *argv) {
 	}
 }
 
-void ChatCommands::CmdZoom(int argc, LPWSTR *argv) {
+void ChatCommands::CmdZoom(const wchar_t *message, int argc, LPWSTR *argv) {
 	if (argc <= 1) {
 		GW::CameraMgr::SetMaxDist();
 	} else {
@@ -509,7 +519,7 @@ void ChatCommands::CmdZoom(int argc, LPWSTR *argv) {
 	}
 }
 
-void ChatCommands::CmdCamera(int argc, LPWSTR *argv) {
+void ChatCommands::CmdCamera(const wchar_t *message, int argc, LPWSTR *argv) {
 	if (argc == 1) {
 		GW::CameraMgr::UnlockCam(false);
 	} else {
@@ -575,7 +585,7 @@ void ChatCommands::CmdCamera(int argc, LPWSTR *argv) {
 	}
 }
 
-void ChatCommands::CmdDamage(int argc, LPWSTR *argv) {
+void ChatCommands::CmdDamage(const wchar_t *message, int argc, LPWSTR *argv) {
 	if (argc <= 1) {
 		PartyDamage::Instance().WritePartyDamage();
 	} else {
@@ -595,11 +605,11 @@ void ChatCommands::CmdDamage(int argc, LPWSTR *argv) {
 	}
 }
 
-void ChatCommands::CmdAfk(int argc, LPWSTR *argv) {
+void ChatCommands::CmdAfk(const wchar_t *message, int argc, LPWSTR *argv) {
 	GW::FriendListMgr::SetFriendListStatus(GW::Constants::OnlineStatus::AWAY);
 }
 
-void ChatCommands::CmdTarget(int argc, LPWSTR *argv) {
+void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
 	if (argc > 1) {
 		std::wstring arg1 = GuiUtils::ToLower(argv[1]);
 		if (arg1 == L"closest" || arg1 == L"nearest") {
@@ -642,7 +652,8 @@ void ChatCommands::CmdTarget(int argc, LPWSTR *argv) {
 				Log::Info("Target coordinates are (%f, %f)", target->pos.x, target->pos.y);
 			}
 		} else {
-			GW::Player *target = GW::PlayerMgr::GetPlayerByName(arg1.c_str());
+			const wchar_t *name = next_word(message);
+			GW::Player *target = GW::PlayerMgr::GetPlayerByName(name);
 			if (target != NULL) {
 				GW::Agent *agent = GW::Agents::GetAgentByID(target->AgentID);
 				if (agent) {
@@ -661,7 +672,7 @@ void ChatCommands::AddSkillToUse(int skill) {
 	}
 }
 
-void ChatCommands::CmdUseSkill(int argc, LPWSTR *argv) {
+void ChatCommands::CmdUseSkill(const wchar_t *message, int argc, LPWSTR *argv) {
 	Instance().skills_to_use.clear();
 
 	if (argc > 1) {
@@ -688,7 +699,7 @@ void ChatCommands::CmdUseSkill(int argc, LPWSTR *argv) {
 	}
 }
 
-void ChatCommands::CmdSCWiki(int argc, LPWSTR *argv) {
+void ChatCommands::CmdSCWiki(const wchar_t *message, int argc, LPWSTR *argv) {
 	CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 	if (argc == 1) {
 		ShellExecuteW(NULL, L"open", L"http://wiki.fbgmguild.com/Main_Page", NULL, NULL, SW_SHOWNORMAL);
@@ -705,7 +716,7 @@ void ChatCommands::CmdSCWiki(int argc, LPWSTR *argv) {
 	}
 }
 
-void ChatCommands::CmdLoad(int argc, LPWSTR *argv) {
+void ChatCommands::CmdLoad(const wchar_t *message, int argc, LPWSTR *argv) {
 	// We will & should move that to GWCA.
 	static int(__fastcall *GetPersonalDir)(size_t size, wchar_t *dir) = 0;
 	*(BYTE**)&GetPersonalDir = GW::MemoryMgr::GetPersonalDirPtr;
@@ -738,7 +749,7 @@ void ChatCommands::CmdLoad(int argc, LPWSTR *argv) {
 		GW::SkillbarMgr::LoadSkillTemplate(temp, std::stoi(argv[2]));
 }
 
-void ChatCommands::CmdTransmo(int argc, LPWSTR *argv) {
+void ChatCommands::CmdTransmo(const wchar_t *message, int argc, LPWSTR *argv) {
 	int scale = 0;
 	if (argc == 2) {
 		GuiUtils::ParseInt(argv[1], &scale);
@@ -820,4 +831,20 @@ void ChatCommands::CmdTransmo(int argc, LPWSTR *argv) {
 		packet.model_id = npc_id;
 		GW::StoC::EmulatePacket(&packet);
 	});
+}
+
+void ChatCommands::CmdResize(const wchar_t *message, int argc, LPWSTR *argv) {
+	if (argc != 3) {
+		Log::Error("The syntax is /resize width height");
+		return;
+	}
+	int width, height;
+	if (!(GuiUtils::ParseInt(argv[1], &width) && GuiUtils::ParseInt(argv[2], &height))) {
+		Log::Error("The syntax is /resize width height");
+		return;
+	}
+	HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
+	RECT rect;
+	GetWindowRect(hwnd, &rect);
+	MoveWindow(hwnd, rect.left, rect.top, width, height, TRUE);
 }

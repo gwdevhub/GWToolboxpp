@@ -69,7 +69,7 @@ void Minimap::Initialize() {
 	pmap_renderer.Invalidate();
 
 	GW::Chat::CreateCommand(L"flag",
-		[this](int argc, LPWSTR *argv) {
+		[this](const wchar_t *message, int argc, LPWSTR *argv) {
 		if (argc <= 1) {
 			FlagHero(0);
 		} else {
@@ -326,58 +326,64 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 	ImGui::End();
 	ImGui::PopStyleColor();
 
-	if (hero_flag_controls_show
-		&& GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable
-		&& GW::Agents::GetHeroAgentID(1) > 0) {
+	if (hero_flag_controls_show && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
+		// @Cleanup: Maybe not lambda, but realy adapted in this case.
+		auto GetPlayerParty = [] () -> GW::PartyInfo* {
+			GW::GameContext *gamectx = GW::GameContext::instance();
+			if (!(gamectx && gamectx->party)) return nullptr;
+			return gamectx->party->playerparty;
+		};
 
-		if (hero_flag_window_attach) {
-			ImGui::SetNextWindowPos(ImVec2((float)location.x, (float)(location.y + size.y)));
-			ImGui::SetNextWindowSize(ImVec2((float)size.x, 40.0f));
-		}
-		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(hero_flag_window_background).Value);
-		if (ImGui::Begin("Hero Controls", nullptr, GetWinFlags(
-			hero_flag_window_attach ? ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove : 0, false))) {
-			static const char* flag_txt[] = {
-				"All", "1", "2", "3", "4", "5", "6", "7", "8"
-			};
-			GW::Vector3f allflag = GW::GameContext::instance()->world->all_flag;
-			GW::HeroFlagArray& flags = GW::GameContext::instance()->world->hero_flags;
-			auto heroarray = GW::GameContext::instance()->party->playerparty->heroes;
-			unsigned int num_heroflags = 9;
-			if (heroarray.valid()) num_heroflags = heroarray.size() + 1;
-			float w_but = (ImGui::GetWindowContentRegionWidth() 
-				- ImGui::GetStyle().ItemSpacing.x * (num_heroflags)) / (num_heroflags + 1);
-
-			for (unsigned int i = 0; i < num_heroflags; ++i) {
-				if (i > 0) ImGui::SameLine();
-				bool old_flagging = flagging[i];
-				if (old_flagging) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered]);
-
-				bool flagged = (i == 0) ?
-					(!std::isinf(allflag.x) || !std::isinf(allflag.y)) :
-					(flags.valid() && i - 1 < flags.size() && (!std::isinf(flags[i - 1].flag.x) || !std::isinf(flags[i - 1].flag.y)));
-
-				if (ImGui::Button(flag_txt[i], ImVec2(w_but, 0))) {
-					flagging[i] ^= 1;
-				}
-				if (old_flagging) ImGui::PopStyleColor();
-
-				if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
-					if (i == 0) GW::PartyMgr::UnflagAll();
-					else GW::PartyMgr::UnflagHero(i);
-				}
-
+		auto playerparty = GetPlayerParty();
+		if (playerparty && (playerparty->henchmen.size() || playerparty->heroes.size())) {
+			if (hero_flag_window_attach) {
+				ImGui::SetNextWindowPos(ImVec2((float)location.x, (float)(location.y + size.y)));
+				ImGui::SetNextWindowSize(ImVec2((float)size.x, 40.0f));
 			}
-			ImGui::SameLine();
-			if (ImGui::Button("Clear", ImVec2(-1, 0))) {
-				GW::PartyMgr::UnflagAll();
-				for (unsigned int i = 1; i < num_heroflags; ++i) {
-					GW::PartyMgr::UnflagHero(i);
+			ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(hero_flag_window_background).Value);
+			if (ImGui::Begin("Hero Controls", nullptr, GetWinFlags(
+				hero_flag_window_attach ? ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove : 0, false))) {
+				static const char* flag_txt[] = {
+					"All", "1", "2", "3", "4", "5", "6", "7", "8"
+				};
+				GW::Vector3f allflag = GW::GameContext::instance()->world->all_flag;
+				GW::HeroFlagArray& flags = GW::GameContext::instance()->world->hero_flags;
+				auto heroarray = playerparty->heroes;
+				unsigned int num_heroflags = heroarray.size() + 1;
+				float w_but = (ImGui::GetWindowContentRegionWidth() 
+					- ImGui::GetStyle().ItemSpacing.x * (num_heroflags)) / (num_heroflags + 1);
+
+				for (unsigned int i = 0; i < num_heroflags; ++i) {
+					if (i > 0) ImGui::SameLine();
+					bool old_flagging = flagging[i];
+					if (old_flagging) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered]);
+
+					bool flagged = (i == 0) ?
+						(!std::isinf(allflag.x) || !std::isinf(allflag.y)) :
+						(flags.valid() && i - 1 < flags.size() && (!std::isinf(flags[i - 1].flag.x) || !std::isinf(flags[i - 1].flag.y)));
+
+					if (ImGui::Button(flag_txt[i], ImVec2(w_but, 0))) {
+						flagging[i] ^= 1;
+					}
+					if (old_flagging) ImGui::PopStyleColor();
+
+					if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
+						if (i == 0) GW::PartyMgr::UnflagAll();
+						else GW::PartyMgr::UnflagHero(i);
+					}
+
+				}
+				ImGui::SameLine();
+				if (ImGui::Button("Clear", ImVec2(-1, 0))) {
+					GW::PartyMgr::UnflagAll();
+					for (unsigned int i = 1; i < num_heroflags; ++i) {
+						GW::PartyMgr::UnflagHero(i);
+					}
 				}
 			}
+			ImGui::End();
+			ImGui::PopStyleColor();
 		}
-		ImGui::End();
-		ImGui::PopStyleColor();
 	}
 }
 

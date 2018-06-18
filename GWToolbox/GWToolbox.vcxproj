@@ -56,7 +56,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32_LEAN_AND_MEAN;WIN32;_DEBUG;_WINDOWS;_USRDLL;API_EXPORTS;_USE_MATH_DEFINES;NOMINMAX;_CRT_SECURE_NO_WARNINGS;IMGUI_USE_BGRA_PACKED_COLOR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ENABLE_BORDERLESS;WIN32_LEAN_AND_MEAN;WIN32;_DEBUG;_WINDOWS;_USRDLL;API_EXPORTS;_USE_MATH_DEFINES;NOMINMAX;_CRT_SECURE_NO_WARNINGS;IMGUI_USE_BGRA_PACKED_COLOR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <ForcedIncludeFiles>GWCA\Utilities\Export.h</ForcedIncludeFiles>
       <ShowIncludes>false</ShowIncludes>
@@ -81,7 +81,7 @@
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32_LEAN_AND_MEAN;WIN32;NDEBUG;_WINDOWS;_USRDLL;API_EXPORTS;_USE_MATH_DEFINES;NOMINMAX;_CRT_SECURE_NO_WARNINGS;IMGUI_USE_BGRA_PACKED_COLOR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ENABLE_BORDERLESS;WIN32_LEAN_AND_MEAN;WIN32;NDEBUG;_WINDOWS;_USRDLL;API_EXPORTS;_USE_MATH_DEFINES;NOMINMAX;_CRT_SECURE_NO_WARNINGS;IMGUI_USE_BGRA_PACKED_COLOR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <AdditionalIncludeDirectories>
@@ -159,6 +159,7 @@
     <ClInclude Include="GWToolbox\Windows\HotkeysWindow.h" />
     <ClInclude Include="GWToolbox\Windows\Hotkeys.h" />
     <ClInclude Include="GWToolbox\Windows\InfoWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\ObjectiveTimerWindow.h" />
     <ClInclude Include="GWToolbox\Windows\MainWindow.h" />
     <ClInclude Include="GWToolbox\Windows\MaterialsWindow.h" />
     <ClInclude Include="GWToolbox\Windows\NotePadWindow.h" />
@@ -215,6 +216,7 @@
     <ClCompile Include="GWToolbox\Windows\HotkeysWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\Hotkeys.cpp" />
     <ClCompile Include="GWToolbox\Windows\InfoWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\ObjectiveTimerWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\MainWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\MaterialsWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\NotePadWindow.cpp" />

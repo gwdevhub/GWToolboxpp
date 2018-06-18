@@ -41,24 +41,25 @@ private:
 	static bool ReadTemplateFile(std::wstring path, char *buff, size_t buffSize);
 	static void ParseDistrict(const std::wstring& s, GW::Constants::District& district, int& number);
 
-	static void CmdAge2(int argc, LPWSTR *argv);
-	static void CmdDialog(int argc, LPWSTR *argv);
-	static void CmdTB(int argc, LPWSTR *argv);
-	static void CmdTP(int argc, LPWSTR *argv);
-	static void CmdDamage(int argc, LPWSTR *argv);
-	static void CmdChest(int argc, LPWSTR *argv);
-	static void CmdAfk(int argc, LPWSTR *argv);
-	static void CmdTarget(int argc, LPWSTR *argv);
-	static void CmdUseSkill(int argc, LPWSTR *argv);
-	static void CmdShow(int argc, LPWSTR *argv);
-	static void CmdHide(int argc, LPWSTR *argv);
-	static void CmdZoom(int argc, LPWSTR *argv);
-	static void CmdCamera(int argc, LPWSTR *argv);
-	static void CmdSCWiki(int argc, LPWSTR *argv);
-	static void CmdLoad(int argc, LPWSTR *argv);
-	static void CmdTransmo(int argc, LPWSTR *argv);
+	static void CmdAge2(const wchar_t *message, int argc, LPWSTR *argv);
+	static void CmdDialog(const wchar_t *message, int argc, LPWSTR *argv);
+	static void CmdTB(const wchar_t *message, int argc, LPWSTR *argv);
+	static void CmdTP(const wchar_t *message, int argc, LPWSTR *argv);
+	static void CmdDamage(const wchar_t *message, int argc, LPWSTR *argv);
+	static void CmdChest(const wchar_t *message, int argc, LPWSTR *argv);
+	static void CmdAfk(const wchar_t *message, int argc, LPWSTR *argv);
+	static void CmdTarget(const wchar_t *message, int argc, LPWSTR *argv);
+	static void CmdUseSkill(const wchar_t *message, int argc, LPWSTR *argv);
+	static void CmdShow(const wchar_t *message, int argc, LPWSTR *argv);
+	static void CmdHide(const wchar_t *message, int argc, LPWSTR *argv);
+	static void CmdZoom(const wchar_t *message, int argc, LPWSTR *argv);
+	static void CmdCamera(const wchar_t *message, int argc, LPWSTR *argv);
+	static void CmdSCWiki(const wchar_t *message, int argc, LPWSTR *argv);
+	static void CmdLoad(const wchar_t *message, int argc, LPWSTR *argv);
+	static void CmdTransmo(const wchar_t *message, int argc, LPWSTR *argv);
+	static void CmdResize(const wchar_t *message, int argc, LPWSTR *argv);
 
-	static std::vector<ToolboxUIElement*> MatchingWindows(int argc, LPWSTR *argv);
+	static std::vector<ToolboxUIElement*> MatchingWindows(const wchar_t *message, int argc, LPWSTR *argv);
 
 	float cam_speed;
 	bool forward_fix_z;

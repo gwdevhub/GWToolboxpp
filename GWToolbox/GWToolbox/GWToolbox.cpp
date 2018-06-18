@@ -425,8 +425,10 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 		ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), device);
 		ImGuiIO& io = ImGui::GetIO();
 		io.MouseDrawCursor = false;
-		static Utf8 imgui_inifile = Resources::GetPathUtf8(L"interface.ini");
-		io.IniFilename = imgui_inifile.c_str();
+		
+		GWToolbox& tb = GWToolbox::Instance();
+		tb.imgui_inifile = Resources::GetPathUtf8(L"interface.ini");
+		io.IniFilename = tb.imgui_inifile.bytes;
 
 		Resources::Instance().EnsureFileExists(Resources::GetPath(L"Font.ttf"),
 			L"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Font.ttf",
@@ -453,11 +455,6 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 		&& GW::Render::GetViewportWidth() > 0
 		&& GW::Render::GetViewportHeight() > 0) {
 
-		if (!GW::UI::GetIsUIDrawn())
-			return;
-
-		ImGui_ImplDX9_NewFrame();
-
 		// Improve precision with QueryPerformanceCounter
 		DWORD tick = GetTickCount();
 		DWORD delta = tick - last_tick_count;
@@ -468,6 +465,13 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 		}
 		last_tick_count = tick;
 
+		if (!GW::UI::GetIsUIDrawn())
+			return;
+
+		if (IsIconic(GW::MemoryMgr::GetGWWindowHandle()))
+			return;
+
+		ImGui_ImplDX9_NewFrame();
 		Resources::Instance().DxUpdate(device);
 
 		for (ToolboxUIElement* uielement : GWToolbox::Instance().uielements) {

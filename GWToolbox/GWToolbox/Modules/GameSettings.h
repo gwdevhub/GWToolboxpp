@@ -68,4 +68,6 @@ private:
 	void UpdateFOV();
 	std::vector<GW::MemoryPatcher*> patches;
 	GW::MemoryPatcher *ctrl_click_patch;
+
+	void DrawChannelColor(const char *name, GW::Chat::Channel chan);
 };

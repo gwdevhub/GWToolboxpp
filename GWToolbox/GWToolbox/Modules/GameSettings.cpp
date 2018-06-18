@@ -343,6 +343,32 @@ namespace {
 		}
 	} 
 #endif // APRIL_FOOLS
+
+    // used by chat colors grid
+    float chat_colors_grid_x[] = { 0, 100, 160, 240 };
+
+	void SaveChannelColor(CSimpleIni *ini, const char *section, const char *chanstr, GW::Chat::Channel chan) {
+		char key[128];
+		GW::Chat::Color sender, message;
+		GW::Chat::GetChannelColors(chan, &sender, &message);
+		// @Cleanup: We relie on the fact the Color and GW::Chat::Color are the same format
+		snprintf(key, 128, "%s_color_sender", chanstr);
+		Colors::Save(ini, section, key, (Color)sender);
+		snprintf(key, 128, "%s_color_message", chanstr);
+		Colors::Save(ini, section, key, (Color)message);
+	}
+
+	void LoadChannelColor(CSimpleIni *ini, const char *section, const char *chanstr, GW::Chat::Channel chan) {
+		char key[128];
+		GW::Chat::Color sender, message;
+		GW::Chat::GetDefaultColors(chan, &sender, &message);
+		snprintf(key, 128, "%s_color_sender", chanstr);
+		sender = (GW::Chat::Color)Colors::Load(ini, section, key, (Color)sender);
+		GW::Chat::SetSenderColor(chan, sender);
+		snprintf(key, 128, "%s_color_message", chanstr);
+		message = (GW::Chat::Color)Colors::Load(ini, section, key, (Color)message);
+		GW::Chat::SetMessageColor(chan, message);
+	}
 }
 
 void GameSettings::Initialize() {
@@ -357,9 +383,9 @@ void GameSettings::Initialize() {
 	}
 
 	{
-		uintptr_t found = GW::Scanner::Find("\x8B\x9E\x7C\x0C\x00\x00\x2B\xC3\x8B", "xxxxxxxxx", 0);
-		patches.push_back(new GW::MemoryPatcher(found - 0xB,  "\xEB", 1));
-		patches.push_back(new GW::MemoryPatcher(found + 0x12, "\xEB", 1));
+		uintptr_t found = GW::Scanner::Find("\x2B\x8E\x78\x0C\x00\x00\x3B\xC1\x7F", "xxxxxxxxx", 0);
+		patches.push_back(new GW::MemoryPatcher(found + 0xF,  "\xEB", 1));
+		patches.push_back(new GW::MemoryPatcher(found + 0x1E, "\xEB", 1));
 	}
 
 	{
@@ -371,16 +397,16 @@ void GameSettings::Initialize() {
 	}
 
 	{
-		uintptr_t found = GW::Scanner::Find("\x56\x57\x8B\xF9\x8B\x87\xF4\x0C\x00\x00\x85\xC0\x75\x14", "xxxxxxxxxxxxxx", 0);
+		uintptr_t found = GW::Scanner::Find("\x55\x8B\xEC\x51\x56\x57\x8B\xF9\x8B\x87\xF8\x0C\x00\x00", "xxxxxxxxxxxxxx", 0);
 		void *patch = "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90";
-		patches.push_back(new GW::MemoryPatcher(found + 0x86,  patch, 10));
-		patches.push_back(new GW::MemoryPatcher(found + 0x100, patch, 10));
-		patches.push_back(new GW::MemoryPatcher(found + 0x13F, patch, 10));
+		patches.push_back(new GW::MemoryPatcher(found + 0x8A,  patch, 10));
+		patches.push_back(new GW::MemoryPatcher(found + 0x10A, patch, 10));
+		patches.push_back(new GW::MemoryPatcher(found + 0x149, patch, 10));
 	}
 #endif // ENABLE_BORDERLESS
 	{
 		// Patch that allow storage page (and Anniversary page) to work... (ask Ziox for more info)
-		uintptr_t found = GW::Scanner::Find("\xEB\x20\x33\xC0\xBE\x06", "xxxxxx", -4);
+		uintptr_t found = GW::Scanner::Find("\xEB\x00\x33\xC0\xBE\x06", "x?xxxx", -4);
 		printf("[SCAN] StoragePatch = %p\n", (void *)found);
 
 		// Xunlai Chest has a behavior where if you
@@ -396,7 +422,7 @@ void GameSettings::Initialize() {
 	}
 #ifdef ENABLE_BORDERLESS
 	GW::Chat::CreateCommand(L"borderless",
-		[&](int argc, LPWSTR *argv) {
+		[&](const wchar_t *message, int argc, LPWSTR *argv) {
 		if (argc <= 1) {
 			ApplyBorderless(!borderlesswindow);
 		} else {
@@ -447,7 +473,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
 	GW::Chat::ShowTimestamps = ini->GetBoolValue(Name(), "show_timestamps", false);
 	GW::Chat::TimestampsColor = Colors::Load(ini, Name(), "timestamps_color", Colors::White());
-	GW::Chat::KeepChatHistory = ini->GetBoolValue(Name(), "keep_chat_history", true);
+	// GW::Chat::KeepChatHistory = ini->GetBoolValue(Name(), "keep_chat_history", true); @Deprecated
 
 	openlinks = ini->GetBoolValue(Name(), VAR_NAME(openlinks), true);
 	auto_url = ini->GetBoolValue(Name(), VAR_NAME(auto_url), true);
@@ -463,6 +489,13 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	auto_set_away_delay = ini->GetLongValue(Name(), VAR_NAME(auto_set_away_delay), 10);
 	auto_set_online = ini->GetBoolValue(Name(), VAR_NAME(auto_set_online), false);
 
+	::LoadChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
+	::LoadChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);
+	::LoadChannelColor(ini, Name(), "team", GW::Chat::CHANNEL_GROUP);
+	::LoadChannelColor(ini, Name(), "trade", GW::Chat::CHANNEL_TRADE);
+	::LoadChannelColor(ini, Name(), "alliance", GW::Chat::CHANNEL_ALLIANCE);
+	::LoadChannelColor(ini, Name(), "whispers", GW::Chat::CHANNEL_WHISPER);
+
 #ifdef ENABLE_BORDERLESS
 	if (borderlesswindow) ApplyBorderless(borderlesswindow);
 #endif
@@ -472,7 +505,6 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	if (auto_url) GW::Chat::SetSendChatCallback(&SendChatCallback);
 	if (flash_window_on_pm) GW::Chat::SetWhisperCallback(&WhisperCallback);
 	if (move_item_on_ctrl_click) GW::Items::SetOnItemClick(GameSettings::ItemClickCallback);
-
 }
 
 void GameSettings::SaveSettings(CSimpleIni* ini) {
@@ -486,7 +518,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 
 	ini->SetBoolValue(Name(), "show_timestamps", GW::Chat::ShowTimestamps);
 	Colors::Save(ini, Name(), "timestamps_color", GW::Chat::TimestampsColor);
-	ini->SetBoolValue(Name(), "keep_chat_history", GW::Chat::KeepChatHistory);
+	// ini->SetBoolValue(Name(), "keep_chat_history", GW::Chat::KeepChatHistory); @Deprecated
 
 	ini->SetBoolValue(Name(), VAR_NAME(openlinks), openlinks);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_url), auto_url);
@@ -501,9 +533,35 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(auto_set_away), auto_set_away);
 	ini->SetLongValue(Name(), VAR_NAME(auto_set_away_delay), auto_set_away_delay);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_set_online), auto_set_online);
+
+	::SaveChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
+	::SaveChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);
+	::SaveChannelColor(ini, Name(), "team", GW::Chat::CHANNEL_GROUP);
+	::SaveChannelColor(ini, Name(), "trade", GW::Chat::CHANNEL_TRADE);
+	::SaveChannelColor(ini, Name(), "alliance", GW::Chat::CHANNEL_ALLIANCE);
+	::SaveChannelColor(ini, Name(), "whispers", GW::Chat::CHANNEL_WHISPER);
 }
 
 void GameSettings::DrawSettingInternal() {
+	if (ImGui::TreeNode("Chat Colors")) {
+        ImGui::Text("Channel");
+        ImGui::SameLine(chat_colors_grid_x[1]);
+        ImGui::Text("Sender");
+        ImGui::SameLine(chat_colors_grid_x[2]);
+        ImGui::Text("Message");
+        ImGui::Spacing();
+
+		DrawChannelColor("Local", GW::Chat::CHANNEL_ALL);
+		DrawChannelColor("Guild", GW::Chat::CHANNEL_GUILD);
+		DrawChannelColor("Team", GW::Chat::CHANNEL_GROUP);
+		DrawChannelColor("Trade", GW::Chat::CHANNEL_TRADE);
+		DrawChannelColor("Alliance", GW::Chat::CHANNEL_ALLIANCE);
+		DrawChannelColor("Whispers", GW::Chat::CHANNEL_WHISPER);
+
+        ImGui::TextDisabled("(Left-click on a color to edit it)");
+		ImGui::TreePop();
+        ImGui::Spacing();
+	}
 #ifdef ENABLE_BORDERLESS
 	DrawBorderlessSetting();
 #endif
@@ -512,14 +570,11 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::Checkbox("Show chat messages timestamp. Color:", &GW::Chat::ShowTimestamps);
 	ImGui::SameLine();
 
-	ImVec4 col = ImGui::ColorConvertU32ToFloat4(GW::Chat::TimestampsColor);
-	if (ImGui::ColorEdit4("Color:", &col.x, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel)) {
-		GW::Chat::TimestampsColor = ImGui::ColorConvertFloat4ToU32(col);
-	}
+    Colors::DrawSettingHueWheel("Color:", &GW::Chat::TimestampsColor);
 	ImGui::ShowHelp("Show timestamps in message history.");
 
-	ImGui::Checkbox("Keep chat history.", &GW::Chat::KeepChatHistory);
-	ImGui::ShowHelp("Messages in the chat do not disappear on character change.");
+	// ImGui::Checkbox("Keep chat history.", &GW::Chat::KeepChatHistory); @Deprecated
+	// ImGui::ShowHelp("Messages in the chat do not disappear on character change.");
 
 	if (ImGui::Checkbox("Open web links from templates", &openlinks)) {
 		GW::Chat::SetOpenLinks(openlinks);
@@ -533,7 +588,9 @@ void GameSettings::DrawSettingInternal() {
 
 	if (ImGui::Checkbox("Tick is a toggle", &tick_is_toggle)) {
 		if (tick_is_toggle) {
+			// @Cleanup: Maybe figure out a better we to hook in runtime vs hook in init time (we queue hooks and apply them in a batch)
 			GW::PartyMgr::SetTickToggle();
+			GW::Hook::EnableHooks();
 		} else {
 			GW::PartyMgr::RestoreTickToggle();
 		}
@@ -767,3 +824,33 @@ void GameSettings::ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag)
 		move_item_to_inventory(item);
 	}
 }
+
+void GameSettings::DrawChannelColor(const char *name, GW::Chat::Channel chan) {
+    ImGui::PushID(chan);
+	ImGui::Text(name);
+	
+	GW::Chat::Color color, sender_col, message_col;
+	GW::Chat::GetChannelColors(chan, &sender_col, &message_col);
+
+	ImGui::SameLine(chat_colors_grid_x[1]);
+    color = sender_col;
+    if (Colors::DrawSettingHueWheel("Sender Color:", &color) && color != sender_col) {
+        GW::Chat::SetSenderColor(chan, color);
+    }
+
+	ImGui::SameLine(chat_colors_grid_x[2]);
+    color = message_col;
+    if (Colors::DrawSettingHueWheel("Message Color:", &color) && color != message_col) {
+        GW::Chat::SetMessageColor(chan, color);
+    }
+
+	ImGui::SameLine(chat_colors_grid_x[3]);
+	if (ImGui::Button("Reset")) {
+		GW::Chat::Color col1, col2;
+		GW::Chat::GetDefaultColors(chan, &col1, &col2);
+		GW::Chat::SetSenderColor(chan, col1);
+		GW::Chat::SetMessageColor(chan, col2);
+	}
+    ImGui::PopID();
+}
+
