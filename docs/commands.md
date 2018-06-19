@@ -7,7 +7,7 @@ Toolbox supports a variety of chat commands; you can use them by typing in chat 
 
 `/afk` will make your character `/sit` and set your status to Away
 
-`/age2` or `/tb age` will display a simple in-game instance time.
+`/age2` will display a simple in-game instance time.
 
 `/borderless` will toggle borderless window; alternatively, you can use `/borderless on` or `/borderless off`.
 
@@ -31,6 +31,8 @@ Toolbox supports a variety of chat commands; you can use them by typing in chat 
 
 `/flag all` or `/flag [number]` to flag  a hero in the minimap (same as using the buttons by the minimap).
 
+`/flag clear` to unflag all heroes.
+
 `/pcons` will toggle [pcons](pcons); alternatively, you can use `/pcons on` or `/pcons off`.
 
 `/target` or `/tgt` has few advanced ways to interact with your target:
@@ -45,6 +47,8 @@ Toolbox supports a variety of chat commands; you can use them by typing in chat 
 `/hide [name]` or `/show [name]` to hide or show a window or widget, or `/tb [name]` to toggle.
 
 `/tb` to hide or show the main Toolbox window.
+
+`resize [x] [y]` sets the size of the Guild Wars window if the resolution is set to Window.
 
 `/to [dest]`, `/tp [dest]`, or `/travel [dest]` will map travel you to the `[dest]` outpost. You can use the following values instead of `[dest]`:
 * `toa`
@@ -69,5 +73,8 @@ Toolbox supports a variety of chat commands; you can use them by typing in chat 
 You can also specify the district with a third argument: possible values are `ae1`, `ee1`, `eg1` (or `dd1`) and `int`. For example, `/tp embark ee1` will make you travel to Embark Beach Europe English District 1.
 
 `/useskill [slot]` will use the selected skill on recharge; for example, `/useskill 1` will use your first skill. Use `/useskill`, `/useskill 0`, or `/useskill stop` to stop.
+
+`/transmo` changes your character model to that of the target NPC. This is only visible to you, and will persist until you zone, use a tonic, or `/transmo` something else.
+* `/transmo [number between 6 and 255]` sets the size of your model. Again, this has no effect except your appearance on your own screen.
 
 [back](./)

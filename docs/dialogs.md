@@ -25,6 +25,6 @@ You can have as many favorites as you want: go on [Settings](settings) to add mo
 ## Custom Dialogs
 The bottom drop down menu contains a list of some of the most popular dialogs, none of which require pre-requisites.
 
-You can also use the input field to send any dialog you wish, so long as you know the code for it. This can be found using the [Info window](info).
+You can also use the input field, or the chat command `/dialog <id>`, to send any dialog you wish, so long as you know the code for it. This can be found using the [Info window](info).
 
 [back](./)
