@@ -581,7 +581,7 @@ void GameSettings::DrawSettingInternal() {
 	}
 	ImGui::ShowHelp("Clicking on template that has a URL as name will open that URL in your browser");
 
-	if (ImGui::Checkbox("Automatically change urls into build templates.", &openlinks)) {
+	if (ImGui::Checkbox("Automatically change urls into build templates.", &auto_url)) {
 		GW::Chat::SetSendChatCallback(&SendChatCallback);
 	}
 	ImGui::ShowHelp("When you write a message starting with 'http://' or 'https://', it will be converted in template format");
