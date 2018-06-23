@@ -300,19 +300,23 @@ void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9* device) {
 		return;
 	}
 	GW::Agent* player = GW::Agents::GetPlayer();
-	if (player == nullptr) return;
+    if (player == nullptr) {
+        recall_target = 0;
+        return;
+    }
 
 	GW::AgentArray agents = GW::Agents::GetAgentArray();
-	if (!agents.valid()) return;
-	if (recall_target > agents.size()) {
-		recall_target = 0;
-		return;
-	}
+    if (!agents.valid() || recall_target >= agents.size()) {
+        recall_target = 0;
+        return;
+    }
 	GW::Agent* target = agents[recall_target];
-	static GW::GamePos targetpos(0.0f, 0.0f);
-	if (target) { targetpos = target->pos; }
-
-	float distance = GW::Agents::GetDistance(targetpos, player->pos);
+    if (target == nullptr) {
+        // This can happen if you recall something that then despawns before you drop recall.
+        recall_target = 0;
+        return;
+    }
+	float distance = GW::Agents::GetDistance(target->pos, player->pos);
 	float distance_perc = distance / GW::Constants::Range::Compass;
 	Color c;
 	if (distance_perc < maxrange_interp_begin) {
@@ -324,7 +328,7 @@ void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9* device) {
 		c = color_shadowstep_line_maxrange;
 	}
 
-	EnqueueVertex(targetpos.x, targetpos.y, c);
+	EnqueueVertex(target->pos.x, target->pos.y, c);
 	EnqueueVertex(player->pos.x, player->pos.y, c);
 }
 
