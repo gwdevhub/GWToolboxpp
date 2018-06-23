@@ -125,4 +125,6 @@ You can attach/detach them to/from the minimap with the **Attach to minimap** to
 
 You can also change the color of the flag controls' background.
 
+You can use the chat commands `/flag all` and `/flag <number>` to select hero flags, and `/flag clear` to unflag all heroes.
+
 [back](./)
