@@ -181,10 +181,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 		if (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) io.KeysDown[VK_XBUTTON1] = false;
 		if (GET_XBUTTON_WPARAM(wParam) == XBUTTON2) io.KeysDown[VK_XBUTTON2] = false;
 		break;
+    case WM_SYSKEYDOWN:
 	case WM_KEYDOWN:
 		if (wParam < 256)
 			io.KeysDown[wParam] = true;
 		break;
+    case WM_SYSKEYUP:
 	case WM_KEYUP:
 		if (wParam < 256)
 			io.KeysDown[wParam] = false;
