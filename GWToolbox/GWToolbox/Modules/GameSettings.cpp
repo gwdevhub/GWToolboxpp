@@ -89,15 +89,49 @@ namespace {
 		FlashWindowEx(&flashInfo);
 	}
 
+	void PrintTime(wchar_t *buffer, size_t n, DWORD time_sec) {
+		DWORD secs = time_sec % 60;
+		DWORD minutes = (time_sec / 60) % 60;
+		DWORD hours = time_sec / 3600;
+		DWORD time = 0;
+		const wchar_t *time_unit = L"";
+		if (hours != 0) {
+			time_unit = L"hour";
+			time = hours;
+		} else if (minutes != 0) {
+			time_unit = L"minute";
+			time = minutes;
+		} else {
+			time_unit = L"second";
+			time = secs;
+		}
+		if (time > 1) {
+			swprintf(buffer, n, L"%lu %ss", time, time_unit);
+		} else {
+			swprintf(buffer, n, L"%lu %s", time, time_unit);
+		}
+	}
+
+	const wchar_t *GetPlayerName(void) {
+		GW::Agent *player = GW::Agents::GetPlayer();
+		if (!player) return L"";
+		DWORD playerNumber = player->PlayerNumber;
+		return GW::Agents::GetPlayerNameByLoginNumber(playerNumber);
+	}
+
 	void WhisperCallback(const wchar_t from[20], const wchar_t msg[140]) {
 		GameSettings&  game_setting = GameSettings::Instance();
 		if (game_setting.flash_window_on_pm) FlashWindow();
 		DWORD status = GW::FriendListMgr::GetMyStatus();
 		if (status == GW::FriendStatus_Away && !game_setting.afk_message.empty()) {
 			wchar_t buffer[120];
-			clock_t diff_time = (clock() - game_setting.afk_message_time) / CLOCKS_PER_SEC;
-			swprintf(buffer, 120, L"Automatic message: \"%s (%d seconds ago)\"", game_setting.afk_message.c_str(), diff_time);
-			GW::Chat::SendChat(from, buffer);
+			DWORD diff_time = (clock() - game_setting.afk_message_time) / CLOCKS_PER_SEC;
+			wchar_t time_buffer[128];
+			PrintTime(time_buffer, 128, diff_time);
+			swprintf(buffer, 120, L"Automatic message: \"%s (%s ago)\"", game_setting.afk_message.c_str(), time_buffer);
+			// Avoid infinite recursion
+			if (wcsncmp(from, ::GetPlayerName(), 20))
+				GW::Chat::SendChat(from, buffer);
 		}
 	}
 
