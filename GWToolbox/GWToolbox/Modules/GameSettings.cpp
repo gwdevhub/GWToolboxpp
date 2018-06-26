@@ -89,7 +89,15 @@ namespace {
 	}
 
 	void WhisperCallback(const wchar_t from[20], const wchar_t msg[140]) {
-		if (GameSettings::Instance().flash_window_on_pm) FlashWindow();
+		GameSettings&  game_setting = GameSettings::Instance();
+		if (game_setting.flash_window_on_pm) FlashWindow();
+		DWORD status = GW::FriendListMgr::GetMyStatus();
+		if (status == GW::FriendStatus_Away && !game_setting.afk_message.empty()) {
+			wchar_t buffer[120];
+			clock_t diff_time = (clock() - game_setting.afk_message_time) / CLOCKS_PER_SEC;
+			swprintf(buffer, 120, L"Automatic message: \"%s (%d seconds ago)\"", game_setting.afk_message.c_str(), diff_time);
+			GW::Chat::SendChat(from, buffer);
+		}
 	}
 
 	int move_materials_to_storage(GW::Item *item) {
@@ -665,6 +673,11 @@ void GameSettings::ApplyBorderless(bool borderless) {
 	} else {
 		borderless_status = WantWindowed;
 	}
+}
+
+void GameSettings::SetAfkMessage(std::wstring&& message) {
+	afk_message = message;
+	afk_message_time = clock();
 }
 
 void GameSettings::Update(float delta) {
