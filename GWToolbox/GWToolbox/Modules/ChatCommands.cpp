@@ -128,7 +128,6 @@ void ChatCommands::Initialize() {
 	GW::Chat::CreateCommand(L"resize", ChatCommands::CmdResize);
 }
 
-
 bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 	if (!GW::CameraMgr::GetCameraUnlock()) return false;
 	if (GW::Chat::IsTyping()) return false;

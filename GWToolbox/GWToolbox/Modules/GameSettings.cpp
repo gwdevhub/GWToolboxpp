@@ -437,6 +437,15 @@ void GameSettings::Initialize() {
 		}
 	});
 #endif
+
+	{
+		uintptr_t found = GW::Scanner::Find("\xEC\x6A\x00\x51\x8B\x4D\xF8\xBA\x41", "xxxxxxxxx", -9);
+		printf("[SCAN] TomePatch = %p\n", (void *)found);
+		if (found) {
+			tome_patch = new GW::MemoryPatcher(found, "\x75\x1E\x90\x90\x90\x90\x90", 7);
+		}
+	}
+
 	GW::StoC::AddCallback<GW::Packet::StoC::PartyPlayerAdd>(
 		[](GW::Packet::StoC::PartyPlayerAdd*) -> bool {
 		if (GameSettings::Instance().flash_window_on_party_invite) FlashWindow();
@@ -489,6 +498,8 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	auto_set_away_delay = ini->GetLongValue(Name(), VAR_NAME(auto_set_away_delay), 10);
 	auto_set_online = ini->GetBoolValue(Name(), VAR_NAME(auto_set_online), false);
 
+	show_unlearned_skill = ini->GetBoolValue(Name(), VAR_NAME(show_unlearned_skill), false);
+
 	::LoadChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
 	::LoadChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);
 	::LoadChannelColor(ini, Name(), "team", GW::Chat::CHANNEL_GROUP);
@@ -533,6 +544,8 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(auto_set_away), auto_set_away);
 	ini->SetLongValue(Name(), VAR_NAME(auto_set_away_delay), auto_set_away_delay);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_set_online), auto_set_online);
+
+	ini->SetBoolValue(Name(), VAR_NAME(show_unlearned_skill), show_unlearned_skill);
 
 	::SaveChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
 	::SaveChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);
@@ -632,6 +645,12 @@ void GameSettings::DrawSettingInternal() {
 
 	ImGui::Checkbox("Automatically set 'Online' after an input to Guild Wars", &auto_set_online);
 	ImGui::ShowHelp("Only if you were 'Away'");
+
+	if (ImGui::Checkbox("Only show non learned skills when using a tome", &show_unlearned_skill)) {
+		if (tome_patch) {
+			tome_patch->TooglePatch(show_unlearned_skill);
+		}
+	}
 }
 
 void GameSettings::DrawBorderlessSetting() {

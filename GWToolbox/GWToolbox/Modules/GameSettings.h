@@ -59,8 +59,13 @@ public:
 	bool auto_set_online = false;
 	clock_t activity_timer = 0;
 
-	void ApplyBorderless(bool value);
+	bool show_unlearned_skill = false;
 
+	std::wstring afk_message;
+	clock_t afk_message_time;
+
+	void ApplyBorderless(bool value);
+	void SetAfkMessage(std::wstring&& message);
 	static void ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag);
 
 private:
@@ -68,6 +73,7 @@ private:
 	void UpdateFOV();
 	std::vector<GW::MemoryPatcher*> patches;
 	GW::MemoryPatcher *ctrl_click_patch;
+	GW::MemoryPatcher *tome_patch;
 
 	void DrawChannelColor(const char *name, GW::Chat::Channel chan);
 };
