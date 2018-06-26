@@ -22,6 +22,7 @@
 #include <Color.h>
 
 namespace {
+#if 0 // @Deprecated
 	void ChatEventCallback(DWORD id, DWORD type, wchar_t* info, void* unk) {
 		if (type == 0x29 && GameSettings::Instance().select_with_chat_doubleclick) {
 			static wchar_t last_name[64] = L"";
@@ -45,6 +46,7 @@ namespace {
 			}
 		}
 	}
+#endif
 
 	void SendChatCallback(GW::Chat::Channel chan, wchar_t msg[120]) {
 		if (!GameSettings::Instance().auto_url || !msg) return;
@@ -536,7 +538,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
 	openlinks = ini->GetBoolValue(Name(), VAR_NAME(openlinks), true);
 	auto_url = ini->GetBoolValue(Name(), VAR_NAME(auto_url), true);
-	select_with_chat_doubleclick = ini->GetBoolValue(Name(), VAR_NAME(select_with_chat_doubleclick), true);
+	// select_with_chat_doubleclick = ini->GetBoolValue(Name(), VAR_NAME(select_with_chat_doubleclick), true);
 	move_item_on_ctrl_click = ini->GetBoolValue(Name(), VAR_NAME(move_item_on_ctrl_click), true);
 
 	flash_window_on_pm = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_pm), true);
@@ -563,10 +565,11 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 #endif
 	if (openlinks) GW::Chat::SetOpenLinks(openlinks);
 	if (tick_is_toggle) GW::PartyMgr::SetTickToggle();
-	if (select_with_chat_doubleclick) GW::Chat::SetChatEventCallback(&ChatEventCallback);
+	// if (select_with_chat_doubleclick) GW::Chat::SetChatEventCallback(&ChatEventCallback);
 	if (auto_url) GW::Chat::SetSendChatCallback(&SendChatCallback);
 	if (flash_window_on_pm) GW::Chat::SetWhisperCallback(&WhisperCallback);
 	if (move_item_on_ctrl_click) GW::Items::SetOnItemClick(GameSettings::ItemClickCallback);
+	if (tome_patch && show_unlearned_skill) tome_patch->TooglePatch(true);
 }
 
 void GameSettings::SaveSettings(CSimpleIni* ini) {
@@ -584,7 +587,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 
 	ini->SetBoolValue(Name(), VAR_NAME(openlinks), openlinks);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_url), auto_url);
-	ini->SetBoolValue(Name(), VAR_NAME(select_with_chat_doubleclick), select_with_chat_doubleclick);
+	// ini->SetBoolValue(Name(), VAR_NAME(select_with_chat_doubleclick), select_with_chat_doubleclick);
 	ini->SetBoolValue(Name(), VAR_NAME(move_item_on_ctrl_click), move_item_on_ctrl_click);
 
 	ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_pm), flash_window_on_pm);
@@ -661,11 +664,12 @@ void GameSettings::DrawSettingInternal() {
 		}
 	}
 	ImGui::ShowHelp("Ticking in party window will work as a toggle instead of opening the menu");
-
+#if 0 // @Deprecated
 	if (ImGui::Checkbox("Target with double-click on message author", &select_with_chat_doubleclick)) {
 		GW::Chat::SetChatEventCallback(&ChatEventCallback);
 	}
 	ImGui::ShowHelp("Double clicking on the author of a message in chat will target the author");
+#endif
 
 	if (ImGui::Checkbox("Move items from/to storage with Control+Click", &move_item_on_ctrl_click)) {
 		GW::Items::SetOnItemClick(GameSettings::ItemClickCallback);
