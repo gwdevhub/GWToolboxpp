@@ -130,7 +130,7 @@ namespace {
 			DWORD diff_time = (clock() - game_setting.afk_message_time) / CLOCKS_PER_SEC;
 			wchar_t time_buffer[128];
 			PrintTime(time_buffer, 128, diff_time);
-			swprintf(buffer, 120, L"Automatic message: \"%s (%s ago)\"", game_setting.afk_message.c_str(), time_buffer);
+			swprintf(buffer, 120, L"Automatic message: \"%s\" (%s ago)", game_setting.afk_message.c_str(), time_buffer);
 			// Avoid infinite recursion
 			if (wcsncmp(from, ::GetPlayerName(), 20))
 				GW::Chat::SendChat(from, buffer);
