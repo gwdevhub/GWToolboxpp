@@ -3,6 +3,7 @@
 #include <ctime>
 
 #include <GWCA\Managers\GameThreadMgr.h>
+#include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\PartyMgr.h>
 #include <GWCA\Managers\ItemMgr.h>
@@ -474,6 +475,13 @@ void GameSettings::Initialize() {
 		return false;
 	});
 
+	GW::StoC::AddCallback<GW::Packet::StoC::CinematicPlay>(
+	[this](GW::Packet::StoC::CinematicPlay *packet) -> bool {
+		if (packet->play && auto_skip_cinematic)
+			GW::Map::SkipCinematic();
+		return false;
+	});
+
 #ifdef APRIL_FOOLS
 	AF::ApplyPatchesIfItsTime();
 #endif
@@ -507,6 +515,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	auto_set_online = ini->GetBoolValue(Name(), VAR_NAME(auto_set_online), false);
 
 	show_unlearned_skill = ini->GetBoolValue(Name(), VAR_NAME(show_unlearned_skill), false);
+	auto_skip_cinematic = ini->GetBoolValue(Name(), VAR_NAME(auto_skip_cinematic), false);
 
 	::LoadChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
 	::LoadChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);
@@ -554,6 +563,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(auto_set_online), auto_set_online);
 
 	ini->SetBoolValue(Name(), VAR_NAME(show_unlearned_skill), show_unlearned_skill);
+	ini->SetBoolValue(Name(), VAR_NAME(auto_skip_cinematic), auto_skip_cinematic);
 
 	::SaveChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
 	::SaveChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);
@@ -659,6 +669,8 @@ void GameSettings::DrawSettingInternal() {
 			tome_patch->TooglePatch(show_unlearned_skill);
 		}
 	}
+
+	ImGui::Checkbox("Automatically skip cinematics", &auto_skip_cinematic);
 }
 
 void GameSettings::DrawBorderlessSetting() {

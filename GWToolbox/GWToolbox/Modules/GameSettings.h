@@ -59,6 +59,7 @@ public:
 	bool auto_set_online = false;
 	clock_t activity_timer = 0;
 
+	bool auto_skip_cinematic = false;
 	bool show_unlearned_skill = false;
 
 	std::wstring afk_message;
