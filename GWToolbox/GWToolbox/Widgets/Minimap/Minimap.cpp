@@ -167,6 +167,8 @@ void Minimap::DrawSettingInternal() {
 		ImGui::TreePop();
 	}
     ImGui::Checkbox("Alt + Click on minimap to move", &alt_click_to_move);
+    ImGui::Checkbox("Reduce agent ping spam", &pingslines_renderer.reduce_ping_spam);
+    ImGui::ShowHelp("Additional pings on the same agents will increase the duration of the existing ping, rather than create a new one.");
 }
 
 void Minimap::LoadSettings(CSimpleIni* ini) {
@@ -177,6 +179,7 @@ void Minimap::LoadSettings(CSimpleIni* ini) {
 	hero_flag_window_background = Colors::Load(ini, Name(), "hero_flag_controls_background",
 		ImColor(ImGui::GetStyle().Colors[ImGuiCol_WindowBg]));
     alt_click_to_move = ini->GetBoolValue(Name(), VAR_NAME(alt_click_to_move), false);
+    pingslines_renderer.reduce_ping_spam = ini->GetBoolValue(Name(), VAR_NAME(reduce_ping_spam), false);
 	range_renderer.LoadSettings(ini, Name());
 	pmap_renderer.LoadSettings(ini, Name());
 	agent_renderer.LoadSettings(ini, Name());
@@ -192,6 +195,7 @@ void Minimap::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(hero_flag_window_attach), hero_flag_window_attach);
 	Colors::Save(ini, Name(), VAR_NAME(hero_flag_window_background), hero_flag_window_background);
     ini->SetBoolValue(Name(), VAR_NAME(alt_click_to_move), alt_click_to_move);
+    ini->SetBoolValue(Name(), VAR_NAME(reduce_ping_spam), pingslines_renderer.reduce_ping_spam);
 	range_renderer.SaveSettings(ini, Name());
 	pmap_renderer.SaveSettings(ini, Name());
 	agent_renderer.SaveSettings(ini, Name());

@@ -1,5 +1,6 @@
 #include "PingsLinesRenderer.h"
 
+#include <unordered_set>
 #include <d3dx9math.h>
 #include <d3d9.h>
 
@@ -76,7 +77,21 @@ PingsLinesRenderer::PingsLinesRenderer() : vertices(nullptr) {
 }
 
 void PingsLinesRenderer::P046Callback(GW::Packet::StoC::AgentPinged *pak) {
-	pings.push_front(new AgentPing(pak->agent_id));
+    bool found = false;
+    if (reduce_ping_spam) {
+        for (Ping* ping : pings) {
+            if (ping->GetAgentID() == pak->agent_id) {
+                // extend the duration to count for the current ping.
+                clock_t diff = TIMER_DIFF(ping->start);
+                ping->duration = 3000 + diff;
+                found = true;
+                break;
+            }
+        }
+    }
+    if (!found) {
+        pings.push_front(new AgentPing(pak->agent_id));
+    }
 }
 
 void PingsLinesRenderer::P138Callback(GW::Packet::StoC::CompassEvent *pak) {
@@ -189,6 +204,7 @@ void PingsLinesRenderer::Render(IDirect3DDevice9* device) {
 void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device) {
 	for (Ping* ping : pings) {
 		if (ping->GetScale() == 0) continue;
+        if (TIMER_DIFF(ping->start) > ping->duration) continue;
 
 		D3DXMATRIX translate, scale, world;
         D3DXMatrixTranslation(&translate, ping->GetX(), ping->GetY(), 0.0f);
@@ -212,7 +228,7 @@ void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device) {
 	}
 	if (!pings.empty()) {
         Ping* last = pings.back(); 
-        if (TIMER_DIFF(last->start) > last->GetDuration()) {
+        if (TIMER_DIFF(last->start) > last->duration) {
             delete last;
             pings.pop_back();
         }
@@ -394,19 +410,19 @@ void PingsLinesRenderer::Marker::Initialize(IDirect3DDevice9* device) {
 	buffer->Unlock();
 }
 
-float PingsLinesRenderer::AgentPing::GetX() {
+float PingsLinesRenderer::AgentPing::GetX() const {
 	GW::Agent* agent = GW::Agents::GetAgentByID(id);
 	if (agent == nullptr) return 0.0f;
 	return agent->pos.x;
 }
 
-float PingsLinesRenderer::AgentPing::GetY() {
+float PingsLinesRenderer::AgentPing::GetY() const {
 	GW::Agent* agent = GW::Agents::GetAgentByID(id);
 	if (agent == nullptr) return 0.0f;
 	return agent->pos.y;
 }
 
-float PingsLinesRenderer::AgentPing::GetScale() {
+float PingsLinesRenderer::AgentPing::GetScale() const {
 	GW::Agent* agent = GW::Agents::GetAgentByID(id);
 	if (agent == nullptr) return 0.0f;
 	return 1.0f;

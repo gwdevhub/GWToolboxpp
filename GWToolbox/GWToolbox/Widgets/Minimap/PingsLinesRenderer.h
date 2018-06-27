@@ -13,6 +13,7 @@
 #include "Color.h"
 
 class PingsLinesRenderer : public VBuffer {
+    friend class Minimap;
 	const float drawing_scale = 96.0f;
 
 	struct DrawingLine {
@@ -30,35 +31,37 @@ class PingsLinesRenderer : public VBuffer {
 	struct Ping {
 		Ping() : start(TIMER_INIT()) {}
 		clock_t start;
-		virtual float GetX() = 0;
-		virtual float GetY() = 0;
-		virtual float GetScale() { return 1.0f; }
-        virtual int GetDuration() const { return 3000; }
+        int duration = 3000;
+		virtual float GetX() const = 0;
+		virtual float GetY() const = 0;
+		virtual float GetScale() const { return 1.0f; }
         virtual bool ShowInner() const { return true; }
+        virtual DWORD GetAgentID() const { return 0; }
 	};
 	struct TerrainPing : Ping {
 		TerrainPing(float _x, float _y) : Ping(), x(_x), y(_y) {}
 		const float x, y;
-		float GetX() override { return x; }
-		float GetY() override { return y; }
-		float GetScale() override { return 2.0f; }
+		float GetX() const override { return x; }
+		float GetY() const override { return y; }
+		float GetScale() const override { return 2.0f; }
 	};
 	struct AgentPing : Ping {
 		AgentPing(DWORD _id) : Ping(), id(_id) {}
 		DWORD id;
-		float GetX() override;
-		float GetY() override;
-		float GetScale() override;
+		float GetX() const override;
+		float GetY() const override;
+		float GetScale() const override;
+        DWORD GetAgentID() const override { return id; }
 	};
     struct ClickPing : Ping {
         ClickPing(float _x, float _y) : Ping(), x(_x), y(_y) {
             start = TIMER_INIT() - 200;
+            duration = 1000;
         }
         const float x, y;
-        float GetX() override { return x; }
-        float GetY() override { return y; }
-        float GetScale() override { return 0.08f; }
-        int GetDuration() const override { return 1000; };
+        float GetX() const override { return x; }
+        float GetY() const override { return y; }
+        float GetScale() const override { return 0.08f; }
         bool ShowInner() const override { return false; }
     };
 	class PingCircle : public VBuffer {
@@ -136,6 +139,7 @@ private:
 	Color color_shadowstep_line_maxrange;
 	float maxrange_interp_begin = 0.85f;
 	float maxrange_interp_end = 0.95f;
+    bool reduce_ping_spam = false;
 
 	// for markers
 	Marker marker;
