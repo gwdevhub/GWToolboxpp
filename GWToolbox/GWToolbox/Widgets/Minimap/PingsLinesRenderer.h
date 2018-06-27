@@ -33,10 +33,12 @@ class PingsLinesRenderer : public VBuffer {
 		virtual float GetX() = 0;
 		virtual float GetY() = 0;
 		virtual float GetScale() { return 1.0f; }
+        virtual int GetDuration() const { return 3000; }
+        virtual bool ShowInner() const { return true; }
 	};
 	struct TerrainPing : Ping {
 		TerrainPing(float _x, float _y) : Ping(), x(_x), y(_y) {}
-		float x, y;
+		const float x, y;
 		float GetX() override { return x; }
 		float GetY() override { return y; }
 		float GetScale() override { return 2.0f; }
@@ -48,6 +50,17 @@ class PingsLinesRenderer : public VBuffer {
 		float GetY() override;
 		float GetScale() override;
 	};
+    struct ClickPing : Ping {
+        ClickPing(float _x, float _y) : Ping(), x(_x), y(_y) {
+            start = TIMER_INIT() - 200;
+        }
+        const float x, y;
+        float GetX() override { return x; }
+        float GetY() override { return y; }
+        float GetScale() override { return 0.08f; }
+        int GetDuration() const override { return 1000; };
+        bool ShowInner() const override { return false; }
+    };
 	class PingCircle : public VBuffer {
 		void Initialize(IDirect3DDevice9* device) override;
 	public:
@@ -73,6 +86,7 @@ public:
 	bool OnMouseDown(float x, float y);
 	bool OnMouseMove(float x, float y);
 	bool OnMouseUp();
+    void AddMouseClickPing(GW::Vector2f pos);
 
 	void P046Callback(GW::Packet::StoC::AgentPinged *pak);
 	void P138Callback(GW::Packet::StoC::CompassEvent *pak);

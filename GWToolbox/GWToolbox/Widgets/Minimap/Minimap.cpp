@@ -166,6 +166,7 @@ void Minimap::DrawSettingInternal() {
 		Colors::DrawSetting("Background", &hero_flag_window_background);
 		ImGui::TreePop();
 	}
+    ImGui::Checkbox("Alt + Click on minimap to move", &alt_click_to_move);
 }
 
 void Minimap::LoadSettings(CSimpleIni* ini) {
@@ -175,6 +176,7 @@ void Minimap::LoadSettings(CSimpleIni* ini) {
 	hero_flag_window_attach = ini->GetBoolValue(Name(), VAR_NAME(hero_flag_window_attach), true);
 	hero_flag_window_background = Colors::Load(ini, Name(), "hero_flag_controls_background",
 		ImColor(ImGui::GetStyle().Colors[ImGuiCol_WindowBg]));
+    alt_click_to_move = ini->GetBoolValue(Name(), VAR_NAME(alt_click_to_move), false);
 	range_renderer.LoadSettings(ini, Name());
 	pmap_renderer.LoadSettings(ini, Name());
 	agent_renderer.LoadSettings(ini, Name());
@@ -188,7 +190,8 @@ void Minimap::SaveSettings(CSimpleIni* ini) {
 	ini->SetDoubleValue(Name(), VAR_NAME(scale), scale);
 	ini->SetBoolValue(Name(), VAR_NAME(hero_flag_controls_show), hero_flag_controls_show);
 	ini->SetBoolValue(Name(), VAR_NAME(hero_flag_window_attach), hero_flag_window_attach);
-	Colors::Save(ini, Name(), "hero_flag_controls_background", hero_flag_window_background);
+	Colors::Save(ini, Name(), VAR_NAME(hero_flag_window_background), hero_flag_window_background);
+    ini->SetBoolValue(Name(), VAR_NAME(alt_click_to_move), alt_click_to_move);
 	range_renderer.SaveSettings(ini, Name());
 	pmap_renderer.SaveSettings(ini, Name());
 	agent_renderer.SaveSettings(ini, Name());
@@ -485,23 +488,30 @@ bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam) {
 	if (!IsInside(x, y)) return false;
 
 	mousedown = true;
+    GW::Vector2f worldpos = InterfaceToWorldPoint(Vec2i(x, y));
 
 	if (wParam & MK_CONTROL) {
-		SelectTarget(InterfaceToWorldPoint(Vec2i(x, y)));
+		SelectTarget(worldpos);
 		return true;
 	}
+
+    if (alt_click_to_move && ImGui::IsKeyDown(VK_MENU)) {
+        GW::Agents::Move(worldpos);
+        pingslines_renderer.AddMouseClickPing(worldpos);
+        return true;
+    }
 
 	bool flagged = false;
 	if (flagging[0]) {
 		flagging[0] = false;
-		GW::PartyMgr::FlagAll(GW::GamePos(InterfaceToWorldPoint(Vec2i(x, y))));
+		GW::PartyMgr::FlagAll(GW::GamePos(worldpos));
 		flagged = true;
 	}
 	for (int i = 1; i < 9; ++i) {
 		if (flagging[i]) {
 			flagging[i] = false;
 			flagged = true;
-			GW::PartyMgr::FlagHero(i, GW::GamePos(InterfaceToWorldPoint(Vec2i(x, y))));
+			GW::PartyMgr::FlagHero(i, GW::GamePos(worldpos));
 		}
 	}
 	if (flagged) return true;
@@ -513,8 +523,7 @@ bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam) {
 
 	if (!lock_move) return true;
 
-	GW::Vector2f v = InterfaceToWorldPoint(Vec2i(x, y));
-	pingslines_renderer.OnMouseDown(v.x, v.y);
+	pingslines_renderer.OnMouseDown(worldpos.x, worldpos.y);
 
 	return true;
 }

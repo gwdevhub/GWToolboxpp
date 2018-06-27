@@ -84,6 +84,8 @@ private:
 
 	bool loading = false; // only consider some cases but still good
 
+    bool alt_click_to_move = false;
+
 	bool hero_flag_controls_show = false;
 	bool hero_flag_window_attach = true;
 	Color hero_flag_window_background;

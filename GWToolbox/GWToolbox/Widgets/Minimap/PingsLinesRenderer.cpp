@@ -191,11 +191,14 @@ void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device) {
 		if (ping->GetScale() == 0) continue;
 
 		D3DXMATRIX translate, scale, world;
-		D3DXMatrixTranslation(&translate, ping->GetX(), ping->GetY(), 0.0f);
-		D3DXMatrixScaling(&scale, drawing_scale, drawing_scale, 1.0f);
-		world = scale * translate;
-		device->SetTransform(D3DTS_WORLD, &world);
-		ping_circle.Render(device);
+        D3DXMatrixTranslation(&translate, ping->GetX(), ping->GetY(), 0.0f);
+
+        if (ping->ShowInner()) {
+            D3DXMatrixScaling(&scale, drawing_scale, drawing_scale, 1.0f);
+            world = scale * translate;
+            device->SetTransform(D3DTS_WORLD, &world);
+            ping_circle.Render(device);
+        }
 
 		int diff = TIMER_DIFF(ping->start);
 		bool first_loop = diff < 1000;
@@ -207,9 +210,12 @@ void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device) {
 		device->SetTransform(D3DTS_WORLD, &world);
 		ping_circle.Render(device);
 	}
-	if (!pings.empty() && TIMER_DIFF(pings.back()->start) > 3000) {
-		delete pings.back();
-		pings.pop_back();
+	if (!pings.empty()) {
+        Ping* last = pings.back(); 
+        if (TIMER_DIFF(last->start) > last->GetDuration()) {
+            delete last;
+            pings.pop_back();
+        }
 	}
 }
 
@@ -414,6 +420,10 @@ bool PingsLinesRenderer::OnMouseDown(float x, float y) {
 	queue.clear();
 	lastsent = TIMER_INIT();
 	return true;
+}
+
+void PingsLinesRenderer::AddMouseClickPing(GW::Vector2f pos) {
+    pings.push_front(new ClickPing(pos.x, pos.y));
 }
 
 bool PingsLinesRenderer::OnMouseMove(float x, float y) {
