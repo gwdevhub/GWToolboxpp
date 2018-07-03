@@ -2,21 +2,22 @@
 
 ## A set of tools for Guild Wars Speed Clearers
 
-[https://haskha.github.io/GWToolboxpp/](https://haskha.github.io/GWToolboxpp/)
-
-## Announcement
-A recent game update broke compatibility of APIs such as the included dependency and subrepository 'GWCA'. GWCA has been fixed, but its authors and I decided to keep the fixes private in order to not ease and promote botting. The submodule GWCA source is currently private. This means that cloning the repository will fail, and you cannot completely build from the source. I apologize for the inconvenience. GWCA has been release as public headers and compiled .lib here: [https://github.com/GregLando113/GWCA-Public](GWCA-Public). You should be able to build GWToolbox with it.
+If you are here to check toolbox features and for a download link to go [https://haskha.github.io/GWToolboxpp/](https://haskha.github.io/GWToolboxpp/). Keep reading for information on how to download and build from the source.
 
 ## How to download and run
-1. Clone *recursively* the repository. On command line, use: `git clone --recursive https://github.com/HasKha/GWToolboxpp.git`.
-2. Open GWToolboxpp.sln with Visual Studio. Toolbox is developed under VS2015, but earlier or later versions should work too.
-3. Set to Debug mode, Win32 and compile.
-4. If it's not already, set CSLauncher as the startup project, and run. Alternatively you can copy `AutoitLauncher/Inject.au3` to your build folder (where `GWToolbox.dll` is) and run that (this requires AutoIt3).
+1. Clone *recursively* the repository. On command line, use: `git clone --recursive https://github.com/HasKha/GWToolboxpp.git`. `GWCA` will fail with an error, you can ignore it.
+2. Open GWToolboxpp.sln with Visual Studio. Toolbox is developed under VS2015 / VS2017, but earlier or later versions should work too. GWCA-related projects will fail to load, you can ignore this and remove them. You do *not* need a GWCA-Public project as part of the solution. 
+3. Open the GWToolbox project properties (right click GWToolbox -> properties), and under `VC++ Directories` change in both `Include Directories` and `Library Directories` from `GWCA` to `GWCA-Public`. 
+4. Set to Debug mode, Win32 and compile.
+5. If it's not already, set CSLauncher as the startup project, and run. Alternatively you can copy `AutoitLauncher/Inject.au3` to your build folder (where `GWToolbox.dll` is) and run that (this requires AutoIt3).
 
 ## Notes
 * GWToolbox compiles as a DLL (`GWToolbox.dll`). `GWToolbox.exe`, aka Launcher, selects a GW clients and injects the dll, but you can also use different launchers, such as the ones in the `AutoItLauncher/` folder.
 * The launcher will run the GWToolbox.dll in the project's compiled directory when set to Debug, but it will run the dll in the installation folder when set to Release. If you wish to run your own compiled dll in release mode either use a different launcher or move the dll to the GWToolboxpp installation folder.
 * You can use the Visual Studio debugger directly to be able to break and step through toolbox code. First launch toolbox in debug mode as normal, then go to Debug -> Attach to process, then select the gw.exe process and click Attach. You can also attach the debugger *before* running toolbox, to debug issues during launch, but you will need to use a separate launcher, such as `AutoItLauncher/inject.au3`. 
+
+## Why is GWCA private?
+A recent game update broke compatibility of APIs such as the included dependency and subrepository 'GWCA'. GWCA has been fixed, but its authors and I decided to keep the fixes private in order to not ease and promote botting. The submodule GWCA source is currently private, so currently cloning or pulling the repository will fail. I apologize for the inconvenience. GWCA has been release as public headers and compiled .lib here: [https://github.com/GregLando113/GWCA-Public](GWCA-Public). You should be able to build GWToolbox with it by changing the include and library paths from `GWCA` to `GWCA-Public` in the GWToolbox project. If you see compile errors, it is possible that GWCA-Public is not up to date with GWCA, so ping me or the contributors here or on Discord and we'll make sure it's up to date.
 
 ## How to contribute
 * First of all make sure you take a look at the code and respect the somewhat consistent code conventions.
