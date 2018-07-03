@@ -5,7 +5,7 @@
 If you are here to check toolbox features and for a download link to go [https://haskha.github.io/GWToolboxpp/](https://haskha.github.io/GWToolboxpp/). Keep reading for information on how to download and build from the source.
 
 ## How to download and run
-1. Clone *recursively* the repository. On command line, use: `git clone --recursive https://github.com/HasKha/GWToolboxpp.git`. `GWCA` will fail with an error, you can ignore it.
+1. Clone *recursively* the repository. On command line, use: `git clone --recursive https://github.com/HasKha/GWToolboxpp.git`. `GWCA` will fail with an error, you can ignore it. Read below for more information.
 2. Open GWToolboxpp.sln with Visual Studio. Toolbox is developed under VS2015 / VS2017, but earlier or later versions should work too. GWCA-related projects will fail to load, you can ignore this and remove them. You do *not* need a GWCA-Public project as part of the solution. 
 3. Open the GWToolbox project properties (right click GWToolbox -> properties), and under `VC++ Directories` change in both `Include Directories` and `Library Directories` from `GWCA` to `GWCA-Public`. 
 4. Set to Debug mode, Win32 and compile.
@@ -17,7 +17,7 @@ If you are here to check toolbox features and for a download link to go [https:/
 * You can use the Visual Studio debugger directly to be able to break and step through toolbox code. First launch toolbox in debug mode as normal, then go to Debug -> Attach to process, then select the gw.exe process and click Attach. You can also attach the debugger *before* running toolbox, to debug issues during launch, but you will need to use a separate launcher, such as `AutoItLauncher/inject.au3`. 
 
 ## Why is GWCA private?
-A recent game update broke compatibility of APIs such as the included dependency and subrepository 'GWCA'. GWCA has been fixed, but its authors and I decided to keep the fixes private in order to not ease and promote botting. The submodule GWCA source is currently private, so currently cloning or pulling the repository will fail. I apologize for the inconvenience. GWCA has been release as public headers and compiled .lib here: [https://github.com/GregLando113/GWCA-Public](GWCA-Public). You should be able to build GWToolbox with it by changing the include and library paths from `GWCA` to `GWCA-Public` in the GWToolbox project. If you see compile errors, it is possible that GWCA-Public is not up to date with GWCA, so ping me or the contributors here or on Discord and we'll make sure it's up to date.
+A recent game update broke compatibility of APIs such as the included dependency and subrepository 'GWCA'. GWCA has been fixed, but its authors and I decided to keep the fixes private in order to not ease and promote botting. The submodule GWCA source is currently private, so currently cloning or pulling the repository will fail. I apologize for the inconvenience. GWCA has been release as public headers and compiled .lib here: [https://github.com/GregLando113/GWCA-Public](GWCA-Public). You should be able to build GWToolbox with it by changing the include and library paths from `GWCA` to `GWCA-Public` in the GWToolbox project. If you see compile errors, it is possible that GWCA-Public is not up to date with GWCA, so feel free to ping me or the contributors here or on Discord (link on the web page) with the error message and we'll make sure it's up to date.
 
 ## How to contribute
 * First of all make sure you take a look at the code and respect the somewhat consistent code conventions.
