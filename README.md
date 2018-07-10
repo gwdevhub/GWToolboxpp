@@ -4,12 +4,23 @@
 
 If you are here to check toolbox features and for a download link to go [https://haskha.github.io/GWToolboxpp/](https://haskha.github.io/GWToolboxpp/). Keep reading for information on how to download and build from the source.
 
-## How to download and run
-1. Clone *recursively* the repository. On command line, use: `git clone --recursive https://github.com/HasKha/GWToolboxpp.git`. `GWCA` will fail with an error, you can ignore it. Read below for more information.
+## How to download, build, and run
+1. Clone *recursively* the repository. On command line, use: `git clone --recursive https://github.com/HasKha/GWToolboxpp.git`. `GWCA` will fail with an error, you can ignore it. Read `Why is GWCA private?` below for more information.
 2. Open GWToolboxpp.sln with Visual Studio. Toolbox is developed under VS2015 / VS2017, but earlier or later versions should work too. GWCA-related projects will fail to load, you can ignore this and remove them. You do *not* need a GWCA-Public project as part of the solution. 
-3. Open the GWToolbox project properties (right click GWToolbox -> properties), and under `VC++ Directories` change in both `Include Directories` and `Library Directories` from `GWCA` to `GWCA-Public`. 
-4. Set to Debug mode, Win32 and compile.
-5. If it's not already, set CSLauncher as the startup project, and run. Alternatively you can copy `AutoitLauncher/Inject.au3` to your build folder (where `GWToolbox.dll` is) and run that (this requires AutoIt3).
+3. Open the GWToolbox project properties (right click GWToolbox -> properties). Select `Configuration: All Configurations` in the dropdown on the top-left. Under `VC++ Directories` change in both `Include Directories` and `Library Directories` from `GWCA` to `GWCA-Public`. 
+4. Release and Debug mode each require specific steps. Start with Release mode, then try Debug once that works. 
+- **Release mode**:
+   1. Set to Release mode, Win32.
+   2. Build the solution.
+   3. Copy `AutoitLauncher/Inject.au3` to your build folder (where `GWToolbox.dll` is) and run it (this requires AutoIt3). Read the `Notes` section below for more info.
+- **Debug mode**:
+   1. Set to Debug mode, Win32.
+   2. Open the GWToolbox project properties. Make sure `Configuration: Debug` is selected on the top-left dropdown.
+   2. In `Properties > Linker > Input > Additional Dependencies` change `GWCAd.lib` to `GWCA.lib`.
+   3. GWCA is compiled only in Release, so in order to compile in Debug mode you'll need to match some compiler flags: `Properties > C/C++ > Code Generation > Runtime Library to Multi-threaded (/MT)`.
+   4. Build the solution.
+   5. If it's not already, set CSLauncher as the startup project, and run. Alternatively you can copy `AutoitLauncher/Inject.au3` to your build folder (where `GWToolbox.dll` is) and run that (this requires AutoIt3). Read the `Notes` section below for more info.
+
 
 ## Notes
 * GWToolbox compiles as a DLL (`GWToolbox.dll`). `GWToolbox.exe`, aka Launcher, selects a GW clients and injects the dll, but you can also use different launchers, such as the ones in the `AutoItLauncher/` folder.
