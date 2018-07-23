@@ -90,4 +90,7 @@ private:
 	bool hero_flag_window_attach = true;
 	Color hero_flag_window_background;
 	bool flagging[9];
+	std::vector<GW::AgentID> player_heroes;
+
+	void GetPlayerHeroes(GW::PartyInfo *party, std::vector<GW::AgentID>& heroes);
 };

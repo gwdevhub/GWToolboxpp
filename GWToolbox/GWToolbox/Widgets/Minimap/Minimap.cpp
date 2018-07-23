@@ -204,6 +204,20 @@ void Minimap::SaveSettings(CSimpleIni* ini) {
 	custom_renderer.SaveSettings(ini, Name());
 }
 
+void Minimap::GetPlayerHeroes(GW::PartyInfo *party, std::vector<GW::AgentID>& player_heroes) {
+	player_heroes.clear();
+	if (!party) return;
+	GW::Agent *player = GW::Agents::GetPlayer();
+	if (!player) return;
+	GW::PlayerID player_id = player->LoginNumber;
+	auto heroes = party->heroes;
+	player_heroes.reserve(heroes.size());
+	for (GW::HeroPartyMember &hero : heroes) {
+		if (hero.ownerplayerid == player_id)
+			player_heroes.push_back(hero.agentid);
+	}
+}
+
 void Minimap::Draw(IDirect3DDevice9* device) {
 	if (!IsActive()) return;
 
@@ -342,7 +356,12 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 		};
 
 		auto playerparty = GetPlayerParty();
-		if (playerparty && (playerparty->henchmen.size() || playerparty->heroes.size())) {
+		GetPlayerHeroes(playerparty, player_heroes);
+		bool player_has_henchmans = false;
+		if (playerparty && playerparty->henchmen.size() && GW::PartyMgr::GetPlayerIsLeader())
+			player_has_henchmans = true;
+
+		if (playerparty && (player_has_henchmans || player_heroes.size())) {
 			if (hero_flag_window_attach) {
 				ImGui::SetNextWindowPos(ImVec2((float)location.x, (float)(location.y + size.y)));
 				ImGui::SetNextWindowSize(ImVec2((float)size.x, 40.0f));
@@ -355,8 +374,7 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 				};
 				GW::Vector3f allflag = GW::GameContext::instance()->world->all_flag;
 				GW::HeroFlagArray& flags = GW::GameContext::instance()->world->hero_flags;
-				auto heroarray = playerparty->heroes;
-				unsigned int num_heroflags = heroarray.size() + 1;
+				unsigned int num_heroflags = player_heroes.size() + 1;
 				float w_but = (ImGui::GetWindowContentRegionWidth() 
 					- ImGui::GetStyle().ItemSpacing.x * (num_heroflags)) / (num_heroflags + 1);
 
@@ -515,7 +533,7 @@ bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam) {
 		if (flagging[i]) {
 			flagging[i] = false;
 			flagged = true;
-			GW::PartyMgr::FlagHero(i, GW::GamePos(worldpos));
+			GW::PartyMgr::FlagHeroAgent(player_heroes[i-1], GW::GamePos(worldpos));
 		}
 	}
 	if (flagged) return true;
