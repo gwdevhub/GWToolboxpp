@@ -178,6 +178,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			if (ImGui::TreeNode("Advanced##target")) {
 				ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() / 2);
 				if (target) {
+					ImGui::LabelText("Addr", "%p", target);
 					ImGui::LabelText("Id", "%d", target->Id);
 					ImGui::LabelText("Z", "%f", target->Z);
 					ImGui::LabelText("Width", "%f", target->Width1);

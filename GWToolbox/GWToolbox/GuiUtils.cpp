@@ -20,7 +20,7 @@ namespace {
 }
 
 void GuiUtils::LoadFonts() {
-	string fontfile = Resources::GetPathUtf8(L"Font.ttf");
+	utf8::string fontfile = Resources::GetPathUtf8(L"Font.ttf");
 	ImGuiIO& io = ImGui::GetIO();
 	font16 = io.Fonts->AddFontFromFileTTF(fontfile.bytes, 16.0f);
 	font18 = io.Fonts->AddFontFromFileTTF(fontfile.bytes, 18.0f);

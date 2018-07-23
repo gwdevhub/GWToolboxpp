@@ -407,11 +407,11 @@ bool ChatFilter::ShouldIgnoreByContent(const wchar_t *message, size_t size) {
 
 	// std::string temp(start, end);
 	char buffer[1024];
-	string temp = Unicode16ToUtf8(buffer, 1024, start, end);
+	utf8::string temp = Unicode16ToUtf8(buffer, 1024, start, end);
 	if (!temp.count)
 		return false;
 
-	string text = Utf8Normalize(temp.bytes);
+	utf8::string text = Utf8Normalize(temp.bytes);
 	if (!text.count) {
 		return false;
 	}
@@ -511,7 +511,7 @@ void ChatFilter::DrawSettingInternal() {
 
 void ChatFilter::ParseBuffer(const char *text, std::vector<std::string> &words) const {
 	words.clear();
-	string normalized_text = Utf8Normalize(text);
+	utf8::string normalized_text = Utf8Normalize(text);
 	std::istringstream stream(normalized_text.bytes);
 	std::string word;
 	while (std::getline(stream, word)) {
