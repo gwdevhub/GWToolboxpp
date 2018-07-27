@@ -229,7 +229,7 @@ void ObjectiveTimerWindow::AddFoWObjectiveSet() {
 	os->objectives.emplace_back(310, "Wailing Lord");
 	os->objectives.emplace_back(311, "Griffons");
 	os->objectives.emplace_back(312, "Defend");
-	os->objectives.emplace_back(313, "Camp");
+	os->objectives.emplace_back(313, "Forge");
 	os->objectives.emplace_back(314, "Menzies");
 	os->objectives.emplace_back(315, "Restore");
 	os->objectives.emplace_back(316, "Khobay");
