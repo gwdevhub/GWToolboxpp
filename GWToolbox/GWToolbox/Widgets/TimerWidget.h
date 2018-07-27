@@ -19,5 +19,17 @@ public:
 	// Draw user interface. Will be called every frame if the element is visible
 	void Draw(IDirect3DDevice9* pDevice) override;
 
+private:
+    // those function write to extra_buffer and extra_color.
+    // they return true if there is something to draw.
+    bool GetUrgozTimer();
+    bool GetDeepTimer();
+    bool GetDhuumTimer();
+
 	bool click_to_print_time;
+    bool show_extra_timers;
+
+    char timer_buffer[32];
+    char extra_buffer[32];
+    ImColor extra_color;
 };
