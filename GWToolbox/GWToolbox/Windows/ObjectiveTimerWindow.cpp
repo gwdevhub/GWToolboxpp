@@ -10,6 +10,7 @@
 #include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Managers\UIMgr.h>
+#include <GWCA\Context\WorldContext.h>
 
 #include "GuiUtils.h"
 #include "GWToolbox.h"
@@ -89,25 +90,25 @@ namespace {
 }
 
 void ObjectiveTimerWindow::Initialize() {
-	ToolboxWindow::Initialize();
+    ToolboxWindow::Initialize();
 
-	GW::StoC::AddCallback<GW::Packet::StoC::PartyDefeated>(
-	[this](GW::Packet::StoC::PartyDefeated *packet) -> bool {
-		if (!objective_sets.empty()) {
-			ObjectiveSet *os = objective_sets.back();
-			os->StopObjectives();
-		}
-		return false;
-	});
+    GW::StoC::AddCallback<GW::Packet::StoC::PartyDefeated>(
+        [this](GW::Packet::StoC::PartyDefeated *packet) -> bool {
+        if (!objective_sets.empty()) {
+            ObjectiveSet *os = objective_sets.back();
+            os->StopObjectives();
+        }
+        return false;
+    });
 
-	GW::StoC::AddCallback<GW::Packet::StoC::GameSrvTransfer>(
-	[this](GW::Packet::StoC::GameSrvTransfer *packet) -> bool {
-		if (!objective_sets.empty()) {
-			ObjectiveSet *os = objective_sets.back();
-			os->StopObjectives();
-		}
-		return false;
-	});
+    GW::StoC::AddCallback<GW::Packet::StoC::GameSrvTransfer>(
+        [this](GW::Packet::StoC::GameSrvTransfer *packet) -> bool {
+        if (!objective_sets.empty()) {
+            ObjectiveSet *os = objective_sets.back();
+            os->StopObjectives();
+        }
+        return false;
+    });
 
 	GW::StoC::AddCallback<GW::Packet::StoC::InstanceLoadFile>(
 	[this](GW::Packet::StoC::InstanceLoadFile *packet) -> bool {
@@ -159,6 +160,26 @@ void ObjectiveTimerWindow::Initialize() {
         }
         return false;
 	});
+
+    GW::StoC::AddCallback<GW::Packet::StoC::AgentUpdateAllegiance>(
+        [this](GW::Packet::StoC::AgentUpdateAllegiance* packet) -> bool {
+        // we only use this for triggering dhuum
+        if (GW::Map::GetMapID() != GW::Constants::MapID::The_Underworld) return false;
+        // check the flag packet->unk1
+        printf("P48: agent %d - %d\n", packet->agent_id, packet->unk1);
+
+        GW::AgentArray agents = GW::Agents::GetAgentArray();
+        if (!agents.valid()) return false;
+        if (packet->agent_id >= agents.size()) return false;
+        const GW::Agent* agent = agents[packet->agent_id];
+        if (agent->PlayerNumber != GW::Constants::ModelID::UW::Dhuum) return false;
+        printf("that agent was dhuum!\n");
+        
+        // ok, dhuum turned hostile, find the objective
+        Objective* obj = GetCurrentObjective(157);
+        if (obj && !obj->IsStarted()) obj->SetStarted();
+        return false;
+    });
 
 	GW::StoC::AddCallback<GW::Packet::StoC::DoACompleteZone>(
 	[this](GW::Packet::StoC::DoACompleteZone* packet) -> bool {
