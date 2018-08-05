@@ -166,14 +166,12 @@ void ObjectiveTimerWindow::Initialize() {
         // we only use this for triggering dhuum
         if (GW::Map::GetMapID() != GW::Constants::MapID::The_Underworld) return false;
         // check the flag packet->unk1
-        printf("P48: agent %d - %d\n", packet->agent_id, packet->unk1);
+        //printf("P48: agent %d - %d\n", packet->agent_id, packet->unk1);
 
-        GW::AgentArray agents = GW::Agents::GetAgentArray();
-        if (!agents.valid()) return false;
-        if (packet->agent_id >= agents.size()) return false;
-        const GW::Agent* agent = agents[packet->agent_id];
+        const GW::Agent* agent = GW::Agents::GetAgentByID(packet->agent_id);
+        if (agent == nullptr) return false;
         if (agent->PlayerNumber != GW::Constants::ModelID::UW::Dhuum) return false;
-        printf("that agent was dhuum!\n");
+        if (packet->unk1 != 0x6D6F6E31) return false;
         
         // ok, dhuum turned hostile, find the objective
         Objective* obj = GetCurrentObjective(157);
