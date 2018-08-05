@@ -7,6 +7,22 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
+## Version 2.18
+* [New] `/tb`, `/hide` and `/show` do not require quotes for windows with multiple names. 
+* [New] Added an option (in Game Settings) to only show non-learned skills when using a tome.
+* [New] Added an afk message to `/afk <message>`. Toolbox will automatically reply with that message if you get PMd while afk.
+* [New] Toolbox will now not render during cinematics.
+* [New] Added an option to automatically skip cinematics.
+* [New] Added an option to alt+click on the minimap to move to that location.
+* [New] Added an option to reduce the visual impact in the minimap when agents get spam pinged.
+* [New] Added an optional timer for Deep Aspects. You can enable it in Timer settings.
+* [Fix] Fixed a bug where the bond monitor would not properly update the party size.
+* [Fix] Fixed a bug where toolbox could only control 7 heroes.
+* [Fix] Fixed the Dhuum start trigger in the Objective Timer.
+* [Fix] Fixed bug where Recall line would not know where to go after your Recall target despawned.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.18_Release/GWToolbox.dll)
+
 ## Version 2.17
 * [New] Options to change game messages color. (Under GameSettings)
 * [Fix] The "x" in Objective Timer will now delete the record.
