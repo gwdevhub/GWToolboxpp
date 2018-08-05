@@ -313,12 +313,10 @@ void ChatCommands::CmdTB(const wchar_t *message, int argc, LPWSTR *argv) {
 		} else if (arg == L"ignore") {
 
 		} else {
-			std::string name = std::string(arg.begin(), arg.end());
-			for (ToolboxUIElement* window : GWToolbox::Instance().GetUIElements()) {
-				if (name == GuiUtils::ToLower(window->Name())) {
-					window->visible ^= 1;
-				}
-			}
+            auto windows = MatchingWindows(message, argc, argv);
+            for (ToolboxUIElement* window : windows) {
+                window->visible ^= 1;
+            }
 		}
 	}
 }
