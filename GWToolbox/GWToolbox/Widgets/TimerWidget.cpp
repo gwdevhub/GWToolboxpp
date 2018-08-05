@@ -144,7 +144,5 @@ bool TimerWidget::GetDeepTimer() {
 
 bool TimerWidget::GetDhuumTimer() {
     // todo: implement
-    // please use a callback on skill usage, 
-    // don't loop over all agents hoping to find dhuum casting judgmnt
     return false;
 }

@@ -163,17 +163,13 @@ void ObjectiveTimerWindow::Initialize() {
 
     GW::StoC::AddCallback<GW::Packet::StoC::AgentUpdateAllegiance>(
         [this](GW::Packet::StoC::AgentUpdateAllegiance* packet) -> bool {
-        // we only use this for triggering dhuum
         if (GW::Map::GetMapID() != GW::Constants::MapID::The_Underworld) return false;
-        // check the flag packet->unk1
-        //printf("P48: agent %d - %d\n", packet->agent_id, packet->unk1);
 
         const GW::Agent* agent = GW::Agents::GetAgentByID(packet->agent_id);
         if (agent == nullptr) return false;
         if (agent->PlayerNumber != GW::Constants::ModelID::UW::Dhuum) return false;
         if (packet->unk1 != 0x6D6F6E31) return false;
         
-        // ok, dhuum turned hostile, find the objective
         Objective* obj = GetCurrentObjective(157);
         if (obj && !obj->IsStarted()) obj->SetStarted();
         return false;
