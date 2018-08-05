@@ -3,6 +3,7 @@
 #include <ctime>
 
 #include <GWCA\Managers\GameThreadMgr.h>
+#include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\PartyMgr.h>
 #include <GWCA\Managers\ItemMgr.h>
@@ -21,6 +22,7 @@
 #include <Color.h>
 
 namespace {
+#if 0 // @Deprecated
 	void ChatEventCallback(DWORD id, DWORD type, wchar_t* info, void* unk) {
 		if (type == 0x29 && GameSettings::Instance().select_with_chat_doubleclick) {
 			static wchar_t last_name[64] = L"";
@@ -44,6 +46,7 @@ namespace {
 			}
 		}
 	}
+#endif
 
 	void SendChatCallback(GW::Chat::Channel chan, wchar_t msg[120]) {
 		if (!GameSettings::Instance().auto_url || !msg) return;
@@ -88,8 +91,50 @@ namespace {
 		FlashWindowEx(&flashInfo);
 	}
 
+	void PrintTime(wchar_t *buffer, size_t n, DWORD time_sec) {
+		DWORD secs = time_sec % 60;
+		DWORD minutes = (time_sec / 60) % 60;
+		DWORD hours = time_sec / 3600;
+		DWORD time = 0;
+		const wchar_t *time_unit = L"";
+		if (hours != 0) {
+			time_unit = L"hour";
+			time = hours;
+		} else if (minutes != 0) {
+			time_unit = L"minute";
+			time = minutes;
+		} else {
+			time_unit = L"second";
+			time = secs;
+		}
+		if (time > 1) {
+			swprintf(buffer, n, L"%lu %ss", time, time_unit);
+		} else {
+			swprintf(buffer, n, L"%lu %s", time, time_unit);
+		}
+	}
+
+	const wchar_t *GetPlayerName(void) {
+		GW::Agent *player = GW::Agents::GetPlayer();
+		if (!player) return L"";
+		DWORD playerNumber = player->PlayerNumber;
+		return GW::Agents::GetPlayerNameByLoginNumber(playerNumber);
+	}
+
 	void WhisperCallback(const wchar_t from[20], const wchar_t msg[140]) {
-		if (GameSettings::Instance().flash_window_on_pm) FlashWindow();
+		GameSettings&  game_setting = GameSettings::Instance();
+		if (game_setting.flash_window_on_pm) FlashWindow();
+		DWORD status = GW::FriendListMgr::GetMyStatus();
+		if (status == GW::FriendStatus_Away && !game_setting.afk_message.empty()) {
+			wchar_t buffer[120];
+			DWORD diff_time = (clock() - game_setting.afk_message_time) / CLOCKS_PER_SEC;
+			wchar_t time_buffer[128];
+			PrintTime(time_buffer, 128, diff_time);
+			swprintf(buffer, 120, L"Automatic message: \"%s\" (%s ago)", game_setting.afk_message.c_str(), time_buffer);
+			// Avoid infinite recursion
+			if (wcsncmp(from, ::GetPlayerName(), 20))
+				GW::Chat::SendChat(from, buffer);
+		}
 	}
 
 	int move_materials_to_storage(GW::Item *item) {
@@ -422,7 +467,7 @@ void GameSettings::Initialize() {
 	}
 #ifdef ENABLE_BORDERLESS
 	GW::Chat::CreateCommand(L"borderless",
-		[&](int argc, LPWSTR *argv) {
+		[&](const wchar_t *message, int argc, LPWSTR *argv) {
 		if (argc <= 1) {
 			ApplyBorderless(!borderlesswindow);
 		} else {
@@ -437,6 +482,15 @@ void GameSettings::Initialize() {
 		}
 	});
 #endif
+
+	{
+		uintptr_t found = GW::Scanner::Find("\xEC\x6A\x00\x51\x8B\x4D\xF8\xBA\x41", "xxxxxxxxx", -9);
+		printf("[SCAN] TomePatch = %p\n", (void *)found);
+		if (found) {
+			tome_patch = new GW::MemoryPatcher(found, "\x75\x1E\x90\x90\x90\x90\x90", 7);
+		}
+	}
+
 	GW::StoC::AddCallback<GW::Packet::StoC::PartyPlayerAdd>(
 		[](GW::Packet::StoC::PartyPlayerAdd*) -> bool {
 		if (GameSettings::Instance().flash_window_on_party_invite) FlashWindow();
@@ -454,6 +508,13 @@ void GameSettings::Initialize() {
 			ShowWindow(hwnd, SW_RESTORE);
 		}
 
+		return false;
+	});
+
+	GW::StoC::AddCallback<GW::Packet::StoC::CinematicPlay>(
+	[this](GW::Packet::StoC::CinematicPlay *packet) -> bool {
+		if (packet->play && auto_skip_cinematic)
+			GW::Map::SkipCinematic();
 		return false;
 	});
 
@@ -477,7 +538,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
 	openlinks = ini->GetBoolValue(Name(), VAR_NAME(openlinks), true);
 	auto_url = ini->GetBoolValue(Name(), VAR_NAME(auto_url), true);
-	select_with_chat_doubleclick = ini->GetBoolValue(Name(), VAR_NAME(select_with_chat_doubleclick), true);
+	// select_with_chat_doubleclick = ini->GetBoolValue(Name(), VAR_NAME(select_with_chat_doubleclick), true);
 	move_item_on_ctrl_click = ini->GetBoolValue(Name(), VAR_NAME(move_item_on_ctrl_click), true);
 
 	flash_window_on_pm = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_pm), true);
@@ -488,6 +549,9 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	auto_set_away = ini->GetBoolValue(Name(), VAR_NAME(auto_set_away), false);
 	auto_set_away_delay = ini->GetLongValue(Name(), VAR_NAME(auto_set_away_delay), 10);
 	auto_set_online = ini->GetBoolValue(Name(), VAR_NAME(auto_set_online), false);
+
+	show_unlearned_skill = ini->GetBoolValue(Name(), VAR_NAME(show_unlearned_skill), false);
+	auto_skip_cinematic = ini->GetBoolValue(Name(), VAR_NAME(auto_skip_cinematic), false);
 
 	::LoadChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
 	::LoadChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);
@@ -501,10 +565,11 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 #endif
 	if (openlinks) GW::Chat::SetOpenLinks(openlinks);
 	if (tick_is_toggle) GW::PartyMgr::SetTickToggle();
-	if (select_with_chat_doubleclick) GW::Chat::SetChatEventCallback(&ChatEventCallback);
+	// if (select_with_chat_doubleclick) GW::Chat::SetChatEventCallback(&ChatEventCallback);
 	if (auto_url) GW::Chat::SetSendChatCallback(&SendChatCallback);
 	if (flash_window_on_pm) GW::Chat::SetWhisperCallback(&WhisperCallback);
 	if (move_item_on_ctrl_click) GW::Items::SetOnItemClick(GameSettings::ItemClickCallback);
+	if (tome_patch && show_unlearned_skill) tome_patch->TooglePatch(true);
 }
 
 void GameSettings::SaveSettings(CSimpleIni* ini) {
@@ -522,7 +587,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 
 	ini->SetBoolValue(Name(), VAR_NAME(openlinks), openlinks);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_url), auto_url);
-	ini->SetBoolValue(Name(), VAR_NAME(select_with_chat_doubleclick), select_with_chat_doubleclick);
+	// ini->SetBoolValue(Name(), VAR_NAME(select_with_chat_doubleclick), select_with_chat_doubleclick);
 	ini->SetBoolValue(Name(), VAR_NAME(move_item_on_ctrl_click), move_item_on_ctrl_click);
 
 	ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_pm), flash_window_on_pm);
@@ -533,6 +598,9 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(auto_set_away), auto_set_away);
 	ini->SetLongValue(Name(), VAR_NAME(auto_set_away_delay), auto_set_away_delay);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_set_online), auto_set_online);
+
+	ini->SetBoolValue(Name(), VAR_NAME(show_unlearned_skill), show_unlearned_skill);
+	ini->SetBoolValue(Name(), VAR_NAME(auto_skip_cinematic), auto_skip_cinematic);
 
 	::SaveChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
 	::SaveChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);
@@ -581,7 +649,7 @@ void GameSettings::DrawSettingInternal() {
 	}
 	ImGui::ShowHelp("Clicking on template that has a URL as name will open that URL in your browser");
 
-	if (ImGui::Checkbox("Automatically change urls into build templates.", &openlinks)) {
+	if (ImGui::Checkbox("Automatically change urls into build templates.", &auto_url)) {
 		GW::Chat::SetSendChatCallback(&SendChatCallback);
 	}
 	ImGui::ShowHelp("When you write a message starting with 'http://' or 'https://', it will be converted in template format");
@@ -596,11 +664,12 @@ void GameSettings::DrawSettingInternal() {
 		}
 	}
 	ImGui::ShowHelp("Ticking in party window will work as a toggle instead of opening the menu");
-
+#if 0 // @Deprecated
 	if (ImGui::Checkbox("Target with double-click on message author", &select_with_chat_doubleclick)) {
 		GW::Chat::SetChatEventCallback(&ChatEventCallback);
 	}
 	ImGui::ShowHelp("Double clicking on the author of a message in chat will target the author");
+#endif
 
 	if (ImGui::Checkbox("Move items from/to storage with Control+Click", &move_item_on_ctrl_click)) {
 		GW::Items::SetOnItemClick(GameSettings::ItemClickCallback);
@@ -632,6 +701,14 @@ void GameSettings::DrawSettingInternal() {
 
 	ImGui::Checkbox("Automatically set 'Online' after an input to Guild Wars", &auto_set_online);
 	ImGui::ShowHelp("Only if you were 'Away'");
+
+	if (ImGui::Checkbox("Only show non learned skills when using a tome", &show_unlearned_skill)) {
+		if (tome_patch) {
+			tome_patch->TooglePatch(show_unlearned_skill);
+		}
+	}
+
+	ImGui::Checkbox("Automatically skip cinematics", &auto_skip_cinematic);
 }
 
 void GameSettings::DrawBorderlessSetting() {
@@ -646,6 +723,11 @@ void GameSettings::ApplyBorderless(bool borderless) {
 	} else {
 		borderless_status = WantWindowed;
 	}
+}
+
+void GameSettings::SetAfkMessage(std::wstring&& message) {
+	afk_message = message;
+	afk_message_time = clock();
 }
 
 void GameSettings::Update(float delta) {

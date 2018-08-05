@@ -1,8 +1,8 @@
 #include "ChatFilter.h"
 
-#include <locale>
 #include <fstream>
 #include <sstream>
+#include <string.h>
 
 #include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
@@ -405,20 +405,29 @@ bool ChatFilter::ShouldIgnoreByContent(const wchar_t *message, size_t size) {
 	}
 	if (start == nullptr) return false; // no string segment in this packet
 
-	std::string text(start, end);
-	std::transform(text.begin(), text.end(), text.begin(), ::tolower);
+	// std::string temp(start, end);
+	char buffer[1024];
+	utf8::string temp = Unicode16ToUtf8(buffer, 1024, start, end);
+	if (!temp.count)
+		return false;
 
-	for (const std::string& s : bycontent_words) {
-		if (text.find(s) != std::string::npos) {
+	utf8::string text = Utf8Normalize(temp.bytes);
+	if (!text.count) {
+		return false;
+	}
+
+	for (const auto& s : bycontent_words) {
+		if (strstr(text.bytes, s.c_str())) {
+			free(text);
 			return true;
 		}
 	}
 	for (const std::regex& r : bycontent_regex) {
-		if (std::regex_match(text, r)) {
+		if (std::regex_match(text.bytes, r)) {
 			return true;
 		}
 	}
-
+	free(text);
 	return false;
 }
 
@@ -502,11 +511,25 @@ void ChatFilter::DrawSettingInternal() {
 
 void ChatFilter::ParseBuffer(const char *text, std::vector<std::string> &words) const {
 	words.clear();
-	std::istringstream stream(text);
+	utf8::string normalized_text = Utf8Normalize(text);
+	std::istringstream stream(normalized_text.bytes);
 	std::string word;
 	while (std::getline(stream, word)) {
 		if (!word.empty()) {
-			std::transform(word.begin(), word.end(), word.begin(), ::tolower);
+			words.push_back(word);
+		}
+	}
+	free(normalized_text);
+}
+
+void ChatFilter::ParseBuffer(const char *text, std::vector<std::wstring> &words) const {
+	words.clear();
+	wchar_t buffer[1024];
+	Utf8ToUnicode(text, buffer, 1024);
+	std::wstringstream stream(buffer);
+	std::wstring word;
+	while (std::getline(stream, word)) {
+		if (!word.empty()) {
 			words.push_back(word);
 		}
 	}

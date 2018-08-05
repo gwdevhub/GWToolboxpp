@@ -62,10 +62,11 @@ private:
 
 	// Chat filter
 	std::vector<std::string> bycontent_words;
-	std::vector<std::regex> bycontent_regex;
 	char bycontent_word_buf[FILTER_BUF_SIZE];
-	char bycontent_regex_buf[FILTER_BUF_SIZE];
 	bool bycontent_filedirty = false;
+
+	std::vector<std::regex> bycontent_regex;
+	char bycontent_regex_buf[FILTER_BUF_SIZE];
 
 #ifdef EXTENDED_IGNORE_LIST
 	bool messagebyauthor;
@@ -74,7 +75,8 @@ private:
 	bool byauthor_filedirty = false;
 #endif
 
-	void ParseBuffer(const char *text, std::vector<std::string> &words) const;
+	void ParseBuffer(const char *text, std::vector<std::string>  &words) const;
+	void ParseBuffer(const char *text, std::vector<std::wstring> &words) const;
 	void ParseBuffer(const char* text, std::vector<std::regex> &regex) const;
 
 	//void ByContent_ParseBuf() {

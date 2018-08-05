@@ -15,6 +15,7 @@
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\GameThreadMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
+#include <GWCA\Managers\EffectMgr.h>
 
 #include <Widgets\TimerWidget.h>
 #include <Widgets\HealthWidget.h>
@@ -144,6 +145,21 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::InputText("Player ID##player", modelid_buf, 32, ImGuiInputTextFlags_ReadOnly);
 			ImGui::ShowHelp("Player ID is unique for each human player in the instance.");
 			ImGui::PopItemWidth();
+            if (ImGui::TreeNode("Effects##player")) {
+                GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
+                if (effects.valid()) {
+                    for (DWORD i = 0; i < effects.size(); ++i) {
+                        ImGui::Text("id: %d", effects[i].SkillId);
+                        long time = effects[i].GetTimeRemaining();
+                        if (time > 0) {
+                            ImGui::SameLine();
+                            ImGui::Text(" duration: %d", time / 1000);
+                        }
+                    }
+                }
+                ImGui::TreePop();
+            }
+
 		}
 		if (show_target && ImGui::CollapsingHeader("Target")) {
 			static char x_buf[32] = "";
@@ -178,6 +194,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			if (ImGui::TreeNode("Advanced##target")) {
 				ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() / 2);
 				if (target) {
+					ImGui::LabelText("Addr", "%p", target);
 					ImGui::LabelText("Id", "%d", target->Id);
 					ImGui::LabelText("Z", "%f", target->Z);
 					ImGui::LabelText("Width", "%f", target->Width1);

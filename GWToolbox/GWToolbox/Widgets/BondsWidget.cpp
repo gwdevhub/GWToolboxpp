@@ -52,9 +52,8 @@ void BondsWidget::Terminate() {
 	}
 }
 
-void BondsWidget::Draw(IDirect3DDevice9* device) {
-	if (!visible) return;
-
+void BondsWidget::Update(float delta)
+{
 	switch (GW::Map::GetInstanceType()) {
 	case GW::Constants::InstanceType::Explorable:
 		if (update) {
@@ -74,6 +73,10 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
 	default:
 		break;
 	}
+}
+
+void BondsWidget::Draw(IDirect3DDevice9* device) {
+	if (!visible) return;
 	
 	GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
 	if (info == nullptr) return;

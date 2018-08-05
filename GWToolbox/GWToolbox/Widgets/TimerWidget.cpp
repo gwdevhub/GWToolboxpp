@@ -1,9 +1,11 @@
 #include "TimerWidget.h"
 
 #include <logger.h>
+#include <Timer.h>
 #include <GWCA\GWCA.h>
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
+#include <GWCA\Managers\EffectMgr.h>
 
 #include "GuiUtils.h"
 #include "Modules\ToolboxSettings.h"
@@ -11,16 +13,20 @@
 void TimerWidget::LoadSettings(CSimpleIni *ini) {
 	ToolboxWidget::LoadSettings(ini);
 	click_to_print_time = ini->GetBoolValue(Name(), VAR_NAME(click_to_print_time), false);
+    show_extra_timers = ini->GetBoolValue(Name(), VAR_NAME(show_extra_timers), false);
 }
 
 void TimerWidget::SaveSettings(CSimpleIni *ini) {
 	ToolboxWidget::SaveSettings(ini);
 	ini->SetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
+    ini->SetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
 }
 
 void TimerWidget::DrawSettingInternal() {
 	ToolboxWidget::DrawSettingInternal();
 	ImGui::Checkbox("Ctrl+Click to print time", &click_to_print_time);
+    ImGui::Checkbox("Show extra timers", &show_extra_timers);
+    ImGui::ShowHelp("Such as Deep aspects");
 }
 
 void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
@@ -33,34 +39,26 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
 	ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(click_to_print_time && ctrl_pressed)))) {
-		static char timer[32];
-		static char urgoz_timer[32];
-		snprintf(timer, 32, "%d:%02d:%02d", time / (60 * 60), (time / 60) % 60, time % 60);
+		snprintf(timer_buffer, 32, "%d:%02d:%02d", time / (60 * 60), (time / 60) % 60, time % 60);
 		ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f48));
 		ImVec2 cur = ImGui::GetCursorPos();
 		ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
-		ImGui::TextColored(ImColor(0, 0, 0), timer);
+		ImGui::TextColored(ImColor(0, 0, 0), timer_buffer);
 		ImGui::SetCursorPos(cur);
-		ImGui::Text(timer);
+		ImGui::Text(timer_buffer);
 		ImGui::PopFont();
-		if (GW::Map::GetMapID() == GW::Constants::MapID::Urgozs_Warren
-			&& GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
-			ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f24));
-			ImVec2 cur = ImGui::GetCursorPos();
-			int temp = (time - 1) % 25;
-			if (temp < 15) {
-				snprintf(urgoz_timer, 32, "Open - %d", 15 - temp);
-			}  else {
-				snprintf(urgoz_timer, 32, "Closed - %d", 25 - temp);
-			}
 
-			ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
-			ImGui::TextColored(ImColor(0, 0, 0), urgoz_timer);
-			ImGui::SetCursorPos(cur);
-			ImColor color = temp < 15 ? ImColor(0, 255, 0) : ImColor(255, 0, 0);
-			ImGui::TextColored(color, urgoz_timer);
-			ImGui::PopFont();
-		}
+        if (GetUrgozTimer() || (show_extra_timers && (GetDeepTimer() || GetDhuumTimer()))) {
+
+            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f24));
+            ImVec2 cur = ImGui::GetCursorPos();
+            ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
+            ImGui::TextColored(ImColor(0, 0, 0), extra_buffer);
+            ImGui::SetCursorPos(cur);
+            ImGui::TextColored(extra_color, extra_buffer);
+            ImGui::PopFont();
+        }
+
 		if (click_to_print_time) {
 			ImVec2 size = ImGui::GetWindowSize();
 			ImVec2 min = ImGui::GetWindowPos();
@@ -72,4 +70,79 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
 	}
 	ImGui::End();
 	ImGui::PopStyleColor();
+}
+
+bool TimerWidget::GetUrgozTimer() {
+    if (GW::Map::GetMapID() != GW::Constants::MapID::Urgozs_Warren) return false;
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return false;
+    unsigned long time = GW::Map::GetInstanceTime() / 1000;
+    int temp = (time - 1) % 25;
+    if (temp < 15) {
+        snprintf(extra_buffer, 32, "Open - %d", 15 - temp);
+        extra_color = ImColor(0, 255, 0);
+    } else {
+        snprintf(extra_buffer, 32, "Closed - %d", 25 - temp);
+        extra_color = ImColor(255, 0, 0);
+    }
+    return true;
+}
+
+bool TimerWidget::GetDeepTimer() {
+    using namespace GW::Constants;
+
+    if (GW::Map::GetMapID() != MapID::The_Deep) return false;
+    if (GW::Map::GetInstanceType() != InstanceType::Explorable) return false;
+    
+    GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
+    if (!effects.valid()) return false;
+
+    static clock_t start = -1;
+    SkillID skill = SkillID::No_Skill;
+    for (DWORD i = 0; i < effects.size(); ++i) {
+        SkillID effect_id = (SkillID)effects[i].SkillId;
+        switch (effect_id) {
+        case SkillID::Aspect_of_Exhaustion: skill = SkillID::Aspect_of_Exhaustion; break;
+        case SkillID::Aspect_of_Depletion_energy_loss: skill = SkillID::Aspect_of_Depletion_energy_loss; break;
+        case SkillID::Scorpion_Aspect: skill = SkillID::Scorpion_Aspect; break;
+        default: break;
+        }
+    }
+    if (skill == SkillID::No_Skill) {
+        start = -1;
+        return false;
+    }
+
+    if (start == -1) {
+        start = TIMER_INIT();
+    }
+
+    clock_t diff = TIMER_DIFF(start) / 1000;
+
+
+    // a 30s timer starts when you enter the aspect
+    // a 30s timer starts 100s after you enter the aspect
+    // a 30s timer starts 200s after you enter the aspect
+    long timer = 30 - (diff % 30);
+    if (diff > 100) timer = std::min(timer, 30 - ((diff - 100) % 30));
+    if (diff > 200) timer = std::min(timer, 30 - ((diff - 200) % 30));
+    switch (skill) {
+    case SkillID::Aspect_of_Exhaustion: 
+        snprintf(extra_buffer, 32, "Exhaustion: %d", timer);
+        break;
+    case SkillID::Aspect_of_Depletion_energy_loss: 
+        snprintf(extra_buffer, 32, "Depletion: %d", timer);
+        break;
+    case SkillID::Scorpion_Aspect: 
+        snprintf(extra_buffer, 32, "Scorpion: %d", timer);
+        break;
+    default:
+        break;
+    }
+    extra_color = ImColor(255, 255, 255);
+    return true;
+}
+
+bool TimerWidget::GetDhuumTimer() {
+    // todo: implement
+    return false;
 }

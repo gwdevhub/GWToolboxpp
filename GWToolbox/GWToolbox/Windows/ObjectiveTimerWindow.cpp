@@ -10,6 +10,7 @@
 #include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Managers\UIMgr.h>
+#include <GWCA\Context\WorldContext.h>
 
 #include "GuiUtils.h"
 #include "GWToolbox.h"
@@ -89,25 +90,25 @@ namespace {
 }
 
 void ObjectiveTimerWindow::Initialize() {
-	ToolboxWindow::Initialize();
+    ToolboxWindow::Initialize();
 
-	GW::StoC::AddCallback<GW::Packet::StoC::PartyDefeated>(
-	[this](GW::Packet::StoC::PartyDefeated *packet) -> bool {
-		if (!objective_sets.empty()) {
-			ObjectiveSet *os = objective_sets.back();
-			os->StopObjectives();
-		}
-		return false;
-	});
+    GW::StoC::AddCallback<GW::Packet::StoC::PartyDefeated>(
+        [this](GW::Packet::StoC::PartyDefeated *packet) -> bool {
+        if (!objective_sets.empty()) {
+            ObjectiveSet *os = objective_sets.back();
+            os->StopObjectives();
+        }
+        return false;
+    });
 
-	GW::StoC::AddCallback<GW::Packet::StoC::GameSrvTransfer>(
-	[this](GW::Packet::StoC::GameSrvTransfer *packet) -> bool {
-		if (!objective_sets.empty()) {
-			ObjectiveSet *os = objective_sets.back();
-			os->StopObjectives();
-		}
-		return false;
-	});
+    GW::StoC::AddCallback<GW::Packet::StoC::GameSrvTransfer>(
+        [this](GW::Packet::StoC::GameSrvTransfer *packet) -> bool {
+        if (!objective_sets.empty()) {
+            ObjectiveSet *os = objective_sets.back();
+            os->StopObjectives();
+        }
+        return false;
+    });
 
 	GW::StoC::AddCallback<GW::Packet::StoC::InstanceLoadFile>(
 	[this](GW::Packet::StoC::InstanceLoadFile *packet) -> bool {
@@ -159,6 +160,20 @@ void ObjectiveTimerWindow::Initialize() {
         }
         return false;
 	});
+
+    GW::StoC::AddCallback<GW::Packet::StoC::AgentUpdateAllegiance>(
+        [this](GW::Packet::StoC::AgentUpdateAllegiance* packet) -> bool {
+        if (GW::Map::GetMapID() != GW::Constants::MapID::The_Underworld) return false;
+
+        const GW::Agent* agent = GW::Agents::GetAgentByID(packet->agent_id);
+        if (agent == nullptr) return false;
+        if (agent->PlayerNumber != GW::Constants::ModelID::UW::Dhuum) return false;
+        if (packet->unk1 != 0x6D6F6E31) return false;
+        
+        Objective* obj = GetCurrentObjective(157);
+        if (obj && !obj->IsStarted()) obj->SetStarted();
+        return false;
+    });
 
 	GW::StoC::AddCallback<GW::Packet::StoC::DoACompleteZone>(
 	[this](GW::Packet::StoC::DoACompleteZone* packet) -> bool {
@@ -229,7 +244,7 @@ void ObjectiveTimerWindow::AddFoWObjectiveSet() {
 	os->objectives.emplace_back(310, "Wailing Lord");
 	os->objectives.emplace_back(311, "Griffons");
 	os->objectives.emplace_back(312, "Defend");
-	os->objectives.emplace_back(313, "Camp");
+	os->objectives.emplace_back(313, "Forge");
 	os->objectives.emplace_back(314, "Menzies");
 	os->objectives.emplace_back(315, "Restore");
 	os->objectives.emplace_back(316, "Khobay");

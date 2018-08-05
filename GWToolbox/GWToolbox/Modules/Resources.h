@@ -35,7 +35,7 @@ public:
 	static std::wstring GetPath(std::wstring file);
 	static std::wstring GetPath(std::wstring folder, std::wstring file);
 
-	static string GetPathUtf8(std::wstring file);
+	static utf8::string GetPathUtf8(std::wstring file);
 	static void EnsureFolderExists(std::wstring path);
 
 	// folder should not contain a trailing slash

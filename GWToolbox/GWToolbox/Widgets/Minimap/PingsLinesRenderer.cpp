@@ -1,5 +1,6 @@
 #include "PingsLinesRenderer.h"
 
+#include <unordered_set>
 #include <d3dx9math.h>
 #include <d3d9.h>
 
@@ -76,7 +77,21 @@ PingsLinesRenderer::PingsLinesRenderer() : vertices(nullptr) {
 }
 
 void PingsLinesRenderer::P046Callback(GW::Packet::StoC::AgentPinged *pak) {
-	pings.push_front(new AgentPing(pak->agent_id));
+    bool found = false;
+    if (reduce_ping_spam) {
+        for (Ping* ping : pings) {
+            if (ping->GetAgentID() == pak->agent_id) {
+                // extend the duration to count for the current ping.
+                clock_t diff = TIMER_DIFF(ping->start);
+                ping->duration = 3000 + diff;
+                found = true;
+                break;
+            }
+        }
+    }
+    if (!found) {
+        pings.push_front(new AgentPing(pak->agent_id));
+    }
 }
 
 void PingsLinesRenderer::P138Callback(GW::Packet::StoC::CompassEvent *pak) {
@@ -189,13 +204,17 @@ void PingsLinesRenderer::Render(IDirect3DDevice9* device) {
 void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device) {
 	for (Ping* ping : pings) {
 		if (ping->GetScale() == 0) continue;
+        if (TIMER_DIFF(ping->start) > ping->duration) continue;
 
 		D3DXMATRIX translate, scale, world;
-		D3DXMatrixTranslation(&translate, ping->GetX(), ping->GetY(), 0.0f);
-		D3DXMatrixScaling(&scale, drawing_scale, drawing_scale, 1.0f);
-		world = scale * translate;
-		device->SetTransform(D3DTS_WORLD, &world);
-		ping_circle.Render(device);
+        D3DXMatrixTranslation(&translate, ping->GetX(), ping->GetY(), 0.0f);
+
+        if (ping->ShowInner()) {
+            D3DXMatrixScaling(&scale, drawing_scale, drawing_scale, 1.0f);
+            world = scale * translate;
+            device->SetTransform(D3DTS_WORLD, &world);
+            ping_circle.Render(device);
+        }
 
 		int diff = TIMER_DIFF(ping->start);
 		bool first_loop = diff < 1000;
@@ -207,9 +226,12 @@ void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device) {
 		device->SetTransform(D3DTS_WORLD, &world);
 		ping_circle.Render(device);
 	}
-	if (!pings.empty() && TIMER_DIFF(pings.back()->start) > 3000) {
-		delete pings.back();
-		pings.pop_back();
+	if (!pings.empty()) {
+        Ping* last = pings.back(); 
+        if (TIMER_DIFF(last->start) > last->duration) {
+            delete last;
+            pings.pop_back();
+        }
 	}
 }
 
@@ -300,19 +322,23 @@ void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9* device) {
 		return;
 	}
 	GW::Agent* player = GW::Agents::GetPlayer();
-	if (player == nullptr) return;
+    if (player == nullptr) {
+        recall_target = 0;
+        return;
+    }
 
 	GW::AgentArray agents = GW::Agents::GetAgentArray();
-	if (!agents.valid()) return;
-	if (recall_target > agents.size()) {
-		recall_target = 0;
-		return;
-	}
+    if (!agents.valid() || recall_target >= agents.size()) {
+        recall_target = 0;
+        return;
+    }
 	GW::Agent* target = agents[recall_target];
-	static GW::GamePos targetpos(0.0f, 0.0f);
-	if (target) { targetpos = target->pos; }
-
-	float distance = GW::Agents::GetDistance(targetpos, player->pos);
+    if (target == nullptr) {
+        // This can happen if you recall something that then despawns before you drop recall.
+        recall_target = 0;
+        return;
+    }
+	float distance = GW::Agents::GetDistance(target->pos, player->pos);
 	float distance_perc = distance / GW::Constants::Range::Compass;
 	Color c;
 	if (distance_perc < maxrange_interp_begin) {
@@ -324,7 +350,7 @@ void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9* device) {
 		c = color_shadowstep_line_maxrange;
 	}
 
-	EnqueueVertex(targetpos.x, targetpos.y, c);
+	EnqueueVertex(target->pos.x, target->pos.y, c);
 	EnqueueVertex(player->pos.x, player->pos.y, c);
 }
 
@@ -384,19 +410,19 @@ void PingsLinesRenderer::Marker::Initialize(IDirect3DDevice9* device) {
 	buffer->Unlock();
 }
 
-float PingsLinesRenderer::AgentPing::GetX() {
+float PingsLinesRenderer::AgentPing::GetX() const {
 	GW::Agent* agent = GW::Agents::GetAgentByID(id);
 	if (agent == nullptr) return 0.0f;
 	return agent->pos.x;
 }
 
-float PingsLinesRenderer::AgentPing::GetY() {
+float PingsLinesRenderer::AgentPing::GetY() const {
 	GW::Agent* agent = GW::Agents::GetAgentByID(id);
 	if (agent == nullptr) return 0.0f;
 	return agent->pos.y;
 }
 
-float PingsLinesRenderer::AgentPing::GetScale() {
+float PingsLinesRenderer::AgentPing::GetScale() const {
 	GW::Agent* agent = GW::Agents::GetAgentByID(id);
 	if (agent == nullptr) return 0.0f;
 	return 1.0f;
@@ -410,6 +436,10 @@ bool PingsLinesRenderer::OnMouseDown(float x, float y) {
 	queue.clear();
 	lastsent = TIMER_INIT();
 	return true;
+}
+
+void PingsLinesRenderer::AddMouseClickPing(GW::Vector2f pos) {
+    pings.push_front(new ClickPing(pos.x, pos.y));
 }
 
 bool PingsLinesRenderer::OnMouseMove(float x, float y) {

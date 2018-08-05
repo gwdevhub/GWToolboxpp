@@ -42,12 +42,12 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(ProjectDir)GWToolbox;$(SolutionDir)Dependencies;$(SolutionDir)Dependencies\GWCA;$(SolutionDir)Dependencies\imgui;$(SolutionDir)Dependencies\DirectX\Include\;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)GWToolbox;$(SolutionDir)Dependencies;$(SolutionDir)Dependencies\GWCA;$(SolutionDir)Dependencies\imgui;$(SolutionDir)Dependencies\DirectX\Include\;$(SolutionDir)Dependencies\utf8proc;$(IncludePath)</IncludePath>
     <LibraryPath>$(OutDir);$(SolutionDir)Dependencies\DirectX\Lib\x86\;$(SolutionDir)Dependencies\GWCA\;$(SolutionDir)Dependencies\openssl\lib\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(ProjectDir)GWToolbox;$(SolutionDir)Dependencies;$(SolutionDir)Dependencies\GWCA;$(SolutionDir)Dependencies\imgui;$(SolutionDir)Dependencies\DirectX\Include\;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)GWToolbox;$(SolutionDir)Dependencies;$(SolutionDir)Dependencies\GWCA;$(SolutionDir)Dependencies\imgui;$(SolutionDir)Dependencies\DirectX\Include\;$(SolutionDir)Dependencies\utf8proc;$(IncludePath)</IncludePath>
     <LibraryPath>$(OutDir);$(SolutionDir)Dependencies\DirectX\Lib\x86\;$(SolutionDir)Dependencies\GWCA\;$(SolutionDir)Dependencies\openssl\lib\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -56,7 +56,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>ENABLE_BORDERLESS;WIN32_LEAN_AND_MEAN;WIN32;_DEBUG;_WINDOWS;_USRDLL;API_EXPORTS;_USE_MATH_DEFINES;NOMINMAX;_CRT_SECURE_NO_WARNINGS;IMGUI_USE_BGRA_PACKED_COLOR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>UTF8PROC_STATIC;ENABLE_BORDERLESS;WIN32_LEAN_AND_MEAN;WIN32;_DEBUG;_WINDOWS;_USRDLL;API_EXPORTS;_USE_MATH_DEFINES;NOMINMAX;_CRT_SECURE_NO_WARNINGS;IMGUI_USE_BGRA_PACKED_COLOR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <ForcedIncludeFiles>GWCA\Utilities\Export.h</ForcedIncludeFiles>
       <ShowIncludes>false</ShowIncludes>
@@ -81,7 +81,7 @@
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>ENABLE_BORDERLESS;WIN32_LEAN_AND_MEAN;WIN32;NDEBUG;_WINDOWS;_USRDLL;API_EXPORTS;_USE_MATH_DEFINES;NOMINMAX;_CRT_SECURE_NO_WARNINGS;IMGUI_USE_BGRA_PACKED_COLOR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>UTF8PROC_STATIC;ENABLE_BORDERLESS;WIN32_LEAN_AND_MEAN;WIN32;NDEBUG;_WINDOWS;_USRDLL;API_EXPORTS;_USE_MATH_DEFINES;NOMINMAX;_CRT_SECURE_NO_WARNINGS;IMGUI_USE_BGRA_PACKED_COLOR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <AdditionalIncludeDirectories>
@@ -112,6 +112,7 @@
     <ClInclude Include="..\Dependencies\imgui\stb_rect_pack.h" />
     <ClInclude Include="..\Dependencies\imgui\stb_textedit.h" />
     <ClInclude Include="..\Dependencies\imgui\stb_truetype.h" />
+    <ClInclude Include="..\Dependencies\utf8proc\utf8proc.h" />
     <ClInclude Include="GWToolbox\CircurlarBuffer.h" />
     <ClInclude Include="GWToolbox\Color.h" />
     <ClInclude Include="GWToolbox\CursorFix.h" />
@@ -175,6 +176,11 @@
     <ClCompile Include="..\Dependencies\imgui\imgui.cpp" />
     <ClCompile Include="..\Dependencies\imgui\imgui_demo.cpp" />
     <ClCompile Include="..\Dependencies\imgui\imgui_draw.cpp" />
+    <ClCompile Include="..\Dependencies\utf8proc\utf8proc.c" />
+    <ClCompile Include="..\Dependencies\utf8proc\utf8proc_data.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="GWToolbox\CursorFix.cpp" />
     <ClCompile Include="GWToolbox\GuiUtils.cpp" />
     <ClCompile Include="GWToolbox\ImGuiAddons.cpp" />

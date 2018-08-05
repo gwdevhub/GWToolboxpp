@@ -204,7 +204,7 @@ void PconsWindow::Initialize() {
 	});
 
 	GW::Chat::CreateCommand(L"pcons",
-		[this](int argc, LPWSTR *argv) {
+		[this](const wchar_t *message, int argc, LPWSTR *argv) {
 		if (argc <= 1) {
 			ToggleEnable();
 		} else { // we are ignoring parameters after the first

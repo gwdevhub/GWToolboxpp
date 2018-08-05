@@ -50,6 +50,6 @@ private:
 	std::vector<ToolboxUIElement*> uielements;
 	std::vector<HANDLE> dllhandles;
 
-	string imgui_inifile;
+	utf8::string imgui_inifile;
 	CSimpleIni* inifile = nullptr;
 };

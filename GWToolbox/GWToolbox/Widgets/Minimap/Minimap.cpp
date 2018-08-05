@@ -69,7 +69,7 @@ void Minimap::Initialize() {
 	pmap_renderer.Invalidate();
 
 	GW::Chat::CreateCommand(L"flag",
-		[this](int argc, LPWSTR *argv) {
+		[this](const wchar_t *message, int argc, LPWSTR *argv) {
 		if (argc <= 1) {
 			FlagHero(0);
 		} else {
@@ -166,6 +166,9 @@ void Minimap::DrawSettingInternal() {
 		Colors::DrawSetting("Background", &hero_flag_window_background);
 		ImGui::TreePop();
 	}
+    ImGui::Checkbox("Alt + Click on minimap to move", &alt_click_to_move);
+    ImGui::Checkbox("Reduce agent ping spam", &pingslines_renderer.reduce_ping_spam);
+    ImGui::ShowHelp("Additional pings on the same agents will increase the duration of the existing ping, rather than create a new one.");
 }
 
 void Minimap::LoadSettings(CSimpleIni* ini) {
@@ -175,6 +178,8 @@ void Minimap::LoadSettings(CSimpleIni* ini) {
 	hero_flag_window_attach = ini->GetBoolValue(Name(), VAR_NAME(hero_flag_window_attach), true);
 	hero_flag_window_background = Colors::Load(ini, Name(), "hero_flag_controls_background",
 		ImColor(ImGui::GetStyle().Colors[ImGuiCol_WindowBg]));
+    alt_click_to_move = ini->GetBoolValue(Name(), VAR_NAME(alt_click_to_move), false);
+    pingslines_renderer.reduce_ping_spam = ini->GetBoolValue(Name(), VAR_NAME(reduce_ping_spam), false);
 	range_renderer.LoadSettings(ini, Name());
 	pmap_renderer.LoadSettings(ini, Name());
 	agent_renderer.LoadSettings(ini, Name());
@@ -188,13 +193,29 @@ void Minimap::SaveSettings(CSimpleIni* ini) {
 	ini->SetDoubleValue(Name(), VAR_NAME(scale), scale);
 	ini->SetBoolValue(Name(), VAR_NAME(hero_flag_controls_show), hero_flag_controls_show);
 	ini->SetBoolValue(Name(), VAR_NAME(hero_flag_window_attach), hero_flag_window_attach);
-	Colors::Save(ini, Name(), "hero_flag_controls_background", hero_flag_window_background);
+	Colors::Save(ini, Name(), VAR_NAME(hero_flag_window_background), hero_flag_window_background);
+    ini->SetBoolValue(Name(), VAR_NAME(alt_click_to_move), alt_click_to_move);
+    ini->SetBoolValue(Name(), VAR_NAME(reduce_ping_spam), pingslines_renderer.reduce_ping_spam);
 	range_renderer.SaveSettings(ini, Name());
 	pmap_renderer.SaveSettings(ini, Name());
 	agent_renderer.SaveSettings(ini, Name());
 	pingslines_renderer.SaveSettings(ini, Name());
 	symbols_renderer.SaveSettings(ini, Name());
 	custom_renderer.SaveSettings(ini, Name());
+}
+
+void Minimap::GetPlayerHeroes(GW::PartyInfo *party, std::vector<GW::AgentID>& player_heroes) {
+	player_heroes.clear();
+	if (!party) return;
+	GW::Agent *player = GW::Agents::GetPlayer();
+	if (!player) return;
+	GW::PlayerID player_id = player->LoginNumber;
+	auto heroes = party->heroes;
+	player_heroes.reserve(heroes.size());
+	for (GW::HeroPartyMember &hero : heroes) {
+		if (hero.ownerplayerid == player_id)
+			player_heroes.push_back(hero.agentid);
+	}
 }
 
 void Minimap::Draw(IDirect3DDevice9* device) {
@@ -335,7 +356,12 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 		};
 
 		auto playerparty = GetPlayerParty();
-		if (playerparty && (playerparty->henchmen.size() || playerparty->heroes.size())) {
+		GetPlayerHeroes(playerparty, player_heroes);
+		bool player_has_henchmans = false;
+		if (playerparty && playerparty->henchmen.size() && GW::PartyMgr::GetPlayerIsLeader())
+			player_has_henchmans = true;
+
+		if (playerparty && (player_has_henchmans || player_heroes.size())) {
 			if (hero_flag_window_attach) {
 				ImGui::SetNextWindowPos(ImVec2((float)location.x, (float)(location.y + size.y)));
 				ImGui::SetNextWindowSize(ImVec2((float)size.x, 40.0f));
@@ -348,8 +374,7 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 				};
 				GW::Vector3f allflag = GW::GameContext::instance()->world->all_flag;
 				GW::HeroFlagArray& flags = GW::GameContext::instance()->world->hero_flags;
-				auto heroarray = playerparty->heroes;
-				unsigned int num_heroflags = heroarray.size() + 1;
+				unsigned int num_heroflags = player_heroes.size() + 1;
 				float w_but = (ImGui::GetWindowContentRegionWidth() 
 					- ImGui::GetStyle().ItemSpacing.x * (num_heroflags)) / (num_heroflags + 1);
 
@@ -485,23 +510,30 @@ bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam) {
 	if (!IsInside(x, y)) return false;
 
 	mousedown = true;
+    GW::Vector2f worldpos = InterfaceToWorldPoint(Vec2i(x, y));
 
 	if (wParam & MK_CONTROL) {
-		SelectTarget(InterfaceToWorldPoint(Vec2i(x, y)));
+		SelectTarget(worldpos);
 		return true;
 	}
+
+    if (alt_click_to_move && ImGui::IsKeyDown(VK_MENU)) {
+        GW::Agents::Move(worldpos);
+        pingslines_renderer.AddMouseClickPing(worldpos);
+        return true;
+    }
 
 	bool flagged = false;
 	if (flagging[0]) {
 		flagging[0] = false;
-		GW::PartyMgr::FlagAll(GW::GamePos(InterfaceToWorldPoint(Vec2i(x, y))));
+		GW::PartyMgr::FlagAll(GW::GamePos(worldpos));
 		flagged = true;
 	}
 	for (int i = 1; i < 9; ++i) {
 		if (flagging[i]) {
 			flagging[i] = false;
 			flagged = true;
-			GW::PartyMgr::FlagHero(i, GW::GamePos(InterfaceToWorldPoint(Vec2i(x, y))));
+			GW::PartyMgr::FlagHeroAgent(player_heroes[i-1], GW::GamePos(worldpos));
 		}
 	}
 	if (flagged) return true;
@@ -513,8 +545,7 @@ bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam) {
 
 	if (!lock_move) return true;
 
-	GW::Vector2f v = InterfaceToWorldPoint(Vec2i(x, y));
-	pingslines_renderer.OnMouseDown(v.x, v.y);
+	pingslines_renderer.OnMouseDown(worldpos.x, worldpos.y);
 
 	return true;
 }
