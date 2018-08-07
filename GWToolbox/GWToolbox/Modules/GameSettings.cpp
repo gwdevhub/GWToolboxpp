@@ -567,9 +567,10 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	if (tick_is_toggle) GW::PartyMgr::SetTickToggle();
 	// if (select_with_chat_doubleclick) GW::Chat::SetChatEventCallback(&ChatEventCallback);
 	if (auto_url) GW::Chat::SetSendChatCallback(&SendChatCallback);
-	if (flash_window_on_pm) GW::Chat::SetWhisperCallback(&WhisperCallback);
 	if (move_item_on_ctrl_click) GW::Items::SetOnItemClick(GameSettings::ItemClickCallback);
 	if (tome_patch && show_unlearned_skill) tome_patch->TooglePatch(true);
+
+	GW::Chat::SetWhisperCallback(&WhisperCallback);
 }
 
 void GameSettings::SaveSettings(CSimpleIni* ini) {
@@ -678,9 +679,7 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::Text("Flash Guild Wars taskbar icon when:");
 	ImGui::Indent();
 	ImGui::ShowHelp("Only triggers when Guild Wars is not the active window");
-	if (ImGui::Checkbox("Receiving a private message", &flash_window_on_pm)) {
-		GW::Chat::SetWhisperCallback(&WhisperCallback);
-	}
+	ImGui::Checkbox("Receiving a private message", &flash_window_on_pm);
 	ImGui::Checkbox("Receiving a party invite", &flash_window_on_party_invite);
 	ImGui::Checkbox("Zoning in a new map", &flash_window_on_zoning);
 	ImGui::Unindent();
@@ -726,8 +725,15 @@ void GameSettings::ApplyBorderless(bool borderless) {
 }
 
 void GameSettings::SetAfkMessage(std::wstring&& message) {
-	afk_message = message;
-	afk_message_time = clock();
+	
+	static size_t MAX_AFK_MSG_LEN = 80;
+	if (message.size() <= MAX_AFK_MSG_LEN) {
+		afk_message = message;
+		afk_message_time = clock();
+		Log::Info("Afk message set to \"%S\"", afk_message.c_str());
+	} else {
+		Log::Error("Afk message must be under 80 characters. (Yours is %zu)", message.size());
+	}
 }
 
 void GameSettings::Update(float delta) {
@@ -843,12 +849,17 @@ void GameSettings::UpdateBorderless() {
 }
 
 bool GameSettings::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
+	// I don't know what would be the best solution here, but the way we capture every messages as a sign of activity can be bad.
+	// Added that because when someone was typing "/afk message" he was put online directly, because "enter-up" was captured.
+	if (Message == WM_KEYUP)
+		return false;
 
 	activity_timer = TIMER_INIT();
 	static clock_t set_online_timer = TIMER_INIT();
 	if (auto_set_online
 		&& TIMER_DIFF(set_online_timer) > 5000 // to avoid spamming in case of failure
 		&& GW::FriendListMgr::GetMyStatus() == (DWORD)GW::Constants::OnlineStatus::AWAY) {
+		printf("%X\n", Message);
 		GW::FriendListMgr::SetFriendListStatus(GW::Constants::OnlineStatus::ONLINE);
 		set_online_timer = TIMER_INIT();
 	}
