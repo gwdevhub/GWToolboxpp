@@ -67,7 +67,7 @@ namespace {
 		"Master Of Whispers", "Acolyte Jin", "Koss", "Dunkoro",
 		"Acolyte Sousuke", "Melonni", "Zhed Shadowhoof",
 		"General Morgahn", "Magrid The Sly", "Zenmai",
-		"Olias", "Razah", "MOX", "Jora", "Keiran Thackeray",
+		"Olias", "Razah", "MOX", "Keiran Thackeray", "Jora",
 		"Pyre Fierceshot", "Anton", "Livia", "Hayda",
 		"Kahmu", "Gwen", "Xandra", "Vekk", "Ogden",
 		"Mercenary Hero 1", "Mercenary Hero 2", "Mercenary Hero 3",
