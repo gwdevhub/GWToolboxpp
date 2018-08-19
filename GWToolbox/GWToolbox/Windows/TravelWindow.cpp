@@ -109,8 +109,8 @@ void TravelWindow::Draw(IDirect3DDevice9* pDevice) {
 			TravelButton("Embark", 1, GW::Constants::MapID::Embark_Beach);
 			TravelButton("Vlox's", 0, GW::Constants::MapID::Vloxs_Falls);
 			TravelButton("Gadd's", 1, GW::Constants::MapID::Gadds_Encampment_outpost);
-			TravelButton("Urgoz", 0, GW::Constants::MapID::Urgozs_Warren);
-			TravelButton("Deep", 1, GW::Constants::MapID::The_Deep);
+			// TravelButton("Urgoz", 0, GW::Constants::MapID::Urgozs_Warren);
+			// TravelButton("Deep", 1, GW::Constants::MapID::The_Deep);
 
 			for (int i = 0; i < fav_count; ++i) {
 				ImGui::PushID(i);
