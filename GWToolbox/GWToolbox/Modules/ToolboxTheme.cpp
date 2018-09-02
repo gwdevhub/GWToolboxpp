@@ -84,7 +84,7 @@ void ToolboxTheme::SaveSettings(CSimpleIni* ini) {
 	ToolboxModule::SaveSettings(ini);
 
 	ImGuiStyle& style = ImGui::GetStyle();
-	if (ImGui::GetIO().FontGlobalScale != 1.0f) inifile->SetDoubleValue(IniSection, "FontGlobalScale", ImGui::GetIO().FontGlobalScale);
+	inifile->SetDoubleValue(IniSection, "FontGlobalScale", ImGui::GetIO().FontGlobalScale);
 	if (style.Alpha != ini_style.Alpha) inifile->SetDoubleValue(IniSection, "GlobalAlpha", style.Alpha);
 	if (style.WindowPadding.x != ini_style.WindowPadding.x) inifile->SetDoubleValue(IniSection, "WindowPaddingX", style.WindowPadding.x);
 	if (style.WindowPadding.y != ini_style.WindowPadding.y) inifile->SetDoubleValue(IniSection, "WindowPaddingY", style.WindowPadding.y);
