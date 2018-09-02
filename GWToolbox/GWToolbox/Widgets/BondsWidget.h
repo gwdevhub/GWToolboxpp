@@ -84,6 +84,7 @@ private:
 	std::vector<BuffID> skillbar_bond_skillid;
 	
 	// map from agent id to index
+	size_t team_size_when_updated = 0;
 	std::map<GW::AgentID, PartyIndex> party_index;
 	std::vector<GW::AgentID> agentids;
 };

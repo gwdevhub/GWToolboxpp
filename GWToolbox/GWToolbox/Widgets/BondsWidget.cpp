@@ -56,12 +56,6 @@ void BondsWidget::Update(float delta)
 {
 	switch (GW::Map::GetInstanceType()) {
 	case GW::Constants::InstanceType::Explorable:
-		if (update) {
-			update = false;
-			if (!UpdateSkillbarBonds()) update = true;
-			if (!UpdatePartyIndexMap()) update = true;
-		}
-		break;
 	case GW::Constants::InstanceType::Outpost:
 		update = true;
 		UpdateSkillbarBonds();
@@ -197,14 +191,19 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
 }
 
 bool BondsWidget::UpdatePartyIndexMap() {
-	party_index.clear();
-	agentids.clear();
-
 	GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
 	if (info == nullptr) return false;
 
+	size_t team_size = info->players.size() + info->henchmen.size() + info->heroes.size() + info->others.size();
+	if (team_size == team_size_when_updated)
+		return false;
+	team_size_when_updated = team_size;
+
 	GW::PlayerArray players = GW::Agents::GetPlayerArray();
 	if (!players.valid()) return false;
+
+	party_index.clear();
+	agentids.clear();
 
 	bool success = true;
 	int index = 0;

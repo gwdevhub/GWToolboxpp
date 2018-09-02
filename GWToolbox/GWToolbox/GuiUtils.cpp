@@ -95,17 +95,6 @@ std::wstring GuiUtils::ToWstr(std::string &s) {
 	for (char c : s) result.push_back(c);
 	return result;
 }
-int GuiUtils::ConvertToUtf8(const wchar_t *str, char *output, size_t max_size) {
-	size_t len = wcslen(str);
-	if (len > max_size) return 0;
-	int nbytes = WideCharToMultiByte(CP_UTF8, 0, str, -1, output, max_size, NULL, NULL);
-	return nbytes;
-}
-
-int GuiUtils::ConvertToUtf8(const std::wstring& str, char *output, size_t max_size) {
-	return ConvertToUtf8(str.c_str(), output, max_size);
-}
-
 size_t GuiUtils::wcstostr(char *dest, const wchar_t *src, size_t n) {
 	size_t i;
     unsigned char *d = (unsigned char *)dest;
