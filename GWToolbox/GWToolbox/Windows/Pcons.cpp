@@ -283,7 +283,7 @@ int PconAlcohol::QuantityForEach(const GW::Item* item) const {
 	case ItemID::Grog:
 	case ItemID::SpikedEggnog:
 	case ItemID::AgedDwarvenAle:
-	case ItemID::AgedHungersAle:
+	case ItemID::AgedHuntersAle:
 	case ItemID::Keg:
 	case ItemID::FlaskOfFirewater:
 	case ItemID::KrytanBrandy:
