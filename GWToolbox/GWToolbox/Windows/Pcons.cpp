@@ -289,6 +289,9 @@ int PconAlcohol::QuantityForEach(const GW::Item* item) const {
 		return 5;
 	case ItemID::Keg: {
 		GW::ItemModifier *mod = item->ModStruct;
+		// we don't think this will ever happen
+		if (mod == nullptr) return 5;
+
 		for (DWORD i = 0; i < item->ModStructSize; i++) {
 			if (mod->identifier() == 581) {
 				return mod->arg3() * 5;
