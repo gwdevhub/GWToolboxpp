@@ -604,9 +604,9 @@ bool Minimap::OnMouseMove(UINT Message, WPARAM wParam, LPARAM lParam) {
 bool Minimap::OnMouseWheel(UINT Message, WPARAM wParam, LPARAM lParam) {
 	if (!IsActive()) return false;
 
-	int x = GET_X_LPARAM(lParam);
-	int y = GET_Y_LPARAM(lParam);
-	if (!IsInside(x, y)) return false;
+    // Mouse wheel x and y are in absolute coords, not window coords! (Windows why...)
+    const ImVec2 mouse = ImGui::GetMousePos();
+    if (!IsInside((int)mouse.x, (int)mouse.y)) return false;
 	
 	int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
 
