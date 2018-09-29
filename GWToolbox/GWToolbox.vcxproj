@@ -176,6 +176,7 @@
     <ClCompile Include="..\Dependencies\imgui\imgui.cpp" />
     <ClCompile Include="..\Dependencies\imgui\imgui_demo.cpp" />
     <ClCompile Include="..\Dependencies\imgui\imgui_draw.cpp" />
+    <ClCompile Include="..\Dependencies\imgui\imgui_widgets.cpp" />
     <ClCompile Include="..\Dependencies\utf8proc\utf8proc.c" />
     <ClCompile Include="..\Dependencies\utf8proc\utf8proc_data.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>

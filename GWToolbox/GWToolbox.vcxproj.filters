@@ -436,6 +436,9 @@
     <ClCompile Include="..\Dependencies\utf8proc\utf8proc_data.c">
       <Filter>utf8proc</Filter>
     </ClCompile>
+    <ClCompile Include="..\Dependencies\imgui\imgui_widgets.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GWToolbox.rc">
