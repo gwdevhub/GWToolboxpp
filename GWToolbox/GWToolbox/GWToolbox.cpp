@@ -199,6 +199,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 		break;
 	}
 
+    
+
 	// === Send events to toolbox ===
 	GWToolbox& tb = GWToolbox::Instance();
 	switch (Message) {
@@ -477,6 +479,11 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 			return;
 
 		ImGui_ImplDX9_NewFrame();
+        // Key up/down events don't get passed to gw window when out of focus, but we need the following to be correct, 
+        // or things like alt-tab make imgui think that alt is still down.
+        ImGui::GetIO().KeysDown[VK_CONTROL] = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
+        ImGui::GetIO().KeysDown[VK_SHIFT] = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+        ImGui::GetIO().KeysDown[VK_MENU] = (GetKeyState(VK_MENU) & 0x8000) != 0;
 		Resources::Instance().DxUpdate(device);
 
 		for (ToolboxUIElement* uielement : GWToolbox::Instance().uielements) {

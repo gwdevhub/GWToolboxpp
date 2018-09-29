@@ -869,8 +869,7 @@ bool GameSettings::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 
 void GameSettings::ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag) {
 	if (!GameSettings::Instance().move_item_on_ctrl_click) return;
-	// ImGui::IsKeyDown doesn't work (probably unitialize value)
-	if (!(GetKeyState(VK_CONTROL) & 0x8000)) return;
+    if (!ImGui::IsKeyDown(VK_CONTROL)) return;
 	if (type != 7) return;
 
 	// Expected behaviors
