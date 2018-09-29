@@ -84,6 +84,7 @@ private:
 
 	bool loading = false; // only consider some cases but still good
 
+    bool mouse_clickthrough = false;
     bool alt_click_to_move = false;
 
 	bool hero_flag_controls_show = false;

@@ -166,6 +166,8 @@ void Minimap::DrawSettingInternal() {
 		Colors::DrawSetting("Background", &hero_flag_window_background);
 		ImGui::TreePop();
 	}
+    ImGui::Checkbox("Allow mouse click-through", &mouse_clickthrough);
+    ImGui::ShowHelp("Toolbox minimap will not capture mouse events");
     ImGui::Checkbox("Alt + Click on minimap to move", &alt_click_to_move);
     ImGui::Checkbox("Reduce agent ping spam", &pingslines_renderer.reduce_ping_spam);
     ImGui::ShowHelp("Additional pings on the same agents will increase the duration of the existing ping, rather than create a new one.");
@@ -178,6 +180,7 @@ void Minimap::LoadSettings(CSimpleIni* ini) {
 	hero_flag_window_attach = ini->GetBoolValue(Name(), VAR_NAME(hero_flag_window_attach), true);
 	hero_flag_window_background = Colors::Load(ini, Name(), "hero_flag_controls_background",
 		ImColor(ImGui::GetStyle().Colors[ImGuiCol_WindowBg]));
+    mouse_clickthrough = ini->GetBoolValue(Name(), VAR_NAME(mouse_clickthrough), false);
     alt_click_to_move = ini->GetBoolValue(Name(), VAR_NAME(alt_click_to_move), false);
     pingslines_renderer.reduce_ping_spam = ini->GetBoolValue(Name(), VAR_NAME(reduce_ping_spam), false);
 	range_renderer.LoadSettings(ini, Name());
@@ -194,6 +197,7 @@ void Minimap::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(hero_flag_controls_show), hero_flag_controls_show);
 	ini->SetBoolValue(Name(), VAR_NAME(hero_flag_window_attach), hero_flag_window_attach);
 	Colors::Save(ini, Name(), VAR_NAME(hero_flag_window_background), hero_flag_window_background);
+    ini->SetBoolValue(Name(), VAR_NAME(mouse_clickthrough), mouse_clickthrough);
     ini->SetBoolValue(Name(), VAR_NAME(alt_click_to_move), alt_click_to_move);
     ini->SetBoolValue(Name(), VAR_NAME(reduce_ping_spam), pingslines_renderer.reduce_ping_spam);
 	range_renderer.SaveSettings(ini, Name());
@@ -492,6 +496,7 @@ void Minimap::SelectTarget(GW::Vector2f pos) {
 }
 
 bool Minimap::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
+    if (mouse_clickthrough) return false;
 	switch (Message) {
 	case WM_MOUSEMOVE: return OnMouseMove(Message, wParam, lParam);
 	case WM_LBUTTONDOWN: return OnMouseDown(Message, wParam, lParam);
