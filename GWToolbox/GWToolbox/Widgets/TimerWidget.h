@@ -25,6 +25,7 @@ private:
     bool GetUrgozTimer();
     bool GetDeepTimer();
     bool GetDhuumTimer();
+    bool GetTrapTimer();
 
 	bool click_to_print_time;
     bool show_extra_timers;
