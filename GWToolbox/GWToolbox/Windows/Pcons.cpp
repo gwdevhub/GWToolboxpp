@@ -284,10 +284,21 @@ int PconAlcohol::QuantityForEach(const GW::Item* item) const {
 	case ItemID::SpikedEggnog:
 	case ItemID::AgedDwarvenAle:
 	case ItemID::AgedHuntersAle:
-	case ItemID::Keg:
 	case ItemID::FlaskOfFirewater:
 	case ItemID::KrytanBrandy:
 		return 5;
+	case ItemID::Keg: {
+		GW::ItemModifier *mod = item->ModStruct;
+		if (mod == nullptr) return 5; // we don't think this will ever happen
+
+		for (DWORD i = 0; i < item->ModStructSize; i++) {
+			if (mod->identifier() == 581) {
+				return mod->arg3() * 5;
+			}
+			mod++;
+		}
+		return 5; // this should never happen, but we keep it as a fallback
+	}
 	default:
 		return 0;
 	}

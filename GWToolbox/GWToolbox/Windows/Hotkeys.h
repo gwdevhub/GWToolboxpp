@@ -154,7 +154,7 @@ class HotkeyAction : public TBHotkey {
 		OpenXunlaiChest,
 		OpenLockedChest,
 		DropGoldCoin,
-		ReapplyLBTitle
+		ReapplyTitle
 	};
 	static bool GetText(void*, int idx, const char** out_text);
 
