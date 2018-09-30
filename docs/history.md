@@ -7,6 +7,17 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
+## Version 2.19
+* [New] Reapply Title hotkey now applies the appropriate title for the area, not just Lightbringer title.
+* [New] Added an option to allow mouse clickthrough in the minimap.
+* [New] Added an optional timer for dungeon traps.
+* [Fix] Fixed a bug where toolbox would consider "Alt" key down after alt-tabbing.
+* [Fix] Kegs now are correctly counted in the alcohol counter.
+* [Fix] Quest marker animation now adapts to the framerate.
+* [Fix] Removed Deep and Urgoz travel buttons, as they are not longer possible.
+* [Fix] Fixed bug with bond monitor where it would not update to party size.
+* [Fix] Fixed bug where Jora and Keiran were inversed in hero builds.
+
 ## Version 2.18
 * [New] `/tb`, `/hide` and `/show` do not require quotes for windows with multiple names. 
 * [New] Added an option (in Game Settings) to only show non-learned skills when using a tome.
