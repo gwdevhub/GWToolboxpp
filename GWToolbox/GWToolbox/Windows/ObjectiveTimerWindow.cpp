@@ -205,7 +205,6 @@ void ObjectiveTimerWindow::ObjectiveSet::StopObjectives() {
 }
 
 void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vector2f spawn) {
-    printf("%f, %f\n", spawn.x, spawn.y);
     static const GW::Vector2f area_spawns[] = {
         { -10514, 15231 },  // foundry
         { -18575, -8833 },  // city
