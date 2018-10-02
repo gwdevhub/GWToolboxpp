@@ -288,9 +288,9 @@ void HotkeyUseItem::Execute() {
 
 	if (!used) {
 		if (name[0] == '\0') {
-			Log::Error("Item #%d not found!", item_id);
+			Log::Info("Item #%d not found!", item_id);
 		} else {
-			Log::Error("%s not found!", name);
+			Log::Info("%s not found!", name);
 		}
 	}
 }
