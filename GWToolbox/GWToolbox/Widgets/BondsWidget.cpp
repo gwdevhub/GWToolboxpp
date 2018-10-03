@@ -225,6 +225,10 @@ bool BondsWidget::UpdatePartyIndexMap() {
 		agentids.push_back(hench.agentid);
 	}
 
+    if (!success) {
+        // That's a bit of a hack, but a good hack !
+        team_size_when_updated = 0;
+    }
 	return success;
 }
 
