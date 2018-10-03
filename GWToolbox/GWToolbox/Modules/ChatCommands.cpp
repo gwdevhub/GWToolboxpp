@@ -604,10 +604,13 @@ void ChatCommands::CmdDamage(const wchar_t *message, int argc, LPWSTR *argv) {
 
 void ChatCommands::CmdAfk(const wchar_t *message, int argc, LPWSTR *argv) {
 	GW::FriendListMgr::SetFriendListStatus(GW::Constants::OnlineStatus::AWAY);
+    GameSettings& settings = GameSettings::Instance();
 	if (argc > 1) {
 		const wchar_t *afk_msg = next_word(message);
-		GameSettings::Instance().SetAfkMessage(afk_msg);
-	}
+		settings.SetAfkMessage(afk_msg);
+	} else {
+        settings.afk_message.clear();
+    }
 }
 
 void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
