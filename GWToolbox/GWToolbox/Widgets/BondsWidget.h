@@ -27,9 +27,8 @@ class BondsWidget : public ToolboxWidget {
 		Succor,
 		VitalBlessing,
 		WatchfulSpirit,
+        None
 	};
-
-	static const int MAX_PARTYSIZE = 64;
 
 	BondsWidget() {};
 	~BondsWidget() {};
@@ -45,7 +44,7 @@ public:
 	void Terminate() override;
 
 	// Update. Will always be called every frame.
-	void Update(float delta) override;
+    void Update(float delta) override {}
 
 	// Draw user interface. Will be called every frame if the element is visible
 	void Draw(IDirect3DDevice9* device) override;
@@ -56,14 +55,8 @@ public:
 	void DrawSettingInternal() override;
 
 private:
-	typedef unsigned int PartyIndex;
-	typedef unsigned int BondIndex;
-	typedef DWORD BuffID;
-
-	void UseBuff(PartyIndex player, BondIndex bond);
-	GW::Constants::SkillID GetSkillID(Bond bond) const;
-	bool UpdateSkillbarBonds();
-	bool UpdatePartyIndexMap();
+	void UseBuff(GW::AgentID target, DWORD buff_skillid);
+    Bond GetBondBySkillID(DWORD skillid) const;
 
 	IDirect3DTexture9* textures[MAX_BONDS];
 	Color background;
@@ -73,18 +66,4 @@ private:
 	bool show_allies = true;
 	bool flip_bonds = false;
 	int row_height = 0;
-
-	static BuffID buff_id[MAX_PARTYSIZE][MAX_BONDS];
-
-	bool update = true;
-
-	unsigned int n_bonds;
-	std::vector<BondIndex> skillbar_bond_idx;
-	std::vector<BondIndex> skillbar_bond_slot;
-	std::vector<BuffID> skillbar_bond_skillid;
-	
-	// map from agent id to index
-	size_t team_size_when_updated = 0;
-	std::map<GW::AgentID, PartyIndex> party_index;
-	std::vector<GW::AgentID> agentids;
 };

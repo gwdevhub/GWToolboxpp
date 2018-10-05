@@ -5,6 +5,7 @@
 #include <d3dx9tex.h>
 
 #include <imgui_internal.h>
+#include <unordered_map>
 
 #include <GWCA\Managers\GameThreadMgr.h>
 #include <GWCA\Managers\MapMgr.h>
@@ -18,7 +19,7 @@
 #include "Modules\ToolboxSettings.h"
 #include <Modules\Resources.h>
 
-DWORD BondsWidget::buff_id[MAX_PARTYSIZE][MAX_BONDS] = { 0 };
+//DWORD BondsWidget::buff_id[MAX_PARTYSIZE][MAX_BONDS] = { 0 };
 
 void BondsWidget::Initialize() {
 	ToolboxWidget::Initialize();
@@ -52,200 +53,145 @@ void BondsWidget::Terminate() {
 	}
 }
 
-void BondsWidget::Update(float delta)
-{
-	switch (GW::Map::GetInstanceType()) {
-	case GW::Constants::InstanceType::Explorable:
-	case GW::Constants::InstanceType::Outpost:
-		update = true;
-		UpdateSkillbarBonds();
-		UpdatePartyIndexMap();
-		break;
-	case GW::Constants::InstanceType::Loading:
-		update = true;
-		return; // exit here instead
-	default:
-		break;
-	}
-}
-
 void BondsWidget::Draw(IDirect3DDevice9* device) {
 	if (!visible) return;
 	
-	GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
-	if (info == nullptr) return;
-	GW::Array<GW::AgentID>& allies = info->others;
+	const GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
+    const GW::PlayerArray& players = GW::Agents::GetPlayerArray();
+    if (info == nullptr) return;
+    if (!players.valid()) return;
+    if (!info->players.valid()) return;
+    // note: info->heroes, ->henchmen, and ->others CAN be invalid during normal use.
+
+    // ==== Get party ====
+    std::vector<GW::AgentID> party_list; // index to agent id
+    std::unordered_map<GW::AgentID, int> party_map; // agent id to index
+    int allies_start = 255;
+    for (const GW::PlayerPartyMember& player : info->players) {
+        DWORD id = players[player.loginnumber].AgentID;
+        party_map[id] = party_list.size();
+        party_list.push_back(id);
+        
+        if (info->heroes.valid()) {
+            for (const GW::HeroPartyMember& hero : info->heroes) {
+                if (hero.ownerplayerid == player.loginnumber) {
+                    party_map[hero.agentid] = party_list.size();
+                    party_list.push_back(hero.agentid);
+                }
+            }
+        }
+    }
+    if (info->henchmen.valid()) {
+        for (const GW::HenchmanPartyMember& hench : info->henchmen) {
+            party_list.push_back(hench.agentid);
+        }
+    }
+    if (show_allies && info->others.valid()) {
+        allies_start = party_list.size();
+        for (const DWORD ally_id : info->others) {
+            GW::Agent* ally = GW::Agents::GetAgentByID(ally_id);
+            if (ally && ally->GetCanBeViewedInPartyWindow() && !ally->GetIsSpawned()) {
+                party_map[ally_id] = party_list.size();
+                party_list.push_back(ally_id);
+            }
+        }
+    }
 	
-	int img_size = row_height > 0 ? row_height : GuiUtils::GetPartyHealthbarHeight();
-	unsigned int party = agentids.size();
-	unsigned int full_party = party;
-	static std::vector<DWORD> allies_id;
-	if (show_allies) {
-		allies_id.clear();
-		for (DWORD id : allies) {
-			GW::Agent* agent = GW::Agents::GetAgentByID(id);
-			if (agent 
-				&& agent->GetCanBeViewedInPartyWindow()
-				&& !agent->GetIsSpawned()) {
-				++full_party;
-				allies_id.push_back(id);
-			}
-		}
-	}
+    // ==== Get bonds ====
+    std::vector<int> bond_list; // index to skill id
+    std::unordered_map<DWORD, int> bond_map; // skill id to index
+    const GW::Skillbar& bar = GW::Skillbar::GetPlayerSkillbar();
+    if (!bar.IsValid()) return;
+    for (int slot = 0; slot < 8; ++slot) {
+        DWORD SkillID = bar.Skills[slot].SkillId;
+        Bond bond = GetBondBySkillID(SkillID);
+        if (bond != Bond::None) {
+            bond_map[SkillID] = bond_list.size();
+            bond_list.push_back(SkillID);
+        }
+    }
 
-	for (PartyIndex p = 0; p < full_party && p < MAX_PARTYSIZE; ++p) {
-		for (BondIndex b = 0; b < n_bonds; ++b) {
-			buff_id[p][b] = 0;
-		}
-	}
+    const GW::AgentEffectsArray& effects = GW::Effects::GetPartyEffectArray();
+    if (!effects.valid()) return;
+    const GW::BuffArray& buffs = effects[0].Buffs; // first one is for players, after are heroes
 
-	GW::AgentEffectsArray effects = GW::Effects::GetPartyEffectArray();
-	if (effects.valid()) {
-		GW::BuffArray buffs = effects[0].Buffs;
-		GW::AgentArray agents = GW::Agents::GetAgentArray();
+    // ==== Draw ====
+    const int img_size = row_height > 0 ? row_height : GuiUtils::GetPartyHealthbarHeight();
+    const int height = (party_list.size() + (allies_start < 255 ? 1 : 0)) * img_size;
 
-		if (buffs.valid() && agents.valid() && effects.valid()) {
-			for (size_t i = 0; i < buffs.size(); ++i) {
-				PartyIndex p = -1;
-				DWORD id = buffs[i].TargetAgentId;
-				if (party_index.find(id) != party_index.end()) {
-					p = party_index[id];
-				} else if (show_allies) {
-					// check allies
-					for (unsigned int j = 0; j < allies_id.size(); ++j) {
-						if (allies_id[j] == id) {
-							p = party + j;
-						}
-					}
-				}
-				if (p == -1) continue;
-				if (p >= MAX_PARTYSIZE) continue;
-
-				BondIndex b = -1;
-				for (BondIndex b_idx = 0; b_idx < n_bonds; ++b_idx) {
-					if (buffs[i].SkillId == skillbar_bond_skillid[b_idx]) {
-						b = b_idx;
-						break;
-					}
-				}
-				if (b == -1) continue;
-
-				buff_id[p][b] = buffs[i].BuffId;
-			}
-		}
-	}
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(background).Value);
-	ImGui::SetNextWindowSize(ImVec2((float)(n_bonds * img_size), 
-		(float)((full_party + (full_party > party ? 1 : 0)) * img_size)));
+	ImGui::SetNextWindowSize(ImVec2((float)(bond_list.size() * img_size), (float)height));
 	if (ImGui::Begin(Name(), &visible, GetWinFlags(0, !click_to_use))) {
-		float x = ImGui::GetWindowPos().x;
-		float y = ImGui::GetWindowPos().y;
-		for (PartyIndex p = 0; p < full_party && p < MAX_PARTYSIZE; ++p) {
-			int extra = p >= party ? 1 : 0;
-			float ytop = y + (p + 0 + extra) * img_size;
-			float ybot = y + (p + 1 + extra) * img_size;
-			for (BondIndex b = 0; b < n_bonds; ++b) {
-				BondIndex i = (flip_bonds ? (n_bonds - 1 - b) : b);
-				ImVec2 tl(x + (i + 0) * img_size, ytop);
-				ImVec2 br(x + (i + 1) * img_size, ybot);
-				if (buff_id[p][b] > 0) {
-					ImGui::GetWindowDrawList()->AddImage(
-						(ImTextureID)textures[skillbar_bond_idx[b]],
-						ImVec2(tl.x, tl.y),
-						ImVec2(br.x, br.y));
-				}
-				if (click_to_use) {
-					if (ImGui::IsMouseHoveringRect(tl, br)) {
-						ImGui::GetWindowDrawList()->AddRect(tl, br, IM_COL32(255, 255, 255, 255));
-						if (ImGui::IsMouseReleased(0)) {
-							if (buff_id[p][b] > 0) {
-								GW::Effects::DropBuff(buff_id[p][b]);
-							} else {
-								GW::AgentID target;
-								if (p < agentids.size()) {
-									target = agentids[p];
-								} else if (p - party >= 0 && p - party < allies_id.size()) {
-									target = allies_id[p - party];
-								}
-								if (target > 0) {
-									int slot = skillbar_bond_slot[b];
-									GW::Skillbar skillbar = GW::Skillbar::GetPlayerSkillbar();
-									if (skillbar.IsValid() && skillbar.Skills[slot].Recharge == 0) {
-										GW::GameThread::Enqueue([slot, target] {
-											GW::SkillbarMgr::UseSkill(slot, target);
-										});
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		}
+		float win_x = ImGui::GetWindowPos().x;
+		float win_y = ImGui::GetWindowPos().y;
+
+        auto GetGridPos = [&](const int _x, const int _y, bool topleft) -> ImVec2 {
+            int x = _x;
+            int y = _y;
+            if (y >= allies_start) ++y;
+            if (!topleft) {
+                ++x; ++y;
+            }
+            return ImVec2(win_x + x * img_size, 
+                win_y + y * img_size);
+        };
+
+        bool handled_click = false;
+        for (unsigned int i = 0; i < buffs.size(); ++i) {
+            DWORD agent = buffs[i].TargetAgentId;
+            DWORD skill = buffs[i].SkillId;
+            if (party_map.find(agent) == party_map.end()) continue; // bond target not in party
+            int y = party_map[agent];
+            if (bond_map.find(skill) == bond_map.end()) continue; // bond with a skill not in skillbar 
+            int x = bond_map[skill];
+            Bond bond = GetBondBySkillID(skill);
+            ImVec2 tl = GetGridPos(x, y, true);
+            ImVec2 br = GetGridPos(x, y, false);
+            ImGui::GetWindowDrawList()->AddImage((ImTextureID)textures[bond], tl, br);
+            if (click_to_use && ImGui::IsMouseHoveringRect(tl, br) && ImGui::IsMouseReleased(0)) {
+                GW::Effects::DropBuff(buffs[i].BuffId);
+                handled_click = true;
+            }
+        }
+
+        if (click_to_use && !handled_click) {
+            for (unsigned int y = 0; y < party_list.size(); ++y) {
+                for (unsigned int x = 0; x < bond_list.size(); ++x) {
+                    ImVec2 tl = GetGridPos(x, y, true);
+                    ImVec2 br = GetGridPos(x, y, false);
+                    if (ImGui::IsMouseHoveringRect(tl, br)) {
+                        ImGui::GetWindowDrawList()->AddRect(tl, br, IM_COL32(255, 255, 255, 255));
+                        if (ImGui::IsMouseReleased(0)) {
+                            UseBuff(party_list[y], bond_list[x]);
+                        }
+                    }
+                }
+            }
+        }
 	}
 	ImGui::End();
 	ImGui::PopStyleColor(); // window bg
 	ImGui::PopStyleVar(2);
 }
 
-bool BondsWidget::UpdatePartyIndexMap() {
-	GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
-	if (info == nullptr) return false;
-
-	size_t team_size = info->players.size() + info->henchmen.size() + info->heroes.size() + info->others.size();
-	if (team_size == team_size_when_updated)
-		return false;
-	team_size_when_updated = team_size;
-
-	GW::PlayerArray players = GW::Agents::GetPlayerArray();
-	if (!players.valid()) return false;
-
-	party_index.clear();
-	agentids.clear();
-
-	bool success = true;
-	int index = 0;
-	for (GW::PlayerPartyMember& player : info->players) {
-		long id = players[player.loginnumber].AgentID;
-		party_index[id] = index++;
-		agentids.push_back(id);
-		if (id == 0) success = false;
-
-		for (GW::HeroPartyMember& hero : info->heroes) {
-			if (hero.ownerplayerid == player.loginnumber) {
-				party_index[hero.agentid] = index++;
-				agentids.push_back(hero.agentid);
-			}
-		}
-	}
-	for (GW::HenchmanPartyMember& hench : info->henchmen) {
-		party_index[hench.agentid] = index++;
-		agentids.push_back(hench.agentid);
-	}
-
-    if (!success) {
-        // That's a bit of a hack, but a good hack !
-        team_size_when_updated = 0;
-    }
-	return success;
-}
-
-void BondsWidget::UseBuff(PartyIndex player, BondIndex bond) {
+void BondsWidget::UseBuff(GW::AgentID targetId, DWORD buff_skillid) {
 	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return;
+    if (targetId == 0) return;
 
-	DWORD target = agentids[player];
-	if (target == 0) return;
+    GW::Agent* target = GW::Agents::GetAgentByID(targetId);
+    if (target == nullptr) return;
 
-	int slot = skillbar_bond_slot[bond];
+    int slot = GW::SkillbarMgr::GetSkillSlot((GW::Constants::SkillID)buff_skillid);
 	GW::Skillbar skillbar = GW::Skillbar::GetPlayerSkillbar();
 	if (!skillbar.IsValid()) return;
 	if (skillbar.Skills[slot].Recharge != 0) return;
 
-	GW::GameThread::Enqueue([slot, target] {
-		GW::SkillbarMgr::UseSkill(slot, target);
-	});
+    // capture by value!
+    GW::GameThread::Enqueue([slot, targetId]() -> void {
+        GW::SkillbarMgr::UseSkill(slot, targetId);
+    });
 }
 
 void BondsWidget::LoadSettings(CSimpleIni* ini) {
@@ -298,51 +244,26 @@ void BondsWidget::DrawSettingInternal() {
 	ImGui::InputInt("Row Height", &row_height);
 	if (row_height < 0) row_height = 0;
 	ImGui::ShowHelp("Height of each row, leave 0 for default");
-	if (ImGui::SmallButton("Update bond order")) update = true;
-	ImGui::ShowHelp("You can use this button after reordering your build in an\n"
-					"explorable area to force a refresh in the bond order.");
 }
 
-bool BondsWidget::UpdateSkillbarBonds() {
-	n_bonds = 0;
-	skillbar_bond_idx.clear();
-	skillbar_bond_slot.clear();
-	skillbar_bond_skillid.clear();
-
-	GW::Skillbar bar = GW::Skillbar::GetPlayerSkillbar();
-	if (!bar.IsValid()) return false;
-	for (int i = 0; i < 8; ++i) {
-		for (int j = 0; j < MAX_BONDS; ++j) {
-			const Bond bond = static_cast<Bond>(j);
-			if (bar.Skills[i].SkillId == (DWORD)GetSkillID(bond)) {
-				++n_bonds;
-				skillbar_bond_idx.push_back(bond);
-				skillbar_bond_slot.push_back(i);
-				skillbar_bond_skillid.push_back(bar.Skills[i].SkillId);
-			}
-		}
-	}
-	return true;
-}
-
-GW::Constants::SkillID BondsWidget::GetSkillID(Bond bond) const {
-	using namespace GW::Constants;
-	switch (bond) {
-	case BondsWidget::BalthazarSpirit: return SkillID::Balthazars_Spirit;
-	case BondsWidget::EssenceBond: return SkillID::Essence_Bond;
-	case BondsWidget::HolyVeil: return SkillID::Holy_Veil;
-	case BondsWidget::LifeAttunement: return SkillID::Life_Attunement;
-	case BondsWidget::LifeBarrier: return SkillID::Life_Barrier;
-	case BondsWidget::LifeBond: return SkillID::Life_Bond;
-	case BondsWidget::LiveVicariously: return SkillID::Live_Vicariously;
-	case BondsWidget::Mending: return SkillID::Mending;
-	case BondsWidget::ProtectiveBond: return SkillID::Protective_Bond;
-	case BondsWidget::PurifyingVeil: return SkillID::Purifying_Veil;
-	case BondsWidget::Retribution: return SkillID::Retribution;
-	case BondsWidget::StrengthOfHonor: return SkillID::Strength_of_Honor;
-	case BondsWidget::Succor: return SkillID::Succor;
-	case BondsWidget::VitalBlessing: return SkillID::Vital_Blessing;
-	case BondsWidget::WatchfulSpirit: return SkillID::Watchful_Spirit;
-	default: return SkillID::No_Skill;
-	}
+BondsWidget::Bond BondsWidget::GetBondBySkillID(DWORD skillid) const {
+    using namespace GW::Constants;
+    switch ((GW::Constants::SkillID)skillid) {
+    case SkillID::Balthazars_Spirit: return Bond::BalthazarSpirit;
+    case SkillID::Essence_Bond: return Bond::EssenceBond;
+    case SkillID::Holy_Veil: return Bond::HolyVeil;
+    case SkillID::Life_Attunement: return Bond::LifeAttunement;
+    case SkillID::Life_Barrier: return Bond::LifeBarrier;
+    case SkillID::Life_Bond: return Bond::LifeBond;
+    case SkillID::Live_Vicariously: return Bond::LiveVicariously;
+    case SkillID::Mending: return Bond::Mending;
+    case SkillID::Protective_Bond: return Bond::ProtectiveBond;
+    case SkillID::Purifying_Veil: return Bond::PurifyingVeil;
+    case SkillID::Retribution: return Bond::Retribution;
+    case SkillID::Strength_of_Honor: return Bond::StrengthOfHonor;
+    case SkillID::Succor: return Bond::Succor;
+    case SkillID::Vital_Blessing: return Bond::VitalBlessing;
+    case SkillID::Watchful_Spirit: return Bond::WatchfulSpirit;
+    default: return Bond::None;
+    }
 }
