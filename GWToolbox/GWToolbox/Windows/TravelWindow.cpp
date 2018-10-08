@@ -195,7 +195,7 @@ GW::Constants::MapID TravelWindow::IndexToOutpostID(int index) {
 	case 14: return MapID::Basalt_Grotto_outpost;
 	case 15: return MapID::Beacons_Perch_outpost;
 	case 16: return MapID::Beetletun_outpost;
-	case 17: return MapID::Beknur_Harbor_outpost;
+	case 17: return MapID::Beknur_Harbor;
 	case 18: return MapID::Bergen_Hot_Springs_outpost;
 	case 19: return MapID::Blacktide_Den;
 	case 20: return MapID::Bloodstone_Fen;
