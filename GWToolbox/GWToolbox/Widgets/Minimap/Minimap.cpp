@@ -168,7 +168,15 @@ void Minimap::DrawSettingInternal() {
 	}
     ImGui::Checkbox("Allow mouse click-through", &mouse_clickthrough);
     ImGui::ShowHelp("Toolbox minimap will not capture mouse events");
+    if (mouse_clickthrough) {
+        ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+        ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+    }
     ImGui::Checkbox("Alt + Click on minimap to move", &alt_click_to_move);
+    if (mouse_clickthrough) {
+        ImGui::PopItemFlag();
+        ImGui::PopStyleVar();
+    }
     ImGui::Checkbox("Reduce agent ping spam", &pingslines_renderer.reduce_ping_spam);
     ImGui::ShowHelp("Additional pings on the same agents will increase the duration of the existing ping, rather than create a new one.");
 }
