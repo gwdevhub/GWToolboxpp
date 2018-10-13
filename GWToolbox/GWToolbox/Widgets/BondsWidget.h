@@ -1,6 +1,5 @@
 #pragma once
 
-#include <vector>
 #include <Defines.h>
 
 #include <GWCA\GameEntities\Agent.h>
@@ -62,7 +61,8 @@ private:
 	Color background;
 
 	// settings
-	bool click_to_use = true;
+	bool click_to_cast = true;
+    bool click_to_drop = true;
 	bool show_allies = true;
 	bool flip_bonds = false;
 	int row_height = 0;

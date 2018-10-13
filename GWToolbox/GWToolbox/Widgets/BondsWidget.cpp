@@ -123,7 +123,7 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(background).Value);
 	ImGui::SetNextWindowSize(ImVec2((float)(bond_list.size() * img_size), (float)height));
-	if (ImGui::Begin(Name(), &visible, GetWinFlags(0, !click_to_use))) {
+	if (ImGui::Begin(Name(), &visible, GetWinFlags(0, !(click_to_cast || click_to_drop)))) {
 		float win_x = ImGui::GetWindowPos().x;
 		float win_y = ImGui::GetWindowPos().y;
 
@@ -150,13 +150,13 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
             ImVec2 tl = GetGridPos(x, y, true);
             ImVec2 br = GetGridPos(x, y, false);
             ImGui::GetWindowDrawList()->AddImage((ImTextureID)textures[bond], tl, br);
-            if (click_to_use && ImGui::IsMouseHoveringRect(tl, br) && ImGui::IsMouseReleased(0)) {
+            if (click_to_drop && ImGui::IsMouseHoveringRect(tl, br) && ImGui::IsMouseReleased(0)) {
                 GW::Effects::DropBuff(buffs[i].BuffId);
                 handled_click = true;
             }
         }
 
-        if (click_to_use && !handled_click) {
+        if (click_to_cast && !handled_click) {
             for (unsigned int y = 0; y < party_list.size(); ++y) {
                 for (unsigned int x = 0; x < bond_list.size(); ++x) {
                     ImVec2 tl = GetGridPos(x, y, true);
@@ -199,8 +199,9 @@ void BondsWidget::LoadSettings(CSimpleIni* ini) {
 	lock_move = ini->GetBoolValue(Name(), VAR_NAME(lock_move), true);
 
 	background = Colors::Load(ini, Name(), VAR_NAME(background), Colors::ARGB(76, 0, 0, 0));
-	click_to_use = ini->GetBoolValue(Name(), VAR_NAME(click_to_use), true);
-	show_allies = ini->GetBoolValue(Name(), VAR_NAME(show_allies), true);
+    click_to_cast = ini->GetBoolValue(Name(), VAR_NAME(click_to_cast), true);
+    click_to_drop = ini->GetBoolValue(Name(), VAR_NAME(click_to_drop), true);
+    show_allies = ini->GetBoolValue(Name(), VAR_NAME(show_allies), true);
 	flip_bonds = ini->GetBoolValue(Name(), VAR_NAME(flip_bonds), false);
 	row_height = ini->GetLongValue(Name(), VAR_NAME(row_height), 0);
 }
@@ -210,8 +211,9 @@ void BondsWidget::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(lock_move), lock_move);
 	
 	Colors::Save(ini, Name(), VAR_NAME(background), background);
-	ini->SetBoolValue(Name(), VAR_NAME(click_to_use), click_to_use);
-	ini->SetBoolValue(Name(), VAR_NAME(show_allies), show_allies);
+    ini->SetBoolValue(Name(), VAR_NAME(click_to_cast), click_to_cast);
+    ini->SetBoolValue(Name(), VAR_NAME(click_to_drop), click_to_drop);
+    ini->SetBoolValue(Name(), VAR_NAME(show_allies), show_allies);
 	ini->SetBoolValue(Name(), VAR_NAME(flip_bonds), flip_bonds);
 	ini->SetLongValue(Name(), VAR_NAME(row_height), row_height);
 }
@@ -236,7 +238,8 @@ void BondsWidget::DrawSettings() {
 
 void BondsWidget::DrawSettingInternal() {
 	Colors::DrawSetting("Background", &background);
-	ImGui::Checkbox("Click to Drop/Use", &click_to_use);
+	ImGui::Checkbox("Click to cast bond", &click_to_cast);
+    ImGui::Checkbox("Click to cancel bond", &click_to_drop);
 	ImGui::Checkbox("Show bonds for Allies", &show_allies);
 	ImGui::ShowHelp("'Allies' meaning the ones that show in party window, such as summoning stones");
 	ImGui::Checkbox("Flip bond order (left/right)", &flip_bonds);
