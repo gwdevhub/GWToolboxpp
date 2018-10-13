@@ -7,6 +7,15 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
+## Version 2.20
+* [Fix] Fixed a bug with the bond monitor.
+* [New] The old `click to use` option in bond monitor is now split into `click to cast` and `click to drop`.
+* [New] `Item not found` message will now show in the Emotes chat channel.
+* [New] `/afk` will now remove the message set by `/afk message`.
+* [New] Added an option to not set normal or hard mode when loading hero builds.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.20_Release/GWToolbox.dll)
+
 ## Version 2.19
 * [New] Reapply Title hotkey now applies the appropriate title for the area, not just Lightbringer title.
 * [New] Added an option to allow mouse clickthrough in the minimap.
@@ -17,6 +26,8 @@ Previous releases are provided as dll files. In order to use it, you need to use
 * [Fix] Removed Deep and Urgoz travel buttons, as they are not longer possible.
 * [Fix] Fixed bug with bond monitor where it would not update to party size.
 * [Fix] Fixed bug where Jora and Keiran were inversed in hero builds.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.19_Release/GWToolbox.dll)
 
 ## Version 2.18
 * [New] `/tb`, `/hide` and `/show` do not require quotes for windows with multiple names. 
