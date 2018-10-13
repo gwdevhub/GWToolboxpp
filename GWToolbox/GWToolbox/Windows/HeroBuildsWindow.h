@@ -33,7 +33,7 @@ private:
 			strncpy(name, n, 128);
 		}
 		bool edit_open = false;
-		bool hardmode = false;
+        int mode = 0; // 0=don't change, 1=normal mode, 2=hard mode
 		char name[128];
 		std::vector<HeroBuild> builds;
 		unsigned int ui_id; // should be const but then assignment operator doesn't get created automatically, and I'm too lazy to redefine it, so just don't change this value, okay?
