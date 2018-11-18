@@ -4,6 +4,7 @@
 #include <imgui.h>
 
 #include <GWCA\Managers\ChatMgr.h> // for GW::Chat::Color
+#include <GuiUtils.h>
 
 #ifdef RGB
 #undef RGB
@@ -36,13 +37,14 @@ namespace Colors {
 	static Color Blue() { return RGB(0x0, 0x0, 0xFF); }
 
 	static Color Load(CSimpleIni* ini, const char* section, const char* key, Color def) {
-		try {
-			const char* wc = ini->GetValue(section, key, nullptr);
-			if (wc == nullptr) return def;
-			unsigned long c = std::stoul(wc, nullptr, 16);
+		const char* wc = ini->GetValue(section, key, nullptr);
+		if (wc == nullptr) return def;
+		unsigned int c;
+		if (GuiUtils::ParseUInt(wc, &c, 16)) {
 			// swap red and blue channels
 			return c;
-		} catch (...) { // invalid argument, out of range, whatever
+		} else {
+			// invalid argument, out of range, whatever
 			return Black();
 		}
 	}
