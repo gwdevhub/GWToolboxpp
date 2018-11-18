@@ -377,7 +377,7 @@ void PartyDamage::SaveSettings(CSimpleIni* ini) {
 	ini->SetDoubleValue(Name(), VAR_NAME(width), width);
 	ini->SetBoolValue(Name(), VAR_NAME(bars_left), bars_left);
 	ini->SetLongValue(Name(), VAR_NAME(row_height), row_height);
-	ini->GetLongValue(Name(), VAR_NAME(recent_max_time), recent_max_time);
+	ini->SetLongValue(Name(), VAR_NAME(recent_max_time), recent_max_time);
 	Colors::Save(ini, Name(), VAR_NAME(color_background), color_background);
 	Colors::Save(ini, Name(), VAR_NAME(color_damage), color_damage);
 	Colors::Save(ini, Name(), VAR_NAME(color_recent), color_recent);
