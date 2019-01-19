@@ -168,10 +168,11 @@ bool TimerWidget::GetTrapTimer() {
     case MapID::Catacombs_of_Kathandrax_Level_3:
     case MapID::Bloodstone_Caves_Level_1:
     case MapID::Arachnis_Haunt_Level_2:
+    case MapID::Oolas_Lab_Level_2:
         snprintf(extra_buffer, 32, "Fire Jet: %d", timer);
         return true;
     case MapID::Heart_of_the_Shiverpeaks_Level_3:
-        snprintf(extra_buffer, 32, "Fire Sprout: %d", timer);
+        snprintf(extra_buffer, 32, "Fire Spout: %d", timer);
         return true;
     case MapID::Shards_of_Orr_Level_3:
     case MapID::Cathedral_of_Flames_Level_3:
@@ -181,19 +182,21 @@ bool TimerWidget::GetTrapTimer() {
     case MapID::Ravens_Point_Level_1:
     case MapID::Ravens_Point_Level_2:
     case MapID::Heart_of_the_Shiverpeaks_Level_1:
+    case MapID::Darkrime_Delves_Level_2:
         snprintf(extra_buffer, 32, "Ice Jet: %d", timer);
         return true;
     case MapID::Darkrime_Delves_Level_1:
     case MapID::Secret_Lair_of_the_Snowmen:
-        snprintf(extra_buffer, 32, "Ice Sprout: %d", timer);
+        snprintf(extra_buffer, 32, "Ice Spout: %d", timer);
         return true;
     case MapID::Bogroot_Growths_Level_1:
+    case MapID::Arachnis_Haunt_Level_1:
     case MapID::Shards_of_Orr_Level_1:
     case MapID::Shards_of_Orr_Level_2:
         snprintf(extra_buffer, 32, "Poison Jet: %d", timer);
         return true;
     case MapID::Bloodstone_Caves_Level_2:
-        snprintf(extra_buffer, 32, "Poison Sprout: %d", timer);
+        snprintf(extra_buffer, 32, "Poison Spout: %d", timer);
         return true;
     case MapID::Cathedral_of_Flames_Level_2:
     case MapID::Bloodstone_Caves_Level_3:
