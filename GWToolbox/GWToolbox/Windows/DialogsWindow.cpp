@@ -126,15 +126,14 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
 			static bool hex = false;
 			static char customdialogbuf[64] = "";
 			if (ImGui::Button(hex ? "Hex" : "Dec", ImVec2(32.0f, 0))) {
-				try {
+				int id;
+				if (GuiUtils::ParseInt(customdialogbuf, &id, hex ? 16 : 10)) {
 					if (hex) { // was hex, convert to dec
-						long id = std::stol(customdialogbuf, 0, 16);
 						snprintf(customdialogbuf, 64, "%d", id);
 					} else { // was dec, convert to hex
-						long id = std::stol(customdialogbuf, 0, 10);
 						snprintf(customdialogbuf, 64, "%X", id);
 					}
-				} catch (...) {}
+				}
 				hex = !hex;
 			}
 			if (ImGui::IsItemHovered()) {
@@ -148,10 +147,10 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::PopItemWidth();
 			ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 			if (ImGui::Button("Send##2", ImVec2(60.0f, 0))) {
-				try {
-					long id = std::stol(customdialogbuf, 0, hex ? 16 : 10);
+				int id;
+				if (GuiUtils::ParseInt(customdialogbuf, &id, hex ? 16 : 10)) {
 					GW::Agents::Dialog(id);
-				} catch (...) {}
+				}
 			}
 		}
 	}

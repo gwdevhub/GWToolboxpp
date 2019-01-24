@@ -78,16 +78,37 @@ std::wstring GuiUtils::ToLower(std::wstring s) {
 	std::transform(s.begin(), s.end(), s.begin(), ::tolower);
 	return s;
 }
-
-bool GuiUtils::ParseInt(const char *str, int *val) {
+bool GuiUtils::ParseInt(const char *str, int *val, int base) {
 	char *end;
-	*val = strtol(str, &end, 0);
-	return *end == 0;
+	*val = strtol(str, &end, base);
+	if (str == end || errno == ERANGE)
+		return false;
+	else
+		return true;
 }
-bool GuiUtils::ParseInt(const wchar_t *str, int *val) {
+bool GuiUtils::ParseInt(const wchar_t *str, int *val, int base) {
 	wchar_t *end;
-	*val = wcstol(str, &end, 0);
-	return *end == 0;
+	*val = wcstol(str, &end, base);
+	if (str == end || errno == ERANGE)
+		return false;
+	else
+		return true;
+}
+bool GuiUtils::ParseUInt(const char *str, unsigned int *val, int base) {
+	char *end;
+	*val = strtoul(str, &end, base);
+	if (str == end || errno == ERANGE)
+		return false;
+	else
+		return true;
+}
+bool GuiUtils::ParseUInt(const wchar_t *str, unsigned int *val, int base) {
+	wchar_t *end;
+	*val = wcstoul(str, &end, base);
+	if (str == end || errno == ERANGE)
+		return false;
+	else
+		return true;
 }
 std::wstring GuiUtils::ToWstr(std::string &s) {
 	std::wstring result;

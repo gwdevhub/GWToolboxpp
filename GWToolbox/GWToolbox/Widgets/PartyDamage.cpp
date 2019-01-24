@@ -348,7 +348,6 @@ void PartyDamage::LoadSettings(CSimpleIni* ini) {
 	CSimpleIni::TNamesDepend keys;
 	inifile->GetAllKeys(IniSection, keys);
 	for (CSimpleIni::Entry key : keys) {
-	#if 1
 		int lkey;
 		if (GuiUtils::ParseInt(key.pItem, &lkey)) {
 			if (lkey <= 0) continue;
@@ -356,17 +355,6 @@ void PartyDamage::LoadSettings(CSimpleIni* ini) {
 			if (lval <= 0) continue;
 			hp_map[lkey] = lval;
 		}
-	#else
-		try {
-			long lkey = std::stol(key.pItem);
-			if (lkey <= 0) continue;
-			long lval = inifile->GetLongValue(IniSection, key.pItem, 0);
-			if (lval <= 0) continue;
-			hp_map[lkey] = lval;
-		} catch (...) {
-			// no big deal
-		}
-	#endif
 	}
 }
 

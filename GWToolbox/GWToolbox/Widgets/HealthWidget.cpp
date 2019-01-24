@@ -1,16 +1,33 @@
 #include "HealthWidget.h"
 
+#include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\AgentMgr.h>
 
 #include "GuiUtils.h"
 #include "Modules\ToolboxSettings.h"
+
+void HealthWidget::LoadSettings(CSimpleIni *ini) {
+	ToolboxWidget::LoadSettings(ini);
+	click_to_print_health = ini->GetBoolValue(Name(), VAR_NAME(click_to_print_health), false);
+}
+
+void HealthWidget::SaveSettings(CSimpleIni *ini) {
+	ToolboxWidget::SaveSettings(ini);
+	ini->SetBoolValue(Name(), VAR_NAME(click_to_print_health), click_to_print_health);
+}
+
+void HealthWidget::DrawSettingInternal() {
+	ToolboxWidget::DrawSettingInternal();
+	ImGui::Checkbox("Ctrl+Click to print target health", &click_to_print_health);
+}
 
 void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
 	if (!visible) return;
 
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
 	ImGui::SetNextWindowSize(ImVec2(150, 100), ImGuiSetCond_FirstUseEver);
-	if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, true))) {
+    bool ctrl_pressed = ImGui::IsKeyDown(VK_CONTROL);
+	if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(ctrl_pressed && click_to_print_health)))) {
 		static char health_perc[32];
 		static char health_abs[32];
 		GW::Agent* target = GW::Agents::GetTarget();
@@ -55,6 +72,24 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::SetCursorPos(cur);
 			ImGui::Text(health_abs);
 			ImGui::PopFont();
+
+            if (click_to_print_health) {
+			    ImVec2 size = ImGui::GetWindowSize();
+			    ImVec2 min = ImGui::GetWindowPos();
+			    ImVec2 max(min.x + size.x, min.y + size.y);
+			    if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsMouseHoveringRect(min, max)) {
+                    if (target) {
+                        std::wstring name;
+                        GW::Agents::AsyncGetAgentName(target, name);
+                        if (name.size()) {
+                            char buffer[512];
+                            int current_hp = (int)(target->HP * target->MaxHP);
+                            snprintf(buffer, sizeof(buffer), "%S Health is %d of %d. (%.0f %%)", name.c_str(), current_hp, target->MaxHP, target->HP * 100.f);
+                            GW::Chat::SendChat('#', buffer);
+                        }
+                    }
+			    }
+		    }
 		}
 	}
 	ImGui::End();

@@ -458,8 +458,10 @@ void ChatCommands::CmdTP(const wchar_t *message, int argc, LPWSTR *argv) {
 		if (fav_s_num.empty()) {
 			TravelWindow::Instance().TravelFavorite(0);
 		} else {
-			int fav_num = wcstol(fav_s_num.c_str(), nullptr, 0);
-			TravelWindow::Instance().TravelFavorite(fav_num - 1);
+			int fav_num;
+			if (GuiUtils::ParseInt(fav_s_num.c_str(), &fav_num)) {
+				TravelWindow::Instance().TravelFavorite(fav_num - 1);
+			}
 		}
 	} else if (town == L"toa") {
 		GW::Map::Travel(GW::Constants::MapID::Temple_of_the_Ages, district, district_number);
@@ -492,8 +494,8 @@ void ChatCommands::CmdTP(const wchar_t *message, int argc, LPWSTR *argv) {
 	} else if (town == L"doom" || town == L"doomlore") {
 		GW::Map::Travel(GW::Constants::MapID::Doomlore_Shrine_outpost, district, district_number);
 	} else {
-		int mapid = wcstol(town.c_str(), nullptr, 0);
-		if (mapid) {
+		int mapid;
+		if (GuiUtils::ParseInt(town.c_str(), &mapid) && (mapid != 0)) {
 			GW::Map::Travel((GW::Constants::MapID)mapid, district, district_number);
 		}
 	}
@@ -749,8 +751,16 @@ void ChatCommands::CmdLoad(const wchar_t *message, int argc, LPWSTR *argv) {
 	}
 	if (argc == 2)
 		GW::SkillbarMgr::LoadSkillTemplate(temp);	
-	else if (argc == 3)
-		GW::SkillbarMgr::LoadSkillTemplate(temp, std::stoi(argv[2]));
+	else if (argc == 3) {
+		int hero_number;
+		if (GuiUtils::ParseInt(argv[2], &hero_number)) {
+			// @Robustness:
+			// Check that the number is actually valid or make sure LoadSkillTemplate is safe
+			if (0 < hero_number && hero_number <= 8) {
+				GW::SkillbarMgr::LoadSkillTemplate(temp, hero_number);
+			}
+		}
+	}
 }
 
 void ChatCommands::CmdTransmo(const wchar_t *message, int argc, LPWSTR *argv) {
