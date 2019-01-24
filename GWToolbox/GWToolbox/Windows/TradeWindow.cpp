@@ -19,6 +19,7 @@
 
 #include <list>
 #include <fstream>
+#include <regex>
 
 using easywsclient::WebSocket;
 using nlohmann::json;
@@ -100,7 +101,6 @@ void TradeWindow::Update(float delta) {
 	ws_chat->dispatch([this](const std::string& data) {
 		char buffer[512];
 		json res = json::parse(data.c_str());
-
 		// We don't support queries in the chat
 		if (res.find("query") != res.end())
 			return;
@@ -110,12 +110,14 @@ void TradeWindow::Update(float delta) {
 		if (filter_alerts) {
 			print_message = false; // filtered unless allowed by words
 			for (auto& word : alert_words) {
-				auto found = std::search(msg.begin(), msg.end(), word.begin(), word.end(), [](char c1, char c2) -> bool {
-					return tolower(c1) == c2;
-				});
-				if (found != msg.end()) {
-					print_message = true;
-					break; // don't need to check other words
+				std::regex word_regex;
+				try {
+					word_regex = std::regex(word, std::regex::ECMAScript | std::regex::icase);
+				}
+				catch (...) {} // Avoid user input error
+				if (!word_regex._Empty() && std::regex_search(msg, word_regex)) {
+					print_message = true; // Regex match
+					break;
 				}
 			}
 		}
