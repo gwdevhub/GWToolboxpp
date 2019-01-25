@@ -36,6 +36,7 @@ public:
 
 	void Draw(IDirect3DDevice9* device) override;
 	void RenderSetupProjection(IDirect3DDevice9* device);
+	
 
 	bool OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam);
 	bool OnMouseDblClick(UINT Message, WPARAM wParam, LPARAM lParam);
@@ -48,6 +49,8 @@ public:
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
+
+	float GetMapRotation();
 
 	// 0 is 'all' flag, 1 to 7 is each hero
 	void FlagHero(unsigned int idx) {
@@ -85,6 +88,7 @@ private:
 	bool loading = false; // only consider some cases but still good
 
     bool mouse_clickthrough = false;
+	bool fixed_north = false;
     bool alt_click_to_move = false;
 
 	bool hero_flag_controls_show = false;

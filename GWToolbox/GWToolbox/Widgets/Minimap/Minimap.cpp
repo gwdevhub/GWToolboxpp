@@ -179,6 +179,8 @@ void Minimap::DrawSettingInternal() {
     }
     ImGui::Checkbox("Reduce agent ping spam", &pingslines_renderer.reduce_ping_spam);
     ImGui::ShowHelp("Additional pings on the same agents will increase the duration of the existing ping, rather than create a new one.");
+	ImGui::Checkbox("Map Rotation", &fixed_north);
+	ImGui::ShowHelp("Map rotation on (e.g. Compass), or off (e.g. Mission Map).");
 }
 
 void Minimap::LoadSettings(CSimpleIni* ini) {
@@ -189,6 +191,7 @@ void Minimap::LoadSettings(CSimpleIni* ini) {
 	hero_flag_window_background = Colors::Load(ini, Name(), "hero_flag_controls_background",
 		ImColor(ImGui::GetStyle().Colors[ImGuiCol_WindowBg]));
     mouse_clickthrough = ini->GetBoolValue(Name(), VAR_NAME(mouse_clickthrough), false);
+	fixed_north = ini->GetBoolValue(Name(), VAR_NAME(fixed_north), false);
     alt_click_to_move = ini->GetBoolValue(Name(), VAR_NAME(alt_click_to_move), false);
     pingslines_renderer.reduce_ping_spam = ini->GetBoolValue(Name(), VAR_NAME(reduce_ping_spam), false);
 	range_renderer.LoadSettings(ini, Name());
@@ -208,6 +211,7 @@ void Minimap::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(mouse_clickthrough), mouse_clickthrough);
     ini->SetBoolValue(Name(), VAR_NAME(alt_click_to_move), alt_click_to_move);
     ini->SetBoolValue(Name(), VAR_NAME(reduce_ping_spam), pingslines_renderer.reduce_ping_spam);
+	ini->SetBoolValue(Name(), VAR_NAME(fixed_north), fixed_north);
 	range_renderer.SaveSettings(ini, Name());
 	pmap_renderer.SaveSettings(ini, Name());
 	agent_renderer.SaveSettings(ini, Name());
@@ -229,7 +233,9 @@ void Minimap::GetPlayerHeroes(GW::PartyInfo *party, std::vector<GW::AgentID>& pl
 			player_heroes.push_back(hero.agentid);
 	}
 }
-
+float Minimap::GetMapRotation() {
+	return fixed_north ? (float)1.5708 : GW::CameraMgr::GetYaw();
+}
 void Minimap::Draw(IDirect3DDevice9* device) {
 	if (!IsActive()) return;
 
@@ -250,7 +256,7 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 			translation -= d;
 		}
 	}
-
+	float rotation = GetMapRotation();
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
 	ImGui::SetNextWindowSize(ImVec2(500.0f, 500.0f), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), nullptr, GetWinFlags(ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoBringToFrontOnFocus))) {
@@ -315,7 +321,7 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 			D3DXMatrixTranslation(&translate_char, -me->pos.x, -me->pos.y, 0);
 
 			D3DXMATRIX rotate_char;
-			D3DXMatrixRotationZ(&rotate_char, -GW::CameraMgr::GetYaw() + (float)M_PI_2);
+			D3DXMatrixRotationZ(&rotate_char, -Instance().GetMapRotation()+ (float)M_PI_2);
 
 			D3DXMATRIX scaleM, translationM;
 			D3DXMatrixScaling(&scaleM, Instance().scale, Instance().scale, 1.0f);
@@ -449,7 +455,7 @@ GW::Vector2f Minimap::InterfaceToWorldPoint(Vec2i pos) const {
 	v /= scale;
 
 	// rotate by current camera rotation
-	float angle = GW::CameraMgr::GetYaw() - (float)M_PI_2;
+	float angle = Instance().GetMapRotation() - (float)M_PI_2;
 	float x1 = v.x * std::cos(angle) - v.y * std::sin(angle);
 	float y1 = v.x * std::sin(angle) + v.y * std::cos(angle);
 	v = GW::Vector2f(x1, y1);
