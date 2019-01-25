@@ -179,7 +179,7 @@ void Minimap::DrawSettingInternal() {
     }
     ImGui::Checkbox("Reduce agent ping spam", &pingslines_renderer.reduce_ping_spam);
     ImGui::ShowHelp("Additional pings on the same agents will increase the duration of the existing ping, rather than create a new one.");
-	ImGui::Checkbox("Map Rotation", &fixed_north);
+	ImGui::Checkbox("Map Rotation", &rotate_minimap);
 	ImGui::ShowHelp("Map rotation on (e.g. Compass), or off (e.g. Mission Map).");
 }
 
@@ -191,7 +191,7 @@ void Minimap::LoadSettings(CSimpleIni* ini) {
 	hero_flag_window_background = Colors::Load(ini, Name(), "hero_flag_controls_background",
 		ImColor(ImGui::GetStyle().Colors[ImGuiCol_WindowBg]));
     mouse_clickthrough = ini->GetBoolValue(Name(), VAR_NAME(mouse_clickthrough), false);
-	fixed_north = ini->GetBoolValue(Name(), VAR_NAME(fixed_north), false);
+	rotate_minimap = ini->GetBoolValue(Name(), VAR_NAME(rotate_minimap), true);
     alt_click_to_move = ini->GetBoolValue(Name(), VAR_NAME(alt_click_to_move), false);
     pingslines_renderer.reduce_ping_spam = ini->GetBoolValue(Name(), VAR_NAME(reduce_ping_spam), false);
 	range_renderer.LoadSettings(ini, Name());
@@ -211,7 +211,7 @@ void Minimap::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(mouse_clickthrough), mouse_clickthrough);
     ini->SetBoolValue(Name(), VAR_NAME(alt_click_to_move), alt_click_to_move);
     ini->SetBoolValue(Name(), VAR_NAME(reduce_ping_spam), pingslines_renderer.reduce_ping_spam);
-	ini->SetBoolValue(Name(), VAR_NAME(fixed_north), fixed_north);
+	ini->SetBoolValue(Name(), VAR_NAME(rotate_minimap), rotate_minimap);
 	range_renderer.SaveSettings(ini, Name());
 	pmap_renderer.SaveSettings(ini, Name());
 	agent_renderer.SaveSettings(ini, Name());
@@ -234,7 +234,7 @@ void Minimap::GetPlayerHeroes(GW::PartyInfo *party, std::vector<GW::AgentID>& pl
 	}
 }
 float Minimap::GetMapRotation() {
-	return fixed_north ? (float)1.5708 : GW::CameraMgr::GetYaw();
+	return rotate_minimap ? GW::CameraMgr::GetYaw() : (float)1.5708;
 }
 void Minimap::Draw(IDirect3DDevice9* device) {
 	if (!IsActive()) return;
