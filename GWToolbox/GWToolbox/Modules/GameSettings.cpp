@@ -1,6 +1,7 @@
 #include "GameSettings.h"
 
 #include <ctime>
+#include <ShellApi.h>
 
 #include <GWCA\Managers\GameThreadMgr.h>
 #include <GWCA\Managers\MapMgr.h>
@@ -12,6 +13,7 @@
 #include <GWCA\Managers\FriendListMgr.h>
 #include <GWCA\Managers\Render.h>
 #include <GWCA\Managers\CameraMgr.h>
+#include <GWCA\Managers\UIMgr.h>
 
 #include <GWCA\Context\GameContext.h>
 
@@ -540,6 +542,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	auto_url = ini->GetBoolValue(Name(), VAR_NAME(auto_url), true);
 	// select_with_chat_doubleclick = ini->GetBoolValue(Name(), VAR_NAME(select_with_chat_doubleclick), true);
 	move_item_on_ctrl_click = ini->GetBoolValue(Name(), VAR_NAME(move_item_on_ctrl_click), true);
+	wiki_item_on_ctrl_shift_click = ini->GetBoolValue(Name(), VAR_NAME(wiki_item_on_ctrl_shift_click), true);
 
 	flash_window_on_pm = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_pm), true);
 	flash_window_on_party_invite = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_party_invite), true);
@@ -567,7 +570,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	if (tick_is_toggle) GW::PartyMgr::SetTickToggle();
 	// if (select_with_chat_doubleclick) GW::Chat::SetChatEventCallback(&ChatEventCallback);
 	if (auto_url) GW::Chat::SetSendChatCallback(&SendChatCallback);
-	if (move_item_on_ctrl_click) GW::Items::SetOnItemClick(GameSettings::ItemClickCallback);
+	if (move_item_on_ctrl_click || wiki_item_on_ctrl_shift_click) GW::Items::SetOnItemClick(GameSettings::ItemClickCallback);
 	if (tome_patch && show_unlearned_skill) tome_patch->TooglePatch(true);
 
 	GW::Chat::SetWhisperCallback(&WhisperCallback);
@@ -590,6 +593,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(auto_url), auto_url);
 	// ini->SetBoolValue(Name(), VAR_NAME(select_with_chat_doubleclick), select_with_chat_doubleclick);
 	ini->SetBoolValue(Name(), VAR_NAME(move_item_on_ctrl_click), move_item_on_ctrl_click);
+	ini->SetBoolValue(Name(), VAR_NAME(wiki_item_on_ctrl_shift_click), wiki_item_on_ctrl_shift_click);
 
 	ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_pm), flash_window_on_pm);
 	ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_party_invite), flash_window_on_party_invite);
@@ -673,6 +677,10 @@ void GameSettings::DrawSettingInternal() {
 #endif
 
 	if (ImGui::Checkbox("Move items from/to storage with Control+Click", &move_item_on_ctrl_click)) {
+		GW::Items::SetOnItemClick(GameSettings::ItemClickCallback);
+	}
+	
+	if (ImGui::Checkbox("Search the wiki for an item with Control+Shift+Click", &wiki_item_on_ctrl_shift_click)) {
 		GW::Items::SetOnItemClick(GameSettings::ItemClickCallback);
 	}
 
@@ -868,9 +876,25 @@ bool GameSettings::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 }
 
 void GameSettings::ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag) {
-	if (!GameSettings::Instance().move_item_on_ctrl_click) return;
+	if (!GameSettings::Instance().move_item_on_ctrl_click && !GameSettings::Instance().wiki_item_on_ctrl_shift_click) return;
     if (!ImGui::IsKeyDown(VK_CONTROL)) return;
 	if (type != 7) return;
+
+	// Ctrl + Shift + Click will open the gww with the item name as a search term.
+	if (ImGui::IsKeyDown(VK_SHIFT)) {
+		GW::Item *item = GW::Items::GetItemBySlot(bag, slot + 1);
+		if (!item || !item->NameString) return;
+
+		std::wstring itemName;
+		GW::UI::AsyncDecodeStr(item->NameString, &itemName);
+
+		CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+
+		// the buffer is large enough, because you can type only 120 characters at once in the chat.
+		std::wstring link = L"https://wiki.guildwars.com/wiki/?search=" + itemName;
+		ShellExecuteW(NULL, L"open", link.c_str(), NULL, NULL, SW_SHOWNORMAL);
+		return;
+	}
 
 	// Expected behaviors
 	//  When clicking on item in inventory
