@@ -234,7 +234,7 @@ void Minimap::GetPlayerHeroes(GW::PartyInfo *party, std::vector<GW::AgentID>& pl
 	}
 }
 float Minimap::GetMapRotation() {
-	return rotate_minimap ? GW::CameraMgr::GetYaw() : (float)1.5708;
+	return rotate_minimap ? GW::CameraMgr::GetYaw() : 1.5708f;
 }
 void Minimap::Draw(IDirect3DDevice9* device) {
 	if (!IsActive()) return;
