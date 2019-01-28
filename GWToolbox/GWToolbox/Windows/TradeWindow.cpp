@@ -114,7 +114,15 @@ void TradeWindow::Update(float delta) {
 				try {
 					word_regex = std::regex(word, std::regex::ECMAScript | std::regex::icase);
 				}
-				catch (...) {} // Avoid user input error
+				catch (...) {	// Avoid regex input error, fallback to word search
+					auto found = std::search(msg.begin(), msg.end(), word.begin(), word.end(), [](char c1, char c2) -> bool {
+						return tolower(c1) == c2;
+					});
+					if (found != msg.end()) {
+						print_message = true;
+						break; // don't need to check other words
+					}
+				}
 				if (!word_regex._Empty() && std::regex_search(msg, word_regex)) {
 					print_message = true; // Regex match
 					break;
