@@ -326,6 +326,7 @@ void PconLunar::Update(int delay) {
 }
 int PconLunar::QuantityForEach(const GW::Item* item) const {
 	switch (item->ModelId) {
+	case ItemID::LunarPig:
 	case ItemID::LunarRat:
 	case ItemID::LunarOx:
 	case ItemID::LunarTiger:
