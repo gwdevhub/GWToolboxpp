@@ -27,29 +27,33 @@ namespace CSLauncher
 
         private void CharSelector_Load(object sender, EventArgs e)
         {
-            procs = Process.GetProcessesByName("Gw");
+            Process[] check_procs = Process.GetProcessesByName("Gw");
+            procs = new Process[check_procs.Length];
             IntPtr charnameAddr;
 
             {
-                GWCAMemory firstprocmems = new GWCAMemory(procs[0]);
-                firstprocmems.InitScanner(new IntPtr(0x401000),0x49A000);
-                charnameAddr = firstprocmems.ScanForPtr(new byte[] { 0x6A, 0x14, 0x8D, 0x96, 0xBC },0x9, true);
+                GWCAMemory firstprocmems = new GWCAMemory(check_procs[0]);
+                firstprocmems.InitScanner(new IntPtr(0x401000), 0x49A000);
+                charnameAddr = firstprocmems.ScanForPtr(new byte[] { 0x6A, 0x14, 0x8D, 0x96, 0xBC }, 0x9, true);
                 firstprocmems.TerminateScanner();
             }
-
-            foreach (Process proc in procs)
+            int validProcs = 0;
+            for (int i = 0; i < check_procs.Length; i++)
             {
-                GWCAMemory mem = new GWCAMemory(proc);
+                GWCAMemory mem = new GWCAMemory(check_procs[i]);
                 if (mem.Read<Int32>(new IntPtr(0x00DE0000)) != 0)
                     continue;
                 if (mem.HaveModule("GWToolbox.dll"))
                     continue;
-                string charname = mem.ReadWString(charnameAddr,30);
+                procs[validProcs] = check_procs[i];
+                validProcs++;
+                string charname = mem.ReadWString(charnameAddr, 30);
                 comboBox.Items.Add(charname);
                 checkedListBox.Items.Add(charname, CheckState.Unchecked);
             }
             comboBox.SelectedIndex = 0;
-            if (checkedListBox.Items.Count > 0) {
+            if (checkedListBox.Items.Count > 0)
+            {
                 checkedListBox.SetItemCheckState(0, CheckState.Checked);
             }
         }
@@ -57,31 +61,40 @@ namespace CSLauncher
         private void buttonLaunch_Click(object sender, EventArgs e)
         {
             SelectedProcesses.Clear();
-            if (expanded) {
-                foreach (int index in checkedListBox.CheckedIndices) {
+            if (expanded)
+            {
+                foreach (int index in checkedListBox.CheckedIndices)
+                {
                     SelectedProcesses.Add(procs[index]);
                 }
-                if (SelectedProcesses.Count == 0) {
+                if (SelectedProcesses.Count == 0)
+                {
                     MessageBox.Show("Please select at least one process", "Error: No process selected", MessageBoxButtons.OK);
                     return;
                 }
-                
-            } else {
+
+            }
+            else
+            {
                 SelectedProcesses.Add(procs[comboBox.SelectedIndex]);
             }
             this.Close();
         }
 
-        private void buttonExpand_Click(object sender, EventArgs e) {
+        private void buttonExpand_Click(object sender, EventArgs e)
+        {
             this.expanded = !this.expanded;
-            if (this.expanded) {
+            if (this.expanded)
+            {
                 this.groupBoxCharSelect.Size = new Size(264, 216);
                 this.ClientSize = new System.Drawing.Size(288, 240);
                 this.groupBoxCharSelect.Controls.Add(this.buttonCheckAll);
                 this.groupBoxCharSelect.Controls.Add(this.buttonUncheckAll);
                 this.groupBoxCharSelect.Controls.Add(this.checkedListBox);
                 this.groupBoxCharSelect.Controls.Remove(this.comboBox);
-            } else {
+            }
+            else
+            {
                 this.groupBoxCharSelect.Size = new Size(264, 54);
                 this.ClientSize = new System.Drawing.Size(288, 78);
                 this.groupBoxCharSelect.Controls.Remove(this.buttonCheckAll);
@@ -91,14 +104,18 @@ namespace CSLauncher
             }
         }
 
-        private void buttonCheckAll_Click(object sender, EventArgs e) {
-            for (int i = 0; i < checkedListBox.Items.Count; ++i) {
+        private void buttonCheckAll_Click(object sender, EventArgs e)
+        {
+            for (int i = 0; i < checkedListBox.Items.Count; ++i)
+            {
                 checkedListBox.SetItemCheckState(i, CheckState.Checked);
             }
         }
 
-        private void buttonUncheckAll_Click(object sender, EventArgs e) {
-            for (int i = 0; i < checkedListBox.Items.Count; ++i) {
+        private void buttonUncheckAll_Click(object sender, EventArgs e)
+        {
+            for (int i = 0; i < checkedListBox.Items.Count; ++i)
+            {
                 checkedListBox.SetItemCheckState(i, CheckState.Unchecked);
             }
         }

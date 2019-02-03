@@ -45,6 +45,9 @@ private:
 	// if we need to print in the chat
 	bool print_game_chat = false;
 
+	// Whether to use regex search for trade alerts. Falls back to basic search.
+	bool enable_regex_filter_for_alerts = false; 
+
 	// if enable, we won't print the messages containing word from alert_words
 	bool filter_alerts = false;
 

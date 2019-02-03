@@ -110,22 +110,23 @@ void TradeWindow::Update(float delta) {
 		if (filter_alerts) {
 			print_message = false; // filtered unless allowed by words
 			for (auto& word : alert_words) {
-				std::regex word_regex;
-				try {
-					word_regex = std::regex(word, std::regex::ECMAScript | std::regex::icase);
-				}
-				catch (...) {	// Avoid regex input error, fallback to word search
+				if (print_message)	break;	// Found match; drop out of loop.
+				if (enable_regex_filter_for_alerts) {	// Regex enabled; try regex, fallback to word search
+					try {
+						std::regex word_regex = std::regex(word, std::regex::ECMAScript | std::regex::icase);
+						print_message = !word_regex._Empty() && std::regex_search(msg, word_regex);
+					}
+					catch (...) {	// Avoid regex input error, fallback to word search
+						auto found = std::search(msg.begin(), msg.end(), word.begin(), word.end(), [](char c1, char c2) -> bool {
+							return tolower(c1) == c2;
+						});
+						print_message = found != msg.end();
+					}
+				} else {	// Regex disabled; word search only
 					auto found = std::search(msg.begin(), msg.end(), word.begin(), word.end(), [](char c1, char c2) -> bool {
 						return tolower(c1) == c2;
 					});
-					if (found != msg.end()) {
-						print_message = true;
-						break; // don't need to check other words
-					}
-				}
-				if (!word_regex._Empty() && std::regex_search(msg, word_regex)) {
-					print_message = true; // Regex match
-					break;
+					print_message = found != msg.end();
 				}
 			}
 		}
@@ -353,6 +354,7 @@ void TradeWindow::DrawAlertsWindowContent(bool ownwindow) {
 		ParseBuffer(alert_buf, alert_words);
 		alertfile_dirty = true;
 	}
+	ImGui::Checkbox("Use regex for searches", &enable_regex_filter_for_alerts);
 }
 
 void TradeWindow::DrawSettingInternal() {
@@ -363,6 +365,7 @@ void TradeWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxWindow::LoadSettings(ini);
 	print_game_chat = ini->GetBoolValue(Name(), VAR_NAME(print_game_chat), false);
 	filter_alerts   = ini->GetBoolValue(Name(), VAR_NAME(filter_alerts), false);
+	enable_regex_filter_for_alerts = ini->GetBoolValue(Name(), VAR_NAME(enable_regex_filter_for_alerts), false);
 
 	std::ifstream alert_file;
 	alert_file.open(Resources::GetPath(L"AlertKeywords.txt"));
@@ -380,6 +383,7 @@ void TradeWindow::SaveSettings(CSimpleIni* ini) {
 
 	ini->SetBoolValue(Name(), VAR_NAME(print_game_chat), print_game_chat);
 	ini->SetBoolValue(Name(), VAR_NAME(filter_alerts), filter_alerts);
+	ini->SetBoolValue(Name(), VAR_NAME(enable_regex_filter_for_alerts), enable_regex_filter_for_alerts);
 
 	if (alertfile_dirty) {
 		std::ofstream bycontent_file;
