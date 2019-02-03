@@ -1,21 +1,41 @@
-#include "ObjectiveTimerWindow.h"
+#include <stdint.h>
+#include <Windows.h>
 
+#include <queue>
+#include <thread>
+#include <vector>
+#include <functional>
+
+#include <imgui.h>
 #include <imgui_internal.h>
 
-#include <GWCA\Constants\QuestIDs.h>
-#include <GWCA\Constants\Constants.h>
+#include <d3d9.h>
+#include <SimpleIni.h>
 
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\Managers\StoCMgr.h>
-#include <GWCA\Managers\UIMgr.h>
-#include <GWCA\Context\WorldContext.h>
+#include <GWCA/Constants/Constants.h>
+// @Cleanup: Fix this Position & StoC includes
+#include <GWCA/GameEntities/Position.h>
+#include <GWCA/Packets/StoC.h>
 
+#include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Pathing.h>
+
+#include <GWCA/Context/WorldContext.h>
+
+#include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
+
+#include "Utf8.h"
+#include "Defines.h"
 #include "GuiUtils.h"
 #include "GWToolbox.h"
+#include "ToolboxWindow.h"
 
-#include <Modules\Resources.h>
+#include "Modules/Resources.h"
+#include "Windows/ObjectiveTimerWindow.h"
 
 #define countof(arr) (sizeof(arr) / sizeof(arr[0]))
 
@@ -61,15 +81,15 @@ namespace {
         }
     }
 
-	void AsyncGetMapName(char *buffer, size_t n) {
-		static wchar_t enc_str[16];
-		GW::AreaInfo& info = GW::Map::GetCurrentMapInfo();
-		if (!GW::UI::UInt32ToEncStr(info.NameID, enc_str, n)) {
-			buffer[0] = 0;
-			return;
-		}
-		GW::UI::AsyncDecodeStr(enc_str, buffer, n);
-	}
+    void AsyncGetMapName(char *buffer, size_t n) {
+        static wchar_t enc_str[16];
+        GW::AreaInfo& info = GW::Map::GetCurrentMapInfo();
+        if (!GW::UI::UInt32ToEncStr(info.name_id, enc_str, n)) {
+            buffer[0] = 0;
+            return;
+        }
+        GW::UI::AsyncDecodeStr(enc_str, buffer, n);
+    }
 
     void ComputeNColumns() {
         n_columns = 1
@@ -110,56 +130,56 @@ void ObjectiveTimerWindow::Initialize() {
         return false;
     });
 
-	GW::StoC::AddCallback<GW::Packet::StoC::InstanceLoadFile>(
-	[this](GW::Packet::StoC::InstanceLoadFile *packet) -> bool {
-		// We would want to have a default type that can handle objective by using name in Guild Wars
-		// The only thing we miss is how to determine wether this map has a mission objectives.
-		// We could use packet 187, but this can be a little bit hairy to do. Ask Ziox for more info.
-		switch (packet->map_fileID) {
-		case 219215: AddDoAObjectiveSet(packet->spawn_point); break;
-		case 63058:  AddFoWObjectiveSet(); break;
+    GW::StoC::AddCallback<GW::Packet::StoC::InstanceLoadFile>(
+    [this](GW::Packet::StoC::InstanceLoadFile *packet) -> bool {
+        // We would want to have a default type that can handle objective by using name in Guild Wars
+        // The only thing we miss is how to determine wether this map has a mission objectives.
+        // We could use packet 187, but this can be a little bit hairy to do. Ask Ziox for more info.
+        switch (packet->map_fileID) {
+        case 219215: AddDoAObjectiveSet(packet->spawn_point); break;
+        case 63058:  AddFoWObjectiveSet(); break;
         case 63059:  AddUWObjectiveSet(); break;
         default: 
             if (!objective_sets.empty()) {
                 objective_sets.back()->StopObjectives();
             }
-		}
-		return false;
-	});
+        }
+        return false;
+    });
 
-	GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveAdd>(
-	[this](GW::Packet::StoC::ObjectiveAdd *packet) -> bool {
-		// type 12 is the "title" of the mission objective, should we ignore it or have a "title" objective ?
-		/*
-		Objective *obj = GetCurrentObjective(packet->objective_id);
-		if (obj) return false;
-		ObjectiveSet *os = objective_sets.back();
-		os->objectives.emplace_back(packet->objective_id);
-		obj = &os->objectives.back();
-		GW::UI::AsyncDecodeStr(packet->name, obj->name, sizeof(obj->name));
-		// If the name isn't "???" we consider that the objective started
-		if (wcsncmp(packet->name, L"\x8102\x3236", 2))
-			obj->SetStarted();
-		*/
-		return false;
-	});
+    GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveAdd>(
+    [this](GW::Packet::StoC::ObjectiveAdd *packet) -> bool {
+        // type 12 is the "title" of the mission objective, should we ignore it or have a "title" objective ?
+        /*
+        Objective *obj = GetCurrentObjective(packet->objective_id);
+        if (obj) return false;
+        ObjectiveSet *os = objective_sets.back();
+        os->objectives.emplace_back(packet->objective_id);
+        obj = &os->objectives.back();
+        GW::UI::AsyncDecodeStr(packet->name, obj->name, sizeof(obj->name));
+        // If the name isn't "???" we consider that the objective started
+        if (wcsncmp(packet->name, L"\x8102\x3236", 2))
+            obj->SetStarted();
+        */
+        return false;
+    });
 
-	GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveUpdateName>(
-	[this](GW::Packet::StoC::ObjectiveUpdateName* packet) -> bool {
-		Objective *obj = GetCurrentObjective(packet->objective_id);
+    GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveUpdateName>(
+    [this](GW::Packet::StoC::ObjectiveUpdateName* packet) -> bool {
+        Objective *obj = GetCurrentObjective(packet->objective_id);
         if (obj) obj->SetStarted();
         return false;
-	});
-	
-	GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveDone>(
-	[this](GW::Packet::StoC::ObjectiveDone* packet) -> bool {
-		Objective *obj = GetCurrentObjective(packet->objective_id);
+    });
+    
+    GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveDone>(
+    [this](GW::Packet::StoC::ObjectiveDone* packet) -> bool {
+        Objective *obj = GetCurrentObjective(packet->objective_id);
         if (obj) {
             obj->SetDone();
             objective_sets.back()->CheckSetDone();
         }
         return false;
-	});
+    });
 
     GW::StoC::AddCallback<GW::Packet::StoC::AgentUpdateAllegiance>(
         [this](GW::Packet::StoC::AgentUpdateAllegiance* packet) -> bool {
@@ -167,7 +187,7 @@ void ObjectiveTimerWindow::Initialize() {
 
         const GW::Agent* agent = GW::Agents::GetAgentByID(packet->agent_id);
         if (agent == nullptr) return false;
-        if (agent->PlayerNumber != GW::Constants::ModelID::UW::Dhuum) return false;
+        if (agent->player_number != GW::Constants::ModelID::UW::Dhuum) return false;
         if (packet->unk1 != 0x6D6F6E31) return false;
         
         Objective* obj = GetCurrentObjective(157);
@@ -175,14 +195,14 @@ void ObjectiveTimerWindow::Initialize() {
         return false;
     });
 
-	GW::StoC::AddCallback<GW::Packet::StoC::DoACompleteZone>(
-	[this](GW::Packet::StoC::DoACompleteZone* packet) -> bool {
-		if (packet->message[0] != 0x8101) return false;
-		if (objective_sets.empty()) return false;
+    GW::StoC::AddCallback<GW::Packet::StoC::DoACompleteZone>(
+    [this](GW::Packet::StoC::DoACompleteZone* packet) -> bool {
+        if (packet->message[0] != 0x8101) return false;
+        if (objective_sets.empty()) return false;
 
-		uint32_t id = packet->message[1];
-		Objective *obj = GetCurrentObjective(id);
-		ObjectiveSet *os = objective_sets.back();
+        uint32_t id = packet->message[1];
+        Objective *obj = GetCurrentObjective(id);
+        ObjectiveSet *os = objective_sets.back();
 
         if (obj) {
             obj->SetDone();
@@ -191,17 +211,17 @@ void ObjectiveTimerWindow::Initialize() {
             Objective *next = GetCurrentObjective(next_id);
             if (next && !next->IsStarted()) next->SetStarted();
         }
-		return false;
-	});
+        return false;
+    });
 }
 
 void ObjectiveTimerWindow::ObjectiveSet::StopObjectives() {
     active = false;
-	for (Objective& obj : objectives) {
+    for (Objective& obj : objectives) {
         if (obj.status == Objective::Started) {
             obj.status = Objective::Failed;
         }
-	}
+    }
 }
 
 void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vector2f spawn) {
@@ -225,8 +245,8 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vector2f spawn) {
     }
     if (area == -1) return; // we're doing mallyx, not doa!
 
-	ObjectiveSet *os = new ObjectiveSet;
-	::AsyncGetMapName(os->name, sizeof(os->name));
+    ObjectiveSet *os = new ObjectiveSet;
+    ::AsyncGetMapName(os->name, sizeof(os->name));
     Objective objs[n_areas] = {{Foundry, "Foundry"}, {City, "City"}, {Veil, "Veil"}, {Gloom, "Gloom"}};
 
     for (int i = 0; i < n_areas; ++i) {
@@ -237,36 +257,36 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vector2f spawn) {
     objective_sets.push_back(os);
 }
 void ObjectiveTimerWindow::AddFoWObjectiveSet() {
-	ObjectiveSet *os = new ObjectiveSet;
-	::AsyncGetMapName(os->name, sizeof(os->name));
-	os->objectives.emplace_back(309, "ToC");
-	os->objectives.emplace_back(310, "Wailing Lord");
-	os->objectives.emplace_back(311, "Griffons");
-	os->objectives.emplace_back(312, "Defend");
-	os->objectives.emplace_back(313, "Forge");
-	os->objectives.emplace_back(314, "Menzies");
-	os->objectives.emplace_back(315, "Restore");
-	os->objectives.emplace_back(316, "Khobay");
-	os->objectives.emplace_back(317, "ToS");
-	os->objectives.emplace_back(318, "Burning Forest");
-	os->objectives.emplace_back(319, "The Hunt");
-	objective_sets.push_back(os);
+    ObjectiveSet *os = new ObjectiveSet;
+    ::AsyncGetMapName(os->name, sizeof(os->name));
+    os->objectives.emplace_back(309, "ToC");
+    os->objectives.emplace_back(310, "Wailing Lord");
+    os->objectives.emplace_back(311, "Griffons");
+    os->objectives.emplace_back(312, "Defend");
+    os->objectives.emplace_back(313, "Forge");
+    os->objectives.emplace_back(314, "Menzies");
+    os->objectives.emplace_back(315, "Restore");
+    os->objectives.emplace_back(316, "Khobay");
+    os->objectives.emplace_back(317, "ToS");
+    os->objectives.emplace_back(318, "Burning Forest");
+    os->objectives.emplace_back(319, "The Hunt");
+    objective_sets.push_back(os);
 }
 void ObjectiveTimerWindow::AddUWObjectiveSet() {
-	ObjectiveSet *os = new ObjectiveSet;
-	::AsyncGetMapName(os->name, sizeof(os->name));
-	os->objectives.emplace_back(146, "Chamber");
-	os->objectives.emplace_back(147, "Restore");
-	os->objectives.emplace_back(148, "Escort");
-	os->objectives.emplace_back(149, "UWG");
-	os->objectives.emplace_back(150, "Vale");
-	os->objectives.emplace_back(151, "Waste");
-	os->objectives.emplace_back(152, "Pits");
-	os->objectives.emplace_back(153, "Planes");
-	os->objectives.emplace_back(154, "Mnts");
-	os->objectives.emplace_back(155, "Pools");
-	os->objectives.emplace_back(157, "Dhuum");
-	objective_sets.push_back(os);
+    ObjectiveSet *os = new ObjectiveSet;
+    ::AsyncGetMapName(os->name, sizeof(os->name));
+    os->objectives.emplace_back(146, "Chamber");
+    os->objectives.emplace_back(147, "Restore");
+    os->objectives.emplace_back(148, "Escort");
+    os->objectives.emplace_back(149, "UWG");
+    os->objectives.emplace_back(150, "Vale");
+    os->objectives.emplace_back(151, "Waste");
+    os->objectives.emplace_back(152, "Pits");
+    os->objectives.emplace_back(153, "Planes");
+    os->objectives.emplace_back(154, "Mnts");
+    os->objectives.emplace_back(155, "Pools");
+    os->objectives.emplace_back(157, "Dhuum");
+    objective_sets.push_back(os);
 }
 
 void ObjectiveTimerWindow::Update(float delta) {
@@ -275,11 +295,11 @@ void ObjectiveTimerWindow::Update(float delta) {
     }
 }
 void ObjectiveTimerWindow::Draw(IDirect3DDevice9* pDevice) {
-	if (!visible) return;
+    if (!visible) return;
 
-	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-	ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
-	if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
+    ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
+    if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
 
         if (objective_sets.empty()) {
             ImGui::Text("Enter DoA, FoW, or UW to begin");
@@ -294,8 +314,8 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9* pDevice) {
                 }
             }
         }
-	}
-	ImGui::End();
+    }
+    ImGui::End();
 }
 
 ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::GetCurrentObjective(uint32_t obj_id) {
@@ -319,7 +339,7 @@ void ObjectiveTimerWindow::DrawSettingInternal() {
 }
 
 void ObjectiveTimerWindow::LoadSettings(CSimpleIni* ini) {
-	ToolboxWindow::LoadSettings(ini);
+    ToolboxWindow::LoadSettings(ini);
     show_decimal = ini->GetBoolValue(Name(), VAR_NAME(show_decimal), false);
     show_start_column = ini->GetBoolValue(Name(), VAR_NAME(show_start_column), true);
     show_end_column = ini->GetBoolValue(Name(), VAR_NAME(show_end_column), true);
@@ -328,7 +348,7 @@ void ObjectiveTimerWindow::LoadSettings(CSimpleIni* ini) {
 }
 
 void ObjectiveTimerWindow::SaveSettings(CSimpleIni* ini) {
-	ToolboxWindow::SaveSettings(ini);
+    ToolboxWindow::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(show_decimal), show_decimal);
     ini->SetBoolValue(Name(), VAR_NAME(show_start_column), show_start_column);
     ini->SetBoolValue(Name(), VAR_NAME(show_end_column), show_end_column);
@@ -445,8 +465,8 @@ void ObjectiveTimerWindow::ObjectiveSet::CheckSetDone() {
 }
 
 ObjectiveTimerWindow::ObjectiveSet::ObjectiveSet() : ui_id(cur_ui_id++) {
-	name[0] = 0;
-	GetLocalTime(&system_time);
+    name[0] = 0;
+    GetLocalTime(&system_time);
 }
 
 bool ObjectiveTimerWindow::ObjectiveSet::Draw() {
@@ -474,7 +494,7 @@ bool ObjectiveTimerWindow::ObjectiveSet::Draw() {
         for (Objective& objective : objectives) {
             objective.Draw();
         }
-		ImGui::PopID();
-	}
+        ImGui::PopID();
+    }
     return is_open;
 }

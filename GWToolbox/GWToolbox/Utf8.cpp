@@ -1,9 +1,9 @@
-#include "Utf8.h"
-
-#include <Windows.h>
 #include <stdio.h>
+#include <Windows.h>
 
 #include <utf8proc.h>
+
+#include "Utf8.h"
 
 utf8::string Unicode16ToUtf8(const wchar_t *str)
 {

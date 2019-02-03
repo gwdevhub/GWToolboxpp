@@ -1,12 +1,41 @@
-#include "SymbolsRenderer.h"
+#include <time.h>
+#include <stdint.h>
+#include <Windows.h>
 
-#include <ImGuiAddons.h>
+#include <deque>
+#include <vector>
+#include <unordered_map>
+
 #include <d3dx9math.h>
+#include <imgui.h>
+#include <SimpleIni.h>
 
-#include <GWCA\GWCA.h>
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Context\GameContext.h>
-#include <GWCA\Context\WorldContext.h>
+#include <GWCA/Constants/Constants.h>
+// @Cleanup: Fix this Position & StoC includes
+#include <GWCA/GameEntities/Position.h>
+#include <GWCA/Packets/StoC.h>
+
+#include <GWCA/GameEntities/NPC.h>
+#include <GWCA/GameEntities/Map.h>
+#include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Party.h>
+#include <GWCA/GameEntities/Player.h>
+#include <GWCA/GameEntities/Pathing.h>
+
+#include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/WorldContext.h>
+
+#include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
+
+#include "Timer.h"
+#include "GuiUtils.h"
+#include "ImGuiAddons.h"
+// @Cleanup: Fix this include (depends on GuiUtils)
+#include "Color.h"
+
+#include "ToolboxWidget.h"
+
 #include "Minimap.h"
 
 void SymbolsRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
@@ -115,14 +144,14 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device) {
 	D3DXMATRIX translate, scale, rotate, world;
 
 	
-	GW::QuestLog qlog = GW::GameContext::instance()->world->questlog;
-	DWORD qid = GW::GameContext::instance()->world->activequestid;
+	GW::QuestLog qlog = GW::GameContext::instance()->world->quest_log;
+	DWORD qid = GW::GameContext::instance()->world->active_quest_id;
 	if (qlog.valid() && qid > 0) {
 		GW::Vector2f qpos(0, 0);
 		bool qfound = false;
 		for (unsigned int i = 0; i < qlog.size(); ++i) {
 			GW::Quest q = qlog[i];
-			if (q.questid == qid) {
+			if (q.quest_id == qid) {
 				qpos = GW::Vector2f(q.marker.x, q.marker.y);
 				qfound = true;
 				break;

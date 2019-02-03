@@ -1,6 +1,13 @@
-#include "ToolboxUIElement.h"
+#include <vector>
 
-#include <GWToolbox.h>
+#include <d3d9.h>
+#include <imgui.h>
+#include <SimpleIni.h>
+
+#include "Utf8.h"
+#include "GWToolbox.h"
+
+#include "ToolboxUIElement.h"
 
 void ToolboxUIElement::Initialize() {
 	ToolboxModule::Initialize();

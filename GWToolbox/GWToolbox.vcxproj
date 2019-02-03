@@ -64,7 +64,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;GWCAd.lib;Shlwapi.lib;Urlmon.lib;Wininet.lib;libeay32.lib;ssleay32.lib;user32.lib;gdi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;Shlwapi.lib;Urlmon.lib;Wininet.lib;libeay32.lib;ssleay32.lib;user32.lib;gdi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ProgramDatabaseFile>$(OutDir)$(TargetFileName).pdb</ProgramDatabaseFile>
       <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
     </Link>

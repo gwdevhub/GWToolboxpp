@@ -1,16 +1,17 @@
 #pragma once
 
-#include <SimpleIni.h>
-#include <imgui.h>
-
-#include <GWCA\Managers\ChatMgr.h> // for GW::Chat::Color
-#include <GuiUtils.h>
-
 #ifdef RGB
 #undef RGB
 #endif
 
 typedef ImU32 Color;
+
+// @Remove: Remove this
+namespace GW {
+	namespace Chat {
+		typedef DWORD Color;
+	}
+}
 
 namespace Colors {
 

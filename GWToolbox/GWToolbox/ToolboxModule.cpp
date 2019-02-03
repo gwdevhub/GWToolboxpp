@@ -1,6 +1,11 @@
-#include "ToolboxModule.h"
+#include <vector>
 
+#include <d3d9.h>
+#include <SimpleIni.h>
+
+#include "Utf8.h"
 #include "GWToolbox.h"
+#include "ToolboxModule.h"
 
 void ToolboxModule::Initialize() {
 	GWToolbox::Instance().RegisterModule(this);

@@ -1,43 +1,35 @@
 #pragma once
 
-#include <Windows.h>
-#include <vector>
-#include <Defines.h>
-
-#include <GWCA\GameEntities\Position.h>
-
-#include "ToolboxWindow.h"
-
 class ObjectiveTimerWindow : public ToolboxWindow {
     ObjectiveTimerWindow() {};
-	~ObjectiveTimerWindow() {};
+    ~ObjectiveTimerWindow() {};
 public:
-	static ObjectiveTimerWindow& Instance() {
-		static ObjectiveTimerWindow instance;
-		return instance;
-	}
+    static ObjectiveTimerWindow& Instance() {
+        static ObjectiveTimerWindow instance;
+        return instance;
+    }
 
-	const char* Name() const override { return "Objective Timer"; }
+    const char* Name() const override { return "Objective Timer"; }
 
-	void Initialize() override;
+    void Initialize() override;
 
     void Update(float delta) override;
-	void Draw(IDirect3DDevice9* pDevice) override;
+    void Draw(IDirect3DDevice9* pDevice) override;
     void DrawSettingInternal() override;
 
-	void LoadSettings(CSimpleIni* ini) override;
-	void SaveSettings(CSimpleIni* ini) override;
+    void LoadSettings(CSimpleIni* ini) override;
+    void SaveSettings(CSimpleIni* ini) override;
 
 private:
     class Objective {
     public:
-		uint32_t id;
-		char     name[126];
-		DWORD    start;
-		DWORD    done;
+        uint32_t id;
+        char     name[126];
+        DWORD    start;
+        DWORD    done;
         DWORD    duration;
-		char cached_done[16];
-		char cached_start[16];
+        char cached_done[16];
+        char cached_start[16];
         char cached_duration[16];
         enum Status {
             NotStarted,
@@ -46,7 +38,7 @@ private:
             Failed
         } status = NotStarted;
        
-	    Objective(uint32_t id, const char* name = "");
+        Objective(uint32_t id, const char* name = "");
 
         bool IsStarted() const;
         bool IsDone() const;
@@ -54,13 +46,13 @@ private:
         void SetDone();
         void Draw();
         void Update();
-	};
+    };
 
     class ObjectiveSet {
     public:
         ObjectiveSet();
 
-		SYSTEMTIME system_time;
+        SYSTEMTIME system_time;
         DWORD time = -1;
         char cached_time[16];
 
@@ -70,14 +62,14 @@ private:
 
         void CheckSetDone();
         bool Draw(); // returns false when should be deleted
-		void StopObjectives();
+        void StopObjectives();
 
         void Update();
         // todo: print to file
 
     private:
         // an internal id to ensure interface consistency
-        const unsigned int ui_id = 0;	
+        const unsigned int ui_id = 0;   
         static unsigned int cur_ui_id;
     };
 

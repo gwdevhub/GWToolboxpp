@@ -1,7 +1,11 @@
+#include <stdint.h>
+#include <Windows.h>
+
+#include "Logger.h"
 #include "CursorFix.h"
-#include "logger.h"
-#include <GWCA\Managers\MemoryMgr.h>
-#include <GWCA\Utilities\Hooker.h>
+
+#include <GWCA/Utilities/Hooker.h>
+#include <GWCA/Managers/MemoryMgr.h>
 
 typedef BOOL WINAPI GetClipCursor_t(
     _Out_ LPRECT lpRect);
@@ -25,5 +29,5 @@ void InstallCursorFix()
 void UninstallCursorFix()
 {
     if (g_hkGetClipCursor.Valid())
-		GW::HookBase::DisableHooks(&g_hkGetClipCursor);
+        GW::HookBase::DisableHooks(&g_hkGetClipCursor);
 }

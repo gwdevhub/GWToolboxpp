@@ -1,52 +1,67 @@
-#include "TimerWidget.h"
+#include <stdint.h>
 
-#include <logger.h>
-#include <Timer.h>
-#include <GWCA\GWCA.h>
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\Managers\EffectMgr.h>
+#include <Windows.h>
 
+#include <fstream>
+#include <functional>
+
+#include <GWCA/Constants/Constants.h>
+
+#include <GWCA/GameEntities/Map.h>
+#include <GWCA/GameEntities/Skill.h>
+#include <GWCA/GameEntities/Pathing.h>
+
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/EffectMgr.h>
+
+#include "Timer.h"
+#include "Logger.h"
 #include "GuiUtils.h"
-#include "Modules\ToolboxSettings.h"
+#include "ImGuiAddons.h"
+#include "ToolboxWidget.h"
+
+#include "Modules/ToolboxSettings.h"
+
+#include "Widgets/TimerWidget.h"
 
 void TimerWidget::LoadSettings(CSimpleIni *ini) {
-	ToolboxWidget::LoadSettings(ini);
-	click_to_print_time = ini->GetBoolValue(Name(), VAR_NAME(click_to_print_time), false);
+    ToolboxWidget::LoadSettings(ini);
+    click_to_print_time = ini->GetBoolValue(Name(), VAR_NAME(click_to_print_time), false);
     show_extra_timers = ini->GetBoolValue(Name(), VAR_NAME(show_extra_timers), false);
 }
 
 void TimerWidget::SaveSettings(CSimpleIni *ini) {
-	ToolboxWidget::SaveSettings(ini);
-	ini->SetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
+    ToolboxWidget::SaveSettings(ini);
+    ini->SetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
     ini->SetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
 }
 
 void TimerWidget::DrawSettingInternal() {
-	ToolboxWidget::DrawSettingInternal();
-	ImGui::Checkbox("Ctrl+Click to print time", &click_to_print_time);
+    ToolboxWidget::DrawSettingInternal();
+    ImGui::Checkbox("Ctrl+Click to print time", &click_to_print_time);
     ImGui::Checkbox("Show extra timers", &show_extra_timers);
     ImGui::ShowHelp("Such as Deep aspects");
 }
 
 void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
-	if (!visible) return;
-	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
+    if (!visible) return;
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
 
-	unsigned long time = GW::Map::GetInstanceTime() / 1000;
+    unsigned long time = GW::Map::GetInstanceTime() / 1000;
 
     bool ctrl_pressed = ImGui::IsKeyDown(VK_CONTROL);
-	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
-	ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiSetCond_FirstUseEver);
-	if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(click_to_print_time && ctrl_pressed)))) {
-		snprintf(timer_buffer, 32, "%d:%02d:%02d", time / (60 * 60), (time / 60) % 60, time % 60);
-		ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f48));
-		ImVec2 cur = ImGui::GetCursorPos();
-		ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
-		ImGui::TextColored(ImColor(0, 0, 0), timer_buffer);
-		ImGui::SetCursorPos(cur);
-		ImGui::Text(timer_buffer);
-		ImGui::PopFont();
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
+    ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiSetCond_FirstUseEver);
+    if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(click_to_print_time && ctrl_pressed)))) {
+        snprintf(timer_buffer, 32, "%d:%02d:%02d", time / (60 * 60), (time / 60) % 60, time % 60);
+        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f48));
+        ImVec2 cur = ImGui::GetCursorPos();
+        ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
+        ImGui::TextColored(ImColor(0, 0, 0), timer_buffer);
+        ImGui::SetCursorPos(cur);
+        ImGui::Text(timer_buffer);
+        ImGui::PopFont();
 
         if (GetUrgozTimer() || (show_extra_timers && (GetDeepTimer() || GetDhuumTimer() || GetTrapTimer()))) {
 
@@ -59,17 +74,17 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
             ImGui::PopFont();
         }
 
-		if (click_to_print_time) {
-			ImVec2 size = ImGui::GetWindowSize();
-			ImVec2 min = ImGui::GetWindowPos();
-			ImVec2 max(min.x + size.x, min.y + size.y);
-			if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsMouseHoveringRect(min, max)) {
-				GW::Chat::SendChat('/', "age");
-			}
-		}
-	}
-	ImGui::End();
-	ImGui::PopStyleColor();
+        if (click_to_print_time) {
+            ImVec2 size = ImGui::GetWindowSize();
+            ImVec2 min = ImGui::GetWindowPos();
+            ImVec2 max(min.x + size.x, min.y + size.y);
+            if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsMouseHoveringRect(min, max)) {
+                GW::Chat::SendChat('/', "age");
+            }
+        }
+    }
+    ImGui::End();
+    ImGui::PopStyleColor();
 }
 
 bool TimerWidget::GetUrgozTimer() {
@@ -99,7 +114,7 @@ bool TimerWidget::GetDeepTimer() {
     static clock_t start = -1;
     SkillID skill = SkillID::No_Skill;
     for (DWORD i = 0; i < effects.size(); ++i) {
-        SkillID effect_id = (SkillID)effects[i].SkillId;
+        SkillID effect_id = (SkillID)effects[i].skill_id;
         switch (effect_id) {
         case SkillID::Aspect_of_Exhaustion: skill = SkillID::Aspect_of_Exhaustion; break;
         case SkillID::Aspect_of_Depletion_energy_loss: skill = SkillID::Aspect_of_Depletion_energy_loss; break;

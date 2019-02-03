@@ -1,6 +1,18 @@
+#include <stdio.h>
+#include <stdint.h>
+#include <assert.h>
+
+#include <Windows.h>
+
+#include <vector>
+
+#include <d3d9.h>
+#include <SimpleIni.h>
+
+#include "Utf8.h"
+#include "Logger.h"
 #include "Defines.h"
 #include "GWToolbox.h"
-#include "logger.h"
 
 #include <GWCA/Utilities/Scanner.h>
 
