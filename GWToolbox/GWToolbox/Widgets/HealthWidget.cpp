@@ -84,7 +84,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
                         if (name.size()) {
                             char buffer[512];
                             int current_hp = (int)(target->HP * target->MaxHP);
-                            snprintf(buffer, sizeof(buffer), "%S Health is %d of %d. (%.0f %%)", name.c_str(), current_hp, target->MaxHP, target->HP * 100.f);
+                            snprintf(buffer, sizeof(buffer), "%S's Health is %d of %d. (%.0f %%)", name.c_str(), current_hp, target->MaxHP, target->HP * 100.f);
                             GW::Chat::SendChat('#', buffer);
                         }
                     }
