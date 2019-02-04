@@ -8,6 +8,7 @@
 #include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\GameThreadMgr.h>
 #include <GWCA\Managers\MapMgr.h>
+#include <GWCA\Managers\StoCMgr.h>
 #include <Modules\Resources.h>
 
 #include <imgui.h>
@@ -44,7 +45,8 @@ void TradeWindow::Initialize() {
 		while (!should_stop) {
 			if (thread_jobs.empty()) {
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
-			} else {
+			}
+			else {
 				thread_jobs.front()();
 				thread_jobs.pop();
 			}
@@ -52,6 +54,11 @@ void TradeWindow::Initialize() {
 	});
 
 	if (print_game_chat) AsyncChatConnect();
+	MapChanged();
+	GW::StoC::AddCallback<GW::Packet::StoC::MapLoaded>([this](GW::Packet::StoC::MapLoaded *packet) -> bool {
+		MapChanged();
+		return false;
+	});
 }
 
 void TradeWindow::Terminate() {
@@ -72,23 +79,30 @@ TradeWindow::~TradeWindow() {
 	Terminate();
 }
 
-
+void TradeWindow::MapChanged() {
+	is_in_kamadan_ad1 = false;
+	switch (GW::Map::GetMapID()) {
+	case GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost:
+	case GW::Constants::MapID::Kamadan_Jewel_of_Istan_Canthan_New_Year_outpost:
+	case GW::Constants::MapID::Kamadan_Jewel_of_Istan_Halloween_outpost:
+	case GW::Constants::MapID::Kamadan_Jewel_of_Istan_Wintersday_outpost:
+		is_in_kamadan_ad1 = GW::Map::GetDistrict() == 1 && GW::Map::GetRegion() == GW::Constants::Region::America;
+		break;
+	}
+}
 void TradeWindow::Update(float delta) {
-	if (!print_game_chat) return;
-
+	if (!print_game_chat || is_in_kamadan_ad1) return;
 	if (ws_chat && ws_chat->getReadyState() == WebSocket::CLOSED) {
 		delete ws_chat;
 		ws_chat = nullptr;
 	}
 
 	// do not display trade chat while in kamadan AE district 1
-	if (GW::Map::GetMapID() == GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost &&
-		GW::Map::GetDistrict() == 1 &&
-		GW::Map::GetRegion() == GW::Constants::Region::America) {
-		if (ws_chat) ws_chat->close();
+	if (is_in_kamadan_ad1) {
+		if (ws_chat)	ws_chat->close();
 		return;
 	}
-	
+
 	if (!ws_chat && !ws_chat_connecting) {
 		AsyncChatConnect();
 		return;
@@ -122,7 +136,8 @@ void TradeWindow::Update(float delta) {
 						});
 						print_message = found != msg.end();
 					}
-				} else {	// Regex disabled; word search only
+				}
+				else {	// Regex disabled; word search only
 					auto found = std::search(msg.begin(), msg.end(), word.begin(), word.end(), [](char c1, char c2) -> bool {
 						return tolower(c1) == c2;
 					});
@@ -150,7 +165,7 @@ TradeWindow::Message TradeWindow::parse_json_message(json js) {
 void TradeWindow::fetch() {
 	if (ws_window == nullptr) return;
 	if (ws_window->getReadyState() != WebSocket::OPEN) return;
-	
+
 	ws_window->poll();
 	ws_window->dispatch([this](const std::string& data) {
 		json res = json::parse(data.c_str());
@@ -158,7 +173,8 @@ void TradeWindow::fetch() {
 			// It's a new message
 			Message msg = parse_json_message(res);
 			messages.add(msg);
-		} else {
+		}
+		else {
 			search_pending = false;
 			if (res["num_results"].get<std::string>() == "0")
 				return;
@@ -204,7 +220,8 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		if (ws_window == nullptr) {
 			AsyncWindowConnect();
 		}
-	} else { // not visible
+	}
+	else { // not visible
 		if (ws_window) {
 			ws_window->close();
 			delete ws_window;
@@ -212,7 +229,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		}
 		return;
 	}
-	
+
 	if (ws_window && ws_window->getReadyState() == WebSocket::CLOSED) {
 		delete ws_window;
 		ws_window = nullptr;
@@ -254,11 +271,13 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			if (ImGui::Button("Click to reconnect")) {
 				AsyncWindowConnect();
 			}
-		} else if (ws_window_connecting || (ws_window && ws_window->getReadyState() == WebSocket::CONNECTING)) {
-			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Connecting...").x)/2);
+		}
+		else if (ws_window_connecting || (ws_window && ws_window->getReadyState() == WebSocket::CONNECTING)) {
+			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Connecting...").x) / 2);
 			ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
 			ImGui::Text("Connecting...");
-		} else {
+		}
+		else {
 			/* Display trade messages */
 			bool show_time = ImGui::GetWindowWidth() > 600.0f;
 
@@ -289,13 +308,16 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 					if ((int)(time_since_message / (60 * 60 * 24))) {
 						int days = (int)(time_since_message / (60 * 60 * 24));
 						_snprintf(timetext, 128, "%d %s ago", days, days > 1 ? "days" : "day");
-					} else if ((int)(time_since_message / (60 * 60))) {
+					}
+					else if ((int)(time_since_message / (60 * 60))) {
 						int hours = (int)(time_since_message / (60 * 60));
 						_snprintf(timetext, 128, "%d %s ago", hours, hours > 1 ? "hours" : "hour");
-					} else if ((int)(time_since_message / (60))) {
+					}
+					else if ((int)(time_since_message / (60))) {
 						int minutes = (int)(time_since_message / 60);
 						_snprintf(timetext, 128, "%d %s ago", minutes, minutes > 1 ? "minutes" : "minute");
-					} else {
+					}
+					else {
 						_snprintf(timetext, 128, "%d %s ago", time_since_message, time_since_message > 1 ? "seconds" : "second");
 					}
 					ImGui::SetCursorPosX(playername_left - innerspacing - ImGui::CalcTextSize(timetext).x);
@@ -326,7 +348,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		ImGui::EndChild();
 
 		/* Link to website footer */
-		if (ImGui::Button("Powered by https://kamadan.decltype.org", ImVec2(ImGui::GetWindowContentRegionWidth(), 20.0f))){ 
+		if (ImGui::Button("Powered by https://kamadan.decltype.org", ImVec2(ImGui::GetWindowContentRegionWidth(), 20.0f))) {
 			CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 			ShellExecuteA(NULL, "open", "https://kamadan.decltype.org", NULL, NULL, SW_SHOWNORMAL);
 		}
@@ -348,7 +370,7 @@ void TradeWindow::DrawAlertsWindowContent(bool ownwindow) {
 	ImGui::Checkbox("Send Kamadan ad1 trade chat to your trade chat", &print_game_chat);
 	ImGui::Checkbox("Only show messages containing:", &filter_alerts);
 	ImGui::TextDisabled("(Each line is a separate keyword. Not case sensitive.)");
-	if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE, 
+	if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE,
 		ImVec2(-1.0f, ownwindow ? -1.0f : 0.0f))) {
 
 		ParseBuffer(alert_buf, alert_words);
@@ -364,7 +386,7 @@ void TradeWindow::DrawSettingInternal() {
 void TradeWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxWindow::LoadSettings(ini);
 	print_game_chat = ini->GetBoolValue(Name(), VAR_NAME(print_game_chat), false);
-	filter_alerts   = ini->GetBoolValue(Name(), VAR_NAME(filter_alerts), false);
+	filter_alerts = ini->GetBoolValue(Name(), VAR_NAME(filter_alerts), false);
 	enable_regex_filter_for_alerts = ini->GetBoolValue(Name(), VAR_NAME(enable_regex_filter_for_alerts), false);
 
 	std::ifstream alert_file;
