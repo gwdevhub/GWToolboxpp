@@ -8,6 +8,7 @@
 #include <GWCA\Managers\PartyMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
+#include <GWCA\GameEntities\Position.h>
 #include <imgui_internal.h>
 
 #include <logger.h>
@@ -24,7 +25,7 @@ void PconsWindow::Initialize() {
 	const float s = 64.0f; // all icons are 64x64
 
 	pcons.push_back(new PconCons("Essence of Celerity", "essence", L"Essence_of_Celerity.png", IDB_Pcons_Essence,
-		ImVec2(5 / s , 10 / s), ImVec2(46 / s, 51 / s),
+		ImVec2(5 / s, 10 / s), ImVec2(46 / s, 51 / s),
 		ItemID::ConsEssence, SkillID::Essence_of_Celerity_item_effect, 5));
 
 	pcons.push_back(new PconCons("Grail of Might", "grail", L"Grail_of_Might.png", IDB_Pcons_Grail,
@@ -68,7 +69,7 @@ void PconsWindow::Initialize() {
 		ItemID::Pies, SkillID::Pie_Induced_Ecstasy, 10));
 
 	pcons.push_back(new PconGeneric("War Supplies", "warsupply", L"War_Supplies.png", IDB_Pcons_WarSupplies,
-		ImVec2(0 / s, 0 / s), ImVec2(63/s, 63/s),
+		ImVec2(0 / s, 0 / s), ImVec2(63 / s, 63 / s),
 		ItemID::Warsupplies, SkillID::Well_Supplied, 20));
 
 	pcons.push_back(pcon_alcohol = new PconAlcohol("Alcohol", "alcohol", L"Dwarven_Ale.png", IDB_Pcons_Ale,
@@ -202,6 +203,19 @@ void PconsWindow::Initialize() {
 		//printf("m[0] == 0x%X && m[1] == 0x%X && m[2] == 0x%X && m[3] == 0x%X\n", m[0], m[1], m[2], m[3]);
 		return false;
 	});
+	kanaxai_location = GW::Vector2f(30428.0f,-5842.0f);
+	urgoz_location = GW::Vector2f(-2800.0f, 14316.0f);
+	GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveDone>([this](GW::Packet::StoC::ObjectiveDone* packet) -> bool {
+		objectives_complete.push_back(packet->objective_id);
+		Log::Info("Objective has been completed: %d", packet->objective_id);
+		CheckObjectivesCompleteAutoDisable();
+		return false;
+	});
+	MapChanged();
+	GW::StoC::AddCallback<GW::Packet::StoC::MapLoaded>([this](GW::Packet::StoC::MapLoaded* packet) -> bool {
+		MapChanged();
+		return false;
+	});
 
 	GW::Chat::CreateCommand(L"pcons",
 		[this](const wchar_t *message, int argc, LPWSTR *argv) {
@@ -261,6 +275,26 @@ void PconsWindow::Draw(IDirect3DDevice9* device) {
 			}
 		}
 	}
+
+	switch (map_id) {
+	case GW::Constants::MapID::The_Deep:
+		ImGui::Checkbox("Disable in final room", &deep_disable_in_range_of_boss);
+		ImGui::ShowHelp(deep_disable_hint);
+		break;
+	case GW::Constants::MapID::Urgozs_Warren:
+		ImGui::Checkbox("Disable in final room", &urgoz_disable_in_range_of_boss);
+		ImGui::ShowHelp(urgoz_disable_hint);
+		break;
+	case GW::Constants::MapID::The_Fissure_of_Woe:
+		ImGui::Checkbox("Disable on Completion", &fow_disable_when_all_objs_complete);
+		ImGui::ShowHelp(fow_disable_hint);
+		break;
+	case GW::Constants::MapID::The_Underworld:
+		ImGui::Checkbox("Disable on Completion", &uw_disable_when_all_objs_complete);
+		ImGui::ShowHelp(uw_disable_hint);
+		break;
+	}
+
 	ImGui::End();
 
 	if (!alcohol_enabled_before && pcon_alcohol->enabled) {
@@ -273,6 +307,9 @@ void PconsWindow::Update(float delta) {
 		current_map_type = GW::Map::GetInstanceType();
 		scan_inventory_timer = TIMER_INIT();
 	}
+	if (!player && current_map_type == GW::Constants::InstanceType::Explorable) {
+		player = GW::Agents::GetPlayer();
+	}
 
 	if (scan_inventory_timer > 0 && TIMER_DIFF(scan_inventory_timer) > 2000) {
 		scan_inventory_timer = 0;
@@ -283,7 +320,7 @@ void PconsWindow::Update(float delta) {
 	}
 
 	if (!enabled) return;
-
+	CheckBossRangeAutoDisable();
 	for (Pcon* pcon : pcons) {
 		pcon->Update();
 	}
@@ -291,7 +328,7 @@ void PconsWindow::Update(float delta) {
 
 bool PconsWindow::SetEnabled(bool b) {
 	enabled = b;
-	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
+	if (current_map_type != GW::Constants::InstanceType::Loading) {
 		ImGuiWindow* main = ImGui::FindWindowByName(MainWindow::Instance().Name());
 		ImGuiWindow* pcon = ImGui::FindWindowByName(Name());
 		if ((pcon == nullptr || pcon->Collapsed || !visible)
@@ -300,16 +337,78 @@ bool PconsWindow::SetEnabled(bool b) {
 			Log::Info("Pcons %s", enabled ? "enabled" : "disabled");
 		}
 	}
-	if (tick_with_pcons && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+	if (tick_with_pcons && current_map_type == GW::Constants::InstanceType::Outpost) {
 		GW::PartyMgr::Tick(enabled);
 	}
 	CheckIfWeJustEnabledAlcoholWithLunarsOn();
 	return enabled;
 }
 
+void PconsWindow::MapChanged() {
+	elite_area_check_timer = TIMER_INIT();
+	map_id = GW::Map::GetMapID();
+	player = nullptr;
+	elite_area_disable_triggered = false;
+	objectives_complete.empty();
+	//Log::Info("Map changed to %d",map_id);
+}
+
+void PconsWindow::CheckObjectivesCompleteAutoDisable() {
+	if (!enabled || elite_area_disable_triggered || current_map_type != GW::Constants::InstanceType::Explorable) return;		// Pcons disabled or no need to check any elite area.
+	std::vector<DWORD> *objs_to_check;
+	char* disabled_message = "Pcons disabled";
+	switch (map_id) {
+	case GW::Constants::MapID::The_Fissure_of_Woe:
+		objs_to_check = &fow_objectives;
+		disabled_message = fow_disable_hint;
+		break;
+	case GW::Constants::MapID::The_Underworld:
+		objs_to_check = &uw_objectives;
+		disabled_message = uw_disable_hint;
+		break;
+	}
+	if (!objs_to_check) return;
+	for (std::vector<DWORD>::iterator it = (*objs_to_check).begin(); it != (*objs_to_check).end(); ++it) {
+		bool found = false;
+		for (std::vector<DWORD>::iterator it2 = objectives_complete.begin(); it2 != objectives_complete.end() && !found; ++it2) {
+			found = *it == *it2;
+		}
+		if (!found)	return; // Not all objectives complete.
+	}
+	elite_area_disable_triggered = true;
+	SetEnabled(false);
+	Log::Info(disabled_message);
+}
+
+void PconsWindow::CheckBossRangeAutoDisable() {	// Trigger Elite area auto disable if applicable
+	if (!enabled || elite_area_disable_triggered || !player || TIMER_DIFF(elite_area_check_timer) < 1000 || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return;		// Pcons disabled or no need to check any elite area.
+	elite_area_check_timer = TIMER_INIT();
+	bool disable_pcons = false;
+	float d = 0;
+	char* disabled_message = "Pcons disabled";
+	switch (map_id) {
+	case GW::Constants::MapID::Urgozs_Warren:
+		d = player->pos.DistanceTo(urgoz_location);
+		disable_pcons = urgoz_disable_in_range_of_boss && d > 0 && d <= GW::Constants::Range::Spellcast;
+		disabled_message = urgoz_disable_hint;
+		break;
+	case GW::Constants::MapID::The_Deep:
+		d = player->pos.DistanceTo(kanaxai_location);
+		disable_pcons = deep_disable_in_range_of_boss && d > 0 && d <= GW::Constants::Range::Compass;
+		disabled_message = deep_disable_hint;
+		break;
+	}
+	if (disable_pcons) {
+		elite_area_disable_triggered = true;
+		SetEnabled(false);
+		Log::Info(disabled_message);
+		//Log::Info("Distance: %.0f", d);
+	}
+}
+
 void PconsWindow::CheckIfWeJustEnabledAlcoholWithLunarsOn() {
 	if (enabled
-		&& GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable
+		&& current_map_type == GW::Constants::InstanceType::Explorable
 		&& pcon_alcohol->enabled
 		&& Pcon::alcohol_level == 5) {
 		// we just re-enabled pcons and we need to pop alcohol, but the alcohol level 
@@ -327,7 +426,7 @@ void PconsWindow::LoadSettings(CSimpleIni* ini) {
 	for (Pcon* pcon : pcons) {
 		pcon->LoadSettings(ini, Name());
 	}
-	
+
 	tick_with_pcons = ini->GetBoolValue(Name(), VAR_NAME(tick_with_pcons), true);
 	items_per_row = ini->GetLongValue(Name(), VAR_NAME(items_per_row), 3);
 	Pcon::pcons_delay = ini->GetLongValue(Name(), VAR_NAME(pcons_delay), 5000);
@@ -340,6 +439,11 @@ void PconsWindow::LoadSettings(CSimpleIni* ini) {
 	Pcon::suppress_drunk_text = ini->GetBoolValue(Name(), VAR_NAME(suppress_drunk_text), false);
 	Pcon::suppress_drunk_emotes = ini->GetBoolValue(Name(), VAR_NAME(suppress_drunk_emotes), false);
 	Pcon::suppress_lunar_skills = ini->GetBoolValue(Name(), VAR_NAME(suppress_lunar_skills), false);
+
+	urgoz_disable_in_range_of_boss = ini->GetBoolValue(Name(), VAR_NAME(urgoz_disable_in_range_of_boss), urgoz_disable_in_range_of_boss);
+	deep_disable_in_range_of_boss = ini->GetBoolValue(Name(), VAR_NAME(deep_disable_in_range_of_boss), deep_disable_in_range_of_boss);
+	uw_disable_when_all_objs_complete = ini->GetBoolValue(Name(), VAR_NAME(uw_disable_when_all_objs_complete), uw_disable_when_all_objs_complete);
+	fow_disable_when_all_objs_complete = ini->GetBoolValue(Name(), VAR_NAME(fow_disable_when_all_objs_complete), fow_disable_when_all_objs_complete);
 }
 
 void PconsWindow::SaveSettings(CSimpleIni* ini) {
@@ -362,6 +466,11 @@ void PconsWindow::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(suppress_drunk_text), Pcon::suppress_drunk_text);
 	ini->SetBoolValue(Name(), VAR_NAME(suppress_drunk_emotes), Pcon::suppress_drunk_emotes);
 	ini->SetBoolValue(Name(), VAR_NAME(suppress_lunar_skills), Pcon::suppress_lunar_skills);
+
+	ini->SetBoolValue(Name(), VAR_NAME(urgoz_disable_in_range_of_boss), urgoz_disable_in_range_of_boss);
+	ini->SetBoolValue(Name(), VAR_NAME(deep_disable_in_range_of_boss), deep_disable_in_range_of_boss);
+	ini->SetBoolValue(Name(), VAR_NAME(uw_disable_when_all_objs_complete), uw_disable_when_all_objs_complete);
+	ini->SetBoolValue(Name(), VAR_NAME(fow_disable_when_all_objs_complete), fow_disable_when_all_objs_complete);
 }
 
 void PconsWindow::DrawSettingInternal() {
@@ -398,6 +507,7 @@ void PconsWindow::DrawSettingInternal() {
 			ImGui::Checkbox(pcon->chat, &pcon->visible);
 		}
 		ImGui::TreePop();
+
 	}
 
 	ImGui::Separator();
@@ -414,4 +524,9 @@ void PconsWindow::DrawSettingInternal() {
 		"This will prevent kneel, bored, moan, flex, fistshake and roar.\n");
 	ImGui::Checkbox("Hide Spiritual Possession and Lucky Aura", &Pcon::suppress_lunar_skills);
 	ImGui::ShowHelp("Will hide the skills in your effect monitor");
+	ImGui::Text("Auto disable Pcons near end of elite area:");
+	ImGui::Checkbox(urgoz_disable_hint, &urgoz_disable_in_range_of_boss);
+	ImGui::Checkbox(deep_disable_hint, &deep_disable_in_range_of_boss);
+	ImGui::Checkbox(fow_disable_hint, &fow_disable_when_all_objs_complete);
+	ImGui::Checkbox(uw_disable_hint, &uw_disable_when_all_objs_complete);
 }
