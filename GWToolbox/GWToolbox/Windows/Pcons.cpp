@@ -7,10 +7,13 @@
 #include <GWCA\Managers\EffectMgr.h>
 #include <GWCA\Managers\ItemMgr.h>
 #include <GWCA\Managers\PartyMgr.h>
+#include <GWCA\Managers\CtoSMgr.h>
 
 #include <logger.h>
 #include "GuiUtils.h"
 #include <Modules\Resources.h>
+#include <Windows\PconsWindow.h>
+#include <mutex>
 
 using namespace GW::Constants;
 
@@ -18,6 +21,7 @@ float Pcon::size = 46.0f;
 int Pcon::pcons_delay = 5000;
 int Pcon::lunar_delay = 500;
 bool Pcon::disable_when_not_found = true;
+bool Pcon::refill_if_below_threshold = false;
 DWORD Pcon::player_id = 0;
 Color Pcon::enabled_bg_color = Colors::ARGB(102, 0, 255, 0);
 
@@ -26,6 +30,11 @@ bool Pcon::suppress_drunk_effect = false;
 bool Pcon::suppress_drunk_text = false;
 bool Pcon::suppress_drunk_emotes = false;
 bool Pcon::suppress_lunar_skills = false;
+
+static std::mutex reserve_slot_mutex;
+
+// 22 is the highest bag index. 25 is the most slots in any single bag.
+std::vector<std::vector<clock_t>> Pcon::reserved_bag_slots(22, std::vector<clock_t>(25));
 
 // ================================================
 Pcon::Pcon(const char* chatname,
@@ -49,6 +58,7 @@ void Pcon::Draw(IDirect3DDevice9* device) {
 	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
 	if (ImGui::ImageButton((ImTextureID)texture, s, uv0, uv1, -1, bg, tint)) {
 		enabled = !enabled;
+		pcon_quantity_checked = false;
 		ScanInventory();
 	}
 	ImGui::PopStyleColor();
@@ -89,18 +99,25 @@ void Pcon::Update(int delay) {
 	}
 
 	// === Warn the user if zoning into outpost with quantity = 0 or low ===
-	// todo: refill automatically ?
 	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost
 		&& (mapid != GW::Map::GetMapID() || maptype != GW::Map::GetInstanceType())) {
 		mapid = GW::Map::GetMapID();
 		maptype = GW::Map::GetInstanceType();
+		pcon_quantity_checked = false;
+		reserved_bag_slots.empty();
+	}	
+}
 
-		if (quantity == 0) {
-			Log::Error("Cannot find %s, please refill or disable", chat);
-		} else if (quantity < threshold) {
-			Log::Warning("Low on %s, please refill or disable", chat);
-		}
-	}
+
+bool Pcon::ReserveSlotForMove(int bagIndex, int slot) { // Should NOT be used directly, supposed to be used with a mutex.
+	if (IsSlotReservedForMove(bagIndex, slot)) return false;
+	reserved_bag_slots.at(bagIndex).at(slot) = TIMER_INIT();
+	return true;
+}
+bool Pcon::IsSlotReservedForMove(int bagIndex, int slot) {
+	clock_t slot_reserved_at = reserved_bag_slots.at(bagIndex).at(slot);
+	bool is_reserved = slot_reserved_at && TIMER_DIFF(slot_reserved_at) < 1000; // 1000ms is reasonable for CtoS then StoC
+	return is_reserved;
 }
 void Pcon::AfterUsed(bool used, int qty) {
 	if (qty >= 0) { // if not, bag was undefined and we just ignore everything
@@ -128,6 +145,105 @@ void Pcon::AfterUsed(bool used, int qty) {
 void Pcon::ScanInventory() {
 	int qty = CheckInventory();
 	if (qty >= 0) quantity = qty;
+	if (enabled && PconsWindow::Instance().GetEnabled() && !pcon_quantity_checked && maptype == GW::Constants::InstanceType::Outpost) {
+		pcon_quantity_checked = true;
+		if (quantity < threshold && refill_if_below_threshold) {
+			quantity += Refill();
+		}
+		if (quantity == 0) {
+			Log::Error("No more %s items found", chat);
+		}
+		else if (quantity < threshold) {
+			Log::Warning("Low on %s", chat);
+		}
+	}
+}
+GW::Item* Pcon::FindVacantStackOrSlotInInventory() { // Scan bags, find an incomplete stack, or otherwise an empty slot.
+	GW::Bag** bags = GW::Items::GetBagArray();
+	if (bags == nullptr) return nullptr;
+	int emptySlotIdx = -1;
+	int emptyBagIdx = -1;
+	std::lock_guard<std::mutex> lk(reserve_slot_mutex); // Lock to reserve the slot once found - pcons check on different threads!
+	for (int bagIndex = 4; bagIndex > 0; --bagIndex) { // Work from last bag to first; pcons at bottom of inventory
+		GW::Bag* bag = bags[bagIndex];
+		if (bag == nullptr) continue;	// No bag, skip
+		GW::ItemArray items = bag->Items;
+		if (!items.valid()) continue;	// No item array, skip
+		for (size_t i = items.size(); i > 0; i--) { // Work from last slot to first; pcons at bottom of inventory
+			int slotIndex = i-1;
+			GW::Item* item = items[slotIndex];
+			if (!item || item == nullptr) {
+				if (emptySlotIdx < 0 && !IsSlotReservedForMove(bagIndex, slotIndex)) {
+					emptySlotIdx = slotIndex;
+					emptyBagIdx = bagIndex;
+				}
+				continue;
+			}
+			int qtyea = QuantityForEach(item); 
+			if (qtyea < 1 || item->Quantity >= 250) continue; // This is not the pcon you're looking for...
+			if (IsSlotReservedForMove(bagIndex, item->Slot)) continue; // This slot already reserved.
+			ReserveSlotForMove(bagIndex, item->Slot);
+			return item;	// Found a stack with space.
+		}
+	}
+	if (emptyBagIdx < 0 || emptySlotIdx < 0) return nullptr;
+	GW::Item* item = new GW::Item(); // Create a "fake" item...
+	item->Bag = bags[emptyBagIdx]; // ...that belongs in the empty bag/slot we found...
+	item->Slot = emptySlotIdx;
+	item->Quantity = 0; // ...with 250 available slots.
+	ReserveSlotForMove(emptyBagIdx, emptySlotIdx); // Reserved this slot for moving for next 1000ms
+	return item;
+}
+// Similar to GW::Items::MoveItem, except this returns amount moved and uses the split stack header when needed.
+// Most of this logic should be integrated back into GWCA repo, but I've written it here for GWToolbox
+int Pcon::MoveItem(GW::Item *item, GW::Bag *bag, int slot, int quantity = 0) {
+	if (slot < 0) return 0;
+	if (!item || !bag) return 0;
+	if (bag->Items.size() < (unsigned)slot) return 0;
+	if (quantity < 1) quantity = item->Quantity;
+	if (quantity > item->Quantity) quantity = item->Quantity;
+	GW::Item* destItem = bag->Items.valid() ? bag->Items[slot] : nullptr;
+	int originalQuantity = destItem ? destItem->Quantity : 0;
+	int vacantQuantity = 250 - originalQuantity;
+	if (quantity > 1 && vacantQuantity < quantity) quantity = vacantQuantity;
+	unsigned short CtoGS_MSGMoveItemSplitStack = 0x7A; // Put the header here until GWCA has it defined.
+	if (quantity == item->Quantity) { // Move the whole thing.
+		GW::CtoS::SendPacket(0x10, CtoGS_MSGMoveItem, item->ItemId, bag->BagId, slot);
+	} else { // Split stack
+		GW::CtoS::SendPacket(0x14, CtoGS_MSGMoveItemSplitStack, item->ItemId, quantity, bag->BagId, slot);
+	}
+	return quantity;
+}
+int Pcon::Refill() {
+	// Log::Info("Refilling %s", chat);
+	int amount_needed = threshold - quantity;
+	int amount_moved = 0;
+	if (amount_needed < 1) return amount_moved;
+	GW::Bag** bags = GW::Items::GetBagArray();
+	if (bags == nullptr) return amount_moved;
+	for (int bagIndex = 8; bagIndex <= 21; ++bagIndex) {
+		if (amount_needed < 1) return true;
+		GW::Bag* bag = bags[bagIndex];
+		if (bag == nullptr) continue;	// No bag, skip
+		GW::ItemArray items = bag->Items;
+		if (!items.valid()) continue;	// No item array, skip
+		for (size_t i = 0; i < items.size(); i++) {
+			if (amount_needed < 1) return amount_moved;
+			GW::Item* storageItem = items[i];
+			if (storageItem == nullptr) continue; // No item, skip
+			int qtyea = QuantityForEach(storageItem);
+			if (qtyea < 1) continue; // This is not the pcon you're looking for...
+			// Found some pcons in storage to pull from - now find a slot in inventory to move them to.
+			qtyea = storageItem->Quantity; // Reuse variable.
+			GW::Item* inventoryItem = FindVacantStackOrSlotInInventory();
+			if (inventoryItem == nullptr) return amount_moved; // No space for more pcons in inventory.
+			int amount_to_move = storageItem->Quantity;
+			if (amount_to_move > amount_needed)		amount_to_move = amount_needed;
+			amount_moved += MoveItem(storageItem, inventoryItem->Bag, inventoryItem->Slot,amount_to_move);
+			amount_needed -= amount_moved;
+		}
+	}
+	return amount_moved;
 }
 int Pcon::CheckInventory(bool* used, int* used_qty_ptr) const {
 	int count = 0;
@@ -136,24 +252,20 @@ int Pcon::CheckInventory(bool* used, int* used_qty_ptr) const {
 	if (bags == nullptr) return -1;
 	for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
 		GW::Bag* bag = bags[bagIndex];
-		if (bag != nullptr) {
-			GW::ItemArray items = bag->Items;
-			if (items.valid()) {
-				for (size_t i = 0; i < items.size(); i++) {
-					GW::Item* item = items[i];
-					if (item != nullptr) {
-						int qtyea = QuantityForEach(item);
-						if (qtyea > 0) {
-							if (used != nullptr && !*used) {
-								GW::Items::UseItem(item);
-								*used = true;
-								used_qty = qtyea;
-							}
-							count += qtyea * item->Quantity;
-						}
-					}
-				}
-			}			
+		if (bag == nullptr) continue;	// No bag, skip
+		GW::ItemArray items = bag->Items;
+		if (!items.valid()) continue;	// No item array, skip
+		for (size_t i = 0; i < items.size(); i++) {
+			GW::Item* item = items[i];
+			if (item == nullptr) continue; // No item, skip
+			int qtyea = QuantityForEach(item);
+			if (qtyea < 1) continue; // This is not the pcon you're looking for...
+			if (used != nullptr && !*used) {
+				GW::Items::UseItem(item);
+				*used = true;
+				used_qty = qtyea;
+			}
+			count += qtyea * item->Quantity;
 		}
 	}
 	if (used_qty_ptr) *used_qty_ptr = used_qty;

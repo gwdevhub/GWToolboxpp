@@ -26,6 +26,7 @@ public:
 	void Initialize() override;
 
 	bool SetEnabled(bool b);
+	bool GetEnabled();
 
 	inline void ToggleEnable() { SetEnabled(!enabled); }
 
@@ -52,6 +53,7 @@ private:
 	bool tick_with_pcons = false;
 	int items_per_row = 3;
 	bool show_enable_button = true;
+	bool show_auto_refill_pcons_tickbox = true;
 	GW::Agent* player;
 
 	// Pcon Settings
@@ -65,6 +67,7 @@ private:
 	void CheckObjectivesCompleteAutoDisable();
 
 	GW::Constants::MapID map_id;
+	GW::Constants::InstanceType instance_type;
 	bool elite_area_disable_triggered = false;	// Already triggered in this run?
 	clock_t elite_area_check_timer;
 

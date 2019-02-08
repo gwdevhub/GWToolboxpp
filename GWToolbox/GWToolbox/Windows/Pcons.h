@@ -9,6 +9,10 @@
 #include <GWCA\GameEntities\Item.h>
 #include "Timer.h"
 #include <Color.h>
+#include <GWCA/CtoSHeaders.h>
+#include <mutex>
+#include <vector>
+
 
 class Pcon {
 public:
@@ -16,6 +20,7 @@ public:
 	static int lunar_delay;
 	static float size;
 	static bool disable_when_not_found;
+	static bool refill_if_below_threshold;
 	static Color enabled_bg_color;
 	static DWORD player_id;
 
@@ -25,17 +30,23 @@ public:
 	static bool suppress_drunk_emotes;
 	static bool suppress_lunar_skills;
 
+	static std::vector<std::vector<clock_t>> reserved_bag_slots;
+
 protected:
 	Pcon(const char* chatname,
 		const char* ininame,
 		const wchar_t* filename, 
 		WORD res_id, // you can use 0 and it will not load texture from resource, only from file.
 		ImVec2 uv0, ImVec2 uv1, int threshold);
-
+	static bool ReserveSlotForMove(int bagId, int slot); // Prevents more than 1 pcon from trying to add to the same slot at the same time.
+	static bool IsSlotReservedForMove(int bagId, int slot); // Checks whether another pcon has reserved this slot.
 public:
 	void Draw(IDirect3DDevice9* device);
 	virtual void Update(int delay = -1);
 	void ScanInventory();
+	int MoveItem(GW::Item *item, GW::Bag *bag, int slot, int quantity); // Extension of the GWCA function.
+	int Refill(); // True if the amount of pcons has been refilled, false if not enough.
+	
 	void AfterUsed(bool used, int qty);
 	inline void Toggle() { enabled = !enabled; }
 
@@ -45,6 +56,7 @@ public:
 public:
 	bool visible = true;
 	bool enabled = false;
+	bool pcon_quantity_checked = false;
 	int threshold; // quantity at which the number color goes from green to yellow and warning starts being displayed
 	int quantity = 0;
 
@@ -54,8 +66,7 @@ public:
 	const char* const ini;
 
 protected:
-	void CheckUpdateTimer();
-
+	GW::Item* FindVacantStackOrSlotInInventory();
 	// loops over the inventory, counting the items according to QuantityForEach
 	// if 'used' is not null, it will also use the first item found,
 	// and, if so, used *used to true
