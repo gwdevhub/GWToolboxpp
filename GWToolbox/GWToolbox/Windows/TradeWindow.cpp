@@ -77,6 +77,7 @@ bool TradeWindow::GetInKamadan() {
 	case MapID::Kamadan_Jewel_of_Istan_outpost:
 	case MapID::Kamadan_Jewel_of_Istan_Halloween_outpost:
 	case MapID::Kamadan_Jewel_of_Istan_Wintersday_outpost:
+	case MapID::Kamadan_Jewel_of_Istan_Canthan_New_Year_outpost:
 		return true;
 	default:
 		return false;
