@@ -71,6 +71,17 @@ TradeWindow::~TradeWindow() {
 	Terminate();
 }
 
+bool TradeWindow::GetInKamadan() {
+	using namespace GW::Constants;
+	switch (GW::Map::GetMapID()) {
+	case MapID::Kamadan_Jewel_of_Istan_outpost:
+	case MapID::Kamadan_Jewel_of_Istan_Halloween_outpost:
+	case MapID::Kamadan_Jewel_of_Istan_Wintersday_outpost:
+		return true;
+	default:
+		return false;
+	}
+}
 
 void TradeWindow::Update(float delta) {
 	if (!print_game_chat) return;
@@ -81,8 +92,7 @@ void TradeWindow::Update(float delta) {
 	}
 
 	// do not display trade chat while in kamadan AE district 1
-	if (GW::Map::GetMapID() == GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost &&
-		GW::Map::GetDistrict() == 1 &&
+	if (GetInKamadan() && GW::Map::GetDistrict() == 1 &&
 		GW::Map::GetRegion() == GW::Constants::Region::America) {
 		if (ws_chat) ws_chat->close();
 		return;

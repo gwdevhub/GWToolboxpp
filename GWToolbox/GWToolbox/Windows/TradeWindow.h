@@ -57,6 +57,8 @@ private:
 
 	void DrawAlertsWindowContent(bool ownwindow);
 
+    static bool GetInKamadan();
+
     // Since we are connecting in an other thread, the following attributes/methods avoid spamming connection requests
     void AsyncChatConnect();
     void AsyncWindowConnect();
