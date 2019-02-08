@@ -207,7 +207,13 @@ void PconsWindow::Initialize() {
 	urgoz_location = GW::Vector2f(-2800.0f, 14316.0f);
 	GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveDone>([this](GW::Packet::StoC::ObjectiveDone* packet) -> bool {
 		objectives_complete.push_back(packet->objective_id);
-		Log::Info("Objective has been completed: %d", packet->objective_id);
+		// Log::Info("Objective has been completed: %d", packet->objective_id);
+		CheckObjectivesCompleteAutoDisable();
+		return false;
+	});
+	GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveAdd>([this](GW::Packet::StoC::ObjectiveAdd* packet) -> bool {
+		objectives_complete.push_back(packet->objective_id);
+		// Log::Info("Objective has been added: %d", packet->objective_id);
 		CheckObjectivesCompleteAutoDisable();
 		return false;
 	});
@@ -234,9 +240,7 @@ void PconsWindow::Initialize() {
 	});
 }
 
-bool PconsWindow::DrawTabButton(IDirect3DDevice9* device, 
-	bool show_icon, bool show_text) {
-
+bool PconsWindow::DrawTabButton(IDirect3DDevice9* device, bool show_icon, bool show_text) {
 	bool clicked = ToolboxWindow::DrawTabButton(device, show_icon, show_text);
 
 	ImGui::PushStyleColor(ImGuiCol_Text, enabled ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
@@ -277,22 +281,25 @@ void PconsWindow::Draw(IDirect3DDevice9* device) {
 	}
 
 	switch (map_id) {
-	case GW::Constants::MapID::The_Deep:
-		ImGui::Checkbox("Disable in final room", &deep_disable_in_range_of_boss);
-		ImGui::ShowHelp(deep_disable_hint);
-		break;
-	case GW::Constants::MapID::Urgozs_Warren:
-		ImGui::Checkbox("Disable in final room", &urgoz_disable_in_range_of_boss);
-		ImGui::ShowHelp(urgoz_disable_hint);
-		break;
-	case GW::Constants::MapID::The_Fissure_of_Woe:
-		ImGui::Checkbox("Disable on Completion", &fow_disable_when_all_objs_complete);
-		ImGui::ShowHelp(fow_disable_hint);
-		break;
-	case GW::Constants::MapID::The_Underworld:
-		ImGui::Checkbox("Disable on Completion", &uw_disable_when_all_objs_complete);
-		ImGui::ShowHelp(uw_disable_hint);
-		break;
+		case GW::Constants::MapID::The_Deep:
+			ImGui::Checkbox("Disable in final room", &deep_disable_in_range_of_boss);
+			ImGui::ShowHelp(deep_disable_hint);
+			break;
+		case GW::Constants::MapID::Urgozs_Warren:
+			ImGui::Checkbox("Disable in final room", &urgoz_disable_in_range_of_boss);
+			ImGui::ShowHelp(urgoz_disable_hint);
+			break;
+		case GW::Constants::MapID::The_Fissure_of_Woe:
+			ImGui::Checkbox("Disable on Completion", &fow_disable_when_all_objs_complete);
+			ImGui::ShowHelp(fow_disable_hint);
+			break;
+		case GW::Constants::MapID::The_Underworld:
+			ImGui::Checkbox("Disable on Completion", &uw_disable_when_all_objs_complete);
+			ImGui::ShowHelp(uw_disable_hint);
+			break;
+	}
+	if (current_map_type == GW::Constants::InstanceType::Outpost && show_auto_refill_pcons_tickbox) {
+		ImGui::Checkbox("Auto Refill Pcons", &Pcon::refill_if_below_threshold);
 	}
 
 	ImGui::End();
@@ -301,7 +308,6 @@ void PconsWindow::Draw(IDirect3DDevice9* device) {
 		CheckIfWeJustEnabledAlcoholWithLunarsOn();
 	}
 }
-
 void PconsWindow::Update(float delta) {
 	if (current_map_type != GW::Map::GetInstanceType()) {
 		current_map_type = GW::Map::GetInstanceType();
@@ -326,8 +332,16 @@ void PconsWindow::Update(float delta) {
 	}
 }
 
+bool PconsWindow::GetEnabled() {
+	return enabled;
+}
 bool PconsWindow::SetEnabled(bool b) {
+	if (enabled == b) return enabled; // Do nothing - already enabled/disabled.
 	enabled = b;
+	for (Pcon* pcon : pcons) {
+		pcon->pcon_quantity_checked = false;
+		pcon->ScanInventory();
+	}
 	if (current_map_type != GW::Constants::InstanceType::Loading) {
 		ImGuiWindow* main = ImGui::FindWindowByName(MainWindow::Instance().Name());
 		ImGuiWindow* pcon = ImGui::FindWindowByName(Name());
@@ -347,6 +361,7 @@ bool PconsWindow::SetEnabled(bool b) {
 void PconsWindow::MapChanged() {
 	elite_area_check_timer = TIMER_INIT();
 	map_id = GW::Map::GetMapID();
+	instance_type = GW::Map::GetInstanceType();
 	player = nullptr;
 	elite_area_disable_triggered = false;
 	objectives_complete.empty();
@@ -440,6 +455,9 @@ void PconsWindow::LoadSettings(CSimpleIni* ini) {
 	Pcon::suppress_drunk_emotes = ini->GetBoolValue(Name(), VAR_NAME(suppress_drunk_emotes), false);
 	Pcon::suppress_lunar_skills = ini->GetBoolValue(Name(), VAR_NAME(suppress_lunar_skills), false);
 
+	Pcon::refill_if_below_threshold = ini->GetBoolValue(Name(), VAR_NAME(refill_if_below_threshold), false);
+	ini->GetBoolValue(Name(), VAR_NAME(show_auto_refill_pcons_tickbox), show_auto_refill_pcons_tickbox);
+
 	urgoz_disable_in_range_of_boss = ini->GetBoolValue(Name(), VAR_NAME(urgoz_disable_in_range_of_boss), urgoz_disable_in_range_of_boss);
 	deep_disable_in_range_of_boss = ini->GetBoolValue(Name(), VAR_NAME(deep_disable_in_range_of_boss), deep_disable_in_range_of_boss);
 	uw_disable_when_all_objs_complete = ini->GetBoolValue(Name(), VAR_NAME(uw_disable_when_all_objs_complete), uw_disable_when_all_objs_complete);
@@ -467,6 +485,9 @@ void PconsWindow::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(suppress_drunk_emotes), Pcon::suppress_drunk_emotes);
 	ini->SetBoolValue(Name(), VAR_NAME(suppress_lunar_skills), Pcon::suppress_lunar_skills);
 
+	ini->SetBoolValue(Name(), VAR_NAME(refill_if_below_threshold), Pcon::refill_if_below_threshold);
+	ini->SetBoolValue(Name(), VAR_NAME(show_auto_refill_pcons_tickbox), show_auto_refill_pcons_tickbox);
+
 	ini->SetBoolValue(Name(), VAR_NAME(urgoz_disable_in_range_of_boss), urgoz_disable_in_range_of_boss);
 	ini->SetBoolValue(Name(), VAR_NAME(deep_disable_in_range_of_boss), deep_disable_in_range_of_boss);
 	ini->SetBoolValue(Name(), VAR_NAME(uw_disable_when_all_objs_complete), uw_disable_when_all_objs_complete);
@@ -480,6 +501,8 @@ void PconsWindow::DrawSettingInternal() {
 	ImGui::ShowHelp("Enabling or disabling pcons will also Tick or Untick in party list");
 	ImGui::Checkbox("Disable when not found", &Pcon::disable_when_not_found);
 	ImGui::ShowHelp("Toolbox will disable a pcon if it is not found in the inventory");
+	ImGui::Checkbox("Refill from storage", &Pcon::refill_if_below_threshold);
+	ImGui::ShowHelp("Toolbox will refill pcons from storage if below the threshold");
 	ImGui::SliderInt("Pcons delay", &Pcon::pcons_delay, 100, 5000, "%.0f milliseconds");
 	ImGui::ShowHelp(
 		"After using a pcon, toolbox will not use it again for this amount of time.\n"
@@ -503,6 +526,7 @@ void PconsWindow::DrawSettingInternal() {
 	if (Pcon::size <= 1.0f) Pcon::size = 1.0f;
 	if (ImGui::TreeNode("Visibility")) {
 		ImGui::Checkbox("Enable/Disable button", &show_enable_button);
+		ImGui::Checkbox("Auto refill pcons checkbox", &show_auto_refill_pcons_tickbox);
 		for (Pcon* pcon : pcons) {
 			ImGui::Checkbox(pcon->chat, &pcon->visible);
 		}
