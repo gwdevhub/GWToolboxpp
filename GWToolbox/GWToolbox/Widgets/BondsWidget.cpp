@@ -129,10 +129,10 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
     // ==== Get bonds ====
     std::vector<int> bond_list; // index to skill id
     std::unordered_map<DWORD, int> bond_map; // skill id to index
-    const GW::Skillbar& bar = GW::Skillbar::GetPlayerSkillbar();
-    if (!bar.IsValid()) return;
+    GW::Skillbar *bar = GW::Skillbar::GetPlayerSkillbar();
+    if (!bar || !bar->IsValid()) return;
     for (int slot = 0; slot < 8; ++slot) {
-        DWORD SkillID = bar.skills[slot].skill_id;
+        DWORD SkillID = bar->skills[slot].skill_id;
         Bond bond = GetBondBySkillID(SkillID);
         if (bond != Bond::None) {
             bond_map[SkillID] = bond_list.size();
@@ -213,9 +213,9 @@ void BondsWidget::UseBuff(GW::AgentID targetId, DWORD buff_skillid) {
     if (target == nullptr) return;
 
     int slot = GW::SkillbarMgr::GetSkillSlot((GW::Constants::SkillID)buff_skillid);
-    GW::Skillbar skillbar = GW::Skillbar::GetPlayerSkillbar();
-    if (!skillbar.IsValid()) return;
-    if (skillbar.skills[slot].recharge != 0) return;
+    GW::Skillbar *skillbar = GW::Skillbar::GetPlayerSkillbar();
+    if (!skillbar || !skillbar->IsValid()) return;
+    if (skillbar->skills[slot].recharge != 0) return;
 
     // capture by value!
     GW::GameThread::Enqueue([slot, targetId]() -> void {

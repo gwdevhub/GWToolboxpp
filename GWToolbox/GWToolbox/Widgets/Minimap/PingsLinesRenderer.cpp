@@ -342,8 +342,8 @@ void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9* device) {
     if (recall_target == 0) return;
     if ((color_shadowstep_line & IM_COL32_A_MASK) == 0) return;
 
-    GW::Buff recall = GW::Effects::GetPlayerBuffBySkillId(GW::Constants::SkillID::Recall);
-    if (recall.skill_id == 0) {
+    GW::Buff *recall = GW::Effects::GetPlayerBuffBySkillId(GW::Constants::SkillID::Recall);
+    if (!recall || recall->skill_id == 0) {
         recall_target = 0;
         return;
     }
@@ -364,7 +364,7 @@ void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9* device) {
         recall_target = 0;
         return;
     }
-    float distance = GW::Agents::GetDistance(target->pos, player->pos);
+    float distance = GW::GetDistance(target->pos, player->pos);
     float distance_perc = distance / GW::Constants::Range::Compass;
     Color c;
     if (distance_perc < maxrange_interp_begin) {

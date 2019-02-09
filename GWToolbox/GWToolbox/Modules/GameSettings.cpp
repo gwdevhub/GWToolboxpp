@@ -938,7 +938,7 @@ void GameSettings::ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag)
     }
 
     if (is_inventory_item) {
-        if (GW::Items::IsStorageOpen()) {
+        if (GW::Items::GetIsStorageOpen()) {
             int current_storage = GW::Items::GetStoragePage();
             move_item_to_storage_page(item, current_storage);
         } else {

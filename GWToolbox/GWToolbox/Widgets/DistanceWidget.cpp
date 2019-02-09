@@ -33,7 +33,7 @@ void DistanceWidget::Draw(IDirect3DDevice9* pDevice) {
         GW::Agent* me = GW::Agents::GetPlayer();
         GW::Agent* target = GW::Agents::GetTarget();
         if (me && target && me != target) {
-            float dist = GW::Agents::GetDistance(me->pos, target->pos);
+            float dist = GW::GetDistance(me->pos, target->pos);
             snprintf(dist_perc, 32, "%2.0f %s", dist * 100 / GW::Constants::Range::Compass, "%%");
             snprintf(dist_abs, 32, "%.0f", dist);
 

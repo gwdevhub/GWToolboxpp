@@ -134,12 +134,12 @@ void MaterialsWindow::Initialize() {
             price[trans.material] = pak->price;
             if (gold_character >= pak->price) {
                 GW::Merchant::TransactionInfo give, recv;
-                give.itemcount = 0;
-                give.itemids = nullptr;
-                give.itemquantities = nullptr;
-                recv.itemcount = 1;
-                recv.itemids = &pak->itemid;
-                recv.itemquantities = nullptr;
+                give.item_count = 0;
+                give.item_ids = nullptr;
+                give.item_quantities = nullptr;
+                recv.item_count = 1;
+                recv.item_ids = &pak->itemid;
+                recv.item_quantities = nullptr;
 
                 GW::Merchant::TransactItems(GW::Merchant::TransactionType::TraderBuy, pak->price, give, 0, recv);
                 trans_pending_time = GetTickCount() + MIN_TIME_BETWEEN_RETRY;
@@ -155,12 +155,12 @@ void MaterialsWindow::Initialize() {
         } else if (trans.type == Transaction::Sell) {
             if (gold_character + pak->price <= 100 * 1000) {
                 GW::Merchant::TransactionInfo give, recv;
-                give.itemcount = 1;
-                give.itemids = &pak->itemid;
-                give.itemquantities = nullptr;
-                recv.itemcount = 0;
-                recv.itemids = nullptr;
-                recv.itemquantities = nullptr;
+                give.item_count = 1;
+                give.item_ids = &pak->itemid;
+                give.item_quantities = nullptr;
+                recv.item_count = 0;
+                recv.item_ids = nullptr;
+                recv.item_quantities = nullptr;
 
                 GW::Merchant::TransactItems(GW::Merchant::TransactionType::TraderSell, 0, give, pak->price, recv);
                 trans_pending_time = GetTickCount() + MIN_TIME_BETWEEN_RETRY;
@@ -536,11 +536,11 @@ DWORD MaterialsWindow::RequestPurchaseQuote(Material material) {
     if (!item) return 0;
     GW::Merchant::QuoteInfo give, recv;
     give.unknown = 0;
-    give.itemcount = 0;
-    give.itemids = nullptr;
+    give.item_count = 0;
+    give.item_ids = nullptr;
     recv.unknown = 0;
-    recv.itemcount = 1;
-    recv.itemids = &item->item_id;
+    recv.item_count = 1;
+    recv.item_ids = &item->item_id;
     GW::Merchant::RequestQuote(GW::Merchant::TransactionType::TraderBuy, give, recv);
     return item->item_id;
 }
@@ -550,11 +550,11 @@ DWORD MaterialsWindow::RequestSellQuote(Material material) {
     if (!item) return 0;
     GW::Merchant::QuoteInfo give, recv;
     give.unknown = 0;
-    give.itemcount = 1;
-    give.itemids = &item->item_id;
+    give.item_count = 1;
+    give.item_ids = &item->item_id;
     recv.unknown = 0;
-    recv.itemcount = 0;
-    recv.itemids = nullptr;
+    recv.item_count = 0;
+    recv.item_ids = nullptr;
     GW::Merchant::RequestQuote(GW::Merchant::TransactionType::TraderSell, give, recv);
     return item->item_id;
 }

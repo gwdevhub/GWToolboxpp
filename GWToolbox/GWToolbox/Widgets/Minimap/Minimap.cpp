@@ -530,7 +530,7 @@ void Minimap::SelectTarget(GW::Vector2f pos) {
         if (agent->GetIsItemType()) continue;
         if (agent->GetIsGadgetType() && agent->extra_type != 8141) continue; // allow locked chests
         if (agent->player_number >= 230 && agent->player_number <= 346) continue; // block all useless minis
-        float newDistance = GW::Agents::GetSqrDistance(pos, agents[i]->pos);
+        float newDistance = GW::GetSquareDistance(pos, agents[i]->pos);
         if (distance > newDistance) {
             distance = newDistance;
             closest = i;
@@ -682,7 +682,7 @@ bool Minimap::IsInside(int x, int y) const {
     if (translation.x == 0 && translation.y == 0) {
         GW::Vector2f gamepos = InterfaceToWorldPoint(Vec2i(x, y));
         GW::Agent* me = GW::Agents::GetPlayer();
-        float sqrdst = GW::Agents::GetSqrDistance(me->pos, gamepos);
+        float sqrdst = GW::GetSquareDistance(me->pos, gamepos);
         return me && sqrdst < GW::Constants::SqrRange::Compass;
     }
     return true;
@@ -690,7 +690,7 @@ bool Minimap::IsInside(int x, int y) const {
 bool Minimap::IsActive() const {
     return visible
         && !loading
-        && GW::Map::IsMapLoaded()
+        && GW::Map::GetIsMapLoaded()
         && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
         && GW::Agents::GetPlayerId() != 0;
 }

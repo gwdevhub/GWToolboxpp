@@ -347,8 +347,8 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                     GW::Agent* agent = agents[i];
                     if (agent == nullptr) continue; // ignore nothings
                     if (agent->allegiance != 0x3) continue; // ignore non-hostiles
-                    if (agent->GetIsDead()) continue; // ignore dead 
-                    float sqrd = GW::Agents::GetSqrDistance(player->pos, agent->pos);
+                    if (agent->GetIsDead()) continue; // ignore dead
+                    float sqrd = GW::GetSquareDistance(player->pos, agent->pos);
                     if (agent->player_number == GW::Constants::ModelID::DoA::SoulTormentor
                         || agent->player_number == GW::Constants::ModelID::DoA::VeilSoulTormentor) {
                         if (GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish

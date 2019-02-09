@@ -83,8 +83,8 @@ namespace {
 
     void AsyncGetMapName(char *buffer, size_t n) {
         static wchar_t enc_str[16];
-        GW::AreaInfo& info = GW::Map::GetCurrentMapInfo();
-        if (!GW::UI::UInt32ToEncStr(info.name_id, enc_str, n)) {
+        GW::AreaInfo *info = GW::Map::GetCurrentMapInfo();
+        if (!info || !GW::UI::UInt32ToEncStr(info->name_id, enc_str, n)) {
             buffer[0] = 0;
             return;
         }

@@ -199,7 +199,7 @@ static int cmdGetTargetId(lua_State *L)
 
 LUA_CFUNC_SIG(Dialog) {
     lua_Integer dialog_id = luaL_checkinteger(state, 1);
-    GW::Agents::Dialog((DWORD)dialog_id);
+    GW::Agents::SendDialog((DWORD)dialog_id);
     return 0;
 }
 

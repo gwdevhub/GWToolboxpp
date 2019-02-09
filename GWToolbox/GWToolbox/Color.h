@@ -9,7 +9,7 @@ typedef ImU32 Color;
 // @Remove: Remove this
 namespace GW {
 	namespace Chat {
-		typedef DWORD Color;
+		typedef uint32_t Color;
 	}
 }
 
@@ -71,14 +71,6 @@ namespace Colors {
 	}
 
     static bool DrawSettingHueWheel(const char* text, Color* color) {
-        ImVec4 col = ImGui::ColorConvertU32ToFloat4(*color);
-        if (ImGui::ColorEdit4(text, &col.x, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel)) {
-            *color = ImGui::ColorConvertFloat4ToU32(col);
-            return true;
-        }
-        return false;
-    }
-    static bool DrawSettingHueWheel(const char* text, GW::Chat::Color* color) {
         ImVec4 col = ImGui::ColorConvertU32ToFloat4(*color);
         if (ImGui::ColorEdit4(text, &col.x, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel)) {
             *color = ImGui::ColorConvertFloat4ToU32(col);

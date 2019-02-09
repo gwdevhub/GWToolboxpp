@@ -43,7 +43,7 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
         float w = (ImGui::GetWindowContentRegionWidth()
             - ImGui::GetStyle().ItemInnerSpacing.x * (x_qty - 1)) / x_qty;
         if (ImGui::Button(text, ImVec2(w, 0))) {
-            GW::Agents::Dialog(dialog);
+            GW::Agents::SendDialog(dialog);
         }
         if (text != nullptr && ImGui::IsItemHovered()) {
             ImGui::SetTooltip(help);
@@ -111,11 +111,11 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
                 ImGui::PopItemWidth();
                 ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
                 if (ImGui::Button("Take", ImVec2(40.0f, 0))) {
-                    GW::Agents::Dialog(QuestAcceptDialog(IndexToQuestID(fav_index[i])));
+                    GW::Agents::SendDialog(QuestAcceptDialog(IndexToQuestID(fav_index[i])));
                 }
                 ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
                 if (ImGui::Button("Reward", ImVec2(60.0f, 0))) {
-                    GW::Agents::Dialog(QuestRewardDialog(IndexToDialogID(fav_index[i])));
+                    GW::Agents::SendDialog(QuestRewardDialog(IndexToDialogID(fav_index[i])));
                 }
                 ImGui::PopID();
             }
@@ -144,7 +144,7 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
             ImGui::PopItemWidth();
             ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
             if (ImGui::Button("Send##1", ImVec2(60.0f, 0))) {
-                GW::Agents::Dialog(IndexToDialogID(dialogindex));
+                GW::Agents::SendDialog(IndexToDialogID(dialogindex));
             }
 
             static bool hex = false;
@@ -173,7 +173,7 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
             if (ImGui::Button("Send##2", ImVec2(60.0f, 0))) {
                 int id;
                 if (GuiUtils::ParseInt(customdialogbuf, &id, hex ? 16 : 10)) {
-                    GW::Agents::Dialog(id);
+                    GW::Agents::SendDialog(id);
                 }
             }
         }

@@ -56,7 +56,7 @@ void PmapRenderer::Initialize(IDirect3DDevice9* device) {
 // #define WIREFRAME_MODE
 
     GW::PathingMapArray path_map;
-    if (GW::Map::IsMapLoaded()) {
+    if (GW::Map::GetIsMapLoaded()) {
         path_map = GW::Map::GetPathingMap();
     } else {
         initialized = false;

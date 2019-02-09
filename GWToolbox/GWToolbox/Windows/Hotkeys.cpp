@@ -369,12 +369,12 @@ void HotkeyDropUseBuff::Draw() {
 void HotkeyDropUseBuff::Execute() {
     if (!isExplorable()) return;
 
-    GW::Buff buff = GW::Effects::GetPlayerBuffBySkillId(id);
-    if (buff.skill_id) {
-        GW::Effects::DropBuff(buff.buff_id);
+    GW::Buff *buff = GW::Effects::GetPlayerBuffBySkillId(id);
+    if (buff) {
+        GW::Effects::DropBuff(buff->buff_id);
     } else {
         int slot = GW::SkillbarMgr::GetSkillSlot(id);
-        if (slot >= 0 && GW::Skillbar::GetPlayerSkillbar().skills[slot].recharge == 0) {
+        if (slot >= 0 && GW::Skillbar::GetPlayerSkillbar()->skills[slot].recharge == 0) {
             GW::SkillbarMgr::UseSkill(slot, GW::Agents::GetTargetId());
         }
     }
@@ -600,7 +600,7 @@ void HotkeyTarget::Execute() {
         GW::Agent* agent = agents[i];
         if (agent == nullptr) continue;
         if (agent->player_number == id && agent->hp > 0) {
-            float newDistance = GW::Agents::GetSqrDistance(me->pos, agents[i]->pos);
+            float newDistance = GW::GetSquareDistance(me->pos, agents[i]->pos);
             if (newDistance < distance) {
                 closest = i;
                 distance = newDistance;
@@ -648,7 +648,7 @@ void HotkeyMove::Execute() {
 
     GW::Agent* me = GW::Agents::GetPlayer();
     if (mapid != 0 && mapid != (DWORD)GW::Map::GetMapID()) return;
-    double dist = GW::Agents::GetDistance(me->pos, GW::Vector2f(x, y));
+    double dist = GW::GetDistance(me->pos, GW::Vec2f(x, y));
     if (range != 0 && dist > range) return;
     GW::Agents::Move(x, y);
     if (name[0] == '\0') {
@@ -681,7 +681,7 @@ void HotkeyDialog::Draw() {
 void HotkeyDialog::Execute() {
     if (isLoading()) return;
     if (id == 0) return;
-    GW::Agents::Dialog(id);
+    GW::Agents::SendDialog(id);
     Log::Info("Sent dialog %s (%d)", name, id);
 }
 

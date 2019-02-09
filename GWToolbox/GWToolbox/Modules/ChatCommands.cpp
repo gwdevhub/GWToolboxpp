@@ -171,7 +171,7 @@ void ChatCommands::Initialize() {
 
 bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
     if (!GW::CameraMgr::GetCameraUnlock()) return false;
-    if (GW::Chat::IsTyping()) return false;
+    if (GW::Chat::GetIsTyping()) return false;
     if (ImGui::GetIO().WantTextInput) return false;
 
     switch (Message) {
@@ -207,7 +207,7 @@ void ChatCommands::Update(float delta) {
     float dist_rot  = delta * ROTATION_SPEED;
 
     if (GW::CameraMgr::GetCameraUnlock() 
-        && !GW::Chat::IsTyping() 
+        && !GW::Chat::GetIsTyping() 
         && !ImGui::GetIO().WantTextInput) {
 
         float forward = 0;
@@ -246,9 +246,9 @@ void ChatCommands::Update(float delta) {
     for (int slot : skills_to_use) {
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable
             && (clock() - skill_timer) / 1000.0f > skill_usage_delay) {
-            GW::Skillbar skillbar = GW::Skillbar::GetPlayerSkillbar();
-            if (skillbar.IsValid()) {
-                GW::SkillbarSkill skill = skillbar.skills[slot];
+            GW::Skillbar *skillbar = GW::Skillbar::GetPlayerSkillbar();
+            if (skillbar && skillbar->IsValid()) {
+                GW::SkillbarSkill skill = skillbar->skills[slot];
                 if (skill.GetRecharge() == 0) {
                     GW::GameThread::Enqueue([slot] {
                         GW::SkillbarMgr::UseSkill(slot, GW::Agents::GetTargetId());
@@ -301,7 +301,7 @@ void ChatCommands::CmdDialog(const wchar_t *message, int argc, LPWSTR *argv) {
     } else {
         int id;
         if (GuiUtils::ParseInt(argv[1], &id)) {
-            GW::Agents::Dialog(id);
+            GW::Agents::SendDialog(id);
             Log::Info("Sent Dialog 0x%X", id);
         } else {
             Log::Error("Invalid argument '%ls', please use an integer or hex value", argv[0]);
@@ -674,7 +674,7 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
                 GW::Agent* agent = agents[i];
                 if (agent == nullptr) continue;
                 if (agent->player_number != me->player_number) {
-                    float newDistance = GW::Agents::GetSqrDistance(me->pos, agents[i]->pos);
+                    float newDistance = GW::GetSquareDistance(me->pos, agents[i]->pos);
                     if (newDistance < distance) {
                         closest = i;
                         distance = newDistance;
@@ -766,7 +766,7 @@ void ChatCommands::CmdSCWiki(const wchar_t *message, int argc, LPWSTR *argv) {
 void ChatCommands::CmdLoad(const wchar_t *message, int argc, LPWSTR *argv) {
     // We will & should move that to GWCA.
     static int(__fastcall *GetPersonalDir)(size_t size, wchar_t *dir) = 0;
-    *(BYTE**)&GetPersonalDir = GW::MemoryMgr::GetPersonalDirPtr;
+    *(uintptr_t *)&GetPersonalDir = GW::MemoryMgr::GetPersonalDirPtr;
     if (argc == 1) {
         // We could open the build template window, but any interaction with it would make gw crash.
         // int32_t param[2] = { 0, 2 };

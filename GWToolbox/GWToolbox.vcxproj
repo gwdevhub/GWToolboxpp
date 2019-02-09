@@ -42,12 +42,10 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(ProjectDir)GWToolbox;$(SolutionDir)Dependencies;$(SolutionDir)Dependencies\GWCA;$(SolutionDir)Dependencies\imgui;$(SolutionDir)Dependencies\DirectX\Include\;$(SolutionDir)Dependencies\utf8proc;$(IncludePath)</IncludePath>
     <LibraryPath>$(OutDir);$(SolutionDir)Dependencies\DirectX\Lib\x86\;$(SolutionDir)Dependencies\GWCA\;$(SolutionDir)Dependencies\openssl\lib\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(ProjectDir)GWToolbox;$(SolutionDir)Dependencies;$(SolutionDir)Dependencies\GWCA;$(SolutionDir)Dependencies\imgui;$(SolutionDir)Dependencies\DirectX\Include\;$(SolutionDir)Dependencies\utf8proc;$(IncludePath)</IncludePath>
     <LibraryPath>$(OutDir);$(SolutionDir)Dependencies\DirectX\Lib\x86\;$(SolutionDir)Dependencies\GWCA\;$(SolutionDir)Dependencies\openssl\lib\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -60,6 +58,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <ForcedIncludeFiles>GWCA\Utilities\Export.h</ForcedIncludeFiles>
       <ShowIncludes>false</ShowIncludes>
+      <AdditionalIncludeDirectories>$(ProjectDir)GWToolbox;$(SolutionDir)Dependencies;$(SolutionDir)Dependencies\GWCA\Source\;$(SolutionDir)Dependencies\imgui;$(SolutionDir)Dependencies\DirectX\Include\;$(SolutionDir)Dependencies\utf8proc</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -84,8 +83,7 @@
       <PreprocessorDefinitions>UTF8PROC_STATIC;ENABLE_BORDERLESS;WIN32_LEAN_AND_MEAN;WIN32;NDEBUG;_WINDOWS;_USRDLL;API_EXPORTS;_USE_MATH_DEFINES;NOMINMAX;_CRT_SECURE_NO_WARNINGS;IMGUI_USE_BGRA_PACKED_COLOR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>
-      </AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)GWToolbox;$(SolutionDir)Dependencies;$(SolutionDir)Dependencies\GWCA\Source\;$(SolutionDir)Dependencies\imgui;$(SolutionDir)Dependencies\DirectX\Include\;$(SolutionDir)Dependencies\utf8proc</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <ForcedIncludeFiles>GWCA\Utilities\Export.h</ForcedIncludeFiles>
     </ClCompile>
@@ -234,7 +232,7 @@
     <ClCompile Include="GWToolbox\Windows\TravelWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Dependencies\GWCA\GWCA.2015.vcxproj">
+    <ProjectReference Include="..\Dependencies\GWCA\vc\GWCA\GWCA.2015.vcxproj">
       <Project>{b3359f05-68cf-4e7f-b9d6-d106f6d48a38}</Project>
     </ProjectReference>
     <ProjectReference Include="..\LUA\LUA.vcxproj">
