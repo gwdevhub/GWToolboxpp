@@ -104,7 +104,7 @@ void Pcon::Update(int delay) {
 		mapid = GW::Map::GetMapID();
 		maptype = GW::Map::GetInstanceType();
 		pcon_quantity_checked = false;
-		reserved_bag_slots.empty();
+		std::vector<std::vector<clock_t>>(22, std::vector<clock_t>(25)).swap(reserved_bag_slots); // Clear reserved slots.
 	}	
 }
 
@@ -145,6 +145,9 @@ void Pcon::AfterUsed(bool used, int qty) {
 void Pcon::ScanInventory() {
 	int qty = CheckInventory();
 	if (qty >= 0) quantity = qty;
+	if (!enabled || !PconsWindow::Instance().GetEnabled()) {
+		pcon_quantity_checked = false; // Not enabled; enforce a re-check when it is enabled again.
+	}
 	if (enabled && PconsWindow::Instance().GetEnabled() && !pcon_quantity_checked && maptype == GW::Constants::InstanceType::Outpost) {
 		pcon_quantity_checked = true;
 		if (quantity < threshold && refill_if_below_threshold) {
@@ -206,11 +209,10 @@ int Pcon::MoveItem(GW::Item *item, GW::Bag *bag, int slot, int quantity = 0) {
 	int originalQuantity = destItem ? destItem->Quantity : 0;
 	int vacantQuantity = 250 - originalQuantity;
 	if (quantity > 1 && vacantQuantity < quantity) quantity = vacantQuantity;
-	unsigned short CtoGS_MSGMoveItemSplitStack = 0x7A; // Put the header here until GWCA has it defined.
 	if (quantity == item->Quantity) { // Move the whole thing.
 		GW::CtoS::SendPacket(0x10, CtoGS_MSGMoveItem, item->ItemId, bag->BagId, slot);
 	} else { // Split stack
-		GW::CtoS::SendPacket(0x14, CtoGS_MSGMoveItemSplitStack, item->ItemId, quantity, bag->BagId, slot);
+		GW::CtoS::SendPacket(0x14, CtoGS_MSGSplitStack, item->ItemId, quantity, bag->BagId, slot);
 	}
 	return quantity;
 }
