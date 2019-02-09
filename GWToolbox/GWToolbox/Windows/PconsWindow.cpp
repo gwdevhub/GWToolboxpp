@@ -207,13 +207,12 @@ void PconsWindow::Initialize() {
 	urgoz_location = GW::Vector2f(-2800.0f, 14316.0f);
 	GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveDone>([this](GW::Packet::StoC::ObjectiveDone* packet) -> bool {
 		objectives_complete.push_back(packet->objective_id);
-		// Log::Info("Objective has been completed: %d", packet->objective_id);
+		//Log::Info("Objective has been completed: %d", packet->objective_id);
 		CheckObjectivesCompleteAutoDisable();
 		return false;
 	});
 	GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveAdd>([this](GW::Packet::StoC::ObjectiveAdd* packet) -> bool {
-		objectives_complete.push_back(packet->objective_id);
-		// Log::Info("Objective has been added: %d", packet->objective_id);
+		//Log::Info("Objective has been added: %d", packet->objective_id);
 		CheckObjectivesCompleteAutoDisable();
 		return false;
 	});
@@ -382,17 +381,20 @@ void PconsWindow::CheckObjectivesCompleteAutoDisable() {
 		disabled_message = uw_disable_hint;
 		break;
 	}
-	if (!objs_to_check) return;
-	for (std::vector<DWORD>::iterator it = (*objs_to_check).begin(); it != (*objs_to_check).end(); ++it) {
-		bool found = false;
-		for (std::vector<DWORD>::iterator it2 = objectives_complete.begin(); it2 != objectives_complete.end() && !found; ++it2) {
-			found = *it == *it2;
+	if (!objs_to_check || objs_to_check->empty() || objectives_complete.empty()) return;
+	bool all_objectives_complete = false;
+	for (size_t i = 0; i < objs_to_check->size();i++) {
+		all_objectives_complete = false;
+		for (size_t j = 0; j < objectives_complete.size() && !all_objectives_complete; j++){
+			all_objectives_complete = objs_to_check->at(i) == objectives_complete.at(j);
 		}
-		if (!found)	return; // Not all objectives complete.
+		if (!all_objectives_complete)	return; // Not all objectives complete.
 	}
-	elite_area_disable_triggered = true;
-	SetEnabled(false);
-	Log::Info(disabled_message);
+	if (all_objectives_complete) {
+		elite_area_disable_triggered = true;
+		SetEnabled(false);
+		Log::Info(disabled_message);
+	}
 }
 
 void PconsWindow::CheckBossRangeAutoDisable() {	// Trigger Elite area auto disable if applicable
