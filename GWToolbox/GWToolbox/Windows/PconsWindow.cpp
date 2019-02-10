@@ -369,7 +369,7 @@ void PconsWindow::MapChanged() {
 
 void PconsWindow::CheckObjectivesCompleteAutoDisable() {
 	if (!enabled || elite_area_disable_triggered || current_map_type != GW::Constants::InstanceType::Explorable) return;		// Pcons disabled or no need to check any elite area.
-	std::vector<DWORD> *objs_to_check;
+	std::vector<DWORD> *objs_to_check = nullptr;
 	char* disabled_message = "Pcons disabled";
 	switch (map_id) {
 	case GW::Constants::MapID::The_Fissure_of_Woe:
@@ -381,7 +381,7 @@ void PconsWindow::CheckObjectivesCompleteAutoDisable() {
 		disabled_message = uw_disable_hint;
 		break;
 	}
-	if (!objs_to_check || objs_to_check->empty() || objectives_complete.empty()) return;
+	if (objs_to_check == nullptr || objs_to_check->empty() || objectives_complete.empty()) return;
 	bool all_objectives_complete = false;
 	for (size_t i = 0; i < objs_to_check->size();i++) {
 		all_objectives_complete = false;
