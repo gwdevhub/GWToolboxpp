@@ -1,12 +1,4 @@
-#include <stdint.h>
-#include <Windows.h>
-
-#include <queue>
-#include <thread>
-#include <functional>
-
-#include <imgui.h>
-#include <SimpleIni.h>
+#include "stdafx.h"
 
 #include <GWCA/GameContainers/Array.h>
 

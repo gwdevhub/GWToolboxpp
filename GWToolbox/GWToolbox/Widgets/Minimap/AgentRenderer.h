@@ -61,9 +61,9 @@ private:
         bool size_active = true;
     };
 
-    struct Shape_Vertex : public GW::Vector2f {
+    struct Shape_Vertex : public GW::Vec2f {
         Shape_Vertex(float x, float y, Color_Modifier mod) 
-            : GW::Vector2f(x, y), modifier(mod) {}
+            : GW::Vec2f(x, y), modifier(mod) {}
         Color_Modifier modifier;
     };
     struct Shape_t {

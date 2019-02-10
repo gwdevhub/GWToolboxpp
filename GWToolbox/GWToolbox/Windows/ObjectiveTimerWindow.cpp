@@ -1,20 +1,8 @@
-#include <stdint.h>
-#include <Windows.h>
-
-#include <queue>
-#include <thread>
-#include <vector>
-#include <functional>
-
-#include <imgui.h>
-#include <imgui_internal.h>
-
-#include <d3d9.h>
-#include <SimpleIni.h>
+#include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
-// @Cleanup: Fix this Position & StoC includes
-#include <GWCA/GameEntities/Position.h>
+
+#include <GWCA/GameContainers/Vector.h>
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/Agent.h>
@@ -32,6 +20,8 @@
 #include "Defines.h"
 #include "GuiUtils.h"
 #include "GWToolbox.h"
+
+#include "ToolboxModule.h"
 #include "ToolboxWindow.h"
 
 #include "Modules/Resources.h"
@@ -224,20 +214,20 @@ void ObjectiveTimerWindow::ObjectiveSet::StopObjectives() {
     }
 }
 
-void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vector2f spawn) {
-    static const GW::Vector2f area_spawns[] = {
+void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn) {
+    static const GW::Vec2f area_spawns[] = {
         { -10514, 15231 },  // foundry
         { -18575, -8833 },  // city
         { 364, -10445 },    // veil
         { 16034, 1244 },    // gloom
     };
-    const GW::Vector2f mallyx_spawn(-3931, -6214);
+    const GW::Vec2f mallyx_spawn(-3931, -6214);
 
     const int n_areas = 4;
-    double best_dist = spawn.DistanceTo(mallyx_spawn);
+    double best_dist = GW::GetDistance(spawn, mallyx_spawn);
     int area = -1;
     for (int i = 0; i < n_areas; ++i) {
-        float dist = spawn.DistanceTo(area_spawns[i]);
+        float dist = GW::GetDistance(spawn, area_spawns[i]);
         if (best_dist > dist) {
             best_dist = dist;
             area = i;

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <imgui.h>
-
 namespace ImGui {
 	// Shows '(?)' and the helptext when hovered
 	IMGUI_API void ShowHelp(const char* help);

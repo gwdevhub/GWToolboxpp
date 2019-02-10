@@ -8,8 +8,8 @@ class CustomRenderer : public VBuffer {
             else strncpy(name, "line", 128);
         };
         CustomLine(const char* n) : CustomLine(0, 0, 0, 0, GW::Constants::MapID::None, n) {};
-        GW::Vector2f p1;
-        GW::Vector2f p2;
+        GW::Vec2f p1;
+        GW::Vec2f p2;
         GW::Constants::MapID map;
         bool visible;
         char name[128];
@@ -25,7 +25,7 @@ class CustomRenderer : public VBuffer {
             else strncpy(name, "marker", 128);
         };
         CustomMarker(const char* n) : CustomMarker(0, 0, 100.0f, LineCircle, GW::Constants::MapID::None, n) {};
-        GW::Vector2f pos;
+        GW::Vec2f pos;
         float size;
         Shape shape;
         GW::Constants::MapID map;

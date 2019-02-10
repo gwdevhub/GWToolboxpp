@@ -1,15 +1,6 @@
-#include <stdint.h>
-#include <Windows.h>
+#include "stdafx.h"
 
-#include <vector>
-
-#include <d3d9.h>
-#include <imgui.h>
-#include <imgui_internal.h>
-#include <SimpleIni.h>
-
-// @Cleanup: Fix this Position & StoC includes
-#include <GWCA/GameEntities/Position.h>
+#include <GWCA/GameContainers/Vector.h>
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/Party.h>
@@ -18,6 +9,7 @@
 
 #include "Utf8.h"
 #include "Logger.h"
+#include "Defines.h"
 #include "GuiUtils.h"
 #include "GWToolbox.h"
 #include "ImGuiAddons.h"

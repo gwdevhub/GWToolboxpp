@@ -1,12 +1,7 @@
-#include <stdint.h>
-#include <Windows.h>
-
-#include <queue>
-#include <thread>
-#include <fstream>
-#include <functional>
+#include "stdafx.h"
 
 #include "Utf8.h"
+#include "Defines.h"
 #include "ToolboxModule.h"
 #include "ToolboxWindow.h"
 

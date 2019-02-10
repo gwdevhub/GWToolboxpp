@@ -1,25 +1,8 @@
-#include <stdint.h>
-#include <string.h>
-
-#include <Windows.h>
-
-#include <set>
-#include <regex>
-#include <queue>
-#include <string>
-#include <thread>
-#include <vector>
-#include <fstream>
-#include <sstream>
-#include <functional>
-#include <initializer_list>
-
-#include <imgui.h>
-#include <ImGuiAddons.h>
+#include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
 
-#include <GWCA/GameEntities/Position.h>
+#include <GWCA/GameContainers/Vector.h>
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/NPC.h>
@@ -39,6 +22,8 @@
 #include "Utf8.h"
 #include "Logger.h"
 #include "Defines.h"
+#include "ImGuiAddons.h"
+
 #include "ToolboxModule.h"
 
 #include "Modules/Resources.h"

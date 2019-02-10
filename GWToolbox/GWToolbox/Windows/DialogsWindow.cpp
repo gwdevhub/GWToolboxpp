@@ -1,15 +1,4 @@
-#include <stdint.h>
-#include <Windows.h>
-
-#include <queue>
-#include <string>
-#include <thread>
-#include <vector>
-#include <functional>
-
-#include <d3d9.h>
-#include <imgui.h>
-#include <SimpleIni.h>
+#include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
 
@@ -26,6 +15,8 @@
 #include "Defines.h"
 #include "GuiUtils.h"
 #include "GWToolbox.h"
+
+#include "ToolboxModule.h"
 #include "ToolboxWindow.h"
 
 #include "Modules/Resources.h"

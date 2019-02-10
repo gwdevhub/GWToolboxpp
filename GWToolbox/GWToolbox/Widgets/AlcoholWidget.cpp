@@ -1,13 +1,8 @@
-#include <time.h>
-#include <stdint.h>
-
-#include <Windows.h>
-
-#include <functional>
+#include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
 
-#include <GWCA/GameEntities/Position.h>
+#include <GWCA/GameContainers/Vector.h>
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/Map.h>

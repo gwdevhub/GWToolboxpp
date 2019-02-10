@@ -1,9 +1,4 @@
-#include <time.h>
-#include <stdint.h>
-
-#include <Windows.h>
-
-#include <fstream>
+#include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
 

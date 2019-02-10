@@ -59,6 +59,9 @@ public:
     void SetAfkMessage(std::wstring&& message);
     static void ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag);
 
+    bool show_timestamps;
+    Color timestamps_color;
+
 private:
     void UpdateBorderless();
     void UpdateFOV();

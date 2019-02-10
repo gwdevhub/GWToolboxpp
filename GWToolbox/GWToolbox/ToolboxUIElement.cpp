@@ -1,12 +1,10 @@
-#include <vector>
-
-#include <d3d9.h>
-#include <imgui.h>
-#include <SimpleIni.h>
+#include "stdafx.h"
 
 #include "Utf8.h"
+#include "Defines.h"
 #include "GWToolbox.h"
 
+#include "ToolboxModule.h"
 #include "ToolboxUIElement.h"
 
 void ToolboxUIElement::Initialize() {

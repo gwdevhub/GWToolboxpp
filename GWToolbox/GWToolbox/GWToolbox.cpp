@@ -1,30 +1,17 @@
-#include <stdint.h>
+#include "stdafx.h"
 
-#include <Windows.h>
 #include <Windowsx.h>
-
-#include <queue>
-#include <regex>
-#include <string>
-#include <thread>
-#include <vector>
-#include <fstream>
-#include <functional>
-#include <unordered_map>
-
-#include <imgui.h>
 #include <imgui_impl_dx9.h>
-#include <SimpleIni.h>
 
 #include <GWCA/GWCA.h>
 
 #include <GWCA/Constants/Constants.h>
-// @Cleanup: Fix this Position & StoC includes
-#include <GWCA/GameEntities/Position.h>
-#include <GWCA/Packets/StoC.h>
 
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/MemoryPatcher.h>
+
+#include <GWCA/GameContainers/Vector.h>
+#include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/NPC.h>
 #include <GWCA/GameEntities/Map.h>
@@ -35,10 +22,10 @@
 
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/Render.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/RenderMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 
 #include "Utf8.h"
@@ -128,7 +115,6 @@ DWORD __stdcall ThreadEntry(LPVOID) {
 #ifdef _DEBUG
         if (GetAsyncKeyState(VK_END) & 1) {
             GWToolbox::Instance().StartSelfDestruct();
-            break;
         }
 #endif
     }
@@ -152,7 +138,6 @@ DWORD __stdcall ThreadEntry(LPVOID) {
     Log::Terminate();
     Sleep(100);
 
-    GW::HookBase::Deinitialize(); // At this point every hook should be disable, so we only need to free the memory
     FreeLibraryAndExitThread(dllmodule, EXIT_SUCCESS);
 }
 
@@ -549,10 +534,8 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 
         Log::Log("Restoring input hook\n");
         SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
-        Log::Log("Destroying directX hook\n");
-        GW::Render::RestoreHooks();
-        Log::Log("Destroying API\n");
-        GW::Terminate();
+        
+        tb_initialized = false;
         tb_destroyed = true;
     }
 }

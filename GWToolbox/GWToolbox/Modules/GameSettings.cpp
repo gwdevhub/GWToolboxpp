@@ -1,16 +1,8 @@
-#include <time.h>
-#include <stdint.h>
-
-#include <Windows.h>
-
-#include <vector>
-#include <functional>
-
-#include <imgui.h>
-#include <SimpleIni.h>
+#include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
-#include <GWCA/GameEntities/Position.h>
+
+#include <GWCA/GameContainers/Vector.h>
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/Utilities/Hooker.h>
@@ -28,7 +20,6 @@
 #include <GWCA/Context/GameContext.h>
 
 #include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/Render.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
@@ -36,6 +27,7 @@
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/CameraMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
+#include <GWCA/Managers/RenderMgr.h>
 #include <GWCA/Managers/FriendListMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 
@@ -564,13 +556,11 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     fov = (float)ini->GetDoubleValue(Name(), VAR_NAME(fov), 1.308997f);
     tick_is_toggle = ini->GetBoolValue(Name(), VAR_NAME(tick_is_toggle), true);
 
-    GW::Chat::ShowTimestamps = ini->GetBoolValue(Name(), "show_timestamps", false);
-    GW::Chat::TimestampsColor = Colors::Load(ini, Name(), "timestamps_color", Colors::White());
-    // GW::Chat::KeepChatHistory = ini->GetBoolValue(Name(), "keep_chat_history", true); @Deprecated
+    show_timestamps = ini->GetBoolValue(Name(), "show_timestamps", false);
+    timestamps_color = Colors::Load(ini, Name(), "timestamps_color", Colors::White());
 
     openlinks = ini->GetBoolValue(Name(), VAR_NAME(openlinks), true);
     auto_url = ini->GetBoolValue(Name(), VAR_NAME(auto_url), true);
-    // select_with_chat_doubleclick = ini->GetBoolValue(Name(), VAR_NAME(select_with_chat_doubleclick), true);
     move_item_on_ctrl_click = ini->GetBoolValue(Name(), VAR_NAME(move_item_on_ctrl_click), true);
 
     flash_window_on_pm = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_pm), true);
@@ -585,6 +575,9 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     show_unlearned_skill = ini->GetBoolValue(Name(), VAR_NAME(show_unlearned_skill), false);
     auto_skip_cinematic = ini->GetBoolValue(Name(), VAR_NAME(auto_skip_cinematic), false);
 
+    GW::Chat::ToggleTimestamps(show_timestamps);
+    GW::Chat::SetTimestampsColor(timestamps_color);
+
     ::LoadChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
     ::LoadChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);
     ::LoadChannelColor(ini, Name(), "team", GW::Chat::CHANNEL_GROUP);
@@ -596,7 +589,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     if (borderlesswindow) ApplyBorderless(borderlesswindow);
 #endif
     if (openlinks) GW::Chat::SetOpenLinks(openlinks);
-    if (tick_is_toggle) GW::PartyMgr::SetTickToggle();
+    if (tick_is_toggle) GW::PartyMgr::SetTickToggle(tick_is_toggle);
     // if (select_with_chat_doubleclick) GW::Chat::SetChatEventCallback(&ChatEventCallback);
     if (auto_url) GW::Chat::SetSendChatCallback(&SendChatCallback);
     if (move_item_on_ctrl_click) GW::Items::SetOnItemClick(GameSettings::ItemClickCallback);
@@ -614,13 +607,11 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetDoubleValue(Name(), VAR_NAME(fov), fov);
     ini->SetBoolValue(Name(), VAR_NAME(tick_is_toggle), tick_is_toggle);
 
-    ini->SetBoolValue(Name(), "show_timestamps", GW::Chat::ShowTimestamps);
-    Colors::Save(ini, Name(), "timestamps_color", GW::Chat::TimestampsColor);
-    // ini->SetBoolValue(Name(), "keep_chat_history", GW::Chat::KeepChatHistory); @Deprecated
+    ini->SetBoolValue(Name(), VAR_NAME(show_timestamps), show_timestamps);
+    Colors::Save(ini, Name(), VAR_NAME(timestamps_color), timestamps_color);
 
     ini->SetBoolValue(Name(), VAR_NAME(openlinks), openlinks);
     ini->SetBoolValue(Name(), VAR_NAME(auto_url), auto_url);
-    // ini->SetBoolValue(Name(), VAR_NAME(select_with_chat_doubleclick), select_with_chat_doubleclick);
     ini->SetBoolValue(Name(), VAR_NAME(move_item_on_ctrl_click), move_item_on_ctrl_click);
 
     ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_pm), flash_window_on_pm);
@@ -668,10 +659,12 @@ void GameSettings::DrawSettingInternal() {
 #endif
     DrawFOVSetting();
 
-    ImGui::Checkbox("Show chat messages timestamp. Color:", &GW::Chat::ShowTimestamps);
+    if (ImGui::Checkbox("Show chat messages timestamp. Color:", &show_timestamps))
+        GW::Chat::ToggleTimestamps(show_timestamps);
     ImGui::SameLine();
 
-    Colors::DrawSettingHueWheel("Color:", &GW::Chat::TimestampsColor);
+    if (Colors::DrawSettingHueWheel("Color:", &timestamps_color))
+        GW::Chat::SetTimestampsColor(timestamps_color);
     ImGui::ShowHelp("Show timestamps in message history.");
 
     // ImGui::Checkbox("Keep chat history.", &GW::Chat::KeepChatHistory); @Deprecated
@@ -688,13 +681,7 @@ void GameSettings::DrawSettingInternal() {
     ImGui::ShowHelp("When you write a message starting with 'http://' or 'https://', it will be converted in template format");
 
     if (ImGui::Checkbox("Tick is a toggle", &tick_is_toggle)) {
-        if (tick_is_toggle) {
-            // @Cleanup: Maybe figure out a better we to hook in runtime vs hook in init time (we queue hooks and apply them in a batch)
-            GW::PartyMgr::SetTickToggle();
-            GW::Hook::EnableHooks();
-        } else {
-            GW::PartyMgr::RestoreTickToggle();
-        }
+        GW::PartyMgr::SetTickToggle(tick_is_toggle);
     }
     ImGui::ShowHelp("Ticking in party window will work as a toggle instead of opening the menu");
 #if 0 // @Deprecated

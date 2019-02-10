@@ -1,13 +1,4 @@
-#include <stdint.h>
-#include <Windows.h>
-
-#include <queue>
-#include <string>
-#include <thread>
-#include <functional>
-
-#include <imgui.h>
-#include <SimpleIni.h>
+#include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
 
@@ -30,6 +21,7 @@
 #include "Utf8.h"
 #include "Timer.h"
 #include "Logger.h"
+#include "Defines.h"
 #include "GuiUtils.h"
 #include "ImGuiAddons.h"
 

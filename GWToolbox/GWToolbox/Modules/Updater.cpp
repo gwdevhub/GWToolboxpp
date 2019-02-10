@@ -1,14 +1,4 @@
-#include <stdint.h>
-#include <string.h>
-#include <Windows.h>
-
-#include <queue>
-#include <string>
-#include <thread>
-
-#include <d3d9.h>
-#include <json.hpp>
-#include <SimpleIni.h>
+#include "stdafx.h"
 
 #include <GWCA/Managers/GameThreadMgr.h>
 

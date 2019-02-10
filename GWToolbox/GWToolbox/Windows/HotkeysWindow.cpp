@@ -1,15 +1,4 @@
-#include <stdint.h>
-#include <Windows.h>
-
-#include <queue>
-#include <string>
-#include <thread>
-#include <vector>
-#include <algorithm>
-#include <functional>
-
-#include <imgui.h>
-#include <SimpleIni.h>
+#include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
 
@@ -24,9 +13,12 @@
 
 #include "Keys.h"
 #include "Utf8.h"
-#include "Logger.h"
 #include "Timer.h"
+#include "Logger.h"
+#include "Defines.h"
 #include "GuiUtils.h"
+
+#include "ToolboxModule.h"
 #include "ToolboxWindow.h"
 
 #include "Modules/Resources.h"

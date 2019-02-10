@@ -1,23 +1,7 @@
-#include <stdint.h>
+#include "stdafx.h"
 
-#include <Windows.h>
-#include <ShellApi.h>
 #include <WinSock2.h>
 
-#include <set>
-#include <list>
-#include <queue>
-#include <thread>
-#include <vector>
-#include <fstream>
-#include <iostream>
-
-#include <d3d9.h>
-#include <imgui.h>
-#include <imgui_internal.h>
-#include <SimpleIni.h>
-
-#include <json.hpp>
 #include <easywsclient/easywsclient.hpp>
 
 #include <GWCA/Constants/Constants.h>
@@ -33,6 +17,7 @@
 
 #include "Utf8.h"
 #include "Logger.h"
+#include "Defines.h"
 #include "GuiUtils.h"
 #include "GWToolbox.h"
 #include "CircurlarBuffer.h"

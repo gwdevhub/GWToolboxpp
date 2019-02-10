@@ -1,5 +1,4 @@
-#include <stdio.h>
-#include <Windows.h>
+#include "stdafx.h"
 
 #include <utf8proc.h>
 

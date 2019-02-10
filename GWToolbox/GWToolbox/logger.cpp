@@ -1,14 +1,7 @@
-#include <time.h>
-#include <stdio.h>
-#include <stdint.h>
+#include "stdafx.h"
 
-#include <Windows.h>
 #include <dbghelp.h>
 #include <strsafe.h>
-
-#include <queue>
-#include <thread>
-#include <functional>
 
 #include <GWCA/GameContainers/Array.h>
 

@@ -1,15 +1,4 @@
-#include <stdint.h>
-#include <Windows.h>
-#include <ShellApi.h>
-
-#include <queue>
-#include <string>
-#include <thread>
-#include <fstream>
-#include <functional>
-
-#include <d3d9.h>
-#include <SimpleIni.h>
+#include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
 
@@ -23,6 +12,8 @@
 #include "Defines.h"
 #include "GuiUtils.h" 
 #include "GWToolbox.h"
+// @Cleanup: Fix this include (depends on GuiUtils)
+#include "Color.h"
 
 #include "ToolboxModule.h"
 #include "ToolboxWindow.h"

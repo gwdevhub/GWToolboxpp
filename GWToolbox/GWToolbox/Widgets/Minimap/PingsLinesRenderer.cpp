@@ -1,20 +1,10 @@
-#include <stdint.h>
-#include <Windows.h>
+#include "stdafx.h"
 
-#include <map>
-#include <deque>
-#include <vector>
-#include <functional>
-#include <unordered_set>
-
-#include <d3d9.h>
 #include <d3dx9math.h>
-#include <imgui.h>
-#include <SimpleIni.h>
 
 #include <GWCA/Constants/Constants.h>
-// @Cleanup: Fix this Position & StoC includes
-#include <GWCA/GameEntities/Position.h>
+
+#include <GWCA/GameContainers/Vector.h>
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/NPC.h>
@@ -99,7 +89,7 @@ PingsLinesRenderer::PingsLinesRenderer() : vertices(nullptr) {
     lastsent = TIMER_INIT();
     lastqueued = TIMER_INIT();
 
-    shadowstep_location = GW::Vector2f(0, 0);
+    shadowstep_location = GW::Vec2f(0, 0);
 }
 
 void PingsLinesRenderer::P046Callback(GW::Packet::StoC::AgentPinged *pak) {
@@ -302,7 +292,7 @@ void PingsLinesRenderer::DrawShadowstepMarker(IDirect3DDevice9* device) {
 
     GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
     if (!effects.valid()) {
-        shadowstep_location = GW::Vector2f();
+        shadowstep_location = GW::Vec2f();
         return;
     }
 
@@ -314,7 +304,7 @@ void PingsLinesRenderer::DrawShadowstepMarker(IDirect3DDevice9* device) {
         }
     }
     if (!found) {
-        shadowstep_location = GW::Vector2f();
+        shadowstep_location = GW::Vec2f();
         return;
     }
 
@@ -464,7 +454,7 @@ bool PingsLinesRenderer::OnMouseDown(float x, float y) {
     return true;
 }
 
-void PingsLinesRenderer::AddMouseClickPing(GW::Vector2f pos) {
+void PingsLinesRenderer::AddMouseClickPing(GW::Vec2f pos) {
     pings.push_front(new ClickPing(pos.x, pos.y));
 }
 

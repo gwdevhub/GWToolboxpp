@@ -1,9 +1,4 @@
-#include <time.h>
-#include <stdint.h>
-#include <Windows.h>
-
-#include <string>
-#include <functional>
+#include "stdafx.h"
 
 #include <lua/lua.hpp>
 #include <lua/lstate.h>

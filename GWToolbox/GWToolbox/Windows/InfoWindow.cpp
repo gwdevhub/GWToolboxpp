@@ -1,21 +1,8 @@
-#include <math.h>
-#include <stdint.h>
-#include <Windows.h>
-
-#include <queue>
-#include <string>
-#include <thread>
-#include <vector>
-#include <functional>
-#include <unordered_map>
-
-#include <d3d9.h>
-#include <imgui.h>
-#include <SimpleIni.h>
+#include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
-// @Cleanup: Fix this Position & StoC includes
-#include <GWCA/GameEntities/Position.h>
+
+#include <GWCA/GameContainers/Vector.h>
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/NPC.h>
@@ -72,8 +59,6 @@
 
 void InfoWindow::Initialize() {
     ToolboxWindow::Initialize();
-
-    GW::Agents::SetupLastDialogHook();
 
     Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"info.png"), IDB_Icon_Info);
     GW::StoC::AddCallback<GW::Packet::StoC::MessageCore>(

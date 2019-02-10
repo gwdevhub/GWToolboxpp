@@ -1,19 +1,11 @@
-#include <stdint.h>
-#include <Windows.h>
+#include "stdafx.h"
 
 #include <Shlobj.h>
 #include <urlmon.h>
 #include <Shlwapi.h>
 #include <WinInet.h>
 
-#include <d3d9.h>
 #include <d3dx9tex.h>
-#include <SimpleIni.h>
-
-#include <queue>
-#include <string>
-#include <thread>
-#include <functional>
 
 #include "Utf8.h"
 #include "Logger.h"

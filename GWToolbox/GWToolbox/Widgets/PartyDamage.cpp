@@ -1,23 +1,8 @@
-#include <stdint.h>
-
-#include <Windows.h>
-
-#include <map>
-#include <queue>
-#include <string>
-#include <thread>
-#include <sstream>
-#include <fstream>
-#include <functional>
-
-#include <d3d9.h>
-#include <imgui.h>
-#include <imgui_internal.h>
-#include <SimpleIni.h>
+#include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
 
-#include <GWCA/GameEntities/Position.h>
+#include <GWCA/GameContainers/Vector.h>
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/NPC.h>

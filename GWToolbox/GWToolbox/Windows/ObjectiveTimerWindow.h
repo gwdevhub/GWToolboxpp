@@ -77,7 +77,7 @@ private:
 
     Objective* GetCurrentObjective(uint32_t obj_id);
 
-    void AddDoAObjectiveSet(GW::Vector2f spawn);
+    void AddDoAObjectiveSet(GW::Vec2f spawn);
     void AddFoWObjectiveSet();
     void AddUWObjectiveSet();
 };

@@ -1,15 +1,10 @@
-#include <stdint.h>
-#include <Windows.h>
+#include "stdafx.h"
 
 #include <d3dx9math.h>
 
-#include <imgui.h>
-#include <SimpleIni.h>
-
 #include <GWCA/Constants/Constants.h>
-// @Cleanup: Fix this Position & StoC includes
-#include <GWCA/GameEntities/Position.h>
-// #include <GWCA/Packets/StoC.h>
+
+#include <GWCA/GameContainers/Vector.h>
 
 #include <GWCA/GameEntities/NPC.h>
 #include <GWCA/GameEntities/Map.h>
@@ -180,7 +175,7 @@ void RangeRenderer::Render(IDirect3DDevice9* device) {
             && !tgt->GetIsDead()
             && GW::GetSquareDistance(tgt->pos, me->pos) < GW::Constants::SqrRange::Spellcast) {
             
-            GW::Vector2f v = me->pos - tgt->pos;
+            GW::Vec2f v = me->pos - tgt->pos;
             float angle = std::atan2(v.y, v.x);
 
             D3DXMATRIX oldworld, rotate, newworld;

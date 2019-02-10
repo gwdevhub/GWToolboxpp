@@ -1,5 +1,4 @@
-#include <stdint.h>
-#include <Windows.h>
+#include "stdafx.h"
 
 #include "Logger.h"
 #include "CursorFix.h"
@@ -7,11 +6,12 @@
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Managers/MemoryMgr.h>
 
-typedef BOOL WINAPI GetClipCursor_t(
+typedef BOOL WINAPI GetClipCursor_pt(
     _Out_ LPRECT lpRect);
 
-GW::THook<GetClipCursor_t*> g_hkGetClipCursor;
-BOOL WINAPI fnGetClipCursor(LPRECT lpRect)
+GetClipCursor_pt *GetClipCursor_Func;
+
+BOOL WINAPI OnGetClipCursor(LPRECT lpRect)
 {
     GW::HookBase::EnterHook();
     BOOL retval = GetWindowRect(GW::MemoryMgr::GetGWWindowHandle(), lpRect);
@@ -21,16 +21,20 @@ BOOL WINAPI fnGetClipCursor(LPRECT lpRect)
 
 void InstallCursorFix()
 {
-    GetClipCursor_t* fn = (GetClipCursor_t*)GetProcAddress(GetModuleHandleA("user32.dll"), "GetClipCursor");
-    if (!fn) {
+    GetClipCursor_Func = (GetClipCursor_pt *)GetProcAddress(GetModuleHandleA("user32.dll"), "GetClipCursor");
+    if (!GetClipCursor_Func) {
         Log::Warning("Cursor Fix not installed, message devs about this!");
         return;
     }
-    g_hkGetClipCursor.Detour(fn, fnGetClipCursor);
+
+    GW::HookBase::CreateHook(GetClipCursor_Func, OnGetClipCursor, NULL);
+    GW::HookBase::EnableHooks(GetClipCursor_Func);
 }
 
 void UninstallCursorFix()
 {
-    if (g_hkGetClipCursor.Valid())
-        GW::HookBase::DisableHooks(&g_hkGetClipCursor);
+    if (GetClipCursor_Func) {
+        GW::HookBase::DisableHooks(GetClipCursor_Func);
+        GW::HookBase::RemoveHook(GetClipCursor_Func);
+    }
 }

@@ -77,7 +77,7 @@ public:
     bool OnMouseDown(float x, float y);
     bool OnMouseMove(float x, float y);
     bool OnMouseUp();
-    void AddMouseClickPing(GW::Vector2f pos);
+    void AddMouseClickPing(GW::Vec2f pos);
 
     void P046Callback(GW::Packet::StoC::AgentPinged *pak);
     void P138Callback(GW::Packet::StoC::CompassEvent *pak);
@@ -131,7 +131,7 @@ private:
 
     // for markers
     Marker marker;
-    GW::Vector2f shadowstep_location;
+    GW::Vec2f shadowstep_location;
     DWORD recall_target = 0;
 
     // for the gpu

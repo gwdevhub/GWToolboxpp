@@ -1,12 +1,4 @@
-#include <time.h>
-#include <stdint.h>
-
-#include <Windows.h>
-
-#include <fstream>
-#include <functional>
-
-#include <imgui.h>
+#include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
 
@@ -20,6 +12,8 @@
 #include <GWCA/Managers/AgentMgr.h>
 
 #include "GuiUtils.h"
+#include "Defines.h"
+#include "ToolboxModule.h"
 #include "ToolboxWidget.h"
 
 #include "Modules/ToolboxSettings.h"
@@ -103,8 +97,8 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
                         GW::Agents::AsyncGetAgentName(target, name);
                         if (name.size()) {
                             char buffer[512];
-                            int current_hp = (int)(target->HP * target->MaxHP);
-                            snprintf(buffer, sizeof(buffer), "%S's Health is %d of %d. (%.0f %%)", name.c_str(), current_hp, target->MaxHP, target->HP * 100.f);
+                            int current_hp = (int)(target->hp * target->max_hp);
+                            snprintf(buffer, sizeof(buffer), "%S's Health is %d of %d. (%.0f %%)", name.c_str(), current_hp, target->max_hp, target->hp * 100.f);
                             GW::Chat::SendChat('#', buffer);
                         }
                     }

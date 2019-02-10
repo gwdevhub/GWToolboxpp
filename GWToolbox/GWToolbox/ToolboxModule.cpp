@@ -1,7 +1,4 @@
-#include <vector>
-
-#include <d3d9.h>
-#include <SimpleIni.h>
+#include "stdafx.h"
 
 #include "Utf8.h"
 #include "GWToolbox.h"

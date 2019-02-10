@@ -1,21 +1,8 @@
-#include <stdint.h>
-#include <Windows.h>
-
-#include <list>
-#include <queue>
-#include <string>
-#include <thread>
-#include <vector>
-#include <functional>
-
-#include <imgui.h>
-#include <imgui_internal.h>
-
-#include <SimpleIni.h>
+#include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
-// @Cleanup: Fix this Position & StoC includes
-#include <GWCA/GameEntities/Position.h>
+
+#include <GWCA/GameContainers/Vector.h>
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/NPC.h>

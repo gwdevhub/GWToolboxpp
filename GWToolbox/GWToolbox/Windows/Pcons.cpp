@@ -1,14 +1,6 @@
-#include <stdint.h>
-#include <Windows.h>
+#include "stdafx.h"
 
-#include <queue>
-#include <thread>
-#include <functional>
-
-#include <d3d9.h>
 #include <d3dx9tex.h>
-#include <imgui.h>
-#include <SimpleIni.h>
 
 #include <GWCA/Constants/Constants.h>
 
@@ -25,6 +17,8 @@
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
+
+#include "Defines.h"
 
 #include "Utf8.h"
 #include "Timer.h"
@@ -279,7 +273,7 @@ bool PconCity::CanUseByEffect() const {
     return true;
 }
 int PconCity::QuantityForEach(const GW::Item* item) const {
-    switch (item->ModelId) {
+    switch (item->model_id) {
     case ItemID::CremeBrulee:
     case ItemID::ChocolateBunny:
     case ItemID::Fruitcake:
@@ -354,7 +348,7 @@ void PconLunar::Update(int delay) {
     Pcon::Update(Pcon::lunar_delay);
 }
 int PconLunar::QuantityForEach(const GW::Item* item) const {
-    switch (item->ModelId) {
+    switch (item->model_id) {
     case ItemID::LunarPig:
     case ItemID::LunarRat:
     case ItemID::LunarOx:

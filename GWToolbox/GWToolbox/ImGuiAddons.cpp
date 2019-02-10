@@ -1,9 +1,6 @@
+#include "stdafx.h"
+
 #include "ImGuiAddons.h"
-
-#include <Windows.h>
-
-#include <imgui.h>
-#include <imgui_internal.h>
 
 void ImGui::ShowHelp(const char* help) {
 	ImGui::SameLine();

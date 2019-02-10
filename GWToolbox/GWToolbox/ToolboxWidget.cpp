@@ -1,8 +1,4 @@
-#include <timer.h>
-#include <fstream>
-
-#include <imgui.h>
-#include <imgui_internal.h>
+#include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
 

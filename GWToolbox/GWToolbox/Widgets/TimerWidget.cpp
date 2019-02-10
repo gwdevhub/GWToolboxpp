@@ -1,9 +1,4 @@
-#include <stdint.h>
-
-#include <Windows.h>
-
-#include <fstream>
-#include <functional>
+#include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
 
@@ -17,6 +12,7 @@
 
 #include "Timer.h"
 #include "Logger.h"
+#include "Defines.h"
 #include "GuiUtils.h"
 #include "ImGuiAddons.h"
 #include "ToolboxWidget.h"

@@ -1,23 +1,12 @@
-#include <stdint.h>
-#include <Windows.h>
+#include "stdafx.h"
+
 #include <Windowsx.h>
 
-#include <deque>
-#include <thread>
-#include <vector>
-#include <fstream>
-#include <functional>
-#include <unordered_map>
-
-#include <d3d9.h>
 #include <d3dx9math.h>
-#include <imgui.h>
-#include <imgui_internal.h>
-#include <SimpleIni.h>
 
 #include <GWCA/Constants/Constants.h>
-// @Cleanup: Fix this Position & StoC includes
-#include <GWCA/GameEntities/Position.h>
+
+#include <GWCA/GameContainers/Vector.h>
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/NPC.h>
@@ -48,6 +37,7 @@
 // @Cleanup: Fix this include (depends on GuiUtils)
 #include "Color.h"
 
+#include "ToolboxModule.h"
 #include "ToolboxWidget.h"
 
 #include "Modules/ToolboxSettings.h"
@@ -277,14 +267,14 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 
     // if not center and want to move, move center towards player
     if ((translation.x != 0 || translation.y != 0)
-        && (me->MoveX != 0 || me->MoveY != 0)
+        && (me->move_x != 0 || me->move_y != 0)
         && TIMER_DIFF(last_moved) > ms_before_back) {
-        GW::Vector2f v(translation.x, translation.y);
+        GW::Vec2f v(translation.x, translation.y);
         float speed = std::min((TIMER_DIFF(last_moved) - ms_before_back) * acceleration, 500.0f);
-        float n = v.Norm();
-        GW::Vector2f d = v.Normalized() * speed;
+        float n = GW::GetNorm(v);
+        GW::Vec2f d = GW::Normalize(v) * speed;
         if (std::abs(d.x) > std::abs(v.x)) {
-            translation = GW::Vector2f(0, 0);
+            translation = GW::Vec2f(0, 0);
         } else {
             translation -= d;
         }
@@ -403,7 +393,7 @@ void Minimap::Draw(IDirect3DDevice9* device) {
         auto GetPlayerParty = [] () -> GW::PartyInfo* {
             GW::GameContext *gamectx = GW::GameContext::instance();
             if (!(gamectx && gamectx->party)) return nullptr;
-            return gamectx->party->playerparty;
+            return gamectx->party->player_party;
         };
 
         auto playerparty = GetPlayerParty();
@@ -423,7 +413,7 @@ void Minimap::Draw(IDirect3DDevice9* device) {
                 static const char* flag_txt[] = {
                     "All", "1", "2", "3", "4", "5", "6", "7", "8"
                 };
-                GW::Vector3f allflag = GW::GameContext::instance()->world->all_flag;
+                GW::Vec3f allflag = GW::GameContext::instance()->world->all_flag;
                 GW::HeroFlagArray& flags = GW::GameContext::instance()->world->hero_flags;
                 unsigned int num_heroflags = player_heroes.size() + 1;
                 float w_but = (ImGui::GetWindowContentRegionWidth() 
@@ -463,11 +453,11 @@ void Minimap::Draw(IDirect3DDevice9* device) {
     }
 }
 
-GW::Vector2f Minimap::InterfaceToWorldPoint(Vec2i pos) const {
+GW::Vec2f Minimap::InterfaceToWorldPoint(Vec2i pos) const {
     GW::Agent* me = GW::Agents::GetPlayer();
-    if (me == nullptr) return GW::Vector2f(0, 0);
+    if (me == nullptr) return GW::Vec2f(0, 0);
     
-    GW::Vector2f v((float)pos.x, (float)pos.y);
+    GW::Vec2f v((float)pos.x, (float)pos.y);
 
     // Invert viewport projection
     v.x = v.x - location.x;
@@ -491,7 +481,7 @@ GW::Vector2f Minimap::InterfaceToWorldPoint(Vec2i pos) const {
     float angle = Instance().GetMapRotation() - (float)M_PI_2;
     float x1 = v.x * std::cos(angle) - v.y * std::sin(angle);
     float y1 = v.x * std::sin(angle) + v.y * std::cos(angle);
-    v = GW::Vector2f(x1, y1);
+    v = GW::Vec2f(x1, y1);
 
     // translate by character position
     v += me->pos;
@@ -499,8 +489,8 @@ GW::Vector2f Minimap::InterfaceToWorldPoint(Vec2i pos) const {
     return v;
 }
 
-GW::Vector2f Minimap::InterfaceToWorldVector(Vec2i pos) const {
-    GW::Vector2f v((float)pos.x, (float)pos.y);
+GW::Vec2f Minimap::InterfaceToWorldVector(Vec2i pos) const {
+    GW::Vec2f v((float)pos.x, (float)pos.y);
 
     // Invert y direction
     v.y = -v.y;
@@ -516,7 +506,7 @@ GW::Vector2f Minimap::InterfaceToWorldVector(Vec2i pos) const {
     return v;
 }
 
-void Minimap::SelectTarget(GW::Vector2f pos) {
+void Minimap::SelectTarget(GW::Vec2f pos) {
     GW::AgentArray agents = GW::Agents::GetAgentArray();
     if (!agents.valid()) return;
 
@@ -562,7 +552,7 @@ bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam) {
     if (!IsInside(x, y)) return false;
 
     mousedown = true;
-    GW::Vector2f worldpos = InterfaceToWorldPoint(Vec2i(x, y));
+    GW::Vec2f worldpos = InterfaceToWorldPoint(Vec2i(x, y));
 
     if (wParam & MK_CONTROL) {
         SelectTarget(worldpos);
@@ -649,7 +639,7 @@ bool Minimap::OnMouseMove(UINT Message, WPARAM wParam, LPARAM lParam) {
         return true;
     }
 
-    GW::Vector2f v = InterfaceToWorldPoint(Vec2i(x, y));
+    GW::Vec2f v = InterfaceToWorldPoint(Vec2i(x, y));
     return pingslines_renderer.OnMouseMove(v.x, v.y);
 }
 
@@ -680,7 +670,7 @@ bool Minimap::IsInside(int x, int y) const {
 
     // if centered, use radar range
     if (translation.x == 0 && translation.y == 0) {
-        GW::Vector2f gamepos = InterfaceToWorldPoint(Vec2i(x, y));
+        GW::Vec2f gamepos = InterfaceToWorldPoint(Vec2i(x, y));
         GW::Agent* me = GW::Agents::GetPlayer();
         float sqrdst = GW::GetSquareDistance(me->pos, gamepos);
         return me && sqrdst < GW::Constants::SqrRange::Compass;

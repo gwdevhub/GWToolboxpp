@@ -1,17 +1,7 @@
-#include <stdint.h>
-#include <Windows.h>
-
-#include <queue>
-#include <memory>
-#include <thread>
-#include <vector>
-#include <functional>
-#include <unordered_map>
-
-#include <imgui.h>
-#include <SimpleIni.h>
+#include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/GameContainers/Vector.h>
 
 #include <GWCA/GameEntities/NPC.h>
 #include <GWCA/GameEntities/Map.h>
@@ -673,7 +663,7 @@ void AgentRenderer::Enqueue(Shape_e shape, const GW::Agent* agent, float size, C
     unsigned int i;
     for (i = 0; i < shapes[shape].vertices.size(); ++i) {
         const Shape_Vertex& vert = shapes[shape].vertices[i];
-        GW::Vector2f pos = vert.Rotated(agent->rotation_cos, agent->rotation_sin) * size + agent->pos;
+        GW::Vec2f pos = GW::Rotate((GW::Vec2f)vert, agent->rotation_cos, agent->rotation_sin) * size + agent->pos;
         Color vcolor = color;
         switch (vert.modifier) {
         case Dark: vcolor = Colors::Sub(color, color_agent_modifier); break;

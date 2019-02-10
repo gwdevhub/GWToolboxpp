@@ -1,9 +1,5 @@
 #pragma once
 
-#include <imgui.h>
-#include <d3d9.h>
-#include <SimpleIni.h>
-
 class ToolboxModule {
 public:
 	ToolboxModule() {}

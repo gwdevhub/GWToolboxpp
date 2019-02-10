@@ -1,18 +1,9 @@
-#include <stdint.h>
+#include "stdafx.h"
 
-#include <Windows.h>
-
-#include <queue>
-#include <string>
-#include <thread>
-#include <vector>
-
-#include <imgui.h>
-#include <SimpleIni.h>
 #include <d3dx9math.h>
 
 #include <GWCA/Constants/Constants.h>
-#include <GWCA/GameEntities/Position.h>
+#include <GWCA/GameContainers/Vector.h>
 
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Hero.h>
@@ -361,7 +352,7 @@ void CustomRenderer::DrawCustomMarkers(IDirect3DDevice9* device) {
                 linecircle.Render(device);
             }
         }
-        GW::Vector3f allflag = GW::GameContext::instance()->world->all_flag;
+        GW::Vec3f allflag = GW::GameContext::instance()->world->all_flag;
         D3DXMATRIX translate, scale, world;
         D3DXMatrixTranslation(&translate, allflag.x, allflag.y, 0.0f);
         D3DXMatrixScaling(&scale, 300.0f, 300.0f, 1.0f);

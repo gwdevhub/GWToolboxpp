@@ -1,19 +1,6 @@
-#include <stdint.h>
-
-#include <Windows.h>
-
-#include <queue>
-#include <string>
-#include <thread>
-#include <fstream>
-#include <sstream>
-#include <functional>
-#include <unordered_map>
+#include "stdafx.h"
 
 #include <d3dx9tex.h>
-#include <imgui.h>
-#include <imgui_internal.h>
-#include <SimpleIni.h>
 
 #include <GWCA/Constants/Constants.h>
 

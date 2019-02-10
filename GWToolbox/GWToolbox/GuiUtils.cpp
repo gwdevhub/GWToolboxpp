@@ -1,15 +1,7 @@
-#include <stdint.h>
-#include <Windows.h>
+#include "stdafx.h"
 
 #include <Shlobj.h>
 #include <Shlwapi.h>
-
-#include <queue>
-#include <thread>
-#include <algorithm>
-#include <functional>
-
-#include <imgui.h>
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Utilities/Scanner.h>

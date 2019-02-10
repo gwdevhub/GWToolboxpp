@@ -1,18 +1,10 @@
-#include <time.h>
-#include <stdint.h>
-#include <Windows.h>
-
-#include <deque>
-#include <vector>
-#include <unordered_map>
+#include "stdafx.h"
 
 #include <d3dx9math.h>
-#include <imgui.h>
-#include <SimpleIni.h>
 
 #include <GWCA/Constants/Constants.h>
-// @Cleanup: Fix this Position & StoC includes
-#include <GWCA/GameEntities/Position.h>
+
+#include <GWCA/GameContainers/Vector.h>
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/NPC.h>
@@ -147,12 +139,12 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device) {
 	GW::QuestLog qlog = GW::GameContext::instance()->world->quest_log;
 	DWORD qid = GW::GameContext::instance()->world->active_quest_id;
 	if (qlog.valid() && qid > 0) {
-		GW::Vector2f qpos(0, 0);
+		GW::Vec2f qpos(0, 0);
 		bool qfound = false;
 		for (unsigned int i = 0; i < qlog.size(); ++i) {
 			GW::Quest q = qlog[i];
 			if (q.quest_id == qid) {
-				qpos = GW::Vector2f(q.marker.x, q.marker.y);
+				qpos = GW::Vec2f(q.marker.x, q.marker.y);
 				qfound = true;
 				break;
 			}
@@ -168,12 +160,12 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device) {
 			device->SetTransform(D3DTS_WORLD, &world);
 			device->DrawPrimitive(type, star_offset, star_ntriangles);
 
-			GW::Vector2f mypos = me->pos;
-			GW::Vector2f v = qpos - mypos;
+			GW::Vec2f mypos = me->pos;
+			GW::Vec2f v = qpos - mypos;
 			const float max_quest_range = (GW::Constants::Range::Compass - 250.0f) / compass_scale;
 			const float max_quest_range_sqr = max_quest_range * max_quest_range;
-			if (v.SquaredNorm() > max_quest_range_sqr) {
-				v = v.Normalized() * max_quest_range;
+			if (GW::GetSquaredNorm(v)> max_quest_range_sqr) {
+				v = GW::Normalize(v) * max_quest_range;
 				
 				float angle = std::atan2(v.y, v.x);
 				D3DXMatrixRotationZ(&rotate, angle - (float)M_PI_2);

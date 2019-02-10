@@ -1,14 +1,4 @@
-#include <stdint.h>
-#include <Windows.h>
-
-#include <queue>
-#include <string>
-#include <thread>
-#include <sstream>
-#include <iostream>
-#include <functional>
-
-#include <SimpleIni.h>
+#include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
 

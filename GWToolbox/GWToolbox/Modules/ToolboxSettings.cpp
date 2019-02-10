@@ -1,24 +1,10 @@
-#include <stdint.h>
-#include <Windows.h>
-
-#include <queue>
-#include <thread>
-#include <vector>
-#include <fstream>
-#include <functional>
-#include <unordered_map>
-
-#include <d3d9.h>
-#include <imgui.h>
-#include <json.hpp>
-#include <SimpleIni.h>
+#include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
 
-#include <GWCA/GameEntities/Position.h>
-#include <GWCA/Packets/StoC.h>
-
 #include <GWCA/GameContainers/Array.h>
+#include <GWCA/GameContainers/Vector.h>
+#include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/NPC.h>
 #include <GWCA/GameEntities/Map.h>
