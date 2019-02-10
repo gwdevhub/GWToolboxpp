@@ -136,7 +136,18 @@ DWORD __stdcall ThreadEntry(LPVOID) {
     Sleep(100);
     Log::Log("Removing Cursor Fix\n");
     UninstallCursorFix();
-    Sleep(100);
+
+    // @Enhancement:
+    // This shouldn't be there, but we wait until the game print "Bye !"
+    // Nore necessary, though.
+    Sleep(50);
+
+    Log::Log("Destroying API\n");
+    GW::Terminate();
+
+    while (GW::HookBase::GetInHookCount())
+        Sleep(100);
+
     Log::Log("Closing log/console, bye!\n");
     Log::Terminate();
     Sleep(100);
@@ -476,9 +487,6 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         });
 
         GWToolbox::Instance().Initialize();
-
-        // Maybe temporary...
-        GW::HookBase::EnableHooks();
 
         last_tick_count = GetTickCount();
         tb_initialized = true;

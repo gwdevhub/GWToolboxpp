@@ -13,7 +13,10 @@ typedef BOOL WINAPI GetClipCursor_t(
 GW::THook<GetClipCursor_t*> g_hkGetClipCursor;
 BOOL WINAPI fnGetClipCursor(LPRECT lpRect)
 {
-    return GetWindowRect(GW::MemoryMgr::GetGWWindowHandle(), lpRect);
+    GW::HookBase::EnterHook();
+    BOOL retval = GetWindowRect(GW::MemoryMgr::GetGWWindowHandle(), lpRect);
+    GW::HookBase::LeaveHook();
+    return retval;
 }
 
 void InstallCursorFix()
