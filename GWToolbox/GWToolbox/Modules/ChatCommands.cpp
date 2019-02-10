@@ -27,6 +27,7 @@
 #include <Keys.h>
 #include <logger.h>
 #include <Modules\GameSettings.h>
+#include <Modules\GWToolboxMap.h>
 #include <Windows\MainWindow.h>
 #include <Windows\SettingsWindow.h>
 #include <Windows\TravelWindow.h>
@@ -480,9 +481,9 @@ void ChatCommands::CmdTP(const wchar_t *message, int argc, LPWSTR *argv) {
 	} else if (town == L"gadd" || town == L"gadds") {
 		GW::Map::Travel(GW::Constants::MapID::Gadds_Encampment_outpost, district, district_number);
 	} else if (town == L"urgoz") {
-		GW::Map::Travel(GW::Constants::MapID::Urgozs_Warren, district, district_number);
+		GWToolboxMap::Travel(GW::Constants::MapID::Urgozs_Warren, district, district_number);
 	} else if (town == L"deep") {
-		GW::Map::Travel(GW::Constants::MapID::The_Deep, district, district_number);
+		GWToolboxMap::Travel(GW::Constants::MapID::The_Deep, district, district_number);
 	} else if (town == L"gtob") {
 		GW::Map::Travel(GW::Constants::MapID::Great_Temple_of_Balthazar_outpost, district, district_number);
 	} else if (town == L"la") {
