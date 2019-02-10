@@ -8,6 +8,7 @@
 #include "GWToolbox.h"
 #include "GuiUtils.h"
 #include <Modules\Resources.h>
+#include <Modules\GWToolboxMap.h>
 
 #define N_OUTPOSTS 180
 #define N_DISTRICTS 14
@@ -30,7 +31,7 @@ void TravelWindow::TravelButton(const char* text, int x_idx, GW::Constants::MapI
 	if (x_idx != 0) ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 	float w = (ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().ItemInnerSpacing.x) / 2;
 	if (ImGui::Button(text, ImVec2(w, 0))) {
-		GW::Map::Travel(mapid, district, district_number);
+		GWToolboxMap::Travel(mapid, district, district_number);
 		if (close_on_travel) visible = false;
 	}
 }
@@ -57,7 +58,7 @@ void TravelWindow::Draw(IDirect3DDevice9* pDevice) {
 			static int travelto_index = -1;
 			if (ImGui::MyCombo("travelto", "Travel To...", &travelto_index, outpost_name_array_getter, nullptr, N_OUTPOSTS)) {
 				GW::Constants::MapID id = IndexToOutpostID(travelto_index);
-				GW::Map::Travel(id, district, district_number);
+				GWToolboxMap::Travel(id, district, district_number);
 				travelto_index = -1;
 				if (close_on_travel) visible = false;
 			}
@@ -130,7 +131,7 @@ void TravelWindow::Draw(IDirect3DDevice9* pDevice) {
 
 bool TravelWindow::TravelFavorite(unsigned int idx) {
 	if (idx >= 0 && idx < fav_index.size()) {
-		GW::Map::Travel(IndexToOutpostID(fav_index[idx]), district, district_number);
+		GWToolboxMap::Travel(IndexToOutpostID(fav_index[idx]), district, district_number);
 		if (close_on_travel) visible = false;
 		return true;
 	} else {
