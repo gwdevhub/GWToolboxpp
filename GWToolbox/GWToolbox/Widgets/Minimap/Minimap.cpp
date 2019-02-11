@@ -73,7 +73,8 @@ void Minimap::Initialize() {
 			return; // Not explorable - "/flag" can be typed in chat to bypass flag hero buttons, so this is needed.
 		}
 		if (argc <= 1) {
-			return FlagHero(0); // "/flag"
+			FlagHero(0); // "/flag"
+			return;
 		}
 		std::wstring arg1 = GuiUtils::ToLower(argv[1]);
 		float x;
@@ -82,12 +83,15 @@ void Minimap::Initialize() {
 		unsigned int f_hero = 0;  // Hero number to flag
 		if (arg1 == L"all") {
 			if (argc <= 2) {
-				return FlagHero(0); // "/flag all" == "/flag"
+				FlagHero(0); // "/flag all" == "/flag"
+				return;
 			}
 			if (argc < 4 || !GuiUtils::ParseFloat(argv[2], &x) || !GuiUtils::ParseFloat(argv[3], &y)) {
-				return Log::Error("Please provide command in format /flag all [x] [y]"); // Not enough args or coords not valid float vals.
+				Log::Error("Please provide command in format /flag all [x] [y]"); // Not enough args or coords not valid float vals.
+				return;
 			}
-			return GW::PartyMgr::FlagAll(GW::GamePos(GW::Vector2f(x,y))); // "/flag all -2913.41 3004.78"
+			GW::PartyMgr::FlagAll(GW::GamePos(x,y)); // "/flag all -2913.41 3004.78"
+			return;
 		}
 		auto heroarray = GW::GameContext::instance()->party->playerparty->heroes;
 		if (heroarray.valid()) n_heros = heroarray.size();
@@ -98,24 +102,29 @@ void Minimap::Initialize() {
 			for (unsigned int i = 1; i <= n_heros; ++i) {
 				GW::PartyMgr::UnflagHero(i);
 			}
-			return GW::PartyMgr::UnflagAll(); // "/flag clear"
+			GW::PartyMgr::UnflagAll(); // "/flag clear"
+			return;
 		}
 		if (!GuiUtils::ParseUInt(argv[1], &f_hero) || f_hero < 1 || f_hero > n_heros) {
+			Log::Error("Invalid hero number");
 			return; // Invalid hero number
 		}
 		if (argc < 3) {
-			return FlagHero(f_hero); // "/flag 5"
+			FlagHero(f_hero); // "/flag 5"
+			return;
 		}
 		std::wstring arg2 = GuiUtils::ToLower(argv[2]);
 		if (arg2 == L"clear") {
-			return GW::PartyMgr::UnflagHero(f_hero); // "/flag 5 clear"
+			GW::PartyMgr::UnflagHero(f_hero); // "/flag 5 clear"
+			return;
 		}
 		if (argc < 4
 			|| !GuiUtils::ParseFloat(argv[2], &x)
 			|| !GuiUtils::ParseFloat(argv[3], &y)) {
-			return Log::Error("Please provide command in format /flag %d [x] [y]", f_hero); // Invalid coords
+			Log::Error("Please provide command in format /flag [hero number] [x] [y]"); // Invalid coords
+			return;
 		}
-		return GW::PartyMgr::FlagHeroAgent(GW::Agents::GetHeroAgentID(f_hero), GW::GamePos(GW::Vector2f(x, y))); // "/flag 5 -2913.41 3004.78"
+		GW::PartyMgr::FlagHeroAgent(GW::Agents::GetHeroAgentID(f_hero), GW::GamePos(x, y)); // "/flag 5 -2913.41 3004.78"
 	});
 }
 
