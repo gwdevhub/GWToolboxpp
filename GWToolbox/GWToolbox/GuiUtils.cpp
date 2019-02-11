@@ -94,6 +94,16 @@ bool GuiUtils::ParseInt(const wchar_t *str, int *val, int base) {
 	else
 		return true;
 }
+bool GuiUtils::ParseFloat(const char *str, float *val) {
+	char *end;
+	*val = strtof(str, &end);
+	return str != end && errno != ERANGE;
+}
+bool GuiUtils::ParseFloat(const wchar_t *str, float *val) {
+	wchar_t *end;
+	*val = wcstof(str, &end);
+	return str != end && errno != ERANGE;
+}
 bool GuiUtils::ParseUInt(const char *str, unsigned int *val, int base) {
 	char *end;
 	*val = strtoul(str, &end, base);

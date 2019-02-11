@@ -62,6 +62,8 @@ void ChatCommands::DrawHelp() {
 		"'/damage reset' resets the damage in party window.");
 	ImGui::Bullet(); ImGui::Text("'/dialog <id>' sends a dialog.");
 	ImGui::Bullet(); ImGui::Text("'/flag [all|clear|<number>]' to flag a hero in the minimap (same as using the buttons by the minimap).");
+	ImGui::Bullet(); ImGui::Text("'/flag [all|<number>] [x] [y]' to flag a hero to coordinates [x],[y].");
+	ImGui::Bullet(); ImGui::Text("'/flag <number> clear' to clear flag for a hero.");
 	ImGui::Bullet(); ImGui::Text("'/hide <name>' closes the window or widget titled <name>.");
 	ImGui::Bullet(); ImGui::Text("'/load [build template|build name] [Hero index]' loads a build. The build name must be between quotes if it contains spaces. First Hero index is 1, last is 7. Leave out for player");
 	ImGui::Bullet(); ImGui::Text("'/pcons [on|off]' toggles, enables or disables pcons.");

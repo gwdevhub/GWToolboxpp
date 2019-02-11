@@ -68,40 +68,54 @@ void Minimap::Initialize() {
 
 	pmap_renderer.Invalidate();
 
-	GW::Chat::CreateCommand(L"flag",
-		[this](const wchar_t *message, int argc, LPWSTR *argv) {
-		if (argc <= 1) {
-			FlagHero(0);
-		} else {
-			std::wstring arg0 = GuiUtils::ToLower(argv[1]);
-			// partially laziness, and partially safety
-			if (arg0 == L"clear") {
-				auto heroarray = GW::GameContext::instance()->party->playerparty->heroes;
-				unsigned int num_heroflags = 9;
-				if (heroarray.valid()) num_heroflags = heroarray.size() + 1;
-				GW::PartyMgr::UnflagAll();
-				for (unsigned int i = 1; i < num_heroflags; ++i) {
-					GW::PartyMgr::UnflagHero(i);
-				}
-			} else if (arg0 == L"all") {
-				FlagHero(0);
-			} else if (arg0 == L"1") {
-				FlagHero(1);
-			} else if (arg0 == L"2") {
-				FlagHero(2);
-			} else if (arg0 == L"3") {
-				FlagHero(3);
-			} else if (arg0 == L"4") {
-				FlagHero(4);
-			} else if (arg0 == L"5") {
-				FlagHero(5);
-			} else if (arg0 == L"6") {
-				FlagHero(6);
-			} else if (arg0 == L"7") {
-				FlagHero(7);
-			}
+	GW::Chat::CreateCommand(L"flag", [this](const wchar_t *message, int argc, LPWSTR *argv) {
+		if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
+			return; // Not explorable - "/flag" can be typed in chat to bypass flag hero buttons, so this is needed.
 		}
-		return true;
+		if (argc <= 1) {
+			return FlagHero(0); // "/flag"
+		}
+		std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+		float x;
+		float y;
+		unsigned int n_heros = 0; // Count of heros available
+		unsigned int f_hero = 0;  // Hero number to flag
+		if (arg1 == L"all") {
+			if (argc <= 2) {
+				return FlagHero(0); // "/flag all" == "/flag"
+			}
+			if (argc < 4 || !GuiUtils::ParseFloat(argv[2], &x) || !GuiUtils::ParseFloat(argv[3], &y)) {
+				return Log::Error("Please provide command in format /flag all [x] [y]"); // Not enough args or coords not valid float vals.
+			}
+			return GW::PartyMgr::FlagAll(GW::GamePos(GW::Vector2f(x,y))); // "/flag all -2913.41 3004.78"
+		}
+		auto heroarray = GW::GameContext::instance()->party->playerparty->heroes;
+		if (heroarray.valid()) n_heros = heroarray.size();
+		if (n_heros < 1) {
+			return; // Player has no heroes, so no need to continue.
+		}
+		if (arg1 == L"clear") {
+			for (unsigned int i = 1; i <= n_heros; ++i) {
+				GW::PartyMgr::UnflagHero(i);
+			}
+			return GW::PartyMgr::UnflagAll(); // "/flag clear"
+		}
+		if (!GuiUtils::ParseUInt(argv[1], &f_hero) || f_hero < 1 || f_hero > n_heros) {
+			return; // Invalid hero number
+		}
+		if (argc < 3) {
+			return FlagHero(f_hero); // "/flag 5"
+		}
+		std::wstring arg2 = GuiUtils::ToLower(argv[2]);
+		if (arg2 == L"clear") {
+			return GW::PartyMgr::UnflagHero(f_hero); // "/flag 5 clear"
+		}
+		if (argc < 4
+			|| !GuiUtils::ParseFloat(argv[2], &x)
+			|| !GuiUtils::ParseFloat(argv[3], &y)) {
+			return Log::Error("Please provide command in format /flag %d [x] [y]", f_hero); // Invalid coords
+		}
+		return GW::PartyMgr::FlagHeroAgent(GW::Agents::GetHeroAgentID(f_hero), GW::GamePos(GW::Vector2f(x, y))); // "/flag 5 -2913.41 3004.78"
 	});
 }
 
