@@ -46,8 +46,7 @@ Pcon::Pcon(const char* chatname,
 	uv0(uv0_), uv1(uv1_), texture(nullptr),
 	enabled(false), quantity(0), timer(TIMER_INIT()) {
 
-	Resources::Instance().LoadTextureAsync(&texture, 
-		Resources::GetPath(L"img/pcons", filename), res_id);
+	Resources::Instance().LoadTextureAsync(&texture,Resources::GetPath(L"img/pcons", filename), res_id);
 }
 void Pcon::Draw(IDirect3DDevice9* device) {
 	if (texture == nullptr) return;
@@ -59,7 +58,6 @@ void Pcon::Draw(IDirect3DDevice9* device) {
 	if (ImGui::ImageButton((ImTextureID)texture, s, uv0, uv1, -1, bg, tint)) {
 		enabled = !enabled;
 		pcon_quantity_checked = false;
-		ScanInventory();
 	}
 	ImGui::PopStyleColor();
 
@@ -74,41 +72,51 @@ void Pcon::Draw(IDirect3DDevice9* device) {
 	ImGui::SetCursorPos(ImVec2(pos.x + 2, pos.y + 2));
 	ImGui::TextColored(color, "%d", quantity);
 	ImGui::PopFont();
-
 	ImGui::SetCursorPos(pos);
 	ImGui::Dummy(ImVec2(size, size));
 }
 void Pcon::Update(int delay) {
-	if (!enabled) return; // not enabled, do nothing
-	if (delay < 0) delay = Pcon::pcons_delay;
-
-	GW::Agent* player = GW::Agents::GetPlayer();
-
-	 // === Use item if possible ===
-	if (player != nullptr
-		&& !player->GetIsDead()
-		&& (player_id == 0 || player->Id == player_id)
-		&& TIMER_DIFF(timer) > delay
-		&& CanUseByInstanceType()
-		&& CanUseByEffect()) {
-
-		bool used = false;
-		int qty = CheckInventory(&used);
-
-		AfterUsed(used, qty);
-	}
-
-	// === Warn the user if zoning into outpost with quantity = 0 or low ===
-	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost
-		&& (mapid != GW::Map::GetMapID() || maptype != GW::Map::GetInstanceType())) {
+	if (mapid != GW::Map::GetMapID() || maptype != GW::Map::GetInstanceType()) { // Map changed; reset vars
 		mapid = GW::Map::GetMapID();
 		maptype = GW::Map::GetInstanceType();
 		pcon_quantity_checked = false;
-		std::vector<std::vector<clock_t>>(22, std::vector<clock_t>(25)).swap(reserved_bag_slots); // Clear reserved slots.
-	}	
+		player = nullptr;
+	}
+	if (enabled && PconsWindow::Instance().GetEnabled()) {
+		if (delay < 0) delay = Pcon::pcons_delay;
+		if(!player || player == nullptr) player = GW::Agents::GetPlayer();
+		// === Use item if possible ===
+		if (player != nullptr
+			&& !player->GetIsDead()
+			&& (player_id == 0 || player->Id == player_id)
+			&& TIMER_DIFF(timer) > delay
+			&& CanUseByInstanceType()
+			&& CanUseByEffect()) {
+
+			bool used = false;
+			int qty = CheckInventory(&used);
+
+			AfterUsed(used, qty);
+		}
+	}
+
+	
+	if (!pcon_quantity_checked) {
+		int qty = CheckInventory();
+		if (qty < 0) return; // Inventory pointers not ready
+		quantity = qty;
+		quantity += Refill();
+		if (enabled && PconsWindow::Instance().GetEnabled() && maptype == GW::Constants::InstanceType::Outpost) {
+			// Only warn user of low pcon count if is enabled and we're in an outpost.
+			if (quantity == 0) {
+				Log::Error("No more %s items found", chat);
+			} else if (quantity < threshold) {
+				Log::Warning("Low on %s", chat);
+			}
+		}
+		pcon_quantity_checked = true;
+	}
 }
-
-
 bool Pcon::ReserveSlotForMove(int bagIndex, int slot) { // Should NOT be used directly, supposed to be used with a mutex.
 	if (IsSlotReservedForMove(bagIndex, slot)) return false;
 	reserved_bag_slots.at(bagIndex).at(slot) = TIMER_INIT();
@@ -139,25 +147,6 @@ void Pcon::AfterUsed(bool used, int qty) {
 				maptype = GW::Map::GetInstanceType();
 				Log::Error("Cannot find %s", chat);
 			}
-		}
-	}
-}
-void Pcon::ScanInventory() {
-	int qty = CheckInventory();
-	if (qty >= 0) quantity = qty;
-	if (!enabled || !PconsWindow::Instance().GetEnabled()) {
-		pcon_quantity_checked = false; // Not enabled; enforce a re-check when it is enabled again.
-	}
-	if (enabled && PconsWindow::Instance().GetEnabled() && !pcon_quantity_checked && maptype == GW::Constants::InstanceType::Outpost) {
-		pcon_quantity_checked = true;
-		if (quantity < threshold && refill_if_below_threshold) {
-			quantity += Refill();
-		}
-		if (quantity == 0) {
-			Log::Error("No more %s items found", chat);
-		}
-		else if (quantity < threshold) {
-			Log::Warning("Low on %s", chat);
 		}
 	}
 }
@@ -217,7 +206,12 @@ int Pcon::MoveItem(GW::Item *item, GW::Bag *bag, int slot, int quantity = 0) {
 	return quantity;
 }
 int Pcon::Refill() {
-	// Log::Info("Refilling %s", chat);
+	if (!enabled || !PconsWindow::Instance().GetEnabled() || maptype != GW::Constants::InstanceType::Outpost) {
+		return 0; // This Pcon disabled, all pcons disables, or not in outpost.
+	}
+	if(!refill_if_below_threshold || quantity >= threshold) {
+		return 0; // Not allowed to auto refill, or above the threshold already.
+	}
 	int amount_needed = threshold - quantity;
 	int amount_moved = 0;
 	if (amount_needed < 1) return amount_moved;
@@ -236,13 +230,12 @@ int Pcon::Refill() {
 			int qtyea = QuantityForEach(storageItem);
 			if (qtyea < 1) continue; // This is not the pcon you're looking for...
 			// Found some pcons in storage to pull from - now find a slot in inventory to move them to.
-			qtyea = storageItem->Quantity; // Reuse variable.
 			GW::Item* inventoryItem = FindVacantStackOrSlotInInventory();
 			if (inventoryItem == nullptr) return amount_moved; // No space for more pcons in inventory.
-			int amount_to_move = storageItem->Quantity;
+			int amount_to_move = ceil(storageItem->Quantity / qtyea);
 			if (amount_to_move > amount_needed)		amount_to_move = amount_needed;
-			amount_moved += MoveItem(storageItem, inventoryItem->Bag, inventoryItem->Slot,amount_to_move);
-			amount_needed -= amount_moved;
+			amount_moved += MoveItem(storageItem, inventoryItem->Bag, inventoryItem->Slot,amount_to_move) * qtyea;
+			amount_needed -= amount_moved; // amount_moved = item quantity moved x number of uses per item
 		}
 	}
 	return amount_moved;
@@ -323,7 +316,6 @@ bool PconGeneric::CanUseByEffect() const {
 // ================================================
 bool PconCons::CanUseByEffect() const {
 	if (!PconGeneric::CanUseByEffect()) return false;
-
 	if (!GW::PartyMgr::GetIsPartyLoaded()) return false;
 
 	GW::MapAgentArray mapAgents = GW::Agents::GetMapAgentArray();

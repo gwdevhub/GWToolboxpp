@@ -7,6 +7,7 @@
 #include <imgui.h>
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\GameEntities\Item.h>
+#include <GWCA\Managers\AgentMgr.h>
 #include "Timer.h"
 #include <Color.h>
 #include <GWCA/CtoSHeaders.h>
@@ -43,7 +44,6 @@ protected:
 public:
 	void Draw(IDirect3DDevice9* device);
 	virtual void Update(int delay = -1);
-	void ScanInventory();
 	int MoveItem(GW::Item *item, GW::Bag *bag, int slot, int quantity); // Extension of the GWCA function.
 	int Refill(); // True if the amount of pcons has been refilled, false if not enough.
 	
@@ -67,6 +67,10 @@ public:
 
 protected:
 	GW::Item* FindVacantStackOrSlotInInventory();
+	GW::Agent* player = nullptr;
+
+	GW::Constants::MapID mapid = GW::Constants::MapID::None;
+	GW::Constants::InstanceType maptype = GW::Constants::InstanceType::Loading;
 	// loops over the inventory, counting the items according to QuantityForEach
 	// if 'used' is not null, it will also use the first item found,
 	// and, if so, used *used to true
@@ -81,9 +85,7 @@ private:
 	IDirect3DTexture9* texture = nullptr;
 	const ImVec2 uv0;
 	const ImVec2 uv1;
-
-	GW::Constants::MapID mapid = GW::Constants::MapID::None;
-	GW::Constants::InstanceType maptype = GW::Constants::InstanceType::Loading;
+	
 };
 
 // A generic Pcon has an item_id and effect_id

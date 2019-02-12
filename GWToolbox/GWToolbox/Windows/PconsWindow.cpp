@@ -96,10 +96,6 @@ void PconsWindow::Initialize() {
 		ImVec2(0 / s, 5 / s), ImVec2(49 / s, 54 / s),
 		ItemID::PahnaiSalad, SkillID::Pahnai_Salad_item_effect, 10));
 
-	for (Pcon* pcon : pcons) {
-		pcon->ScanInventory();
-	}
-
 	GW::StoC::AddCallback<GW::Packet::StoC::AgentSetPlayer>(
 		[](GW::Packet::StoC::AgentSetPlayer *pak) -> bool {
 		Pcon::player_id = pak->unk1;
@@ -203,22 +199,9 @@ void PconsWindow::Initialize() {
 		//printf("m[0] == 0x%X && m[1] == 0x%X && m[2] == 0x%X && m[3] == 0x%X\n", m[0], m[1], m[2], m[3]);
 		return false;
 	});
-	kanaxai_location = GW::Vector2f(30428.0f,-5842.0f);
-	urgoz_location = GW::Vector2f(-2800.0f, 14316.0f);
 	GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveDone>([this](GW::Packet::StoC::ObjectiveDone* packet) -> bool {
 		objectives_complete.push_back(packet->objective_id);
-		//Log::Info("Objective has been completed: %d", packet->objective_id);
 		CheckObjectivesCompleteAutoDisable();
-		return false;
-	});
-	GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveAdd>([this](GW::Packet::StoC::ObjectiveAdd* packet) -> bool {
-		//Log::Info("Objective has been added: %d", packet->objective_id);
-		CheckObjectivesCompleteAutoDisable();
-		return false;
-	});
-	MapChanged();
-	GW::StoC::AddCallback<GW::Packet::StoC::MapLoaded>([this](GW::Packet::StoC::MapLoaded* packet) -> bool {
-		MapChanged();
 		return false;
 	});
 
@@ -257,7 +240,7 @@ void PconsWindow::Draw(IDirect3DDevice9* device) {
 	if (!visible) return;
 
 	bool alcohol_enabled_before = pcon_alcohol->enabled;
-	
+
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
 		if (show_enable_button) {
@@ -278,27 +261,19 @@ void PconsWindow::Draw(IDirect3DDevice9* device) {
 			}
 		}
 	}
-
-	switch (map_id) {
-		case GW::Constants::MapID::The_Deep:
-			ImGui::Checkbox("Disable in final room", &deep_disable_in_range_of_boss);
-			ImGui::ShowHelp(deep_disable_hint);
-			break;
-		case GW::Constants::MapID::Urgozs_Warren:
-			ImGui::Checkbox("Disable in final room", &urgoz_disable_in_range_of_boss);
-			ImGui::ShowHelp(urgoz_disable_hint);
-			break;
-		case GW::Constants::MapID::The_Fissure_of_Woe:
-			ImGui::Checkbox("Disable on Completion", &fow_disable_when_all_objs_complete);
-			ImGui::ShowHelp(fow_disable_hint);
-			break;
-		case GW::Constants::MapID::The_Underworld:
-			ImGui::Checkbox("Disable on Completion", &uw_disable_when_all_objs_complete);
-			ImGui::ShowHelp(uw_disable_hint);
-			break;
+	if (current_map_type == GW::Constants::InstanceType::Explorable) {
+		if (!current_objectives_to_check.empty()) {
+			ImGui::Checkbox("Disable on Completion", &disable_cons_on_objective_completion);
+			ImGui::ShowHelp(disable_cons_on_objective_completion_hint);
+		}
+		if (!(current_final_room_location == NULL)) {
+			ImGui::Checkbox("Disable in final room", &disable_cons_in_final_room);
+			ImGui::ShowHelp(disable_cons_in_final_room_hint);
+		}
 	}
 	if (current_map_type == GW::Constants::InstanceType::Outpost && show_auto_refill_pcons_tickbox) {
-		ImGui::Checkbox("Auto Refill Pcons", &Pcon::refill_if_below_threshold);
+		ImGui::Checkbox("Auto Refill", &Pcon::refill_if_below_threshold);
+		ImGui::ShowHelp("When Pcons are enabled in an outpost, will refill from storage up to the threshold");
 	}
 
 	ImGui::End();
@@ -308,29 +283,39 @@ void PconsWindow::Draw(IDirect3DDevice9* device) {
 	}
 }
 void PconsWindow::Update(float delta) {
-	if (current_map_type != GW::Map::GetInstanceType()) {
-		current_map_type = GW::Map::GetInstanceType();
-		scan_inventory_timer = TIMER_INIT();
+	if (current_map_type != GW::Map::GetInstanceType() || map_id != GW::Map::GetMapID()) { 
+		MapChanged(); // Map changed.
 	}
 	if (!player && current_map_type == GW::Constants::InstanceType::Explorable) {
-		player = GW::Agents::GetPlayer();
+		player = GW::Agents::GetPlayer(); // Won't be immediately able to get player ptr on map load, so put here.
 	}
-
-	if (scan_inventory_timer > 0 && TIMER_DIFF(scan_inventory_timer) > 2000) {
-		scan_inventory_timer = 0;
-
-		for (Pcon* pcon : pcons) {
-			pcon->ScanInventory();
-		}
-	}
-
-	if (!enabled) return;
 	CheckBossRangeAutoDisable();
 	for (Pcon* pcon : pcons) {
 		pcon->Update();
 	}
 }
-
+void PconsWindow::MapChanged() {
+	elite_area_check_timer = TIMER_INIT();
+	map_id = GW::Map::GetMapID();
+	current_map_type = GW::Map::GetInstanceType();
+	player = nullptr;
+	elite_area_disable_triggered = false;
+	// Find out which objectives we need to complete for this map.
+	std::map<GW::Constants::MapID, std::vector<DWORD>>::iterator it = objectives_to_complete_by_map_id.find(map_id);
+	if (it != objectives_to_complete_by_map_id.end()) {
+		objectives_complete.clear();
+		current_objectives_to_check = it->second;
+	} else {
+		current_objectives_to_check.clear();
+	}
+	// Find out if we need to check for boss range for this map.
+	std::map<GW::Constants::MapID, GW::Vector2f>::iterator it2 = final_room_location_by_map_id.find(map_id);
+	if (it2 != final_room_location_by_map_id.end()) {
+		current_final_room_location = it2->second;
+	} else {
+		current_final_room_location = NULL;
+	}
+}
 bool PconsWindow::GetEnabled() {
 	return enabled;
 }
@@ -339,14 +324,12 @@ bool PconsWindow::SetEnabled(bool b) {
 	enabled = b;
 	for (Pcon* pcon : pcons) {
 		pcon->pcon_quantity_checked = false;
-		pcon->ScanInventory();
 	}
 	if (current_map_type != GW::Constants::InstanceType::Loading) {
 		ImGuiWindow* main = ImGui::FindWindowByName(MainWindow::Instance().Name());
 		ImGuiWindow* pcon = ImGui::FindWindowByName(Name());
 		if ((pcon == nullptr || pcon->Collapsed || !visible)
 			&& (main == nullptr || main->Collapsed || !MainWindow::Instance().visible)) {
-
 			Log::Info("Pcons %s", enabled ? "enabled" : "disabled");
 		}
 	}
@@ -357,69 +340,42 @@ bool PconsWindow::SetEnabled(bool b) {
 	return enabled;
 }
 
-void PconsWindow::MapChanged() {
-	elite_area_check_timer = TIMER_INIT();
-	map_id = GW::Map::GetMapID();
-	instance_type = GW::Map::GetInstanceType();
-	player = nullptr;
-	elite_area_disable_triggered = false;
-	objectives_complete.empty();
-	//Log::Info("Map changed to %d",map_id);
-}
-
 void PconsWindow::CheckObjectivesCompleteAutoDisable() {
-	if (!enabled || elite_area_disable_triggered || current_map_type != GW::Constants::InstanceType::Explorable) return;		// Pcons disabled or no need to check any elite area.
-	std::vector<DWORD> *objs_to_check = nullptr;
-	char* disabled_message = "Pcons disabled";
-	switch (map_id) {
-	case GW::Constants::MapID::The_Fissure_of_Woe:
-		objs_to_check = &fow_objectives;
-		disabled_message = fow_disable_hint;
-		break;
-	case GW::Constants::MapID::The_Underworld:
-		objs_to_check = &uw_objectives;
-		disabled_message = uw_disable_hint;
-		break;
+	if (!enabled || elite_area_disable_triggered || current_map_type != GW::Constants::InstanceType::Explorable) {
+		return;		// Pcons disabled, auto disable already triggered, or not in explorable area.
 	}
-	if (objs_to_check == nullptr || objs_to_check->empty() || objectives_complete.empty()) return;
-	bool all_objectives_complete = false;
-	for (size_t i = 0; i < objs_to_check->size();i++) {
-		all_objectives_complete = false;
-		for (size_t j = 0; j < objectives_complete.size() && !all_objectives_complete; j++){
-			all_objectives_complete = objs_to_check->at(i) == objectives_complete.at(j);
+	if (objectives_complete.empty() || current_objectives_to_check.empty()) {
+		return; // No objectives complete, or no objectives to check for this map.
+	}
+	bool objective_complete = false;
+	for (size_t i = 0; i < current_objectives_to_check.size();i++) {
+		objective_complete = false;
+		for (size_t j = 0; j < objectives_complete.size() && !objective_complete; j++){
+			objective_complete = current_objectives_to_check.at(i) == objectives_complete.at(j);
 		}
-		if (!all_objectives_complete)	return; // Not all objectives complete.
+		if (!objective_complete)	return; // Not all objectives complete.
 	}
-	if (all_objectives_complete) {
+	if (objective_complete) {
 		elite_area_disable_triggered = true;
 		SetEnabled(false);
-		Log::Info(disabled_message);
+		Log::Info("Cons auto-disabled on completion");
 	}
 }
 
 void PconsWindow::CheckBossRangeAutoDisable() {	// Trigger Elite area auto disable if applicable
-	if (!enabled || elite_area_disable_triggered || !player || TIMER_DIFF(elite_area_check_timer) < 1000 || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return;		// Pcons disabled or no need to check any elite area.
+	if (!enabled || elite_area_disable_triggered || current_map_type != GW::Constants::InstanceType::Explorable) {
+		return;		// Pcons disabled, auto disable already triggered, or not in explorable area.
+	}
+	if (current_final_room_location == NULL || !player || TIMER_DIFF(elite_area_check_timer) < 1000) {
+		return;		// No boss location to check for this map, player ptr not loaded, or checked recently already.
+	}
 	elite_area_check_timer = TIMER_INIT();
 	bool disable_pcons = false;
-	float d = 0;
-	char* disabled_message = "Pcons disabled";
-	switch (map_id) {
-	case GW::Constants::MapID::Urgozs_Warren:
-		d = player->pos.DistanceTo(urgoz_location);
-		disable_pcons = urgoz_disable_in_range_of_boss && d > 0 && d <= GW::Constants::Range::Spellcast;
-		disabled_message = urgoz_disable_hint;
-		break;
-	case GW::Constants::MapID::The_Deep:
-		d = player->pos.DistanceTo(kanaxai_location);
-		disable_pcons = deep_disable_in_range_of_boss && d > 0 && d <= GW::Constants::Range::Compass;
-		disabled_message = deep_disable_hint;
-		break;
-	}
-	if (disable_pcons) {
+	float d = player->pos.DistanceTo(current_final_room_location);
+	if (d > 0 && d <= GW::Constants::Range::Spirit) {
 		elite_area_disable_triggered = true;
 		SetEnabled(false);
-		Log::Info(disabled_message);
-		//Log::Info("Distance: %.0f", d);
+		Log::Info("Cons auto-disabled in range of boss");
 	}
 }
 
@@ -459,11 +415,11 @@ void PconsWindow::LoadSettings(CSimpleIni* ini) {
 
 	Pcon::refill_if_below_threshold = ini->GetBoolValue(Name(), VAR_NAME(refill_if_below_threshold), false);
 	ini->GetBoolValue(Name(), VAR_NAME(show_auto_refill_pcons_tickbox), show_auto_refill_pcons_tickbox);
+	ini->GetBoolValue(Name(), VAR_NAME(show_auto_disable_pcons_tickbox), show_auto_disable_pcons_tickbox);
+	
 
-	urgoz_disable_in_range_of_boss = ini->GetBoolValue(Name(), VAR_NAME(urgoz_disable_in_range_of_boss), urgoz_disable_in_range_of_boss);
-	deep_disable_in_range_of_boss = ini->GetBoolValue(Name(), VAR_NAME(deep_disable_in_range_of_boss), deep_disable_in_range_of_boss);
-	uw_disable_when_all_objs_complete = ini->GetBoolValue(Name(), VAR_NAME(uw_disable_when_all_objs_complete), uw_disable_when_all_objs_complete);
-	fow_disable_when_all_objs_complete = ini->GetBoolValue(Name(), VAR_NAME(fow_disable_when_all_objs_complete), fow_disable_when_all_objs_complete);
+	disable_cons_in_final_room = ini->GetBoolValue(Name(), VAR_NAME(disable_cons_in_final_room), disable_cons_in_final_room);
+	disable_cons_on_objective_completion = ini->GetBoolValue(Name(), VAR_NAME(disable_cons_on_objective_completion), disable_cons_on_objective_completion);
 }
 
 void PconsWindow::SaveSettings(CSimpleIni* ini) {
@@ -489,11 +445,11 @@ void PconsWindow::SaveSettings(CSimpleIni* ini) {
 
 	ini->SetBoolValue(Name(), VAR_NAME(refill_if_below_threshold), Pcon::refill_if_below_threshold);
 	ini->SetBoolValue(Name(), VAR_NAME(show_auto_refill_pcons_tickbox), show_auto_refill_pcons_tickbox);
+	ini->SetBoolValue(Name(), VAR_NAME(show_auto_disable_pcons_tickbox), show_auto_disable_pcons_tickbox);
+	
 
-	ini->SetBoolValue(Name(), VAR_NAME(urgoz_disable_in_range_of_boss), urgoz_disable_in_range_of_boss);
-	ini->SetBoolValue(Name(), VAR_NAME(deep_disable_in_range_of_boss), deep_disable_in_range_of_boss);
-	ini->SetBoolValue(Name(), VAR_NAME(uw_disable_when_all_objs_complete), uw_disable_when_all_objs_complete);
-	ini->SetBoolValue(Name(), VAR_NAME(fow_disable_when_all_objs_complete), fow_disable_when_all_objs_complete);
+	ini->SetBoolValue(Name(), VAR_NAME(disable_cons_in_final_room), disable_cons_in_final_room);
+	ini->SetBoolValue(Name(), VAR_NAME(disable_cons_on_objective_completion), disable_cons_on_objective_completion);
 }
 
 void PconsWindow::DrawSettingInternal() {
@@ -528,7 +484,8 @@ void PconsWindow::DrawSettingInternal() {
 	if (Pcon::size <= 1.0f) Pcon::size = 1.0f;
 	if (ImGui::TreeNode("Visibility")) {
 		ImGui::Checkbox("Enable/Disable button", &show_enable_button);
-		ImGui::Checkbox("Auto refill pcons checkbox", &show_auto_refill_pcons_tickbox);
+		ImGui::Checkbox("Show auto refill pcons checkbox", &show_auto_refill_pcons_tickbox);
+		ImGui::Checkbox("Show auto disable pcons checkbox", &show_auto_disable_pcons_tickbox);
 		for (Pcon* pcon : pcons) {
 			ImGui::Checkbox(pcon->chat, &pcon->visible);
 		}
@@ -550,9 +507,5 @@ void PconsWindow::DrawSettingInternal() {
 		"This will prevent kneel, bored, moan, flex, fistshake and roar.\n");
 	ImGui::Checkbox("Hide Spiritual Possession and Lucky Aura", &Pcon::suppress_lunar_skills);
 	ImGui::ShowHelp("Will hide the skills in your effect monitor");
-	ImGui::Text("Auto disable Pcons near end of elite area:");
-	ImGui::Checkbox(urgoz_disable_hint, &urgoz_disable_in_range_of_boss);
-	ImGui::Checkbox(deep_disable_hint, &deep_disable_in_range_of_boss);
-	ImGui::Checkbox(fow_disable_hint, &fow_disable_when_all_objs_complete);
-	ImGui::Checkbox(uw_disable_hint, &uw_disable_when_all_objs_complete);
+	ImGui::Text("Auto disable Pcons near end of elite area");
 }

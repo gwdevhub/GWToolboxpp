@@ -54,6 +54,7 @@ private:
 	int items_per_row = 3;
 	bool show_enable_button = true;
 	bool show_auto_refill_pcons_tickbox = true;
+	bool show_auto_disable_pcons_tickbox = false;
 	GW::Agent* player;
 
 	// Pcon Settings
@@ -61,9 +62,9 @@ private:
 	// todo: morale / dp removal
 	// todo: replenish character pcons from chest?
 
+	void MapChanged(); // Called via Update() when map id changes
 	// Elite area auto disable
 	void CheckBossRangeAutoDisable();	// Trigger Elite area auto disable if applicable
-	void MapChanged();
 	void CheckObjectivesCompleteAutoDisable();
 
 	GW::Constants::MapID map_id;
@@ -71,21 +72,25 @@ private:
 	bool elite_area_disable_triggered = false;	// Already triggered in this run?
 	clock_t elite_area_check_timer;
 
-	std::vector<DWORD> objectives_complete;
-	// Fissue of Woe
-	bool fow_disable_when_all_objs_complete = false;
-	std::vector<DWORD> fow_objectives{ 309,310,311,312,313,314,315,316,317,318,319 };
-	char* fow_disable_hint = "Fissure of Woe: Pcons auto disabled on final objective completion";
-	// Underworld
-	bool uw_disable_when_all_objs_complete = false;
-	std::vector<DWORD> uw_objectives{ 157 };
-	char* uw_disable_hint = "The Underworld: Pcons auto disabled on final objective completion";
-	// Urgoz Warren
-	GW::Vector2f urgoz_location;
-	bool urgoz_disable_in_range_of_boss = false;	// Urgoz
-	char* urgoz_disable_hint = "Urgoz Warren: Pcons auto disabled after entering final room";
-	// The Deep
-	GW::Vector2f kanaxai_location;
-	bool deep_disable_in_range_of_boss = false;	// Deep
-	char* deep_disable_hint = "The Deep: Pcons auto disabled after entering final room";
+	
+	// Map of which objectives to check per map_id
+	std::vector<DWORD> objectives_complete = {};
+	bool disable_cons_on_objective_completion = false;
+	std::map<GW::Constants::MapID, std::vector<DWORD>> objectives_to_complete_by_map_id = {
+		{GW::Constants::MapID::The_Fissure_of_Woe,{ 309,310,311,312,313,314,315,316,317,318,319 }}, // Can be done in any order - check them all.
+		{GW::Constants::MapID::The_Deep, { 421 }},
+		{GW::Constants::MapID::Urgozs_Warren, { 357 }},
+		{GW::Constants::MapID::The_Underworld,{ 157 }} // Only need to check for Nightman Cometh for Underworld.
+	};
+	std::vector<DWORD> current_objectives_to_check = {};
+	char* disable_cons_on_objective_completion_hint = "Disable cons when final objective(s) completed";
+	// Map of which locations to turn off near by map_id e.g. Kanaxai, Urgoz
+	bool disable_cons_in_final_room = false;
+	std::map<GW::Constants::MapID, GW::Vector2f> final_room_location_by_map_id = {
+		{GW::Constants::MapID::The_Deep, GW::Vector2f(30428.0f, -5842.0f)},		// Rough location of Kanaxai
+		{GW::Constants::MapID::Urgozs_Warren, GW::Vector2f(-2800.0f, 14316.0f)} // Front entrance of Urgoz's room
+	};
+	char* disable_cons_in_final_room_hint = "Disable cons when reaching the final room in Urgoz and Deep";
+	GW::Vector2f current_final_room_location = NULL;
+	
 };
