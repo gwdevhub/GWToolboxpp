@@ -26,6 +26,9 @@ namespace GuiUtils {
 	bool ParseUInt(const char *str, unsigned int *val, int base = 0);
 	bool ParseUInt(const wchar_t *str, unsigned int *val, int base = 0);
 
+	bool ParseFloat(const char *str, float *val);
+	bool ParseFloat(const wchar_t *str, float *val);
+
 	std::wstring ToWstr(std::string &s);
 
 	size_t wcstostr(char *dest, const wchar_t *src, size_t n);
