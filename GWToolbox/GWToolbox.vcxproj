@@ -124,7 +124,6 @@
     <ClInclude Include="GWToolbox\Modules\ChatFilter.h" />
     <ClInclude Include="GWToolbox\Modules\GameSettings.h" />
     <ClInclude Include="GWToolbox\Modules\LUAInterface.h" />
-    <ClInclude Include="GWToolbox\Modules\GWToolboxMap.h" />
     <ClInclude Include="GWToolbox\Modules\Resources.h" />
     <ClInclude Include="GWToolbox\Modules\ToolboxSettings.h" />
     <ClInclude Include="GWToolbox\Modules\ToolboxTheme.h" />
@@ -193,7 +192,6 @@
     <ClCompile Include="GWToolbox\Modules\ChatFilter.cpp" />
     <ClCompile Include="GWToolbox\Modules\GameSettings.cpp" />
     <ClCompile Include="GWToolbox\Modules\LUAInterface.cpp" />
-    <ClCompile Include="GWToolbox\Modules\GWToolboxMap.cpp" />
     <ClCompile Include="GWToolbox\Modules\Resources.cpp" />
     <ClCompile Include="GWToolbox\Modules\ToolboxSettings.cpp" />
     <ClCompile Include="GWToolbox\Modules\ToolboxTheme.cpp" />

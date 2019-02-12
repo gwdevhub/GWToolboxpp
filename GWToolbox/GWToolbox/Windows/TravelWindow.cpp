@@ -4,11 +4,13 @@
 
 #include <GWCA\GWCA.h>
 #include <GWCA\Managers\MapMgr.h>
+#include <GWCA\Managers\PartyMgr.h>
+#include <GWCA\Managers\ItemMgr.h>
+#include <GWCA\Context\GameContext.h>
 
 #include "GWToolbox.h"
 #include "GuiUtils.h"
 #include <Modules\Resources.h>
-#include <Modules\GWToolboxMap.h>
 
 #define N_OUTPOSTS 180
 #define N_DISTRICTS 14
@@ -31,7 +33,7 @@ void TravelWindow::TravelButton(const char* text, int x_idx, GW::Constants::MapI
 	if (x_idx != 0) ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 	float w = (ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().ItemInnerSpacing.x) / 2;
 	if (ImGui::Button(text, ImVec2(w, 0))) {
-		GWToolboxMap::Travel(mapid, district, district_number);
+		Travel(mapid, district, district_number);
 		if (close_on_travel) visible = false;
 	}
 }
@@ -58,7 +60,7 @@ void TravelWindow::Draw(IDirect3DDevice9* pDevice) {
 			static int travelto_index = -1;
 			if (ImGui::MyCombo("travelto", "Travel To...", &travelto_index, outpost_name_array_getter, nullptr, N_OUTPOSTS)) {
 				GW::Constants::MapID id = IndexToOutpostID(travelto_index);
-				GWToolboxMap::Travel(id, district, district_number);
+				Travel(id, district, district_number);
 				travelto_index = -1;
 				if (close_on_travel) visible = false;
 			}
@@ -110,8 +112,8 @@ void TravelWindow::Draw(IDirect3DDevice9* pDevice) {
 			TravelButton("Embark", 1, GW::Constants::MapID::Embark_Beach);
 			TravelButton("Vlox's", 0, GW::Constants::MapID::Vloxs_Falls);
 			TravelButton("Gadd's", 1, GW::Constants::MapID::Gadds_Encampment_outpost);
-			// TravelButton("Urgoz", 0, GW::Constants::MapID::Urgozs_Warren);
-			// TravelButton("Deep", 1, GW::Constants::MapID::The_Deep);
+			TravelButton("Urgoz", 0, GW::Constants::MapID::Urgozs_Warren);
+			TravelButton("Deep", 1, GW::Constants::MapID::The_Deep);
 
 			for (int i = 0; i < fav_count; ++i) {
 				ImGui::PushID(i);
@@ -129,14 +131,97 @@ void TravelWindow::Draw(IDirect3DDevice9* pDevice) {
 	}
 }
 
-bool TravelWindow::TravelFavorite(unsigned int idx) {
-	if (idx >= 0 && idx < fav_index.size()) {
-		GWToolboxMap::Travel(IndexToOutpostID(fav_index[idx]), district, district_number);
-		if (close_on_travel) visible = false;
-		return true;
-	} else {
-		return false;
+void TravelWindow::Update(float delta) {
+	if (scroll_to_outpost_id != GW::Constants::MapID::None) {
+		ScrollToOutpost(scroll_to_outpost_id); // We're in the process of scrolling to an outpost
 	}
+}
+
+bool TravelWindow::IsWaitingForMapTravel() {
+	return GW::GameContext::instance()->party != nullptr && (GW::GameContext::instance()->party->flag & 0x8) > 0;
+}
+
+void TravelWindow::ScrollToOutpost(GW::Constants::MapID outpost_id, GW::Constants::District district, int district_number) {
+	if (!GW::Map::IsMapLoaded() || !GW::PartyMgr::GetIsPartyLoaded()) {
+		map_travel_countdown_started = false;
+		pending_map_travel = false;
+		return; // Map loading, so we're no longer waiting for travel timer to start or finish.
+	}
+	if (IsWaitingForMapTravel()) {
+		map_travel_countdown_started = true;
+		return; // Currently in travel countdown. Wait until the countdown is complete or cancelled.
+	}
+	if (map_travel_countdown_started) {
+		pending_map_travel = false;
+		map_travel_countdown_started = false;
+		scroll_to_outpost_id = GW::Constants::MapID::None;
+		return; // We were waiting for countdown, but it was cancelled.
+	}
+	if (pending_map_travel) {
+		return; // Checking too soon; still waiting for either a map travel or a countdown for it.
+	}
+
+	GW::Constants::MapID map_id = GW::Map::GetMapID();
+	if (scroll_to_outpost_id == GW::Constants::MapID::None) {
+		scroll_to_outpost_id = outpost_id;
+		scroll_from_outpost_id = map_id;
+	}
+	if (scroll_to_outpost_id != outpost_id) return; // Already travelling to another outpost
+	if (map_id == outpost_id) {
+		scroll_to_outpost_id = GW::Constants::MapID::None;
+		GW::Map::Travel(outpost_id, district, district_number);
+		return; // Already at this outpost. Called GW::Map::Travel just in case district is different.
+	}
+
+	int scroll_model_id = 0;
+	bool is_ready_to_scroll = map_id == GW::Constants::MapID::Embark_Beach;
+	switch (scroll_to_outpost_id) {
+	case GW::Constants::MapID::The_Deep:
+		scroll_model_id = 22279;
+		is_ready_to_scroll = is_ready_to_scroll || map_id == GW::Constants::MapID::Cavalon_outpost;
+		break;
+	case GW::Constants::MapID::Urgozs_Warren:
+		scroll_model_id = 3256;
+		is_ready_to_scroll = is_ready_to_scroll || map_id == GW::Constants::MapID::House_zu_Heltzer_outpost;
+		break;
+	default:
+		Log::Error("Invalid outpost for scrolling");
+		return;
+	}
+	if (!is_ready_to_scroll && scroll_from_outpost_id != map_id) {
+		scroll_to_outpost_id = GW::Constants::MapID::None;
+		return; // Not in scrollable outpost, but we're not in the outpost we started from either - user has decided to travel somewhere else.
+	}
+
+	GW::Item* scroll_to_use = GW::Items::GetItemByModelId(scroll_model_id, static_cast<int>(GW::Constants::Bag::Backpack), static_cast<int>(GW::Constants::Bag::Storage_14));
+	if (!scroll_to_use) {
+		scroll_to_outpost_id = GW::Constants::MapID::None;
+		Log::Error("No scroll found in inventory for travel");
+		return; // No scroll found.
+	}
+	if (is_ready_to_scroll) {
+		scroll_to_outpost_id = GW::Constants::MapID::None;
+		GW::Items::UseItem(scroll_to_use);
+		return; // Done.
+	}
+	pending_map_travel = true;
+	GW::Map::Travel(GW::Constants::MapID::Embark_Beach, district, district_number); // Travel to embark.
+}
+
+void TravelWindow::Travel(GW::Constants::MapID MapID, GW::Constants::District District /*= 0*/, int district_number) {
+	switch (MapID) {
+	case GW::Constants::MapID::The_Deep:
+	case GW::Constants::MapID::Urgozs_Warren:
+		return ScrollToOutpost(MapID, District, district_number);
+	}
+	return GW::Map::Travel(MapID, District, district_number);
+}
+
+bool TravelWindow::TravelFavorite(unsigned int idx) {
+	if (idx >= 0 && idx < fav_index.size())	return false;
+	Travel(IndexToOutpostID(fav_index[idx]), district, district_number);
+	if (close_on_travel) visible = false;
+	return true;
 }
 
 void TravelWindow::DrawSettingInternal() {

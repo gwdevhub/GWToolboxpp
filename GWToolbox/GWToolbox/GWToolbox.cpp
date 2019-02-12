@@ -24,7 +24,6 @@
 #include <Modules\GameSettings.h>
 #include <Modules\ToolboxSettings.h>
 #include <Modules\ToolboxTheme.h>
-#include <Modules\GWToolboxMap.h>
 #ifdef ENABLE_LUA
 #  include <Modules\LUAInterface.h>
 #endif
@@ -319,7 +318,6 @@ void GWToolbox::Initialize() {
 	core_modules.push_back(&ChatFilter::Instance());
 	core_modules.push_back(&ChatCommands::Instance());
 	core_modules.push_back(&ToolboxTheme::Instance());
-	core_modules.push_back(&GWToolboxMap::Instance());
 
 	for (ToolboxModule* core : core_modules) {
 		core->Initialize();

@@ -121,9 +121,6 @@
     <Filter Include="utf8proc">
       <UniqueIdentifier>{52973ab6-dfdc-4b2a-9368-285b25aad81d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Modules\GWToolboxMap">
-      <UniqueIdentifier>{aa3905ee-443e-40a4-9f64-962aaa36f7c8}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GWToolbox\GuiUtils.h" />
@@ -291,9 +288,6 @@
     <ClInclude Include="..\Dependencies\utf8proc\utf8proc.h">
       <Filter>utf8proc</Filter>
     </ClInclude>
-    <ClInclude Include="GWToolbox\Modules\GWToolboxMap.h">
-      <Filter>Modules\GWToolboxMap</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -444,9 +438,6 @@
     </ClCompile>
     <ClCompile Include="..\Dependencies\imgui\imgui_widgets.cpp">
       <Filter>imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\Modules\GWToolboxMap.cpp">
-      <Filter>Modules\GWToolboxMap</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
