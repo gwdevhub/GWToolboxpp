@@ -37,6 +37,7 @@ GW::Item *MaterialsWindow::GetMerchItem(Material mat) const {
 
 GW::Item *MaterialsWindow::GetBagItem(Material mat) const {
 	uint32_t model_id = GetModelID(mat);
+	int min_qty = mat <= Material::WoodPlank ? 10 : 1; // 10 if common, 1 if rare
 	GW::Bag **bags = GW::Items::GetBagArray();
 	if (!bags) return nullptr;
 	size_t bag_i = (size_t)GW::Constants::Bag::Backpack;
@@ -47,7 +48,7 @@ GW::Item *MaterialsWindow::GetBagItem(Material mat) const {
 		size_t pos = bag->find1(model_id, 0);
 		while (pos != GW::Bag::npos) {
 			GW::Item *item = bag->Items[pos];
-			if (item->Quantity >= 10)
+			if (item->Quantity >= min_qty)
 				return item;
 			pos = bag->find1(model_id, pos + 1);
 		}
@@ -581,7 +582,6 @@ void MaterialsWindow::DrawSettingInternal() {
 	ImGui::Checkbox("Automatically manage gold", &manage_gold);
 	ImGui::ShowHelp("It will automaticly withdraw and deposit gold while buying materials");
 }
-
 MaterialsWindow::Material MaterialsWindow::GetMaterial(DWORD modelid) {
 	switch (modelid) {
 	case GW::Constants::ItemID::BoltofCloth: 			return BoltofCloth;
