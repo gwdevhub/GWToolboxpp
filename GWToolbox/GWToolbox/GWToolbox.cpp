@@ -13,17 +13,12 @@
 #include <GWCA/GameContainers/Vector.h>
 #include <GWCA/Packets/StoC.h>
 
-#include <GWCA/GameEntities/NPC.h>
-#include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Item.h>
 #include <GWCA/GameEntities/Agent.h>
-#include <GWCA/GameEntities/Player.h>
-#include <GWCA/GameEntities/Pathing.h>
 
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>

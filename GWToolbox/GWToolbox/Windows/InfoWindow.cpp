@@ -5,15 +5,12 @@
 #include <GWCA/GameContainers/Vector.h>
 #include <GWCA/Packets/StoC.h>
 
-#include <GWCA/GameEntities/NPC.h>
-#include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Item.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Quest.h>
 #include <GWCA/GameEntities/Player.h>
-#include <GWCA/GameEntities/Pathing.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>

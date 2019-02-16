@@ -6,13 +6,8 @@
 
 #include <GWCA/GameContainers/Vector.h>
 
-#include <GWCA/GameEntities/NPC.h>
-#include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Skill.h>
-#include <GWCA/GameEntities/Camera.h>
-#include <GWCA/GameEntities/Player.h>
-#include <GWCA/GameEntities/Pathing.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
@@ -195,7 +190,7 @@ void RangeRenderer::Render(IDirect3DDevice9* device) {
 }
 
 bool RangeRenderer::HaveHos() {
-    GW::Skillbar *skillbar = GW::Skillbar::GetPlayerSkillbar();
+    GW::Skillbar *skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
     if (!skillbar || !skillbar->IsValid()) {
         checkforhos_ = true;
         return false;

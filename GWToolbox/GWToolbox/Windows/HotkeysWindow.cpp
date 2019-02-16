@@ -2,8 +2,8 @@
 
 #include <GWCA/Constants/Constants.h>
 
-#include <GWCA/GameEntities/Map.h>
-#include <GWCA/GameEntities/Item.h>
+#include <GWCA/GameContainers/Array.h>
+
 #include <GWCA/GameEntities/Pathing.h>
 
 #include <GWCA/Managers/MapMgr.h>

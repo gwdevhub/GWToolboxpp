@@ -9,13 +9,11 @@
 #include <GWCA/GameContainers/Vector.h>
 #include <GWCA/Packets/StoC.h>
 
-#include <GWCA/GameEntities/NPC.h>
-#include <GWCA/GameEntities/Map.h>
+#include <GWCA/GameEntities/Hero.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Camera.h>
 #include <GWCA/GameEntities/Player.h>
-#include <GWCA/GameEntities/Pathing.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/PartyContext.h>
@@ -257,7 +255,13 @@ void Minimap::GetPlayerHeroes(GW::PartyInfo *party, std::vector<GW::AgentID>& pl
     }
 }
 float Minimap::GetMapRotation() {
-    return rotate_minimap ? GW::CameraMgr::GetYaw() : (float)1.5708;
+    float rotation = 1.5708f;
+    if (rotate_minimap) {
+        GW::Camera *cam = GW::CameraMgr::GetCamera();
+        if (cam)
+            rotation = cam->GetYaw();
+    }
+    return rotation;
 }
 void Minimap::Draw(IDirect3DDevice9* device) {
     if (!IsActive()) return;

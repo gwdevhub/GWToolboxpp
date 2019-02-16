@@ -2,11 +2,9 @@
 
 #include <GWCA/Constants/Constants.h>
 
-#include <GWCA/GameEntities/NPC.h>
-#include <GWCA/GameEntities/Map.h>
+#include <GWCA/GameContainers/Vector.h>
+
 #include <GWCA/GameEntities/Agent.h>
-#include <GWCA/GameEntities/Player.h>
-#include <GWCA/GameEntities/Pathing.h>
 
 #include <GWCA/Managers/AgentMgr.h>
 

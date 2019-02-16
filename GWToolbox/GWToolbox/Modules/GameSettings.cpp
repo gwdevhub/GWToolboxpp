@@ -6,15 +6,12 @@
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/Utilities/Hooker.h>
+#include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/MemoryPatcher.h>
 
-#include <GWCA/GameEntities/NPC.h>
-#include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Item.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Camera.h>
-#include <GWCA/GameEntities/Player.h>
-#include <GWCA/GameEntities/Pathing.h>
 #include <GWCA/GameEntities/Friendslist.h>
 
 #include <GWCA/Context/GameContext.h>
@@ -778,7 +775,9 @@ void GameSettings::DrawFOVSetting() {
 }
 
 void GameSettings::UpdateFOV() {
-    if (maintain_fov && GW::CameraMgr::GetFieldOfView() != fov) {
+    if (!maintain_fov) return;
+    GW::Camera *cam = GW::CameraMgr::GetCamera();
+    if (cam && cam->GetFieldOfView() != fov) {
         GW::CameraMgr::SetFieldOfView(fov);
     }
 }

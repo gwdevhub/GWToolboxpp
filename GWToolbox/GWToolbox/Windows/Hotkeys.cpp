@@ -2,13 +2,10 @@
 
 #include <GWCA/Constants/Constants.h>
 
-#include <GWCA/GameEntities/NPC.h>
-#include <GWCA/GameEntities/Map.h>
-#include <GWCA/GameEntities/Item.h>
+#include <GWCA/GameContainers/Vector.h>
+
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Skill.h>
-#include <GWCA/GameEntities/Player.h>
-#include <GWCA/GameEntities/Pathing.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
@@ -364,7 +361,7 @@ void HotkeyDropUseBuff::Execute() {
         GW::Effects::DropBuff(buff->buff_id);
     } else {
         int slot = GW::SkillbarMgr::GetSkillSlot(id);
-        if (slot >= 0 && GW::Skillbar::GetPlayerSkillbar()->skills[slot].recharge == 0) {
+        if (slot >= 0 && GW::SkillbarMgr::GetPlayerSkillbar()->skills[slot].recharge == 0) {
             GW::SkillbarMgr::UseSkill(slot, GW::Agents::GetTargetId());
         }
     }

@@ -5,9 +5,7 @@
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameContainers/Vector.h>
 
-#include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Hero.h>
-#include <GWCA/GameEntities/Pathing.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>

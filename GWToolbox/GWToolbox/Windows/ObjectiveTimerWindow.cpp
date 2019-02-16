@@ -5,8 +5,8 @@
 #include <GWCA/GameContainers/Vector.h>
 #include <GWCA/Packets/StoC.h>
 
+#include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Agent.h>
-#include <GWCA/GameEntities/Pathing.h>
 
 #include <GWCA/Context/WorldContext.h>
 

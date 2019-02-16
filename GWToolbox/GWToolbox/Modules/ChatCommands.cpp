@@ -8,15 +8,11 @@
 #include <GWCA/Utilities/MemoryPatcher.h>
 
 #include <GWCA/GameEntities/NPC.h>
-#include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Item.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Guild.h>
 #include <GWCA/GameEntities/Skill.h>
-#include <GWCA/GameEntities/Camera.h>
 #include <GWCA/GameEntities/Player.h>
-#include <GWCA/GameEntities/Pathing.h>
-#include <GWCA/GameEntities/Friendslist.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
@@ -231,7 +227,7 @@ void ChatCommands::Update(float delta) {
     for (int slot : skills_to_use) {
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable
             && (clock() - skill_timer) / 1000.0f > skill_usage_delay) {
-            GW::Skillbar *skillbar = GW::Skillbar::GetPlayerSkillbar();
+            GW::Skillbar *skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
             if (skillbar && skillbar->IsValid()) {
                 GW::SkillbarSkill skill = skillbar->skills[slot];
                 if (skill.GetRecharge() == 0) {

@@ -3,10 +3,6 @@
 #include <GWCA/GameContainers/Vector.h>
 #include <GWCA/Packets/StoC.h>
 
-#include <GWCA/GameEntities/Party.h>
-
-#include <GWCA/Managers/PartyMgr.h>
-
 #include "Utf8.h"
 #include "Logger.h"
 #include "Defines.h"

@@ -6,8 +6,6 @@
 
 #include <GWCA/GameContainers/Vector.h>
 
-#include <GWCA/GameEntities/Map.h>
-#include <GWCA/GameEntities/Camera.h>
 #include <GWCA/GameEntities/Pathing.h>
 
 #include <GWCA/Managers/MapMgr.h>

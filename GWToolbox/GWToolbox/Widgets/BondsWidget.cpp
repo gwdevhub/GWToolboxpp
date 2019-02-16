@@ -4,13 +4,12 @@
 
 #include <GWCA/Constants/Constants.h>
 
-#include <GWCA/GameEntities/NPC.h>
-#include <GWCA/GameEntities/Map.h>
+#include <GWCA/GameContainers/Vector.h>
+
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Player.h>
-#include <GWCA/GameEntities/Pathing.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
@@ -116,7 +115,7 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
     // ==== Get bonds ====
     std::vector<int> bond_list; // index to skill id
     std::unordered_map<DWORD, int> bond_map; // skill id to index
-    GW::Skillbar *bar = GW::Skillbar::GetPlayerSkillbar();
+    GW::Skillbar *bar = GW::SkillbarMgr::GetPlayerSkillbar();
     if (!bar || !bar->IsValid()) return;
     for (int slot = 0; slot < 8; ++slot) {
         DWORD SkillID = bar->skills[slot].skill_id;
@@ -200,7 +199,7 @@ void BondsWidget::UseBuff(GW::AgentID targetId, DWORD buff_skillid) {
     if (target == nullptr) return;
 
     int slot = GW::SkillbarMgr::GetSkillSlot((GW::Constants::SkillID)buff_skillid);
-    GW::Skillbar *skillbar = GW::Skillbar::GetPlayerSkillbar();
+    GW::Skillbar *skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
     if (!skillbar || !skillbar->IsValid()) return;
     if (skillbar->skills[slot].recharge != 0) return;
 
