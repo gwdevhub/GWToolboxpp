@@ -25,7 +25,7 @@ void TravelWindow::Initialize() {
 	ToolboxWindow::Initialize();
 	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"airplane.png"), IDB_Icon_Airplane);
 
-	district = district = GW::Constants::District::Current;
+	district = GW::Constants::District::Current;
 	district_number = 0;
 }
 
@@ -218,7 +218,7 @@ void TravelWindow::Travel(GW::Constants::MapID MapID, GW::Constants::District Di
 }
 
 bool TravelWindow::TravelFavorite(unsigned int idx) {
-	if (idx >= 0 && idx < fav_index.size())	return false;
+	if (idx < 0 || idx >= fav_index.size())	return false;
 	Travel(IndexToOutpostID(fav_index[idx]), district, district_number);
 	if (close_on_travel) visible = false;
 	return true;
