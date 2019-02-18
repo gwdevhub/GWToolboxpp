@@ -541,7 +541,7 @@ void ChatFilter::ParseBuffer(const char *text, std::vector<std::regex> &regex) c
 	std::string word;
 	while (std::getline(stream, word)) {
 		if (!word.empty()) {
-			std::transform(word.begin(), word.end(), word.begin(), ::tolower);
+			// std::transform(word.begin(), word.end(), word.begin(), ::tolower);
 			try {
 				regex.push_back(std::regex(word));
 			} catch (...) {
