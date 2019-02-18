@@ -14,6 +14,11 @@ class ChatFilter : public ToolboxModule {
 	ChatFilter() {};
 	~ChatFilter() {};
 
+	// @Remark:
+	// The text buffer will only be parsed if there was no modification within this period of time.
+	// It can be re-ajusted to be more enjoyable.
+	static const uint32_t NOISE_REDUCTION_DELAY_MS = 1000;
+
 public:
 	static ChatFilter& Instance() {
 		static ChatFilter instance;
@@ -26,6 +31,8 @@ public:
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
+
+	void Update(float delta) override;
 
 private:
 	const wchar_t* Get1stSegment(const wchar_t *message) const;
@@ -74,6 +81,9 @@ private:
 	char byauthor_buf[FILTER_BUF_SIZE];
 	bool byauthor_filedirty = false;
 #endif
+
+	uint32_t timer_parse_filters = 0;
+	uint32_t timer_parse_regexes = 0;
 
 	void ParseBuffer(const char *text, std::vector<std::string>  &words) const;
 	void ParseBuffer(const char *text, std::vector<std::wstring> &words) const;

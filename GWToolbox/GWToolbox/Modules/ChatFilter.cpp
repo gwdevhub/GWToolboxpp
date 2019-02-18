@@ -184,6 +184,18 @@ void ChatFilter::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(you_have_been_playing_for), you_have_been_playing_for);
 	ini->SetBoolValue(Name(), VAR_NAME(player_has_achieved_title), player_has_achieved_title);
 
+	if (timer_parse_filters) {
+		timer_parse_filters = 0;
+		ParseBuffer(bycontent_word_buf, bycontent_words);
+		bycontent_filedirty = true;
+	}
+
+	if (timer_parse_regexes) {
+		timer_parse_regexes = 0;
+		ParseBuffer(bycontent_regex_buf, bycontent_regex);
+		bycontent_filedirty = true;
+	}
+
 	if (bycontent_filedirty) {
 		std::ofstream file1;
 		file1.open(Resources::GetPath(L"FilterByContent.txt"));
@@ -483,15 +495,13 @@ void ChatFilter::DrawSettingInternal() {
 	ImGui::TextDisabled("(Each in a separate line. Not case sensitive)");
 	if (ImGui::InputTextMultiline("##bycontentfilter", bycontent_word_buf, 
 		FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0f))) {
-		ParseBuffer(bycontent_word_buf, bycontent_words);
-		bycontent_filedirty = true;
+		timer_parse_filters = GetTickCount() + NOISE_REDUCTION_DELAY_MS;
 	}
 	ImGui::Text("And messages matching regular expressions:");
 	ImGui::ShowHelp("Regular expressions allow you to specify wildcards and express more.\nThe syntax is described at www.cplusplus.com/reference/regex/ECMAScript\nNote that the whole message needs to be matched, so for example you might want .* at the end.");
 	if (ImGui::InputTextMultiline("##bycontentfilter_regex", bycontent_regex_buf,
 		FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0))) {
-		ParseBuffer(bycontent_regex_buf, bycontent_regex);
-		bycontent_filedirty = true;
+		timer_parse_regexes = GetTickCount() + NOISE_REDUCTION_DELAY_MS;
 	}
 	ImGui::Unindent();
 
@@ -507,6 +517,22 @@ void ChatFilter::DrawSettingInternal() {
 	}
 	ImGui::Unindent();
 #endif // EXTENDED_IGNORE_LIST
+}
+
+void ChatFilter::Update(float delta) {
+	uint32_t timestamp = GetTickCount();
+	
+	if (timer_parse_filters && timer_parse_filters < timestamp) {
+		timer_parse_filters = 0;
+		ParseBuffer(bycontent_word_buf, bycontent_words);
+		bycontent_filedirty = true;
+	}
+
+	if (timer_parse_regexes && timer_parse_regexes < timestamp) {
+		timer_parse_regexes = 0;
+		ParseBuffer(bycontent_regex_buf, bycontent_regex);
+		bycontent_filedirty = true;
+	}
 }
 
 void ChatFilter::ParseBuffer(const char *text, std::vector<std::string> &words) const {
