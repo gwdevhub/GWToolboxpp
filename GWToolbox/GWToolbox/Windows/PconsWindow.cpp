@@ -118,6 +118,9 @@ void PconsWindow::Initialize() {
 	});
 	GW::StoC::AddCallback<GW::Packet::StoC::PostProcess>(
 		[&](GW::Packet::StoC::PostProcess *pak) -> bool {
+		if (pak->tint == 6) {
+			return PconAlcohol::suppress_drunk_effect; // Tint effect 6 is spiritual possession (5 is grog); this isn't drunk.
+		}
 		PconAlcohol::alcohol_level = pak->level;
 		//printf("Level = %d, tint = %d\n", pak->level, pak->tint);
 		if (enabled) pcon_alcohol->Update();

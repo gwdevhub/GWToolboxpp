@@ -19,6 +19,9 @@ void AlcoholWidget::Initialize() {
 }
 
 bool AlcoholWidget::AlcUpdate(GW::Packet::StoC::PostProcess *packet) {
+	if (packet->tint == 6) {
+		return false; // Tint effect 6 is spiritual possession (5 is grog); this isn't drunk.
+	}
 	// if the player used a drink
 	if (packet->level > alcohol_level){
 		// if the player already had a drink going
