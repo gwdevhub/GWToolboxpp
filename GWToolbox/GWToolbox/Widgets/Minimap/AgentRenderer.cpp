@@ -569,6 +569,8 @@ float AgentRenderer::GetSize(const GW::Agent* agent, const CustomAgent* ca) cons
 
 	case 0x3: // hostile
 		switch (agent->PlayerNumber) {
+		case GW::Constants::ModelID::Rotscale:
+
 		case GW::Constants::ModelID::DoA::StygianLordNecro:
 		case GW::Constants::ModelID::DoA::StygianLordMesmer:
 		case GW::Constants::ModelID::DoA::StygianLordEle:
@@ -588,18 +590,59 @@ float AgentRenderer::GetSize(const GW::Agent* agent, const CustomAgent* ca) cons
 		case GW::Constants::ModelID::FoW::ShardWolf:
 		case GW::Constants::ModelID::FoW::SeedOfCorruption:
 		case GW::Constants::ModelID::FoW::LordKhobay:
+		case GW::Constants::ModelID::FoW::DragonLich:
 
 		case GW::Constants::ModelID::Deep::Kanaxai:
 		case GW::Constants::ModelID::Deep::KanaxaiAspect:
 		case GW::Constants::ModelID::Urgoz::Urgoz:
 
-		case GW::Constants::ModelID::SoO::Brigand:
-		case GW::Constants::ModelID::SoO::Fendi:
-		case GW::Constants::ModelID::SoO::Fendi_soul:
-
+		case GW::Constants::ModelID::EotnDungeons::DiscOfChaos:
+		case GW::Constants::ModelID::EotnDungeons::PlagueOfDestruction:
+		case GW::Constants::ModelID::EotnDungeons::ZhimMonns:
 		case GW::Constants::ModelID::EotnDungeons::Khabuus:
+		case GW::Constants::ModelID::EotnDungeons::DuncanTheBlack:
 		case GW::Constants::ModelID::EotnDungeons::JusticiarThommis:
-		// add more eotn bosses?
+		case GW::Constants::ModelID::EotnDungeons::RandStormweaver:
+		case GW::Constants::ModelID::EotnDungeons::Selvetarm:
+		case GW::Constants::ModelID::EotnDungeons::Forgewright:
+		case GW::Constants::ModelID::EotnDungeons::HavokSoulwail:
+		case GW::Constants::ModelID::EotnDungeons::RragarManeater3:
+		case GW::Constants::ModelID::EotnDungeons::RragarManeater12:
+		case GW::Constants::ModelID::EotnDungeons::Arachni:
+		case GW::Constants::ModelID::EotnDungeons::Hidesplitter:
+		case GW::Constants::ModelID::EotnDungeons::PrismaticOoze:
+		case GW::Constants::ModelID::EotnDungeons::IlsundurLordofFire:
+		case GW::Constants::ModelID::EotnDungeons::EldritchEttin:
+		case GW::Constants::ModelID::EotnDungeons::TPSRegulartorGolem:
+		case GW::Constants::ModelID::EotnDungeons::MalfunctioningEnduringGolem:
+		case GW::Constants::ModelID::EotnDungeons::CyndrTheMountainHeart:
+		case GW::Constants::ModelID::EotnDungeons::InfernalSiegeWurm:
+		case GW::Constants::ModelID::EotnDungeons::Frostmaw:
+		case GW::Constants::ModelID::EotnDungeons::RemnantOfAntiquities:
+		case GW::Constants::ModelID::EotnDungeons::MurakaiLadyOfTheNight:
+		case GW::Constants::ModelID::EotnDungeons::ZoldarkTheUnholy:
+		case GW::Constants::ModelID::EotnDungeons::Brigand:
+		case GW::Constants::ModelID::EotnDungeons::FendiNin:
+		case GW::Constants::ModelID::EotnDungeons::SoulOfFendiNin:
+		case GW::Constants::ModelID::EotnDungeons::KeymasterOfMurakai:
+		case GW::Constants::ModelID::EotnDungeons::AngrySnowman:
+
+		case GW::Constants::ModelID::BonusMissionPack::WarAshenskull:
+		case GW::Constants::ModelID::BonusMissionPack::RoxAshreign:
+		case GW::Constants::ModelID::BonusMissionPack::AnrakTindershot:
+		case GW::Constants::ModelID::BonusMissionPack::DettMortash:
+		case GW::Constants::ModelID::BonusMissionPack::AkinCinderspire:
+		case GW::Constants::ModelID::BonusMissionPack::TwangSootpaws:
+		case GW::Constants::ModelID::BonusMissionPack::MagisEmberglow:
+		case GW::Constants::ModelID::BonusMissionPack::MerciaTheSmug:
+		case GW::Constants::ModelID::BonusMissionPack::OptimusCaliph:
+		case GW::Constants::ModelID::BonusMissionPack::LazarusTheDire:
+		case GW::Constants::ModelID::BonusMissionPack::AdmiralJakman:
+		case GW::Constants::ModelID::BonusMissionPack::PalawaJoko:
+		case GW::Constants::ModelID::BonusMissionPack::YuriTheHand:
+		case GW::Constants::ModelID::BonusMissionPack::MasterRiyo:
+		case GW::Constants::ModelID::BonusMissionPack::CaptainSunpu:
+		case GW::Constants::ModelID::BonusMissionPack::MinisterWona:
 			return size_boss;
 
 		default:
