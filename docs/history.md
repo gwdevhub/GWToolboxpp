@@ -7,6 +7,25 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
+## Version 2.22.1
+* [Fix] Material buying and auto-manage gold
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.22.1_Release/GWToolbox.dll)
+
+## Version 2.22
+* [Fix] General fixes for the February 5th update.
+* [Fix] Pcons not finding proper quantities
+* [Fix] Ctrl+Click storage/inventory item quick-move
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.22_Release/GWToolbox.dll)
+
+## Version 2.21
+* [Fix] Added Year of the Pig lunars to lunar pop list.
+* [New] Added an option to ctrl+click on target health (widget) to print it.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.21_Release/GWToolbox.dll)
+
+
 ## Version 2.20
 * [Fix] Fixed a bug with the bond monitor.
 * [New] The old `click to use` option in bond monitor is now split into `click to cast` and `click to drop`.

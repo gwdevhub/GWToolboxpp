@@ -22,7 +22,7 @@ TexMod, uMod, screen recording software (in game capture mode) and Toolbox all u
 **I have an feature request/non-bug issue with GWToolbox++. Where can I voice it?** \\
 We are always open to comments and criticism about Toolbox++. If you have features or opinions of features you would like to voice to the developers, please leave your input on the [repository issue tracker](https://github.com/HasKha/GWToolboxpp/issues).
 
-**Why does GWToolbox++ require Admin privileges?**
+**Why does GWToolbox++ require Admin privileges?** \\
 GWToolbox++ needs admin privileges if Guild Wars has admin privileges. Guild Wars can be indirectly started with those privileges if it was started by a program that was run as admin. TexMod, uMod, GWML or GW Launcher typically require admin privileges so we decided for Toolbox to require admin privileges by default, to avoid issues.
 
 You can find a version of the launcher that doesn't require admin privileges [here](https://github.com/HasKha/GWToolboxpp/releases/tag/2.14_Release).
