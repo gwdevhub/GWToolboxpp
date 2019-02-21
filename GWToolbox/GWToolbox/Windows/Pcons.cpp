@@ -219,7 +219,7 @@ int Pcon::Refill() {
 	GW::Bag** bags = GW::Items::GetBagArray();
 	if (bags == nullptr) return points_moved;
 	for (int bagIndex = static_cast<int>(GW::Constants::Bag::Storage_1); bagIndex <= static_cast<int>(GW::Constants::Bag::Max); ++bagIndex) {
-		if (points_needed < 1) return true;
+		if (points_needed < 1) return points_moved;
 		GW::Bag* bag = bags[bagIndex];
 		if (bag == nullptr) continue;	// No bag, skip
 		GW::ItemArray items = bag->Items;
@@ -232,9 +232,9 @@ int Pcon::Refill() {
 			if (points_per_item < 1) continue; // This is not the pcon you're looking for...
 			GW::Item* inventoryItem = FindVacantStackOrSlotInInventory(); // Now find a slot in inventory to move them to.
 			if (inventoryItem == nullptr) return points_moved; // No space for more pcons in inventory.
-			float quantity_to_move = points_needed / points_per_item;
-			if (quantity_to_move > inventoryItem->Quantity)		quantity_to_move = inventoryItem->Quantity;
-			points_moved += MoveItem(storageItem, inventoryItem->Bag, inventoryItem->Slot,ceil(quantity_to_move)) * points_per_item;
+			int quantity_to_move = static_cast<int>(ceil(points_needed / points_per_item));
+			if (quantity_to_move > storageItem->Quantity)		quantity_to_move = storageItem->Quantity;
+			points_moved += MoveItem(storageItem, inventoryItem->Bag, inventoryItem->Slot,quantity_to_move) * points_per_item;
 			points_needed -= points_moved; // amount_moved = item quantity moved x number of uses per item
 		}
 	}
