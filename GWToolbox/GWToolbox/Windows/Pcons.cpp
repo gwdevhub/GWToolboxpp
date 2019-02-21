@@ -8,6 +8,7 @@
 #include <GWCA\Managers\ItemMgr.h>
 #include <GWCA\Managers\PartyMgr.h>
 #include <GWCA\Managers\CtoSMgr.h>
+#include <GWCA\Constants\ItemIDs.h>
 
 #include <logger.h>
 #include "GuiUtils.h"
@@ -212,33 +213,32 @@ int Pcon::Refill() {
 	if(!refill_if_below_threshold || quantity >= threshold) {
 		return 0; // Not allowed to auto refill, or above the threshold already.
 	}
-	int amount_needed = threshold - quantity;
-	int amount_moved = 0;
-	if (amount_needed < 1) return amount_moved;
+	int points_needed = threshold - quantity; // quantity is actually points e.g. 20 grog = 60 quantity
+	int points_moved = 0;
+	if (points_needed < 1) return points_moved;
 	GW::Bag** bags = GW::Items::GetBagArray();
-	if (bags == nullptr) return amount_moved;
-	for (int bagIndex = 8; bagIndex <= 21; ++bagIndex) {
-		if (amount_needed < 1) return true;
+	if (bags == nullptr) return points_moved;
+	for (int bagIndex = static_cast<int>(GW::Constants::Bag::Storage_1); bagIndex <= static_cast<int>(GW::Constants::Bag::Max); ++bagIndex) {
+		if (points_needed < 1) return true;
 		GW::Bag* bag = bags[bagIndex];
 		if (bag == nullptr) continue;	// No bag, skip
 		GW::ItemArray items = bag->Items;
 		if (!items.valid()) continue;	// No item array, skip
 		for (size_t i = 0; i < items.size(); i++) {
-			if (amount_needed < 1) return amount_moved;
+			if (points_needed < 1) return points_moved;
 			GW::Item* storageItem = items[i];
 			if (storageItem == nullptr) continue; // No item, skip
-			int qtyea = QuantityForEach(storageItem);
-			if (qtyea < 1) continue; // This is not the pcon you're looking for...
-			// Found some pcons in storage to pull from - now find a slot in inventory to move them to.
-			GW::Item* inventoryItem = FindVacantStackOrSlotInInventory();
-			if (inventoryItem == nullptr) return amount_moved; // No space for more pcons in inventory.
-			int amount_to_move = ceil(storageItem->Quantity / qtyea);
-			if (amount_to_move > amount_needed)		amount_to_move = amount_needed;
-			amount_moved += MoveItem(storageItem, inventoryItem->Bag, inventoryItem->Slot,amount_to_move) * qtyea;
-			amount_needed -= amount_moved; // amount_moved = item quantity moved x number of uses per item
+			int points_per_item = QuantityForEach(storageItem);
+			if (points_per_item < 1) continue; // This is not the pcon you're looking for...
+			GW::Item* inventoryItem = FindVacantStackOrSlotInInventory(); // Now find a slot in inventory to move them to.
+			if (inventoryItem == nullptr) return points_moved; // No space for more pcons in inventory.
+			float quantity_to_move = points_needed / points_per_item;
+			if (quantity_to_move > inventoryItem->Quantity)		quantity_to_move = inventoryItem->Quantity;
+			points_moved += MoveItem(storageItem, inventoryItem->Bag, inventoryItem->Slot,ceil(quantity_to_move)) * points_per_item;
+			points_needed -= points_moved; // amount_moved = item quantity moved x number of uses per item
 		}
 	}
-	return amount_moved;
+	return points_moved;
 }
 int Pcon::CheckInventory(bool* used, int* used_qty_ptr) const {
 	int count = 0;
