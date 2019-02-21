@@ -88,6 +88,7 @@ private:
 	bool loading = false; // only consider some cases but still good
 
     bool mouse_clickthrough = false;
+	bool mouse_clickthrough_in_outpost = false;
 	bool rotate_minimap = true;
     bool alt_click_to_move = false;
 
