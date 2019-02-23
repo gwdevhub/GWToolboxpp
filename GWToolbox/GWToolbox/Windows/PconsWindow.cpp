@@ -347,7 +347,7 @@ void PconsWindow::CheckObjectivesCompleteAutoDisable() {
 	if (!enabled || elite_area_disable_triggered || current_map_type != GW::Constants::InstanceType::Explorable) {
 		return;		// Pcons disabled, auto disable already triggered, or not in explorable area.
 	}
-	if (objectives_complete.empty() || current_objectives_to_check.empty()) {
+	if (!disable_cons_on_objective_completion || objectives_complete.empty() || current_objectives_to_check.empty()) {
 		return; // No objectives complete, or no objectives to check for this map.
 	}
 	bool objective_complete = false;
@@ -369,7 +369,7 @@ void PconsWindow::CheckBossRangeAutoDisable() {	// Trigger Elite area auto disab
 	if (!enabled || elite_area_disable_triggered || current_map_type != GW::Constants::InstanceType::Explorable) {
 		return;		// Pcons disabled, auto disable already triggered, or not in explorable area.
 	}
-	if (current_final_room_location == NULL || !player || TIMER_DIFF(elite_area_check_timer) < 1000) {
+	if (!disable_cons_in_final_room || current_final_room_location == NULL || !player || TIMER_DIFF(elite_area_check_timer) < 1000) {
 		return;		// No boss location to check for this map, player ptr not loaded, or checked recently already.
 	}
 	elite_area_check_timer = TIMER_INIT();
