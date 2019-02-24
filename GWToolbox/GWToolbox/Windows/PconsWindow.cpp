@@ -374,19 +374,6 @@ void PconsWindow::CheckBossRangeAutoDisable() {	// Trigger Elite area auto disab
 	}
 }
 
-void PconsWindow::CheckIfWeJustEnabledAlcoholWithLunarsOn() {
-	if (enabled
-		&& current_map_type == GW::Constants::InstanceType::Explorable
-		&& pcon_alcohol->enabled
-		&& Pcon::alcohol_level == 5) {
-		// we just re-enabled pcons and we need to pop alcohol, but the alcohol level 
-		// is 5 already, which means it's very likely that we have Spiritual Possession on.
-		// Force usage of alcohol to be sure.
-		// Note: if we're dead this will fail and alcohol will never be used.
-		pcon_alcohol->ForceUse();
-	}
-}
-
 void PconsWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxWindow::LoadSettings(ini);
 	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
