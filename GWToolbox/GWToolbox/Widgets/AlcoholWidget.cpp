@@ -2,8 +2,11 @@
 
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Managers\MapMgr.h>
+#include <GWCA\Context\GameContext.h>
+#include <Windows\PconsWindow.h>
 
 #include <GuiUtils.h>
+#include <logger.h>
 
 #include <ctime>
 
@@ -17,11 +20,42 @@ void AlcoholWidget::Initialize() {
 	GW::StoC::AddCallback<GW::Packet::StoC::PostProcess>(
 		std::bind(&AlcoholWidget::AlcUpdate, this, std::placeholders::_1));
 }
-
-bool AlcoholWidget::AlcUpdate(GW::Packet::StoC::PostProcess *packet) {
-	if (packet->tint == 6) {
-		return false; // Tint effect 6 is spiritual possession (5 is grog); this isn't drunk.
+long AlcoholWidget::GetAlcoholTitlePoints() {
+	GW::GameContext* gameContext = GW::GameContext::instance();
+	if (!gameContext || !gameContext->world || !gameContext->world->titles.valid())
+		return 0;	// Sanity checks; context not ready.
+	return gameContext->world->titles[7].currentpoints;
+}
+long AlcoholWidget::GetAlcoholTitlePointsGained() {
+	long current_title_points = GetAlcoholTitlePoints();
+	long points_gained = current_title_points - prev_alcohol_title_points;
+	prev_alcohol_title_points = current_title_points; // Update previous variable.
+	return points_gained <= 0 ? 0 : points_gained;
+}
+void AlcoholWidget::Update(float delta) {
+	if (map_id != GW::Map::GetMapID() && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
+		map_id = GW::Map::GetMapID();
+		Log::Info("Map changed");
+		prev_alcohol_title_points = GetAlcoholTitlePoints(); // Fetch base alcohol points at start of map.
 	}
+}
+DWORD AlcoholWidget::GetAlcoholLevel() {
+	return this->alcohol_level;
+}
+bool AlcoholWidget::AlcUpdate(GW::Packet::StoC::PostProcess *packet) {
+	long pts_gained = GetAlcoholTitlePointsGained();
+	//Log::Info("Drunk effect %d / %d, %d pts gained", packet->tint, packet->level, pts_gained);
+	if (packet->tint == 6) {
+		// Tint 6, level 5 - the trouble zone for lunars!
+		if (packet->level == 5 && (prev_packet_tint_6_level < packet->level-1 || (prev_packet_tint_6_level == 5 && pts_gained < 1))) {
+			// If we've jumped a level, or the last packet was also level 5 and no points were gained, then its not alcohol.
+			// NOTE: All alcohol progresses from 1 to 5, but lunars just dive in at level 5.
+			//Log::Info("Lunars detected");
+			return false;
+		}
+		prev_packet_tint_6_level = packet->level;
+	}
+	
 	// if the player used a drink
 	if (packet->level > alcohol_level){
 		// if the player already had a drink going
