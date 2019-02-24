@@ -40,9 +40,6 @@ public:
 	void DrawSettingInternal() override;
 
 private:
-	void CheckIfWeJustEnabledAlcoholWithLunarsOn();
-
-
 	std::vector<Pcon*> pcons;
 	PconAlcohol* pcon_alcohol = nullptr;
 	GW::Constants::InstanceType current_map_type;

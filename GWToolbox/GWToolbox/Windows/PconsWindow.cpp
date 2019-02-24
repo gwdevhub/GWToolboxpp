@@ -9,12 +9,14 @@
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\GameEntities\Position.h>
+#include <GWCA\Context\GameContext.h>
 #include <imgui_internal.h>
 
 #include <logger.h>
 #include "GuiUtils.h"
 #include "Windows\MainWindow.h"
 #include <Modules\Resources.h>
+#include <Widgets\AlcoholWidget.h>
 
 using namespace GW::Constants;
 
@@ -113,13 +115,9 @@ void PconsWindow::Initialize() {
 		}
 		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::PostProcess>(
-		[&](GW::Packet::StoC::PostProcess *pak) -> bool {
-		if (pak->tint == 6) {
-			return PconAlcohol::suppress_drunk_effect; // Tint effect 6 is spiritual possession (5 is grog); this isn't drunk.
-		}
-		PconAlcohol::alcohol_level = pak->level;
-		//printf("Level = %d, tint = %d\n", pak->level, pak->tint);
+	GW::StoC::AddCallback<GW::Packet::StoC::PostProcess>([&](GW::Packet::StoC::PostProcess *pak) -> bool {
+		//Log::Info("Level = %d, tint = %d\n", pak->level, pak->tint);
+		PconAlcohol::alcohol_level = AlcoholWidget::Instance().GetAlcoholLevel();
 		if (enabled) pcon_alcohol->Update();
 		return PconAlcohol::suppress_drunk_effect;
 	});
@@ -224,7 +222,6 @@ void PconsWindow::Initialize() {
 		}
 	});
 }
-
 bool PconsWindow::DrawTabButton(IDirect3DDevice9* device, bool show_icon, bool show_text) {
 	bool clicked = ToolboxWindow::DrawTabButton(device, show_icon, show_text);
 
@@ -280,10 +277,6 @@ void PconsWindow::Draw(IDirect3DDevice9* device) {
 	}
 
 	ImGui::End();
-
-	if (!alcohol_enabled_before && pcon_alcohol->enabled) {
-		CheckIfWeJustEnabledAlcoholWithLunarsOn();
-	}
 }
 void PconsWindow::Update(float delta) {
 	if (current_map_type != GW::Map::GetInstanceType() || map_id != GW::Map::GetMapID()) { 
@@ -339,7 +332,6 @@ bool PconsWindow::SetEnabled(bool b) {
 	if (tick_with_pcons && current_map_type == GW::Constants::InstanceType::Outpost) {
 		GW::PartyMgr::Tick(enabled);
 	}
-	CheckIfWeJustEnabledAlcoholWithLunarsOn();
 	return enabled;
 }
 
