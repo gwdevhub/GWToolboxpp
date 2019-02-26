@@ -35,7 +35,6 @@ long AlcoholWidget::GetAlcoholTitlePointsGained() {
 void AlcoholWidget::Update(float delta) {
 	if (map_id != GW::Map::GetMapID() && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
 		map_id = GW::Map::GetMapID();
-		Log::Info("Map changed");
 		prev_alcohol_title_points = GetAlcoholTitlePoints(); // Fetch base alcohol points at start of map.
 	}
 }
