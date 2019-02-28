@@ -81,11 +81,10 @@ void Pcon::Update(int delay) {
 		mapid = GW::Map::GetMapID();
 		maptype = GW::Map::GetInstanceType();
 		pcon_quantity_checked = false;
-		player = nullptr;
 	}
 	if (enabled && PconsWindow::Instance().GetEnabled()) {
 		if (delay < 0) delay = Pcon::pcons_delay;
-		if(!player || player == nullptr) player = GW::Agents::GetPlayer();
+		player = GW::Agents::GetPlayer();
 		// === Use item if possible ===
 		if (player != nullptr
 			&& !player->GetIsDead()
