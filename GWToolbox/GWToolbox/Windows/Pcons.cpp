@@ -194,12 +194,23 @@ bool PconGeneric::CanUseByEffect() const {
 	GW::AgentEffectsArray AgEffects = GW::Effects::GetPartyEffectArray();
 	if (!AgEffects.valid()) return false; // don't know
 
-	GW::EffectArray effects = AgEffects[0].Effects;
-	if (!effects.valid()) return false; // don't know
+	DWORD player_id = GW::Agents::GetPlayerId();
+	if (!player_id) return false;  // player doesn't exist?
 
-	for (DWORD i = 0; i < effects.size(); i++) {
-		if (effects[i].SkillId == (DWORD)effectID
-			&& effects[i].GetTimeRemaining() > 1000) {
+	GW::EffectArray *effects = NULL;
+	for (size_t i = 0; i < AgEffects.size(); i++) {
+		if (AgEffects[i].AgentId == player_id) {
+			effects = &AgEffects[i].Effects;
+			break;
+		}
+	}
+
+	if (!effects || !effects->valid())
+		return false; // don't know
+
+	for (DWORD i = 0; i < effects->size(); i++) {
+		if (effects->at(i).SkillId == (DWORD)effectID
+			&& effects->at(i).GetTimeRemaining() > 1000) {
 			return false; // already on
 		}
 	}
