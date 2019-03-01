@@ -81,11 +81,10 @@ void Pcon::Update(int delay) {
 		mapid = GW::Map::GetMapID();
 		maptype = GW::Map::GetInstanceType();
 		pcon_quantity_checked = false;
-		player = nullptr;
 	}
 	if (enabled && PconsWindow::Instance().GetEnabled()) {
 		if (delay < 0) delay = Pcon::pcons_delay;
-		if(!player || player == nullptr) player = GW::Agents::GetPlayer();
+		player = GW::Agents::GetPlayer();
 		// === Use item if possible ===
 		if (player != nullptr
 			&& !player->GetIsDead()
@@ -218,7 +217,7 @@ int Pcon::Refill() {
 	if (points_needed < 1) return points_moved;
 	GW::Bag** bags = GW::Items::GetBagArray();
 	if (bags == nullptr) return points_moved;
-	for (int bagIndex = static_cast<int>(GW::Constants::Bag::Storage_1); bagIndex <= static_cast<int>(GW::Constants::Bag::Max); ++bagIndex) {
+	for (int bagIndex = static_cast<int>(GW::Constants::Bag::Storage_1); bagIndex <= static_cast<int>(GW::Constants::Bag::Storage_14); ++bagIndex) {
 		if (points_needed < 1) return points_moved;
 		GW::Bag* bag = bags[bagIndex];
 		if (bag == nullptr) continue;	// No bag, skip
@@ -232,7 +231,7 @@ int Pcon::Refill() {
 			if (points_per_item < 1) continue; // This is not the pcon you're looking for...
 			GW::Item* inventoryItem = FindVacantStackOrSlotInInventory(); // Now find a slot in inventory to move them to.
 			if (inventoryItem == nullptr) return points_moved; // No space for more pcons in inventory.
-			int quantity_to_move = static_cast<int>(ceil(points_needed / points_per_item));
+			int quantity_to_move = (int)ceil(points_needed / points_per_item);
 			if (quantity_to_move > storageItem->Quantity)		quantity_to_move = storageItem->Quantity;
 			points_moved += MoveItem(storageItem, inventoryItem->Bag, inventoryItem->Slot,quantity_to_move) * points_per_item;
 			points_needed -= points_moved; // amount_moved = item quantity moved x number of uses per item
