@@ -264,16 +264,16 @@ namespace {
 		}
 
 		const int storage1 = (int)GW::Constants::Bag::Storage_1;
-		const int storage9 = (int)GW::Constants::Bag::Storage_9;
+		const int storage14 = (int)GW::Constants::Bag::Storage_14;
 
 		// If item is stackable, try to complete similar stack
 		if (remaining == 0) return;
-		int moved = complete_existing_stack(item, storage1, storage9, remaining);
+		int moved = complete_existing_stack(item, storage1, storage14, remaining);
 		remaining -= moved;
 
 		// We find the first empty slot and put the remaining there
 		if (remaining) {
-			move_to_first_empty_slot(item, storage1, storage9);
+			move_to_first_empty_slot(item, storage1, storage14);
 		}
 	}
 
