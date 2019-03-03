@@ -372,59 +372,83 @@ void ChatCommands::CmdHide(const wchar_t *message, int argc, LPWSTR *argv) {
 	}
 }
 
-void ChatCommands::ParseDistrict(const std::wstring& s, GW::Constants::District& district, int& number) {
+bool ChatCommands::ParseOutpost(const std::wstring s, GW::Constants::MapID& outpost, GW::Constants::District& district, int& number) {
+	// Shortcut words e.g "/tp kama" for kamadan jewel of istan
+	if (s == L"toa")								return outpost = GW::Constants::MapID::Temple_of_the_Ages, true;
+	if (s == L"doa")								return outpost = GW::Constants::MapID::Domain_of_Anguish, true;
+	if (s == L"kamadan" || s == L"kama")			return outpost = GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost, true;
+	if (s == L"embark")								return outpost = GW::Constants::MapID::Embark_Beach, true;
+	if (s == L"eee")								return outpost = GW::Constants::MapID::Embark_Beach, district = GW::Constants::District::EuropeEnglish, true;
+	if (s == L"vlox" || s == L"vloxs")				return outpost = GW::Constants::MapID::Vloxs_Falls, true;
+	if (s == L"gadd" || s == L"gadds")				return outpost = GW::Constants::MapID::Gadds_Encampment_outpost, true;
+	if (s == L"urgoz")								return outpost = GW::Constants::MapID::Urgozs_Warren, true;
+	if (s == L"deep")								return outpost = GW::Constants::MapID::The_Deep, true;
+	if (s == L"gtob")								return outpost = GW::Constants::MapID::Great_Temple_of_Balthazar_outpost, true;
+	if (s == L"la")									return outpost = GW::Constants::MapID::Lions_Arch_outpost, true;
+	if (s == L"kaineng")							return outpost = GW::Constants::MapID::Kaineng_Center_outpost, true;
+	if (s == L"eotn")								return outpost = GW::Constants::MapID::Eye_of_the_North_outpost, true;
+	if (s == L"sif")								return outpost = GW::Constants::MapID::Sifhalla_outpost, true;
+	if (s == L"doom" || s == L"doomlore")			return outpost = GW::Constants::MapID::Doomlore_Shrine_outpost, true;
+	if (s == L"cava")								return outpost = GW::Constants::MapID::Cavalon_outpost, true;
+	if (s == L"hzh")								return outpost = GW::Constants::MapID::House_zu_Heltzer_outpost, true;
+	// By Map ID e.g. "/tp 77" for house zu heltzer 
+	int mapid;
+	if (GuiUtils::ParseInt(s.c_str(), &mapid) && (mapid != 0)) {
+		return outpost = (GW::Constants::MapID)mapid, true; 
+	}
+	// By full outpost name (without punctuation) e.g. "/tp GrEaT TemplE oF BalthaZAR"
+	std::string sanitized;
+	std::string compare = GuiUtils::RemovePunctuation(GuiUtils::WStringToString(s),0);
+	// NOTE: 730 is the size of GW::Constants::NAME_FROM_ID, hardcoded here because sizeof() returns wrong result.
+	for (int i = 0; i < 730; i++) {
+		if (!GW::Constants::NAME_FROM_ID[i] || strlen(GW::Constants::NAME_FROM_ID[i]) < 1) continue;
+		sanitized = GuiUtils::ToLower(GuiUtils::RemovePunctuation(GW::Constants::NAME_FROM_ID[i],i)); // Remove punctuation, to lower case.
+		if (compare == sanitized) return outpost = (GW::Constants::MapID)i, true; // 
+	}
+	return false;
+}
+bool ChatCommands::ParseDistrict(const std::wstring s, GW::Constants::District& district, int& number) {
 	district = GW::Constants::District::Current;
 	number = 0;
-	if (s == L"ae") {
-		district = GW::Constants::District::American;
-	} else if (s == L"ae1") {
-		district = GW::Constants::District::American;
-		number = 1;
-	} else if (s == L"int") {
-		district = GW::Constants::District::International;
-	} else if (s == L"ee") {
-		district = GW::Constants::District::EuropeEnglish;
-	} else if (s == L"eg" || s == L"dd") {
-		district = GW::Constants::District::EuropeGerman;
-	} else if (s == L"ef" || s == L"fr") {
-		district = GW::Constants::District::EuropeFrench;
-	} else if (s == L"ei" || s == L"it") {
-		district = GW::Constants::District::EuropeItalian;
-	} else if (s == L"es") {
-		district = GW::Constants::District::EuropeSpanish;
-	} else if (s == L"ep" || s == L"pl") {
-		district = GW::Constants::District::EuropePolish;
-	} else if (s == L"er" || s == L"ru") {
-		district = GW::Constants::District::EuropeRussian;
-	} else if (s == L"ak" || s == L"kr") {
-		district = GW::Constants::District::AsiaKorean;
-	} else if (s == L"ac" || s == L"atc" || s == L"ch") {
-		district = GW::Constants::District::AsiaChinese;
-	} else if (s == L"aj" || s == L"jp") {
-		district = GW::Constants::District::AsiaJapanese;
-	}
+	if (s == L"ae")									return district = GW::Constants::District::American, true;
+	if (s == L"ae1" || s == L"ad1")					return district = GW::Constants::District::American, number = 1, true;
+	if (s == L"int")								return district = GW::Constants::District::International, true;
+	if (s == L"ee")									return district = GW::Constants::District::EuropeEnglish, true;
+	if (s == L"eg" || s == L"dd")					return district = GW::Constants::District::EuropeGerman, true;
+	if (s == L"ef" || s == L"fr")					return district = GW::Constants::District::EuropeFrench, true;
+	if (s == L"ei" || s == L"it")					return district = GW::Constants::District::EuropeItalian, true;
+	if (s == L"es")									return district = GW::Constants::District::EuropeSpanish, true;
+	if (s == L"ep" || s == L"pl")					return district = GW::Constants::District::EuropePolish, true;
+	if (s == L"er" || s == L"ru")					return district = GW::Constants::District::EuropeRussian, true;
+	if (s == L"ak" || s == L"kr")					return district = GW::Constants::District::AsiaKorean, true;
+	if (s == L"ac" || s == L"atc" || s == L"ch")	return district = GW::Constants::District::AsiaChinese, true;
+	if (s == L"aj" || s == L"jp")					return district = GW::Constants::District::AsiaJapanese, true;
+	return false;
 }
-
 void ChatCommands::CmdTP(const wchar_t *message, int argc, LPWSTR *argv) {
 	// zero argument error
 	if (argc == 1) {
 		Log::Error("[Error] Please provide an argument");
 		return;
 	}
+	GW::Constants::MapID outpost = GW::Map::GetMapID();
+	GW::Constants::District district = GW::Constants::District::Current;
+	int district_number = 0;
 
-	std::wstring arg1 = GuiUtils::ToLower(argv[1]);
-
-	// own guild hall
-	if (arg1 == L"gh" && argc == 2) {
-		GW::GuildMgr::TravelGH();
-		return;
-	}
-	// ally guild hall
-	if (arg1 == L"gh" && argc > 2) {
-		std::wstring tag = GuiUtils::ToLower(argv[2]);
+	std::wstring argOutpost = GuiUtils::ToLower(argv[1]);
+	std::wstring argDistrict = GuiUtils::ToLower(argv[argc-1]);
+	// Guild hall
+	if (argOutpost == L"gh") {
+		if (argc == 2) { 
+			// "/tp gh"
+			GW::GuildMgr::TravelGH();
+			return;
+		}
+		// "/tp gh lag" = travel to Guild Hall belonging to Zero Files Remaining [LaG]
+		std::wstring argGuildTag = GuiUtils::ToLower(argv[2]);
 		GW::GuildArray guilds = GW::GuildMgr::GetGuildArray();
 		for (GW::Guild* guild : guilds) {
-			if (guild && GuiUtils::ToLower(guild->tag) == tag) {
+			if (guild && GuiUtils::ToLower(guild->tag) == argGuildTag) {
 				GW::GuildMgr::TravelGH(guild->key);
 				return;
 			}
@@ -432,75 +456,42 @@ void ChatCommands::CmdTP(const wchar_t *message, int argc, LPWSTR *argv) {
 		Log::Error("[Error] Did not recognize guild '%ls'\n", argv[2]);
 		return;
 	}
-
-	// current outpost - different district
-	GW::Constants::District district;
-	int district_number;
-	ParseDistrict(arg1, district, district_number);
-	if (district != GW::Constants::District::Current) {
-		// we have a match
-		GW::Constants::MapID current = GW::Map::GetMapID();
-		GW::Map::Travel(current, district, district_number);
-		return;
-	}
-	
-	// different outpost - district optional
-	if (argc > 2) {
-		std::wstring dis = GuiUtils::ToLower(argv[2]);
-		ParseDistrict(dis, district, district_number);
-		if (district == GW::Constants::District::Current) {
-			// did not match district, but continue with travel anyway
-			Log::Error("Invalid district '%ls'", dis.c_str());
-		}
-	}
-
-	std::wstring town = GuiUtils::ToLower(argv[1]);
-	if (town.compare(0, 3, L"fav", 3) == 0) {
-		std::wstring fav_s_num = town.substr(3, std::wstring::npos);
+	if (argOutpost.size() > 2 && argOutpost.compare(0, 3, L"fav", 3) == 0) {
+		std::wstring fav_s_num = argOutpost.substr(3, std::wstring::npos);
 		if (fav_s_num.empty()) {
 			TravelWindow::Instance().TravelFavorite(0);
-		} else {
-			int fav_num;
-			if (GuiUtils::ParseInt(fav_s_num.c_str(), &fav_num)) {
-				TravelWindow::Instance().TravelFavorite(fav_num - 1);
-			}
+			return;
 		}
-	} else if (town == L"toa") {
-		GW::Map::Travel(GW::Constants::MapID::Temple_of_the_Ages, district, district_number);
-	} else if (town == L"doa") {
-		GW::Map::Travel(GW::Constants::MapID::Domain_of_Anguish, district, district_number);
-	} else if (town == L"kamadan" || town == L"kama") {
-		GW::Map::Travel(GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost, district, district_number);
-	} else if (town == L"embark") {
-		GW::Map::Travel(GW::Constants::MapID::Embark_Beach, district, district_number);
-	} else if (town == L"eee") {
-		GW::Map::Travel(GW::Constants::MapID::Embark_Beach, GW::Constants::District::EuropeEnglish, 0);
-	} else if (town == L"vlox" || town == L"vloxs") {
-		GW::Map::Travel(GW::Constants::MapID::Vloxs_Falls, district, district_number);
-	} else if (town == L"gadd" || town == L"gadds") {
-		GW::Map::Travel(GW::Constants::MapID::Gadds_Encampment_outpost, district, district_number);
-	} else if (town == L"urgoz") {
-		GW::Map::Travel(GW::Constants::MapID::Urgozs_Warren, district, district_number);
-	} else if (town == L"deep") {
-		GW::Map::Travel(GW::Constants::MapID::The_Deep, district, district_number);
-	} else if (town == L"gtob") {
-		GW::Map::Travel(GW::Constants::MapID::Great_Temple_of_Balthazar_outpost, district, district_number);
-	} else if (town == L"la") {
-		GW::Map::Travel(GW::Constants::MapID::Lions_Arch_outpost, district, district_number);
-	} else if (town == L"kaineng") {
-		GW::Map::Travel(GW::Constants::MapID::Kaineng_Center_outpost, district, district_number);
-	} else if (town == L"eotn") {
-		GW::Map::Travel(GW::Constants::MapID::Eye_of_the_North_outpost, district, district_number);
-	} else if (town == L"sif" || town == L"sifhalla") {
-		GW::Map::Travel(GW::Constants::MapID::Sifhalla_outpost, district, district_number);
-	} else if (town == L"doom" || town == L"doomlore") {
-		GW::Map::Travel(GW::Constants::MapID::Doomlore_Shrine_outpost, district, district_number);
-	} else {
-		int mapid;
-		if (GuiUtils::ParseInt(town.c_str(), &mapid) && (mapid != 0)) {
-			GW::Map::Travel((GW::Constants::MapID)mapid, district, district_number);
+		int fav_num;
+		if (GuiUtils::ParseInt(fav_s_num.c_str(), &fav_num)) {
+			TravelWindow::Instance().TravelFavorite(fav_num - 1);
+			return;
 		}
+		Log::Error("[Error] Did not recognize favourite\n");
+		return;
 	}
+	for (int i = 2; i < argc-1; i++) {
+		// Outpost name can be anything after "/tp" but before the district e.g. "/tp house zu heltzer ae1"
+		argOutpost.append(L" ");
+		argOutpost.append(GuiUtils::ToLower(argv[i]));
+	}
+	bool isValidDistrict = ParseDistrict(argDistrict, district, district_number);
+	if (isValidDistrict && argc == 2) {
+		// e.g. "/tp ae1"
+		GW::Map::Travel(outpost, district, district_number); // NOTE: ParseDistrict sets district and district_number vars by reference.
+		return;
+	}
+	if (!isValidDistrict && argc > 2) { 
+		// e.g. "/tp house zu heltzer"
+		argOutpost.append(L" ");
+		argOutpost.append(argDistrict);
+	}
+	if (ParseOutpost(argOutpost, outpost, district, district_number)) {
+		GW::Map::Travel(outpost, district, district_number); // NOTE: ParseOutpost sets outpost, district and district_number vars by reference.
+		return;
+	}
+	Log::Error("[Error] Did not recognize outpost '%ls'\n", argOutpost.c_str());
+	return;
 }
 
 void ChatCommands::CmdZoom(const wchar_t *message, int argc, LPWSTR *argv) {

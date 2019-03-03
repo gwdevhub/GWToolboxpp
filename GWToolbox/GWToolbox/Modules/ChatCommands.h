@@ -39,7 +39,8 @@ public:
 
 private:
 	static bool ReadTemplateFile(std::wstring path, char *buff, size_t buffSize);
-	static void ParseDistrict(const std::wstring& s, GW::Constants::District& district, int& number);
+	static bool ParseDistrict(const std::wstring s, GW::Constants::District& district, int& number);
+	static bool ParseOutpost(const std::wstring s, GW::Constants::MapID& outpost, GW::Constants::District& district, int& number);
 
 	static void CmdAge2(const wchar_t *message, int argc, LPWSTR *argv);
 	static void CmdDialog(const wchar_t *message, int argc, LPWSTR *argv);

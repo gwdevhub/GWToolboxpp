@@ -78,6 +78,29 @@ std::wstring GuiUtils::ToLower(std::wstring s) {
 	std::transform(s.begin(), s.end(), s.begin(), ::tolower);
 	return s;
 }
+std::string GuiUtils::WStringToString(const std::wstring& s)
+{
+	std::string temp(s.length(), ' ');
+	std::copy(s.begin(), s.end(), temp.begin());
+	return temp;
+}
+
+std::string GuiUtils::RemovePunctuation(std::string s) {
+	for (int i = 0, len = s.size(); i < len; i++) {
+		if (!ispunct(s[i])) continue;
+		s.erase(i--, 1);
+		len--;
+	}
+	return s;
+}
+std::wstring GuiUtils::RemovePunctuation(std::wstring s) {
+	for (int i = 0, len = s.size(); i < len; i++)	{
+		if (!ispunct(s[i])) continue;
+		s.erase(i--, 1);
+		len--;
+	}
+	return s;
+}
 bool GuiUtils::ParseInt(const char *str, int *val, int base) {
 	char *end;
 	*val = strtol(str, &end, base);
