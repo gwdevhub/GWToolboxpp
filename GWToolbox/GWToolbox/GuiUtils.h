@@ -19,6 +19,10 @@ namespace GuiUtils {
 
 	std::string ToLower(std::string s);
 	std::wstring ToLower(std::wstring s);
+	std::wstring RemovePunctuation(std::wstring s);
+	std::string RemovePunctuation(std::string s);
+
+	std::string WStringToString(const std::wstring& s);
 
 	bool ParseInt(const char *str, int *val, int base = 0);
 	bool ParseInt(const wchar_t *str, int *val, int base = 0);
