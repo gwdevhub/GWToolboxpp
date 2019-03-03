@@ -370,11 +370,19 @@ bool PconLunar::CanUseByEffect() const {
 	GW::AgentEffectsArray AgEffects = GW::Effects::GetPartyEffectArray();
 	if (!AgEffects.valid()) return false; // don't know
 
-	GW::EffectArray effects = AgEffects[0].effects;
-	if (!effects.valid()) return false; // don't know
+	GW::EffectArray *effects = NULL;
+	for (size_t i = 0; i < AgEffects.size(); i++) {
+		if (AgEffects[i].agent_id == player_id) {
+			effects = &AgEffects[i].effects;
+			break;
+		}
+	}
 
-	for (DWORD i = 0; i < effects.size(); i++) {
-		if (effects[i].skill_id == (DWORD)GW::Constants::SkillID::Lunar_Blessing) {
+	if (!effects || !effects->valid())
+		return false; // don't know
+
+	for (DWORD i = 0; i < effects->size(); i++) {
+		if (effects->at(i).skill_id == (DWORD)GW::Constants::SkillID::Lunar_Blessing) {
 			return false; // already on
 		}
 	}
