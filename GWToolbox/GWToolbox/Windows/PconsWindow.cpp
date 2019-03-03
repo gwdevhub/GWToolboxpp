@@ -1,19 +1,26 @@
-#include "PconsWindow.h"
+#include <stdint.h>
 
 #include <string>
 #include <functional>
 
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\PartyMgr.h>
-#include <GWCA\Managers\StoCMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
+#include <imgui.h>
 #include <imgui_internal.h>
+
+#include <GWCA\GameContainers\Array.h>
+#include <GWCA\GameContainers\GamePos.h>
+#include <GWCA\Packets\StoC.h>
+
+#include <GWCA\Managers\MapMgr.h>
+#include <GWCA\Managers\ChatMgr.h>
+#include <GWCA\Managers\StoCMgr.h>
+#include <GWCA\Managers\AgentMgr.h>
+#include <GWCA\Managers\PartyMgr.h>
 
 #include <logger.h>
 #include "GuiUtils.h"
 #include "Windows\MainWindow.h"
 #include <Modules\Resources.h>
+#include "PconsWindow.h"
 
 using namespace GW::Constants;
 

@@ -1,16 +1,27 @@
-#include "Pcons.h"
+#include <stdint.h>
+
+#include <string>
+#include <functional>
 
 #include <d3dx9tex.h>
 
+#include <GWCA\Constants\Constants.h>
+#include <GWCA\GameContainers\Array.h>
+#include <GWCA\GameContainers\GamePos.h>
+
+#include <GWCA\GameEntities\Agent.h>
+#include <GWCA\GameEntities\Skill.h>
+
 #include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\EffectMgr.h>
 #include <GWCA\Managers\ItemMgr.h>
+#include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\PartyMgr.h>
+#include <GWCA\Managers\EffectMgr.h>
 
 #include <logger.h>
 #include "GuiUtils.h"
 #include <Modules\Resources.h>
+#include "Pcons.h"
 
 using namespace GW::Constants;
 
@@ -77,7 +88,7 @@ void Pcon::Update(int delay) {
 	 // === Use item if possible ===
 	if (player != nullptr
 		&& !player->GetIsDead()
-		&& (player_id == 0 || player->Id == player_id)
+		&& (player_id == 0 || player->agent_id == player_id)
 		&& TIMER_DIFF(timer) > delay
 		&& CanUseByInstanceType()
 		&& CanUseByEffect()) {
@@ -137,7 +148,7 @@ int Pcon::CheckInventory(bool* used, int* used_qty_ptr) const {
 	for (int bagIndex = 1; bagIndex <= 4; ++bagIndex) {
 		GW::Bag* bag = bags[bagIndex];
 		if (bag != nullptr) {
-			GW::ItemArray items = bag->Items;
+			GW::ItemArray items = bag->items;
 			if (items.valid()) {
 				for (size_t i = 0; i < items.size(); i++) {
 					GW::Item* item = items[i];
@@ -149,7 +160,7 @@ int Pcon::CheckInventory(bool* used, int* used_qty_ptr) const {
 								*used = true;
 								used_qty = qtyea;
 							}
-							count += qtyea * item->Quantity;
+							count += qtyea * item->quantity;
 						}
 					}
 				}
@@ -187,7 +198,7 @@ void Pcon::SaveSettings(CSimpleIni* inifile, const char* section) {
 
 // ================================================
 int PconGeneric::QuantityForEach(const GW::Item* item) const {
-	if (item->ModelId == (DWORD)itemID) return 1;
+	if (item->model_id == (DWORD)itemID) return 1;
 	return 0;
 }
 bool PconGeneric::CanUseByEffect() const {
@@ -199,8 +210,8 @@ bool PconGeneric::CanUseByEffect() const {
 
 	GW::EffectArray *effects = NULL;
 	for (size_t i = 0; i < AgEffects.size(); i++) {
-		if (AgEffects[i].AgentId == player_id) {
-			effects = &AgEffects[i].Effects;
+		if (AgEffects[i].agent_id == player_id) {
+			effects = &AgEffects[i].effects;
 			break;
 		}
 	}
@@ -209,7 +220,7 @@ bool PconGeneric::CanUseByEffect() const {
 		return false; // don't know
 
 	for (DWORD i = 0; i < effects->size(); i++) {
-		if (effects->at(i).SkillId == (DWORD)effectID
+		if (effects->at(i).skill_id == (DWORD)effectID
 			&& effects->at(i).GetTimeRemaining() > 1000) {
 			return false; // already on
 		}
@@ -244,25 +255,25 @@ bool PconCity::CanUseByInstanceType() const {
 bool PconCity::CanUseByEffect() const {
 	GW::Agent* player = GW::Agents::GetPlayer();
 	if (player == nullptr) return false;
-	if (player->MoveX == 0.0f && player->MoveY == 0.0f) return false;
+	if (player->move_x == 0.0f && player->move_y == 0.0f) return false;
 
 	GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
 	if (!effects.valid()) return true; // When the player doesn't have any effect, the array is not created.
 
 	for (DWORD i = 0; i < effects.size(); i++) {
 		if (effects[i].GetTimeRemaining() < 1000) continue;
-		if (effects[i].SkillId == (DWORD)SkillID::Sugar_Rush_short
-			|| effects[i].SkillId == (DWORD)SkillID::Sugar_Rush_medium
-			|| effects[i].SkillId == (DWORD)SkillID::Sugar_Rush_long
-			|| effects[i].SkillId == (DWORD)SkillID::Sugar_Jolt_short
-			|| effects[i].SkillId == (DWORD)SkillID::Sugar_Jolt_long) {
+		if (effects[i].skill_id == (DWORD)SkillID::Sugar_Rush_short
+			|| effects[i].skill_id == (DWORD)SkillID::Sugar_Rush_medium
+			|| effects[i].skill_id == (DWORD)SkillID::Sugar_Rush_long
+			|| effects[i].skill_id == (DWORD)SkillID::Sugar_Jolt_short
+			|| effects[i].skill_id == (DWORD)SkillID::Sugar_Jolt_long) {
 			return false; // already on
 		}
 	}
 	return true;
 }
 int PconCity::QuantityForEach(const GW::Item* item) const {
-	switch (item->ModelId) {
+	switch (item->model_id) {
 	case ItemID::CremeBrulee:
 	case ItemID::ChocolateBunny:
 	case ItemID::Fruitcake:
@@ -282,7 +293,7 @@ bool PconAlcohol::CanUseByEffect() const {
 	return Pcon::alcohol_level <= 1;
 }
 int PconAlcohol::QuantityForEach(const GW::Item* item) const {
-	switch (item->ModelId) {
+	switch (item->model_id) {
 	case ItemID::Eggnog:
 	case ItemID::DwarvenAle:
 	case ItemID::HuntersAle:
@@ -300,10 +311,10 @@ int PconAlcohol::QuantityForEach(const GW::Item* item) const {
 	case ItemID::KrytanBrandy:
 		return 5;
 	case ItemID::Keg: {
-		GW::ItemModifier *mod = item->ModStruct;
+		GW::ItemModifier *mod = item->mod_struct;
 		if (mod == nullptr) return 5; // we don't think this will ever happen
 
-		for (DWORD i = 0; i < item->ModStructSize; i++) {
+		for (DWORD i = 0; i < item->mod_struct_size; i++) {
 			if (mod->identifier() == 581) {
 				return mod->arg3() * 5;
 			}
@@ -319,7 +330,7 @@ void PconAlcohol::ForceUse() {
 	GW::Agent* player = GW::Agents::GetPlayer();
 	if (player != nullptr
 		&& !player->GetIsDead()
-		&& (player_id == 0 || player->Id == player_id)) {
+		&& (player_id == 0 || player->agent_id == player_id)) {
 		bool used = false;
 		int used_qty = 0;
 		int qty = CheckInventory(&used, &used_qty);
@@ -337,7 +348,7 @@ void PconLunar::Update(int delay) {
 	Pcon::Update(Pcon::lunar_delay);
 }
 int PconLunar::QuantityForEach(const GW::Item* item) const {
-	switch (item->ModelId) {
+	switch (item->model_id) {
 	case ItemID::LunarPig:
 	case ItemID::LunarRat:
 	case ItemID::LunarOx:
@@ -359,11 +370,11 @@ bool PconLunar::CanUseByEffect() const {
 	GW::AgentEffectsArray AgEffects = GW::Effects::GetPartyEffectArray();
 	if (!AgEffects.valid()) return false; // don't know
 
-	GW::EffectArray effects = AgEffects[0].Effects;
+	GW::EffectArray effects = AgEffects[0].effects;
 	if (!effects.valid()) return false; // don't know
 
 	for (DWORD i = 0; i < effects.size(); i++) {
-		if (effects[i].SkillId == (DWORD)GW::Constants::SkillID::Lunar_Blessing) {
+		if (effects[i].skill_id == (DWORD)GW::Constants::SkillID::Lunar_Blessing) {
 			return false; // already on
 		}
 	}

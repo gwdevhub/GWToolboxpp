@@ -1,9 +1,15 @@
-#include "DistanceWidget.h"
+#include <stdint.h>
 
+#include <string>
+
+#include <GWCA\Constants\Constants.h>
+#include <GWCA\GameContainers\GamePos.h>
+#include <GWCA\GameEntities\Agent.h>
 #include <GWCA\Managers\AgentMgr.h>
 
 #include "GuiUtils.h"
 #include "Modules\ToolboxSettings.h"
+#include "DistanceWidget.h"
 
 void DistanceWidget::Draw(IDirect3DDevice9* pDevice) {
 	if (!visible) return;
@@ -16,7 +22,7 @@ void DistanceWidget::Draw(IDirect3DDevice9* pDevice) {
 		GW::Agent* me = GW::Agents::GetPlayer();
 		GW::Agent* target = GW::Agents::GetTarget();
 		if (me && target && me != target) {
-			float dist = GW::Agents::GetDistance(me->pos, target->pos);
+			float dist = GW::GetDistance(me->pos, target->pos);
 			snprintf(dist_perc, 32, "%2.0f %s", dist * 100 / GW::Constants::Range::Compass, "%%");
 			snprintf(dist_abs, 32, "%.0f", dist);
 

@@ -1,16 +1,24 @@
-#include "RangeRenderer.h"
+#include <stdint.h>
+
+#include <string>
 
 #include <d3dx9math.h>
-
 #include <imgui.h>
 
 #include <GWCA\Constants\Constants.h>
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\SkillbarMgr.h>
+#include <GWCA\GameContainers\Array.h>
+#include <GWCA\GameContainers\GamePos.h>
+
+#include <GWCA\GameEntities\Agent.h>
+#include <GWCA\GameEntities\Skill.h>
+
 #include <GWCA\Managers\MapMgr.h>
+#include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\CameraMgr.h>
+#include <GWCA\Managers\SkillbarMgr.h>
 
 #include "GuiUtils.h"
+#include "RangeRenderer.h"
 
 void RangeRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	color_range_hos = Colors::Load(ini, section, "color_range_hos", 0xFF881188);
@@ -157,9 +165,9 @@ void RangeRenderer::Render(IDirect3DDevice9* device) {
 			&& tgt->GetIsCharacterType()
 			&& !me->GetIsDead()
 			&& !tgt->GetIsDead()
-			&& GW::Agents::GetSqrDistance(tgt->pos, me->pos) < GW::Constants::SqrRange::Spellcast) {
+			&& GW::GetSquareDistance(tgt->pos, me->pos) < GW::Constants::SqrRange::Spellcast) {
 			
-			GW::Vector2f v = me->pos - tgt->pos;
+			GW::Vec2f v = me->pos - tgt->pos;
 			float angle = std::atan2(v.y, v.x);
 
 			D3DXMATRIX oldworld, rotate, newworld;
@@ -179,15 +187,15 @@ void RangeRenderer::Render(IDirect3DDevice9* device) {
 }
 
 bool RangeRenderer::HaveHos() {
-	GW::Skillbar skillbar = GW::Skillbar::GetPlayerSkillbar();
-	if (!skillbar.IsValid()) {
+	GW::Skillbar *skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
+	if (!skillbar || !skillbar->IsValid()) {
 		checkforhos_ = true;
 		return false;
 	}
 
 	for (int i = 0; i < 8; ++i) {
-		GW::SkillbarSkill skill = skillbar.Skills[i];
-		GW::Constants::SkillID id = (GW::Constants::SkillID) skill.SkillId;
+		GW::SkillbarSkill skill = skillbar->skills[i];
+		GW::Constants::SkillID id = (GW::Constants::SkillID) skill.skill_id;
 		if (id == GW::Constants::SkillID::Heart_of_Shadow) return true;
 		if (id == GW::Constants::SkillID::Vipers_Defense) return true;
 	}

@@ -1,17 +1,29 @@
-#include "PingsLinesRenderer.h"
+#include <stdint.h>
 
+#include <string>
+#include <functional>
 #include <unordered_set>
-#include <d3dx9math.h>
-#include <d3d9.h>
 
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\StoCMgr.h>
-#include <GWCA\Managers\EffectMgr.h>
-#include <GWCA\Managers\CtoSMgr.h>
+#include <d3d9.h>
+#include <d3dx9math.h>
+
+#include <GWCA\Constants\Constants.h>
+#include <GWCA\GameContainers\Array.h>
+#include <GWCA\GameContainers\GamePos.h>
+
+#include <GWCA\Packets\StoC.h>
+
+#include <GWCA\GameEntities\Agent.h>
+#include <GWCA\GameEntities\Skill.h>
+
 #include <GWCA\Managers\UIMgr.h>
+#include <GWCA\Managers\CtoSMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
+#include <GWCA\Managers\AgentMgr.h>
+#include <GWCA\Managers\EffectMgr.h>
 
 #include "GuiUtils.h"
+#include "PingsLinesRenderer.h"
 
 void PingsLinesRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	color_drawings = Colors::Load(ini, section, "color_drawings", Colors::ARGB(0xFF, 0xFF, 0xFF, 0xFF));
@@ -73,7 +85,7 @@ PingsLinesRenderer::PingsLinesRenderer() : vertices(nullptr) {
 	lastsent = TIMER_INIT();
 	lastqueued = TIMER_INIT();
 
-	shadowstep_location = GW::Vector2f(0, 0);
+	shadowstep_location = GW::Vec2f(0, 0);
 }
 
 void PingsLinesRenderer::P046Callback(GW::Packet::StoC::AgentPinged *pak) {
@@ -276,19 +288,19 @@ void PingsLinesRenderer::DrawShadowstepMarker(IDirect3DDevice9* device) {
 
 	GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
 	if (!effects.valid()) {
-		shadowstep_location = GW::Vector2f();
+		shadowstep_location = GW::Vec2f();
 		return;
 	}
 
 	bool found = false;
 	for (unsigned int i = 0; i < effects.size(); ++i) {
-		if (effects[i].SkillId == (DWORD)GW::Constants::SkillID::Shadow_of_Haste
-			|| effects[i].SkillId == (DWORD)GW::Constants::SkillID::Shadow_Walk) {
+		if (effects[i].skill_id == (DWORD)GW::Constants::SkillID::Shadow_of_Haste
+			|| effects[i].skill_id == (DWORD)GW::Constants::SkillID::Shadow_Walk) {
 			found = true;
 		}
 	}
 	if (!found) {
-		shadowstep_location = GW::Vector2f();
+		shadowstep_location = GW::Vec2f();
 		return;
 	}
 
@@ -316,8 +328,8 @@ void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9* device) {
 	if (recall_target == 0) return;
 	if ((color_shadowstep_line & IM_COL32_A_MASK) == 0) return;
 
-	GW::Buff recall = GW::Effects::GetPlayerBuffBySkillId(GW::Constants::SkillID::Recall);
-	if (recall.SkillId == 0) {
+	GW::Buff *recall = GW::Effects::GetPlayerBuffBySkillId(GW::Constants::SkillID::Recall);
+	if (!recall || recall->skill_id == 0) {
 		recall_target = 0;
 		return;
 	}
@@ -338,7 +350,7 @@ void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9* device) {
         recall_target = 0;
         return;
     }
-	float distance = GW::Agents::GetDistance(target->pos, player->pos);
+	float distance = GW::GetDistance(target->pos, player->pos);
 	float distance_perc = distance / GW::Constants::Range::Compass;
 	Color c;
 	if (distance_perc < maxrange_interp_begin) {
@@ -438,7 +450,7 @@ bool PingsLinesRenderer::OnMouseDown(float x, float y) {
 	return true;
 }
 
-void PingsLinesRenderer::AddMouseClickPing(GW::Vector2f pos) {
+void PingsLinesRenderer::AddMouseClickPing(GW::Vec2f pos) {
     pings.push_front(new ClickPing(pos.x, pos.y));
 }
 
@@ -449,11 +461,11 @@ bool PingsLinesRenderer::OnMouseMove(float x, float y) {
 	if (me == nullptr) return false;
 
 
-	drawings[me->PlayerNumber].player = me->PlayerNumber;
+	drawings[me->player_number].player = me->player_number;
 	if (!mouse_moved) { // first time
 		mouse_moved = true;
 		BumpSessionID();
-		drawings[me->PlayerNumber].session = session_id;
+		drawings[me->player_number].session = session_id;
 	}
 
 	if (TIMER_DIFF(lastshown) > show_interval
@@ -466,7 +478,7 @@ bool PingsLinesRenderer::OnMouseMove(float x, float y) {
 		l.y1 = mouse_y;
 		l.x2 = mouse_x = x;
 		l.y2 = mouse_y = y;
-		drawings[me->PlayerNumber].lines.push_back(l);
+		drawings[me->player_number].lines.push_back(l);
 
 		if (TIMER_DIFF(lastqueued) > queue_interval
 			|| TIMER_DIFF(lastsent) > send_interval) {

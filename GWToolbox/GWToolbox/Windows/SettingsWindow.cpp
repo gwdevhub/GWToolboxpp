@@ -1,6 +1,4 @@
-#include "SettingsWindow.h"
-
-#include <Windows.h>
+#include <TbWindows.h>
 #include <ShellApi.h>
 
 #include "Defines.h"
@@ -11,6 +9,7 @@
 #include <Modules\GameSettings.h>
 #include <Modules\Updater.h>
 #include <Modules\Resources.h>
+#include "SettingsWindow.h"
 
 void SettingsWindow::Initialize() {
 	ToolboxWindow::Initialize();

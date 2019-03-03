@@ -1,7 +1,13 @@
-#include "HotkeysWindow.h"
+#include <stdint.h>
 
+#include <string>
 #include <algorithm>
-#include <Windows.h>
+#include <functional>
+
+#include <TbWindows.h>
+
+#include <GWCA\Constants\Constants.h>
+#include <GWCA\GameContainers\Array.h>
 
 #include <GWCA\Managers\ItemMgr.h>
 
@@ -9,6 +15,7 @@
 #include <logger.h>
 #include <GuiUtils.h>
 #include <Modules\Resources.h>
+#include "HotkeysWindow.h"
 
 void HotkeysWindow::Initialize() {
 	ToolboxWindow::Initialize();

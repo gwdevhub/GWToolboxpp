@@ -1,9 +1,16 @@
-#include "ToolboxSettings.h"
-
 #include <fstream>
 
-#include <GWCA\Managers\AgentMgr.h>
+#include <GWCA\Constants\Constants.h>
+
+#include <GWCA\GameContainers\Array.h>
+#include <GWCA\GameContainers\GamePos.h>
+
+#include <GWCA\Packets\StoC.h>
+
+#include <GWCA\GameEntities\Party.h>
+
 #include <GWCA\Managers\MapMgr.h>
+#include <GWCA\Managers\AgentMgr.h>
 
 #include <Defines.h>
 #include "GuiUtils.h"
@@ -34,6 +41,8 @@
 #include <Widgets\ClockWidget.h>
 #include <Widgets\VanquishWidget.h>
 #include <Widgets\AlcoholWidget.h>
+
+#include "ToolboxSettings.h"
 
 bool ToolboxSettings::move_all = false;
 
@@ -225,10 +234,10 @@ void ToolboxSettings::Update(float delta) {
 				if (me) {
 					prof_string += L" - ";
 					prof_string += GW::Constants::GetWProfessionAcronym(
-						static_cast<GW::Constants::Profession>(me->Primary));
+						static_cast<GW::Constants::Profession>(me->primary));
 					prof_string += L"-";
 					prof_string += GW::Constants::GetWProfessionAcronym(
-						static_cast<GW::Constants::Profession>(me->Secondary));
+						static_cast<GW::Constants::Profession>(me->secondary));
 				}
 
 				SYSTEMTIME localtime;
