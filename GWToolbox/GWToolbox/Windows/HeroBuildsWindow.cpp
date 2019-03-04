@@ -1,15 +1,27 @@
-#include "HeroBuildsWindow.h"
+#include <stdint.h>
 
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
+#include <string>
+#include <functional>
+
+#include <GWCA\Constants\Constants.h>
+#include <GWCA\GameContainers\Array.h>
+#include <GWCA\GameContainers\GamePos.h>
+
+#include <GWCA\GameEntities\Hero.h>
+
+#include <GWCA\Context\GameContext.h>
+#include <GWCA\Context\WorldContext.h>
+
 #include <GWCA\Managers\MapMgr.h>
+#include <GWCA\Managers\ChatMgr.h>
+#include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\PartyMgr.h>
 #include <GWCA\Managers\SkillbarMgr.h>
-#include <GWCA\Context\GameContext.h>
 
 #include <logger.h>
 #include "GuiUtils.h"
 #include <Modules\Resources.h>
+#include "HeroBuildsWindow.h"
 
 #define INI_FILENAME L"herobuilds.ini"
 
@@ -175,7 +187,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
                         auto ctx = GW::GameContext::instance();
                         auto& hero_array = ctx->world->hero_info;
                         for (auto& hero : hero_array) {
-                            if (hero.HeroID == id) {
+                            if (hero.hero_id == id) {
                                 match = true;
                                 wcstombs(MercHeroNames[id - HeroID::Merc1], hero.name, 20);
                                 *out_text = MercHeroNames[id - HeroID::Merc1];

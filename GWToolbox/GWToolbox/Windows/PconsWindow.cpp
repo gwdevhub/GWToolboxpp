@@ -1,22 +1,33 @@
-#include "PconsWindow.h"
+#include <stdint.h>
 
 #include <string>
 #include <functional>
-
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\PartyMgr.h>
-#include <GWCA\Managers\StoCMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\GameEntities\Position.h>
-#include <GWCA\Context\GameContext.h>
+#include <imgui.h>
 #include <imgui_internal.h>
+
+#include <GWCA\GameContainers\GamePos.h>
+
+#include <GWCA\Context\GameContext.h>
+
+#include <GWCA\GameContainers\Array.h>
+#include <GWCA\GameContainers\GamePos.h>
+
+#include <GWCA\GameEntities\Agent.h>
+
+#include <GWCA\Packets\StoC.h>
+
+#include <GWCA\Managers\MapMgr.h>
+#include <GWCA\Managers\ChatMgr.h>
+#include <GWCA\Managers\StoCMgr.h>
+#include <GWCA\Managers\AgentMgr.h>
+#include <GWCA\Managers\PartyMgr.h>
 
 #include <logger.h>
 #include "GuiUtils.h"
 #include "Windows\MainWindow.h"
 #include <Modules\Resources.h>
 #include <Widgets\AlcoholWidget.h>
+#include "PconsWindow.h"
 
 using namespace GW::Constants;
 
@@ -266,7 +277,7 @@ void PconsWindow::Draw(IDirect3DDevice9* device) {
 			ImGui::Checkbox("Disable on Completion", &disable_cons_on_objective_completion);
 			ImGui::ShowHelp(disable_cons_on_objective_completion_hint);
 		}
-		if (!(current_final_room_location == NULL)) {
+		if (!(current_final_room_location == GW::Vec2f(0, 0))) {
 			ImGui::Checkbox("Disable in final room", &disable_cons_in_final_room);
 			ImGui::ShowHelp(disable_cons_in_final_room_hint);
 		}
@@ -305,11 +316,11 @@ void PconsWindow::MapChanged() {
 		current_objectives_to_check.clear();
 	}
 	// Find out if we need to check for boss range for this map.
-	std::map<GW::Constants::MapID, GW::Vector2f>::iterator it2 = final_room_location_by_map_id.find(map_id);
+	std::map<GW::Constants::MapID, GW::Vec2f>::iterator it2 = final_room_location_by_map_id.find(map_id);
 	if (it2 != final_room_location_by_map_id.end()) {
 		current_final_room_location = it2->second;
 	} else {
-		current_final_room_location = NULL;
+		current_final_room_location = GW::Vec2f(0, 0);
 	}
 }
 bool PconsWindow::GetEnabled() {
@@ -361,12 +372,12 @@ void PconsWindow::CheckBossRangeAutoDisable() {	// Trigger Elite area auto disab
 	if (!enabled || elite_area_disable_triggered || current_map_type != GW::Constants::InstanceType::Explorable) {
 		return;		// Pcons disabled, auto disable already triggered, or not in explorable area.
 	}
-	if (!disable_cons_in_final_room || current_final_room_location == NULL || !player || TIMER_DIFF(elite_area_check_timer) < 1000) {
+	if (!disable_cons_in_final_room || current_final_room_location == GW::Vec2f(0,0) || !player || TIMER_DIFF(elite_area_check_timer) < 1000) {
 		return;		// No boss location to check for this map, player ptr not loaded, or checked recently already.
 	}
 	elite_area_check_timer = TIMER_INIT();
 	bool disable_pcons = false;
-	float d = player->pos.DistanceTo(current_final_room_location);
+	float d = GetDistance(GW::Vec2f(player->pos),current_final_room_location);
 	if (d > 0 && d <= GW::Constants::Range::Spirit) {
 		elite_area_disable_triggered = true;
 		SetEnabled(false);

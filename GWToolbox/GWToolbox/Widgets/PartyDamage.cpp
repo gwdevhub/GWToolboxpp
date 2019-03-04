@@ -1,19 +1,28 @@
-#include "PartyDamage.h"
+#include <stdint.h>
 
 #include <sstream>
+#include <functional>
 
+#include <imgui.h>
 #include <imgui_internal.h>
 
-#include <GWCA\Managers\AgentMgr.h>
+#include <GWCA\GameContainers\GamePos.h>
+
+#include <GWCA\GameEntities\Agent.h>
+#include <GWCA\GameEntities\Party.h>
+#include <GWCA\GameEntities\Player.h>
+
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
+#include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\PartyMgr.h>
 
 #include <GWToolbox.h>
 #include <GuiUtils.h>
 #include <Modules\Resources.h>
 #include <Modules\ToolboxSettings.h>
+#include "PartyDamage.h"
 
 #define INI_FILENAME L"healthlog.ini"
 #define IniSection "health"
@@ -84,29 +93,29 @@ bool PartyDamage::DamagePacketCallback(GW::Packet::StoC::GenericModifier* packet
 	GW::Agent* cause = agents[packet->cause_id];
 	
 	if (cause == nullptr) return false;
-	if (cause->Allegiance != 0x1) return false;
-	auto cause_it = party_index.find(cause->Id);
+	if (cause->allegiance != 0x1) return false;
+	auto cause_it = party_index.find(cause->agent_id);
 	if (cause_it == party_index.end()) return false;  // ignore damage done by non-party members
 
 	// get target agent
 	GW::Agent* target = agents[packet->target_id];
 	if (target == nullptr) return false;
-	if (target->LoginNumber != 0) return false; // ignore player-inflicted damage
+	if (target->login_number != 0) return false; // ignore player-inflicted damage
 										        // such as Life bond or sacrifice
-	if (target->Allegiance == 0x1) return false; // ignore damage inflicted to allies in general
+	if (target->allegiance == 0x1) return false; // ignore damage inflicted to allies in general
 	// warning: note damage to allied spirits, minions or stones may still trigger
 	// you can do damage like that by standing in bugged dart traps in eye of the north
 	// or maybe with some skills that damage minions/spirits
 
 	long dmg;
-	if (target->MaxHP > 0 && target->MaxHP < 100000) {
-		dmg = std::lround(-packet->value * target->MaxHP);
-		hp_map[target->PlayerNumber] = target->MaxHP;
+	if (target->max_hp > 0 && target->max_hp < 100000) {
+		dmg = std::lround(-packet->value * target->max_hp);
+		hp_map[target->player_number] = target->max_hp;
 	} else {
-		auto it = hp_map.find(target->PlayerNumber);
+		auto it = hp_map.find(target->player_number);
 		if (it == hp_map.end()) {
 			// max hp not found, approximate with hp/lvl formula
-			dmg = std::lround(-packet->value * (target->Level * 20 + 100));
+			dmg = std::lround(-packet->value * (target->level * 20 + 100));
 		} else {
 			long maxhp = it->second;
 			dmg = std::lround(-packet->value * it->second);
@@ -125,8 +134,8 @@ bool PartyDamage::DamagePacketCallback(GW::Packet::StoC::GenericModifier* packet
 			damage[index].name = L"<A Hero>";
 		}
 		*/
-		damage[index].primary = static_cast<GW::Constants::Profession>(cause->Primary);
-		damage[index].secondary = static_cast<GW::Constants::Profession>(cause->Secondary);
+		damage[index].primary = static_cast<GW::Constants::Profession>(cause->primary);
+		damage[index].secondary = static_cast<GW::Constants::Profession>(cause->secondary);
 	}
 
 	damage[index].damage += dmg;
@@ -172,18 +181,18 @@ void PartyDamage::CreatePartyIndexMap() {
 
 	int index = 0;
 	for (GW::PlayerPartyMember& player : info->players) {
-		long id = players[player.loginnumber].AgentID;
+		long id = players[player.login_number].agent_id;
 		if (id == GW::Agents::GetPlayerId()) player_index = index;
 		party_index[id] = index++;
 
 		for (GW::HeroPartyMember& hero : info->heroes) {
-			if (hero.ownerplayerid == player.loginnumber) {
-				party_index[hero.agentid] = index++;
+			if (hero.owner_player_id == player.login_number) {
+				party_index[hero.agent_id] = index++;
 			}
 		}
 	}
 	for (GW::HenchmanPartyMember& hench : info->henchmen) {
-		party_index[hench.agentid] = index++;
+		party_index[hench.agent_id] = index++;
 	}
 }
 

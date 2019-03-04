@@ -3,7 +3,6 @@
 #include <SimpleIni.h>
 #include <imgui.h>
 
-#include <GWCA\Managers\ChatMgr.h> // for GW::Chat::Color
 #include <GuiUtils.h>
 
 #ifdef RGB
@@ -77,6 +76,7 @@ namespace Colors {
         }
         return false;
     }
+#if 0
     static bool DrawSettingHueWheel(const char* text, GW::Chat::Color* color) {
         ImVec4 col = ImGui::ColorConvertU32ToFloat4(*color);
         if (ImGui::ColorEdit4(text, &col.x, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel)) {
@@ -85,6 +85,7 @@ namespace Colors {
         }
         return false;
     }
+#endif
 
 	static bool DrawSetting(const char* text, Color* color, bool alpha = true) {
 		int i[4];

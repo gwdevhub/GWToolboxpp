@@ -1,14 +1,22 @@
-#include "LUAInterface.h"
+#include <time.h>
+#include <stdint.h>
 
-#include <ctime>
+#include <functional>
 
 #include <lua\lua.hpp>
 #include <lua\lstate.h>
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
+
+#include <GWCA\Constants\Constants.h>
+#include <GWCA\GameContainers\GamePos.h>
+
+#include <GWCA\GameEntities\Agent.h>
+
 #include <GWCA\Managers\MapMgr.h>
+#include <GWCA\Managers\ChatMgr.h>
+#include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\SkillbarMgr.h>
 
+#include "LUAInterface.h"
 /*
  - Execute(const char *str);
    - pushstring
@@ -85,12 +93,12 @@ static int cmdGetAgent(lua_State* L)
 
 	LUA_NEWTABLE(L, 6);
 	{
-		LUA_TABLEINT(L,   "id", ag->Id);
+		LUA_TABLEINT(L,   "id", ag->agent_id);
 		LUA_TABLEFLOAT(L, "x", ag->pos.x);
 		LUA_TABLEFLOAT(L, "y", ag->pos.y);
 		LUA_TABLEINT(L, "plane", ag->plane);
-		LUA_TABLEINT(L, "dead", (ag->Effects & 0x10) > 0);
-		LUA_TABLEINT(L, "modelidx", ag->PlayerNumber);
+		LUA_TABLEINT(L, "dead", (ag->effects & 0x10) > 0);
+		LUA_TABLEINT(L, "modelidx", ag->player_number);
 	}
 
 	return 1;
@@ -178,13 +186,13 @@ static int cmdGetTargetId(lua_State *L)
 {
 	GW::Agent *a = GW::Agents::GetTarget();
 	if (!a) lua_pushnil(L);
-	else    lua_pushinteger(L, a->PlayerNumber);
+	else    lua_pushinteger(L, a->player_number);
 	return 1;
 }
 
 LUA_CFUNC_SIG(Dialog) {
 	lua_Integer dialog_id = luaL_checkinteger(state, 1);
-	GW::Agents::Dialog((DWORD)dialog_id);
+	GW::Agents::SendDialog((DWORD)dialog_id);
 	return 0;
 }
 

@@ -1,10 +1,20 @@
-#include "CustomRenderer.h"
-
 #include <d3dx9math.h>
-#include <GWCA\GWCA.h>
+
+#include <string>
+
+#include <GWCA\Constants\Constants.h>
+#include <GWCA\GameContainers\Array.h>
+#include <GWCA\GameContainers\GamePos.h>
+
+#include <GWCA\GameEntities\Hero.h>
+
+#include <GWCA\Context\GameContext.h>
+#include <GWCA\Context\WorldContext.h>
+
 #include <GWCA\Managers\MapMgr.h>
 
 #include <Modules\Resources.h>
+#include "CustomRenderer.h"
 
 Color CustomRenderer::color = 0xFF00FFFF;
 
@@ -332,7 +342,7 @@ void CustomRenderer::DrawCustomMarkers(IDirect3DDevice9* device) {
 				linecircle.Render(device);
 			}
 		}
-		GW::Vector3f allflag = GW::GameContext::instance()->world->all_flag;
+		GW::Vec3f allflag = GW::GameContext::instance()->world->all_flag;
 		D3DXMATRIX translate, scale, world;
 		D3DXMatrixTranslation(&translate, allflag.x, allflag.y, 0.0f);
 		D3DXMatrixScaling(&scale, 300.0f, 300.0f, 1.0f);

@@ -1,14 +1,22 @@
-#include "AlcoholWidget.h"
+#include <ctime>
+
+#include <functional>
+
+#include <GWCA\GameContainers\GamePos.h>
+
+#include <GWCA\Context\GameContext.h>
+#include <GWCA\Context\WorldContext.h>
+
+#include <GWCA\GameEntities\Title.h>
 
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Context\GameContext.h>
-#include <Windows\PconsWindow.h>
 
+#include <Windows\PconsWindow.h>
 #include <GuiUtils.h>
 #include <logger.h>
+#include "AlcoholWidget.h"
 
-#include <ctime>
 
 void AlcoholWidget::Initialize() {
 	ToolboxWidget::Initialize();
@@ -24,7 +32,7 @@ long AlcoholWidget::GetAlcoholTitlePoints() {
 	GW::GameContext* gameContext = GW::GameContext::instance();
 	if (!gameContext || !gameContext->world || !gameContext->world->titles.valid())
 		return 0;	// Sanity checks; context not ready.
-	return gameContext->world->titles[7].currentpoints;
+	return gameContext->world->titles[7].current_points;
 }
 long AlcoholWidget::GetAlcoholTitlePointsGained() {
 	long current_title_points = GetAlcoholTitlePoints();

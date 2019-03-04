@@ -1,16 +1,25 @@
-#include "TravelWindow.h"
-
 #include <string>
+#include <functional>
 
-#include <GWCA\GWCA.h>
+#include <GWCA\Constants\Constants.h>
+
+#include <GWCA\GameContainers\GamePos.h>
+
+#include <GWCA\Context\GameContext.h>
+#include <GWCA\Context\WorldContext.h>
+#include <GWCA\Context\PartyContext.h>
+
+#include <GWCA\GameEntities\Map.h>
+#include <GWCA\GameEntities\Party.h>
+
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\PartyMgr.h>
 #include <GWCA\Managers\ItemMgr.h>
-#include <GWCA\Context\GameContext.h>
 
 #include "GWToolbox.h"
 #include "GuiUtils.h"
 #include <Modules\Resources.h>
+#include "TravelWindow.h"
 
 #define N_OUTPOSTS 180
 #define N_DISTRICTS 14
@@ -18,7 +27,7 @@
 namespace {
 	bool outpost_name_array_getter(void* data, int idx, const char** out_text);
 
-	bool ImInPresearing() { return GW::Map::GetCurrentMapInfo().Region == GW::Region_Presearing; }
+	bool ImInPresearing() { return GW::Map::GetCurrentMapInfo()->region == GW::Region_Presearing; }
 }
 
 void TravelWindow::Initialize() {
@@ -142,7 +151,7 @@ bool TravelWindow::IsWaitingForMapTravel() {
 }
 
 void TravelWindow::ScrollToOutpost(GW::Constants::MapID outpost_id, GW::Constants::District district, int district_number) {
-	if (!GW::Map::IsMapLoaded() || !GW::PartyMgr::GetIsPartyLoaded()) {
+	if (!GW::Map::GetIsMapLoaded() || !GW::PartyMgr::GetIsPartyLoaded()) {
 		map_travel_countdown_started = false;
 		pending_map_travel = false;
 		return; // Map loading, so we're no longer waiting for travel timer to start or finish.

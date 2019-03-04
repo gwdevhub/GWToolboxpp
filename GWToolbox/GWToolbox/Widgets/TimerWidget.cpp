@@ -1,14 +1,24 @@
-#include "TimerWidget.h"
+#include <stdint.h>
 
-#include <logger.h>
-#include <Timer.h>
-#include <GWCA\GWCA.h>
+#include <string>
+#include <functional>
+
+#include <GWCA\Constants\Constants.h>
+
+#include <GWCA\GameContainers\Array.h>
+
+#include <GWCA\GameEntities\Skill.h>
+
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\EffectMgr.h>
 
+#include <logger.h>
+#include <Timer.h>
+
 #include "GuiUtils.h"
 #include "Modules\ToolboxSettings.h"
+#include "TimerWidget.h"
 
 void TimerWidget::LoadSettings(CSimpleIni *ini) {
 	ToolboxWidget::LoadSettings(ini);
@@ -99,7 +109,7 @@ bool TimerWidget::GetDeepTimer() {
     static clock_t start = -1;
     SkillID skill = SkillID::No_Skill;
     for (DWORD i = 0; i < effects.size(); ++i) {
-        SkillID effect_id = (SkillID)effects[i].SkillId;
+        SkillID effect_id = (SkillID)effects[i].skill_id;
         switch (effect_id) {
         case SkillID::Aspect_of_Exhaustion: skill = SkillID::Aspect_of_Exhaustion; break;
         case SkillID::Aspect_of_Depletion_energy_loss: skill = SkillID::Aspect_of_Depletion_energy_loss; break;

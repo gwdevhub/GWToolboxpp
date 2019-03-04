@@ -1,14 +1,23 @@
-#include "Hotkeys.h"
+#include <stdint.h>
 
-#include <iostream>
+#include <string>
 #include <sstream>
+#include <iostream>
+#include <functional>
 
-#include <GWCA\Managers\AgentMgr.h>
+#include <GWCA\Constants\Constants.h>
+#include <GWCA\GameContainers\Array.h>
+#include <GWCA\GameContainers\GamePos.h>
+
+#include <GWCA\GameEntities\Agent.h>
+#include <GWCA\GameEntities\Skill.h>
+
+#include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\ItemMgr.h>
+#include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\EffectMgr.h>
 #include <GWCA\Managers\PlayerMgr.h>
 #include <GWCA\Managers\SkillbarMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
 
 #include "logger.h"
 #include <Keys.h>
@@ -20,6 +29,7 @@
 #  include <Modules\LUAInterface.h>
 #endif
 #include <ImGuiAddons.h>
+#include "Hotkeys.h"
 
 bool TBHotkey::show_active_in_header = true;
 bool TBHotkey::show_run_in_header = true;
@@ -348,12 +358,12 @@ void HotkeyDropUseBuff::Draw() {
 void HotkeyDropUseBuff::Execute() {
 	if (!isExplorable()) return;
 
-	GW::Buff buff = GW::Effects::GetPlayerBuffBySkillId(id);
-	if (buff.SkillId) {
-		GW::Effects::DropBuff(buff.BuffId);
+	GW::Buff *buff = GW::Effects::GetPlayerBuffBySkillId(id);
+	if (buff && buff->skill_id) {
+		GW::Effects::DropBuff(buff->buff_id);
 	} else {
 		int slot = GW::SkillbarMgr::GetSkillSlot(id);
-		if (slot >= 0 && GW::Skillbar::GetPlayerSkillbar().Skills[slot].Recharge == 0) {
+		if (slot >= 0 && GW::SkillbarMgr::GetPlayerSkillbar()->skills[slot].recharge == 0) {
 			GW::SkillbarMgr::UseSkill(slot, GW::Agents::GetTargetId());
 		}
 	}
@@ -435,7 +445,7 @@ void HotkeyAction::Execute() {
 	case HotkeyAction::OpenLockedChest: {
 		if (isExplorable()) {
 			GW::Agent* target = GW::Agents::GetTarget();
-			if (target && target->Type == 0x200) {
+			if (target && target->type == 0x200) {
 				GW::Agents::GoSignpost(target);
 				GW::Items::OpenLockedChest();
 			}
@@ -578,8 +588,8 @@ void HotkeyTarget::Execute() {
 	for (size_t i = 0; i < agents.size(); ++i) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
-		if (agent->PlayerNumber == id && agent->HP > 0) {
-			float newDistance = GW::Agents::GetSqrDistance(me->pos, agents[i]->pos);
+		if (agent->player_number == id && agent->hp > 0) {
+			float newDistance = GW::GetSquareDistance(me->pos, agents[i]->pos);
 			if (newDistance < distance) {
 				closest = i;
 				distance = newDistance;
@@ -627,7 +637,7 @@ void HotkeyMove::Execute() {
 
 	GW::Agent* me = GW::Agents::GetPlayer();
 	if (mapid != 0 && mapid != (DWORD)GW::Map::GetMapID()) return;
-	double dist = GW::Agents::GetDistance(me->pos, GW::Vector2f(x, y));
+	double dist = GW::GetDistance(me->pos, GW::Vec2f(x, y));
 	if (range != 0 && dist > range) return;
 	GW::Agents::Move(x, y);
 	if (name[0] == '\0') {
@@ -660,7 +670,7 @@ void HotkeyDialog::Draw() {
 void HotkeyDialog::Execute() {
 	if (isLoading()) return;
 	if (id == 0) return;
-	GW::Agents::Dialog(id);
+	GW::Agents::SendDialog(id);
 	Log::Info("Sent dialog %s (%d)", name, id);
 }
 

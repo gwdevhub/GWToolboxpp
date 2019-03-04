@@ -4,10 +4,6 @@
 #include <vector>
 #include <Defines.h>
 
-#include <GWCA\Constants\Constants.h>
-#include <GWCA\GameEntities\Position.h>
-#include <GWCA\GameEntities\Agent.h>
-
 #include "Timer.h"
 #include "Pcons.h"
 #include "ToolboxWindow.h"
@@ -83,11 +79,11 @@ private:
 	char* disable_cons_on_objective_completion_hint = "Disable cons when final objective(s) completed";
 	// Map of which locations to turn off near by map_id e.g. Kanaxai, Urgoz
 	bool disable_cons_in_final_room = false;
-	std::map<GW::Constants::MapID, GW::Vector2f> final_room_location_by_map_id = {
-		{GW::Constants::MapID::The_Deep, GW::Vector2f(30428.0f, -5842.0f)},		// Rough location of Kanaxai
-		{GW::Constants::MapID::Urgozs_Warren, GW::Vector2f(-2800.0f, 14316.0f)} // Front entrance of Urgoz's room
+	std::map<GW::Constants::MapID, GW::Vec2f> final_room_location_by_map_id = {
+		{GW::Constants::MapID::The_Deep, GW::Vec2f(30428.0f, -5842.0f)},		// Rough location of Kanaxai
+		{GW::Constants::MapID::Urgozs_Warren, GW::Vec2f(-2800.0f, 14316.0f)} // Front entrance of Urgoz's room
 	};
 	char* disable_cons_in_final_room_hint = "Disable cons when reaching the final room in Urgoz and Deep";
-	GW::Vector2f current_final_room_location = NULL;
+	GW::Vec2f current_final_room_location = GW::Vec2f(0,0);
 	
 };

@@ -1,8 +1,10 @@
-#include "Minimap.h"
+#include <stdint.h>
 
-#include <Windows.h>
-#include <windowsx.h>
 #include <thread>
+
+#include <TbWindows.h>
+#include <windowsx.h>
+
 #include <d3d9.h>
 #include <d3dx9math.h>
 
@@ -10,16 +12,30 @@
 #include <imgui_internal.h>
 #include <ImGuiAddons.h>
 
-#include <GuiUtils.h>
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\StoCMgr.h>
-#include <GWCA\Managers\CameraMgr.h>
-#include <GWCA\Managers\PartyMgr.h>
+#include <GWCA\Constants\Constants.h>
+
+#include <GWCA\GameContainers\Array.h>
+#include <GWCA\GameContainers\GamePos.h>
+#include <GWCA\Packets\StoC.h>
+
+#include <GWCA\GameEntities\Hero.h>
+#include <GWCA\GameEntities\Party.h>
+
+#include <GWCA\Context\GameContext.h>
+#include <GWCA\Context\PartyContext.h>
+#include <GWCA\Context\WorldContext.h>
+
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
+#include <GWCA\Managers\StoCMgr.h>
+#include <GWCA\Managers\AgentMgr.h>
+#include <GWCA\Managers\PartyMgr.h>
+#include <GWCA\Managers\CameraMgr.h>
 
+#include <GuiUtils.h>
 #include "logger.h"
 #include "Modules\ToolboxSettings.h"
+#include "Minimap.h"
 
 void Minimap::Initialize() {
 	ToolboxWidget::Initialize();
@@ -90,10 +106,10 @@ void Minimap::Initialize() {
 				Log::Error("Please provide command in format /flag all [x] [y]"); // Not enough args or coords not valid float vals.
 				return;
 			}
-			GW::PartyMgr::FlagAll(GW::GamePos(x,y)); // "/flag all -2913.41 3004.78"
+			GW::PartyMgr::FlagAll(GW::GamePos(x, y, 0)); // "/flag all -2913.41 3004.78"
 			return;
 		}
-		auto heroarray = GW::GameContext::instance()->party->playerparty->heroes;
+		auto heroarray = GW::GameContext::instance()->party->player_party->heroes;
 		if (heroarray.valid()) n_heros = heroarray.size();
 		if (n_heros < 1) {
 			return; // Player has no heroes, so no need to continue.
@@ -124,7 +140,7 @@ void Minimap::Initialize() {
 			Log::Error("Please provide command in format /flag [hero number] [x] [y]"); // Invalid coords
 			return;
 		}
-		GW::PartyMgr::FlagHeroAgent(GW::Agents::GetHeroAgentID(f_hero), GW::GamePos(x, y)); // "/flag 5 -2913.41 3004.78"
+		GW::PartyMgr::FlagHeroAgent(GW::Agents::GetHeroAgentID(f_hero), GW::GamePos(x, y, 0)); // "/flag 5 -2913.41 3004.78"
 	});
 }
 
@@ -252,12 +268,12 @@ void Minimap::GetPlayerHeroes(GW::PartyInfo *party, std::vector<GW::AgentID>& pl
 	if (!party) return;
 	GW::Agent *player = GW::Agents::GetPlayer();
 	if (!player) return;
-	GW::PlayerID player_id = player->LoginNumber;
+	uint32_t player_id = player->login_number;
 	auto heroes = party->heroes;
 	player_heroes.reserve(heroes.size());
 	for (GW::HeroPartyMember &hero : heroes) {
-		if (hero.ownerplayerid == player_id)
-			player_heroes.push_back(hero.agentid);
+		if (hero.owner_player_id == player_id)
+			player_heroes.push_back(hero.agent_id);
 	}
 }
 float Minimap::GetMapRotation() {
@@ -271,14 +287,15 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 
 	// if not center and want to move, move center towards player
 	if ((translation.x != 0 || translation.y != 0)
-		&& (me->MoveX != 0 || me->MoveY != 0)
+		&& (me->move_x != 0 || me->move_y != 0)
 		&& TIMER_DIFF(last_moved) > ms_before_back) {
-		GW::Vector2f v(translation.x, translation.y);
+		GW::Vec2f v(translation.x, translation.y);
 		float speed = std::min((TIMER_DIFF(last_moved) - ms_before_back) * acceleration, 500.0f);
-		float n = v.Norm();
-		GW::Vector2f d = v.Normalized() * speed;
+		float n = GW::GetNorm(v);
+		GW::Vec2f d = v;
+        d = GW::Normalize(d) * speed;
 		if (std::abs(d.x) > std::abs(v.x)) {
-			translation = GW::Vector2f(0, 0);
+			translation = GW::Vec2f(0, 0);
 		} else {
 			translation -= d;
 		}
@@ -397,7 +414,7 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 		auto GetPlayerParty = [] () -> GW::PartyInfo* {
 			GW::GameContext *gamectx = GW::GameContext::instance();
 			if (!(gamectx && gamectx->party)) return nullptr;
-			return gamectx->party->playerparty;
+			return gamectx->party->player_party;
 		};
 
 		auto playerparty = GetPlayerParty();
@@ -417,7 +434,7 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 				static const char* flag_txt[] = {
 					"All", "1", "2", "3", "4", "5", "6", "7", "8"
 				};
-				GW::Vector3f allflag = GW::GameContext::instance()->world->all_flag;
+				GW::Vec3f allflag = GW::GameContext::instance()->world->all_flag;
 				GW::HeroFlagArray& flags = GW::GameContext::instance()->world->hero_flags;
 				unsigned int num_heroflags = player_heroes.size() + 1;
 				float w_but = (ImGui::GetWindowContentRegionWidth() 
@@ -457,11 +474,11 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 	}
 }
 
-GW::Vector2f Minimap::InterfaceToWorldPoint(Vec2i pos) const {
+GW::Vec2f Minimap::InterfaceToWorldPoint(Vec2i pos) const {
 	GW::Agent* me = GW::Agents::GetPlayer();
-	if (me == nullptr) return GW::Vector2f(0, 0);
+	if (me == nullptr) return GW::Vec2f(0, 0);
 	
-	GW::Vector2f v((float)pos.x, (float)pos.y);
+	GW::Vec2f v((float)pos.x, (float)pos.y);
 
 	// Invert viewport projection
 	v.x = v.x - location.x;
@@ -485,7 +502,7 @@ GW::Vector2f Minimap::InterfaceToWorldPoint(Vec2i pos) const {
 	float angle = Instance().GetMapRotation() - (float)M_PI_2;
 	float x1 = v.x * std::cos(angle) - v.y * std::sin(angle);
 	float y1 = v.x * std::sin(angle) + v.y * std::cos(angle);
-	v = GW::Vector2f(x1, y1);
+	v = GW::Vec2f(x1, y1);
 
 	// translate by character position
 	v += me->pos;
@@ -493,8 +510,8 @@ GW::Vector2f Minimap::InterfaceToWorldPoint(Vec2i pos) const {
 	return v;
 }
 
-GW::Vector2f Minimap::InterfaceToWorldVector(Vec2i pos) const {
-	GW::Vector2f v((float)pos.x, (float)pos.y);
+GW::Vec2f Minimap::InterfaceToWorldVector(Vec2i pos) const {
+	GW::Vec2f v((float)pos.x, (float)pos.y);
 
 	// Invert y direction
 	v.y = -v.y;
@@ -510,7 +527,7 @@ GW::Vector2f Minimap::InterfaceToWorldVector(Vec2i pos) const {
 	return v;
 }
 
-void Minimap::SelectTarget(GW::Vector2f pos) {
+void Minimap::SelectTarget(GW::Vec2f pos) {
 	GW::AgentArray agents = GW::Agents::GetAgentArray();
 	if (!agents.valid()) return;
 
@@ -522,9 +539,9 @@ void Minimap::SelectTarget(GW::Vector2f pos) {
 		if (agent == nullptr) continue;
 		if (agent->GetIsCharacterType() && agent->GetIsDead()) continue;
 		if (agent->GetIsItemType()) continue;
-		if (agent->GetIsGadgetType() && agent->ExtraType != 8141) continue; // allow locked chests
-		if (agent->PlayerNumber >= 230 && agent->PlayerNumber <= 346) continue; // block all useless minis
-		float newDistance = GW::Agents::GetSqrDistance(pos, agents[i]->pos);
+		if (agent->GetIsGadgetType() && agent->extra_type != 8141) continue; // allow locked chests
+		if (agent->player_number >= 230 && agent->player_number <= 346) continue; // block all useless minis
+		float newDistance = GW::GetSquareDistance(pos, agents[i]->pos);
 		if (distance > newDistance) {
 			distance = newDistance;
 			closest = i;
@@ -556,7 +573,7 @@ bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam) {
 	if (!IsInside(x, y)) return false;
 
 	mousedown = true;
-    GW::Vector2f worldpos = InterfaceToWorldPoint(Vec2i(x, y));
+    GW::Vec2f worldpos = InterfaceToWorldPoint(Vec2i(x, y));
 
 	if (wParam & MK_CONTROL) {
 		SelectTarget(worldpos);
@@ -643,7 +660,7 @@ bool Minimap::OnMouseMove(UINT Message, WPARAM wParam, LPARAM lParam) {
 		return true;
 	}
 
-	GW::Vector2f v = InterfaceToWorldPoint(Vec2i(x, y));
+	GW::Vec2f v = InterfaceToWorldPoint(Vec2i(x, y));
 	return pingslines_renderer.OnMouseMove(v.x, v.y);
 }
 
@@ -674,9 +691,9 @@ bool Minimap::IsInside(int x, int y) const {
 
 	// if centered, use radar range
 	if (translation.x == 0 && translation.y == 0) {
-		GW::Vector2f gamepos = InterfaceToWorldPoint(Vec2i(x, y));
+		GW::Vec2f gamepos = InterfaceToWorldPoint(Vec2i(x, y));
 		GW::Agent* me = GW::Agents::GetPlayer();
-		float sqrdst = GW::Agents::GetSqrDistance(me->pos, gamepos);
+		float sqrdst = GW::GetSquareDistance(me->pos, gamepos);
 		return me && sqrdst < GW::Constants::SqrRange::Compass;
 	}
 	return true;
@@ -684,7 +701,7 @@ bool Minimap::IsInside(int x, int y) const {
 bool Minimap::IsActive() const {
 	return visible
 		&& !loading
-		&& GW::Map::IsMapLoaded()
+		&& GW::Map::GetIsMapLoaded()
 		&& GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
 		&& GW::Agents::GetPlayerId() != 0;
 }

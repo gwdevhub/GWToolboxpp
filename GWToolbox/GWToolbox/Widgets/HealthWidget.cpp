@@ -1,10 +1,17 @@
-#include "HealthWidget.h"
+#include <stdint.h>
+
+#include <functional>
+
+#include <GWCA\GameContainers\GamePos.h>
+
+#include <GWCA\GameEntities\Agent.h>
 
 #include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\AgentMgr.h>
 
 #include "GuiUtils.h"
 #include "Modules\ToolboxSettings.h"
+#include "HealthWidget.h"
 
 void HealthWidget::LoadSettings(CSimpleIni *ini) {
 	ToolboxWidget::LoadSettings(ini);
@@ -32,14 +39,14 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
 		static char health_abs[32];
 		GW::Agent* target = GW::Agents::GetTarget();
 		if (target && target->GetIsCharacterType()) {
-			if (target->HP >= 0) {
-				snprintf(health_perc, 32, "%.0f %s", target->HP * 100, "%%");
+			if (target->hp >= 0) {
+				snprintf(health_perc, 32, "%.0f %s", target->hp * 100, "%%");
 			} else {
 				snprintf(health_perc, 32, "-");
 			}
-			if (target->MaxHP > 0) {
-				float abs = target->HP * target->MaxHP;
-				snprintf(health_abs, 32, "%.0f / %d", abs, target->MaxHP);
+			if (target->max_hp > 0) {
+				float abs = target->hp * target->max_hp;
+				snprintf(health_abs, 32, "%.0f / %d", abs, target->max_hp);
 			} else {
 				snprintf(health_abs, 32, "-");
 			}
@@ -83,8 +90,8 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
                         GW::Agents::AsyncGetAgentName(target, name);
                         if (name.size()) {
                             char buffer[512];
-                            int current_hp = (int)(target->HP * target->MaxHP);
-                            snprintf(buffer, sizeof(buffer), "%S's Health is %d of %d. (%.0f %%)", name.c_str(), current_hp, target->MaxHP, target->HP * 100.f);
+                            int current_hp = (int)(target->hp * target->max_hp);
+                            snprintf(buffer, sizeof(buffer), "%S's Health is %d of %d. (%.0f %%)", name.c_str(), current_hp, target->max_hp, target->hp * 100.f);
                             GW::Chat::SendChat('#', buffer);
                         }
                     }

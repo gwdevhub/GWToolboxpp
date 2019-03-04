@@ -1,24 +1,31 @@
-#include "TradeWindow.h"
+#include <stdint.h>
 
+#include <list>
+#include <string>
+#include <fstream>
+#include <functional>
+
+#include <TbWindows.h>
 #include <ShellApi.h>
 #include <WinSock2.h>
-
-#include <GWCA\GWCA.h>
-#include <GWCA\Managers\UIMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\Managers\GameThreadMgr.h>
-#include <GWCA\Managers\MapMgr.h>
-#include <Modules\Resources.h>
 
 #include <imgui.h>
 #include <imgui_internal.h>
 
+#include <GWCA\Constants\Constants.h>
+#include <GWCA\GameContainers\Array.h>
+
+#include <GWCA\Managers\UIMgr.h>
+#include <GWCA\Managers\MapMgr.h>
+#include <GWCA\Managers\ChatMgr.h>
+#include <GWCA\Managers\GameThreadMgr.h>
+
+#include <Modules\Resources.h>
+
 #include "logger.h"
 #include "GuiUtils.h"
 #include "GWToolbox.h"
-
-#include <list>
-#include <fstream>
+#include "TradeWindow.h"
 
 using easywsclient::WebSocket;
 using nlohmann::json;

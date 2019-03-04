@@ -6,9 +6,17 @@
 
 #include <GWCA\Utilities\MemoryPatcher.h>
 #include <GWCA\GameEntities\Item.h>
-#include <GWCA\Managers\ChatMgr.h>
 
+#include <Color.h>
 #include "ToolboxModule.h"
+
+namespace GW
+{
+    namespace Chat
+    {
+        enum Channel;
+    }
+}
 
 class GameSettings : public ToolboxModule {
 	GameSettings() {};
@@ -64,6 +72,9 @@ public:
 
 	std::wstring afk_message;
 	clock_t afk_message_time;
+
+	bool show_timestamps = false;
+	Color timestamps_color;
 
 	void ApplyBorderless(bool value);
 	void SetAfkMessage(std::wstring&& message);

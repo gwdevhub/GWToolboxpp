@@ -1,16 +1,29 @@
-#include "MaterialsWindow.h"
+#include <stdint.h>
 
+#include <string>
+#include <functional>
+
+#include <imgui.h>
 #include <imgui_internal.h>
 
-#include <GWCA\GWCA.h>
-#include <GWCA\Managers\ItemMgr.h>
-#include <GWCA\Managers\MerchantMgr.h>
-#include <GWCA\Managers\StoCMgr.h>
+#include <GWCA\Constants\Constants.h>
+#include <GWCA\GameContainers\Array.h>
+#include <GWCA\GameContainers\GamePos.h>
+#include <GWCA\Packets\StoC.h>
+
+#include <GWCA\GameEntities\Item.h>
+
 #include <GWCA\Context\GameContext.h>
+#include <GWCA\Context\WorldContext.h>
+
+#include <GWCA\Managers\ItemMgr.h>
+#include <GWCA\Managers\StoCMgr.h>
+#include <GWCA\Managers\MerchantMgr.h>
 
 #include "GuiUtils.h"
 #include <logger.h>
 #include <Modules\Resources.h>
+#include "MaterialsWindow.h"
 
 static const DWORD MIN_TIME_BETWEEN_RETRY = 160; // 10 frames
 
@@ -18,18 +31,18 @@ GW::MerchItemArray MaterialsWindow::GetMerchItems() const {
 	GW::MerchItemArray items = {};
 	GW::GameContext *game_ctx = GW::GameContext::instance();
 	if (!(game_ctx && game_ctx->world)) return items;
-	return game_ctx->world->merchitems;
+	return game_ctx->world->merch_items;
 }
 
 GW::Item *MaterialsWindow::GetMerchItem(Material mat) const {
 	uint32_t model_id = GetModelID(mat);
 	GW::ItemArray& items = GW::Items::GetItemArray();
-	for (GW::ItemID item_id : merch_items) {
+	for (uint32_t item_id : merch_items) {
 		if (item_id >= items.size())
 			continue;
 		GW::Item *item = items[item_id];
 		if (!item) continue;
-		if (item->ModelId == model_id)
+		if (item->model_id == model_id)
 			return item;
 	}
 	return nullptr;
@@ -47,8 +60,8 @@ GW::Item *MaterialsWindow::GetBagItem(Material mat) const {
 		if (!bag) continue;
 		size_t pos = bag->find1(model_id, 0);
 		while (pos != GW::Bag::npos) {
-			GW::Item *item = bag->Items[pos];
-			if (item->Quantity >= min_qty)
+			GW::Item *item = bag->items[pos];
+			if (item->quantity >= min_qty)
 				return item;
 			pos = bag->find1(model_id, pos + 1);
 		}
@@ -111,12 +124,12 @@ void MaterialsWindow::Initialize() {
 			price[trans.material] = pak->price;
 			if (gold_character >= pak->price) {
 				GW::Merchant::TransactionInfo give, recv;
-				give.itemcount = 0;
-				give.itemids = nullptr;
-				give.itemquantities = nullptr;
-				recv.itemcount = 1;
-				recv.itemids = &pak->itemid;
-				recv.itemquantities = nullptr;
+				give.item_count = 0;
+				give.item_ids = nullptr;
+				give.item_quantities = nullptr;
+				recv.item_count = 1;
+				recv.item_ids = &pak->itemid;
+				recv.item_quantities = nullptr;
 
 				GW::Merchant::TransactItems(GW::Merchant::TransactionType::TraderBuy, pak->price, give, 0, recv);
 				trans_pending_time = GetTickCount() + MIN_TIME_BETWEEN_RETRY;
@@ -132,12 +145,12 @@ void MaterialsWindow::Initialize() {
 		} else if (trans.type == Transaction::Sell) {
 			if (gold_character + pak->price <= 100 * 1000) {
 				GW::Merchant::TransactionInfo give, recv;
-				give.itemcount = 1;
-				give.itemids = &pak->itemid;
-				give.itemquantities = nullptr;
-				recv.itemcount = 0;
-				recv.itemids = nullptr;
-				recv.itemquantities = nullptr;
+				give.item_count = 1;
+				give.item_ids = &pak->itemid;
+				give.item_quantities = nullptr;
+				recv.item_count = 0;
+				recv.item_ids = nullptr;
+				recv.item_quantities = nullptr;
 
 				GW::Merchant::TransactItems(GW::Merchant::TransactionType::TraderSell, 0, give, pak->price, recv);
 				trans_pending_time = GetTickCount() + MIN_TIME_BETWEEN_RETRY;
@@ -513,13 +526,13 @@ DWORD MaterialsWindow::RequestPurchaseQuote(Material material) {
 	if (!item) return 0;
 	GW::Merchant::QuoteInfo give, recv;
 	give.unknown = 0;
-	give.itemcount = 0;
-	give.itemids = nullptr;
+	give.item_count = 0;
+	give.item_ids = nullptr;
 	recv.unknown = 0;
-	recv.itemcount = 1;
-	recv.itemids = &item->ItemId;
+	recv.item_count = 1;
+	recv.item_ids = &item->item_id;
 	GW::Merchant::RequestQuote(GW::Merchant::TransactionType::TraderBuy, give, recv);
-	return item->ItemId;
+	return item->item_id;
 }
 
 DWORD MaterialsWindow::RequestSellQuote(Material material) {
@@ -527,13 +540,13 @@ DWORD MaterialsWindow::RequestSellQuote(Material material) {
 	if (!item) return 0;
 	GW::Merchant::QuoteInfo give, recv;
 	give.unknown = 0;
-	give.itemcount = 1;
-	give.itemids = &item->ItemId;
+	give.item_count = 1;
+	give.item_ids = &item->item_id;
 	recv.unknown = 0;
-	recv.itemcount = 0;
-	recv.itemids = nullptr;
+	recv.item_count = 0;
+	recv.item_ids = nullptr;
 	GW::Merchant::RequestQuote(GW::Merchant::TransactionType::TraderSell, give, recv);
-	return item->ItemId;
+	return item->item_id;
 }
 
 std::string MaterialsWindow::GetPrice(MaterialsWindow::Material mat1, float fac1,

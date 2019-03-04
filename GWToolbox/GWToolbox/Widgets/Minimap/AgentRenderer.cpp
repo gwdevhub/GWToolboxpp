@@ -1,4 +1,12 @@
-#include "AgentRenderer.h"
+#include <stdint.h>
+
+#include <string>
+
+#include <GWCA\Constants\Constants.h>
+#include <GWCA\GameContainers\Array.h>
+#include <GWCA\GameContainers\GamePos.h>
+
+#include <GWCA\GameEntities\NPC.h>
 
 #include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\MapMgr.h>
@@ -7,6 +15,7 @@
 #include <Defines.h>
 
 #include <Modules\Resources.h>
+#include "AgentRenderer.h"
 
 #define AGENTCOLOR_INIFILENAME L"AgentColors.ini"
 
@@ -366,7 +375,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
 		if (agent->GetIsDead()) continue;
-		switch (agent->PlayerNumber) {
+		switch (agent->player_number) {
 		case GW::Constants::ModelID::EoE:
 			Enqueue(BigCircle, agent, GW::Constants::Range::Spirit, color_eoe);
 			break;
@@ -386,7 +395,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 
 	// some helper lambads
 	auto AddCustomAgentsToDraw = [this](const GW::Agent* agent) -> bool {
-		const auto it = custom_agents_map.find(agent->PlayerNumber);
+		const auto it = custom_agents_map.find(agent->player_number);
 		bool found_custom_agent = false;
 		if (it != custom_agents_map.end()) {
 			for (const CustomAgent* ca : it->second) {
@@ -409,14 +418,14 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 	for (size_t i = 0; i < agents.size(); ++i) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
-		if (agent->PlayerNumber <= 12) continue;
+		if (agent->player_number <= 12) continue;
 		if (agent->GetIsGadgetType()
 			&& GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish
-			&& agent->ExtraType == 7602) continue;
+			&& agent->extra_type == 7602) continue;
 		if (agent->GetIsCharacterType()
 			&& agent->IsNPC()
-			&& agent->PlayerNumber < npcs.size()
-			&& (npcs[agent->PlayerNumber].NpcFlags & 0x10000) > 0) continue;
+			&& agent->player_number < npcs.size()
+			&& (npcs[agent->player_number].npc_flags & 0x10000) > 0) continue;
 		if (target == agent) continue; // will draw target at the end
 
 		if (AddCustomAgentsToDraw(agent)) {
@@ -436,7 +445,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 	custom_agents_to_draw.clear();
 
 	// 4. target if it's a non-player
-	if (target && target->PlayerNumber > 12) {
+	if (target && target->player_number > 12) {
 		if (AddCustomAgentsToDraw(target)) {
 			SortCustomAgentsToDraw();
 			for (const auto pair : custom_agents_to_draw) {
@@ -455,7 +464,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 	for (size_t i = 0; i < agents.size(); ++i) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
-		if (agent->PlayerNumber > 12) continue;
+		if (agent->player_number > 12) continue;
 		if (agent == player) continue; // will draw player at the end
 		if (agent == target) continue; // will draw target at the end
 
@@ -465,7 +474,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 	}
 
 	// 6. target if it's a player
-	if (target && target != player && target->PlayerNumber <= 12) {
+	if (target && target != player && target->player_number <= 12) {
 		Enqueue(target);
 	}
 
@@ -488,7 +497,7 @@ void AgentRenderer::Enqueue(const GW::Agent* agent, const CustomAgent* ca) {
 	float size = GetSize(agent, ca);
 	Shape_e shape = GetShape(agent, ca);
 
-	if (GW::Agents::GetTargetId() == agent->Id && shape != BigCircle) {
+	if (GW::Agents::GetTargetId() == agent->agent_id && shape != BigCircle) {
 		Enqueue(shape, agent, size + 50.0f, color_target);
 	}
 
@@ -496,7 +505,7 @@ void AgentRenderer::Enqueue(const GW::Agent* agent, const CustomAgent* ca) {
 }
 
 Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) const {
-	if (agent->Id == GW::Agents::GetPlayerId()) {
+	if (agent->agent_id == GW::Agents::GetPlayerId()) {
 		if (agent->GetIsDead()) return color_player_dead;
 		else return color_player;
 	}
@@ -506,9 +515,9 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
 
 	// don't draw dead spirits
 	auto npcs = GW::Agents::GetNPCArray();
-	if (agent->GetIsDead() && npcs.valid() && agent->PlayerNumber < npcs.size()) {
-		GW::NPC& npc = npcs[agent->PlayerNumber];
-		switch (npc.ModelFileID) {
+	if (agent->GetIsDead() && npcs.valid() && agent->player_number < npcs.size()) {
+		GW::NPC& npc = npcs[agent->player_number];
+		switch (npc.model_file_id) {
 		case 0x22A34: // nature rituals
 		case 0x2D0E4: // defensive binding rituals
 		case 0x2D07E: // offensive binding rituals
@@ -519,25 +528,25 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
 	}
 
 	if (ca && ca->color_active) {
-		if (agent->Allegiance == 0x3 && agent->HP > 0.0f && agent->HP <= 0.9f) {
+		if (agent->allegiance == 0x3 && agent->hp > 0.0f && agent->hp <= 0.9f) {
 			return Colors::Sub(ca->color, color_agent_damaged_modifier);
 		}
-		if (agent->HP > 0.0f) return ca->color;
+		if (agent->hp > 0.0f) return ca->color;
 	}
 
 	// hostiles
-	if (agent->Allegiance == 0x3) {
-		if (agent->HP > 0.9f) return color_hostile;
-		if (agent->HP > 0.0f) return Colors::Sub(color_hostile, color_agent_damaged_modifier);
+	if (agent->allegiance == 0x3) {
+		if (agent->hp > 0.9f) return color_hostile;
+		if (agent->hp > 0.0f) return Colors::Sub(color_hostile, color_agent_damaged_modifier);
 		return color_hostile_dead;
 	}
 
 	// neutrals
-	if (agent->Allegiance == 0x2) return color_neutral;
+	if (agent->allegiance == 0x2) return color_neutral;
 
 	// friendly
 	if (agent->GetIsDead()) return color_ally_dead;
-	switch (agent->Allegiance) {
+	switch (agent->allegiance) {
 	case 0x1: return color_ally; // ally
 	case 0x6: return color_ally_npc; // npc / minipet
 	case 0x4: return color_ally_spirit; // spirit / pet
@@ -549,7 +558,7 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
 }
 
 float AgentRenderer::GetSize(const GW::Agent* agent, const CustomAgent* ca) const {
-	if (agent->Id == GW::Agents::GetPlayerId()) return size_player;
+	if (agent->agent_id == GW::Agents::GetPlayerId()) return size_player;
 	if (agent->GetIsGadgetType()) return size_signpost;
 	if (agent->GetIsItemType()) return size_item;
 
@@ -557,7 +566,7 @@ float AgentRenderer::GetSize(const GW::Agent* agent, const CustomAgent* ca) cons
 
 	if (agent->GetHasBossGlow()) return size_boss;
 
-	switch (agent->Allegiance) {
+	switch (agent->allegiance) {
 	case 0x1: // ally
 	case 0x2: // neutral
 	case 0x4: // spirit / pet
@@ -568,7 +577,7 @@ float AgentRenderer::GetSize(const GW::Agent* agent, const CustomAgent* ca) cons
 		return size_minion;
 
 	case 0x3: // hostile
-		switch (agent->PlayerNumber) {
+		switch (agent->player_number) {
 		case GW::Constants::ModelID::Rotscale:
 
 		case GW::Constants::ModelID::DoA::StygianLordNecro:
@@ -659,7 +668,7 @@ AgentRenderer::Shape_e AgentRenderer::GetShape(const GW::Agent* agent, const Cus
 	if (agent->GetIsGadgetType()) return Quad;
 	if (agent->GetIsItemType()) return Quad;
 
-	if (agent->LoginNumber > 0) return Tear;	// players
+	if (agent->login_number > 0) return Tear;	// players
 	if (!agent->GetIsCharacterType()) return Quad; // shouldn't happen but just in case
 
 	if (ca && ca->shape_active) {
@@ -667,9 +676,9 @@ AgentRenderer::Shape_e AgentRenderer::GetShape(const GW::Agent* agent, const Cus
 	}
 
 	auto npcs = GW::Agents::GetNPCArray();
-	if (npcs.valid() && agent->PlayerNumber < npcs.size()) {
-		GW::NPC& npc = npcs[agent->PlayerNumber];
-		switch (npc.ModelFileID) {
+	if (npcs.valid() && agent->player_number < npcs.size()) {
+		GW::NPC& npc = npcs[agent->player_number];
+		switch (npc.model_file_id) {
 		case 0x22A34: // nature rituals
 		case 0x2D0E4: // defensive binding rituals
 		case 0x2963E: // dummies
@@ -688,7 +697,7 @@ void AgentRenderer::Enqueue(Shape_e shape, const GW::Agent* agent, float size, C
 	unsigned int i;
 	for (i = 0; i < shapes[shape].vertices.size(); ++i) {
 		const Shape_Vertex& vert = shapes[shape].vertices[i];
-		GW::Vector2f pos = vert.Rotated(agent->Rotation_cos, agent->Rotation_sin) * size + agent->pos;
+		GW::Vec2f pos = (GW::Rotate(vert, agent->rotation_cos, agent->rotation_sin) * size) + agent->pos;
 		Color vcolor = color;
 		switch (vert.modifier) {
 		case Dark: vcolor = Colors::Sub(color, color_agent_modifier); break;

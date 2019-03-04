@@ -1,13 +1,17 @@
-#include "logger.h"
-
+#include <time.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <strsafe.h>
-#include <dbghelp.h>
-#include <time.h>
 
-#include <GWCA\GWCA.h>
+#include "TbWindows.h"
+#include <dbghelp.h>
+
+#include <functional>
+
+#include <GWCA\GameContainers\Array.h>
 #include <GWCA\Managers\ChatMgr.h>
 
+#include "logger.h"
 #include "Defines.h"
 #include <Modules\Resources.h>
 

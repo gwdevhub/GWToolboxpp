@@ -1,26 +1,41 @@
-#include "ChatCommands.h"
-
-#include <ShellApi.h>
+#include <ctype.h>
+#include <stdint.h>
 
 #include <algorithm>
-#include <cctype>
+#include <functional>
+
+#include <TbWindows.h>
+#include <ShellApi.h>
 
 #include <imgui.h>
 #include <imgui_internal.h>
 
-#include <GWCA\Constants\Skills.h>
-#include <GWCA\Managers\CameraMgr.h>
+#include <GWCA\Constants\Constants.h>
+
+#include <GWCA\GameContainers\Array.h>
+#include <GWCA\GameContainers\GamePos.h>
+
+#include <GWCA\GameEntities\NPC.h>
+#include <GWCA\GameEntities\Agent.h>
+#include <GWCA\GameEntities\Guild.h>
+#include <GWCA\GameEntities\Skill.h>
+#include <GWCA\GameEntities\Player.h>
+
+#include <GWCA\Context\GameContext.h>
+#include <GWCA\Context\WorldContext.h>
+
+#include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\ItemMgr.h>
-#include <GWCA\Managers\GuildMgr.h>
-#include <GWCA\Managers\FriendListMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
-#include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\AgentMgr.h>
+#include <GWCA\Managers\GuildMgr.h>
+#include <GWCA\Managers\CameraMgr.h>
+#include <GWCA\Managers\MemoryMgr.h>
 #include <GWCA\Managers\PlayerMgr.h>
 #include <GWCA\Managers\SkillbarMgr.h>
+#include <GWCA\Managers\FriendListMgr.h>
 #include <GWCA\Managers\GameThreadMgr.h>
-#include <GWCA\Context\GameContext.h>
 
 #include <GuiUtils.h>
 #include "GWToolbox.h"
@@ -32,6 +47,7 @@
 #include <Windows\TravelWindow.h>
 #include <Windows\BuildsWindow.h>
 #include <Widgets\PartyDamage.h>
+#include "ChatCommands.h"
 
 namespace {
 	const wchar_t *next_word(const wchar_t *str) {
@@ -132,7 +148,7 @@ void ChatCommands::Initialize() {
 
 bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 	if (!GW::CameraMgr::GetCameraUnlock()) return false;
-	if (GW::Chat::IsTyping()) return false;
+	if (GW::Chat::GetIsTyping()) return false;
 	if (ImGui::GetIO().WantTextInput) return false;
 
 	switch (Message) {
@@ -168,7 +184,7 @@ void ChatCommands::Update(float delta) {
 	float dist_rot  = delta * ROTATION_SPEED;
 
 	if (GW::CameraMgr::GetCameraUnlock() 
-		&& !GW::Chat::IsTyping() 
+		&& !GW::Chat::GetIsTyping() 
 		&& !ImGui::GetIO().WantTextInput) {
 
 		float forward = 0;
@@ -207,16 +223,16 @@ void ChatCommands::Update(float delta) {
 	for (int slot : skills_to_use) {
 		if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable
 			&& (clock() - skill_timer) / 1000.0f > skill_usage_delay) {
-			GW::Skillbar skillbar = GW::Skillbar::GetPlayerSkillbar();
-			if (skillbar.IsValid()) {
-				GW::SkillbarSkill skill = skillbar.Skills[slot];
+			GW::Skillbar* skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
+			if (skillbar && skillbar->IsValid()) {
+				GW::SkillbarSkill skill = skillbar->skills[slot];
 				if (skill.GetRecharge() == 0) {
 					GW::GameThread::Enqueue([slot] {
 						GW::SkillbarMgr::UseSkill(slot, GW::Agents::GetTargetId());
 					});
 
-					GW::Skill skilldata = GW::SkillbarMgr::GetSkillConstantData(skill.SkillId);
-					skill_usage_delay = std::max(skilldata.Activation + skilldata.Aftercast, 0.25f); // a small flat delay of .3s for ping and to avoid spamming in case of bad target
+					GW::Skill skilldata = GW::SkillbarMgr::GetSkillConstantData(skill.skill_id);
+					skill_usage_delay = std::max(skilldata.activation + skilldata.aftercast, 0.25f); // a small flat delay of .3s for ping and to avoid spamming in case of bad target
 					skill_timer = clock();
 				}
 			}
@@ -262,7 +278,7 @@ void ChatCommands::CmdDialog(const wchar_t *message, int argc, LPWSTR *argv) {
 	} else {
 		int id;
 		if (GuiUtils::ParseInt(argv[1], &id)) {
-			GW::Agents::Dialog(id);
+			GW::Agents::SendDialog(id);
 			Log::Info("Sent Dialog 0x%X", id);
 		} else {
 			Log::Error("Invalid argument '%ls', please use an integer or hex value", argv[0]);
@@ -277,7 +293,7 @@ void ChatCommands::CmdChest(const wchar_t *message, int argc, LPWSTR *argv) {
 		break;
 	case GW::Constants::InstanceType::Explorable: {
 		GW::Agent* target = GW::Agents::GetTarget();
-		if (target && target->Type == 0x200) {
+		if (target && target->type == 0x200) {
 			GW::Agents::GoSignpost(target);
 			GW::Items::OpenLockedChest();
 		}
@@ -625,8 +641,8 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
 			for (size_t i = 0; i < agents.size(); ++i) {
 				GW::Agent* agent = agents[i];
 				if (agent == nullptr) continue;
-				if (agent->PlayerNumber != me->PlayerNumber) {
-					float newDistance = GW::Agents::GetSqrDistance(me->pos, agents[i]->pos);
+				if (agent->player_number != me->player_number) {
+					float newDistance = GW::GetSquareDistance(me->pos, agents[i]->pos);
 					if (newDistance < distance) {
 						closest = i;
 						distance = newDistance;
@@ -641,7 +657,7 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
 			if (target == nullptr) {
 				Log::Error("No target selected!");
 			} else {
-				Log::Info("Target model id (PlayerNumber) is %d", target->PlayerNumber);
+				Log::Info("Target model id (PlayerNumber) is %d", target->player_number);
 			}
 		} else if (arg1 == L"getpos") {
 			GW::Agent* target = GW::Agents::GetTarget();
@@ -654,7 +670,7 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
 			const wchar_t *name = next_word(message);
 			GW::Player *target = GW::PlayerMgr::GetPlayerByName(name);
 			if (target != NULL) {
-				GW::Agent *agent = GW::Agents::GetAgentByID(target->AgentID);
+				GW::Agent *agent = GW::Agents::GetAgentByID(target->agent_id);
 				if (agent) {
 					GW::Agents::ChangeTarget(agent);
 				}
@@ -718,7 +734,7 @@ void ChatCommands::CmdSCWiki(const wchar_t *message, int argc, LPWSTR *argv) {
 void ChatCommands::CmdLoad(const wchar_t *message, int argc, LPWSTR *argv) {
 	// We will & should move that to GWCA.
 	static int(__fastcall *GetPersonalDir)(size_t size, wchar_t *dir) = 0;
-	*(BYTE**)&GetPersonalDir = GW::MemoryMgr::GetPersonalDirPtr;
+	*(uintptr_t*)&GetPersonalDir = GW::MemoryMgr::GetPersonalDirPtr;
 	if (argc == 1) {
 		// We could open the build template window, but any interaction with it would make gw crash.
 		// int32_t param[2] = { 0, 2 };
@@ -771,9 +787,9 @@ void ChatCommands::CmdTransmo(const wchar_t *message, int argc, LPWSTR *argv) {
 
 	DWORD npc_id = 0;
 	if (target->IsPlayer()) {
-		npc_id = target->TransmogNpcId & 0x0FFFFFFF;
+		npc_id = target->transmog_npc_id & 0x0FFFFFFF;
 	} else {
-		npc_id = target->PlayerNumber;
+		npc_id = target->player_number;
 	}
 
 	if (!npc_id) return;
