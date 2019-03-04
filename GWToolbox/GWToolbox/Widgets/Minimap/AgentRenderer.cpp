@@ -697,9 +697,7 @@ void AgentRenderer::Enqueue(Shape_e shape, const GW::Agent* agent, float size, C
 	unsigned int i;
 	for (i = 0; i < shapes[shape].vertices.size(); ++i) {
 		const Shape_Vertex& vert = shapes[shape].vertices[i];
-        GW::Vec2f pos = vert;
-        GW::Rotate(pos, agent->rotation_cos, agent->rotation_sin);
-		pos = (pos * size) + agent->pos;
+		GW::Vec2f pos = (GW::Rotate(vert, agent->rotation_cos, agent->rotation_sin) * size) + agent->pos;
 		Color vcolor = color;
 		switch (vert.modifier) {
 		case Dark: vcolor = Colors::Sub(color, color_agent_modifier); break;
