@@ -126,9 +126,10 @@ void PconsWindow::Initialize() {
 		}
 		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::PostProcess>([&](GW::Packet::StoC::PostProcess *pak) -> bool {
-		//Log::Info("Level = %d, tint = %d\n", pak->level, pak->tint);
-		PconAlcohol::alcohol_level = AlcoholWidget::Instance().GetAlcoholLevel();
+	GW::StoC::AddCallback<GW::Packet::StoC::PostProcess>(
+		[&](GW::Packet::StoC::PostProcess *pak) -> bool {
+		PconAlcohol::alcohol_level = pak->level;
+		//printf("Level = %d, tint = %d\n", pak->level, pak->tint);
 		if (enabled) pcon_alcohol->Update();
 		return PconAlcohol::suppress_drunk_effect;
 	});
