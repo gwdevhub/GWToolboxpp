@@ -112,24 +112,23 @@ DWORD __stdcall ThreadEntry(LPVOID) {
 #endif
     }
 
-    Sleep(100);
     Log::Log("Removing Cursor Fix\n");
     UninstallCursorFix();
 
-    // @Enhancement:
-    // This shouldn't be there, but we wait until the game print "Bye !"
-    // Nore necessary, though.
-    Sleep(50);
+    // @Remark:
+    // Hooks are disable from Guild Wars thread (safely), so we just make sure we exit the last hooks
+    while (GW::HookBase::GetInHookCount())
+        Sleep(16);
 
+    // @Remark:
+    // We can't guarantee that the code in Guild Wars thread isn't still in the trampoline, but
+    // practically a short sleep is fine.
+    Sleep(16);
     Log::Log("Destroying API\n");
     GW::Terminate();
 
-    while (GW::HookBase::GetInHookCount())
-        Sleep(100);
-
     Log::Log("Closing log/console, bye!\n");
     Log::Terminate();
-    Sleep(100);
 
     FreeLibraryAndExitThread(dllmodule, EXIT_SUCCESS);
 }
@@ -528,6 +527,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         Log::Log("Restoring input hook\n");
         SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
         
+        GW::DisableHooks();
         tb_initialized = false;
         tb_destroyed = true;
     }
