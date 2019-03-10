@@ -1,14 +1,19 @@
-#include "PmapRenderer.h"
+#include <stdint.h>
 
 #include <vector>
+
 #include <d3dx9math.h>
 #include <d3d9.h>
 
-#include <GWCA\GWCA.h>
+#include <GWCA\GameContainers\Array.h>
+
+#include <GWCA\GameEntities\Pathing.h>
+
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\CameraMgr.h>
 
 #include "D3DVertex.h"
+#include "PmapRenderer.h"
 
 void PmapRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	color_map = Colors::Load(ini, section, "color_map", 0xFF999999);
@@ -36,7 +41,7 @@ void PmapRenderer::Initialize(IDirect3DDevice9* device) {
 // #define WIREFRAME_MODE
 
 	GW::PathingMapArray path_map;
-	if (GW::Map::IsMapLoaded()) {
+	if (GW::Map::GetIsMapLoaded()) {
 		path_map = GW::Map::GetPathingMap();
 	} else {
 		initialized = false;
@@ -47,7 +52,7 @@ void PmapRenderer::Initialize(IDirect3DDevice9* device) {
 	// get the number of trapezoids, need it to allocate the vertex buffer
 	trapez_count_ = 0;
 	for (size_t i = 0; i < path_map.size(); ++i) {
-		trapez_count_ += path_map[i].trapezoidcount;
+		trapez_count_ += path_map[i].trapezoid_count;
 	}
 	if (trapez_count_ == 0) return;
 
@@ -114,7 +119,7 @@ void PmapRenderer::Initialize(IDirect3DDevice9* device) {
 	for (int k = 0; k < (shadow_show ? 2 : 1); ++k) {
 		for (size_t i = 0; i < path_map.size(); ++i) {
 			GW::PathingMap pmap = path_map[i];
-			for (size_t j = 0; j < pmap.trapezoidcount; ++j) {
+			for (size_t j = 0; j < pmap.trapezoid_count; ++j) {
 				GW::PathingTrapezoid& trap = pmap.trapezoids[j];
 
 				vertices[0].x = trap.XTL; vertices[0].y = trap.YT;

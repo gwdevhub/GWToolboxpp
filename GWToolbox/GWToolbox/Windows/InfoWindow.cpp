@@ -1,21 +1,33 @@
-#include "InfoWindow.h"
+#include <math.h>
+#include <stdint.h>
 
 #include <string>
-#include <cmath>
+#include <functional>
 
 #include <GWCA\Constants\Constants.h>
+#include <GWCA\GameContainers\Array.h>
+#include <GWCA\GameContainers\GamePos.h>
+
+#include <GWCA\GameEntities\Item.h>
+#include <GWCA\GameEntities\Party.h>
+#include <GWCA\GameEntities\Quest.h>
+#include <GWCA\GameEntities\Skill.h>
+#include <GWCA\GameEntities\Player.h>
+
+#include <GWCA\Context\GameContext.h>
+#include <GWCA\Context\WorldContext.h>
+
+#include <GWCA\Managers\MapMgr.h>
+#include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\ItemMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
+#include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\PartyMgr.h>
+#include <GWCA\Managers\EffectMgr.h>
+#include <GWCA\Managers\GameThreadMgr.h>
 
 #include "GWToolbox.h"
 #include "GuiUtils.h"
-
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\GameThreadMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\Managers\EffectMgr.h>
 
 #include <Widgets\TimerWidget.h>
 #include <Widgets\HealthWidget.h>
@@ -27,11 +39,10 @@
 #include <Widgets\AlcoholWidget.h>
 #include <Windows\NotepadWindow.h>
 #include <Modules\Resources.h>
+#include "InfoWindow.h"
 
 void InfoWindow::Initialize() {
 	ToolboxWindow::Initialize();
-
-	GW::Agents::SetupLastDialogHook();
 
 	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"info.png"), IDB_Icon_Info);
 	GW::StoC::AddCallback<GW::Packet::StoC::MessageCore>(
@@ -63,8 +74,8 @@ void InfoWindow::Initialize() {
 			// set the right index in party
 			for (unsigned i = 0; i < partymembers.size(); ++i) {
 				if (i >= status.size()) continue;
-				if (partymembers[i].loginnumber >= players.size()) continue;
-				if (wcscmp(players[partymembers[i].loginnumber].Name, buf) == 0) {
+				if (partymembers[i].login_number >= players.size()) continue;
+				if (wcscmp(players[partymembers[i].login_number].name, buf) == 0) {
 					status[i] = Resigned;
 					timestamp[i] = GW::Map::GetInstanceTime();
 				}
@@ -131,10 +142,10 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			if (player) {
 				snprintf(x_buf, 32, "%.2f", player->pos.x);
 				snprintf(y_buf, 32, "%.2f", player->pos.y);
-				float s = sqrtf(player->MoveX * player->MoveX + player->MoveY * player->MoveY);
+				float s = sqrtf(player->move_x * player->move_x + player->move_y * player->move_y);
 				snprintf(s_buf, 32, "%.3f", s / 288.0f);
-				snprintf(agentid_buf, 32, "%d", player->Id);
-				snprintf(modelid_buf, 32, "%d", player->PlayerNumber);
+				snprintf(agentid_buf, 32, "%d", player->agent_id);
+				snprintf(modelid_buf, 32, "%d", player->player_number);
 			}
 			ImGui::PushItemWidth(-80.0f);
 			ImGui::InputText("X pos##player", x_buf, 32, ImGuiInputTextFlags_ReadOnly);
@@ -149,7 +160,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                 GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
                 if (effects.valid()) {
                     for (DWORD i = 0; i < effects.size(); ++i) {
-                        ImGui::Text("id: %d", effects[i].SkillId);
+                        ImGui::Text("id: %d", effects[i].skill_id);
                         long time = effects[i].GetTimeRemaining();
                         if (time > 0) {
                             ImGui::SameLine();
@@ -171,10 +182,10 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			if (target) {
 				snprintf(x_buf, 32, "%.2f", target->pos.x);
 				snprintf(y_buf, 32, "%.2f", target->pos.y);
-				float s = sqrtf(target->MoveX * target->MoveX + target->MoveY * target->MoveY);
+				float s = sqrtf(target->move_x * target->move_x + target->move_y * target->move_y);
 				snprintf(s_buf, 32, "%.3f", s / 288.0f);
-				snprintf(agentid_buf, 32, "%d", target->Id);
-				snprintf(modelid_buf, 32, "%d", target->PlayerNumber);
+				snprintf(agentid_buf, 32, "%d", target->agent_id);
+				snprintf(modelid_buf, 32, "%d", target->player_number);
 			} else {
 				snprintf(x_buf, 32, "-");
 				snprintf(y_buf, 32, "-");
@@ -195,33 +206,33 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 				ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() / 2);
 				if (target) {
 					ImGui::LabelText("Addr", "%p", target);
-					ImGui::LabelText("Id", "%d", target->Id);
-					ImGui::LabelText("Z", "%f", target->Z);
-					ImGui::LabelText("Width", "%f", target->Width1);
-					ImGui::LabelText("Height", "%f", target->Height1);
-					ImGui::LabelText("Rotation", "%f", target->Rotation_angle);
-					ImGui::LabelText("NameProperties", "0x%X", target->NameProperties);
+					ImGui::LabelText("Id", "%d", target->agent_id);
+					ImGui::LabelText("Z", "%f", target->z);
+					ImGui::LabelText("Width", "%f", target->width1);
+					ImGui::LabelText("Height", "%f", target->height1);
+					ImGui::LabelText("Rotation", "%f", target->rotation_angle);
+					ImGui::LabelText("NameProperties", "0x%X", target->name_properties);
 					ImGui::LabelText("X", "%f", target->pos.x);
 					ImGui::LabelText("Y", "%f", target->pos.y);
 					ImGui::LabelText("plane", "%d", target->plane);
-					ImGui::LabelText("Type", "0x%X", target->Type);
-					ImGui::LabelText("Owner", "%d", target->Owner);
-					ImGui::LabelText("ItemId", "%d", target->ItemID);
-					ImGui::LabelText("ExtraType", "%d", target->ExtraType);
-					ImGui::LabelText("AS of Weapon", "%f", target->WeaponAttackSpeed);
-					ImGui::LabelText("AS modifier", "%f", target->AttackSpeedModifier);
-					ImGui::LabelText("PlayerNumber", "%d", target->PlayerNumber);
-					ImGui::LabelText("Primary Prof", "%d", target->Primary);
-					ImGui::LabelText("Secondary Prof", "%d", target->Secondary);
-					ImGui::LabelText("Level", "%d", target->Level);
-					ImGui::LabelText("TeamId", "%d", target->TeamId);
-					ImGui::LabelText("Effects", "0x%X", target->Effects);
-					ImGui::LabelText("ModelState", "0x%X", target->ModelState);
-					ImGui::LabelText("typeMap", "0x%X", target->TypeMap);
-					ImGui::LabelText("LoginNumber", "%d", target->LoginNumber);
-					ImGui::LabelText("Allegiance", "%d", target->Allegiance);
-					ImGui::LabelText("WeaponType", "%d", target->WeaponType);
-					ImGui::LabelText("Skill", "%d", target->Skill);
+					ImGui::LabelText("Type", "0x%X", target->type);
+					ImGui::LabelText("Owner", "%d", target->owner);
+					ImGui::LabelText("ItemId", "%d", target->item_id);
+					ImGui::LabelText("ExtraType", "%d", target->extra_type);
+					ImGui::LabelText("AS of Weapon", "%f", target->weapon_attack_speed);
+					ImGui::LabelText("AS modifier", "%f", target->attack_speed_modifier);
+					ImGui::LabelText("PlayerNumber", "%d", target->player_number);
+					ImGui::LabelText("Primary Prof", "%d", target->primary);
+					ImGui::LabelText("Secondary Prof", "%d", target->secondary);
+					ImGui::LabelText("Level", "%d", target->level);
+					ImGui::LabelText("TeamId", "%d", target->team_id);
+					ImGui::LabelText("Effects", "0x%X", target->effects);
+					ImGui::LabelText("ModelState", "0x%X", target->model_state);
+					ImGui::LabelText("typeMap", "0x%X", target->type_map);
+					ImGui::LabelText("LoginNumber", "%d", target->login_number);
+					ImGui::LabelText("Allegiance", "%d", target->allegiance);
+					ImGui::LabelText("WeaponType", "%d", target->weapon_type);
+					ImGui::LabelText("Skill", "%d", target->skill);
 				}
 				ImGui::PopItemWidth();
 				ImGui::TreePop();
@@ -261,11 +272,11 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			if (bags) {
 				GW::Bag* bag1 = bags[1];
 				if (bag1) {
-					GW::ItemArray items = bag1->Items;
+					GW::ItemArray items = bag1->items;
 					if (items.valid()) {
 						GW::Item* item = items[0];
 						if (item) {
-							snprintf(modelid, 32, "%d", item->ModelId);
+							snprintf(modelid, 32, "%d", item->model_id);
 						}
 					}
 				}
@@ -276,13 +287,13 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::PopItemWidth();
 		}
 		if (show_quest && ImGui::CollapsingHeader("Quest")) {
-			GW::QuestLog qlog = GW::GameContext::instance()->world->questlog;
-			DWORD qid = GW::GameContext::instance()->world->activequestid;
+			GW::QuestLog qlog = GW::GameContext::instance()->world->quest_log;
+			DWORD qid = GW::GameContext::instance()->world->active_quest_id;
 			if (qid && qlog.valid()) {
 				for (unsigned int i = 0; i < qlog.size(); ++i) {
 					GW::Quest q = qlog[i];
-					if (q.questid == qid) {
-						ImGui::Text("ID: 0x%X", q.questid);
+					if (q.quest_id == qid) {
+						ImGui::Text("ID: 0x%X", q.quest_id);
 						ImGui::Text("Marker: (%.0f, %.0f)", q.marker.x, q.marker.y);
 						break;
 					}
@@ -304,11 +315,11 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 				for (unsigned int i = 0; i < agents.size(); ++i) {
 					GW::Agent* agent = agents[i];
 					if (agent == nullptr) continue; // ignore nothings
-					if (agent->Allegiance != 0x3) continue; // ignore non-hostiles
+					if (agent->allegiance != 0x3) continue; // ignore non-hostiles
 					if (agent->GetIsDead()) continue; // ignore dead 
-					float sqrd = GW::Agents::GetSqrDistance(player->pos, agent->pos);
-					if (agent->PlayerNumber == GW::Constants::ModelID::DoA::SoulTormentor
-						|| agent->PlayerNumber == GW::Constants::ModelID::DoA::VeilSoulTormentor) {
+					float sqrd = GW::GetSquareDistance(player->pos, agent->pos);
+					if (agent->player_number == GW::Constants::ModelID::DoA::SoulTormentor
+						|| agent->player_number == GW::Constants::ModelID::DoA::VeilSoulTormentor) {
 						if (GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish
 							&& sqrd < sqr_soul_range) {
 							++soul_count;
@@ -374,8 +385,8 @@ void InfoWindow::DrawResignlog() {
 	if (!players.valid()) return;
 	for (unsigned i = 0; i < partymembers.size(); ++i) {
 		GW::PlayerPartyMember& partymember = partymembers[i];
-		if (partymember.loginnumber >= players.size()) continue;
-		GW::Player& player = players[partymember.loginnumber];
+		if (partymember.login_number >= players.size()) continue;
+		GW::Player& player = players[partymember.login_number];
 		const char* status_str = [](Status status) -> const char* {
 			switch (status) {
 			case InfoWindow::Unknown: return "Unknown";
@@ -390,14 +401,14 @@ void InfoWindow::DrawResignlog() {
 		if (ImGui::Button("Send")) {
 			// Todo: wording probably needs improvement
 			char buf[256];
-			snprintf(buf, 256, "%d. %S - %s", i + 1, player.Name,
+			snprintf(buf, 256, "%d. %S - %s", i + 1, player.name,
 				(status[i] == Connected 
 					&& GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) 
 				? "Connected (not resigned)" : status_str);
 			GW::Chat::SendChat('#', buf);
 		}
 		ImGui::SameLine();
-		ImGui::Text("%d. %S - %s", i + 1, player.Name, status_str);
+		ImGui::Text("%d. %S - %s", i + 1, player.name, status_str);
 		if (status[i] != Unknown) {
 			ImGui::SameLine();
 			ImGui::TextDisabled("[%d:%02d:%02d.%03d]",

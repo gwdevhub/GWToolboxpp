@@ -1,13 +1,16 @@
-#include "GuiUtils.h"
+#include <stdint.h>
 
+#include <string>
 #include <algorithm>
+
 #include <Shlobj.h>
 #include <Shlwapi.h>
-
 #include <imgui.h>
+
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\Utilities\Scanner.h>
 
+#include "GuiUtils.h"
 #include <Modules\Resources.h>
 
 namespace {

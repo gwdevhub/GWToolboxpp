@@ -1,8 +1,15 @@
-#include "VanquishWidget.h"
+#include <stdint.h>
+
+#include <string>
+
+#include <GWCA\Constants\Constants.h>
+
+#include <GWCA\GameContainers\Array.h>
 
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\PartyMgr.h>
 
+#include "VanquishWidget.h"
 #include "GuiUtils.h"
 
 void VanquishWidget::Draw(IDirect3DDevice9 *pDevice) {

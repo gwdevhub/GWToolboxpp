@@ -1,10 +1,10 @@
-#include "TravelWindow.h"
-
 #include <string>
 
-#include <GWCA\GWCA.h>
+#include <GWCA\Constants\Constants.h>
+#include <GWCA\GameEntities\Map.h>
 #include <GWCA\Managers\MapMgr.h>
 
+#include "TravelWindow.h"
 #include "GWToolbox.h"
 #include "GuiUtils.h"
 #include <Modules\Resources.h>
@@ -15,7 +15,7 @@
 namespace {
 	bool outpost_name_array_getter(void* data, int idx, const char** out_text);
 
-	bool ImInPresearing() { return GW::Map::GetCurrentMapInfo().Region == GW::Region_Presearing; }
+	bool ImInPresearing() { return GW::Map::GetCurrentMapInfo()->region == GW::Region_Presearing; }
 }
 
 void TravelWindow::Initialize() {

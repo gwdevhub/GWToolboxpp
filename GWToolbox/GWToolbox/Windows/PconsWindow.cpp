@@ -1,20 +1,33 @@
-#include "PconsWindow.h"
+#include <stdint.h>
 
 #include <string>
 #include <functional>
-
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\PartyMgr.h>
-#include <GWCA\Managers\StoCMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\GameEntities\Position.h>
+#include <imgui.h>
 #include <imgui_internal.h>
+
+#include <GWCA\GameContainers\GamePos.h>
+
+#include <GWCA\Context\GameContext.h>
+
+#include <GWCA\GameContainers\Array.h>
+#include <GWCA\GameContainers\GamePos.h>
+
+#include <GWCA\GameEntities\Agent.h>
+
+#include <GWCA\Packets\StoC.h>
+
+#include <GWCA\Managers\MapMgr.h>
+#include <GWCA\Managers\ChatMgr.h>
+#include <GWCA\Managers\StoCMgr.h>
+#include <GWCA\Managers\AgentMgr.h>
+#include <GWCA\Managers\PartyMgr.h>
 
 #include <logger.h>
 #include "GuiUtils.h"
 #include "Windows\MainWindow.h"
 #include <Modules\Resources.h>
+#include <Widgets\AlcoholWidget.h>
+#include "PconsWindow.h"
 
 using namespace GW::Constants;
 
@@ -113,10 +126,9 @@ void PconsWindow::Initialize() {
 		}
 		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::PostProcess>(
-		[&](GW::Packet::StoC::PostProcess *pak) -> bool {
-		PconAlcohol::alcohol_level = pak->level;
-		//printf("Level = %d, tint = %d\n", pak->level, pak->tint);
+	GW::StoC::AddCallback<GW::Packet::StoC::PostProcess>([&](GW::Packet::StoC::PostProcess *pak) -> bool {
+		//Log::Info("Level = %d, tint = %d\n", pak->level, pak->tint);
+		PconAlcohol::alcohol_level = AlcoholWidget::Instance().GetAlcoholLevel();
 		if (enabled) pcon_alcohol->Update();
 		return PconAlcohol::suppress_drunk_effect;
 	});
@@ -140,9 +152,9 @@ void PconsWindow::Initialize() {
 		[](GW::Packet::StoC::AgentState *pak) -> bool {
 		if (PconAlcohol::suppress_drunk_emotes
 			&& pak->agent_id == GW::Agents::GetPlayerId()
-			&& pak->state & 0x2000) { 
+			&& pak->state & 0x2000) {
 
-			pak->state ^= 0x2000; 
+			pak->state ^= 0x2000;
 		}
 		return false;
 	});
@@ -209,25 +221,27 @@ void PconsWindow::Initialize() {
 		[this](const wchar_t *message, int argc, LPWSTR *argv) {
 		if (argc <= 1) {
 			ToggleEnable();
-		} else { // we are ignoring parameters after the first
+		}
+		else { // we are ignoring parameters after the first
 			std::wstring arg1 = GuiUtils::ToLower(argv[1]);
 			if (arg1 == L"on") {
 				SetEnabled(true);
-			} else if (arg1 == L"off") {
+			}
+			else if (arg1 == L"off") {
 				SetEnabled(false);
-			} else {
+			}
+			else {
 				Log::Error("Invalid argument '%ls', please use /pcons [|on|off]", argv[1]);
 			}
 		}
 	});
 }
-
 bool PconsWindow::DrawTabButton(IDirect3DDevice9* device, bool show_icon, bool show_text) {
 	bool clicked = ToolboxWindow::DrawTabButton(device, show_icon, show_text);
 
 	ImGui::PushStyleColor(ImGuiCol_Text, enabled ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
 	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-	if (ImGui::Button(enabled ? "Enabled###pconstoggle" : "Disabled###pconstoggle", 
+	if (ImGui::Button(enabled ? "Enabled###pconstoggle" : "Disabled###pconstoggle",
 		ImVec2(ImGui::GetWindowContentRegionWidth(), 0))) {
 		ToggleEnable();
 	}
@@ -266,7 +280,7 @@ void PconsWindow::Draw(IDirect3DDevice9* device) {
 			ImGui::Checkbox("Disable on Completion", &disable_cons_on_objective_completion);
 			ImGui::ShowHelp(disable_cons_on_objective_completion_hint);
 		}
-		if (!(current_final_room_location == NULL)) {
+		if (!(current_final_room_location == GW::Vec2f(0, 0))) {
 			ImGui::Checkbox("Disable in final room", &disable_cons_in_final_room);
 			ImGui::ShowHelp(disable_cons_in_final_room_hint);
 		}
@@ -277,13 +291,9 @@ void PconsWindow::Draw(IDirect3DDevice9* device) {
 	}
 
 	ImGui::End();
-
-	if (!alcohol_enabled_before && pcon_alcohol->enabled) {
-		CheckIfWeJustEnabledAlcoholWithLunarsOn();
-	}
 }
 void PconsWindow::Update(float delta) {
-	if (current_map_type != GW::Map::GetInstanceType() || map_id != GW::Map::GetMapID()) { 
+	if (current_map_type != GW::Map::GetInstanceType() || map_id != GW::Map::GetMapID()) {
 		MapChanged(); // Map changed.
 	}
 	if (!player && current_map_type == GW::Constants::InstanceType::Explorable) {
@@ -305,15 +315,17 @@ void PconsWindow::MapChanged() {
 	if (it != objectives_to_complete_by_map_id.end()) {
 		objectives_complete.clear();
 		current_objectives_to_check = it->second;
-	} else {
+	}
+	else {
 		current_objectives_to_check.clear();
 	}
 	// Find out if we need to check for boss range for this map.
-	std::map<GW::Constants::MapID, GW::Vector2f>::iterator it2 = final_room_location_by_map_id.find(map_id);
+	std::map<GW::Constants::MapID, GW::Vec2f>::iterator it2 = final_room_location_by_map_id.find(map_id);
 	if (it2 != final_room_location_by_map_id.end()) {
 		current_final_room_location = it2->second;
-	} else {
-		current_final_room_location = NULL;
+	}
+	else {
+		current_final_room_location = GW::Vec2f(0, 0);
 	}
 }
 bool PconsWindow::GetEnabled() {
@@ -336,7 +348,6 @@ bool PconsWindow::SetEnabled(bool b) {
 	if (tick_with_pcons && current_map_type == GW::Constants::InstanceType::Outpost) {
 		GW::PartyMgr::Tick(enabled);
 	}
-	CheckIfWeJustEnabledAlcoholWithLunarsOn();
 	return enabled;
 }
 
@@ -348,9 +359,9 @@ void PconsWindow::CheckObjectivesCompleteAutoDisable() {
 		return; // No objectives complete, or no objectives to check for this map.
 	}
 	bool objective_complete = false;
-	for (size_t i = 0; i < current_objectives_to_check.size();i++) {
+	for (size_t i = 0; i < current_objectives_to_check.size(); i++) {
 		objective_complete = false;
-		for (size_t j = 0; j < objectives_complete.size() && !objective_complete; j++){
+		for (size_t j = 0; j < objectives_complete.size() && !objective_complete; j++) {
 			objective_complete = current_objectives_to_check.at(i) == objectives_complete.at(j);
 		}
 		if (!objective_complete)	return; // Not all objectives complete.
@@ -366,29 +377,16 @@ void PconsWindow::CheckBossRangeAutoDisable() {	// Trigger Elite area auto disab
 	if (!enabled || elite_area_disable_triggered || current_map_type != GW::Constants::InstanceType::Explorable) {
 		return;		// Pcons disabled, auto disable already triggered, or not in explorable area.
 	}
-	if (!disable_cons_in_final_room || current_final_room_location == NULL || !player || TIMER_DIFF(elite_area_check_timer) < 1000) {
+	if (!disable_cons_in_final_room || current_final_room_location == GW::Vec2f(0, 0) || !player || TIMER_DIFF(elite_area_check_timer) < 1000) {
 		return;		// No boss location to check for this map, player ptr not loaded, or checked recently already.
 	}
 	elite_area_check_timer = TIMER_INIT();
 	bool disable_pcons = false;
-	float d = player->pos.DistanceTo(current_final_room_location);
+	float d = GetDistance(GW::Vec2f(player->pos), current_final_room_location);
 	if (d > 0 && d <= GW::Constants::Range::Spirit) {
 		elite_area_disable_triggered = true;
 		SetEnabled(false);
 		Log::Info("Cons auto-disabled in range of boss");
-	}
-}
-
-void PconsWindow::CheckIfWeJustEnabledAlcoholWithLunarsOn() {
-	if (enabled
-		&& current_map_type == GW::Constants::InstanceType::Explorable
-		&& pcon_alcohol->enabled
-		&& Pcon::alcohol_level == 5) {
-		// we just re-enabled pcons and we need to pop alcohol, but the alcohol level 
-		// is 5 already, which means it's very likely that we have Spiritual Possession on.
-		// Force usage of alcohol to be sure.
-		// Note: if we're dead this will fail and alcohol will never be used.
-		pcon_alcohol->ForceUse();
 	}
 }
 
@@ -416,7 +414,7 @@ void PconsWindow::LoadSettings(CSimpleIni* ini) {
 	Pcon::refill_if_below_threshold = ini->GetBoolValue(Name(), VAR_NAME(refill_if_below_threshold), false);
 	ini->GetBoolValue(Name(), VAR_NAME(show_auto_refill_pcons_tickbox), show_auto_refill_pcons_tickbox);
 	ini->GetBoolValue(Name(), VAR_NAME(show_auto_disable_pcons_tickbox), show_auto_disable_pcons_tickbox);
-	
+
 
 	disable_cons_in_final_room = ini->GetBoolValue(Name(), VAR_NAME(disable_cons_in_final_room), disable_cons_in_final_room);
 	disable_cons_on_objective_completion = ini->GetBoolValue(Name(), VAR_NAME(disable_cons_on_objective_completion), disable_cons_on_objective_completion);
@@ -446,7 +444,7 @@ void PconsWindow::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(refill_if_below_threshold), Pcon::refill_if_below_threshold);
 	ini->SetBoolValue(Name(), VAR_NAME(show_auto_refill_pcons_tickbox), show_auto_refill_pcons_tickbox);
 	ini->SetBoolValue(Name(), VAR_NAME(show_auto_disable_pcons_tickbox), show_auto_disable_pcons_tickbox);
-	
+
 
 	ini->SetBoolValue(Name(), VAR_NAME(disable_cons_in_final_room), disable_cons_in_final_room);
 	ini->SetBoolValue(Name(), VAR_NAME(disable_cons_on_objective_completion), disable_cons_on_objective_completion);

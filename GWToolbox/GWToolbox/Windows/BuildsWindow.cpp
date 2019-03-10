@@ -1,12 +1,20 @@
-#include "BuildsWindow.h"
+#include <stdint.h>
 
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
+#include <string>
+#include <functional>
+
+#include <GWCA\Constants\Constants.h>
+
+#include <GWCA\GameContainers\Array.h>
+
 #include <GWCA\Managers\MapMgr.h>
+#include <GWCA\Managers\ChatMgr.h>
+#include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\SkillbarMgr.h>
 
 #include "GuiUtils.h"
 #include <Modules\Resources.h>
+#include "BuildsWindow.h"
 
 unsigned int BuildsWindow::TeamBuild::cur_ui_id = 0;
 

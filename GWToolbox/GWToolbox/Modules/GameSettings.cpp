@@ -1,17 +1,36 @@
-#include "GameSettings.h"
+#include <time.h>
+#include <assert.h>
+#include <stdint.h>
 
-#include <ctime>
+#include <string>
+#include <algorithm>
+#include <functional>
 
-#include <GWCA\Managers\GameThreadMgr.h>
+#include <TbWindows.h>
+
+#include <GWCA\Utilities\Scanner.h>
+
+#include <GWCA\Constants\Constants.h>
+
+#include <GWCA\GameContainers\Array.h>
+#include <GWCA\GameContainers\GamePos.h>
+
+#include <GWCA\Packets\StoC.h>
+
+#include <GWCA\GameEntities\Agent.h>
+#include <GWCA\GameEntities\Friendslist.h>
+
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\Managers\PartyMgr.h>
 #include <GWCA\Managers\ItemMgr.h>
-#include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
-#include <GWCA\Managers\FriendListMgr.h>
-#include <GWCA\Managers\Render.h>
+#include <GWCA\Managers\AgentMgr.h>
+#include <GWCA\Managers\PartyMgr.h>
 #include <GWCA\Managers\CameraMgr.h>
+#include <GWCA\Managers\MemoryMgr.h>
+#include <GWCA\Managers\RenderMgr.h>
+#include <GWCA\Managers\FriendListMgr.h>
+#include <GWCA\Managers\GameThreadMgr.h>
 
 #include <GWCA\Context\GameContext.h>
 
@@ -20,6 +39,8 @@
 #include <GWToolbox.h>
 #include <Timer.h>
 #include <Color.h>
+
+#include "GameSettings.h"
 
 namespace {
 #if 0 // @Deprecated
@@ -117,7 +138,7 @@ namespace {
 	const wchar_t *GetPlayerName(void) {
 		GW::Agent *player = GW::Agents::GetPlayer();
 		if (!player) return L"";
-		DWORD playerNumber = player->PlayerNumber;
+		DWORD playerNumber = player->player_number;
 		return GW::Agents::GetPlayerNameByLoginNumber(playerNumber);
 	}
 
@@ -138,15 +159,15 @@ namespace {
 	}
 
 	int move_materials_to_storage(GW::Item *item) {
-		assert(item && item->Quantity);
+		assert(item && item->quantity);
 		assert(item->GetIsMaterial());
 
 		int slot = GW::Items::GetMaterialSlot(item);
 		if (slot < 0 || (int)GW::Constants::N_MATS <= slot) return 0;
 		int availaible = 250;
 		GW::Item *b_item = GW::Items::GetItemBySlot(GW::Constants::Bag::Material_Storage, slot + 1);
-		if (b_item) availaible = 250 - b_item->Quantity;
-		int will_move = std::min((int)item->Quantity, availaible);
+		if (b_item) availaible = 250 - b_item->quantity;
+		int will_move = std::min((int)item->quantity, availaible);
 		if (will_move) GW::Items::MoveItem(item, GW::Constants::Bag::Material_Storage, slot, will_move);
 		return will_move;
 	}
@@ -161,10 +182,10 @@ namespace {
 			if (!bag) continue;
 			size_t slot = bag->find2(item);
 			while (slot != GW::Bag::npos) {
-				GW::Item *b_item = bag->Items[slot];
+				GW::Item *b_item = bag->items[slot];
 				// b_item can be null in the case of birthday present for instance.
 				if (b_item != nullptr) {
-					int availaible = 250 - b_item->Quantity;
+					int availaible = 250 - b_item->quantity;
 					int will_move = std::min(availaible, remaining);
 					if (will_move > 0) {
 						GW::Items::MoveItem(item, b_item, will_move);
@@ -186,7 +207,7 @@ namespace {
 			size_t slot = bag->find1(0);
 			// The reason why we test if the slot has no item is because birthday present have ModelId == 0
 			while (slot != GW::Bag::npos) {
-				if (bag->Items[slot] == nullptr) {
+				if (bag->items[slot] == nullptr) {
 					GW::Items::MoveItem(item, bag, slot);
 					return;
 				}
@@ -196,7 +217,7 @@ namespace {
 	}
 
 	void move_item_to_storage_page(GW::Item *item, int page) {
-		assert(item && item->Quantity);
+		assert(item && item->quantity);
 		// 9 being the material storage
 		if (page < 0 || 9 < page) return;
 
@@ -211,7 +232,7 @@ namespace {
 		const int bag_index = storage1 + page;
 		assert(GW::Items::GetBag(bag_index));
 
-		int remaining = item->Quantity;
+		int remaining = item->quantity;
 
 		// For materials, we always try to move what we can into the material page
 		if (item->GetIsMaterial()) {
@@ -230,11 +251,11 @@ namespace {
 	}
 
 	void move_item_to_storage(GW::Item *item) {
-		assert(item && item->Quantity);
+		assert(item && item->quantity);
 
 		GW::Bag **bags = GW::Items::GetBagArray();
 		if (!bags) return;
-		int remaining = item->Quantity;
+		int remaining = item->quantity;
 
 		// We try to move to the material storage
 		if (item->GetIsMaterial()) {
@@ -243,26 +264,26 @@ namespace {
 		}
 
 		const int storage1 = (int)GW::Constants::Bag::Storage_1;
-		const int storage9 = (int)GW::Constants::Bag::Storage_9;
+		const int storage14 = (int)GW::Constants::Bag::Storage_14;
 
 		// If item is stackable, try to complete similar stack
 		if (remaining == 0) return;
-		int moved = complete_existing_stack(item, storage1, storage9, remaining);
+		int moved = complete_existing_stack(item, storage1, storage14, remaining);
 		remaining -= moved;
 
 		// We find the first empty slot and put the remaining there
 		if (remaining) {
-			move_to_first_empty_slot(item, storage1, storage9);
+			move_to_first_empty_slot(item, storage1, storage14);
 		}
 	}
 
 	void move_item_to_inventory(GW::Item *item) {
-		assert(item && item->Quantity);
+		assert(item && item->quantity);
 
 		const int backpack = (int)GW::Constants::Bag::Backpack;
 		const int bag2 = (int)GW::Constants::Bag::Bag_2;
 
-		int total = item->Quantity;
+		int total = item->quantity;
 		int remaining = total;
 
 		// If item is stackable, try to complete similar stack
@@ -532,13 +553,11 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	fov = (float)ini->GetDoubleValue(Name(), VAR_NAME(fov), 1.308997f);
 	tick_is_toggle = ini->GetBoolValue(Name(), VAR_NAME(tick_is_toggle), true);
 
-	GW::Chat::ShowTimestamps = ini->GetBoolValue(Name(), "show_timestamps", false);
-	GW::Chat::TimestampsColor = Colors::Load(ini, Name(), "timestamps_color", Colors::White());
-	// GW::Chat::KeepChatHistory = ini->GetBoolValue(Name(), "keep_chat_history", true); @Deprecated
+    show_timestamps = ini->GetBoolValue(Name(), VAR_NAME(show_timestamps), false);
+	timestamps_color = Colors::Load(ini, Name(), VAR_NAME(timestamps_color), Colors::White());
 
 	openlinks = ini->GetBoolValue(Name(), VAR_NAME(openlinks), true);
 	auto_url = ini->GetBoolValue(Name(), VAR_NAME(auto_url), true);
-	// select_with_chat_doubleclick = ini->GetBoolValue(Name(), VAR_NAME(select_with_chat_doubleclick), true);
 	move_item_on_ctrl_click = ini->GetBoolValue(Name(), VAR_NAME(move_item_on_ctrl_click), true);
 
 	flash_window_on_pm = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_pm), true);
@@ -564,7 +583,9 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	if (borderlesswindow) ApplyBorderless(borderlesswindow);
 #endif
 	if (openlinks) GW::Chat::SetOpenLinks(openlinks);
-	if (tick_is_toggle) GW::PartyMgr::SetTickToggle();
+	if (tick_is_toggle) GW::PartyMgr::SetTickToggle(tick_is_toggle);
+    if (show_timestamps) GW::Chat::ToggleTimestamps(show_timestamps);
+    if (timestamps_color) GW::Chat::SetTimestampsColor(timestamps_color);
 	// if (select_with_chat_doubleclick) GW::Chat::SetChatEventCallback(&ChatEventCallback);
 	if (auto_url) GW::Chat::SetSendChatCallback(&SendChatCallback);
 	if (move_item_on_ctrl_click) GW::Items::SetOnItemClick(GameSettings::ItemClickCallback);
@@ -582,13 +603,11 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetDoubleValue(Name(), VAR_NAME(fov), fov);
 	ini->SetBoolValue(Name(), VAR_NAME(tick_is_toggle), tick_is_toggle);
 
-	ini->SetBoolValue(Name(), "show_timestamps", GW::Chat::ShowTimestamps);
-	Colors::Save(ini, Name(), "timestamps_color", GW::Chat::TimestampsColor);
-	// ini->SetBoolValue(Name(), "keep_chat_history", GW::Chat::KeepChatHistory); @Deprecated
+	ini->SetBoolValue(Name(), VAR_NAME(show_timestamps), show_timestamps);
+	Colors::Save(ini, Name(), VAR_NAME(timestamps_color), timestamps_color);
 
 	ini->SetBoolValue(Name(), VAR_NAME(openlinks), openlinks);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_url), auto_url);
-	// ini->SetBoolValue(Name(), VAR_NAME(select_with_chat_doubleclick), select_with_chat_doubleclick);
 	ini->SetBoolValue(Name(), VAR_NAME(move_item_on_ctrl_click), move_item_on_ctrl_click);
 
 	ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_pm), flash_window_on_pm);
@@ -636,10 +655,14 @@ void GameSettings::DrawSettingInternal() {
 #endif
 	DrawFOVSetting();
 
-	ImGui::Checkbox("Show chat messages timestamp. Color:", &GW::Chat::ShowTimestamps);
+	if (ImGui::Checkbox("Show chat messages timestamp. Color:", &show_timestamps)) {
+        GW::Chat::ToggleTimestamps(show_timestamps);
+    }
 	ImGui::SameLine();
 
-    Colors::DrawSettingHueWheel("Color:", &GW::Chat::TimestampsColor);
+    if (Colors::DrawSettingHueWheel("Color:", &timestamps_color)) {
+        GW::Chat::SetTimestampsColor(timestamps_color);
+    }
 	ImGui::ShowHelp("Show timestamps in message history.");
 
 	// ImGui::Checkbox("Keep chat history.", &GW::Chat::KeepChatHistory); @Deprecated
@@ -656,13 +679,7 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::ShowHelp("When you write a message starting with 'http://' or 'https://', it will be converted in template format");
 
 	if (ImGui::Checkbox("Tick is a toggle", &tick_is_toggle)) {
-		if (tick_is_toggle) {
-			// @Cleanup: Maybe figure out a better we to hook in runtime vs hook in init time (we queue hooks and apply them in a batch)
-			GW::PartyMgr::SetTickToggle();
-			GW::Hook::EnableHooks();
-		} else {
-			GW::PartyMgr::RestoreTickToggle();
-		}
+		GW::PartyMgr::SetTickToggle(tick_is_toggle);
 	}
 	ImGui::ShowHelp("Ticking in party window will work as a toggle instead of opening the menu");
 #if 0 // @Deprecated
@@ -900,13 +917,13 @@ void GameSettings::ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag)
 	if (!item) return;
 
 	// @Cleanup: Bad
-	if (item->ModelFileID == 0x0002f301) {
+	if (item->model_file_id == 0x0002f301) {
 		Log::Error("Ctrl+click doesn't work with birthday presents yet");
 		return;
 	}
 
 	if (is_inventory_item) {
-		if (GW::Items::IsStorageOpen()) {
+		if (GW::Items::GetIsStorageOpen()) {
 			int current_storage = GW::Items::GetStoragePage();
 			move_item_to_storage_page(item, current_storage);
 		} else {

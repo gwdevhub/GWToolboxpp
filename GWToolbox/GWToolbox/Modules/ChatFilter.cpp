@@ -1,21 +1,31 @@
-#include "ChatFilter.h"
+#include <stdint.h>
+#include <string.h>
 
 #include <fstream>
 #include <sstream>
-#include <string.h>
-
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\StoCMgr.h>
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\Context\GameContext.h>
+#include <functional>
 
 #include <imgui.h>
+
+#include <GWCA\GameContainers\Array.h>
+#include <GWCA\GameContainers\GamePos.h>
+
+#include <GWCA\GameEntities\Agent.h>
+
+#include <GWCA\Context\GameContext.h>
+#include <GWCA\Context\WorldContext.h>
+
+#include <GWCA\Managers\MapMgr.h>
+#include <GWCA\Managers\ChatMgr.h>
+#include <GWCA\Managers\StoCMgr.h>
+#include <GWCA\Managers\AgentMgr.h>
+
 #include <ImGuiAddons.h>
 #include <logger.h>
 
 #include <Modules\Resources.h>
 #include <Defines.h>
+#include "ChatFilter.h"
 
 //#define PRINT_CHAT_PACKETS
 
@@ -316,7 +326,7 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 				  // <monster> is wchar_t id of several wchars
 				  // <rarity> is 0x108 for common, 0xA40 gold, 0xA42 purple, 0xA43 green
 		GW::Agent* me = GW::Agents::GetPlayer();
-		bool forplayer = (me && me->PlayerNumber == GetNumericSegment(message));
+		bool forplayer = (me && me->player_number == GetNumericSegment(message));
 		bool rare = IsRare(Get2ndSegment(message));
 		if (forplayer && rare) return self_drop_rare;
 		if (forplayer && !rare) return self_drop_common;

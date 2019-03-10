@@ -1,13 +1,26 @@
-#include "SymbolsRenderer.h"
+#include <stdint.h>
 
-#include <ImGuiAddons.h>
+#include <string>
+#include <functional>
+
 #include <d3dx9math.h>
 
-#include <GWCA\GWCA.h>
-#include <GWCA\Managers\AgentMgr.h>
+#include <GWCA\Constants\Constants.h>
+#include <GWCA\GameContainers\Array.h>
+#include <GWCA\GameContainers\GamePos.h>
+#include <GWCA\PAckets\StoC.h>
+
+#include <GWCA\GameEntities\Quest.h>
+#include <GWCA\GameEntities\Party.h>
+
 #include <GWCA\Context\GameContext.h>
 #include <GWCA\Context\WorldContext.h>
+
+#include <GWCA\Managers\AgentMgr.h>
+
 #include "Minimap.h"
+#include <ImGuiAddons.h>
+#include "SymbolsRenderer.h"
 
 void SymbolsRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	color_quest = Colors::Load(ini, section, "color_quest", 0xFF22EF22);
@@ -115,15 +128,15 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device) {
 	D3DXMATRIX translate, scale, rotate, world;
 
 	
-	GW::QuestLog qlog = GW::GameContext::instance()->world->questlog;
-	DWORD qid = GW::GameContext::instance()->world->activequestid;
+	GW::QuestLog qlog = GW::GameContext::instance()->world->quest_log;
+	DWORD qid = GW::GameContext::instance()->world->active_quest_id;
 	if (qlog.valid() && qid > 0) {
-		GW::Vector2f qpos(0, 0);
+		GW::Vec2f qpos(0, 0);
 		bool qfound = false;
 		for (unsigned int i = 0; i < qlog.size(); ++i) {
 			GW::Quest q = qlog[i];
-			if (q.questid == qid) {
-				qpos = GW::Vector2f(q.marker.x, q.marker.y);
+			if (q.quest_id == qid) {
+				qpos = GW::Vec2f(q.marker.x, q.marker.y);
 				qfound = true;
 				break;
 			}
@@ -139,12 +152,12 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device) {
 			device->SetTransform(D3DTS_WORLD, &world);
 			device->DrawPrimitive(type, star_offset, star_ntriangles);
 
-			GW::Vector2f mypos = me->pos;
-			GW::Vector2f v = qpos - mypos;
+			GW::Vec2f mypos = me->pos;
+			GW::Vec2f v = qpos - mypos;
 			const float max_quest_range = (GW::Constants::Range::Compass - 250.0f) / compass_scale;
 			const float max_quest_range_sqr = max_quest_range * max_quest_range;
-			if (v.SquaredNorm() > max_quest_range_sqr) {
-				v = v.Normalized() * max_quest_range;
+			if (GW::GetSquaredNorm(v) > max_quest_range_sqr) {
+				v = GW::Normalize(v) * max_quest_range;
 				
 				float angle = std::atan2(v.y, v.x);
 				D3DXMatrixRotationZ(&rotate, angle - (float)M_PI_2);

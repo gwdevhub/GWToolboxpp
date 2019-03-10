@@ -1,23 +1,33 @@
-#include "BondsWidget.h"
+#include <stdint.h>
 
-#include <sstream>
 #include <string>
-#include <d3dx9tex.h>
-
-#include <imgui_internal.h>
+#include <sstream>
+#include <functional>
 #include <unordered_map>
 
-#include <GWCA\Managers\GameThreadMgr.h>
+#include <d3dx9tex.h>
+#include <imgui.h>
+#include <imgui_internal.h>
+
+#include <GWCA\Constants\Constants.h>
+
+#include <GWCA\GameContainers\GamePos.h>
+
+#include <GWCA\GameEntities\Party.h>
+#include <GWCA\GameEntities\Skill.h>
+#include <GWCA\GameEntities\Player.h>
+
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\AgentMgr.h>
+#include <GWCA\Managers\PartyMgr.h>
 #include <GWCA\Managers\EffectMgr.h>
 #include <GWCA\Managers\SkillbarMgr.h>
-#include <GWCA\Managers\PartyMgr.h>
-#include <GWCA\Managers\SkillbarMgr.h>
+#include <GWCA\Managers\GameThreadMgr.h>
 
 #include "GuiUtils.h"
 #include "Modules\ToolboxSettings.h"
 #include <Modules\Resources.h>
+#include "BondsWidget.h"
 
 //DWORD BondsWidget::buff_id[MAX_PARTYSIZE][MAX_BONDS] = { 0 };
 
@@ -68,22 +78,22 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
     std::unordered_map<GW::AgentID, int> party_map; // agent id to index
     int allies_start = 255;
     for (const GW::PlayerPartyMember& player : info->players) {
-        DWORD id = players[player.loginnumber].AgentID;
+        DWORD id = players[player.login_number].agent_id;
         party_map[id] = party_list.size();
         party_list.push_back(id);
         
         if (info->heroes.valid()) {
             for (const GW::HeroPartyMember& hero : info->heroes) {
-                if (hero.ownerplayerid == player.loginnumber) {
-                    party_map[hero.agentid] = party_list.size();
-                    party_list.push_back(hero.agentid);
+                if (hero.owner_player_id == player.login_number) {
+                    party_map[hero.agent_id] = party_list.size();
+                    party_list.push_back(hero.agent_id);
                 }
             }
         }
     }
     if (info->henchmen.valid()) {
         for (const GW::HenchmanPartyMember& hench : info->henchmen) {
-            party_list.push_back(hench.agentid);
+            party_list.push_back(hench.agent_id);
         }
     }
     if (show_allies && info->others.valid()) {
@@ -100,10 +110,10 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
     // ==== Get bonds ====
     std::vector<int> bond_list; // index to skill id
     std::unordered_map<DWORD, int> bond_map; // skill id to index
-    const GW::Skillbar& bar = GW::Skillbar::GetPlayerSkillbar();
-    if (!bar.IsValid()) return;
+    const GW::Skillbar *bar = GW::SkillbarMgr::GetPlayerSkillbar();
+    if (!bar || !bar->IsValid()) return;
     for (int slot = 0; slot < 8; ++slot) {
-        DWORD SkillID = bar.Skills[slot].SkillId;
+        DWORD SkillID = bar->skills[slot].skill_id;
         Bond bond = GetBondBySkillID(SkillID);
         if (bond != Bond::None) {
             bond_map[SkillID] = bond_list.size();
@@ -113,7 +123,7 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
 
     const GW::AgentEffectsArray& effects = GW::Effects::GetPartyEffectArray();
     if (!effects.valid()) return;
-    const GW::BuffArray& buffs = effects[0].Buffs; // first one is for players, after are heroes
+    const GW::BuffArray& buffs = effects[0].buffs; // first one is for players, after are heroes
 
     // ==== Draw ====
     const int img_size = row_height > 0 ? row_height : GuiUtils::GetPartyHealthbarHeight();
@@ -140,8 +150,8 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
 
         bool handled_click = false;
         for (unsigned int i = 0; i < buffs.size(); ++i) {
-            DWORD agent = buffs[i].TargetAgentId;
-            DWORD skill = buffs[i].SkillId;
+            DWORD agent = buffs[i].target_agent_id;
+            DWORD skill = buffs[i].skill_id;
             if (party_map.find(agent) == party_map.end()) continue; // bond target not in party
             int y = party_map[agent];
             if (bond_map.find(skill) == bond_map.end()) continue; // bond with a skill not in skillbar 
@@ -151,7 +161,7 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
             ImVec2 br = GetGridPos(x, y, false);
             ImGui::GetWindowDrawList()->AddImage((ImTextureID)textures[bond], tl, br);
             if (click_to_drop && ImGui::IsMouseHoveringRect(tl, br) && ImGui::IsMouseReleased(0)) {
-                GW::Effects::DropBuff(buffs[i].BuffId);
+                GW::Effects::DropBuff(buffs[i].buff_id);
                 handled_click = true;
             }
         }
@@ -184,9 +194,9 @@ void BondsWidget::UseBuff(GW::AgentID targetId, DWORD buff_skillid) {
     if (target == nullptr) return;
 
     int slot = GW::SkillbarMgr::GetSkillSlot((GW::Constants::SkillID)buff_skillid);
-	GW::Skillbar skillbar = GW::Skillbar::GetPlayerSkillbar();
-	if (!skillbar.IsValid()) return;
-	if (skillbar.Skills[slot].Recharge != 0) return;
+	GW::Skillbar *skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
+	if (!skillbar || !skillbar->IsValid()) return;
+	if (skillbar->skills[slot].recharge != 0) return;
 
     // capture by value!
     GW::GameThread::Enqueue([slot, targetId]() -> void {

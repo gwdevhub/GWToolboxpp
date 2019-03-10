@@ -69,9 +69,9 @@ private:
 	// returns true if the map is visible, valid, not loading, etc
 	inline bool IsActive() const;
 
-	GW::Vector2f InterfaceToWorldPoint(Vec2i pos) const;
-	GW::Vector2f InterfaceToWorldVector(Vec2i pos) const;
-	void SelectTarget(GW::Vector2f pos);
+	GW::Vec2f InterfaceToWorldPoint(Vec2i pos) const;
+	GW::Vec2f InterfaceToWorldVector(Vec2i pos) const;
+	void SelectTarget(GW::Vec2f pos);
 
 	bool mousedown = false;
 
@@ -79,7 +79,7 @@ private:
 	Vec2i size;
 
 	Vec2i drag_start;
-	GW::Vector2f translation;
+	GW::Vec2f translation;
 	float scale;
 
 	// vars for minimap movement

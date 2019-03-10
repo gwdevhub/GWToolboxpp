@@ -1,7 +1,4 @@
-#include "MainWindow.h"
-
-#include <GWCA\GWCA.h>
-#include <GWCA\Managers\PartyMgr.h>
+#include <stdint.h>
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -9,6 +6,7 @@
 #include "logger.h"
 #include "GuiUtils.h"
 #include "GWToolbox.h"
+#include "MainWindow.h"
 
 void MainWindow::LoadSettings(CSimpleIni* ini) {
 	bool v = ini->GetBoolValue(Name(), VAR_NAME(visible), true);

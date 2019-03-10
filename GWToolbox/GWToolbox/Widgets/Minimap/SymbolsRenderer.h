@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include <GWCA\GameEntities\Position.h>
+#include <GWCA\GameContainers\GamePos.h>
 
 #include "VBuffer.h"
 #include "Color.h"
