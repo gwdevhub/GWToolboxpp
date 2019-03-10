@@ -59,6 +59,7 @@ public:
 	bool pcon_quantity_checked = false;
 	int threshold; // quantity at which the number color goes from green to yellow and warning starts being displayed
 	int quantity = 0;
+	int quantity_storage = 0;
 
 	clock_t timer;
 
@@ -66,7 +67,8 @@ public:
 	const char* const ini;
 
 protected:
-	GW::Item* FindVacantStackOrSlotInInventory();
+	// Cycles through character's inventory to find a matching (incomplete) stack, or an empty pane.
+	GW::Item* FindVacantStackOrSlotInInventory(GW::Item* likeItem = nullptr);
 	GW::Agent* player = nullptr;
 
 	GW::Constants::MapID mapid = GW::Constants::MapID::None;
@@ -75,7 +77,7 @@ protected:
 	// if 'used' is not null, it will also use the first item found,
 	// and, if so, used *used to true
 	// returns the number of items found, or -1 in case of error
-	int CheckInventory(bool* used = nullptr, int* used_qty = nullptr) const;
+	int CheckInventory(bool* used = nullptr, int* used_qty = nullptr, int from_bag = static_cast<int>(GW::Constants::Bag::Backpack), int to_bag = static_cast<int>(GW::Constants::Bag::Bag_2)) const;
 
 	virtual bool CanUseByInstanceType() const;
 	virtual bool CanUseByEffect() const = 0;

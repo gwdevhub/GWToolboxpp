@@ -23,6 +23,7 @@ public:
 
 	bool SetEnabled(bool b);
 	bool GetEnabled();
+	bool show_storage_quantity = false;
 
 	inline void ToggleEnable() { SetEnabled(!enabled); }
 
@@ -36,6 +37,7 @@ public:
 	void DrawSettingInternal() override;
 
 private:
+
 	std::vector<Pcon*> pcons;
 	PconAlcohol* pcon_alcohol = nullptr;
 	GW::Constants::InstanceType current_map_type;
@@ -46,6 +48,7 @@ private:
 	bool tick_with_pcons = false;
 	int items_per_row = 3;
 	bool show_enable_button = true;
+	
 	bool show_auto_refill_pcons_tickbox = true;
 	bool show_auto_disable_pcons_tickbox = false;
 	GW::Agent* player;
