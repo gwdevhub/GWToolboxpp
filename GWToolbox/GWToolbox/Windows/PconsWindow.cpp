@@ -415,6 +415,8 @@ void PconsWindow::LoadSettings(CSimpleIni* ini) {
 	Pcon::refill_if_below_threshold = ini->GetBoolValue(Name(), VAR_NAME(refill_if_below_threshold), false);
 	ini->GetBoolValue(Name(), VAR_NAME(show_auto_refill_pcons_tickbox), show_auto_refill_pcons_tickbox);
 	ini->GetBoolValue(Name(), VAR_NAME(show_auto_disable_pcons_tickbox), show_auto_disable_pcons_tickbox);
+	ini->GetBoolValue(Name(), VAR_NAME(show_storage_quantity), show_storage_quantity);
+	
 
 
 	disable_cons_in_final_room = ini->GetBoolValue(Name(), VAR_NAME(disable_cons_in_final_room), disable_cons_in_final_room);
@@ -445,7 +447,7 @@ void PconsWindow::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(refill_if_below_threshold), Pcon::refill_if_below_threshold);
 	ini->SetBoolValue(Name(), VAR_NAME(show_auto_refill_pcons_tickbox), show_auto_refill_pcons_tickbox);
 	ini->SetBoolValue(Name(), VAR_NAME(show_auto_disable_pcons_tickbox), show_auto_disable_pcons_tickbox);
-
+	ini->SetBoolValue(Name(), VAR_NAME(show_storage_quantity), show_storage_quantity);
 
 	ini->SetBoolValue(Name(), VAR_NAME(disable_cons_in_final_room), disable_cons_in_final_room);
 	ini->SetBoolValue(Name(), VAR_NAME(disable_cons_on_objective_completion), disable_cons_on_objective_completion);
@@ -460,6 +462,9 @@ void PconsWindow::DrawSettingInternal() {
 	ImGui::ShowHelp("Toolbox will disable a pcon if it is not found in the inventory");
 	ImGui::Checkbox("Refill from storage", &Pcon::refill_if_below_threshold);
 	ImGui::ShowHelp("Toolbox will refill pcons from storage if below the threshold");
+	ImGui::Checkbox("Show storage quantity in outpost", &show_storage_quantity);
+	ImGui::ShowHelp("Display a number on the bottom of each pcon icon, showing total quantity in storage.\n"
+					"This only displays when in an outpost.");
 	ImGui::SliderInt("Pcons delay", &Pcon::pcons_delay, 100, 5000, "%.0f milliseconds");
 	ImGui::ShowHelp(
 		"After using a pcon, toolbox will not use it again for this amount of time.\n"
