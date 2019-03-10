@@ -583,9 +583,9 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	if (borderlesswindow) ApplyBorderless(borderlesswindow);
 #endif
 	if (openlinks) GW::Chat::SetOpenLinks(openlinks);
-	if (tick_is_toggle) GW::PartyMgr::SetTickToggle(tick_is_toggle);
-    if (show_timestamps) GW::Chat::ToggleTimestamps(show_timestamps);
-    if (timestamps_color) GW::Chat::SetTimestampsColor(timestamps_color);
+	GW::PartyMgr::SetTickToggle(tick_is_toggle);
+    GW::Chat::ToggleTimestamps(show_timestamps);
+    GW::Chat::SetTimestampsColor(timestamps_color);
 	// if (select_with_chat_doubleclick) GW::Chat::SetChatEventCallback(&ChatEventCallback);
 	if (auto_url) GW::Chat::SetSendChatCallback(&SendChatCallback);
 	if (move_item_on_ctrl_click) GW::Items::SetOnItemClick(GameSettings::ItemClickCallback);
