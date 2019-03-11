@@ -689,8 +689,9 @@ bool Minimap::IsInside(int x, int y) const {
 	if (translation.x == 0 && translation.y == 0) {
 		GW::Vec2f gamepos = InterfaceToWorldPoint(Vec2i(x, y));
 		GW::Agent* me = GW::Agents::GetPlayer();
+		if (!me) return false;
 		float sqrdst = GW::GetSquareDistance(me->pos, gamepos);
-		return me && sqrdst < GW::Constants::SqrRange::Compass;
+		return sqrdst < GW::Constants::SqrRange::Compass;
 	}
 	return true;
 }

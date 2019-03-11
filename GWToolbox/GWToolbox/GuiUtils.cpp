@@ -57,8 +57,11 @@ int GuiUtils::GetPartyHealthbarHeight() {
 	static DWORD* optionarray = nullptr;
 	if (!optionarray) {
 		optionarray = (DWORD*)GW::Scanner::Find("\x8B\x4D\x08\x85\xC9\x74\x0A", "xxxxxxx", -9);
+		printf("[SCAN] optionarray = %p\n", optionarray);
 		if (optionarray)
 			optionarray = *(DWORD**)optionarray;
+		else
+			return GW::Constants::HealthbarHeight::Normal;
 	}
 	GW::Constants::InterfaceSize interfacesize =
 		static_cast<GW::Constants::InterfaceSize>(optionarray[6]);
@@ -139,4 +142,9 @@ size_t GuiUtils::wcstostr(char *dest, const wchar_t *src, size_t n) {
         if (src[i] == 0) break;
     }
     return i;
+}
+char *GuiUtils::StrCopy(char *dest, const char *src, size_t dest_size) {
+	strncpy(dest, src, dest_size - 1);
+	dest[dest_size - 1] = 0;
+	return dest;
 }

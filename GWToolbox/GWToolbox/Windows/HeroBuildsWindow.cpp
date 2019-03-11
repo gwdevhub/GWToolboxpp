@@ -317,7 +317,8 @@ void HeroBuildsWindow::Update(float delta) {
 			queue.pop();
 			send_timer = TIMER_INIT();
 		} else {
-			queue.empty(); 
+            while (!queue.empty())
+		        queue.pop(); 
 		}
 	}
 

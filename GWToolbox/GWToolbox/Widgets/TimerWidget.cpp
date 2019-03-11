@@ -61,10 +61,10 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
         if (GetUrgozTimer() || (show_extra_timers && (GetDeepTimer() || GetDhuumTimer() || GetTrapTimer()))) {
 
             ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f24));
-            ImVec2 cur = ImGui::GetCursorPos();
-            ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
+            ImVec2 cur2 = ImGui::GetCursorPos();
+            ImGui::SetCursorPos(ImVec2(cur2.x + 2, cur2.y + 2));
             ImGui::TextColored(ImColor(0, 0, 0), extra_buffer);
-            ImGui::SetCursorPos(cur);
+            ImGui::SetCursorPos(cur2);
             ImGui::TextColored(extra_color, extra_buffer);
             ImGui::PopFont();
         }

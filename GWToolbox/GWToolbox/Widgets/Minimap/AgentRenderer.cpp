@@ -243,8 +243,8 @@ void AgentRenderer::DrawSettings() {
 			case AgentRenderer::CustomAgent::Operation::MoveUp:
 			case AgentRenderer::CustomAgent::Operation::MoveDown:
 			case AgentRenderer::CustomAgent::Operation::Delete: 
-				for (size_t i = 0; i < custom_agents.size(); ++i) {
-					custom_agents[i]->index = i;
+				for (size_t j = 0; j < custom_agents.size(); ++j) {
+					custom_agents[j]->index = j;
 				}
 				changed = true;
 			default: break;
@@ -729,7 +729,7 @@ AgentRenderer::CustomAgent::CustomAgent(CSimpleIni* ini, const char* section)
 	: ui_id(++cur_ui_id) {
 
 	active = ini->GetBoolValue(section, VAR_NAME(active));
-	strncpy(name, ini->GetValue(section, VAR_NAME(name), ""), 128);
+	GuiUtils::StrCopy(name, ini->GetValue(section, VAR_NAME(name), ""), sizeof(name));
 	modelId = ini->GetLongValue(section, VAR_NAME(modelId), 0);
 	mapId = ini->GetLongValue(section, VAR_NAME(mapId), 0);
 
@@ -754,7 +754,7 @@ AgentRenderer::CustomAgent::CustomAgent(DWORD _modelId, Color _color, const char
 
 	modelId = _modelId;
 	color = _color;
-	strncpy(name, _name, 128);
+	GuiUtils::StrCopy(name, _name, sizeof(name));
 	active = true;
 }
 

@@ -94,7 +94,12 @@ private:
 		uint32_t item_id;
 		Material material;
 
-		Transaction(Type t, Material mat) : type(t), material(mat) {}
+		Transaction(Type t, Material mat)
+			: type(t)
+			, item_id(0)
+			, material(mat)
+		{
+		}
 	};
 
 	void Cancel();

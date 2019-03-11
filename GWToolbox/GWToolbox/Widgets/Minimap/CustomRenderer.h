@@ -10,8 +10,8 @@ class CustomRenderer : public VBuffer {
 	struct CustomLine {
 		CustomLine(float x1, float y1, float x2, float y2, GW::Constants::MapID m, const char* n)
 			: p1(x1, y1), p2(x2, y2), map(m), visible(true) {
-			if (n) strncpy(name, n, 128);
-			else strncpy(name, "line", 128);
+			if (n) GuiUtils::StrCopy(name, n, sizeof(name));
+			else GuiUtils::StrCopy(name, "line", sizeof(name));
 		};
 		CustomLine(const char* n) : CustomLine(0, 0, 0, 0, GW::Constants::MapID::None, n) {};
 		GW::Vec2f p1;
@@ -27,8 +27,8 @@ class CustomRenderer : public VBuffer {
 	struct CustomMarker {
 		CustomMarker(float x, float y, float s, Shape sh, GW::Constants::MapID m, const char* n)
 			: pos(x, y), size(s), shape(sh), map(m), visible(true) {
-			if (n) strncpy(name, n, 128);
-			else strncpy(name, "marker", 128);
+			if (n) GuiUtils::StrCopy(name, n, sizeof(name));
+			else GuiUtils::StrCopy(name, "marker", sizeof(name));
 		};
 		CustomMarker(const char* n) : CustomMarker(0, 0, 100.0f, LineCircle, GW::Constants::MapID::None, n) {};
 		GW::Vec2f pos;

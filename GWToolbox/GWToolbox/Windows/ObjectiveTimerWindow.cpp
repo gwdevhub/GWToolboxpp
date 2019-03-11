@@ -61,7 +61,7 @@ namespace {
 
     void PrintTime(char* buf, size_t size, DWORD time, bool show_ms = true) {
         if (time == TIME_UNKNOWN) {
-            strncpy(buf, "--:--", size);
+            GuiUtils::StrCopy(buf, "--:--", size);
         } else {
             DWORD sec = time / 1000;
             if (show_ms && show_decimal) {
@@ -350,7 +350,7 @@ void ObjectiveTimerWindow::SaveSettings(CSimpleIni* ini) {
 
 ObjectiveTimerWindow::Objective::Objective(uint32_t _id, const char* _name) {
     id = _id;
-    strncpy(name, _name, sizeof(name));
+    GuiUtils::StrCopy(name, _name, sizeof(name));
     start = TIME_UNKNOWN;
     done = TIME_UNKNOWN;
     duration = TIME_UNKNOWN;

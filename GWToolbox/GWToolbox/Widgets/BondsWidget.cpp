@@ -194,6 +194,7 @@ void BondsWidget::UseBuff(GW::AgentID targetId, DWORD buff_skillid) {
     if (target == nullptr) return;
 
     int slot = GW::SkillbarMgr::GetSkillSlot((GW::Constants::SkillID)buff_skillid);
+    if (slot < 0) return;
 	GW::Skillbar *skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
 	if (!skillbar || !skillbar->IsValid()) return;
 	if (skillbar->skills[slot].recharge != 0) return;
