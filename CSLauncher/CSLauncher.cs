@@ -53,7 +53,7 @@ namespace CSLauncher {
             ResInstaller installer = new ResInstaller();
             installer.Install();
 
-#if DEBUG
+#if DEBUG || true // Disable automated updates if we've using 3vcloud
             // do nothing, we'll use GWToolbox.dll in /Debug
             string dllfile = "GWToolbox.dll"; // same folder where the launcher is built
 #else

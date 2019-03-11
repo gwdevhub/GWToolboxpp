@@ -328,7 +328,7 @@ void GWToolbox::Initialize() {
     Log::Log("Creating Modules\n");
     std::vector<ToolboxModule*> core_modules;
     core_modules.push_back(&Resources::Instance());
-    core_modules.push_back(&Updater::Instance());
+    //core_modules.push_back(&Updater::Instance()); // Disable updater
 #ifdef ENABLE_LUA
     core_modules.push_back(&LUAInterface::Instance());
 #endif
