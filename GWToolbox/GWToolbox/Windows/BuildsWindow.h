@@ -7,6 +7,7 @@
 #include <string>
 
 #include "Timer.h"
+#include "GuiUtils.h"
 
 class BuildsWindow : public ToolboxWindow {
 private:

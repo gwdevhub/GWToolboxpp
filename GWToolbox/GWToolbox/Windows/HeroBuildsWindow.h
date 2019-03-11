@@ -8,6 +8,7 @@
 #include <string>
 
 #include "Timer.h"
+#include "GuiUtils.h"
 
 class HeroBuildsWindow : public ToolboxWindow {
 private:
