@@ -4,6 +4,7 @@
 #include <string>
 #include <fstream>
 #include <functional>
+#include <regex>
 
 #include <TbWindows.h>
 #include <ShellApi.h>
@@ -114,26 +115,48 @@ void TradeWindow::Update(float delta) {
 	if (!ws_chat || ws_chat->getReadyState() != WebSocket::OPEN)
 		return;
 
+	
 	ws_chat->poll();
 	ws_chat->dispatch([this](const std::string& data) {
 		char buffer[512];
 		json res = json::parse(data.c_str());
 
+		
+
 		// We don't support queries in the chat
 		if (res.find("query") != res.end())
 			return;
-
+		const std::regex regex_check = std::regex("^/(.*)/[a-z]?$", std::regex::ECMAScript | std::regex::icase);
+		std::regex word_regex;
+		std::smatch m;
+		std::string s;
 		std::string msg = res["message"].get<std::string>();
 		bool print_message = true;
 		if (filter_alerts) {
 			print_message = false; // filtered unless allowed by words
 			for (auto& word : alert_words) {
-				auto found = std::search(msg.begin(), msg.end(), word.begin(), word.end(), [](char c1, char c2) -> bool {
-					return tolower(c1) == c2;
-				});
-				if (found != msg.end()) {
-					print_message = true;
-					break; // don't need to check other words
+				if (std::regex_search(word, m, regex_check)) {
+					s = m._At(1).str();
+					// Log::Info("Match %s",s.c_str());
+					try {
+						word_regex = std::regex(s, std::regex::ECMAScript | std::regex::icase);
+					}
+					catch (...) {
+						// Silent fail.
+					}
+					if (std::regex_search(msg, word_regex)) {
+						print_message = true;
+						break;
+					}
+				}
+				else {
+					auto found = std::search(msg.begin(), msg.end(), word.begin(), word.end(), [](char c1, char c2) -> bool {
+						return tolower(c1) == c2;
+					});
+					if (found != msg.end()) {
+						print_message = true;
+						break; // don't need to check other words
+					}
 				}
 			}
 		}
