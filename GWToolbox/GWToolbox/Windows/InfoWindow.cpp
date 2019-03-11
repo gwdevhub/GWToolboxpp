@@ -55,13 +55,15 @@ void InfoWindow::Initialize() {
 			
 			// Prepare the name
 			const int offset = 5;
-			int i = 0;
-			wchar_t buf[128];
-			while (i < 256 && pak->message[i + offset] != 0x1 && pak->message[i + offset] != 0) {
-				buf[i] = (pak->message[offset + i]);
-				++i;
+			wchar_t buf[256];
+			{
+				int i = 0;
+				while (i < 255 && pak->message[i + offset] != 0x1 && pak->message[i + offset] != 0) {
+					buf[i] = (pak->message[offset + i]);
+					++i;
+				}
+				buf[i] = '\0';	
 			}
-			buf[i] = '\0';
 
 			// get all the data
 			GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();

@@ -265,7 +265,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Clear", ImVec2(80.0f, 0))) {
-			strncpy(search_buffer, "", 256);
+			GuiUtils::StrCopy(search_buffer, "", 256);
 			search("");
 		}
 		ImGui::SameLine();

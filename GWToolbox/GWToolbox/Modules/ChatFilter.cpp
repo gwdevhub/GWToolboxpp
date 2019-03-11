@@ -338,8 +338,7 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 	case 0x7F6: { // player x picks up item y (note: item can be unassigned gold)
 		bool rare = IsRare(Get2ndSegment(message));
 		if (rare) return ally_pickup_rare;
-		if (!rare) return ally_pickup_common;
-		return false;
+		else	  return ally_pickup_common;
 	}
 	case 0x7FC: return false; // you pick up item y (note: item can be unassigned gold)
 	case 0x807: return false; // player joined the game

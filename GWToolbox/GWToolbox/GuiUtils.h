@@ -36,4 +36,6 @@ namespace GuiUtils {
 	std::wstring ToWstr(std::string &s);
 
 	size_t wcstostr(char *dest, const wchar_t *src, size_t n);
+
+	char *StrCopy(char *dest, const char *src, size_t dest_size);
 };

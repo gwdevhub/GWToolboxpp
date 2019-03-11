@@ -36,7 +36,7 @@ GW::MerchItemArray MaterialsWindow::GetMerchItems() const {
 
 GW::Item *MaterialsWindow::GetMerchItem(Material mat) const {
 	uint32_t model_id = GetModelID(mat);
-	GW::ItemArray& items = GW::Items::GetItemArray();
+	GW::ItemArray items = GW::Items::GetItemArray();
 	for (uint32_t item_id : merch_items) {
 		if (item_id >= items.size())
 			continue;
@@ -181,7 +181,7 @@ void MaterialsWindow::Initialize() {
 	[this](GW::Packet::StoC::ItemStreamEnd *pak) -> bool {
 		// @Remark: unk1 = 13 means "selling" tab
 		if (pak->unk1 != 12) return false;
-		GW::MerchItemArray& items = GetMerchItems();
+		GW::MerchItemArray items = GetMerchItems();
 		merch_items.clear();
 		for (size_t i = 0; i < items.size(); i++)
 			merch_items.push_back(items[i]);

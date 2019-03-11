@@ -365,7 +365,7 @@ std::vector<ToolboxUIElement*> ChatCommands::MatchingWindows(const wchar_t *mess
 void ChatCommands::CmdShow(const wchar_t *message, int argc, LPWSTR *argv) {
 	auto windows = MatchingWindows(message, argc, argv);
 	if (windows.empty()) {
-		if (argc == 2 && argv[1] == L"settings") {
+		if (argc == 2 && !wcscmp(argv[1], L"settings")) {
 			SettingsWindow::Instance().visible = true;
 		} else {
 			Log::Error("Cannot find window '%ls'", argc > 1 ? argv[1] : L"");
@@ -753,7 +753,7 @@ void ChatCommands::CmdLoad(const wchar_t *message, int argc, LPWSTR *argv) {
 	if (!ReadTemplateFile(dir, temp, 64)) {
 		// If it failed, we will interpret the input as the code models.
 		size_t len = wcslen(arg1);
-		if (len > 64) return;
+		if (len >= 64) return;
 		for (size_t i = 0; i < len; i++)
 			temp[i] = (char)arg1[i];
 		temp[len] = 0;
