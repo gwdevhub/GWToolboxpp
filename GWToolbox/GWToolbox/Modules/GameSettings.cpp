@@ -15,6 +15,9 @@
 #include <GWCA\GameContainers\Array.h>
 #include <GWCA\GameContainers\GamePos.h>
 
+#include <GWCA\Context\WorldContext.h>
+#include <GWCA\Context\GameContext.h>
+
 #include <GWCA\Packets\StoC.h>
 
 #include <GWCA\GameEntities\Agent.h>
@@ -572,6 +575,9 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	show_unlearned_skill = ini->GetBoolValue(Name(), VAR_NAME(show_unlearned_skill), false);
 	auto_skip_cinematic = ini->GetBoolValue(Name(), VAR_NAME(auto_skip_cinematic), false);
 
+	faction_warn_percent = ini->GetBoolValue(Name(), VAR_NAME(faction_warn_percent), faction_warn_percent);
+	faction_warn_percent_amount = ini->GetLongValue(Name(), VAR_NAME(faction_warn_percent_amount), faction_warn_percent_amount);
+
 	::LoadChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
 	::LoadChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);
 	::LoadChannelColor(ini, Name(), "team", GW::Chat::CHANNEL_GROUP);
@@ -621,6 +627,9 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 
 	ini->SetBoolValue(Name(), VAR_NAME(show_unlearned_skill), show_unlearned_skill);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_skip_cinematic), auto_skip_cinematic);
+
+	ini->SetBoolValue(Name(), VAR_NAME(faction_warn_percent), faction_warn_percent);
+	ini->SetLongValue(Name(), VAR_NAME(faction_warn_percent_amount), faction_warn_percent_amount);
 
 	::SaveChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
 	::SaveChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);
@@ -725,6 +734,14 @@ void GameSettings::DrawSettingInternal() {
 	}
 
 	ImGui::Checkbox("Automatically skip cinematics", &auto_skip_cinematic);
+	ImGui::Checkbox("Show warning when earned faction reaches ", &faction_warn_percent);
+	ImGui::SameLine();
+	ImGui::PushItemWidth(40.0f * ImGui::GetIO().FontGlobalScale);
+	ImGui::InputInt("##faction_warn_percent_amount", &faction_warn_percent_amount, 0);
+	ImGui::PopItemWidth();
+	ImGui::SameLine();
+	ImGui::Text("%%");
+	ImGui::ShowHelp("Displays when in a challenge mission or elite mission outpost");
 }
 
 void GameSettings::DrawBorderlessSetting() {
@@ -741,6 +758,63 @@ void GameSettings::ApplyBorderless(bool borderless) {
 	}
 }
 
+void GameSettings::FactionEarnedCheckAndWarn() {
+	if (!faction_warn_percent)
+		return; // Disabled
+	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
+		faction_checked = false;
+		return; // Loading or explorable area.
+	}
+	if (faction_checked)
+		return; // Already checked.
+	faction_checked = true;
+	GW::WorldContext * world_context = GW::GameContext::instance()->world;
+	if (!world_context || !world_context->max_luxon || !world_context->total_earned_kurzick) {
+		faction_checked = false;
+		return; // No world context yet.
+	}
+	float percent;
+	// Avoid invalid user input values.
+	if (faction_warn_percent_amount < 0)
+		faction_warn_percent_amount = 0; 
+	if (faction_warn_percent_amount > 100)
+		faction_warn_percent_amount = 100;
+	// Warn user to dump faction if we're in a luxon/kurzick mission outpost
+	switch (GW::Map::GetMapID()) {
+		case GW::Constants::MapID::The_Deep:
+		case GW::Constants::MapID::The_Jade_Quarry_Luxon_outpost:
+		case GW::Constants::MapID::Fort_Aspenwood_Luxon_outpost:
+		case GW::Constants::MapID::Zos_Shivros_Channel:
+		case GW::Constants::MapID::The_Aurios_Mines:
+			// Player is in luxon mission outpost
+			percent = (100.0f / (float)world_context->max_luxon) * (float)world_context->current_luxon;
+			if (percent >= (float)faction_warn_percent_amount) {
+				// Faction earned is over 75% capacity
+				Log::Warning("Luxon faction earned is %d of %d", world_context->current_luxon, world_context->max_luxon );
+			}
+			else if (world_context->current_kurzick > 4999 && world_context->current_kurzick > world_context->current_luxon) {
+				// Kurzick faction > Luxon faction
+				Log::Warning("Kurzick faction earned is greater than Luxon");
+			}
+			break;
+		case GW::Constants::MapID::Urgozs_Warren:
+		case GW::Constants::MapID::The_Jade_Quarry_Kurzick_outpost:
+		case GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost:
+		case GW::Constants::MapID::Altrumm_Ruins:
+		case GW::Constants::MapID::Amatz_Basin:
+			// Player is in kurzick mission outpost
+			percent = (100.0f / (float)world_context->max_kurzick) * (float)world_context->current_kurzick;
+			if (percent >= (float)faction_warn_percent_amount) {
+				// Faction earned is over 75% capacity
+				Log::Warning("Kurzick faction earned is %d of %d", world_context->current_kurzick, world_context->max_kurzick);
+			}
+			else if (world_context->current_luxon > 4999 && world_context->current_luxon > world_context->current_kurzick) {
+				// Luxon faction > Kurzick faction
+				Log::Warning("Luxon faction earned is greater than Kurzick");
+			}
+			break;
+	}
+}
 void GameSettings::SetAfkMessage(std::wstring&& message) {
 	
 	static size_t MAX_AFK_MSG_LEN = 80;
@@ -761,6 +835,7 @@ void GameSettings::Update(float delta) {
 		activity_timer = TIMER_INIT(); // refresh the timer to avoid spamming in case the set status call fails
 	}
 	UpdateFOV();
+	FactionEarnedCheckAndWarn();
 #ifdef ENABLE_BORDERLESS
 	UpdateBorderless();
 #endif
