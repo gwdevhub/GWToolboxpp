@@ -70,6 +70,9 @@ public:
 	bool auto_skip_cinematic = false;
 	bool show_unlearned_skill = false;
 
+	bool faction_warn_percent = true;
+	int faction_warn_percent_amount = 75;
+
 	std::wstring afk_message;
 	clock_t afk_message_time;
 
@@ -83,6 +86,9 @@ public:
 private:
 	void UpdateBorderless();
 	void UpdateFOV();
+	void FactionEarnedCheckAndWarn();
+	bool faction_checked = false;
+
 	std::vector<GW::MemoryPatcher*> patches;
 	GW::MemoryPatcher *ctrl_click_patch;
 	GW::MemoryPatcher *tome_patch;
