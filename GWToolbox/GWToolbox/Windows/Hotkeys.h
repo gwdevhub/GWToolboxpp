@@ -76,6 +76,26 @@ public:
 	void Execute() override;
 };
 
+class HotkeyEquipItem : public TBHotkey {
+private:
+	UINT bag_idx = 0;
+	UINT slot_idx = 0;
+
+public:
+	static const char* IniSection() { return "EquipItem"; }
+	const char* Name() const override { return IniSection(); }
+
+	HotkeyEquipItem(CSimpleIni* ini, const char* section);
+
+	void Save(CSimpleIni* ini, const char* section) const override;
+
+	void Draw() override;
+	void Description(char* buf, int bufsz) const;
+	void Execute() override;
+
+	bool IsEquippable(GW::Item* item);
+};
+
 // hotkey to use an item
 // will use the item in explorable areas, and display a warning with given name if not found
 class HotkeyUseItem : public TBHotkey {
