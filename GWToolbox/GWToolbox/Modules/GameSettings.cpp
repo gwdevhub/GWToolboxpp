@@ -561,7 +561,8 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
 	openlinks = ini->GetBoolValue(Name(), VAR_NAME(openlinks), true);
 	auto_url = ini->GetBoolValue(Name(), VAR_NAME(auto_url), true);
-	move_item_on_ctrl_click = ini->GetBoolValue(Name(), VAR_NAME(move_item_on_ctrl_click), true);
+	move_item_on_ctrl_click = ini->GetBoolValue(Name(), VAR_NAME(move_item_on_ctrl_click), move_item_on_ctrl_click);
+	move_item_to_current_storage_pane = ini->GetBoolValue(Name(), VAR_NAME(move_item_to_current_storage_pane), move_item_to_current_storage_pane);
 
 	flash_window_on_pm = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_pm), true);
 	flash_window_on_party_invite = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_party_invite), true);
@@ -615,6 +616,8 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(openlinks), openlinks);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_url), auto_url);
 	ini->SetBoolValue(Name(), VAR_NAME(move_item_on_ctrl_click), move_item_on_ctrl_click);
+	ini->SetBoolValue(Name(), VAR_NAME(move_item_to_current_storage_pane), move_item_to_current_storage_pane);
+	
 
 	ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_pm), flash_window_on_pm);
 	ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_party_invite), flash_window_on_party_invite);
@@ -701,6 +704,12 @@ void GameSettings::DrawSettingInternal() {
 	if (ImGui::Checkbox("Move items from/to storage with Control+Click", &move_item_on_ctrl_click)) {
 		GW::Items::SetOnItemClick(GameSettings::ItemClickCallback);
 	}
+	ImGui::Indent();
+	ImGui::Checkbox("Move item to current open storage pane on click", &move_item_to_current_storage_pane);
+	ImGui::ShowHelp("Enabled: Using Control+Click on an item in inventory with storage chest open,\n"
+					"try to deposit item into the currently displayed storage pane.\n"
+					"Disabled: Item will be stored into any available stack/slot in the chest.");
+	ImGui::Unindent();
 
 	ImGui::Text("Flash Guild Wars taskbar icon when:");
 	ImGui::Indent();
@@ -966,7 +975,7 @@ void GameSettings::ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag)
 
 	// Expected behaviors
 	//  When clicking on item in inventory
-	//   case storage close:
+	//   case storage close (or move_item_to_current_storage_pane = false):
 	//    - If the item is a material, it look if it can move it to the material page.
 	//    - If the item is stackable, search in all the storage if there is already similar items and completes the stack
 	//    - If not everything was moved, move the remaining in the first empty slot of the storage.
@@ -998,10 +1007,12 @@ void GameSettings::ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag)
 	}
 
 	if (is_inventory_item) {
-		if (GW::Items::GetIsStorageOpen()) {
+		if (GW::Items::GetIsStorageOpen() && GameSettings::Instance().move_item_to_current_storage_pane) {
+			// If move_item_to_current_storage_pane = true, try to add the item to current storage pane.
 			int current_storage = GW::Items::GetStoragePage();
 			move_item_to_storage_page(item, current_storage);
 		} else {
+			// Otherwise, just try to put it in anywhere.
 			move_item_to_storage(item);
 		}
 	} else {
