@@ -64,6 +64,8 @@ TBHotkey* TBHotkey::HotkeyFactory(CSimpleIni* ini, const char* section) {
 		return new HotkeyPingBuild(ini, section);
 	} else if (type.compare(HotkeyHeroTeamBuild::IniSection()) == 0) {
 		return new HotkeyHeroTeamBuild(ini, section);
+	} else if (type.compare(HotkeyEquipItem::IniSection()) == 0) {
+		return new HotkeyEquipItem(ini, section);
 	} else {
 		return nullptr;
 	}
@@ -303,6 +305,76 @@ void HotkeyUseItem::Execute() {
 			Log::Info("%s not found!", name);
 		}
 	}
+}
+
+HotkeyEquipItem::HotkeyEquipItem(CSimpleIni* ini, const char* section) : TBHotkey(ini, section) {
+	bag_idx = ini ? ini->GetLongValue(section, "Bag", 0) : 0;
+	slot_idx = ini ? ini->GetLongValue(section, "Slot", 0) : 0;
+}
+void HotkeyEquipItem::Save(CSimpleIni* ini, const char* section) const {
+	TBHotkey::Save(ini, section);
+	ini->SetLongValue(section, "Bag", bag_idx);
+	ini->SetLongValue(section, "Slot", slot_idx);
+}
+void HotkeyEquipItem::Description(char* buf, int bufsz) const {
+	snprintf(buf, bufsz, "Equip Item in bag %d slot %d", bag_idx, slot_idx);
+}
+void HotkeyEquipItem::Draw() {
+	if (ImGui::InputInt("Bag (1-5)", (int*)&bag_idx)) hotkeys_changed = true;
+	if (ImGui::InputInt("Slot (1-25)", (int*)&slot_idx)) hotkeys_changed = true;
+}
+bool HotkeyEquipItem::IsEquippable(GW::Item* item) {
+	if (!item) return false;
+	switch (static_cast<GW::Constants::ItemType>(item->type)) {
+		case GW::Constants::ItemType::Axe:
+		case GW::Constants::ItemType::Boots:
+		case GW::Constants::ItemType::Bow:
+		case GW::Constants::ItemType::Chestpiece:
+		case GW::Constants::ItemType::Offhand:
+		case GW::Constants::ItemType::Gloves:
+		case GW::Constants::ItemType::Hammer:
+		case GW::Constants::ItemType::Headpiece:
+		case GW::Constants::ItemType::Leggings:
+		case GW::Constants::ItemType::Wand:
+		case GW::Constants::ItemType::Shield:
+		case GW::Constants::ItemType::Staff:
+		case GW::Constants::ItemType::Sword:
+		case GW::Constants::ItemType::Daggers:
+		case GW::Constants::ItemType::Scythe:
+		case GW::Constants::ItemType::Spear:
+		case GW::Constants::ItemType::Costume:
+			// TODO: Can this player equip this item e.g. is it customised for someone else?
+			return true;
+			break;
+		default:
+			return false;
+			break;
+	}
+	return true;
+}
+void HotkeyEquipItem::Execute() {
+	if (isLoading()) return;
+	if (bag_idx < 1 || bag_idx > 5 || slot_idx < 1 || slot_idx > 25) {
+		Log::Error("Invalid bag slot %d/%d!", bag_idx, slot_idx);
+		return;
+	}
+	GW::Bag * b = GW::Items::GetBag(bag_idx);
+	if (!b) {
+		Log::Error("Bag #%d not found!", bag_idx);
+		return;
+	}
+	GW::ItemArray items = b->items;
+	if (!items.valid() || slot_idx > items.size()) {
+		Log::Error("Invalid bag slot %d/%d!", bag_idx, slot_idx);
+		return;
+	}
+	GW::Item * item = items.at(slot_idx-1);
+	if(!IsEquippable(item)) {
+		Log::Error("No equippable item in bag %d slot %d", bag_idx, slot_idx);
+		return;
+	}
+	//Log::Info("Equip item in bag %d slot %d", bag_idx, slot_idx);
+	GW::Items::EquipItem(item);
 }
 
 bool HotkeyDropUseBuff::GetText(void* data, int idx, const char** out_text) {
