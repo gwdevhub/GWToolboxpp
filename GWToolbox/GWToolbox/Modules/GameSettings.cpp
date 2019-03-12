@@ -799,11 +799,11 @@ void GameSettings::FactionEarnedCheckAndWarn() {
 			percent = (100.0f / (float)world_context->max_luxon) * (float)world_context->current_luxon;
 			if (percent >= (float)faction_warn_percent_amount) {
 				// Faction earned is over 75% capacity
-				Log::Warning("<c=#FFFF00>Luxon faction earned is %d of %d</c>", world_context->current_luxon, world_context->max_luxon );
+				Log::Warning("Luxon faction earned is %d of %d", world_context->current_luxon, world_context->max_luxon );
 			}
 			else if (world_context->current_kurzick > 4999 && world_context->current_kurzick > world_context->current_luxon) {
 				// Kurzick faction > Luxon faction
-				Log::Warning("<c=#FFFF00>Kurzick faction earned is greater than Luxon</c>");
+				Log::Warning("Kurzick faction earned is greater than Luxon");
 			}
 			break;
 		case GW::Constants::MapID::Urgozs_Warren:
@@ -815,11 +815,11 @@ void GameSettings::FactionEarnedCheckAndWarn() {
 			percent = (100.0f / (float)world_context->max_kurzick) * (float)world_context->current_kurzick;
 			if (percent >= (float)faction_warn_percent_amount) {
 				// Faction earned is over 75% capacity
-				Log::Warning("<c=#FFFF00>Kurzick faction earned is %d of %d<c/>", world_context->current_kurzick, world_context->max_kurzick);
+				Log::Warning("Kurzick faction earned is %d of %d", world_context->current_kurzick, world_context->max_kurzick);
 			}
 			else if (world_context->current_luxon > 4999 && world_context->current_luxon > world_context->current_kurzick) {
 				// Luxon faction > Kurzick faction
-				Log::Warning("<c=#FFFF00>Luxon faction earned is greater than Kurzick</c>");
+				Log::Warning("Luxon faction earned is greater than Kurzick");
 			}
 			break;
 	}
