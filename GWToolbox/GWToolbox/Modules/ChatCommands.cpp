@@ -469,7 +469,7 @@ void ChatCommands::CmdTP(const wchar_t *message, int argc, LPWSTR *argv) {
 				return;
 			}
 		}
-		Log::Error("[Error] Did not recognize guild '%ls'\n", argv[2]);
+		Log::Error("[Error] Did not recognize guild '%ls'", argv[2]);
 		return;
 	}
 	if (argOutpost.size() > 2 && argOutpost.compare(0, 3, L"fav", 3) == 0) {
