@@ -30,6 +30,7 @@ public:
 	const char* Name() const override { return "Game Settings"; }
 
 	void Initialize() override;
+	void Terminate() override;
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
@@ -76,6 +77,8 @@ public:
 	bool show_timestamps = false;
 	Color timestamps_color;
 
+	bool disable_gold_selling_confirmation = false;
+
 	void ApplyBorderless(bool value);
 	void SetAfkMessage(std::wstring&& message);
 	static void ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag);
@@ -86,6 +89,7 @@ private:
 	std::vector<GW::MemoryPatcher*> patches;
 	GW::MemoryPatcher *ctrl_click_patch;
 	GW::MemoryPatcher *tome_patch;
+	GW::MemoryPatcher *gold_confirm_patch;
 
 	void DrawChannelColor(const char *name, GW::Chat::Channel chan);
 };

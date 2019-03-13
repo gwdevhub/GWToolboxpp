@@ -43,32 +43,6 @@
 #include "GameSettings.h"
 
 namespace {
-#if 0 // @Deprecated
-	void ChatEventCallback(DWORD id, DWORD type, wchar_t* info, void* unk) {
-		if (type == 0x29 && GameSettings::Instance().select_with_chat_doubleclick) {
-			static wchar_t last_name[64] = L"";
-			static clock_t timer = TIMER_INIT();
-			if (TIMER_DIFF(timer) < 500 && wcscmp(last_name, info) == 0) {
-				GW::PlayerArray players = GW::Agents::GetPlayerArray();
-				if (players.valid()) {
-					for (unsigned i = 0; i < players.size(); ++i) {
-						GW::Player& player = players[i];
-						wchar_t* name = player.Name;
-						if (player.AgentID > 0
-							&& name != nullptr
-							&& wcscmp(info, name) == 0) {
-							GW::Agents::ChangeTarget(players[i].AgentID);
-						}
-					}
-				}
-			} else {
-				timer = TIMER_INIT();
-				wcscpy_s(last_name, info);
-			}
-		}
-	}
-#endif
-
 	void SendChatCallback(GW::Chat::Channel chan, wchar_t msg[120]) {
 		if (!GameSettings::Instance().auto_url || !msg) return;
 		size_t len = wcslen(msg);
@@ -512,6 +486,14 @@ void GameSettings::Initialize() {
 		}
 	}
 
+	{
+		uintptr_t found = GW::Scanner::Find("\xF7\x40\x0C\x10\x00\x02\x00\x75", "xxxxxxxx", +7);
+		printf("[SCAN] GoldConfirmationPatch = %p\n", (void *)found);
+		if (found) {
+			gold_confirm_patch = new GW::MemoryPatcher(found, "\x90\x90", 2);
+		}
+	}
+
 	GW::StoC::AddCallback<GW::Packet::StoC::PartyPlayerAdd>(
 		[](GW::Packet::StoC::PartyPlayerAdd*) -> bool {
 		if (GameSettings::Instance().flash_window_on_party_invite) FlashWindow();
@@ -572,6 +554,8 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	show_unlearned_skill = ini->GetBoolValue(Name(), VAR_NAME(show_unlearned_skill), false);
 	auto_skip_cinematic = ini->GetBoolValue(Name(), VAR_NAME(auto_skip_cinematic), false);
 
+	disable_gold_selling_confirmation = ini->GetBoolValue(Name(), VAR_NAME(disable_gold_selling_confirmation), false);
+
 	::LoadChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
 	::LoadChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);
 	::LoadChannelColor(ini, Name(), "team", GW::Chat::CHANNEL_GROUP);
@@ -590,8 +574,32 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	if (auto_url) GW::Chat::SetSendChatCallback(&SendChatCallback);
 	if (move_item_on_ctrl_click) GW::Items::SetOnItemClick(GameSettings::ItemClickCallback);
 	if (tome_patch && show_unlearned_skill) tome_patch->TooglePatch(true);
+	if (gold_confirm_patch && disable_gold_selling_confirmation) gold_confirm_patch->TooglePatch(true);
 
 	GW::Chat::SetWhisperCallback(&WhisperCallback);
+}
+
+void GameSettings::Terminate() {
+	for (GW::MemoryPatcher* patch : patches) {
+		if (patch) {
+			patch->TooglePatch(false);
+			delete patch;
+		}
+	}
+	patches.clear();
+
+	if (ctrl_click_patch) {
+		ctrl_click_patch->TooglePatch(false);
+		delete ctrl_click_patch;
+	}
+	if (tome_patch) {
+		tome_patch->TooglePatch(false);
+		delete tome_patch;
+	}
+	if (gold_confirm_patch) {
+		gold_confirm_patch->TooglePatch(false);
+		delete gold_confirm_patch;
+	}
 }
 
 void GameSettings::SaveSettings(CSimpleIni* ini) {
@@ -621,6 +629,8 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 
 	ini->SetBoolValue(Name(), VAR_NAME(show_unlearned_skill), show_unlearned_skill);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_skip_cinematic), auto_skip_cinematic);
+
+	ini->SetBoolValue(Name(), VAR_NAME(disable_gold_selling_confirmation), disable_gold_selling_confirmation);
 
 	::SaveChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
 	::SaveChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);
@@ -665,9 +675,6 @@ void GameSettings::DrawSettingInternal() {
     }
 	ImGui::ShowHelp("Show timestamps in message history.");
 
-	// ImGui::Checkbox("Keep chat history.", &GW::Chat::KeepChatHistory); @Deprecated
-	// ImGui::ShowHelp("Messages in the chat do not disappear on character change.");
-
 	if (ImGui::Checkbox("Open web links from templates", &openlinks)) {
 		GW::Chat::SetOpenLinks(openlinks);
 	}
@@ -682,12 +689,6 @@ void GameSettings::DrawSettingInternal() {
 		GW::PartyMgr::SetTickToggle(tick_is_toggle);
 	}
 	ImGui::ShowHelp("Ticking in party window will work as a toggle instead of opening the menu");
-#if 0 // @Deprecated
-	if (ImGui::Checkbox("Target with double-click on message author", &select_with_chat_doubleclick)) {
-		GW::Chat::SetChatEventCallback(&ChatEventCallback);
-	}
-	ImGui::ShowHelp("Double clicking on the author of a message in chat will target the author");
-#endif
 
 	if (ImGui::Checkbox("Move items from/to storage with Control+Click", &move_item_on_ctrl_click)) {
 		GW::Items::SetOnItemClick(GameSettings::ItemClickCallback);
@@ -725,6 +726,16 @@ void GameSettings::DrawSettingInternal() {
 	}
 
 	ImGui::Checkbox("Automatically skip cinematics", &auto_skip_cinematic);
+
+	if (ImGui::Checkbox("Disable Gold/Green items confirmation", &disable_gold_selling_confirmation)) {
+		if (gold_confirm_patch) {
+			gold_confirm_patch->TooglePatch(disable_gold_selling_confirmation);
+		}
+	}
+	ImGui::ShowHelp(
+		"Disable the confirmation request when\n"
+		"selling Gold and Green items introduced\n"
+		"in February 5, 2019 update.");
 }
 
 void GameSettings::DrawBorderlessSetting() {
