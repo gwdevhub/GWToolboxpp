@@ -445,7 +445,7 @@ void ChatCommands::CmdTP(const wchar_t *message, int argc, LPWSTR *argv) {
 				return;
 			}
 		}
-		Log::Error("[Error] Did not recognize guild '%ls'\n", argv[2]);
+		Log::Error("[Error] Did not recognize guild '%ls'", argv[2]);
 		return;
 	}
 
