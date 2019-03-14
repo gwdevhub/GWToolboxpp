@@ -807,7 +807,7 @@ void GameSettings::FactionEarnedCheckAndWarn() {
 		case GW::Constants::MapID::Zos_Shivros_Channel:
 		case GW::Constants::MapID::The_Aurios_Mines:
 			// Player is in luxon mission outpost
-			percent = (100.0f / (float)world_context->max_luxon) * (float)world_context->current_luxon;
+			percent = 100.0f * (float)world_context->current_luxon / (float)world_context->max_luxon;
 			if (percent >= (float)faction_warn_percent_amount) {
 				// Faction earned is over 75% capacity
 				Log::Warning("Luxon faction earned is %d of %d", world_context->current_luxon, world_context->max_luxon );
@@ -823,7 +823,7 @@ void GameSettings::FactionEarnedCheckAndWarn() {
 		case GW::Constants::MapID::Altrumm_Ruins:
 		case GW::Constants::MapID::Amatz_Basin:
 			// Player is in kurzick mission outpost
-			percent = (100.0f / (float)world_context->max_kurzick) * (float)world_context->current_kurzick;
+			percent = 100.0f * (float)world_context->current_kurzick / (float)world_context->max_kurzick;
 			if (percent >= (float)faction_warn_percent_amount) {
 				// Faction earned is over 75% capacity
 				Log::Warning("Kurzick faction earned is %d of %d", world_context->current_kurzick, world_context->max_kurzick);
