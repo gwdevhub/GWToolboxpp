@@ -416,7 +416,7 @@ bool ChatCommands::ParseOutpost(const std::wstring s, GW::Constants::MapID& outp
 	std::string sanitized;
 	std::string compare = GuiUtils::RemovePunctuation(GuiUtils::WStringToString(s));
 	// NOTE: 730 is the size of GW::Constants::NAME_FROM_ID, hardcoded here because sizeof() returns wrong result.
-	for (int i = 0; i < 730; i++) {
+	for (int i = 0; i < 725; i++) {
 		if (!GW::Constants::NAME_FROM_ID[i] || strlen(GW::Constants::NAME_FROM_ID[i]) < 1) continue;
 		sanitized = GuiUtils::ToLower(GuiUtils::RemovePunctuation(GW::Constants::NAME_FROM_ID[i])); // Remove punctuation, to lower case.
 		if (compare == sanitized) return outpost = (GW::Constants::MapID)i, true; // 
