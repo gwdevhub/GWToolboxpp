@@ -2,7 +2,19 @@
 layout: default
 ---
 
-**How does the damage monitor work?** \\
+# Damage Monitor
+The damage monitor records how much damage has been dealt by each party member and displays it as a number, as a percentage of the party's total, and as a thick horizontal bar.
+
+As well as the thick bar showing each party member's damage, there is a thinner bar showing recent damage. This resets after dealing no damage for a short time, which can be customized in [Settings](settings).
+
+You can customize the color of the bars in [Settings](settings). You can also adjust the row height to make the monitor line up better with your party window.
+
+Life steal is counted as damage, but degen is not; if it doesn't show as a pop-up number above the enemy, it isn't counted by the monitor. 
+
+Bear in mind that if a party member or enemy is beyond compass range, your client cannot see the damage packets they are dealing/receiving, so these will not show up on the damage monitor.
+
+
+# How does the damage monitor work?
 
 Toolbox reads damage from a single packet that is sent from the server to your GW client. The goal of this packet is two-fold: update the HP bars of any agent on your screen, and make the client show the damage numbers done by you and dealt to you. This is only sent for agents in your compass range, and contains the following information:
 * Who dealt the damage (caster)
