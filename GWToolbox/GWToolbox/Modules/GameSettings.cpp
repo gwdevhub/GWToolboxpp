@@ -526,16 +526,18 @@ void GameSettings::Initialize() {
 	});
 	// - Print NPC speech bubbles to emote chat.
 	GW::StoC::AddCallback<GW::Packet::StoC::SpeechBubble>(
-		[](GW::Packet::StoC::SpeechBubble *pak) -> bool {
-		if (!GameSettings::Instance().npc_speech_bubbles_as_chat) return false;
+		[this](GW::Packet::StoC::SpeechBubble *pak) -> bool {
+		if (!npc_speech_bubbles_as_chat) return false;
 		const wchar_t* m = pak->message;
+		//Log::Info("m[0] == 0x%X && m[1] == 0x%X && m[2] == 0x%X && m[3] == 0x%X\n", m[0], m[1], m[2], m[3]);
 		if (m[3] == 0) return false; // Shout skill etc
 		GW::Agent* agent = GW::Agents::GetAgentByID(pak->agent_id);
-		if (agent->login_number) return false; // Speech bubble from player e.g. drunk message.
-		GW::UI::AsyncDecodeStr(pak->message, &GameSettings::Instance().speech_bubble_msg);
-		GW::Agents::AsyncGetAgentName(agent, GameSettings::Instance().speech_bubble_sender);
+		if (!agent || agent->login_number) return false; // Agent not found or Speech bubble from player e.g. drunk message.
+		GW::UI::AsyncDecodeStr(pak->message, &speech_bubble_msg);
+		GW::Agents::AsyncGetAgentName(agent, speech_bubble_sender);
 		return false; // Consume.
 	});
+	
 
 #ifdef APRIL_FOOLS
 	AF::ApplyPatchesIfItsTime();
@@ -868,7 +870,7 @@ void GameSettings::SetAfkMessage(std::wstring&& message) {
 void GameSettings::Update(float delta) {
 	if (speech_bubble_msg.size() && speech_bubble_sender.size()) {
 		GW::Chat::Color dummy; // Needed for GW::Chat::GetChannelColors
-		GW::Chat::Color senderCol;
+		GW::Chat::Color senderCol; // 153, 255, 0 for NPC colour?
 		GW::Chat::Color messageCol;
 
 		GW::Chat::GetChannelColors(GW::Chat::CHANNEL_EMOTE, &senderCol, &dummy);   // Sender should be same color as emote sender
