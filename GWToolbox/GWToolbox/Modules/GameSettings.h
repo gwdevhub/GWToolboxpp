@@ -70,6 +70,9 @@ public:
 
 	bool auto_skip_cinematic = false;
 	bool show_unlearned_skill = false;
+	bool npc_speech_bubbles_as_chat = false;
+	std::wstring speech_bubble_msg;
+	std::wstring speech_bubble_sender;
 
 	std::wstring afk_message;
 	clock_t afk_message_time;
