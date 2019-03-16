@@ -25,6 +25,7 @@
 
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
+#include <GWCA\Managers\UIMgr.h>
 #include <GWCA\Managers\ItemMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Managers\AgentMgr.h>
@@ -523,6 +524,18 @@ void GameSettings::Initialize() {
 			GW::Map::SkipCinematic();
 		return false;
 	});
+	// - Print NPC speech bubbles to emote chat.
+	GW::StoC::AddCallback<GW::Packet::StoC::SpeechBubble>(
+		[](GW::Packet::StoC::SpeechBubble *pak) -> bool {
+		if (!GameSettings::Instance().npc_speech_bubbles_as_chat) return false;
+		const wchar_t* m = pak->message;
+		if (m[3] == 0) return false; // Shout skill etc
+		GW::Agent* agent = GW::Agents::GetAgentByID(pak->agent_id);
+		if (agent->login_number) return false; // Speech bubble from player e.g. drunk message.
+		GW::UI::AsyncDecodeStr(pak->message, &GameSettings::Instance().speech_bubble_msg);
+		GW::Agents::AsyncGetAgentName(agent, GameSettings::Instance().speech_bubble_sender);
+		return false; // Consume.
+	});
 
 #ifdef APRIL_FOOLS
 	AF::ApplyPatchesIfItsTime();
@@ -557,6 +570,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
 	show_unlearned_skill = ini->GetBoolValue(Name(), VAR_NAME(show_unlearned_skill), false);
 	auto_skip_cinematic = ini->GetBoolValue(Name(), VAR_NAME(auto_skip_cinematic), false);
+	npc_speech_bubbles_as_chat = ini->GetBoolValue(Name(), VAR_NAME(npc_speech_bubbles_as_chat), npc_speech_bubbles_as_chat);
 
 	faction_warn_percent = ini->GetBoolValue(Name(), VAR_NAME(faction_warn_percent), faction_warn_percent);
 	faction_warn_percent_amount = ini->GetLongValue(Name(), VAR_NAME(faction_warn_percent_amount), faction_warn_percent_amount);
@@ -639,6 +653,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 
 	ini->SetBoolValue(Name(), VAR_NAME(show_unlearned_skill), show_unlearned_skill);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_skip_cinematic), auto_skip_cinematic);
+	ini->SetBoolValue(Name(), VAR_NAME(npc_speech_bubbles_as_chat), npc_speech_bubbles_as_chat);
 
 	ini->SetBoolValue(Name(), VAR_NAME(faction_warn_percent), faction_warn_percent);
 	ini->SetLongValue(Name(), VAR_NAME(faction_warn_percent_amount), faction_warn_percent_amount);
@@ -686,6 +701,9 @@ void GameSettings::DrawSettingInternal() {
         GW::Chat::SetTimestampsColor(timestamps_color);
     }
 	ImGui::ShowHelp("Show timestamps in message history.");
+
+	ImGui::Checkbox("Show NPC messages in emote channel", &npc_speech_bubbles_as_chat);
+	ImGui::ShowHelp("Speech bubbles from NPCs and Heroes will appear as emote messages in chat");
 
 	if (ImGui::Checkbox("Open web links from templates", &openlinks)) {
 		GW::Chat::SetOpenLinks(openlinks);
@@ -848,6 +866,19 @@ void GameSettings::SetAfkMessage(std::wstring&& message) {
 }
 
 void GameSettings::Update(float delta) {
+	if (speech_bubble_msg.size() && speech_bubble_sender.size()) {
+		GW::Chat::Color dummy; // Needed for GW::Chat::GetChannelColors
+		GW::Chat::Color senderCol;
+		GW::Chat::Color messageCol;
+
+		GW::Chat::GetChannelColors(GW::Chat::CHANNEL_EMOTE, &senderCol, &dummy);   // Sender should be same color as emote sender
+		GW::Chat::GetChannelColors(GW::Chat::CHANNEL_ALLIES, &dummy, &messageCol); // ...but set the message to be same color as ally chat
+		char buffer[512];
+		snprintf(buffer, sizeof(buffer), "<c=#%06X>%S</c>: <c=#%06X>%S</c>", senderCol & 0x00FFFFFF, speech_bubble_sender.c_str(), messageCol & 0x00FFFFFF, speech_bubble_msg.c_str());
+		GW::Chat::WriteChat(GW::Chat::CHANNEL_EMOTE, buffer);
+		speech_bubble_msg.clear();
+		speech_bubble_sender.clear();
+	}
 	if (auto_set_away
 		&& TIMER_DIFF(activity_timer) > auto_set_away_delay * 60000
 		&& GW::FriendListMgr::GetMyStatus() == (DWORD)GW::Constants::OnlineStatus::ONLINE) {

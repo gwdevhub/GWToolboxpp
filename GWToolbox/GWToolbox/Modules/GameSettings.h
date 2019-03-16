@@ -71,6 +71,9 @@ public:
 
 	bool auto_skip_cinematic = false;
 	bool show_unlearned_skill = false;
+	bool npc_speech_bubbles_as_chat = false;
+	std::wstring speech_bubble_msg;
+	std::wstring speech_bubble_sender;
 
 	bool faction_warn_percent = true;
 	int faction_warn_percent_amount = 75;
