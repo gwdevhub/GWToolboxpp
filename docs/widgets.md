@@ -48,15 +48,7 @@ The distance monitor shows your distance from your target as a percentage of com
 The [minimap](minimap) is an improved version of the default Guild Wars compass, with such features as targeting, zoom, and accurate pathing maps.
 
 ## Damage
-The damage monitor records how much damage has been dealt by each party member and displays it as a number, as a percentage of the party's total, and as a thick horizontal bar.
-
-Life steal is counted as damage, but degen is not; if it doesn't show as a pop-up number above the enemy, it isn't counted by the monitor.
-
-As well as the thick bar showing each party member's damage, there is a thinner bar showing recent damage. This resets after dealing no damage for a short time, which can be customized in [Settings](settings).
-
-You can customize the color of the bars in [Settings](settings). You can also adjust the row height to make the monitor line up better with your party window.
-
-Bear in mind that if a party member or enemy is beyond compass range, your client cannot see the damage packets they are dealing/receiving, so these will not show up on the damage monitor.
+The [damage monitor](damage_monitor) records how much damage has been dealt by each party member and displays it as a number, as a percentage of the party's total, and as a thick horizontal bar.
 
 ## Bonds
 The bonds monitor shows which maintained monk enchantments you currently have on the allies in the party window. There is an option in [Settings](settings) to only show bonds for party members.

@@ -27,7 +27,7 @@ GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancemen
 		</tr>
 		<tr>
 			<td><a href="hotkeys">Hotkeys</a></td>
-			<td><a href="widgets#damage">Damage Monitor</a></td>
+			<td><a href="damage_monitor">Damage Monitor</a></td>
 			<td><a href="commands">Chat Commands</a></td>
 		</tr>
 		<tr>
