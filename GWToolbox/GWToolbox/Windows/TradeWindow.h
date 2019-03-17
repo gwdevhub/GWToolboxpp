@@ -82,4 +82,6 @@ private:
 
 	void ParseBuffer(const char *text, std::vector<std::string> &words);
 	void ParseBuffer(std::fstream stream, std::vector<std::string>& words);
+
+    static void DeleteWebSocket(easywsclient::WebSocket *ws);
 };

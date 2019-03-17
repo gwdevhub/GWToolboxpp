@@ -63,15 +63,17 @@ void TradeWindow::Initialize() {
 
 void TradeWindow::Terminate() {
 	should_stop = true;
-	if (worker.joinable()) worker.join();
-	if (ws_chat) delete ws_chat;
-	if (ws_window) delete ws_window;
+	if (worker.joinable())
+		worker.join();
+
+	if (ws_chat) DeleteWebSocket(ws_chat);
+	if (ws_window) DeleteWebSocket(ws_window);
 	if (ws_chat || ws_window) {
 		ws_chat = nullptr;
 		ws_window = nullptr;
-		WSACleanup();
 	}
 
+	WSACleanup();
 	ToolboxWindow::Terminate();
 }
 
@@ -93,8 +95,9 @@ bool TradeWindow::GetInKamadan() {
 }
 
 void TradeWindow::Update(float delta) {
-	if (!print_game_chat) return;
+	fetch();
 
+	if (!print_game_chat) return;
 	if (ws_chat && ws_chat->getReadyState() == WebSocket::CLOSED) {
 		delete ws_chat;
 		ws_chat = nullptr;
@@ -301,7 +304,6 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			const float playernamewidth = 160.0f * ImGui::GetIO().FontGlobalScale;
 			const float message_left = playername_left + playernamewidth + innerspacing;
 
-			fetch();
 			size_t size = messages.size();
 			for (unsigned int i = size - 1; i < size; i--) {
 				Message &msg = messages[i];
@@ -466,4 +468,13 @@ void TradeWindow::AsyncWindowConnect() {
 		}
 		ws_window_connecting = false;
 	});
+}
+
+void TradeWindow::DeleteWebSocket(easywsclient::WebSocket *ws) {
+	if (!ws) return;
+	if (ws->getReadyState() == easywsclient::WebSocket::OPEN)
+		ws->close();
+	while (ws->getReadyState() != easywsclient::WebSocket::CLOSED)
+		ws->poll();
+	delete ws;
 }
