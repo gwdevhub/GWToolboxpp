@@ -885,23 +885,6 @@ void GameSettings::Update(float delta) {
 		GW::Chat::WriteChat(GW::Chat::CHANNEL_EMOTE, buffer);
 		speech_bubble_msg.clear();
 		speech_bubble_sender.clear();
-		}
-	// Process pending "Player has logged in" messages
-	char buffer[512];
-	for (size_t i = 0; i < friend_status_change_log.size(); i++) {
-		if (TIMER_DIFF(friend_status_change_log[i].change_time) > 5000) {
-			// Failed to get updated friend info after 5 seconds, erase
-			friend_status_change_log.erase(friend_status_change_log.begin() + i);
-			continue;
-		}
-		GW::Friend* f = GW::FriendListMgr::GetFriend(friend_status_change_log[i].account_name, nullptr);
-		if (!f)
-			continue;	// No friend ptr
-		if (f->status < 1)
-			continue;	// Friend not updated to show online yet
-		snprintf(buffer, sizeof(buffer), "<a=1>%S</a> has just logged in!", f->name);
-		GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
-		friend_status_change_log.erase(friend_status_change_log.begin() + i); // Success
 	}
 	if (auto_set_away
 		&& TIMER_DIFF(activity_timer) > auto_set_away_delay * 60000
