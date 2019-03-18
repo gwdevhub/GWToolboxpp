@@ -7,6 +7,8 @@
 #include <GWCA\Utilities\MemoryPatcher.h>
 #include <GWCA\GameEntities\Item.h>
 
+#include <GWCA\Managers\FriendListMgr.h>
+
 #include <Color.h>
 #include "ToolboxModule.h"
 
@@ -77,11 +79,20 @@ public:
 	bool show_timestamps = false;
 	Color timestamps_color;
 
+	struct FriendStatusChange {
+		clock_t change_time;
+		GW::FriendStatus new_status;
+		wchar_t* account_name;
+	};
+	std::vector<FriendStatusChange> friend_status_change_log;
+	bool notify_when_friends_online = true;
+
 	bool disable_gold_selling_confirmation = false;
 
 	void ApplyBorderless(bool value);
 	void SetAfkMessage(std::wstring&& message);
 	static void ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag);
+	static void FriendStatusCallback(GW::Friend* f, GW::FriendStatus status);
 
 private:
 	void UpdateBorderless();
