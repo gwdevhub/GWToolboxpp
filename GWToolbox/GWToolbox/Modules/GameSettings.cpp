@@ -1088,7 +1088,7 @@ void GameSettings::ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag)
 
 void GameSettings::FriendStatusCallback(GW::Friend* f, GW::FriendStatus status) {
 	if (!GameSettings::Instance().notify_when_friends_online) return;
-	if (status > 3 || status < 0) return;
+	if (status > 3 || status < 0 || status == f->status) return;
 	char buffer[512];
 	switch (static_cast<GW::Constants::OnlineStatus>(status)) {
 	case GW::Constants::OnlineStatus::OFFLINE:
