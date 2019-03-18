@@ -1086,28 +1086,23 @@ void GameSettings::ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag)
 	}
 }
 
-void GameSettings::FriendStatusCallback(GW::Friend* f, GW::FriendStatus status) {
-	if (!GameSettings::Instance().notify_when_friends_online) return;
-	if (status > 3 || status < 0 || status == f->status) return;
+void GameSettings::FriendStatusCallback(GW::Friend* f, GW::FriendStatus status, wchar_t *charname) {
+	GameSettings& game_setting = GameSettings::Instance();
+	if (!game_setting.notify_when_friends_online || status == f->status)
+		return;
 	char buffer[512];
-	switch (static_cast<GW::Constants::OnlineStatus>(status)) {
-	case GW::Constants::OnlineStatus::OFFLINE:
-		snprintf(buffer, sizeof(buffer), "%S has just logged out.", f->name);
+	switch (status) {
+	case GW::FriendStatus_Offline:
+		snprintf(buffer, sizeof(buffer), "%S has just logged out.", charname);
 		GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
 		return;
-	case GW::Constants::OnlineStatus::AWAY:
-	case GW::Constants::OnlineStatus::DO_NOT_DISTURB:
-		return;
-	case GW::Constants::OnlineStatus::ONLINE:
-		if (f->status > 0) return; // Player wasn't previously offline
-		// Add to a queue - at this point, the friend that has just logged in hasn't been updated.
-		// So we don't know which character they're on.
-		// Wait until the status has been updated, then print the message on-screen.
-		FriendStatusChange fsc;
-		fsc.change_time = TIMER_INIT();
-		fsc.account_name = f->account;
-		fsc.new_status = status;
-		GameSettings::Instance().friend_status_change_log.push_back(fsc);
+	case GW::FriendStatus_Away:
+	case GW::FriendStatus_DND:
+	case GW::FriendStatus_Online:
+		if (f->status != GW::FriendStatus_Offline)
+            return;
+		snprintf(buffer, sizeof(buffer), "<a=1>%S</a> has just logged in!", charname);
+		GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
 		return;
 	}
 }
