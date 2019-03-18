@@ -520,6 +520,7 @@ void GameSettings::Initialize() {
 			GW::Map::SkipCinematic();
 		return false;
 	});
+	GW::FriendListMgr::SetOnFriendStatusCallback(GameSettings::FriendStatusCallback);
 
 #ifdef APRIL_FOOLS
 	AF::ApplyPatchesIfItsTime();
@@ -632,6 +633,8 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 
 	ini->SetBoolValue(Name(), VAR_NAME(disable_gold_selling_confirmation), disable_gold_selling_confirmation);
 
+	ini->SetBoolValue(Name(), VAR_NAME(notify_when_friends_online), notify_when_friends_online);
+
 	::SaveChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
 	::SaveChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);
 	::SaveChannelColor(ini, Name(), "team", GW::Chat::CHANNEL_GROUP);
@@ -664,6 +667,8 @@ void GameSettings::DrawSettingInternal() {
 	DrawBorderlessSetting();
 #endif
 	DrawFOVSetting();
+
+	ImGui::Checkbox("Show a message when friends login or logout", &notify_when_friends_online);
 
 	if (ImGui::Checkbox("Show chat messages timestamp. Color:", &show_timestamps)) {
         GW::Chat::ToggleTimestamps(show_timestamps);
@@ -942,6 +947,27 @@ void GameSettings::ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag)
 		}
 	} else {
 		move_item_to_inventory(item);
+	}
+}
+
+void GameSettings::FriendStatusCallback(GW::Friend* f, GW::FriendStatus status, wchar_t *charname) {
+	GameSettings& game_setting = GameSettings::Instance();
+	if (!game_setting.notify_when_friends_online || status == f->status)
+		return;
+	char buffer[512];
+	switch (status) {
+	case GW::FriendStatus_Offline:
+		snprintf(buffer, sizeof(buffer), "%S has just logged out.", charname);
+		GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
+		return;
+	case GW::FriendStatus_Away:
+	case GW::FriendStatus_DND:
+	case GW::FriendStatus_Online:
+		if (f->status != GW::FriendStatus_Offline)
+            return;
+		snprintf(buffer, sizeof(buffer), "<a=1>%S</a> has just logged in!", charname);
+		GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
+		return;
 	}
 }
 

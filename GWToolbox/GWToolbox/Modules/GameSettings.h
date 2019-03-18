@@ -7,6 +7,8 @@
 #include <GWCA\Utilities\MemoryPatcher.h>
 #include <GWCA\GameEntities\Item.h>
 
+#include <GWCA\Managers\FriendListMgr.h>
+
 #include <Color.h>
 #include "ToolboxModule.h"
 
@@ -77,6 +79,8 @@ public:
 	bool show_timestamps = false;
 	Color timestamps_color;
 
+	bool notify_when_friends_online = true;
+
 	bool disable_gold_selling_confirmation = false;
 
 	void ApplyBorderless(bool value);
@@ -92,4 +96,5 @@ private:
 	GW::MemoryPatcher *gold_confirm_patch;
 
 	void DrawChannelColor(const char *name, GW::Chat::Channel chan);
+	static void FriendStatusCallback(GW::Friend* f, GW::FriendStatus status, wchar_t *charname);
 };
