@@ -1092,7 +1092,7 @@ void GameSettings::FriendStatusCallback(GW::Friend* f, GW::FriendStatus status) 
 	char buffer[512];
 	switch (static_cast<GW::Constants::OnlineStatus>(status)) {
 	case GW::Constants::OnlineStatus::OFFLINE:
-		snprintf(buffer, sizeof(buffer), "%S has just logged out", f->name);
+		snprintf(buffer, sizeof(buffer), "%S has just logged out.", f->name);
 		GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
 		return;
 	case GW::Constants::OnlineStatus::AWAY:
