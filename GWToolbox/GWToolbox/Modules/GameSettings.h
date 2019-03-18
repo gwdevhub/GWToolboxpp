@@ -79,12 +79,6 @@ public:
 	bool show_timestamps = false;
 	Color timestamps_color;
 
-	struct FriendStatusChange {
-		clock_t change_time;
-		GW::FriendStatus new_status;
-		wchar_t* account_name;
-	};
-	std::vector<FriendStatusChange> friend_status_change_log;
 	bool notify_when_friends_online = true;
 
 	bool disable_gold_selling_confirmation = false;
@@ -92,7 +86,6 @@ public:
 	void ApplyBorderless(bool value);
 	void SetAfkMessage(std::wstring&& message);
 	static void ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag);
-	static void FriendStatusCallback(GW::Friend* f, GW::FriendStatus status);
 
 private:
 	void UpdateBorderless();
@@ -103,4 +96,5 @@ private:
 	GW::MemoryPatcher *gold_confirm_patch;
 
 	void DrawChannelColor(const char *name, GW::Chat::Channel chan);
+	static void FriendStatusCallback(GW::Friend* f, GW::FriendStatus status, wchar_t *charname);
 };
