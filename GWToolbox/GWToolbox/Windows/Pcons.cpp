@@ -24,6 +24,7 @@
 #include "GuiUtils.h"
 #include <Modules\Resources.h>
 #include <Windows\PconsWindow.h>
+#include <Widgets\AlcoholWidget.h>
 #include "Pcons.h"
 
 using namespace GW::Constants;
@@ -420,7 +421,7 @@ int PconCity::QuantityForEach(const GW::Item* item) const {
 
 // ================================================
 bool PconAlcohol::CanUseByEffect() const {
-	return Pcon::alcohol_level <= 1;
+	return AlcoholWidget::Instance().GetAlcoholLevel() <= 1;
 }
 int PconAlcohol::QuantityForEach(const GW::Item* item) const {
 	switch (item->model_id) {
