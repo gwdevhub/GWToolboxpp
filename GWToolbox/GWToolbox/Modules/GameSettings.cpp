@@ -580,6 +580,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
 
 	disable_gold_selling_confirmation = ini->GetBoolValue(Name(), VAR_NAME(disable_gold_selling_confirmation), false);
+	notify_when_friends_online = ini->GetBoolValue(Name(), VAR_NAME(notify_when_friends_online), true);
 
 	::LoadChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
 	::LoadChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);
