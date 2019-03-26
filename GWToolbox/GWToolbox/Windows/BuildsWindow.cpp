@@ -90,7 +90,7 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 				if (ImGui::InputText("###code", build.code, 128)) builds_changed = true;
 				ImGui::PopItemWidth();
 				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-				if (ImGui::Button("Send", ImVec2(50.0f, 0))) {
+				if (ImGui::Button("Send", ImVec2(50.0f * ImGui::GetIO().FontGlobalScale, 0))) {
 					Send(tbuild, j);
 				}
 				if (ImGui::IsItemHovered()) ImGui::SetTooltip("Send to team chat");

@@ -8,7 +8,7 @@
     <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>CSLauncher</RootNamespace>
-    <AssemblyName>GWToolbox</AssemblyName>
+    <AssemblyName>JonsToolbox</AssemblyName>
     <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -37,7 +37,7 @@
     <StartupObject>CSLauncher.CSLauncher</StartupObject>
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>Resources\gwtoolbox.ico</ApplicationIcon>
+    <ApplicationIcon>gwtoolbox.jon2.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup />
   <PropertyGroup>
@@ -82,7 +82,10 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Content Include="gwtoolbox.jon.ico" />
+    <Content Include="gwtoolbox.jon2.ico" />
+  </ItemGroup>
   <ItemGroup>
     <None Include="Resources\gwtoolbox.ico" />
   </ItemGroup>
