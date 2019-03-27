@@ -40,16 +40,14 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 		if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
 			for (TeamBuild& tbuild : teambuilds) {
 				ImGui::PushID(tbuild.ui_id);
-				if (ImGui::Button(tbuild.name, ImVec2(ImGui::GetWindowContentRegionWidth()
-					-ImGui::GetStyle().ItemInnerSpacing.x - 60.0f, 0))) {
-					Send(tbuild);
+				ImGui::GetStyle().ButtonTextAlign = ImVec2(0.0f, 0.5f);
+				if (ImGui::Button(tbuild.name, ImVec2(ImGui::GetWindowContentRegionWidth()-ImGui::GetStyle().ItemInnerSpacing.x - 60.0f * ImGui::GetIO().FontGlobalScale, 0))) {
+					tbuild.edit_open = !tbuild.edit_open;
 				}
-				if (ImGui::IsItemHovered()) {
-					ImGui::SetTooltip("Click to send teambuild to chat");
-				}
+				ImGui::GetStyle().ButtonTextAlign = ImVec2(0.5f, 0.5f);
 				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-				if (ImGui::Button("Edit", ImVec2(60.0f, 0))) {
-					tbuild.edit_open = true;
+				if (ImGui::Button("Send", ImVec2(60.0f * ImGui::GetIO().FontGlobalScale, 0))) {
+					Send(tbuild);
 				}
 				ImGui::PopID();
 			}
@@ -311,7 +309,10 @@ void BuildsWindow::LoadFromFile() {
 			tbuild.builds.push_back(Build(nameval, templateval));
 		}
 	}
-
+	// Sort by name
+	sort(teambuilds.begin(), teambuilds.end(), [](TeamBuild a, TeamBuild b) {
+		return _stricmp(a.name, b.name) < 0;
+	});
 	builds_changed = false;
 }
 
