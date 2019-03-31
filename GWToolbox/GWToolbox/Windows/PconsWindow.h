@@ -40,7 +40,6 @@ private:
 
 	std::vector<Pcon*> pcons;
 	PconAlcohol* pcon_alcohol = nullptr;
-	GW::Constants::InstanceType current_map_type;
 	clock_t scan_inventory_timer;
 	bool enabled = false;
 
@@ -48,6 +47,7 @@ private:
 	bool tick_with_pcons = false;
 	int items_per_row = 3;
 	bool show_enable_button = true;
+	bool disable_pcons_on_map_change = true;
 	
 	bool show_auto_refill_pcons_tickbox = true;
 	bool show_auto_disable_pcons_tickbox = false;
@@ -65,6 +65,8 @@ private:
 
 	GW::Constants::MapID map_id;
 	GW::Constants::InstanceType instance_type;
+	GW::Constants::InstanceType previous_instance_type;
+
 	bool elite_area_disable_triggered = false;	// Already triggered in this run?
 	clock_t elite_area_check_timer;
 

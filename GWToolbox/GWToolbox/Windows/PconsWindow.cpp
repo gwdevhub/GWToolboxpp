@@ -276,7 +276,7 @@ void PconsWindow::Draw(IDirect3DDevice9* device) {
 			}
 		}
 	}
-	if (current_map_type == GW::Constants::InstanceType::Explorable) {
+	if(instance_type == GW::Constants::InstanceType::Explorable) {
 		if (!current_objectives_to_check.empty()) {
 			ImGui::Checkbox("Disable on Completion", &disable_cons_on_objective_completion);
 			ImGui::ShowHelp(disable_cons_on_objective_completion_hint);
@@ -286,18 +286,14 @@ void PconsWindow::Draw(IDirect3DDevice9* device) {
 			ImGui::ShowHelp(disable_cons_in_final_room_hint);
 		}
 	}
-	if (current_map_type == GW::Constants::InstanceType::Outpost && show_auto_refill_pcons_tickbox) {
-		ImGui::Checkbox("Auto Refill", &Pcon::refill_if_below_threshold);
-		ImGui::ShowHelp("When Pcons are enabled in an outpost, will refill from storage up to the threshold");
-	}
 
 	ImGui::End();
 }
 void PconsWindow::Update(float delta) {
-	if (current_map_type != GW::Map::GetInstanceType() || map_id != GW::Map::GetMapID()) {
+	if (instance_type != GW::Map::GetInstanceType() || map_id != GW::Map::GetMapID()) {
 		MapChanged(); // Map changed.
 	}
-	if (!player && current_map_type == GW::Constants::InstanceType::Explorable) {
+	if (!player && instance_type == GW::Constants::InstanceType::Explorable) {
 		player = GW::Agents::GetPlayer(); // Won't be immediately able to get player ptr on map load, so put here.
 	}
 	CheckBossRangeAutoDisable();
@@ -308,7 +304,14 @@ void PconsWindow::Update(float delta) {
 void PconsWindow::MapChanged() {
 	elite_area_check_timer = TIMER_INIT();
 	map_id = GW::Map::GetMapID();
-	current_map_type = GW::Map::GetInstanceType();
+	if(instance_type != GW::Constants::InstanceType::Loading)
+		previous_instance_type = instance_type;
+	instance_type = GW::Map::GetInstanceType();
+	// If we've just come from an explorable area then disable pcons.
+	if (disable_pcons_on_map_change && previous_instance_type == GW::Constants::InstanceType::Explorable)
+		SetEnabled(false);
+	
+	
 	player = nullptr;
 	elite_area_disable_triggered = false;
 	// Find out which objectives we need to complete for this map.
@@ -338,22 +341,24 @@ bool PconsWindow::SetEnabled(bool b) {
 	for (Pcon* pcon : pcons) {
 		pcon->pcon_quantity_checked = false;
 	}
-	if (current_map_type != GW::Constants::InstanceType::Loading) {
+	switch (GW::Map::GetInstanceType()) {
+	case GW::Constants::InstanceType::Outpost:
+		if(tick_with_pcons)
+			GW::PartyMgr::Tick(enabled);
+	case GW::Constants::InstanceType::Explorable:
 		ImGuiWindow* main = ImGui::FindWindowByName(MainWindow::Instance().Name());
 		ImGuiWindow* pcon = ImGui::FindWindowByName(Name());
 		if ((pcon == nullptr || pcon->Collapsed || !visible)
 			&& (main == nullptr || main->Collapsed || !MainWindow::Instance().visible)) {
 			Log::Info("Pcons %s", enabled ? "enabled" : "disabled");
 		}
-	}
-	if (tick_with_pcons && current_map_type == GW::Constants::InstanceType::Outpost) {
-		GW::PartyMgr::Tick(enabled);
+		break;
 	}
 	return enabled;
 }
 
 void PconsWindow::CheckObjectivesCompleteAutoDisable() {
-	if (!enabled || elite_area_disable_triggered || current_map_type != GW::Constants::InstanceType::Explorable) {
+	if (!enabled || elite_area_disable_triggered || instance_type != GW::Constants::InstanceType::Explorable) {
 		return;		// Pcons disabled, auto disable already triggered, or not in explorable area.
 	}
 	if (!disable_cons_on_objective_completion || objectives_complete.empty() || current_objectives_to_check.empty()) {
@@ -375,7 +380,7 @@ void PconsWindow::CheckObjectivesCompleteAutoDisable() {
 }
 
 void PconsWindow::CheckBossRangeAutoDisable() {	// Trigger Elite area auto disable if applicable
-	if (!enabled || elite_area_disable_triggered || current_map_type != GW::Constants::InstanceType::Explorable) {
+	if (!enabled || elite_area_disable_triggered || instance_type != GW::Constants::InstanceType::Explorable) {
 		return;		// Pcons disabled, auto disable already triggered, or not in explorable area.
 	}
 	if (!disable_cons_in_final_room || current_final_room_location == GW::Vec2f(0, 0) || !player || TIMER_DIFF(elite_area_check_timer) < 1000) {
@@ -418,7 +423,7 @@ void PconsWindow::LoadSettings(CSimpleIni* ini) {
 
 	show_storage_quantity = ini->GetBoolValue(Name(), VAR_NAME(show_storage_quantity), show_storage_quantity);
 
-
+	disable_pcons_on_map_change = ini->GetBoolValue(Name(), VAR_NAME(disable_pcons_on_map_change), disable_pcons_on_map_change);
 	disable_cons_in_final_room = ini->GetBoolValue(Name(), VAR_NAME(disable_cons_in_final_room), disable_cons_in_final_room);
 	disable_cons_on_objective_completion = ini->GetBoolValue(Name(), VAR_NAME(disable_cons_on_objective_completion), disable_cons_on_objective_completion);
 }
@@ -449,6 +454,7 @@ void PconsWindow::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(show_auto_disable_pcons_tickbox), show_auto_disable_pcons_tickbox);
 	ini->SetBoolValue(Name(), VAR_NAME(show_storage_quantity), show_storage_quantity);
 
+	ini->SetBoolValue(Name(), VAR_NAME(disable_pcons_on_map_change), disable_pcons_on_map_change);
 	ini->SetBoolValue(Name(), VAR_NAME(disable_cons_in_final_room), disable_cons_in_final_room);
 	ini->SetBoolValue(Name(), VAR_NAME(disable_cons_on_objective_completion), disable_cons_on_objective_completion);
 }
@@ -460,6 +466,8 @@ void PconsWindow::DrawSettingInternal() {
 	ImGui::ShowHelp("Enabling or disabling pcons will also Tick or Untick in party list");
 	ImGui::Checkbox("Disable when not found", &Pcon::disable_when_not_found);
 	ImGui::ShowHelp("Toolbox will disable a pcon if it is not found in the inventory");
+	ImGui::Checkbox("Disable on map change", &disable_pcons_on_map_change);
+	ImGui::ShowHelp("Toolbox will disable pcons when leaving an explorable area");
 	ImGui::Checkbox("Refill from storage", &Pcon::refill_if_below_threshold);
 	ImGui::ShowHelp("Toolbox will refill pcons from storage if below the threshold");
 	ImGui::Checkbox("Show storage quantity in outpost", &show_storage_quantity);
