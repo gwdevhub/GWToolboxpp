@@ -21,4 +21,6 @@ public:
 	void Draw(IDirect3DDevice9* pDevice) override;
 
     bool click_to_print_health;
+
+    std::wstring agent_name_ping;
 };
