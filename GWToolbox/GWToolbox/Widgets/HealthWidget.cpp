@@ -86,12 +86,11 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
 			    ImVec2 max(min.x + size.x, min.y + size.y);
 			    if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsMouseHoveringRect(min, max)) {
                     if (target) {
-                        std::wstring name;
-                        GW::Agents::AsyncGetAgentName(target, name);
-                        if (name.size()) {
+                        GW::Agents::AsyncGetAgentName(target, agent_name_ping);
+                        if (agent_name_ping.size()) {
                             char buffer[512];
                             int current_hp = (int)(target->hp * target->max_hp);
-                            snprintf(buffer, sizeof(buffer), "%S's Health is %d of %d. (%.0f %%)", name.c_str(), current_hp, target->max_hp, target->hp * 100.f);
+                            snprintf(buffer, sizeof(buffer), "%S's Health is %d of %d. (%.0f %%)", agent_name_ping.c_str(), current_hp, target->max_hp, target->hp * 100.f);
                             GW::Chat::SendChat('#', buffer);
                         }
                     }
