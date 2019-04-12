@@ -7,6 +7,17 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
+## Version 2.23
+* [New] Added an option to disable the prompt when selling green and gold items.
+* [New] Added an option to show a notification when a friend come online or goes offline.
+* [Fix] Fixed ctrl+click with new storage pannels.
+* [Fix] Fixed bug when selling rare materials with quantity smaller than 10.
+* [Minor] Extended `/flag` command to flag on a given coordinate.
+* [Minor] Added more bosses to minimap.
+* [Minor] Added map id of the event version of Kamadan to disable trade chat.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.23_Release/GWToolbox.dll)
+
 ## Version 2.22.1
 * [Fix] Material buying and auto-manage gold
 
