@@ -80,6 +80,7 @@ public:
 	Color timestamps_color;
 
 	bool notify_when_friends_online = true;
+    bool notify_when_friends_offline = false;
 
 	bool disable_gold_selling_confirmation = false;
 
