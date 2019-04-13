@@ -9,12 +9,12 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 ## Version 2.23
 * [New] Added an option to disable the prompt when selling green and gold items.
-* [New] Added an option to show a notification when a friend come online or goes offline.
-* [Fix] Fixed ctrl+click with new storage pannels.
-* [Fix] Fixed bug when selling rare materials with quantity smaller than 10.
+* [New] Added an option to show a notification when a friend comes online or goes offline.
+* [Fix] Fixed ctrl+click with new storage panels.
+* [Fix] Fixed bug when selling rare materials with a quantity smaller than 10.
 * [Minor] Extended `/flag` command to flag at a given coordinate.
-* [Minor] Added more bosses to minimap.
-* [Minor] Added map id of the event version of Kamadan to disable trade chat.
+* [Minor] Added more bosses to the minimap.
+* [Minor] Added map ids of the event versions of Kamadan to disable the trade chat.
 
 [Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.23_Release/GWToolbox.dll)
 
