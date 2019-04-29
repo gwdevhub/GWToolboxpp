@@ -415,12 +415,24 @@ bool ChatCommands::ParseOutpost(const std::wstring s, GW::Constants::MapID& outp
 	// By full outpost name (without punctuation) e.g. "/tp GrEaT TemplE oF BalthaZAR"
 	std::string sanitized;
 	std::string compare = GuiUtils::RemovePunctuation(GuiUtils::WStringToString(s));
+	unsigned int searchStringLength = compare.length();
+	unsigned int bestMatchMapID = 0;
+	unsigned int bestMatchLength = 0;
 	// NOTE: 730 is the size of GW::Constants::NAME_FROM_ID, hardcoded here because sizeof() returns wrong result.
 	for (int i = 0; i < 725; i++) {
-		if (!GW::Constants::NAME_FROM_ID[i] || strlen(GW::Constants::NAME_FROM_ID[i]) < 1) continue;
+		if (!GW::Constants::NAME_FROM_ID[i]) continue;
 		sanitized = GuiUtils::ToLower(GuiUtils::RemovePunctuation(GW::Constants::NAME_FROM_ID[i])); // Remove punctuation, to lower case.
-		if (compare == sanitized) return outpost = (GW::Constants::MapID)i, true; // 
+		unsigned int thisMapLength = sanitized.length();
+		if (searchStringLength > thisMapLength) continue; // String entered by user is longer than this outpost name.
+		if (sanitized.rfind(compare) == 0) {
+			if(searchStringLength == thisMapLength) return outpost = (GW::Constants::MapID)i, true; // Exact match
+			if (bestMatchLength < thisMapLength) {
+				bestMatchLength = thisMapLength;
+				bestMatchMapID = i;
+			}
+		}
 	}
+	if(bestMatchMapID) return outpost = (GW::Constants::MapID)bestMatchMapID, true; // Exact match
 	return false;
 }
 bool ChatCommands::ParseDistrict(const std::wstring s, GW::Constants::District& district, int& number) {
