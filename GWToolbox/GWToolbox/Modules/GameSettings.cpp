@@ -436,7 +436,7 @@ void GameSettings::Initialize() {
 	}
 
 	{
-		uintptr_t found = GW::Scanner::Find("\xEC\x6A\x00\x51\x8B\x4D\xF8\xBA\x41", "xxxxxxxxx", -9);
+		uintptr_t found = GW::Scanner::Find("\xEC\x6A\x00\x51\x8B\x4D\xF8\xBA\x47", "xxxxxxxxx", -9);
 		printf("[SCAN] TomePatch = %p\n", (void *)found);
 		if (found) {
 			tome_patch = new GW::MemoryPatcher(found, "\x75\x1E\x90\x90\x90\x90\x90", 7);
