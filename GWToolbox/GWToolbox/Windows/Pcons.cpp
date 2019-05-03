@@ -501,6 +501,9 @@ bool PconLunar::CanUseByEffect() const {
 	GW::AgentEffectsArray AgEffects = GW::Effects::GetPartyEffectArray();
 	if (!AgEffects.valid()) return false; // don't know
 
+	DWORD player_id = GW::Agents::GetPlayerId();
+	if (!player_id) return false;  // player doesn't exist?
+
 	GW::EffectArray *effects = NULL;
 	for (size_t i = 0; i < AgEffects.size(); i++) {
 		if (AgEffects[i].agent_id == player_id) {
