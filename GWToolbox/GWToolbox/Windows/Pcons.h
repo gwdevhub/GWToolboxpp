@@ -8,9 +8,9 @@
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\GameEntities\Item.h>
 #include <GWCA\Managers\AgentMgr.h>
+#include <GWCA\Packets\CtoSHeaders.h>
 #include "Timer.h"
 #include <Color.h>
-#include <GWCA/CtoSHeaders.h>
 #include <mutex>
 #include <vector>
 
