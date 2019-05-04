@@ -414,36 +414,42 @@ namespace {
 void GameSettings::Initialize() {
 	ToolboxModule::Initialize();
 
-// This borderless code is no longer needed!
-#ifdef ENABLE_BORDERLESS
-	{
-		uintptr_t found = GW::Scanner::Find("\x8B\x9E\xCC\x0C\x00\x00\x03\xD9\x03\xFB\xEB\x03", "xxxxxxxxxxxx", 0x42);
+	// This borderless code is no longer needed!
+	auto initialize_borderless = [this]() -> bool {
+		uintptr_t found;
+
+		found = GW::Scanner::Find("\x8B\x9E\xCC\x0C\x00\x00\x03\xD9\x03\xFB\xEB\x03", "xxxxxxxxxxxx", 0x42);
+		if (!found) return false;
 		patches.push_back(new GW::MemoryPatcher(found,
 			"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90", 0x13));
-	}
 
-	{
-		uintptr_t found = GW::Scanner::Find("\x2B\x8E\x78\x0C\x00\x00\x3B\xC1\x7F", "xxxxxxxxx", 0);
-		patches.push_back(new GW::MemoryPatcher(found + 0xF,  "\xEB", 1));
+
+		found = GW::Scanner::Find("\x2B\x8E\x78\x0C\x00\x00\x3B\xC1\x7F", "xxxxxxxxx", 0);
+		if (!found) return false;
+		patches.push_back(new GW::MemoryPatcher(found + 0xF, "\xEB", 1));
 		patches.push_back(new GW::MemoryPatcher(found + 0x1E, "\xEB", 1));
-	}
 
-	{
-		uintptr_t found = GW::Scanner::Find("\x56\x57\x8B\xF9\x8B\x87\x00\x02\x00\x00\x85\xC0\x75\x14", "xxxxxxxxxxxxxx", 0);
+		found = GW::Scanner::Find("\x56\x57\x8B\xF9\x8B\x87\x00\x02\x00\x00\x85\xC0\x75\x14", "xxxxxxxxxxxxxx", 0);
+		if (!found) return false;
 		void *patch = "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90";
-		patches.push_back(new GW::MemoryPatcher(found + 0x86,  patch, 10));
-		patches.push_back(new GW::MemoryPatcher(found + 0xD2,  patch, 10));
+		patches.push_back(new GW::MemoryPatcher(found + 0x86, patch, 10));
+		patches.push_back(new GW::MemoryPatcher(found + 0xD2, patch, 10));
 		patches.push_back(new GW::MemoryPatcher(found + 0x10E, patch, 10));
-	}
 
-	{
-		uintptr_t found = GW::Scanner::Find("\x55\x8B\xEC\x51\x56\x57\x8B\xF9\x8B\x87\xF8\x0C\x00\x00", "xxxxxxxxxxxxxx", 0);
-		void *patch = "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90";
-		patches.push_back(new GW::MemoryPatcher(found + 0x8A,  patch, 10));
+		found = GW::Scanner::Find("\x55\x8B\xEC\x51\x56\x57\x8B\xF9\x8B\x87\xF8\x0C\x00\x00", "xxxxxxxxxxxxxx", 0);
+		if (!found) return false;
+		patches.push_back(new GW::MemoryPatcher(found + 0x8A, patch, 10));
 		patches.push_back(new GW::MemoryPatcher(found + 0x10A, patch, 10));
 		patches.push_back(new GW::MemoryPatcher(found + 0x149, patch, 10));
+
+		return true;
+	};
+
+	if (!initialize_borderless()) {
+		for (auto* patch : patches) delete patch;
+		patches.clear();
+		printf("Error initializing borderless!\n");
 	}
-#endif // ENABLE_BORDERLESS
 	{
 		// Patch that allow storage page (and Anniversary page) to work... (ask Ziox for more info)
 		uintptr_t found = GW::Scanner::Find("\xEB\x00\x33\xC0\xBE\x06", "x?xxxx", -4);
@@ -479,7 +485,7 @@ void GameSettings::Initialize() {
 #endif
 
 	{
-		uintptr_t found = GW::Scanner::Find("\xEC\x6A\x00\x51\x8B\x4D\xF8\xBA\x41", "xxxxxxxxx", -9);
+		uintptr_t found = GW::Scanner::Find("\xEC\x6A\x00\x51\x8B\x4D\xF8\xBA\x47", "xxxxxxxxx", -9);
 		printf("[SCAN] TomePatch = %p\n", (void *)found);
 		if (found) {
 			tome_patch = new GW::MemoryPatcher(found, "\x75\x1E\x90\x90\x90\x90\x90", 7);

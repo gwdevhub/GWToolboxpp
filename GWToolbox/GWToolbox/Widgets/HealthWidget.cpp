@@ -81,10 +81,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::PopFont();
 
             if (click_to_print_health) {
-			    ImVec2 size = ImGui::GetWindowSize();
-			    ImVec2 min = ImGui::GetWindowPos();
-			    ImVec2 max(min.x + size.x, min.y + size.y);
-			    if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsMouseHoveringRect(min, max)) {
+			    if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsMouseHoveringWindow()) {
                     if (target) {
                         GW::Agents::AsyncGetAgentName(target, agent_name_ping);
                         if (agent_name_ping.size()) {
