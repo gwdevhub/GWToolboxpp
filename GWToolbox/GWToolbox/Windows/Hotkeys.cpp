@@ -364,7 +364,7 @@ void HotkeyDropUseBuff::Execute() {
 	} else {
 		int slot = GW::SkillbarMgr::GetSkillSlot(id);
 		if (slot >= 0 && GW::SkillbarMgr::GetPlayerSkillbar()->skills[slot].recharge == 0) {
-			GW::SkillbarMgr::UseSkill(slot, GW::Agents::GetTargetId());
+			GW::SkillbarMgr::UseSkill(slot, GW::Agents::GetTargetId(), ImGui::IsKeyDown(VK_CONTROL));
 		}
 	}
 }
