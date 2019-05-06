@@ -121,6 +121,11 @@ void ChatCommands::SaveSettings(CSimpleIni* ini) {
 void ChatCommands::Initialize() {
 	ToolboxModule::Initialize();
 
+	// you can create commands here in-line with a lambda, but only if they are only 
+	// a couple of lines and not used multiple times
+	GW::Chat::CreateCommand(L"ff", [](const wchar_t* message, int argc, LPWSTR* argv) -> void {
+		GW::Chat::SendChat('/', "resign");
+	});
 	GW::Chat::CreateCommand(L"age2", ChatCommands::CmdAge2);
 	GW::Chat::CreateCommand(L"dialog", ChatCommands::CmdDialog);
 	GW::Chat::CreateCommand(L"show", ChatCommands::CmdShow);

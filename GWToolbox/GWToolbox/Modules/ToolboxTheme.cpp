@@ -52,6 +52,7 @@ void ToolboxTheme::LoadSettings(CSimpleIni* ini) {
 	
 	ImGui::GetIO().FontGlobalScale = (float)inifile->GetDoubleValue(IniSection, "FontGlobalScale", 1.0);
 	ini_style.Alpha = (float)inifile->GetDoubleValue(IniSection, "GlobalAlpha", ini_style.Alpha);
+	ini_style.Alpha = std::min(std::max(ini_style.Alpha, 0.2f), 1.0f); // clamp to [0.2, 1.0]
 	ini_style.WindowPadding.x = (float)inifile->GetDoubleValue(IniSection, "WindowPaddingX", ini_style.WindowPadding.x);
 	ini_style.WindowPadding.y = (float)inifile->GetDoubleValue(IniSection, "WindowPaddingY", ini_style.WindowPadding.y);
 	ini_style.WindowRounding = (float)inifile->GetDoubleValue(IniSection, "WindowRounding", ini_style.WindowRounding);
@@ -127,6 +128,8 @@ void ToolboxTheme::DrawSettingInternal() {
 	}
 	ImGui::Text("Note: theme is stored in 'Theme.ini' in settings folder. You can share the file or parts of it with other people.");
 	ImGui::DragFloat("Global Alpha", &style.Alpha, 0.005f, 0.20f, 1.0f, "%.2f");
+	if (style.Alpha > 1.0f) style.Alpha = 1.0f;
+	if (style.Alpha < .2f) style.Alpha = .2f;
 	ImGui::DragFloat("Global Font Scale", &ImGui::GetIO().FontGlobalScale, 0.005f, 0.3f, 2.0f, "%.1f");
 	ImGui::Text("Sizes");
 	ImGui::SliderFloat2("Window Padding", (float*)&style.WindowPadding, 0.0f, 20.0f, "%.0f");

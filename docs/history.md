@@ -7,6 +7,13 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
+
+## Version 2.24
+* [Fix] Fixed several crash bugs related to GW May 1st update. 
+* [Note] Toolbox borderless functionality is current disabled. It might be fixed or removed in the future. For now, please use the in-game borderless that you can find in GW Options -> Graphics -> Resolution.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.24_Release/GWToolbox.dll)
+
 ## Version 2.23
 * [New] Added an option to disable the prompt when selling green and gold items.
 * [New] Added an option to show a notification when a friend comes online or goes offline.

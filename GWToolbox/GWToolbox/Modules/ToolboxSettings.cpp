@@ -168,6 +168,7 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
 	use_alcohol = ini->GetBoolValue(Name(), VAR_NAME(use_alcohol), true);
 	use_trade = ini->GetBoolValue(Name(), VAR_NAME(use_trade), true);
     use_objectivetimer = ini->GetBoolValue(Name(), VAR_NAME(use_instancetimer), true);
+	save_location_data = ini->GetBoolValue(Name(), VAR_NAME(save_location_data), false);
 }
 
 void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
@@ -193,6 +194,7 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(use_alcohol), use_alcohol);
 	ini->SetBoolValue(Name(), VAR_NAME(use_trade), use_trade);
 	ini->SetBoolValue(Name(), VAR_NAME(use_objectivetimer), use_objectivetimer);
+	ini->SetBoolValue(Name(), VAR_NAME(save_location_data), save_location_data);
 }
 
 void ToolboxSettings::Update(float delta) {
@@ -253,7 +255,8 @@ void ToolboxSettings::Update(float delta) {
 				if (location_file && location_file.is_open()) {
 					location_file.close();
 				}
-				location_file.open(Resources::GetPath(filename, L"location logs").c_str());
+				const std::wstring path = Resources::GetPath(L"location logs", filename);
+				location_file.open(path);
 			}
 
 			GW::Agent* me = GW::Agents::GetPlayer();
