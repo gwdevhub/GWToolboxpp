@@ -111,6 +111,7 @@ void Pcon::Update(int delay) {
 		if (delay < 0) delay = Pcon::pcons_delay;
 		player = GW::Agents::GetPlayer();
 		// === Use item if possible ===
+		// NOTE: Only fails CanUseByEffect() if we've found an effects array for this map before.
 		if (player != nullptr
 			&& !player->GetIsDead()
 			&& (player_id == 0 || player->agent_id == player_id)
@@ -334,28 +335,24 @@ int PconGeneric::QuantityForEach(const GW::Item* item) const {
 	return 0;
 }
 bool PconGeneric::CanUseByEffect() const {
-	GW::AgentEffectsArray AgEffects = GW::Effects::GetPartyEffectArray();
-	if (!AgEffects.valid()) return false; // don't know
-
 	DWORD player_id = GW::Agents::GetPlayerId();
 	if (!player_id) return false;  // player doesn't exist?
 
+	GW::AgentEffectsArray AgEffects = GW::Effects::GetPartyEffectArray();
+	if (!AgEffects.valid()) return !map_has_effects_array; // When the player doesn't have any effect, the array is not created.
+
 	GW::EffectArray *effects = NULL;
-	for (size_t i = 0; i < AgEffects.size(); i++) {
-		if (AgEffects[i].agent_id == player_id) {
+	for (size_t i = 0; i < AgEffects.size() && !effects; i++) {
+		if (AgEffects[i].agent_id == player_id)
 			effects = &AgEffects[i].effects;
-			break;
-		}
 	}
 
 	if (!effects || !effects->valid())
-		return false; // don't know
+		return !map_has_effects_array; // When the player doesn't have any effect, the array is not created.
 
 	for (DWORD i = 0; i < effects->size(); i++) {
-		if (effects->at(i).skill_id == (DWORD)effectID
-			&& effects->at(i).GetTimeRemaining() > 1000) {
-			return false; // already on
-		}
+		if (effects->at(i).skill_id == (DWORD)effectID)
+			return effects->at(i).GetTimeRemaining() < 1000;
 	}
 	return true;
 }
@@ -389,7 +386,7 @@ bool PconCity::CanUseByEffect() const {
 	if (player->move_x == 0.0f && player->move_y == 0.0f) return false;
 
 	GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
-	if (!effects.valid()) return true; // When the player doesn't have any effect, the array is not created.
+	if (!effects.valid()) return !map_has_effects_array; // When the player doesn't have any effect, the array is not created.
 
 	for (DWORD i = 0; i < effects.size(); i++) {
 		if (effects[i].GetTimeRemaining() < 1000) continue;
@@ -498,27 +495,24 @@ int PconLunar::QuantityForEach(const GW::Item* item) const {
 	}
 }
 bool PconLunar::CanUseByEffect() const {
-	GW::AgentEffectsArray AgEffects = GW::Effects::GetPartyEffectArray();
-	if (!AgEffects.valid()) return false; // don't know
-
 	DWORD player_id = GW::Agents::GetPlayerId();
 	if (!player_id) return false;  // player doesn't exist?
 
+	GW::AgentEffectsArray AgEffects = GW::Effects::GetPartyEffectArray();
+	if (!AgEffects.valid()) return !map_has_effects_array; // When the player doesn't have any effect, the array is not created.
+
 	GW::EffectArray *effects = NULL;
-	for (size_t i = 0; i < AgEffects.size(); i++) {
-		if (AgEffects[i].agent_id == player_id) {
+	for (size_t i = 0; i < AgEffects.size() && !effects; i++) {
+		if (AgEffects[i].agent_id == player_id)
 			effects = &AgEffects[i].effects;
-			break;
-		}
 	}
 
 	if (!effects || !effects->valid())
-		return false; // don't know
+		return !map_has_effects_array; // When the player doesn't have any effect, the array is not created.
 
 	for (DWORD i = 0; i < effects->size(); i++) {
-		if (effects->at(i).skill_id == (DWORD)GW::Constants::SkillID::Lunar_Blessing) {
+		if (effects->at(i).skill_id == (DWORD)GW::Constants::SkillID::Lunar_Blessing)
 			return false; // already on
-		}
 	}
 	return true;
 }

@@ -5,6 +5,8 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 
+#include <GWCA\Constants\Constants.h>
+
 #include <GWCA\GameContainers\GamePos.h>
 
 #include <GWCA\Context\GameContext.h>
@@ -13,6 +15,7 @@
 #include <GWCA\GameContainers\GamePos.h>
 
 #include <GWCA\GameEntities\Agent.h>
+#include <GWCA\GameEntities\Skill.h>
 
 #include <GWCA\Packets\StoC.h>
 
@@ -21,6 +24,7 @@
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\PartyMgr.h>
+#include <GWCA\Managers\EffectMgr.h>
 
 #include <logger.h>
 #include "GuiUtils.h"
@@ -30,6 +34,8 @@
 #include "PconsWindow.h"
 
 using namespace GW::Constants;
+
+bool Pcon::map_has_effects_array = false;
 
 void PconsWindow::Initialize() {
 	ToolboxWindow::Initialize();
@@ -290,11 +296,17 @@ void PconsWindow::Draw(IDirect3DDevice9* device) {
 	ImGui::End();
 }
 void PconsWindow::Update(float delta) {
-	if (instance_type != GW::Map::GetInstanceType() || map_id != GW::Map::GetMapID()) {
+	if (instance_type != GW::Map::GetInstanceType() || map_id != GW::Map::GetMapID())
 		MapChanged(); // Map changed.
-	}
-	if (!player && instance_type == GW::Constants::InstanceType::Explorable) {
+	if (!player && instance_type == GW::Constants::InstanceType::Explorable)
 		player = GW::Agents::GetPlayer(); // Won't be immediately able to get player ptr on map load, so put here.
+	if (!Pcon::map_has_effects_array && player != nullptr) {
+		// If we haven't yet found an effects array for this map, try to find it.
+		GW::AgentEffectsArray partyEffects = GW::Effects::GetPartyEffectArray();
+		if (partyEffects.valid()) {
+			for (size_t i = 0; i < partyEffects.size() && !Pcon::map_has_effects_array; i++)
+				Pcon::map_has_effects_array = partyEffects[i].agent_id == player->agent_id;
+		}
 	}
 	CheckBossRangeAutoDisable();
 	for (Pcon* pcon : pcons) {
@@ -304,13 +316,13 @@ void PconsWindow::Update(float delta) {
 void PconsWindow::MapChanged() {
 	elite_area_check_timer = TIMER_INIT();
 	map_id = GW::Map::GetMapID();
+	Pcon::map_has_effects_array = false;
 	if(instance_type != GW::Constants::InstanceType::Loading)
 		previous_instance_type = instance_type;
 	instance_type = GW::Map::GetInstanceType();
 	// If we've just come from an explorable area then disable pcons.
 	if (disable_pcons_on_map_change && previous_instance_type == GW::Constants::InstanceType::Explorable)
 		SetEnabled(false);
-	
 	
 	player = nullptr;
 	elite_area_disable_triggered = false;

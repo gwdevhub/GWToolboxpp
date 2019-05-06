@@ -19,6 +19,7 @@ class Pcon {
 public:
 	static int pcons_delay;
 	static int lunar_delay;
+	static bool map_has_effects_array;
 	static float size;
 	static bool disable_when_not_found;
 	static bool refill_if_below_threshold;
