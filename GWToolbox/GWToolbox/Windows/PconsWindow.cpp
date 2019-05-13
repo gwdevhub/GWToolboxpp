@@ -47,13 +47,13 @@ void PconsWindow::Initialize() {
 		ImVec2(5 / s, 10 / s), ImVec2(46 / s, 51 / s),
 		ItemID::ConsEssence, SkillID::Essence_of_Celerity_item_effect, 5));
 
-	pcons.push_back(new PconCons("Grail of Might", "grail", L"Grail_of_Might.png", IDB_Pcons_Grail,
-		ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s),
-		ItemID::ConsGrail, SkillID::Grail_of_Might_item_effect, 5));
-
 	pcons.push_back(new PconCons("Armor of Salvation", "armor", L"Armor_of_Salvation.png", IDB_Pcons_Armor,
 		ImVec2(0 / s, 2 / s), ImVec2(56 / s, 58 / s),
 		ItemID::ConsArmor, SkillID::Armor_of_Salvation_item_effect, 5));
+
+	pcons.push_back(new PconCons("Grail of Might", "grail", L"Grail_of_Might.png", IDB_Pcons_Grail,
+		ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s),
+		ItemID::ConsGrail, SkillID::Grail_of_Might_item_effect, 5));
 
 	pcons.push_back(new PconGeneric("Red Rock Candy", "redrock", L"Red_Rock_Candy.png", IDB_Pcons_RedRock,
 		ImVec2(0 / s, 4 / s), ImVec2(52 / s, 56 / s),
@@ -531,5 +531,9 @@ void PconsWindow::DrawSettingInternal() {
 		"This will prevent kneel, bored, moan, flex, fistshake and roar.\n");
 	ImGui::Checkbox("Hide Spiritual Possession and Lucky Aura", &Pcon::suppress_lunar_skills);
 	ImGui::ShowHelp("Will hide the skills in your effect monitor");
-	ImGui::Text("Auto disable Pcons near end of elite area");
+	ImGui::Text("Auto-Disabling Pcons in elite areas");
+	ImGui::Checkbox("Auto Disable in final room of Urgoz/Deep", &disable_cons_in_final_room);
+	ImGui::ShowHelp(disable_cons_in_final_room_hint);
+	ImGui::Checkbox("Auto Disable on final objective completion", &disable_cons_on_objective_completion);
+	ImGui::ShowHelp(disable_cons_on_objective_completion_hint);
 }
