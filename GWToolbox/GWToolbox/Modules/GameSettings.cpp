@@ -716,8 +716,8 @@ void GameSettings::DrawSettingInternal() {
 
     ImGui::Text("Show a message when a friend:");
 	ImGui::Indent();
-	ImGui::Checkbox("Login", &notify_when_friends_online);
-    ImGui::Checkbox("Logout", &notify_when_friends_offline);
+	ImGui::Checkbox("Logs in", &notify_when_friends_online);
+    ImGui::Checkbox("Logs out", &notify_when_friends_offline);
     ImGui::Unindent();
 
 	ImGui::Checkbox("Allow window restore", &focus_window_on_zoning);
