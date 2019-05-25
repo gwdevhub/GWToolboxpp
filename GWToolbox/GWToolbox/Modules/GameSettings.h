@@ -97,5 +97,5 @@ private:
 	GW::MemoryPatcher *gold_confirm_patch;
 
 	void DrawChannelColor(const char *name, GW::Chat::Channel chan);
-	static void FriendStatusCallback(GW::Friend* f, GW::FriendStatus status, wchar_t *charname);
+	static void FriendStatusCallback(GW::Friend* f, GW::FriendStatus status, wchar_t *charname, wchar_t *account_name);
 };
