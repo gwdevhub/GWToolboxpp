@@ -211,6 +211,8 @@ void Minimap::DrawSettingInternal() {
         ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
         ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
     }
+	ImGui::Checkbox("Allow mouse click-through in outposts", &mouse_clickthrough_in_outpost);
+	ImGui::ShowHelp("Toolbox minimap will not capture mouse events when in an outpost");
     ImGui::Checkbox("Alt + Click on minimap to move", &alt_click_to_move);
     if (mouse_clickthrough) {
         ImGui::PopItemFlag();
@@ -230,6 +232,7 @@ void Minimap::LoadSettings(CSimpleIni* ini) {
 	hero_flag_window_background = Colors::Load(ini, Name(), "hero_flag_controls_background",
 		ImColor(ImGui::GetStyle().Colors[ImGuiCol_WindowBg]));
     mouse_clickthrough = ini->GetBoolValue(Name(), VAR_NAME(mouse_clickthrough), false);
+	mouse_clickthrough_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(mouse_clickthrough_in_outpost), mouse_clickthrough_in_outpost);
 	rotate_minimap = ini->GetBoolValue(Name(), VAR_NAME(rotate_minimap), true);
     alt_click_to_move = ini->GetBoolValue(Name(), VAR_NAME(alt_click_to_move), false);
     pingslines_renderer.reduce_ping_spam = ini->GetBoolValue(Name(), VAR_NAME(reduce_ping_spam), false);
@@ -248,6 +251,7 @@ void Minimap::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(hero_flag_window_attach), hero_flag_window_attach);
 	Colors::Save(ini, Name(), VAR_NAME(hero_flag_window_background), hero_flag_window_background);
     ini->SetBoolValue(Name(), VAR_NAME(mouse_clickthrough), mouse_clickthrough);
+	ini->SetBoolValue(Name(), VAR_NAME(mouse_clickthrough_in_outpost), mouse_clickthrough_in_outpost);
     ini->SetBoolValue(Name(), VAR_NAME(alt_click_to_move), alt_click_to_move);
     ini->SetBoolValue(Name(), VAR_NAME(reduce_ping_spam), pingslines_renderer.reduce_ping_spam);
 	ini->SetBoolValue(Name(), VAR_NAME(rotate_minimap), rotate_minimap);
@@ -550,7 +554,7 @@ void Minimap::SelectTarget(GW::Vec2f pos) {
 }
 
 bool Minimap::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
-    if (mouse_clickthrough) return false;
+    if (mouse_clickthrough || (mouse_clickthrough_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)) return false;
 	switch (Message) {
 	case WM_MOUSEMOVE: return OnMouseMove(Message, wParam, lParam);
 	case WM_LBUTTONDOWN: return OnMouseDown(Message, wParam, lParam);
