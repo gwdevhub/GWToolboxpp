@@ -983,7 +983,7 @@ void GameSettings::FriendStatusCallback(GW::Friend* f, GW::FriendStatus status, 
 		if (f->status != GW::FriendStatus_Offline)
             return;
         if (game_setting.notify_when_friends_online) {
-		    snprintf(buffer, sizeof(buffer), "<a=1>%S</a> (%S) has just logged in!</c>", charname, account_name);
+		    snprintf(buffer, sizeof(buffer), "<a=1>%S</a> (%S) has just logged in.</c>", charname, account_name);
 		    GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
         }
 		return;
