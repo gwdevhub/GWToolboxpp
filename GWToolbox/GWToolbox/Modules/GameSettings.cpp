@@ -197,7 +197,13 @@ namespace {
 			move_materials_to_storage(item);
 			return;
 		}
-		assert(page >= static_cast<int>(GW::Constants::StoragePane::Storage_1) && page <= static_cast<int>(GW::Constants::StoragePane::Storage_14));
+
+		if (page < static_cast<int>(GW::Constants::StoragePane::Storage_1) ||
+			static_cast<int>(GW::Constants::StoragePane::Storage_14) < page) {
+
+			return;
+		}
+
 		const int storage1 = (int)GW::Constants::Bag::Storage_1;
 		const int bag_index = storage1 + page;
 		assert(GW::Items::GetBag(bag_index));
