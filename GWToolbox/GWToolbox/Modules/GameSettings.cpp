@@ -201,7 +201,13 @@ namespace {
 			move_materials_to_storage(item);
 			return;
 		}
-		assert(page >= static_cast<int>(GW::Constants::StoragePane::Storage_1) && page <= static_cast<int>(GW::Constants::StoragePane::Storage_14));
+
+		if (page < static_cast<int>(GW::Constants::StoragePane::Storage_1) ||
+			static_cast<int>(GW::Constants::StoragePane::Storage_14) < page) {
+
+			return;
+		}
+
 		const int storage1 = (int)GW::Constants::Bag::Storage_1;
 		const int bag_index = storage1 + page;
 		assert(GW::Items::GetBag(bag_index));
@@ -1025,7 +1031,7 @@ void GameSettings::ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag)
 	}
 }
 
-void GameSettings::FriendStatusCallback(GW::Friend* f, GW::FriendStatus status, wchar_t *charname) {
+void GameSettings::FriendStatusCallback(GW::Friend* f, GW::FriendStatus status, wchar_t *charname, wchar_t *account_name) {
 	GameSettings& game_setting = GameSettings::Instance();
 	if (status == f->status)
 		return;
@@ -1033,7 +1039,7 @@ void GameSettings::FriendStatusCallback(GW::Friend* f, GW::FriendStatus status, 
 	switch (status) {
 	case GW::FriendStatus_Offline:
         if (game_setting.notify_when_friends_offline) {
-		    snprintf(buffer, sizeof(buffer), "%S has just logged out.", charname);
+		    snprintf(buffer, sizeof(buffer), "%S (%S) has just logged out.", charname, account_name);
 		    GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
         }
 		return;
@@ -1043,7 +1049,7 @@ void GameSettings::FriendStatusCallback(GW::Friend* f, GW::FriendStatus status, 
 		if (f->status != GW::FriendStatus_Offline)
             return;
         if (game_setting.notify_when_friends_online) {
-		    snprintf(buffer, sizeof(buffer), "<a=1>%S</a> has just logged in!</c>", charname);
+		    snprintf(buffer, sizeof(buffer), "<a=1>%S</a> (%S) has just logged in.</c>", charname, account_name);
 		    GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
         }
 		return;
