@@ -488,6 +488,7 @@ bool HotkeyAction::GetText(void*, int idx, const char** out_text) {
 	case OpenLockedChest: *out_text = "Open Locked Chest"; return true;
 	case DropGoldCoin: *out_text = "Drop Gold Coin"; return true;
 	case ReapplyTitle: *out_text = "Reapply appropriate Title"; return true;
+	case EnterChallenge: *out_text = "Enter Challenge"; return true;
 	default: return false;
 	}
 }
@@ -619,6 +620,10 @@ void HotkeyAction::Execute() {
 			GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Lightbringer);
 		}
 		break;
+	case HotkeyAction::EnterChallenge:
+		GW::Map::EnterChallenge();
+		break;
+
 	}
 }
 

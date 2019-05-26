@@ -1032,6 +1032,9 @@ void GameSettings::ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag)
 }
 
 void GameSettings::FriendStatusCallback(GW::Friend* f, GW::FriendStatus status, wchar_t *charname, wchar_t *account_name) {
+	if (!f || !charname || *charname == L'\0')
+		return;
+
 	GameSettings& game_setting = GameSettings::Instance();
 	if (status == f->status)
 		return;
