@@ -44,6 +44,8 @@ private:
 
 	// if we need to print in the chat
 	bool print_game_chat = false;
+	// Flash window when trade alert matches
+	bool flash_window_on_trade_alert = true;
 
 	// if enable, we won't print the messages containing word from alert_words
 	bool filter_alerts = false;

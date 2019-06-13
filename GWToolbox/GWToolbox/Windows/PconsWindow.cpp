@@ -508,8 +508,8 @@ void PconsWindow::DrawSettingInternal() {
 	if (Pcon::size <= 1.0f) Pcon::size = 1.0f;
 	if (ImGui::TreeNode("Visibility")) {
 		ImGui::Checkbox("Enable/Disable button", &show_enable_button);
-		ImGui::Checkbox("Show auto refill pcons checkbox", &show_auto_refill_pcons_tickbox);
 		ImGui::Checkbox("Show auto disable pcons checkbox", &show_auto_disable_pcons_tickbox);
+		ImGui::ShowHelp("Will show a tickbox in the pcons window when in an elite area");
 		for (Pcon* pcon : pcons) {
 			ImGui::Checkbox(pcon->chat, &pcon->visible);
 		}
@@ -531,6 +531,7 @@ void PconsWindow::DrawSettingInternal() {
 		"This will prevent kneel, bored, moan, flex, fistshake and roar.\n");
 	ImGui::Checkbox("Hide Spiritual Possession and Lucky Aura", &Pcon::suppress_lunar_skills);
 	ImGui::ShowHelp("Will hide the skills in your effect monitor");
+	ImGui::Separator();
 	ImGui::Text("Auto-Disabling Pcons in elite areas");
 	ImGui::Checkbox("Auto Disable in final room of Urgoz/Deep", &disable_cons_in_final_room);
 	ImGui::ShowHelp(disable_cons_in_final_room_hint);

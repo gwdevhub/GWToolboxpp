@@ -33,6 +33,7 @@ public:
 	void OpenSettingsFile();
 	void LoadModuleSettings();
 	void SaveSettings();
+	static void FlashWindow();
 
 	void StartSelfDestruct() { must_self_destruct = true; }
 	bool must_self_destruct = false;	// is true when toolbox should quit

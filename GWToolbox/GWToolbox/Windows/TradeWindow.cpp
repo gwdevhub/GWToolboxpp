@@ -22,6 +22,7 @@
 #include <GWCA\Managers\GameThreadMgr.h>
 
 #include <Modules\Resources.h>
+#include <Modules\GameSettings.h>
 
 #include "logger.h"
 #include "GuiUtils.h"
@@ -168,6 +169,8 @@ void TradeWindow::Update(float delta) {
 			std::string name = res["name"].get<std::string>();
 			snprintf(buffer, sizeof(buffer), "<a=1>%s</a>: <c=#f96677><quote>%s", name.c_str(), msg.c_str());
 			GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, buffer);
+			if (flash_window_on_trade_alert)
+				GWToolbox::FlashWindow();
 		}
 	});
 }

@@ -80,15 +80,7 @@ namespace {
 		}
 	}
 
-	void FlashWindow() {
-		FLASHWINFO flashInfo = { 0 };
-		flashInfo.cbSize = sizeof(FLASHWINFO);
-		flashInfo.hwnd = GW::MemoryMgr::GetGWWindowHandle();
-		flashInfo.dwFlags = FLASHW_TIMER | FLASHW_TRAY | FLASHW_TIMERNOFG;
-		flashInfo.uCount = 0;
-		flashInfo.dwTimeout = 0;
-		FlashWindowEx(&flashInfo);
-	}
+	
 
 	void PrintTime(wchar_t *buffer, size_t n, DWORD time_sec) {
 		DWORD secs = time_sec % 60;
@@ -122,7 +114,7 @@ namespace {
 
 	void WhisperCallback(const wchar_t from[20], const wchar_t msg[140]) {
 		GameSettings&  game_setting = GameSettings::Instance();
-		if (game_setting.flash_window_on_pm) FlashWindow();
+		if (game_setting.flash_window_on_pm) GWToolbox::FlashWindow();
 		DWORD status = GW::FriendListMgr::GetMyStatus();
 		if (status == GW::FriendStatus_Away && !game_setting.afk_message.empty()) {
 			wchar_t buffer[120];
@@ -455,7 +447,7 @@ void GameSettings::Initialize() {
 
 	GW::StoC::AddCallback<GW::Packet::StoC::PartyPlayerAdd>(
 		[](GW::Packet::StoC::PartyPlayerAdd*) -> bool {
-		if (GameSettings::Instance().flash_window_on_party_invite) FlashWindow();
+		if (GameSettings::Instance().flash_window_on_party_invite) GWToolbox::FlashWindow();
 		return false;
 	});
 
@@ -463,7 +455,7 @@ void GameSettings::Initialize() {
 		[](GW::Packet::StoC::GameSrvTransfer *pak) -> bool {
 
 		GW::CharContext *ctx = GW::GameContext::instance()->character;
-		if (GameSettings::Instance().flash_window_on_zoning) FlashWindow();
+		if (GameSettings::Instance().flash_window_on_zoning) GWToolbox::FlashWindow();
 		if (GameSettings::Instance().focus_window_on_zoning && pak->is_explorable) {
 			HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
 			SetForegroundWindow(hwnd);

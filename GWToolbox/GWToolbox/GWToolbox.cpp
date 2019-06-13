@@ -398,6 +398,15 @@ void GWToolbox::Initialize() {
         Log::Info("Hello %ls!", GW::Agents::GetPlayerNameByLoginNumber(playerNumber));
     }
 }
+void GWToolbox::FlashWindow() {
+	FLASHWINFO flashInfo = { 0 };
+	flashInfo.cbSize = sizeof(FLASHWINFO);
+	flashInfo.hwnd = GW::MemoryMgr::GetGWWindowHandle();
+	flashInfo.dwFlags = FLASHW_TIMER | FLASHW_TRAY | FLASHW_TIMERNOFG;
+	flashInfo.uCount = 0;
+	flashInfo.dwTimeout = 0;
+	FlashWindowEx(&flashInfo);
+}
 
 void GWToolbox::OpenSettingsFile() {
     Log::Log("Opening ini file\n");
