@@ -67,18 +67,6 @@ void Minimap::Initialize() {
 		}
 		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::InstanceLoadFile>(
-		[this](GW::Packet::StoC::InstanceLoadFile *packet) -> bool {
-		pmap_renderer.Invalidate();
-		loading = false;
-		return false;
-	});
-
-	GW::StoC::AddCallback<GW::Packet::StoC::GameSrvTransfer>(
-		[&](GW::Packet::StoC::GameSrvTransfer *pak) -> bool {
-		loading = true;
-		return false;
-	});
 
 	last_moved = TIMER_INIT();
 
@@ -280,7 +268,8 @@ float Minimap::GetMapRotation() {
 	return rotate_minimap ? GW::CameraMgr::GetYaw() : (float)1.5708;
 }
 void Minimap::Update(float delta) {
-	if (!GW::Map::GetIsMapLoaded()) pmap_renderer.Invalidate();
+	loading = GW::Map::GetIsMapLoaded();
+	if(loading) pmap_renderer.Invalidate();
 }
 void Minimap::Draw(IDirect3DDevice9* device) {
 	if (!IsActive()) return;
