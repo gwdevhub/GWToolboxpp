@@ -268,7 +268,7 @@ float Minimap::GetMapRotation() {
 	return rotate_minimap ? GW::CameraMgr::GetYaw() : (float)1.5708;
 }
 void Minimap::Update(float delta) {
-	loading = GW::Map::GetIsMapLoaded();
+	loading = !GW::Map::GetIsMapLoaded();
 	if(loading) pmap_renderer.Invalidate();
 }
 void Minimap::Draw(IDirect3DDevice9* device) {
