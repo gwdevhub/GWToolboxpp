@@ -579,6 +579,7 @@ void HotkeyAction::Execute() {
 		case GW::Constants::MapID::Mano_a_Norn_o:
 		case GW::Constants::MapID::Service_In_Defense_of_the_Eye:
 		case GW::Constants::MapID::Cold_as_Ice:
+		case GW::Constants::MapID::The_Norn_Fighting_Tournament:				
 		// @todo: case MapID for Bear Club for Women/Men
 			GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Norn);
 			break;
