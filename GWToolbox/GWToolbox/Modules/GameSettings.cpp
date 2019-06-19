@@ -476,7 +476,6 @@ void GameSettings::Initialize() {
 		[this](GW::Packet::StoC::SpeechBubble *pak) -> bool {
 		if (!npc_speech_bubbles_as_chat) return false;
 		const wchar_t* m = pak->message;
-		//Log::Info("m[0] == 0x%X && m[1] == 0x%X && m[2] == 0x%X && m[3] == 0x%X\n", m[0], m[1], m[2], m[3]);
 		if (m[3] == 0) return false; // Shout skill etc
 		GW::Agent* agent = GW::Agents::GetAgentByID(pak->agent_id);
 		if (!agent || agent->login_number) return false; // Agent not found or Speech bubble from player e.g. drunk message.
@@ -1023,28 +1022,30 @@ void GameSettings::ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag)
 	}
 }
 
-void GameSettings::FriendStatusCallback(GW::Friend* f, GW::FriendStatus status) {
-	if (!f || !f->charname || *f->charname == L'\0')
+void GameSettings::FriendStatusCallback(GW::Friend *f, GW::FriendStatus status, GW::FriendStatus prev_status, wchar_t *charname) {
+
+	//Log::Info("FriendStatusCallback %d %d %d %S",f->status, status, prev_status, charname);
+	if (!f)// || !f->charname || *f->charname == L'\0')
 		return;
 
 	GameSettings& game_setting = GameSettings::Instance();
-	if (status == f->status)
+	if (status == prev_status)
 		return;
 	char buffer[512];
 	switch (status) {
 	case GW::FriendStatus_Offline:
         if (game_setting.notify_when_friends_offline) {
-		    snprintf(buffer, sizeof(buffer), "%S (%S) has just logged out.", f->charname, f->account);
+		    snprintf(buffer, sizeof(buffer), "%S (%S) has just logged out.", charname, f->account);
 		    GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
         }
 		return;
 	case GW::FriendStatus_Away:
 	case GW::FriendStatus_DND:
 	case GW::FriendStatus_Online:
-		if (f->status != GW::FriendStatus_Offline)
-            return;
+		if (prev_status != GW::FriendStatus_Offline)
+           return;
         if (game_setting.notify_when_friends_online) {
-		    snprintf(buffer, sizeof(buffer), "<a=1>%S</a> (%S) has just logged in.</c>", f->charname, f->account);
+		    snprintf(buffer, sizeof(buffer), "<a=1>%S</a> (%S) has just logged in.</c>", charname, f->account);
 		    GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
         }
 		return;
