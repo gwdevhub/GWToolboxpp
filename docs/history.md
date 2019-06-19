@@ -8,6 +8,11 @@ Previous releases are provided as dll files. In order to use it, you need to use
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
 
+## Version 2.26
+* [Fix] Fixed bug with friend status message.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.26_Release/GWToolbox.dll)
+
 ## Version 2.25
 * [New] Added option to disable minimap mouse capture in outpost.
 * [Fix] Fixed bugs related to GW June 12th update.
