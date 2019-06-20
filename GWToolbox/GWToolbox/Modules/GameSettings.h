@@ -59,6 +59,7 @@ public:
 	bool auto_url = false;
 	// bool select_with_chat_doubleclick = false;
 	bool move_item_on_ctrl_click = false;
+	bool move_item_to_current_storage_pane = false;
 
 	bool flash_window_on_pm = false;
 	bool flash_window_on_party_invite = false;
@@ -72,6 +73,12 @@ public:
 
 	bool auto_skip_cinematic = false;
 	bool show_unlearned_skill = false;
+	bool npc_speech_bubbles_as_chat = false;
+	std::wstring speech_bubble_msg;
+	std::wstring speech_bubble_sender;
+
+	bool faction_warn_percent = true;
+	int faction_warn_percent_amount = 75;
 
 	std::wstring afk_message;
 	clock_t afk_message_time;
@@ -91,11 +98,14 @@ public:
 private:
 	void UpdateBorderless();
 	void UpdateFOV();
+	void FactionEarnedCheckAndWarn();
+	bool faction_checked = false;
+
 	std::vector<GW::MemoryPatcher*> patches;
 	GW::MemoryPatcher *ctrl_click_patch;
 	GW::MemoryPatcher *tome_patch;
 	GW::MemoryPatcher *gold_confirm_patch;
 
 	void DrawChannelColor(const char *name, GW::Chat::Channel chan);
-	static void FriendStatusCallback(GW::Friend* f, GW::FriendStatus status, const wchar_t *name, const wchar_t *charname);
+	static void FriendStatusCallback(GW::Friend* f, GW::FriendStatus status, const wchar_t *account, const wchar_t *charname);
 };

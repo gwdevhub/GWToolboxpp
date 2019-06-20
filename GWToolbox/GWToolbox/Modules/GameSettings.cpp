@@ -31,8 +31,10 @@
 #include <GWCA\Managers\RenderMgr.h>
 #include <GWCA\Managers\FriendListMgr.h>
 #include <GWCA\Managers\GameThreadMgr.h>
+#include <GWCA\Managers\UIMgr.h>
 
 #include <GWCA\Context\GameContext.h>
+#include <GWCA\Context\WorldContext.h>
 
 #include <logger.h>
 #include "GuiUtils.h"
@@ -416,42 +418,6 @@ namespace {
 void GameSettings::Initialize() {
 	ToolboxModule::Initialize();
 
-	// This borderless code is no longer needed!
-	auto initialize_borderless = [this]() -> bool {
-		uintptr_t found;
-
-		found = GW::Scanner::Find("\x8B\x9E\xCC\x0C\x00\x00\x03\xD9\x03\xFB\xEB\x03", "xxxxxxxxxxxx", 0x42);
-		if (!found) return false;
-		patches.push_back(new GW::MemoryPatcher(found,
-			"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90", 0x13));
-
-
-		found = GW::Scanner::Find("\x2B\x8E\x78\x0C\x00\x00\x3B\xC1\x7F", "xxxxxxxxx", 0);
-		if (!found) return false;
-		patches.push_back(new GW::MemoryPatcher(found + 0xF, "\xEB", 1));
-		patches.push_back(new GW::MemoryPatcher(found + 0x1E, "\xEB", 1));
-
-		found = GW::Scanner::Find("\x56\x57\x8B\xF9\x8B\x87\x00\x02\x00\x00\x85\xC0\x75\x14", "xxxxxxxxxxxxxx", 0);
-		if (!found) return false;
-		void *patch = "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90";
-		patches.push_back(new GW::MemoryPatcher(found + 0x86, patch, 10));
-		patches.push_back(new GW::MemoryPatcher(found + 0xD2, patch, 10));
-		patches.push_back(new GW::MemoryPatcher(found + 0x10E, patch, 10));
-
-		found = GW::Scanner::Find("\x55\x8B\xEC\x51\x56\x57\x8B\xF9\x8B\x87\xF8\x0C\x00\x00", "xxxxxxxxxxxxxx", 0);
-		if (!found) return false;
-		patches.push_back(new GW::MemoryPatcher(found + 0x8A, patch, 10));
-		patches.push_back(new GW::MemoryPatcher(found + 0x10A, patch, 10));
-		patches.push_back(new GW::MemoryPatcher(found + 0x149, patch, 10));
-
-		return true;
-	};
-
-	if (!initialize_borderless()) {
-		for (auto* patch : patches) delete patch;
-		patches.clear();
-		printf("Error initializing borderless!\n");
-	}
 	{
 		// Patch that allow storage page (and Anniversary page) to work... (ask Ziox for more info)
 		uintptr_t found = GW::Scanner::Find("\xEB\x00\x33\xC0\xBE\x06", "x?xxxx", -4);
@@ -468,23 +434,6 @@ void GameSettings::Initialize() {
 		ctrl_click_patch = new GW::MemoryPatcher(found, &page_max, 1);
 		ctrl_click_patch->TooglePatch(true);
 	}
-#ifdef ENABLE_BORDERLESS
-	GW::Chat::CreateCommand(L"borderless",
-		[&](const wchar_t *message, int argc, LPWSTR *argv) {
-		if (argc <= 1) {
-			ApplyBorderless(!borderlesswindow);
-		} else {
-			std::wstring arg1 = GuiUtils::ToLower(argv[1]);
-			if (arg1 == L"on") {
-				ApplyBorderless(true);
-			} else if (arg1 == L"off") {
-				ApplyBorderless(false);
-			} else {
-				Log::Error("Invalid argument '%ls', please use /borderless [|on|off]", argv[1]);
-			}
-		}
-	});
-#endif
 
 	{
 		uintptr_t found = GW::Scanner::Find("\xEC\x6A\x00\x51\x8B\x4D\xF8\xBA\x47", "xxxxxxxxx", -9);
@@ -528,6 +477,19 @@ void GameSettings::Initialize() {
 			GW::Map::SkipCinematic();
 		return false;
 	});
+	// - Print NPC speech bubbles to emote chat.
+	GW::StoC::AddCallback<GW::Packet::StoC::SpeechBubble>(
+		[this](GW::Packet::StoC::SpeechBubble *pak) -> bool {
+		if (!npc_speech_bubbles_as_chat) return false;
+		const wchar_t* m = pak->message;
+		if (m[3] == 0) return false; // Shout skill etc
+		GW::Agent* agent = GW::Agents::GetAgentByID(pak->agent_id);
+		if (!agent || agent->login_number) return false; // Agent not found or Speech bubble from player e.g. drunk message.
+		GW::UI::AsyncDecodeStr(pak->message, &speech_bubble_msg);
+		GW::Agents::AsyncGetAgentName(agent, speech_bubble_sender);
+		return false; // Consume.
+	});
+	
 	GW::FriendListMgr::SetOnFriendStatusCallback(GameSettings::FriendStatusCallback);
 
 #ifdef APRIL_FOOLS
@@ -549,7 +511,8 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
 	openlinks = ini->GetBoolValue(Name(), VAR_NAME(openlinks), true);
 	auto_url = ini->GetBoolValue(Name(), VAR_NAME(auto_url), true);
-	move_item_on_ctrl_click = ini->GetBoolValue(Name(), VAR_NAME(move_item_on_ctrl_click), true);
+	move_item_on_ctrl_click = ini->GetBoolValue(Name(), VAR_NAME(move_item_on_ctrl_click), move_item_on_ctrl_click);
+	move_item_to_current_storage_pane = ini->GetBoolValue(Name(), VAR_NAME(move_item_to_current_storage_pane), move_item_to_current_storage_pane);
 
 	flash_window_on_pm = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_pm), true);
 	flash_window_on_party_invite = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_party_invite), true);
@@ -562,6 +525,11 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
 	show_unlearned_skill = ini->GetBoolValue(Name(), VAR_NAME(show_unlearned_skill), false);
 	auto_skip_cinematic = ini->GetBoolValue(Name(), VAR_NAME(auto_skip_cinematic), false);
+	npc_speech_bubbles_as_chat = ini->GetBoolValue(Name(), VAR_NAME(npc_speech_bubbles_as_chat), npc_speech_bubbles_as_chat);
+
+	faction_warn_percent = ini->GetBoolValue(Name(), VAR_NAME(faction_warn_percent), faction_warn_percent);
+	faction_warn_percent_amount = ini->GetLongValue(Name(), VAR_NAME(faction_warn_percent_amount), faction_warn_percent_amount);
+
 
 	disable_gold_selling_confirmation = ini->GetBoolValue(Name(), VAR_NAME(disable_gold_selling_confirmation), false);
 	notify_when_friends_online = ini->GetBoolValue(Name(), VAR_NAME(notify_when_friends_online), true);
@@ -628,6 +596,8 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(openlinks), openlinks);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_url), auto_url);
 	ini->SetBoolValue(Name(), VAR_NAME(move_item_on_ctrl_click), move_item_on_ctrl_click);
+	ini->SetBoolValue(Name(), VAR_NAME(move_item_to_current_storage_pane), move_item_to_current_storage_pane);
+	
 
 	ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_pm), flash_window_on_pm);
 	ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_party_invite), flash_window_on_party_invite);
@@ -640,7 +610,10 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 
 	ini->SetBoolValue(Name(), VAR_NAME(show_unlearned_skill), show_unlearned_skill);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_skip_cinematic), auto_skip_cinematic);
+	ini->SetBoolValue(Name(), VAR_NAME(npc_speech_bubbles_as_chat), npc_speech_bubbles_as_chat);
 
+	ini->SetBoolValue(Name(), VAR_NAME(faction_warn_percent), faction_warn_percent);
+	ini->SetLongValue(Name(), VAR_NAME(faction_warn_percent_amount), faction_warn_percent_amount);
 	ini->SetBoolValue(Name(), VAR_NAME(disable_gold_selling_confirmation), disable_gold_selling_confirmation);
 
 	ini->SetBoolValue(Name(), VAR_NAME(notify_when_friends_online), notify_when_friends_online);
@@ -689,6 +662,9 @@ void GameSettings::DrawSettingInternal() {
     }
 	ImGui::ShowHelp("Show timestamps in message history.");
 
+	ImGui::Checkbox("Show NPC messages in emote channel", &npc_speech_bubbles_as_chat);
+	ImGui::ShowHelp("Speech bubbles from NPCs and Heroes will appear as emote messages in chat");
+
 	if (ImGui::Checkbox("Open web links from templates", &openlinks)) {
 		GW::Chat::SetOpenLinks(openlinks);
 	}
@@ -707,6 +683,12 @@ void GameSettings::DrawSettingInternal() {
 	if (ImGui::Checkbox("Move items from/to storage with Control+Click", &move_item_on_ctrl_click)) {
 		GW::Items::SetOnItemClick(GameSettings::ItemClickCallback);
 	}
+	ImGui::Indent();
+	ImGui::Checkbox("Move item to current open storage pane on click", &move_item_to_current_storage_pane);
+	ImGui::ShowHelp("Enabled: Using Control+Click on an item in inventory with storage chest open,\n"
+					"try to deposit item into the currently displayed storage pane.\n"
+					"Disabled: Item will be stored into any available stack/slot in the chest.");
+	ImGui::Unindent();
 
 	ImGui::Text("Flash Guild Wars taskbar icon when:");
 	ImGui::Indent();
@@ -746,6 +728,14 @@ void GameSettings::DrawSettingInternal() {
 	}
 
 	ImGui::Checkbox("Automatically skip cinematics", &auto_skip_cinematic);
+	ImGui::Checkbox("Show warning when earned faction reaches ", &faction_warn_percent);
+	ImGui::SameLine();
+	ImGui::PushItemWidth(40.0f * ImGui::GetIO().FontGlobalScale);
+	ImGui::InputInt("##faction_warn_percent_amount", &faction_warn_percent_amount, 0);
+	ImGui::PopItemWidth();
+	ImGui::SameLine();
+	ImGui::Text("%%");
+	ImGui::ShowHelp("Displays when in a challenge mission or elite mission outpost");
 
 	if (ImGui::Checkbox("Disable Gold/Green items confirmation", &disable_gold_selling_confirmation)) {
 		if (gold_confirm_patch) {
@@ -772,6 +762,63 @@ void GameSettings::ApplyBorderless(bool borderless) {
 	}
 }
 
+void GameSettings::FactionEarnedCheckAndWarn() {
+	if (!faction_warn_percent)
+		return; // Disabled
+	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
+		faction_checked = false;
+		return; // Loading or explorable area.
+	}
+	if (faction_checked)
+		return; // Already checked.
+	faction_checked = true;
+	GW::WorldContext * world_context = GW::GameContext::instance()->world;
+	if (!world_context || !world_context->max_luxon || !world_context->total_earned_kurzick) {
+		faction_checked = false;
+		return; // No world context yet.
+	}
+	float percent;
+	// Avoid invalid user input values.
+	if (faction_warn_percent_amount < 0)
+		faction_warn_percent_amount = 0; 
+	if (faction_warn_percent_amount > 100)
+		faction_warn_percent_amount = 100;
+	// Warn user to dump faction if we're in a luxon/kurzick mission outpost
+	switch (GW::Map::GetMapID()) {
+		case GW::Constants::MapID::The_Deep:
+		case GW::Constants::MapID::The_Jade_Quarry_Luxon_outpost:
+		case GW::Constants::MapID::Fort_Aspenwood_Luxon_outpost:
+		case GW::Constants::MapID::Zos_Shivros_Channel:
+		case GW::Constants::MapID::The_Aurios_Mines:
+			// Player is in luxon mission outpost
+			percent = 100.0f * (float)world_context->current_luxon / (float)world_context->max_luxon;
+			if (percent >= (float)faction_warn_percent_amount) {
+				// Faction earned is over 75% capacity
+				Log::Warning("Luxon faction earned is %d of %d", world_context->current_luxon, world_context->max_luxon );
+			}
+			else if (world_context->current_kurzick > 4999 && world_context->current_kurzick > world_context->current_luxon) {
+				// Kurzick faction > Luxon faction
+				Log::Warning("Kurzick faction earned is greater than Luxon");
+			}
+			break;
+		case GW::Constants::MapID::Urgozs_Warren:
+		case GW::Constants::MapID::The_Jade_Quarry_Kurzick_outpost:
+		case GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost:
+		case GW::Constants::MapID::Altrumm_Ruins:
+		case GW::Constants::MapID::Amatz_Basin:
+			// Player is in kurzick mission outpost
+			percent = 100.0f * (float)world_context->current_kurzick / (float)world_context->max_kurzick;
+			if (percent >= (float)faction_warn_percent_amount) {
+				// Faction earned is over 75% capacity
+				Log::Warning("Kurzick faction earned is %d of %d", world_context->current_kurzick, world_context->max_kurzick);
+			}
+			else if (world_context->current_luxon > 4999 && world_context->current_luxon > world_context->current_kurzick) {
+				// Luxon faction > Kurzick faction
+				Log::Warning("Luxon faction earned is greater than Kurzick");
+			}
+			break;
+	}
+}
 void GameSettings::SetAfkMessage(std::wstring&& message) {
 	
 	static size_t MAX_AFK_MSG_LEN = 80;
@@ -785,6 +832,19 @@ void GameSettings::SetAfkMessage(std::wstring&& message) {
 }
 
 void GameSettings::Update(float delta) {
+	if (speech_bubble_msg.size() && speech_bubble_sender.size()) {
+		GW::Chat::Color dummy; // Needed for GW::Chat::GetChannelColors
+		GW::Chat::Color senderCol; // 153, 255, 0 for NPC colour?
+		GW::Chat::Color messageCol;
+
+		GW::Chat::GetChannelColors(GW::Chat::CHANNEL_EMOTE, &senderCol, &dummy);   // Sender should be same color as emote sender
+		GW::Chat::GetChannelColors(GW::Chat::CHANNEL_ALLIES, &dummy, &messageCol); // ...but set the message to be same color as ally chat
+		char buffer[512];
+		snprintf(buffer, sizeof(buffer), "<c=#%06X>%S</c>: <c=#%06X>%S</c>", senderCol & 0x00FFFFFF, speech_bubble_sender.c_str(), messageCol & 0x00FFFFFF, speech_bubble_msg.c_str());
+		GW::Chat::WriteChat(GW::Chat::CHANNEL_EMOTE, buffer);
+		speech_bubble_msg.clear();
+		speech_bubble_sender.clear();
+	}
 	if (auto_set_away
 		&& TIMER_DIFF(activity_timer) > auto_set_away_delay * 60000
 		&& GW::FriendListMgr::GetMyStatus() == (DWORD)GW::Constants::OnlineStatus::ONLINE) {
@@ -792,6 +852,7 @@ void GameSettings::Update(float delta) {
 		activity_timer = TIMER_INIT(); // refresh the timer to avoid spamming in case the set status call fails
 	}
 	UpdateFOV();
+	FactionEarnedCheckAndWarn();
 #ifdef ENABLE_BORDERLESS
 	UpdateBorderless();
 #endif
@@ -922,7 +983,7 @@ void GameSettings::ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag)
 
 	// Expected behaviors
 	//  When clicking on item in inventory
-	//   case storage close:
+	//   case storage close (or move_item_to_current_storage_pane = false):
 	//    - If the item is a material, it look if it can move it to the material page.
 	//    - If the item is stackable, search in all the storage if there is already similar items and completes the stack
 	//    - If not everything was moved, move the remaining in the first empty slot of the storage.
@@ -954,10 +1015,12 @@ void GameSettings::ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag)
 	}
 
 	if (is_inventory_item) {
-		if (GW::Items::GetIsStorageOpen()) {
+		if (GW::Items::GetIsStorageOpen() && GameSettings::Instance().move_item_to_current_storage_pane) {
+			// If move_item_to_current_storage_pane = true, try to add the item to current storage pane.
 			int current_storage = GW::Items::GetStoragePage();
 			move_item_to_storage_page(item, current_storage);
 		} else {
+			// Otherwise, just try to put it in anywhere.
 			move_item_to_storage(item);
 		}
 	} else {
