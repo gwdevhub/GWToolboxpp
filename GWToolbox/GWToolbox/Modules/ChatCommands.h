@@ -15,7 +15,7 @@ class ChatCommands : public ToolboxModule {
 	const float DEFAULT_CAM_SPEED = 1000.f; // 600 units per sec
 	const float ROTATION_SPEED = (float)M_PI / 3.f; // 6 seconds for full rotation
 
-	ChatCommands() : cam_speed(DEFAULT_CAM_SPEED) {};
+	ChatCommands() {};
 	~ChatCommands() {};
 public:
 	static ChatCommands& Instance() {
@@ -62,8 +62,8 @@ private:
 
 	static std::vector<ToolboxUIElement*> MatchingWindows(const wchar_t *message, int argc, LPWSTR *argv);
 
-	float cam_speed;
-	bool forward_fix_z;
+	float cam_speed = DEFAULT_CAM_SPEED;
+	bool forward_fix_z = true;
 
 	void AddSkillToUse(int skill); // 1-8 range
 	std::list<int> skills_to_use; // 0-7 range

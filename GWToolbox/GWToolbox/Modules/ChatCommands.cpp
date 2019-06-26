@@ -109,7 +109,7 @@ void ChatCommands::DrawSettingInternal() {
 }
 
 void ChatCommands::LoadSettings(CSimpleIni* ini) {
-	forward_fix_z = ini->GetBoolValue(Name(), VAR_NAME(forward_fix_z), true);
+	forward_fix_z = ini->GetBoolValue(Name(), VAR_NAME(forward_fix_z), forward_fix_z);
 	cam_speed = (float)ini->GetDoubleValue(Name(), VAR_NAME(cam_speed), DEFAULT_CAM_SPEED);
 }
 
