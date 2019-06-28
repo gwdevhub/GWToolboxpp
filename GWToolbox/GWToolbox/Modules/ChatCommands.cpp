@@ -231,12 +231,12 @@ void ChatCommands::Update(float delta) {
 			GW::Skillbar* skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
 			if (skillbar && skillbar->IsValid()) {
 				GW::SkillbarSkill skill = skillbar->skills[slot];
-				if (skill.GetRecharge() == 0) {
+				GW::Skill skilldata = GW::SkillbarMgr::GetSkillConstantData(skill.skill_id);
+				if ((skilldata.adrenaline == 0 && skill.GetRecharge() == 0) || (skilldata.adrenaline > 0 && skill.adrenaline_a == skilldata.adrenaline)) {
 					GW::GameThread::Enqueue([slot] {
 						GW::SkillbarMgr::UseSkill(slot, GW::Agents::GetTargetId());
 					});
 
-					GW::Skill skilldata = GW::SkillbarMgr::GetSkillConstantData(skill.skill_id);
 					skill_usage_delay = std::max(skilldata.activation + skilldata.aftercast, 0.25f); // a small flat delay of .3s for ping and to avoid spamming in case of bad target
 					skill_timer = clock();
 				}
