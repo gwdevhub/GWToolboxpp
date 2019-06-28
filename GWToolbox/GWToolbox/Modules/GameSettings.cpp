@@ -454,6 +454,12 @@ void GameSettings::Initialize() {
 	GW::StoC::AddCallback<GW::Packet::StoC::PartyPlayerAdd>(
 		[](GW::Packet::StoC::PartyPlayerAdd*) -> bool {
 		if (GameSettings::Instance().flash_window_on_party_invite) FlashWindow();
+		GameSettings::Instance().check_message_on_party_change = true;
+		return false;
+	});
+	GW::StoC::AddCallback<GW::Packet::StoC::PartyPlayerRemove>(
+		[](GW::Packet::StoC::PartyPlayerRemove*) -> bool {
+		GameSettings::Instance().check_message_on_party_change = true;
 		return false;
 	});
 
@@ -495,8 +501,55 @@ void GameSettings::Initialize() {
 #ifdef APRIL_FOOLS
 	AF::ApplyPatchesIfItsTime();
 #endif
-}
 
+}
+void GameSettings::MessageOnPartyChange() {
+	GW::PartyInfo* current_party = GW::PartyMgr::GetPartyInfo();
+	if (!current_party)
+		return; // Party not ready yet.
+	std::vector<wchar_t*> current_party_names;
+	for (size_t i = 0; i < current_party->players.size(); i++) {
+		current_party_names.push_back(GW::Agents::GetPlayerNameByLoginNumber(current_party->players[i].login_number));
+	}
+	bool is_leading = current_party->players[0].login_number == GW::Agents::GetPlayer()->login_number;
+	// If previous party list is empty (i.e. map change), then initialise
+	if (!previous_party_names.size()) {
+		previous_party_names = current_party_names;
+		was_leading = is_leading;
+	}
+	if (current_party_names.size() > previous_party_names.size()) {
+		// Someone joined my party
+		for (size_t i = 0; i < current_party_names.size(); i++) {
+			bool found = false;
+			for (size_t j = 0; j < previous_party_names.size() && !found; j++) {
+				found = previous_party_names[j] == current_party_names[i];
+			}
+			if (!found && notify_when_party_member_joins) {
+				wchar_t buffer[255];
+				_snwprintf(buffer, sizeof(buffer), L"<a=1>%ls</a> joined the party.", current_party_names[i]);
+				GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
+			}
+		}
+	} else if (!was_leading && is_leading && current_party_names.size() == 1 && previous_party_names.size() > 2) {
+		// We left a party of at least 2 other people
+	} else if (current_party_names.size() < previous_party_names.size()) {
+		// Someone left my party
+		for (size_t i = 0; i < previous_party_names.size(); i++) {
+			bool found = false;
+			for (size_t j = 0; j < current_party_names.size() && !found; j++) {
+				found = previous_party_names[i] == current_party_names[j];
+			}
+			if (!found && notify_when_party_member_leaves) {
+				wchar_t buffer[255];
+				_snwprintf(buffer, sizeof(buffer), L"<a=1>%ls</a> left the party.", previous_party_names[i]);
+				GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
+			}
+		}
+	} 
+	was_leading = is_leading;
+	previous_party_names = current_party_names;
+	check_message_on_party_change = false;
+}
 void GameSettings::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini);
 #ifdef ENABLE_BORDERLESS
@@ -534,6 +587,9 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	disable_gold_selling_confirmation = ini->GetBoolValue(Name(), VAR_NAME(disable_gold_selling_confirmation), false);
 	notify_when_friends_online = ini->GetBoolValue(Name(), VAR_NAME(notify_when_friends_online), true);
     notify_when_friends_offline = ini->GetBoolValue(Name(), VAR_NAME(notify_when_friends_offline), false);
+
+	notify_when_party_member_leaves = ini->GetBoolValue(Name(), VAR_NAME(notify_when_party_member_leaves), notify_when_party_member_leaves);
+	notify_when_party_member_joins = ini->GetBoolValue(Name(), VAR_NAME(notify_when_party_member_leaves), notify_when_party_member_joins);
 
 	::LoadChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
 	::LoadChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);
@@ -619,6 +675,9 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(notify_when_friends_online), notify_when_friends_online);
     ini->SetBoolValue(Name(), VAR_NAME(notify_when_friends_offline), notify_when_friends_offline);
 
+	ini->SetBoolValue(Name(), VAR_NAME(notify_when_party_member_leaves), notify_when_party_member_leaves);
+	ini->SetBoolValue(Name(), VAR_NAME(notify_when_party_member_joins), notify_when_party_member_joins);
+
 	::SaveChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
 	::SaveChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);
 	::SaveChannelColor(ini, Name(), "team", GW::Chat::CHANNEL_GROUP);
@@ -703,6 +762,12 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::Checkbox("Logs in", &notify_when_friends_online);
     ImGui::Checkbox("Logs out", &notify_when_friends_offline);
     ImGui::Unindent();
+
+	ImGui::Text("Show a message when a party member:");
+	ImGui::Indent();
+	ImGui::Checkbox("Joins", &notify_when_party_member_joins);
+	ImGui::Checkbox("Leaves", &notify_when_party_member_leaves);
+	ImGui::Unindent();
 
 	ImGui::Checkbox("Allow window restore", &focus_window_on_zoning);
 	ImGui::ShowHelp("When enabled, GWToolbox++ can automatically restore\n"
@@ -860,6 +925,15 @@ void GameSettings::Update(float delta) {
 #ifdef APRIL_FOOLS
 	AF::ApplyPatchesIfItsTime();
 #endif
+	if (notify_when_party_member_joins || notify_when_party_member_leaves) {
+		if (!check_message_on_party_change && !GW::Map::GetIsMapLoaded()) {
+			// Map changed - clear previous party names, flag to re-populate on map load
+			previous_party_names.clear();
+			check_message_on_party_change = true;
+		}
+		if (check_message_on_party_change)
+			GameSettings::MessageOnPartyChange();
+	}
 }
 
 void GameSettings::DrawFOVSetting() {
