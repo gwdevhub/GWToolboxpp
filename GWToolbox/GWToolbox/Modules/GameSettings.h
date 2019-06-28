@@ -5,9 +5,14 @@
 #include <Defines.h>
 
 #include <GWCA\Utilities\MemoryPatcher.h>
+
 #include <GWCA\GameEntities\Item.h>
+#include <GWCA\GameEntities\Party.h>
+#include <GWCA\GameContainers\List.h>
 
 #include <GWCA\Managers\FriendListMgr.h>
+
+
 
 #include <Color.h>
 #include "ToolboxModule.h"
@@ -82,6 +87,9 @@ public:
 	bool notify_when_friends_online = true;
     bool notify_when_friends_offline = false;
 
+	bool notify_when_party_member_leaves = true;
+	bool notify_when_party_member_joins = true;
+
 	bool disable_gold_selling_confirmation = false;
 
 	void ApplyBorderless(bool value);
@@ -91,10 +99,15 @@ public:
 private:
 	void UpdateBorderless();
 	void UpdateFOV();
+	void MessageOnPartyChange();
+
 	std::vector<GW::MemoryPatcher*> patches;
 	GW::MemoryPatcher *ctrl_click_patch;
 	GW::MemoryPatcher *tome_patch;
 	GW::MemoryPatcher *gold_confirm_patch;
+	std::vector<wchar_t*> previous_party_names;
+	bool was_leading = true;
+	bool check_message_on_party_change = true;
 
 	void DrawChannelColor(const char *name, GW::Chat::Channel chan);
 	static void FriendStatusCallback(GW::Friend* f, GW::FriendStatus status, const wchar_t *name, const wchar_t *charname);
