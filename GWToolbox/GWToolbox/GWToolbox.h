@@ -43,7 +43,6 @@ public:
 private:
 	std::vector<ToolboxModule*> modules;
 	std::vector<ToolboxUIElement*> uielements;
-	std::vector<HANDLE> dllhandles;
 
 	utf8::string imgui_inifile;
 	CSimpleIni* inifile = nullptr;

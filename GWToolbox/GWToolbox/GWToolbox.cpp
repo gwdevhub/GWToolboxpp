@@ -334,40 +334,6 @@ void GWToolbox::Initialize() {
     }
     LoadModuleSettings(); // This will only read settings of the core modules (specified above)
 
-                          // Loading all plugin modules.
-
-    std::vector<ToolboxModule*> plugin_modules;
-
-    WIN32_FIND_DATAW find_data;
-    HANDLE find_handle = FindFirstFileW(Resources::GetPath(L"plugins\\*.dll").c_str(), &find_data);
-    if (find_handle != INVALID_HANDLE_VALUE) {
-        do {
-            HMODULE dllmod = LoadLibraryW(Resources::GetPath(L"plugins", find_data.cFileName).c_str());
-            if (!dllmod) {
-                Log::Warning("DLL plugin \"%S\" could not be loaded. LoadLibraryW Err %d", find_data.cFileName, GetLastError());
-                continue;
-            }
-            typedef ToolboxModule* InstanceFn_t();
-            InstanceFn_t* inst = (InstanceFn_t*)GetProcAddress(dllmod, "GWTB_Instance");
-            if (!inst) {
-                Log::Warning("DLL plugin \"%S\" could not be loaded. TB_Instance entry point not defined.", find_data.cFileName);
-                continue;
-            }
-            ToolboxModule* mod = inst();
-            if (!mod) {
-                Log::Warning("DLL plugin \"%S\" could not be loaded. Module does not exist.", find_data.cFileName);
-                continue;
-            }
-            dllhandles.push_back(dllmod);
-            plugin_modules.push_back(mod);
-            Log::LogW(L"DLL plugin \"%s\" loaded successfully.", find_data.cFileName);
-        } while (FindNextFileW(find_handle, &find_data));
-    }
-
-    for (ToolboxModule* plugin : plugin_modules) {
-        plugin->Initialize();
-    }
-
     ToolboxSettings::Instance().InitializeModules(); // initialize all other modules as specified by the user
 
     // Only read settings of non-core modules
