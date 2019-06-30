@@ -351,7 +351,7 @@ void GWToolbox::Initialize() {
     HANDLE find_handle = FindFirstFileW(Resources::GetPath(L"plugins\\*.dll").c_str(), &find_data);
     if (find_handle != INVALID_HANDLE_VALUE) {
         do {
-            HMODULE dllmod = LoadLibraryW(find_data.cFileName);
+            HMODULE dllmod = LoadLibraryW(Resources::GetPath(L"plugins", find_data.cFileName).c_str());
             if (!dllmod) {
                 Log::Warning("DLL plugin \"%S\" could not be loaded. LoadLibraryW Err %d", find_data.cFileName, GetLastError());
                 continue;
@@ -384,6 +384,7 @@ void GWToolbox::Initialize() {
         bool is_core = false;
         for (ToolboxModule* core : core_modules) {
             if (module == core) is_core = true;
+			break;
         }
         if (!is_core) module->LoadSettings(inifile);
     }
