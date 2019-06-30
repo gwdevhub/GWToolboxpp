@@ -62,6 +62,11 @@ private:
 	bool away;
 	bool you_have_been_playing_for;
 	bool player_has_achieved_title;
+	// Error messages on-screen
+	bool invalid_target = true; // Includes other error messages, see ChatFilter.cpp.
+	bool chest_is_being_used = true;
+	bool inventory_is_full = true;
+	bool item_cannot_be_used = true; // Includes other error messages, see ChatFilter.cpp.
 
 	bool messagebycontent;
 

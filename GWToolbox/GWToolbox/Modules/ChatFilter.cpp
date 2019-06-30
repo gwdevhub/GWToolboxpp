@@ -61,13 +61,13 @@ void ChatFilter::Initialize() {
 	});
 
 #ifdef PRINT_CHAT_PACKETS
-	GW::StoC::AddCallback<GW::Packet::StoC::P088>(
+	/*GW::StoC::AddCallback<GW::Packet::StoC::P088>(
 		[](GW::Packet::StoC::P088 *pak) -> bool {
 		printf("P081: agent_id %d, unk1 %d, unk2 ", pak->agent_id, pak->unk1);
 		for (int i = 0; i < 8 && pak->unk2[i]; ++i) printchar(pak->unk2[i]);
 		printf("\n");
 		return false;
-	});
+	});*/
 #endif // PRINT_CHAT_PACKETS
 
 	// global messages
@@ -143,6 +143,10 @@ void ChatFilter::LoadSettings(CSimpleIni* ini) {
 	away = ini->GetBoolValue(Name(), VAR_NAME(away), false);
 	you_have_been_playing_for = ini->GetBoolValue(Name(), VAR_NAME(you_have_been_playing_for), false);
 	player_has_achieved_title = ini->GetBoolValue(Name(), VAR_NAME(player_has_achieved_title), false);
+	invalid_target = ini->GetBoolValue(Name(), VAR_NAME(invalid_target), invalid_target);
+	chest_is_being_used = ini->GetBoolValue(Name(), VAR_NAME(chest_is_being_used), chest_is_being_used);
+	inventory_is_full = ini->GetBoolValue(Name(), VAR_NAME(inventory_is_full), inventory_is_full);
+	item_cannot_be_used = ini->GetBoolValue(Name(), VAR_NAME(item_cannot_be_used), item_cannot_be_used);
 
 	{
 		std::ifstream file;
@@ -193,6 +197,10 @@ void ChatFilter::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(away), away);
 	ini->SetBoolValue(Name(), VAR_NAME(you_have_been_playing_for), you_have_been_playing_for);
 	ini->SetBoolValue(Name(), VAR_NAME(player_has_achieved_title), player_has_achieved_title);
+	ini->SetBoolValue(Name(), VAR_NAME(invalid_target), invalid_target);
+	ini->SetBoolValue(Name(), VAR_NAME(chest_is_being_used), chest_is_being_used);
+	ini->SetBoolValue(Name(), VAR_NAME(inventory_is_full), inventory_is_full);
+	ini->SetBoolValue(Name(), VAR_NAME(item_cannot_be_used), item_cannot_be_used);
 
 	if (timer_parse_filters) {
 		timer_parse_filters = 0;
@@ -291,6 +299,8 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 	switch (message[0]) {
 		// ==== Messages not ignored ====
 	case 0x108: return false; // player message
+	case 0x2AFC: return false; // <agent name> hands you <quantity> <item name>
+	case 0x4C32: return item_cannot_be_used; // Item can only be used in towns or outposts.
 	case 0x76D: return false; // whisper received.
 	case 0x76E: return false; // whisper sended.
 	case 0x777: return false; // I'm level x and x% of the way earning my next skill point	(author is not part of the message)
@@ -308,9 +318,13 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 		// all other emotes, in alphabetical order
 	case 0x7BE: return false; // emote yawn
 	case 0x7BF: return false; // emote yes
+	case 0x7C8: return false; // Quest Reward Accepted: <quest name>
+	case 0x7C9: return false; // Quest Updated: <quest name>
+	case 0x7CB: return false; // You gain (message[5] - 100) experience
 	case 0x7CC:
 		if (FullMatch(&message[1], { 0x962D, 0xFEB5, 0x1D08, 0x10A, 0xAC2, 0x101, 0x164, 0x1 })) return lunars; // you receive 100 gold
 		break;
+	case 0x7CD: return false; // You receive <quantity> <item name>
 	case 0x7E0: return ally_pickup_common; // party shares gold
 	case 0x7ED: return false; // opening the chest reveals x, which your party reserves for y
 	case 0x7DF: return ally_pickup_common; // party shares gold ?
@@ -351,12 +365,16 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 	case 0x87F: return false; // 'Failed to send whisper to player <name>...' (Do not disturb)
 	case 0x880: return false; // 'Player name <name> is invalid.'. (Anyone actually saw it ig ?)
 	case 0x881: return false; // 'Player <name> is not online.' (Offline)
-
+	case 0x89B: return item_cannot_be_used; // Item cannot be used in towns or outposts.
+	case 0x89C: return chest_is_being_used; // Chest is being used.
+	case 0x8AA: return inventory_is_full; // Inventory is full.
+	case 0x8AB: return invalid_target; // Your view of the target is obstructed.
+	case 0x8C2: return invalid_target; // Invalid spell target.
 	case 0x7BF4: return you_have_been_playing_for; // You have been playing for x time.
 	case 0x7BF5: return you_have_been_playing_for; // You have been playinf for x time. Please take a break.
-
 	case 0x8101:
 		switch (message[1]) {
+		case 0x14B1: return false; // Captain Rujiyo urgently requests the help... (dragon festival)
 			// nine rings
 		case 0x1867: // stay where you are, nine rings is about to begin
 		case 0x1868: // teilah takes 10 festival tickets
@@ -374,9 +392,15 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 			return ninerings;
         case 0x39CD: // you have a special item available: <special item reward>
             return ninerings;
+		case 0x3E3: // Spell failed. Spirits are not affected by this spell.
+			return invalid_target;
+		case 0x679C:	// You cannot use a <profession> tome because you are not a <profession> (Elite == message[5] == 0x6725)
+			return false;
 		case 0x7B91:	// x minutes of favor of the gods remaining. Note: full message is 0x8101 0x7B91 0xC686 0xE490 0x6922 0x101 0x100+value
 		case 0x7B92:	// x more achievements must be performed to earn the favor of the gods. // 0x8101 0x7B92 0x8B0A 0x8DB5 0x5135 0x101 0x100+value
 			return favor;
+		case 0x7C3E:	// This item cannot be used here.
+			return item_cannot_be_used;
 		}
 		if (FullMatch(&message[1], { 0x6649, 0xA2F9, 0xBBFA, 0x3C27 })) return lunars; // you will celebrate a festive new year (rocket or popper)
 		if (FullMatch(&message[1], { 0x664B, 0xDBAB, 0x9F4C, 0x6742 })) return lunars; // something special is in your future! (lucky aura)
@@ -396,12 +420,19 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 		case 0x23E4: return favor; // 0xF8AA 0x95CD 0x2766 // the world no longer has the favor of the gods
 		case 0x23E5: return player_has_achieved_title;
 		case 0x23E6: return player_has_achieved_title;
+		case 0x29F1: return item_cannot_be_used; // Cannot use this item when no party members are dead.
 		case 0x2E35: return player_has_achieved_title; // Player has achieved the title...
 		case 0x2E36: return player_has_achieved_title; // Player has achieved the title...
 		case 0x3772: return false; // I'm under the effect of x
+		case 0x3DCA: return false; // This item can only be used in a guild hall
+		case 0x4685: return item_cannot_be_used; // You have already used a summoning stone within the last 10 minutes.
 		}
 		break;
-
+	case 0x8103:
+		switch (message[1]) {
+		case 0x9CD: return item_cannot_be_used; // You must wait before using another tonic.
+		}
+	case 0xADD:	return item_cannot_be_used; // That item has no uses remaining
 	//default:
 	//	for (size_t i = 0; pak->message[i] != 0; ++i) printf(" 0x%X", pak->message[i]);
 	//	printf("\n");
@@ -487,6 +518,25 @@ void ChatFilter::DrawSettingInternal() {
 	ImGui::Checkbox("Favor of the Gods announcements", &favor);
 	ImGui::Checkbox("'You have been playing for...'", &you_have_been_playing_for);
 	ImGui::Checkbox("'Player x has achieved title...'", &player_has_achieved_title);
+
+	ImGui::Separator();
+	ImGui::Text("Warnings");
+	ImGui::Checkbox("Unable to use item", &item_cannot_be_used);
+	ImGui::ShowHelp("Includes:\n\
+'Item can only be used in towns or outposts.'\n\
+'Item cannot be used in towns or outposts.'\n\
+'This item cannot be used here.'\n\
+'Cannot use this item when no party members are dead.'\n\
+'You have already used a summoning stone within the last 10 minutes.'\n\
+'That item has no uses remaining.'\n\
+'You must wait before using another tonic.'");
+	ImGui::Checkbox("Invalid target", &invalid_target);
+	ImGui::ShowHelp("Includes:\n\
+'Invalid spell target.'\n\
+'Spell failed. Spirits are not affected by this spell.'\n\
+'Your view of the target is obstructed.'");
+	ImGui::Checkbox("'Inventory is full'", &inventory_is_full);
+	ImGui::Checkbox("'Chest is being used'", &chest_is_being_used);
 
 	ImGui::Separator();
 	ImGui::Text("Others");
