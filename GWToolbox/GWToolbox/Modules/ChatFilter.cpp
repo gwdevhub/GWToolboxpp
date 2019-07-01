@@ -558,7 +558,7 @@ void ChatFilter::DrawSettingInternal() {
 'The chest is locked. You must use a lockpick to open it.'\n\
 'The chest is locked. You must have the correct key or a lockpick.'\n\
 'The chest is empty.'");
-    ImGui::Checkbox("Opening chests", &item_already_identified);
+    ImGui::Checkbox("Item already identified", &item_already_identified);
 
 	ImGui::Separator();
 	ImGui::Text("Others");
