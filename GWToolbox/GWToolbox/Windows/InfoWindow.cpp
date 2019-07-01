@@ -266,7 +266,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::InputText("Last Dialog", id_buf, 32, ImGuiInputTextFlags_ReadOnly);
 			ImGui::PopItemWidth();
 		}
-		if (show_item && ImGui::CollapsingHeader("Items")) {
+		if (show_item && ImGui::CollapsingHeader("Item")) {
 			ImGui::Text("First item in inventory");
 			static char modelid[32] = "";
 			strcpy_s(modelid, "-");
@@ -341,7 +341,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::Text("%d foes in spirit range", spirit_count);
 			ImGui::Text("%d foes in compass range", compass_count);
 		}
-		if (show_resignlog && ImGui::CollapsingHeader("Resign log")) {
+		if (show_resignlog && ImGui::CollapsingHeader("Resign Log")) {
 			DrawResignlog();
 		}
 	}
@@ -425,15 +425,15 @@ void InfoWindow::DrawResignlog() {
 
 void InfoWindow::DrawSettingInternal() {
 	ImGui::Checkbox("Show widget toggles", &show_widgets);
-	ImGui::Checkbox("Show 'open xunlai chest' button", &show_open_chest);
+	ImGui::Checkbox("Show 'Open Xunlai Chest' button", &show_open_chest);
 	ImGui::Checkbox("Show Player", &show_player);
-	ImGui::Checkbox("Show target", &show_target);
-	ImGui::Checkbox("Show map", &show_map);
-	ImGui::Checkbox("Show dialog", &show_dialog);
-	ImGui::Checkbox("Show item", &show_item);
+	ImGui::Checkbox("Show Target", &show_target);
+	ImGui::Checkbox("Show Map", &show_map);
+	ImGui::Checkbox("Show Dialog", &show_dialog);
+	ImGui::Checkbox("Show Item", &show_item);
 	ImGui::Checkbox("Show Quest", &show_quest);
-	ImGui::Checkbox("Show enemy count", &show_mobcount);
-	ImGui::Checkbox("Show resign log", &show_resignlog);
+	ImGui::Checkbox("Show Enemy Count", &show_mobcount);
+	ImGui::Checkbox("Show Resign Log", &show_resignlog);
 }
 
 void InfoWindow::LoadSettings(CSimpleIni* ini) {
