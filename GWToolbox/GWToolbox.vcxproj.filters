@@ -288,6 +288,7 @@
     <ClInclude Include="..\Dependencies\utf8proc\utf8proc.h">
       <Filter>utf8proc</Filter>
     </ClInclude>
+    <ClInclude Include="GWToolbox\Windows\FactionLeaderboardWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -439,6 +440,7 @@
     <ClCompile Include="..\Dependencies\imgui\imgui_widgets.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
+    <ClCompile Include="GWToolbox\Windows\FactionLeaderboardWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GWToolbox.rc">

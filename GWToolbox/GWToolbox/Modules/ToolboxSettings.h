@@ -57,4 +57,5 @@ private:
 	bool use_vanquish = true;
 	bool use_alcohol = true;
 	bool use_objectivetimer = true;
+	bool use_factionleaderboard = true;
 };

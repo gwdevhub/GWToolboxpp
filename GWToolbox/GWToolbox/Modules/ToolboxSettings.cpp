@@ -31,6 +31,7 @@
 #include <Windows\NotePadWindow.h>
 #include <Windows\TradeWindow.h>
 #include <Windows\ObjectiveTimerWindow.h>
+#include <Windows\FactionLeaderboardWindow.h>
 
 #include <Widgets\TimerWidget.h>
 #include <Widgets\HealthWidget.h>
@@ -61,6 +62,7 @@ void ToolboxSettings::InitializeModules() {
 	if (use_trade) TradeWindow::Instance().Initialize();
 	if (use_notepad) NotePadWindow::Instance().Initialize();
 	if (use_objectivetimer) ObjectiveTimerWindow::Instance().Initialize();
+	if (use_factionleaderboard) FactionLeaderboardWindow::Instance().Initialize();
 
 	SettingsWindow::Instance().Initialize();
 
@@ -167,7 +169,9 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
 	use_vanquish = ini->GetBoolValue(Name(), VAR_NAME(use_vanquish), true);
 	use_alcohol = ini->GetBoolValue(Name(), VAR_NAME(use_alcohol), true);
 	use_trade = ini->GetBoolValue(Name(), VAR_NAME(use_trade), true);
-    use_objectivetimer = ini->GetBoolValue(Name(), VAR_NAME(use_instancetimer), true);
+    use_objectivetimer = ini->GetBoolValue(Name(), VAR_NAME(use_objectivetimer), true);
+	use_factionleaderboard = ini->GetBoolValue(Name(), VAR_NAME(use_factionleaderboard), use_factionleaderboard);
+
 	save_location_data = ini->GetBoolValue(Name(), VAR_NAME(save_location_data), false);
 }
 
@@ -194,6 +198,8 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(use_alcohol), use_alcohol);
 	ini->SetBoolValue(Name(), VAR_NAME(use_trade), use_trade);
 	ini->SetBoolValue(Name(), VAR_NAME(use_objectivetimer), use_objectivetimer);
+	ini->SetBoolValue(Name(), VAR_NAME(use_factionleaderboard), use_factionleaderboard);
+
 	ini->SetBoolValue(Name(), VAR_NAME(save_location_data), save_location_data);
 }
 
