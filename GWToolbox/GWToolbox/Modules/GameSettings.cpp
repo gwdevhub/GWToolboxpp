@@ -495,8 +495,18 @@ void GameSettings::Initialize() {
 		GW::Agents::AsyncGetAgentName(agent, speech_bubble_sender);
 		return false; // Consume.
 	});
-	
+
 	GW::FriendListMgr::SetOnFriendStatusCallback(GameSettings::FriendStatusCallback);
+#ifdef _DEBUG
+	for (size_t i = GW::Packet::StoC::ManipulateMapObject::STATIC_HEADER; i < GW::Packet::StoC::ManipulateMapObject::STATIC_HEADER + 0x20; i++) {
+		GW::StoC::AddCallback(i, [](GW::Packet::StoC::PacketBase *pak) -> bool {
+			Log::Log("[Packet] %08X\n", pak->header);
+			return false;
+		});
+	}
+#endif
+
+	
 
 #ifdef APRIL_FOOLS
 	AF::ApplyPatchesIfItsTime();
