@@ -64,9 +64,11 @@ private:
 	bool player_has_achieved_title;
 	// Error messages on-screen
 	bool invalid_target = true; // Includes other error messages, see ChatFilter.cpp.
-	bool chest_is_being_used = true;
-	bool inventory_is_full = true;
+	bool opening_chest_messages = true;
+	bool inventory_is_full = false;
 	bool item_cannot_be_used = true; // Includes other error messages, see ChatFilter.cpp.
+	bool not_enough_energy = true; // Includes other error messages, see ChatFilter.cpp.
+    bool item_already_identified = false;
 
 	bool messagebycontent;
 

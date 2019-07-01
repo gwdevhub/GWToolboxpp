@@ -144,9 +144,10 @@ void ChatFilter::LoadSettings(CSimpleIni* ini) {
 	you_have_been_playing_for = ini->GetBoolValue(Name(), VAR_NAME(you_have_been_playing_for), false);
 	player_has_achieved_title = ini->GetBoolValue(Name(), VAR_NAME(player_has_achieved_title), false);
 	invalid_target = ini->GetBoolValue(Name(), VAR_NAME(invalid_target), invalid_target);
-	chest_is_being_used = ini->GetBoolValue(Name(), VAR_NAME(chest_is_being_used), chest_is_being_used);
+    opening_chest_messages = ini->GetBoolValue(Name(), VAR_NAME(opening_chest_messages), opening_chest_messages);
 	inventory_is_full = ini->GetBoolValue(Name(), VAR_NAME(inventory_is_full), inventory_is_full);
 	item_cannot_be_used = ini->GetBoolValue(Name(), VAR_NAME(item_cannot_be_used), item_cannot_be_used);
+    item_already_identified = ini->GetBoolValue(Name(), VAR_NAME(item_already_identified), item_already_identified);
 
 	{
 		std::ifstream file;
@@ -198,9 +199,11 @@ void ChatFilter::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(you_have_been_playing_for), you_have_been_playing_for);
 	ini->SetBoolValue(Name(), VAR_NAME(player_has_achieved_title), player_has_achieved_title);
 	ini->SetBoolValue(Name(), VAR_NAME(invalid_target), invalid_target);
-	ini->SetBoolValue(Name(), VAR_NAME(chest_is_being_used), chest_is_being_used);
+	ini->SetBoolValue(Name(), VAR_NAME(opening_chest_messages), opening_chest_messages);
 	ini->SetBoolValue(Name(), VAR_NAME(inventory_is_full), inventory_is_full);
 	ini->SetBoolValue(Name(), VAR_NAME(item_cannot_be_used), item_cannot_be_used);
+    ini->SetBoolValue(Name(), VAR_NAME(item_already_identified), item_already_identified);
+    
 
 	if (timer_parse_filters) {
 		timer_parse_filters = 0;
@@ -365,16 +368,26 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 	case 0x87F: return false; // 'Failed to send whisper to player <name>...' (Do not disturb)
 	case 0x880: return false; // 'Player name <name> is invalid.'. (Anyone actually saw it ig ?)
 	case 0x881: return false; // 'Player <name> is not online.' (Offline)
+	case 0x88E: return invalid_target; // Invalid attack target.
 	case 0x89B: return item_cannot_be_used; // Item cannot be used in towns or outposts.
-	case 0x89C: return chest_is_being_used; // Chest is being used.
+	case 0x89C: return opening_chest_messages; // Chest is being used.
+    case 0x89D: return opening_chest_messages; // The chest is empty.
+    case 0x89E: return opening_chest_messages; // The chest is locked. You must have the correct key or a lockpick.
+	case 0x8A5: return invalid_target; // Target is immune to bleeding (no flesh.)
+	case 0x8A6: return invalid_target; // Target is immune to disease (no flesh.)
+	case 0x8A7: return invalid_target; // Target is immune to poison (no flesh.)
+	case 0x8A8: return not_enough_energy; // Not enough adrenaline
+	case 0x8A9: return not_enough_energy; // Not enough energy.
 	case 0x8AA: return inventory_is_full; // Inventory is full.
 	case 0x8AB: return invalid_target; // Your view of the target is obstructed.
+	case 0x8C1: return invalid_target; // That skill requires a different weapon type.
 	case 0x8C2: return invalid_target; // Invalid spell target.
+	case 0x8C3: return invalid_target; // Target is out of range.
+    case 0xAD7: return false; // You salvaged <number> <item name(s)> from the <item name>
 	case 0x7BF4: return you_have_been_playing_for; // You have been playing for x time.
 	case 0x7BF5: return you_have_been_playing_for; // You have been playinf for x time. Please take a break.
 	case 0x8101:
 		switch (message[1]) {
-		case 0x14B1: return false; // Captain Rujiyo urgently requests the help... (dragon festival)
 			// nine rings
 		case 0x1867: // stay where you are, nine rings is about to begin
 		case 0x1868: // teilah takes 10 festival tickets
@@ -394,8 +407,8 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
             return ninerings;
 		case 0x3E3: // Spell failed. Spirits are not affected by this spell.
 			return invalid_target;
-		case 0x679C:	// You cannot use a <profession> tome because you are not a <profession> (Elite == message[5] == 0x6725)
-			return false;
+		case 0x679C: return false;	// You cannot use a <profession> tome because you are not a <profession> (Elite == message[5] == 0x6725)
+        case 0x72EB: return opening_chest_messages;   // The chest is locked. You must use a lockpick to open it.
 		case 0x7B91:	// x minutes of favor of the gods remaining. Note: full message is 0x8101 0x7B91 0xC686 0xE490 0x6922 0x101 0x100+value
 		case 0x7B92:	// x more achievements must be performed to earn the favor of the gods. // 0x8101 0x7B92 0x8B0A 0x8DB5 0x5135 0x101 0x100+value
 			return favor;
@@ -424,7 +437,8 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 		case 0x2E35: return player_has_achieved_title; // Player has achieved the title...
 		case 0x2E36: return player_has_achieved_title; // Player has achieved the title...
 		case 0x3772: return false; // I'm under the effect of x
-		case 0x3DCA: return false; // This item can only be used in a guild hall
+		case 0x3DCA: return item_cannot_be_used; // This item can only be used in a guild hall
+		case 0x4684: return item_cannot_be_used; // There is already an ally from a summoning stone present in this instance.
 		case 0x4685: return item_cannot_be_used; // You have already used a summoning stone within the last 10 minutes.
 		}
 		break;
@@ -432,6 +446,7 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 		switch (message[1]) {
 		case 0x9CD: return item_cannot_be_used; // You must wait before using another tonic.
 		}
+    case 0xAD2: return item_already_identified; // That item is already identified
 	case 0xADD:	return item_cannot_be_used; // That item has no uses remaining
 	//default:
 	//	for (size_t i = 0; pak->message[i] != 0; ++i) printf(" 0x%X", pak->message[i]);
@@ -522,21 +537,28 @@ void ChatFilter::DrawSettingInternal() {
 	ImGui::Separator();
 	ImGui::Text("Warnings");
 	ImGui::Checkbox("Unable to use item", &item_cannot_be_used);
-	ImGui::ShowHelp("Includes:\n\
-'Item can only be used in towns or outposts.'\n\
-'Item cannot be used in towns or outposts.'\n\
+	ImGui::ShowHelp("'Item can only/cannot be used in towns or outposts.'\n\
 'This item cannot be used here.'\n\
 'Cannot use this item when no party members are dead.'\n\
+'There is already an ally from a summoning stone present in this instance.'\n\
 'You have already used a summoning stone within the last 10 minutes.'\n\
 'That item has no uses remaining.'\n\
-'You must wait before using another tonic.'");
+'You must wait before using another tonic.'\n\
+'This item can only be used in a guild hall'");
 	ImGui::Checkbox("Invalid target", &invalid_target);
-	ImGui::ShowHelp("Includes:\n\
-'Invalid spell target.'\n\
+	ImGui::ShowHelp("'Invalid spell/attack target.'\n\
 'Spell failed. Spirits are not affected by this spell.'\n\
-'Your view of the target is obstructed.'");
+'Your view of the target is obstructed.'\n\
+'That skill requires a different weapon type.'\n\
+'Target is out of range.'\n\
+'Target is immune to bleeding/disease/poison (no flesh.)'");
 	ImGui::Checkbox("'Inventory is full'", &inventory_is_full);
-	ImGui::Checkbox("'Chest is being used'", &chest_is_being_used);
+	ImGui::Checkbox("Opening chests", &opening_chest_messages);
+    ImGui::ShowHelp("'Chest is being used'\n\
+'The chest is locked. You must use a lockpick to open it.'\n\
+'The chest is locked. You must have the correct key or a lockpick.'\n\
+'The chest is empty.'");
+    ImGui::Checkbox("Opening chests", &item_already_identified);
 
 	ImGui::Separator();
 	ImGui::Text("Others");
