@@ -1,9 +1,7 @@
 #pragma once
 
-#include <GWCA\Managers\MerchantMgr.h>
-
-#include <deque>
-#include <vector>
+#include <GWCA/GameEntities/Item.h>
+#include <GWCA/Managers/MerchantMgr.h>
 
 #include "ToolboxWindow.h"
 

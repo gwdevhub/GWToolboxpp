@@ -1,5 +1,5 @@
-#include <TbWindows.h>
-#include <ShellApi.h>
+#include "stdafx.h"
+#include "SettingsWindow.h"
 
 #include "Defines.h"
 #include "GuiUtils.h" 
@@ -9,7 +9,7 @@
 #include <Modules\GameSettings.h>
 #include <Modules\Updater.h>
 #include <Modules\Resources.h>
-#include "SettingsWindow.h"
+
 
 void SettingsWindow::Initialize() {
 	ToolboxWindow::Initialize();

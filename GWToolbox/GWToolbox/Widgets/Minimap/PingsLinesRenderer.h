@@ -1,11 +1,9 @@
 #pragma once
 
-#include <deque>
-#include <vector>
-#include <map>
-
-#include <GWCA\Managers\StoCMgr.h>
-#include <GWCA\Managers\UIMgr.h>
+#include <GWCA/Packets/StoC.h>
+#include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/UIMgr.h>
+#include <GWCA/GameContainers/GamePos.h>
 
 #include "VBuffer.h"
 #include "Timer.h"

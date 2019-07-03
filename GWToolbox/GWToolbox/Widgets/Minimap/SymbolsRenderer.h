@@ -1,8 +1,6 @@
 #pragma once
 
-#include <vector>
-
-#include <GWCA\GameContainers\GamePos.h>
+#include <GWCA/GameContainers/GamePos.h>
 
 #include "VBuffer.h"
 #include "Color.h"

@@ -1,19 +1,18 @@
-#include <stdint.h>
-
-#include <vector>
+#include "stdafx.h"
+#include "PmapRenderer.h"
 
 #include <d3dx9math.h>
 #include <d3d9.h>
 
-#include <GWCA\GameContainers\Array.h>
+#include <GWCA/GameContainers/Array.h>
 
-#include <GWCA\GameEntities\Pathing.h>
+#include <GWCA/GameEntities/Pathing.h>
 
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\CameraMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/CameraMgr.h>
 
 #include "D3DVertex.h"
-#include "PmapRenderer.h"
+
 
 void PmapRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	color_map = Colors::Load(ini, section, "color_map", 0xFF999999);

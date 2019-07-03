@@ -1,48 +1,39 @@
-#include <stdint.h>
-
-#include <string>
-#include <functional>
-
-#include "TbWindows.h"
-#include <windowsx.h>
+#include "stdafx.h"
+#include "GWToolbox.h"
 
 #include <imgui.h>
 #include <imgui_impl_dx9.h>
 
-#include <GWCA\Utilities\Hooker.h>
+#include <GWCA/Utilities/Hooker.h>
+#include <GWCA/GameContainers/Array.h>
+#include <GWCA/GameContainers/GamePos.h>
+#include <GWCA/GameEntities/Party.h>
 
-#include <GWCA\GameContainers\Array.h>
-#include <GWCA\GameContainers\GamePos.h>
+#include <GWCA/GWCA.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/MemoryMgr.h>
+#include <GWCA/Managers/RenderMgr.h>
 
-#include <GWCA\GameEntities\Party.h>
-
-#include <GWCA\GWCA.h>
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\Managers\StoCMgr.h>
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\MemoryMgr.h>
-#include <GWCA\Managers\RenderMgr.h>
-
-#include "logger.h"
-#include "Defines.h"
-#include "GWToolbox.h"
-#include "CursorFix.h"
-
-#include <Modules\Resources.h>
-#include <Modules\ChatCommands.h>
-#include <Modules\ChatFilter.h>
-#include <Modules\GameSettings.h>
-#include <Modules\ToolboxSettings.h>
-#include <Modules\ToolboxTheme.h>
+#include <Modules/Resources.h>
+#include <Modules/ChatCommands.h>
+#include <Modules/ChatFilter.h>
+#include <Modules/GameSettings.h>
+#include <Modules/ToolboxSettings.h>
+#include <Modules/ToolboxTheme.h>
 #ifdef ENABLE_LUA
-#  include <Modules\LUAInterface.h>
+#  include <Modules/LUAInterface.h>
 #endif
-#include <Modules\Updater.h>
+#include <Modules/Updater.h>
 
-#include <Widgets\Minimap\Minimap.h>
+#include <Widgets/Minimap/Minimap.h>
 
 #include "GuiUtils.h"
+#include "logger.h"
+#include "Defines.h"
+#include "CursorFix.h"
 
 namespace {
     HMODULE dllmodule = 0;

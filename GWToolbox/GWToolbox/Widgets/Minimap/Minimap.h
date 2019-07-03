@@ -1,5 +1,7 @@
 #pragma once
 
+#include <GWCA/GameEntities/Party.h>
+
 #include <Defines.h>
 #include "ToolboxWidget.h"
 #include "VBuffer.h"

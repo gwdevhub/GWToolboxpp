@@ -1,53 +1,46 @@
-#include <ctype.h>
-#include <stdint.h>
-
-#include <algorithm>
-#include <functional>
-
-#include <TbWindows.h>
-#include <ShellApi.h>
+#include "stdafx.h"
+#include "ChatCommands.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
 
-#include <GWCA\Constants\Constants.h>
+#include <GWCA/Constants/Constants.h>
 
-#include <GWCA\GameContainers\Array.h>
-#include <GWCA\GameContainers\GamePos.h>
+#include <GWCA/GameContainers/Array.h>
+#include <GWCA/GameContainers/GamePos.h>
 
-#include <GWCA\GameEntities\NPC.h>
-#include <GWCA\GameEntities\Agent.h>
-#include <GWCA\GameEntities\Guild.h>
-#include <GWCA\GameEntities\Skill.h>
-#include <GWCA\GameEntities\Player.h>
+#include <GWCA/GameEntities/NPC.h>
+#include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Guild.h>
+#include <GWCA/GameEntities/Skill.h>
+#include <GWCA/GameEntities/Player.h>
 
-#include <GWCA\Context\GameContext.h>
-#include <GWCA\Context\WorldContext.h>
+#include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/WorldContext.h>
 
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\Managers\ItemMgr.h>
-#include <GWCA\Managers\StoCMgr.h>
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\GuildMgr.h>
-#include <GWCA\Managers\CameraMgr.h>
-#include <GWCA\Managers\MemoryMgr.h>
-#include <GWCA\Managers\PlayerMgr.h>
-#include <GWCA\Managers\SkillbarMgr.h>
-#include <GWCA\Managers\FriendListMgr.h>
-#include <GWCA\Managers\GameThreadMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/ItemMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/GuildMgr.h>
+#include <GWCA/Managers/CameraMgr.h>
+#include <GWCA/Managers/MemoryMgr.h>
+#include <GWCA/Managers/PlayerMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
+#include <GWCA/Managers/FriendListMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 
 #include <GuiUtils.h>
 #include "GWToolbox.h"
 #include <Keys.h>
 #include <logger.h>
-#include <Modules\GameSettings.h>
-#include <Windows\MainWindow.h>
-#include <Windows\SettingsWindow.h>
-#include <Windows\TravelWindow.h>
-#include <Windows\BuildsWindow.h>
-#include <Widgets\PartyDamage.h>
-#include "ChatCommands.h"
+#include <Modules/GameSettings.h>
+#include <Windows/MainWindow.h>
+#include <Windows/SettingsWindow.h>
+#include <Windows/TravelWindow.h>
+#include <Windows/BuildsWindow.h>
+#include <Widgets/PartyDamage.h>
 
 namespace {
 	const wchar_t *next_word(const wchar_t *str) {

@@ -1,12 +1,6 @@
 #pragma once
 
-#include <string>
-#include <vector>
-#include <functional>
-#include <Windows.h>
-#include <time.h>
-
-#include <GWCA\Constants\Constants.h>
+#include <GWCA/Constants/Constants.h>
 
 #include <ToolboxModule.h>
 #include <ToolboxUIElement.h>

@@ -1,22 +1,19 @@
-#include <time.h>
-#include <stdint.h>
-
-#include <functional>
-
-#include <lua\lua.hpp>
-#include <lua\lstate.h>
-
-#include <GWCA\Constants\Constants.h>
-#include <GWCA\GameContainers\GamePos.h>
-
-#include <GWCA\GameEntities\Agent.h>
-
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\SkillbarMgr.h>
-
+#include "stdafx.h"
 #include "LUAInterface.h"
+
+#include <lua/lua.hpp>
+#include <lua/lstate.h>
+
+#include <GWCA/Constants/Constants.h>
+#include <GWCA/GameContainers/GamePos.h>
+
+#include <GWCA/GameEntities/Agent.h>
+
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
+
 /*
  - Execute(const char *str);
    - pushstring

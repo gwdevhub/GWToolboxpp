@@ -1,15 +1,14 @@
-#include <stdint.h>
+#include "stdafx.h"
+#include "DistanceWidget.h"
 
-#include <string>
-
-#include <GWCA\Constants\Constants.h>
-#include <GWCA\GameContainers\GamePos.h>
-#include <GWCA\GameEntities\Agent.h>
-#include <GWCA\Managers\AgentMgr.h>
+#include <GWCA/Constants/Constants.h>
+#include <GWCA/GameContainers/GamePos.h>
+#include <GWCA/GameEntities/Agent.h>
+#include <GWCA/Managers/AgentMgr.h>
 
 #include "GuiUtils.h"
-#include "Modules\ToolboxSettings.h"
-#include "DistanceWidget.h"
+#include "Modules/ToolboxSettings.h"
+
 
 void DistanceWidget::Draw(IDirect3DDevice9* pDevice) {
 	if (!visible) return;

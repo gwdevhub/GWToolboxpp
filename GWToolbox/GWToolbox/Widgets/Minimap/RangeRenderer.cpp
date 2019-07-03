@@ -1,24 +1,23 @@
-#include <stdint.h>
-
-#include <string>
+#include "stdafx.h"
+#include "RangeRenderer.h"
 
 #include <d3dx9math.h>
 #include <imgui.h>
 
-#include <GWCA\Constants\Constants.h>
-#include <GWCA\GameContainers\Array.h>
-#include <GWCA\GameContainers\GamePos.h>
+#include <GWCA/Constants/Constants.h>
+#include <GWCA/GameContainers/Array.h>
+#include <GWCA/GameContainers/GamePos.h>
 
-#include <GWCA\GameEntities\Agent.h>
-#include <GWCA\GameEntities\Skill.h>
+#include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Skill.h>
 
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\CameraMgr.h>
-#include <GWCA\Managers\SkillbarMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/CameraMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
 
 #include "GuiUtils.h"
-#include "RangeRenderer.h"
+
 
 void RangeRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	color_range_hos = Colors::Load(ini, section, "color_range_hos", 0xFF881188);

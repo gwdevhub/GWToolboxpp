@@ -1,10 +1,6 @@
 #pragma once
 
-#include <memory>
-#include <vector>
-#include <unordered_map>
-
-#include <GWCA\GameEntities\Agent.h>
+#include <GWCA/GameEntities/Agent.h>
 #include <SimpleIni.h>
 
 #include "Color.h"

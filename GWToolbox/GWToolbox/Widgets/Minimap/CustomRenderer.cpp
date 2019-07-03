@@ -1,20 +1,20 @@
+#include "stdafx.h"
+#include "CustomRenderer.h"
+
 #include <d3dx9math.h>
 
-#include <string>
+#include <GWCA/Constants/Constants.h>
+#include <GWCA/GameContainers/Array.h>
+#include <GWCA/GameContainers/GamePos.h>
 
-#include <GWCA\Constants\Constants.h>
-#include <GWCA\GameContainers\Array.h>
-#include <GWCA\GameContainers\GamePos.h>
+#include <GWCA/GameEntities/Hero.h>
 
-#include <GWCA\GameEntities\Hero.h>
+#include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/WorldContext.h>
 
-#include <GWCA\Context\GameContext.h>
-#include <GWCA\Context\WorldContext.h>
+#include <GWCA/Managers/MapMgr.h>
 
-#include <GWCA\Managers\MapMgr.h>
-
-#include <Modules\Resources.h>
-#include "CustomRenderer.h"
+#include <Modules/Resources.h>
 
 Color CustomRenderer::color = 0xFF00FFFF;
 

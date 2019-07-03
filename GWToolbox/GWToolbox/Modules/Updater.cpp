@@ -1,4 +1,5 @@
-#include <json.hpp>
+#include "stdafx.h"
+#include "Updater.h"
 
 #include <GWCA/Managers/GameThreadMgr.h>
 
@@ -6,8 +7,7 @@
 #include <Defines.h>
 #include <logger.h>
 #include <GuiUtils.h>
-#include <Modules\Resources.h>
-#include "Updater.h"
+#include <Modules/Resources.h>
 
 void Updater::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini);

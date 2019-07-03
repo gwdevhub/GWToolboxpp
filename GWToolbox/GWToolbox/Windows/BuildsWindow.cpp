@@ -1,7 +1,5 @@
-#include <stdint.h>
-
-#include <string>
-#include <functional>
+#include "stdafx.h"
+#include "BuildsWindow.h"
 
 #include <GWCA\Constants\Constants.h>
 
@@ -14,7 +12,7 @@
 
 #include "GuiUtils.h"
 #include <Modules\Resources.h>
-#include "BuildsWindow.h"
+
 
 unsigned int BuildsWindow::TeamBuild::cur_ui_id = 0;
 

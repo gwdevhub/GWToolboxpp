@@ -1,7 +1,5 @@
 #pragma once
 
-#include <string>
-
 #include "ToolboxUIElement.h"
 
 class Updater : public ToolboxUIElement {

@@ -1,12 +1,6 @@
-#include <stdint.h>
+#include "stdafx.h"
+#include "TradeWindow.h"
 
-#include <list>
-#include <string>
-#include <fstream>
-#include <functional>
-
-#include <TbWindows.h>
-#include <ShellApi.h>
 #include <WinSock2.h>
 
 #include <imgui.h>
@@ -25,7 +19,6 @@
 #include "logger.h"
 #include "GuiUtils.h"
 #include "GWToolbox.h"
-#include "TradeWindow.h"
 
 using easywsclient::WebSocket;
 using nlohmann::json;

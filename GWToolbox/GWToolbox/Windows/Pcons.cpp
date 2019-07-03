@@ -1,7 +1,5 @@
-#include <stdint.h>
-
-#include <string>
-#include <functional>
+#include "stdafx.h"
+#include "Pcons.h"
 
 #include <d3dx9tex.h>
 
@@ -21,7 +19,7 @@
 #include <logger.h>
 #include "GuiUtils.h"
 #include <Modules\Resources.h>
-#include "Pcons.h"
+
 
 using namespace GW::Constants;
 

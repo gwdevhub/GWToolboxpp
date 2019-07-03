@@ -1,13 +1,12 @@
 #pragma once
 
-#include <vector>
 #include <Timer.h>
 #include <Defines.h>
 
-#include <GWCA\Utilities\MemoryPatcher.h>
-#include <GWCA\GameEntities\Item.h>
+#include <GWCA/Utilities/MemoryPatcher.h>
+#include <GWCA/GameEntities/Item.h>
 
-#include <GWCA\Managers\FriendListMgr.h>
+#include <GWCA/Managers/FriendListMgr.h>
 
 #include <Color.h>
 #include "ToolboxModule.h"

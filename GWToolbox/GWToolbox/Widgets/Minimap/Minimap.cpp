@@ -1,9 +1,5 @@
-#include <stdint.h>
-
-#include <thread>
-
-#include <TbWindows.h>
-#include <windowsx.h>
+#include "stdafx.h"
+#include "Minimap.h"
 
 #include <d3d9.h>
 #include <d3dx9math.h>
@@ -12,30 +8,30 @@
 #include <imgui_internal.h>
 #include <ImGuiAddons.h>
 
-#include <GWCA\Constants\Constants.h>
+#include <GWCA/Constants/Constants.h>
 
-#include <GWCA\GameContainers\Array.h>
-#include <GWCA\GameContainers\GamePos.h>
-#include <GWCA\Packets\StoC.h>
+#include <GWCA/GameContainers/Array.h>
+#include <GWCA/GameContainers/GamePos.h>
+#include <GWCA/Packets/StoC.h>
 
-#include <GWCA\GameEntities\Hero.h>
-#include <GWCA\GameEntities\Party.h>
+#include <GWCA/GameEntities/Hero.h>
+#include <GWCA/GameEntities/Party.h>
 
-#include <GWCA\Context\GameContext.h>
-#include <GWCA\Context\PartyContext.h>
-#include <GWCA\Context\WorldContext.h>
+#include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/PartyContext.h>
+#include <GWCA/Context/WorldContext.h>
 
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\Managers\StoCMgr.h>
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\PartyMgr.h>
-#include <GWCA\Managers\CameraMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Managers/CameraMgr.h>
 
 #include <GuiUtils.h>
 #include "logger.h"
-#include "Modules\ToolboxSettings.h"
-#include "Minimap.h"
+#include "Modules/ToolboxSettings.h"
+
 
 void Minimap::Initialize() {
 	ToolboxWidget::Initialize();

@@ -1,21 +1,19 @@
-#include <stdint.h>
+#include "stdafx.h"
+#include "AgentRenderer.h"
 
-#include <string>
+#include <GWCA/Constants/Constants.h>
+#include <GWCA/GameContainers/Array.h>
+#include <GWCA/GameContainers/GamePos.h>
 
-#include <GWCA\Constants\Constants.h>
-#include <GWCA\GameContainers\Array.h>
-#include <GWCA\GameContainers\GamePos.h>
+#include <GWCA/GameEntities/NPC.h>
 
-#include <GWCA\GameEntities\NPC.h>
-
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\MapMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/MapMgr.h>
 
 #include "GuiUtils.h"
 #include <Defines.h>
 
-#include <Modules\Resources.h>
-#include "AgentRenderer.h"
+#include <Modules/Resources.h>
 
 #define AGENTCOLOR_INIFILENAME L"AgentColors.ini"
 

@@ -1,9 +1,5 @@
-#include <stdint.h>
-
-#include <string>
-#include <sstream>
-#include <iostream>
-#include <functional>
+#include "stdafx.h"
+#include "Hotkeys.h"
 
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\GameContainers\Array.h>
@@ -29,7 +25,7 @@
 #  include <Modules\LUAInterface.h>
 #endif
 #include <ImGuiAddons.h>
-#include "Hotkeys.h"
+
 
 bool TBHotkey::show_active_in_header = true;
 bool TBHotkey::show_run_in_header = true;

@@ -1,6 +1,5 @@
-#include <stdint.h>
-
-#include <string>
+#include "stdafx.h"
+#include "DialogsWindow.h"
 
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\GameContainers\Array.h>
@@ -10,7 +9,6 @@
 #include "GuiUtils.h"
 #include "GWToolbox.h"
 #include <Modules\Resources.h>
-#include "DialogsWindow.h"
 
 void DialogsWindow::Initialize() {
 	ToolboxWindow::Initialize();

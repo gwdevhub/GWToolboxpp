@@ -1,27 +1,24 @@
-#include <stdint.h>
-
-#include <sstream>
-#include <functional>
+#include "stdafx.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
 
-#include <GWCA\GameContainers\GamePos.h>
+#include <GWCA/GameContainers/GamePos.h>
 
-#include <GWCA\GameEntities\Agent.h>
-#include <GWCA\GameEntities\Party.h>
-#include <GWCA\GameEntities\Player.h>
+#include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Party.h>
+#include <GWCA/GameEntities/Player.h>
 
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\Managers\StoCMgr.h>
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\PartyMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
 
 #include <GWToolbox.h>
 #include <GuiUtils.h>
-#include <Modules\Resources.h>
-#include <Modules\ToolboxSettings.h>
+#include <Modules/Resources.h>
+#include <Modules/ToolboxSettings.h>
 #include "PartyDamage.h"
 
 #define INI_FILENAME L"healthlog.ini"

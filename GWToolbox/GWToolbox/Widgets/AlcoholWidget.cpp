@@ -1,18 +1,16 @@
-#include <time.h>
-#include <stdint.h>
+#include "stdafx.h"
+#include "AlcoholWidget.h"
 
-#include <functional>
+#include <GWCA/Constants/Constants.h>
 
-#include <GWCA\Constants\Constants.h>
+#include <GWCA/GameContainers/Array.h>
+#include <GWCA/GameContainers/GamePos.h>
 
-#include <GWCA\GameContainers\Array.h>
-#include <GWCA\GameContainers\GamePos.h>
-
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\StoCMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
 
 #include <GuiUtils.h>
-#include "AlcoholWidget.h"
+
 
 void AlcoholWidget::Initialize() {
 	ToolboxWidget::Initialize();

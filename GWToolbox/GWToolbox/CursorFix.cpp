@@ -1,12 +1,11 @@
-#include <stdint.h>
+#include "stdafx.h"
 
-#include "TbWindows.h"
+#include "CursorFix.h"
 
-#include <GWCA\Managers\MemoryMgr.h>
-#include <GWCA\Utilities\Hooker.h>
+#include <GWCA/Managers/MemoryMgr.h>
+#include <GWCA/Utilities/Hooker.h>
 
 #include "logger.h"
-#include "CursorFix.h"
 
 typedef BOOL (WINAPI *GetClipCursor_pt)(
     _Out_ LPRECT lpRect);

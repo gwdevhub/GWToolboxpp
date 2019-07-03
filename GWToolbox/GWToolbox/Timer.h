@@ -1,7 +1,5 @@
 #pragma once
 
-#include <time.h>
-
 /* 
 This class makes using timers easier
 

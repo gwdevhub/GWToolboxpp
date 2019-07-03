@@ -1,16 +1,15 @@
-#include <stdint.h>
+#include "stdafx.h"
+#include "GuiUtils.h"
 
-#include <string>
+#include <GWCA/Constants/Constants.h>
 
-#include <GWCA\Constants\Constants.h>
+#include <GWCA/GameContainers/Array.h>
 
-#include <GWCA\GameContainers\Array.h>
-
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\PartyMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
 
 #include "VanquishWidget.h"
-#include "GuiUtils.h"
+
 
 void VanquishWidget::Draw(IDirect3DDevice9 *pDevice) {
 	if (!visible) return;

@@ -1,10 +1,11 @@
+#include "stdafx.h"
 #include "ToolboxWidget.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
 #include "ImGuiAddons.h"
 
-#include "Modules\ToolboxSettings.h"
+#include <Modules/ToolboxSettings.h>
 
 void ToolboxWidget::DrawSettings() {
 	if (ImGui::CollapsingHeader(Name(), ImGuiTreeNodeFlags_AllowItemOverlap)) {

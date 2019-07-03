@@ -1,33 +1,28 @@
-#include <stdint.h>
-
-#include <string>
-#include <sstream>
-#include <functional>
-#include <unordered_map>
+#include "stdafx.h"
+#include "BondsWidget.h"
 
 #include <d3dx9tex.h>
 #include <imgui.h>
 #include <imgui_internal.h>
 
-#include <GWCA\Constants\Constants.h>
+#include <GWCA/Constants/Constants.h>
 
-#include <GWCA\GameContainers\GamePos.h>
+#include <GWCA/GameContainers/GamePos.h>
 
-#include <GWCA\GameEntities\Party.h>
-#include <GWCA\GameEntities\Skill.h>
-#include <GWCA\GameEntities\Player.h>
+#include <GWCA/GameEntities/Party.h>
+#include <GWCA/GameEntities/Skill.h>
+#include <GWCA/GameEntities/Player.h>
 
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\PartyMgr.h>
-#include <GWCA\Managers\EffectMgr.h>
-#include <GWCA\Managers\SkillbarMgr.h>
-#include <GWCA\Managers\GameThreadMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Managers/EffectMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 
 #include "GuiUtils.h"
-#include "Modules\ToolboxSettings.h"
-#include <Modules\Resources.h>
-#include "BondsWidget.h"
+#include "Modules/ToolboxSettings.h"
+#include <Modules/Resources.h>
 
 //DWORD BondsWidget::buff_id[MAX_PARTYSIZE][MAX_BONDS] = { 0 };
 

@@ -1,10 +1,10 @@
-#include <string>
+#include "stdafx.h"
+#include "TravelWindow.h"
 
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\GameEntities\Map.h>
 #include <GWCA\Managers\MapMgr.h>
 
-#include "TravelWindow.h"
 #include "GWToolbox.h"
 #include "GuiUtils.h"
 #include <Modules\Resources.h>

@@ -1,7 +1,5 @@
-#include <stdint.h>
-
-#include <string>
-#include <functional>
+#include "stdafx.h"
+#include "MaterialsWindow.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -23,7 +21,7 @@
 #include "GuiUtils.h"
 #include <logger.h>
 #include <Modules\Resources.h>
-#include "MaterialsWindow.h"
+
 
 static const DWORD MIN_TIME_BETWEEN_RETRY = 160; // 10 frames
 

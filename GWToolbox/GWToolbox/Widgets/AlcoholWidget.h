@@ -2,16 +2,15 @@
 
 #include "ToolboxWidget.h"
 
-#include <GWCA\Packets\StoC.h>
-
+#include <GWCA/Packets/StoC.h>
 
 class AlcoholWidget : public ToolboxWidget {
 	AlcoholWidget() {};
 	~AlcoholWidget() {};
 private:
-	DWORD alcohol_level;
-	time_t last_alcohol;
-	long alcohol_time;
+	DWORD alcohol_level = 0;
+	time_t last_alcohol = 0;
+	long alcohol_time = 0;
 public:
 	static AlcoholWidget& Instance() {
 		static AlcoholWidget instance;

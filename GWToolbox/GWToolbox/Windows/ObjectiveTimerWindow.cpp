@@ -1,7 +1,5 @@
-#include <stdint.h>
-
-#include <string>
-#include <functional>
+#include "stdafx.h"
+#include "ObjectiveTimerWindow.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -27,7 +25,7 @@
 #include "GWToolbox.h"
 
 #include <Modules\Resources.h>
-#include "ObjectiveTimerWindow.h"
+
 
 #define countof(arr) (sizeof(arr) / sizeof(arr[0]))
 

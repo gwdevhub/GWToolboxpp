@@ -1,7 +1,5 @@
-#include <stdint.h>
-
-#include <string>
-#include <functional>
+#include "stdafx.h"
+#include "HeroBuildsWindow.h"
 
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\GameContainers\Array.h>
@@ -21,7 +19,7 @@
 #include <logger.h>
 #include "GuiUtils.h"
 #include <Modules\Resources.h>
-#include "HeroBuildsWindow.h"
+
 
 #define INI_FILENAME L"herobuilds.ini"
 
