@@ -117,6 +117,7 @@
     <ClInclude Include="GWToolbox\Keys.h" />
     <ClInclude Include="GWToolbox\Modules\ChatCommands.h" />
     <ClInclude Include="GWToolbox\Modules\ChatFilter.h" />
+    <ClInclude Include="GWToolbox\Modules\DailyQuests\DailyQuests.h" />
     <ClInclude Include="GWToolbox\Modules\GameSettings.h" />
     <ClInclude Include="GWToolbox\Modules\LUAInterface.h" />
     <ClInclude Include="GWToolbox\Modules\Resources.h" />
@@ -186,6 +187,7 @@
     <ClCompile Include="GWToolbox\main.cpp" />
     <ClCompile Include="GWToolbox\Modules\ChatCommands.cpp" />
     <ClCompile Include="GWToolbox\Modules\ChatFilter.cpp" />
+    <ClCompile Include="GWToolbox\Modules\DailyQuests\DailyQuests.cpp" />
     <ClCompile Include="GWToolbox\Modules\GameSettings.cpp" />
     <ClCompile Include="GWToolbox\Modules\LUAInterface.cpp" />
     <ClCompile Include="GWToolbox\Modules\Resources.cpp" />

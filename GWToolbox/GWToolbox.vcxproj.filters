@@ -289,6 +289,7 @@
       <Filter>utf8proc</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\Windows\FactionLeaderboardWindow.h" />
+    <ClInclude Include="GWToolbox\Modules\DailyQuests\DailyQuests.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -441,6 +442,7 @@
       <Filter>imgui</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\Windows\FactionLeaderboardWindow.cpp" />
+    <ClCompile Include="GWToolbox\Modules\DailyQuests\DailyQuests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GWToolbox.rc">

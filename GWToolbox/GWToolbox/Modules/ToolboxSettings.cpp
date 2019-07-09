@@ -17,6 +17,7 @@
 #include <GWToolbox.h>
 #include <Modules\Resources.h>
 #include <Modules\Updater.h>
+#include <Modules\DailyQuests\DailyQuests.h>
 
 #include <Windows\MainWindow.h>
 #include <Windows\PconsWindow.h>
@@ -63,6 +64,7 @@ void ToolboxSettings::InitializeModules() {
 	if (use_notepad) NotePadWindow::Instance().Initialize();
 	if (use_objectivetimer) ObjectiveTimerWindow::Instance().Initialize();
 	if (use_factionleaderboard) FactionLeaderboardWindow::Instance().Initialize();
+    if (use_daily_quests) DailyQuests::Instance().Initialize();
 
 	SettingsWindow::Instance().Initialize();
 

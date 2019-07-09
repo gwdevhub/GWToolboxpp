@@ -58,4 +58,5 @@ private:
 	bool use_alcohol = true;
 	bool use_objectivetimer = true;
 	bool use_factionleaderboard = true;
+    bool use_daily_quests = true;
 };
