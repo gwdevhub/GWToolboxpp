@@ -1,24 +1,22 @@
-#include <stdint.h>
+#include "stdafx.h"
+#include "TimerWidget.h"
 
-#include <string>
-#include <functional>
+#include <GWCA/Constants/Constants.h>
 
-#include <GWCA\Constants\Constants.h>
+#include <GWCA/GameContainers/Array.h>
 
-#include <GWCA\GameContainers\Array.h>
+#include <GWCA/GameEntities/Skill.h>
 
-#include <GWCA\GameEntities\Skill.h>
-
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\Managers\EffectMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/EffectMgr.h>
 
 #include <logger.h>
 #include <Timer.h>
 
 #include "GuiUtils.h"
-#include "Modules\ToolboxSettings.h"
-#include "TimerWidget.h"
+#include "Modules/ToolboxSettings.h"
+
 
 void TimerWidget::LoadSettings(CSimpleIni *ini) {
 	ToolboxWidget::LoadSettings(ini);

@@ -1,26 +1,24 @@
-#include <stdint.h>
-
-#include <string>
-#include <functional>
+#include "stdafx.h"
+#include "SymbolsRenderer.h"
 
 #include <d3dx9math.h>
 
-#include <GWCA\Constants\Constants.h>
-#include <GWCA\GameContainers\Array.h>
-#include <GWCA\GameContainers\GamePos.h>
-#include <GWCA\PAckets\StoC.h>
+#include <GWCA/Constants/Constants.h>
+#include <GWCA/GameContainers/Array.h>
+#include <GWCA/GameContainers/GamePos.h>
+#include <GWCA/PAckets/StoC.h>
 
-#include <GWCA\GameEntities\Quest.h>
-#include <GWCA\GameEntities\Party.h>
+#include <GWCA/GameEntities/Quest.h>
+#include <GWCA/GameEntities/Party.h>
 
-#include <GWCA\Context\GameContext.h>
-#include <GWCA\Context\WorldContext.h>
+#include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/WorldContext.h>
 
-#include <GWCA\Managers\AgentMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
 
 #include "Minimap.h"
 #include <ImGuiAddons.h>
-#include "SymbolsRenderer.h"
+
 
 void SymbolsRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	color_quest = Colors::Load(ini, section, "color_quest", 0xFF22EF22);

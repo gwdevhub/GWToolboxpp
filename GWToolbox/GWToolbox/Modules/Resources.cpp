@@ -1,7 +1,8 @@
+#include "stdafx.h"
 #include "Resources.h"
 
-#include <Shlobj.h>
-#include <Shlwapi.h>
+#include <thread>
+
 #include <urlmon.h>
 #include <WinInet.h>
 #include <d3dx9tex.h>

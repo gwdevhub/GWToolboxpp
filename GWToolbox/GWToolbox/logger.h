@@ -1,7 +1,5 @@
 #pragma once
 
-#include <Windows.h>
-
 namespace Log {
 	// === Setup and cleanup ====
 	// in release redirects stdout and stderr to log file

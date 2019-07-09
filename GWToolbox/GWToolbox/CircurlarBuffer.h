@@ -1,7 +1,4 @@
-#ifndef CIRCULAR_BUFFER_H
-#define CIRCULAR_BUFFER_H
-
-#include <assert.h>
+#pragma once
 
 template <typename T>
 struct CircularBuffer {
@@ -65,5 +62,3 @@ private:
     size_t count = 0;  // number of elements
     size_t allocated = 0;
 };
-
-#endif // CIRCULAR_BUFFER_H

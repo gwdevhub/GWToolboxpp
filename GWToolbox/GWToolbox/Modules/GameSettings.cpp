@@ -1,48 +1,33 @@
-#include <time.h>
-#include <assert.h>
-#include <stdint.h>
+#include "stdafx.h"
+#include "GameSettings.h"
 
-#include <string>
-#include <algorithm>
-#include <functional>
-
-#include <TbWindows.h>
-
-#include <GWCA\Utilities\Scanner.h>
-
-#include <GWCA\Constants\Constants.h>
-
-#include <GWCA\GameContainers\Array.h>
-#include <GWCA\GameContainers\GamePos.h>
-
-#include <GWCA\Packets\StoC.h>
-
-#include <GWCA\GameEntities\Agent.h>
-#include <GWCA\GameEntities\Friendslist.h>
-
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\Managers\ItemMgr.h>
-#include <GWCA\Managers\StoCMgr.h>
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\PartyMgr.h>
-#include <GWCA\Managers\CameraMgr.h>
-#include <GWCA\Managers\MemoryMgr.h>
-#include <GWCA\Managers\RenderMgr.h>
-#include <GWCA\Managers\FriendListMgr.h>
-#include <GWCA\Managers\GameThreadMgr.h>
+#include <GWCA/Utilities/Scanner.h>
+#include <GWCA/Constants/Constants.h>
+#include <GWCA/GameContainers/Array.h>
+#include <GWCA/GameContainers/GamePos.h>
+#include <GWCA/Packets/StoC.h>
+#include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Friendslist.h>
+#include <GWCA/Context/GameContext.h>
 #include <GWCA\Managers\UIMgr.h>
 
-#include <GWCA\Context\GameContext.h>
-#include <GWCA\Context\WorldContext.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/ItemMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Managers/CameraMgr.h>
+#include <GWCA/Managers/MemoryMgr.h>
+#include <GWCA/Managers/RenderMgr.h>
+#include <GWCA/Managers/FriendListMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 
 #include <logger.h>
 #include "GuiUtils.h"
 #include <GWToolbox.h>
 #include <Timer.h>
 #include <Color.h>
-
-#include "GameSettings.h"
 
 namespace {
 	void SendChatCallback(GW::Chat::Channel chan, wchar_t msg[120]) {

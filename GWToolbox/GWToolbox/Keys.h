@@ -1,9 +1,5 @@
 #pragma once
 
-#include <cstdio>
-#include <Windows.h>
-#include <WinUser.h>
-
 #define VK_0		0x30
 #define VK_1		0x31
 #define VK_2		0x32

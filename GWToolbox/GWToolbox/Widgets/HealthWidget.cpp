@@ -1,17 +1,16 @@
-#include <stdint.h>
+#include "stdafx.h"
+#include "HealthWidget.h"
 
-#include <functional>
+#include <GWCA/GameContainers/GamePos.h>
 
-#include <GWCA\GameContainers\GamePos.h>
+#include <GWCA/GameEntities/Agent.h>
 
-#include <GWCA\GameEntities\Agent.h>
-
-#include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\Managers\AgentMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
 
 #include "GuiUtils.h"
-#include "Modules\ToolboxSettings.h"
-#include "HealthWidget.h"
+#include "Modules/ToolboxSettings.h"
+
 
 void HealthWidget::LoadSettings(CSimpleIni *ini) {
 	ToolboxWidget::LoadSettings(ini);

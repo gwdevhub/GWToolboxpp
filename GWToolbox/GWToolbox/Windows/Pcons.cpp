@@ -1,8 +1,6 @@
-#include <stdint.h>
-
+#include "stdafx.h"
+#include "Pcons.h"
 #include <mutex>
-#include <string>
-#include <functional>
 #include <d3dx9tex.h>
 
 #include <GWCA\Constants\Constants.h>
@@ -25,7 +23,6 @@
 #include <Modules\Resources.h>
 #include <Windows\PconsWindow.h>
 #include <Widgets\AlcoholWidget.h>
-#include "Pcons.h"
 
 using namespace GW::Constants;
 

@@ -1,11 +1,8 @@
 #pragma once
 
-#include <queue>
-#include <functional>
-#include <thread>
 #include <d3d9.h>
-#include <string>
 
+#include <thread>
 #include <../resource.h>
 
 #include <Utf8.h>

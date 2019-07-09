@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29020.237
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GWToolbox", "GWToolbox\GWToolbox.vcxproj", "{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -15,9 +15,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSLauncher", "CSLauncher\CS
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LUA", "LUA\LUA.vcxproj", "{07E36EE0-D8A8-48F0-A872-681512E93CCD}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GWCA", "Dependencies\GWCA\vc\GWCA\GWCA.2015.vcxproj", "{B3359F05-68CF-4E7F-B9D6-D106F6D48A38}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MinHook", "Dependencies\GWCA\vc\MinHook\MinHook.vcxproj", "{AC820BBA-BB5B-4D8C-96FF-EA8138CEED52}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GWCA", "Dependencies\GWCA\vc\GWCA\GWCA.vcxproj", "{B3359F05-68CF-4E7F-B9D6-D106F6D48A38}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -37,16 +37,19 @@ Global
 		{07E36EE0-D8A8-48F0-A872-681512E93CCD}.Debug|Win32.Build.0 = Debug|Win32
 		{07E36EE0-D8A8-48F0-A872-681512E93CCD}.Release|Win32.ActiveCfg = Release|Win32
 		{07E36EE0-D8A8-48F0-A872-681512E93CCD}.Release|Win32.Build.0 = Release|Win32
-		{B3359F05-68CF-4E7F-B9D6-D106F6D48A38}.Debug|Win32.ActiveCfg = Debug|Win32
-		{B3359F05-68CF-4E7F-B9D6-D106F6D48A38}.Debug|Win32.Build.0 = Debug|Win32
-		{B3359F05-68CF-4E7F-B9D6-D106F6D48A38}.Release|Win32.ActiveCfg = Release|Win32
-		{B3359F05-68CF-4E7F-B9D6-D106F6D48A38}.Release|Win32.Build.0 = Release|Win32
 		{AC820BBA-BB5B-4D8C-96FF-EA8138CEED52}.Debug|Win32.ActiveCfg = Debug|Win32
 		{AC820BBA-BB5B-4D8C-96FF-EA8138CEED52}.Debug|Win32.Build.0 = Debug|Win32
 		{AC820BBA-BB5B-4D8C-96FF-EA8138CEED52}.Release|Win32.ActiveCfg = Release|Win32
 		{AC820BBA-BB5B-4D8C-96FF-EA8138CEED52}.Release|Win32.Build.0 = Release|Win32
+		{B3359F05-68CF-4E7F-B9D6-D106F6D48A38}.Debug|Win32.ActiveCfg = Debug|Win32
+		{B3359F05-68CF-4E7F-B9D6-D106F6D48A38}.Debug|Win32.Build.0 = Debug|Win32
+		{B3359F05-68CF-4E7F-B9D6-D106F6D48A38}.Release|Win32.ActiveCfg = Release|Win32
+		{B3359F05-68CF-4E7F-B9D6-D106F6D48A38}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9CE8C2EA-E709-4D2C-BB9C-BA8239B34119}
 	EndGlobalSection
 EndGlobal

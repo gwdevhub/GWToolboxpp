@@ -1,8 +1,5 @@
-#include <math.h>
-#include <stdint.h>
-
-#include <string>
-#include <functional>
+#include "stdafx.h"
+#include "InfoWindow.h"
 
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\GameContainers\Array.h>
@@ -39,7 +36,7 @@
 #include <Widgets\AlcoholWidget.h>
 #include <Windows\NotepadWindow.h>
 #include <Modules\Resources.h>
-#include "InfoWindow.h"
+
 
 void InfoWindow::Initialize() {
 	ToolboxWindow::Initialize();

@@ -1,10 +1,5 @@
 #pragma once
 
-#include <Windows.h>
-
-#include <vector>
-#include <SimpleIni.h>
-
 #include "Utf8.h"
 #include "ToolboxModule.h"
 #include "ToolboxUIElement.h"

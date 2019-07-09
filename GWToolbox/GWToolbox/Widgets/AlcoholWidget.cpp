@@ -1,21 +1,21 @@
-#include <ctime>
+#include "stdafx.h"
+#include "AlcoholWidget.h"
 
-#include <functional>
+#include <GWCA/Constants/Constants.h>
 
-#include <GWCA\GameContainers\GamePos.h>
+#include <GWCA/GameContainers/Array.h>
+#include <GWCA/GameContainers/GamePos.h>
 
-#include <GWCA\Context\GameContext.h>
-#include <GWCA\Context\WorldContext.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
 
 #include <GWCA\GameEntities\Title.h>
 
-#include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Managers\MapMgr.h>
 
 #include <Windows\PconsWindow.h>
 #include <GuiUtils.h>
 #include <logger.h>
-#include "AlcoholWidget.h"
 
 
 void AlcoholWidget::Initialize() {

@@ -5,9 +5,10 @@
 If you are here to check toolbox features and for a download link to go [https://haskha.github.io/GWToolboxpp/](https://haskha.github.io/GWToolboxpp/). Keep reading for information on how to download and build from the source.
 
 ## How to download, build, and run
+0. Requirements: Install Visual Studio Community 2019, including the "Desktop development with C++" and ".NET desktop development" packages. Other versions (pro, enterprise) work too. Older versions of visual studio *should* work, as long as they support C++17.
 1. Clone *recursively* the repository. On command line, use: `git clone --recursive https://github.com/HasKha/GWToolboxpp.git`.
-2. Open GWToolboxpp.sln with Visual Studio. Toolbox is developed under VS2015 / VS2017, but earlier or later versions should work too. 
-3. Set to Debug, build, and run. For testing in Release mode, read the notes below.
+2. Open GWToolboxpp.sln with Visual Studio.
+3. Set to Debug, build, and run. You may have to launch Visual Studio as administrator. For testing in Release mode, read the notes below.
 
 ## Notes
 * GWToolbox compiles as a DLL (`GWToolbox.dll`). `GWToolbox.exe`, aka Launcher, selects a GW clients and injects the dll, but you can also use different launchers, such as the ones in the `AutoItLauncher/` folder.

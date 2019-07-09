@@ -1,5 +1,6 @@
-#include <string>
+#include "stdafx.h"
 #include <functional>
+#include "TravelWindow.h"
 
 #include <GWCA\Constants\Constants.h>
 

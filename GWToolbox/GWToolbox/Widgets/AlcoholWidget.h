@@ -2,17 +2,16 @@
 
 #include "ToolboxWidget.h"
 
-#include <GWCA\Packets\StoC.h>
+#include <GWCA/Packets/StoC.h>
 #include <GWCA\Constants\Maps.h>
-
 
 class AlcoholWidget : public ToolboxWidget {
 	AlcoholWidget() {};
 	~AlcoholWidget() {};
 private:
-	DWORD alcohol_level;
-	time_t last_alcohol;
-	long alcohol_time;
+	DWORD alcohol_level = 0;
+	time_t last_alcohol = 0;
+	long alcohol_time = 0;
 	long GetAlcoholTitlePointsGained(); // Returns amount of alcohol points gained since last check (or map load)
 	long prev_alcohol_title_points = 0; // Used in GetAlcoholTitlePointsGained
 	GW::Constants::MapID map_id;

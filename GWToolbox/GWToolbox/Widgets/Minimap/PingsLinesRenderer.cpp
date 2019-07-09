@@ -1,29 +1,26 @@
-#include <stdint.h>
-
-#include <string>
-#include <functional>
-#include <unordered_set>
+#include "stdafx.h"
+#include "PingsLinesRenderer.h"
 
 #include <d3d9.h>
 #include <d3dx9math.h>
 
-#include <GWCA\Constants\Constants.h>
-#include <GWCA\GameContainers\Array.h>
-#include <GWCA\GameContainers\GamePos.h>
+#include <GWCA/Constants/Constants.h>
+#include <GWCA/GameContainers/Array.h>
+#include <GWCA/GameContainers/GamePos.h>
 
-#include <GWCA\Packets\StoC.h>
+#include <GWCA/Packets/StoC.h>
 
-#include <GWCA\GameEntities\Agent.h>
-#include <GWCA\GameEntities\Skill.h>
+#include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Skill.h>
 
-#include <GWCA\Managers\UIMgr.h>
-#include <GWCA\Managers\CtoSMgr.h>
-#include <GWCA\Managers\StoCMgr.h>
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\EffectMgr.h>
+#include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/CtoSMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/EffectMgr.h>
 
 #include "GuiUtils.h"
-#include "PingsLinesRenderer.h"
+
 
 void PingsLinesRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	color_drawings = Colors::Load(ini, section, "color_drawings", Colors::ARGB(0xFF, 0xFF, 0xFF, 0xFF));

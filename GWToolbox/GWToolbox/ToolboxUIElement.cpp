@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include "ToolboxUIElement.h"
 
 #include <GWToolbox.h>

@@ -1,48 +1,48 @@
-#include <fstream>
+#include "stdafx.h"
 
-#include <GWCA\Constants\Constants.h>
+#include <GWCA/Constants/Constants.h>
 
-#include <GWCA\GameContainers\Array.h>
-#include <GWCA\GameContainers\GamePos.h>
+#include <GWCA/GameContainers/Array.h>
+#include <GWCA/GameContainers/GamePos.h>
 
-#include <GWCA\Packets\StoC.h>
+#include <GWCA/Packets/StoC.h>
 
-#include <GWCA\GameEntities\Party.h>
+#include <GWCA/GameEntities/Party.h>
 
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\AgentMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
 
 #include <Defines.h>
 #include "GuiUtils.h"
 #include <GWToolbox.h>
-#include <Modules\Resources.h>
-#include <Modules\Updater.h>
+#include <Modules/Resources.h>
+#include <Modules/Updater.h>
 #include <Modules\DailyQuests\DailyQuests.h>
 
-#include <Windows\MainWindow.h>
-#include <Windows\PconsWindow.h>
-#include <Windows\HotkeysWindow.h>
-#include <Windows\BuildsWindow.h>
-#include <Windows\HeroBuildsWindow.h>
-#include <Windows\TravelWindow.h>
-#include <Windows\DialogsWindow.h>
-#include <Windows\InfoWindow.h>
-#include <Windows\MaterialsWindow.h>
-#include <Windows\SettingsWindow.h>
-#include <Windows\NotePadWindow.h>
-#include <Windows\TradeWindow.h>
-#include <Windows\ObjectiveTimerWindow.h>
+#include <Windows/MainWindow.h>
+#include <Windows/PconsWindow.h>
+#include <Windows/HotkeysWindow.h>
+#include <Windows/BuildsWindow.h>
+#include <Windows/HeroBuildsWindow.h>
+#include <Windows/TravelWindow.h>
+#include <Windows/DialogsWindow.h>
+#include <Windows/InfoWindow.h>
+#include <Windows/MaterialsWindow.h>
+#include <Windows/SettingsWindow.h>
+#include <Windows/NotePadWindow.h>
+#include <Windows/TradeWindow.h>
+#include <Windows/ObjectiveTimerWindow.h>
 #include <Windows\FactionLeaderboardWindow.h>
 
-#include <Widgets\TimerWidget.h>
-#include <Widgets\HealthWidget.h>
-#include <Widgets\DistanceWidget.h>
-#include <Widgets\Minimap\Minimap.h>
-#include <Widgets\PartyDamage.h>
-#include <Widgets\BondsWidget.h>
-#include <Widgets\ClockWidget.h>
-#include <Widgets\VanquishWidget.h>
-#include <Widgets\AlcoholWidget.h>
+#include <Widgets/TimerWidget.h>
+#include <Widgets/HealthWidget.h>
+#include <Widgets/DistanceWidget.h>
+#include <Widgets/Minimap/Minimap.h>
+#include <Widgets/PartyDamage.h>
+#include <Widgets/BondsWidget.h>
+#include <Widgets/ClockWidget.h>
+#include <Widgets/VanquishWidget.h>
+#include <Widgets/AlcoholWidget.h>
 
 #include "ToolboxSettings.h"
 

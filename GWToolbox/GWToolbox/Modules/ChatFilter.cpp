@@ -1,31 +1,26 @@
-#include <stdint.h>
-#include <string.h>
-
-#include <fstream>
-#include <sstream>
-#include <functional>
+#include "stdafx.h"
+#include "ChatFilter.h"
 
 #include <imgui.h>
 
-#include <GWCA\GameContainers\Array.h>
-#include <GWCA\GameContainers\GamePos.h>
+#include <GWCA/GameContainers/Array.h>
+#include <GWCA/GameContainers/GamePos.h>
 
-#include <GWCA\GameEntities\Agent.h>
+#include <GWCA/GameEntities/Agent.h>
 
-#include <GWCA\Context\GameContext.h>
-#include <GWCA\Context\WorldContext.h>
+#include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/WorldContext.h>
 
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\Managers\StoCMgr.h>
-#include <GWCA\Managers\AgentMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
 
 #include <ImGuiAddons.h>
 #include <logger.h>
 
-#include <Modules\Resources.h>
+#include <Modules/Resources.h>
 #include <Defines.h>
-#include "ChatFilter.h"
 
 //#define PRINT_CHAT_PACKETS
 

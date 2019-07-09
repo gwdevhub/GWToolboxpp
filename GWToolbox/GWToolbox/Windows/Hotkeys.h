@@ -3,7 +3,7 @@
 #include <string>
 #include <Defines.h>
 
-#include <GWCA\GWCA.h>
+#include <GWCA\Constants\Constants.h>
 #include <GWCA\Constants\Skills.h>
 #include <GWCA\Managers\MapMgr.h>
 #include <SimpleIni.h>

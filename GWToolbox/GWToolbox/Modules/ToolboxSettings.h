@@ -1,8 +1,6 @@
 #pragma once
 
-#include <fstream>
-
-#include <GWCA\Constants\Maps.h>
+#include <GWCA/Constants/Maps.h>
 
 #include "Timer.h"
 #include "ToolboxModule.h"

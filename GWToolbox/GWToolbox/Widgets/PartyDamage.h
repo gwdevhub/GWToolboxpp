@@ -1,13 +1,9 @@
 #pragma once
 
-#include <queue>
-#include <string>
-#include <map>
 #include <Defines.h>
 
-#include <GWCA\GWCA.h>
-#include <GWCA\Constants\Constants.h>
-#include <GWCA\Packets\StoC.h>
+#include <GWCA/Constants/Constants.h>
+#include <GWCA/Packets/StoC.h>
 
 #include "ToolboxWidget.h"
 #include "Timer.h"

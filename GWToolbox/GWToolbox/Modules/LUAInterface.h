@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "ToolboxWindow.h"
 
 struct lua_State;

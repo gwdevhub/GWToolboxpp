@@ -1,7 +1,5 @@
 #pragma once
 
-#include <Windows.h>
-
 struct D3DVertex {
 	float x;
 	float y;

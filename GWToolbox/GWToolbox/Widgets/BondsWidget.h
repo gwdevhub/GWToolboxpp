@@ -2,8 +2,8 @@
 
 #include <Defines.h>
 
-#include <GWCA\GameEntities\Agent.h>
-#include <GWCA\Constants\Skills.h>
+#include <GWCA/GameEntities/Agent.h>
+#include <GWCA/Constants/Skills.h>
 
 #include "Color.h"
 #include "ToolboxWidget.h"

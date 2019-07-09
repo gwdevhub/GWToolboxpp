@@ -1,7 +1,5 @@
-#include <stdint.h>
-
-#include <string>
-#include <functional>
+#include "stdafx.h"
+#include "PconsWindow.h"
 #include <imgui.h>
 #include <imgui_internal.h>
 
@@ -31,7 +29,6 @@
 #include "Windows\MainWindow.h"
 #include <Modules\Resources.h>
 #include <Widgets\AlcoholWidget.h>
-#include "PconsWindow.h"
 
 using namespace GW::Constants;
 

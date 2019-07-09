@@ -1,19 +1,11 @@
-#include <time.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <strsafe.h>
-
-#include "TbWindows.h"
-#include <dbghelp.h>
-
-#include <functional>
-
-#include <GWCA\GameContainers\Array.h>
-#include <GWCA\Managers\ChatMgr.h>
-
+#include "stdafx.h"
 #include "logger.h"
+
+#include <GWCA/GameContainers/Array.h>
+#include <GWCA/Managers/ChatMgr.h>
+
 #include "Defines.h"
-#include <Modules\Resources.h>
+#include <Modules/Resources.h>
 
 #define CHAN_WARNING GW::Chat::CHANNEL_GWCA2
 #define CHAN_INFO    GW::Chat::CHANNEL_EMOTE

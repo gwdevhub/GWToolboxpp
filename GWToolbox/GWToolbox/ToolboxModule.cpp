@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include "ToolboxModule.h"
 
 #include "GWToolbox.h"

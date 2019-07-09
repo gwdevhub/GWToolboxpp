@@ -1,6 +1,5 @@
+#include "stdafx.h"
 #include "NotePadWindow.h"
-
-#include <fstream>
 
 #include <Modules\Resources.h>
 

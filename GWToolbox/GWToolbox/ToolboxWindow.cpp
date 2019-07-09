@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include "ToolboxWindow.h"
 
 #include <imgui.h>
