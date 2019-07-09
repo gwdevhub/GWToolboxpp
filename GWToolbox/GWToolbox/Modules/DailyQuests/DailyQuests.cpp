@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include <ctype.h>
 #include <ctime>
 #include <stdint.h>
@@ -5,7 +6,6 @@
 #include <algorithm>
 #include <functional>
 
-#include <TbWindows.h>
 #include <ShellApi.h>
 
 #include <imgui.h>

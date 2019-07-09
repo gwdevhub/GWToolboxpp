@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include <stdint.h>
 
 #include <GWCA\stdafx.h>

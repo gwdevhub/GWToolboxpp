@@ -4,6 +4,8 @@
 #include <vector>
 #include <Defines.h>
 
+#include <GWCA/GameContainers/GamePos.h>
+
 #include "Timer.h"
 #include "Pcons.h"
 #include "ToolboxWindow.h"

@@ -5,7 +5,11 @@
 
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\Constants\Skills.h>
+
+#include <GWCA/GameEntities/Item.h>
+
 #include <GWCA\Managers\MapMgr.h>
+
 #include <SimpleIni.h>
 
 // abstract class Toolbox Hotkey

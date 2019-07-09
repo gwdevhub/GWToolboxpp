@@ -9,9 +9,12 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 
-#include <GWCA\GameEntities\Title.h>
+#include <GWCA/GameEntities/Title.h>
 
-#include <GWCA\Managers\MapMgr.h>
+#include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/WorldContext.h>
+
+#include <GWCA/Managers/MapMgr.h>
 
 #include <Windows\PconsWindow.h>
 #include <GuiUtils.h>
