@@ -8,9 +8,11 @@
 #include <GWCA/Packets/StoC.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Friendslist.h>
-#include <GWCA/Context/GameContext.h>
-#include <GWCA\Managers\UIMgr.h>
 
+#include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/WorldContext.h>
+
+#include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
@@ -471,7 +473,7 @@ void GameSettings::Initialize() {
 	// - Print NPC speech bubbles to emote chat.
 	GW::StoC::AddCallback<GW::Packet::StoC::SpeechBubble>(
 		[this](GW::Packet::StoC::SpeechBubble *pak) -> bool {
-		if (!npc_speech_bubbles_as_chat) return false;
+		if (!npc_speech_bubbles_as_chat || !pak->message || !pak->agent_id) return false;
 		const wchar_t* m = pak->message;
 		if (m[3] == 0) return false; // Shout skill etc
 		GW::Agent* agent = GW::Agents::GetAgentByID(pak->agent_id);
@@ -483,12 +485,12 @@ void GameSettings::Initialize() {
 
 	GW::FriendListMgr::SetOnFriendStatusCallback(GameSettings::FriendStatusCallback);
 #ifdef _DEBUG
-	for (size_t i = GW::Packet::StoC::ManipulateMapObject::STATIC_HEADER; i < GW::Packet::StoC::ManipulateMapObject::STATIC_HEADER + 0x20; i++) {
+	/*for (size_t i = GW::Packet::StoC::ManipulateMapObject::STATIC_HEADER; i < GW::Packet::StoC::ManipulateMapObject::STATIC_HEADER + 0x20; i++) {
 		GW::StoC::AddCallback(i, [](GW::Packet::StoC::PacketBase *pak) -> bool {
 			Log::Log("[Packet] %08X\n", pak->header);
 			return false;
 		});
-	}
+	}*/
 #endif
 
 	
@@ -500,7 +502,7 @@ void GameSettings::Initialize() {
 }
 void GameSettings::MessageOnPartyChange() {
 	GW::PartyInfo* current_party = GW::PartyMgr::GetPartyInfo();
-	if (!current_party)
+	if (!current_party || !current_party->players.valid())
 		return; // Party not ready yet.
 	std::vector<wchar_t*> current_party_names;
 	for (size_t i = 0; i < current_party->players.size(); i++) {
