@@ -168,7 +168,6 @@ void DailyQuests::Draw(IDirect3DDevice9* pDevice) {
     ImGui::Separator();
     ImGui::BeginChild("dailies_scroll");
     time_t unix = time(nullptr);
-    std::tm* lTime;
     for (size_t i = 0; i < 52; i++) {
         offset = 0.0f;
         switch (i) {
@@ -259,8 +258,8 @@ void DailyQuests::Initialize() {
     });
 
     // Hook for turning player name links into hyperlinks.
-    /*OnStartWhisper_Func = (OnStartWhisper_pt)GW::Scanner::Find("\x55\x8B\xEC\x51\x53\x56\x8B\xF1\x57\xBA\x05\x00\x00\x00", "xxxxxxxxxxxxxx", 0);
-    printf("[SCAN] OnStartWhisper = %p\n", OnStartWhisper_Func);*/
+    OnStartWhisper_Func = (OnStartWhisper_pt)GW::Scanner::Find("\x55\x8B\xEC\x51\x53\x56\x8B\xF1\x57\xBA\x05\x00\x00\x00", "xxxxxxxxxxxxxx", 0);
+    printf("[SCAN] OnStartWhisper = %p\n", OnStartWhisper_Func);
     if (OnStartWhisper_Func) {
         GW::HookBase::CreateHook(OnStartWhisper_Func, OnStartWhisper, (void **)&OnStartWhisperRet);
         GW::HookBase::EnableHooks(OnStartWhisper_Func);

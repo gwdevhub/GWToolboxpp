@@ -1,4 +1,4 @@
-
+#include "stdafx.h"
 #ifdef _WIN32
     #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
         #define _CRT_SECURE_NO_WARNINGS // _CRT_SECURE_NO_WARNINGS for sscanf errors in MSVC2013 Express
