@@ -197,27 +197,6 @@
     <ClInclude Include="GWToolbox\Windows\Pcons.h">
       <Filter>Windows\Pcons</Filter>
     </ClInclude>
-    <ClInclude Include="GWToolbox\Modules\ChatCommands.h">
-      <Filter>Modules\ChatCommands</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\Modules\ChatFilter.h">
-      <Filter>Modules\ChatFilter</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\Modules\GameSettings.h">
-      <Filter>Modules\GameSettings</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\Modules\Resources.h">
-      <Filter>Modules\Resources</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\Modules\ToolboxTheme.h">
-      <Filter>Modules\Theme</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\Modules\ToolboxSettings.h">
-      <Filter>Modules\ToolboxSettings</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\Modules\Updater.h">
-      <Filter>Modules\Updater</Filter>
-    </ClInclude>
     <ClInclude Include="GWToolbox\Windows\BuildsWindow.h">
       <Filter>Windows\Builds</Filter>
     </ClInclude>
@@ -260,9 +239,6 @@
     <ClInclude Include="GWToolbox\Widgets\VanquishWidget.h">
       <Filter>Widgets\Vanquish</Filter>
     </ClInclude>
-    <ClInclude Include="GWToolbox\Modules\LUAInterface.h">
-      <Filter>Modules\LUACommands</Filter>
-    </ClInclude>
     <ClInclude Include="resource.h">
       <Filter>Resources</Filter>
     </ClInclude>
@@ -290,7 +266,31 @@
     </ClInclude>
     <ClInclude Include="GWToolbox\Windows\FactionLeaderboardWindow.h" />
     <ClInclude Include="GWToolbox\stdafx.h" />
-    <ClInclude Include="GWToolbox\Modules\DailyQuests\DailyQuests.h" />
+    <ClInclude Include="GWToolbox\Windows\DailyQuests.h" />
+    <ClInclude Include="GWToolbox\Modules\ChatCommands.h">
+      <Filter>Modules\ChatCommands</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Modules\ChatFilter.h">
+      <Filter>Modules\ChatFilter</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Modules\GameSettings.h">
+      <Filter>Modules\GameSettings</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Modules\LUAInterface.h">
+      <Filter>Modules\LUACommands</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Modules\Resources.h">
+      <Filter>Modules\Resources</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Modules\ToolboxSettings.h">
+      <Filter>Modules\ToolboxSettings</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Modules\ToolboxTheme.h">
+      <Filter>Modules\Theme</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Modules\Updater.h">
+      <Filter>Modules\Updater</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -350,27 +350,6 @@
     <ClCompile Include="GWToolbox\Windows\Pcons.cpp">
       <Filter>Windows\Pcons</Filter>
     </ClCompile>
-    <ClCompile Include="GWToolbox\Modules\ChatCommands.cpp">
-      <Filter>Modules\ChatCommands</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\Modules\ChatFilter.cpp">
-      <Filter>Modules\ChatFilter</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\Modules\GameSettings.cpp">
-      <Filter>Modules\GameSettings</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\Modules\Resources.cpp">
-      <Filter>Modules\Resources</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\Modules\ToolboxTheme.cpp">
-      <Filter>Modules\Theme</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\Modules\ToolboxSettings.cpp">
-      <Filter>Modules\ToolboxSettings</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\Modules\Updater.cpp">
-      <Filter>Modules\Updater</Filter>
-    </ClCompile>
     <ClCompile Include="GWToolbox\Windows\BuildsWindow.cpp">
       <Filter>Windows\Builds</Filter>
     </ClCompile>
@@ -413,9 +392,6 @@
     <ClCompile Include="GWToolbox\Widgets\VanquishWidget.cpp">
       <Filter>Widgets\Vanquish</Filter>
     </ClCompile>
-    <ClCompile Include="GWToolbox\Modules\LUAInterface.cpp">
-      <Filter>Modules\LUACommands</Filter>
-    </ClCompile>
     <ClCompile Include="GWToolbox\imgui_impl_dx9.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
@@ -444,7 +420,31 @@
     </ClCompile>
     <ClCompile Include="GWToolbox\Windows\FactionLeaderboardWindow.cpp" />
     <ClCompile Include="GWToolbox\stdafx.cpp" />
-    <ClCompile Include="GWToolbox\Modules\DailyQuests\DailyQuests.cpp" />
+    <ClCompile Include="GWToolbox\Windows\DailyQuests.cpp" />
+    <ClCompile Include="GWToolbox\Modules\ChatCommands.cpp">
+      <Filter>Modules\ChatCommands</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Modules\ChatFilter.cpp">
+      <Filter>Modules\ChatFilter</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Modules\GameSettings.cpp">
+      <Filter>Modules\GameSettings</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Modules\LUAInterface.cpp">
+      <Filter>Modules\LUACommands</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Modules\Resources.cpp">
+      <Filter>Modules\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Modules\ToolboxSettings.cpp">
+      <Filter>Modules\ToolboxSettings</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Modules\ToolboxTheme.cpp">
+      <Filter>Modules\Theme</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Modules\Updater.cpp">
+      <Filter>Modules\Updater</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GWToolbox.rc">

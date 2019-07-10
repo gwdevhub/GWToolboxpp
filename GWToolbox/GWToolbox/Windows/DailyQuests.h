@@ -8,10 +8,10 @@
 
 #include <GWCA\Constants\Constants.h>
 
-#include <ToolboxModule.h>
+#include <ToolboxWindow.h>
 #include <ToolboxUIElement.h>
 
-class DailyQuests : public ToolboxModule {
+class DailyQuests : public ToolboxWindow {
     DailyQuests() {};
     ~DailyQuests() {};
 public:
@@ -24,14 +24,11 @@ public:
 
     void Initialize() override;
     void Terminate() override;
-    void LoadSettings(CSimpleIni* ini) override;
-    void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
 
     void DrawHelp();
-
-    // Update. Will always be called every frame.
     void Update(float delta) override;
+    void Draw(IDirect3DDevice9* pDevice) override;
 
     const char* vanguard_cycles[9]{
         "Bandits",
@@ -536,23 +533,23 @@ public:
         "Rhea's Crater",
         "Varajar Fells",
         "Dalada Uplands",
-        "Zen Daijun (explorable area)",
+        "Zen Daijun",
         "Garden of Seborhin",
         "Bukdek Byway",
         "Deldrimor Bowl",
         "Eastern Frontier",
-        "Gyala Hatchery (explorable area)",
+        "Gyala Hatchery",
         "The Arid Sea",
         "Ice Cliff Chasms",
         "Ice Floe",
         "Bahdok Caverns",
         "Tangle Root",
         "Resplendent Makuun",
-        "Arborstone (explorable area)",
+        "Arborstone",
         "North Kryta Province",
         "Holdings of Chokhin",
         "Haiju Lagoon",
-        "Tahnnakai Temple (explorable area)",
+        "Tahnnakai Temple",
         "Prophet's Path",
         "Snake Dance",
         "Mehtani Keys",
@@ -560,7 +557,7 @@ public:
         "Verdant Cascades",
         "The Scar",
         "Spearhead Peak",
-        "Nahpui Quarter (explorable area)",
+        "Nahpui Quarter",
         "Lornar's Pass",
         "Issnur Isles",
         "Ferndale",
@@ -580,17 +577,17 @@ public:
         "Griffon's Mouth",
         "Pockmark Flats",
         "Forum Highlands",
-        "Raisu Palace (explorable area)",
+        "Raisu Palace",
         "Tears of the Fallen",
         "Drazach Thicket",
         "Jaga Moraine",
         "Mamnoon Lagoon",
         "Zehlon Reach",
         "Kessex Peak",
-        "Sunjiang District (explorable area)",
+        "Sunjiang District",
         "Salt Flats",
         "Silverwood",
-        "The Eternal Grove (explorable area)",
+        "The Eternal Grove",
         "Lahtenda Bog",
         "Vehtendi Valley",
         "Magus Stones",
@@ -607,7 +604,7 @@ public:
         "Jahai Bluffs",
         "Vehjin Mines",
         "Reed Bog",
-        "Minister Cho's Estate (explorable area)",
+        "Minister Cho's Estate",
         "Iron Horse Mine",
         "The Shattered Ravines",
         "Archipelagos",
@@ -627,7 +624,7 @@ public:
         "Xaquang Skyway",
         "The Mirror of Lyss",
         "Ascalon Foothills",
-        "Unwaking Waters (explorable area)",
+        "Unwaking Waters",
         "Bjora Marches",
         "Dejarin Estate",
         "Talus Chute",
@@ -645,7 +642,7 @@ public:
         "Yatendi Canyons",
         "Grothmar Wardowns",
         "Dragon's Gullet",
-        "Boreas Seabed (explorable area)",
+        "Boreas Seabed",
         "Scoundrel's Rise",
         "Sunward Marches",
         "Sage Lands",

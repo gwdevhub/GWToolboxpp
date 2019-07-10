@@ -17,7 +17,7 @@
 #include <GWToolbox.h>
 #include <Modules/Resources.h>
 #include <Modules/Updater.h>
-#include <Modules\DailyQuests\DailyQuests.h>
+
 
 #include <Windows/MainWindow.h>
 #include <Windows/PconsWindow.h>
@@ -32,7 +32,8 @@
 #include <Windows/NotePadWindow.h>
 #include <Windows/TradeWindow.h>
 #include <Windows/ObjectiveTimerWindow.h>
-#include <Windows\FactionLeaderboardWindow.h>
+#include <Windows/FactionLeaderboardWindow.h>
+#include <Windows/DailyQuests.h>
 
 #include <Widgets/TimerWidget.h>
 #include <Widgets/HealthWidget.h>

@@ -33,6 +33,7 @@ public:
 	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
 
+
 private:
     struct Message {
         uint32_t    timestamp;

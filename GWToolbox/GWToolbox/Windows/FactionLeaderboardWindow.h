@@ -60,7 +60,6 @@ public:
 	const char* Name() const override { return "Faction Leaderboard"; }
 
 	void Initialize() override;
-	void Terminate() override;
 
 	// Draw user interface. Will be called every frame if the element is visible
 	void Draw(IDirect3DDevice9* pDevice) override;

@@ -501,14 +501,25 @@ void GameSettings::Initialize() {
 
 }
 void GameSettings::MessageOnPartyChange() {
+    if (!check_message_on_party_change || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
+        return; // Don't need to check, or not an outpost.
 	GW::PartyInfo* current_party = GW::PartyMgr::GetPartyInfo();
-	if (!current_party || !current_party->players.valid())
+    GW::Agent* me = GW::Agents::GetPlayer();
+	if (!me || !current_party || !current_party->players.valid())
 		return; // Party not ready yet.
+    bool is_leading = false;
 	std::vector<wchar_t*> current_party_names;
-	for (size_t i = 0; i < current_party->players.size(); i++) {
-		current_party_names.push_back(GW::Agents::GetPlayerNameByLoginNumber(current_party->players[i].login_number));
+    GW::PlayerPartyMemberArray current_party_players = current_party->players; // Copy the player array here to avoid ptr issues.
+	for (size_t i = 0; i < current_party_players.size(); i++) {
+        if (!current_party_players[i].login_number)
+            continue;
+        if (i == 0)
+            is_leading = current_party_players[i].login_number == me->login_number;
+        wchar_t* player_name = GW::Agents::GetPlayerNameByLoginNumber(current_party->players[i].login_number);
+        if (!player_name)
+            continue;
+		current_party_names.push_back(player_name);
 	}
-	bool is_leading = current_party->players[0].login_number == GW::Agents::GetPlayer()->login_number;
 	// If previous party list is empty (i.e. map change), then initialise
 	if (!previous_party_names.size()) {
 		previous_party_names = current_party_names;
@@ -894,7 +905,7 @@ void GameSettings::SetAfkMessage(std::wstring&& message) {
 }
 
 void GameSettings::Update(float delta) {
-	if (speech_bubble_msg.size() && speech_bubble_sender.size()) {
+	if (npc_speech_bubbles_as_chat && speech_bubble_msg.size() && speech_bubble_sender.size()) {
 		GW::Chat::Color dummy; // Needed for GW::Chat::GetChannelColors
 		GW::Chat::Color senderCol; // 153, 255, 0 for NPC colour?
 		GW::Chat::Color messageCol;
@@ -902,7 +913,7 @@ void GameSettings::Update(float delta) {
 		GW::Chat::GetChannelColors(GW::Chat::CHANNEL_EMOTE, &senderCol, &dummy);   // Sender should be same color as emote sender
 		GW::Chat::GetChannelColors(GW::Chat::CHANNEL_ALLIES, &dummy, &messageCol); // ...but set the message to be same color as ally chat
 		char buffer[512];
-		snprintf(buffer, sizeof(buffer), "<c=#%06X>%S</c>: <c=#%06X>%S</c>", senderCol & 0x00FFFFFF, speech_bubble_sender.c_str(), messageCol & 0x00FFFFFF, speech_bubble_msg.c_str());
+		snprintf(buffer, sizeof(buffer), "<c=#%06X>%s</c>: <c=#%06X>%s</c>", senderCol & 0x00FFFFFF, speech_bubble_sender.c_str(), messageCol & 0x00FFFFFF, speech_bubble_msg.c_str());
 		GW::Chat::WriteChat(GW::Chat::CHANNEL_EMOTE, buffer);
 		speech_bubble_msg.clear();
 		speech_bubble_sender.clear();

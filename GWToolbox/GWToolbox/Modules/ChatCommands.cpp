@@ -17,6 +17,7 @@
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
+#include <GWCA/Context/GuildContext.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
@@ -387,24 +388,21 @@ void ChatCommands::CmdHide(const wchar_t *message, int argc, LPWSTR *argv) {
 }
 
 bool ChatCommands::ParseOutpost(const std::wstring s, GW::Constants::MapID& outpost, GW::Constants::District& district, int& number) {
-	// Shortcut words e.g "/tp kama" for kamadan jewel of istan
+	// Shortcut words e.g "/tp doa" for domain of anguish
 	if (s == L"toa")								return outpost = GW::Constants::MapID::Temple_of_the_Ages, true;
-	if (s == L"doa")								return outpost = GW::Constants::MapID::Domain_of_Anguish, true;
-	if (s == L"kamadan" || s == L"kama")			return outpost = GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost, true;
-	if (s == L"embark")								return outpost = GW::Constants::MapID::Embark_Beach, true;
+	if (s == L"doa" || s == L"goa" || s == L"tdp")	return outpost = GW::Constants::MapID::Domain_of_Anguish, true;
 	if (s == L"eee")								return outpost = GW::Constants::MapID::Embark_Beach, district = GW::Constants::District::EuropeEnglish, true;
-	if (s == L"vlox" || s == L"vloxs")				return outpost = GW::Constants::MapID::Vloxs_Falls, true;
-	if (s == L"gadd" || s == L"gadds")				return outpost = GW::Constants::MapID::Gadds_Encampment_outpost, true;
-	if (s == L"urgoz")								return outpost = GW::Constants::MapID::Urgozs_Warren, true;
-	if (s == L"deep")								return outpost = GW::Constants::MapID::The_Deep, true;
 	if (s == L"gtob")								return outpost = GW::Constants::MapID::Great_Temple_of_Balthazar_outpost, true;
 	if (s == L"la")									return outpost = GW::Constants::MapID::Lions_Arch_outpost, true;
-	if (s == L"kaineng")							return outpost = GW::Constants::MapID::Kaineng_Center_outpost, true;
+    if (s == L"ac")									return outpost = GW::Constants::MapID::Ascalon_City_outpost, true;
 	if (s == L"eotn")								return outpost = GW::Constants::MapID::Eye_of_the_North_outpost, true;
-	if (s == L"sif")								return outpost = GW::Constants::MapID::Sifhalla_outpost, true;
-	if (s == L"doom" || s == L"doomlore")			return outpost = GW::Constants::MapID::Doomlore_Shrine_outpost, true;
-	if (s == L"cava")								return outpost = GW::Constants::MapID::Cavalon_outpost, true;
 	if (s == L"hzh")								return outpost = GW::Constants::MapID::House_zu_Heltzer_outpost, true;
+    if (s == L"ctc")								return outpost = GW::Constants::MapID::Central_Transfer_Chamber_outpost, true;
+    if (s == L"topk")								return outpost = GW::Constants::MapID::Tomb_of_the_Primeval_Kings, true;
+    if (s == L"ra")								    return outpost = GW::Constants::MapID::Random_Arenas_outpost, true;
+    if (s == L"ha")								    return outpost = GW::Constants::MapID::Heroes_Ascent_outpost, true;
+    if (s == L"fa" || s.rfind(L"fa ") == 0)			return outpost = GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost, true;
+    if (s == L"jq" || s.rfind(L"jq ") == 0)			return outpost = GW::Constants::MapID::The_Jade_Quarry_Kurzick_outpost, true;
 	// By Map ID e.g. "/tp 77" for house zu heltzer 
 	int mapid;
 	if (GuiUtils::ParseInt(s.c_str(), &mapid) && (mapid != 0)) {
@@ -412,25 +410,33 @@ bool ChatCommands::ParseOutpost(const std::wstring s, GW::Constants::MapID& outp
 	}
 	// By full outpost name (without punctuation) e.g. "/tp GrEaT TemplE oF BalthaZAR"
 	std::string sanitized;
-	std::string compare = GuiUtils::RemovePunctuation(GuiUtils::WStringToString(s));
+	std::string compare = GuiUtils::ToLower(GuiUtils::RemovePunctuation(GuiUtils::WStringToString(s)));
+    // Remove "the " from front of entered string
+    std::size_t found = compare.rfind("the ");
+    if (found == 0)
+        compare.replace(found, 4, "");
+    int bestMatchMapID = -1;
 	unsigned int searchStringLength = compare.length();
-	unsigned int bestMatchMapID = 0;
 	unsigned int bestMatchLength = 0;
-	// NOTE: 730 is the size of GW::Constants::NAME_FROM_ID, hardcoded here because sizeof() returns wrong result.
-	for (int i = 0; i < 725; i++) {
-		if (!GW::Constants::NAME_FROM_ID[i]) continue;
-		sanitized = GuiUtils::ToLower(GuiUtils::RemovePunctuation(GW::Constants::NAME_FROM_ID[i])); // Remove punctuation, to lower case.
-		unsigned int thisMapLength = sanitized.length();
-		if (searchStringLength > thisMapLength) continue; // String entered by user is longer than this outpost name.
-		if (sanitized.rfind(compare) == 0) {
-			if(searchStringLength == thisMapLength) return outpost = (GW::Constants::MapID)i, true; // Exact match
-			if (bestMatchLength < thisMapLength) {
-				bestMatchLength = thisMapLength;
-				bestMatchMapID = i;
-			}
+    unsigned int thisMapLength = 0;
+    const char** searchable_map_names = TravelWindow::Instance().searchable_map_names;
+    const size_t mapCnt = 181;
+	for (int i = 0; i < mapCnt; i++) {
+		sanitized = searchable_map_names[i]; // Remove punctuation, to lower case.
+        thisMapLength = sanitized.length();
+		if (searchStringLength > thisMapLength) 
+            continue; // String entered by user is longer than this outpost name.
+        if (sanitized.rfind(compare) != 0)
+            continue; // No match
+		if (bestMatchLength < thisMapLength) {
+			bestMatchLength = thisMapLength;
+			bestMatchMapID = i;
+            if (searchStringLength == thisMapLength)
+                break; // Exact match, break.
 		}
 	}
-	if(bestMatchMapID) return outpost = (GW::Constants::MapID)bestMatchMapID, true; // Exact match
+    if (bestMatchMapID != -1)
+        return outpost = TravelWindow::Instance().searchable_map_ids[bestMatchMapID], true; // Exact match
 	return false;
 }
 bool ChatCommands::ParseDistrict(const std::wstring s, GW::Constants::District& district, int& number) {
@@ -450,6 +456,10 @@ bool ChatCommands::ParseDistrict(const std::wstring s, GW::Constants::District& 
 	if (s == L"ac" || s == L"atc" || s == L"ch")	return district = GW::Constants::District::AsiaChinese, true;
 	if (s == L"aj" || s == L"jp")					return district = GW::Constants::District::AsiaJapanese, true;
 	return false;
+}
+bool ChatCommands::IsLuxon() {
+    GW::GuildContext* c = GW::GuildMgr::GetGuildContext();
+    return c && c->guilds[c->player_guild_index]->faction;
 }
 void ChatCommands::CmdTP(const wchar_t *message, int argc, LPWSTR *argv) {
 	// zero argument error
@@ -513,6 +523,33 @@ void ChatCommands::CmdTP(const wchar_t *message, int argc, LPWSTR *argv) {
 		argOutpost.append(argDistrict);
 	}
 	if (ParseOutpost(argOutpost, outpost, district, district_number)) {
+        switch (outpost) {
+            case GW::Constants::MapID::Vizunah_Square_Foreign_Quarter_outpost:
+            case GW::Constants::MapID::Vizunah_Square_Local_Quarter_outpost:
+                if (std::wstring(L"local").rfind(argv[argc - 1]) == 0) // - e.g. /tp viz local
+                    outpost = GW::Constants::MapID::Vizunah_Square_Local_Quarter_outpost;
+                else
+                    outpost = GW::Constants::MapID::Vizunah_Square_Foreign_Quarter_outpost;
+                break;
+            case GW::Constants::MapID::Fort_Aspenwood_Luxon_outpost:
+            case GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost:
+                if (std::wstring(L"luxon").rfind(argv[argc - 1]) == 0) // - e.g. /tp fa lux
+                    outpost = GW::Constants::MapID::Fort_Aspenwood_Luxon_outpost;
+                else if (std::wstring(L"kurzick").rfind(argv[argc - 1]) == 0)
+                    outpost = GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost;
+                else
+                    outpost = IsLuxon() ? GW::Constants::MapID::Fort_Aspenwood_Luxon_outpost : GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost;
+                break;
+            case GW::Constants::MapID::The_Jade_Quarry_Kurzick_outpost:
+            case GW::Constants::MapID::The_Jade_Quarry_Luxon_outpost:
+                if (std::wstring(L"luxon").rfind(argv[argc - 1]) == 0) // - e.g. /tp jq lux
+                    outpost = GW::Constants::MapID::The_Jade_Quarry_Luxon_outpost;
+                else if (std::wstring(L"kurzick").rfind(argv[argc - 1]) == 0)
+                    outpost = GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost;
+                else
+                    outpost = IsLuxon() ? GW::Constants::MapID::The_Jade_Quarry_Luxon_outpost : GW::Constants::MapID::The_Jade_Quarry_Kurzick_outpost;
+                break;
+        }
 		TravelWindow::Instance().Travel(outpost, district, district_number); // NOTE: ParseOutpost sets outpost, district and district_number vars by reference.
 		return;
 	}

@@ -115,7 +115,7 @@ const char* GetZaishenVanquish(time_t* unix) {
     return DailyQuests::Instance().zaishen_vanquish_cycles[cycle_index];
 }
 const char* GetNicholasSandfordLocation(time_t* unix) {
-    uint32_t cycle_index = (*unix - 1239260400) / 604800 % 52;
+    uint32_t cycle_index = (*unix - 1239260400) / 86400 % 52;
     return DailyQuests::Instance().nicholas_sandford_cycles[cycle_index];
 }
 uint32_t GetNicholasItemQuantity(time_t* unix) {
@@ -131,16 +131,76 @@ const char* GetNicholasItemName(time_t* unix) {
     return DailyQuests::Instance().nicholas_item_cycles[cycle_index];
 }
 const char* GetWantedByShiningBlade(time_t* unix) {
-    uint32_t cycle_index = (*unix - 1276012800) / 604800 % 21;
+    uint32_t cycle_index = (*unix - 1276012800) / 86400 % 21;
     return DailyQuests::Instance().wanted_by_shining_blade_cycles[cycle_index];
 }
 const char* GetVanguardQuest(time_t* unix) {
-    uint32_t cycle_index = (*unix - 1299168000) / 604800 % 9;
+    uint32_t cycle_index = (*unix - 1299168000) / 86400 % 9;
     return DailyQuests::Instance().vanguard_cycles[cycle_index];
 }
 bool GetIsPreSearing() {
     GW::AreaInfo* i = GW::Map::GetCurrentMapInfo();
     return i && i->region == GW::Region::Region_Presearing;
+}
+void DailyQuests::Draw(IDirect3DDevice9* pDevice) {
+    if (!visible)
+        return;
+    ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiSetCond_FirstUseEver);
+    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
+        return ImGui::End();
+    float offset = 0.0f;
+    const float short_text_width = 120.0f * ImGui::GetIO().FontGlobalScale;
+    const float long_text_width = 200.0f * ImGui::GetIO().FontGlobalScale;
+    ImGui::Text("Date");
+    ImGui::SameLine(offset += short_text_width);
+    ImGui::Text("Zaishen Mission");
+    ImGui::SameLine(offset += long_text_width);
+    ImGui::Text("Zaishen Bounty");
+    ImGui::SameLine(offset += long_text_width);
+    ImGui::Text("Zaishen Combat");
+    ImGui::SameLine(offset += long_text_width);
+    ImGui::Text("Zaishen Vanquish");
+    ImGui::SameLine(offset += long_text_width);
+    ImGui::Text("Wanted");
+    ImGui::SameLine(offset += long_text_width);
+    ImGui::Text("Nicholas the Traveller");
+    ImGui::Separator();
+    ImGui::BeginChild("dailies_scroll");
+    time_t unix = time(nullptr);
+    std::tm* lTime;
+    for (size_t i = 0; i < 52; i++) {
+        offset = 0.0f;
+        switch (i) {
+        case 0:
+            ImGui::Text("Today");
+            break;
+        case 1:
+            ImGui::Text("Tomorrow");
+            break;
+        default:
+            char mbstr[100];
+            std::strftime(mbstr, sizeof(mbstr), "%a %d %b", std::localtime(&unix));
+            ImGui::Text(mbstr);
+            break;
+        }
+        
+        ImGui::SameLine(offset += short_text_width);
+        ImGui::Text(GetZaishenMission(&unix));
+        ImGui::SameLine(offset += long_text_width);
+        ImGui::Text(GetZaishenBounty(&unix));
+        ImGui::SameLine(offset += long_text_width);
+        ImGui::Text(GetZaishenCombat(&unix));
+        ImGui::SameLine(offset += long_text_width);
+        ImGui::Text(GetZaishenVanquish(&unix));
+        ImGui::SameLine(offset += long_text_width);
+        ImGui::Text(GetWantedByShiningBlade(&unix));
+        ImGui::SameLine(offset += long_text_width);
+        ImGui::Text("%d %s, %s",GetNicholasItemQuantity(&unix), GetNicholasItemName(&unix), GetNicholasLocation(&unix));
+        unix += 86400;
+    }
+    ImGui::EndChild();
+    return ImGui::End();
 }
 void DailyQuests::DrawHelp() {
     ImGui::Text("You can create a 'Send Chat' hotkey to perform any command.");
@@ -151,19 +211,12 @@ void DailyQuests::DrawHelp() {
     ImGui::Bullet(); ImGui::Text("'/today' prints current daily activities.");
     ImGui::Bullet(); ImGui::Text("'/tomorrow' prints tomorrow's daily activities.");
 }
-
 void DailyQuests::DrawSettingInternal() {
 
 }
 
-void DailyQuests::LoadSettings(CSimpleIni* ini) {
-}
-
-void DailyQuests::SaveSettings(CSimpleIni* ini) {
-}
-
 void DailyQuests::Initialize() {
-    ToolboxModule::Initialize();
+    ToolboxWindow::Initialize();
 
     GW::Chat::CreateCommand(L"zb", DailyQuests::CmdZaishenBounty);
     GW::Chat::CreateCommand(L"zm", DailyQuests::CmdZaishenMission);
