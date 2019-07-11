@@ -474,6 +474,7 @@ void GameSettings::Initialize() {
 	GW::StoC::AddCallback<GW::Packet::StoC::SpeechBubble>(
 		[this](GW::Packet::StoC::SpeechBubble *pak) -> bool {
 		if (!npc_speech_bubbles_as_chat || !pak->message || !pak->agent_id) return false;
+        if (speech_bubble_chat_pending) return false; // Pending another speech bubble.
 		const wchar_t* m = pak->message;
 		if (m[3] == 0) return false; // Shout skill etc
 		GW::Agent* agent = GW::Agents::GetAgentByID(pak->agent_id);
@@ -905,7 +906,7 @@ void GameSettings::SetAfkMessage(std::wstring&& message) {
 }
 
 void GameSettings::Update(float delta) {
-	if (npc_speech_bubbles_as_chat && speech_bubble_msg.size() && speech_bubble_sender.size()) {
+	if (npc_speech_bubbles_as_chat && speech_bubble_chat_pending && speech_bubble_msg.size() && speech_bubble_sender.size()) {
 		GW::Chat::Color dummy; // Needed for GW::Chat::GetChannelColors
 		GW::Chat::Color senderCol; // 153, 255, 0 for NPC colour?
 		GW::Chat::Color messageCol;
@@ -917,6 +918,7 @@ void GameSettings::Update(float delta) {
 		GW::Chat::WriteChat(GW::Chat::CHANNEL_EMOTE, buffer);
 		speech_bubble_msg.clear();
 		speech_bubble_sender.clear();
+        speech_bubble_chat_pending = false;
 	}
 	if (auto_set_away
 		&& TIMER_DIFF(activity_timer) > auto_set_away_delay * 60000

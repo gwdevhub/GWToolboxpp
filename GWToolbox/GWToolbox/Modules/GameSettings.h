@@ -116,6 +116,7 @@ private:
 	std::vector<wchar_t*> previous_party_names;
 	bool was_leading = true;
 	bool check_message_on_party_change = true;
+    bool speech_bubble_chat_pending = false;
 
 	void DrawChannelColor(const char *name, GW::Chat::Channel chan);
 	static void FriendStatusCallback(GW::Friend* f, GW::FriendStatus status, const wchar_t *name, const wchar_t *charname);

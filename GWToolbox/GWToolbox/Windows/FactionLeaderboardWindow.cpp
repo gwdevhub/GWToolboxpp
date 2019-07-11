@@ -47,7 +47,7 @@ void FactionLeaderboardWindow::Initialize() {
 		};
 		if (leaderboard.size() <= leaderboardEntry.rank)
 			leaderboard.resize(leaderboardEntry.rank + 1);
-		leaderboard.emplace(leaderboard.begin() + leaderboardEntry.rank, leaderboardEntry);
+		leaderboard.assign(leaderboard.begin() + leaderboardEntry.rank, leaderboardEntry);
 		return false;
 	});
 }
