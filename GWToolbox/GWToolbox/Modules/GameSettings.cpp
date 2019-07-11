@@ -481,6 +481,7 @@ void GameSettings::Initialize() {
 		if (!agent || agent->login_number) return false; // Agent not found or Speech bubble from player e.g. drunk message.
 		GW::UI::AsyncDecodeStr(pak->message, &speech_bubble_msg);
 		GW::Agents::AsyncGetAgentName(agent, speech_bubble_sender);
+        speech_bubble_chat_pending = true;
 		return false; // Consume.
 	});
 
@@ -509,17 +510,17 @@ void GameSettings::MessageOnPartyChange() {
 	if (!me || !current_party || !current_party->players.valid())
 		return; // Party not ready yet.
     bool is_leading = false;
-	std::vector<wchar_t*> current_party_names;
+	std::vector<std::wstring> current_party_names;
     GW::PlayerPartyMemberArray current_party_players = current_party->players; // Copy the player array here to avoid ptr issues.
 	for (size_t i = 0; i < current_party_players.size(); i++) {
         if (!current_party_players[i].login_number)
             continue;
         if (i == 0)
             is_leading = current_party_players[i].login_number == me->login_number;
-        wchar_t* player_name = GW::Agents::GetPlayerNameByLoginNumber(current_party->players[i].login_number);
+        wchar_t* player_name = GW::Agents::GetPlayerNameByLoginNumber(current_party_players[i].login_number);
         if (!player_name)
             continue;
-		current_party_names.push_back(player_name);
+		current_party_names.push_back(std::wstring(player_name));
 	}
 	// If previous party list is empty (i.e. map change), then initialise
 	if (!previous_party_names.size()) {
@@ -528,14 +529,14 @@ void GameSettings::MessageOnPartyChange() {
 	}
 	if (current_party_names.size() > previous_party_names.size()) {
 		// Someone joined my party
-		for (size_t i = 0; i < current_party_names.size(); i++) {
+		for (size_t i = 0; i < current_party_names.size() && notify_when_party_member_joins; i++) {
 			bool found = false;
 			for (size_t j = 0; j < previous_party_names.size() && !found; j++) {
 				found = previous_party_names[j] == current_party_names[i];
 			}
-			if (!found && notify_when_party_member_joins) {
-				wchar_t buffer[255];
-				_snwprintf(buffer, sizeof(buffer), L"<a=1>%ls</a> joined the party.", current_party_names[i]);
+			if (!found) {
+				wchar_t buffer[128];
+                swprintf(buffer, 128, L"<a=1>%ls</a> joined the party.", current_party_names[i].c_str());
 				GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
 			}
 		}
@@ -543,14 +544,14 @@ void GameSettings::MessageOnPartyChange() {
 		// We left a party of at least 2 other people
 	} else if (current_party_names.size() < previous_party_names.size()) {
 		// Someone left my party
-		for (size_t i = 0; i < previous_party_names.size(); i++) {
+		for (size_t i = 0; i < previous_party_names.size() && notify_when_party_member_leaves; i++) {
 			bool found = false;
 			for (size_t j = 0; j < current_party_names.size() && !found; j++) {
 				found = previous_party_names[i] == current_party_names[j];
 			}
-			if (!found && notify_when_party_member_leaves) {
-				wchar_t buffer[255];
-				_snwprintf(buffer, sizeof(buffer), L"<a=1>%ls</a> left the party.", previous_party_names[i]);
+			if (!found) {
+				wchar_t buffer[128];
+				swprintf(buffer, 128, L"<a=1>%ls</a> left the party.", previous_party_names[i].c_str());
 				GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
 			}
 		}
@@ -913,8 +914,8 @@ void GameSettings::Update(float delta) {
 
 		GW::Chat::GetChannelColors(GW::Chat::CHANNEL_EMOTE, &senderCol, &dummy);   // Sender should be same color as emote sender
 		GW::Chat::GetChannelColors(GW::Chat::CHANNEL_ALLIES, &dummy, &messageCol); // ...but set the message to be same color as ally chat
-		char buffer[512];
-		snprintf(buffer, sizeof(buffer), "<c=#%06X>%s</c>: <c=#%06X>%s</c>", senderCol & 0x00FFFFFF, speech_bubble_sender.c_str(), messageCol & 0x00FFFFFF, speech_bubble_msg.c_str());
+		wchar_t buffer[128];
+        swprintf(buffer, 128, L"<c=#%06X>%ls</c>: <c=#%06X>%ls</c>", senderCol & 0x00FFFFFF, speech_bubble_sender.c_str(), messageCol & 0x00FFFFFF, speech_bubble_msg.c_str());
 		GW::Chat::WriteChat(GW::Chat::CHANNEL_EMOTE, buffer);
 		speech_bubble_msg.clear();
 		speech_bubble_sender.clear();

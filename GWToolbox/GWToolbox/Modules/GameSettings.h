@@ -113,7 +113,7 @@ private:
 	GW::MemoryPatcher *ctrl_click_patch;
 	GW::MemoryPatcher *tome_patch;
 	GW::MemoryPatcher *gold_confirm_patch;
-	std::vector<wchar_t*> previous_party_names;
+	std::vector<std::wstring> previous_party_names;
 	bool was_leading = true;
 	bool check_message_on_party_change = true;
     bool speech_bubble_chat_pending = false;
