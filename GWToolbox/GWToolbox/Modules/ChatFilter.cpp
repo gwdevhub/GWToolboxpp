@@ -97,8 +97,10 @@ void ChatFilter::Initialize() {
 
 		GW::Array<wchar_t> *buff = &GW::GameContext::instance()->world->message_buff;
 		wchar_t *sender = GW::Agents::GetPlayerNameByLoginNumber(pak->id);
-		if (!sender) return false;
-
+		if (!sender) 
+            return false;
+        if (!ShouldIgnoreByChannel(pak->type))
+            return false;
 		if (ShouldIgnore(buff->begin()) ||
 			ShouldIgnoreBySender(sender, 32) ||
 			ShouldIgnoreByContent(buff->begin(), buff->size())) {
@@ -143,6 +145,13 @@ void ChatFilter::LoadSettings(CSimpleIni* ini) {
 	inventory_is_full = ini->GetBoolValue(Name(), VAR_NAME(inventory_is_full), inventory_is_full);
 	item_cannot_be_used = ini->GetBoolValue(Name(), VAR_NAME(item_cannot_be_used), item_cannot_be_used);
     item_already_identified = ini->GetBoolValue(Name(), VAR_NAME(item_already_identified), item_already_identified);
+
+    filter_channel_local = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_local), filter_channel_local);
+    filter_channel_guild = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_guild), filter_channel_guild);
+    filter_channel_team = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_team), filter_channel_team);
+    filter_channel_trade = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_trade), filter_channel_trade);
+    filter_channel_alliance = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_alliance), filter_channel_alliance);
+    filter_channel_emotes = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_emotes), filter_channel_emotes);
 
 	{
 		std::ifstream file;
@@ -199,6 +208,19 @@ void ChatFilter::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(item_cannot_be_used), item_cannot_be_used);
     ini->SetBoolValue(Name(), VAR_NAME(item_already_identified), item_already_identified);
     
+    ini->SetBoolValue(Name(), VAR_NAME(filter_channel_local), filter_channel_local);
+    ini->SetBoolValue(Name(), VAR_NAME(filter_channel_guild), filter_channel_guild);
+    ini->SetBoolValue(Name(), VAR_NAME(filter_channel_team), filter_channel_team);
+    ini->SetBoolValue(Name(), VAR_NAME(filter_channel_trade), filter_channel_trade);
+    ini->SetBoolValue(Name(), VAR_NAME(filter_channel_alliance), filter_channel_alliance);
+    ini->SetBoolValue(Name(), VAR_NAME(filter_channel_emotes), filter_channel_emotes);
+
+    filter_channel_local = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_local), filter_channel_local);
+    filter_channel_guild = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_guild), filter_channel_guild);
+    filter_channel_team = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_team), filter_channel_team);
+    filter_channel_trade = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_trade), filter_channel_trade);
+    filter_channel_alliance = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_alliance), filter_channel_alliance);
+    filter_channel_emotes = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_emotes), filter_channel_emotes);
 
 	if (timer_parse_filters) {
 		timer_parse_filters = 0;
@@ -492,7 +514,17 @@ bool ChatFilter::ShouldIgnoreByContent(const wchar_t *message, size_t size) {
 	free(text);
 	return false;
 }
-
+bool ChatFilter::ShouldIgnoreByChannel(uint32_t channel) {
+    switch (static_cast<GW::Chat::Channel>(channel)) {
+    case GW::Chat::Channel::CHANNEL_ALL:        return filter_channel_local;
+    case GW::Chat::Channel::CHANNEL_GUILD:      return filter_channel_guild;
+    case GW::Chat::Channel::CHANNEL_GROUP:      return filter_channel_team;
+    case GW::Chat::Channel::CHANNEL_TRADE:      return filter_channel_trade;
+    case GW::Chat::Channel::CHANNEL_ALLIANCE:   return filter_channel_alliance;
+    case GW::Chat::Channel::CHANNEL_EMOTE:      return filter_channel_emotes;
+    }
+    return false;
+}
 bool ChatFilter::ShouldIgnoreBySender(const wchar_t *sender, size_t size) {
 #ifdef EXTENDED_IGNORE_LIST
 	if (sender == nullptr) return false;
@@ -567,8 +599,20 @@ void ChatFilter::DrawSettingInternal() {
 
 	ImGui::Separator();
 	ImGui::Checkbox("Hide any messages containing:", &messagebycontent);
-	ImGui::Indent();
+    ImGui::Indent();
 	ImGui::TextDisabled("(Each in a separate line. Not case sensitive)");
+    ImGui::Checkbox("Local", &filter_channel_local);
+    ImGui::SameLine(0.0f, -1.0f);
+    ImGui::Checkbox("Guild", &filter_channel_guild);
+    ImGui::SameLine(0.0f, -1.0f);
+    ImGui::Checkbox("Team", &filter_channel_team);
+    ImGui::SameLine(0.0f, -1.0f);
+    ImGui::Checkbox("Trade", &filter_channel_trade);
+    ImGui::SameLine(0.0f, -1.0f);
+    ImGui::Checkbox("Alliance", &filter_channel_alliance);
+    ImGui::SameLine(0.0f, -1.0f);
+    ImGui::Checkbox("Emotes", &filter_channel_emotes);
+    
 	if (ImGui::InputTextMultiline("##bycontentfilter", bycontent_word_buf, 
 		FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0f))) {
 		timer_parse_filters = GetTickCount() + NOISE_REDUCTION_DELAY_MS;

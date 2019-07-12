@@ -350,7 +350,7 @@ std::vector<ToolboxUIElement*> ChatCommands::MatchingWindows(const wchar_t *mess
 				ret.push_back(window);
 			}
 		} else {
-			std::string name = std::string(arg.begin(), arg.end());
+            std::string name = GuiUtils::WStringToString(arg);
 			for (ToolboxUIElement* window : GWToolbox::Instance().GetUIElements()) {
 				if (name == GuiUtils::ToLower(window->Name())) {
 					ret.push_back(window);

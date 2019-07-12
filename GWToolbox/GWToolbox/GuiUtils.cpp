@@ -8,6 +8,7 @@
 #include <GWCA/Utilities/Scanner.h>
 
 #include <Modules/Resources.h>
+#include <Utf8.h>
 
 namespace {
 	ImFont* font16 = nullptr;
@@ -82,9 +83,10 @@ std::wstring GuiUtils::ToLower(std::wstring s) {
 }
 std::string GuiUtils::WStringToString(const std::wstring& s)
 {
-	std::string temp(s.length(), ' ');
+	/*std::string temp(s.length(), ' ');
 	std::copy(s.begin(), s.end(), temp.begin());
-	return temp;
+	return temp;*/
+    return std::string(Unicode16ToUtf8(s.c_str()).bytes);
 }
 
 std::string GuiUtils::RemovePunctuation(std::string s) {

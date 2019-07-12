@@ -45,6 +45,7 @@ private:
 	bool ShouldIgnore(const wchar_t *message);
 	bool ShouldIgnoreByContent(const wchar_t *message, size_t size);
 	bool ShouldIgnoreBySender(const wchar_t *sender, size_t size);
+    bool ShouldIgnoreByChannel(uint32_t channel);
 
 	bool self_drop_rare;
 	bool self_drop_common;
@@ -71,6 +72,13 @@ private:
     bool item_already_identified = false;
 
 	bool messagebycontent;
+    // Which channels to filter.
+    bool filter_channel_local = true;
+    bool filter_channel_guild = false;
+    bool filter_channel_team = false;
+    bool filter_channel_trade = true;
+    bool filter_channel_alliance = false;
+    bool filter_channel_emotes = false;
 
 	static const size_t FILTER_BUF_SIZE = 1024*16;
 
