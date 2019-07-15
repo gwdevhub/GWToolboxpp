@@ -474,16 +474,28 @@ void GameSettings::Initialize() {
 	GW::StoC::AddCallback<GW::Packet::StoC::SpeechBubble>(
 		[this](GW::Packet::StoC::SpeechBubble *pak) -> bool {
 		if (!npc_speech_bubbles_as_chat || !pak->message || !pak->agent_id) return false;
-        if (speech_bubble_chat_pending) return false; // Pending another speech bubble.
+        if (npc_message_pending) return false; // Pending another speech bubble.
 		const wchar_t* m = pak->message;
 		if (m[3] == 0) return false; // Shout skill etc
 		GW::Agent* agent = GW::Agents::GetAgentByID(pak->agent_id);
 		if (!agent || agent->login_number) return false; // Agent not found or Speech bubble from player e.g. drunk message.
-		GW::UI::AsyncDecodeStr(pak->message, &speech_bubble_msg);
-		GW::Agents::AsyncGetAgentName(agent, speech_bubble_sender);
-        speech_bubble_chat_pending = true;
+		GW::UI::AsyncDecodeStr(pak->message, &npc_message);
+		GW::Agents::AsyncGetAgentName(agent, npc_sender);
+        npc_message_pending = true;
 		return false; // Consume.
 	});
+    
+    GW::StoC::AddCallback<GW::Packet::StoC::DisplayDialogue>(
+        [this](GW::Packet::StoC::DisplayDialogue* pak) -> bool {
+            if (!redirect_npc_messages_to_emote_chat)
+                return false; // Disabled
+        GW::UI::AsyncDecodeStr(pak->name, &npc_sender);
+        GW::UI::AsyncDecodeStr(pak->message, &npc_message);
+        npc_message_pending = true;
+        return true;
+        // packet 159
+    });
+
 
 	GW::FriendListMgr::SetOnFriendStatusCallback(GameSettings::FriendStatusCallback);
 #ifdef _DEBUG
@@ -588,7 +600,9 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
 	show_unlearned_skill = ini->GetBoolValue(Name(), VAR_NAME(show_unlearned_skill), false);
 	auto_skip_cinematic = ini->GetBoolValue(Name(), VAR_NAME(auto_skip_cinematic), false);
+
 	npc_speech_bubbles_as_chat = ini->GetBoolValue(Name(), VAR_NAME(npc_speech_bubbles_as_chat), npc_speech_bubbles_as_chat);
+    redirect_npc_messages_to_emote_chat = ini->GetBoolValue(Name(), VAR_NAME(redirect_npc_messages_to_emote_chat), redirect_npc_messages_to_emote_chat);
 
 	faction_warn_percent = ini->GetBoolValue(Name(), VAR_NAME(faction_warn_percent), faction_warn_percent);
 	faction_warn_percent_amount = ini->GetLongValue(Name(), VAR_NAME(faction_warn_percent_amount), faction_warn_percent_amount);
@@ -676,7 +690,9 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 
 	ini->SetBoolValue(Name(), VAR_NAME(show_unlearned_skill), show_unlearned_skill);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_skip_cinematic), auto_skip_cinematic);
+
 	ini->SetBoolValue(Name(), VAR_NAME(npc_speech_bubbles_as_chat), npc_speech_bubbles_as_chat);
+    ini->SetBoolValue(Name(), VAR_NAME(redirect_npc_messages_to_emote_chat), redirect_npc_messages_to_emote_chat);
 
 	ini->SetBoolValue(Name(), VAR_NAME(faction_warn_percent), faction_warn_percent);
 	ini->SetLongValue(Name(), VAR_NAME(faction_warn_percent_amount), faction_warn_percent_amount);
@@ -731,8 +747,10 @@ void GameSettings::DrawSettingInternal() {
     }
 	ImGui::ShowHelp("Show timestamps in message history.");
 
-	ImGui::Checkbox("Show NPC messages in emote channel", &npc_speech_bubbles_as_chat);
+	ImGui::Checkbox("Show NPC speech bubbles in emote channel", &npc_speech_bubbles_as_chat);
 	ImGui::ShowHelp("Speech bubbles from NPCs and Heroes will appear as emote messages in chat");
+    ImGui::Checkbox("Redirect NPC dialog to emote channel", &redirect_npc_messages_to_emote_chat);
+    ImGui::ShowHelp("Messages from NPCs that would normally show on-screen and in team chat are instead redirected to the emote channel");
 
 	if (ImGui::Checkbox("Open web links from templates", &openlinks)) {
 		GW::Chat::SetOpenLinks(openlinks);
@@ -907,19 +925,19 @@ void GameSettings::SetAfkMessage(std::wstring&& message) {
 }
 
 void GameSettings::Update(float delta) {
-	if (npc_speech_bubbles_as_chat && speech_bubble_chat_pending && speech_bubble_msg.size() && speech_bubble_sender.size()) {
+	if (npc_message_pending && npc_message.size() && npc_sender.size()) {
 		GW::Chat::Color dummy; // Needed for GW::Chat::GetChannelColors
 		GW::Chat::Color senderCol; // 153, 255, 0 for NPC colour?
 		GW::Chat::Color messageCol;
 
 		GW::Chat::GetChannelColors(GW::Chat::CHANNEL_EMOTE, &senderCol, &dummy);   // Sender should be same color as emote sender
 		GW::Chat::GetChannelColors(GW::Chat::CHANNEL_ALLIES, &dummy, &messageCol); // ...but set the message to be same color as ally chat
-		wchar_t buffer[128];
-        swprintf(buffer, 128, L"<c=#%06X>%ls</c>: <c=#%06X>%ls</c>", senderCol & 0x00FFFFFF, speech_bubble_sender.c_str(), messageCol & 0x00FFFFFF, speech_bubble_msg.c_str());
+        wchar_t buffer[512];
+        swprintf(buffer, 512, L"<c=#%06X>%ls</c>: <c=#%06X>%ls</c>", senderCol & 0x00FFFFFF, npc_sender.c_str(), messageCol & 0x00FFFFFF, npc_message.c_str());
 		GW::Chat::WriteChat(GW::Chat::CHANNEL_EMOTE, buffer);
-		speech_bubble_msg.clear();
-		speech_bubble_sender.clear();
-        speech_bubble_chat_pending = false;
+        npc_message.clear();
+        npc_sender.clear();
+        npc_message_pending = false;
 	}
 	if (auto_set_away
 		&& TIMER_DIFF(activity_timer) > auto_set_away_delay * 60000
