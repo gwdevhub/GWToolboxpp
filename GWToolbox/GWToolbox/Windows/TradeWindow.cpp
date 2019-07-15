@@ -382,6 +382,7 @@ void TradeWindow::DrawAlertsWindowContent(bool ownwindow) {
 		ParseBuffer(alert_buf, alert_words);
 		alertfile_dirty = true;
 	}
+    ImGui::Checkbox("Flash Guild Wars window in taskbar on match", &flash_window_on_trade_alert);
 }
 
 void TradeWindow::DrawSettingInternal() {
@@ -392,6 +393,7 @@ void TradeWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxWindow::LoadSettings(ini);
 	print_game_chat = ini->GetBoolValue(Name(), VAR_NAME(print_game_chat), false);
 	filter_alerts   = ini->GetBoolValue(Name(), VAR_NAME(filter_alerts), false);
+    flash_window_on_trade_alert = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_trade_alert), flash_window_on_trade_alert);
 
 	std::ifstream alert_file;
 	alert_file.open(Resources::GetPath(L"AlertKeywords.txt"));
@@ -409,6 +411,8 @@ void TradeWindow::SaveSettings(CSimpleIni* ini) {
 
 	ini->SetBoolValue(Name(), VAR_NAME(print_game_chat), print_game_chat);
 	ini->SetBoolValue(Name(), VAR_NAME(filter_alerts), filter_alerts);
+    ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_trade_alert), flash_window_on_trade_alert);
+    
 
 	if (alertfile_dirty) {
 		std::ofstream bycontent_file;
