@@ -16,6 +16,8 @@
 
 unsigned int BuildsWindow::TeamBuild::cur_ui_id = 0;
 
+bool order_by_changed = false;
+
 #define INI_FILENAME L"builds.ini"
 
 void BuildsWindow::Initialize() {
@@ -29,6 +31,20 @@ void BuildsWindow::Terminate() {
 	teambuilds.clear();
 	inifile->Reset();
 	delete inifile;
+}
+
+void BuildsWindow::DrawSettingInternal() {
+    ImGui::Text("Order team builds by: ");
+    ImGui::SameLine(0, -1);
+    if (ImGui::Checkbox("Index", &order_by_index)) {
+        order_by_changed = true;
+        order_by_name = !order_by_index;
+    }
+    ImGui::SameLine(0, -1);
+    if (ImGui::Checkbox("Name", &order_by_name)) {
+        order_by_changed = true;
+        order_by_index = !order_by_name;
+    }
 }
 
 void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
@@ -211,7 +227,10 @@ void BuildsWindow::Update(float delta) {
 			queue.pop();
 		}
 	}
-
+    if (order_by_changed) {
+        LoadFromFile();
+        order_by_changed = false;
+    }
 	// if we open the window, load from file. If we close the window, save to file. 
 	static bool old_visible = false;
 	bool cur_visible = false;
@@ -282,35 +301,37 @@ bool BuildsWindow::MoveOldBuilds(CSimpleIni* ini) {
 }
 
 void BuildsWindow::LoadFromFile() {
-	// clear builds from toolbox
-	teambuilds.clear();
+    // clear builds from toolbox
+    teambuilds.clear();
 
-	if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
-	inifile->LoadFile(Resources::GetPath(INI_FILENAME).c_str());
+    if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
+    inifile->LoadFile(Resources::GetPath(INI_FILENAME).c_str());
 
-	// then load
-	CSimpleIni::TNamesDepend entries;
-	inifile->GetAllSections(entries);
-	for (CSimpleIni::Entry& entry : entries) {
-		const char* section = entry.pItem;
-		int count = inifile->GetLongValue(section, "count", 12);
-		teambuilds.push_back(TeamBuild(inifile->GetValue(section, "buildname", "")));
-		TeamBuild& tbuild = teambuilds.back();
-		tbuild.show_numbers = inifile->GetBoolValue(section, "showNumbers", true);
-		for (int i = 0; i < count; ++i) {
-			char namekey[16];
-			char templatekey[16];
-			snprintf(namekey, 16, "name%d", i);
-			snprintf(templatekey, 16, "template%d", i);
-			const char* nameval = inifile->GetValue(section, namekey, "");
-			const char* templateval = inifile->GetValue(section, templatekey, "");
-			tbuild.builds.push_back(Build(nameval, templateval));
-		}
-	}
-	// Sort by name
-	sort(teambuilds.begin(), teambuilds.end(), [](TeamBuild a, TeamBuild b) {
-		return _stricmp(a.name, b.name) < 0;
-	});
+    // then load
+    CSimpleIni::TNamesDepend entries;
+    inifile->GetAllSections(entries);
+    for (CSimpleIni::Entry& entry : entries) {
+        const char* section = entry.pItem;
+        int count = inifile->GetLongValue(section, "count", 12);
+        teambuilds.push_back(TeamBuild(inifile->GetValue(section, "buildname", "")));
+        TeamBuild& tbuild = teambuilds.back();
+        tbuild.show_numbers = inifile->GetBoolValue(section, "showNumbers", true);
+        for (int i = 0; i < count; ++i) {
+            char namekey[16];
+            char templatekey[16];
+            snprintf(namekey, 16, "name%d", i);
+            snprintf(templatekey, 16, "template%d", i);
+            const char* nameval = inifile->GetValue(section, namekey, "");
+            const char* templateval = inifile->GetValue(section, templatekey, "");
+            tbuild.builds.push_back(Build(nameval, templateval));
+        }
+    }
+    // Sort by name
+    if (order_by_name) {
+        sort(teambuilds.begin(), teambuilds.end(), [](TeamBuild a, TeamBuild b) {
+            return _stricmp(a.name, b.name) < 0;
+        });
+    }
 	builds_changed = false;
 }
 

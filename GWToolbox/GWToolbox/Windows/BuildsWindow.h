@@ -53,6 +53,7 @@ public:
 
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
+    void DrawSettingInternal() override;
 
 	void LoadFromFile();
 	void SaveToFile();
@@ -69,6 +70,8 @@ private:
 
 	bool builds_changed = false;
 	std::vector<TeamBuild> teambuilds;
+    bool order_by_name = true;
+    bool order_by_index = !order_by_name;
 
 	clock_t send_timer;
 	std::queue<std::string> queue;
