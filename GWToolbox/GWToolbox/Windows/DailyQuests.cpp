@@ -164,7 +164,7 @@ void DailyQuests::Draw(IDirect3DDevice9* pDevice) {
     ImGui::SameLine(offset += long_text_width);
     ImGui::Text("Wanted");
     ImGui::SameLine(offset += long_text_width);
-    ImGui::Text("Nicholas the Traveller");
+    ImGui::Text("Nicholas the Traveler");
     ImGui::Separator();
     ImGui::BeginChild("dailies_scroll");
     time_t unix = time(nullptr);
@@ -368,9 +368,9 @@ void DailyQuests::CmdNicholas(const wchar_t *message, int argc, LPWSTR *argv) {
             snprintf(buf, buf_size, "Nicholas Sandford, %s: 5 %s", DateString(&now), GetNicholasSandfordLocation(&now));
     } else {
         if (nowOriginal == now) // Today - dont put timestamp in.
-            snprintf(buf, buf_size, "Nicholas the Traveller: %d %s in %s", GetNicholasItemQuantity(&now), GetNicholasItemName(&now), GetNicholasLocation(&now));
+            snprintf(buf, buf_size, "Nicholas the Traveler: %d %s in %s", GetNicholasItemQuantity(&now), GetNicholasItemName(&now), GetNicholasLocation(&now));
         else
-            snprintf(buf, buf_size, "Nicholas the Traveller, %s: %d %s in %s", DateString(&now), GetNicholasItemQuantity(&now), GetNicholasItemName(&now), GetNicholasLocation(&now));
+            snprintf(buf, buf_size, "Nicholas the Traveler, %s: %d %s in %s", DateString(&now), GetNicholasItemQuantity(&now), GetNicholasItemName(&now), GetNicholasLocation(&now));
     }
     GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buf);
 }
