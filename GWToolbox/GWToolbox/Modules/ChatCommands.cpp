@@ -42,6 +42,7 @@
 #include <Windows/TravelWindow.h>
 #include <Windows/BuildsWindow.h>
 #include <Widgets/PartyDamage.h>
+#include <Windows/Hotkeys.h>
 
 namespace {
 	const wchar_t *next_word(const wchar_t *str) {
@@ -120,6 +121,22 @@ void ChatCommands::Initialize() {
 	GW::Chat::CreateCommand(L"ff", [](const wchar_t* message, int argc, LPWSTR* argv) -> void {
 		GW::Chat::SendChat('/', "resign");
 	});
+    GW::Chat::CreateCommand(L"enter", [](const wchar_t* message, int argc, LPWSTR* argv) -> void {
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) return;
+        uint32_t item_id;
+        switch (GW::Map::GetMapID()) {
+        case GW::Constants::MapID::Temple_of_the_Ages:
+        case GW::Constants::MapID::Embark_Beach:
+            if (argc < 2 || (argv[1] != L"fow" && argv[1] != L"uw"))
+                return Log::Warning("Use /enter fow or /enter uw to trigger entry");
+            item_id = argv[1] == L"fow" ? 22280 : 3746;
+            if (!GW::Items::UseItemByModelId(item_id, 1, 4) && !GW::Items::UseItemByModelId(item_id, 8, 16))
+                return Log::Error("Scroll not found!");
+            break;
+        default:
+            return Log::Warning("Use /enter from Temple of the Ages or Embark Beach");
+        }
+    });
 	GW::Chat::CreateCommand(L"age2", ChatCommands::CmdAge2);
 	GW::Chat::CreateCommand(L"dialog", ChatCommands::CmdDialog);
 	GW::Chat::CreateCommand(L"show", ChatCommands::CmdShow);
