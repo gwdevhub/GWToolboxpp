@@ -248,11 +248,9 @@ void DailyQuests::DrawHelp() {
     ImGui::Bullet(); ImGui::Text("'/today' prints current daily activities.");
     ImGui::Bullet(); ImGui::Text("'/tomorrow' prints tomorrow's daily activities.");
 }
-void DailyQuests::DrawSettingInternal() {
-
-}
 
 void DailyQuests::LoadSettings(CSimpleIni* ini) {
+    ToolboxWindow::LoadSettings(ini);
 
     const char* zms = ini->GetValue(Name(), VAR_NAME(subscribed_zaishen_missions), "0");
     std::bitset<zm_cnt> zmb(zms);
@@ -285,6 +283,7 @@ void DailyQuests::LoadSettings(CSimpleIni* ini) {
     }
 }
 void DailyQuests::SaveSettings(CSimpleIni* ini) {
+    ToolboxWindow::SaveSettings(ini);
     std::bitset<zm_cnt> zmb;
     for (unsigned int i = 0; i < zmb.size(); ++i) {
         zmb[i] = subscribed_zaishen_missions[i] ? 1 : 0;
@@ -375,8 +374,14 @@ void DailyQuests::Terminate() {
     }
 }
 bool checked_subscriptions = false;
+time_t start_time;
 void DailyQuests::Update(float delta) {
-    if (!checked_subscriptions) {
+    if (checked_subscriptions)
+        return;
+    if (!start_time)
+        start_time = time(nullptr);
+    if (GW::Map::GetIsMapLoaded() && (time(nullptr) - start_time) > 1) {
+        
         checked_subscriptions = true;
         // Check daily quests for the next 6 days, and send a message if found. Only runs once when TB is opened.
         time_t unix = time(nullptr);

@@ -26,7 +26,7 @@ public:
     void Terminate() override;
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
-    void DrawSettingInternal() override;
+    //void DrawSettingInternal() override;
 
     void DrawHelp();
     void Update(float delta) override;
