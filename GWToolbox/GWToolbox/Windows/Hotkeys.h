@@ -2,6 +2,7 @@
 
 #include <string>
 #include <Defines.h>
+#include <chrono>
 
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\Constants\Skills.h>
@@ -32,6 +33,8 @@ public:
 
 	bool pressed = false;	// if the key has been pressed
 	bool active = true;		// if the hotkey is enabled/active
+    bool show_message_in_emote_channel = true; // if hotkey should show message in emote channel when triggered
+    bool ongoing = false; // used for hotkeys that need to execute more than once per toggle.
 
 	long hotkey = 0;
 	long modifier = 0;
@@ -84,7 +87,10 @@ class HotkeyEquipItem : public TBHotkey {
 private:
 	UINT bag_idx = 0;
 	UINT slot_idx = 0;
-
+    GW::Item* item;
+    std::chrono::time_point<std::chrono::steady_clock> start_time;
+    std::chrono::time_point<std::chrono::steady_clock> last_try;
+    wchar_t* item_name;
 public:
 	static const char* IniSection() { return "EquipItem"; }
 	const char* Name() const override { return IniSection(); }

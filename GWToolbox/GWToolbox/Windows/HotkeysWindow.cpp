@@ -5,6 +5,7 @@
 #include <GWCA\GameContainers\Array.h>
 
 #include <GWCA\Managers\ItemMgr.h>
+#include <GWCA\Managers\ChatMgr.h>
 
 #include <Keys.h>
 #include <logger.h>
@@ -178,6 +179,8 @@ void HotkeysWindow::SaveSettings(CSimpleIni* ini) {
 
 bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 	long keyData = 0;
+    if (GW::Chat::GetIsTyping())
+        return false;
 	switch (Message) {
 	case WM_KEYDOWN:
 	case WM_SYSKEYDOWN:
@@ -275,6 +278,11 @@ void HotkeysWindow::Update(float delta) {
 			GW::Items::DropGold(1);
 		}
 	}
+
+    for (unsigned int i = 0; i < hotkeys.size(); ++i) {
+        if (hotkeys[i]->ongoing)
+            hotkeys[i]->Execute();
+    }
 
 	// TODO rupt?
 }

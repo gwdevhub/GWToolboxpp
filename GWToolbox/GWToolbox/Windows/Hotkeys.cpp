@@ -244,22 +244,26 @@ void HotkeySendChat::Draw() {
 	};
 	if (ImGui::Combo("Channel", &index, channels, 7)) {
 		switch (index) {
-		case 0: channel = '/'; break;
 		case 1: channel = '!'; break;
 		case 2: channel = '@'; break;
 		case 3: channel = '#'; break;
 		case 4: channel = '$'; break;
 		case 5: channel = '%'; break;
 		case 6: channel = '"'; break;
-		default: channel = '/';break;
+		default: 
+            channel = '/';
+        break;
 		}
+        show_message_in_emote_channel = channel == '/' && show_message_in_emote_channel;
 		hotkeys_changed = true;
 	}
 	if (ImGui::InputText("Message", message, 139)) hotkeys_changed = true;
+    if (channel == '/' && ImGui::Checkbox("Display message when triggered", &show_message_in_emote_channel))
+        hotkeys_changed = true;
 }
 void HotkeySendChat::Execute() {
 	if (isLoading()) return;
-	if (channel == L'/') {
+	if (show_message_in_emote_channel && channel == L'/') {
 		Log::Info("/%s", message);
 	}
 	GW::Chat::SendChat(channel, message);
@@ -350,26 +354,47 @@ bool HotkeyEquipItem::IsEquippable(GW::Item* item) {
 }
 void HotkeyEquipItem::Execute() {
 	if (isLoading()) return;
-	if (bag_idx < 1 || bag_idx > 5 || slot_idx < 1 || slot_idx > 25) {
-		Log::Error("Invalid bag slot %d/%d!", bag_idx, slot_idx);
-		return;
-	}
-	GW::Bag * b = GW::Items::GetBag(bag_idx);
-	if (!b) {
-		Log::Error("Bag #%d not found!", bag_idx);
-		return;
-	}
-	GW::ItemArray items = b->items;
-	if (!items.valid() || slot_idx > items.size()) {
-		Log::Error("Invalid bag slot %d/%d!", bag_idx, slot_idx);
-		return;
-	}
-	GW::Item * item = items.at(slot_idx-1);
-	if(!IsEquippable(item)) {
-		Log::Error("No equippable item in bag %d slot %d", bag_idx, slot_idx);
-		return;
-	}
-	//Log::Info("Equip item in bag %d slot %d", bag_idx, slot_idx);
+    if (!ongoing) {
+	    if (bag_idx < 1 || bag_idx > 5 || slot_idx < 1 || slot_idx > 25) {
+		    Log::Error("Invalid bag slot %d/%d!", bag_idx, slot_idx);
+		    return;
+	    }
+	    GW::Bag * b = GW::Items::GetBag(bag_idx);
+	    if (!b) {
+		    Log::Error("Bag #%d not found!", bag_idx);
+		    return;
+	    }
+	    GW::ItemArray items = b->items;
+	    if (!items.valid() || slot_idx > items.size()) {
+		    Log::Error("Invalid bag slot %d/%d!", bag_idx, slot_idx);
+		    return;
+	    }
+	    item = items.at(slot_idx-1);
+	    if(!IsEquippable(item)) {
+		    Log::Error("No equippable item in bag %d slot %d", bag_idx, slot_idx);
+            item = nullptr;
+		    return;
+	    }
+        ongoing = true;
+        start_time = std::chrono::steady_clock::now();
+    }
+    last_try = std::chrono::steady_clock::now();
+    __int64 diff_mills = std::chrono::duration_cast<std::chrono::milliseconds>(last_try - start_time).count();
+    if (diff_mills < 250) {
+        return; // Wait 250ms between tries.
+    }
+    if (!item || !item->item_id || diff_mills > 3000) {
+        Log::Error("Failed to equip item in bad %d slot %d", bag_idx, slot_idx);
+        ongoing = false;
+        item = nullptr;
+        return;
+    }
+    if (item->bag && item->bag->bag_type == 2) {
+        //Log::Info("Success!");
+        ongoing = false;
+        item = nullptr;
+        return; // Success!
+    }
 	GW::Items::EquipItem(item);
 }
 
