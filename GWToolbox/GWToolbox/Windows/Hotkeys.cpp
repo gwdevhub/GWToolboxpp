@@ -211,10 +211,12 @@ HotkeySendChat::HotkeySendChat(CSimpleIni* ini, const char* section)
 	: TBHotkey(ini, section) {
 	strcpy_s(message, ini ? ini->GetValue(section, "msg", "") : "");
 	channel = ini ? ini->GetValue(section, "channel", "/")[0] : '/';
+    show_message_in_emote_channel = ini ? ini->GetBoolValue(section, VAR_NAME(show_message_in_emote_channel), show_message_in_emote_channel) : show_message_in_emote_channel;
 }
 void HotkeySendChat::Save(CSimpleIni* ini, const char* section) const {
 	TBHotkey::Save(ini, section);
 	ini->SetValue(section, "msg", message);
+    ini->SetBoolValue(section, VAR_NAME(show_message_in_emote_channel), show_message_in_emote_channel);
 	char buf[8];
 	snprintf(buf, 8, "%c", channel);
 	ini->SetValue(section, "channel", buf);
