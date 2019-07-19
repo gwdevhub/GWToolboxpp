@@ -24,6 +24,8 @@ public:
 
     void Initialize() override;
     void Terminate() override;
+    void LoadSettings(CSimpleIni* ini) override;
+    void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
 
     void DrawHelp();
@@ -982,6 +984,19 @@ public:
         "Vess the Disputant"
     };
 private:
+
+    static const size_t zb_cnt = sizeof(zaishen_bounty_cycles) / sizeof( * zaishen_bounty_cycles);
+    static const size_t zm_cnt = sizeof(zaishen_mission_cycles) / sizeof( * zaishen_mission_cycles);
+    static const size_t zc_cnt = sizeof(zaishen_combat_cycles) / sizeof( * zaishen_combat_cycles);
+    static const size_t zv_cnt = sizeof(zaishen_vanquish_cycles) / sizeof( * zaishen_vanquish_cycles);
+    static const size_t ws_cnt = sizeof(wanted_by_shining_blade_cycles) / sizeof(*wanted_by_shining_blade_cycles);
+
+    bool subscribed_zaishen_bounties[zb_cnt] = { 0 };
+    bool subscribed_zaishen_combats[zc_cnt] = { 0 };
+    bool subscribed_zaishen_missions[zm_cnt] = { 0 };
+    bool subscribed_zaishen_vanquishes[zv_cnt] = { 0 };
+    bool subscribed_wanted_quests[ws_cnt] = { 0 };
+
     static void CmdWantedByShiningBlade(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdZaishenBounty(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdZaishenMission(const wchar_t *message, int argc, LPWSTR *argv);
