@@ -5,6 +5,7 @@
 #include <GWCA\GameContainers\Array.h>
 
 #include <GWCA\Managers\ItemMgr.h>
+#include <GWCA\Managers\ChatMgr.h>
 
 #include <Keys.h>
 #include <logger.h>
@@ -173,6 +174,9 @@ void HotkeysWindow::SaveSettings(CSimpleIni* ini) {
 }
 
 bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
+	if (GW::Chat::GetIsTyping())
+		return false;
+
 	long keyData = 0;
 	switch (Message) {
 	case WM_KEYDOWN:
