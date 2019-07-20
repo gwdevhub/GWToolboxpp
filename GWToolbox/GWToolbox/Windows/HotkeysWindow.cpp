@@ -182,8 +182,6 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 		return false;
 
 	long keyData = 0;
-    if (GW::Chat::GetIsTyping())
-        return false;
 	switch (Message) {
 	case WM_KEYDOWN:
 	case WM_SYSKEYDOWN:
