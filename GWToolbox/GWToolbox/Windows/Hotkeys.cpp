@@ -71,11 +71,15 @@ TBHotkey::TBHotkey(CSimpleIni* ini, const char* section) : ui_id(++cur_ui_id) {
 	hotkey = ini ? ini->GetLongValue(section, VAR_NAME(hotkey), 0) : 0;
 	modifier = ini ? ini->GetLongValue(section, VAR_NAME(modifier), 0) : 0;
 	active = ini ? ini->GetBoolValue(section, VAR_NAME(active), true) : true;
+    show_message_in_emote_channel = ini ? ini->GetBoolValue(section, VAR_NAME(show_message_in_emote_channel), show_message_in_emote_channel) : show_message_in_emote_channel;
+    show_error_on_failure = ini ? ini->GetBoolValue(section, VAR_NAME(show_error_on_failure), show_error_on_failure) : show_error_on_failure;
 }
 void TBHotkey::Save(CSimpleIni* ini, const char* section) const {
 	ini->SetLongValue(section, VAR_NAME(hotkey), hotkey);
 	ini->SetLongValue(section, VAR_NAME(modifier), modifier);
 	ini->SetBoolValue(section, VAR_NAME(active), active);
+    ini->SetBoolValue(section, VAR_NAME(show_message_in_emote_channel), show_message_in_emote_channel);
+    ini->SetBoolValue(section, VAR_NAME(show_error_on_failure), show_error_on_failure);
 }
 void TBHotkey::Draw(Op* op) {
 	auto ShowHeaderButtons = [&]() {
@@ -211,12 +215,12 @@ HotkeySendChat::HotkeySendChat(CSimpleIni* ini, const char* section)
 	: TBHotkey(ini, section) {
 	strcpy_s(message, ini ? ini->GetValue(section, "msg", "") : "");
 	channel = ini ? ini->GetValue(section, "channel", "/")[0] : '/';
-    show_message_in_emote_channel = ini ? ini->GetBoolValue(section, VAR_NAME(show_message_in_emote_channel), show_message_in_emote_channel) : show_message_in_emote_channel;
+    
 }
 void HotkeySendChat::Save(CSimpleIni* ini, const char* section) const {
 	TBHotkey::Save(ini, section);
 	ini->SetValue(section, "msg", message);
-    ini->SetBoolValue(section, VAR_NAME(show_message_in_emote_channel), show_message_in_emote_channel);
+    
 	char buf[8];
 	snprintf(buf, 8, "%c", channel);
 	ini->SetValue(section, "channel", buf);
@@ -290,6 +294,7 @@ void HotkeyUseItem::Description(char* buf, int bufsz) const {
 void HotkeyUseItem::Draw() {
 	if (ImGui::InputInt("Item ID", (int*)&item_id)) hotkeys_changed = true;
 	if (ImGui::InputText("Item Name", name, 140)) hotkeys_changed = true;
+    if (ImGui::Checkbox("Display error message on failure", &show_error_on_failure)) hotkeys_changed = true;
 }
 void HotkeyUseItem::Execute() {
 	if (isLoading()) return;
@@ -300,11 +305,11 @@ void HotkeyUseItem::Execute() {
 		used = GW::Items::UseItemByModelId(item_id, 8, 16);
 	}
 
-	if (!used) {
+	if (!used && show_error_on_failure) {
 		if (name[0] == '\0') {
-			Log::Info("Item #%d not found!", item_id);
+			Log::Error("Item #%d not found!", item_id);
 		} else {
-			Log::Info("%s not found!", name);
+			Log::Error("%s not found!", name);
 		}
 	}
 }
@@ -324,6 +329,7 @@ void HotkeyEquipItem::Description(char* buf, int bufsz) const {
 void HotkeyEquipItem::Draw() {
 	if (ImGui::InputInt("Bag (1-5)", (int*)&bag_idx)) hotkeys_changed = true;
 	if (ImGui::InputInt("Slot (1-25)", (int*)&slot_idx)) hotkeys_changed = true;
+    if (ImGui::Checkbox("Display error message on failure", &show_error_on_failure)) hotkeys_changed = true;
 }
 bool HotkeyEquipItem::IsEquippable(GW::Item* item) {
 	if (!item) return false;
@@ -358,22 +364,22 @@ void HotkeyEquipItem::Execute() {
 	if (isLoading()) return;
     if (!ongoing) {
 	    if (bag_idx < 1 || bag_idx > 5 || slot_idx < 1 || slot_idx > 25) {
-		    Log::Error("Invalid bag slot %d/%d!", bag_idx, slot_idx);
+            if (show_error_on_failure) Log::Error("Invalid bag slot %d/%d!", bag_idx, slot_idx);
 		    return;
 	    }
 	    GW::Bag * b = GW::Items::GetBag(bag_idx);
 	    if (!b) {
-		    Log::Error("Bag #%d not found!", bag_idx);
+            if (show_error_on_failure) Log::Error("Bag #%d not found!", bag_idx);
 		    return;
 	    }
 	    GW::ItemArray items = b->items;
 	    if (!items.valid() || slot_idx > items.size()) {
-		    Log::Error("Invalid bag slot %d/%d!", bag_idx, slot_idx);
+            if (show_error_on_failure) Log::Error("Invalid bag slot %d/%d!", bag_idx, slot_idx);
 		    return;
 	    }
 	    item = items.at(slot_idx-1);
 	    if(!IsEquippable(item)) {
-		    Log::Error("No equippable item in bag %d slot %d", bag_idx, slot_idx);
+            if (show_error_on_failure) Log::Error("No equippable item in bag %d slot %d", bag_idx, slot_idx);
             item = nullptr;
 		    return;
 	    }
@@ -386,7 +392,7 @@ void HotkeyEquipItem::Execute() {
         return; // Wait 250ms between tries.
     }
     if (!item || !item->item_id || diff_mills > 3000) {
-        Log::Error("Failed to equip item in bad %d slot %d", bag_idx, slot_idx);
+        if(show_error_on_failure) Log::Error("Failed to equip item in bad %d slot %d", bag_idx, slot_idx);
         ongoing = false;
         item = nullptr;
         return;
