@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include <stdint.h>
 
-#include <GWCA\stdafx.h>
 #include <ShellApi.h>
 
 #include <string>
