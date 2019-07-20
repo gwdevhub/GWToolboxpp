@@ -34,6 +34,7 @@ public:
 	bool pressed = false;	// if the key has been pressed
 	bool active = true;		// if the hotkey is enabled/active
     bool show_message_in_emote_channel = true; // if hotkey should show message in emote channel when triggered
+    bool show_error_on_failure = true; // if hotkey should show error message on failure
     bool ongoing = false; // used for hotkeys that need to execute more than once per toggle.
 
 	long hotkey = 0;
@@ -52,6 +53,7 @@ public:
 	virtual void Execute() = 0;
 
 protected:
+    
 	inline bool isLoading() const { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading; }
 	inline bool isExplorable() const { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable; }
 	inline bool isOutpost() const { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost; }
@@ -112,7 +114,6 @@ class HotkeyUseItem : public TBHotkey {
 private:
 	UINT item_id = 0;
 	char name[140];
-
 public:
 	static const char* IniSection() { return "UseItem"; }
 	const char* Name() const override { return IniSection(); }
