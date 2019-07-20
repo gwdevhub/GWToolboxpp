@@ -178,6 +178,9 @@ void HotkeysWindow::SaveSettings(CSimpleIni* ini) {
 }
 
 bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
+	if (GW::Chat::GetIsTyping())
+		return false;
+
 	long keyData = 0;
     if (GW::Chat::GetIsTyping())
         return false;
