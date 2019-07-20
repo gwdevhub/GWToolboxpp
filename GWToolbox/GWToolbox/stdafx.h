@@ -1,6 +1,6 @@
 #pragma once
 
-#include <GWCA/stdafx.h>
+#include <GWCA/Source/stdafx.h>
 
 #ifndef WIN32
 #define WIN32
