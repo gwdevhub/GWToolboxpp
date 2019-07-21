@@ -26,7 +26,7 @@ public:
     void Terminate() override;
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
-    //void DrawSettingInternal() override;
+    void DrawSettingInternal() override;
 
     void DrawHelp();
     void Update(float delta) override;
@@ -983,6 +983,44 @@ public:
         "Justiciar Kasandra",
         "Vess the Disputant"
     };
+    const char* pve_weekly_bonus_cycles[9]{
+        "Extra Luck",
+        "Elonian Support",
+        "Zaishen Bounty",
+        "Factions Elite",
+        "Northern Support",
+        "Zaishen Mission",
+        "Pantheon",
+        "Faction Support",
+        "Zaishen Vanquishing"
+    };
+    const char* pve_weekly_bonus_descriptions[9]{
+        "Keys and lockpicks drop at four times the usual rate and double Lucky and Unlucky title points",
+        "Double Sunspear and Lightbringer points",
+        "Double copper Zaishen Coin rewards for Zaishen bounties",
+        "The Deep and Urgoz's Warren can be entered from Kaineng Center",
+        "Double Asura, Deldrimor, Ebon Vanguard, or Norn reputation points",
+        "Double copper Zaishen Coin rewards for Zaishen missions",
+        "Free passage to the Underworld and the Fissure of Woe",
+        "Double Kurzick and Luxon title track points for exchanging faction",
+        "Double copper Zaishen Coin rewards for Zaishen vanquishes"
+    };
+    const char* pvp_weekly_bonus_cycles[6]{
+        "Random Arenas",
+        "Guild Versus Guild",
+        "Competitive Mission",
+        "Heroes' Ascent",
+        "Codex Arena",
+        "Alliance Battle"
+    };
+    const char* pvp_weekly_bonus_descriptions[6]{
+        "Double Balthazar faction and Gladiator title points in Random Arenas",
+        "Double Balthazar faction and Champion title points in GvG",
+        "Double Balthazar and Imperial faction in the Jade Quarry and Fort Aspenwood",
+        "Double Balthazar faction and Hero title points in Heroes' Ascent",
+        "Double Balthazar faction and Codex title points in Codex Arena",
+        "Double Balthazar and Imperial faction in Alliance Battles"
+    };
 private:
 
     static const size_t zb_cnt = sizeof(zaishen_bounty_cycles) / sizeof( * zaishen_bounty_cycles);
@@ -990,13 +1028,32 @@ private:
     static const size_t zc_cnt = sizeof(zaishen_combat_cycles) / sizeof( * zaishen_combat_cycles);
     static const size_t zv_cnt = sizeof(zaishen_vanquish_cycles) / sizeof( * zaishen_vanquish_cycles);
     static const size_t ws_cnt = sizeof(wanted_by_shining_blade_cycles) / sizeof(*wanted_by_shining_blade_cycles);
+    static const size_t wbe_cnt = sizeof(pve_weekly_bonus_cycles) / sizeof(*pve_weekly_bonus_cycles);
+    static const size_t wbp_cnt = sizeof(pvp_weekly_bonus_cycles) / sizeof(*pvp_weekly_bonus_cycles);
 
     bool subscribed_zaishen_bounties[zb_cnt] = { 0 };
     bool subscribed_zaishen_combats[zc_cnt] = { 0 };
     bool subscribed_zaishen_missions[zm_cnt] = { 0 };
     bool subscribed_zaishen_vanquishes[zv_cnt] = { 0 };
     bool subscribed_wanted_quests[ws_cnt] = { 0 };
+    bool subscribed_weekly_bonus_pve[wbe_cnt] = { 0 };
+    bool subscribed_weekly_bonus_pvp[wbp_cnt] = { 0 };
 
+    bool show_zaishen_bounty_in_window = true;
+    bool show_zaishen_combat_in_window = true;
+    bool show_zaishen_missions_in_window = true;
+    bool show_zaishen_vanquishes_in_window = true;
+    bool show_wanted_quests_in_window = true;
+    bool show_nicholas_in_window = true;
+    bool show_weekly_bonus_pve_in_window = true;
+    bool show_weekly_bonus_pvp_in_window = true;
+
+    uint32_t subscriptions_lookahead_days = 7;
+
+    float text_width = 200.0f;
+    int daily_quest_window_count = 90;
+
+    static void CmdWeeklyBonus(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdWantedByShiningBlade(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdZaishenBounty(const wchar_t *message, int argc, LPWSTR *argv);
     static void CmdZaishenMission(const wchar_t *message, int argc, LPWSTR *argv);

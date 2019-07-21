@@ -391,7 +391,7 @@ void HotkeyEquipItem::Execute() {
     if (diff_mills < 250) {
         return; // Wait 250ms between tries.
     }
-    if (!item || !item->item_id || diff_mills > 3000) {
+    if (!item || !item->item_id || diff_mills > 5000) {
         if(show_error_on_failure) Log::Error("Failed to equip item in bad %d slot %d", bag_idx, slot_idx);
         ongoing = false;
         item = nullptr;
@@ -738,6 +738,7 @@ void HotkeyMove::Draw() {
 	if (ImGui::InputInt("Map", (int*)&mapid, 0)) hotkeys_changed = true;
 	ImGui::ShowHelp("The hotkey will only trigger in this map.\nUse 0 for any map.");
 	if (ImGui::InputText("Name", name, 140)) hotkeys_changed = true;
+    if (ImGui::Checkbox("Display message when triggered", &show_message_in_emote_channel)) hotkeys_changed = true;
 }
 void HotkeyMove::Execute() {
 	if (!isExplorable()) return;
@@ -748,9 +749,9 @@ void HotkeyMove::Execute() {
 	if (range != 0 && dist > range) return;
 	GW::Agents::Move(x, y);
 	if (name[0] == '\0') {
-		Log::Info("Moving to (%.0f, %.0f)", x, y);
+		if(show_message_in_emote_channel) Log::Info("Moving to (%.0f, %.0f)", x, y);
 	} else {
-		Log::Info("Moving to %s", name);
+        if (show_message_in_emote_channel) Log::Info("Moving to %s", name);
 	}
 }
 
@@ -773,12 +774,13 @@ void HotkeyDialog::Description(char* buf, int bufsz) const {
 void HotkeyDialog::Draw() {
 	if (ImGui::InputInt("Dialog ID", (int*)&id)) hotkeys_changed = true;
 	if (ImGui::InputText("Dialog Name", name, 140)) hotkeys_changed = true;
+    if (ImGui::Checkbox("Display message when triggered", &show_message_in_emote_channel)) hotkeys_changed = true;
 }
 void HotkeyDialog::Execute() {
 	if (isLoading()) return;
 	if (id == 0) return;
 	GW::Agents::SendDialog(id);
-	Log::Info("Sent dialog %s (%d)", name, id);
+    if (show_message_in_emote_channel) Log::Info("Sent dialog %s (%d)", name, id);
 }
 
 bool HotkeyPingBuild::GetText(void*, int idx, const char** out_text) {
