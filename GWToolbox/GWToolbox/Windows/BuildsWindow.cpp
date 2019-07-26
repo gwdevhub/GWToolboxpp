@@ -252,6 +252,9 @@ void BuildsWindow::Update(float delta) {
 void BuildsWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxWindow::LoadSettings(ini);
 	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
+    order_by_name = ini->GetBoolValue(Name(), VAR_NAME(order_by_name), order_by_name);
+    order_by_index = !order_by_name;
+
 	if (MoveOldBuilds(ini)) {
 		// loaded
 	} else {
@@ -261,6 +264,7 @@ void BuildsWindow::LoadSettings(CSimpleIni* ini) {
 
 void BuildsWindow::SaveSettings(CSimpleIni* ini) {
 	ToolboxWindow::SaveSettings(ini);
+    ini->SetBoolValue(Name(), VAR_NAME(order_by_name), order_by_name);
 	SaveToFile();
 }
 
