@@ -29,6 +29,7 @@
 #include "Windows\MainWindow.h"
 #include <Modules\Resources.h>
 #include <Widgets\AlcoholWidget.h>
+#include <Windows\HotkeysWindow.h>
 
 using namespace GW::Constants;
 
@@ -354,7 +355,9 @@ bool PconsWindow::SetEnabled(bool b) {
 	case GW::Constants::InstanceType::Outpost:
 		if(tick_with_pcons)
 			GW::PartyMgr::Tick(enabled);
-	case GW::Constants::InstanceType::Explorable:
+    case GW::Constants::InstanceType::Explorable:
+        if (HotkeysWindow::Instance().current_hotkey && !HotkeysWindow::Instance().current_hotkey->show_message_in_emote_channel)
+            break; // Selected hotkey doesn't allow a message.
 		ImGuiWindow* main = ImGui::FindWindowByName(MainWindow::Instance().Name());
 		ImGuiWindow* pcon = ImGui::FindWindowByName(Name());
 		if ((pcon == nullptr || pcon->Collapsed || !visible)

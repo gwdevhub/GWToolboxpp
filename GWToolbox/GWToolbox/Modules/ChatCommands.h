@@ -31,6 +31,8 @@ public:
 	// Update. Will always be called every frame.
 	void Update(float delta) override;
 
+    static void CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* argv);
+
 private:
 	static bool ReadTemplateFile(std::wstring path, char *buff, size_t buffSize);
 	static bool ParseDistrict(const std::wstring s, GW::Constants::District& district, int& number);
@@ -54,6 +56,7 @@ private:
 	static void CmdLoad(const wchar_t *message, int argc, LPWSTR *argv);
 	static void CmdTransmo(const wchar_t *message, int argc, LPWSTR *argv);
 	static void CmdResize(const wchar_t *message, int argc, LPWSTR *argv);
+    
 
 	static std::vector<ToolboxUIElement*> MatchingWindows(const wchar_t *message, int argc, LPWSTR *argv);
 

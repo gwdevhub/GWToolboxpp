@@ -223,7 +223,9 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 				&& modifier == hk->modifier) {
 
 				hk->pressed = true;
+                current_hotkey = hk;
 				hk->Execute();
+                current_hotkey = nullptr;
 				triggered = true;
 			}
 		}

@@ -160,6 +160,8 @@ void ChatCommands::Initialize() {
 	GW::Chat::CreateCommand(L"load", ChatCommands::CmdLoad);
 	GW::Chat::CreateCommand(L"transmo", ChatCommands::CmdTransmo);
 	GW::Chat::CreateCommand(L"resize", ChatCommands::CmdResize);
+    GW::Chat::CreateCommand(L"settitle", ChatCommands::CmdReapplyTitle);
+    GW::Chat::CreateCommand(L"title", ChatCommands::CmdReapplyTitle);
 }
 
 bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
@@ -935,3 +937,96 @@ void ChatCommands::CmdResize(const wchar_t *message, int argc, LPWSTR *argv) {
 	GetWindowRect(hwnd, &rect);
 	MoveWindow(hwnd, rect.left, rect.top, width, height, TRUE);
 }
+
+void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* argv) {
+    GW::PlayerMgr::RemoveActiveTitle();
+
+    switch (GW::Map::GetMapID()) {
+    case GW::Constants::MapID::Rata_Sum_outpost:
+    case GW::Constants::MapID::Tarnished_Haven_outpost:
+    case GW::Constants::MapID::Vloxs_Falls:
+    case GW::Constants::MapID::Gadds_Encampment_outpost:
+    case GW::Constants::MapID::Umbral_Grotto_outpost:
+    case GW::Constants::MapID::Magus_Stones:
+    case GW::Constants::MapID::Riven_Earth:
+    case GW::Constants::MapID::Arbor_Bay:
+    case GW::Constants::MapID::Alcazia_Tangle:
+    case GW::Constants::MapID::Sparkfly_Swamp:
+    case GW::Constants::MapID::Verdant_Cascades:
+        GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Asuran);
+        break;
+    case GW::Constants::MapID::Glints_Challenge_mission:
+    case GW::Constants::MapID::Central_Transfer_Chamber_outpost:
+    case GW::Constants::MapID::Genius_Operated_Living_Enchanted_Manifestation:
+    case GW::Constants::MapID::A_Gate_Too_Far_Level_1:
+    case GW::Constants::MapID::A_Gate_Too_Far_Level_2:
+    case GW::Constants::MapID::A_Gate_Too_Far_Level_3:
+    case GW::Constants::MapID::Destructions_Depths_Level_1:
+    case GW::Constants::MapID::Destructions_Depths_Level_2:
+    case GW::Constants::MapID::Destructions_Depths_Level_3:
+    case GW::Constants::MapID::A_Time_for_Heroes:
+    case GW::Constants::MapID::Ravens_Point_Level_1:
+    case GW::Constants::MapID::Ravens_Point_Level_2:
+    case GW::Constants::MapID::Ravens_Point_Level_3:
+        GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Deldrimor);
+        break;
+    case GW::Constants::MapID::Boreal_Station_outpost:
+    case GW::Constants::MapID::Eye_of_the_North_outpost:
+    case GW::Constants::MapID::Gunnars_Hold_outpost:
+    case GW::Constants::MapID::Sifhalla_outpost:
+    case GW::Constants::MapID::Olafstead_outpost:
+    case GW::Constants::MapID::Ice_Cliff_Chasms:
+    case GW::Constants::MapID::Norrhart_Domains:
+    case GW::Constants::MapID::Drakkar_Lake:
+    case GW::Constants::MapID::Jaga_Moraine:
+    case GW::Constants::MapID::Bjora_Marches:
+    case GW::Constants::MapID::Varajar_Fells:
+    case GW::Constants::MapID::Attack_of_the_Nornbear:
+    case GW::Constants::MapID::Curse_of_the_Nornbear:
+    case GW::Constants::MapID::Blood_Washes_Blood:
+    case GW::Constants::MapID::Mano_a_Norn_o:
+    case GW::Constants::MapID::Service_In_Defense_of_the_Eye:
+    case GW::Constants::MapID::Cold_as_Ice:
+    case GW::Constants::MapID::The_Norn_Fighting_Tournament:
+        // @todo: case MapID for Bear Club for Women/Men
+        GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Norn);
+        break;
+    case GW::Constants::MapID::Doomlore_Shrine_outpost:
+    case GW::Constants::MapID::Longeyes_Ledge_outpost:
+    case GW::Constants::MapID::Grothmar_Wardowns:
+    case GW::Constants::MapID::Dalada_Uplands:
+    case GW::Constants::MapID::Sacnoth_Valley:
+    case GW::Constants::MapID::Against_the_Charr:
+    case GW::Constants::MapID::Warband_of_Brothers_Level_1:
+    case GW::Constants::MapID::Warband_of_Brothers_Level_2:
+    case GW::Constants::MapID::Warband_of_Brothers_Level_3:
+    case GW::Constants::MapID::Assault_on_the_Stronghold:
+    case GW::Constants::MapID::Cathedral_of_Flames_Level_1:
+    case GW::Constants::MapID::Cathedral_of_Flames_Level_2:
+    case GW::Constants::MapID::Cathedral_of_Flames_Level_3:
+    case GW::Constants::MapID::Rragars_Menagerie_Level_1:
+    case GW::Constants::MapID::Rragars_Menagerie_Level_2:
+    case GW::Constants::MapID::Rragars_Menagerie_Level_3:
+    case GW::Constants::MapID::Warband_Training:
+    case GW::Constants::MapID::Ascalon_City_outpost:
+    case GW::Constants::MapID::The_Great_Northern_Wall:
+    case GW::Constants::MapID::Fort_Ranik:
+    case GW::Constants::MapID::Ruins_of_Surmia:
+    case GW::Constants::MapID::Nolani_Academy:
+    case GW::Constants::MapID::Frontier_Gate_outpost:
+    case GW::Constants::MapID::Grendich_Courthouse_outpost:
+    case GW::Constants::MapID::Sardelac_Sanitarium_outpost:
+    case GW::Constants::MapID::Piken_Square_outpost:
+    case GW::Constants::MapID::Old_Ascalon:
+    case GW::Constants::MapID::Regent_Valley:
+    case GW::Constants::MapID::The_Breach:
+    case GW::Constants::MapID::Diessa_Lowlands:
+    case GW::Constants::MapID::Flame_Temple_Corridor:
+    case GW::Constants::MapID::Dragons_Gullet:
+        GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Vanguard);
+        break;
+    default:
+        GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Lightbringer);
+    }
+}
+

@@ -30,6 +30,8 @@ public:
 	inline bool ToggleCoinDrop() { return dropCoinsActive = !dropCoinsActive; }
 	inline bool ToggleRupt() { return ruptActive = !ruptActive; }
 
+    TBHotkey* current_hotkey = nullptr;
+
 	// Update. Will always be called every frame.
 	void Update(float delta) override;
 
