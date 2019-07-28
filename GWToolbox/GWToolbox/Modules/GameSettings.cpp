@@ -495,6 +495,19 @@ void GameSettings::Initialize() {
         return true;
         // packet 159
     });
+    GW::StoC::AddCallback<GW::Packet::StoC::MessageNPC>(
+        [this](GW::Packet::StoC::MessageNPC* pak) -> bool {
+            if (!redirect_npc_messages_to_emote_chat)
+                return false; // Disabled
+            GW::UI::AsyncDecodeStr(pak->sender_name, &npc_sender);
+            GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
+            wchar_t msg[122];
+            wcscpy(msg, buff->begin()); // Copy from the message buffer, then clear it.
+            buff->clear();
+            GW::UI::AsyncDecodeStr(msg, &npc_message); // Use copied message.
+            npc_message_pending = true;
+            return true;
+        });
 
 
 	GW::FriendListMgr::SetOnFriendStatusCallback(GameSettings::FriendStatusCallback);

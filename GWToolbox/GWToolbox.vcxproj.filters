@@ -291,6 +291,7 @@
     <ClInclude Include="GWToolbox\Modules\Updater.h">
       <Filter>Modules\Updater</Filter>
     </ClInclude>
+    <ClInclude Include="GWToolbox\Modules\PacketLogger.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -445,6 +446,7 @@
     <ClCompile Include="GWToolbox\Modules\Updater.cpp">
       <Filter>Modules\Updater</Filter>
     </ClCompile>
+    <ClCompile Include="GWToolbox\Modules\PacketLogger.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GWToolbox.rc">

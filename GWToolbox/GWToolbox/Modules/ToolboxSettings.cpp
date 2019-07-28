@@ -34,6 +34,9 @@
 #include <Windows/ObjectiveTimerWindow.h>
 #include <Windows/FactionLeaderboardWindow.h>
 #include <Windows/DailyQuests.h>
+#ifdef _DEBUG
+#include <Modules/PacketLogger.h>
+#endif
 
 #include <Widgets/TimerWidget.h>
 #include <Widgets/HealthWidget.h>
@@ -66,6 +69,9 @@ void ToolboxSettings::InitializeModules() {
 	if (use_objectivetimer) ObjectiveTimerWindow::Instance().Initialize();
 	if (use_factionleaderboard) FactionLeaderboardWindow::Instance().Initialize();
     if (use_daily_quests) DailyQuests::Instance().Initialize();
+#ifdef _DEBUG
+    PacketLogger::Instance().Initialize();
+#endif
 
 	SettingsWindow::Instance().Initialize();
 

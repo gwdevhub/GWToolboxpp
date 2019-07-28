@@ -116,6 +116,7 @@
     <ClInclude Include="GWToolbox\Keys.h" />
     <ClInclude Include="GWToolbox\Modules\ChatCommands.h" />
     <ClInclude Include="GWToolbox\Modules\ChatFilter.h" />
+    <ClInclude Include="GWToolbox\Modules\PacketLogger.h" />
     <ClInclude Include="GWToolbox\Windows\DailyQuests.h" />
     <ClInclude Include="GWToolbox\Modules\GameSettings.h" />
     <ClInclude Include="GWToolbox\Modules\LUAInterface.h" />
@@ -210,6 +211,7 @@
     <ClCompile Include="GWToolbox\main.cpp" />
     <ClCompile Include="GWToolbox\Modules\ChatCommands.cpp" />
     <ClCompile Include="GWToolbox\Modules\ChatFilter.cpp" />
+    <ClCompile Include="GWToolbox\Modules\PacketLogger.cpp" />
     <ClCompile Include="GWToolbox\Windows\DailyQuests.cpp" />
     <ClCompile Include="GWToolbox\Modules\GameSettings.cpp" />
     <ClCompile Include="GWToolbox\Modules\LUAInterface.cpp" />
