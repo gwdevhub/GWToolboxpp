@@ -470,11 +470,16 @@ void GameSettings::Initialize() {
 			GW::Map::SkipCinematic();
 		return false;
 	});
+    bool emulated_speech_bubble = false;
 	// - Print NPC speech bubbles to emote chat.
 	GW::StoC::AddCallback<GW::Packet::StoC::SpeechBubble>(
-		[this](GW::Packet::StoC::SpeechBubble *pak) -> bool {
-		if (!npc_speech_bubbles_as_chat || !pak->message || !pak->agent_id) return false;
-        if (npc_message_pending) return false; // Pending another speech bubble.
+		[this, &emulated_speech_bubble](GW::Packet::StoC::SpeechBubble *pak) -> bool {
+        if (emulated_speech_bubble)
+            return emulated_speech_bubble = false; // Emulated via toolbox.
+		if (!npc_speech_bubbles_as_chat || !pak->message || !pak->agent_id) 
+            return false;
+        if (npc_message_pending) 
+            return false; // Pending another speech bubble
 		const wchar_t* m = pak->message;
 		if (m[3] == 0) return false; // Shout skill etc
 		GW::Agent* agent = GW::Agents::GetAgentByID(pak->agent_id);
@@ -496,7 +501,7 @@ void GameSettings::Initialize() {
         // packet 159
     });
     GW::StoC::AddCallback<GW::Packet::StoC::MessageNPC>(
-        [this](GW::Packet::StoC::MessageNPC* pak) -> bool {
+        [this, &emulated_speech_bubble](GW::Packet::StoC::MessageNPC* pak) -> bool {
             if (!redirect_npc_messages_to_emote_chat)
                 return false; // Disabled
             GW::UI::AsyncDecodeStr(pak->sender_name, &npc_sender);
@@ -506,6 +511,17 @@ void GameSettings::Initialize() {
             buff->clear();
             GW::UI::AsyncDecodeStr(msg, &npc_message); // Use copied message.
             npc_message_pending = true;
+            // Then forward the message on to speech bubble
+            if (pak->agent_id) {
+                uint32_t agent_id = pak->agent_id;
+                GW::GameThread::Enqueue([&emulated_speech_bubble, msg, agent_id]() {
+                    emulated_speech_bubble = true;
+                    GW::Packet::StoC::SpeechBubble pack;
+                    pack.agent_id = agent_id;
+                    wcscpy(pack.message, msg);
+                    GW::StoC::EmulatePacket(&pack);
+                });
+            }
             return true;
         });
 
