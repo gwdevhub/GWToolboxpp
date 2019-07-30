@@ -387,7 +387,6 @@ void HotkeyEquipItem::Execute() {
             return;
         }
         ongoing = true;
-        enqueued = false;
         start_time = std::chrono::steady_clock::now();
     }
     else {
