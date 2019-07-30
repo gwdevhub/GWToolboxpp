@@ -14,6 +14,8 @@
 #include <GWCA\Managers\EffectMgr.h>
 #include <GWCA\Managers\PlayerMgr.h>
 #include <GWCA\Managers\SkillbarMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/CtoSMgr.h>
 
 #include "logger.h"
 #include <Keys.h>
@@ -362,38 +364,48 @@ bool HotkeyEquipItem::IsEquippable(GW::Item* item) {
 	return true;
 }
 void HotkeyEquipItem::Execute() {
-	if (isLoading()) return;
+    if (isLoading()) return;
     if (!ongoing) {
-	    if (bag_idx < 1 || bag_idx > 5 || slot_idx < 1 || slot_idx > 25) {
+        if (bag_idx < 1 || bag_idx > 5 || slot_idx < 1 || slot_idx > 25) {
             if (show_error_on_failure) Log::Error("Invalid bag slot %d/%d!", bag_idx, slot_idx);
-		    return;
-	    }
-	    GW::Bag * b = GW::Items::GetBag(bag_idx);
-	    if (!b) {
+            return;
+        }
+        GW::Bag* b = GW::Items::GetBag(bag_idx);
+        if (!b) {
             if (show_error_on_failure) Log::Error("Bag #%d not found!", bag_idx);
-		    return;
-	    }
-	    GW::ItemArray items = b->items;
-	    if (!items.valid() || slot_idx > items.size()) {
+            return;
+        }
+        GW::ItemArray items = b->items;
+        if (!items.valid() || slot_idx > items.size()) {
             if (show_error_on_failure) Log::Error("Invalid bag slot %d/%d!", bag_idx, slot_idx);
-		    return;
-	    }
-	    item = items.at(slot_idx-1);
-	    if(!IsEquippable(item)) {
+            return;
+        }
+        item = items.at(slot_idx - 1);
+        if (!IsEquippable(item)) {
             if (show_error_on_failure) Log::Error("No equippable item in bag %d slot %d", bag_idx, slot_idx);
             item = nullptr;
-		    return;
-	    }
+            return;
+        }
         ongoing = true;
+        enqueued = false;
         start_time = std::chrono::steady_clock::now();
     }
-    last_try = std::chrono::steady_clock::now();
-    __int64 diff_mills = std::chrono::duration_cast<std::chrono::milliseconds>(last_try - start_time).count();
-    if (diff_mills < 250) {
-        return; // Wait 250ms between tries.
+    else {
+        last_try = std::chrono::steady_clock::now();
+        __int64 diff_mills = std::chrono::duration_cast<std::chrono::milliseconds>(last_try - start_time).count();
+        if (diff_mills < 500) {
+            return; // Wait 250ms between tries.
+        }
+        if (diff_mills > 5000) {
+            if (show_error_on_failure) Log::Error("Failed to equip item in bag %d slot %d", bag_idx, slot_idx);
+            ongoing = false;
+            item = nullptr;
+            return;
+        }
     }
-    if (!item || !item->item_id || diff_mills > 5000) {
-        if(show_error_on_failure) Log::Error("Failed to equip item in bag %d slot %d", bag_idx, slot_idx);
+
+    if (!item || !item->item_id) {
+        if (show_error_on_failure) Log::Error("Failed to equip item in bag %d slot %d", bag_idx, slot_idx);
         ongoing = false;
         item = nullptr;
         return;
@@ -404,7 +416,24 @@ void HotkeyEquipItem::Execute() {
         item = nullptr;
         return; // Success!
     }
-	GW::Items::EquipItem(item);
+    GW::Agent* p = GW::Agents::GetPlayer();
+    if (!p || p->GetIsKnockedDown()) {
+        //Log::Info("knocked down or missing"); // Player knocked down or casting; wait.
+        return;
+    }
+    if (p->skill) {
+        GW::CtoS::SendPacket(0x4, CtoGS_MSGCancelAction); // Cancel action if casting a skill. Return here and wait before equipping items.
+        //Log::Info("cancel action");
+        return;
+    }
+    if (p->GetIsIdle() || p->GetIsMoving()) {
+        GW::Items::EquipItem(item);
+        //Log::Info("equip %d", item->item_id);
+    }
+    else {
+        GW::Agents::Move(p->pos); // Move to clear model state e.g. attacking, aftercast
+        //Log::Info("not idle nor moving, %d",p->model_state);
+    }
 }
 
 bool HotkeyDropUseBuff::GetText(void* data, int idx, const char** out_text) {
