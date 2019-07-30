@@ -116,9 +116,14 @@ private:
 
     bool npc_speech_bubbles_as_chat = true;
     bool redirect_npc_messages_to_emote_chat = true;
+
     bool npc_message_pending = false;
     std::wstring npc_message;
     std::wstring npc_sender;
+
+    bool teamchat_message_pending = false;
+    std::wstring pending_teamchat_message;
+    std::wstring pending_teamchat_sender;
 
 	void DrawChannelColor(const char *name, GW::Chat::Channel chan);
 	static void FriendStatusCallback(GW::Friend* f, GW::FriendStatus status, const wchar_t *name, const wchar_t *charname);

@@ -524,6 +524,28 @@ void GameSettings::Initialize() {
             }
             return true;
         });
+    GW::StoC::AddCallback<GW::Packet::StoC::MessageLocal>([this](GW::Packet::StoC::MessageLocal* pak) -> bool {
+        if (pak->type != 11 || !pak->id)
+            return false; // Not team chat or no sender
+        wchar_t* message = GW::GameContext::instance()->world->message_buff.begin();
+        if (!message)
+            return false;
+        if (message[0] != 0x778 || message[1] != 0x10A || message[2] != 0xBA9 || message[3] != 0x107)
+            return false; // Not "I'm Following X" message.
+        wchar_t* sender = GW::Agents::GetPlayerNameByLoginNumber(pak->id);
+        if (!sender)
+            return false;
+
+        std::wstring output(message);
+        std::wstring input;
+        output.insert(4, L"<a=1>");
+        output.insert(output.size() - 2, L"</a>");
+        GW::UI::AsyncDecodeStr(output.c_str(), &pending_teamchat_message);
+        pending_teamchat_sender = std::wstring(sender);
+        teamchat_message_pending = true;
+        GW::GameContext::instance()->world->message_buff.clear();
+        return true; // consume original packet.
+    });
 
 
 	GW::FriendListMgr::SetOnFriendStatusCallback(GameSettings::FriendStatusCallback);
@@ -954,6 +976,17 @@ void GameSettings::SetAfkMessage(std::wstring&& message) {
 }
 
 void GameSettings::Update(float delta) {
+    if (teamchat_message_pending && pending_teamchat_message.size() && pending_teamchat_sender.size()) {
+        GW::Chat::Color senderCol;
+        GW::Chat::Color messageCol;
+        GW::Chat::GetChannelColors(GW::Chat::CHANNEL_GROUP, &senderCol, &messageCol);   // Sender should be same color as emote sender
+        wchar_t buffer[256];
+        swprintf(buffer, 256, L"<c=#%06X><a=2>%ls</a></c>: <c=#%06X>%ls</c>", senderCol & 0x00FFFFFF, pending_teamchat_sender.c_str(), messageCol & 0x00FFFFFF, pending_teamchat_message.c_str());
+        GW::Chat::WriteChat(GW::Chat::CHANNEL_GROUP, buffer);
+        pending_teamchat_message.clear();
+        pending_teamchat_sender.clear();
+        teamchat_message_pending = false;
+    }
 	if (npc_message_pending && npc_message.size() && npc_sender.size()) {
 		GW::Chat::Color dummy; // Needed for GW::Chat::GetChannelColors
 		GW::Chat::Color senderCol; // 153, 255, 0 for NPC colour?
