@@ -16,7 +16,7 @@ DWORD WINAPI init(HMODULE hModule){
 		Log::InitializeLog();
 		Log::Log("Waiting for logged character\n");
 
-		GW::Scanner::Initialize("Gw.exe");
+		GW::Scanner::Initialize();
 		DWORD **found = (DWORD **)GW::Scanner::Find("\xBA\x01\x00\x00\x00\x3B\xC2\x75\x0A", "xxxxxxxxx", -22);
 		if (!(found && *found)) {
 			MessageBoxA(0, "We can't determine if the character is ingame.\nContact the developpers.", "GWToolbox++ - Clientside Error Detected", 0);
