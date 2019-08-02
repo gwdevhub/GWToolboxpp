@@ -16,4 +16,12 @@ public:
 
     void Initialize() override;
 
+    void Enable();
+    void Disable();
+
+    
+private:
+    uint32_t identifiers[512]; // Presume 512 is big enough for header size...
+    
+    
 };

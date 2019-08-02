@@ -477,7 +477,8 @@ void GameSettings::Initialize() {
 	GW::StoC::AddCallback<GW::Packet::StoC::PartyPlayerAdd>(
 		[](GW::Packet::StoC::PartyPlayerAdd*) -> bool {
 		if (GameSettings::Instance().flash_window_on_party_invite) FlashWindow();
-		GameSettings::Instance().check_message_on_party_change = true;
+        if(GW::Agents::GetPlayerId())
+		    GameSettings::Instance().check_message_on_party_change = true;
 		return false;
 	});
 	GW::StoC::AddCallback<GW::Packet::StoC::PartyPlayerRemove>(
@@ -583,7 +584,41 @@ void GameSettings::Initialize() {
         buff->clear();
         return true; // consume original packet.
     });
-
+    GW::StoC::AddCallback<GW::Packet::StoC::PlayerJoinMap>([&](GW::Packet::StoC::PlayerJoinMap* pak) -> bool {
+        if (!notify_when_players_join_outpost && !notify_when_friends_join_outpost)
+            return false; // Dont notify about player joining
+        if (!pak->player_name || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
+            return false; // Only message in an outpost.
+        GW::Agent* agent = GW::Agents::GetAgentByID(pak->agent_id);
+        if (agent)
+            return false; // Player already joined
+        if (!GW::Agents::GetPlayerId())
+            return false; // Current player not loaded in yet
+        if (!notify_when_players_join_outpost && !GW::FriendListMgr::GetFriend(nullptr, pak->player_name))
+            return false; // Notify on friends only, but this player aint yer pal, buddy.
+        wchar_t buffer[128];
+        swprintf(buffer, 128, L"<a=1>%ls</a> entered the outpost.", pak->player_name);
+        GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
+        return false;
+    });
+    GW::StoC::AddCallback<GW::Packet::StoC::AgentRemove>([&](GW::Packet::StoC::AgentRemove* pak) -> bool {
+        if (!notify_when_players_leave_outpost && !notify_when_friends_leave_outpost)
+            return false; // Dont notify about player leaving
+        if (!pak->agent_id || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
+            return false; // Only message in an outpost.
+        GW::Agent* agent = GW::Agents::GetAgentByID(pak->agent_id);
+        if (!agent || !agent->IsPlayer()) 
+            return false; // Not a player.
+        wchar_t* player_name = GW::PlayerMgr::GetPlayerName(agent->player_number);
+        if (!player_name) 
+            return false; // Failed to get name
+        if (!notify_when_players_leave_outpost && !GW::FriendListMgr::GetFriend(nullptr,player_name))
+            return false; // Notify on friends only, but this player aint yer pal, buddy.
+        wchar_t buffer[128];
+        swprintf(buffer, 128, L"<a=1>%ls</a> left the outpost.", player_name);
+        GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
+        return false;
+    });
 
 	GW::FriendListMgr::SetOnFriendStatusCallback(GameSettings::FriendStatusCallback);
 
@@ -878,14 +913,22 @@ void GameSettings::DrawSettingInternal() {
     ImGui::Text("Show a message when a friend:");
 	ImGui::Indent();
 	ImGui::Checkbox("Logs in", &notify_when_friends_online);
+    ImGui::SameLine(256.0f * ImGui::GetIO().FontGlobalScale);
+    ImGui::Checkbox("Joins your outpost", &notify_when_friends_join_outpost);
     ImGui::Checkbox("Logs out", &notify_when_friends_offline);
+    ImGui::SameLine(256.0f * ImGui::GetIO().FontGlobalScale);
+    ImGui::Checkbox("Leaves your outpost", &notify_when_friends_leave_outpost);
     ImGui::Unindent();
 
-	ImGui::Text("Show a message when a party member:");
-	ImGui::Indent();
-	ImGui::Checkbox("Joins", &notify_when_party_member_joins);
-	ImGui::Checkbox("Leaves", &notify_when_party_member_leaves);
-	ImGui::Unindent();
+    ImGui::Text("Show a message when a player:");
+    ImGui::Indent();
+    ImGui::Checkbox("Joins your outpost", &notify_when_players_join_outpost);
+    ImGui::SameLine(256.0f * ImGui::GetIO().FontGlobalScale);
+    ImGui::Checkbox("Joins your party", &notify_when_party_member_joins);
+    ImGui::Checkbox("Leaves your outpost", &notify_when_players_leave_outpost);
+    ImGui::SameLine(256.0f * ImGui::GetIO().FontGlobalScale);
+    ImGui::Checkbox("Leaves your party", &notify_when_party_member_leaves);
+    ImGui::Unindent();
 
 	ImGui::Checkbox("Allow window restore", &focus_window_on_zoning);
 	ImGui::ShowHelp("When enabled, GWToolbox++ can automatically restore\n"

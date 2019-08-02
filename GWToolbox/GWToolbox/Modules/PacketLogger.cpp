@@ -47,10 +47,20 @@ enum class FieldType {
     Count
 };
 
+bool log_message_content = false;
 bool logger_enabled = false;
+uint32_t log_message_callback_identifier = 0;
 static volatile bool running;
 static StoCHandlerArray  game_server_handler;
 static std::vector<bool> ignored_packets;
+static void printchar(wchar_t c) {
+    if (c >= L' ' && c <= L'~') {
+        printf("%lc", c);
+    }
+    else {
+        printf("0x%X ", c);
+    }
+}
 
 static void InitStoC()
 {
@@ -358,20 +368,41 @@ void PacketLogger::Draw(IDirect3DDevice9* pDevice) {
     if (!visible)
         return;
     ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(128, 64), ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(256, 128), ImGuiSetCond_FirstUseEver);
     if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
         return ImGui::End();
 
-    if (ImGui::Button(logger_enabled ? "Pause" : "Resume")) {
+    if (ImGui::Checkbox("Enable Logging",&logger_enabled)) {
         logger_enabled = !logger_enabled;
+        if (!logger_enabled)
+            Enable();
+        else
+            Disable();
+    }
+    if (ImGui::Checkbox("Log Message Content", &log_message_content)) {
+        if (!logger_enabled)
+            log_message_content = false;
+        if (log_message_callback_identifier) {
+            GW::StoC::RemoveCallback(GW::Packet::StoC::MessageCore::STATIC_HEADER, log_message_callback_identifier);
+            log_message_callback_identifier = 0;
+        }
+
+        if (log_message_content) {
+            log_message_callback_identifier = GW::StoC::AddCallback<GW::Packet::StoC::MessageCore>([&](GW::Packet::StoC::MessageCore* pak) -> bool {
+                for (int i = 0; pak->message[i] != 0; ++i) printchar(pak->message[i]);
+                printf("\n");
+                return false;
+            });
+        }
     }
     return ImGui::End();
 }
 void PacketLogger::Initialize() {
     ToolboxWindow::Initialize();
     InitStoC();
-    for (size_t i = 0; i < game_server_handler.size(); i++) {
-        GW::StoC::AddCallback(i, PacketHandler);
+    if (logger_enabled) {
+        logger_enabled = false;
+        Enable();
     }
     /*GW::StoC::AddCallback<GW::Packet::StoC::GameSrvTransfer>([this](GW::Packet::StoC::GameSrvTransfer* pak) -> bool {
         logger_enabled = false;
@@ -381,4 +412,18 @@ void PacketLogger::Initialize() {
         logger_enabled = true;
         return false;
         });*/
+}
+void PacketLogger::Disable() {
+    if (!logger_enabled) return;
+    for (size_t i = 0; i < game_server_handler.size(); i++) {
+        GW::StoC::RemoveCallback(i, identifiers[i]);
+    }
+    logger_enabled = false;
+}
+void PacketLogger::Enable() {
+    if (logger_enabled) return;
+    for (size_t i = 0; i < game_server_handler.size(); i++) {
+        identifiers[i] = GW::StoC::AddCallback(i, PacketHandler);
+    }
+    logger_enabled = true;
 }

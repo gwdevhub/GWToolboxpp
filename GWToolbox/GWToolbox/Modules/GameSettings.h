@@ -89,6 +89,11 @@ public:
 
 	bool notify_when_friends_online = true;
     bool notify_when_friends_offline = false;
+    bool notify_when_friends_join_outpost = true;
+    bool notify_when_friends_leave_outpost = false;
+
+    bool notify_when_players_join_outpost = false;
+    bool notify_when_players_leave_outpost = false;
 
 	bool notify_when_party_member_leaves = true;
 	bool notify_when_party_member_joins = true;
