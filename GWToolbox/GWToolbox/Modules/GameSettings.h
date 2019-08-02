@@ -99,6 +99,8 @@ public:
 	void SetAfkMessage(std::wstring&& message);
 	static void ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag);
 
+    
+
 private:
 	void UpdateBorderless();
 	void UpdateFOV();
@@ -115,6 +117,7 @@ private:
 	bool check_message_on_party_change = true;
 
     bool npc_speech_bubbles_as_chat = true;
+    bool emulated_speech_bubble = false;
     bool redirect_npc_messages_to_emote_chat = true;
 
     bool npc_message_pending = false;
