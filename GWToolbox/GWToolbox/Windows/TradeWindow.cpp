@@ -9,11 +9,18 @@
 
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\GameContainers\Array.h>
+#include <GWCA\GameEntities\Player.h>
+#include <GWCA\GameEntities\Agent.h>
 
 #include <GWCA\Managers\UIMgr.h>
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\GameThreadMgr.h>
+#include <GWCA\Managers\PlayerMgr.h>
+#include <GWCA\Managers\AgentMgr.h>
+
+#include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/WorldContext.h>
 
 #include <Modules\Resources.h>
 #include <Modules\GameSettings.h>
@@ -337,12 +344,23 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 					ImGui::SameLine(playername_left);
 				}
 				if (ImGui::Button(msg.name.c_str(), ImVec2(playernamewidth, 0))) {
-					// open whisper to player
-					GW::GameThread::Enqueue([&msg]() {
-						wchar_t ws[100];
-						swprintf(ws, 100, L"%hs", msg.name.c_str());
-						GW::UI::SendUIMessage(GW::UI::kOpenWhisper, ws, nullptr);
-					});
+                    wchar_t name[100];
+                    swprintf(name, 100, L"%hs", msg.name.c_str());
+                    // Control + click = target player
+                    if (ImGui::GetIO().KeysDown[VK_CONTROL]) {
+                        GW::Player* player = GW::PlayerMgr::GetPlayerByName(name);
+                        if (player) {
+                            GW::GameThread::Enqueue([player]() {
+                                GW::Agents::ChangeTarget(player->agent_id);
+                                });
+                        }
+                    }
+                    else {
+                        // open whisper to player
+                        GW::GameThread::Enqueue([&name]() {
+                            GW::UI::SendUIMessage(GW::UI::kOpenWhisper, name, nullptr);
+                            });
+                    }
 				}
 
 				// ==== Message column ====
