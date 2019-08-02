@@ -475,24 +475,24 @@ void GameSettings::Initialize() {
 	}
 
 	GW::StoC::AddCallback<GW::Packet::StoC::PartyPlayerAdd>(
-		[](GW::Packet::StoC::PartyPlayerAdd*) -> bool {
-		if (GameSettings::Instance().flash_window_on_party_invite) FlashWindow();
-        if(GW::Agents::GetPlayerId())
-		    GameSettings::Instance().check_message_on_party_change = true;
+		[&](GW::Packet::StoC::PartyPlayerAdd*) -> bool {
+        if (!GW::Agents::GetPlayerId())
+            return false;
+		if (flash_window_on_party_invite && GW::PartyMgr::GetPlayerIsLeader()) 
+            FlashWindow();
+        check_message_on_party_change = true;
 		return false;
 	});
 	GW::StoC::AddCallback<GW::Packet::StoC::PartyPlayerRemove>(
-		[](GW::Packet::StoC::PartyPlayerRemove*) -> bool {
-		GameSettings::Instance().check_message_on_party_change = true;
+		[&](GW::Packet::StoC::PartyPlayerRemove*) -> bool {
+		check_message_on_party_change = true;
 		return false;
 	});
 
 	GW::StoC::AddCallback<GW::Packet::StoC::GameSrvTransfer>(
-		[](GW::Packet::StoC::GameSrvTransfer *pak) -> bool {
-
-		GW::CharContext *ctx = GW::GameContext::instance()->character;
-		if (GameSettings::Instance().flash_window_on_zoning) FlashWindow();
-		if (GameSettings::Instance().focus_window_on_zoning && pak->is_explorable) {
+		[&](GW::Packet::StoC::GameSrvTransfer *pak) -> bool {
+		if (flash_window_on_zoning) FlashWindow();
+		if (focus_window_on_zoning && pak->is_explorable) {
 			HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
 			SetForegroundWindow(hwnd);
 			ShowWindow(hwnd, SW_RESTORE);
@@ -502,9 +502,13 @@ void GameSettings::Initialize() {
 	});
 
 	GW::StoC::AddCallback<GW::Packet::StoC::CinematicPlay>(
-	[this](GW::Packet::StoC::CinematicPlay *packet) -> bool {
-		if (packet->play && auto_skip_cinematic)
-			GW::Map::SkipCinematic();
+	[&](GW::Packet::StoC::CinematicPlay *packet) -> bool {
+        if (packet->play && auto_skip_cinematic) {
+            GW::Map::SkipCinematic();
+            return false;
+        }
+        if (flash_window_on_cinematic)
+            FlashWindow();
 		return false;
 	});
 	// - Print NPC speech bubbles to emote chat.
@@ -908,26 +912,27 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::Checkbox("Receiving a private message", &flash_window_on_pm);
 	ImGui::Checkbox("Receiving a party invite", &flash_window_on_party_invite);
 	ImGui::Checkbox("Zoning in a new map", &flash_window_on_zoning);
+    ImGui::Checkbox("Cinematic start/end", &flash_window_on_cinematic);
 	ImGui::Unindent();
 
     ImGui::Text("Show a message when a friend:");
 	ImGui::Indent();
 	ImGui::Checkbox("Logs in", &notify_when_friends_online);
     ImGui::SameLine(256.0f * ImGui::GetIO().FontGlobalScale);
-    ImGui::Checkbox("Joins your outpost", &notify_when_friends_join_outpost);
+    ImGui::Checkbox("Joins your outpost###notify_when_friends_join_outpost", &notify_when_friends_join_outpost);
     ImGui::Checkbox("Logs out", &notify_when_friends_offline);
     ImGui::SameLine(256.0f * ImGui::GetIO().FontGlobalScale);
-    ImGui::Checkbox("Leaves your outpost", &notify_when_friends_leave_outpost);
+    ImGui::Checkbox("Leaves your outpost###notify_when_friends_leave_outpost", &notify_when_friends_leave_outpost);
     ImGui::Unindent();
 
     ImGui::Text("Show a message when a player:");
     ImGui::Indent();
-    ImGui::Checkbox("Joins your outpost", &notify_when_players_join_outpost);
-    ImGui::SameLine(256.0f * ImGui::GetIO().FontGlobalScale);
     ImGui::Checkbox("Joins your party", &notify_when_party_member_joins);
-    ImGui::Checkbox("Leaves your outpost", &notify_when_players_leave_outpost);
     ImGui::SameLine(256.0f * ImGui::GetIO().FontGlobalScale);
+    ImGui::Checkbox("Joins your outpost###notify_when_players_join_outpost", &notify_when_players_join_outpost);
     ImGui::Checkbox("Leaves your party", &notify_when_party_member_leaves);
+    ImGui::SameLine(256.0f * ImGui::GetIO().FontGlobalScale);
+    ImGui::Checkbox("Leaves your outpost###notify_when_players_leave_outpost", &notify_when_players_leave_outpost);
     ImGui::Unindent();
 
 	ImGui::Checkbox("Allow window restore", &focus_window_on_zoning);
