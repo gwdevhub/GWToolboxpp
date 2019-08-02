@@ -3,9 +3,11 @@
 
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\GameContainers\Array.h>
+#include <GWCA\GameEntities\Agent.h>
 
 #include <GWCA\Managers\ItemMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
+#include <GWCA\Managers\AgentMgr.h>
 
 #include <Keys.h>
 #include <logger.h>
@@ -217,9 +219,13 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 			modifier |= ModKey_Alt;
 
 		bool triggered = false;
+        uint32_t map_id = static_cast<uint32_t>(GW::Map::GetMapID());
+        uint8_t prof_id = GW::Agents::GetPlayer()->primary;
 		for (TBHotkey* hk : hotkeys) {
 			if (!block_hotkeys && hk->active 
 				&& !hk->pressed && keyData == hk->hotkey
+                && (hk->map_id == 0 || hk->map_id == map_id)
+                && (hk->prof_id == 0 || hk->prof_id == prof_id)
 				&& modifier == hk->modifier) {
 
 				hk->pressed = true;

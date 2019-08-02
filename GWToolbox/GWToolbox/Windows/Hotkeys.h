@@ -37,6 +37,9 @@ public:
     bool show_error_on_failure = true; // if hotkey should show error message on failure
     bool ongoing = false; // used for hotkeys that need to execute more than once per toggle.
 
+    int map_id = 0;
+    int prof_id = 0;
+
 	long hotkey = 0;
 	long modifier = 0;
 

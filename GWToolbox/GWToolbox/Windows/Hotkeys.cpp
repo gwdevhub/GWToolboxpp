@@ -71,19 +71,34 @@ TBHotkey* TBHotkey::HotkeyFactory(CSimpleIni* ini, const char* section) {
 }
 
 TBHotkey::TBHotkey(CSimpleIni* ini, const char* section) : ui_id(++cur_ui_id) {
-	hotkey = ini ? ini->GetLongValue(section, VAR_NAME(hotkey), 0) : 0;
-	modifier = ini ? ini->GetLongValue(section, VAR_NAME(modifier), 0) : 0;
-	active = ini ? ini->GetBoolValue(section, VAR_NAME(active), true) : true;
+	hotkey = ini ? ini->GetLongValue(section, VAR_NAME(hotkey), modifier) : modifier;
+	modifier = ini ? ini->GetLongValue(section, VAR_NAME(modifier), modifier) : modifier;
+	active = ini ? ini->GetBoolValue(section, VAR_NAME(active), active) : active;
+    map_id = ini ? ini->GetLongValue(section, VAR_NAME(map_id), map_id) : map_id;
+    prof_id = ini ? ini->GetLongValue(section, VAR_NAME(prof_id), prof_id) : prof_id;
     show_message_in_emote_channel = ini ? ini->GetBoolValue(section, VAR_NAME(show_message_in_emote_channel), show_message_in_emote_channel) : show_message_in_emote_channel;
     show_error_on_failure = ini ? ini->GetBoolValue(section, VAR_NAME(show_error_on_failure), show_error_on_failure) : show_error_on_failure;
 }
 void TBHotkey::Save(CSimpleIni* ini, const char* section) const {
 	ini->SetLongValue(section, VAR_NAME(hotkey), hotkey);
+    ini->SetLongValue(section, VAR_NAME(map_id), map_id);
+    ini->SetLongValue(section, VAR_NAME(prof_id), prof_id);
 	ini->SetLongValue(section, VAR_NAME(modifier), modifier);
 	ini->SetBoolValue(section, VAR_NAME(active), active);
     ini->SetBoolValue(section, VAR_NAME(show_message_in_emote_channel), show_message_in_emote_channel);
     ini->SetBoolValue(section, VAR_NAME(show_error_on_failure), show_error_on_failure);
 }
+static const char* const professions[] = { "Any",
+                "Warrior",
+                "Ranger",
+                "Monk",
+                "Necromancer",
+                "Mesmer",
+                "Elementalist",
+                "Assassin",
+                "Ritualist",
+                "Paragon",
+                "Dervish" };
 void TBHotkey::Draw(Op* op) {
 	auto ShowHeaderButtons = [&]() {
 		if (show_active_in_header || show_run_in_header) {
@@ -113,9 +128,22 @@ void TBHotkey::Draw(Op* op) {
 	char header[256];
 	char desbuf[128];
 	char keybuf[128];
+    char profbuf[64] = { '\0' };
+    char mapbuf[64] = { '\0' };
+    try { // Can cause crashes here as the user changes the var.
+        if (prof_id) 
+            snprintf(profbuf, 64, " [%s]", professions[prof_id]);
+        if (map_id) {
+            if (map_id <= 729)
+                snprintf(mapbuf, 64, " [%s]", GW::Constants::NAME_FROM_ID[map_id]);
+            else
+                snprintf(mapbuf, 64, " [Map %d]", map_id);
+        }
+    }
+    catch (...) {};
 	Description(desbuf, 128);
 	ModKeyName(keybuf, 128, modifier, hotkey, "<None>");
-	snprintf(header, 128, "%s [%s]###header%u", desbuf, keybuf, ui_id);
+	snprintf(header, 128, "%s [%s]%s%s###header%u", desbuf, keybuf, profbuf, mapbuf, ui_id);
 	ImGuiTreeNodeFlags flags = (show_active_in_header || show_run_in_header) 
 		? ImGuiTreeNodeFlags_AllowItemOverlap : 0;
 	if (!ImGui::CollapsingHeader(header, flags)) {
@@ -128,6 +156,11 @@ void TBHotkey::Draw(Op* op) {
 		Draw();
 
 		// === Hotkey section ===
+        if (ImGui::InputInt("Map ID", &map_id)) hotkeys_changed = true;
+        ImGui::ShowHelp("The hotkey can only trigger in the selected map (0 = Any map)");
+        
+        if (ImGui::Combo("Profession", &prof_id, professions, 11)) hotkeys_changed = true;
+        ImGui::ShowHelp("The hotkey can only trigger when player is the selected primary profession (0 = Any profession)");
 		ImGui::Separator();
 		if (ImGui::Checkbox("###active", &active)) hotkeys_changed = true;
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("The hotkey can trigger only when selected");
@@ -218,7 +251,6 @@ HotkeySendChat::HotkeySendChat(CSimpleIni* ini, const char* section)
 	: TBHotkey(ini, section) {
 	strcpy_s(message, ini ? ini->GetValue(section, "msg", "") : "");
 	channel = ini ? ini->GetValue(section, "channel", "/")[0] : '/';
-    
 }
 void HotkeySendChat::Save(CSimpleIni* ini, const char* section) const {
 	TBHotkey::Save(ini, section);
@@ -646,7 +678,10 @@ void HotkeyTarget::Execute() {
 		}
 	}
 	if (closest > 0) {
-		GW::Agents::ChangeTarget(agents[closest]);
+        GW::Agent* agent = agents[closest];
+        GW::GameThread::Enqueue([agent]{
+            GW::Agents::ChangeTarget(agent);
+            });
 	}
 }
 
