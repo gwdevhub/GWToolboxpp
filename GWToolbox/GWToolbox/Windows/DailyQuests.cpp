@@ -31,8 +31,7 @@
 #include <sstream>
 #include <string>
 
-#include <GWCA/Utilities/Scanner.h>
-#include <GWCA/Utilities/Hooker.h>
+
 
 //using namespace std;
 
@@ -43,22 +42,11 @@
 #include <memory>
 #endif
 
-typedef void(__fastcall *OnStartWhisper_pt)(uint32_t unk1, wchar_t* name, wchar_t* name2);
-OnStartWhisper_pt OnStartWhisper_Func;
-OnStartWhisper_pt OnStartWhisperRet;
+
 
 bool subscriptions_changed = false;
 
-void __fastcall OnStartWhisper(uint32_t unk1, wchar_t* name, wchar_t* name2) {
-    GW::HookBase::EnterHook();
-    //Log::LogW(L"[OnStartWhisper] %08X %ls", unk1,name);
-    if (name && (!wcsncmp(name, L"http://", 7) || !wcsncmp(name, L"https://", 8))) {
-        ShellExecuteW(NULL, L"open", name, NULL, NULL, SW_SHOWNORMAL);
-    } else {
-        OnStartWhisperRet(unk1, name, name2);
-    }
-    return GW::HookBase::LeaveHook();
-}
+
 const char* DateString(time_t* unix) {
     std::tm* now = std::localtime(unix);
         
@@ -481,20 +469,11 @@ void DailyQuests::Initialize() {
         GW::Chat::SendChat('/', "nicholas tomorrow");
     });
 
-    // Hook for turning player name links into hyperlinks.
-    OnStartWhisper_Func = (OnStartWhisper_pt)GW::Scanner::Find("\x55\x8B\xEC\x51\x53\x56\x8B\xF1\x57\xBA\x05\x00\x00\x00", "xxxxxxxxxxxxxx", 0);
-    printf("[SCAN] OnStartWhisper = %p\n", OnStartWhisper_Func);
-    if (OnStartWhisper_Func) {
-        GW::HookBase::CreateHook(OnStartWhisper_Func, OnStartWhisper, (void **)&OnStartWhisperRet);
-        GW::HookBase::EnableHooks(OnStartWhisper_Func);
-    }
+    
 }
 void DailyQuests::Terminate() {
     ToolboxModule::Terminate();
-    if (OnStartWhisper_Func) {
-        GW::HookBase::DisableHooks(OnStartWhisper_Func);
-        GW::HookBase::RemoveHook(OnStartWhisper_Func);
-    }
+    
 }
 bool checked_subscriptions = false;
 time_t start_time;
