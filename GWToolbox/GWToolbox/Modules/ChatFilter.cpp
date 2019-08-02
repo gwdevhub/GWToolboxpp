@@ -47,6 +47,8 @@ void ChatFilter::Initialize() {
 #endif // PRINT_CHAT_PACKETS
 
 		GW::Array<wchar_t> *buff = &GW::GameContext::instance()->world->message_buff;
+        if (!buff || !buff->valid() || !buff->size())
+            return true;
 		if (ShouldIgnore(buff->begin()) || ShouldIgnoreByContent(buff->begin(), buff->size())) {
 			buff->clear();
 			return true;
@@ -77,7 +79,8 @@ void ChatFilter::Initialize() {
 #endif // PRINT_CHAT_PACKETS
 
 		GW::Array<wchar_t> *buff = &GW::GameContext::instance()->world->message_buff;
-
+        if (!buff || !buff->valid() || !buff->size())
+            return true;
 		if (ShouldIgnore(buff->begin()) ||
 			ShouldIgnoreByContent(buff->begin(), buff->size())) {
 
@@ -96,6 +99,8 @@ void ChatFilter::Initialize() {
 #endif // PRINT_CHAT_PACKETS
 
 		GW::Array<wchar_t> *buff = &GW::GameContext::instance()->world->message_buff;
+        if (!buff || !buff->valid() || !buff->size())
+            return true;
 		wchar_t *sender = GW::Agents::GetPlayerNameByLoginNumber(pak->id);
 		if (!sender) 
             return false;
@@ -315,7 +320,8 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 	for (size_t i = 0; message[i] != 0; ++i) printchar(message[i]);
 	printf("\n");
 #endif // PRINT_CHAT_PACKETS
-
+    if (!message)
+        return false;
 	switch (message[0]) {
 		// ==== Messages not ignored ====
 	case 0x108: return false; // player message
@@ -476,6 +482,7 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 
 bool ChatFilter::ShouldIgnoreByContent(const wchar_t *message, size_t size) {
 	if (!messagebycontent) return false;
+    if (!message) return false;
 	if (!(message[0] == 0x108 && message[1] == 0x107)
 		&& !(message[0] == 0x8102 && message[1] == 0xEFE && message[2] == 0x107)) return false;
 	const wchar_t* start = nullptr;
