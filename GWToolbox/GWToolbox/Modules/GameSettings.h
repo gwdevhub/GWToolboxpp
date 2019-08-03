@@ -65,11 +65,14 @@ public:
 	bool move_item_on_ctrl_click = false;
 	bool move_item_to_current_storage_pane = false;
 
-	bool flash_window_on_pm = false;
-	bool flash_window_on_party_invite = false;
-	bool flash_window_on_zoning = false;
+	bool flash_window_on_pm = true;
+	bool flash_window_on_party_invite = true;
+	bool flash_window_on_zoning = true;
 	bool focus_window_on_zoning = false;
     bool flash_window_on_cinematic = true;
+    bool flash_window_on_trade = true;
+    bool focus_window_on_trade = false;
+    bool flash_window_on_name_ping = true;
 
 	bool auto_set_away = false;
 	int auto_set_away_delay = 10;

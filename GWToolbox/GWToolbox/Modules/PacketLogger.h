@@ -15,6 +15,8 @@ public:
     void Draw(IDirect3DDevice9* pDevice) override;
 
     void Initialize() override;
+    void SaveSettings(CSimpleIni* ini) override;
+    void LoadSettings(CSimpleIni* ini) override;
 
     void Enable();
     void Disable();

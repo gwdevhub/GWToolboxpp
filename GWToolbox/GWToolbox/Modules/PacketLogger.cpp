@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include <Windows.h>
+#include <bitset>
 
 #include <assert.h>
 #include <stdint.h>
@@ -395,6 +396,21 @@ void PacketLogger::Draw(IDirect3DDevice9* pDevice) {
             });
         }
     }
+    ImGui::Text("Ignored Packets");
+    float offset = 0.0f;
+    for (size_t i = 0; i < ignored_packets.size(); i++) {
+        if (i % 12 == 0) {
+            offset = 0.0f;
+            ImGui::NewLine();
+        }
+        ImGui::SameLine(offset,0);
+        offset += 80.0f * ImGui::GetIO().FontGlobalScale;
+        char buf[30];
+        sprintf(buf, "%d###ignore_packet_%d", i, i);
+        bool p = ignored_packets[i];
+        if (ImGui::Checkbox(buf,&p))
+            ignored_packets[i] = p;
+    }
     return ImGui::End();
 }
 void PacketLogger::Initialize() {
@@ -412,6 +428,28 @@ void PacketLogger::Initialize() {
         logger_enabled = true;
         return false;
         });*/
+}
+void PacketLogger::SaveSettings(CSimpleIni* ini) {
+    ToolboxModule::SaveSettings(ini);
+
+    std::string ignored_packets_bits((ignored_packets.size() + 8 - 1) / 8, 0);
+    auto out = ignored_packets_bits.begin();
+    int shift = 0;
+    for (bool bit : ignored_packets) {
+        *out |= bit << shift;
+        if (++shift == 8) {
+            ++out;
+            shift = 0;
+        }
+    }
+    ini->SetValue(Name(), VAR_NAME(ignored_packets), ignored_packets_bits.c_str());
+}
+void PacketLogger::LoadSettings(CSimpleIni* ini) {
+    ToolboxWindow::LoadSettings(ini);
+    const char* ignored_packets_bits = ini->GetValue(Name(), VAR_NAME(ignored_packets), "-");
+    for (size_t i = 0; ignored_packets[i] != 0 && i < ignored_packets.size(); i++) {
+        ignored_packets[i] = ignored_packets[i] - '0' == 1;
+    }
 }
 void PacketLogger::Disable() {
     if (!logger_enabled) return;

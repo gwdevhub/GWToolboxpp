@@ -12,6 +12,7 @@
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
+#include <GWCA/Context/CharContext.h>
 
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/MapMgr.h>
@@ -474,6 +475,17 @@ void GameSettings::Initialize() {
 		}
 	}
 
+    GW::StoC::AddCallback<GW::Packet::StoC::TradeStart>([&](GW::Packet::StoC::TradeStart*) -> bool {
+        if(flash_window_on_trade) 
+            FlashWindow();
+        if (focus_window_on_trade) {
+            HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
+            SetForegroundWindow(hwnd);
+            ShowWindow(hwnd, SW_RESTORE);
+        }
+        return false;
+    });
+
 	GW::StoC::AddCallback<GW::Packet::StoC::PartyPlayerAdd>(
 		[&](GW::Packet::StoC::PartyPlayerAdd*) -> bool {
         if (!GW::Agents::GetPlayerId())
@@ -580,6 +592,12 @@ void GameSettings::Initialize() {
             return false;
 
         std::wstring output(message);
+        if (flash_window_on_name_ping) {
+            std::wstring player_pinged = output.substr(4, output.size() - 6);
+            //Log::LogW(L"player = %ls, my name = %ls", player_pinged.c_str(), GW::GameContext::instance()->character->player_name);
+            if (!wcsncmp(GW::GameContext::instance()->character->player_name, player_pinged.c_str(), 20))
+                FlashWindow(); // Flash window - we've been followed!
+        }
         output.insert(4, L"<a=1>");
         output.insert(output.size() - 2, L"</a>");
         GW::UI::AsyncDecodeStr(output.c_str(), &pending_teamchat_message);
@@ -753,6 +771,9 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	flash_window_on_zoning = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_zoning), flash_window_on_zoning);
     flash_window_on_cinematic = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_cinematic), flash_window_on_cinematic);
 	focus_window_on_zoning = ini->GetBoolValue(Name(), VAR_NAME(focus_window_on_zoning), focus_window_on_zoning);
+    flash_window_on_trade = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_trade), flash_window_on_trade);
+    focus_window_on_trade = ini->GetBoolValue(Name(), VAR_NAME(focus_window_on_trade), focus_window_on_trade);
+    flash_window_on_name_ping = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_name_ping), flash_window_on_name_ping);
 
 	auto_set_away = ini->GetBoolValue(Name(), VAR_NAME(auto_set_away), auto_set_away);
 	auto_set_away_delay = ini->GetLongValue(Name(), VAR_NAME(auto_set_away_delay), auto_set_away_delay);
@@ -851,6 +872,9 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_party_invite), flash_window_on_party_invite);
 	ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_zoning), flash_window_on_zoning);
 	ini->SetBoolValue(Name(), VAR_NAME(focus_window_on_zoning), focus_window_on_zoning);
+    ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_trade), flash_window_on_trade);
+    ini->SetBoolValue(Name(), VAR_NAME(focus_window_on_trade), focus_window_on_trade);
+    ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_name_ping), flash_window_on_name_ping);
 
 	ini->SetBoolValue(Name(), VAR_NAME(auto_set_away), auto_set_away);
 	ini->SetLongValue(Name(), VAR_NAME(auto_set_away_delay), auto_set_away_delay);
@@ -956,7 +980,18 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::Checkbox("Receiving a party invite", &flash_window_on_party_invite);
 	ImGui::Checkbox("Zoning in a new map", &flash_window_on_zoning);
     ImGui::Checkbox("Cinematic start/end", &flash_window_on_cinematic);
+    ImGui::Checkbox("A player starts trade with you###flash_window_on_trade", &flash_window_on_trade);
+    ImGui::Checkbox("A party member pings your name", &flash_window_on_name_ping);
 	ImGui::Unindent();
+
+    ImGui::Text("Show Guild Wars in foreground when:");
+    ImGui::ShowHelp("When enabled, GWToolbox++ can automatically restore\n"
+        "the window from a minimized state when important events\n"
+        "occur, such as entering instances.");
+    ImGui::Indent();
+    ImGui::Checkbox("Zoning in a new map###focus_window_on_zoning", &focus_window_on_zoning);
+    ImGui::Checkbox("A player starts trade with you###focus_window_on_trade", &focus_window_on_trade);
+    ImGui::Unindent();
 
     ImGui::Text("Show a message when a friend:");
 	ImGui::Indent();
@@ -977,11 +1012,6 @@ void GameSettings::DrawSettingInternal() {
     ImGui::SameLine(256.0f * ImGui::GetIO().FontGlobalScale);
     ImGui::Checkbox("Leaves your outpost###notify_when_players_leave_outpost", &notify_when_players_leave_outpost);
     ImGui::Unindent();
-
-	ImGui::Checkbox("Allow window restore", &focus_window_on_zoning);
-	ImGui::ShowHelp("When enabled, GWToolbox++ can automatically restore\n"
-		"the window from a minimized state when important events\n"
-		"occur, such as entering instances.");
 
 	ImGui::Checkbox("Automatically set 'Away' after ", &auto_set_away);
 	ImGui::SameLine();
