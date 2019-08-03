@@ -588,39 +588,55 @@ void GameSettings::Initialize() {
         buff->clear();
         return true; // consume original packet.
     });
-    GW::StoC::AddCallback<GW::Packet::StoC::PlayerJoinMap>([&](GW::Packet::StoC::PlayerJoinMap* pak) -> bool {
+    GW::StoC::AddCallback<GW::Packet::StoC::PlayerJoinInstance>([&](GW::Packet::StoC::PlayerJoinInstance* pak) -> bool {
         if (!notify_when_players_join_outpost && !notify_when_friends_join_outpost)
             return false; // Dont notify about player joining
         if (!pak->player_name || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
             return false; // Only message in an outpost.
+        if (!GW::Agents::GetPlayerId())
+            return false; // Current player not loaded in yet
         GW::Agent* agent = GW::Agents::GetAgentByID(pak->agent_id);
         if (agent)
             return false; // Player already joined
-        if (!GW::Agents::GetPlayerId())
-            return false; // Current player not loaded in yet
-        if (!notify_when_players_join_outpost && !GW::FriendListMgr::GetFriend(nullptr, pak->player_name))
-            return false; // Notify on friends only, but this player aint yer pal, buddy.
-        wchar_t buffer[128];
-        swprintf(buffer, 128, L"<a=1>%ls</a> entered the outpost.", pak->player_name);
-        GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
+        GW::Friend* f = GetOnlineFriend(nullptr, pak->player_name);
+        if (!f) {
+            if (!notify_when_players_join_outpost)
+                return false; // Notify on friends only, but this player aint yer pal, buddy.
+            wchar_t buffer[128];
+            swprintf(buffer, 128, L"<a=1>%ls</a> entered the outpost.", pak->player_name);
+            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
+        }
+        else {
+            // Friend
+            wchar_t buffer[128];
+            swprintf(buffer, 128, L"<a=1>%ls</a> (%ls) entered the outpost.", f->charname, f->account);
+            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
+        }
         return false;
     });
-    GW::StoC::AddCallback<GW::Packet::StoC::AgentRemove>([&](GW::Packet::StoC::AgentRemove* pak) -> bool {
+    GW::StoC::AddCallback<GW::Packet::StoC::PlayerLeaveInstance>([&](GW::Packet::StoC::PlayerLeaveInstance* pak) -> bool {
         if (!notify_when_players_leave_outpost && !notify_when_friends_leave_outpost)
             return false; // Dont notify about player leaving
-        if (!pak->agent_id || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
+        if (!pak->player_number || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
             return false; // Only message in an outpost.
-        GW::Agent* agent = GW::Agents::GetAgentByID(pak->agent_id);
-        if (!agent || !agent->IsPlayer()) 
-            return false; // Not a player.
-        wchar_t* player_name = GW::PlayerMgr::GetPlayerName(agent->player_number);
+        if (pak->player_number >= GW::PlayerMgr::GetPlayerArray().size())
+            return false; // Not a valid player.
+        wchar_t* player_name = GW::PlayerMgr::GetPlayerName(pak->player_number);
         if (!player_name) 
             return false; // Failed to get name
-        if (!notify_when_players_leave_outpost && !GW::FriendListMgr::GetFriend(nullptr,player_name))
-            return false; // Notify on friends only, but this player aint yer pal, buddy.
-        wchar_t buffer[128];
-        swprintf(buffer, 128, L"<a=1>%ls</a> left the outpost.", player_name);
-        GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
+        GW::Friend* f = GetOnlineFriend(nullptr, player_name);
+        if (!f) {
+            if(!notify_when_players_leave_outpost)
+                return false; // Notify on friends only, but this player aint yer pal, buddy.
+            wchar_t buffer[128];
+            swprintf(buffer, 128, L"<a=1>%ls</a> left the outpost.", player_name);
+            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
+        } else {
+            // Friend
+            wchar_t buffer[128];
+            swprintf(buffer, 128, L"<a=1>%ls</a> (%ls) left the outpost.", f->charname, f->account);
+            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
+        }
         return false;
     });
 
@@ -638,6 +654,24 @@ void GameSettings::Initialize() {
 	AF::ApplyPatchesIfItsTime();
 #endif
 
+}
+// Helper function; avoids doing string checks on offline friends.
+GW::Friend* GameSettings::GetOnlineFriend(wchar_t* account, wchar_t* playing) {
+    if (!(account || playing)) return NULL;
+    GW::FriendList* fl = GW::FriendListMgr::GetFriendList();
+    if (!fl) return NULL;
+    uint32_t n_friends = fl->number_of_friend;
+    GW::FriendsListArray& friends = fl->friends;
+    for (GW::Friend* it : friends) {
+        if (!it) continue;
+        if (it->type != GW::FriendType_Friend) continue;
+        if (it->status != GW::FriendStatus::FriendStatus_Online) continue;
+        if (account && !wcsncmp(it->account, account, 20))
+            return it;
+        if (playing && !wcsncmp(it->charname, playing, 20))
+            return it;
+    }
+    return NULL;
 }
 void GameSettings::MessageOnPartyChange() {
     if (!check_message_on_party_change || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
@@ -714,17 +748,18 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	move_item_on_ctrl_click = ini->GetBoolValue(Name(), VAR_NAME(move_item_on_ctrl_click), move_item_on_ctrl_click);
 	move_item_to_current_storage_pane = ini->GetBoolValue(Name(), VAR_NAME(move_item_to_current_storage_pane), move_item_to_current_storage_pane);
 
-	flash_window_on_pm = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_pm), true);
-	flash_window_on_party_invite = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_party_invite), true);
-	flash_window_on_zoning = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_zoning), true);
-	focus_window_on_zoning = ini->GetBoolValue(Name(), VAR_NAME(focus_window_on_zoning), false);
+	flash_window_on_pm = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_pm), flash_window_on_pm);
+	flash_window_on_party_invite = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_party_invite), flash_window_on_party_invite);
+	flash_window_on_zoning = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_zoning), flash_window_on_zoning);
+    flash_window_on_cinematic = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_cinematic), flash_window_on_cinematic);
+	focus_window_on_zoning = ini->GetBoolValue(Name(), VAR_NAME(focus_window_on_zoning), focus_window_on_zoning);
 
-	auto_set_away = ini->GetBoolValue(Name(), VAR_NAME(auto_set_away), false);
-	auto_set_away_delay = ini->GetLongValue(Name(), VAR_NAME(auto_set_away_delay), 10);
-	auto_set_online = ini->GetBoolValue(Name(), VAR_NAME(auto_set_online), false);
+	auto_set_away = ini->GetBoolValue(Name(), VAR_NAME(auto_set_away), auto_set_away);
+	auto_set_away_delay = ini->GetLongValue(Name(), VAR_NAME(auto_set_away_delay), auto_set_away_delay);
+	auto_set_online = ini->GetBoolValue(Name(), VAR_NAME(auto_set_online), auto_set_online);
 
-	show_unlearned_skill = ini->GetBoolValue(Name(), VAR_NAME(show_unlearned_skill), false);
-	auto_skip_cinematic = ini->GetBoolValue(Name(), VAR_NAME(auto_skip_cinematic), false);
+	show_unlearned_skill = ini->GetBoolValue(Name(), VAR_NAME(show_unlearned_skill), show_unlearned_skill);
+	auto_skip_cinematic = ini->GetBoolValue(Name(), VAR_NAME(auto_skip_cinematic), auto_skip_cinematic);
 
 	npc_speech_bubbles_as_chat = ini->GetBoolValue(Name(), VAR_NAME(npc_speech_bubbles_as_chat), npc_speech_bubbles_as_chat);
     redirect_npc_messages_to_emote_chat = ini->GetBoolValue(Name(), VAR_NAME(redirect_npc_messages_to_emote_chat), redirect_npc_messages_to_emote_chat);
@@ -733,12 +768,16 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	faction_warn_percent_amount = ini->GetLongValue(Name(), VAR_NAME(faction_warn_percent_amount), faction_warn_percent_amount);
 
 
-	disable_gold_selling_confirmation = ini->GetBoolValue(Name(), VAR_NAME(disable_gold_selling_confirmation), false);
-	notify_when_friends_online = ini->GetBoolValue(Name(), VAR_NAME(notify_when_friends_online), true);
-    notify_when_friends_offline = ini->GetBoolValue(Name(), VAR_NAME(notify_when_friends_offline), false);
+	disable_gold_selling_confirmation = ini->GetBoolValue(Name(), VAR_NAME(disable_gold_selling_confirmation), disable_gold_selling_confirmation);
+	notify_when_friends_online = ini->GetBoolValue(Name(), VAR_NAME(notify_when_friends_online), notify_when_friends_online);
+    notify_when_friends_offline = ini->GetBoolValue(Name(), VAR_NAME(notify_when_friends_offline), notify_when_friends_offline);
+    notify_when_friends_join_outpost = ini->GetBoolValue(Name(), VAR_NAME(notify_when_friends_join_outpost), notify_when_friends_join_outpost);
+    notify_when_friends_leave_outpost = ini->GetBoolValue(Name(), VAR_NAME(notify_when_friends_leave_outpost), notify_when_friends_leave_outpost);
 
 	notify_when_party_member_leaves = ini->GetBoolValue(Name(), VAR_NAME(notify_when_party_member_leaves), notify_when_party_member_leaves);
 	notify_when_party_member_joins = ini->GetBoolValue(Name(), VAR_NAME(notify_when_party_member_leaves), notify_when_party_member_joins);
+    notify_when_players_join_outpost = ini->GetBoolValue(Name(), VAR_NAME(notify_when_players_join_outpost), notify_when_players_join_outpost);
+    notify_when_players_leave_outpost = ini->GetBoolValue(Name(), VAR_NAME(notify_when_players_leave_outpost), notify_when_players_leave_outpost);
 
 	::LoadChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
 	::LoadChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);
@@ -829,9 +868,13 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 
 	ini->SetBoolValue(Name(), VAR_NAME(notify_when_friends_online), notify_when_friends_online);
     ini->SetBoolValue(Name(), VAR_NAME(notify_when_friends_offline), notify_when_friends_offline);
+    ini->SetBoolValue(Name(), VAR_NAME(notify_when_friends_join_outpost), notify_when_friends_join_outpost);
+    ini->SetBoolValue(Name(), VAR_NAME(notify_when_friends_leave_outpost), notify_when_friends_leave_outpost);
 
 	ini->SetBoolValue(Name(), VAR_NAME(notify_when_party_member_leaves), notify_when_party_member_leaves);
 	ini->SetBoolValue(Name(), VAR_NAME(notify_when_party_member_joins), notify_when_party_member_joins);
+    ini->SetBoolValue(Name(), VAR_NAME(notify_when_players_join_outpost), notify_when_players_join_outpost);
+    ini->SetBoolValue(Name(), VAR_NAME(notify_when_players_leave_outpost), notify_when_players_leave_outpost);
 
 	::SaveChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
 	::SaveChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);

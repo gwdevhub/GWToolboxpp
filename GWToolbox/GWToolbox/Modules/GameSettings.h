@@ -105,15 +105,17 @@ public:
 	void SetAfkMessage(std::wstring&& message);
 	static void ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag);
 
-    
+    static GW::Friend* GetOnlineFriend(wchar_t* account, wchar_t* playing);
 
 private:
 	void UpdateBorderless();
 	void UpdateFOV();
 	void FactionEarnedCheckAndWarn();
 	bool faction_checked = false;
+
+    // Packet callbacks
 	void MessageOnPartyChange();
-	
+
 	std::vector<GW::MemoryPatcher*> patches;
 	GW::MemoryPatcher *ctrl_click_patch;
 	GW::MemoryPatcher *tome_patch;
