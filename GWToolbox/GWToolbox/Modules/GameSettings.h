@@ -5,24 +5,155 @@
 
 #include <GWCA/Utilities/MemoryPatcher.h>
 
+#include <GWCA/Constants/Constants.h>
+
 #include <GWCA/GameEntities/Item.h>
 #include <GWCA\GameEntities\Party.h>
+#include <GWCA\GameEntities/NPC.h>
+#include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Player.h>
+
 #include <GWCA\GameContainers\List.h>
 
+#include <GWCA/Context/AgentContext.h>
+#include <GWCA/Context/GadgetContext.h>
+#include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/WorldContext.h>
+#include <GWCA/Context/CharContext.h>
+
 #include <GWCA/Managers/FriendListMgr.h>
+#include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/PlayerMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/ItemMgr.h>
 
 
-
+#include <logger.h>
 #include <Color.h>
 #include "ToolboxModule.h"
 
-namespace GW
-{
-    namespace Chat
-    {
-        enum Channel;
+class PendingChatMessage {
+public:
+    PendingChatMessage(GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender) : channel(channel) {
+        invalid = !enc_message || !enc_sender;
+        if (!invalid) {
+            wcscpy(encoded_sender, enc_sender);
+            wcscpy(encoded_message, enc_message);
+            Init();
+        }
+    };
+    static bool IsStringEncoded(const wchar_t* str) {
+        return str && (str[0] < L' ' || str[0] > L'~');
     }
-}
+    const bool IsDecoded() {
+        return !output_message.empty() && !output_sender.empty();
+    }
+    const bool PrintMessage() {
+        if (!IsDecoded() || this->invalid) return false; // Not ready or invalid.
+        if (this->printed) return true; // Already printed.
+        /*for (size_t i = 0; encoded_message[i] != 0; i++) {
+            if (encoded_message[i] >= L' ' && encoded_message[i] <= L'~')
+                printf("%lc", encoded_message[i]);
+            else
+                printf("0x%X ", encoded_message[i]);
+        }
+        printf(" = \n");
+        wprintf(output_message->c_str());
+        printf("\n");*/
+        GW::Chat::Color senderCol;
+        GW::Chat::Color messageCol;
+        
+        wchar_t buffer[512];
+        switch (channel) {
+        case GW::Chat::Channel::CHANNEL_GROUP:
+            GW::Chat::GetChannelColors(GW::Chat::CHANNEL_GROUP, &senderCol, &messageCol);   // Sender should be same color as emote sender
+
+            swprintf(buffer, 256, L"<c=#%06X><a=2>%ls</a></c>: <c=#%06X>%ls</c>", senderCol & 0x00FFFFFF, output_sender.c_str(), messageCol & 0x00FFFFFF, output_message.c_str());
+            GW::Chat::WriteChat(GW::Chat::CHANNEL_GROUP, buffer);
+            break;
+        case GW::Chat::Channel::CHANNEL_EMOTE:
+            GW::Chat::Color dummy; // Needed for GW::Chat::GetChannelColors
+            GW::Chat::GetChannelColors(GW::Chat::CHANNEL_EMOTE, &senderCol, &dummy);   // Sender should be same color as emote sender
+            GW::Chat::GetChannelColors(GW::Chat::CHANNEL_ALLIES, &dummy, &messageCol); // ...but set the message to be same color as ally chat
+            
+            swprintf(buffer, 512, L"<c=#%06X>%ls</c>: <c=#%06X>%ls</c>", senderCol & 0x00FFFFFF, output_sender.c_str(), messageCol & 0x00FFFFFF, output_message.c_str());
+            GW::Chat::WriteChat(GW::Chat::CHANNEL_EMOTE, buffer);
+            break;
+        }
+        output_message.clear();
+        output_sender.clear();
+        printed = true;
+        return printed;
+    }
+    
+    static wchar_t* GetAgentNameEncoded(GW::Agent* agent) {
+        if (!agent) return NULL;
+        if (agent->GetIsCharacterType()) {
+            // Player
+            if (agent->login_number) {
+                GW::PlayerArray players = GW::GameContext::instance()->world->players;
+                if (!players.valid()) return NULL;
+
+                GW::Player* player = &players[agent->login_number];
+                if (player) return player->name_enc;
+            }
+            // NPC
+            GW::Array<GW::AgentInfo> agent_infos = GW::GameContext::instance()->world->agent_infos;
+            if (agent->agent_id >= agent_infos.size()) return NULL;
+            if (agent_infos[agent->agent_id].name_enc) return agent_infos[agent->agent_id].name_enc;
+            GW::NPCArray npcs = GW::GameContext::instance()->world->npcs;
+            if (npcs.valid()) return npcs[agent->player_number].name_enc;
+        }
+        if (agent->GetIsGadgetType()) {
+            GW::AgentContext* ctx = GW::GameContext::instance()->agent;
+            GW::GadgetContext* gadget = GW::GameContext::instance()->gadget;
+            if (!ctx || !gadget) return NULL;
+            auto* GadgetIds = ctx->gadget_data[agent->agent_id].gadget_ids;
+            if (!GadgetIds) return NULL;
+            if (GadgetIds->name_enc) return GadgetIds->name_enc;
+            size_t id = GadgetIds->gadget_id;
+            if (gadget->GadgetInfo.size() <= id) return NULL;
+            return gadget->GadgetInfo[id].name_enc;
+        }
+        if (agent->GetIsItemType()) {
+            GW::ItemArray items = GW::Items::GetItemArray();
+            if (!items.valid()) return false;
+            GW::Item* item = items[agent->item_id];
+            return item->name_enc;
+        }
+        return NULL;
+    }
+    bool invalid = true; // Set when we can't find the agent name for some reason, or arguments passed are empty.
+protected:
+    bool printed = false;
+    wchar_t encoded_message[128] = { '\0' };
+    wchar_t encoded_sender[32] = { '\0' };
+    std::wstring output_message;
+    std::wstring output_sender;
+    GW::Chat::Channel channel;
+    void Init() {
+        if (!invalid) {
+            if (IsStringEncoded(this->encoded_message)) {
+                //Log::LogW(L"message IS encoded, ");
+                GW::UI::AsyncDecodeStr(encoded_message, &output_message);
+            }
+            else {
+                output_message = std::wstring(encoded_message);
+                //Log::LogW(L"message NOT encoded, ");
+            }
+            if (IsStringEncoded(this->encoded_sender)) {
+                //Log::LogW(L"sender IS encoded\n");
+                GW::UI::AsyncDecodeStr(encoded_sender, &output_sender);
+            }
+            else {
+                //Log::LogW(L"sender NOT encoded\n");
+                output_sender = std::wstring(encoded_sender);
+            }
+        }
+    }
+    
+};
 
 class GameSettings : public ToolboxModule {
 	GameSettings() {};
@@ -127,18 +258,14 @@ private:
 	bool was_leading = true;
 	bool check_message_on_party_change = true;
 
+    std::vector<PendingChatMessage*> pending_messages;
+
     bool npc_speech_bubbles_as_chat = true;
     bool emulated_speech_bubble = false;
     bool redirect_npc_messages_to_emote_chat = true;
-
-    bool npc_message_pending = false;
-    std::wstring npc_message;
-    std::wstring npc_sender;
-
-    bool teamchat_message_pending = false;
-    std::wstring pending_teamchat_message;
-    std::wstring pending_teamchat_sender;
-
+    
 	void DrawChannelColor(const char *name, GW::Chat::Channel chan);
 	static void FriendStatusCallback(GW::Friend* f, GW::FriendStatus status, const wchar_t *name, const wchar_t *charname);
 };
+
+

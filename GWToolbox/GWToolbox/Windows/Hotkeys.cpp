@@ -88,7 +88,7 @@ void TBHotkey::Save(CSimpleIni* ini, const char* section) const {
     ini->SetBoolValue(section, VAR_NAME(show_message_in_emote_channel), show_message_in_emote_channel);
     ini->SetBoolValue(section, VAR_NAME(show_error_on_failure), show_error_on_failure);
 }
-static const char* const professions[] = { "Any",
+static const char* professions[] = { "Any",
                 "Warrior",
                 "Ranger",
                 "Monk",
@@ -99,6 +99,7 @@ static const char* const professions[] = { "Any",
                 "Ritualist",
                 "Paragon",
                 "Dervish" };
+static const char* instance_types[] = { "Any","Outpost","Explorable" };
 void TBHotkey::Draw(Op* op) {
 	auto ShowHeaderButtons = [&]() {
 		if (show_active_in_header || show_run_in_header) {
@@ -161,6 +162,10 @@ void TBHotkey::Draw(Op* op) {
         
         if (ImGui::Combo("Profession", &prof_id, professions, 11)) hotkeys_changed = true;
         ImGui::ShowHelp("The hotkey can only trigger when player is the selected primary profession (0 = Any profession)");
+
+        if (ImGui::Combo("Outpost/Explorable", &instance_type, instance_types, 3)) hotkeys_changed = true;
+        ImGui::ShowHelp("When Outpost is selected, hotkey only triggers in an outpost\nWhen Explorable is selected, hotkey only triggers in an explorable area");
+        
 		ImGui::Separator();
 		if (ImGui::Checkbox("###active", &active)) hotkeys_changed = true;
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("The hotkey can trigger only when selected");

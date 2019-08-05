@@ -121,6 +121,9 @@ void ChatCommands::Initialize() {
 	GW::Chat::CreateCommand(L"ff", [](const wchar_t* message, int argc, LPWSTR* argv) -> void {
 		GW::Chat::SendChat('/', "resign");
 	});
+    GW::Chat::CreateCommand(L"gh", [](const wchar_t* message, int argc, LPWSTR* argv) -> void {
+        GW::Chat::SendChat('/', "tp gh");
+        });
     GW::Chat::CreateCommand(L"enter", [](const wchar_t* message, int argc, LPWSTR* argv) -> void {
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) return;
         uint32_t item_id;

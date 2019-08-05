@@ -23,7 +23,7 @@ public:
 
     
 private:
-    uint32_t identifiers[512]; // Presume 512 is big enough for header size...
+    uint32_t identifiers[512] = { 0 }; // Presume 512 is big enough for header size...
     
     
 };

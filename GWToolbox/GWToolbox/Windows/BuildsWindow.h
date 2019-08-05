@@ -67,6 +67,10 @@ private:
 	void Send(const TeamBuild& tbuild);
 	// Send a specific build from a teambuild
 	void Send(const TeamBuild& tbuild, unsigned int idx);
+    // View a teambuild
+    void View(const TeamBuild& tbuild);
+    // View a specific build from a teambuild
+    void View(const TeamBuild& tbuild, unsigned int idx);
 
 	bool builds_changed = false;
 	std::vector<TeamBuild> teambuilds;

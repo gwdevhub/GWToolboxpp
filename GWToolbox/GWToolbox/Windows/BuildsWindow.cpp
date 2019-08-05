@@ -9,6 +9,8 @@
 #include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\SkillbarMgr.h>
+#include <GWCA\Managers\UIMgr.h>
+#include <GWCA\Managers\GameThreadMgr.h>
 
 #include "GuiUtils.h"
 #include <Modules\Resources.h>
@@ -90,24 +92,28 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::Text("Name");
 			ImGui::SameLine(-50.0f + ImGui::GetWindowContentRegionWidth() / 2);
 			ImGui::Text("Template");
+            const float btn_width = 50.0f * ImGui::GetIO().FontGlobalScale;
 			for (unsigned int j = 0; j < tbuild.builds.size(); ++j) {
 				Build& build = tbuild.builds[j];
 				ImGui::PushID(j);
 				ImGui::Text("#%d", j + 1);
 				ImGui::SameLine(30.0f);
-				ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 24.0f - 50.0f - 50.0f - 30.0f
+				ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 24.0f - btn_width - btn_width - 30.0f
 					- ImGui::GetStyle().ItemInnerSpacing.x * 4) / 2);
 				if (ImGui::InputText("###name", build.name, 128)) builds_changed = true;
 				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 				if (ImGui::InputText("###code", build.code, 128)) builds_changed = true;
 				ImGui::PopItemWidth();
 				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-				if (ImGui::Button("Send", ImVec2(50.0f * ImGui::GetIO().FontGlobalScale, 0))) {
-					Send(tbuild, j);
-				}
-				if (ImGui::IsItemHovered()) ImGui::SetTooltip("Send to team chat");
+                if (ImGui::Button(ImGui::GetIO().KeyCtrl ? "Send" : "View", ImVec2(btn_width, 0))) {
+                    if (ImGui::GetIO().KeyCtrl)
+                        Send(tbuild, j);
+                    else
+                        View(tbuild, j);
+                }
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip(ImGui::GetIO().KeyCtrl ? "Click to send to team chat" : "Click to view build. Ctrl + Click to send to chat.");
 				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-				if (ImGui::Button("Load", ImVec2(50.0f, 0))) {
+				if (ImGui::Button("Load", ImVec2(btn_width, 0))) {
 					GW::SkillbarMgr::LoadSkillTemplate(build.code);
 				}
 				if (ImGui::IsItemHovered()) ImGui::SetTooltip("Load build on your character");
@@ -188,6 +194,23 @@ void BuildsWindow::Send(const BuildsWindow::TeamBuild& tbuild) {
 		const Build& build = tbuild.builds[i];
 		Send(tbuild, i);
 	}
+}
+void BuildsWindow::View(const TeamBuild& tbuild, unsigned int idx) {
+    if (idx >= tbuild.builds.size()) return;
+    const Build& build = tbuild.builds[idx];
+
+    GW::Chat::ChatTemplate* t = new GW::Chat::ChatTemplate();
+    t->code.m_buffer = new wchar_t[32];
+    MultiByteToWideChar(CP_UTF8, 0, build.code, -1, t->code.m_buffer, 32);
+    t->code.m_size = t->code.m_capacity = wcslen(t->code.m_buffer);
+    t->name = new wchar_t[128];
+    MultiByteToWideChar(CP_UTF8, 0, build.name, -1, t->name, 128);
+    GW::GameThread::Enqueue([t] {
+        GW::UI::SendUIMessage(0x10000000 | 0x1B9, t);
+        delete[] t->code.m_buffer;
+        delete[] t->name;
+        });
+    
 }
 
 void BuildsWindow::Send(const TeamBuild& tbuild, unsigned int idx) {
