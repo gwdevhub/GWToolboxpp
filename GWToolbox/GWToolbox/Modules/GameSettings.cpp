@@ -480,7 +480,6 @@ void GameSettings::Initialize() {
             GW::CtoS::SendPacket(&pak);
             return false;
             });
-        if (flash_window_on_trade)
     GW::StoC::AddCallback<GW::Packet::StoC::TradeStart>([&](GW::Packet::StoC::TradeStart*) -> bool {
         if(flash_window_on_trade) 
             FlashWindow();
