@@ -15,6 +15,8 @@
 #include <GWCA/Managers/MapMgr.h>
 
 #include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/CtoSMgr.h>
+#include <GWCA/Packets/CtoSHeaders.h>
 
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/CameraMgr.h>
@@ -469,7 +471,16 @@ void GameSettings::Initialize() {
 			gold_confirm_patch = new GW::MemoryPatcher(found, "\x90\x90", 2);
 		}
 	}
-
+    
+        GW::StoC::AddCallback<GW::Packet::StoC::PartyDefeated>([&](GW::Packet::StoC::PartyDefeated*) -> bool {
+            if (!auto_return_on_defeat || !GW::PartyMgr::GetPlayerIsLeader())
+                return false;
+            struct ReturnToOutpostPacket { const uint32_t header = CtoGS_MSGReturnToOutpost; };
+            static ReturnToOutpostPacket pak;
+            GW::CtoS::SendPacket(&pak);
+            return false;
+            });
+        if (flash_window_on_trade)
     GW::StoC::AddCallback<GW::Packet::StoC::TradeStart>([&](GW::Packet::StoC::TradeStart*) -> bool {
         if(flash_window_on_trade) 
             FlashWindow();
@@ -779,6 +790,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	auto_set_away = ini->GetBoolValue(Name(), VAR_NAME(auto_set_away), auto_set_away);
 	auto_set_away_delay = ini->GetLongValue(Name(), VAR_NAME(auto_set_away_delay), auto_set_away_delay);
 	auto_set_online = ini->GetBoolValue(Name(), VAR_NAME(auto_set_online), auto_set_online);
+    auto_return_on_defeat = ini->GetBoolValue(Name(), VAR_NAME(auto_return_on_defeat), auto_return_on_defeat);
 
 	show_unlearned_skill = ini->GetBoolValue(Name(), VAR_NAME(show_unlearned_skill), show_unlearned_skill);
 	auto_skip_cinematic = ini->GetBoolValue(Name(), VAR_NAME(auto_skip_cinematic), auto_skip_cinematic);
@@ -865,6 +877,8 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 
 	ini->SetBoolValue(Name(), VAR_NAME(openlinks), openlinks);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_url), auto_url);
+    ini->SetBoolValue(Name(), VAR_NAME(auto_return_on_defeat), auto_return_on_defeat);
+    
 	ini->SetBoolValue(Name(), VAR_NAME(move_item_on_ctrl_click), move_item_on_ctrl_click);
 	ini->SetBoolValue(Name(), VAR_NAME(move_item_to_current_storage_pane), move_item_to_current_storage_pane);
 	
@@ -1033,6 +1047,8 @@ void GameSettings::DrawSettingInternal() {
 	}
 
 	ImGui::Checkbox("Automatically skip cinematics", &auto_skip_cinematic);
+    ImGui::Checkbox("Automatically return to outpost on defeat", &auto_return_on_defeat);
+    ImGui::ShowHelp("Automatically return party to outpost on party wipe if player is leading");
 	ImGui::Checkbox("Show warning when earned faction reaches ", &faction_warn_percent);
 	ImGui::SameLine();
 	ImGui::PushItemWidth(40.0f * ImGui::GetIO().FontGlobalScale);

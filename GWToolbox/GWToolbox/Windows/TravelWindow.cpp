@@ -235,9 +235,11 @@ void TravelWindow::UITravel(GW::Constants::MapID MapID, GW::Constants::District 
         GW::Constants::MapID map_id;
         uint32_t region_id;
         uint32_t language_id;
+        uint32_t district_number;
     };
     MapStruct* t = new MapStruct();
     t->map_id = MapID;
+    t->district_number = district_number;
     t->region_id = RegionFromDistrict(district);
     t->language_id = LanguageFromDistrict(district);
 
