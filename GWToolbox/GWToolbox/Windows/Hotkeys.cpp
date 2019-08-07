@@ -162,10 +162,6 @@ void TBHotkey::Draw(Op* op) {
         
         if (ImGui::Combo("Profession", &prof_id, professions, 11)) hotkeys_changed = true;
         ImGui::ShowHelp("The hotkey can only trigger when player is the selected primary profession (0 = Any profession)");
-
-        if (ImGui::Combo("Outpost/Explorable", &instance_type, instance_types, 3)) hotkeys_changed = true;
-        ImGui::ShowHelp("When Outpost is selected, hotkey only triggers in an outpost\nWhen Explorable is selected, hotkey only triggers in an explorable area");
-        
 		ImGui::Separator();
 		if (ImGui::Checkbox("###active", &active)) hotkeys_changed = true;
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("The hotkey can trigger only when selected");
