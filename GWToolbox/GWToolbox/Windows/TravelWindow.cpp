@@ -240,8 +240,8 @@ void TravelWindow::UITravel(GW::Constants::MapID MapID, GW::Constants::District 
     MapStruct* t = new MapStruct();
     t->map_id = MapID;
     t->district_number = district_number;
-    t->region_id = RegionFromDistrict(district);
-    t->language_id = LanguageFromDistrict(district);
+    t->region_id = RegionFromDistrict(District);
+    t->language_id = LanguageFromDistrict(District);
 
     GW::GameThread::Enqueue([t] {
         GW::UI::SendUIMessage(0x10000000 | 0x17A, t);
