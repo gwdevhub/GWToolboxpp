@@ -26,6 +26,7 @@ public:
 	bool TravelFavorite(unsigned int idx);
 
 	void Travel(GW::Constants::MapID MapID, GW::Constants::District district, int district_number = 0);
+    void UITravel(GW::Constants::MapID MapID, GW::Constants::District district, int district_number = 0); // Travel via UI interface, allowing "Are you sure" dialogs.
 	void ScrollToOutpost(GW::Constants::MapID outpost_id, GW::Constants::District district = GW::Constants::District::Current, int district_number = 0);
 	bool IsWaitingForMapTravel();
 
@@ -37,6 +38,8 @@ public:
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
+    uint32_t RegionFromDistrict(GW::Constants::District district);
+    uint32_t LanguageFromDistrict(GW::Constants::District district);
 
 private:
 	// ==== Helpers ====

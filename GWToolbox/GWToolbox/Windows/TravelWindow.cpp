@@ -16,6 +16,8 @@
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\PartyMgr.h>
 #include <GWCA\Managers\ItemMgr.h>
+#include <GWCA\Managers\GameThreadMgr.h>
+#include <GWCA\Managers\UIMgr.h>
 
 #include "GWToolbox.h"
 #include "GuiUtils.h"
@@ -179,7 +181,7 @@ void TravelWindow::ScrollToOutpost(GW::Constants::MapID outpost_id, GW::Constant
 	if (scroll_to_outpost_id != outpost_id) return; // Already travelling to another outpost
 	if (map_id == outpost_id) {
 		scroll_to_outpost_id = GW::Constants::MapID::None;
-		GW::Map::Travel(outpost_id, district, district_number);
+		UITravel(outpost_id, district, district_number);
 		return; // Already at this outpost. Called GW::Map::Travel just in case district is different.
 	}
 
@@ -215,7 +217,8 @@ void TravelWindow::ScrollToOutpost(GW::Constants::MapID outpost_id, GW::Constant
 		return; // Done.
 	}
 	pending_map_travel = true;
-	GW::Map::Travel(GW::Constants::MapID::Embark_Beach, district, district_number); // Travel to embark.
+    UITravel(GW::Constants::MapID::Embark_Beach, district, district_number);
+	//GW::Map::Travel(GW::Constants::MapID::Embark_Beach, district, district_number); // Travel to embark.
 }
 
 void TravelWindow::Travel(GW::Constants::MapID MapID, GW::Constants::District District /*= 0*/, int district_number) {
@@ -224,7 +227,61 @@ void TravelWindow::Travel(GW::Constants::MapID MapID, GW::Constants::District Di
 	case GW::Constants::MapID::Urgozs_Warren:
 		return ScrollToOutpost(MapID, District, district_number);
 	}
-	return GW::Map::Travel(MapID, District, district_number);
+    return UITravel(MapID, District, district_number);
+	//return GW::Map::Travel(MapID, District, district_number);
+}
+void TravelWindow::UITravel(GW::Constants::MapID MapID, GW::Constants::District District /*= 0*/, int district_number) {
+    struct MapStruct {
+        GW::Constants::MapID map_id;
+        uint32_t region_id;
+        uint32_t language_id;
+    };
+    MapStruct* t = new MapStruct();
+    t->map_id = MapID;
+    t->region_id = RegionFromDistrict(district);
+    t->language_id = LanguageFromDistrict(district);
+
+    GW::GameThread::Enqueue([t] {
+        GW::UI::SendUIMessage(0x10000000 | 0x17A, t);
+        delete t;
+    });
+}
+
+uint32_t TravelWindow::RegionFromDistrict(GW::Constants::District district) {
+    switch (district) {
+    case GW::Constants::District::International: return GW::Constants::Region::International;
+    case GW::Constants::District::American: return GW::Constants::Region::America;
+    case GW::Constants::District::EuropeEnglish:
+    case GW::Constants::District::EuropeFrench:
+    case GW::Constants::District::EuropeGerman:
+    case GW::Constants::District::EuropeItalian:
+    case GW::Constants::District::EuropeSpanish:
+    case GW::Constants::District::EuropePolish:
+    case GW::Constants::District::EuropeRussian:
+        return GW::Constants::Region::Europe;
+    case GW::Constants::District::AsiaKorean: return GW::Constants::Region::Korea;
+    case GW::Constants::District::AsiaChinese: return GW::Constants::Region::China;
+    case GW::Constants::District::AsiaJapanese: return GW::Constants::Region::Japan;
+    }
+    return GW::Map::GetRegion();
+}
+uint32_t TravelWindow::LanguageFromDistrict(GW::Constants::District district) {
+    switch (district) {
+    case GW::Constants::District::EuropeEnglish: return GW::Constants::EuropeLanguage::English;
+    case GW::Constants::District::EuropeFrench: return GW::Constants::EuropeLanguage::French;
+    case GW::Constants::District::EuropeGerman: return GW::Constants::EuropeLanguage::German;
+    case GW::Constants::District::EuropeItalian: return GW::Constants::EuropeLanguage::Italian;
+    case GW::Constants::District::EuropeSpanish: return GW::Constants::EuropeLanguage::Spanish;
+    case GW::Constants::District::EuropePolish: return GW::Constants::EuropeLanguage::Polish;
+    case GW::Constants::District::EuropeRussian: return GW::Constants::EuropeLanguage::Russian;
+    case GW::Constants::District::AsiaKorean:
+    case GW::Constants::District::AsiaChinese:
+    case GW::Constants::District::AsiaJapanese:
+    case GW::Constants::District::International:
+    case GW::Constants::District::American:
+        return 0;
+    }
+    return GW::Map::GetLanguage();
 }
 
 bool TravelWindow::TravelFavorite(unsigned int idx) {
