@@ -62,4 +62,8 @@ private:
 
 	float movementX = 0;					// X coordinate of the destination of movement macro
 	float movementY = 0;					// Y coordinate of the destination of movement macro
+
+    void MapChanged();
+    uint32_t map_id = 0;
+    uint32_t prof_id = 0;
 };

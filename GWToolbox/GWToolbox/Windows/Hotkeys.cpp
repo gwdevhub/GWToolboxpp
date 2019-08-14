@@ -635,6 +635,7 @@ void HotkeyAction::Execute() {
 HotkeyTarget::HotkeyTarget(CSimpleIni* ini, const char* section) : TBHotkey(ini, section) {
 	id = ini ? ini->GetLongValue(section, "TargetID", 0) : 0;
 	strcpy_s(name, ini ? ini->GetValue(section, "TargetName", "") : "");
+    if (!ini) show_message_in_emote_channel = false;
 }
 void HotkeyTarget::Save(CSimpleIni* ini, const char* section) const {
 	TBHotkey::Save(ini, section);
@@ -651,6 +652,7 @@ void HotkeyTarget::Description(char* buf, int bufsz) const {
 void HotkeyTarget::Draw() {
 	if (ImGui::InputInt("Target ID", (int*)&id)) hotkeys_changed = true;
 	if (ImGui::InputText("Name", name, 140)) hotkeys_changed = true;
+    if (ImGui::Checkbox("Display message when triggered", &show_message_in_emote_channel)) hotkeys_changed = true;
 }
 void HotkeyTarget::Execute() {
 	if (isLoading()) return;
@@ -684,6 +686,11 @@ void HotkeyTarget::Execute() {
             GW::Agents::ChangeTarget(agent);
             });
 	}
+    if (show_message_in_emote_channel) {
+        char buf[256];
+        Description(buf, 256);
+        Log::Info("Triggered %s", buf);
+    }
 }
 
 HotkeyMove::HotkeyMove(CSimpleIni* ini, const char* section) : TBHotkey(ini, section) {

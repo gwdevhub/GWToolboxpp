@@ -73,34 +73,34 @@ void FactionLeaderboardWindow::Draw(IDirect3DDevice9* pDevice) {
 	ImGui::Text("Guild");
 	ImGui::Separator();
 	for (size_t i = 0; i < leaderboard.size(); i++) {
-		LeaderboardEntry e = leaderboard.at(i);
-		if (!e.initialised)
+		LeaderboardEntry* e = &leaderboard[i];
+		if (!e->initialised)
 			continue;
 		offset = 0.0f;
-		if (e.map_name[0] == 0) {
+		if (e->map_name[0] == 0) {
 			// Try to load map name in.
-			GW::AreaInfo* info = GW::Map::GetMapInfo((GW::Constants::MapID)e.map_id);
-			if (info && GW::UI::UInt32ToEncStr(info->name_id, e.map_name_enc, 256))
-				GW::UI::AsyncDecodeStr(e.map_name_enc, e.map_name, 256);
+			GW::AreaInfo* info = GW::Map::GetMapInfo((GW::Constants::MapID)e->map_id);
+			if (info && GW::UI::UInt32ToEncStr(info->name_id, e->map_name_enc, 256))
+				GW::UI::AsyncDecodeStr(e->map_name_enc, e->map_name, 256);
 		}
-		ImGui::Text("%d",e.rank);
+		ImGui::Text("%d",e->rank);
 		ImGui::SameLine(offset += tiny_text_width);
-		ImGui::Text(e.allegiance == 1 ? "Luxon" : "Kurzick");
+		ImGui::Text(e->allegiance == 1 ? "Luxon" : "Kurzick");
 		ImGui::SameLine(offset += short_text_width);
-		ImGui::Text("%d",e.faction);
+		ImGui::Text("%d",e->faction);
 		ImGui::SameLine(offset += short_text_width);
-		ImGui::Text(e.map_name);
+		ImGui::Text(e->map_name);
 		ImGui::SameLine(offset += long_text_width);
-		std::string s = e.guild_str;
+		std::string s = e->guild_str;
 		s += " [";
-		s += e.tag_str;
+		s += e->tag_str;
 		s += "]";
 		const char* sc = s.c_str();
 		ImGui::Text(sc);
-		ImGui::PushID(e.map_id);
+		ImGui::PushID(e->map_id);
 		ImGui::SameLine(offset = avail_width - tiny_text_width);
 		if (ImGui::Button("Wiki",ImVec2(tiny_text_width,0))) {
-			ShellExecuteW(NULL, L"open", GuiUtils::ToWstr(e.guild_wiki_url).c_str(), NULL, NULL, SW_SHOWNORMAL);
+			ShellExecuteW(NULL, L"open", GuiUtils::ToWstr(e->guild_wiki_url).c_str(), NULL, NULL, SW_SHOWNORMAL);
 		}
 		ImGui::PopID();
 	}

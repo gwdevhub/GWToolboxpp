@@ -219,14 +219,12 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 			modifier |= ModKey_Alt;
 
 		bool triggered = false;
-        uint32_t map_id = static_cast<uint32_t>(GW::Map::GetMapID());
-        uint8_t prof_id = GW::Agents::GetPlayer()->primary;
 		for (TBHotkey* hk : hotkeys) {
 			if (!block_hotkeys && hk->active 
 				&& !hk->pressed && keyData == hk->hotkey
+                && modifier == hk->modifier
                 && (hk->map_id == 0 || hk->map_id == map_id)
-                && (hk->prof_id == 0 || hk->prof_id == prof_id)
-				&& modifier == hk->modifier) {
+                && (hk->prof_id == 0 || hk->prof_id == prof_id)) {
 
 				hk->pressed = true;
                 current_hotkey = hk;
@@ -264,9 +262,18 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 		return false;
 	}
 }
-
+void HotkeysWindow::MapChanged() {
+    GW::Agent* p = GW::Agents::GetPlayer();
+    if (!p) return;
+    map_id = (uint32_t)GW::Map::GetMapID();
+    prof_id = p->primary;
+}
 
 void HotkeysWindow::Update(float delta) {
+    if (!GW::Map::GetIsMapLoaded())
+        map_id = prof_id = 0;
+    else if (!map_id)
+        MapChanged();
 	if (clickerActive && TIMER_DIFF(clickerTimer) > 20) {
 		clickerTimer = TIMER_INIT();
 		INPUT input;
