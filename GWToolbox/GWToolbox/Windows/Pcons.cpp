@@ -104,6 +104,8 @@ void Pcon::Update(int delay) {
 		maptype = GW::Map::GetInstanceType();
 		pcon_quantity_checked = false;
 	}
+    if(maptype == GW::Constants::InstanceType::Loading)
+        return;
 	if (enabled && PconsWindow::Instance().GetEnabled()) {
 		if (delay < 0) delay = Pcon::pcons_delay;
 		player = GW::Agents::GetPlayer();
@@ -301,7 +303,7 @@ int Pcon::CheckInventory(bool* used, int* used_qty_ptr,int from_bag, int to_bag)
 	return count - used_qty;
 }
 bool Pcon::CanUseByInstanceType() const {
-	return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable;
+	return maptype == GW::Constants::InstanceType::Explorable;
 }
 void Pcon::LoadSettings(CSimpleIni* inifile, const char* section) {
 	char buf_active[256];
@@ -373,9 +375,15 @@ bool PconCons::CanUseByEffect() const {
 	return true;
 }
 
+void PconRefiller::Draw(IDirect3DDevice9* device) {
+    if (maptype == GW::Constants::InstanceType::Explorable)
+        return; // Don't draw in explorable areas - this is only for refilling in an outpost!
+    Pcon::Draw(device);
+}
+
 // ================================================
 bool PconCity::CanUseByInstanceType() const {
-	return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost;
+	return maptype == GW::Constants::InstanceType::Outpost;
 }
 bool PconCity::CanUseByEffect() const {
 	GW::Agent* player = GW::Agents::GetPlayer();

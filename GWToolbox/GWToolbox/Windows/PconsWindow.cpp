@@ -113,6 +113,9 @@ void PconsWindow::Initialize() {
 		ImVec2(0 / s, 5 / s), ImVec2(49 / s, 54 / s),
 		ItemID::PahnaiSalad, SkillID::Pahnai_Salad_item_effect, 10));
 
+    pcons.push_back(new PconRefiller("Res Scroll", "resscroll", L"Scroll_of_Resurrection.png", IDB_Mat_ResScroll,
+        ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s), ItemID::ResScrolls, 5));
+
 	GW::StoC::AddCallback<GW::Packet::StoC::AgentSetPlayer>(
 		[](GW::Packet::StoC::AgentSetPlayer *pak) -> bool {
 		Pcon::player_id = pak->unk1;

@@ -43,7 +43,7 @@ protected:
 	static bool ReserveSlotForMove(int bagId, int slot); // Prevents more than 1 pcon from trying to add to the same slot at the same time.
 	static bool IsSlotReservedForMove(int bagId, int slot); // Checks whether another pcon has reserved this slot.
 public:
-	void Draw(IDirect3DDevice9* device);
+	virtual void Draw(IDirect3DDevice9* device);
 	virtual void Update(int delay = -1);
 	int MoveItem(GW::Item *item, GW::Bag *bag, int slot, int quantity); // Extension of the GWCA function.
 	int Refill(); // True if the amount of pcons has been refilled, false if not enough.
@@ -141,6 +141,26 @@ public:
 	bool CanUseByInstanceType() const;
 	bool CanUseByEffect() const override;
 	int QuantityForEach(const GW::Item* item) const override;
+};
+// Used only in outposts for refilling
+class PconRefiller : public PconCity {
+public:
+    
+    PconRefiller(const char* chat,
+        const char* ini,
+        const wchar_t* file,
+        WORD res_id,
+        ImVec2 uv0, ImVec2 uv1,
+        DWORD item,
+        int threshold)
+        : PconCity(chat, ini, file, res_id, uv0, uv1, threshold), itemID(item) {}
+
+    bool CanUseByInstanceType() const override { return false; }
+    bool CanUseByEffect() const override { return false; }
+    void Draw(IDirect3DDevice9* device) override;
+    int QuantityForEach(const GW::Item* item) const override { return item->model_id == itemID ? 1 : 0; }
+private:
+    const DWORD itemID;
 };
 
 class PconAlcohol : public Pcon {

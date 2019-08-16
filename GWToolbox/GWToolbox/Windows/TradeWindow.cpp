@@ -348,6 +348,8 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
                     swprintf(name, 100, L"%hs", msg.name.c_str());
                     // Control + click = target player
                     if (ImGui::GetIO().KeysDown[VK_CONTROL]) {
+                        wchar_t name[100];
+                        swprintf(name, 100, L"%hs", msg.name.c_str());
                         GW::Player* player = GW::PlayerMgr::GetPlayerByName(name);
                         if (player) {
                             GW::GameThread::Enqueue([player]() {
@@ -357,7 +359,9 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
                     }
                     else {
                         // open whisper to player
-                        GW::GameThread::Enqueue([&name]() {
+                        GW::GameThread::Enqueue([msg]() {
+                            wchar_t name[100];
+                            swprintf(name, 100, L"%hs", msg.name.c_str());
                             GW::UI::SendUIMessage(GW::UI::kOpenWhisper, name, nullptr);
                             });
                     }
