@@ -291,7 +291,8 @@
     <ClInclude Include="GWToolbox\Modules\Updater.h">
       <Filter>Modules\Updater</Filter>
     </ClInclude>
-    <ClInclude Include="GWToolbox\Modules\PacketLogger.h" />
+    <ClInclude Include="GWToolbox\Windows\DoorMonitorWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\PacketLoggerWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -446,7 +447,8 @@
     <ClCompile Include="GWToolbox\Modules\Updater.cpp">
       <Filter>Modules\Updater</Filter>
     </ClCompile>
-    <ClCompile Include="GWToolbox\Modules\PacketLogger.cpp" />
+    <ClCompile Include="GWToolbox\Windows\DoorMonitorWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\PacketLoggerWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GWToolbox.rc">

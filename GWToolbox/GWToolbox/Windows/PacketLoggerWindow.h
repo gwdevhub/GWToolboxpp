@@ -2,12 +2,12 @@
 
 #include <ToolboxWindow.h>
 
-class PacketLogger : public ToolboxWindow {
-    PacketLogger() {};
-    ~PacketLogger() {};
+class PacketLoggerWindow : public ToolboxWindow {
+    PacketLoggerWindow() {};
+    ~PacketLoggerWindow() {};
 public:
-    static PacketLogger& Instance() {
-        static PacketLogger instance;
+    static PacketLoggerWindow& Instance() {
+        static PacketLoggerWindow instance;
         return instance;
     }
 
@@ -25,5 +25,6 @@ public:
 private:
     uint32_t identifiers[512] = { 0 }; // Presume 512 is big enough for header size...
     
-    
+    void AddCallback(uint32_t packet_header);
+    void RemoveCallback(uint32_t packet_header);
 };

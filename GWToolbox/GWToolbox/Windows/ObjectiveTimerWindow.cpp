@@ -25,6 +25,7 @@
 #include "GWToolbox.h"
 
 #include <Modules\Resources.h>
+#include "logger.h"
 
 
 #define countof(arr) (sizeof(arr) / sizeof(arr[0]))
@@ -103,13 +104,13 @@ void ObjectiveTimerWindow::Initialize() {
     ToolboxWindow::Initialize();
 
     GW::StoC::AddCallback<GW::Packet::StoC::PartyDefeated>(
-        [this](GW::Packet::StoC::PartyDefeated *packet) -> bool {
-        if (!objective_sets.empty()) {
-            ObjectiveSet *os = objective_sets.back();
-            os->StopObjectives();
-        }
-        return false;
-    });
+        [this](GW::Packet::StoC::PartyDefeated* packet) -> bool {
+            if (!objective_sets.empty()) {
+                ObjectiveSet* os = objective_sets.back();
+                os->StopObjectives();
+            }
+            return false;
+        });
 
     GW::StoC::AddCallback<GW::Packet::StoC::GameSrvTransfer>(
         [this](GW::Packet::StoC::GameSrvTransfer *packet) -> bool {
@@ -129,6 +130,7 @@ void ObjectiveTimerWindow::Initialize() {
 		case 219215: AddDoAObjectiveSet(packet->spawn_point); break;
 		case 63058:  AddFoWObjectiveSet(); break;
         case 63059:  AddUWObjectiveSet(); break;
+        case 167860: AddUrgozObjectiveSet(); break;
         default: 
             if (!objective_sets.empty()) {
                 objective_sets.back()->StopObjectives();
@@ -153,6 +155,26 @@ void ObjectiveTimerWindow::Initialize() {
 		*/
 		return false;
 	});
+
+    GW::StoC::AddCallback<GW::Packet::StoC::ManipulateMapObject>(
+        [this](GW::Packet::StoC::ManipulateMapObject* packet) -> bool {
+            if (packet->animation_type != 16 || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
+                return false; // Door not open or not in explorable area
+            if (GW::Map::GetMapID() != GW::Constants::MapID::Urgozs_Warren)
+                return false; // Urgoz only
+            // For Urgoz, the id of the objective is actually the door object_id
+            Objective* obj = GetCurrentObjective(packet->object_id);
+            if (!obj || obj->IsStarted())
+                return false;
+            ObjectiveSet* os = objective_sets.back();
+            obj->SetStarted();
+            for (Objective& objective : os->objectives) {
+                if (objective.id == packet->object_id)
+                    break;
+                objective.SetDone();
+            }
+            return false;
+        });
 
 	GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveUpdateName>(
 	[this](GW::Packet::StoC::ObjectiveUpdateName* packet) -> bool {
@@ -242,6 +264,38 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn) {
     for (int i = 0; i < n_areas; ++i) {
         os->objectives.push_back(objs[(area + i) % n_areas]);
     }
+
+    os->objectives.front().SetStarted();
+    objective_sets.push_back(os);
+}
+void ObjectiveTimerWindow::AddUrgozObjectiveSet() {
+    // Zone 1, Weakness = already open on start
+    // Zone 2, Life Drain = Starts when door 45420 opens
+    // Zone 3, Levers = Starts when door 11692 opens
+    // Zone 4, Bridge = Starts when door 54552 opens
+    // Zone 5, Wolves = Starts when door 1760 opens
+    // Zone 6, Energy Drain = Starts when door 40330 opens
+    // Zone 7, Exhaustion = Starts when door 29537 opens 60114? 54756?
+    // Zone 8, Pillars = Starts when door 37191 opens
+    // Zone 9, Blood Drinkers = Starts when door 35500 opens
+    // Zone 10, Jons Fail Room = Starts when door 34278 opens
+    // Zone 11, Urgoz = Starts when door 15529 opens
+    // Urgoz = 3750
+    // Objective for Urgoz = ???
+
+    ObjectiveTimerWindow::ObjectiveSet* os = new ObjectiveSet;
+    ::AsyncGetMapName(os->name, sizeof(os->name));
+    os->objectives.emplace_back(1, "Zone 1; Bonds plz");
+    os->objectives.emplace_back(45420, "Zone 2; Men from the boys");
+    os->objectives.emplace_back(11692, "Zone 3; WTB IAU");
+    os->objectives.emplace_back(54552, "Zone 4; Watch yer toes");
+    os->objectives.emplace_back(1760, "Zone 5; OMG Seed!");
+    os->objectives.emplace_back(40330, "Zone 6; HoS fail room");
+    os->objectives.emplace_back(29537, "Zone 7; This is exhausting.");
+    os->objectives.emplace_back(37191, "Zone 8; Its a trap!");
+    os->objectives.emplace_back(35500, "Zone 9; Derv plays dead");
+    os->objectives.emplace_back(34278, "Zone 10; Jons Fail Room");
+    os->objectives.emplace_back(15529, "Zone 11; Urgoz");
 
     os->objectives.front().SetStarted();
     objective_sets.push_back(os);

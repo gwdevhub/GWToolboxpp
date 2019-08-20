@@ -88,4 +88,5 @@ private:
     void AddDoAObjectiveSet(GW::Vec2f spawn);
     void AddFoWObjectiveSet();
     void AddUWObjectiveSet();
+    void AddUrgozObjectiveSet();
 };

@@ -15,8 +15,9 @@
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
+#include "logger.h"
 
-#include "PacketLogger.h"
+#include "PacketLoggerWindow.h"
 
 // We can forward declare, because we won't use it
 struct IDirect3DDevice9;
@@ -53,7 +54,8 @@ bool logger_enabled = false;
 uint32_t log_message_callback_identifier = 0;
 static volatile bool running;
 static StoCHandlerArray  game_server_handler;
-static std::vector<bool> ignored_packets;
+static const unsigned int packet_max = 512; // Increase if number of StoC packets exceeds this.
+static bool ignored_packets[packet_max] = { 0 };
 static void printchar(wchar_t c) {
     if (c >= L' ' && c <= L'~') {
         printf("%lc", c);
@@ -89,7 +91,6 @@ static void InitStoC()
 
     GameServer** addr = (GameServer * *)StoCHandler_Addr;
     game_server_handler = (*addr)->gs_codec->handlers;
-    ignored_packets.resize(game_server_handler.size());
 
     ignored_packets[12] = true;
     ignored_packets[13] = true;
@@ -365,7 +366,7 @@ static bool PacketHandler(GW::Packet::StoC::PacketBase* packet)
     return false;
 }
 
-void PacketLogger::Draw(IDirect3DDevice9* pDevice) {
+void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
     if (!visible)
         return;
     ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
@@ -397,8 +398,14 @@ void PacketLogger::Draw(IDirect3DDevice9* pDevice) {
         }
     }
     ImGui::Text("Ignored Packets");
+    ImGui::SameLine();
+    if (ImGui::Button("Toggle All")) {
+        for (size_t i = 0; i < game_server_handler.size(); i++) {
+            ignored_packets[i] = !ignored_packets[i];
+        }
+    }
     float offset = 0.0f;
-    for (size_t i = 0; i < ignored_packets.size(); i++) {
+    for (size_t i = 0; i < game_server_handler.size(); i++) {
         if (i % 12 == 0) {
             offset = 0.0f;
             ImGui::NewLine();
@@ -413,55 +420,53 @@ void PacketLogger::Draw(IDirect3DDevice9* pDevice) {
     }
     return ImGui::End();
 }
-void PacketLogger::Initialize() {
+void PacketLoggerWindow::Initialize() {
     ToolboxWindow::Initialize();
     InitStoC();
     if (logger_enabled) {
         logger_enabled = false;
         Enable();
     }
-    /*GW::StoC::AddCallback<GW::Packet::StoC::GameSrvTransfer>([this](GW::Packet::StoC::GameSrvTransfer* pak) -> bool {
-        logger_enabled = false;
-        return false;
-        });
-    GW::StoC::AddCallback<GW::Packet::StoC::MapLoaded>([this](GW::Packet::StoC::MapLoaded* pak) -> bool {
-        logger_enabled = true;
-        return false;
-        });*/
 }
-void PacketLogger::SaveSettings(CSimpleIni* ini) {
-    ToolboxModule::SaveSettings(ini);
+void PacketLoggerWindow::SaveSettings(CSimpleIni* ini) {
+    ToolboxWindow::SaveSettings(ini);
 
-    std::string ignored_packets_bits((ignored_packets.size() + 8 - 1) / 8, 0);
-    auto out = ignored_packets_bits.begin();
-    int shift = 0;
-    for (bool bit : ignored_packets) {
-        *out |= bit << shift;
-        if (++shift == 8) {
-            ++out;
-            shift = 0;
-        }
+    std::bitset<packet_max> ignored_packets_bitset;
+    for (unsigned int i = 0; i < packet_max; ++i) {
+        ignored_packets_bitset[i] = ignored_packets[i] ? 1 : 0;
     }
-    ini->SetValue(Name(), VAR_NAME(ignored_packets), ignored_packets_bits.c_str());
+    ini->SetValue(Name(), VAR_NAME(ignored_packets), ignored_packets_bitset.to_string().c_str());
 }
-void PacketLogger::LoadSettings(CSimpleIni* ini) {
+void PacketLoggerWindow::LoadSettings(CSimpleIni* ini) {
     ToolboxWindow::LoadSettings(ini);
+
     const char* ignored_packets_bits = ini->GetValue(Name(), VAR_NAME(ignored_packets), "-");
-    for (size_t i = 0; ignored_packets[i] != 0 && i < ignored_packets.size(); i++) {
-        ignored_packets[i] = ignored_packets[i] - '0' == 1;
+    std::bitset<packet_max> ignored_packets_bitset(ignored_packets_bits);
+    for(unsigned int i=0;i<packet_max;i++) {
+        ignored_packets[i] = ignored_packets_bitset[i] == 1;
     }
 }
-void PacketLogger::Disable() {
+void PacketLoggerWindow::RemoveCallback(uint32_t packet_header) {
+    if (!identifiers[packet_header])
+        return;
+    GW::StoC::RemoveCallback(packet_header, identifiers[packet_header]);
+}
+void PacketLoggerWindow::AddCallback(uint32_t packet_header) {
+    if (identifiers[packet_header])
+        return;
+    identifiers[packet_header] = GW::StoC::AddCallback(packet_header, PacketHandler);
+}
+void PacketLoggerWindow::Disable() {
     if (!logger_enabled) return;
     for (size_t i = 0; i < game_server_handler.size(); i++) {
-        GW::StoC::RemoveCallback(i, identifiers[i]);
+        RemoveCallback(i);
     }
     logger_enabled = false;
 }
-void PacketLogger::Enable() {
+void PacketLoggerWindow::Enable() {
     if (logger_enabled) return;
     for (size_t i = 0; i < game_server_handler.size(); i++) {
-        identifiers[i] = GW::StoC::AddCallback(i, PacketHandler);
+        AddCallback(i);
     }
     logger_enabled = true;
 }
