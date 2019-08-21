@@ -62,10 +62,10 @@ private:
 
 		SYSTEMTIME system_time;
         DWORD time = -1;
-        char cached_time[16];
+        char cached_time[16] = { 0 };
 
         bool active = true;
-        char name[256];
+        char name[256] = { 0 };
         std::vector<Objective> objectives;
 
         void CheckSetDone();
@@ -88,5 +88,6 @@ private:
     void AddDoAObjectiveSet(GW::Vec2f spawn);
     void AddFoWObjectiveSet();
     void AddUWObjectiveSet();
+    void AddDeepObjectiveSet();
     void AddUrgozObjectiveSet();
 };

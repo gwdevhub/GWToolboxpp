@@ -83,20 +83,17 @@ namespace {
 	}
 
     void ComputeNColumns() {
-        n_columns = 1
+        n_columns = 0
             + (show_start_column ? 1 : 0)
             + (show_end_column ? 1 : 0)
             + (show_time_column ? 1 : 0);
     }
-    float GetGridItemWidth() {
-        return (ImGui::GetWindowContentRegionWidth()
-            - (ImGui::GetStyle().ItemInnerSpacing.x * (n_columns - 1))) / n_columns;
+    
+    float GetTimestampWidth() {
+        return (75.0f * ImGui::GetIO().FontGlobalScale);
     }
-
-    float GetGridItemX(int i) {
-        const auto& style = ImGui::GetStyle();
-        return style.WindowPadding.x + ImGui::GetStyle().ItemInnerSpacing.x
-            + (i * ImGui::GetWindowContentRegionWidth() / n_columns);
+    float GetLabelWidth() {
+        return ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().WindowPadding.x - ((GetTimestampWidth() + ImGui::GetStyle().ItemInnerSpacing.x) * n_columns);
     }
 }
 
@@ -120,41 +117,22 @@ void ObjectiveTimerWindow::Initialize() {
         }
         return false;
     });
-
-	GW::StoC::AddCallback<GW::Packet::StoC::InstanceLoadFile>(
-	[this](GW::Packet::StoC::InstanceLoadFile *packet) -> bool {
-		// We would want to have a default type that can handle objective by using name in Guild Wars
-		// The only thing we miss is how to determine wether this map has a mission objectives.
-		// We could use packet 187, but this can be a little bit hairy to do. Ask Ziox for more info.
-		switch (packet->map_fileID) {
-		case 219215: AddDoAObjectiveSet(packet->spawn_point); break;
-		case 63058:  AddFoWObjectiveSet(); break;
-        case 63059:  AddUWObjectiveSet(); break;
-        case 167860: AddUrgozObjectiveSet(); break;
-        default: 
-            if (!objective_sets.empty()) {
-                objective_sets.back()->StopObjectives();
+    GW::StoC::AddCallback<GW::Packet::StoC::InstanceLoadInfo>(
+        [this](GW::Packet::StoC::InstanceLoadInfo* packet) -> bool {
+            if (!packet->is_explorable)
+                return false;
+            switch (static_cast<GW::Constants::MapID>(packet->map_id)) {
+                case GW::Constants::MapID::Urgozs_Warren: 
+                    AddUrgozObjectiveSet(); break;
+                case GW::Constants::MapID::The_Deep: 
+                    AddDeepObjectiveSet(); break;
+                case GW::Constants::MapID::The_Fissure_of_Woe:
+                    AddFoWObjectiveSet(); break;
+                case GW::Constants::MapID::The_Underworld:
+                    AddUWObjectiveSet(); break;
             }
-		}
-		return false;
-	});
-
-	GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveAdd>(
-	[this](GW::Packet::StoC::ObjectiveAdd *packet) -> bool {
-		// type 12 is the "title" of the mission objective, should we ignore it or have a "title" objective ?
-		/*
-		Objective *obj = GetCurrentObjective(packet->objective_id);
-		if (obj) return false;
-		ObjectiveSet *os = objective_sets.back();
-		os->objectives.emplace_back(packet->objective_id);
-		obj = &os->objectives.back();
-		GW::UI::AsyncDecodeStr(packet->name, obj->name, sizeof(obj->name));
-		// If the name isn't "???" we consider that the objective started
-		if (wcsncmp(packet->name, L"\x8102\x3236", 2))
-			obj->SetStarted();
-		*/
-		return false;
-	});
+            return false;
+        });
 
     GW::StoC::AddCallback<GW::Packet::StoC::ManipulateMapObject>(
         [this](GW::Packet::StoC::ManipulateMapObject* packet) -> bool {
@@ -185,7 +163,7 @@ void ObjectiveTimerWindow::Initialize() {
 	
 	GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveDone>(
 	[this](GW::Packet::StoC::ObjectiveDone* packet) -> bool {
-		Objective *obj = GetCurrentObjective(packet->objective_id);
+        Objective* obj = GetCurrentObjective(packet->objective_id);
         if (obj) {
             obj->SetDone();
             objective_sets.back()->CheckSetDone();
@@ -281,24 +259,32 @@ void ObjectiveTimerWindow::AddUrgozObjectiveSet() {
     // Zone 10, Jons Fail Room = Starts when door 34278 opens
     // Zone 11, Urgoz = Starts when door 15529 opens
     // Urgoz = 3750
-    // Objective for Urgoz = ???
+    // Objective for Urgoz = 357
+    Log::Log("%d", GW::Map::GetInstanceType());
 
     ObjectiveTimerWindow::ObjectiveSet* os = new ObjectiveSet;
     ::AsyncGetMapName(os->name, sizeof(os->name));
-    os->objectives.emplace_back(1, "Zone 1; Bonds plz");
-    os->objectives.emplace_back(45420, "Zone 2; Men from the boys");
-    os->objectives.emplace_back(11692, "Zone 3; WTB IAU");
-    os->objectives.emplace_back(54552, "Zone 4; Watch yer toes");
-    os->objectives.emplace_back(1760, "Zone 5; OMG Seed!");
-    os->objectives.emplace_back(40330, "Zone 6; HoS fail room");
-    os->objectives.emplace_back(29537, "Zone 7; This is exhausting.");
-    os->objectives.emplace_back(37191, "Zone 8; Its a trap!");
-    os->objectives.emplace_back(35500, "Zone 9; Derv plays dead");
-    os->objectives.emplace_back(34278, "Zone 10; Jons Fail Room");
-    os->objectives.emplace_back(15529, "Zone 11; Urgoz");
+    os->objectives.emplace_back(1, "Zone 1 | Weakness");
+    os->objectives.emplace_back(45420, "Zone 2 | Life Drain");
+    os->objectives.emplace_back(11692, "Zone 3 | Levers");
+    os->objectives.emplace_back(54552, "Zone 4 | Bridge Wolves");
+    os->objectives.emplace_back(1760, "Zone 5 | More Wolves");
+    os->objectives.emplace_back(40330, "Zone 6 | Energy Drain");
+    os->objectives.emplace_back(29537, "Zone 7 | Exhaustion");
+    os->objectives.emplace_back(37191, "Zone 8 | Pillars");
+    os->objectives.emplace_back(35500, "Zone 9 | Blood Drinkers");
+    os->objectives.emplace_back(34278, "Zone 10 | Bridge");
+    os->objectives.emplace_back(15529, "Zone 11 | Urgoz");
 
     os->objectives.front().SetStarted();
     objective_sets.push_back(os);
+}
+void ObjectiveTimerWindow::AddDeepObjectiveSet() {
+    // Room 1 = 1760 + 54552
+    // Room 2 = 45425 + 48290
+    // Room 3 = 11692 + 12669
+    // Room 4 = 29594 + 40330
+    // Room 5 = 49742
 }
 void ObjectiveTimerWindow::AddFoWObjectiveSet() {
 	ObjectiveSet *os = new ObjectiveSet;
@@ -343,22 +329,21 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9* pDevice) {
 
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
-	if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-
-        if (objective_sets.empty()) {
-            ImGui::Text("Enter DoA, FoW, or UW to begin");
-        } else {
-            for (auto& it = objective_sets.rbegin(); it != objective_sets.rend(); it++) {
-                bool show = (*it)->Draw();
-                if (!show) {
-                    objective_sets.erase(--(it.base()));
-                    break; 
-                    // iterators go crazy, don't even bother, we're skipping a frame. NBD.
-                    // if you really want to draw the rest make sure you extensively test this.
-                }
-            }
+    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
+        return ImGui::End();
+    if (objective_sets.empty()) {
+        ImGui::Text("Enter DoA, FoW, UW or Urgoz to begin");
+        return ImGui::End();
+    }
+    for (auto& it = objective_sets.rbegin(); it != objective_sets.rend(); it++) {
+        bool show = (*it)->Draw();
+        if (!show) {
+            objective_sets.erase(--(it.base()));
+            break;
+            // iterators go crazy, don't even bother, we're skipping a frame. NBD.
+            // if you really want to draw the rest make sure you extensively test this.
         }
-	}
+    }
 	ImGui::End();
 }
 
@@ -418,17 +403,21 @@ bool ObjectiveTimerWindow::Objective::IsDone() const {
     return done != TIME_UNKNOWN;
 }
 void ObjectiveTimerWindow::Objective::SetStarted() {
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
-        start = 0; // still loading, just set to 0
-    } else {
-        start = GW::Map::GetInstanceTime();
+    if (start == TIME_UNKNOWN) {
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
+            start = 0; // still loading, just set to 0
+        }
+        else {
+            start = GW::Map::GetInstanceTime();
+        }
     }
     PrintTime(cached_start, sizeof(cached_start), start);
     status = Started;
 }
 void ObjectiveTimerWindow::Objective::SetDone() {
     if (start == TIME_UNKNOWN) SetStarted(); // something went wrong
-    done = GW::Map::GetInstanceTime();
+    if (done == TIME_UNKNOWN)
+        done = GW::Map::GetInstanceTime();
     PrintTime(cached_done, sizeof(cached_done), done);
     duration = done - start;
     PrintTime(cached_duration, sizeof(cached_duration), duration);
@@ -460,26 +449,34 @@ void ObjectiveTimerWindow::Objective::Draw() {
     default:
         break;
     }
-    if (ImGui::Button(name, ImVec2(GetGridItemWidth(), 0))) {
+    auto& style = ImGui::GetStyle();
+    style.ButtonTextAlign = ImVec2(0.0f, 0.5f);
+    if (ImGui::Button(name, ImVec2(GetLabelWidth(), 0))) {
         char buf[256];
         snprintf(buf, 256, "[%s] ~ Start: %s ~ End: %s ~ Time: %s",
             name, cached_start, cached_done, cached_duration);
         GW::Chat::SendChat('#', buf);
     }
+    style.ButtonTextAlign = ImVec2(0.5f, 0.5f);
     ImGui::PopStyleColor();
-
-    ImGui::PushItemWidth(GetGridItemWidth());
+    float ts_width = GetTimestampWidth();
+    float offset = 0.0f;
+    
+    ImGui::PushItemWidth(ts_width);
     if (show_start_column) {
-        ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+        ImGui::SameLine();
         ImGui::InputText("##start", cached_start, sizeof(cached_start), ImGuiInputTextFlags_ReadOnly);
+        // ImGui::SameLine(offset += ts_width + style.ItemInnerSpacing.x, -1);
     }
     if (show_end_column) {
-        ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+        ImGui::SameLine();
         ImGui::InputText("##end", cached_done, sizeof(cached_done), ImGuiInputTextFlags_ReadOnly);
+        //ImGui::SameLine();//ImGui::SameLine(offset += ts_width + style.ItemInnerSpacing.x, -1);
     }
     if (show_time_column) {
-        ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+        ImGui::SameLine();
         ImGui::InputText("##time", cached_duration, sizeof(cached_duration), ImGuiInputTextFlags_ReadOnly);
+        //ImGui::SameLine();//ImGui::SameLine(offset += ts_width + style.ItemInnerSpacing.x, -1);
     }
 }
 
@@ -515,24 +512,25 @@ ObjectiveTimerWindow::ObjectiveSet::ObjectiveSet() : ui_id(cur_ui_id++) {
 
 bool ObjectiveTimerWindow::ObjectiveSet::Draw() {
     char buf[256];
-    snprintf(buf, sizeof(buf), "%s - %s###header%d", name, cached_time, ui_id);
+    snprintf(buf, sizeof(buf), "%s - %s###header%d", name, cached_time ? cached_time : "--:--", ui_id);
 
     bool is_open = true;
+    const auto& style = ImGui::GetStyle();
+    float offset = 0;
+    float ts_width = GetTimestampWidth();
     if (ImGui::CollapsingHeader(buf, &is_open, ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::PushID(ui_id);
-        int i = 1;
+        offset = style.WindowPadding.x + GetLabelWidth() + style.ItemInnerSpacing.x + ImGui::GetCurrentWindow()->DC.GroupOffset.x - GetTimestampWidth() - style.ItemInnerSpacing.x;
         if (show_start_column) {
-            ImGui::SetCursorPosX(GetGridItemX(i++));
+            ImGui::SameLine(offset += GetTimestampWidth() + style.ItemInnerSpacing.x);
             ImGui::Text("Start");
         }
         if (show_end_column) {
-            if (i > 1) ImGui::SameLine();
-            ImGui::SetCursorPosX(GetGridItemX(i++));
+            ImGui::SameLine(offset += GetTimestampWidth() + style.ItemInnerSpacing.x);
             ImGui::Text("End");
         }
         if (show_time_column) {
-            if (i > 1) ImGui::SameLine();
-            ImGui::SetCursorPosX(GetGridItemX(i++));
+            ImGui::SameLine(offset += GetTimestampWidth() + style.ItemInnerSpacing.x);
             ImGui::Text("Time");
         }
         for (Objective& objective : objectives) {
