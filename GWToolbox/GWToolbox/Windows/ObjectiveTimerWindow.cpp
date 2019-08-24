@@ -100,6 +100,29 @@ namespace {
 void ObjectiveTimerWindow::Initialize() {
     ToolboxWindow::Initialize();
 
+    GW::StoC::AddCallback<GW::Packet::StoC::MessageServer>(
+        [this](GW::Packet::StoC::MessageServer* packet) -> bool {
+            if (GW::Map::GetMapID() != GW::Constants::MapID::Urgozs_Warren)
+                return false; // Only care about Urgoz
+            GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
+            if (!buff || !buff->valid() || !buff->size())
+                return true; // Message buffer empty!?
+            const wchar_t* msg = buff->begin();
+            if (msg[0] != 0x6C9C || (msg[5] != 0x2810 && msg[5] != 0x1488))
+                return false;
+            // Gained 10,000 Kurzick faction in Urgoz Warren - get Urgoz objective.
+            Objective* obj = GetCurrentObjective(15529);
+            if (!obj || obj->IsDone())
+                return false; // Already done!?
+            obj->SetDone();
+            ObjectiveSet* os = objective_sets.back();
+            for (Objective& objective : os->objectives) {
+                objective.SetDone();
+            }
+            os->active = false;
+            return false;
+        });
+
     GW::StoC::AddCallback<GW::Packet::StoC::PartyDefeated>(
         [this](GW::Packet::StoC::PartyDefeated* packet) -> bool {
             if (!objective_sets.empty()) {
@@ -117,6 +140,12 @@ void ObjectiveTimerWindow::Initialize() {
         }
         return false;
     });
+    GW::StoC::AddCallback<GW::Packet::StoC::InstanceLoadFile>(
+        [this](GW::Packet::StoC::InstanceLoadFile* packet) -> bool {
+            if (packet->map_fileID == 219215)
+                AddDoAObjectiveSet(packet->spawn_point);
+            return false;
+        });
     GW::StoC::AddCallback<GW::Packet::StoC::InstanceLoadInfo>(
         [this](GW::Packet::StoC::InstanceLoadInfo* packet) -> bool {
             if (!packet->is_explorable)
@@ -260,7 +289,6 @@ void ObjectiveTimerWindow::AddUrgozObjectiveSet() {
     // Zone 11, Urgoz = Starts when door 15529 opens
     // Urgoz = 3750
     // Objective for Urgoz = 357
-    Log::Log("%d", GW::Map::GetInstanceType());
 
     ObjectiveTimerWindow::ObjectiveSet* os = new ObjectiveSet;
     ::AsyncGetMapName(os->name, sizeof(os->name));
@@ -275,7 +303,7 @@ void ObjectiveTimerWindow::AddUrgozObjectiveSet() {
     os->objectives.emplace_back(35500, "Zone 9 | Blood Drinkers");
     os->objectives.emplace_back(34278, "Zone 10 | Bridge");
     os->objectives.emplace_back(15529, "Zone 11 | Urgoz");
-
+    // 45631 53071 are the object_ids for the left and right urgoz doors
     os->objectives.front().SetStarted();
     objective_sets.push_back(os);
 }
@@ -450,14 +478,14 @@ void ObjectiveTimerWindow::Objective::Draw() {
         break;
     }
     auto& style = ImGui::GetStyle();
-    style.ButtonTextAlign = ImVec2(0.0f, 0.5f);
+    style.ButtonTextAlign.x = 0.0f;
     if (ImGui::Button(name, ImVec2(GetLabelWidth(), 0))) {
         char buf[256];
         snprintf(buf, 256, "[%s] ~ Start: %s ~ End: %s ~ Time: %s",
             name, cached_start, cached_done, cached_duration);
         GW::Chat::SendChat('#', buf);
     }
-    style.ButtonTextAlign = ImVec2(0.5f, 0.5f);
+    style.ButtonTextAlign.x = 0.5f;
     ImGui::PopStyleColor();
     float ts_width = GetTimestampWidth();
     float offset = 0.0f;

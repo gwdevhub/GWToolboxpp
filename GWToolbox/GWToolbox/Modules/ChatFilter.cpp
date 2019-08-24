@@ -396,6 +396,7 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 	case 0x89C: return opening_chest_messages; // Chest is being used.
     case 0x89D: return opening_chest_messages; // The chest is empty.
     case 0x89E: return opening_chest_messages; // The chest is locked. You must have the correct key or a lockpick.
+    case 0x8A0: return opening_chest_messages; // Already used that chest
 	case 0x8A5: return invalid_target; // Target is immune to bleeding (no flesh.)
 	case 0x8A6: return invalid_target; // Target is immune to disease (no flesh.)
 	case 0x8A7: return invalid_target; // Target is immune to poison (no flesh.)
@@ -409,6 +410,10 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
     case 0xAD7: return false; // You salvaged <number> <item name(s)> from the <item name>
 	case 0x7BF4: return you_have_been_playing_for; // You have been playing for x time.
 	case 0x7BF5: return you_have_been_playing_for; // You have been playinf for x time. Please take a break.
+    case 0x6C9C: // 0x6C9C 0x866F 0xB8D2 0x5A20 0x101 0x100 - You gain (message[5] - 0x100) Kurzick faction
+        if (FullMatch(&message[1], { 0x866F, 0xB8D2, 0x5A20, 0x101 })) return false; 
+    case 0x6D4D: // 0x6D4D 0xDD4E 0xB502 0x71CE 0x101 0x4E8 - You gain (message[5] - 0x100) Luxon faction
+        if (FullMatch(&message[1], { 0xDD4E, 0xB502, 0x71CE, 0x101 })) return false; 
 	case 0x8101:
 		switch (message[1]) {
 			// nine rings

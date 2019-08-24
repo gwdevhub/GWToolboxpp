@@ -127,12 +127,19 @@ void ChatCommands::Initialize() {
     GW::Chat::CreateCommand(L"enter", [](const wchar_t* message, int argc, LPWSTR* argv) -> void {
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) return;
         uint32_t item_id;
+        std::wstring arg;
         switch (GW::Map::GetMapID()) {
         case GW::Constants::MapID::Temple_of_the_Ages:
         case GW::Constants::MapID::Embark_Beach:
-            if (argc < 2 || (argv[1] != L"fow" && argv[1] != L"uw"))
+            if (argc < 2)
                 return Log::Warning("Use /enter fow or /enter uw to trigger entry");
-            item_id = argv[1] == L"fow" ? 22280 : 3746;
+            arg = GuiUtils::ToLower(argv[1]);
+            if (arg == L"fow")
+                item_id = 22280;
+            else if (arg == L"uw")
+                item_id == 3746;
+            else
+                return Log::Warning("Use /enter fow or /enter uw to trigger entry");
             if (!GW::Items::UseItemByModelId(item_id, 1, 4) && !GW::Items::UseItemByModelId(item_id, 8, 16))
                 return Log::Error("Scroll not found!");
             break;

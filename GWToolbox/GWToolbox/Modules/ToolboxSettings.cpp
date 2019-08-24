@@ -48,6 +48,10 @@
 #include <Widgets/AlcoholWidget.h>
 
 #include "ToolboxSettings.h"
+#define TB_DEBUG
+#ifdef _DEBUG
+ #define TB_DEBUG
+#endif
 
 bool ToolboxSettings::move_all = false;
 
@@ -68,9 +72,12 @@ void ToolboxSettings::InitializeModules() {
 	if (use_objectivetimer) ObjectiveTimerWindow::Instance().Initialize();
 	if (use_factionleaderboard) FactionLeaderboardWindow::Instance().Initialize();
     if (use_daily_quests) DailyQuests::Instance().Initialize();
+#ifdef TB_DEBUG
+    DoorMonitorWindow::Instance().Initialize();
+    //SkillListingWindow::Instance().Initialize();
+#endif
 #ifdef _DEBUG
     PacketLoggerWindow::Instance().Initialize();
-    DoorMonitorWindow::Instance().Initialize();
 #endif
 
 	SettingsWindow::Instance().Initialize();
