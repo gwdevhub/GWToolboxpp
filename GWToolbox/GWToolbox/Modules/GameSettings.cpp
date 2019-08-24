@@ -9,9 +9,6 @@
 
 #include <GWCA/GameEntities/Friendslist.h>
 
-
-
-
 #include <GWCA/Managers/MapMgr.h>
 
 #include <GWCA/Managers/StoCMgr.h>
@@ -767,10 +764,11 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 #endif
 	maintain_fov = ini->GetBoolValue(Name(), VAR_NAME(maintain_fov), false);
 	fov = (float)ini->GetDoubleValue(Name(), VAR_NAME(fov), 1.308997f);
-	tick_is_toggle = ini->GetBoolValue(Name(), VAR_NAME(tick_is_toggle), true);
-
-    show_timestamps = ini->GetBoolValue(Name(), VAR_NAME(show_timestamps), false);
-	timestamps_color = Colors::Load(ini, Name(), VAR_NAME(timestamps_color), Colors::White());
+	tick_is_toggle = ini->GetBoolValue(Name(), VAR_NAME(tick_is_toggle), tick_is_toggle);
+    show_timestamps = ini->GetBoolValue(Name(), VAR_NAME(show_timestamps), show_timestamps);
+    show_timestamp_24h = ini->GetBoolValue(Name(), VAR_NAME(show_timestamp_24h), show_timestamp_24h);
+    show_timestamp_seconds = ini->GetBoolValue(Name(), VAR_NAME(show_timestamp_seconds), show_timestamp_seconds);
+	timestamps_color = Colors::Load(ini, Name(), VAR_NAME(timestamps_color), Colors::RGB(0xc0, 0xc0, 0xbf));
 
 	openlinks = ini->GetBoolValue(Name(), VAR_NAME(openlinks), true);
 	auto_url = ini->GetBoolValue(Name(), VAR_NAME(auto_url), true);
@@ -872,6 +870,8 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(tick_is_toggle), tick_is_toggle);
 
 	ini->SetBoolValue(Name(), VAR_NAME(show_timestamps), show_timestamps);
+    ini->SetBoolValue(Name(), VAR_NAME(show_timestamp_24h), show_timestamp_24h);
+    ini->SetBoolValue(Name(), VAR_NAME(show_timestamp_seconds), show_timestamp_seconds);
 	Colors::Save(ini, Name(), VAR_NAME(timestamps_color), timestamps_color);
 
 	ini->SetBoolValue(Name(), VAR_NAME(openlinks), openlinks);
@@ -947,15 +947,25 @@ void GameSettings::DrawSettingInternal() {
 #endif
 	DrawFOVSetting();
 
-	if (ImGui::Checkbox("Show chat messages timestamp. Color:", &show_timestamps)) {
+	if (ImGui::Checkbox("Show chat messages timestamp", &show_timestamps))
         GW::Chat::ToggleTimestamps(show_timestamps);
+    ImGui::ShowHelp("Show timestamps in message history.");
+    if (show_timestamps) {
+        ImGui::Indent();
+        if (ImGui::Checkbox("Use 24h", &show_timestamp_24h))
+            GW::Chat::SetTimestampsFormat(show_timestamp_24h, show_timestamp_seconds);
+        ImGui::SameLine();
+        if (ImGui::Checkbox("Show seconds", &show_timestamp_seconds))
+            GW::Chat::SetTimestampsFormat(show_timestamp_24h, show_timestamp_seconds);
+        ImGui::SameLine(); 
+        ImGui::Text("Color:");
+        ImGui::SameLine();
+        if (Colors::DrawSettingHueWheel("Color:", &timestamps_color))
+            GW::Chat::SetTimestampsColor(timestamps_color);
+        ImGui::Unindent();
     }
-	ImGui::SameLine();
-
-    if (Colors::DrawSettingHueWheel("Color:", &timestamps_color)) {
-        GW::Chat::SetTimestampsColor(timestamps_color);
-    }
-	ImGui::ShowHelp("Show timestamps in message history.");
+    
+	
 
 	ImGui::Checkbox("Show NPC speech bubbles in emote channel", &npc_speech_bubbles_as_chat);
 	ImGui::ShowHelp("Speech bubbles from NPCs and Heroes will appear as emote messages in chat");

@@ -222,6 +222,8 @@ public:
 	clock_t afk_message_time;
 
 	bool show_timestamps = false;
+    bool show_timestamp_seconds = false;
+    bool show_timestamp_24h = false;
 	Color timestamps_color;
 
 	bool notify_when_friends_online = true;

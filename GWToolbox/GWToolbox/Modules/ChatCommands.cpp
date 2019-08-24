@@ -137,7 +137,7 @@ void ChatCommands::Initialize() {
             if (arg == L"fow")
                 item_id = 22280;
             else if (arg == L"uw")
-                item_id == 3746;
+                item_id = 3746;
             else
                 return Log::Warning("Use /enter fow or /enter uw to trigger entry");
             if (!GW::Items::UseItemByModelId(item_id, 1, 4) && !GW::Items::UseItemByModelId(item_id, 8, 16))
