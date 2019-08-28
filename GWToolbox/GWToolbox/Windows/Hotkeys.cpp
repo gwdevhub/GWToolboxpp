@@ -696,8 +696,7 @@ void HotkeyTarget::Execute() {
 HotkeyMove::HotkeyMove(CSimpleIni* ini, const char* section) : TBHotkey(ini, section) {
 	x = ini ? (float)ini->GetDoubleValue(section, "x", 0.0) : 0.0f;
 	y = ini ? (float)ini->GetDoubleValue(section, "y", 0.0) : 0.0f;
-	range = ini ? (float)ini->GetDoubleValue(section, "distance", 5000.0f) : 5000.0f;
-	mapid = ini ? ini->GetLongValue(section, "mapid", 0) : 0;
+	range = ini ? (float)ini->GetDoubleValue(section, "distance", GW::Constants::Range::Compass) : GW::Constants::Range::Compass;
 	strcpy_s(name, ini ? ini->GetValue(section, "name", "") : "");
 }
 void HotkeyMove::Save(CSimpleIni* ini, const char* section) const {
@@ -705,7 +704,6 @@ void HotkeyMove::Save(CSimpleIni* ini, const char* section) const {
 	ini->SetDoubleValue(section, "x", x);
 	ini->SetDoubleValue(section, "y", y);
 	ini->SetDoubleValue(section, "distance", range);
-	ini->SetLongValue(section, "mapid", mapid);
 	ini->SetValue(section, "name", name);
 }
 void HotkeyMove::Description(char* buf, int bufsz) const {
@@ -720,8 +718,6 @@ void HotkeyMove::Draw() {
 	if (ImGui::InputFloat("y", &y, 0.0f, 0.0f, 3)) hotkeys_changed = true;
 	if (ImGui::InputFloat("Range", &range, 0.0f, 0.0f, 0)) hotkeys_changed = true;
 	ImGui::ShowHelp("The hotkey will only trigger within this range.\nUse 0 for no limit.");
-	if (ImGui::InputInt("Map", (int*)&mapid, 0)) hotkeys_changed = true;
-	ImGui::ShowHelp("The hotkey will only trigger in this map.\nUse 0 for any map.");
 	if (ImGui::InputText("Name", name, 140)) hotkeys_changed = true;
     if (ImGui::Checkbox("Display message when triggered", &show_message_in_emote_channel)) hotkeys_changed = true;
 }
@@ -729,7 +725,6 @@ void HotkeyMove::Execute() {
 	if (!isExplorable()) return;
 
 	GW::Agent* me = GW::Agents::GetPlayer();
-	if (mapid != 0 && mapid != (DWORD)GW::Map::GetMapID()) return;
 	double dist = GW::GetDistance(me->pos, GW::Vec2f(x, y));
 	if (range != 0 && dist > range) return;
 	GW::Agents::Move(x, y);

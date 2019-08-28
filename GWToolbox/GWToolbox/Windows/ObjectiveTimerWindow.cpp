@@ -397,10 +397,10 @@ void ObjectiveTimerWindow::DrawSettingInternal() {
 
 void ObjectiveTimerWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxWindow::LoadSettings(ini);
-    show_decimal = ini->GetBoolValue(Name(), VAR_NAME(show_decimal), false);
-    show_start_column = ini->GetBoolValue(Name(), VAR_NAME(show_start_column), true);
-    show_end_column = ini->GetBoolValue(Name(), VAR_NAME(show_end_column), true);
-    show_time_column = ini->GetBoolValue(Name(), VAR_NAME(show_time_column), true);
+    show_decimal = ini->GetBoolValue(Name(), VAR_NAME(show_decimal), show_decimal);
+    show_start_column = ini->GetBoolValue(Name(), VAR_NAME(show_start_column), show_start_column);
+    show_end_column = ini->GetBoolValue(Name(), VAR_NAME(show_end_column), show_end_column);
+    show_time_column = ini->GetBoolValue(Name(), VAR_NAME(show_time_column), show_time_column);
     ComputeNColumns();
 }
 

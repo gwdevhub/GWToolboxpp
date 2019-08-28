@@ -450,6 +450,7 @@ void PacketLoggerWindow::RemoveCallback(uint32_t packet_header) {
     if (!identifiers[packet_header])
         return;
     GW::StoC::RemoveCallback(packet_header, identifiers[packet_header]);
+    identifiers[packet_header] = 0;
 }
 void PacketLoggerWindow::AddCallback(uint32_t packet_header) {
     if (identifiers[packet_header])
