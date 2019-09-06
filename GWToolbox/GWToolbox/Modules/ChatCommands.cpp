@@ -444,13 +444,13 @@ bool ChatCommands::ParseOutpost(const std::wstring s, GW::Constants::MapID& outp
     std::size_t found = compare.rfind("the ");
     if (found == 0)
         compare.replace(found, 4, "");
-    int bestMatchMapID = -1;
+    GW::Constants::MapID bestMatchMapID = GW::Constants::MapID::None;
 	unsigned int searchStringLength = compare.length();
 	unsigned int bestMatchLength = 0;
     unsigned int thisMapLength = 0;
     const char** searchable_map_names = TravelWindow::Instance().searchable_map_names;
-    const size_t mapCnt = 181;
-	for (int i = 0; i < mapCnt; i++) {
+    //const size_t mapCnt = 181;
+	for (int i = 0; searchable_map_names[i] != 0; i++) {
 		sanitized = searchable_map_names[i]; // Remove punctuation, to lower case.
         thisMapLength = sanitized.length();
 		if (searchStringLength > thisMapLength) 
@@ -459,13 +459,31 @@ bool ChatCommands::ParseOutpost(const std::wstring s, GW::Constants::MapID& outp
             continue; // No match
 		if (bestMatchLength < thisMapLength) {
 			bestMatchLength = thisMapLength;
-			bestMatchMapID = i;
+			bestMatchMapID = TravelWindow::Instance().searchable_map_ids[i];
             if (searchStringLength == thisMapLength)
                 break; // Exact match, break.
 		}
 	}
-    if (bestMatchMapID != -1)
-        return outpost = TravelWindow::Instance().searchable_map_ids[bestMatchMapID], true; // Exact match
+    const char** dungeon_map_names = TravelWindow::Instance().searchable_dungeon_names;
+    if (bestMatchMapID == GW::Constants::MapID::None) {
+        // Not found yet; try dungeons
+        for (int i = 0; dungeon_map_names[i] != 0; i++) {
+            sanitized = dungeon_map_names[i]; // Remove punctuation, to lower case.
+            thisMapLength = sanitized.length();
+            if (searchStringLength > thisMapLength)
+                continue; // String entered by user is longer than this outpost name.
+            if (sanitized.rfind(compare) != 0)
+                continue; // No match
+            if (bestMatchLength < thisMapLength) {
+                bestMatchLength = thisMapLength;
+                bestMatchMapID = TravelWindow::Instance().dungeon_map_ids[i];
+                if (searchStringLength == thisMapLength)
+                    break; // Exact match, break.
+            }
+        }
+    }
+    if (bestMatchMapID != GW::Constants::MapID::None)
+        return outpost = bestMatchMapID, true; // Exact match
 	return false;
 }
 bool ChatCommands::ParseDistrict(const std::wstring s, GW::Constants::District& district, int& number) {

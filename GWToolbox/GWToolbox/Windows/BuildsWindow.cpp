@@ -200,8 +200,8 @@ void BuildsWindow::View(const TeamBuild& tbuild, unsigned int idx) {
     const Build& build = tbuild.builds[idx];
 
     GW::Chat::ChatTemplate* t = new GW::Chat::ChatTemplate();
-    t->code.m_buffer = new wchar_t[32];
-    MultiByteToWideChar(CP_UTF8, 0, build.code, -1, t->code.m_buffer, 32);
+    t->code.m_buffer = new wchar_t[128];
+    MultiByteToWideChar(CP_UTF8, 0, build.code, -1, t->code.m_buffer, 128);
     t->code.m_size = t->code.m_capacity = wcslen(t->code.m_buffer);
     t->name = new wchar_t[128];
     MultiByteToWideChar(CP_UTF8, 0, build.name, -1, t->name, 128);

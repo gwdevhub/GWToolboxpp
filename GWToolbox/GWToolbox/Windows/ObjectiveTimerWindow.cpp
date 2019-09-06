@@ -90,10 +90,10 @@ namespace {
     }
     
     float GetTimestampWidth() {
-        return (75.0f * ImGui::GetIO().FontGlobalScale);
+        return (65.0f * ImGui::GetIO().FontGlobalScale);
     }
     float GetLabelWidth() {
-        return ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().WindowPadding.x - ((GetTimestampWidth() + ImGui::GetStyle().ItemInnerSpacing.x) * n_columns);
+        return std::max(GetTimestampWidth(),ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().WindowPadding.x - ((GetTimestampWidth() + ImGui::GetStyle().ItemInnerSpacing.x) * n_columns));
     }
 }
 
@@ -148,6 +148,7 @@ void ObjectiveTimerWindow::Initialize() {
         });
     GW::StoC::AddCallback<GW::Packet::StoC::InstanceLoadInfo>(
         [this](GW::Packet::StoC::InstanceLoadInfo* packet) -> bool {
+            //packet->district = 112;
             if (!packet->is_explorable)
                 return false;
             switch (static_cast<GW::Constants::MapID>(packet->map_id)) {
@@ -207,7 +208,7 @@ void ObjectiveTimerWindow::Initialize() {
         const GW::Agent* agent = GW::Agents::GetAgentByID(packet->agent_id);
         if (agent == nullptr) return false;
         if (agent->player_number != GW::Constants::ModelID::UW::Dhuum) return false;
-        if (packet->unk1 != 0x6D6F6E31) return false;
+        if (packet->allegiance_bits != 0x6D6F6E31) return false;
         
         Objective* obj = GetCurrentObjective(157);
         if (obj && !obj->IsStarted()) obj->SetStarted();
@@ -479,7 +480,8 @@ void ObjectiveTimerWindow::Objective::Draw() {
     }
     auto& style = ImGui::GetStyle();
     style.ButtonTextAlign.x = 0.0f;
-    if (ImGui::Button(name, ImVec2(GetLabelWidth(), 0))) {
+    float label_width = GetLabelWidth();
+    if (ImGui::Button(name, ImVec2(label_width, 0))) {
         char buf[256];
         snprintf(buf, 256, "[%s] ~ Start: %s ~ End: %s ~ Time: %s",
             name, cached_start, cached_done, cached_duration);
@@ -487,23 +489,32 @@ void ObjectiveTimerWindow::Objective::Draw() {
     }
     style.ButtonTextAlign.x = 0.5f;
     ImGui::PopStyleColor();
+    
     float ts_width = GetTimestampWidth();
-    float offset = 0.0f;
+    float offset = style.ItemSpacing.x + label_width + style.ItemSpacing.x;
     
     ImGui::PushItemWidth(ts_width);
     if (show_start_column) {
-        ImGui::SameLine();
-        ImGui::InputText("##start", cached_start, sizeof(cached_start), ImGuiInputTextFlags_ReadOnly);
+        ImGui::SameLine(offset);
+        ImGui::Text(cached_start);//ImGui::InputText("##start", cached_start, sizeof(cached_start), ImGuiInputTextFlags_ReadOnly);
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Start");
+        offset += ts_width;
         // ImGui::SameLine(offset += ts_width + style.ItemInnerSpacing.x, -1);
     }
     if (show_end_column) {
-        ImGui::SameLine();
-        ImGui::InputText("##end", cached_done, sizeof(cached_done), ImGuiInputTextFlags_ReadOnly);
+        ImGui::SameLine(offset);
+        ImGui::Text(cached_done); //ImGui::InputText("##end", cached_done, sizeof(cached_done), ImGuiInputTextFlags_ReadOnly);
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("End");
+        offset += ts_width;
         //ImGui::SameLine();//ImGui::SameLine(offset += ts_width + style.ItemInnerSpacing.x, -1);
     }
     if (show_time_column) {
-        ImGui::SameLine();
-        ImGui::InputText("##time", cached_duration, sizeof(cached_duration), ImGuiInputTextFlags_ReadOnly);
+        ImGui::SameLine(offset);
+        ImGui::Text(cached_duration); //ImGui::InputText("##time", cached_duration, sizeof(cached_duration), ImGuiInputTextFlags_ReadOnly);
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Time");
         //ImGui::SameLine();//ImGui::SameLine(offset += ts_width + style.ItemInnerSpacing.x, -1);
     }
 }
@@ -548,7 +559,7 @@ bool ObjectiveTimerWindow::ObjectiveSet::Draw() {
     float ts_width = GetTimestampWidth();
     if (ImGui::CollapsingHeader(buf, &is_open, ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::PushID(ui_id);
-        offset = style.WindowPadding.x + GetLabelWidth() + style.ItemInnerSpacing.x + ImGui::GetCurrentWindow()->DC.GroupOffset.x - GetTimestampWidth() - style.ItemInnerSpacing.x;
+        /*offset = style.WindowPadding.x + GetLabelWidth() + style.ItemInnerSpacing.x + ImGui::GetCurrentWindow()->DC.GroupOffset.x - GetTimestampWidth() - style.ItemInnerSpacing.x;
         if (show_start_column) {
             ImGui::SameLine(offset += GetTimestampWidth() + style.ItemInnerSpacing.x);
             ImGui::Text("Start");
@@ -560,7 +571,7 @@ bool ObjectiveTimerWindow::ObjectiveSet::Draw() {
         if (show_time_column) {
             ImGui::SameLine(offset += GetTimestampWidth() + style.ItemInnerSpacing.x);
             ImGui::Text("Time");
-        }
+        }*/
         for (Objective& objective : objectives) {
             objective.Draw();
         }

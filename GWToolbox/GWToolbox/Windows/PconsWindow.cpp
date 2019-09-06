@@ -264,26 +264,29 @@ void PconsWindow::Draw(IDirect3DDevice9* device) {
 	bool alcohol_enabled_before = pcon_alcohol->enabled;
 
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-	if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-		if (show_enable_button) {
-			ImGui::PushStyleColor(ImGuiCol_Text, enabled ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
-			if (ImGui::Button(enabled ? "Enabled###pconstoggle" : "Disabled###pconstoggle",
-				ImVec2(ImGui::GetWindowContentRegionWidth(), 0))) {
-				ToggleEnable();
-			}
-			ImGui::PopStyleColor();
+    if(!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
+        return ImGui::End();
+	if (show_enable_button) {
+		ImGui::PushStyleColor(ImGuiCol_Text, enabled ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
+		if (ImGui::Button(enabled ? "Enabled###pconstoggle" : "Disabled###pconstoggle",
+			ImVec2(ImGui::GetWindowContentRegionWidth(), 0))) {
+			ToggleEnable();
 		}
-		int j = 0;
-		for (unsigned int i = 0; i < pcons.size(); ++i) {
-			if (pcons[i]->visible) {
-				if (j++ % items_per_row > 0) {
-					ImGui::SameLine();
-				}
-				pcons[i]->Draw(device);
+		ImGui::PopStyleColor();
+	}
+	int j = 0;
+	for (unsigned int i = 0; i < pcons.size(); ++i) {
+		if (pcons[i]->visible) {
+			if (j++ % items_per_row > 0) {
+				ImGui::SameLine();
 			}
+			pcons[i]->Draw(device);
 		}
 	}
-	if(instance_type == GW::Constants::InstanceType::Explorable) {
+    
+	if(instance_type == GW::Constants::InstanceType::Explorable && show_auto_disable_pcons_tickbox) {
+        if (j && j % items_per_row > 0)
+            ImGui::NewLine();
 		if (!current_objectives_to_check.empty()) {
 			ImGui::Checkbox("Disable on Completion", &disable_cons_on_objective_completion);
 			ImGui::ShowHelp(disable_cons_on_objective_completion_hint);
@@ -293,8 +296,8 @@ void PconsWindow::Draw(IDirect3DDevice9* device) {
 			ImGui::ShowHelp(disable_cons_in_final_room_hint);
 		}
 	}
-
-	ImGui::End();
+    ImGui::End();
+	
 }
 void PconsWindow::Update(float delta) {
 	if (instance_type != GW::Map::GetInstanceType() || map_id != GW::Map::GetMapID())
@@ -511,7 +514,7 @@ void PconsWindow::DrawSettingInternal() {
 	if (Pcon::size <= 1.0f) Pcon::size = 1.0f;
 	if (ImGui::TreeNode("Visibility")) {
 		ImGui::Checkbox("Enable/Disable button", &show_enable_button);
-		ImGui::Checkbox("Show auto disable pcons checkbox", &show_auto_disable_pcons_tickbox);
+		ImGui::Checkbox("Show auto disable pcons checkboxes", &show_auto_disable_pcons_tickbox);
 		ImGui::ShowHelp("Will show a tickbox in the pcons window when in an elite area");
 		for (Pcon* pcon : pcons) {
 			ImGui::Checkbox(pcon->chat, &pcon->visible);

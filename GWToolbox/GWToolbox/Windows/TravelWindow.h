@@ -64,9 +64,26 @@ private:
 	bool map_travel_countdown_started = false;
 	bool pending_map_travel = false;
 
+    enum error_message_ids {
+
+    };
+
+    enum error_message_trans_codes {
+        error_B29 = 0xB29, // The target party has members who do not meet this mission's level requirements.
+        error_B30, // You may not enter that outpost
+        error_B31, // Your party leader must be a member of this guild. An officer from this guild must also be in the party.
+        error_B32, // You must be the leader of your party to do that.
+        error_B33, // You must be a member of a party to do that.
+        error_B34, // Your party is already waiting to go somewhere else.
+        error_B35, // Your party is already in that guild hall.
+        error_B36, // Your party is already in that district.
+        error_B37, // Your party is already in the active district.
+        error_B38, // The merged party would be too large.
+    };   
+
 public:
 
-    const GW::Constants::MapID searchable_map_ids[181]{
+    const GW::Constants::MapID searchable_map_ids[182]{
         GW::Constants::MapID::Abaddons_Gate,
         GW::Constants::MapID::Abaddons_Mouth,
         GW::Constants::MapID::Altrumm_Ruins,
@@ -247,9 +264,36 @@ public:
         GW::Constants::MapID::Zen_Daijun_outpost_mission,
         GW::Constants::MapID::Zin_Ku_Corridor_outpost,
         GW::Constants::MapID::Zos_Shivros_Channel,
-        GW::Constants::MapID::Great_Temple_of_Balthazar_outpost
+        GW::Constants::MapID::Great_Temple_of_Balthazar_outpost,
+        
     };
-    const char* searchable_map_names[181]{
+    const GW::Constants::MapID dungeon_map_ids[11]{
+        GW::Constants::MapID::Doomlore_Shrine_outpost,
+        GW::Constants::MapID::Doomlore_Shrine_outpost,
+        GW::Constants::MapID::Doomlore_Shrine_outpost,
+        GW::Constants::MapID::Doomlore_Shrine_outpost,
+        GW::Constants::MapID::Longeyes_Ledge_outpost,
+        GW::Constants::MapID::Longeyes_Ledge_outpost,
+        GW::Constants::MapID::Sifhalla_outpost,
+        GW::Constants::MapID::Sifhalla_outpost,
+        GW::Constants::MapID::Olafstead_outpost,
+        GW::Constants::MapID::Umbral_Grotto_outpost,
+        GW::Constants::MapID::Vloxs_Falls
+    };
+    const char* searchable_dungeon_names[11]{
+        "catacombs of kathandrax",
+        "kathandrax",
+        "rragars menagerie",
+        "cathedral of flames",
+        "ooze pit",
+        "darkrime delves",
+        "frostmaws burrows",
+        "sepulchre of dragrimmar",
+        "ravens point",
+        "vloxen excavations",
+        "bogroot growths"
+    };
+    const char* searchable_map_names[182]{
         "abaddons gate",
         "abaddons mouth",
         "altrumm ruins",

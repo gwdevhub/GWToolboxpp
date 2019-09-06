@@ -36,6 +36,8 @@
 #include <Windows/DailyQuests.h>
 #include <Windows/PacketLoggerWindow.h>
 #include <Windows/DoorMonitorWindow.h>
+#include <Windows/SkillListingWindow.h>
+#include <Windows/StringDecoderWindow.h>
 
 #include <Widgets/TimerWidget.h>
 #include <Widgets/HealthWidget.h>
@@ -48,7 +50,7 @@
 #include <Widgets/AlcoholWidget.h>
 
 #include "ToolboxSettings.h"
-#define TB_DEBUG
+//#define TB_DEBUG
 #ifdef _DEBUG
  #define TB_DEBUG
 #endif
@@ -74,10 +76,11 @@ void ToolboxSettings::InitializeModules() {
     if (use_daily_quests) DailyQuests::Instance().Initialize();
 #ifdef TB_DEBUG
     DoorMonitorWindow::Instance().Initialize();
-    //SkillListingWindow::Instance().Initialize();
+    SkillListingWindow::Instance().Initialize();
 #endif
 #ifdef _DEBUG
     PacketLoggerWindow::Instance().Initialize();
+    StringDecoderWindow::Instance().Initialize();
 #endif
 
 	SettingsWindow::Instance().Initialize();

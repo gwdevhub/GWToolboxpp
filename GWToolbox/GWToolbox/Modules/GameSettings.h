@@ -2,6 +2,7 @@
 
 #include <Timer.h>
 #include <Defines.h>
+#include <regex>
 
 #include <GWCA/Utilities/MemoryPatcher.h>
 
@@ -12,6 +13,7 @@
 #include <GWCA\GameEntities/NPC.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Player.h>
+#include <GWCA/Packets/StoC.h>
 
 #include <GWCA\GameContainers\List.h>
 
@@ -43,50 +45,23 @@ public:
             Init();
         }
     };
+    void SendIt() {
+        print = false;
+        send = true;
+    }
     static bool IsStringEncoded(const wchar_t* str) {
         return str && (str[0] < L' ' || str[0] > L'~');
     }
     const bool IsDecoded() {
         return !output_message.empty() && !output_sender.empty();
     }
-    const bool PrintMessage() {
-        if (!IsDecoded() || this->invalid) return false; // Not ready or invalid.
-        if (this->printed) return true; // Already printed.
-        /*for (size_t i = 0; encoded_message[i] != 0; i++) {
-            if (encoded_message[i] >= L' ' && encoded_message[i] <= L'~')
-                printf("%lc", encoded_message[i]);
-            else
-                printf("0x%X ", encoded_message[i]);
-        }
-        printf(" = \n");
-        wprintf(output_message->c_str());
-        printf("\n");*/
-        GW::Chat::Color senderCol;
-        GW::Chat::Color messageCol;
-        
-        wchar_t buffer[512];
-        switch (channel) {
-        case GW::Chat::Channel::CHANNEL_GROUP:
-            GW::Chat::GetChannelColors(GW::Chat::CHANNEL_GROUP, &senderCol, &messageCol);   // Sender should be same color as emote sender
-
-            swprintf(buffer, 256, L"<c=#%06X><a=2>%ls</a></c>: <c=#%06X>%ls</c>", senderCol & 0x00FFFFFF, output_sender.c_str(), messageCol & 0x00FFFFFF, output_message.c_str());
-            GW::Chat::WriteChat(GW::Chat::CHANNEL_GROUP, buffer);
-            break;
-        case GW::Chat::Channel::CHANNEL_EMOTE:
-            GW::Chat::Color dummy; // Needed for GW::Chat::GetChannelColors
-            GW::Chat::GetChannelColors(GW::Chat::CHANNEL_EMOTE, &senderCol, &dummy);   // Sender should be same color as emote sender
-            GW::Chat::GetChannelColors(GW::Chat::CHANNEL_ALLIES, &dummy, &messageCol); // ...but set the message to be same color as ally chat
-            
-            swprintf(buffer, 512, L"<c=#%06X>%ls</c>: <c=#%06X>%ls</c>", senderCol & 0x00FFFFFF, output_sender.c_str(), messageCol & 0x00FFFFFF, output_message.c_str());
-            GW::Chat::WriteChat(GW::Chat::CHANNEL_EMOTE, buffer);
-            break;
-        }
-        output_message.clear();
-        output_sender.clear();
-        printed = true;
-        return printed;
+    const bool Consume() {
+        if (print) return PrintMessage();
+        if (send) return SendMessage();
+        return false;
     }
-    
+
+
     static wchar_t* GetAgentNameEncoded(GW::Agent* agent) {
         if (!agent) return NULL;
         if (agent->GetIsCharacterType()) {
@@ -127,11 +102,26 @@ public:
     bool invalid = true; // Set when we can't find the agent name for some reason, or arguments passed are empty.
 protected:
     bool printed = false;
-    wchar_t encoded_message[128] = { '\0' };
+    bool print = true;
+    bool send = false;
+    wchar_t encoded_message[256] = { '\0' };
     wchar_t encoded_sender[32] = { '\0' };
     std::wstring output_message;
     std::wstring output_sender;
     GW::Chat::Channel channel;
+    std::vector<std::wstring> SanitiseForSend() {
+        std::wregex no_tags(L"<[^>]+>"), no_new_lines(L"\n");
+        std::wstring sanitised, sanitised2, temp;
+        std::regex_replace(std::back_inserter(sanitised), output_message.begin(), output_message.end(), no_tags, L"");
+        std::regex_replace(std::back_inserter(sanitised2), sanitised.begin(), sanitised.end(), no_new_lines, L"|");
+        std::vector<std::wstring> parts;
+        std::wstringstream wss(sanitised2);
+        while (std::getline(wss, temp, L'|'))
+            parts.push_back(temp);
+        return parts;
+    }
+    const bool PrintMessage();
+    const bool SendMessage();
     void Init() {
         if (!invalid) {
             if (IsStringEncoded(this->encoded_message)) {
@@ -152,8 +142,9 @@ protected:
             }
         }
     }
-    
+
 };
+
 
 class GameSettings : public ToolboxModule {
 	GameSettings() {};
@@ -165,6 +156,8 @@ public:
 	}
 
 	const char* Name() const override { return "Game Settings"; }
+
+    time_t PendingChatMessage_last_send = 0;
 
 	void Initialize() override;
 	void Terminate() override;
@@ -239,11 +232,15 @@ public:
 
 	bool disable_gold_selling_confirmation = false;
 
+    bool add_special_npcs_to_party_window = true;
+
 	void ApplyBorderless(bool value);
 	void SetAfkMessage(std::wstring&& message);
 	static void ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag);
 
     static GW::Friend* GetOnlineFriend(wchar_t* account, wchar_t* playing);
+
+    std::vector<PendingChatMessage*> pending_messages;
 
 private:
 	void UpdateBorderless();
@@ -262,7 +259,7 @@ private:
 	bool was_leading = true;
 	bool check_message_on_party_change = true;
 
-    std::vector<PendingChatMessage*> pending_messages;
+    
 
     bool npc_speech_bubbles_as_chat = true;
     bool emulated_speech_bubble = false;
@@ -270,6 +267,8 @@ private:
     
 	void DrawChannelColor(const char *name, GW::Chat::Channel chan);
 	static void FriendStatusCallback(GW::Friend* f, GW::FriendStatus status, const wchar_t *name, const wchar_t *charname);
+    
+    bool ShouldAddAgentToPartyWindow(GW::Packet::StoC::AgentAdd* pak);
+    bool ShouldRemoveAgentFromPartyWindow(uint32_t agent_id);
 };
-
 

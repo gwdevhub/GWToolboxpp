@@ -165,6 +165,8 @@
     <ClInclude Include="GWToolbox\Windows\PconsWindow.h" />
     <ClInclude Include="GWToolbox\Windows\Pcons.h" />
     <ClInclude Include="GWToolbox\Windows\SettingsWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\SkillListingWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\StringDecoderWindow.h" />
     <ClInclude Include="GWToolbox\Windows\TradeWindow.h" />
     <ClInclude Include="GWToolbox\Windows\TravelWindow.h" />
     <ClInclude Include="GWToolbox\Windows\DoorMonitorWindow.h" />
@@ -259,6 +261,8 @@
     <ClCompile Include="GWToolbox\Windows\PconsWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\Pcons.cpp" />
     <ClCompile Include="GWToolbox\Windows\SettingsWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\SkillListingWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\StringDecoderWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\TradeWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\TravelWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\DoorMonitorWindow.cpp" />
@@ -317,12 +321,18 @@
     <Image Include="..\resources\pcons\Golden_Egg.png" />
     <Image Include="..\resources\pcons\Grail_of_Might.png" />
     <Image Include="..\resources\pcons\Green_Rock_Candy.png" />
+    <Image Include="..\resources\pcons\Honeycomb.png" />
     <Image Include="..\resources\pcons\Lunar_Fortune.png" />
     <Image Include="..\resources\pcons\Pahnai_Salad.png" />
     <Image Include="..\resources\pcons\Red_Rock_Candy.png" />
     <Image Include="..\resources\pcons\Slice_of_Pumpkin_Pie.png" />
     <Image Include="..\resources\pcons\Sugary_Blue_Drink.png" />
     <Image Include="..\resources\pcons\War_Supplies.png" />
+    <Image Include="bitmap1.bmp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\resources\pcons\rcdata1.bin" />
+    <None Include="..\resources\pcons\rcdata2.bin" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

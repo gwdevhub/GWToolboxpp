@@ -12,9 +12,15 @@
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Packets/StoC.h>
 
+#include <GWCA/Constants/Constants.h>
+
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
+#include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 #include "logger.h"
 
 #include "PacketLoggerWindow.h"
@@ -51,10 +57,12 @@ enum class FieldType {
 
 bool log_message_content = false;
 bool logger_enabled = false;
+bool debug = false;
 uint32_t log_message_callback_identifier = 0;
 static volatile bool running;
+
 static StoCHandlerArray  game_server_handler;
-static const unsigned int packet_max = 512; // Increase if number of StoC packets exceeds this.
+static const size_t packet_max = 512; // Increase if number of StoC packets exceeds this.
 static bool ignored_packets[packet_max] = { 0 };
 static void printchar(wchar_t c) {
     if (c >= L' ' && c <= L'~') {
@@ -64,7 +72,28 @@ static void printchar(wchar_t c) {
         printf("0x%X ", c);
     }
 }
+typedef void(__fastcall* SendPacket_pt)(uint32_t context, uint32_t size, void* packet);
+SendPacket_pt SendPacket_Func;
+SendPacket_pt SendPacket_Func_Ret;
 
+uintptr_t game_srv_object_addr;
+static void InitCtoS() {
+    SendPacket_Func = (SendPacket_pt)GW::Scanner::Find(
+        "\x55\x8B\xEC\x83\xEC\x2C\x53\x56\x57\x8B\xF9\x85", "xxxxxxxxxxxx", 0);
+    //printf("[SCAN] SendPacket = %p\n", SendPacket_Func);
+    if (!SendPacket_Func)
+        return;
+
+    {
+        uintptr_t address = GW::Scanner::Find(
+            "\x56\x33\xF6\x3B\xCE\x74\x0E\x56\x33\xD2", "xxxxxxxxxx", -4);
+        printf("[SCAN] CtoGSObjectPtr = %p\n", (void*)address);
+        if (address)
+            game_srv_object_addr = *(uintptr_t*)address;
+    }
+    
+
+}
 static void InitStoC()
 {
     struct GameServer {
@@ -266,16 +295,16 @@ static void PrintField(FieldType field, uint32_t count, uint8_t** bytes, uint32_
         uint32_t length;
         Serialize<uint32_t>(bytes, &length);
         uint8_t* end = *bytes + (count * 2);
-        printf("Array16(%lu) {\n", length);
-        uint16_t val;
-        for (size_t i = 0; i < length; i++) {
-            Serialize<uint16_t>(bytes, &val);
-            PrintIndent(indent + 4);
-            printf("[%zu] => %u,\n", i, val);
-        }
-        printf("}\n");
-        *bytes = end;
-        break;
+printf("Array16(%lu) {\n", length);
+uint16_t val;
+for (size_t i = 0; i < length; i++) {
+    Serialize<uint16_t>(bytes, &val);
+    PrintIndent(indent + 4);
+    printf("[%zu] => %u,\n", i, val);
+}
+printf("}\n");
+*bytes = end;
+break;
     }
     case FieldType::Array32: {
         PrintIndent(indent);
@@ -366,6 +395,16 @@ static bool PacketHandler(GW::Packet::StoC::PacketBase* packet)
     return false;
 }
 
+static void CtoSHandler(uint32_t context, uint32_t size, uint32_t* packet) {
+    GW::HookBase::EnterHook();
+    if(size && packet)
+        Log::Log("StoC Packet %d",size);
+    SendPacket_Func_Ret(context, size, packet);
+    GW::HookBase::LeaveHook();
+}
+
+
+
 void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
     if (!visible)
         return;
@@ -373,7 +412,7 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
     ImGui::SetNextWindowSize(ImVec2(256, 128), ImGuiSetCond_FirstUseEver);
     if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
         return ImGui::End();
-
+    ImGui::Checkbox("Debug", &debug);
     if (ImGui::Checkbox("Enable Logging",&logger_enabled)) {
         logger_enabled = !logger_enabled;
         if (!logger_enabled)
@@ -423,16 +462,37 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
 void PacketLoggerWindow::Initialize() {
     ToolboxWindow::Initialize();
     InitStoC();
+    InitCtoS();
+    if (SendPacket_Func) {
+        //GW::HookBase::CreateHook(SendPacket_Func, CtoSHandler, (void**)& SendPacket_Func_Ret);
+    }
     if (logger_enabled) {
         logger_enabled = false;
         Enable();
     }
+/*
+    GW::StoC::AddCallback<GW::Packet::StoC::ErrorMessage>(
+        [this](GW::Packet::StoC::ErrorMessage* pak) -> bool {
+            wchar_t enc_str[16] = { 0 };
+            Log::Log("%d\n", pak->message_enc_id);
+            if (GW::UI::UInt32ToEncStr(pak->message_enc_id, enc_str, 16)) {
+                Log::Log("Loggit!\n");
+                GW::GameThread::Enqueue([enc_str]() {
+                    GW::Packet::StoC::SpeechBubble packet;
+                    packet.header = GW::Packet::StoC::SpeechBubble::STATIC_HEADER;
+                    packet.agent_id = GW::Agents::GetPlayerId();
+                    wcscpy(packet.message, enc_str);
+                    GW::StoC::EmulatePacket((GW::Packet::StoC::PacketBase*) & packet);
+                });
+            }
+            return false;
+        });*/
 }
 void PacketLoggerWindow::SaveSettings(CSimpleIni* ini) {
     ToolboxWindow::SaveSettings(ini);
 
     std::bitset<packet_max> ignored_packets_bitset;
-    for (unsigned int i = 0; i < packet_max; ++i) {
+    for (size_t i = 0; i < packet_max; ++i) {
         ignored_packets_bitset[i] = ignored_packets[i] ? 1 : 0;
     }
     ini->SetValue(Name(), VAR_NAME(ignored_packets), ignored_packets_bitset.to_string().c_str());
@@ -442,7 +502,7 @@ void PacketLoggerWindow::LoadSettings(CSimpleIni* ini) {
 
     const char* ignored_packets_bits = ini->GetValue(Name(), VAR_NAME(ignored_packets), "-");
     std::bitset<packet_max> ignored_packets_bitset(ignored_packets_bits);
-    for(unsigned int i=0;i<packet_max;i++) {
+    for (size_t i = 0; i < packet_max; ++i) {
         ignored_packets[i] = ignored_packets_bitset[i] == 1;
     }
 }
@@ -462,6 +522,7 @@ void PacketLoggerWindow::Disable() {
     for (size_t i = 0; i < game_server_handler.size(); i++) {
         RemoveCallback(i);
     }
+    if (SendPacket_Func) GW::HookBase::DisableHooks(SendPacket_Func);
     logger_enabled = false;
 }
 void PacketLoggerWindow::Enable() {
@@ -469,5 +530,6 @@ void PacketLoggerWindow::Enable() {
     for (size_t i = 0; i < game_server_handler.size(); i++) {
         AddCallback(i);
     }
+    if(SendPacket_Func) GW::HookBase::EnableHooks(SendPacket_Func);
     logger_enabled = true;
 }

@@ -293,6 +293,8 @@
     </ClInclude>
     <ClInclude Include="GWToolbox\Windows\DoorMonitorWindow.h" />
     <ClInclude Include="GWToolbox\Windows\PacketLoggerWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\SkillListingWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\StringDecoderWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -449,6 +451,8 @@
     </ClCompile>
     <ClCompile Include="GWToolbox\Windows\DoorMonitorWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\PacketLoggerWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\SkillListingWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\StringDecoderWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GWToolbox.rc">
@@ -600,5 +604,11 @@
     <Image Include="..\resources\bonds\Holy_Veil.png">
       <Filter>Resources\bonds</Filter>
     </Image>
+    <Image Include="..\resources\pcons\Honeycomb.png" />
+    <Image Include="bitmap1.bmp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\resources\pcons\rcdata1.bin" />
+    <None Include="..\resources\pcons\rcdata2.bin" />
   </ItemGroup>
 </Project>

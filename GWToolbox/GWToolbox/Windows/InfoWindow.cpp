@@ -35,6 +35,7 @@
 #include <Widgets\ClockWidget.h>
 #include <Widgets\AlcoholWidget.h>
 #include <Windows\NotepadWindow.h>
+#include <Windows\StringDecoderWindow.h>
 #include <Modules\Resources.h>
 
 
@@ -241,6 +242,8 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			static char id_buf[32] = "";
 			char* type = "";
 			static char file_buf[32] = "";
+            static char region_buf[32] = "";
+            static char district_buf[32] = "";
 			snprintf(id_buf, 32, "%d", GW::Map::GetMapID());
 			switch (GW::Map::GetInstanceType()) {
 			case GW::Constants::InstanceType::Outpost: type = "Outpost\0\0\0"; break;
@@ -248,9 +251,13 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			case GW::Constants::InstanceType::Loading: type = "Loading\0\0\0"; break;
 			}
 			snprintf(file_buf, 32, "%d", mapfile);
+            snprintf(region_buf, 32, "%d", GW::Map::GetRegion());
+            snprintf(district_buf, 32, "%d", GW::Map::GetDistrict());
 			ImGui::PushItemWidth(-80.0f);
 			ImGui::InputText("Map ID", id_buf, 32, ImGuiInputTextFlags_ReadOnly);
 			ImGui::ShowHelp("Map ID is unique for each area");
+            ImGui::InputText("Map Region", region_buf, 32, ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputText("Map District", district_buf, 32, ImGuiInputTextFlags_ReadOnly);
 			ImGui::InputText("Map Type", type, 11, ImGuiInputTextFlags_ReadOnly);
 			ImGui::InputText("Map file", file_buf, 32, ImGuiInputTextFlags_ReadOnly);
 			ImGui::ShowHelp("Map file is unique for each pathing map (e.g. used by minimap).\nMany different maps use the same map file");
@@ -265,25 +272,61 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 		}
 		if (show_item && ImGui::CollapsingHeader("Item")) {
 			ImGui::Text("First item in inventory");
+            GW::Item* item = nullptr;
 			static char modelid[32] = "";
 			strcpy_s(modelid, "-");
 			GW::Bag** bags = GW::Items::GetBagArray();
-			if (bags) {
-				GW::Bag* bag1 = bags[1];
-				if (bag1) {
-					GW::ItemArray items = bag1->items;
-					if (items.valid()) {
-						GW::Item* item = items[0];
-						if (item) {
-							snprintf(modelid, 32, "%d", item->model_id);
-						}
-					}
+			if (bags && bags[1]) {
+				GW::ItemArray items = bags[1]->items;
+				if (items.valid()) {
+                    item = items[0];
 				}
 			}
+            if(item)
+                snprintf(modelid, 32, "%d", item->model_id);
 			ImGui::PushItemWidth(-80.0f);
 			ImGui::InputText("ModelID", modelid, 32, ImGuiInputTextFlags_ReadOnly);
 			//ImGui::InputText("ItemID", itemid, 32, ImGuiInputTextFlags_ReadOnly);
 			ImGui::PopItemWidth();
+            if (ImGui::TreeNode("Advanced##item")) {
+                ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() / 2);
+                if (item) {
+                    ImGui::LabelText("Addr", "%p", item);
+                    ImGui::LabelText("Id", "%d", item->item_id);
+                    ImGui::LabelText("name_enc", "%ls", item->complete_name_enc);
+                    if (ImGui::IsItemClicked()) {
+                        StringDecoderWindow::Instance().PrintEncStr(item->info_string);
+                    }
+
+                   /* ImGui::LabelText("Width", "%f", target->width1);
+                    ImGui::LabelText("Height", "%f", target->height1);
+                    ImGui::LabelText("Rotation", "%f", target->rotation_angle);
+                    ImGui::LabelText("NameProperties", "0x%X", target->name_properties);
+                    ImGui::LabelText("X", "%f", target->pos.x);
+                    ImGui::LabelText("Y", "%f", target->pos.y);
+                    ImGui::LabelText("plane", "%d", target->plane);
+                    ImGui::LabelText("Type", "0x%X", target->type);
+                    ImGui::LabelText("Owner", "%d", target->owner);
+                    ImGui::LabelText("ItemId", "%d", target->item_id);
+                    ImGui::LabelText("ExtraType", "%d", target->extra_type);
+                    ImGui::LabelText("AS of Weapon", "%f", target->weapon_attack_speed);
+                    ImGui::LabelText("AS modifier", "%f", target->attack_speed_modifier);
+                    ImGui::LabelText("PlayerNumber", "%d", target->player_number);
+                    ImGui::LabelText("Primary Prof", "%d", target->primary);
+                    ImGui::LabelText("Secondary Prof", "%d", target->secondary);
+                    ImGui::LabelText("Level", "%d", target->level);
+                    ImGui::LabelText("TeamId", "%d", target->team_id);
+                    ImGui::LabelText("Effects", "0x%X", target->effects);
+                    ImGui::LabelText("ModelState", "0x%X", target->model_state);
+                    ImGui::LabelText("typeMap", "0x%X", target->type_map);
+                    ImGui::LabelText("LoginNumber", "%d", target->login_number);
+                    ImGui::LabelText("Allegiance", "%d", target->allegiance);
+                    ImGui::LabelText("WeaponType", "%d", target->weapon_type);
+                    ImGui::LabelText("Skill", "%d", target->skill);*/
+                }
+                ImGui::PopItemWidth();
+                ImGui::TreePop();
+            }
 		}
 		if (show_quest && ImGui::CollapsingHeader("Quest")) {
 			GW::QuestLog qlog = GW::GameContext::instance()->world->quest_log;

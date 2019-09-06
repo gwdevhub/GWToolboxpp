@@ -81,12 +81,12 @@ void ChatFilter::Initialize() {
 		GW::Array<wchar_t> *buff = &GW::GameContext::instance()->world->message_buff;
         if (!buff || !buff->valid() || !buff->size())
             return true;
-		if (ShouldIgnore(buff->begin()) ||
-			ShouldIgnoreByContent(buff->begin(), buff->size())) {
-
-			buff->clear();
-			return true;
-		}
+        bool should_ignore = false;
+        should_ignore |= ShouldIgnoreByChannel(pak->channel) && ShouldIgnoreByContent(buff->begin(), buff->size());
+        if (should_ignore) {
+            buff->clear();
+            return true;
+        }
 
 		return false;
 	});
@@ -101,18 +101,16 @@ void ChatFilter::Initialize() {
 		GW::Array<wchar_t> *buff = &GW::GameContext::instance()->world->message_buff;
         if (!buff || !buff->valid() || !buff->size())
             return true;
-		wchar_t *sender = GW::Agents::GetPlayerNameByLoginNumber(pak->id);
+		wchar_t *sender = GW::Agents::GetPlayerNameByLoginNumber(pak->player_number);
 		if (!sender) 
             return false;
-        if (!ShouldIgnoreByChannel(pak->type))
-            return false;
-		if (ShouldIgnore(buff->begin()) ||
-			ShouldIgnoreBySender(sender, 32) ||
-			ShouldIgnoreByContent(buff->begin(), buff->size())) {
-
-			buff->clear();
-			return true;
-		}
+        bool should_ignore = false;
+        should_ignore |= ShouldIgnore(buff->begin());
+        should_ignore |= ShouldIgnoreByChannel(pak->channel) && ShouldIgnoreByContent(buff->begin(), buff->size());
+        if (should_ignore) {
+            buff->clear();
+            return true;
+        }
 
 		return false;
 	});
@@ -482,7 +480,7 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 	//	return false;
 	}
 
-	return false;
+    return false;
 }
 
 bool ChatFilter::ShouldIgnoreByContent(const wchar_t *message, size_t size) {
@@ -527,13 +525,13 @@ bool ChatFilter::ShouldIgnoreByContent(const wchar_t *message, size_t size) {
 	return false;
 }
 bool ChatFilter::ShouldIgnoreByChannel(uint32_t channel) {
-    switch (static_cast<GW::Chat::Channel>(channel)) {
-    case GW::Chat::Channel::CHANNEL_ALL:        return filter_channel_local;
-    case GW::Chat::Channel::CHANNEL_GUILD:      return filter_channel_guild;
-    case GW::Chat::Channel::CHANNEL_GROUP:      return filter_channel_team;
-    case GW::Chat::Channel::CHANNEL_TRADE:      return filter_channel_trade;
-    case GW::Chat::Channel::CHANNEL_ALLIANCE:   return filter_channel_alliance;
-    case GW::Chat::Channel::CHANNEL_EMOTE:      return filter_channel_emotes;
+    switch (channel) {
+    case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_ALL):        return filter_channel_local;
+    case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_GUILD):      return filter_channel_guild;
+    case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_GROUP):      return filter_channel_team;
+    case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_TRADE):      return filter_channel_trade;
+    case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_ALLIANCE):   return filter_channel_alliance;
+    case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_EMOTE):      return filter_channel_emotes;
     }
     return false;
 }
