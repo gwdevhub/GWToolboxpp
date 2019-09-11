@@ -295,6 +295,8 @@
     <ClInclude Include="GWToolbox\Windows\PacketLoggerWindow.h" />
     <ClInclude Include="GWToolbox\Windows\SkillListingWindow.h" />
     <ClInclude Include="GWToolbox\Windows\StringDecoderWindow.h" />
+    <ClInclude Include="GWToolbox\Modules\DiscordModule.h" />
+    <ClInclude Include="..\Dependencies\discord_game_sdk\c\discord_game_sdk.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -453,6 +455,7 @@
     <ClCompile Include="GWToolbox\Windows\PacketLoggerWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\SkillListingWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\StringDecoderWindow.cpp" />
+    <ClCompile Include="GWToolbox\Modules\DiscordModule.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GWToolbox.rc">

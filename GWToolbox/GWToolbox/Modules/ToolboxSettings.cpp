@@ -17,7 +17,7 @@
 #include <GWToolbox.h>
 #include <Modules/Resources.h>
 #include <Modules/Updater.h>
-
+#include <Modules/DiscordModule.h>
 
 #include <Windows/MainWindow.h>
 #include <Windows/PconsWindow.h>
@@ -77,6 +77,7 @@ void ToolboxSettings::InitializeModules() {
 #ifdef TB_DEBUG
     DoorMonitorWindow::Instance().Initialize();
     SkillListingWindow::Instance().Initialize();
+    DiscordModule::Instance().Initialize();
 #endif
 #ifdef _DEBUG
     PacketLoggerWindow::Instance().Initialize();

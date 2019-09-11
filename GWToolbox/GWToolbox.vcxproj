@@ -53,7 +53,7 @@
       <Optimization>Disabled</Optimization>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <ShowIncludes>false</ShowIncludes>
-      <AdditionalIncludeDirectories>$(SolutionDir)GWToolbox\GWToolbox\;$(SolutionDir)Dependencies\;$(SolutionDir)Dependencies\imgui\;$(SolutionDir)Dependencies\utf8proc\;$(SolutionDir)Dependencies\GWCA\Include\;$(SolutionDir)Dependencies\DirectX\Include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)discord_game_sdk\cpp\;$(SolutionDir)GWToolbox\GWToolbox\;$(SolutionDir)Dependencies\;$(SolutionDir)Dependencies\imgui\;$(SolutionDir)Dependencies\utf8proc\;$(SolutionDir)Dependencies\GWCA\Include\;$(SolutionDir)Dependencies\DirectX\Include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <PreprocessorDefinitions>_WIN32;UTF8PROC_STATIC;IMGUI_USE_BGRA_PACKED_COLOR;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -99,6 +99,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\Dependencies\discord_game_sdk\c\discord_game_sdk.h" />
     <ClInclude Include="..\Dependencies\easywsclient\easywsclient.hpp" />
     <ClInclude Include="..\Dependencies\imgui\imconfig.h" />
     <ClInclude Include="..\Dependencies\imgui\imgui.h" />
@@ -116,6 +117,7 @@
     <ClInclude Include="GWToolbox\Keys.h" />
     <ClInclude Include="GWToolbox\Modules\ChatCommands.h" />
     <ClInclude Include="GWToolbox\Modules\ChatFilter.h" />
+    <ClInclude Include="GWToolbox\Modules\DiscordModule.h" />
     <ClInclude Include="GWToolbox\Windows\PacketLoggerWindow.h" />
     <ClInclude Include="GWToolbox\Windows\DailyQuests.h" />
     <ClInclude Include="GWToolbox\Modules\GameSettings.h" />
@@ -214,6 +216,7 @@
     <ClCompile Include="GWToolbox\main.cpp" />
     <ClCompile Include="GWToolbox\Modules\ChatCommands.cpp" />
     <ClCompile Include="GWToolbox\Modules\ChatFilter.cpp" />
+    <ClCompile Include="GWToolbox\Modules\DiscordModule.cpp" />
     <ClCompile Include="GWToolbox\Windows\PacketLoggerWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\DailyQuests.cpp" />
     <ClCompile Include="GWToolbox\Modules\GameSettings.cpp" />
