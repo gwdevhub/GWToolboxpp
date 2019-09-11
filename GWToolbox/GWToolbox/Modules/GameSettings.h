@@ -259,8 +259,6 @@ private:
 	bool was_leading = true;
 	bool check_message_on_party_change = true;
 
-    
-
     bool npc_speech_bubbles_as_chat = true;
     bool emulated_speech_bubble = false;
     bool redirect_npc_messages_to_emote_chat = true;
@@ -270,5 +268,6 @@ private:
     
     bool ShouldAddAgentToPartyWindow(GW::Packet::StoC::AgentAdd* pak);
     bool ShouldRemoveAgentFromPartyWindow(uint32_t agent_id);
+    bool GetPlayerIsLeader();
 };
 

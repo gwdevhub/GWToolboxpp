@@ -49,10 +49,15 @@ private:
 	bool tick_with_pcons = false;
 	int items_per_row = 3;
 	bool show_enable_button = true;
+
 	bool disable_pcons_on_map_change = true;
-	
+    bool disable_cons_on_vanquish_completion = true;
+    bool disable_cons_on_objective_completion = false;
+    bool disable_cons_in_final_room = false;
+
 	bool show_auto_refill_pcons_tickbox = true;
 	bool show_auto_disable_pcons_tickbox = false;
+    
 	GW::Agent* player;
 
 	// Pcon Settings
@@ -68,14 +73,13 @@ private:
 	GW::Constants::MapID map_id;
 	GW::Constants::InstanceType instance_type;
 	GW::Constants::InstanceType previous_instance_type;
+    bool in_vanquishable_area = false;
 
 	bool elite_area_disable_triggered = false;	// Already triggered in this run?
 	clock_t elite_area_check_timer;
 
-	
 	// Map of which objectives to check per map_id
 	std::vector<DWORD> objectives_complete = {};
-	bool disable_cons_on_objective_completion = false;
 	std::map<GW::Constants::MapID, std::vector<DWORD>> objectives_to_complete_by_map_id = {
 		{GW::Constants::MapID::The_Fissure_of_Woe,{ 309,310,311,312,313,314,315,316,317,318,319 }}, // Can be done in any order - check them all.
 		{GW::Constants::MapID::The_Deep, { 421 }},
@@ -83,14 +87,17 @@ private:
 		{GW::Constants::MapID::The_Underworld,{ 157 }} // Only need to check for Nightman Cometh for Underworld.
 	};
 	std::vector<DWORD> current_objectives_to_check = {};
-	char* disable_cons_on_objective_completion_hint = "Disable cons when final objective(s) completed";
+	
 	// Map of which locations to turn off near by map_id e.g. Kanaxai, Urgoz
-	bool disable_cons_in_final_room = false;
 	std::map<GW::Constants::MapID, GW::Vec2f> final_room_location_by_map_id = {
 		{GW::Constants::MapID::The_Deep, GW::Vec2f(30428.0f, -5842.0f)},		// Rough location of Kanaxai
 		{GW::Constants::MapID::Urgozs_Warren, GW::Vec2f(-2800.0f, 14316.0f)} // Front entrance of Urgoz's room
 	};
+    GW::Vec2f current_final_room_location = GW::Vec2f(0, 0);
+
+    char* disable_cons_on_objective_completion_hint = "Disable cons when final objective(s) completed";
 	char* disable_cons_in_final_room_hint = "Disable cons when reaching the final room in Urgoz and Deep";
-	GW::Vec2f current_final_room_location = GW::Vec2f(0,0);
+    char* disable_cons_on_vanquish_completion_hint = "Disable cons when completing a vanquish";
+	
 	
 };

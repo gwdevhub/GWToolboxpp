@@ -224,7 +224,15 @@ void PconsWindow::Initialize() {
 		CheckObjectivesCompleteAutoDisable();
 		return false;
 	});
-
+    GW::StoC::AddCallback<GW::Packet::StoC::VanquishComplete>([&](GW::Packet::StoC::VanquishComplete* pak) -> bool {
+        if (!disable_cons_on_vanquish_completion)
+            return false;
+        if (!enabled) 
+            return false;
+        SetEnabled(false);
+        Log::Info("Cons auto-disabled on completion");
+        return false;
+    });
 	GW::Chat::CreateCommand(L"pcons",
 		[this](const wchar_t *message, int argc, LPWSTR *argv) {
 		if (argc <= 1) {
@@ -295,6 +303,10 @@ void PconsWindow::Draw(IDirect3DDevice9* device) {
 			ImGui::Checkbox("Disable in final room", &disable_cons_in_final_room);
 			ImGui::ShowHelp(disable_cons_in_final_room_hint);
 		}
+        if (in_vanquishable_area) {
+            ImGui::Checkbox("Disable on Vanquish", &disable_cons_on_vanquish_completion);
+            ImGui::ShowHelp(disable_cons_on_vanquish_completion_hint);
+        }
 	}
     ImGui::End();
 	
@@ -312,6 +324,7 @@ void PconsWindow::Update(float delta) {
 				Pcon::map_has_effects_array = partyEffects[i].agent_id == player->agent_id;
 		}
 	}
+    in_vanquishable_area = GW::Map::GetFoesToKill();
 	CheckBossRangeAutoDisable();
 	for (Pcon* pcon : pcons) {
 		pcon->Update();
@@ -347,6 +360,8 @@ void PconsWindow::MapChanged() {
 	else {
 		current_final_room_location = GW::Vec2f(0, 0);
 	}
+
+    
 }
 bool PconsWindow::GetEnabled() {
 	return enabled;
@@ -442,6 +457,7 @@ void PconsWindow::LoadSettings(CSimpleIni* ini) {
 	show_storage_quantity = ini->GetBoolValue(Name(), VAR_NAME(show_storage_quantity), show_storage_quantity);
 
 	disable_pcons_on_map_change = ini->GetBoolValue(Name(), VAR_NAME(disable_pcons_on_map_change), disable_pcons_on_map_change);
+    disable_cons_on_vanquish_completion = ini->GetBoolValue(Name(), VAR_NAME(disable_cons_on_vanquish_completion), disable_cons_on_vanquish_completion);
 	disable_cons_in_final_room = ini->GetBoolValue(Name(), VAR_NAME(disable_cons_in_final_room), disable_cons_in_final_room);
 	disable_cons_on_objective_completion = ini->GetBoolValue(Name(), VAR_NAME(disable_cons_on_objective_completion), disable_cons_on_objective_completion);
 }
@@ -473,6 +489,7 @@ void PconsWindow::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(show_storage_quantity), show_storage_quantity);
 
 	ini->SetBoolValue(Name(), VAR_NAME(disable_pcons_on_map_change), disable_pcons_on_map_change);
+    ini->SetBoolValue(Name(), VAR_NAME(disable_cons_on_vanquish_completion), disable_cons_on_vanquish_completion);
 	ini->SetBoolValue(Name(), VAR_NAME(disable_cons_in_final_room), disable_cons_in_final_room);
 	ini->SetBoolValue(Name(), VAR_NAME(disable_cons_on_objective_completion), disable_cons_on_objective_completion);
 }
@@ -539,6 +556,8 @@ void PconsWindow::DrawSettingInternal() {
 	ImGui::ShowHelp("Will hide the skills in your effect monitor");
 	ImGui::Separator();
 	ImGui::Text("Auto-Disabling Pcons in elite areas");
+    ImGui::Checkbox("Auto Disable on Vanquish completion", &disable_cons_on_vanquish_completion);
+    ImGui::ShowHelp(disable_cons_on_vanquish_completion_hint);
 	ImGui::Checkbox("Auto Disable in final room of Urgoz/Deep", &disable_cons_in_final_room);
 	ImGui::ShowHelp(disable_cons_in_final_room_hint);
 	ImGui::Checkbox("Auto Disable on final objective completion", &disable_cons_on_objective_completion);

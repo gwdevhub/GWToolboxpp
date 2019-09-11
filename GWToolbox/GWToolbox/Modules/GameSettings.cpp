@@ -586,15 +586,14 @@ void GameSettings::Initialize() {
 	}
     // Automatically return to outpost on defeat
     GW::StoC::AddCallback<GW::Packet::StoC::PartyDefeated>([&](GW::Packet::StoC::PartyDefeated*) -> bool {
-        if (!auto_return_on_defeat || !GW::PartyMgr::GetPlayerIsLeader())
+        if (!auto_return_on_defeat || !GetPlayerIsLeader())
             return false;
         struct ReturnToOutpostPacket { const uint32_t header = CtoGS_MSGReturnToOutpost; };
         static ReturnToOutpostPacket pak;
         GW::CtoS::SendPacket(&pak);
         return false;
     });
-    // TODO: Remove certain NPCs from party window when dead
-    // TODO: Remove ice eles from party list when objective complete
+    // Remove certain NPCs from party window when dead
     GW::StoC::AddCallback<GW::Packet::StoC::AgentState>([&](GW::Packet::StoC::AgentState* pak) -> bool {
         if (!add_special_npcs_to_party_window || pak->state != 16)
             return false; // Not dead.
@@ -632,7 +631,7 @@ void GameSettings::Initialize() {
 	GW::StoC::AddCallback<GW::Packet::StoC::PartyPlayerAdd>([&](GW::Packet::StoC::PartyPlayerAdd*) -> bool {
         if (!GW::Agents::GetPlayerId())
             return false;
-		if (flash_window_on_party_invite && GW::PartyMgr::GetPlayerIsLeader()) 
+		if (flash_window_on_party_invite && GetPlayerIsLeader())
             FlashWindow();
         check_message_on_party_change = true;
 		return false;
@@ -814,7 +813,7 @@ void GameSettings::Initialize() {
         GW::HookBase::EnableHooks(OnStartWhisper_Func);
     }
 
-    OnPingEquippedItem_Func = (OnPingEqippedItem_pt)GW::Scanner::Find("\x8D\x4D\xF0\xC7\x45\xF0\x2B", "xxxxxxx", -0xC); // NOTE: 0x2B is CtoC header
+    OnPingEquippedItem_Func = (OnPingEqippedItem_pt)GW::Scanner::Find("\x8D\x4D\xF0\xC7\x45\xF0\x2B", "xxxxxxx", -0xC); // NOTE: 0x2B is CtoS header
     printf("[SCAN] OnPingEquippedItem = %p\n", OnPingEquippedItem_Func);
     if (OnPingEquippedItem_Func) {
         GW::HookBase::CreateHook(OnPingEquippedItem_Func, OnPingEquippedItem, (void**)& OnPingEquippedItemRet);
@@ -825,6 +824,20 @@ void GameSettings::Initialize() {
 	AF::ApplyPatchesIfItsTime();
 #endif
 
+}
+// Same as GW::PartyMgr::GetPlayerIsLeader() but has an extra check to ignore disconnected people.
+bool GameSettings::GetPlayerIsLeader() {
+    GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
+    if (!party) return false;
+    GW::Agent* player_agent = GW::Agents::GetPlayer();
+    if (!player_agent) return false;
+    if (!party->players.size()) return false;
+    for (size_t i = 0; i < party->players.size(); i++) {
+        if (!party->players[i].connected())
+            continue;
+        return (party->players[i].login_number == player_agent->login_number);
+    }
+    return false;
 }
 
 bool GameSettings::ShouldRemoveAgentFromPartyWindow(uint32_t agent_id) {
@@ -1371,8 +1384,8 @@ void GameSettings::Update(float delta) {
                 packet.header = GW::Packet::StoC::PartyAllyAdd::STATIC_HEADER;
                 packet.agent_id = p.agent_id;
                 packet.agent_type = p.agent_type;
-                packet.allegiance_bits = 1886151033;// p.allegiance_bits;
-                GW::StoC::EmulatePacket((GW::Packet::StoC::PacketBase*) & packet);
+                packet.allegiance_bits = p.allegiance_bits;// 1886151033;
+                GW::StoC::EmulatePacket( & packet);
                 });
             allies_added_to_party.push_back(p.agent_id);
         }
@@ -1385,7 +1398,7 @@ void GameSettings::Update(float delta) {
                 GW::Packet::StoC::PartyRemoveAlly packet;
                 packet.header = GW::Packet::StoC::PartyRemoveAlly::STATIC_HEADER;
                 packet.agent_id = agent_id;
-                GW::StoC::EmulatePacket((GW::Packet::StoC::PacketBase*) & packet);
+                GW::StoC::EmulatePacket(&packet);
                 });
             // Remove from list of manually added party members if applicable.
             for (size_t i = 0; i < allies_added_to_party.size(); i++) {
