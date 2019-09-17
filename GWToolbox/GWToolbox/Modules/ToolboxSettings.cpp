@@ -74,10 +74,11 @@ void ToolboxSettings::InitializeModules() {
 	if (use_objectivetimer) ObjectiveTimerWindow::Instance().Initialize();
 	if (use_factionleaderboard) FactionLeaderboardWindow::Instance().Initialize();
     if (use_daily_quests) DailyQuests::Instance().Initialize();
+    if (use_discord) DiscordModule::Instance().Initialize();
 #ifdef TB_DEBUG
     DoorMonitorWindow::Instance().Initialize();
     SkillListingWindow::Instance().Initialize();
-    DiscordModule::Instance().Initialize();
+    
 #endif
 #ifdef _DEBUG
     PacketLoggerWindow::Instance().Initialize();
@@ -140,6 +141,8 @@ void ToolboxSettings::DrawSettingInternal() {
 	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
 	ImGui::Checkbox("Alcohol", &use_alcohol);
 	ImGui::Checkbox("Trade", &use_trade);
+    ImGui::SameLine(ImGui::GetWindowWidth() / 2);
+    ImGui::Checkbox("Discord", &use_discord);
 	ImGui::PopID();
 
 	ImGui::PushID("menubuttons");
@@ -190,6 +193,7 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
 	use_alcohol = ini->GetBoolValue(Name(), VAR_NAME(use_alcohol), true);
 	use_trade = ini->GetBoolValue(Name(), VAR_NAME(use_trade), true);
     use_objectivetimer = ini->GetBoolValue(Name(), VAR_NAME(use_objectivetimer), true);
+    use_discord = ini->GetBoolValue(Name(), VAR_NAME(use_discord), true);
 	use_factionleaderboard = ini->GetBoolValue(Name(), VAR_NAME(use_factionleaderboard), use_factionleaderboard);
 
 	save_location_data = ini->GetBoolValue(Name(), VAR_NAME(save_location_data), false);
@@ -219,6 +223,7 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(use_trade), use_trade);
 	ini->SetBoolValue(Name(), VAR_NAME(use_objectivetimer), use_objectivetimer);
 	ini->SetBoolValue(Name(), VAR_NAME(use_factionleaderboard), use_factionleaderboard);
+    ini->SetBoolValue(Name(), VAR_NAME(use_discord), use_discord);
 
 	ini->SetBoolValue(Name(), VAR_NAME(save_location_data), save_location_data);
 }

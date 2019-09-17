@@ -108,6 +108,7 @@
     <ClInclude Include="..\Dependencies\imgui\stb_textedit.h" />
     <ClInclude Include="..\Dependencies\imgui\stb_truetype.h" />
     <ClInclude Include="..\Dependencies\utf8proc\utf8proc.h" />
+    <ClInclude Include="GWToolbox\base64.h" />
     <ClInclude Include="GWToolbox\CircurlarBuffer.h" />
     <ClInclude Include="GWToolbox\Color.h" />
     <ClInclude Include="GWToolbox\CursorFix.h" />
@@ -118,6 +119,7 @@
     <ClInclude Include="GWToolbox\Modules\ChatCommands.h" />
     <ClInclude Include="GWToolbox\Modules\ChatFilter.h" />
     <ClInclude Include="GWToolbox\Modules\DiscordModule.h" />
+    <ClInclude Include="GWToolbox\sha1.h" />
     <ClInclude Include="GWToolbox\Windows\PacketLoggerWindow.h" />
     <ClInclude Include="GWToolbox\Windows\DailyQuests.h" />
     <ClInclude Include="GWToolbox\Modules\GameSettings.h" />
@@ -205,6 +207,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="GWToolbox\base64.cpp" />
     <ClCompile Include="GWToolbox\CursorFix.cpp" />
     <ClCompile Include="GWToolbox\GuiUtils.cpp" />
     <ClCompile Include="GWToolbox\ImGuiAddons.cpp" />
@@ -217,6 +220,7 @@
     <ClCompile Include="GWToolbox\Modules\ChatCommands.cpp" />
     <ClCompile Include="GWToolbox\Modules\ChatFilter.cpp" />
     <ClCompile Include="GWToolbox\Modules\DiscordModule.cpp" />
+    <ClCompile Include="GWToolbox\sha1.cpp" />
     <ClCompile Include="GWToolbox\Windows\PacketLoggerWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\DailyQuests.cpp" />
     <ClCompile Include="GWToolbox\Modules\GameSettings.cpp" />

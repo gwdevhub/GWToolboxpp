@@ -57,4 +57,5 @@ private:
 	bool use_objectivetimer = true;
 	bool use_factionleaderboard = true;
     bool use_daily_quests = true;
+    bool use_discord = true;
 };
