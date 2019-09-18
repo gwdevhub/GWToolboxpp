@@ -21,7 +21,14 @@ struct DiscordJoinableParty {
     short district_id;
     short region_id;
     short language_id;
+	uint32_t ghkey[4];
     wchar_t player[32];
+};
+// Used to record current GH info
+struct CurrentGuildHall {
+	wchar_t tag[5];
+	wchar_t name[32];
+	uint32_t ghkey[4];
 };
 
 class DiscordModule : public ToolboxModule {

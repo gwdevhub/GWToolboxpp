@@ -22,7 +22,9 @@
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Guild.h>
 
+#include <GWCA/Managers/GuildMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/UIMgr.h>
@@ -159,7 +161,8 @@ time_t pending_join_request_reply_user_at = 0;
 DiscordJoinableParty join_in_progress;
 time_t join_party_next_action = 0;
 time_t join_party_started_at = 0;
-
+time_t join_party_started = 0;
+CurrentGuildHall current_guild_hall;
 
 void UpdateActivityCallback(void* data, enum EDiscordResult result) {
     Log::Log(result == DiscordResult_Ok ? "Activity updated successfully.\n" : "Activity update FAILED!\n");
@@ -181,13 +184,8 @@ void OnJoinParty(void* event_data, const char* secret) {
 // NOTE: In our game, anyone can join anyone else's party - work around for "ask to join" by auto-accepting.
 void OnJoinRequest(void* data, DiscordUser* user) {
     Log::Log("Join request received from %s; automatically accept\n",user->username);
-    // send_request_reply doesn't seem to send back to the user that asked to join.
     Application* app = &DiscordModule::Instance().app;
     app->activities->send_request_reply(app->activities, user->id, EDiscordActivityJoinRequestReply::DiscordActivityJoinRequestReply_Yes, app, OnJoinRequestReplyCallback);
-    Log::Info("%s is joining your party from Discord",user->username);
-    // send_request_reply doesn't seem to send back to the user that asked to join. As a workaround, invite the user directly for the moment.
-    //if (DiscordModule::Instance().InviteUser(user))
-    //    Log::Info("%s has asked to join your group from discord; an invite has been sent.",user->username);
 }
 void OnPartyInvite(void* event_data, EDiscordActivityActionType type, DiscordUser* user, DiscordActivity* activity) {
     Log::Log("Party invite received from %s\n", user->username);
@@ -242,7 +240,7 @@ void DiscordModule::Terminate() {
 }
 void DiscordModule::Disconnect() {
 	if(discord_connected)
-		app.core->destroy(app.core);
+		app.core->destroy(app.core); // Do this for each discord connection
 	discord_connected = pending_activity_update = pending_discord_connect = false;
 }
 void DiscordModule::Initialize() {
@@ -256,6 +254,7 @@ void DiscordModule::Initialize() {
     //memset(&core_events, 0, sizeof(core_events));
     memset(&join_in_progress, 0, sizeof(join_in_progress));
 
+	current_guild_hall.ghkey[0] = 0;
     DiscordCreateParamsSetDefault(&params);
     params.client_id = DISCORD_APP_ID;
     params.flags = DiscordCreateFlags_NoRequireDiscord;
@@ -270,12 +269,29 @@ void DiscordModule::Initialize() {
     GW::StoC::AddCallback<GW::Packet::StoC::InstanceLoadInfo>(
         [this](GW::Packet::StoC::InstanceLoadInfo* packet) -> bool {
             zone_entered_time = time(nullptr); // Because you cant rely on instance time at this point.
+			current_guild_hall.ghkey[0] = 0; // Flag GH key as invalid until GuildGeneral received again.
             pending_activity_update = true;
             if (!discord_connected)
                 pending_discord_connect = true; // Connect in Update() loop instead of StoC callback, just incase its blocking
-			join_party_next_action = 0;//join_party_next_action = time(nullptr) + 2; // 2 seconds for player agents to load
+			join_party_next_action = time(nullptr) + 2; // 2 seconds for other packets to be received e.g. players, guild info
             return false;
         });
+	GW::StoC::AddCallback<GW::Packet::StoC::GuildGeneral>(
+		[this](GW::Packet::StoC::GuildGeneral* packet) -> bool {
+			if (packet->local_id != 1)
+				return false; // This is not the GH we're in.
+			// Set the info for the guild hall we've just entered
+			memset(&current_guild_hall.tag, 0, 5);
+			wcsncpy(current_guild_hall.tag, packet->tag, 5);
+			memset(&current_guild_hall.name, 0, 32);
+			wcsncpy(current_guild_hall.name, packet->name, 32);
+			for (size_t i = 0; i < 4; i++) {
+				current_guild_hall.ghkey[i] = packet->ghkey[i];
+			}
+			// Set pending activity update
+			pending_activity_update = true;
+			return false;
+		});
     GW::StoC::AddCallback<GW::Packet::StoC::PartyPlayerAdd>(
         [this](GW::Packet::StoC::PartyPlayerAdd* packet) -> bool {
 			//Log::Log("PartyPlayerAdd %d %d\n",  packet->party_id, packet->player_id);
@@ -291,7 +307,6 @@ void DiscordModule::Initialize() {
         });
     GW::StoC::AddCallback<GW::Packet::StoC::PartyUpdateSize>(
         [this](GW::Packet::StoC::PartyUpdateSize* packet) -> bool {
-			//Log::Log("PartyUpdateSize %d %d\n", packet->player_id, packet->size);
             GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo();
             if (p && packet->player_id == p->players[0].login_number)
                 pending_activity_update = true; // Update if this is my leader
@@ -322,6 +337,13 @@ void DiscordModule::Initialize() {
 bool DiscordModule::IsInJoinablePartyMap() {
     if (!join_in_progress.map_id)
         return false;
+	if (join_in_progress.ghkey[0]) {
+		for (size_t i = 0; i < 4; i++) {
+			if(join_in_progress.ghkey[i] != current_guild_hall.ghkey[i])
+				return false;
+		}
+		return true;
+	}
     return join_in_progress.map_id == static_cast<unsigned short>(GW::Map::GetMapID())
         && join_in_progress.district_id == GW::Map::GetDistrict()
         && join_in_progress.region_id == GW::Map::GetRegion()
@@ -334,6 +356,10 @@ void DiscordModule::FailedJoin(const char* error_msg) {
 void DiscordModule::JoinParty() {
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
         return; // Loading
+	if (!join_party_started)
+		join_party_started = time(nullptr);
+	if (join_party_started < time(nullptr) - 10)
+		return FailedJoin("Failed to join party after 10 seconds");
     if (join_party_next_action > time(nullptr))
         return; // Delay between steps.
     if (!join_in_progress.map_id)
@@ -342,20 +368,28 @@ void DiscordModule::JoinParty() {
         Log::Log("Not in the same map; try to travel there.\n");
         if (!IsMapUnlocked(join_in_progress.map_id))
             return FailedJoin("Cannot enter outpost on this character");
-        // Travel to the group's location.
-        GW::Map::Travel(static_cast<GW::Constants::MapID>(join_in_progress.map_id), join_in_progress.district_id, join_in_progress.region_id, join_in_progress.language_id);
+		if (join_in_progress.ghkey[0]) {
+			Log::Log("Travelling to guild hall\n");
+			GW::GuildMgr::TravelGH({ join_in_progress.ghkey[0],join_in_progress.ghkey[1],join_in_progress.ghkey[2],join_in_progress.ghkey[3] });
+		}
+		else {
+			Log::Log("Travelling to outpost\n");
+			// Travel to the group's location.
+			GW::Map::Travel(static_cast<GW::Constants::MapID>(join_in_progress.map_id), join_in_progress.district_id, join_in_progress.region_id, join_in_progress.language_id);
+		}
 		join_party_next_action = time(nullptr) + 5;
         return;
     }
     // In map - try to join party!
     wchar_t buf[128] = { 0 };
-    swprintf(buf, L"invite %ls", join_in_progress.player);
+    swprintf(buf, 128, L"invite %ls", join_in_progress.player);
     GW::Chat::SendChat('/', buf);
 	HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
 	SetForegroundWindow(hwnd);
 	ShowWindow(hwnd, SW_RESTORE);
     Log::Log("Join process complete\n");
     join_in_progress.map_id = 0; // Done.
+	join_party_started = 0;
 }
 bool DiscordModule::Connect() {
     pending_discord_connect = false;
@@ -521,8 +555,13 @@ void DiscordModule::UpdateActivity() {
             if (instance_type == GW::Constants::InstanceType::Explorable) {
                 sprintf(activity.party.id, "%d-%d", c->token1,c->token2);
             }
+			else if (is_guild_hall && current_guild_hall.ghkey[0]) {
+				sprintf(activity.party.id, "%d-%d-%d-%d-%d", 
+					current_guild_hall.ghkey[0], current_guild_hall.ghkey[1], current_guild_hall.ghkey[2], current_guild_hall.ghkey[3],
+					p->party_id);
+			}
             else {
-                sprintf(activity.party.id, "%d-%d-%d-%d-%d", map_id, map_region, map_language, map_district, p->party_id);
+                sprintf(activity.party.id, "%d-%d-%d-%d-%d-%d", map_id, map_region, m->type, map_language, map_district, p->party_id);
             }
             // Add a party secret if in an outpost. TODO: Joining feature?
             DiscordJoinableParty secret;
@@ -530,8 +569,14 @@ void DiscordModule::UpdateActivity() {
             secret.region_id = map_region;
             secret.language_id = map_language;
             secret.district_id = map_district;
-            swprintf(secret.player, L"%ls", GW::GameContext::instance()->character->player_name);
-            if (instance_type == GW::Constants::InstanceType::Outpost && !is_guild_hall) {
+			secret.ghkey[0] = 0;
+            swprintf(secret.player, 32, L"%ls", GW::GameContext::instance()->character->player_name);
+			if (is_guild_hall) {
+				for (size_t i = 0; i < 4; i++) {
+					secret.ghkey[i] = current_guild_hall.ghkey[i];
+				}
+			}
+            if (instance_type == GW::Constants::InstanceType::Outpost) {
                 // NOTE: Guild halls off bounds until I can figure out how to get the GHKey for it.
                 b64_enc(&secret, sizeof(secret), activity.secrets.join);
             }
@@ -557,7 +602,7 @@ void DiscordModule::UpdateActivity() {
                 return; // Map name not decoded yet.
             short map_region = m->region;
             char region_info[32] = { 0 };
-            if (instance_type == GW::Constants::InstanceType::Outpost && !is_guild_hall) {
+			if (instance_type == GW::Constants::InstanceType::Outpost && !is_guild_hall) {
                 switch (static_cast<GW::Constants::MapRegion>(GW::Map::GetRegion()))
                 {
                 case GW::Constants::MapRegion::International:
@@ -566,16 +611,16 @@ void DiscordModule::UpdateActivity() {
                 case GW::Constants::MapRegion::Chinese:
                 case GW::Constants::MapRegion::Korean:
                 case GW::Constants::MapRegion::Japanese:
-                    sprintf(region_info, "%s %d", region_abbreviations[GW::Map::GetRegion()], GW::Map::GetDistrict());
+					sprintf(region_info, "%s %d", region_abbreviations[GW::Map::GetRegion()], GW::Map::GetDistrict());
                     break;
                 default:
-                    sprintf(region_info, "%s %s %d", region_abbreviations[GW::Map::GetRegion()], map_languages[GW::Map::GetLanguage()],GW::Map::GetDistrict());
+					sprintf(region_info, "%s %s %d", region_abbreviations[GW::Map::GetRegion()], map_languages[GW::Map::GetLanguage()],GW::Map::GetDistrict());
                     break;
                 }
             }
             // State
             if (is_guild_hall) {
-                sprintf(activity.state, "In Guild Hall");
+				sprintf(activity.state, "In Guild Hall");
                 map_region = static_cast<short>(GW::Region::Region_BattleIslands);
             }
             else if (instance_type == GW::Constants::InstanceType::Outpost) {
@@ -584,7 +629,12 @@ void DiscordModule::UpdateActivity() {
             else {
                 sprintf(activity.state, "In Explorable");
             }
-            sprintf(activity.details, "%ls", map_name_decoded.c_str());
+			if (is_guild_hall && current_guild_hall.ghkey[0]) {
+				sprintf(activity.details, "%ls [%ls]", current_guild_hall.name, current_guild_hall.tag);
+			}
+			else {
+				sprintf(activity.details, "%ls", map_name_decoded.c_str());
+			}
             sprintf(activity.assets.large_image, region_assets[map_region]);
             sprintf(activity.assets.large_text, "Region: %s", region_names[map_region]);
             activity.instance = instance_type == GW::Constants::InstanceType::Explorable;
