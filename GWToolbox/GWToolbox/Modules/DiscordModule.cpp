@@ -1,9 +1,19 @@
-/*
-*   Thanks to KAOS for original version from https://github.com/GregLando113/gw-discord
+/*   
+Thanks to KAOS for original version from https://github.com/GregLando113/gw-discord
+
+HOW TO TEST WITH 2 DISCORD INSTANCES IN DEBUG MODE:
+1. Close DiscordCanary.exe, load first GW client and start toolbox
+	Client 1 is now sending statuses to Discord.exe
+2. Open DiscordCanary.exe, load second GW client and start toolbox
+	Client 2 is now sending statuses to DiscordCanary.exe
+
+NOTE: Disconnecting/reconnecting will mess this up so repeat process.
 */
 
 #include "stdafx.h"
 #include "base64.h"
+#include "sha1.hpp"
+
 #include "DiscordModule.h"
 #include <windows.h>
 #include <tlhelp32.h>
@@ -22,13 +32,13 @@
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Agent.h>
-#include <GWCA/GameEntities/Guild.h>
 
+#include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/GuildMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/UIMgr.h>
-#include <GWCA/Managers/MapMgr.h>
+
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/FriendListMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
@@ -162,7 +172,6 @@ DiscordJoinableParty join_in_progress;
 time_t join_party_next_action = 0;
 time_t join_party_started_at = 0;
 time_t join_party_started = 0;
-CurrentGuildHall current_guild_hall;
 
 void UpdateActivityCallback(void* data, enum EDiscordResult result) {
     Log::Log(result == DiscordResult_Ok ? "Activity updated successfully.\n" : "Activity update FAILED!\n");
@@ -193,6 +202,7 @@ void OnPartyInvite(void* event_data, EDiscordActivityActionType type, DiscordUse
 void OnDiscordLog(void* data, enum EDiscordLogLevel level, const char* message) {
     Log::Log("Discord Log Level %d: %s\n", level, message);
 }
+// Get pid from executable name (i.e. DiscordCanary.exe)
 DWORD GetProcId(char* ProcName) {
     PROCESSENTRY32   pe32;
     HANDLE         hSnapshot = NULL;
@@ -214,7 +224,8 @@ DWORD GetProcId(char* ProcName) {
 
     return pid;
 }
-bool IsMapUnlocked(uint32_t map_id) {
+// Used to figure out if this char has access to the outpost without waiting for server error
+bool DiscordModule::IsMapUnlocked(uint32_t map_id) {
     GW::Array<uint32_t> unlocked_map = GW::GameContext::instance()->world->unlocked_map;
     uint32_t real_index = map_id / 32;
     if (real_index >= unlocked_map.size())
@@ -223,20 +234,25 @@ bool IsMapUnlocked(uint32_t map_id) {
     uint32_t flag = 1 << shift;
     return (unlocked_map[real_index] & flag) != 0;
 }
-bool DiscordModule::InviteUser(DiscordUser* user) {
-    if (!activity.secrets.join || activity.party.size.current_size >= activity.party.size.max_size) {
-        app.activities->send_request_reply(app.activities, user->id, EDiscordActivityJoinRequestReply::DiscordActivityJoinRequestReply_Ignore, &app, OnJoinRequestReplyCallback);
-        return false; // Not joinable; ignore.
-    }
+// Returns guild struct of current location. Returns null on fail or non-guild map.
+GW::Guild* DiscordModule::GetCurrentGH() {
+	GW::AreaInfo* m = GW::Map::GetCurrentMapInfo();
+	if (!m || m->type != GW::RegionType::RegionType_GuildHall) return nullptr;
+	GW::Array<GW::Guild*> guilds = GW::GuildMgr::GetGuildArray();
+	if (!guilds.valid()) return nullptr;
+	for (size_t i = 0; i < guilds.size(); i++) {
+		if (!guilds[i]) continue;
+		return guilds[i];
+	}
+	return nullptr;
+}
+void DiscordModule::InviteUser(DiscordUser* user) {
     char invite_str[128];
     sprintf(invite_str, "%s, %s", activity.details, activity.state);
-    app.activities->send_request_reply(app.activities, user->id, EDiscordActivityJoinRequestReply::DiscordActivityJoinRequestReply_Yes, &app, OnJoinRequestReplyCallback);
     app.activities->send_invite(app.activities, user->id, EDiscordActivityActionType::DiscordActivityActionType_Join, invite_str, &app, OnSendInviteCallback);
-    return true;
 }
 void DiscordModule::Terminate() {
     Disconnect();
-	pending_discord_connect = pending_activity_update = discord_connected = false;
 }
 void DiscordModule::Disconnect() {
 	if(discord_connected)
@@ -247,14 +263,10 @@ void DiscordModule::Initialize() {
     ToolboxModule::Initialize();
     // Initialise discord objects
     memset(&app, 0, sizeof(app));
-   // memset(&users_events, 0, sizeof(users_events));
     memset(&activities_events, 0, sizeof(activities_events));
-    //memset(&relationships_events, 0, sizeof(relationships_events));
     memset(&network_events, 0, sizeof(network_events));
-    //memset(&core_events, 0, sizeof(core_events));
     memset(&join_in_progress, 0, sizeof(join_in_progress));
 
-	current_guild_hall.ghkey[0] = 0;
     DiscordCreateParamsSetDefault(&params);
     params.client_id = DISCORD_APP_ID;
     params.flags = DiscordCreateFlags_NoRequireDiscord;
@@ -269,32 +281,14 @@ void DiscordModule::Initialize() {
     GW::StoC::AddCallback<GW::Packet::StoC::InstanceLoadInfo>(
         [this](GW::Packet::StoC::InstanceLoadInfo* packet) -> bool {
             zone_entered_time = time(nullptr); // Because you cant rely on instance time at this point.
-			current_guild_hall.ghkey[0] = 0; // Flag GH key as invalid until GuildGeneral received again.
             pending_activity_update = true;
             if (!discord_connected)
                 pending_discord_connect = true; // Connect in Update() loop instead of StoC callback, just incase its blocking
 			join_party_next_action = time(nullptr) + 2; // 2 seconds for other packets to be received e.g. players, guild info
             return false;
         });
-	GW::StoC::AddCallback<GW::Packet::StoC::GuildGeneral>(
-		[this](GW::Packet::StoC::GuildGeneral* packet) -> bool {
-			if (packet->local_id != 1)
-				return false; // This is not the GH we're in.
-			// Set the info for the guild hall we've just entered
-			memset(&current_guild_hall.tag, 0, 5);
-			wcsncpy(current_guild_hall.tag, packet->tag, 5);
-			memset(&current_guild_hall.name, 0, 32);
-			wcsncpy(current_guild_hall.name, packet->name, 32);
-			for (size_t i = 0; i < 4; i++) {
-				current_guild_hall.ghkey[i] = packet->ghkey[i];
-			}
-			// Set pending activity update
-			pending_activity_update = true;
-			return false;
-		});
     GW::StoC::AddCallback<GW::Packet::StoC::PartyPlayerAdd>(
         [this](GW::Packet::StoC::PartyPlayerAdd* packet) -> bool {
-			//Log::Log("PartyPlayerAdd %d %d\n",  packet->party_id, packet->player_id);
 			GW::Agent* player_agent = GW::Agents::GetPlayer();
 			if (player_agent && packet->player_id == player_agent->player_number) {
 				pending_activity_update = true; // Update if this is me
@@ -316,8 +310,8 @@ void DiscordModule::Initialize() {
         [this](GW::Packet::StoC::ErrorMessage* packet) -> bool {
             if (!join_in_progress.map_id)
                 return false;
-            switch (packet->message_enc_id) {
-            case 0x35: // Cannot enter outpost (e.g. char not unlocked.)
+            switch (packet->message_id) {
+            case 0x35: // Cannot enter outpost (e.g. char has no access to outpost or GH)
                 FailedJoin("Cannot enter outpost on this character");
                 break;
             case 0x3C: // Already in active district (try to join party)
@@ -338,8 +332,11 @@ bool DiscordModule::IsInJoinablePartyMap() {
     if (!join_in_progress.map_id)
         return false;
 	if (join_in_progress.ghkey[0]) {
+		// If ghkey is set, we need to be in a guild hall
+		GW::Guild* g = GetCurrentGH();
+		if (!g) return false;
 		for (size_t i = 0; i < 4; i++) {
-			if(join_in_progress.ghkey[i] != current_guild_hall.ghkey[i])
+			if(join_in_progress.ghkey[i] != g->key.k[i])
 				return false;
 		}
 		return true;
@@ -356,12 +353,12 @@ void DiscordModule::FailedJoin(const char* error_msg) {
 void DiscordModule::JoinParty() {
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
         return; // Loading
-	if (!join_party_started)
-		join_party_started = time(nullptr);
-	if (join_party_started < time(nullptr) - 10)
+	if (!join_party_started) // Started to join party
+		join_party_started = time(nullptr); 
+	if (join_party_started < time(nullptr) - 10) // Join timeout (try again please!)
 		return FailedJoin("Failed to join party after 10 seconds");
     if (join_party_next_action > time(nullptr))
-        return; // Delay between steps.
+        return; // Delay between steps. Used to wait for packets to load etc
     if (!join_in_progress.map_id)
         return FailedJoin("No Party to join");
     if (!IsInJoinablePartyMap()) {
@@ -374,9 +371,9 @@ void DiscordModule::JoinParty() {
 		}
 		else {
 			Log::Log("Travelling to outpost\n");
-			// Travel to the group's location.
 			GW::Map::Travel(static_cast<GW::Constants::MapID>(join_in_progress.map_id), join_in_progress.district_id, join_in_progress.region_id, join_in_progress.language_id);
 		}
+		// 5s timeout for any GW::Packet::StoC::ErrorMessage packets e.g. "Cannot enter outpost"
 		join_party_next_action = time(nullptr) + 5;
         return;
     }
@@ -397,19 +394,17 @@ bool DiscordModule::Connect() {
         return false; // Failed to hook into discord_game_sdk.dll
 	if (discord_connected)
 		return true; // Already connected
-    uint32_t discord_pid = GetProcId("Discord.exe");
-    uint32_t discord_canary_pid = GetProcId("DiscordCanary.exe");
-    uint32_t discord_env = 0;
-    // Prefer canary over vanilla. To use vanilla, just close canary...
-    if (discord_canary_pid && discord_pid) {
-        FILETIME discord_canary_started;
-        FILETIME discord_started;
-        FILETIME dummy;
-        GetProcessTimes(OpenProcess(PROCESS_QUERY_INFORMATION, TRUE, discord_canary_pid), &discord_canary_started,&dummy, &dummy, &dummy);
-        GetProcessTimes(OpenProcess(PROCESS_QUERY_INFORMATION, TRUE, discord_pid), &discord_started, &dummy, &dummy, &dummy);
-        discord_env = CompareFileTime(&discord_canary_started, &discord_started) ? 1 : 0;
-    }
-    SetEnvironmentVariable("DISCORD_INSTANCE_ID", discord_env ? "1" : "0");
+#ifdef _DEBUG
+/* 
+	HOW TO TEST WITH 2 DISCORD INSTANCES IN DEBUG MODE:
+	1. Close DiscordCanary.exe, load first GW client and start toolbox
+		Client 1 is now sending statuses to Discord.exe
+	2. Open DiscordCanary.exe, load second GW client and start toolbox
+		Client 2 is now sending statuses to DiscordCanary.exe
+	NOTE: Disconnecting/reconnecting will mess this up so repeat process. 
+*/
+	ConnectCanary(); // Sets env var to attach to canary if its open.
+#endif
     if (discordCreate(DISCORD_VERSION, &params, &app.core) != DiscordResult_Ok) {
         Log::Error("Failed to create discord connection");
         return false;
@@ -423,6 +418,22 @@ bool DiscordModule::Connect() {
     //Log::Log("Successful discord connection\n");
     Log::Log("Discord connected\n");
     return true;
+}
+// Sets DISCORD_INSTANCE_ID to match DiscordCanary.exe if its open. debug only.
+void DiscordModule::ConnectCanary() {
+	uint32_t discord_pid = GetProcId("Discord.exe");
+	uint32_t discord_canary_pid = GetProcId("DiscordCanary.exe");
+	uint32_t discord_env = 0;
+	// Prefer canary over vanilla. To use vanilla, just close canary...
+	if (discord_canary_pid && discord_pid) {
+		FILETIME discord_canary_started;
+		FILETIME discord_started;
+		FILETIME dummy;
+		GetProcessTimes(OpenProcess(PROCESS_QUERY_INFORMATION, TRUE, discord_canary_pid), &discord_canary_started, &dummy, &dummy, &dummy);
+		GetProcessTimes(OpenProcess(PROCESS_QUERY_INFORMATION, TRUE, discord_pid), &discord_started, &dummy, &dummy, &dummy);
+		discord_env = CompareFileTime(&discord_canary_started, &discord_started) ? 1 : 0;
+	}
+	SetEnvironmentVariable("DISCORD_INSTANCE_ID", discord_env ? "1" : "0");
 }
 bool DiscordModule::LoadDll() {
     if (discordCreate)
@@ -485,8 +496,7 @@ void DiscordModule::LoadSettings(CSimpleIni* ini) {
     Resources::Instance().EnsureFileExists(dll_location,DISCORD_DLL_REMOTE_URL,
         [&](bool success) {
             if (!success || !LoadDll()) {
-                Log::Error("Failed to load discord_game_sdk.dll");
-                Log::Error("To try again, please restart GWToolbox");
+                Log::Error("Failed to load discord_game_sdk.dll. To try again, please restart GWToolbox");
             }
             pending_discord_connect = pending_activity_update = discord_enabled;
         });
@@ -515,7 +525,7 @@ void DiscordModule::UpdateActivity() {
         return;
     if (!GW::Map::GetIsMapLoaded())
         return;
-    
+	GW::Guild* g = nullptr;
     GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo();
     GW::AreaInfo* m = GW::Map::GetCurrentMapInfo();
     GW::Agent* a = GW::Agents::GetPlayer();
@@ -523,6 +533,11 @@ void DiscordModule::UpdateActivity() {
     GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
     if (!p || !m || !a || !c)
         return;
+	bool is_guild_hall = m->type == GW::RegionType::RegionType_GuildHall;
+	if (is_guild_hall) {
+		g = GetCurrentGH();
+		if (!g) return; // Current gh not found - guild array not loaded yet
+	}
 	bool show_activity = !hide_activity_when_offline || GW::FriendListMgr::GetMyStatus() != 0;
 	if (!show_activity) {
 		Disconnect(); // Disconnect from discord if we're set to offline
@@ -549,20 +564,23 @@ void DiscordModule::UpdateActivity() {
         short map_language = static_cast<short>(GW::Map::GetLanguage());
         short map_district = static_cast<short>(GW::Map::GetDistrict());
         short player_number = a->player_number;
-        bool is_guild_hall = m->type == GW::RegionType::RegionType_GuildHall;
+		char party_id[128];
         if (show_party_info) {
             // Party ID needs to be consistent across maps
             if (instance_type == GW::Constants::InstanceType::Explorable) {
-                sprintf(activity.party.id, "%d-%d", c->token1,c->token2);
+                sprintf(party_id, "%d-%d", c->token1,c->current_map_id);
             }
-			else if (is_guild_hall && current_guild_hall.ghkey[0]) {
-				sprintf(activity.party.id, "%d-%d-%d-%d-%d", 
-					current_guild_hall.ghkey[0], current_guild_hall.ghkey[1], current_guild_hall.ghkey[2], current_guild_hall.ghkey[3],
+			else if (is_guild_hall) {
+				sprintf(party_id, "%d-%d-%d-%d-%d",
+					g->key.k[0], g->key.k[1], g->key.k[2], g->key.k[3],
 					p->party_id);
 			}
             else {
-                sprintf(activity.party.id, "%d-%d-%d-%d-%d-%d", map_id, map_region, m->type, map_language, map_district, p->party_id);
+                sprintf(party_id, "%d-%d-%d-%d-%d-%d", map_id, map_region, m->type, map_language, map_district, p->party_id);
             }
+			SHA1 checksum;
+			checksum.update(party_id);
+			sprintf(activity.party.id, "%s", checksum.final().c_str());
             // Add a party secret if in an outpost. TODO: Joining feature?
             DiscordJoinableParty secret;
             secret.map_id = map_id;
@@ -573,7 +591,7 @@ void DiscordModule::UpdateActivity() {
             swprintf(secret.player, 32, L"%ls", GW::GameContext::instance()->character->player_name);
 			if (is_guild_hall) {
 				for (size_t i = 0; i < 4; i++) {
-					secret.ghkey[i] = current_guild_hall.ghkey[i];
+					secret.ghkey[i] = g->key.k[i];
 				}
 			}
             if (instance_type == GW::Constants::InstanceType::Outpost) {
@@ -629,8 +647,8 @@ void DiscordModule::UpdateActivity() {
             else {
                 sprintf(activity.state, "In Explorable");
             }
-			if (is_guild_hall && current_guild_hall.ghkey[0]) {
-				sprintf(activity.details, "%ls [%ls]", current_guild_hall.name, current_guild_hall.tag);
+			if (is_guild_hall) {
+				sprintf(activity.details, "%ls [%ls]", g->name, g->tag);
 			}
 			else {
 				sprintf(activity.details, "%ls", map_name_decoded.c_str());
@@ -647,8 +665,7 @@ void DiscordModule::UpdateActivity() {
 
     last_activity_update = time(nullptr);
 	if (show_activity) {
-		Log::Log("Outgoing discord state = %s\n", activity.state);
-		Log::Log("Outgoing discord details = %s\n", activity.details);
+		Log::Log("Outgoing discord state = %s, %s\n", activity.details, activity.state);
 		app.activities->update_activity(app.activities, &activity, &app, UpdateActivityCallback);
 	}
 	else {

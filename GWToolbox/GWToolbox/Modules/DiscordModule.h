@@ -4,6 +4,8 @@
 #include <ToolboxUIElement.h>
 #include <discord_game_sdk/c/discord_game_sdk.h>
 
+#include <GWCA/GameEntities/Guild.h>
+
 struct Application {
     struct IDiscordCore* core;
     struct IDiscordUserManager* users;
@@ -26,7 +28,7 @@ struct DiscordJoinableParty {
 };
 // Used to record current GH info
 struct CurrentGuildHall {
-	wchar_t tag[5];
+	wchar_t tag[8];
 	wchar_t name[32];
 	uint32_t ghkey[4];
 };
@@ -50,10 +52,13 @@ public:
 
     void UpdateActivity();
 
-    bool InviteUser(DiscordUser* user);
+	void InviteUser(DiscordUser* user);
     void FailedJoin(const char* error_msg);
     void JoinParty();
     bool IsInJoinablePartyMap();
+
+	static bool IsMapUnlocked(uint32_t map_id);
+	static GW::Guild* GetCurrentGH();
 
     Application app;
     DiscordActivity activity;
@@ -85,5 +90,6 @@ private:
 
     bool LoadDll();
     bool Connect();
+	void ConnectCanary();
     void Disconnect();
 };

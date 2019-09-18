@@ -119,7 +119,7 @@
     <ClInclude Include="GWToolbox\Modules\ChatCommands.h" />
     <ClInclude Include="GWToolbox\Modules\ChatFilter.h" />
     <ClInclude Include="GWToolbox\Modules\DiscordModule.h" />
-    <ClInclude Include="GWToolbox\sha1.h" />
+    <ClInclude Include="GWToolbox\sha1.hpp" />
     <ClInclude Include="GWToolbox\Windows\PacketLoggerWindow.h" />
     <ClInclude Include="GWToolbox\Windows\DailyQuests.h" />
     <ClInclude Include="GWToolbox\Modules\GameSettings.h" />
