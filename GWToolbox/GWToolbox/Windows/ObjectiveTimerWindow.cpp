@@ -57,7 +57,31 @@ namespace {
         }
         return 0;
     }
-
+	// Hex values matching the first char of Kanaxai's dialogs in each room.
+	enum kanaxai_room_dialogs {
+		Room5 = 0x5336,
+		Room6,
+		Room8,
+		Room10,
+		Room12,
+		Room13,
+		Room14,
+		Room15
+	};
+	const wchar_t* kanaxai_dialogs[] = {
+		// Room 1-4 no dialog
+		L"\x5336\xBEB8\x8555\x7267", // Room 5 "Fear not the darkness. It is already within you."
+		L"\x5337\xAA3A\xE96F\x3E34", // Room 6 "Is it comforting to know the source of your fears? Or do you fear more now that you see them in front of you."
+		// Room 7 no dialog
+		L"\x5338\xFD69\xA162\x3A04", // Room 8 "Even if you banish me from your sight, I will remain in your mind."
+		// Room 9 no dialog
+		L"\x5339\xA7BA\xC67B\x5D81", // Room 10 "You mortals may be here to defeat me, but acknowledging my presence only makes the nightmare grow stronger."
+		// Room 11 no dialog
+		L"\x533A\xED06\x815D\x5FFB", // Room 12 "So, you have passed through the depths of the Jade Sea, and into the nightmare realm. It is too bad that I must send you back from whence you came."
+		L"\x533B\xCAA6\xFDA9\x3277", // Room 13 "I am Kanaxai, creator of nightmares. Let me make yours into reality."
+		L"\x533C\xDD33\xA330\x4E27", // Room 14 "I will fill your hearts with visions of horror and despair that will haunt you for all of your days."
+		L"\x533D\x9EB1\x8BEE\x2637"	 // Kanaxai "What gives you the right to enter my lair? I shall kill you for your audacity, after I destroy your mind with my horrifying visions, of course."
+	};
     void PrintTime(char* buf, size_t size, DWORD time, bool show_ms = true) {
         if (time == TIME_UNKNOWN) {
             GuiUtils::StrCopy(buf, "--:--", size);
@@ -111,6 +135,7 @@ void ObjectiveTimerWindow::Initialize() {
                 break;
             case GW::Constants::MapID::The_Deep:
                 msg_check = 0x6D4D;  // Gained 10,000 or 5,000 Luxon faction in Deep - get Kanaxai objective.
+				objective_id = RoomID::Deep_room_15;
                 break;
             }
             if (!objective_id) return false;
@@ -132,7 +157,11 @@ void ObjectiveTimerWindow::Initialize() {
             os->active = false;
             return false;
         });
-
+	GW::StoC::AddCallback<GW::Packet::StoC::DisplayDialogue>(
+		[this](GW::Packet::StoC::DisplayDialogue* packet) -> bool {
+			DisplayDialogue(packet);
+			return false;
+		});
     GW::StoC::AddCallback<GW::Packet::StoC::PartyDefeated>(
         [this](GW::Packet::StoC::PartyDefeated* packet) -> bool {
             if (!objective_sets.empty()) {
@@ -158,6 +187,7 @@ void ObjectiveTimerWindow::Initialize() {
         });
     GW::StoC::AddCallback<GW::Packet::StoC::InstanceLoadInfo>(
         [this](GW::Packet::StoC::InstanceLoadInfo* packet) -> bool {
+			monitor_doors = false;
             if (!packet->is_explorable)
                 return false;
             switch (static_cast<GW::Constants::MapID>(packet->map_id)) {
@@ -175,32 +205,12 @@ void ObjectiveTimerWindow::Initialize() {
 
     GW::StoC::AddCallback<GW::Packet::StoC::ManipulateMapObject>(
         [this](GW::Packet::StoC::ManipulateMapObject* packet) -> bool {
-            if (packet->animation_type != 16 || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
+            if (!monitor_doors || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
                 return false; // Door not open or not in explorable area
-            bool tick_all_preceeding_objectives = false;
-            switch (GW::Map::GetMapID()) {
-            case GW::Constants::MapID::Urgozs_Warren:
-                tick_all_preceeding_objectives = true; // For Urgoz, rooms are linear - tick all preceeding rooms
-                break;
-            case GW::Constants::MapID::The_Deep:
-                tick_all_preceeding_objectives = packet->object_id == 123123;  // For deep, rooms 1-4 can be opened in any order. Only tick all preceeding rooms if we're room 6 door.
-                break;
-            default:
-                return false;
-            }
-            // For Urgoz and Deep, the id of the objective is actually the door object_id
-            Objective* obj = GetCurrentObjective(packet->object_id);
-            if (!obj || obj->IsStarted())
-                return false; // Already started
-            obj->SetStarted();
-            if (!tick_all_preceeding_objectives)
-                return false;
-            ObjectiveSet* os = objective_sets.back();
-            for (Objective& objective : os->objectives) {
-                if (objective.id == packet->object_id)
-                    break;
-                objective.SetDone();
-            }
+			if (packet->animation_type == 16)
+				DoorOpened(packet->object_id);
+			else
+				DoorClosed(packet->object_id);
             return false;
         });
 
@@ -327,6 +337,7 @@ void ObjectiveTimerWindow::AddUrgozObjectiveSet() {
     // 45631 53071 are the object_ids for the left and right urgoz doors
     os->objectives.front().SetStarted();
     objective_sets.push_back(os);
+	monitor_doors = true;
 }
 void ObjectiveTimerWindow::AddDeepObjectiveSet() {
     // object_id's for doors opening.
@@ -340,20 +351,86 @@ void ObjectiveTimerWindow::AddDeepObjectiveSet() {
     ObjectiveTimerWindow::ObjectiveSet* os = new ObjectiveSet;
     ::AsyncGetMapName(os->name, sizeof(os->name));
     os->objectives.emplace_back(1, "Room 1 | Soothing");
-    os->objectives.emplace_back(45420, "Room 2 | Death");
-    os->objectives.emplace_back(11692, "Room 3 | Surrender");
-    os->objectives.emplace_back(54552, "Room 4 | Exposure");
-    os->objectives.emplace_back(1760, "Room 5 | Pain");
-    os->objectives.emplace_back(40330, "Room 6 | Lethargy");
-
-    os->objectives.emplace_back(29537, "Zone 7 | Exhaustion");
-    os->objectives.emplace_back(37191, "Zone 8 | Pillars");
-    os->objectives.emplace_back(35500, "Zone 9 | Blood Drinkers");
-    os->objectives.emplace_back(34278, "Zone 10 | Bridge");
-    os->objectives.emplace_back(15529, "Zone 11 | Urgoz");
-    // 45631 53071 are the object_ids for the left and right urgoz doors
-    os->objectives.front().SetStarted();
+    os->objectives.emplace_back(2, "Room 2 | Death");
+    os->objectives.emplace_back(3, "Room 3 | Surrender");
+    os->objectives.emplace_back(4, "Room 4 | Exposure");
+	for (size_t i = 0; i < 4; i++) {
+		os->objectives[i].SetStarted(); // Start first 4 rooms
+	}
+    os->objectives.emplace_back(5, "Room 5 | Pain");
+    os->objectives.emplace_back(RoomID::Deep_room_5, "Room 6 | Lethargy");
+	os->objectives.emplace_back(RoomID::Deep_room_6, "Room 7 | Depletion");
+	os->objectives.emplace_back(RoomID::Deep_room_7, "Room 8 | Failure");
+	os->objectives.emplace_back(RoomID::Deep_room_9, "Room 9 | Shadows"); // TODO: Maybe trigger on leviathan spawn
+	os->objectives.emplace_back(RoomID::Deep_room_10, "Room 10 | Scorpion"); // Trigger on dialog
+	os->objectives.emplace_back(RoomID::Deep_room_11, "Room 11 | Fear"); // Trigger bottom door first spawn
+	os->objectives.emplace_back(RoomID::Deep_room_12, "Room 12 | Depletion"); // Trigger on dialog
+	os->objectives.emplace_back(RoomID::Deep_room_13, "Room 13 | Decay"); // Trigger on dialog
+	os->objectives.emplace_back(RoomID::Deep_room_14, "Room 14 | Torment"); // Trigger on dialog
+    os->objectives.emplace_back(RoomID::Deep_room_15, "Room 15 | Kanaxai");
     objective_sets.push_back(os);
+	monitor_doors = true;
+}
+void ObjectiveTimerWindow::DoorClosed(uint32_t door_id) {
+	// Unused
+}
+void ObjectiveTimerWindow::DoorOpened(uint32_t door_id) {
+	bool tick_all_preceeding_objectives = true;
+	uint32_t objective_to_start = door_id;
+	uint32_t objective_to_end = 0;
+	switch (GW::Map::GetMapID()) {
+	case GW::Constants::MapID::Urgozs_Warren:
+		break;
+	case GW::Constants::MapID::The_Deep:
+		// For deep, rooms 1-4 can be opened in any order. Only tick all preceeding rooms if we're room 6 door or beyond
+		switch (door_id) {
+				// For deep rooms 1-4, any of these doors mean that room 5 is open
+			case RoomID::Deep_room_1_second:
+			case RoomID::Deep_room_1_first:
+				objective_to_end = 1;
+				objective_to_start = 5;
+				tick_all_preceeding_objectives = false;
+				break;
+			case RoomID::Deep_room_2_second:
+			case RoomID::Deep_room_2_first:
+				objective_to_end = 2;
+				objective_to_start = 5;
+				tick_all_preceeding_objectives = false;
+				break;
+			case RoomID::Deep_room_3_second:
+			case RoomID::Deep_room_3_first:
+				objective_to_end = 3;
+				objective_to_start = 5;
+				tick_all_preceeding_objectives = false;
+				break;
+			case RoomID::Deep_room_4_second:
+			case RoomID::Deep_room_4_first:
+				objective_to_end = 4;
+				objective_to_start = 5;
+				tick_all_preceeding_objectives = false;
+				break;
+		}
+		break;
+	default:
+		return;
+	}
+	if (objective_to_end) {
+		Objective* obj = GetCurrentObjective(objective_to_end);
+		if(obj) obj->SetDone();
+	}
+	// For Urgoz and Deep, the id of the objective is actually the door object_id that STARTS the room
+	Objective* obj = GetCurrentObjective(objective_to_start);
+	if (!obj || obj->IsStarted())
+		return; // Already started
+	obj->SetStarted();
+	if (!tick_all_preceeding_objectives)
+		return;
+	ObjectiveSet* os = objective_sets.back();
+	for (Objective& objective : os->objectives) {
+		if (objective.id == objective_to_start)
+			break;
+		objective.SetDone();
+	}
 }
 void ObjectiveTimerWindow::AddFoWObjectiveSet() {
 	ObjectiveSet *os = new ObjectiveSet;
@@ -386,6 +463,33 @@ void ObjectiveTimerWindow::AddUWObjectiveSet() {
 	os->objectives.emplace_back(155, "Pools");
 	os->objectives.emplace_back(157, "Dhuum");
 	objective_sets.push_back(os);
+}
+void ObjectiveTimerWindow::DisplayDialogue(GW::Packet::StoC::DisplayDialogue* packet) {
+	uint32_t objective_id = 0; // Which objective has just been STARTED?
+	switch (GW::Map::GetMapID()) {
+	case GW::Constants::MapID::The_Deep:
+		switch (packet->message[0]) {
+		case kanaxai_room_dialogs::Room10: objective_id = RoomID::Deep_room_10; break;
+		case kanaxai_room_dialogs::Room12: objective_id = RoomID::Deep_room_12; break;
+		case kanaxai_room_dialogs::Room13: objective_id = RoomID::Deep_room_13; break;
+		case kanaxai_room_dialogs::Room14: objective_id = RoomID::Deep_room_14; break;
+		case kanaxai_room_dialogs::Room15: objective_id = RoomID::Deep_room_15; break;
+		}
+		break;
+	}
+	if (!objective_id)
+		return;
+	// For Urgoz and Deep, the id of the objective is actually the door object_id that STARTS the room
+	Objective* obj = GetCurrentObjective(objective_id);
+	if (!obj || obj->IsStarted())
+		return; // Already started
+	obj->SetStarted();
+	ObjectiveSet* os = objective_sets.back();
+	for (Objective& objective : os->objectives) {
+		if (objective.id == objective_id)
+			break;
+		objective.SetDone();
+	}
 }
 
 void ObjectiveTimerWindow::Update(float delta) {
@@ -452,7 +556,6 @@ void ObjectiveTimerWindow::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(show_end_column), show_end_column);
     ini->SetBoolValue(Name(), VAR_NAME(show_time_column), show_time_column);
 }
-
 
 ObjectiveTimerWindow::Objective::Objective(uint32_t _id, const char* _name) {
     id = _id;

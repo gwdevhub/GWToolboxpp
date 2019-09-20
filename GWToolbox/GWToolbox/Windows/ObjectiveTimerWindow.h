@@ -5,6 +5,7 @@
 #include <Defines.h>
 
 #include <GWCA\GameContainers\GamePos.h>
+#include <GWCA\Packets\StoC.h>
 
 #include "ToolboxWindow.h"
 
@@ -28,15 +29,7 @@ public:
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
 
-    // Room 1 Complete = Room 5 open = 12669 + 11692
-// Room 2 Complete = Room 5 open = 54552 + 1760
-// Room 3 Complete = Room 5 open = 45425 + 48290
-// Room 4 Complete = Room 5 open = 40330 + 60114
-// Room 5 Complete = Room 6 open = 29594
-// Room 6 Complete = Room 7 open = 49742
-// Room 7 Complete = Room 8 open = 55680
-
-    enum DoorID {
+    const enum RoomID {
         // object_id's for doors opening.
         Deep_room_1_first = 12669, // Room 1 Complete = Room 5 open
         Deep_room_1_second = 11692,// Room 1 Complete = Room 5 open
@@ -48,7 +41,15 @@ public:
         Deep_room_4_second = 60114, // Room 4 Complete = Room 5 open
         Deep_room_5 = 29594, // Room 5 Complete = Room 1,2,3,4,6 open
         Deep_room_6 = 49742, // Room 6 Complete = Room 7 open
-        Deep_room_7 = 55680 // Room 7 Complete = Room 8 open
+        Deep_room_7 = 55680, // Room 7 Complete = Room 8 open
+		// NOTE: Room 8 (failure) to room 10 (scorpion), no door.
+		Deep_room_9 = 99887, // Trigger on leviathan?
+		Deep_room_10 = 99888, // Generic room id for room 10 (dialog used to start)
+		Deep_room_11 = 29320, // Room 11 door is always open. Use to START room 11 when it comes into range.
+		Deep_room_12 = 99990, // Generic room id for room 12 (dialog used to start)
+		Deep_room_13 = 99991, // Generic room id for room 13 (dialog used to start)
+		Deep_room_14 = 99992, // Generic room id for room 13 (dialog used to start)
+		Deep_room_15 = 99993 // Generic room id for room 15 (dialog used to start)
     };
 
 private:
@@ -107,10 +108,14 @@ private:
     std::vector<ObjectiveSet *> objective_sets;
 
     Objective* GetCurrentObjective(uint32_t obj_id);
+	bool monitor_doors = false;
 
     void AddDoAObjectiveSet(GW::Vec2f spawn);
     void AddFoWObjectiveSet();
     void AddUWObjectiveSet();
+	void DoorOpened(uint32_t door_id);
+	void DoorClosed(uint32_t door_id);
+	void DisplayDialogue(GW::Packet::StoC::DisplayDialogue* packet);
     void AddDeepObjectiveSet();
     void AddUrgozObjectiveSet();
 };
