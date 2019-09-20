@@ -514,9 +514,7 @@ void DiscordModule::Update(float delta) {
         Log::Error("Discord disconnected");
         discord_connected = false;
 		// Note that when not logged into discord (but Discord.exe running), DiscordCreate will still return an OK result but a subsequent transaction will disconnect the API.
-		// To check for this, don't reconnect if we've only just connected within last 2s (i.e. this is a failed connect)
-		if (discord_connected_at < time(nullptr) - 2)
-			pending_discord_connect = pending_activity_update = discord_enabled;
+		// Don't auto-reconnect here; if discord API is borked, you can retry to connect on map load or if user tried to click connect.
     }
     if (pending_activity_update) {
         UpdateActivity();
