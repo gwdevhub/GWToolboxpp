@@ -72,10 +72,12 @@ void FactionLeaderboardWindow::Draw(IDirect3DDevice9* pDevice) {
 	ImGui::SameLine(offset += long_text_width);
 	ImGui::Text("Guild");
 	ImGui::Separator();
+	bool has_entries = 0;
 	for (size_t i = 0; i < leaderboard.size(); i++) {
 		LeaderboardEntry* e = &leaderboard[i];
 		if (!e->initialised)
 			continue;
+		has_entries = 1;
 		offset = 0.0f;
 		if (e->map_name[0] == 0) {
 			// Try to load map name in.
@@ -103,6 +105,12 @@ void FactionLeaderboardWindow::Draw(IDirect3DDevice9* pDevice) {
 			ShellExecuteW(NULL, L"open", GuiUtils::ToWstr(e->guild_wiki_url).c_str(), NULL, NULL, SW_SHOWNORMAL);
 		}
 		ImGui::PopID();
+	}
+	if (!has_entries) {
+		ImVec2 w = ImGui::CalcTextSize("Enter a Canthan outpost to see data");
+		ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
+		ImGui::SetCursorPosX(avail_width / 2 - (w.x / 2));
+		ImGui::Text("Enter a Canthan outpost to see data");
 	}
 	return ImGui::End();
 }

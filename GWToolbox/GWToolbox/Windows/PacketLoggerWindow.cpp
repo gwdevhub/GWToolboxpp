@@ -56,6 +56,13 @@ enum class FieldType {
 };
 
 bool log_message_content = false;
+bool log_npc_dialogs = false;
+struct NPCDialog {
+	wchar_t msg_in[122] = { 0 };
+	wchar_t sender_in[32] = { 0 };
+	std::wstring msg_out = L"";
+	std::wstring sender_out = L"";
+} npc_dialog;
 bool logger_enabled = false;
 bool debug = false;
 uint32_t log_message_callback_identifier = 0;
@@ -403,7 +410,9 @@ static void CtoSHandler(uint32_t context, uint32_t size, uint32_t* packet) {
     GW::HookBase::LeaveHook();
 }
 
-
+int debug_door_id = 0;
+uint32_t message_core_callback_identifier;
+uint32_t display_dialogue_callback_identifier;
 
 void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
     if (!visible)
@@ -420,21 +429,67 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
         else
             Disable();
     }
+    ImGui::InputInt("Door ID", &debug_door_id);
+    if (ImGui::Button("Open")) {
+        GW::GameThread::Enqueue([]() {
+            GW::Packet::StoC::ManipulateMapObject packet;
+            packet.header = GW::Packet::StoC::ManipulateMapObject::STATIC_HEADER;
+            packet.animation_stage = 3;
+            packet.animation_type = 16;
+            packet.object_id = debug_door_id;
+            GW::StoC::EmulatePacket(&packet);
+        });
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Close")) {
+        GW::GameThread::Enqueue([]() {
+            GW::Packet::StoC::ManipulateMapObject packet;
+            packet.header = GW::Packet::StoC::ManipulateMapObject::STATIC_HEADER;
+            packet.animation_stage = 3;
+            packet.animation_type = 9;
+            packet.object_id = debug_door_id;
+            GW::StoC::EmulatePacket(&packet);
+        });
+    }
+	if (ImGui::Checkbox("Log NPC Dialogs", &log_npc_dialogs)) {
+		if (!logger_enabled)
+			log_npc_dialogs = false;
+		if (log_npc_dialogs) {
+			display_dialogue_callback_identifier = GW::StoC::AddCallback<GW::Packet::StoC::DisplayDialogue>([&](GW::Packet::StoC::DisplayDialogue* pak) -> bool {
+				memset(npc_dialog.msg_in, 0, 122);
+				memset(npc_dialog.sender_in, 0, 32);
+				wcscpy(npc_dialog.msg_in, pak->message);
+				wcscpy(npc_dialog.sender_in, pak->name);
+				GW::UI::AsyncDecodeStr(npc_dialog.msg_in, &npc_dialog.msg_out);
+				GW::UI::AsyncDecodeStr(npc_dialog.sender_in, &npc_dialog.sender_out);
+
+				return false;
+				});
+		}
+		else {
+			if (display_dialogue_callback_identifier) {
+				GW::StoC::RemoveCallback(GW::Packet::StoC::DisplayDialogue::STATIC_HEADER, display_dialogue_callback_identifier);
+				display_dialogue_callback_identifier = 0;
+			}
+		}
+	}
     if (ImGui::Checkbox("Log Message Content", &log_message_content)) {
         if (!logger_enabled)
             log_message_content = false;
-        if (log_message_callback_identifier) {
-            GW::StoC::RemoveCallback(GW::Packet::StoC::MessageCore::STATIC_HEADER, log_message_callback_identifier);
-            log_message_callback_identifier = 0;
-        }
-
         if (log_message_content) {
-            log_message_callback_identifier = GW::StoC::AddCallback<GW::Packet::StoC::MessageCore>([&](GW::Packet::StoC::MessageCore* pak) -> bool {
+			message_core_callback_identifier = GW::StoC::AddCallback<GW::Packet::StoC::MessageCore>([&](GW::Packet::StoC::MessageCore* pak) -> bool {
+				printf("MessageCore: ");
                 for (int i = 0; pak->message[i] != 0; ++i) printchar(pak->message[i]);
                 printf("\n");
                 return false;
             });
-        }
+		}
+		else {
+			if (message_core_callback_identifier) {
+				GW::StoC::RemoveCallback(GW::Packet::StoC::MessageCore::STATIC_HEADER, message_core_callback_identifier);
+				message_core_callback_identifier = 0;
+			}
+		}
     }
     ImGui::Text("Ignored Packets");
     ImGui::SameLine();
@@ -487,6 +542,14 @@ void PacketLoggerWindow::Initialize() {
             }
             return false;
         });*/
+}
+void PacketLoggerWindow::Update(float delta) {
+	if (log_npc_dialogs && !npc_dialog.msg_out.empty()) {
+		Log::Log("DisplayDialogue from %ls: ", npc_dialog.sender_out.c_str());
+		for (int i = 0; npc_dialog.msg_in[i] != 0; ++i) printchar(npc_dialog.msg_in[i]);
+		printf("\n");
+		npc_dialog.msg_out.clear();
+	}
 }
 void PacketLoggerWindow::SaveSettings(CSimpleIni* ini) {
     ToolboxWindow::SaveSettings(ini);

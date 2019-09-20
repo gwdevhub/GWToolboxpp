@@ -17,7 +17,7 @@ public:
     void Initialize() override;
     void SaveSettings(CSimpleIni* ini) override;
     void LoadSettings(CSimpleIni* ini) override;
-
+	void Update(float delta) override;
     void Enable();
     void Disable();
 

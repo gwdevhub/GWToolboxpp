@@ -28,6 +28,29 @@ public:
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
 
+    // Room 1 Complete = Room 5 open = 12669 + 11692
+// Room 2 Complete = Room 5 open = 54552 + 1760
+// Room 3 Complete = Room 5 open = 45425 + 48290
+// Room 4 Complete = Room 5 open = 40330 + 60114
+// Room 5 Complete = Room 6 open = 29594
+// Room 6 Complete = Room 7 open = 49742
+// Room 7 Complete = Room 8 open = 55680
+
+    enum DoorID {
+        // object_id's for doors opening.
+        Deep_room_1_first = 12669, // Room 1 Complete = Room 5 open
+        Deep_room_1_second = 11692,// Room 1 Complete = Room 5 open
+        Deep_room_2_first = 54552, // Room 2 Complete = Room 5 open
+        Deep_room_2_second = 1760, // Room 2 Complete = Room 5 open
+        Deep_room_3_first = 45425, // Room 3 Complete = Room 5 open
+        Deep_room_3_second = 48290, // Room 3 Complete = Room 5 open
+        Deep_room_4_first = 40330, // Room 4 Complete = Room 5 open
+        Deep_room_4_second = 60114, // Room 4 Complete = Room 5 open
+        Deep_room_5 = 29594, // Room 5 Complete = Room 1,2,3,4,6 open
+        Deep_room_6 = 49742, // Room 6 Complete = Room 7 open
+        Deep_room_7 = 55680 // Room 7 Complete = Room 8 open
+    };
+
 private:
     class Objective {
     public:

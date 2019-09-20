@@ -66,7 +66,6 @@ void DoorMonitorWindow::Initialize() {
     // Check on first load
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
         doors.clear();
-        Log::Log("InstanceDoorMonitorWindow: Zone entered\n");
         in_zone = true;
     }
 
@@ -75,7 +74,6 @@ void DoorMonitorWindow::Initialize() {
             if (!packet->is_explorable)
                 return in_zone = false, false;
             doors.clear();
-            Log::Log("InstanceDoorMonitorWindow: Zone entered\n");
             return in_zone = true, false;
         });
 

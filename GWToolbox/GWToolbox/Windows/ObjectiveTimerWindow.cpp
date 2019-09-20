@@ -102,19 +102,29 @@ void ObjectiveTimerWindow::Initialize() {
 
     GW::StoC::AddCallback<GW::Packet::StoC::MessageServer>(
         [this](GW::Packet::StoC::MessageServer* packet) -> bool {
-            if (GW::Map::GetMapID() != GW::Constants::MapID::Urgozs_Warren)
-                return false; // Only care about Urgoz
+            uint32_t objective_id = 0; // Objective_id applicable for the check
+            uint32_t msg_check = 0; // First encoded msg char to check for
+            switch (GW::Map::GetMapID()) {
+            case GW::Constants::MapID::Urgozs_Warren:
+                msg_check = 0x6C9C; // Gained 10,000 or 5,000 Kurzick faction in Urgoz Warren - get Urgoz objective.
+                objective_id = 15529;
+                break;
+            case GW::Constants::MapID::The_Deep:
+                msg_check = 0x6D4D;  // Gained 10,000 or 5,000 Luxon faction in Deep - get Kanaxai objective.
+                break;
+            }
+            if (!objective_id) return false;
             GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
             if (!buff || !buff->valid() || !buff->size())
                 return true; // Message buffer empty!?
             const wchar_t* msg = buff->begin();
-            if (msg[0] != 0x6C9C || (msg[5] != 0x2810 && msg[5] != 0x1488))
-                return false;
-            // Gained 10,000 Kurzick faction in Urgoz Warren - get Urgoz objective.
-            Objective* obj = GetCurrentObjective(15529);
+            if (msg[0] != msg_check || (msg[5] != 0x2810 && msg[5] != 0x1488))
+                return false; // Not the right message            
+            Objective* obj = GetCurrentObjective(objective_id);
             if (!obj || obj->IsDone())
                 return false; // Already done!?
             obj->SetDone();
+            // Cycle through all previous objectives and flag as done
             ObjectiveSet* os = objective_sets.back();
             for (Objective& objective : os->objectives) {
                 objective.SetDone();
@@ -148,7 +158,6 @@ void ObjectiveTimerWindow::Initialize() {
         });
     GW::StoC::AddCallback<GW::Packet::StoC::InstanceLoadInfo>(
         [this](GW::Packet::StoC::InstanceLoadInfo* packet) -> bool {
-            //packet->district = 112;
             if (!packet->is_explorable)
                 return false;
             switch (static_cast<GW::Constants::MapID>(packet->map_id)) {
@@ -168,14 +177,25 @@ void ObjectiveTimerWindow::Initialize() {
         [this](GW::Packet::StoC::ManipulateMapObject* packet) -> bool {
             if (packet->animation_type != 16 || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
                 return false; // Door not open or not in explorable area
-            if (GW::Map::GetMapID() != GW::Constants::MapID::Urgozs_Warren)
-                return false; // Urgoz only
-            // For Urgoz, the id of the objective is actually the door object_id
+            bool tick_all_preceeding_objectives = false;
+            switch (GW::Map::GetMapID()) {
+            case GW::Constants::MapID::Urgozs_Warren:
+                tick_all_preceeding_objectives = true; // For Urgoz, rooms are linear - tick all preceeding rooms
+                break;
+            case GW::Constants::MapID::The_Deep:
+                tick_all_preceeding_objectives = packet->object_id == 123123;  // For deep, rooms 1-4 can be opened in any order. Only tick all preceeding rooms if we're room 6 door.
+                break;
+            default:
+                return false;
+            }
+            // For Urgoz and Deep, the id of the objective is actually the door object_id
             Objective* obj = GetCurrentObjective(packet->object_id);
             if (!obj || obj->IsStarted())
+                return false; // Already started
+            obj->SetStarted();
+            if (!tick_all_preceeding_objectives)
                 return false;
             ObjectiveSet* os = objective_sets.back();
-            obj->SetStarted();
             for (Objective& objective : os->objectives) {
                 if (objective.id == packet->object_id)
                     break;
@@ -309,11 +329,31 @@ void ObjectiveTimerWindow::AddUrgozObjectiveSet() {
     objective_sets.push_back(os);
 }
 void ObjectiveTimerWindow::AddDeepObjectiveSet() {
-    // Room 1 = 1760 + 54552
-    // Room 2 = 45425 + 48290
-    // Room 3 = 11692 + 12669
-    // Room 4 = 29594 + 40330
-    // Room 5 = 49742
+    // object_id's for doors opening.
+    // Room 1 Complete = Room 5 open = 12669 + 11692
+    // Room 2 Complete = Room 5 open = 54552 + 1760
+    // Room 3 Complete = Room 5 open = 45425 + 48290
+    // Room 4 Complete = Room 5 open = 40330 + 60114
+    // Room 5 Complete = Room 6 open = 29594
+    // Room 6 Complete = Room 7 open = 49742
+    // Room 7 Complete = Room 8 open = 55680
+    ObjectiveTimerWindow::ObjectiveSet* os = new ObjectiveSet;
+    ::AsyncGetMapName(os->name, sizeof(os->name));
+    os->objectives.emplace_back(1, "Room 1 | Soothing");
+    os->objectives.emplace_back(45420, "Room 2 | Death");
+    os->objectives.emplace_back(11692, "Room 3 | Surrender");
+    os->objectives.emplace_back(54552, "Room 4 | Exposure");
+    os->objectives.emplace_back(1760, "Room 5 | Pain");
+    os->objectives.emplace_back(40330, "Room 6 | Lethargy");
+
+    os->objectives.emplace_back(29537, "Zone 7 | Exhaustion");
+    os->objectives.emplace_back(37191, "Zone 8 | Pillars");
+    os->objectives.emplace_back(35500, "Zone 9 | Blood Drinkers");
+    os->objectives.emplace_back(34278, "Zone 10 | Bridge");
+    os->objectives.emplace_back(15529, "Zone 11 | Urgoz");
+    // 45631 53071 are the object_ids for the left and right urgoz doors
+    os->objectives.front().SetStarted();
+    objective_sets.push_back(os);
 }
 void ObjectiveTimerWindow::AddFoWObjectiveSet() {
 	ObjectiveSet *os = new ObjectiveSet;

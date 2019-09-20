@@ -222,35 +222,35 @@ void DailyQuests::Draw(IDirect3DDevice9* pDevice) {
         if (show_zaishen_missions_in_window) {
             idx = GetZaishenMission(&unix);
             ImGui::TextColored(subscribed_zaishen_missions[idx] ? sCol : wCol, DailyQuests::Instance().zaishen_mission_cycles[idx]);
-            if (ImGui::IsItemClicked() && (subscriptions_changed = true))
+            if (ImGui::IsItemClicked())
                 subscribed_zaishen_missions[idx] = !subscribed_zaishen_missions[idx];
             ImGui::SameLine(offset += zm_width);
         }
         if (show_zaishen_bounty_in_window) {
             idx = GetZaishenBounty(&unix);
             ImGui::TextColored(subscribed_zaishen_bounties[idx] ? sCol : wCol, DailyQuests::Instance().zaishen_bounty_cycles[idx]);
-            if (ImGui::IsItemClicked() && (subscriptions_changed = true))
+            if (ImGui::IsItemClicked())
                 subscribed_zaishen_bounties[idx] = !subscribed_zaishen_bounties[idx];
             ImGui::SameLine(offset += zb_width);
         }
         if (show_zaishen_combat_in_window) {
             idx = GetZaishenCombat(&unix);
             ImGui::TextColored(subscribed_zaishen_combats[idx] ? sCol : wCol, DailyQuests::Instance().zaishen_combat_cycles[idx]);
-            if (ImGui::IsItemClicked() && (subscriptions_changed = true))
+            if (ImGui::IsItemClicked())
                 subscribed_zaishen_combats[idx] = !subscribed_zaishen_combats[idx];
             ImGui::SameLine(offset += zc_width);
         }
         if (show_zaishen_vanquishes_in_window) {
             idx = GetZaishenVanquish(&unix);
             ImGui::TextColored(subscribed_zaishen_vanquishes[idx] ? sCol : wCol, DailyQuests::Instance().zaishen_vanquish_cycles[idx]);
-            if (ImGui::IsItemClicked() && (subscriptions_changed = true))
+            if (ImGui::IsItemClicked())
                 subscribed_zaishen_vanquishes[idx] = !subscribed_zaishen_vanquishes[idx];
             ImGui::SameLine(offset += zv_width);
         }
         if (show_wanted_quests_in_window) {
             idx = GetWantedByShiningBlade(&unix);
             ImGui::TextColored(subscribed_wanted_quests[idx] ? sCol : wCol, DailyQuests::Instance().wanted_by_shining_blade_cycles[idx]);
-            if (ImGui::IsItemClicked() && (subscriptions_changed = true))
+            if (ImGui::IsItemClicked())
                 subscribed_wanted_quests[idx] = !subscribed_wanted_quests[idx];
             ImGui::SameLine(offset += ws_width);
         }
@@ -263,7 +263,7 @@ void DailyQuests::Draw(IDirect3DDevice9* pDevice) {
             ImGui::TextColored(subscribed_weekly_bonus_pve[idx] ? sCol : wCol, DailyQuests::Instance().pve_weekly_bonus_cycles[idx]);
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip(DailyQuests::Instance().pve_weekly_bonus_descriptions[idx]);
-            if(ImGui::IsItemClicked() && (subscriptions_changed = true))
+            if(ImGui::IsItemClicked())
                 subscribed_weekly_bonus_pve[idx] = !subscribed_weekly_bonus_pve[idx];
             ImGui::SameLine(offset += wbe_width);
         }
@@ -272,7 +272,7 @@ void DailyQuests::Draw(IDirect3DDevice9* pDevice) {
             ImGui::TextColored(subscribed_weekly_bonus_pvp[idx] ? sCol : wCol, DailyQuests::Instance().pvp_weekly_bonus_cycles[idx]);
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip(DailyQuests::Instance().pvp_weekly_bonus_descriptions[idx]);
-            if (ImGui::IsItemClicked() && (subscriptions_changed = true))
+            if (ImGui::IsItemClicked())
                 subscribed_weekly_bonus_pvp[idx] = !subscribed_weekly_bonus_pvp[idx];
             ImGui::SameLine(offset += long_text_width);
         }
