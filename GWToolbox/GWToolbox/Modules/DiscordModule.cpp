@@ -172,6 +172,7 @@ DiscordJoinableParty join_in_progress;
 time_t join_party_next_action = 0;
 time_t join_party_started_at = 0;
 time_t join_party_started = 0;
+time_t discord_connected_at = 0;
 
 void UpdateActivityCallback(void* data, enum EDiscordResult result) {
     Log::Log(result == DiscordResult_Ok ? "Activity updated successfully.\n" : "Activity update FAILED!\n");
@@ -348,7 +349,9 @@ bool DiscordModule::IsInJoinablePartyMap() {
 }
 void DiscordModule::FailedJoin(const char* error_msg) {
     Log::Error("Join Party Failed: %s",error_msg);
-    memset(&join_in_progress, 0, sizeof(join_in_progress));
+	join_party_started = 0;
+	join_party_next_action = 0;
+	join_in_progress.map_id = 0;
 }
 void DiscordModule::JoinParty() {
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
@@ -385,8 +388,9 @@ void DiscordModule::JoinParty() {
 	SetForegroundWindow(hwnd);
 	ShowWindow(hwnd, SW_RESTORE);
     Log::Log("Join process complete\n");
-    join_in_progress.map_id = 0; // Done.
 	join_party_started = 0;
+	join_party_next_action = 0;
+	join_in_progress.map_id = 0;
 }
 bool DiscordModule::Connect() {
     pending_discord_connect = false;
@@ -406,7 +410,7 @@ bool DiscordModule::Connect() {
 	ConnectCanary(); // Sets env var to attach to canary if its open.
 #endif
     if (discordCreate(DISCORD_VERSION, &params, &app.core) != DiscordResult_Ok) {
-        Log::Error("Failed to create discord connection");
+        // Log::Error("Failed to create discord connection");
         return false;
     }
     discord_connected = true;
@@ -415,8 +419,8 @@ bool DiscordModule::Connect() {
     app.core->set_log_hook(app.core, EDiscordLogLevel::DiscordLogLevel_Info, &app, OnDiscordLog);
     app.activities = app.core->get_activity_manager(app.core);
     app.network = app.core->get_network_manager(app.core);
-    //Log::Log("Successful discord connection\n");
     Log::Log("Discord connected\n");
+	discord_connected_at = time(nullptr);
     return true;
 }
 // Sets DISCORD_INSTANCE_ID to match DiscordCanary.exe if its open. debug only.
@@ -509,7 +513,10 @@ void DiscordModule::Update(float delta) {
     if (discord_connected && app.core->run_callbacks(app.core) != DiscordResult_Ok) {
         Log::Error("Discord disconnected");
         discord_connected = false;
-        pending_discord_connect = pending_activity_update = discord_enabled;
+		// Note that when not logged into discord (but Discord.exe running), DiscordCreate will still return an OK result but a subsequent transaction will disconnect the API.
+		// To check for this, don't reconnect if we've only just connected within last 2s (i.e. this is a failed connect)
+		if (discord_connected_at < time(nullptr) - 2)
+			pending_discord_connect = pending_activity_update = discord_enabled;
     }
     if (pending_activity_update) {
         UpdateActivity();
@@ -563,12 +570,11 @@ void DiscordModule::UpdateActivity() {
         short map_region = static_cast<short>(GW::Map::GetRegion());
         short map_language = static_cast<short>(GW::Map::GetLanguage());
         short map_district = static_cast<short>(GW::Map::GetDistrict());
-        short player_number = a->player_number;
 		char party_id[128];
         if (show_party_info) {
             // Party ID needs to be consistent across maps
             if (instance_type == GW::Constants::InstanceType::Explorable) {
-                sprintf(party_id, "%d-%d", c->token1,c->current_map_id);
+                sprintf(party_id, "%d-%d", c->token1, map_id);
             }
 			else if (is_guild_hall) {
 				sprintf(party_id, "%d-%d-%d-%d-%d",
