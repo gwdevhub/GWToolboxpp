@@ -510,10 +510,16 @@ void ChatCommands::CmdTP(const wchar_t *message, int argc, LPWSTR *argv) {
 	} else if (town == L"doom" || town == L"doomlore") {
 		GW::Map::Travel(GW::Constants::MapID::Doomlore_Shrine_outpost, district, district_number);
 	} else {
-		int mapid;
-		if (GuiUtils::ParseInt(town.c_str(), &mapid) && (mapid != 0)) {
-			GW::Map::Travel((GW::Constants::MapID)mapid, district, district_number);
+		int map_id_integer;
+		if (GuiUtils::ParseInt(town.c_str(), &map_id_integer) && (map_id_integer != 0)) {
+			GW::Map::Travel((GW::Constants::MapID)map_id_integer, district, district_number);
+		} else {
+			GW::Constants::MapID map_id = MatchMapPrefix(town.c_str());
+			if (map_id != GW::Constants::MapID::None) {
+				GW::Map::Travel(map_id, district, district_number);
+			}
 		}
+
 	}
 }
 
@@ -877,4 +883,245 @@ void ChatCommands::CmdResize(const wchar_t *message, int argc, LPWSTR *argv) {
 	RECT rect;
 	GetWindowRect(hwnd, &rect);
 	MoveWindow(hwnd, rect.left, rect.top, width, height, TRUE);
+}
+
+
+static struct {
+    const char *name;
+	const wchar_t 		   *sname;
+	GW::Constants::MapID 	map_id;
+} teleport_search_map[] = {
+	"Abaddon's Gate", L"abaddonsgate", GW::Constants::MapID::Abaddons_Gate,
+	"Abaddon's Mouth", L"abaddonsmouth", GW::Constants::MapID::Abaddons_Mouth,
+	"Altrumm Ruins", L"altrummruins", GW::Constants::MapID::Altrumm_Ruins,
+	"Amatz Basin", L"amatzbasin", GW::Constants::MapID::Amatz_Basin,
+	"Amnoon Oasis, The", L"amnoonoasis, The", GW::Constants::MapID::The_Amnoon_Oasis_outpost,
+	"Arborstone", L"arborstone", GW::Constants::MapID::Arborstone_outpost_mission,
+	"Ascalon City", L"ascaloncity", GW::Constants::MapID::Ascalon_City_outpost,
+	"Aspenwood Gate (Kurzick)", L"aspenwoodgate(kurzick)", GW::Constants::MapID::Aspenwood_Gate_Kurzick_outpost,
+	"Aspenwood Gate (Luxon)", L"aspenwoodgate(luxon)", GW::Constants::MapID::Aspenwood_Gate_Luxon_outpost,
+	"Astralarium, The", L"astralarium, The", GW::Constants::MapID::The_Astralarium_outpost,
+	"Augury Rock", L"auguryrock", GW::Constants::MapID::Augury_Rock_outpost,
+	"Aurios Mines, The", L"auriosmines, The", GW::Constants::MapID::The_Aurios_Mines,
+	"Aurora Glade", L"auroraglade", GW::Constants::MapID::Aurora_Glade,
+	"Bai Paasu Reach", L"baipaasureach", GW::Constants::MapID::Bai_Paasu_Reach_outpost,
+	"Basalt Grotto", L"basaltgrotto", GW::Constants::MapID::Basalt_Grotto_outpost,
+	"Beacon's Perch", L"beaconsperch", GW::Constants::MapID::Beacons_Perch_outpost,
+	"Beetletun", L"beetletun", GW::Constants::MapID::Beetletun_outpost,
+	"Beknur Harbor", L"beknurharbor", GW::Constants::MapID::Beknur_Harbor,
+	"Bergen Hot Springs", L"bergenhotsprings", GW::Constants::MapID::Bergen_Hot_Springs_outpost,
+	"Blacktide Den", L"blacktideden", GW::Constants::MapID::Blacktide_Den,
+	"Bloodstone Fen", L"bloodstonefen", GW::Constants::MapID::Bloodstone_Fen,
+	"Bone Palace", L"bonepalace", GW::Constants::MapID::Bone_Palace_outpost,
+	"Boreal Station", L"borealstation", GW::Constants::MapID::Boreal_Station_outpost,
+	"Boreas Seabed", L"boreasseabed", GW::Constants::MapID::Boreas_Seabed_outpost_mission,
+	"Borlis Pass", L"borlispass", GW::Constants::MapID::Borlis_Pass,
+	"Brauer Academy", L"braueracademy", GW::Constants::MapID::Brauer_Academy_outpost,
+	"Breaker Hollow", L"breakerhollow", GW::Constants::MapID::Breaker_Hollow_outpost,
+	"Camp Hojanu", L"camphojanu", GW::Constants::MapID::Camp_Hojanu_outpost,
+	"Camp Rankor", L"camprankor", GW::Constants::MapID::Camp_Rankor_outpost,
+	"Cavalon", L"cavalon", GW::Constants::MapID::Cavalon_outpost,
+	"Central Transfer Chamber", L"centraltransferchamber", GW::Constants::MapID::Central_Transfer_Chamber_outpost,
+	"Chahbek Village", L"chahbekvillage", GW::Constants::MapID::Chahbek_Village,
+	"Champion's Dawn", L"championsdawn", GW::Constants::MapID::Champions_Dawn_outpost,
+	"Chantry of Secrets", L"chantryofsecrets", GW::Constants::MapID::Chantry_of_Secrets_outpost,
+	"Codex Arena", L"codexarena", GW::Constants::MapID::Codex_Arena_outpost,
+	"Consulate Docks", L"consulatedocks", GW::Constants::MapID::Consulate_Docks,
+	"Copperhammer Mines", L"copperhammermines", GW::Constants::MapID::Copperhammer_Mines_outpost,
+	"D'Alessio Seaboard", L"dajkahinlet", GW::Constants::MapID::Dajkah_Inlet,
+	"Dajkah Inlet", L"dalessioseaboard", GW::Constants::MapID::DAlessio_Seaboard,
+	"Dasha Vestibule", L"dashavestibule", GW::Constants::MapID::Dasha_Vestibule,
+	"Deep, The", L"deep, The", GW::Constants::MapID::The_Deep,
+	"Deldrimor War Camp", L"deldrimorwarcamp", GW::Constants::MapID::Deldrimor_War_Camp_outpost,
+	"Destiny's Gorge", L"destinysgorge", GW::Constants::MapID::Destinys_Gorge_outpost,
+	"Divinity Coast", L"divinitycoast", GW::Constants::MapID::Divinity_Coast,
+	"Doomlore Shrine", L"doomloreshrine", GW::Constants::MapID::Doomlore_Shrine_outpost,
+	"Dragon's Lair, The", L"dragonslair, The", GW::Constants::MapID::The_Dragons_Lair,
+	"Dragon's Throat", L"dragonsthroat", GW::Constants::MapID::Dragons_Throat,
+	"Droknar's Forge", L"droknarsforge", GW::Constants::MapID::Droknars_Forge_outpost,
+	"Druid's Overlook", L"druidsoverlook", GW::Constants::MapID::Druids_Overlook_outpost,
+	"Dunes of Despair", L"dunesofdespair", GW::Constants::MapID::Dunes_of_Despair,
+	"Durheim Archives", L"durheimarchives", GW::Constants::MapID::Durheim_Archives_outpost,
+	"Dzagonur Bastion", L"dzagonurbastion", GW::Constants::MapID::Dzagonur_Bastion,
+	"Elona Reach", L"elonareach", GW::Constants::MapID::Elona_Reach,
+	"Embark Beach", L"embarkbeach", GW::Constants::MapID::Embark_Beach,
+	"Ember Light Camp", L"emberlightcamp", GW::Constants::MapID::Ember_Light_Camp_outpost,
+	"Eredon Terrace", L"eredonterrace", GW::Constants::MapID::Eredon_Terrace_outpost,
+	"Eternal Grove, The", L"eternalgrove, The", GW::Constants::MapID::The_Eternal_Grove_outpost_mission,
+	"Eye of the North", L"eyeofthenorth", GW::Constants::MapID::Eye_of_the_North_outpost,
+	"Fishermen's Haven", L"fishermenshaven", GW::Constants::MapID::Fishermens_Haven_outpost,
+	"Fort Aspenwood (Kurzick)", L"fortaspenwood(kurzick)", GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost,
+	"Fort Aspenwood (Luxon)", L"fortaspenwood(luxon)", GW::Constants::MapID::Fort_Aspenwood_Luxon_outpost,
+	"Fort Ranik", L"fortranik", GW::Constants::MapID::Fort_Ranik,
+	"Frontier Gate", L"frontiergate", GW::Constants::MapID::Frontier_Gate_outpost,
+	"Frost Gate, The", L"frostgate, The", GW::Constants::MapID::The_Frost_Gate,
+	"Gadd's Encampment", L"gaddsencampment", GW::Constants::MapID::Gadds_Encampment_outpost,
+	"Gate of Anguish", L"gateofanguish", GW::Constants::MapID::Domain_of_Anguish,
+	"Gate of Desolation", L"gateofdesolation", GW::Constants::MapID::Gate_of_Desolation,
+	"Gate of Fear", L"gateoffear", GW::Constants::MapID::Gate_of_Fear_outpost,
+	"Gate of Madness", L"gateofmadness", GW::Constants::MapID::Gate_of_Madness,
+	"Gate of Pain", L"gateofpain", GW::Constants::MapID::Gate_of_Pain,
+	"Gate of Secrets", L"gateofsecrets", GW::Constants::MapID::Gate_of_Secrets_outpost,
+	"Gate of the Nightfallen Lands", L"gateofthenightfallenlands", GW::Constants::MapID::Gate_of_the_Nightfallen_Lands_outpost,
+	"Gate of Torment", L"gateoftorment", GW::Constants::MapID::Gate_of_Torment_outpost,
+	"Gates of Kryta", L"gatesofkryta", GW::Constants::MapID::Gates_of_Kryta,
+	"Grand Court of Sebelkeh", L"grandcourtofsebelkeh", GW::Constants::MapID::Grand_Court_of_Sebelkeh,
+	"Granite Citadel, The", L"granitecitadel, The", GW::Constants::MapID::The_Granite_Citadel_outpost,
+	"Great Northern Wall, The", L"greatnorthernwall, The", GW::Constants::MapID::The_Great_Northern_Wall,
+	"Great Temple of Balthazar", L"greattempleofbalthazar", GW::Constants::MapID::Great_Temple_of_Balthazar_outpost,
+	"Grendich Courthouse", L"grendichcourthouse", GW::Constants::MapID::Grendich_Courthouse_outpost,
+	"Gunnar's Hold", L"gunnarshold", GW::Constants::MapID::Gunnars_Hold_outpost,
+	"Gyala Hatchery", L"gyalahatchery", GW::Constants::MapID::Gyala_Hatchery_outpost_mission,
+	"Harvest Temple", L"harvesttemple", GW::Constants::MapID::Harvest_Temple_outpost,
+	"Hell's Precipice", L"hellsprecipice", GW::Constants::MapID::Hells_Precipice,
+	"Henge of Denravi", L"hengeofdenravi", GW::Constants::MapID::Henge_of_Denravi_outpost,
+	"Heroes' Ascent", L"heroesascent", GW::Constants::MapID::Heroes_Ascent_outpost,
+	"Heroes' Audience", L"heroesaudience", GW::Constants::MapID::Heroes_Audience_outpost,
+	"Honur Hill", L"honurhill", GW::Constants::MapID::Honur_Hill_outpost,
+	"House zu Heltzer", L"housezuheltzer", GW::Constants::MapID::House_zu_Heltzer_outpost,
+	"Ice Caves of Sorrow", L"icecavesofsorrow", GW::Constants::MapID::Ice_Caves_of_Sorrow,
+	"Ice Tooth Cave", L"icetoothcave", GW::Constants::MapID::Ice_Tooth_Cave_outpost,
+	"Imperial Sanctum", L"imperialsanctum", GW::Constants::MapID::Imperial_Sanctum_outpost_mission,
+	"Iron Mines of Moladune", L"ironminesofmoladune", GW::Constants::MapID::Iron_Mines_of_Moladune,
+	"Jade Flats (Kurzick)", L"jadeflats(kurzick)", GW::Constants::MapID::Jade_Flats_Kurzick_outpost,
+	"Jade Flats (Luxon)", L"jadeflats(luxon)", GW::Constants::MapID::Jade_Flats_Luxon_outpost,
+	"Jade Quarry (Kurzick), The", L"jadequarry(kurzick), The", GW::Constants::MapID::The_Jade_Quarry_Kurzick_outpost,
+	"Jade Quarry (Luxon), The", L"jadequarry(luxon), The", GW::Constants::MapID::The_Jade_Quarry_Luxon_outpost,
+	"Jennur's Horde", L"jennurshorde", GW::Constants::MapID::Jennurs_Horde,
+	"Jokanur Diggings", L"jokanurdiggings", GW::Constants::MapID::Jokanur_Diggings,
+	"Kaineng Center", L"kainengcenter", GW::Constants::MapID::Kaineng_Center_outpost,
+	"Kamadan, Jewel of Istan", L"kamadan, Jewel of Istan", GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost,
+	"Kodash Bazaar, The", L"kodashbazaar, The", GW::Constants::MapID::The_Kodash_Bazaar_outpost,
+	"Kodlonu Hamlet", L"kodlonuhamlet", GW::Constants::MapID::Kodlonu_Hamlet_outpost,
+	"Kodonur Crossroads", L"kodonurcrossroads", GW::Constants::MapID::Kodonur_Crossroads,
+	"Lair of the Forgotten", L"lairoftheforgotten", GW::Constants::MapID::Lair_of_the_Forgotten_outpost,
+	"Leviathan Pits", L"leviathanpits", GW::Constants::MapID::Leviathan_Pits_outpost,
+	"Lion's Arch", L"lionsarch", GW::Constants::MapID::Lions_Arch_outpost,
+	"Longeye's Ledge", L"longeyesledge", GW::Constants::MapID::Longeyes_Ledge_outpost,
+	"Lutgardis Conservatory", L"lutgardisconservatory", GW::Constants::MapID::Lutgardis_Conservatory_outpost,
+	"Maatu Keep", L"maatukeep", GW::Constants::MapID::Maatu_Keep_outpost,
+	"Maguuma Stade", L"maguumastade", GW::Constants::MapID::Maguuma_Stade_outpost,
+	"Marhan's Grotto", L"marhansgrotto", GW::Constants::MapID::Marhans_Grotto_outpost,
+	"Marketplace, The", L"marketplace, The", GW::Constants::MapID::The_Marketplace_outpost,
+	"Mihanu Township", L"mihanutownship", GW::Constants::MapID::Mihanu_Township_outpost,
+	"Minister Cho's Estate", L"ministerchosestate", GW::Constants::MapID::Minister_Chos_Estate_outpost_mission,
+	"Moddok Crevice", L"moddokcrevice", GW::Constants::MapID::Moddok_Crevice,
+	"Mouth of Torment, The", L"mouthoftorment, The", GW::Constants::MapID::The_Mouth_of_Torment_outpost,
+	"Nahpui Quarter", L"nahpuiquarter", GW::Constants::MapID::Nahpui_Quarter_outpost_mission,
+	"Nolani Academy", L"nolaniacademy", GW::Constants::MapID::Nolani_Academy,
+	"Nundu Bay", L"nundubay", GW::Constants::MapID::Nundu_Bay,
+	"Olafstead", L"olafstead", GW::Constants::MapID::Olafstead_outpost,
+	"Piken Square", L"pikensquare", GW::Constants::MapID::Piken_Square_outpost,
+	"Pogahn Passage", L"pogahnpassage", GW::Constants::MapID::Pogahn_Passage,
+	"Port Sledge", L"portsledge", GW::Constants::MapID::Port_Sledge_outpost,
+	"Quarrel Falls", L"quarrelfalls", GW::Constants::MapID::Quarrel_Falls_outpost,
+	"Raisu Palace", L"raisupalace", GW::Constants::MapID::Raisu_Palace_outpost_mission,
+	"Ran Musu Gardens", L"ranmusugardens", GW::Constants::MapID::Ran_Musu_Gardens_outpost,
+	"Random Arenas", L"randomarenas", GW::Constants::MapID::Random_Arenas_outpost,
+	"Rata Sum", L"ratasum", GW::Constants::MapID::Rata_Sum_outpost,
+	"Remains of Sahlahja", L"remainsofsahlahja", GW::Constants::MapID::Remains_of_Sahlahja,
+	"Rilohn Refuge", L"rilohnrefuge", GW::Constants::MapID::Rilohn_Refuge,
+	"Ring of Fire", L"ringoffire", GW::Constants::MapID::Ring_of_Fire,
+	"Riverside Province", L"riversideprovince", GW::Constants::MapID::Riverside_Province,
+	"Ruins of Morah", L"ruinsofmorah", GW::Constants::MapID::Ruins_of_Morah,
+	"Ruins of Surmia", L"ruinsofsurmia", GW::Constants::MapID::Ruins_of_Surmia,
+	"Saint Anjeka's Shrine", L"saintanjekasshrine", GW::Constants::MapID::Saint_Anjekas_Shrine_outpost,
+	"Sanctum Cay", L"sanctumcay", GW::Constants::MapID::Sanctum_Cay,
+	"Sardelac Sanitarium", L"sardelacsanitarium", GW::Constants::MapID::Sardelac_Sanitarium_outpost,
+	"Seafarer's Rest", L"seafarersrest", GW::Constants::MapID::Seafarers_Rest_outpost,
+	"Seeker's Passage", L"seekerspassage", GW::Constants::MapID::Seekers_Passage_outpost,
+	"Seitung Harbor", L"seitungharbor", GW::Constants::MapID::Seitung_Harbor_outpost,
+	"Senji's Corner", L"senjiscorner", GW::Constants::MapID::Senjis_Corner_outpost,
+	"Serenity Temple", L"serenitytemple", GW::Constants::MapID::Serenity_Temple_outpost,
+	"Shadow Nexus, The", L"shadownexus, The", GW::Constants::MapID::The_Shadow_Nexus,
+	"Shing Jea Arena", L"shingjeaarena", GW::Constants::MapID::Shing_Jea_Arena,
+	"Shing Jea Monastery", L"shingjeamonastery", GW::Constants::MapID::Shing_Jea_Monastery_outpost,
+	"Sifhalla", L"sifhalla", GW::Constants::MapID::Sifhalla_outpost,
+	"Sunjiang District", L"sunjiangdistrict", GW::Constants::MapID::Sunjiang_District_outpost_mission,
+	"Sunspear Arena", L"sunspeararena", GW::Constants::MapID::Sunspear_Arena,
+	"Sunspear Great Hall", L"sunspeargreathall", GW::Constants::MapID::Sunspear_Great_Hall_outpost,
+	"Sunspear Sanctuary", L"sunspearsanctuary", GW::Constants::MapID::Sunspear_Sanctuary_outpost,
+	"Tahnnakai Temple", L"tahnnakaitemple", GW::Constants::MapID::Tahnnakai_Temple_outpost_mission,
+	"Tanglewood Copse", L"tanglewoodcopse", GW::Constants::MapID::Tanglewood_Copse_outpost,
+	"Tarnished Haven", L"tarnishedhaven", GW::Constants::MapID::Tarnished_Haven_outpost,
+	"Temple of the Ages", L"templeoftheages", GW::Constants::MapID::Temple_of_the_Ages,
+	"Thirsty River", L"thirstyriver", GW::Constants::MapID::Thirsty_River,
+	"Thunderhead Keep", L"thunderheadkeep", GW::Constants::MapID::Thunderhead_Keep,
+	"Tihark Orchard", L"tiharkorchard", GW::Constants::MapID::Tihark_Orchard,
+	"Tomb of the Primeval Kings", L"tomboftheprimevalkings", GW::Constants::MapID::Tomb_of_the_Primeval_Kings,
+	"Tsumei Village", L"tsumeivillage", GW::Constants::MapID::Tsumei_Village_outpost,
+	"Umbral Grotto", L"umbralgrotto", GW::Constants::MapID::Umbral_Grotto_outpost,
+	"Unwaking Waters (Kurzick)", L"unwakingwaters(kurzick)", GW::Constants::MapID::Unwaking_Waters_Kurzick_outpost,
+	"Unwaking Waters (Luxon)", L"unwakingwaters(luxon)", GW::Constants::MapID::Unwaking_Waters_Luxon_outpost,
+	"Urgoz's Warren", L"urgozswarren", GW::Constants::MapID::Urgozs_Warren,
+	"Vasburg Armory", L"vasburgarmory", GW::Constants::MapID::Vasburg_Armory_outpost,
+	"Venta Cemetery", L"ventacemetery", GW::Constants::MapID::Venta_Cemetery,
+	"Ventari's Refuge", L"ventarisrefuge", GW::Constants::MapID::Ventaris_Refuge_outpost,
+	"Vizunah Square (Foreign)", L"vizunahsquare(foreign)", GW::Constants::MapID::Vizunah_Square_Foreign_Quarter_outpost,
+	"Vizunah Square (Local)", L"vizunahsquare(local)", GW::Constants::MapID::Vizunah_Square_Local_Quarter_outpost,
+	"Vlox's Falls", L"vloxsfalls", GW::Constants::MapID::Vloxs_Falls,
+	"Wehhan Terraces", L"wehhanterraces", GW::Constants::MapID::Wehhan_Terraces_outpost,
+	"Wilds, The", L"wilds, The", GW::Constants::MapID::The_Wilds,
+	"Yahnur Market", L"yahnurmarket", GW::Constants::MapID::Yahnur_Market_outpost,
+	"Yak's Bend", L"yaksbend", GW::Constants::MapID::Yaks_Bend_outpost,
+	"Yohlon Haven", L"yohlonhaven", GW::Constants::MapID::Yohlon_Haven_outpost,
+	"Zaishen Challenge", L"zaishenchallenge", GW::Constants::MapID::Zaishen_Challenge_outpost,
+	"Zaishen Elite", L"zaishenelite", GW::Constants::MapID::Zaishen_Elite_outpost,
+	"Zaishen Menagerie", L"zaishenmenagerie", GW::Constants::MapID::Zaishen_Menagerie_outpost,
+	"Zen Daijun", L"zendaijun", GW::Constants::MapID::Zen_Daijun_outpost_mission,
+	"Zin Ku Corridor", L"zinkucorridor", GW::Constants::MapID::Zin_Ku_Corridor_outpost,
+	"Zos Shivros Channel", L"zosshivroschannel", GW::Constants::MapID::Zos_Shivros_Channel,
+};
+
+static bool Special_StrStartsWith(const wchar_t *str, const wchar_t *pre)
+{
+	for (;;) {
+		if (*pre == 0)
+			break;
+		if (*str == 0)
+			return false;
+		if (*pre == L' ' || *pre == L'\'')
+			continue;
+		if (towlower(*pre) != *str)
+			return false;
+		pre++;
+		str++;
+	}
+	return true;
+}
+
+GW::Constants::MapID ChatCommands::MatchMapPrefix(const wchar_t *map_name)
+{
+	size_t array_size = sizeof(teleport_search_map) / sizeof(teleport_search_map[0]);
+	for (size_t i = 0; i < array_size; i++) {
+		if (Special_StrStartsWith(teleport_search_map[i].sname, map_name)) {
+			size_t count = 1;
+			for (size_t j = i + 1; j < array_size; j++) {
+				if (Special_StrStartsWith(teleport_search_map[j].sname, map_name))
+					count++;
+				else
+					break;
+			}
+
+			if (count == 1) {
+				return teleport_search_map[i].map_id;
+			} else {
+				std::stringstream ss;
+				size_t max_count = std::min<size_t>(4, count);
+				for (size_t j = i; j < i + max_count - 1; j++)
+					ss << teleport_search_map[j].name << ", ";
+				if (max_count < count)
+					ss << teleport_search_map[i + max_count - 1].name << ", ...";
+				else
+					ss << teleport_search_map[i + max_count - 1].name << ".";
+				std::string s = ss.str();
+				Log::Info("Ambiguous prefix because of %s", s.c_str());
+				return GW::Constants::MapID::None;
+			}
+			break;
+		}
+	}
+
+	Log::Error("No map were found with the prefix '%S'", map_name);
+	return GW::Constants::MapID::None;
 }
