@@ -340,14 +340,6 @@ void ObjectiveTimerWindow::AddUrgozObjectiveSet() {
 	monitor_doors = true;
 }
 void ObjectiveTimerWindow::AddDeepObjectiveSet() {
-    // object_id's for doors opening.
-    // Room 1 Complete = Room 5 open = 12669 + 11692
-    // Room 2 Complete = Room 5 open = 54552 + 1760
-    // Room 3 Complete = Room 5 open = 45425 + 48290
-    // Room 4 Complete = Room 5 open = 40330 + 60114
-    // Room 5 Complete = Room 6 open = 29594
-    // Room 6 Complete = Room 7 open = 49742
-    // Room 7 Complete = Room 8 open = 55680
     ObjectiveTimerWindow::ObjectiveSet* os = new ObjectiveSet;
     ::AsyncGetMapName(os->name, sizeof(os->name));
     os->objectives.emplace_back(1, "Room 1 | Soothing");
@@ -505,7 +497,7 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9* pDevice) {
     if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
         return ImGui::End();
     if (objective_sets.empty()) {
-        ImGui::Text("Enter DoA, FoW, UW or Urgoz to begin");
+        ImGui::Text("Enter DoA, FoW, UW, Deep or Urgoz to begin");
         return ImGui::End();
     }
     for (auto& it = objective_sets.rbegin(); it != objective_sets.rend(); it++) {
