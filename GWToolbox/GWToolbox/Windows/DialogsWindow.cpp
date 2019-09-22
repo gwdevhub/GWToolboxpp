@@ -126,7 +126,7 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
 				GW::Agents::SendDialog(IndexToDialogID(dialogindex));
 			}
 
-			static bool hex = false;
+			static bool hex = true;
 			static char customdialogbuf[64] = "";
 			if (ImGui::Button(hex ? "Hex" : "Dec", ImVec2(32.0f, 0))) {
 				int id;

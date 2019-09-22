@@ -60,6 +60,8 @@ private:
 
 	static std::vector<ToolboxUIElement*> MatchingWindows(const wchar_t *message, int argc, LPWSTR *argv);
 
+	static GW::Constants::MapID MatchMapPrefix(const wchar_t *map_name);
+
 	float cam_speed = DEFAULT_CAM_SPEED;
 	bool forward_fix_z = true;
 

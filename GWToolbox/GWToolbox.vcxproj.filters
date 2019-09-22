@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="imgui">
@@ -90,9 +90,6 @@
     </Filter>
     <Filter Include="Windows\Notepad">
       <UniqueIdentifier>{f2c5506d-d857-49bc-a04c-fda72918c542}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Modules\LUACommands">
-      <UniqueIdentifier>{d96b2770-9882-4e70-bd22-7c1e640d9f0f}</UniqueIdentifier>
     </Filter>
     <Filter Include="Resources">
       <UniqueIdentifier>{554c14f1-8688-4e1d-a4db-5e272596d3e3}</UniqueIdentifier>
@@ -197,6 +194,27 @@
     <ClInclude Include="GWToolbox\Windows\Pcons.h">
       <Filter>Windows\Pcons</Filter>
     </ClInclude>
+    <ClInclude Include="GWToolbox\Modules\ChatCommands.h">
+      <Filter>Modules\ChatCommands</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Modules\ChatFilter.h">
+      <Filter>Modules\ChatFilter</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Modules\GameSettings.h">
+      <Filter>Modules\GameSettings</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Modules\Resources.h">
+      <Filter>Modules\Resources</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Modules\ToolboxTheme.h">
+      <Filter>Modules\Theme</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Modules\ToolboxSettings.h">
+      <Filter>Modules\ToolboxSettings</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Modules\Updater.h">
+      <Filter>Modules\Updater</Filter>
+    </ClInclude>
     <ClInclude Include="GWToolbox\Windows\BuildsWindow.h">
       <Filter>Windows\Builds</Filter>
     </ClInclude>
@@ -267,30 +285,6 @@
     <ClInclude Include="GWToolbox\Windows\FactionLeaderboardWindow.h" />
     <ClInclude Include="GWToolbox\stdafx.h" />
     <ClInclude Include="GWToolbox\Windows\DailyQuests.h" />
-    <ClInclude Include="GWToolbox\Modules\ChatCommands.h">
-      <Filter>Modules\ChatCommands</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\Modules\ChatFilter.h">
-      <Filter>Modules\ChatFilter</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\Modules\GameSettings.h">
-      <Filter>Modules\GameSettings</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\Modules\LUAInterface.h">
-      <Filter>Modules\LUACommands</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\Modules\Resources.h">
-      <Filter>Modules\Resources</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\Modules\ToolboxSettings.h">
-      <Filter>Modules\ToolboxSettings</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\Modules\ToolboxTheme.h">
-      <Filter>Modules\Theme</Filter>
-    </ClInclude>
-    <ClInclude Include="GWToolbox\Modules\Updater.h">
-      <Filter>Modules\Updater</Filter>
-    </ClInclude>
     <ClInclude Include="GWToolbox\Windows\DoorMonitorWindow.h" />
     <ClInclude Include="GWToolbox\Windows\PacketLoggerWindow.h" />
     <ClInclude Include="GWToolbox\Windows\SkillListingWindow.h" />
@@ -357,6 +351,27 @@
     </ClCompile>
     <ClCompile Include="GWToolbox\Windows\Pcons.cpp">
       <Filter>Windows\Pcons</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Modules\ChatCommands.cpp">
+      <Filter>Modules\ChatCommands</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Modules\ChatFilter.cpp">
+      <Filter>Modules\ChatFilter</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Modules\GameSettings.cpp">
+      <Filter>Modules\GameSettings</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Modules\Resources.cpp">
+      <Filter>Modules\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Modules\ToolboxTheme.cpp">
+      <Filter>Modules\Theme</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Modules\ToolboxSettings.cpp">
+      <Filter>Modules\ToolboxSettings</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Modules\Updater.cpp">
+      <Filter>Modules\Updater</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\Windows\BuildsWindow.cpp">
       <Filter>Windows\Builds</Filter>
@@ -429,30 +444,6 @@
     <ClCompile Include="GWToolbox\Windows\FactionLeaderboardWindow.cpp" />
     <ClCompile Include="GWToolbox\stdafx.cpp" />
     <ClCompile Include="GWToolbox\Windows\DailyQuests.cpp" />
-    <ClCompile Include="GWToolbox\Modules\ChatCommands.cpp">
-      <Filter>Modules\ChatCommands</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\Modules\ChatFilter.cpp">
-      <Filter>Modules\ChatFilter</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\Modules\GameSettings.cpp">
-      <Filter>Modules\GameSettings</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\Modules\LUAInterface.cpp">
-      <Filter>Modules\LUACommands</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\Modules\Resources.cpp">
-      <Filter>Modules\Resources</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\Modules\ToolboxSettings.cpp">
-      <Filter>Modules\ToolboxSettings</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\Modules\ToolboxTheme.cpp">
-      <Filter>Modules\Theme</Filter>
-    </ClCompile>
-    <ClCompile Include="GWToolbox\Modules\Updater.cpp">
-      <Filter>Modules\Updater</Filter>
-    </ClCompile>
     <ClCompile Include="GWToolbox\Windows\DoorMonitorWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\PacketLoggerWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\SkillListingWindow.cpp" />
@@ -611,11 +602,5 @@
     <Image Include="..\resources\bonds\Holy_Veil.png">
       <Filter>Resources\bonds</Filter>
     </Image>
-    <Image Include="..\resources\pcons\Honeycomb.png" />
-    <Image Include="bitmap1.bmp" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\resources\pcons\rcdata1.bin" />
-    <None Include="..\resources\pcons\rcdata2.bin" />
   </ItemGroup>
 </Project>
