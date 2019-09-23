@@ -98,17 +98,21 @@ private:
 
         void Update();
         // todo: print to file
-
+		// an internal id to ensure interface consistency
+		const unsigned int ui_id = 0;
     private:
-        // an internal id to ensure interface consistency
-        const unsigned int ui_id = 0;	
+
         static unsigned int cur_ui_id;
     };
 
     std::vector<ObjectiveSet *> objective_sets;
 
     Objective* GetCurrentObjective(uint32_t obj_id);
+	ObjectiveSet* GetCurrentObjectiveSet();
 	bool monitor_doors = false;
+	bool show_current_run_window = false;
+	bool clear_cached_times = false;
+	bool auto_send_age = false;
 
     void AddDoAObjectiveSet(GW::Vec2f spawn);
     void AddFoWObjectiveSet();

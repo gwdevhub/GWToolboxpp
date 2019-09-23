@@ -117,7 +117,7 @@ namespace {
         return (65.0f * ImGui::GetIO().FontGlobalScale);
     }
     float GetLabelWidth() {
-        return std::max(GetTimestampWidth(),ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().WindowPadding.x - ((GetTimestampWidth() + ImGui::GetStyle().ItemInnerSpacing.x) * n_columns));
+        return std::max(GetTimestampWidth(),ImGui::GetWindowContentRegionWidth() - (GetTimestampWidth() * n_columns));
     }
 }
 
@@ -352,13 +352,13 @@ void ObjectiveTimerWindow::AddDeepObjectiveSet() {
     os->objectives.emplace_back(5, "Room 5 | Pain");
     os->objectives.emplace_back(RoomID::Deep_room_5, "Room 6 | Lethargy");
 	os->objectives.emplace_back(RoomID::Deep_room_6, "Room 7 | Depletion");
-	os->objectives.emplace_back(RoomID::Deep_room_7, "Room 8 | Failure");
-	os->objectives.emplace_back(RoomID::Deep_room_9, "Room 9 | Shadows"); // TODO: Maybe trigger on leviathan spawn
+    // 8 and 9 together because theres no boundary between
+	os->objectives.emplace_back(RoomID::Deep_room_7, "Room 8-9 | Failure/Shadows");
 	os->objectives.emplace_back(RoomID::Deep_room_10, "Room 10 | Scorpion"); // Trigger on dialog
 	os->objectives.emplace_back(RoomID::Deep_room_11, "Room 11 | Fear"); // Trigger bottom door first spawn
 	os->objectives.emplace_back(RoomID::Deep_room_12, "Room 12 | Depletion"); // Trigger on dialog
-	os->objectives.emplace_back(RoomID::Deep_room_13, "Room 13 | Decay"); // Trigger on dialog
-	os->objectives.emplace_back(RoomID::Deep_room_14, "Room 14 | Torment"); // Trigger on dialog
+    // 13 and 14 together because theres no boundary between
+	os->objectives.emplace_back(RoomID::Deep_room_13, "Room 13-14 | Decay/Torment"); // Trigger on dialog
     os->objectives.emplace_back(RoomID::Deep_room_15, "Room 15 | Kanaxai");
     objective_sets.push_back(os);
 	monitor_doors = true;
@@ -371,40 +371,46 @@ void ObjectiveTimerWindow::DoorOpened(uint32_t door_id) {
 	uint32_t objective_to_start = door_id;
 	uint32_t objective_to_end = 0;
 	switch (GW::Map::GetMapID()) {
-	case GW::Constants::MapID::Urgozs_Warren:
-		break;
-	case GW::Constants::MapID::The_Deep:
-		// For deep, rooms 1-4 can be opened in any order. Only tick all preceeding rooms if we're room 6 door or beyond
-		switch (door_id) {
-				// For deep rooms 1-4, any of these doors mean that room 5 is open
-			case RoomID::Deep_room_1_second:
-			case RoomID::Deep_room_1_first:
-				objective_to_end = 1;
-				objective_to_start = 5;
-				tick_all_preceeding_objectives = false;
-				break;
-			case RoomID::Deep_room_2_second:
-			case RoomID::Deep_room_2_first:
-				objective_to_end = 2;
-				objective_to_start = 5;
-				tick_all_preceeding_objectives = false;
-				break;
-			case RoomID::Deep_room_3_second:
-			case RoomID::Deep_room_3_first:
-				objective_to_end = 3;
-				objective_to_start = 5;
-				tick_all_preceeding_objectives = false;
-				break;
-			case RoomID::Deep_room_4_second:
-			case RoomID::Deep_room_4_first:
-				objective_to_end = 4;
-				objective_to_start = 5;
-				tick_all_preceeding_objectives = false;
-				break;
-		}
-		break;
-	default:
-		return;
+	    case GW::Constants::MapID::Urgozs_Warren:
+            switch (door_id) {
+                case 45631: // Urgoz left door
+                case 53071: // Urgoz right door
+                    objective_to_start = 15529;
+                    break;
+                }
+		    break;
+	    case GW::Constants::MapID::The_Deep:
+		    // For deep, rooms 1-4 can be opened in any order. Only tick all preceeding rooms if we're room 6 door or beyond
+		    switch (door_id) {
+				    // For deep rooms 1-4, any of these doors mean that room 5 is open
+			    case RoomID::Deep_room_1_second:
+			    case RoomID::Deep_room_1_first:
+				    objective_to_end = 1;
+				    objective_to_start = 5;
+				    tick_all_preceeding_objectives = false;
+				    break;
+			    case RoomID::Deep_room_2_second:
+			    case RoomID::Deep_room_2_first:
+				    objective_to_end = 2;
+				    objective_to_start = 5;
+				    tick_all_preceeding_objectives = false;
+				    break;
+			    case RoomID::Deep_room_3_second:
+			    case RoomID::Deep_room_3_first:
+				    objective_to_end = 3;
+				    objective_to_start = 5;
+				    tick_all_preceeding_objectives = false;
+				    break;
+			    case RoomID::Deep_room_4_second:
+			    case RoomID::Deep_room_4_first:
+				    objective_to_end = 4;
+				    objective_to_start = 5;
+				    tick_all_preceeding_objectives = false;
+				    break;
+		    }
+		    break;
+	    default:
+		    return;
 	}
 	if (objective_to_end) {
 		Objective* obj = GetCurrentObjective(objective_to_end);
@@ -490,33 +496,62 @@ void ObjectiveTimerWindow::Update(float delta) {
     }
 }
 void ObjectiveTimerWindow::Draw(IDirect3DDevice9* pDevice) {
-	if (!visible) return;
+	// Main objective timer window
+	if (visible) {
+		ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
+		ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
+		if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
+			if (objective_sets.empty()) {
+				ImGui::Text("Enter DoA, FoW, UW, Deep or Urgoz to begin");
+			}
+			else {
+				for (auto& it = objective_sets.rbegin(); it != objective_sets.rend(); it++) {
+					bool show = (*it)->Draw();
+					if (!show) {
+						objective_sets.erase(--(it.base()));
+						break;
+						// iterators go crazy, don't even bother, we're skipping a frame. NBD.
+						// if you really want to draw the rest make sure you extensively test this.
+					}
+				}
+			}
+		}
+		ImGui::End();
+	}
 
-	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-	ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
-    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
-        return ImGui::End();
-    if (objective_sets.empty()) {
-        ImGui::Text("Enter DoA, FoW, UW, Deep or Urgoz to begin");
-        return ImGui::End();
-    }
-    for (auto& it = objective_sets.rbegin(); it != objective_sets.rend(); it++) {
-        bool show = (*it)->Draw();
-        if (!show) {
-            objective_sets.erase(--(it.base()));
-            break;
-            // iterators go crazy, don't even bother, we're skipping a frame. NBD.
-            // if you really want to draw the rest make sure you extensively test this.
-        }
-    }
-	ImGui::End();
+	// Breakout objective set for current run
+	if (show_current_run_window) {
+		ObjectiveSet* o = GetCurrentObjectiveSet();
+		if (o) {
+			ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
+			ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
+			char buf[256];
+			sprintf(buf, "%s - %s###ObjectiveTimerCurrentRun", o->name, o->cached_time ? o->cached_time : "--:--");
+			
+			if (ImGui::Begin(buf, &show_current_run_window, GetWinFlags())) {
+				ImGui::PushID(o->ui_id);
+				for (Objective& objective : o->objectives) {
+					objective.Draw();
+				}
+				ImGui::PopID();
+			}
+			
+			ImGui::End();
+		}
+	}
+}
+
+ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::GetCurrentObjectiveSet() {
+	if (objective_sets.empty()) return nullptr;
+	ObjectiveTimerWindow::ObjectiveSet* o = objective_sets.back();
+	if (!o || !o->active) return nullptr;
+	return o;
 }
 
 ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::GetCurrentObjective(uint32_t obj_id) {
-    if (objective_sets.empty()) return nullptr;
-    if (!objective_sets.back()->active) return nullptr;
-
-    for (Objective& objective : objective_sets.back()->objectives) {
+	ObjectiveTimerWindow::ObjectiveSet* o = GetCurrentObjectiveSet();
+	if (!o) return nullptr;
+    for (Objective& objective : o->objectives) {
         if (objective.id == obj_id) {
             return &objective;
         }
@@ -525,10 +560,13 @@ ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::GetCurrentObjective(uint3
 }
 
 void ObjectiveTimerWindow::DrawSettingInternal() {
-    ImGui::Checkbox("Show second decimal", &show_decimal);
+	clear_cached_times = ImGui::Checkbox("Show second decimal", &show_decimal);
     ImGui::Checkbox("Show 'Start' column", &show_start_column);
     ImGui::Checkbox("Show 'End' column", &show_end_column);
     ImGui::Checkbox("Show 'Time' column", &show_time_column);
+	ImGui::Checkbox("Show current run in separate window", &show_current_run_window);
+	ImGui::Checkbox("Automatic /age on completion", &auto_send_age);
+	ImGui::ShowHelp("As soon as final objective is complete, send /age command to game server to receive server-side completion time.");
     ComputeNColumns();
 }
 
@@ -538,6 +576,8 @@ void ObjectiveTimerWindow::LoadSettings(CSimpleIni* ini) {
     show_start_column = ini->GetBoolValue(Name(), VAR_NAME(show_start_column), show_start_column);
     show_end_column = ini->GetBoolValue(Name(), VAR_NAME(show_end_column), show_end_column);
     show_time_column = ini->GetBoolValue(Name(), VAR_NAME(show_time_column), show_time_column);
+	show_current_run_window = ini->GetBoolValue(Name(), VAR_NAME(show_current_run_window), show_current_run_window);
+	auto_send_age = ini->GetBoolValue(Name(), VAR_NAME(auto_send_age), auto_send_age);
     ComputeNColumns();
 }
 
@@ -547,6 +587,8 @@ void ObjectiveTimerWindow::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(show_start_column), show_start_column);
     ini->SetBoolValue(Name(), VAR_NAME(show_end_column), show_end_column);
     ini->SetBoolValue(Name(), VAR_NAME(show_time_column), show_time_column);
+	ini->SetBoolValue(Name(), VAR_NAME(show_current_run_window), show_current_run_window);
+	ini->SetBoolValue(Name(), VAR_NAME(auto_send_age), auto_send_age);
 }
 
 ObjectiveTimerWindow::Objective::Objective(uint32_t _id, const char* _name) {
@@ -593,10 +635,20 @@ void ObjectiveTimerWindow::Objective::Update() {
         PrintTime(cached_duration, sizeof(cached_duration), TIME_UNKNOWN);
     } else if (done == TIME_UNKNOWN) {
         PrintTime(cached_duration, sizeof(cached_duration), GW::Map::GetInstanceTime() - start);
-    }
+	} 
+	if (ObjectiveTimerWindow::Instance().clear_cached_times) {
+		switch (status) {
+			case Completed:
+				PrintTime(cached_done, sizeof(cached_done), done);
+			case Started:
+				PrintTime(cached_start, sizeof(cached_start), start);
+				if(duration)
+					PrintTime(cached_duration, sizeof(cached_duration), duration ? duration : GW::Map::GetInstanceTime() - start);
+				break;
+		}
+	}
 }
 void ObjectiveTimerWindow::Objective::Draw() {
-
     switch (status) {
     case ObjectiveTimerWindow::Objective::NotStarted:
         ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
@@ -618,7 +670,7 @@ void ObjectiveTimerWindow::Objective::Draw() {
     float label_width = GetLabelWidth();
     if (ImGui::Button(name, ImVec2(label_width, 0))) {
         char buf[256];
-        snprintf(buf, 256, "[%s] ~ Start: %s ~ End: %s ~ Time: %s",
+		sprintf(buf,"[%s] ~ Start: %s ~ End: %s ~ Time: %s",
             name, cached_start, cached_done, cached_duration);
         GW::Chat::SendChat('#', buf);
     }
@@ -642,7 +694,7 @@ void ObjectiveTimerWindow::Objective::Draw() {
         ImGui::Text(cached_done); //ImGui::InputText("##end", cached_done, sizeof(cached_done), ImGuiInputTextFlags_ReadOnly);
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("End");
-        offset += ts_width;
+        offset += ts_width + style.ItemSpacing.x;
         //ImGui::SameLine();//ImGui::SameLine(offset += ts_width + style.ItemInnerSpacing.x, -1);
     }
     if (show_time_column) {
@@ -676,6 +728,8 @@ void ObjectiveTimerWindow::ObjectiveSet::CheckSetDone() {
     }
     if (done) {
         active = false;
+		if (ObjectiveTimerWindow::Instance().auto_send_age)
+			GW::Chat::SendChat('/', "age");
     }
 }
 
@@ -686,7 +740,7 @@ ObjectiveTimerWindow::ObjectiveSet::ObjectiveSet() : ui_id(cur_ui_id++) {
 
 bool ObjectiveTimerWindow::ObjectiveSet::Draw() {
     char buf[256];
-    snprintf(buf, sizeof(buf), "%s - %s###header%d", name, cached_time ? cached_time : "--:--", ui_id);
+    sprintf(buf, "%s - %s###header%d", name, cached_time ? cached_time : "--:--", ui_id);
 
     bool is_open = true;
     const auto& style = ImGui::GetStyle();
@@ -694,19 +748,6 @@ bool ObjectiveTimerWindow::ObjectiveSet::Draw() {
     float ts_width = GetTimestampWidth();
     if (ImGui::CollapsingHeader(buf, &is_open, ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::PushID(ui_id);
-        /*offset = style.WindowPadding.x + GetLabelWidth() + style.ItemInnerSpacing.x + ImGui::GetCurrentWindow()->DC.GroupOffset.x - GetTimestampWidth() - style.ItemInnerSpacing.x;
-        if (show_start_column) {
-            ImGui::SameLine(offset += GetTimestampWidth() + style.ItemInnerSpacing.x);
-            ImGui::Text("Start");
-        }
-        if (show_end_column) {
-            ImGui::SameLine(offset += GetTimestampWidth() + style.ItemInnerSpacing.x);
-            ImGui::Text("End");
-        }
-        if (show_time_column) {
-            ImGui::SameLine(offset += GetTimestampWidth() + style.ItemInnerSpacing.x);
-            ImGui::Text("Time");
-        }*/
         for (Objective& objective : objectives) {
             objective.Draw();
         }

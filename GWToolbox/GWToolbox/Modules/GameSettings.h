@@ -187,7 +187,7 @@ public:
 	bool auto_url = false;
 	// bool select_with_chat_doubleclick = false;
 	bool move_item_on_ctrl_click = false;
-	bool move_item_to_current_storage_pane = false;
+	bool move_item_to_current_storage_pane = true;
 
 	bool flash_window_on_pm = true;
 	bool flash_window_on_party_invite = true;
@@ -198,7 +198,7 @@ public:
     bool focus_window_on_trade = false;
     bool flash_window_on_name_ping = true;
 
-    bool auto_return_on_defeat = true;
+	bool auto_return_on_defeat = false;
 
 	bool auto_set_away = false;
 	int auto_set_away_delay = 10;
@@ -227,8 +227,8 @@ public:
     bool notify_when_players_join_outpost = false;
     bool notify_when_players_leave_outpost = false;
 
-	bool notify_when_party_member_leaves = true;
-	bool notify_when_party_member_joins = true;
+	bool notify_when_party_member_leaves = false;
+	bool notify_when_party_member_joins = false;
 
 	bool disable_gold_selling_confirmation = false;
 
@@ -259,9 +259,9 @@ private:
 	bool was_leading = true;
 	bool check_message_on_party_change = true;
 
-    bool npc_speech_bubbles_as_chat = true;
+    bool npc_speech_bubbles_as_chat = false;
     bool emulated_speech_bubble = false;
-    bool redirect_npc_messages_to_emote_chat = true;
+    bool redirect_npc_messages_to_emote_chat = false;
     
 	void DrawChannelColor(const char *name, GW::Chat::Channel chan);
 	static void FriendStatusCallback(GW::Friend* f, GW::FriendStatus status, const wchar_t *name, const wchar_t *charname);
