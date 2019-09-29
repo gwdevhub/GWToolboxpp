@@ -154,7 +154,7 @@ void ObjectiveTimerWindow::Initialize() {
             for (Objective& objective : os->objectives) {
                 objective.SetDone();
             }
-            os->active = false;
+			os->CheckSetDone();
             return false;
         });
 	GW::StoC::AddCallback<GW::Packet::StoC::DisplayDialogue>(
