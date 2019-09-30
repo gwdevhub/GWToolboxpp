@@ -44,7 +44,7 @@ namespace {
         IRCModule* module = &IRCModule::Instance();
         IRC* irc_conn = (IRC*)conn;
         char buf[128];
-        Log::Log("%s: Connected %s", module->irc_alias, params);
+        Log::Log("%s: Connected %s", module->irc_alias.c_str(), params);
         sprintf(buf, "#%s", module->irc_channel.c_str());
         irc_conn->join(buf);
         return 0;
@@ -110,7 +110,7 @@ void IRCModule::AddHooks() {
 		}
 		else {
 			irc_reply_data d;
-			d.nick = irc_username.data();
+			d.nick = const_cast<char*>(irc_username.c_str());
 			OnMessage(content.c_str(), &d, &conn);
 		}
 		return true;
@@ -136,7 +136,13 @@ bool IRCModule::Connect() {
         printf("Invalid username!\n");
         return false;
     }
-    if (conn.start(irc_server.data(),irc_port, irc_username.data(), irc_username.data(), irc_username.data(), irc_password.data()) != 0) {
+    if (conn.start(
+		const_cast<char*>(irc_server.c_str()),
+		irc_port, 
+		const_cast<char*>(irc_username.c_str()), 
+		const_cast<char*>(irc_username.c_str()), 
+		const_cast<char*>(irc_username.c_str()), 
+		const_cast<char*>(irc_password.c_str())) != 0) {
         printf("IRC::start failed!\n");
         return false;
     }
@@ -172,15 +178,15 @@ void IRCModule::DrawSettingInternal() {
     ImGui::Checkbox("Notify on user leave", &notify_on_user_leave);
     ImGui::SameLine();
     ImGui::Checkbox("Notify on user join", &notify_on_user_join);
-    ImGui::InputText("IRC Alias", irc_alias.data(), 32);
+    ImGui::InputText("IRC Alias", const_cast<char*>(irc_alias.c_str()), 32);
     ImGui::ShowHelp("Sending a whisper to the IRC Alias will send the message to the IRC Channel.\nCannot contain spaces.");
 
-    ImGui::InputText("IRC Server", irc_server.data(), 255);
-    ImGui::InputText("IRC Username", irc_username.data(), 32);
-    ImGui::InputText("IRC Password", irc_password.data(), 255, show_irc_password ? 0 : ImGuiInputTextFlags_Password);
+    ImGui::InputText("IRC Server", const_cast<char*>(irc_server.c_str()), 255);
+    ImGui::InputText("IRC Username", const_cast<char*>(irc_username.c_str()), 32);
+    ImGui::InputText("IRC Password", const_cast<char*>(irc_password.c_str()), 255, show_irc_password ? 0 : ImGuiInputTextFlags_Password);
     ImGui::SameLine();
     ImGui::Checkbox("Show", &show_irc_password);    
-    ImGui::InputText("IRC Channel", irc_channel.data(), 56);
+    ImGui::InputText("IRC Channel", const_cast<char*>(irc_channel.c_str()), 56);
 }
 void IRCModule::LoadSettings(CSimpleIni* ini) {
     ToolboxModule::LoadSettings(ini);
