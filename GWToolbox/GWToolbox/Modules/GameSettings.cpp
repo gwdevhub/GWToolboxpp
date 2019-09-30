@@ -421,36 +421,7 @@ namespace {
     struct PendingSendChatMessage {};
 }
 
-typedef void(__fastcall* OnStartWhisper_pt)(uint32_t unk1, wchar_t* name, wchar_t* name2);
-OnStartWhisper_pt OnStartWhisper_Func;
-OnStartWhisper_pt OnStartWhisperRet;
 
-void __fastcall OnStartWhisper(uint32_t unk1, wchar_t* name, wchar_t* name2) {
-    GW::HookBase::EnterHook();
-    // Open links on click
-    if (GameSettings::Instance().openlinks && name && (!wcsncmp(name, L"http://", 7) || !wcsncmp(name, L"https://", 8))) {
-        ShellExecuteW(NULL, L"open", name, NULL, NULL, SW_SHOWNORMAL);
-        GW::HookBase::LeaveHook();
-        return;
-    }
-    // Ctrl click name to target
-    if (name && ImGui::GetIO().KeysDown[VK_CONTROL]) {
-        if (ImGui::GetIO().KeysDown[VK_SHIFT] && GW::PartyMgr::GetPlayerIsLeader()) {
-            wchar_t buf[64];
-            swprintf(buf, 64, L"invite %ls", name);
-            GW::Chat::SendChat('/', buf);
-        }
-        GW::Player* player = GW::PlayerMgr::GetPlayerByName(name);
-        if (player && GW::Agents::GetAgentByID(player->agent_id)) {
-            GW::Agents::ChangeTarget(player->agent_id);
-        }
-        GW::HookBase::LeaveHook();
-        return;
-    }
-    // Default fallback
-    OnStartWhisperRet(unk1, name, name2);
-    GW::HookBase::LeaveHook();
-}
 
 typedef void(__fastcall* OnPingEqippedItem_pt)(uint32_t unk1, uint32_t item_id1, uint32_t item_id2);
 OnPingEqippedItem_pt OnPingEquippedItem_Func;
@@ -549,9 +520,31 @@ const bool PendingChatMessage::PrintMessage() {
     return printed;
 };
 
+
+
 void GameSettings::Initialize() {
 	ToolboxModule::Initialize();
-
+	// Open links on player name click
+	// Ctrl click name to target (and add to party)
+	// Ctrl+shift to invite to party
+	GW::Chat::AddStartWhisperCallback([&](wchar_t* name) -> bool {
+		if (openlinks && name && (!wcsncmp(name, L"http://", 7) || !wcsncmp(name, L"https://", 8))) {
+			ShellExecuteW(NULL, L"open", name, NULL, NULL, SW_SHOWNORMAL);
+			return true;
+		}
+		if (!name || !ImGui::GetIO().KeysDown[VK_CONTROL])
+			return false;
+		if (ImGui::GetIO().KeysDown[VK_SHIFT] && GW::PartyMgr::GetPlayerIsLeader()) {
+			wchar_t buf[64];
+			swprintf(buf, 64, L"invite %ls", name);
+			GW::Chat::SendChat('/', buf);
+		}
+		GW::Player* player = GW::PlayerMgr::GetPlayerByName(name);
+		if (player && GW::Agents::GetAgentByID(player->agent_id)) {
+			GW::Agents::ChangeTarget(player->agent_id);
+		}
+		return true;
+	});
 	{
 		// Patch that allow storage page (and Anniversary page) to work... (ask Ziox for more info)
 		uintptr_t found = GW::Scanner::Find("\xEB\x00\x33\xC0\xBE\x06", "x?xxxx", -4);
@@ -805,13 +798,7 @@ void GameSettings::Initialize() {
 
 	GW::FriendListMgr::SetOnFriendStatusCallback(GameSettings::FriendStatusCallback);
 
-    // Hook for turning player name links into hyperlinks.
-    OnStartWhisper_Func = (OnStartWhisper_pt)GW::Scanner::Find("\x55\x8B\xEC\x51\x53\x56\x8B\xF1\x57\xBA\x05\x00\x00\x00", "xxxxxxxxxxxxxx", 0);
-    printf("[SCAN] OnStartWhisper = %p\n", OnStartWhisper_Func);
-    if (OnStartWhisper_Func) {
-        GW::HookBase::CreateHook(OnStartWhisper_Func, OnStartWhisper, (void**)& OnStartWhisperRet);
-        GW::HookBase::EnableHooks(OnStartWhisper_Func);
-    }
+
 
     OnPingEquippedItem_Func = (OnPingEqippedItem_pt)GW::Scanner::Find("\x8D\x4D\xF0\xC7\x45\xF0\x2B", "xxxxxxx", -0xC); // NOTE: 0x2B is CtoS header
     printf("[SCAN] OnPingEquippedItem = %p\n", OnPingEquippedItem_Func);
@@ -1058,10 +1045,6 @@ void GameSettings::Terminate() {
 		gold_confirm_patch->TooglePatch(false);
 		delete gold_confirm_patch;
 	}
-    if (OnStartWhisper_Func) {
-        GW::HookBase::DisableHooks(OnStartWhisper_Func);
-        GW::HookBase::RemoveHook(OnStartWhisper_Func);
-    }
     if (OnPingEquippedItem_Func) {
         GW::HookBase::DisableHooks(OnPingEquippedItem_Func);
         GW::HookBase::RemoveHook(OnPingEquippedItem_Func);
