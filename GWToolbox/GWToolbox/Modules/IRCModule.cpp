@@ -18,7 +18,7 @@
 namespace {
     int OnJoin(const char* params, irc_reply_data* hostd, void* conn) {
         IRCModule* module = &IRCModule::Instance();
-        if (!params[0] || !module->show_messages || !module->notify_on_viewer_join)
+        if (!params[0] || !module->show_messages || !module->notify_on_user_join)
             return 0; // Empty msg
         wchar_t buf[600];
         swprintf(buf, 599, L"<a=1>%S</a>: %S joined your channel.", module->irc_alias.c_str(), hostd->nick);
@@ -30,7 +30,7 @@ namespace {
     }
     int OnLeave(const char* params, irc_reply_data* hostd, void* conn) {
         IRCModule* module = &IRCModule::Instance();
-        if (!params[0] || !module->show_messages || !module->notify_on_viewer_leave)
+        if (!params[0] || !module->show_messages || !module->notify_on_user_leave)
             return 0; // Empty msg
         wchar_t buf[600];
         swprintf(buf, 599, L"<a=1>%S</a>: %S left your channel.", module->irc_alias.c_str(), hostd->nick);
