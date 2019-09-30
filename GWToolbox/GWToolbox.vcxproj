@@ -115,10 +115,12 @@
     <ClInclude Include="GWToolbox\Defines.h" />
     <ClInclude Include="GWToolbox\ImGuiAddons.h" />
     <ClInclude Include="GWToolbox\imgui_impl_dx9.h" />
+    <ClInclude Include="GWToolbox\IRC.h" />
     <ClInclude Include="GWToolbox\Keys.h" />
     <ClInclude Include="GWToolbox\Modules\ChatCommands.h" />
     <ClInclude Include="GWToolbox\Modules\ChatFilter.h" />
     <ClInclude Include="GWToolbox\Modules\DiscordModule.h" />
+    <ClInclude Include="GWToolbox\Modules\IRCModule.h" />
     <ClInclude Include="GWToolbox\sha1.hpp" />
     <ClInclude Include="GWToolbox\Windows\PacketLoggerWindow.h" />
     <ClInclude Include="GWToolbox\Windows\DailyQuests.h" />
@@ -214,11 +216,13 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="GWToolbox\IRC.cc" />
     <ClCompile Include="GWToolbox\logger.cpp" />
     <ClCompile Include="GWToolbox\main.cpp" />
     <ClCompile Include="GWToolbox\Modules\ChatCommands.cpp" />
     <ClCompile Include="GWToolbox\Modules\ChatFilter.cpp" />
     <ClCompile Include="GWToolbox\Modules\DiscordModule.cpp" />
+    <ClCompile Include="GWToolbox\Modules\IRCModule.cpp" />
     <ClCompile Include="GWToolbox\sha1.cpp" />
     <ClCompile Include="GWToolbox\Windows\PacketLoggerWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\DailyQuests.cpp" />

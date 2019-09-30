@@ -58,4 +58,5 @@ private:
 	bool use_factionleaderboard = true;
     bool use_daily_quests = true;
     bool use_discord = true;
+	bool use_irc = true;
 };

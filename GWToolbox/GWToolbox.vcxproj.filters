@@ -293,6 +293,8 @@
     <ClInclude Include="..\Dependencies\discord_game_sdk\c\discord_game_sdk.h" />
     <ClInclude Include="GWToolbox\base64.h" />
     <ClInclude Include="GWToolbox\sha1.hpp" />
+    <ClInclude Include="GWToolbox\IRC.h" />
+    <ClInclude Include="GWToolbox\Modules\IRCModule.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -451,6 +453,8 @@
     <ClCompile Include="GWToolbox\Modules\DiscordModule.cpp" />
     <ClCompile Include="GWToolbox\base64.cpp" />
     <ClCompile Include="GWToolbox\sha1.cpp" />
+    <ClCompile Include="GWToolbox\IRC.cc" />
+    <ClCompile Include="GWToolbox\Modules\IRCModule.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GWToolbox.rc">
