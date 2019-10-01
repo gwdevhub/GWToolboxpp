@@ -20,6 +20,8 @@ namespace {
         IRCModule* module = &IRCModule::Instance();
         if (!params[0] || !module->show_messages || !module->notify_on_user_join)
             return 0; // Empty msg
+		if (strcmp(params, module->irc_username.c_str()) == 0)
+			return 0; // This is me.
         wchar_t buf[600];
         swprintf(buf, 599, L"<a=1>%S</a>: %S joined your channel.", module->irc_alias.c_str(), hostd->nick);
         GW::GameThread::Enqueue([buf]() {
