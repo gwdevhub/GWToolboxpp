@@ -122,6 +122,12 @@ void ChatFilter::Initialize() {
 		}
 		return true;
 	});
+	// Hide "You have been playing for..."
+	GW::Chat::AddPrintChatCallback([&](GW::Chat::Channel channel, wchar_t* str, FILETIME timestamp, int reprint) {
+		// 0x7bf4 0x10a 0x763 0x101 0x101 0x10a 0x766 0x1 0x1 = You have been playing for 1 hour.
+		// 0x7bf5 0x10a 0x763 0x101 0x101 0x10a 0x766 0x1 0x1 = You have been playing for 1 hour. Please take a break
+		return you_have_been_playing_for && (str[0] == 0x7BF4 || str[0] == 0x7BF5);
+	});
 }
 
 void ChatFilter::LoadSettings(CSimpleIni* ini) {
