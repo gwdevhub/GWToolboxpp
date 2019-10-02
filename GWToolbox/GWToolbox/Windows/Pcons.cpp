@@ -64,7 +64,7 @@ void Pcon::Draw(IDirect3DDevice9* device) {
 	ImVec4 bg = enabled ? ImColor(enabled_bg_color) : ImVec4(0, 0, 0, 0);
 	ImVec4 tint(1, 1, 1, 1);
 	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-	if (ImGui::ImageButton((ImTextureID)texture, s, uv0, uv1, -1, bg, tint)) {
+	if (ImGui::ImageButton((ImTextureID)texture, s, uv0, uv1, 0, bg, tint)) {
 		enabled = !enabled;
 		pcon_quantity_checked = false;
 	}
@@ -79,9 +79,9 @@ void Pcon::Draw(IDirect3DDevice9* device) {
 
 	ImVec2 nextPos = ImGui::GetCursorPos();
 
-	ImGui::SetCursorPos(ImVec2(pos.x + 3, pos.y + 3));
+	ImGui::SetCursorPos(ImVec2(pos.x + 1, pos.y + 1));
 	ImGui::TextColored(ImVec4(0, 0, 0, 1), "%d", quantity);
-	ImGui::SetCursorPos(ImVec2(pos.x + 2, pos.y + 2));
+	ImGui::SetCursorPos(ImVec2(pos.x, pos.y));
 	ImGui::TextColored(color, "%d", quantity);
 	ImGui::PopFont();
 

@@ -83,7 +83,7 @@ void ToolboxSettings::InitializeModules() {
     
 #endif
 #ifdef _DEBUG
-    //PacketLoggerWindow::Instance().Initialize();
+    PacketLoggerWindow::Instance().Initialize();
     StringDecoderWindow::Instance().Initialize();
 
 #endif

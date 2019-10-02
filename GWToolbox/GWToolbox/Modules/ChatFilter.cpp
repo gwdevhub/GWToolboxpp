@@ -90,7 +90,11 @@ void ChatFilter::Initialize() {
 
 		return false;
 	});
-
+	// Hide guild announcement. 
+	// NOTE: Don't block at packet level because its also used for editing the announcement in guild window.
+	GW::Chat::AddPrintChatCallback([&](GW::Chat::Channel channel, wchar_t* str, FILETIME timestamp, int reprint) {
+		return guild_announcement && str[0] == 0x314;
+	});
 	// local messages
 	GW::StoC::AddCallback<GW::Packet::StoC::MessageLocal>(
 		[this](GW::Packet::StoC::MessageLocal *pak) -> bool {
@@ -140,6 +144,7 @@ void ChatFilter::LoadSettings(CSimpleIni* ini) {
 	ally_pickup_common = ini->GetBoolValue(Name(), VAR_NAME(ally_pickup_common), false);
 	skill_points = ini->GetBoolValue(Name(), VAR_NAME(skill_points), false);
 	pvp_messages = ini->GetBoolValue(Name(), VAR_NAME(pvp_messages), true);
+	guild_announcement = ini->GetBoolValue(Name(), VAR_NAME(guild_announcement), guild_announcement);
 	hoh = ini->GetBoolValue(Name(), VAR_NAME(hoh_messages), false);
 	favor = ini->GetBoolValue(Name(), VAR_NAME(favor), false);
 	ninerings = ini->GetBoolValue(Name(), VAR_NAME(ninerings), true);
@@ -202,6 +207,7 @@ void ChatFilter::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(ally_pickup_common), ally_pickup_common);
 	ini->SetBoolValue(Name(), VAR_NAME(skill_points), skill_points);
 	ini->SetBoolValue(Name(), VAR_NAME(pvp_messages), pvp_messages);
+	ini->SetBoolValue(Name(), VAR_NAME(guild_announcement), guild_announcement);
 	ini->SetBoolValue(Name(), VAR_NAME(hoh_messages), hoh);
 	ini->SetBoolValue(Name(), VAR_NAME(favor), favor);
 	ini->SetBoolValue(Name(), VAR_NAME(ninerings), ninerings);
@@ -572,6 +578,7 @@ void ChatFilter::DrawSettingInternal() {
 
 	ImGui::Separator();
 	ImGui::Text("Announcements");
+	ImGui::Checkbox("Guild Announcement", &guild_announcement);
 	ImGui::Checkbox("Hall of Heroes winners", &hoh);
 	ImGui::Checkbox("Favor of the Gods announcements", &favor);
 	ImGui::Checkbox("'You have been playing for...'", &you_have_been_playing_for);

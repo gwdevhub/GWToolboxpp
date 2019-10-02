@@ -48,6 +48,7 @@ private:
     bool ShouldIgnoreByChannel(uint32_t channel);
 
 	bool self_drop_rare;
+	bool guild_announcement = false;
 	bool self_drop_common;
 	bool ally_drop_rare;
 	bool ally_drop_common;

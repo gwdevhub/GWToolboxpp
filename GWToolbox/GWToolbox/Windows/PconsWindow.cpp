@@ -286,7 +286,7 @@ void PconsWindow::Draw(IDirect3DDevice9* device) {
 	for (unsigned int i = 0; i < pcons.size(); ++i) {
 		if (pcons[i]->visible) {
 			if (j++ % items_per_row > 0) {
-				ImGui::SameLine();
+				ImGui::SameLine(0,2.0f);
 			}
 			pcons[i]->Draw(device);
 		}
