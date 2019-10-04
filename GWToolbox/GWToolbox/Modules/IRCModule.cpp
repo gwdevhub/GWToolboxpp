@@ -85,6 +85,8 @@ void IRCModule::AddHooks() {
 	// When starting a whisper to "<irc_nickname> @ <irc_channel>", rewrite recipient to be "<irc_channel>"
 	GW::Chat::AddStartWhisperCallback([&](wchar_t* name) -> bool {
 		wchar_t buf[128];
+		if (!name)
+			return false;
 		std::wstring walias = GuiUtils::ToWstr(IRCModule::Instance().irc_alias);
 		swprintf(buf, 128, L" @ %s", walias.c_str());
 		if ((std::wstring(name)).find(buf) != -1) {
