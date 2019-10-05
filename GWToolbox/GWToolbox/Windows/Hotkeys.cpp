@@ -5,6 +5,9 @@
 #include <GWCA\GameContainers\Array.h>
 #include <GWCA\GameContainers\GamePos.h>
 
+#include <GWCA\Context\GameContext.h>
+#include <GWCA\Context\CharContext.h>
+
 #include <GWCA\GameEntities\Agent.h>
 #include <GWCA\GameEntities\Skill.h>
 
@@ -387,8 +390,10 @@ bool HotkeyEquipItem::IsEquippable(GW::Item* item) {
 		case GW::Constants::ItemType::Scythe:
 		case GW::Constants::ItemType::Spear:
 		case GW::Constants::ItemType::Costume:
-			// TODO: Can this player equip this item e.g. is it customised for someone else?
-			return true;
+			if (!item->customized) return true;
+			GW::GameContext* g = GW::GameContext::instance();
+			GW::CharContext* c = g ? g->character : nullptr;
+			return c && c->player_name && wcscmp(c->player_name, item->customized) == 0;
 			break;
 		default:
 			return false;
