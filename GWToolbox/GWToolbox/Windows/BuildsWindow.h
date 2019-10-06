@@ -74,7 +74,7 @@ private:
 
 	bool builds_changed = false;
 	std::vector<TeamBuild> teambuilds;
-    bool order_by_name = true;
+    bool order_by_name = false;
     bool order_by_index = !order_by_name;
 
 	clock_t send_timer;

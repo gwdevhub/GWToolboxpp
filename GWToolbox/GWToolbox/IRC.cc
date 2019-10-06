@@ -46,6 +46,7 @@ IRC::IRC()
 	sentnick=false;
 	sentpass=false;
 	sentuser=false;
+	pending_disconnect = false;
 	cur_nick=0;
 }
 IRC::~IRC()
@@ -130,9 +131,8 @@ int IRC::start(char* server, int port, char* nick, char* user, char* name, char*
         printf("Failed to socket: %d\n", WSAGetLastError());
         return 1;
     }
-    t.~thread();
+	disconnect();
     t = std::thread([&]() {
-            //printf("loop");
             message_loop();
         });
     t.detach();
@@ -155,18 +155,21 @@ int IRC::start(char* server, int port, char* nick, char* user, char* name, char*
 }
 void IRC::disconnect()
 {
-	if (connected)
-	{
-		if(dataout) fclose(dataout);
-		printf("Disconnected from server.\n");
-		connected=false;
-		quit("Leaving");
-		#ifdef WIN32
-		shutdown(irc_socket, 2);
-		#endif
-		closesocket(irc_socket);
-	}
-    t.~thread();
+	if (!connected) return;
+	if(dataout) fclose(dataout);
+	printf("Disconnected from server.\n");
+	connected=false;
+	quit("Leaving");
+	#ifdef WIN32
+	shutdown(irc_socket, 2);
+	#endif
+	closesocket(irc_socket);
+	// Destroy thread.
+	pending_disconnect = true;
+	if (t.joinable())
+		t.join();
+	pending_disconnect = false;
+	t.~thread();
 }
 
 void IRC::error(int err) {
@@ -202,6 +205,7 @@ int IRC::message_loop()
 {
 	while (1) {
         if (!connected) continue;
+		if (pending_disconnect) return 0;
         if (message_fetch() != 0)
             return 1;
 	}

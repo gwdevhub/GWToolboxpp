@@ -98,6 +98,7 @@ private:
 	SOCKET irc_socket;
     char message_buffer[1024] = { 0 };
 	bool connected;
+	bool pending_disconnect;
 	bool sentnick;
 	bool sentpass;
 	bool sentuser;
