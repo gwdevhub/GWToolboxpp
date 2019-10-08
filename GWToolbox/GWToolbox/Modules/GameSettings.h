@@ -183,6 +183,7 @@ public:
 	bool borderlesswindow = false; // status of the borderless checkbox and setting
 	bool tick_is_toggle = false;
 
+	bool shorthand_item_ping = true;
 	bool openlinks = false;
 	bool auto_url = false;
 	// bool select_with_chat_doubleclick = false;

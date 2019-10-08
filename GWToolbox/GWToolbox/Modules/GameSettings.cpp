@@ -34,6 +34,7 @@
 #include <GWToolbox.h>
 #include <Timer.h>
 #include <Color.h>
+#include <Windows\StringDecoderWindow.h>
 
 namespace {
 
@@ -427,9 +428,209 @@ typedef void(__fastcall* OnPingEqippedItem_pt)(uint32_t unk1, uint32_t item_id1,
 OnPingEqippedItem_pt OnPingEquippedItem_Func;
 OnPingEqippedItem_pt OnPingEquippedItemRet;
 
+std::wstring ShorthandItemDescription(GW::Item* item) {
+	std::wstring original(item->info_string);
+	std::wsmatch m;
+
+	// Replace "Requires 9 Divine Favor" > "q9 Divine Favor"
+	std::wregex regexp_req(L".\x010A\x0AA8\x010A\x0AA9\x010A.\x0001\x0101.\x0001\x0001");
+	while (std::regex_search(original, m, regexp_req)) {
+		for (auto match : m) {
+			std::wstring found = match.str();
+			wchar_t buffer[128];
+			wsprintfW(buffer, L"\x0108\x0107, q%d \x0001\x0002%c", found.at(9) - 0x100, found.at(6));
+			original = std::regex_replace(original, std::wregex(found), buffer);
+		}
+	}
+	// Replace "Requires 9 Scythe Mastery" > "q9 Scythe Mastery"
+	std::wregex regexp_req2(L".\x10A\xAA8\x10A\xAA9\x010A\x8101.\x1\x0101.\x1\x1");
+	while (std::regex_search(original, m, regexp_req2)) {
+		for (auto match : m) {
+			std::wstring found = match.str();
+			wchar_t buffer[128];
+			wsprintfW(buffer, L"\x108\x107, q%d \x1\x2\x8101%c", found.at(10) - 0x100, found.at(7));
+			original = std::regex_replace(original, std::wregex(found), buffer);
+		}
+	}
+
+	// "vs. Earth damage" > "Earth"
+	// "vs. Demons" > "Demons"
+	std::wregex vs_damage(L"[\xAAC\xAAF]\x10A.\x1");
+	while (std::regex_search(original, m, vs_damage)) {
+		for (auto match : m) {
+			std::wstring found = match.str();
+			wchar_t buffer[4];
+			wsprintfW(buffer, L"%c", found.at(2));
+			original = std::regex_replace(original, std::wregex(found), buffer);
+		}
+	}
+
+	// Replace "Lengthens ??? duration on foes by 33%" > "??? duration +33%"
+	std::wregex regexp_lengthens_duration(L"\x0AA4\x010A.\x0001");
+	while (std::regex_search(original, m, regexp_lengthens_duration)) {
+		for (auto match : m) {
+			std::wstring found = match.str();
+			wchar_t buffer[64];
+			wsprintfW(buffer, L"%c\x0002\x0108\x0107 +33%%\x0001", found.at(2));
+			original = std::regex_replace(original, std::wregex(found), buffer);
+		}
+	}
+
+	// Replace "Reduces ??? duration on you by 20%" > "??? duration -20%"
+	std::wregex regexp_reduces_duration(L"\xAA7\x010A.\x0001");
+	while (std::regex_search(original, m, regexp_reduces_duration)) {
+		for (auto match : m) {
+			std::wstring found = match.str();
+			wchar_t buffer[64];
+			wsprintfW(buffer, L"%c\x0002\x0108\x0107 -20%%\x0001", found.at(2));
+			original = std::regex_replace(original, std::wregex(found), buffer);
+		}
+	}
+
+	// Change "Damage 15% (while Health is above 50%)" to "Damage +15^50"
+	std::wregex damage_15_over_50(L".\x010A\xA85\x010A\xA4C\x1\x101.\x1\x2" L".\x010A\xAA8\x010A\xABC\x10A\xA52\x1\x101.\x1\x1");
+	while (std::regex_search(original, m, damage_15_over_50)) {
+		for (auto match : m) {
+			std::wstring found = match.str();
+			wchar_t buffer[64];
+			wsprintfW(buffer, L"\xA4C\x0002\x0108\x0107 +%d%%^%d\x0001", found.at(7) - 0x100, found.at(19) - 0x100);
+			original = std::regex_replace(original, std::wregex(found), buffer);
+		}
+	}
+
+	// Change "Enchantments last 20% longer" to "Ench +20%"
+	std::wregex enchantments(L"\xAA2\x101.");
+	while (std::regex_search(original, m, enchantments)) {
+		for (auto match : m) {
+			std::wstring found = match.str();
+			wchar_t buffer[64];
+			wsprintfW(buffer, L"\x0108\x0107" L"Enchantments +%d%%\x0001", found.at(2) - 0x100);
+			original = std::regex_replace(original, std::wregex(found), buffer);
+		}
+	}
+
+	// "(Chance: 18%)" > "(18%)"
+	std::wregex chance_regex(L"\xA87\x10A\xA48\x1\x101.");
+	while (std::regex_search(original, m, chance_regex)) {
+		for (auto match : m) {
+			std::wstring found = match.str();
+			wchar_t buffer[64];
+			wsprintfW(buffer, L"\x0108\x0107%d%%\x0001", found.at(5) - 0x100);
+			original = std::regex_replace(original, std::wregex(found), buffer);
+		}
+	}
+	// Change "Halves skill recharge of <attribute> spells" > "HSR <attribute>"
+	std::wregex hsr_attribute(L"\xA81\x10A\xA58\x1\x10B.\x1");
+	while (std::regex_search(original, m, hsr_attribute)) {
+		for (auto match : m) {
+			std::wstring found = match.str();
+			wchar_t buffer[64];
+			wsprintfW(buffer, L"\x0108\x0107" L"HSR \x1\x2%c", found.at(5));
+			original = std::regex_replace(original, std::wregex(found), buffer);
+		}
+	}
+	// Change "Inscription: "Blah Blah"" to just "Blah Blah"
+	std::wregex inscription(L"\x8101\x5DC5\x10A..\x1");
+	while (std::regex_search(original, m, inscription)) {
+		for (auto match : m) {
+			std::wstring found = match.str();
+			wchar_t buffer[64];
+			wsprintfW(buffer, L"%c%c", found.at(3), found.at(4));
+			original = std::regex_replace(original, std::wregex(found), buffer);
+		}
+	}
+
+	// Change "Halves casting time of <attribute> spells" > "HCT <attribute>"
+	std::wregex hct_attribute(L"\xA81\x10A\xA47\x1\x10B.\x1");
+	while (std::regex_search(original, m, hct_attribute)) {
+		for (auto match : m) {
+			std::wstring found = match.str();
+			wchar_t buffer[64];
+			wsprintfW(buffer, L"\x0108\x0107" L"HCT \x1\x2%c", found.at(5));
+			original = std::regex_replace(original, std::wregex(found), buffer);
+		}
+	}
+
+	// Change "Piercing Dmg: 11-22" > "Piercing: 11-22"
+	std::wregex weapon_dmg(L"\xA89\x10A\xA4E\x1\x10B.\x1\x101.\x102.");
+	while (std::regex_search(original, m, weapon_dmg)) {
+		for (auto match : m) {
+			std::wstring found = match.str();
+			wchar_t buffer[64];
+			wsprintfW(buffer, L"%c\x2\x108\x107: %d-%d\x1", found.at(5),found.at(8) - 0x100, found.at(10) - 0x100);
+			original = std::regex_replace(original, std::wregex(found), buffer);
+		}
+	}
+
+	// Change "Life draining -3, Health regeneration -1" > "Vampiric" (add at end of description)
+	std::wregex vampiric(L"\x2\x102\x2.\x10A\xA86\x10A\xA54\x1\x101.\x1" L"\x2\x102\x2.\x10A\xA7E\x10A\xA53\x1\x101.\x1");
+	if (std::regex_search(original, vampiric)) {
+		original = std::regex_replace(original, vampiric, L"");
+		original += L"\x2\x102\x2\x108\x107" L"Vampiric\x1";
+	}
+	// Change "Energy gain on hit 1, Energy regeneration -1" > "Zealous" (add at end of description)
+	std::wregex zealous(L"\x2\x102\x2.\x10A\xA86\x10A\xA50\x1\x101.\x1" L"\x2\x102\x2.\x10A\xA7E\x10A\xA51\x1\x101.\x1");
+	if (std::regex_search(original, zealous)) {
+		original = std::regex_replace(original, zealous, L"");
+		original += L"\x2\x102\x2\x108\x107" L"Zealous\x1";
+	}
+
+	// Change "Damage" > "Dmg"
+	original = std::regex_replace(original, std::wregex(L"\xA4C"), L"\xA4E");
+
+	// Change Bow "Two-Handed" > ""
+	original = std::regex_replace(original, std::wregex(L"\x8102\x1227"), L"\xA3E");
+
+	// Change "Halves casting time of spells" > "HCT"
+	original = std::regex_replace(original, std::wregex(L"\xA80\x010A\xA47\x1"), L"\x0108\x0107" L"HCT\x1");
+
+	// Change "Halves skill recharge of spells" > "HSR"
+	std::wregex half_skill_recharge(L"\xA80\x010A\xA58\x1");
+	original = std::regex_replace(original, half_skill_recharge, L"\x0108\x0107" L"HSR\x1");
+
+	// Remove (Stacking) and (Non-stacking) rubbish
+	std::wregex stacking_non_stacking(L"\x0002.\x010A\x0AA8\x010A(\x0AB1|\x0AB2)\x0001\x0001");
+	original = std::regex_replace(original, stacking_non_stacking, L"");
+
+	// Replace (while xxx) to just (xxx)
+	original = std::regex_replace(original, std::wregex(L"\x0AB4"), L"\x0108\x0107" L"Attacking\x0001");
+	original = std::regex_replace(original, std::wregex(L"\x0AB5"), L"\x0108\x0107" L"Casting\x0001");
+	original = std::regex_replace(original, std::wregex(L"\x0AB6"), L"\x0108\x0107" L"Condition\x0001");
+	original = std::regex_replace(original, std::wregex(L"\x0AB7"), L"\x0108\x0107" L"Enchanted\x0001");
+	original = std::regex_replace(original, std::wregex(L"\x0AB8"), L"\x0108\x0107" L"Hexed\x0001");
+	original = std::regex_replace(original, std::wregex(L"\x0AB9"), L"\x0108\x0107" L"Stance\x0001");
+	original = std::regex_replace(original, std::wregex(L"\x0ABA"), L"\x0108\x0107" L"Stance\x0001");
+
+	return original;
+}
+
 std::wstring ParseItemDescription(GW::Item* item) {
-    std::wstring original(item->info_string);
-    // TODO: Replace encoded segments to shorten the original!
+	std::wstring original = ShorthandItemDescription(item);
+
+    // Remove "Value: 122 gold"
+    original = std::regex_replace(original, std::wregex(L"\x0002\x0102\x0002\x0A3E\x010A\x0A8A\x010A\x0A59\x0001\x010B.\x0101.\x0001\x0001"), L"");
+
+    // Remove other "greyed" generic terms e.g. "Two-Handed", "Unidentified"	
+	original = std::regex_replace(original, std::wregex(L"\x0002\x0102\x0002\x0A3E\x010A.\x0001"), L"");
+
+	// Remove "Necromancer Munne sometimes gives these to me in trade" etc
+	original = std::regex_replace(original, std::wregex(L"\x0002\x0102\x0002.\x010A\x8102.\x0001"), L"");
+
+	// Remove "Inscription: None"
+	original = std::regex_replace(original, std::wregex(L"\x0002\x0102\x0002.\x010A\x8101\x5A1F\x0001"), L"");
+
+	// Remove "Crafted in tribute to an enduring legend."
+	original = std::regex_replace(original, std::wregex(L"\x2\x0102\x2.\x010A\x8103\xB5A\x1"), L"");
+
+	// Remove "20% Additional damage during festival events" > "Dmg +20% (Festival)"
+	original = std::regex_replace(original, std::wregex(L".\x010A\x108\x10A\x8103\xB71\x101\x100\x1\x1"), L"\xA85\x10A\xA4E\x1\x0101\x114\x2\xAA8\x10A\x108\x107" L"Festival\x1\x1");
+
+	if (item->customized) {
+		// Remove "\nDamage +20%" > "\n"
+		original = std::regex_replace(original, std::wregex(L"\x2\x102\x2.\x10A\xA85\x10A(\xA4C|\xA4E)\x1\x0101\x114\x1"), L"");
+		// Append "Customized"
+		original += L"\x0002\x0102\x0002\x0108\x0107" L"Customized\x0001";
+	}
 
     return original;
 }
@@ -437,11 +638,20 @@ std::wstring ParseItemDescription(GW::Item* item) {
 void __fastcall OnPingEquippedItem(uint32_t oneC, uint32_t item_id1, uint32_t item_id2) {
     GW::HookBase::EnterHook();
     OnPingEquippedItemRet(oneC, item_id1, item_id2);
-    
+	if (!GameSettings::Instance().shorthand_item_ping) {
+		GW::HookBase::LeaveHook();
+		return;
+	}
     GW::Item* item;
     GW::Player* p = GW::PlayerMgr::GetPlayerByID(GW::Agents::GetPlayer()->login_number);
     if (item_id1) {
         item = GW::GameContext::instance()->items->item_array[item_id1];
+		#ifdef _DEBUG
+			printf("Item 1 Name:\n");
+			StringDecoderWindow::PrintEncStr(item->name_enc);
+			printf("Item 1 Desc:\n");
+			StringDecoderWindow::PrintEncStr(item->info_string);
+		#endif
         std::wstring item_description = ParseItemDescription(item);
         PendingChatMessage* m = new PendingChatMessage(GW::Chat::Channel::CHANNEL_GROUP, item_description.c_str(), p->name_enc);
         if (!m->invalid) {
@@ -451,6 +661,12 @@ void __fastcall OnPingEquippedItem(uint32_t oneC, uint32_t item_id1, uint32_t it
     }
     if (item_id2) {
         item = GW::GameContext::instance()->items->item_array[item_id2];
+		#ifdef _DEBUG
+			printf("Item 2 Name:\n");
+			StringDecoderWindow::PrintEncStr(item->name_enc);
+			printf("Item 2 Desc:\n");
+			StringDecoderWindow::PrintEncStr(item->info_string);
+		#endif
         std::wstring item_description2 = ParseItemDescription(item);
         PendingChatMessage* m2 = new PendingChatMessage(GW::Chat::Channel::CHANNEL_GROUP, item_description2.c_str(), p->name_enc);
         if (!m2->invalid) {
@@ -469,7 +685,7 @@ const bool PendingChatMessage::SendMessage() {
     for (size_t i = 0; i < sanitised_lines.size(); i++) {
         size_t san_len = sanitised_lines[i].length();
         const wchar_t* str = sanitised_lines[i].c_str();
-        if (len + san_len + 2 > 120) {
+        if (len + san_len + 3 > 120) {
             GW::Chat::SendChat('#', buf);
             buf[0] = '\0';
             len = 0;
@@ -844,8 +1060,19 @@ bool GameSettings::ShouldAddAgentToPartyWindow(GW::Packet::StoC::AgentAdd* pak) 
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
         return false; // Not in an explorable area
     GW::Constants::MapID map_id = GW::Map::GetMapID();
-    uint32_t player_number = (pak->agent_type ^ 0x20000000);
+	uint32_t player_number = (pak->agent_type ^ 0x20000000);
     switch (player_number) {
+		// PVP
+	case 3087: // Luxon Longbow
+	case 3588: // Luxon monk
+	case 3024: // Luxon priest
+	case 3032: // Luxon warrior
+		return false; // wip
+	case 3369: // Kurz warrior
+	case 3370: // Kurzick ranger
+	case 3367: // Kurz ele
+	case 3030: // Kurz necro
+		return false; // wip
     case 2349: // Vale friendly spirit 1
     case 2350: // Vale friendly spirit 2
     case 2358: // Pits friendly spirit 1
@@ -958,6 +1185,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     show_timestamp_seconds = ini->GetBoolValue(Name(), VAR_NAME(show_timestamp_seconds), show_timestamp_seconds);
 	timestamps_color = Colors::Load(ini, Name(), VAR_NAME(timestamps_color), Colors::RGB(0xc0, 0xc0, 0xbf));
 
+	shorthand_item_ping = ini->GetBoolValue(Name(), VAR_NAME(shorthand_item_ping), shorthand_item_ping);
 	openlinks = ini->GetBoolValue(Name(), VAR_NAME(openlinks), true);
 	auto_url = ini->GetBoolValue(Name(), VAR_NAME(auto_url), true);
 	move_item_on_ctrl_click = ini->GetBoolValue(Name(), VAR_NAME(move_item_on_ctrl_click), move_item_on_ctrl_click);
@@ -1068,6 +1296,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(openlinks), openlinks);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_url), auto_url);
     ini->SetBoolValue(Name(), VAR_NAME(auto_return_on_defeat), auto_return_on_defeat);
+	ini->SetBoolValue(Name(), VAR_NAME(shorthand_item_ping), shorthand_item_ping);
     
 	ini->SetBoolValue(Name(), VAR_NAME(move_item_on_ctrl_click), move_item_on_ctrl_click);
 	ini->SetBoolValue(Name(), VAR_NAME(move_item_to_current_storage_pane), move_item_to_current_storage_pane);
@@ -1157,7 +1386,8 @@ void GameSettings::DrawSettingInternal() {
             GW::Chat::SetTimestampsColor(timestamps_color);
         ImGui::Unindent();
     }
-    
+	ImGui::Checkbox("Shorthand item description on weapon ping", &shorthand_item_ping);
+	ImGui::ShowHelp("Include a concise description of your equipped weapon when ctrl+clicking a weapon set");
 	ImGui::Checkbox("Show NPC speech bubbles in emote channel", &npc_speech_bubbles_as_chat);
 	ImGui::ShowHelp("Speech bubbles from NPCs and Heroes will appear as emote messages in chat");
     ImGui::Checkbox("Redirect NPC dialog to emote channel", &redirect_npc_messages_to_emote_chat);

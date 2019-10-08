@@ -18,7 +18,7 @@ public:
 
     void Decode();
     void Send();
-    void PrintEncStr(wchar_t* enc_str);
+    static void PrintEncStr(wchar_t* enc_str);
     wchar_t* GetEncodedString();
 
 private:
