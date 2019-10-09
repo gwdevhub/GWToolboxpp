@@ -201,6 +201,9 @@ int IRC::message_fetch() {
     split_to_replies(message_buffer);
     return 0;
 }
+bool IRC::is_connected() {
+	return connected;
+}
 int IRC::message_loop()
 {
 	while (1) {
@@ -679,7 +682,7 @@ void IRC::parse_irc_reply(char* data)
 			#ifdef __IRC_DEBUG__
 			#endif
 		} */
-		call_hook(cmd, &params[1], &hostd_tmp);
+		call_hook(cmd, params, &hostd_tmp);
 	}
 	else
 	{

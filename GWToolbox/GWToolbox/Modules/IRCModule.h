@@ -14,7 +14,7 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "IRC Integration"; }
+    const char* Name() const override { return "Twitch Chat"; }
     void Initialize() override;
     void Terminate() override;
     void Update(float delta) override;
@@ -22,14 +22,15 @@ public:
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
     bool Connect();
+	void Disconnect();
     // IRC details
     std::string irc_server="irc.chat.twitch.tv";
     int irc_port = 443; // Not 6667, just in case router blocks it.
-    std::string irc_username = "<your_twitch_username>";
+    std::string irc_username = "";
     std::string irc_password = "oauth:<your_token_here>";
-    std::string irc_channel = "<twitch_streamer_username>";
+    std::string irc_channel = "";
     std::string irc_alias = "Twitch";
-    Color irc_chat_color = Colors::RGB(0x9B,0x66,0xFF);
+    Color irc_chat_color = Colors::RGB(0xAD,0x83,0xFA);
 
     bool show_messages = true;
     bool notify_on_user_leave = true;
