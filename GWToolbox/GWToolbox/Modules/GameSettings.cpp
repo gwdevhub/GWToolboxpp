@@ -488,12 +488,14 @@ std::wstring ShorthandItemDescription(GW::Item* item) {
 	}
 
 	// Change "Damage 15% (while Health is above 50%)" to "Damage +15^50"
-	std::wregex damage_15_over_50(L".\x010A\xA85\x010A\xA4C\x1\x101.\x1\x2" L".\x010A\xAA8\x010A\xABC\x10A\xA52\x1\x101.\x1\x1");
-	while (std::regex_search(original, m, damage_15_over_50)) {
+	//std::wregex damage_15_over_50(L".\x010A\xA85\x010A\xA4C\x1\x101.\x1\x2" L".\x010A\xAA8\x010A\xABC\x10A\xA52\x1\x101.\x1\x1");
+	// Change " (while Health is above n)" to "^n";
+	std::wregex n_over_n(L"\xAA8\x010A\xABC\x10A\xA52\x1\x101.\x1");
+	while (std::regex_search(original, m, n_over_n)) {
 		for (auto match : m) {
 			std::wstring found = match.str();
 			wchar_t buffer[64];
-			wsprintfW(buffer, L"\xA4C\x0002\x0108\x0107 +%d%%^%d\x0001", found.at(7) - 0x100, found.at(19) - 0x100);
+			wsprintfW(buffer, L"\x108\x107^%d\x1", found.at(7) - 0x100);
 			original = std::regex_replace(original, std::wregex(found), buffer);
 		}
 	}
