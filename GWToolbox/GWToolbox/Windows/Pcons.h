@@ -42,7 +42,6 @@ protected:
 		ImVec2 uv0, ImVec2 uv1, int threshold,
         const char* desc = nullptr);
 	~Pcon();
-    static GW::Item* WaitForSlotUpdate(GW::Bag* bag, int slot, uint32_t timeout_seconds = 3);
     bool RefillBlocking();
     static bool UnreserveSlotForMove(int bagId, int slot); // Unlock slot.
 	static bool ReserveSlotForMove(int bagId, int slot); // Prevents more than 1 pcon from trying to add to the same slot at the same time.
@@ -50,13 +49,15 @@ protected:
 public:
 	virtual void Draw(IDirect3DDevice9* device);
 	virtual void Update(int delay = -1);
-    // Extension of the GWCA function.
-	int MoveItem(GW::Item *item, GW::Bag *bag, int slot, int quantity);
+	// Similar to GW::Items::MoveItem, except this returns amount moved and uses the split stack header when needed.
+	// Most of this logic should be integrated back into GWCA repo, but I've written it here for GWToolbox
+	// If timeout_seconds > 0, this process blocks until item has moved or timeout is hit.
+	static GW::Item* MoveItem(GW::Item *item, GW::Bag *bag, int slot, int quantity = 0, uint32_t timeout_seconds = 0);
 	// Fires off another thread to refill pcons. Sets refill_attempted to TRUE when finished.
     void Refill();
 	void SetEnabled(bool enabled);
 	void AfterUsed(bool used, int qty);
-	inline void Toggle() { enabled = !enabled; }
+	inline void Toggle() { SetEnabled(!enabled); }
 	// Resets pcon counters so it needs to recalc number and refill.
 	void ResetCounts();
 	void LoadSettings(CSimpleIni* ini, const char* section);
