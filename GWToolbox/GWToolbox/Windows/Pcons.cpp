@@ -47,15 +47,31 @@ std::vector<std::vector<clock_t>> Pcon::reserved_bag_slots(22, std::vector<clock
 
 // ================================================
 Pcon::Pcon(const char* chatname,
-	const char* ininame,
-	const wchar_t* filename,
-	WORD res_id,
-	ImVec2 uv0_, ImVec2 uv1_, int threshold_)
-	: chat(chatname), ini(ininame), threshold(threshold_),
+    const char* ininame,
+    const wchar_t* filename,
+    WORD res_id,
+    ImVec2 uv0_, ImVec2 uv1_, int threshold_,
+    const char* desc_)
+    : chat(chatname), ini(ininame), threshold(threshold_), 
 	uv0(uv0_), uv1(uv1_), texture(nullptr),
 	enabled(false), quantity(0), timer(TIMER_INIT()) {
-
+	if (desc_)
+		desc = desc_;
 	Resources::Instance().LoadTextureAsync(&texture, Resources::GetPath(L"img/pcons", filename), res_id);
+}
+Pcon::~Pcon() {
+	if (refill_thread.joinable())
+		refill_thread.join();
+}
+// Resets pcon counters so it needs to recalc number and refill.
+void Pcon::ResetCounts() {
+	refill_attempted = !enabled;
+	pcon_quantity_checked = false;
+}
+void Pcon::SetEnabled(bool b) {
+	if (enabled == b) return;
+	enabled = b;
+	ResetCounts();
 }
 void Pcon::Draw(IDirect3DDevice9* device) {
 	if (texture == nullptr) return;
@@ -65,10 +81,11 @@ void Pcon::Draw(IDirect3DDevice9* device) {
 	ImVec4 tint(1, 1, 1, 1);
 	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
 	if (ImGui::ImageButton((ImTextureID)texture, s, uv0, uv1, 0, bg, tint)) {
-		enabled = !enabled;
-		pcon_quantity_checked = false;
+		SetEnabled(!enabled);
 	}
 	ImGui::PopStyleColor();
+    if (ImGui::IsItemHovered() && desc.size())
+        ImGui::SetTooltip(desc.c_str());
 
 	ImFont* f = GuiUtils::GetFont(GuiUtils::f20);
 	ImGui::PushFont(f);
@@ -102,7 +119,7 @@ void Pcon::Update(int delay) {
 	if (mapid != GW::Map::GetMapID() || maptype != GW::Map::GetInstanceType()) { // Map changed; reset vars
 		mapid = GW::Map::GetMapID();
 		maptype = GW::Map::GetInstanceType();
-		pcon_quantity_checked = false;
+		ResetCounts();
 	}
     if(maptype == GW::Constants::InstanceType::Loading)
         return;
@@ -126,11 +143,15 @@ void Pcon::Update(int delay) {
 
 
 	if (!pcon_quantity_checked) {
+
+        if (!refill_attempted) {
+            Refill();
+            return; // Not tried to refill yet
+        }
+		pcon_quantity_checked = true;
 		int qty = CheckInventory();
 		if (qty < 0) return; // Inventory pointers not ready
-		pcon_quantity_checked = true;
 		quantity = qty;
-		quantity += Refill();
 		if (maptype == GW::Constants::InstanceType::Outpost) {
 			quantity_storage = CheckInventory(nullptr, nullptr, static_cast<int>(GW::Constants::Bag::Storage_1), static_cast<int>(GW::Constants::Bag::Storage_14));
 		}
@@ -146,14 +167,25 @@ void Pcon::Update(int delay) {
 	}
 }
 bool Pcon::ReserveSlotForMove(int bagIndex, int slot) { // Should NOT be used directly, supposed to be used with a mutex.
-	if (IsSlotReservedForMove(bagIndex, slot)) return false;
+    std::lock_guard<std::mutex> lk(reserve_slot_mutex); // Lock to reserve the slot once found - pcons check on different threads!
+	if (IsSlotReservedForMove(bagIndex, slot)) {
+		printf("Slot %d %d, %d is LOCKED\n", bagIndex, slot, reserved_bag_slots.at(bagIndex).at(slot));
+		return false;
+	}
 	reserved_bag_slots.at(bagIndex).at(slot) = TIMER_INIT();
+	printf("locking %d %d, %d\n", bagIndex, slot, reserved_bag_slots.at(bagIndex).at(slot));
 	return true;
 }
+bool Pcon::UnreserveSlotForMove(int bagIndex, int slot) { // Should NOT be used directly, supposed to be used with a mutex.
+    std::lock_guard<std::mutex> lk(reserve_slot_mutex); // Lock to reserve the slot once found - pcons check on different threads!
+    reserved_bag_slots.at(bagIndex).at(slot) = 0;
+	printf("unlocking %d %d, %d\n", bagIndex, slot, reserved_bag_slots.at(bagIndex).at(slot));
+    return true;
+}
 bool Pcon::IsSlotReservedForMove(int bagIndex, int slot) {
+    //std::lock_guard<std::mutex> lk(reserve_slot_mutex); // Lock to reserve the slot once found - pcons check on different threads!
 	clock_t slot_reserved_at = reserved_bag_slots.at(bagIndex).at(slot);
-	bool is_reserved = slot_reserved_at && TIMER_DIFF(slot_reserved_at) < 1000; // 1000ms is reasonable for CtoS then StoC
-	return is_reserved;
+    return slot_reserved_at && TIMER_DIFF(slot_reserved_at) < 3000; // 1000ms is reasonable for CtoS then StoC
 }
 void Pcon::AfterUsed(bool used, int qty) {
 	if (qty >= 0) { // if not, bag was undefined and we just ignore everything
@@ -183,8 +215,8 @@ GW::Item* Pcon::FindVacantStackOrSlotInInventory(GW::Item* likeItem) { // Scan b
 	GW::Bag** bags = GW::Items::GetBagArray();
 	if (bags == nullptr) return nullptr;
 	int emptySlotIdx = -1;
-	int emptyBagIdx = -1;
-	std::lock_guard<std::mutex> lk(reserve_slot_mutex); // Lock to reserve the slot once found - pcons check on different threads!
+	GW::Bag* emptyBag = nullptr;
+	
 	for (int bagIndex = static_cast<int>(GW::Constants::Bag::Bag_2); bagIndex > 0; --bagIndex) { // Work from last bag to first; pcons at bottom of inventory
 		GW::Bag* bag = bags[bagIndex];
 		if (bag == nullptr) continue;	// No bag, skip
@@ -194,9 +226,10 @@ GW::Item* Pcon::FindVacantStackOrSlotInInventory(GW::Item* likeItem) { // Scan b
 			int slotIndex = i - 1;
 			GW::Item* item = items[slotIndex];
 			if (!item || item == nullptr) {
-				if (emptySlotIdx < 0 && !IsSlotReservedForMove(bagIndex, slotIndex)) {
+                // Reserve this slot for later
+				if (!emptyBag && ReserveSlotForMove(bag->index, slotIndex)) {
 					emptySlotIdx = slotIndex;
-					emptyBagIdx = bagIndex;
+					emptyBag = bag;
 				}
 				continue;
 			}
@@ -206,19 +239,50 @@ GW::Item* Pcon::FindVacantStackOrSlotInInventory(GW::Item* likeItem) { // Scan b
 				continue; // This is not the same item - apples and pears.
 			if (likeItem->item_id == item->item_id || item->quantity >= 250)
 				continue; // Comparing against yourself, or this item is already a full stack.
-			if (IsSlotReservedForMove(bagIndex, item->slot)) 
-				continue; // This slot already reserved.
-			ReserveSlotForMove(bagIndex, item->slot);
-			return item;	// Found a stack with space.
+            if (ReserveSlotForMove(bag->index, item->slot)) {
+                if (emptySlotIdx >= 0) // Unlock the empty slot.
+                    UnreserveSlotForMove(emptyBag->index, emptySlotIdx);
+                return item;	// Found a stack with space.
+            }
 		}
 	}
-	if (emptyBagIdx < 0 || emptySlotIdx < 0) return nullptr;
+	if (!emptyBag) return nullptr;
 	GW::Item* item = new GW::Item(); // Create a "fake" item...
-	item->bag = bags[emptyBagIdx]; // ...that belongs in the empty bag/slot we found...
+	item->bag = emptyBag; // ...that belongs in the empty bag/slot we found...
 	item->slot = emptySlotIdx;
 	item->quantity = 0; // ...with 250 available slots.
-	ReserveSlotForMove(emptyBagIdx, emptySlotIdx); // Reserved this slot for moving for next 1000ms
+    item->item_id = 0; // item_id to 0 for comparison
 	return item;
+}
+// Blocking - run on a separate thread! Waits for the item in this bag/slot to change e.g. waiting for a MoveItem request
+GW::Item* Pcon::WaitForSlotUpdate(GW::Bag* bag, int slot, uint32_t timeout_seconds) {
+    if (bag == nullptr)
+        return nullptr;
+    time_t start = time(nullptr);
+    int prevQty = 0, prevId = 0;
+    if (bag->items[slot]) {
+        prevQty = bag->items[slot]->quantity;
+        prevId = bag->items[slot]->item_id;
+    }
+    size_t ms_sleep = 150;
+	size_t i = 0;
+    uint32_t timeout_ms = timeout_seconds * 1000;
+    while(i < timeout_ms) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(150));
+		i += 150;
+        GW::Item* curItem = bag->items[slot];
+        if (!curItem) {
+            if (prevId)
+                return nullptr; // Item removed.
+            continue;
+        }
+        else {
+			if (curItem->item_id != prevId || curItem->quantity != prevQty) {
+				return curItem; // Item swapped for another or qty changed
+			}
+        }
+    }
+    return nullptr;
 }
 // Similar to GW::Items::MoveItem, except this returns amount moved and uses the split stack header when needed.
 // Most of this logic should be integrated back into GWCA repo, but I've written it here for GWToolbox
@@ -240,41 +304,86 @@ int Pcon::MoveItem(GW::Item *item, GW::Bag *bag, int slot, int quantity = 0) {
 	}
 	return quantity;
 }
-int Pcon::Refill() {
-	if (!enabled || !PconsWindow::Instance().GetEnabled() || maptype != GW::Constants::InstanceType::Outpost) {
-		return 0; // This Pcon disabled, all pcons disables, or not in outpost.
+// Blocking function - waits for item moves etc, dont run on main thread. False if not ready (i.e. keep trying)
+bool Pcon::RefillBlocking() {
+    // Simple function to check for return or not.
+    if (!enabled || !PconsWindow::Instance().GetEnabled() || maptype != GW::Constants::InstanceType::Outpost) {
+        return true; // This Pcon disabled, all pcons disabled, or not in outpost.
+    }
+    if (!refill_if_below_threshold || quantity >= threshold) {
+        return true; // Not allowed to auto refill, or above the threshold already.
+    }
+	// Wait until inventory is ready.
+	uint32_t timeout_ms = 5000, i = 0;
+	while (i < timeout_ms) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(150));
+		i += 150;
+		if (maptype != GW::Constants::InstanceType::Outpost)
+			continue;
+		if (!GW::Items::GetBagArray())
+			continue;
+		break;
 	}
-	if (!refill_if_below_threshold || quantity >= threshold) {
-		return 0; // Not allowed to auto refill, or above the threshold already.
-	}
-	int points_needed = threshold - quantity; // quantity is actually points e.g. 20 grog = 60 quantity
-	int points_moved = 0;
-	int items_moved = 0;
-	int quantity_to_move = 0;
-	if (points_needed < 1) return points_moved;
-	GW::Bag** bags = GW::Items::GetBagArray();
-	if (bags == nullptr) return points_moved;
-	for (int bagIndex = static_cast<int>(GW::Constants::Bag::Storage_1); bagIndex <= static_cast<int>(GW::Constants::Bag::Storage_14); ++bagIndex) {
-		if (points_needed < 1) return points_moved;
-		GW::Bag* bag = bags[bagIndex];
-		if (bag == nullptr) continue;	// No bag, skip
-		GW::ItemArray items = bag->items;
-		if (!items.valid()) continue;	// No item array, skip
-		for (size_t i = 0; i < items.size(); i++) {
-			if (points_needed < 1) return points_moved;
-			GW::Item* storageItem = items[i];
-			if (storageItem == nullptr) continue; // No item, skip
-			int points_per_item = QuantityForEach(storageItem);
-			if (points_per_item < 1) continue; // This is not the pcon you're looking for...
-			GW::Item* inventoryItem = FindVacantStackOrSlotInInventory(storageItem); // Now find a slot in inventory to move them to.
-			if (inventoryItem == nullptr) return points_moved; // No space for more pcons in inventory.
-			quantity_to_move = (int)ceil((float)points_needed / (float)points_per_item);
-			if (quantity_to_move > storageItem->quantity)		quantity_to_move = storageItem->quantity;
-			points_moved += MoveItem(storageItem, inventoryItem->bag, inventoryItem->slot, quantity_to_move) * points_per_item;
-			points_needed -= points_moved; // amount_moved = item quantity moved x number of uses per item
-		}
-	}
-	return points_moved;
+	printf("Begin %s\n", chat);
+    int points_needed = threshold - CheckInventory(); // quantity is actually points e.g. 20 grog = 60 quantity
+    int points_moved = 0;
+    int items_moved = 0;
+    int quantity_to_move = 0;
+    if (points_needed < 1)
+        return true;
+    GW::Bag** bags = GW::Items::GetBagArray();
+    if (bags == nullptr)
+        return false;
+    for (int bagIndex = static_cast<int>(GW::Constants::Bag::Storage_1); bagIndex <= static_cast<int>(GW::Constants::Bag::Storage_14); ++bagIndex) {
+        if (points_needed < 1) return true;
+        GW::Bag* storageBag = bags[bagIndex];
+        if (storageBag == nullptr) continue;	// No bag, skip
+        GW::ItemArray storageItems = storageBag->items;
+        if (!storageItems.valid()) continue;	// No item array, skip
+        for (size_t i = 0; i < storageItems.size(); i++) {
+            if (points_needed < 1) return true;
+            GW::Item* storageItem = storageItems[i];
+            if (storageItem == nullptr) continue; // No item, skip
+            int points_per_item = QuantityForEach(storageItem);
+            if (points_per_item < 1) continue; // This is not the pcon you're looking for...
+            GW::Item* inventoryItem = FindVacantStackOrSlotInInventory(storageItem); // Now find a slot in inventory to move them to.
+            if (inventoryItem == nullptr)
+                return true; // No space for more pcons in inventory.
+            quantity_to_move = (int)ceil((float)points_needed / (float)points_per_item);
+            if (quantity_to_move > storageItem->quantity)		quantity_to_move = storageItem->quantity;
+            // Get slot of bag moving into
+            GW::ItemArray invBagItems = inventoryItem->bag->items;
+            int slot_to = inventoryItem->slot;
+            GW::Bag* bag_to = inventoryItem->bag;
+            int qty_before = inventoryItem->quantity;
+            MoveItem(storageItem, bag_to, slot_to, quantity_to_move);
+            GW::Item* updatedItem = WaitForSlotUpdate(bag_to, slot_to); // NOTE: This is blocking, dont run on main thread
+            UnreserveSlotForMove(bag_to->index, slot_to);
+            if (!updatedItem) {
+                printf("Failed to wait for slot move\n");
+                return false;
+            }
+			int this_moved = (updatedItem->quantity - qty_before) * points_per_item;
+			points_needed -= this_moved;
+            printf("Moved %d points for %s to %d %d successfully\n", this_moved, chat, updatedItem->bag->index, updatedItem->slot);
+        }
+    }
+	return true;
+}
+void Pcon::Refill() {
+    if (refilling)
+        return; // Still going
+    refilling = true;
+    refill_thread = std::thread([&] {
+		printf("Refilling %s\n", chat);
+		quantity = CheckInventory();
+		quantity_storage = CheckInventory(nullptr, nullptr, static_cast<int>(GW::Constants::Bag::Storage_1), static_cast<int>(GW::Constants::Bag::Storage_14));
+		RefillBlocking();
+        printf("Refilled %s\n", chat);
+        refill_attempted = true;
+        refilling = false;
+    });
+    refill_thread.detach();
 }
 int Pcon::CheckInventory(bool* used, int* used_qty_ptr,int from_bag, int to_bag) const {
 	int count = 0;

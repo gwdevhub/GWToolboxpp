@@ -39,18 +39,26 @@ protected:
 		const char* ininame,
 		const wchar_t* filename, 
 		WORD res_id, // you can use 0 and it will not load texture from resource, only from file.
-		ImVec2 uv0, ImVec2 uv1, int threshold);
+		ImVec2 uv0, ImVec2 uv1, int threshold,
+        const char* desc = nullptr);
+	~Pcon();
+    static GW::Item* WaitForSlotUpdate(GW::Bag* bag, int slot, uint32_t timeout_seconds = 3);
+    bool RefillBlocking();
+    static bool UnreserveSlotForMove(int bagId, int slot); // Unlock slot.
 	static bool ReserveSlotForMove(int bagId, int slot); // Prevents more than 1 pcon from trying to add to the same slot at the same time.
 	static bool IsSlotReservedForMove(int bagId, int slot); // Checks whether another pcon has reserved this slot.
 public:
 	virtual void Draw(IDirect3DDevice9* device);
 	virtual void Update(int delay = -1);
-	int MoveItem(GW::Item *item, GW::Bag *bag, int slot, int quantity); // Extension of the GWCA function.
-	int Refill(); // True if the amount of pcons has been refilled, false if not enough.
-	
+    // Extension of the GWCA function.
+	int MoveItem(GW::Item *item, GW::Bag *bag, int slot, int quantity);
+	// Fires off another thread to refill pcons. Sets refill_attempted to TRUE when finished.
+    void Refill();
+	void SetEnabled(bool enabled);
 	void AfterUsed(bool used, int qty);
 	inline void Toggle() { enabled = !enabled; }
-
+	// Resets pcon counters so it needs to recalc number and refill.
+	void ResetCounts();
 	void LoadSettings(CSimpleIni* ini, const char* section);
 	void SaveSettings(CSimpleIni* ini, const char* section);
 
@@ -58,6 +66,8 @@ public:
 	bool visible = true;
 	bool enabled = false;
 	bool pcon_quantity_checked = false;
+    bool refilling = false; // Set when a refill is in progress. Dont touch.
+    bool refill_attempted = false; // Set to true when refill thread has run for this map
 	int threshold; // quantity at which the number color goes from green to yellow and warning starts being displayed
 	int quantity = 0;
 	int quantity_storage = 0;
@@ -65,6 +75,7 @@ public:
 	clock_t timer;
 
 	const char* const chat;
+    std::string desc;
 	const char* const ini;
 
 protected:
@@ -88,7 +99,7 @@ private:
 	IDirect3DTexture9* texture = nullptr;
 	const ImVec2 uv0;
 	const ImVec2 uv1;
-	
+    std::thread refill_thread;
 };
 
 // A generic Pcon has an item_id and effect_id
@@ -100,8 +111,9 @@ public:
 		WORD res_id,
 		ImVec2 uv0, ImVec2 uv1,
 		DWORD item, GW::Constants::SkillID effect, 
-		int threshold)
-		: Pcon(chat, ini, file, res_id, uv0, uv1, threshold),
+		int threshold,
+        const char* desc = nullptr)
+		: Pcon(chat, ini, file, res_id, uv0, uv1, threshold, desc),
 		itemID(item), effectID(effect) {}
 
 protected:
@@ -122,8 +134,9 @@ public:
 		WORD res_id,
 		ImVec2 uv0, ImVec2 uv1,
 		DWORD item, GW::Constants::SkillID effect, 
-		int threshold)
-		: PconGeneric(chat, ini, file, res_id, uv0, uv1, item, effect, threshold) {}
+		int threshold,
+        const char* desc = nullptr)
+		: PconGeneric(chat, ini, file, res_id, uv0, uv1, item, effect, threshold, desc) {}
 
 	bool CanUseByEffect() const override;
 };
@@ -135,8 +148,9 @@ public:
 		const wchar_t* file,
 		WORD res_id,
 		ImVec2 uv0, ImVec2 uv1, 
-		int threshold)
-		: Pcon(chat, ini, file, res_id, uv0, uv1, threshold) {}
+		int threshold,
+        const char* desc = nullptr)
+		: Pcon(chat, ini, file, res_id, uv0, uv1, threshold, desc) {}
 
 	bool CanUseByInstanceType() const;
 	bool CanUseByEffect() const override;
@@ -152,8 +166,13 @@ public:
         WORD res_id,
         ImVec2 uv0, ImVec2 uv1,
         DWORD item,
-        int threshold)
-        : PconCity(chat, ini, file, res_id, uv0, uv1, threshold), itemID(item) {}
+        int threshold,
+        const char* desc_ = nullptr)
+        : PconCity(chat, ini, file, res_id, uv0, uv1, threshold, desc_), itemID(item) {
+        if (desc.size())
+            desc += "\n";
+        desc += "Enable in an outpost to refill your inventory.";
+    }
 
     bool CanUseByInstanceType() const override { return false; }
     bool CanUseByEffect() const override { return false; }
@@ -170,8 +189,9 @@ public:
 		const wchar_t* file,
 		WORD res_id,
 		ImVec2 uv0, ImVec2 uv1,
-		int threshold)
-		: Pcon(chat, ini, file, res_id, uv0, uv1, threshold) {}
+		int threshold,
+        const char* desc = nullptr)
+		: Pcon(chat, ini, file, res_id, uv0, uv1, threshold, desc) {}
 
 	bool CanUseByEffect() const override;
 	int QuantityForEach(const GW::Item* item) const override;
@@ -185,8 +205,9 @@ public:
 		const wchar_t* file,
 		WORD res_id,
 		ImVec2 uv0, ImVec2 uv1, 
-		int threshold)
-		: Pcon(chat, ini, file, res_id, uv0, uv1, threshold) {}
+		int threshold,
+        const char* desc = nullptr)
+		: Pcon(chat, ini, file, res_id, uv0, uv1, threshold, desc) {}
 
 	void Update(int delay = -1) override;
 	bool CanUseByEffect() const override;

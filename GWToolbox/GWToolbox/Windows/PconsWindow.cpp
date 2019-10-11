@@ -370,7 +370,7 @@ bool PconsWindow::SetEnabled(bool b) {
 	if (enabled == b) return enabled; // Do nothing - already enabled/disabled.
 	enabled = b;
 	for (Pcon* pcon : pcons) {
-		pcon->pcon_quantity_checked = false;
+		pcon->ResetCounts();
 	}
 	switch (GW::Map::GetInstanceType()) {
 	case GW::Constants::InstanceType::Outpost:
