@@ -14,6 +14,7 @@ namespace CSLauncher
 {
     public partial class CharSelector : Form {
         private Process[] procs;
+		private string[] charnames;
         private bool expanded = false;
 
         public List<Process> SelectedProcesses { get; private set; }
@@ -21,32 +22,51 @@ namespace CSLauncher
         public CharSelector() {
             InitializeComponent();
             SelectedProcesses = new List<Process>();
+			procs = new Process[0];
+			charnames = new string[0];
         }
-
+		public Process[] GetValidProcesses()
+		{
+			Process[] check_procs = Process.GetProcessesByName("Gw");
+			Process[] tmp_procs = new Process[check_procs.Length];
+			string[] tmp_charnames = new string[check_procs.Length];
+			IntPtr charnameAddr = IntPtr.Zero;
+			if (check_procs.Length < 1)
+				return check_procs;
+			int validProcs = 0;
+			for (int i = 0; i < check_procs.Length; i++)
+			{
+				GWCAMemory mem = new GWCAMemory(check_procs[i]);
+				if (mem.Read<Int32>(new IntPtr(0x00DE0000)) != 0)
+					continue;
+				if (mem.HaveModule("GWToolbox.dll"))
+					continue;
+				if(charnameAddr == IntPtr.Zero) {
+					mem.InitScanner(new IntPtr(0x401000), 0x49A000);
+					charnameAddr = mem.ScanForPtr(new byte[] { 0x6A, 0x14, 0x8D, 0x96, 0xBC }, 0x9, true);
+					mem.TerminateScanner();
+				}
+				if (charnameAddr == IntPtr.Zero) continue;
+				tmp_procs[validProcs] = check_procs[i];
+				tmp_charnames[validProcs] = mem.ReadWString(charnameAddr, 60);
+				validProcs++;
+			}
+			charnames = new string[validProcs];
+			procs = new Process[validProcs];
+			for (int i=0;i < validProcs;i++)
+			{
+				procs[i] = tmp_procs[i];
+				charnames[i] = tmp_charnames[i];
+			}
+			return procs;
+		}
         private void CharSelector_Load(object sender, EventArgs e) {
-            Process[] check_procs = Process.GetProcessesByName("Gw");
-            procs = new Process[check_procs.Length];
-            IntPtr charnameAddr;
-
-            {
-                GWCAMemory firstprocmems = new GWCAMemory(check_procs[0]);
-                firstprocmems.InitScanner(new IntPtr(0x401000), 0x49A000);
-                charnameAddr = firstprocmems.ScanForPtr(new byte[] { 0x6A, 0x14, 0x8D, 0x96, 0xBC }, 0x9, true);
-                firstprocmems.TerminateScanner();
-            }
-            int validProcs = 0;
-            for (int i = 0; i < check_procs.Length; i++)
-            {
-                GWCAMemory mem = new GWCAMemory(check_procs[i]);
-                if (mem.Read<Int32>(new IntPtr(0x00DE0000)) != 0)
-                    continue;
-                if (mem.HaveModule("GWToolbox.dll"))
-                    continue;
-                procs[validProcs] = check_procs[i];
-                validProcs++;
-                string charname = mem.ReadWString(charnameAddr, 30);
-                comboBox.Items.Add(charname);
-                checkedListBox.Items.Add(charname, CheckState.Unchecked);
+			GetValidProcesses();
+			for (int i = 0; i < charnames.Length; i++)
+			{
+				if (charnames[i] == null) continue;
+                comboBox.Items.Add(charnames[i]);
+                checkedListBox.Items.Add(charnames[i], CheckState.Unchecked);
             }
             comboBox.SelectedIndex = 0;
             if (checkedListBox.Items.Count > 0) {

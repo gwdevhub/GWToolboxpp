@@ -77,9 +77,10 @@ namespace CSLauncher {
             }
 
             // Look for gw processes.
-            Process[] gwprocs = Process.GetProcessesByName("Gw");
             List<Process> processesToInject = new List<Process>();
 
+			CharSelector chargui = new CharSelector();
+			Process[] gwprocs = chargui.GetValidProcesses();
             switch(gwprocs.Length) {
                 case 0: // No gw processes found.
                     MessageBox.Show("No Guild Wars clients found.\n" +
@@ -92,11 +93,7 @@ namespace CSLauncher {
                     processesToInject.Add(gwprocs[0]);
                     break;
                 default: // More than one found, make user select client.
-
-                    CharSelector chargui = new CharSelector();
-
                     Application.Run(chargui);
-
                     processesToInject.AddRange(chargui.SelectedProcesses);
                     break;
             }

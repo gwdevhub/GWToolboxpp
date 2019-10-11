@@ -324,7 +324,7 @@ bool Pcon::RefillBlocking() {
 			continue;
 		break;
 	}
-	printf("Begin %s\n", chat);
+	//printf("Begin %s\n", chat);
     int points_needed = threshold - CheckInventory(); // quantity is actually points e.g. 20 grog = 60 quantity
     int points_moved = 0;
     int items_moved = 0;
@@ -375,11 +375,13 @@ void Pcon::Refill() {
         return; // Still going
     refilling = true;
     refill_thread = std::thread([&] {
-		printf("Refilling %s\n", chat);
+		//printf("Refilling %s\n", chat);
 		quantity = CheckInventory();
 		quantity_storage = CheckInventory(nullptr, nullptr, static_cast<int>(GW::Constants::Bag::Storage_1), static_cast<int>(GW::Constants::Bag::Storage_14));
 		RefillBlocking();
-        printf("Refilled %s\n", chat);
+		quantity = CheckInventory();
+		quantity_storage = CheckInventory(nullptr, nullptr, static_cast<int>(GW::Constants::Bag::Storage_1), static_cast<int>(GW::Constants::Bag::Storage_14));
+        //printf("Refilled %s\n", chat);
         refill_attempted = true;
         refilling = false;
     });
