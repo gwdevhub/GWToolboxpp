@@ -29,7 +29,7 @@
 #include <Color.h>
 
 namespace {
-	void SendChatCallback(GW::Chat::Channel chan, wchar_t msg[120]) {
+	void SendChatCallback(GW::HookStatus *, GW::Chat::Channel chan, wchar_t msg[120]) {
 		if (!GameSettings::Instance().auto_url || !msg) return;
 		size_t len = wcslen(msg);
 		size_t max_len = 120;
@@ -102,7 +102,7 @@ namespace {
 		return GW::Agents::GetPlayerNameByLoginNumber(playerNumber);
 	}
 
-	void WhisperCallback(const wchar_t from[20], const wchar_t msg[140]) {
+	void WhisperCallback(GW::HookStatus *, const wchar_t from[20], const wchar_t msg[140]) {
 		GameSettings&  game_setting = GameSettings::Instance();
 		if (game_setting.flash_window_on_pm) FlashWindow();
 		DWORD status = GW::FriendListMgr::GetMyStatus();
@@ -336,21 +336,20 @@ namespace {
 		void ApplyPatches() {
 			// apply skin on agent spawn
 			GW::StoC::AddCallback<DisplayCape>(
-				[](DisplayCape *packet) -> bool {
+				[](GW::HookStatus *status, DisplayCape *packet) -> void {
 				DWORD agent_id = packet->agent_id;
 				GW::Agent *agent = GW::Agents::GetAgentByID(agent_id);
 				ApplySkinSafe(agent, 221);
-				return false;
 			});
 
 			// override tonic usage
 			GW::StoC::AddCallback<AgentModel>(
-				[](AgentModel *packet) -> bool {
+				[](GW::HookStatus *status, AgentModel *packet) -> void {
 				GW::Agent *agent = GW::Agents::GetAgentByID(packet->agent_id);
-				if (!(agent && agent->IsPlayer())) return false;
+				if (!(agent && agent->IsPlayer())) return;
 				GW::GameContext *game_ctx = GW::GameContext::instance();
 				if (game_ctx && game_ctx->character && game_ctx->character->is_explorable) return false;
-				return true; // do not process
+				status->blocked = true;
 			});
 
 			// This apply when you start to everyone in the map
@@ -456,7 +455,7 @@ void GameSettings::Initialize() {
 	}
 #ifdef ENABLE_BORDERLESS
 	GW::Chat::CreateCommand(L"borderless",
-		[&](const wchar_t *message, int argc, LPWSTR *argv) {
+	[this](const wchar_t *message, int argc, LPWSTR *argv) {
 		if (argc <= 1) {
 			ApplyBorderless(!borderlesswindow);
 		} else {
@@ -488,14 +487,13 @@ void GameSettings::Initialize() {
 		}
 	}
 
-	GW::StoC::AddCallback<GW::Packet::StoC::PartyPlayerAdd>(
-		[](GW::Packet::StoC::PartyPlayerAdd*) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerAdd>(&PartyPlayerAdd_Entry,
+	[](GW::HookStatus *status, GW::Packet::StoC::PartyPlayerAdd*) -> void {
 		if (GameSettings::Instance().flash_window_on_party_invite) FlashWindow();
-		return false;
 	});
 
-	GW::StoC::AddCallback<GW::Packet::StoC::GameSrvTransfer>(
-		[](GW::Packet::StoC::GameSrvTransfer *pak) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry,
+	[](GW::HookStatus *status, GW::Packet::StoC::GameSrvTransfer *pak) -> void {
 
 		GW::CharContext *ctx = GW::GameContext::instance()->character;
 		if (GameSettings::Instance().flash_window_on_zoning) FlashWindow();
@@ -504,17 +502,14 @@ void GameSettings::Initialize() {
 			SetForegroundWindow(hwnd);
 			ShowWindow(hwnd, SW_RESTORE);
 		}
-
-		return false;
 	});
 
-	GW::StoC::AddCallback<GW::Packet::StoC::CinematicPlay>(
-	[this](GW::Packet::StoC::CinematicPlay *packet) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::CinematicPlay>(&CinematicPlay_Entry,
+	[this](GW::HookStatus *status, GW::Packet::StoC::CinematicPlay *packet) -> void {
 		if (packet->play && auto_skip_cinematic)
 			GW::Map::SkipCinematic();
-		return false;
 	});
-	GW::FriendListMgr::SetOnFriendStatusCallback(GameSettings::FriendStatusCallback);
+	GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusCallback_Entry, GameSettings::FriendStatusCallback);
 
 #ifdef APRIL_FOOLS
 	AF::ApplyPatchesIfItsTime();
@@ -568,12 +563,12 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     GW::Chat::ToggleTimestamps(show_timestamps);
     GW::Chat::SetTimestampsColor(timestamps_color);
 	// if (select_with_chat_doubleclick) GW::Chat::SetChatEventCallback(&ChatEventCallback);
-	if (auto_url) GW::Chat::SetSendChatCallback(&SendChatCallback);
-	if (move_item_on_ctrl_click) GW::Items::SetOnItemClick(GameSettings::ItemClickCallback);
+	if (auto_url) GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, &SendChatCallback);
+	if (move_item_on_ctrl_click) GW::Items::RegisterItemClickCallback(&ItemClickCallback_Entry, GameSettings::ItemClickCallback);
 	if (tome_patch) tome_patch->TooglePatch(show_unlearned_skill);
 	if (gold_confirm_patch) gold_confirm_patch->TooglePatch(disable_gold_selling_confirmation);
 
-	GW::Chat::SetWhisperCallback(&WhisperCallback);
+	GW::Chat::RegisterWhisperCallback(&WhisperCallback_Entry, &WhisperCallback);
 }
 
 void GameSettings::Terminate() {
@@ -681,7 +676,7 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::ShowHelp("Clicking on template that has a URL as name will open that URL in your browser");
 
 	if (ImGui::Checkbox("Automatically change urls into build templates.", &auto_url)) {
-		GW::Chat::SetSendChatCallback(&SendChatCallback);
+		GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, &SendChatCallback);
 	}
 	ImGui::ShowHelp("When you write a message starting with 'http://' or 'https://', it will be converted in template format");
 
@@ -691,7 +686,7 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::ShowHelp("Ticking in party window will work as a toggle instead of opening the menu");
 
 	if (ImGui::Checkbox("Move items from/to storage with Control+Click", &move_item_on_ctrl_click)) {
-		GW::Items::SetOnItemClick(GameSettings::ItemClickCallback);
+        GW::Items::RegisterItemClickCallback(&ItemClickCallback_Entry, GameSettings::ItemClickCallback);
 	}
 
 	ImGui::Text("Flash Guild Wars taskbar icon when:");
@@ -901,7 +896,7 @@ bool GameSettings::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 	return false;
 }
 
-void GameSettings::ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag) {
+void GameSettings::ItemClickCallback(GW::HookStatus *, uint32_t type, uint32_t slot, GW::Bag *bag) {
 	if (!GameSettings::Instance().move_item_on_ctrl_click) return;
     if (!ImGui::IsKeyDown(VK_CONTROL)) return;
 	if (type != 7) return;
@@ -951,7 +946,13 @@ void GameSettings::ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag)
 	}
 }
 
-void GameSettings::FriendStatusCallback(GW::Friend* f, GW::FriendStatus status, const wchar_t *account, const wchar_t *charname) {
+void GameSettings::FriendStatusCallback(
+	GW::HookStatus *,
+	GW::Friend* f,
+	GW::FriendStatus status,
+	const wchar_t *account,
+	const wchar_t *charname) {
+	
 	if (!f || !charname || *charname == L'\0')
 		return;
 

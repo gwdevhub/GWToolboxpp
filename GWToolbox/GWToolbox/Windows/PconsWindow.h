@@ -1,9 +1,8 @@
 #pragma once
 
-#include <list>
-#include <vector>
 #include <Defines.h>
 
+#include <GWCA\Utilities\Hook.h>
 #include <GWCA\Constants\Constants.h>
 
 #include "Timer.h"
@@ -53,4 +52,10 @@ private:
 	// todo: tonic pop?
 	// todo: morale / dp removal
 	// todo: replenish character pcons from chest?
+	GW::HookEntry AgentSetPlayer_Entry;
+	GW::HookEntry AddExternalBond_Entry;
+	GW::HookEntry PostProcess_Entry;
+	GW::HookEntry GenericValue_Entry;
+	GW::HookEntry AgentState_Entry;
+	GW::HookEntry SpeechBubble_Entry;
 };

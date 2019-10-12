@@ -1,5 +1,6 @@
 #pragma once
 
+#include <GWCA/Utilities/Hook.h>
 #include <GWCA/GameEntities/Item.h>
 #include <GWCA/Managers/MerchantMgr.h>
 
@@ -120,4 +121,8 @@ private:
 	size_t trans_done;
 
 	bool manage_gold;
+
+	GW::HookEntry QuotedItemPrice_Entry;
+	GW::HookEntry TransactionDone_Entry;
+	GW::HookEntry ItemStreamEnd_Entry;
 };

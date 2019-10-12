@@ -1,7 +1,7 @@
 #pragma once
 
-#include <vector>
-#include <string>
+#include <GWCA\Utilities\Hook.h>
+
 #include <Defines.h>
 
 #include "ToolboxWindow.h"
@@ -51,4 +51,7 @@ private:
 	bool show_mobcount = true;
 	bool show_quest = true;
 	bool show_resignlog = true;
+
+	GW::HookEntry MessageCore_Entry;
+	GW::HookEntry InstanceLoadFile_Entry;
 };

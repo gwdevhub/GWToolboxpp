@@ -1,9 +1,8 @@
 #pragma once
 
-#include <Windows.h>
-#include <vector>
 #include <Defines.h>
 
+#include <GWCA\Utilities\Hook.h>
 #include <GWCA\GameContainers\GamePos.h>
 
 #include "ToolboxWindow.h"
@@ -88,4 +87,13 @@ private:
     void AddDoAObjectiveSet(GW::Vec2f spawn);
     void AddFoWObjectiveSet();
     void AddUWObjectiveSet();
+
+    GW::HookEntry PartyDefeated_Entry;
+    GW::HookEntry GameSrvTransfer_Entry;
+    GW::HookEntry InstanceLoadFile_Entry;
+    GW::HookEntry ObjectiveAdd_Entry;
+    GW::HookEntry ObjectiveUpdateName_Entry;
+    GW::HookEntry ObjectiveDone_Entry;
+    GW::HookEntry AgentUpdateAllegiance_Entry;
+    GW::HookEntry DoACompleteZone_Entry;
 };

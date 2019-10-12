@@ -60,8 +60,8 @@ public:
 	void ResetDamage();
 
 private:
-	bool DamagePacketCallback(GW::Packet::StoC::GenericModifier *packet);
-	bool MapLoadedCallback(GW::Packet::StoC::MapLoaded *packet);
+	void DamagePacketCallback(GW::HookStatus *, GW::Packet::StoC::GenericModifier *packet);
+	void MapLoadedCallback(GW::HookStatus *, GW::Packet::StoC::MapLoaded *packet);
 
 	void CreatePartyIndexMap();
 
@@ -90,4 +90,7 @@ private:
 	bool bars_left;
 	int recent_max_time;
 	int row_height = 0;
+
+	GW::HookEntry GenericModifier_Entry;
+	GW::HookEntry MapLoaded_Entry;
 };

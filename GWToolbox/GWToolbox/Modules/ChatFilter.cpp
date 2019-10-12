@@ -40,8 +40,8 @@ void ChatFilter::Initialize() {
 	//strcpy_s(byauthor_buf, "");
 
 	// server messages
-	GW::StoC::AddCallback<GW::Packet::StoC::MessageServer>(
-		[this](GW::Packet::StoC::MessageServer *pak) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&MessageServer_Entry,
+	[this](GW::HookStatus *status, GW::Packet::StoC::MessageServer *pak) -> void {
 #ifdef PRINT_CHAT_PACKETS
 		printf("P082: id %d, type %d\n", pak->id, pak->type);
 #endif // PRINT_CHAT_PACKETS
@@ -49,15 +49,14 @@ void ChatFilter::Initialize() {
 		GW::Array<wchar_t> *buff = &GW::GameContext::instance()->world->message_buff;
 		if (ShouldIgnore(buff->begin()) || ShouldIgnoreByContent(buff->begin(), buff->size())) {
 			buff->clear();
-			return true;
+			status->blocked = true;
+			return;
 		}
-
-		return false;
 	});
 
 #ifdef PRINT_CHAT_PACKETS
 	GW::StoC::AddCallback<GW::Packet::StoC::P088>(
-		[](GW::Packet::StoC::P088 *pak) -> bool {
+	[](GW::Packet::StoC::P088 *pak) -> bool {
 		printf("P081: agent_id %d, unk1 %d, unk2 ", pak->agent_id, pak->unk1);
 		for (int i = 0; i < 8 && pak->unk2[i]; ++i) printchar(pak->unk2[i]);
 		printf("\n");
@@ -66,8 +65,8 @@ void ChatFilter::Initialize() {
 #endif // PRINT_CHAT_PACKETS
 
 	// global messages
-	GW::StoC::AddCallback<GW::Packet::StoC::MessageGlobal>(
-		[&](GW::Packet::StoC::MessageGlobal* pak) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageGlobal>(&MessageGlobal_Entry,
+	[this](GW::HookStatus *status, GW::Packet::StoC::MessageGlobal* pak) -> void {
 #ifdef PRINT_CHAT_PACKETS
 		printf("P081: id %d, name ", pak->id);
 		for (int i = 0; i < 32 && pak->sender_name[i]; ++i) printchar(pak->sender_name[i]);
@@ -80,42 +79,38 @@ void ChatFilter::Initialize() {
 
 		if (ShouldIgnore(buff->begin()) ||
 			ShouldIgnoreByContent(buff->begin(), buff->size())) {
-
 			buff->clear();
-			return true;
+			status->blocked = true;
+			return;
 		}
-
-		return false;
 	});
 
 	// local messages
-	GW::StoC::AddCallback<GW::Packet::StoC::MessageLocal>(
-		[this](GW::Packet::StoC::MessageLocal *pak) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&MessageLocal_Entry,
+	[this](GW::HookStatus *status, GW::Packet::StoC::MessageLocal *pak) -> void {
 #ifdef PRINT_CHAT_PACKETS
 		printf("P085: id %d, type %d\n", pak->id, pak->type);
 #endif // PRINT_CHAT_PACKETS
 
 		GW::Array<wchar_t> *buff = &GW::GameContext::instance()->world->message_buff;
 		wchar_t *sender = GW::Agents::GetPlayerNameByLoginNumber(pak->id);
-		if (!sender) return false;
+		if (!sender) return;
 
 		if (ShouldIgnore(buff->begin()) ||
 			ShouldIgnoreBySender(sender, 32) ||
 			ShouldIgnoreByContent(buff->begin(), buff->size())) {
 
 			buff->clear();
-			return true;
+			status->blocked = true;
+			return;
 		}
-
-		return false;
 	});
 
-	GW::Chat::SetLocalMessageCallback(
-		[this](int channel, wchar_t *message) -> bool {
+	GW::Chat::RegisterLocalMessageCallback(&LocalMessageCallback_Entry,
+	[this](GW::HookStatus *status, int channel, wchar_t *message) -> void {
 		if (away && ShouldIgnore(message)) {
-			return false;
+			status->blocked = true;
 		}
-		return true;
 	});
 }
 

@@ -3,6 +3,7 @@
 #include <Timer.h>
 #include <Defines.h>
 
+#include <GWCA/Utilities/Hook.h>
 #include <GWCA/Utilities/MemoryPatcher.h>
 #include <GWCA/GameEntities/Item.h>
 
@@ -85,7 +86,7 @@ public:
 
 	void ApplyBorderless(bool value);
 	void SetAfkMessage(std::wstring&& message);
-	static void ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag);
+	static void ItemClickCallback(GW::HookStatus *, uint32_t type, uint32_t slot, GW::Bag *bag);
 
 private:
 	void UpdateBorderless();
@@ -96,5 +97,19 @@ private:
 	GW::MemoryPatcher *gold_confirm_patch;
 
 	void DrawChannelColor(const char *name, GW::Chat::Channel chan);
-	static void FriendStatusCallback(GW::Friend* f, GW::FriendStatus status, const wchar_t *name, const wchar_t *charname);
+	static void FriendStatusCallback(
+		GW::HookStatus *,
+		GW::Friend* f,
+		GW::FriendStatus status,
+		const wchar_t *name,
+		const wchar_t *charname);
+
+	GW::HookEntry WhisperCallback_Entry;
+	GW::HookEntry SendChatCallback_Entry;
+	GW::HookEntry ItemClickCallback_Entry;
+	GW::HookEntry FriendStatusCallback_Entry;
+
+	GW::HookEntry PartyPlayerAdd_Entry;
+	GW::HookEntry GameSrvTransfer_Entry;
+	GW::HookEntry CinematicPlay_Entry;
 };

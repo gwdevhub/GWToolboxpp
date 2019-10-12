@@ -102,26 +102,24 @@ namespace {
 void ObjectiveTimerWindow::Initialize() {
     ToolboxWindow::Initialize();
 
-    GW::StoC::AddCallback<GW::Packet::StoC::PartyDefeated>(
-        [this](GW::Packet::StoC::PartyDefeated *packet) -> bool {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyDefeated>(&PartyDefeated_Entry,
+    [this](GW::HookStatus *, GW::Packet::StoC::PartyDefeated *packet) -> void {
         if (!objective_sets.empty()) {
             ObjectiveSet *os = objective_sets.back();
             os->StopObjectives();
         }
-        return false;
     });
 
-    GW::StoC::AddCallback<GW::Packet::StoC::GameSrvTransfer>(
-        [this](GW::Packet::StoC::GameSrvTransfer *packet) -> bool {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry,
+    [this](GW::HookStatus *, GW::Packet::StoC::GameSrvTransfer *packet) -> void {
         if (!objective_sets.empty()) {
             ObjectiveSet *os = objective_sets.back();
             os->StopObjectives();
         }
-        return false;
     });
 
-	GW::StoC::AddCallback<GW::Packet::StoC::InstanceLoadFile>(
-	[this](GW::Packet::StoC::InstanceLoadFile *packet) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry,
+	[this](GW::HookStatus *, GW::Packet::StoC::InstanceLoadFile *packet) -> void {
 		// We would want to have a default type that can handle objective by using name in Guild Wars
 		// The only thing we miss is how to determine wether this map has a mission objectives.
 		// We could use packet 187, but this can be a little bit hairy to do. Ask Ziox for more info.
@@ -134,11 +132,10 @@ void ObjectiveTimerWindow::Initialize() {
                 objective_sets.back()->StopObjectives();
             }
 		}
-		return false;
 	});
 
-	GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveAdd>(
-	[this](GW::Packet::StoC::ObjectiveAdd *packet) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveAdd>(&ObjectiveAdd_Entry,
+	[this](GW::HookStatus *, GW::Packet::StoC::ObjectiveAdd *packet) -> void {
 		// type 12 is the "title" of the mission objective, should we ignore it or have a "title" objective ?
 		/*
 		Objective *obj = GetCurrentObjective(packet->objective_id);
@@ -151,44 +148,40 @@ void ObjectiveTimerWindow::Initialize() {
 		if (wcsncmp(packet->name, L"\x8102\x3236", 2))
 			obj->SetStarted();
 		*/
-		return false;
 	});
 
-	GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveUpdateName>(
-	[this](GW::Packet::StoC::ObjectiveUpdateName* packet) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveUpdateName>(&ObjectiveUpdateName_Entry,
+	[this](GW::HookStatus *, GW::Packet::StoC::ObjectiveUpdateName* packet) -> void {
 		Objective *obj = GetCurrentObjective(packet->objective_id);
         if (obj) obj->SetStarted();
-        return false;
 	});
 	
-	GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveDone>(
-	[this](GW::Packet::StoC::ObjectiveDone* packet) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveDone>(&ObjectiveDone_Entry,
+	[this](GW::HookStatus *, GW::Packet::StoC::ObjectiveDone* packet) -> void {
 		Objective *obj = GetCurrentObjective(packet->objective_id);
         if (obj) {
             obj->SetDone();
             objective_sets.back()->CheckSetDone();
         }
-        return false;
 	});
 
-    GW::StoC::AddCallback<GW::Packet::StoC::AgentUpdateAllegiance>(
-        [this](GW::Packet::StoC::AgentUpdateAllegiance* packet) -> bool {
-        if (GW::Map::GetMapID() != GW::Constants::MapID::The_Underworld) return false;
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentUpdateAllegiance>(&AgentUpdateAllegiance_Entry,
+        [this](GW::HookStatus *, GW::Packet::StoC::AgentUpdateAllegiance* packet) -> void {
+        if (GW::Map::GetMapID() != GW::Constants::MapID::The_Underworld) return;
 
         const GW::Agent* agent = GW::Agents::GetAgentByID(packet->agent_id);
-        if (agent == nullptr) return false;
-        if (agent->player_number != GW::Constants::ModelID::UW::Dhuum) return false;
-        if (packet->unk1 != 0x6D6F6E31) return false;
+        if (agent == nullptr) return;
+        if (agent->player_number != GW::Constants::ModelID::UW::Dhuum) return;
+        if (packet->unk1 != 0x6D6F6E31) return;
         
         Objective* obj = GetCurrentObjective(157);
         if (obj && !obj->IsStarted()) obj->SetStarted();
-        return false;
     });
 
-	GW::StoC::AddCallback<GW::Packet::StoC::DoACompleteZone>(
-	[this](GW::Packet::StoC::DoACompleteZone* packet) -> bool {
-		if (packet->message[0] != 0x8101) return false;
-		if (objective_sets.empty()) return false;
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DoACompleteZone>(&DoACompleteZone_Entry,
+	[this](GW::HookStatus *, GW::Packet::StoC::DoACompleteZone* packet) -> void {
+		if (packet->message[0] != 0x8101) return;
+		if (objective_sets.empty()) return;
 
 		uint32_t id = packet->message[1];
 		Objective *obj = GetCurrentObjective(id);
@@ -201,7 +194,6 @@ void ObjectiveTimerWindow::Initialize() {
             Objective *next = GetCurrentObjective(next_id);
             if (next && !next->IsStarted()) next->SetStarted();
         }
-		return false;
 	});
 }
 

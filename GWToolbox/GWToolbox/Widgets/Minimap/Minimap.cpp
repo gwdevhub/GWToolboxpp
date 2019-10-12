@@ -35,45 +35,39 @@
 
 void Minimap::Initialize() {
 	ToolboxWidget::Initialize();
-	GW::StoC::AddCallback<GW::Packet::StoC::AgentPinged>(
-		[&](GW::Packet::StoC::AgentPinged *pak) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentPinged>(&AgentPinged_Entry,
+	[this](GW::HookStatus *, GW::Packet::StoC::AgentPinged *pak) -> void {
 		if (visible) {
 			pingslines_renderer.P046Callback(pak);
 		}
-		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::CompassEvent>(
-		[&](GW::Packet::StoC::CompassEvent *pak) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::CompassEvent>(&CompassEvent_Entry,
+	[this](GW::HookStatus *, GW::Packet::StoC::CompassEvent *pak) -> void {
 		if (visible) {
 			pingslines_renderer.P138Callback(pak);
 		}
-		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::GenericValueTarget>(
-		[&](GW::Packet::StoC::GenericValueTarget *pak) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValueTarget>(&GenericValueTarget_Entry,
+	[this](GW::HookStatus *, GW::Packet::StoC::GenericValueTarget *pak) -> void {
 		if (visible) {
 			pingslines_renderer.P153Callback(pak);
 		}
-		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::SkillActivate>(
-		[&](GW::Packet::StoC::SkillActivate *pak) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SkillActivate>(&SkillActivate_Entry,
+	[this](GW::HookStatus *, GW::Packet::StoC::SkillActivate *pak) -> void {
 		if (visible) {
 			pingslines_renderer.P221Callback(pak);
 		}
-		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::InstanceLoadFile>(
-		[this](GW::Packet::StoC::InstanceLoadFile *packet) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry,
+		[this](GW::HookStatus *, GW::Packet::StoC::InstanceLoadFile *packet) -> void {
 		pmap_renderer.Invalidate();
 		loading = false;
-		return false;
 	});
 
-	GW::StoC::AddCallback<GW::Packet::StoC::GameSrvTransfer>(
-		[&](GW::Packet::StoC::GameSrvTransfer *pak) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry,
+	[this](GW::HookStatus *, GW::Packet::StoC::GameSrvTransfer *pak) -> void {
 		loading = true;
-		return false;
 	});
 
 	last_moved = TIMER_INIT();

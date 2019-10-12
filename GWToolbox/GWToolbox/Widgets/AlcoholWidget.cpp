@@ -19,11 +19,14 @@ void AlcoholWidget::Initialize() {
 	// last time the player used a drink
 	last_alcohol = 0;
 	alcohol_level = 0;
-	GW::StoC::AddCallback<GW::Packet::StoC::PostProcess>(
-		std::bind(&AlcoholWidget::AlcUpdate, this, std::placeholders::_1));
+	
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PostProcess>(&PostProcess_Entry,
+	[this] (GW::HookStatus *status, GW::Packet::StoC::PostProcess *packet) -> void {
+		return AlcUpdate(status, packet);
+	});
 }
 
-bool AlcoholWidget::AlcUpdate(GW::Packet::StoC::PostProcess *packet) {
+void AlcoholWidget::AlcUpdate(GW::HookStatus *, GW::Packet::StoC::PostProcess *packet) {
 	// if the player used a drink
 	if (packet->level > alcohol_level){
 		// if the player already had a drink going
@@ -39,7 +42,6 @@ bool AlcoholWidget::AlcUpdate(GW::Packet::StoC::PostProcess *packet) {
 		last_alcohol = time(NULL);
 	}
 	alcohol_level = packet->level;
-	return false;
 }
 
 void AlcoholWidget::Draw(IDirect3DDevice9* pDevice) {

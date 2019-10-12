@@ -1,11 +1,6 @@
 #pragma once
 
-#include <set>
-#include <string>
-#include <regex>
-#include <vector>
-#include <initializer_list>
-
+#include <GWCA\Utilities\Hook.h>
 #include <GWCA\Packets\StoC.h>
 
 #include "ToolboxModule.h"
@@ -101,4 +96,10 @@ private:
 		ParseBuffer(byauthor_buf, byauthor_words);
 	}
 #endif
+
+	GW::HookEntry LocalMessageCallback_Entry;
+
+	GW::HookEntry MessageServer_Entry;
+	GW::HookEntry MessageGlobal_Entry;
+	GW::HookEntry MessageLocal_Entry;
 };
