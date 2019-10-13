@@ -294,14 +294,18 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			static char modelid[32] = "";
 			strcpy_s(modelid, "-");
 			GW::Bag** bags = GW::Items::GetBagArray();
-			if (bags && bags[1]) {
-				GW::ItemArray items = bags[1]->items;
-				if (items.valid()) {
-                    item = items[0];
+			if (bags) {
+				GW::Bag* bag1 = bags[1];
+				if (bag1) {
+					GW::ItemArray items = bag1->items;
+					if (items.valid()) {
+						GW::Item* item = items[0];
+						if (item) {
+							snprintf(modelid, 32, "%d", item->model_id);
+						}
+					}
 				}
 			}
-            if(item)
-                snprintf(modelid, 32, "%d", item->model_id);
 			ImGui::PushItemWidth(-80.0f);
 			ImGui::InputText("ModelID", modelid, 32, ImGuiInputTextFlags_ReadOnly);
 			//ImGui::InputText("ItemID", itemid, 32, ImGuiInputTextFlags_ReadOnly);

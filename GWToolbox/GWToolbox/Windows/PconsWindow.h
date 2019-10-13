@@ -2,6 +2,8 @@
 
 #include <Defines.h>
 
+#include <GWCA\Utilities\Hook.h>
+#include <GWCA\Constants\Constants.h>
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA\Utilities\Hook.h>
 #include <GWCA\Constants\Constants.h>
@@ -106,4 +108,10 @@ private:
     char* disable_cons_on_vanquish_completion_hint = "Disable cons when completing a vanquish";
 	
 	
+	GW::HookEntry AgentSetPlayer_Entry;
+	GW::HookEntry AddExternalBond_Entry;
+	GW::HookEntry PostProcess_Entry;
+	GW::HookEntry GenericValue_Entry;
+	GW::HookEntry AgentState_Entry;
+	GW::HookEntry SpeechBubble_Entry;
 };
