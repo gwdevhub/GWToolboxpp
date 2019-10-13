@@ -461,6 +461,9 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         if (IsIconic(GW::MemoryMgr::GetGWWindowHandle()))
             return;
 
+        if (!GuiUtils::FontsLoaded())
+            return; // Fonts not loaded yet.
+
         ImGui_ImplDX9_NewFrame();
         // Key up/down events don't get passed to gw window when out of focus, but we need the following to be correct, 
         // or things like alt-tab make imgui think that alt is still down.

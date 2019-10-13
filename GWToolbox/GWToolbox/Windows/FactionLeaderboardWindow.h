@@ -28,11 +28,11 @@ private:
 			map_name[0] = 0;
 			strcpy(guild_str,GuiUtils::WStringToString(guild_wstr).c_str());
 			strcpy(tag_str, GuiUtils::WStringToString(tag_wstr).c_str());
-			guild_wiki_url = guild_str;
-			std::transform(guild_wiki_url.begin(), guild_wiki_url.end(), guild_wiki_url.begin(), [](char ch) {
+			guild_wiki_url = guild_wstr;
+			std::transform(guild_wiki_url.begin(), guild_wiki_url.end(), guild_wiki_url.begin(), [](wchar_t ch) {
 				return ch == ' ' ? '_' : ch;
 			});
-			guild_wiki_url = "https://wiki.guildwars.com/wiki/Guild:" + guild_wiki_url;
+			guild_wiki_url = L"https://wiki.guildwars.com/wiki/Guild:" + guild_wiki_url;
 			initialised = true;
 		}
 		uint32_t map_id;
@@ -41,11 +41,11 @@ private:
 		uint32_t faction;
 		wchar_t guild_wstr[32];
 		wchar_t tag_wstr[5];
-		char guild_str[32];
-		char tag_str[5];
+		char guild_str[128]; // unicode char can be up to 4 bytes
+		char tag_str[20]; // unicode char can be up to 4 bytes
 		wchar_t map_name_enc[16];
 		char map_name[256];
-		std::string guild_wiki_url;
+		std::wstring guild_wiki_url;
 		bool initialised = false;
 	};
 

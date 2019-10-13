@@ -12,6 +12,7 @@ namespace GuiUtils {
 		f48
 	};
 	void LoadFonts();
+    bool FontsLoaded();
 	ImFont* GetFont(FontSize size);
 
 	int GetPartyHealthbarHeight();
@@ -22,6 +23,7 @@ namespace GuiUtils {
 	std::string RemovePunctuation(std::string s);
 
 	std::string WStringToString(const std::wstring& s);
+	std::wstring StringToWString(const std::string& s);
 
 	bool ParseInt(const char *str, int *val, int base = 0);
 	bool ParseInt(const wchar_t *str, int *val, int base = 0);
@@ -32,9 +34,6 @@ namespace GuiUtils {
 	bool ParseFloat(const char *str, float *val);
 	bool ParseFloat(const wchar_t *str, float *val);
 
-	std::wstring ToWstr(std::string &s);
-
-	size_t wcstostr(char *dest, const wchar_t *src, size_t n);
-
 	char *StrCopy(char *dest, const char *src, size_t dest_size);
+
 };

@@ -98,7 +98,7 @@ void Updater::CheckForUpdate() {
 
 		// get json release manifest
 		std::string s = Resources::Instance().Download(
-			std::wstring(L"https://api.github.com/repos/HasKha/GWToolboxpp/releases/tags/") + GuiUtils::ToWstr(version) + L"_Release");
+			std::wstring(L"https://api.github.com/repos/HasKha/GWToolboxpp/releases/tags/") + GuiUtils::StringToWString(version) + L"_Release");
 
 		if (s.empty()) {
 			step = Done;
@@ -245,7 +245,7 @@ void Updater::DoUpdate() {
 	Resources::Instance().Download(
 		dllfile,
 		std::wstring(L"https://github.com/HasKha/GWToolboxpp/releases/download/") 
-			+ GuiUtils::ToWstr(server_version) + L"_Release/GWToolbox.dll", 
+			+ GuiUtils::StringToWString(server_version) + L"_Release/GWToolbox.dll", 
 		[this, dllfile, dllold](bool success) {
 		if (success) {
 			step = Success;

@@ -26,13 +26,13 @@ namespace {
 				swprintf(buf, 599, L"<a=1>%S</a>: Connected", module->irc_alias.c_str());
 			}
 			else {
-				swprintf(buf, 599, L"<a=1>%S</a>: Connected to %S as %S", module->irc_alias.c_str(), &params[1], module->irc_username.c_str());
+				swprintf(buf, 599, L"<a=1>%S</a>: Connected to %s as %S", module->irc_alias.c_str(), GuiUtils::StringToWString(&params[1]).c_str(), module->irc_username.c_str());
 			}
 		}
 		else {
 			if (!module->notify_on_user_join)
 				return 0;
-			swprintf(buf, 599, L"<a=1>%S</a>: %S joined your channel.", module->irc_alias.c_str(), hostd->nick);
+			swprintf(buf, 599, L"<a=1>%S</a>: %s joined your channel.", module->irc_alias.c_str(), GuiUtils::StringToWString(hostd->nick).c_str());
 		}
         GW::GameThread::Enqueue([buf]() {
             // NOTE: Messages are sent to the GWCA_1 channel - unused atm as far as i can see
@@ -45,7 +45,7 @@ namespace {
         if (!params[0] || !module->show_messages || !module->notify_on_user_leave)
             return 0; // Empty msg
         wchar_t buf[600];
-        swprintf(buf, 599, L"<a=1>%S</a>: %S left your channel.", module->irc_alias.c_str(), hostd->nick);
+        swprintf(buf, 599, L"<a=1>%S</a>: %s left your channel.", module->irc_alias.c_str(), GuiUtils::StringToWString(hostd->nick).c_str());
         GW::GameThread::Enqueue([buf]() {
             // NOTE: Messages are sent to the GWCA_1 channel - unused atm as far as i can see
             GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, buf);
@@ -72,7 +72,7 @@ namespace {
         if (!params[0] || !module->show_messages)
             return 0; // Empty msg
         wchar_t buf[600];
-        swprintf(buf, 599, L"<a=1>%S @ %S</a>: %S", hostd->nick, module->irc_alias.c_str(), &params[1]);
+        swprintf(buf, 599, L"<a=1>%s @ %S</a>: %s", GuiUtils::StringToWString(hostd->nick).c_str(), module->irc_alias.c_str(), GuiUtils::StringToWString(&params[1]).c_str());
         GW::GameThread::Enqueue([buf]() {
             // NOTE: Messages are sent to the GWCA_1 channel - unused atm as far as i can see
             GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, buf);
@@ -123,7 +123,7 @@ void IRCModule::AddHooks() {
 		wchar_t buf[128];
 		if (!name)
 			return false;
-		std::wstring walias = GuiUtils::ToWstr(IRCModule::Instance().irc_alias);
+		std::wstring walias = GuiUtils::StringToWString(IRCModule::Instance().irc_alias);
 		swprintf(buf, 128, L" @ %s", walias.c_str());
 		if ((std::wstring(name)).find(buf) != -1) {
 			wcscpy(name, walias.c_str());

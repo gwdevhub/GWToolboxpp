@@ -564,6 +564,8 @@ void PacketLoggerWindow::LoadSettings(CSimpleIni* ini) {
     ToolboxWindow::LoadSettings(ini);
 
     const char* ignored_packets_bits = ini->GetValue(Name(), VAR_NAME(ignored_packets), "-");
+    if (strcmp(ignored_packets_bits, "-") == 0)
+        return;
     std::bitset<packet_max> ignored_packets_bitset(ignored_packets_bits);
     for (size_t i = 0; i < packet_max; ++i) {
         ignored_packets[i] = ignored_packets_bitset[i] == 1;
