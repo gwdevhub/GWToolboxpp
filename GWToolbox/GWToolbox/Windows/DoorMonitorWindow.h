@@ -6,6 +6,8 @@
 #include <time.h>
 #include <ctime>
 
+#include <GWCA/Utilities/Hook.h>
+
 #include "ToolboxWindow.h"
 
 class DoorMonitorWindow : public ToolboxWindow {
@@ -83,6 +85,8 @@ public:
 private:
     bool in_zone = false;
 
+	GW::HookEntry InstanceLoadInfo_Callback;
+	GW::HookEntry ManipulateMapObject_Callback;
  
 public:
     std::map<uint32_t, DoorObject*> doors;

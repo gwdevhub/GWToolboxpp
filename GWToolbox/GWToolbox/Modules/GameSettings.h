@@ -273,6 +273,7 @@ private:
 		const wchar_t *name,
 		const wchar_t *charname);
 
+	GW::HookEntry StartWhisperCallback_Entry;
 	GW::HookEntry WhisperCallback_Entry;
 	GW::HookEntry SendChatCallback_Entry;
 	GW::HookEntry ItemClickCallback_Entry;
@@ -281,9 +282,19 @@ private:
     bool ShouldRemoveAgentFromPartyWindow(uint32_t agent_id);
     bool GetPlayerIsLeader();
 
+	GW::HookEntry PartyDefeated_Entry;
+	GW::HookEntry AgentState_Entry;
+	GW::HookEntry AgentRemove_Entry;
+	GW::HookEntry AgentAdd_Entry;
+	GW::HookEntry TradeStart_Entry;
 	GW::HookEntry PartyPlayerAdd_Entry;
-	GW::HookEntry PlayerLeaveInstance_Entry;
-	GW::HookEntry PlayerJoinInstance_Entry;
+	GW::HookEntry PartyPlayerRemove_Entry;
 	GW::HookEntry GameSrvTransfer_Entry;
 	GW::HookEntry CinematicPlay_Entry;
+	GW::HookEntry SpeechBubble_Entry;
+	GW::HookEntry DisplayDialogue_Entry;
+	GW::HookEntry MessageNPC_Entry;
+	GW::HookEntry MessageLocal_Entry;
+	GW::HookEntry PlayerJoinInstance_Entry;
+	GW::HookEntry PlayerLeaveInstance_Entry;
 };

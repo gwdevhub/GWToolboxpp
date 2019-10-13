@@ -72,6 +72,8 @@ private:
 	GW::HookEntry GenericValue_Entry;
 	GW::HookEntry AgentState_Entry;
 	GW::HookEntry SpeechBubble_Entry;
+	GW::HookEntry ObjectiveDone_Entry;
+	GW::HookEntry VanquishComplete_Entry;
 
 	void MapChanged(); // Called via Update() when map id changes
 	// Elite area auto disable
@@ -107,11 +109,4 @@ private:
 	char* disable_cons_in_final_room_hint = "Disable cons when reaching the final room in Urgoz and Deep";
     char* disable_cons_on_vanquish_completion_hint = "Disable cons when completing a vanquish";
 	
-	
-	GW::HookEntry AgentSetPlayer_Entry;
-	GW::HookEntry AddExternalBond_Entry;
-	GW::HookEntry PostProcess_Entry;
-	GW::HookEntry GenericValue_Entry;
-	GW::HookEntry AgentState_Entry;
-	GW::HookEntry SpeechBubble_Entry;
 };

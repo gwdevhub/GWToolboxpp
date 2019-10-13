@@ -2,6 +2,10 @@
 
 #include "ToolboxWidget.h"
 
+#include <GWCA/Utilities/Hook.h>
+
+#include <GWCA/Constants/Maps.h>
+
 #include <GWCA/Packets/StoC.h>
 
 class AlcoholWidget : public ToolboxWidget {
@@ -28,7 +32,7 @@ public:
 	void Update(float delta) override;
 	DWORD GetAlcoholLevel();
 	long GetAlcoholTitlePoints(); // Gets current alcohol title points.
-	void AlcUpdate(GW::HookStatus *, GW::Packet::StoC::PostProcess *packet);
+	void AlcUpdate(GW::Packet::StoC::PostProcess *packet);
 
 	// Draw user interface. Will be called every frame if the element is visible
 	void Draw(IDirect3DDevice9* pDevice) override;

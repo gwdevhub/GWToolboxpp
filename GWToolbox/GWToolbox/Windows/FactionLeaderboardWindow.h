@@ -7,6 +7,8 @@
 #include <queue>
 #include <string>
 
+#include <GWCA/Utilities/Hook.h>
+
 #include <GWCA\GameEntities\Map.h>
 
 #include <GWCA\Managers\UIMgr.h>
@@ -66,4 +68,6 @@ public:
 private:
 	std::vector<LeaderboardEntry> leaderboard;
 	std::vector<LeaderboardEntry>::iterator lit;
+
+	GW::HookEntry TownAlliance_Entry;
 };

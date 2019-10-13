@@ -69,16 +69,16 @@ void DoorMonitorWindow::Initialize() {
         in_zone = true;
     }
 
-    GW::StoC::AddCallback<GW::Packet::StoC::InstanceLoadInfo>(
-        [this](GW::Packet::StoC::InstanceLoadInfo* packet) -> bool {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadInfo_Callback, 
+        [this](GW::HookStatus* status, GW::Packet::StoC::InstanceLoadInfo* packet) -> bool {
             if (!packet->is_explorable)
                 return in_zone = false, false;
             doors.clear();
             return in_zone = true, false;
         });
 
-    GW::StoC::AddCallback<GW::Packet::StoC::ManipulateMapObject>(
-        [this](GW::Packet::StoC::ManipulateMapObject* packet) -> bool {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ManipulateMapObject>(&ManipulateMapObject_Callback,
+        [this](GW::HookStatus* status, GW::Packet::StoC::ManipulateMapObject* packet) -> bool {
             if (!in_zone)
                 return false;
             DoorObject::DoorAnimation(packet->object_id, packet->animation_type, packet->animation_stage);

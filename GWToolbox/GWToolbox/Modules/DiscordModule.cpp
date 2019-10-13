@@ -279,38 +279,35 @@ void DiscordModule::Initialize() {
     params.network_events = &network_events;
     network_events.on_message = OnNetworkMessage;
 
-    GW::StoC::AddCallback<GW::Packet::StoC::InstanceLoadInfo>(
-        [this](GW::Packet::StoC::InstanceLoadInfo* packet) -> bool {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadInfo_Callback,
+        [this](GW::HookStatus* status, GW::Packet::StoC::InstanceLoadInfo* packet) -> void {
             zone_entered_time = time(nullptr); // Because you cant rely on instance time at this point.
             pending_activity_update = true;
             if (!discord_connected)
                 pending_discord_connect = true; // Connect in Update() loop instead of StoC callback, just incase its blocking
 			join_party_next_action = time(nullptr) + 2; // 2 seconds for other packets to be received e.g. players, guild info
-            return false;
         });
-    GW::StoC::AddCallback<GW::Packet::StoC::PartyPlayerAdd>(
-        [this](GW::Packet::StoC::PartyPlayerAdd* packet) -> bool {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerAdd>(&PartyPlayerAdd_Callback,
+        [this](GW::HookStatus* status, GW::Packet::StoC::PartyPlayerAdd* packet) -> void {
 			GW::Agent* player_agent = GW::Agents::GetPlayer();
 			if (player_agent && packet->player_id == player_agent->player_number) {
 				pending_activity_update = true; // Update if this is me
-				return false;
+				return;
 			}
 			GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo();
 			if (p && packet->party_id == p->party_id)
 				pending_activity_update = true; // Update if this is my party
-            return false;
         });
-    GW::StoC::AddCallback<GW::Packet::StoC::PartyUpdateSize>(
-        [this](GW::Packet::StoC::PartyUpdateSize* packet) -> bool {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyUpdateSize>(&PartyUpdateSize_Callback,
+        [this](GW::HookStatus* status, GW::Packet::StoC::PartyUpdateSize* packet) -> void {
             GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo();
             if (p && packet->player_id == p->players[0].login_number)
                 pending_activity_update = true; // Update if this is my leader
-            return false;
         });
-    GW::StoC::AddCallback<GW::Packet::StoC::ErrorMessage>(
-        [this](GW::Packet::StoC::ErrorMessage* packet) -> bool {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ErrorMessage>(&ErrorMessage_Callback,
+        [this](GW::HookStatus* status, GW::Packet::StoC::ErrorMessage* packet) -> void {
             if (!join_in_progress.map_id)
-                return false;
+                return;
             switch (packet->message_id) {
             case 0x35: // Cannot enter outpost (e.g. char has no access to outpost or GH)
                 FailedJoin("Cannot enter outpost on this character");
@@ -319,7 +316,6 @@ void DiscordModule::Initialize() {
                 JoinParty();
                 break;
             }
-            return false;
         });
     if(GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
         zone_entered_time = time(nullptr) - (GW::Map::GetInstanceTime() / 1000);

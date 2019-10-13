@@ -741,13 +741,14 @@ void GameSettings::Initialize() {
 	// Open links on player name click
 	// Ctrl click name to target (and add to party)
 	// Ctrl+shift to invite to party
-	GW::Chat::RegisterWhisperCallback([&](wchar_t* name) -> bool {
+	GW::Chat::RegisterStartWhisperCallback(&StartWhisperCallback_Entry, [&](GW::HookStatus* status, wchar_t* name) -> void {
 		if (openlinks && name && (!wcsncmp(name, L"http://", 7) || !wcsncmp(name, L"https://", 8))) {
 			ShellExecuteW(NULL, L"open", name, NULL, NULL, SW_SHOWNORMAL);
-			return true;
+			status->blocked = true;
+			return;
 		}
 		if (!name || !ImGui::GetIO().KeysDown[VK_CONTROL])
-			return false;
+			return;
 		if (ImGui::GetIO().KeysDown[VK_SHIFT] && GW::PartyMgr::GetPlayerIsLeader()) {
 			wchar_t buf[64];
 			swprintf(buf, 64, L"invite %ls", name);
@@ -757,7 +758,7 @@ void GameSettings::Initialize() {
 		if (player && GW::Agents::GetAgentByID(player->agent_id)) {
 			GW::Agents::ChangeTarget(player->agent_id);
 		}
-		return true;
+		status->blocked = true;
 	});
 	{
 		// Patch that allow storage page (and Anniversary page) to work... (ask Ziox for more info)
@@ -809,39 +810,35 @@ void GameSettings::Initialize() {
 		}
 	}
     // Automatically return to outpost on defeat
-    GW::StoC::AddCallback<GW::Packet::StoC::PartyDefeated>([&](GW::Packet::StoC::PartyDefeated*) -> bool {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyDefeated>(&PartyDefeated_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::PartyDefeated*) -> void {
         if (!auto_return_on_defeat || !GetPlayerIsLeader())
-            return false;
+            return;
         struct ReturnToOutpostPacket { const uint32_t header = CtoGS_MSGReturnToOutpost; };
         static ReturnToOutpostPacket pak;
         GW::CtoS::SendPacket(&pak);
-        return false;
     });
     // Remove certain NPCs from party window when dead
-    GW::StoC::AddCallback<GW::Packet::StoC::AgentState>([&](GW::Packet::StoC::AgentState* pak) -> bool {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentState>(&AgentState_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::AgentState* pak) -> void {
         if (!add_special_npcs_to_party_window || pak->state != 16)
-            return false; // Not dead.
+            return; // Not dead.
         if (ShouldRemoveAgentFromPartyWindow(pak->agent_id))
             allies_to_remove.push_back(pak->agent_id);
-        return false;
     });
     // Remove certain NPCs from party window when despawned
-    GW::StoC::AddCallback<GW::Packet::StoC::AgentRemove>([&](GW::Packet::StoC::AgentRemove* pak) -> bool {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentRemove>(&AgentRemove_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::AgentRemove* pak) -> void {
         if (ShouldRemoveAgentFromPartyWindow(pak->agent_id))
             allies_to_remove.push_back(pak->agent_id);
-        return false;
     });
     // Add certain NPCs to party window when spawned
-    GW::StoC::AddCallback<GW::Packet::StoC::AgentAdd>([&](GW::Packet::StoC::AgentAdd* pak) -> bool {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(&AgentAdd_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::AgentAdd* pak) -> void {
             if (!add_special_npcs_to_party_window)
-                return false;
+                return;
             if (!ShouldAddAgentToPartyWindow(pak))
-                return false;
+                return;
             allies_to_add.push_back({ pak->agent_id,pak->agent_type,pak->allegiance_bits });
-            return false;
         });
     // Flash/focus window on trade
-    GW::StoC::AddCallback<GW::Packet::StoC::TradeStart>([&](GW::Packet::StoC::TradeStart*) -> bool {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::TradeStart>(&TradeStart_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::TradeStart*) -> void {
         if(flash_window_on_trade) 
             FlashWindow();
         if (focus_window_on_trade) {
@@ -849,24 +846,21 @@ void GameSettings::Initialize() {
             SetForegroundWindow(hwnd);
             ShowWindow(hwnd, SW_RESTORE);
         }
-        return false;
     });
     // Flash window on party member added
-	GW::StoC::AddCallback<GW::Packet::StoC::PartyPlayerAdd>([&](GW::Packet::StoC::PartyPlayerAdd*) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerAdd>(&PartyPlayerAdd_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::PartyPlayerAdd*) -> void {
         if (!GW::Agents::GetPlayerId())
-            return false;
+            return;
 		if (flash_window_on_party_invite && GetPlayerIsLeader())
             FlashWindow();
         check_message_on_party_change = true;
-		return false;
 	});
     // Trigger for message on party change
-	GW::StoC::AddCallback<GW::Packet::StoC::PartyPlayerRemove>([&](GW::Packet::StoC::PartyPlayerRemove*) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerRemove>(&PartyPlayerRemove_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::PartyPlayerRemove*) -> void {
 		check_message_on_party_change = true;
-		return false;
 	});
     // Flash/focus window on zoning (and a bit of housekeeping)
-	GW::StoC::AddCallback<GW::Packet::StoC::GameSrvTransfer>([&](GW::Packet::StoC::GameSrvTransfer *pak) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::GameSrvTransfer *pak) -> void {
         allies_added_to_party.clear();
         allies_to_remove.clear();
 		if (flash_window_on_zoning) FlashWindow();
@@ -875,56 +869,53 @@ void GameSettings::Initialize() {
 			SetForegroundWindow(hwnd);
 			ShowWindow(hwnd, SW_RESTORE);
 		}
-		return false;
 	});
     // Automatically skip cinematics
-	GW::StoC::AddCallback<GW::Packet::StoC::CinematicPlay>([&](GW::Packet::StoC::CinematicPlay *packet) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::CinematicPlay>(&CinematicPlay_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::CinematicPlay *packet) -> void {
         if (packet->play && auto_skip_cinematic) {
             GW::Map::SkipCinematic();
-            return false;
+            return;
         }
         if (flash_window_on_cinematic)
             FlashWindow();
-		return false;
 	});
 	// - Print NPC speech bubbles to emote chat.
-	GW::StoC::AddCallback<GW::Packet::StoC::SpeechBubble>([&](GW::Packet::StoC::SpeechBubble *pak) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SpeechBubble>(&SpeechBubble_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::SpeechBubble *pak) -> void {
 		if (!npc_speech_bubbles_as_chat || !pak->message || !pak->agent_id)
-            return false; // Disabled, invalid, or pending another speech bubble
+            return; // Disabled, invalid, or pending another speech bubble
         if (emulated_speech_bubble) {
             emulated_speech_bubble = false;
-            return false; // Toolbox generated, skip
+            return; // Toolbox generated, skip
         }
         size_t len = 0;
         for (size_t i = 0; pak->message[i] != 0; i++)
             len = i + 1;
 		if (len < 3)
-            return false; // Shout skill etc
+            return; // Shout skill etc
 		GW::Agent* agent = GW::Agents::GetAgentByID(pak->agent_id);
-		if (!agent || agent->login_number) return false; // Agent not found or Speech bubble from player e.g. drunk message.
+		if (!agent || agent->login_number) return; // Agent not found or Speech bubble from player e.g. drunk message.
         PendingChatMessage* m = new PendingChatMessage(GW::Chat::Channel::CHANNEL_EMOTE, pak->message, PendingChatMessage::GetAgentNameEncoded(agent));
         if (!m->invalid) {
-            //Log::Log("Push back now\n");
             pending_messages.push_back(m);
         }
-        //Log::Log("SpeechBubble processed, pending message cnt = %d\n", pending_messages.size());
-		return false; // Consume.
 	});
     // - NPC dialog messages to emote chat
-    GW::StoC::AddCallback<GW::Packet::StoC::DisplayDialogue>([&](GW::Packet::StoC::DisplayDialogue* pak) -> bool {
-            if (!redirect_npc_messages_to_emote_chat)
-                return false; // Disabled or message pending
-            PendingChatMessage* m = new PendingChatMessage(GW::Chat::Channel::CHANNEL_EMOTE, pak->message, pak->name);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::DisplayDialogue* pak) -> void {
+        if (!redirect_npc_messages_to_emote_chat)
+            return; // Disabled or message pending
+        PendingChatMessage* m = new PendingChatMessage(GW::Chat::Channel::CHANNEL_EMOTE, pak->message, pak->name);
         if(!m->invalid) pending_messages.push_back(m);
-        return true;
+		status->blocked = true; // consume original packet.
     });
     // - NPC teamchat messages to emote chat (emulate speech bubble instead)
-    GW::StoC::AddCallback<GW::Packet::StoC::MessageNPC>([&](GW::Packet::StoC::MessageNPC* pak) -> bool {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageNPC>(&MessageNPC_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::MessageNPC* pak) -> void {
             if (!redirect_npc_messages_to_emote_chat || !pak->sender_name)
-                return false; // Disabled or message pending
+                return; // Disabled or message pending
             GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
-            if (!buff || !buff->valid() || !buff->size())
-                return true; // No buffer, may have already been cleared.
+			if (!buff || !buff->valid() || !buff->size()) {
+				status->blocked = true; // No buffer, may have already been cleared.
+				return;
+			}
             PendingChatMessage* m = new PendingChatMessage(GW::Chat::Channel::CHANNEL_EMOTE, buff->begin(), pak->sender_name);
             if (!m->invalid) pending_messages.push_back(m);
             if (pak->agent_id) {
@@ -944,21 +935,23 @@ void GameSettings::Initialize() {
                 }
             }
             buff->clear();
-            return true;
+			status->blocked = true; // consume original packet.
         });
     // - Allow clickable name when a player pings "I'm following X" or "I'm targeting X"
-    GW::StoC::AddCallback<GW::Packet::StoC::MessageLocal>([&](GW::Packet::StoC::MessageLocal* pak) -> bool {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&MessageLocal_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::MessageLocal* pak) -> void {
         if (pak->channel != static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_GROUP) || !pak->player_number)
-            return false; // Not team chat or no sender
+            return; // Not team chat or no sender
         GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
-        if (!buff || !buff->valid() || !buff->size())
-            return true; // No buffer, may have already been cleared.
+		if (!buff || !buff->valid() || !buff->size()) {
+			status->blocked = true; // No buffer, may have already been cleared.
+			return;
+		}
         wchar_t* message = buff->begin();
-        if ((message[0] != 0x778 && message[0] != 0x781) || message[1] != 0x10A || message[2] != 0xBA9 || message[3] != 0x107)
-            return false; // Not "I'm Following X" or "I'm Targeting X" message.
+        if (message[0] != 0x778 && message[0] != 0x781)
+            return; // Not "I'm Following X" or "I'm Targeting X" message.
         GW::Player* sender = GW::PlayerMgr::GetPlayerByID(pak->player_number);
         if (!sender)
-            return false;
+            return;
 
         std::wstring output(message);
         if (flash_window_on_name_ping) {
@@ -971,23 +964,23 @@ void GameSettings::Initialize() {
         PendingChatMessage* m = new PendingChatMessage(GW::Chat::Channel::CHANNEL_GROUP, output.c_str(), sender->name_enc);
         if (!m->invalid) pending_messages.push_back(m);
         buff->clear();
-        return true; // consume original packet.
+		status->blocked = true; // consume original packet.
     });
     // - Show a message when player joins the outpost
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::PlayerJoinInstance* pak) -> bool {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::PlayerJoinInstance* pak) -> void {
         if (!notify_when_players_join_outpost && !notify_when_friends_join_outpost)
-            return false; // Dont notify about player joining
+            return; // Dont notify about player joining
         if (!pak->player_name || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
-            return false; // Only message in an outpost.
+            return; // Only message in an outpost.
         if (!GW::Agents::GetPlayerId())
-            return false; // Current player not loaded in yet
+            return; // Current player not loaded in yet
         GW::Agent* agent = GW::Agents::GetAgentByID(pak->agent_id);
         if (agent)
-            return false; // Player already joined
+            return; // Player already joined
         GW::Friend* f = GetOnlineFriend(nullptr, pak->player_name);
         if (!f) {
             if (!notify_when_players_join_outpost)
-                return false; // Notify on friends only, but this player aint yer pal, buddy.
+                return; // Notify on friends only, but this player aint yer pal, buddy.
             wchar_t buffer[128];
             swprintf(buffer, 128, L"<a=1>%ls</a> entered the outpost.", pak->player_name);
             GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
@@ -995,10 +988,9 @@ void GameSettings::Initialize() {
         else {
             // Friend
             wchar_t buffer[128];
-            swprintf(buffer, 128, L"<a=1>%ls</a> (%ls) entered the outpost.", f->charname, f->account);
+            swprintf(buffer, 128, L"<a=1>%ls</a> (%ls) entered the outpost.", f->charname, f->alias);
             GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
         }
-        return false;
     });
     // - Show a message when player leaves the outpost
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerLeaveInstance>(&PlayerLeaveInstance_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::PlayerLeaveInstance* pak) -> void {
@@ -1024,7 +1016,6 @@ void GameSettings::Initialize() {
             swprintf(buffer, 128, L"<a=1>%ls</a> (%ls) left the outpost.", f->charname, f->alias);
             GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
         }
-        return;
     });
 
 	GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusCallback_Entry,GameSettings::FriendStatusCallback);

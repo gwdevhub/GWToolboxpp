@@ -3,6 +3,8 @@
 #include "IRC.h"
 #include <ToolboxModule.h>
 
+#include <GWCA/Utilities/Hook.h>
+
 #include <Color.h>
 
 class IRCModule : public ToolboxModule {
@@ -49,4 +51,7 @@ private:
     char message_buffer[1024] = { 0 };
 
     IRC conn;
+
+	GW::HookEntry SendChatCallback_Entry;
+	GW::HookEntry StartWhisperCallback_Entry;
 };

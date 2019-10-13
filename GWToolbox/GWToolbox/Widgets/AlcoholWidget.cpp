@@ -3,8 +3,13 @@
 
 #include <GWCA/Constants/Constants.h>
 
+#include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/WorldContext.h>
+
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>
+
+#include <GWCA/GameEntities/Title.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
@@ -19,8 +24,9 @@ void AlcoholWidget::Initialize() {
 	// last time the player used a drink
 	last_alcohol = 0;
 	alcohol_level = 0;
-	GW::StoC::AddCallback<GW::Packet::StoC::PostProcess>(
-		std::bind(&AlcoholWidget::AlcUpdate, this, std::placeholders::_1));
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PostProcess>(&PostProcess_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::PostProcess* pak) {
+		AlcUpdate(pak);
+	});
 }
 long AlcoholWidget::GetAlcoholTitlePoints() {
 	GW::GameContext* gameContext = GW::GameContext::instance();
@@ -43,7 +49,7 @@ void AlcoholWidget::Update(float delta) {
 DWORD AlcoholWidget::GetAlcoholLevel() {
 	return this->alcohol_level;
 }
-bool AlcoholWidget::AlcUpdate(GW::Packet::StoC::PostProcess *packet) {
+void AlcoholWidget::AlcUpdate(GW::Packet::StoC::PostProcess *packet) {
 	long pts_gained = GetAlcoholTitlePointsGained();
 	//Log::Info("Drunk effect %d / %d, %d pts gained", packet->tint, packet->level, pts_gained);
 	if (packet->tint == 6) {
@@ -52,13 +58,10 @@ bool AlcoholWidget::AlcUpdate(GW::Packet::StoC::PostProcess *packet) {
 			// If we've jumped a level, or the last packet was also level 5 and no points were gained, then its not alcohol.
 			// NOTE: All alcohol progresses from 1 to 5, but lunars just dive in at level 5.
 			//Log::Info("Lunars detected");
-			return false;
+			return;
 		}
 		prev_packet_tint_6_level = packet->level;
 	}
-	
-
-void AlcoholWidget::AlcUpdate(GW::HookStatus *, GW::Packet::StoC::PostProcess *packet) {
 	// if the player used a drink
 	if (packet->level > alcohol_level){
 		// if the player already had a drink going

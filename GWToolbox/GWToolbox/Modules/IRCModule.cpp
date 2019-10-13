@@ -119,7 +119,7 @@ void IRCModule::AddHooks() {
 	if (hooked) return;
 	hooked = 1;
 	// When starting a whisper to "<irc_nickname> @ <irc_channel>", rewrite recipient to be "<irc_channel>"
-	GW::Chat::AddStartWhisperCallback([&](wchar_t* name) -> bool {
+	GW::Chat::RegisterStartWhisperCallback(&StartWhisperCallback_Entry, [&](GW::HookStatus* status, wchar_t* name) -> bool {
 		wchar_t buf[128];
 		if (!name)
 			return false;
@@ -131,7 +131,7 @@ void IRCModule::AddHooks() {
 		return false;
 	});
 	// When sending a whisper to "<irc_channel>", redirect it to send message via IRC
-	GW::Chat::AddSendChatCallback([&](GW::Chat::Channel chan, wchar_t* msg) -> bool {
+	GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, [&](GW::HookStatus* status, GW::Chat::Channel chan, wchar_t* msg) -> bool {
 		if (chan != GW::Chat::CHANNEL_WHISPER || !connected)
 			return false;
 		wchar_t msgcpy[255];

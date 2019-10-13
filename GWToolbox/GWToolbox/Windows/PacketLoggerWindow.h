@@ -2,6 +2,8 @@
 
 #include <ToolboxWindow.h>
 
+#include <GWCA/Utilities/Hook.h>
+
 class PacketLoggerWindow : public ToolboxWindow {
     PacketLoggerWindow() {};
     ~PacketLoggerWindow() {};
@@ -24,7 +26,11 @@ public:
     
 private:
     uint32_t identifiers[512] = { 0 }; // Presume 512 is big enough for header size...
-    
+	std::vector<GW::HookEntry> hooks;
+
     void AddCallback(uint32_t packet_header);
     void RemoveCallback(uint32_t packet_header);
+
+	GW::HookEntry DisplayDialogue_Entry;
+	GW::HookEntry MessageCore_Entry;
 };

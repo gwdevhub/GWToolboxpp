@@ -4,6 +4,8 @@
 #include <ToolboxUIElement.h>
 #include <discord_game_sdk/c/discord_game_sdk.h>
 
+#include <GWCA/Utilities/Hook.h>
+
 #include <GWCA/GameEntities/Guild.h>
 
 struct Application {
@@ -92,4 +94,10 @@ private:
     bool Connect();
 	void ConnectCanary();
     void Disconnect();
+
+	GW::HookEntry ErrorMessage_Callback;
+	GW::HookEntry PartyUpdateSize_Callback;
+	GW::HookEntry PartyPlayerAdd_Callback;
+	GW::HookEntry InstanceLoadInfo_Callback;
+
 };

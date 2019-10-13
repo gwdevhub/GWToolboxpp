@@ -377,14 +377,14 @@ static void PrintNestedField(uint32_t* fields, uint32_t n_fields,
     }
 }
 
-static bool PacketHandler(GW::Packet::StoC::PacketBase* packet)
+static void PacketHandler(GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet)
 {
-    if (!logger_enabled) return false;
+    if (!logger_enabled) return;
     //if (packet->header == 95) return true;
     if (packet->header >= game_server_handler.size())
-        return false;
+        return;
     if (ignored_packets[packet->header])
-        return false;
+        return;
 
     StoCHandler handler = game_server_handler[packet->header];
     uint8_t* packet_raw = reinterpret_cast<uint8_t*>(packet);
@@ -397,9 +397,6 @@ static bool PacketHandler(GW::Packet::StoC::PacketBase* packet)
     printf("packet(%lu) {\n", packet->header);
     PrintNestedField(handler.fields + 1, handler.field_count - 1, 1, bytes, 4);
     printf("}\n");
-
-    // Returns false means to forward the packet to the game
-    return false;
 }
 
 static void CtoSHandler(uint32_t context, uint32_t size, uint32_t* packet) {
@@ -455,20 +452,19 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
 		if (!logger_enabled)
 			log_npc_dialogs = false;
 		if (log_npc_dialogs) {
-			display_dialogue_callback_identifier = GW::StoC::AddCallback<GW::Packet::StoC::DisplayDialogue>([&](GW::Packet::StoC::DisplayDialogue* pak) -> bool {
+			GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::DisplayDialogue* pak) -> void {
 				memset(npc_dialog.msg_in, 0, 122);
 				memset(npc_dialog.sender_in, 0, 32);
 				wcscpy(npc_dialog.msg_in, pak->message);
 				wcscpy(npc_dialog.sender_in, pak->name);
 				GW::UI::AsyncDecodeStr(npc_dialog.msg_in, &npc_dialog.msg_out);
 				GW::UI::AsyncDecodeStr(npc_dialog.sender_in, &npc_dialog.sender_out);
-
-				return false;
 				});
+			display_dialogue_callback_identifier = 1;
 		}
 		else {
 			if (display_dialogue_callback_identifier) {
-				GW::StoC::RemoveCallback(GW::Packet::StoC::DisplayDialogue::STATIC_HEADER, display_dialogue_callback_identifier);
+				GW::StoC::RemoveCallback(GW::Packet::StoC::DisplayDialogue::STATIC_HEADER, &DisplayDialogue_Entry);
 				display_dialogue_callback_identifier = 0;
 			}
 		}
@@ -477,16 +473,17 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
         if (!logger_enabled)
             log_message_content = false;
         if (log_message_content) {
-			message_core_callback_identifier = GW::StoC::AddCallback<GW::Packet::StoC::MessageCore>([&](GW::Packet::StoC::MessageCore* pak) -> bool {
+			GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageCore>(&MessageCore_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::MessageCore* pak) -> bool {
 				printf("MessageCore: ");
                 for (int i = 0; pak->message[i] != 0; ++i) printchar(pak->message[i]);
                 printf("\n");
                 return false;
             });
+			message_core_callback_identifier = 1;
 		}
 		else {
 			if (message_core_callback_identifier) {
-				GW::StoC::RemoveCallback(GW::Packet::StoC::MessageCore::STATIC_HEADER, message_core_callback_identifier);
+				GW::StoC::RemoveCallback(GW::Packet::StoC::MessageCore::STATIC_HEADER, &MessageCore_Entry);
 				message_core_callback_identifier = 0;
 			}
 		}
@@ -518,6 +515,7 @@ void PacketLoggerWindow::Initialize() {
     ToolboxWindow::Initialize();
     InitStoC();
     InitCtoS();
+	hooks.resize(512);
     if (SendPacket_Func) {
         //GW::HookBase::CreateHook(SendPacket_Func, CtoSHandler, (void**)& SendPacket_Func_Ret);
     }
@@ -574,13 +572,14 @@ void PacketLoggerWindow::LoadSettings(CSimpleIni* ini) {
 void PacketLoggerWindow::RemoveCallback(uint32_t packet_header) {
     if (!identifiers[packet_header])
         return;
-    GW::StoC::RemoveCallback(packet_header, identifiers[packet_header]);
+    GW::StoC::RemoveCallback(packet_header, &hooks.at(packet_header));
     identifiers[packet_header] = 0;
 }
 void PacketLoggerWindow::AddCallback(uint32_t packet_header) {
     if (identifiers[packet_header])
         return;
-    identifiers[packet_header] = GW::StoC::AddCallback(packet_header, PacketHandler);
+	GW::StoC::RegisterPacketCallback(&hooks.at(packet_header), packet_header, PacketHandler);
+	identifiers[packet_header] = 1;
 }
 void PacketLoggerWindow::Disable() {
     if (!logger_enabled) return;

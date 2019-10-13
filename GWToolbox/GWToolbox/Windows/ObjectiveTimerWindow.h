@@ -130,4 +130,8 @@ private:
     GW::HookEntry ObjectiveDone_Entry;
     GW::HookEntry AgentUpdateAllegiance_Entry;
     GW::HookEntry DoACompleteZone_Entry;
+	GW::HookEntry DisplayDialogue_Entry;
+	GW::HookEntry MessageServer_Entry;
+	GW::HookEntry InstanceLoadInfo_Entry;
+	GW::HookEntry ManipulateMapObject_Entry;
 };

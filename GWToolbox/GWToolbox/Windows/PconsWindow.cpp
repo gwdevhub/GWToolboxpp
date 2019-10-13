@@ -220,12 +220,12 @@ void PconsWindow::Initialize() {
 		status->blocked = blocked;
 		return;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveDone>([this](GW::Packet::StoC::ObjectiveDone* packet) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveDone>(&ObjectiveDone_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::ObjectiveDone* packet) -> bool {
 		objectives_complete.push_back(packet->objective_id);
 		CheckObjectivesCompleteAutoDisable();
 		return false;
 	});
-    GW::StoC::AddCallback<GW::Packet::StoC::VanquishComplete>([&](GW::Packet::StoC::VanquishComplete* pak) -> bool {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::VanquishComplete>(&VanquishComplete_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::VanquishComplete* pak) -> bool {
         if (!disable_cons_on_vanquish_completion)
             return false;
         if (!enabled) 

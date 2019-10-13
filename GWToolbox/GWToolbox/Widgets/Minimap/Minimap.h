@@ -36,7 +36,6 @@ public:
 
 	void Initialize() override;
 
-	void Update(float delta) override;
 	void Draw(IDirect3DDevice9* device) override;
 	void RenderSetupProjection(IDirect3DDevice9* device);
 	

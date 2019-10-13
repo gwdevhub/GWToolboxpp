@@ -124,8 +124,8 @@ namespace {
 void ObjectiveTimerWindow::Initialize() {
     ToolboxWindow::Initialize();
 
-    GW::StoC::AddCallback<GW::Packet::StoC::MessageServer>(
-        [this](GW::Packet::StoC::MessageServer* packet) -> bool {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&MessageServer_Entry, 
+        [this](GW::HookStatus* status, GW::Packet::StoC::MessageServer* packet) -> bool {
             uint32_t objective_id = 0; // Objective_id applicable for the check
             uint32_t msg_check = 0; // First encoded msg char to check for
             switch (GW::Map::GetMapID()) {
@@ -157,13 +157,13 @@ void ObjectiveTimerWindow::Initialize() {
 			os->CheckSetDone();
             return false;
         });
-	GW::StoC::AddCallback<GW::Packet::StoC::DisplayDialogue>(
-		[this](GW::Packet::StoC::DisplayDialogue* packet) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry,
+		[this](GW::HookStatus* status, GW::Packet::StoC::DisplayDialogue* packet) -> bool {
 			DisplayDialogue(packet);
 			return false;
 		});
-    GW::StoC::AddCallback<GW::Packet::StoC::PartyDefeated>(
-        [this](GW::Packet::StoC::PartyDefeated* packet) -> bool {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyDefeated>(&PartyDefeated_Entry,
+        [this](GW::HookStatus* status, GW::Packet::StoC::PartyDefeated* packet) -> bool {
             if (!objective_sets.empty()) {
                 ObjectiveSet* os = objective_sets.back();
                 os->StopObjectives();
@@ -178,14 +178,14 @@ void ObjectiveTimerWindow::Initialize() {
             os->StopObjectives();
         }
     });
-    GW::StoC::AddCallback<GW::Packet::StoC::InstanceLoadFile>(
-        [this](GW::Packet::StoC::InstanceLoadFile* packet) -> bool {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry, 
+        [this](GW::HookStatus* status, GW::Packet::StoC::InstanceLoadFile* packet) -> bool {
             if (packet->map_fileID == 219215)
                 AddDoAObjectiveSet(packet->spawn_point);
             return false;
         });
-    GW::StoC::AddCallback<GW::Packet::StoC::InstanceLoadInfo>(
-        [this](GW::Packet::StoC::InstanceLoadInfo* packet) -> bool {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadInfo_Entry,
+        [this](GW::HookStatus* status, GW::Packet::StoC::InstanceLoadInfo* packet) -> bool {
 			monitor_doors = false;
             if (!packet->is_explorable)
                 return false;
@@ -202,8 +202,8 @@ void ObjectiveTimerWindow::Initialize() {
             return false;
         });
 
-    GW::StoC::AddCallback<GW::Packet::StoC::ManipulateMapObject>(
-        [this](GW::Packet::StoC::ManipulateMapObject* packet) -> bool {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ManipulateMapObject>(&ManipulateMapObject_Entry,
+        [this](GW::HookStatus* status, GW::Packet::StoC::ManipulateMapObject* packet) -> bool {
             if (!monitor_doors || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
                 return false; // Door not open or not in explorable area
 			if (packet->animation_type == 16)
@@ -212,8 +212,8 @@ void ObjectiveTimerWindow::Initialize() {
 				DoorClosed(packet->object_id);
             return false;
         });
-	GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveAdd>(
-	[this](GW::Packet::StoC::ObjectiveAdd *packet) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveAdd>(&ObjectiveAdd_Entry,
+	[this](GW::HookStatus* status, GW::Packet::StoC::ObjectiveAdd *packet) -> bool {
 		// type 12 is the "title" of the mission objective, should we ignore it or have a "title" objective ?
 		/*
 		Objective *obj = GetCurrentObjective(packet->objective_id);
@@ -251,7 +251,7 @@ void ObjectiveTimerWindow::Initialize() {
         const GW::Agent* agent = GW::Agents::GetAgentByID(packet->agent_id);
         if (agent == nullptr) return;
         if (agent->player_number != GW::Constants::ModelID::UW::Dhuum) return;
-        if (packet->unk1 != 0x6D6F6E31) return;
+        if (packet->allegiance_bits != 0x6D6F6E31) return;
         
         Objective* obj = GetCurrentObjective(157);
         if (obj && !obj->IsStarted()) obj->SetStarted();
