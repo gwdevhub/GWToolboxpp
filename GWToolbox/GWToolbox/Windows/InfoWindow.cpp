@@ -43,8 +43,8 @@ void InfoWindow::Initialize() {
 	ToolboxWindow::Initialize();
 
 	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"info.png"), IDB_Icon_Info);
-	GW::StoC::AddCallback<GW::Packet::StoC::MessageCore>(
-		[this](GW::Packet::StoC::MessageCore *pak) {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageCore>(&MessageCore_Entry,
+	[this](GW::HookStatus *, GW::Packet::StoC::MessageCore *pak) -> void {
 		if (pak->message[0] == 0x7BFF
 			&& pak->message[1] == 0xC9C4
 			&& pak->message[2] == 0xAeAA
@@ -65,11 +65,11 @@ void InfoWindow::Initialize() {
 
 			// get all the data
 			GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
-			if (info == nullptr) return false;
+			if (info == nullptr) return;
 			GW::PlayerPartyMemberArray partymembers = info->players;
-			if (!partymembers.valid()) return false;
+			if (!partymembers.valid()) return;
 			GW::PlayerArray players = GW::Agents::GetPlayerArray();
-			if (!players.valid()) return false;
+			if (!players.valid()) return;
 
 			// set the right index in party
 			for (unsigned i = 0; i < partymembers.size(); ++i) {
@@ -81,16 +81,14 @@ void InfoWindow::Initialize() {
 				}
 			}
 		}
-		return false;
 	});
-	GW::StoC::AddCallback<GW::Packet::StoC::InstanceLoadFile>(
-		[this](GW::Packet::StoC::InstanceLoadFile *packet) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry,
+	[this](GW::HookStatus *, GW::Packet::StoC::InstanceLoadFile *packet) -> void {
 		mapfile = packet->map_fileID;
 		for (unsigned i = 0; i < status.size(); ++i) {
 			status[i] = NotYetConnected;
 			timestamp[i] = 0;
 		}
-		return false;
 	});
 }
 

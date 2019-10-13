@@ -4,6 +4,7 @@
 #include <Defines.h>
 #include <regex>
 
+#include <GWCA/Utilities/Hook.h>
 #include <GWCA/Utilities/MemoryPatcher.h>
 
 #include <GWCA/Constants/Constants.h>
@@ -237,7 +238,7 @@ public:
 
 	void ApplyBorderless(bool value);
 	void SetAfkMessage(std::wstring&& message);
-	static void ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag);
+	static void ItemClickCallback(GW::HookStatus *, uint32_t type, uint32_t slot, GW::Bag *bag);
 
     static GW::Friend* GetOnlineFriend(wchar_t* account, wchar_t* playing);
 
@@ -265,10 +266,23 @@ private:
     bool redirect_npc_messages_to_emote_chat = false;
     
 	void DrawChannelColor(const char *name, GW::Chat::Channel chan);
+	static void FriendStatusCallback(
+		GW::HookStatus *,
+		GW::Friend* f,
+		GW::FriendStatus status,
+		const wchar_t *name,
+		const wchar_t *charname);
 	static void FriendStatusCallback(GW::Friend* f, GW::FriendStatus status, const wchar_t *name, const wchar_t *charname);
-    
     bool ShouldAddAgentToPartyWindow(GW::Packet::StoC::AgentAdd* pak);
     bool ShouldRemoveAgentFromPartyWindow(uint32_t agent_id);
     bool GetPlayerIsLeader();
-};
 
+	GW::HookEntry WhisperCallback_Entry;
+	GW::HookEntry SendChatCallback_Entry;
+	GW::HookEntry ItemClickCallback_Entry;
+	GW::HookEntry FriendStatusCallback_Entry;
+
+	GW::HookEntry PartyPlayerAdd_Entry;
+	GW::HookEntry GameSrvTransfer_Entry;
+	GW::HookEntry CinematicPlay_Entry;
+};

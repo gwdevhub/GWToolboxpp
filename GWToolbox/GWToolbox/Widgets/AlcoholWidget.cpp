@@ -9,16 +9,7 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 
-#include <GWCA/GameEntities/Title.h>
-
-#include <GWCA/Context/GameContext.h>
-#include <GWCA/Context/WorldContext.h>
-
-#include <GWCA/Managers/MapMgr.h>
-
-#include <Windows\PconsWindow.h>
 #include <GuiUtils.h>
-#include <logger.h>
 
 
 void AlcoholWidget::Initialize() {
@@ -66,6 +57,8 @@ bool AlcoholWidget::AlcUpdate(GW::Packet::StoC::PostProcess *packet) {
 		prev_packet_tint_6_level = packet->level;
 	}
 	
+
+void AlcoholWidget::AlcUpdate(GW::HookStatus *, GW::Packet::StoC::PostProcess *packet) {
 	// if the player used a drink
 	if (packet->level > alcohol_level){
 		// if the player already had a drink going
@@ -81,7 +74,6 @@ bool AlcoholWidget::AlcUpdate(GW::Packet::StoC::PostProcess *packet) {
 		last_alcohol = time(NULL);
 	}
 	alcohol_level = packet->level;
-	return false;
 }
 
 void AlcoholWidget::Draw(IDirect3DDevice9* pDevice) {

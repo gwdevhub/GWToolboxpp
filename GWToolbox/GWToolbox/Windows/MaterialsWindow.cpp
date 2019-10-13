@@ -104,14 +104,14 @@ void MaterialsWindow::Initialize() {
 		price[i] = PRICE_DEFAULT;
 	}
 
-	GW::StoC::AddCallback<GW::Packet::StoC::QuotedItemPrice>(
-	[this](GW::Packet::StoC::QuotedItemPrice *pak) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::QuotedItemPrice>(&QuotedItemPrice_Entry,
+	[this](GW::HookStatus *, GW::Packet::StoC::QuotedItemPrice *pak) -> void {
 		// printf("Received price %d for %d (item %d)\n", pak->price, item->ModelId, pak->itemid);
-		if (transactions.empty()) return false;
+		if (transactions.empty()) return;
 		Transaction& trans = transactions.front();
 		if (cancelled || (trans.item_id != pak->itemid)) {
 			quote_pending = false;
-			return false;
+			return;
 		}
 
 		auto gold_character = GW::Items::GetGoldAmountOnCharacter();
@@ -164,26 +164,23 @@ void MaterialsWindow::Initialize() {
 		}
 
 		quote_pending = false;
-		return false;
 	});
 
-	GW::StoC::AddCallback<GW::Packet::StoC::TransactionDone>(
-	[this](GW::Packet::StoC::TransactionDone *pak) -> bool {
-		if (transactions.empty()) return false;
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::TransactionDone>(&TransactionDone_Entry,
+	[this](GW::HookStatus *, GW::Packet::StoC::TransactionDone *pak) -> void {
+		if (transactions.empty()) return;
 		trans_pending = false;
 		Dequeue();
-		return false;
 	});
 
-	GW::StoC::AddCallback<GW::Packet::StoC::ItemStreamEnd>(
-	[this](GW::Packet::StoC::ItemStreamEnd *pak) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ItemStreamEnd>(&ItemStreamEnd_Entry,
+	[this](GW::HookStatus *, GW::Packet::StoC::ItemStreamEnd *pak) -> void {
 		// @Remark: unk1 = 13 means "selling" tab
-		if (pak->unk1 != 12) return false;
+		if (pak->unk1 != 12) return;
 		GW::MerchItemArray items = GetMerchItems();
 		merch_items.clear();
 		for (size_t i = 0; i < items.size(); i++)
 			merch_items.push_back(items[i]);
-		return false;
 	});
 }
 

@@ -102,4 +102,11 @@ private:
 	std::vector<GW::AgentID> player_heroes;
 
 	void GetPlayerHeroes(GW::PartyInfo *party, std::vector<GW::AgentID>& heroes);
+
+	GW::HookEntry AgentPinged_Entry;
+	GW::HookEntry CompassEvent_Entry;
+	GW::HookEntry GenericValueTarget_Entry;
+	GW::HookEntry SkillActivate_Entry;
+	GW::HookEntry InstanceLoadFile_Entry;
+	GW::HookEntry GameSrvTransfer_Entry;
 };
