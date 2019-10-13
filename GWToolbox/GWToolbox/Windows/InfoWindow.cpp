@@ -89,6 +89,26 @@ void InfoWindow::Initialize() {
 			timestamp[i] = 0;
 		}
 	});
+
+	GW::Chat::CreateCommand(L"resignlog",
+	[this](const wchar_t *cmd, int argc, wchar_t **argv) -> void {
+		if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
+		GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
+		if (info == nullptr) return;
+		GW::PlayerPartyMemberArray partymembers = info->players;
+		if (!partymembers.valid()) return;
+		GW::PlayerArray players = GW::Agents::GetPlayerArray();
+		if (!players.valid()) return;
+		for (size_t i = 0; i < partymembers.size(); ++i) {
+			GW::PlayerPartyMember& partymember = partymembers[i];
+			if (partymember.login_number >= players.size()) continue;
+			GW::Player& player = players[partymember.login_number];
+
+			wchar_t buffer[256];
+			PrintResignStatus(buffer, 256, i, player.name);
+            send_queue.push(std::wstring(buffer));
+		}
+	});
 }
 
 void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
@@ -344,6 +364,16 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 }
 
 void InfoWindow::Update(float delta) {
+	if (!send_queue.empty() && TIMER_DIFF(send_timer) > 600) {
+		send_timer = TIMER_INIT();
+		if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
+			&& GW::Agents::GetPlayer()) {
+
+			GW::Chat::SendChat('#', send_queue.front().c_str());
+			send_queue.pop();
+		}
+	}
+
 	if (show_resignlog
 		&& GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
 		&& GW::PartyMgr::GetPartyInfo()) {
@@ -372,6 +402,26 @@ void InfoWindow::Update(float delta) {
 	}
 }
 
+const char* InfoWindow::GetStatusStr(Status status) {
+	switch (status) {
+	case InfoWindow::Unknown: return "Unknown";
+	case InfoWindow::NotYetConnected: return "Not connected";
+	case InfoWindow::Connected: return "Connected";
+	case InfoWindow::Resigned: return "Resigned";
+	case InfoWindow::Left: return "Left";
+	default: return "";
+	}
+}
+
+void InfoWindow::PrintResignStatus(wchar_t *buffer, size_t size, size_t index, const wchar_t *player_name) {
+	Status player_status = status[index];
+	const char* status_str = GetStatusStr(player_status);
+	_snwprintf(buffer, size, L"%d. %s - %S", index + 1, player_name,
+		(player_status == Connected
+			&& GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
+		? "Connected (not resigned)" : status_str);
+}
+
 void InfoWindow::DrawResignlog() {
 	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
 	GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
@@ -384,27 +434,15 @@ void InfoWindow::DrawResignlog() {
 		GW::PlayerPartyMember& partymember = partymembers[i];
 		if (partymember.login_number >= players.size()) continue;
 		GW::Player& player = players[partymember.login_number];
-		const char* status_str = [](Status status) -> const char* {
-			switch (status) {
-			case InfoWindow::Unknown: return "Unknown";
-			case InfoWindow::NotYetConnected: return "Not connected";
-			case InfoWindow::Connected: return "Connected";
-			case InfoWindow::Resigned: return "Resigned";
-			case InfoWindow::Left: return "Left";
-			default: return "";
-			}
-		}(status[i]);
 		ImGui::PushID(i);
 		if (ImGui::Button("Send")) {
 			// Todo: wording probably needs improvement
-			char buf[256];
-			snprintf(buf, 256, "%d. %S - %s", i + 1, player.name,
-				(status[i] == Connected 
-					&& GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) 
-				? "Connected (not resigned)" : status_str);
+			wchar_t buf[256];
+			PrintResignStatus(buf, 256, i, player.name);
 			GW::Chat::SendChat('#', buf);
 		}
 		ImGui::SameLine();
+		const char* status_str = GetStatusStr(status[i]);
 		ImGui::Text("%d. %S - %s", i + 1, player.name, status_str);
 		if (status[i] != Unknown) {
 			ImGui::SameLine();
