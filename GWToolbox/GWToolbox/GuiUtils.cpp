@@ -49,6 +49,8 @@ void GuiUtils::LoadFonts() {
             fonts_loading = false;
             return;
         }
+		// Collect the final font. This is the default (16px) font with all special chars merged. in.
+		fontCfg = &io.Fonts->ConfigData.back();
         // Do the same for CJK fonts if found. MergeMode = true will merge these fonts with the above default font.
         if (PathFileExistsW(Resources::GetPath(L"Font_Japanese.ttf").c_str())) {
             ImFontConfig c;
@@ -77,8 +79,7 @@ void GuiUtils::LoadFonts() {
         else {
             printf("Font_Korean.ttf not found. Add this file to load special chars.\n");
         }
-        // Collect the final font. This is the default (16px) font with all special chars merged. in.
-        fontCfg = &io.Fonts->ConfigData.back();
+        
         font16 = fontCfg->DstFont;
 
 		// Recycle the binary data from original ImFontConfig for the other font sizes.
@@ -108,6 +109,8 @@ void GuiUtils::LoadFonts() {
         sprintf(copyCfg.Name, "Default_48");
         font48 = io.Fonts->AddFont(&copyCfg);
 
+		printf("Building fonts...\n");
+		io.Fonts->Build();
         printf("Fonts loaded\n");
         fonts_loaded = true;
         fonts_loading = false;
