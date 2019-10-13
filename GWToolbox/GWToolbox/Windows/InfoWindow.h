@@ -27,10 +27,6 @@ public:
 	void SaveSettings(CSimpleIni* ini) override;
 
 private:
-	void DrawResignlog();
-
-	DWORD mapfile = 0;
-
 	enum Status {
 		Unknown,
 		NotYetConnected,
@@ -38,8 +34,19 @@ private:
 		Resigned,
 		Left
 	};
+
+	static const char* GetStatusStr(Status status);
+
+	void PrintResignStatus(wchar_t *buffer, size_t size, size_t index, const wchar_t *player_name);
+	void DrawResignlog();
+
+	DWORD mapfile = 0;
+
 	std::vector<Status> status;
 	std::vector<unsigned long> timestamp;
+
+	std::queue<std::wstring> send_queue;
+	clock_t send_timer = 0;
 
 	bool show_widgets = true;
 	bool show_open_chest = true;
