@@ -47,8 +47,10 @@ void ChatFilter::Initialize() {
 #endif // PRINT_CHAT_PACKETS
 
 		GW::Array<wchar_t> *buff = &GW::GameContext::instance()->world->message_buff;
-        if (!buff || !buff->valid() || !buff->size())
-            return true;
+		if (!buff || !buff->valid() || !buff->size()) {
+			status->blocked = true;
+			return;
+		}
 		if (ShouldIgnore(buff->begin()) || ShouldIgnoreByContent(buff->begin(), buff->size())) {
 			buff->clear();
 			status->blocked = true;
@@ -88,8 +90,14 @@ void ChatFilter::Initialize() {
 	});
 	// Hide guild announcement. 
 	// NOTE: Don't block at packet level because its also used for editing the announcement in guild window.
-	GW::Chat::AddPrintChatCallback([&](GW::Chat::Channel channel, wchar_t* str, FILETIME timestamp, int reprint) {
-		return guild_announcement && str[0] == 0x314;
+	GW::Chat::RegisterPrintChatCallback(&PrintChat_Entry, [this](GW::HookStatus* status, GW::Chat::Channel channel, wchar_t* str, FILETIME timestamp, int reprint) {
+		// 0x7bf4 0x10a 0x763 0x101 0x101 0x10a 0x766 0x1 0x1 = You have been playing for 1 hour.
+		// 0x7bf5 0x10a 0x763 0x101 0x101 0x10a 0x766 0x1 0x1 = You have been playing for 1 hour. Please take a break
+		if (guild_announcement && str[0] == 0x314)
+			status->blocked = true;
+		else if(you_have_been_playing_for && (str[0] == 0x7BF4 || str[0] == 0x7BF5))
+			status->blocked = true;
+		return ;
 	});
 	// local messages
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&MessageLocal_Entry,
@@ -99,7 +107,7 @@ void ChatFilter::Initialize() {
 #endif // PRINT_CHAT_PACKETS
 
 		GW::Array<wchar_t> *buff = &GW::GameContext::instance()->world->message_buff;
-		wchar_t *sender = GW::Agents::GetPlayerNameByLoginNumber(pak->id);
+		wchar_t *sender = GW::Agents::GetPlayerNameByLoginNumber(pak->player_number);
 		if (!sender) return;
 
 		if (ShouldIgnore(buff->begin()) ||
@@ -117,12 +125,6 @@ void ChatFilter::Initialize() {
 		if (away && ShouldIgnore(message)) {
 			status->blocked = true;
 		}
-	});
-	// Hide "You have been playing for..."
-	GW::Chat::AddPrintChatCallback([&](GW::Chat::Channel channel, wchar_t* str, FILETIME timestamp, int reprint) {
-		// 0x7bf4 0x10a 0x763 0x101 0x101 0x10a 0x766 0x1 0x1 = You have been playing for 1 hour.
-		// 0x7bf5 0x10a 0x763 0x101 0x101 0x10a 0x766 0x1 0x1 = You have been playing for 1 hour. Please take a break
-		return you_have_been_playing_for && (str[0] == 0x7BF4 || str[0] == 0x7BF5);
 	});
 }
 

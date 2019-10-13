@@ -741,7 +741,7 @@ void GameSettings::Initialize() {
 	// Open links on player name click
 	// Ctrl click name to target (and add to party)
 	// Ctrl+shift to invite to party
-	GW::Chat::AddStartWhisperCallback([&](wchar_t* name) -> bool {
+	GW::Chat::RegisterWhisperCallback([&](wchar_t* name) -> bool {
 		if (openlinks && name && (!wcsncmp(name, L"http://", 7) || !wcsncmp(name, L"https://", 8))) {
 			ShellExecuteW(NULL, L"open", name, NULL, NULL, SW_SHOWNORMAL);
 			return true;
@@ -974,7 +974,7 @@ void GameSettings::Initialize() {
         return true; // consume original packet.
     });
     // - Show a message when player joins the outpost
-    GW::StoC::AddCallback<GW::Packet::StoC::PlayerJoinInstance>([&](GW::Packet::StoC::PlayerJoinInstance* pak) -> bool {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::PlayerJoinInstance* pak) -> bool {
         if (!notify_when_players_join_outpost && !notify_when_friends_join_outpost)
             return false; // Dont notify about player joining
         if (!pak->player_name || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
@@ -1001,33 +1001,33 @@ void GameSettings::Initialize() {
         return false;
     });
     // - Show a message when player leaves the outpost
-    GW::StoC::AddCallback<GW::Packet::StoC::PlayerLeaveInstance>([&](GW::Packet::StoC::PlayerLeaveInstance* pak) -> bool {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerLeaveInstance>(&PlayerLeaveInstance_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::PlayerLeaveInstance* pak) -> void {
         if (!notify_when_players_leave_outpost && !notify_when_friends_leave_outpost)
-            return false; // Dont notify about player leaving
+            return; // Dont notify about player leaving
         if (!pak->player_number || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
-            return false; // Only message in an outpost.
+            return; // Only message in an outpost.
         if (pak->player_number >= GW::PlayerMgr::GetPlayerArray().size())
-            return false; // Not a valid player.
+            return; // Not a valid player.
         wchar_t* player_name = GW::PlayerMgr::GetPlayerName(pak->player_number);
         if (!player_name) 
-            return false; // Failed to get name
+            return; // Failed to get name
         GW::Friend* f = GetOnlineFriend(nullptr, player_name);
         if (!f) {
             if(!notify_when_players_leave_outpost)
-                return false; // Notify on friends only, but this player aint yer pal, buddy.
+                return; // Notify on friends only, but this player aint yer pal, buddy.
             wchar_t buffer[128];
             swprintf(buffer, 128, L"<a=1>%ls</a> left the outpost.", player_name);
             GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
         } else {
             // Friend
             wchar_t buffer[128];
-            swprintf(buffer, 128, L"<a=1>%ls</a> (%ls) left the outpost.", f->charname, f->account);
+            swprintf(buffer, 128, L"<a=1>%ls</a> (%ls) left the outpost.", f->charname, f->alias);
             GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
         }
-        return false;
+        return;
     });
 
-	GW::FriendListMgr::SetOnFriendStatusCallback(GameSettings::FriendStatusCallback);
+	GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusCallback_Entry,GameSettings::FriendStatusCallback);
 
 
 
@@ -1122,7 +1122,7 @@ GW::Friend* GameSettings::GetOnlineFriend(wchar_t* account, wchar_t* playing) {
         if (!it) continue;
         if (it->type != GW::FriendType_Friend) continue;
         if (it->status != GW::FriendStatus::FriendStatus_Online) continue;
-        if (account && !wcsncmp(it->account, account, 20))
+        if (account && !wcsncmp(it->alias, account, 20))
             return it;
         if (playing && !wcsncmp(it->charname, playing, 20))
             return it;

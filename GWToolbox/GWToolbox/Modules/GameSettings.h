@@ -282,6 +282,8 @@ private:
     bool GetPlayerIsLeader();
 
 	GW::HookEntry PartyPlayerAdd_Entry;
+	GW::HookEntry PlayerLeaveInstance_Entry;
+	GW::HookEntry PlayerJoinInstance_Entry;
 	GW::HookEntry GameSrvTransfer_Entry;
 	GW::HookEntry CinematicPlay_Entry;
 };

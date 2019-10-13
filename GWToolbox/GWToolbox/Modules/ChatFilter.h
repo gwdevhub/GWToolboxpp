@@ -118,4 +118,5 @@ private:
 	GW::HookEntry MessageServer_Entry;
 	GW::HookEntry MessageGlobal_Entry;
 	GW::HookEntry MessageLocal_Entry;
+	GW::HookEntry PrintChat_Entry;
 };
