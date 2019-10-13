@@ -40,8 +40,8 @@ void ChatFilter::Initialize() {
 	//strcpy_s(byauthor_buf, "");
 
 	// server messages
-	GW::StoC::AddCallback<GW::Packet::StoC::MessageServer>(
-		[this](GW::Packet::StoC::MessageServer *pak) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&MessageServer_Entry,
+	[this](GW::HookStatus *status, GW::Packet::StoC::MessageServer *pak) -> void {
 #ifdef PRINT_CHAT_PACKETS
 		printf("P082: id %d, type %d\n", pak->id, pak->type);
 #endif // PRINT_CHAT_PACKETS
@@ -51,25 +51,24 @@ void ChatFilter::Initialize() {
             return true;
 		if (ShouldIgnore(buff->begin()) || ShouldIgnoreByContent(buff->begin(), buff->size())) {
 			buff->clear();
-			return true;
+			status->blocked = true;
+			return;
 		}
-
-		return false;
 	});
 
 #ifdef PRINT_CHAT_PACKETS
-	/*GW::StoC::AddCallback<GW::Packet::StoC::P088>(
-		[](GW::Packet::StoC::P088 *pak) -> bool {
+	GW::StoC::AddCallback<GW::Packet::StoC::P088>(
+	[](GW::Packet::StoC::P088 *pak) -> bool {
 		printf("P081: agent_id %d, unk1 %d, unk2 ", pak->agent_id, pak->unk1);
 		for (int i = 0; i < 8 && pak->unk2[i]; ++i) printchar(pak->unk2[i]);
 		printf("\n");
 		return false;
-	});*/
+	});
 #endif // PRINT_CHAT_PACKETS
 
 	// global messages
-	GW::StoC::AddCallback<GW::Packet::StoC::MessageGlobal>(
-		[&](GW::Packet::StoC::MessageGlobal* pak) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageGlobal>(&MessageGlobal_Entry,
+	[this](GW::HookStatus *status, GW::Packet::StoC::MessageGlobal* pak) -> void {
 #ifdef PRINT_CHAT_PACKETS
 		printf("P081: id %d, name ", pak->id);
 		for (int i = 0; i < 32 && pak->sender_name[i]; ++i) printchar(pak->sender_name[i]);
@@ -79,16 +78,13 @@ void ChatFilter::Initialize() {
 #endif // PRINT_CHAT_PACKETS
 
 		GW::Array<wchar_t> *buff = &GW::GameContext::instance()->world->message_buff;
-        if (!buff || !buff->valid() || !buff->size())
-            return true;
-        bool should_ignore = false;
-        should_ignore |= ShouldIgnoreByChannel(pak->channel) && ShouldIgnoreByContent(buff->begin(), buff->size());
-        if (should_ignore) {
-            buff->clear();
-            return true;
-        }
 
-		return false;
+		if (ShouldIgnore(buff->begin()) ||
+			ShouldIgnoreByContent(buff->begin(), buff->size())) {
+			buff->clear();
+			status->blocked = true;
+			return;
+		}
 	});
 	// Hide guild announcement. 
 	// NOTE: Don't block at packet level because its also used for editing the announcement in guild window.
@@ -96,35 +92,31 @@ void ChatFilter::Initialize() {
 		return guild_announcement && str[0] == 0x314;
 	});
 	// local messages
-	GW::StoC::AddCallback<GW::Packet::StoC::MessageLocal>(
-		[this](GW::Packet::StoC::MessageLocal *pak) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&MessageLocal_Entry,
+	[this](GW::HookStatus *status, GW::Packet::StoC::MessageLocal *pak) -> void {
 #ifdef PRINT_CHAT_PACKETS
 		printf("P085: id %d, type %d\n", pak->id, pak->type);
 #endif // PRINT_CHAT_PACKETS
 
 		GW::Array<wchar_t> *buff = &GW::GameContext::instance()->world->message_buff;
-        if (!buff || !buff->valid() || !buff->size())
-            return true;
-		wchar_t *sender = GW::Agents::GetPlayerNameByLoginNumber(pak->player_number);
-		if (!sender) 
-            return false;
-        bool should_ignore = false;
-        should_ignore |= ShouldIgnore(buff->begin());
-        should_ignore |= ShouldIgnoreByChannel(pak->channel) && ShouldIgnoreByContent(buff->begin(), buff->size());
-        if (should_ignore) {
-            buff->clear();
-            return true;
-        }
+		wchar_t *sender = GW::Agents::GetPlayerNameByLoginNumber(pak->id);
+		if (!sender) return;
 
-		return false;
+		if (ShouldIgnore(buff->begin()) ||
+			ShouldIgnoreBySender(sender, 32) ||
+			ShouldIgnoreByContent(buff->begin(), buff->size())) {
+
+			buff->clear();
+			status->blocked = true;
+			return;
+		}
 	});
 
-	GW::Chat::SetLocalMessageCallback(
-		[this](int channel, wchar_t *message) -> bool {
+	GW::Chat::RegisterLocalMessageCallback(&LocalMessageCallback_Entry,
+	[this](GW::HookStatus *status, int channel, wchar_t *message) -> void {
 		if (away && ShouldIgnore(message)) {
-			return false;
+			status->blocked = true;
 		}
-		return true;
 	});
 	// Hide "You have been playing for..."
 	GW::Chat::AddPrintChatCallback([&](GW::Chat::Channel channel, wchar_t* str, FILETIME timestamp, int reprint) {

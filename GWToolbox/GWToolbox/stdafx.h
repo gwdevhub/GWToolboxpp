@@ -32,21 +32,24 @@
 #include <assert.h>
 
 // c++ headers
+#include <algorithm>
 #include <cmath>
+#include <deque>
+#include <functional>
+#include <fstream>
+#include <initializer_list>
+#include <iostream>
 #include <list>
-#include <vector>
 #include <map> // ?
+#include <memory>
+#include <queue>
+#include <regex>
+#include <set>
+#include <sstream>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
-#include <queue>
-#include <deque>
-#include <string>
-#include <algorithm>
-#include <functional>
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <memory>
+#include <vector>
 
 // windows headers
 #include <Windows.h>

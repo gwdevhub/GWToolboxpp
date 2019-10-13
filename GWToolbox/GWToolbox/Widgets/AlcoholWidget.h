@@ -3,7 +3,6 @@
 #include "ToolboxWidget.h"
 
 #include <GWCA/Packets/StoC.h>
-#include <GWCA\Constants\Maps.h>
 
 class AlcoholWidget : public ToolboxWidget {
 	AlcoholWidget() {};
@@ -16,6 +15,7 @@ private:
 	long prev_alcohol_title_points = 0; // Used in GetAlcoholTitlePointsGained
 	GW::Constants::MapID map_id;
 	DWORD prev_packet_tint_6_level=0; // Record what last post processing packet was - for lunars check
+	GW::HookEntry PostProcess_Entry;
 public:
 	static AlcoholWidget& Instance() {
 		static AlcoholWidget instance;
@@ -28,7 +28,7 @@ public:
 	void Update(float delta) override;
 	DWORD GetAlcoholLevel();
 	long GetAlcoholTitlePoints(); // Gets current alcohol title points.
-	bool AlcUpdate(GW::Packet::StoC::PostProcess *packet);
+	void AlcUpdate(GW::HookStatus *, GW::Packet::StoC::PostProcess *packet);
 
 	// Draw user interface. Will be called every frame if the element is visible
 	void Draw(IDirect3DDevice9* pDevice) override;

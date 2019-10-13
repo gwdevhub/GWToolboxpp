@@ -81,7 +81,6 @@ bool AlcoholWidget::AlcUpdate(GW::Packet::StoC::PostProcess *packet) {
 		last_alcohol = time(NULL);
 	}
 	alcohol_level = packet->level;
-	return false;
 }
 
 void AlcoholWidget::Draw(IDirect3DDevice9* pDevice) {

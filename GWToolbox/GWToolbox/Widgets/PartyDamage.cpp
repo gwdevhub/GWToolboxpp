@@ -30,11 +30,15 @@ void PartyDamage::Initialize() {
 	total = 0;
 	send_timer = TIMER_INIT();
 
-	GW::StoC::AddCallback<GW::Packet::StoC::GenericModifier>(
-		std::bind(&PartyDamage::DamagePacketCallback, this, std::placeholders::_1));
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericModifier>(&GenericModifier_Entry,
+	[this] (GW::HookStatus *status, GW::Packet::StoC::GenericModifier *packet) -> void {
+		return DamagePacketCallback(status, packet);
+	});
 
-	GW::StoC::AddCallback<GW::Packet::StoC::MapLoaded>(
-		std::bind(&PartyDamage::MapLoadedCallback, this, std::placeholders::_1));
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&MapLoaded_Entry,
+	[this] (GW::HookStatus *status, GW::Packet::StoC::MapLoaded *packet) -> void {
+		return MapLoadedCallback(status, packet);
+	});
 
 	for (int i = 0; i < MAX_PLAYERS; ++i) {
 		damage[i].damage= 0;
@@ -49,7 +53,7 @@ void PartyDamage::Terminate() {
 	delete inifile;
 }
 
-bool PartyDamage::MapLoadedCallback(GW::Packet::StoC::MapLoaded *packet) {
+void PartyDamage::MapLoadedCallback(GW::HookStatus *, GW::Packet::StoC::MapLoaded *packet) {
 	switch (GW::Map::GetInstanceType()) {
 	case GW::Constants::InstanceType::Outpost:
 		in_explorable = false;
@@ -65,10 +69,9 @@ bool PartyDamage::MapLoadedCallback(GW::Packet::StoC::MapLoaded *packet) {
 	default:
 		break;
 	}
-	return false;
 }
 
-bool PartyDamage::DamagePacketCallback(GW::Packet::StoC::GenericModifier* packet) {
+void PartyDamage::DamagePacketCallback(GW::HookStatus *, GW::Packet::StoC::GenericModifier* packet) {
 
 	// ignore non-damage packets
 	switch (packet->type) {
@@ -77,29 +80,29 @@ bool PartyDamage::DamagePacketCallback(GW::Packet::StoC::GenericModifier* packet
 	case GW::Packet::StoC::P156_Type::armorignoring:
 		break;
 	default:
-		return false;
+		return;
 	}
 
 	// ignore heals
-	if (packet->value >= 0) return false;
+	if (packet->value >= 0) return;
 
 	GW::AgentArray agents = GW::Agents::GetAgentArray();
 
 	// get cause agent
-	if (packet->cause_id >= agents.size()) return false;
+	if (packet->cause_id >= agents.size()) return;
 	GW::Agent* cause = agents[packet->cause_id];
 	
-	if (cause == nullptr) return false;
-	if (cause->allegiance != 0x1) return false;
+	if (cause == nullptr) return;
+	if (cause->allegiance != 0x1) return;
 	auto cause_it = party_index.find(cause->agent_id);
-	if (cause_it == party_index.end()) return false;  // ignore damage done by non-party members
+	if (cause_it == party_index.end()) return;  // ignore damage done by non-party members
 
 	// get target agent
 	GW::Agent* target = agents[packet->target_id];
-	if (target == nullptr) return false;
-	if (target->login_number != 0) return false; // ignore player-inflicted damage
+	if (target == nullptr) return;
+	if (target->login_number != 0) return; // ignore player-inflicted damage
 										        // such as Life bond or sacrifice
-	if (target->allegiance == 0x1) return false; // ignore damage inflicted to allies in general
+	if (target->allegiance == 0x1) return; // ignore damage inflicted to allies in general
 	// warning: note damage to allied spirits, minions or stones may still trigger
 	// you can do damage like that by standing in bugged dart traps in eye of the north
 	// or maybe with some skills that damage minions/spirits
@@ -120,7 +123,7 @@ bool PartyDamage::DamagePacketCallback(GW::Packet::StoC::GenericModifier* packet
 	}
 
 	int index = cause_it->second;
-	if (index >= MAX_PLAYERS) return false; // something went very wrong.
+	if (index >= MAX_PLAYERS) return; // something went very wrong.
 	if (damage[index].damage == 0) {
 		damage[index].agent_id = packet->cause_id;
 		GW::Agents::AsyncGetAgentName(cause, damage[index].name);
@@ -142,7 +145,6 @@ bool PartyDamage::DamagePacketCallback(GW::Packet::StoC::GenericModifier* packet
 		damage[index].recent_damage += dmg;
 		damage[index].last_damage = TIMER_INIT();
 	}
-	return false;
 }
 
 void PartyDamage::Update(float delta) {

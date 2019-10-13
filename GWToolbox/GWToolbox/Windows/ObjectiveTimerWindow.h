@@ -1,9 +1,8 @@
 #pragma once
 
-#include <Windows.h>
-#include <vector>
 #include <Defines.h>
 
+#include <GWCA\Utilities\Hook.h>
 #include <GWCA\GameContainers\GamePos.h>
 #include <GWCA\Packets\StoC.h>
 
@@ -122,4 +121,13 @@ private:
 	void DisplayDialogue(GW::Packet::StoC::DisplayDialogue* packet);
     void AddDeepObjectiveSet();
     void AddUrgozObjectiveSet();
+
+    GW::HookEntry PartyDefeated_Entry;
+    GW::HookEntry GameSrvTransfer_Entry;
+    GW::HookEntry InstanceLoadFile_Entry;
+    GW::HookEntry ObjectiveAdd_Entry;
+    GW::HookEntry ObjectiveUpdateName_Entry;
+    GW::HookEntry ObjectiveDone_Entry;
+    GW::HookEntry AgentUpdateAllegiance_Entry;
+    GW::HookEntry DoACompleteZone_Entry;
 };

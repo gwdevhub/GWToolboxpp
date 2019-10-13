@@ -37,10 +37,7 @@
 #include <Windows\StringDecoderWindow.h>
 
 namespace {
-
-
-
-	void SendChatCallback(GW::Chat::Channel chan, wchar_t msg[120]) {
+	void SendChatCallback(GW::HookStatus *, GW::Chat::Channel chan, wchar_t msg[120]) {
 		if (!GameSettings::Instance().auto_url || !msg) return;
 		size_t len = wcslen(msg);
 		size_t max_len = 120;
@@ -113,7 +110,7 @@ namespace {
 		return GW::Agents::GetPlayerNameByLoginNumber(playerNumber);
 	}
 
-	void WhisperCallback(const wchar_t from[20], const wchar_t msg[140]) {
+	void WhisperCallback(GW::HookStatus *, const wchar_t from[20], const wchar_t msg[140]) {
 		GameSettings&  game_setting = GameSettings::Instance();
 		if (game_setting.flash_window_on_pm) FlashWindow();
 		DWORD status = GW::FriendListMgr::GetMyStatus();
@@ -347,21 +344,20 @@ namespace {
 		void ApplyPatches() {
 			// apply skin on agent spawn
 			GW::StoC::AddCallback<DisplayCape>(
-				[](DisplayCape *packet) -> bool {
+				[](GW::HookStatus *status, DisplayCape *packet) -> void {
 				DWORD agent_id = packet->agent_id;
 				GW::Agent *agent = GW::Agents::GetAgentByID(agent_id);
 				ApplySkinSafe(agent, 221);
-				return false;
 			});
 
 			// override tonic usage
 			GW::StoC::AddCallback<AgentModel>(
-				[](AgentModel *packet) -> bool {
+				[](GW::HookStatus *status, AgentModel *packet) -> void {
 				GW::Agent *agent = GW::Agents::GetAgentByID(packet->agent_id);
-				if (!(agent && agent->IsPlayer())) return false;
+				if (!(agent && agent->IsPlayer())) return;
 				GW::GameContext *game_ctx = GW::GameContext::instance();
 				if (game_ctx && game_ctx->character && game_ctx->character->is_explorable) return false;
-				return true; // do not process
+				status->blocked = true;
 			});
 
 			// This apply when you start to everyone in the map
@@ -779,6 +775,23 @@ void GameSettings::Initialize() {
 		ctrl_click_patch = new GW::MemoryPatcher(found, &page_max, 1);
 		ctrl_click_patch->TooglePatch(true);
 	}
+#ifdef ENABLE_BORDERLESS
+	GW::Chat::CreateCommand(L"borderless",
+		[&](const wchar_t *message, int argc, LPWSTR *argv) {
+		if (argc <= 1) {
+			ApplyBorderless(!borderlesswindow);
+		} else {
+			std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+			if (arg1 == L"on") {
+				ApplyBorderless(true);
+			} else if (arg1 == L"off") {
+				ApplyBorderless(false);
+			} else {
+				Log::Error("Invalid argument '%ls', please use /borderless [|on|off]", argv[1]);
+			}
+		}
+	});
+#endif
 
 	{
 		uintptr_t found = GW::Scanner::Find("\xEC\x6A\x00\x51\x8B\x4D\xF8\xBA\x47", "xxxxxxxxx", -9);
@@ -1246,12 +1259,12 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     GW::Chat::SetTimestampsColor(timestamps_color);
     GW::Chat::SetTimestampsFormat(show_timestamp_24h, show_timestamp_seconds);
 	// if (select_with_chat_doubleclick) GW::Chat::SetChatEventCallback(&ChatEventCallback);
-	if (auto_url) GW::Chat::SetSendChatCallback(&SendChatCallback);
-	if (move_item_on_ctrl_click) GW::Items::SetOnItemClick(GameSettings::ItemClickCallback);
+	if (auto_url) GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, &SendChatCallback);
+	if (move_item_on_ctrl_click) GW::Items::RegisterItemClickCallback(&ItemClickCallback_Entry, GameSettings::ItemClickCallback);
 	if (tome_patch) tome_patch->TooglePatch(show_unlearned_skill);
 	if (gold_confirm_patch) gold_confirm_patch->TooglePatch(disable_gold_selling_confirmation);
 
-	GW::Chat::SetWhisperCallback(&WhisperCallback);
+	GW::Chat::RegisterWhisperCallback(&WhisperCallback_Entry, &WhisperCallback);
 }
 
 void GameSettings::Terminate() {
@@ -1401,7 +1414,7 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::ShowHelp("Clicking on template that has a URL as name will open that URL in your browser");
 
 	if (ImGui::Checkbox("Automatically change urls into build templates.", &auto_url)) {
-		GW::Chat::SetSendChatCallback(&SendChatCallback);
+		GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, &SendChatCallback);
 	}
 	ImGui::ShowHelp("When you write a message starting with 'http://' or 'https://', it will be converted in template format");
 
@@ -1411,7 +1424,7 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::ShowHelp("Ticking in party window will work as a toggle instead of opening the menu");
 
 	if (ImGui::Checkbox("Move items from/to storage with Control+Click", &move_item_on_ctrl_click)) {
-		GW::Items::SetOnItemClick(GameSettings::ItemClickCallback);
+        GW::Items::RegisterItemClickCallback(&ItemClickCallback_Entry, GameSettings::ItemClickCallback);
 	}
 	ImGui::Indent();
 	ImGui::Checkbox("Move item to current open storage pane on click", &move_item_to_current_storage_pane);
@@ -1775,7 +1788,7 @@ bool GameSettings::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 	return false;
 }
 
-void GameSettings::ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag) {
+void GameSettings::ItemClickCallback(GW::HookStatus *, uint32_t type, uint32_t slot, GW::Bag *bag) {
 	if (!GameSettings::Instance().move_item_on_ctrl_click) return;
     if (!ImGui::IsKeyDown(VK_CONTROL)) return;
 	if (type != 7) return;
@@ -1827,7 +1840,13 @@ void GameSettings::ItemClickCallback(uint32_t type, uint32_t slot, GW::Bag *bag)
 	}
 }
 
-void GameSettings::FriendStatusCallback(GW::Friend* f, GW::FriendStatus status, const wchar_t *account, const wchar_t *charname) {
+void GameSettings::FriendStatusCallback(
+	GW::HookStatus *,
+	GW::Friend* f,
+	GW::FriendStatus status,
+	const wchar_t *alias,
+	const wchar_t *charname) {
+	
 	if (!f || !charname || *charname == L'\0')
 		return;
 
@@ -1838,7 +1857,7 @@ void GameSettings::FriendStatusCallback(GW::Friend* f, GW::FriendStatus status, 
 	switch (status) {
 	case GW::FriendStatus_Offline:
         if (game_setting.notify_when_friends_offline) {
-		    snprintf(buffer, sizeof(buffer), "%S (%S) has just logged out.", charname, account);
+		    snprintf(buffer, sizeof(buffer), "%S (%S) has just logged out.", charname, alias);
 		    GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
         }
 		return;
@@ -1848,7 +1867,7 @@ void GameSettings::FriendStatusCallback(GW::Friend* f, GW::FriendStatus status, 
 		if (f->status != GW::FriendStatus_Offline)
             return;
         if (game_setting.notify_when_friends_online) {
-		    snprintf(buffer, sizeof(buffer), "<a=1>%S</a> (%S) has just logged in.</c>", charname, account);
+		    snprintf(buffer, sizeof(buffer), "<a=1>%S</a> (%S) has just logged in.</c>", charname, alias);
 		    GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
         }
 		return;

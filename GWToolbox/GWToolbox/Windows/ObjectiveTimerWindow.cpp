@@ -171,13 +171,12 @@ void ObjectiveTimerWindow::Initialize() {
             return false;
         });
 
-    GW::StoC::AddCallback<GW::Packet::StoC::GameSrvTransfer>(
-        [this](GW::Packet::StoC::GameSrvTransfer *packet) -> bool {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry,
+    [this](GW::HookStatus *, GW::Packet::StoC::GameSrvTransfer *packet) -> void {
         if (!objective_sets.empty()) {
             ObjectiveSet *os = objective_sets.back();
             os->StopObjectives();
         }
-        return false;
     });
     GW::StoC::AddCallback<GW::Packet::StoC::InstanceLoadFile>(
         [this](GW::Packet::StoC::InstanceLoadFile* packet) -> bool {
@@ -213,42 +212,55 @@ void ObjectiveTimerWindow::Initialize() {
 				DoorClosed(packet->object_id);
             return false;
         });
+	GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveAdd>(
+	[this](GW::Packet::StoC::ObjectiveAdd *packet) -> bool {
+		// type 12 is the "title" of the mission objective, should we ignore it or have a "title" objective ?
+		/*
+		Objective *obj = GetCurrentObjective(packet->objective_id);
+		if (obj) return false;
+		ObjectiveSet *os = objective_sets.back();
+		os->objectives.emplace_back(packet->objective_id);
+		obj = &os->objectives.back();
+		GW::UI::AsyncDecodeStr(packet->name, obj->name, sizeof(obj->name));
+		// If the name isn't "???" we consider that the objective started
+		if (wcsncmp(packet->name, L"\x8102\x3236", 2))
+			obj->SetStarted();
+		*/
+		return false;
+	});
 
-	GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveUpdateName>(
-	[this](GW::Packet::StoC::ObjectiveUpdateName* packet) -> bool {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveUpdateName>(&ObjectiveUpdateName_Entry,
+	[this](GW::HookStatus *, GW::Packet::StoC::ObjectiveUpdateName* packet) -> void {
 		Objective *obj = GetCurrentObjective(packet->objective_id);
         if (obj) obj->SetStarted();
-        return false;
 	});
 	
-	GW::StoC::AddCallback<GW::Packet::StoC::ObjectiveDone>(
-	[this](GW::Packet::StoC::ObjectiveDone* packet) -> bool {
-        Objective* obj = GetCurrentObjective(packet->objective_id);
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveDone>(&ObjectiveDone_Entry,
+	[this](GW::HookStatus *, GW::Packet::StoC::ObjectiveDone* packet) -> void {
+		Objective *obj = GetCurrentObjective(packet->objective_id);
         if (obj) {
             obj->SetDone();
             objective_sets.back()->CheckSetDone();
         }
-        return false;
 	});
 
-    GW::StoC::AddCallback<GW::Packet::StoC::AgentUpdateAllegiance>(
-        [this](GW::Packet::StoC::AgentUpdateAllegiance* packet) -> bool {
-        if (GW::Map::GetMapID() != GW::Constants::MapID::The_Underworld) return false;
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentUpdateAllegiance>(&AgentUpdateAllegiance_Entry,
+        [this](GW::HookStatus *, GW::Packet::StoC::AgentUpdateAllegiance* packet) -> void {
+        if (GW::Map::GetMapID() != GW::Constants::MapID::The_Underworld) return;
 
         const GW::Agent* agent = GW::Agents::GetAgentByID(packet->agent_id);
-        if (agent == nullptr) return false;
-        if (agent->player_number != GW::Constants::ModelID::UW::Dhuum) return false;
-        if (packet->allegiance_bits != 0x6D6F6E31) return false;
+        if (agent == nullptr) return;
+        if (agent->player_number != GW::Constants::ModelID::UW::Dhuum) return;
+        if (packet->unk1 != 0x6D6F6E31) return;
         
         Objective* obj = GetCurrentObjective(157);
         if (obj && !obj->IsStarted()) obj->SetStarted();
-        return false;
     });
 
-	GW::StoC::AddCallback<GW::Packet::StoC::DoACompleteZone>(
-	[this](GW::Packet::StoC::DoACompleteZone* packet) -> bool {
-		if (packet->message[0] != 0x8101) return false;
-		if (objective_sets.empty()) return false;
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DoACompleteZone>(&DoACompleteZone_Entry,
+	[this](GW::HookStatus *, GW::Packet::StoC::DoACompleteZone* packet) -> void {
+		if (packet->message[0] != 0x8101) return;
+		if (objective_sets.empty()) return;
 
 		uint32_t id = packet->message[1];
 		Objective *obj = GetCurrentObjective(id);
@@ -261,7 +273,6 @@ void ObjectiveTimerWindow::Initialize() {
             Objective *next = GetCurrentObjective(next_id);
             if (next && !next->IsStarted()) next->SetStarted();
         }
-		return false;
 	});
 }
 
