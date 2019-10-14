@@ -154,6 +154,7 @@ void IRCModule::AddHooks() {
 			content.insert(0,":");
 			OnMessage(content.c_str(), &d, &conn);
 		}
+		status->blocked = true;
 		return true;
 	});
 }
