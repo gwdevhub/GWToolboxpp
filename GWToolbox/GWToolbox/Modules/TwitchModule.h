@@ -7,16 +7,16 @@
 
 #include <Color.h>
 
-class IRCModule : public ToolboxModule {
-    IRCModule() {};
-    ~IRCModule() {};
+class TwitchModule : public ToolboxModule {
+    TwitchModule() {};
+    ~TwitchModule() {};
 public:
-    static IRCModule& Instance() {
-        static IRCModule instance;
+    static TwitchModule& Instance() {
+        static TwitchModule instance;
         return instance;
     }
 
-    const char* Name() const override { return "Twitch Chat"; }
+    const char* Name() const override { return "Twitch"; }
     void Initialize() override;
     void Terminate() override;
     void Update(float delta) override;
@@ -44,6 +44,7 @@ private:
     bool pending_connect = false;
     bool connected = false;
     bool show_irc_password = false;
+	bool twitch_enabled = true;
 
 	void AddHooks();
 	bool hooked = 0;

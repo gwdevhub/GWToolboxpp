@@ -456,7 +456,18 @@ void DiscordModule::DrawSettingInternal() {
     ImGui::ShowHelp("Allows GWToolbox to send in-game information to Discord");
     if (discord_enabled) {
         ImGui::SameLine();
-		edited |= ImGui::Button(discord_connected ? "Connected" : "Click to connect", ImVec2(0, 0)) && !discord_connected;
+		ImGui::PushStyleColor(ImGuiCol_Text, discord_connected ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
+		if (ImGui::Button(discord_connected ? "Connected" : "Disconnected", ImVec2(0, 0))) {
+			if (discord_connected) {
+				Disconnect();
+			}
+			else {
+				edited |= true;
+			}
+		}
+		ImGui::PopStyleColor();
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip(discord_connected ? "Click to disconnect" : "Click to connect");
 
         ImGui::Indent();
 		edited |= ImGui::Checkbox("Hide in-game info when appearing offline", &hide_activity_when_offline);

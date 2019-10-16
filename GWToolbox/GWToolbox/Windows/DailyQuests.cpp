@@ -296,25 +296,30 @@ void DailyQuests::DrawHelp() {
 }
 void DailyQuests::DrawSettingInternal() {
     ToolboxWindow::DrawSettingInternal();
+	float width = ImGui::GetContentRegionAvailWidth() / 2;
+	ImGui::PushItemWidth(width);
     ImGui::InputInt("Show daily quests for the next ", &daily_quest_window_count);
+	ImGui::PopItemWidth();
     ImGui::SameLine(0, 0);
     ImGui::Text("days");
     ImGui::Text("Quests to show in Daily Quests window:");
     ImGui::Indent();
-    float spacing = 140.0f * ImGui::GetIO().FontGlobalScale;
+	ImGui::PushItemWidth(width);
     ImGui::Checkbox("Zaishen Bounty", &show_zaishen_bounty_in_window);
-    ImGui::SameLine(0, spacing);
+    ImGui::SameLine();
     ImGui::Checkbox("Zaishen Combat", &show_zaishen_combat_in_window);
     ImGui::Checkbox("Zaishen Mission", &show_zaishen_missions_in_window);
-    ImGui::SameLine(0, spacing);
+    ImGui::SameLine();
     ImGui::Checkbox("Zaishen Vanquish", &show_zaishen_vanquishes_in_window);
     ImGui::Checkbox("Wanted by Shining Blade", &show_wanted_quests_in_window);
-    ImGui::SameLine(0, spacing);
+    ImGui::SameLine();
     ImGui::Checkbox("Nicholas The Traveler", &show_nicholas_in_window);
     ImGui::Checkbox("Weekly Bonus (PvE)", &show_weekly_bonus_pve_in_window);
-    ImGui::SameLine(0, spacing);
+    ImGui::SameLine();
     ImGui::Checkbox("Weekly Bonus (PvP)", &show_weekly_bonus_pvp_in_window);
     ImGui::InputFloat("Text spacing", &text_width);
+	ImGui::PopItemWidth();
+	ImGui::Unindent();
 }
 void DailyQuests::LoadSettings(CSimpleIni* ini) {
     ToolboxWindow::LoadSettings(ini);

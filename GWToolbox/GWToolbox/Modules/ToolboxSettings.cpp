@@ -18,7 +18,7 @@
 #include <Modules/Resources.h>
 #include <Modules/Updater.h>
 #include <Modules/DiscordModule.h>
-#include <Modules/IRCModule.h>
+#include <Modules/TwitchModule.h>
 
 #include <Windows/MainWindow.h>
 #include <Windows/PconsWindow.h>
@@ -77,7 +77,7 @@ void ToolboxSettings::InitializeModules() {
 	if (use_factionleaderboard) FactionLeaderboardWindow::Instance().Initialize();
     if (use_daily_quests) DailyQuests::Instance().Initialize();
     if (use_discord) DiscordModule::Instance().Initialize();
-    if (use_irc) IRCModule::Instance().Initialize();
+    if (use_twitch) TwitchModule::Instance().Initialize();
 #ifdef TB_DEBUG
     DoorMonitorWindow::Instance().Initialize();
     SkillListingWindow::Instance().Initialize();
@@ -86,7 +86,6 @@ void ToolboxSettings::InitializeModules() {
 #ifdef _DEBUG
     PacketLoggerWindow::Instance().Initialize();
     StringDecoderWindow::Instance().Initialize();
-
     FriendListWindow::Instance().Initialize();
 #endif
 
@@ -148,7 +147,7 @@ void ToolboxSettings::DrawSettingInternal() {
 	ImGui::Checkbox("Trade", &use_trade);
     ImGui::SameLine(ImGui::GetWindowWidth() / 2);
     ImGui::Checkbox("Discord", &use_discord);
-	ImGui::Checkbox("IRC Integration", &use_irc);
+	ImGui::Checkbox("Twitch", &use_twitch);
 	ImGui::PopID();
 
 	ImGui::PushID("menubuttons");
@@ -201,7 +200,7 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
     use_objectivetimer = ini->GetBoolValue(Name(), VAR_NAME(use_objectivetimer), true);
     use_discord = ini->GetBoolValue(Name(), VAR_NAME(use_discord), true);
 	use_factionleaderboard = ini->GetBoolValue(Name(), VAR_NAME(use_factionleaderboard), use_factionleaderboard);
-	use_irc = ini->GetBoolValue(Name(), VAR_NAME(use_irc), use_irc);
+	use_twitch = ini->GetBoolValue(Name(), VAR_NAME(use_twitch), use_twitch);
 
 	save_location_data = ini->GetBoolValue(Name(), VAR_NAME(save_location_data), false);
 }
@@ -231,7 +230,7 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(use_objectivetimer), use_objectivetimer);
 	ini->SetBoolValue(Name(), VAR_NAME(use_factionleaderboard), use_factionleaderboard);
     ini->SetBoolValue(Name(), VAR_NAME(use_discord), use_discord);
-    ini->SetBoolValue(Name(), VAR_NAME(use_irc), use_irc);
+    ini->SetBoolValue(Name(), VAR_NAME(use_twitch), use_twitch);
 
 	ini->SetBoolValue(Name(), VAR_NAME(save_location_data), save_location_data);
 }

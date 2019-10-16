@@ -294,8 +294,8 @@
     <ClInclude Include="GWToolbox\base64.h" />
     <ClInclude Include="GWToolbox\sha1.hpp" />
     <ClInclude Include="GWToolbox\IRC.h" />
-    <ClInclude Include="GWToolbox\Modules\IRCModule.h" />
     <ClInclude Include="GWToolbox\Windows\FriendListWindow.h" />
+    <ClInclude Include="GWToolbox\Modules\TwitchModule.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -455,8 +455,8 @@
     <ClCompile Include="GWToolbox\base64.cpp" />
     <ClCompile Include="GWToolbox\sha1.cpp" />
     <ClCompile Include="GWToolbox\IRC.cc" />
-    <ClCompile Include="GWToolbox\Modules\IRCModule.cpp" />
     <ClCompile Include="GWToolbox\Windows\FriendListWindow.cpp" />
+    <ClCompile Include="GWToolbox\Modules\TwitchModule.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GWToolbox.rc">
@@ -608,5 +608,6 @@
     <Image Include="..\resources\bonds\Holy_Veil.png">
       <Filter>Resources\bonds</Filter>
     </Image>
+    <Image Include="..\resources\pcons\Honeycomb.png" />
   </ItemGroup>
 </Project>

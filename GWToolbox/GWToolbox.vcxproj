@@ -120,7 +120,7 @@
     <ClInclude Include="GWToolbox\Modules\ChatCommands.h" />
     <ClInclude Include="GWToolbox\Modules\ChatFilter.h" />
     <ClInclude Include="GWToolbox\Modules\DiscordModule.h" />
-    <ClInclude Include="GWToolbox\Modules\IRCModule.h" />
+    <ClInclude Include="GWToolbox\Modules\TwitchModule.h" />
     <ClInclude Include="GWToolbox\sha1.hpp" />
     <ClInclude Include="GWToolbox\Windows\FriendListWindow.h" />
     <ClInclude Include="GWToolbox\Windows\PacketLoggerWindow.h" />
@@ -223,7 +223,7 @@
     <ClCompile Include="GWToolbox\Modules\ChatCommands.cpp" />
     <ClCompile Include="GWToolbox\Modules\ChatFilter.cpp" />
     <ClCompile Include="GWToolbox\Modules\DiscordModule.cpp" />
-    <ClCompile Include="GWToolbox\Modules\IRCModule.cpp" />
+    <ClCompile Include="GWToolbox\Modules\TwitchModule.cpp" />
     <ClCompile Include="GWToolbox\sha1.cpp" />
     <ClCompile Include="GWToolbox\Windows\FriendListWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\PacketLoggerWindow.cpp" />
@@ -336,11 +336,6 @@
     <Image Include="..\resources\pcons\Slice_of_Pumpkin_Pie.png" />
     <Image Include="..\resources\pcons\Sugary_Blue_Drink.png" />
     <Image Include="..\resources\pcons\War_Supplies.png" />
-    <Image Include="bitmap1.bmp" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\resources\pcons\rcdata1.bin" />
-    <None Include="..\resources\pcons\rcdata2.bin" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

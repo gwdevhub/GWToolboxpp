@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Defines.h"
 
-#include "IRCModule.h"
+#include "TwitchModule.h"
 #include <WinSock2.h>
 #include "logger.h"
 
@@ -17,7 +17,7 @@
 #include <GWCA/Utilities/Hooker.h>
 namespace {
     int OnJoin(const char* params, irc_reply_data* hostd, void* conn) {
-        IRCModule* module = &IRCModule::Instance();
+        TwitchModule* module = &TwitchModule::Instance();
         if (!params[0] || !module->show_messages)
             return 0; // Empty msg
 		wchar_t buf[600];
@@ -41,7 +41,7 @@ namespace {
         return 0;
     }
     int OnLeave(const char* params, irc_reply_data* hostd, void* conn) {
-        IRCModule* module = &IRCModule::Instance();
+        TwitchModule* module = &TwitchModule::Instance();
         if (!params[0] || !module->show_messages || !module->notify_on_user_leave)
             return 0; // Empty msg
         wchar_t buf[600];
@@ -53,7 +53,7 @@ namespace {
         return 0;
     }
     int OnConnected(const char* params, irc_reply_data* hostd, void* conn) {
-        IRCModule* module = &IRCModule::Instance();
+        TwitchModule* module = &TwitchModule::Instance();
         IRC* irc_conn = (IRC*)conn;
 		// Set the username to be the connected name.
 		module->irc_username = params;
@@ -68,7 +68,7 @@ namespace {
         return 0;
     }
     int OnMessage(const char* params, irc_reply_data* hostd, void* conn) {
-        IRCModule* module = &IRCModule::Instance();
+        TwitchModule* module = &TwitchModule::Instance();
         if (!params[0] || !module->show_messages)
             return 0; // Empty msg
         wchar_t buf[600];
@@ -101,7 +101,7 @@ namespace {
 	}
 }
 WSADATA wsaData; /* winsock stuff, linux/unix/*bsd users need not worry about this */
-void IRCModule::Initialize() {
+void TwitchModule::Initialize() {
     ToolboxModule::Initialize();
 
     irc_server.resize(255);
@@ -115,7 +115,7 @@ void IRCModule::Initialize() {
     conn.hook_irc_command("PRIVMSG", &OnMessage);
 	conn.hook_irc_command("NOTICE", &OnNotice);
 }
-void IRCModule::AddHooks() {
+void TwitchModule::AddHooks() {
 	if (hooked) return;
 	hooked = 1;
 	// When starting a whisper to "<irc_nickname> @ <irc_channel>", rewrite recipient to be "<irc_channel>"
@@ -123,7 +123,7 @@ void IRCModule::AddHooks() {
 		wchar_t buf[128];
 		if (!name)
 			return false;
-		std::wstring walias = GuiUtils::StringToWString(IRCModule::Instance().irc_alias);
+		std::wstring walias = GuiUtils::StringToWString(TwitchModule::Instance().irc_alias);
 		swprintf(buf, 128, L" @ %s", walias.c_str());
 		if ((std::wstring(name)).find(buf) != -1) {
 			wcscpy(name, walias.c_str());
@@ -158,15 +158,17 @@ void IRCModule::AddHooks() {
 		return true;
 	});
 }
-void IRCModule::Disconnect() {
+void TwitchModule::Disconnect() {
 	conn.disconnect();
 	connected = conn.is_connected();
 }
-void IRCModule::Terminate() {
+void TwitchModule::Terminate() {
 	Disconnect();
     WSACleanup(); /* more winsock stuff */
 }
-bool IRCModule::Connect() {
+bool TwitchModule::Connect() {
+	if (!twitch_enabled)
+		return true;
 	connected = conn.is_connected();
     if (connected)
         return true;
@@ -179,15 +181,15 @@ bool IRCModule::Connect() {
 		printf("Invalid server name!\n");
 		return false;
 	}
-	if(irc_username.empty()) {
+	/*if(irc_username.empty()) {
         printf("Invalid username!\n");
         return false;
-    }
+    }*/
 	// Sanitise strings to lower case
 	std::transform(irc_server.begin(), irc_server.end(), irc_server.begin(),
 		[](unsigned char c) { return std::tolower(c); });
-	std::transform(irc_username.begin(), irc_username.end(), irc_username.begin(),
-		[](unsigned char c) { return std::tolower(c); });
+	/*std::transform(irc_username.begin(), irc_username.end(), irc_username.begin(),
+		[](unsigned char c) { return std::tolower(c); });*/
 	std::transform(irc_channel.begin(), irc_channel.end(), irc_channel.begin(),
 		[](unsigned char c) { return std::tolower(c); });
 
@@ -204,64 +206,70 @@ bool IRCModule::Connect() {
     printf("Connected to IRC!\n");
     return connected = conn.is_connected();
 }
-void IRCModule::Update(float delta) {
+void TwitchModule::Update(float delta) {
 	connected = conn.is_connected();
 }
-void IRCModule::DrawSettingInternal() {
-    ImGui::Text("%s is used to exchange messages with Twitch using the in-game chat window.\n",Name());
-    /*ImGui::TextColored(ImColor(102, 187, 238, 255) , "What is IRC?");
-    if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("Go to %s", "https://www.computerhope.com/jargon/i/irc.htm");
-    if (ImGui::IsItemClicked())
-        ShellExecute(NULL, "open", "https://www.computerhope.com/jargon/i/irc.htm", NULL, NULL, SW_SHOWNORMAL);*/
-	ImGui::PushStyleColor(ImGuiCol_Text, connected ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
-    if (ImGui::Button(connected ? "Connected" : "Disconnected", ImVec2(0, 0))) {
-        if (connected) {
-			Disconnect();
-        }
-        else {
-            Connect();
-        }
-    }
-	ImGui::PopStyleColor();
-	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip(connected ? "Click to disconnect" : "Click to connect");
+void TwitchModule::DrawSettingInternal() {
+	bool edited = false;
+	if (ImGui::Checkbox("Enable Twitch integration", &twitch_enabled))
+		Disconnect();
+	ImGui::ShowHelp("Allows GWToolbox to send & receive messages with Twitch using the in-game chat window.");
+	if (twitch_enabled) {
+		ImGui::SameLine();
+		ImGui::PushStyleColor(ImGuiCol_Text, connected ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
+		if (ImGui::Button(connected ? "Connected" : "Disconnected", ImVec2(0, 0))) {
+			if (connected) {
+				Disconnect();
+			}
+			else {
+				Connect();
+			}
+			edited |= true;
+		}
+		ImGui::PopStyleColor();
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip(connected ? "Click to disconnect" : "Click to connect");
+		ImGui::Indent();
 
-    float width = ImGui::GetContentRegionAvailWidth() / 2;
-    ImGui::Checkbox("Show messages in chat window. Color:", &show_messages);
-    ImGui::SameLine();
-	if (Colors::DrawSettingHueWheel("Twitch Color:", &irc_chat_color)) {
-		GW::Chat::SetSenderColor(GW::Chat::Channel::CHANNEL_GWCA1, IRCModule::Instance().irc_chat_color);
+		ImGui::Checkbox("Show messages in chat window. Color:", &show_messages);
+		ImGui::SameLine();
+		if (Colors::DrawSettingHueWheel("Twitch Color:", &irc_chat_color)) {
+			GW::Chat::SetSenderColor(GW::Chat::Channel::CHANNEL_GWCA1, TwitchModule::Instance().irc_chat_color);
+		}
+		ImGui::Checkbox("Notify on user leave", &notify_on_user_leave);
+		ImGui::ShowHelp("Receive a message in the chat window when a viewer leaves the Twitch Channel");
+		ImGui::Checkbox("Notify on user join", &notify_on_user_join);
+		ImGui::ShowHelp("Receive a message in the chat window when a viewer joins the Twitch Channel");
+
+		float width = ImGui::GetContentRegionAvailWidth() / 2;
+		ImGui::PushItemWidth(width);
+		/*ImGui::InputText("Twitch Alias", const_cast<char*>(irc_alias.c_str()), 32);
+		ImGui::ShowHelp("Sending a whisper to this name will send the message to Twitch.\nCannot contain spaces.");
+		ImGui::InputText("Twitch Server", const_cast<char*>(irc_server.c_str()), 255);
+		ImGui::ShowHelp("Shouldn't need to change this.\nDefault: irc.chat.twitch.tv");
+		ImGui::InputText("Twitch Username", const_cast<char*>(irc_username.c_str()), 32);
+		ImGui::ShowHelp("Your username that you use for Twitch.");*/
+		ImGui::InputText("Twitch Oauth Token", const_cast<char*>(irc_password.c_str()), 255, show_irc_password ? 0 : ImGuiInputTextFlags_Password);
+		ImGui::PopItemWidth();
+		ImGui::ShowHelp("Used to connect to Twitch.\ne.g. oauth:3fplxiscsq1550zdkf8z2kh1jk7mqs");
+		ImGui::SameLine();
+		ImGui::Checkbox("Show", &show_irc_password);
+		ImGui::Indent();
+		ImGui::TextColored(ImColor(102, 187, 238, 255), "Click Here to get a Twitch Oauth Token");
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Go to %s", "https://twitchapps.com/tmi/");
+		if (ImGui::IsItemClicked())
+			ShellExecute(NULL, "open", "https://twitchapps.com/tmi/", NULL, NULL, SW_SHOWNORMAL);
+		ImGui::Unindent();
+		ImGui::PushItemWidth(width);
+		ImGui::InputText("Twitch Channel", const_cast<char*>(irc_channel.c_str()), 56);
+		ImGui::ShowHelp("The Twitch username of the person who's channel you want to connect to.\nEnter your own Twitch username here to receive messages from your channel whilst streaming.");
+		ImGui::PopItemWidth();
+		ImGui::TextDisabled("Re-connect after making changes to use updated info");
+		ImGui::Unindent();
 	}
-    ImGui::Checkbox("Notify on user leave", &notify_on_user_leave);
-	ImGui::ShowHelp("Receive a message in the chat window when a viewer leaves the Twitch Channel");
-    ImGui::SameLine();
-    ImGui::Checkbox("Notify on user join", &notify_on_user_join);
-	ImGui::ShowHelp("Receive a message in the chat window when a viewer joins the Twitch Channel");
-	ImGui::PushItemWidth(width);
-    /*ImGui::InputText("Twitch Alias", const_cast<char*>(irc_alias.c_str()), 32);
-    ImGui::ShowHelp("Sending a whisper to this name will send the message to Twitch.\nCannot contain spaces.");
-    ImGui::InputText("Twitch Server", const_cast<char*>(irc_server.c_str()), 255);
-	ImGui::ShowHelp("Shouldn't need to change this.\nDefault: irc.chat.twitch.tv");
-    ImGui::InputText("Twitch Username", const_cast<char*>(irc_username.c_str()), 32);
-	ImGui::ShowHelp("Your username that you use for Twitch.");*/
-    ImGui::InputText("Twitch Oauth Token", const_cast<char*>(irc_password.c_str()), 255, show_irc_password ? 0 : ImGuiInputTextFlags_Password);
-	ImGui::ShowHelp("Used to connect to Twitch.\ne.g. oauth:3fplxiscsq1550zdkf8z2kh1jk7mqs");
-	ImGui::PopItemWidth();
-	ImGui::SameLine();
-	ImGui::Checkbox("Show", &show_irc_password);
-	ImGui::TextColored(ImColor(102, 187, 238, 255), "Get my Twitch Oauth Token");
-	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("Go to %s", "https://twitchapps.com/tmi/");
-	if (ImGui::IsItemClicked())
-		ShellExecute(NULL, "open", "https://twitchapps.com/tmi/", NULL, NULL, SW_SHOWNORMAL);
-	ImGui::PushItemWidth(width);
-    ImGui::InputText("Twitch Channel", const_cast<char*>(irc_channel.c_str()), 56);
-	ImGui::ShowHelp("The Twitch username of the person who's channel you want to connect to.\nEnter your own Twitch username here to receive messages from your channel whilst streaming.");
-	ImGui::PopItemWidth();
-	ImGui::TextDisabled("Re-connect after making changes to use updated info");
 }
-void IRCModule::LoadSettings(CSimpleIni* ini) {
+void TwitchModule::LoadSettings(CSimpleIni* ini) {
     ToolboxModule::LoadSettings(ini);
 
     irc_alias = ini->GetValue(Name(), VAR_NAME(irc_alias), irc_alias.c_str());
@@ -270,12 +278,13 @@ void IRCModule::LoadSettings(CSimpleIni* ini) {
     irc_password = ini->GetValue(Name(), VAR_NAME(irc_password), irc_password.c_str());
     irc_channel = ini->GetValue(Name(), VAR_NAME(irc_channel), irc_channel.c_str());
 
+	twitch_enabled = ini->GetBoolValue(Name(), VAR_NAME(twitch_enabled), twitch_enabled);
     show_messages = ini->GetBoolValue(Name(), VAR_NAME(show_messages), show_messages);
     notify_on_user_join = ini->GetBoolValue(Name(), VAR_NAME(notify_on_user_join), notify_on_user_join);
     notify_on_user_leave = ini->GetBoolValue(Name(), VAR_NAME(notify_on_user_leave), notify_on_user_leave);
 
     irc_chat_color = (GW::Chat::Color)Colors::Load(ini, Name(), VAR_NAME(irc_chat_color), irc_chat_color);
-	GW::Chat::SetSenderColor(GW::Chat::Channel::CHANNEL_GWCA1, IRCModule::Instance().irc_chat_color);
+	GW::Chat::SetSenderColor(GW::Chat::Channel::CHANNEL_GWCA1, TwitchModule::Instance().irc_chat_color);
 	Color col1, col2;
 	GW::Chat::GetChannelColors(GW::Chat::Channel::CHANNEL_GUILD, &col1, &col2);
 	GW::Chat::SetMessageColor(GW::Chat::Channel::CHANNEL_GWCA1, col2);
@@ -287,7 +296,7 @@ void IRCModule::LoadSettings(CSimpleIni* ini) {
 		Connect();
 	}
 }
-void IRCModule::SaveSettings(CSimpleIni* ini) {
+void TwitchModule::SaveSettings(CSimpleIni* ini) {
     ToolboxModule::SaveSettings(ini);
 
     ini->SetValue(Name(), VAR_NAME(irc_alias), irc_alias.c_str());
@@ -296,6 +305,7 @@ void IRCModule::SaveSettings(CSimpleIni* ini) {
     ini->SetValue(Name(), VAR_NAME(irc_password), irc_password.c_str());
     ini->SetValue(Name(), VAR_NAME(irc_channel), irc_channel.c_str());
 
+	ini->SetBoolValue(Name(), VAR_NAME(twitch_enabled), twitch_enabled);
     ini->SetBoolValue(Name(), VAR_NAME(show_messages), show_messages);
     ini->SetBoolValue(Name(), VAR_NAME(notify_on_user_join), notify_on_user_join);
     ini->SetBoolValue(Name(), VAR_NAME(notify_on_user_leave), notify_on_user_leave);
