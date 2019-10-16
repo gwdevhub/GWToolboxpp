@@ -39,6 +39,7 @@
 #include <Windows/DoorMonitorWindow.h>
 #include <Windows/SkillListingWindow.h>
 #include <Windows/StringDecoderWindow.h>
+#include <Windows/FriendListWindow.h>
 
 #include <Widgets/TimerWidget.h>
 #include <Widgets/HealthWidget.h>
@@ -86,6 +87,7 @@ void ToolboxSettings::InitializeModules() {
     PacketLoggerWindow::Instance().Initialize();
     StringDecoderWindow::Instance().Initialize();
 
+    FriendListWindow::Instance().Initialize();
 #endif
 
 	SettingsWindow::Instance().Initialize();

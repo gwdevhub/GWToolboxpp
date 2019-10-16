@@ -122,6 +122,7 @@
     <ClInclude Include="GWToolbox\Modules\DiscordModule.h" />
     <ClInclude Include="GWToolbox\Modules\IRCModule.h" />
     <ClInclude Include="GWToolbox\sha1.hpp" />
+    <ClInclude Include="GWToolbox\Windows\FriendListWindow.h" />
     <ClInclude Include="GWToolbox\Windows\PacketLoggerWindow.h" />
     <ClInclude Include="GWToolbox\Windows\DailyQuests.h" />
     <ClInclude Include="GWToolbox\Modules\GameSettings.h" />
@@ -224,6 +225,7 @@
     <ClCompile Include="GWToolbox\Modules\DiscordModule.cpp" />
     <ClCompile Include="GWToolbox\Modules\IRCModule.cpp" />
     <ClCompile Include="GWToolbox\sha1.cpp" />
+    <ClCompile Include="GWToolbox\Windows\FriendListWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\PacketLoggerWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\DailyQuests.cpp" />
     <ClCompile Include="GWToolbox\Modules\GameSettings.cpp" />
