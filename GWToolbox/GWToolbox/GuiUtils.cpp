@@ -30,13 +30,21 @@ void GuiUtils::LoadFonts() {
     if (fonts_loaded || fonts_loading)
         return;
     fonts_loading = true;
+
 	std::thread t([] {
         printf("Loading fonts\n");
+
+		ImGuiIO& io = ImGui::GetIO();
+		std::vector<std::pair<wchar_t*, const ImWchar*>> extra_fonts;
+		extra_fonts.push_back({ L"Font_Japanese.ttf", io.Fonts->GetGlyphRangesJapanese() });
+		extra_fonts.push_back({ L"Font_Cyrillic.ttf", io.Fonts->GetGlyphRangesCyrillic() });
+		extra_fonts.push_back({ L"Font_ChineseTraditional.ttf", io.Fonts->GetGlyphRangesChineseFull() });
+		extra_fonts.push_back({ L"Font_Korean.ttf", io.Fonts->GetGlyphRangesKorean() });
 
         //std::this_thread::sleep_for(std::chrono::milliseconds(3000));
         // Pre-load font configs
         ImFontConfig* fontCfg;
-        ImGuiIO& io = ImGui::GetIO();
+        
         // Preload font size 16, then re-use the binary data for other sizes to avoid re-reading the file.
         if (PathFileExistsW(Resources::GetPath(L"Font.ttf").c_str())) {
             utf8::string f = Resources::GetPathUtf8(L"Font.ttf");
@@ -51,43 +59,18 @@ void GuiUtils::LoadFonts() {
         }
 		// Collect the final font. This is the default (16px) font with all special chars merged. in.
 		fontCfg = &io.Fonts->ConfigData.back();
-        // Do the same for other fonts if found. MergeMode = true will merge these fonts with the above default font.
-        if (PathFileExistsW(Resources::GetPath(L"Font_Japanese.ttf").c_str())) {
-            ImFontConfig c;
-            c.MergeMode = true;
-            io.Fonts->AddFontFromFileTTF(Resources::GetPathUtf8(L"Font_Japanese.ttf").bytes, 16.0f, &c, io.Fonts->GetGlyphRangesJapanese());
-            printf("Font_Japanese.ttf found and pre-loaded\n");
-        }
-        else {
-            printf("Font_Japanese.ttf not found. Add this file to load special chars.\n");
-        }
-		if (PathFileExistsW(Resources::GetPath(L"Font_Cyrillic.ttf").c_str())) {
-			ImFontConfig c;
-			c.MergeMode = true;
-			io.Fonts->AddFontFromFileTTF(Resources::GetPathUtf8(L"Font_Cyrillic.ttf").bytes, 16.0f, &c, io.Fonts->GetGlyphRangesCyrillic());
-			printf("Font_Cyrillic.ttf found and pre-loaded\n");
+
+		for (unsigned int i = 0; i < extra_fonts.size(); i++) {
+			if (PathFileExistsW(Resources::GetPath(extra_fonts[i].first).c_str())) {
+				ImFontConfig c;
+				c.MergeMode = true;
+				io.Fonts->AddFontFromFileTTF(Resources::GetPathUtf8(extra_fonts[i].first).bytes, 16.0f, &c, extra_fonts[i].second);
+				printf("%ls found and pre-loaded\n", extra_fonts[i].first);
+			}
+			else {
+				printf("%ls not found. Add this file to load special chars.\n", extra_fonts[i].first);
+			}
 		}
-		else {
-			printf("Font_Cyrillic.ttf not found. Add this file to load special chars.\n");
-		}
-        if (PathFileExistsW(Resources::GetPath(L"Font_ChineseTraditional.ttf").c_str())) {
-            ImFontConfig c;
-            c.MergeMode = true;
-            io.Fonts->AddFontFromFileTTF(Resources::GetPathUtf8(L"Font_ChineseTraditional.ttf").bytes, 16.0f, &c, io.Fonts->GetGlyphRangesChineseFull());
-            printf("Font_ChineseTraditional.ttf found and pre-loaded\n");
-        }
-        else {
-            printf("Font_ChineseTraditional.ttf not found. Add this file to load special chars.\n");
-        }
-        if (PathFileExistsW(Resources::GetPath(L"Font_Korean.ttf").c_str())) {
-            ImFontConfig c;
-            c.MergeMode = true;
-            io.Fonts->AddFontFromFileTTF(Resources::GetPathUtf8(L"Font_Korean.ttf").bytes, 16.0f, &c, io.Fonts->GetGlyphRangesKorean());
-            printf("Font_Korean.ttf found and pre-loaded\n");
-        }
-        else {
-            printf("Font_Korean.ttf not found. Add this file to load special chars.\n");
-        }
         
         font16 = fontCfg->DstFont;
 

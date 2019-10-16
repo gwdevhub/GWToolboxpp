@@ -351,6 +351,8 @@ bool Pcon::RefillBlocking() {
             int slot_to = inventoryItem->slot;
             GW::Bag* bag_to = inventoryItem->bag;
             int qty_before = inventoryItem->quantity;
+			if(inventoryItem->quantity == 0)
+				delete inventoryItem; // Empty slot was returned; free memory here.
 			// This next statement blocks until move completes.
 			GW::Item* updatedItem = MoveItem(storageItem, bag_to, slot_to, quantity_to_move, 3);
             UnreserveSlotForMove(bag_to->index, slot_to);

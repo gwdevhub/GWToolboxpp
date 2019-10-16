@@ -46,6 +46,23 @@ public:
             Init();
         }
     };
+	static PendingChatMessage* queueSend(GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender) {
+		PendingChatMessage* m = new PendingChatMessage(channel, enc_message, enc_sender);
+		if (m->invalid) {
+			delete m;
+			return nullptr;
+		}
+		m->SendIt();
+		return m;
+	}
+	static PendingChatMessage* queuePrint(GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender) {
+		PendingChatMessage* m = new PendingChatMessage(channel, enc_message, enc_sender);
+		if (m->invalid) {
+			delete m;
+			return nullptr;
+		}
+		return m;
+	}
     void SendIt() {
         print = false;
         send = true;

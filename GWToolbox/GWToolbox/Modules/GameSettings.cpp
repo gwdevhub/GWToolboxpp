@@ -651,11 +651,8 @@ void __fastcall OnPingEquippedItem(uint32_t oneC, uint32_t item_id1, uint32_t it
 			StringDecoderWindow::PrintEncStr(item->info_string);
 		#endif
         std::wstring item_description = ParseItemDescription(item);
-        PendingChatMessage* m = new PendingChatMessage(GW::Chat::Channel::CHANNEL_GROUP, item_description.c_str(), p->name_enc);
-        if (!m->invalid) {
-            m->SendIt();
-            GameSettings::Instance().pending_messages.push_back(m);
-        }
+		PendingChatMessage* m = PendingChatMessage::queueSend(GW::Chat::Channel::CHANNEL_GROUP, item_description.c_str(), p->name_enc);
+		if (m) GameSettings::Instance().pending_messages.push_back(m);
     }
     if (item_id2) {
         item = GW::GameContext::instance()->items->item_array[item_id2];
@@ -666,11 +663,8 @@ void __fastcall OnPingEquippedItem(uint32_t oneC, uint32_t item_id1, uint32_t it
 			StringDecoderWindow::PrintEncStr(item->info_string);
 		#endif
         std::wstring item_description2 = ParseItemDescription(item);
-        PendingChatMessage* m2 = new PendingChatMessage(GW::Chat::Channel::CHANNEL_GROUP, item_description2.c_str(), p->name_enc);
-        if (!m2->invalid) {
-            m2->SendIt();
-            GameSettings::Instance().pending_messages.push_back(m2);
-        }
+		PendingChatMessage* m = PendingChatMessage::queueSend(GW::Chat::Channel::CHANNEL_GROUP, item_description2.c_str(), p->name_enc);
+		if (m) GameSettings::Instance().pending_messages.push_back(m);
     }
     GW::HookBase::LeaveHook();
 }
@@ -700,7 +694,9 @@ const bool PendingChatMessage::SendMessage() {
         buf[len] = '\0';
     }
     if (len) {
-        GW::Chat::SendChat('#', buf);
+		GW::GameThread::Enqueue([buf]() {
+			GW::Chat::SendChat('#', buf);
+			});
     }
     printed = true;
     return printed;
@@ -894,17 +890,15 @@ void GameSettings::Initialize() {
             return; // Shout skill etc
 		GW::Agent* agent = GW::Agents::GetAgentByID(pak->agent_id);
 		if (!agent || agent->login_number) return; // Agent not found or Speech bubble from player e.g. drunk message.
-        PendingChatMessage* m = new PendingChatMessage(GW::Chat::Channel::CHANNEL_EMOTE, pak->message, PendingChatMessage::GetAgentNameEncoded(agent));
-        if (!m->invalid) {
-            pending_messages.push_back(m);
-        }
+		PendingChatMessage* m = PendingChatMessage::queuePrint(GW::Chat::Channel::CHANNEL_EMOTE, pak->message, PendingChatMessage::GetAgentNameEncoded(agent));
+        if(m) pending_messages.push_back(m);
 	});
     // - NPC dialog messages to emote chat
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::DisplayDialogue* pak) -> void {
         if (!redirect_npc_messages_to_emote_chat)
             return; // Disabled or message pending
-        PendingChatMessage* m = new PendingChatMessage(GW::Chat::Channel::CHANNEL_EMOTE, pak->message, pak->name);
-        if(!m->invalid) pending_messages.push_back(m);
+		PendingChatMessage* m = PendingChatMessage::queuePrint(GW::Chat::Channel::CHANNEL_EMOTE, pak->message, pak->name);
+        if(m) pending_messages.push_back(m);
 		status->blocked = true; // consume original packet.
     });
     // - NPC teamchat messages to emote chat (emulate speech bubble instead)
@@ -916,8 +910,8 @@ void GameSettings::Initialize() {
 				status->blocked = true; // No buffer, may have already been cleared.
 				return;
 			}
-            PendingChatMessage* m = new PendingChatMessage(GW::Chat::Channel::CHANNEL_EMOTE, buff->begin(), pak->sender_name);
-            if (!m->invalid) pending_messages.push_back(m);
+			PendingChatMessage* m = PendingChatMessage::queuePrint(GW::Chat::Channel::CHANNEL_EMOTE, buff->begin(), pak->sender_name);
+			if (m) pending_messages.push_back(m);
             if (pak->agent_id) {
                 wchar_t msg[122];
                 wcscpy(msg, buff->begin()); // Copy from the message buffer, then clear it.
@@ -961,8 +955,8 @@ void GameSettings::Initialize() {
         }
         output.insert(4, L"<a=1>");
         output.insert(output.size() - 2, L"</a>");
-        PendingChatMessage* m = new PendingChatMessage(GW::Chat::Channel::CHANNEL_GROUP, output.c_str(), sender->name_enc);
-        if (!m->invalid) pending_messages.push_back(m);
+        PendingChatMessage* m = PendingChatMessage::queuePrint(GW::Chat::Channel::CHANNEL_GROUP, output.c_str(), sender->name_enc);
+		if (m) pending_messages.push_back(m);
         buff->clear();
 		status->blocked = true; // consume original packet.
     });
@@ -1599,13 +1593,16 @@ void GameSettings::Update(float delta) {
     if (allies_to_add.size()) {
         for (size_t i = 0; i < allies_to_add.size(); i++) {
             PendingAddToParty p = allies_to_add[i];
+			if (!GW::Agents::GetAgentByID(p.agent_id))
+				continue; // Agent not ready yet.
             GW::GameThread::Enqueue([p]() {
                 GW::Packet::StoC::PartyAllyAdd packet;
                 packet.header = GW::Packet::StoC::PartyAllyAdd::STATIC_HEADER;
                 packet.agent_id = p.agent_id;
                 packet.agent_type = p.agent_type;
                 packet.allegiance_bits = p.allegiance_bits;// 1886151033;
-                GW::StoC::EmulatePacket( & packet);
+				if (GW::Agents::GetAgentByID(p.agent_id))
+					GW::StoC::EmulatePacket( & packet);
                 });
             allies_added_to_party.push_back(p.agent_id);
         }
@@ -1614,12 +1611,15 @@ void GameSettings::Update(float delta) {
     if (allies_to_remove.size()) {
         for (size_t i = 0; i < allies_to_remove.size(); i++) {
             uint32_t agent_id = allies_to_remove[i];
-            GW::GameThread::Enqueue([agent_id]() {
-                GW::Packet::StoC::PartyRemoveAlly packet;
-                packet.header = GW::Packet::StoC::PartyRemoveAlly::STATIC_HEADER;
-                packet.agent_id = agent_id;
-                GW::StoC::EmulatePacket(&packet);
-                });
+			if (GW::Agents::GetAgentByID(agent_id)) {
+				GW::GameThread::Enqueue([agent_id]() {
+					GW::Packet::StoC::PartyRemoveAlly packet;
+					packet.header = GW::Packet::StoC::PartyRemoveAlly::STATIC_HEADER;
+					packet.agent_id = agent_id;
+					if (GW::Agents::GetAgentByID(agent_id))
+						GW::StoC::EmulatePacket(&packet);
+				});
+			}
             // Remove from list of manually added party members if applicable.
             for (size_t i = 0; i < allies_added_to_party.size(); i++) {
                 if (allies_added_to_party[i] != agent_id)

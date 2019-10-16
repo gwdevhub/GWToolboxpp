@@ -289,6 +289,7 @@ void HeroBuildsWindow::View(const TeamHeroBuild& tbuild, unsigned int idx) {
 		GW::UI::SendUIMessage(0x10000000 | 0x1B9, t);
 		delete[] t->code.m_buffer;
 		delete[] t->name;
+		delete t;
 		});
 
 }
