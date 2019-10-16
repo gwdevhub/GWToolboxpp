@@ -81,7 +81,7 @@ void TradeWindow::Initialize() {
 	// This is a fallback for when kamadan.decltype.org goes down; trade window will still work in ae1
 	// NOTE: Timestamps are based on received time; better to use a hook to `PrintChat` from the ChatMgr module when its exposed.
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&MessageLocal_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::MessageLocal* pak) {
-		if (pak->type != GW::Chat::CHANNEL_TRADE)
+		if (pak->channel != GW::Chat::CHANNEL_TRADE)
 			return;
 		if (!GetInKamadanAE1() && false)
 			return;
@@ -105,7 +105,7 @@ void TradeWindow::Initialize() {
 		message[message.size() - 1] = '\0';
 		if (message.empty())
 			return;
-		std::wstring player_name(GW::PlayerMgr::GetPlayerName(pak->id));
+		std::wstring player_name(GW::PlayerMgr::GetPlayerName(pak->player_number));
 		if (player_name.empty())
 			return;
 		int size_needed = WideCharToMultiByte(CP_UTF8, 0, &message[0], (int)message.size(), NULL, 0, NULL, NULL);
