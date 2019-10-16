@@ -539,7 +539,7 @@ void FriendListWindow::SaveToFile() {
         // do something
         Friend lf = it->second;
 		char uuid[128];
-		b64_enc(lf.uuid.data(),lf.uuid.size(),uuid);
+		b64_enc((wchar_t*)lf.uuid.data(),lf.uuid.size(),uuid);
         inifile->SetLongValue(uuid, "type", lf.type);
 		inifile->SetValue(uuid, "alias", GuiUtils::WStringToString(lf.alias).c_str());
         for (unsigned int i = 0; i < lf.characters.size(); i++) {

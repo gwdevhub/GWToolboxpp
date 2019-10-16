@@ -468,7 +468,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
                         // open whisper to player
                         GW::GameThread::Enqueue([msg]() {
 							std::wstring name = GuiUtils::StringToWString(msg.name);
-                            GW::UI::SendUIMessage(GW::UI::kOpenWhisper, name.data(), nullptr);
+                            GW::UI::SendUIMessage(GW::UI::kOpenWhisper, (wchar_t*)name.data(), nullptr);
                             });
                     }
 				}
