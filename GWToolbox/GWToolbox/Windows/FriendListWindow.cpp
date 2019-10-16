@@ -5,91 +5,30 @@
 
 #include <GWCA/Packets/StoC.h>
 
-#include <GWCA\Constants\Constants.h>
-
 #include <GWCA/GameEntities/Friendslist.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Player.h>
-#include <GWCA/GameEntities/Map.h>
+#include <GWCA/GameEntities/Party.h>
 
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
-#include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/FriendListMgr.h>
-#include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
 
 #include <Modules/Resources.h>
-
-#include <GuiUtils.h>
 
 #include "logger.h"
 #include "base64.h"
 
-/* Out of scope namespecey lookups */
-namespace {
-	enum ProfColors {
-		None = IM_COL32_WHITE,
-		Warrior = IM_COL32(0xb4, 0x82, 0x46, 255),
-		Ranger = IM_COL32(0x91, 0xc0, 0x4c, 255),
-		Monk = IM_COL32(0x7a, 0xbb, 0xd1, 255),
-		Necromancer = IM_COL32(0x4c, 0xA2, 0x64, 255),
-		Mesmer = IM_COL32(0x71, 0x35, 0x66, 255), 
-		Elementalist = IM_COL32(0xc4, 0x4b, 0x4b, 255), 
-		Assassin = IM_COL32(0xe1, 0x18, 0x7c, 255), 
-		Ritualist = IM_COL32(0x1e, 0xd6, 0xba, 255), 
-		Paragon = IM_COL32(0xea, 0xde, 0x00, 255), 
-		Dervish = IM_COL32(0x57, 0x68, 0x95, 255)
-	};
-	wchar_t* ProfNames[10] = {
-		L"Unknown",
-		L"Warrior",
-		L"Ranger"
-		L"Monk",
-		L"Necromancer",
-		L"Mesmer",
-		L"Elementalist",
-		L"Assassin",
-		L"Ritualist",
-		L"Paragon",
-		L"Dervish"
-	};
-	ImColor StatusColors[4] = {
-		IM_COL32(0x99,0x99,0x99,0), // offline
-		IM_COL32(0x0,0xc8,0x0,255),  // online
-		IM_COL32(0xc8,0x0,0x0,255), // busy
-		IM_COL32(0xc8,0xc8,0x0,255)  // away
-	};
-	ImColor GetProfessionColor(uint8_t prof = 0) {
-		switch (static_cast<GW::Constants::Profession>(prof)) {
-		case GW::Constants::Profession::Warrior:		return ProfColors::Warrior;
-		case GW::Constants::Profession::Ranger:			return ProfColors::Ranger;
-		case GW::Constants::Profession::Monk:			return ProfColors::Monk;
-		case GW::Constants::Profession::Necromancer:	return ProfColors::Necromancer;
-		case GW::Constants::Profession::Mesmer:			return ProfColors::Mesmer;
-		case GW::Constants::Profession::Elementalist:	return ProfColors::Elementalist;
-		case GW::Constants::Profession::Assassin:		return ProfColors::Assassin;
-		case GW::Constants::Profession::Ritualist:		return ProfColors::Ritualist;
-		case GW::Constants::Profession::Paragon:		return ProfColors::Paragon;
-		case GW::Constants::Profession::Dervish:		return ProfColors::Dervish;
-		}
-		return ProfColors::None;
-	}
-	char* GetStatusText(uint8_t status) {
-		switch (status) {
-		case 0: return "Offline";
-		case 1: return "Online";
-		case 2: return "Do not disturb";
-		case 3: return "Away";
-		}
-		return "Unknown";
-	}
-	std::map<uint32_t, wchar_t*> map_names;
-}
+
 /*	FriendListWindow::Friend	*/
 
 void FriendListWindow::Friend::GetMapName() {
+	if (!current_map_id)
+		return;
 	GW::GameThread::Enqueue([this]() {
 		GW::AreaInfo* info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(current_map_id));
 		if (!info) {
@@ -110,7 +49,6 @@ GW::Friend* FriendListWindow::Friend::GetFriend() {
 }
 // Start whisper to this player via their current char name.
 void FriendListWindow::Friend::StartWhisper() {
-	// open whisper to player
 	GW::GameThread::Enqueue([this]() {
 		if (current_char == nullptr)
 			return Log::Error("Player %s is not logged in", alias);
@@ -119,22 +57,59 @@ void FriendListWindow::Friend::StartWhisper() {
 }
 // Send a whisper to this player advertising your current party
 void FriendListWindow::Friend::InviteToParty() {
-	Log::Log("INVITE TODO\n");
+	GW::GameThread::Enqueue([this]() {
+		if (current_char == nullptr)
+			return Log::Error("Player %s is not logged in", alias);
+		
+		std::wstring* map_name = GetCurrentMapName();
+		if (!map_name) return;
+		GW::AreaInfo* ai = GW::Map::GetCurrentMapInfo();
+		if (!ai) return;
+		GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo();
+		if (!p || !p->players.valid())
+			return;
+		std::wstring professions;
+		for (unsigned int i = 0; p->players.size(); i++) {
+			GW::Player* pl = GW::PlayerMgr::GetPlayerByID(p->players[i].login_number);
+			if (!pl) return;
+			if (i > 0) professions += L", ";
+			professions += ProfNames[pl->primary];
+		}
+		wchar_t buffer[139] = { 0 };
+		swprintf(buffer, 138, L"%s,%s %d/%d (%s)", current_char->name.c_str(), map_name->c_str(), p->players.size(), ai->max_party_size,professions.c_str());
+		buffer[138] = 0;
+		GW::Chat::SendChat('"', buffer);
+		});
 }
 // Get the character belonging to this friend (e.g. to find profession etc)
 FriendListWindow::Character* FriendListWindow::Friend::GetCharacter(const wchar_t* char_name) {
-	for (unsigned int i = 0; i < characters.size(); i++) {
-		if (characters[i].name._Equal(char_name))
-			return &characters[i];
+	std::map<std::wstring, Character>::iterator it = characters.find(char_name);
+	if (it == characters.end())
+		return nullptr; // Not found
+	return &it->second;
+}
+// Get the character belonging to this friend (e.g. to find profession etc)
+FriendListWindow::Character* FriendListWindow::Friend::SetCharacter(const wchar_t* char_name, uint8_t profession = 0) {
+	Character* existing = GetCharacter(char_name);
+	if (!existing) {
+		Character c;
+		c.name = std::wstring(char_name);
+		characters.emplace(c.name, c);
+		existing = GetCharacter(c.name.c_str());
+		cached_charnames_hover = false;
 	}
-	return nullptr;
+	if (profession && profession != existing->profession) {
+		existing->profession = profession;
+		cached_charnames_hover = false;
+	}
+	return existing;
 }
 // Add this friend to the GW Friend list to find out online status etc.
 bool FriendListWindow::Friend::AddGWFriend() {
 	GW::Friend* f = GetFriend();
 	if (f) return true;
 	if (characters.empty()) return false; // Cant add a friend that doesn't have a char name
-	GW::FriendListMgr::AddFriend(characters.front().name.c_str());
+	GW::FriendListMgr::AddFriend(characters.begin()->first.c_str());
 	added_via_toolbox = true;
 	last_update = clock();
 	return true;
@@ -172,7 +147,7 @@ FriendListWindow::Friend* FriendListWindow::SetFriend(uint8_t* uuid, uint8_t typ
 	if (alias && wcscmp(alias, lf->alias.c_str())) {
 		lf->alias = std::wstring(alias);
 	}
-	if (map_id && lf->current_map_id != map_id && !lf->current_map_id) {
+	if (lf->current_map_id != map_id) {
 		lf->current_map_id = map_id;
 		memset(lf->current_map_name, 0, sizeof lf->current_map_name);
 		lf->GetMapName();
@@ -182,19 +157,8 @@ FriendListWindow::Friend* FriendListWindow::SetFriend(uint8_t* uuid, uint8_t typ
 	if (!charname || status == 0)
 		lf->current_char = nullptr;
 	if (status != 0 && charname) {
-		bool has_name = false;
-		for (unsigned int i = 0; i < lf->characters.size(); i++) {
-			if (!has_name && lf->characters[i].name._Equal(charname)) {
-				lf->current_char = &lf->characters[i];
-				has_name = true;
-				break;
-			}
-		}
-		if (!has_name) {
-			lf->characters.push_back({ charname,0 });
-			lf->current_char = &lf->characters.back();
-			uuid_by_name.emplace(charname, lf->uuid);
-		}
+		lf->current_char = lf->SetCharacter(charname);
+		uuid_by_name.emplace(charname, lf->uuid);
 	}
 	if (status != 255) {
 		if (lf->status != status)
@@ -250,12 +214,13 @@ void FriendListWindow::Initialize() {
         const wchar_t* alias,
         const wchar_t* charname) {
         // Keep a log mapping char name to uuid. This is saved to disk.
-        Friend* lf = SetFriend(f->uuid, f->type, status, f->zone_id, charname, alias);
-        // If we only added this user to get an updated status, then remove this user now.
-        if (lf->added_via_toolbox) {
+		Friend* lf = SetFriend(f->uuid, f->type, status, f->zone_id, charname, alias);
+		// If we only added this user to get an updated status, then remove this user now.
+		if (lf->added_via_toolbox) {
 			lf->RemoveGWFriend();
-        }
-        lf->last_update = clock();
+		}
+		lf->last_update = clock();
+       
     });
 	// If a friend has just logged in on a character in this map, record their profession.
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::PlayerJoinInstance* pak) {
@@ -263,7 +228,7 @@ void FriendListWindow::Initialize() {
 		
 		wcscpy(player_name, pak->player_name);
 		thread_jobs.push([this, player_name](){
-			Log::Log("Checking player profession %ls", player_name);
+			//Log::Log("%s: Checking player profession %ls\n", player_name);
 			GW::Player* a = GW::PlayerMgr::GetPlayerByName(player_name);
 			if (!a || !a->primary) return;
 			uint8_t profession = a->primary;
@@ -271,15 +236,15 @@ void FriendListWindow::Initialize() {
 			if (!f) return;
 			Character* fc = f->GetCharacter(player_name);
 			if (!fc) return;
-			Log::Log("Friend found; setting %ls profession to %d", player_name, profession);
+			Log::Log("%s: Friend found; setting %ls profession to %s\n", Name(), player_name, ProfNames[profession]);
 			fc->profession = profession;
 		});
 		
 	});
 	// Does "Failed to add friend" or "Friend <name> already added as <name>" come into this hook???
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&ErrorMessage_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::MessageServer* pak) {
-        Log::Log("%s: Error message received: %d", Name(), pak->id);
-    });
+    /*GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&ErrorMessage_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::MessageServer* pak) {
+        Log::Log("%s: Error message received: %d\n", Name(), pak->id);
+    });*/
 }
 void FriendListWindow::Update(float delta) {
 	if (loading)
@@ -319,7 +284,7 @@ void FriendListWindow::Poll() {
 	polling = true;
     clock_t now = clock();
     GW::FriendList* fl = GW::FriendListMgr::GetFriendList();
-    if (!fl || fl->number_of_friend >= 100) return;
+    if (!fl) return;
     Log::Log("Polling friends list\n");
 	for (unsigned int i = 0; i < fl->friends.size(); i++) {
 		GW::Friend* f = fl->friends[i];
@@ -376,10 +341,11 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
 		colIdx = 0;
 		Friend* lfp = &it->second;
         if (lfp->type != GW::FriendType_Friend) continue;
-		if (lfp->status < 1) continue;
-		if (lfp->alias.empty()) continue;
 		// Get actual object instead of pointer just in case it becomes invalid half way through the draw.
-		Friend lf = it->second; 
+		Friend lf = it->second;
+		if (lf.IsOffline()) continue;
+		if (lf.alias.empty()) continue;
+		
 		float height = ImGui::GetTextLineHeightWithSpacing();
         
 		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
@@ -403,11 +369,11 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::SetTooltip(GetStatusText(lf.status));
 		ImGui::SameLine(0);
 		ImGui::Text(GuiUtils::WStringToString(lf.alias).c_str());
-		ImGui::SameLine(cols[colIdx]);
 		if (lf.current_char != nullptr) {
+			ImGui::SameLine(cols[colIdx]);
 			std::string current_char_name_s = GuiUtils::WStringToString(lf.current_char->name);
 			uint8_t prof = lf.current_char->profession;
-			if (prof) ImGui::PushStyleColor(ImGuiCol_Text, GetProfessionColor(lf.current_char->profession).Value);
+			if (prof) ImGui::PushStyleColor(ImGuiCol_Text, ProfColors[lf.current_char->profession].Value);
 			ImGui::Text("%s", current_char_name_s.c_str());
 			if (prof) ImGui::PopStyleColor();
 			if (lf.characters.size() > 1) {
@@ -416,19 +382,8 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
 				ImGui::Text(" (+%d)", lf.characters.size() - 1);
 				hovered |= ImGui::IsItemHovered();
 				if (hovered) {
-					std::wstring charnames(L"Characters for ");
-					charnames += lf.alias;
-					charnames += L":\n";
-					for (unsigned int i = 0; i < lf.characters.size(); i++) {
-						if(i > 0) charnames += L"\n  ";
-						charnames += lf.characters[i].name;
-						if (lf.characters[i].profession) {
-							charnames += L" (";
-							charnames += ProfNames[lf.characters[i].profession];
-							charnames += L")";
-						}
-					}
-					ImGui::SetTooltip(GuiUtils::WStringToString(charnames).c_str());
+					ImGui::SetTooltip(lf.GetCharactersHover().c_str());
+					
 				}
 			}
 			if (show_location) {
@@ -439,7 +394,14 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
 			}
 		}
 		ImGui::PopID();
-		
+		if (clicked && !lf.IsOffline()) {
+			if (ImGui::IsKeyDown(VK_CONTROL) && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+				lf.InviteToParty();
+			}
+			else {
+				lf.StartWhisper();
+			}
+		}
     }
     ImGui::EndChild();
     ImGui::End();
@@ -481,7 +443,7 @@ void FriendListWindow::LoadFromFile() {
 		CSimpleIni::TNamesDepend entries;
 		inifile->GetAllSections(entries);
 		for (CSimpleIni::Entry& entry : entries) {
-			char uuid[128];
+			char uuid[32] = { 0 };
 			b64_dec(entry.pItem, uuid);
 			uint8_t type = 0;
 
@@ -504,20 +466,20 @@ void FriendListWindow::LoadFromFile() {
 				std::wstringstream wss(char_wstr);
 				while (std::getline(wss, temp, L','))
 					parts.push_back(temp);
-				Character c;
-				c.name = parts[0];
+				std::wstring name = parts[0];
+				uint8_t profession = 0;
 				if (parts.size() > 1) {
 					int p = _wtoi(&parts[1][0]);
 					if (p > 0 && p < 10)
-						c.profession = (uint8_t)p;
+						profession = (uint8_t)p;
 				}
-				lf.characters.push_back(c);
+				lf.SetCharacter(name.c_str(), profession);
 			}
 			if (lf.characters.empty())
 				continue; // Error, should have at least 1 charname...
 			friends.emplace(lf.uuid, lf);
-			for (unsigned int i = 0; i < lf.characters.size(); i++) {
-				uuid_by_name.emplace(lf.characters[i].name, uuid);
+			for (std::map<std::wstring, Character>::iterator it2 = lf.characters.begin(); it2 != lf.characters.end(); ++it2) {
+				uuid_by_name.emplace(it2->first, uuid);
 			}
 			if (f) SetFriend(f);
 		}
@@ -542,11 +504,11 @@ void FriendListWindow::SaveToFile() {
 		b64_enc((wchar_t*)lf.uuid.data(),lf.uuid.size(),uuid);
         inifile->SetLongValue(uuid, "type", lf.type);
 		inifile->SetValue(uuid, "alias", GuiUtils::WStringToString(lf.alias).c_str());
-        for (unsigned int i = 0; i < lf.characters.size(); i++) {
+		for (std::map<std::wstring, Character>::iterator it2 = lf.characters.begin(); it2 != lf.characters.end(); ++it2) {
 			char charname[128] = { 0 };
-			snprintf(charname, 128, "%s,%d", GuiUtils::WStringToString(lf.characters[i].name).c_str(), lf.characters[i].profession);
-            inifile->SetValue(uuid, "charname", charname);
-        }
+			snprintf(charname, 128, "%s,%d", GuiUtils::WStringToString(it2->first).c_str(), it2->second.profession);
+			inifile->SetValue(uuid, "charname", charname);
+		}
     }
     inifile->SaveFile(Resources::GetPath(ini_filename).c_str());
 }
