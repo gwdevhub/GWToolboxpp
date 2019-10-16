@@ -8,6 +8,15 @@ Previous releases are provided as dll files. In order to use it, you need to use
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
 
+## Version 2.27
+* [New] Added support for adrenaline skill with /useskill command.
+* [New] Added /resignlog command.
+* [New] You can now use the command /tp and /to with the prefix of an outpost to teleport to the outpost.
+* [Fix] Reduced the connection spams to kamadan.decltype.org when the site is down.
+* [Fix] Fixed bug when game process name wasn't "Gw.exe".
+* [Fix] Fixed bug related to player status introduced in recent game update.
+* [Minor] Several improvements in GWCA and updated 3rd party libraries.
+
 ## Version 2.26
 * [Fix] Fixed bug with friend status message.
 
