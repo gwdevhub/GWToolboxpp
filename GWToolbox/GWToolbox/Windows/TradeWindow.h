@@ -12,6 +12,8 @@
 #include <easywsclient\easywsclient.hpp>
 #include <CircurlarBuffer.h>
 
+#include "Utils\RateLimiter.h"
+
 class TradeWindow : public ToolboxWindow {
 	TradeWindow() {};
 	~TradeWindow();
@@ -67,6 +69,9 @@ private:
 
     easywsclient::WebSocket *ws_chat = NULL;
     easywsclient::WebSocket *ws_window = NULL;
+
+    RateLimiter chat_rate_limiter;
+    RateLimiter window_rate_limiter;
 
     bool search_pending;
     void search(std::string);

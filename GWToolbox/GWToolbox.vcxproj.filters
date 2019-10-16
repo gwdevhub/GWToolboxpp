@@ -283,6 +283,7 @@
       <Filter>utf8proc</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\stdafx.h" />
+    <ClInclude Include="GWToolbox\Utils\RateLimiter.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -432,6 +433,7 @@
       <Filter>imgui</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\stdafx.cpp" />
+    <ClCompile Include="GWToolbox\Utils\RateLimiter.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GWToolbox.rc">

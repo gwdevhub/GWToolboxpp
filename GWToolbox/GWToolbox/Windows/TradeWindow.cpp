@@ -20,6 +20,12 @@
 #include "GuiUtils.h"
 #include "GWToolbox.h"
 
+// Every connection cost 30 seconds.
+// You have 2 tries.
+// After that, you can try every 30 seconds.
+static const uint32_t COST_PER_CONNECTION_MS 	 = 30 * 1000;
+static const uint32_t COST_PER_CONNECTION_MAX_MS = 60 * 1000;
+
 using easywsclient::WebSocket;
 using nlohmann::json;
 using json_vec = std::vector<json>;
@@ -419,6 +425,8 @@ void TradeWindow::ParseBuffer(std::fstream stream, std::vector<std::string>& wor
 void TradeWindow::AsyncChatConnect() {
 	if (ws_chat) return;
 	if (ws_chat_connecting) return;
+	if (!chat_rate_limiter.AddTime(COST_PER_CONNECTION_MS, COST_PER_CONNECTION_MAX_MS))
+		return;
 	ws_chat_connecting = true;
 	thread_jobs.push([this]() {
 		if (!(ws_chat = WebSocket::from_url(ws_host))) {
@@ -431,6 +439,8 @@ void TradeWindow::AsyncChatConnect() {
 void TradeWindow::AsyncWindowConnect() {
 	if (ws_window) return;
 	if (ws_window_connecting) return;
+	if (!window_rate_limiter.AddTime(COST_PER_CONNECTION_MS, COST_PER_CONNECTION_MAX_MS))
+		return;
 	ws_window_connecting = true;
 	thread_jobs.push([this]() {
 		if (!(ws_window = WebSocket::from_url(ws_host))) {
