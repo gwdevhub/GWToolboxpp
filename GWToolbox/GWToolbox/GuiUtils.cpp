@@ -51,7 +51,7 @@ void GuiUtils::LoadFonts() {
         }
 		// Collect the final font. This is the default (16px) font with all special chars merged. in.
 		fontCfg = &io.Fonts->ConfigData.back();
-        // Do the same for CJK fonts if found. MergeMode = true will merge these fonts with the above default font.
+        // Do the same for other fonts if found. MergeMode = true will merge these fonts with the above default font.
         if (PathFileExistsW(Resources::GetPath(L"Font_Japanese.ttf").c_str())) {
             ImFontConfig c;
             c.MergeMode = true;
@@ -61,6 +61,15 @@ void GuiUtils::LoadFonts() {
         else {
             printf("Font_Japanese.ttf not found. Add this file to load special chars.\n");
         }
+		if (PathFileExistsW(Resources::GetPath(L"Font_Cyrillic.ttf").c_str())) {
+			ImFontConfig c;
+			c.MergeMode = true;
+			io.Fonts->AddFontFromFileTTF(Resources::GetPathUtf8(L"Font_Cyrillic.ttf").bytes, 16.0f, &c, io.Fonts->GetGlyphRangesCyrillic());
+			printf("Font_Cyrillic.ttf found and pre-loaded\n");
+		}
+		else {
+			printf("Font_Cyrillic.ttf not found. Add this file to load special chars.\n");
+		}
         if (PathFileExistsW(Resources::GetPath(L"Font_ChineseTraditional.ttf").c_str())) {
             ImFontConfig c;
             c.MergeMode = true;
