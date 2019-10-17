@@ -406,10 +406,24 @@ namespace {
 	}
 
     struct PendingAddToParty {
-        PendingAddToParty(uint32_t _agent_id, uint32_t _agent_type, uint32_t _allegiance_bits) : agent_id(_agent_id), agent_type(_agent_type), allegiance_bits(_allegiance_bits) {};
+        PendingAddToParty(uint32_t _agent_id, uint32_t _agent_type, uint32_t _allegiance_bits, uint32_t _player_number) : agent_id(_agent_id), agent_type(_agent_type), allegiance_bits(_allegiance_bits), player_number(_player_number){};
         uint32_t agent_id;
         uint32_t agent_type;
+        uint32_t player_number;
         uint32_t allegiance_bits;
+        bool IsValidAgent() const {
+            GW::Agent* a = GW::Agents::GetAgentByID(agent_id);
+            if (!a || !a->GetIsCharacterType() || a->player_number != player_number)
+                return false;
+            GW::NPCArray npcs = GW::Agents::GetNPCArray();
+            if (!npcs.valid()) 
+                return false;
+            if (a->player_number == 0 || a->player_number >= npcs.size())
+                return false;
+            if (npcs[a->player_number].npc_flags & 0x10000)
+                return false;
+            return true;
+        }
     };
     std::vector<PendingAddToParty> allies_to_add;
     std::vector<uint32_t> allies_to_remove;
@@ -831,7 +845,7 @@ void GameSettings::Initialize() {
                 return;
             if (!ShouldAddAgentToPartyWindow(pak))
                 return;
-            allies_to_add.push_back({ pak->agent_id,pak->agent_type,pak->allegiance_bits });
+            allies_to_add.push_back({ pak->agent_id,pak->agent_type,pak->allegiance_bits, pak->agent_type ^ 0x20000000 });
         });
     // Flash/focus window on trade
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::TradeStart>(&TradeStart_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::TradeStart*) -> void {
@@ -918,13 +932,14 @@ void GameSettings::Initialize() {
                 // Then forward the message on to speech bubble
                 uint32_t agent_id = pak->agent_id;
                 {
-                    GW::GameThread::Enqueue([&, msg, agent_id]() {
+                    GW::GameThread::Enqueue([this,msg, agent_id]() {
                         GW::Packet::StoC::SpeechBubble packet;
                         packet.header = GW::Packet::StoC::SpeechBubble::STATIC_HEADER;
                         packet.agent_id = agent_id;
                         wcscpy(packet.message, msg);
                         emulated_speech_bubble = true;
-                        GW::StoC::EmulatePacket((GW::Packet::StoC::PacketBase*) &packet);
+						if(GW::Agents::GetAgentByID(agent_id))
+							GW::StoC::EmulatePacket((GW::Packet::StoC::PacketBase*) &packet);
                     });
                 }
             }
@@ -932,30 +947,36 @@ void GameSettings::Initialize() {
 			status->blocked = true; // consume original packet.
         });
     // - Allow clickable name when a player pings "I'm following X" or "I'm targeting X"
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&MessageLocal_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::MessageLocal* pak) -> void {
-        if (pak->channel != static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_GROUP) || !pak->player_number)
-            return; // Not team chat or no sender
-        GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&MessageLocal_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::MessageLocal* pak) -> void {
+		if (pak->channel != static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_GROUP) || !pak->player_number)
+			return; // Not team chat or no sender
+		GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
 		if (!buff || !buff->valid() || !buff->size()) {
 			status->blocked = true; // No buffer, may have already been cleared.
 			return;
 		}
-        wchar_t* message = buff->begin();
-        if (message[0] != 0x778 && message[0] != 0x781)
-            return; // Not "I'm Following X" or "I'm Targeting X" message.
-        GW::Player* sender = GW::PlayerMgr::GetPlayerByID(pak->player_number);
-        if (!sender)
-            return;
-
-        std::wstring output(message);
-        if (flash_window_on_name_ping) {
-            std::wstring player_pinged = output.substr(4, output.size() - 6);
-            if (!wcsncmp(GW::GameContext::instance()->character->player_name, player_pinged.c_str(), 20))
-                FlashWindow(); // Flash window - we've been followed!
-        }
-        output.insert(4, L"<a=1>");
-        output.insert(output.size() - 2, L"</a>");
-        PendingChatMessage* m = PendingChatMessage::queuePrint(GW::Chat::Channel::CHANNEL_GROUP, output.c_str(), sender->name_enc);
+		std::wstring message(buff->begin());
+		if (message[0] != 0x778 && message[0] != 0x781)
+			return; // Not "I'm Following X" or "I'm Targeting X" message.
+		size_t start_idx = message.find(L"\xba9\x107");
+		if (start_idx == std::wstring::npos)
+			return; // Not a player name.
+		start_idx += 2;
+		size_t end_idx = message.find(L"\x1",start_idx);
+		if (end_idx == std::wstring::npos)
+			return; // Not a player name, this should never happen.
+		end_idx += start_idx + 1;
+		std::wstring player_pinged = message.substr(start_idx, end_idx);
+		if (player_pinged.empty())
+			return; // No recipient
+		GW::Player* sender = GW::PlayerMgr::GetPlayerByID(pak->player_number);
+		if (!sender)
+			return;// No sender
+        if (flash_window_on_name_ping && !wcsncmp(GW::GameContext::instance()->character->player_name, player_pinged.c_str(), 20))
+            FlashWindow(); // Flash window - we've been followed!
+		message.insert(start_idx, L"<a=1>");
+		message.insert(end_idx, L"</a>");
+        PendingChatMessage* m = PendingChatMessage::queuePrint(GW::Chat::Channel::CHANNEL_GROUP, message.c_str(), sender->name_enc);
 		if (m) pending_messages.push_back(m);
         buff->clear();
 		status->blocked = true; // consume original packet.
@@ -1013,8 +1034,6 @@ void GameSettings::Initialize() {
     });
 
 	GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusCallback_Entry,GameSettings::FriendStatusCallback);
-
-
 
     OnPingEquippedItem_Func = (OnPingEqippedItem_pt)GW::Scanner::Find("\x8D\x4D\xF0\xC7\x45\xF0\x2B", "xxxxxxx", -0xC); // NOTE: 0x2B is CtoS header
     printf("[SCAN] OnPingEquippedItem = %p\n", OnPingEquippedItem_Func);
@@ -1593,7 +1612,7 @@ void GameSettings::Update(float delta) {
     if (allies_to_add.size()) {
         for (size_t i = 0; i < allies_to_add.size(); i++) {
             PendingAddToParty p = allies_to_add[i];
-			if (!GW::Agents::GetAgentByID(p.agent_id))
+			if (!p.IsValidAgent())
 				continue; // Agent not ready yet.
             GW::GameThread::Enqueue([p]() {
                 GW::Packet::StoC::PartyAllyAdd packet;
@@ -1601,7 +1620,7 @@ void GameSettings::Update(float delta) {
                 packet.agent_id = p.agent_id;
                 packet.agent_type = p.agent_type;
                 packet.allegiance_bits = p.allegiance_bits;// 1886151033;
-				if (GW::Agents::GetAgentByID(p.agent_id))
+				if (!p.IsValidAgent())
 					GW::StoC::EmulatePacket( & packet);
                 });
             allies_added_to_party.push_back(p.agent_id);

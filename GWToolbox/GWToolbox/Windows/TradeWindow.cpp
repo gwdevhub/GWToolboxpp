@@ -404,6 +404,9 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
 			ImGui::Text("Connecting...");*/
 		}
+		else if (ws_window) {
+			messages_ptr = &messages;
+		}
 		if(messages_ptr) {
 			/* Display trade messages */
 			bool show_time = ImGui::GetWindowWidth() > 600.0f;
@@ -488,11 +491,11 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 				ImGui::SetTooltip("GWToolbox is fetching new trade messages from https://kamadan.decltype.org");
 
 			/* Link to website footer */
-			ImGui::SameLine(ImGui::GetContentRegionAvailWidth() - 300.0f * ImGui::GetIO().FontGlobalScale, 0);
+			/*ImGui::SameLine(ImGui::GetContentRegionAvailWidth() - 300.0f * ImGui::GetIO().FontGlobalScale, 0);
 			if (ImGui::Button("Powered by https://kamadan.decltype.org", ImVec2(300.0f * ImGui::GetIO().FontGlobalScale, 20.0f))) {
 				CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 				ShellExecuteA(NULL, "open", "https://kamadan.decltype.org", NULL, NULL, SW_SHOWNORMAL);
-			}
+			}*/
 		} else if (ws_window_connecting) {
 			ImGui::Button("Connecting...", ImVec2(0,20.0f));
 			if (ImGui::IsItemHovered())
