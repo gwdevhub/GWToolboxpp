@@ -267,27 +267,3 @@ public:
 	void Description(char* buf, int bufsz) const;
 	void Execute() override;
 };
-
-#ifdef ENABLE_LUA
-class HotkeyLUACmd : public TBHotkey {
-
-public:
-	/*
-	char name[60] = "";
-	char command[512] = "";
-	*/
-	mutable char cmd[0x200];
-	bool editopen;
-
-	static const char* IniSection() { return "LUACmd"; }
-	const char* Name() const override { return IniSection(); }
-
-	HotkeyLUACmd(CSimpleIni* ini, const char* section);
-
-	void Save(CSimpleIni* ini, const char* section) const override;
-
-	void Draw() override;
-	void Description(char* buf, int bufsz) const;
-	void Execute() override;
-};
-#endif

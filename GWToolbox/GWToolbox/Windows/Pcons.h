@@ -45,10 +45,10 @@ public:
 public:
 	bool visible = true;
 	bool enabled = false;
-	int threshold; // quantity at which the number color goes from green to yellow and warning starts being displayed
+	int threshold = 0; // quantity at which the number color goes from green to yellow and warning starts being displayed
 	int quantity = 0;
 
-	clock_t timer;
+	clock_t timer = 0;
 
 	const char* const chat;
 	const char* const ini;

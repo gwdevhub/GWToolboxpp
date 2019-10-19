@@ -26,9 +26,9 @@ public:
 	virtual bool IsWindow() const { return false; }
 	virtual bool IsWidget() const { return false; }
 
-	bool visible;
-	bool lock_move;
-	bool lock_size;
+	bool visible = false;
+	bool lock_move = false;
+	bool lock_size = false;
 	bool show_menubutton = false;
 
 protected:

@@ -30,14 +30,14 @@ public:
 private:
     class Objective {
     public:
-		uint32_t id;
-		char     name[126];
-		DWORD    start;
-		DWORD    done;
-        DWORD    duration;
-		char cached_done[16];
-		char cached_start[16];
-        char cached_duration[16];
+		uint32_t id = 0;
+		char     name[126] = "";
+		DWORD    start = 0;
+		DWORD    done = 0;
+        DWORD    duration = 0;
+		char cached_done[16] = "";
+		char cached_start[16] = "";
+        char cached_duration[16] = "";
         enum Status {
             NotStarted,
             Started,

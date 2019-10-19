@@ -70,7 +70,7 @@ private:
 	bool builds_changed = false;
 	std::vector<TeamBuild> teambuilds;
 
-	clock_t send_timer;
+	clock_t send_timer = 0;
 	std::queue<std::string> queue;
 
 	CSimpleIni* inifile = nullptr;

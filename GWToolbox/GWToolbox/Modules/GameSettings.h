@@ -45,6 +45,10 @@ public:
 	bool maintain_fov = false;
 	float fov = 1.308997f; // default fov
 
+	void ApplyBorderless(bool value);
+	void SetAfkMessage(std::wstring&& message);
+	static void ItemClickCallback(GW::HookStatus *, uint32_t type, uint32_t slot, GW::Bag *bag);
+
 	// some settings that are either referenced from multiple places
 	// or have nowhere else to be
 	enum { 
@@ -74,27 +78,23 @@ public:
 	bool show_unlearned_skill = false;
 
 	std::wstring afk_message;
-	clock_t afk_message_time;
+	clock_t afk_message_time = 0;
 
 	bool show_timestamps = false;
-	Color timestamps_color;
+	Color timestamps_color = 0;
 
 	bool notify_when_friends_online = true;
     bool notify_when_friends_offline = false;
 
 	bool disable_gold_selling_confirmation = false;
 
-	void ApplyBorderless(bool value);
-	void SetAfkMessage(std::wstring&& message);
-	static void ItemClickCallback(GW::HookStatus *, uint32_t type, uint32_t slot, GW::Bag *bag);
-
 private:
 	void UpdateBorderless();
 	void UpdateFOV();
 	std::vector<GW::MemoryPatcher*> patches;
-	GW::MemoryPatcher *ctrl_click_patch;
-	GW::MemoryPatcher *tome_patch;
-	GW::MemoryPatcher *gold_confirm_patch;
+	GW::MemoryPatcher *ctrl_click_patch = nullptr;
+	GW::MemoryPatcher *tome_patch = nullptr;
+	GW::MemoryPatcher *gold_confirm_patch = nullptr;
 
 	void DrawChannelColor(const char *name, GW::Chat::Channel chan);
 	static void FriendStatusCallback(

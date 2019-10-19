@@ -30,9 +30,9 @@ private:
 
 	bool draw_center_ = false;
 
-	Color color_range_hos;
-	Color color_range_aggro;
-	Color color_range_cast;
-	Color color_range_spirit;
-	Color color_range_compass;
+	Color color_range_hos = 0;
+	Color color_range_aggro = 0;
+	Color color_range_cast = 0;
+	Color color_range_spirit = 0;
+	Color color_range_compass = 0;
 };

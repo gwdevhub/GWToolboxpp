@@ -63,9 +63,9 @@ private:
 	
 	static Color color;
 
-	D3DVertex* vertices;
-	unsigned int vertices_count;
-	unsigned int vertices_max;
+	D3DVertex* vertices = nullptr;
+	unsigned int vertices_count = 0;
+	unsigned int vertices_max = 0;
 
 	bool markers_changed = false;
 	std::vector<CustomLine> lines;

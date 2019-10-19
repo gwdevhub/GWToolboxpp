@@ -41,37 +41,37 @@ private:
 	bool ShouldIgnoreByContent(const wchar_t *message, size_t size);
 	bool ShouldIgnoreBySender(const wchar_t *sender, size_t size);
 
-	bool self_drop_rare;
-	bool self_drop_common;
-	bool ally_drop_rare;
-	bool ally_drop_common;
-	bool ally_pickup_rare;
-	bool ally_pickup_common;
-	bool skill_points;
-	bool pvp_messages;
-	bool hoh;
-	bool favor;
-	bool ninerings;
-	bool noonehearsyou;
-	bool lunars;
-	bool away;
-	bool you_have_been_playing_for;
-	bool player_has_achieved_title;
+	bool self_drop_rare = false;
+	bool self_drop_common = false;
+	bool ally_drop_rare = false;
+	bool ally_drop_common = false;
+	bool ally_pickup_rare = false;
+	bool ally_pickup_common = false;
+	bool skill_points = false;
+	bool pvp_messages = true;
+	bool hoh = false;
+	bool favor = false;
+	bool ninerings = true;
+	bool noonehearsyou = true;
+	bool lunars = true;
+	bool away = false;
+	bool you_have_been_playing_for = false;
+	bool player_has_achieved_title = false;
 
-	bool messagebycontent;
+	bool messagebycontent = false;
 
 	static const size_t FILTER_BUF_SIZE = 1024*16;
 
 	// Chat filter
 	std::vector<std::string> bycontent_words;
-	char bycontent_word_buf[FILTER_BUF_SIZE];
+	char bycontent_word_buf[FILTER_BUF_SIZE] = "";
 	bool bycontent_filedirty = false;
 
 	std::vector<std::regex> bycontent_regex;
-	char bycontent_regex_buf[FILTER_BUF_SIZE];
+	char bycontent_regex_buf[FILTER_BUF_SIZE] = "";
 
 #ifdef EXTENDED_IGNORE_LIST
-	bool messagebyauthor;
+	bool messagebyauthor = false;
 	std::set<std::string> byauthor_words;
 	char byauthor_buf[FILTER_BUF_SIZE];
 	bool byauthor_filedirty = false;
