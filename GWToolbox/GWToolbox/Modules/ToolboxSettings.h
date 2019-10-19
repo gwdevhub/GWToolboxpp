@@ -59,4 +59,5 @@ private:
     bool use_daily_quests = true;
     bool use_discord = true;
 	bool use_twitch = true;
+	bool use_partywindowmodule = true;
 };

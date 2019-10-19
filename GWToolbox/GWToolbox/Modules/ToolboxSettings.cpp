@@ -19,6 +19,7 @@
 #include <Modules/Updater.h>
 #include <Modules/DiscordModule.h>
 #include <Modules/TwitchModule.h>
+#include <Modules/PartyWindowModule.h>
 
 #include <Windows/MainWindow.h>
 #include <Windows/PconsWindow.h>
@@ -51,6 +52,7 @@
 #include <Widgets/VanquishWidget.h>
 #include <Widgets/AlcoholWidget.h>
 
+
 #include "ToolboxSettings.h"
 //#define TB_DEBUG
 #ifdef _DEBUG
@@ -78,6 +80,7 @@ void ToolboxSettings::InitializeModules() {
     if (use_daily_quests) DailyQuests::Instance().Initialize();
     if (use_discord) DiscordModule::Instance().Initialize();
     if (use_twitch) TwitchModule::Instance().Initialize();
+	if (use_partywindowmodule) PartyWindowModule::Instance().Initialize();
 #ifdef TB_DEBUG
     DoorMonitorWindow::Instance().Initialize();
     SkillListingWindow::Instance().Initialize();

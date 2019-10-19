@@ -296,6 +296,7 @@
     <ClInclude Include="GWToolbox\IRC.h" />
     <ClInclude Include="GWToolbox\Windows\FriendListWindow.h" />
     <ClInclude Include="GWToolbox\Modules\TwitchModule.h" />
+    <ClInclude Include="GWToolbox\Modules\PartyWindowModule.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -457,6 +458,7 @@
     <ClCompile Include="GWToolbox\IRC.cc" />
     <ClCompile Include="GWToolbox\Windows\FriendListWindow.cpp" />
     <ClCompile Include="GWToolbox\Modules\TwitchModule.cpp" />
+    <ClCompile Include="GWToolbox\Modules\PartyWindowModule.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GWToolbox.rc">

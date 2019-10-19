@@ -295,8 +295,7 @@ private:
 	GW::HookEntry SendChatCallback_Entry;
 	GW::HookEntry ItemClickCallback_Entry;
 	GW::HookEntry FriendStatusCallback_Entry;
-    bool ShouldAddAgentToPartyWindow(GW::Packet::StoC::AgentAdd* pak);
-    static bool ShouldRemoveAgentFromPartyWindow(uint32_t agent_id);
+
     bool GetPlayerIsLeader();
 
 	GW::HookEntry PartyDefeated_Entry;

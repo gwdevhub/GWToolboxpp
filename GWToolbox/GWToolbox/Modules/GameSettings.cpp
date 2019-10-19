@@ -405,29 +405,7 @@ namespace {
 		GW::Chat::SetMessageColor(chan, message);
 	}
 
-    struct PendingAddToParty {
-        PendingAddToParty(uint32_t _agent_id, uint32_t _agent_type, uint32_t _allegiance_bits, uint32_t _player_number) : agent_id(_agent_id), agent_type(_agent_type), allegiance_bits(_allegiance_bits), player_number(_player_number){};
-        uint32_t agent_id;
-        uint32_t agent_type;
-        uint32_t player_number;
-        uint32_t allegiance_bits;
-        bool IsValidAgent() const {
-            GW::Agent* a = GW::Agents::GetAgentByID(agent_id);
-            if (!a || !a->GetIsCharacterType() || a->player_number != player_number)
-                return false;
-            GW::NPCArray npcs = GW::Agents::GetNPCArray();
-            if (!npcs.valid()) 
-                return false;
-            if (a->player_number == 0 || a->player_number >= npcs.size())
-                return false;
-            if (npcs[a->player_number].npc_flags & 0x10000)
-                return false;
-            return true;
-        }
-    };
-    std::vector<PendingAddToParty> allies_to_add;
-    std::vector<uint32_t> allies_to_remove;
-    std::vector<uint32_t> allies_added_to_party;
+
 
     struct PendingSendChatMessage {};
 }
@@ -827,26 +805,7 @@ void GameSettings::Initialize() {
         static ReturnToOutpostPacket pak;
         GW::CtoS::SendPacket(&pak);
     });
-    // Remove certain NPCs from party window when dead
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentState>(&AgentState_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::AgentState* pak) -> void {
-        if (!add_special_npcs_to_party_window || pak->state != 16)
-            return; // Not dead.
-        if (ShouldRemoveAgentFromPartyWindow(pak->agent_id))
-            allies_to_remove.push_back(pak->agent_id);
-    });
-    // Remove certain NPCs from party window when despawned
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentRemove>(&AgentRemove_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::AgentRemove* pak) -> void {
-        if (ShouldRemoveAgentFromPartyWindow(pak->agent_id))
-            allies_to_remove.push_back(pak->agent_id);
-    });
-    // Add certain NPCs to party window when spawned
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(&AgentAdd_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::AgentAdd* pak) -> void {
-            if (!add_special_npcs_to_party_window)
-                return;
-            if (!ShouldAddAgentToPartyWindow(pak))
-                return;
-            allies_to_add.push_back({ pak->agent_id,pak->agent_type,pak->allegiance_bits, pak->agent_type ^ 0x20000000 });
-        });
+
     // Flash/focus window on trade
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::TradeStart>(&TradeStart_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::TradeStart*) -> void {
         if(flash_window_on_trade) 
@@ -871,8 +830,6 @@ void GameSettings::Initialize() {
 	});
     // Flash/focus window on zoning (and a bit of housekeeping)
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::GameSrvTransfer *pak) -> void {
-        allies_added_to_party.clear();
-        allies_to_remove.clear();
 		if (flash_window_on_zoning) FlashWindow();
 		if (focus_window_on_zoning && pak->is_explorable) {
 			HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
@@ -965,7 +922,6 @@ void GameSettings::Initialize() {
 		size_t end_idx = message.find(L"\x1",start_idx);
 		if (end_idx == std::wstring::npos)
 			return; // Not a player name, this should never happen.
-		end_idx += start_idx + 1;
 		std::wstring player_pinged = message.substr(start_idx, end_idx);
 		if (player_pinged.empty())
 			return; // No recipient
@@ -975,7 +931,7 @@ void GameSettings::Initialize() {
         if (flash_window_on_name_ping && !wcsncmp(GW::GameContext::instance()->character->player_name, player_pinged.c_str(), 20))
             FlashWindow(); // Flash window - we've been followed!
 		message.insert(start_idx, L"<a=1>");
-		message.insert(end_idx, L"</a>");
+		message.insert(end_idx + 5, L"</a>");
         PendingChatMessage* m = PendingChatMessage::queuePrint(GW::Chat::Channel::CHANNEL_GROUP, message.c_str(), sender->name_enc);
 		if (m) pending_messages.push_back(m);
         buff->clear();
@@ -1062,59 +1018,6 @@ bool GameSettings::GetPlayerIsLeader() {
     return false;
 }
 
-bool GameSettings::ShouldRemoveAgentFromPartyWindow(uint32_t agent_id) {
-    GW::Agent* a = GW::Agents::GetAgentByID(agent_id);
-    if (!a || !(a->type_map & 0x20000) || a->allegiance != 6)
-        return false; // Not in party window or not ally.
-    for (size_t i = 0; i < allies_added_to_party.size(); i++) {
-        if (a->agent_id != allies_added_to_party[i])
-            continue;
-        return true;
-    }
-    return false;
-}
-bool GameSettings::ShouldAddAgentToPartyWindow(GW::Packet::StoC::AgentAdd* pak) {
-    if ((pak->agent_type & 0x20000000) == 0)
-        return false; // Not an NPC
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
-        return false; // Not in an explorable area
-    GW::Constants::MapID map_id = GW::Map::GetMapID();
-	uint32_t player_number = (pak->agent_type ^ 0x20000000);
-    switch (player_number) {
-		// PVP
-	case 3087: // Luxon Longbow
-	case 3588: // Luxon monk
-	case 3024: // Luxon priest
-	case 3032: // Luxon warrior
-		return false; // wip
-	case 3369: // Kurz warrior
-	case 3370: // Kurzick ranger
-	case 3367: // Kurz ele
-	case 3030: // Kurz necro
-		return false; // wip
-    case 2349: // Vale friendly spirit 1
-    case 2350: // Vale friendly spirit 2
-    case 2358: // Pits friendly spirit 1
-    case 2359: // Pits friendly spirit 2
-    case 2360: // Pits friendly spirit 3
-    case 2351: // Pits friendly spirit 4
-        return map_id == GW::Constants::MapID::The_Underworld;
-    case 3582: // Siege turtle, Gyala hatchery
-        return map_id == GW::Constants::MapID::Gyala_Hatchery_outpost_mission;
-    case 4998: // Captain Sulahresh (maybe filter this one by encoded name as it shares id with other snek bois)
-        return map_id == GW::Constants::MapID::Domain_of_Anguish;
-    case GW::Constants::ModelID::FoW::Griffons:
-    case GW::Constants::ModelID::FoW::Forgemaster:
-        return map_id == GW::Constants::MapID::The_Fissure_of_Woe;
-    case 5843: // Mursaat Elementalist (Polymock summon)
-    case 5844: // Flame Djinn (Polymock summon)
-    case 5845: // Ice Imp (Polymock summon)
-    case 5846: // Naga Shaman (Polymock summon)
-    case 5848: // Ebon Vanguard Assassin
-        return true;
-    }
-    return false;
-}
 // Helper function; avoids doing string checks on offline friends.
 GW::Friend* GameSettings::GetOnlineFriend(wchar_t* account, wchar_t* playing) {
     if (!(account || playing)) return NULL;
@@ -1608,47 +1511,6 @@ void GameSettings::SetAfkMessage(std::wstring&& message) {
 }
 
 void GameSettings::Update(float delta) {
-    // Add any pending agents to party window
-    if (allies_to_add.size()) {
-        for (size_t i = 0; i < allies_to_add.size(); i++) {
-            PendingAddToParty p = allies_to_add[i];
-			if (!p.IsValidAgent())
-				continue; // Agent not ready yet.
-            GW::GameThread::Enqueue([p]() {
-                GW::Packet::StoC::PartyAllyAdd packet;
-                packet.header = GW::Packet::StoC::PartyAllyAdd::STATIC_HEADER;
-                packet.agent_id = p.agent_id;
-                packet.agent_type = p.agent_type;
-                packet.allegiance_bits = p.allegiance_bits;// 1886151033;
-				if (!p.IsValidAgent())
-					GW::StoC::EmulatePacket( & packet);
-                });
-            allies_added_to_party.push_back(p.agent_id);
-        }
-        allies_to_add.clear();
-    }
-    if (allies_to_remove.size()) {
-        for (size_t i = 0; i < allies_to_remove.size(); i++) {
-            uint32_t agent_id = allies_to_remove[i];
-			if (GW::Agents::GetAgentByID(agent_id)) {
-				GW::GameThread::Enqueue([agent_id]() {
-					GW::Packet::StoC::PartyRemoveAlly packet;
-					packet.header = GW::Packet::StoC::PartyRemoveAlly::STATIC_HEADER;
-					packet.agent_id = agent_id;
-					if (GW::Agents::GetAgentByID(agent_id))
-						GW::StoC::EmulatePacket(&packet);
-				});
-			}
-            // Remove from list of manually added party members if applicable.
-            for (size_t i = 0; i < allies_added_to_party.size(); i++) {
-                if (allies_added_to_party[i] != agent_id)
-                    continue;
-                allies_added_to_party.erase(allies_added_to_party.begin() + i);
-                break;
-            }
-        }
-        allies_to_remove.clear();
-    }
     // Try to print any pending messages.
     for (std::vector<PendingChatMessage*>::iterator it = pending_messages.begin(); it != pending_messages.end(); ++it) {
         PendingChatMessage *m = *it;
