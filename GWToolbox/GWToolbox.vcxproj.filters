@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="imgui">
@@ -284,6 +284,7 @@
     </ClInclude>
     <ClInclude Include="GWToolbox\Windows\FactionLeaderboardWindow.h" />
     <ClInclude Include="GWToolbox\stdafx.h" />
+    <ClInclude Include="GWToolbox\Utils\RateLimiter.h" />
     <ClInclude Include="GWToolbox\Windows\DailyQuests.h" />
     <ClInclude Include="GWToolbox\Windows\DoorMonitorWindow.h" />
     <ClInclude Include="GWToolbox\Windows\PacketLoggerWindow.h" />
@@ -447,6 +448,7 @@
     </ClCompile>
     <ClCompile Include="GWToolbox\Windows\FactionLeaderboardWindow.cpp" />
     <ClCompile Include="GWToolbox\stdafx.cpp" />
+    <ClCompile Include="GWToolbox\Utils\RateLimiter.cpp" />
     <ClCompile Include="GWToolbox\Windows\DailyQuests.cpp" />
     <ClCompile Include="GWToolbox\Windows\DoorMonitorWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\PacketLoggerWindow.cpp" />
