@@ -47,11 +47,11 @@ private:
 	GW::Constants::MapID IndexToOutpostID(int index);
 
 	// ==== Travel variables ====
-	GW::Constants::District district;
-	int district_number;
+	GW::Constants::District district = GW::Constants::District::Current;
+	int district_number = 0;
 
 	// ==== Favorites ====
-	int fav_count;
+	int fav_count = 0;
 	std::vector<int> fav_index;
 
 	// ==== options ====

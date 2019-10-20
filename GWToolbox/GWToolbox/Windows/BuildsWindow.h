@@ -77,7 +77,7 @@ private:
     bool order_by_name = false;
     bool order_by_index = !order_by_name;
 
-	clock_t send_timer;
+	clock_t send_timer = 0;
 	std::queue<std::string> queue;
 
 	CSimpleIni* inifile = nullptr;

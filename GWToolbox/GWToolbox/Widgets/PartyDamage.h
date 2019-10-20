@@ -14,8 +14,8 @@ class PartyDamage : public ToolboxWidget {
 
 	struct PlayerDamage {
 		long damage = 0;
-		long recent_damage;
-		clock_t last_damage;
+		long recent_damage = 0;
+		clock_t last_damage = 0;
 		long agent_id = 0;
 		std::wstring name;
 		GW::Constants::Profession primary = GW::Constants::Profession::None;
@@ -70,7 +70,7 @@ private:
 	{ return GetPartOfTotal(dmg) * 100.0f; };
 
 	// damage values
-	long total;
+	long total = 0;
 	PlayerDamage damage[MAX_PLAYERS];
 	std::map<DWORD, long> hp_map;
 	std::map<DWORD, int> party_index;
@@ -78,17 +78,17 @@ private:
 
 	// main routine variables
 	bool in_explorable = false;
-	clock_t send_timer;
+	clock_t send_timer = 0;
 	std::queue<std::wstring> send_queue;
 
 	// ini
 	CSimpleIni* inifile = nullptr;
-	Color color_background;
-	Color color_damage;
-	Color color_recent;
-	float width;
-	bool bars_left;
-	int recent_max_time;
+	Color color_background = 0;
+	Color color_damage = 0;
+	Color color_recent = 0;
+	float width = 0.f;
+	bool bars_left = false;
+	int recent_max_time = 0;
 	int row_height = 0;
 
 	GW::HookEntry GenericModifier_Entry;

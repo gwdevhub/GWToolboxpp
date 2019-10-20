@@ -65,12 +65,12 @@ class PingsLinesRenderer : public VBuffer {
 	class PingCircle : public VBuffer {
 		void Initialize(IDirect3DDevice9* device) override;
 	public:
-		Color color;
+		Color color = 0;
 	};
 	class Marker : public VBuffer {
 		void Initialize(IDirect3DDevice9* device) override;
 	public:
-		Color color;
+		Color color = 0;
 	};
 
 public:
@@ -123,18 +123,19 @@ private:
 	const long show_interval = 10;
 	const long queue_interval = 25;
 	const long send_interval = 250;
-	bool mouse_down;
-	bool mouse_moved; // true if moved since last pressed
-	float mouse_x, mouse_y;
-	int session_id;
-	clock_t lastshown;
-	clock_t lastsent;
-	clock_t lastqueued;
+	bool mouse_down = false;
+	bool mouse_moved = false; // true if moved since last pressed
+	float mouse_x = 0.f;
+	float mouse_y = 0.f;
+	int session_id = 0;
+	clock_t lastshown = 0;
+	clock_t lastsent = 0;
+	clock_t lastqueued = 0;
 	std::vector<GW::UI::CompassPoint> queue;
 
-	Color color_drawings;
-	Color color_shadowstep_line;
-	Color color_shadowstep_line_maxrange;
+	Color color_drawings = 0;
+	Color color_shadowstep_line = 0;
+	Color color_shadowstep_line_maxrange = 0;
 	float maxrange_interp_begin = 0.85f;
 	float maxrange_interp_end = 0.95f;
     bool reduce_ping_spam = false;
@@ -145,7 +146,7 @@ private:
 	DWORD recall_target = 0;
 
 	// for the gpu
-	D3DVertex* vertices;		// vertices array
-	unsigned int vertices_count;// count of vertices
-	unsigned int vertices_max;	// max number of vertices to draw in one call
+    D3DVertex *vertices = nullptr;	// vertices array
+	unsigned int vertices_count = 0;// count of vertices
+	unsigned int vertices_max = 0;	// max number of vertices to draw in one call
 };

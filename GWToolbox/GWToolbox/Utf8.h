@@ -5,8 +5,8 @@
 
 namespace utf8 {
 	struct string {
-		char  *bytes;
-		size_t count;
+		char  *bytes = nullptr;
+		size_t count = 0;
 	};
 }
 

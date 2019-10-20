@@ -80,7 +80,7 @@ private:
 	static const int PRICE_COMPUTING_QUEUE = -2;
 	static const int PRICE_COMPUTING_SENT = -3;
 	static const int PRICE_NOT_AVAILABLE = -4;
-	int price[N_MATS];
+	int price[N_MATS] = {};
 
 	// int max = 0;
 	GW::MerchItemArray GetMerchItems() const;
@@ -113,14 +113,14 @@ private:
 	std::deque<Transaction> transactions;
 	bool quote_pending = false;
 	bool trans_pending = false;
-	DWORD quote_pending_time;
-	DWORD trans_pending_time;
+	DWORD quote_pending_time = 0;
+	DWORD trans_pending_time = 0;
 
 	bool cancelled = false;
-	size_t trans_queued;
-	size_t trans_done;
+	size_t trans_queued = 0;
+	size_t trans_done = 0;
 
-	bool manage_gold;
+	bool manage_gold = false;
 
 	GW::HookEntry QuotedItemPrice_Entry;
 	GW::HookEntry TransactionDone_Entry;

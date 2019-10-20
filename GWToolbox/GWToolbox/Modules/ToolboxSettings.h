@@ -30,10 +30,10 @@ public:
 
 private:
 	// === location stuff ===
-	clock_t location_timer;
-	GW::Constants::MapID location_current_map;
+	clock_t location_timer = 0;
+	GW::Constants::MapID location_current_map = GW::Constants::MapID::None;
 	std::wofstream location_file;
-	bool save_location_data;
+	bool save_location_data = false;
 
 	bool use_pcons = true;
 	bool use_hotkeys = true;

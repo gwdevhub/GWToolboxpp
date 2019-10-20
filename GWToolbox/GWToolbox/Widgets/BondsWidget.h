@@ -58,7 +58,7 @@ private:
     Bond GetBondBySkillID(DWORD skillid) const;
 
 	IDirect3DTexture9* textures[MAX_BONDS];
-	Color background;
+	Color background = 0;
 
 	// settings
 	bool click_to_cast = true;

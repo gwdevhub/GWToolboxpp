@@ -745,7 +745,6 @@ void ObjectiveTimerWindow::ObjectiveSet::CheckSetDone() {
 }
 
 ObjectiveTimerWindow::ObjectiveSet::ObjectiveSet() : ui_id(cur_ui_id++) {
-	name[0] = 0;
 	GetLocalTime(&system_time);
 }
 

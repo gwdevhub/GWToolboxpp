@@ -38,7 +38,7 @@ private:
 		Success,
 		Done
 	};
-	Step step = Checking;
 
+	Step step = Checking;
 	std::string changelog = "";
 };

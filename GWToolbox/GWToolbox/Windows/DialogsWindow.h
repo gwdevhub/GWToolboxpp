@@ -32,7 +32,7 @@ private:
 	DWORD IndexToQuestID(int index);
 	DWORD IndexToDialogID(int index);
 
-	int fav_count;
+	int fav_count = 0;
 	std::vector<int> fav_index;
 
 	bool show_common = true;

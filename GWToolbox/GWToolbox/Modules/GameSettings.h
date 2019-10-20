@@ -175,7 +175,7 @@ public:
 
 	const char* Name() const override { return "Game Settings"; }
 
-    time_t PendingChatMessage_last_send = 0;
+    	time_t PendingChatMessage_last_send = 0;
 
 	void Initialize() override;
 	void Terminate() override;
@@ -212,10 +212,10 @@ public:
 	bool flash_window_on_party_invite = true;
 	bool flash_window_on_zoning = true;
 	bool focus_window_on_zoning = false;
-    bool flash_window_on_cinematic = true;
-    bool flash_window_on_trade = true;
-    bool focus_window_on_trade = false;
-    bool flash_window_on_name_ping = true;
+    	bool flash_window_on_cinematic = true;
+    	bool flash_window_on_trade = true;
+	bool focus_window_on_trade = false;
+    	bool flash_window_on_name_ping = true;
 
 	bool auto_return_on_defeat = false;
 
@@ -231,35 +231,35 @@ public:
 	int faction_warn_percent_amount = 75;
 
 	std::wstring afk_message;
-	clock_t afk_message_time;
+	clock_t afk_message_time = 0;
 
 	bool show_timestamps = false;
-    bool show_timestamp_seconds = false;
-    bool show_timestamp_24h = false;
-	Color timestamps_color;
+    	bool show_timestamp_seconds = false;
+    	bool show_timestamp_24h = false;
+	Color timestamps_color = 0;
 
 	bool notify_when_friends_online = true;
-    bool notify_when_friends_offline = false;
-    bool notify_when_friends_join_outpost = true;
-    bool notify_when_friends_leave_outpost = false;
+    	bool notify_when_friends_offline = false;
+    	bool notify_when_friends_join_outpost = true;
+    	bool notify_when_friends_leave_outpost = false;
 
-    bool notify_when_players_join_outpost = false;
-    bool notify_when_players_leave_outpost = false;
+    	bool notify_when_players_join_outpost = false;
+    	bool notify_when_players_leave_outpost = false;
 
 	bool notify_when_party_member_leaves = false;
 	bool notify_when_party_member_joins = false;
 
 	bool disable_gold_selling_confirmation = false;
 
-    bool add_special_npcs_to_party_window = true;
+    	bool add_special_npcs_to_party_window = true;
 
 	void ApplyBorderless(bool value);
 	void SetAfkMessage(std::wstring&& message);
 	static void ItemClickCallback(GW::HookStatus *, uint32_t type, uint32_t slot, GW::Bag *bag);
 
-    static GW::Friend* GetOnlineFriend(wchar_t* account, wchar_t* playing);
+    	static GW::Friend* GetOnlineFriend(wchar_t* account, wchar_t* playing);
 
-    std::vector<PendingChatMessage*> pending_messages;
+    	std::vector<PendingChatMessage*> pending_messages;
 
 private:
 	void UpdateBorderless();
@@ -267,20 +267,20 @@ private:
 	void FactionEarnedCheckAndWarn();
 	bool faction_checked = false;
 
-    // Packet callbacks
+    	// Packet callbacks
 	void MessageOnPartyChange();
 
 	std::vector<GW::MemoryPatcher*> patches;
-	GW::MemoryPatcher *ctrl_click_patch;
-	GW::MemoryPatcher *tome_patch;
-	GW::MemoryPatcher *gold_confirm_patch;
+	GW::MemoryPatcher *ctrl_click_patch = nullptr;
+	GW::MemoryPatcher *tome_patch = nullptr;
+	GW::MemoryPatcher *gold_confirm_patch = nullptr;
 	std::vector<std::wstring> previous_party_names;
 	bool was_leading = true;
 	bool check_message_on_party_change = true;
 
-    bool npc_speech_bubbles_as_chat = false;
-    bool emulated_speech_bubble = false;
-    bool redirect_npc_messages_to_emote_chat = false;
+    	bool npc_speech_bubbles_as_chat = false;
+    	bool emulated_speech_bubble = false;
+    	bool redirect_npc_messages_to_emote_chat = false;
     
 	void DrawChannelColor(const char *name, GW::Chat::Channel chan);
 	static void FriendStatusCallback(
@@ -296,7 +296,7 @@ private:
 	GW::HookEntry ItemClickCallback_Entry;
 	GW::HookEntry FriendStatusCallback_Entry;
 
-    bool GetPlayerIsLeader();
+    	bool GetPlayerIsLeader();
 
 	GW::HookEntry PartyDefeated_Entry;
 	GW::HookEntry AgentState_Entry;

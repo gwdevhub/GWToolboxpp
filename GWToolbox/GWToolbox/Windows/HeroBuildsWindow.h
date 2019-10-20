@@ -90,8 +90,8 @@ private:
 	};
 
 
-	clock_t send_timer;
-	clock_t load_timer;
+	clock_t send_timer = 0;
+	clock_t load_timer = 0;
 	std::queue<CodeOnHero> queue;
 	std::queue<std::string> send_queue;
 

@@ -40,54 +40,56 @@ private:
 	bool ShouldIgnore(const wchar_t *message);
 	bool ShouldIgnoreByContent(const wchar_t *message, size_t size);
 	bool ShouldIgnoreBySender(const wchar_t *sender, size_t size);
-    bool ShouldIgnoreByChannel(uint32_t channel);
+	bool ShouldIgnoreByChannel(uint32_t channel);
 
-	bool self_drop_rare;
 	bool guild_announcement = false;
-	bool self_drop_common;
-	bool ally_drop_rare;
-	bool ally_drop_common;
-	bool ally_pickup_rare;
-	bool ally_pickup_common;
-	bool skill_points;
-	bool pvp_messages;
-	bool hoh;
-	bool favor;
-	bool ninerings;
-	bool noonehearsyou;
-	bool lunars;
-	bool away;
-	bool you_have_been_playing_for;
-	bool player_has_achieved_title;
+	bool self_drop_rare = false;
+	bool self_drop_common = false;
+	bool ally_drop_rare = false;
+	bool ally_drop_common = false;
+	bool ally_pickup_rare = false;
+	bool ally_pickup_common = false;
+	bool skill_points = false;
+	bool pvp_messages = true;
+	bool hoh = false;
+	bool favor = false;
+	bool ninerings = true;
+	bool noonehearsyou = true;
+	bool lunars = true;
+	bool away = false;
+	bool you_have_been_playing_for = false;
+	bool player_has_achieved_title = false;
+
+
 	// Error messages on-screen
 	bool invalid_target = true; // Includes other error messages, see ChatFilter.cpp.
 	bool opening_chest_messages = true;
 	bool inventory_is_full = false;
 	bool item_cannot_be_used = true; // Includes other error messages, see ChatFilter.cpp.
 	bool not_enough_energy = true; // Includes other error messages, see ChatFilter.cpp.
-    bool item_already_identified = false;
+    	bool item_already_identified = false;
 
-	bool messagebycontent;
-    // Which channels to filter.
-    bool filter_channel_local = true;
-    bool filter_channel_guild = false;
-    bool filter_channel_team = false;
-    bool filter_channel_trade = true;
-    bool filter_channel_alliance = false;
-    bool filter_channel_emotes = false;
+	bool messagebycontent = false;
+    	// Which channels to filter.
+    	bool filter_channel_local = true;
+    	bool filter_channel_guild = false;
+    	bool filter_channel_team = false;
+    	bool filter_channel_trade = true;
+    	bool filter_channel_alliance = false;
+    	bool filter_channel_emotes = false;
 
 	static const size_t FILTER_BUF_SIZE = 1024*16;
 
 	// Chat filter
 	std::vector<std::string> bycontent_words;
-	char bycontent_word_buf[FILTER_BUF_SIZE];
+	char bycontent_word_buf[FILTER_BUF_SIZE] = "";
 	bool bycontent_filedirty = false;
 
 	std::vector<std::regex> bycontent_regex;
-	char bycontent_regex_buf[FILTER_BUF_SIZE];
+	char bycontent_regex_buf[FILTER_BUF_SIZE] = "";
 
 #ifdef EXTENDED_IGNORE_LIST
-	bool messagebyauthor;
+	bool messagebyauthor = false;
 	std::set<std::string> byauthor_words;
 	char byauthor_buf[FILTER_BUF_SIZE];
 	bool byauthor_filedirty = false;

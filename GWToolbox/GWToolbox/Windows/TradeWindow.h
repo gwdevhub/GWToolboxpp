@@ -38,7 +38,7 @@ public:
 
 private:
     struct Message {
-        uint32_t    timestamp;
+        uint32_t    timestamp = 0;
         std::string name;
         std::string message;
 		inline bool contains(std::string search) {
@@ -62,7 +62,7 @@ private:
 	bool filter_alerts = false;
 
 	#define ALERT_BUF_SIZE 1024 * 16
-	char alert_buf[ALERT_BUF_SIZE];
+	char alert_buf[ALERT_BUF_SIZE] = "";
 	// set when the alert_buf was modified
 	bool alertfile_dirty = false;
 	bool localtradelogfile_dirty = false;

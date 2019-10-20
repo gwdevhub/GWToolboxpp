@@ -44,7 +44,7 @@ private:
 
 	std::vector<Pcon*> pcons;
 	PconAlcohol* pcon_alcohol = nullptr;
-	clock_t scan_inventory_timer;
+	clock_t scan_inventory_timer = 0;
 	bool enabled = false;
 
 	// Interface Settings
@@ -53,9 +53,9 @@ private:
 	bool show_enable_button = true;
 
 	bool disable_pcons_on_map_change = true;
-    bool disable_cons_on_vanquish_completion = true;
-    bool disable_cons_on_objective_completion = false;
-    bool disable_cons_in_final_room = false;
+    	bool disable_cons_on_vanquish_completion = true;
+    	bool disable_cons_on_objective_completion = false;
+    	bool disable_cons_in_final_room = false;
 
 	bool show_auto_refill_pcons_tickbox = true;
 	bool show_auto_disable_pcons_tickbox = false;
@@ -65,7 +65,6 @@ private:
 	// Pcon Settings
 	// todo: tonic pop?
 	// todo: morale / dp removal
-	// todo: replenish character pcons from chest?
 	GW::HookEntry AgentSetPlayer_Entry;
 	GW::HookEntry AddExternalBond_Entry;
 	GW::HookEntry PostProcess_Entry;
@@ -83,7 +82,7 @@ private:
 	GW::Constants::MapID map_id;
 	GW::Constants::InstanceType instance_type;
 	GW::Constants::InstanceType previous_instance_type;
-    bool in_vanquishable_area = false;
+    	bool in_vanquishable_area = false;
 
 	bool elite_area_disable_triggered = false;	// Already triggered in this run?
 	clock_t elite_area_check_timer;

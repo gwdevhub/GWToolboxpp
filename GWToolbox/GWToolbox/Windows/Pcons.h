@@ -42,8 +42,8 @@ protected:
 		ImVec2 uv0, ImVec2 uv1, int threshold,
         const char* desc = nullptr);
 	~Pcon();
-    bool RefillBlocking();
-    static bool UnreserveSlotForMove(int bagId, int slot); // Unlock slot.
+    	bool RefillBlocking();
+    	static bool UnreserveSlotForMove(int bagId, int slot); // Unlock slot.
 	static bool ReserveSlotForMove(int bagId, int slot); // Prevents more than 1 pcon from trying to add to the same slot at the same time.
 	static bool IsSlotReservedForMove(int bagId, int slot); // Checks whether another pcon has reserved this slot.
 public:
@@ -54,7 +54,7 @@ public:
 	// If timeout_seconds > 0, this process blocks until item has moved or timeout is hit.
 	static GW::Item* MoveItem(GW::Item *item, GW::Bag *bag, int slot, int quantity = 0, uint32_t timeout_seconds = 0);
 	// Fires off another thread to refill pcons. Sets refill_attempted to TRUE when finished.
-    void Refill();
+    	void Refill();
 	void SetEnabled(bool enabled);
 	void AfterUsed(bool used, int qty);
 	inline void Toggle() { SetEnabled(!enabled); }
@@ -67,16 +67,16 @@ public:
 	bool visible = true;
 	bool enabled = false;
 	bool pcon_quantity_checked = false;
-    bool refilling = false; // Set when a refill is in progress. Dont touch.
-    bool refill_attempted = false; // Set to true when refill thread has run for this map
-	int threshold; // quantity at which the number color goes from green to yellow and warning starts being displayed
+    	bool refilling = false; // Set when a refill is in progress. Dont touch.
+    	bool refill_attempted = false; // Set to true when refill thread has run for this map
+	int threshold = 0; // quantity at which the number color goes from green to yellow and warning starts being displayed
 	int quantity = 0;
 	int quantity_storage = 0;
 
-	clock_t timer;
+	clock_t timer = 0;
 
 	const char* const chat;
-    std::string desc;
+    	std::string desc;
 	const char* const ini;
 
 protected:
@@ -100,7 +100,7 @@ private:
 	IDirect3DTexture9* texture = nullptr;
 	const ImVec2 uv0;
 	const ImVec2 uv1;
-    std::thread refill_thread;
+    	std::thread refill_thread;
 };
 
 // A generic Pcon has an item_id and effect_id
@@ -113,7 +113,7 @@ public:
 		ImVec2 uv0, ImVec2 uv1,
 		DWORD item, GW::Constants::SkillID effect, 
 		int threshold,
-        const char* desc = nullptr)
+        	const char* desc = nullptr)
 		: Pcon(chat, ini, file, res_id, uv0, uv1, threshold, desc),
 		itemID(item), effectID(effect) {}
 
@@ -136,7 +136,7 @@ public:
 		ImVec2 uv0, ImVec2 uv1,
 		DWORD item, GW::Constants::SkillID effect, 
 		int threshold,
-        const char* desc = nullptr)
+        	const char* desc = nullptr)
 		: PconGeneric(chat, ini, file, res_id, uv0, uv1, item, effect, threshold, desc) {}
 
 	bool CanUseByEffect() const override;
@@ -150,7 +150,7 @@ public:
 		WORD res_id,
 		ImVec2 uv0, ImVec2 uv1, 
 		int threshold,
-        const char* desc = nullptr)
+        	const char* desc = nullptr)
 		: Pcon(chat, ini, file, res_id, uv0, uv1, threshold, desc) {}
 
 	bool CanUseByInstanceType() const;
@@ -191,7 +191,7 @@ public:
 		WORD res_id,
 		ImVec2 uv0, ImVec2 uv1,
 		int threshold,
-        const char* desc = nullptr)
+        	const char* desc = nullptr)
 		: Pcon(chat, ini, file, res_id, uv0, uv1, threshold, desc) {}
 
 	bool CanUseByEffect() const override;
@@ -207,7 +207,7 @@ public:
 		WORD res_id,
 		ImVec2 uv0, ImVec2 uv1, 
 		int threshold,
-        const char* desc = nullptr)
+        	const char* desc = nullptr)
 		: Pcon(chat, ini, file, res_id, uv0, uv1, threshold, desc) {}
 
 	void Update(int delay = -1) override;

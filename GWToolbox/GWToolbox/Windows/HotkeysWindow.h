@@ -47,14 +47,14 @@ public:
 private:
 	std::vector<TBHotkey*> hotkeys;				// list of hotkeys
 
-	long max_id_;
+	long max_id_ = 0;
 	bool block_hotkeys = false;
 
 	bool clickerActive = false;				// clicker is active or not
 	bool dropCoinsActive = false;			// coin dropper is active or not
 
-	clock_t clickerTimer;					// timer for clicker
-	clock_t dropCoinsTimer;					// timer for coin dropper
+	clock_t clickerTimer = 0;				// timer for clicker
+	clock_t dropCoinsTimer = 0;				// timer for coin dropper
 
 	unsigned int ruptSkillID = 0;			// skill id of the skill to rupt
 	unsigned int ruptSkillSlot = 0;			// skill slot of the skill to rupt with

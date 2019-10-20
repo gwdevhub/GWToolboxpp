@@ -27,10 +27,10 @@ private:
     bool GetDhuumTimer();
     bool GetTrapTimer();
 
-	bool click_to_print_time;
-    bool show_extra_timers;
+	bool click_to_print_time = false;
+    bool show_extra_timers = false;
 
-    char timer_buffer[32];
-    char extra_buffer[32];
-    ImColor extra_color;
+    char timer_buffer[32] = "";
+    char extra_buffer[32] = "";
+    ImColor extra_color = 0;
 };
