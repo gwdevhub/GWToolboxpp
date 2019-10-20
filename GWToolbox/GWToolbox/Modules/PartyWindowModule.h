@@ -27,7 +27,7 @@ public:
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
-	void Error(char* fmt, ...);
+	void Error(const char* fmt, ...);
 	void CheckMap();
 
 private:

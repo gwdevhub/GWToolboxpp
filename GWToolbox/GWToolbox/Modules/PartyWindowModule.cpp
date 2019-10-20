@@ -21,35 +21,7 @@
 #include <thread>
 
 void PartyWindowModule::Update(float delta) {
-	// Add any pending agents to party window
-	if (allies_pending_add.size()) {
-		for (size_t i = 0; i < allies_pending_add.size(); i++) {
-			PendingAddToParty p = allies_pending_add[i];
-			if (!p.IsValidAgent())
-				continue; // Agent not ready yet.
-			GW::GameThread::Enqueue([p,this]() {
-				AddAllyActual(p);
-				});
-			allies_added_to_party.push_back(p.agent_id);
-		}
-		allies_pending_add.clear();
-	}
-	if (allies_pending_remove.size()) {
-		for (size_t i = 0; i < allies_pending_remove.size(); i++) {
-			uint32_t agent_id = allies_pending_remove[i];
-			GW::GameThread::Enqueue([agent_id,this]() {
-				RemoveAllyActual(agent_id);
-				});
-			// Remove from list of manually added party members if applicable.
-			for (size_t i = 0; i < allies_added_to_party.size(); i++) {
-				if (allies_added_to_party[i] != agent_id)
-					continue;
-				allies_added_to_party.erase(allies_added_to_party.begin() + i);
-				break;
-			}
-		}
-		allies_pending_remove.clear();
-	}
+
 }
 void PartyWindowModule::Initialize() {
 	ToolboxModule::Initialize();
@@ -73,7 +45,10 @@ void PartyWindowModule::Initialize() {
 			return;
 		if (!ShouldAddAgentToPartyWindow(pak->agent_type))
 			return;
-		allies_pending_add.push_back({ pak->agent_id,pak->allegiance_bits, pak->agent_type ^ 0x20000000 });
+		PendingAddToParty p(pak->agent_id, pak->allegiance_bits, pak->agent_type ^ 0x20000000);
+		status->blocked = true;
+		GW::StoC::EmulatePacket(pak);
+		AddAllyActual(p);
 		});
 	// Flash/focus window on zoning (and a bit of housekeeping)
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::GameSrvTransfer* pak) -> void {
@@ -92,22 +67,32 @@ void PartyWindowModule::CheckMap() {
 	GW::AgentArray agents = GW::Agents::GetAgentArray();
 	if (!agents.valid())
 		return;
+	std::vector<uint32_t> to_remove;
 	for (unsigned int i = 0; i < allies_added_to_party.size(); i++) {
 		GW::Agent* a = agents[allies_added_to_party[i]];
 		if (!a || !a->IsNPC() || !a->GetIsCharacterType()) {
-			allies_pending_remove.push_back(allies_added_to_party[i]);
+			to_remove.push_back(allies_added_to_party[i]);
 			continue;
 		}
 		std::map<uint32_t, SpecialNPCToAdd*>::iterator it = user_defined_npcs_by_model_id.find(a->player_number);
 		if (it != user_defined_npcs_by_model_id.end())
 			continue;
-		allies_pending_remove.push_back(a->agent_id);
+		to_remove.push_back(a->agent_id);
 	}
+	std::vector<PendingAddToParty> to_add;
 	for (unsigned int i = 0; i < agents.size(); i++) {
 		if (!ShouldAddAgentToPartyWindow(agents[i]))
 			continue;
-		allies_pending_add.push_back({ agents[i]->agent_id,0,agents[i]->player_number });
+		to_add.push_back({ agents[i]->agent_id,0,agents[i]->player_number });
 	}
+	GW::GameThread::Enqueue([this,to_add, to_remove]() {
+		for (unsigned int i = 0; i < to_remove.size(); i++) {
+			RemoveAllyActual(to_remove[i]);
+		}
+		for (unsigned int i = 0; i < to_add.size(); i++) {
+			AddAllyActual(to_add[i]);
+		}
+	});
 }
 void PartyWindowModule::Terminate() {
 	ClearSpecialNPCs();
@@ -128,6 +113,9 @@ void PartyWindowModule::RemoveAllyActual(uint32_t agent_id) {
 	// 2. Re-set the NPC's name to what it was, otherwise it'll revert to the original NPC name.
 	if (packet2.name_enc && a && wcscmp(packet2.name_enc, GW::Agents::GetAgentEncName(a)) != 0)
 		GW::StoC::EmulatePacket(&packet2);
+	std::vector<uint32_t>::iterator it = std::find(allies_added_to_party.begin(), allies_added_to_party.end(), agent_id);
+	if (it != allies_added_to_party.end())
+		allies_added_to_party.erase(it);
 }
 void PartyWindowModule::AddAllyActual(PendingAddToParty p) {
 	GW::Packet::StoC::PartyAllyAdd packet;
@@ -147,8 +135,8 @@ void PartyWindowModule::AddAllyActual(PendingAddToParty p) {
 	// 2. Re-set the NPC's name to what it was, otherwise it'll revert to the original NPC name.
 	if (packet2.name_enc && a && wcscmp(packet2.name_enc, GW::Agents::GetAgentEncName(a)) != 0)
 		GW::StoC::EmulatePacket(&packet2);
+	allies_added_to_party.push_back(p.agent_id);
 }
-
 void PartyWindowModule::ClearAddedAllies() {
 	for (size_t i = 0; i < allies_added_to_party.size(); i++) {
 		uint32_t agent_id = allies_added_to_party[i];
@@ -296,11 +284,11 @@ void PartyWindowModule::DrawSettingInternal() {
 		CheckMap();
 	}
 }
-void PartyWindowModule::Error(char* fmt, ...) {
+void PartyWindowModule::Error(const char* format, ...) {
 	char buffer[600];
 	va_list args;
-	va_start(args, fmt);
-	snprintf(buffer, 599, fmt, args);
+	va_start(args, format);
+	snprintf(buffer, 599, format, args);
 	va_end(args);
 	GW::GameThread::Enqueue([buffer]() {
 		Log::Error(buffer);

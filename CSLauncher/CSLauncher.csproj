@@ -83,7 +83,6 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="gwtoolbox.jon.ico" />
     <Content Include="gwtoolbox.jon2.ico" />
   </ItemGroup>
   <ItemGroup>
