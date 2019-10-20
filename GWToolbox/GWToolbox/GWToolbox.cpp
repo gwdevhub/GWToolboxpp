@@ -385,6 +385,9 @@ void GWToolbox::SaveSettings() {
 }
 
 void GWToolbox::Terminate() {
+	static bool terminated = false;
+	if (terminated) return;
+	terminated = true;
     SaveSettings();
     inifile->Reset();
     delete inifile;
@@ -488,17 +491,19 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
     }
 
     // === destruction ===
-    if (tb_initialized && GWToolbox::Instance().must_self_destruct) {
-        GWToolbox::Instance().Terminate();
+	if (tb_initialized && GWToolbox::Instance().must_self_destruct) {
+		GWToolbox::Instance().Terminate();
+		if (GW::DisableHooks()) {
+			// Hooks disabled OK, continue.
+			ImGui_ImplDX9_Shutdown();
+			ImGui::DestroyContext();
 
-        ImGui_ImplDX9_Shutdown();
-        ImGui::DestroyContext();
+			Log::Log("Restoring input hook\n");
+			SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
 
-        Log::Log("Restoring input hook\n");
-        SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
-        
-        GW::DisableHooks();
-        tb_initialized = false;
-        tb_destroyed = true;
+
+			tb_initialized = false;
+			tb_destroyed = true;
+		}
     }
 }
