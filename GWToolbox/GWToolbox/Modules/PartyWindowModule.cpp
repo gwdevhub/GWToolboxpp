@@ -53,8 +53,6 @@ void PartyWindowModule::Initialize() {
 	// Flash/focus window on zoning (and a bit of housekeeping)
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::GameSrvTransfer* pak) -> void {
 		allies_added_to_party.clear();
-		allies_pending_add.clear();
-		allies_pending_remove.clear();
 		});
 }
 void PartyWindowModule::CheckMap() {
@@ -94,9 +92,18 @@ void PartyWindowModule::CheckMap() {
 		}
 	});
 }
+void PartyWindowModule::SignalTerminate() {
+	GW::StoC::RemoveCallback<GW::Packet::StoC::AgentRemove>(&AgentRemove_Entry);
+	GW::StoC::RemoveCallback<GW::Packet::StoC::AgentState>(&AgentState_Entry);
+	GW::StoC::RemoveCallback<GW::Packet::StoC::AgentAdd>(&AgentAdd_Entry);
+	GW::StoC::RemoveCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry);
+	ClearAddedAllies();
+}
 void PartyWindowModule::Terminate() {
 	ClearSpecialNPCs();
-	ClearAddedAllies();
+}
+bool PartyWindowModule::CanTerminate() {
+	return allies_added_to_party.empty();
 }
 void PartyWindowModule::RemoveAllyActual(uint32_t agent_id) {
 	GW::Packet::StoC::PartyRemoveAlly packet;
@@ -144,8 +151,6 @@ void PartyWindowModule::ClearAddedAllies() {
 			RemoveAllyActual(agent_id);
 			});
 	}
-	allies_pending_remove.clear();
-	allies_added_to_party.clear();
 }
 bool PartyWindowModule::ShouldRemoveAgentFromPartyWindow(uint32_t agent_id) {
 	GW::Agent* a = GW::Agents::GetAgentByID(agent_id);

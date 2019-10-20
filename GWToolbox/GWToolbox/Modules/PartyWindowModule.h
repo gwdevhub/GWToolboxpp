@@ -22,7 +22,9 @@ public:
 
 	const char* Name() const override { return "Party Window"; }
 	void Initialize() override;
+	void SignalTerminate() override;
 	void Terminate() override;
+	bool CanTerminate() override;
 	void Update(float delta) override;
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
@@ -51,8 +53,6 @@ private:
 		GW::Constants::MapID map_id = GW::Constants::MapID::None;
 	};
 
-	std::vector<PendingAddToParty> allies_pending_add;
-	std::vector<uint32_t> allies_pending_remove;
 	std::vector<uint32_t> allies_added_to_party;
 
 	void AddSpecialNPC(SpecialNPCToAdd npc) {
