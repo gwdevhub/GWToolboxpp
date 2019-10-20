@@ -16,6 +16,12 @@ public:
 	// Initialize module
 	virtual void Initialize();
 
+	// Send termination signal to module.
+	virtual void SignalTerminate() {};
+
+	// Can we terminate this module?
+	virtual bool CanTerminate() { return true; };
+
 	// Terminate module
 	virtual void Terminate() {};
 

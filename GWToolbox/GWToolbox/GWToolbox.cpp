@@ -487,18 +487,23 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         ImGui_ImplDX9_RenderDrawData(draw_data);
     }
 
-    // === destruction ===
-    if (tb_initialized && GWToolbox::Instance().must_self_destruct) {
-        GWToolbox::Instance().Terminate();
+	// === destruction ===
+	if (tb_initialized && GWToolbox::Instance().must_self_destruct) {
+		for (ToolboxModule* module : GWToolbox::Instance().modules) {
+			if (!module->CanTerminate())
+				return;
+		}
 
-        ImGui_ImplDX9_Shutdown();
-        ImGui::DestroyContext();
+		GWToolbox::Instance().Terminate();
 
-        Log::Log("Restoring input hook\n");
-        SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
-        
-        GW::DisableHooks();
-        tb_initialized = false;
-        tb_destroyed = true;
-    }
+		ImGui_ImplDX9_Shutdown();
+		ImGui::DestroyContext();
+
+		Log::Log("Restoring input hook\n");
+		SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
+
+		GW::DisableHooks();
+		tb_initialized = false;
+		tb_destroyed = true;
+	}
 }

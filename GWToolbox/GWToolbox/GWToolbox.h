@@ -30,7 +30,12 @@ public:
 	void SaveSettings();
 	static void FlashWindow();
 
-	void StartSelfDestruct() { must_self_destruct = true; }
+	void StartSelfDestruct() {
+		for (ToolboxModule* module : modules) {
+			module->SignalTerminate();
+		}
+		must_self_destruct = true;
+	}
 	bool must_self_destruct = false;	// is true when toolbox should quit
 
 	void RegisterModule(ToolboxModule* m) { modules.push_back(m); }
