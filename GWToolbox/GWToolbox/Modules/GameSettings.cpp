@@ -818,7 +818,7 @@ void GameSettings::Initialize() {
     });
     // Flash window on party member added
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerAdd>(&PartyPlayerAdd_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::PartyPlayerAdd*) -> void {
-        if (!GW::Agents::GetPlayerId())
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost || !GW::Agents::GetPlayerId())
             return;
 		if (flash_window_on_party_invite && GetPlayerIsLeader())
             FlashWindow();
@@ -896,7 +896,7 @@ void GameSettings::Initialize() {
                         wcscpy(packet.message, msg);
                         emulated_speech_bubble = true;
 						if(GW::Agents::GetAgentByID(agent_id))
-							GW::StoC::EmulatePacket((GW::Packet::StoC::PacketBase*) &packet);
+							GW::StoC::EmulatePacket(&packet);
                     });
                 }
             }
@@ -948,20 +948,20 @@ void GameSettings::Initialize() {
         GW::Agent* agent = GW::Agents::GetAgentByID(pak->agent_id);
         if (agent)
             return; // Player already joined
-        GW::Friend* f = GetOnlineFriend(nullptr, pak->player_name);
-        if (!f) {
-            if (!notify_when_players_join_outpost)
-                return; // Notify on friends only, but this player aint yer pal, buddy.
-            wchar_t buffer[128];
-            swprintf(buffer, 128, L"<a=1>%ls</a> entered the outpost.", pak->player_name);
-            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
-        }
-        else {
-            // Friend
-            wchar_t buffer[128];
-            swprintf(buffer, 128, L"<a=1>%ls</a> (%ls) entered the outpost.", f->charname, f->alias);
-            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
-        }
+		if (notify_when_friends_join_outpost) {
+			GW::Friend* f = GetOnlineFriend(nullptr, pak->player_name);
+			if (f) {
+				wchar_t buffer[128];
+				swprintf(buffer, 128, L"<a=1>%ls</a> (%ls) entered the outpost.", f->charname, f->alias);
+				GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
+				return;
+			}
+		}
+		if (notify_when_players_join_outpost) {
+			wchar_t buffer[128];
+			swprintf(buffer, 128, L"<a=1>%ls</a> entered the outpost.", pak->player_name);
+			GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
+		}
     });
     // - Show a message when player leaves the outpost
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerLeaveInstance>(&PlayerLeaveInstance_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::PlayerLeaveInstance* pak) -> void {
@@ -974,17 +974,18 @@ void GameSettings::Initialize() {
         wchar_t* player_name = GW::PlayerMgr::GetPlayerName(pak->player_number);
         if (!player_name) 
             return; // Failed to get name
-        GW::Friend* f = GetOnlineFriend(nullptr, player_name);
-        if (!f) {
-            if(!notify_when_players_leave_outpost)
-                return; // Notify on friends only, but this player aint yer pal, buddy.
+		if (notify_when_friends_leave_outpost) {
+			GW::Friend* f = GetOnlineFriend(nullptr, player_name);
+			if (f) {
+				wchar_t buffer[128];
+				swprintf(buffer, 128, L"<a=1>%ls</a> (%ls) left the outpost.", f->charname, f->alias);
+				GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
+				return;
+			}
+		}
+        if(notify_when_players_leave_outpost) {
             wchar_t buffer[128];
             swprintf(buffer, 128, L"<a=1>%ls</a> left the outpost.", player_name);
-            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
-        } else {
-            // Friend
-            wchar_t buffer[128];
-            swprintf(buffer, 128, L"<a=1>%ls</a> (%ls) left the outpost.", f->charname, f->alias);
             GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
         }
     });
@@ -1023,11 +1024,12 @@ GW::Friend* GameSettings::GetOnlineFriend(wchar_t* account, wchar_t* playing) {
     if (!(account || playing)) return NULL;
     GW::FriendList* fl = GW::FriendListMgr::GetFriendList();
     if (!fl) return NULL;
-    uint32_t n_friends = fl->number_of_friend;
+    uint32_t n_friends = fl->number_of_friend, n_found = 0;
     GW::FriendsListArray& friends = fl->friends;
     for (GW::Friend* it : friends) {
         if (!it) continue;
         if (it->type != GW::FriendType_Friend) continue;
+		if (n_found == n_friends) break;
         if (it->status != GW::FriendStatus::FriendStatus_Online) continue;
         if (account && !wcsncmp(it->alias, account, 20))
             return it;

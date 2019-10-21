@@ -151,6 +151,8 @@ void ToolboxSettings::DrawSettingInternal() {
     ImGui::SameLine(ImGui::GetWindowWidth() / 2);
     ImGui::Checkbox("Discord", &use_discord);
 	ImGui::Checkbox("Twitch", &use_twitch);
+	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
+	ImGui::Checkbox("Party Window", &use_partywindowmodule);
 	ImGui::PopID();
 
 	ImGui::PushID("menubuttons");
@@ -204,6 +206,7 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
     use_discord = ini->GetBoolValue(Name(), VAR_NAME(use_discord), true);
 	use_factionleaderboard = ini->GetBoolValue(Name(), VAR_NAME(use_factionleaderboard), use_factionleaderboard);
 	use_twitch = ini->GetBoolValue(Name(), VAR_NAME(use_twitch), use_twitch);
+	use_partywindowmodule = ini->GetBoolValue(Name(), VAR_NAME(use_partywindowmodule), use_partywindowmodule);
 
 	save_location_data = ini->GetBoolValue(Name(), VAR_NAME(save_location_data), false);
 }
@@ -234,6 +237,7 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(use_factionleaderboard), use_factionleaderboard);
     ini->SetBoolValue(Name(), VAR_NAME(use_discord), use_discord);
     ini->SetBoolValue(Name(), VAR_NAME(use_twitch), use_twitch);
+	ini->SetBoolValue(Name(), VAR_NAME(use_partywindowmodule), use_partywindowmodule);
 
 	ini->SetBoolValue(Name(), VAR_NAME(save_location_data), save_location_data);
 }
