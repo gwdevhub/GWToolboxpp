@@ -273,16 +273,17 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			ImGui::Text("Connecting...");
 		}
 		else {
+			const float font_scale = ImGui::GetIO().FontGlobalScale;
 			/* Display trade messages */
-			bool show_time = ImGui::GetWindowWidth() > 600.0f;
+			bool show_time = ImGui::GetWindowWidth() > 600.0f * font_scale;
 
 			char timetext[128];
 			time_t now = time(nullptr);
-
+			
 			const float innerspacing = ImGui::GetStyle().ItemInnerSpacing.x;
-			const float time_width = show_time ? 100.0f : 0.0f;
+			const float time_width = show_time ? 100.0f * font_scale : 0.0f;
 			const float playername_left = time_width + innerspacing; // player button left align
-			const float playernamewidth = 160.0f;
+			const float playernamewidth = 160.0f * font_scale;
 			const float message_left = playername_left + playernamewidth + innerspacing;
 
 			size_t size = messages.size();
@@ -327,9 +328,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 				if (ImGui::Button(msg.name.c_str(), ImVec2(playernamewidth, 0))) {
 					// open whisper to player
 					GW::GameThread::Enqueue([&msg]() {
-						wchar_t ws[100];
-						swprintf(ws, 100, L"%hs", msg.name.c_str());
-						GW::UI::SendUIMessage(GW::UI::kOpenWhisper, ws, nullptr);
+						GW::UI::SendUIMessage(GW::UI::kOpenWhisper, (wchar_t*)GuiUtils::StringToWString(msg.name).c_str(), nullptr);
 						});
 				}
 
