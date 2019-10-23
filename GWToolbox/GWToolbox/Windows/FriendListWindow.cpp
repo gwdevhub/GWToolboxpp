@@ -109,8 +109,8 @@ bool FriendListWindow::Friend::AddGWFriend() {
 	GW::Friend* f = GetFriend();
 	if (f) return true;
 	if (characters.empty()) return false; // Cant add a friend that doesn't have a char name
-	GW::FriendListMgr::AddFriend(characters.begin()->first.c_str());
 	added_via_toolbox = true;
+	GW::FriendListMgr::AddFriend(characters.begin()->first.c_str());
 	last_update = clock();
 	return true;
 }
@@ -196,18 +196,7 @@ FriendListWindow::Friend* FriendListWindow::GetFriend(uint8_t* uuid) {
 /* FriendListWindow basic functions etc */
 void FriendListWindow::Initialize() {
     ToolboxWindow::Initialize();
-    worker = std::thread([this]() {
-        while (!should_stop) {
-            if(thread_jobs.empty()) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            }
-            else {
-                thread_jobs.front()();
-                thread_jobs.pop();
-            }
-        }
-    });
-
+	worker.Run();
     GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusUpdate_Entry, [this](GW::HookStatus*,
         GW::Friend* f,
         GW::FriendStatus status,
@@ -216,7 +205,7 @@ void FriendListWindow::Initialize() {
         // Keep a log mapping char name to uuid. This is saved to disk.
 		Friend* lf = SetFriend(f->uuid, f->type, status, f->zone_id, charname, alias);
 		// If we only added this user to get an updated status, then remove this user now.
-		if (lf->added_via_toolbox) {
+		if (lf->is_tb_friend) {
 			lf->RemoveGWFriend();
 		}
 		lf->last_update = clock();
@@ -227,7 +216,7 @@ void FriendListWindow::Initialize() {
 		wchar_t player_name[30] = { 0 };
 		
 		wcscpy(player_name, pak->player_name);
-		thread_jobs.push([this, player_name](){
+		worker.Add([this, player_name](){
 			//Log::Log("%s: Checking player profession %ls\n", player_name);
 			GW::Player* a = GW::PlayerMgr::GetPlayerByName(player_name);
 			if (!a || !a->primary) return;
@@ -255,29 +244,17 @@ void FriendListWindow::Update(float delta) {
 	friend_list_ready = fl && fl->friends.valid();
 	if (!friend_list_ready) 
 		return;
-	if (need_to_reorder_friends) {
-		need_to_reorder_friends = false;
-		thread_jobs.push([this]() {
-			need_to_reorder_friends = false;
-			Reorder();
-			});
-	}
 	if (!poll_queued) {
 		int interval_check = poll_interval_seconds * CLOCKS_PER_SEC;
 		if (clock() - friends_list_checked > interval_check) {
-			Log::Log("Queueing poll friends list\n");
+			//Log::Log("Queueing poll friends list\n");
 			poll_queued = true;
-			thread_jobs.push([this]() {
+			worker.Add([this]() {
 				poll_queued = false;
 				Poll();
 				});
 		}
 	}
-}
-void FriendListWindow::Reorder() {
-	if (loading) return;
-	loading = true;
-
 }
 void FriendListWindow::Poll() {
 	if (loading || polling) return;
@@ -285,7 +262,7 @@ void FriendListWindow::Poll() {
     clock_t now = clock();
     GW::FriendList* fl = GW::FriendListMgr::GetFriendList();
     if (!fl) return;
-    Log::Log("Polling friends list\n");
+    //Log::Log("Polling friends list\n");
 	for (unsigned int i = 0; i < fl->friends.size(); i++) {
 		GW::Friend* f = fl->friends[i];
 		if (!f) continue;
@@ -296,7 +273,7 @@ void FriendListWindow::Poll() {
 		}
 		lf->last_update = now;
 	}
-	Log::Log("Polling non-gw friends list\n");
+	//Log::Log("Polling non-gw friends list\n");
     std::map<std::string, Friend>::iterator it = friends.begin();
     while (it != friends.end()) {
         if (fl->number_of_friend >= 100)
@@ -310,7 +287,7 @@ void FriendListWindow::Poll() {
         }
 		it++;
     }
-	Log::Log("Friends list polled\n");
+	//Log::Log("Friends list polled\n");
 	friends_list_checked = now;
 	polling = false;
 }
@@ -423,15 +400,35 @@ void FriendListWindow::SaveSettings(CSimpleIni* ini) {
 
     SaveToFile();
 }
+void FriendListWindow::SignalTerminate() {
+	GW::FriendListMgr::RemoveFriendStatusCallback(&FriendStatusUpdate_Entry);
+	GW::StoC::RemoveCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry);
+	// Remove any friends added via toolbox.
+	worker.Add([this]() {
+		GW::GameThread::Enqueue([this]() {
+			for (std::map<std::string, Friend>::iterator it = friends.begin();  it != friends.end(); it++) {
+				Friend f = it->second;
+				if (!f.is_tb_friend)
+					continue;
+				if (!f.GetFriend())
+					continue;
+				f.RemoveGWFriend();
+			}
+			worker.Stop();
+			});
+		});
+}
+bool FriendListWindow::CanTerminate() {
+	return !worker.IsRunning();
+}
 void FriendListWindow::Terminate() {
     ToolboxWindow::Terminate();
     should_stop = true;
-    if (worker.joinable()) worker.join();
 }
 void FriendListWindow::LoadFromFile() {
 	loading = true;
 	Log::Log("%s: Loading friends from ini", Name());
-	thread_jobs.push([this]() {
+	worker.Add([this]() {
 		// clear builds from toolbox
 		uuid_by_name.clear();
 		friends.clear();
@@ -454,7 +451,6 @@ void FriendListWindow::LoadFromFile() {
 			if (lf.uuid.empty() || lf.alias.empty())
 				continue; // Error, alias or uuid empty.
 			GW::Friend* f = lf.GetFriend();
-			lf.is_tb_friend = f == nullptr;
 
 			// Grab char names
 			CSimpleIniA::TNamesDepend values;
@@ -485,7 +481,6 @@ void FriendListWindow::LoadFromFile() {
 		}
 		Log::Log("%s: Loaded friends from ini", Name());
 		loading = false;
-		Poll();
 	});
 }
 void FriendListWindow::SaveToFile() {
@@ -503,6 +498,7 @@ void FriendListWindow::SaveToFile() {
 		char uuid[128];
 		b64_enc((wchar_t*)lf.uuid.data(),lf.uuid.size(),uuid);
         inifile->SetLongValue(uuid, "type", lf.type);
+		inifile->SetBoolValue(uuid, "is_tb_friend", lf.is_tb_friend);
 		inifile->SetValue(uuid, "alias", GuiUtils::WStringToString(lf.alias).c_str());
 		for (std::map<std::wstring, Character>::iterator it2 = lf.characters.begin(); it2 != lf.characters.end(); ++it2) {
 			char charname[128] = { 0 };

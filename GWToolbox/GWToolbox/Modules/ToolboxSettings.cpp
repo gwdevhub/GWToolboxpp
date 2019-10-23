@@ -89,7 +89,7 @@ void ToolboxSettings::InitializeModules() {
 #ifdef _DEBUG
     PacketLoggerWindow::Instance().Initialize();
     StringDecoderWindow::Instance().Initialize();
-    FriendListWindow::Instance().Initialize();
+    if(use_friendlist) FriendListWindow::Instance().Initialize();
 #endif
 
 	SettingsWindow::Instance().Initialize();
@@ -153,6 +153,8 @@ void ToolboxSettings::DrawSettingInternal() {
 	ImGui::Checkbox("Twitch", &use_twitch);
 	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
 	ImGui::Checkbox("Party Window", &use_partywindowmodule);
+	ImGui::Checkbox("Friend List", &use_friendlist);
+
 	ImGui::PopID();
 
 	ImGui::PushID("menubuttons");
@@ -207,6 +209,7 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
 	use_factionleaderboard = ini->GetBoolValue(Name(), VAR_NAME(use_factionleaderboard), use_factionleaderboard);
 	use_twitch = ini->GetBoolValue(Name(), VAR_NAME(use_twitch), use_twitch);
 	use_partywindowmodule = ini->GetBoolValue(Name(), VAR_NAME(use_partywindowmodule), use_partywindowmodule);
+	use_friendlist = ini->GetBoolValue(Name(), VAR_NAME(use_friendlist), use_friendlist);
 
 	save_location_data = ini->GetBoolValue(Name(), VAR_NAME(save_location_data), false);
 }
@@ -238,6 +241,7 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(use_discord), use_discord);
     ini->SetBoolValue(Name(), VAR_NAME(use_twitch), use_twitch);
 	ini->SetBoolValue(Name(), VAR_NAME(use_partywindowmodule), use_partywindowmodule);
+	ini->SetBoolValue(Name(), VAR_NAME(use_friendlist), use_friendlist);
 
 	ini->SetBoolValue(Name(), VAR_NAME(save_location_data), save_location_data);
 }

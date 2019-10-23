@@ -60,4 +60,5 @@ private:
     bool use_discord = true;
 	bool use_twitch = true;
 	bool use_partywindowmodule = true;
+	bool use_friendlist = true;
 };

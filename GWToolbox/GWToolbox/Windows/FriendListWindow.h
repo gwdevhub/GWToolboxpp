@@ -12,6 +12,7 @@
 #include <GuiUtils.h>
 
 #include <GWCA\Utilities\Hook.h>
+#include <mutex>
 
 /* Out of scope namespecey lookups */
 namespace {
@@ -78,10 +79,7 @@ namespace {
 class FriendListWindow : public ToolboxWindow {
 private:
     FriendListWindow() {};
-    ~FriendListWindow() {
-        if (worker.joinable()) worker.join();
-		worker.~thread();
-    };
+    ~FriendListWindow() {};
 	// Structs because we don't case about public or private; this whole struct is private to this module anyway.
 	struct Character {
 		std::wstring name;
@@ -166,6 +164,8 @@ public:
     const char* Name() const override { return "Friend List"; }
 
     void Initialize() override;
+	void SignalTerminate() override;
+	bool CanTerminate() override;
     void Terminate() override;
 
     // Update. Will always be called every frame.
@@ -173,8 +173,6 @@ public:
 
     // Check friends list.
     void Poll();
-	// Reorder friends by filter/online status etc
-	void Reorder();
 
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;
@@ -206,9 +204,57 @@ private:
 
 	uint8_t poll_interval_seconds = 10;
 
-    std::thread worker;
     // tasks to be done async by the worker thread
-    std::queue<std::function<void()>> thread_jobs;
+	class WorkerThread {
+		std::queue<std::function<void()>> thread_jobs;
+		std::thread thread;
+		std::mutex mutex;
+		bool running = false;
+		bool need_to_stop = false;
+	public:
+		~WorkerThread() {
+			need_to_stop = true;
+			if (thread.joinable())
+				thread.join();
+		}
+		bool IsRunning() {
+			return running;
+		}
+		void Add(std::function<void()> func) {
+			if (need_to_stop)
+				return;
+			std::lock_guard<std::mutex> lock(mutex);
+			thread_jobs.push(func);
+			Run();
+		}
+		void Stop() {
+			need_to_stop = true;
+		}
+		void Run() {
+			if (need_to_stop || IsRunning())
+				return;
+			running = true;
+			thread = std::thread([this]() {
+				std::unique_lock lock(mutex);
+				lock.unlock();
+				while (!need_to_stop) {
+					lock.lock();
+					if (thread_jobs.empty()) {
+						lock.unlock();
+						std::this_thread::sleep_for(std::chrono::milliseconds(100));
+					}
+					else {
+						thread_jobs.front()();
+						thread_jobs.pop();
+						lock.unlock();
+					}
+				}
+				running = false;
+			});
+		}
+	};
+	WorkerThread worker;
+    
 
     // Mapping of Name > UUID
     std::map<std::wstring, std::string> uuid_by_name;
