@@ -10,6 +10,7 @@
 #include <GWCA\GameEntities\Quest.h>
 #include <GWCA\GameEntities\Skill.h>
 #include <GWCA\GameEntities\Player.h>
+#include <GWCA\GameEntities\Guild.h>
 
 #include <GWCA\Context\GameContext.h>
 #include <GWCA\Context\WorldContext.h>
@@ -19,8 +20,10 @@
 #include <GWCA\Managers\ItemMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Managers\AgentMgr.h>
+#include <GWCA\Managers\PlayerMgr.h>
 #include <GWCA\Managers\PartyMgr.h>
 #include <GWCA\Managers\EffectMgr.h>
+#include <GWCA\Managers\GuildMgr.h>
 #include <GWCA\Managers\GameThreadMgr.h>
 
 #include "GWToolbox.h"
@@ -220,9 +223,19 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::InputText("Model ID##target", modelid_buf, 32, ImGuiInputTextFlags_ReadOnly);
 			ImGui::ShowHelp("Model ID is unique for each kind of agent.\nIt is static and shared by the same agents.\nWhen targeting players, this is Player ID instead, unique for each player in the instance.\nFor the purpose of targeting hotkeys and commands, use this value");
 			ImGui::PopItemWidth();
-			if (ImGui::TreeNode("Advanced##target")) {
-				ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() / 2);
-				if (target) {
+			GW::Player* player = nullptr;
+			GW::Guild* guild = nullptr;
+			if (target && target->IsPlayer()) {
+				player = GW::PlayerMgr::GetPlayerByID(target->player_number);
+			}
+			if (player && target->tags->guild_id) {
+				GW::GuildArray guilds = GW::GuildMgr::GetGuildArray();
+				if (guilds.valid() && target->tags->guild_id < guilds.size())
+					guild = guilds[target->tags->guild_id];
+			}
+			if (target) {
+				if (ImGui::TreeNode("Advanced##target")) {
+					ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() / 2);
 					ImGui::LabelText("Addr", "%p", target);
 					ImGui::LabelText("Id", "%d", target->agent_id);
 					ImGui::LabelText("Z", "%f", target->z);
@@ -251,9 +264,31 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 					ImGui::LabelText("Allegiance", "%d", target->allegiance);
 					ImGui::LabelText("WeaponType", "%d", target->weapon_type);
 					ImGui::LabelText("Skill", "%d", target->skill);
+					ImGui::PopItemWidth();
+					ImGui::TreePop();
 				}
-				ImGui::PopItemWidth();
-				ImGui::TreePop();
+				if (player) {
+					if (ImGui::TreeNode("Player Info##target")) {
+						ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() / 2);
+						ImGui::LabelText("Addr", "%p", player);
+						ImGui::LabelText("Name", "%s", GuiUtils::WStringToString(player->name).c_str());
+						ImGui::PopItemWidth();
+						ImGui::TreePop();
+					}
+				}
+				if (guild) {
+					if (ImGui::TreeNode("Guild Info##target")) {
+						ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() / 2);
+						ImGui::LabelText("Addr", "%p", guild);
+						ImGui::LabelText("Name", "%s [%s]", GuiUtils::WStringToString(guild->name).c_str(), GuiUtils::WStringToString(guild->tag).c_str());
+						ImGui::LabelText("Faction", "%d (%s)", guild->faction_point, guild->faction ? "Luxon" : "Kurzick");
+						if (ImGui::Button("Go to Guild Hall")) {
+							GW::GuildMgr::TravelGH(guild->key);
+						}
+						ImGui::PopItemWidth();
+						ImGui::TreePop();
+					}
+				}
 			}
 		}
 		if (show_map && ImGui::CollapsingHeader("Map")) {
@@ -424,7 +459,7 @@ void InfoWindow::Update(float delta) {
 	if (show_resignlog
 		&& GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
 		&& GW::PartyMgr::GetPartyInfo()) {
-
+		GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
 		GW::PlayerPartyMemberArray partymembers = GW::PartyMgr::GetPartyInfo()->players;
 		if (partymembers.valid()) {
 			if (partymembers.size() != status.size()) {
