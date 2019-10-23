@@ -93,6 +93,7 @@ private:
 	bool mouse_clickthrough_in_outpost = false;
 	bool rotate_minimap = true;
     bool alt_click_to_move = false;
+	bool is_observing = false;
 
 	bool hero_flag_controls_show = false;
 	bool hero_flag_window_attach = true;
@@ -107,5 +108,6 @@ private:
 	GW::HookEntry GenericValueTarget_Entry;
 	GW::HookEntry SkillActivate_Entry;
 	GW::HookEntry InstanceLoadFile_Entry;
+	GW::HookEntry InstanceLoadInfo_Entry;
 	GW::HookEntry GameSrvTransfer_Entry;
 };

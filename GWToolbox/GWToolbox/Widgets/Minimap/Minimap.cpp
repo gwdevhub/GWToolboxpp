@@ -59,6 +59,10 @@ void Minimap::Initialize() {
 			pingslines_renderer.P221Callback(pak);
 		}
 	});
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadInfo_Entry,
+		[this](GW::HookStatus*, GW::Packet::StoC::InstanceLoadInfo* packet) -> void {
+			is_observing = packet->is_observer;
+		});
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry,
 		[this](GW::HookStatus *, GW::Packet::StoC::InstanceLoadFile *packet) -> void {
 		pmap_renderer.Invalidate();
@@ -544,7 +548,12 @@ void Minimap::SelectTarget(GW::Vec2f pos) {
 }
 
 bool Minimap::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
-    if (mouse_clickthrough || (mouse_clickthrough_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)) return false;
+	if (is_observing)
+		return false;
+	if (mouse_clickthrough)
+		return false;
+    if (mouse_clickthrough_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) 
+		return false;
 	switch (Message) {
 	case WM_MOUSEMOVE: return OnMouseMove(Message, wParam, lParam);
 	case WM_LBUTTONDOWN: return OnMouseDown(Message, wParam, lParam);
