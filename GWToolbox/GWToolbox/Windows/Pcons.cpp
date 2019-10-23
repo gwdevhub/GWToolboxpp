@@ -373,12 +373,13 @@ void Pcon::Refill() {
     if (refilling)
         return; // Still going
     refilling = true;
-    refill_thread = std::thread([&] {
+	if (refill_thread.joinable())
+		refill_thread.join();
+    refill_thread = std::thread([this]() {
 		RefillBlocking();
         refill_attempted = true;
         refilling = false;
     });
-    refill_thread.detach();
 }
 int Pcon::CheckInventory(bool* used, int* used_qty_ptr,int from_bag, int to_bag) const {
 	int count = 0;
