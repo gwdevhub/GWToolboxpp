@@ -96,7 +96,7 @@ namespace CSLauncher {
                                 continue;
                             foreach(var asset in release.assets)
                             {
-                                if (!asset.name.Equals("JonsGWToolbox.dll"))
+                                if (!asset.name.Equals(DLL_NAME))
                                     continue;
                                 remoteversion = release.tag_name.Substring(0, version_number_len);
                                 dllurl = asset.browser_download_url;
