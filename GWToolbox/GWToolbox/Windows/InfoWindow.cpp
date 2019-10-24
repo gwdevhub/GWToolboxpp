@@ -103,14 +103,18 @@ void InfoWindow::Initialize() {
 		if (!partymembers.valid()) return;
 		GW::PlayerArray players = GW::Agents::GetPlayerArray();
 		if (!players.valid()) return;
-		for (size_t i = 0; i < partymembers.size(); ++i) {
+		size_t index_max = std::min<size_t>(status.size(), partymembers.size());
+		for (size_t i = 0; i < index_max; ++i) {
 			GW::PlayerPartyMember& partymember = partymembers[i];
 			if (partymember.login_number >= players.size()) continue;
 			GW::Player& player = players[partymember.login_number];
 
 			wchar_t buffer[256];
-			PrintResignStatus(buffer, 256, i, player.name);
-            send_queue.push(std::wstring(buffer));
+			Status player_status = status[i];
+			if (player_status == Connected) {
+				PrintResignStatus(buffer, 256, i, player.name);
+            	send_queue.push(std::wstring(buffer));
+            }
 		}
 	});
 }
@@ -496,6 +500,7 @@ const char* InfoWindow::GetStatusStr(Status status) {
 }
 
 void InfoWindow::PrintResignStatus(wchar_t *buffer, size_t size, size_t index, const wchar_t *player_name) {
+	assert(index < status.size());
 	Status player_status = status[index];
 	const char* status_str = GetStatusStr(player_status);
 	_snwprintf(buffer, size, L"%d. %s - %S", index + 1, player_name,
