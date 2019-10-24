@@ -7,6 +7,12 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
+## Version 2.27, Extended 1.8.94
+* [New] JonsToolbox.exe now uses/downloads JonsGWToolbox.dll instead of GWToolbox.dll if not found in GWToolboxpp folder.
+* [New] Updater module re-enabled; will now give update notifications for this version of toolbox.
+* [New] Added "Check for Updates" button to Toolbox Settings section. If enabled, it will auto-check every 10 minutes instead of just the first load.
+* [Minor] Stability/failover changes for Updater module. Will update current dll wherever it is on disk, not just from GWToolboxpp folder.
+
 ## Version 2.27, Extended 1.8.93
 * [New] Support for Chinese character set; add "Font_ChineseTraditional.ttf" to GWToolboxpp folder to load automatically.
 * [New] Support for Japanese character set; add "Font_Japanese.ttf" to GWToolboxpp folder to load automatically.
