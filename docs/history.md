@@ -7,6 +7,15 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
+## Version 2.27, Extended 1.8.93
+* [New] Support for Chinese character set; add "Font_ChineseTraditional.ttf" to GWToolboxpp folder to load automatically.
+* [New] Support for Japanese character set; add "Font_Japanese.ttf" to GWToolboxpp folder to load automatically.
+* [New] Support for Russian character set; add "Font_Cyrillic.ttf" to GWToolboxpp folder to load automatically.
+* [New] Support for Korean character set; add "Font_Korean.ttf" to GWToolboxpp folder to load automatically.
+* [New] Added ability to view a player's guild info via Target section of Info Window
+* [Fix] Fixed a crash when trying to click on Minimap whilst observing PvP matches
+* [Fix] Bugfix with memory leak when refilling pcons
+* [Minor] Reverted Trade Window to vanilla 2.27. Tweaks to layout widths, fixed bug when trying to whisper player's with unicode chars in their name.
 
 ## Version 2.27
 * [New] Added support for adrenaline skill with /useskill command.
