@@ -9,6 +9,8 @@
 #include <GuiUtils.h>
 #include <Modules/Resources.h>
 
+#define DLL_NAME "JonsGWToolbox.dll"
+
 void Updater::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini);
 #ifdef _DEBUG
@@ -80,7 +82,7 @@ void Updater::GetLatestRelease(GWToolboxRelease* release) {
             if (!asset["name"].is_string())
                 continue;
             std::string asset_name = asset["name"];
-            if (!asset_name._Equal("GWToolbox.dll"))
+            if (!asset_name._Equal(DLL_NAME))
                 continue; // This release doesn't have a dll download.
             std::string download_url = asset["browser_download_url"];
             std::string body = json[i]["body"];
