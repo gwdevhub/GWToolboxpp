@@ -37,7 +37,7 @@
     <StartupObject>CSLauncher.CSLauncher</StartupObject>
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>gwtoolbox.jon2.ico</ApplicationIcon>
+    <ApplicationIcon>Resources\gwtoolbox.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup />
   <PropertyGroup>
@@ -46,7 +46,6 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="app.manifest" />
-    <None Include="Resources\Font.ttf" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CharSelector.cs">
@@ -81,9 +80,6 @@
       <SubType>Designer</SubType>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="gwtoolbox.jon2.ico" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\gwtoolbox.ico" />

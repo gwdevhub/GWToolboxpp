@@ -18,7 +18,7 @@ void Updater::SaveSettings(CSimpleIni* ini) {
 	ToolboxModule::SaveSettings(ini);
 
 	ini->SetLongValue(Name(), "update_mode", mode);
-	ini->SetValue(Name(), "dllversion", GWTOOLBOX_VERSION);
+	ini->SetValue(Name(), "dllversion", GWTOOLBOX_DLL_VERSION);
 
 #ifndef _DEBUG
 	{
@@ -55,9 +55,9 @@ void Updater::CheckForUpdate() {
 		// Here we are in the worker thread and can do blocking operations
 		// Reminder: do not send stuff to gw chat from this thread!
 		std::string version = Resources::Instance().Download(
-			L"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/toolboxversion.txt");
+			L"https://raw.githubusercontent.com/" GITHUB_OWNER L"/GWToolboxpp/master/resources/toolboxversion.txt");
 
-		if (version.compare(GWTOOLBOX_VERSION) == 0) {
+		if (version.compare(GWTOOLBOX_DLL_VERSION) == 0) {
 			// server and client versions match
 			if (BETA_VERSION[0]) {
 				// we are a beta/pre-release version. Version is the same, do update (e.g. 1.0 BETA -> 1.0).
@@ -98,7 +98,7 @@ void Updater::CheckForUpdate() {
 
 		// get json release manifest
 		std::string s = Resources::Instance().Download(
-			std::wstring(L"https://api.github.com/repos/HasKha/GWToolboxpp/releases/tags/") + GuiUtils::StringToWString(version) + L"_Release");
+			std::wstring(L"https://api.github.com/repos/" GITHUB_OWNER L"/GWToolboxpp/releases/tags/") + GuiUtils::StringToWString(version) + L"_Release");
 
 		if (s.empty()) {
 			step = Done;
@@ -129,7 +129,7 @@ void Updater::Draw(IDirect3DDevice9* device) {
 		if (!notified) {
 			notified = true;
 			Log::Warning("GWToolbox++ version %s is available! You have %s%s.",
-				server_version.c_str(), GWTOOLBOX_VERSION, BETA_VERSION);
+				server_version.c_str(), GWTOOLBOX_DLL_VERSION, BETA_VERSION);
 		}
 
 		switch (mode) {
@@ -148,7 +148,7 @@ void Updater::Draw(IDirect3DDevice9* device) {
 			ImGui::SetNextWindowPosCenter(ImGuiSetCond_Appearing);
 			ImGui::Begin("Toolbox Update!", &visible);
 			ImGui::Text("GWToolbox++ version %s is available! You have %s%s",
-				server_version.c_str(), GWTOOLBOX_VERSION, BETA_VERSION);
+				server_version.c_str(), GWTOOLBOX_DLL_VERSION, BETA_VERSION);
 			ImGui::Text("Changes:");
 			ImGui::Text(changelog.c_str());
 
@@ -183,7 +183,7 @@ void Updater::Draw(IDirect3DDevice9* device) {
 			ImGui::SetNextWindowPosCenter(ImGuiSetCond_Appearing);
 			ImGui::Begin("Toolbox Update!", &visible);
 			ImGui::Text("GWToolbox++ version %s is available! You have %s",
-				server_version.c_str(), GWTOOLBOX_VERSION);
+				server_version.c_str(), GWTOOLBOX_DLL_VERSION);
 			ImGui::Text("Changes:");
 			ImGui::Text(changelog.c_str());
 
@@ -201,7 +201,7 @@ void Updater::Draw(IDirect3DDevice9* device) {
 			ImGui::SetNextWindowPosCenter(ImGuiSetCond_Appearing);
 			ImGui::Begin("Toolbox Update!", &visible);
 			ImGui::Text("GWToolbox++ version %s is available! You have %s",
-				server_version.c_str(), GWTOOLBOX_VERSION);
+				server_version.c_str(), GWTOOLBOX_DLL_VERSION);
 			ImGui::Text("Changes:");
 			ImGui::Text(changelog.c_str());
 
@@ -233,6 +233,25 @@ void Updater::DoUpdate() {
 	}
 	Log::Log("dll file name is %s\n", dllfile);
 
+    // Get name of dll from path
+    std::wstring dll_path(dllfile);
+    std::wstring dll_name;
+    wchar_t sep = '/';
+    #ifdef _WIN32
+        sep = '\\';
+    #endif
+
+    size_t i = dll_path.rfind(sep, dll_path.length());
+    if (i != std::wstring::npos) {
+        dll_name = dll_path.substr(i + 1, dll_path.length() - i);
+    }
+    if (dll_name.empty()) {
+        Log::Error("Updater error - failed to extract dll name from path");
+        step = Done;
+        return;
+    }
+
+
 	// 1. rename toolbox dll
 	WCHAR* dllold = new WCHAR[MAX_PATH];
 	wcsncpy(dllold, dllfile, MAX_PATH);
@@ -244,8 +263,8 @@ void Updater::DoUpdate() {
 	// 2. download new dll
 	Resources::Instance().Download(
 		dllfile,
-		std::wstring(L"https://github.com/HasKha/GWToolboxpp/releases/download/") 
-			+ GuiUtils::StringToWString(server_version) + L"_Release/GWToolbox.dll", 
+		std::wstring(L"https://github.com/" GITHUB_OWNER L"/GWToolboxpp/releases/download/") 
+			+ GuiUtils::StringToWString(server_version) + L"_Release/" + dll_name,
 		[this, dllfile, dllold](bool success) {
 		if (success) {
 			step = Success;

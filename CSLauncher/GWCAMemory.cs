@@ -214,7 +214,7 @@ namespace GWCA
                 ProcessModuleCollection modules = process.Modules;
                 foreach (ProcessModule module in modules)
                 {
-                    if (String.Equals(module.ModuleName, "GWToolbox.dll", StringComparison.OrdinalIgnoreCase))
+                    if (module.ModuleName.IndexOf("GWToolbox.dll", StringComparison.OrdinalIgnoreCase) != -1)
                         return true;
                 }
                 return false;

@@ -13,11 +13,12 @@ using GWCA.Memory;
 
 namespace CSLauncher {
     static class CSLauncher {
-        const string DLL_DIRECTORY = "\\GWToolboxpp\\GWToolbox.dll";
+        const string DLL_NAME = "GWToolbox.dll";
+        const string DLL_DIRECTORY = "\\GWToolboxpp\\" + DLL_NAME;
 
         static readonly string[] LOADMODULE_RESULT_MESSAGES = {
-            "GWToolbox.dll successfully loaded.",
-            "GWToolbox.dll not found.",
+            DLL_NAME +" successfully loaded.",
+            DLL_NAME +" not found.",
             "kernel32.dll not found.\nHow the fuck did you do this.",
             "LoadLibraryW not found in kernel32.dll... what",
             "VirtualAllocEx allocation unsuccessful.",
@@ -53,25 +54,25 @@ namespace CSLauncher {
             ResInstaller installer = new ResInstaller();
             installer.Install();
 
-#if DEBUG || true // Disable automated updates if we've using 3vcloud
+#if DEBUG
             // do nothing, we'll use GWToolbox.dll in /Debug
-            string dllfile = System.IO.Path.GetDirectoryName(Application.ExecutablePath) + "\\GWToolbox.dll";
+            string dllfile = System.IO.Path.GetDirectoryName(Application.ExecutablePath) + "\\" + DLL_NAME;
 #else
             // Download or update if needed
-            string dllfile = settingsfolder + "GWToolbox.dll";
+            string dllfile = settingsfolder + DLL_NAME;
             if (!File.Exists(dllfile)) {
                 string toolboxdir = Environment.GetEnvironmentVariable("LocalAppData") + "\\GWToolboxpp\\";
                 WebClient host = new WebClient();
                 string remoteversion = host.DownloadString(
-                    "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/toolboxversion.txt");
-                string dllurl = "https://github.com/HasKha/GWToolboxpp/releases/download/" 
-                    + remoteversion + "_Release/GWToolbox.dll";
-                host.DownloadFile(dllurl, toolboxdir + "GWToolbox.dll");
+                    "https://raw.githubusercontent.com/3vcloud/GWToolboxpp/master/resources/toolboxversion.txt");
+                string dllurl = "https://github.com/3vcloud/GWToolboxpp/releases/download/" 
+                    + remoteversion + "_Release/" + DLL_NAME;
+                host.DownloadFile(dllurl, toolboxdir + DLL_NAME);
             }
 #endif
             // check again after download/update/build
             if (!File.Exists(dllfile)) {
-                MessageBox.Show("Cannot find GWToolbox.dll", "GWToolbox++ Launcher Error",
+                MessageBox.Show("Cannot find " + DLL_NAME, "GWToolbox++ Launcher Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }

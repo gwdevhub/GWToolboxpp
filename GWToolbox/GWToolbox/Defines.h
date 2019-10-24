@@ -1,10 +1,12 @@
 #pragma once
 
 #define GWTOOLBOX_VERSION "2.27" // Enter main version here. Should match with server version file.
-#define GWTOOLBOX_EXTENDED_VERSION "1.8.92 (2019-10-20)" // Extended version
+#define GWTOOLBOX_EXTENDED_VERSION "1.8.93" // Extended version
+#define GWTOOLBOX_DLL_VERSION GWTOOLBOX_VERSION "_" GWTOOLBOX_EXTENDED_VERSION
 #define BETA_VERSION "" // enter something like "Beta 1". Internally we only check if not empty
 #define GWTOOLBOX_WEBSITE "https://haskha.github.io/GWToolboxpp/"
-#define GWTOOLBOX_EXTENDED_WEBSITE "https://github.com/3vcloud/GWToolboxpp"
+#define GITHUB_OWNER "3vcloud"
+#define GWTOOLBOX_EXTENDED_WEBSITE "https://github.com/" GITHUB_OWNER "/GWToolboxpp"
 
 #define VAR_NAME(v) (#v)
 
