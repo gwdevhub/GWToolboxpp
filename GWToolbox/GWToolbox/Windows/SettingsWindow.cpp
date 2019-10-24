@@ -48,7 +48,7 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
 		} else {
 			const std::string server_version = Updater::Instance().GetServerVersion();
 			if (!server_version.empty()) {
-				if (server_version.compare(GWTOOLBOX_VERSION) == 0) {
+				if (server_version.compare(GWTOOLBOX_DLL_VERSION) == 0) {
 					ImGui::SameLine();
 					ImGui::Text("(Up to date)");
 				} else {

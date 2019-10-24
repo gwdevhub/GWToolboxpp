@@ -15,13 +15,19 @@ using System.Net.Security;
 using System.Web.Script.Serialization;
 
 namespace CSLauncher {
-    public class GithubRelease
+    struct GithubAsset
+    {
+        public string name { get; set; }
+        public string browser_download_url { get; set; }
+    }
+    struct GithubRelease
     {
         public string tag_name { get; set; }
+        public string body { get; set; }
+        public List<GithubAsset> assets { get; set; }
     };
     static class CSLauncher {
         const string DLL_NAME = "JonsGWToolbox.dll";
-        const string DLL_DIRECTORY = "\\GWToolboxpp\\" + DLL_NAME;
 
         static readonly string[] LOADMODULE_RESULT_MESSAGES = {
             DLL_NAME +" successfully loaded.",
@@ -62,26 +68,45 @@ namespace CSLauncher {
 
 #if DEBUG
             // do nothing, we'll use GWToolbox.dll in /Debug
-            string dllfile = System.IO.Path.GetDirectoryName(Application.ExecutablePath) + "\\" + DLL_NAME;
+            string dllfile = System.IO.Path.GetDirectoryName(Application.ExecutablePath) + "\\GWToolbox.dll";
 #else
             // Download or update if needed
             string dllfile = toolboxdir + DLL_NAME;
-            if (File.Exists(dllfile) && (new System.IO.FileInfo(dllfile).Length) < 1)
+            if (File.Exists(dllfile) && (new FileInfo(dllfile).Length) < 1)
                 File.Delete(dllfile); // Delete file if exists with 0 length
             if (!File.Exists(dllfile)) {
                 ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
                 WebClient host = new WebClient();
+                host.Headers.Add(HttpRequestHeader.UserAgent, "GWToolboxpp Launcher");
                 string remoteversion = "";
+                string dllurl = "";
                 int tries = 0;
 
                 while(tries < 3 && remoteversion.Length == 0)
                 {
                     try
                     {
-                        string json = host.DownloadString("https://api.github.com/repos/3vcloud/GWToolboxpp/releases/latest");
+                        string json = host.DownloadString("https://api.github.com/repos/3vcloud/GWToolboxpp/releases");
                         JavaScriptSerializer serializer = new JavaScriptSerializer();
-                        var item = serializer.Deserialize<GithubRelease>(json);
-                        remoteversion = item.tag_name == null ? "0" : item.tag_name;
+                        var items = serializer.Deserialize<List<GithubRelease>>(json);
+                        foreach(var release in items)
+                        {
+                            int version_number_len = release.tag_name.IndexOf("_Release");
+                            if (version_number_len == -1)
+                                continue;
+                            foreach(var asset in release.assets)
+                            {
+                                if (!asset.name.Equals("GWToolbox.dll"))
+                                    continue;
+                                remoteversion = release.tag_name.Substring(0, version_number_len);
+                                dllurl = asset.browser_download_url;
+                                break;
+                            }
+                            if (remoteversion.Length > 0)
+                                break;                            
+                        }
+                        if(remoteversion.Length == 0)
+                            remoteversion = "0";
                     }
                     catch (Exception e)
                     {
@@ -99,9 +124,8 @@ namespace CSLauncher {
                     return;
                 }
                 tries = 0;
-                string dllurl = "https://github.com/3vcloud/GWToolboxpp/releases/download/"
-                    + remoteversion + "_Release/" + DLL_NAME;
-                while (tries < 3 && remoteversion.Length == 0)
+                // This bit will take a while...
+                while (tries < 3 && dllurl.Length > 0 && !File.Exists(dllfile))
                 {
                     try
                     {
@@ -117,7 +141,7 @@ namespace CSLauncher {
                 }
                 if (!File.Exists(dllfile))
                 {
-                    MessageBox.Show("Failed to download GWToolbox++ dll after " + tries + " attempts.\n Check your internet connection and try again",
+                    MessageBox.Show("Failed to download GWToolbox++ dll.\n Check your internet connection and try again",
                         "GWToolbox++ Error",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Error);

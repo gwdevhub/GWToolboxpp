@@ -319,7 +319,7 @@ void GWToolbox::Initialize() {
     Log::Log("Creating Modules\n");
     std::vector<ToolboxModule*> core_modules;
     core_modules.push_back(&Resources::Instance());
-    //core_modules.push_back(&Updater::Instance()); // Disable updater
+    core_modules.push_back(&Updater::Instance()); // Disable updater
 #ifdef ENABLE_LUA
     core_modules.push_back(&LUAInterface::Instance());
 #endif
@@ -345,8 +345,6 @@ void GWToolbox::Initialize() {
         }
         if (!is_core) module->LoadSettings(inifile);
     }
-
-    Updater::Instance().CheckForUpdate();
 
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
         && GW::Agents::GetAgentArray().valid()
