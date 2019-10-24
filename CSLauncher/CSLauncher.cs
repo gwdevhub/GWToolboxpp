@@ -68,7 +68,7 @@ namespace CSLauncher {
 
 #if DEBUG
             // do nothing, we'll use GWToolbox.dll in /Debug
-            string dllfile = System.IO.Path.GetDirectoryName(Application.ExecutablePath) + "\\GWToolbox.dll";
+            string dllfile = System.IO.Path.GetDirectoryName(Application.ExecutablePath) + "\\JonsGWToolbox.dll";
 #else
             // Download or update if needed
             string dllfile = toolboxdir + DLL_NAME;
