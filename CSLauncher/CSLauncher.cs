@@ -10,10 +10,17 @@ using System.IO;
 using System.Net;
 using System.Security.Principal;
 using GWCA.Memory;
+using System.Security.Cryptography.X509Certificates;
+using System.Net.Security;
+using System.Web.Script.Serialization;
 
 namespace CSLauncher {
+    public class GithubRelease
+    {
+        public string tag_name { get; set; }
+    };
     static class CSLauncher {
-        const string DLL_NAME = "GWToolbox.dll";
+        const string DLL_NAME = "JonsGWToolbox.dll";
         const string DLL_DIRECTORY = "\\GWToolboxpp\\" + DLL_NAME;
 
         static readonly string[] LOADMODULE_RESULT_MESSAGES = {
@@ -27,7 +34,7 @@ namespace CSLauncher {
             "Remote thread did not finish dll initialization.",
             "VirtualFreeEx deallocation unsuccessful."
         };
- 
+
         [STAThread]
         static void Main(string[] args) {
             Application.EnableVisualStyles();
@@ -46,9 +53,8 @@ namespace CSLauncher {
             }
 
             // names and paths
-            string localappdata = Environment.GetEnvironmentVariable("LocalAppData");
-            string settingsfolder = localappdata + "\\GWToolboxpp\\";
-            string inifile = settingsfolder + "GWToolbox.ini";
+            string toolboxdir = Environment.GetEnvironmentVariable("LocalAppData") + "\\GWToolboxpp\\";
+            string inifile = toolboxdir + "GWToolbox.ini";
 
             // Install resources
             ResInstaller installer = new ResInstaller();
@@ -59,15 +65,64 @@ namespace CSLauncher {
             string dllfile = System.IO.Path.GetDirectoryName(Application.ExecutablePath) + "\\" + DLL_NAME;
 #else
             // Download or update if needed
-            string dllfile = settingsfolder + DLL_NAME;
+            string dllfile = toolboxdir + DLL_NAME;
+            if (File.Exists(dllfile) && (new System.IO.FileInfo(dllfile).Length) < 1)
+                File.Delete(dllfile); // Delete file if exists with 0 length
             if (!File.Exists(dllfile)) {
-                string toolboxdir = Environment.GetEnvironmentVariable("LocalAppData") + "\\GWToolboxpp\\";
+                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
                 WebClient host = new WebClient();
-                string remoteversion = host.DownloadString(
-                    "https://raw.githubusercontent.com/3vcloud/GWToolboxpp/master/resources/toolboxversion.txt");
-                string dllurl = "https://github.com/3vcloud/GWToolboxpp/releases/download/" 
+                string remoteversion = "";
+                int tries = 0;
+
+                while(tries < 3 && remoteversion.Length == 0)
+                {
+                    try
+                    {
+                        string json = host.DownloadString("https://api.github.com/repos/3vcloud/GWToolboxpp/releases/latest");
+                        JavaScriptSerializer serializer = new JavaScriptSerializer();
+                        var item = serializer.Deserialize<GithubRelease>(json);
+                        remoteversion = item.tag_name == null ? "0" : item.tag_name;
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                        // todo
+                    }
+                    tries++;
+                }
+                if(remoteversion.Length == 0)
+                {
+                    MessageBox.Show("Failed to fetch current GWToolbox++ version after " + tries +" attempts.\n Check your internet connection and try again",
+                        "GWToolbox++ Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                    return;
+                }
+                tries = 0;
+                string dllurl = "https://github.com/3vcloud/GWToolboxpp/releases/download/"
                     + remoteversion + "_Release/" + DLL_NAME;
-                host.DownloadFile(dllurl, toolboxdir + DLL_NAME);
+                while (tries < 3 && remoteversion.Length == 0)
+                {
+                    try
+                    {
+                        host.DownloadFile(dllurl, dllfile);
+                        if (File.Exists(dllfile) && (new System.IO.FileInfo(dllfile).Length) < 1)
+                            File.Delete(dllfile); // Delete file if exists with 0 length
+                    }
+                    catch (Exception e)
+                    {
+                        // todo
+                    }
+                    tries++;
+                }
+                if (!File.Exists(dllfile))
+                {
+                    MessageBox.Show("Failed to download GWToolbox++ dll after " + tries + " attempts.\n Check your internet connection and try again",
+                        "GWToolbox++ Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                    return;
+                }
             }
 #endif
             // check again after download/update/build

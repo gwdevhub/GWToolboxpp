@@ -15,7 +15,7 @@ namespace CSLauncher {
             EnsureDirectoryExists(toolboxdir);
 
             // Config font
-            EnsureFileExists(Properties.Resources.Font, toolboxdir + "Font.ttf");
+            //EnsureFileExists(Properties.Resources.Font, toolboxdir + "Font.ttf");
         }
 
         private void EnsureDirectoryExists(string path) {

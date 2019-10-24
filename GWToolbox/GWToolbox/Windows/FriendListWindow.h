@@ -235,7 +235,7 @@ private:
 				return;
 			running = true;
 			thread = std::thread([this]() {
-				std::unique_lock lock(mutex);
+				std::unique_lock<std::mutex> lock(mutex);
 				lock.unlock();
 				while (!need_to_stop) {
 					lock.lock();
