@@ -212,10 +212,10 @@ public:
 	bool flash_window_on_party_invite = true;
 	bool flash_window_on_zoning = true;
 	bool focus_window_on_zoning = false;
-    	bool flash_window_on_cinematic = true;
-    	bool flash_window_on_trade = true;
+	bool flash_window_on_cinematic = true;
+	bool flash_window_on_trade = true;
 	bool focus_window_on_trade = false;
-    	bool flash_window_on_name_ping = true;
+	bool flash_window_on_name_ping = true;
 
 	bool auto_return_on_defeat = false;
 
@@ -234,24 +234,22 @@ public:
 	clock_t afk_message_time = 0;
 
 	bool show_timestamps = false;
-    	bool show_timestamp_seconds = false;
-    	bool show_timestamp_24h = false;
+	bool show_timestamp_seconds = false;
+	bool show_timestamp_24h = false;
 	Color timestamps_color = 0;
 
 	bool notify_when_friends_online = true;
-    	bool notify_when_friends_offline = false;
-    	bool notify_when_friends_join_outpost = true;
-    	bool notify_when_friends_leave_outpost = false;
+	bool notify_when_friends_offline = false;
+	bool notify_when_friends_join_outpost = true;
+	bool notify_when_friends_leave_outpost = false;
 
-    	bool notify_when_players_join_outpost = false;
-    	bool notify_when_players_leave_outpost = false;
+	bool notify_when_players_join_outpost = false;
+	bool notify_when_players_leave_outpost = false;
 
 	bool notify_when_party_member_leaves = false;
 	bool notify_when_party_member_joins = false;
 
 	bool disable_gold_selling_confirmation = false;
-
-    	bool add_special_npcs_to_party_window = true;
 
 	void ApplyBorderless(bool value);
 	void SetAfkMessage(std::wstring&& message);
@@ -275,12 +273,14 @@ private:
 	GW::MemoryPatcher *tome_patch = nullptr;
 	GW::MemoryPatcher *gold_confirm_patch = nullptr;
 	std::vector<std::wstring> previous_party_names;
+
 	bool was_leading = true;
 	bool check_message_on_party_change = true;
-
-    	bool npc_speech_bubbles_as_chat = false;
-    	bool emulated_speech_bubble = false;
-    	bool redirect_npc_messages_to_emote_chat = false;
+    bool npc_speech_bubbles_as_chat = false;
+    bool emulated_speech_bubble = false;
+    bool redirect_npc_messages_to_emote_chat = false;
+	bool auto_age2_on_age = true;
+	bool auto_age_on_vanquish = false;
     
 	void DrawChannelColor(const char *name, GW::Chat::Channel chan);
 	static void FriendStatusCallback(
@@ -290,14 +290,14 @@ private:
 		const wchar_t *name,
 		const wchar_t *charname);
 
+	bool GetPlayerIsLeader();
+
+	GW::HookEntry VanquishComplete_Entry;
 	GW::HookEntry StartWhisperCallback_Entry;
 	GW::HookEntry WhisperCallback_Entry;
 	GW::HookEntry SendChatCallback_Entry;
 	GW::HookEntry ItemClickCallback_Entry;
 	GW::HookEntry FriendStatusCallback_Entry;
-
-    	bool GetPlayerIsLeader();
-
 	GW::HookEntry PartyDefeated_Entry;
 	GW::HookEntry AgentState_Entry;
 	GW::HookEntry AgentRemove_Entry;
@@ -311,6 +311,7 @@ private:
 	GW::HookEntry DisplayDialogue_Entry;
 	GW::HookEntry MessageNPC_Entry;
 	GW::HookEntry MessageLocal_Entry;
+	GW::HookEntry MessageServer_Entry;
 	GW::HookEntry PlayerJoinInstance_Entry;
 	GW::HookEntry PlayerLeaveInstance_Entry;
 };

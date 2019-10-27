@@ -872,6 +872,50 @@ void GameSettings::Initialize() {
         if(m) pending_messages.push_back(m);
 		status->blocked = true; // consume original packet.
     });
+	// - Automatic /age on vanquish
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::VanquishComplete>(&VanquishComplete_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::VanquishComplete* pak) -> void {
+		if (!auto_age_on_vanquish)
+			return;
+		GW::GameThread::Enqueue([]() {
+			GW::Chat::SendChat('/', "age");
+			});
+		});
+	// - Automatically send /age2 on /age.
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&DisplayDialogue_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::MessageServer* pak) -> void {
+		if (!auto_age2_on_age)
+			return; // Disabled or message pending
+		GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
+		if (!buff || !buff->valid() || !buff->size()) {
+			status->blocked = true; // No buffer, may have already been cleared.
+			return;
+		}
+		//0x8101 0x641F 0x86C3 0xE149 0x53E8 0x101 0x107 = You have been in this map for n minutes.
+		//0x8101 0x641E 0xE7AD 0xEF64 0x1676 0x101 0x107 0x102 0x107 = You have been in this map for n hours and n minutes.
+		wchar_t* msg = buff->begin();
+		if (msg[0] != 0x8101)
+			return;
+		static wchar_t msg_check_mins[4] = { 0x641F, 0x86C3, 0xE149, 0x53E8 };
+		static wchar_t msg_check_hours[4] = { 0x641E, 0xE7AD, 0xEF64, 0x1676 };
+		if (msg[1] == msg_check_mins[0]) {
+			for (unsigned int i = 0; i < 4; i++) {
+				if (msg[i+1] != msg_check_mins[i])
+					return;
+			}
+		}
+		else if (msg[1] == msg_check_hours[1]) {
+			for (unsigned int i = 0; i < 4; i++) {
+				if (msg[i + 1] != msg_check_hours[i])
+					return;
+			}
+		}
+		else {
+			return;
+		}
+		GW::GameThread::Enqueue([]() {
+			GW::Chat::SendChat('/', "age2");
+			});
+		});
+	// 0x8101 0x641E 0xE7AD 0xEF64 0x1676
     // - NPC teamchat messages to emote chat (emulate speech bubble instead)
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageNPC>(&MessageNPC_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::MessageNPC* pak) -> void {
             if (!redirect_npc_messages_to_emote_chat || !pak->sender_name)
@@ -1150,7 +1194,8 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     notify_when_players_join_outpost = ini->GetBoolValue(Name(), VAR_NAME(notify_when_players_join_outpost), notify_when_players_join_outpost);
     notify_when_players_leave_outpost = ini->GetBoolValue(Name(), VAR_NAME(notify_when_players_leave_outpost), notify_when_players_leave_outpost);
 
-    add_special_npcs_to_party_window = ini->GetBoolValue(Name(), VAR_NAME(add_special_npcs_to_party_window), add_special_npcs_to_party_window);
+    auto_age_on_vanquish = ini->GetBoolValue(Name(), VAR_NAME(auto_age_on_vanquish), auto_age_on_vanquish);
+	auto_age2_on_age = ini->GetBoolValue(Name(), VAR_NAME(auto_age2_on_age), auto_age2_on_age);
 
 	::LoadChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
 	::LoadChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);
@@ -1258,7 +1303,8 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(notify_when_players_join_outpost), notify_when_players_join_outpost);
     ini->SetBoolValue(Name(), VAR_NAME(notify_when_players_leave_outpost), notify_when_players_leave_outpost);
 
-    ini->SetBoolValue(Name(), VAR_NAME(add_special_npcs_to_party_window), add_special_npcs_to_party_window);
+    ini->SetBoolValue(Name(), VAR_NAME(auto_age_on_vanquish), auto_age_on_vanquish);
+	ini->SetBoolValue(Name(), VAR_NAME(auto_age2_on_age), auto_age2_on_age);
 
 	::SaveChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
 	::SaveChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);
@@ -1310,6 +1356,10 @@ void GameSettings::DrawSettingInternal() {
             GW::Chat::SetTimestampsColor(timestamps_color);
         ImGui::Unindent();
     }
+	ImGui::Checkbox("Automatic /age on vanquish", &auto_age2_on_age);
+	ImGui::ShowHelp("As soon as a vanquish is complete, send /age command to game server to receive server-side completion time.");
+	ImGui::Checkbox("Automatic /age2 on /age", &auto_age2_on_age);
+	ImGui::ShowHelp("GWToolbox++ will show /age2 time after /age is shown in chat");
 	ImGui::Checkbox("Shorthand item description on weapon ping", &shorthand_item_ping);
 	ImGui::ShowHelp("Include a concise description of your equipped weapon when ctrl+clicking a weapon set");
 	ImGui::Checkbox("Show NPC speech bubbles in emote channel", &npc_speech_bubbles_as_chat);
@@ -1421,12 +1471,6 @@ void GameSettings::DrawSettingInternal() {
 		"Disable the confirmation request when\n"
 		"selling Gold and Green items introduced\n"
 		"in February 5, 2019 update.");
-    ImGui::Checkbox("Add special NPCs to party window", &add_special_npcs_to_party_window);
-    ImGui::ShowHelp("Adds the following NPCs to party window when available:\n"
-    "Ebon Vanguard Assassin\n"
-    "Polymock summon e.g. Ice Imp, Naga Shaman etc\n"
-    "Fissure of Woe: Forest Griffons\n"
-    "Fissure of Woe: Eternal Forgemaster\n");
 }
 
 void GameSettings::DrawBorderlessSetting() {

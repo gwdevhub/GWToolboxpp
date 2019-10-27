@@ -166,7 +166,7 @@ bool PartyWindowModule::ShouldRemoveAgentFromPartyWindow(uint32_t agent_id) {
 }
 void PartyWindowModule::LoadDefaults() {
 	ClearSpecialNPCs();
-	AddSpecialNPC({ "Luxon Longbow", 3087, GW::Constants::MapID::Fort_Aspenwood_mission });
+	/*AddSpecialNPC({ "Luxon Longbow", 3087, GW::Constants::MapID::Fort_Aspenwood_mission });
 	AddSpecialNPC({ "Luxon Monk", 3588, GW::Constants::MapID::Fort_Aspenwood_mission });
 	AddSpecialNPC({ "Luxon Priest", 3024, GW::Constants::MapID::Fort_Aspenwood_mission });
 	AddSpecialNPC({ "Luxon Warrior", 3032, GW::Constants::MapID::Fort_Aspenwood_mission });
@@ -174,14 +174,14 @@ void PartyWindowModule::LoadDefaults() {
 	AddSpecialNPC({ "Kurzick Warrior", 3369, GW::Constants::MapID::Fort_Aspenwood_mission });
 	AddSpecialNPC({ "Kurzick Ranger", 3370, GW::Constants::MapID::Fort_Aspenwood_mission });
 	AddSpecialNPC({ "Kurzick Elementalist", 3367, GW::Constants::MapID::Fort_Aspenwood_mission });
-	AddSpecialNPC({ "Kurzick Necromancer", 3030, GW::Constants::MapID::Fort_Aspenwood_mission });
+	AddSpecialNPC({ "Kurzick Necromancer", 3030, GW::Constants::MapID::Fort_Aspenwood_mission });*/
 
 	AddSpecialNPC({ "Vale friendly spirit 1", 2349, GW::Constants::MapID::The_Underworld });
-	AddSpecialNPC({ "Vale friendly spitit 2", 2350, GW::Constants::MapID::The_Underworld });
-	AddSpecialNPC({ "Pits friendly spirit 1", 2358, GW::Constants::MapID::The_Underworld });
-	AddSpecialNPC({ "Pits friendly spitit 2", 2359, GW::Constants::MapID::The_Underworld });
-	AddSpecialNPC({ "Pits friendly spirit 3", 2360, GW::Constants::MapID::The_Underworld });
-	AddSpecialNPC({ "Pits friendly spitit 4", 2351, GW::Constants::MapID::The_Underworld });
+	AddSpecialNPC({ "Vale friendly spirit 2", 2350, GW::Constants::MapID::The_Underworld });
+    AddSpecialNPC({ "Pits friendly spirit 1", 2351, GW::Constants::MapID::The_Underworld });
+	AddSpecialNPC({ "Pits friendly spirit 2", 2358, GW::Constants::MapID::The_Underworld });
+	AddSpecialNPC({ "Pits friendly spirit 3", 2359, GW::Constants::MapID::The_Underworld });
+	AddSpecialNPC({ "Pits friendly spirit 4", 2360, GW::Constants::MapID::The_Underworld });
 
 	AddSpecialNPC({ "Gyala Hatchery siege turtle", 3582, GW::Constants::MapID::Gyala_Hatchery_outpost_mission });
 	
@@ -229,7 +229,7 @@ bool PartyWindowModule::ShouldAddAgentToPartyWindow(GW::Agent* a) {
 void PartyWindowModule::DrawSettingInternal() {
 	if (ImGui::Checkbox("Add special NPCs to party window", &add_npcs_to_party_window))
 		CheckMap();
-	ImGui::ShowHelp("Enable or disable this feature");
+	ImGui::ShowHelp("Adds special NPCs to the Allies section of the party window within compass range.");
 	if (!add_npcs_to_party_window)
 		return;
 	ImGui::TextDisabled("Only works in an explorable area. Only works on NPCs; not enemies, minions or spirits.");
