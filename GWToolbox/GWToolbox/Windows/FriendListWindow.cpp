@@ -49,37 +49,37 @@ GW::Friend* FriendListWindow::Friend::GetFriend() {
 }
 // Start whisper to this player via their current char name.
 void FriendListWindow::Friend::StartWhisper() {
-	GW::GameThread::Enqueue([this]() {
-		if (current_char == nullptr)
-			return Log::Error("Player %s is not logged in", alias);
-		GW::UI::SendUIMessage(GW::UI::kOpenWhisper, &current_char->name, nullptr);
+    const wchar_t* alias_c = alias.c_str();
+    const wchar_t* charname = current_char ? current_char->name.c_str() : '\0';
+    
+	GW::GameThread::Enqueue([charname, alias_c]() {
+        if(!charname[0])
+            return Log::Error("Player %S is not logged in", alias_c);
+		GW::UI::SendUIMessage(GW::UI::kOpenWhisper, (wchar_t*)charname, nullptr);
 	});
 }
 // Send a whisper to this player advertising your current party
 void FriendListWindow::Friend::InviteToParty() {
-	GW::GameThread::Enqueue([this]() {
-		if (current_char == nullptr)
-			return Log::Error("Player %s is not logged in", alias);
-		
-		std::wstring* map_name = GetCurrentMapName();
-		if (!map_name) return;
-		GW::AreaInfo* ai = GW::Map::GetCurrentMapInfo();
-		if (!ai) return;
-		GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo();
-		if (!p || !p->players.valid())
-			return;
-		std::wstring professions;
-		for (unsigned int i = 0; p->players.size(); i++) {
-			GW::Player* pl = GW::PlayerMgr::GetPlayerByID(p->players[i].login_number);
-			if (!pl) return;
-			if (i > 0) professions += L", ";
-			professions += ProfNames[pl->primary];
-		}
-		wchar_t buffer[139] = { 0 };
-		swprintf(buffer, 138, L"%s,%s %d/%d (%s)", current_char->name.c_str(), map_name->c_str(), p->players.size(), ai->max_party_size,professions.c_str());
-		buffer[138] = 0;
-		GW::Chat::SendChat('"', buffer);
-		});
+    const wchar_t* alias_c = alias.c_str();
+    const wchar_t* charname = current_char ? current_char->name.c_str() : '\0';
+
+    GW::GameThread::Enqueue([charname, alias_c]() {
+        if (!charname[0])
+            return Log::Error("Player %S is not logged in", alias_c);
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
+            return Log::Error("You are not in an outpost");
+        std::wstring* map_name = GetCurrentMapName();
+        if (!map_name) return;
+        GW::AreaInfo* ai = GW::Map::GetCurrentMapInfo();
+        if (!ai) return;
+        GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo();
+        if (!p || !p->players.valid())
+            return;
+        wchar_t buffer[139] = { 0 };
+        swprintf(buffer, 138, L"%s,%s %d/%d", charname, map_name->c_str(), p->players.size(), ai->max_party_size);
+        buffer[138] = 0;
+        GW::Chat::SendChat('"', buffer);
+        });
 }
 // Get the character belonging to this friend (e.g. to find profession etc)
 FriendListWindow::Character* FriendListWindow::Friend::GetCharacter(const wchar_t* char_name) {
@@ -126,19 +126,20 @@ bool FriendListWindow::Friend::RemoveGWFriend() {
 /* Setters */
 // Update local friend record from raw info.
 FriendListWindow::Friend* FriendListWindow::SetFriend(uint8_t* uuid, uint8_t type, uint8_t status, uint32_t map_id, const wchar_t* charname, const wchar_t* alias) {
+    
 	Friend* lf = GetFriend(uuid);
 	if (!lf && charname)
 		lf = GetFriend(charname);
 	if(!lf && alias)
 		lf = GetFriend(alias);
+	std::lock_guard<std::mutex> lock(friends_mutex);
 	if(!lf) {
 		// New friend
-		Friend nlf;
-		nlf.uuid = std::string((char*)uuid);
-		nlf.type = type;
-		nlf.alias = std::wstring(alias);
-		friends.emplace(nlf.uuid, nlf);
-		lf = GetFriend(uuid);
+        lf = new Friend();
+        lf->uuid = std::string((char*)uuid);
+        lf->type = type;
+        lf->alias = std::wstring(alias);
+		friends.emplace(lf->uuid, lf);
 	}
 	if (!lf->uuid[0] || strcmp((char*)uuid, lf->uuid.c_str())) {
 		// UUID is different. This could be because toolbox created a uuid and it needs updating.
@@ -187,10 +188,11 @@ FriendListWindow::Friend* FriendListWindow::GetFriend(GW::Friend* f) {
 }
 // Find existing record for friend by uuid
 FriendListWindow::Friend* FriendListWindow::GetFriend(uint8_t* uuid) {
-	std::map<std::string, Friend>::iterator it = friends.find((char*)uuid);
+    std::lock_guard<std::mutex> lock(friends_mutex);
+	std::map<std::string, Friend*>::iterator it = friends.find((char*)uuid);
 	if (it == friends.end())
 		return nullptr;
-	return &it->second; // Found in cache
+	return it->second; // Found in cache
 }
 
 /* FriendListWindow basic functions etc */
@@ -209,13 +211,10 @@ void FriendListWindow::Initialize() {
 			lf->RemoveGWFriend();
 		}
 		lf->last_update = clock();
-       
     });
 	// If a friend has just logged in on a character in this map, record their profession.
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::PlayerJoinInstance* pak) {
-		wchar_t player_name[30] = { 0 };
-		
-		wcscpy(player_name, pak->player_name);
+        const wchar_t* player_name = std::wstring(pak->player_name).c_str();
 		worker.Add([this, player_name](){
 			//Log::Log("%s: Checking player profession %ls\n", player_name);
 			GW::Player* a = GW::PlayerMgr::GetPlayerByName(player_name);
@@ -246,7 +245,7 @@ void FriendListWindow::Update(float delta) {
 		return;
 	if (!poll_queued) {
 		int interval_check = poll_interval_seconds * CLOCKS_PER_SEC;
-		if (clock() - friends_list_checked > interval_check) {
+		if (!friends_list_checked || clock() - friends_list_checked > interval_check) {
 			//Log::Log("Queueing poll friends list\n");
 			poll_queued = true;
 			worker.Add([this]() {
@@ -274,11 +273,11 @@ void FriendListWindow::Poll() {
 		lf->last_update = now;
 	}
 	//Log::Log("Polling non-gw friends list\n");
-    std::map<std::string, Friend>::iterator it = friends.begin();
+    std::map<std::string, Friend*>::iterator it = friends.begin();
     while (it != friends.end()) {
         if (fl->number_of_friend >= 100)
             break; // No more space to add friends.
-        Friend* lf = &it->second;
+        Friend* lf = it->second;
         if (lf->is_tb_friend && lf->NeedToUpdate(now) && !lf->GetFriend()) {
             // Add the friend to friend list. The RegisterFriendStatusCallback will remove it once we get the response.
 			lf->AddGWFriend();
@@ -314,12 +313,12 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
 	}
     ImGui::Separator();
     ImGui::BeginChild("friend_list_scroll");
-    for (std::map<std::string, Friend>::iterator it = friends.begin(); it != friends.end(); ++it) {
+    for (std::map<std::string, Friend*>::iterator it = friends.begin(); it != friends.end(); ++it) {
 		colIdx = 0;
-		Friend* lfp = &it->second;
+		Friend* lfp = it->second;
         if (lfp->type != GW::FriendType_Friend) continue;
 		// Get actual object instead of pointer just in case it becomes invalid half way through the draw.
-		Friend lf = it->second;
+		Friend lf = *lfp;
 		if (lf.IsOffline()) continue;
 		if (lf.alias.empty()) continue;
 		
@@ -401,18 +400,18 @@ void FriendListWindow::SaveSettings(CSimpleIni* ini) {
     SaveToFile();
 }
 void FriendListWindow::SignalTerminate() {
+    // Try to remove callbacks here.
 	GW::FriendListMgr::RemoveFriendStatusCallback(&FriendStatusUpdate_Entry);
 	GW::StoC::RemoveCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry);
 	// Remove any friends added via toolbox.
 	worker.Add([this]() {
 		GW::GameThread::Enqueue([this]() {
-			for (std::map<std::string, Friend>::iterator it = friends.begin();  it != friends.end(); it++) {
-				Friend f = it->second;
-				if (!f.is_tb_friend)
-					continue;
-				if (!f.GetFriend())
-					continue;
-				f.RemoveGWFriend();
+            std::lock_guard<std::mutex> lock(friends_mutex);
+			for (std::map<std::string, Friend*>::iterator it = friends.begin();  it != friends.end(); it++) {
+				Friend* f = it->second;
+                if (f->is_tb_friend && f->GetFriend()) {
+                    f->RemoveGWFriend();
+                }
 			}
 			worker.Stop();
 			});
@@ -423,12 +422,22 @@ bool FriendListWindow::CanTerminate() {
 }
 void FriendListWindow::Terminate() {
     ToolboxWindow::Terminate();
-    should_stop = true;
+    // Try to remove callbacks AGAIN here.
+    GW::FriendListMgr::RemoveFriendStatusCallback(&FriendStatusUpdate_Entry);
+    GW::StoC::RemoveCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry);
+    // Free memory for Friends list.
+    std::lock_guard<std::mutex> lock(friends_mutex);
+    for (std::map<std::string, Friend*>::iterator it = friends.begin(); it != friends.end(); it++) {
+        if (it->second)
+            delete it->second;
+    }
+    friends.clear();
 }
 void FriendListWindow::LoadFromFile() {
 	loading = true;
 	Log::Log("%s: Loading friends from ini", Name());
 	worker.Add([this]() {
+        std::lock_guard<std::mutex> lock(friends_mutex);
 		// clear builds from toolbox
 		uuid_by_name.clear();
 		friends.clear();
@@ -444,13 +453,14 @@ void FriendListWindow::LoadFromFile() {
 			b64_dec(entry.pItem, uuid);
 			uint8_t type = 0;
 
-			Friend lf;
-			lf.uuid = std::string(uuid);
-			lf.alias = GuiUtils::StringToWString(inifile->GetValue(entry.pItem, "alias", ""));
-			lf.type = inifile->GetLongValue(entry.pItem, "type", lf.type);
-			if (lf.uuid.empty() || lf.alias.empty())
-				continue; // Error, alias or uuid empty.
-			GW::Friend* f = lf.GetFriend();
+			Friend* lf = new Friend();
+			lf->uuid = std::string(uuid);
+			lf->alias = GuiUtils::StringToWString(inifile->GetValue(entry.pItem, "alias", ""));
+			lf->type = (uint8_t)inifile->GetLongValue(entry.pItem, "type", lf->type);
+            if (lf->uuid.empty() || lf->alias.empty()) {
+                delete lf;
+                continue; // Error, alias or uuid empty.
+            }
 
 			// Grab char names
 			CSimpleIniA::TNamesDepend values;
@@ -469,15 +479,16 @@ void FriendListWindow::LoadFromFile() {
 					if (p > 0 && p < 10)
 						profession = (uint8_t)p;
 				}
-				lf.SetCharacter(name.c_str(), profession);
+				lf->SetCharacter(name.c_str(), profession);
 			}
-			if (lf.characters.empty())
-				continue; // Error, should have at least 1 charname...
-			friends.emplace(lf.uuid, lf);
-			for (std::map<std::wstring, Character>::iterator it2 = lf.characters.begin(); it2 != lf.characters.end(); ++it2) {
+            if (lf->characters.empty()) {
+                delete lf;
+                continue; // Error, should have at least 1 charname...
+            }
+			friends.emplace(lf->uuid, lf);
+			for (std::map<std::wstring, Character>::iterator it2 = lf->characters.begin(); it2 != lf->characters.end(); ++it2) {
 				uuid_by_name.emplace(it2->first, uuid);
 			}
-			if (f) SetFriend(f);
 		}
 		Log::Log("%s: Loaded friends from ini", Name());
 		loading = false;
@@ -492,9 +503,10 @@ void FriendListWindow::SaveToFile() {
     if (friends.empty())
         return; // Error, should have at least 1 friend
     inifile->Reset();
-    for (std::map<std::string, Friend>::iterator it = friends.begin(); it != friends.end(); ++it) {
+    std::lock_guard<std::mutex> lock(friends_mutex);
+    for (std::map<std::string, Friend*>::iterator it = friends.begin(); it != friends.end(); ++it) {
         // do something
-        Friend lf = it->second;
+        Friend lf = *it->second;
 		char uuid[128];
 		b64_enc((wchar_t*)lf.uuid.data(),lf.uuid.size(),uuid);
         inifile->SetLongValue(uuid, "type", lf.type);

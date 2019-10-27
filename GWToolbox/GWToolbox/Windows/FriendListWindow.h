@@ -137,12 +137,6 @@ private:
         }
     };
 
-	// Functions for sorting friend list by online status etc.
-	typedef std::function<bool(std::pair<std::string, Friend>, std::pair<std::string, Friend>)> Comparator;
-	Comparator compFunctor = [](std::pair<std::string, Friend> elem1, std::pair<std::string, Friend> elem2) {
-		return elem1.second.status < elem1.second.status;
-	};
-
 	Friend* SetFriend(uint8_t*, uint8_t, uint8_t, uint32_t, const wchar_t*, const wchar_t*);
 	Friend* SetFriend(GW::Friend*);
 	Friend* GetFriend(const wchar_t*);
@@ -183,8 +177,6 @@ public:
 
     void LoadFromFile();
     void SaveToFile();
-
-
 
 private:
     CSimpleIni* inifile = nullptr;
@@ -260,7 +252,8 @@ private:
     std::map<std::wstring, std::string> uuid_by_name;
 
     // Main store of Friend info
-    std::map<std::string, Friend> friends;
+    std::map<std::string, Friend*> friends;
+    std::mutex friends_mutex;
 
 	bool show_location = true;
 
