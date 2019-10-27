@@ -50,14 +50,6 @@ namespace CSLauncher {
             WindowsPrincipal principal = new WindowsPrincipal(identity);
             bool isElevated = principal.IsInRole(WindowsBuiltInRole.Administrator);
 
-            if(!isElevated) {
-                MessageBox.Show("Please run the launcher as Admin.",
-                                   "GWToolbox++ Error",
-                                   MessageBoxButtons.OK,
-                                   MessageBoxIcon.Error);
-                return;
-            }
-
             // names and paths
             string toolboxdir = Environment.GetEnvironmentVariable("LocalAppData") + "\\GWToolboxpp\\";
             string inifile = toolboxdir + "GWToolbox.ini";
@@ -164,7 +156,9 @@ namespace CSLauncher {
             switch(gwprocs.Length) {
                 case 0: // No gw processes found.
                     MessageBox.Show("No Guild Wars clients found.\n" +
-                                    "Please log into Guild Wars first.", 
+                                    (!isElevated ? 
+                                    "If Guild Wars is currently running as Admin, this launcher also needs Admin permission to run GWToolbox++" 
+                                    : "Please log into Guild Wars first."), 
                                     "GWToolbox++ Error", 
                                     MessageBoxButtons.OK, 
                                     MessageBoxIcon.Error);

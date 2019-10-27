@@ -30,9 +30,9 @@
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(CharSelector));
             this.groupBoxCharSelect = new System.Windows.Forms.GroupBox();
+            this.buttonExpand = new System.Windows.Forms.Button();
             this.buttonLaunch = new System.Windows.Forms.Button();
             this.comboBox = new System.Windows.Forms.ComboBox();
-            this.buttonExpand = new System.Windows.Forms.Button();
             this.buttonCheckAll = new System.Windows.Forms.Button();
             this.buttonUncheckAll = new System.Windows.Forms.Button();
             this.checkedListBox = new System.Windows.Forms.CheckedListBox();
@@ -50,6 +50,16 @@
             this.groupBoxCharSelect.TabIndex = 0;
             this.groupBoxCharSelect.TabStop = false;
             this.groupBoxCharSelect.Text = "Select Character...";
+            // 
+            // buttonExpand
+            // 
+            this.buttonExpand.Location = new System.Drawing.Point(11, 18);
+            this.buttonExpand.Name = "buttonExpand";
+            this.buttonExpand.Size = new System.Drawing.Size(20, 23);
+            this.buttonExpand.TabIndex = 2;
+            this.buttonExpand.Text = "^";
+            this.buttonExpand.UseVisualStyleBackColor = true;
+            this.buttonExpand.Click += new System.EventHandler(this.buttonExpand_Click);
             // 
             // buttonLaunch
             // 
@@ -70,26 +80,8 @@
             this.comboBox.Size = new System.Drawing.Size(139, 21);
             this.comboBox.TabIndex = 0;
             // 
-            // checkedListBox
-            //
-            this.checkedListBox.CheckOnClick = true;
-            this.checkedListBox.FormattingEnabled = true;
-            this.checkedListBox.Location = new System.Drawing.Point(31, 19);
-            this.checkedListBox.Name = "checkedListBox";
-            this.checkedListBox.Size = new System.Drawing.Size(143, 169);
-            this.checkedListBox.TabIndex = 0;
-            // 
-            // buttonExpand
-            // 
-            this.buttonExpand.Location = new System.Drawing.Point(11, 18);
-            this.buttonExpand.Name = "buttonExpand";
-            this.buttonExpand.Size = new System.Drawing.Size(20, 23);
-            this.buttonExpand.TabIndex = 2;
-            this.buttonExpand.Text = "^";
-            this.buttonExpand.UseVisualStyleBackColor = true;
-            this.buttonExpand.Click += new System.EventHandler(this.buttonExpand_Click);
-
             // buttonCheckAll
+            // 
             this.buttonCheckAll.Location = new System.Drawing.Point(176, 47);
             this.buttonCheckAll.Name = "buttonCheckAll";
             this.buttonCheckAll.Size = new System.Drawing.Size(75, 23);
@@ -107,6 +99,15 @@
             this.buttonUncheckAll.Text = "Uncheck All";
             this.buttonUncheckAll.UseVisualStyleBackColor = true;
             this.buttonUncheckAll.Click += new System.EventHandler(this.buttonUncheckAll_Click);
+            // 
+            // checkedListBox
+            // 
+            this.checkedListBox.CheckOnClick = true;
+            this.checkedListBox.FormattingEnabled = true;
+            this.checkedListBox.Location = new System.Drawing.Point(31, 19);
+            this.checkedListBox.Name = "checkedListBox";
+            this.checkedListBox.Size = new System.Drawing.Size(143, 169);
+            this.checkedListBox.TabIndex = 0;
             // 
             // CharSelector
             // 

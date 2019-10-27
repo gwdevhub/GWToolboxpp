@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Diagnostics;
 using GWCA.Memory;
+using System.Security.Principal;
+using System.Runtime.InteropServices;
 
 namespace CSLauncher
 {
@@ -34,8 +36,15 @@ namespace CSLauncher
 			if (check_procs.Length < 1)
 				return check_procs;
 			int validProcs = 0;
-			for (int i = 0; i < check_procs.Length; i++)
+            // Check for admin rights.
+            WindowsIdentity identity = WindowsIdentity.GetCurrent();
+            WindowsPrincipal principal = new WindowsPrincipal(identity);
+            bool isElevated = principal.IsInRole(WindowsBuiltInRole.Administrator);
+
+            for (int i = 0; i < check_procs.Length; i++)
 			{
+                if (!isElevated && ProcessHelper.IsProcessOwnerAdmin(check_procs[i]))
+                    continue; // Guild wars has higher privileges
 				GWCAMemory mem = new GWCAMemory(check_procs[i]);
 				if (mem.Read<Int32>(new IntPtr(0x00DE0000)) != 0)
 					continue;
@@ -120,6 +129,57 @@ namespace CSLauncher
             for (int i = 0; i < checkedListBox.Items.Count; ++i) {
                 checkedListBox.SetItemCheckState(i, CheckState.Unchecked);
             }
+        }
+    }
+    static class ProcessHelper
+    {
+        [DllImport("advapi32.dll", SetLastError = true)]
+        private static extern bool OpenProcessToken(IntPtr ProcessHandle, UInt32 DesiredAccess, out IntPtr TokenHandle);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool CloseHandle(IntPtr hObject);
+
+        private const int STANDARD_RIGHTS_REQUIRED = 0xF0000;
+        private const int TOKEN_ASSIGN_PRIMARY = 0x1;
+        private const int TOKEN_DUPLICATE = 0x2;
+        private const int TOKEN_IMPERSONATE = 0x4;
+        private const int TOKEN_QUERY = 0x8;
+        private const int TOKEN_QUERY_SOURCE = 0x10;
+        private const int TOKEN_ADJUST_GROUPS = 0x40;
+        private const int TOKEN_ADJUST_PRIVILEGES = 0x20;
+        private const int TOKEN_ADJUST_SESSIONID = 0x100;
+        private const int TOKEN_ADJUST_DEFAULT = 0x80;
+        private const int TOKEN_ALL_ACCESS = (STANDARD_RIGHTS_REQUIRED | TOKEN_ASSIGN_PRIMARY | TOKEN_DUPLICATE | TOKEN_IMPERSONATE | TOKEN_QUERY | TOKEN_QUERY_SOURCE | TOKEN_ADJUST_PRIVILEGES | TOKEN_ADJUST_GROUPS | TOKEN_ADJUST_SESSIONID | TOKEN_ADJUST_DEFAULT);
+
+        public static bool IsProcessOwnerAdmin(Process proc)
+        {
+            IntPtr ph = IntPtr.Zero;
+            try
+            {
+                OpenProcessToken(proc.Handle, TOKEN_ALL_ACCESS, out ph);
+            }
+            catch (Exception)
+            {
+                return true; // Presume true if we can't even access it...
+            }
+            WindowsIdentity iden = new WindowsIdentity(ph);
+            bool result = false;
+            foreach (IdentityReference role in iden.Groups)
+            {
+                if (!role.IsValidTargetType(typeof(SecurityIdentifier)))
+                    continue;
+                SecurityIdentifier sid = role as SecurityIdentifier;
+                if (!sid.IsWellKnown(WellKnownSidType.AccountAdministratorSid) || sid.IsWellKnown(WellKnownSidType.BuiltinAdministratorsSid))
+                    continue;
+                result = true;
+                break;
+            }
+            CloseHandle(ph);
+            return result;
+        }
+        public static bool IsProcessOwnerAdmin(string processName)
+        {
+            return IsProcessOwnerAdmin(Process.GetProcessesByName(processName)[0]);
         }
     }
 }
