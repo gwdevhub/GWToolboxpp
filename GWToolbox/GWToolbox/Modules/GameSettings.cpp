@@ -1071,9 +1071,10 @@ GW::Friend* GameSettings::GetOnlineFriend(wchar_t* account, wchar_t* playing) {
     uint32_t n_friends = fl->number_of_friend, n_found = 0;
     GW::FriendsListArray& friends = fl->friends;
     for (GW::Friend* it : friends) {
+        if (n_found == n_friends) break;
         if (!it) continue;
         if (it->type != GW::FriendType_Friend) continue;
-		if (n_found == n_friends) break;
+        n_found++;
         if (it->status != GW::FriendStatus::FriendStatus_Online) continue;
         if (account && !wcsncmp(it->alias, account, 20))
             return it;
