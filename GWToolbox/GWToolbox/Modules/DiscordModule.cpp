@@ -174,33 +174,33 @@ time_t join_party_started_at = 0;
 time_t join_party_started = 0;
 time_t discord_connected_at = 0;
 
-void UpdateActivityCallback(void* data, enum EDiscordResult result) {
+static void UpdateActivityCallback(void* data, enum EDiscordResult result) {
     Log::Log(result == DiscordResult_Ok ? "Activity updated successfully.\n" : "Activity update FAILED!\n");
 }
-void OnJoinRequestReplyCallback(void* data, enum EDiscordResult result) {
+static void OnJoinRequestReplyCallback(void* data, enum EDiscordResult result) {
     Log::Log(result == DiscordResult_Ok ? "Join request reply sent successfully.\n" : "Join request reply send FAILED!\n");
 }
-void OnSendInviteCallback(void* data, enum EDiscordResult result) {
+static void OnSendInviteCallback(void* data, enum EDiscordResult result) {
     Log::Log(result == DiscordResult_Ok ? "Invite sent successfully.\n" : "Invite send FAILED!\n");
 }
-void OnNetworkMessage(void* event_data, DiscordNetworkPeerId peer_id, DiscordNetworkChannelId channel_id, uint8_t* data, uint32_t data_length) {
+static void OnNetworkMessage(void* event_data, DiscordNetworkPeerId peer_id, DiscordNetworkChannelId channel_id, uint8_t* data, uint32_t data_length) {
     Log::Log("Discord: Network message\n");
 }
-void OnJoinParty(void* event_data, const char* secret) {
+static void OnJoinParty(void* event_data, const char* secret) {
     Log::Log("Discord: on_activity_join %s\n",secret);
     memset(&join_in_progress, 0, sizeof(join_in_progress));
     b64_dec(secret, &join_in_progress);
 }
 // NOTE: In our game, anyone can join anyone else's party - work around for "ask to join" by auto-accepting.
-void OnJoinRequest(void* data, DiscordUser* user) {
+static void OnJoinRequest(void* data, DiscordUser* user) {
     Log::Log("Join request received from %s; automatically accept\n",user->username);
     Application* app = &DiscordModule::Instance().app;
     app->activities->send_request_reply(app->activities, user->id, EDiscordActivityJoinRequestReply::DiscordActivityJoinRequestReply_Yes, app, OnJoinRequestReplyCallback);
 }
-void OnPartyInvite(void* event_data, EDiscordActivityActionType type, DiscordUser* user, DiscordActivity* activity) {
+static void OnPartyInvite(void* event_data, EDiscordActivityActionType type, DiscordUser* user, DiscordActivity* activity) {
     Log::Log("Party invite received from %s\n", user->username);
 }
-void OnDiscordLog(void* data, enum EDiscordLogLevel level, const char* message) {
+static void OnDiscordLog(void* data, EDiscordLogLevel level, const char* message) {
     Log::Log("Discord Log Level %d: %s\n", level, message);
 }
 // Get pid from executable name (i.e. DiscordCanary.exe)
@@ -378,7 +378,7 @@ void DiscordModule::JoinParty() {
     }
     // In map - try to join party!
     wchar_t buf[128] = { 0 };
-    swprintf(buf, 128, L"invite %ls", join_in_progress.player);
+    swprintf(buf, 128, L"invite %s", join_in_progress.player);
     GW::Chat::SendChat('/', buf);
 	HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
 	SetForegroundWindow(hwnd);
@@ -429,8 +429,12 @@ void DiscordModule::ConnectCanary() {
 		FILETIME discord_canary_started;
 		FILETIME discord_started;
 		FILETIME dummy;
-		GetProcessTimes(OpenProcess(PROCESS_QUERY_INFORMATION, TRUE, discord_canary_pid), &discord_canary_started, &dummy, &dummy, &dummy);
-		GetProcessTimes(OpenProcess(PROCESS_QUERY_INFORMATION, TRUE, discord_pid), &discord_started, &dummy, &dummy, &dummy);
+		HANDLE proc = OpenProcess(PROCESS_QUERY_INFORMATION, TRUE, discord_canary_pid);
+		GetProcessTimes(proc, &discord_canary_started, &dummy, &dummy, &dummy);
+		if(proc) CloseHandle(proc);
+		proc = OpenProcess(PROCESS_QUERY_INFORMATION, TRUE, discord_pid);
+		GetProcessTimes(proc, &discord_started, &dummy, &dummy, &dummy);
+		if (proc) CloseHandle(proc);
 		discord_env = CompareFileTime(&discord_canary_started, &discord_started) ? 1 : 0;
 	}
 	SetEnvironmentVariable("DISCORD_INSTANCE_ID", discord_env ? "1" : "0");
@@ -599,7 +603,7 @@ void DiscordModule::UpdateActivity() {
             secret.language_id = map_language;
             secret.district_id = map_district;
 			secret.ghkey[0] = 0;
-            swprintf(secret.player, 32, L"%ls", GW::GameContext::instance()->character->player_name);
+            swprintf(secret.player, 32, L"%s", GW::GameContext::instance()->character->player_name);
 			if (is_guild_hall) {
 				for (size_t i = 0; i < 4; i++) {
 					secret.ghkey[i] = g->key.k[i];
@@ -615,7 +619,7 @@ void DiscordModule::UpdateActivity() {
 
         if (show_character_info) {
             sprintf(activity.assets.small_image, "profession_%d_512px", a->primary);
-            sprintf(activity.assets.small_text, "%ls (%s)", GW::GameContext::instance()->character->player_name, profession_names[a->primary]);
+            sprintf(activity.assets.small_text, "%S (%s)", GW::GameContext::instance()->character->player_name, profession_names[a->primary]);
         }
 
         if (show_location_info) {
@@ -659,10 +663,10 @@ void DiscordModule::UpdateActivity() {
                 sprintf(activity.state, "In Explorable");
             }
 			if (is_guild_hall) {
-				sprintf(activity.details, "%ls [%ls]", g->name, g->tag);
+				sprintf(activity.details, "%S [%S]", g->name, g->tag);
 			}
 			else {
-				sprintf(activity.details, "%ls", map_name_decoded.c_str());
+				sprintf(activity.details, "%S", map_name_decoded.c_str());
 			}
             sprintf(activity.assets.large_image, region_assets[map_region]);
             sprintf(activity.assets.large_text, "Region: %s", region_names[map_region]);
