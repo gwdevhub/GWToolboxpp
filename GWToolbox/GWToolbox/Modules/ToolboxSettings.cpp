@@ -51,6 +51,7 @@
 #include <Widgets/ClockWidget.h>
 #include <Widgets/VanquishWidget.h>
 #include <Widgets/AlcoholWidget.h>
+#include <Widgets/ServerInfoWidget.h>
 
 
 #include "ToolboxSettings.h"
@@ -105,6 +106,7 @@ void ToolboxSettings::InitializeModules() {
 	if (use_clock) ClockWidget::Instance().Initialize();
 	if (use_vanquish) VanquishWidget::Instance().Initialize();
 	if (use_alcohol) AlcoholWidget::Instance().Initialize();
+	if (use_serverinfo) ServerInfoWidget::Instance().Initialize();
 }
 
 void ToolboxSettings::DrawSettingInternal() {
@@ -154,6 +156,8 @@ void ToolboxSettings::DrawSettingInternal() {
 	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
 	ImGui::Checkbox("Party Window", &use_partywindowmodule);
 	ImGui::Checkbox("Friend List", &use_friendlist);
+	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
+	ImGui::Checkbox("Server Info", &use_serverinfo);
 
 	ImGui::PopID();
 
@@ -210,6 +214,7 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
 	use_twitch = ini->GetBoolValue(Name(), VAR_NAME(use_twitch), use_twitch);
 	use_partywindowmodule = ini->GetBoolValue(Name(), VAR_NAME(use_partywindowmodule), use_partywindowmodule);
 	use_friendlist = ini->GetBoolValue(Name(), VAR_NAME(use_friendlist), use_friendlist);
+	use_serverinfo = ini->GetBoolValue(Name(), VAR_NAME(use_serverinfo), use_serverinfo);
 
 	save_location_data = ini->GetBoolValue(Name(), VAR_NAME(save_location_data), false);
 }
@@ -242,6 +247,7 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(use_twitch), use_twitch);
 	ini->SetBoolValue(Name(), VAR_NAME(use_partywindowmodule), use_partywindowmodule);
 	ini->SetBoolValue(Name(), VAR_NAME(use_friendlist), use_friendlist);
+	ini->SetBoolValue(Name(), VAR_NAME(use_serverinfo), use_serverinfo);
 
 	ini->SetBoolValue(Name(), VAR_NAME(save_location_data), save_location_data);
 }

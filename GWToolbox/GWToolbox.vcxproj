@@ -15,7 +15,6 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>API</RootNamespace>
     <ProjectName>GWToolbox</ProjectName>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -127,6 +126,7 @@
     <ClInclude Include="GWToolbox\Modules\PartyWindowModule.h" />
     <ClInclude Include="GWToolbox\Modules\TwitchModule.h" />
     <ClInclude Include="GWToolbox\sha1.hpp" />
+    <ClInclude Include="GWToolbox\Widgets\ServerInfoWidget.h" />
     <ClInclude Include="GWToolbox\Windows\FriendListWindow.h" />
     <ClInclude Include="GWToolbox\Windows\PacketLoggerWindow.h" />
     <ClInclude Include="GWToolbox\Windows\DailyQuests.h" />
@@ -232,6 +232,7 @@
     <ClCompile Include="GWToolbox\Modules\PartyWindowModule.cpp" />
     <ClCompile Include="GWToolbox\Modules\TwitchModule.cpp" />
     <ClCompile Include="GWToolbox\sha1.cpp" />
+    <ClCompile Include="GWToolbox\Widgets\ServerInfoWidget.cpp" />
     <ClCompile Include="GWToolbox\Windows\FriendListWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\PacketLoggerWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\DailyQuests.cpp" />

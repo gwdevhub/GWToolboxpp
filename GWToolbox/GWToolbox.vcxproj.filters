@@ -298,6 +298,7 @@
     <ClInclude Include="GWToolbox\Windows\FriendListWindow.h" />
     <ClInclude Include="GWToolbox\Modules\TwitchModule.h" />
     <ClInclude Include="GWToolbox\Modules\PartyWindowModule.h" />
+    <ClInclude Include="GWToolbox\Widgets\ServerInfoWidget.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -461,6 +462,7 @@
     <ClCompile Include="GWToolbox\Windows\FriendListWindow.cpp" />
     <ClCompile Include="GWToolbox\Modules\TwitchModule.cpp" />
     <ClCompile Include="GWToolbox\Modules\PartyWindowModule.cpp" />
+    <ClCompile Include="GWToolbox\Widgets\ServerInfoWidget.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GWToolbox.rc">
