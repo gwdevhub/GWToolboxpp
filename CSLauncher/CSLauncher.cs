@@ -1,18 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Diagnostics;
-using System.Threading;
 using System.IO;
-using System.Net;
 using System.Security.Principal;
 using GWCA.Memory;
-using System.Security.Cryptography.X509Certificates;
-using System.Net.Security;
-using System.Web.Script.Serialization;
+using System.Runtime.InteropServices;
 
 namespace CSLauncher {
     struct GithubAsset
@@ -41,6 +34,30 @@ namespace CSLauncher {
             "VirtualFreeEx deallocation unsuccessful."
         };
 
+        [DllImport("user32.dll")]
+        private static extern IntPtr FindWindowEx(IntPtr hWndParent, IntPtr hWndChildAfter, string lpszClass,string lpszWindow);
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out Int32 lpdwProcessId);
+        static bool hasElevatedGWProcesses()
+        {
+            IntPtr hWndTargetWindow = FindWindowEx(IntPtr.Zero, IntPtr.Zero, "ArenaNet_Dx_Window_Class", null);
+            Process[] processList = Process.GetProcesses();
+            while (hWndTargetWindow != IntPtr.Zero)
+            {
+                Int32 pid = 0;
+                GetWindowThreadProcessId(hWndTargetWindow, out pid);
+                foreach (Process p in processList)
+                {
+                    if (p.Id != pid)
+                        continue;
+                    if (ProcessHelper.IsProcessOwnerAdmin(p))
+                        return true;
+                    break;
+                }
+                hWndTargetWindow = FindWindowEx(IntPtr.Zero, hWndTargetWindow, "ArenaNet_Dx_Window_Class", null);
+            }
+            return false;
+        }
         [STAThread]
         static void Main(string[] args) {
             Application.EnableVisualStyles();
@@ -155,10 +172,17 @@ namespace CSLauncher {
 			Process[] gwprocs = chargui.GetValidProcesses();
             switch(gwprocs.Length) {
                 case 0: // No gw processes found.
+                    if(!isElevated && hasElevatedGWProcesses())
+                    {
+                        MessageBox.Show("Guild Wars is running as Admin.\n" +
+                            "Restart Guild Wars without Admin, or run this launcher as Admin to run GWToolbox++",
+                            "GWToolbox++ Error",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error);
+                        return;
+                    }
                     MessageBox.Show("No Guild Wars clients found.\n" +
-                                    (!isElevated ? 
-                                    "If Guild Wars is currently running as Admin, this launcher also needs Admin permission to run GWToolbox++" 
-                                    : "Please log into Guild Wars first."), 
+                                    "Please log into Guild Wars first.", 
                                     "GWToolbox++ Error", 
                                     MessageBoxButtons.OK, 
                                     MessageBoxIcon.Error);
@@ -194,6 +218,57 @@ namespace CSLauncher {
                     return;
                 }
             }
+        }
+    }
+    static class ProcessHelper
+    {
+        [DllImport("advapi32.dll", SetLastError = true)]
+        private static extern bool OpenProcessToken(IntPtr ProcessHandle, UInt32 DesiredAccess, out IntPtr TokenHandle);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool CloseHandle(IntPtr hObject);
+
+        private const int STANDARD_RIGHTS_REQUIRED = 0xF0000;
+        private const int TOKEN_ASSIGN_PRIMARY = 0x1;
+        private const int TOKEN_DUPLICATE = 0x2;
+        private const int TOKEN_IMPERSONATE = 0x4;
+        private const int TOKEN_QUERY = 0x8;
+        private const int TOKEN_QUERY_SOURCE = 0x10;
+        private const int TOKEN_ADJUST_GROUPS = 0x40;
+        private const int TOKEN_ADJUST_PRIVILEGES = 0x20;
+        private const int TOKEN_ADJUST_SESSIONID = 0x100;
+        private const int TOKEN_ADJUST_DEFAULT = 0x80;
+        private const int TOKEN_ALL_ACCESS = (STANDARD_RIGHTS_REQUIRED | TOKEN_ASSIGN_PRIMARY | TOKEN_DUPLICATE | TOKEN_IMPERSONATE | TOKEN_QUERY | TOKEN_QUERY_SOURCE | TOKEN_ADJUST_PRIVILEGES | TOKEN_ADJUST_GROUPS | TOKEN_ADJUST_SESSIONID | TOKEN_ADJUST_DEFAULT);
+
+        public static bool IsProcessOwnerAdmin(Process proc)
+        {
+            IntPtr ph = IntPtr.Zero;
+            try
+            {
+                OpenProcessToken(proc.Handle, TOKEN_ALL_ACCESS, out ph);
+            }
+            catch (Exception)
+            {
+                return true; // Presume true if we can't even access it...
+            }
+            WindowsIdentity iden = new WindowsIdentity(ph);
+            bool result = false;
+            foreach (IdentityReference role in iden.Groups)
+            {
+                if (!role.IsValidTargetType(typeof(SecurityIdentifier)))
+                    continue;
+                SecurityIdentifier sid = role as SecurityIdentifier;
+                if (!sid.IsWellKnown(WellKnownSidType.AccountAdministratorSid) || sid.IsWellKnown(WellKnownSidType.BuiltinAdministratorsSid))
+                    continue;
+                result = true;
+                break;
+            }
+            CloseHandle(ph);
+            return result;
+        }
+        public static bool IsProcessOwnerAdmin(string processName)
+        {
+            return IsProcessOwnerAdmin(Process.GetProcessesByName(processName)[0]);
         }
     }
 }
