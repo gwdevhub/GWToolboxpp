@@ -300,19 +300,21 @@ GW::Item* Pcon::MoveItem(GW::Item* item, GW::Bag* bag, int slot, int quantity, u
 }
 // Blocking function - waits for item moves etc, dont run on main thread. False if not ready (i.e. keep trying)
 bool Pcon::RefillBlocking() {
+    auto refillable = [this]() {
+        return enabled && refill_if_below_threshold
+            && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost
+            && PconsWindow::Instance().GetEnabled()
+            && quantity < threshold;
+    };
     // Simple function to check for return or not.
-    if (!enabled || !PconsWindow::Instance().GetEnabled() || maptype != GW::Constants::InstanceType::Outpost) {
-        return true; // This Pcon disabled, all pcons disabled, or not in outpost.
-    }
-    if (!refill_if_below_threshold || quantity >= threshold) {
-        return true; // Not allowed to auto refill, or above the threshold already.
-    }
+    if (!refillable()) return true;
 	printf("Refilling %s", chat);
 	// Wait until inventory is ready.
 	uint32_t timeout_ms = 5000, i = 0;
 	while (i < timeout_ms) {
 		if (GW::Items::GetBagArray())
 			break;
+        if(!refillable()) return true;
 		std::this_thread::sleep_for(std::chrono::milliseconds(150));
 		i += 150;
 	}
@@ -353,6 +355,7 @@ bool Pcon::RefillBlocking() {
             int qty_before = inventoryItem->quantity;
 			if(inventoryItem->quantity == 0)
 				delete inventoryItem; // Empty slot was returned; free memory here.
+            if (!refillable()) return true;
 			// This next statement blocks until move completes.
 			GW::Item* updatedItem = MoveItem(storageItem, bag_to, slot_to, quantity_to_move, 3);
             UnreserveSlotForMove(bag_to->index, slot_to);
@@ -365,6 +368,7 @@ bool Pcon::RefillBlocking() {
 			quantity += this_moved;
 			quantity_storage -= this_moved;
             printf("Moved %d points for %s to %d %d successfully\n", this_moved, chat, updatedItem->bag->index, updatedItem->slot);
+            if (!refillable()) return true;
         }
     }
 	return true;

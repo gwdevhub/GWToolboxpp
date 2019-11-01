@@ -6,6 +6,8 @@ using System.IO;
 using System.Security.Principal;
 using GWCA.Memory;
 using System.Runtime.InteropServices;
+using System.Net;
+using System.Web.Script.Serialization;
 
 namespace CSLauncher {
     struct GithubAsset
@@ -20,7 +22,9 @@ namespace CSLauncher {
         public List<GithubAsset> assets { get; set; }
     };
     static class CSLauncher {
-        const string DLL_NAME = "JonsGWToolbox.dll";
+        const string DLL_NAME = "JonsGWToolbox.dll"; // "GWToolbox.dll";
+
+        const string GITHUB_USER = "3vcloud"; // "HasKha";
 
         static readonly string[] LOADMODULE_RESULT_MESSAGES = {
             DLL_NAME +" successfully loaded.",
@@ -38,6 +42,12 @@ namespace CSLauncher {
         private static extern IntPtr FindWindowEx(IntPtr hWndParent, IntPtr hWndChildAfter, string lpszClass,string lpszWindow);
         [DllImport("user32.dll", SetLastError = true)]
         private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out Int32 lpdwProcessId);
+        [DllImport("kernel32.dll")]
+        static extern IntPtr LoadLibraryEx(string lpFileName, IntPtr hFile, uint dwFlags);
+        [DllImport("kernel32.dll")]
+        static extern bool FreeLibrary(IntPtr hModule);
+        [DllImport("kernel32.dll")]
+        public static extern IntPtr GetProcAddress(IntPtr hModule, string procedureName);
         static bool hasElevatedGWProcesses()
         {
             IntPtr hWndTargetWindow = FindWindowEx(IntPtr.Zero, IntPtr.Zero, "ArenaNet_Dx_Window_Class", null);
@@ -58,6 +68,64 @@ namespace CSLauncher {
             }
             return false;
         }
+        static string GetLatestVersion()
+        {
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+            WebClient host = new WebClient();
+            host.Headers.Add(HttpRequestHeader.UserAgent, "GWToolboxpp Launcher");
+            string remoteversion = "";
+            string dllurl = "";
+            int tries = 0;
+
+            while (tries < 3 && remoteversion.Length == 0)
+            {
+                try
+                {
+                    string json = host.DownloadString("https://api.github.com/repos/3vcloud/GWToolboxpp/releases");
+                    JavaScriptSerializer serializer = new JavaScriptSerializer();
+                    var items = serializer.Deserialize<List<GithubRelease>>(json);
+                    foreach (var release in items)
+                    {
+                        int version_number_len = release.tag_name.IndexOf("_Release");
+                        if (version_number_len == -1)
+                            continue;
+                        foreach (var asset in release.assets)
+                        {
+                            if (!asset.name.Equals(DLL_NAME))
+                                continue;
+                            remoteversion = release.tag_name.Substring(0, version_number_len);
+                            dllurl = asset.browser_download_url;
+                            break;
+                        }
+                        if (remoteversion.Length > 0)
+                            break;
+                    }
+                    if (remoteversion.Length == 0)
+                        remoteversion = "0";
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                    // todo
+                }
+                tries++;
+            }
+            return remoteversion;
+
+        }
+        static string GetLocalVersion(string dllfile)
+        {
+            if (!File.Exists(dllfile))
+                return "";
+            const uint LOAD_LIBRARY_AS_DATAFILE = 0x00000002;
+            IntPtr hToolbox = LoadLibraryEx(dllfile,IntPtr.Zero, LOAD_LIBRARY_AS_DATAFILE);
+            if (hToolbox == IntPtr.Zero)
+                return "";
+            IntPtr GWToolboxVersion_Func = GetProcAddress(hToolbox, "GWToolboxVersion");
+            if (GWToolboxVersion_Func == IntPtr.Zero)
+                return "";
+            return Marshal.PtrToStringAnsi(GWToolboxVersion_Func);
+        }
         [STAThread]
         static void Main(string[] args) {
             Application.EnableVisualStyles();
@@ -77,7 +145,7 @@ namespace CSLauncher {
 
 #if DEBUG
             // do nothing, we'll use GWToolbox.dll in /Debug
-            string dllfile = System.IO.Path.GetDirectoryName(Application.ExecutablePath) + "\\JonsGWToolbox.dll";
+            string dllfile = System.IO.Path.GetDirectoryName(Application.ExecutablePath) + "\\" + DLL_NAME;
 #else
             // Download or update if needed
             string dllfile = toolboxdir + DLL_NAME;
@@ -87,52 +155,17 @@ namespace CSLauncher {
                 ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
                 WebClient host = new WebClient();
                 host.Headers.Add(HttpRequestHeader.UserAgent, "GWToolboxpp Launcher");
-                string remoteversion = "";
-                string dllurl = "";
-                int tries = 0;
-
-                while(tries < 3 && remoteversion.Length == 0)
+                string remoteversion = GetLatestVersion();
+                if (remoteversion.Length == 0)
                 {
-                    try
-                    {
-                        string json = host.DownloadString("https://api.github.com/repos/3vcloud/GWToolboxpp/releases");
-                        JavaScriptSerializer serializer = new JavaScriptSerializer();
-                        var items = serializer.Deserialize<List<GithubRelease>>(json);
-                        foreach(var release in items)
-                        {
-                            int version_number_len = release.tag_name.IndexOf("_Release");
-                            if (version_number_len == -1)
-                                continue;
-                            foreach(var asset in release.assets)
-                            {
-                                if (!asset.name.Equals(DLL_NAME))
-                                    continue;
-                                remoteversion = release.tag_name.Substring(0, version_number_len);
-                                dllurl = asset.browser_download_url;
-                                break;
-                            }
-                            if (remoteversion.Length > 0)
-                                break;                            
-                        }
-                        if(remoteversion.Length == 0)
-                            remoteversion = "0";
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e.Message);
-                        // todo
-                    }
-                    tries++;
-                }
-                if(remoteversion.Length == 0)
-                {
-                    MessageBox.Show("Failed to fetch current GWToolbox++ version after " + tries +" attempts.\n Check your internet connection and try again",
+                    MessageBox.Show("Failed to fetch latest GWToolbox++ version.\n Check your internet connection and try again",
                         "GWToolbox++ Error",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Error);
                     return;
                 }
-                tries = 0;
+                string dllurl = "https://github.com/3vcloud/GWToolboxpp/releases/download/" + remoteversion + "_Release/" + DLL_NAME;
+                int tries = 0;
                 // This bit will take a while...
                 while (tries < 3 && dllurl.Length > 0 && !File.Exists(dllfile))
                 {
@@ -142,7 +175,7 @@ namespace CSLauncher {
                         if (File.Exists(dllfile) && (new System.IO.FileInfo(dllfile).Length) < 1)
                             File.Delete(dllfile); // Delete file if exists with 0 length
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
                         // todo
                     }

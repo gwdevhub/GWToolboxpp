@@ -722,8 +722,6 @@ const bool PendingChatMessage::PrintMessage() {
     return printed;
 };
 
-
-
 void GameSettings::Initialize() {
 	ToolboxModule::Initialize();
 	// Open links on player name click
@@ -881,41 +879,23 @@ void GameSettings::Initialize() {
 			});
 		});
 	// - Automatically send /age2 on /age.
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&DisplayDialogue_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::MessageServer* pak) -> void {
-		if (!auto_age2_on_age)
-			return; // Disabled or message pending
-		GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
-		if (!buff || !buff->valid() || !buff->size()) {
-			status->blocked = true; // No buffer, may have already been cleared.
-			return;
-		}
-		//0x8101 0x641F 0x86C3 0xE149 0x53E8 0x101 0x107 = You have been in this map for n minutes.
-		//0x8101 0x641E 0xE7AD 0xEF64 0x1676 0x101 0x107 0x102 0x107 = You have been in this map for n hours and n minutes.
-		wchar_t* msg = buff->begin();
-		if (msg[0] != 0x8101)
-			return;
-		static wchar_t msg_check_mins[4] = { 0x641F, 0x86C3, 0xE149, 0x53E8 };
-		static wchar_t msg_check_hours[4] = { 0x641E, 0xE7AD, 0xEF64, 0x1676 };
-		if (msg[1] == msg_check_mins[0]) {
-			for (unsigned int i = 0; i < 4; i++) {
-				if (msg[i+1] != msg_check_mins[i])
-					return;
-			}
-		}
-		else if (msg[1] == msg_check_hours[1]) {
-			for (unsigned int i = 0; i < 4; i++) {
-				if (msg[i + 1] != msg_check_hours[i])
-					return;
-			}
-		}
-		else {
-			return;
-		}
-		GW::GameThread::Enqueue([]() {
-			GW::Chat::SendChat('/', "age2");
-			});
-		});
-	// 0x8101 0x641E 0xE7AD 0xEF64 0x1676
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&MessageServer_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::MessageServer* pak) -> void {
+        if (!auto_age2_on_age)
+            return; // Disabled or message pending
+        GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
+        if (!buff || !buff->valid() || !buff->size()) {
+            status->blocked = true; // No buffer, may have already been cleared.
+            return;
+        }
+        //0x8101 0x641F 0x86C3 0xE149 0x53E8 0x101 0x107 = You have been in this map for n minutes.
+        //0x8101 0x641E 0xE7AD 0xEF64 0x1676 0x101 0x107 0x102 0x107 = You have been in this map for n hours and n minutes.
+        wchar_t* msg = buff->begin();
+        if (wmemcmp(msg, L"\x8101\x641F\x86C3\xE149\x53E8", 5) || wmemcmp(msg, L"\x8101\x641E\xE7AD\xEF64\x1676", 5)) {
+            GW::GameThread::Enqueue([]() {
+                GW::Chat::SendChat('/', "age2");
+                });
+        }
+       });
     // - NPC teamchat messages to emote chat (emulate speech bubble instead)
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageNPC>(&MessageNPC_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::MessageNPC* pak) -> void {
             if (!redirect_npc_messages_to_emote_chat || !pak->sender_name)
@@ -1776,7 +1756,7 @@ void GameSettings::FriendStatusCallback(
 	switch (status) {
 	case GW::FriendStatus_Offline:
         if (game_setting.notify_when_friends_offline) {
-		    snprintf(buffer, sizeof(buffer), "%S (%S) has just logged out.", charname, alias);
+		    snprintf(buffer, sizeof(buffer), "%ls (%ls) has just logged out.", charname, alias);
 		    GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
         }
 		return;
@@ -1786,7 +1766,7 @@ void GameSettings::FriendStatusCallback(
 		if (f->status != GW::FriendStatus_Offline)
             return;
         if (game_setting.notify_when_friends_online) {
-		    snprintf(buffer, sizeof(buffer), "<a=1>%S</a> (%S) has just logged in.</c>", charname, alias);
+		    snprintf(buffer, sizeof(buffer), "<a=1>%ls</a> (%ls) has just logged in.</c>", charname, alias);
 		    GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
         }
 		return;
