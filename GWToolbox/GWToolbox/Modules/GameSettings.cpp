@@ -880,17 +880,18 @@ void GameSettings::Initialize() {
 		});
 	// - Automatically send /age2 on /age.
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&MessageServer_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::MessageServer* pak) -> void {
-        if (!auto_age2_on_age)
+        if (!auto_age2_on_age || pak->channel != GW::Chat::Channel::CHANNEL_GLOBAL)
             return; // Disabled or message pending
         GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
         if (!buff || !buff->valid() || !buff->size()) {
             status->blocked = true; // No buffer, may have already been cleared.
             return;
         }
+        
         //0x8101 0x641F 0x86C3 0xE149 0x53E8 0x101 0x107 = You have been in this map for n minutes.
         //0x8101 0x641E 0xE7AD 0xEF64 0x1676 0x101 0x107 0x102 0x107 = You have been in this map for n hours and n minutes.
         wchar_t* msg = buff->begin();
-        if (wmemcmp(msg, L"\x8101\x641F\x86C3\xE149\x53E8", 5) || wmemcmp(msg, L"\x8101\x641E\xE7AD\xEF64\x1676", 5)) {
+        if (wmemcmp(msg, L"\x8101\x641F\x86C3\xE149\x53E8", 5) == 0 || wmemcmp(msg, L"\x8101\x641E\xE7AD\xEF64\x1676", 5) == 0) {
             GW::GameThread::Enqueue([]() {
                 GW::Chat::SendChat('/', "age2");
                 });
