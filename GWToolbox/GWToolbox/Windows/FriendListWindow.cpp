@@ -227,12 +227,29 @@ void FriendListWindow::Initialize() {
 			Log::Log("%s: Friend found; setting %ls profession to %s\n", Name(), player_name, ProfNames[profession]);
 			fc->profession = profession;
 		});
-		
 	});
-	// Does "Failed to add friend" or "Friend <name> already added as <name>" come into this hook???
-    /*GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&ErrorMessage_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::MessageServer* pak) {
-        Log::Log("%s: Error message received: %d\n", Name(), pak->id);
-    });*/
+    // "Failed to add friend" or "Friend <name> already added as <name>"
+    GW::Chat::RegisterLocalMessageCallback(&ErrorMessage_Entry,
+        [this](GW::HookStatus* status, int channel, wchar_t* message) -> void {
+            if (!message || message[0] < 0x2f3 || message[0] > 0x2f6)
+                return;
+            wchar_t buffer[128] = { 0 };
+            wcsncpy(buffer, message, 128);
+            worker.Add([this, buffer]() {
+                std::wstring player_name;
+                switch (buffer[0]) {
+                case 0x2f3: // You cannot add yourself as a friend.
+                    break;
+                case 0x2f4: // You have exceeded the maximum number of characters on your Friends list.
+                    break;
+                case 0x2F5: // The Character name "" does not exist
+                    break;
+                case 0x2F6: // The Character you're trying to add is already in your friend list as "".
+                    break;
+                }
+                });
+        });
+	
 }
 void FriendListWindow::Update(float delta) {
 	if (loading)

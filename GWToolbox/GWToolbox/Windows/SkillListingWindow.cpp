@@ -1,11 +1,7 @@
 #include "stdafx.h"
 #include "SkillListingWindow.h"
 
-#include <GWCA\Constants\Constants.h>
 
-#include <GWCA\GameContainers\Array.h>
-
-#include <GWCA\GameEntities\Skill.h>
 
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
@@ -20,24 +16,6 @@
 
 #include <GWCA/Utilities/Macros.h>
 #include <GWCA/Utilities/Scanner.h>
-struct SkillName {
-    SkillName(uint32_t _name_enc_id, uint32_t _desc_enc_id) : name_enc_id(_name_enc_id), desc_enc_id(_desc_enc_id) {
-        if (GW::UI::UInt32ToEncStr(name_enc_id, name_encoded, 16)) {
-            GW::UI::AsyncDecodeStr(name_encoded, name_decoded, 256);
-        }
-            
-        if (GW::UI::UInt32ToEncStr(desc_enc_id, desc_encoded, 16)) {
-            GW::UI::AsyncDecodeStr(desc_encoded, desc_decoded, 256);
-        }
-    }
-    uint32_t name_enc_id = 0;
-    uint32_t desc_enc_id = 0;
-    wchar_t name_encoded[16] = { 0 };
-    wchar_t desc_encoded[16] = { 0 };
-    wchar_t name_decoded[256] = { 0 };
-    wchar_t desc_decoded[256] = { 0 };
-};
-std::map<uint32_t, SkillName*> decoded_skill_names;
 
 static uintptr_t skill_array_addr;
 
@@ -51,19 +29,10 @@ static void printchar(wchar_t c) {
 }
 
 
-void SkillListingWindow::AsyncDecodeStr(wchar_t* buffer, const size_t n, uint32_t enc_num) {
-    static wchar_t enc_str[16];
-    if (!GW::UI::UInt32ToEncStr(enc_num, enc_str, 16)) {
-        buffer[0] = 0;
-        return;
-    }
-    GW::UI::AsyncDecodeStr(enc_str, buffer, n);
-}
-
-
 void SkillListingWindow::Initialize() {
     ToolboxWindow::Initialize();
-
+    const unsigned int max_skills = 3410;
+    skills.resize(max_skills);
     {
         uintptr_t address = GW::Scanner::Find(
             "\x8D\x04\xB6\x5E\xC1\xE0\x05\x05", "xxxxxxxx", 8);
@@ -72,32 +41,53 @@ void SkillListingWindow::Initialize() {
             skill_array_addr = *(uintptr_t*)address;
     }
 
-    const unsigned int max_skills = 3410;
+    
     if(!skill_array_addr)
         return;
     GW::Skill* skill_constants = (GW::Skill*)skill_array_addr;
 
     size_t added = 0;
-    for (size_t i = 0; i < max_skills && added < 10; i++) {
-        GW::Skill s = skill_constants[i];
-        if (!s.skill_id) continue;
-        if (s.skill_id != 1032) continue;
-        if (s.h0098) {
-            SkillName* n = new SkillName(s.name,s.h0098);
-            decoded_skill_names[s.skill_id] = n;
-            added++;
-        }
+    for (size_t i = 0; i < max_skills && added < 1000; i++) {
+        if (!skill_constants[i].skill_id) continue;
+        skills[i] = new Skill(&skill_constants[i]);
+        //added++;
     }
     Log::Log("%d Added\n", added);  
 }
-void SkillListingWindow::Update(float delta) {
-    for (std::map<uint32_t, SkillName*>::iterator it = decoded_skill_names.begin(); it != decoded_skill_names.end(); ++it) {
-        if (it->second->name_decoded[0] && it->second->desc_decoded[0]) {
-            for (int i = 0; it->second->name_encoded[i] != 0; ++i) printchar(it->second->name_encoded[i]);
-            printf("\n");
-            Log::LogW(L"Skill ID %d = %d = %ls = %ls\n", it->first, it->second->desc_enc_id, it->second->desc_encoded, it->second->desc_decoded);
-            decoded_skill_names.erase(it);
-            if (!decoded_skill_names.size()) break;
-        }
+void SkillListingWindow::Draw(IDirect3DDevice9* pDevice) {
+    if (!visible)
+        return;
+    ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiSetCond_FirstUseEver);
+    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
+        return ImGui::End();
+    float offset = 0.0f;
+    const float tiny_text_width = 50.0f * ImGui::GetIO().FontGlobalScale;
+    const float short_text_width = 80.0f * ImGui::GetIO().FontGlobalScale;
+    const float avail_width = ImGui::GetContentRegionAvailWidth();
+    const float long_text_width = 200.0f * ImGui::GetIO().FontGlobalScale;
+    ImGui::Text("#");
+    ImGui::SameLine(offset += tiny_text_width);
+    ImGui::Text("Name");
+    //ImGui::SameLine(0,short_text_width);
+    ImGui::Separator();
+    bool has_entries = 0;
+    for (size_t i = 0; i < skills.size(); i++) {
+        if (!skills[i]) continue;
+        ImGui::Text("%d", i);
+        if (!ImGui::IsItemVisible())
+            continue;
+        offset = 0;
+        ImGui::SameLine(offset += tiny_text_width);
+        ImGui::Text("%S",skills[i]->Name());
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("%S,\n\n%S", skills[i]->Description(), skills[i]->Concise());
+        ImGui::SameLine(offset += long_text_width);
+        ImGui::Text("%d, %d, %d", skills[i]->skill->attribute, skills[i]->skill->profession, skills[i]->skill->type);
+        //ImGui::SameLine(0, short_text_width);
     }
+    ImGui::End();
+}
+void SkillListingWindow::Update(float delta) {
+    
 }

@@ -479,11 +479,18 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
                 printf("\n");
                 return false;
             });
+            GW::Chat::RegisterLocalMessageCallback(&MessageLocal_Entry, [this](GW::HookStatus* status, int channel, wchar_t* message) {
+                printf("MessageLocal: ");
+                for (int i = 0; message[i] != 0; ++i) printchar(message[i]);
+                printf("\n");
+                return false;
+                });
 			message_core_callback_identifier = 1;
 		}
 		else {
 			if (message_core_callback_identifier) {
 				GW::StoC::RemoveCallback(GW::Packet::StoC::MessageCore::STATIC_HEADER, &MessageCore_Entry);
+                GW::Chat::RemoveLocalMessageCallback(&MessageLocal_Entry);
 				message_core_callback_identifier = 0;
 			}
 		}
