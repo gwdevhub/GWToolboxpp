@@ -20,6 +20,7 @@
 #include <Modules/DiscordModule.h>
 #include <Modules/TwitchModule.h>
 #include <Modules/PartyWindowModule.h>
+#include <Modules/FunModule.h>
 
 #include <Windows/MainWindow.h>
 #include <Windows/PconsWindow.h>
@@ -90,6 +91,7 @@ void ToolboxSettings::InitializeModules() {
 #ifdef _DEBUG
     PacketLoggerWindow::Instance().Initialize();
     StringDecoderWindow::Instance().Initialize();
+	FunModule::Instance().Initialize();
     if(use_friendlist) FriendListWindow::Instance().Initialize();
 #endif
 
