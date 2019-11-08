@@ -46,16 +46,9 @@ void ChatFilter::Initialize() {
 		printf("P082: id %d, type %d\n", pak->id, pak->type);
 #endif // PRINT_CHAT_PACKETS
 
-		GW::Array<wchar_t> *buff = &GW::GameContext::instance()->world->message_buff;
-		if (!buff || !buff->valid() || !buff->size()) {
-			status->blocked = true;
-			return;
-		}
-		if (ShouldIgnore(buff->begin()) || ShouldIgnoreByContent(buff->begin(), buff->size())) {
-			buff->clear();
-			status->blocked = true;
-			return;
-		}
+        GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
+        if (!buff) return;
+        BlockIfApplicable(status, buff->begin(), pak->channel);
 	});
 
 #ifdef PRINT_CHAT_PACKETS
@@ -79,25 +72,9 @@ void ChatFilter::Initialize() {
 		printf("\n");
 #endif // PRINT_CHAT_PACKETS
 
-		GW::Array<wchar_t> *buff = &GW::GameContext::instance()->world->message_buff;
-
-		if (ShouldIgnore(buff->begin()) ||
-			ShouldIgnoreByContent(buff->begin(), buff->size())) {
-			buff->clear();
-			status->blocked = true;
-			return;
-		}
-	});
-	// Hide guild announcement. 
-	// NOTE: Don't block at packet level because its also used for editing the announcement in guild window.
-	GW::Chat::RegisterPrintChatCallback(&PrintChat_Entry, [this](GW::HookStatus* status, GW::Chat::Channel channel, wchar_t* str, FILETIME timestamp, int reprint) {
-		// 0x7bf4 0x10a 0x763 0x101 0x101 0x10a 0x766 0x1 0x1 = You have been playing for 1 hour.
-		// 0x7bf5 0x10a 0x763 0x101 0x101 0x10a 0x766 0x1 0x1 = You have been playing for 1 hour. Please take a break
-		if (guild_announcement && str[0] == 0x314)
-			status->blocked = true;
-		else if(you_have_been_playing_for && (str[0] == 0x7BF4 || str[0] == 0x7BF5))
-			status->blocked = true;
-		return ;
+        GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
+        if (!buff) return;
+        BlockIfApplicable(status, buff->begin(), pak->channel);
 	});
 	// local messages
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&MessageLocal_Entry,
@@ -106,26 +83,23 @@ void ChatFilter::Initialize() {
 		printf("P085: id %d, type %d\n", pak->id, pak->type);
 #endif // PRINT_CHAT_PACKETS
 
-		GW::Array<wchar_t> *buff = &GW::GameContext::instance()->world->message_buff;
-		wchar_t *sender = GW::Agents::GetPlayerNameByLoginNumber(pak->player_number);
-		if (!sender) return;
-
-		if (ShouldIgnore(buff->begin()) ||
-			ShouldIgnoreBySender(sender, 32) ||
-			ShouldIgnoreByContent(buff->begin(), buff->size())) {
-
-			buff->clear();
-			status->blocked = true;
-			return;
-		}
+        GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
+        if (!buff) return;
+        BlockIfApplicable(status, buff->begin(), pak->channel);
 	});
 
 	GW::Chat::RegisterLocalMessageCallback(&LocalMessageCallback_Entry,
 	[this](GW::HookStatus *status, int channel, wchar_t *message) -> void {
-		if (away && ShouldIgnore(message)) {
-			status->blocked = true;
-		}
+        BlockIfApplicable(status, message, channel);
 	});
+}
+void ChatFilter::BlockIfApplicable(GW::HookStatus* status, const wchar_t* message, uint32_t channel) {
+    if (!ShouldIgnore(message, channel))
+        return;
+     status->blocked = true;
+     GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
+     if (buff)
+         buff->clear();
 }
 
 void ChatFilter::LoadSettings(CSimpleIni* ini) {
@@ -319,6 +293,13 @@ bool ChatFilter::FullMatch(const wchar_t* s, const std::initializer_list<wchar_t
 	return true;
 }
 
+bool ChatFilter::ShouldIgnore(const wchar_t* message, uint32_t channel) {
+    if (ShouldIgnore(message))
+        return true;
+    if (!ShouldIgnoreByChannel(channel))
+        return false;
+    return ShouldIgnoreByContent(message);
+}
 bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 #ifdef PRINT_CHAT_PACKETS
 	for (size_t i = 0; message[i] != 0; ++i) printchar(message[i]);
@@ -330,6 +311,7 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 		// ==== Messages not ignored ====
 	case 0x108: return false; // player message
 	case 0x2AFC: return false; // <agent name> hands you <quantity> <item name>
+    case 0x0314: return guild_announcement; // Guild Announcement by X: X
 	case 0x4C32: return item_cannot_be_used; // Item can only be used in towns or outposts.
 	case 0x76D: return false; // whisper received.
 	case 0x76E: return false; // whisper sended.
@@ -495,15 +477,20 @@ bool ChatFilter::ShouldIgnoreByContent(const wchar_t *message, size_t size) {
 	if (!(message[0] == 0x108 && message[1] == 0x107)
 		&& !(message[0] == 0x8102 && message[1] == 0xEFE && message[2] == 0x107)) return false;
 	const wchar_t* start = nullptr;
-	const wchar_t* end = &message[size];
-	for (int i = 0; i < (int)size && message[i] != 0; ++i) {
-		if (message[i] == 0x107) {
-			start = &message[i + 1];
-		} else if (message[i] == 0x1) {
-			end = &message[i];
-		}
-	}
-	if (start == nullptr) return false; // no string segment in this packet
+	const wchar_t* end = nullptr;
+    size_t i = 0;
+    while (start == nullptr && message[i]) {
+        if (message[i] == 0x107)
+            start = &message[i + 1];
+        i++;
+    }
+    if (start == nullptr) return false; // no string segment in this packet
+    while (end == nullptr && message[i]) {
+        if (message[i] == 0x1)
+            end = &message[i];
+        i++;
+    }
+    if (end == nullptr) end = &message[i];
 
 	// std::string temp(start, end);
 	char buffer[1024];
@@ -539,7 +526,7 @@ bool ChatFilter::ShouldIgnoreByChannel(uint32_t channel) {
     case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_ALLIANCE):   return filter_channel_alliance;
     case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_EMOTE):      return filter_channel_emotes;
     }
-    return false;
+    return true;
 }
 bool ChatFilter::ShouldIgnoreBySender(const wchar_t *sender, size_t size) {
 #ifdef EXTENDED_IGNORE_LIST

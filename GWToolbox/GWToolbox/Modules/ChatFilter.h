@@ -37,9 +37,16 @@ private:
 	DWORD GetNumericSegment(const wchar_t *message) const;
 	bool ShouldIgnoreByAgentThatDropped(const wchar_t* agent_segment) const;
 	bool IsRare(const wchar_t* item_segment) const;
+    // Blocks/flushes StoC packets if they need blocking
+    void BlockIfApplicable(GW::HookStatus* status, const wchar_t* message, uint32_t channel);
+    // Should this message for this channel be ignored either by encoded string or content?
+    bool ShouldIgnore(const wchar_t* message, uint32_t channel);
+    // Should this message be ignored by encoded string?
 	bool ShouldIgnore(const wchar_t *message);
-	bool ShouldIgnoreByContent(const wchar_t *message, size_t size);
+    // Should this message be ignored by content?
+	bool ShouldIgnoreByContent(const wchar_t *message, size_t size = 1024);
 	bool ShouldIgnoreBySender(const wchar_t *sender, size_t size);
+    // Should this channel be checked for ignored messages?
 	bool ShouldIgnoreByChannel(uint32_t channel);
 
 	bool guild_announcement = false;
