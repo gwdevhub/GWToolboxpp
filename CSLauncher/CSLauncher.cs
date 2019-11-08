@@ -81,7 +81,7 @@ namespace CSLauncher {
             {
                 try
                 {
-                    string json = host.DownloadString("https://api.github.com/repos/3vcloud/GWToolboxpp/releases");
+                    string json = host.DownloadString("https://api.github.com/repos/" + GITHUB_USER +"/GWToolboxpp/releases");
                     JavaScriptSerializer serializer = new JavaScriptSerializer();
                     var items = serializer.Deserialize<List<GithubRelease>>(json);
                     foreach (var release in items)
@@ -164,7 +164,7 @@ namespace CSLauncher {
                         MessageBoxIcon.Error);
                     return;
                 }
-                string dllurl = "https://github.com/3vcloud/GWToolboxpp/releases/download/" + remoteversion + "_Release/" + DLL_NAME;
+                string dllurl = "https://github.com/" + GITHUB_USER + "/GWToolboxpp/releases/download/" + remoteversion + "_Release/" + DLL_NAME;
                 int tries = 0;
                 // This bit will take a while...
                 while (tries < 3 && dllurl.Length > 0 && !File.Exists(dllfile))
