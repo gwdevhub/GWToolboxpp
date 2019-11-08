@@ -10,7 +10,7 @@ using System.Net;
 using System.Web.Script.Serialization;
 
 namespace CSLauncher {
-    struct GithubAsset
+	struct GithubAsset
     {
         public string name { get; set; }
         public string browser_download_url { get; set; }
@@ -136,7 +136,7 @@ namespace CSLauncher {
             bool isElevated = principal.IsInRole(WindowsBuiltInRole.Administrator);
 
             // names and paths
-            string toolboxdir = Environment.GetEnvironmentVariable("LocalAppData") + "\\GWToolboxpp\\";
+            string toolboxdir = Environment.GetEnvironmentVariable("LocalAppData") + Path.DirectorySeparatorChar + "GWToolboxpp" + Path.DirectorySeparatorChar;
             string inifile = toolboxdir + "GWToolbox.ini";
 
             // Install resources
@@ -145,7 +145,7 @@ namespace CSLauncher {
 
 #if DEBUG
             // do nothing, we'll use GWToolbox.dll in /Debug
-            string dllfile = System.IO.Path.GetDirectoryName(Application.ExecutablePath) + "\\" + DLL_NAME;
+            string dllfile = System.IO.Path.GetDirectoryName(Application.ExecutablePath) + Path.DirectorySeparatorChar + DLL_NAME;
 #else
             // Download or update if needed
             string dllfile = toolboxdir + DLL_NAME;
