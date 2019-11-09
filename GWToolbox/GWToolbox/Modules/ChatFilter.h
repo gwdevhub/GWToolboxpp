@@ -66,6 +66,8 @@ private:
 	bool away = false;
 	bool you_have_been_playing_for = false;
 	bool player_has_achieved_title = false;
+	bool faction_gain = false;
+	bool challenge_mission_messages = false;
 
 
 	// Error messages on-screen
@@ -74,16 +76,16 @@ private:
 	bool inventory_is_full = false;
 	bool item_cannot_be_used = true; // Includes other error messages, see ChatFilter.cpp.
 	bool not_enough_energy = true; // Includes other error messages, see ChatFilter.cpp.
-    	bool item_already_identified = false;
+    bool item_already_identified = false;
 
 	bool messagebycontent = false;
-    	// Which channels to filter.
-    	bool filter_channel_local = true;
-    	bool filter_channel_guild = false;
-    	bool filter_channel_team = false;
-    	bool filter_channel_trade = true;
-    	bool filter_channel_alliance = false;
-    	bool filter_channel_emotes = false;
+    // Which channels to filter.
+    bool filter_channel_local = true;
+    bool filter_channel_guild = false;
+    bool filter_channel_team = false;
+    bool filter_channel_trade = true;
+    bool filter_channel_alliance = false;
+    bool filter_channel_emotes = false;
 
 	static const size_t FILTER_BUF_SIZE = 1024*16;
 

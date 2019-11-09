@@ -7,6 +7,7 @@
 #include <GWCA/GameContainers/GamePos.h>
 
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Map.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
@@ -23,6 +24,11 @@
 #include <Defines.h>
 
 //#define PRINT_CHAT_PACKETS
+
+static bool IsInChallengeMission() {
+	GW::AreaInfo* a = GW::Map::GetCurrentMapInfo();
+	return a && a->type == GW::RegionType_Challenge;
+}
 
 static void printchar(wchar_t c) {
 	if (c >= L' ' && c <= L'~') {
@@ -104,29 +110,31 @@ void ChatFilter::BlockIfApplicable(GW::HookStatus* status, const wchar_t* messag
 
 void ChatFilter::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini);
-	self_drop_rare = ini->GetBoolValue(Name(), VAR_NAME(self_drop_rare), false);
-	self_drop_common = ini->GetBoolValue(Name(), VAR_NAME(self_drop_common), false);
-	ally_drop_rare = ini->GetBoolValue(Name(), VAR_NAME(ally_drop_rare), false);
-	ally_drop_common = ini->GetBoolValue(Name(), VAR_NAME(ally_drop_common), false);
-	ally_pickup_rare = ini->GetBoolValue(Name(), VAR_NAME(ally_pickup_rare), false);
-	ally_pickup_common = ini->GetBoolValue(Name(), VAR_NAME(ally_pickup_common), false);
-	skill_points = ini->GetBoolValue(Name(), VAR_NAME(skill_points), false);
-	pvp_messages = ini->GetBoolValue(Name(), VAR_NAME(pvp_messages), true);
+	self_drop_rare = ini->GetBoolValue(Name(), VAR_NAME(self_drop_rare), self_drop_rare);
+	self_drop_common = ini->GetBoolValue(Name(), VAR_NAME(self_drop_common), self_drop_common);
+	ally_drop_rare = ini->GetBoolValue(Name(), VAR_NAME(ally_drop_rare), ally_drop_rare);
+	ally_drop_common = ini->GetBoolValue(Name(), VAR_NAME(ally_drop_common), ally_drop_common);
+	ally_pickup_rare = ini->GetBoolValue(Name(), VAR_NAME(ally_pickup_rare), ally_pickup_rare);
+	ally_pickup_common = ini->GetBoolValue(Name(), VAR_NAME(ally_pickup_common), ally_pickup_common);
+	skill_points = ini->GetBoolValue(Name(), VAR_NAME(skill_points), skill_points);
+	pvp_messages = ini->GetBoolValue(Name(), VAR_NAME(pvp_messages), pvp_messages);
 	guild_announcement = ini->GetBoolValue(Name(), VAR_NAME(guild_announcement), guild_announcement);
-	hoh = ini->GetBoolValue(Name(), VAR_NAME(hoh_messages), false);
-	favor = ini->GetBoolValue(Name(), VAR_NAME(favor), false);
-	ninerings = ini->GetBoolValue(Name(), VAR_NAME(ninerings), true);
-	noonehearsyou = ini->GetBoolValue(Name(), VAR_NAME(noonehearsyou), true);
-	lunars = ini->GetBoolValue(Name(), VAR_NAME(lunars), true);
-	messagebycontent = ini->GetBoolValue(Name(), VAR_NAME(messagebycontent), false);
-	away = ini->GetBoolValue(Name(), VAR_NAME(away), false);
-	you_have_been_playing_for = ini->GetBoolValue(Name(), VAR_NAME(you_have_been_playing_for), false);
-	player_has_achieved_title = ini->GetBoolValue(Name(), VAR_NAME(player_has_achieved_title), false);
+	hoh = ini->GetBoolValue(Name(), VAR_NAME(hoh_messages), hoh);
+	favor = ini->GetBoolValue(Name(), VAR_NAME(favor), favor);
+	ninerings = ini->GetBoolValue(Name(), VAR_NAME(ninerings), ninerings);
+	noonehearsyou = ini->GetBoolValue(Name(), VAR_NAME(noonehearsyou), noonehearsyou);
+	lunars = ini->GetBoolValue(Name(), VAR_NAME(lunars), lunars);
+	messagebycontent = ini->GetBoolValue(Name(), VAR_NAME(messagebycontent), messagebycontent);
+	away = ini->GetBoolValue(Name(), VAR_NAME(away), away);
+	you_have_been_playing_for = ini->GetBoolValue(Name(), VAR_NAME(you_have_been_playing_for), you_have_been_playing_for);
+	player_has_achieved_title = ini->GetBoolValue(Name(), VAR_NAME(player_has_achieved_title), player_has_achieved_title);
 	invalid_target = ini->GetBoolValue(Name(), VAR_NAME(invalid_target), invalid_target);
     opening_chest_messages = ini->GetBoolValue(Name(), VAR_NAME(opening_chest_messages), opening_chest_messages);
 	inventory_is_full = ini->GetBoolValue(Name(), VAR_NAME(inventory_is_full), inventory_is_full);
 	item_cannot_be_used = ini->GetBoolValue(Name(), VAR_NAME(item_cannot_be_used), item_cannot_be_used);
     item_already_identified = ini->GetBoolValue(Name(), VAR_NAME(item_already_identified), item_already_identified);
+	faction_gain = ini->GetBoolValue(Name(), VAR_NAME(faction_gain), faction_gain);
+	challenge_mission_messages = ini->GetBoolValue(Name(), VAR_NAME(challenge_mission_messages), challenge_mission_messages);
 
     filter_channel_local = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_local), filter_channel_local);
     filter_channel_guild = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_guild), filter_channel_guild);
@@ -190,6 +198,8 @@ void ChatFilter::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(inventory_is_full), inventory_is_full);
 	ini->SetBoolValue(Name(), VAR_NAME(item_cannot_be_used), item_cannot_be_used);
     ini->SetBoolValue(Name(), VAR_NAME(item_already_identified), item_already_identified);
+	ini->SetBoolValue(Name(), VAR_NAME(faction_gain), faction_gain);
+	ini->SetBoolValue(Name(), VAR_NAME(challenge_mission_messages), challenge_mission_messages);
     
     ini->SetBoolValue(Name(), VAR_NAME(filter_channel_local), filter_channel_local);
     ini->SetBoolValue(Name(), VAR_NAME(filter_channel_guild), filter_channel_guild);
@@ -394,12 +404,16 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 	case 0x8C2: return invalid_target; // Invalid spell target.
 	case 0x8C3: return invalid_target; // Target is out of range.
     case 0xAD7: return false; // You salvaged <number> <item name(s)> from the <item name>
+	case 0x52C3: // 0x52C3 0xDE9C 0xCD2F 0x78E4 0x101 0x100 - Hold-out bonus: +(message[5] - 0x100) points
+		if (FullMatch(&message[1], { 0xDE9C, 0xCD2F, 0x78E4, 0x101 })) return challenge_mission_messages;
+    case 0x6C9C: // 0x6C9C 0x866F 0xB8D2 0x5A20 0x101 0x100 - You gain (message[5] - 0x100) Kurzick faction
+		if (!FullMatch(&message[1], { 0x866F, 0xB8D2, 0x5A20, 0x101 })) break;
+		return faction_gain || challenge_mission_messages && IsInChallengeMission();
+    case 0x6D4D: // 0x6D4D 0xDD4E 0xB502 0x71CE 0x101 0x4E8 - You gain (message[5] - 0x100) Luxon faction
+        if (!FullMatch(&message[1], { 0xDD4E, 0xB502, 0x71CE, 0x101 })) break;
+		return faction_gain || challenge_mission_messages && IsInChallengeMission();
 	case 0x7BF4: return you_have_been_playing_for; // You have been playing for x time.
 	case 0x7BF5: return you_have_been_playing_for; // You have been playinf for x time. Please take a break.
-    case 0x6C9C: // 0x6C9C 0x866F 0xB8D2 0x5A20 0x101 0x100 - You gain (message[5] - 0x100) Kurzick faction
-        if (FullMatch(&message[1], { 0x866F, 0xB8D2, 0x5A20, 0x101 })) return false; 
-    case 0x6D4D: // 0x6D4D 0xDD4E 0xB502 0x71CE 0x101 0x4E8 - You gain (message[5] - 0x100) Luxon faction
-        if (FullMatch(&message[1], { 0xDD4E, 0xB502, 0x71CE, 0x101 })) return false; 
 	case 0x8101:
 		switch (message[1]) {
 			// nine rings
@@ -545,26 +559,27 @@ bool ChatFilter::ShouldIgnoreBySender(const wchar_t *sender, size_t size) {
 }
 
 void ChatFilter::DrawSettingInternal() {
+	const float half_width = ImGui::GetContentRegionAvailWidth() / 2;
 	ImGui::Text("Hide the following messages:");
 	ImGui::Separator();
 	ImGui::Text("Drops");
 	ImGui::SameLine();
 	ImGui::TextDisabled("('Rare' stands for Gold item, Ecto or Obby shard)");
 	ImGui::Checkbox("A rare item drops for you", &self_drop_rare);
-	ImGui::Checkbox("A common item drops for you", &self_drop_common);
+	ImGui::SameLine(half_width); ImGui::Checkbox("A common item drops for you", &self_drop_common);
 	ImGui::Checkbox("A rare item drops for an ally", &ally_drop_rare);
-	ImGui::Checkbox("A common item drops for an ally", &ally_drop_common);
+	ImGui::SameLine(half_width); ImGui::Checkbox("A common item drops for an ally", &ally_drop_common);
 	ImGui::Checkbox("An ally picks up a rare item", &ally_pickup_rare);
-	ImGui::Checkbox("An ally picks up a common item", &ally_pickup_common);
+	ImGui::SameLine(half_width); ImGui::Checkbox("An ally picks up a common item", &ally_pickup_common);
 
 	ImGui::Separator();
 	ImGui::Text("Announcements");
 	ImGui::Checkbox("Guild Announcement", &guild_announcement);
-	ImGui::Checkbox("Hall of Heroes winners", &hoh);
+	ImGui::SameLine(half_width); ImGui::Checkbox("Hall of Heroes winners", &hoh);
 	ImGui::Checkbox("Favor of the Gods announcements", &favor);
-	ImGui::Checkbox("'You have been playing for...'", &you_have_been_playing_for);
+	ImGui::SameLine(half_width); ImGui::Checkbox("'You have been playing for...'", &you_have_been_playing_for);
 	ImGui::Checkbox("'Player x has achieved title...'", &player_has_achieved_title);
-
+	ImGui::SameLine(half_width); ImGui::Checkbox("'You gain x faction'", &faction_gain);
 	ImGui::Separator();
 	ImGui::Text("Warnings");
 	ImGui::Checkbox("Unable to use item", &item_cannot_be_used);
@@ -576,7 +591,7 @@ void ChatFilter::DrawSettingInternal() {
 'That item has no uses remaining.'\n\
 'You must wait before using another tonic.'\n\
 'This item can only be used in a guild hall'");
-	ImGui::Checkbox("Invalid target", &invalid_target);
+	ImGui::SameLine(half_width); ImGui::Checkbox("Invalid target", &invalid_target);
 	ImGui::ShowHelp("'Invalid spell/attack target.'\n\
 'Spell failed. Spirits are not affected by this spell.'\n\
 'Your view of the target is obstructed.'\n\
@@ -584,7 +599,7 @@ void ChatFilter::DrawSettingInternal() {
 'Target is out of range.'\n\
 'Target is immune to bleeding/disease/poison (no flesh.)'");
 	ImGui::Checkbox("'Inventory is full'", &inventory_is_full);
-	ImGui::Checkbox("Opening chests", &opening_chest_messages);
+	ImGui::SameLine(half_width); ImGui::Checkbox("Opening chests", &opening_chest_messages);
     ImGui::ShowHelp("'Chest is being used'\n\
 'The chest is locked. You must use a lockpick to open it.'\n\
 'The chest is locked. You must have the correct key or a lockpick.'\n\
@@ -598,6 +613,8 @@ void ChatFilter::DrawSettingInternal() {
 	ImGui::ShowHelp("Such as 'A skill was updated for pvp!'");
 	ImGui::Checkbox("9 Rings messages", &ninerings);
 	ImGui::Checkbox("Lunar fortunes messages", &lunars);
+	ImGui::Checkbox("Challenge mission messages", &challenge_mission_messages);
+	ImGui::ShowHelp("Such as 'Hold-out bonus: +2 points'");
 	ImGui::Checkbox("'No one hears you...'", &noonehearsyou);
 	ImGui::Checkbox("'Player x might not reply because his/her status is set to away'", &away);
 
