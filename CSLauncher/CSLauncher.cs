@@ -138,17 +138,15 @@ namespace CSLauncher {
             // names and paths
             string toolboxdir = Environment.GetEnvironmentVariable("LocalAppData") + Path.DirectorySeparatorChar + "GWToolboxpp" + Path.DirectorySeparatorChar;
             string inifile = toolboxdir + "GWToolbox.ini";
+			string dllfile = Path.GetDirectoryName(Application.ExecutablePath) + Path.DirectorySeparatorChar + DLL_NAME;
 
-            // Install resources
-            ResInstaller installer = new ResInstaller();
+			// Install resources
+			ResInstaller installer = new ResInstaller();
             installer.Install();
 
-#if DEBUG
-            // do nothing, we'll use GWToolbox.dll in /Debug
-            string dllfile = System.IO.Path.GetDirectoryName(Application.ExecutablePath) + Path.DirectorySeparatorChar + DLL_NAME;
-#else
-            // Download or update if needed
-            string dllfile = toolboxdir + DLL_NAME;
+            // Download or update if needed. If dll file exists in current directory, use it.
+			if(!File.Exists(dllfile))
+				dllfile = toolboxdir + DLL_NAME;
             if (File.Exists(dllfile) && (new FileInfo(dllfile).Length) < 1)
                 File.Delete(dllfile); // Delete file if exists with 0 length
             if (!File.Exists(dllfile)) {
@@ -190,7 +188,6 @@ namespace CSLauncher {
                     return;
                 }
             }
-#endif
             // check again after download/update/build
             if (!File.Exists(dllfile)) {
                 MessageBox.Show("Cannot find " + DLL_NAME, "GWToolbox++ Launcher Error",
