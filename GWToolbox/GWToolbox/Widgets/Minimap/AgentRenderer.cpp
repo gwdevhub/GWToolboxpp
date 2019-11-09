@@ -46,6 +46,8 @@ void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	size_boss = (float)ini->GetDoubleValue(section, VAR_NAME(size_boss), 125.0);
 	size_minion = (float)ini->GetDoubleValue(section, VAR_NAME(size_minion), 50.0);
 
+	show_hidden_npcs = ini->GetBoolValue(section, VAR_NAME(show_hidden_npcs), show_hidden_npcs);
+
 	LoadAgentColors();
 
 	Invalidate();
@@ -97,6 +99,8 @@ void AgentRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 	ini->SetDoubleValue(section, VAR_NAME(size_item), size_item);
 	ini->SetDoubleValue(section, VAR_NAME(size_boss), size_boss);
 	ini->SetDoubleValue(section, VAR_NAME(size_minion), size_minion);
+
+	ini->SetBoolValue(section, VAR_NAME(show_hidden_npcs), show_hidden_npcs);
 
 	SaveAgentColors();
 }
@@ -420,7 +424,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 		if (agent->GetIsGadgetType()
 			&& GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish
 			&& agent->extra_type == 7602) continue;
-		if (agent->GetIsCharacterType()
+		if (!show_hidden_npcs && agent->GetIsCharacterType()
 			&& agent->IsNPC()
 			&& agent->player_number < npcs.size()
 			&& (npcs[agent->player_number].npc_flags & 0x10000) > 0) continue;

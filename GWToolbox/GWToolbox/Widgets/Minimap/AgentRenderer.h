@@ -19,6 +19,8 @@ public:
 	void LoadAgentColors();
 	void SaveAgentColors() const;
 
+	bool show_hidden_npcs = false;
+
 private:
 	static const size_t shape_size = 4;
 	enum Shape_e { Tear, Circle, Quad, BigCircle };
