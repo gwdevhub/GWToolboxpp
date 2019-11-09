@@ -418,6 +418,7 @@ void ChatCommands::CmdHide(const wchar_t *message, int argc, LPWSTR *argv) {
 
 bool ChatCommands::ParseOutpost(const std::wstring s, GW::Constants::MapID& outpost, GW::Constants::District& district, int& number) {
 	// Shortcut words e.g "/tp doa" for domain of anguish
+	if (s == L"bestarea")							return outpost = GW::Constants::MapID::The_Deep, true;
 	if (s == L"toa")								return outpost = GW::Constants::MapID::Temple_of_the_Ages, true;
 	if (s == L"doa" || s == L"goa" || s == L"tdp")	return outpost = GW::Constants::MapID::Domain_of_Anguish, true;
 	if (s == L"eee")								return outpost = GW::Constants::MapID::Embark_Beach, district = GW::Constants::District::EuropeEnglish, true;

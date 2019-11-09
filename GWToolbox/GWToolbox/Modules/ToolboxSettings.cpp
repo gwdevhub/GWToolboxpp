@@ -56,10 +56,7 @@
 
 
 #include "ToolboxSettings.h"
-//#define TB_DEBUG
-#ifdef _DEBUG
- #define TB_DEBUG
-#endif
+//#define _FUN
 
 bool ToolboxSettings::move_all = false;
 
@@ -83,18 +80,17 @@ void ToolboxSettings::InitializeModules() {
     if (use_discord) DiscordModule::Instance().Initialize();
     if (use_twitch) TwitchModule::Instance().Initialize();
 	if (use_partywindowmodule) PartyWindowModule::Instance().Initialize();
-#ifdef TB_DEBUG
-    DoorMonitorWindow::Instance().Initialize();
-    SkillListingWindow::Instance().Initialize();
-    
-#endif
 #ifdef _DEBUG
     PacketLoggerWindow::Instance().Initialize();
     StringDecoderWindow::Instance().Initialize();
-	FunModule::Instance().Initialize();
+	DoorMonitorWindow::Instance().Initialize();
+	SkillListingWindow::Instance().Initialize();
     if(use_friendlist) FriendListWindow::Instance().Initialize();
 #endif
-
+#ifdef _FUN
+	FunModule::Instance().Initialize();
+#endif
+	
 	SettingsWindow::Instance().Initialize();
 
 	SettingsWindow::Instance().sep_widgets = GWToolbox::Instance().GetModules().size();
@@ -108,7 +104,7 @@ void ToolboxSettings::InitializeModules() {
 	if (use_clock) ClockWidget::Instance().Initialize();
 	if (use_vanquish) VanquishWidget::Instance().Initialize();
 	if (use_alcohol) AlcoholWidget::Instance().Initialize();
-	if (use_serverinfo) ServerInfoWidget::Instance().Initialize();
+	//if (use_serverinfo) ServerInfoWidget::Instance().Initialize();
 }
 
 void ToolboxSettings::DrawSettingInternal() {
