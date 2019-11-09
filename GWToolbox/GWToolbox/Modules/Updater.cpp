@@ -18,6 +18,7 @@ void Updater::LoadSettings(CSimpleIni* ini) {
 #else
 	mode = ini->GetLongValue(Name(), "update_mode", mode);
 #endif
+	CheckForUpdate();
 }
 
 void Updater::SaveSettings(CSimpleIni* ini) {
@@ -132,9 +133,6 @@ void Updater::CheckForUpdate(const bool forced) {
 }
 
 void Updater::Draw(IDirect3DDevice9* device) {
-	if (!last_check || (clock() - last_check) / CLOCKS_PER_SEC > 600) {
-		CheckForUpdate(); // Check for updates every 10 mins
-	}
 	if (step == Asking && !latest_release.version.empty()) {
 		
 		if (!notified) {
