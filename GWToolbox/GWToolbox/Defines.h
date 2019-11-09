@@ -7,6 +7,7 @@
 #define GWTOOLBOX_WEBSITE "https://haskha.github.io/GWToolboxpp/"
 #define GITHUB_OWNER "3vcloud"
 #define GWTOOLBOX_EXTENDED_WEBSITE "https://github.com/" GITHUB_OWNER "/GWToolboxpp"
+#define DLL_NAME "JonsGWToolbox.dll"
 
 #define VAR_NAME(v) (#v)
 

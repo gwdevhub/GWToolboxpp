@@ -9,8 +9,6 @@
 #include <GuiUtils.h>
 #include <Modules/Resources.h>
 
-#define DLL_NAME "JonsGWToolbox.dll"
-
 void Updater::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini);
 #ifdef _DEBUG

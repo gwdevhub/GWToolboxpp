@@ -5,13 +5,27 @@ layout: default
 # Version History
 Previous releases are provided as dll files. In order to use it, you need to use a different launcher which must be placed in the same directory as the dll. If you are looking for the latest version, go to the [Home Page](./) instead.
 
-[AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
+## Version 2.27, Extended 1.8.96
+* [New] Automatic /age on vanquish option
+* [New] Automatic /age2 on /age option
+* [New] Added option to show hidden NPCs on Minimap
+* [New] Added seconds to the clock widget
+* [New] Added challenge mission chat filter option
+* [New] Added "You gain x faction" chat filter option
+* [Minor] JonsToolbox.exe will now check for JonsGWToolbox.dll in its own folder before trying to load from appdata folder.
+* [Minor] JonsToolbox.exe no longer requires admin, but will let you know if it needs it to do its job.
+* [Minor] Performance tweaks and housekeeping for chat filters.
+* [Fix] Chat filter by channel now working again
+
+[Download](https://github.com/3vcloud/GWToolboxpp/releases/download/2.27-1.8.96_Release/JonsGWToolbox.dll)
 
 ## Version 2.27, Extended 1.8.94
 * [New] JonsToolbox.exe now uses/downloads JonsGWToolbox.dll instead of GWToolbox.dll if not found in GWToolboxpp folder.
 * [New] Updater module re-enabled; will now give update notifications for this version of toolbox.
 * [New] Added "Check for Updates" button to Toolbox Settings section. If enabled, it will auto-check every 10 minutes instead of just the first load.
 * [Minor] Stability/failover changes for Updater module. Will update current dll wherever it is on disk, not just from GWToolboxpp folder.
+
+[Download](https://github.com/3vcloud/GWToolboxpp/releases/download/2.27-1.8.94_Release/JonsGWToolbox.dll)
 
 ## Version 2.27, Extended 1.8.93
 * [New] Support for Chinese character set; add "Font_ChineseTraditional.ttf" to GWToolboxpp folder to load automatically.
@@ -22,6 +36,8 @@ Previous releases are provided as dll files. In order to use it, you need to use
 * [Fix] Fixed a crash when trying to click on Minimap whilst observing PvP matches
 * [Fix] Bugfix with memory leak when refilling pcons
 * [Minor] Reverted Trade Window to vanilla 2.27. Tweaks to layout widths, fixed bug when trying to whisper player's with unicode chars in their name.
+
+[Download](https://github.com/3vcloud/GWToolboxpp/releases/download/2.27-1.8.93_Release/GWToolbox.dll)
 
 ## Version 2.27
 * [New] Added support for adrenaline skill with /useskill command.
