@@ -40,9 +40,11 @@ public:
 	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
 
+    std::vector<Pcon*> pcons;
+
 private:
 
-	std::vector<Pcon*> pcons;
+	
 	PconAlcohol* pcon_alcohol = nullptr;
 	clock_t scan_inventory_timer = 0;
 	bool enabled = false;

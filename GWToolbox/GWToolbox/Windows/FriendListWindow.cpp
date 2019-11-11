@@ -1,4 +1,6 @@
 #include "stdafx.h"
+#include "rpccde.h"
+
 #include "FriendListWindow.h"
 
 #include <algorithm>
@@ -45,7 +47,7 @@ void FriendListWindow::Friend::GetMapName() {
 }
 // Get the Guild Wars friend object for this friend (if it exists)
 GW::Friend* FriendListWindow::Friend::GetFriend() {
-	return GW::FriendListMgr::GetFriend((uint8_t*)uuid.c_str());
+	return GW::FriendListMgr::GetFriend((uint8_t*)&uuid);
 }
 // Start whisper to this player via their current char name.
 void FriendListWindow::Friend::StartWhisper() {
@@ -125,7 +127,7 @@ bool FriendListWindow::Friend::RemoveGWFriend() {
 
 /* Setters */
 // Update local friend record from raw info.
-FriendListWindow::Friend* FriendListWindow::SetFriend(uint8_t* uuid, uint8_t type, uint8_t status, uint32_t map_id, const wchar_t* charname, const wchar_t* alias) {
+FriendListWindow::Friend* FriendListWindow::SetFriend(UUID* uuid, uint8_t type, uint8_t status, uint32_t map_id, const wchar_t* charname, const wchar_t* alias) {
     
 	Friend* lf = GetFriend(uuid);
 	if (!lf && charname)
@@ -136,14 +138,16 @@ FriendListWindow::Friend* FriendListWindow::SetFriend(uint8_t* uuid, uint8_t typ
 	if(!lf) {
 		// New friend
         lf = new Friend();
-        lf->uuid = std::string((char*)uuid);
+        memcpy(&lf->uuid, uuid, 16);
         lf->type = type;
         lf->alias = std::wstring(alias);
-		friends.emplace(lf->uuid, lf);
+        char uuid[128];
+        UuidToString(&lf->uuid,(RPC_CSTR*)&uuid);
+		friends.emplace(uuid, lf);
 	}
-	if (!lf->uuid[0] || strcmp((char*)uuid, lf->uuid.c_str())) {
+	if (memcmp(uuid,&lf->uuid,16) != 0) {
 		// UUID is different. This could be because toolbox created a uuid and it needs updating.
-		lf->uuid = std::string((char*)uuid);
+        memcpy(&lf->uuid, uuid, 16);
 	}
 	if (alias && wcscmp(alias, lf->alias.c_str())) {
 		lf->alias = std::wstring(alias);
@@ -159,7 +163,7 @@ FriendListWindow::Friend* FriendListWindow::SetFriend(uint8_t* uuid, uint8_t typ
 		lf->current_char = nullptr;
 	if (status != 0 && charname) {
 		lf->current_char = lf->SetCharacter(charname);
-		uuid_by_name.emplace(charname, lf->uuid);
+		uuid_by_name.emplace(charname, &lf->uuid);
 	}
 	if (status != 255) {
 		if (lf->status != status)
@@ -171,25 +175,27 @@ FriendListWindow::Friend* FriendListWindow::SetFriend(uint8_t* uuid, uint8_t typ
 }
 // Update local friend record from existing friend.
 FriendListWindow::Friend* FriendListWindow::SetFriend(GW::Friend* f) {
-	return SetFriend((uint8_t*)&f->uuid[0], f->type, f->status, f->zone_id, (wchar_t*)&f->charname[0], (wchar_t*)&f->alias[0]);
+	return SetFriend((UUID*)&f->uuid, f->type, f->status, f->zone_id, (wchar_t*)&f->charname[0], (wchar_t*)&f->alias[0]);
 }
 
 /* Getters */
 // Find existing record for friend by char name.
 FriendListWindow::Friend* FriendListWindow::GetFriend(const wchar_t* name) {
-	std::map<std::wstring, std::string>::iterator it = uuid_by_name.find(name);
+	std::map<std::wstring, UUID*>::iterator it = uuid_by_name.find(name);
 	if (it == uuid_by_name.end())
 		return nullptr; // Not found
-	return GetFriend((uint8_t*)it->second.c_str());
+	return GetFriend(it->second);
 }
 // Find existing record for friend by GW Friend object
 FriendListWindow::Friend* FriendListWindow::GetFriend(GW::Friend* f) {
-	return f ? GetFriend(f->uuid) : nullptr;
+	return f ? GetFriend((UUID*)&f->uuid) : nullptr;
 }
 // Find existing record for friend by uuid
-FriendListWindow::Friend* FriendListWindow::GetFriend(uint8_t* uuid) {
+FriendListWindow::Friend* FriendListWindow::GetFriend(UUID* uuid) {
     std::lock_guard<std::mutex> lock(friends_mutex);
-	std::map<std::string, Friend*>::iterator it = friends.find((char*)uuid);
+    char uuid_c[128] = { 0 };
+    UuidToString(uuid, (RPC_CSTR*)&uuid_c);
+	std::map<std::string, Friend*>::iterator it = friends.find(uuid_c);
 	if (it == friends.end())
 		return nullptr;
 	return it->second; // Found in cache
@@ -205,7 +211,7 @@ void FriendListWindow::Initialize() {
         const wchar_t* alias,
         const wchar_t* charname) {
         // Keep a log mapping char name to uuid. This is saved to disk.
-		Friend* lf = SetFriend(f->uuid, f->type, status, f->zone_id, charname, alias);
+		Friend* lf = SetFriend((UUID*)&f->uuid, f->type, status, f->zone_id, charname, alias);
 		// If we only added this user to get an updated status, then remove this user now.
 		if (lf->is_tb_friend) {
 			lf->RemoveGWFriend();
@@ -282,7 +288,7 @@ void FriendListWindow::Poll() {
 	for (unsigned int i = 0; i < fl->friends.size(); i++) {
 		GW::Friend* f = fl->friends[i];
 		if (!f) continue;
-		Friend* lf = SetFriend(f->uuid, f->type, f->status, f->zone_id, f->charname, f->alias);
+		Friend* lf = SetFriend((UUID*)&f->uuid, f->type, f->status, f->zone_id, f->charname, f->alias);
 		// If we only added this user to get an updated status, then remove this user now.
 		if (lf->added_via_toolbox) {
 			lf->RemoveGWFriend();
@@ -346,7 +352,9 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0);
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0, 0));
-		ImGui::PushID(lf.uuid.c_str());
+        char uuid[128] = { 0 };
+        UuidToString(&lf.uuid, (RPC_CSTR*)&uuid);
+		ImGui::PushID(uuid);
 		bool clicked = ImGui::Button("", ImVec2(ImGui::GetContentRegionAvailWidth(), height));
 		
 		ImGui::PopStyleVar();
@@ -466,15 +474,13 @@ void FriendListWindow::LoadFromFile() {
 		CSimpleIni::TNamesDepend entries;
 		inifile->GetAllSections(entries);
 		for (CSimpleIni::Entry& entry : entries) {
-			char uuid[32] = { 0 };
-			b64_dec(entry.pItem, uuid);
 			uint8_t type = 0;
-
 			Friend* lf = new Friend();
-			lf->uuid = std::string(uuid);
+            const char* uuid_c = entry.pItem;
+            UuidFromString((RPC_CSTR)uuid_c, &lf->uuid);
 			lf->alias = GuiUtils::StringToWString(inifile->GetValue(entry.pItem, "alias", ""));
 			lf->type = (uint8_t)inifile->GetLongValue(entry.pItem, "type", lf->type);
-            if (lf->uuid.empty() || lf->alias.empty()) {
+            if (!lf->uuid.Data1 || lf->alias.empty()) {
                 delete lf;
                 continue; // Error, alias or uuid empty.
             }
@@ -502,9 +508,9 @@ void FriendListWindow::LoadFromFile() {
                 delete lf;
                 continue; // Error, should have at least 1 charname...
             }
-			friends.emplace(lf->uuid, lf);
+			friends.emplace(uuid_c, lf);
 			for (std::map<std::wstring, Character>::iterator it2 = lf->characters.begin(); it2 != lf->characters.end(); ++it2) {
-				uuid_by_name.emplace(it2->first, uuid);
+				uuid_by_name.emplace(it2->first, &lf->uuid);
 			}
 		}
 		Log::Log("%s: Loaded friends from ini", Name());
@@ -524,8 +530,8 @@ void FriendListWindow::SaveToFile() {
     for (std::map<std::string, Friend*>::iterator it = friends.begin(); it != friends.end(); ++it) {
         // do something
         Friend lf = *it->second;
-		char uuid[128];
-		b64_enc((wchar_t*)lf.uuid.data(),lf.uuid.size(),uuid);
+        char uuid[128] = { 0 };
+        UuidToString((UUID*)&lf.uuid, (RPC_CSTR*)&uuid);
         inifile->SetLongValue(uuid, "type", lf.type);
 		inifile->SetBoolValue(uuid, "is_tb_friend", lf.is_tb_friend);
 		inifile->SetValue(uuid, "alias", GuiUtils::WStringToString(lf.alias).c_str());

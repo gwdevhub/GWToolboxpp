@@ -12,12 +12,17 @@
 class BuildsWindow : public ToolboxWindow {
 private:
 	struct Build {
-		Build(const char* n, const char* c) {
+		Build(const char* n, const char* c, bool _has_pcons = false) : has_pcons(_has_pcons) {
 			GuiUtils::StrCopy(name, n, sizeof(name));
 			GuiUtils::StrCopy(code, c, sizeof(code));
+
 		}
 		char name[128];
 		char code[128];
+        // Does this build have pcons setup?
+        bool has_pcons = false;
+        // Vector of pcons to use for this build, listed by ini name e.g. "cupcake"
+        std::set<std::string> pcons;
 	};
 	struct TeamBuild {
 		static unsigned int cur_ui_id;
@@ -26,6 +31,7 @@ private:
 			GuiUtils::StrCopy(name, n, sizeof(name));
 		}
 		bool edit_open = false;
+        int edit_pcons = -1;
 		bool show_numbers = false;
 		char name[128];
 		std::vector<Build> builds;
@@ -67,15 +73,23 @@ private:
 	void Send(const TeamBuild& tbuild);
 	// Send a specific build from a teambuild
 	void Send(const TeamBuild& tbuild, unsigned int idx);
+    // Load a specific build from a teambuild (and any applicable pcons)
+    void Load(const TeamBuild& tbuild, unsigned int idx);
+    // Toggle pcons for a specific build
+    void LoadPcons(const TeamBuild& tbuild, unsigned int idx);
     // View a teambuild
     void View(const TeamBuild& tbuild);
     // View a specific build from a teambuild
     void View(const TeamBuild& tbuild, unsigned int idx);
 
+    void BuildEditSection(TeamBuild& tbuild, unsigned int idx);
+    void BuildHeaderButtons(TeamBuild& tbuild, unsigned int idx);
+
 	bool builds_changed = false;
 	std::vector<TeamBuild> teambuilds;
     bool order_by_name = false;
     bool order_by_index = !order_by_name;
+    bool auto_load_pcons = false;
 
 	clock_t send_timer = 0;
 	std::queue<std::string> queue;
