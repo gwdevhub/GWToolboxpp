@@ -73,6 +73,7 @@ private:
 	void Send(const TeamBuild& tbuild);
 	// Send a specific build from a teambuild
 	void Send(const TeamBuild& tbuild, unsigned int idx);
+	void SendPcons(const TeamBuild& tbuild, unsigned int idx, bool include_build_name=true);
     // Load a specific build from a teambuild (and any applicable pcons)
     void Load(const TeamBuild& tbuild, unsigned int idx);
     // Toggle pcons for a specific build
@@ -89,6 +90,7 @@ private:
     bool order_by_name = false;
     bool order_by_index = !order_by_name;
     bool auto_load_pcons = true;
+	bool auto_send_pcons = true;
 	bool delete_builds_without_prompt = false;
 
 	clock_t send_timer = 0;

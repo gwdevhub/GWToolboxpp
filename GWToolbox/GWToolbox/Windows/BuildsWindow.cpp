@@ -40,6 +40,8 @@ void BuildsWindow::Terminate() {
 void BuildsWindow::DrawSettingInternal() {
 	ImGui::Checkbox("Auto load pcons",&auto_load_pcons);
 	ImGui::ShowHelp("Automatically load pcons for a build when loaded onto a character");
+	ImGui::Checkbox("Send pcons when pinging a build", &auto_send_pcons);
+	ImGui::ShowHelp("Automatically send a second message after the build template in team chat,\nshowing the pcons that the build uses.");
     ImGui::Text("Order team builds by: ");
     ImGui::SameLine(0, -1);
     if (ImGui::Checkbox("Index", &order_by_index)) {
@@ -125,6 +127,11 @@ void BuildsWindow::DrawBuildSection(TeamBuild& tbuild, unsigned int j) {
 	if (ImGui::Checkbox("This build has pcons###has_pcons", &build.has_pcons))
 		builds_changed = true;
 	if (build.has_pcons) {
+		ImGui::SameLine(btn_offset);
+		if (ImGui::Button("Send Pcons", ImVec2(btn_width * 2, 0)) && build.pcons.size()) {
+			SendPcons(tbuild, j);
+		}
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Send this build's Pcons to team chat");
 		auto pcons = PconsWindow::Instance().pcons;
 		
 		float pos_x = 0;
@@ -348,6 +355,32 @@ void BuildsWindow::LoadPcons(const TeamBuild& tbuild, unsigned int idx) {
 			});
 	}
 }
+void BuildsWindow::SendPcons(const TeamBuild& tbuild, unsigned int idx, bool include_build_name) {
+	if (idx >= tbuild.builds.size()) return;
+	const Build& build = tbuild.builds[idx];
+	if (!build.has_pcons || build.pcons.empty())
+		return;
+	std::string pconsStr("[Pcons] ");
+	if (include_build_name) {
+		char buf[255] = { 0 };
+		const std::string name(build.name);
+		if(name.empty())
+			snprintf(buf, 255, "[Pcons][%s %d] ", tbuild.name, idx + 1);
+		else
+			snprintf(buf, 255, "[Pcons][%s] ", name.c_str());
+		pconsStr = buf;
+	}
+	size_t cnt = 0;
+	for (auto pcon : PconsWindow::Instance().pcons) {
+		if (build.pcons.find(pcon->ini) == build.pcons.end())
+			continue;
+		if (cnt) pconsStr += ", ";
+		cnt = 1;
+		pconsStr += pcon->abbrev;
+	}
+	if (cnt)
+		queue.push(pconsStr.c_str());
+}
 void BuildsWindow::Send(const TeamBuild& tbuild, unsigned int idx) {
 	if (idx >= tbuild.builds.size()) return;
 	const Build& build = tbuild.builds[idx];
@@ -372,19 +405,8 @@ void BuildsWindow::Send(const TeamBuild& tbuild, unsigned int idx) {
 		snprintf(buf, buf_size, "[%s;%s]", build.name, build.code);
 	}
 	queue.push(buf);
-	if (build.has_pcons && !build.pcons.empty()) {
-		std::string pconsStr = "Pcons: ";
-		size_t cnt = 0;
-		for (auto pcon : PconsWindow::Instance().pcons) {
-			if (build.pcons.find(pcon->ini) == build.pcons.end())
-				continue;
-			if (cnt) pconsStr += ", ";
-			cnt = 1;
-			pconsStr += pcon->abbrev;
-		}
-		if (cnt)
-			queue.push(pconsStr.c_str());
-	}
+	if (auto_send_pcons)
+		SendPcons(tbuild, idx, false);
 }
 
 void BuildsWindow::Update(float delta) {
@@ -424,6 +446,7 @@ void BuildsWindow::LoadSettings(CSimpleIni* ini) {
 	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
     order_by_name = ini->GetBoolValue(Name(), VAR_NAME(order_by_name), order_by_name);
 	auto_load_pcons = ini->GetBoolValue(Name(), VAR_NAME(auto_load_pcons), auto_load_pcons);
+	auto_send_pcons = ini->GetBoolValue(Name(), VAR_NAME(auto_send_pcons), auto_send_pcons);
     order_by_index = !order_by_name;
 
 	if (MoveOldBuilds(ini)) {
@@ -437,6 +460,7 @@ void BuildsWindow::SaveSettings(CSimpleIni* ini) {
 	ToolboxWindow::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(order_by_name), order_by_name);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_load_pcons), auto_load_pcons);
+	ini->SetBoolValue(Name(), VAR_NAME(auto_send_pcons), auto_send_pcons);
 	SaveToFile();
 }
 
