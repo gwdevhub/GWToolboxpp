@@ -86,16 +86,13 @@ namespace {
 		return guid;
 	}
 
-	static std::string GuidToString(GUID guid)
+	static void GuidToString(GUID guid, char* guid_cstr)
 	{
-		char guid_cstr[39];
-		snprintf(guid_cstr, sizeof(guid_cstr),
+		snprintf(guid_cstr, 128,
 			"{%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x}",
 			guid.Data1, guid.Data2, guid.Data3,
 			guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3],
 			guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]);
-
-		return std::string(guid_cstr);
 	}
 }
 
@@ -110,7 +107,7 @@ private:
 	};
 	
     struct Friend {
-		UUID uuid = { 0 };
+		std::string uuid;
         std::wstring alias;
 		Character* current_char = nullptr;
 		char current_map_name[128] = { 0 };
@@ -160,11 +157,12 @@ private:
         }
     };
 
-	Friend* SetFriend(UUID*, uint8_t, uint8_t, uint32_t, const wchar_t*, const wchar_t*);
+	Friend* SetFriend(uint8_t*, uint8_t, uint8_t, uint32_t, const wchar_t*, const wchar_t*);
 	Friend* SetFriend(GW::Friend*);
 	Friend* GetFriend(const wchar_t*);
 	Friend* GetFriend(GW::Friend*);
-	Friend* GetFriend(UUID*);
+	Friend* GetFriendByUUID(const char*);
+	Friend* GetFriend(uint8_t*);
 public:
     static FriendListWindow& Instance() {
         static FriendListWindow instance;
@@ -272,7 +270,7 @@ private:
     
 
     // Mapping of Name > UUID
-    std::map<std::wstring, UUID*> uuid_by_name;
+    std::map<std::wstring, std::string> uuid_by_name;
 
     // Main store of Friend info
     std::map<std::string, Friend*> friends;
