@@ -82,14 +82,14 @@ private:
     // View a specific build from a teambuild
     void View(const TeamBuild& tbuild, unsigned int idx);
 
-    void BuildEditSection(TeamBuild& tbuild, unsigned int idx);
-    void BuildHeaderButtons(TeamBuild& tbuild, unsigned int idx);
+    void DrawBuildSection(TeamBuild& tbuild, unsigned int idx);
 
 	bool builds_changed = false;
 	std::vector<TeamBuild> teambuilds;
     bool order_by_name = false;
     bool order_by_index = !order_by_name;
-    bool auto_load_pcons = false;
+    bool auto_load_pcons = true;
+	bool delete_builds_without_prompt = false;
 
 	clock_t send_timer = 0;
 	std::queue<std::string> queue;

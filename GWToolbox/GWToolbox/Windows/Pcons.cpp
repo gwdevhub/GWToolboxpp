@@ -47,12 +47,13 @@ std::vector<std::vector<clock_t>> Pcon::reserved_bag_slots(22, std::vector<clock
 
 // ================================================
 Pcon::Pcon(const char* chatname,
+	const char* abbrevname,
     const char* ininame,
     const wchar_t* filename,
     WORD res_id,
     ImVec2 uv0_, ImVec2 uv1_, int threshold_,
     const char* desc_)
-    : chat(chatname), ini(ininame), threshold(threshold_), 
+    : chat(chatname), abbrev(abbrevname), ini(ininame), threshold(threshold_),
 	uv0(uv0_), uv1(uv1_), texture(nullptr),
 	enabled(false), quantity(0), timer(TIMER_INIT()) {
 	if (desc_)

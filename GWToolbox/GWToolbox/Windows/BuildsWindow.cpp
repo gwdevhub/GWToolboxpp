@@ -15,6 +15,7 @@
 #include "GuiUtils.h"
 #include <Modules\Resources.h>
 #include <Windows\PconsWindow.h>
+#include <logger.h>
 
 
 unsigned int BuildsWindow::TeamBuild::cur_ui_id = 0;
@@ -37,6 +38,8 @@ void BuildsWindow::Terminate() {
 }
 
 void BuildsWindow::DrawSettingInternal() {
+	ImGui::Checkbox("Auto load pcons",&auto_load_pcons);
+	ImGui::ShowHelp("Automatically load pcons for a build when loaded onto a character");
     ImGui::Text("Order team builds by: ");
     ImGui::SameLine(0, -1);
     if (ImGui::Checkbox("Index", &order_by_index)) {
@@ -50,38 +53,20 @@ void BuildsWindow::DrawSettingInternal() {
     }
 }
 
-void BuildsWindow::BuildEditSection(TeamBuild& tbuild, unsigned int j) {
+void BuildsWindow::DrawBuildSection(TeamBuild& tbuild, unsigned int j) {
     Build& build = tbuild.builds[j];
-    if (ImGui::InputText("Name###name", build.name, 128)) 
-        builds_changed = true;
-    if (ImGui::InputText("Code###code", build.code, 128)) 
-        builds_changed = true;
-    if (ImGui::Checkbox("This build has pcons###has_pcons", &build.has_pcons))
-        builds_changed = true;
-    if (build.has_pcons) {
-        auto pcons = PconsWindow::Instance().pcons;
-        const float half_width = ImGui::GetContentRegionAvailWidth() / 2;
-        for (size_t i = 0; i < pcons.size(); i++) {
-            auto pcon = pcons[i];
-            bool active = build.pcons.find((char*)pcon->ini) != build.pcons.end();
-            if (i % 2 != 0)
-                ImGui::SameLine(half_width);
-            char pconlabel[128];
-            snprintf(pconlabel, 128, "%s###pcon_%s", pcon->chat, pcon->ini);
-            if (ImGui::Checkbox(pconlabel, &active)) {
-                if (active)
-                    build.pcons.emplace(pcon->ini);
-                else
-                    build.pcons.erase((char*)pcon->ini);
-                builds_changed = true;
-            }
-        }
-    }
-}
-void BuildsWindow::BuildHeaderButtons(TeamBuild& tbuild, unsigned int j) {
-    Build& build = tbuild.builds[j];
-    const float btn_width = 50.0f * ImGui::GetIO().FontGlobalScale;
-    const float btn_offset = ImGui::GetContentRegionAvailWidth() - 24.0f - btn_width * 3 - ImGui::GetStyle().FramePadding.x * 3;
+	const float font_scale = ImGui::GetIO().FontGlobalScale;
+    const float btn_width = 50.0f * font_scale;
+	const float del_width = 24.0f * font_scale;
+	const float spacing = ImGui::GetStyle().ItemSpacing.y;
+    const float btn_offset = ImGui::GetContentRegionAvailWidth() - del_width - btn_width * 3 - spacing * 3;
+	ImGui::Text("#%d", j + 1);
+	ImGui::PushItemWidth((btn_offset - btn_width - spacing * 2) / 2);
+	ImGui::SameLine(btn_width, 0);
+	if (ImGui::InputText("###name", build.name, 128)) builds_changed = true;
+	ImGui::SameLine(0, spacing);
+	if (ImGui::InputText("###code", build.code, 128)) builds_changed = true;
+	ImGui::PopItemWidth();
     ImGui::SameLine(btn_offset);
     if (ImGui::Button(ImGui::GetIO().KeyCtrl ? "Send" : "View", ImVec2(btn_width, 0))) {
         if (ImGui::GetIO().KeyCtrl)
@@ -90,33 +75,84 @@ void BuildsWindow::BuildHeaderButtons(TeamBuild& tbuild, unsigned int j) {
             View(tbuild, j);
     }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip(ImGui::GetIO().KeyCtrl ? "Click to send to team chat" : "Click to view build. Ctrl + Click to send to chat.");
-    ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+	ImGui::SameLine(0, spacing);
     if (ImGui::Button("Load", ImVec2(btn_width, 0)))
         Load(tbuild, j);
     if (ImGui::IsItemHovered())
-        ImGui::SetTooltip(auto_load_pcons && build.has_pcons ? "Click to load build template and pcons" : "Click to load build template");
-    if (build.has_pcons) {
-        ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-        if (ImGui::Button("Pcons", ImVec2(btn_width, 0))) {
-            LoadPcons(tbuild, j);
-        }
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Click to load pcons for this build");
-    }
-    ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-    if (ImGui::Button(ImGui::GetIO().KeyCtrl ? "Send" : "View", ImVec2(btn_width, 0))) {
-        if (ImGui::GetIO().KeyCtrl)
-            Send(tbuild, j);
-        else
-            View(tbuild, j);
-    }
-
-    ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-    if (ImGui::Button("x", ImVec2(24.0f, 0))) {
-        tbuild.builds.erase(tbuild.builds.begin() + j);
-        builds_changed = true;
+        ImGui::SetTooltip(build.has_pcons ? "Click to load build template and pcons" : "Click to load build template");
+	ImGui::SameLine(0, spacing);
+	bool pcons_editing = tbuild.edit_pcons == j;
+	if(pcons_editing) 
+		ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered));
+	if (!build.has_pcons)
+		ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+	if (ImGui::Button("Pcons", ImVec2(btn_width, 0)))
+		tbuild.edit_pcons = pcons_editing ? -1 : j;
+	if(pcons_editing) ImGui::PopStyleColor();
+	if(!build.has_pcons) ImGui::PopStyleColor();
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Click to modify pcons for this build");
+	ImGui::SameLine(0, spacing);
+    if (ImGui::Button("x", ImVec2(del_width, 0))) {
+		if (delete_builds_without_prompt) {
+			tbuild.builds.erase(tbuild.builds.begin() + j);
+			builds_changed = true;
+		}
+		else {
+			ImGui::OpenPopup("Delete Build?");
+		}
     }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete build");
+	if (ImGui::BeginPopupModal("Delete Build?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+		ImGui::Text("Are you sure?\nThis operation cannot be undone.\n\n");
+		ImGui::Checkbox("Don't remind me again", &delete_builds_without_prompt);
+		ImGui::ShowHelp("This can be re-enabled in settings");
+		if (ImGui::Button("OK", ImVec2(120, 0))) {
+			tbuild.builds.erase(tbuild.builds.begin() + j);
+			builds_changed = true;
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndPopup();
+	}
+	if (tbuild.edit_pcons != j)
+		return; // Not editing this build.
+	const float indent = btn_width - ImGui::GetStyle().ItemSpacing.x;
+	ImGui::Indent(indent);
+	if (ImGui::Checkbox("This build has pcons###has_pcons", &build.has_pcons))
+		builds_changed = true;
+	if (build.has_pcons) {
+		auto pcons = PconsWindow::Instance().pcons;
+		
+		float pos_x = 0;
+		float third_w = ImGui::GetContentRegionAvailWidth() / 3;
+		unsigned int offset = 0;
+		for (size_t i = 0; i < pcons.size(); i++) {
+			auto pcon = pcons[i];
+			bool active = build.pcons.find(pcon->ini) != build.pcons.end();
+			ImGui::SameLine(indent, pos_x += third_w);
+			offset++;
+			if (i % 3 == 0) {
+				ImGui::NewLine();
+				offset = 1;
+				pos_x = 0;
+			}
+				
+			char pconlabel[128];
+			snprintf(pconlabel, 128, "%s###pcon_%s", pcon->chat, pcon->ini);
+			if (ImGui::Checkbox(pconlabel, &active)) {
+				if (active)
+					build.pcons.emplace(pcon->ini);
+				else
+					build.pcons.erase((char*)pcon->ini);
+				builds_changed = true;
+			}
+		}
+	}
+	ImGui::Unindent(indent);
 }
 
 void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
@@ -163,15 +199,7 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
             for (unsigned int j = 0; j < tbuild.builds.size(); ++j) {
                 Build& build = tbuild.builds[j];
                 ImGui::PushID(j);
-                char buildheader[256];
-                snprintf(buildheader, 256, "#%d %s###bhdr%d", j + 1, tbuild.name, tbuild.ui_id);
-                if (ImGui::CollapsingHeader(buildheader, ImGuiTreeNodeFlags_AllowItemOverlap)) {
-                    BuildHeaderButtons(tbuild, j);
-                    BuildEditSection(tbuild, j);
-                }
-                else {
-                    BuildHeaderButtons(tbuild, j);
-                }
+				BuildsWindow::DrawBuildSection(tbuild, j);
                 ImGui::PopID();
             }
             if (ImGui::Checkbox("Show numbers", &tbuild.show_numbers)) builds_changed = true;
@@ -264,18 +292,61 @@ void BuildsWindow::View(const TeamBuild& tbuild, unsigned int idx) {
 void BuildsWindow::Load(const TeamBuild& tbuild, unsigned int idx) {
     if (idx >= tbuild.builds.size()) return;
     const Build& build = tbuild.builds[idx];
-    GW::SkillbarMgr::LoadSkillTemplate(build.code);
-    if (auto_load_pcons)
-        LoadPcons(tbuild, idx);
+	if (!GW::SkillbarMgr::LoadSkillTemplate(build.code)) {
+		GW::GameThread::Enqueue([build]() {
+			Log::Error("Failed to load build template %s", build.name);
+			});
+		return;
+	}
+    LoadPcons(tbuild, idx);
 }
 void BuildsWindow::LoadPcons(const TeamBuild& tbuild, unsigned int idx) {
     if (idx >= tbuild.builds.size()) return;
     const Build& build = tbuild.builds[idx];
-    if (!build.has_pcons)
+    if (!build.has_pcons || !auto_load_pcons)
         return;
+	bool some_pcons_not_visible = false;
+	std::vector<Pcon*> pcons_loaded;
+	std::vector<Pcon*> pcons_not_visible;
     for (auto pcon : PconsWindow::Instance().pcons) {
-        pcon->SetEnabled(build.pcons.find((char*)pcon->ini) != build.pcons.end());
+		bool enable = build.pcons.find(pcon->ini) != build.pcons.end();
+		if (enable) {
+			if (!pcon->visible) {
+				// Don't enable pcons that the user cant see!
+				pcons_not_visible.push_back(pcon);
+				continue;
+			} 
+			else {
+				pcons_loaded.push_back(pcon);
+			}
+		}
+        pcon->SetEnabled(enable);
     }
+	if (pcons_loaded.size()) {
+		GW::GameThread::Enqueue([pcons_loaded]() {
+			std::string pcons_str;
+			size_t i = 0;
+			for (auto pcon : pcons_loaded) {
+				if (i) pcons_str += ", ";
+				i = 1;
+				pcons_str += pcon->abbrev;
+			}
+			Log::Info("Pcons loaded: %s", pcons_str.c_str());
+			});
+		PconsWindow::Instance().SetEnabled(true);
+	}
+	if (pcons_not_visible.size()) {
+		GW::GameThread::Enqueue([pcons_not_visible]() {
+			std::string pcons_str;
+			size_t i = 0;
+			for (auto pcon : pcons_not_visible) {
+				if (i) pcons_str += ", ";
+				i = 1;
+				pcons_str += pcon->abbrev;
+			}
+			Log::Warning("Pcons not loaded: %s.\nOnly pcons visible in the Pcons window will be auto enabled.", pcons_str.c_str());
+			});
+	}
 }
 void BuildsWindow::Send(const TeamBuild& tbuild, unsigned int idx) {
 	if (idx >= tbuild.builds.size()) return;
@@ -285,11 +356,10 @@ void BuildsWindow::Send(const TeamBuild& tbuild, unsigned int idx) {
 
 	const int buf_size = 139;
 	char buf[buf_size];
-	if (name.empty() && code.empty()) {
+	if (name.empty() && code.empty())
 		return; // nothing to do here
-	} else if (name.empty()) {
+	if (name.empty()) {
 		// name is empty, fill it with the teambuild name
-		
 		snprintf(buf, buf_size, "[%s %d;%s]", tbuild.name, idx + 1, build.code);
 	} else if (code.empty()) {
 		// code is empty, just print the name without template format
@@ -302,6 +372,19 @@ void BuildsWindow::Send(const TeamBuild& tbuild, unsigned int idx) {
 		snprintf(buf, buf_size, "[%s;%s]", build.name, build.code);
 	}
 	queue.push(buf);
+	if (build.has_pcons && !build.pcons.empty()) {
+		std::string pconsStr = "Pcons: ";
+		size_t cnt = 0;
+		for (auto pcon : PconsWindow::Instance().pcons) {
+			if (build.pcons.find(pcon->ini) == build.pcons.end())
+				continue;
+			if (cnt) pconsStr += ", ";
+			cnt = 1;
+			pconsStr += pcon->abbrev;
+		}
+		if (cnt)
+			queue.push(pconsStr.c_str());
+	}
 }
 
 void BuildsWindow::Update(float delta) {
@@ -340,6 +423,7 @@ void BuildsWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxWindow::LoadSettings(ini);
 	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
     order_by_name = ini->GetBoolValue(Name(), VAR_NAME(order_by_name), order_by_name);
+	auto_load_pcons = ini->GetBoolValue(Name(), VAR_NAME(auto_load_pcons), auto_load_pcons);
     order_by_index = !order_by_name;
 
 	if (MoveOldBuilds(ini)) {
@@ -352,6 +436,7 @@ void BuildsWindow::LoadSettings(CSimpleIni* ini) {
 void BuildsWindow::SaveSettings(CSimpleIni* ini) {
 	ToolboxWindow::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(order_by_name), order_by_name);
+	ini->SetBoolValue(Name(), VAR_NAME(auto_load_pcons), auto_load_pcons);
 	SaveToFile();
 }
 
@@ -433,6 +518,8 @@ void BuildsWindow::LoadFromFile() {
                 b.pcons.emplace(token.c_str());
                 pconsval.erase(0, pos + 1);
             }
+			if (pconsval.length())
+				b.pcons.emplace(pconsval.c_str());
             tbuild.builds.push_back(b);
         }
     }
@@ -476,7 +563,10 @@ void BuildsWindow::SaveToFile() {
                     char pconskey[16];
                     std::string pconsval;
                     snprintf(pconskey, 16, "pcons%d", j);
+					size_t i = 0;
                     for (auto pconstr : build.pcons) {
+						if (i) pconsval += ",";
+						i = 1;
                         pconsval += pconstr;
                     }
                     inifile->SetValue(section, pconskey, pconsval.c_str());

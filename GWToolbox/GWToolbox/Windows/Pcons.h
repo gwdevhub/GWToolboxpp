@@ -36,6 +36,7 @@ public:
 
 protected:
 	Pcon(const char* chatname,
+		const char* abbrevname,
 		const char* ininame,
 		const wchar_t* filename, 
 		WORD res_id, // you can use 0 and it will not load texture from resource, only from file.
@@ -76,6 +77,7 @@ public:
 	clock_t timer = 0;
 
 	const char* const chat;
+	const char* const abbrev;
     std::string desc;
 	const char* const ini;
 
@@ -107,6 +109,7 @@ private:
 class PconGeneric : public Pcon {
 public:
 	PconGeneric(const char* chat,
+		const char* abbrev,
 		const char* ini,
 		const wchar_t* file,
 		WORD res_id,
@@ -114,7 +117,7 @@ public:
 		DWORD item, GW::Constants::SkillID effect, 
 		int threshold,
         	const char* desc = nullptr)
-		: Pcon(chat, ini, file, res_id, uv0, uv1, threshold, desc),
+		: Pcon(chat, abbrev, ini, file, res_id, uv0, uv1, threshold, desc),
 		itemID(item), effectID(effect) {}
 
 protected:
@@ -130,6 +133,7 @@ private:
 class PconCons : public PconGeneric {
 public:
 	PconCons(const char* chat,
+		const char* abbrev,
 		const char* ini,
 		const wchar_t* file,
 		WORD res_id,
@@ -137,7 +141,7 @@ public:
 		DWORD item, GW::Constants::SkillID effect, 
 		int threshold,
         	const char* desc = nullptr)
-		: PconGeneric(chat, ini, file, res_id, uv0, uv1, item, effect, threshold, desc) {}
+		: PconGeneric(chat, abbrev, ini, file, res_id, uv0, uv1, item, effect, threshold, desc) {}
 
 	bool CanUseByEffect() const override;
 };
@@ -145,13 +149,14 @@ public:
 class PconCity : public Pcon {
 public:
 	PconCity(const char* chat,
+		const char* abbrev,
 		const char* ini,
 		const wchar_t* file,
 		WORD res_id,
 		ImVec2 uv0, ImVec2 uv1, 
 		int threshold,
         	const char* desc = nullptr)
-		: Pcon(chat, ini, file, res_id, uv0, uv1, threshold, desc) {}
+		: Pcon(chat, abbrev, ini, file, res_id, uv0, uv1, threshold, desc) {}
 
 	bool CanUseByInstanceType() const;
 	bool CanUseByEffect() const override;
@@ -162,6 +167,7 @@ class PconRefiller : public PconCity {
 public:
     
     PconRefiller(const char* chat,
+		const char* abbrev,
         const char* ini,
         const wchar_t* file,
         WORD res_id,
@@ -169,7 +175,7 @@ public:
         DWORD item,
         int threshold,
         const char* desc_ = nullptr)
-        : PconCity(chat, ini, file, res_id, uv0, uv1, threshold, desc_), itemID(item) {
+        : PconCity(chat, abbrev, ini, file, res_id, uv0, uv1, threshold, desc_), itemID(item) {
         if (desc.size())
             desc += "\n";
         desc += "Enable in an outpost to refill your inventory.";
@@ -186,13 +192,14 @@ private:
 class PconAlcohol : public Pcon {
 public:
 	PconAlcohol(const char* chat,
+		const char* abbrev,
 		const char* ini,
 		const wchar_t* file,
 		WORD res_id,
 		ImVec2 uv0, ImVec2 uv1,
 		int threshold,
         	const char* desc = nullptr)
-		: Pcon(chat, ini, file, res_id, uv0, uv1, threshold, desc) {}
+		: Pcon(chat, abbrev, ini, file, res_id, uv0, uv1, threshold, desc) {}
 
 	bool CanUseByEffect() const override;
 	int QuantityForEach(const GW::Item* item) const override;
@@ -202,13 +209,14 @@ public:
 class PconLunar : public Pcon {
 public:
 	PconLunar(const char* chat,
+		const char* abbrev,
 		const char* ini,
 		const wchar_t* file,
 		WORD res_id,
 		ImVec2 uv0, ImVec2 uv1, 
 		int threshold,
         	const char* desc = nullptr)
-		: Pcon(chat, ini, file, res_id, uv0, uv1, threshold, desc) {}
+		: Pcon(chat, abbrev, ini, file, res_id, uv0, uv1, threshold, desc) {}
 
 	void Update(int delay = -1) override;
 	bool CanUseByEffect() const override;
