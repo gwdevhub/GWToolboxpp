@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "ChatCommands.h"
+#include <algorithm>
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -55,6 +56,8 @@ namespace {
 }
 
 void ChatCommands::DrawHelp() {
+	if (!ImGui::TreeNode("Chat Commands"))
+		return;
 	ImGui::Text("You can create a 'Send Chat' hotkey to perform any command.");
 	ImGui::TextDisabled("Below, <xyz> denotes an argument, use an appropriate value without the quotes.\n"
 		"(a|b) denotes a mandatory argument, in this case 'a' or 'b'.\n"
@@ -93,6 +96,7 @@ void ChatCommands::DrawHelp() {
 		"Use '/useskill <skill>' to stop the skill.");
 	ImGui::Bullet(); ImGui::Text("'/zoom <value>' to change the maximum zoom to the value. "
 		"use empty '/zoom' to reset to the default value of 750.");
+	ImGui::TreePop();
 }
 
 void ChatCommands::DrawSettingInternal() {
@@ -868,87 +872,197 @@ void ChatCommands::CmdLoad(const wchar_t *message, int argc, LPWSTR *argv) {
 }
 
 void ChatCommands::CmdTransmo(const wchar_t *message, int argc, LPWSTR *argv) {
-	int scale = 0;
-	if (argc == 2) {
-		GuiUtils::ParseInt(argv[1], &scale);
-		if (scale < 6 || scale > 255) {
-			Log::Error("scale must be between [6, 255]");
-			return;
+	int scale = 0x64000000;
+	DWORD npc_id = 0;
+	DWORD npc_model_file_id = 0;
+	uint32_t npc_model_file_data = 0;
+	DWORD flags = 0;
+	GW::NPCArray& npcs = GW::GameContext::instance()->world->npcs;
+	if (argc > 1) {
+		int arglen = 0;
+		while (argv[1][arglen])
+			arglen++;
+
+		if (wcsncmp(argv[1], L"reset", std::min(arglen, 5)) == 0) {
+			npc_id = INT_MAX;
+		}
+		else if (wcsncmp(argv[1], L"charr", std::min(arglen, 5)) == 0) {
+			npc_id = 163;
+			npc_model_file_id = 0x0004c409;
+			flags = 98820;
+		}
+		else if (wcsncmp(argv[1], L"eye", std::min(arglen, 12)) == 0) {
+			npc_id = 0x1f4;
+			npc_model_file_id = 0x9d07;
+		}
+		else if (wcsncmp(argv[1], L"zhu", std::min(arglen, 9)) == 0) {
+			npc_id = 298;
+			npc_model_file_id = 170283;
+			npc_model_file_data = 170481;
+			flags = 98820;
+		}
+		else if (wcsncmp(argv[1], L"kuunavang", std::min(arglen, 9)) == 0) {
+			npc_id = 309;
+			npc_model_file_id = 157438;
+			npc_model_file_data = 157527;
+			flags = 98820;
+		}
+		else if (wcsncmp(argv[1], L"beetle", std::min(arglen, 6)) == 0) {
+			npc_id = 329;
+			npc_model_file_id = 207331;
+			npc_model_file_data = 279211;
+			flags = 98820;
+		}
+		else if (wcsncmp(argv[1], L"polar", std::min(arglen, 5)) == 0) {
+			npc_id = 313;
+			npc_model_file_id = 277551;
+			npc_model_file_data = 277556;
+			flags = 98820;
+		}
+		else if (wcsncmp(argv[1], L"celepig", std::min(arglen, 7)) == 0) {
+			npc_id = 331;
+			npc_model_file_id = 279205;
+		}
+		else if (wcsncmp(argv[1], L"mallyx", std::min(arglen, 6)) == 0) {
+			npc_id = 315;
+			npc_model_file_id = 243812;
+			flags = 98820;
+		}
+		else if (wcsncmp(argv[1], L"bonedragon", std::min(arglen, 10)) == 0) {
+			npc_id = 231;
+			npc_model_file_id = 16768;
+		}
+		else if (wcsncmp(argv[1], L"destroyer", std::min(arglen, 9)) == 0) {
+			npc_id = 312;
+			npc_model_file_id = 285891;
+			npc_model_file_data = 285900;
+			flags = 98820;
+		}
+		else if (wcsncmp(argv[1], L"destroyer", std::min(arglen, 10)) == 0) {
+			npc_id = 146;
+			npc_model_file_id = 285886;
+			npc_model_file_data = 285890;
+			flags = 32780;
+		}
+		else if (wcsncmp(argv[1], L"koss", std::min(arglen, 4)) == 0) {
+			npc_id = 250;
+			npc_model_file_id = 243282;
+			npc_model_file_data = 245053;
+			flags = 98820;
+		}
+		else if (wcsncmp(argv[1], L"smite", std::min(arglen, 5)) == 0) {
+			npc_id = 346;
+			npc_model_file_id = 129664;
+			flags = 98820;
+		}
+		else if (wcsncmp(argv[1], L"dorian", std::min(arglen, 6)) == 0) {
+			npc_id = 8299;
+			npc_model_file_id = 86510;
+			flags = 98820;
+		}
+		else if (wcsncmp(argv[1], L"kanaxai", std::min(arglen, 7)) == 0) {
+			npc_id = 462;
+			npc_model_file_id = 184176;
+			npc_model_file_data = 185319;
+			flags = 32780;
+		}
+		else if (wcsncmp(argv[1], L"skeletonic", std::min(arglen, 10)) == 0) {
+			npc_id = 359;
+			npc_model_file_id = 52356;
+			flags = 98820;
+		}
+		else if (wcsncmp(argv[1], L"moa", std::min(arglen, 3)) == 0) {
+			npc_id = 504;
+			npc_model_file_id = 16689;
+			flags = 98820;
+		}
+		else if(GuiUtils::ParseInt(argv[1], &scale) ) {
+			if (scale < 6 || scale > 255) {
+				Log::Error("scale must be between [6, 255]");
+				return;
+			}
+			scale = (DWORD)scale << 24;
+			npc_id = GW::Agents::GetPlayer()->transmog_npc_id & 0x0FFFFFFF;
+		}
+		else {
+			Log::Error("unknown transmo '%s'",argv[1]);
+		}
+		if (argc > 2 && GuiUtils::ParseInt(argv[2], &scale)) {
+			if (scale < 6 || scale > 255) {
+				Log::Error("scale must be between [6, 255]");
+				return;
+			}
+			scale = (DWORD)scale << 24;
 		}
 	}
-
-	GW::Agent *target = GW::Agents::GetTarget();
-	if (!target || !target->GetIsCharacterType()) return;
-
-	DWORD npc_id = 0;
-	if (target->IsPlayer()) {
-		npc_id = target->transmog_npc_id & 0x0FFFFFFF;
-	} else {
+	else {
+		GW::Agent* target = GW::Agents::GetTarget();
+		if (!target || !target->GetIsCharacterType()) return;
 		npc_id = target->player_number;
+		if (target->IsPlayer())
+			npc_id = target->transmog_npc_id & 0x0FFFFFFF;
 	}
-
 	if (!npc_id) return;
-	GW::NPCArray &npcs = GW::GameContext::instance()->world->npcs;
-	GW::NPC &npc = npcs[npc_id];
+	if (npc_id == INT_MAX) {
+		npc_id = 0;
+	}
+	else if (npc_id >= npcs.size() || !npcs[npc_id].model_file_id) {
+		if (!npc_model_file_id) return;
+		// Need to create the NPC.
+		// Those 2 packets (P074 & P075) are used to create a new model, for instance if we want to "use" a tonic.
+		// We have to find the data that are in the NPC structure and feed them to those 2 packets.
+		GW::NPC npc = { 0 };
+		npc.model_file_id = npc_model_file_id;
+		npc.npc_flags = flags;
+		npc.primary = 1;
+		npc.scale = scale;
+		npc.default_level = 0;
+		GW::GameThread::Enqueue([npc_id, npc]()
+		{
+			GW::Packet::StoC::NpcGeneralStats packet;
+			packet.header = GW::Packet::StoC::NpcGeneralStats::STATIC_HEADER;
+			packet.npc_id = npc_id;
+			packet.file_id = npc.model_file_id;
+			packet.data1 = 0;
+			packet.scale = npc.scale;
+			packet.data2 = 0;
+			packet.flags = npc.npc_flags;
+			packet.profession = npc.primary;
+			packet.level = npc.default_level;
+			packet.name[0] = 0;
+			GW::StoC::EmulatePacket(&packet);
+		});
+		if (npc_model_file_data) {
+			GW::GameThread::Enqueue([npc_id, npc_model_file_data]()
+				{
+					GW::Packet::StoC::NPCModelFile packet = { 0 };
+					packet.header = GW::Packet::StoC::NPCModelFile::STATIC_HEADER;
+					packet.npc_id = npc_id;
+					packet.count = 1;
+					packet.data[0] = npc_model_file_data;
 
-#if 0
-	npc_id = 12;
-	GW::NPC npc = {0};
-	npc.ModelFileID = 193245;
-	npc.scale = 0x64000000; // I think, 2 highest order bytes are percent of size, so 0x64000000 is 100%
+					GW::StoC::EmulatePacket(&packet);
+				});
+		}
+	}
+	else {
+		GW::NPC npc = npcs[npc_id];
+		if (!npc.model_file_id)
+			return;
+	}
+	GW::GameThread::Enqueue([npc_id, scale]()
+		{
+			GW::Packet::StoC::AgentScale packet1;
+			packet1.agent_id = GW::Agents::GetPlayerId();
+			packet1.scale = scale;
+			
+			GW::Packet::StoC::AgentModel packet2;
+			packet2.agent_id = packet1.agent_id;
+			packet2.model_id = npc_id;
 
-	// Those 2 packets (P074 & P075) are used to create a new model, for instance if we want to "use" a tonic.
-	// We have to find the data that are in the NPC structure and feed them to those 2 packets.
-
-	GW::GameThread::Enqueue([npc_id, npc]()
-	{
-		GW::Packet::StoC::NpcGeneralStats packet;
-		packet.header = 79;
-		packet.npc_id = npc_id;
-		packet.file_id = npc.ModelFileID;
-		packet.data1 = 0;
-		packet.scale = npc.scale;
-		packet.data2 = 0;
-		packet.flags = npc.NpcFlags;
-		packet.profession = npc.Primary;
-		packet.level = 0;
-		packet.name[0] = 0;
-
-		GW::StoC::EmulatePacket((GW::Packet::StoC::PacketBase *)&packet);
-	});
-
-	GW::GameThread::Enqueue([npc_id, npc]()
-	{
-		GW::Packet::StoC::P080 packet;
-		packet.header = 80;
-		packet.npc_id = npc_id;I 
-
-		// If we found a npc that have more than 1 ModelFiles, we can determine which one of h0028, h002C are size and capacity.
-		assert(npc.FilesCount <= 8);
-		packet.count = npc.FilesCount;
-		for (size_t i = 0; i < npc.FilesCount; i++)
-			packet.data[i] = npc.ModelFiles[i];
-
-		GW::StoC::EmulatePacket((GW::Packet::StoC::PacketBase *)&packet);
-	});
-#endif
-
-	GW::GameThread::Enqueue([scale]()
-	{
-		GW::Packet::StoC::AgentScale packet;
-		packet.agent_id = GW::Agents::GetPlayerId();
-		packet.scale = (DWORD)scale << 24;
-
-		GW::StoC::EmulatePacket(&packet);
-	});
-
-	GW::GameThread::Enqueue([npc_id]()
-	{
-		GW::Packet::StoC::AgentModel packet;
-		packet.agent_id = GW::Agents::GetPlayerId();
-		packet.model_id = npc_id;
-		GW::StoC::EmulatePacket(&packet);
-	});
+			GW::StoC::EmulatePacket(&packet1);
+			GW::StoC::EmulatePacket(&packet2);
+		});
 }
 
 void ChatCommands::CmdResize(const wchar_t *message, int argc, LPWSTR *argv) {

@@ -286,13 +286,19 @@ void DailyQuests::Draw(IDirect3DDevice9* pDevice) {
     return ImGui::End();
 }
 void DailyQuests::DrawHelp() {
+	if (!ImGui::TreeNode("Daily Quest Chat Commands"))
+		return;
     ImGui::Text("You can create a 'Send Chat' hotkey to perform any command.");
     ImGui::Bullet(); ImGui::Text("'/zb' prints current zaishen bounty.");
     ImGui::Bullet(); ImGui::Text("'/zm' prints current zaishen mission.");
     ImGui::Bullet(); ImGui::Text("'/zc' prints current zaishen mission.");
+	ImGui::Bullet(); ImGui::Text("'/vanguard' prints current pre-searing vanguard quest.");
+	ImGui::Bullet(); ImGui::Text("'/wanted' prints current shining blade bounty.");
     ImGui::Bullet(); ImGui::Text("'/nicholas' prints current nicholas location.");
+	ImGui::Bullet(); ImGui::Text("'/weekly' prints current weekly bonus.");
     ImGui::Bullet(); ImGui::Text("'/today' prints current daily activities.");
     ImGui::Bullet(); ImGui::Text("'/tomorrow' prints tomorrow's daily activities.");
+	ImGui::TreePop();
 }
 void DailyQuests::DrawSettingInternal() {
     ToolboxWindow::DrawSettingInternal();

@@ -45,7 +45,7 @@ public:
 		static BuildsWindow instance;
 		return instance;
 	}
-
+	static void CmdLoad(const wchar_t* message, int argc, LPWSTR* argv);
 	const char* Name() const override { return "Builds"; }
 
 	void Initialize() override;
@@ -56,7 +56,7 @@ public:
 
 	// Draw user interface. Will be called every frame if the element is visible
 	void Draw(IDirect3DDevice9* pDevice) override;
-
+	void DrawHelp() override;
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
@@ -82,6 +82,14 @@ private:
     void View(const TeamBuild& tbuild);
     // View a specific build from a teambuild
     void View(const TeamBuild& tbuild, unsigned int idx);
+	// Load build by name or code, without specific teambuild assigned.
+	void Load(const char* build_name);
+	// Load build by teambuild name and build name
+	void Load(const char* tbuild_name, const char* build_name);
+	// Load by build code. Similar to GWCA method except this checks for valid profession.
+	static bool LoadSkillTemplate(const char* code);
+
+	static bool BuildSkillTemplateString(const TeamBuild& tbuild, unsigned int idx, char* out, unsigned int out_len);
 
     void DrawBuildSection(TeamBuild& tbuild, unsigned int idx);
 

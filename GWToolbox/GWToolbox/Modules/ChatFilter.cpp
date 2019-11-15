@@ -38,6 +38,23 @@ static void printchar(wchar_t c) {
 	}
 }
 
+static wchar_t* GetMessageCore() {
+	GW::Array<wchar_t>* buf = &GW::GameContext::instance()->world->message_buff;
+	return buf ? buf->begin() : nullptr;
+}
+
+void ChatFilter::PostInitialize() {
+	static bool post_initialized = false;
+	if (post_initialized)
+		return;
+	post_initialized = true;
+	// Due to the way ChatFilter works, if a previous message was blocked then the buffer would still contain the last message.
+	// Clear down the message buffer if the packet has been blocked.
+	// We run these hooks at the end of the queue to allow other modules to still have access to the message buffer in their hooks.
+	GW::StoC::RegisterPacketCallback(&ClearMessageBuffer_Entry, GW::Packet::StoC::MessageServer::STATIC_HEADER, ClearMessageBufferIfBlocked);
+	GW::StoC::RegisterPacketCallback(&ClearMessageBuffer_Entry, GW::Packet::StoC::MessageGlobal::STATIC_HEADER, ClearMessageBufferIfBlocked);
+	GW::StoC::RegisterPacketCallback(&ClearMessageBuffer_Entry, GW::Packet::StoC::MessageLocal::STATIC_HEADER, ClearMessageBufferIfBlocked);
+}
 void ChatFilter::Initialize() {
 	ToolboxModule::Initialize();
 
@@ -45,16 +62,14 @@ void ChatFilter::Initialize() {
 	strcpy_s(bycontent_regex_buf, "");
 	//strcpy_s(byauthor_buf, "");
 
+
 	// server messages
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&MessageServer_Entry,
 	[this](GW::HookStatus *status, GW::Packet::StoC::MessageServer *pak) -> void {
 #ifdef PRINT_CHAT_PACKETS
 		printf("P082: id %d, type %d\n", pak->id, pak->type);
 #endif // PRINT_CHAT_PACKETS
-
-        GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
-        if (!buff) return;
-        BlockIfApplicable(status, buff->begin(), pak->channel);
+		BlockIfApplicable(status, GetMessageCore(), pak->channel);
 	});
 
 #ifdef PRINT_CHAT_PACKETS
@@ -77,10 +92,7 @@ void ChatFilter::Initialize() {
 		for (int i = 0; i < 6 && pak->sender_guild[i]; ++i) printchar(pak->sender_guild[i]);
 		printf("\n");
 #endif // PRINT_CHAT_PACKETS
-
-        GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
-        if (!buff) return;
-        BlockIfApplicable(status, buff->begin(), pak->channel);
+		BlockIfApplicable(status, GetMessageCore(), pak->channel);
 	});
 	// local messages
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&MessageLocal_Entry,
@@ -88,10 +100,7 @@ void ChatFilter::Initialize() {
 #ifdef PRINT_CHAT_PACKETS
 		printf("P085: id %d, type %d\n", pak->id, pak->type);
 #endif // PRINT_CHAT_PACKETS
-
-        GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
-        if (!buff) return;
-        BlockIfApplicable(status, buff->begin(), pak->channel);
+        BlockIfApplicable(status, GetMessageCore(), pak->channel);
 	});
 
 	GW::Chat::RegisterLocalMessageCallback(&LocalMessageCallback_Entry,
@@ -100,15 +109,19 @@ void ChatFilter::Initialize() {
 	});
 }
 void ChatFilter::BlockIfApplicable(GW::HookStatus* status, const wchar_t* message, uint32_t channel) {
-    if (!ShouldIgnore(message, channel))
-        return;
-     status->blocked = true;
-     GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
-     if (buff)
-         buff->clear();
+    if (message && ShouldIgnore(message, channel))
+		status->blocked = true;
+}
+void ChatFilter::ClearMessageBufferIfBlocked(GW::HookStatus* status, GW::Packet::StoC::PacketBase*) {
+	if (!status->blocked)
+		return;
+	GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
+	if (!buff) return;
+	buff->clear();
 }
 
 void ChatFilter::LoadSettings(CSimpleIni* ini) {
+	PostInitialize();
 	ToolboxModule::LoadSettings(ini);
 	self_drop_rare = ini->GetBoolValue(Name(), VAR_NAME(self_drop_rare), self_drop_rare);
 	self_drop_common = ini->GetBoolValue(Name(), VAR_NAME(self_drop_common), self_drop_common);

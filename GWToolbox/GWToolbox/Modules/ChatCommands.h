@@ -5,6 +5,8 @@
 #include <ToolboxModule.h>
 #include <ToolboxUIElement.h>
 
+#include <GWCA/Utilities/Hook.h>
+
 class ChatCommands : public ToolboxModule {
 	const float DEFAULT_CAM_SPEED = 1000.f; // 600 units per sec
 	const float ROTATION_SPEED = (float)M_PI / 3.f; // 6 seconds for full rotation
@@ -24,7 +26,7 @@ public:
 	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
 
-	void DrawHelp();
+	void DrawHelp() override;
 
 	bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam);
 

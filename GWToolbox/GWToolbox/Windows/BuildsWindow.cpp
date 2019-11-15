@@ -4,6 +4,7 @@
 #include <GWCA\Constants\Constants.h>
 
 #include <GWCA\GameContainers\Array.h>
+#include <GWCA\GameEntities\Agent.h>
 
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
@@ -11,6 +12,7 @@
 #include <GWCA\Managers\SkillbarMgr.h>
 #include <GWCA\Managers\UIMgr.h>
 #include <GWCA\Managers\GameThreadMgr.h>
+#include <GWCA\Managers\PlayerMgr.h>
 
 #include "GuiUtils.h"
 #include <Modules\Resources.h>
@@ -28,6 +30,57 @@ void BuildsWindow::Initialize() {
 	ToolboxWindow::Initialize();
 	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"list.png"), IDB_Icon_list);
 	send_timer = TIMER_INIT();
+
+	GW::Chat::CreateCommand(L"loadbuild", CmdLoad);
+}
+void BuildsWindow::DrawHelp() {
+	if (!ImGui::TreeNode("Build Chat Commands"))
+		return;
+	ImGui::Bullet(); ImGui::Text("'/loadbuild [teambuild] [build name|build code]' loads a build. The teambuild name and build name must be between quotes if they contain spaces.");
+	ImGui::TreePop();
+}
+void BuildsWindow::CmdLoad(const wchar_t* message, int argc, LPWSTR* argv) {
+	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
+		return;
+	if (argc > 2) {
+		std::string build_name = GuiUtils::WStringToString(argv[2]);
+		std::string team_build_name = GuiUtils::WStringToString(argv[1]);
+		Instance().Load(team_build_name.c_str(), build_name.c_str());
+		return;
+	}
+	if (argc > 1) {
+		std::string build_name = GuiUtils::WStringToString(argv[1]);
+		Instance().Load(build_name.c_str());
+		return;
+	}
+	Log::Error("Not enough arguments. See Help for chat commands");
+	return;
+}
+bool BuildsWindow::BuildSkillTemplateString(const TeamBuild& tbuild, unsigned int idx, char* out, unsigned int out_len) {
+	if (!out || idx >= tbuild.builds.size()) return false;
+	const Build& build = tbuild.builds[idx];
+	const std::string name(build.name);
+	const std::string code(build.code);
+
+	if (name.empty() && code.empty())
+		return false; // nothing to do here
+	if (name.empty()) {
+		// name is empty, fill it with the teambuild name
+		snprintf(out, out_len, "[%s %d;%s]", tbuild.name, idx + 1, build.code);
+	}
+	else if (code.empty()) {
+		// code is empty, just print the name without template format
+		snprintf(out, out_len, "%s", build.name);
+	}
+	else if (tbuild.show_numbers) {
+		// add numbers in front of name
+		snprintf(out, out_len, "[%d - %s;%s]", idx + 1, build.name, build.code);
+	}
+	else {
+		// simple template
+		snprintf(out, out_len, "[%s;%s]", build.name, build.code);
+	}
+	return true;
 }
 
 void BuildsWindow::Terminate() {
@@ -299,13 +352,52 @@ void BuildsWindow::View(const TeamBuild& tbuild, unsigned int idx) {
 void BuildsWindow::Load(const TeamBuild& tbuild, unsigned int idx) {
     if (idx >= tbuild.builds.size()) return;
     const Build& build = tbuild.builds[idx];
-	if (!GW::SkillbarMgr::LoadSkillTemplate(build.code)) {
-		GW::GameThread::Enqueue([build]() {
-			Log::Error("Failed to load build template %s", build.name);
+	if (!LoadSkillTemplate(build.code)) {
+		GW::GameThread::Enqueue([tbuild, build, idx]() {
+			char buf[192] = { 0 };
+			Log::Error("Failed to load build template %s", BuildSkillTemplateString(tbuild,idx,buf,192) ? buf : build.name);
 			});
 		return;
 	}
+	if (!tbuild.edit_open) {
+		GW::GameThread::Enqueue([tbuild, build, idx]() {
+			char buf[192] = { 0 };
+			Log::Info("Build loaded: %s", BuildSkillTemplateString(tbuild, idx, buf, 192) ? buf : build.code);
+			});
+	}
     LoadPcons(tbuild, idx);
+}
+bool BuildsWindow::LoadSkillTemplate(const char* code) {
+	int skill_count = 0;
+	int attrib_count = 0;
+	int attrib_ids[10] = { 0 };
+	int attrib_vals[10] = { 0 };
+	int skill_ids[8] = { 0 };
+
+	GW::Constants::Profession primary = GW::Constants::Profession::None;
+	GW::Constants::Profession secondary = GW::Constants::Profession::None;
+
+	if (!GW::SkillbarMgr::DecodeSkillTemplate(code, attrib_ids, attrib_vals, &attrib_count, skill_ids, &skill_count, &primary, &secondary))
+		return false;
+	GW::Agent* me = GW::Agents::GetPlayer();
+	if (!me || me->primary != static_cast<uint8_t>(primary))
+		return false;
+	return GW::SkillbarMgr::LoadSkillTemplate(code);
+}
+void BuildsWindow::Load(const char* build_name) {
+	return BuildsWindow::Load(nullptr, build_name);
+}
+void BuildsWindow::Load(const char* tbuild_name, const char* build_name) {
+	const size_t tbuild_str_len = tbuild_name ? sizeof(tbuild_name) : 0;
+	const size_t build_str_len = build_name ? sizeof(build_name) : 0;
+	for (auto tb : teambuilds) {
+		if (tbuild_name && strncmp(tb.name, tbuild_name, tbuild_str_len) != 0)
+			continue;
+		for (size_t i = 0; i < tb.builds.size(); i++) {
+			if (strncmp(tb.builds[i].name, build_name, build_str_len) == 0 || strncmp(tb.builds[i].code, build_name, build_str_len) == 0)
+				return BuildsWindow::Load(tb, i);
+		}
+	}
 }
 void BuildsWindow::LoadPcons(const TeamBuild& tbuild, unsigned int idx) {
     if (idx >= tbuild.builds.size()) return;
@@ -315,7 +407,8 @@ void BuildsWindow::LoadPcons(const TeamBuild& tbuild, unsigned int idx) {
 	bool some_pcons_not_visible = false;
 	std::vector<Pcon*> pcons_loaded;
 	std::vector<Pcon*> pcons_not_visible;
-    for (auto pcon : PconsWindow::Instance().pcons) {
+	PconsWindow* pcw = &PconsWindow::Instance();
+    for (auto pcon : pcw->pcons) {
 		bool enable = build.pcons.find(pcon->ini) != build.pcons.end();
 		if (enable) {
 			if (!pcon->visible) {
@@ -323,11 +416,10 @@ void BuildsWindow::LoadPcons(const TeamBuild& tbuild, unsigned int idx) {
 				pcons_not_visible.push_back(pcon);
 				continue;
 			} 
-			else {
-				pcons_loaded.push_back(pcon);
-			}
+			pcon->SetEnabled(false);
+			pcons_loaded.push_back(pcon);
 		}
-        pcon->SetEnabled(enable);
+		pcon->SetEnabled(enable);
     }
 	if (pcons_loaded.size()) {
 		GW::GameThread::Enqueue([pcons_loaded]() {
@@ -382,28 +474,9 @@ void BuildsWindow::SendPcons(const TeamBuild& tbuild, unsigned int idx, bool inc
 		queue.push(pconsStr.c_str());
 }
 void BuildsWindow::Send(const TeamBuild& tbuild, unsigned int idx) {
-	if (idx >= tbuild.builds.size()) return;
-	const Build& build = tbuild.builds[idx];
-	const std::string name(build.name);
-	const std::string code(build.code);
-
-	const int buf_size = 139;
-	char buf[buf_size];
-	if (name.empty() && code.empty())
-		return; // nothing to do here
-	if (name.empty()) {
-		// name is empty, fill it with the teambuild name
-		snprintf(buf, buf_size, "[%s %d;%s]", tbuild.name, idx + 1, build.code);
-	} else if (code.empty()) {
-		// code is empty, just print the name without template format
-		snprintf(buf, buf_size, "%s", build.name);
-	} else if (tbuild.show_numbers) {
-		// add numbers in front of name
-		snprintf(buf, buf_size, "[%d - %s;%s]", idx + 1, build.name, build.code);
-	} else {
-		// simple template
-		snprintf(buf, buf_size, "[%s;%s]", build.name, build.code);
-	}
+	char buf[192] = { 0 };
+	if (!BuildSkillTemplateString(tbuild, idx, buf, 192))
+		return;
 	queue.push(buf);
 	if (auto_send_pcons)
 		SendPcons(tbuild, idx, false);

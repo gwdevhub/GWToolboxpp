@@ -28,7 +28,7 @@ public:
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
 
-    void DrawHelp();
+    void DrawHelp() override;
     void Update(float delta) override;
     void Draw(IDirect3DDevice9* pDevice) override;
 
