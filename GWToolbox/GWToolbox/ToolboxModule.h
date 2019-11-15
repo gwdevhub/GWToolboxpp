@@ -19,6 +19,9 @@ public:
 	// Send termination signal to module.
 	virtual void SignalTerminate() {};
 
+	// Draw help section
+	virtual void DrawHelp() {};
+
 	// Can we terminate this module?
 	virtual bool CanTerminate() { return true; };
 

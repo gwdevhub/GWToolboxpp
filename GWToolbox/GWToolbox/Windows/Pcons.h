@@ -54,6 +54,7 @@ public:
 	// Most of this logic should be integrated back into GWCA repo, but I've written it here for GWToolbox
 	// If timeout_seconds > 0, this process blocks until item has moved or timeout is hit.
 	static GW::Item* MoveItem(GW::Item *item, GW::Bag *bag, int slot, int quantity = 0, uint32_t timeout_seconds = 0);
+	static GW::Bag* GetBag(uint32_t bag_id);
 	// Fires off another thread to refill pcons. Sets refill_attempted to TRUE when finished.
     void Refill();
 	void SetEnabled(bool enabled);
@@ -88,6 +89,7 @@ protected:
 
 	GW::Constants::MapID mapid = GW::Constants::MapID::None;
 	GW::Constants::InstanceType maptype = GW::Constants::InstanceType::Loading;
+	clock_t mapentered = clock();
 	// loops over the inventory, counting the items according to QuantityForEach
 	// if 'used' is not null, it will also use the first item found,
 	// and, if so, used *used to true

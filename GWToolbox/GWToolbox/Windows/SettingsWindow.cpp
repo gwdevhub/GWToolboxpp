@@ -111,12 +111,10 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
 				ImGui::Bullet(); ImGui::Text("Send Chat hotkey to enter one of the commands above.");
 				ImGui::TreePop();
 			}
-			if (ImGui::TreeNode("Chat Commands")) {
-				ChatCommands::Instance().DrawHelp();
-				ImGui::TreePop();
+			for (unsigned i = 0; i < GWToolbox::Instance().GetModules().size(); ++i) {
+				GWToolbox::Instance().GetModules()[i]->DrawHelp();
 			}
 		}
-
 		for (unsigned i = 0; i < GWToolbox::Instance().GetModules().size(); ++i) {
 			if (i == sep_windows) ImGui::Text("Windows:");
 			if (i == sep_widgets) ImGui::Text("Widgets:");

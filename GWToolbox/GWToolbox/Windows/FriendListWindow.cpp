@@ -25,6 +25,17 @@
 #include "base64.h"
 
 
+static const std::wstring GetPlayerNameFromEncodedString(const wchar_t* message) {
+	int start_idx = -1;
+	for (size_t i = 0; message[i] != 0; ++i) {
+		if (start_idx < 0 && message[i] == 0x107)
+			start_idx = ++i;
+		if (message[i] == 0x1)
+			return std::wstring(&message[start_idx], i - start_idx);
+	}
+	return L"";
+}
+
 /*	FriendListWindow::Friend	*/
 
 void FriendListWindow::Friend::GetMapName() {
@@ -110,7 +121,10 @@ bool FriendListWindow::Friend::AddGWFriend() {
 	GW::Friend* f = GetFriend();
 	if (f) return true;
 	if (characters.empty()) return false; // Cant add a friend that doesn't have a char name
-	added_via_toolbox = true;
+	clock_t now = clock();
+	if (added_via_toolbox > now - 5)
+		return true; // Waiting for friend to be added.
+	added_via_toolbox = clock();
 	GW::FriendListMgr::AddFriend(characters.begin()->first.c_str());
 	last_update = clock();
 	return true;
@@ -238,10 +252,8 @@ void FriendListWindow::Initialize() {
     // "Failed to add friend" or "Friend <name> already added as <name>"
     GW::Chat::RegisterLocalMessageCallback(&ErrorMessage_Entry,
         [this](GW::HookStatus* status, int channel, wchar_t* message) -> void {
-            if (!message || message[0] < 0x2f3 || message[0] > 0x2f6)
-                return;
-            wchar_t buffer[128] = { 0 };
-            wcsncpy(buffer, message, 128);
+            wchar_t buffer[64] = { 0 };
+            wcsncpy(buffer, message, 64);
             worker.Add([this, buffer]() {
                 std::wstring player_name;
                 switch (buffer[0]) {
@@ -250,9 +262,15 @@ void FriendListWindow::Initialize() {
                 case 0x2f4: // You have exceeded the maximum number of characters on your Friends list.
                     break;
                 case 0x2F5: // The Character name "" does not exist
+					player_name = GetPlayerNameFromEncodedString(buffer);
                     break;
                 case 0x2F6: // The Character you're trying to add is already in your friend list as "".
+					player_name = GetPlayerNameFromEncodedString(buffer);
                     break;
+				case 0x881: // Player "" is not online.
+					player_name = GetPlayerNameFromEncodedString(buffer);
+					// TODO: Try to redirect whisper to the right person.
+					break;
                 }
                 });
         });
@@ -356,15 +374,11 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::PushID(lf.uuid.c_str());
 		bool clicked = ImGui::Button("", ImVec2(ImGui::GetContentRegionAvailWidth(), height));
 		
-		ImGui::PopStyleVar();
-		ImGui::PopStyleVar();
-		ImGui::PopStyleVar();
-		ImGui::PopStyleVar();
-		ImGui::PopStyleColor();
+		ImGui::PopStyleVar(4);
 		ImGui::SameLine(2.0f,0);
 		ImGui::PushStyleColor(ImGuiCol_Text,StatusColors[lf.status].Value);
 		ImGui::Bullet();
-		ImGui::PopStyleColor();
+		ImGui::PopStyleColor(2);
 		if(ImGui::IsItemHovered())
 			ImGui::SetTooltip(GetStatusText(lf.status));
 		ImGui::SameLine(0);
@@ -394,14 +408,8 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
 			}
 		}
 		ImGui::PopID();
-		if (clicked && !lf.IsOffline()) {
-			if (ImGui::IsKeyDown(VK_CONTROL) && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
-				lf.InviteToParty();
-			}
-			else {
-				lf.StartWhisper();
-			}
-		}
+		if (clicked && !lf.IsOffline())
+			lf.StartWhisper();
     }
     ImGui::EndChild();
     ImGui::End();

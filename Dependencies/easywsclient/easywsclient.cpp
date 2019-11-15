@@ -257,6 +257,10 @@ class _RealWebSocket : public easywsclient::WebSocket
             }
         }
         while (txbuf.size()) {
+			if (readyState == CLOSED) {
+				txbuf.clear();
+				break;
+			}
             int ret = kWrite(ptConnCtx, (char*)&txbuf[0], txbuf.size(), 0);
             if (false) { }
             else if (ret < 0 && (socketerrno == SOCKET_EWOULDBLOCK || socketerrno == SOCKET_EAGAIN_EINPROGRESS)) {

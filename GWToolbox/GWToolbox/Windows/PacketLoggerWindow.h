@@ -34,4 +34,5 @@ private:
 	GW::HookEntry DisplayDialogue_Entry;
 	GW::HookEntry MessageCore_Entry;
     GW::HookEntry MessageLocal_Entry;
+	GW::HookEntry NpcGeneralStats_Entry;
 };

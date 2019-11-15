@@ -479,6 +479,12 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
                 printf("\n");
                 return false;
             });
+			GW::StoC::RegisterPacketCallback<GW::Packet::StoC::NpcGeneralStats>(&NpcGeneralStats_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::NpcGeneralStats* pak) -> bool {
+				printf("NpcGeneralStats name: ");
+				for (int i = 0; pak->name[i] != 0; ++i) printchar(pak->name[i]);
+				printf("\n");
+				return false;
+				});
             GW::Chat::RegisterLocalMessageCallback(&MessageLocal_Entry, [this](GW::HookStatus* status, int channel, wchar_t* message) {
                 printf("MessageLocal: ");
                 for (int i = 0; message[i] != 0; ++i) printchar(message[i]);
@@ -489,6 +495,7 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
 		}
 		else {
 			if (message_core_callback_identifier) {
+				GW::StoC::RemoveCallback(GW::Packet::StoC::NpcGeneralStats::STATIC_HEADER, &NpcGeneralStats_Entry);
 				GW::StoC::RemoveCallback(GW::Packet::StoC::MessageCore::STATIC_HEADER, &MessageCore_Entry);
                 GW::Chat::RemoveLocalMessageCallback(&MessageLocal_Entry);
 				message_core_callback_identifier = 0;

@@ -11,6 +11,7 @@
 #include <GWCA\GameEntities\Skill.h>
 #include <GWCA\GameEntities\Player.h>
 #include <GWCA\GameEntities\Guild.h>
+#include <GWCA\GameEntities\NPC.h>
 
 #include <GWCA\Context\GameContext.h>
 #include <GWCA\Context\WorldContext.h>
@@ -229,8 +230,14 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::PopItemWidth();
 			GW::Player* player = nullptr;
 			GW::Guild* guild = nullptr;
+			GW::NPC* npc = nullptr;
 			if (target && target->IsPlayer()) {
 				player = GW::PlayerMgr::GetPlayerByID(target->player_number);
+				if(target->transmog_npc_id & 0x20000000)
+					npc = GW::Agents::GetNPCByID(target->transmog_npc_id ^ 0x20000000);
+			}
+			if (target && target->IsNPC()) {
+				npc = GW::Agents::GetNPCByID(target->player_number);
 			}
 			if (player && target->tags->guild_id) {
 				GW::GuildArray guilds = GW::GuildMgr::GetGuildArray();
@@ -265,6 +272,13 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 					ImGui::LabelText("ModelState", "0x%X", target->model_state);
 					ImGui::LabelText("typeMap", "0x%X", target->type_map);
 					ImGui::LabelText("LoginNumber", "%d", target->login_number);
+					if (npc) {
+						ImGui::LabelText("NPC ID", "%d", target->player_number);
+						ImGui::LabelText("NPC ModelFileID", "%d", npc->model_file_id);
+						if(npc->files_count)
+							ImGui::LabelText("NPC ModelFile", "%d", npc->model_files[0]);
+						ImGui::LabelText("NPC Flags", "%d", npc->npc_flags);
+					}
 					ImGui::LabelText("Allegiance", "%d", target->allegiance);
 					ImGui::LabelText("WeaponType", "%d", target->weapon_type);
 					ImGui::LabelText("Skill", "%d", target->skill);
