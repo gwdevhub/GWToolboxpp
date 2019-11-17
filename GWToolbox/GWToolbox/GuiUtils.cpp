@@ -198,7 +198,7 @@ std::wstring GuiUtils::RemovePunctuation(std::wstring s) {
 bool GuiUtils::ParseInt(const char *str, int *val, int base) {
 	char *end;
 	*val = strtol(str, &end, base);
-	if (str == end || errno == ERANGE)
+	if (*end != 0 || errno == ERANGE)
 		return false;
 	else
 		return true;
@@ -206,7 +206,7 @@ bool GuiUtils::ParseInt(const char *str, int *val, int base) {
 bool GuiUtils::ParseInt(const wchar_t *str, int *val, int base) {
 	wchar_t *end;
 	*val = wcstol(str, &end, base);
-	if (str == end || errno == ERANGE)
+	if (*end != 0 || errno == ERANGE)
 		return false;
 	else
 		return true;

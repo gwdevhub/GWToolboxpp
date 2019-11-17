@@ -39,4 +39,6 @@ private:
 	bool show_uwteles = true;
 	bool show_favorites = true;
 	bool show_custom = true;
+
+	char customdialogbuf[64] = "";
 };
