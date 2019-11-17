@@ -27,6 +27,7 @@
 #  include <Modules/LUAInterface.h>
 #endif
 #include <Modules/Updater.h>
+#include <Modules/DiscordIntegration.h>
 
 #include <Widgets/Minimap/Minimap.h>
 
@@ -328,6 +329,7 @@ void GWToolbox::Initialize() {
     core_modules.push_back(&ChatFilter::Instance());
     core_modules.push_back(&ChatCommands::Instance());
     core_modules.push_back(&ToolboxTheme::Instance());
+    core_modules.push_back(&DiscordIntegration::Instance());
 
     for (ToolboxModule* core : core_modules) {
         core->Initialize();
