@@ -352,7 +352,7 @@ void BuildsWindow::View(const TeamBuild& tbuild, unsigned int idx) {
 void BuildsWindow::Load(const TeamBuild& tbuild, unsigned int idx) {
     if (idx >= tbuild.builds.size()) return;
     const Build& build = tbuild.builds[idx];
-	if (!LoadSkillTemplate(build.code)) {
+	if (!GW::SkillbarMgr::LoadSkillTemplate(build.code)) {
 		GW::GameThread::Enqueue([tbuild, build, idx]() {
 			char buf[192] = { 0 };
 			Log::Error("Failed to load build template %s", BuildSkillTemplateString(tbuild,idx,buf,192) ? buf : build.name);
@@ -366,23 +366,6 @@ void BuildsWindow::Load(const TeamBuild& tbuild, unsigned int idx) {
 			});
 	}
     LoadPcons(tbuild, idx);
-}
-bool BuildsWindow::LoadSkillTemplate(const char* code) {
-	int skill_count = 0;
-	int attrib_count = 0;
-	int attrib_ids[10] = { 0 };
-	int attrib_vals[10] = { 0 };
-	int skill_ids[8] = { 0 };
-
-	GW::Constants::Profession primary = GW::Constants::Profession::None;
-	GW::Constants::Profession secondary = GW::Constants::Profession::None;
-
-	if (!GW::SkillbarMgr::DecodeSkillTemplate(code, attrib_ids, attrib_vals, &attrib_count, skill_ids, &skill_count, &primary, &secondary))
-		return false;
-	GW::Agent* me = GW::Agents::GetPlayer();
-	if (!me || me->primary != static_cast<uint8_t>(primary))
-		return false;
-	return GW::SkillbarMgr::LoadSkillTemplate(code);
 }
 void BuildsWindow::Load(const char* build_name) {
 	return BuildsWindow::Load(nullptr, build_name);

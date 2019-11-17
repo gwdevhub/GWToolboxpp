@@ -86,8 +86,6 @@ private:
 	void Load(const char* build_name);
 	// Load build by teambuild name and build name
 	void Load(const char* tbuild_name, const char* build_name);
-	// Load by build code. Similar to GWCA method except this checks for valid profession.
-	static bool LoadSkillTemplate(const char* code);
 
 	static bool BuildSkillTemplateString(const TeamBuild& tbuild, unsigned int idx, char* out, unsigned int out_len);
 
