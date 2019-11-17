@@ -24,6 +24,7 @@ public:
 
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
+	void Initialize() override;
 	void DrawSettings() override {};
 	void DrawSettingInternal() override;
     void GetLatestRelease(GWToolboxRelease*);

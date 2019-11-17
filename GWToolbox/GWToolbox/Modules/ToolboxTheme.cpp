@@ -41,8 +41,6 @@ ImGuiStyle ToolboxTheme::DefaultTheme() {
 
 void ToolboxTheme::Terminate() {
 	ToolboxModule::Terminate();
-	if (inifile) inifile->Reset();
-	delete inifile;
 }
 
 void ToolboxTheme::LoadSettings(CSimpleIni* ini) {
@@ -117,7 +115,9 @@ void ToolboxTheme::SaveSettings(CSimpleIni* ini) {
 	}
 
 	inifile->SaveFile(Resources::GetPath(IniFilename).c_str());
-
+    inifile->Reset();
+    delete inifile;
+    inifile = nullptr;
 	ini_style = style;
 }
 

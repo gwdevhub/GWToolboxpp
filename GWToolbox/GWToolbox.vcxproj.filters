@@ -618,6 +618,5 @@
     <Image Include="..\resources\bonds\Holy_Veil.png">
       <Filter>Resources\bonds</Filter>
     </Image>
-    <Image Include="..\resources\pcons\Honeycomb.png" />
   </ItemGroup>
 </Project>

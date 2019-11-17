@@ -2,7 +2,7 @@
 
 #include <ToolboxModule.h>
 #include <ToolboxUIElement.h>
-#include <discord_game_sdk/c/discord_game_sdk.h>
+#include <discord_game_sdk.h>
 
 #include <GWCA/Utilities/Hook.h>
 

@@ -15,8 +15,12 @@
 #include <Defines.h>
 #include "GuiUtils.h"
 #include <GWToolbox.h>
-#include <Modules/Resources.h>
+
 #include <Modules/Updater.h>
+#include <Modules/Resources.h>
+#include <Modules/ChatFilter.h>
+#include <Modules/ChatCommands.h>
+#include <Modules/GameSettings.h>
 #include <Modules/DiscordModule.h>
 #include <Modules/TwitchModule.h>
 #include <Modules/PartyWindowModule.h>
@@ -60,51 +64,59 @@
 
 bool ToolboxSettings::move_all = false;
 
-void ToolboxSettings::InitializeModules() {
-	SettingsWindow::Instance().sep_windows = GWToolbox::Instance().GetModules().size();
-
-	MainWindow::Instance().Initialize();
-	if (use_pcons) PconsWindow::Instance().Initialize();
-	if (use_hotkeys) HotkeysWindow::Instance().Initialize();
-	if (use_builds) BuildsWindow::Instance().Initialize();
-	if (use_herobuilds) HeroBuildsWindow::Instance().Initialize();
-	if (use_travel) TravelWindow::Instance().Initialize();
-	if (use_dialogs) DialogsWindow::Instance().Initialize();
-	if (use_info) InfoWindow::Instance().Initialize();
-	if (use_materials) MaterialsWindow::Instance().Initialize();
-	if (use_trade) TradeWindow::Instance().Initialize();
-	if (use_notepad) NotePadWindow::Instance().Initialize();
-	if (use_objectivetimer) ObjectiveTimerWindow::Instance().Initialize();
-	if (use_factionleaderboard) FactionLeaderboardWindow::Instance().Initialize();
-    if (use_daily_quests) DailyQuests::Instance().Initialize();
-    if (use_discord) DiscordModule::Instance().Initialize();
-    if (use_twitch) TwitchModule::Instance().Initialize();
-	if (use_partywindowmodule) PartyWindowModule::Instance().Initialize();
-#ifdef _DEBUG
-    PacketLoggerWindow::Instance().Initialize();
-    StringDecoderWindow::Instance().Initialize();
-	DoorMonitorWindow::Instance().Initialize();
-	SkillListingWindow::Instance().Initialize();
-    if(use_friendlist) FriendListWindow::Instance().Initialize();
-#endif
+void ToolboxSettings::LoadModules(CSimpleIni* ini) {
+	SettingsWindow::Instance().sep_modules = optional_modules.size();
+	if (use_gamesettings) optional_modules.push_back(&GameSettings::Instance());
+	if (use_updater) optional_modules.push_back(&Updater::Instance());
+	if (use_chatfilter) optional_modules.push_back(&ChatFilter::Instance());
+	if (use_chatcommand) optional_modules.push_back(&ChatCommands::Instance());
+	if (use_discord) optional_modules.push_back(&DiscordModule::Instance());
+	if (use_twitch) optional_modules.push_back(&TwitchModule::Instance());
+	if (use_partywindowmodule) optional_modules.push_back(&PartyWindowModule::Instance());
 #ifdef _FUN
-	FunModule::Instance().Initialize();
+	optional_modules.push_back(&FunModule::Instance());
 #endif
-	
-	SettingsWindow::Instance().Initialize();
 
-	SettingsWindow::Instance().sep_widgets = GWToolbox::Instance().GetModules().size();
+	SettingsWindow::Instance().sep_windows = optional_modules.size();
+	if (use_pcons) optional_modules.push_back(&PconsWindow::Instance());
+	if (use_hotkeys) optional_modules.push_back(&HotkeysWindow::Instance());
+	if (use_builds) optional_modules.push_back(&BuildsWindow::Instance());
+	if (use_herobuilds) optional_modules.push_back(&HeroBuildsWindow::Instance());
+	if (use_travel) optional_modules.push_back(&TravelWindow::Instance());
+	if (use_dialogs) optional_modules.push_back(&DialogsWindow::Instance());
+	if (use_info) optional_modules.push_back(&InfoWindow::Instance());
+	if (use_materials) optional_modules.push_back(&MaterialsWindow::Instance());
+	if (use_trade) optional_modules.push_back(&TradeWindow::Instance());
+	if (use_notepad) optional_modules.push_back(&NotePadWindow::Instance());
+	if (use_objectivetimer) optional_modules.push_back(&ObjectiveTimerWindow::Instance());
+	if (use_factionleaderboard) optional_modules.push_back(&FactionLeaderboardWindow::Instance());
+	if (use_daily_quests) optional_modules.push_back(&DailyQuests::Instance());
+#ifdef _DEBUG
+	optional_modules.push_back(&PacketLoggerWindow::Instance());
+	optional_modules.push_back(&StringDecoderWindow::Instance());
+	optional_modules.push_back(&DoorMonitorWindow::Instance());
+	optional_modules.push_back(&SkillListingWindow::Instance());
+	if(use_friendlist) optional_modules.push_back(&FriendListWindow::Instance());
+#endif
 
-	if (use_timer) TimerWidget::Instance().Initialize();
-	if (use_health) HealthWidget::Instance().Initialize();
-	if (use_distance) DistanceWidget::Instance().Initialize();
-	if (use_minimap) Minimap::Instance().Initialize();
-	if (use_damage) PartyDamage::Instance().Initialize();
-	if (use_bonds) BondsWidget::Instance().Initialize();
-	if (use_clock) ClockWidget::Instance().Initialize();
-	if (use_vanquish) VanquishWidget::Instance().Initialize();
-	if (use_alcohol) AlcoholWidget::Instance().Initialize();
-	//if (use_serverinfo) ServerInfoWidget::Instance().Initialize();
+	SettingsWindow::Instance().sep_widgets = optional_modules.size();
+	optional_modules.push_back(&SettingsWindow::Instance());
+	if (use_timer) optional_modules.push_back(&TimerWidget::Instance());
+	if (use_health) optional_modules.push_back(&HealthWidget::Instance());
+	if (use_distance) optional_modules.push_back(&DistanceWidget::Instance());
+	if (use_minimap) optional_modules.push_back(&Minimap::Instance());
+	if (use_damage) optional_modules.push_back(&PartyDamage::Instance());
+	if (use_bonds) optional_modules.push_back(&BondsWidget::Instance());
+	if (use_clock) optional_modules.push_back(&ClockWidget::Instance());
+	if (use_vanquish) optional_modules.push_back(&VanquishWidget::Instance());
+	if (use_alcohol) optional_modules.push_back(&AlcoholWidget::Instance());
+	//if (use_serverinfo) optional_modules.push_back(&ServerInfoWidget::Instance());
+
+	// Only read settings of non-core modules
+	for (ToolboxModule* module : optional_modules) {
+		module->LoadSettings(ini);
+		module->Initialize();
+	}
 }
 
 void ToolboxSettings::DrawSettingInternal() {
@@ -135,27 +147,27 @@ void ToolboxSettings::DrawSettingInternal() {
 	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
 	ImGui::Checkbox("Objective Timer", &use_objectivetimer);
 	ImGui::Checkbox("Timer", &use_timer);
+	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
 	ImGui::Checkbox("Health", &use_health);
-	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
 	ImGui::Checkbox("Distance", &use_distance);
+	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
 	ImGui::Checkbox("Minimap", &use_minimap);
-	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
 	ImGui::Checkbox("Damage", &use_damage);
+	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
 	ImGui::Checkbox("Bonds", &use_bonds);
-	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
 	ImGui::Checkbox("Clock", &use_clock);
+	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
 	ImGui::Checkbox("Vanquish counter", &use_vanquish);
-	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
 	ImGui::Checkbox("Alcohol", &use_alcohol);
+	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
 	ImGui::Checkbox("Trade", &use_trade);
-    ImGui::SameLine(ImGui::GetWindowWidth() / 2);
-    ImGui::Checkbox("Discord", &use_discord);
+    ImGui::Checkbox("Discord Integration", &use_discord);
+	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
 	ImGui::Checkbox("Twitch", &use_twitch);
-	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
 	ImGui::Checkbox("Party Window", &use_partywindowmodule);
-	ImGui::Checkbox("Friend List", &use_friendlist);
 	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
-	ImGui::Checkbox("Server Info", &use_serverinfo);
+	ImGui::Checkbox("Friend List", &use_friendlist);
+	//ImGui::Checkbox("Server Info", &use_serverinfo);
 
 	ImGui::PopID();
 
@@ -180,8 +192,8 @@ void ToolboxSettings::DrawSettingInternal() {
 }
 
 void ToolboxSettings::DrawFreezeSetting() {
-    ImGui::Checkbox("Unlock Move All", &move_all);
-    ImGui::ShowHelp("Will allow movement and resize of all widgets and windows");
+	ImGui::Checkbox("Unlock Move All", &move_all);
+	ImGui::ShowHelp("Will allow movement and resize of all widgets and windows");
 }
 
 void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
@@ -206,15 +218,18 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
 	use_vanquish = ini->GetBoolValue(Name(), VAR_NAME(use_vanquish), true);
 	use_alcohol = ini->GetBoolValue(Name(), VAR_NAME(use_alcohol), true);
 	use_trade = ini->GetBoolValue(Name(), VAR_NAME(use_trade), true);
-    use_objectivetimer = ini->GetBoolValue(Name(), VAR_NAME(use_objectivetimer), true);
-    use_discord = ini->GetBoolValue(Name(), VAR_NAME(use_discord), true);
+    	use_objectivetimer = ini->GetBoolValue(Name(), VAR_NAME(use_objectivetimer), true);
+	save_location_data = ini->GetBoolValue(Name(), VAR_NAME(save_location_data), false);
+	use_gamesettings = ini->GetBoolValue(Name(), VAR_NAME(use_gamesettings), true);
+	use_updater = ini->GetBoolValue(Name(), VAR_NAME(use_updater), true);
+	use_chatfilter = ini->GetBoolValue(Name(), VAR_NAME(use_chatfilter), true);
+	use_chatcommand = ini->GetBoolValue(Name(), VAR_NAME(use_chatcommand), true);
+    	use_discord = ini->GetBoolValue(Name(), VAR_NAME(use_discord), true);
 	use_factionleaderboard = ini->GetBoolValue(Name(), VAR_NAME(use_factionleaderboard), use_factionleaderboard);
 	use_twitch = ini->GetBoolValue(Name(), VAR_NAME(use_twitch), use_twitch);
 	use_partywindowmodule = ini->GetBoolValue(Name(), VAR_NAME(use_partywindowmodule), use_partywindowmodule);
 	use_friendlist = ini->GetBoolValue(Name(), VAR_NAME(use_friendlist), use_friendlist);
 	use_serverinfo = ini->GetBoolValue(Name(), VAR_NAME(use_serverinfo), use_serverinfo);
-
-	save_location_data = ini->GetBoolValue(Name(), VAR_NAME(save_location_data), false);
 }
 
 void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
@@ -241,17 +256,20 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(use_trade), use_trade);
 	ini->SetBoolValue(Name(), VAR_NAME(use_objectivetimer), use_objectivetimer);
 	ini->SetBoolValue(Name(), VAR_NAME(use_factionleaderboard), use_factionleaderboard);
-    ini->SetBoolValue(Name(), VAR_NAME(use_discord), use_discord);
-    ini->SetBoolValue(Name(), VAR_NAME(use_twitch), use_twitch);
+    	ini->SetBoolValue(Name(), VAR_NAME(use_discord), use_discord);
+    	ini->SetBoolValue(Name(), VAR_NAME(use_twitch), use_twitch);
 	ini->SetBoolValue(Name(), VAR_NAME(use_partywindowmodule), use_partywindowmodule);
 	ini->SetBoolValue(Name(), VAR_NAME(use_friendlist), use_friendlist);
 	ini->SetBoolValue(Name(), VAR_NAME(use_serverinfo), use_serverinfo);
-
 	ini->SetBoolValue(Name(), VAR_NAME(save_location_data), save_location_data);
+	ini->SetBoolValue(Name(), VAR_NAME(use_gamesettings), use_gamesettings);
+	ini->SetBoolValue(Name(), VAR_NAME(use_updater), use_updater);
+	ini->SetBoolValue(Name(), VAR_NAME(use_chatfilter), use_chatfilter);
+	ini->SetBoolValue(Name(), VAR_NAME(use_chatcommand), use_chatcommand);
 }
 
 void ToolboxSettings::Update(float delta) {
-    ImGui::GetStyle().WindowBorderSize = (move_all ? 1.0f : 0.0f);
+	ImGui::GetStyle().WindowBorderSize = (move_all ? 1.0f : 0.0f);
 
 	// save location data
 	if (save_location_data && TIMER_DIFF(location_timer) > 1000) {

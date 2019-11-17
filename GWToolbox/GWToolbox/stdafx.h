@@ -51,6 +51,10 @@
 #include <unordered_set>
 #include <vector>
 
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+
 // windows headers
 #include <Windows.h>
 #include <windowsx.h>

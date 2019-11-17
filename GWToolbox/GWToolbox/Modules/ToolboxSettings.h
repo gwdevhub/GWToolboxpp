@@ -16,7 +16,7 @@ public:
 
 	const char* Name() const override { return "Toolbox Settings"; }
 
-	void InitializeModules();
+	void LoadModules(CSimpleIni* ini);
 	
 	void Update(float delta) override;
 
@@ -26,6 +26,8 @@ public:
 
 	void DrawFreezeSetting();
 
+	const std::vector<ToolboxModule*>& GetOptionalModules() const { return optional_modules; }
+
 	static bool move_all;
 
 private:
@@ -34,6 +36,8 @@ private:
 	GW::Constants::MapID location_current_map = GW::Constants::MapID::None;
 	std::wofstream location_file;
 	bool save_location_data = false;
+
+	std::vector<ToolboxModule*> optional_modules;
 
 	bool use_pcons = true;
 	bool use_hotkeys = true;
@@ -56,10 +60,15 @@ private:
 	bool use_alcohol = true;
 	bool use_objectivetimer = true;
 	bool use_factionleaderboard = true;
-    bool use_daily_quests = true;
-    bool use_discord = true;
+    	bool use_daily_quests = true;
+    	bool use_discord = true;
 	bool use_twitch = true;
 	bool use_partywindowmodule = true;
 	bool use_friendlist = true;
 	bool use_serverinfo = true;
+	bool use_gamesettings = true;
+	bool use_updater = true;
+	bool use_chatfilter = true;
+	bool use_chatcommand = true;
+	bool use_discordintegration = true;
 };

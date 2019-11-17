@@ -49,8 +49,6 @@ void PartyDamage::Initialize() {
 
 void PartyDamage::Terminate() {
 	ToolboxWidget::Terminate();
-	inifile->Reset();
-	delete inifile;
 }
 
 void PartyDamage::MapLoadedCallback(GW::HookStatus *, GW::Packet::StoC::MapLoaded *packet) {
@@ -383,6 +381,9 @@ void PartyDamage::SaveSettings(CSimpleIni* ini) {
 		inifile->SetLongValue(IniSection, key.c_str(), item.second, 0, false, true);
 	}
 	inifile->SaveFile(Resources::GetPath(INI_FILENAME).c_str());
+    inifile->Reset();
+    delete inifile;
+    inifile = nullptr;
 }
 
 void PartyDamage::DrawSettings() {
