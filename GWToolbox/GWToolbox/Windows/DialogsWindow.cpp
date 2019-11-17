@@ -6,6 +6,7 @@
 
 #include <GWCA\Managers\AgentMgr.h>
 
+#include "logger.h"
 #include "GuiUtils.h"
 #include "GWToolbox.h"
 #include <Modules\Resources.h>
@@ -126,33 +127,19 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
 				GW::Agents::SendDialog(IndexToDialogID(dialogindex));
 			}
 
-			static bool hex = true;
-			static char customdialogbuf[64] = "";
-			if (ImGui::Button(hex ? "Hex" : "Dec", ImVec2(32.0f, 0))) {
-				int id;
-				if (GuiUtils::ParseInt(customdialogbuf, &id, hex ? 16 : 10)) {
-					if (hex) { // was hex, convert to dec
-						snprintf(customdialogbuf, 64, "%d", id);
-					} else { // was dec, convert to hex
-						snprintf(customdialogbuf, 64, "%X", id);
-					}
-				}
-				hex = !hex;
-			}
-			if (ImGui::IsItemHovered()) {
-				ImGui::SetTooltip(hex ? "Dialog ID is in hexadecimal value\nClick to convert to decimal"
-					: "Dialog ID is in decimal value\nClick to convert to hexadecimal");
-			}
-			ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-			ImGuiInputTextFlags flag = (hex ? ImGuiInputTextFlags_CharsHexadecimal : ImGuiInputTextFlags_CharsDecimal);
 			ImGui::PushItemWidth(-60.0f - ImGui::GetStyle().ItemInnerSpacing.x);
-			ImGui::InputText("###dialoginput", customdialogbuf, 64, flag);
+			ImGui::InputText("###dialoginput", customdialogbuf, 64, ImGuiInputTextFlags_None);
 			ImGui::PopItemWidth();
+			if (ImGui::IsItemHovered()) {
+				ImGui::SetTooltip("You can prefix the number by \"0x\" to specify an hexadecimal number");
+			}
 			ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 			if (ImGui::Button("Send##2", ImVec2(60.0f, 0))) {
 				int id;
-				if (GuiUtils::ParseInt(customdialogbuf, &id, hex ? 16 : 10)) {
+				if (GuiUtils::ParseInt(customdialogbuf, &id)) {
 					GW::Agents::SendDialog(id);
+				} else {
+					Log::Error("Invalid dialog number '%s'", customdialogbuf);
 				}
 			}
 		}
