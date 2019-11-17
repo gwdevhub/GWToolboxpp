@@ -21,9 +21,6 @@
 #include "HeroBuildsWindow.h"
 #include "HotkeysWindow.h"
 #include "PconsWindow.h"
-#ifdef ENABLE_LUA
-#  include <Modules\LUAInterface.h>
-#endif
 #include <ImGuiAddons.h>
 
 
@@ -727,78 +724,3 @@ void HotkeyHeroTeamBuild::Execute() {
 
 	HeroBuildsWindow::Instance().Load(index);
 }
-
-
-#ifdef ENABLE_LUA
-HotkeyLUACmd::HotkeyLUACmd(CSimpleIni * ini, const char * section)
-	:TBHotkey(ini, section)
-{
-	const char* val = ini->GetValue(section, "Command");
-	if (val)
-	{
-		strcpy(cmd, ini->GetValue(section, "Command"));
-		char* seek = cmd;
-		for (; *seek; ++seek)
-		{
-			switch (*seek)
-			{
-			case -1: {
-				*seek = '\n';
-			}break;
-			case -2: {
-				*seek = '\t';
-			}break;
-			}
-		}
-	}
-}
-
-void HotkeyLUACmd::Save(CSimpleIni * ini, const char * section) const
-{
-	char* seek = cmd;
-	for (; *seek; ++seek)
-	{
-		switch (*seek)
-		{
-			case '\n': {
-				*seek = -1;
-			}break;
-			case '\t': {
-				*seek = -2;
-			}break;
-		}
-	}
-	ini->SetValue(section, "Command", cmd);
-}
-
-void HotkeyLUACmd::Draw()
-{
-	if (ImGui::Button("Edit"))
-	{
-		editopen = true;
-	}
-	if(editopen)
-	{
-		ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiSetCond_FirstUseEver);
-		if(ImGui::Begin("Edit LUACmd", &editopen))
-		{
-			ImVec2 cmax = ImGui::GetWindowContentRegionMax();
-			ImVec2 cmin = ImGui::GetWindowContentRegionMin();
-			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 1));
-			ImGui::InputTextMultiline("##source", cmd, 0x200,
-				ImVec2(cmax.x - cmin.x, cmax.y - cmin.y), ImGuiInputTextFlags_AllowTabInput);
-			ImGui::PopStyleVar();
-			ImGui::End();
-		}
-	}
-}
-
-void HotkeyLUACmd::Description(char * buf, int bufsz) const
-{
-}
-
-void HotkeyLUACmd::Execute()
-{
-	LUAInterface::Instance().RunString(cmd);
-}
-#endif
