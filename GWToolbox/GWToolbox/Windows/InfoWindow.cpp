@@ -352,7 +352,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 				if (bag1) {
 					GW::ItemArray items = bag1->items;
 					if (items.valid()) {
-						GW::Item* item = items[0];
+						item = items[0];
 						if (item) {
 							snprintf(modelid, 32, "%d", item->model_id);
 						}

@@ -18,10 +18,10 @@ public:
 
     void Decode();
     void Send();
-    static void PrintEncStr(wchar_t* enc_str);
+    static void PrintEncStr(const wchar_t* enc_str);
     wchar_t* GetEncodedString();
 
 private:
-    char encoded[512];
+	char encoded[2048] = { 0 };
     std::wstring decoded;
 };

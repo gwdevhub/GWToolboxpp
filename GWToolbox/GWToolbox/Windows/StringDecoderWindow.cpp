@@ -26,7 +26,7 @@ void StringDecoderWindow::Draw(IDirect3DDevice9* pDevice) {
     ImGui::SetNextWindowSize(ImVec2(256, 128), ImGuiSetCond_FirstUseEver);
     if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
         return ImGui::End();
-    ImGui::InputText("Encoded string:", encoded, 512);
+    ImGui::InputText("Encoded string:", encoded, 2048);
     if (ImGui::Button("Decode")) {
         Decode();
     }
@@ -40,7 +40,7 @@ void StringDecoderWindow::Draw(IDirect3DDevice9* pDevice) {
 void StringDecoderWindow::Initialize() {
     ToolboxWindow::Initialize();
 }
-void StringDecoderWindow::PrintEncStr(wchar_t* enc_str) {
+void StringDecoderWindow::PrintEncStr(const wchar_t* enc_str) {
     char enc_str_chars[256] = { 0 };
     for (size_t i = 0; enc_str[i] != 0; i++) {
         printf("0x%X ", enc_str[i]);
