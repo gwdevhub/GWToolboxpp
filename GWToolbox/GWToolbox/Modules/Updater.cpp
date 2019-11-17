@@ -34,6 +34,10 @@ void Updater::SaveSettings(CSimpleIni* ini) {
 #endif // !_DEBUG
 }
 
+void Updater::Initialize() {
+	CheckForUpdate();
+}
+
 void Updater::DrawSettingInternal() {
 	ImGui::Text("Update mode:");
 	ImGui::RadioButton("Do not check for updates", &mode, 0);
