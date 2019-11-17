@@ -175,7 +175,9 @@ public:
 
 	const char* Name() const override { return "Game Settings"; }
 
-    	time_t PendingChatMessage_last_send = 0;
+    time_t PendingChatMessage_last_send = 0;
+	static void PingItem(GW::Item* item, bool include_name = false);
+	static void PingItem(uint32_t item_id, bool include_name = false);
 
 	void Initialize() override;
 	void Terminate() override;

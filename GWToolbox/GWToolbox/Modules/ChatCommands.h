@@ -58,6 +58,7 @@ private:
 	static void CmdLoad(const wchar_t *message, int argc, LPWSTR *argv);
 	static void CmdTransmo(const wchar_t *message, int argc, LPWSTR *argv);
 	static void CmdResize(const wchar_t *message, int argc, LPWSTR *argv);
+	static void CmdPingEquipment(const wchar_t* message, int argc, LPWSTR* argv);
     
 
 	static std::vector<ToolboxUIElement*> MatchingWindows(const wchar_t *message, int argc, LPWSTR *argv);

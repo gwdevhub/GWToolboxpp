@@ -416,7 +416,7 @@ typedef void(__fastcall* OnPingEqippedItem_pt)(uint32_t unk1, uint32_t item_id1,
 OnPingEqippedItem_pt OnPingEquippedItem_Func;
 OnPingEqippedItem_pt OnPingEquippedItemRet;
 
-std::wstring ShorthandItemDescription(GW::Item* item) {
+static std::wstring ShorthandItemDescription(GW::Item* item) {
 	std::wstring original(item->info_string);
 	std::wsmatch m;
 
@@ -582,19 +582,43 @@ std::wstring ShorthandItemDescription(GW::Item* item) {
 	std::wregex stacking_non_stacking(L"\x0002.\x010A\x0AA8\x010A(\x0AB1|\x0AB2)\x0001\x0001");
 	original = std::regex_replace(original, stacking_non_stacking, L"");
 
+	// Replace (while affected by a(n) to just (n)
+	std::wregex while_affected_by(L"\x8101\x4D9C\x10A.\x1");
+	while (std::regex_search(original, m, while_affected_by)) {
+		for (auto match : m) {
+			std::wstring found = match.str();
+			wchar_t buffer[2] = { 0 };
+			buffer[0] = found.at(3);
+			original = std::regex_replace(original, std::wregex(found), buffer);
+		}
+	}
+	if (std::regex_search(original, while_affected_by)) {
+		original = std::regex_replace(original, zealous, L"");
+		original += L"\x2\x102\x2\x108\x107" L"Zealous\x1";
+	}
 	// Replace (while xxx) to just (xxx)
 	original = std::regex_replace(original, std::wregex(L"\x0AB4"), L"\x0108\x0107" L"Attacking\x0001");
 	original = std::regex_replace(original, std::wregex(L"\x0AB5"), L"\x0108\x0107" L"Casting\x0001");
 	original = std::regex_replace(original, std::wregex(L"\x0AB6"), L"\x0108\x0107" L"Condition\x0001");
-	original = std::regex_replace(original, std::wregex(L"\x0AB7"), L"\x0108\x0107" L"Enchanted\x0001");
-	original = std::regex_replace(original, std::wregex(L"\x0AB8"), L"\x0108\x0107" L"Hexed\x0001");
-	original = std::regex_replace(original, std::wregex(L"\x0AB9"), L"\x0108\x0107" L"Stance\x0001");
-	original = std::regex_replace(original, std::wregex(L"\x0ABA"), L"\x0108\x0107" L"Stance\x0001");
+	original = std::regex_replace(original, std::wregex(L"\x0AB7|\x4B6"), L"\x0108\x0107" L"Enchanted\x0001");
+	original = std::regex_replace(original, std::wregex(L"\x0AB8|\x4B4"), L"\x0108\x0107" L"Hexed\x0001");
+	original = std::regex_replace(original, std::wregex(L"\x0AB9|\x0ABA"), L"\x0108\x0107" L"Stance\x0001");
 
+	// Combine Attribute + 3, Attribute + 1 to Attribute +3 +1 (e.g. headpiece)
+	std::wregex attribute_stacks(L".\x10A\xA84\x10A.\x1\x101.\x1\x2\x102\x2.\x10A\xA84\x10A.\x1\x101.\x1");
+	if (std::regex_search(original, m, attribute_stacks)) {
+		for (auto match : m) {
+			std::wstring found = match.str();
+			if (found[4] != found[16]) continue; // Different attributes.
+			wchar_t buffer[64];
+			wsprintfW(buffer, L"%c\x10A\xA84\x10A%c\x1\x101%c\x2\xA84\x101%c\x1", 
+				found[0], found[4],found[7], found[19]);
+			original = std::regex_replace(original, std::wregex(found), buffer);
+		}
+	}
 	return original;
 }
-
-std::wstring ParseItemDescription(GW::Item* item) {
+static std::wstring ParseItemDescription(GW::Item* item) {
 	std::wstring original = ShorthandItemDescription(item);
 
     // Remove "Value: 122 gold"
@@ -615,9 +639,10 @@ std::wstring ParseItemDescription(GW::Item* item) {
 	// Remove "20% Additional damage during festival events" > "Dmg +20% (Festival)"
 	original = std::regex_replace(original, std::wregex(L".\x010A\x108\x10A\x8103\xB71\x101\x100\x1\x1"), L"\xA85\x10A\xA4E\x1\x0101\x114\x2\xAA8\x10A\x108\x107" L"Festival\x1\x1");
 
-	if (item->customized) {
+	std::wregex dmg_plus_20(L"\x2\x102\x2.\x10A\xA85\x10A(\xA4C|\xA4E)\x1\x0101\x114\x1");
+	if (item->customized && std::regex_search(original, dmg_plus_20)) {
 		// Remove "\nDamage +20%" > "\n"
-		original = std::regex_replace(original, std::wregex(L"\x2\x102\x2.\x10A\xA85\x10A(\xA4C|\xA4E)\x1\x0101\x114\x1"), L"");
+		original = std::regex_replace(original, dmg_plus_20, L"");
 		// Append "Customized"
 		original += L"\x0002\x0102\x0002\x0108\x0107" L"Customized\x0001";
 	}
@@ -625,6 +650,32 @@ std::wstring ParseItemDescription(GW::Item* item) {
     return original;
 }
 
+void GameSettings::PingItem(GW::Item* item, bool include_name) {
+	if (!item) return;
+	GW::Player* p = GW::PlayerMgr::GetPlayerByID(GW::Agents::GetPlayer()->login_number);
+	if (!p) return;
+	std::wstring out;
+	if (include_name)
+		out += item->name_enc;
+	if (item->info_string) {
+		if (out.length())
+			out += L"\x2\x108\x107, \x1\x2";
+		out += ParseItemDescription(item);
+	}
+	#ifdef _DEBUG
+		printf("Pinged item:\n");
+		StringDecoderWindow::PrintEncStr(out.c_str());
+	#endif
+	PendingChatMessage* m = PendingChatMessage::queueSend(GW::Chat::Channel::CHANNEL_GROUP, out.c_str(), p->name_enc);
+	if (m) GameSettings::Instance().pending_messages.push_back(m);
+}
+void GameSettings::PingItem(uint32_t item_id, bool include_name) {
+	if (!item_id) return;
+	GW::ItemArray items = GW::Items::GetItemArray();
+	if (!items.valid()) return;
+	if (item_id >= items.size()) return;
+	return PingItem(items[item_id], include_name);
+}
 void __fastcall OnPingEquippedItem(uint32_t oneC, uint32_t item_id1, uint32_t item_id2) {
     GW::HookBase::EnterHook();
     OnPingEquippedItemRet(oneC, item_id1, item_id2);
@@ -632,32 +683,8 @@ void __fastcall OnPingEquippedItem(uint32_t oneC, uint32_t item_id1, uint32_t it
 		GW::HookBase::LeaveHook();
 		return;
 	}
-    GW::Item* item;
-    GW::Player* p = GW::PlayerMgr::GetPlayerByID(GW::Agents::GetPlayer()->login_number);
-    if (item_id1) {
-        item = GW::GameContext::instance()->items->item_array[item_id1];
-		#ifdef _DEBUG
-			printf("Item 1 Name:\n");
-			StringDecoderWindow::PrintEncStr(item->name_enc);
-			printf("Item 1 Desc:\n");
-			StringDecoderWindow::PrintEncStr(item->info_string);
-		#endif
-        std::wstring item_description = ParseItemDescription(item);
-		PendingChatMessage* m = PendingChatMessage::queueSend(GW::Chat::Channel::CHANNEL_GROUP, item_description.c_str(), p->name_enc);
-		if (m) GameSettings::Instance().pending_messages.push_back(m);
-    }
-    if (item_id2) {
-        item = GW::GameContext::instance()->items->item_array[item_id2];
-		#ifdef _DEBUG
-			printf("Item 2 Name:\n");
-			StringDecoderWindow::PrintEncStr(item->name_enc);
-			printf("Item 2 Desc:\n");
-			StringDecoderWindow::PrintEncStr(item->info_string);
-		#endif
-        std::wstring item_description2 = ParseItemDescription(item);
-		PendingChatMessage* m = PendingChatMessage::queueSend(GW::Chat::Channel::CHANNEL_GROUP, item_description2.c_str(), p->name_enc);
-		if (m) GameSettings::Instance().pending_messages.push_back(m);
-    }
+	GameSettings::PingItem(item_id1);
+	GameSettings::PingItem(item_id2);
     GW::HookBase::LeaveHook();
 }
 

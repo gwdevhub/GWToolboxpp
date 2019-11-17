@@ -176,6 +176,7 @@ void ChatCommands::Initialize() {
 	GW::Chat::CreateCommand(L"resize", ChatCommands::CmdResize);
     GW::Chat::CreateCommand(L"settitle", ChatCommands::CmdReapplyTitle);
     GW::Chat::CreateCommand(L"title", ChatCommands::CmdReapplyTitle);
+	GW::Chat::CreateCommand(L"pingitem", ChatCommands::CmdPingEquipment);
 }
 
 bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
@@ -868,6 +869,45 @@ void ChatCommands::CmdLoad(const wchar_t *message, int argc, LPWSTR *argv) {
 				GW::SkillbarMgr::LoadSkillTemplate(temp, hero_number);
 			}
 		}
+	}
+}
+void ChatCommands::CmdPingEquipment(const wchar_t* message, int argc, LPWSTR* argv) {
+	if (argc < 2) return;
+	GW::Agent* p = GW::Agents::GetPlayer();
+	if (!p || !p->equip) return;
+	GW::Agent::Equipment* e = *p->equip;
+	if (!e) return;
+	std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+	uint32_t item_types[8] = { 0 };
+	size_t i = 0;
+	if (arg1 == L"head")
+		GameSettings::PingItem(e->item_id_head, true);
+	else if (arg1 == L"chest")		
+		GameSettings::PingItem(e->item_id_chest, true);
+	else if (arg1 == L"legs")		
+		GameSettings::PingItem(e->item_id_legs, true);
+	else if (arg1 == L"boots")		
+		GameSettings::PingItem(e->item_id_feet, true);
+	else if (arg1 == L"gloves")		
+		GameSettings::PingItem(e->item_id_hands, true);
+	else if (arg1 == L"offhand" || arg1 == L"shield")
+		GameSettings::PingItem(e->item_id_offhand, true);
+	else if(arg1 == L"weapon")
+		GameSettings::PingItem(e->item_id_weapon, true);
+	else if (arg1 == L"weapons") {
+		GameSettings::PingItem(e->item_id_weapon, true);
+		GameSettings::PingItem(e->item_id_offhand, true);
+	}
+	else if (arg1 == L"costume") {
+		GameSettings::PingItem(e->item_id_costume_head, true);
+		GameSettings::PingItem(e->item_id_costume_body, true);
+	}
+	else if (arg1 == L"armor") {
+		GameSettings::PingItem(e->item_id_head, true);
+		GameSettings::PingItem(e->item_id_chest, true);
+		GameSettings::PingItem(e->item_id_legs, true);
+		GameSettings::PingItem(e->item_id_feet, true);
+		GameSettings::PingItem(e->item_id_hands, true);
 	}
 }
 
