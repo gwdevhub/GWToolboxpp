@@ -27,9 +27,6 @@
 #include "HotkeysWindow.h"
 #include "PconsWindow.h"
 #include "Modules\ChatCommands.h"
-#ifdef ENABLE_LUA
-#  include <Modules\LUAInterface.h>
-#endif
 #include <ImGuiAddons.h>
 
 
@@ -264,7 +261,6 @@ HotkeySendChat::HotkeySendChat(CSimpleIni* ini, const char* section)
 void HotkeySendChat::Save(CSimpleIni* ini, const char* section) const {
 	TBHotkey::Save(ini, section);
 	ini->SetValue(section, "msg", message);
-    
 	char buf[8];
 	snprintf(buf, 8, "%c", channel);
 	ini->SetValue(section, "channel", buf);
@@ -294,15 +290,14 @@ void HotkeySendChat::Draw() {
 	};
 	if (ImGui::Combo("Channel", &index, channels, 7)) {
 		switch (index) {
+		case 0: channel = '/'; break;
 		case 1: channel = '!'; break;
 		case 2: channel = '@'; break;
 		case 3: channel = '#'; break;
 		case 4: channel = '$'; break;
 		case 5: channel = '%'; break;
 		case 6: channel = '"'; break;
-		default: 
-            channel = '/';
-        break;
+		default: channel = '/';break;
 		}
         show_message_in_emote_channel = channel == '/' && show_message_in_emote_channel;
 		hotkeys_changed = true;
@@ -823,78 +818,3 @@ void HotkeyHeroTeamBuild::Execute() {
 
 	HeroBuildsWindow::Instance().Load(index);
 }
-
-
-#ifdef ENABLE_LUA
-HotkeyLUACmd::HotkeyLUACmd(CSimpleIni * ini, const char * section)
-	:TBHotkey(ini, section)
-{
-	const char* val = ini->GetValue(section, "Command");
-	if (val)
-	{
-		strcpy(cmd, ini->GetValue(section, "Command"));
-		char* seek = cmd;
-		for (; *seek; ++seek)
-		{
-			switch (*seek)
-			{
-			case -1: {
-				*seek = '\n';
-			}break;
-			case -2: {
-				*seek = '\t';
-			}break;
-			}
-		}
-	}
-}
-
-void HotkeyLUACmd::Save(CSimpleIni * ini, const char * section) const
-{
-	char* seek = cmd;
-	for (; *seek; ++seek)
-	{
-		switch (*seek)
-		{
-			case '\n': {
-				*seek = -1;
-			}break;
-			case '\t': {
-				*seek = -2;
-			}break;
-		}
-	}
-	ini->SetValue(section, "Command", cmd);
-}
-
-void HotkeyLUACmd::Draw()
-{
-	if (ImGui::Button("Edit"))
-	{
-		editopen = true;
-	}
-	if(editopen)
-	{
-		ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiSetCond_FirstUseEver);
-		if(ImGui::Begin("Edit LUACmd", &editopen))
-		{
-			ImVec2 cmax = ImGui::GetWindowContentRegionMax();
-			ImVec2 cmin = ImGui::GetWindowContentRegionMin();
-			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 1));
-			ImGui::InputTextMultiline("##source", cmd, 0x200,
-				ImVec2(cmax.x - cmin.x, cmax.y - cmin.y), ImGuiInputTextFlags_AllowTabInput);
-			ImGui::PopStyleVar();
-			ImGui::End();
-		}
-	}
-}
-
-void HotkeyLUACmd::Description(char * buf, int bufsz) const
-{
-}
-
-void HotkeyLUACmd::Execute()
-{
-	LUAInterface::Instance().RunString(cmd);
-}
-#endif
