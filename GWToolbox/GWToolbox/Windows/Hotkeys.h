@@ -36,6 +36,7 @@ public:
     bool show_message_in_emote_channel = true; // if hotkey should show message in emote channel when triggered
     bool show_error_on_failure = true; // if hotkey should show error message on failure
     bool ongoing = false; // used for hotkeys that need to execute more than once per toggle.
+	bool block_gw = false; // true to consume the keypress before passing to gw.
 
     int map_id = 0;
     int prof_id = 0;

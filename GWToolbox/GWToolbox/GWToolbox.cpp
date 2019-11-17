@@ -265,7 +265,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 
         // send to toolbox modules
         for (ToolboxModule* m : tb.GetModules()) {
-            m->WndProc(Message, wParam, lParam);
+			bool captured = false;
+			for (ToolboxModule* m : tb.GetModules()) {
+				if (m->WndProc(Message, wParam, lParam)) captured = true;
+			}
+			if (captured) return true;
         }
         // note: capturing those events would prevent typing if you have a hotkey assigned to normal letters. 
         // We may want to not send events to toolbox if the player is typing in-game

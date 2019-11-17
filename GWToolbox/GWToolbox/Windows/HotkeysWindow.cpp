@@ -230,7 +230,8 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
                 current_hotkey = hk;
 				hk->Execute();
                 current_hotkey = nullptr;
-				triggered = true;
+				if (hk->block_gw)
+					triggered = true;
 			}
 		}
 		return triggered;

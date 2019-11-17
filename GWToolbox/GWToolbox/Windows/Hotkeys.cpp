@@ -81,6 +81,7 @@ TBHotkey::TBHotkey(CSimpleIni* ini, const char* section) : ui_id(++cur_ui_id) {
     prof_id = ini ? ini->GetLongValue(section, VAR_NAME(prof_id), prof_id) : prof_id;
     show_message_in_emote_channel = ini ? ini->GetBoolValue(section, VAR_NAME(show_message_in_emote_channel), show_message_in_emote_channel) : show_message_in_emote_channel;
     show_error_on_failure = ini ? ini->GetBoolValue(section, VAR_NAME(show_error_on_failure), show_error_on_failure) : show_error_on_failure;
+	block_gw = ini ? ini->GetBoolValue(section, VAR_NAME(block_gw), block_gw) : block_gw;
 }
 void TBHotkey::Save(CSimpleIni* ini, const char* section) const {
 	ini->SetLongValue(section, VAR_NAME(hotkey), hotkey);
@@ -88,6 +89,7 @@ void TBHotkey::Save(CSimpleIni* ini, const char* section) const {
     ini->SetLongValue(section, VAR_NAME(prof_id), prof_id);
 	ini->SetLongValue(section, VAR_NAME(modifier), modifier);
 	ini->SetBoolValue(section, VAR_NAME(active), active);
+	ini->SetBoolValue(section, VAR_NAME(block_gw), block_gw);
     ini->SetBoolValue(section, VAR_NAME(show_message_in_emote_channel), show_message_in_emote_channel);
     ini->SetBoolValue(section, VAR_NAME(show_error_on_failure), show_error_on_failure);
 }
@@ -109,17 +111,18 @@ void TBHotkey::Draw(Op* op) {
 			ImGui::PushID(ui_id);
 			ImGui::PushID("header");
 			ImGuiStyle& style = ImGui::GetStyle();
+			const float btn_width = 50.0f * ImGui::GetIO().FontGlobalScale;
 			if (show_active_in_header) {
 				ImGui::SameLine(ImGui::GetContentRegionAvailWidth() 
 					- ImGui::GetTextLineHeight() 
 					- style.FramePadding.y * 2
-					- (show_run_in_header ? (50.0f + ImGui::GetStyle().ItemSpacing.x) : 0));
+					- (show_run_in_header ? (btn_width + ImGui::GetStyle().ItemSpacing.x) : 0));
 				if (ImGui::Checkbox("", &active)) hotkeys_changed = true;
 				if (ImGui::IsItemHovered()) ImGui::SetTooltip("The hotkey can trigger only when selected");
 			}
 			if (show_run_in_header) {
-				ImGui::SameLine(ImGui::GetContentRegionAvailWidth() - 50.0f);
-				if (ImGui::Button("Run", ImVec2(50.0f, 0.0f))) {
+				ImGui::SameLine(ImGui::GetContentRegionAvailWidth() - btn_width);
+				if (ImGui::Button("Run", ImVec2(btn_width, 0.0f))) {
 					Execute();
 				}
 			}
@@ -160,6 +163,8 @@ void TBHotkey::Draw(Op* op) {
 		Draw();
 
 		// === Hotkey section ===
+		if(ImGui::Checkbox("Block key in Guild Wars when triggered",&block_gw)) hotkeys_changed = true;
+		ImGui::ShowHelp("When triggered, this hotkey will prevent Guild Wars from receiving the keypress event");
         if (ImGui::InputInt("Map ID", &map_id)) hotkeys_changed = true;
         ImGui::ShowHelp("The hotkey can only trigger in the selected map (0 = Any map)");
         
