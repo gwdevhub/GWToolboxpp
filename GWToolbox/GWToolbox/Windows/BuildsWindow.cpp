@@ -371,16 +371,60 @@ void BuildsWindow::Load(const char* build_name) {
 	return BuildsWindow::Load(nullptr, build_name);
 }
 void BuildsWindow::Load(const char* tbuild_name, const char* build_name) {
-	const size_t tbuild_str_len = tbuild_name ? sizeof(tbuild_name) : 0;
-	const size_t build_str_len = build_name ? sizeof(build_name) : 0;
-	for (auto tb : teambuilds) {
-		if (tbuild_name && strncmp(tb.name, tbuild_name, tbuild_str_len) != 0)
-			continue;
-		for (size_t i = 0; i < tb.builds.size(); i++) {
-			if (strncmp(tb.builds[i].name, build_name, build_str_len) == 0 || strncmp(tb.builds[i].code, build_name, build_str_len) == 0)
-				return BuildsWindow::Load(tb, i);
-		}
-	}
+    if (!build_name || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
+        return;
+    GW::SkillbarMgr::SkillTemplate t;
+    GW::Constants::Profession prof = (GW::Constants::Profession)GW::Agents::GetPlayer()->primary;
+    bool is_skill_template = GW::SkillbarMgr::DecodeSkillTemplate(&t, build_name);
+    if (is_skill_template && t.primary != prof)
+        return; // Wrong profession.
+    std::string tbuild_ws = GuiUtils::ToLower(tbuild_name);
+    std::string build_ws = GuiUtils::ToLower(build_name);
+    Build* build = nullptr;
+    TeamBuild* teambuild = nullptr;
+
+    std::map<size_t,TeamBuild*> local_teambuilds;
+    std::map<TeamBuild*, size_t> local_builds;
+    for (auto tb : teambuilds) {
+        size_t found = local_teambuilds.size();
+        size_t tbuild_best_match = tb.builds.size();
+        if (tbuild_name) {
+            found = GuiUtils::ToLower(tb.name).find(tbuild_ws.c_str());
+            if (found == std::string::npos)
+                continue; // Teambuild name doesn't match
+        }
+        if (is_skill_template) {
+            for (size_t i = 0; i < tb.builds.size();i++) {
+                if (strcmp(tb.builds[i].code, build_name) != 0)
+                    continue;
+                tbuild_best_match = i;
+                break;
+            }
+        }
+        else {
+            for (size_t i = 0; i < tb.builds.size(); i++) {
+                if (GuiUtils::ToLower(tb.builds[i].name).find(build_ws.c_str()) == std::string::npos)
+                    continue;
+                GW::SkillbarMgr::SkillTemplate bt;
+                if (!GW::SkillbarMgr::DecodeSkillTemplate(&bt, tb.builds[i].code))
+                    continue; // Invalid build code
+                if (bt.primary != prof)
+                    continue; // Wrong profession.
+                tbuild_best_match = i;
+                break;
+            }
+        }
+        if (tbuild_best_match >= tb.builds.size())
+            continue; // This team build has no matching valid build codes
+        local_teambuilds.emplace(found, &tb);
+        local_builds.emplace(&tb, tbuild_best_match);
+    }
+    // These are now in order of build match.
+    if (local_teambuilds.empty())
+        return;
+    for (auto it : local_teambuilds) {
+        return Load(*it.second, local_builds[it.second]);
+    }
 }
 void BuildsWindow::LoadPcons(const TeamBuild& tbuild, unsigned int idx) {
     if (idx >= tbuild.builds.size()) return;

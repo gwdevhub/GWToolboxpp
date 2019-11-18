@@ -41,7 +41,6 @@ void GuiUtils::LoadFonts() {
 		extra_fonts.push_back({ L"Font_ChineseTraditional.ttf", io.Fonts->GetGlyphRangesChineseFull() });
 		extra_fonts.push_back({ L"Font_Korean.ttf", io.Fonts->GetGlyphRangesKorean() });
 
-        //std::this_thread::sleep_for(std::chrono::milliseconds(3000));
         // Pre-load font configs
         ImFontConfig* fontCfg;
         
