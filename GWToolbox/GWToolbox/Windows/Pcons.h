@@ -89,7 +89,6 @@ protected:
 
 	GW::Constants::MapID mapid = GW::Constants::MapID::None;
 	GW::Constants::InstanceType maptype = GW::Constants::InstanceType::Loading;
-	clock_t mapentered = clock();
 	// loops over the inventory, counting the items according to QuantityForEach
 	// if 'used' is not null, it will also use the first item found,
 	// and, if so, used *used to true

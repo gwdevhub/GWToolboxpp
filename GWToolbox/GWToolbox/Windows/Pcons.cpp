@@ -126,50 +126,52 @@ void Pcon::Update(int delay) {
 		maptype = GW::Map::GetInstanceType();
 		mapentered = clock();
 		ResetCounts();
+        refill_attempted = maptype != GW::Constants::InstanceType::Outpost;
 	}
-    if(maptype == GW::Constants::InstanceType::Loading || !GW::Map::GetIsMapLoaded())
+    if (maptype == GW::Constants::InstanceType::Loading)
         return;
-	if (enabled && PconsWindow::Instance().GetEnabled()) {
-		if (delay < 0) delay = Pcon::pcons_delay;
-		player = GW::Agents::GetPlayer();
-		// === Use item if possible ===
-		// NOTE: Only fails CanUseByEffect() if we've found an effects array for this map before.
-		if (player != nullptr
-			&& !player->GetIsDead()
-			&& (player_id == 0 || player->agent_id == player_id)
-			&& TIMER_DIFF(timer) > delay
-			&& CanUseByInstanceType()
-			&& CanUseByEffect()) {
-
-			bool used = false;
-			int qty = CheckInventory(&used);
-			AfterUsed(used, qty);
-		}
-	}
-
-
-	if (!pcon_quantity_checked) {
-        if (!refill_attempted) {
-            Refill();
-            return; // Not tried to refill yet
+    // Refill pcons if needed.
+    if (!refill_attempted) {
+        Refill();
+        return;
+    }
+    // Check pcon count in inventory
+    if (!pcon_quantity_checked) {
+        int qty = CheckInventory();
+        if (qty < 0) return; // Inventory pointers not ready
+        quantity = qty;
+        if (maptype == GW::Constants::InstanceType::Outpost) {
+            quantity_storage = CheckInventory(nullptr, nullptr, static_cast<int>(GW::Constants::Bag::Storage_1), static_cast<int>(GW::Constants::Bag::Storage_14));
+            if (enabled && PconsWindow::Instance().GetEnabled()) {
+                // Only warn user of low pcon count if is enabled and we're in an outpost.
+                if (quantity == 0) {
+                    Log::Error("No more %s items found", chat);
+                }
+                else if (quantity < threshold) {
+                    Log::Warning("Low on %s", chat);
+                }
+            }
         }
-		pcon_quantity_checked = true;
-		int qty = CheckInventory();
-		if (qty < 0) return; // Inventory pointers not ready
-		quantity = qty;
-		if (maptype == GW::Constants::InstanceType::Outpost) {
-			quantity_storage = CheckInventory(nullptr, nullptr, static_cast<int>(GW::Constants::Bag::Storage_1), static_cast<int>(GW::Constants::Bag::Storage_14));
-		}
-		if (enabled && PconsWindow::Instance().GetEnabled() && maptype == GW::Constants::InstanceType::Outpost) {
-			// Only warn user of low pcon count if is enabled and we're in an outpost.
-			if (quantity == 0) {
-				Log::Error("No more %s items found", chat);
-			}
-			else if (quantity < threshold) {
-				Log::Warning("Low on %s", chat);
-			}
-		}
-	}
+        pcon_quantity_checked = true;
+    }
+    // === Use item if possible ===
+    if (enabled && PconsWindow::Instance().GetEnabled()) {
+        if (delay < 0) delay = Pcon::pcons_delay;
+        player = GW::Agents::GetPlayer();
+        // NOTE: Only fails CanUseByEffect() if we've found an effects array for this map before.
+        if (player != nullptr
+            && !player->GetIsDead()
+            && (player_id == 0 || player->agent_id == player_id)
+            && TIMER_DIFF(timer) > delay
+            && CanUseByInstanceType()
+            && CanUseByEffect()) {
+
+            bool used = false;
+            int qty = CheckInventory(&used);
+            AfterUsed(used, qty);
+        }
+    }
+
 }
 GW::Bag* Pcon::GetBag(uint32_t bag_id) {
 	GW::Bag** bags = GW::Items::GetBagArray();
@@ -233,7 +235,7 @@ GW::Item* Pcon::FindVacantStackOrSlotInInventory(GW::Item* likeItem) { // Scan b
 	int emptySlotIdx = -1;
 	GW::Bag* emptyBag = nullptr;
 	
-	for (int bagIndex = static_cast<int>(GW::Constants::Bag::Bag_2); bagIndex > 0; --bagIndex) { // Work from last bag to first; pcons at bottom of inventory
+	for (size_t bagIndex = static_cast<size_t>(GW::Constants::Bag::Bag_2); bagIndex > 0; --bagIndex) { // Work from last bag to first; pcons at bottom of inventory
 		GW::Bag* bag = bags[bagIndex];
 		if (bag == nullptr) continue;	// No bag, skip
 		GW::ItemArray items = bag->items;
@@ -277,11 +279,6 @@ GW::Item* Pcon::MoveItem(GW::Item* item, GW::Bag* bag, int slot, int quantity, u
 	if (quantity < 1) quantity = item->quantity;
 	if (quantity > item->quantity) quantity = item->quantity;
 	GW::Item* destItem = bag->items.valid() ? bag->items[slot] : nullptr;
-	int prevDestId = 0, prevDestQty = 0;
-	if (destItem) {
-		prevDestId = destItem->item_id;
-		prevDestQty = destItem->quantity;
-	}
 	int originalQuantity = destItem ? destItem->quantity : 0;
 	int originalId = destItem ? destItem->item_id : 0;
 	int vacantQuantity = 250 - originalQuantity;
@@ -295,10 +292,8 @@ GW::Item* Pcon::MoveItem(GW::Item* item, GW::Bag* bag, int slot, int quantity, u
 	}
 	if (!timeout_seconds)
 		return destItem; // No wait.
-	size_t ms_sleep = 150;
 	size_t i = 0;
 	uint32_t timeout_ms = timeout_seconds * 1000;
-	
 	while (i < timeout_ms) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(150));
 		i += 150;
@@ -308,16 +303,10 @@ GW::Item* Pcon::MoveItem(GW::Item* item, GW::Bag* bag, int slot, int quantity, u
 		if (!nbag || !nbag->items.valid())
 			continue;
 		GW::Item* curItem = nbag->items[slot];
-		if (!curItem) {
-			if (originalId)
-				return nullptr; // Item removed.
-			continue;
-		}
-		else {
-			if (curItem->item_id != originalId || curItem->quantity != originalQuantity) {
-				return curItem; // Item swapped for another or qty changed
-			}
-		}
+        if (!curItem) 
+            continue; // Item not moved yet
+        if (curItem->item_id != originalId || curItem->quantity != originalQuantity)
+            return curItem; // Item swapped for another or qty changed
 	}
 	return nullptr;
 }
@@ -331,15 +320,6 @@ bool Pcon::RefillBlocking() {
     // Simple function to check for return or not.
     if (!refillable()) return true;
 	printf("Refilling %s\n", chat);
-	// Wait until inventory is ready.
-	uint32_t timeout_ms = 5000, i = 0;
-	while (i < timeout_ms) {
-		if (mapentered < clock() - 3)
-			break;
-        if(!refillable()) return true;
-		std::this_thread::sleep_for(std::chrono::milliseconds(150));
-		i += 150;
-	}
 	quantity = CheckInventory();
 	if (quantity >= threshold) return true;
 	quantity_storage = CheckInventory(nullptr, nullptr, static_cast<int>(GW::Constants::Bag::Storage_1), static_cast<int>(GW::Constants::Bag::Storage_14));
@@ -352,7 +332,7 @@ bool Pcon::RefillBlocking() {
     GW::Bag** bags = GW::Items::GetBagArray();
     if (bags == nullptr)
         return false;
-    for (int bagIndex = static_cast<int>(GW::Constants::Bag::Storage_1); bagIndex <= static_cast<int>(GW::Constants::Bag::Storage_14); ++bagIndex) {
+    for (size_t bagIndex = static_cast<size_t>(GW::Constants::Bag::Storage_1); bagIndex <= static_cast<size_t>(GW::Constants::Bag::Storage_14); ++bagIndex) {
         if (points_needed < 1) return true;
         GW::Bag* storageBag = bags[bagIndex];
         if (storageBag == nullptr) continue;	// No bag, skip
@@ -381,11 +361,12 @@ bool Pcon::RefillBlocking() {
             if (!refillable() || quantity >= threshold) return true;
 			// This next statement blocks until move completes.
 			GW::Item* updatedItem = MoveItem(storageItem, bag_to, slot_to, quantity_to_move, 3);
+			UnreserveSlotForMove(bag_to->index, slot_to);
+            if (!refillable()) return true;
             if (!updatedItem) {
                 printf("Failed to wait for slot move\n");
                 return false;
             }
-			UnreserveSlotForMove(bag_to->index, slot_to);
 			int this_moved = (updatedItem->quantity - qty_before) * points_per_item;
 			points_needed -= this_moved;
 			quantity += this_moved;
@@ -403,13 +384,9 @@ void Pcon::Refill() {
 	if (refill_thread.joinable())
 		refill_thread.join();
     refill_thread = std::thread([this]() {
-		GW::Constants::MapID start_map = mapid;
 		RefillBlocking();
 		refilling = false;
-		if (!GW::Map::GetIsMapLoaded() || GW::Map::GetMapID() != start_map)
-			return;
         refill_attempted = true;
-        
     });
 }
 int Pcon::CheckInventory(bool* used, int* used_qty_ptr,int from_bag, int to_bag) const {

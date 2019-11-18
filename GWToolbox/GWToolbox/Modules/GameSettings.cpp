@@ -104,10 +104,9 @@ namespace {
 	}
 
 	const wchar_t *GetPlayerName(void) {
-		GW::Agent *player = GW::Agents::GetPlayer();
-		if (!player) return L"";
-		DWORD playerNumber = player->player_number;
-		return GW::Agents::GetPlayerNameByLoginNumber(playerNumber);
+        GW::GameContext* g = GW::GameContext::instance();
+        if (!g || !g->character) return L"";
+        return g->character->player_name;
 	}
 
 	void WhisperCallback(GW::HookStatus *, const wchar_t from[20], const wchar_t msg[140]) {
@@ -404,8 +403,6 @@ namespace {
 		message = (GW::Chat::Color)Colors::Load(ini, section, key, (Color)message);
 		GW::Chat::SetMessageColor(chan, message);
 	}
-
-
 
     struct PendingSendChatMessage {};
 }
@@ -1060,13 +1057,13 @@ void GameSettings::Initialize() {
 bool GameSettings::GetPlayerIsLeader() {
     GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
     if (!party) return false;
-    GW::Agent* player_agent = GW::Agents::GetPlayer();
-    if (!player_agent) return false;
+    const wchar_t* player_name = GetPlayerName();
+    if (!player_name) return false;
     if (!party->players.size()) return false;
     for (size_t i = 0; i < party->players.size(); i++) {
         if (!party->players[i].connected())
             continue;
-        return (party->players[i].login_number == player_agent->login_number);
+        return wcsncmp(GW::PlayerMgr::GetPlayerName(party->players[i].login_number), player_name, 20) == 0;
     }
     return false;
 }
