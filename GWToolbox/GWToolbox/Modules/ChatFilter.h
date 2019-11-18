@@ -126,12 +126,7 @@ private:
 		ParseBuffer(byauthor_buf, byauthor_words);
 	}
 #endif
-
-	GW::HookEntry LocalMessageCallback_Entry;
-
+	bool post_initialized = false;
+	GW::HookEntry BlockIfApplicable_Entry;
 	GW::HookEntry ClearMessageBuffer_Entry;
-	GW::HookEntry MessageServer_Entry;
-	GW::HookEntry MessageGlobal_Entry;
-	GW::HookEntry MessageLocal_Entry;
-	GW::HookEntry PrintChat_Entry;
 };

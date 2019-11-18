@@ -622,7 +622,7 @@ static std::wstring ParseItemDescription(GW::Item* item) {
 	std::wstring original = ShorthandItemDescription(item);
 
     // Remove "Value: 122 gold"
-    original = std::regex_replace(original, std::wregex(L"\x0002\x0102\x0002\x0A3E\x010A\x0A8A\x010A\x0A59\x0001\x010B.\x0101.\x0001\x0001"), L"");
+	original = std::regex_replace(original, std::wregex(L"\x2\x0102\x2\x0A3E\x010A\x0A8A\x010A\x0A59\x1\x010B.\x0101.(\x102.)?\x1\x1"), L"");
 
     // Remove other "greyed" generic terms e.g. "Two-Handed", "Unidentified"	
 	original = std::regex_replace(original, std::wregex(L"\x0002\x0102\x0002\x0A3E\x010A.\x0001"), L"");

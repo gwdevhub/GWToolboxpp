@@ -44,9 +44,6 @@ static wchar_t* GetMessageCore() {
 }
 
 void ChatFilter::PostInitialize() {
-	static bool post_initialized = false;
-	if (post_initialized)
-		return;
 	post_initialized = true;
 	// Due to the way ChatFilter works, if a previous message was blocked then the buffer would still contain the last message.
 	// Clear down the message buffer if the packet has been blocked.
@@ -64,46 +61,23 @@ void ChatFilter::Initialize() {
 
 
 	// server messages
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&MessageServer_Entry,
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&BlockIfApplicable_Entry,
 	[this](GW::HookStatus *status, GW::Packet::StoC::MessageServer *pak) -> void {
-#ifdef PRINT_CHAT_PACKETS
-		printf("P082: id %d, type %d\n", pak->id, pak->type);
-#endif // PRINT_CHAT_PACKETS
 		BlockIfApplicable(status, GetMessageCore(), pak->channel);
 	});
 
-#ifdef PRINT_CHAT_PACKETS
-	GW::StoC::AddCallback<GW::Packet::StoC::P088>(
-	[](GW::Packet::StoC::P088 *pak) -> bool {
-		printf("P081: agent_id %d, unk1 %d, unk2 ", pak->agent_id, pak->unk1);
-		for (int i = 0; i < 8 && pak->unk2[i]; ++i) printchar(pak->unk2[i]);
-		printf("\n");
-		return false;
-	});
-#endif // PRINT_CHAT_PACKETS
-
 	// global messages
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageGlobal>(&MessageGlobal_Entry,
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageGlobal>(&BlockIfApplicable_Entry,
 	[this](GW::HookStatus *status, GW::Packet::StoC::MessageGlobal* pak) -> void {
-#ifdef PRINT_CHAT_PACKETS
-		printf("P081: id %d, name ", pak->id);
-		for (int i = 0; i < 32 && pak->sender_name[i]; ++i) printchar(pak->sender_name[i]);
-		printf(", guild ");
-		for (int i = 0; i < 6 && pak->sender_guild[i]; ++i) printchar(pak->sender_guild[i]);
-		printf("\n");
-#endif // PRINT_CHAT_PACKETS
 		BlockIfApplicable(status, GetMessageCore(), pak->channel);
 	});
 	// local messages
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&MessageLocal_Entry,
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&BlockIfApplicable_Entry,
 	[this](GW::HookStatus *status, GW::Packet::StoC::MessageLocal *pak) -> void {
-#ifdef PRINT_CHAT_PACKETS
-		printf("P085: id %d, type %d\n", pak->id, pak->type);
-#endif // PRINT_CHAT_PACKETS
         BlockIfApplicable(status, GetMessageCore(), pak->channel);
 	});
 
-	GW::Chat::RegisterLocalMessageCallback(&LocalMessageCallback_Entry,
+	GW::Chat::RegisterLocalMessageCallback(&BlockIfApplicable_Entry,
 	[this](GW::HookStatus *status, int channel, wchar_t *message) -> void {
         BlockIfApplicable(status, message, channel);
 	});
@@ -121,7 +95,6 @@ void ChatFilter::ClearMessageBufferIfBlocked(GW::HookStatus* status, GW::Packet:
 }
 
 void ChatFilter::LoadSettings(CSimpleIni* ini) {
-	PostInitialize();
 	ToolboxModule::LoadSettings(ini);
 	self_drop_rare = ini->GetBoolValue(Name(), VAR_NAME(self_drop_rare), self_drop_rare);
 	self_drop_common = ini->GetBoolValue(Name(), VAR_NAME(self_drop_common), self_drop_common);
@@ -324,10 +297,6 @@ bool ChatFilter::ShouldIgnore(const wchar_t* message, uint32_t channel) {
     return ShouldIgnoreByContent(message);
 }
 bool ChatFilter::ShouldIgnore(const wchar_t *message) {
-#ifdef PRINT_CHAT_PACKETS
-	for (size_t i = 0; message[i] != 0; ++i) printchar(message[i]);
-	printf("\n");
-#endif // PRINT_CHAT_PACKETS
     if (!message)
         return false;
 	switch (message[0]) {
@@ -553,7 +522,7 @@ bool ChatFilter::ShouldIgnoreByChannel(uint32_t channel) {
     case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_ALLIANCE):   return filter_channel_alliance;
     case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_EMOTE):      return filter_channel_emotes;
     }
-    return true;
+    return false;
 }
 bool ChatFilter::ShouldIgnoreBySender(const wchar_t *sender, size_t size) {
 #ifdef EXTENDED_IGNORE_LIST
@@ -675,7 +644,8 @@ void ChatFilter::DrawSettingInternal() {
 
 void ChatFilter::Update(float delta) {
 	uint32_t timestamp = GetTickCount();
-	
+	if(!post_initialized)
+		PostInitialize();
 	if (timer_parse_filters && timer_parse_filters < timestamp) {
 		timer_parse_filters = 0;
 		ParseBuffer(bycontent_word_buf, bycontent_words);
