@@ -124,7 +124,6 @@ void Pcon::Update(int delay) {
 	if (mapid != GW::Map::GetMapID() || maptype != GW::Map::GetInstanceType()) { // Map changed; reset vars
 		mapid = GW::Map::GetMapID();
 		maptype = GW::Map::GetInstanceType();
-		mapentered = clock();
 		ResetCounts();
         refill_attempted = maptype != GW::Constants::InstanceType::Outpost;
 	}

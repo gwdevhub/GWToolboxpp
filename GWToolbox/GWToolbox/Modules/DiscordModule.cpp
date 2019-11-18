@@ -53,7 +53,7 @@ NOTE: Disconnecting/reconnecting will mess this up so repeat process.
 #include "logger.h"
 
 #define DISCORD_APP_ID 378706083788881961
-#define DISCORD_DLL_REMOTE_URL L"https://www.dropbox.com/s/55vr9u820ei5sqb/discord_game_sdk.dll?dl=1"
+#define DISCORD_DLL_REMOTE_URL L"https://raw.githubusercontent.com/3vcloud/GWToolboxpp/master/resources/discord_game_sdk.dll"
 
 typedef enum EDiscordResult(__cdecl* DiscordCreate_pt)(DiscordVersion version,struct DiscordCreateParams* params,struct IDiscordCore** result);
 
