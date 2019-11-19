@@ -299,8 +299,8 @@
     <ClInclude Include="GWToolbox\Modules\TwitchModule.h" />
     <ClInclude Include="GWToolbox\Modules\PartyWindowModule.h" />
     <ClInclude Include="GWToolbox\Widgets\ServerInfoWidget.h" />
-    <ClInclude Include="GWToolbox\Modules\FunModule.h" />
     <ClInclude Include="GWToolbox\mp3.h" />
+    <ClInclude Include="GWToolbox\Modules\ZrawDeepModule.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -465,8 +465,8 @@
     <ClCompile Include="GWToolbox\Modules\TwitchModule.cpp" />
     <ClCompile Include="GWToolbox\Modules\PartyWindowModule.cpp" />
     <ClCompile Include="GWToolbox\Widgets\ServerInfoWidget.cpp" />
-    <ClCompile Include="GWToolbox\Modules\FunModule.cpp" />
     <ClCompile Include="GWToolbox\mp3.cpp" />
+    <ClCompile Include="GWToolbox\Modules\ZrawDeepModule.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GWToolbox.rc">

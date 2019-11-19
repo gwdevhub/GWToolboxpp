@@ -24,7 +24,7 @@
 #include <Modules/DiscordModule.h>
 #include <Modules/TwitchModule.h>
 #include <Modules/PartyWindowModule.h>
-#include <Modules/FunModule.h>
+#include <Modules/ZrawDeepModule.h>
 
 #include <Windows/MainWindow.h>
 #include <Windows/PconsWindow.h>
@@ -110,6 +110,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
 	if (use_clock) optional_modules.push_back(&ClockWidget::Instance());
 	if (use_vanquish) optional_modules.push_back(&VanquishWidget::Instance());
 	if (use_alcohol) optional_modules.push_back(&AlcoholWidget::Instance());
+	optional_modules.push_back(&ZrawDeepModule::Instance());
 	//if (use_serverinfo) optional_modules.push_back(&ServerInfoWidget::Instance());
 
 	// Only read settings of non-core modules
