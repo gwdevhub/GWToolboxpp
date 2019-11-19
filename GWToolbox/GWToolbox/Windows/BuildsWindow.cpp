@@ -25,7 +25,6 @@ unsigned int BuildsWindow::TeamBuild::cur_ui_id = 0;
 bool order_by_changed = false;
 
 #define INI_FILENAME L"builds.ini"
-
 void BuildsWindow::Initialize() {
 	ToolboxWindow::Initialize();
 	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"list.png"), IDB_Icon_list);
@@ -36,7 +35,8 @@ void BuildsWindow::Initialize() {
 void BuildsWindow::DrawHelp() {
 	if (!ImGui::TreeNode("Build Chat Commands"))
 		return;
-	ImGui::Bullet(); ImGui::Text("'/loadbuild [teambuild] [build name|build code]' loads a build. The teambuild name and build name must be between quotes if they contain spaces.");
+	ImGui::Bullet(); ImGui::Text("'/load [build template|build name] [Hero index]' loads a build via Guild Wars builds. The build name must be between quotes if it contains spaces. First Hero index is 1, last is 7. Leave out for player");
+	ImGui::Bullet(); ImGui::Text("'/loadbuild [teambuild] <build name|build code>' loads a build via GWToolbox Builds window. Does a partial search on team build name/build name/build code. Matches current player's profession.");
 	ImGui::TreePop();
 }
 void BuildsWindow::CmdLoad(const wchar_t* message, int argc, LPWSTR* argv) {
@@ -376,15 +376,16 @@ void BuildsWindow::Load(const char* tbuild_name, const char* build_name) {
     GW::SkillbarMgr::SkillTemplate t;
     GW::Constants::Profession prof = (GW::Constants::Profession)GW::Agents::GetPlayer()->primary;
     bool is_skill_template = GW::SkillbarMgr::DecodeSkillTemplate(&t, build_name);
-    if (is_skill_template && t.primary != prof)
-        return; // Wrong profession.
-    std::string tbuild_ws = GuiUtils::ToLower(tbuild_name);
+	if (is_skill_template && t.primary != prof) {
+		Log::Error("Invalid profession for %s (%s)", build_name,GW::Constants::GetProfessionAcronym(t.primary));
+		return;
+	}
+    std::string tbuild_ws = tbuild_name ? GuiUtils::ToLower(tbuild_name) : "";
     std::string build_ws = GuiUtils::ToLower(build_name);
     Build* build = nullptr;
     TeamBuild* teambuild = nullptr;
 
-    std::map<size_t,TeamBuild*> local_teambuilds;
-    std::map<TeamBuild*, size_t> local_builds;
+    std::vector<std::pair<TeamBuild,size_t>> local_teambuilds;
     for (auto tb : teambuilds) {
         size_t found = local_teambuilds.size();
         size_t tbuild_best_match = tb.builds.size();
@@ -416,14 +417,15 @@ void BuildsWindow::Load(const char* tbuild_name, const char* build_name) {
         }
         if (tbuild_best_match >= tb.builds.size())
             continue; // This team build has no matching valid build codes
-        local_teambuilds.emplace(found, &tb);
-        local_builds.emplace(&tb, tbuild_best_match);
+		local_teambuilds.push_back({ tb,tbuild_best_match });
     }
     // These are now in order of build match.
-    if (local_teambuilds.empty())
-        return;
+	if (local_teambuilds.empty()) {
+		Log::Error("Failed to find build for %s", build_name);
+		return;
+	}
     for (auto it : local_teambuilds) {
-        return Load(*it.second, local_builds[it.second]);
+        return Load(it.first, it.second);
     }
 }
 void BuildsWindow::LoadPcons(const TeamBuild& tbuild, unsigned int idx) {
