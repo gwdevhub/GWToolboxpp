@@ -91,3 +91,9 @@ void SkillListingWindow::Draw(IDirect3DDevice9* pDevice) {
 void SkillListingWindow::Update(float delta) {
     
 }
+void SkillListingWindow::Terminate() {
+	for (auto sk : skills) {
+		delete sk;
+	}
+	skills.clear();
+}

@@ -66,5 +66,6 @@ public:
     void Update(float delta) override;
     void Draw(IDirect3DDevice9* pDevice) override;
     void Initialize() override;
+	void Terminate() override;
 
 };
