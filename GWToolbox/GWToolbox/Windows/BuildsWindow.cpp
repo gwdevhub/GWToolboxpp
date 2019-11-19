@@ -18,6 +18,11 @@ unsigned int BuildsWindow::TeamBuild::cur_ui_id = 0;
 
 #define INI_FILENAME L"builds.ini"
 
+BuildsWindow::~BuildsWindow() {
+	if (inifile)
+		delete inifile;
+}
+
 void BuildsWindow::Initialize() {
 	ToolboxWindow::Initialize();
 	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"list.png"), IDB_Icon_list);
@@ -27,8 +32,6 @@ void BuildsWindow::Initialize() {
 void BuildsWindow::Terminate() {
 	ToolboxWindow::Terminate();
 	teambuilds.clear();
-	inifile->Reset();
-	delete inifile;
 }
 
 void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {

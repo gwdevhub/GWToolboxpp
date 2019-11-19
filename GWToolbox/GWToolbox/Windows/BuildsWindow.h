@@ -33,7 +33,7 @@ private:
 	};
 
 	BuildsWindow() {};
-	~BuildsWindow() {};
+	~BuildsWindow();
 public:
 	static BuildsWindow& Instance() {
 		static BuildsWindow instance;
