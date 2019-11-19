@@ -320,9 +320,6 @@ void DiscordModule::Initialize() {
     if(GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
         zone_entered_time = time(nullptr) - (GW::Map::GetInstanceTime() / 1000);
     pending_activity_update = true;
-
-    // Make sure discord dll is injected. dll_location used later.
-    dll_location = Resources::GetPath(L"discord_game_sdk.dll");
 	// Actual connection started in LoadSettings
 }
 bool DiscordModule::IsInJoinablePartyMap() {
@@ -507,6 +504,7 @@ void DiscordModule::LoadSettings(CSimpleIni* ini) {
     show_party_info = ini->GetBoolValue(Name(), VAR_NAME(show_party_info), show_party_info);
 
     // Try to download and inject discord_game_sdk.dll for discord.
+	dll_location = Resources::GetPath(L"discord_game_sdk.dll");
     // NOTE: We're using the one we know matches our API version, not checking for any other discord dll on the machine.
     Resources::Instance().EnsureFileExists(dll_location,DISCORD_DLL_REMOTE_URL,
         [&](bool success) {

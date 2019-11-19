@@ -37,6 +37,16 @@
 #include "ToolboxModule.h"
 
 class PendingChatMessage {
+protected:
+	bool printed = false;
+	bool print = true;
+	bool send = false;
+	inline static clock_t last_send = 0;
+	wchar_t encoded_message[256] = { '\0' };
+	wchar_t encoded_sender[32] = { '\0' };
+	std::wstring output_message;
+	std::wstring output_sender;
+	GW::Chat::Channel channel;
 public:
     PendingChatMessage(GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender) : channel(channel) {
         invalid = !enc_message || !enc_sender;
@@ -78,7 +88,12 @@ public:
         if (send) return SendMessage();
         return false;
     }
-
+	const bool IsSend() {
+		return send;
+	}
+	static bool Cooldown() {
+		return last_send && clock() < last_send + (clock_t)(CLOCKS_PER_SEC / 2);
+	}
 
     static wchar_t* GetAgentNameEncoded(GW::Agent* agent) {
         if (!agent) return NULL;
@@ -119,14 +134,6 @@ public:
     }
     bool invalid = true; // Set when we can't find the agent name for some reason, or arguments passed are empty.
 protected:
-    bool printed = false;
-    bool print = true;
-    bool send = false;
-    wchar_t encoded_message[256] = { '\0' };
-    wchar_t encoded_sender[32] = { '\0' };
-    std::wstring output_message;
-    std::wstring output_sender;
-    GW::Chat::Channel channel;
     std::vector<std::wstring> SanitiseForSend() {
         std::wregex no_tags(L"<[^>]+>"), no_new_lines(L"\n");
         std::wstring sanitised, sanitised2, temp;

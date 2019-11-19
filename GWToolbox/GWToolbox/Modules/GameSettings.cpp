@@ -713,6 +713,7 @@ const bool PendingChatMessage::SendMessage() {
 		GW::GameThread::Enqueue([buf]() {
 			GW::Chat::SendChat('#', buf);
 			});
+		last_send = clock();
     }
     printed = true;
     return printed;
@@ -1566,6 +1567,8 @@ void GameSettings::Update(float delta) {
     // Try to print any pending messages.
     for (std::vector<PendingChatMessage*>::iterator it = pending_messages.begin(); it != pending_messages.end(); ++it) {
         PendingChatMessage *m = *it;
+		if (m->IsSend() && PendingChatMessage::Cooldown()) 
+			continue;
         if (m->Consume()) {
             it = pending_messages.erase(it);
             delete m;
