@@ -294,7 +294,7 @@ void ChatCommands::DrawHelp() {
 		"Use '/useskill <skill>' to stop the skill.");
 	ImGui::Bullet(); ImGui::Text("'/zoom <value>' to change the maximum zoom to the value. "
 		"use empty '/zoom' to reset to the default value of 750.");
-	const char* transmo_hint = "<npc_name> options: charr, eye, zhu, kuunavang, beetle, polar, celepig, mallyx, \n"
+	const char* transmo_hint = "<npc_name> options: eye, zhu, kuunavang, beetle, polar, celepig, \n"
 		"  destroyer, koss, bonedragon, smite, kanaxai, skeletonic, moa";
 	ImGui::Bullet(); ImGui::Text("'/transmo <npc_name> [size (6-255)]' to change your appearance into an NPC.\n"
 		"'/transmo' to change your appearance into target NPC.\n"
