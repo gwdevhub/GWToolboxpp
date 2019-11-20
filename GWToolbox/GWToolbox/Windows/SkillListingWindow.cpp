@@ -52,7 +52,7 @@ void SkillListingWindow::Initialize() {
         skills[i] = new Skill(&skill_constants[i]);
         //added++;
     }
-    Log::Log("%d Added\n", added);  
+    //Log::Log("%d Added\n", added);  
 }
 void SkillListingWindow::Draw(IDirect3DDevice9* pDevice) {
     if (!visible)
@@ -81,7 +81,7 @@ void SkillListingWindow::Draw(IDirect3DDevice9* pDevice) {
         ImGui::SameLine(offset += tiny_text_width);
         ImGui::Text("%S",skills[i]->Name());
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("%S,\n\n%S", skills[i]->Description(), skills[i]->Concise());
+            ImGui::SetTooltip("%S,\n%S", skills[i]->Description(), skills[i]->Concise());
         ImGui::SameLine(offset += long_text_width);
         ImGui::Text("%d, %d, %d", skills[i]->skill->attribute, skills[i]->skill->profession, skills[i]->skill->type);
         //ImGui::SameLine(0, short_text_width);

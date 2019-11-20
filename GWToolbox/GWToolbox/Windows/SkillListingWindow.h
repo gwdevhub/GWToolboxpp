@@ -28,22 +28,32 @@ public:
             return name_dec;
         }
         wchar_t* Description() {
-            if (!desc_enc[0] && GW::UI::UInt32ToEncStr(skill->description, desc_enc, 16))
+            if (!desc_enc[0] && GW::UI::UInt32ToEncStr(skill->description, desc_enc, 16)) {
+                wchar_t buf[64] = { 0 };
+                swprintf(buf, 64, L"%s\x10A\x108\x107%d..%d\x1\x1\x10B\x108\x107%d..%d\x1\x1\x10C\x108\x107%d..%d\x1\x1", desc_enc, skill->scale0, skill->scale15, skill->bonusScale0, skill->bonusScale15, skill->duration0, skill->duration15);
+                for (size_t i = 0; buf[i]; i++)
+                    desc_enc[i] = buf[i];
                 GW::UI::AsyncDecodeStr(desc_enc, desc_dec, 256);
+            }
             return desc_dec;
         }
         wchar_t* Concise() {
-            if (!concise_enc[0] && GW::UI::UInt32ToEncStr(skill->h0098, concise_enc, 16))
+            if (!concise_enc[0] && GW::UI::UInt32ToEncStr(skill->h0098, concise_enc, 16)) {
+                wchar_t buf[64] = { 0 };
+                swprintf(buf, 64, L"%s\x10A\x108\x107%d..%d\x1\x1\x10B\x108\x107%d..%d\x1\x1\x10C\x108\x107%d..%d\x1\x1", concise_enc, skill->scale0, skill->scale15, skill->bonusScale0, skill->bonusScale15, skill->duration0, skill->duration15);
+                for (size_t i = 0; buf[i]; i++)
+                    concise_enc[i] = buf[i];
                 GW::UI::AsyncDecodeStr(concise_enc, concise_dec, 256);
+            }
             return concise_dec;
         }
         GW::Skill* skill;
     private:
-        wchar_t name_enc[16] = { 0 };
+        wchar_t name_enc[64] = { 0 };
         wchar_t name_dec[256] = { 0 };
-        wchar_t desc_enc[16] = { 0 };
+        wchar_t desc_enc[64] = { 0 };
         wchar_t desc_dec[256] = { 0 };
-        wchar_t concise_enc[16] = { 0 };
+        wchar_t concise_enc[64] = { 0 };
         wchar_t concise_dec[256] = { 0 };
     };
 private:
