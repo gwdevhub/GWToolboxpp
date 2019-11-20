@@ -17,6 +17,7 @@ class ZrawDeepModule : public ToolboxModule {
 	ZrawDeepModule() {};
 	~ZrawDeepModule() {
 		if (mp3) delete mp3;
+		CoUninitialize();
 	};
 private:
 	Mp3* mp3;
@@ -30,6 +31,8 @@ private:
     bool kanaxais_true_form = true;
 
 	clock_t pending_transmog = 0;
+	bool can_terminate = false;
+	bool terminating = false;
 public:
 	static ZrawDeepModule& Instance() {
 		static ZrawDeepModule instance;
@@ -38,7 +41,8 @@ public:
 
 	const char* Name() const override { return "24h Deep Mode"; }
 	void Initialize() override;
-	void Terminate() override;
+	void SignalTerminate() override;
+	bool CanTerminate() { return can_terminate; }
 	void Update(float delta) override;
     void DrawSettingInternal() override;
 	void DisplayDialogue(GW::Packet::StoC::DisplayDialogue*);

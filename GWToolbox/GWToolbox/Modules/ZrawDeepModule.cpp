@@ -85,7 +85,6 @@ namespace {
 		}
 		return true;
 	}
-
 }
 void ZrawDeepModule::Initialize() {
 	ToolboxModule::Initialize();
@@ -141,9 +140,7 @@ void ZrawDeepModule::Initialize() {
 
     GW::Chat::CreateCommand(L"deep24h", [this](const wchar_t* message, int argc, LPWSTR* argv) -> void {
         Toggle();
-        GW::GameThread::Enqueue([this]() {
-            Log::Info(enabled ? "24h Deep mode on!" : "24h Deep mode off :(");
-            });
+		Log::Info(enabled ? "24h Deep mode on!" : "24h Deep mode off :(");
         pending_transmog = clock();
         });
 	GW::Chat::CreateCommand(L"24hdeep", [](const wchar_t* message, int argc, LPWSTR* argv) -> void {
@@ -178,8 +175,8 @@ void ZrawDeepModule::SetTransmogs() {
 	if (!GW::PartyMgr::GetIsPartyLoaded())
 		return;
 	pending_transmog = 0;
-	bool transmo_kanaxai_ = enabled && kanaxais_true_form;
-	bool transmo_team_ = enabled && transmo_team;
+	bool transmo_kanaxai_ = !terminating && enabled && kanaxais_true_form;
+	bool transmo_team_ = !terminating && enabled && transmo_team;
 	if (transmo_team_) {
 		if(!IsWholePartyTransformed())
 			GW::Chat::SendChat('/', "transmoparty kanaxai 34");
@@ -206,10 +203,19 @@ void ZrawDeepModule::Update(float delta) {
     if (pending_transmog)
         SetTransmogs();
 }
-void ZrawDeepModule::Terminate() {
+void ZrawDeepModule::SignalTerminate() {
+	terminating = true;
 	GW::StoC::RemoveCallback<GW::Packet::StoC::DisplayDialogue>(&ZrawDeepModule_StoCs);
-	if (mp3) delete mp3;
-	CoUninitialize();
+	GW::StoC::RemoveCallback<GW::Packet::StoC::SpeechBubble>(&ZrawDeepModule_StoCs);
+	GW::StoC::RemoveCallback<GW::Packet::StoC::DialogBody>(&ZrawDeepModule_StoCs);
+	GW::StoC::RemoveCallback<GW::Packet::StoC::InstanceLoadInfo>(&ZrawDeepModule_StoCs);
+	GW::StoC::RemoveCallback<GW::Packet::StoC::AgentAdd>(&ZrawDeepModule_StoCs);
+	GW::StoC::RemoveCallback<GW::Packet::StoC::DisplayCape>(&ZrawDeepModule_StoCs);
+	GW::StoC::RemoveCallback<GW::Packet::StoC::AgentModel>(&ZrawDeepModule_StoCs);
+	SetTransmogs();
+	GW::GameThread::Enqueue([this]() {
+		can_terminate = true;
+		});
 }
 void ZrawDeepModule::SaveSettings(CSimpleIni* ini) {
 	ToolboxModule::SaveSettings(ini);

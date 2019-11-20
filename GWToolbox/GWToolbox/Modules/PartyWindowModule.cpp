@@ -19,7 +19,6 @@
 #include "logger.h"
 #include <chrono>
 #include <thread>
-
 void PartyWindowModule::Update(float delta) {
 
 }
@@ -98,9 +97,6 @@ void PartyWindowModule::SignalTerminate() {
 	GW::StoC::RemoveCallback<GW::Packet::StoC::AgentAdd>(&AgentAdd_Entry);
 	GW::StoC::RemoveCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry);
 	ClearAddedAllies();
-}
-void PartyWindowModule::Terminate() {
-	ClearSpecialNPCs();
 }
 bool PartyWindowModule::CanTerminate() {
 	return allies_added_to_party.empty();

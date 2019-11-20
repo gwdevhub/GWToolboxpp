@@ -13,7 +13,9 @@
 
 class PartyWindowModule : public ToolboxModule {
 	PartyWindowModule() {};
-	~PartyWindowModule() {};
+	~PartyWindowModule() {
+		ClearSpecialNPCs();
+	}
 public:
 	static PartyWindowModule& Instance() {
 		static PartyWindowModule instance;
@@ -23,7 +25,6 @@ public:
 	const char* Name() const override { return "Party Window"; }
 	void Initialize() override;
 	void SignalTerminate() override;
-	void Terminate() override;
 	bool CanTerminate() override;
 	void Update(float delta) override;
 	void LoadSettings(CSimpleIni* ini) override;
