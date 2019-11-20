@@ -138,17 +138,17 @@ void BuildsWindow::DrawBuildSection(TeamBuild& tbuild, unsigned int j) {
     if (ImGui::Button("Load", ImVec2(btn_width, 0)))
         Load(tbuild, j);
     if (ImGui::IsItemHovered())
-        ImGui::SetTooltip(build.has_pcons ? "Click to load build template and pcons" : "Click to load build template");
+        ImGui::SetTooltip(!build.pcons.empty() ? "Click to load build template and pcons" : "Click to load build template");
 	ImGui::SameLine(0, spacing);
 	bool pcons_editing = tbuild.edit_pcons == j;
 	if(pcons_editing) 
 		ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered));
-	if (!build.has_pcons)
+	if (build.pcons.empty())
 		ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
 	if (ImGui::Button("Pcons", ImVec2(btn_width, 0)))
 		tbuild.edit_pcons = pcons_editing ? -1 : j;
 	if(pcons_editing) ImGui::PopStyleColor();
-	if(!build.has_pcons) ImGui::PopStyleColor();
+	if(build.pcons.empty()) ImGui::PopStyleColor();
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Click to modify pcons for this build");
 	ImGui::SameLine(0, spacing);
@@ -181,39 +181,34 @@ void BuildsWindow::DrawBuildSection(TeamBuild& tbuild, unsigned int j) {
 		return; // Not editing this build.
 	const float indent = btn_width - ImGui::GetStyle().ItemSpacing.x;
 	ImGui::Indent(indent);
-	if (ImGui::Checkbox("This build has pcons###has_pcons", &build.has_pcons))
-		builds_changed = true;
-	if (build.has_pcons) {
-		ImGui::SameLine(btn_offset);
-		if (ImGui::Button("Send Pcons", ImVec2(btn_width * 2, 0)) && build.pcons.size()) {
-			SendPcons(tbuild, j);
-		}
-		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Send this build's Pcons to team chat");
-		auto pcons = PconsWindow::Instance().pcons;
+	if (ImGui::Button("Send Pcons", ImVec2(btn_width * 2, 0))) {
+		SendPcons(tbuild, j);
+	}
+	if (ImGui::IsItemHovered()) ImGui::SetTooltip("Send this build's Pcons to team chat");
+	auto pcons = PconsWindow::Instance().pcons;
 		
-		float pos_x = 0;
-		float third_w = ImGui::GetContentRegionAvailWidth() / 3;
-		unsigned int offset = 0;
-		for (size_t i = 0; i < pcons.size(); i++) {
-			auto pcon = pcons[i];
-			bool active = build.pcons.find(pcon->ini) != build.pcons.end();
-			ImGui::SameLine(indent, pos_x += third_w);
-			offset++;
-			if (i % 3 == 0) {
-				ImGui::NewLine();
-				offset = 1;
-				pos_x = 0;
-			}
+	float pos_x = 0;
+	float third_w = ImGui::GetContentRegionAvailWidth() / 3;
+	unsigned int offset = 0;
+	for (size_t i = 0; i < pcons.size(); i++) {
+		auto pcon = pcons[i];
+		bool active = build.pcons.find(pcon->ini) != build.pcons.end();
+		ImGui::SameLine(indent, pos_x += third_w);
+		offset++;
+		if (i % 3 == 0) {
+			ImGui::NewLine();
+			offset = 1;
+			pos_x = 0;
+		}
 				
-			char pconlabel[128];
-			snprintf(pconlabel, 128, "%s###pcon_%s", pcon->chat, pcon->ini);
-			if (ImGui::Checkbox(pconlabel, &active)) {
-				if (active)
-					build.pcons.emplace(pcon->ini);
-				else
-					build.pcons.erase((char*)pcon->ini);
-				builds_changed = true;
-			}
+		char pconlabel[128];
+		snprintf(pconlabel, 128, "%s###pcon_%s", pcon->chat, pcon->ini);
+		if (ImGui::Checkbox(pconlabel, &active)) {
+			if (active)
+				build.pcons.emplace(pcon->ini);
+			else
+				build.pcons.erase((char*)pcon->ini);
+			builds_changed = true;
 		}
 	}
 	ImGui::Unindent(indent);
@@ -435,7 +430,7 @@ void BuildsWindow::Load(const char* tbuild_name, const char* build_name) {
 void BuildsWindow::LoadPcons(const TeamBuild& tbuild, unsigned int idx) {
     if (idx >= tbuild.builds.size()) return;
     const Build& build = tbuild.builds[idx];
-    if (!build.has_pcons || !auto_load_pcons)
+    if (!auto_load_pcons || build.pcons.empty())
         return;
 	bool some_pcons_not_visible = false;
 	std::vector<Pcon*> pcons_loaded;
@@ -465,7 +460,6 @@ void BuildsWindow::LoadPcons(const TeamBuild& tbuild, unsigned int idx) {
 			}
 			Log::Info("Pcons loaded: %s", pcons_str.c_str());
 			});
-		PconsWindow::Instance().SetEnabled(true);
 	}
 	if (pcons_not_visible.size()) {
 		GW::GameThread::Enqueue([pcons_not_visible]() {
@@ -483,7 +477,7 @@ void BuildsWindow::LoadPcons(const TeamBuild& tbuild, unsigned int idx) {
 void BuildsWindow::SendPcons(const TeamBuild& tbuild, unsigned int idx, bool include_build_name) {
 	if (idx >= tbuild.builds.size()) return;
 	const Build& build = tbuild.builds[idx];
-	if (!build.has_pcons || build.pcons.empty())
+	if (build.pcons.empty())
 		return;
 	std::string pconsStr("[Pcons] ");
 	if (include_build_name) {
@@ -626,18 +620,15 @@ void BuildsWindow::LoadFromFile() {
             char namekey[16];
             char templatekey[16];
             char pconskey[16];
-            char has_pconskey[16];
             snprintf(namekey, 16, "name%d", i);
             snprintf(templatekey, 16, "template%d", i);
-            snprintf(has_pconskey, 16, "has_pcons%d", i);
             snprintf(pconskey, 16, "pcons%d", i);
             const char* nameval = inifile->GetValue(section, namekey, "");
             const char* templateval = inifile->GetValue(section, templatekey, "");
 
             Build b(
                 inifile->GetValue(section, namekey, ""), 
-                inifile->GetValue(section, templatekey, ""), 
-                inifile->GetBoolValue(section, has_pconskey, false)
+                inifile->GetValue(section, templatekey, "")
             );
             // Parse pcons
             std::string pconsval(inifile->GetValue(section, pconskey, ""));
@@ -681,13 +672,10 @@ void BuildsWindow::SaveToFile() {
 				const Build& build = tbuild.builds[j];
 				char namekey[16];
 				char templatekey[16];
-                char has_pconskey[16];
 				snprintf(namekey, 16, "name%d", j);
 				snprintf(templatekey, 16, "template%d", j);
-                snprintf(has_pconskey, 16, "has_pcons%d", j);
 				inifile->SetValue(section, namekey, build.name);
 				inifile->SetValue(section, templatekey, build.code);
-                inifile->SetBoolValue(section, has_pconskey, build.has_pcons);
                 
                 if (!build.pcons.empty()) {
                     char pconskey[16];
