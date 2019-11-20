@@ -55,6 +55,37 @@ namespace {
         wmemset(current, 0, wcslen(current));
         wcscpy(current, GetRandomKanaxaiDialog());
     }
+	const bool IsKanaxai(uint32_t agent_type_or_player_number = 0) {
+		if (agent_type_or_player_number & 0x20000000)
+			agent_type_or_player_number = (agent_type_or_player_number ^ 0x20000000);
+		return agent_type_or_player_number == GW::Constants::ModelID::Deep::Kanaxai;
+	}
+	const bool IsKanaxai(GW::Agent* agent) {
+		return agent && IsKanaxai(agent->player_number);
+	}
+
+	static uint32_t kanaxai_agent_id = 0;
+	const bool IsKanaxaiTransformed() {
+		if (!kanaxai_agent_id) return false;
+		GW::Agent* kanaxai = GW::Agents::GetAgentByID(kanaxai_agent_id);
+		if (!IsKanaxai(kanaxai)) return false;
+		return (kanaxai->transmog_npc_id ^ 0x20000000) == GW::Constants::ModelID::Minipet::Gwen;
+	}
+	const bool IsWholePartyTransformed() {
+		GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo();
+		if (!p || !p->players.valid()) return false;
+		GW::PlayerArray players = GW::Agents::GetPlayerArray();
+		if (!players.valid()) return false;
+		for (auto player : p->players) {
+			GW::Player* p2 = GW::PlayerMgr::GetPlayerByID(player.login_number);
+			if (!p2) return false;
+			GW::Agent* pa = GW::Agents::GetAgentByID(p2->agent_id);
+			if (pa && (pa->transmog_npc_id ^ 0x20000000) != GW::Constants::ModelID::Minipet::Kanaxai)
+				return false;
+		}
+		return true;
+	}
+
 }
 void ZrawDeepModule::Initialize() {
 	ToolboxModule::Initialize();
@@ -81,37 +112,49 @@ void ZrawDeepModule::Initialize() {
 		});
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(&ZrawDeepModule_StoCs,
         [this](GW::HookStatus* status, GW::Packet::StoC::AgentAdd* packet) -> void {
-            if (!enabled) return;
-            Reset();
-            if ((packet->agent_type ^ 0x20000000) == GW::Constants::ModelID::Deep::KanaxaiAspect) {
-                kanaxai_agent_id = packet->agent_id;
-                pending_transmog = clock();
-            }            
+			if (IsKanaxai(packet->agent_type)) {
+				kanaxai_agent_id = packet->agent_id;
+				if (!enabled) return;
+				pending_transmog = clock();
+			}            
         });
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayCape>(&ZrawDeepModule_StoCs,
 		[this](GW::HookStatus* status, GW::Packet::StoC::DisplayCape* packet) -> void {
 			if (!enabled) return;
 			GW::Agent* a = GW::Agents::GetAgentByID(packet->agent_id);
-			if (a->IsPlayer() || a->GetCanBeViewedInPartyWindow())
+			if (!a) return;
+			if (a->IsPlayer() || a->GetCanBeViewedInPartyWindow() || IsKanaxai(a)) {
 				status->blocked = true;
-			pending_transmog = clock();
+				pending_transmog = clock();
+			}
 		});
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentModel>(&ZrawDeepModule_StoCs,
 		[this](GW::HookStatus* status, GW::Packet::StoC::AgentModel* packet) -> void {
             if (!enabled) return;
 			GW::Agent* a = GW::Agents::GetAgentByID(packet->agent_id);
             if (!a) return;
-			if (a->IsPlayer() || a->GetCanBeViewedInPartyWindow() || a->player_number == GW::Constants::ModelID::Deep::KanaxaiAspect)
+			if (a->IsPlayer() || a->GetCanBeViewedInPartyWindow() || IsKanaxai(a)) {
 				status->blocked = true;
-			pending_transmog = clock();
+				pending_transmog = clock();
+			}
 		});
+
     GW::Chat::CreateCommand(L"deep24h", [this](const wchar_t* message, int argc, LPWSTR* argv) -> void {
         Toggle();
         GW::GameThread::Enqueue([this]() {
-            Log::Info(enabled ? "Zraw 24h Deep mode on!" : "Zraw 24h Deep mode off :(");
+            Log::Info(enabled ? "24h Deep mode on!" : "24h Deep mode off :(");
             });
         pending_transmog = clock();
         });
+	GW::Chat::CreateCommand(L"24hdeep", [](const wchar_t* message, int argc, LPWSTR* argv) -> void {
+		GW::Chat::SendChat('/', "deep24h");
+		});
+	GW::AgentArray agents = GW::Agents::GetAgentArray();
+	for (size_t i = 0; !kanaxai_agent_id && agents.valid() && i < agents.size(); i++) {
+		if (IsKanaxai(agents[i]))
+			kanaxai_agent_id = agents[i]->agent_id;
+	}
+	SetTransmogs();
 }
 void ZrawDeepModule::DrawSettingInternal() {
     ImGui::TextDisabled("Use chat command /deep24h to toggle this module on or off at any time");
@@ -121,39 +164,43 @@ void ZrawDeepModule::DrawSettingInternal() {
     }
     if (!enabled)
         return;
-    if(ImGui::Checkbox("Kanaxai gives your team visions in explorable areas",&transmo_team_in_explorable))
+	ImGui::Indent();
+    if(ImGui::Checkbox("Kanaxai gives you and your team stunningly attractive",&transmo_team))
         pending_transmog = clock();
     ImGui::Checkbox("Kanaxai infiltrates the minds of NPCs",&rewrite_npc_dialogs);
     if(ImGui::Checkbox("Kanaxai shows his true form", &kanaxais_true_form))
         pending_transmog = clock();
+	ImGui::Unindent();
 }
 void ZrawDeepModule::SetTransmogs() {
 	if (!GW::Map::GetIsMapLoaded())
 		return;
 	if (!GW::PartyMgr::GetIsPartyLoaded())
 		return;
-    if (clock() - CLOCKS_PER_SEC < pending_transmog)
-        return;
 	pending_transmog = 0;
-    if (!enabled)
-        GW::Chat::SendChat('/', "transmoparty reset");
-    else
-	    GW::Chat::SendChat('/', "transmoparty kanaxai 34");
-    if (kanaxai_agent_id) {
-        GW::Agent* kanaxai = GW::Agents::GetAgentByID(kanaxai_agent_id);
-        if (kanaxai && kanaxai->player_number == GW::Constants::ModelID::Deep::KanaxaiAspect) {
-            if (kanaxais_true_form && (kanaxai->transmog_npc_id ^ 0x20000000) != GW::Constants::ModelID::Minipet::GwenDoll) {
-                char buf[128] = { 0 };
-                snprintf(buf, 128, "transmoagent %d gwenchan", kanaxai_agent_id);
-                GW::Chat::SendChat('/', buf);
-            }
-            if (!kanaxais_true_form && (kanaxai->transmog_npc_id ^ 0x20000000) == GW::Constants::ModelID::Minipet::GwenDoll) {
-                char buf[128] = { 0 };
-                snprintf(buf, 128, "transmoagent %d reset", kanaxai_agent_id);
-                GW::Chat::SendChat('/', buf);
-            }
-        }
-    }
+	bool transmo_kanaxai_ = enabled && kanaxais_true_form;
+	bool transmo_team_ = enabled && transmo_team;
+	if (transmo_team_) {
+		if(!IsWholePartyTransformed())
+			GW::Chat::SendChat('/', "transmoparty kanaxai 34");
+	}
+	else {
+		GW::Chat::SendChat('/', "transmoparty reset");
+	}
+	if (transmo_kanaxai_) {
+		if (kanaxai_agent_id && !IsKanaxaiTransformed()) {
+			char buf[128] = { 0 };
+			snprintf(buf, 128, "transmoagent %d gwenpre", kanaxai_agent_id);
+			GW::Chat::SendChat('/', buf);
+		}
+	}
+	else {
+		if (kanaxai_agent_id && IsKanaxaiTransformed()) {
+			char buf[128] = { 0 };
+			snprintf(buf, 128, "transmoagent %d reset", kanaxai_agent_id);
+			GW::Chat::SendChat('/', buf);
+		}
+	}
 }
 void ZrawDeepModule::Update(float delta) {
     if (pending_transmog)
@@ -163,6 +210,22 @@ void ZrawDeepModule::Terminate() {
 	GW::StoC::RemoveCallback<GW::Packet::StoC::DisplayDialogue>(&ZrawDeepModule_StoCs);
 	if (mp3) delete mp3;
 	CoUninitialize();
+}
+void ZrawDeepModule::SaveSettings(CSimpleIni* ini) {
+	ToolboxModule::SaveSettings(ini);
+
+	ini->SetBoolValue(Name(), VAR_NAME(enabled), enabled);
+	ini->SetBoolValue(Name(), VAR_NAME(transmo_team), transmo_team);
+	ini->SetBoolValue(Name(), VAR_NAME(rewrite_npc_dialogs), rewrite_npc_dialogs);
+	ini->SetBoolValue(Name(), VAR_NAME(kanaxais_true_form), kanaxais_true_form);
+}
+void ZrawDeepModule::LoadSettings(CSimpleIni* ini) {
+	ToolboxModule::LoadSettings(ini);
+
+	enabled = ini->GetBoolValue(Name(), VAR_NAME(enabled), enabled);
+	transmo_team = ini->GetBoolValue(Name(), VAR_NAME(transmo_team), transmo_team);
+	rewrite_npc_dialogs = ini->GetBoolValue(Name(), VAR_NAME(rewrite_npc_dialogs), rewrite_npc_dialogs);
+	kanaxais_true_form = ini->GetBoolValue(Name(), VAR_NAME(kanaxais_true_form), kanaxais_true_form);
 }
 void ZrawDeepModule::DisplayDialogue(GW::Packet::StoC::DisplayDialogue* packet) {
 	for (uint8_t i = 0; kanaxai_dialogs[i] != 0; i++) {

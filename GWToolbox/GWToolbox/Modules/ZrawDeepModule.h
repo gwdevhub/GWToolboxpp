@@ -23,10 +23,9 @@ private:
 	bool transmog_done = false;
 	bool checked_enabled = false;
 	bool valid_for_map = false;
-    uint32_t kanaxai_agent_id = 0;
     
-	bool enabled = true;
-    bool transmo_team_in_explorable = true;
+	bool enabled = false;
+    bool transmo_team = true;
     bool rewrite_npc_dialogs = true;
     bool kanaxais_true_form = true;
 
@@ -37,13 +36,15 @@ public:
 		return instance;
 	}
 
-	const char* Name() const override { return "Zraw 24h Deep!"; }
+	const char* Name() const override { return "24h Deep Mode"; }
 	void Initialize() override;
 	void Terminate() override;
 	void Update(float delta) override;
     void DrawSettingInternal() override;
 	void DisplayDialogue(GW::Packet::StoC::DisplayDialogue*);
 	void PlayKanaxaiDialog(uint8_t idx);
+	void SaveSettings(CSimpleIni* ini);
+	void LoadSettings(CSimpleIni* ini);
 
 	void SetTransmogs();
 	void Reset() {
