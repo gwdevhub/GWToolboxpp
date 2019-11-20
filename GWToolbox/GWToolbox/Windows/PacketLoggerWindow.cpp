@@ -396,7 +396,7 @@ static void PacketHandler(GW::HookStatus* status, GW::Packet::StoC::PacketBase* 
 
     printf("packet(%lu) {\n", packet->header);
     PrintNestedField(handler.fields + 1, handler.field_count - 1, 1, bytes, 4);
-    printf("}\n");
+    printf("} endpacket(%lu)\n", packet->header);
 }
 
 static void CtoSHandler(uint32_t context, uint32_t size, uint32_t* packet) {
