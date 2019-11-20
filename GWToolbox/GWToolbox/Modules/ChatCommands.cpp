@@ -149,17 +149,23 @@ namespace {
 			*npc_model_file_id = 0x0004c409;
 			*flags = 98820;
 		}
+		else if (wcsncmp(name, L"gwenpre", std::min(arglen,7)) == 0) {
+			*npc_id = 244;
+			*npc_model_file_id = 116377;
+			*npc_model_file_data = 116759;
+			*flags = 98820;
+		}
         else if (wcsncmp(name, L"gwenchan", std::min(arglen, 8)) == 0) {
             *npc_id = 245;
             *npc_model_file_id = 116377;
             *npc_model_file_data = 283392;
             *flags = 98820;
         }
-		else if (wcsncmp(name, L"eye", std::min(arglen, 12)) == 0) {
+		else if (wcsncmp(name, L"eye", std::min(arglen, 3)) == 0) {
 			*npc_id = 0x1f4;
 			*npc_model_file_id = 0x9d07;
 		}
-		else if (wcsncmp(name, L"zhu", std::min(arglen, 9)) == 0) {
+		else if (wcsncmp(name, L"zhu", std::min(arglen, 3)) == 0) {
 			*npc_id = 298;
 			*npc_model_file_id = 170283;
 			*npc_model_file_data = 170481;
@@ -225,10 +231,10 @@ namespace {
 			*flags = 98820;
 		}
 		else if (wcsncmp(name, L"kanaxai", std::min(arglen, 7)) == 0) {
-			*npc_id = 462;
+			*npc_id = 317;
 			*npc_model_file_id = 184176;
 			*npc_model_file_data = 185319;
-			*flags = 32780;
+			*flags = 98820;
 		}
 		else if (wcsncmp(name, L"skeletonic", std::min(arglen, 10)) == 0) {
 			*npc_id = 359;
@@ -382,6 +388,7 @@ void ChatCommands::Initialize() {
 	GW::Chat::CreateCommand(L"transmo", ChatCommands::CmdTransmo);
 	GW::Chat::CreateCommand(L"transmotarget", ChatCommands::CmdTransmoTarget);
 	GW::Chat::CreateCommand(L"transmoparty", ChatCommands::CmdTransmoParty);
+	GW::Chat::CreateCommand(L"transmoagent", ChatCommands::CmdTransmoAgent);
 	GW::Chat::CreateCommand(L"resize", ChatCommands::CmdResize);
     GW::Chat::CreateCommand(L"settitle", ChatCommands::CmdReapplyTitle);
     GW::Chat::CreateCommand(L"title", ChatCommands::CmdReapplyTitle);
