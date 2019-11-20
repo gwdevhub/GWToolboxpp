@@ -144,7 +144,7 @@ namespace {
 			arglen++;
 		if (!arglen)
 			return false;
-		if (wcsncmp(name, L"charr", std::min(arglen, 5)) == 0) {
+		if (wcsncmp(name, L"charr", std::min(arglen, 5)) == 0 && false) {
 			*npc_id = 163;
 			*npc_model_file_id = 0x0004c409;
 			*flags = 98820;
@@ -193,7 +193,7 @@ namespace {
 			*npc_id = 331;
 			*npc_model_file_id = 279205;
 		}
-		else if (wcsncmp(name, L"mallyx", std::min(arglen, 6)) == 0) {
+		else if (wcsncmp(name, L"mallyx", std::min(arglen, 6)) == 0 && false) {
 			*npc_id = 315;
 			*npc_model_file_id = 243812;
 			*flags = 98820;
