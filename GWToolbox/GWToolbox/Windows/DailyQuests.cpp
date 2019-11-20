@@ -291,7 +291,8 @@ void DailyQuests::DrawHelp() {
     ImGui::Text("You can create a 'Send Chat' hotkey to perform any command.");
     ImGui::Bullet(); ImGui::Text("'/zb' prints current zaishen bounty.");
     ImGui::Bullet(); ImGui::Text("'/zm' prints current zaishen mission.");
-    ImGui::Bullet(); ImGui::Text("'/zc' prints current zaishen mission.");
+    ImGui::Bullet(); ImGui::Text("'/zv' prints current zaishen vanquish.");
+	ImGui::Bullet(); ImGui::Text("'/zc' prints current zaishen combat.");
 	ImGui::Bullet(); ImGui::Text("'/vanguard' prints current pre-searing vanguard quest.");
 	ImGui::Bullet(); ImGui::Text("'/wanted' prints current shining blade bounty.");
     ImGui::Bullet(); ImGui::Text("'/nicholas' prints current nicholas location.");

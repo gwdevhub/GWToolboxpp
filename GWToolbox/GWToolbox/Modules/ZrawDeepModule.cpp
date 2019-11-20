@@ -165,7 +165,7 @@ void ZrawDeepModule::DrawSettingInternal() {
     if (!enabled)
         return;
 	ImGui::Indent();
-    if(ImGui::Checkbox("Kanaxai gives you and your team stunningly attractive",&transmo_team))
+    if(ImGui::Checkbox("Kanaxai makes you and your team stunningly attractive",&transmo_team))
         pending_transmog = clock();
     ImGui::Checkbox("Kanaxai infiltrates the minds of NPCs",&rewrite_npc_dialogs);
     if(ImGui::Checkbox("Kanaxai shows his true form", &kanaxais_true_form))
