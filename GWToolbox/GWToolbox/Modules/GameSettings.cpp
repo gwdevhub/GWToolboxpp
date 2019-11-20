@@ -405,6 +405,8 @@ namespace {
 	}
 
     struct PendingSendChatMessage {};
+
+	static clock_t last_send = 0;
 }
 
 
@@ -685,6 +687,10 @@ void __fastcall OnPingEquippedItem(uint32_t oneC, uint32_t item_id1, uint32_t it
     GW::HookBase::LeaveHook();
 }
 
+
+bool PendingChatMessage::Cooldown() {
+	return last_send && clock() < last_send + (clock_t)(CLOCKS_PER_SEC / 2);
+}
 const bool PendingChatMessage::SendMessage() {
     if (!IsDecoded() || this->invalid) return false; // Not ready or invalid.
     std::vector<std::wstring> sanitised_lines = SanitiseForSend();

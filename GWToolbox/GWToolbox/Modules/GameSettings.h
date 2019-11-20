@@ -41,7 +41,7 @@ protected:
 	bool printed = false;
 	bool print = true;
 	bool send = false;
-	inline static clock_t last_send = 0;
+	
 	wchar_t encoded_message[256] = { '\0' };
 	wchar_t encoded_sender[32] = { '\0' };
 	std::wstring output_message;
@@ -91,10 +91,7 @@ public:
 	const bool IsSend() {
 		return send;
 	}
-	static bool Cooldown() {
-		return last_send && clock() < last_send + (clock_t)(CLOCKS_PER_SEC / 2);
-	}
-
+	static bool Cooldown();
     static wchar_t* GetAgentNameEncoded(GW::Agent* agent) {
         if (!agent) return NULL;
         if (agent->GetIsCharacterType()) {
@@ -179,10 +176,7 @@ public:
 		static GameSettings instance;
 		return instance;
 	}
-
 	const char* Name() const override { return "Game Settings"; }
-
-    time_t PendingChatMessage_last_send = 0;
 	static void PingItem(GW::Item* item, bool include_name = false);
 	static void PingItem(uint32_t item_id, bool include_name = false);
 
