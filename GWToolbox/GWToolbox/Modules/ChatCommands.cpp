@@ -1158,7 +1158,7 @@ void ChatCommands::CmdTransmoParty(const wchar_t* message, int argc, LPWSTR* arg
 			npc_id = INT_MAX-1;
 		}
 		else if (!GetNPCInfoByName(argv[1], &npc_id, &npc_model_file_id, &npc_model_file_data, &flags)) {
-			Log::Error("Unknown transmo '%s'", argv[1]);
+			Log::Error("Unknown transmo '%ls'", argv[1]);
 			return;
 		}
 		if (argc > 2 && GuiUtils::ParseInt(argv[2], &scale)) {
@@ -1218,7 +1218,7 @@ void ChatCommands::CmdTransmoTarget(const wchar_t* message, int argc, LPWSTR* ar
 		npc_id = INT_MAX - 1;
 	}
 	else if (!GetNPCInfoByName(argv[1], &npc_id, &npc_model_file_id, &npc_model_file_data, &flags)) {
-		Log::Error("Unknown transmo '%s'", argv[1]);
+		Log::Error("Unknown transmo '%ls'", argv[1]);
 		return;
 	}
 	if (argc > 2 && GuiUtils::ParseInt(argv[2], &scale)) {
@@ -1252,7 +1252,7 @@ void ChatCommands::CmdTransmo(const wchar_t *message, int argc, LPWSTR *argv) {
 			npc_id = INT_MAX - 1;
 		}
 		else if (!GetNPCInfoByName(argv[1], &npc_id, &npc_model_file_id, &npc_model_file_data, &flags)) {
-			Log::Error("unknown transmo '%s'", argv[1]);
+			Log::Error("unknown transmo '%ls'", argv[1]);
 			return;
 		}
 		if (argc > 2 && GuiUtils::ParseInt(argv[2], &scale)) {

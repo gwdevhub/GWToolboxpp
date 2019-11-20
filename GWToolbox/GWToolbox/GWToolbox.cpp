@@ -367,13 +367,13 @@ void GWToolbox::SaveSettings() {
 }
 
 void GWToolbox::Terminate() {
+	SaveSettings();
+	inifile->Reset();
+	delete inifile;
+
     for (ToolboxModule* module : modules) {
         module->Terminate();
     }
-
-    SaveSettings();
-    inifile->Reset();
-    delete inifile;
 
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
         Log::Info("Bye!");
