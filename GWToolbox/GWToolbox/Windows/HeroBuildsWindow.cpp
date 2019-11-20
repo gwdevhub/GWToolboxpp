@@ -92,6 +92,11 @@ namespace {
 
 unsigned int HeroBuildsWindow::TeamHeroBuild::cur_ui_id = 0;
 
+HeroBuildsWindow::~HeroBuildsWindow() {
+    if (inifile)
+        delete inifile;
+}
+
 void HeroBuildsWindow::Initialize() {
 	ToolboxWindow::Initialize();
 	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"party.png"));
@@ -101,8 +106,6 @@ void HeroBuildsWindow::Initialize() {
 void HeroBuildsWindow::Terminate() {
 	ToolboxWindow::Terminate();
 	teambuilds.clear();
-	inifile->Reset();
-	delete inifile;
 }
 
 void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {

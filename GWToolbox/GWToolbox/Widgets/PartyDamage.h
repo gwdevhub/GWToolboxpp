@@ -32,7 +32,7 @@ class PartyDamage : public ToolboxWidget {
 	};
 
 	PartyDamage() {};
-	~PartyDamage() {};
+	~PartyDamage();
 public:
 	static PartyDamage& Instance() {
 		static PartyDamage instance;

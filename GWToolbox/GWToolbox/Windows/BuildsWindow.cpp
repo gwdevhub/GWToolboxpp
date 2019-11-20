@@ -25,6 +25,12 @@ unsigned int BuildsWindow::TeamBuild::cur_ui_id = 0;
 bool order_by_changed = false;
 
 #define INI_FILENAME L"builds.ini"
+
+BuildsWindow::~BuildsWindow() {
+	if (inifile)
+		delete inifile;
+}
+
 void BuildsWindow::Initialize() {
 	ToolboxWindow::Initialize();
 	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"list.png"), IDB_Icon_list);
@@ -86,8 +92,6 @@ bool BuildsWindow::BuildSkillTemplateString(const TeamBuild& tbuild, unsigned in
 void BuildsWindow::Terminate() {
 	ToolboxWindow::Terminate();
 	teambuilds.clear();
-	inifile->Reset();
-	delete inifile;
 }
 
 void BuildsWindow::DrawSettingInternal() {

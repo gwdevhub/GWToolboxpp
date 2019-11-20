@@ -24,6 +24,11 @@
 #define INI_FILENAME L"healthlog.ini"
 #define IniSection "health"
 
+PartyDamage::~PartyDamage() {
+	if (inifile)
+    	delete inifile;
+}
+
 void PartyDamage::Initialize() {
 	ToolboxWidget::Initialize();
 
@@ -381,9 +386,6 @@ void PartyDamage::SaveSettings(CSimpleIni* ini) {
 		inifile->SetLongValue(IniSection, key.c_str(), item.second, 0, false, true);
 	}
 	inifile->SaveFile(Resources::GetPath(INI_FILENAME).c_str());
-    inifile->Reset();
-    delete inifile;
-    inifile = nullptr;
 }
 
 void PartyDamage::DrawSettings() {

@@ -41,7 +41,7 @@ private:
 	};
 
 	HeroBuildsWindow() {};
-	~HeroBuildsWindow() {};
+	~HeroBuildsWindow();
 public:
 	static HeroBuildsWindow& Instance() {
 		static HeroBuildsWindow instance;
