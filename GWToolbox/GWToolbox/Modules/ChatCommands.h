@@ -61,6 +61,7 @@ private:
 	static void CmdPingEquipment(const wchar_t* message, int argc, LPWSTR* argv);
 	static void CmdTransmoTarget(const wchar_t* message, int argc, LPWSTR* argv);
 	static void CmdTransmoParty(const wchar_t* message, int argc, LPWSTR* argv);
+    static void CmdTransmoAgent(const wchar_t* message, int argc, LPWSTR* argv);
     
 
 	static std::vector<ToolboxUIElement*> MatchingWindows(const wchar_t *message, int argc, LPWSTR *argv);

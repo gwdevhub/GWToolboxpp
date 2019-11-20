@@ -149,6 +149,12 @@ namespace {
 			*npc_model_file_id = 0x0004c409;
 			*flags = 98820;
 		}
+        else if (wcsncmp(name, L"gwenchan", std::min(arglen, 8)) == 0) {
+            *npc_id = 245;
+            *npc_model_file_id = 116377;
+            *npc_model_file_data = 283392;
+            *flags = 98820;
+        }
 		else if (wcsncmp(name, L"eye", std::min(arglen, 12)) == 0) {
 			*npc_id = 0x1f4;
 			*npc_model_file_id = 0x9d07;
@@ -1259,6 +1265,42 @@ void ChatCommands::CmdTransmo(const wchar_t *message, int argc, LPWSTR *argv) {
 			return;
 	}
 	TransmoAgent(GW::Agents::GetPlayerId(), npc_id, npc_model_file_id, npc_model_file_data, flags, scale);
+}
+void ChatCommands::CmdTransmoAgent(const wchar_t* message, int argc, LPWSTR* argv) {
+    int scale = 0x64000000;
+    int tmpScale = scale;
+    DWORD npc_id = 0;
+    DWORD npc_model_file_id = 0;
+    DWORD npc_model_file_data = 0;
+    DWORD flags = 0;
+    if(argc < 3)
+        return Log::Error("Missing /transmoagent argument");
+    int agent_id = 0;
+    if(!GuiUtils::ParseInt(argv[1], &agent_id) || agent_id < 0)
+        return Log::Error("Invalid /transmoagent agent_id");
+    if (wcsncmp(argv[2], L"reset", 5) == 0) {
+        npc_id = INT_MAX;
+    }
+    else if (GuiUtils::ParseInt(argv[2], &scale)) {
+        if (scale < 6 || scale > 255) {
+            Log::Error("scale must be between [6, 255]");
+            return;
+        }
+        scale = (DWORD)scale << 24;
+        npc_id = INT_MAX - 1;
+    }
+    else if (!GetNPCInfoByName(argv[2], &npc_id, &npc_model_file_id, &npc_model_file_data, &flags)) {
+        Log::Error("unknown transmo '%s'", argv[1]);
+        return;
+    }
+    if (argc > 4 && GuiUtils::ParseInt(argv[3], &scale)) {
+        if (scale < 6 || scale > 255) {
+            Log::Error("scale must be between [6, 255]");
+            return;
+        }
+        scale = (DWORD)scale << 24;
+    }
+    TransmoAgent(agent_id, npc_id, npc_model_file_id, npc_model_file_data, flags, scale);
 }
 
 void ChatCommands::CmdResize(const wchar_t *message, int argc, LPWSTR *argv) {
