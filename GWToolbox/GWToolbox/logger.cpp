@@ -3,6 +3,7 @@
 
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 
 #include "Defines.h"
 #include <Modules/Resources.h>
@@ -87,7 +88,10 @@ static void _vchatlog(GW::Chat::Channel chan, const char* format, va_list argv) 
 
 	char buf2[256];
 	snprintf(buf2, 256, "<c=#00ccff>GWToolbox++</c>: %s", buf1);
-	GW::Chat::WriteChat(chan, buf2);
+	GW::GameThread::Enqueue([chan, buf2]() {
+		GW::Chat::WriteChat(chan, buf2);
+		});
+	
 
 	const char* c = [](GW::Chat::Channel chan) -> const char* {
 		switch (chan) {
