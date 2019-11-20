@@ -1093,6 +1093,7 @@ void ChatCommands::CmdLoad(const wchar_t *message, int argc, LPWSTR *argv) {
 void ChatCommands::CmdPingEquipment(const wchar_t* message, int argc, LPWSTR* argv) {
 	if (argc < 2) {
 		Log::Error("Missing argument for /pingitem");
+		return;
 	}
 	GW::Agent* p = GW::Agents::GetPlayer();
 	if (!p || !p->equip) return;
@@ -1131,7 +1132,7 @@ void ChatCommands::CmdPingEquipment(const wchar_t* message, int argc, LPWSTR* ar
 		GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 9), true);
 	}
 	else {
-		Log::Error("Unrecognised /pingitem %s", argv[1]);
+		Log::Error("Unrecognised /pingitem %ls", argv[1]);
 	}
 }
 
