@@ -23,7 +23,13 @@ private:
 	bool transmog_done = false;
 	bool checked_enabled = false;
 	bool valid_for_map = false;
-	bool disabled = false;
+    uint32_t kanaxai_agent_id = 0;
+    
+	bool enabled = true;
+    bool transmo_team_in_explorable = true;
+    bool rewrite_npc_dialogs = true;
+    bool kanaxais_true_form = true;
+
 	clock_t pending_transmog = 0;
 public:
 	static ZrawDeepModule& Instance() {
@@ -31,34 +37,33 @@ public:
 		return instance;
 	}
 
-	const char* Name() const override { return "ZRaw 24h Deep!"; }
+	const char* Name() const override { return "Zraw 24h Deep!"; }
 	void Initialize() override;
 	void Terminate() override;
 	void Update(float delta) override;
-	bool HasSettings() override { return false; };
+    void DrawSettingInternal() override;
 	void DisplayDialogue(GW::Packet::StoC::DisplayDialogue*);
 	void PlayKanaxaiDialog(uint8_t idx);
 
-	void SetTransmogs(bool enabled);
-	void SetValidForMap(bool v);
+	void SetTransmogs();
 	void Reset() {
 		transmog_done = false;
 		checked_enabled = false;
 		valid_for_map = false;
 	}
 	void Disable() {
-		disabled = true;
+        enabled = false;
 		Reset();
 	}
 	void Enable() {
-		disabled = false;
+        enabled = true;
 		Reset();
 	}
 	bool IsEnabled() {
-		return disabled == false;
+        return enabled;
 	}
 	void Toggle() {
-		disabled = !disabled;
+        enabled = !enabled;
 		Reset();
 	}
 

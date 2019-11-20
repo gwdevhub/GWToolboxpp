@@ -66,6 +66,7 @@ bool ToolboxSettings::move_all = false;
 
 void ToolboxSettings::LoadModules(CSimpleIni* ini) {
 	SettingsWindow::Instance().sep_modules = optional_modules.size();
+    optional_modules.push_back(&ZrawDeepModule::Instance());
 	if (use_gamesettings) optional_modules.push_back(&GameSettings::Instance());
 	if (use_updater) optional_modules.push_back(&Updater::Instance());
 	if (use_chatfilter) optional_modules.push_back(&ChatFilter::Instance());
@@ -73,9 +74,6 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
 	if (use_discord) optional_modules.push_back(&DiscordModule::Instance());
 	if (use_twitch) optional_modules.push_back(&TwitchModule::Instance());
 	if (use_partywindowmodule) optional_modules.push_back(&PartyWindowModule::Instance());
-#ifdef _FUN
-	optional_modules.push_back(&FunModule::Instance());
-#endif
 
 	SettingsWindow::Instance().sep_windows = optional_modules.size();
 	if (use_pcons) optional_modules.push_back(&PconsWindow::Instance());
@@ -110,8 +108,6 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
 	if (use_clock) optional_modules.push_back(&ClockWidget::Instance());
 	if (use_vanquish) optional_modules.push_back(&VanquishWidget::Instance());
 	if (use_alcohol) optional_modules.push_back(&AlcoholWidget::Instance());
-	optional_modules.push_back(&ZrawDeepModule::Instance());
-	//if (use_serverinfo) optional_modules.push_back(&ServerInfoWidget::Instance());
 
 	// Only read settings of non-core modules
 	for (ToolboxModule* module : optional_modules) {
