@@ -24,6 +24,7 @@ public:
 	const char* Name() const override { return "Pcons"; }
 
 	void Initialize() override;
+	void InitializePcons();
 
 	bool SetEnabled(bool b);
 	bool GetEnabled();

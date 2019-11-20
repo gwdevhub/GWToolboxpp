@@ -35,8 +35,10 @@ using namespace GW::Constants;
 
 bool Pcon::map_has_effects_array = false;
 
-void PconsWindow::Initialize() {
-	ToolboxWindow::Initialize();
+void PconsWindow::InitializePcons() {
+	static bool initialized = false;
+	if (initialized) return;
+	initialized = true;
 	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"cupcake.png"), IDB_Icon_Cupcake);
 
 	const float s = 64.0f; // all icons are 64x64
@@ -113,11 +115,16 @@ void PconsWindow::Initialize() {
 		ImVec2(0 / s, 5 / s), ImVec2(49 / s, 54 / s),
 		ItemID::PahnaiSalad, SkillID::Pahnai_Salad_item_effect, 10));
 
-    pcons.push_back(new PconRefiller("Scroll of Resurrection", "Scroll", "resscroll", L"Scroll_of_Resurrection.png", IDB_Mat_ResScroll,
-        ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s), ItemID::ResScrolls, 5));
+	pcons.push_back(new PconRefiller("Scroll of Resurrection", "Scroll", "resscroll", L"Scroll_of_Resurrection.png", IDB_Mat_ResScroll,
+		ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s), ItemID::ResScrolls, 5));
 
 	pcons.push_back(new PconRefiller("Powerstone of Courage", "Pstone", "pstone", L"Powerstone_of_Courage.png", IDB_Mat_Powerstone,
 		ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s), ItemID::Powerstone, 5));
+}
+
+void PconsWindow::Initialize() {
+	ToolboxWindow::Initialize();
+	InitializePcons();
 
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentSetPlayer>(&AgentSetPlayer_Entry,
 	[](GW::HookStatus *, GW::Packet::StoC::AgentSetPlayer *pak) -> void {
@@ -435,8 +442,9 @@ void PconsWindow::CheckBossRangeAutoDisable() {	// Trigger Elite area auto disab
 
 void PconsWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxWindow::LoadSettings(ini);
+	InitializePcons();
 	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
-
+	
 	for (Pcon* pcon : pcons) {
 		pcon->LoadSettings(ini, Name());
 	}
