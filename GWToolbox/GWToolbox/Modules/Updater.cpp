@@ -32,9 +32,11 @@ void Updater::SaveSettings(CSimpleIni* ini) {
 	} else {
 		ini->SetValue(Name(), "dllpath", "error");
 	}
+	ini->SetLongValue(Name(), "update_mode", mode);
 }
 
 void Updater::Initialize() {
+	ToolboxUIElement::Initialize();
 	CheckForUpdate();
 }
 
