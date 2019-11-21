@@ -405,6 +405,11 @@ namespace {
 	}
 
     struct PendingSendChatMessage {};
+	struct ReturnToOutpostPacket { const uint32_t header = CtoGS_MSGReturnToOutpost; };
+	struct AcceptInvitePacket {
+		const uint32_t header = CtoGS_MSGAcceptPartyRequest;
+		uint32_t party_id = 0;
+	};
 
 	static clock_t last_send = 0;
 }
@@ -829,8 +834,7 @@ void GameSettings::Initialize() {
     // Automatically return to outpost on defeat
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyDefeated>(&PartyDefeated_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::PartyDefeated*) -> void {
         if (!auto_return_on_defeat || !GetPlayerIsLeader())
-            return;
-        struct ReturnToOutpostPacket { const uint32_t header = CtoGS_MSGReturnToOutpost; };
+            return;        
         static ReturnToOutpostPacket pak;
         GW::CtoS::SendPacket(&pak);
     });
@@ -845,13 +849,33 @@ void GameSettings::Initialize() {
             ShowWindow(hwnd, SW_RESTORE);
         }
     });
-    // Flash window on party member added
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerAdd>(&PartyPlayerAdd_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::PartyPlayerAdd*) -> void {
-        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost || !GW::Agents::GetPlayerId())
+	// Auto accept invitations, flash window on received party invite
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyInviteReceived_Create>(&PartyPlayerAdd_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::PartyInviteReceived_Create* packet) {
+		if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost || !GetPlayerIsLeader())
+			return;
+		if (auto_accept_invites && GW::PartyMgr::GetIsPlayerTicked()) {
+			static AcceptInvitePacket pak;
+			pak.party_id = packet->target_party_id;
+			GW::CtoS::SendPacket(&pak);
+		}
+		if(flash_window_on_party_invite)
+			FlashWindow();
+		});
+    // Flash window on player added
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerAdd>(&PartyPlayerAdd_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::PartyPlayerAdd* packet) -> void {
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
             return;
-		if (flash_window_on_party_invite && GetPlayerIsLeader())
-            FlashWindow();
-        check_message_on_party_change = true;
+		check_message_on_party_change = true;
+		if (flash_window_on_party_invite) {
+			GW::PartyInfo* current_party = GW::PartyMgr::GetPartyInfo();
+			if (!current_party) return;
+			GW::Agent* me = GW::Agents::GetPlayer();
+			if (!me) return;
+			if (packet->player_id == me->login_number
+				|| (packet->party_id == current_party->party_id && GetPlayerIsLeader())) {
+				FlashWindow();
+			}
+		}
 	});
     // Trigger for message on party change
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerRemove>(&PartyPlayerRemove_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::PartyPlayerRemove*) -> void {
@@ -1209,6 +1233,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
     auto_age_on_vanquish = ini->GetBoolValue(Name(), VAR_NAME(auto_age_on_vanquish), auto_age_on_vanquish);
 	auto_age2_on_age = ini->GetBoolValue(Name(), VAR_NAME(auto_age2_on_age), auto_age2_on_age);
+	auto_accept_invites = ini->GetBoolValue(Name(), VAR_NAME(auto_age2_on_age), auto_age2_on_age);
 
 	::LoadChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
 	::LoadChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);
@@ -1328,6 +1353,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 }
 
 void GameSettings::DrawSettingInternal() {
+	const float column_spacing = 256.0f * ImGui::GetIO().FontGlobalScale;
 	if (ImGui::TreeNode("Chat Colors")) {
         ImGui::Text("Channel");
         ImGui::SameLine(chat_colors_grid_x[1]);
@@ -1409,11 +1435,11 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::Indent();
 	ImGui::ShowHelp("Only triggers when Guild Wars is not the active window");
 	ImGui::Checkbox("Receiving a private message", &flash_window_on_pm);
-	ImGui::Checkbox("Receiving a party invite", &flash_window_on_party_invite);
+	ImGui::SameLine(column_spacing); ImGui::Checkbox("Receiving a party invite", &flash_window_on_party_invite);
 	ImGui::Checkbox("Zoning in a new map", &flash_window_on_zoning);
-    ImGui::Checkbox("Cinematic start/end", &flash_window_on_cinematic);
-    ImGui::Checkbox("A player starts trade with you###flash_window_on_trade", &flash_window_on_trade);
-    ImGui::Checkbox("A party member pings your name", &flash_window_on_name_ping);
+	ImGui::SameLine(column_spacing); ImGui::Checkbox("Cinematic start/end", &flash_window_on_cinematic);
+	ImGui::Checkbox("A player starts trade with you###flash_window_on_trade", &flash_window_on_trade);
+    ImGui::SameLine(column_spacing); ImGui::Checkbox("A party member pings your name", &flash_window_on_name_ping);
 	ImGui::Unindent();
 
     ImGui::Text("Show Guild Wars in foreground when:");
@@ -1422,27 +1448,23 @@ void GameSettings::DrawSettingInternal() {
         "occur, such as entering instances.");
     ImGui::Indent();
     ImGui::Checkbox("Zoning in a new map###focus_window_on_zoning", &focus_window_on_zoning);
-    ImGui::Checkbox("A player starts trade with you###focus_window_on_trade", &focus_window_on_trade);
+	ImGui::SameLine(column_spacing); ImGui::Checkbox("A player starts trade with you###focus_window_on_trade", &focus_window_on_trade);
     ImGui::Unindent();
 
     ImGui::Text("Show a message when a friend:");
 	ImGui::Indent();
 	ImGui::Checkbox("Logs in", &notify_when_friends_online);
-    ImGui::SameLine(256.0f * ImGui::GetIO().FontGlobalScale);
-    ImGui::Checkbox("Joins your outpost###notify_when_friends_join_outpost", &notify_when_friends_join_outpost);
-    ImGui::Checkbox("Logs out", &notify_when_friends_offline);
-    ImGui::SameLine(256.0f * ImGui::GetIO().FontGlobalScale);
-    ImGui::Checkbox("Leaves your outpost###notify_when_friends_leave_outpost", &notify_when_friends_leave_outpost);
+	ImGui::SameLine(column_spacing); ImGui::Checkbox("Joins your outpost###notify_when_friends_join_outpost", &notify_when_friends_join_outpost);
+	ImGui::Checkbox("Logs out", &notify_when_friends_offline);
+	ImGui::SameLine(column_spacing); ImGui::Checkbox("Leaves your outpost###notify_when_friends_leave_outpost", &notify_when_friends_leave_outpost);
     ImGui::Unindent();
 
     ImGui::Text("Show a message when a player:");
     ImGui::Indent();
     ImGui::Checkbox("Joins your party", &notify_when_party_member_joins);
-    ImGui::SameLine(256.0f * ImGui::GetIO().FontGlobalScale);
-    ImGui::Checkbox("Joins your outpost###notify_when_players_join_outpost", &notify_when_players_join_outpost);
-    ImGui::Checkbox("Leaves your party", &notify_when_party_member_leaves);
-    ImGui::SameLine(256.0f * ImGui::GetIO().FontGlobalScale);
-    ImGui::Checkbox("Leaves your outpost###notify_when_players_leave_outpost", &notify_when_players_leave_outpost);
+	ImGui::SameLine(column_spacing); ImGui::Checkbox("Joins your outpost###notify_when_players_join_outpost", &notify_when_players_join_outpost);
+	ImGui::Checkbox("Leaves your party", &notify_when_party_member_leaves);
+	ImGui::SameLine(column_spacing); ImGui::Checkbox("Leaves your outpost###notify_when_players_leave_outpost", &notify_when_players_leave_outpost);
     ImGui::Unindent();
 
 	ImGui::Checkbox("Automatically set 'Away' after ", &auto_set_away);
@@ -1466,6 +1488,7 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::Checkbox("Automatically skip cinematics", &auto_skip_cinematic);
     ImGui::Checkbox("Automatically return to outpost on defeat", &auto_return_on_defeat);
     ImGui::ShowHelp("Automatically return party to outpost on party wipe if player is leading");
+	ImGui::Checkbox("Automatically accept party invites when ticked", &auto_accept_invites);
 	ImGui::Checkbox("Show warning when earned faction reaches ", &faction_warn_percent);
 	ImGui::SameLine();
 	ImGui::PushItemWidth(40.0f * ImGui::GetIO().FontGlobalScale);

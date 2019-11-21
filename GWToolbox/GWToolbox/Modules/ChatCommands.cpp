@@ -180,8 +180,8 @@ namespace {
 		else if (wcsncmp(name, L"beetle", std::min(arglen, 6)) == 0) {
 			*npc_id = 329;
 			*npc_model_file_id = 207331;
-			*npc_model_file_data = 279211;
-			*flags = 98820;
+			*npc_model_file_data = 279211; // 245179?
+			*flags = 98820; // 32780 ?
 		}
 		else if (wcsncmp(name, L"polar", std::min(arglen, 5)) == 0) {
 			*npc_id = 313;

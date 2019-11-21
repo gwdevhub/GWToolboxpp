@@ -221,7 +221,7 @@ public:
 	bool flash_window_on_name_ping = true;
 
 	bool auto_return_on_defeat = false;
-
+	bool auto_accept_invites = false;
 	bool auto_set_away = false;
 	int auto_set_away_delay = 10;
 	bool auto_set_online = false;
