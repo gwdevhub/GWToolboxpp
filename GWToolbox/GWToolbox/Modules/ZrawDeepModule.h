@@ -43,6 +43,7 @@ public:
 	void Initialize() override;
 	void SignalTerminate() override;
 	bool CanTerminate() { return can_terminate; }
+	bool HasSettings() { return enabled; }
 	void Update(float delta) override;
     void DrawSettingInternal() override;
 	void DisplayDialogue(GW::Packet::StoC::DisplayDialogue*);

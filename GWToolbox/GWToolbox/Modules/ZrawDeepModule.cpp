@@ -155,19 +155,11 @@ void ZrawDeepModule::Initialize() {
 }
 void ZrawDeepModule::DrawSettingInternal() {
     ImGui::TextDisabled("Use chat command /deep24h to toggle this module on or off at any time");
-    if (ImGui::Checkbox("Enabled",&enabled)) {
-        Reset();
-        pending_transmog = clock();
-    }
-    if (!enabled)
-        return;
-	ImGui::Indent();
     if(ImGui::Checkbox("Kanaxai makes you and your team stunningly attractive",&transmo_team))
         pending_transmog = clock();
     ImGui::Checkbox("Kanaxai infiltrates the minds of NPCs",&rewrite_npc_dialogs);
     if(ImGui::Checkbox("Kanaxai shows his true form", &kanaxais_true_form))
         pending_transmog = clock();
-	ImGui::Unindent();
 }
 void ZrawDeepModule::SetTransmogs() {
 	if (!GW::Map::GetIsMapLoaded())
