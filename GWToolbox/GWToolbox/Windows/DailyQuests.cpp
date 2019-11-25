@@ -280,7 +280,7 @@ void DailyQuests::Draw(IDirect3DDevice9* pDevice) {
         unix += 86400;
     }
     ImGui::EndChild();
-    ImGui::TextDisabled("Click on a daily quest to get notified when its coming up. Subscribed quests are highlighted in ");
+    ImGui::TextDisabled("Click on a daily quest to get notified when its coming up. Subscribed quests are highlighted in .");
     ImGui::SameLine(0,0);
     ImGui::TextColored(sCol, "blue");
     return ImGui::End();
