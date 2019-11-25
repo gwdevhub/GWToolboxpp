@@ -32,6 +32,8 @@ using json_vec = std::vector<json>;
 
 static const char ws_host[] = "wss://kamadan.decltype.org/ws/";
 
+static const std::regex regex_check = std::regex("^/(.*)/[a-z]?$", std::regex::ECMAScript | std::regex::icase);
+
 void TradeWindow::Initialize() {
 	ToolboxWindow::Initialize();
 	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"trade.png"));
@@ -96,19 +98,28 @@ bool TradeWindow::GetInKamadan() {
 void TradeWindow::Update(float delta) {
 	fetch();
 
+	if (ws_chat) {
+		switch (ws_chat->getReadyState()) {
+			case WebSocket::CLOSED:
+				delete ws_chat;
+				ws_chat = nullptr;
+				return;
+			case WebSocket::CLOSING:
+				ws_chat->poll();
+				return;
+		}
+		if (!print_game_chat) {
+			ws_chat->close();
+			return;
+		}
+		// do not display trade chat while in kamadan AE district 1
+		if (GetInKamadan() && GW::Map::GetDistrict() == 1 &&
+			GW::Map::GetRegion() == GW::Constants::Region::America) {
+			ws_chat->close();
+			return;
+		}
+	}
 	if (!print_game_chat) return;
-	if (ws_chat && ws_chat->getReadyState() == WebSocket::CLOSED) {
-		delete ws_chat;
-		ws_chat = nullptr;
-	}
-
-	// do not display trade chat while in kamadan AE district 1
-	if (GetInKamadan() && GW::Map::GetDistrict() == 1 &&
-		GW::Map::GetRegion() == GW::Constants::Region::America) {
-		if (ws_chat) ws_chat->close();
-		return;
-	}
-
 	if (!ws_chat && !ws_chat_connecting) {
 		AsyncChatConnect();
 		return;
@@ -131,13 +142,22 @@ void TradeWindow::Update(float delta) {
 		if (filter_alerts) {
 			print_message = false; // filtered unless allowed by words
 			for (auto& word : alert_words) {
-				auto found = std::search(msg.begin(), msg.end(), word.begin(), word.end(), [](char c1, char c2) -> bool {
-					return tolower(c1) == c2;
-					});
-				if (found != msg.end()) {
-					print_message = true;
-					break; // don't need to check other words
+				if (std::regex_search(word, m, regex_check)) {
+					try {
+						word_regex = std::regex(m._At(1).str(), std::regex::ECMAScript | std::regex::icase);
+					}
+					catch (...) {
+						// Silent fail; invalid regex
+					}
+					print_message = std::regex_search(msg, word_regex);
 				}
+				else {
+					auto found = std::search(msg.begin(), msg.end(), word.begin(), word.end(), [](char c1, char c2) -> bool {
+						return tolower(c1) == c2;
+						});
+					print_message = found != msg.end();
+				}
+				if (print_message) break;
 			}
 		}
 

@@ -50,6 +50,9 @@ private:
 	// if enable, we won't print the messages containing word from alert_words
 	bool filter_alerts = false;
 
+	std::regex word_regex;
+	std::smatch m;
+
 #define ALERT_BUF_SIZE 1024 * 16
 	char alert_buf[ALERT_BUF_SIZE];
 	// set when the alert_buf was modified
