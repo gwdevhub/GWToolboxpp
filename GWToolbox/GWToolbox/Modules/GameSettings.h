@@ -254,13 +254,15 @@ public:
 
 	bool disable_gold_selling_confirmation = false;
 
+	bool skip_entering_name_for_faction_donate = true;
+
 	void ApplyBorderless(bool value);
 	void SetAfkMessage(std::wstring&& message);
 	static void ItemClickCallback(GW::HookStatus *, uint32_t type, uint32_t slot, GW::Bag *bag);
 
-    	static GW::Friend* GetOnlineFriend(wchar_t* account, wchar_t* playing);
+    static GW::Friend* GetOnlineFriend(wchar_t* account, wchar_t* playing);
 
-    	std::vector<PendingChatMessage*> pending_messages;
+    std::vector<PendingChatMessage*> pending_messages;
 
 private:
 	void UpdateBorderless();
@@ -268,7 +270,6 @@ private:
 	void FactionEarnedCheckAndWarn();
 	bool faction_checked = false;
 
-    	// Packet callbacks
 	void MessageOnPartyChange();
 
 	std::vector<GW::MemoryPatcher*> patches;
@@ -317,4 +318,5 @@ private:
 	GW::HookEntry MessageServer_Entry;
 	GW::HookEntry PlayerJoinInstance_Entry;
 	GW::HookEntry PlayerLeaveInstance_Entry;
+	GW::HookEntry OnDialog_Entry;
 };

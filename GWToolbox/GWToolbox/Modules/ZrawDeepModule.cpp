@@ -77,8 +77,9 @@ namespace {
 		GW::PlayerArray players = GW::Agents::GetPlayerArray();
 		if (!players.valid()) return false;
 		for (auto player : p->players) {
-			GW::Player* p2 = GW::PlayerMgr::GetPlayerByID(player.login_number);
-			if (!p2) return false;
+			if (!player.login_number || player.login_number >= players.size()) continue;
+			GW::Player* p2 = &players[player.login_number];
+			if (!p2) continue;
 			GW::Agent* pa = GW::Agents::GetAgentByID(p2->agent_id);
 			if (pa && (pa->transmog_npc_id ^ 0x20000000) != GW::Constants::ModelID::Minipet::Kanaxai)
 				return false;
@@ -86,72 +87,95 @@ namespace {
 		return true;
 	}
 }
+void ZrawDeepModule::SetEnabled(bool _enabled) {
+	if (enabled == _enabled)
+		return;
+	if (!terminating)
+		enabled = _enabled;
+	if (_enabled) {
+		can_terminate = false;
+		GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&ZrawDeepModule_StoCs,
+			[this](GW::HookStatus* status, GW::Packet::StoC::DisplayDialogue* packet) -> void {
+				if (!enabled) return;
+				DisplayDialogue(packet);
+			});
+		GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SpeechBubble>(&ZrawDeepModule_StoCs,
+			[this](GW::HookStatus* status, GW::Packet::StoC::SpeechBubble* packet) -> void {
+				if (!enabled || !rewrite_npc_dialogs) return;
+				SetToRandomKanaxaiString(packet->message);
+			});
+		GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DialogBody>(&ZrawDeepModule_StoCs,
+			[this](GW::HookStatus* status, GW::Packet::StoC::DialogBody* packet) -> void {
+				if (!enabled || !rewrite_npc_dialogs) return;
+				SetToRandomKanaxaiString(packet->message);
+			});
+		GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&ZrawDeepModule_StoCs,
+			[this](GW::HookStatus* status, GW::Packet::StoC::InstanceLoadInfo* packet) -> void {
+				if (!enabled) return;
+				Reset();
+			});
+		GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(&ZrawDeepModule_StoCs,
+			[this](GW::HookStatus* status, GW::Packet::StoC::AgentAdd* packet) -> void {
+				if (IsKanaxai(packet->agent_type)) {
+					kanaxai_agent_id = packet->agent_id;
+					if (!enabled) return;
+					pending_transmog = clock();
+				}
+			});
+		GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayCape>(&ZrawDeepModule_StoCs,
+			[this](GW::HookStatus* status, GW::Packet::StoC::DisplayCape* packet) -> void {
+				if (!enabled) return;
+				GW::Agent* a = GW::Agents::GetAgentByID(packet->agent_id);
+				if (!a) return;
+				if (a->IsPlayer() || a->GetCanBeViewedInPartyWindow() || IsKanaxai(a)) {
+					status->blocked = true;
+					pending_transmog = clock();
+				}
+			});
+		GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentModel>(&ZrawDeepModule_StoCs,
+			[this](GW::HookStatus* status, GW::Packet::StoC::AgentModel* packet) -> void {
+				if (!enabled) return;
+				GW::Agent* a = GW::Agents::GetAgentByID(packet->agent_id);
+				if (!a) return;
+				if (a->IsPlayer() || a->GetCanBeViewedInPartyWindow() || IsKanaxai(a)) {
+					status->blocked = true;
+					pending_transmog = clock();
+				}
+			});
+
+		GW::Chat::CreateCommand(L"deep24h", [this](const wchar_t* message, int argc, LPWSTR* argv) -> void {
+			SetEnabled(!enabled);
+			Log::Info(enabled ? "24h Deep mode on!" : "24h Deep mode off :(");
+			pending_transmog = clock();
+			});
+		GW::Chat::CreateCommand(L"24hdeep", [](const wchar_t* message, int argc, LPWSTR* argv) -> void {
+			GW::Chat::SendChat('/', "deep24h");
+			});
+		GW::AgentArray agents = GW::Agents::GetAgentArray();
+		for (size_t i = 0; !kanaxai_agent_id && agents.valid() && i < agents.size(); i++) {
+			if (IsKanaxai(agents[i]))
+				kanaxai_agent_id = agents[i]->agent_id;
+		}
+		SetTransmogs();
+	}
+	else {
+		GW::StoC::RemoveCallback<GW::Packet::StoC::DisplayDialogue>(&ZrawDeepModule_StoCs);
+		GW::StoC::RemoveCallback<GW::Packet::StoC::SpeechBubble>(&ZrawDeepModule_StoCs);
+		GW::StoC::RemoveCallback<GW::Packet::StoC::DialogBody>(&ZrawDeepModule_StoCs);
+		GW::StoC::RemoveCallback<GW::Packet::StoC::InstanceLoadInfo>(&ZrawDeepModule_StoCs);
+		GW::StoC::RemoveCallback<GW::Packet::StoC::AgentAdd>(&ZrawDeepModule_StoCs);
+		GW::StoC::RemoveCallback<GW::Packet::StoC::DisplayCape>(&ZrawDeepModule_StoCs);
+		GW::StoC::RemoveCallback<GW::Packet::StoC::AgentModel>(&ZrawDeepModule_StoCs);
+		SetTransmogs();
+		GW::GameThread::Enqueue([this]() {
+			can_terminate = true;
+			});
+	}
+}
 void ZrawDeepModule::Initialize() {
 	ToolboxModule::Initialize();
 	CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&ZrawDeepModule_StoCs,
-		[this](GW::HookStatus* status, GW::Packet::StoC::DisplayDialogue* packet) -> void {
-            if (!enabled) return;
-			DisplayDialogue(packet);
-		});
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SpeechBubble>(&ZrawDeepModule_StoCs,
-        [this](GW::HookStatus* status, GW::Packet::StoC::SpeechBubble* packet) -> void {
-            if (!enabled || !rewrite_npc_dialogs) return;
-            SetToRandomKanaxaiString(packet->message);
-        });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DialogBody>(&ZrawDeepModule_StoCs,
-        [this](GW::HookStatus* status, GW::Packet::StoC::DialogBody* packet) -> void {
-            if (!enabled || !rewrite_npc_dialogs) return;
-            SetToRandomKanaxaiString(packet->message);
-        });
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&ZrawDeepModule_StoCs,
-		[this](GW::HookStatus* status, GW::Packet::StoC::InstanceLoadInfo* packet) -> void {
-            if (!enabled) return;
-			Reset();
-		});
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(&ZrawDeepModule_StoCs,
-        [this](GW::HookStatus* status, GW::Packet::StoC::AgentAdd* packet) -> void {
-			if (IsKanaxai(packet->agent_type)) {
-				kanaxai_agent_id = packet->agent_id;
-				if (!enabled) return;
-				pending_transmog = clock();
-			}            
-        });
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayCape>(&ZrawDeepModule_StoCs,
-		[this](GW::HookStatus* status, GW::Packet::StoC::DisplayCape* packet) -> void {
-			if (!enabled) return;
-			GW::Agent* a = GW::Agents::GetAgentByID(packet->agent_id);
-			if (!a) return;
-			if (a->IsPlayer() || a->GetCanBeViewedInPartyWindow() || IsKanaxai(a)) {
-				status->blocked = true;
-				pending_transmog = clock();
-			}
-		});
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentModel>(&ZrawDeepModule_StoCs,
-		[this](GW::HookStatus* status, GW::Packet::StoC::AgentModel* packet) -> void {
-            if (!enabled) return;
-			GW::Agent* a = GW::Agents::GetAgentByID(packet->agent_id);
-            if (!a) return;
-			if (a->IsPlayer() || a->GetCanBeViewedInPartyWindow() || IsKanaxai(a)) {
-				status->blocked = true;
-				pending_transmog = clock();
-			}
-		});
-
-    GW::Chat::CreateCommand(L"deep24h", [this](const wchar_t* message, int argc, LPWSTR* argv) -> void {
-        Toggle();
-		Log::Info(enabled ? "24h Deep mode on!" : "24h Deep mode off :(");
-        pending_transmog = clock();
-        });
-	GW::Chat::CreateCommand(L"24hdeep", [](const wchar_t* message, int argc, LPWSTR* argv) -> void {
-		GW::Chat::SendChat('/', "deep24h");
-		});
-	GW::AgentArray agents = GW::Agents::GetAgentArray();
-	for (size_t i = 0; !kanaxai_agent_id && agents.valid() && i < agents.size(); i++) {
-		if (IsKanaxai(agents[i]))
-			kanaxai_agent_id = agents[i]->agent_id;
-	}
-	SetTransmogs();
+	SetEnabled(enabled);
 }
 void ZrawDeepModule::DrawSettingInternal() {
     ImGui::TextDisabled("Use chat command /deep24h to toggle this module on or off at any time");
@@ -197,17 +221,7 @@ void ZrawDeepModule::Update(float delta) {
 }
 void ZrawDeepModule::SignalTerminate() {
 	terminating = true;
-	GW::StoC::RemoveCallback<GW::Packet::StoC::DisplayDialogue>(&ZrawDeepModule_StoCs);
-	GW::StoC::RemoveCallback<GW::Packet::StoC::SpeechBubble>(&ZrawDeepModule_StoCs);
-	GW::StoC::RemoveCallback<GW::Packet::StoC::DialogBody>(&ZrawDeepModule_StoCs);
-	GW::StoC::RemoveCallback<GW::Packet::StoC::InstanceLoadInfo>(&ZrawDeepModule_StoCs);
-	GW::StoC::RemoveCallback<GW::Packet::StoC::AgentAdd>(&ZrawDeepModule_StoCs);
-	GW::StoC::RemoveCallback<GW::Packet::StoC::DisplayCape>(&ZrawDeepModule_StoCs);
-	GW::StoC::RemoveCallback<GW::Packet::StoC::AgentModel>(&ZrawDeepModule_StoCs);
-	SetTransmogs();
-	GW::GameThread::Enqueue([this]() {
-		can_terminate = true;
-		});
+	SetEnabled(false);
 }
 void ZrawDeepModule::SaveSettings(CSimpleIni* ini) {
 	ToolboxModule::SaveSettings(ini);

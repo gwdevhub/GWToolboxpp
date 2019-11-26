@@ -410,8 +410,15 @@ namespace {
 		const uint32_t header = CtoGS_MSGAcceptPartyRequest;
 		uint32_t party_id = 0;
 	};
+	struct DonateFactionPacket {
+		const uint32_t header = CtoGS_MSGDonateFaction;
+		const uint32_t unk1 = 0;
+		uint32_t allegiance = 0;
+		const uint32_t faction_amount = 5000;
+	};
 
 	static clock_t last_send = 0;
+	static std::wstring last_dialog_body;
 }
 
 
@@ -841,6 +848,25 @@ void GameSettings::Initialize() {
         static ReturnToOutpostPacket pak;
         GW::CtoS::SendPacket(&pak);
     });
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DialogBody>(&OnDialog_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::DialogBody* packet) {
+		last_dialog_body = std::wstring(packet->message);
+		});
+	// Skip char name entry dialog when donating faction
+	GW::Agents::RegisterDialogCallback(&OnDialog_Entry, [this](GW::HookStatus* status, uint32_t dialog_id) {
+		if (!skip_entering_name_for_faction_donate) return;
+		if (dialog_id != 135) return;
+		status->blocked = true;
+		static DonateFactionPacket pak;
+		pak.allegiance = 0; // 0 = kurzick, 1 = luxon
+		uint32_t* current_faction = &GW::GameContext::instance()->world->current_kurzick;
+		if (wcsncmp(last_dialog_body.c_str(), L"\x8102\x445\xABB2\xAA22\x2A14",5) == 0) {
+			current_faction = &GW::GameContext::instance()->world->current_luxon;
+			pak.allegiance = 1;
+		}
+		if (*current_faction < pak.faction_amount)
+			return; // Not enough to donate.
+		GW::CtoS::SendPacket(&pak);
+		});
 
     // Flash/focus window on trade
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::TradeStart>(&TradeStart_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::TradeStart*) -> void {
@@ -1238,6 +1264,8 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	auto_age2_on_age = ini->GetBoolValue(Name(), VAR_NAME(auto_age2_on_age), auto_age2_on_age);
 	auto_accept_invites = ini->GetBoolValue(Name(), VAR_NAME(auto_age2_on_age), auto_age2_on_age);
 
+	skip_entering_name_for_faction_donate = ini->GetBoolValue(Name(), VAR_NAME(skip_entering_name_for_faction_donate), skip_entering_name_for_faction_donate);
+
 	::LoadChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
 	::LoadChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);
 	::LoadChannelColor(ini, Name(), "team", GW::Chat::CHANNEL_GROUP);
@@ -1346,6 +1374,8 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 
     ini->SetBoolValue(Name(), VAR_NAME(auto_age_on_vanquish), auto_age_on_vanquish);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_age2_on_age), auto_age2_on_age);
+
+	ini->SetBoolValue(Name(), VAR_NAME(skip_entering_name_for_faction_donate), skip_entering_name_for_faction_donate);
 
 	::SaveChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
 	::SaveChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);
@@ -1500,6 +1530,7 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::SameLine();
 	ImGui::Text("%%");
 	ImGui::ShowHelp("Displays when in a challenge mission or elite mission outpost");
+	ImGui::Checkbox("Skip character name input when donating faction", &skip_entering_name_for_faction_donate);
 
 	if (ImGui::Checkbox("Disable Gold/Green items confirmation", &disable_gold_selling_confirmation)) {
 		if (gold_confirm_patch) {

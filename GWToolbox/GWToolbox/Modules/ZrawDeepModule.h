@@ -31,7 +31,7 @@ private:
     bool kanaxais_true_form = true;
 
 	clock_t pending_transmog = 0;
-	bool can_terminate = false;
+	bool can_terminate = true;
 	bool terminating = false;
 public:
 	static ZrawDeepModule& Instance() {
@@ -44,6 +44,7 @@ public:
 	void SignalTerminate() override;
 	bool CanTerminate() { return can_terminate; }
 	bool HasSettings() { return enabled; }
+	void SetEnabled(bool enabled);
 	void Update(float delta) override;
     void DrawSettingInternal() override;
 	void DisplayDialogue(GW::Packet::StoC::DisplayDialogue*);
@@ -57,20 +58,8 @@ public:
 		checked_enabled = false;
 		valid_for_map = false;
 	}
-	void Disable() {
-        enabled = false;
-		Reset();
-	}
-	void Enable() {
-        enabled = true;
-		Reset();
-	}
 	bool IsEnabled() {
         return enabled;
-	}
-	void Toggle() {
-        enabled = !enabled;
-		Reset();
 	}
 
 	GW::HookEntry ZrawDeepModule_StoCs;

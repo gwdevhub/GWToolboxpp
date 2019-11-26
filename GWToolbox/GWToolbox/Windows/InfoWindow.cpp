@@ -368,36 +368,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                 if (item) {
                     ImGui::LabelText("Addr", "%p", item);
                     ImGui::LabelText("Id", "%d", item->item_id);
-                    ImGui::LabelText("name_enc", "%ls", item->complete_name_enc);
-                    if (ImGui::IsItemClicked()) {
-                        StringDecoderWindow::Instance().PrintEncStr(item->info_string);
-                    }
-
-                   /* ImGui::LabelText("Width", "%f", target->width1);
-                    ImGui::LabelText("Height", "%f", target->height1);
-                    ImGui::LabelText("Rotation", "%f", target->rotation_angle);
-                    ImGui::LabelText("NameProperties", "0x%X", target->name_properties);
-                    ImGui::LabelText("X", "%f", target->pos.x);
-                    ImGui::LabelText("Y", "%f", target->pos.y);
-                    ImGui::LabelText("plane", "%d", target->plane);
-                    ImGui::LabelText("Type", "0x%X", target->type);
-                    ImGui::LabelText("Owner", "%d", target->owner);
-                    ImGui::LabelText("ItemId", "%d", target->item_id);
-                    ImGui::LabelText("ExtraType", "%d", target->extra_type);
-                    ImGui::LabelText("AS of Weapon", "%f", target->weapon_attack_speed);
-                    ImGui::LabelText("AS modifier", "%f", target->attack_speed_modifier);
-                    ImGui::LabelText("PlayerNumber", "%d", target->player_number);
-                    ImGui::LabelText("Primary Prof", "%d", target->primary);
-                    ImGui::LabelText("Secondary Prof", "%d", target->secondary);
-                    ImGui::LabelText("Level", "%d", target->level);
-                    ImGui::LabelText("TeamId", "%d", target->team_id);
-                    ImGui::LabelText("Effects", "0x%X", target->effects);
-                    ImGui::LabelText("ModelState", "0x%X", target->model_state);
-                    ImGui::LabelText("typeMap", "0x%X", target->type_map);
-                    ImGui::LabelText("LoginNumber", "%d", target->login_number);
-                    ImGui::LabelText("Allegiance", "%d", target->allegiance);
-                    ImGui::LabelText("WeaponType", "%d", target->weapon_type);
-                    ImGui::LabelText("Skill", "%d", target->skill);*/
+					ImGui::LabelText("model_file_id", "0x%X", item->model_file_id);
                 }
                 ImGui::PopItemWidth();
                 ImGui::TreePop();
