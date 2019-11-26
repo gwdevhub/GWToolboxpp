@@ -419,6 +419,11 @@ namespace {
 
 	static clock_t last_send = 0;
 	static std::wstring last_dialog_body;
+
+	const enum PING_PARTS {
+		NAME=1,
+		DESC=2
+	};
 }
 
 
@@ -661,16 +666,24 @@ static std::wstring ParseItemDescription(GW::Item* item) {
     return original;
 }
 
-void GameSettings::PingItem(GW::Item* item, bool include_name) {
+void GameSettings::PingItem(GW::Item* item, uint32_t parts) {
 	if (!item) return;
 	GW::Player* p = GW::PlayerMgr::GetPlayerByID(GW::Agents::GetPlayer()->login_number);
 	if (!p) return;
 	std::wstring out;
-	if (include_name)
-		out += item->name_enc;
-	if (item->info_string) {
+	if ((parts & PING_PARTS::NAME) && item->complete_name_enc) {
 		if (out.length())
-			out += L"\x2\x108\x107, \x1\x2";
+			out += L"\x2\x102\x2";
+		out += item->complete_name_enc;
+	}
+	else if ((parts & PING_PARTS::NAME) && item->name_enc) {
+		if (out.length())
+			out += L"\x2\x102\x2";
+		out += item->name_enc;
+	}
+	if ((parts & PING_PARTS::DESC) && item->info_string) {
+		if (out.length())
+			out += L"\x2\x102\x2";
 		out += ParseItemDescription(item);
 	}
 	#ifdef _DEBUG
@@ -680,22 +693,22 @@ void GameSettings::PingItem(GW::Item* item, bool include_name) {
 	PendingChatMessage* m = PendingChatMessage::queueSend(GW::Chat::Channel::CHANNEL_GROUP, out.c_str(), p->name_enc);
 	if (m) GameSettings::Instance().pending_messages.push_back(m);
 }
-void GameSettings::PingItem(uint32_t item_id, bool include_name) {
+void GameSettings::PingItem(uint32_t item_id, uint32_t parts) {
 	if (!item_id) return;
 	GW::ItemArray items = GW::Items::GetItemArray();
 	if (!items.valid()) return;
 	if (item_id >= items.size()) return;
-	return PingItem(items[item_id], include_name);
+	return PingItem(items[item_id], parts);
 }
 void __fastcall OnPingEquippedItem(uint32_t oneC, uint32_t item_id1, uint32_t item_id2) {
     GW::HookBase::EnterHook();
-    OnPingEquippedItemRet(oneC, item_id1, item_id2);
 	if (!GameSettings::Instance().shorthand_item_ping) {
+		OnPingEquippedItemRet(oneC, item_id1, item_id2);
 		GW::HookBase::LeaveHook();
 		return;
 	}
-	GameSettings::PingItem(item_id1);
-	GameSettings::PingItem(item_id2);
+	GameSettings::PingItem(item_id1, PING_PARTS::NAME | PING_PARTS::DESC);
+	GameSettings::PingItem(item_id2, PING_PARTS::NAME | PING_PARTS::DESC);
     GW::HookBase::LeaveHook();
 }
 

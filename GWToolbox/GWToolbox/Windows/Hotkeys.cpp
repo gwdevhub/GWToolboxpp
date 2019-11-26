@@ -49,7 +49,7 @@ TBHotkey* TBHotkey::HotkeyFactory(CSimpleIni* ini, const char* section) {
 		return new HotkeyUseItem(ini, section);
 	} else if (type.compare(HotkeyDropUseBuff::IniSection()) == 0) {
 		return new HotkeyDropUseBuff(ini, section);
-	} else if (type.compare(HotkeyToggle::IniSection()) == 0) {
+	} else if (type.compare(HotkeyToggle::IniSection()) == 0 && HotkeyToggle::IsValid(ini,section)) {
 		return new HotkeyToggle(ini, section);
 	} else if (type.compare(HotkeyAction::IniSection()) == 0) {
 		return new HotkeyAction(ini, section);
@@ -543,6 +543,14 @@ bool HotkeyToggle::GetText(void*, int idx, const char** out_text) {
 	case CoinDrop: *out_text = "Coin Drop"; return true;
 	default: return false;
 	}
+}
+const bool HotkeyToggle::IsValid(CSimpleIni* ini, const char* section) {
+	switch (ini->GetLongValue(section, "ToggleID", (long)Clicker)) {
+	case (long)Clicker:
+	case (long)Pcons:
+		return true;
+	}
+	return false;
 }
 HotkeyToggle::HotkeyToggle(CSimpleIni* ini, const char* section) : TBHotkey(ini, section) {
 	target = ini ? (Toggle)ini->GetLongValue(section, "ToggleID", (long)Clicker) : Clicker;

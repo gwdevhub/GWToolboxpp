@@ -177,8 +177,8 @@ public:
 		return instance;
 	}
 	const char* Name() const override { return "Game Settings"; }
-	static void PingItem(GW::Item* item, bool include_name = false);
-	static void PingItem(uint32_t item_id, bool include_name = false);
+	static void PingItem(GW::Item* item, uint32_t parts = 3);
+	static void PingItem(uint32_t item_id, uint32_t parts = 3);
 
 	void Initialize() override;
 	void Terminate() override;
@@ -254,8 +254,6 @@ public:
 
 	bool disable_gold_selling_confirmation = false;
 
-	bool skip_entering_name_for_faction_donate = true;
-
 	void ApplyBorderless(bool value);
 	void SetAfkMessage(std::wstring&& message);
 	static void ItemClickCallback(GW::HookStatus *, uint32_t type, uint32_t slot, GW::Bag *bag);
@@ -285,7 +283,8 @@ private:
     bool redirect_npc_messages_to_emote_chat = false;
 	bool auto_age2_on_age = true;
 	bool auto_age_on_vanquish = false;
-    
+	bool skip_entering_name_for_faction_donate = false;
+
 	void DrawChannelColor(const char *name, GW::Chat::Channel chan);
 	static void FriendStatusCallback(
 		GW::HookStatus *,

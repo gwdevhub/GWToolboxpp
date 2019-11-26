@@ -161,7 +161,7 @@ public:
 
 // hotkey to toggle a toolbox function
 class HotkeyToggle : public TBHotkey {
-	const int n_targets = 3;
+	const int n_targets = 2;
 	enum Toggle {
 		Clicker,
 		Pcons,
@@ -172,6 +172,7 @@ class HotkeyToggle : public TBHotkey {
 public:
 	Toggle target; // the thing to toggle
 
+	static const bool IsValid(CSimpleIni* ini, const char* section);
 	static const char* IniSection() { return "Toggle"; }
 	const char* Name() const override { return IniSection(); }
 
