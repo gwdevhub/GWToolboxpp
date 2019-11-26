@@ -831,6 +831,9 @@ void GameSettings::Initialize() {
 			gold_confirm_patch = new GW::MemoryPatcher(found, "\x90\x90", 2);
 		}
 	}
+	if (tome_patch) tome_patch->TooglePatch(show_unlearned_skill);
+	if (gold_confirm_patch) gold_confirm_patch->TooglePatch(disable_gold_selling_confirmation);
+
     // Automatically return to outpost on defeat
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyDefeated>(&PartyDefeated_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::PartyDefeated*) -> void {
         if (!auto_return_on_defeat || !GetPlayerIsLeader())

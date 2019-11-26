@@ -55,11 +55,6 @@ void ChatFilter::PostInitialize() {
 void ChatFilter::Initialize() {
 	ToolboxModule::Initialize();
 
-	strcpy_s(bycontent_word_buf, "");
-	strcpy_s(bycontent_regex_buf, "");
-	//strcpy_s(byauthor_buf, "");
-
-
 	// server messages
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&BlockIfApplicable_Entry,
 	[this](GW::HookStatus *status, GW::Packet::StoC::MessageServer *pak) -> void {
@@ -128,6 +123,9 @@ void ChatFilter::LoadSettings(CSimpleIni* ini) {
     filter_channel_trade = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_trade), filter_channel_trade);
     filter_channel_alliance = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_alliance), filter_channel_alliance);
     filter_channel_emotes = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_emotes), filter_channel_emotes);
+
+	strcpy_s(bycontent_word_buf, "");
+	strcpy_s(bycontent_regex_buf, "");
 
 	{
 		std::ifstream file;

@@ -40,7 +40,7 @@ void TradeWindow::Initialize() {
 
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData)) {
-		printf("WSAStartup Failed.\n");
+		Log::Log("WSAStartup Failed.\n");
 		return;
 	}
 
@@ -97,7 +97,6 @@ bool TradeWindow::GetInKamadan() {
 
 void TradeWindow::Update(float delta) {
 	fetch();
-
 	if (ws_chat) {
 		switch (ws_chat->getReadyState()) {
 			case WebSocket::CLOSED:
@@ -112,14 +111,14 @@ void TradeWindow::Update(float delta) {
 			ws_chat->close();
 			return;
 		}
-		// do not display trade chat while in kamadan AE district 1
-		if (GetInKamadan() && GW::Map::GetDistrict() == 1 &&
-			GW::Map::GetRegion() == GW::Constants::Region::America) {
-			ws_chat->close();
-			return;
-		}
 	}
+
 	if (!print_game_chat) return;
+	if (GetInKamadan() && GW::Map::GetDistrict() == 1 &&
+		GW::Map::GetRegion() == GW::Constants::Region::America) {
+		if(ws_chat) ws_chat->close();
+		return;
+	}
 	if (!ws_chat && !ws_chat_connecting) {
 		AsyncChatConnect();
 		return;
@@ -457,7 +456,7 @@ void TradeWindow::AsyncChatConnect() {
 	ws_chat_connecting = true;
 	thread_jobs.push([this]() {
 		if (!(ws_chat = WebSocket::from_url(ws_host))) {
-			printf("Couldn't connect to the host '%s'", ws_host);
+			Log::Log("Couldn't connect to the host '%s'", ws_host);
 		}
 		ws_chat_connecting = false;
 		});
@@ -471,7 +470,7 @@ void TradeWindow::AsyncWindowConnect() {
 	ws_window_connecting = true;
 	thread_jobs.push([this]() {
 		if (!(ws_window = WebSocket::from_url(ws_host))) {
-			printf("Couldn't connect to the host '%s'", ws_host);
+			Log::Log("Couldn't connect to the host '%s'", ws_host);
 		}
 		ws_window_connecting = false;
 		});
