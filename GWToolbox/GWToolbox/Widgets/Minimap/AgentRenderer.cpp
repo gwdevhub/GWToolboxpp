@@ -17,6 +17,16 @@
 
 #define AGENTCOLOR_INIFILENAME L"AgentColors.ini"
 
+namespace {
+	static unsigned int GetAgentProfession(const GW::Agent* agent) {
+		if (!agent) return 0;
+		if (agent->primary) return agent->primary;
+		GW::NPC* npc = GW::Agents::GetNPCByID(agent->player_number);
+		if (!npc) return 0;
+		return npc->primary;
+	}
+}
+
 unsigned int AgentRenderer::CustomAgent::cur_ui_id = 0;
 
 void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
@@ -47,6 +57,7 @@ void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	size_minion = (float)ini->GetDoubleValue(section, VAR_NAME(size_minion), 50.0);
 
 	show_hidden_npcs = ini->GetBoolValue(section, VAR_NAME(show_hidden_npcs), show_hidden_npcs);
+	boss_colors = ini->GetBoolValue(section, VAR_NAME(boss_colors), boss_colors);
 
 	LoadAgentColors();
 
@@ -101,6 +112,7 @@ void AgentRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 	ini->SetDoubleValue(section, VAR_NAME(size_minion), size_minion);
 
 	ini->SetBoolValue(section, VAR_NAME(show_hidden_npcs), show_hidden_npcs);
+	ini->SetBoolValue(section, VAR_NAME(boss_colors), boss_colors);
 
 	SaveAgentColors();
 }
@@ -175,6 +187,7 @@ void AgentRenderer::DrawSettings() {
 				size_item = 25.0f;
 				size_boss = 125.0f;
 				size_minion = 50.0f;
+				boss_colors = true;
 				ImGui::CloseCurrentPopup();
 			}
 			ImGui::SameLine();
@@ -535,12 +548,16 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
 		}
 		if (agent->hp > 0.0f) return ca->color;
 	}
-
 	// hostiles
 	if (agent->allegiance == 0x3) {
-		if (agent->hp > 0.9f) return color_hostile;
-		if (agent->hp > 0.0f) return Colors::Sub(color_hostile, color_agent_damaged_modifier);
-		return color_hostile_dead;
+		if(agent->hp <= 0.0f) return color_hostile_dead;
+		const Color* c = &color_hostile;
+		if (boss_colors && agent->GetHasBossGlow()) {
+			unsigned int prof = GetAgentProfession(agent);
+			if (prof) c = &profession_colors[prof];
+		}
+		if (agent->hp > 0.9f) return *c;
+		return Colors::Sub(*c, color_agent_damaged_modifier);
 	}
 
 	// neutrals

@@ -199,6 +199,7 @@ void Minimap::DrawSettingInternal() {
 		Colors::DrawSetting("Background", &hero_flag_window_background);
 		ImGui::TreePop();
 	}
+	ImGui::Checkbox("Show boss by profession color on minimap", &agent_renderer.boss_colors);
 	ImGui::Checkbox("Show hidden NPCs", &agent_renderer.show_hidden_npcs);
 	ImGui::ShowHelp("Show NPCs that aren't usually visible on the minimap\ne.g. minipets, invisible NPCs");
     ImGui::Checkbox("Allow mouse click-through", &mouse_clickthrough);
