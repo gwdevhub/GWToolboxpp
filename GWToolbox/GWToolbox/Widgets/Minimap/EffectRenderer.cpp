@@ -24,56 +24,40 @@
 
 void EffectRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	Invalidate();
+	Colors::Load(ini, section, VAR_NAME(aoe_color), aoe_color);
 }
 void EffectRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
-	ini->SetDoubleValue(section, "maxrange_interp_begin", maxrange_interp_begin);
-	ini->SetDoubleValue(section, "maxrange_interp_end", maxrange_interp_end);
+	Colors::Save(ini, section, VAR_NAME(aoe_color), aoe_color);
 }
 void EffectRenderer::DrawSettings() {
-	/*if (ImGui::SmallButton("Restore Defaults")) {
-		// TODO
-	}
-	Colors::DrawSetting("Drawings", &color_drawings);
-	if (Colors::DrawSetting("Pings", &ping_circle.color)) {
-		ping_circle.Invalidate();
-	}
-	if (Colors::DrawSetting("Shadowstep Marker", &marker.color)) {
-		marker.Invalidate();
-	}
-	Colors::DrawSetting("Shadowstep Line", &color_shadowstep_line);
-	Colors::DrawSetting("Shadowstep Line (Max range)", &color_shadowstep_line_maxrange);
-	if (ImGui::SliderFloat("Max range start", &maxrange_interp_begin, 0.0f, 1.0f)
-		&& maxrange_interp_end < maxrange_interp_begin) {
-		maxrange_interp_end = maxrange_interp_begin;
-	}
-	if (ImGui::SliderFloat("Max range end", &maxrange_interp_end, 0.0f, 1.0f)
-		&& maxrange_interp_begin > maxrange_interp_end) {
-		maxrange_interp_begin = maxrange_interp_end;
-	}*/
+	Colors::DrawSetting("AoE Circle Color", &aoe_color);
 }
-
-EffectRenderer::EffectRenderer() : vertices(nullptr) {}
 
 void EffectRenderer::PacketCallback(GW::Packet::StoC::GenericValue* pak) {
 	if (pak->Value_id != 21) return;
+	uint32_t duration = 10000;
 	switch (pak->value) {
 	case 347: // Lava font
+		duration = 5000;
 		break;
 	default: return;
 	}
 	GW::Agent* caster = GW::Agents::GetAgentByID(pak->agent_id);
 	if (!caster || caster->allegiance != 0x3) return;
-	pings.push_front(new Effect(pak->value, caster->pos.x, caster->pos.y));
-
+	Effect* e = new Effect(pak->value, caster->pos.x, caster->pos.y, duration);
+	aoe_effects.push_front(e);
 }
 
 void EffectRenderer::PacketCallback(GW::Packet::StoC::GenericValueTarget* pak) {
 	if (pak->Value_id != 20) return;
+	uint32_t duration = 10000;
 	switch (pak->value) {
 	case 381: // Maelstrom
+		break;
 	case 346: // Savannah heat
 	case 351: // Breath of fire
 	case 875: // Bed of coals
+		duration = 5000;
 		break;
 	default: return;
 	}
@@ -81,16 +65,20 @@ void EffectRenderer::PacketCallback(GW::Packet::StoC::GenericValueTarget* pak) {
 	if (!caster || caster->allegiance != 0x3) return;
 	GW::Agent* target = GW::Agents::GetAgentByID(pak->target);
 	if (!target) return;
-	pings.push_front(new Effect(pak->value, target->pos.x, target->pos.y));
-
+	Effect* e = new Effect(pak->value, target->pos.x, target->pos.y, duration);
+	e->circle.color = &aoe_color;
+	aoe_effects.push_front(e);
 }
 
 void EffectRenderer::PacketCallback(GW::Packet::StoC::PlayEffect* pak) {
 	// TODO: Fire storm and Meteor shower have no caster!
 	// Need to record GenericValueTarget with value_id matching these skills, then roughly match the coords after.
+	uint32_t duration = 10000;
 	switch (pak->effect_id) {
 	case 131: // Chaos storm
+		break;
 	case 994: // Churning earth
+		duration = 5000;
 		break;
 	default: return;
 	}
@@ -98,15 +86,13 @@ void EffectRenderer::PacketCallback(GW::Packet::StoC::PlayEffect* pak) {
 		GW::Agent* a = GW::Agents::GetAgentByID(pak->agent_id);
 		if (!a || a->allegiance != 0x3) return;
 	}
-	pings.push_front(new Effect(pak->effect_id, pak->coords.x, pak->coords.y));
+	Effect* e = new Effect(pak->effect_id, pak->coords.x, pak->coords.y, duration);
+	e->circle.color = &aoe_color;
+	aoe_effects.push_front(e);
 }
 
 void EffectRenderer::Initialize(IDirect3DDevice9* device) {
 	type = D3DPT_LINELIST;
-
-	vertices_max = 0x1000; // support for up to 4096 line segments, should be enough
-
-	vertices = nullptr;
 
 	HRESULT hr = device->CreateVertexBuffer(sizeof(D3DVertex) * vertices_max, 0,
 		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
@@ -121,32 +107,32 @@ void EffectRenderer::Render(IDirect3DDevice9* device) {
 		Initialize(device);
 	}
 
-	DrawPings(device);
+	DrawAoeEffects(device);
 }
 
-void EffectRenderer::DrawPings(IDirect3DDevice9* device) {
+void EffectRenderer::DrawAoeEffects(IDirect3DDevice9* device) {
 	D3DXMATRIX translate, scale, world;
 	D3DXMatrixScaling(&scale, GW::Constants::Range::Nearby, GW::Constants::Range::Nearby, 1.0f);
-	for (Effect* ping : pings) {
-		if (TIMER_DIFF(ping->start) > ping->duration) continue;
+	for (Effect* effect : aoe_effects) {
+		if (TIMER_DIFF(effect->start) > effect->duration) continue;
 
-		D3DXMatrixTranslation(&translate, ping->x, ping->y, 0.0f);
+		D3DXMatrixTranslation(&translate, effect->x, effect->y, 0.0f);
 		world = scale * translate;
 		device->SetTransform(D3DTS_WORLD, &world);
-		ping->circle.Render(device);
+		effect->circle.Render(device);
 	}
-	for (size_t i = 0; i < pings.size(); i++) {
-		Effect* effect = pings[i];
+	for (size_t i = 0; i < aoe_effects.size(); i++) {
+		Effect* effect = aoe_effects[i];
 		if (TIMER_DIFF(effect->start) > effect->duration) {
 			delete effect;
-			pings.erase(pings.begin() + i);
-			if (!pings.size()) break;
+			aoe_effects.erase(aoe_effects.begin() + i);
+			if (!aoe_effects.size()) break;
 			i--;
 		}
 	}
 }
 
-void EffectRenderer::EffectCircle ::Initialize(IDirect3DDevice9* device) {
+void EffectRenderer::EffectCircle::Initialize(IDirect3DDevice9* device) {
 	type = D3DPT_LINESTRIP;
 	count = 16; // polycount
 	unsigned int vertex_count = count + 1;
@@ -164,7 +150,7 @@ void EffectRenderer::EffectCircle ::Initialize(IDirect3DDevice9* device) {
 		vertices[i].x = std::cos(angle);
 		vertices[i].y = std::sin(angle);
 		vertices[i].z = 0.0f;
-		vertices[i].color = color;
+		vertices[i].color = *color;
 	}
 	vertices[count] = vertices[0];
 

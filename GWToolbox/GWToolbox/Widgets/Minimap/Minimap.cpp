@@ -193,6 +193,10 @@ void Minimap::DrawSettingInternal() {
 		pingslines_renderer.DrawSettings();
 		ImGui::TreePop();
 	}
+	if (ImGui::TreeNode("AoE Effects")) {
+		effect_renderer.DrawSettings();
+		ImGui::TreePop();
+	}
 	if (ImGui::TreeNode("Symbols")) {
 		symbols_renderer.DrawSettings();
 		ImGui::TreePop();
