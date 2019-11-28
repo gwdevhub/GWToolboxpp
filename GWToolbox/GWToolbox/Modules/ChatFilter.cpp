@@ -78,14 +78,20 @@ void ChatFilter::Initialize() {
 	});
 }
 void ChatFilter::BlockIfApplicable(GW::HookStatus* status, const wchar_t* message, uint32_t channel) {
-    if (message && ShouldIgnore(message, channel))
+	if (message && ShouldIgnore(message, channel)) {
+		/*Log::Log("ChatFilter Blocked:\n");
+		for (size_t i = 0; message[i]; i++)
+			printchar(message[i]);
+		printf("\n");*/
 		status->blocked = true;
+	}
 }
 void ChatFilter::ClearMessageBufferIfBlocked(GW::HookStatus* status, GW::Packet::StoC::PacketBase*) {
 	if (!status->blocked)
 		return;
 	GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
-	if (!buff) return;
+	if (!buff || !buff->valid()) return;
+	//Log::Log("ChatFilter cleared message buffer\n");
 	buff->clear();
 }
 
