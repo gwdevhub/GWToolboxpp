@@ -967,7 +967,7 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
 	};
 	const float pi = 3.14159f;
 	std::wstring arg1 = GuiUtils::ToLower(argv[1]);
-	if (arg1 == L"ee" || arg1 == L"dc") {
+	if (arg1 == L"ee") {
 		// target best ebon escape target
 		GW::AgentArray agents = GW::Agents::GetAgentArray();
 		if (!agents.valid()) return;
@@ -983,7 +983,9 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
 		int closest = -1;
 		for (size_t i = 0; i < agents.size(); ++i) {
 			GW::Agent* agent = agents[i];
-			if (agent == nullptr || agent == me || !agent->GetIsCharacterType() || agent->GetIsDead())
+			if (agent == nullptr || agent == me 
+				|| !agent->GetIsCharacterType() || agent->GetIsDead() 
+				|| agent->allegiance == 0x3)
 				continue;
 			float this_distance = GW::GetSquareDistance(me->pos, agents[i]->pos);
 			if (this_distance > max_distance || distance > this_distance)

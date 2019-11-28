@@ -301,6 +301,7 @@
     <ClInclude Include="GWToolbox\Widgets\ServerInfoWidget.h" />
     <ClInclude Include="GWToolbox\mp3.h" />
     <ClInclude Include="GWToolbox\Modules\ZrawDeepModule.h" />
+    <ClInclude Include="GWToolbox\Widgets\Minimap\EffectRenderer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -467,6 +468,7 @@
     <ClCompile Include="GWToolbox\Widgets\ServerInfoWidget.cpp" />
     <ClCompile Include="GWToolbox\mp3.cpp" />
     <ClCompile Include="GWToolbox\Modules\ZrawDeepModule.cpp" />
+    <ClCompile Include="GWToolbox\Widgets\Minimap\EffectRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GWToolbox.rc">

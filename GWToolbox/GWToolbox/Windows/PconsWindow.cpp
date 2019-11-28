@@ -153,14 +153,14 @@ void PconsWindow::Initialize() {
 	[](GW::HookStatus *, GW::Packet::StoC::GenericValue *pak) -> void {
 		if (PconAlcohol::suppress_drunk_emotes
 			&& pak->agent_id == GW::Agents::GetPlayerId()
-			&& pak->unk1 == 22) {
+			&& pak->Value_id == 22) {
 
-			if (pak->unk2 == 0x33E807E5) pak->unk2 = 0; // kneel
-			if (pak->unk2 == 0x313AC9D1) pak->unk2 = 0; // bored
-			if (pak->unk2 == 0x3033596A) pak->unk2 = 0; // moan
-			if (pak->unk2 == 0x305A7EF2) pak->unk2 = 0; // flex
-			if (pak->unk2 == 0x74999B06) pak->unk2 = 0; // fistshake
-			if (pak->unk2 == 0x30446E61) pak->unk2 = 0; // roar
+			if (pak->value == 0x33E807E5) pak->value = 0; // kneel
+			if (pak->value == 0x313AC9D1) pak->value = 0; // bored
+			if (pak->value == 0x3033596A) pak->value = 0; // moan
+			if (pak->value == 0x305A7EF2) pak->value = 0; // flex
+			if (pak->value == 0x74999B06) pak->value = 0; // fistshake
+			if (pak->value == 0x30446E61) pak->value = 0; // roar
 		}
 	});
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentState>(&AgentState_Entry,

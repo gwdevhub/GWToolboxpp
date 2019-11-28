@@ -128,6 +128,7 @@
     <ClInclude Include="GWToolbox\Modules\TwitchModule.h" />
     <ClInclude Include="GWToolbox\mp3.h" />
     <ClInclude Include="GWToolbox\sha1.hpp" />
+    <ClInclude Include="GWToolbox\Widgets\Minimap\EffectRenderer.h" />
     <ClInclude Include="GWToolbox\Widgets\ServerInfoWidget.h" />
     <ClInclude Include="GWToolbox\Windows\FriendListWindow.h" />
     <ClInclude Include="GWToolbox\Windows\PacketLoggerWindow.h" />
@@ -236,6 +237,7 @@
     <ClCompile Include="GWToolbox\Modules\TwitchModule.cpp" />
     <ClCompile Include="GWToolbox\mp3.cpp" />
     <ClCompile Include="GWToolbox\sha1.cpp" />
+    <ClCompile Include="GWToolbox\Widgets\Minimap\EffectRenderer.cpp" />
     <ClCompile Include="GWToolbox\Widgets\ServerInfoWidget.cpp" />
     <ClCompile Include="GWToolbox\Windows\FriendListWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\PacketLoggerWindow.cpp" />

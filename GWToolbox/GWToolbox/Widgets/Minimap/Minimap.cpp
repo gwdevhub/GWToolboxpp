@@ -47,10 +47,23 @@ void Minimap::Initialize() {
 			pingslines_renderer.P138Callback(pak);
 		}
 	});
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayEffect>(&CompassEvent_Entry,
+		[this](GW::HookStatus* status, GW::Packet::StoC::PlayEffect* pak) -> void {
+			if (visible) {
+				effect_renderer.PacketCallback(pak);
+			}
+		});
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&GenericValueTarget_Entry,
+		[this](GW::HookStatus* s, GW::Packet::StoC::GenericValue* pak) -> void {
+			if (visible) {
+				effect_renderer.PacketCallback(pak);
+			}
+		});
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValueTarget>(&GenericValueTarget_Entry,
-	[this](GW::HookStatus *, GW::Packet::StoC::GenericValueTarget *pak) -> void {
+	[this](GW::HookStatus * s, GW::Packet::StoC::GenericValueTarget *pak) -> void {
 		if (visible) {
 			pingslines_renderer.P153Callback(pak);
+			effect_renderer.PacketCallback(pak);
 		}
 	});
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SkillActivate>(&SkillActivate_Entry,
@@ -239,6 +252,7 @@ void Minimap::LoadSettings(CSimpleIni* ini) {
 	pingslines_renderer.LoadSettings(ini, Name());
 	symbols_renderer.LoadSettings(ini, Name());
 	custom_renderer.LoadSettings(ini, Name());
+	effect_renderer.LoadSettings(ini, Name());
 }
 
 void Minimap::SaveSettings(CSimpleIni* ini) {
@@ -375,6 +389,8 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 
 			Instance().custom_renderer.Render(device);
 
+			
+
 			// move the rings to the char position
 			D3DXMatrixTranslation(&translate_char, me->pos.x, me->pos.y, 0);
 			device->SetTransform(D3DTS_WORLD, &translate_char);
@@ -394,6 +410,8 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 
 			device->SetTransform(D3DTS_WORLD, &identity);
 			Instance().agent_renderer.Render(device);
+
+			Instance().effect_renderer.Render(device);
 
 			Instance().pingslines_renderer.Render(device);
 

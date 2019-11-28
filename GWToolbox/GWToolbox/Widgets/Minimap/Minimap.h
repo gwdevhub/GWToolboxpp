@@ -11,6 +11,7 @@
 #include "PingsLinesRenderer.h"
 #include "SymbolsRenderer.h"
 #include "CustomRenderer.h"
+#include "EffectRenderer.h"
 
 class Minimap : public ToolboxWidget {
 	struct Vec2i {
@@ -65,6 +66,7 @@ public:
 	PingsLinesRenderer pingslines_renderer;
 	SymbolsRenderer symbols_renderer;
 	CustomRenderer custom_renderer;
+	EffectRenderer effect_renderer;
 
 private:
 	bool IsInside(int x, int y) const;
