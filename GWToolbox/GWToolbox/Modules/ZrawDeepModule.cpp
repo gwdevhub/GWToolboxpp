@@ -143,14 +143,7 @@ void ZrawDeepModule::SetEnabled(bool _enabled) {
 				}
 			});
 
-		GW::Chat::CreateCommand(L"deep24h", [this](const wchar_t* message, int argc, LPWSTR* argv) -> void {
-			SetEnabled(!enabled);
-			Log::Info(enabled ? "24h Deep mode on!" : "24h Deep mode off :(");
-			pending_transmog = clock();
-			});
-		GW::Chat::CreateCommand(L"24hdeep", [](const wchar_t* message, int argc, LPWSTR* argv) -> void {
-			GW::Chat::SendChat('/', "deep24h");
-			});
+
 		GW::AgentArray agents = GW::Agents::GetAgentArray();
 		for (size_t i = 0; !kanaxai_agent_id && agents.valid() && i < agents.size(); i++) {
 			if (IsKanaxai(agents[i]))
@@ -176,6 +169,14 @@ void ZrawDeepModule::Initialize() {
 	ToolboxModule::Initialize();
 	CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
 	SetEnabled(enabled);
+    GW::Chat::CreateCommand(L"deep24h", [this](const wchar_t* message, int argc, LPWSTR* argv) -> void {
+        SetEnabled(!enabled);
+        Log::Info(enabled ? "24h Deep mode on!" : "24h Deep mode off :(");
+        pending_transmog = clock();
+        });
+    GW::Chat::CreateCommand(L"24hdeep", [](const wchar_t* message, int argc, LPWSTR* argv) -> void {
+        GW::Chat::SendChat('/', "deep24h");
+        });
 }
 void ZrawDeepModule::DrawSettingInternal() {
     ImGui::TextDisabled("Use chat command /deep24h to toggle this module on or off at any time");
