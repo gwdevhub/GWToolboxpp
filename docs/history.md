@@ -5,6 +5,42 @@ layout: default
 # Version History
 Previous releases are provided as dll files. In order to use it, you need to use a different launcher which must be placed in the same directory as the dll. If you are looking for the latest version, go to the [Home Page](./) instead.
 
+## Version 2.28, Extended 1.9.2
+* [New] Added auto-accept invites when ticked option for faster party reorder
+* [New] Added option to skip entering character name when donating faction
+* [New] Added boss by profession color to Minimap
+* [New] Added /target hos and /target ee commands, see help section for info
+* [New] Added AoE circles for Maelstrom, Chaos storm, Lava font, Savannah heat, Breath of fire, Bed of coals, Churning earth
+* [New] Added option to add player number to player names in explorable areas
+* [New] Added pcons per character option, default turned on
+* [Fix] Gold selling prompts, chat filter content, and learnt skill tomes options load properly again
+* [Fix] Fixed trade alerts by regex not working
+* [Fix] Reduced flashing GW window spam when being invited to a party
+* [Fix] Fixed chat filter blocking some messages in error.
+* [Fix] Fixed issue with "Load Settings" not working properly after initial load
+* [Minor] Removed armor descriptions when using /pingitem command. Will add headpiece +1 info in a later release.
+* [Minor] Remove "I'm wielding" text when pinging weapons with GWToolbox
+* [Minor] Remove coindrop toggle
+* [Minor] Stability changes and shutdown fixes
+* [Minor] Hide /deep24h setting from settings window when not enabled
+
+## Version 2.28, Extended 1.9.11
+* [New] Added pcons to GWToolbox Builds window; pcons can now be assigned to a particular build and auto-enabled when loaded.
+* [New] /transmo command updated to allow players to transform into a list of pre-defined NPCs by name instead of just the one target. "/transmo reset" will remove the current NPC skin on the player. See help section of GWToolbox in-game for more info
+* [New] /transmotarget command added, similar syntax to /transmo
+* [New] /transmoparty command added, similar syntax to /transmo
+* [New] /loadbuild command added, allows player to load builds from the GWToolbox Builds window by name or build code. See help section of GWToolbox in-game for more info
+* [New] /pingitem command added, allows player to ping any currently equipped item. See help section of GWToolbox in-game for more info.
+* [New] Added 24h Deep module - use /deep24h command to toggle
+* [Minor] Added daily quest chat command help section
+* [Minor] Merged in vanilla version 2.28
+* [Minor] Removed "n platinum, n gold" from pinged item descriptions
+* [Fix] Fixed pcon refill bug on map load spamming errors in chat
+* [Fix] Auto resign now works when observing another player
+* [Fix] Tweaks to discord module after merging with vanilla codebase
+* [Fix] Fixed updater not saving preferences
+* [Fix] Fixed issues with loading and saving to file
+
 ## Version 2.27, Extended 1.8.96
 * [New] Automatic /age on vanquish option
 * [New] Automatic /age2 on /age option
