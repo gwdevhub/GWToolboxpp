@@ -19,6 +19,26 @@
 #include "logger.h"
 #include <chrono>
 #include <thread>
+namespace {
+	static bool IsPvE() {
+		if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
+			return false;
+		GW::AreaInfo* map = GW::Map::GetCurrentMapInfo();
+		if (!map) return false;
+		switch (static_cast<GW::RegionType>(map->type)) {
+		case GW::RegionType::RegionType_AllianceBattle:
+		case GW::RegionType::RegionType_Arena:
+		case GW::RegionType::RegionType_GuildBattleArea:
+		case GW::RegionType::RegionType_CompetitiveMission:
+		case GW::RegionType::RegionType_ZaishenBattle:
+		case GW::RegionType::RegionType_HeroesAscent:
+		case GW::RegionType::RegionType_HeroBattleArea:
+			return false;
+		}
+		return true;
+	}
+}
+
 void PartyWindowModule::Update(float delta) {
 
 }
@@ -52,6 +72,14 @@ void PartyWindowModule::Initialize() {
 	// Flash/focus window on zoning (and a bit of housekeeping)
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::GameSrvTransfer* pak) -> void {
 		allies_added_to_party.clear();
+		});
+	// Player numbers in party window
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(&GameSrvTransfer_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::PlayerJoinInstance* pak) -> void {
+		if (!add_player_numbers_to_party_window || !IsPvE())
+			return;
+		wchar_t buf[32] = { 0 };
+		wnsprintfW(buf, 32, L"%s (%d)", pak->player_name, pak->player_number);
+		wcscpy(pak->player_name, buf);
 		});
 }
 void PartyWindowModule::CheckMap() {
@@ -223,6 +251,8 @@ bool PartyWindowModule::ShouldAddAgentToPartyWindow(GW::Agent* a) {
 	return ShouldAddAgentToPartyWindow(agent_type);
 }
 void PartyWindowModule::DrawSettingInternal() {
+	ImGui::Checkbox("Add player numbers to party window", &add_player_numbers_to_party_window);
+	ImGui::ShowHelp("Will update on next map");
 	if (ImGui::Checkbox("Add special NPCs to party window", &add_npcs_to_party_window))
 		CheckMap();
 	ImGui::ShowHelp("Adds special NPCs to the Allies section of the party window within compass range.");
@@ -300,6 +330,8 @@ void PartyWindowModule::SaveSettings(CSimpleIni* ini) {
 	// Clear existing ini settings
 	ini->Delete(Name(), NULL, NULL);
 
+	ini->SetBoolValue(Name(), VAR_NAME(add_player_numbers_to_party_window), add_player_numbers_to_party_window);
+
 	// - Re-fill settings.
 	ini->SetBoolValue(Name(), VAR_NAME(add_npcs_to_party_window_enabled), add_npcs_to_party_window);
 	for (size_t i = 0; i < user_defined_npcs.size(); i++) {
@@ -320,6 +352,7 @@ void PartyWindowModule::LoadSettings(CSimpleIni* ini) {
 		return LoadDefaults();
 
 	add_npcs_to_party_window = ini->GetBoolValue(Name(), VAR_NAME(add_npcs_to_party_window), add_npcs_to_party_window);
+	add_player_numbers_to_party_window = ini->GetBoolValue(Name(), VAR_NAME(add_player_numbers_to_party_window), add_player_numbers_to_party_window);
 
 	ClearSpecialNPCs();
 	for (CSimpleIniA::TNamesDepend::const_iterator i = keys.begin(); i != keys.end(); ++i) {

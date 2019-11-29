@@ -1132,11 +1132,12 @@ bool GameSettings::GetPlayerIsLeader() {
     if (!party) return false;
     const wchar_t* player_name = GetPlayerName();
     if (!player_name) return false;
+	size_t name_len = wcslen(player_name);
     if (!party->players.size()) return false;
     for (size_t i = 0; i < party->players.size(); i++) {
         if (!party->players[i].connected())
             continue;
-        return wcsncmp(GW::PlayerMgr::GetPlayerName(party->players[i].login_number), player_name, 20) == 0;
+        return wcsncmp(GW::PlayerMgr::GetPlayerName(party->players[i].login_number), player_name, name_len) == 0;
     }
     return false;
 }

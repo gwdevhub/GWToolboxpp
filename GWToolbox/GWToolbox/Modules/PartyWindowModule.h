@@ -90,6 +90,7 @@ private:
 	std::map<GW::Constants::MapID, std::wstring> map_names_by_id;
 
 	bool add_npcs_to_party_window = true; // Quick tickbox to disable the module without restarting TB
+	bool add_player_numbers_to_party_window = false;
 
 	char new_npc_alias[128] = { 0 };
 	int new_npc_model_id = 0;
