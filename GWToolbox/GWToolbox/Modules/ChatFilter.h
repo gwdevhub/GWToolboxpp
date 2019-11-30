@@ -23,14 +23,11 @@ public:
 	const char* Name() const override { return "Chat Filter"; }
 
 	void Initialize() override;
-	void PostInitialize();
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
 
 	void Update(float delta) override;
-
-	static void ClearMessageBufferIfBlocked(GW::HookStatus*, GW::Packet::StoC::PacketBase*);
 
 private:
 	const wchar_t* Get1stSegment(const wchar_t *message) const;
@@ -126,7 +123,5 @@ private:
 		ParseBuffer(byauthor_buf, byauthor_words);
 	}
 #endif
-	bool post_initialized = false;
 	GW::HookEntry BlockIfApplicable_Entry;
-	GW::HookEntry ClearMessageBuffer_Entry;
 };
