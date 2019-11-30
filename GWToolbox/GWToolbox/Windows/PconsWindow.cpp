@@ -8,6 +8,7 @@
 #include <GWCA\GameContainers\GamePos.h>
 
 #include <GWCA\Context\GameContext.h>
+#include <GWCA\Context\CharContext.h>
 
 #include <GWCA\GameContainers\Array.h>
 #include <GWCA\GameContainers\GamePos.h>
@@ -276,12 +277,8 @@ bool PconsWindow::DrawTabButton(IDirect3DDevice9* device, bool show_icon, bool s
 	ImGui::PopStyleColor();
 	return clicked;
 }
-
 void PconsWindow::Draw(IDirect3DDevice9* device) {
 	if (!visible) return;
-
-	bool alcohol_enabled_before = pcon_alcohol->enabled;
-
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
     if(!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
         return ImGui::End();
@@ -295,7 +292,7 @@ void PconsWindow::Draw(IDirect3DDevice9* device) {
 	}
 	int j = 0;
 	for (unsigned int i = 0; i < pcons.size(); ++i) {
-		if (pcons[i]->visible) {
+		if (pcons[i]->IsVisible()) {
 			if (j++ % items_per_row > 0) {
 				ImGui::SameLine(0,2.0f);
 			}
@@ -344,7 +341,7 @@ void PconsWindow::Update(float delta) {
 void PconsWindow::MapChanged() {
 	elite_area_check_timer = TIMER_INIT();
 	map_id = GW::Map::GetMapID();
-	Pcon::map_has_effects_array = false;
+    Pcon::map_has_effects_array = false;
 	if(instance_type != GW::Constants::InstanceType::Loading)
 		previous_instance_type = instance_type;
 	instance_type = GW::Map::GetInstanceType();
@@ -461,6 +458,7 @@ void PconsWindow::LoadSettings(CSimpleIni* ini) {
 	Pcon::suppress_drunk_text = ini->GetBoolValue(Name(), VAR_NAME(suppress_drunk_text), false);
 	Pcon::suppress_drunk_emotes = ini->GetBoolValue(Name(), VAR_NAME(suppress_drunk_emotes), false);
 	Pcon::suppress_lunar_skills = ini->GetBoolValue(Name(), VAR_NAME(suppress_lunar_skills), false);
+    Pcon::pcons_by_character = ini->GetBoolValue(Name(), VAR_NAME(pcons_by_character), Pcon::pcons_by_character);
 
 	Pcon::refill_if_below_threshold = ini->GetBoolValue(Name(), VAR_NAME(refill_if_below_threshold), false);
 	show_auto_refill_pcons_tickbox = ini->GetBoolValue(Name(), VAR_NAME(show_auto_refill_pcons_tickbox), show_auto_refill_pcons_tickbox);
@@ -494,6 +492,7 @@ void PconsWindow::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(suppress_drunk_text), Pcon::suppress_drunk_text);
 	ini->SetBoolValue(Name(), VAR_NAME(suppress_drunk_emotes), Pcon::suppress_drunk_emotes);
 	ini->SetBoolValue(Name(), VAR_NAME(suppress_lunar_skills), Pcon::suppress_lunar_skills);
+    ini->SetBoolValue(Name(), VAR_NAME(pcons_by_character), Pcon::pcons_by_character);
 
 	ini->SetBoolValue(Name(), VAR_NAME(refill_if_below_threshold), Pcon::refill_if_below_threshold);
 	ini->SetBoolValue(Name(), VAR_NAME(show_auto_refill_pcons_tickbox), show_auto_refill_pcons_tickbox);
@@ -509,6 +508,8 @@ void PconsWindow::SaveSettings(CSimpleIni* ini) {
 void PconsWindow::DrawSettingInternal() {
 	ImGui::Separator();
 	ImGui::Text("Functionality:");
+    ImGui::Checkbox("Pcons active/visible per character", &Pcon::pcons_by_character);
+    ImGui::ShowHelp("Tick to make visibility and status of Pcons depend on current character.\nUntick to enable/disable regardless of current character.");
 	ImGui::Checkbox("Tick with pcons", &tick_with_pcons);
 	ImGui::ShowHelp("Enabling or disabling pcons will also Tick or Untick in party list");
 	ImGui::Checkbox("Disable when not found", &Pcon::disable_when_not_found);

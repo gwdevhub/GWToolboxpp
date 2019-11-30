@@ -23,6 +23,7 @@ public:
 	static float size;
 	static bool disable_when_not_found;
 	static bool refill_if_below_threshold;
+    static bool pcons_by_character;
 	static Color enabled_bg_color;
 	static DWORD player_id;
 
@@ -35,15 +36,16 @@ public:
 	static std::vector<std::vector<clock_t>> reserved_bag_slots;
 
 protected:
-	Pcon(const char* chatname,
-		const char* abbrevname,
-		const char* ininame,
-		const wchar_t* filename, 
-		WORD res_id, // you can use 0 and it will not load texture from resource, only from file.
-		ImVec2 uv0, ImVec2 uv1, int threshold,
+    Pcon(const char* chatname,
+        const char* abbrevname,
+        const char* ininame,
+        const wchar_t* filename,
+        WORD res_id, // you can use 0 and it will not load texture from resource, only from file.
+        ImVec2 uv0, ImVec2 uv1, int threshold,
         const char* desc = nullptr);
 	~Pcon();
     bool RefillBlocking();
+    bool* GetSettingsByName(const wchar_t* name);
     static bool UnreserveSlotForMove(int bagId, int slot); // Unlock slot.
 	static bool ReserveSlotForMove(int bagId, int slot); // Prevents more than 1 pcon from trying to add to the same slot at the same time.
 	static bool IsSlotReservedForMove(int bagId, int slot); // Checks whether another pcon has reserved this slot.
@@ -55,25 +57,29 @@ public:
 	// If timeout_seconds > 0, this process blocks until item has moved or timeout is hit.
 	static GW::Item* MoveItem(GW::Item *item, GW::Bag *bag, int slot, int quantity = 0, uint32_t timeout_seconds = 0);
 	static GW::Bag* GetBag(uint32_t bag_id);
+    wchar_t* SetPlayerName();
 	// Fires off another thread to refill pcons. Sets refill_attempted to TRUE when finished.
     void Refill();
 	void SetEnabled(bool enabled);
+    const bool IsEnabled() { return IsVisible() && *enabled; }
+    const bool IsVisible() { return visible; }
 	void AfterUsed(bool used, int qty);
-	inline void Toggle() { SetEnabled(!enabled); }
+	inline void Toggle() { SetEnabled(!IsEnabled()); }
 	// Resets pcon counters so it needs to recalc number and refill.
 	void ResetCounts();
 	void LoadSettings(CSimpleIni* ini, const char* section);
 	void SaveSettings(CSimpleIni* ini, const char* section);
 
 public:
-	bool visible = true;
-	bool enabled = false;
+    bool* enabled; // This is a ptr to the current char's status if applicable.
 	bool pcon_quantity_checked = false;
     bool refilling = false; // Set when a refill is in progress. Dont touch.
     bool refill_attempted = false; // Set to true when refill thread has run for this map
-	int threshold = 0; // quantity at which the number color goes from green to yellow and warning starts being displayed
-	int quantity = 0;
+	int threshold = 0; 
+    bool visible = true;
+    int quantity = 0;
 	int quantity_storage = 0;
+    wchar_t* character_name = L"default";
 
 	clock_t timer = 0;
 
@@ -86,6 +92,9 @@ protected:
 	// Cycles through character's inventory to find a matching (incomplete) stack, or an empty pane.
 	GW::Item* FindVacantStackOrSlotInInventory(GW::Item* likeItem = nullptr);
 	GW::Agent* player = nullptr;
+
+    // "default" is the fallback
+    std::map<std::wstring, bool*> settings_by_charname;
 
 	GW::Constants::MapID mapid = GW::Constants::MapID::None;
 	GW::Constants::InstanceType maptype = GW::Constants::InstanceType::Loading;

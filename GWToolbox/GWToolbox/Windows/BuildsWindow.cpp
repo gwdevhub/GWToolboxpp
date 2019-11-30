@@ -439,7 +439,7 @@ void BuildsWindow::LoadPcons(const TeamBuild& tbuild, unsigned int idx) {
     for (auto pcon : pcw->pcons) {
 		bool enable = build.pcons.find(pcon->ini) != build.pcons.end();
 		if (enable) {
-			if (!pcon->visible) {
+			if (!pcon->IsVisible()) {
 				// Don't enable pcons that the user cant see!
 				pcons_not_visible.push_back(pcon);
 				continue;

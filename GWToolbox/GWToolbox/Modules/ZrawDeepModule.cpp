@@ -21,6 +21,7 @@
 #include "Modules/Resources.h"
 
 #include "logger.h"
+#include <Timer.h>
 
 namespace {
     const wchar_t* kanaxai_dialogs[] = {
@@ -129,7 +130,7 @@ void ZrawDeepModule::SetEnabled(bool _enabled) {
 				if (!a) return;
 				if (a->IsPlayer() || a->GetCanBeViewedInPartyWindow() || IsKanaxai(a)) {
 					status->blocked = true;
-					pending_transmog = clock();
+                    pending_transmog = -500;
 				}
 			});
 		GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentModel>(&ZrawDeepModule_StoCs,
@@ -139,24 +140,17 @@ void ZrawDeepModule::SetEnabled(bool _enabled) {
 				if (!a) return;
 				if (a->IsPlayer() || a->GetCanBeViewedInPartyWindow() || IsKanaxai(a)) {
 					status->blocked = true;
-					pending_transmog = clock();
+                    pending_transmog = -500;
 				}
 			});
 
-		GW::Chat::CreateCommand(L"deep24h", [this](const wchar_t* message, int argc, LPWSTR* argv) -> void {
-			SetEnabled(!enabled);
-			Log::Info(enabled ? "24h Deep mode on!" : "24h Deep mode off :(");
-			pending_transmog = clock();
-			});
-		GW::Chat::CreateCommand(L"24hdeep", [](const wchar_t* message, int argc, LPWSTR* argv) -> void {
-			GW::Chat::SendChat('/', "deep24h");
-			});
+
 		GW::AgentArray agents = GW::Agents::GetAgentArray();
 		for (size_t i = 0; !kanaxai_agent_id && agents.valid() && i < agents.size(); i++) {
 			if (IsKanaxai(agents[i]))
 				kanaxai_agent_id = agents[i]->agent_id;
 		}
-		SetTransmogs();
+        pending_transmog = -500;
 	}
 	else {
 		GW::StoC::RemoveCallback<GW::Packet::StoC::DisplayDialogue>(&ZrawDeepModule_StoCs);
@@ -166,6 +160,7 @@ void ZrawDeepModule::SetEnabled(bool _enabled) {
 		GW::StoC::RemoveCallback<GW::Packet::StoC::AgentAdd>(&ZrawDeepModule_StoCs);
 		GW::StoC::RemoveCallback<GW::Packet::StoC::DisplayCape>(&ZrawDeepModule_StoCs);
 		GW::StoC::RemoveCallback<GW::Packet::StoC::AgentModel>(&ZrawDeepModule_StoCs);
+        pending_transmog = clock() - 500;
 		SetTransmogs();
 		GW::GameThread::Enqueue([this]() {
 			can_terminate = true;
@@ -176,6 +171,14 @@ void ZrawDeepModule::Initialize() {
 	ToolboxModule::Initialize();
 	CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
 	SetEnabled(enabled);
+    GW::Chat::CreateCommand(L"deep24h", [this](const wchar_t* message, int argc, LPWSTR* argv) -> void {
+        SetEnabled(!enabled);
+        Log::Info(enabled ? "24h Deep mode on!" : "24h Deep mode off :(");
+        pending_transmog = clock();
+        });
+    GW::Chat::CreateCommand(L"24hdeep", [](const wchar_t* message, int argc, LPWSTR* argv) -> void {
+        GW::Chat::SendChat('/', "deep24h");
+        });
 }
 void ZrawDeepModule::DrawSettingInternal() {
     ImGui::TextDisabled("Use chat command /deep24h to toggle this module on or off at any time");
@@ -190,6 +193,8 @@ void ZrawDeepModule::SetTransmogs() {
 		return;
 	if (!GW::PartyMgr::GetIsPartyLoaded())
 		return;
+    if (pending_transmog == 0 || TIMER_DIFF(pending_transmog) < 500)
+        return;
 	pending_transmog = 0;
 	bool transmo_kanaxai_ = !terminating && enabled && kanaxais_true_form;
 	bool transmo_team_ = !terminating && enabled && transmo_team;

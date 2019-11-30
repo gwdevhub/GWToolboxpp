@@ -42,18 +42,16 @@ static wchar_t* GetMessageCore() {
 	GW::Array<wchar_t>* buf = &GW::GameContext::instance()->world->message_buff;
 	return buf ? buf->begin() : nullptr;
 }
-
-void ChatFilter::PostInitialize() {
-	post_initialized = true;
-	// Due to the way ChatFilter works, if a previous message was blocked then the buffer would still contain the last message.
-	// Clear down the message buffer if the packet has been blocked.
-	// We run these hooks at the end of the queue to allow other modules to still have access to the message buffer in their hooks.
-	GW::StoC::RegisterPacketCallback(&ClearMessageBuffer_Entry, GW::Packet::StoC::MessageServer::STATIC_HEADER, ClearMessageBufferIfBlocked);
-	GW::StoC::RegisterPacketCallback(&ClearMessageBuffer_Entry, GW::Packet::StoC::MessageGlobal::STATIC_HEADER, ClearMessageBufferIfBlocked);
-	GW::StoC::RegisterPacketCallback(&ClearMessageBuffer_Entry, GW::Packet::StoC::MessageLocal::STATIC_HEADER, ClearMessageBufferIfBlocked);
-}
 void ChatFilter::Initialize() {
 	ToolboxModule::Initialize();
+    // Due to the way ChatFilter works, if a previous message was blocked then the buffer would still contain the last message.
+    // Clear down the message buffer if the packet has been blocked.
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageCore>(&BlockIfApplicable_Entry,
+        [this](GW::HookStatus* status, GW::Packet::StoC::MessageCore* pak) -> void {
+            GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
+            if (!buff || !buff->valid()) return;
+            buff->clear();
+        });
 
 	// server messages
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&BlockIfApplicable_Entry,
@@ -85,14 +83,6 @@ void ChatFilter::BlockIfApplicable(GW::HookStatus* status, const wchar_t* messag
 		printf("\n");*/
 		status->blocked = true;
 	}
-}
-void ChatFilter::ClearMessageBufferIfBlocked(GW::HookStatus* status, GW::Packet::StoC::PacketBase*) {
-	if (!status->blocked)
-		return;
-	GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
-	if (!buff || !buff->valid()) return;
-	//Log::Log("ChatFilter cleared message buffer\n");
-	buff->clear();
 }
 
 void ChatFilter::LoadSettings(CSimpleIni* ini) {
@@ -648,8 +638,6 @@ void ChatFilter::DrawSettingInternal() {
 
 void ChatFilter::Update(float delta) {
 	uint32_t timestamp = GetTickCount();
-	if(!post_initialized)
-		PostInitialize();
 	if (timer_parse_filters && timer_parse_filters < timestamp) {
 		timer_parse_filters = 0;
 		ParseBuffer(bycontent_word_buf, bycontent_words);

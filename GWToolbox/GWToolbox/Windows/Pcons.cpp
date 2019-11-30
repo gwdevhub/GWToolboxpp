@@ -5,6 +5,9 @@
 
 #include <GWCA\Constants\Constants.h>
 
+#include <GWCA\Context\GameContext.h>
+#include <GWCA\Context\CharContext.h>
+
 #include <GWCA\GameContainers\Array.h>
 #include <GWCA\GameContainers\GamePos.h>
 
@@ -39,7 +42,7 @@ bool Pcon::suppress_drunk_effect = false;
 bool Pcon::suppress_drunk_text = false;
 bool Pcon::suppress_drunk_emotes = false;
 bool Pcon::suppress_lunar_skills = false;
-
+bool Pcon::pcons_by_character = true;
 static std::mutex reserve_slot_mutex;
 
 // 22 is the highest bag index. 25 is the most slots in any single bag.
@@ -53,9 +56,9 @@ Pcon::Pcon(const char* chatname,
     WORD res_id,
     ImVec2 uv0_, ImVec2 uv1_, int threshold_,
     const char* desc_)
-    : chat(chatname), abbrev(abbrevname), ini(ininame), threshold(threshold_),
-	uv0(uv0_), uv1(uv1_), texture(nullptr),
-	enabled(false), quantity(0), timer(TIMER_INIT()) {
+    : chat(chatname), abbrev(abbrevname), ini(ininame), uv0(uv0_), uv1(uv1_), threshold(threshold_), timer(TIMER_INIT()) {
+    settings_by_charname[L"default"] = new bool(false);
+    enabled = settings_by_charname[character_name];
 	if (desc_)
 		desc = desc_;
 	Resources::Instance().LoadTextureAsync(&texture, Resources::GetPath(L"img/pcons", filename), res_id);
@@ -63,6 +66,10 @@ Pcon::Pcon(const char* chatname,
 Pcon::~Pcon() {
 	if (refill_thread.joinable())
 		refill_thread.join();
+    for (auto c : settings_by_charname) {
+        delete c.second;
+    }
+    settings_by_charname.clear();
 }
 // Resets pcon counters so it needs to recalc number and refill.
 void Pcon::ResetCounts() {
@@ -73,19 +80,26 @@ void Pcon::ResetCounts() {
 	}
 }
 void Pcon::SetEnabled(bool b) {
-	if (enabled == b) return;
-	enabled = b;
+	if (*enabled == b) return;
+	*enabled = b;
 	ResetCounts();
+}
+wchar_t* Pcon::SetPlayerName() {
+    GW::GameContext* g = GW::GameContext::instance();
+    if (!g || !g->character || !g->character->player_name)
+        return nullptr;
+    enabled = GetSettingsByName(pcons_by_character ? g->character->player_name : L"default");
+    return g->character->player_name;
 }
 void Pcon::Draw(IDirect3DDevice9* device) {
 	if (texture == nullptr) return;
 	ImVec2 pos = ImGui::GetCursorPos();
 	ImVec2 s(size, size);
-	ImVec4 bg = enabled ? ImColor(enabled_bg_color) : ImVec4(0, 0, 0, 0);
+	ImVec4 bg = IsEnabled() ? ImColor(enabled_bg_color) : ImVec4(0, 0, 0, 0);
 	ImVec4 tint(1, 1, 1, 1);
 	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
 	if (ImGui::ImageButton((ImTextureID)texture, s, uv0, uv1, 0, bg, tint)) {
-		SetEnabled(!enabled);
+        Toggle();
 	}
 	ImGui::PopStyleColor();
 	if (ImGui::IsItemHovered() && desc.size())
@@ -124,6 +138,7 @@ void Pcon::Update(int delay) {
 	if (mapid != GW::Map::GetMapID() || maptype != GW::Map::GetInstanceType()) { // Map changed; reset vars
 		mapid = GW::Map::GetMapID();
 		maptype = GW::Map::GetInstanceType();
+        SetPlayerName();
 		ResetCounts();
         refill_attempted = maptype != GW::Constants::InstanceType::Outpost;
 	}
@@ -141,7 +156,7 @@ void Pcon::Update(int delay) {
         quantity = qty;
         if (maptype == GW::Constants::InstanceType::Outpost) {
             quantity_storage = CheckInventory(nullptr, nullptr, static_cast<int>(GW::Constants::Bag::Storage_1), static_cast<int>(GW::Constants::Bag::Storage_14));
-            if (enabled && PconsWindow::Instance().GetEnabled()) {
+            if (IsEnabled() && PconsWindow::Instance().GetEnabled()) {
                 // Only warn user of low pcon count if is enabled and we're in an outpost.
                 if (quantity == 0) {
                     Log::Error("No more %s items found", chat);
@@ -154,7 +169,7 @@ void Pcon::Update(int delay) {
         pcon_quantity_checked = true;
     }
     // === Use item if possible ===
-    if (enabled && PconsWindow::Instance().GetEnabled()) {
+    if (IsEnabled() && PconsWindow::Instance().GetEnabled()) {
         if (delay < 0) delay = Pcon::pcons_delay;
         player = GW::Agents::GetPlayer();
         // NOTE: Only fails CanUseByEffect() if we've found an effects array for this map before.
@@ -213,12 +228,12 @@ void Pcon::AfterUsed(bool used, int qty) {
 				mapid = GW::Map::GetMapID();
 				maptype = GW::Map::GetInstanceType();
 				Log::Warning("Just used the last %s", chat);
-				if (disable_when_not_found) enabled = false;
+				if (disable_when_not_found) SetEnabled(false);
 			}
 		}
 		else {
 			// we should have used but didn't find the item
-			if (disable_when_not_found) enabled = false;
+			if (disable_when_not_found) SetEnabled(false);
 			if (mapid != GW::Map::GetMapID()
 				|| maptype != GW::Map::GetInstanceType()) { // only yell at the user once
 				mapid = GW::Map::GetMapID();
@@ -312,7 +327,7 @@ GW::Item* Pcon::MoveItem(GW::Item* item, GW::Bag* bag, int slot, int quantity, u
 // Blocking function - waits for item moves etc, dont run on main thread. False if not ready (i.e. keep trying)
 bool Pcon::RefillBlocking() {
     auto refillable = [this]() {
-		return enabled && refill_if_below_threshold
+		return IsEnabled() && refill_if_below_threshold
 			&& GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost
 			&& PconsWindow::Instance().GetEnabled();
     };
@@ -417,6 +432,13 @@ int Pcon::CheckInventory(bool* used, int* used_qty_ptr,int from_bag, int to_bag)
 bool Pcon::CanUseByInstanceType() const {
 	return maptype == GW::Constants::InstanceType::Explorable;
 }
+bool* Pcon::GetSettingsByName(const wchar_t* name) {
+    if (settings_by_charname.find(name) == settings_by_charname.end()) {
+        bool* def = settings_by_charname[L"default"];
+        settings_by_charname[name] = new bool(*def);
+    }
+    return settings_by_charname[name];
+}
 void Pcon::LoadSettings(CSimpleIni* inifile, const char* section) {
 	char buf_active[256];
 	char buf_threshold[256];
@@ -424,9 +446,26 @@ void Pcon::LoadSettings(CSimpleIni* inifile, const char* section) {
 	snprintf(buf_active, 256, "%s_active", ini);
 	snprintf(buf_threshold, 256, "%s_threshold", ini);
 	snprintf(buf_visible, 256, "%s_visible", ini);
-	enabled = inifile->GetBoolValue(section, buf_active);
-	threshold = inifile->GetLongValue(section, buf_threshold, threshold);
-	visible = inifile->GetBoolValue(section, buf_visible, true);
+    threshold = inifile->GetLongValue(section, buf_threshold, threshold);
+
+    bool* def = GetSettingsByName(L"default");
+    *def = inifile->GetBoolValue(section, buf_active, *def);
+    visible = inifile->GetBoolValue(section, buf_visible, visible);
+
+    CSimpleIni::TNamesDepend entries;
+    inifile->GetAllSections(entries);
+    std::string sectionsub(section);
+    sectionsub += ':';
+    size_t section_len = sectionsub.size();
+    for (CSimpleIni::Entry& entry : entries) {
+        if (strncmp(entry.pItem, sectionsub.c_str(), section_len) != 0)
+            continue;
+        std::string str(entry.pItem);
+        size_t charname_pos = section_len;
+        std::wstring charname = GuiUtils::StringToWString(entry.pItem + charname_pos);
+        bool* char_enabled = GetSettingsByName(charname.c_str());
+        *char_enabled = inifile->GetBoolValue(entry.pItem, buf_active, *char_enabled);
+    }
 }
 void Pcon::SaveSettings(CSimpleIni* inifile, const char* section) {
 	char buf_active[256];
@@ -435,9 +474,23 @@ void Pcon::SaveSettings(CSimpleIni* inifile, const char* section) {
 	snprintf(buf_active, 256, "%s_active", ini);
 	snprintf(buf_threshold, 256, "%s_threshold", ini);
 	snprintf(buf_visible, 256, "%s_visible", ini);
-	inifile->SetBoolValue(section, buf_active, enabled);
-	inifile->SetLongValue(section, buf_threshold, threshold);
-	inifile->SetBoolValue(section, buf_visible, visible);
+    inifile->SetLongValue(section, buf_threshold, threshold);
+    inifile->SetBoolValue(section, buf_visible, visible);
+
+    for (auto charname_pcons : settings_by_charname) {
+        bool* enabled = charname_pcons.second;
+        if (charname_pcons.first == L"default") {
+            inifile->SetBoolValue(section, buf_active, *enabled);
+            continue;
+        }
+        std::wstring charname = charname_pcons.first;
+        if (charname.empty())
+            continue;
+        std::string char_section(section);
+        char_section.append(":");
+        char_section.append(GuiUtils::WStringToString(charname).c_str());
+        inifile->SetBoolValue(char_section.c_str(), buf_active, *enabled);
+    }
 }
 
 // ================================================
