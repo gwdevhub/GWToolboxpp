@@ -21,9 +21,6 @@ class ZrawDeepModule : public ToolboxModule {
 	};
 private:
 	Mp3* mp3;
-	bool transmog_done = false;
-	bool checked_enabled = false;
-	bool valid_for_map = false;
     
 	bool enabled = false;
     bool transmo_team = true;
@@ -53,11 +50,6 @@ public:
 	void LoadSettings(CSimpleIni* ini);
 
 	void SetTransmogs();
-	void Reset() {
-		transmog_done = false;
-		checked_enabled = false;
-		valid_for_map = false;
-	}
 	bool IsEnabled() {
         return enabled;
 	}

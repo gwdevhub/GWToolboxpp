@@ -89,37 +89,32 @@ namespace {
 	}
 }
 void ZrawDeepModule::SetEnabled(bool _enabled) {
-	if (enabled == _enabled)
-		return;
 	if (!terminating)
 		enabled = _enabled;
 	if (_enabled) {
 		can_terminate = false;
 		GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&ZrawDeepModule_StoCs,
 			[this](GW::HookStatus* status, GW::Packet::StoC::DisplayDialogue* packet) -> void {
-				if (!enabled) return;
 				DisplayDialogue(packet);
 			});
 		GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SpeechBubble>(&ZrawDeepModule_StoCs,
 			[this](GW::HookStatus* status, GW::Packet::StoC::SpeechBubble* packet) -> void {
-				if (!enabled || !rewrite_npc_dialogs) return;
+				if (!rewrite_npc_dialogs) return;
 				SetToRandomKanaxaiString(packet->message);
 			});
 		GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DialogBody>(&ZrawDeepModule_StoCs,
 			[this](GW::HookStatus* status, GW::Packet::StoC::DialogBody* packet) -> void {
-				if (!enabled || !rewrite_npc_dialogs) return;
+				if (!rewrite_npc_dialogs) return;
 				SetToRandomKanaxaiString(packet->message);
 			});
-		GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&ZrawDeepModule_StoCs,
-			[this](GW::HookStatus* status, GW::Packet::StoC::InstanceLoadInfo* packet) -> void {
-				if (!enabled) return;
-				Reset();
+		GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&ZrawDeepModule_StoCs,
+			[this](GW::HookStatus* status, GW::Packet::StoC::GameSrvTransfer*) -> void {
+				kanaxai_agent_id = 0;
 			});
 		GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(&ZrawDeepModule_StoCs,
 			[this](GW::HookStatus* status, GW::Packet::StoC::AgentAdd* packet) -> void {
 				if (IsKanaxai(packet->agent_type)) {
 					kanaxai_agent_id = packet->agent_id;
-					if (!enabled) return;
 					pending_transmog = clock();
 				}
 			});
@@ -144,13 +139,11 @@ void ZrawDeepModule::SetEnabled(bool _enabled) {
 				}
 			});
 
-
 		GW::AgentArray agents = GW::Agents::GetAgentArray();
 		for (size_t i = 0; !kanaxai_agent_id && agents.valid() && i < agents.size(); i++) {
 			if (IsKanaxai(agents[i]))
 				kanaxai_agent_id = agents[i]->agent_id;
 		}
-        pending_transmog = -500;
 	}
 	else {
 		GW::StoC::RemoveCallback<GW::Packet::StoC::DisplayDialogue>(&ZrawDeepModule_StoCs);
@@ -160,12 +153,8 @@ void ZrawDeepModule::SetEnabled(bool _enabled) {
 		GW::StoC::RemoveCallback<GW::Packet::StoC::AgentAdd>(&ZrawDeepModule_StoCs);
 		GW::StoC::RemoveCallback<GW::Packet::StoC::DisplayCape>(&ZrawDeepModule_StoCs);
 		GW::StoC::RemoveCallback<GW::Packet::StoC::AgentModel>(&ZrawDeepModule_StoCs);
-        pending_transmog = clock() - 500;
-		SetTransmogs();
-		GW::GameThread::Enqueue([this]() {
-			can_terminate = true;
-			});
 	}
+	pending_transmog = -500;
 }
 void ZrawDeepModule::Initialize() {
 	ToolboxModule::Initialize();
@@ -174,7 +163,6 @@ void ZrawDeepModule::Initialize() {
     GW::Chat::CreateCommand(L"deep24h", [this](const wchar_t* message, int argc, LPWSTR* argv) -> void {
         SetEnabled(!enabled);
         Log::Info(enabled ? "24h Deep mode on!" : "24h Deep mode off :(");
-        pending_transmog = clock();
         });
     GW::Chat::CreateCommand(L"24hdeep", [](const wchar_t* message, int argc, LPWSTR* argv) -> void {
         GW::Chat::SendChat('/', "deep24h");
@@ -183,10 +171,10 @@ void ZrawDeepModule::Initialize() {
 void ZrawDeepModule::DrawSettingInternal() {
     ImGui::TextDisabled("Use chat command /deep24h to toggle this module on or off at any time");
     if(ImGui::Checkbox("Kanaxai makes you and your team stunningly attractive",&transmo_team))
-        pending_transmog = clock();
+        pending_transmog = -500;
     ImGui::Checkbox("Kanaxai infiltrates the minds of NPCs",&rewrite_npc_dialogs);
     if(ImGui::Checkbox("Kanaxai shows his true form", &kanaxais_true_form))
-        pending_transmog = clock();
+        pending_transmog = -500;
 }
 void ZrawDeepModule::SetTransmogs() {
 	if (!GW::Map::GetIsMapLoaded())
@@ -218,6 +206,11 @@ void ZrawDeepModule::SetTransmogs() {
 			snprintf(buf, 128, "transmoagent %d reset", kanaxai_agent_id);
 			GW::Chat::SendChat('/', buf);
 		}
+	}
+	if (!can_terminate && !transmo_kanaxai_ && !transmo_team_) {
+		GW::GameThread::Enqueue([this]() {
+			can_terminate = true;
+			});
 	}
 }
 void ZrawDeepModule::Update(float delta) {
