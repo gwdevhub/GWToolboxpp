@@ -7,6 +7,7 @@
 #include <GWCA/GameContainers/GamePos.h>
 
 #include <GWCA/Context/ItemContext.h>
+#include <GWCA/Context/PartyContext.h>
 
 #include <GWCA/Constants/AgentIDs.h>
 
@@ -107,6 +108,21 @@ namespace {
         GW::GameContext* g = GW::GameContext::instance();
         if (!g || !g->character) return L"";
         return g->character->player_name;
+	}
+
+	struct PartyInfo : GW::PartyInfo {
+		size_t GetPartySize() {
+			return players.size() + henchmen.size() + heroes.size();
+		}
+	};
+
+	PartyInfo* GetPartyInfo(uint32_t party_id = 0) {
+		if (!party_id)
+			return (PartyInfo*)GW::PartyMgr::GetPartyInfo();
+		GW::PartyContext* p = GW::GameContext::instance()->party;
+		if (!p || !p->parties.valid() || party_id >= p->parties.size())
+			return nullptr;
+		return (PartyInfo*)p->parties[party_id];
 	}
 
 	void WhisperCallback(GW::HookStatus *, const wchar_t from[20], const wchar_t msg[140]) {
@@ -895,10 +911,21 @@ void GameSettings::Initialize() {
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyInviteReceived_Create>(&PartyPlayerAdd_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::PartyInviteReceived_Create* packet) {
 		if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost || !GetPlayerIsLeader())
 			return;
-		if (auto_accept_invites && GW::PartyMgr::GetIsPlayerTicked()) {
-			static AcceptInvitePacket pak;
-			pak.party_id = packet->target_party_id;
-			GW::CtoS::SendPacket(&pak);
+		if (GW::PartyMgr::GetIsPlayerTicked()) {
+			PartyInfo* other_party = GetPartyInfo(packet->target_party_id);
+			PartyInfo* my_party = GetPartyInfo();
+			if (auto_accept_invites && other_party && my_party && my_party->GetPartySize() <= other_party->GetPartySize()) {
+				// Auto accept if I'm joining a bigger party
+				static AcceptInvitePacket pak;
+				pak.party_id = packet->target_party_id;
+				GW::CtoS::SendPacket(&pak);
+			}
+			if (auto_accept_join_requests && other_party && my_party && my_party->GetPartySize() > other_party->GetPartySize()) {
+				// Auto accept join requests if I'm the bigger party
+				static AcceptInvitePacket pak;
+				pak.party_id = packet->target_party_id;
+				GW::CtoS::SendPacket(&pak);
+			}
 		}
 		if(flash_window_on_party_invite)
 			FlashWindow();
@@ -1276,7 +1303,8 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
     auto_age_on_vanquish = ini->GetBoolValue(Name(), VAR_NAME(auto_age_on_vanquish), auto_age_on_vanquish);
 	auto_age2_on_age = ini->GetBoolValue(Name(), VAR_NAME(auto_age2_on_age), auto_age2_on_age);
-	auto_accept_invites = ini->GetBoolValue(Name(), VAR_NAME(auto_age2_on_age), auto_age2_on_age);
+	auto_accept_invites = ini->GetBoolValue(Name(), VAR_NAME(auto_accept_invites), auto_accept_invites);
+	auto_accept_join_requests = ini->GetBoolValue(Name(), VAR_NAME(auto_accept_join_requests), auto_accept_join_requests);
 
 	skip_entering_name_for_faction_donate = ini->GetBoolValue(Name(), VAR_NAME(skip_entering_name_for_faction_donate), skip_entering_name_for_faction_donate);
 
@@ -1388,6 +1416,9 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 
     ini->SetBoolValue(Name(), VAR_NAME(auto_age_on_vanquish), auto_age_on_vanquish);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_age2_on_age), auto_age2_on_age);
+	ini->SetBoolValue(Name(), VAR_NAME(auto_accept_invites), auto_accept_invites);
+	ini->SetBoolValue(Name(), VAR_NAME(auto_accept_join_requests), auto_accept_join_requests);
+	
 
 	ini->SetBoolValue(Name(), VAR_NAME(skip_entering_name_for_faction_donate), skip_entering_name_for_faction_donate);
 
@@ -1535,7 +1566,10 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::Checkbox("Automatically skip cinematics", &auto_skip_cinematic);
     ImGui::Checkbox("Automatically return to outpost on defeat", &auto_return_on_defeat);
     ImGui::ShowHelp("Automatically return party to outpost on party wipe if player is leading");
-	ImGui::Checkbox("Automatically accept party invites when ticked", &auto_accept_invites);
+	ImGui::Checkbox("Automatically accept party invitations when ticked", &auto_accept_invites);
+	ImGui::ShowHelp("When you're invited to join someone elses party");
+	ImGui::Checkbox("Automatically accept party join requests when ticked", &auto_accept_join_requests);
+	ImGui::ShowHelp("When a player wants to join your existing party");
 	ImGui::Checkbox("Show warning when earned faction reaches ", &faction_warn_percent);
 	ImGui::SameLine();
 	ImGui::PushItemWidth(40.0f * ImGui::GetIO().FontGlobalScale);
