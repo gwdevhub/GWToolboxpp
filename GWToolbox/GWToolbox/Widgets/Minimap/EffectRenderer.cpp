@@ -45,6 +45,7 @@ void EffectRenderer::PacketCallback(GW::Packet::StoC::GenericValue* pak) {
 	GW::Agent* caster = GW::Agents::GetAgentByID(pak->agent_id);
 	if (!caster || caster->allegiance != 0x3) return;
 	Effect* e = new Effect(pak->value, caster->pos.x, caster->pos.y, duration);
+    e->circle.color = &aoe_color;
 	aoe_effects.push_front(e);
 }
 
@@ -111,16 +112,10 @@ void EffectRenderer::Render(IDirect3DDevice9* device) {
 }
 
 void EffectRenderer::DrawAoeEffects(IDirect3DDevice9* device) {
+    if (aoe_effects.empty())
+        return;
 	D3DXMATRIX translate, scale, world;
 	D3DXMatrixScaling(&scale, GW::Constants::Range::Nearby, GW::Constants::Range::Nearby, 1.0f);
-	for (Effect* effect : aoe_effects) {
-		if (TIMER_DIFF(effect->start) > effect->duration) continue;
-
-		D3DXMatrixTranslation(&translate, effect->x, effect->y, 0.0f);
-		world = scale * translate;
-		device->SetTransform(D3DTS_WORLD, &world);
-		effect->circle.Render(device);
-	}
 	for (size_t i = 0; i < aoe_effects.size(); i++) {
 		Effect* effect = aoe_effects[i];
 		if (TIMER_DIFF(effect->start) > effect->duration) {
@@ -128,7 +123,12 @@ void EffectRenderer::DrawAoeEffects(IDirect3DDevice9* device) {
 			aoe_effects.erase(aoe_effects.begin() + i);
 			if (!aoe_effects.size()) break;
 			i--;
+            continue;
 		}
+        D3DXMatrixTranslation(&translate, effect->x, effect->y, 0.0f);
+        world = scale * translate;
+        device->SetTransform(D3DTS_WORLD, &world);
+        effect->circle.Render(device);
 	}
 }
 
@@ -144,9 +144,8 @@ void EffectRenderer::EffectCircle::Initialize(IDirect3DDevice9* device) {
 	buffer->Lock(0, sizeof(D3DVertex) * vertex_count,
 		(VOID**)&vertices, D3DLOCK_DISCARD);
 
-	const float PI = 3.1415927f;
 	for (size_t i = 0; i < count; ++i) {
-		float angle = i * (2 * PI / count);
+		float angle = i * (2 * M_PI / count);
 		vertices[i].x = std::cos(angle);
 		vertices[i].y = std::sin(angle);
 		vertices[i].z = 0.0f;

@@ -21,6 +21,7 @@
 #include "Modules/Resources.h"
 
 #include "logger.h"
+#include <Timer.h>
 
 namespace {
     const wchar_t* kanaxai_dialogs[] = {
@@ -129,7 +130,7 @@ void ZrawDeepModule::SetEnabled(bool _enabled) {
 				if (!a) return;
 				if (a->IsPlayer() || a->GetCanBeViewedInPartyWindow() || IsKanaxai(a)) {
 					status->blocked = true;
-					pending_transmog = clock();
+                    pending_transmog = -500;
 				}
 			});
 		GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentModel>(&ZrawDeepModule_StoCs,
@@ -139,7 +140,7 @@ void ZrawDeepModule::SetEnabled(bool _enabled) {
 				if (!a) return;
 				if (a->IsPlayer() || a->GetCanBeViewedInPartyWindow() || IsKanaxai(a)) {
 					status->blocked = true;
-					pending_transmog = clock();
+                    pending_transmog = -500;
 				}
 			});
 
@@ -149,7 +150,7 @@ void ZrawDeepModule::SetEnabled(bool _enabled) {
 			if (IsKanaxai(agents[i]))
 				kanaxai_agent_id = agents[i]->agent_id;
 		}
-		SetTransmogs();
+        pending_transmog = -500;
 	}
 	else {
 		GW::StoC::RemoveCallback<GW::Packet::StoC::DisplayDialogue>(&ZrawDeepModule_StoCs);
@@ -159,6 +160,7 @@ void ZrawDeepModule::SetEnabled(bool _enabled) {
 		GW::StoC::RemoveCallback<GW::Packet::StoC::AgentAdd>(&ZrawDeepModule_StoCs);
 		GW::StoC::RemoveCallback<GW::Packet::StoC::DisplayCape>(&ZrawDeepModule_StoCs);
 		GW::StoC::RemoveCallback<GW::Packet::StoC::AgentModel>(&ZrawDeepModule_StoCs);
+        pending_transmog = clock() - 500;
 		SetTransmogs();
 		GW::GameThread::Enqueue([this]() {
 			can_terminate = true;
@@ -191,6 +193,8 @@ void ZrawDeepModule::SetTransmogs() {
 		return;
 	if (!GW::PartyMgr::GetIsPartyLoaded())
 		return;
+    if (pending_transmog == 0 || TIMER_DIFF(pending_transmog) < 500)
+        return;
 	pending_transmog = 0;
 	bool transmo_kanaxai_ = !terminating && enabled && kanaxais_true_form;
 	bool transmo_team_ = !terminating && enabled && transmo_team;
