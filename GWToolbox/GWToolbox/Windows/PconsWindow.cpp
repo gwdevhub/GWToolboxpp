@@ -508,8 +508,8 @@ void PconsWindow::SaveSettings(CSimpleIni* ini) {
 void PconsWindow::DrawSettingInternal() {
 	ImGui::Separator();
 	ImGui::Text("Functionality:");
-    ImGui::Checkbox("Pcons active/visible per character", &Pcon::pcons_by_character);
-    ImGui::ShowHelp("Tick to make visibility and status of Pcons depend on current character.\nUntick to enable/disable regardless of current character.");
+    ImGui::Checkbox("Toggle Pcons per character", &Pcon::pcons_by_character);
+    ImGui::ShowHelp("Tick to remember pcon enable/disable per character.\nUntick to enable/disable regardless of current character.");
 	ImGui::Checkbox("Tick with pcons", &tick_with_pcons);
 	ImGui::ShowHelp("Enabling or disabling pcons will also Tick or Untick in party list");
 	ImGui::Checkbox("Disable when not found", &Pcon::disable_when_not_found);
