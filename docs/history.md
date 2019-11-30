@@ -5,8 +5,9 @@ layout: default
 # Version History
 Previous releases are provided as dll files. In order to use it, you need to use a different launcher which must be placed in the same directory as the dll. If you are looking for the latest version, go to the [Home Page](./) instead.
 
-## Version 2.28, Extended 1.9.2
-* [New] Added auto-accept invites when ticked option for faster party reorder
+## Version 2.28, Extended 1.9.20
+* [New] Added auto-accept party invites when ticked option for faster party reorder
+* [New] Added auto-accept party join requests when ticked option for faster party reorder
 * [New] Added option to skip entering character name when donating faction
 * [New] Added boss by profession color to Minimap
 * [New] Added /target hos and /target ee commands, see help section for info
