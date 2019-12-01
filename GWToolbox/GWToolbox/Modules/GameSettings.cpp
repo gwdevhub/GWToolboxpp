@@ -800,13 +800,16 @@ void GameSettings::Initialize() {
 	// Ctrl click name to target (and add to party)
 	// Ctrl+shift to invite to party
 	GW::Chat::RegisterStartWhisperCallback(&StartWhisperCallback_Entry, [&](GW::HookStatus* status, wchar_t* name) -> void {
-		if (openlinks && name && (!wcsncmp(name, L"http://", 7) || !wcsncmp(name, L"https://", 8))) {
+		if (!name) return;		
+		if (openlinks && (!wcsncmp(name, L"http://", 7) || !wcsncmp(name, L"https://", 8))) {
 			ShellExecuteW(NULL, L"open", name, NULL, NULL, SW_SHOWNORMAL);
 			status->blocked = true;
 			return;
 		}
-		if (!name || !ImGui::GetIO().KeysDown[VK_CONTROL])
-			return;
+		if (!ImGui::GetIO().KeysDown[VK_CONTROL])
+			return; // - Next logic only applicable when Ctrl + whisper
+		if (ImGui::GetIO().KeysDown[VK_RETURN])
+			return; // - Ctrl + Enter is write whisper to target in GW
 		if (ImGui::GetIO().KeysDown[VK_SHIFT] && GW::PartyMgr::GetPlayerIsLeader()) {
 			wchar_t buf[64];
 			swprintf(buf, 64, L"invite %ls", name);

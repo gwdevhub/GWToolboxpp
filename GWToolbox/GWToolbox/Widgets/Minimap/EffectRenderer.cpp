@@ -115,7 +115,7 @@ void EffectRenderer::DrawAoeEffects(IDirect3DDevice9* device) {
     if (aoe_effects.empty())
         return;
 	D3DXMATRIX translate, scale, world;
-	D3DXMatrixScaling(&scale, GW::Constants::Range::Nearby, GW::Constants::Range::Nearby, 1.0f);
+	D3DXMatrixScaling(&scale, GW::Constants::Range::Adjacent, GW::Constants::Range::Adjacent, 1.0f);
 	for (size_t i = 0; i < aoe_effects.size(); i++) {
 		Effect* effect = aoe_effects[i];
 		if (TIMER_DIFF(effect->start) > effect->duration) {

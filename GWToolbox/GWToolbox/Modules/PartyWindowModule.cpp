@@ -4,12 +4,16 @@
 
 #include <GWCA/Constants/Constants.h>
 
+#include <GWCA/Context/PartyContext.h>
+#include <GWCA/Context/GameContext.h>
 
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/NPC.h>
+#include <GWCA/GameEntities/Party.h>
 
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/UIMgr.h>
@@ -21,8 +25,6 @@
 #include <thread>
 namespace {
 	static bool IsPvE() {
-		if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
-			return false;
 		GW::AreaInfo* map = GW::Map::GetCurrentMapInfo();
 		if (!map) return false;
 		switch (static_cast<GW::RegionType>(map->type)) {
@@ -37,6 +39,27 @@ namespace {
 		}
 		return true;
 	}
+	struct PartyInfo : GW::PartyInfo {
+		size_t GetPartySize() {
+			return players.size() + henchmen.size() + heroes.size();
+		}
+	};
+
+	PartyInfo* GetPartyInfo(uint32_t party_id = 0) {
+		if (!party_id)
+			return (PartyInfo*)GW::PartyMgr::GetPartyInfo();
+		GW::PartyContext* p = GW::GameContext::instance()->party;
+		if (!p || !p->parties.valid() || party_id >= p->parties.size())
+			return nullptr;
+		return (PartyInfo*)p->parties[party_id];
+	}
+	static void SetPlayerNumber(wchar_t* player_name, uint32_t player_number) {
+		wchar_t buf[32] = { 0 };
+		wnsprintfW(buf, 32, L"%s (%d)", player_name, player_number);
+		if(wcsncmp(player_name,buf,wcslen(buf)) != 0)
+			wcscpy(player_name, buf);
+	}
+	static bool is_explorable = false;
 }
 
 void PartyWindowModule::Update(float delta) {
@@ -59,27 +82,23 @@ void PartyWindowModule::Initialize() {
 		RemoveAllyActual(pak->agent_id);
 		});
 	// Add certain NPCs to party window when spawned
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(&AgentAdd_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::AgentAdd* pak) -> void {
+	GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::AgentAdd>(&AgentAdd_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::AgentAdd* pak) -> void {
 		if (!add_npcs_to_party_window)
 			return;
 		if (!ShouldAddAgentToPartyWindow(pak->agent_type))
 			return;
-		PendingAddToParty p(pak->agent_id, pak->allegiance_bits, pak->agent_type ^ 0x20000000);
-		status->blocked = true;
-		GW::StoC::EmulatePacket(pak);
-		AddAllyActual(p);
+		AddAllyActual({ pak->agent_id, pak->allegiance_bits, pak->agent_type ^ 0x20000000 });
 		});
 	// Flash/focus window on zoning (and a bit of housekeeping)
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::GameSrvTransfer* pak) -> void {
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&GameSrvTransfer_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::InstanceLoadInfo* pak) -> void {
 		allies_added_to_party.clear();
+		is_explorable = pak->is_explorable;
 		});
 	// Player numbers in party window
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(&GameSrvTransfer_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::PlayerJoinInstance* pak) -> void {
-		if (!add_player_numbers_to_party_window || !IsPvE())
+		if (!add_player_numbers_to_party_window || !is_explorable)
 			return;
-		wchar_t buf[32] = { 0 };
-		wnsprintfW(buf, 32, L"%s (%d)", pak->player_name, pak->player_number);
-		wcscpy(pak->player_name, buf);
+		SetPlayerNumber(pak->player_name, pak->player_number);
 		});
 }
 void PartyWindowModule::CheckMap() {

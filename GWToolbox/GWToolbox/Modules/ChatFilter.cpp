@@ -39,36 +39,43 @@ static void printchar(wchar_t c) {
 }
 
 static wchar_t* GetMessageCore() {
-	GW::Array<wchar_t>* buf = &GW::GameContext::instance()->world->message_buff;
-	return buf ? buf->begin() : nullptr;
+	GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
+	return buff ? buff->begin() : nullptr;
+}
+// Due to the way ChatFilter works, if a previous message was blocked then the buffer would still contain the last message.
+// Clear down the message buffer if the packet has been blocked.
+static void ClearMessageBufferIfBlocked(GW::HookStatus* status, GW::Packet::StoC::PacketBase*) {
+	if (!status->blocked)
+		return;
+	GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
+	if (!buff || !buff->valid()) {
+		Log::Log("Failed to clear message buffer!\n");
+		return;
+	}
+	buff->clear();
 }
 void ChatFilter::Initialize() {
 	ToolboxModule::Initialize();
-    // Due to the way ChatFilter works, if a previous message was blocked then the buffer would still contain the last message.
-    // Clear down the message buffer if the packet has been blocked.
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageCore>(&BlockIfApplicable_Entry,
-        [this](GW::HookStatus* status, GW::Packet::StoC::MessageCore* pak) -> void {
-            GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
-            if (!buff || !buff->valid()) return;
-            buff->clear();
-        });
 
 	// server messages
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&BlockIfApplicable_Entry,
 	[this](GW::HookStatus *status, GW::Packet::StoC::MessageServer *pak) -> void {
 		BlockIfApplicable(status, GetMessageCore(), pak->channel);
 	});
+	GW::StoC::RegisterPostPacketCallback< GW::Packet::StoC::MessageServer>(&BlockIfApplicable_Entry, ClearMessageBufferIfBlocked);
 
 	// global messages
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageGlobal>(&BlockIfApplicable_Entry,
 	[this](GW::HookStatus *status, GW::Packet::StoC::MessageGlobal* pak) -> void {
 		BlockIfApplicable(status, GetMessageCore(), pak->channel);
 	});
+	GW::StoC::RegisterPostPacketCallback< GW::Packet::StoC::MessageGlobal>(&BlockIfApplicable_Entry, ClearMessageBufferIfBlocked);
 	// local messages
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&BlockIfApplicable_Entry,
 	[this](GW::HookStatus *status, GW::Packet::StoC::MessageLocal *pak) -> void {
         BlockIfApplicable(status, GetMessageCore(), pak->channel);
 	});
+	GW::StoC::RegisterPostPacketCallback< GW::Packet::StoC::MessageLocal>(&BlockIfApplicable_Entry, ClearMessageBufferIfBlocked);
 
 	GW::Chat::RegisterLocalMessageCallback(&BlockIfApplicable_Entry,
 	[this](GW::HookStatus *status, int channel, wchar_t *message) -> void {
