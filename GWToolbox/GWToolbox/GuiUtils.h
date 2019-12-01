@@ -25,6 +25,8 @@ namespace GuiUtils {
 	std::string WStringToString(const std::wstring& s);
 	std::wstring StringToWString(const std::string& s);
 
+	std::wstring SanitizePlayerName(std::wstring s);
+
 	bool ParseInt(const char *str, int *val, int base = 0);
 	bool ParseInt(const wchar_t *str, int *val, int base = 0);
 

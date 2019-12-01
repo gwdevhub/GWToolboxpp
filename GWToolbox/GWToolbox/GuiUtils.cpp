@@ -177,21 +177,24 @@ std::wstring GuiUtils::StringToWString(const std::string& str)
 	MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
 	return wstrTo;
 }
-
+std::wstring GuiUtils::SanitizePlayerName(std::wstring s) {
+	if (s.empty()) return std::wstring();
+	s.erase(std::remove_if(s.begin(), s.end(), &isdigit),s.end());
+	s.erase(std::remove_if(s.begin(), s.end(), &ispunct), s.end());
+	s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) {
+		return !std::isspace(ch);
+		}).base(), s.end());
+	s.erase(s.begin(),std::find_if(s.begin(), s.end(), [](int ch) {
+		return !std::isspace(ch);
+		}));
+	return s;
+}
 std::string GuiUtils::RemovePunctuation(std::string s) {
-	for (int i = 0, len = s.size(); i < len; i++) {
-		if (!ispunct(s[i])) continue;
-		s.erase(i--, 1);
-		len--;
-	}
+	s.erase(std::remove_if(s.begin(), s.end(), &ispunct), s.end());
 	return s;
 }
 std::wstring GuiUtils::RemovePunctuation(std::wstring s) {
-	for (int i = 0, len = s.size(); i < len; i++)	{
-		if (!ispunct(s[i])) continue;
-		s.erase(i--, 1);
-		len--;
-	}
+	s.erase(std::remove_if(s.begin(), s.end(), &ispunct), s.end());
 	return s;
 }
 bool GuiUtils::ParseInt(const char *str, int *val, int base) {

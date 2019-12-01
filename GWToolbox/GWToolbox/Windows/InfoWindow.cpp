@@ -78,8 +78,9 @@ void InfoWindow::Initialize() {
 			// set the right index in party
 			for (unsigned i = 0; i < partymembers.size(); ++i) {
 				if (i >= status.size()) continue;
+				if (status[i] == Resigned) continue;
 				if (partymembers[i].login_number >= players.size()) continue;
-				if (wcscmp(players[partymembers[i].login_number].name, buf) == 0) {
+				if (GuiUtils::SanitizePlayerName(players[partymembers[i].login_number].name) == buf) {
 					status[i] = Resigned;
 					timestamp[i] = GW::Map::GetInstanceTime();
 				}

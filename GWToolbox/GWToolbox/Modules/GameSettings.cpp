@@ -103,13 +103,7 @@ namespace {
 			swprintf(buffer, n, L"%lu %s", time, time_unit);
 		}
 	}
-
-	const wchar_t *GetPlayerName(void) {
-        GW::GameContext* g = GW::GameContext::instance();
-        if (!g || !g->character) return L"";
-        return g->character->player_name;
-	}
-
+	
 	struct PartyInfo : GW::PartyInfo {
 		size_t GetPartySize() {
 			return players.size() + henchmen.size() + heroes.size();
@@ -125,6 +119,30 @@ namespace {
 		return (PartyInfo*)p->parties[party_id];
 	}
 
+	const std::wstring GetPlayerName(uint32_t player_number = 0) {
+		if (!player_number) {
+			GW::GameContext* g = GW::GameContext::instance();
+			if (!g || !g->character) return L"";
+			return g->character->player_name;
+		}
+		GW::PlayerArray& players = GW::PlayerMgr::GetPlayerArray();
+		if (!players.valid() || player_number >= players.size())
+			return L"";
+		return GuiUtils::SanitizePlayerName(players[player_number].name);
+	}
+
+	GW::Player* GetPlayerByName(const wchar_t* _name) {
+		if (!_name) return NULL;
+		std::wstring name = GuiUtils::SanitizePlayerName(_name);
+		GW::PlayerArray& players = GW::PlayerMgr::GetPlayerArray();
+		for (GW::Player& player : players) {
+			if (!player.name) continue;
+			if (name == GuiUtils::SanitizePlayerName(player.name))
+				return &player;
+		}
+		return NULL;
+	}
+
 	void WhisperCallback(GW::HookStatus *, const wchar_t from[20], const wchar_t msg[140]) {
 		GameSettings&  game_setting = GameSettings::Instance();
 		if (game_setting.flash_window_on_pm) FlashWindow();
@@ -136,7 +154,7 @@ namespace {
 			PrintTime(time_buffer, 128, diff_time);
 			swprintf(buffer, 120, L"Automatic message: \"%s\" (%s ago)", game_setting.afk_message.c_str(), time_buffer);
 			// Avoid infinite recursion
-			if (wcsncmp(from, ::GetPlayerName(), 20))
+			if (::GetPlayerName() == from)
 				GW::Chat::SendChat(from, buffer);
 		}
 	}
@@ -810,12 +828,13 @@ void GameSettings::Initialize() {
 			return; // - Next logic only applicable when Ctrl + whisper
 		if (ImGui::GetIO().KeysDown[VK_RETURN])
 			return; // - Ctrl + Enter is write whisper to target in GW
+		
 		if (ImGui::GetIO().KeysDown[VK_SHIFT] && GW::PartyMgr::GetPlayerIsLeader()) {
 			wchar_t buf[64];
 			swprintf(buf, 64, L"invite %ls", name);
 			GW::Chat::SendChat('/', buf);
 		}
-		GW::Player* player = GW::PlayerMgr::GetPlayerByName(name);
+		GW::Player* player = GetPlayerByName(name);
 		if (player && GW::Agents::GetAgentByID(player->agent_id)) {
 			GW::Agents::ChangeTarget(player->agent_id);
 		}
@@ -1160,14 +1179,12 @@ void GameSettings::Initialize() {
 bool GameSettings::GetPlayerIsLeader() {
     GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
     if (!party) return false;
-    const wchar_t* player_name = GetPlayerName();
-    if (!player_name) return false;
-	size_t name_len = wcslen(player_name);
+    std::wstring player_name = GetPlayerName();
     if (!party->players.size()) return false;
     for (size_t i = 0; i < party->players.size(); i++) {
         if (!party->players[i].connected())
             continue;
-        return wcsncmp(GW::PlayerMgr::GetPlayerName(party->players[i].login_number), player_name, name_len) == 0;
+        return GetPlayerName(party->players[i].login_number) == player_name;
     }
     return false;
 }
