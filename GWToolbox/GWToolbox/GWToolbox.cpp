@@ -301,7 +301,7 @@ void GWToolbox::Initialize() {
     Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img\\pcons"));
     Resources::Instance().EnsureFolderExists(Resources::GetPath(L"location logs"));
     Resources::Instance().EnsureFileExists(Resources::GetPath(L"GWToolbox.ini"),
-        L"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/GWToolbox.ini",
+        L"https://raw.githubusercontent.com/" GITHUB_OWNER L"/GWToolboxpp/master/resources/GWToolbox.ini",
         [](bool success) {
         if (success) {
             GWToolbox::Instance().OpenSettingsFile();
@@ -313,7 +313,7 @@ void GWToolbox::Initialize() {
     // in order to read defaults
     OpenSettingsFile();
     Resources::Instance().EnsureFileExists(Resources::GetPath(L"Markers.ini"),
-        L"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Markers.ini",
+        L"https://raw.githubusercontent.com/" GITHUB_OWNER L"/GWToolboxpp/master/resources/Markers.ini",
         [](bool success) {
         Minimap::Instance().custom_renderer.LoadMarkers();
     });
@@ -403,7 +403,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         io.IniFilename = tb.imgui_inifile.bytes;
 
         Resources::Instance().EnsureFileExists(Resources::GetPath(L"Font.ttf"),
-            L"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Font.ttf",
+            L"https://raw.githubusercontent.com/" GITHUB_OWNER L"/GWToolboxpp/master/resources/Font.ttf",
             [](bool success) {
             if (success) {
                 GuiUtils::LoadFonts();
