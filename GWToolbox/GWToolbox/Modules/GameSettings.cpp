@@ -817,10 +817,10 @@ void GameSettings::Initialize() {
 	// Open links on player name click
 	// Ctrl click name to target (and add to party)
 	// Ctrl+shift to invite to party
-	GW::Chat::RegisterStartWhisperCallback(&StartWhisperCallback_Entry, [&](GW::HookStatus* status, wchar_t* name) -> void {
-		if (!name) return;		
-		if (openlinks && (!wcsncmp(name, L"http://", 7) || !wcsncmp(name, L"https://", 8))) {
-			ShellExecuteW(NULL, L"open", name, NULL, NULL, SW_SHOWNORMAL);
+	GW::Chat::RegisterStartWhisperCallback(&StartWhisperCallback_Entry, [&](GW::HookStatus* status, wchar_t* _name) -> void {
+		if (!_name) return;
+		if (openlinks && (!wcsncmp(_name, L"http://", 7) || !wcsncmp(_name, L"https://", 8))) {
+			ShellExecuteW(NULL, L"open", _name, NULL, NULL, SW_SHOWNORMAL);
 			status->blocked = true;
 			return;
 		}
@@ -828,13 +828,13 @@ void GameSettings::Initialize() {
 			return; // - Next logic only applicable when Ctrl + whisper
 		if (ImGui::GetIO().KeysDown[VK_RETURN])
 			return; // - Ctrl + Enter is write whisper to target in GW
-		
+		std::wstring name = GuiUtils::SanitizePlayerName(_name);
 		if (ImGui::GetIO().KeysDown[VK_SHIFT] && GW::PartyMgr::GetPlayerIsLeader()) {
 			wchar_t buf[64];
 			swprintf(buf, 64, L"invite %ls", name);
 			GW::Chat::SendChat('/', buf);
 		}
-		GW::Player* player = GetPlayerByName(name);
+		GW::Player* player = GetPlayerByName(name.c_str());
 		if (player && GW::Agents::GetAgentByID(player->agent_id)) {
 			GW::Agents::ChangeTarget(player->agent_id);
 		}
@@ -1093,13 +1093,13 @@ void GameSettings::Initialize() {
 		size_t end_idx = message.find(L"\x1",start_idx);
 		if (end_idx == std::wstring::npos)
 			return; // Not a player name, this should never happen.
-		std::wstring player_pinged = message.substr(start_idx, end_idx);
+		std::wstring player_pinged = GuiUtils::SanitizePlayerName(message.substr(start_idx, end_idx));
 		if (player_pinged.empty())
 			return; // No recipient
 		GW::Player* sender = GW::PlayerMgr::GetPlayerByID(pak->player_number);
 		if (!sender)
 			return;// No sender
-        if (flash_window_on_name_ping && !wcsncmp(GW::GameContext::instance()->character->player_name, player_pinged.c_str(), 20))
+        if (flash_window_on_name_ping && GetPlayerName() == player_pinged)
             FlashWindow(); // Flash window - we've been followed!
 		message.insert(start_idx, L"<a=1>");
 		message.insert(end_idx + 5, L"</a>");

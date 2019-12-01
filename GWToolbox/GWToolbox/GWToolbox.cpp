@@ -352,7 +352,6 @@ void GWToolbox::FlashWindow() {
 void GWToolbox::OpenSettingsFile() {
     Log::Log("Opening ini file\n");
     if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
-    inifile->Reset();
     inifile->LoadFile(Resources::GetPath(L"GWToolbox.ini").c_str());
 }
 void GWToolbox::LoadModuleSettings() {

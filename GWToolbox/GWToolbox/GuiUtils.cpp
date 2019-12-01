@@ -178,15 +178,9 @@ std::wstring GuiUtils::StringToWString(const std::string& str)
 	return wstrTo;
 }
 std::wstring GuiUtils::SanitizePlayerName(std::wstring s) {
-	if (s.empty()) return std::wstring();
-	s.erase(std::remove_if(s.begin(), s.end(), &isdigit),s.end());
-	s.erase(std::remove_if(s.begin(), s.end(), &ispunct), s.end());
-	s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) {
-		return !std::isspace(ch);
-		}).base(), s.end());
-	s.erase(s.begin(),std::find_if(s.begin(), s.end(), [](int ch) {
-		return !std::isspace(ch);
-		}));
+	if (s.empty()) return L"";
+	std::wregex remove(L" ?[\\(\\[]\\w+[\\)\\]]");
+	s = std::regex_replace(s, remove, L""); 
 	return s;
 }
 std::string GuiUtils::RemovePunctuation(std::string s) {
