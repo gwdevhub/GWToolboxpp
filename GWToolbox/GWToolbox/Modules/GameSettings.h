@@ -255,6 +255,7 @@ public:
 	bool notify_when_party_member_joins = false;
 
 	bool disable_gold_selling_confirmation = false;
+	bool collectors_edition_emotes = true;
 
 	void ApplyBorderless(bool value);
 	void SetAfkMessage(std::wstring&& message);

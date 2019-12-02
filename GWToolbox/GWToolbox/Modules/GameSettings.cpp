@@ -452,7 +452,8 @@ namespace {
 	};
 
 	static clock_t last_send = 0;
-	static std::wstring last_dialog_body;
+	static uint32_t last_dialog_npc_id = 0;
+
     static bool ctrl_enter_whisper = false;
 
 	const enum PING_PARTS {
@@ -900,23 +901,44 @@ void GameSettings::Initialize() {
         static ReturnToOutpostPacket pak;
         GW::CtoS::SendPacket(&pak);
     });
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DialogBody>(&OnDialog_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::DialogBody* packet) {
-		last_dialog_body = std::wstring(packet->message);
+	// Apply Collector's Edition animations
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&PartyDefeated_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::GenericValue* pak) -> void {
+		if (!collectors_edition_emotes || pak->Value_id != 28 || pak->agent_id != GW::Agents::GetPlayerId())
+			return;
+		static GW::Packet::StoC::GenericValue pak2;
+		pak2.agent_id = pak->agent_id;
+		pak2.Value_id = 23;
+		pak2.value = pak->value;
+		GW::StoC::EmulatePacket(&pak2);
+		});
+	// Save last dialog sender, used for faction donate
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DialogSender>(&OnDialog_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::DialogSender* pak) {
+		GW::Agent* agent = GW::Agents::GetAgentByID(pak->agent_id);
+		if (!agent) return;
+		last_dialog_npc_id = agent->player_number;
 		});
 	// Skip char name entry dialog when donating faction
 	GW::Agents::RegisterDialogCallback(&OnDialog_Entry, [this](GW::HookStatus* status, uint32_t dialog_id) {
 		if (!skip_entering_name_for_faction_donate) return;
 		if (dialog_id != 135) return;
-		status->blocked = true;
 		static DonateFactionPacket pak;
-		pak.allegiance = 0; // 0 = kurzick, 1 = luxon
-		uint32_t* current_faction = &GW::GameContext::instance()->world->current_kurzick;
-		if (wcsncmp(last_dialog_body.c_str(), L"\x8102\x445\xABB2\xAA22\x2A14",5) == 0) {
+		uint32_t* current_faction = nullptr;
+		// Dialog 135 is also used for other NPCs e.g. zaishen keys. Use last_dialog_npc_id to compare.
+		switch (last_dialog_npc_id) {
+		case 3639:
 			current_faction = &GW::GameContext::instance()->world->current_luxon;
 			pak.allegiance = 1;
+			break;
+		case 3410:
+			current_faction = &GW::GameContext::instance()->world->current_kurzick;
+			pak.allegiance = 0;
+			break;
+		default:
+			return;
 		}
 		if (*current_faction < pak.faction_amount)
-			return; // Not enough to donate.
+			return; // Not enough to donate. Return here and the NPC will reply.
+		status->blocked = true;
 		GW::CtoS::SendPacket(&pak);
 		});
 
