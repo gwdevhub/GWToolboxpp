@@ -21,7 +21,18 @@
 
 #include "GuiUtils.h"
 
-
+namespace {
+	enum SkillEffect {
+		Chaos_storm = 131,
+		Churning_earth = 994,
+		Meteor_Shower = 341,
+		Lava_font = 347,
+		Maelstrom = 381,
+		Savannah_heat = 346,
+		Breath_of_fire = 351,
+		Bed_of_coals = 875
+	};
+}
 void EffectRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	Invalidate();
 	Colors::Load(ini, section, VAR_NAME(aoe_color), aoe_color);
@@ -34,13 +45,17 @@ void EffectRenderer::DrawSettings() {
 }
 
 void EffectRenderer::PacketCallback(GW::Packet::StoC::GenericValue* pak) {
-	if (pak->Value_id != 21) return;
+	if (!initialized) return;
 	uint32_t duration = 10000;
-	switch (pak->value) {
-	case 347: // Lava font
-		duration = 5000;
-		break;
-	default: return;
+	switch (pak->Value_id) {
+	case 21: // Effect on agent
+		switch (pak->value) {
+		case 347: // Lava font
+			duration = 5000;
+			break;
+		default: return;
+		}
+	default:return;
 	}
 	GW::Agent* caster = GW::Agents::GetAgentByID(pak->agent_id);
 	if (!caster || caster->allegiance != 0x3) return;
@@ -48,19 +63,24 @@ void EffectRenderer::PacketCallback(GW::Packet::StoC::GenericValue* pak) {
     e->circle.color = &aoe_color;
 	aoe_effects.push_front(e);
 }
-
 void EffectRenderer::PacketCallback(GW::Packet::StoC::GenericValueTarget* pak) {
-	if (pak->Value_id != 20) return;
+	if (!initialized) return;
 	uint32_t duration = 10000;
-	switch (pak->value) {
-	case 381: // Maelstrom
-		break;
-	case 346: // Savannah heat
-	case 351: // Breath of fire
-	case 875: // Bed of coals
-		duration = 5000;
-		break;
-	default: return;
+	switch (pak->Value_id) {
+		case 20: // Effect on target
+			switch (pak->value) {
+			case SkillEffect::Maelstrom:
+				duration = 10000;
+				break;
+			case SkillEffect::Savannah_heat:
+			case SkillEffect::Breath_of_fire:
+			case SkillEffect::Bed_of_coals:
+				duration = 5000;
+				break;
+			default: return;
+			}
+			break;
+		default: return;
 	}
 	GW::Agent* caster = GW::Agents::GetAgentByID(pak->caster);
 	if (!caster || caster->allegiance != 0x3) return;
@@ -70,16 +90,19 @@ void EffectRenderer::PacketCallback(GW::Packet::StoC::GenericValueTarget* pak) {
 	e->circle.color = &aoe_color;
 	aoe_effects.push_front(e);
 }
-
 void EffectRenderer::PacketCallback(GW::Packet::StoC::PlayEffect* pak) {
+	if (!initialized) return;
 	// TODO: Fire storm and Meteor shower have no caster!
 	// Need to record GenericValueTarget with value_id matching these skills, then roughly match the coords after.
 	uint32_t duration = 10000;
+	float range = GW::Constants::Range::Adjacent;
 	switch (pak->effect_id) {
-	case 131: // Chaos storm
+	case SkillEffect::Chaos_storm:
+		duration = 10000;
 		break;
-	case 994: // Churning earth
+	case SkillEffect::Churning_earth:
 		duration = 5000;
+		range = GW::Constants::Range::Nearby;
 		break;
 	default: return;
 	}
@@ -87,12 +110,14 @@ void EffectRenderer::PacketCallback(GW::Packet::StoC::PlayEffect* pak) {
 		GW::Agent* a = GW::Agents::GetAgentByID(pak->agent_id);
 		if (!a || a->allegiance != 0x3) return;
 	}
-	Effect* e = new Effect(pak->effect_id, pak->coords.x, pak->coords.y, duration);
+	Effect* e = new Effect(pak->effect_id, pak->coords.x, pak->coords.y, duration, range);
 	e->circle.color = &aoe_color;
 	aoe_effects.push_front(e);
 }
-
 void EffectRenderer::Initialize(IDirect3DDevice9* device) {
+	if (initialized)
+		return;
+	initialized = true;
 	type = D3DPT_LINELIST;
 
 	HRESULT hr = device->CreateVertexBuffer(sizeof(D3DVertex) * vertices_max, 0,
@@ -101,16 +126,10 @@ void EffectRenderer::Initialize(IDirect3DDevice9* device) {
 		printf("Error setting up PingsLinesRenderer vertex buffer: %d\n", hr);
 	}
 }
-
 void EffectRenderer::Render(IDirect3DDevice9* device) {
-	if (!initialized) {
-		initialized = true;
-		Initialize(device);
-	}
-
+	Initialize(device);
 	DrawAoeEffects(device);
 }
-
 void EffectRenderer::DrawAoeEffects(IDirect3DDevice9* device) {
     if (aoe_effects.empty())
         return;
@@ -145,7 +164,7 @@ void EffectRenderer::EffectCircle::Initialize(IDirect3DDevice9* device) {
 		(VOID**)&vertices, D3DLOCK_DISCARD);
 
 	for (size_t i = 0; i < count; ++i) {
-		float angle = i * (2 * M_PI / count);
+		float angle = i * (2 * (float)M_PI / count);
 		vertices[i].x = std::cos(angle);
 		vertices[i].y = std::sin(angle);
 		vertices[i].z = 0.0f;

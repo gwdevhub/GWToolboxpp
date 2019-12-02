@@ -1,5 +1,6 @@
 #pragma once
 
+#include <GWCA/Constants/Constants.h>
 #include <GWCA/Packets/StoC.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/UIMgr.h>
@@ -21,10 +22,14 @@ class EffectRenderer : public VBuffer {
 		void Initialize(IDirect3DDevice9* device) override;
 	public:
 		Color* color = nullptr;
+		float range = GW::Constants::Range::Adjacent;
 	};
 	struct Effect {
 		Effect(uint32_t _effect_id, float _x, float _y) : Effect(_effect_id,_x,_y,duration)  {};
-		Effect(uint32_t _effect_id, float _x, float _y, uint32_t _duration) : effect_id(_effect_id), y(_y), x(_x), duration(_duration), start(TIMER_INIT()) {};
+		Effect(uint32_t _effect_id, float _x, float _y, uint32_t _duration) : Effect(_effect_id, _x, _y, duration, GW::Constants::Range::Adjacent) {};
+		Effect(uint32_t _effect_id, float _x, float _y, uint32_t _duration, float range) : effect_id(_effect_id), y(_y), x(_x), duration(_duration), start(TIMER_INIT()) {
+			circle.range = range;
+		};
 		clock_t start;
 		const uint32_t effect_id;
 		const float x, y;
