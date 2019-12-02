@@ -832,7 +832,7 @@ void GameSettings::Initialize() {
 		std::wstring name = GuiUtils::SanitizePlayerName(_name);
 		if (ImGui::GetIO().KeyShift && GW::PartyMgr::GetPlayerIsLeader()) {
 			wchar_t buf[64];
-			swprintf(buf, 64, L"invite %ls", name);
+			swprintf(buf, 64, L"invite %s", name.c_str());
 			GW::Chat::SendChat('/', buf);
 		}
 		GW::Player* player = GetPlayerByName(name.c_str());
