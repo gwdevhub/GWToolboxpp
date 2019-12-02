@@ -453,6 +453,7 @@ namespace {
 
 	static clock_t last_send = 0;
 	static std::wstring last_dialog_body;
+    static bool ctrl_enter_whisper = false;
 
 	const enum PING_PARTS {
 		NAME=1,
@@ -824,12 +825,12 @@ void GameSettings::Initialize() {
 			status->blocked = true;
 			return;
 		}
-		if (!ImGui::GetIO().KeysDown[VK_CONTROL])
-			return; // - Next logic only applicable when Ctrl + whisper
-		if (ImGui::GetIO().KeysDown[VK_RETURN])
-			return; // - Ctrl + Enter is write whisper to target in GW
+		if (!ImGui::GetIO().KeyCtrl)
+			return; // - Next logic only applicable when Ctrl is held
+		if (ctrl_enter_whisper)
+			return; // - Ctrl + Enter is write whisper to target - drop out here
 		std::wstring name = GuiUtils::SanitizePlayerName(_name);
-		if (ImGui::GetIO().KeysDown[VK_SHIFT] && GW::PartyMgr::GetPlayerIsLeader()) {
+		if (ImGui::GetIO().KeyShift && GW::PartyMgr::GetPlayerIsLeader()) {
 			wchar_t buf[64];
 			swprintf(buf, 64, L"invite %ls", name);
 			GW::Chat::SendChat('/', buf);
@@ -1828,6 +1829,24 @@ void GameSettings::UpdateBorderless() {
 }
 
 bool GameSettings::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
+    // Open Whisper to targeted player with Ctrl + Enter
+    if (Message == WM_KEYUP
+        && wParam == VK_RETURN
+        && ImGui::GetIO().KeyCtrl
+        && !GW::Chat::GetIsTyping()) {
+        GW::Agent* target = GW::Agents::GetTarget();
+        if (target && target->IsPlayer()) {
+            const wchar_t* player_name = GW::PlayerMgr::GetPlayerName(target->login_number);
+            GW::GameThread::Enqueue([player_name]() {
+                if (!player_name)
+                    return;
+                ctrl_enter_whisper = true;
+                GW::UI::SendUIMessage(GW::UI::kOpenWhisper, (wchar_t*)player_name, nullptr);
+                ctrl_enter_whisper = false;
+                });
+        }
+    }
+
 	// I don't know what would be the best solution here, but the way we capture every messages as a sign of activity can be bad.
 	// Added that because when someone was typing "/afk message" he was put online directly, because "enter-up" was captured.
 	if (Message == WM_KEYUP)
