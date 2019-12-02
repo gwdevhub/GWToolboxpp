@@ -4,6 +4,9 @@
 
 #include <GWCA\Constants\Constants.h>
 
+#include <GWCA\Packets\StoC.h>
+#include <GWCA\Managers\StoCMgr.h>
+
 #include <GWCA\GameContainers\GamePos.h>
 
 #include <GWCA\Context\GameContext.h>
@@ -230,6 +233,15 @@ void TravelWindow::Travel(GW::Constants::MapID MapID, GW::Constants::District Di
     return UITravel(MapID, District, district_number);
 	//return GW::Map::Travel(MapID, District, district_number);
 }
+bool TravelWindow::IsMapUnlocked(GW::Constants::MapID map_id) {
+	GW::Array<uint32_t> unlocked_map = GW::GameContext::instance()->world->unlocked_map;
+	uint32_t real_index = (uint32_t)map_id / 32;
+	if (real_index >= unlocked_map.size())
+		return false;
+	uint32_t shift = (uint32_t)map_id % 32;
+	uint32_t flag = 1 << shift;
+	return (unlocked_map[real_index] & flag) != 0;
+}
 void TravelWindow::UITravel(GW::Constants::MapID MapID, GW::Constants::District District /*= 0*/, int district_number) {
     struct MapStruct {
         GW::Constants::MapID map_id;
@@ -243,6 +255,23 @@ void TravelWindow::UITravel(GW::Constants::MapID MapID, GW::Constants::District 
     t->region_id = RegionFromDistrict(District);
     t->language_id = LanguageFromDistrict(District);
 
+	uint32_t err = 0;
+	if (!IsMapUnlocked(MapID)) {
+		err = 53;
+	}
+	if (t->region_id == GW::Map::GetRegion()
+		&& t->language_id == GW::Map::GetLanguage()
+		&& t->map_id == GW::Map::GetMapID()) {
+		err = 60;
+	}
+	if (err) {
+		GW::GameThread::Enqueue([err] {
+			static GW::Packet::StoC::ErrorMessage e;
+			e.message_id = err;
+			GW::StoC::EmulatePacket(&e);
+			});
+		return;
+	}
     GW::GameThread::Enqueue([t] {
         GW::UI::SendUIMessage(0x10000000 | 0x17A, t);
         delete t;

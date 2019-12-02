@@ -800,25 +800,25 @@ void ChatCommands::CmdTP(const wchar_t *message, int argc, LPWSTR *argv) {
         switch (outpost) {
             case GW::Constants::MapID::Vizunah_Square_Foreign_Quarter_outpost:
             case GW::Constants::MapID::Vizunah_Square_Local_Quarter_outpost:
-                if (std::wstring(L"local").rfind(argv[argc - 1]) == 0) // - e.g. /tp viz local
-                    outpost = GW::Constants::MapID::Vizunah_Square_Local_Quarter_outpost;
-                else
-                    outpost = GW::Constants::MapID::Vizunah_Square_Foreign_Quarter_outpost;
+				if (std::wstring(L"l").rfind(argv[argc - 1]) == 0) // - e.g. /tp viz local
+					outpost = GW::Constants::MapID::Vizunah_Square_Local_Quarter_outpost;
+				else if (std::wstring(L"f").rfind(argv[argc - 1]) == 0)
+					outpost = GW::Constants::MapID::Vizunah_Square_Foreign_Quarter_outpost;
                 break;
             case GW::Constants::MapID::Fort_Aspenwood_Luxon_outpost:
             case GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost:
-                if (std::wstring(L"luxon").rfind(argv[argc - 1]) == 0) // - e.g. /tp fa lux
+                if (std::wstring(L"l").rfind(argv[argc - 1]) == 0) // - e.g. /tp fa lux
                     outpost = GW::Constants::MapID::Fort_Aspenwood_Luxon_outpost;
-                else if (std::wstring(L"kurzick").rfind(argv[argc - 1]) == 0)
+                else if (std::wstring(L"k").rfind(argv[argc - 1]) == 0)
                     outpost = GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost;
                 else
                     outpost = IsLuxon() ? GW::Constants::MapID::Fort_Aspenwood_Luxon_outpost : GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost;
                 break;
             case GW::Constants::MapID::The_Jade_Quarry_Kurzick_outpost:
             case GW::Constants::MapID::The_Jade_Quarry_Luxon_outpost:
-                if (std::wstring(L"luxon").rfind(argv[argc - 1]) == 0) // - e.g. /tp jq lux
+                if (std::wstring(L"l").rfind(argv[argc - 1]) == 0) // - e.g. /tp jq lux
                     outpost = GW::Constants::MapID::The_Jade_Quarry_Luxon_outpost;
-                else if (std::wstring(L"kurzick").rfind(argv[argc - 1]) == 0)
+                else if (std::wstring(L"k").rfind(argv[argc - 1]) == 0)
                     outpost = GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost;
                 else
                     outpost = IsLuxon() ? GW::Constants::MapID::The_Jade_Quarry_Luxon_outpost : GW::Constants::MapID::The_Jade_Quarry_Kurzick_outpost;

@@ -24,7 +24,7 @@ public:
 	void Initialize() override;
 
 	bool TravelFavorite(unsigned int idx);
-
+	bool IsMapUnlocked(GW::Constants::MapID map_id);
 	void Travel(GW::Constants::MapID MapID, GW::Constants::District district, int district_number = 0);
     void UITravel(GW::Constants::MapID MapID, GW::Constants::District district, int district_number = 0); // Travel via UI interface, allowing "Are you sure" dialogs.
 	void ScrollToOutpost(GW::Constants::MapID outpost_id, GW::Constants::District district = GW::Constants::District::Current, int district_number = 0);
@@ -64,9 +64,18 @@ private:
 	bool map_travel_countdown_started = false;
 	bool pending_map_travel = false;
 
-    enum error_message_ids {
-
-    };
+    /*enum error_message_ids {
+		error_B29 = 52,
+		error_B30,
+		error_B31,
+		error_B32,
+		error_B33,
+		error_B34,
+		error_B35,
+		error_B36,
+		error_B37,
+		error_B38
+    };*/
 
     enum error_message_trans_codes {
         error_B29 = 0xB29, // The target party has members who do not meet this mission's level requirements.
@@ -83,7 +92,7 @@ private:
 
 public:
 
-    const GW::Constants::MapID searchable_map_ids[182]{
+    const GW::Constants::MapID searchable_map_ids[186]{
         GW::Constants::MapID::Abaddons_Gate,
         GW::Constants::MapID::Abaddons_Mouth,
         GW::Constants::MapID::Altrumm_Ruins,
@@ -144,7 +153,9 @@ public:
         GW::Constants::MapID::Eye_of_the_North_outpost,
         GW::Constants::MapID::Fishermens_Haven_outpost,
         GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost,
+		GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost,
         GW::Constants::MapID::Fort_Aspenwood_Luxon_outpost,
+		GW::Constants::MapID::Fort_Aspenwood_Luxon_outpost,
         GW::Constants::MapID::Fort_Ranik,
         GW::Constants::MapID::Frontier_Gate_outpost,
         GW::Constants::MapID::The_Frost_Gate,
@@ -179,7 +190,9 @@ public:
         GW::Constants::MapID::Jade_Flats_Kurzick_outpost,
         GW::Constants::MapID::Jade_Flats_Luxon_outpost,
         GW::Constants::MapID::The_Jade_Quarry_Kurzick_outpost,
+		GW::Constants::MapID::The_Jade_Quarry_Kurzick_outpost,
         GW::Constants::MapID::The_Jade_Quarry_Luxon_outpost,
+		GW::Constants::MapID::The_Jade_Quarry_Luxon_outpost,
         GW::Constants::MapID::Jennurs_Horde,
         GW::Constants::MapID::Jokanur_Diggings,
         GW::Constants::MapID::Kaineng_Center_outpost,
@@ -293,7 +306,7 @@ public:
         "vloxen excavations",
         "bogroot growths"
     };
-    const char* searchable_map_names[182]{
+    const char* searchable_map_names[186] {
         "abaddons gate",
         "abaddons mouth",
         "altrumm ruins",
@@ -354,7 +367,9 @@ public:
         "eye of the north",
         "fishermens haven",
         "fort aspenwood kurzick",
+		"fa kurzick",
         "fort aspenwood luxon",
+		"fa luxon",
         "fort ranik",
         "frontier gate",
         "frost gate",
@@ -389,7 +404,9 @@ public:
         "jade flats kurzick",
         "jade flats luxon",
         "jade quarry kurzick",
+		"jq kurzick",
         "jade quarry luxon",
+		"jq luxon",
         "jennurs horde",
         "jokanur diggings",
         "kaineng center",
