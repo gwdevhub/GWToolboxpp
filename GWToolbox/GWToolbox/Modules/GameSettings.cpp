@@ -1830,17 +1830,16 @@ void GameSettings::UpdateBorderless() {
 
 bool GameSettings::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
     // Open Whisper to targeted player with Ctrl + Enter
-    if (Message == WM_KEYUP
+    if (Message == WM_KEYDOWN
         && wParam == VK_RETURN
+        && !ctrl_enter_whisper
         && ImGui::GetIO().KeyCtrl
         && !GW::Chat::GetIsTyping()) {
         GW::Agent* target = GW::Agents::GetTarget();
         if (target && target->IsPlayer()) {
             const wchar_t* player_name = GW::PlayerMgr::GetPlayerName(target->login_number);
+            ctrl_enter_whisper = true;
             GW::GameThread::Enqueue([player_name]() {
-                if (!player_name)
-                    return;
-                ctrl_enter_whisper = true;
                 GW::UI::SendUIMessage(GW::UI::kOpenWhisper, (wchar_t*)player_name, nullptr);
                 ctrl_enter_whisper = false;
                 });
