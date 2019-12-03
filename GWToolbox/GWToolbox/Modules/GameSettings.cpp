@@ -154,7 +154,7 @@ namespace {
 			PrintTime(time_buffer, 128, diff_time);
 			swprintf(buffer, 120, L"Automatic message: \"%s\" (%s ago)", game_setting.afk_message.c_str(), time_buffer);
 			// Avoid infinite recursion
-			if (::GetPlayerName() == from)
+			if (::GetPlayerName() != from)
 				GW::Chat::SendChat(from, buffer);
 		}
 	}
@@ -456,6 +456,10 @@ namespace {
 
     static bool ctrl_enter_whisper = false;
 
+    static bool IsInfused(GW::Item* item) {
+        return item && std::wstring(item->info_string).find(L"\xAC9") != std::wstring::npos;
+    }
+
 	const enum PING_PARTS {
 		NAME=1,
 		DESC=2
@@ -471,6 +475,32 @@ OnPingEqippedItem_pt OnPingEquippedItemRet;
 static std::wstring ShorthandItemDescription(GW::Item* item) {
 	std::wstring original(item->info_string);
 	std::wsmatch m;
+
+    // For armor items, include full item name and a few description bits.
+    switch ((GW::Constants::ItemType)item->type) {
+    case GW::Constants::ItemType::Headpiece:
+    case GW::Constants::ItemType::Boots:
+    case GW::Constants::ItemType::Chestpiece:
+    case GW::Constants::ItemType::Gloves:
+    case GW::Constants::ItemType::Leggings:
+        original = item->complete_name_enc;
+        std::wstring item_str(item->info_string);
+        std::wregex stacking_att(L"\x2.\x10A\xA84\x10A(.{1,2})\x1\x101\x101\x1\x2\xA3E\x10A\xAA8\x10A\xAB1\x1\x1");
+        if (std::regex_search(item_str, m, stacking_att)) {
+            wchar_t buffer[64];
+            wsprintfW(buffer, L"\x2\xAA8\x10A\xA84\x10A%s\x1\x101\x101\x1", m[1].str().c_str());
+            original += buffer;
+        }
+        std::wregex armor_rating(L"\xA3B\x10A\xA86\x10A\xA44\x1\x101(.)\x1\x2");
+        if (std::regex_search(item_str, m, armor_rating)) {
+            wchar_t buffer[64];
+            wsprintfW(buffer, L"\x2\x102\x2\xA86\x10A\xA44\x1\x101%s", m[1].str().c_str());
+            original += buffer;
+        }
+        if (IsInfused(item))
+            original += L"\x2\x102\x2\xAC9";
+        return original;
+    }
 
 	// Replace "Requires 9 Divine Favor" > "q9 Divine Favor"
 	std::wregex regexp_req(L".\x010A\x0AA8\x010A\x0AA9\x010A.\x0001\x0101.\x0001\x0001");
@@ -671,8 +701,8 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
 	return original;
 }
 static std::wstring ParseItemDescription(GW::Item* item) {
-	std::wstring original = ShorthandItemDescription(item);
-
+    std::wstring original = ShorthandItemDescription(item);
+    
     // Remove "Value: 122 gold"
 	original = std::regex_replace(original, std::wregex(L"\x2\x0102\x2\x0A3E\x010A\x0A8A\x010A\x0A59\x1\x010B.\x0101.(\x102.)?\x1\x1"), L"");
 
