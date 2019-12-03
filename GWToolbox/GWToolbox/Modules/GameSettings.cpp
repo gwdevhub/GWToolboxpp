@@ -908,7 +908,15 @@ void GameSettings::Initialize() {
 		static GW::Packet::StoC::GenericValue pak2;
 		pak2.agent_id = pak->agent_id;
 		pak2.Value_id = 23;
-		pak2.value = pak->value;
+		pak2.value = pak->value; // Glowing hands, any profession
+		switch ((GW::Constants::Profession)GW::Agents::GetPlayer()->primary) {
+			case GW::Constants::Profession::Assassin:
+			case GW::Constants::Profession::Ritualist:
+			case GW::Constants::Profession::Dervish:
+			case GW::Constants::Profession::Paragon:
+				pak2.value = 14; // Collectors edition Nightfall/Factions
+				break;
+		}
 		GW::StoC::EmulatePacket(&pak2);
 		});
 	// Save last dialog sender, used for faction donate

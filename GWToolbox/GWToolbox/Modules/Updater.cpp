@@ -24,14 +24,6 @@ void Updater::SaveSettings(CSimpleIni* ini) {
 #ifdef _DEBUG
     return;
 #endif
-	HMODULE module = GWToolbox::GetDLLModule();
-	CHAR* dllfile = new CHAR[MAX_PATH];
-	DWORD size = GetModuleFileName(module, dllfile, MAX_PATH);
-	if (size > 0) {
-		ini->SetValue(Name(), "dllpath", dllfile);
-	} else {
-		ini->SetValue(Name(), "dllpath", "error");
-	}
 	ini->SetLongValue(Name(), "update_mode", mode);
 }
 
