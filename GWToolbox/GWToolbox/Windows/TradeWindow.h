@@ -67,6 +67,8 @@ private:
 
 	void DrawAlertsWindowContent(bool ownwindow);
 
+	void NotifyTradeBlockedInKamadan();
+
 	static bool GetInKamadan();
 
 	// Since we are connecting in an other thread, the following attributes/methods avoid spamming connection requests

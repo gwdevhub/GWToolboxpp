@@ -40,6 +40,10 @@ static const char ws_host[] = "wss://kamadan.decltype.org/ws/";
 
 static const std::regex regex_check = std::regex("^/(.*)/[a-z]?$", std::regex::ECMAScript | std::regex::icase);
 
+void TradeWindow::NotifyTradeBlockedInKamadan() {
+	if (print_game_chat && only_show_trade_alerts_in_kamadan && filter_alerts && GetInKamadan())
+		Log::Info("Only trade alerts will be visible in the trade channel.\nYou can still view all Kamadan trade messages via Trade window.");
+}
 void TradeWindow::Initialize() {
 	ToolboxWindow::Initialize();
 	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"trade.png"));
@@ -68,11 +72,10 @@ void TradeWindow::Initialize() {
 	if (print_game_chat) AsyncChatConnect();
 
 	GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::MapLoaded>(&OnTradeMessage_Entry, [&](GW::HookStatus*, GW::Packet::StoC::MapLoaded*) {
-		if (only_show_trade_alerts_in_kamadan && filter_alerts && GetInKamadan())
-			Log::Info("Only trade alerts will be visible in the trade channel.\nYou can still view all Kamadan trade messages via Trade window.");
+		NotifyTradeBlockedInKamadan();
 		});
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&OnTradeMessage_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::MessageLocal* pak) {
-		if (!only_show_trade_alerts_in_kamadan || !filter_alerts) return;
+		if (!print_game_chat || !only_show_trade_alerts_in_kamadan || !filter_alerts) return;
 		if (pak->channel != GW::Chat::CHANNEL_TRADE) return;
 		if (!GetInKamadan()) return;
 		GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
@@ -83,8 +86,7 @@ void TradeWindow::Initialize() {
 			buff->clear();
 		}
 		});
-	if (only_show_trade_alerts_in_kamadan && filter_alerts && GetInKamadan())
-		Log::Info("Only trade alerts will be visible in the trade channel.\nYou can still view all Kamadan trade messages via Trade window.");
+	NotifyTradeBlockedInKamadan();
 }
 
 void TradeWindow::Terminate() {
@@ -404,9 +406,10 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 
 void TradeWindow::DrawAlertsWindowContent(bool ownwindow) {
 	ImGui::Text("Alerts");
-	ImGui::Checkbox("Send Kamadan ad1 trade chat to your trade chat", &print_game_chat);
+	bool edited = false;
+	edited |= ImGui::Checkbox("Send Kamadan ad1 trade chat to your trade chat", &print_game_chat);
 	if (print_game_chat) {
-		ImGui::Checkbox("Only show messages containing:", &filter_alerts);
+		edited |= ImGui::Checkbox("Only show messages containing:", &filter_alerts);
 		ImGui::TextDisabled("(Each line is a separate keyword. Not case sensitive.)");
 		if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE,
 			ImVec2(-1.0f, 0.0f))) {
@@ -415,9 +418,12 @@ void TradeWindow::DrawAlertsWindowContent(bool ownwindow) {
 			alertfile_dirty = true;
 		}
 		if (filter_alerts) {
-			ImGui::Checkbox("Only show trade alerts when in Kamadan ae1", &only_show_trade_alerts_in_kamadan);
+			edited |= ImGui::Checkbox("Only show trade alerts when in Kamadan ae1", &only_show_trade_alerts_in_kamadan);
 			ImGui::ShowHelp("You can still view Kamadan trade chat via the main Trade Window");
 		}
+	}
+	if (edited) {
+		NotifyTradeBlockedInKamadan();
 	}
 }
 
