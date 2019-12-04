@@ -110,6 +110,16 @@ namespace {
 		}
 	};
 
+    static wchar_t* GetMessageCore() {
+        GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
+        return buff ? buff->begin() : nullptr;
+    }
+    static void ClearMessageCore() {
+        GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
+        if (buff && buff->valid())
+            buff->clear();
+    }
+
 	PartyInfo* GetPartyInfo(uint32_t party_id = 0) {
 		if (!party_id)
 			return (PartyInfo*)GW::PartyMgr::GetPartyInfo();
@@ -935,18 +945,20 @@ void GameSettings::Initialize() {
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&PartyDefeated_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::GenericValue* pak) -> void {
 		if (!collectors_edition_emotes || pak->Value_id != 28 || pak->agent_id != GW::Agents::GetPlayerId())
 			return;
-		static GW::Packet::StoC::GenericValue pak2;
-		pak2.agent_id = pak->agent_id;
-		pak2.Value_id = 23;
-		pak2.value = pak->value; // Glowing hands, any profession
-		switch ((GW::Constants::Profession)GW::Agents::GetPlayer()->primary) {
-			case GW::Constants::Profession::Assassin:
-			case GW::Constants::Profession::Ritualist:
-			case GW::Constants::Profession::Dervish:
-			case GW::Constants::Profession::Paragon:
-				pak2.value = 14; // Collectors edition Nightfall/Factions
-				break;
-		}
+        static GW::Packet::StoC::GenericValue pak2;
+        pak2.agent_id = pak->agent_id;
+        pak2.Value_id = 23;
+        pak2.value = pak->value; // Glowing hands, any profession
+        if (pak->value == 0x43394f1d) { // 0x31939cbb = /dance, 0x43394f1d = /dancenew
+            switch ((GW::Constants::Profession)GW::Agents::GetPlayer()->primary) {
+            case GW::Constants::Profession::Assassin:
+            case GW::Constants::Profession::Ritualist:
+            case GW::Constants::Profession::Dervish:
+            case GW::Constants::Profession::Paragon:
+                pak2.value = 14; // Collectors edition Nightfall/Factions
+                break;
+            }
+        }
 		GW::StoC::EmulatePacket(&pak2);
 		});
 	// Save last dialog sender, used for faction donate
@@ -1089,15 +1101,9 @@ void GameSettings::Initialize() {
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&MessageServer_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::MessageServer* pak) -> void {
         if (!auto_age2_on_age || pak->channel != GW::Chat::Channel::CHANNEL_GLOBAL)
             return; // Disabled or message pending
-        GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
-        if (!buff || !buff->valid() || !buff->size()) {
-            status->blocked = true; // No buffer, may have already been cleared.
-            return;
-        }
-        
+        const wchar_t* msg = GetMessageCore();
         //0x8101 0x641F 0x86C3 0xE149 0x53E8 0x101 0x107 = You have been in this map for n minutes.
         //0x8101 0x641E 0xE7AD 0xEF64 0x1676 0x101 0x107 0x102 0x107 = You have been in this map for n hours and n minutes.
-        wchar_t* msg = buff->begin();
         if (wmemcmp(msg, L"\x8101\x641F\x86C3\xE149\x53E8", 5) == 0 || wmemcmp(msg, L"\x8101\x641E\xE7AD\xEF64\x1676", 5) == 0) {
             GW::GameThread::Enqueue([]() {
                 GW::Chat::SendChat('/', "age2");
@@ -1108,16 +1114,12 @@ void GameSettings::Initialize() {
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageNPC>(&MessageNPC_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::MessageNPC* pak) -> void {
             if (!redirect_npc_messages_to_emote_chat || !pak->sender_name)
                 return; // Disabled or message pending
-            GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
-			if (!buff || !buff->valid() || !buff->size()) {
-				status->blocked = true; // No buffer, may have already been cleared.
-				return;
-			}
-			PendingChatMessage* m = PendingChatMessage::queuePrint(GW::Chat::Channel::CHANNEL_EMOTE, buff->begin(), pak->sender_name);
+            const wchar_t* message = GetMessageCore();
+			PendingChatMessage* m = PendingChatMessage::queuePrint(GW::Chat::Channel::CHANNEL_EMOTE, message, pak->sender_name);
 			if (m) pending_messages.push_back(m);
             if (pak->agent_id) {
                 wchar_t msg[122];
-                wcscpy(msg, buff->begin()); // Copy from the message buffer, then clear it.
+                wcscpy(msg, message); // Copy from the message buffer, then clear it.
                 // Then forward the message on to speech bubble
                 uint32_t agent_id = pak->agent_id;
                 {
@@ -1132,19 +1134,14 @@ void GameSettings::Initialize() {
                     });
                 }
             }
-            buff->clear();
+            ClearMessageCore();
 			status->blocked = true; // consume original packet.
         });
     // - Allow clickable name when a player pings "I'm following X" or "I'm targeting X"
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&MessageLocal_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::MessageLocal* pak) -> void {
 		if (pak->channel != static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_GROUP) || !pak->player_number)
 			return; // Not team chat or no sender
-		GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
-		if (!buff || !buff->valid() || !buff->size()) {
-			status->blocked = true; // No buffer, may have already been cleared.
-			return;
-		}
-		std::wstring message(buff->begin());
+        std::wstring message(GetMessageCore());
 		if (message[0] != 0x778 && message[0] != 0x781)
 			return; // Not "I'm Following X" or "I'm Targeting X" message.
 		size_t start_idx = message.find(L"\xba9\x107");
@@ -1166,7 +1163,7 @@ void GameSettings::Initialize() {
 		message.insert(end_idx + 5, L"</a>");
         PendingChatMessage* m = PendingChatMessage::queuePrint(GW::Chat::Channel::CHANNEL_GROUP, message.c_str(), sender->name_enc);
 		if (m) pending_messages.push_back(m);
-        buff->clear();
+        ClearMessageCore();
 		status->blocked = true; // consume original packet.
     });
     // - Show a message when player joins the outpost
