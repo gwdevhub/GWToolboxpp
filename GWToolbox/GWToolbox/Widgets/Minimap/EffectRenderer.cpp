@@ -24,13 +24,13 @@
 namespace {
 	enum SkillEffect {
 		Chaos_storm = 131,
-		Churning_earth = 994,
 		Meteor_Shower = 341,
-		Lava_font = 347,
-		Maelstrom = 381,
 		Savannah_heat = 346,
+		Lava_font = 347,
 		Breath_of_fire = 351,
-		Bed_of_coals = 875
+		Maelstrom = 381,
+		Bed_of_coals = 875,
+		Churning_earth = 994
 	};
 }
 void EffectRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
@@ -50,7 +50,7 @@ void EffectRenderer::PacketCallback(GW::Packet::StoC::GenericValue* pak) {
 	switch (pak->Value_id) {
 	case 21: // Effect on agent
 		switch (pak->value) {
-		case 347: // Lava font
+		case SkillEffect::Lava_font:
 			duration = 5000;
 			break;
 		default: return;
@@ -82,6 +82,7 @@ void EffectRenderer::PacketCallback(GW::Packet::StoC::GenericValueTarget* pak) {
 			break;
 		default: return;
 	}
+	if (pak->caster == pak->target) return;
 	GW::Agent* caster = GW::Agents::GetAgentByID(pak->caster);
 	if (!caster || caster->allegiance != 0x3) return;
 	GW::Agent* target = GW::Agents::GetAgentByID(pak->target);

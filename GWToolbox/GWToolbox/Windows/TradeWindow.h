@@ -12,6 +12,8 @@
 #include <easywsclient\easywsclient.hpp>
 #include <CircurlarBuffer.h>
 
+#include <GWCA\Utilities\Hook.h>
+
 #include "Utils\RateLimiter.h"
 
 class TradeWindow : public ToolboxWindow {
@@ -30,6 +32,8 @@ public:
 
 	void Update(float delta) override;
 	void Draw(IDirect3DDevice9* pDevice) override;
+	bool FilterTradeMessage(std::wstring message);
+	bool FilterTradeMessage(std::string message);
 
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
@@ -49,6 +53,7 @@ private:
 
 	// if enable, we won't print the messages containing word from alert_words
 	bool filter_alerts = false;
+	bool only_show_trade_alerts_in_kamadan = false;
 
 	std::regex word_regex;
 	std::smatch m;
@@ -92,4 +97,6 @@ private:
 	void ParseBuffer(std::fstream stream, std::vector<std::string>& words);
 
 	static void DeleteWebSocket(easywsclient::WebSocket* ws);
+
+	GW::HookEntry OnTradeMessage_Entry;
 };

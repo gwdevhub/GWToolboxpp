@@ -7,12 +7,18 @@
 #include <imgui_internal.h>
 
 #include <GWCA\Constants\Constants.h>
+#include <GWCA\Context\GameContext.h>
+#include <GWCA\Context\WorldContext.h>
+
 #include <GWCA\GameContainers\Array.h>
+
+#include <GWCA\Packets\StoC.h>
 
 #include <GWCA\Managers\UIMgr.h>
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\GameThreadMgr.h>
+#include <GWCA\Managers\StoCMgr.h>
 
 #include <Modules\Resources.h>
 
@@ -60,6 +66,25 @@ void TradeWindow::Initialize() {
 		});
 
 	if (print_game_chat) AsyncChatConnect();
+
+	GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::MapLoaded>(&OnTradeMessage_Entry, [&](GW::HookStatus*, GW::Packet::StoC::MapLoaded*) {
+		if (only_show_trade_alerts_in_kamadan && filter_alerts && GetInKamadan())
+			Log::Info("Only trade alerts will be visible in the trade channel.\nYou can still view all Kamadan trade messages via Trade window.");
+		});
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&OnTradeMessage_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::MessageLocal* pak) {
+		if (!only_show_trade_alerts_in_kamadan || !filter_alerts) return;
+		if (pak->channel != GW::Chat::CHANNEL_TRADE) return;
+		if (!GetInKamadan()) return;
+		GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
+		if (!buff || !buff->valid())
+			return;
+		if (!FilterTradeMessage(buff->begin())) {
+			status->blocked = true;
+			buff->clear();
+		}
+		});
+	if (only_show_trade_alerts_in_kamadan && filter_alerts && GetInKamadan())
+		Log::Info("Only trade alerts will be visible in the trade channel.\nYou can still view all Kamadan trade messages via Trade window.");
 }
 
 void TradeWindow::Terminate() {
@@ -89,10 +114,39 @@ bool TradeWindow::GetInKamadan() {
 	case MapID::Kamadan_Jewel_of_Istan_Halloween_outpost:
 	case MapID::Kamadan_Jewel_of_Istan_Wintersday_outpost:
 	case MapID::Kamadan_Jewel_of_Istan_Canthan_New_Year_outpost:
-		return true;
+		return GW::Map::GetRegion() == GW::Constants::Region::America && GW::Map::GetDistrict() == 1;
 	default:
 		return false;
 	}
+}
+
+bool TradeWindow::FilterTradeMessage(std::string msg) {
+	if (!filter_alerts)
+		return true;
+	for (auto& word : alert_words) {
+		if (std::regex_search(word, m, regex_check)) {
+			try {
+				word_regex = std::regex(m._At(1).str(), std::regex::ECMAScript | std::regex::icase);
+			}
+			catch (...) {
+				// Silent fail; invalid regex
+			}
+			if (std::regex_search(msg, word_regex))
+				return true;
+		}
+		else {
+			auto found = std::search(msg.begin(), msg.end(), word.begin(), word.end(), [](char c1, char c2) -> bool {
+				return tolower(c1) == c2;
+				});
+			if (found != msg.end())
+				return true;
+		}
+	}
+	return false;
+}
+bool TradeWindow::FilterTradeMessage(std::wstring msg) {
+	std::string ws = GuiUtils::WStringToString(msg);
+	return FilterTradeMessage(ws);
 }
 
 void TradeWindow::Update(float delta) {
@@ -107,15 +161,9 @@ void TradeWindow::Update(float delta) {
 				ws_chat->poll();
 				return;
 		}
-		if (!print_game_chat) {
-			ws_chat->close();
-			return;
-		}
 	}
 
-	if (!print_game_chat) return;
-	if (GetInKamadan() && GW::Map::GetDistrict() == 1 &&
-		GW::Map::GetRegion() == GW::Constants::Region::America) {
+	if (!print_game_chat || GetInKamadan()) {
 		if(ws_chat) ws_chat->close();
 		return;
 	}
@@ -137,30 +185,7 @@ void TradeWindow::Update(float delta) {
 			return;
 
 		std::string msg = res["message"].get<std::string>();
-		bool print_message = true;
-		if (filter_alerts) {
-			print_message = false; // filtered unless allowed by words
-			for (auto& word : alert_words) {
-				if (std::regex_search(word, m, regex_check)) {
-					try {
-						word_regex = std::regex(m._At(1).str(), std::regex::ECMAScript | std::regex::icase);
-					}
-					catch (...) {
-						// Silent fail; invalid regex
-					}
-					print_message = std::regex_search(msg, word_regex);
-				}
-				else {
-					auto found = std::search(msg.begin(), msg.end(), word.begin(), word.end(), [](char c1, char c2) -> bool {
-						return tolower(c1) == c2;
-						});
-					print_message = found != msg.end();
-				}
-				if (print_message) break;
-			}
-		}
-
-		if (print_message) {
+		if (FilterTradeMessage(msg)) {
 			std::string name = res["name"].get<std::string>();
 			snprintf(buffer, sizeof(buffer), "<a=1>%s</a>: <c=#f96677><quote>%s", name.c_str(), msg.c_str());
 			GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, buffer);
@@ -380,13 +405,19 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 void TradeWindow::DrawAlertsWindowContent(bool ownwindow) {
 	ImGui::Text("Alerts");
 	ImGui::Checkbox("Send Kamadan ad1 trade chat to your trade chat", &print_game_chat);
-	ImGui::Checkbox("Only show messages containing:", &filter_alerts);
-	ImGui::TextDisabled("(Each line is a separate keyword. Not case sensitive.)");
-	if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE,
-		ImVec2(-1.0f, ownwindow ? -1.0f : 0.0f))) {
+	if (print_game_chat) {
+		ImGui::Checkbox("Only show messages containing:", &filter_alerts);
+		ImGui::TextDisabled("(Each line is a separate keyword. Not case sensitive.)");
+		if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE,
+			ImVec2(-1.0f, 0.0f))) {
 
-		ParseBuffer(alert_buf, alert_words);
-		alertfile_dirty = true;
+			ParseBuffer(alert_buf, alert_words);
+			alertfile_dirty = true;
+		}
+		if (filter_alerts) {
+			ImGui::Checkbox("Only show trade alerts when in Kamadan ae1", &only_show_trade_alerts_in_kamadan);
+			ImGui::ShowHelp("You can still view Kamadan trade chat via the main Trade Window");
+		}
 	}
 }
 
@@ -396,8 +427,9 @@ void TradeWindow::DrawSettingInternal() {
 
 void TradeWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxWindow::LoadSettings(ini);
-	print_game_chat = ini->GetBoolValue(Name(), VAR_NAME(print_game_chat), false);
-	filter_alerts = ini->GetBoolValue(Name(), VAR_NAME(filter_alerts), false);
+	print_game_chat = ini->GetBoolValue(Name(), VAR_NAME(print_game_chat), print_game_chat);
+	filter_alerts = ini->GetBoolValue(Name(), VAR_NAME(filter_alerts), filter_alerts);
+	only_show_trade_alerts_in_kamadan = ini->GetBoolValue(Name(), VAR_NAME(only_show_trade_alerts_in_kamadan), only_show_trade_alerts_in_kamadan);
 
 	std::ifstream alert_file;
 	alert_file.open(Resources::GetPath(L"AlertKeywords.txt"));
@@ -415,7 +447,8 @@ void TradeWindow::SaveSettings(CSimpleIni* ini) {
 
 	ini->SetBoolValue(Name(), VAR_NAME(print_game_chat), print_game_chat);
 	ini->SetBoolValue(Name(), VAR_NAME(filter_alerts), filter_alerts);
-
+	ini->SetBoolValue(Name(), VAR_NAME(only_show_trade_alerts_in_kamadan), only_show_trade_alerts_in_kamadan);
+	
 	if (alertfile_dirty) {
 		std::ofstream bycontent_file;
 		bycontent_file.open(Resources::GetPath(L"AlertKeywords.txt"));
