@@ -464,6 +464,8 @@ namespace {
 	static clock_t last_send = 0;
 	static uint32_t last_dialog_npc_id = 0;
 
+	static clock_t instance_entered_at = 0;
+
     static bool ctrl_enter_whisper = false;
 
     static bool IsInfused(GW::Item* item) {
@@ -1167,11 +1169,16 @@ void GameSettings::Initialize() {
 		status->blocked = true; // consume original packet.
     });
     // - Show a message when player joins the outpost
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&PlayerJoinInstance_Entry, [&](GW::HookStatus*, GW::Packet::StoC::MapLoaded*) {
+		instance_entered_at = TIMER_INIT();
+		});
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::PlayerJoinInstance* pak) -> void {
         if (!notify_when_players_join_outpost && !notify_when_friends_join_outpost)
             return; // Dont notify about player joining
         if (!pak->player_name || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
             return; // Only message in an outpost.
+		if (TIMER_DIFF(instance_entered_at) < 2000)
+			return; // Only been in this map for less than 2 seconds; avoids spam on map load.
         if (!GW::Agents::GetPlayerId())
             return; // Current player not loaded in yet
         GW::Agent* agent = GW::Agents::GetAgentByID(pak->agent_id);
