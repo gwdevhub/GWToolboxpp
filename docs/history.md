@@ -18,7 +18,7 @@ Previous releases are provided as dll files. In order to use it, you need to use
 * [Fix] Fixes resign log not working when player numbers are turned on in an explorable area.
 * [Fix] Adjusted AoE range for churning earth from adjacent to nearby.
 
-[Download][https://github.com/3vcloud/GWToolboxpp/releases/download/2.28-1.9.21_Release/JonsGWToolbox.dll]
+[Download](https://github.com/3vcloud/GWToolboxpp/releases/download/2.28-1.9.21_Release/JonsGWToolbox.dll)
 
 ## Version 2.28, Extended 1.9.20
 * [New] Added auto-accept party invites when ticked option for faster party reorder
@@ -40,7 +40,7 @@ Previous releases are provided as dll files. In order to use it, you need to use
 * [Fix] Fixed chat filter blocking some messages in error.
 * [Fix] Fixed issue with "Load Settings" not working properly after initial load
 
-[Download][https://github.com/3vcloud/GWToolboxpp/releases/download/2.28-1.9.20_Release/JonsGWToolbox.dll]
+[Download](https://github.com/3vcloud/GWToolboxpp/releases/download/2.28-1.9.20_Release/JonsGWToolbox.dll)
 
 ## Version 2.28, Extended 1.9.11
 * [New] Added pcons to GWToolbox Builds window; pcons can now be assigned to a particular build and auto-enabled when loaded.
@@ -59,7 +59,7 @@ Previous releases are provided as dll files. In order to use it, you need to use
 * [Fix] Fixed updater not saving preferences
 * [Fix] Fixed issues with loading and saving to file
 
-[Download][https://github.com/3vcloud/GWToolboxpp/releases/download/2.28-1.9.11_Release/JonsGWToolbox.dll]
+[Download](https://github.com/3vcloud/GWToolboxpp/releases/download/2.28-1.9.11_Release/JonsGWToolbox.dll)
 
 ## Version 2.27, Extended 1.8.96
 * [New] Automatic /age on vanquish option
