@@ -117,7 +117,7 @@ private:
         uint8_t type = 255; // 0 = Friend, 1 = Ignore, 2 = Played, 3 = Trade
         bool is_tb_friend = false;  // Is this a friend via toolbox, or friend via friend list?
 		bool has_tmp_uuid = false;
-		bool added_via_toolbox = false; // This friend added via toolbox?
+		clock_t added_via_toolbox = 0; // This friend added via toolbox? When?
         clock_t last_update = 0;
 		std::string cached_charnames_hover_str;
 		bool cached_charnames_hover = false;
