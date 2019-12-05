@@ -5,6 +5,21 @@ layout: default
 # Version History
 Previous releases are provided as dll files. In order to use it, you need to use a different launcher which must be placed in the same directory as the dll. If you are looking for the latest version, go to the [Home Page](./) instead.
 
+## Version 2.28, Extended 1.9.21
+* [New] Ctrl + enter to whisper targeted player.
+* [New] `/dance` adds Collector's Edition glow to player hands.
+* [New] `/dancenew` on Factions/NF professions shows Collector's Edition dance emote instead of standard one.
+* [New] Modified trade alerts; added option to only show trade alerts in chat when in Kamadan ae1
+* [Minor] Changed `/pingitem` and `/armor` descriptions to include armor rating, infused and +1 stacking attribute if applicable.
+* [Fix] Reduce `<player_name> joined the outpost` spam when entering an outpost
+* [Fix] `/tp fa lux` and `/tp fa kurz` now work as intended, previously only worked when providing whole name `luxon` or `kurzick`
+* [Fix] Fixed player numbers not working properly when turned on in an explorable area.
+* [Fix] Fixed issues with whispering and targeting via player name when player numbers are turned on in an explorable area.
+* [Fix] Fixes resign log not working when player numbers are turned on in an explorable area.
+* [Fix] Adjusted AoE range for churning earth from adjacent to nearby.
+
+[Download][https://github.com/3vcloud/GWToolboxpp/releases/download/2.28-1.9.21_Release/JonsGWToolbox.dll]
+
 ## Version 2.28, Extended 1.9.20
 * [New] Added auto-accept party invites when ticked option for faster party reorder
 * [New] Added auto-accept party join requests when ticked option for faster party reorder
@@ -14,16 +29,18 @@ Previous releases are provided as dll files. In order to use it, you need to use
 * [New] Added AoE circles for Maelstrom, Chaos storm, Lava font, Savannah heat, Breath of fire, Bed of coals, Churning earth
 * [New] Added option to add player number to player names in explorable areas
 * [New] Added pcons per character option, default turned on
-* [Fix] Gold selling prompts, chat filter content, and learnt skill tomes options load properly again
-* [Fix] Fixed trade alerts by regex not working
-* [Fix] Reduced flashing GW window spam when being invited to a party
-* [Fix] Fixed chat filter blocking some messages in error.
-* [Fix] Fixed issue with "Load Settings" not working properly after initial load
 * [Minor] Removed armor descriptions when using /pingitem command. Will add headpiece +1 info in a later release.
 * [Minor] Remove "I'm wielding" text when pinging weapons with GWToolbox
 * [Minor] Remove coindrop toggle
 * [Minor] Stability changes and shutdown fixes
 * [Minor] Hide /deep24h setting from settings window when not enabled
+* [Fix] Gold selling prompts, chat filter content, and learnt skill tomes options load properly again
+* [Fix] Fixed trade alerts by regex not working
+* [Fix] Reduced flashing GW window spam when being invited to a party
+* [Fix] Fixed chat filter blocking some messages in error.
+* [Fix] Fixed issue with "Load Settings" not working properly after initial load
+
+[Download][https://github.com/3vcloud/GWToolboxpp/releases/download/2.28-1.9.20_Release/JonsGWToolbox.dll]
 
 ## Version 2.28, Extended 1.9.11
 * [New] Added pcons to GWToolbox Builds window; pcons can now be assigned to a particular build and auto-enabled when loaded.
@@ -41,6 +58,8 @@ Previous releases are provided as dll files. In order to use it, you need to use
 * [Fix] Tweaks to discord module after merging with vanilla codebase
 * [Fix] Fixed updater not saving preferences
 * [Fix] Fixed issues with loading and saving to file
+
+[Download][https://github.com/3vcloud/GWToolboxpp/releases/download/2.28-1.9.11_Release/JonsGWToolbox.dll]
 
 ## Version 2.27, Extended 1.8.96
 * [New] Automatic /age on vanquish option
