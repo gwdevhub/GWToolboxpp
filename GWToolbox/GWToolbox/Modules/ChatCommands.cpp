@@ -6,10 +6,12 @@
 #include <imgui_internal.h>
 
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/Constants/Maps.h>
 
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>
 
+#include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/NPC.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Guild.h>
@@ -45,6 +47,7 @@
 #include <Windows/BuildsWindow.h>
 #include <Widgets/PartyDamage.h>
 #include <Windows/Hotkeys.h>
+
 
 namespace {
 	const wchar_t *next_word(const wchar_t *str) {
@@ -250,6 +253,31 @@ namespace {
 			return false;
 		}
 		return true;
+	}
+
+	// Returns guild struct of current location. Returns null on fail or non-guild map.
+	static GW::Guild* GetCurrentGH() {
+		GW::AreaInfo* m = GW::Map::GetCurrentMapInfo();
+		if (!m || m->type != GW::RegionType::RegionType_GuildHall) return nullptr;
+		GW::Array<GW::Guild*> guilds = GW::GuildMgr::GetGuildArray();
+		if (!guilds.valid()) return nullptr;
+		for (size_t i = 0; i < guilds.size(); i++) {
+			if (!guilds[i]) continue;
+			return guilds[i];
+		}
+		return nullptr;
+	}
+	static GW::Guild* GetPlayerGH() {
+		GW::Array<GW::Guild*> guilds = GW::GuildMgr::GetGuildArray();
+		if (!guilds.valid()) return nullptr;
+		uint32_t guild_idx = GW::GuildMgr::GetPlayerGuildIndex();
+		if (guild_idx >= guilds.size())
+			return nullptr;
+		return guilds[guild_idx];
+	}
+	static bool IsInGH() {
+		GW::Guild* gh = GetCurrentGH();
+		return gh && gh == GetPlayerGH();
 	}
 }
 
@@ -733,7 +761,7 @@ bool ChatCommands::ParseDistrict(const std::wstring s, GW::Constants::District& 
 }
 bool ChatCommands::IsLuxon() {
     GW::GuildContext* c = GW::GuildMgr::GetGuildContext();
-    return c && c->guilds[c->player_guild_index]->faction;
+    return c && c->player_guild_index && c->guilds[c->player_guild_index]->faction;
 }
 void ChatCommands::CmdTP(const wchar_t *message, int argc, LPWSTR *argv) {
 	// zero argument error
@@ -751,7 +779,10 @@ void ChatCommands::CmdTP(const wchar_t *message, int argc, LPWSTR *argv) {
 	if (argOutpost == L"gh") {
 		if (argc == 2) { 
 			// "/tp gh"
-			GW::GuildMgr::TravelGH();
+			if(IsInGH())
+				GW::GuildMgr::LeaveGH();
+			else
+				GW::GuildMgr::TravelGH();
 			return;
 		}
 		// "/tp gh lag" = travel to Guild Hall belonging to Zero Files Remaining [LaG]
