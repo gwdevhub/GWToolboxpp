@@ -125,7 +125,7 @@ private:
 		Character* SetCharacter(const wchar_t*, uint8_t);
 		GW::Friend* GetFriend();
 		void GetMapName();
-		std::string GetCharactersHover() {
+		std::string GetCharactersHover(bool include_charname=false,bool include_location=false) {
 			if (!cached_charnames_hover) {
 				std::wstring cached_charnames_hover_ws = L"Characters for ";
 				cached_charnames_hover_ws += alias;
@@ -142,8 +142,19 @@ private:
 				cached_charnames_hover_str = GuiUtils::WStringToString(cached_charnames_hover_ws);
 				cached_charnames_hover = true;
 			}
-			
-			return cached_charnames_hover_str;
+			std::string str;
+			if (include_charname && current_char) {
+				str += GuiUtils::WStringToString(current_char->name);
+				str += "\n";
+			}
+			if (include_charname && current_map_name[0]) {
+				str += current_map_name;
+				str += "\n";
+			}
+			if (str.size())
+				str += "\n";
+			str += cached_charnames_hover_str;
+			return str;
 		};
 		void StartWhisper();
 		void InviteToParty();
@@ -182,6 +193,8 @@ public:
 	void SignalTerminate() override;
 	bool CanTerminate() override;
     void Terminate() override;
+	bool ShowAsWidget() const;
+	ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags=0) const;
 
     // Update. Will always be called every frame.
     void Update(float delta) override;
@@ -211,6 +224,13 @@ private:
     bool pending_friend_removal = false;
     bool friend_list_ready = false; // Allow processing when this is true.
 	bool need_to_reorder_friends = true;
+
+	bool show_as_widget_in_explorable = true;
+	bool show_as_widget_in_outpost = false;
+	bool resize_widget = false;
+
+	bool lock_move_as_widget = true;
+	bool lock_size_as_widget = true;
 
 
     clock_t friends_list_checked = 0;

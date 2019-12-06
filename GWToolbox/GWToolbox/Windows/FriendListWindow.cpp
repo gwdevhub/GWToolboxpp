@@ -235,15 +235,15 @@ void FriendListWindow::Initialize() {
     });
 	// If a friend has just logged in on a character in this map, record their profession.
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::PlayerJoinInstance* pak) {
-        const wchar_t* player_name = std::wstring(pak->player_name).c_str();
+		std::wstring player_name(pak->player_name);
 		worker.Add([this, player_name](){
 			//Log::Log("%s: Checking player profession %ls\n", player_name);
-			GW::Player* a = GW::PlayerMgr::GetPlayerByName(player_name);
+			GW::Player* a = GW::PlayerMgr::GetPlayerByName(player_name.c_str());
 			if (!a || !a->primary) return;
 			uint8_t profession = a->primary;
-			Friend* f = GetFriend(player_name);
+			Friend* f = GetFriend(player_name.c_str());
 			if (!f) return;
-			Character* fc = f->GetCharacter(player_name);
+			Character* fc = f->GetCharacter(player_name.c_str());
 			if (!fc) return;
 			Log::Log("%s: Friend found; setting %ls profession to %s\n", Name(), player_name, ProfNames[profession]);
 			fc->profession = profession;
@@ -252,27 +252,31 @@ void FriendListWindow::Initialize() {
     // "Failed to add friend" or "Friend <name> already added as <name>"
     GW::Chat::RegisterLocalMessageCallback(&ErrorMessage_Entry,
         [this](GW::HookStatus* status, int channel, wchar_t* message) -> void {
-            wchar_t buffer[64] = { 0 };
-            wcsncpy(buffer, message, 64);
-            worker.Add([this, buffer]() {
-                std::wstring player_name;
-                switch (buffer[0]) {
-                case 0x2f3: // You cannot add yourself as a friend.
-                    break;
-                case 0x2f4: // You have exceeded the maximum number of characters on your Friends list.
-                    break;
-                case 0x2F5: // The Character name "" does not exist
-					player_name = GetPlayerNameFromEncodedString(buffer);
-                    break;
-                case 0x2F6: // The Character you're trying to add is already in your friend list as "".
-					player_name = GetPlayerNameFromEncodedString(buffer);
-                    break;
-				case 0x881: // Player "" is not online.
-					player_name = GetPlayerNameFromEncodedString(buffer);
-					// TODO: Try to redirect whisper to the right person.
-					break;
-                }
-                });
+			std::wstring player_name;
+			switch (message[0]) {
+			case 0x2f3: // You cannot add yourself as a friend.
+				break;
+			case 0x2f4: // You have exceeded the maximum number of characters on your Friends list.
+				break;
+			case 0x2F5: // The Character name "" does not exist
+				player_name = GetPlayerNameFromEncodedString(message);
+				break;
+			case 0x2F6: // The Character you're trying to add is already in your friend list as "".
+				player_name = GetPlayerNameFromEncodedString(message);
+				Friend* f = GetFriend(player_name.c_str());
+				if (f) {
+					f->SetCharacter(player_name.c_str());
+				}
+				break;
+			case 0x881: // Player "" is not online. Redirect to the right person if we can find them!
+				player_name = GetPlayerNameFromEncodedString(message);
+				Friend* f = GetFriend(player_name.c_str());
+				if (f && !f->IsOffline() && f->current_char->name != player_name) {
+					GW::Chat::SendChat(f->current_char->name.c_str(), last_whisper.c_str());
+					status->blocked = true;
+				}
+				break;
+			}
         });
 	
 }
@@ -332,29 +336,60 @@ void FriendListWindow::Poll() {
 	friends_list_checked = now;
 	polling = false;
 }
+ImGuiWindowFlags FriendListWindow::GetWinFlags(ImGuiWindowFlags flags) const {
+	if (ShowAsWidget()) {
+		flags |= ImGuiWindowFlags_NoTitleBar;
+		flags |= ImGuiWindowFlags_NoScrollbar;
+		if (lock_size_as_widget) {
+			flags |= ImGuiWindowFlags_NoResize;
+			flags |= ImGuiWindowFlags_AlwaysAutoResize;
+		}
+		if (lock_move_as_widget)
+			flags |= ImGuiWindowFlags_NoMove;
+		return flags;
+	}
+	return ToolboxWindow::GetWinFlags(flags);
+}
+bool FriendListWindow::ShowAsWidget() const {
+	return (show_as_widget_in_explorable && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
+		|| (show_as_widget_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost);
+}
 void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
-    if (!visible)
+    if (!visible || GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
         return;
-    ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
+	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 	ImGuiIO* io = &ImGui::GetIO();
 	ImVec2 window_size = ImVec2(540.0f * io->FontGlobalScale, 512.0f * io->FontGlobalScale);
-	if (!show_location)
-		window_size.x -= 180.0f * io->FontGlobalScale;
-    ImGui::SetNextWindowSize(window_size, ImGuiSetCond_FirstUseEver);
-    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()))
-        return ImGui::End();
+	float cols[3] = { 180.0f * io->FontGlobalScale, 360.0f * io->FontGlobalScale, 540.0f * io->FontGlobalScale };
+	ImGui::SetNextWindowSize(window_size, ImGuiSetCond_FirstUseEver);
 
-    float cols[3] = { 180.0f, 360.0f, 540.0f};
+	const bool is_widget = ShowAsWidget();
+	if (is_widget)
+		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(0).Value);
+	bool ok = ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags());
+	if (is_widget)
+		ImGui::PopStyleColor();
+    if(!ok) 
+		return ImGui::End();
+
 	unsigned int colIdx = 0;
-    ImGui::Text("Name");
-    ImGui::SameLine(cols[colIdx] *= io->FontGlobalScale);
-    ImGui::Text("Character(s)");
-	if (show_location) {
-		ImGui::SameLine(cols[++colIdx] *= io->FontGlobalScale);
-		ImGui::Text("Map");
+	bool show_charname = ImGui::GetContentRegionAvailWidth() > 180.0f;
+	bool show_location = ImGui::GetContentRegionAvailWidth() > 360.0f;
+	if (!is_widget) {
+		ImGui::Text("Name");
+		if (show_charname) {
+			ImGui::SameLine(cols[colIdx]);
+			ImGui::Text("Character(s)");
+		}
+		if (show_location) {
+			ImGui::SameLine(cols[++colIdx]);
+			ImGui::Text("Map");
+		}
+		ImGui::Separator();
+		ImGui::BeginChild("friend_list_scroll");
 	}
-    ImGui::Separator();
-    ImGui::BeginChild("friend_list_scroll");
+	float height = ImGui::GetTextLineHeightWithSpacing();
+	ImVec2 pos;
     for (std::map<std::string, Friend*>::iterator it = friends.begin(); it != friends.end(); ++it) {
 		colIdx = 0;
 		Friend* lfp = it->second;
@@ -363,9 +398,6 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
 		Friend lf = *lfp;
 		if (lf.IsOffline()) continue;
 		if (lf.alias.empty()) continue;
-		
-		float height = ImGui::GetTextLineHeightWithSpacing();
-        
 		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,ImVec2(0,0));
 		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0);
@@ -373,7 +405,7 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0, 0));
 		ImGui::PushID(lf.uuid.c_str());
 		bool clicked = ImGui::Button("", ImVec2(ImGui::GetContentRegionAvailWidth(), height));
-		
+		bool hovered = ImGui::IsItemHovered();
 		ImGui::PopStyleVar(4);
 		ImGui::SameLine(2.0f,0);
 		ImGui::PushStyleColor(ImGuiCol_Text,StatusColors[lf.status].Value);
@@ -382,27 +414,54 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
 		if(ImGui::IsItemHovered())
 			ImGui::SetTooltip(GetStatusText(lf.status));
 		ImGui::SameLine(0);
-		ImGui::Text(GuiUtils::WStringToString(lf.alias).c_str());
-		if (lf.current_char != nullptr) {
+		std::string s = GuiUtils::WStringToString(lf.alias);
+		if (is_widget) {
+			pos = ImGui::GetCursorPos();
+			ImGui::SetCursorPos(ImVec2(pos.x + 1, pos.y + 1));
+			ImGui::TextColored(ImVec4(0, 0, 0, 1), s.c_str());
+			ImGui::SetCursorPos(ImVec2(pos.x, pos.y));
+		}
+		ImGui::Text(s.c_str());
+		hovered = hovered || ImGui::IsItemHovered();
+		if (!show_charname && hovered) {
+			ImGui::SetTooltip(lf.GetCharactersHover(true,true).c_str());
+		}
+		if (show_charname && lf.current_char != nullptr) {
 			ImGui::SameLine(cols[colIdx]);
 			std::string current_char_name_s = GuiUtils::WStringToString(lf.current_char->name);
 			uint8_t prof = lf.current_char->profession;
 			if (prof) ImGui::PushStyleColor(ImGuiCol_Text, ProfColors[lf.current_char->profession].Value);
+			if (is_widget) {
+				pos = ImGui::GetCursorPos();
+				ImGui::SetCursorPos(ImVec2(pos.x + 1, pos.y + 1));
+				ImGui::TextColored(ImVec4(0, 0, 0, 1), "%s", current_char_name_s.c_str());
+				ImGui::SetCursorPos(ImVec2(pos.x, pos.y));
+			}
 			ImGui::Text("%s", current_char_name_s.c_str());
 			if (prof) ImGui::PopStyleColor();
 			if (lf.characters.size() > 1) {
-				bool hovered = ImGui::IsItemHovered();
 				ImGui::SameLine(0,0);
+				if (is_widget) {
+					pos = ImGui::GetCursorPos();
+					ImGui::SetCursorPos(ImVec2(pos.x + 1, pos.y + 1));
+					ImGui::TextColored(ImVec4(0, 0, 0, 1), " (+%d)", lf.characters.size() - 1);
+					ImGui::SetCursorPos(ImVec2(pos.x, pos.y));
+				}
 				ImGui::Text(" (+%d)", lf.characters.size() - 1);
 				hovered |= ImGui::IsItemHovered();
 				if (hovered) {
 					ImGui::SetTooltip(lf.GetCharactersHover().c_str());
-					
 				}
 			}
 			if (show_location) {
 				ImGui::SameLine(cols[++colIdx]);
 				if (lf.current_map_name) {
+					if (is_widget) {
+						pos = ImGui::GetCursorPos();
+						ImGui::SetCursorPos(ImVec2(pos.x + 1, pos.y + 1));
+						ImGui::TextColored(ImVec4(0, 0, 0, 1), lf.current_map_name);
+						ImGui::SetCursorPos(ImVec2(pos.x, pos.y));
+					}
 					ImGui::Text(lf.current_map_name);
 				}
 			}
@@ -411,23 +470,31 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
 		if (clicked && !lf.IsOffline())
 			lf.StartWhisper();
     }
-    ImGui::EndChild();
+	if (!is_widget)
+		ImGui::EndChild();
     ImGui::End();
 }
 void FriendListWindow::DrawSettingInternal() {
 	bool edited = false;
-	edited |= ImGui::Checkbox("Show Friend Location", &show_location);
-	ImGui::ShowHelp("Show 'Map' column in friend list");
+	edited |= ImGui::Checkbox("Show as widget in outpost", &show_as_widget_in_outpost);
+	edited |= ImGui::Checkbox("Show as widget in explorable", &show_as_widget_in_explorable);
+	edited |= ImGui::Checkbox("Lock size as widget", &lock_size_as_widget);
+	edited |= ImGui::Checkbox("Lock move as widget", &lock_move_as_widget);
 }
 void FriendListWindow::LoadSettings(CSimpleIni* ini) {
     ToolboxWindow::LoadSettings(ini);
-	show_location = ini->GetBoolValue(Name(), VAR_NAME(show_location), show_location);
-
+	lock_move_as_widget = ini->GetBoolValue(Name(), VAR_NAME(lock_move_as_widget), lock_move_as_widget);
+	lock_size_as_widget = ini->GetBoolValue(Name(), VAR_NAME(lock_size_as_widget), lock_size_as_widget);
+	show_as_widget_in_explorable = ini->GetBoolValue(Name(), VAR_NAME(show_as_widget_in_explorable), show_as_widget_in_explorable);
+	show_as_widget_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(show_as_widget_in_outpost), show_as_widget_in_outpost);
     LoadFromFile();
 }
 void FriendListWindow::SaveSettings(CSimpleIni* ini) {
     ToolboxWindow::SaveSettings(ini);
-	ini->SetBoolValue(Name(), VAR_NAME(show_location), show_location);
+	ini->SetBoolValue(Name(), VAR_NAME(lock_move_as_widget), lock_move_as_widget);
+	ini->SetBoolValue(Name(), VAR_NAME(lock_size_as_widget), lock_size_as_widget);
+	ini->SetBoolValue(Name(), VAR_NAME(show_as_widget_in_explorable), show_as_widget_in_explorable);
+	ini->SetBoolValue(Name(), VAR_NAME(show_as_widget_in_outpost), show_as_widget_in_outpost);
 
     SaveToFile();
 }
