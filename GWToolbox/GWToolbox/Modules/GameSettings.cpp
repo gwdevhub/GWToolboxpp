@@ -6,15 +6,17 @@
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>
 
+#include <GWCA/GameEntities/Friendslist.h>
+#include <GWCA/GameEntities/Guild.h>
+
 #include <GWCA/Context/ItemContext.h>
 #include <GWCA/Context/PartyContext.h>
+#include <GWCA/Context/GuildContext.h>
 
 #include <GWCA/Constants/AgentIDs.h>
 
-#include <GWCA/GameEntities/Friendslist.h>
-
 #include <GWCA/Managers/MapMgr.h>
-
+#include <GWCA/Managers/GuildMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/CtoSMgr.h>
 #include <GWCA/Packets/CtoSHeaders.h>
@@ -109,7 +111,6 @@ namespace {
 			return players.size() + henchmen.size() + heroes.size();
 		}
 	};
-
     static wchar_t* GetMessageCore() {
         GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
         return buff ? buff->begin() : nullptr;
@@ -988,6 +989,9 @@ void GameSettings::Initialize() {
 		default:
 			return;
 		}
+		GW::GuildContext* c = GW::GuildMgr::GetGuildContext();
+		if (!c || !c->player_guild_index || !c->guilds[c->player_guild_index]->faction != pak.allegiance)
+			return; // Alliance isn't the right faction. Return here and the NPC will reply.
 		if (*current_faction < pak.faction_amount)
 			return; // Not enough to donate. Return here and the NPC will reply.
 		status->blocked = true;
