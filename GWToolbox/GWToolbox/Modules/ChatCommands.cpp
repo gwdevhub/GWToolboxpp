@@ -1073,19 +1073,21 @@ static struct {
 	"Zos Shivros Channel", L"zosshivroschannel", GW::Constants::MapID::Zos_Shivros_Channel,
 };
 
-static bool Special_StrStartsWith(const wchar_t *str, const wchar_t *pre)
+static bool string_starts_with(const wchar_t *str, const wchar_t *pre)
 {
 	for (;;) {
 		if (*pre == 0)
 			break;
 		if (*str == 0)
 			return false;
-		if (*pre == L' ' || *pre == L'\'')
+		if (*pre == L' ' || *pre == L'\'') {
+			++pre;
 			continue;
+		}
 		if (towlower(*pre) != *str)
 			return false;
-		pre++;
-		str++;
+		++pre;
+		++str;
 	}
 	return true;
 }
@@ -1094,10 +1096,10 @@ GW::Constants::MapID ChatCommands::MatchMapPrefix(const wchar_t *map_name)
 {
 	size_t array_size = sizeof(teleport_search_map) / sizeof(teleport_search_map[0]);
 	for (size_t i = 0; i < array_size; i++) {
-		if (Special_StrStartsWith(teleport_search_map[i].sname, map_name)) {
+		if (string_starts_with(teleport_search_map[i].sname, map_name)) {
 			size_t count = 1;
 			for (size_t j = i + 1; j < array_size; j++) {
-				if (Special_StrStartsWith(teleport_search_map[j].sname, map_name))
+				if (string_starts_with(teleport_search_map[j].sname, map_name))
 					count++;
 				else
 					break;
