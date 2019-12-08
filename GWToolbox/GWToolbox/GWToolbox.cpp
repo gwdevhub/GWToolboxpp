@@ -19,12 +19,11 @@
 
 #include <Modules/Resources.h>
 #include <Modules/ChatCommands.h>
-#include <Modules/ChatFilter.h>
 #include <Modules/GameSettings.h>
-#include <Modules/ToolboxSettings.h>
 #include <Modules/ToolboxTheme.h>
-#include <Modules/Updater.h>
-#include <Modules/DiscordIntegration.h>
+#include <Modules/ToolboxSettings.h>
+
+#include <Windows/MainWindow.h>
 
 #include <Widgets/Minimap/Minimap.h>
 
@@ -305,6 +304,7 @@ void GWToolbox::Initialize() {
             GWToolbox::Instance().LoadModuleSettings();
         }
     });
+
     // if the file does not exist we'll load module settings once downloaded, but we need the file open
     // in order to read defaults
     OpenSettingsFile();
@@ -315,34 +315,17 @@ void GWToolbox::Initialize() {
     });
 
     Log::Log("Creating Modules\n");
-    std::vector<ToolboxModule*> core_modules;
     core_modules.push_back(&Resources::Instance());
-    core_modules.push_back(&Updater::Instance());
-    core_modules.push_back(&GameSettings::Instance());
-    core_modules.push_back(&ToolboxSettings::Instance());
-    core_modules.push_back(&ChatFilter::Instance());
-    core_modules.push_back(&ChatCommands::Instance());
     core_modules.push_back(&ToolboxTheme::Instance());
-    core_modules.push_back(&DiscordIntegration::Instance());
+    core_modules.push_back(&ToolboxSettings::Instance());
+    core_modules.push_back(&MainWindow::Instance());
 
-    for (ToolboxModule* core : core_modules) {
-        core->Initialize();
-    }
-    LoadModuleSettings(); // This will only read settings of the core modules (specified above)
-
-    ToolboxSettings::Instance().InitializeModules(); // initialize all other modules as specified by the user
-
-    // Only read settings of non-core modules
-    for (ToolboxModule* module : modules) {
-        bool is_core = false;
-        for (ToolboxModule* core : core_modules) {
-            if (module == core) is_core = true;
-			break;
-        }
-        if (!is_core) module->LoadSettings(inifile);
+    for (ToolboxModule* module : core_modules) {
+        module->Initialize();
+        module->LoadSettings(inifile);
     }
 
-    Updater::Instance().CheckForUpdate();
+    ToolboxSettings::Instance().LoadModules(inifile); // initialize all other modules as specified by the user
 
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
         && GW::Agents::GetAgentArray().valid()
@@ -363,7 +346,6 @@ void GWToolbox::LoadModuleSettings() {
         module->LoadSettings(inifile);
     }
 }
-
 void GWToolbox::SaveSettings() {
     for (ToolboxModule* module : modules) {
         module->SaveSettings(inifile);

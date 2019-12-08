@@ -49,8 +49,11 @@ void PartyDamage::Initialize() {
 
 void PartyDamage::Terminate() {
 	ToolboxWidget::Terminate();
-	inifile->Reset();
-	delete inifile;
+	if (inifile) {
+	    inifile->Reset();
+	    delete inifile;
+	    inifile = nullptr;
+	}
 }
 
 void PartyDamage::MapLoadedCallback(GW::HookStatus *, GW::Packet::StoC::MapLoaded *packet) {

@@ -4,11 +4,13 @@
 #include "Defines.h"
 #include "GuiUtils.h" 
 #include "GWToolbox.h"
-#include <Modules\ChatCommands.h>
-#include <Modules\ToolboxSettings.h>
-#include <Modules\GameSettings.h>
-#include <Modules\Updater.h>
-#include <Modules\Resources.h>
+
+#include <Modules/Updater.h>
+#include <Modules/Resources.h>
+#include <Modules/ChatCommands.h>
+#include <Modules/GameSettings.h>
+#include <Modules/ToolboxTheme.h>
+#include <Modules/ToolboxSettings.h>
 
 
 void SettingsWindow::Initialize() {
@@ -104,10 +106,14 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
 			}
 		}
 
-		for (unsigned i = 0; i < GWToolbox::Instance().GetModules().size(); ++i) {
+		ToolboxTheme::Instance().DrawSettings();
+		ToolboxSettings::Instance().DrawSettings();
+
+		const std::vector<ToolboxModule*>& optional_modules = ToolboxSettings::Instance().GetOptionalModules();
+		for (unsigned i = 0; i < optional_modules.size(); ++i) {
 			if (i == sep_windows) ImGui::Text("Windows:");
 			if (i == sep_widgets) ImGui::Text("Widgets:");
-			GWToolbox::Instance().GetModules()[i]->DrawSettings();
+            optional_modules[i]->DrawSettings();
 		}
 
 		if (ImGui::Button("Save Now", ImVec2(w, 0))) {
