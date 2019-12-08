@@ -32,6 +32,9 @@ public:
 	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
 
+	static void Travel(GW::Constants::MapID map_id,
+		GW::Constants::District district, int district_number = 0);
+
 private:
 	// ==== Helpers ====
 	void TravelButton(const char* text, int x_idx, GW::Constants::MapID mapid);

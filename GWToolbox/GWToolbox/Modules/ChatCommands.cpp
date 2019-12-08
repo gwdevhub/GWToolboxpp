@@ -454,7 +454,7 @@ void ChatCommands::CmdTP(const wchar_t *message, int argc, LPWSTR *argv) {
 	if (district != GW::Constants::District::Current) {
 		// we have a match
 		GW::Constants::MapID current = GW::Map::GetMapID();
-		GW::Map::Travel(current, district, district_number);
+		TravelWindow::Travel(current, district, district_number);
 		return;
 	}
 	
@@ -480,43 +480,43 @@ void ChatCommands::CmdTP(const wchar_t *message, int argc, LPWSTR *argv) {
 			}
 		}
 	} else if (town == L"toa") {
-		GW::Map::Travel(GW::Constants::MapID::Temple_of_the_Ages, district, district_number);
+		TravelWindow::Travel(GW::Constants::MapID::Temple_of_the_Ages, district, district_number);
 	} else if (town == L"doa") {
-		GW::Map::Travel(GW::Constants::MapID::Domain_of_Anguish, district, district_number);
+		TravelWindow::Travel(GW::Constants::MapID::Domain_of_Anguish, district, district_number);
 	} else if (town == L"kamadan" || town == L"kama") {
-		GW::Map::Travel(GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost, district, district_number);
+		TravelWindow::Travel(GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost, district, district_number);
 	} else if (town == L"embark") {
-		GW::Map::Travel(GW::Constants::MapID::Embark_Beach, district, district_number);
+		TravelWindow::Travel(GW::Constants::MapID::Embark_Beach, district, district_number);
 	} else if (town == L"eee") {
-		GW::Map::Travel(GW::Constants::MapID::Embark_Beach, GW::Constants::District::EuropeEnglish, 0);
+		TravelWindow::Travel(GW::Constants::MapID::Embark_Beach, GW::Constants::District::EuropeEnglish, 0);
 	} else if (town == L"vlox" || town == L"vloxs") {
-		GW::Map::Travel(GW::Constants::MapID::Vloxs_Falls, district, district_number);
+		TravelWindow::Travel(GW::Constants::MapID::Vloxs_Falls, district, district_number);
 	} else if (town == L"gadd" || town == L"gadds") {
-		GW::Map::Travel(GW::Constants::MapID::Gadds_Encampment_outpost, district, district_number);
+		TravelWindow::Travel(GW::Constants::MapID::Gadds_Encampment_outpost, district, district_number);
 	} else if (town == L"urgoz") {
-		GW::Map::Travel(GW::Constants::MapID::Urgozs_Warren, district, district_number);
+		TravelWindow::Travel(GW::Constants::MapID::Urgozs_Warren, district, district_number);
 	} else if (town == L"deep") {
-		GW::Map::Travel(GW::Constants::MapID::The_Deep, district, district_number);
+		TravelWindow::Travel(GW::Constants::MapID::The_Deep, district, district_number);
 	} else if (town == L"gtob") {
-		GW::Map::Travel(GW::Constants::MapID::Great_Temple_of_Balthazar_outpost, district, district_number);
+		TravelWindow::Travel(GW::Constants::MapID::Great_Temple_of_Balthazar_outpost, district, district_number);
 	} else if (town == L"la") {
-		GW::Map::Travel(GW::Constants::MapID::Lions_Arch_outpost, district, district_number);
+		TravelWindow::Travel(GW::Constants::MapID::Lions_Arch_outpost, district, district_number);
 	} else if (town == L"kaineng") {
-		GW::Map::Travel(GW::Constants::MapID::Kaineng_Center_outpost, district, district_number);
+		TravelWindow::Travel(GW::Constants::MapID::Kaineng_Center_outpost, district, district_number);
 	} else if (town == L"eotn") {
-		GW::Map::Travel(GW::Constants::MapID::Eye_of_the_North_outpost, district, district_number);
+		TravelWindow::Travel(GW::Constants::MapID::Eye_of_the_North_outpost, district, district_number);
 	} else if (town == L"sif" || town == L"sifhalla") {
-		GW::Map::Travel(GW::Constants::MapID::Sifhalla_outpost, district, district_number);
+		TravelWindow::Travel(GW::Constants::MapID::Sifhalla_outpost, district, district_number);
 	} else if (town == L"doom" || town == L"doomlore") {
-		GW::Map::Travel(GW::Constants::MapID::Doomlore_Shrine_outpost, district, district_number);
+		TravelWindow::Travel(GW::Constants::MapID::Doomlore_Shrine_outpost, district, district_number);
 	} else {
 		int map_id_integer;
 		if (GuiUtils::ParseInt(town.c_str(), &map_id_integer) && (map_id_integer != 0)) {
-			GW::Map::Travel((GW::Constants::MapID)map_id_integer, district, district_number);
+			TravelWindow::Travel((GW::Constants::MapID)map_id_integer, district, district_number);
 		} else {
 			GW::Constants::MapID map_id = MatchMapPrefix(town.c_str());
 			if (map_id != GW::Constants::MapID::None) {
-				GW::Map::Travel(map_id, district, district_number);
+				TravelWindow::Travel(map_id, district, district_number);
 			}
 		}
 

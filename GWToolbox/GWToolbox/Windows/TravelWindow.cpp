@@ -3,6 +3,7 @@
 
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\GameEntities\Map.h>
+#include <GWCA\Managers\UIMgr.h>
 #include <GWCA\Managers\MapMgr.h>
 
 #include "GWToolbox.h"
@@ -30,7 +31,7 @@ void TravelWindow::TravelButton(const char* text, int x_idx, GW::Constants::MapI
 	if (x_idx != 0) ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 	float w = (ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().ItemInnerSpacing.x) / 2;
 	if (ImGui::Button(text, ImVec2(w, 0))) {
-		GW::Map::Travel(mapid, district, district_number);
+		TravelWindow::Travel(mapid, district, district_number);
 		if (close_on_travel) visible = false;
 	}
 }
@@ -57,7 +58,7 @@ void TravelWindow::Draw(IDirect3DDevice9* pDevice) {
 			static int travelto_index = -1;
 			if (ImGui::MyCombo("travelto", "Travel To...", &travelto_index, outpost_name_array_getter, nullptr, N_OUTPOSTS)) {
 				GW::Constants::MapID id = IndexToOutpostID(travelto_index);
-				GW::Map::Travel(id, district, district_number);
+				TravelWindow::Travel(id, district, district_number);
 				travelto_index = -1;
 				if (close_on_travel) visible = false;
 			}
@@ -130,7 +131,7 @@ void TravelWindow::Draw(IDirect3DDevice9* pDevice) {
 
 bool TravelWindow::TravelFavorite(unsigned int idx) {
 	if (idx >= 0 && idx < fav_index.size()) {
-		GW::Map::Travel(IndexToOutpostID(fav_index[idx]), district, district_number);
+		TravelWindow::Travel(IndexToOutpostID(fav_index[idx]), district, district_number);
 		if (close_on_travel) visible = false;
 		return true;
 	} else {
@@ -360,6 +361,78 @@ GW::Constants::MapID TravelWindow::IndexToOutpostID(int index) {
 	case 179: return MapID::Zos_Shivros_Channel;
 	default: return MapID::Great_Temple_of_Balthazar_outpost;
 	}
+}
+
+void TravelWindow::Travel(GW::Constants::MapID map_id,
+	GW::Constants::District district, int district_number)
+{
+	struct UITravelPacket {
+		uint32_t map_id;
+		uint32_t region_id;
+		uint32_t language_id;
+		uint32_t district;
+	};
+
+	UITravelPacket packet;
+	packet.map_id = static_cast<uint32_t>(map_id);
+	packet.district = district_number;
+
+	switch (district) {
+	case GW::Constants::District::Current:
+        packet.region_id = GW::Map::GetRegion();
+        packet.language_id = GW::Map::GetLanguage();
+        break;
+    case GW::Constants::District::International:
+        packet.region_id = GW::Constants::Region::International;
+        packet.language_id = 0;
+        break;
+    case GW::Constants::District::American:
+        packet.region_id = GW::Constants::Region::America;
+        packet.language_id = 0;
+        break;
+    case GW::Constants::District::EuropeEnglish:
+        packet.region_id = GW::Constants::Region::Europe;
+        packet.language_id = GW::Constants::EuropeLanguage::English;
+        break;
+    case GW::Constants::District::EuropeFrench:
+        packet.region_id = GW::Constants::Region::Europe;
+        packet.language_id = GW::Constants::EuropeLanguage::French;
+        break;
+    case GW::Constants::District::EuropeGerman:
+        packet.region_id = GW::Constants::Region::Europe;
+        packet.language_id = GW::Constants::EuropeLanguage::German;
+        break;
+    case GW::Constants::District::EuropeItalian:
+        packet.region_id = GW::Constants::Region::Europe;
+        packet.language_id = GW::Constants::EuropeLanguage::Italian;
+        break;
+    case GW::Constants::District::EuropeSpanish:
+        packet.region_id = GW::Constants::Region::Europe;
+        packet.language_id = GW::Constants::EuropeLanguage::Spanish;
+        break;
+    case GW::Constants::District::EuropePolish:
+        packet.region_id = GW::Constants::Region::Europe;
+        packet.language_id = GW::Constants::EuropeLanguage::Polish;
+        break;
+    case GW::Constants::District::EuropeRussian:
+        packet.region_id = GW::Constants::Region::Europe;
+        packet.language_id = GW::Constants::EuropeLanguage::Russian;
+        break;
+    case GW::Constants::District::AsiaKorean:
+        packet.region_id = GW::Constants::Region::Korea;
+        packet.language_id = 0;
+        break;
+    case GW::Constants::District::AsiaChinese:
+        packet.region_id = GW::Constants::Region::China;
+        packet.language_id = 0;
+        break;
+    case GW::Constants::District::AsiaJapanese:
+        packet.region_id = GW::Constants::Region::Japan;
+        packet.language_id = 0;
+        break;
+    }
+
+    GW::UI::SendUIMessage(GW::UI::kTravel, &packet);
 }
 
 namespace {
