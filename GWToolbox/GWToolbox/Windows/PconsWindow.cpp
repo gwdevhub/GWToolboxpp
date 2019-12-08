@@ -275,6 +275,11 @@ void PconsWindow::Draw(IDirect3DDevice9* device) {
 }
 
 void PconsWindow::Update(float delta) {
+
+	// Otherwise pcons may be used during cinematics
+	if (GW::Map::GetIsInCinematic())
+        return;
+
 	if (current_map_type != GW::Map::GetInstanceType()) {
 		current_map_type = GW::Map::GetInstanceType();
 		scan_inventory_timer = TIMER_INIT();
