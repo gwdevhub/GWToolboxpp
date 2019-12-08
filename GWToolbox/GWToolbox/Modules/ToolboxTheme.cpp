@@ -11,11 +11,6 @@ ToolboxTheme::ToolboxTheme() {
 	ini_style = DefaultTheme();
 }
 
-ToolboxTheme::~ToolboxTheme() {
-	if (inifile)
-		delete inifile;
-}
-
 ImGuiStyle ToolboxTheme::DefaultTheme() {
 	ImGuiStyle style = ImGuiStyle();
 	style.WindowRounding = 6.0f;
@@ -46,6 +41,11 @@ ImGuiStyle ToolboxTheme::DefaultTheme() {
 
 void ToolboxTheme::Terminate() {
 	ToolboxModule::Terminate();
+	if (inifile) {
+	    inifile->Reset();
+	    delete inifile;
+	    inifile = nullptr;
+	}
 }
 
 void ToolboxTheme::LoadSettings(CSimpleIni* ini) {

@@ -24,11 +24,6 @@
 #define INI_FILENAME L"healthlog.ini"
 #define IniSection "health"
 
-PartyDamage::~PartyDamage() {
-	if (inifile)
-    	delete inifile;
-}
-
 void PartyDamage::Initialize() {
 	ToolboxWidget::Initialize();
 
@@ -54,6 +49,11 @@ void PartyDamage::Initialize() {
 
 void PartyDamage::Terminate() {
 	ToolboxWidget::Terminate();
+	if (inifile) {
+	    inifile->Reset();
+	    delete inifile;
+	    inifile = nullptr;
+	}
 }
 
 void PartyDamage::MapLoadedCallback(GW::HookStatus *, GW::Packet::StoC::MapLoaded *packet) {

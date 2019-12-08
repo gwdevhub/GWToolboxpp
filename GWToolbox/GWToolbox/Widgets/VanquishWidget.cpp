@@ -6,6 +6,7 @@
 #include <GWCA/GameContainers/Array.h>
 
 #include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
 
 #include "VanquishWidget.h"
@@ -21,9 +22,10 @@ void VanquishWidget::Draw(IDirect3DDevice9 *pDevice) {
 		!GW::PartyMgr::GetIsPartyInHardMode() ||
 		tokill <= 0) return;
 
+	bool ctrl_pressed = ImGui::IsKeyDown(VK_CONTROL);
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
 	ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiSetCond_FirstUseEver);
-	if (ImGui::Begin(Name(), nullptr, GetWinFlags())) {
+	if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !ctrl_pressed))) {
 		static char foes_count[32] = "";
 		snprintf(foes_count, 32, "%u / %u", killed, tokill + killed);
 
@@ -44,6 +46,21 @@ void VanquishWidget::Draw(IDirect3DDevice9 *pDevice) {
 		ImGui::SetCursorPos(cur);
 		ImGui::Text(foes_count);
 		ImGui::PopFont();
+
+		// Check if the widget was clicked
+		ImVec2 size = ImGui::GetWindowSize();
+		ImVec2 min = ImGui::GetWindowPos();
+		ImVec2 max(min.x + size.x, min.y + size.y);
+		if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsMouseHoveringRect(min, max)) {
+			char buffer[256];
+			snprintf(buffer, sizeof(buffer),
+				"We have vanquished %lu %s! %lu %s remaining.",
+				killed,
+				killed == 1 ? "foe" : "foes",
+				tokill,
+				tokill == 1 ? "foe" : "foes");
+			GW::Chat::SendChat('#', buffer);
+		}
 	}
 	ImGui::End();
 	ImGui::PopStyleColor();
