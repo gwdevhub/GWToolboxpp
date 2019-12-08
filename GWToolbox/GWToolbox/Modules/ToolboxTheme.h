@@ -4,7 +4,6 @@
 
 class ToolboxTheme : public ToolboxModule {
 	ToolboxTheme();
-	~ToolboxTheme();
 public:
 	static ToolboxTheme& Instance() {
 		static ToolboxTheme instance;

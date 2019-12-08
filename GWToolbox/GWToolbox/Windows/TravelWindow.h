@@ -41,9 +41,6 @@ public:
     uint32_t RegionFromDistrict(GW::Constants::District district);
     uint32_t LanguageFromDistrict(GW::Constants::District district);
 
-	static void Travel(GW::Constants::MapID map_id,
-		GW::Constants::District district, int district_number = 0);
-
 private:
 	// ==== Helpers ====
 	void TravelButton(const char* text, int x_idx, GW::Constants::MapID mapid);

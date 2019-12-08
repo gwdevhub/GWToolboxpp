@@ -32,10 +32,6 @@ void Updater::Initialize() {
 	CheckForUpdate();
 }
 
-void Updater::Initialize() {
-	CheckForUpdate();
-}
-
 void Updater::DrawSettingInternal() {
 	ImGui::Text("Update mode:");
     const float btnWidth = 180.0f * ImGui::GetIO().FontGlobalScale;
