@@ -71,9 +71,9 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
 	if (use_trade) optional_modules.push_back(&TradeWindow::Instance());
 	if (use_notepad) optional_modules.push_back(&NotePadWindow::Instance());
 	if (use_objectivetimer) optional_modules.push_back(&ObjectiveTimerWindow::Instance());
+	optional_modules.push_back(&SettingsWindow::Instance());
 
 	SettingsWindow::Instance().sep_widgets = optional_modules.size();
-	optional_modules.push_back(&SettingsWindow::Instance());
 	if (use_timer) optional_modules.push_back(&TimerWidget::Instance());
 	if (use_health) optional_modules.push_back(&HealthWidget::Instance());
 	if (use_distance) optional_modules.push_back(&DistanceWidget::Instance());
