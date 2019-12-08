@@ -632,10 +632,10 @@ std::vector<ToolboxUIElement*> ChatCommands::MatchingWindows(const wchar_t *mess
 			for (ToolboxUIElement* window : GWToolbox::Instance().GetUIElements()) {
 				ret.push_back(window);
 			}
-		} else {
+		} else if(arg.size()) {
             std::string name = GuiUtils::WStringToString(arg);
 			for (ToolboxUIElement* window : GWToolbox::Instance().GetUIElements()) {
-				if (name == GuiUtils::ToLower(window->Name())) {
+				if (GuiUtils::ToLower(window->Name()).find(name) == 0){
 					ret.push_back(window);
 				}
 			}
