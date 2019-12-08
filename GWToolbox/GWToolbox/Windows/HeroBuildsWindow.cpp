@@ -338,7 +338,7 @@ void HeroBuildsWindow::HeroBuildName(const TeamHeroBuild& tbuild, unsigned int i
 	const std::string name(build.name);
 	const std::string code(build.code);
 	char buf[128];
-	auto id = idx == 0 ? 0 : HeroIndexToID[build.hero_index];
+	auto id = idx > 0 && build.hero_index > 0 ? HeroIndexToID[build.hero_index] : 0;
 	if (name.empty() && code.empty() && id == HeroID::NoHero) {
 		return; // nothing to do here
 	}

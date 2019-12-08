@@ -179,7 +179,7 @@ void TradeWindow::Update(float delta) {
 
 	ws_chat->poll();
 	ws_chat->dispatch([this](const std::string& data) {
-		char buffer[512];
+		wchar_t buffer[512];
 		json res = json::parse(data.c_str());
 
 		// We don't support queries in the chat
@@ -188,8 +188,9 @@ void TradeWindow::Update(float delta) {
 
 		std::string msg = res["message"].get<std::string>();
 		if (FilterTradeMessage(msg)) {
-			std::string name = res["name"].get<std::string>();
-			snprintf(buffer, sizeof(buffer), "<a=1>%s</a>: <c=#f96677><quote>%s", name.c_str(), msg.c_str());
+			std::wstring name_ws = GuiUtils::StringToWString(res["name"].get<std::string>());
+			std::wstring msg_ws = GuiUtils::StringToWString(msg);
+			wnsprintfW(buffer, sizeof(buffer), L"<a=1>%s</a>: <c=#f96677><quote>%s", name_ws.c_str(), msg_ws.c_str());
 			GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, buffer);
 		}
 		});
