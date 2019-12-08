@@ -990,7 +990,7 @@ void GameSettings::Initialize() {
 			return;
 		}
 		GW::GuildContext* c = GW::GuildMgr::GetGuildContext();
-		if (!c || !c->player_guild_index || !c->guilds[c->player_guild_index]->faction != pak.allegiance)
+		if (!c || !c->player_guild_index || c->guilds[c->player_guild_index]->faction != pak.allegiance)
 			return; // Alliance isn't the right faction. Return here and the NPC will reply.
 		if (*current_faction < pak.faction_amount)
 			return; // Not enough to donate. Return here and the NPC will reply.
