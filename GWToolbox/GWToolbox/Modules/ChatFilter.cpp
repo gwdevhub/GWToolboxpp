@@ -35,10 +35,6 @@ static void printchar(wchar_t c) {
 void ChatFilter::Initialize() {
 	ToolboxModule::Initialize();
 
-	strcpy_s(bycontent_word_buf, "");
-	strcpy_s(bycontent_regex_buf, "");
-	//strcpy_s(byauthor_buf, "");
-
 	// server messages
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&MessageServer_Entry,
 	[this](GW::HookStatus *status, GW::Packet::StoC::MessageServer *pak) -> void {
