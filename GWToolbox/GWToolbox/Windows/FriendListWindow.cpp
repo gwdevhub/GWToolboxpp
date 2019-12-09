@@ -36,6 +36,11 @@ static const std::wstring GetPlayerNameFromEncodedString(const wchar_t* message)
 	return L"";
 }
 
+namespace {
+	static std::wstring last_whisper;
+
+}
+
 /*	FriendListWindow::Friend	*/
 
 void FriendListWindow::Friend::GetMapName() {
@@ -57,7 +62,7 @@ void FriendListWindow::Friend::GetMapName() {
 }
 // Get the Guild Wars friend object for this friend (if it exists)
 GW::Friend* FriendListWindow::Friend::GetFriend() {
-	return GW::FriendListMgr::GetFriend((uint8_t*)&uuid);
+	return GW::FriendListMgr::GetFriend((uint8_t*)&uuid_bytes);
 }
 // Start whisper to this player via their current char name.
 void FriendListWindow::Friend::StartWhisper() {
@@ -95,7 +100,7 @@ void FriendListWindow::Friend::InviteToParty() {
 }
 // Get the character belonging to this friend (e.g. to find profession etc)
 FriendListWindow::Character* FriendListWindow::Friend::GetCharacter(const wchar_t* char_name) {
-	std::map<std::wstring, Character>::iterator it = characters.find(char_name);
+	std::unordered_map<std::wstring, Character>::iterator it = characters.find(char_name);
 	if (it == characters.end())
 		return nullptr; // Not found
 	return &it->second;
@@ -141,27 +146,29 @@ bool FriendListWindow::Friend::RemoveGWFriend() {
 /* Setters */
 // Update local friend record from raw info.
 FriendListWindow::Friend* FriendListWindow::SetFriend(uint8_t* uuid, uint8_t type, uint8_t status, uint32_t map_id, const wchar_t* charname, const wchar_t* alias) {
-    
+	if (type != GW::FriendType_Friend && type != GW::FriendType_Ignore)
+		return nullptr;
 	Friend* lf = GetFriend(uuid);
 	if (!lf && charname)
 		lf = GetFriend(charname);
 	if(!lf && alias)
 		lf = GetFriend(alias);
-	std::lock_guard<std::mutex> lock(friends_mutex);
+	std::lock_guard<std::recursive_mutex> lock(friends_mutex);
 	char uuid_c[128];
 	GuidToString(*(UUID*)uuid, uuid_c);
 	if(!lf) {
 		// New friend
-        lf = new Friend();
-        lf->type = type;
+        lf = new Friend(this);
         lf->alias = std::wstring(alias);
 		friends.emplace(uuid_c, lf);
 	}
+	lf->type = type;
 	if (strcmp(lf->uuid.c_str(),uuid_c) != 0) {
 		// UUID is different. This could be because toolbox created a uuid and it needs updating.
 		lf->uuid = std::string(uuid_c);
+		lf->uuid_bytes = StringToGuid(uuid_c);
 	}
-	if (alias && wcscmp(alias, lf->alias.c_str())) {
+	if (alias && wcscmp(alias, lf->alias.c_str()) != 0) {
 		lf->alias = std::wstring(alias);
 	}
 	if (lf->current_map_id != map_id) {
@@ -193,7 +200,7 @@ FriendListWindow::Friend* FriendListWindow::SetFriend(GW::Friend* f) {
 /* Getters */
 // Find existing record for friend by char name.
 FriendListWindow::Friend* FriendListWindow::GetFriend(const wchar_t* name) {
-	std::map<std::wstring, std::string>::iterator it = uuid_by_name.find(name);
+	std::unordered_map<std::wstring, std::string>::iterator it = uuid_by_name.find(name);
 	if (it == uuid_by_name.end())
 		return nullptr; // Not found
 	return GetFriendByUUID(it->second.c_str());
@@ -209,13 +216,27 @@ FriendListWindow::Friend* FriendListWindow::GetFriend(uint8_t* uuid) {
 }
 // Find existing record for friend by uuid
 FriendListWindow::Friend* FriendListWindow::GetFriendByUUID(const char* uuid) {
-    std::lock_guard<std::mutex> lock(friends_mutex);
-	std::map<std::string, Friend*>::iterator it = friends.find(uuid);
+    std::lock_guard<std::recursive_mutex> lock(friends_mutex);
+	std::unordered_map<std::string, Friend*>::iterator it = friends.find(uuid);
 	if (it == friends.end())
 		return nullptr;
 	return it->second; // Found in cache
 }
-
+void FriendListWindow::RemoveFriend(Friend* f) {
+	std::lock_guard<std::recursive_mutex> lock(friends_mutex);
+	if (!f) return;
+	std::unordered_map<std::string, Friend*>::iterator it1 = friends.find(f->uuid);
+	if (it1 != friends.end()) {
+		friends.erase(it1);
+	}
+	std::unordered_map<std::wstring, std::string>::iterator it2;
+	for (auto character : f->characters) {
+		it2 = uuid_by_name.find(character.first);
+		if (it2 != uuid_by_name.end() && it2->second == f->uuid)
+			uuid_by_name.erase(it2);
+	}
+	delete f;
+}
 /* FriendListWindow basic functions etc */
 void FriendListWindow::Initialize() {
     ToolboxWindow::Initialize();
@@ -227,6 +248,7 @@ void FriendListWindow::Initialize() {
         const wchar_t* charname) {
         // Keep a log mapping char name to uuid. This is saved to disk.
 		Friend* lf = SetFriend(f->uuid, f->type, status, f->zone_id, charname, alias);
+		if (!lf) return;
 		// If we only added this user to get an updated status, then remove this user now.
 		if (lf->is_tb_friend) {
 			lf->RemoveGWFriend();
@@ -249,10 +271,17 @@ void FriendListWindow::Initialize() {
 			fc->profession = profession;
 		});
 	});
+	GW::Chat::RegisterSendChatCallback(&ErrorMessage_Entry, [&](GW::HookStatus* status, GW::Chat::Channel channel, wchar_t* msg) {
+		if (channel != GW::Chat::CHANNEL_WHISPER)
+			return;
+		last_whisper = msg;
+		last_whisper = last_whisper.substr(last_whisper.find_first_of(L",") + 1);
+		});
     // "Failed to add friend" or "Friend <name> already added as <name>"
     GW::Chat::RegisterLocalMessageCallback(&ErrorMessage_Entry,
         [this](GW::HookStatus* status, int channel, wchar_t* message) -> void {
 			std::wstring player_name;
+			Friend* f;
 			switch (message[0]) {
 			case 0x2f3: // You cannot add yourself as a friend.
 				break;
@@ -263,14 +292,14 @@ void FriendListWindow::Initialize() {
 				break;
 			case 0x2F6: // The Character you're trying to add is already in your friend list as "".
 				player_name = GetPlayerNameFromEncodedString(message);
-				Friend* f = GetFriend(player_name.c_str());
+				f = GetFriend(player_name.c_str());
 				if (f) {
 					f->SetCharacter(player_name.c_str());
 				}
 				break;
 			case 0x881: // Player "" is not online. Redirect to the right person if we can find them!
 				player_name = GetPlayerNameFromEncodedString(message);
-				Friend* f = GetFriend(player_name.c_str());
+				f = GetFriend(player_name.c_str());
 				if (f && !f->IsOffline() && f->current_char->name != player_name) {
 					GW::Chat::SendChat(f->current_char->name.c_str(), last_whisper.c_str());
 					status->blocked = true;
@@ -312,6 +341,7 @@ void FriendListWindow::Poll() {
 		GW::Friend* f = fl->friends[i];
 		if (!f) continue;
 		Friend* lf = SetFriend(f->uuid, f->type, f->status, f->zone_id, f->charname, f->alias);
+		if (!lf) continue;
 		// If we only added this user to get an updated status, then remove this user now.
 		if (lf->added_via_toolbox) {
 			lf->RemoveGWFriend();
@@ -319,12 +349,22 @@ void FriendListWindow::Poll() {
 		lf->last_update = now;
 	}
 	//Log::Log("Polling non-gw friends list\n");
-    std::map<std::string, Friend*>::iterator it = friends.begin();
+	int friend_list_spaces = 100 - fl->number_of_friend;
+    std::unordered_map<std::string, Friend*>::iterator it = friends.begin();
     while (it != friends.end()) {
-        if (fl->number_of_friend >= 100)
-            break; // No more space to add friends.
         Friend* lf = it->second;
-        if (lf->is_tb_friend && lf->NeedToUpdate(now) && !lf->GetFriend()) {
+		if (lf->GetFriend()) {
+			// Friend exists in friend list, don't need to mess
+			it++;
+			continue;
+		}
+		if (!lf->is_tb_friend) {
+			// Removed from in-game friend list, delete from tb friend list.
+			RemoveFriend(lf);
+			it = friends.begin();
+			continue;
+		}
+        if (friend_list_spaces > 0 && lf->NeedToUpdate(now)) {
             // Add the friend to friend list. The RegisterFriendStatusCallback will remove it once we get the response.
 			lf->AddGWFriend();
             //GW::FriendListMgr::AddFriend(lf->charnames.front().c_str(),lf->alias.c_str());
@@ -390,7 +430,7 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
 	}
 	float height = ImGui::GetTextLineHeightWithSpacing();
 	ImVec2 pos;
-    for (std::map<std::string, Friend*>::iterator it = friends.begin(); it != friends.end(); ++it) {
+    for (std::unordered_map<std::string, Friend*>::iterator it = friends.begin(); it != friends.end(); ++it) {
 		colIdx = 0;
 		Friend* lfp = it->second;
         if (lfp->type != GW::FriendType_Friend) continue;
@@ -399,18 +439,25 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
 		if (lf.IsOffline()) continue;
 		if (lf.alias.empty()) continue;
 		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, hover_background_color);
+		ImGui::PushStyleColor(ImGuiCol_ButtonActive, hover_background_color);
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,ImVec2(0,0));
 		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0);
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0, 0));
 		ImGui::PushID(lf.uuid.c_str());
-		bool clicked = ImGui::Button("", ImVec2(ImGui::GetContentRegionAvailWidth(), height));
+		ImGui::Button("", ImVec2(ImGui::GetContentRegionAvailWidth(), height));
+		bool left_clicked = ImGui::IsItemClicked(0);
+		bool right_clicked = ImGui::IsItemClicked(1);
+		// TODO: Rename, Remove, Ignore.
+		//ImGui::BeginPopupContextItem();
+
 		bool hovered = ImGui::IsItemHovered();
 		ImGui::PopStyleVar(4);
 		ImGui::SameLine(2.0f,0);
 		ImGui::PushStyleColor(ImGuiCol_Text,StatusColors[lf.status].Value);
 		ImGui::Bullet();
-		ImGui::PopStyleColor(2);
+		ImGui::PopStyleColor(4);
 		if(ImGui::IsItemHovered())
 			ImGui::SetTooltip(GetStatusText(lf.status));
 		ImGui::SameLine(0);
@@ -467,8 +514,11 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
 			}
 		}
 		ImGui::PopID();
-		if (clicked && !lf.IsOffline())
+		if (left_clicked && !lf.IsOffline())
 			lf.StartWhisper();
+		if (right_clicked) {
+			
+		}
     }
 	if (!is_widget)
 		ImGui::EndChild();
@@ -476,10 +526,14 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
 }
 void FriendListWindow::DrawSettingInternal() {
 	bool edited = false;
+	const float offset = ImGui::GetContentRegionAvailWidth() / 2;
 	edited |= ImGui::Checkbox("Show as widget in outpost", &show_as_widget_in_outpost);
+	ImGui::SameLine(offset);
 	edited |= ImGui::Checkbox("Show as widget in explorable", &show_as_widget_in_explorable);
 	edited |= ImGui::Checkbox("Lock size as widget", &lock_size_as_widget);
+	ImGui::SameLine(offset);
 	edited |= ImGui::Checkbox("Lock move as widget", &lock_move_as_widget);
+	Colors::DrawSetting("Background hover color", &hover_background_color);
 }
 void FriendListWindow::LoadSettings(CSimpleIni* ini) {
     ToolboxWindow::LoadSettings(ini);
@@ -487,6 +541,8 @@ void FriendListWindow::LoadSettings(CSimpleIni* ini) {
 	lock_size_as_widget = ini->GetBoolValue(Name(), VAR_NAME(lock_size_as_widget), lock_size_as_widget);
 	show_as_widget_in_explorable = ini->GetBoolValue(Name(), VAR_NAME(show_as_widget_in_explorable), show_as_widget_in_explorable);
 	show_as_widget_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(show_as_widget_in_outpost), show_as_widget_in_outpost);
+	Colors::Load(ini, Name(), VAR_NAME(hover_background_color), hover_background_color);
+
     LoadFromFile();
 }
 void FriendListWindow::SaveSettings(CSimpleIni* ini) {
@@ -495,6 +551,8 @@ void FriendListWindow::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(lock_size_as_widget), lock_size_as_widget);
 	ini->SetBoolValue(Name(), VAR_NAME(show_as_widget_in_explorable), show_as_widget_in_explorable);
 	ini->SetBoolValue(Name(), VAR_NAME(show_as_widget_in_outpost), show_as_widget_in_outpost);
+
+	Colors::Save(ini, Name(), VAR_NAME(hover_background_color), hover_background_color);
 
     SaveToFile();
 }
@@ -505,8 +563,8 @@ void FriendListWindow::SignalTerminate() {
 	// Remove any friends added via toolbox.
 	worker.Add([this]() {
 		GW::GameThread::Enqueue([this]() {
-            std::lock_guard<std::mutex> lock(friends_mutex);
-			for (std::map<std::string, Friend*>::iterator it = friends.begin();  it != friends.end(); it++) {
+            std::lock_guard<std::recursive_mutex> lock(friends_mutex);
+			for (std::unordered_map<std::string, Friend*>::iterator it = friends.begin();  it != friends.end(); it++) {
 				Friend* f = it->second;
                 if (f->is_tb_friend && f->GetFriend()) {
                     f->RemoveGWFriend();
@@ -525,23 +583,26 @@ void FriendListWindow::Terminate() {
     GW::FriendListMgr::RemoveFriendStatusCallback(&FriendStatusUpdate_Entry);
     GW::StoC::RemoveCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry);
     // Free memory for Friends list.
-    std::lock_guard<std::mutex> lock(friends_mutex);
-    for (std::map<std::string, Friend*>::iterator it = friends.begin(); it != friends.end(); it++) {
-        if (it->second)
-            delete it->second;
-    }
+    std::lock_guard<std::recursive_mutex> lock(friends_mutex);
+	while (friends.begin() != friends.end()) {
+		RemoveFriend(friends.begin()->second);
+	}
     friends.clear();
 }
 void FriendListWindow::LoadFromFile() {
 	loading = true;
 	Log::Log("%s: Loading friends from ini", Name());
 	worker.Add([this]() {
-        std::lock_guard<std::mutex> lock(friends_mutex);
+        std::lock_guard<std::recursive_mutex> lock(friends_mutex);
 		// clear builds from toolbox
 		uuid_by_name.clear();
+		while (friends.begin() != friends.end()) {
+			RemoveFriend(friends.begin()->second);
+		}
 		friends.clear();
 
 		if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
+		inifile->Reset();
 		inifile->SetMultiKey(true);
 		inifile->LoadFile(Resources::GetPath(ini_filename).c_str());
 
@@ -549,8 +610,9 @@ void FriendListWindow::LoadFromFile() {
 		inifile->GetAllSections(entries);
 		for (CSimpleIni::Entry& entry : entries) {
 			uint8_t type = 0;
-			Friend* lf = new Friend();
+			Friend* lf = new Friend(this);
 			lf->uuid = entry.pItem;
+			lf->uuid_bytes = StringToGuid(lf->uuid);
 			lf->alias = GuiUtils::StringToWString(inifile->GetValue(entry.pItem, "alias", ""));
 			lf->type = (uint8_t)inifile->GetLongValue(entry.pItem, "type", lf->type);
             if (lf->uuid.empty() || lf->alias.empty()) {
@@ -582,7 +644,7 @@ void FriendListWindow::LoadFromFile() {
                 continue; // Error, should have at least 1 charname...
             }
 			friends.emplace(lf->uuid, lf);
-			for (std::map<std::wstring, Character>::iterator it2 = lf->characters.begin(); it2 != lf->characters.end(); ++it2) {
+			for (std::unordered_map<std::wstring, Character>::iterator it2 = lf->characters.begin(); it2 != lf->characters.end(); ++it2) {
 				uuid_by_name.emplace(it2->first, lf->uuid);
 			}
 		}
@@ -599,15 +661,15 @@ void FriendListWindow::SaveToFile() {
     if (friends.empty())
         return; // Error, should have at least 1 friend
     inifile->Reset();
-    std::lock_guard<std::mutex> lock(friends_mutex);
-    for (std::map<std::string, Friend*>::iterator it = friends.begin(); it != friends.end(); ++it) {
+    std::lock_guard<std::recursive_mutex> lock(friends_mutex);
+    for (std::unordered_map<std::string, Friend*>::iterator it = friends.begin(); it != friends.end(); ++it) {
         // do something
         Friend lf = *it->second;
 		const char* uuid = lf.uuid.c_str();
         inifile->SetLongValue(uuid, "type", lf.type);
 		inifile->SetBoolValue(uuid, "is_tb_friend", lf.is_tb_friend);
 		inifile->SetValue(uuid, "alias", GuiUtils::WStringToString(lf.alias).c_str());
-		for (std::map<std::wstring, Character>::iterator it2 = lf.characters.begin(); it2 != lf.characters.end(); ++it2) {
+		for (std::unordered_map<std::wstring, Character>::iterator it2 = lf.characters.begin(); it2 != lf.characters.end(); ++it2) {
 			char charname[128] = { 0 };
 			snprintf(charname, 128, "%s,%d", GuiUtils::WStringToString(it2->first).c_str(), it2->second.profession);
 			inifile->SetValue(uuid, "charname", charname);

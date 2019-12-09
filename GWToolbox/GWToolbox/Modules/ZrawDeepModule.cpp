@@ -113,6 +113,7 @@ void ZrawDeepModule::SetEnabled(bool _enabled) {
 			});
 		GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(&ZrawDeepModule_StoCs,
 			[this](GW::HookStatus* status, GW::Packet::StoC::AgentAdd* packet) -> void {
+				if (!enabled) return;
 				if (IsKanaxai(packet->agent_type)) {
 					kanaxai_agent_id = packet->agent_id;
 					pending_transmog = clock();

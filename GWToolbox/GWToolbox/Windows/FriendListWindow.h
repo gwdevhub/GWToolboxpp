@@ -13,26 +13,27 @@
 
 #include <GWCA\Utilities\Hook.h>
 #include <mutex>
+#include "Color.h"
 
 /* Out of scope namespecey lookups */
 namespace {
-	static ImColor ProfColors[10] = {
-		IM_COL32_WHITE,
-		IM_COL32(0xb4, 0x82, 0x46, 255),
-		IM_COL32(0x91, 0xc0, 0x4c, 255),
-		IM_COL32(0x7a, 0xbb, 0xd1, 255),
-		IM_COL32(0x4c, 0xA2, 0x64, 255),
-		IM_COL32(0x71, 0x35, 0x66, 255),
-		IM_COL32(0xc4, 0x4b, 0x4b, 255),
-		IM_COL32(0xe1, 0x18, 0x7c, 255),
-		IM_COL32(0x1e, 0xd6, 0xba, 255),
-		IM_COL32(0xea, 0xde, 0x00, 255)/*,
-		IM_COL32(0x57, 0x68, 0x95, 255)*/
+	static ImColor ProfColors[11] = {
+		0xFFFFFFFF,
+		0xFFEEAA33,
+		0xFF55AA00,
+		0xFF4444BB,
+		0xFF00AA55,
+		0xFF8800AA,
+		0xFFBB3333,
+		0xFFAA0088,
+		0xFF00AAAA,
+		0xFF996600,
+		0xFF7777CC
 	};
-	static wchar_t* ProfNames[10] = {
+	static wchar_t* ProfNames[11] = {
 		L"Unknown",
 		L"Warrior",
-		L"Ranger"
+		L"Ranger",
 		L"Monk",
 		L"Necromancer",
 		L"Mesmer",
@@ -107,12 +108,18 @@ private:
 	};
 	
     struct Friend {
+		Friend(FriendListWindow* _parent) : parent(_parent) {};
+		~Friend() {
+			characters.clear();
+		};
 		std::string uuid;
+		UUID uuid_bytes;
         std::wstring alias;
+		FriendListWindow* parent;
 		Character* current_char = nullptr;
 		char current_map_name[128] = { 0 };
 		uint32_t current_map_id = 0;
-        std::map<std::wstring,Character> characters;
+        std::unordered_map<std::wstring,Character> characters;
         uint8_t status = 0; // 0 = Offline, 1 = Online, 2 = Do not disturb, 3 = Away
         uint8_t type = 255; // 0 = Friend, 1 = Ignore, 2 = Played, 3 = Trade
         bool is_tb_friend = false;  // Is this a friend via toolbox, or friend via friend list?
@@ -130,7 +137,7 @@ private:
 				std::wstring cached_charnames_hover_ws = L"Characters for ";
 				cached_charnames_hover_ws += alias;
 				cached_charnames_hover_ws += L":";
-				for (std::map<std::wstring, Character>::iterator it2 = characters.begin(); it2 != characters.end(); ++it2) {
+				for (std::unordered_map<std::wstring, Character>::iterator it2 = characters.begin(); it2 != characters.end(); ++it2) {
 					cached_charnames_hover_ws += L"\n  ";
 					cached_charnames_hover_ws += it2->first;
 					if (it2->second.profession) {
@@ -174,6 +181,7 @@ private:
 	Friend* GetFriend(GW::Friend*);
 	Friend* GetFriendByUUID(const char*);
 	Friend* GetFriend(uint8_t*);
+	void RemoveFriend(Friend* f);
 public:
     static FriendListWindow& Instance() {
         static FriendListWindow instance;
@@ -232,6 +240,7 @@ private:
 	bool lock_move_as_widget = true;
 	bool lock_size_as_widget = true;
 
+	Color hover_background_color = 0x33999999;
 
     clock_t friends_list_checked = 0;
 
@@ -290,11 +299,11 @@ private:
     
 
     // Mapping of Name > UUID
-    std::map<std::wstring, std::string> uuid_by_name;
+    std::unordered_map<std::wstring, std::string> uuid_by_name;
 
     // Main store of Friend info
-    std::map<std::string, Friend*> friends;
-    std::mutex friends_mutex;
+    std::unordered_map<std::string, Friend*> friends;
+    std::recursive_mutex friends_mutex;
 
 	bool show_location = true;
 
