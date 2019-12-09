@@ -40,23 +40,13 @@ public:
 	void Update(float delta) override;
 	bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam);
 
-	void DrawBorderlessSetting();
 	void DrawFOVSetting();
 	bool maintain_fov = false;
 	float fov = 1.308997f; // default fov
 
-	void ApplyBorderless(bool value);
 	void SetAfkMessage(std::wstring&& message);
 	static void ItemClickCallback(GW::HookStatus *, uint32_t type, uint32_t slot, GW::Bag *bag);
 
-	// some settings that are either referenced from multiple places
-	// or have nowhere else to be
-	enum { 
-		Ok,
-		WantBorderless,
-		WantWindowed
-	} borderless_status = Ok; // current actual status of borderless
-	bool borderlesswindow = false; // status of the borderless checkbox and setting
 	bool tick_is_toggle = false;
 
 	bool openlinks = false;
@@ -89,12 +79,10 @@ public:
 	bool disable_gold_selling_confirmation = false;
 
 private:
-	void UpdateBorderless();
 	void UpdateFOV();
-	std::vector<GW::MemoryPatcher*> patches;
-	GW::MemoryPatcher *ctrl_click_patch = nullptr;
-	GW::MemoryPatcher *tome_patch = nullptr;
-	GW::MemoryPatcher *gold_confirm_patch = nullptr;
+	GW::MemoryPatcher ctrl_click_patch;
+	GW::MemoryPatcher tome_patch;
+	GW::MemoryPatcher gold_confirm_patch;
 
 	void DrawChannelColor(const char *name, GW::Chat::Channel chan);
 	static void FriendStatusCallback(

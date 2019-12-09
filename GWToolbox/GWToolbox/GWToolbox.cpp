@@ -268,13 +268,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
         // We may want to not send events to toolbox if the player is typing in-game
         // Otherwise, we may want to capture events. 
         // For that, we may want to only capture *successfull* hotkey activations.
-
-        // block alt-enter if in borderless to avoid graphic glitches (no reason to go fullscreen anyway)
-        if (GameSettings::Instance().borderlesswindow
-            && (GetAsyncKeyState(VK_MENU) < 0)
-            && (GetAsyncKeyState(VK_RETURN) < 0)) {
-            return true;
-        }
         break;
 
     case WM_SIZE:
