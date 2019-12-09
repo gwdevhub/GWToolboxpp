@@ -1,6 +1,9 @@
 #pragma once
 
 #include <GWCA/Constants/Constants.h>
+
+#include <GWCA/GameContainers/GamePos.h>
+
 #include <GWCA/Packets/StoC.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/UIMgr.h>
@@ -10,6 +13,8 @@
 #include "Timer.h"
 
 #include "Defines.h"
+
+#include <mutex>
 
 #include "Color.h"
 
@@ -25,15 +30,13 @@ class EffectRenderer : public VBuffer {
 		float range = GW::Constants::Range::Adjacent;
 	};
 	struct Effect {
-		Effect(uint32_t _effect_id, float _x, float _y) : Effect(_effect_id,_x,_y,duration)  {};
-		Effect(uint32_t _effect_id, float _x, float _y, uint32_t _duration) : Effect(_effect_id, _x, _y, duration, GW::Constants::Range::Adjacent) {};
-		Effect(uint32_t _effect_id, float _x, float _y, uint32_t _duration, float range) : effect_id(_effect_id), y(_y), x(_x), duration(_duration), start(TIMER_INIT()) {
+		Effect(uint32_t _effect_id, float _x, float _y, int _duration = 10000, float range = GW::Constants::Range::Adjacent) : effect_id(_effect_id), pos(_x,_y), duration(_duration), start(TIMER_INIT()) {
 			circle.range = range;
 		};
 		clock_t start;
 		const uint32_t effect_id;
-		const float x, y;
-		int duration = 10000;
+		const GW::Vec2f pos;
+		int duration;
 		EffectCircle circle;
 	};
 
@@ -56,8 +59,15 @@ public:
 private:
 	void Initialize(IDirect3DDevice9* device) override;
 
+	void RemoveTriggeredEffect(uint32_t effect_id, GW::Vec2f* pos);
+	void RemoveEffect(Effect* effect);
 	void DrawAoeEffects(IDirect3DDevice9* device);
-	std::deque<Effect*> aoe_effects;
+	std::vector<Effect*> aoe_effects;
+	bool need_to_clear_effects = false;
+
+	std::recursive_mutex effects_mutex;
+
+	GW::HookEntry StoC_Hook;
 	
 	Color aoe_color = 0xFFFF0000;
 	unsigned int vertices_max = 0x1000;	// max number of vertices to draw in one call
