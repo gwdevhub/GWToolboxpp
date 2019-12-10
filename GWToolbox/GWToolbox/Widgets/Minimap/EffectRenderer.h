@@ -47,6 +47,7 @@ public:
 	inline void Invalidate() {
 		for (Effect* p : aoe_effects) delete p;
 		aoe_effects.clear();
+		trap_triggers_handled.clear();
 	}
 	void PacketCallback(GW::Packet::StoC::GenericValue* pak);
 	void PacketCallback(GW::Packet::StoC::GenericValueTarget* pak);
@@ -60,9 +61,17 @@ private:
 	void Initialize(IDirect3DDevice9* device) override;
 
 	void RemoveTriggeredEffect(uint32_t effect_id, GW::Vec2f* pos);
-	void RemoveEffect(Effect* effect);
 	void DrawAoeEffects(IDirect3DDevice9* device);
 	std::vector<Effect*> aoe_effects;
+	struct pair_hash
+	{
+		template <class T1, class T2>
+		std::size_t operator() (const std::pair<T1, T2>& pair) const
+		{
+			return std::hash<T1>()(pair.first) ^ std::hash<T2>()(pair.second);
+		}
+	};
+	std::unordered_map<std::pair<float,float>, clock_t, pair_hash> trap_triggers_handled;
 	bool need_to_clear_effects = false;
 
 	std::recursive_mutex effects_mutex;

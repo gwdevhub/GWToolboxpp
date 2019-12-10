@@ -96,6 +96,12 @@ void EffectRenderer::RemoveTriggeredEffect(uint32_t effect_id, GW::Vec2f* pos) {
 	}
 	if (!effect_to_check)
 		return;
+	std::pair<float, float> posp = { pos->x,pos->y };
+	auto trap_handled = trap_triggers_handled.find(posp);
+	if (trap_handled != trap_triggers_handled.end() && TIMER_DIFF(trap_handled->second) < 5000) {
+		return; // Already handled this trap, e.g. Spike Trap triggers 3 times over 2 seconds; we only care about the first.
+	}
+	trap_triggers_handled.emplace(posp, TIMER_INIT());
 	std::lock_guard<std::recursive_mutex> lock(effects_mutex);
 	Effect* closest = nullptr;
 	float closestDistance = GW::Constants::SqrRange::Nearby;
@@ -113,8 +119,9 @@ void EffectRenderer::RemoveTriggeredEffect(uint32_t effect_id, GW::Vec2f* pos) {
 		closestDistance = newDistance;
 	}
 	if (closest) {
-		aoe_effects.erase(aoe_effects.begin() + closest_idx);
-		delete closest;
+		// Trigger this trap to time out in 2 seconds' time.
+		closest->start = TIMER_INIT();
+		closest->duration = 2000;
 	}
 }
 
@@ -183,15 +190,6 @@ void EffectRenderer::Render(IDirect3DDevice9* device) {
 	Initialize(device);
 	DrawAoeEffects(device);
 }
-void EffectRenderer::RemoveEffect(Effect* effect) {
-	for (size_t i = 0; i < aoe_effects.size();i++) {
-		if (aoe_effects[i] == effect) {
-			aoe_effects.erase(aoe_effects.begin() + i);
-			delete aoe_effects[i];
-			return;
-		}
-	}
-}
 void EffectRenderer::DrawAoeEffects(IDirect3DDevice9* device) {
 	if (need_to_clear_effects) {
 		Invalidate();
@@ -201,14 +199,17 @@ void EffectRenderer::DrawAoeEffects(IDirect3DDevice9* device) {
         return;
 	D3DXMATRIX translate, scale, world;
 	std::lock_guard<std::recursive_mutex> lock(effects_mutex);
-	for (size_t i = 0; i < aoe_effects.size(); i++) {
+	int effect_size = aoe_effects.size();
+	for (int i = 0; i < effect_size; i++) {
 		Effect* effect = aoe_effects[i];
 		if (!effect)
 			continue;
 		if (TIMER_DIFF(effect->start) > effect->duration) {
 			aoe_effects.erase(aoe_effects.begin() + i);
 			delete effect;
-			return;
+			i--;
+			effect_size--;
+			continue;
 		}
 		D3DXMatrixScaling(&scale, effect->circle.range, effect->circle.range, 1.0f);
         D3DXMatrixTranslation(&translate, effect->pos.x, effect->pos.y, 0.0f);

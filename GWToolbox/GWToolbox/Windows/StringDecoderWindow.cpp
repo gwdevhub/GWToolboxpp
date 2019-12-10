@@ -31,7 +31,8 @@ void StringDecoderWindow::Draw(IDirect3DDevice9* pDevice) {
         Decode();
     }
     if (decoded.size()) {
-        Log::LogW(L"%ls\n",decoded.c_str());
+		//std::wstring str = GuiUtils::StringToWString(encoded);
+        Log::LogW(L"%d %ls\n",GW::UI::EncStrToUInt32(GetEncodedString()), decoded.c_str());
         GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, decoded.c_str());
         decoded.clear();
     }

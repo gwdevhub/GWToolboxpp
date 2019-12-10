@@ -32,14 +32,14 @@ const wchar_t* SkillListingWindow::Skill::Name() {
 }
 const wchar_t* SkillListingWindow::Skill::GWWDescription() {
     const wchar_t* raw_description = Description();
-    if (raw_description[0] && !replaced_desc_vars) {
+    if (raw_description[0] && !desc_gww[0]) {
         wchar_t scale1_txt[16] = { 0 };
         swprintf(scale1_txt, 16, L"%d..%d", skill->scale0, skill->scale15);
         wchar_t scale2_txt[16] = { 0 };
         swprintf(scale2_txt, 16, L"%d..%d", skill->bonusScale0, skill->bonusScale15);
         wchar_t scale3_txt[16] = { 0 };
         swprintf(scale3_txt, 16, L"%d..%d", skill->duration0, skill->duration15);
-        std::wstring s(desc_dec);
+        std::wstring s(raw_description);
         size_t pos = std::wstring::npos;
         while ((pos = s.find(L"991")) != std::wstring::npos)
             s.replace(pos, 3, scale1_txt);
@@ -47,10 +47,9 @@ const wchar_t* SkillListingWindow::Skill::GWWDescription() {
             s.replace(pos, 3, scale2_txt);
         while ((pos = s.find(L"993")) != std::wstring::npos)
             s.replace(pos, 3, scale3_txt);
-        wcscpy(desc_dec, s.c_str());
-        replaced_desc_vars = true;
+		wsprintfW(desc_gww, L"%s. %s", GetSkillType().c_str(), s.c_str());
     }
-    return raw_description;
+    return desc_gww;
 }
 const wchar_t* SkillListingWindow::Skill::GWWConcise() {
     const wchar_t* raw_description = Concise();
@@ -69,7 +68,7 @@ const wchar_t* SkillListingWindow::Skill::GWWConcise() {
             s.replace(pos, 3, scale2_txt);
         while ((pos = s.find(L"993")) != std::wstring::npos)
             s.replace(pos, 3, scale3_txt);
-        wcscpy(concise_gww, s.c_str());
+		wsprintfW(concise_gww, L"%s. %s", GetSkillType().c_str(), s.c_str());
     }
     return concise_gww;
 }
@@ -109,7 +108,7 @@ void SkillListingWindow::Initialize() {
 
     size_t added = 0;
     for (size_t i = 0; i < max_skills && added < 1000; i++) {
-        if (!skill_constants[i].skill_id) continue;
+        if (!skill_constants[i].skill_id || !skill_constants[i].skill_equip_type) continue;
         skills[i] = new Skill(&skill_constants[i]);
         //added++;
     }
@@ -147,7 +146,7 @@ void SkillListingWindow::Draw(IDirect3DDevice9* pDevice) {
         ImGui::SameLine(offset += tiny_text_width);
         ImGui::Text("%S",skills[i]->Name());
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("%S,\n%S", skills[i]->GWWDescription(), skills[i]->GWWConcise());
+			ImGui::SetTooltip("%S,\n%S", skills[i]->GWWDescription(), "");// skills[i]->GWWConcise());
         ImGui::SameLine(offset += long_text_width);
         ImGui::Text("%d", skills[i]->skill->attribute);
         ImGui::SameLine(offset += tiny_text_width);
