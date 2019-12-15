@@ -77,6 +77,7 @@ public:
     bool notify_when_friends_offline = false;
 
 	bool disable_gold_selling_confirmation = false;
+	bool skip_entering_name_for_faction_donate = true;
 
 private:
 	void UpdateFOV();
