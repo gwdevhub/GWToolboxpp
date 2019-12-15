@@ -10,6 +10,7 @@
 #include <GWCA/GameEntities/Friendslist.h>
 #include <GWCA/Context/GameContext.h>
 
+#include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
@@ -507,7 +508,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	::LoadChannelColor(ini, Name(), "alliance", GW::Chat::CHANNEL_ALLIANCE);
 	::LoadChannelColor(ini, Name(), "whispers", GW::Chat::CHANNEL_WHISPER);
 
-	if (openlinks) GW::Chat::SetOpenLinks(openlinks);
+	if (openlinks) GW::UI::SetOpenLinks(openlinks);
 	// GW::PartyMgr::SetTickToggle(tick_is_toggle);
     GW::Chat::ToggleTimestamps(show_timestamps);
     GW::Chat::SetTimestampsColor(timestamps_color);
@@ -598,7 +599,7 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::ShowHelp("Show timestamps in message history.");
 
 	if (ImGui::Checkbox("Open web links from templates", &openlinks)) {
-		GW::Chat::SetOpenLinks(openlinks);
+		GW::UI::SetOpenLinks(openlinks);
 	}
 	ImGui::ShowHelp("Clicking on template that has a URL as name will open that URL in your browser");
 
