@@ -15,6 +15,7 @@
 
 #include <GWCA/Constants/AgentIDs.h>
 
+#include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/GuildMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
@@ -1389,7 +1390,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	::LoadChannelColor(ini, Name(), "alliance", GW::Chat::CHANNEL_ALLIANCE);
 	::LoadChannelColor(ini, Name(), "whispers", GW::Chat::CHANNEL_WHISPER);
 
-	if (openlinks) GW::Chat::SetOpenLinks(openlinks);
+	if (openlinks) GW::UI::SetOpenLinks(openlinks);
 	// GW::PartyMgr::SetTickToggle(tick_is_toggle);
     GW::Chat::ToggleTimestamps(show_timestamps);
     GW::Chat::SetTimestampsColor(timestamps_color);
@@ -1527,7 +1528,7 @@ void GameSettings::DrawSettingInternal() {
     ImGui::ShowHelp("Messages from NPCs that would normally show on-screen and in team chat are instead redirected to the emote channel");
 
 	if (ImGui::Checkbox("Open web links from templates", &openlinks)) {
-		GW::Chat::SetOpenLinks(openlinks);
+		GW::UI::SetOpenLinks(openlinks);
 	}
 	ImGui::ShowHelp("Clicking on template that has a URL as name will open that URL in your browser");
 

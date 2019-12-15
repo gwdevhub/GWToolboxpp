@@ -26,6 +26,14 @@
 #define INI_FILENAME L"herobuilds.ini"
 
 namespace {
+
+	struct ChatTemplate {
+		uint32_t        unk0;
+		uint32_t        type; // 0 = build, 1 = equipement
+		GW::Array<wchar_t>  code;
+		wchar_t* name;
+	};
+
 	using GW::Constants::HeroID;
 
 	// hero index is an arbitrary index. 
@@ -282,7 +290,7 @@ void HeroBuildsWindow::View(const TeamHeroBuild& tbuild, unsigned int idx) {
 		return; // No name = no build.
 	}
 
-	GW::Chat::ChatTemplate* t = new GW::Chat::ChatTemplate();
+	ChatTemplate* t = new ChatTemplate();
 	t->code.m_buffer = new wchar_t[128];
 	MultiByteToWideChar(CP_UTF8, 0, build.code, -1, t->code.m_buffer, 128);
 	t->code.m_size = t->code.m_capacity = wcslen(t->code.m_buffer);

@@ -20,6 +20,16 @@
 #include <logger.h>
 
 
+namespace {
+
+	struct ChatTemplate {
+		uint32_t        unk0;
+		uint32_t        type; // 0 = build, 1 = equipement
+		GW::Array<wchar_t>  code;
+		wchar_t* name;
+	};
+}
+
 unsigned int BuildsWindow::TeamBuild::cur_ui_id = 0;
 
 bool order_by_changed = false;
@@ -335,7 +345,7 @@ void BuildsWindow::View(const TeamBuild& tbuild, unsigned int idx) {
     if (idx >= tbuild.builds.size()) return;
     const Build& build = tbuild.builds[idx];
 
-    GW::Chat::ChatTemplate* t = new GW::Chat::ChatTemplate();
+    ChatTemplate* t = new ChatTemplate();
     t->code.m_buffer = new wchar_t[128];
     MultiByteToWideChar(CP_UTF8, 0, build.code, -1, t->code.m_buffer, 128);
     t->code.m_size = t->code.m_capacity = wcslen(t->code.m_buffer);
