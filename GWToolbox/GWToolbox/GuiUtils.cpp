@@ -52,7 +52,8 @@ ImFont* GuiUtils::GetFont(GuiUtils::FontSize size) {
 int GuiUtils::GetPartyHealthbarHeight() {
 	static DWORD* optionarray = nullptr;
 	if (!optionarray) {
-		optionarray = (DWORD*)GW::Scanner::Find("\x8B\x4D\x08\x85\xC9\x74\x0A", "xxxxxxx", -9);
+		// @Replaced
+		optionarray = (DWORD*)GW::Scanner::Find("\x75\xF6\x33\xF6\x39\x34\x9D", "xxxxxxx", +7);
 		printf("[SCAN] optionarray = %p\n", optionarray);
 		if (optionarray)
 			optionarray = *(DWORD**)optionarray;

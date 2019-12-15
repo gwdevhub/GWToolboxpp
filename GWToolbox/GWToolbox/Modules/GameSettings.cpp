@@ -402,8 +402,9 @@ void GameSettings::Initialize() {
 	ToolboxModule::Initialize();
 
 	{
-		// Patch that allow storage page (and Anniversary page) to work... (ask Ziox for more info)
-		uintptr_t found = GW::Scanner::Find("\xEB\x00\x33\xC0\xBE\x06", "x?xxxx", -4);
+		// @Replaced
+		// Patch that allow storage page (and Anniversary page) to work.
+		uintptr_t found = GW::Scanner::Find("\xEB\x17\x33\xD2\x8D\x4A\x06\xEB", "xxxxxxxx", -4);
 		printf("[SCAN] StoragePatch = %p\n", (void *)found);
 
 		// Xunlai Chest has a behavior where if you
@@ -419,7 +420,9 @@ void GameSettings::Initialize() {
 	}
 	
 	{
-		uintptr_t found = GW::Scanner::Find("\xEC\x6A\x00\x51\x8B\x4D\xF8\xBA\x47", "xxxxxxxxx", -9);
+		// @Replaced
+		uintptr_t found = GW::Scanner::Find(
+			"\x5F\x6A\x00\xFF\x75\xE4\x6A\x4C\xFF\x75\xF8", "xxxxxxxxxxx", -0x44);
 		printf("[SCAN] TomePatch = %p\n", (void *)found);
 		if (found) {
 			tome_patch.SetPatch(found, "\x75\x1E\x90\x90\x90\x90\x90", 7);
@@ -428,6 +431,7 @@ void GameSettings::Initialize() {
 	}
 
 	{
+		// @Replaced: (Didn't break wow!)
 		uintptr_t found = GW::Scanner::Find("\xF7\x40\x0C\x10\x00\x02\x00\x75", "xxxxxxxx", +7);
 		printf("[SCAN] GoldConfirmationPatch = %p\n", (void *)found);
 		if (found) {
@@ -491,9 +495,10 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	show_unlearned_skill = ini->GetBoolValue(Name(), VAR_NAME(show_unlearned_skill), false);
 	auto_skip_cinematic = ini->GetBoolValue(Name(), VAR_NAME(auto_skip_cinematic), false);
 
-	disable_gold_selling_confirmation = ini->GetBoolValue(Name(), VAR_NAME(disable_gold_selling_confirmation), false);
 	notify_when_friends_online = ini->GetBoolValue(Name(), VAR_NAME(notify_when_friends_online), true);
     notify_when_friends_offline = ini->GetBoolValue(Name(), VAR_NAME(notify_when_friends_offline), false);
+	disable_gold_selling_confirmation = ini->GetBoolValue(Name(), VAR_NAME(disable_gold_selling_confirmation), false);
+	skip_entering_name_for_faction_donate = ini->GetBoolValue(Name(), VAR_NAME(skip_entering_name_for_faction_donate), false);
 
 	::LoadChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
 	::LoadChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);
@@ -503,7 +508,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	::LoadChannelColor(ini, Name(), "whispers", GW::Chat::CHANNEL_WHISPER);
 
 	if (openlinks) GW::Chat::SetOpenLinks(openlinks);
-	GW::PartyMgr::SetTickToggle(tick_is_toggle);
+	// GW::PartyMgr::SetTickToggle(tick_is_toggle);
     GW::Chat::ToggleTimestamps(show_timestamps);
     GW::Chat::SetTimestampsColor(timestamps_color);
 	// if (select_with_chat_doubleclick) GW::Chat::SetChatEventCallback(&ChatEventCallback);
@@ -545,10 +550,11 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(show_unlearned_skill), show_unlearned_skill);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_skip_cinematic), auto_skip_cinematic);
 
-	ini->SetBoolValue(Name(), VAR_NAME(disable_gold_selling_confirmation), disable_gold_selling_confirmation);
-
 	ini->SetBoolValue(Name(), VAR_NAME(notify_when_friends_online), notify_when_friends_online);
     ini->SetBoolValue(Name(), VAR_NAME(notify_when_friends_offline), notify_when_friends_offline);
+
+	ini->SetBoolValue(Name(), VAR_NAME(disable_gold_selling_confirmation), disable_gold_selling_confirmation);
+	ini->SetBoolValue(Name(), VAR_NAME(skip_entering_name_for_faction_donate), skip_entering_name_for_faction_donate);
 
 	::SaveChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
 	::SaveChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);
@@ -602,7 +608,7 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::ShowHelp("When you write a message starting with 'http://' or 'https://', it will be converted in template format");
 
 	if (ImGui::Checkbox("Tick is a toggle", &tick_is_toggle)) {
-		GW::PartyMgr::SetTickToggle(tick_is_toggle);
+		// GW::PartyMgr::SetTickToggle(tick_is_toggle);
 	}
 	ImGui::ShowHelp("Ticking in party window will work as a toggle instead of opening the menu");
 

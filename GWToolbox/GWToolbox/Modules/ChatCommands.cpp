@@ -746,7 +746,7 @@ void ChatCommands::CmdSCWiki(const wchar_t *message, int argc, LPWSTR *argv) {
 
 void ChatCommands::CmdLoad(const wchar_t *message, int argc, LPWSTR *argv) {
 	// We will & should move that to GWCA.
-	static int(__fastcall *GetPersonalDir)(size_t size, wchar_t *dir) = 0;
+	static int(__cdecl *GetPersonalDir)(size_t size, wchar_t *dir) = 0;
 	*(uintptr_t*)&GetPersonalDir = GW::MemoryMgr::GetPersonalDirPtr;
 	if (argc == 1) {
 		// We could open the build template window, but any interaction with it would make gw crash.
