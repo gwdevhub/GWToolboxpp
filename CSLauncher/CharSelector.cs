@@ -26,22 +26,17 @@ namespace CSLauncher
         private void CharSelector_Load(object sender, EventArgs e) {
             Process[] check_procs = Process.GetProcessesByName("Gw");
             procs = new Process[check_procs.Length];
-            IntPtr charnameAddr;
 
-            {
-                GWCAMemory firstprocmems = new GWCAMemory(check_procs[0]);
-                firstprocmems.InitScanner(new IntPtr(0x401000), 0x49A000);
-                charnameAddr = firstprocmems.ScanForPtr(new byte[] { 0x6A, 0x14, 0x8D, 0x96, 0xBC }, 0x9, true);
-                firstprocmems.TerminateScanner();
-            }
             int validProcs = 0;
             for (int i = 0; i < check_procs.Length; i++)
             {
                 GWCAMemory mem = new GWCAMemory(check_procs[i]);
-                if (mem.Read<Int32>(new IntPtr(0x00DE0000)) != 0)
-                    continue;
                 if (mem.HaveModule("GWToolbox.dll"))
                     continue;
+                Tuple<IntPtr, int> imagebase = mem.GetImageBase();
+                mem.InitScanner(imagebase.Item1, imagebase.Item2);
+                IntPtr charnameAddr = mem.ScanForPtr(new byte[] { 0x8B, 0xF8, 0x6A, 0x03, 0x68, 0x0F, 0x00, 0x00, 0xC0, 0x8B, 0xCF, 0xE8 }, -0x42, true);
+                mem.TerminateScanner();
                 procs[validProcs] = check_procs[i];
                 validProcs++;
                 string charname = mem.ReadWString(charnameAddr, 30);
