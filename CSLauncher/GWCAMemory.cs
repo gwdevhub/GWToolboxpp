@@ -209,6 +209,18 @@ namespace GWCA
             }
             #endregion
 
+            public Tuple<IntPtr, int> GetImageBase()
+            {
+                string name = process.ProcessName;
+                ProcessModuleCollection modules = process.Modules;
+                foreach (ProcessModule module in modules)
+                {
+                    if (module.ModuleName.StartsWith(name, StringComparison.OrdinalIgnoreCase))
+                        return new Tuple<IntPtr, int>(module.BaseAddress, module.ModuleMemorySize);
+                }
+                return new Tuple<IntPtr, int>(IntPtr.Zero, 0);
+            }
+
             public bool HaveModule(string name)
             {
                 ProcessModuleCollection modules = process.Modules;

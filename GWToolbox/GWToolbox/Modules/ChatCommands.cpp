@@ -898,30 +898,6 @@ void ChatCommands::CmdCamera(const wchar_t *message, int argc, LPWSTR *argv) {
 					GW::CameraMgr::SetFog(false);
 				}
 			}
-		} else if (arg1 == L"fov") {
-			if (argc == 2) {
-				GW::CameraMgr::SetFieldOfView(1.308997f);
-				GameSettings::Instance().fov = 1.308997f;
-			} else {
-				std::wstring arg2 = GuiUtils::ToLower(argv[2]);
-				if (arg2 == L"default") {
-					GW::CameraMgr::SetFieldOfView(1.308997f);
-					GameSettings::Instance().fov = 1.308997f;
-				} else {
-					try {
-						float fovnew = std::stof(arg2);
-						if (fovnew > 0) {
-							GW::CameraMgr::SetFieldOfView(fovnew);
-							GameSettings::Instance().fov = fovnew;
-							Log::Info("Field of View is %f", fovnew);
-						} else {
-							Log::Error("Invalid argument '%ls', please use a positive value", argv[2]);
-						}
-					} catch (...) {
-						Log::Error("Invalid argument '%ls', please use a float value", argv[2]);
-					}
-				}
-			}
 		} else if (arg1 == L"speed") {
 			if (argc < 3) {
 				Instance().cam_speed = Instance().DEFAULT_CAM_SPEED;
@@ -1167,7 +1143,7 @@ void ChatCommands::CmdSCWiki(const wchar_t *message, int argc, LPWSTR *argv) {
 
 void ChatCommands::CmdLoad(const wchar_t *message, int argc, LPWSTR *argv) {
 	// We will & should move that to GWCA.
-	static int(__fastcall *GetPersonalDir)(size_t size, wchar_t *dir) = 0;
+	static int(__cdecl *GetPersonalDir)(size_t size, wchar_t *dir) = 0;
 	*(uintptr_t*)&GetPersonalDir = GW::MemoryMgr::GetPersonalDirPtr;
 	if (argc == 1) {
 		// We could open the build template window, but any interaction with it would make gw crash.

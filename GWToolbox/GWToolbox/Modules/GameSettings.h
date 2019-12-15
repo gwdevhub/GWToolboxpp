@@ -189,19 +189,13 @@ public:
 	void Update(float delta) override;
 	bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam);
 
-	void DrawBorderlessSetting();
 	void DrawFOVSetting();
 	bool maintain_fov = false;
 	float fov = 1.308997f; // default fov
 
-	// some settings that are either referenced from multiple places
-	// or have nowhere else to be
-	enum { 
-		Ok,
-		WantBorderless,
-		WantWindowed
-	} borderless_status = Ok; // current actual status of borderless
-	bool borderlesswindow = false; // status of the borderless checkbox and setting
+	void SetAfkMessage(std::wstring&& message);
+	static void ItemClickCallback(GW::HookStatus *, uint32_t type, uint32_t slot, GW::Bag *bag);
+
 	bool tick_is_toggle = false;
 
 	bool shorthand_item_ping = true;
@@ -211,9 +205,9 @@ public:
 	bool move_item_on_ctrl_click = false;
 	bool move_item_to_current_storage_pane = true;
 
-	bool flash_window_on_pm = true;
-	bool flash_window_on_party_invite = true;
-	bool flash_window_on_zoning = true;
+	bool flash_window_on_pm = false;
+	bool flash_window_on_party_invite = false;
+	bool flash_window_on_zoning = false;
 	bool focus_window_on_zoning = false;
 	bool flash_window_on_cinematic = true;
 	bool flash_window_on_trade = true;
@@ -257,26 +251,20 @@ public:
 	bool disable_gold_selling_confirmation = false;
 	bool collectors_edition_emotes = true;
 
-	void ApplyBorderless(bool value);
-	void SetAfkMessage(std::wstring&& message);
-	static void ItemClickCallback(GW::HookStatus *, uint32_t type, uint32_t slot, GW::Bag *bag);
-
     static GW::Friend* GetOnlineFriend(wchar_t* account, wchar_t* playing);
 
     std::vector<PendingChatMessage*> pending_messages;
 
 private:
-	void UpdateBorderless();
 	void UpdateFOV();
 	void FactionEarnedCheckAndWarn();
 	bool faction_checked = false;
 
 	void MessageOnPartyChange();
 
-	std::vector<GW::MemoryPatcher*> patches;
-	GW::MemoryPatcher *ctrl_click_patch = nullptr;
-	GW::MemoryPatcher *tome_patch = nullptr;
-	GW::MemoryPatcher *gold_confirm_patch = nullptr;
+	GW::MemoryPatcher ctrl_click_patch;
+	GW::MemoryPatcher tome_patch;
+	GW::MemoryPatcher gold_confirm_patch;
 	std::vector<std::wstring> previous_party_names;
 
 	bool was_leading = true;

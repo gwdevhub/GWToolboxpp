@@ -11,6 +11,57 @@
 #include "GWToolbox.h"
 #include <Modules\Resources.h>
 
+static const char* const questnames[] = {
+	"UW - Chamber",
+	"UW - Wastes",
+	"UW - UWG",
+	"UW - Mnt",
+	"UW - Pits",
+	"UW - Planes",
+	"UW - Pools",
+	"UW - Escort",
+	"UW - Restore",
+	"UW - Vale",
+	"FoW - Defend",
+	"FoW - Army Of Darkness",
+	"FoW - WailingLord",
+	"FoW - Griffons",
+	"FoW - Slaves",
+	"FoW - Restore",
+	"FoW - Hunt",
+	"FoW - Forgemaster",
+	"FoW - Tos",
+	"FoW - Toc",
+	"FoW - Khobay",
+	"DoA - Gloom 1: Deathbringer Company",
+	"DoA - Gloom 2: The Rifts Between Us",
+	"DoA - Gloom 3: To The Rescue",
+	"DoA - City",
+	"DoA - Veil 1: Breaching Stygian Veil",
+	"DoA - Veil 2: Brood Wars",
+	"DoA - Foundry 1: Foundry Of Failed Creations",
+	"DoA - Foundry 2: Foundry Breakout"
+};
+static const char* const dialognames[] = {
+	"Craft fow armor",
+	"Prof Change - Warrior",
+	"Prof Change - Ranger",
+	"Prof Change - Monk",
+	"Prof Change - Necro",
+	"Prof Change - Mesmer",
+	"Prof Change - Elementalist",
+	"Prof Change - Assassin",
+	"Prof Change - Ritualist",
+	"Prof Change - Paragon",
+	"Prof Change - Dervish",
+	"Kama -> Docks @ Hahnna",
+	"Docks -> Kaineng @ Mhenlo",
+	"Docks -> LA Gate @ Mhenlo",
+	"LA Gate -> LA @ Neiro",
+	"Faction mission outpost",
+	"Nightfall mission outpost",
+};
+
 void DialogsWindow::Initialize() {
 	ToolboxWindow::Initialize();
 	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"dialogue.png"), IDB_Icon_Dialogue);
@@ -52,37 +103,7 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
 			DialogButton(2, 3, "Mountains", "Teleport Mountains\nThis is NOT the mountains quest", GW::Constants::DialogID::UwTeleMnt);
 			ImGui::Separator();
 		}
-		const int n_quests = 29;
-		static const char* const questnames[] = { "UW - Chamber",
-			"UW - Wastes",
-			"UW - UWG",
-			"UW - Mnt",
-			"UW - Pits",
-			"UW - Planes",
-			"UW - Pools",
-			"UW - Escort",
-			"UW - Restore",
-			"UW - Vale",
-			"FoW - Defend",
-			"FoW - Army Of Darkness",
-			"FoW - WailingLord",
-			"FoW - Griffons",
-			"FoW - Slaves",
-			"FoW - Restore",
-			"FoW - Hunt",
-			"FoW - Forgemaster",
-			"FoW - Tos",
-			"FoW - Toc",
-			"FoW - Khobay",
-			"DoA - Gloom 1: Deathbringer Company",
-			"DoA - Gloom 2: The Rifts Between Us",
-			"DoA - Gloom 3: To The Rescue",
-			"DoA - City",
-			"DoA - Veil 1: Breaching Stygian Veil",
-			"DoA - Veil 2: Brood Wars",
-			"DoA - Foundry 1: Foundry Of Failed Creations",
-			"DoA - Foundry 2: Foundry Breakout"
-		};
+		const int n_quests = _countof(questnames);
 		if (show_favorites) {
 			for (int i = 0; i < fav_count; ++i) {
 				ImGui::PushID(i);
@@ -102,22 +123,7 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::Separator();
 		}
 		if (show_custom) {
-			const int n_dialogs = 15;
-			static const char* const dialognames[] = { "Craft fow armor",
-				"Prof Change - Warrior",
-				"Prof Change - Ranger",
-				"Prof Change - Monk",
-				"Prof Change - Necro",
-				"Prof Change - Mesmer",
-				"Prof Change - Elementalist",
-				"Prof Change - Assassin",
-				"Prof Change - Ritualist",
-				"Prof Change - Paragon",
-				"Prof Change - Dervish",
-				"Kama -> Docks @ Hahnna",
-				"Docks -> Kaineng @ Mhenlo",
-				"Docks -> LA Gate @ Mhenlo",
-				"LA Gate -> LA @ Neiro" };
+			const int n_dialogs = _countof(dialognames);
 			static int dialogindex = 0;
 			ImGui::PushItemWidth(-60.0f - ImGui::GetStyle().ItemInnerSpacing.x);
 			ImGui::Combo("###dialogcombo", &dialogindex, dialognames, n_dialogs);
@@ -245,6 +251,8 @@ DWORD DialogsWindow::IndexToDialogID(int index) {
 	case 12: return GW::Constants::DialogID::FerryDocksToKaineng;
 	case 13: return GW::Constants::DialogID::FerryDocksToLA;
 	case 14: return GW::Constants::DialogID::FerryGateToLA;
+	case 15: return GW::Constants::DialogID::FactionMissionOutpost;
+	case 16: return GW::Constants::DialogID::NightfallMissionOutpost;
 	default: return 0;
 	}
 }

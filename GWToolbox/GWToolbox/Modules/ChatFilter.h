@@ -100,7 +100,7 @@ private:
 #ifdef EXTENDED_IGNORE_LIST
 	bool messagebyauthor = false;
 	std::set<std::string> byauthor_words;
-	char byauthor_buf[FILTER_BUF_SIZE];
+	char byauthor_buf[FILTER_BUF_SIZE] = "";
 	bool byauthor_filedirty = false;
 #endif
 

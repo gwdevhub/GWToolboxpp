@@ -886,8 +886,9 @@ void GameSettings::Initialize() {
 		status->blocked = true;
 	});
 	{
-		// Patch that allow storage page (and Anniversary page) to work... (ask Ziox for more info)
-		uintptr_t found = GW::Scanner::Find("\xEB\x00\x33\xC0\xBE\x06", "x?xxxx", -4);
+		// @Replaced
+		// Patch that allow storage page (and Anniversary page) to work.
+		uintptr_t found = GW::Scanner::Find("\xEB\x17\x33\xD2\x8D\x4A\x06\xEB", "xxxxxxxx", -4);
 		printf("[SCAN] StoragePatch = %p\n", (void *)found);
 
 		// Xunlai Chest has a behavior where if you
@@ -898,44 +899,30 @@ void GameSettings::Initialize() {
 		// you will get back the the page 1. I think it was a intended use for material page & forgot to fix it
 		// when they added anniversary page so we do it ourself.
 		DWORD page_max = 14;
-		ctrl_click_patch = new GW::MemoryPatcher(found, &page_max, 1);
-		ctrl_click_patch->TooglePatch(true);
+		ctrl_click_patch.SetPatch(found, &page_max, 1);
+		ctrl_click_patch.TooglePatch(true);
 	}
-#ifdef ENABLE_BORDERLESS
-	GW::Chat::CreateCommand(L"borderless",
-		[&](const wchar_t *message, int argc, LPWSTR *argv) {
-		if (argc <= 1) {
-			ApplyBorderless(!borderlesswindow);
-		} else {
-			std::wstring arg1 = GuiUtils::ToLower(argv[1]);
-			if (arg1 == L"on") {
-				ApplyBorderless(true);
-			} else if (arg1 == L"off") {
-				ApplyBorderless(false);
-			} else {
-				Log::Error("Invalid argument '%ls', please use /borderless [|on|off]", argv[1]);
-			}
-		}
-	});
-#endif
 
 	{
-		uintptr_t found = GW::Scanner::Find("\xEC\x6A\x00\x51\x8B\x4D\xF8\xBA\x47", "xxxxxxxxx", -9);
+		// @Replaced
+		uintptr_t found = GW::Scanner::Find(
+			"\x5F\x6A\x00\xFF\x75\xE4\x6A\x4C\xFF\x75\xF8", "xxxxxxxxxxx", -0x44);
 		printf("[SCAN] TomePatch = %p\n", (void *)found);
 		if (found) {
-			tome_patch = new GW::MemoryPatcher(found, "\x75\x1E\x90\x90\x90\x90\x90", 7);
-		}
+			tome_patch.SetPatch(found, "\x75\x1E\x90\x90\x90\x90\x90", 7);
+            tome_patch.TooglePatch(show_unlearned_skill);
+        }
 	}
 
 	{
+		// @Replaced: (Didn't break wow!)
 		uintptr_t found = GW::Scanner::Find("\xF7\x40\x0C\x10\x00\x02\x00\x75", "xxxxxxxx", +7);
 		printf("[SCAN] GoldConfirmationPatch = %p\n", (void *)found);
 		if (found) {
-			gold_confirm_patch = new GW::MemoryPatcher(found, "\x90\x90", 2);
+			gold_confirm_patch.SetPatch(found, "\x90\x90", 2);
+            gold_confirm_patch.TooglePatch(disable_gold_selling_confirmation);
 		}
 	}
-	if (tome_patch) tome_patch->TooglePatch(show_unlearned_skill);
-	if (gold_confirm_patch) gold_confirm_patch->TooglePatch(disable_gold_selling_confirmation);
 
     // Automatically return to outpost on defeat
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyDefeated>(&PartyDefeated_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::PartyDefeated*) -> void {
@@ -1338,9 +1325,7 @@ void GameSettings::MessageOnPartyChange() {
 }
 void GameSettings::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini);
-#ifdef ENABLE_BORDERLESS
-	borderlesswindow = ini->GetBoolValue(Name(), VAR_NAME(borderlesswindow), false);
-#endif
+
 	maintain_fov = ini->GetBoolValue(Name(), VAR_NAME(maintain_fov), false);
 	fov = (float)ini->GetDoubleValue(Name(), VAR_NAME(fov), 1.308997f);
 	tick_is_toggle = ini->GetBoolValue(Name(), VAR_NAME(tick_is_toggle), tick_is_toggle);
@@ -1404,55 +1389,27 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	::LoadChannelColor(ini, Name(), "alliance", GW::Chat::CHANNEL_ALLIANCE);
 	::LoadChannelColor(ini, Name(), "whispers", GW::Chat::CHANNEL_WHISPER);
 
-#ifdef ENABLE_BORDERLESS
-	if (borderlesswindow) ApplyBorderless(borderlesswindow);
-#endif
 	if (openlinks) GW::Chat::SetOpenLinks(openlinks);
-	GW::PartyMgr::SetTickToggle(tick_is_toggle);
+	// GW::PartyMgr::SetTickToggle(tick_is_toggle);
     GW::Chat::ToggleTimestamps(show_timestamps);
     GW::Chat::SetTimestampsColor(timestamps_color);
     GW::Chat::SetTimestampsFormat(show_timestamp_24h, show_timestamp_seconds);
 	// if (select_with_chat_doubleclick) GW::Chat::SetChatEventCallback(&ChatEventCallback);
 	if (auto_url) GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, &SendChatCallback);
 	if (move_item_on_ctrl_click) GW::Items::RegisterItemClickCallback(&ItemClickCallback_Entry, GameSettings::ItemClickCallback);
-	if (tome_patch) tome_patch->TooglePatch(show_unlearned_skill);
-	if (gold_confirm_patch) gold_confirm_patch->TooglePatch(disable_gold_selling_confirmation);
 
 	GW::Chat::RegisterWhisperCallback(&WhisperCallback_Entry, &WhisperCallback);
 }
 
 void GameSettings::Terminate() {
-	for (GW::MemoryPatcher* patch : patches) {
-		if (patch) {
-			patch->TooglePatch(false);
-			delete patch;
-		}
-	}
-	patches.clear();
-
-	if (ctrl_click_patch) {
-		ctrl_click_patch->TooglePatch(false);
-		delete ctrl_click_patch;
-	}
-	if (tome_patch) {
-		tome_patch->TooglePatch(false);
-		delete tome_patch;
-	}
-	if (gold_confirm_patch) {
-		gold_confirm_patch->TooglePatch(false);
-		delete gold_confirm_patch;
-	}
-    if (OnPingEquippedItem_Func) {
-        GW::HookBase::DisableHooks(OnPingEquippedItem_Func);
-        GW::HookBase::RemoveHook(OnPingEquippedItem_Func);
-    }
+	ctrl_click_patch.Reset();
+	tome_patch.Reset();
+	gold_confirm_patch.Reset();
 }
 
 void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ToolboxModule::SaveSettings(ini);
-#ifdef ENABLE_BORDERLESS
-	ini->SetBoolValue(Name(), VAR_NAME(borderlesswindow), borderlesswindow);
-#endif
+
 	ini->SetBoolValue(Name(), VAR_NAME(maintain_fov), maintain_fov);
 	ini->SetDoubleValue(Name(), VAR_NAME(fov), fov);
 	ini->SetBoolValue(Name(), VAR_NAME(tick_is_toggle), tick_is_toggle);
@@ -1507,8 +1464,6 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(auto_age2_on_age), auto_age2_on_age);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_accept_invites), auto_accept_invites);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_accept_join_requests), auto_accept_join_requests);
-	
-
 	ini->SetBoolValue(Name(), VAR_NAME(skip_entering_name_for_faction_donate), skip_entering_name_for_faction_donate);
 
 	::SaveChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
@@ -1540,9 +1495,7 @@ void GameSettings::DrawSettingInternal() {
 		ImGui::TreePop();
         ImGui::Spacing();
 	}
-#ifdef ENABLE_BORDERLESS
-	DrawBorderlessSetting();
-#endif
+
 	DrawFOVSetting();
 
 	if (ImGui::Checkbox("Show chat messages timestamp", &show_timestamps))
@@ -1584,7 +1537,7 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::ShowHelp("When you write a message starting with 'http://' or 'https://', it will be converted in template format");
 
 	if (ImGui::Checkbox("Tick is a toggle", &tick_is_toggle)) {
-		GW::PartyMgr::SetTickToggle(tick_is_toggle);
+		// GW::PartyMgr::SetTickToggle(tick_is_toggle);
 	}
 	ImGui::ShowHelp("Ticking in party window will work as a toggle instead of opening the menu");
 
@@ -1647,9 +1600,7 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::ShowHelp("Only if you were 'Away'");
 
 	if (ImGui::Checkbox("Only show non learned skills when using a tome", &show_unlearned_skill)) {
-		if (tome_patch) {
-			tome_patch->TooglePatch(show_unlearned_skill);
-		}
+		tome_patch.TooglePatch(show_unlearned_skill);
 	}
 
 	ImGui::Checkbox("Automatically skip cinematics", &auto_skip_cinematic);
@@ -1670,28 +1621,12 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::Checkbox("Skip character name input when donating faction", &skip_entering_name_for_faction_donate);
 
 	if (ImGui::Checkbox("Disable Gold/Green items confirmation", &disable_gold_selling_confirmation)) {
-		if (gold_confirm_patch) {
-			gold_confirm_patch->TooglePatch(disable_gold_selling_confirmation);
-		}
+		gold_confirm_patch.TooglePatch(disable_gold_selling_confirmation);
 	}
 	ImGui::ShowHelp(
 		"Disable the confirmation request when\n"
 		"selling Gold and Green items introduced\n"
 		"in February 5, 2019 update.");
-}
-
-void GameSettings::DrawBorderlessSetting() {
-	if (ImGui::Checkbox("Borderless Window", &borderlesswindow)) {
-		ApplyBorderless(borderlesswindow);
-	}
-}
-
-void GameSettings::ApplyBorderless(bool borderless) {
-	if (borderless) {
-		borderless_status = WantBorderless;
-	} else {
-		borderless_status = WantWindowed;
-	}
 }
 
 void GameSettings::FactionEarnedCheckAndWarn() {
@@ -1783,9 +1718,6 @@ void GameSettings::Update(float delta) {
 	}
 	UpdateFOV();
 	FactionEarnedCheckAndWarn();
-#ifdef ENABLE_BORDERLESS
-	UpdateBorderless();
-#endif
 
 #ifdef APRIL_FOOLS
 	AF::ApplyPatchesIfItsTime();
@@ -1810,90 +1742,6 @@ void GameSettings::UpdateFOV() {
 	if (maintain_fov && GW::CameraMgr::GetFieldOfView() != fov) {
 		GW::CameraMgr::SetFieldOfView(fov);
 	}
-}
-
-void GameSettings::UpdateBorderless() {
-
-	// ==== Check if we have something to do ====
-	bool borderless = false;
-	switch (borderless_status) {
-	case GameSettings::Ok:										return; // nothing to do
-	case GameSettings::WantBorderless:	borderless = true;		break;
-	case GameSettings::WantWindowed:	borderless = false;		break;
-	}
-
-	// ==== Check fullscreen status allows it ====
-	switch (GW::Render::GetIsFullscreen()) {
-	case -1:
-		// Unknown status. Probably has been minimized since toolbox launch. Wait.
-		// leave borderless_status as-is
-		return;
-
-	case 0:
-		// windowed or borderless windowed
-		break; // proceed
-
-	case 1:
-		// fullscreen
-		Log::Info("Please enable Borderless while in Windowed mode");
-		borderless_status = Ok;
-		return;
-
-	default:
-		return; // should never happen
-	}
-
-	// ==== Either borderless or windowed, find out which and warn the user if it's a useless operation ====
-	RECT windowRect, desktopRect;
-	if (GetWindowRect(GW::MemoryMgr::GetGWWindowHandle(), &windowRect)
-		&& GetWindowRect(GetDesktopWindow(), &desktopRect)) {
-
-		if (windowRect.left == desktopRect.left
-			&& windowRect.right == desktopRect.right
-			&& windowRect.top == desktopRect.top
-			&& windowRect.bottom == desktopRect.bottom) {
-
-			//borderless
-			if (borderless_status == WantBorderless) {
-				//trying to activate borderless while already in borderless
-				Log::Info("Already in Borderless mode");
-			}
-		} else if (windowRect.left >= desktopRect.left
-			&& windowRect.right <= desktopRect.right
-			&& windowRect.top >= desktopRect.top
-			&& windowRect.bottom <= desktopRect.bottom) {
-
-			// windowed
-			if (borderless_status == WantWindowed) {
-				//trying to deactivate borderless in window mode
-				Log::Info("Already in Window mode");
-			}
-		}
-	}
-
-	DWORD current_style = GetWindowLong(GW::MemoryMgr::GetGWWindowHandle(), GWL_STYLE);
-	DWORD new_style = borderless ? WS_POPUP | WS_VISIBLE | WS_MAXIMIZEBOX | WS_MINIMIZEBOX | WS_CLIPSIBLINGS
-		: WS_SIZEBOX | WS_SYSMENU | WS_CAPTION | WS_VISIBLE | WS_MAXIMIZEBOX | WS_MINIMIZEBOX | WS_CLIPSIBLINGS;
-
-	//printf("old 0x%X, new 0x%X\n", current_style, new_style);
-	//printf("popup: old=%X, new=%X\n", current_style & WS_POPUP, new_style & WS_POPUP);
-
-	for (GW::MemoryPatcher* patch : patches) patch->TooglePatch(borderless);
-
-	SetWindowLong(GW::MemoryMgr::GetGWWindowHandle(), GWL_STYLE, new_style);
-
-	if (borderless) {
-		int width = GetSystemMetrics(SM_CXSCREEN);
-		int height = GetSystemMetrics(SM_CYSCREEN);
-		MoveWindow(GW::MemoryMgr::GetGWWindowHandle(), 0, 0, width, height, TRUE);
-	} else {
-		RECT size;
-		SystemParametersInfoW(SPI_GETWORKAREA, 0, &size, 0);
-		MoveWindow(GW::MemoryMgr::GetGWWindowHandle(), size.top, size.left, size.right, size.bottom, TRUE);
-	}
-
-	borderlesswindow = borderless;
-	borderless_status = Ok;
 }
 
 bool GameSettings::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
