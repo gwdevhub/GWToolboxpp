@@ -15,7 +15,7 @@ Previous releases are provided as dll files. In order to use it, you need to use
 * [Fix] Merged GWCA and GWToolbox vanilla after Dec 13th client changes.
 * [Fix] Updated launcher after Dec 13th client changes.
 
-[Download](https://github.com/3vcloud/GWToolboxpp/releases/download/2.29-1.9.3_Release/JonsGWToolbox_1.9.3.zip)
+[Download](https://github.com/3vcloud/GWToolboxpp/releases/download/2.29-1.9.3_Release/JonsToolbox_1.9.3.zip)
 
 ## Version 2.28, Extended 1.9.21
 * [New] Ctrl + enter to whisper targeted player.
