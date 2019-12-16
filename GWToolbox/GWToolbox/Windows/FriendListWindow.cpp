@@ -397,7 +397,7 @@ bool FriendListWindow::ShowAsWidget() const {
 void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
     if (!visible || GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
         return;
-	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
+	ImGui::SetNextWindowPos(ImVec2(0.0f, 72.0f), ImGuiSetCond_FirstUseEver);
 	ImGuiIO* io = &ImGui::GetIO();
 	ImVec2 window_size = ImVec2(540.0f * io->FontGlobalScale, 512.0f * io->FontGlobalScale);
 	float cols[3] = { 180.0f * io->FontGlobalScale, 360.0f * io->FontGlobalScale, 540.0f * io->FontGlobalScale };

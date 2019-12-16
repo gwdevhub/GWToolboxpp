@@ -5,6 +5,18 @@ layout: default
 # Version History
 Previous releases are provided as dll files. In order to use it, you need to use a different launcher which must be placed in the same directory as the dll. If you are looking for the latest version, go to the [Home Page](./) instead.
 
+## Version 2.29, Extended 1.9.3
+* [New] Added Flame Trap, Spike Trap and Barbed Trap to aoe effects on minimap.
+* [New] Friend List window/module added.
+* [Minor] `/tb <window_name>` now matches partial window names.
+* [Minor] Added client-side checks before trying to travel e.g. same district, to avoid the need for packet sending.
+* [Minor] `/tp gh` and `/gh` now check whether you're already in GH before leaving/entering as applicable.
+* [Fix] Fixed a crash when trying to view a hero build without assigning it to a hero using the dropdown first.
+* [Fix] Merged GWCA and GWToolbox vanilla after Dec 13th client changes.
+* [Fix] Updated launcher after Dec 13th client changes.
+
+[Download](https://github.com/3vcloud/GWToolboxpp/releases/download/2.29-1.9.3_Release/JonsGWToolbox.dll)
+
 ## Version 2.28, Extended 1.9.21
 * [New] Ctrl + enter to whisper targeted player.
 * [New] `/dance` adds Collector's Edition glow to player hands.

@@ -234,10 +234,10 @@ private:
 	bool need_to_reorder_friends = true;
 
 	bool show_as_widget_in_explorable = true;
-	bool show_as_widget_in_outpost = false;
+	bool show_as_widget_in_outpost = true;
 	bool resize_widget = false;
 
-	bool lock_move_as_widget = true;
+	bool lock_move_as_widget = false;
 	bool lock_size_as_widget = true;
 
 	Color hover_background_color = 0x33999999;

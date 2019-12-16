@@ -89,14 +89,13 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
 	if (use_objectivetimer) optional_modules.push_back(&ObjectiveTimerWindow::Instance());
 	if (use_factionleaderboard) optional_modules.push_back(&FactionLeaderboardWindow::Instance());
 	if (use_daily_quests) optional_modules.push_back(&DailyQuests::Instance());
+	if (use_friendlist) optional_modules.push_back(&FriendListWindow::Instance());
 #ifdef _DEBUG
 	optional_modules.push_back(&PacketLoggerWindow::Instance());
 	optional_modules.push_back(&StringDecoderWindow::Instance());
 	optional_modules.push_back(&DoorMonitorWindow::Instance());
 	optional_modules.push_back(&SkillListingWindow::Instance());
-	if(use_friendlist) optional_modules.push_back(&FriendListWindow::Instance());
 #endif
-
 	SettingsWindow::Instance().sep_widgets = optional_modules.size();
 	optional_modules.push_back(&SettingsWindow::Instance());
 	if (use_timer) optional_modules.push_back(&TimerWidget::Instance());
