@@ -594,5 +594,89 @@
     <Image Include="..\resources\bonds\Holy_Veil.png">
       <Filter>Resources\bonds</Filter>
     </Image>
+    <Image Include="..\resources\missions\EOTNDungeon.png">
+      <Filter>Resources\missions</Filter>
+    </Image>
+    <Image Include="..\resources\missions\EOTNDungeonIncomplete.png">
+      <Filter>Resources\missions</Filter>
+    </Image>
+    <Image Include="..\resources\missions\EOTNHardModeDungeonIncomplete.png">
+      <Filter>Resources\missions</Filter>
+    </Image>
+    <Image Include="..\resources\missions\EOTNHardModeMission.png">
+      <Filter>Resources\missions</Filter>
+    </Image>
+    <Image Include="..\resources\missions\EOTNHardModeMissionIncomplete.png">
+      <Filter>Resources\missions</Filter>
+    </Image>
+    <Image Include="..\resources\missions\EOTNMission.png">
+      <Filter>Resources\missions</Filter>
+    </Image>
+    <Image Include="..\resources\missions\EOTNMissionIncomplete.png">
+      <Filter>Resources\missions</Filter>
+    </Image>
+    <Image Include="..\resources\missions\FactionsMissionIcon.png">
+      <Filter>Resources\missions</Filter>
+    </Image>
+    <Image Include="..\resources\missions\FactionsMissionIconExpert.png">
+      <Filter>Resources\missions</Filter>
+    </Image>
+    <Image Include="..\resources\missions\FactionsMissionIconIncomplete.png">
+      <Filter>Resources\missions</Filter>
+    </Image>
+    <Image Include="..\resources\missions\FactionsMissionIconPrimary.png">
+      <Filter>Resources\missions</Filter>
+    </Image>
+    <Image Include="..\resources\missions\HardModeMissionIcon.png">
+      <Filter>Resources\missions</Filter>
+    </Image>
+    <Image Include="..\resources\missions\HardModeMissionIcon1.png">
+      <Filter>Resources\missions</Filter>
+    </Image>
+    <Image Include="..\resources\missions\HardModeMissionIcon1b.png">
+      <Filter>Resources\missions</Filter>
+    </Image>
+    <Image Include="..\resources\missions\HardModeMissionIcon2.png">
+      <Filter>Resources\missions</Filter>
+    </Image>
+    <Image Include="..\resources\missions\HardModeMissionIconIncomplete.png">
+      <Filter>Resources\missions</Filter>
+    </Image>
+    <Image Include="..\resources\missions\MissionIcon.png">
+      <Filter>Resources\missions</Filter>
+    </Image>
+    <Image Include="..\resources\missions\MissionIconBonus.png">
+      <Filter>Resources\missions</Filter>
+    </Image>
+    <Image Include="..\resources\missions\MissionIconIncomplete.png">
+      <Filter>Resources\missions</Filter>
+    </Image>
+    <Image Include="..\resources\missions\MissionIconPrimary.png">
+      <Filter>Resources\missions</Filter>
+    </Image>
+    <Image Include="..\resources\missions\NightfallMissionIcon.png">
+      <Filter>Resources\missions</Filter>
+    </Image>
+    <Image Include="..\resources\missions\NightfallMissionIconExpert.png">
+      <Filter>Resources\missions</Filter>
+    </Image>
+    <Image Include="..\resources\missions\NightfallMissionIconIncomplete.png">
+      <Filter>Resources\missions</Filter>
+    </Image>
+    <Image Include="..\resources\missions\NightfallMissionIconPrimary.png">
+      <Filter>Resources\missions</Filter>
+    </Image>
+    <Image Include="..\resources\missions\NightfallTormentMissionIcon.png">
+      <Filter>Resources\missions</Filter>
+    </Image>
+    <Image Include="..\resources\missions\NightfallTormentMissionIconExpert.png">
+      <Filter>Resources\missions</Filter>
+    </Image>
+    <Image Include="..\resources\missions\NightfallTormentMissionIconIncomplete.png">
+      <Filter>Resources\missions</Filter>
+    </Image>
+    <Image Include="..\resources\missions\NightfallTormentMissionIconPrimary.png">
+      <Filter>Resources\missions</Filter>
+    </Image>
   </ItemGroup>
 </Project>
