@@ -121,6 +121,12 @@
     <Filter Include="Modules\DiscordIntegration">
       <UniqueIdentifier>{91f3b428-8d65-453d-92e7-c32de9b6d836}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Windows\Missions">
+      <UniqueIdentifier>{dfb6903f-6c83-4e94-a63c-e7d0b27887a5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\missions">
+      <UniqueIdentifier>{70275e93-6f17-4bd0-b853-6b04bc2b9fc6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GWToolbox\GuiUtils.h" />
@@ -194,6 +200,9 @@
     <ClInclude Include="GWToolbox\Windows\Hotkeys.h">
       <Filter>Windows\Hotkeys</Filter>
     </ClInclude>
+    <ClInclude Include="GWToolbox\Windows\Missions.h">
+      <Filter>Windows\Missions</Filter>
+    </ClInclude>
     <ClInclude Include="GWToolbox\Windows\Pcons.h">
       <Filter>Windows\Pcons</Filter>
     </ClInclude>
@@ -232,6 +241,9 @@
     </ClInclude>
     <ClInclude Include="GWToolbox\Windows\MaterialsWindow.h">
       <Filter>Windows\Materials</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Windows\MissionsWindow.h">
+      <Filter>Windows\Missions</Filter>
     </ClInclude>
     <ClInclude Include="GWToolbox\Windows\PconsWindow.h">
       <Filter>Windows\Pcons</Filter>
@@ -346,6 +358,9 @@
     <ClCompile Include="GWToolbox\Windows\Hotkeys.cpp">
       <Filter>Windows\Hotkeys</Filter>
     </ClCompile>
+    <ClCompile Include="GWToolbox\Windows\Missions.cpp">
+      <Filter>Windows\Missions</Filter>
+    </ClCompile>
     <ClCompile Include="GWToolbox\Windows\Pcons.cpp">
       <Filter>Windows\Pcons</Filter>
     </ClCompile>
@@ -384,6 +399,9 @@
     </ClCompile>
     <ClCompile Include="GWToolbox\Windows\MaterialsWindow.cpp">
       <Filter>Windows\Materials</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Windows\MissionsWindow.cpp">
+      <Filter>Windows\Missions</Filter>
     </ClCompile>
     <ClCompile Include="GWToolbox\Windows\PconsWindow.cpp">
       <Filter>Windows\Pcons</Filter>
