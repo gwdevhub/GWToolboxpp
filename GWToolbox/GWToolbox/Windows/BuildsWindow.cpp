@@ -351,17 +351,13 @@ void BuildsWindow::Load(const TeamBuild& tbuild, unsigned int idx) {
     if (idx >= tbuild.builds.size()) return;
     const Build& build = tbuild.builds[idx];
 	if (!GW::SkillbarMgr::LoadSkillTemplate(build.code)) {
-		GW::GameThread::Enqueue([tbuild, build, idx]() {
-			char buf[192] = { 0 };
-			Log::Error("Failed to load build template %s", BuildSkillTemplateString(tbuild,idx,buf,192) ? buf : build.name);
-			});
+		char buf[192] = { 0 };
+		Log::Error("Failed to load build template %s", BuildSkillTemplateString(tbuild, idx, buf, 192) ? buf : build.name);
 		return;
 	}
 	if (!tbuild.edit_open) {
-		GW::GameThread::Enqueue([tbuild, build, idx]() {
-			char buf[192] = { 0 };
-			Log::Info("Build loaded: %s", BuildSkillTemplateString(tbuild, idx, buf, 192) ? buf : build.code);
-			});
+		char buf[192] = { 0 };
+		Log::Info("Build loaded: %s", BuildSkillTemplateString(tbuild, idx, buf, 192) ? buf : build.code);
 	}
     LoadPcons(tbuild, idx);
 }
@@ -449,28 +445,26 @@ void BuildsWindow::LoadPcons(const TeamBuild& tbuild, unsigned int idx) {
 		pcon->SetEnabled(enable);
     }
 	if (pcons_loaded.size()) {
-		GW::GameThread::Enqueue([pcons_loaded]() {
-			std::string pcons_str;
-			size_t i = 0;
-			for (auto pcon : pcons_loaded) {
-				if (i) pcons_str += ", ";
-				i = 1;
-				pcons_str += pcon->abbrev;
-			}
-			Log::Info("Pcons loaded: %s", pcons_str.c_str());
-			});
+		std::string pcons_str;
+		size_t i = 0;
+		for (auto pcon : pcons_loaded) {
+			if (i) pcons_str += ", ";
+			i = 1;
+			pcons_str += pcon->abbrev;
+		}
+		const char* str = pcons_str.c_str();
+		Log::Info("Pcons loaded: %s", str);
 	}
 	if (pcons_not_visible.size()) {
-		GW::GameThread::Enqueue([pcons_not_visible]() {
-			std::string pcons_str;
-			size_t i = 0;
-			for (auto pcon : pcons_not_visible) {
-				if (i) pcons_str += ", ";
-				i = 1;
-				pcons_str += pcon->abbrev;
-			}
-			Log::Warning("Pcons not loaded: %s.\nOnly pcons visible in the Pcons window will be auto enabled.", pcons_str.c_str());
-			});
+		std::string pcons_str;
+		size_t i = 0;
+		for (auto pcon : pcons_not_visible) {
+			if (i) pcons_str += ", ";
+			i = 1;
+			pcons_str += pcon->abbrev;
+		}
+		const char* str = pcons_str.c_str();
+		Log::Warning("Pcons not loaded: %s.\nOnly pcons visible in the Pcons window will be auto enabled.", str);
 	}
 }
 void BuildsWindow::SendPcons(const TeamBuild& tbuild, unsigned int idx, bool include_build_name) {
