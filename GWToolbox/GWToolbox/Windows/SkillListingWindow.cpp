@@ -93,26 +93,12 @@ void SkillListingWindow::Initialize() {
     ToolboxWindow::Initialize();
     const unsigned int max_skills = 3410;
     skills.resize(max_skills);
-    {
-        uintptr_t address = GW::Scanner::Find(
-            "\x8D\x04\xB6\x5E\xC1\xE0\x05\x05", "xxxxxxxx", 8);
-        printf("[SCAN] SkillArray = %p\n", (void*)address);
-        if (Verify(address))
-            skill_array_addr = *(uintptr_t*)address;
-    }
-
-    
-    if(!skill_array_addr)
-        return;
-    GW::Skill* skill_constants = (GW::Skill*)skill_array_addr;
-
     size_t added = 0;
     for (size_t i = 0; i < max_skills && added < 1000; i++) {
-        if (!skill_constants[i].skill_id || !skill_constants[i].skill_equip_type) continue;
-        skills[i] = new Skill(&skill_constants[i]);
-        //added++;
+        GW::Skill* s = &GW::SkillbarMgr::GetSkillConstantData(i);
+        if (!s || s->skill_id || !s->skill_equip_type) continue;
+        skills[i] = new Skill(s);
     }
-    //Log::Log("%d Added\n", added);  
 }
 void SkillListingWindow::Draw(IDirect3DDevice9* pDevice) {
     if (!visible)

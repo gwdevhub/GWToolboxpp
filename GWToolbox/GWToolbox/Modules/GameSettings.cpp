@@ -482,7 +482,7 @@ namespace {
 
 
 
-typedef void(__fastcall* OnPingEqippedItem_pt)(uint32_t unk1, uint32_t item_id1, uint32_t item_id2);
+typedef void(__cdecl* OnPingEqippedItem_pt)(uint32_t unk1, uint32_t item_id1, uint32_t item_id2);
 OnPingEqippedItem_pt OnPingEquippedItem_Func;
 OnPingEqippedItem_pt OnPingEquippedItemRet;
 
@@ -780,7 +780,7 @@ void GameSettings::PingItem(uint32_t item_id, uint32_t parts) {
 	if (item_id >= items.size()) return;
 	return PingItem(items[item_id], parts);
 }
-void __fastcall OnPingEquippedItem(uint32_t oneC, uint32_t item_id1, uint32_t item_id2) {
+void __cdecl OnPingEquippedItem(uint32_t oneC, uint32_t item_id1, uint32_t item_id2) {
     GW::HookBase::EnterHook();
 	if (!GameSettings::Instance().shorthand_item_ping) {
 		OnPingEquippedItemRet(oneC, item_id1, item_id2);
@@ -924,7 +924,6 @@ void GameSettings::Initialize() {
             gold_confirm_patch.TooglePatch(disable_gold_selling_confirmation);
 		}
 	}
-
     // Automatically return to outpost on defeat
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyDefeated>(&PartyDefeated_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::PartyDefeated*) -> void {
         if (!auto_return_on_defeat || !GetPlayerIsLeader())
@@ -1220,7 +1219,7 @@ void GameSettings::Initialize() {
 
 	GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusCallback_Entry,GameSettings::FriendStatusCallback);
 
-    OnPingEquippedItem_Func = (OnPingEqippedItem_pt)GW::Scanner::Find("\x8D\x4D\xF0\xC7\x45\xF0\x2B", "xxxxxxx", -0xC); // NOTE: 0x2B is CtoS header
+    OnPingEquippedItem_Func = (OnPingEqippedItem_pt)GW::Scanner::Find("\x50\x6A\x10\xC7\x45\xEC\x2B", "xxxxxxx", -0x25); // NOTE: 0x2B is CtoS header
     printf("[SCAN] OnPingEquippedItem = %p\n", OnPingEquippedItem_Func);
     if (OnPingEquippedItem_Func) {
         GW::HookBase::CreateHook(OnPingEquippedItem_Func, OnPingEquippedItem, (void**)& OnPingEquippedItemRet);
@@ -1497,7 +1496,7 @@ void GameSettings::DrawSettingInternal() {
         ImGui::Spacing();
 	}
 
-	DrawFOVSetting();
+	//DrawFOVSetting();
 
 	if (ImGui::Checkbox("Show chat messages timestamp", &show_timestamps))
         GW::Chat::ToggleTimestamps(show_timestamps);
@@ -1717,7 +1716,7 @@ void GameSettings::Update(float delta) {
 		GW::FriendListMgr::SetFriendListStatus(GW::Constants::OnlineStatus::AWAY);
 		activity_timer = TIMER_INIT(); // refresh the timer to avoid spamming in case the set status call fails
 	}
-	UpdateFOV();
+	//UpdateFOV();
 	FactionEarnedCheckAndWarn();
 
 #ifdef APRIL_FOOLS
