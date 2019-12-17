@@ -821,9 +821,7 @@ const bool PendingChatMessage::SendMessage() {
         buf[len] = '\0';
     }
     if (len) {
-		GW::GameThread::Enqueue([buf]() {
-			GW::Chat::SendChat('#', buf);
-			});
+		GW::Chat::SendChat('#', buf);
 		last_send = clock();
     }
     printed = true;
@@ -1086,9 +1084,7 @@ void GameSettings::Initialize() {
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::VanquishComplete>(&VanquishComplete_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::VanquishComplete* pak) -> void {
 		if (!auto_age_on_vanquish)
 			return;
-		GW::GameThread::Enqueue([]() {
-			GW::Chat::SendChat('/', "age");
-			});
+		GW::Chat::SendChat('/', "age");
 		});
 	// - Automatically send /age2 on /age.
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&MessageServer_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::MessageServer* pak) -> void {
@@ -1098,9 +1094,7 @@ void GameSettings::Initialize() {
         //0x8101 0x641F 0x86C3 0xE149 0x53E8 0x101 0x107 = You have been in this map for n minutes.
         //0x8101 0x641E 0xE7AD 0xEF64 0x1676 0x101 0x107 0x102 0x107 = You have been in this map for n hours and n minutes.
         if (wmemcmp(msg, L"\x8101\x641F\x86C3\xE149\x53E8", 5) == 0 || wmemcmp(msg, L"\x8101\x641E\xE7AD\xEF64\x1676", 5) == 0) {
-            GW::GameThread::Enqueue([]() {
-                GW::Chat::SendChat('/', "age2");
-                });
+			GW::Chat::SendChat('/', "age2");
         }
        });
     // - NPC teamchat messages to emote chat (emulate speech bubble instead)

@@ -163,7 +163,7 @@ void ToolboxSettings::DrawSettingInternal() {
 	ImGui::Checkbox("Party Window", &use_partywindowmodule);
 	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
 	ImGui::Checkbox("Friend List", &use_friendlist);
-	//ImGui::Checkbox("Server Info", &use_serverinfo);
+	ImGui::Checkbox("Daily Quests", &use_daily_quests);
 
 	ImGui::PopID();
 
@@ -214,18 +214,19 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
 	use_vanquish = ini->GetBoolValue(Name(), VAR_NAME(use_vanquish), true);
 	use_alcohol = ini->GetBoolValue(Name(), VAR_NAME(use_alcohol), true);
 	use_trade = ini->GetBoolValue(Name(), VAR_NAME(use_trade), true);
-    	use_objectivetimer = ini->GetBoolValue(Name(), VAR_NAME(use_objectivetimer), true);
+    use_objectivetimer = ini->GetBoolValue(Name(), VAR_NAME(use_objectivetimer), true);
 	save_location_data = ini->GetBoolValue(Name(), VAR_NAME(save_location_data), false);
 	use_gamesettings = ini->GetBoolValue(Name(), VAR_NAME(use_gamesettings), true);
 	use_updater = ini->GetBoolValue(Name(), VAR_NAME(use_updater), true);
 	use_chatfilter = ini->GetBoolValue(Name(), VAR_NAME(use_chatfilter), true);
 	use_chatcommand = ini->GetBoolValue(Name(), VAR_NAME(use_chatcommand), true);
-    	use_discord = ini->GetBoolValue(Name(), VAR_NAME(use_discord), true);
+    use_discord = ini->GetBoolValue(Name(), VAR_NAME(use_discord), true);
 	use_factionleaderboard = ini->GetBoolValue(Name(), VAR_NAME(use_factionleaderboard), use_factionleaderboard);
 	use_twitch = ini->GetBoolValue(Name(), VAR_NAME(use_twitch), use_twitch);
 	use_partywindowmodule = ini->GetBoolValue(Name(), VAR_NAME(use_partywindowmodule), use_partywindowmodule);
 	use_friendlist = ini->GetBoolValue(Name(), VAR_NAME(use_friendlist), use_friendlist);
 	use_serverinfo = ini->GetBoolValue(Name(), VAR_NAME(use_serverinfo), use_serverinfo);
+	use_daily_quests = ini->GetBoolValue(Name(), VAR_NAME(use_daily_quests), use_daily_quests);
 }
 
 void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
@@ -252,8 +253,8 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(use_trade), use_trade);
 	ini->SetBoolValue(Name(), VAR_NAME(use_objectivetimer), use_objectivetimer);
 	ini->SetBoolValue(Name(), VAR_NAME(use_factionleaderboard), use_factionleaderboard);
-    	ini->SetBoolValue(Name(), VAR_NAME(use_discord), use_discord);
-    	ini->SetBoolValue(Name(), VAR_NAME(use_twitch), use_twitch);
+    ini->SetBoolValue(Name(), VAR_NAME(use_discord), use_discord);
+    ini->SetBoolValue(Name(), VAR_NAME(use_twitch), use_twitch);
 	ini->SetBoolValue(Name(), VAR_NAME(use_partywindowmodule), use_partywindowmodule);
 	ini->SetBoolValue(Name(), VAR_NAME(use_friendlist), use_friendlist);
 	ini->SetBoolValue(Name(), VAR_NAME(use_serverinfo), use_serverinfo);
@@ -262,6 +263,7 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(use_updater), use_updater);
 	ini->SetBoolValue(Name(), VAR_NAME(use_chatfilter), use_chatfilter);
 	ini->SetBoolValue(Name(), VAR_NAME(use_chatcommand), use_chatcommand);
+	ini->SetBoolValue(Name(), VAR_NAME(use_daily_quests), use_daily_quests);
 }
 
 void ToolboxSettings::Update(float delta) {

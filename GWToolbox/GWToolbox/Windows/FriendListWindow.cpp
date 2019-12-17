@@ -79,24 +79,21 @@ void FriendListWindow::Friend::StartWhisper() {
 void FriendListWindow::Friend::InviteToParty() {
     const wchar_t* alias_c = alias.c_str();
     const wchar_t* charname = current_char ? current_char->name.c_str() : '\0';
-
-    GW::GameThread::Enqueue([charname, alias_c]() {
-        if (!charname[0])
-            return Log::Error("Player %S is not logged in", alias_c);
-        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
-            return Log::Error("You are not in an outpost");
-        std::wstring* map_name = GetCurrentMapName();
-        if (!map_name) return;
-        GW::AreaInfo* ai = GW::Map::GetCurrentMapInfo();
-        if (!ai) return;
-        GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo();
-        if (!p || !p->players.valid())
-            return;
-        wchar_t buffer[139] = { 0 };
-        swprintf(buffer, 138, L"%s,%s %d/%d", charname, map_name->c_str(), p->players.size(), ai->max_party_size);
-        buffer[138] = 0;
-        GW::Chat::SendChat('"', buffer);
-        });
+	if (!charname[0])
+		return Log::Error("Player %S is not logged in", alias_c);
+	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
+		return Log::Error("You are not in an outpost");
+	std::wstring* map_name = GetCurrentMapName();
+	if (!map_name) return;
+	GW::AreaInfo* ai = GW::Map::GetCurrentMapInfo();
+	if (!ai) return;
+	GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo();
+	if (!p || !p->players.valid())
+		return;
+	wchar_t buffer[139] = { 0 };
+	swprintf(buffer, 138, L"%s,%s %d/%d", charname, map_name->c_str(), p->players.size(), ai->max_party_size);
+	buffer[138] = 0;
+	GW::Chat::SendChat('"', buffer);
 }
 // Get the character belonging to this friend (e.g. to find profession etc)
 FriendListWindow::Character* FriendListWindow::Friend::GetCharacter(const wchar_t* char_name) {
