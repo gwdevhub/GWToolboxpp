@@ -267,8 +267,8 @@ void FriendListWindow::Initialize() {
 			if (!f) return;
 			Character* fc = f->GetCharacter(player_name.c_str());
 			if (!fc) return;
-			Log::Log("%s: Friend found; setting %ls profession to %s\n", Name(), player_name, ProfNames[profession]);
-			fc->profession = profession;
+			if(profession > 0 && profession < 11)
+				fc->profession = profession;
 		});
 	});
 	GW::Chat::RegisterSendChatCallback(&ErrorMessage_Entry, [&](GW::HookStatus* status, GW::Chat::Channel channel, wchar_t* msg) {
