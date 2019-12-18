@@ -99,8 +99,8 @@ namespace {
 
 class FriendListWindow : public ToolboxWindow {
 private:
-    FriendListWindow() {};
-    ~FriendListWindow() {};
+    FriendListWindow();
+    ~FriendListWindow();
 	// Structs because we don't case about public or private; this whole struct is private to this module anyway.
 	struct Character {
 		std::wstring name;
@@ -182,6 +182,7 @@ private:
 	Friend* GetFriendByUUID(const char*);
 	Friend* GetFriend(uint8_t*);
 	void RemoveFriend(Friend* f);
+	void LoadCharnames(const char* section, std::unordered_map<std::wstring, uint8_t>* out);
 public:
     static FriendListWindow& Instance() {
         static FriendListWindow instance;

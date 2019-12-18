@@ -235,6 +235,13 @@ void FriendListWindow::RemoveFriend(Friend* f) {
 	delete f;
 }
 /* FriendListWindow basic functions etc */
+FriendListWindow::FriendListWindow() {
+	inifile = new CSimpleIni(false, false, false);
+}
+FriendListWindow::~FriendListWindow() {
+	worker.~WorkerThread();
+	delete inifile;
+}
 void FriendListWindow::Initialize() {
     ToolboxWindow::Initialize();
 	worker.Run();
@@ -586,6 +593,27 @@ void FriendListWindow::Terminate() {
 	}
     friends.clear();
 }
+void FriendListWindow::LoadCharnames(const char* section, std::unordered_map<std::wstring, uint8_t>* out) {
+	// Grab char names
+	CSimpleIniA::TNamesDepend values;
+	inifile->GetAllValues(section, "charname", values);
+	CSimpleIniA::TNamesDepend::const_iterator i;
+	for (i = values.begin(); i != values.end(); ++i) {
+		std::wstring char_wstr = GuiUtils::StringToWString(i->pItem), temp;
+		std::vector<std::wstring> parts;
+		std::wstringstream wss(char_wstr);
+		while (std::getline(wss, temp, L','))
+			parts.push_back(temp);
+		std::wstring name = parts[0];
+		uint8_t profession = 0;
+		if (parts.size() > 1) {
+			int p = _wtoi(&parts[1][0]);
+			if (p > 0 && p < 11)
+				profession = (uint8_t)p;
+		}
+		out->emplace(name, profession);
+	}
+}
 void FriendListWindow::LoadFromFile() {
 	loading = true;
 	Log::Log("%s: Loading friends from ini", Name());
@@ -598,7 +626,6 @@ void FriendListWindow::LoadFromFile() {
 		}
 		friends.clear();
 
-		if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
 		inifile->Reset();
 		inifile->SetMultiKey(true);
 		inifile->LoadFile(Resources::GetPath(ini_filename).c_str());
@@ -618,23 +645,10 @@ void FriendListWindow::LoadFromFile() {
             }
 
 			// Grab char names
-			CSimpleIniA::TNamesDepend values;
-			inifile->GetAllValues(entry.pItem, "charname", values);
-			CSimpleIniA::TNamesDepend::const_iterator i;
-			for (i = values.begin(); i != values.end(); ++i) {
-				std::wstring char_wstr = GuiUtils::StringToWString(i->pItem), temp;
-				std::vector<std::wstring> parts;
-				std::wstringstream wss(char_wstr);
-				while (std::getline(wss, temp, L','))
-					parts.push_back(temp);
-				std::wstring name = parts[0];
-				uint8_t profession = 0;
-				if (parts.size() > 1) {
-					int p = _wtoi(&parts[1][0]);
-					if (p > 0 && p < 10)
-						profession = (uint8_t)p;
-				}
-				lf->SetCharacter(name.c_str(), profession);
+			std::unordered_map<std::wstring, uint8_t> charnames;
+			LoadCharnames(entry.pItem, &charnames);
+			for (auto it : charnames) {
+				lf->SetCharacter(it.first.c_str(), it.second);
 			}
             if (lf->characters.empty()) {
                 delete lf;
@@ -646,6 +660,7 @@ void FriendListWindow::LoadFromFile() {
 			}
 		}
 		Log::Log("%s: Loaded friends from ini", Name());
+		friends_list_checked = false;
 		loading = false;
 	});
 }
@@ -653,22 +668,33 @@ void FriendListWindow::SaveToFile() {
     if (!friends_changed)
         return;
     friends_changed = false;
-    if (inifile == nullptr) inifile = new CSimpleIni();
+	inifile->Reset();
+	// Load the existing file in, and amend the info
+	inifile->LoadFile(Resources::GetPath(ini_filename).c_str());
 	inifile->SetMultiKey(true);
     if (friends.empty())
         return; // Error, should have at least 1 friend
-    inifile->Reset();
     std::lock_guard<std::recursive_mutex> lock(friends_mutex);
     for (std::unordered_map<std::string, Friend*>::iterator it = friends.begin(); it != friends.end(); ++it) {
         // do something
         Friend lf = *it->second;
 		const char* uuid = lf.uuid.c_str();
-        inifile->SetLongValue(uuid, "type", lf.type);
-		inifile->SetBoolValue(uuid, "is_tb_friend", lf.is_tb_friend);
-		inifile->SetValue(uuid, "alias", GuiUtils::WStringToString(lf.alias).c_str());
-		for (std::unordered_map<std::wstring, Character>::iterator it2 = lf.characters.begin(); it2 != lf.characters.end(); ++it2) {
+        inifile->SetLongValue(uuid, "type", lf.type,NULL,false,true);
+		inifile->SetBoolValue(uuid, "is_tb_friend", lf.is_tb_friend, NULL, true);
+		inifile->SetValue(uuid, "alias", GuiUtils::WStringToString(lf.alias).c_str(), NULL, true);
+		// Append to existing charnames, but don't duplicate. This allows multiple accounts to contribute to the friend list.
+		std::unordered_map<std::wstring, uint8_t> charnames;
+		LoadCharnames(uuid, &charnames);
+		for (auto it : lf.characters) {
+			auto found = charnames.find(it.first);
+			// Note: Don't overwrite the profession
+			if (found == charnames.end() || it.second.profession != 0)
+				charnames.emplace(it.first, it.second.profession);
+		}
+		inifile->DeleteValue(uuid, "charname", NULL);
+		for (auto it : charnames) {
 			char charname[128] = { 0 };
-			snprintf(charname, 128, "%s,%d", GuiUtils::WStringToString(it2->first).c_str(), it2->second.profession);
+			snprintf(charname, 128, "%s,%d", GuiUtils::WStringToString(it.first).c_str(), it.second);
 			inifile->SetValue(uuid, "charname", charname);
 		}
     }
