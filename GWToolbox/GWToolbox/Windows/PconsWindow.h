@@ -13,7 +13,7 @@
 #include "ToolboxWindow.h"
 
 class PconsWindow : public ToolboxWindow {
-	PconsWindow() {};
+	PconsWindow();
 	~PconsWindow() {};
 public:
 	static PconsWindow& Instance() {
