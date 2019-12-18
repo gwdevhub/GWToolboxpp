@@ -22,7 +22,9 @@ namespace CSLauncher {
         public List<GithubAsset> assets { get; set; }
     };
     static class CSLauncher {
-        const string DLL_NAME = "JonsGWToolbox.dll"; // "GWToolbox.dll";
+
+        const string APP_NAME = "JonsGWToolbox";
+        const string DLL_NAME = APP_NAME + ".dll"; // "GWToolbox.dll";
 
         const string GITHUB_USER = "3vcloud"; // "HasKha";
 
@@ -72,11 +74,10 @@ namespace CSLauncher {
         {
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
             WebClient host = new WebClient();
-            host.Headers.Add(HttpRequestHeader.UserAgent, "GWToolboxpp Launcher");
+            host.Headers.Add(HttpRequestHeader.UserAgent, APP_NAME + " Launcher");
             string remoteversion = "";
             string dllurl = "";
             int tries = 0;
-
             while (tries < 3 && remoteversion.Length == 0)
             {
                 try
@@ -152,12 +153,12 @@ namespace CSLauncher {
             if (!File.Exists(dllfile)) {
                 ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
                 WebClient host = new WebClient();
-                host.Headers.Add(HttpRequestHeader.UserAgent, "GWToolboxpp Launcher");
+                host.Headers.Add(HttpRequestHeader.UserAgent, APP_NAME + " Launcher");
                 string remoteversion = GetLatestVersion();
                 if (remoteversion.Length == 0)
                 {
-                    MessageBox.Show("Failed to fetch latest GWToolbox++ version.\n Check your internet connection and try again",
-                        "GWToolbox++ Error",
+                    MessageBox.Show("Failed to fetch latest "+ APP_NAME+" version.\n Check your internet connection and try again",
+                        APP_NAME + " Error",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Error);
                     return;
@@ -181,8 +182,8 @@ namespace CSLauncher {
                 }
                 if (!File.Exists(dllfile))
                 {
-                    MessageBox.Show("Failed to download GWToolbox++ dll.\n Check your internet connection and try again",
-                        "GWToolbox++ Error",
+                    MessageBox.Show("Failed to download " + DLL_NAME +" dll.\n Check your internet connection and try again",
+                        APP_NAME + " Error",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Error);
                     return;
@@ -190,8 +191,10 @@ namespace CSLauncher {
             }
             // check again after download/update/build
             if (!File.Exists(dllfile)) {
-                MessageBox.Show("Cannot find " + DLL_NAME, "GWToolbox++ Launcher Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Cannot find " + DLL_NAME, 
+                    APP_NAME + " Launcher Error",
+                    MessageBoxButtons.OK, 
+                    MessageBoxIcon.Error);
                 return;
             }
 
@@ -206,14 +209,14 @@ namespace CSLauncher {
                     {
                         MessageBox.Show("Guild Wars is running as Admin.\n" +
                             "Restart Guild Wars without Admin, or run this launcher as Admin to run GWToolbox++",
-                            "GWToolbox++ Error",
+                            APP_NAME + " Error",
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Error);
                         return;
                     }
                     MessageBox.Show("No Guild Wars clients found.\n" +
-                                    "Please log into Guild Wars first.", 
-                                    "GWToolbox++ Error", 
+                                    "Please log into Guild Wars first.",
+                                     APP_NAME + " Error", 
                                     MessageBoxButtons.OK, 
                                     MessageBoxIcon.Error);
                     break;
@@ -236,13 +239,13 @@ namespace CSLauncher {
                     // continue
                 } else if (result == GWCAMemory.LOADMODULERESULT.SUCCESSFUL) {
                     MessageBox.Show("Error loading DLL: ExitCode " + dll_return,
-                                    "GWToolbox++ Error",
+                                    APP_NAME + " Error",
                                     MessageBoxButtons.OK,
                                     MessageBoxIcon.Error);
                 } else {
                     MessageBox.Show("Module Load Error.\n" +
                                     LOADMODULE_RESULT_MESSAGES[(uint)result] + "\n",
-                                    "GWToolbox++ Error",
+                                     APP_NAME + " Error",
                                     MessageBoxButtons.OK,
                                     MessageBoxIcon.Error);
                     return;

@@ -60,7 +60,6 @@ namespace {
 			if (header != GW::Packet::StoC::GenericValue::STATIC_HEADER)
 				return false; 
 			*duration = 90000;
-			*range = GW::Constants::Range::Nearby;
 			break;
 		case SkillEffect::Churning_earth:
 			*duration = 5000;
@@ -119,9 +118,10 @@ void EffectRenderer::RemoveTriggeredEffect(uint32_t effect_id, GW::Vec2f* pos) {
 		closestDistance = newDistance;
 	}
 	if (closest) {
-		// Trigger this trap to time out in 2 seconds' time.
+		// Trigger this trap to time out in 2 seconds' time. Increase damage radius from adjacent to nearby.
 		closest->start = TIMER_INIT();
 		closest->duration = 2000;
+		closest->circle.range = GW::Constants::Range::Nearby;
 	}
 }
 
@@ -134,7 +134,7 @@ void EffectRenderer::PacketCallback(GW::Packet::StoC::GenericValue* pak) {
 	if (!GetRangeAndDuration(pak->value, &range, &duration, pak->header))
 		return;
 	GW::Agent* caster = GW::Agents::GetAgentByID(pak->agent_id);
-	//if (!caster || caster->allegiance != 0x3) return;
+	if (!caster || caster->allegiance != 0x3) return;
 	Effect* e = new Effect(pak->value, caster->pos.x, caster->pos.y, duration, range);
     e->circle.color = &aoe_color;
 	aoe_effects.push_back(e);
