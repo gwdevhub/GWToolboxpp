@@ -7,6 +7,8 @@
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Utilities/Scanner.h>
 
+#include <GWCA/Managers/UIMgr.h>
+
 #include <Modules/Resources.h>
 
 namespace {
@@ -50,18 +52,8 @@ ImFont* GuiUtils::GetFont(GuiUtils::FontSize size) {
 }
 
 int GuiUtils::GetPartyHealthbarHeight() {
-	static DWORD* optionarray = nullptr;
-	if (!optionarray) {
-		// @Replaced
-		optionarray = (DWORD*)GW::Scanner::Find("\x75\xF6\x33\xF6\x39\x34\x9D", "xxxxxxx", +7);
-		printf("[SCAN] optionarray = %p\n", optionarray);
-		if (optionarray)
-			optionarray = *(DWORD**)optionarray;
-		else
-			return GW::Constants::HealthbarHeight::Normal;
-	}
 	GW::Constants::InterfaceSize interfacesize =
-		static_cast<GW::Constants::InterfaceSize>(optionarray[6]);
+		static_cast<GW::Constants::InterfaceSize>(GW::UI::GetPreference(GW::UI::Preference_InterfaceSize));
 
 	switch (interfacesize) {
 	case GW::Constants::InterfaceSize::SMALL: return GW::Constants::HealthbarHeight::Small;
