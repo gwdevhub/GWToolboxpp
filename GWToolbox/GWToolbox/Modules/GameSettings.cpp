@@ -473,8 +473,6 @@ void GameSettings::Initialize() {
 void GameSettings::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini);
 
-	maintain_fov = ini->GetBoolValue(Name(), VAR_NAME(maintain_fov), false);
-	fov = (float)ini->GetDoubleValue(Name(), VAR_NAME(fov), 1.308997f);
 	tick_is_toggle = ini->GetBoolValue(Name(), VAR_NAME(tick_is_toggle), true);
 
     show_timestamps = ini->GetBoolValue(Name(), VAR_NAME(show_timestamps), false);
@@ -528,8 +526,6 @@ void GameSettings::Terminate() {
 void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ToolboxModule::SaveSettings(ini);
 
-	ini->SetBoolValue(Name(), VAR_NAME(maintain_fov), maintain_fov);
-	ini->SetDoubleValue(Name(), VAR_NAME(fov), fov);
 	ini->SetBoolValue(Name(), VAR_NAME(tick_is_toggle), tick_is_toggle);
 
 	ini->SetBoolValue(Name(), VAR_NAME(show_timestamps), show_timestamps);
@@ -585,8 +581,6 @@ void GameSettings::DrawSettingInternal() {
 		ImGui::TreePop();
         ImGui::Spacing();
 	}
-
-	DrawFOVSetting();
 
 	if (ImGui::Checkbox("Show chat messages timestamp. Color:", &show_timestamps)) {
         GW::Chat::ToggleTimestamps(show_timestamps);
@@ -682,22 +676,10 @@ void GameSettings::Update(float delta) {
 		GW::FriendListMgr::SetFriendListStatus(GW::Constants::OnlineStatus::AWAY);
 		activity_timer = TIMER_INIT(); // refresh the timer to avoid spamming in case the set status call fails
 	}
-	UpdateFOV();
 
 #ifdef APRIL_FOOLS
 	AF::ApplyPatchesIfItsTime();
 #endif
-}
-
-void GameSettings::DrawFOVSetting() {
-	ImGui::Checkbox("Maintain FOV", &maintain_fov);
-	ImGui::ShowHelp("GWToolbox will save and maintain the FOV setting used with /cam fov <value>");
-}
-
-void GameSettings::UpdateFOV() {
-	if (maintain_fov && GW::CameraMgr::GetFieldOfView() != fov) {
-		GW::CameraMgr::SetFieldOfView(fov);
-	}
 }
 
 bool GameSettings::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {

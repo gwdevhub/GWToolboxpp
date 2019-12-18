@@ -40,10 +40,6 @@ public:
 	void Update(float delta) override;
 	bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam);
 
-	void DrawFOVSetting();
-	bool maintain_fov = false;
-	float fov = 1.308997f; // default fov
-
 	void SetAfkMessage(std::wstring&& message);
 	static void ItemClickCallback(GW::HookStatus *, uint32_t type, uint32_t slot, GW::Bag *bag);
 
@@ -80,7 +76,6 @@ public:
 	bool skip_entering_name_for_faction_donate = true;
 
 private:
-	void UpdateFOV();
 	GW::MemoryPatcher ctrl_click_patch;
 	GW::MemoryPatcher tome_patch;
 	GW::MemoryPatcher gold_confirm_patch;
