@@ -38,63 +38,63 @@ namespace {
 		Bed_of_coals = 875,
 		Churning_earth = 994
 	};
+}
+EffectRenderer::EffectRenderer() {
+	aoe_effect_settings.emplace(Maelstrom, new EffectSettings("Maelstrom", Maelstrom, GW::Constants::Range::Adjacent, 10000));
+	aoe_effect_settings.emplace(Chaos_storm, new EffectSettings("Chaos Storm", Chaos_storm, GW::Constants::Range::Adjacent, 10000));
+	aoe_effect_settings.emplace(Savannah_heat, new EffectSettings("Savannah Heat", Savannah_heat, GW::Constants::Range::Adjacent, 5000));
+	aoe_effect_settings.emplace(Breath_of_fire, new EffectSettings("Breath of Fire", Breath_of_fire, GW::Constants::Range::Adjacent, 5000));
+	aoe_effect_settings.emplace(Maelstrom, new EffectSettings("Lava font", Lava_font, GW::Constants::Range::Adjacent, 5000));
+	aoe_effect_settings.emplace(Churning_earth, new EffectSettings("Churning Earth", Churning_earth, GW::Constants::Range::Nearby, 5000));
 
-	static bool GetRangeAndDuration(uint32_t effect_id, float* range, int* duration, uint32_t header) {
-		*range = GW::Constants::Range::Adjacent;
-		*duration = 10000;
-		switch (effect_id) {
-		case SkillEffect::Maelstrom:
-		case SkillEffect::Chaos_storm:
-			*duration = 10000;
-			break;
-		case SkillEffect::Savannah_heat:
-		case SkillEffect::Breath_of_fire:
-		case SkillEffect::Bed_of_coals:
-		case SkillEffect::Lava_font:
-			*duration = 5000;
-			break;
-		case SkillEffect::Barbed_Trap:
-		case SkillEffect::Flame_Trap:
-		case SkillEffect::Spike_Trap:
-			// For traps, GW sometimes sends GenericValueTarget AND GenericValue - we only care about the latter.
-			if (header != GW::Packet::StoC::GenericValue::STATIC_HEADER)
-				return false; 
-			*duration = 90000;
-			break;
-		case SkillEffect::Churning_earth:
-			*duration = 5000;
-			*range = GW::Constants::Range::Nearby;
-			break;
-		default: return false;
-		}
-		return true;
+	aoe_effect_settings.emplace(Barbed_Trap, new EffectSettings("Barbed Trap", Barbed_Trap, GW::Constants::Range::Adjacent, 90000, GW::Packet::StoC::GenericValue::STATIC_HEADER));
+	aoe_effect_triggers.emplace(Barbed_Trap_Activate, new EffectTrigger(Barbed_Trap, 2000, GW::Constants::Range::Nearby));
+	aoe_effect_settings.emplace(Flame_Trap, new EffectSettings("Flame Trap", Flame_Trap, GW::Constants::Range::Adjacent, 90000, GW::Packet::StoC::GenericValue::STATIC_HEADER));
+	aoe_effect_triggers.emplace(Flame_Trap_Activate, new EffectTrigger(Flame_Trap, 2000, GW::Constants::Range::Nearby));
+	aoe_effect_settings.emplace(Spike_Trap, new EffectSettings("Spike Trap", Barbed_Trap, GW::Constants::Range::Adjacent, 90000, GW::Packet::StoC::GenericValue::STATIC_HEADER));
+	aoe_effect_triggers.emplace(Spike_Trap_Activate, new EffectTrigger(Spike_Trap, 2000, GW::Constants::Range::Nearby));
+}
+EffectRenderer::~EffectRenderer() {
+	for (auto settings : aoe_effect_settings) {
+		delete settings.second;
 	}
+	aoe_effect_settings.clear();
+	for (auto triggers : aoe_effect_triggers) {
+		delete triggers.second;
+	}
+	aoe_effect_triggers.clear();
 }
 void EffectRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	Invalidate();
-	Colors::Load(ini, section, VAR_NAME(aoe_color), aoe_color);
+	for (auto settings : aoe_effect_settings) {
+		char color_buf[64];
+		sprintf(color_buf, "color_aoe_effect_%d", settings.first);
+		settings.second->color = Colors::Load(ini, section, color_buf, settings.second->color);
+	}
 }
 void EffectRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
-	Colors::Save(ini, section, VAR_NAME(aoe_color), aoe_color);
+	for (auto settings : aoe_effect_settings) {
+		char color_buf[64];
+		sprintf(color_buf, "color_aoe_effect_%d", settings.first);
+		Colors::Save(ini, section, color_buf, settings.second->color);
+	}
 }
 void EffectRenderer::DrawSettings() {
-	Colors::DrawSetting("AoE Circle Color", &aoe_color);
+	const float offset = ImGui::GetIO().FontGlobalScale * 150.0f;
+	for (auto s : aoe_effect_settings) {
+		ImGui::PushID(s.first);
+		Colors::DrawSettingHueWheel("", &s.second->color, 0);
+		ImGui::SameLine();
+		ImGui::Text(s.second->name.c_str());
+		ImGui::PopID();
+	}
 }
 void EffectRenderer::RemoveTriggeredEffect(uint32_t effect_id, GW::Vec2f* pos) {
-	uint32_t effect_to_check = 0;
-	switch (effect_id) {
-	case SkillEffect::Barbed_Trap_Activate:
-		effect_to_check = Barbed_Trap;
-		break;
-	case SkillEffect::Flame_Trap_Activate:
-		effect_to_check = Flame_Trap;
-		break;
-	case SkillEffect::Spike_Trap_Activate:
-		effect_to_check = Spike_Trap;
-		break;
-	}
-	if (!effect_to_check)
+	auto it1 = aoe_effect_triggers.find(effect_id);
+	if (it1 == aoe_effect_triggers.end())
 		return;
+	auto trigger = it1->second;
+	auto settings = aoe_effect_settings.find(trigger->triggered_effect_id)->second;
 	std::pair<float, float> posp = { pos->x,pos->y };
 	auto trap_handled = trap_triggers_handled.find(posp);
 	if (trap_handled != trap_triggers_handled.end() && TIMER_DIFF(trap_handled->second) < 5000) {
@@ -107,7 +107,7 @@ void EffectRenderer::RemoveTriggeredEffect(uint32_t effect_id, GW::Vec2f* pos) {
 	uint32_t closest_idx = 0;
 	for (size_t i = 0; i < aoe_effects.size();i++) {
 		Effect* effect = aoe_effects[i];
-		if (!effect || effect->effect_id != effect_to_check)
+		if (!effect || effect->effect_id != settings->effect_id)
 			continue;
 		// Need to estimate position; player may have moved on cast slightly.
 		float newDistance = GW::GetSquareDistance(*pos,effect->pos);
@@ -120,56 +120,56 @@ void EffectRenderer::RemoveTriggeredEffect(uint32_t effect_id, GW::Vec2f* pos) {
 	if (closest) {
 		// Trigger this trap to time out in 2 seconds' time. Increase damage radius from adjacent to nearby.
 		closest->start = TIMER_INIT();
-		closest->duration = 2000;
-		closest->circle.range = GW::Constants::Range::Nearby;
+		closest->duration = trigger->duration;
+		closest->circle.range = trigger->range;
 	}
 }
 
 void EffectRenderer::PacketCallback(GW::Packet::StoC::GenericValue* pak) {
 	if (!initialized) return;
-	int duration = 10000;
-	float range = 0;
 	if (pak->Value_id != 21) // Effect on agent
 		return;
-	if (!GetRangeAndDuration(pak->value, &range, &duration, pak->header))
+	auto it = aoe_effect_settings.find(pak->value);
+	if (it == aoe_effect_settings.end())
+		return;
+	auto settings = it->second;
+	if (settings->stoc_header && settings->stoc_header != pak->header)
 		return;
 	GW::Agent* caster = GW::Agents::GetAgentByID(pak->agent_id);
 	if (!caster || caster->allegiance != 0x3) return;
-	Effect* e = new Effect(pak->value, caster->pos.x, caster->pos.y, duration, range);
-    e->circle.color = &aoe_color;
-	aoe_effects.push_back(e);
+	aoe_effects.push_back(new Effect(pak->value, caster->pos.x, caster->pos.y, settings->duration, settings->range, &settings->color));
 }
 void EffectRenderer::PacketCallback(GW::Packet::StoC::GenericValueTarget* pak) {
 	if (!initialized) return;
-	int duration = 10000;
-	float range = 0;
 	if (pak->Value_id != 20) // Effect on target
 		return;
-	if (!GetRangeAndDuration(pak->value, &range, &duration, pak->header))
+	auto it = aoe_effect_settings.find(pak->value);
+	if (it == aoe_effect_settings.end())
+		return;
+	auto settings = it->second;
+	if (settings->stoc_header && settings->stoc_header != pak->header)
 		return;
 	if (pak->caster == pak->target) return;
 	GW::Agent* caster = GW::Agents::GetAgentByID(pak->caster);
 	if (!caster || caster->allegiance != 0x3) return;
 	GW::Agent* target = GW::Agents::GetAgentByID(pak->target);
 	if (!target) return;
-	Effect* e = new Effect(pak->value, target->pos.x, target->pos.y, duration, range);
-	e->circle.color = &aoe_color;
-	aoe_effects.push_back(e);
+	aoe_effects.push_back(new Effect(pak->value, target->pos.x, target->pos.y, settings->duration, settings->range, &settings->color));
 }
 void EffectRenderer::PacketCallback(GW::Packet::StoC::PlayEffect* pak) {
 	if (!initialized) return;
 	// TODO: Fire storm and Meteor shower have no caster!
 	// Need to record GenericValueTarget with value_id matching these skills, then roughly match the coords after.
-	int duration = 10000;
-	float range = 0;
 	RemoveTriggeredEffect(pak->effect_id, &pak->coords);
-	if (!GetRangeAndDuration(pak->effect_id, &range, &duration, pak->header))
+	auto it = aoe_effect_settings.find(pak->effect_id);
+	if (it == aoe_effect_settings.end())
+		return;
+	auto settings = it->second;
+	if (settings->stoc_header && settings->stoc_header != pak->header)
 		return;
 	GW::Agent* a = GW::Agents::GetAgentByID(pak->agent_id);
 	if (!a || a->allegiance != 0x3) return;
-	Effect* e = new Effect(pak->effect_id, pak->coords.x, pak->coords.y, duration, range);
-	e->circle.color = &aoe_color;
-	aoe_effects.push_back(e);
+	aoe_effects.push_back(new Effect(pak->effect_id, pak->coords.x, pak->coords.y, settings->duration, settings->range, &settings->color));
 }
 void EffectRenderer::Initialize(IDirect3DDevice9* device) {
 	if (initialized)

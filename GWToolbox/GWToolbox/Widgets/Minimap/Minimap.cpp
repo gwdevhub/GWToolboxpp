@@ -279,6 +279,7 @@ void Minimap::SaveSettings(CSimpleIni* ini) {
 	pingslines_renderer.SaveSettings(ini, Name());
 	symbols_renderer.SaveSettings(ini, Name());
 	custom_renderer.SaveSettings(ini, Name());
+	effect_renderer.SaveSettings(ini, Name());
 }
 
 void Minimap::GetPlayerHeroes(GW::PartyInfo *party, std::vector<GW::AgentID>& player_heroes) {

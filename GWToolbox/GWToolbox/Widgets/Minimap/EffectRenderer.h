@@ -30,8 +30,9 @@ class EffectRenderer : public VBuffer {
 		float range = GW::Constants::Range::Adjacent;
 	};
 	struct Effect {
-		Effect(uint32_t _effect_id, float _x, float _y, int _duration = 10000, float range = GW::Constants::Range::Adjacent) : effect_id(_effect_id), pos(_x,_y), duration(_duration), start(TIMER_INIT()) {
+		Effect(uint32_t _effect_id, float _x, float _y, int _duration, float range, Color * _color) : effect_id(_effect_id), pos(_x,_y), duration(_duration), start(TIMER_INIT()) {
 			circle.range = range;
+			circle.color = _color;
 		};
 		clock_t start;
 		const uint32_t effect_id;
@@ -49,6 +50,8 @@ public:
 		aoe_effects.clear();
 		trap_triggers_handled.clear();
 	}
+	EffectRenderer();
+	~EffectRenderer();
 	void PacketCallback(GW::Packet::StoC::GenericValue* pak);
 	void PacketCallback(GW::Packet::StoC::GenericValueTarget* pak);
 	void PacketCallback(GW::Packet::StoC::PlayEffect* pak);
@@ -76,8 +79,26 @@ private:
 
 	std::recursive_mutex effects_mutex;
 
+	struct EffectSettings {
+		Color color = 0xFFFF0000;
+		std::string name;
+		uint32_t effect_id;
+		float range = GW::Constants::Range::Nearby;
+		uint32_t stoc_header = 0;
+		uint32_t duration = 10000;
+		EffectSettings(const char* _name, uint32_t _effect_id, float _range, uint32_t _duration, uint32_t _stoc_header = 0) : name(_name), effect_id(_effect_id), range(_range), duration(_duration), stoc_header(_stoc_header) {};
+	};
+	struct EffectTrigger {
+		uint32_t triggered_effect_id = 0;
+		uint32_t duration = 2000;
+		float range = GW::Constants::Range::Nearby;
+		EffectTrigger(uint32_t _triggered_effect_id, uint32_t _duration, float _range) : triggered_effect_id(_triggered_effect_id), duration(_duration), range(_range) {};
+	};
+
+	std::unordered_map<uint32_t, EffectSettings*> aoe_effect_settings;
+	std::unordered_map<uint32_t, EffectTrigger*> aoe_effect_triggers;
+
 	GW::HookEntry StoC_Hook;
 	
-	Color aoe_color = 0xFFFF0000;
 	unsigned int vertices_max = 0x1000;	// max number of vertices to draw in one call
 };
