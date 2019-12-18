@@ -86,8 +86,8 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
 
 	// Only read settings of non-core modules
 	for (ToolboxModule* module : optional_modules) {
-		module->LoadSettings(ini);
-		module->Initialize();
+        module->Initialize();
+        module->LoadSettings(ini);
 	}
 }
 
