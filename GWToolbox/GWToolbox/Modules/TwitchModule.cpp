@@ -114,6 +114,12 @@ void TwitchModule::Initialize() {
     conn.hook_irc_command("PART", &OnLeave);
     conn.hook_irc_command("PRIVMSG", &OnMessage);
 	conn.hook_irc_command("NOTICE", &OnNotice);
+
+	AddHooks();
+
+	Color col1, col2;
+	GW::Chat::GetChannelColors(GW::Chat::Channel::CHANNEL_GUILD, &col1, &col2);
+	GW::Chat::SetMessageColor(GW::Chat::Channel::CHANNEL_GWCA1, col2);
 }
 void TwitchModule::AddHooks() {
 	if (hooked) return;
@@ -125,7 +131,7 @@ void TwitchModule::AddHooks() {
 			return false;
 		std::wstring walias = GuiUtils::StringToWString(TwitchModule::Instance().irc_alias);
 		swprintf(buf, 128, L" @ %s", walias.c_str());
-		if ((std::wstring(name)).find(buf) != -1) {
+		if ((std::wstring(name)).find(buf) != std::wstring::npos) {
 			wcscpy(name, walias.c_str());
 		}
 		return false;
@@ -159,6 +165,8 @@ void TwitchModule::AddHooks() {
 	});
 }
 void TwitchModule::Disconnect() {
+	connected = conn.is_connected();
+	if (!connected) return;
 	conn.disconnect();
 	connected = conn.is_connected();
 }
@@ -181,6 +189,8 @@ bool TwitchModule::Connect() {
 		printf("Invalid server name!\n");
 		return false;
 	}
+	if (strcmp(irc_password.c_str(), "oauth:<your_token_here>") == 0)
+		return false;
 	/*if(irc_username.empty()) {
         printf("Invalid username!\n");
         return false;
@@ -208,6 +218,14 @@ bool TwitchModule::Connect() {
 }
 void TwitchModule::Update(float delta) {
 	connected = conn.is_connected();
+	if (pending_disconnect) {
+		Disconnect();
+		pending_connect = pending_disconnect = false;
+	}
+	if (pending_connect) {
+		Connect();
+		pending_connect = pending_disconnect = false;
+	}
 }
 void TwitchModule::DrawSettingInternal() {
 	bool edited = false;
@@ -219,10 +237,10 @@ void TwitchModule::DrawSettingInternal() {
 		ImGui::PushStyleColor(ImGuiCol_Text, connected ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
 		if (ImGui::Button(connected ? "Connected" : "Disconnected", ImVec2(0, 0))) {
 			if (connected) {
-				Disconnect();
+				pending_disconnect = true;
 			}
 			else {
-				Connect();
+				pending_connect = true;
 			}
 			edited |= true;
 		}
@@ -284,17 +302,11 @@ void TwitchModule::LoadSettings(CSimpleIni* ini) {
     notify_on_user_leave = ini->GetBoolValue(Name(), VAR_NAME(notify_on_user_leave), notify_on_user_leave);
 
     irc_chat_color = (GW::Chat::Color)Colors::Load(ini, Name(), VAR_NAME(irc_chat_color), irc_chat_color);
-	GW::Chat::SetSenderColor(GW::Chat::Channel::CHANNEL_GWCA1, TwitchModule::Instance().irc_chat_color);
-	Color col1, col2;
-	GW::Chat::GetChannelColors(GW::Chat::Channel::CHANNEL_GUILD, &col1, &col2);
-	GW::Chat::SetMessageColor(GW::Chat::Channel::CHANNEL_GWCA1, col2);
-	AddHooks();
-	if (strcmp(irc_password.c_str(), "oauth:<your_token_here>") == 0) {
-		show_irc_password = true;
-	}
-	else {
-		Connect();
-	}
+	show_irc_password = strcmp(irc_password.c_str(), "oauth:<your_token_here>") == 0;
+
+	GW::Chat::SetSenderColor(GW::Chat::Channel::CHANNEL_GWCA1, irc_chat_color);
+
+	pending_connect = true;
 }
 void TwitchModule::SaveSettings(CSimpleIni* ini) {
     ToolboxModule::SaveSettings(ini);

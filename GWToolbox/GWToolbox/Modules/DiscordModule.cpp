@@ -320,7 +320,17 @@ void DiscordModule::Initialize() {
     if(GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
         zone_entered_time = time(nullptr) - (GW::Map::GetInstanceTime() / 1000);
     pending_activity_update = true;
-	// Actual connection started in LoadSettings
+    // Try to download and inject discord_game_sdk.dll for discord.
+    dll_location = Resources::GetPath(L"discord_game_sdk.dll");
+    // NOTE: We're using the one we know matches our API version, not checking for any other discord dll on the machine.
+    Resources::Instance().EnsureFileExists(dll_location, DISCORD_DLL_REMOTE_URL,
+        [&](bool success) {
+            if (!success || !LoadDll()) {
+                //Log::Error("Failed to load discord_game_sdk.dll. To try again, please restart GWToolbox");
+                return;
+            }
+            pending_discord_connect = pending_activity_update = discord_enabled;
+        });
 }
 bool DiscordModule::IsInJoinablePartyMap() {
     if (!join_in_progress.map_id)
@@ -502,17 +512,6 @@ void DiscordModule::LoadSettings(CSimpleIni* ini) {
     show_location_info = ini->GetBoolValue(Name(), VAR_NAME(show_location_info), show_location_info);
     show_character_info = ini->GetBoolValue(Name(), VAR_NAME(show_character_info), show_character_info);
     show_party_info = ini->GetBoolValue(Name(), VAR_NAME(show_party_info), show_party_info);
-
-    // Try to download and inject discord_game_sdk.dll for discord.
-	dll_location = Resources::GetPath(L"discord_game_sdk.dll");
-    // NOTE: We're using the one we know matches our API version, not checking for any other discord dll on the machine.
-    Resources::Instance().EnsureFileExists(dll_location,DISCORD_DLL_REMOTE_URL,
-        [&](bool success) {
-            if (!success || !LoadDll()) {
-                Log::Error("Failed to load discord_game_sdk.dll. To try again, please restart GWToolbox");
-            }
-            pending_discord_connect = pending_activity_update = discord_enabled;
-        });
 }
 void DiscordModule::Update(float delta) {
 	if (!discord_enabled && discord_connected)

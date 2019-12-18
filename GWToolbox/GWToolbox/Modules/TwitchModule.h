@@ -42,6 +42,7 @@ public:
     IRC* irc() { return &conn; };
 private:
     bool pending_connect = false;
+    bool pending_disconnect = false;
     bool connected = false;
     bool show_irc_password = false;
 	bool twitch_enabled = true;
