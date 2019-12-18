@@ -1,97 +1,110 @@
 #pragma once
 
-#include <string>
-#include <Defines.h>
+#include <Windows.h>
+#include <d3d9.h>
 
+#include <GWCA\Context\GameContext.h>
+#include <GWCA\Context\WorldContext.h>
 #include <GWCA\Constants\Constants.h>
-#include <GWCA\Constants\Skills.h>
-#include <GWCA\Managers\MapMgr.h>
-#include <SimpleIni.h>
+#include <Modules\Resources.h>
 
-// abstract class Toolbox Hotkey
-// has the key code and pressed status
-class TBMission {
+
+enum class Campaign {
+    Prophecies,
+    Factions,
+    Nightfall,
+    EyeOfTheNorth,
+    Dungeon,
+};
+
+const std::map<Campaign, const char*> Campaign_to_string = {
+    {Campaign::Prophecies, "Prophecies"},
+    {Campaign::Factions, "Factions"},
+    {Campaign::Nightfall, "Nightfall"},
+    {Campaign::EyeOfTheNorth, "Eye of the North"},
+    {Campaign::Dungeon, "Dungeons"},
+};
+
+
+class Mission {
+protected:
+    GW::Constants::MapID outpost;
+    std::vector<IDirect3DTexture9*> normal_mode_textures;
+    std::vector<IDirect3DTexture9*> hard_mode_textures;
+
 public:
-	enum Op {
-		Op_None,
-		Op_MoveUp,
-		Op_MoveDown,
-		Op_Delete,
-		Op_BlockInput,
-	};
+    using ImgPair = std::pair<const wchar_t*, const WORD>;
+    using MissionImageList = std::vector<ImgPair>;
 
-	static bool show_active_in_header;
-	static bool show_run_in_header;
-	static bool hotkeys_changed;
+    Mission(GW::Constants::MapID, const MissionImageList&, const MissionImageList&);
 
-	static TBMission* HotkeyFactory(CSimpleIni* ini, const char* section);
+    void Draw(IDirect3DDevice9*);
+    virtual const char* Name() { return GW::Constants::NAME_FROM_ID[static_cast<int>(outpost)]; }
+    virtual IDirect3DTexture9* GetMissionImage();
+    //TODO: on press -> travel
+    //TODO: highlight dailies
+    //TODO: highlight if you have quest
+};
 
-	bool pressed = false;	// if the key has been pressed
-	bool active = true;		// if the hotkey is enabled/active
 
-	long hotkey = 0;
-	long modifier = 0;
+class PropheciesMission : public Mission {
+private:
+    static const MissionImageList normal_mode_images;
+    static const MissionImageList hard_mode_images;
 
-	// Create hotkey, load from file if 'ini' is not null
-	TBMission(CSimpleIni* ini, const char* section);
+public:
+    PropheciesMission(GW::Constants::MapID _outpost)
+        : Mission(_outpost, normal_mode_images, hard_mode_images) {}
+};
 
-	virtual void Save(CSimpleIni* ini, const char* section) const;
 
-	void Draw(Op* op);
+class FactionsMission : public Mission {
+private:
+    static const MissionImageList normal_mode_images;
+    static const MissionImageList hard_mode_images;
 
-	virtual const char* Name() const = 0;
-	virtual void Draw() = 0;
-	virtual void Description(char* buf, int bufsz) const = 0;
-	virtual void Execute() = 0;
+public:
+    FactionsMission(GW::Constants::MapID _outpost)
+        : Mission(_outpost, normal_mode_images, hard_mode_images) {}
+};
+
+
+class NightfallMission : public Mission {
+private:
+    static const MissionImageList normal_mode_images;
+    static const MissionImageList hard_mode_images;
+
+public:
+    NightfallMission(GW::Constants::MapID _outpost)
+        : Mission(_outpost, normal_mode_images, hard_mode_images) {}
+};
+
+
+class EotNMission : public Mission {
+private:
+    static const MissionImageList normal_mode_images;
+    static const MissionImageList hard_mode_images;
+    const char* name;
 
 protected:
-	inline bool isLoading() const { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading; }
-	inline bool isExplorable() const { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable; }
-	inline bool isOutpost() const { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost; }
-
-	const unsigned int ui_id = 0;	// an internal id to ensure interface consistency
-
-private:
-	static unsigned int cur_ui_id;
-
-};
-
-// hotkey to send a message in chat
-// can be used for anything that uses SendChat
-class MissionSendChat : public TBMission {
-private:
-	char message[139];
-	char channel = '/';
+    EotNMission(GW::Constants::MapID _outpost, const char* _name,
+        const MissionImageList& normal_mode_images, const MissionImageList& hard_mode_images)
+        : Mission(_outpost, normal_mode_images, hard_mode_images), name(_name) {}
 
 public:
-	inline static const char* IniSection() { return "SendChat"; }
-	const char* Name() const override { return IniSection(); }
+    EotNMission(GW::Constants::MapID _outpost, const char* _name)
+        : Mission(_outpost, normal_mode_images, hard_mode_images),  name(_name) {}
 
-	MissionSendChat(CSimpleIni* ini, const char* section);
-
-	void Save(CSimpleIni* ini, const char* section) const override;
-
-	void Draw() override;
-	void Description(char* buf, int bufsz) const;
-	void Execute() override;
+    const char* Name() override { return name; }
+    IDirect3DTexture9* GetMissionImage();
 };
 
-// hotkey to use an item
-// will use the item in explorable areas, and display a warning with given name if not found
-class MissionUseItem : public TBMission {
+class Dungeon : public EotNMission {
 private:
-	UINT item_id = 0;
-	char name[140];
+    static const MissionImageList normal_mode_images;
+    static const MissionImageList hard_mode_images;
 
 public:
-	static const char* IniSection() { return "UseItem"; }
-	const char* Name() const override { return IniSection(); }
-
-	MissionUseItem(CSimpleIni* ini, const char* section);
-
-	void Save(CSimpleIni* ini, const char* section) const override;
-
-	void Draw() override;
-	void Description(char* buf, int bufsz) const;
-	void Execute() override;
+    Dungeon(GW::Constants::MapID _outpost, const char* _name)
+        : EotNMission(_outpost, _name, normal_mode_images, hard_mode_images){}
 };
