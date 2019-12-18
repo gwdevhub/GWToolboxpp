@@ -52,16 +52,12 @@ std::vector<std::vector<clock_t>> Pcon::reserved_bag_slots(22, std::vector<clock
 Pcon::Pcon(const char* chatname,
 	const char* abbrevname,
     const char* ininame,
-    const wchar_t* filename,
-    WORD res_id,
+    const wchar_t* filename_, WORD res_id_,
     ImVec2 uv0_, ImVec2 uv1_, int threshold_,
     const char* desc_)
-    : chat(chatname), abbrev(abbrevname), ini(ininame), uv0(uv0_), uv1(uv1_), threshold(threshold_), timer(TIMER_INIT()) {
-    settings_by_charname[L"default"] = new bool(false);
-    enabled = settings_by_charname[character_name];
-	if (desc_)
-		desc = desc_;
-	Resources::Instance().LoadTextureAsync(&texture, Resources::GetPath(L"img/pcons", filename), res_id);
+    : chat(chatname), abbrev(abbrevname), ini(ininame), filename(filename_), res_id(res_id_), uv0(uv0_), uv1(uv1_), threshold(threshold_), timer(TIMER_INIT()) {
+    enabled = settings_by_charname[L"default"] = new bool(false);
+	if (desc_) desc = desc_;
 }
 Pcon::~Pcon() {
 	if (refill_thread.joinable())
@@ -133,6 +129,9 @@ void Pcon::Draw(IDirect3DDevice9* device) {
 	
 	ImGui::SetCursorPos(pos);
 	ImGui::Dummy(ImVec2(size, size));
+}
+void Pcon::Initialize() {
+	Resources::Instance().LoadTextureAsync(&texture, Resources::GetPath(L"img/pcons", filename), res_id);
 }
 void Pcon::Update(int delay) {
 	if (mapid != GW::Map::GetMapID() || maptype != GW::Map::GetInstanceType()) { // Map changed; reset vars

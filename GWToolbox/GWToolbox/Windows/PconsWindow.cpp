@@ -120,6 +120,9 @@ PconsWindow::PconsWindow() {
 void PconsWindow::Initialize() {
 	ToolboxWindow::Initialize();
 	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"cupcake.png"), IDB_Icon_Cupcake);
+	for (Pcon* pcon : pcons) {
+		pcon->Initialize();
+	}
 
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentSetPlayer>(&AgentSetPlayer_Entry,
 	[](GW::HookStatus *, GW::Packet::StoC::AgentSetPlayer *pak) -> void {

@@ -50,6 +50,7 @@ protected:
 	static bool ReserveSlotForMove(int bagId, int slot); // Prevents more than 1 pcon from trying to add to the same slot at the same time.
 	static bool IsSlotReservedForMove(int bagId, int slot); // Checks whether another pcon has reserved this slot.
 public:
+	void Initialize();
 	virtual void Draw(IDirect3DDevice9* device);
 	virtual void Update(int delay = -1);
 	// Similar to GW::Items::MoveItem, except this returns amount moved and uses the split stack header when needed.
@@ -78,8 +79,10 @@ public:
 	int threshold = 0; 
     bool visible = true;
     int quantity = 0;
+	// Icon vars
+	WORD res_id = 0;
+	std::wstring filename;
 	int quantity_storage = 0;
-    wchar_t* character_name = L"default";
 
 	clock_t timer = 0;
 
