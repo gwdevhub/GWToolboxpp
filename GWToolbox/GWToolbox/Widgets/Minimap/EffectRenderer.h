@@ -45,11 +45,7 @@ public:
 
 	void Render(IDirect3DDevice9* device) override;
 
-	inline void Invalidate() {
-		for (Effect* p : aoe_effects) delete p;
-		aoe_effects.clear();
-		trap_triggers_handled.clear();
-	}
+	void Invalidate();
 	EffectRenderer();
 	~EffectRenderer();
 	void PacketCallback(GW::Packet::StoC::GenericValue* pak);
@@ -74,7 +70,6 @@ private:
 			return std::hash<T1>()(pair.first) ^ std::hash<T2>()(pair.second);
 		}
 	};
-	std::unordered_map<std::pair<float,float>, clock_t, pair_hash> trap_triggers_handled;
 	bool need_to_clear_effects = false;
 
 	std::recursive_mutex effects_mutex;
@@ -92,6 +87,7 @@ private:
 		uint32_t triggered_effect_id = 0;
 		uint32_t duration = 2000;
 		float range = GW::Constants::Range::Nearby;
+		std::unordered_map<std::pair<float, float>, clock_t, pair_hash> triggers_handled;
 		EffectTrigger(uint32_t _triggered_effect_id, uint32_t _duration, float _range) : triggered_effect_id(_triggered_effect_id), duration(_duration), range(_range) {};
 	};
 

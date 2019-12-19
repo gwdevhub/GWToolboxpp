@@ -55,6 +55,7 @@ EffectRenderer::EffectRenderer() {
 	aoe_effect_triggers.emplace(Spike_Trap_Activate, new EffectTrigger(Spike_Trap, 2000, GW::Constants::Range::Nearby));
 }
 EffectRenderer::~EffectRenderer() {
+	Invalidate();
 	for (auto settings : aoe_effect_settings) {
 		delete settings.second;
 	}
@@ -63,6 +64,15 @@ EffectRenderer::~EffectRenderer() {
 		delete triggers.second;
 	}
 	aoe_effect_triggers.clear();
+}
+void EffectRenderer::Invalidate() {
+	for (auto p : aoe_effects) {
+		delete p;
+	}
+	aoe_effects.clear();
+	for (auto trigger : aoe_effect_triggers) {
+		trigger.second->triggers_handled.clear();
+	}
 }
 void EffectRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	Invalidate();
@@ -96,11 +106,11 @@ void EffectRenderer::RemoveTriggeredEffect(uint32_t effect_id, GW::Vec2f* pos) {
 	auto trigger = it1->second;
 	auto settings = aoe_effect_settings.find(trigger->triggered_effect_id)->second;
 	std::pair<float, float> posp = { pos->x,pos->y };
-	auto trap_handled = trap_triggers_handled.find(posp);
-	if (trap_handled != trap_triggers_handled.end() && TIMER_DIFF(trap_handled->second) < 5000) {
+	auto trap_handled = trigger->triggers_handled.find(posp);
+	if (trap_handled != trigger->triggers_handled.end() && TIMER_DIFF(trap_handled->second) < 5000) {
 		return; // Already handled this trap, e.g. Spike Trap triggers 3 times over 2 seconds; we only care about the first.
 	}
-	trap_triggers_handled.emplace(posp, TIMER_INIT());
+	trigger->triggers_handled.emplace(posp, TIMER_INIT());
 	std::lock_guard<std::recursive_mutex> lock(effects_mutex);
 	Effect* closest = nullptr;
 	float closestDistance = GW::Constants::SqrRange::Nearby;
