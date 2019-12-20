@@ -37,7 +37,7 @@
 #include <Windows/MaterialsWindow.h>
 #include <Windows/SettingsWindow.h>
 #include <Windows/NotePadWindow.h>
-#include <Windows/TradeWindow.h>
+#include <Windows/TradeWindowExtended.h>
 #include <Windows/ObjectiveTimerWindow.h>
 #include <Windows/FactionLeaderboardWindow.h>
 #include <Windows/DailyQuests.h>

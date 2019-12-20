@@ -42,12 +42,48 @@
 
 #define TRADE_LOG_FILENAME "trade_log.txt"
 
+static const uint32_t COST_PER_CONNECTION_MS = 30 * 1000;
+static const uint32_t COST_PER_CONNECTION_MAX_MS = 60 * 1000;
+
 using easywsclient::WebSocket;
 using nlohmann::json;
 using json_vec = std::vector<json>;
 
 static const char ws_host[] = "wss://kamadan.decltype.org/ws/";
+static const std::regex regex_check = std::regex("^/(.*)/[a-z]?$", std::regex::ECMAScript | std::regex::icase);
 
+void TradeWindow::NotifyTradeBlockedInKamadan() {
+	if (print_game_chat && only_show_trade_alerts_in_kamadan && filter_alerts && GetInKamadan())
+		Log::Info("Only trade alerts will be visible in the trade channel.\nYou can still view all Kamadan trade messages via Trade window.");
+}
+bool TradeWindow::FilterTradeMessage(std::string msg) {
+	if (!filter_alerts)
+		return true;
+	for (auto& word : alert_words) {
+		if (std::regex_search(word, m, regex_check)) {
+			try {
+				word_regex = std::regex(m._At(1).str(), std::regex::ECMAScript | std::regex::icase);
+			}
+			catch (...) {
+				// Silent fail; invalid regex
+			}
+			if (std::regex_search(msg, word_regex))
+				return true;
+		}
+		else {
+			auto found = std::search(msg.begin(), msg.end(), word.begin(), word.end(), [](char c1, char c2) -> bool {
+				return tolower(c1) == c2;
+				});
+			if (found != msg.end())
+				return true;
+		}
+	}
+	return false;
+}
+bool TradeWindow::FilterTradeMessage(std::wstring msg) {
+	std::string ws = GuiUtils::WStringToString(msg);
+	return FilterTradeMessage(ws);
+}
 void TradeWindow::Initialize() {
 	ToolboxWindow::Initialize();
 	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"trade.png"));
@@ -124,6 +160,22 @@ void TradeWindow::Initialize() {
 		}
 		localtradelogfile_dirty = true;
 		});
+	GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::MapLoaded>(&OnTradeMessage_Entry, [&](GW::HookStatus*, GW::Packet::StoC::MapLoaded*) {
+		NotifyTradeBlockedInKamadan();
+		});
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&OnTradeMessage_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::MessageLocal* pak) {
+		if (!print_game_chat || !only_show_trade_alerts_in_kamadan || !filter_alerts) return;
+		if (pak->channel != GW::Chat::CHANNEL_TRADE) return;
+		if (!GetInKamadan()) return;
+		GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
+		if (!buff || !buff->valid())
+			return;
+		if (!FilterTradeMessage(buff->begin())) {
+			status->blocked = true;
+			buff->clear();
+		}
+		});
+	NotifyTradeBlockedInKamadan();
 }
 
 void TradeWindow::Terminate() {
@@ -165,80 +217,49 @@ bool TradeWindow::GetInKamadan() {
 
 void TradeWindow::Update(float delta) {
 	fetch();
-
-	if (!print_game_chat) return;
-	if (ws_chat && ws_chat->getReadyState() == WebSocket::CLOSED) {
-		delete ws_chat;
-		ws_chat = nullptr;
+	if (ws_chat) {
+		switch (ws_chat->getReadyState()) {
+		case WebSocket::CLOSED:
+			delete ws_chat;
+			ws_chat = nullptr;
+			return;
+		case WebSocket::CLOSING:
+			ws_chat->poll();
+			return;
+		}
 	}
-
-	// do not display trade chat while in kamadan AE district 1
-	if (GetInKamadanAE1()) {
+	if (!enable_kamadan_decltype) {
+		if (ws_chat) ws_chat->close();
+		if (ws_window) ws_window->close();
+		return;
+	}
+	if (!print_game_chat || GetInKamadan()) {
 		if (ws_chat) ws_chat->close();
 		return;
 	}
-
 	if (!ws_chat && !ws_chat_connecting) {
-		if (clock() > socket_retry_clock + socket_retry_interval)
-			AsyncChatConnect(); // Only retry connection after retry timeout.
+		AsyncChatConnect();
 		return;
 	}
 
 	if (!ws_chat || ws_chat->getReadyState() != WebSocket::OPEN)
 		return;
 
-
 	ws_chat->poll();
 	ws_chat->dispatch([this](const std::string& data) {
-		char buffer[512];
+		wchar_t buffer[512];
 		json res = json::parse(data.c_str());
-
-
 
 		// We don't support queries in the chat
 		if (res.find("query") != res.end())
 			return;
-		const std::regex regex_check = std::regex("^/(.*)/[a-z]?$", std::regex::ECMAScript | std::regex::icase);
-		std::regex word_regex;
-		std::smatch m;
-		std::string s;
-		std::string msg = res["message"].get<std::string>();
-		bool print_message = true;
-		if (filter_alerts) {
-			print_message = false; // filtered unless allowed by words
-			for (auto& word : alert_words) {
-				if (std::regex_search(word, m, regex_check)) {
-					s = m._At(1).str();
-					// Log::Info("Match %s",s.c_str());
-					try {
-						word_regex = std::regex(s, std::regex::ECMAScript | std::regex::icase);
-					}
-					catch (...) {
-						// Silent fail.
-					}
-					if (std::regex_search(msg, word_regex)) {
-						print_message = true;
-						break;
-					}
-				}
-				else {
-					auto found = std::search(msg.begin(), msg.end(), word.begin(), word.end(), [](char c1, char c2) -> bool {
-						return tolower(c1) == c2;
-						});
-					if (found != msg.end()) {
-						print_message = true;
-						break; // don't need to check other words
-					}
-				}
-			}
-		}
 
-		if (print_message) {
-			std::string name = res["name"].get<std::string>();
-			snprintf(buffer, sizeof(buffer), "<a=1>%s</a>: <c=#f96677><quote>%s", name.c_str(), msg.c_str());
+		std::string msg = res["message"].get<std::string>();
+		if (FilterTradeMessage(msg)) {
+			std::wstring name_ws = GuiUtils::StringToWString(res["name"].get<std::string>());
+			std::wstring msg_ws = GuiUtils::StringToWString(msg);
+			wnsprintfW(buffer, sizeof(buffer), L"<a=1>%s</a>: <c=#f96677><quote>%s", name_ws.c_str(), msg_ws.c_str());
 			GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, buffer);
-			if (flash_window_on_trade_alert)
-				GWToolbox::FlashWindow();
 		}
 		});
 }
@@ -252,8 +273,23 @@ TradeWindow::Message TradeWindow::parse_json_message(json js) {
 }
 
 void TradeWindow::fetch() {
-	if (ws_window == nullptr) return;
-	if (ws_window->getReadyState() != WebSocket::OPEN) return;
+	if (ws_window) {
+		switch (ws_window->getReadyState()) {
+		case WebSocket::CLOSED:
+			delete ws_window;
+			ws_window = nullptr;
+			return;
+		case WebSocket::CLOSING:
+			ws_window->poll();
+			return;
+		}
+	}
+	if (!enable_kamadan_decltype || !visible) {
+		if (ws_window) ws_window->close();
+		return;
+	}
+	if (!ws_window) AsyncWindowConnect();
+	if (!ws_window || ws_window->getReadyState() != WebSocket::OPEN) return;
 
 	ws_window->poll();
 	ws_window->dispatch([this](const std::string& data) {
@@ -275,19 +311,6 @@ void TradeWindow::fetch() {
 			}
 		}
 		});
-}
-void TradeWindow::ConnectionFailed(bool forced) {
-	printf("Couldn't connect to the host '%s'\n", ws_host);
-	socket_retry_interval += 5 * CLOCKS_PER_SEC;
-	if (socket_retry_interval > 120 * CLOCKS_PER_SEC)
-		socket_retry_interval = 120 * CLOCKS_PER_SEC; // Retry interval of 120 seconds at most.
-	socket_fail_count++;
-	if (forced) {
-		// If player attempted to connect directly, show an error.
-		GW::GameThread::Enqueue([this]() {
-			Log::Error("%s Failed to connect to kamadan.decltype.org", Name(), socket_fail_count);
-			});
-	}
 }
 void TradeWindow::search(std::string query) {
 	// for now we won't allow to enqueue more than 1 search, it shouldn't change anything because how fast we get the answers
@@ -343,26 +366,7 @@ void TradeWindow::search_local(std::string query) {
 }
 
 void TradeWindow::Draw(IDirect3DDevice9* device) {
-	if (visible) {
-		if (ws_window == nullptr) {
-			if (clock() > socket_retry_clock + socket_retry_interval)
-				AsyncWindowConnect(); // Only retry connection after retry timeout.
-		}
-	}
-	else { // not visible
-		if (ws_window) {
-			ws_window->close();
-			delete ws_window;
-			ws_window = nullptr;
-		}
-		return;
-	}
-
-	if (ws_window && ws_window->getReadyState() == WebSocket::CLOSED) {
-		delete ws_window;
-		ws_window = nullptr;
-	}
-
+	if (!visible) return;
 	// start the trade_searcher if its not active
 	// if (!trade_searcher->is_active() && !trade_searcher->is_timed_out()) trade_searcher->search("");
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
@@ -518,11 +522,17 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		}
 		else {
 			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
-			if (ImGui::Button("Not Connected", ImVec2(0, 20.0f)))
-				AsyncWindowConnect(true);
+			if (enable_kamadan_decltype) {
+				if (ImGui::Button("Not Connected - Click to re-connect to https://kamadan.decltype.org", ImVec2(0, 20.0f)))
+					AsyncWindowConnect(true);
+			}
+			else {
+				if (ImGui::Button("Not Connected - Click to travel to Kamadan ae1", ImVec2(0, 20.0f)))
+					GW::Map::Travel(GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost, GW::Constants::District::American, 1);
+			}
 			ImGui::PopStyleColor();
 			if (ImGui::IsItemHovered())
-				ImGui::SetTooltip("GWToolbox isn't fetching new trade messages.\nClick to re-connect to https://kamadan.decltype.org");
+				ImGui::SetTooltip("GWToolbox isn't fetching new trade messages.");
 		}
 
 		/* Alerts window */
@@ -538,17 +548,35 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 }
 
 void TradeWindow::DrawAlertsWindowContent(bool ownwindow) {
-	ImGui::Text("Alerts");
-	ImGui::Checkbox("Send Kamadan ad1 trade chat to your trade chat", &print_game_chat);
-	ImGui::Checkbox("Only show messages containing:", &filter_alerts);
-	ImGui::TextDisabled("(Each line is a separate keyword. Not case sensitive.)");
-	if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE,
-		ImVec2(-1.0f, ownwindow ? -1.0f : 0.0f))) {
-
-		ParseBuffer(alert_buf, alert_words);
-		alertfile_dirty = true;
+	ImGui::Text("Trade Window mode:");
+	if (ImGui::RadioButton("kamadan.decltype.org", enable_kamadan_decltype)) {
+		AsyncWindowConnect(true);
 	}
-	ImGui::Checkbox("Flash Guild Wars window in taskbar on match", &flash_window_on_trade_alert);
+	ImGui::ShowHelp("Show messages from kamadan.decltype.org in Trade Window");
+	ImGui::SameLine();
+	if (ImGui::RadioButton("In-Game Trade Chat", !enable_kamadan_decltype))
+		enable_kamadan_decltype = false;
+	ImGui::ShowHelp("Show messages from your Kamadan ae1 Trade Chat in Trade Window");
+	ImGui::Text("Alerts:");
+	bool edited = false;
+	edited |= ImGui::Checkbox("Send Kamadan ad1 trade chat to your trade chat", &print_game_chat);
+	if (print_game_chat) {
+		edited |= ImGui::Checkbox("Only show messages containing:", &filter_alerts);
+		ImGui::TextDisabled("(Each line is a separate keyword. Not case sensitive.)");
+		if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE,
+			ImVec2(-1.0f, 0.0f))) {
+
+			ParseBuffer(alert_buf, alert_words);
+			alertfile_dirty = true;
+		}
+		if (filter_alerts) {
+			edited |= ImGui::Checkbox("Block all other trade messages when in Kamadan ae1", &only_show_trade_alerts_in_kamadan);
+			ImGui::ShowHelp("You can still view Kamadan trade chat via the main Trade Window");
+		}
+	}
+	if (edited) {
+		NotifyTradeBlockedInKamadan();
+	}
 }
 
 void TradeWindow::DrawSettingInternal() {
@@ -560,7 +588,7 @@ void TradeWindow::LoadSettings(CSimpleIni* ini) {
 	print_game_chat = ini->GetBoolValue(Name(), VAR_NAME(print_game_chat), false);
 	filter_alerts = ini->GetBoolValue(Name(), VAR_NAME(filter_alerts), false);
 	flash_window_on_trade_alert = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_trade_alert), flash_window_on_trade_alert);
-
+	enable_kamadan_decltype = ini->GetBoolValue(Name(), VAR_NAME(enable_kamadan_decltype), enable_kamadan_decltype);
 	std::ifstream alert_file;
 	alert_file.open(Resources::GetPath(L"AlertKeywords.txt"));
 	if (alert_file.is_open()) {
@@ -604,15 +632,14 @@ void TradeWindow::LoadSettings(CSimpleIni* ini) {
 	search_local(search_buffer);
 }
 
-
 void TradeWindow::SaveSettings(CSimpleIni* ini) {
 	ToolboxWindow::SaveSettings(ini);
 
 	ini->SetBoolValue(Name(), VAR_NAME(print_game_chat), print_game_chat);
 	ini->SetBoolValue(Name(), VAR_NAME(filter_alerts), filter_alerts);
 	ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_trade_alert), flash_window_on_trade_alert);
-
-
+	ini->SetBoolValue(Name(), VAR_NAME(enable_kamadan_decltype), enable_kamadan_decltype);
+	
 	if (alertfile_dirty) {
 		std::ofstream bycontent_file;
 		bycontent_file.open(Resources::GetPath(L"AlertKeywords.txt"));
@@ -672,40 +699,31 @@ void TradeWindow::ParseBuffer(std::fstream stream, std::vector<std::string>& wor
 }
 
 void TradeWindow::AsyncChatConnect(bool force) {
+	if (!enable_kamadan_decltype) return;
 	if (ws_chat) return;
 	if (ws_chat_connecting) return;
-	if (socket_fail_count >= 4 && !force) return;
+	if (!force && !chat_rate_limiter.AddTime(COST_PER_CONNECTION_MS, COST_PER_CONNECTION_MAX_MS))
+		return;
 	ws_chat_connecting = true;
-	thread_jobs.push([this, force]() {
-		socket_retry_clock = clock();
+	thread_jobs.push([this]() {
 		if (!(ws_chat = WebSocket::from_url(ws_host))) {
-			ConnectionFailed(force);
-		}
-		else {
-			logged_socket_fail_error = false;
-			socket_retry_interval = 0;
-			socket_retry_clock = 0;
-			socket_fail_count = 0;
+			Log::Log("Couldn't connect to the host '%s'", ws_host);
 		}
 		ws_chat_connecting = false;
 		});
 }
 
 void TradeWindow::AsyncWindowConnect(bool force) {
+	if (force) enable_kamadan_decltype = true;
+	if (!enable_kamadan_decltype) return;
 	if (ws_window) return;
 	if (ws_window_connecting) return;
-	if (socket_fail_count >= 4 && !force) return;
+	if (!force && !window_rate_limiter.AddTime(COST_PER_CONNECTION_MS, COST_PER_CONNECTION_MAX_MS))
+		return;
 	ws_window_connecting = true;
-	thread_jobs.push([this, force]() {
-		socket_retry_clock = clock();
+	thread_jobs.push([this]() {
 		if (!(ws_window = WebSocket::from_url(ws_host))) {
-			ConnectionFailed(force);
-		}
-		else {
-			logged_socket_fail_error = false;
-			socket_retry_interval = 0;
-			socket_retry_clock = 0;
-			socket_fail_count = 0;
+			Log::Log("Couldn't connect to the host '%s'", ws_host);
 		}
 		ws_window_connecting = false;
 		});

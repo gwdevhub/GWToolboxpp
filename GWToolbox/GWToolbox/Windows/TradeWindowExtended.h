@@ -14,6 +14,8 @@
 
 #include <GWCA\Utilities\Hook.h>
 
+#include "Utils\RateLimiter.h"
+
 class TradeWindow : public ToolboxWindow {
 	TradeWindow() {};
 	~TradeWindow();
@@ -27,6 +29,9 @@ public:
 
 	void Initialize() override;
 	void Terminate() override;
+
+	bool FilterTradeMessage(std::wstring message);
+	bool FilterTradeMessage(std::string message);
 
 	void Update(float delta) override;
 	void Draw(IDirect3DDevice9* pDevice) override;
@@ -51,15 +56,20 @@ private:
 		};
 	};
 
+	std::regex word_regex;
+	std::smatch m;
+
 	bool show_alert_window = false;
 
+	bool enable_kamadan_decltype = true;
 	// if we need to print in the chat
 	bool print_game_chat = false;
 	// Flash window when trade alert matches
-	bool flash_window_on_trade_alert = true;
+	bool flash_window_on_trade_alert = false;
 
 	// if enable, we won't print the messages containing word from alert_words
 	bool filter_alerts = false;
+	bool only_show_trade_alerts_in_kamadan = false;
 
 #define ALERT_BUF_SIZE 1024 * 16
 	char alert_buf[ALERT_BUF_SIZE] = "";
@@ -71,6 +81,8 @@ private:
 
 	void DrawAlertsWindowContent(bool ownwindow);
 
+	void NotifyTradeBlockedInKamadan();
+
 	static bool GetInKamadan();
 	static bool GetInKamadanAE1();
 
@@ -81,6 +93,9 @@ private:
 
 	bool ws_chat_connecting = false;
 	bool ws_window_connecting = false;
+
+	RateLimiter chat_rate_limiter;
+	RateLimiter window_rate_limiter;
 
 	easywsclient::WebSocket* ws_chat = NULL;
 	easywsclient::WebSocket* ws_window = NULL;
@@ -128,4 +143,5 @@ private:
 	static void DeleteWebSocket(easywsclient::WebSocket* ws);
 
 	GW::HookEntry MessageLocal_Entry;
+	GW::HookEntry OnTradeMessage_Entry;
 };
