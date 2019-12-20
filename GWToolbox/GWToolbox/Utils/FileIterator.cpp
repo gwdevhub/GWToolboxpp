@@ -5,14 +5,10 @@
 
 #include "FileIterator.h"
 
-#ifndef ArrayCount
-# define ArrayCount(array) (sizeof(array) / sizeof((array)[0]))
-#endif
-
 FileIterator::FileIterator(const wchar_t *path)
     : handle(NULL)
 {
-    wcsncpy(dirpath, path, ArrayCount(dirpath));
+    wcsncpy(dirpath, path, _countof(dirpath));
 }
 
 FileIterator::~FileIterator()
@@ -38,7 +34,7 @@ void FileIterator::InitFileInfo(FileInfo *info, struct _WIN32_FIND_DATAW *find_d
         info->attributes |= FileAttribute_Hidden;
 
     info->size = ((uint64_t)find_data->nFileSizeHigh << 32) | find_data->nFileSizeLow;
-    swprintf(info->path, ArrayCount(info->path), L"%s\\%s", dirpath, find_data->cFileName);
+    swprintf(info->path, _countof(info->path), L"%s\\%s", dirpath, find_data->cFileName);
 }
 
 bool FileIterator::GetNext(FileInfo *info)
