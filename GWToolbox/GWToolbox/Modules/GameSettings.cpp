@@ -427,7 +427,6 @@ void GameSettings::Initialize() {
 		printf("[SCAN] TomePatch = %p\n", (void *)found);
 		if (found) {
 			tome_patch.SetPatch(found, "\x75\x1E\x90\x90\x90\x90\x90", 7);
-            tome_patch.TooglePatch(show_unlearned_skill);
         }
 	}
 
@@ -437,7 +436,6 @@ void GameSettings::Initialize() {
 		printf("[SCAN] GoldConfirmationPatch = %p\n", (void *)found);
 		if (found) {
 			gold_confirm_patch.SetPatch(found, "\x90\x90", 2);
-            gold_confirm_patch.TooglePatch(disable_gold_selling_confirmation);
 		}
 	}
 
@@ -515,6 +513,9 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	if (move_item_on_ctrl_click) GW::Items::RegisterItemClickCallback(&ItemClickCallback_Entry, GameSettings::ItemClickCallback);
 
 	GW::Chat::RegisterWhisperCallback(&WhisperCallback_Entry, &WhisperCallback);
+
+    tome_patch.TooglePatch(show_unlearned_skill);
+    gold_confirm_patch.TooglePatch(disable_gold_selling_confirmation);
 }
 
 void GameSettings::Terminate() {
