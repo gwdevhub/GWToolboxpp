@@ -417,7 +417,7 @@ void GameSettings::Initialize() {
 		// when they added anniversary page so we do it ourself.
 		DWORD page_max = 14;
 		ctrl_click_patch.SetPatch(found, &page_max, 1);
-		ctrl_click_patch.TooglePatch(true);
+		ctrl_click_patch.TogglePatch(true);
 	}
 	
 	{
@@ -514,8 +514,8 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
 	GW::Chat::RegisterWhisperCallback(&WhisperCallback_Entry, &WhisperCallback);
 
-    tome_patch.TooglePatch(show_unlearned_skill);
-    gold_confirm_patch.TooglePatch(disable_gold_selling_confirmation);
+    tome_patch.TogglePatch(show_unlearned_skill);
+    gold_confirm_patch.TogglePatch(disable_gold_selling_confirmation);
 }
 
 void GameSettings::Terminate() {
@@ -644,13 +644,13 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::ShowHelp("Only if you were 'Away'");
 
 	if (ImGui::Checkbox("Only show non learned skills when using a tome", &show_unlearned_skill)) {
-		tome_patch.TooglePatch(show_unlearned_skill);
+		tome_patch.TogglePatch(show_unlearned_skill);
 	}
 
 	ImGui::Checkbox("Automatically skip cinematics", &auto_skip_cinematic);
 
 	if (ImGui::Checkbox("Disable Gold/Green items confirmation", &disable_gold_selling_confirmation)) {
-		gold_confirm_patch.TooglePatch(disable_gold_selling_confirmation);
+		gold_confirm_patch.TogglePatch(disable_gold_selling_confirmation);
 	}
 	ImGui::ShowHelp(
 		"Disable the confirmation request when\n"
