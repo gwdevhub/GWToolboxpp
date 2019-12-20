@@ -2,8 +2,9 @@
 #include <Array.au3>
 #include <GUIConstantsEx.au3>
 #include <File.au3>
+#include <WinAPIProc.au3>
 
-Global $mKernelHandle, $mGWProcHandle, $mCharname
+Global $mKernelHandle, $mGWProcHandle, $mGWProcId
 
 If Not InjectGW() Then MsgBox(0, "Inject Error", "There was an error in injection, code: " & @error)
 
@@ -15,17 +16,25 @@ Func InjectGW()
 			Exit MsgBox(0, "Injector - Err", "Cannot find an open Guild Wars client.")
 		Case Else
 			Local $lComboStr
-			Local $lCharArray[$lWinList[0][0]][2]
+			Local $lCharArray[$lWinList[0][0]]
 			Local $lFirstChar
+			Local $lCharNameRva
 
 			For $i = 1 To $lWinList[0][0]
-				$lCharArray[$i - 1][1] = WinGetProcess($lWinList[$i][1])
-				MemoryOpen($lCharArray[$i - 1][1])
-				If $i = 1 Then $lFirstChar = ScanForCharname()
-				$lCharArray[$i - 1][0] = MemoryRead($mCharname, 'wchar[30]')
+				Local $lPID = WinGetProcess($lWinList[$i][1])
+				MemoryOpen($lPID)
+				Local $lModuleBase, $lModuleSize
+				GetModuleInfo($lModuleBase, $lModuleSize)
+				If $i = 1 Then
+					$lCharNameRva = ScanForCharname($lModuleBase, $lModuleSize)
+					$lFirstChar = MemoryRead($lModuleBase + $lCharNameRva, 'wchar[30]')
+					$lCharArray[$i - 1] = $lFirstChar
+				Else
+					$lCharArray[$i - 1] = MemoryRead($lModuleBase + $lCharNameRva, 'wchar[30]')
+				EndIf
 				MemoryClose()
 
-				$lComboStr &= $lCharArray[$i - 1][0]
+				$lComboStr &= $lCharArray[$i - 1]
 				If $i <> $lWinList[0][0] Then $lComboStr &= '|'
 			Next
 			DllClose($mKernelHandle)
@@ -72,6 +81,7 @@ Func MemoryOpen($aPID)
 	$mKernelHandle = DllOpen('kernel32.dll')
 	Local $lOpenProcess = DllCall($mKernelHandle, 'int', 'OpenProcess', 'int', 0x1F0FFF, 'int', 1, 'int', $aPID)
 	$mGWProcHandle = $lOpenProcess[0]
+	$mGWProcId = $aPID
 EndFunc   ;==>MemoryOpen
 
 ;~ Description: Internal use only.
@@ -86,13 +96,30 @@ Func MemoryRead($aAddress, $aType = 'dword')
 	Return DllStructGetData($lBuffer, 1)
 EndFunc   ;==>MemoryRead
 
-Func ScanForCharname()
-	Local $lCharNameCode = BinaryToString('0x90909066C705')
-	Local $lCurrentSearchAddress = 0x00401000
+Func GetModuleInfo(ByRef $aModuleBase, ByRef $aModuleSize)
+	Local $lProcName = _WinAPI_GetProcessName($mGWProcId)
+	Local $lProcNameLength = StringLen($lProcName)
+
+	Local $lModules = _WinAPI_EnumProcessModules($mGWProcId)
+	For $i = 1 To $lModules[0][0]
+		Local $lModuleName = StringRight($lModules[$i][1], $lProcNameLength)
+		If StringCompare($lModuleName, $lProcName, $STR_NOCASESENSE) = 0 Then
+			Local $lModuleInfo = _WinAPI_GetModuleInformation($mGWProcHandle, $lModules[$i][0])
+			$aModuleBase = DllStructGetData($lModuleInfo, 'BaseOfDll')
+			$aModuleSize = DllStructGetData($lModuleInfo, 'SizeOfImage')
+			Return True
+		EndIf
+	Next
+	Return False
+EndFunc   ;==>GetModuleInfo
+
+Func ScanForCharname($aModuleBase, $aModuleSize)
+	Local $lCharNameCode = BinaryToString('0x8BF86A03680F0000C08BCFE8')
+	Local $lCurrentSearchAddress = $aModuleBase
 	Local $lMBI[7], $lMBIBuffer = DllStructCreate('dword;dword;dword;dword;dword;dword;dword')
 	Local $lSearch, $lTmpMemData, $lTmpAddress, $lTmpBuffer = DllStructCreate('ptr'), $i
 
-	While $lCurrentSearchAddress < 0x00900000
+	While $lCurrentSearchAddress < $aModuleBase + $aModuleSize
 		Local $lMBI[7]
 		DllCall($mKernelHandle, 'int', 'VirtualQueryEx', 'int', $mGWProcHandle, 'int', $lCurrentSearchAddress, 'ptr', DllStructGetPtr($lMBIBuffer), 'int', DllStructGetSize($lMBIBuffer))
 		For $i = 0 To 6
@@ -109,9 +136,8 @@ Func ScanForCharname()
 			$lSearch = StringInStr($lTmpMemData, $lCharNameCode, 2)
 			If $lSearch > 0 Then
 				$lTmpAddress = $lCurrentSearchAddress + $lSearch - 1
-				DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lTmpAddress + 0x6, 'ptr', DllStructGetPtr($lTmpBuffer), 'int', DllStructGetSize($lTmpBuffer), 'int', '')
-				$mCharname = DllStructGetData($lTmpBuffer, 1)
-				Return MemoryRead($mCharname, 'wchar[30]')
+				DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lTmpAddress - 0x42, 'ptr', DllStructGetPtr($lTmpBuffer), 'int', DllStructGetSize($lTmpBuffer), 'int', '')
+				Return DllStructGetData($lTmpBuffer, 1) - $aModuleBase
 			EndIf
 
 			$lCurrentSearchAddress += $lMBI[3]
