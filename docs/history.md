@@ -8,6 +8,16 @@ Previous releases are provided as dll files. In order to use it, you need to use
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
 
+## Version 2.29
+* [New] Added Discord 'Rich Presence' integration.
+* [Fix] Fixes following December 13th update.
+* [Fix] Pcons are not used in cinematic anymore.
+* [Minor] Minor improvements to `/tp <town name>` command.
+* [Minor] Guild Wars will ask permission to travel when in a group with other players.
+* [Minor] Vanquish Widget can now be ctrl+clicked to print the vanquish information to group chat.
+* [Minor] Now, '/resignlog' only prints name of players who didn't resigned yet.
+
+
 ## Version 2.27
 * [New] Added support for adrenaline skill with /useskill command.
 * [New] Added /resignlog command.
