@@ -16,7 +16,7 @@ Func InjectGW()
 			Exit MsgBox(0, "Injector - Err", "Cannot find an open Guild Wars client.")
 		Case Else
 			Local $lComboStr
-			Local $lCharArray[$lWinList[0][0]]
+			Local $lCharArray[$lWinList[0][0]][2]
 			Local $lFirstChar
 			Local $lCharNameRva
 
@@ -28,19 +28,20 @@ Func InjectGW()
 				If $i = 1 Then
 					$lCharNameRva = ScanForCharname($lModuleBase, $lModuleSize)
 					$lFirstChar = MemoryRead($lModuleBase + $lCharNameRva, 'wchar[30]')
-					$lCharArray[$i - 1] = $lFirstChar
+					$lCharArray[$i - 1][0] = $lFirstChar
 				Else
-					$lCharArray[$i - 1] = MemoryRead($lModuleBase + $lCharNameRva, 'wchar[30]')
+					$lCharArray[$i - 1][0] = MemoryRead($lModuleBase + $lCharNameRva, 'wchar[30]')
 				EndIf
+                $lCharArray[$i - 1][1] = $mGWProcId
 				MemoryClose()
 
-				$lComboStr &= $lCharArray[$i - 1]
+				$lComboStr &= $lCharArray[$i - 1][0]
 				If $i <> $lWinList[0][0] Then $lComboStr &= '|'
 			Next
 			DllClose($mKernelHandle)
 
 			Local $lDLLList = _FileListToArray(@ScriptDir, '*.dll', 1)
-			If $lDLLList[0] = 0 Then Exit MsgBox(0, "Injector - Err", "Cannot find any DLL's to inject.")
+			If Not IsArray($lDLLList) Then Exit MsgBox(0, "Injector - Err", "Cannot find any DLL's to inject.")
 
 			Local $mGUI = GUICreate("GW Injector", 161, 109)
 
