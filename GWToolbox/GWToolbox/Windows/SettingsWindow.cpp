@@ -4,6 +4,7 @@
 #include "Defines.h"
 #include "GuiUtils.h" 
 #include "GWToolbox.h"
+#include "Windows/MainWindow.h"
 
 #include <Modules/Updater.h>
 #include <Modules/Resources.h>
@@ -116,6 +117,7 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
 
 		ToolboxTheme::Instance().DrawSettings();
 		ToolboxSettings::Instance().DrawSettings();
+		MainWindow::Instance().DrawSettings();
 
 		const std::vector<ToolboxModule*>& optional_modules = ToolboxSettings::Instance().GetOptionalModules();
 		for (unsigned i = 0; i < optional_modules.size(); ++i) {
