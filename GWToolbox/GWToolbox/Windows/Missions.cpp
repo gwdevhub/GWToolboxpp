@@ -2,6 +2,7 @@
 #include "Missions.h"
 #include "TravelWindow.h"
 
+#include <GWCA/GameEntities/Quest.h>
 #include <GWCA/Managers/PartyMgr.h>
 #include "logger.h"
 
@@ -78,6 +79,10 @@ const Mission::MissionImageList Dungeon::hard_mode_images({
 });
 
 
+Color Mission::has_quest_bg_color = Colors::ARGB(102, 0, 255, 0);
+float Mission::icon_size = 48.0f;
+
+
 const char* const Missions::CampaignName(const Campaign camp) {
 	switch (camp) {
 	case Campaign::Prophecies:
@@ -107,8 +112,9 @@ static bool ArrayBoolAt(GW::Array<uint32_t>& array, uint32_t index)
 
 Mission::Mission(GW::Constants::MapID _outpost,
 				 const Mission::MissionImageList& normal_mode_images,
-				 const Mission::MissionImageList& hard_mode_images)
-	: outpost(_outpost)
+				 const Mission::MissionImageList& hard_mode_images,
+				 uint32_t _zm_quest)
+	: outpost(_outpost), zm_quest(_zm_quest)
 {
 	normal_mode_textures.assign(normal_mode_images.size(), nullptr);
 	hard_mode_textures.assign(hard_mode_images.size(), nullptr);
@@ -130,13 +136,15 @@ Mission::Mission(GW::Constants::MapID _outpost,
 }
 
 
-void Mission::Draw(IDirect3DDevice9* device, float icon_size)
+void Mission::Draw(IDirect3DDevice9* device)
 {
 	auto texture = GetMissionImage();
 	if (texture == nullptr) return;
 
+	bool has_quest = HasQuest();
+
 	ImVec2 s(icon_size, icon_size);
-	ImVec4 bg = ImVec4(0, 0, 0, 0);
+	ImVec4 bg = has_quest ? ImColor(has_quest_bg_color) : ImVec4(0, 0, 0, 0);
 	ImVec4 tint(1, 1, 1, 1);
 	ImVec2 uv0 = ImVec2(0, 0);
 	ImVec2 uv1 = ImVec2(1, 1);
@@ -172,14 +180,36 @@ IDirect3DTexture9* Mission::GetMissionImage()
 }
 
 
+bool Mission::IsDaily()
+{
+	//TODO how do we get the current daily?
+	return false;
+}
+
+
+bool Mission::HasQuest()
+{
+	GW::WorldContext* ctx = GW::GameContext::instance()->world;
+	const auto& quests = ctx->quest_log;
+	for (size_t i = 0; i < quests.size(); i++) {
+		GW::Quest q = quests[i];
+		if (q.quest_id == static_cast<uint32_t>(zm_quest)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+
 IDirect3DTexture9* EotNMission::GetMissionImage()
 {
+	//TODO do these work like proph, factions, nf?
 	bool hardmode = GW::PartyMgr::GetIsPartyInHardMode();
 	auto& texture_list = normal_mode_textures;
 	if (hardmode) {
 		texture_list = hard_mode_textures;
 	}
-	return texture_list.at(1);
+	return texture_list.at(0);
 }
 
 

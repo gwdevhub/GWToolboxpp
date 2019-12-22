@@ -16,12 +16,12 @@ public:
 	const char* Name() const override { return "Missions"; }
 
 	void Initialize() override;
+	void Initialize_Prophecies();
+	void Initialize_Factions();
+	void Initialize_Nightfall();
+	void Initialize_EotN();
+	void Initialize_Dungeons();
 	void Terminate() override;
-
-	// Update. Will always be called every frame.
-	// void Update(float delta) override;
-
-	// Draw user interface. Will be called every frame if the element is visible
 	void Draw(IDirect3DDevice9* pDevice) override;
 
 
@@ -38,5 +38,4 @@ public:
 	};
 
 	int missions_per_row = 5;
-	float icon_size = 48.0f;
 };
