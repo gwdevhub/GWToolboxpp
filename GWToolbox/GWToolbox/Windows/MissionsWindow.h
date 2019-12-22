@@ -29,14 +29,5 @@ public:
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
 
-	std::map<Missions::Campaign, std::vector<Missions::Mission*>> missions{
-		{ Missions::Campaign::Prophecies, {} },
-		{ Missions::Campaign::Factions, {} },
-		{ Missions::Campaign::Nightfall, {} },
-		{ Missions::Campaign::EyeOfTheNorth, {} },
-		{ Missions::Campaign::Dungeon, {} },
-	};
-
-	int missions_per_row = 5;
-	float icon_size = 48.0f;
+	std::vector<Mission*> missions;
 };

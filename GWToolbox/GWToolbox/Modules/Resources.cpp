@@ -120,34 +120,6 @@ void Resources::LoadTextureAsync(IDirect3DTexture9** texture,
 	}
 }
 
-
-std::wstring GetErrorMessage(DWORD dwErrorCode)
-{
-	LPWSTR psz{ nullptr };
-	const DWORD cchMsg = FormatMessageW(
-		FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_ALLOCATE_BUFFER,
-		NULL, // (not used with FORMAT_MESSAGE_FROM_SYSTEM)
-		dwErrorCode,
-		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-		reinterpret_cast<LPWSTR>(&psz),
-		0,
-		NULL
-	);
-
-	if (cchMsg > 0)
-	{
-		// Assign buffer to smart pointer with custom deleter so that memory gets released
-		// in case String's c'tor throws an exception.
-		auto deleter = [](void* p) { ::HeapFree(::GetProcessHeap(), 0, p); };
-		std::unique_ptr<WCHAR, decltype(deleter)> ptrBuffer(psz, deleter);
-		return std::wstring(ptrBuffer.get(), cchMsg);
-	} else {
-		auto error_code{ ::GetLastError() };
-		throw std::system_error(error_code, std::system_category(),
-			"Failed to retrieve error message string.");
-	}
-}
-
 void Resources::LoadTextureAsync(IDirect3DTexture9** texture, 
 	std::wstring path_to_file, WORD id) {
 
@@ -164,28 +136,16 @@ void Resources::LoadTextureAsync(IDirect3DTexture9** texture,
 
 		// write to file so the user can customize his icons
 		HANDLE hFile = CreateFileW(path_to_file.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-		if (hFile == INVALID_HANDLE_VALUE) {
+		DWORD bytesWritten;
+		BOOL wfRes = WriteFile(hFile, hRes, size, &bytesWritten, NULL);
+		if (wfRes != TRUE) {
 			DWORD wfErr = GetLastError();
-			std::wstring wfErrMsg = GetErrorMessage(wfErr);
-			Log::Error("Error creating file %S - Error is %lu: %S",
-				path_to_file.c_str(), wfErr, wfErrMsg.c_str()
-			);
-		} else {
-			DWORD bytesWritten;
-			BOOL wfRes = WriteFile(hFile, hRes, size, &bytesWritten, NULL);
-			if (wfRes != TRUE) {
-				DWORD wfErr = GetLastError();
-				std::wstring wfErrMsg = GetErrorMessage(wfErr);
-				Log::Error("Error writing file %S - Error is %lu: %S",
-					path_to_file.c_str(), wfErr, wfErrMsg.c_str()
-				);
-			}
-			else if (bytesWritten != size) {
-				Log::Error("Wrote %lu of %lu bytes for %S", bytesWritten, size, path_to_file.c_str());
-			}
-			CloseHandle(hFile);
-			// Note: this WILL fail for some users. Don't care, it's only needed for customization.
+			Log::Error("Error writing file %s - Error is %lu", path_to_file.c_str(), wfErr);
+		} else if (bytesWritten != size) {
+			Log::Error("Wrote %lu of %lu bytes for %s", bytesWritten, size, path_to_file.c_str());
 		}
+		CloseHandle(hFile);
+		// Note: this WILL fail for some users. Don't care, it's only needed for customization.
 
 		// finally load the texture from the resource
 		toload.push([id, texture](IDirect3DDevice9* device) {

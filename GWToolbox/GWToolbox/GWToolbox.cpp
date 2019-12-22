@@ -287,7 +287,6 @@ void GWToolbox::Initialize() {
     Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img\\bonds"));
     Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img\\icons"));
     Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img\\materials"));
-    Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img\\missions"));
     Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img\\pcons"));
     Resources::Instance().EnsureFolderExists(Resources::GetPath(L"location logs"));
     Resources::Instance().EnsureFileExists(Resources::GetPath(L"GWToolbox.ini"),
