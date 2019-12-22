@@ -26,6 +26,7 @@
 #include <Windows/MainWindow.h>
 #include <Windows/PconsWindow.h>
 #include <Windows/HotkeysWindow.h>
+#include <Windows/MissionsWindow.h>
 #include <Windows/BuildsWindow.h>
 #include <Windows/HeroBuildsWindow.h>
 #include <Windows/TravelWindow.h>
@@ -62,6 +63,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
 	SettingsWindow::Instance().sep_windows = optional_modules.size();
 	if (use_pcons) optional_modules.push_back(&PconsWindow::Instance());
 	if (use_hotkeys) optional_modules.push_back(&HotkeysWindow::Instance());
+	if (use_missions) optional_modules.push_back(&MissionsWindow::Instance());
 	if (use_builds) optional_modules.push_back(&BuildsWindow::Instance());
 	if (use_herobuilds) optional_modules.push_back(&HeroBuildsWindow::Instance());
 	if (use_travel) optional_modules.push_back(&TravelWindow::Instance());

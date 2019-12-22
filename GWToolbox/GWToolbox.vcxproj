@@ -155,6 +155,8 @@
     <ClInclude Include="GWToolbox\Windows\HeroBuildsWindow.h" />
     <ClInclude Include="GWToolbox\Windows\HotkeysWindow.h" />
     <ClInclude Include="GWToolbox\Windows\Hotkeys.h" />
+    <ClInclude Include="GWToolbox\Windows\MissionsWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\Missions.h" />
     <ClInclude Include="GWToolbox\Windows\InfoWindow.h" />
     <ClInclude Include="GWToolbox\Windows\ObjectiveTimerWindow.h" />
     <ClInclude Include="GWToolbox\Windows\MainWindow.h" />
@@ -246,6 +248,8 @@
     <ClCompile Include="GWToolbox\Windows\HeroBuildsWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\HotkeysWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\Hotkeys.cpp" />
+    <ClCompile Include="GWToolbox\Windows\MissionsWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\Missions.cpp" />
     <ClCompile Include="GWToolbox\Windows\InfoWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\ObjectiveTimerWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\MainWindow.cpp" />
