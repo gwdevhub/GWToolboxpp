@@ -387,7 +387,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			search("");
 		}
 		ImGui::SameLine();
-		if (ImGui::Button("Alerts", ImVec2(80.0f, 0))) {
+		if (ImGui::Button("Settings", ImVec2(80.0f, 0))) {
 			show_alert_window = !show_alert_window;
 		}
 
@@ -538,7 +538,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		/* Alerts window */
 		if (show_alert_window) {
 			ImGui::SetNextWindowSize(ImVec2(250, 220), ImGuiCond_FirstUseEver);
-			if (ImGui::Begin("Trade Alerts", &show_alert_window)) {
+			if (ImGui::Begin("Trade Settings", &show_alert_window)) {
 				DrawAlertsWindowContent(true);
 			}
 			ImGui::End();

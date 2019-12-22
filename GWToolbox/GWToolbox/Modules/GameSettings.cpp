@@ -1219,6 +1219,9 @@ void GameSettings::Initialize() {
         GW::HookBase::CreateHook(OnPingEquippedItem_Func, OnPingEquippedItem, (void**)& OnPingEquippedItemRet);
         GW::HookBase::EnableHooks(OnPingEquippedItem_Func);
     }
+	GW::Items::RegisterItemClickCallback(&ItemClickCallback_Entry, GameSettings::ItemClickCallback);
+	GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, &SendChatCallback);
+	GW::Chat::RegisterWhisperCallback(&WhisperCallback_Entry, &WhisperCallback);
 
 #ifdef APRIL_FOOLS
 	AF::ApplyPatchesIfItsTime();
@@ -1389,10 +1392,9 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     GW::Chat::SetTimestampsColor(timestamps_color);
     GW::Chat::SetTimestampsFormat(show_timestamp_24h, show_timestamp_seconds);
 	// if (select_with_chat_doubleclick) GW::Chat::SetChatEventCallback(&ChatEventCallback);
-	if (auto_url) GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, &SendChatCallback);
-	if (move_item_on_ctrl_click) GW::Items::RegisterItemClickCallback(&ItemClickCallback_Entry, GameSettings::ItemClickCallback);
 
-	GW::Chat::RegisterWhisperCallback(&WhisperCallback_Entry, &WhisperCallback);
+	gold_confirm_patch.TooglePatch(disable_gold_selling_confirmation);
+	tome_patch.TooglePatch(show_unlearned_skill);
 }
 
 void GameSettings::Terminate() {
