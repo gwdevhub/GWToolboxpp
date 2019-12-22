@@ -2,115 +2,25 @@
 #include "MissionsWindow.h"
 
 #include <GWCA\Constants\Constants.h>
+#include <GWCA\GameContainers\Array.h>
+
+#include <GWCA\Managers\ItemMgr.h>
+#include <GWCA\Managers\ChatMgr.h>
+
+#include <Keys.h>
+#include <logger.h>
+#include <GuiUtils.h>
 #include <Modules\Resources.h>
 
 void MissionsWindow::Initialize() {
 	ToolboxWindow::Initialize();
 	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/missions", L"MissionIcon.png"), IDB_Missions_MissionIcon);
-
-	// Prophecies
-	missions.push_back(new PropheciesMission(GW::Constants::MapID::The_Great_Northern_Wall));
-	missions.push_back(new PropheciesMission(GW::Constants::MapID::Fort_Ranik));
-	missions.push_back(new PropheciesMission(GW::Constants::MapID::Ruins_of_Surmia));
-	missions.push_back(new PropheciesMission(GW::Constants::MapID::Nolani_Academy));
-	missions.push_back(new PropheciesMission(GW::Constants::MapID::Borlis_Pass));
-	missions.push_back(new PropheciesMission(GW::Constants::MapID::The_Frost_Gate));
-	missions.push_back(new PropheciesMission(GW::Constants::MapID::Gates_of_Kryta));
-	missions.push_back(new PropheciesMission(GW::Constants::MapID::DAlessio_Seaboard));
-	missions.push_back(new PropheciesMission(GW::Constants::MapID::Divinity_Coast));
-	missions.push_back(new PropheciesMission(GW::Constants::MapID::The_Wilds));
-	missions.push_back(new PropheciesMission(GW::Constants::MapID::Bloodstone_Fen));
-	missions.push_back(new PropheciesMission(GW::Constants::MapID::Aurora_Glade));
-	missions.push_back(new PropheciesMission(GW::Constants::MapID::Riverside_Province));
-	missions.push_back(new PropheciesMission(GW::Constants::MapID::Sanctum_Cay));
-	missions.push_back(new PropheciesMission(GW::Constants::MapID::Dunes_of_Despair));
-	missions.push_back(new PropheciesMission(GW::Constants::MapID::Thirsty_River));
-	missions.push_back(new PropheciesMission(GW::Constants::MapID::Elona_Reach));
-	missions.push_back(new PropheciesMission(GW::Constants::MapID::Augury_Rock_mission));
-	missions.push_back(new PropheciesMission(GW::Constants::MapID::The_Dragons_Lair));
-	missions.push_back(new PropheciesMission(GW::Constants::MapID::Ice_Caves_of_Sorrow));
-	missions.push_back(new PropheciesMission(GW::Constants::MapID::Iron_Mines_of_Moladune));
-	missions.push_back(new PropheciesMission(GW::Constants::MapID::Thunderhead_Keep));
-	missions.push_back(new PropheciesMission(GW::Constants::MapID::Ring_of_Fire));
-	missions.push_back(new PropheciesMission(GW::Constants::MapID::Abaddons_Mouth));
-	missions.push_back(new PropheciesMission(GW::Constants::MapID::Hells_Precipice));
-	// Factions
-	missions.push_back(new FactionsMission(GW::Constants::MapID::Minister_Chos_Estate_outpost_mission));
-	missions.push_back(new FactionsMission(GW::Constants::MapID::Zen_Daijun_outpost_mission));
-	missions.push_back(new FactionsMission(GW::Constants::MapID::Vizunah_Square_Local_Quarter_outpost));
-	missions.push_back(new FactionsMission(GW::Constants::MapID::Vizunah_Square_Foreign_Quarter_outpost));
-	missions.push_back(new FactionsMission(GW::Constants::MapID::Nahpui_Quarter_outpost_mission));
-	missions.push_back(new FactionsMission(GW::Constants::MapID::Tahnnakai_Temple_outpost_mission));
-	missions.push_back(new FactionsMission(GW::Constants::MapID::Arborstone_outpost_mission));
-	missions.push_back(new FactionsMission(GW::Constants::MapID::Boreas_Seabed_outpost_mission));
-	missions.push_back(new FactionsMission(GW::Constants::MapID::Sunjiang_District_outpost_mission));
-	missions.push_back(new FactionsMission(GW::Constants::MapID::The_Eternal_Grove_outpost_mission));
-	missions.push_back(new FactionsMission(GW::Constants::MapID::Unwaking_Waters_Kurzick_outpost));
-	missions.push_back(new FactionsMission(GW::Constants::MapID::Gyala_Hatchery_outpost_mission));
-	missions.push_back(new FactionsMission(GW::Constants::MapID::Unwaking_Waters_Luxon_outpost));
-	missions.push_back(new FactionsMission(GW::Constants::MapID::Raisu_Palace_outpost_mission));
-	missions.push_back(new FactionsMission(GW::Constants::MapID::Imperial_Sanctum_outpost_mission));
-	// Nightfall
-	missions.push_back(new NightfallMission(GW::Constants::MapID::Chahbek_Village));
-	missions.push_back(new NightfallMission(GW::Constants::MapID::Jokanur_Diggings));
-	missions.push_back(new NightfallMission(GW::Constants::MapID::Blacktide_Den));
-	missions.push_back(new NightfallMission(GW::Constants::MapID::Consulate_Docks));
-	missions.push_back(new NightfallMission(GW::Constants::MapID::Venta_Cemetery));
-	missions.push_back(new NightfallMission(GW::Constants::MapID::Kodonur_Crossroads));
-	missions.push_back(new NightfallMission(GW::Constants::MapID::Pogahn_Passage));
-	missions.push_back(new NightfallMission(GW::Constants::MapID::Rilohn_Refuge));
-	missions.push_back(new NightfallMission(GW::Constants::MapID::Moddok_Crevice));
-	missions.push_back(new NightfallMission(GW::Constants::MapID::Tihark_Orchard));
-	missions.push_back(new NightfallMission(GW::Constants::MapID::Dasha_Vestibule));
-	missions.push_back(new NightfallMission(GW::Constants::MapID::Dzagonur_Bastion));
-	missions.push_back(new NightfallMission(GW::Constants::MapID::Grand_Court_of_Sebelkeh));
-	missions.push_back(new NightfallMission(GW::Constants::MapID::Jennurs_Horde));
-	missions.push_back(new NightfallMission(GW::Constants::MapID::Nundu_Bay));
-	missions.push_back(new NightfallMission(GW::Constants::MapID::Gate_of_Desolation));
-	missions.push_back(new NightfallMission(GW::Constants::MapID::Ruins_of_Morah));
-	missions.push_back(new NightfallMission(GW::Constants::MapID::Gate_of_Pain));
-	missions.push_back(new NightfallMission(GW::Constants::MapID::Gate_of_Madness));
-	missions.push_back(new NightfallMission(GW::Constants::MapID::Abaddons_Gate));
-	// Eye of the North - missions
-	// Asura
-	missions.push_back(new EotNMission(GW::Constants::MapID::Gadds_Encampment_outpost, "Finding the Bloodstone"));
-	missions.push_back(new EotNMission(GW::Constants::MapID::Rata_Sum_outpost, "The Elusive Golemancer"));
-	missions.push_back(new EotNMission(GW::Constants::MapID::Rata_Sum_outpost, "Genius Operated Living Enchanted Manifestation"));
-	// Vanguard
-	missions.push_back(new EotNMission(GW::Constants::MapID::Longeyes_Ledge_outpost, "Against the Charr"));
-	missions.push_back(new EotNMission(GW::Constants::MapID::Doomlore_Shrine_outpost, "Warband of Brothers"));
-	missions.push_back(new EotNMission(GW::Constants::MapID::Doomlore_Shrine_outpost, "Assault on the Stronghold"));
-	// Norn
-	missions.push_back(new EotNMission(GW::Constants::MapID::Sifhalla_outpost, "Curse of the Nornbear"));
-	missions.push_back(new EotNMission(GW::Constants::MapID::Sifhalla_outpost, "Blood Washes Blood"));
-	missions.push_back(new EotNMission(GW::Constants::MapID::Olafstead_outpost, "A Gate Too Far"));
-	// Destroyers
-	missions.push_back(new EotNMission(GW::Constants::MapID::Central_Transfer_Chamber_outpost, "Destruction's Depths"));
-	missions.push_back(new EotNMission(GW::Constants::MapID::Central_Transfer_Chamber_outpost, "A Time for Heroes"));
-
-	// Eye of the North - dungeons
-	missions.push_back(new Dungeon(GW::Constants::MapID::Doomlore_Shrine_outpost, "Catacombs of Kathandrax"));
-	missions.push_back(new Dungeon(GW::Constants::MapID::Doomlore_Shrine_outpost, "Rragar's Menagerie"));
-	missions.push_back(new Dungeon(GW::Constants::MapID::Doomlore_Shrine_outpost, "Cathedral of Flames"));
-	missions.push_back(new Dungeon(GW::Constants::MapID::Doomlore_Shrine_outpost, "Ooze Pit"));
-	missions.push_back(new Dungeon(GW::Constants::MapID::Longeyes_Ledge_outpost, "Darkrime Delves"));
-	missions.push_back(new Dungeon(GW::Constants::MapID::Sifhalla_outpost, "Frostmaw's Burrows"));
-	missions.push_back(new Dungeon(GW::Constants::MapID::Sifhalla_outpost, "Sepulchre of Dragrimmar"));
-	missions.push_back(new Dungeon(GW::Constants::MapID::Olafstead_outpost, "Raven's Point"));
-	missions.push_back(new Dungeon(GW::Constants::MapID::Umbral_Grotto_outpost, "Vloxen Excavations"));
-	missions.push_back(new Dungeon(GW::Constants::MapID::Gadds_Encampment_outpost, "Bogroot Growths"));
-	missions.push_back(new Dungeon(GW::Constants::MapID::Gadds_Encampment_outpost, "Bloodstone Caves"));
-	missions.push_back(new Dungeon(GW::Constants::MapID::Vloxs_Falls, "Shards of Orr"));
-	missions.push_back(new Dungeon(GW::Constants::MapID::Rata_Sum_outpost, "Oola's Lab"));
-	missions.push_back(new Dungeon(GW::Constants::MapID::Rata_Sum_outpost, "Arachni's Haunt"));
-	missions.push_back(new Dungeon(GW::Constants::MapID::Umbral_Grotto_outpost, "Slavers' Exile"));
-	missions.push_back(new Dungeon(GW::Constants::MapID::Gunnars_Hold_outpost, "Fronis Irontoe's Lair"));
-	missions.push_back(new Dungeon(GW::Constants::MapID::Umbral_Grotto_outpost, "Secret Lair of the Snowmen"));
-	missions.push_back(new Dungeon(GW::Constants::MapID::Central_Transfer_Chamber_outpost, "Heart of the Shiverpeaks"));
+	clickerTimer = TIMER_INIT();
+	dropCoinsTimer = TIMER_INIT();
 }
 void MissionsWindow::Terminate() {
-	for (auto m : missions) {
-		delete m;
+	for (TBMission* hotkey : hotkeys) {
+		delete hotkey;
 	}
 }
 
@@ -123,21 +33,218 @@ void MissionsWindow::Draw(IDirect3DDevice9* pDevice) {
 		if (ImGui::Button("Create Hotkey...", ImVec2(ImGui::GetWindowContentRegionWidth(), 0))) {
 			ImGui::OpenPopup("Create Hotkey");
 		}
+		if (ImGui::BeginPopup("Create Hotkey")) {
+			if (ImGui::Selectable("Send Chat")) {
+				hotkeys.push_back(new MissionSendChat(nullptr, nullptr));
+			}
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Send a message or command to chat");
+			if (ImGui::Selectable("Use Item")) {
+				hotkeys.push_back(new MissionUseItem(nullptr, nullptr));
+			}
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Use an item from your inventory");
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Use or cancel a skill such as Recall or UA");
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Toggle a GWToolbox++ functionality such as clicker");
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Execute a single task such as opening chests\nor reapplying lightbringer title");
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Target a game entity by its ID");
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move to a specific (x,y) coordinate");
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Send a Dialog");
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Ping a build from the Build Panel");
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Load a team hero build from the Hero Build Panel");
+			ImGui::EndPopup();
+		}
+
+		// === each hotkey ===
+		block_hotkeys = false;
+		for (unsigned int i = 0; i < hotkeys.size(); ++i) {
+			TBMission::Op op = TBMission::Op_None;
+			hotkeys[i]->Draw(&op);
+			switch (op) {
+			case TBMission::Op_None: break;
+			case TBMission::Op_MoveUp:
+				if (i > 0) std::swap(hotkeys[i], hotkeys[i - 1]);
+				break;
+			case TBMission::Op_MoveDown:
+				if (i < hotkeys.size() - 1) {
+					std::swap(hotkeys[i], hotkeys[i + 1]);
+					// render the moved one and increase i
+					TBMission::Op op2;
+					hotkeys[i++]->Draw(&op2);
+				}
+				break;
+			case TBMission::Op_Delete: {
+				TBMission* hk = hotkeys[i];
+				hotkeys.erase(hotkeys.begin() + i);
+				delete hk;
+				--i;
+			}
+									break;
+			case TBMission::Op_BlockInput:
+				block_hotkeys = true;
+				break;
+
+			default:
+				break;
+			}
+		}
 	}
 	ImGui::End();
 }
 
 void MissionsWindow::DrawSettingInternal() {
 	ToolboxWindow::DrawSettingInternal();
+	ImGui::Checkbox("Show 'Active' checkbox in header", &TBMission::show_active_in_header);
+	ImGui::Checkbox("Show 'Run' button in header", &TBMission::show_run_in_header);
 }
 
 void MissionsWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxWindow::LoadSettings(ini);
 	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
+
+	TBMission::show_active_in_header = ini->GetBoolValue(Name(), "show_active_in_header", false);
+	TBMission::show_run_in_header = ini->GetBoolValue(Name(), "show_run_in_header", false);
+
+	// clear hotkeys from toolbox
+	for (TBMission* hotkey : hotkeys) {
+		delete hotkey;
+	}
+	hotkeys.clear();
+
+	// then load again
+	CSimpleIni::TNamesDepend entries;
+	ini->GetAllSections(entries);
+	for (CSimpleIni::Entry& entry : entries) {
+		TBMission* hk = TBMission::HotkeyFactory(ini, entry.pItem);
+		if (hk) hotkeys.push_back(hk);
+	}
+
+	TBMission::hotkeys_changed = false;
 }
 void MissionsWindow::SaveSettings(CSimpleIni* ini) {
 	ToolboxWindow::SaveSettings(ini);
+	ini->SetBoolValue(Name(), "show_active_in_header", TBMission::show_active_in_header);
+	ini->SetBoolValue(Name(), "show_run_in_header", TBMission::show_run_in_header);
+
+	if (TBMission::hotkeys_changed) {
+		// clear hotkeys from ini
+		CSimpleIni::TNamesDepend entries;
+		ini->GetAllSections(entries);
+		for (CSimpleIni::Entry& entry : entries) {
+			if (strncmp(entry.pItem, "hotkey-", 7) == 0) {
+				ini->Delete(entry.pItem, nullptr);
+			}
+		}
+
+		// then save again
+		char buf[256];
+		for (unsigned int i = 0; i < hotkeys.size(); ++i) {
+			snprintf(buf, 256, "hotkey-%03d:%s", i, hotkeys[i]->Name());
+			hotkeys[i]->Save(ini, buf);
+		}
+	}
 }
 
-//void MissionsWindow::Update(float delta) {
-//}
+bool MissionsWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
+	if (GW::Chat::GetIsTyping())
+		return false;
+
+	long keyData = 0;
+	switch (Message) {
+	case WM_KEYDOWN:
+	case WM_SYSKEYDOWN:
+	case WM_KEYUP:
+	case WM_SYSKEYUP:
+		keyData = wParam;
+		break;
+	case WM_XBUTTONDOWN:
+	case WM_MBUTTONDOWN:
+		if (LOWORD(wParam) & MK_MBUTTON) keyData = VK_MBUTTON;
+		if (LOWORD(wParam) & MK_XBUTTON1) keyData = VK_XBUTTON1;
+		if (LOWORD(wParam) & MK_XBUTTON2) keyData = VK_XBUTTON2;
+		break;
+	case WM_XBUTTONUP:
+	case WM_MBUTTONUP:
+		// leave keydata to none, need to handle special case below
+		break;
+	default:
+		break;
+	}
+
+	switch (Message) {
+	case WM_KEYDOWN:
+	case WM_SYSKEYDOWN:
+	case WM_XBUTTONDOWN:
+	case WM_MBUTTONDOWN: {
+		long modifier = 0;
+		if (GetKeyState(VK_CONTROL) < 0)
+			modifier |= ModKey_Control;
+		if (GetKeyState(VK_SHIFT) < 0)
+			modifier |= ModKey_Shift;
+		if (GetKeyState(VK_MENU) < 0)
+			modifier |= ModKey_Alt;
+
+		bool triggered = false;
+		for (TBMission* hk : hotkeys) {
+			if (!block_hotkeys && hk->active
+				&& !hk->pressed && keyData == hk->hotkey
+				&& modifier == hk->modifier) {
+
+				hk->pressed = true;
+				hk->Execute();
+				triggered = true;
+			}
+		}
+		return triggered;
+	}
+
+	case WM_KEYUP:
+	case WM_SYSKEYUP:
+		for (TBMission* hk : hotkeys) {
+			if (hk->pressed && keyData == hk->hotkey) {
+				hk->pressed = false;
+			}
+		}
+		return false;
+
+	case WM_XBUTTONUP:
+		for (TBMission* hk : hotkeys) {
+			if (hk->pressed && (hk->hotkey == VK_XBUTTON1 || hk->hotkey == VK_XBUTTON2)) {
+				hk->pressed = false;
+			}
+		}
+		return false;
+	case WM_MBUTTONUP:
+		for (TBMission* hk : hotkeys) {
+			if (hk->pressed && hk->hotkey == VK_MBUTTON) {
+				hk->pressed = false;
+			}
+		}
+	default:
+		return false;
+	}
+}
+
+
+void MissionsWindow::Update(float delta) {
+	if (clickerActive && TIMER_DIFF(clickerTimer) > 20) {
+		clickerTimer = TIMER_INIT();
+		INPUT input;
+		input.type = INPUT_MOUSE;
+		input.mi.dx = 0;
+		input.mi.dy = 0;
+		input.mi.mouseData = 0;
+		input.mi.dwFlags = MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP;
+		input.mi.time = 0;
+		input.mi.dwExtraInfo = NULL;
+
+		SendInput(1, &input, sizeof(INPUT));
+	}
+
+	if (dropCoinsActive && TIMER_DIFF(dropCoinsTimer) > 500) {
+		if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
+			dropCoinsTimer = TIMER_INIT();
+			GW::Items::DropGold(1);
+		}
+	}
+
+	// TODO rupt?
+}
