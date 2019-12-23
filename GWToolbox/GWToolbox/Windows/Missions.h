@@ -42,7 +42,7 @@ namespace Missions {
         virtual const std::string Name() { return std::string(GW::Constants::NAME_FROM_ID[static_cast<uint32_t>(outpost)]); }
         virtual IDirect3DTexture9* GetMissionImage();
         bool IsDaily(); // True if this mission is ZM or ZB today
-        bool HasQuest(); // True if the ZM or ZB is in quest log
+        virtual bool HasQuest(); // True if the ZM or ZB is in quest log
     };
 
 
@@ -130,9 +130,13 @@ namespace Missions {
     private:
         static const MissionImageList normal_mode_images;
         static const MissionImageList hard_mode_images;
+        std::vector<uint32_t> zm_quests;
 
     public:
+        Dungeon(GW::Constants::MapID _outpost, const char* _name, std::vector<uint32_t> _zm_quests)
+            : EotNMission(_outpost, _name, normal_mode_images, hard_mode_images, 0), zm_quests(_zm_quests) {}
         Dungeon(GW::Constants::MapID _outpost, const char* _name, uint32_t _zm_quest = 0)
-            : EotNMission(_outpost, _name, normal_mode_images, hard_mode_images, _zm_quest) {}
+            : EotNMission(_outpost, _name, normal_mode_images, hard_mode_images, 0), zm_quests({_zm_quest}) {}
+        bool HasQuest() override;
     };
 }

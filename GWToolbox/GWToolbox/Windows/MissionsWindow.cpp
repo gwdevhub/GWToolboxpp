@@ -26,13 +26,13 @@ void MissionsWindow::Initialize_Prophecies()
 {
 	auto& prophecies_missions = missions.at(Campaign::Prophecies);
 	prophecies_missions.push_back(new PropheciesMission(
-		MapID::The_Great_Northern_Wall)); // UNKNOWN QUEST_ID
+		MapID::The_Great_Northern_Wall));
 	prophecies_missions.push_back(new PropheciesMission(
 		MapID::Fort_Ranik, QuestID::ZaishenMission::Fort_Ranik));
 	prophecies_missions.push_back(new PropheciesMission(
 		MapID::Ruins_of_Surmia, QuestID::ZaishenMission::Ruins_of_Surmia));
 	prophecies_missions.push_back(new PropheciesMission(
-		MapID::Nolani_Academy)); // UNKNOWN QUEST_ID
+		MapID::Nolani_Academy));
 	prophecies_missions.push_back(new PropheciesMission(
 		MapID::Borlis_Pass, QuestID::ZaishenMission::Borlis_Pass));
 	prophecies_missions.push_back(new PropheciesMission(
@@ -48,7 +48,7 @@ void MissionsWindow::Initialize_Prophecies()
 	prophecies_missions.push_back(new PropheciesMission(
 		MapID::Bloodstone_Fen, QuestID::ZaishenMission::Bloodstone_Fen));
 	prophecies_missions.push_back(new PropheciesMission(
-		MapID::Aurora_Glade)); // UNKNOWN QUEST_ID
+		MapID::Aurora_Glade));
 	prophecies_missions.push_back(new PropheciesMission(
 		MapID::Riverside_Province, QuestID::ZaishenMission::Riverside_Province));
 	prophecies_missions.push_back(new PropheciesMission(
@@ -64,7 +64,7 @@ void MissionsWindow::Initialize_Prophecies()
 	prophecies_missions.push_back(new PropheciesMission(
 		MapID::The_Dragons_Lair, QuestID::ZaishenMission::The_Dragons_Lair));
 	prophecies_missions.push_back(new PropheciesMission(
-		MapID::Ice_Caves_of_Sorrow)); // UNKNOWN QUEST_ID
+		MapID::Ice_Caves_of_Sorrow));
 	prophecies_missions.push_back(new PropheciesMission(
 		MapID::Iron_Mines_of_Moladune, QuestID::ZaishenMission::Iron_Mines_of_Moladune));
 	prophecies_missions.push_back(new PropheciesMission(
@@ -82,29 +82,29 @@ void MissionsWindow::Initialize_Factions()
 {
 	auto& factions_missions = missions.at(Campaign::Factions);
 	factions_missions.push_back(new FactionsMission(
-		MapID::Minister_Chos_Estate_outpost_mission)); // UNKNOWN QUEST_ID
+		MapID::Minister_Chos_Estate_outpost_mission));
 	factions_missions.push_back(new FactionsMission(
 		MapID::Zen_Daijun_outpost_mission, QuestID::ZaishenMission::Zen_Daijun));
 	factions_missions.push_back(new FactionsMission(
-		MapID::Vizunah_Square_Local_Quarter_outpost)); // UNKNOWN QUEST_ID
+		MapID::Vizunah_Square_Local_Quarter_outpost));
 	factions_missions.push_back(new FactionsMission(
-		MapID::Vizunah_Square_Foreign_Quarter_outpost)); // UNKNOWN QUEST_ID
+		MapID::Vizunah_Square_Foreign_Quarter_outpost));
 	factions_missions.push_back(new FactionsMission(
-		MapID::Nahpui_Quarter_outpost_mission)); // UNKNOWN QUEST_ID
+		MapID::Nahpui_Quarter_outpost_mission, QuestID::ZaishenMission::Naphui_Quarter));
 	factions_missions.push_back(new FactionsMission(
-		MapID::Tahnnakai_Temple_outpost_mission)); // UNKNOWN QUEST_ID
+		MapID::Tahnnakai_Temple_outpost_mission));
 	factions_missions.push_back(new FactionsMission(
-		MapID::Arborstone_outpost_mission)); // UNKNOWN QUEST_ID
+		MapID::Arborstone_outpost_mission));
 	factions_missions.push_back(new FactionsMission(
 		MapID::Boreas_Seabed_outpost_mission, QuestID::ZaishenMission::Boreas_Seabed));
 	factions_missions.push_back(new FactionsMission(
-		MapID::Sunjiang_District_outpost_mission)); // UNKNOWN QUEST_ID
+		MapID::Sunjiang_District_outpost_mission));
 	factions_missions.push_back(new FactionsMission(
 		MapID::The_Eternal_Grove_outpost_mission, QuestID::ZaishenMission::The_Eternal_Grove));
 	factions_missions.push_back(new FactionsMission(
-		MapID::Unwaking_Waters_Kurzick_outpost, QuestID::ZaishenMission::Unwaking_Waters));
-	factions_missions.push_back(new FactionsMission(
 		MapID::Gyala_Hatchery_outpost_mission, QuestID::ZaishenMission::Gyala_Hatchery));
+	factions_missions.push_back(new FactionsMission(
+		MapID::Unwaking_Waters_Kurzick_outpost, QuestID::ZaishenMission::Unwaking_Waters));
 	factions_missions.push_back(new FactionsMission(
 		MapID::Unwaking_Waters_Luxon_outpost, QuestID::ZaishenMission::Unwaking_Waters));
 	factions_missions.push_back(new FactionsMission(
@@ -118,27 +118,27 @@ void MissionsWindow::Initialize_Nightfall()
 {
 	auto& nightfall_missions = missions.at(Campaign::Nightfall);
 	nightfall_missions.push_back(new NightfallMission(
-		MapID::Chahbek_Village)); // UNKNOWN QUEST_ID
+		MapID::Chahbek_Village, QuestID::ZaishenMission::Chabek_Village));
 	nightfall_missions.push_back(new NightfallMission(
 		MapID::Jokanur_Diggings, QuestID::ZaishenMission::Jokanur_Diggings));
 	nightfall_missions.push_back(new NightfallMission(
-		MapID::Blacktide_Den, QuestID::ZaishenMission::Blacktide_Den));
+		MapID::Blacktide_Den));
 	nightfall_missions.push_back(new NightfallMission(
 		MapID::Consulate_Docks, QuestID::ZaishenMission::Consulate_Docks));
 	nightfall_missions.push_back(new NightfallMission(
-		MapID::Venta_Cemetery)); // UNKNOWN QUEST_ID
+		MapID::Venta_Cemetery, QuestID::ZaishenMission::Venta_Cemetary));
 	nightfall_missions.push_back(new NightfallMission(
 		MapID::Kodonur_Crossroads, QuestID::ZaishenMission::Kodonur_Crossroads));
 	nightfall_missions.push_back(new NightfallMission(
 		MapID::Pogahn_Passage, QuestID::ZaishenMission::Pogahn_Passage));
 	nightfall_missions.push_back(new NightfallMission(
-		MapID::Rilohn_Refuge)); // UNKNOWN QUEST_ID
+		MapID::Rilohn_Refuge));
 	nightfall_missions.push_back(new NightfallMission(
 		MapID::Moddok_Crevice, QuestID::ZaishenMission::Moddok_Crevice));
 	nightfall_missions.push_back(new NightfallMission(
-		MapID::Tihark_Orchard)); // UNKNOWN QUEST_ID
+		MapID::Tihark_Orchard));
 	nightfall_missions.push_back(new NightfallMission(
-		MapID::Dasha_Vestibule)); // UNKNOWN QUEST_ID
+		MapID::Dasha_Vestibule));
 	nightfall_missions.push_back(new NightfallMission(
 		MapID::Dzagonur_Bastion, QuestID::ZaishenMission::Dzagonur_Bastion));
 	nightfall_missions.push_back(new NightfallMission(
@@ -148,13 +148,13 @@ void MissionsWindow::Initialize_Nightfall()
 	nightfall_missions.push_back(new NightfallMission(
 		MapID::Nundu_Bay, QuestID::ZaishenMission::Nundu_Bay));
 	nightfall_missions.push_back(new NightfallMission(
-		MapID::Gate_of_Desolation)); // UNKNOWN QUEST_ID
+		MapID::Gate_of_Desolation));
 	nightfall_missions.push_back(new NightfallMission(
 		MapID::Ruins_of_Morah, QuestID::ZaishenMission::Ruins_of_Morah));
 	nightfall_missions.push_back(new TormentMission(
-		MapID::Gate_of_Pain)); // UNKNOWN QUEST_ID
+		MapID::Gate_of_Pain));
 	nightfall_missions.push_back(new TormentMission(
-		MapID::Gate_of_Madness)); // UNKNOWN QUEST_ID
+		MapID::Gate_of_Madness));
 	nightfall_missions.push_back(new TormentMission(
 		MapID::Abaddons_Gate, QuestID::ZaishenMission::Abaddons_Gate));
 }
@@ -165,17 +165,17 @@ void MissionsWindow::Initialize_EotN()
 	auto& eotn_missions = missions.at(Campaign::EyeOfTheNorth);
 	// Asura
 	eotn_missions.push_back(new EotNMission(
-		MapID::Gadds_Encampment_outpost, "Finding the Bloodstone")); // UNKNOWN QUEST_ID
+		MapID::Gadds_Encampment_outpost, "Finding the Bloodstone"));
 	eotn_missions.push_back(new EotNMission(
-		MapID::Rata_Sum_outpost, "The Elusive Golemancer")); // UNKNOWN QUEST_ID
+		MapID::Rata_Sum_outpost, "The Elusive Golemancer"));
 	eotn_missions.push_back(new EotNMission(
 		MapID::Rata_Sum_outpost, "Genius Operated Living Enchanted Manifestation",
 		QuestID::ZaishenMission::G_O_L_E_M));
 	// Vanguard
 	eotn_missions.push_back(new EotNMission(
-		MapID::Longeyes_Ledge_outpost, "Against the Charr")); // UNKNOWN QUEST_ID
+		MapID::Longeyes_Ledge_outpost, "Against the Charr"));
 	eotn_missions.push_back(new EotNMission(
-		MapID::Doomlore_Shrine_outpost, "Warband of Brothers")); // UNKNOWN QUEST_ID
+		MapID::Doomlore_Shrine_outpost, "Warband of Brothers"));
 	eotn_missions.push_back(new EotNMission(
 		MapID::Doomlore_Shrine_outpost, "Assault on the Stronghold",
 		QuestID::ZaishenMission::Assault_on_the_Stronghold));
@@ -183,10 +183,9 @@ void MissionsWindow::Initialize_EotN()
 	eotn_missions.push_back(new EotNMission(
 		MapID::Sifhalla_outpost, "Curse of the Nornbear", QuestID::ZaishenMission::Curse_of_the_Nornbear));
 	eotn_missions.push_back(new EotNMission(
-		MapID::Sifhalla_outpost, "Blood Washes Blood")); // UNKNOWN QUEST_ID
+		MapID::Olafstead_outpost, "A Gate Too Far", QuestID::ZaishenMission::A_Gate_Too_Far));
 	eotn_missions.push_back(new EotNMission(
-		MapID::Olafstead_outpost, "A Gate Too Far",
-		QuestID::ZaishenMission::A_Gate_Too_Far));
+		MapID::Sifhalla_outpost, "Blood Washes Blood"));
 	// Destroyers
 	eotn_missions.push_back(new EotNMission(
 		MapID::Central_Transfer_Chamber_outpost, "Destruction's Depths",
@@ -199,14 +198,14 @@ void MissionsWindow::Initialize_EotN()
 
 void MissionsWindow::Initialize_Dungeons()
 {
-	// TODO: quest ids
+	using namespace QuestID::ZaishenBounty;
 	auto& dungeons = missions.at(Campaign::Dungeon);
 	dungeons.push_back(new Dungeon(
-		MapID::Doomlore_Shrine_outpost, "Catacombs of Kathandrax"));
+		MapID::Doomlore_Shrine_outpost, "Catacombs of Kathandrax", Ilsundur_Lord_of_Fire));
 	dungeons.push_back(new Dungeon(
-		MapID::Doomlore_Shrine_outpost, "Rragar's Menagerie"));
+		MapID::Doomlore_Shrine_outpost, "Rragar's Menagerie", Rragar_Maneater));
 	dungeons.push_back(new Dungeon(
-		MapID::Doomlore_Shrine_outpost, "Cathedral of Flames"));
+		MapID::Doomlore_Shrine_outpost, "Cathedral of Flames", Murakai_Lady_of_the_Night));
 	dungeons.push_back(new Dungeon(
 		MapID::Doomlore_Shrine_outpost, "Ooze Pit"));
 	dungeons.push_back(new Dungeon(
@@ -214,29 +213,30 @@ void MissionsWindow::Initialize_Dungeons()
 	dungeons.push_back(new Dungeon(
 		MapID::Sifhalla_outpost, "Frostmaw's Burrows"));
 	dungeons.push_back(new Dungeon(
-		MapID::Sifhalla_outpost, "Sepulchre of Dragrimmar"));
+		MapID::Sifhalla_outpost, "Sepulchre of Dragrimmar", Remnant_of_Antiquities));
 	dungeons.push_back(new Dungeon(
-		MapID::Olafstead_outpost, "Raven's Point"));
+		MapID::Olafstead_outpost, "Raven's Point", Plague_of_Destruction));
 	dungeons.push_back(new Dungeon(
-		MapID::Umbral_Grotto_outpost, "Vloxen Excavations"));
+		MapID::Umbral_Grotto_outpost, "Vloxen Excavations", Zoldark_the_Unholy));
 	dungeons.push_back(new Dungeon(
 		MapID::Gadds_Encampment_outpost, "Bogroot Growths"));
 	dungeons.push_back(new Dungeon(
 		MapID::Gadds_Encampment_outpost, "Bloodstone Caves"));
 	dungeons.push_back(new Dungeon(
-		MapID::Vloxs_Falls, "Shards of Orr"));
+		MapID::Vloxs_Falls, "Shards of Orr", Fendi_Nin));
 	dungeons.push_back(new Dungeon(
-		MapID::Rata_Sum_outpost, "Oola's Lab"));
+		MapID::Rata_Sum_outpost, "Oola's Lab", TPS_Regulator_Golem));
 	dungeons.push_back(new Dungeon(
-		MapID::Rata_Sum_outpost, "Arachni's Haunt"));
+		MapID::Rata_Sum_outpost, "Arachni's Haunt", Arachni));
 	dungeons.push_back(new Dungeon(
-		MapID::Umbral_Grotto_outpost, "Slavers' Exile"));
+		MapID::Umbral_Grotto_outpost, "Slavers' Exile", {
+			Forgewight, Selvetarm, /*Justiciar_Thommis,*/ Rand_Stormweaver, Duncan_the_Black }));
 	dungeons.push_back(new Dungeon(
-		MapID::Gunnars_Hold_outpost, "Fronis Irontoe's Lair"));
+		MapID::Gunnars_Hold_outpost, "Fronis Irontoe's Lair", {QuestID::ZaishenBounty::Fronis_Irontoe}));
 	dungeons.push_back(new Dungeon(
 		MapID::Umbral_Grotto_outpost, "Secret Lair of the Snowmen"));
 	dungeons.push_back(new Dungeon(
-		MapID::Central_Transfer_Chamber_outpost, "Heart of the Shiverpeaks"));
+		MapID::Central_Transfer_Chamber_outpost, "Heart of the Shiverpeaks", {QuestID::ZaishenBounty::Magmus}));
 }
 
 
@@ -271,7 +271,6 @@ void MissionsWindow::Draw(IDirect3DDevice9* device)
 			}
 		}
 	}
-
 
 	ImGui::End();
 }

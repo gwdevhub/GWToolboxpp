@@ -193,7 +193,7 @@ bool Mission::HasQuest()
 	const auto& quests = ctx->quest_log;
 	for (size_t i = 0; i < quests.size(); i++) {
 		GW::Quest q = quests[i];
-		if (q.quest_id == static_cast<uint32_t>(zm_quest)) {
+		if (q.quest_id == zm_quest) {
 			return true;
 		}
 	}
@@ -219,4 +219,20 @@ const std::string EotNMission::Name() {
 	label += Mission::Name();
 	label += ")";
 	return label;
+}
+
+
+bool Dungeon::HasQuest()
+{
+	GW::WorldContext* ctx = GW::GameContext::instance()->world;
+	const auto& quests = ctx->quest_log;
+	for (size_t i = 0; i < quests.size(); i++) {
+		GW::Quest q = quests[i];
+		for (auto zm : zm_quests) {
+			if (q.quest_id == zm) {
+				return true;
+			}
+		}
+	}
+	return false;
 }
