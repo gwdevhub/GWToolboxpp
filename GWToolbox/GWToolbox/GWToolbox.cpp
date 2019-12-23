@@ -74,7 +74,12 @@ DWORD __stdcall ThreadEntry(LPVOID) {
 
     Log::Log("Installing dx hooks\n");
     GW::Render::SetRenderCallback([](IDirect3DDevice9* device) {
-        GWToolbox::Instance().Draw(device);
+        __try {
+            GWToolbox::Instance().Draw(device);
+        }
+        __except (Log::GenerateDump(GetExceptionInformation())) {
+            sprintf("Oh deary dear.");
+        }
     });
     GW::Render::SetResetCallback([](IDirect3DDevice9* device) {
         ImGui_ImplDX9_InvalidateDeviceObjects();
