@@ -26,13 +26,13 @@ void MissionsWindow::Initialize_Prophecies()
 {
 	auto& prophecies_missions = missions.at(Campaign::Prophecies);
 	prophecies_missions.push_back(new PropheciesMission(
-		MapID::The_Great_Northern_Wall));
+		MapID::The_Great_Northern_Wall, QuestID::ZaishenMission::The_Great_Northern_Wall));
 	prophecies_missions.push_back(new PropheciesMission(
 		MapID::Fort_Ranik, QuestID::ZaishenMission::Fort_Ranik));
 	prophecies_missions.push_back(new PropheciesMission(
 		MapID::Ruins_of_Surmia, QuestID::ZaishenMission::Ruins_of_Surmia));
 	prophecies_missions.push_back(new PropheciesMission(
-		MapID::Nolani_Academy));
+		MapID::Nolani_Academy, QuestID::ZaishenMission::Nolani_Academy));
 	prophecies_missions.push_back(new PropheciesMission(
 		MapID::Borlis_Pass, QuestID::ZaishenMission::Borlis_Pass));
 	prophecies_missions.push_back(new PropheciesMission(
@@ -48,7 +48,7 @@ void MissionsWindow::Initialize_Prophecies()
 	prophecies_missions.push_back(new PropheciesMission(
 		MapID::Bloodstone_Fen, QuestID::ZaishenMission::Bloodstone_Fen));
 	prophecies_missions.push_back(new PropheciesMission(
-		MapID::Aurora_Glade));
+		MapID::Aurora_Glade, QuestID::ZaishenMission::Aurora_Glade));
 	prophecies_missions.push_back(new PropheciesMission(
 		MapID::Riverside_Province, QuestID::ZaishenMission::Riverside_Province));
 	prophecies_missions.push_back(new PropheciesMission(
@@ -64,7 +64,7 @@ void MissionsWindow::Initialize_Prophecies()
 	prophecies_missions.push_back(new PropheciesMission(
 		MapID::The_Dragons_Lair, QuestID::ZaishenMission::The_Dragons_Lair));
 	prophecies_missions.push_back(new PropheciesMission(
-		MapID::Ice_Caves_of_Sorrow));
+		MapID::Ice_Caves_of_Sorrow, QuestID::ZaishenMission::Ice_Caves_of_Sorrow));
 	prophecies_missions.push_back(new PropheciesMission(
 		MapID::Iron_Mines_of_Moladune, QuestID::ZaishenMission::Iron_Mines_of_Moladune));
 	prophecies_missions.push_back(new PropheciesMission(
@@ -82,23 +82,23 @@ void MissionsWindow::Initialize_Factions()
 {
 	auto& factions_missions = missions.at(Campaign::Factions);
 	factions_missions.push_back(new FactionsMission(
-		MapID::Minister_Chos_Estate_outpost_mission));
+		MapID::Minister_Chos_Estate_outpost_mission, QuestID::ZaishenMission::Minister_Chos_Estate));
 	factions_missions.push_back(new FactionsMission(
 		MapID::Zen_Daijun_outpost_mission, QuestID::ZaishenMission::Zen_Daijun));
 	factions_missions.push_back(new FactionsMission(
-		MapID::Vizunah_Square_Local_Quarter_outpost));
+		MapID::Vizunah_Square_Local_Quarter_outpost, QuestID::ZaishenMission::Vizunah_Square));
 	factions_missions.push_back(new FactionsMission(
-		MapID::Vizunah_Square_Foreign_Quarter_outpost));
+		MapID::Vizunah_Square_Foreign_Quarter_outpost, QuestID::ZaishenMission::Vizunah_Square));
 	factions_missions.push_back(new FactionsMission(
-		MapID::Nahpui_Quarter_outpost_mission, QuestID::ZaishenMission::Naphui_Quarter));
+		MapID::Nahpui_Quarter_outpost_mission, QuestID::ZaishenMission::Nahpui_Quarter));
 	factions_missions.push_back(new FactionsMission(
-		MapID::Tahnnakai_Temple_outpost_mission));
+		MapID::Tahnnakai_Temple_outpost_mission, QuestID::ZaishenMission::Tahnnakai_Temple));
 	factions_missions.push_back(new FactionsMission(
-		MapID::Arborstone_outpost_mission));
+		MapID::Arborstone_outpost_mission, QuestID::ZaishenMission::Arborstone));
 	factions_missions.push_back(new FactionsMission(
 		MapID::Boreas_Seabed_outpost_mission, QuestID::ZaishenMission::Boreas_Seabed));
 	factions_missions.push_back(new FactionsMission(
-		MapID::Sunjiang_District_outpost_mission));
+		MapID::Sunjiang_District_outpost_mission, QuestID::ZaishenMission::Sunjiang_District));
 	factions_missions.push_back(new FactionsMission(
 		MapID::The_Eternal_Grove_outpost_mission, QuestID::ZaishenMission::The_Eternal_Grove));
 	factions_missions.push_back(new FactionsMission(
@@ -118,27 +118,27 @@ void MissionsWindow::Initialize_Nightfall()
 {
 	auto& nightfall_missions = missions.at(Campaign::Nightfall);
 	nightfall_missions.push_back(new NightfallMission(
-		MapID::Chahbek_Village, QuestID::ZaishenMission::Chabek_Village));
+		MapID::Chahbek_Village, QuestID::ZaishenMission::Chahbek_Village));
 	nightfall_missions.push_back(new NightfallMission(
 		MapID::Jokanur_Diggings, QuestID::ZaishenMission::Jokanur_Diggings));
 	nightfall_missions.push_back(new NightfallMission(
-		MapID::Blacktide_Den));
+		MapID::Blacktide_Den, QuestID::ZaishenMission::Blacktide_Den));
 	nightfall_missions.push_back(new NightfallMission(
 		MapID::Consulate_Docks, QuestID::ZaishenMission::Consulate_Docks));
 	nightfall_missions.push_back(new NightfallMission(
-		MapID::Venta_Cemetery, QuestID::ZaishenMission::Venta_Cemetary));
+		MapID::Venta_Cemetery, QuestID::ZaishenMission::Venta_Cemetery));
 	nightfall_missions.push_back(new NightfallMission(
 		MapID::Kodonur_Crossroads, QuestID::ZaishenMission::Kodonur_Crossroads));
 	nightfall_missions.push_back(new NightfallMission(
 		MapID::Pogahn_Passage, QuestID::ZaishenMission::Pogahn_Passage));
 	nightfall_missions.push_back(new NightfallMission(
-		MapID::Rilohn_Refuge));
+		MapID::Rilohn_Refuge, QuestID::ZaishenMission::Rilohn_Refuge));
 	nightfall_missions.push_back(new NightfallMission(
 		MapID::Moddok_Crevice, QuestID::ZaishenMission::Moddok_Crevice));
 	nightfall_missions.push_back(new NightfallMission(
-		MapID::Tihark_Orchard));
+		MapID::Tihark_Orchard, QuestID::ZaishenMission::Tihark_Orchard));
 	nightfall_missions.push_back(new NightfallMission(
-		MapID::Dasha_Vestibule));
+		MapID::Dasha_Vestibule, QuestID::ZaishenMission::Dasha_Vestibule));
 	nightfall_missions.push_back(new NightfallMission(
 		MapID::Dzagonur_Bastion, QuestID::ZaishenMission::Dzagonur_Bastion));
 	nightfall_missions.push_back(new NightfallMission(
@@ -148,13 +148,13 @@ void MissionsWindow::Initialize_Nightfall()
 	nightfall_missions.push_back(new NightfallMission(
 		MapID::Nundu_Bay, QuestID::ZaishenMission::Nundu_Bay));
 	nightfall_missions.push_back(new NightfallMission(
-		MapID::Gate_of_Desolation));
+		MapID::Gate_of_Desolation, QuestID::ZaishenMission::Gate_of_Desolation));
 	nightfall_missions.push_back(new NightfallMission(
 		MapID::Ruins_of_Morah, QuestID::ZaishenMission::Ruins_of_Morah));
 	nightfall_missions.push_back(new TormentMission(
-		MapID::Gate_of_Pain));
+		MapID::Gate_of_Pain, QuestID::ZaishenMission::Gate_of_Pain));
 	nightfall_missions.push_back(new TormentMission(
-		MapID::Gate_of_Madness));
+		MapID::Gate_of_Madness, QuestID::ZaishenMission::Gate_of_Madness));
 	nightfall_missions.push_back(new TormentMission(
 		MapID::Abaddons_Gate, QuestID::ZaishenMission::Abaddons_Gate));
 }

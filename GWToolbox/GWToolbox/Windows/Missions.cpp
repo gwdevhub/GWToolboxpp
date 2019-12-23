@@ -79,7 +79,8 @@ const Mission::MissionImageList Dungeon::hard_mode_images({
 });
 
 
-Color Mission::has_quest_bg_color = Colors::ARGB(102, 0, 255, 0);
+Color Mission::is_daily_bg_color = Colors::ARGB(102, 0, 255, 0);
+Color Mission::has_quest_bg_color = Colors::ARGB(102, 0, 150, 0);
 float Mission::icon_size = 48.0f;
 
 
@@ -141,10 +142,14 @@ void Mission::Draw(IDirect3DDevice9* device)
 	auto texture = GetMissionImage();
 	if (texture == nullptr) return;
 
-	bool has_quest = HasQuest();
-
 	ImVec2 s(icon_size, icon_size);
-	ImVec4 bg = has_quest ? ImColor(has_quest_bg_color) : ImVec4(0, 0, 0, 0);
+	ImVec4 bg = ImVec4(0, 0, 0, 0);
+	if (IsDaily()) {
+		bg = ImColor(is_daily_bg_color);
+	}
+	else if (HasQuest()) {
+		bg = ImColor(has_quest_bg_color);
+	}
 	ImVec4 tint(1, 1, 1, 1);
 	ImVec2 uv0 = ImVec2(0, 0);
 	ImVec2 uv1 = ImVec2(1, 1);
@@ -193,7 +198,7 @@ bool Mission::HasQuest()
 	const auto& quests = ctx->quest_log;
 	for (size_t i = 0; i < quests.size(); i++) {
 		GW::Quest q = quests[i];
-		if (q.quest_id == zm_quest) {
+		if (zm_quest != 0 && q.quest_id == zm_quest) {
 			return true;
 		}
 	}
@@ -228,8 +233,8 @@ bool Dungeon::HasQuest()
 	const auto& quests = ctx->quest_log;
 	for (size_t i = 0; i < quests.size(); i++) {
 		GW::Quest q = quests[i];
-		for (auto zm : zm_quests) {
-			if (q.quest_id == zm) {
+		for (auto zb : zb_quests) {
+			if (zb != 0 && q.quest_id == zb) {
 				return true;
 			}
 		}
