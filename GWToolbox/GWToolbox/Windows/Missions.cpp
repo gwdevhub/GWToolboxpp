@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Missions.h"
 #include "TravelWindow.h"
+#include "ZaishenCycles.h"
 
 #include <GWCA/GameEntities/Quest.h>
 #include <GWCA/Managers/PartyMgr.h>
@@ -187,8 +188,8 @@ IDirect3DTexture9* Mission::GetMissionImage()
 
 bool Mission::IsDaily()
 {
-	//TODO how do we get the current daily?
-	return false;
+	auto daily = ZaishenCycles::GetZiashenMission();
+	return (zm_quest != 0 && daily == zm_quest);
 }
 
 
@@ -224,6 +225,18 @@ const std::string EotNMission::Name() {
 	label += Mission::Name();
 	label += ")";
 	return label;
+}
+
+
+bool Dungeon::IsDaily()
+{
+	auto daily = ZaishenCycles::GetZiashenBounty();
+	for (auto zb : zb_quests) {
+		if (zb != 0 && zb == daily) {
+			return true;
+		}
+	}
+	return false;
 }
 
 

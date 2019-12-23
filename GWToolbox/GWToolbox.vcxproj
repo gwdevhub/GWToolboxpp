@@ -167,6 +167,7 @@
     <ClInclude Include="GWToolbox\Windows\SettingsWindow.h" />
     <ClInclude Include="GWToolbox\Windows\TradeWindow.h" />
     <ClInclude Include="GWToolbox\Windows\TravelWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\ZaishenCycles.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
@@ -260,6 +261,7 @@
     <ClCompile Include="GWToolbox\Windows\SettingsWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\TradeWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\TravelWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\ZaishenCycles.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Dependencies\GWCA\vc\GWCA.vcxproj">

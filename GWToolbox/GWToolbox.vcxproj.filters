@@ -302,6 +302,9 @@
     <ClInclude Include="GWToolbox\Modules\DiscordIntegration.h">
       <Filter>Modules\DiscordIntegration</Filter>
     </ClInclude>
+    <ClInclude Include="GWToolbox\Windows\ZaishenCycles.h">
+      <Filter>Windows\Missions</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -460,6 +463,9 @@
     <ClCompile Include="GWToolbox\Utils\RateLimiter.cpp" />
     <ClCompile Include="GWToolbox\Modules\DiscordIntegration.cpp">
       <Filter>Modules\DiscordIntegration</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Windows\ZaishenCycles.cpp">
+      <Filter>Windows\Missions</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
