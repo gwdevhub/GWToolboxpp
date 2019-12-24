@@ -135,8 +135,8 @@ LONG WINAPI Log::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers) {
 
 	GetLocalTime(&stLocalTime);
 
-	StringCchPrintf(szFileName, MAX_PATH, "%s\\%s-%04d%02d%02d-%02d%02d%02d-%ld-%ld.dmp",
-		Resources::GetSettingsFolderPath().c_str(), GWTOOLBOX_VERSION,
+	StringCchPrintf(szFileName, MAX_PATH, "%ls\\%s-%04d%02d%02d-%02d%02d%02d-%ld-%ld.dmp",
+		Resources::GetSettingsFolderPath().c_str(), GWTOOLBOX_DLL_VERSION,
 		stLocalTime.wYear, stLocalTime.wMonth, stLocalTime.wDay,
 		stLocalTime.wHour, stLocalTime.wMinute, stLocalTime.wSecond,
 		GetCurrentProcessId(), GetCurrentThreadId());
@@ -150,15 +150,14 @@ LONG WINAPI Log::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers) {
 	//MINIDUMP_TYPE flags = static_cast<MINIDUMP_TYPE>(MiniDumpWithDataSegs | MiniDumpWithPrivateReadWriteMemory);
 	bMiniDumpSuccessful = MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(),
 		hDumpFile, MiniDumpWithDataSegs, &ExpParam, NULL, NULL);
-
+	CloseHandle(hDumpFile);
 	if (bMiniDumpSuccessful) {
-		MessageBoxA(0,
-			"GWToolbox crashed, oops\n\n"
-			"Log and dump files have been created in the GWToolbox data folder.\n"
-			"Open it by typing running %LOCALAPPDATA% and looking for GWToolboxpp folder\n"
-			"Please send the files to the GWToolbox++ developers.\n"
-			"Thank you and sorry for the inconvenience.",
-			"GWToolbox++ Crash!", 0);
+		char buf[256];
+		sprintf(buf, "GWToolbox crashed, oops\n\n"
+			"A dump file has been created in:\n\n%s\n\n"
+			"Please send this file to the GWToolbox++ developers.\n"
+			"Thank you and sorry for the inconvenience.", szFileName);
+		MessageBoxA(0, buf,"GWToolbox++ Crash!", 0);
 	} else {
 		MessageBoxA(0,
 			"GWToolbox crashed, oops\n\n"
@@ -166,6 +165,7 @@ LONG WINAPI Log::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers) {
 			"I don't really know what to do, sorry, contact the developers.\n",
 			"GWToolbox++ Crash!", 0);
 	}
+	abort();
 
 	return EXCEPTION_EXECUTE_HANDLER;
 }

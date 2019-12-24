@@ -259,9 +259,10 @@ void TravelWindow::UITravel(GW::Constants::MapID MapID, GW::Constants::District 
 	if (!IsMapUnlocked(MapID)) {
 		err = 53;
 	}
-	if (t->region_id == GW::Map::GetRegion()
-		&& t->language_id == GW::Map::GetLanguage()
-		&& t->district_number == GW::Map::GetDistrict()
+	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost
+		&& t->region_id == GW::Map::GetRegion()
+		&& (t->language_id == 0 || t->language_id == GW::Map::GetLanguage())
+		&& (t->district_number == 0 || t->district_number == GW::Map::GetDistrict())
 		&& t->map_id == GW::Map::GetMapID()) {
 		err = 60;
 	}
