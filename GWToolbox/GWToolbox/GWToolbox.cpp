@@ -77,8 +77,7 @@ DWORD __stdcall ThreadEntry(LPVOID) {
         __try {
             GWToolbox::Instance().Draw(device);
         }
-        __except (Log::GenerateDump(GetExceptionInformation())) {
-            printf("Oh deary dear.");
+        __except (EXCEPT_EXPRESSION_ENTRY) {
         }
     });
     GW::Render::SetResetCallback([](IDirect3DDevice9* device) {
