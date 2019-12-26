@@ -43,7 +43,7 @@ public:
 
 private:
 	struct Message {
-		uint32_t    timestamp = 0;
+		time_t    timestamp = 0;
 		std::string name;
 		std::string message;
 		inline bool contains(std::string search) {

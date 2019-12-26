@@ -203,6 +203,7 @@ public:
 	bool CanTerminate() override;
     void Terminate() override;
 	bool ShowAsWidget() const;
+	bool ShowAsWindow() const;
 	ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags=0) const;
 
     // Update. Will always be called every frame.
@@ -234,8 +235,9 @@ private:
     bool friend_list_ready = false; // Allow processing when this is true.
 	bool need_to_reorder_friends = true;
 
-	bool show_as_widget_in_explorable = true;
-	bool show_as_widget_in_outpost = true;
+	int explorable_show_as = 1;
+	int outpost_show_as = 1;
+
 	bool resize_widget = false;
 
 	bool lock_move_as_widget = false;

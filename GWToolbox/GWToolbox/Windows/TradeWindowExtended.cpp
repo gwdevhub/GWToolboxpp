@@ -436,7 +436,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 				// ==== time elapsed column ====
 				if (show_time) {
 					// negative numbers have came from this before, it is probably just server client desync
-					int time_since_message = (int)now - msg.timestamp;
+					clock_t time_since_message = now - msg.timestamp;
 
 					ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f16));
 					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(.7f, .7f, .7f, 1.0f));

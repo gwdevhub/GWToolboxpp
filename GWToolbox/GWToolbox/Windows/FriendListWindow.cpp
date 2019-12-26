@@ -395,19 +395,25 @@ ImGuiWindowFlags FriendListWindow::GetWinFlags(ImGuiWindowFlags flags) const {
 	return ToolboxWindow::GetWinFlags(flags);
 }
 bool FriendListWindow::ShowAsWidget() const {
-	return (show_as_widget_in_explorable && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
-		|| (show_as_widget_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost);
+	return (explorable_show_as == 1 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
+		|| (outpost_show_as == 1 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost);
+}
+bool FriendListWindow::ShowAsWindow() const {
+	return (explorable_show_as == 0 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
+		|| (outpost_show_as == 0 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost);
 }
 void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
     if (!visible || GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
         return;
+	const bool is_widget = ShowAsWidget();
+	const bool is_window = ShowAsWindow();
+	if (!is_widget && !is_window)
+		return;
 	ImGui::SetNextWindowPos(ImVec2(0.0f, 72.0f), ImGuiSetCond_FirstUseEver);
 	ImGuiIO* io = &ImGui::GetIO();
 	ImVec2 window_size = ImVec2(540.0f * io->FontGlobalScale, 512.0f * io->FontGlobalScale);
 	float cols[3] = { 180.0f * io->FontGlobalScale, 360.0f * io->FontGlobalScale, 540.0f * io->FontGlobalScale };
 	ImGui::SetNextWindowSize(window_size, ImGuiSetCond_FirstUseEver);
-
-	const bool is_widget = ShowAsWidget();
 	if (is_widget)
 		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(0).Value);
 	bool ok = ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags());
@@ -530,21 +536,32 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
 }
 void FriendListWindow::DrawSettingInternal() {
 	bool edited = false;
-	const float offset = ImGui::GetContentRegionAvailWidth() / 2;
-	edited |= ImGui::Checkbox("Show as widget in outpost", &show_as_widget_in_outpost);
-	ImGui::SameLine(offset);
-	edited |= ImGui::Checkbox("Show as widget in explorable", &show_as_widget_in_explorable);
+	ImGui::SameLine();
 	edited |= ImGui::Checkbox("Lock size as widget", &lock_size_as_widget);
-	ImGui::SameLine(offset);
+	ImGui::SameLine();
 	edited |= ImGui::Checkbox("Lock move as widget", &lock_move_as_widget);
-	Colors::DrawSetting("Background hover color", &hover_background_color);
+	const float dropdown_width = 160.0f * ImGui::GetIO().FontGlobalScale;
+	ImGui::Text("Show as");
+	ImGui::SameLine(); 
+	ImGui::PushItemWidth(dropdown_width);
+	edited |= ImGui::Combo("###show_as_outpost", &outpost_show_as, "Window\0Widget\0Hidden");
+	ImGui::PopItemWidth();
+	ImGui::SameLine(); ImGui::Text("in outpost");
+
+	ImGui::Text("Show as");
+	ImGui::SameLine(); 
+	ImGui::PushItemWidth(dropdown_width); 
+	edited |= ImGui::Combo("###show_as_explorable", &explorable_show_as, "Window\0Widget\0Hidden");
+	ImGui::PopItemWidth();
+	ImGui::SameLine(); ImGui::Text("in explorable");
+	Colors::DrawSetting("Widget background hover color", &hover_background_color);
 }
 void FriendListWindow::LoadSettings(CSimpleIni* ini) {
     ToolboxWindow::LoadSettings(ini);
 	lock_move_as_widget = ini->GetBoolValue(Name(), VAR_NAME(lock_move_as_widget), lock_move_as_widget);
 	lock_size_as_widget = ini->GetBoolValue(Name(), VAR_NAME(lock_size_as_widget), lock_size_as_widget);
-	show_as_widget_in_explorable = ini->GetBoolValue(Name(), VAR_NAME(show_as_widget_in_explorable), show_as_widget_in_explorable);
-	show_as_widget_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(show_as_widget_in_outpost), show_as_widget_in_outpost);
+	outpost_show_as = ini->GetLongValue(Name(), VAR_NAME(outpost_show_as), outpost_show_as);
+	explorable_show_as = ini->GetLongValue(Name(), VAR_NAME(explorable_show_as), explorable_show_as);
 	Colors::Load(ini, Name(), VAR_NAME(hover_background_color), hover_background_color);
 
     LoadFromFile();
@@ -553,8 +570,8 @@ void FriendListWindow::SaveSettings(CSimpleIni* ini) {
     ToolboxWindow::SaveSettings(ini);
 	ini->SetBoolValue(Name(), VAR_NAME(lock_move_as_widget), lock_move_as_widget);
 	ini->SetBoolValue(Name(), VAR_NAME(lock_size_as_widget), lock_size_as_widget);
-	ini->SetBoolValue(Name(), VAR_NAME(show_as_widget_in_explorable), show_as_widget_in_explorable);
-	ini->SetBoolValue(Name(), VAR_NAME(show_as_widget_in_outpost), show_as_widget_in_outpost);
+	ini->SetLongValue(Name(), VAR_NAME(outpost_show_as), outpost_show_as);
+	ini->SetLongValue(Name(), VAR_NAME(explorable_show_as), explorable_show_as);
 
 	Colors::Save(ini, Name(), VAR_NAME(hover_background_color), hover_background_color);
 

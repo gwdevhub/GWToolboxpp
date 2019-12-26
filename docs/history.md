@@ -5,6 +5,16 @@ layout: default
 # Version History
 Previous releases are provided as dll files. In order to use it, you need to use a different launcher which must be placed in the same directory as the dll. If you are looking for the latest version, go to the [Home Page](./) instead.
 
+## Version 2.29, Extended 1.9.33
+* [New] Trade Window changes: removed dependency on kamadan.decltype.org - players can now use this window as normal when in Kamadan ae1 even if decltype.org stops working.
+* [New] Better crash handling; more GWToolbox related crashes will be caught and dumped in the GWToolboxpp folder, and will show a message on-screen.
+* [Minor] Merged vanilla 2.29 release (was previously a beta version)
+* [Minor] Friend list is now amended when saved, not overwritten. This allows multiple accounts to maintain details about mutual friends.
+* [Fix] Fixed a `/tp` bug that prevented players from zoning back to outpost from explorable if the map_id was the same e.g. deep, urgoz
+* [Fix] Fixed crash on some users' clients when trying to run toolbox before choosing a character
+
+[Download](https://github.com/3vcloud/GWToolboxpp/releases/download/2.29-1.9.33_Release/JonsToolbox_1.9.33.zip)
+
 ## Version 2.29, Extended 1.9.3
 * [New] Added Flame Trap, Spike Trap and Barbed Trap to aoe effects on minimap.
 * [New] Friend List window/module added.
