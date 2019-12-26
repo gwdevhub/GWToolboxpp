@@ -12,6 +12,7 @@ DWORD WINAPI init(HMODULE hModule){
 		Log::Log("Waiting for logged character\n");
 
 		GW::Scanner::Initialize();
+
 		DWORD **found = (DWORD **)GW::Scanner::Find(
 			"\xA3\x00\x00\x00\x00\xFF\x75\x0C\xC7\x05", "x????xxxxx", +1);
 		if (!(found && *found)) {
@@ -22,7 +23,7 @@ DWORD WINAPI init(HMODULE hModule){
 		}
 
 		DWORD *is_ingame = *found;
-		while (*is_ingame == 0) { // @Cleanup, add pattern
+		while (*is_ingame == 0) {
 			Sleep(100);
 		}
 		

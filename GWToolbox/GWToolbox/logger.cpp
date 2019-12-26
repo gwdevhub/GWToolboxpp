@@ -131,7 +131,7 @@ LONG WINAPI Log::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers) {
 
 	GetLocalTime(&stLocalTime);
 
-	StringCchPrintf(szFileName, MAX_PATH, "%s\\%s-%04d%02d%02d-%02d%02d%02d-%ld-%ld.dmp",
+	StringCchPrintf(szFileName, MAX_PATH, "%ls\\%s-%04d%02d%02d-%02d%02d%02d-%ld-%ld.dmp",
 		Resources::GetSettingsFolderPath().c_str(), GWTOOLBOX_VERSION,
 		stLocalTime.wYear, stLocalTime.wMonth, stLocalTime.wDay,
 		stLocalTime.wHour, stLocalTime.wMinute, stLocalTime.wSecond,
