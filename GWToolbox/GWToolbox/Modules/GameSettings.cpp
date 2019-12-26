@@ -403,7 +403,6 @@ void GameSettings::Initialize() {
 	ToolboxModule::Initialize();
 
 	{
-		// @Replaced
 		// Patch that allow storage page (and Anniversary page) to work.
 		uintptr_t found = GW::Scanner::Find("\xEB\x17\x33\xD2\x8D\x4A\x06\xEB", "xxxxxxxx", -4);
 		printf("[SCAN] StoragePatch = %p\n", (void *)found);
@@ -421,7 +420,6 @@ void GameSettings::Initialize() {
 	}
 	
 	{
-		// @Replaced
 		uintptr_t found = GW::Scanner::Find(
 			"\x5F\x6A\x00\xFF\x75\xE4\x6A\x4C\xFF\x75\xF8", "xxxxxxxxxxx", -0x44);
 		printf("[SCAN] TomePatch = %p\n", (void *)found);
@@ -431,7 +429,6 @@ void GameSettings::Initialize() {
 	}
 
 	{
-		// @Replaced: (Didn't break wow!)
 		uintptr_t found = GW::Scanner::Find("\xF7\x40\x0C\x10\x00\x02\x00\x75", "xxxxxxxx", +7);
 		printf("[SCAN] GoldConfirmationPatch = %p\n", (void *)found);
 		if (found) {
