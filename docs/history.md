@@ -9,6 +9,7 @@ Previous releases are provided as dll files. In order to use it, you need to use
 * [New] Trade Window changes: removed dependency on kamadan.decltype.org - players can now use this window as normal when in Kamadan ae1 even if decltype.org stops working.
 * [New] Better crash handling; more GWToolbox related crashes will be caught and dumped in the GWToolboxpp folder, and will show a message on-screen.
 * [Minor] Merged vanilla 2.29 release (was previously a beta version)
+* [Minor] Added option to hide friends list when in outpost/explorable
 * [Minor] Friend list is now amended when saved, not overwritten. This allows multiple accounts to maintain details about mutual friends.
 * [Fix] Fixed a `/tp` bug that prevented players from zoning back to outpost from explorable if the map_id was the same e.g. deep, urgoz
 * [Fix] Fixed crash on some users' clients when trying to run toolbox before choosing a character
