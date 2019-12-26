@@ -209,7 +209,7 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
 	use_updater = ini->GetBoolValue(Name(), VAR_NAME(use_updater), true);
 	use_chatfilter = ini->GetBoolValue(Name(), VAR_NAME(use_chatfilter), true);
 	use_chatcommand = ini->GetBoolValue(Name(), VAR_NAME(use_chatcommand), true);
-	use_discordintegration = ini->GetBoolValue(Name(), VAR_NAME(use_discordintegration), true);
+	use_discordintegration = ini->GetBoolValue(Name(), VAR_NAME(use_discordintegration), false);
 }
 
 void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
