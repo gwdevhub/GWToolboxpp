@@ -76,8 +76,7 @@ DWORD __stdcall ThreadEntry(LPVOID) {
     GW::Render::SetRenderCallback([](IDirect3DDevice9* device) {
         __try {
             GWToolbox::Instance().Draw(device);
-        }
-        __except (EXCEPT_EXPRESSION_ENTRY) {
+        } __except ( EXCEPT_EXPRESSION_ENTRY ) {
         }
     });
     GW::Render::SetResetCallback([](IDirect3DDevice9* device) {
@@ -364,9 +363,9 @@ void GWToolbox::SaveSettings() {
 }
 
 void GWToolbox::Terminate() {
-	SaveSettings();
-	inifile->Reset();
-	delete inifile;
+    SaveSettings();
+    inifile->Reset();
+    delete inifile;
 
     for (ToolboxModule* module : modules) {
         module->Terminate();

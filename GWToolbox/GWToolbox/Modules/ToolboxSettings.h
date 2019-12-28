@@ -70,5 +70,5 @@ private:
 	bool use_updater = true;
 	bool use_chatfilter = true;
 	bool use_chatcommand = true;
-	bool use_discordintegration = true;
+	bool use_discordintegration = false;
 };
