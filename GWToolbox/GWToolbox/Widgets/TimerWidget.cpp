@@ -20,18 +20,21 @@
 
 void TimerWidget::LoadSettings(CSimpleIni *ini) {
 	ToolboxWidget::LoadSettings(ini);
-	click_to_print_time = ini->GetBoolValue(Name(), VAR_NAME(click_to_print_time), false);
-    show_extra_timers = ini->GetBoolValue(Name(), VAR_NAME(show_extra_timers), false);
+	click_to_print_time = ini->GetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
+    show_extra_timers = ini->GetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
+    hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
 }
 
 void TimerWidget::SaveSettings(CSimpleIni *ini) {
 	ToolboxWidget::SaveSettings(ini);
 	ini->SetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
     ini->SetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
+    ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
 }
 
 void TimerWidget::DrawSettingInternal() {
 	ToolboxWidget::DrawSettingInternal();
+    ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
 	ImGui::Checkbox("Ctrl+Click to print time", &click_to_print_time);
     ImGui::Checkbox("Show extra timers", &show_extra_timers);
     ImGui::ShowHelp("Such as Deep aspects");
@@ -40,7 +43,8 @@ void TimerWidget::DrawSettingInternal() {
 void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
 	if (!visible) return;
 	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
-
+    if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
+        return;
 	unsigned long time = GW::Map::GetInstanceTime() / 1000;
 
     bool ctrl_pressed = ImGui::IsKeyDown(VK_CONTROL);
@@ -106,13 +110,14 @@ bool TimerWidget::GetDeepTimer() {
 
     static clock_t start = -1;
     SkillID skill = SkillID::No_Skill;
-    for (DWORD i = 0; i < effects.size(); ++i) {
+    for (DWORD i = 0; i < effects.size() && skill == SkillID::No_Skill; ++i) {
         SkillID effect_id = (SkillID)effects[i].skill_id;
         switch (effect_id) {
-        case SkillID::Aspect_of_Exhaustion: skill = SkillID::Aspect_of_Exhaustion; break;
-        case SkillID::Aspect_of_Depletion_energy_loss: skill = SkillID::Aspect_of_Depletion_energy_loss; break;
-        case SkillID::Scorpion_Aspect: skill = SkillID::Scorpion_Aspect; break;
-        default: break;
+        case SkillID::Aspect_of_Exhaustion:
+        case SkillID::Aspect_of_Depletion_energy_loss:
+        case SkillID::Scorpion_Aspect: 
+            skill = effect_id; 
+            break;
         }
     }
     if (skill == SkillID::No_Skill) {

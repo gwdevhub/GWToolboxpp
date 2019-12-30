@@ -152,6 +152,12 @@ namespace {
 			*npc_model_file_id = 0x0004c409;
 			*flags = 98820;
 		}
+		else if (wcsncmp(name, L"reindeer", std::min(arglen, 8)) == 0 && false) {
+			*npc_id = 5;
+			*npc_model_file_id = 277573;
+			*npc_model_file_data = 277576;
+			*flags = 32780;
+		}
 		else if (wcsncmp(name, L"gwenpre", std::min(arglen,7)) == 0) {
 			*npc_id = 244;
 			*npc_model_file_id = 116377;

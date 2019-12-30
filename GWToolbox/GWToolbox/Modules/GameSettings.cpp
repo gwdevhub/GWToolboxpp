@@ -884,6 +884,17 @@ void GameSettings::Initialize() {
 		}
 		status->blocked = true;
 	});
+	// Tick is toggle
+	GW::Chat::RegisterChatEventCallback(&StartWhisperCallback_Entry, [this](GW::HookStatus* status, uint32_t button_id, uint32_t type, wchar_t* info, void* unk) {
+		static uint32_t last_button_id = 0;
+		if (!tick_is_toggle || info) return; // Info should be null
+		if (type == 7)
+			last_button_id = button_id;
+		if (type == 6 && button_id + 1 == last_button_id) {
+			GW::PartyMgr::Tick(!GW::PartyMgr::GetIsPlayerTicked());
+			status->blocked = true;
+		}
+		});
 	{
 		// Patch that allow storage page (and Anniversary page) to work.
 		uintptr_t found = GW::Scanner::Find("\xEB\x17\x33\xD2\x8D\x4A\x06\xEB", "xxxxxxxx", -4);
@@ -1381,15 +1392,10 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	::LoadChannelColor(ini, Name(), "alliance", GW::Chat::CHANNEL_ALLIANCE);
 	::LoadChannelColor(ini, Name(), "whispers", GW::Chat::CHANNEL_WHISPER);
 
-	if (openlinks) GW::UI::SetOpenLinks(openlinks);
-	// GW::PartyMgr::SetTickToggle(tick_is_toggle);
+	GW::UI::SetOpenLinks(openlinks);
     GW::Chat::ToggleTimestamps(show_timestamps);
     GW::Chat::SetTimestampsColor(timestamps_color);
     GW::Chat::SetTimestampsFormat(show_timestamp_24h, show_timestamp_seconds);
-	if (auto_url) GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, &SendChatCallback);
-	if (move_item_on_ctrl_click) GW::Items::RegisterItemClickCallback(&ItemClickCallback_Entry, GameSettings::ItemClickCallback);
-
-	GW::Chat::RegisterWhisperCallback(&WhisperCallback_Entry, &WhisperCallback);
 
     tome_patch.TogglePatch(show_unlearned_skill);
     gold_confirm_patch.TogglePatch(disable_gold_selling_confirmation);
@@ -1525,21 +1531,13 @@ void GameSettings::DrawSettingInternal() {
 	}
 	ImGui::ShowHelp("Clicking on template that has a URL as name will open that URL in your browser");
 
-	if (ImGui::Checkbox("Automatically change urls into build templates.", &auto_url)) {
-		GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, &SendChatCallback);
-	}
+	ImGui::Checkbox("Automatically change urls into build templates.", &auto_url);
 	ImGui::ShowHelp("When you write a message starting with 'http://' or 'https://', it will be converted in template format");
 
-#if 0
-	if (ImGui::Checkbox("Tick is a toggle", &tick_is_toggle)) {
-		GW::PartyMgr::SetTickToggle(tick_is_toggle);
-	}
+	ImGui::Checkbox("Tick is a toggle", &tick_is_toggle);
 	ImGui::ShowHelp("Ticking in party window will work as a toggle instead of opening the menu");
-#endif
 
-	if (ImGui::Checkbox("Move items from/to storage with Control+Click", &move_item_on_ctrl_click)) {
-        GW::Items::RegisterItemClickCallback(&ItemClickCallback_Entry, GameSettings::ItemClickCallback);
-	}
+	ImGui::Checkbox("Move items from/to storage with Control+Click", &move_item_on_ctrl_click);
 	ImGui::Indent();
 	ImGui::Checkbox("Move item to current open storage pane on click", &move_item_to_current_storage_pane);
 	ImGui::ShowHelp("Enabled: Using Control+Click on an item in inventory with storage chest open,\n"

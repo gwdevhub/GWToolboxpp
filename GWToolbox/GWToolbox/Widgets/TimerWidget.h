@@ -27,6 +27,7 @@ private:
     bool GetDhuumTimer();
     bool GetTrapTimer();
 
+	bool hide_in_outpost = false;
 	bool click_to_print_time = false;
     bool show_extra_timers = false;
 

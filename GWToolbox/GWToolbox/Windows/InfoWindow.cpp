@@ -5,6 +5,7 @@
 #include <GWCA\GameContainers\Array.h>
 #include <GWCA\GameContainers\GamePos.h>
 
+#include <GWCA\GameEntities\Camera.h>
 #include <GWCA\GameEntities\Item.h>
 #include <GWCA\GameEntities\Party.h>
 #include <GWCA\GameEntities\Quest.h>
@@ -26,6 +27,7 @@
 #include <GWCA\Managers\EffectMgr.h>
 #include <GWCA\Managers\GuildMgr.h>
 #include <GWCA\Managers\GameThreadMgr.h>
+#include <GWCA\Managers\CameraMgr.h>
 
 #include "GWToolbox.h"
 #include "GuiUtils.h"
@@ -158,7 +160,20 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 				});
 			}
 		}
-
+		
+		if (ImGui::CollapsingHeader("Camera")) {
+			static char pos_buf[32];
+			static char target_buf[32];
+			static GW::Camera* cam;
+			if (cam = GW::CameraMgr::GetCamera()) {
+				snprintf(pos_buf, 32, "%.2f, %.2f, %.2f", cam->position.x, cam->position.y, cam->position.z);
+				snprintf(target_buf, 32, "%.2f, %.2f, %.2f", cam->look_at_target.x, cam->look_at_target.y, cam->look_at_target.z);
+			}
+			ImGui::PushItemWidth(-80.0f);
+			ImGui::InputText("Position##cam_pos", pos_buf, 32, ImGuiInputTextFlags_ReadOnly);
+			ImGui::InputText("Target##cam_target", target_buf, 32, ImGuiInputTextFlags_ReadOnly);
+			ImGui::PopItemWidth();
+		}
 		if (show_player && ImGui::CollapsingHeader("Player")) {
 			static char x_buf[32] = "";
 			static char y_buf[32] = "";
@@ -197,6 +212,19 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                 }
                 ImGui::TreePop();
             }
+			if (ImGui::TreeNode("Buffs##player")) {
+				GW::BuffArray effects = GW::Effects::GetPlayerBuffArray();
+				if (effects.valid()) {
+					for (DWORD i = 0; i < effects.size(); ++i) {
+						ImGui::Text("id: %d", effects[i].skill_id);
+						if (effects[i].target_agent_id) {
+							ImGui::SameLine();
+							ImGui::Text(" target: %d", effects[i].target_agent_id);
+						}
+					}
+				}
+				ImGui::TreePop();
+			}
 
 		}
 		if (show_target && ImGui::CollapsingHeader("Target")) {
