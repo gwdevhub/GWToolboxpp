@@ -118,6 +118,13 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [Download](https://github.com/3vcloud/GWToolboxpp/releases/download/2.27-1.8.93_Release/GWToolbox.dll)
 
+## Version 2.30
+* [Fix] Fix bug with launcher asking to download every time.
+* [Fix] Main window options are now accesible again.
+* [Fix] Fixed crash dump generation.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.30_Release/GWToolbox.dll)
+
 ## Version 2.29
 * [New] Added Discord 'Rich Presence' integration.
 * [Fix] Fixes following December 13th update.
@@ -127,6 +134,7 @@ Previous releases are provided as dll files. In order to use it, you need to use
 * [Minor] Vanquish Widget can now be ctrl+clicked to print the vanquish information to group chat.
 * [Minor] Now, '/resignlog' only prints name of players who didn't resigned yet.
 
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.29_Release/GWToolbox.dll)
 
 ## Version 2.27
 * [New] Added support for adrenaline skill with /useskill command.
@@ -136,6 +144,8 @@ Previous releases are provided as dll files. In order to use it, you need to use
 * [Fix] Fixed bug when game process name wasn't "Gw.exe".
 * [Fix] Fixed bug related to player status introduced in recent game update.
 * [Minor] Several improvements in GWCA and updated 3rd party libraries.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.27_Release/GWToolbox.dll)
 
 ## Version 2.26
 * [Fix] Fixed bug with friend status message.
