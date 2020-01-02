@@ -238,7 +238,7 @@ namespace CSLauncher {
                 if (result == GWCAMemory.LOADMODULERESULT.SUCCESSFUL && dll_return != IntPtr.Zero) {
                     // continue
                 } else if (result == GWCAMemory.LOADMODULERESULT.SUCCESSFUL) {
-                    MessageBox.Show("Error loading DLL: ExitCode " + dll_return,
+                    MessageBox.Show("Error loading DLL: ExitCode " + dll_return + "(" + Marshal.GetLastWin32Error()+")",
                                     APP_NAME + " Error",
                                     MessageBoxButtons.OK,
                                     MessageBoxIcon.Error);
