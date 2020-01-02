@@ -13,6 +13,8 @@
 
 namespace {
 	FILE* logfile = nullptr;
+	FILE* stdout_file = nullptr;
+	FILE* stderr_file = nullptr;
 }
 
 // === Setup and cleanup ====
@@ -20,9 +22,8 @@ void Log::InitializeLog() {
 #if _DEBUG
 	logfile = stdout;
 	AllocConsole();
-	FILE* fh;
-	freopen_s(&fh, "CONOUT$", "w", stdout);
-	freopen_s(&fh, "CONOUT$", "w", stderr);
+	freopen_s(&stdout_file, "CONOUT$", "w", stdout);
+	freopen_s(&stderr_file, "CONOUT$", "w", stderr);
 	SetConsoleTitle("GWTB++ Debug Console");
 #else
 	logfile = _wfreopen(Resources::GetPath(L"log.txt").c_str(), L"w", stdout);
@@ -37,6 +38,10 @@ void Log::InitializeChat() {
 
 void Log::Terminate() {
 #if _DEBUG
+	if (stdout_file)
+		fclose(stdout_file);
+	if (stderr_file)
+		fclose(stderr_file);
 	FreeConsole();
 #else
 	if (logfile) {
