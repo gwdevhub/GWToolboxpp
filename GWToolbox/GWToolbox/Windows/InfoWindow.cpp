@@ -233,6 +233,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			static char s_buf[32] = "";
 			static char agentid_buf[32] = "";
 			static char modelid_buf[32] = "";
+			static char encname_buf[64] = "";
 			GW::Agent* target = GW::Agents::GetTarget();
 			if (target) {
 				snprintf(x_buf, 32, "%.2f", target->pos.x);
@@ -241,12 +242,20 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 				snprintf(s_buf, 32, "%.3f", s / 288.0f);
 				snprintf(agentid_buf, 32, "%d", target->agent_id);
 				snprintf(modelid_buf, 32, "%d", target->player_number);
+				wchar_t* enc_name = GW::Agents::GetAgentEncName(target);
+				if (enc_name) {
+					size_t offset = 0;
+					for (size_t i = 0; enc_name[i]; i++) {
+						offset += sprintf(encname_buf + offset, "0x%X ", enc_name[i]);
+					}
+				}
 			} else {
 				snprintf(x_buf, 32, "-");
 				snprintf(y_buf, 32, "-");
 				snprintf(s_buf, 32, "-");
 				snprintf(agentid_buf, 32, "-");
 				snprintf(modelid_buf, 32, "-");
+				snprintf(encname_buf, 64, "-");
 			}
 			ImGui::PushItemWidth(-80.0f);
 			ImGui::InputText("X pos##target", x_buf, 32, ImGuiInputTextFlags_ReadOnly);
@@ -256,6 +265,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::ShowHelp("Agent ID is unique for each agent in the instance,\nIt's generated on spawn and will change in different instances.");
 			ImGui::InputText("Model ID##target", modelid_buf, 32, ImGuiInputTextFlags_ReadOnly);
 			ImGui::ShowHelp("Model ID is unique for each kind of agent.\nIt is static and shared by the same agents.\nWhen targeting players, this is Player ID instead, unique for each player in the instance.\nFor the purpose of targeting hotkeys and commands, use this value");
+			ImGui::InputText("Agent Enc Name##target", encname_buf, 64, ImGuiInputTextFlags_ReadOnly);
 			ImGui::PopItemWidth();
 			GW::Player* player = nullptr;
 			GW::Guild* guild = nullptr;
@@ -374,21 +384,30 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::Text("First item in inventory");
             GW::Item* item = nullptr;
 			static char modelid[32] = "";
+			static char slot[12] = "";
+			static char encname_buf[32] = "";
+			static char encdesc_buf[512] = "";
 			strcpy_s(modelid, "-");
+			strcpy_s(slot, "-");
+			strcpy_s(encname_buf, "-");
+			strcpy_s(encdesc_buf, "-");
 			GW::Bag** bags = GW::Items::GetBagArray();
 			if (bags) {
-				GW::Bag* bag1 = bags[1];
-				if (bag1) {
-					GW::ItemArray items = bag1->items;
-					if (items.valid()) {
-						item = items[0];
-						if (item) {
-							snprintf(modelid, 32, "%d", item->model_id);
-						}
+				for (size_t i = 1; i < GW::Constants::BagMax && !item; i++) {
+					GW::Bag* bag = bags[i];
+					if (!bag) continue;
+					GW::ItemArray items = bag->items;
+					if (!items.valid()) continue;
+					for (size_t j = 0; j < items.size() && !item; j++) {
+						if (!items[j]) continue;
+						item = items[j];
+						snprintf(modelid, 32, "%d", item->model_id);
+						snprintf(slot, 12, "%d/%d", bag->index + 1,item->slot + 1);
 					}
 				}
 			}
 			ImGui::PushItemWidth(-80.0f);
+			ImGui::LabelText("Bag/Slot", slot, 12, ImGuiInputTextFlags_ReadOnly);
 			ImGui::InputText("ModelID", modelid, 32, ImGuiInputTextFlags_ReadOnly);
 			//ImGui::InputText("ItemID", itemid, 32, ImGuiInputTextFlags_ReadOnly);
 			ImGui::PopItemWidth();
@@ -398,6 +417,20 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                     ImGui::LabelText("Addr", "%p", item);
                     ImGui::LabelText("Id", "%d", item->item_id);
 					ImGui::LabelText("model_file_id", "0x%X", item->model_file_id);
+					if (item->name_enc) {
+						size_t offset = 0;
+						for (size_t i = 0; item->name_enc[i]; i++) {
+							offset += sprintf(encname_buf + offset, "0x%X ", item->name_enc[i]);
+						}
+					}
+					ImGui::InputText("Name Enc", item->name_enc ? encname_buf : "-", 32, ImGuiInputTextFlags_ReadOnly);
+					if (item->info_string) {
+						size_t offset = 0;
+						for (size_t i = 0; item->info_string[i]; i++) {
+							offset += sprintf(encdesc_buf + offset, "0x%X ", item->info_string[i]);
+						}
+					}
+					ImGui::InputText("Desc Enc", item->info_string ? encdesc_buf : "-", 512, ImGuiInputTextFlags_ReadOnly);
                 }
                 ImGui::PopItemWidth();
                 ImGui::TreePop();
