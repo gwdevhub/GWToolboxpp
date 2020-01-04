@@ -387,10 +387,12 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			static char slot[12] = "";
 			static char encname_buf[32] = "";
 			static char encdesc_buf[512] = "";
+			static char int_buf[32] = "";
 			strcpy_s(modelid, "-");
 			strcpy_s(slot, "-");
 			strcpy_s(encname_buf, "-");
 			strcpy_s(encdesc_buf, "-");
+			strcpy_s(int_buf, "-");
 			GW::Bag** bags = GW::Items::GetBagArray();
 			if (bags) {
 				for (size_t i = 1; i < GW::Constants::BagMax && !item; i++) {
@@ -403,6 +405,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 						item = items[j];
 						snprintf(modelid, 32, "%d", item->model_id);
 						snprintf(slot, 12, "%d/%d", bag->index + 1,item->slot + 1);
+						snprintf(int_buf, 12, "%d", item->interaction);
 					}
 				}
 			}
@@ -416,6 +419,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                 if (item) {
                     ImGui::LabelText("Addr", "%p", item);
                     ImGui::LabelText("Id", "%d", item->item_id);
+					ImGui::InputText("interaction", int_buf, 32, ImGuiInputTextFlags_ReadOnly);
 					ImGui::LabelText("model_file_id", "0x%X", item->model_file_id);
 					if (item->name_enc) {
 						size_t offset = 0;
