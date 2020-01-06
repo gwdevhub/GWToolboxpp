@@ -143,6 +143,15 @@ namespace {
 		return GuiUtils::SanitizePlayerName(players[player_number].name);
 	}
 
+	void SetWindowTitle(bool enabled) {
+		std::wstring title = L"Guild Wars";
+		if (!GW::MemoryMgr::GetGWWindowHandle()) return;
+		if (enabled)
+			title = GetPlayerName();
+		if (!title.empty())
+			SetWindowTextW(GW::MemoryMgr::GetGWWindowHandle(), title.c_str());
+	}
+
 	GW::Player* GetPlayerByName(const wchar_t* _name) {
 		if (!_name) return NULL;
 		std::wstring name = GuiUtils::SanitizePlayerName(_name);
@@ -1162,6 +1171,7 @@ void GameSettings::Initialize() {
     // - Show a message when player joins the outpost
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&PlayerJoinInstance_Entry, [&](GW::HookStatus*, GW::Packet::StoC::MapLoaded*) {
 		instance_entered_at = TIMER_INIT();
+		SetWindowTitle(set_window_title_as_charname);
 		});
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::PlayerJoinInstance* pak) -> void {
         if (!notify_when_players_join_outpost && !notify_when_friends_join_outpost)
@@ -1351,6 +1361,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     flash_window_on_trade = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_trade), flash_window_on_trade);
     focus_window_on_trade = ini->GetBoolValue(Name(), VAR_NAME(focus_window_on_trade), focus_window_on_trade);
     flash_window_on_name_ping = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_name_ping), flash_window_on_name_ping);
+	set_window_title_as_charname = ini->GetBoolValue(Name(), VAR_NAME(set_window_title_as_charname), set_window_title_as_charname);
 
 	auto_set_away = ini->GetBoolValue(Name(), VAR_NAME(auto_set_away), auto_set_away);
 	auto_set_away_delay = ini->GetLongValue(Name(), VAR_NAME(auto_set_away_delay), auto_set_away_delay);
@@ -1396,6 +1407,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     GW::Chat::ToggleTimestamps(show_timestamps);
     GW::Chat::SetTimestampsColor(timestamps_color);
     GW::Chat::SetTimestampsFormat(show_timestamp_24h, show_timestamp_seconds);
+	SetWindowTitle(set_window_title_as_charname);
 
     tome_patch.TogglePatch(show_unlearned_skill);
     gold_confirm_patch.TogglePatch(disable_gold_selling_confirmation);
@@ -1435,6 +1447,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_trade), flash_window_on_trade);
     ini->SetBoolValue(Name(), VAR_NAME(focus_window_on_trade), focus_window_on_trade);
     ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_name_ping), flash_window_on_name_ping);
+	ini->SetBoolValue(Name(), VAR_NAME(set_window_title_as_charname), set_window_title_as_charname);
 
 	ini->SetBoolValue(Name(), VAR_NAME(auto_set_away), auto_set_away);
 	ini->SetLongValue(Name(), VAR_NAME(auto_set_away_delay), auto_set_away_delay);
@@ -1621,6 +1634,9 @@ void GameSettings::DrawSettingInternal() {
 		"Disable the confirmation request when\n"
 		"selling Gold and Green items introduced\n"
 		"in February 5, 2019 update.");
+	if (ImGui::Checkbox("Set Guild Wars window title as current logged-in character", &set_window_title_as_charname)) {
+		SetWindowTitle(set_window_title_as_charname);
+	}
 }
 
 void GameSettings::FactionEarnedCheckAndWarn() {
