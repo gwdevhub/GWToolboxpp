@@ -612,8 +612,8 @@ int PconAlcohol::QuantityForEach(const GW::Item* item) const {
 		if (mod == nullptr) return 5; // we don't think this will ever happen
 
 		for (DWORD i = 0; i < item->mod_struct_size; i++) {
-			if (mod->identifier() == 581) {
-				return mod->arg3() * 5;
+			if (mod->identifier() == 0x2458) {
+				return mod->arg1() * 5;
 			}
 			mod++;
 		}

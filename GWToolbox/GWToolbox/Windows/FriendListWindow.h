@@ -234,6 +234,7 @@ private:
     bool pending_friend_removal = false;
     bool friend_list_ready = false; // Allow processing when this is true.
 	bool need_to_reorder_friends = true;
+	bool show_alias_on_whisper = false;
 
 	int explorable_show_as = 1;
 	int outpost_show_as = 1;

@@ -281,6 +281,16 @@ void FriendListWindow::Initialize() {
 		last_whisper = msg;
 		last_whisper = last_whisper.substr(last_whisper.find_first_of(L",") + 1);
 		});
+	GW::Chat::RegisterWhisperCallback(&ErrorMessage_Entry, [&](GW::HookStatus* status, wchar_t* sender, wchar_t* message) {
+		if (!show_alias_on_whisper)
+			return;
+		Friend* f = GetFriend(sender);
+		if (!f || (f->current_char && f->current_char->name == f->alias)) return;
+		wchar_t buf[256];
+		wnsprintfW(buf, 256, L"{<a=1>%s (%s)</a>} %s", sender, f->alias.c_str(), message);
+		GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_WHISPER, buf);
+		status->blocked = true;
+		});
     // "Failed to add friend" or "Friend <name> already added as <name>"
     GW::Chat::RegisterLocalMessageCallback(&ErrorMessage_Entry,
         [this](GW::HookStatus* status, int channel, wchar_t* message) -> void {
@@ -301,6 +311,15 @@ void FriendListWindow::Initialize() {
 					f->SetCharacter(player_name.c_str());
 				}
 				break;
+			case 0x76E: // Outgoing whisper
+				if (!show_alias_on_whisper) break;
+				player_name = GetPlayerNameFromEncodedString(message);
+				f = GetFriend(player_name.c_str());
+				if (!f || f->alias == player_name) return;
+				wchar_t buf[256];
+				wnsprintfW(buf, 256, L"\x76E\x101\x100\x107%s (%s)%s", player_name.c_str(), f->alias.c_str(), wcsstr(message, L"\x1"));
+				wcscpy(message, buf);
+				break;
 			case 0x881: // Player "" is not online. Redirect to the right person if we can find them!
 				player_name = GetPlayerNameFromEncodedString(message);
 				f = GetFriend(player_name.c_str());
@@ -310,6 +329,7 @@ void FriendListWindow::Initialize() {
 				}
 				break;
 			}
+			
         });
 	
 }
@@ -555,13 +575,19 @@ void FriendListWindow::DrawSettingInternal() {
 	ImGui::PopItemWidth();
 	ImGui::SameLine(); ImGui::Text("in explorable");
 	Colors::DrawSetting("Widget background hover color", &hover_background_color);
+
+	ImGui::Checkbox("Show friend aliases when sending/receiving whispers", &show_alias_on_whisper);
+	ImGui::ShowHelp("Only if your friend's alias is different to their character name");
 }
 void FriendListWindow::LoadSettings(CSimpleIni* ini) {
     ToolboxWindow::LoadSettings(ini);
 	lock_move_as_widget = ini->GetBoolValue(Name(), VAR_NAME(lock_move_as_widget), lock_move_as_widget);
 	lock_size_as_widget = ini->GetBoolValue(Name(), VAR_NAME(lock_size_as_widget), lock_size_as_widget);
+	show_alias_on_whisper = ini->GetBoolValue(Name(), VAR_NAME(show_alias_on_whisper), show_alias_on_whisper);
+
 	outpost_show_as = ini->GetLongValue(Name(), VAR_NAME(outpost_show_as), outpost_show_as);
 	explorable_show_as = ini->GetLongValue(Name(), VAR_NAME(explorable_show_as), explorable_show_as);
+
 	Colors::Load(ini, Name(), VAR_NAME(hover_background_color), hover_background_color);
 
     LoadFromFile();
@@ -570,6 +596,8 @@ void FriendListWindow::SaveSettings(CSimpleIni* ini) {
     ToolboxWindow::SaveSettings(ini);
 	ini->SetBoolValue(Name(), VAR_NAME(lock_move_as_widget), lock_move_as_widget);
 	ini->SetBoolValue(Name(), VAR_NAME(lock_size_as_widget), lock_size_as_widget);
+	ini->SetBoolValue(Name(), VAR_NAME(show_alias_on_whisper), show_alias_on_whisper);
+
 	ini->SetLongValue(Name(), VAR_NAME(outpost_show_as), outpost_show_as);
 	ini->SetLongValue(Name(), VAR_NAME(explorable_show_as), explorable_show_as);
 
