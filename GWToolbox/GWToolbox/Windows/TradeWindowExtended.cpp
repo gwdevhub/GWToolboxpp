@@ -589,6 +589,8 @@ void TradeWindow::LoadSettings(CSimpleIni* ini) {
 	filter_alerts = ini->GetBoolValue(Name(), VAR_NAME(filter_alerts), false);
 	flash_window_on_trade_alert = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_trade_alert), flash_window_on_trade_alert);
 	enable_kamadan_decltype = ini->GetBoolValue(Name(), VAR_NAME(enable_kamadan_decltype), enable_kamadan_decltype);
+	only_show_trade_alerts_in_kamadan = ini->GetBoolValue(Name(), VAR_NAME(only_show_trade_alerts_in_kamadan), only_show_trade_alerts_in_kamadan);
+
 	std::ifstream alert_file;
 	alert_file.open(Resources::GetPath(L"AlertKeywords.txt"));
 	if (alert_file.is_open()) {
@@ -639,6 +641,8 @@ void TradeWindow::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(filter_alerts), filter_alerts);
 	ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_trade_alert), flash_window_on_trade_alert);
 	ini->SetBoolValue(Name(), VAR_NAME(enable_kamadan_decltype), enable_kamadan_decltype);
+	ini->SetBoolValue(Name(), VAR_NAME(only_show_trade_alerts_in_kamadan), only_show_trade_alerts_in_kamadan);
+	
 	
 	if (alertfile_dirty) {
 		std::ofstream bycontent_file;
