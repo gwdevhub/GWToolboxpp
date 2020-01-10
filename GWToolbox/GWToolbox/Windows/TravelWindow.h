@@ -92,7 +92,7 @@ private:
 
 public:
 
-    const GW::Constants::MapID searchable_map_ids[186]{
+    const GW::Constants::MapID searchable_map_ids[187]{
         GW::Constants::MapID::Abaddons_Gate,
         GW::Constants::MapID::Abaddons_Mouth,
         GW::Constants::MapID::Altrumm_Ruins,
@@ -230,6 +230,8 @@ public:
         GW::Constants::MapID::Ring_of_Fire,
         GW::Constants::MapID::Riverside_Province,
         GW::Constants::MapID::Ruins_of_Morah,
+        GW::Constants::MapID::Ruins_of_Morah,
+        GW::Constants::MapID::Ruins_of_Surmia,
         GW::Constants::MapID::Ruins_of_Surmia,
         GW::Constants::MapID::Saint_Anjekas_Shrine_outpost,
         GW::Constants::MapID::Sanctum_Cay,
@@ -306,7 +308,7 @@ public:
         "vloxen excavations",
         "bogroot growths"
     };
-    const char* searchable_map_names[186] {
+    const char* searchable_map_names[187] {
         "abaddons gate",
         "abaddons mouth",
         "altrumm ruins",
@@ -444,7 +446,9 @@ public:
         "ring of fire",
         "riverside province",
         "ruins of morah",
+        "morah",
         "ruins of surmia",
+        "surmia",
         "saint anjekas shrine",
         "sanctum cay",
         "sardelac sanitarium",
