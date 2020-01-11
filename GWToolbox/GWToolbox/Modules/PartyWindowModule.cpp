@@ -350,9 +350,9 @@ void PartyWindowModule::SaveSettings(CSimpleIni* ini) {
 	ini->Delete(Name(), NULL, NULL);
 
 	ini->SetBoolValue(Name(), VAR_NAME(add_player_numbers_to_party_window), add_player_numbers_to_party_window);
-
+	
 	// - Re-fill settings.
-	ini->SetBoolValue(Name(), VAR_NAME(add_npcs_to_party_window_enabled), add_npcs_to_party_window);
+	ini->SetBoolValue(Name(), VAR_NAME(add_npcs_to_party_window), add_npcs_to_party_window);
 	for (size_t i = 0; i < user_defined_npcs.size(); i++) {
 		if(!user_defined_npcs[i] || !user_defined_npcs[i]->model_id)
 			continue;
