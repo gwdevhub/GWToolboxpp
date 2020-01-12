@@ -38,7 +38,11 @@ static const std::wstring GetPlayerNameFromEncodedString(const wchar_t* message)
 
 namespace {
 	static std::wstring last_whisper;
-
+	struct UIChatMessage {
+		uint32_t channel;
+		wchar_t* message;
+		uint32_t channel2;
+	};
 }
 
 /*	FriendListWindow::Friend	*/
@@ -281,15 +285,39 @@ void FriendListWindow::Initialize() {
 		last_whisper = msg;
 		last_whisper = last_whisper.substr(last_whisper.find_first_of(L",") + 1);
 		});
-	GW::Chat::RegisterWhisperCallback(&ErrorMessage_Entry, [&](GW::HookStatus* status, wchar_t* sender, wchar_t* message) {
-		if (!show_alias_on_whisper)
+	GW::UI::RegisterUIMessageCallback(&ErrorMessage_Entry, [&](GW::HookStatus* status, uint32_t message_id, void* wparam, void*) {
+		if (!show_alias_on_whisper || message_id != GW::UI::kWriteToChatLog || !wparam)
 			return;
-		Friend* f = GetFriend(sender);
-		if (!f || (f->current_char && f->current_char->name == f->alias)) return;
-		wchar_t buf[256];
-		wnsprintfW(buf, 256, L"{<a=1>%s (%s)</a>} %s", sender, f->alias.c_str(), message);
-		GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_WHISPER, buf);
-		status->blocked = true;
+		wchar_t* message = ((UIChatMessage*)wparam)->message;
+		switch (message[0]) {
+		case 0x76E: // Outgoing whisper
+		case 0x76D: // Incoming whisper
+			int player_name_start = -1;
+			int player_name_end = -1;
+			for (size_t i = 0; message[i] != 0; ++i) {
+				if (player_name_start < 0 && message[i] == 0x107)
+					player_name_start = ++i;
+				if (message[i] == 0x1) {
+					player_name_end = i;
+					break;
+				}
+			}
+			if (player_name_start < 0)
+				return;
+			std::wstring player_name(&message[player_name_start], player_name_end - player_name_start);
+			Friend* f = GetFriend(player_name.c_str());
+			if (!f || f->alias == player_name) 
+				return;
+			static std::wstring new_message;
+			new_message = std::wstring(message, player_name_end);
+			new_message += L" (";
+			new_message += f->alias;
+			new_message += L")";
+			new_message.append(&message[player_name_end]);
+			// TODO; Would doing this cause a memory leak on the previous wchar_t* ?
+			((UIChatMessage*)wparam)->message = new_message.data();
+			break;
+		}
 		});
     // "Failed to add friend" or "Friend <name> already added as <name>"
     GW::Chat::RegisterLocalMessageCallback(&ErrorMessage_Entry,
@@ -310,15 +338,6 @@ void FriendListWindow::Initialize() {
 				if (f) {
 					f->SetCharacter(player_name.c_str());
 				}
-				break;
-			case 0x76E: // Outgoing whisper
-				if (!show_alias_on_whisper) break;
-				player_name = GetPlayerNameFromEncodedString(message);
-				f = GetFriend(player_name.c_str());
-				if (!f || f->alias == player_name) return;
-				wchar_t buf[256];
-				wnsprintfW(buf, 256, L"\x76E\x101\x100\x107%s (%s)%s", player_name.c_str(), f->alias.c_str(), wcsstr(message, L"\x1"));
-				wcscpy(message, buf);
 				break;
 			case 0x881: // Player "" is not online. Redirect to the right person if we can find them!
 				player_name = GetPlayerNameFromEncodedString(message);
