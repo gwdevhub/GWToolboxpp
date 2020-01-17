@@ -613,7 +613,7 @@ int PconAlcohol::QuantityForEach(const GW::Item* item) const {
 
 		for (DWORD i = 0; i < item->mod_struct_size; i++) {
 			if (mod->identifier() == 0x2458) {
-				return mod->arg1() * 5;
+				return mod->arg2() * 5;
 			}
 			mod++;
 		}

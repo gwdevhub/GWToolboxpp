@@ -29,6 +29,7 @@ void Updater::SaveSettings(CSimpleIni* ini) {
 
 void Updater::Initialize() {
 	ToolboxUIElement::Initialize();
+
 	CheckForUpdate();
 }
 
