@@ -53,7 +53,7 @@ static const char ws_host[] = "wss://kamadan.decltype.org/ws/";
 static const std::regex regex_check = std::regex("^/(.*)/[a-z]?$", std::regex::ECMAScript | std::regex::icase);
 
 void TradeWindow::NotifyTradeBlockedInKamadan() {
-	if (print_game_chat && only_show_trade_alerts_in_kamadan && filter_alerts && GetInKamadan())
+	if (print_game_chat && only_show_trade_alerts_in_kamadan && filter_alerts && GetInKamadanAE1())
 		Log::Info("Only trade alerts will be visible in the trade channel.\nYou can still view all Kamadan trade messages via Trade window.");
 }
 bool TradeWindow::FilterTradeMessage(std::string msg) {
@@ -120,7 +120,7 @@ void TradeWindow::Initialize() {
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&MessageLocal_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::MessageLocal* pak) {
 		if (pak->channel != GW::Chat::CHANNEL_TRADE)
 			return;
-		if (!GetInKamadanAE1() && false)
+		if (!GetInKamadanAE1())
 			return;
 		GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
 		if (!buff->m_buffer || buff->m_size < 5)
@@ -159,21 +159,17 @@ void TradeWindow::Initialize() {
 			search_local(searched_message);
 		}
 		localtradelogfile_dirty = true;
-		});
-	GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::MapLoaded>(&OnTradeMessage_Entry, [&](GW::HookStatus*, GW::Packet::StoC::MapLoaded*) {
-		NotifyTradeBlockedInKamadan();
-		});
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&OnTradeMessage_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::MessageLocal* pak) {
-		if (!print_game_chat || !only_show_trade_alerts_in_kamadan || !filter_alerts) return;
-		if (pak->channel != GW::Chat::CHANNEL_TRADE) return;
-		if (!GetInKamadan()) return;
-		GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
-		if (!buff || !buff->valid())
-			return;
-		if (!FilterTradeMessage(buff->begin())) {
+		// Block the trade message if we're only showing filtered messages
+		if (print_game_chat
+			&& only_show_trade_alerts_in_kamadan
+			&& filter_alerts
+			&& !FilterTradeMessage(buff->begin())) {
 			status->blocked = true;
 			buff->clear();
 		}
+		});
+	GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::MapLoaded>(&OnTradeMessage_Entry, [&](GW::HookStatus*, GW::Packet::StoC::MapLoaded*) {
+		NotifyTradeBlockedInKamadan();
 		});
 	NotifyTradeBlockedInKamadan();
 }
