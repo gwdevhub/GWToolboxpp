@@ -200,20 +200,25 @@ int PconGeneric::QuantityForEach(const GW::Item* item) const {
 	return 0;
 }
 bool PconGeneric::CanUseByEffect() const {
-	GW::AgentEffectsArray AgEffects = GW::Effects::GetPartyEffectArray();
-	if (!AgEffects.valid()) return false; // don't know
+	GW::Agent* player = GW::Agents::GetPlayer();
+	if (!player) return false;  // player doesn't exist?
 
-	DWORD player_id = GW::Agents::GetPlayerId();
-	if (!player_id) return false;  // player doesn't exist?
+	GW::AgentEffectsArray AgEffects = GW::Effects::GetPartyEffectArray();
+	// @Remark:
+	// If the agent doesn't have any effects, the effect array is not created.
+	// We also know that the player exist, so the effect can be created.
+	if (!AgEffects.valid()) return true;
 
 	GW::EffectArray *effects = NULL;
 	for (size_t i = 0; i < AgEffects.size(); i++) {
-		if (AgEffects[i].agent_id == player_id) {
+		if (AgEffects[i].agent_id == player->agent_id) {
 			effects = &AgEffects[i].effects;
 			break;
 		}
 	}
 
+	// That's a bit of an odd cases, but we choose to take no risk
+	// and not pop the pcons.
 	if (!effects || !effects->valid())
 		return false; // don't know
 
