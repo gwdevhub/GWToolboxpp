@@ -893,16 +893,9 @@ void GameSettings::Initialize() {
 		}
 		status->blocked = true;
 	});
-	// Tick is toggle
-	GW::Chat::RegisterChatEventCallback(&StartWhisperCallback_Entry, [this](GW::HookStatus* status, uint32_t button_id, uint32_t type, wchar_t* info, void* unk) {
-		static uint32_t last_button_id = 0;
-		if (!tick_is_toggle || info) return; // Info should be null
-		if (type == 7)
-			last_button_id = button_id;
-		if (type == 6 && button_id + 1 == last_button_id) {
-			GW::PartyMgr::Tick(!GW::PartyMgr::GetIsPlayerTicked());
-			status->blocked = true;
-		}
+	GW::Items::RegisterItemClickCallback(&StartWhisperCallback_Entry, [&](GW::HookStatus* status, uint32_t type, uint32_t slot, GW::Bag* bag) {
+
+
 		});
 	{
 		// Patch that allow storage page (and Anniversary page) to work.
@@ -1136,7 +1129,7 @@ void GameSettings::Initialize() {
                     });
                 }
             }
-            ClearMessageCore();
+            ::ClearMessageCore();
 			status->blocked = true; // consume original packet.
         });
     // - Allow clickable name when a player pings "I'm following X" or "I'm targeting X"
@@ -1165,14 +1158,15 @@ void GameSettings::Initialize() {
 		message.insert(end_idx + 5, L"</a>");
         PendingChatMessage* m = PendingChatMessage::queuePrint(GW::Chat::Channel::CHANNEL_GROUP, message.c_str(), sender->name_enc);
 		if (m) pending_messages.push_back(m);
-        ClearMessageCore();
+        ::ClearMessageCore();
 		status->blocked = true; // consume original packet.
     });
-    // - Show a message when player joins the outpost
+    
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&PlayerJoinInstance_Entry, [&](GW::HookStatus*, GW::Packet::StoC::MapLoaded*) {
 		instance_entered_at = TIMER_INIT();
 		SetWindowTitle(set_window_title_as_charname);
 		});
+	// - Show a message when player joins the outpost
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::PlayerJoinInstance* pak) -> void {
         if (!notify_when_players_join_outpost && !notify_when_friends_join_outpost)
             return; // Dont notify about player joining
