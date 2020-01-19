@@ -132,6 +132,13 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.30_Release/GWToolbox.dll)
 
+## Version 2.30
+* [Fix] Fix bug with launcher asking to download every time.
+* [Fix] Main window options are now accesible again.
+* [Fix] Fixed crash dump generation.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.30_Release/GWToolbox.dll)
+
 ## Version 2.29
 * [New] Added Discord 'Rich Presence' integration.
 * [Fix] Fixes following December 13th update.
