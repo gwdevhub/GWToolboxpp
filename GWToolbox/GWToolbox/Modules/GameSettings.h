@@ -92,43 +92,6 @@ public:
 		return send;
 	}
 	static bool Cooldown();
-    static wchar_t* GetAgentNameEncoded(GW::Agent* agent) {
-        if (!agent) return NULL;
-        if (agent->GetIsCharacterType()) {
-            // Player
-            if (agent->login_number) {
-                GW::PlayerArray players = GW::GameContext::instance()->world->players;
-                if (!players.valid()) return NULL;
-
-                GW::Player* player = &players[agent->login_number];
-                if (player) return player->name_enc;
-            }
-            // NPC
-            GW::Array<GW::AgentInfo> agent_infos = GW::GameContext::instance()->world->agent_infos;
-            if (agent->agent_id >= agent_infos.size()) return NULL;
-            if (agent_infos[agent->agent_id].name_enc) return agent_infos[agent->agent_id].name_enc;
-            GW::NPCArray npcs = GW::GameContext::instance()->world->npcs;
-            if (npcs.valid()) return npcs[agent->player_number].name_enc;
-        }
-        if (agent->GetIsGadgetType()) {
-            GW::AgentContext* ctx = GW::GameContext::instance()->agent;
-            GW::GadgetContext* gadget = GW::GameContext::instance()->gadget;
-            if (!ctx || !gadget) return NULL;
-            auto* GadgetIds = ctx->gadget_data[agent->agent_id].gadget_ids;
-            if (!GadgetIds) return NULL;
-            if (GadgetIds->name_enc) return GadgetIds->name_enc;
-            size_t id = GadgetIds->gadget_id;
-            if (gadget->GadgetInfo.size() <= id) return NULL;
-            return gadget->GadgetInfo[id].name_enc;
-        }
-        if (agent->GetIsItemType()) {
-            GW::ItemArray items = GW::Items::GetItemArray();
-            if (!items.valid()) return false;
-            GW::Item* item = items[agent->item_id];
-            return item->name_enc;
-        }
-        return NULL;
-    }
     bool invalid = true; // Set when we can't find the agent name for some reason, or arguments passed are empty.
 protected:
     std::vector<std::wstring> SanitiseForSend() {

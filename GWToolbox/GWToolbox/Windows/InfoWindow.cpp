@@ -85,6 +85,7 @@ void InfoWindow::Initialize() {
 				if (GuiUtils::SanitizePlayerName(players[partymembers[i].login_number].name) == buf) {
 					status[i] = Resigned;
 					timestamp[i] = GW::Map::GetInstanceTime();
+					break;
 				}
 			}
 		}

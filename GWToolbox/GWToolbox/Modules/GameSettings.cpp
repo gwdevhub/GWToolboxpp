@@ -460,17 +460,6 @@ namespace {
 	}
 
     struct PendingSendChatMessage {};
-	struct ReturnToOutpostPacket { const uint32_t header = CtoGS_MSGReturnToOutpost; };
-	struct AcceptInvitePacket {
-		const uint32_t header = CtoGS_MSGAcceptPartyRequest;
-		uint32_t party_id = 0;
-	};
-	struct DonateFactionPacket {
-		const uint32_t header = CtoGS_MSGDonateFaction;
-		const uint32_t unk1 = 0;
-		uint32_t allegiance = 0;
-		const uint32_t faction_amount = 5000;
-	};
 
 	static clock_t last_send = 0;
 	static uint32_t last_dialog_npc_id = 0;
@@ -933,9 +922,8 @@ void GameSettings::Initialize() {
     // Automatically return to outpost on defeat
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyDefeated>(&PartyDefeated_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::PartyDefeated*) -> void {
         if (!auto_return_on_defeat || !GetPlayerIsLeader())
-            return;        
-        static ReturnToOutpostPacket pak;
-        GW::CtoS::SendPacket(&pak);
+            return;
+        GW::CtoS::SendPacket(0x4, CtoGS_MSGReturnToOutpost);
     });
 	// Apply Collector's Edition animations
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&PartyDefeated_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::GenericValue* pak) -> void {
@@ -967,17 +955,17 @@ void GameSettings::Initialize() {
 	GW::Agents::RegisterDialogCallback(&OnDialog_Entry, [this](GW::HookStatus* status, uint32_t dialog_id) {
 		if (!skip_entering_name_for_faction_donate) return;
 		if (dialog_id != 135) return;
-		static DonateFactionPacket pak;
 		uint32_t* current_faction = nullptr;
+		uint32_t allegiance = 0;
 		// Dialog 135 is also used for other NPCs e.g. zaishen keys. Use last_dialog_npc_id to compare.
 		switch (last_dialog_npc_id) {
 		case 3639:
 			current_faction = &GW::GameContext::instance()->world->current_luxon;
-			pak.allegiance = 1;
+			allegiance = 1;
 			break;
 		case 3410:
 			current_faction = &GW::GameContext::instance()->world->current_kurzick;
-			pak.allegiance = 0;
+			allegiance = 0;
 			break;
 		default:
 			return;
@@ -988,7 +976,7 @@ void GameSettings::Initialize() {
 		if (*current_faction < pak.faction_amount)
 			return; // Not enough to donate. Return here and the NPC will reply.
 		status->blocked = true;
-		GW::CtoS::SendPacket(&pak);
+		GW::CtoS::SendPacket(0x10, CtoGS_MSGDonateFaction,0,allegiance,5000);
 		});
 
     // Flash/focus window on trade
@@ -1010,15 +998,11 @@ void GameSettings::Initialize() {
 			PartyInfo* my_party = GetPartyInfo();
 			if (auto_accept_invites && other_party && my_party && my_party->GetPartySize() <= other_party->GetPartySize()) {
 				// Auto accept if I'm joining a bigger party
-				static AcceptInvitePacket pak;
-				pak.party_id = packet->target_party_id;
-				GW::CtoS::SendPacket(&pak);
+				GW::CtoS::SendPacket(0x8, CtoGS_MSGAcceptPartyRequest, packet->target_party_id);
 			}
 			if (auto_accept_join_requests && other_party && my_party && my_party->GetPartySize() > other_party->GetPartySize()) {
 				// Auto accept join requests if I'm the bigger party
-				static AcceptInvitePacket pak;
-				pak.party_id = packet->target_party_id;
-				GW::CtoS::SendPacket(&pak);
+				GW::CtoS::SendPacket(0x8, CtoGS_MSGAcceptPartyRequest, packet->target_party_id);
 			}
 		}
 		if(flash_window_on_party_invite)
@@ -1077,7 +1061,7 @@ void GameSettings::Initialize() {
             return; // Shout skill etc
 		GW::Agent* agent = GW::Agents::GetAgentByID(pak->agent_id);
 		if (!agent || agent->login_number) return; // Agent not found or Speech bubble from player e.g. drunk message.
-		PendingChatMessage* m = PendingChatMessage::queuePrint(GW::Chat::Channel::CHANNEL_EMOTE, pak->message, PendingChatMessage::GetAgentNameEncoded(agent));
+		PendingChatMessage* m = PendingChatMessage::queuePrint(GW::Chat::Channel::CHANNEL_EMOTE, pak->message, GW::Agents::GetAgentEncName(agent));
         if(m) pending_messages.push_back(m);
 	});
     // - NPC dialog messages to emote chat
