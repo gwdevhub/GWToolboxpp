@@ -515,17 +515,17 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     }
 
 	// Replace "Requires 9 Divine Favor" > "q9 Divine Favor"
-	std::wregex regexp_req(L".\x010A\x0AA8\x010A\x0AA9\x010A.\x0001\x0101.\x0001\x0001");
+	std::wregex regexp_req(L".\x10A\x0AA8\x10A\xAA9\x10A.\x1\x101.\x1\x1");
 	while (std::regex_search(original, m, regexp_req)) {
 		for (auto match : m) {
 			std::wstring found = match.str();
 			wchar_t buffer[128];
-			wsprintfW(buffer, L"\x0108\x0107, q%d \x0001\x0002%c", found.at(9) - 0x100, found.at(6));
+			wsprintfW(buffer, L"\x108\x107, q%d \x1\x2%c", found.at(9) - 0x100, found.at(6));
 			original = std::regex_replace(original, std::wregex(found), buffer);
 		}
 	}
 	// Replace "Requires 9 Scythe Mastery" > "q9 Scythe Mastery"
-	std::wregex regexp_req2(L".\x10A\xAA8\x10A\xAA9\x010A\x8101.\x1\x0101.\x1\x1");
+	std::wregex regexp_req2(L".\x10A\xAA8\x10A\xAA9\x10A\x8101.\x1\x101.\x1\x1");
 	while (std::regex_search(original, m, regexp_req2)) {
 		for (auto match : m) {
 			std::wstring found = match.str();
@@ -548,23 +548,23 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
 	}
 
 	// Replace "Lengthens ??? duration on foes by 33%" > "??? duration +33%"
-	std::wregex regexp_lengthens_duration(L"\x0AA4\x010A.\x0001");
+	std::wregex regexp_lengthens_duration(L"\xAA4\x10A.\x1");
 	while (std::regex_search(original, m, regexp_lengthens_duration)) {
 		for (auto match : m) {
 			std::wstring found = match.str();
 			wchar_t buffer[64];
-			wsprintfW(buffer, L"%c\x0002\x0108\x0107 +33%%\x0001", found.at(2));
+			wsprintfW(buffer, L"%c\x2\x108\x107 +33%%\x1", found.at(2));
 			original = std::regex_replace(original, std::wregex(found), buffer);
 		}
 	}
 
 	// Replace "Reduces ??? duration on you by 20%" > "??? duration -20%"
-	std::wregex regexp_reduces_duration(L"\xAA7\x010A.\x0001");
+	std::wregex regexp_reduces_duration(L"\xAA7\x10A.\x1");
 	while (std::regex_search(original, m, regexp_reduces_duration)) {
 		for (auto match : m) {
 			std::wstring found = match.str();
 			wchar_t buffer[64];
-			wsprintfW(buffer, L"%c\x0002\x0108\x0107 -20%%\x0001", found.at(2));
+			wsprintfW(buffer, L"%c\x2\x108\x107 -20%%\x1", found.at(2));
 			original = std::regex_replace(original, std::wregex(found), buffer);
 		}
 	}
@@ -572,7 +572,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
 	// Change "Damage 15% (while Health is above 50%)" to "Damage +15^50"
 	//std::wregex damage_15_over_50(L".\x010A\xA85\x010A\xA4C\x1\x101.\x1\x2" L".\x010A\xAA8\x010A\xABC\x10A\xA52\x1\x101.\x1\x1");
 	// Change " (while Health is above n)" to "^n";
-	std::wregex n_over_n(L"\xAA8\x010A\xABC\x10A\xA52\x1\x101.\x1");
+	std::wregex n_over_n(L"\xAA8\x10A\xABC\x10A\xA52\x1\x101.\x1");
 	while (std::regex_search(original, m, n_over_n)) {
 		for (auto match : m) {
 			std::wstring found = match.str();
@@ -588,7 +588,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
 		for (auto match : m) {
 			std::wstring found = match.str();
 			wchar_t buffer[64];
-			wsprintfW(buffer, L"\x0108\x0107" L"Enchantments +%d%%\x0001", found.at(2) - 0x100);
+			wsprintfW(buffer, L"\x108\x107" L"Enchantments +%d%%\x1", found.at(2) - 0x100);
 			original = std::regex_replace(original, std::wregex(found), buffer);
 		}
 	}
@@ -599,7 +599,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
 		for (auto match : m) {
 			std::wstring found = match.str();
 			wchar_t buffer[64];
-			wsprintfW(buffer, L"\x0108\x0107%d%%\x0001", found.at(5) - 0x100);
+			wsprintfW(buffer, L"\x108\x107%d%%\x1", found.at(5) - 0x100);
 			original = std::regex_replace(original, std::wregex(found), buffer);
 		}
 	}
@@ -609,7 +609,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
 		for (auto match : m) {
 			std::wstring found = match.str();
 			wchar_t buffer[64];
-			wsprintfW(buffer, L"\x0108\x0107" L"HSR \x1\x2%c", found.at(5));
+			wsprintfW(buffer, L"\x108\x107" L"HSR \x1\x2%c", found.at(5));
 			original = std::regex_replace(original, std::wregex(found), buffer);
 		}
 	}
@@ -630,7 +630,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
 		for (auto match : m) {
 			std::wstring found = match.str();
 			wchar_t buffer[64];
-			wsprintfW(buffer, L"\x0108\x0107" L"HCT \x1\x2%c", found.at(5));
+			wsprintfW(buffer, L"\x108\x107" L"HCT \x1\x2%c", found.at(5));
 			original = std::regex_replace(original, std::wregex(found), buffer);
 		}
 	}
@@ -666,14 +666,14 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
 	original = std::regex_replace(original, std::wregex(L"\x8102\x1227"), L"\xA3E");
 
 	// Change "Halves casting time of spells" > "HCT"
-	original = std::regex_replace(original, std::wregex(L"\xA80\x010A\xA47\x1"), L"\x0108\x0107" L"HCT\x1");
+	original = std::regex_replace(original, std::wregex(L"\xA80\x10A\xA47\x1"), L"\x108\x107" L"HCT\x1");
 
 	// Change "Halves skill recharge of spells" > "HSR"
-	std::wregex half_skill_recharge(L"\xA80\x010A\xA58\x1");
-	original = std::regex_replace(original, half_skill_recharge, L"\x0108\x0107" L"HSR\x1");
+	std::wregex half_skill_recharge(L"\xA80\x10A\xA58\x1");
+	original = std::regex_replace(original, half_skill_recharge, L"\x108\x107" L"HSR\x1");
 
 	// Remove (Stacking) and (Non-stacking) rubbish
-	std::wregex stacking_non_stacking(L"\x0002.\x010A\x0AA8\x010A(\x0AB1|\x0AB2)\x0001\x0001");
+	std::wregex stacking_non_stacking(L"\x2.\x10A\xAA8\x10A[\xAB1\xAB2]\x1\x1");
 	original = std::regex_replace(original, stacking_non_stacking, L"");
 
 	// Replace (while affected by a(n) to just (n)
@@ -686,17 +686,13 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
 			original = std::regex_replace(original, std::wregex(found), buffer);
 		}
 	}
-	if (std::regex_search(original, while_affected_by)) {
-		original = std::regex_replace(original, zealous, L"");
-		original += L"\x2\x102\x2\x108\x107" L"Zealous\x1";
-	}
 	// Replace (while xxx) to just (xxx)
-	original = std::regex_replace(original, std::wregex(L"\x0AB4"), L"\x0108\x0107" L"Attacking\x0001");
-	original = std::regex_replace(original, std::wregex(L"\x0AB5"), L"\x0108\x0107" L"Casting\x0001");
-	original = std::regex_replace(original, std::wregex(L"\x0AB6"), L"\x0108\x0107" L"Condition\x0001");
-	original = std::regex_replace(original, std::wregex(L"\x0AB7|\x4B6"), L"\x0108\x0107" L"Enchanted\x0001");
-	original = std::regex_replace(original, std::wregex(L"\x0AB8|\x4B4"), L"\x0108\x0107" L"Hexed\x0001");
-	original = std::regex_replace(original, std::wregex(L"\x0AB9|\x0ABA"), L"\x0108\x0107" L"Stance\x0001");
+	original = std::regex_replace(original, std::wregex(L"\xAB4"), L"\x108\x107" L"Attacking\x1");
+	original = std::regex_replace(original, std::wregex(L"\xAB5"), L"\x108\x107" L"Casting\x1");
+	original = std::regex_replace(original, std::wregex(L"\xAB6"), L"\x108\x107" L"Condition\x1");
+	original = std::regex_replace(original, std::wregex(L"[\xAB7\x4B6]"), L"\x108\x107" L"Enchanted\x1");
+	original = std::regex_replace(original, std::wregex(L"[\xAB8\x4B4]"), L"\x108\x107" L"Hexed\x1");
+	original = std::regex_replace(original, std::wregex(L"[\xAB9\xABA]"), L"\x108\x107" L"Stance\x1");
 
 	// Combine Attribute + 3, Attribute + 1 to Attribute +3 +1 (e.g. headpiece)
 	std::wregex attribute_stacks(L".\x10A\xA84\x10A.\x1\x101.\x1\x2\x102\x2.\x10A\xA84\x10A.\x1\x101.\x1");
@@ -716,29 +712,29 @@ static std::wstring ParseItemDescription(GW::Item* item) {
     std::wstring original = ShorthandItemDescription(item);
     
     // Remove "Value: 122 gold"
-	original = std::regex_replace(original, std::wregex(L"\x2\x0102\x2\x0A3E\x010A\x0A8A\x010A\x0A59\x1\x010B.\x0101.(\x102.)?\x1\x1"), L"");
+	original = std::regex_replace(original, std::wregex(L"\x2\x102\x2\xA3E\x10A\xA8A\x10A\xA59\x1\x10B.\x101.(\x102.)?\x1\x1"), L"");
 
     // Remove other "greyed" generic terms e.g. "Two-Handed", "Unidentified"	
-	original = std::regex_replace(original, std::wregex(L"\x0002\x0102\x0002\x0A3E\x010A.\x0001"), L"");
+	original = std::regex_replace(original, std::wregex(L"\x2\x102\x2\xA3E\x10A.\x1"), L"");
 
 	// Remove "Necromancer Munne sometimes gives these to me in trade" etc
-	original = std::regex_replace(original, std::wregex(L"\x0002\x0102\x0002.\x010A\x8102.\x0001"), L"");
+	original = std::regex_replace(original, std::wregex(L"\x2\x102\x2.\x10A\x8102.\x1"), L"");
 
 	// Remove "Inscription: None"
-	original = std::regex_replace(original, std::wregex(L"\x0002\x0102\x0002.\x010A\x8101\x5A1F\x0001"), L"");
+	original = std::regex_replace(original, std::wregex(L"\x2\x102\x2.\x10A\x8101\x5A1F\x1"), L"");
 
-	// Remove "Crafted in tribute to an enduring legend."
-	original = std::regex_replace(original, std::wregex(L"\x2\x0102\x2.\x010A\x8103\xB5A\x1"), L"");
+	// Remove "Crafted in tribute to an enduring legend." etc
+	original = std::regex_replace(original, std::wregex(L"\x2\x102\x2.\x10A\x8103.\x1"), L"");
 
 	// Remove "20% Additional damage during festival events" > "Dmg +20% (Festival)"
-	original = std::regex_replace(original, std::wregex(L".\x010A\x108\x10A\x8103\xB71\x101\x100\x1\x1"), L"\xA85\x10A\xA4E\x1\x0101\x114\x2\xAA8\x10A\x108\x107" L"Festival\x1\x1");
+	original = std::regex_replace(original, std::wregex(L".\x10A\x108\x10A\x8103\xB71\x101\x100\x1\x1"), L"\xA85\x10A\xA4E\x1\x101\x114\x2\xAA8\x10A\x108\x107" L"Festival\x1\x1");
 
-	std::wregex dmg_plus_20(L"\x2\x102\x2.\x10A\xA85\x10A(\xA4C|\xA4E)\x1\x0101\x114\x1");
+	std::wregex dmg_plus_20(L"\x2\x102\x2.\x10A\xA85\x10A[\xA4C\xA4E]\x1\x101\x114\x1");
 	if (item->customized && std::regex_search(original, dmg_plus_20)) {
 		// Remove "\nDamage +20%" > "\n"
 		original = std::regex_replace(original, dmg_plus_20, L"");
 		// Append "Customized"
-		original += L"\x0002\x0102\x0002\x0108\x0107" L"Customized\x0001";
+		original += L"\x2\x102\x2\x108\x107" L"Customized\x1";
 	}
 
     return original;
@@ -828,25 +824,22 @@ const bool PendingChatMessage::SendMessage() {
 const bool PendingChatMessage::PrintMessage() {
     if (!IsDecoded() || this->invalid) return false; // Not ready or invalid.
     if (this->printed) return true; // Already printed.
-    GW::Chat::Color senderCol;
-    GW::Chat::Color messageCol;
-
     wchar_t buffer[512];
     switch (channel) {
-    case GW::Chat::Channel::CHANNEL_GROUP:
-        GW::Chat::GetChannelColors(GW::Chat::CHANNEL_GROUP, &senderCol, &messageCol);   // Sender should be same color as emote sender
-
-        swprintf(buffer, 256, L"<c=#%06X><a=2>%ls</a></c>: <c=#%06X>%ls</c>", senderCol & 0x00FFFFFF, output_sender.c_str(), messageCol & 0x00FFFFFF, output_message.c_str());
-        GW::Chat::WriteChat(GW::Chat::CHANNEL_GROUP, buffer);
-        break;
     case GW::Chat::Channel::CHANNEL_EMOTE:
         GW::Chat::Color dummy; // Needed for GW::Chat::GetChannelColors
+		GW::Chat::Color senderCol;
+		GW::Chat::Color messageCol;
         GW::Chat::GetChannelColors(GW::Chat::CHANNEL_EMOTE, &senderCol, &dummy);   // Sender should be same color as emote sender
         GW::Chat::GetChannelColors(GW::Chat::CHANNEL_ALLIES, &dummy, &messageCol); // ...but set the message to be same color as ally chat
 
-        swprintf(buffer, 512, L"<c=#%06X>%ls</c>: <c=#%06X>%ls</c>", senderCol & 0x00FFFFFF, output_sender.c_str(), messageCol & 0x00FFFFFF, output_message.c_str());
-        GW::Chat::WriteChat(GW::Chat::CHANNEL_EMOTE, buffer);
+		swprintf(buffer, 512, L"<c=#%06X>%ls</c>: <c=#%06X>%ls</c>", senderCol & 0x00FFFFFF, output_sender.c_str(), messageCol & 0x00FFFFFF, output_message.c_str());
+        GW::Chat::WriteChat(channel, buffer);
         break;
+	default:
+		swprintf(buffer, 512, L"<a=2>%ls</a>: %ls", output_sender.c_str(), output_message.c_str());
+		GW::Chat::WriteChat(channel, buffer);
+		break;
     }
     output_message.clear();
     output_sender.clear();
