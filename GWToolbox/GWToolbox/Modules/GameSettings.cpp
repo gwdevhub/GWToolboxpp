@@ -469,7 +469,7 @@ namespace {
     static bool ctrl_enter_whisper = false;
 
     static bool IsInfused(GW::Item* item) {
-        return item && std::wstring(item->info_string).find(L"\xAC9") != std::wstring::npos;
+        return item && item->info_string && wcschr(item->info_string, 0xAC9);
     }
 
 	const enum PING_PARTS {
@@ -827,13 +827,9 @@ const bool PendingChatMessage::PrintMessage() {
     wchar_t buffer[512];
     switch (channel) {
     case GW::Chat::Channel::CHANNEL_EMOTE:
-        GW::Chat::Color dummy; // Needed for GW::Chat::GetChannelColors
-		GW::Chat::Color senderCol;
-		GW::Chat::Color messageCol;
-        GW::Chat::GetChannelColors(GW::Chat::CHANNEL_EMOTE, &senderCol, &dummy);   // Sender should be same color as emote sender
+        GW::Chat::Color dummy, messageCol; // Needed for GW::Chat::GetChannelColors
         GW::Chat::GetChannelColors(GW::Chat::CHANNEL_ALLIES, &dummy, &messageCol); // ...but set the message to be same color as ally chat
-
-		swprintf(buffer, 512, L"<c=#%06X>%ls</c>: <c=#%06X>%ls</c>", senderCol & 0x00FFFFFF, output_sender.c_str(), messageCol & 0x00FFFFFF, output_message.c_str());
+		swprintf(buffer, 512, L"<a=2>%ls</a>: <c=#%06X>%ls</c>", output_sender.c_str(), messageCol & 0x00FFFFFF, output_message.c_str());
         GW::Chat::WriteChat(channel, buffer);
         break;
 	default:
@@ -875,10 +871,6 @@ void GameSettings::Initialize() {
 		}
 		status->blocked = true;
 	});
-	GW::Items::RegisterItemClickCallback(&StartWhisperCallback_Entry, [&](GW::HookStatus* status, uint32_t type, uint32_t slot, GW::Bag* bag) {
-
-
-		});
 	{
 		// Patch that allow storage page (and Anniversary page) to work.
 		uintptr_t found = GW::Scanner::Find("\xEB\x17\x33\xD2\x8D\x4A\x06\xEB", "xxxxxxxx", -4);
@@ -964,9 +956,9 @@ void GameSettings::Initialize() {
 			return;
 		}
 		GW::GuildContext* c = GW::GuildMgr::GetGuildContext();
-		if (!c || !c->player_guild_index || c->guilds[c->player_guild_index]->faction != pak.allegiance)
+		if (!c || !c->player_guild_index || c->guilds[c->player_guild_index]->faction != allegiance)
 			return; // Alliance isn't the right faction. Return here and the NPC will reply.
-		if (*current_faction < pak.faction_amount)
+		if (*current_faction < 5000)
 			return; // Not enough to donate. Return here and the NPC will reply.
 		status->blocked = true;
 		GW::CtoS::SendPacket(0x10, CtoGS_MSGDonateFaction,0,allegiance,5000);
@@ -1043,10 +1035,6 @@ void GameSettings::Initialize() {
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SpeechBubble>(&SpeechBubble_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::SpeechBubble *pak) -> void {
 		if (!npc_speech_bubbles_as_chat || !pak->message || !pak->agent_id)
             return; // Disabled, invalid, or pending another speech bubble
-        if (emulated_speech_bubble) {
-            emulated_speech_bubble = false;
-            return; // Toolbox generated, skip
-        }
         size_t len = 0;
         for (size_t i = 0; pak->message[i] != 0; i++)
             len = i + 1;
@@ -1090,21 +1078,12 @@ void GameSettings::Initialize() {
 			PendingChatMessage* m = PendingChatMessage::queuePrint(GW::Chat::Channel::CHANNEL_EMOTE, message, pak->sender_name);
 			if (m) pending_messages.push_back(m);
             if (pak->agent_id) {
-                wchar_t msg[122];
-                wcscpy(msg, message); // Copy from the message buffer, then clear it.
                 // Then forward the message on to speech bubble
-                uint32_t agent_id = pak->agent_id;
-                {
-                    GW::GameThread::Enqueue([this,msg, agent_id]() {
-                        GW::Packet::StoC::SpeechBubble packet;
-                        packet.header = GW::Packet::StoC::SpeechBubble::STATIC_HEADER;
-                        packet.agent_id = agent_id;
-                        wcscpy(packet.message, msg);
-                        emulated_speech_bubble = true;
-						if(GW::Agents::GetAgentByID(agent_id))
-							GW::StoC::EmulatePacket(&packet);
-                    });
-                }
+				GW::Packet::StoC::SpeechBubble packet;
+				packet.agent_id = pak->agent_id;
+				wcscpy(packet.message, message);
+				if (GW::Agents::GetAgentByID(packet.agent_id))
+					GW::StoC::EmulatePacket(&packet);
             }
             ::ClearMessageCore();
 			status->blocked = true; // consume original packet.
@@ -1267,7 +1246,7 @@ void GameSettings::MessageOnPartyChange() {
         wchar_t* player_name = GW::Agents::GetPlayerNameByLoginNumber(current_party_players[i].login_number);
         if (!player_name)
             continue;
-		current_party_names.push_back(std::wstring(player_name));
+		current_party_names.push_back(player_name);
 	}
 	// If previous party list is empty (i.e. map change), then initialise
 	if (!previous_party_names.size()) {

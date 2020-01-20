@@ -234,7 +234,6 @@ private:
 	bool was_leading = true;
 	bool check_message_on_party_change = true;
     bool npc_speech_bubbles_as_chat = false;
-    bool emulated_speech_bubble = false;
     bool redirect_npc_messages_to_emote_chat = false;
 	bool auto_age2_on_age = true;
 	bool auto_age_on_vanquish = false;
