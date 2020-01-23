@@ -394,19 +394,9 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		/* Connection checks */
 		if (!ws_window && !ws_window_connecting) {
 			messages_ptr = searched_message.size() ? outpost_messages_filtered_ptr : &outpost_messages;
-			/*ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("The connection to kamadan.decltype.com has timed out.").x) / 2);
-			ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
-			ImGui::Text("The connection to kamadan.decltype.com has timed out.");
-			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Click to reconnect").x) / 2);
-			if (ImGui::Button("Click to reconnect")) {
-				AsyncWindowConnect();
-			}*/
 		}
 		else if (ws_window_connecting || (ws_window && ws_window->getReadyState() == WebSocket::CONNECTING)) {
 			messages_ptr = searched_message.size() ? outpost_messages_filtered_ptr : &outpost_messages;
-			/*ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Connecting...").x) / 2);
-			ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
-			ImGui::Text("Connecting...");*/
 		}
 		else if (ws_window) {
 			messages_ptr = &messages;
@@ -428,7 +418,33 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			for (unsigned int i = size - 1; i < size; i--) {
 				Message& msg = (*messages_ptr)[i];
 				ImGui::PushID(i);
-
+				// ==== Sender name column ====
+				if (show_time)
+					ImGui::SetCursorPosX(playername_left);
+				ImGui::Button(msg.name.c_str(), ImVec2(playernamewidth, 0));
+				if (!ImGui::IsItemVisible()) {
+					ImGui::PopID();
+					continue; // No need to draw stuff that isn't on-screen.
+				}
+				if (ImGui::IsItemClicked()) {
+					std::wstring name = GuiUtils::StringToWString(msg.name);
+					// Control + click = target player
+					if (ImGui::GetIO().KeysDown[VK_CONTROL]) {
+						GW::Player* player = GW::PlayerMgr::GetPlayerByName(name.c_str());
+						if (player) {
+							GW::GameThread::Enqueue([player]() {
+								GW::Agents::ChangeTarget(player->agent_id);
+								});
+						}
+					}
+					else {
+						// open whisper to player
+						GW::GameThread::Enqueue([msg]() {
+							std::wstring name = GuiUtils::StringToWString(msg.name);
+							GW::UI::SendUIMessage(GW::UI::kOpenWhisper, (wchar_t*)name.data(), nullptr);
+							});
+					}
+				}
 				// ==== time elapsed column ====
 				if (show_time) {
 					// negative numbers have came from this before, it is probably just server client desync
@@ -453,34 +469,10 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 					else {
 						_snprintf(timetext, 128, "%d %s ago", time_since_message, time_since_message > 1 ? "seconds" : "second");
 					}
-					ImGui::SetCursorPosX(playername_left - innerspacing - ImGui::CalcTextSize(timetext).x);
+					ImGui::SameLine(playername_left - innerspacing - ImGui::CalcTextSize(timetext).x);
 					ImGui::Text(timetext);
 					ImGui::PopStyleColor();
 					ImGui::PopFont();
-				}
-
-				// ==== Sender name column ====
-				if (show_time) {
-					ImGui::SameLine(playername_left);
-				}
-				if (ImGui::Button(msg.name.c_str(), ImVec2(playernamewidth, 0))) {
-					std::wstring name = GuiUtils::StringToWString(msg.name);
-					// Control + click = target player
-					if (ImGui::GetIO().KeysDown[VK_CONTROL]) {
-						GW::Player* player = GW::PlayerMgr::GetPlayerByName(name.c_str());
-						if (player) {
-							GW::GameThread::Enqueue([player]() {
-								GW::Agents::ChangeTarget(player->agent_id);
-								});
-						}
-					}
-					else {
-						// open whisper to player
-						GW::GameThread::Enqueue([msg]() {
-							std::wstring name = GuiUtils::StringToWString(msg.name);
-							GW::UI::SendUIMessage(GW::UI::kOpenWhisper, (wchar_t*)name.data(), nullptr);
-							});
-					}
 				}
 
 				// ==== Message column ====
