@@ -1352,6 +1352,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 	::LoadChannelColor(ini, Name(), "trade", GW::Chat::CHANNEL_TRADE);
 	::LoadChannelColor(ini, Name(), "alliance", GW::Chat::CHANNEL_ALLIANCE);
 	::LoadChannelColor(ini, Name(), "whispers", GW::Chat::CHANNEL_WHISPER);
+	::LoadChannelColor(ini, Name(), "global", GW::Chat::CHANNEL_GLOBAL);
 
 	GW::UI::SetOpenLinks(openlinks);
     GW::Chat::ToggleTimestamps(show_timestamps);
@@ -1435,6 +1436,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 	::SaveChannelColor(ini, Name(), "trade", GW::Chat::CHANNEL_TRADE);
 	::SaveChannelColor(ini, Name(), "alliance", GW::Chat::CHANNEL_ALLIANCE);
 	::SaveChannelColor(ini, Name(), "whispers", GW::Chat::CHANNEL_WHISPER);
+	::SaveChannelColor(ini, Name(), "global", GW::Chat::CHANNEL_GLOBAL);
 }
 
 void GameSettings::DrawSettingInternal() {
@@ -1453,6 +1455,7 @@ void GameSettings::DrawSettingInternal() {
 		DrawChannelColor("Trade", GW::Chat::CHANNEL_TRADE);
 		DrawChannelColor("Alliance", GW::Chat::CHANNEL_ALLIANCE);
 		DrawChannelColor("Whispers", GW::Chat::CHANNEL_WHISPER);
+		DrawChannelColor("Global", GW::Chat::CHANNEL_GLOBAL);
 
         ImGui::TextDisabled("(Left-click on a color to edit it)");
 		ImGui::TreePop();

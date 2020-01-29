@@ -315,7 +315,7 @@ void FriendListWindow::Initialize() {
 			new_message += L")";
 			new_message.append(&message[player_name_end]);
 			// TODO; Would doing this cause a memory leak on the previous wchar_t* ?
-			((UIChatMessage*)wparam)->message = new_message.data();
+			((UIChatMessage*)wparam)->message = (wchar_t*)new_message.c_str();
 			break;
 		}
 		});
