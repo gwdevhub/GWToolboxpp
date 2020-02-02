@@ -5,6 +5,20 @@ layout: default
 # Version History
 Previous releases are provided as dll files. In order to use it, you need to use a different launcher which must be placed in the same directory as the dll. If you are looking for the latest version, go to the [Home Page](./) instead.
 
+## Version 2.30, Extended 1.9.40
+* [New] Added "Emotes" and "Other" to Chat Colors section of Game Settings
+* [New] Added option in Game Settings to change Guild Wars window title to name of current character
+* [New] Added "show alias on whisper" to Friend List window, adds player alias in brackets when sending or receiving a whisper (default false)
+* [New] Added option to hide bonds, health, party damage and instance timer widgets in outpost
+* [Minor] Added debug info about current camera position to info window
+* [Minor] Added "morah" and "surmia" /tp commands
+* [Minor] Merge vanilla version 2.30 (pcon fixes that were already done in this fork)
+* [Minor] Fixed a bug causing some trade messages to be blocked in Kamadan when filtered using the trade window
+* [Minor] Performance tweaks to resign log and trade window, removed some redundant code blocks
+* [Fix] Fixed bug preventing disabling of special NPCs section of party window module
+
+[Download](https://github.com/3vcloud/GWToolboxpp/releases/download/2.30-1.9.40_Release/JonsToolbox_1.9.40.zip)
+
 ## Version 2.29, Extended 1.9.33
 * [New] Trade Window changes: removed dependency on kamadan.decltype.org - players can now use this window as normal when in Kamadan ae1 even if decltype.org stops working.
 * [New] Better crash handling; more GWToolbox related crashes will be caught and dumped in the GWToolboxpp folder, and will show a message on-screen.
