@@ -60,6 +60,22 @@ namespace {
 			wcscpy(player_name, buf);
 	}
 	static bool is_explorable = false;
+
+	static bool IsPvP() {
+		GW::AreaInfo* i = GW::Map::GetCurrentMapInfo();
+		if (!i) return false;
+		switch (i->type) {
+		case GW::RegionType_AllianceBattle:
+		case GW::RegionType_Arena:
+		case GW::RegionType_CompetitiveMission:
+		case GW::RegionType_GuildBattleArea:
+		case GW::RegionType_HeroBattleArea:
+		case GW::RegionType_HeroesAscent:
+		case GW::RegionType_ZaishenBattle:
+			return true;
+		}
+		return false;
+	}
 }
 
 void PartyWindowModule::Update(float delta) {
@@ -96,7 +112,7 @@ void PartyWindowModule::Initialize() {
 		});
 	// Player numbers in party window
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(&GameSrvTransfer_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::PlayerJoinInstance* pak) -> void {
-		if (!add_player_numbers_to_party_window || !is_explorable)
+		if (!add_player_numbers_to_party_window || !is_explorable || ::IsPvP())
 			return;
 		SetPlayerNumber(pak->player_name, pak->player_number);
 		});

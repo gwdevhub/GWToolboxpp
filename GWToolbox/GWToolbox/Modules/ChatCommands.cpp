@@ -710,8 +710,8 @@ bool ChatCommands::ParseOutpost(const std::wstring s, GW::Constants::MapID& outp
 	unsigned int bestMatchLength = 0;
     unsigned int thisMapLength = 0;
     const char** searchable_map_names = TravelWindow::Instance().searchable_map_names;
-    //const size_t mapCnt = 181;
-	for (int i = 0; searchable_map_names[i] != 0; i++) {
+    size_t mapCnt = 187;
+	for (int i = 0; i < mapCnt; i++) {
 		sanitized = searchable_map_names[i]; // Remove punctuation, to lower case.
         thisMapLength = sanitized.length();
 		if (searchStringLength > thisMapLength) 
@@ -726,9 +726,10 @@ bool ChatCommands::ParseOutpost(const std::wstring s, GW::Constants::MapID& outp
 		}
 	}
     const char** dungeon_map_names = TravelWindow::Instance().searchable_dungeon_names;
+	mapCnt = 11;
     if (bestMatchMapID == GW::Constants::MapID::None) {
         // Not found yet; try dungeons
-        for (int i = 0; dungeon_map_names[i] != 0; i++) {
+        for (int i = 0; i < mapCnt; i++) {
             sanitized = dungeon_map_names[i]; // Remove punctuation, to lower case.
             thisMapLength = sanitized.length();
             if (searchStringLength > thisMapLength)

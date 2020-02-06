@@ -92,7 +92,7 @@ private:
 
 public:
 
-    const GW::Constants::MapID searchable_map_ids[187]{
+    const GW::Constants::MapID searchable_map_ids[187] {
         GW::Constants::MapID::Abaddons_Gate,
         GW::Constants::MapID::Abaddons_Mouth,
         GW::Constants::MapID::Altrumm_Ruins,
@@ -279,8 +279,7 @@ public:
         GW::Constants::MapID::Zen_Daijun_outpost_mission,
         GW::Constants::MapID::Zin_Ku_Corridor_outpost,
         GW::Constants::MapID::Zos_Shivros_Channel,
-        GW::Constants::MapID::Great_Temple_of_Balthazar_outpost,
-        
+        GW::Constants::MapID::Great_Temple_of_Balthazar_outpost
     };
     const GW::Constants::MapID dungeon_map_ids[11]{
         GW::Constants::MapID::Doomlore_Shrine_outpost,

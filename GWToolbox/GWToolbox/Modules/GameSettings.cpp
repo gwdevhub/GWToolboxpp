@@ -8,6 +8,7 @@
 
 #include <GWCA/GameEntities/Friendslist.h>
 #include <GWCA/GameEntities/Guild.h>
+#include <GWCA/GameEntities/Map.h>
 
 #include <GWCA/Context/ItemContext.h>
 #include <GWCA/Context/PartyContext.h>
