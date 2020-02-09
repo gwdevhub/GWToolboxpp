@@ -18,7 +18,7 @@ Previous releases are provided as dll files. In order to use it, you need to use
 * [Fix] Fixed bug preventing disabling of special NPCs section of party window module
 * [Fix] Fixed bug with /tp crashing
 
-[Download](https://github.com/3vcloud/GWToolboxpp/releases/download/2.30-1.9.40_Release/JonsToolbox_1.9.41.zip)
+[Download](https://github.com/3vcloud/GWToolboxpp/releases/download/2.30-1.9.41_Release/JonsToolbox_1.9.41.zip)
 
 ## Version 2.29, Extended 1.9.33
 * [New] Trade Window changes: removed dependency on kamadan.decltype.org - players can now use this window as normal when in Kamadan ae1 even if decltype.org stops working.
