@@ -11,6 +11,8 @@
 #include <GWCA\GameEntities\Agent.h>
 #include <GWCA\GameEntities\Skill.h>
 
+#include <GWCA\Packets\Opcodes.h>
+
 #include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\ItemMgr.h>
 #include <GWCA\Managers\AgentMgr.h>
@@ -458,7 +460,7 @@ void HotkeyEquipItem::Execute() {
         return;
     }
     if (p->skill) {
-        GW::CtoS::SendPacket(0x4, CtoGS_MSGCancelAction); // Cancel action if casting a skill. Return here and wait before equipping items.
+        GW::CtoS::SendPacket(0x4, GAME_CMSG_CANCEL_MOVEMENT); // Cancel action if casting a skill. Return here and wait before equipping items.
         //Log::Info("cancel action");
         return;
     }

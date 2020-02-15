@@ -102,9 +102,7 @@ void Updater::CheckForUpdate(const bool forced) {
         GetLatestRelease(&release);
         if (release.version.empty()) {
             // Error getting server version. Server down? We can do nothing.
-            GW::GameThread::Enqueue([]() {
-                Log::Info("Error checking for updates");
-                });
+			Log::Info("Error checking for updates");
             step = Done;
             return;
         }
@@ -112,9 +110,7 @@ void Updater::CheckForUpdate(const bool forced) {
 			// server and client versions match
             step = Done;
             if (forced) {
-                GW::GameThread::Enqueue([this]() {
-                    Log::Info("GWToolbox++ is up-to-date");
-                    });
+				Log::Info("GWToolbox++ is up-to-date");
             }
             return;
 		}

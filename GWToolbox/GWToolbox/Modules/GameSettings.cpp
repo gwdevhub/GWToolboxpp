@@ -909,7 +909,7 @@ void GameSettings::Initialize() {
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyDefeated>(&PartyDefeated_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::PartyDefeated*) -> void {
         if (!auto_return_on_defeat || !GetPlayerIsLeader())
             return;
-        GW::CtoS::SendPacket(0x4, CtoGS_MSGReturnToOutpost);
+        GW::CtoS::SendPacket(0x4, GAME_CMSG_PARTY_RETURN_TO_OUTPOST);
     });
 	// Apply Collector's Edition animations
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&PartyDefeated_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::GenericValue* pak) -> void {
@@ -962,7 +962,7 @@ void GameSettings::Initialize() {
 		if (*current_faction < 5000)
 			return; // Not enough to donate. Return here and the NPC will reply.
 		status->blocked = true;
-		GW::CtoS::SendPacket(0x10, CtoGS_MSGDonateFaction,0,allegiance,5000);
+		GW::CtoS::SendPacket(0x10, GAME_CMSG_DEPOSIT_FACTION,0,allegiance,5000);
 		});
 
     // Flash/focus window on trade
@@ -984,11 +984,11 @@ void GameSettings::Initialize() {
 			PartyInfo* my_party = GetPartyInfo();
 			if (auto_accept_invites && other_party && my_party && my_party->GetPartySize() <= other_party->GetPartySize()) {
 				// Auto accept if I'm joining a bigger party
-				GW::CtoS::SendPacket(0x8, CtoGS_MSGAcceptPartyRequest, packet->target_party_id);
+				GW::CtoS::SendPacket(0x8, GAME_CMSG_PARTY_ACCEPT_INVITE, packet->target_party_id);
 			}
 			if (auto_accept_join_requests && other_party && my_party && my_party->GetPartySize() > other_party->GetPartySize()) {
 				// Auto accept join requests if I'm the bigger party
-				GW::CtoS::SendPacket(0x8, CtoGS_MSGAcceptPartyRequest, packet->target_party_id);
+				GW::CtoS::SendPacket(0x8, GAME_CMSG_PARTY_ACCEPT_INVITE, packet->target_party_id);
 			}
 		}
 		if(flash_window_on_party_invite)
@@ -1181,7 +1181,7 @@ void GameSettings::Initialize() {
 	GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusCallback_Entry,GameSettings::FriendStatusCallback);
 	
 	char buf[64];
-	sprintf(buf, "\x50\x6A\x10\xC7\x45\xEC%c", CtoGS_MSGPingWeaponSet);
+	sprintf(buf, "\x50\x6A\x10\xC7\x45\xEC%c", GAME_CMSG_PING_WEAPON_SET);
     OnPingEquippedItem_Func = (OnPingEqippedItem_pt)GW::Scanner::Find(buf, "xxxxxxx", -0x25);
     printf("[SCAN] OnPingEquippedItem = %p\n", OnPingEquippedItem_Func);
     if (OnPingEquippedItem_Func) {

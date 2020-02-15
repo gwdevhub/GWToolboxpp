@@ -322,10 +322,10 @@ GW::Item* Pcon::MoveItem(GW::Item* item, GW::Bag* bag, int slot, int quantity, u
 	if (quantity > 1 && vacantQuantity < quantity) quantity = vacantQuantity;
 	int bag_id = bag->bag_id;
 	if (quantity == item->quantity) { // Move the whole thing.
-		GW::CtoS::SendPacket(0x10, CtoGS_MSGMoveItem, item->item_id, bag->bag_id, slot);
+		GW::CtoS::SendPacket(0x10, GAME_CMSG_ITEM_MOVE, item->item_id, bag->bag_id, slot);
 	}
 	else { // Split stack
-		GW::CtoS::SendPacket(0x14, CtoGS_MSGSplitStack, item->item_id, quantity, bag->bag_id, slot);
+		GW::CtoS::SendPacket(0x14, GAME_CMSG_ITEM_SPLIT_STACK, item->item_id, quantity, bag->bag_id, slot);
 	}
 	if (!timeout_seconds)
 		return destItem; // No wait.
