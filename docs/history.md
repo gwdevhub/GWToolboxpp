@@ -15,7 +15,7 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 ## Version 2.30
 * [Fix] Fix bug with launcher asking to download every time.
-* [Fix] Main window options are now accesible again.
+* [Fix] Main window options are now accessible again.
 * [Fix] Fixed crash dump generation.
 
 [Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.30_Release/GWToolbox.dll)
