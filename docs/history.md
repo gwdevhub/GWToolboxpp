@@ -8,6 +8,11 @@ Previous releases are provided as dll files. In order to use it, you need to use
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
 
+## Version 2.31
+* [Fix] Fixes following February 14 update.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.31_Release/GWToolbox.dll)
+
 ## Version 2.30
 * [Fix] Fix bug with launcher asking to download every time.
 * [Fix] Main window options are now accesible again.
