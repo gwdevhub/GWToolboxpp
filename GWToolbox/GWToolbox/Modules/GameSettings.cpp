@@ -1179,8 +1179,10 @@ void GameSettings::Initialize() {
     });
 
 	GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusCallback_Entry,GameSettings::FriendStatusCallback);
-
-    OnPingEquippedItem_Func = (OnPingEqippedItem_pt)GW::Scanner::Find("\x50\x6A\x10\xC7\x45\xEC\x2B", "xxxxxxx", -0x25); // NOTE: 0x2B is CtoS header
+	
+	char buf[64];
+	sprintf(buf, "\x50\x6A\x10\xC7\x45\xEC%c", CtoGS_MSGPingWeaponSet);
+    OnPingEquippedItem_Func = (OnPingEqippedItem_pt)GW::Scanner::Find(buf, "xxxxxxx", -0x25);
     printf("[SCAN] OnPingEquippedItem = %p\n", OnPingEquippedItem_Func);
     if (OnPingEquippedItem_Func) {
         GW::HookBase::CreateHook(OnPingEquippedItem_Func, OnPingEquippedItem, (void**)& OnPingEquippedItemRet);
