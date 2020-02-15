@@ -5,6 +5,12 @@ layout: default
 # Version History
 Previous releases are provided as dll files. In order to use it, you need to use a different launcher which must be placed in the same directory as the dll. If you are looking for the latest version, go to the [Home Page](./) instead.
 
+## Version 2.30, Extended 1.9.42
+* [Fix] Header updates via GWCA after GW update 2020-02-15
+
+[Download](https://github.com/3vcloud/GWToolboxpp/releases/download/2.30-1.9.42_Release/JonsToolbox_1.9.42.zip)
+
+
 ## Version 2.30, Extended 1.9.41
 * [New] Added "Emotes" and "Other" to Chat Colors section of Game Settings
 * [New] Added option in Game Settings to change Guild Wars window title to name of current character
