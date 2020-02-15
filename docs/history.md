@@ -5,12 +5,17 @@ layout: default
 # Version History
 Previous releases are provided as dll files. In order to use it, you need to use a different launcher which must be placed in the same directory as the dll. If you are looking for the latest version, go to the [Home Page](./) instead.
 
+## Version 2.32, Extended 1.9.43
+* [Fix] Merged in vanilla v2.32
+* [Fix] Fixed headers causing return to outpost crashes and other bits
+
+[Download](https://github.com/3vcloud/GWToolboxpp/releases/download/2.32-1.9.43_Release/JonsToolbox_1.9.43.zip)
+
 ## Version 2.30, Extended 1.9.42
 * [Fix] Fixed bug preventing travel from Europe > Europe English
 * [Fix] Header updates via GWCA after GW update 2020-02-15
 
 [Download](https://github.com/3vcloud/GWToolboxpp/releases/download/2.30-1.9.42_Release/JonsToolbox_1.9.42.zip)
-
 
 ## Version 2.30, Extended 1.9.41
 * [New] Added "Emotes" and "Other" to Chat Colors section of Game Settings
@@ -140,23 +145,19 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [Download](https://github.com/3vcloud/GWToolboxpp/releases/download/2.27-1.8.93_Release/GWToolbox.dll)
 
-## Version 2.30
-* [Fix] Fix bug with launcher asking to download every time.
-* [Fix] Main window options are now accesible again.
-* [Fix] Fixed crash dump generation.
+## Version 2.32
+* [Fix] Fix crashes caused because of bad header values.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.30_Release/GWToolbox.dll)
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.32_Release/GWToolbox.dll)
 
-## Version 2.30
-* [Fix] Fix bug with launcher asking to download every time.
-* [Fix] Main window options are now accesible again.
-* [Fix] Fixed crash dump generation.
+## Version 2.31
+* [Fix] Fixes following February 14 update.
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.30_Release/GWToolbox.dll)
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.31_Release/GWToolbox.dll)
 
 ## Version 2.30
 * [Fix] Fix bug with launcher asking to download every time.
-* [Fix] Main window options are now accesible again.
+* [Fix] Main window options are now accessible again.
 * [Fix] Fixed crash dump generation.
 
 [Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.30_Release/GWToolbox.dll)
