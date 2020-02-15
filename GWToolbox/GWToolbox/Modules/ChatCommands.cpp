@@ -519,7 +519,6 @@ void ChatCommands::CmdTP(const wchar_t *message, int argc, LPWSTR *argv) {
 				TravelWindow::Travel(map_id, district, district_number);
 			}
 		}
-
 	}
 }
 
@@ -1070,7 +1069,7 @@ static bool string_starts_with(const wchar_t *str, const wchar_t *pre)
 
 GW::Constants::MapID ChatCommands::MatchMapPrefix(const wchar_t *map_name)
 {
-	size_t array_size = sizeof(teleport_search_map) / sizeof(teleport_search_map[0]);
+	size_t array_size = _countof(teleport_search_map);
 	for (size_t i = 0; i < array_size; i++) {
 		if (string_starts_with(teleport_search_map[i].sname, map_name)) {
 			size_t count = 1;
