@@ -49,7 +49,8 @@ using easywsclient::WebSocket;
 using nlohmann::json;
 using json_vec = std::vector<json>;
 
-static const char ws_host[] = "wss://kamadan.decltype.org/ws/";
+static const char ws_domain[] = "kamadan.gwtoolbox.com";
+static const char ws_host[] = "ws://kamadan.gwtoolbox.com";
 static const std::regex regex_check = std::regex("^/(.*)/[a-z]?$", std::regex::ECMAScript | std::regex::icase);
 
 void TradeWindow::NotifyTradeBlockedInKamadan() {
@@ -249,11 +250,10 @@ void TradeWindow::Update(float delta) {
 		// We don't support queries in the chat
 		if (res.find("query") != res.end())
 			return;
-
-		std::string msg = res["message"].get<std::string>();
-		if (FilterTradeMessage(msg)) {
-			std::wstring name_ws = GuiUtils::StringToWString(res["name"].get<std::string>());
-			std::wstring msg_ws = GuiUtils::StringToWString(msg);
+		Message msg = parse_json_message(res);
+		if (FilterTradeMessage(msg.message)) {
+			std::wstring name_ws = GuiUtils::StringToWString(msg.name);
+			std::wstring msg_ws = GuiUtils::StringToWString(msg.message);
 			wnsprintfW(buffer, sizeof(buffer), L"<a=1>%s</a>: <c=#f96677><quote>%s", name_ws.c_str(), msg_ws.c_str());
 			GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, buffer);
 		}
@@ -262,9 +262,16 @@ void TradeWindow::Update(float delta) {
 
 TradeWindow::Message TradeWindow::parse_json_message(json js) {
 	TradeWindow::Message msg;
-	msg.name = js["name"].get<std::string>();
-	msg.message = js["message"].get<std::string>();
-	msg.timestamp = stoi(js["timestamp"].get<std::string>());
+	if (js.find("s") != js.end()) {
+		msg.name = js["s"].get<std::string>();
+		msg.message = js["m"].get<std::string>();
+		msg.timestamp = js["t"].get<time_t>();
+	}
+	else {
+		msg.name = js["name"].get<std::string>();
+		msg.message = js["message"].get<std::string>();
+		msg.timestamp = js["timstamp"].get<time_t>();
+	}
 	return msg;
 }
 
@@ -297,7 +304,7 @@ void TradeWindow::fetch() {
 		}
 		else {
 			search_pending = false;
-			if (res["num_results"].get<std::string>() == "0")
+			if (res["num_results"].get<size_t>() == 0)
 				return;
 			json_vec results = res["results"].get<json_vec>();
 			messages.clear();
@@ -484,22 +491,15 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		ImGui::EndChild();
 		if (ws_window) {
 			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 1, 0, 1));
-			ImGui::Button("Connected to https://kamadan.decltype.org", ImVec2(0, 20.0f));
+			ImGui::Button("Connected to kamadan.gwtoolbox.com", ImVec2(0, 20.0f));
 			ImGui::PopStyleColor();
 			if (ImGui::IsItemHovered())
-				ImGui::SetTooltip("GWToolbox is fetching new trade messages from https://kamadan.decltype.org");
-
-			/* Link to website footer */
-			/*ImGui::SameLine(ImGui::GetContentRegionAvailWidth() - 300.0f * ImGui::GetIO().FontGlobalScale, 0);
-			if (ImGui::Button("Powered by https://kamadan.decltype.org", ImVec2(300.0f * ImGui::GetIO().FontGlobalScale, 20.0f))) {
-				CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-				ShellExecuteA(NULL, "open", "https://kamadan.decltype.org", NULL, NULL, SW_SHOWNORMAL);
-			}*/
+				ImGui::SetTooltip("GWToolbox is fetching new trade messages from %s", ws_domain);
 		}
 		else if (ws_window_connecting) {
 			ImGui::Button("Connecting...", ImVec2(0, 20.0f));
 			if (ImGui::IsItemHovered())
-				ImGui::SetTooltip("GWToolbox is trying to connect to https://kamadan.decltype.org");
+				ImGui::SetTooltip("GWToolbox is trying to connect to %s", ws_domain);
 		}
 		else if (messages_ptr && GetInKamadanAE1()) {
 			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 1, 0, 1));
@@ -511,7 +511,9 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		else {
 			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
 			if (enable_kamadan_decltype) {
-				if (ImGui::Button("Not Connected - Click to re-connect to https://kamadan.decltype.org", ImVec2(0, 20.0f)))
+				char str[128];
+				sprintf(str, "Not Connected - Click to re-connect to %s", ws_domain);
+				if (ImGui::Button(str, ImVec2(0, 20.0f)))
 					AsyncWindowConnect(true);
 			}
 			else {
@@ -537,10 +539,12 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 
 void TradeWindow::DrawAlertsWindowContent(bool ownwindow) {
 	ImGui::Text("Trade Window mode:");
-	if (ImGui::RadioButton("kamadan.decltype.org", enable_kamadan_decltype)) {
+	if (ImGui::RadioButton(ws_domain, enable_kamadan_decltype)) {
 		AsyncWindowConnect(true);
 	}
-	ImGui::ShowHelp("Show messages from kamadan.decltype.org in Trade Window");
+	char str[128];
+	sprintf(str, "Show messages from %s in Trade Window", ws_domain);
+	ImGui::ShowHelp(str);
 	ImGui::SameLine();
 	if (ImGui::RadioButton("In-Game Trade Chat", !enable_kamadan_decltype))
 		enable_kamadan_decltype = false;
