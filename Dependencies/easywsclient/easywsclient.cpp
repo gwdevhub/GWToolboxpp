@@ -137,7 +137,7 @@ void klose(ConnectionContext* ptConnCtx) {
 	if (ptConnCtx->sockfd) {
 		closesocket(ptConnCtx->sockfd);
 	}
-	if (ptConnCtx->sslHandle==NULL) {
+	if (ptConnCtx->sslHandle) {
 		SSL_shutdown(ptConnCtx->sslHandle);
 		SSL_free(ptConnCtx->sslHandle);
 	}
@@ -471,7 +471,7 @@ easywsclient::WebSocket::pointer from_url(const std::string& url, bool useMask, 
         fprintf(stderr, "ERROR: Could not parse WebSocket url: %s\n", url.c_str());
         return NULL;
     }
-    if (sc[2]!='\0') {
+    if (sc[1]!='\0' && sc[2] != '\0') {
     	fprintf(stderr, "ERROR: Could not parse WebSocket url: %s\n", url.c_str());
         return NULL;
     }
@@ -482,6 +482,8 @@ easywsclient::WebSocket::pointer from_url(const std::string& url, bool useMask, 
     
     ConnectionContext* ptConnCtx;
     ptConnCtx = (ConnectionContext*)malloc(sizeof(ConnectionContext));
+    ptConnCtx->sslContext = nullptr;
+    ptConnCtx->sslHandle = nullptr;
     ptConnCtx->sockfd = hostname_connect(host, port);
     if (ptConnCtx->sockfd == INVALID_SOCKET) {
         fprintf(stderr, "ERROR: Unable to connect to %s:%d\n", host, port);
