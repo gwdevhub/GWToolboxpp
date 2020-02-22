@@ -257,21 +257,15 @@ void TravelWindow::UITravel(GW::Constants::MapID MapID, GW::Constants::District 
 
 	uint32_t err = 0;
 	if (!IsMapUnlocked(MapID)) {
-		err = 53;
+		Log::Error("[Error] Your character does not have %s unlocked\n",GW::Constants::NAME_FROM_ID[(uint32_t)MapID]);
+		return;
 	}
 	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost
 		&& t->region_id == GW::Map::GetRegion()
 		&& t->language_id == GW::Map::GetLanguage()
 		&& (t->district_number == 0 || t->district_number == GW::Map::GetDistrict())
 		&& t->map_id == GW::Map::GetMapID()) {
-		err = 60;
-	}
-	if (err) {
-		GW::GameThread::Enqueue([err] {
-			static GW::Packet::StoC::ErrorMessage e;
-			e.message_id = err;
-			GW::StoC::EmulatePacket(&e);
-			});
+		Log::Error("[Error] You are already in the outpost\n");
 		return;
 	}
     GW::GameThread::Enqueue([t] {
