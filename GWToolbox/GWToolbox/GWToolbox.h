@@ -4,6 +4,8 @@
 #include "ToolboxModule.h"
 #include "ToolboxUIElement.h"
 
+#include <GWCA/Managers/GameThreadMgr.h>
+
 DWORD __stdcall SafeThreadEntry(LPVOID mod);
 DWORD __stdcall ThreadEntry(LPVOID);
 
@@ -21,6 +23,7 @@ public:
 
 	static HMODULE GetDLLModule();
 	static void Draw(IDirect3DDevice9* device);
+	static void Update(GW::HookStatus *);
 
 	void Initialize();
 	void Terminate();
@@ -58,4 +61,6 @@ private:
 
 	utf8::string imgui_inifile;
 	CSimpleIni* inifile = nullptr;
+
+	GW::HookEntry Update_Entry;
 };

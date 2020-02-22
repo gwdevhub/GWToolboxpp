@@ -286,6 +286,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 
 void GWToolbox::Initialize() {
     Log::Log("Creating Toolbox\n");
+
+    GW::GameThread::RegisterGameThreadCallback(&Update_Entry, GWToolbox::Update);
+
     Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img"));
     Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img\\bonds"));
     Resources::Instance().EnsureFolderExists(Resources::GetPath(L"img\\icons"));
@@ -354,6 +357,8 @@ void GWToolbox::Terminate() {
     inifile->Reset();
     delete inifile;
 
+    GW::GameThread::RemoveGameThreadCallback(&Update_Entry);
+
     for (ToolboxModule* module : modules) {
         module->Terminate();
     }
@@ -366,7 +371,6 @@ void GWToolbox::Terminate() {
 void GWToolbox::Draw(IDirect3DDevice9* device) {
 
     static HWND gw_window_handle = 0;
-    static DWORD last_tick_count;
 
     // === initialization ===
     if (!tb_initialized && !GWToolbox::Instance().must_self_destruct) {
@@ -397,7 +401,6 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 
         GWToolbox::Instance().Initialize();
 
-        last_tick_count = GetTickCount();
         tb_initialized = true;
     }
 
@@ -406,16 +409,6 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         && !GWToolbox::Instance().must_self_destruct
         && GW::Render::GetViewportWidth() > 0
         && GW::Render::GetViewportHeight() > 0) {
-
-        // Improve precision with QueryPerformanceCounter
-        DWORD tick = GetTickCount();
-        DWORD delta = tick - last_tick_count;
-        float delta_f = delta / 1000.f;
-
-        for (ToolboxModule* module : GWToolbox::Instance().modules) {
-            module->Update(delta_f);
-        }
-        last_tick_count = tick;
 
         if (!GW::UI::GetIsUIDrawn())
             return;
@@ -468,4 +461,28 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 		tb_initialized = false;
 		tb_destroyed = true;
 	}
+}
+
+void GWToolbox::Update(GW::HookStatus *)
+{
+    static DWORD last_tick_count;
+    if (last_tick_count == 0)
+        last_tick_count = GetTickCount();
+
+    GWToolbox& tb = GWToolbox::Instance();
+    if (tb_initialized
+        && !GWToolbox::Instance().must_self_destruct) {
+
+        // @Enhancement:
+        // Improve precision with QueryPerformanceCounter
+        DWORD tick = GetTickCount();
+        DWORD delta = tick - last_tick_count;
+        float delta_f = delta / 1000.f;
+
+        for (ToolboxModule* module : tb.modules) {
+            module->Update(delta_f);
+        }
+
+        last_tick_count = tick;
+    }
 }
