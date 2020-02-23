@@ -231,6 +231,7 @@ void Minimap::DrawSettingInternal() {
 	ImGui::Checkbox("Allow mouse click-through in outposts", &mouse_clickthrough_in_outpost);
 	ImGui::ShowHelp("Toolbox minimap will not capture mouse events when in an outpost");
     ImGui::Checkbox("Alt + Click on minimap to move", &alt_click_to_move);
+	ImGui::Checkbox("Ctrl + Click for ping and Click for target", &ctrl_click_ping_target_swap);
     if (mouse_clickthrough) {
         ImGui::PopItemFlag();
         ImGui::PopStyleVar();
@@ -252,6 +253,7 @@ void Minimap::LoadSettings(CSimpleIni* ini) {
 	mouse_clickthrough_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(mouse_clickthrough_in_outpost), mouse_clickthrough_in_outpost);
 	rotate_minimap = ini->GetBoolValue(Name(), VAR_NAME(rotate_minimap), true);
     alt_click_to_move = ini->GetBoolValue(Name(), VAR_NAME(alt_click_to_move), false);
+	ctrl_click_ping_target_swap = ini->GetBoolValue(Name(), VAR_NAME(ctrl_click_ping_target_swap), false);
     pingslines_renderer.reduce_ping_spam = ini->GetBoolValue(Name(), VAR_NAME(reduce_ping_spam), false);
 	range_renderer.LoadSettings(ini, Name());
 	pmap_renderer.LoadSettings(ini, Name());
@@ -270,7 +272,8 @@ void Minimap::SaveSettings(CSimpleIni* ini) {
 	Colors::Save(ini, Name(), VAR_NAME(hero_flag_window_background), hero_flag_window_background);
     ini->SetBoolValue(Name(), VAR_NAME(mouse_clickthrough), mouse_clickthrough);
 	ini->SetBoolValue(Name(), VAR_NAME(mouse_clickthrough_in_outpost), mouse_clickthrough_in_outpost);
-    ini->SetBoolValue(Name(), VAR_NAME(alt_click_to_move), alt_click_to_move);
+	ini->SetBoolValue(Name(), VAR_NAME(alt_click_to_move), alt_click_to_move);
+	ini->SetBoolValue(Name(), VAR_NAME(ctrl_click_ping_target_swap), ctrl_click_ping_target_swap);
     ini->SetBoolValue(Name(), VAR_NAME(reduce_ping_spam), pingslines_renderer.reduce_ping_spam);
 	ini->SetBoolValue(Name(), VAR_NAME(rotate_minimap), rotate_minimap);
 	range_renderer.SaveSettings(ini, Name());
@@ -594,6 +597,7 @@ bool Minimap::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 	}
 }
 bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam) {
+	Log::Log("Hello from Minimap.cpp\n");
 	if (!IsActive()) return false;
 
 	int x = GET_X_LPARAM(lParam);
@@ -601,12 +605,8 @@ bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam) {
 	if (!IsInside(x, y)) return false;
 
 	mousedown = true;
-    GW::Vec2f worldpos = InterfaceToWorldPoint(Vec2i(x, y));
+	GW::Vec2f worldpos = InterfaceToWorldPoint(Vec2i(x, y));
 
-	if (wParam & MK_CONTROL) {
-		SelectTarget(worldpos);
-		return true;
-	}
 
     if (alt_click_to_move && ImGui::IsKeyDown(VK_MENU)) {
         GW::Agents::Move(worldpos);
@@ -636,8 +636,21 @@ bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam) {
 
 	if (!lock_move) return true;
 
-	pingslines_renderer.OnMouseDown(worldpos.x, worldpos.y);
+	if (!ctrl_click_ping_target_swap) {
+		if (wParam & MK_CONTROL) {
+			SelectTarget(worldpos);
+			return true;
+		}
 
+		pingslines_renderer.OnMouseDown(worldpos.x, worldpos.y);
+	} else {
+		if (wParam & MK_CONTROL) {
+			pingslines_renderer.OnMouseDown(worldpos.x, worldpos.y);
+			
+			return true;
+		}
+		SelectTarget(worldpos);
+	}
 	return true;
 }
 
@@ -648,7 +661,12 @@ bool Minimap::OnMouseDblClick(UINT Message, WPARAM wParam, LPARAM lParam) {
 	int y = GET_Y_LPARAM(lParam);
 	if (!IsInside(x, y)) return false;
 
-	if (wParam & MK_CONTROL) {
+	if (!ctrl_click_ping_target_swap) {
+		if (wParam & MK_CONTROL) {
+			SelectTarget(InterfaceToWorldPoint(Vec2i(x, y)));
+			return true;
+		}
+	} else { 
 		SelectTarget(InterfaceToWorldPoint(Vec2i(x, y)));
 		return true;
 	}
@@ -663,7 +681,18 @@ bool Minimap::OnMouseUp(UINT Message, WPARAM wParam, LPARAM lParam) {
 
 	mousedown = false;
 
-	return pingslines_renderer.OnMouseUp();
+	//if (ctrl_click_ping_target_swap) {
+	//	if (wParam & MK_CONTROL) {
+	//		return pingslines_renderer.OnMouseUp();
+	//	}
+	//}
+	if (!ctrl_click_ping_target_swap) {
+		return pingslines_renderer.OnMouseUp();
+	} else {
+		if (wParam & MK_CONTROL) {
+			return pingslines_renderer.OnMouseUp();
+		}
+	}
 }
 
 bool Minimap::OnMouseMove(UINT Message, WPARAM wParam, LPARAM lParam) {
@@ -675,11 +704,6 @@ bool Minimap::OnMouseMove(UINT Message, WPARAM wParam, LPARAM lParam) {
 	int y = GET_Y_LPARAM(lParam);
 	//if (!IsInside(x, y)) return false;
 
-	if (wParam & MK_CONTROL) {
-		SelectTarget(InterfaceToWorldPoint(Vec2i(x, y)));
-		return true;
-	}
-
 	if (wParam & MK_SHIFT) {
 		Vec2i diff = Vec2i(x - drag_start.x, y - drag_start.y);
 		translation += InterfaceToWorldVector(diff);
@@ -688,8 +712,23 @@ bool Minimap::OnMouseMove(UINT Message, WPARAM wParam, LPARAM lParam) {
 		return true;
 	}
 
-	GW::Vec2f v = InterfaceToWorldPoint(Vec2i(x, y));
-	return pingslines_renderer.OnMouseMove(v.x, v.y);
+	if (!ctrl_click_ping_target_swap) {
+		if (wParam & MK_CONTROL) {
+			SelectTarget(InterfaceToWorldPoint(Vec2i(x, y)));
+			return true;
+		}
+
+		GW::Vec2f v = InterfaceToWorldPoint(Vec2i(x, y));
+		return pingslines_renderer.OnMouseMove(v.x, v.y);
+	} else {
+		if (wParam & MK_CONTROL) {
+
+			GW::Vec2f v = InterfaceToWorldPoint(Vec2i(x, y));
+			return pingslines_renderer.OnMouseMove(v.x, v.y);
+		}
+		SelectTarget(InterfaceToWorldPoint(Vec2i(x, y)));
+		return true;
+	}
 }
 
 bool Minimap::OnMouseWheel(UINT Message, WPARAM wParam, LPARAM lParam) {
