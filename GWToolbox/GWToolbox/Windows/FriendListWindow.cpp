@@ -154,7 +154,7 @@ FriendListWindow::Friend* FriendListWindow::SetFriend(uint8_t* uuid, uint8_t typ
 		lf = GetFriend(charname);
 	if(!lf && alias)
 		lf = GetFriend(alias);
-	std::lock_guard<std::recursive_mutex> lock(friends_mutex);
+	//std::lock_guard<std::recursive_mutex> lock(friends_mutex);
 	char uuid_c[128];
 	GuidToString(*(UUID*)uuid, uuid_c);
 	if(!lf) {
@@ -217,14 +217,14 @@ FriendListWindow::Friend* FriendListWindow::GetFriend(uint8_t* uuid) {
 }
 // Find existing record for friend by uuid
 FriendListWindow::Friend* FriendListWindow::GetFriendByUUID(const char* uuid) {
-    std::lock_guard<std::recursive_mutex> lock(friends_mutex);
+    //std::lock_guard<std::recursive_mutex> lock(friends_mutex);
 	std::unordered_map<std::string, Friend*>::iterator it = friends.find(uuid);
 	if (it == friends.end())
 		return nullptr;
 	return it->second; // Found in cache
 }
 void FriendListWindow::RemoveFriend(Friend* f) {
-	std::lock_guard<std::recursive_mutex> lock(friends_mutex);
+	//std::lock_guard<std::recursive_mutex> lock(friends_mutex);
 	if (!f) return;
 	std::unordered_map<std::string, Friend*>::iterator it1 = friends.find(f->uuid);
 	if (it1 != friends.end()) {
@@ -243,12 +243,11 @@ FriendListWindow::FriendListWindow() {
 	inifile = new CSimpleIni(false, false, false);
 }
 FriendListWindow::~FriendListWindow() {
-	worker.~WorkerThread();
 	delete inifile;
 }
 void FriendListWindow::Initialize() {
     ToolboxWindow::Initialize();
-	worker.Run();
+	//worker.Run();
     GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusUpdate_Entry, [this](GW::HookStatus*,
         GW::Friend* f,
         GW::FriendStatus status,
@@ -266,18 +265,15 @@ void FriendListWindow::Initialize() {
 	// If a friend has just logged in on a character in this map, record their profession.
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::PlayerJoinInstance* pak) {
 		std::wstring player_name(pak->player_name);
-		worker.Add([this, player_name](){
-			//Log::Log("%s: Checking player profession %ls\n", player_name);
-			GW::Player* a = GW::PlayerMgr::GetPlayerByName(player_name.c_str());
-			if (!a || !a->primary) return;
-			uint8_t profession = a->primary;
-			Friend* f = GetFriend(player_name.c_str());
-			if (!f) return;
-			Character* fc = f->GetCharacter(player_name.c_str());
-			if (!fc) return;
-			if(profession > 0 && profession < 11)
-				fc->profession = profession;
-		});
+		GW::Player* a = GW::PlayerMgr::GetPlayerByName(player_name.c_str());
+		if (!a || !a->primary) return;
+		uint8_t profession = a->primary;
+		Friend* f = GetFriend(player_name.c_str());
+		if (!f) return;
+		Character* fc = f->GetCharacter(player_name.c_str());
+		if (!fc) return;
+		if (profession > 0 && profession < 11)
+			fc->profession = profession;
 	});
 	GW::Chat::RegisterSendChatCallback(&ErrorMessage_Entry, [&](GW::HookStatus* status, GW::Chat::Channel channel, wchar_t* msg) {
 		if (channel != GW::Chat::CHANNEL_WHISPER)
@@ -365,11 +361,7 @@ void FriendListWindow::Update(float delta) {
 		int interval_check = poll_interval_seconds * CLOCKS_PER_SEC;
 		if (!friends_list_checked || clock() - friends_list_checked > interval_check) {
 			//Log::Log("Queueing poll friends list\n");
-			poll_queued = true;
-			worker.Add([this]() {
-				poll_queued = false;
-				Poll();
-				});
+			Poll();
 		}
 	}
 }
@@ -629,21 +621,12 @@ void FriendListWindow::SignalTerminate() {
 	GW::FriendListMgr::RemoveFriendStatusCallback(&FriendStatusUpdate_Entry);
 	GW::StoC::RemoveCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry);
 	// Remove any friends added via toolbox.
-	worker.Add([this]() {
-		GW::GameThread::Enqueue([this]() {
-            std::lock_guard<std::recursive_mutex> lock(friends_mutex);
-			for (std::unordered_map<std::string, Friend*>::iterator it = friends.begin();  it != friends.end(); it++) {
-				Friend* f = it->second;
-                if (f->is_tb_friend && f->GetFriend()) {
-                    f->RemoveGWFriend();
-                }
-			}
-			worker.Stop();
-			});
-		});
-}
-bool FriendListWindow::CanTerminate() {
-	return !worker.IsRunning();
+	for (auto it = friends.begin(); it != friends.end(); it++) {
+		Friend* f = it->second;
+		if (f->is_tb_friend && f->GetFriend()) {
+			f->RemoveGWFriend();
+		}
+	}
 }
 void FriendListWindow::Terminate() {
     ToolboxWindow::Terminate();
@@ -651,7 +634,7 @@ void FriendListWindow::Terminate() {
     GW::FriendListMgr::RemoveFriendStatusCallback(&FriendStatusUpdate_Entry);
     GW::StoC::RemoveCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry);
     // Free memory for Friends list.
-    std::lock_guard<std::recursive_mutex> lock(friends_mutex);
+    //std::lock_guard<std::recursive_mutex> lock(friends_mutex);
 	while (friends.begin() != friends.end()) {
 		RemoveFriend(friends.begin()->second);
 	}
@@ -681,52 +664,49 @@ void FriendListWindow::LoadCharnames(const char* section, std::unordered_map<std
 void FriendListWindow::LoadFromFile() {
 	loading = true;
 	Log::Log("%s: Loading friends from ini", Name());
-	worker.Add([this]() {
-        std::lock_guard<std::recursive_mutex> lock(friends_mutex);
-		// clear builds from toolbox
-		uuid_by_name.clear();
-		while (friends.begin() != friends.end()) {
-			RemoveFriend(friends.begin()->second);
+	// clear builds from toolbox
+	uuid_by_name.clear();
+	while (friends.begin() != friends.end()) {
+		RemoveFriend(friends.begin()->second);
+	}
+	friends.clear();
+
+	inifile->Reset();
+	inifile->SetMultiKey(true);
+	inifile->LoadFile(Resources::GetPath(ini_filename).c_str());
+
+	CSimpleIni::TNamesDepend entries;
+	inifile->GetAllSections(entries);
+	for (CSimpleIni::Entry& entry : entries) {
+		uint8_t type = 0;
+		Friend* lf = new Friend(this);
+		lf->uuid = entry.pItem;
+		lf->uuid_bytes = StringToGuid(lf->uuid);
+		lf->alias = GuiUtils::StringToWString(inifile->GetValue(entry.pItem, "alias", ""));
+		lf->type = (uint8_t)inifile->GetLongValue(entry.pItem, "type", lf->type);
+		if (lf->uuid.empty() || lf->alias.empty()) {
+			delete lf;
+			continue; // Error, alias or uuid empty.
 		}
-		friends.clear();
 
-		inifile->Reset();
-		inifile->SetMultiKey(true);
-		inifile->LoadFile(Resources::GetPath(ini_filename).c_str());
-
-		CSimpleIni::TNamesDepend entries;
-		inifile->GetAllSections(entries);
-		for (CSimpleIni::Entry& entry : entries) {
-			uint8_t type = 0;
-			Friend* lf = new Friend(this);
-			lf->uuid = entry.pItem;
-			lf->uuid_bytes = StringToGuid(lf->uuid);
-			lf->alias = GuiUtils::StringToWString(inifile->GetValue(entry.pItem, "alias", ""));
-			lf->type = (uint8_t)inifile->GetLongValue(entry.pItem, "type", lf->type);
-            if (lf->uuid.empty() || lf->alias.empty()) {
-                delete lf;
-                continue; // Error, alias or uuid empty.
-            }
-
-			// Grab char names
-			std::unordered_map<std::wstring, uint8_t> charnames;
-			LoadCharnames(entry.pItem, &charnames);
-			for (auto it : charnames) {
-				lf->SetCharacter(it.first.c_str(), it.second);
-			}
-            if (lf->characters.empty()) {
-                delete lf;
-                continue; // Error, should have at least 1 charname...
-            }
-			friends.emplace(lf->uuid, lf);
-			for (std::unordered_map<std::wstring, Character>::iterator it2 = lf->characters.begin(); it2 != lf->characters.end(); ++it2) {
-				uuid_by_name.emplace(it2->first, lf->uuid);
-			}
+		// Grab char names
+		std::unordered_map<std::wstring, uint8_t> charnames;
+		LoadCharnames(entry.pItem, &charnames);
+		for (auto it : charnames) {
+			lf->SetCharacter(it.first.c_str(), it.second);
 		}
-		Log::Log("%s: Loaded friends from ini", Name());
-		friends_list_checked = false;
-		loading = false;
-	});
+		if (lf->characters.empty()) {
+			delete lf;
+			continue; // Error, should have at least 1 charname...
+		}
+		friends.emplace(lf->uuid, lf);
+		for (std::unordered_map<std::wstring, Character>::iterator it2 = lf->characters.begin(); it2 != lf->characters.end(); ++it2) {
+			uuid_by_name.emplace(it2->first, lf->uuid);
+		}
+	}
+	Log::Log("%s: Loaded friends from ini", Name());
+	friends_list_checked = false;
+	loading = false;
 }
 void FriendListWindow::SaveToFile() {
     if (!friends_changed)
@@ -738,8 +718,8 @@ void FriendListWindow::SaveToFile() {
 	inifile->SetMultiKey(true);
     if (friends.empty())
         return; // Error, should have at least 1 friend
-    std::lock_guard<std::recursive_mutex> lock(friends_mutex);
-    for (std::unordered_map<std::string, Friend*>::iterator it = friends.begin(); it != friends.end(); ++it) {
+    //std::lock_guard<std::recursive_mutex> lock(friends_mutex);
+    for (auto it = friends.begin(); it != friends.end(); ++it) {
         // do something
         Friend lf = *it->second;
 		const char* uuid = lf.uuid.c_str();

@@ -200,7 +200,6 @@ public:
 
     void Initialize() override;
 	void SignalTerminate() override;
-	bool CanTerminate() override;
     void Terminate() override;
 	bool ShowAsWidget() const;
 	bool ShowAsWindow() const;
@@ -250,64 +249,11 @@ private:
 
 	uint8_t poll_interval_seconds = 10;
 
-    // tasks to be done async by the worker thread
-	class WorkerThread {
-		std::queue<std::function<void()>> thread_jobs;
-		std::thread thread;
-		std::mutex mutex;
-		bool running = false;
-		bool need_to_stop = false;
-	public:
-		~WorkerThread() {
-			need_to_stop = true;
-			if (thread.joinable())
-				thread.join();
-		}
-		bool IsRunning() {
-			return running;
-		}
-		void Add(std::function<void()> func) {
-			if (need_to_stop)
-				return;
-			std::lock_guard<std::mutex> lock(mutex);
-			thread_jobs.push(func);
-			Run();
-		}
-		void Stop() {
-			need_to_stop = true;
-		}
-		void Run() {
-			if (need_to_stop || IsRunning())
-				return;
-			running = true;
-			thread = std::thread([this]() {
-				std::unique_lock<std::mutex> lock(mutex);
-				lock.unlock();
-				while (!need_to_stop) {
-					lock.lock();
-					if (thread_jobs.empty()) {
-						lock.unlock();
-						std::this_thread::sleep_for(std::chrono::milliseconds(100));
-					}
-					else {
-						thread_jobs.front()();
-						thread_jobs.pop();
-						lock.unlock();
-					}
-				}
-				running = false;
-			});
-		}
-	};
-	WorkerThread worker;
-    
-
     // Mapping of Name > UUID
     std::unordered_map<std::wstring, std::string> uuid_by_name;
 
     // Main store of Friend info
     std::unordered_map<std::string, Friend*> friends;
-    std::recursive_mutex friends_mutex;
 
 	bool show_location = true;
 
