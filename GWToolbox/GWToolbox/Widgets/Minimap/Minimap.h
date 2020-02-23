@@ -95,6 +95,7 @@ private:
 	bool mouse_clickthrough_in_outpost = false;
 	bool rotate_minimap = true;
     bool alt_click_to_move = false;
+	bool ctrl_click_ping_target_swap = false;
 	bool is_observing = false;
 
 	bool hero_flag_controls_show = false;
