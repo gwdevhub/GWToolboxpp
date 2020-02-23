@@ -597,7 +597,6 @@ bool Minimap::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 	}
 }
 bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam) {
-	Log::Log("Hello from Minimap.cpp\n");
 	if (!IsActive()) return false;
 
 	int x = GET_X_LPARAM(lParam);
@@ -639,17 +638,15 @@ bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam) {
 	if (!ctrl_click_ping_target_swap) {
 		if (wParam & MK_CONTROL) {
 			SelectTarget(worldpos);
-			return true;
+		} else {
+			pingslines_renderer.OnMouseDown(worldpos.x, worldpos.y);
 		}
-
-		pingslines_renderer.OnMouseDown(worldpos.x, worldpos.y);
 	} else {
 		if (wParam & MK_CONTROL) {
 			pingslines_renderer.OnMouseDown(worldpos.x, worldpos.y);
-			
-			return true;
+		} else {
+			SelectTarget(worldpos);
 		}
-		SelectTarget(worldpos);
 	}
 	return true;
 }
@@ -680,19 +677,11 @@ bool Minimap::OnMouseUp(UINT Message, WPARAM wParam, LPARAM lParam) {
 	if (!mousedown) return false;
 
 	mousedown = false;
-
-	//if (ctrl_click_ping_target_swap) {
-	//	if (wParam & MK_CONTROL) {
-	//		return pingslines_renderer.OnMouseUp();
-	//	}
-	//}
-	if (!ctrl_click_ping_target_swap) {
+	
+	if (!ctrl_click_ping_target_swap || (wParam & MK_CONTROL))
 		return pingslines_renderer.OnMouseUp();
-	} else {
-		if (wParam & MK_CONTROL) {
-			return pingslines_renderer.OnMouseUp();
-		}
-	}
+	
+	return true;
 }
 
 bool Minimap::OnMouseMove(UINT Message, WPARAM wParam, LPARAM lParam) {
@@ -712,23 +701,23 @@ bool Minimap::OnMouseMove(UINT Message, WPARAM wParam, LPARAM lParam) {
 		return true;
 	}
 
+	GW::Vec2f v = InterfaceToWorldPoint(Vec2i(x, y));
+
 	if (!ctrl_click_ping_target_swap) {
 		if (wParam & MK_CONTROL) {
-			SelectTarget(InterfaceToWorldPoint(Vec2i(x, y)));
-			return true;
-		}
-
-		GW::Vec2f v = InterfaceToWorldPoint(Vec2i(x, y));
-		return pingslines_renderer.OnMouseMove(v.x, v.y);
-	} else {
-		if (wParam & MK_CONTROL) {
-
-			GW::Vec2f v = InterfaceToWorldPoint(Vec2i(x, y));
+			SelectTarget(v);
+		} else {
 			return pingslines_renderer.OnMouseMove(v.x, v.y);
 		}
-		SelectTarget(InterfaceToWorldPoint(Vec2i(x, y)));
-		return true;
+	} else {
+		if (wParam & MK_CONTROL) {
+			return pingslines_renderer.OnMouseMove(v.x, v.y);
+		} else {
+			SelectTarget(v);
+		}
 	}
+
+	return true;
 }
 
 bool Minimap::OnMouseWheel(UINT Message, WPARAM wParam, LPARAM lParam) {
