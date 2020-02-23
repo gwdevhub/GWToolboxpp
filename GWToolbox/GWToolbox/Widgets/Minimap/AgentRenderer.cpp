@@ -417,18 +417,24 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 	};
 
 	for (size_t i = 0; i < agents.size(); ++i) {
-		if (!agents[i]) continue;
-		GW::AgentLiving* agent = agents[i]->GetAsAgentLiving();
+		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
-		if (agent->player_number <= 12) continue;
-		if (agent->GetIsGadgetType()
-			&& GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish
-			&& agent->GetAsAgentGadget()->extra_type == 7602) continue;
-		if (agent->IsNPC()
-			&& agent->player_number < npcs.size()
-			&& (npcs[agent->player_number].npc_flags & 0x10000) > 0) continue;
-		if (target == agent) continue; // will draw target at the end
+		GW::AgentLiving* living = agents[i]->GetAsAgentLiving();
+		GW::AgentGadget* gadget = agents[i]->GetAsAgentGadget();
+		if (living) {
+			if (living->player_number <= 12) continue;
+			if (living->IsNPC() && living->player_number < npcs.size() &&
+				(npcs[living->player_number].npc_flags & 0x10000) > 0) {
+				continue;
+			}
+		}
 
+		if (gadget && gadget->extra_type == 7602 &&
+			GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish) {
+			continue;
+		}
+
+		if (target == living) continue; // will draw target at the end
 		if (AddCustomAgentsToDraw(agent)) {
 			// found a custom agent to draw, we'll draw them later
 		} else {
