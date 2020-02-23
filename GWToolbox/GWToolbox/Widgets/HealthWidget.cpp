@@ -44,8 +44,8 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
 	if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(ctrl_pressed && click_to_print_health)))) {
 		static char health_perc[32];
 		static char health_abs[32];
-		GW::Agent* target = GW::Agents::GetTarget();
-		if (target && target->GetIsCharacterType()) {
+		GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
+		if (target) {
 			if (target->hp >= 0) {
 				snprintf(health_perc, 32, "%.0f %s", target->hp * 100, "%%");
 			} else {

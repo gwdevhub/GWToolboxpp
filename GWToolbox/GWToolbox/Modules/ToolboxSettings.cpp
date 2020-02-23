@@ -301,7 +301,7 @@ void ToolboxSettings::Update(float delta) {
 				}
 
 				std::wstring prof_string = L"";
-				GW::Agent* me = GW::Agents::GetPlayer();
+				GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
 				if (me) {
 					prof_string += L" - ";
 					prof_string += GW::Constants::GetWProfessionAcronym(

@@ -248,7 +248,9 @@ void ObjectiveTimerWindow::Initialize() {
         [this](GW::HookStatus *, GW::Packet::StoC::AgentUpdateAllegiance* packet) -> void {
         if (GW::Map::GetMapID() != GW::Constants::MapID::The_Underworld) return;
 
-        const GW::Agent* agent = GW::Agents::GetAgentByID(packet->agent_id);
+        GW::Agent* ag = GW::Agents::GetAgentByID(packet->agent_id);
+        if (ag == nullptr) return;
+        const GW::AgentLiving* agent = ag->GetAsAgentLiving();
         if (agent == nullptr) return;
         if (agent->player_number != GW::Constants::ModelID::UW::Dhuum) return;
         if (packet->allegiance_bits != 0x6D6F6E31) return;

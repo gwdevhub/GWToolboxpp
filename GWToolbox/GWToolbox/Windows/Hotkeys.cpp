@@ -684,7 +684,8 @@ void HotkeyTarget::Execute() {
 	int closest = -1;
 
 	for (size_t i = 0; i < agents.size(); ++i) {
-		GW::Agent* agent = agents[i];
+		if (!agents[i]) continue;
+		GW::AgentLiving* agent = agents[i]->GetAsAgentLiving();
 		if (agent == nullptr) continue;
 		if (agent->player_number == id && agent->hp > 0) {
 			float newDistance = GW::GetSquareDistance(me->pos, agents[i]->pos);

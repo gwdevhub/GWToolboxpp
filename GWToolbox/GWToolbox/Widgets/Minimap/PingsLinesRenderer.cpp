@@ -454,7 +454,7 @@ void PingsLinesRenderer::AddMouseClickPing(GW::Vec2f pos) {
 bool PingsLinesRenderer::OnMouseMove(float x, float y) {
 	if (!mouse_down) return false;
 
-	GW::Agent* me = GW::Agents::GetPlayer();
+	GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
 	if (me == nullptr) return false;
 
 

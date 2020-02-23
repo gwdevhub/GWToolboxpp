@@ -5,14 +5,11 @@
 #include <GWCA\GameContainers\Array.h>
 #include <GWCA\GameContainers\GamePos.h>
 
-#include <GWCA\GameEntities\Camera.h>
 #include <GWCA\GameEntities\Item.h>
 #include <GWCA\GameEntities\Party.h>
 #include <GWCA\GameEntities\Quest.h>
 #include <GWCA\GameEntities\Skill.h>
 #include <GWCA\GameEntities\Player.h>
-#include <GWCA\GameEntities\Guild.h>
-#include <GWCA\GameEntities\NPC.h>
 
 #include <GWCA\Context\GameContext.h>
 #include <GWCA\Context\WorldContext.h>
@@ -22,12 +19,9 @@
 #include <GWCA\Managers\ItemMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
 #include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\PlayerMgr.h>
 #include <GWCA\Managers\PartyMgr.h>
 #include <GWCA\Managers\EffectMgr.h>
-#include <GWCA\Managers\GuildMgr.h>
 #include <GWCA\Managers\GameThreadMgr.h>
-#include <GWCA\Managers\CameraMgr.h>
 
 #include "GWToolbox.h"
 #include "GuiUtils.h"
@@ -41,7 +35,6 @@
 #include <Widgets\ClockWidget.h>
 #include <Widgets\AlcoholWidget.h>
 #include <Windows\NotepadWindow.h>
-#include <Windows\StringDecoderWindow.h>
 #include <Modules\Resources.h>
 
 
@@ -80,12 +73,10 @@ void InfoWindow::Initialize() {
 			// set the right index in party
 			for (unsigned i = 0; i < partymembers.size(); ++i) {
 				if (i >= status.size()) continue;
-				if (status[i] == Resigned) continue;
 				if (partymembers[i].login_number >= players.size()) continue;
-				if (GuiUtils::SanitizePlayerName(players[partymembers[i].login_number].name) == buf) {
+				if (wcscmp(players[partymembers[i].login_number].name, buf) == 0) {
 					status[i] = Resigned;
 					timestamp[i] = GW::Map::GetInstanceTime();
-					break;
 				}
 			}
 		}
@@ -161,20 +152,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 				});
 			}
 		}
-		
-		if (ImGui::CollapsingHeader("Camera")) {
-			static char pos_buf[32];
-			static char target_buf[32];
-			static GW::Camera* cam;
-			if (cam = GW::CameraMgr::GetCamera()) {
-				snprintf(pos_buf, 32, "%.2f, %.2f, %.2f", cam->position.x, cam->position.y, cam->position.z);
-				snprintf(target_buf, 32, "%.2f, %.2f, %.2f", cam->look_at_target.x, cam->look_at_target.y, cam->look_at_target.z);
-			}
-			ImGui::PushItemWidth(-80.0f);
-			ImGui::InputText("Position##cam_pos", pos_buf, 32, ImGuiInputTextFlags_ReadOnly);
-			ImGui::InputText("Target##cam_target", target_buf, 32, ImGuiInputTextFlags_ReadOnly);
-			ImGui::PopItemWidth();
-		}
+
 		if (show_player && ImGui::CollapsingHeader("Player")) {
 			static char x_buf[32] = "";
 			static char y_buf[32] = "";
@@ -188,7 +166,9 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 				float s = sqrtf(player->move_x * player->move_x + player->move_y * player->move_y);
 				snprintf(s_buf, 32, "%.3f", s / 288.0f);
 				snprintf(agentid_buf, 32, "%d", player->agent_id);
-				snprintf(modelid_buf, 32, "%d", player->player_number);
+				GW::AgentLiving* player_living = player->GetAsAgentLiving();
+				if (player_living)
+					snprintf(modelid_buf, 32, "%d", player_living->player_number);
 			}
 			ImGui::PushItemWidth(-80.0f);
 			ImGui::InputText("X pos##player", x_buf, 32, ImGuiInputTextFlags_ReadOnly);
@@ -213,19 +193,6 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                 }
                 ImGui::TreePop();
             }
-			if (ImGui::TreeNode("Buffs##player")) {
-				GW::BuffArray effects = GW::Effects::GetPlayerBuffArray();
-				if (effects.valid()) {
-					for (DWORD i = 0; i < effects.size(); ++i) {
-						ImGui::Text("id: %d", effects[i].skill_id);
-						if (effects[i].target_agent_id) {
-							ImGui::SameLine();
-							ImGui::Text(" target: %d", effects[i].target_agent_id);
-						}
-					}
-				}
-				ImGui::TreePop();
-			}
 
 		}
 		if (show_target && ImGui::CollapsingHeader("Target")) {
@@ -234,29 +201,25 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			static char s_buf[32] = "";
 			static char agentid_buf[32] = "";
 			static char modelid_buf[32] = "";
-			static char encname_buf[64] = "";
 			GW::Agent* target = GW::Agents::GetTarget();
+			GW::AgentItem* target_item = target ? target->GetAsAgentItem() : nullptr;
+			GW::AgentLiving* target_living = target ? target->GetAsAgentLiving() : nullptr;
 			if (target) {
 				snprintf(x_buf, 32, "%.2f", target->pos.x);
 				snprintf(y_buf, 32, "%.2f", target->pos.y);
 				float s = sqrtf(target->move_x * target->move_x + target->move_y * target->move_y);
 				snprintf(s_buf, 32, "%.3f", s / 288.0f);
 				snprintf(agentid_buf, 32, "%d", target->agent_id);
-				snprintf(modelid_buf, 32, "%d", target->player_number);
-				wchar_t* enc_name = GW::Agents::GetAgentEncName(target);
-				if (enc_name) {
-					size_t offset = 0;
-					for (size_t i = 0; enc_name[i]; i++) {
-						offset += sprintf(encname_buf + offset, "0x%X ", enc_name[i]);
-					}
-				}
+				if (target_living)
+					snprintf(modelid_buf, 32, "%d", target_living->player_number);
+				else
+					snprintf(modelid_buf, 32, "-");
 			} else {
 				snprintf(x_buf, 32, "-");
 				snprintf(y_buf, 32, "-");
 				snprintf(s_buf, 32, "-");
 				snprintf(agentid_buf, 32, "-");
 				snprintf(modelid_buf, 32, "-");
-				snprintf(encname_buf, 64, "-");
 			}
 			ImGui::PushItemWidth(-80.0f);
 			ImGui::InputText("X pos##target", x_buf, 32, ImGuiInputTextFlags_ReadOnly);
@@ -266,27 +229,10 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::ShowHelp("Agent ID is unique for each agent in the instance,\nIt's generated on spawn and will change in different instances.");
 			ImGui::InputText("Model ID##target", modelid_buf, 32, ImGuiInputTextFlags_ReadOnly);
 			ImGui::ShowHelp("Model ID is unique for each kind of agent.\nIt is static and shared by the same agents.\nWhen targeting players, this is Player ID instead, unique for each player in the instance.\nFor the purpose of targeting hotkeys and commands, use this value");
-			ImGui::InputText("Agent Enc Name##target", encname_buf, 64, ImGuiInputTextFlags_ReadOnly);
 			ImGui::PopItemWidth();
-			GW::Player* player = nullptr;
-			GW::Guild* guild = nullptr;
-			GW::NPC* npc = nullptr;
-			if (target && target->IsPlayer()) {
-				player = GW::PlayerMgr::GetPlayerByID(target->player_number);
-				if(target->transmog_npc_id & 0x20000000)
-					npc = GW::Agents::GetNPCByID(target->transmog_npc_id ^ 0x20000000);
-			}
-			if (target && target->IsNPC()) {
-				npc = GW::Agents::GetNPCByID(target->player_number);
-			}
-			if (player && target->tags->guild_id) {
-				GW::GuildArray guilds = GW::GuildMgr::GetGuildArray();
-				if (guilds.valid() && target->tags->guild_id < guilds.size())
-					guild = guilds[target->tags->guild_id];
-			}
-			if (target) {
-				if (ImGui::TreeNode("Advanced##target")) {
-					ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() / 2);
+			if (ImGui::TreeNode("Advanced##target")) {
+				ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() / 2);
+				if (target) {
 					ImGui::LabelText("Addr", "%p", target);
 					ImGui::LabelText("Id", "%d", target->agent_id);
 					ImGui::LabelText("Z", "%f", target->z);
@@ -298,63 +244,37 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 					ImGui::LabelText("Y", "%f", target->pos.y);
 					ImGui::LabelText("plane", "%d", target->plane);
 					ImGui::LabelText("Type", "0x%X", target->type);
-					ImGui::LabelText("Owner", "%d", target->owner);
-					ImGui::LabelText("ItemId", "%d", target->item_id);
-					ImGui::LabelText("ExtraType", "%d", target->extra_type);
-					ImGui::LabelText("AS of Weapon", "%f", target->weapon_attack_speed);
-					ImGui::LabelText("AS modifier", "%f", target->attack_speed_modifier);
-					ImGui::LabelText("PlayerNumber", "%d", target->player_number);
-					ImGui::LabelText("Primary Prof", "%d", target->primary);
-					ImGui::LabelText("Secondary Prof", "%d", target->secondary);
-					ImGui::LabelText("Level", "%d", target->level);
-					ImGui::LabelText("TeamId", "%d", target->team_id);
-					ImGui::LabelText("Effects", "0x%X", target->effects);
-					ImGui::LabelText("ModelState", "0x%X", target->model_state);
-					ImGui::LabelText("typeMap", "0x%X", target->type_map);
-					ImGui::LabelText("LoginNumber", "%d", target->login_number);
-					if (npc) {
-						ImGui::LabelText("NPC ID", "%d", target->player_number);
-						ImGui::LabelText("NPC ModelFileID", "%d", npc->model_file_id);
-						if(npc->files_count)
-							ImGui::LabelText("NPC ModelFile", "%d", npc->model_files[0]);
-						ImGui::LabelText("NPC Flags", "%d", npc->npc_flags);
+					if (target_item) {
+						ImGui::LabelText("Owner", "%d", target_item->owner);
+						ImGui::LabelText("ItemId", "%d", target_item->item_id);
+						ImGui::LabelText("ExtraType", "%d", target_item->extra_type);
 					}
-					ImGui::LabelText("Allegiance", "%d", target->allegiance);
-					ImGui::LabelText("WeaponType", "%d", target->weapon_type);
-					ImGui::LabelText("Skill", "%d", target->skill);
-					ImGui::PopItemWidth();
-					ImGui::TreePop();
-				}
-				if (player) {
-					if (ImGui::TreeNode("Player Info##target")) {
-						ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() / 2);
-						ImGui::LabelText("Addr", "%p", player);
-						ImGui::LabelText("Name", "%s", GuiUtils::WStringToString(player->name).c_str());
-						ImGui::PopItemWidth();
-						ImGui::TreePop();
+					if (target_living) {
+						ImGui::LabelText("Owner", "%d", target_living->owner);
+						ImGui::LabelText("AS of Weapon", "%f", target_living->weapon_attack_speed);
+						ImGui::LabelText("AS modifier", "%f", target_living->attack_speed_modifier);
+						ImGui::LabelText("PlayerNumber", "%d", target_living->player_number);
+						ImGui::LabelText("Primary Prof", "%d", target_living->primary);
+						ImGui::LabelText("Secondary Prof", "%d", target_living->secondary);
+						ImGui::LabelText("Level", "%d", target_living->level);
+						ImGui::LabelText("TeamId", "%d", target_living->team_id);
+						ImGui::LabelText("Effects", "0x%X", target_living->effects);
+						ImGui::LabelText("ModelState", "0x%X", target_living->model_state);
+						ImGui::LabelText("typeMap", "0x%X", target_living->type_map);
+						ImGui::LabelText("LoginNumber", "%d", target_living->login_number);
+						ImGui::LabelText("Allegiance", "%d", target_living->allegiance);
+						ImGui::LabelText("WeaponType", "%d", target_living->weapon_type);
+						ImGui::LabelText("Skill", "%d", target_living->skill);
 					}
 				}
-				if (guild) {
-					if (ImGui::TreeNode("Guild Info##target")) {
-						ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() / 2);
-						ImGui::LabelText("Addr", "%p", guild);
-						ImGui::LabelText("Name", "%s [%s]", GuiUtils::WStringToString(guild->name).c_str(), GuiUtils::WStringToString(guild->tag).c_str());
-						ImGui::LabelText("Faction", "%d (%s)", guild->faction_point, guild->faction ? "Luxon" : "Kurzick");
-						if (ImGui::Button("Go to Guild Hall")) {
-							GW::GuildMgr::TravelGH(guild->key);
-						}
-						ImGui::PopItemWidth();
-						ImGui::TreePop();
-					}
-				}
+				ImGui::PopItemWidth();
+				ImGui::TreePop();
 			}
 		}
 		if (show_map && ImGui::CollapsingHeader("Map")) {
 			static char id_buf[32] = "";
 			char* type = "";
 			static char file_buf[32] = "";
-            static char region_buf[32] = "";
-            static char district_buf[32] = "";
 			snprintf(id_buf, 32, "%d", GW::Map::GetMapID());
 			switch (GW::Map::GetInstanceType()) {
 			case GW::Constants::InstanceType::Outpost: type = "Outpost\0\0\0"; break;
@@ -362,13 +282,9 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			case GW::Constants::InstanceType::Loading: type = "Loading\0\0\0"; break;
 			}
 			snprintf(file_buf, 32, "%d", mapfile);
-            snprintf(region_buf, 32, "%d", GW::Map::GetRegion());
-            snprintf(district_buf, 32, "%d", GW::Map::GetDistrict());
 			ImGui::PushItemWidth(-80.0f);
 			ImGui::InputText("Map ID", id_buf, 32, ImGuiInputTextFlags_ReadOnly);
 			ImGui::ShowHelp("Map ID is unique for each area");
-            ImGui::InputText("Map Region", region_buf, 32, ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputText("Map District", district_buf, 32, ImGuiInputTextFlags_ReadOnly);
 			ImGui::InputText("Map Type", type, 11, ImGuiInputTextFlags_ReadOnly);
 			ImGui::InputText("Map file", file_buf, 32, ImGuiInputTextFlags_ReadOnly);
 			ImGui::ShowHelp("Map file is unique for each pathing map (e.g. used by minimap).\nMany different maps use the same map file");
@@ -383,59 +299,25 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 		}
 		if (show_item && ImGui::CollapsingHeader("Item")) {
 			ImGui::Text("First item in inventory");
-            GW::Item* item = nullptr;
 			static char modelid[32] = "";
-			static char slot[12] = "";
-			static char encname_buf[32] = "";
-			static char encdesc_buf[512] = "";
 			strcpy_s(modelid, "-");
-			strcpy_s(slot, "-");
-			strcpy_s(encname_buf, "-");
-			strcpy_s(encdesc_buf, "-");
 			GW::Bag** bags = GW::Items::GetBagArray();
 			if (bags) {
-				for (size_t i = 1; i < GW::Constants::BagMax && !item; i++) {
-					GW::Bag* bag = bags[i];
-					if (!bag) continue;
-					GW::ItemArray items = bag->items;
-					if (!items.valid()) continue;
-					for (size_t j = 0; j < items.size() && !item; j++) {
-						if (!items[j]) continue;
-						item = items[j];
-						snprintf(modelid, 32, "%d", item->model_id);
-						snprintf(slot, 12, "%d/%d", bag->index + 1,item->slot + 1);
+				GW::Bag* bag1 = bags[1];
+				if (bag1) {
+					GW::ItemArray items = bag1->items;
+					if (items.valid()) {
+						GW::Item* item = items[0];
+						if (item) {
+							snprintf(modelid, 32, "%d", item->model_id);
+						}
 					}
 				}
 			}
 			ImGui::PushItemWidth(-80.0f);
-			ImGui::LabelText("Bag/Slot", slot, 12, ImGuiInputTextFlags_ReadOnly);
 			ImGui::InputText("ModelID", modelid, 32, ImGuiInputTextFlags_ReadOnly);
 			//ImGui::InputText("ItemID", itemid, 32, ImGuiInputTextFlags_ReadOnly);
 			ImGui::PopItemWidth();
-            if (ImGui::TreeNode("Advanced##item")) {
-                ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() / 2);
-                if (item) {
-                    ImGui::LabelText("Addr", "%p", item);
-                    ImGui::LabelText("Id", "%d", item->item_id);
-					ImGui::LabelText("model_file_id", "0x%X", item->model_file_id);
-					if (item->name_enc) {
-						size_t offset = 0;
-						for (size_t i = 0; item->name_enc[i]; i++) {
-							offset += sprintf(encname_buf + offset, "0x%X ", item->name_enc[i]);
-						}
-					}
-					ImGui::InputText("Name Enc", item->name_enc ? encname_buf : "-", 32, ImGuiInputTextFlags_ReadOnly);
-					if (item->info_string) {
-						size_t offset = 0;
-						for (size_t i = 0; item->info_string[i]; i++) {
-							offset += sprintf(encdesc_buf + offset, "0x%X ", item->info_string[i]);
-						}
-					}
-					ImGui::InputText("Desc Enc", item->info_string ? encdesc_buf : "-", 512, ImGuiInputTextFlags_ReadOnly);
-                }
-                ImGui::PopItemWidth();
-                ImGui::TreePop();
-            }
 		}
 		if (show_quest && ImGui::CollapsingHeader("Quest")) {
 			GW::QuestLog qlog = GW::GameContext::instance()->world->quest_log;
@@ -464,8 +346,8 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 				&& player != nullptr) {
 
 				for (unsigned int i = 0; i < agents.size(); ++i) {
-					GW::Agent* agent = agents[i];
-					if (agent == nullptr) continue; // ignore nothings
+					if (agents[i] == nullptr) continue; // ignore nothings
+					GW::AgentLiving* agent = agents[i]->GetAsAgentLiving();
 					if (agent->allegiance != 0x3) continue; // ignore non-hostiles
 					if (agent->GetIsDead()) continue; // ignore dead 
 					float sqrd = GW::GetSquareDistance(player->pos, agent->pos);
@@ -511,7 +393,7 @@ void InfoWindow::Update(float delta) {
 	if (show_resignlog
 		&& GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
 		&& GW::PartyMgr::GetPartyInfo()) {
-		GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
+
 		GW::PlayerPartyMemberArray partymembers = GW::PartyMgr::GetPartyInfo()->players;
 		if (partymembers.valid()) {
 			if (partymembers.size() != status.size()) {

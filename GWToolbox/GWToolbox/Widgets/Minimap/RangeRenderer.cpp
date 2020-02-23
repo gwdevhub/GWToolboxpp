@@ -154,14 +154,13 @@ void RangeRenderer::Render(IDirect3DDevice9* device) {
 	if (HaveHos()) {
 		device->DrawPrimitive(type, circle_vertices * (num_circles - 1), circle_points);
 
-		GW::Agent* me = GW::Agents::GetPlayer();
-		GW::Agent* tgt = GW::Agents::GetTarget();
+		GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+		GW::AgentLiving* tgt = GW::Agents::GetTargetAsAgentLiving();
 
 		if (!draw_center_
 			&& me != nullptr
 			&& tgt != nullptr
 			&& me != tgt
-			&& tgt->GetIsCharacterType()
 			&& !me->GetIsDead()
 			&& !tgt->GetIsDead()
 			&& GW::GetSquareDistance(tgt->pos, me->pos) < GW::Constants::SqrRange::Spellcast) {

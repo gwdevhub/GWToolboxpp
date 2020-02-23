@@ -344,7 +344,7 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 				  // 0x7F1 0x9A9D 0xE943 0xB33 0x10A <monster> 0x1 0x10B <rarity> 0x10A <item> 0x1 0x1 0x10F <assignee: playernumber + 0x100>
 				  // <monster> is wchar_t id of several wchars
 				  // <rarity> is 0x108 for common, 0xA40 gold, 0xA42 purple, 0xA43 green
-		GW::Agent* me = GW::Agents::GetPlayer();
+		GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
 		bool forplayer = (me && me->player_number == GetNumericSegment(message));
 		bool rare = IsRare(Get2ndSegment(message));
 		if (forplayer && rare) return self_drop_rare;
