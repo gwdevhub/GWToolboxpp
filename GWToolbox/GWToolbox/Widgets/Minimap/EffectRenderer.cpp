@@ -145,7 +145,7 @@ void EffectRenderer::PacketCallback(GW::Packet::StoC::GenericValue* pak) {
 	auto settings = it->second;
 	if (settings->stoc_header && settings->stoc_header != pak->header)
 		return;
-	GW::Agent* caster = GW::Agents::GetAgentByID(pak->agent_id);
+	GW::AgentLiving* caster = static_cast<GW::AgentLiving * >(GW::Agents::GetAgentByID(pak->agent_id));
 	if (!caster || caster->allegiance != 0x3) return;
 	aoe_effects.push_back(new Effect(pak->value, caster->pos.x, caster->pos.y, settings->duration, settings->range, &settings->color));
 }
@@ -160,7 +160,7 @@ void EffectRenderer::PacketCallback(GW::Packet::StoC::GenericValueTarget* pak) {
 	if (settings->stoc_header && settings->stoc_header != pak->header)
 		return;
 	if (pak->caster == pak->target) return;
-	GW::Agent* caster = GW::Agents::GetAgentByID(pak->caster);
+	GW::AgentLiving* caster = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->caster));
 	if (!caster || caster->allegiance != 0x3) return;
 	GW::Agent* target = GW::Agents::GetAgentByID(pak->target);
 	if (!target) return;
@@ -177,7 +177,7 @@ void EffectRenderer::PacketCallback(GW::Packet::StoC::PlayEffect* pak) {
 	auto settings = it->second;
 	if (settings->stoc_header && settings->stoc_header != pak->header)
 		return;
-	GW::Agent* a = GW::Agents::GetAgentByID(pak->agent_id);
+	GW::AgentLiving* a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->agent_id));
 	if (!a || a->allegiance != 0x3) return;
 	aoe_effects.push_back(new Effect(pak->effect_id, pak->coords.x, pak->coords.y, settings->duration, settings->range, &settings->color));
 }

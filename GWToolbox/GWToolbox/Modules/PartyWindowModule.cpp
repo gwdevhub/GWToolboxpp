@@ -129,8 +129,12 @@ void PartyWindowModule::CheckMap() {
 		return;
 	std::vector<uint32_t> to_remove;
 	for (unsigned int i = 0; i < allies_added_to_party.size(); i++) {
-		GW::Agent* a = agents[allies_added_to_party[i]];
-		if (!a || !a->IsNPC() || !a->GetIsCharacterType()) {
+		if (allies_added_to_party[i] >= agents.size()) {
+			to_remove.push_back(allies_added_to_party[i]);
+			continue;
+		}
+		GW::AgentLiving* a = agents[allies_added_to_party[i]] ? agents[allies_added_to_party[i]]->GetAsAgentLiving() : nullptr;
+		if (!a || !a->IsNPC()) {
 			to_remove.push_back(allies_added_to_party[i]);
 			continue;
 		}
@@ -141,9 +145,10 @@ void PartyWindowModule::CheckMap() {
 	}
 	std::vector<PendingAddToParty> to_add;
 	for (unsigned int i = 0; i < agents.size(); i++) {
-		if (!ShouldAddAgentToPartyWindow(agents[i]))
+		GW::AgentLiving* a = agents[i] ? agents[i]->GetAsAgentLiving() : nullptr;
+		if (!ShouldAddAgentToPartyWindow(a))
 			continue;
-		to_add.push_back({ agents[i]->agent_id,0,agents[i]->player_number });
+		to_add.push_back({ a->agent_id,0,a->player_number });
 	}
 	GW::GameThread::Enqueue([this,to_add, to_remove]() {
 		for (unsigned int i = 0; i < to_remove.size(); i++) {
@@ -212,7 +217,8 @@ void PartyWindowModule::ClearAddedAllies() {
 	}
 }
 bool PartyWindowModule::ShouldRemoveAgentFromPartyWindow(uint32_t agent_id) {
-	GW::Agent* a = GW::Agents::GetAgentByID(agent_id);
+	GW::Agent* _a = GW::Agents::GetAgentByID(agent_id);
+	GW::AgentLiving* a = _a ? _a->GetAsAgentLiving() : nullptr;
 	if (!a || !(a->type_map & 0x20000))
 		return false; // Not in party window
 	for (size_t i = 0; i < allies_added_to_party.size(); i++) {
@@ -270,8 +276,9 @@ bool PartyWindowModule::ShouldAddAgentToPartyWindow(uint32_t agent_type) {
 		return false;
 	return true;
 }
-bool PartyWindowModule::ShouldAddAgentToPartyWindow(GW::Agent* a) {
-	if (!a || !a->IsNPC() || !a->GetIsCharacterType())
+bool PartyWindowModule::ShouldAddAgentToPartyWindow(GW::Agent* _a) {
+	GW::AgentLiving* a = _a ? _a->GetAsAgentLiving() : nullptr;
+	if (!a || !a->IsNPC())
 		return false;
 	//if (a->type_map & 0x20000)
 	//	return false; // Already in party window
@@ -413,8 +420,9 @@ void PartyWindowModule::LoadSettings(CSimpleIni* ini) {
 	CheckMap();
 }
 bool PartyWindowModule::PendingAddToParty::IsValidAgent() const {
-	GW::Agent* a = GW::Agents::GetAgentByID(agent_id);
-	if (!a || !a->GetIsCharacterType() || a->player_number != player_number)
+	GW::Agent* _a = GW::Agents::GetAgentByID(agent_id);
+	GW::AgentLiving* a = _a ? _a->GetAsAgentLiving() : nullptr;
+	if (!a || a->player_number != player_number)
 		return false;
 	GW::NPC* npc = GW::Agents::GetNPCByID(player_number);
 	if (!npc)

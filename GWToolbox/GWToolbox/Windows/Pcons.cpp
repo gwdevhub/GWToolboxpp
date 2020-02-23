@@ -194,7 +194,7 @@ void Pcon::Update(int delay) {
     // === Use item if possible ===
     if (IsEnabled() && PconsWindow::Instance().GetEnabled()) {
         if (delay < 0) delay = Pcon::pcons_delay;
-        player = GW::Agents::GetPlayer();
+        player = GW::Agents::GetPlayerAsAgentLiving();
         // NOTE: Only fails CanUseByEffect() if we've found an effects array for this map before.
         if (player != nullptr
             && !player->GetIsDead()
@@ -640,7 +640,7 @@ int PconAlcohol::QuantityForEach(const GW::Item* item) const {
 	}
 }
 void PconAlcohol::ForceUse() {
-	GW::Agent* player = GW::Agents::GetPlayer();
+	GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
 	if (player != nullptr
 		&& !player->GetIsDead()
 		&& (player_id == 0 || player->agent_id == player_id)) {

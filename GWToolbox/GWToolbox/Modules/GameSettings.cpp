@@ -743,7 +743,7 @@ static std::wstring ParseItemDescription(GW::Item* item) {
 
 void GameSettings::PingItem(GW::Item* item, uint32_t parts) {
 	if (!item) return;
-	GW::Player* p = GW::PlayerMgr::GetPlayerByID(GW::Agents::GetPlayer()->login_number);
+	GW::Player* p = GW::PlayerMgr::GetPlayerByID(GW::Agents::GetPlayerAsAgentLiving()->login_number);
 	if (!p) return;
 	std::wstring out;
 	if ((parts & PING_PARTS::NAME) && item->complete_name_enc) {
@@ -920,7 +920,7 @@ void GameSettings::Initialize() {
         pak2.Value_id = 23;
         pak2.value = pak->value; // Glowing hands, any profession
         if (pak->value == 0x43394f1d) { // 0x31939cbb = /dance, 0x43394f1d = /dancenew
-            switch ((GW::Constants::Profession)GW::Agents::GetPlayer()->primary) {
+            switch ((GW::Constants::Profession)GW::Agents::GetPlayerAsAgentLiving()->primary) {
             case GW::Constants::Profession::Assassin:
             case GW::Constants::Profession::Ritualist:
             case GW::Constants::Profession::Dervish:
@@ -933,7 +933,7 @@ void GameSettings::Initialize() {
 		});
 	// Save last dialog sender, used for faction donate
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DialogSender>(&OnDialog_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::DialogSender* pak) {
-		GW::Agent* agent = GW::Agents::GetAgentByID(pak->agent_id);
+		GW::AgentLiving* agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->agent_id));
 		if (!agent) return;
 		last_dialog_npc_id = agent->player_number;
 		});
@@ -1002,7 +1002,7 @@ void GameSettings::Initialize() {
 		if (flash_window_on_party_invite) {
 			GW::PartyInfo* current_party = GW::PartyMgr::GetPartyInfo();
 			if (!current_party) return;
-			GW::Agent* me = GW::Agents::GetPlayer();
+			GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
 			if (!me) return;
 			if (packet->player_id == me->login_number
 				|| (packet->party_id == current_party->party_id && GetPlayerIsLeader())) {
@@ -1041,7 +1041,7 @@ void GameSettings::Initialize() {
             len = i + 1;
 		if (len < 3)
             return; // Shout skill etc
-		GW::Agent* agent = GW::Agents::GetAgentByID(pak->agent_id);
+		GW::AgentLiving* agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->agent_id));
 		if (!agent || agent->login_number) return; // Agent not found or Speech bubble from player e.g. drunk message.
 		PendingChatMessage* m = PendingChatMessage::queuePrint(GW::Chat::Channel::CHANNEL_EMOTE, pak->message, GW::Agents::GetAgentEncName(agent));
         if(m) pending_messages.push_back(m);
@@ -1235,7 +1235,7 @@ void GameSettings::MessageOnPartyChange() {
     if (!check_message_on_party_change || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
         return; // Don't need to check, or not an outpost.
 	GW::PartyInfo* current_party = GW::PartyMgr::GetPartyInfo();
-    GW::Agent* me = GW::Agents::GetPlayer();
+    GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
 	if (!me || !current_party || !current_party->players.valid())
 		return; // Party not ready yet.
     bool is_leading = false;
@@ -1720,7 +1720,7 @@ bool GameSettings::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
         && !ctrl_enter_whisper
         && ImGui::GetIO().KeyCtrl
         && !GW::Chat::GetIsTyping()) {
-        GW::Agent* target = GW::Agents::GetTarget();
+        GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
         if (target && target->IsPlayer()) {
             const wchar_t* player_name = GW::PlayerMgr::GetPlayerName(target->login_number);
             ctrl_enter_whisper = true;

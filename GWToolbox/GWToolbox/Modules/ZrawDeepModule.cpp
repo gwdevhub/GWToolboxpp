@@ -62,13 +62,14 @@ namespace {
 		return agent_type_or_player_number == GW::Constants::ModelID::Deep::Kanaxai;
 	}
 	const bool IsKanaxai(GW::Agent* agent) {
-		return agent && IsKanaxai(agent->player_number);
+		GW::AgentLiving* a = agent ? agent->GetAsAgentLiving() : nullptr;
+		return a && IsKanaxai(a->player_number);
 	}
 
 	static uint32_t kanaxai_agent_id = 0;
 	const bool IsKanaxaiTransformed() {
 		if (!kanaxai_agent_id) return false;
-		GW::Agent* kanaxai = GW::Agents::GetAgentByID(kanaxai_agent_id);
+		GW::AgentLiving* kanaxai = (GW::AgentLiving*)GW::Agents::GetAgentByID(kanaxai_agent_id);
 		if (!IsKanaxai(kanaxai)) return false;
 		return (kanaxai->transmog_npc_id ^ 0x20000000) == GW::Constants::ModelID::Minipet::Gwen;
 	}
@@ -81,8 +82,8 @@ namespace {
 			if (!player.login_number || player.login_number >= players.size()) continue;
 			GW::Player* p2 = &players[player.login_number];
 			if (!p2) continue;
-			GW::Agent* pa = GW::Agents::GetAgentByID(p2->agent_id);
-			if (pa && (pa->transmog_npc_id ^ 0x20000000) != GW::Constants::ModelID::Minipet::Kanaxai)
+			GW::AgentLiving* pa = (GW::AgentLiving*)GW::Agents::GetAgentByID(p2->agent_id);
+			if (pa && pa->GetIsLivingType() && (pa->transmog_npc_id ^ 0x20000000) != GW::Constants::ModelID::Minipet::Kanaxai)
 				return false;
 		}
 		return true;
@@ -122,8 +123,8 @@ void ZrawDeepModule::SetEnabled(bool _enabled) {
 		GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayCape>(&ZrawDeepModule_StoCs,
 			[this](GW::HookStatus* status, GW::Packet::StoC::DisplayCape* packet) -> void {
 				if (!enabled) return;
-				GW::Agent* a = GW::Agents::GetAgentByID(packet->agent_id);
-				if (!a) return;
+				GW::AgentLiving* a = (GW::AgentLiving*)GW::Agents::GetAgentByID(packet->agent_id);
+				if (!a || !a->GetIsLivingType()) return;
 				if (a->IsPlayer() || a->GetCanBeViewedInPartyWindow() || IsKanaxai(a)) {
 					status->blocked = true;
                     pending_transmog = -500;
@@ -132,8 +133,8 @@ void ZrawDeepModule::SetEnabled(bool _enabled) {
 		GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentModel>(&ZrawDeepModule_StoCs,
 			[this](GW::HookStatus* status, GW::Packet::StoC::AgentModel* packet) -> void {
 				if (!enabled) return;
-				GW::Agent* a = GW::Agents::GetAgentByID(packet->agent_id);
-				if (!a) return;
+				GW::AgentLiving* a = (GW::AgentLiving*)GW::Agents::GetAgentByID(packet->agent_id);
+				if (!a || !a->GetIsLivingType()) return;
 				if (a->IsPlayer() || a->GetCanBeViewedInPartyWindow() || IsKanaxai(a)) {
 					status->blocked = true;
                     pending_transmog = -500;

@@ -258,7 +258,7 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 	}
 }
 void HotkeysWindow::MapChanged() {
-    GW::Agent* p = GW::Agents::GetPlayer();
+    GW::AgentLiving* p = GW::Agents::GetPlayerAsAgentLiving();
     if (!p) return;
     map_id = (uint32_t)GW::Map::GetMapID();
     prof_id = p->primary;

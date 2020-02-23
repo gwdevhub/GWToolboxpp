@@ -368,7 +368,7 @@ void BuildsWindow::Load(const char* tbuild_name, const char* build_name) {
     if (!build_name || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
         return;
     GW::SkillbarMgr::SkillTemplate t;
-    GW::Constants::Profession prof = (GW::Constants::Profession)GW::Agents::GetPlayer()->primary;
+    GW::Constants::Profession prof = (GW::Constants::Profession)GW::Agents::GetPlayerAsAgentLiving()->primary;
     bool is_skill_template = GW::SkillbarMgr::DecodeSkillTemplate(&t, build_name);
 	if (is_skill_template && t.primary != prof) {
 		Log::Error("Invalid profession for %s (%s)", build_name,GW::Constants::GetProfessionAcronym(t.primary));

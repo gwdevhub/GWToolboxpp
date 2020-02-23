@@ -289,7 +289,7 @@ void DiscordModule::Initialize() {
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerAdd>(&PartyPlayerAdd_Callback,
         [this](GW::HookStatus* status, GW::Packet::StoC::PartyPlayerAdd* packet) -> void {
-			GW::Agent* player_agent = GW::Agents::GetPlayer();
+			GW::AgentLiving* player_agent = GW::Agents::GetPlayerAsAgentLiving();
 			if (player_agent && packet->player_id == player_agent->player_number) {
 				pending_activity_update = true; // Update if this is me
 				return;
@@ -541,7 +541,7 @@ void DiscordModule::UpdateActivity() {
 	GW::Guild* g = nullptr;
     GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo();
     GW::AreaInfo* m = GW::Map::GetCurrentMapInfo();
-    GW::Agent* a = GW::Agents::GetPlayer();
+    GW::AgentLiving* a = GW::Agents::GetPlayerAsAgentLiving();
     GW::CharContext* c = GW::GameContext::instance()->character;
     GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
     if (!p || !m || !a || !c)

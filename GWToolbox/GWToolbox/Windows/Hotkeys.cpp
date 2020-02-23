@@ -454,7 +454,7 @@ void HotkeyEquipItem::Execute() {
         item = nullptr;
         return; // Success!
     }
-    GW::Agent* p = GW::Agents::GetPlayer();
+    GW::AgentLiving* p = GW::Agents::GetPlayerAsAgentLiving();
     if (!p || p->GetIsKnockedDown()) {
         //Log::Info("knocked down or missing"); // Player knocked down or casting; wait.
         return;

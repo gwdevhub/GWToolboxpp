@@ -18,7 +18,7 @@
 #define AGENTCOLOR_INIFILENAME L"AgentColors.ini"
 
 namespace {
-	static unsigned int GetAgentProfession(const GW::Agent* agent) {
+	static unsigned int GetAgentProfession(const GW::AgentLiving* agent) {
 		if (!agent) return 0;
 		if (agent->primary) return agent->primary;
 		GW::NPC* npc = GW::Agents::GetNPCByID(agent->player_number);
@@ -435,24 +435,24 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 
 	for (size_t i = 0; i < agents.size(); ++i) {
 		if (!agents[i]) continue;
-		GW::AgentLiving* agent = agents[i]->GetAsAgentLiving();
-		if (agent == nullptr) continue;
-		if (agent->player_number <= 12) continue;
-		if (agent->GetIsGadgetType()
-			&& GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish
-			&& agent->extra_type == 7602) continue;
-		if (!show_hidden_npcs && agent->GetIsCharacterType()
-			&& agent->IsNPC()
-			&& agent->player_number < npcs.size()
-			&& (npcs[agent->player_number].npc_flags & 0x10000) > 0) continue;
-		if (target == agent) continue; // will draw target at the end
-
-		if (AddCustomAgentsToDraw(agent)) {
+		if (target == agents[i]) continue; // will draw target at the end
+		if (agents[i]->GetIsGadgetType()) {
+			GW::AgentGadget* agent = agents[i]->GetAsAgentGadget();
+			if(GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish && agent->extra_type == 7602) continue;
+		}
+		else if (agents[i]->GetIsLivingType()) {
+			GW::AgentLiving* agent = agents[i]->GetAsAgentLiving();
+			if (agent->player_number <= 12) continue;
+			if (!show_hidden_npcs
+				&& agent->IsNPC()
+				&& agent->player_number < npcs.size()
+				&& (npcs[agent->player_number].npc_flags & 0x10000) > 0) continue;
+		}
+		if (AddCustomAgentsToDraw(agents[i])) {
 			// found a custom agent to draw, we'll draw them later
 		} else {
-			Enqueue(agent);
+			Enqueue(agents[i]);
 		}
-
 		if (vertices_count >= vertices_max - 16 * max_shape_verts) break;
 	}
 	// 3. custom colored models
@@ -557,14 +557,14 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
 		if (living->hp > 0.0f) return ca->color;
 	}
 	// hostiles
-	if (agent->allegiance == 0x3) {
-		if(agent->hp <= 0.0f) return color_hostile_dead;
+	if (living->allegiance == 0x3) {
+		if(living->hp <= 0.0f) return color_hostile_dead;
 		const Color* c = &color_hostile;
-		if (boss_colors && agent->GetHasBossGlow()) {
-			unsigned int prof = GetAgentProfession(agent);
+		if (boss_colors && living->GetHasBossGlow()) {
+			unsigned int prof = GetAgentProfession(living);
 			if (prof) c = &profession_colors[prof];
 		}
-		if (agent->hp > 0.9f) return *c;
+		if (living->hp > 0.9f) return *c;
 		return Colors::Sub(*c, color_agent_damaged_modifier);
 	}
 
