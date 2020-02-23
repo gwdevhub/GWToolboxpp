@@ -330,7 +330,7 @@ void GWToolbox::Initialize() {
         && GW::Agents::GetAgentArray().valid()
         && GW::Agents::GetPlayer() != nullptr) {
 
-        DWORD playerNumber = GW::Agents::GetPlayer()->player_number;
+        DWORD playerNumber = GW::Agents::GetPlayerAsAgentLiving()->player_number;
         Log::Info("Hello %ls!", GW::Agents::GetPlayerNameByLoginNumber(playerNumber));
     }
 }

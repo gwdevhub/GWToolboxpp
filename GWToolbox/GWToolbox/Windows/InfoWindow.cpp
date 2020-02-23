@@ -166,7 +166,9 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 				float s = sqrtf(player->move_x * player->move_x + player->move_y * player->move_y);
 				snprintf(s_buf, 32, "%.3f", s / 288.0f);
 				snprintf(agentid_buf, 32, "%d", player->agent_id);
-				snprintf(modelid_buf, 32, "%d", player->player_number);
+				GW::AgentLiving* player_living = player->GetAsAgentLiving();
+				if (player_living)
+					snprintf(modelid_buf, 32, "%d", player_living->player_number);
 			}
 			ImGui::PushItemWidth(-80.0f);
 			ImGui::InputText("X pos##player", x_buf, 32, ImGuiInputTextFlags_ReadOnly);
@@ -200,13 +202,18 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			static char agentid_buf[32] = "";
 			static char modelid_buf[32] = "";
 			GW::Agent* target = GW::Agents::GetTarget();
+			GW::AgentItem* target_item = target ? target->GetAsAgentItem() : nullptr;
+			GW::AgentLiving* target_living = target ? target->GetAsAgentLiving() : nullptr;
 			if (target) {
 				snprintf(x_buf, 32, "%.2f", target->pos.x);
 				snprintf(y_buf, 32, "%.2f", target->pos.y);
 				float s = sqrtf(target->move_x * target->move_x + target->move_y * target->move_y);
 				snprintf(s_buf, 32, "%.3f", s / 288.0f);
 				snprintf(agentid_buf, 32, "%d", target->agent_id);
-				snprintf(modelid_buf, 32, "%d", target->player_number);
+				if (target_living)
+					snprintf(modelid_buf, 32, "%d", target_living->player_number);
+				else
+					snprintf(modelid_buf, 32, "-");
 			} else {
 				snprintf(x_buf, 32, "-");
 				snprintf(y_buf, 32, "-");
@@ -237,23 +244,28 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 					ImGui::LabelText("Y", "%f", target->pos.y);
 					ImGui::LabelText("plane", "%d", target->plane);
 					ImGui::LabelText("Type", "0x%X", target->type);
-					ImGui::LabelText("Owner", "%d", target->owner);
-					ImGui::LabelText("ItemId", "%d", target->item_id);
-					ImGui::LabelText("ExtraType", "%d", target->extra_type);
-					ImGui::LabelText("AS of Weapon", "%f", target->weapon_attack_speed);
-					ImGui::LabelText("AS modifier", "%f", target->attack_speed_modifier);
-					ImGui::LabelText("PlayerNumber", "%d", target->player_number);
-					ImGui::LabelText("Primary Prof", "%d", target->primary);
-					ImGui::LabelText("Secondary Prof", "%d", target->secondary);
-					ImGui::LabelText("Level", "%d", target->level);
-					ImGui::LabelText("TeamId", "%d", target->team_id);
-					ImGui::LabelText("Effects", "0x%X", target->effects);
-					ImGui::LabelText("ModelState", "0x%X", target->model_state);
-					ImGui::LabelText("typeMap", "0x%X", target->type_map);
-					ImGui::LabelText("LoginNumber", "%d", target->login_number);
-					ImGui::LabelText("Allegiance", "%d", target->allegiance);
-					ImGui::LabelText("WeaponType", "%d", target->weapon_type);
-					ImGui::LabelText("Skill", "%d", target->skill);
+					if (target_item) {
+						ImGui::LabelText("Owner", "%d", target_item->owner);
+						ImGui::LabelText("ItemId", "%d", target_item->item_id);
+						ImGui::LabelText("ExtraType", "%d", target_item->extra_type);
+					}
+					if (target_living) {
+						ImGui::LabelText("Owner", "%d", target_living->owner);
+						ImGui::LabelText("AS of Weapon", "%f", target_living->weapon_attack_speed);
+						ImGui::LabelText("AS modifier", "%f", target_living->attack_speed_modifier);
+						ImGui::LabelText("PlayerNumber", "%d", target_living->player_number);
+						ImGui::LabelText("Primary Prof", "%d", target_living->primary);
+						ImGui::LabelText("Secondary Prof", "%d", target_living->secondary);
+						ImGui::LabelText("Level", "%d", target_living->level);
+						ImGui::LabelText("TeamId", "%d", target_living->team_id);
+						ImGui::LabelText("Effects", "0x%X", target_living->effects);
+						ImGui::LabelText("ModelState", "0x%X", target_living->model_state);
+						ImGui::LabelText("typeMap", "0x%X", target_living->type_map);
+						ImGui::LabelText("LoginNumber", "%d", target_living->login_number);
+						ImGui::LabelText("Allegiance", "%d", target_living->allegiance);
+						ImGui::LabelText("WeaponType", "%d", target_living->weapon_type);
+						ImGui::LabelText("Skill", "%d", target_living->skill);
+					}
 				}
 				ImGui::PopItemWidth();
 				ImGui::TreePop();
@@ -334,8 +346,8 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 				&& player != nullptr) {
 
 				for (unsigned int i = 0; i < agents.size(); ++i) {
-					GW::Agent* agent = agents[i];
-					if (agent == nullptr) continue; // ignore nothings
+					if (agents[i] == nullptr) continue; // ignore nothings
+					GW::AgentLiving* agent = agents[i]->GetAsAgentLiving();
 					if (agent->allegiance != 0x3) continue; // ignore non-hostiles
 					if (agent->GetIsDead()) continue; // ignore dead 
 					float sqrd = GW::GetSquareDistance(player->pos, agent->pos);

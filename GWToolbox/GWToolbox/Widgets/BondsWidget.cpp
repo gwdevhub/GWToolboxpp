@@ -94,7 +94,8 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
     if (show_allies && info->others.valid()) {
         allies_start = party_list.size();
         for (const DWORD ally_id : info->others) {
-            GW::Agent* ally = GW::Agents::GetAgentByID(ally_id);
+            GW::Agent* agent = GW::Agents::GetAgentByID(ally_id);
+            GW::AgentLiving* ally = agent ? agent->GetAsAgentLiving() : nullptr;
             if (ally && ally->GetCanBeViewedInPartyWindow() && !ally->GetIsSpawned()) {
                 party_map[ally_id] = party_list.size();
                 party_list.push_back(ally_id);

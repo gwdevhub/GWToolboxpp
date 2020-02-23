@@ -97,7 +97,7 @@ namespace {
 	}
 
 	const wchar_t *GetPlayerName(void) {
-		GW::Agent *player = GW::Agents::GetPlayer();
+		GW::AgentLiving *player = GW::Agents::GetPlayerAsAgentLiving();
 		if (!player) return L"";
 		DWORD playerNumber = player->player_number;
 		return GW::Agents::GetPlayerNameByLoginNumber(playerNumber);

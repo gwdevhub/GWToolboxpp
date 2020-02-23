@@ -256,7 +256,7 @@ void Minimap::SaveSettings(CSimpleIni* ini) {
 void Minimap::GetPlayerHeroes(GW::PartyInfo *party, std::vector<GW::AgentID>& player_heroes) {
 	player_heroes.clear();
 	if (!party) return;
-	GW::Agent *player = GW::Agents::GetPlayer();
+	GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
 	if (!player) return;
 	uint32_t player_id = player->login_number;
 	auto heroes = party->heroes;
@@ -527,10 +527,11 @@ void Minimap::SelectTarget(GW::Vec2f pos) {
 	for (size_t i = 0; i < agents.size(); ++i) {
 		GW::Agent* agent = agents[i];
 		if (agent == nullptr) continue;
-		if (agent->GetIsCharacterType() && agent->GetIsDead()) continue;
+		GW::AgentLiving* living = agent->GetAsAgentLiving();
+		if (living && living->GetIsDead()) continue;
 		if (agent->GetIsItemType()) continue;
-		if (agent->GetIsGadgetType() && agent->extra_type != 8141) continue; // allow locked chests
-		if (agent->player_number >= 230 && agent->player_number <= 346) continue; // block all useless minis
+		if (agent->GetIsGadgetType() && agent->GetAsAgentGadget()->extra_type != 8141) continue; // allow locked chests
+		if (living && (living->player_number >= 230 && living->player_number <= 346)) continue; // block all useless minis
 		float newDistance = GW::GetSquareDistance(pos, agents[i]->pos);
 		if (distance > newDistance) {
 			distance = newDistance;

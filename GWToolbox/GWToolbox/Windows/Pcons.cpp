@@ -81,7 +81,7 @@ void Pcon::Update(int delay) {
 	if (!enabled) return; // not enabled, do nothing
 	if (delay < 0) delay = Pcon::pcons_delay;
 
-	GW::Agent* player = GW::Agents::GetPlayer();
+	GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
 
 	 // === Use item if possible ===
 	if (player != nullptr
@@ -200,7 +200,7 @@ int PconGeneric::QuantityForEach(const GW::Item* item) const {
 	return 0;
 }
 bool PconGeneric::CanUseByEffect() const {
-	GW::Agent* player = GW::Agents::GetPlayer();
+	GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
 	if (!player) return false;  // player doesn't exist?
 
 	GW::AgentEffectsArray AgEffects = GW::Effects::GetPartyEffectArray();
@@ -256,7 +256,7 @@ bool PconCity::CanUseByInstanceType() const {
 	return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost;
 }
 bool PconCity::CanUseByEffect() const {
-	GW::Agent* player = GW::Agents::GetPlayer();
+	GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
 	if (player == nullptr) return false;
 	if (player->move_x == 0.0f && player->move_y == 0.0f) return false;
 
@@ -330,7 +330,7 @@ int PconAlcohol::QuantityForEach(const GW::Item* item) const {
 	}
 }
 void PconAlcohol::ForceUse() {
-	GW::Agent* player = GW::Agents::GetPlayer();
+	GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
 	if (player != nullptr
 		&& !player->GetIsDead()
 		&& (player_id == 0 || player->agent_id == player_id)) {

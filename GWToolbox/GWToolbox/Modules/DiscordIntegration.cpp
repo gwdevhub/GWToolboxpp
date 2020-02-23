@@ -331,7 +331,7 @@ void DiscordIntegration::UpdateActivity() {
 
     GW::Guild* guild = nullptr;
     GW::AreaInfo* area_info = GW::Map::GetCurrentMapInfo();
-    GW::Agent* player_agent = GW::Agents::GetPlayer();
+    GW::AgentLiving* player_agent = GW::Agents::GetPlayerAsAgentLiving();
     GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
 
     if (!area_info || !player_agent)

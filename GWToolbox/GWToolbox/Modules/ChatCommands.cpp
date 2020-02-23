@@ -620,14 +620,15 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
 			GW::AgentArray agents = GW::Agents::GetAgentArray();
 			if (!agents.valid()) return;
 
-			GW::Agent* me = GW::Agents::GetPlayer();
+			GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
 			if (me == nullptr) return;
 
 			float distance = GW::Constants::SqrRange::Compass;
 			int closest = -1;
 
 			for (size_t i = 0; i < agents.size(); ++i) {
-				GW::Agent* agent = agents[i];
+				if (agents[i] == nullptr) continue;
+				GW::AgentLiving* agent = agents[i]->GetAsAgentLiving();
 				if (agent == nullptr) continue;
 				if (agent->player_number != me->player_number) {
 					float newDistance = GW::GetSquareDistance(me->pos, agents[i]->pos);
@@ -641,14 +642,14 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
 				GW::Agents::ChangeTarget(agents[closest]);
 			}
 		} else if (arg1 == L"getid") {
-			GW::Agent* target = GW::Agents::GetTarget();
+			GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
 			if (target == nullptr) {
 				Log::Error("No target selected!");
 			} else {
 				Log::Info("Target model id (PlayerNumber) is %d", target->player_number);
 			}
 		} else if (arg1 == L"getpos") {
-			GW::Agent* target = GW::Agents::GetTarget();
+			GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
 			if (target == nullptr) {
 				Log::Error("No target selected!");
 			} else {
@@ -770,8 +771,8 @@ void ChatCommands::CmdTransmo(const wchar_t *message, int argc, LPWSTR *argv) {
 		}
 	}
 
-	GW::Agent *target = GW::Agents::GetTarget();
-	if (!target || !target->GetIsCharacterType()) return;
+	GW::AgentLiving *target = GW::Agents::GetTargetAsAgentLiving();
+	if (!target) return;
 
 	DWORD npc_id = 0;
 	if (target->IsPlayer()) {
