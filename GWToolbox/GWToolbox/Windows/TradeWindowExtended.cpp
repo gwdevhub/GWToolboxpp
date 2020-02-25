@@ -50,7 +50,7 @@ using nlohmann::json;
 using json_vec = std::vector<json>;
 
 static const char ws_domain[] = "kamadan.gwtoolbox.com";
-static const char ws_host[] = "ws://kamadan.gwtoolbox.com";
+static const char ws_host[] = "wss://kamadan.gwtoolbox.com";
 static const std::regex regex_check = std::regex("^/(.*)/[a-z]?$", std::regex::ECMAScript | std::regex::icase);
 
 void TradeWindow::NotifyTradeBlockedInKamadan() {
@@ -262,15 +262,20 @@ void TradeWindow::Update(float delta) {
 
 TradeWindow::Message TradeWindow::parse_json_message(json js) {
 	TradeWindow::Message msg;
-	if (js.find("s") != js.end()) {
-		msg.name = js["s"].get<std::string>();
-		msg.message = js["m"].get<std::string>();
-		msg.timestamp = js["t"].get<time_t>();
+	try {
+		if (js.find("s") != js.end()) {
+			msg.name = js["s"].get<std::string>();
+			msg.message = js["m"].get<std::string>();
+			msg.timestamp = js["t"].get<time_t>() / 1000;
+		}
+		else {
+			msg.name = js["name"].get<std::string>();
+			msg.message = js["message"].get<std::string>();
+			msg.timestamp = js["timstamp"].get<time_t>();
+		}
 	}
-	else {
-		msg.name = js["name"].get<std::string>();
-		msg.message = js["message"].get<std::string>();
-		msg.timestamp = js["timstamp"].get<time_t>();
+	catch(...) {
+		Log::Error("Failed to parse message");
 	}
 	return msg;
 }
@@ -300,7 +305,8 @@ void TradeWindow::fetch() {
 		if (res.find("query") == res.end()) {
 			// It's a new message
 			Message msg = parse_json_message(res);
-			messages.add(msg);
+			if(msg.timestamp > 0)
+				messages.add(msg);
 		}
 		else {
 			search_pending = false;
