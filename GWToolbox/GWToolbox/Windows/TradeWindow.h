@@ -40,6 +40,9 @@ private:
         uint32_t    timestamp = 0;
         std::string name;
         std::string message;
+		inline bool Valid() {
+			return timestamp && !name.empty() && !message.empty();
+		};
     };
 
 	bool show_alert_window = false;

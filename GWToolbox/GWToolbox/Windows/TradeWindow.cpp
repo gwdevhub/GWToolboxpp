@@ -30,7 +30,8 @@ using easywsclient::WebSocket;
 using nlohmann::json;
 using json_vec = std::vector<json>;
 
-static const char ws_host[] = "wss://kamadan.decltype.org/ws/";
+static const char ws_host[] = "wss://kamadan.gwtoolbox.com";
+static const char https_host[] = "https://kamadan.gwtoolbox.com";
 
 void TradeWindow::Initialize() {
 	ToolboxWindow::Initialize();
@@ -118,22 +119,31 @@ void TradeWindow::Update(float delta) {
 
 	ws_chat->poll();
 	ws_chat->dispatch([this](const std::string& data) {
-		char buffer[512];
-		json res = json::parse(data.c_str());
+		
+		json res;
+		try {
+			res = json::parse(data.c_str());
+		}
+		catch (...) {
+			Log::Log("ERROR: Failed to parse json response in ws_chat->dispatch");
+			return;
+		}
 
 		// We don't support queries in the chat
 		if (res.find("query") != res.end())
 			return;
 
-		std::string msg = res["message"].get<std::string>();
+		TradeWindow::Message msg = parse_json_message(res);
+		if (!msg.Valid())
+			return;
 		bool print_message = true;
 		if (filter_alerts) {
 			print_message = false; // filtered unless allowed by words
 			for (auto& word : alert_words) {
-				auto found = std::search(msg.begin(), msg.end(), word.begin(), word.end(), [](char c1, char c2) -> bool {
+				auto found = std::search(msg.message.begin(), msg.message.end(), word.begin(), word.end(), [](char c1, char c2) -> bool {
 					return tolower(c1) == c2;
 				});
-				if (found != msg.end()) {
+				if (found != msg.message.end()) {
 					print_message = true;
 					break; // don't need to check other words
 				}
@@ -141,8 +151,8 @@ void TradeWindow::Update(float delta) {
 		}
 
 		if (print_message) {
-			std::string name = res["name"].get<std::string>();
-			snprintf(buffer, sizeof(buffer), "<a=1>%s</a>: <c=#f96677><quote>%s", name.c_str(), msg.c_str());
+			char buffer[512];
+			snprintf(buffer, sizeof(buffer), "<a=1>%s</a>: <c=#f96677><quote>%s", msg.name.c_str(), msg.message.c_str());
 			GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, buffer);
 		}
 	});
@@ -150,9 +160,14 @@ void TradeWindow::Update(float delta) {
 
 TradeWindow::Message TradeWindow::parse_json_message(json js) {
 	TradeWindow::Message msg;
-	msg.name = js["name"].get<std::string>();
-	msg.message = js["message"].get<std::string>();
-	msg.timestamp = stoi(js["timestamp"].get<std::string>());
+	try {
+		msg.name = js["s"].get<std::string>();
+		msg.message = js["m"].get<std::string>();
+		msg.timestamp = js["t"].get<uint64_t>() / 1000; // Messy?
+	}
+	catch (...) {
+		Log::Log("ERROR: Failed to parse incoming trade message in TradeWindow::parse_json_message\n");
+	}
 	return msg;
 }
 
@@ -162,20 +177,36 @@ void TradeWindow::fetch() {
 	
 	ws_window->poll();
 	ws_window->dispatch([this](const std::string& data) {
-		json res = json::parse(data.c_str());
+		json res;
+		try {
+			res = json::parse(data.c_str());
+		}
+		catch (...) {
+			Log::Log("ERROR: Failed to parse res JSON from response in ws_window->dispatch\n");
+			return;
+		}
 		if (res.find("query") == res.end()) {
 			// It's a new message
 			Message msg = parse_json_message(res);
-			messages.add(msg);
+			if(msg.Valid())
+				messages.add(msg);
 		} else {
 			search_pending = false;
-			if (res["num_results"].get<std::string>() == "0")
+			json_vec results;
+			try {
+				if (res["num_results"].get<uint32_t>() == 0)
+					return;
+				results = res["results"].get<json_vec>();
+			}
+			catch (...) {
+				Log::Log("ERROR: Failed to parse search results in TradeWindow::fetch\n");
 				return;
-			json_vec results = res["results"].get<json_vec>();
+			}
 			messages.clear();
 			for (auto it = results.rbegin(); it != results.rend(); it++) {
 				Message msg = parse_json_message(*it);
-				messages.add(msg);
+				if(msg.Valid())
+					messages.add(msg);
 			}
 		}
 	});
@@ -256,9 +287,11 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		ImGui::BeginChild("trade_scroll", ImVec2(0, -20.0f - ImGui::GetStyle().ItemInnerSpacing.y));
 		/* Connection checks */
 		if (!ws_window && !ws_window_connecting) {
-			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("The connection to kamadan.decltype.com has timed out.").x) / 2);
+			char buf[255];
+			snprintf(buf, 255, "The connection to %s has timed out.", ws_host);
+			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize(buf).x) / 2);
 			ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
-			ImGui::Text("The connection to kamadan.decltype.com has timed out.");
+			ImGui::Text(buf);
 			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Click to reconnect").x) / 2);
 			if (ImGui::Button("Click to reconnect")) {
 				AsyncWindowConnect();
@@ -334,9 +367,13 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		ImGui::EndChild();
 
 		/* Link to website footer */
-		if (ImGui::Button("Powered by https://kamadan.decltype.org", ImVec2(ImGui::GetWindowContentRegionWidth(), 20.0f))){ 
+		static char buf[128];
+		if (!buf[0]) {
+			snprintf(buf, 128, "Powered by %s", https_host);
+		}
+		if (ImGui::Button(buf, ImVec2(ImGui::GetWindowContentRegionWidth(), 20.0f))){ 
 			CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-			ShellExecuteA(NULL, "open", "https://kamadan.decltype.org", NULL, NULL, SW_SHOWNORMAL);
+			ShellExecuteA(NULL, "open", https_host, NULL, NULL, SW_SHOWNORMAL);
 		}
 
 		/* Alerts window */
@@ -447,6 +484,8 @@ void TradeWindow::AsyncWindowConnect() {
 			printf("Couldn't connect to the host '%s'", ws_host);
 		}
 		ws_window_connecting = false;
+		if (messages.size() == 0)
+			search(""); // Initial draw, gets latest N messages
 	});
 }
 
