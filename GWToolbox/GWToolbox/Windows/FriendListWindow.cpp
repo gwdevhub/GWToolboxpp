@@ -247,6 +247,39 @@ FriendListWindow::~FriendListWindow() {
 }
 void FriendListWindow::Initialize() {
     ToolboxWindow::Initialize();
+
+	GW::Chat::CreateCommand(L"addfriend", [this](const wchar_t* message, int argc, LPWSTR* argv) {
+		if (argc < 2)
+			return Log::Error("Missing player name");
+		std::wstring player_name;
+		for (int i = 2; i < argc; i++) {
+			if(!player_name.empty())
+				player_name += L" ";
+			player_name += argv[i];
+		}
+		if(player_name.empty())
+			return Log::Error("Missing player name");
+		GW::FriendListMgr::AddFriend(player_name.c_str());
+		});
+	GW::Chat::CreateCommand(L"removefriend", [this](const wchar_t* message, int argc, LPWSTR* argv) {
+		if (argc < 2)
+			return Log::Error("Missing player name");
+		std::wstring player_name = argv[1];
+		for (int i = 1; i < argc; i++) {
+			player_name += L" ";
+			player_name += argv[i];
+		}
+		if (player_name.empty())
+			return Log::Error("Missing player name");
+		Friend* f = GetFriend(player_name.c_str());
+		if(!f) return Log::Error("No friend '%ls' found",player_name.c_str());
+		f->RemoveGWFriend();
+		});
+	GW::Chat::CreateCommand(L"deletefriend", [](const wchar_t* message, ...) {
+		std::wstring cmd = L"removefriend ";
+		cmd += message;
+		GW::Chat::SendChat('/', cmd.c_str());
+		});
 	//worker.Run();
     GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusUpdate_Entry, [this](GW::HookStatus*,
         GW::Friend* f,
