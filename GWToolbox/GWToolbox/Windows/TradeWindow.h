@@ -40,9 +40,6 @@ private:
         uint32_t    timestamp = 0;
         std::string name;
         std::string message;
-		inline bool Valid() {
-			return timestamp && !name.empty() && !message.empty();
-		};
     };
 
 	bool show_alert_window = false;
@@ -80,7 +77,7 @@ private:
     void search(std::string);
     void fetch();
 
-    static Message parse_json_message(nlohmann::json* js);
+    static bool parse_json_message(nlohmann::json* js, Message* msg);
     CircularBuffer<Message> messages;
 
     // tasks to be done async by the worker thread
