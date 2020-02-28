@@ -309,9 +309,8 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 				if (ImGui::Button(msg.name.c_str(), ImVec2(playernamewidth, 0))) {
 					// open whisper to player
 					GW::GameThread::Enqueue([&msg]() {
-						wchar_t ws[100];
-						swprintf(ws, 100, L"%hs", msg.name.c_str());
-						GW::UI::SendUIMessage(GW::UI::kOpenWhisper, ws, nullptr);
+						std::wstring name_ws = GuiUtils::ToWstr(msg.name);
+						GW::UI::SendUIMessage(GW::UI::kOpenWhisper, (wchar_t*)name_ws.data(), nullptr);
 					});
 				}
 
