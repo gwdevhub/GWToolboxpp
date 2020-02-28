@@ -59,18 +59,14 @@ private:
 
 	void DrawAlertsWindowContent(bool ownwindow);
 
-    static bool GetInKamadan();
+    static bool GetInKamadanAE1();
 
     // Since we are connecting in an other thread, the following attributes/methods avoid spamming connection requests
-    void AsyncChatConnect();
-    void AsyncWindowConnect();
-    bool ws_chat_connecting = false;
+    void AsyncWindowConnect(bool force = false);
     bool ws_window_connecting = false;
 
-    easywsclient::WebSocket *ws_chat = NULL;
     easywsclient::WebSocket *ws_window = NULL;
 
-    RateLimiter chat_rate_limiter;
     RateLimiter window_rate_limiter;
 
     bool search_pending;
