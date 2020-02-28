@@ -56,8 +56,6 @@ void TradeWindow::Initialize() {
 			}
 		}
 	});
-
-	if (print_game_chat) AsyncChatConnect();
 }
 
 void TradeWindow::Terminate() {
@@ -65,10 +63,8 @@ void TradeWindow::Terminate() {
 	if (worker.joinable())
 		worker.join();
 
-	if (ws_chat) DeleteWebSocket(ws_chat);
-	if (ws_window) DeleteWebSocket(ws_window);
-	if (ws_chat || ws_window) {
-		ws_chat = nullptr;
+	if (ws_window) {
+		DeleteWebSocket(ws_window);
 		ws_window = nullptr;
 	}
 
@@ -80,82 +76,32 @@ TradeWindow::~TradeWindow() {
 	Terminate();
 }
 
-bool TradeWindow::GetInKamadan() {
+bool TradeWindow::GetInKamadanAE1() {
 	using namespace GW::Constants;
 	switch (GW::Map::GetMapID()) {
 	case MapID::Kamadan_Jewel_of_Istan_outpost:
 	case MapID::Kamadan_Jewel_of_Istan_Halloween_outpost:
 	case MapID::Kamadan_Jewel_of_Istan_Wintersday_outpost:
 	case MapID::Kamadan_Jewel_of_Istan_Canthan_New_Year_outpost:
-		return true;
+		return GW::Map::GetDistrict() == 1 && GW::Map::GetRegion() == GW::Constants::Region::America;
 	default:
 		return false;
 	}
 }
 
 void TradeWindow::Update(float delta) {
+	if (ws_window && ws_window->getReadyState() == WebSocket::CLOSED) {
+		delete ws_window;
+		ws_window = nullptr;
+	}
+	bool maintain_socket = visible || print_game_chat;
+	if (maintain_socket && !ws_window) {
+		AsyncWindowConnect();
+	}
+	if (!maintain_socket && ws_window) {
+		ws_window->close();
+	}
 	fetch();
-
-	if (!print_game_chat) return;
-	if (ws_chat && ws_chat->getReadyState() == WebSocket::CLOSED) {
-		delete ws_chat;
-		ws_chat = nullptr;
-	}
-
-	// do not display trade chat while in kamadan AE district 1
-	if (GetInKamadan() && GW::Map::GetDistrict() == 1 &&
-		GW::Map::GetRegion() == GW::Constants::Region::America) {
-		if (ws_chat) ws_chat->close();
-		return;
-	}
-	
-	if (!ws_chat && !ws_chat_connecting) {
-		AsyncChatConnect();
-		return;
-	}
-
-	if (!ws_chat || ws_chat->getReadyState() != WebSocket::OPEN)
-		return;
-
-	ws_chat->poll();
-	ws_chat->dispatch([this](const std::string& data) {
-		
-		json res;
-		try {
-			res = json::parse(data.c_str());
-		}
-		catch (...) {
-			Log::Log("ERROR: Failed to parse json response in ws_chat->dispatch");
-			return;
-		}
-
-		// We don't support queries in the chat
-		if (res.find("query") != res.end())
-			return;
-
-		TradeWindow::Message msg;
-		if (!parse_json_message(&res,&msg))
-			return;
-		bool print_message = true;
-		if (filter_alerts) {
-			print_message = false; // filtered unless allowed by words
-			for (auto& word : alert_words) {
-				auto found = std::search(msg.message.begin(), msg.message.end(), word.begin(), word.end(), [](char c1, char c2) -> bool {
-					return tolower(c1) == c2;
-				});
-				if (found != msg.message.end()) {
-					print_message = true;
-					break; // don't need to check other words
-				}
-			}
-		}
-
-		if (print_message) {
-			char buffer[512];
-			snprintf(buffer, sizeof(buffer), "<a=1>%s</a>: <c=#f96677><quote>%s", msg.name.c_str(), msg.message.c_str());
-			GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, buffer);
-		}
-	});
 }
 
 bool TradeWindow::parse_json_message(json* js, Message* msg) {
@@ -172,8 +118,8 @@ bool TradeWindow::parse_json_message(json* js, Message* msg) {
 }
 
 void TradeWindow::fetch() {
-	if (ws_window == nullptr) return;
-	if (ws_window->getReadyState() != WebSocket::OPEN) return;
+	if (!ws_window || ws_window->getReadyState() != WebSocket::OPEN) 
+		return;
 	
 	ws_window->poll();
 	ws_window->dispatch([this](const std::string& data) {
@@ -190,6 +136,29 @@ void TradeWindow::fetch() {
 			TradeWindow::Message msg;
 			if (parse_json_message(&res, &msg))
 				messages.add(msg);
+
+			// Check alerts
+			// do not display trade chat while in kamadan AE district 1
+			bool print_message = print_game_chat && !GetInKamadanAE1();
+
+			if (print_message && filter_alerts) {
+				print_message = false; // filtered unless allowed by words
+				for (auto& word : alert_words) {
+					auto found = std::search(msg.message.begin(), msg.message.end(), word.begin(), word.end(), [](char c1, char c2) -> bool {
+						return tolower(c1) == c2;
+						});
+					if (found != msg.message.end()) {
+						print_message = true;
+						break; // don't need to check other words
+					}
+				}
+			}
+
+			if (print_message) {
+				char buffer[512];
+				snprintf(buffer, sizeof(buffer), "<a=1>%s</a>: <c=#f96677><quote>%s", msg.name.c_str(), msg.message.c_str());
+				GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, buffer);
+			}
 		} else {
 			search_pending = false;
 			json_vec results;
@@ -237,23 +206,7 @@ void TradeWindow::search(std::string query) {
 }
 
 void TradeWindow::Draw(IDirect3DDevice9* device) {
-	if (visible) {
-		if (ws_window == nullptr) {
-			AsyncWindowConnect();
-		}
-	} else { // not visible
-		if (ws_window) {
-			ws_window->close();
-			delete ws_window;
-			ws_window = nullptr;
-		}
-		return;
-	}
-	
-	if (ws_window && ws_window->getReadyState() == WebSocket::CLOSED) {
-		delete ws_window;
-		ws_window = nullptr;
-	}
+
 
 	// start the trade_searcher if its not active
 	// if (!trade_searcher->is_active() && !trade_searcher->is_timed_out()) trade_searcher->search("");
@@ -299,7 +252,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			ImGui::Text(buf);
 			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Click to reconnect").x) / 2);
 			if (ImGui::Button("Click to reconnect")) {
-				AsyncWindowConnect();
+				AsyncWindowConnect(true);
 			}
 		} else if (ws_window_connecting || (ws_window && ws_window->getReadyState() == WebSocket::CONNECTING)) {
 			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Connecting...").x)/2);
@@ -463,24 +416,10 @@ void TradeWindow::ParseBuffer(std::fstream stream, std::vector<std::string>& wor
 	}
 }
 
-void TradeWindow::AsyncChatConnect() {
-	if (ws_chat) return;
-	if (ws_chat_connecting) return;
-	if (!chat_rate_limiter.AddTime(COST_PER_CONNECTION_MS, COST_PER_CONNECTION_MAX_MS))
-		return;
-	ws_chat_connecting = true;
-	thread_jobs.push([this]() {
-		if (!(ws_chat = WebSocket::from_url(ws_host))) {
-			printf("Couldn't connect to the host '%s'", ws_host);
-		}
-		ws_chat_connecting = false;
-	});
-}
-
-void TradeWindow::AsyncWindowConnect() {
+void TradeWindow::AsyncWindowConnect(bool force) {
 	if (ws_window) return;
 	if (ws_window_connecting) return;
-	if (!window_rate_limiter.AddTime(COST_PER_CONNECTION_MS, COST_PER_CONNECTION_MAX_MS))
+	if (!force && !window_rate_limiter.AddTime(COST_PER_CONNECTION_MS, COST_PER_CONNECTION_MAX_MS))
 		return;
 	ws_window_connecting = true;
 	thread_jobs.push([this]() {
