@@ -115,11 +115,12 @@ bool GuiUtils::ParseUInt(const wchar_t *str, unsigned int *val, int base) {
 	else
 		return true;
 }
-std::wstring GuiUtils::ToWstr(std::string &s) {
-	std::wstring result;
-	result.reserve(s.size() + 1);
-	for (char c : s) result.push_back(c);
-	return result;
+std::wstring GuiUtils::ToWstr(std::string &str) {
+	if (str.empty()) return std::wstring();
+	int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), NULL, 0);
+	std::wstring wstrTo(size_needed, 0);
+	MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
+	return wstrTo;
 }
 size_t GuiUtils::wcstostr(char *dest, const wchar_t *src, size_t n) {
 	size_t i;
