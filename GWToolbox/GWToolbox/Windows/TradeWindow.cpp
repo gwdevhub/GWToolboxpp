@@ -133,8 +133,8 @@ void TradeWindow::Update(float delta) {
 		if (res.find("query") != res.end())
 			return;
 
-		TradeWindow::Message msg = parse_json_message(&res);
-		if (!msg.Valid())
+		TradeWindow::Message msg;
+		if (!parse_json_message(&res,&msg))
 			return;
 		bool print_message = true;
 		if (filter_alerts) {
@@ -158,17 +158,17 @@ void TradeWindow::Update(float delta) {
 	});
 }
 
-TradeWindow::Message TradeWindow::parse_json_message(json* js) {
-	TradeWindow::Message msg;
+bool TradeWindow::parse_json_message(json* js, Message* msg) {
 	try {
-		msg.name = js->at("s").get<std::string>();
-		msg.message = js->at("m").get<std::string>();
-		msg.timestamp = js->at("t").get<uint64_t>() / 1000; // Messy?
+		msg->name = js->at("s").get<std::string>();
+		msg->message = js->at("m").get<std::string>();
+		msg->timestamp = js->at("t").get<uint64_t>() / 1000; // Messy?
 	}
 	catch (...) {
 		Log::Log("ERROR: Failed to parse incoming trade message in TradeWindow::parse_json_message\n");
+		return false;
 	}
-	return msg;
+	return true;
 }
 
 void TradeWindow::fetch() {
@@ -187,8 +187,8 @@ void TradeWindow::fetch() {
 		}
 		if (res.find("query") == res.end()) {
 			// It's a new message
-			Message msg = parse_json_message(&res);
-			if(msg.Valid())
+			TradeWindow::Message msg;
+			if (parse_json_message(&res, &msg))
 				messages.add(msg);
 		} else {
 			search_pending = false;
@@ -203,8 +203,8 @@ void TradeWindow::fetch() {
 			}
 			messages.clear();
 			for (int i = results.size() - 1; i >= 0; i--) {
-				Message msg = parse_json_message(&results[i]);
-				if (msg.Valid())
+				TradeWindow::Message msg;
+				if (parse_json_message(&results[i], &msg))
 					messages.add(msg);
 			}
 		}
