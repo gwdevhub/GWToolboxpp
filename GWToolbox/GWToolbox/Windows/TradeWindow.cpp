@@ -133,7 +133,7 @@ void TradeWindow::Update(float delta) {
 		if (res.find("query") != res.end())
 			return;
 
-		TradeWindow::Message msg = parse_json_message(res);
+		TradeWindow::Message msg = parse_json_message(&res);
 		if (!msg.Valid())
 			return;
 		bool print_message = true;
@@ -158,12 +158,12 @@ void TradeWindow::Update(float delta) {
 	});
 }
 
-TradeWindow::Message TradeWindow::parse_json_message(json js) {
+TradeWindow::Message TradeWindow::parse_json_message(json* js) {
 	TradeWindow::Message msg;
 	try {
-		msg.name = js["s"].get<std::string>();
-		msg.message = js["m"].get<std::string>();
-		msg.timestamp = js["t"].get<uint64_t>() / 1000; // Messy?
+		msg.name = js->at("s").get<std::string>();
+		msg.message = js->at("m").get<std::string>();
+		msg.timestamp = js->at("t").get<uint64_t>() / 1000; // Messy?
 	}
 	catch (...) {
 		Log::Log("ERROR: Failed to parse incoming trade message in TradeWindow::parse_json_message\n");
@@ -187,25 +187,24 @@ void TradeWindow::fetch() {
 		}
 		if (res.find("query") == res.end()) {
 			// It's a new message
-			Message msg = parse_json_message(res);
+			Message msg = parse_json_message(&res);
 			if(msg.Valid())
 				messages.add(msg);
 		} else {
 			search_pending = false;
 			json_vec results;
 			try {
-				if (res["num_results"].get<uint32_t>() == 0)
-					return;
-				results = res["results"].get<json_vec>();
+				if(res["num_results"].get<uint32_t>() > 0)
+					results = res["results"].get<json_vec>();
 			}
 			catch (...) {
 				Log::Log("ERROR: Failed to parse search results in TradeWindow::fetch\n");
 				return;
 			}
 			messages.clear();
-			for (auto it = results.rbegin(); it != results.rend(); it++) {
-				Message msg = parse_json_message(*it);
-				if(msg.Valid())
+			for (int i = results.size() - 1; i >= 0; i--) {
+				Message msg = parse_json_message(&results[i]);
+				if (msg.Valid())
 					messages.add(msg);
 			}
 		}
@@ -234,8 +233,6 @@ void TradeWindow::search(std::string query) {
 
 	json request;
 	request["query"] = query;
-	request["offset"] = 0;
-	request["suggest"] = 0;
 	ws_window->send(request.dump());
 }
 
@@ -266,11 +263,19 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		/* Search bar header */
 		static char search_buffer[256];
 		ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 80.0f - 80.0f - 80.0f - ImGui::GetStyle().ItemInnerSpacing.x * 6));
-		if (ImGui::InputText("", search_buffer, 256, ImGuiInputTextFlags_EnterReturnsTrue)) {
-			search(search_buffer);
+		ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;
+		if (search_pending) {
+			flags |= ImGuiInputTextFlags_ReadOnly;
+			ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
 		}
+		bool do_search = false;
+		do_search |= ImGui::InputText("", search_buffer, 256, flags);
 		ImGui::SameLine();
-		if (ImGui::Button("Search", ImVec2(80.0f, 0))) {
+		do_search |= ImGui::Button(search_pending ? "Searching" : "Search", ImVec2(80.0f, 0));
+		if (search_pending) {
+			ImGui::PopStyleColor();
+		}
+		else if(do_search) {
 			search(search_buffer);
 		}
 		ImGui::SameLine();
@@ -313,8 +318,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			const float playernamewidth = 160.0f;
 			const float message_left = playername_left + playernamewidth + innerspacing;
 
-			size_t size = messages.size();
-			for (unsigned int i = size - 1; i < size; i--) {
+			for (int i = messages.size() - 1; i >= 0; i--) {
 				Message &msg = messages[i];
 				ImGui::PushID(i);
 
