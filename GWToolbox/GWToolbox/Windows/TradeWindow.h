@@ -80,7 +80,7 @@ private:
     void search(std::string);
     void fetch();
 
-    static Message parse_json_message(nlohmann::json js);
+    static Message parse_json_message(nlohmann::json* js);
     CircularBuffer<Message> messages;
 
     // tasks to be done async by the worker thread
