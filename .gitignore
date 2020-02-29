@@ -44,3 +44,4 @@ GWToolbox.aps
 *.sublime-project*
 *.sublime-workspace*
 .vs/
+build/
