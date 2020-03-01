@@ -30,7 +30,8 @@ using easywsclient::WebSocket;
 using nlohmann::json;
 using json_vec = std::vector<json>;
 
-static const char ws_host[] = "wss://kamadan.decltype.org/ws/";
+static const char ws_host[] = "wss://kamadan.gwtoolbox.com";
+static const char https_host[] = "https://kamadan.gwtoolbox.com";
 
 void TradeWindow::Initialize() {
 	ToolboxWindow::Initialize();
@@ -55,8 +56,6 @@ void TradeWindow::Initialize() {
 			}
 		}
 	});
-
-	if (print_game_chat) AsyncChatConnect();
 }
 
 void TradeWindow::Terminate() {
@@ -64,10 +63,8 @@ void TradeWindow::Terminate() {
 	if (worker.joinable())
 		worker.join();
 
-	if (ws_chat) DeleteWebSocket(ws_chat);
-	if (ws_window) DeleteWebSocket(ws_window);
-	if (ws_chat || ws_window) {
-		ws_chat = nullptr;
+	if (ws_window) {
+		DeleteWebSocket(ws_window);
 		ws_window = nullptr;
 	}
 
@@ -79,103 +76,105 @@ TradeWindow::~TradeWindow() {
 	Terminate();
 }
 
-bool TradeWindow::GetInKamadan() {
+bool TradeWindow::GetInKamadanAE1() {
 	using namespace GW::Constants;
 	switch (GW::Map::GetMapID()) {
 	case MapID::Kamadan_Jewel_of_Istan_outpost:
 	case MapID::Kamadan_Jewel_of_Istan_Halloween_outpost:
 	case MapID::Kamadan_Jewel_of_Istan_Wintersday_outpost:
 	case MapID::Kamadan_Jewel_of_Istan_Canthan_New_Year_outpost:
-		return true;
+		return GW::Map::GetDistrict() == 1 && GW::Map::GetRegion() == GW::Constants::Region::America;
 	default:
 		return false;
 	}
 }
 
 void TradeWindow::Update(float delta) {
+	if (ws_window && ws_window->getReadyState() == WebSocket::CLOSED) {
+		delete ws_window;
+		ws_window = nullptr;
+	}
+	bool maintain_socket = visible || print_game_chat;
+	if (maintain_socket && !ws_window) {
+		AsyncWindowConnect();
+	}
+	if (!maintain_socket && ws_window) {
+		ws_window->close();
+	}
 	fetch();
-
-	if (!print_game_chat) return;
-	if (ws_chat && ws_chat->getReadyState() == WebSocket::CLOSED) {
-		delete ws_chat;
-		ws_chat = nullptr;
-	}
-
-	// do not display trade chat while in kamadan AE district 1
-	if (GetInKamadan() && GW::Map::GetDistrict() == 1 &&
-		GW::Map::GetRegion() == GW::Constants::Region::America) {
-		if (ws_chat) ws_chat->close();
-		return;
-	}
-	
-	if (!ws_chat && !ws_chat_connecting) {
-		AsyncChatConnect();
-		return;
-	}
-
-	if (!ws_chat || ws_chat->getReadyState() != WebSocket::OPEN)
-		return;
-
-	ws_chat->poll();
-	ws_chat->dispatch([this](const std::string& data) {
-		char buffer[512];
-		json res = json::parse(data.c_str());
-
-		// We don't support queries in the chat
-		if (res.find("query") != res.end())
-			return;
-
-		std::string msg = res["message"].get<std::string>();
-		bool print_message = true;
-		if (filter_alerts) {
-			print_message = false; // filtered unless allowed by words
-			for (auto& word : alert_words) {
-				auto found = std::search(msg.begin(), msg.end(), word.begin(), word.end(), [](char c1, char c2) -> bool {
-					return tolower(c1) == c2;
-				});
-				if (found != msg.end()) {
-					print_message = true;
-					break; // don't need to check other words
-				}
-			}
-		}
-
-		if (print_message) {
-			std::string name = res["name"].get<std::string>();
-			snprintf(buffer, sizeof(buffer), "<a=1>%s</a>: <c=#f96677><quote>%s", name.c_str(), msg.c_str());
-			GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, buffer);
-		}
-	});
 }
 
-TradeWindow::Message TradeWindow::parse_json_message(json js) {
-	TradeWindow::Message msg;
-	msg.name = js["name"].get<std::string>();
-	msg.message = js["message"].get<std::string>();
-	msg.timestamp = stoi(js["timestamp"].get<std::string>());
-	return msg;
+bool TradeWindow::parse_json_message(json* js, Message* msg) {
+	try {
+		msg->name = js->at("s").get<std::string>();
+		msg->message = js->at("m").get<std::string>();
+		msg->timestamp = js->at("t").get<uint64_t>() / 1000; // Messy?
+	}
+	catch (...) {
+		Log::Log("ERROR: Failed to parse incoming trade message in TradeWindow::parse_json_message\n");
+		return false;
+	}
+	return true;
 }
 
 void TradeWindow::fetch() {
-	if (ws_window == nullptr) return;
-	if (ws_window->getReadyState() != WebSocket::OPEN) return;
+	if (!ws_window || ws_window->getReadyState() != WebSocket::OPEN) 
+		return;
 	
 	ws_window->poll();
 	ws_window->dispatch([this](const std::string& data) {
-		json res = json::parse(data.c_str());
+		json res;
+		try {
+			res = json::parse(data.c_str());
+		}
+		catch (...) {
+			Log::Log("ERROR: Failed to parse res JSON from response in ws_window->dispatch\n");
+			return;
+		}
 		if (res.find("query") == res.end()) {
 			// It's a new message
-			Message msg = parse_json_message(res);
-			messages.add(msg);
+			TradeWindow::Message msg;
+			if (parse_json_message(&res, &msg))
+				messages.add(msg);
+
+			// Check alerts
+			// do not display trade chat while in kamadan AE district 1
+			bool print_message = print_game_chat && !GetInKamadanAE1();
+
+			if (print_message && filter_alerts) {
+				print_message = false; // filtered unless allowed by words
+				for (auto& word : alert_words) {
+					auto found = std::search(msg.message.begin(), msg.message.end(), word.begin(), word.end(), [](char c1, char c2) -> bool {
+						return tolower(c1) == c2;
+						});
+					if (found != msg.message.end()) {
+						print_message = true;
+						break; // don't need to check other words
+					}
+				}
+			}
+
+			if (print_message) {
+				char buffer[512];
+				snprintf(buffer, sizeof(buffer), "<a=1>%s</a>: <c=#f96677><quote>%s", msg.name.c_str(), msg.message.c_str());
+				GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, buffer);
+			}
 		} else {
 			search_pending = false;
-			if (res["num_results"].get<std::string>() == "0")
+			json_vec results;
+			try {
+				if(res["num_results"].get<uint32_t>() > 0)
+					results = res["results"].get<json_vec>();
+			}
+			catch (...) {
+				Log::Log("ERROR: Failed to parse search results in TradeWindow::fetch\n");
 				return;
-			json_vec results = res["results"].get<json_vec>();
+			}
 			messages.clear();
-			for (auto it = results.rbegin(); it != results.rend(); it++) {
-				Message msg = parse_json_message(*it);
-				messages.add(msg);
+			for (int i = results.size() - 1; i >= 0; i--) {
+				TradeWindow::Message msg;
+				if (parse_json_message(&results[i], &msg))
+					messages.add(msg);
 			}
 		}
 	});
@@ -203,29 +202,11 @@ void TradeWindow::search(std::string query) {
 
 	json request;
 	request["query"] = query;
-	request["offset"] = 0;
-	request["suggest"] = 0;
 	ws_window->send(request.dump());
 }
 
 void TradeWindow::Draw(IDirect3DDevice9* device) {
-	if (visible) {
-		if (ws_window == nullptr) {
-			AsyncWindowConnect();
-		}
-	} else { // not visible
-		if (ws_window) {
-			ws_window->close();
-			delete ws_window;
-			ws_window = nullptr;
-		}
-		return;
-	}
-	
-	if (ws_window && ws_window->getReadyState() == WebSocket::CLOSED) {
-		delete ws_window;
-		ws_window = nullptr;
-	}
+
 
 	// start the trade_searcher if its not active
 	// if (!trade_searcher->is_active() && !trade_searcher->is_timed_out()) trade_searcher->search("");
@@ -235,11 +216,19 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		/* Search bar header */
 		static char search_buffer[256];
 		ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 80.0f - 80.0f - 80.0f - ImGui::GetStyle().ItemInnerSpacing.x * 6));
-		if (ImGui::InputText("", search_buffer, 256, ImGuiInputTextFlags_EnterReturnsTrue)) {
-			search(search_buffer);
+		ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;
+		if (search_pending) {
+			flags |= ImGuiInputTextFlags_ReadOnly;
+			ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
 		}
+		bool do_search = false;
+		do_search |= ImGui::InputText("", search_buffer, 256, flags);
 		ImGui::SameLine();
-		if (ImGui::Button("Search", ImVec2(80.0f, 0))) {
+		do_search |= ImGui::Button(search_pending ? "Searching" : "Search", ImVec2(80.0f, 0));
+		if (search_pending) {
+			ImGui::PopStyleColor();
+		}
+		else if(do_search) {
 			search(search_buffer);
 		}
 		ImGui::SameLine();
@@ -256,12 +245,14 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		ImGui::BeginChild("trade_scroll", ImVec2(0, -20.0f - ImGui::GetStyle().ItemInnerSpacing.y));
 		/* Connection checks */
 		if (!ws_window && !ws_window_connecting) {
-			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("The connection to kamadan.decltype.com has timed out.").x) / 2);
+			char buf[255];
+			snprintf(buf, 255, "The connection to %s has timed out.", ws_host);
+			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize(buf).x) / 2);
 			ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
-			ImGui::Text("The connection to kamadan.decltype.com has timed out.");
+			ImGui::Text(buf);
 			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Click to reconnect").x) / 2);
 			if (ImGui::Button("Click to reconnect")) {
-				AsyncWindowConnect();
+				AsyncWindowConnect(true);
 			}
 		} else if (ws_window_connecting || (ws_window && ws_window->getReadyState() == WebSocket::CONNECTING)) {
 			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Connecting...").x)/2);
@@ -280,8 +271,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			const float playernamewidth = 160.0f;
 			const float message_left = playername_left + playernamewidth + innerspacing;
 
-			size_t size = messages.size();
-			for (unsigned int i = size - 1; i < size; i--) {
+			for (int i = messages.size() - 1; i >= 0; i--) {
 				Message &msg = messages[i];
 				ImGui::PushID(i);
 
@@ -319,9 +309,8 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 				if (ImGui::Button(msg.name.c_str(), ImVec2(playernamewidth, 0))) {
 					// open whisper to player
 					GW::GameThread::Enqueue([&msg]() {
-						wchar_t ws[100];
-						swprintf(ws, 100, L"%hs", msg.name.c_str());
-						GW::UI::SendUIMessage(GW::UI::kOpenWhisper, ws, nullptr);
+						std::wstring name_ws = GuiUtils::ToWstr(msg.name);
+						GW::UI::SendUIMessage(GW::UI::kOpenWhisper, (wchar_t*)name_ws.data(), nullptr);
 					});
 				}
 
@@ -334,9 +323,13 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		ImGui::EndChild();
 
 		/* Link to website footer */
-		if (ImGui::Button("Powered by https://kamadan.decltype.org", ImVec2(ImGui::GetWindowContentRegionWidth(), 20.0f))){ 
+		static char buf[128];
+		if (!buf[0]) {
+			snprintf(buf, 128, "Powered by %s", https_host);
+		}
+		if (ImGui::Button(buf, ImVec2(ImGui::GetWindowContentRegionWidth(), 20.0f))){ 
 			CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-			ShellExecuteA(NULL, "open", "https://kamadan.decltype.org", NULL, NULL, SW_SHOWNORMAL);
+			ShellExecuteA(NULL, "open", https_host, NULL, NULL, SW_SHOWNORMAL);
 		}
 
 		/* Alerts window */
@@ -422,24 +415,10 @@ void TradeWindow::ParseBuffer(std::fstream stream, std::vector<std::string>& wor
 	}
 }
 
-void TradeWindow::AsyncChatConnect() {
-	if (ws_chat) return;
-	if (ws_chat_connecting) return;
-	if (!chat_rate_limiter.AddTime(COST_PER_CONNECTION_MS, COST_PER_CONNECTION_MAX_MS))
-		return;
-	ws_chat_connecting = true;
-	thread_jobs.push([this]() {
-		if (!(ws_chat = WebSocket::from_url(ws_host))) {
-			printf("Couldn't connect to the host '%s'", ws_host);
-		}
-		ws_chat_connecting = false;
-	});
-}
-
-void TradeWindow::AsyncWindowConnect() {
+void TradeWindow::AsyncWindowConnect(bool force) {
 	if (ws_window) return;
 	if (ws_window_connecting) return;
-	if (!window_rate_limiter.AddTime(COST_PER_CONNECTION_MS, COST_PER_CONNECTION_MAX_MS))
+	if (!force && !window_rate_limiter.AddTime(COST_PER_CONNECTION_MS, COST_PER_CONNECTION_MAX_MS))
 		return;
 	ws_window_connecting = true;
 	thread_jobs.push([this]() {
@@ -447,6 +426,8 @@ void TradeWindow::AsyncWindowConnect() {
 			printf("Couldn't connect to the host '%s'", ws_host);
 		}
 		ws_window_connecting = false;
+		if (messages.size() == 0)
+			search(""); // Initial draw, gets latest N messages
 	});
 }
 
