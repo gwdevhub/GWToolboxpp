@@ -1,8 +1,8 @@
 #pragma once
 
-#include "ToolboxWidget.h"
+#include <module_base.h>
 
-class InstanceTimer : public ToolboxWidget {
+class InstanceTimer : public TBModule {
 
 public:	
 	InstanceTimer() = default;
@@ -12,7 +12,7 @@ public:
 
 	void LoadSettings(CSimpleIni *ini) override;
 	void SaveSettings(CSimpleIni *ini) override;
-	void DrawSettingInternal() override;
+    void DrawSettings() override;
 
 	// Draw user interface. Will be called every frame if the element is visible
 	void Draw(IDirect3DDevice9* pDevice) override;

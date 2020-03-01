@@ -8,7 +8,10 @@ cmake_minimum_required(VERSION 3.15)
 
 project(gwtoolbox)
 
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
 add_definitions(-DNOMINMAX)
+add_definitions(-D_USE_MATH_DEFINES)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -23,6 +26,8 @@ include(easywsclient)
 include(simpleini)
 include(discord_game_sdk)
 include(json)
+set_target_properties(easywsclient imgui minhook openssl utf8proc PROPERTIES FOLDER "Dependencies/")
+
 
 add_library(gwtoolbox SHARED)
 
@@ -64,24 +69,30 @@ target_link_libraries(gwtoolbox PRIVATE
 
 add_subdirectory(CSLauncher)
 
-add_library(module_base)
-target_sources(module_base PUBLIC
+add_library(module_base INTERFACE)
+target_sources(module_base INTERFACE
     "${PROJECT_SOURCE_DIR}/modules/base/dllmain.cpp"
     "${PROJECT_SOURCE_DIR}/modules/base/module_base.h")
-target_include_directories(module_base PUBLIC "${PROJECT_SOURCE_DIR}/modules/base")
-target_include_directories(module_base PUBLIC "${PROJECT_SOURCE_DIR}/GWToolbox/GWToolbox")
-target_link_libraries(module_base PUBLIC 
+target_include_directories(module_base INTERFACE "${PROJECT_SOURCE_DIR}/modules/base")
+target_include_directories(module_base INTERFACE "${PROJECT_SOURCE_DIR}/GWToolbox/GWToolbox")
+target_link_libraries(module_base INTERFACE 
     imgui
     simpleini
     gwca
     )
-target_compile_definitions(module_base PUBLIC BUILD_DLL)
+target_compile_definitions(module_base INTERFACE BUILD_DLL)
 
+macro(add_tb_module MODULE)
+    add_library(${MODULE} SHARED)
+    file(GLOB SOURCES 
+        "${PROJECT_SOURCE_DIR}/modules/${MODULE}/*.h"
+        "${PROJECT_SOURCE_DIR}/modules/${MODULE}/*.cpp")
+    target_sources(${MODULE} PRIVATE ${SOURCES})
+    target_include_directories(${MODULE} PRIVATE "${PROJECT_SOURCE_DIR}/modules/${MODULE}")
+    target_link_libraries(${MODULE} PRIVATE module_base)
+    set_target_properties(${MODULE} PROPERTIES FOLDER "Modules/")
+endmacro()
 
-add_library(InstanceTimer SHARED)
-target_sources(InstanceTimer PRIVATE 
-    "${PROJECT_SOURCE_DIR}/modules/InstanceTimer/InstanceTimer.h"
-    "${PROJECT_SOURCE_DIR}/modules/InstanceTimer/InstanceTimer.cpp")
-target_include_directories(InstanceTimer PRIVATE "${PROJECT_SOURCE_DIR}/modules/InstanceTimer")
-target_link_libraries(InstanceTimer PRIVATE module_base)
+# add_tb_module(InstanceTimer)
+add_tb_module(clock)
 

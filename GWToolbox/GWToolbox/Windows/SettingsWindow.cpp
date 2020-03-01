@@ -4,6 +4,7 @@
 #include "Defines.h"
 #include "GuiUtils.h" 
 #include "GWToolbox.h"
+#include "PluginManager.h"
 #include "Windows/MainWindow.h"
 
 #include <Modules/Updater.h>
@@ -60,6 +61,9 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
 		ToolboxSettings::Instance().DrawFreezeSetting();
 
 		ImGui::Text("General:");
+
+		GWToolbox::Instance().GetPluginManger().Draw();
+
 		if (ImGui::CollapsingHeader("Help")) {
 			if (ImGui::TreeNode("General Interface")) {
 				ImGui::Bullet(); ImGui::Text("Double-click on the title bar to collapse a window.");

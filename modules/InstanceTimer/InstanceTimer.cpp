@@ -15,7 +15,7 @@
 
 #include "GuiUtils.h"
 
-DLLAPI ToolboxModule* getObj() {
+DLLAPI TBModule* getObj() {
     return new InstanceTimer();
 }
 
@@ -24,19 +24,18 @@ DLLAPI const char* getName() {
 }
 
 void InstanceTimer::LoadSettings(CSimpleIni *ini) {
-	ToolboxWidget::LoadSettings(ini);
+	TBModule::LoadSettings(ini);
 	click_to_print_time = ini->GetBoolValue(Name(), VAR_NAME(click_to_print_time), false);
     show_extra_timers = ini->GetBoolValue(Name(), VAR_NAME(show_extra_timers), false);
 }
 
 void InstanceTimer::SaveSettings(CSimpleIni *ini) {
-	ToolboxWidget::SaveSettings(ini);
+    TBModule::SaveSettings(ini);
 	ini->SetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
     ini->SetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
 }
 
-void InstanceTimer::DrawSettingInternal() {
-	ToolboxWidget::DrawSettingInternal();
+void InstanceTimer::DrawSettings() {
 	ImGui::Checkbox("Ctrl+Click to print time", &click_to_print_time);
     ImGui::Checkbox("Show extra timers", &show_extra_timers);
     ImGui::ShowHelp("Such as Deep aspects");

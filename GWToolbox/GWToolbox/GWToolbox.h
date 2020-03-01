@@ -3,6 +3,7 @@
 #include "Utf8.h"
 #include "ToolboxModule.h"
 #include "ToolboxUIElement.h"
+#include "PluginManager.h"
 
 #include <GWCA/Managers/GameThreadMgr.h>
 
@@ -49,6 +50,8 @@ public:
 
 	bool right_mouse_down = false;
 
+	void AddPlugin(TBModule* mod) { plugins.push_back(mod); }
+	PluginManager& GetPluginManger() { return plugin_manager; };
 private:
 	std::vector<ToolboxModule*> modules;
 
@@ -59,8 +62,13 @@ private:
 	// List of modules that are UI elements. They can be disable
 	std::vector<ToolboxUIElement*> uielements;
 
+	// Plugins
+	std::vector<TBModule*> plugins;
+
 	utf8::string imgui_inifile;
 	CSimpleIni* inifile = nullptr;
 
 	GW::HookEntry Update_Entry;
+
+	PluginManager plugin_manager;
 };
