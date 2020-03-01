@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ctime>
+
 /* 
 This class makes using timers easier
 

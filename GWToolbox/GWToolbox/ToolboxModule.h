@@ -4,6 +4,13 @@
 #include <d3d9.h>
 #include <SimpleIni.h>
 
+// Todo: make a separate ToolboxModule for plugins and move the DLLAPI out of here. 
+#ifdef BUILD_DLL
+#define DLLAPI extern "C" __declspec(dllexport)
+#else
+#define DLLAPI
+#endif
+
 class ToolboxModule {
 public:
 	ToolboxModule() {}
