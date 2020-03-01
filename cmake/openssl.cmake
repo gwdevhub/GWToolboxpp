@@ -9,6 +9,6 @@ target_sources(openssl PRIVATE ${SOURCES})
 target_compile_definitions(openssl PRIVATE "_CRT_SECURE_NO_WARNINGS")
 target_include_directories(openssl PUBLIC "${OPENSSL_FOLDER}")
 target_link_libraries(openssl PRIVATE
-	"${OPENSSL_FOLDER}/openssl/lib/libeay32.lib"
-	"${OPENSSL_FOLDER}/openssl/lib/ssleay32.lib")
+    "${OPENSSL_FOLDER}/openssl/lib/libeay32.lib"
+    "${OPENSSL_FOLDER}/openssl/lib/ssleay32.lib")
 

@@ -259,7 +259,7 @@ namespace GWCA
             /// <param name="signature">Group of bytes to match</param>
             /// <param name="offset">Offset from matched sig to pointer.</param>
             /// <returns>Address found if sucessful, IntPtr.Zero if not.</returns>
-            public IntPtr ScanForPtr(byte[] signature, int offset = 0, bool readptr = false) {
+            public IntPtr ScanForPtr(byte[] signature, int offset, bool readptr) {
                 bool match;
                 byte first = signature[0];
                 int sig_length = signature.Length;

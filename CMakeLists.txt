@@ -23,36 +23,36 @@ add_library(gwtoolbox SHARED)
 
 set(GWTOOLBOX_FOLDER "${PROJECT_SOURCE_DIR}/GWToolbox/GWToolbox")
 file(GLOB SOURCES
-	"${GWTOOLBOX_FOLDER}/*.h"
-	"${GWTOOLBOX_FOLDER}/*.cpp"
-	"${GWTOOLBOX_FOLDER}/Modules/*.h"
-	"${GWTOOLBOX_FOLDER}/Modules/*.cpp"
-	"${GWTOOLBOX_FOLDER}/Utils/*.h"
-	"${GWTOOLBOX_FOLDER}/Utils/*.cpp"
-	"${GWTOOLBOX_FOLDER}/Widgets/*.h"
-	"${GWTOOLBOX_FOLDER}/Widgets/*.cpp"
-	"${GWTOOLBOX_FOLDER}/Widgets/Minimap/*.h"
-	"${GWTOOLBOX_FOLDER}/Widgets/Minimap/*.cpp"
-	"${GWTOOLBOX_FOLDER}/Windows/*.h"
-	"${GWTOOLBOX_FOLDER}/Windows/*.cpp")
+    "${GWTOOLBOX_FOLDER}/*.h"
+    "${GWTOOLBOX_FOLDER}/*.cpp"
+    "${GWTOOLBOX_FOLDER}/Modules/*.h"
+    "${GWTOOLBOX_FOLDER}/Modules/*.cpp"
+    "${GWTOOLBOX_FOLDER}/Utils/*.h"
+    "${GWTOOLBOX_FOLDER}/Utils/*.cpp"
+    "${GWTOOLBOX_FOLDER}/Widgets/*.h"
+    "${GWTOOLBOX_FOLDER}/Widgets/*.cpp"
+    "${GWTOOLBOX_FOLDER}/Widgets/Minimap/*.h"
+    "${GWTOOLBOX_FOLDER}/Widgets/Minimap/*.cpp"
+    "${GWTOOLBOX_FOLDER}/Windows/*.h"
+    "${GWTOOLBOX_FOLDER}/Windows/*.cpp")
 source_group(TREE "${GWTOOLBOX_FOLDER}" FILES ${SOURCES})
 target_sources(gwtoolbox PRIVATE ${SOURCES})
 
 target_include_directories(gwtoolbox PRIVATE 
-	"${GWTOOLBOX_FOLDER}"
-	"${PROJECT_SOURCE_DIR}/Dependencies/"
-	"${PROJECT_SOURCE_DIR}/Dependencies/utf8proc/"
-	)
+    "${GWTOOLBOX_FOLDER}"
+    "${PROJECT_SOURCE_DIR}/Dependencies/"
+    )
 
 target_link_libraries(gwtoolbox PRIVATE
-	imgui
-	gwca
-	directx
-	utf8proc
-	easywsclient
-	Urlmon.lib
-	Shlwapi.lib
-	Wininet.lib
-	Dbghelp.lib # for MiniDump
-	)
+    imgui
+    gwca
+    directx
+    utf8proc
+    easywsclient
+    Urlmon.lib
+    Shlwapi.lib
+    Wininet.lib
+    Dbghelp.lib # for MiniDump
+    )
 
+add_subdirectory(CSLauncher)

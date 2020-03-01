@@ -3,8 +3,8 @@ include_guard()
 set(EASYWSCLIENT_FOLDER "${PROJECT_SOURCE_DIR}/Dependencies/easywsclient/")
 
 set(SOURCES 
-	"${EASYWSCLIENT_FOLDER}/easywsclient.hpp"
-	"${EASYWSCLIENT_FOLDER}/easywsclient.cpp")
+    "${EASYWSCLIENT_FOLDER}/easywsclient.hpp"
+    "${EASYWSCLIENT_FOLDER}/easywsclient.cpp")
 
 add_library(easywsclient)
 target_sources(easywsclient PRIVATE ${SOURCES})
