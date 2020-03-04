@@ -226,6 +226,24 @@ bool GuiUtils::ParseUInt(const wchar_t *str, unsigned int *val, int base) {
 	else
 		return true;
 }
+std::wstring GuiUtils::ToWstr(std::string &str) {
+	if (str.empty()) return std::wstring();
+	int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), NULL, 0);
+	std::wstring wstrTo(size_needed, 0);
+	MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
+	return wstrTo;
+}
+size_t GuiUtils::wcstostr(char *dest, const wchar_t *src, size_t n) {
+	size_t i;
+    unsigned char *d = (unsigned char *)dest;
+    for (i = 0; i < n; i++) {
+        if (src[i] & ~0x7f)
+            return 0;
+        d[i] = src[i] & 0x7f;
+        if (src[i] == 0) break;
+    }
+    return i;
+}
 char *GuiUtils::StrCopy(char *dest, const char *src, size_t dest_size) {
 	strncpy(dest, src, dest_size - 1);
 	dest[dest_size - 1] = 0;

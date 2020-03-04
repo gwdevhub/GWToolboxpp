@@ -12,8 +12,6 @@
 #include <easywsclient\easywsclient.hpp>
 #include <CircurlarBuffer.h>
 
-#include <GWCA\Utilities\Hook.h>
-
 #include "Utils\RateLimiter.h"
 
 class TradeWindow : public ToolboxWindow {
@@ -32,19 +30,17 @@ public:
 
 	void Update(float delta) override;
 	void Draw(IDirect3DDevice9* pDevice) override;
-	bool FilterTradeMessage(std::wstring message);
-	bool FilterTradeMessage(std::string message);
 
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
 
 private:
-	struct Message {
-		uint32_t    timestamp;
-		std::string name;
-		std::string message;
-	};
+    struct Message {
+        uint32_t    timestamp = 0;
+        std::string name;
+        std::string message;
+    };
 
 	bool show_alert_window = false;
 
@@ -53,13 +49,9 @@ private:
 
 	// if enable, we won't print the messages containing word from alert_words
 	bool filter_alerts = false;
-	bool only_show_trade_alerts_in_kamadan = false;
 
-	std::regex word_regex;
-	std::smatch m;
-
-#define ALERT_BUF_SIZE 1024 * 16
-	char alert_buf[ALERT_BUF_SIZE];
+	#define ALERT_BUF_SIZE 1024 * 16
+	char alert_buf[ALERT_BUF_SIZE] = "";
 	// set when the alert_buf was modified
 	bool alertfile_dirty = false;
 
@@ -67,38 +59,30 @@ private:
 
 	void DrawAlertsWindowContent(bool ownwindow);
 
-	void NotifyTradeBlockedInKamadan();
+    static bool GetInKamadanAE1();
 
-	static bool GetInKamadan();
+    // Since we are connecting in an other thread, the following attributes/methods avoid spamming connection requests
+    void AsyncWindowConnect(bool force = false);
+    bool ws_window_connecting = false;
 
-	// Since we are connecting in an other thread, the following attributes/methods avoid spamming connection requests
-	void AsyncChatConnect();
-	void AsyncWindowConnect();
-	bool ws_chat_connecting = false;
-	bool ws_window_connecting = false;
+    easywsclient::WebSocket *ws_window = NULL;
 
-	easywsclient::WebSocket* ws_chat = NULL;
-	easywsclient::WebSocket* ws_window = NULL;
+    RateLimiter window_rate_limiter;
 
-	RateLimiter chat_rate_limiter;
-	RateLimiter window_rate_limiter;
+    bool search_pending;
+    void search(std::string);
+    void fetch();
 
-	bool search_pending;
-	void search(std::string);
-	void fetch();
+    static bool parse_json_message(nlohmann::json* js, Message* msg);
+    CircularBuffer<Message> messages;
 
-	static Message parse_json_message(nlohmann::json js);
-	CircularBuffer<Message> messages;
-
-	// tasks to be done async by the worker thread
+    // tasks to be done async by the worker thread
 	std::queue<std::function<void()>> thread_jobs;
-	bool should_stop = false;
+    bool should_stop = false;
 	std::thread worker;
 
-	void ParseBuffer(const char* text, std::vector<std::string>& words);
+	void ParseBuffer(const char *text, std::vector<std::string> &words);
 	void ParseBuffer(std::fstream stream, std::vector<std::string>& words);
 
-	static void DeleteWebSocket(easywsclient::WebSocket* ws);
-
-	GW::HookEntry OnTradeMessage_Entry;
+    static void DeleteWebSocket(easywsclient::WebSocket *ws);
 };
