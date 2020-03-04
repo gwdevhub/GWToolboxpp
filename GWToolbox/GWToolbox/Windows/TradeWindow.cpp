@@ -219,7 +219,8 @@ void TradeWindow::search(std::string query) {
 }
 
 void TradeWindow::Draw(IDirect3DDevice9* device) {
-
+	if (!visible)
+		return;
 
 	// start the trade_searcher if its not active
 	// if (!trade_searcher->is_active() && !trade_searcher->is_timed_out()) trade_searcher->search("");
