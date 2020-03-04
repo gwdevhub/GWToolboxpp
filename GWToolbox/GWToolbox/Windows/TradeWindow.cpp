@@ -142,14 +142,27 @@ void TradeWindow::fetch() {
 			bool print_message = print_game_chat && !GetInKamadanAE1();
 
 			if (print_message && filter_alerts) {
+				std::regex word_regex;
+				std::smatch m;
+				static const std::regex regex_check = std::regex("^/(.*)/[a-z]?$", std::regex::ECMAScript | std::regex::icase);
 				print_message = false; // filtered unless allowed by words
 				for (auto& word : alert_words) {
-					auto found = std::search(msg.message.begin(), msg.message.end(), word.begin(), word.end(), [](char c1, char c2) -> bool {
-						return tolower(c1) == c2;
-						});
-					if (found != msg.message.end()) {
-						print_message = true;
-						break; // don't need to check other words
+					if (std::regex_search(word, m, regex_check)) {
+						try {
+							word_regex = std::regex(m._At(1).str(), std::regex::ECMAScript | std::regex::icase);
+						}
+						catch (...) {
+							// Silent fail; invalid regex
+						}
+						if (std::regex_search(msg.message, word_regex))
+							print_message = true;
+					}
+					else {
+						auto found = std::search(msg.message.begin(), msg.message.end(), word.begin(), word.end(), [](char c1, char c2) -> bool {
+							return tolower(c1) == c2;
+							});
+						if (found != msg.message.end())
+							print_message = true;
 					}
 				}
 			}

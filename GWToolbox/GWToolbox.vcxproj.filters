@@ -299,7 +299,7 @@
     <ClInclude Include="GWToolbox\mp3.h" />
     <ClInclude Include="GWToolbox\Modules\ZrawDeepModule.h" />
     <ClInclude Include="GWToolbox\Widgets\Minimap\EffectRenderer.h" />
-    <ClInclude Include="GWToolbox\Windows\TradeWindowExtended.h" />
+    <ClInclude Include="GWToolbox\Windows\TradeWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -464,7 +464,7 @@
     <ClCompile Include="GWToolbox\mp3.cpp" />
     <ClCompile Include="GWToolbox\Modules\ZrawDeepModule.cpp" />
     <ClCompile Include="GWToolbox\Widgets\Minimap\EffectRenderer.cpp" />
-    <ClCompile Include="GWToolbox\Windows\TradeWindowExtended.cpp" />
+    <ClCompile Include="GWToolbox\Windows\TradeWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GWToolbox.rc">

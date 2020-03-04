@@ -182,7 +182,7 @@
     <ClInclude Include="GWToolbox\Windows\SettingsWindow.h" />
     <ClInclude Include="GWToolbox\Windows\SkillListingWindow.h" />
     <ClInclude Include="GWToolbox\Windows\StringDecoderWindow.h" />
-    <ClInclude Include="GWToolbox\Windows\TradeWindowExtended.h" />
+    <ClInclude Include="GWToolbox\Windows\TradeWindow.h" />
     <ClInclude Include="GWToolbox\Windows\TravelWindow.h" />
     <ClInclude Include="GWToolbox\Windows\DoorMonitorWindow.h" />
     <ClInclude Include="resource.h" />
@@ -289,7 +289,7 @@
     <ClCompile Include="GWToolbox\Windows\SettingsWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\SkillListingWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\StringDecoderWindow.cpp" />
-    <ClCompile Include="GWToolbox\Windows\TradeWindowExtended.cpp" />
+    <ClCompile Include="GWToolbox\Windows\TradeWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\TravelWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\DoorMonitorWindow.cpp" />
   </ItemGroup>
