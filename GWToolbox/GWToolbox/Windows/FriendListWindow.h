@@ -44,7 +44,7 @@ namespace {
 		L"Dervish"
 	};
 	static const ImColor StatusColors[4] = {
-		IM_COL32(0x99,0x99,0x99,0), // offline
+		IM_COL32(0x99,0x99,0x99,255), // offline
 		IM_COL32(0x0,0xc8,0x0,255),  // online
 		IM_COL32(0xc8,0x0,0x0,255), // busy
 		IM_COL32(0xc8,0xc8,0x0,255)  // away
@@ -106,33 +106,33 @@ private:
 		std::wstring name;
 		uint8_t profession = 0;
 	};
-	
-    struct Friend {
+
+	struct Friend {
 		Friend(FriendListWindow* _parent) : parent(_parent) {};
 		~Friend() {
 			characters.clear();
 		};
 		std::string uuid;
 		UUID uuid_bytes;
-        std::wstring alias;
+		std::wstring alias;
 		FriendListWindow* parent;
 		Character* current_char = nullptr;
 		char current_map_name[128] = { 0 };
 		uint32_t current_map_id = 0;
-        std::unordered_map<std::wstring,Character> characters;
-        uint8_t status = 0; // 0 = Offline, 1 = Online, 2 = Do not disturb, 3 = Away
-        uint8_t type = 255; // 0 = Friend, 1 = Ignore, 2 = Played, 3 = Trade
-        bool is_tb_friend = false;  // Is this a friend via toolbox, or friend via friend list?
+		std::unordered_map<std::wstring, Character> characters;
+		uint8_t status = 0; // 0 = Offline, 1 = Online, 2 = Do not disturb, 3 = Away
+		uint8_t type = 255; // 0 = Friend, 1 = Ignore, 2 = Played, 3 = Trade
+		bool is_tb_friend = false;  // Is this a friend via toolbox, or friend via friend list?
 		bool has_tmp_uuid = false;
 		clock_t added_via_toolbox = 0; // This friend added via toolbox? When?
-        clock_t last_update = 0;
+		clock_t last_update = 0;
 		std::string cached_charnames_hover_str;
 		bool cached_charnames_hover = false;
 		Character* GetCharacter(const wchar_t*);
 		Character* SetCharacter(const wchar_t*, uint8_t);
 		GW::Friend* GetFriend();
 		void GetMapName();
-		std::string GetCharactersHover(bool include_charname=false,bool include_location=false) {
+		std::string GetCharactersHover(bool include_charname = false, bool include_location = false) {
 			if (!cached_charnames_hover) {
 				std::wstring cached_charnames_hover_ws = L"Characters for ";
 				cached_charnames_hover_ws += alias;
@@ -170,10 +170,10 @@ private:
 		bool IsOffline() {
 			return status < 1 || status > 3;
 		};
-        bool NeedToUpdate(clock_t now) {
-            return (now - last_update) > 10000; // 10 Second stale.
-        }
-    };
+		bool NeedToUpdate(clock_t now) {
+			return (now - last_update) > 10000; // 10 Second stale.
+		}
+	};
 
 	Friend* SetFriend(uint8_t*, uint8_t, uint8_t, uint32_t, const wchar_t*, const wchar_t*);
 	Friend* SetFriend(GW::Friend*);
@@ -181,6 +181,7 @@ private:
 	Friend* GetFriend(GW::Friend*);
 	Friend* GetFriendByUUID(const char*);
 	Friend* GetFriend(uint8_t*);
+
 	void RemoveFriend(Friend* f);
 	void LoadCharnames(const char* section, std::unordered_map<std::wstring, uint8_t>* out);
 public:
@@ -198,11 +199,15 @@ public:
 
     const char* Name() const override { return "Friend List"; }
 
+	static void CmdAddFriend(const wchar_t* message, int argc, LPWSTR* argv);
+	static void CmdRemoveFriend(const wchar_t* message, int argc, LPWSTR* argv);
+
     void Initialize() override;
 	void SignalTerminate() override;
     void Terminate() override;
 	bool ShowAsWidget() const;
 	bool ShowAsWindow() const;
+	void DrawHelp() override;
 	ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags=0) const;
 
     // Update. Will always be called every frame.
@@ -234,6 +239,7 @@ private:
     bool friend_list_ready = false; // Allow processing when this is true.
 	bool need_to_reorder_friends = true;
 	bool show_alias_on_whisper = false;
+	bool show_my_status = true;
 
 	int explorable_show_as = 1;
 	int outpost_show_as = 1;
