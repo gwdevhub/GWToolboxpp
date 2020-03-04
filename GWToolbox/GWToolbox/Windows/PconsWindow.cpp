@@ -301,15 +301,15 @@ void PconsWindow::Draw(IDirect3DDevice9* device) {
         if (j && j % items_per_row > 0)
             ImGui::NewLine();
 		if (!current_objectives_to_check.empty()) {
-			ImGui::Checkbox("Disable on Completion", &disable_cons_on_objective_completion);
+			ImGui::Checkbox("Off @ end", &disable_cons_on_objective_completion);
 			ImGui::ShowHelp(disable_cons_on_objective_completion_hint);
 		}
 		if (!(current_final_room_location == GW::Vec2f(0, 0))) {
-			ImGui::Checkbox("Disable in final room", &disable_cons_in_final_room);
+			ImGui::Checkbox("Off @ boss", &disable_cons_in_final_room);
 			ImGui::ShowHelp(disable_cons_in_final_room_hint);
 		}
         if (in_vanquishable_area) {
-            ImGui::Checkbox("Disable on Vanquish", &disable_cons_on_vanquish_completion);
+            ImGui::Checkbox("Off @ end", &disable_cons_on_vanquish_completion);
             ImGui::ShowHelp(disable_cons_on_vanquish_completion_hint);
         }
 	}
@@ -546,7 +546,6 @@ void PconsWindow::DrawSettingInternal() {
 			ImGui::Checkbox(pcon->chat, &pcon->visible);
 		}
 		ImGui::TreePop();
-
 	}
 
 	ImGui::Separator();

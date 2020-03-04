@@ -8,6 +8,8 @@
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\GameEntities\Item.h>
 #include <GWCA\Managers\AgentMgr.h>
+#include <GWCA\Managers\MapMgr.h>
+
 #include <GWCA\Packets\CtoSHeaders.h>
 #include "Timer.h"
 #include <Color.h>
@@ -44,26 +46,29 @@ protected:
         ImVec2 uv0, ImVec2 uv1, int threshold,
         const char* desc = nullptr);
 	~Pcon();
-    bool RefillBlocking();
     bool* GetSettingsByName(const wchar_t* name);
     static bool UnreserveSlotForMove(int bagId, int slot); // Unlock slot.
 	static bool ReserveSlotForMove(int bagId, int slot); // Prevents more than 1 pcon from trying to add to the same slot at the same time.
 	static bool IsSlotReservedForMove(int bagId, int slot); // Checks whether another pcon has reserved this slot.
+
+	GW::Bag* pending_move_to_bag = nullptr;
+	uint32_t pending_move_to_slot = 0;
+	uint32_t pending_move_to_quantity = 0;
 public:
 	void Initialize();
 	virtual void Draw(IDirect3DDevice9* device);
 	virtual void Update(int delay = -1);
 	// Similar to GW::Items::MoveItem, except this returns amount moved and uses the split stack header when needed.
 	// Most of this logic should be integrated back into GWCA repo, but I've written it here for GWToolbox
-	// If timeout_seconds > 0, this process blocks until item has moved or timeout is hit.
-	static GW::Item* MoveItem(GW::Item *item, GW::Bag *bag, int slot, int quantity = 0, uint32_t timeout_seconds = 0);
+	static uint32_t MoveItem(GW::Item *item, GW::Bag *bag, int slot, int quantity = 0);
 	static GW::Bag* GetBag(uint32_t bag_id);
     wchar_t* SetPlayerName();
 	// Fires off another thread to refill pcons. Sets refill_attempted to TRUE when finished.
     void Refill();
+	void StopRefill();
 	void SetEnabled(bool enabled);
     const bool IsEnabled() { return IsVisible() && *enabled; }
-    const bool IsVisible() { return visible; }
+	virtual bool IsVisible() const;
 	void AfterUsed(bool used, int qty);
 	inline void Toggle() { SetEnabled(!IsEnabled()); }
 	// Resets pcon counters so it needs to recalc number and refill.
@@ -172,6 +177,7 @@ public:
 		: Pcon(chat, abbrev, ini, file, res_id, uv0, uv1, threshold, desc) {}
 
 	bool CanUseByInstanceType() const;
+	bool IsVisible() const override;
 	bool CanUseByEffect() const override;
 	int QuantityForEach(const GW::Item* item) const override;
 };
@@ -196,6 +202,7 @@ public:
 
     bool CanUseByInstanceType() const override { return false; }
     bool CanUseByEffect() const override { return false; }
+	bool IsVisible() const { return visible && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost; }
     void Draw(IDirect3DDevice9* device) override;
     int QuantityForEach(const GW::Item* item) const override { return item->model_id == itemID ? 1 : 0; }
 private:
