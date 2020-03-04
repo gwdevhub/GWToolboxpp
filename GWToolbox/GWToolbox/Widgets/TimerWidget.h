@@ -43,7 +43,7 @@ private:
 	bool GetSpiritTimer();
 
     
-    inline static std::map<GW::Constants::SkillID, char*> spirit_effects{
+    std::map<GW::Constants::SkillID, char*> spirit_effects{
         {GW::Constants::SkillID::Edge_of_Extinction,"EoE"},
         {GW::Constants::SkillID::Quickening_Zephyr,"QZ"},
         {GW::Constants::SkillID::Famine,"Famine"},
