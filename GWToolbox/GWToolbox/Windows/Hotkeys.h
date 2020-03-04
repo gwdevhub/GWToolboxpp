@@ -37,6 +37,8 @@ public:
     bool show_error_on_failure = true; // if hotkey should show error message on failure
     bool ongoing = false; // used for hotkeys that need to execute more than once per toggle.
 	bool block_gw = false; // true to consume the keypress before passing to gw.
+	bool trigger_on_explorable = false; // Trigger when entering explorable area
+	bool trigger_on_outpost = false; // Trigger when entering outpost area
 
     int map_id = 0;
     int prof_id = 0;
@@ -59,9 +61,9 @@ public:
 
 protected:
     
-	inline bool isLoading() const { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading; }
-	inline bool isExplorable() const { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable; }
-	inline bool isOutpost() const { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost; }
+	static bool isLoading() { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading; }
+	static bool isExplorable() { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable; }
+	static bool isOutpost() { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost; }
 
 	const unsigned int ui_id = 0;	// an internal id to ensure interface consistency
 

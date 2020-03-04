@@ -258,10 +258,31 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 	}
 }
 void HotkeysWindow::MapChanged() {
+	static bool map_change_triggered = false;
     GW::AgentLiving* p = GW::Agents::GetPlayerAsAgentLiving();
     if (!p) return;
     map_id = (uint32_t)GW::Map::GetMapID();
     prof_id = p->primary;
+	map_change_triggered = false;
+	GW::Constants::InstanceType mt = GW::Map::GetInstanceType();
+	if (!map_change_triggered && mt != GW::Constants::InstanceType::Loading) {
+		for (TBHotkey* hk : hotkeys) {
+			if (!block_hotkeys && hk->active
+				&& ((hk->trigger_on_explorable && mt == GW::Constants::InstanceType::Explorable)
+					|| (hk->trigger_on_outpost && mt == GW::Constants::InstanceType::Outpost))
+				&& !hk->pressed
+				&& (hk->map_id == 0 || hk->map_id == map_id)
+				&& (hk->prof_id == 0 || hk->prof_id == prof_id)) {
+
+				hk->pressed = true;
+				current_hotkey = hk;
+				hk->Execute();
+				current_hotkey = nullptr;
+				hk->pressed = false;
+			}
+		}
+		map_change_triggered = true;
+	}
 }
 
 void HotkeysWindow::Update(float delta) {

@@ -73,14 +73,18 @@ TBHotkey* TBHotkey::HotkeyFactory(CSimpleIni* ini, const char* section) {
 }
 
 TBHotkey::TBHotkey(CSimpleIni* ini, const char* section) : ui_id(++cur_ui_id) {
-	hotkey = ini ? ini->GetLongValue(section, VAR_NAME(hotkey), modifier) : modifier;
-	modifier = ini ? ini->GetLongValue(section, VAR_NAME(modifier), modifier) : modifier;
-	active = ini ? ini->GetBoolValue(section, VAR_NAME(active), active) : active;
-    map_id = ini ? ini->GetLongValue(section, VAR_NAME(map_id), map_id) : map_id;
-    prof_id = ini ? ini->GetLongValue(section, VAR_NAME(prof_id), prof_id) : prof_id;
-    show_message_in_emote_channel = ini ? ini->GetBoolValue(section, VAR_NAME(show_message_in_emote_channel), show_message_in_emote_channel) : show_message_in_emote_channel;
-    show_error_on_failure = ini ? ini->GetBoolValue(section, VAR_NAME(show_error_on_failure), show_error_on_failure) : show_error_on_failure;
-	block_gw = ini ? ini->GetBoolValue(section, VAR_NAME(block_gw), block_gw) : block_gw;
+	if (ini) {
+		hotkey = ini->GetLongValue(section, VAR_NAME(hotkey), hotkey);
+		modifier = ini->GetLongValue(section, VAR_NAME(modifier), modifier);
+		active = ini->GetBoolValue(section, VAR_NAME(active), active);
+		map_id = ini->GetLongValue(section, VAR_NAME(map_id), map_id);
+		prof_id = ini->GetLongValue(section, VAR_NAME(prof_id), prof_id);
+		show_message_in_emote_channel = ini->GetBoolValue(section, VAR_NAME(show_message_in_emote_channel), show_message_in_emote_channel);
+		show_error_on_failure = ini->GetBoolValue(section, VAR_NAME(show_error_on_failure), show_error_on_failure);
+		block_gw = ini->GetBoolValue(section, VAR_NAME(block_gw), block_gw);
+		trigger_on_explorable = ini->GetBoolValue(section, VAR_NAME(trigger_on_explorable), trigger_on_explorable);
+		trigger_on_outpost = ini->GetBoolValue(section, VAR_NAME(trigger_on_outpost), trigger_on_outpost);
+	}
 }
 void TBHotkey::Save(CSimpleIni* ini, const char* section) const {
 	ini->SetLongValue(section, VAR_NAME(hotkey), hotkey);
@@ -91,6 +95,8 @@ void TBHotkey::Save(CSimpleIni* ini, const char* section) const {
 	ini->SetBoolValue(section, VAR_NAME(block_gw), block_gw);
     ini->SetBoolValue(section, VAR_NAME(show_message_in_emote_channel), show_message_in_emote_channel);
     ini->SetBoolValue(section, VAR_NAME(show_error_on_failure), show_error_on_failure);
+	ini->SetBoolValue(section, VAR_NAME(trigger_on_explorable), trigger_on_explorable);
+	ini->SetBoolValue(section, VAR_NAME(trigger_on_outpost), trigger_on_outpost);
 }
 static const char* professions[] = { "Any",
                 "Warrior",
@@ -164,6 +170,8 @@ void TBHotkey::Draw(Op* op) {
 		// === Hotkey section ===
 		if(ImGui::Checkbox("Block key in Guild Wars when triggered",&block_gw)) hotkeys_changed = true;
 		ImGui::ShowHelp("When triggered, this hotkey will prevent Guild Wars from receiving the keypress event");
+		if (ImGui::Checkbox("Trigger hotkey when entering explorable area", &trigger_on_explorable)) hotkeys_changed = true;
+		if (ImGui::Checkbox("Trigger hotkey when entering outpost", &trigger_on_outpost)) hotkeys_changed = true;
         if (ImGui::InputInt("Map ID", &map_id)) hotkeys_changed = true;
         ImGui::ShowHelp("The hotkey can only trigger in the selected map (0 = Any map)");
         
