@@ -333,7 +333,6 @@ void Pcon::StopRefill() {
 	pending_move_to_bag = 0;
 	pending_move_to_slot = 0;
 	pending_move_to_quantity = 0;
-	Log::Log("Refilled %s", chat);
 }
 void Pcon::Refill() {
 	if (!refilling)
