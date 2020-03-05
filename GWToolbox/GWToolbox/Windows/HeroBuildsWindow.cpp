@@ -290,7 +290,7 @@ void HeroBuildsWindow::View(const TeamHeroBuild& tbuild, unsigned int idx) {
 	t->name = new wchar_t[128];
 	MultiByteToWideChar(CP_UTF8, 0, build_name.c_str(), -1, t->name, 128);
 	GW::GameThread::Enqueue([t] {
-		GW::UI::SendUIMessage(0x10000000 | 0x1B9, t);
+		GW::UI::SendUIMessage(GW::UI::kOpenTemplate, t);
 		delete[] t->code.m_buffer;
 		delete[] t->name;
 		delete t;

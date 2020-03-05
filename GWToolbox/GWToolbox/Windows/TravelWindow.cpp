@@ -269,7 +269,7 @@ void TravelWindow::UITravel(GW::Constants::MapID MapID, GW::Constants::District 
 		return;
 	}
     GW::GameThread::Enqueue([t] {
-        GW::UI::SendUIMessage(0x10000000 | 0x17A, t);
+        GW::UI::SendUIMessage(GW::UI::kTravel, t);
         delete t;
     });
 }
