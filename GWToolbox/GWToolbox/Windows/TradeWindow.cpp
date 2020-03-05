@@ -118,32 +118,11 @@ bool TradeWindow::parse_json_message(json* js, Message* msg) {
 }
 
 void TradeWindow::fetch() {
-	if (!ws_window) 
+	if (!ws_window || ws_window->getReadyState() != WebSocket::OPEN) 
 		return;
+	
 	ws_window->poll();
-	if (ws_window->getReadyState() != WebSocket::OPEN) 
-		return;
-	static clock_t ping_timeout = 5 * CLOCKS_PER_SEC;
-	static clock_t pinged_at = 0;
-	static clock_t stale_interval = 30 * CLOCKS_PER_SEC;
-	static clock_t stale_at = clock() + stale_interval;
-	
-	if (clock() > stale_at) {
-		// Stale connection (no message in last 30s)
-		if (pinged_at < stale_at) {
-			pinged_at = clock();
-			ws_window->send("ping");
-		}
-		if (pinged_at + ping_timeout < clock()) {
-			ws_window->close();
-			return;
-		}
-	}
-	
 	ws_window->dispatch([this](const std::string& data) {
-		stale_at = clock() + stale_interval;
-		if (data == "pong")
-			return;
 		json res;
 		try {
 			res = json::parse(data.c_str());
