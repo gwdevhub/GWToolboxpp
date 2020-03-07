@@ -310,14 +310,14 @@ void FriendListWindow::Initialize() {
 		lf->last_update = clock();
     });
 	// If a friend has just logged in on a character in this map, record their profession.
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::PlayerJoinInstance* pak) {
-		std::wstring player_name(pak->player_name);
-		GW::Player* a = GW::PlayerMgr::GetPlayerByName(player_name.c_str());
+	GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::PlayerJoinInstance* pak) {
+		std::wstring player_name = GuiUtils::SanitizePlayerName(pak->player_name);
+		GW::Player* a = GW::PlayerMgr::GetPlayerByName(pak->player_name);
 		if (!a || !a->primary) return;
 		uint8_t profession = a->primary;
-		Friend* f = GetFriend(player_name.c_str());
+		Friend* f = GetFriend(&player_name[0]);
 		if (!f) return;
-		Character* fc = f->GetCharacter(player_name.c_str());
+		Character* fc = f->GetCharacter(&player_name[0]);
 		if (!fc) return;
 		if (profession > 0 && profession < 11)
 			fc->profession = profession;

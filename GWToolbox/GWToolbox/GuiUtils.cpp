@@ -172,7 +172,7 @@ std::wstring GuiUtils::StringToWString(const std::string& str)
 }
 std::wstring GuiUtils::SanitizePlayerName(std::wstring s) {
 	if (s.empty()) return L"";
-	std::wregex remove(L" ?[\\(\\[]\\w+[\\)\\]]");
+	static std::wregex remove(L" ?[\\(\\[]\\w+[\\)\\]]");
 	s = std::regex_replace(s, remove, L""); 
 	return s;
 }
