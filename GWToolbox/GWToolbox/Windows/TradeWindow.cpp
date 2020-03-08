@@ -131,52 +131,12 @@ void TradeWindow::fetch() {
 			Log::Log("ERROR: Failed to parse res JSON from response in ws_window->dispatch\n");
 			return;
 		}
-		if (res.find("query") == res.end()) {
-			// It's a new message
-			TradeWindow::Message msg;
-			if (parse_json_message(&res, &msg))
-				messages.add(msg);
-
-			// Check alerts
-			// do not display trade chat while in kamadan AE district 1
-			bool print_message = print_game_chat && !GetInKamadanAE1();
-
-			if (print_message && filter_alerts) {
-				std::regex word_regex;
-				std::smatch m;
-				static const std::regex regex_check = std::regex("^/(.*)/[a-z]?$", std::regex::ECMAScript | std::regex::icase);
-				print_message = false; // filtered unless allowed by words
-				for (auto& word : alert_words) {
-					if (std::regex_search(word, m, regex_check)) {
-						try {
-							word_regex = std::regex(m._At(1).str(), std::regex::ECMAScript | std::regex::icase);
-						}
-						catch (...) {
-							// Silent fail; invalid regex
-						}
-						if (std::regex_search(msg.message, word_regex))
-							print_message = true;
-					}
-					else {
-						auto found = std::search(msg.message.begin(), msg.message.end(), word.begin(), word.end(), [](char c1, char c2) -> bool {
-							return tolower(c1) == c2;
-							});
-						if (found != msg.message.end())
-							print_message = true;
-					}
-				}
-			}
-
-			if (print_message) {
-				char buffer[512];
-				snprintf(buffer, sizeof(buffer), "<a=1>%s</a>: <c=#f96677><quote>%s", msg.name.c_str(), msg.message.c_str());
-				GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, buffer);
-			}
-		} else {
+		if (res.find("query") != res.end()) {
+			// Search results
 			search_pending = false;
 			json_vec results;
 			try {
-				if(res["num_results"].get<uint32_t>() > 0)
+				if (res["num_results"].get<uint32_t>() > 0)
 					results = res["results"].get<json_vec>();
 			}
 			catch (...) {
@@ -189,6 +149,62 @@ void TradeWindow::fetch() {
 				if (parse_json_message(&results[i], &msg))
 					messages.add(msg);
 			}
+			return;
+		}
+		// Add to message feed
+		TradeWindow::Message msg;
+		if (!parse_json_message(&res, &msg))
+			return; // Not valid message object
+		bool add_to_window = searched_words.empty();
+		if (!add_to_window) {
+			// Currently showing a search term in-window. Only add if it matches all words.
+			add_to_window = true;
+			std::string input(msg.message);
+			std::transform(input.begin(), input.end(), input.begin(), ::tolower);
+			for (auto term : searched_words) {
+				if (input.find(term) != std::string::npos)
+					continue; // Searched word no found; drop out
+				add_to_window = false;
+				break;
+			}
+		}
+		if(add_to_window)
+			messages.add(msg);
+
+		// Check alerts
+		// do not display trade chat while in kamadan AE district 1
+		bool print_message = print_game_chat && !GetInKamadanAE1();
+
+		if (print_message && filter_alerts) {
+			std::regex word_regex;
+			std::smatch m;
+			static const std::regex regex_check = std::regex("^/(.*)/[a-z]?$", std::regex::ECMAScript | std::regex::icase);
+			print_message = false; // filtered unless allowed by words
+			for (auto& word : alert_words) {
+				if (std::regex_search(word, m, regex_check)) {
+					try {
+						word_regex = std::regex(m._At(1).str(), std::regex::ECMAScript | std::regex::icase);
+					}
+					catch (...) {
+						// Silent fail; invalid regex
+					}
+					if (std::regex_search(msg.message, word_regex))
+						print_message = true;
+				}
+				else {
+					auto found = std::search(msg.message.begin(), msg.message.end(), word.begin(), word.end(), [](char c1, char c2) -> bool {
+						return tolower(c1) == c2;
+						});
+					if (found != msg.message.end())
+						print_message = true;
+				}
+			}
+		}
+
+		if (print_message) {
+			char buffer[512];
+			snprintf(buffer, sizeof(buffer), "<a=1>%s</a>: <c=#f96677><quote>%s", msg.name.c_str(), msg.message.c_str());
+			GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, buffer);
 		}
 	});
 }
@@ -200,19 +216,12 @@ void TradeWindow::search(std::string query) {
 	// for now we won't allow to enqueue more than 1 search, it shouldn't change anything because how fast we get the answers
 	if (search_pending)
 		return;
-
 	search_pending = true;
 
-	/*
-	 * The protocol is the following:
-	 *  - From a connected web socket, we send a Json formated packet with the format
-	 *  {
-	 *   "query":  str($query$),
-	 *   "offset": int($page$),
-	 *   "sugest": int(1 or 2)
-	 *  }
-	 */
+	// Fill searched_words; query to lower to ease on-the-fly search in ::fetch
+	ParseBuffer(query.c_str(), searched_words);
 
+	// Send request
 	json request;
 	request["query"] = query;
 	ws_window->send(request.dump());

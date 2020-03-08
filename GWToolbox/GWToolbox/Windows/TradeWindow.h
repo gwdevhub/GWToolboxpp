@@ -56,6 +56,7 @@ private:
 	bool alertfile_dirty = false;
 
 	std::vector<std::string> alert_words;
+	std::vector<std::string> searched_words;
 
 	void DrawAlertsWindowContent(bool ownwindow);
 
