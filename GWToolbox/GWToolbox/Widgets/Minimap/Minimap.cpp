@@ -566,7 +566,7 @@ void Minimap::SelectTarget(GW::Vec2f pos) {
 		GW::AgentLiving* living = agent->GetAsAgentLiving();
 		if (living && living->GetIsDead()) continue;
 		if (agent->GetIsItemType()) continue;
-		if (agent->GetIsGadgetType() && agent->GetAsAgentGadget()->extra_type != 8141) continue; // allow locked chests
+		if (agent->GetIsGadgetType() && agent->GetAsAgentGadget()->gadget_id != 8141) continue; // allow locked chests
 		if (living && (living->player_number >= 230 && living->player_number <= 346)) continue; // block all useless minis
 		float newDistance = GW::GetSquareDistance(pos, agents[i]->pos);
 		if (distance > newDistance) {

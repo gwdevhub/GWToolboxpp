@@ -238,6 +238,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			GW::Agent* target = GW::Agents::GetTarget();
 			GW::AgentLiving* target_living = target ? target->GetAsAgentLiving() : nullptr;
 			GW::AgentItem* target_item = target ? target->GetAsAgentItem() : nullptr;
+			GW::AgentGadget* target_gadget = target ? target->GetAsAgentGadget() : nullptr;
 			if (target) {
 				snprintf(x_buf, 32, "%.2f", target->pos.x);
 				snprintf(y_buf, 32, "%.2f", target->pos.y);
@@ -304,6 +305,10 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 						ImGui::LabelText("Owner", "%d", target_item->owner);
 						ImGui::LabelText("ItemId", "%d", target_item->item_id);
 						ImGui::LabelText("ExtraType", "%d", target_item->extra_type);
+					}
+					if (target_gadget) {
+						ImGui::LabelText("Gadget ID", "%d", target_gadget->gadget_id);
+						ImGui::LabelText("ExtraType", "%d", target_gadget->extra_type);
 					}
 					if (target_living) {
 						ImGui::LabelText("AS of Weapon", "%f", target_living->weapon_attack_speed);
