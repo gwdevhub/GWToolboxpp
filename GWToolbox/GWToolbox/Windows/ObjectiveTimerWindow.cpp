@@ -26,7 +26,7 @@
 
 #include <Modules\Resources.h>
 #include "logger.h"
-
+#include <time.h>
 
 #define countof(arr) (sizeof(arr) / sizeof(arr[0]))
 
@@ -150,33 +150,27 @@ void ObjectiveTimerWindow::Initialize() {
                 return false; // Already done!?
             obj->SetDone();
             // Cycle through all previous objectives and flag as done
-            ObjectiveSet* os = objective_sets.back();
-            for (Objective& objective : os->objectives) {
+            for (Objective& objective : current_objective_set->objectives) {
                 objective.SetDone();
             }
-			os->CheckSetDone();
+            current_objective_set->CheckSetDone();
             return false;
         });
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry,
-		[this](GW::HookStatus* status, GW::Packet::StoC::DisplayDialogue* packet) -> bool {
+		[this](GW::HookStatus* status, GW::Packet::StoC::DisplayDialogue* packet) -> void {
 			DisplayDialogue(packet);
-			return false;
 		});
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyDefeated>(&PartyDefeated_Entry,
-        [this](GW::HookStatus* status, GW::Packet::StoC::PartyDefeated* packet) -> bool {
-            if (!objective_sets.empty()) {
-                ObjectiveSet* os = objective_sets.back();
-                os->StopObjectives();
-            }
-            return false;
+        [this](GW::HookStatus* status, GW::Packet::StoC::PartyDefeated* packet) -> void {
+            if (current_objective_set)
+                current_objective_set->StopObjectives();
         });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry,
     [this](GW::HookStatus *, GW::Packet::StoC::GameSrvTransfer *packet) -> void {
-        if (!objective_sets.empty()) {
-            ObjectiveSet *os = objective_sets.back();
-            os->StopObjectives();
-        }
+        if (current_objective_set)
+            current_objective_set->StopObjectives();
+        current_objective_set = nullptr;
     });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry, 
         [this](GW::HookStatus* status, GW::Packet::StoC::InstanceLoadFile* packet) -> bool {
@@ -240,7 +234,7 @@ void ObjectiveTimerWindow::Initialize() {
 		Objective *obj = GetCurrentObjective(packet->objective_id);
         if (obj) {
             obj->SetDone();
-            objective_sets.back()->CheckSetDone();
+            objective_sets.rbegin()->second->CheckSetDone();
         }
 	});
 
@@ -266,7 +260,7 @@ void ObjectiveTimerWindow::Initialize() {
 
 		uint32_t id = packet->message[1];
 		Objective *obj = GetCurrentObjective(id);
-		ObjectiveSet *os = objective_sets.back();
+        ObjectiveSet* os = objective_sets.rbegin()->second;
 
         if (obj) {
             obj->SetDone();
@@ -281,8 +275,12 @@ void ObjectiveTimerWindow::Initialize() {
 void ObjectiveTimerWindow::ObjectiveSet::StopObjectives() {
     active = false;
 	for (Objective& obj : objectives) {
-        if (obj.status == Objective::Started) {
+        switch (obj.status) {
+        case Objective::Started:
+        case Objective::Failed:
             obj.status = Objective::Failed;
+            failed = true;
+            break;
         }
 	}
 }
@@ -317,7 +315,7 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn) {
     }
 
     os->objectives.front().SetStarted();
-    objective_sets.push_back(os);
+    AddObjectiveSet(os);
 }
 void ObjectiveTimerWindow::AddUrgozObjectiveSet() {
     // Zone 1, Weakness = already open on start
@@ -349,7 +347,7 @@ void ObjectiveTimerWindow::AddUrgozObjectiveSet() {
     os->objectives.emplace_back(15529, "Zone 11 | Urgoz");
     // 45631 53071 are the object_ids for the left and right urgoz doors
     os->objectives.front().SetStarted();
-    objective_sets.push_back(os);
+    AddObjectiveSet(os);
 	monitor_doors = true;
 }
 void ObjectiveTimerWindow::AddDeepObjectiveSet() {
@@ -373,7 +371,7 @@ void ObjectiveTimerWindow::AddDeepObjectiveSet() {
     // 13 and 14 together because theres no boundary between
 	os->objectives.emplace_back(RoomID::Deep_room_13, "Room 13-14 | Decay/Torment"); // Trigger on dialog
     os->objectives.emplace_back(RoomID::Deep_room_15, "Room 15 | Kanaxai");
-    objective_sets.push_back(os);
+    AddObjectiveSet(os);
 	monitor_doors = true;
 }
 void ObjectiveTimerWindow::DoorClosed(uint32_t door_id) {
@@ -436,7 +434,7 @@ void ObjectiveTimerWindow::DoorOpened(uint32_t door_id) {
 	obj->SetStarted();
 	if (!tick_all_preceeding_objectives)
 		return;
-	ObjectiveSet* os = objective_sets.back();
+    ObjectiveSet* os = objective_sets.rbegin()->second;
 	for (Objective& objective : os->objectives) {
 		if (objective.id == objective_to_start)
 			break;
@@ -457,7 +455,16 @@ void ObjectiveTimerWindow::AddFoWObjectiveSet() {
 	os->objectives.emplace_back(317, "ToS");
 	os->objectives.emplace_back(318, "Burning Forest");
 	os->objectives.emplace_back(319, "The Hunt");
-	objective_sets.push_back(os);
+    AddObjectiveSet(os);
+}
+void ObjectiveTimerWindow::AddObjectiveSet(ObjectiveSet* os) {
+    for (auto cos : objective_sets) {
+        cos.second->StopObjectives();
+        cos.second->need_to_collapse = true;
+    }
+    objective_sets.emplace(os->system_time, os);
+    if(os->active)
+        current_objective_set = os;
 }
 void ObjectiveTimerWindow::AddUWObjectiveSet() {
 	ObjectiveSet *os = new ObjectiveSet;
@@ -473,7 +480,7 @@ void ObjectiveTimerWindow::AddUWObjectiveSet() {
 	os->objectives.emplace_back(154, "Mnts");
 	os->objectives.emplace_back(155, "Pools");
 	os->objectives.emplace_back(157, "Dhuum");
-	objective_sets.push_back(os);
+    AddObjectiveSet(os);
 }
 void ObjectiveTimerWindow::DisplayDialogue(GW::Packet::StoC::DisplayDialogue* packet) {
 	uint32_t objective_id = 0; // Which objective has just been STARTED?
@@ -495,17 +502,15 @@ void ObjectiveTimerWindow::DisplayDialogue(GW::Packet::StoC::DisplayDialogue* pa
 	if (!obj || obj->IsStarted())
 		return; // Already started
 	obj->SetStarted();
-	ObjectiveSet* os = objective_sets.back();
-	for (Objective& objective : os->objectives) {
+	for (Objective& objective : current_objective_set->objectives) {
 		if (objective.id == objective_id)
 			break;
 		objective.SetDone();
 	}
 }
-
 void ObjectiveTimerWindow::Update(float delta) {
-    if (!objective_sets.empty() && objective_sets.back()->active) {
-        objective_sets.back()->Update();
+    if (current_objective_set && current_objective_set->active) {
+        current_objective_set->Update();
     }
 }
 void ObjectiveTimerWindow::Draw(IDirect3DDevice9* pDevice) {
@@ -518,8 +523,10 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9* pDevice) {
 				ImGui::Text("Enter DoA, FoW, UW, Deep or Urgoz to begin");
 			}
 			else {
+                ImGuiWindow* window = ImGui::GetCurrentWindow();
+                ImGuiStorage* storage = window->DC.StateStorage;
 				for (auto& it = objective_sets.rbegin(); it != objective_sets.rend(); it++) {
-					bool show = (*it)->Draw();
+					bool show = (*it).second->Draw();
 					if (!show) {
 						objective_sets.erase(--(it.base()));
 						break;
@@ -533,32 +540,28 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9* pDevice) {
 	}
 
 	// Breakout objective set for current run
-	if (show_current_run_window) {
-		ObjectiveSet* o = GetCurrentObjectiveSet();
-		if (o) {
-			ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-			ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
-			char buf[256];
-			sprintf(buf, "%s - %s###ObjectiveTimerCurrentRun", o->name, o->cached_time ? o->cached_time : "--:--");
+	if (show_current_run_window && current_objective_set) {
+		ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
+		ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
+		char buf[256];
+		sprintf(buf, "%s - %s###ObjectiveTimerCurrentRun", current_objective_set->name, current_objective_set->cached_time ? current_objective_set->cached_time : "--:--");
 			
-			if (ImGui::Begin(buf, &show_current_run_window, GetWinFlags())) {
-				ImGui::PushID(o->ui_id);
-				for (Objective& objective : o->objectives) {
-					objective.Draw();
-				}
-				ImGui::PopID();
+		if (ImGui::Begin(buf, &show_current_run_window, GetWinFlags())) {
+			ImGui::PushID(current_objective_set->ui_id);
+			for (Objective& objective : current_objective_set->objectives) {
+				objective.Draw();
 			}
-			
-			ImGui::End();
+			ImGui::PopID();
 		}
+			
+		ImGui::End();
 	}
 }
 
 ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::GetCurrentObjectiveSet() {
 	if (objective_sets.empty()) return nullptr;
-	ObjectiveTimerWindow::ObjectiveSet* o = objective_sets.back();
-	if (!o || !o->active) return nullptr;
-	return o;
+	if (!current_objective_set || !current_objective_set->active) return nullptr;
+	return current_objective_set;
 }
 
 ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::GetCurrentObjective(uint32_t obj_id) {
@@ -592,8 +595,26 @@ void ObjectiveTimerWindow::LoadSettings(CSimpleIni* ini) {
 	show_current_run_window = ini->GetBoolValue(Name(), VAR_NAME(show_current_run_window), show_current_run_window);
 	auto_send_age = ini->GetBoolValue(Name(), VAR_NAME(auto_send_age), auto_send_age);
     ComputeNColumns();
+    ClearObjectiveSets();
+    try {
+        std::ifstream file;
+        file.open(Resources::GetPath(L"ObjectiveTimerRuns.json"));
+        if (file.is_open()) {
+            nlohmann::json os_json_arr;
+            file >> os_json_arr;
+            for (nlohmann::json::iterator it = os_json_arr.begin(); it != os_json_arr.end(); ++it) {
+                ObjectiveSet* os = ObjectiveSet::FromJson(&it.value());
+                os->StopObjectives();
+                os->need_to_collapse = true;
+                objective_sets.emplace(os->system_time, os);
+            }
+            file.close();
+        }
+    }
+    catch (...) {
+        Log::Error("Failed to load ObjectiveSets from json");
+    }
 }
-
 void ObjectiveTimerWindow::SaveSettings(CSimpleIni* ini) {
 	ToolboxWindow::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(show_decimal), show_decimal);
@@ -602,6 +623,28 @@ void ObjectiveTimerWindow::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(show_time_column), show_time_column);
 	ini->SetBoolValue(Name(), VAR_NAME(show_current_run_window), show_current_run_window);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_send_age), auto_send_age);
+
+    try {
+        std::ofstream file;
+        file.open(Resources::GetPath(L"ObjectiveTimerRuns.json"));
+        if (file.is_open()) {
+            nlohmann::json os_json_arr;
+            for (auto os : objective_sets) {
+                os_json_arr.push_back(os.second->ToJson());
+            }
+            file << os_json_arr << std::endl;
+            file.close();
+        }
+    }
+    catch (...) {
+        Log::Error("Failed to save ObjectiveSets to json");
+    }
+}
+void ObjectiveTimerWindow::ClearObjectiveSets() {
+    for (auto os : objective_sets) {
+        delete os.second;
+    }
+    objective_sets.clear();
 }
 
 ObjectiveTimerWindow::Objective::Objective(uint32_t _id, const char* _name) {
@@ -723,8 +766,7 @@ void ObjectiveTimerWindow::ObjectiveSet::Update() {
     if (!active) return;
 
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
-        time = GW::Map::GetInstanceTime();
-        ::PrintTime(cached_time, sizeof(cached_time), time, false);
+        instance_time = GW::Map::GetInstanceTime();
     }
 
     for (Objective& obj : objectives) {
@@ -747,23 +789,88 @@ void ObjectiveTimerWindow::ObjectiveSet::CheckSetDone() {
 }
 
 ObjectiveTimerWindow::ObjectiveSet::ObjectiveSet() : ui_id(cur_ui_id++) {
-	GetLocalTime(&system_time);
+    system_time = static_cast<DWORD>(time(NULL));
 }
 
+ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::ObjectiveSet::FromJson(nlohmann::json* json) {
+    ObjectiveSet* os = new ObjectiveSet;
+    os->active = false;
+    os->system_time = json->at("utc_start").get<DWORD>();
+    std::string name = json->at("name").get<std::string>();
+    snprintf(os->name, sizeof(os->name), "%s", name.c_str());
+    os->instance_time = json->at("instance_start").get<DWORD>();
+    nlohmann::json json_objs = json->at("objectives");
+    for (nlohmann::json::iterator it = json_objs.begin(); it != json_objs.end(); ++it) {
+        nlohmann::json o = it.value();
+        name = o.at("name").get<std::string>();
+        Objective obj(o.at("id").get<DWORD>(),name.c_str());
+        obj.status = o.at("status").get<Objective::Status>();
+        obj.start = o.at("start").get<DWORD>();
+        obj.duration = o.at("duration").get<DWORD>();
+        switch (obj.status) {
+        case Objective::Status::Completed:
+        case Objective::Status::Failed:
+            obj.done = 1;
+            break;
+        }
+        os->objectives.emplace_back(obj);
+    }
+    os->StopObjectives();
+    return os;
+}
+nlohmann::json ObjectiveTimerWindow::ObjectiveSet::ToJson() {
+    nlohmann::json json;
+    json["name"] = name;
+    json["instance_start"] = instance_time;
+    json["utc_start"] = system_time;
+    nlohmann::json json_objectives;
+    for (auto o : objectives) {
+        nlohmann::json obj_json;
+        obj_json["id"] = o.id;
+        obj_json["name"] = o.name;
+        obj_json["status"] = o.status;
+        obj_json["start"] = o.start;
+        obj_json["done"] = o.done;
+        obj_json["duration"] = o.duration;
+        json_objectives.push_back(obj_json);
+    }
+    json["objectives"] = json_objectives;
+    return json;
+}
 bool ObjectiveTimerWindow::ObjectiveSet::Draw() {
     char buf[256];
-    sprintf(buf, "%s - %s###header%d", name, cached_time ? cached_time : "--:--", ui_id);
+    if (!cached_start[0]) {
+        time_t ts = (time_t)system_time;
+        struct tm timeinfo;
+        memcpy(&timeinfo,localtime(&ts),sizeof(timeinfo));
+        time_t now = time(NULL);
+        struct tm* nowinfo = localtime(&now);
+        int cached_str_offset = 0;
+        if (timeinfo.tm_yday != nowinfo->tm_yday || timeinfo.tm_year != nowinfo->tm_year || true) {
+            char* months[] = { "Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec" };
+            cached_str_offset += snprintf(&cached_start[cached_str_offset], sizeof(cached_start) - cached_str_offset, "%s %02d, ", months[timeinfo.tm_mon], timeinfo.tm_mday);
+        }
+        snprintf(&cached_start[cached_str_offset], sizeof(cached_start) - cached_str_offset, "%02d:%02d", timeinfo.tm_hour, timeinfo.tm_min);
+    }
+    if (!cached_time[0] && instance_time)
+        ::PrintTime(cached_time, sizeof(cached_time), instance_time, false);
 
-    bool is_open = true;
+    sprintf(buf, "%s - %s - %s%s###header%d", cached_start, name, cached_time ? cached_time : "--:--", failed ? " [Failed]" : "", ui_id);
+
     const auto& style = ImGui::GetStyle();
     float offset = 0;
     float ts_width = GetTimestampWidth();
+    bool is_open;
     if (ImGui::CollapsingHeader(buf, &is_open, ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::PushID(ui_id);
         for (Objective& objective : objectives) {
             objective.Draw();
         }
-		ImGui::PopID();
-	}
+        ImGui::PopID();
+    }
+    if (need_to_collapse) {
+        ImGui::GetCurrentWindow()->DC.StateStorage->SetInt(ImGui::GetID(buf), 0);
+        need_to_collapse = false;
+    }
     return is_open;
 }

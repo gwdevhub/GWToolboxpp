@@ -6,11 +6,15 @@
 #include <GWCA\GameContainers\GamePos.h>
 #include <GWCA\Packets\StoC.h>
 
+#include <json.hpp>
+
 #include "ToolboxWindow.h"
 
 class ObjectiveTimerWindow : public ToolboxWindow {
     ObjectiveTimerWindow() {};
-	~ObjectiveTimerWindow() {};
+	~ObjectiveTimerWindow() {
+        ClearObjectiveSets();
+    };
 public:
 	static ObjectiveTimerWindow& Instance() {
 		static ObjectiveTimerWindow instance;
@@ -83,18 +87,22 @@ private:
     public:
         ObjectiveSet();
 
-		SYSTEMTIME system_time;
-        DWORD time = -1;
+        DWORD system_time;
+        DWORD instance_time = -1;
         char cached_time[16] = { 0 };
+        char cached_start[16] = { 0 };
 
         bool active = true;
+        bool failed = false;
+        bool need_to_collapse = false;
         char name[256] = { 0 };
         std::vector<Objective> objectives;
 
         void CheckSetDone();
         bool Draw(); // returns false when should be deleted
 		void StopObjectives();
-
+        static ObjectiveSet* FromJson(nlohmann::json* json);
+        nlohmann::json ToJson();
         void Update();
         // todo: print to file
 		// an internal id to ensure interface consistency
@@ -104,7 +112,7 @@ private:
         static unsigned int cur_ui_id;
     };
 
-    std::vector<ObjectiveSet *> objective_sets;
+    std::map<DWORD, ObjectiveSet *> objective_sets;
 
     Objective* GetCurrentObjective(uint32_t obj_id);
 	ObjectiveSet* GetCurrentObjectiveSet();
@@ -112,15 +120,18 @@ private:
 	bool show_current_run_window = false;
 	bool clear_cached_times = false;
 	bool auto_send_age = false;
+    ObjectiveSet* current_objective_set = nullptr;
 
     void AddDoAObjectiveSet(GW::Vec2f spawn);
     void AddFoWObjectiveSet();
     void AddUWObjectiveSet();
+    void AddObjectiveSet(ObjectiveSet* os);
 	void DoorOpened(uint32_t door_id);
 	void DoorClosed(uint32_t door_id);
 	void DisplayDialogue(GW::Packet::StoC::DisplayDialogue* packet);
     void AddDeepObjectiveSet();
     void AddUrgozObjectiveSet();
+    void ClearObjectiveSets();
 
     GW::HookEntry PartyDefeated_Entry;
     GW::HookEntry GameSrvTransfer_Entry;
