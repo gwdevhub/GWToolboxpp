@@ -87,35 +87,51 @@ void AlcoholWidget::Draw(IDirect3DDevice9* pDevice) {
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
 	ImGui::SetNextWindowSize(ImVec2(200.0f, 90.0f), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, true))) {
-		static char timer[32];
-		ImVec2 cur;
-		long t = 0;
+		if (alcohol_level || !only_show_when_drunk) {
+			static char timer[32];
+			ImVec2 cur;
+			long t = 0;
 
-		if (alcohol_level) {
-			t = (long)((int)last_alcohol + ((int)alcohol_time)) - (long)time(NULL);
+			if (alcohol_level) {
+				t = (long)((int)last_alcohol + ((int)alcohol_time)) - (long)time(NULL);
+			}
+			else if (only_show_when_drunk) {
+				return;
+			}
+			snprintf(timer, 32, "%1ld:%02ld", (t / 60) % 60, t % 60);
+
+			ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f20));
+			cur = ImGui::GetCursorPos();
+			ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
+			ImGui::TextColored(ImColor(0, 0, 0), "Alcohol");
+			ImGui::SetCursorPos(cur);
+			ImGui::Text("Alcohol");
+			ImGui::PopFont();
+
+			ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f48));
+			cur = ImGui::GetCursorPos();
+			ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
+			ImGui::TextColored(ImColor(0, 0, 0), timer);
+			ImGui::SetCursorPos(cur);
+			ImGui::Text(timer);
+			ImGui::PopFont();
 		}
-		snprintf(timer, 32, "%1ld:%02ld", (t / 60) % 60, t % 60);
-
-		ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f20));
-		cur = ImGui::GetCursorPos();
-		ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
-		ImGui::TextColored(ImColor(0, 0, 0), "Alcohol");
-		ImGui::SetCursorPos(cur);
-		ImGui::Text("Alcohol");
-		ImGui::PopFont();
-
-		ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f48));
-		cur = ImGui::GetCursorPos();
-		ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
-		ImGui::TextColored(ImColor(0, 0, 0), timer);
-		ImGui::SetCursorPos(cur);
-		ImGui::Text(timer);
-		ImGui::PopFont();
 	}
 	ImGui::End();
 	ImGui::PopStyleColor();
 }
 
 void AlcoholWidget::DrawSettingInternal() {
+	ImGui::Checkbox("Only show when drunk", &only_show_when_drunk);
+	ImGui::ShowHelp("Hides widget when not using alcohol");
 	ImGui::Text("Note: only visible in explorable areas.");
+}
+void AlcoholWidget::LoadSettings(CSimpleIni* ini) {
+	ToolboxWidget::LoadSettings(ini);
+	only_show_when_drunk = ini->GetBoolValue(Name(), VAR_NAME(only_show_when_drunk), only_show_when_drunk);
+}
+
+void AlcoholWidget::SaveSettings(CSimpleIni* ini) {
+	ToolboxWidget::SaveSettings(ini);
+	ini->SetBoolValue(Name(), VAR_NAME(only_show_when_drunk), only_show_when_drunk);
 }

@@ -15,6 +15,7 @@ private:
 	DWORD alcohol_level = 0;
 	time_t last_alcohol = 0;
 	long alcohol_time = 0;
+	bool only_show_when_drunk = false;
 	long GetAlcoholTitlePointsGained(); // Returns amount of alcohol points gained since last check (or map load)
 	long prev_alcohol_title_points = 0; // Used in GetAlcoholTitlePointsGained
 	GW::Constants::MapID map_id;
@@ -31,6 +32,8 @@ public:
 	void Initialize() override;
 	void Update(float delta) override;
 	DWORD GetAlcoholLevel();
+	void LoadSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) override;
 	long GetAlcoholTitlePoints(); // Gets current alcohol title points.
 	void AlcUpdate(GW::Packet::StoC::PostProcess *packet);
 

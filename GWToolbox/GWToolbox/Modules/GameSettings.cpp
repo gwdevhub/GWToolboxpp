@@ -321,119 +321,6 @@ namespace {
 		}
 	}
 
-	// This whole section is commented because packets are not up to date after the update. 
-	// Should still work if you match the right packets.
-
-#ifdef APRIL_FOOLS
-	namespace AF {
-		using namespace GW::Packet::StoC;
-		void CreateXunlaiAgentFromGameThread(void) {
-			{
-				NpcGeneralStats packet;
-				packet.header = NpcGeneralStats::STATIC_HEADER;
-				packet.npc_id = 221;
-				packet.file_id = 0x0001c601;
-				packet.data1 = 0;
-				packet.scale = 0x64000000;
-				packet.data2 = 0;
-				packet.flags = 0x0000020c;
-				packet.profession = 3;
-				packet.level = 15;
-				wcsncpy(packet.name, L"\x8101\x1f4e\xd020\x87c8\x35a8\x0000", 8);
-
-				GW::StoC::EmulatePacket((GW::Packet::StoC::PacketBase *)&packet);
-			}
-
-			{
-				NPCModelFile packet;
-				packet.header = NPCModelFile::STATIC_HEADER;
-				packet.npc_id = 221;
-				packet.count = 1;
-				packet.data[0] = 0x0001fc56;
-
-				GW::StoC::EmulatePacket((GW::Packet::StoC::PacketBase *)&packet);
-			}
-		}
-
-		void ApplySkinSafe(GW::Agent *agent, DWORD npc_id) {
-			if (!agent) return;
-
-			GW::GameContext *game_ctx = GW::GameContext::instance();
-			if (game_ctx && game_ctx->character && game_ctx->character->is_explorable)
-				return;
-
-			GW::NPCArray &npcs = GW::GameContext::instance()->world->npcs;
-			if (!npcs.valid() || npc_id >= npcs.size() || npcs[npc_id].ModelFileID == 0) {
-				GW::GameThread::Enqueue([]() {
-					CreateXunlaiAgentFromGameThread();
-				});
-			}
-
-			GW::GameThread::Enqueue([npc_id, agent]() {
-				if (!agent->IsPlayer()) return;
-
-				GW::Array<GW::AgentMovement *> &movements = GW::GameContext::instance()->agent->agentmovement;
-				if (agent->Id >= movements.size()) return;
-				auto movement = movements[agent->Id];
-				if (!movement) return;
-				if (movement->h001C != 1) return;
-
-				AgentModel packet;
-				packet.header = AgentModel::STATIC_HEADER;
-				packet.agent_id = agent->Id;
-				packet.model_id = npc_id;
-				GW::StoC::EmulatePacket((GW::Packet::StoC::PacketBase *)&packet);
-			});
-		}
-		bool IsItTime() {
-			time_t t = time(nullptr);
-			tm* utc_tm = gmtime(&t);
-			int hour = utc_tm->tm_hour; // 0-23 range
-			int day = utc_tm->tm_mday; // 1-31 range
-			int month = utc_tm->tm_mon; // 0-11 range
-			const int target_month = 3;
-			const int target_day = 1;
-			if (month != target_month) return false;
-			return (day == target_day && hour >= 7) || (day == target_day + 1 && hour < 7);
-		}
-		void ApplyPatches() {
-			// apply skin on agent spawn
-			GW::StoC::AddCallback<DisplayCape>(
-				[](GW::HookStatus *status, DisplayCape *packet) -> void {
-				DWORD agent_id = packet->agent_id;
-				GW::Agent *agent = GW::Agents::GetAgentByID(agent_id);
-				ApplySkinSafe(agent, 221);
-			});
-
-			// override tonic usage
-			GW::StoC::AddCallback<AgentModel>(
-				[](GW::HookStatus *status, AgentModel *packet) -> void {
-				GW::Agent *agent = GW::Agents::GetAgentByID(packet->agent_id);
-				if (!(agent && agent->IsPlayer())) return;
-				GW::GameContext *game_ctx = GW::GameContext::instance();
-				if (game_ctx && game_ctx->character && game_ctx->character->is_explorable) return false;
-				status->blocked = true;
-			});
-
-			// This apply when you start to everyone in the map
-			GW::GameContext *game_ctx = GW::GameContext::instance();
-			if (game_ctx && game_ctx->character && !game_ctx->character->is_explorable) {
-				GW::AgentArray &agents = GW::Agents::GetAgentArray();
-				for (auto agent : agents) {
-					ApplySkinSafe(agent, 221);
-				}
-			}
-		}
-		void ApplyPatchesIfItsTime() {
-			static bool appliedpatches = false;
-			if (!appliedpatches && IsItTime()) {
-				ApplyPatches();
-				appliedpatches = true;
-			}
-		}
-	} 
-#endif // APRIL_FOOLS
-
     // used by chat colors grid
     float chat_colors_grid_x[] = { 0, 100, 160, 240 };
 
@@ -765,6 +652,7 @@ void GameSettings::PingItem(GW::Item* item, uint32_t parts) {
 		printf("Pinged item:\n");
 		StringDecoderWindow::PrintEncStr(out.c_str());
 	#endif
+
 	PendingChatMessage* m = PendingChatMessage::queueSend(GW::Chat::Channel::CHANNEL_GROUP, out.c_str(), p->name_enc);
 	if (m) GameSettings::Instance().pending_messages.push_back(m);
 }
