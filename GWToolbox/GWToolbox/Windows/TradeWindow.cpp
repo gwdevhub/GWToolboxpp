@@ -13,6 +13,7 @@
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\GameThreadMgr.h>
+#include <GWCA\Managers\MemoryMgr.h>
 
 #include <Modules\Resources.h>
 
@@ -202,8 +203,10 @@ void TradeWindow::fetch() {
 		}
 
 		if (print_message) {
-			char buffer[512];
-			snprintf(buffer, sizeof(buffer), "<a=1>%s</a>: <c=#f96677><quote>%s", msg.name.c_str(), msg.message.c_str());
+			wchar_t buffer[512];
+			std::wstring name_ws = GuiUtils::ToWstr(msg.name);
+			std::wstring msg_ws = GuiUtils::ToWstr(msg.message);
+			swprintf(buffer, sizeof(buffer), L"<a=1>%s</a>: <c=#f96677><quote>%s", name_ws.c_str(), msg_ws.c_str());
 			GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, buffer);
 		}
 	});
