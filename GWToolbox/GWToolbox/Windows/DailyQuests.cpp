@@ -49,45 +49,8 @@ bool subscriptions_changed = false;
 
 const char* DateString(time_t* unix) {
     std::tm* now = std::localtime(unix);
-        
-    char* dow = "Sun";
-    char* suf = "th";
-    char* mon = "Jan";
-
-    switch (now->tm_wday) {
-        case 1:dow="Mon"; break;
-        case 2:dow="Tue"; break;
-        case 3:dow="Wed"; break;
-        case 4:dow="Thur"; break;
-        case 5:dow="Fri"; break;
-        case 6:dow="Sat"; break;
-    }
-    switch (now->tm_mday) {
-        case 1:
-        case 21:
-        case 31:suf = "st";break;
-        case 2:
-        case 22:suf= "nd";break;
-        case 3:
-        case 23: suf= "rd";break;
-    }
-    switch (now->tm_mon) {
-        case 1:mon= "Feb"; break;
-        case 2:mon = "Mar"; break;
-        case 3:mon = "Apr"; break;
-        case 4:mon = "May"; break;
-        case 5:mon = "Jun"; break;
-        case 6:mon = "Jul"; break;
-        case 7:mon = "Aug"; break;
-        case 8:mon = "Sep"; break;
-        case 9:mon = "Oct"; break;
-        case 10:mon = "Nov"; break;
-        case 11:mon = "Dec"; break;
-    }
-    const int buf_size = 12;
-    static char buf[buf_size];
-    //snprintf(buf, buf_size, "%s %d%s %s", dow, now->tm_mday, suf, mon);
-    snprintf(buf, buf_size, "%d-%02d-%02d", now->tm_year + 1900, now->tm_mon + 1, now->tm_mday);
+    static char buf[12];
+    snprintf(buf, sizeof(buf), "%d-%02d-%02d", now->tm_year + 1900, now->tm_mon + 1, now->tm_mday);
     return buf;
 }
 uint32_t GetZaishenBounty(time_t* unix) {
