@@ -26,14 +26,26 @@
 // After that, you can try every 30 seconds.
 static const uint32_t COST_PER_CONNECTION_MS 	 = 30 * 1000;
 static const uint32_t COST_PER_CONNECTION_MAX_MS = 60 * 1000;
-
+static char* months[] = { "Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec" };
 using easywsclient::WebSocket;
 using nlohmann::json;
 using json_vec = std::vector<json>;
 
 static const char ws_host[] = "wss://kamadan.gwtoolbox.com";
 static const char https_host[] = "https://kamadan.gwtoolbox.com";
-
+void TradeWindow::CmdPricecheck(const wchar_t* message, int argc, LPWSTR* argv) {
+	if (argc < 2)
+		return Log::Error("Try '/pc <item>'");
+	
+	std::string item_to_search;
+	for (int i = 1; i < argc; i++) {
+		if (i > 1)
+			item_to_search += " ";
+		item_to_search += GuiUtils::WStringToString(argv[i]);
+	}
+	Log::Info("Searching trade for \"%s\"...", item_to_search.c_str());
+	TradeWindow::Instance().search(item_to_search, true);
+}
 void TradeWindow::Initialize() {
 	ToolboxWindow::Initialize();
 	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"trade.png"));
@@ -57,7 +69,9 @@ void TradeWindow::Initialize() {
 			}
 		}
 	});
+	GW::Chat::CreateCommand(L"pc", CmdPricecheck);
 }
+
 
 void TradeWindow::Terminate() {
 	should_stop = true;
@@ -133,8 +147,10 @@ void TradeWindow::fetch() {
 			return;
 		}
 		if (res.find("query") != res.end()) {
-			// Search results
-			search_pending = false;
+			std::string query_string = res["query"].get<std::string>();
+			if (query_string != pending_query_string)
+				return; // Different query has been made since this search.
+			pending_query_string.clear();
 			json_vec results;
 			try {
 				if (res["num_results"].get<uint32_t>() > 0)
@@ -145,11 +161,27 @@ void TradeWindow::fetch() {
 				return;
 			}
 			messages.clear();
+			if (print_search_results && !results.size()) {
+				Log::Warning("No results found for %s", query_string.c_str());
+			}
 			for (int i = results.size() - 1; i >= 0; i--) {
 				TradeWindow::Message msg;
-				if (parse_json_message(&results[i], &msg))
-					messages.add(msg);
+				if (!parse_json_message(&results[i], &msg))
+					continue;
+				messages.add(msg);
+				if (print_search_results && i < 5) {
+					std::wstring name_ws = GuiUtils::ToWstr(msg.name);
+					std::wstring msg_ws = GuiUtils::ToWstr(msg.message);
+					time_t ts = (time_t)msg.timestamp;
+					struct tm* local_tm = localtime(&ts);
+					if (local_tm) {
+						wchar_t buf[512];
+						swprintf(buf, sizeof(buf), L"<a=1>%s</a> @ %S %d, %02d:%02d: <c=#f96677><quote>%s", name_ws.c_str(), months[local_tm->tm_mon], local_tm->tm_mday, local_tm->tm_hour, local_tm->tm_min, msg_ws.c_str());
+						GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, buf);
+					}
+				}
 			}
+			print_search_results = false;
 			return;
 		}
 		// Add to message feed
@@ -201,7 +233,6 @@ void TradeWindow::fetch() {
 				}
 			}
 		}
-
 		if (print_message) {
 			wchar_t buffer[512];
 			std::wstring name_ws = GuiUtils::ToWstr(msg.name);
@@ -212,14 +243,12 @@ void TradeWindow::fetch() {
 	});
 }
 
-void TradeWindow::search(std::string query) {
+void TradeWindow::search(std::string query, bool print_results_in_chat) {
+	pending_query_string = query;
+	print_search_results = print_results_in_chat;
+	pending_query_sent = 0;
 	if (!ws_window || ws_window->getReadyState() != WebSocket::OPEN)
 		return;
-
-	// for now we won't allow to enqueue more than 1 search, it shouldn't change anything because how fast we get the answers
-	if (search_pending)
-		return;
-	search_pending = true;
 
 	// Fill searched_words; query to lower to ease on-the-fly search in ::fetch
 	ParseBuffer(query.c_str(), searched_words);
@@ -227,6 +256,7 @@ void TradeWindow::search(std::string query) {
 	// Send request
 	json request;
 	request["query"] = query;
+	pending_query_sent = clock();
 	ws_window->send(request.dump());
 }
 
@@ -243,15 +273,15 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		static char search_buffer[256];
 		ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 80.0f - 80.0f - 80.0f - ImGui::GetStyle().ItemInnerSpacing.x * 6));
 		ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;
-		if (search_pending) {
+		if (!pending_query_string.empty()) {
 			flags |= ImGuiInputTextFlags_ReadOnly;
 			ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
 		}
 		bool do_search = false;
 		do_search |= ImGui::InputText("", search_buffer, 256, flags);
 		ImGui::SameLine();
-		do_search |= ImGui::Button(search_pending ? "Searching" : "Search", ImVec2(80.0f, 0));
-		if (search_pending) {
+		do_search |= ImGui::Button(!pending_query_string.empty() ? "Searching" : "Search", ImVec2(80.0f, 0));
+		if (!pending_query_string.empty()) {
 			ImGui::PopStyleColor();
 		}
 		else if(do_search) {

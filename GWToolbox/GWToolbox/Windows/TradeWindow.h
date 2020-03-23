@@ -27,6 +27,7 @@ public:
 
 	void Initialize() override;
 	void Terminate() override;
+	static void CmdPricecheck(const wchar_t* message, int argc, LPWSTR* argv);
 
 	void Update(float delta) override;
 	void Draw(IDirect3DDevice9* pDevice) override;
@@ -55,6 +56,10 @@ private:
 	// set when the alert_buf was modified
 	bool alertfile_dirty = false;
 
+	std::string pending_query_string;
+	clock_t pending_query_sent = 0;
+	bool print_search_results = false;
+
 	std::vector<std::string> alert_words;
 	std::vector<std::string> searched_words;
 
@@ -70,8 +75,7 @@ private:
 
     RateLimiter window_rate_limiter;
 
-    bool search_pending;
-    void search(std::string);
+    void search(std::string, bool print_results_in_chat = false);
     void fetch();
 
     static bool parse_json_message(nlohmann::json* js, Message* msg);
