@@ -25,6 +25,7 @@
 #include <Modules/TwitchModule.h>
 #include <Modules/PartyWindowModule.h>
 #include <Modules/ZrawDeepModule.h>
+#include <Modules/AprilFools.h>
 
 #include <Windows/MainWindow.h>
 #include <Windows/PconsWindow.h>
@@ -113,6 +114,8 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
         module->Initialize();
         module->LoadSettings(ini);
 	}
+	AprilFools::Instance().Initialize();
+	AprilFools::Instance().LoadSettings(ini);
 }
 
 void ToolboxSettings::DrawSettingInternal() {

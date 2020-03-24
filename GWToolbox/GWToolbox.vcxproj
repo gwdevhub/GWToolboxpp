@@ -120,6 +120,7 @@
     <ClInclude Include="GWToolbox\imgui_impl_dx9.h" />
     <ClInclude Include="GWToolbox\IRC.h" />
     <ClInclude Include="GWToolbox\Keys.h" />
+    <ClInclude Include="GWToolbox\Modules\AprilFools.h" />
     <ClInclude Include="GWToolbox\Modules\ChatCommands.h" />
     <ClInclude Include="GWToolbox\Modules\ChatFilter.h" />
     <ClInclude Include="GWToolbox\Modules\DiscordModule.h" />
@@ -229,6 +230,7 @@
     <ClCompile Include="GWToolbox\IRC.cc" />
     <ClCompile Include="GWToolbox\logger.cpp" />
     <ClCompile Include="GWToolbox\main.cpp" />
+    <ClCompile Include="GWToolbox\Modules\AprilFools.cpp" />
     <ClCompile Include="GWToolbox\Modules\ChatCommands.cpp" />
     <ClCompile Include="GWToolbox\Modules\ChatFilter.cpp" />
     <ClCompile Include="GWToolbox\Modules\DiscordModule.cpp" />

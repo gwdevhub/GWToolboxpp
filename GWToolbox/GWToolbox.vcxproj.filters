@@ -300,6 +300,7 @@
     <ClInclude Include="GWToolbox\Modules\ZrawDeepModule.h" />
     <ClInclude Include="GWToolbox\Widgets\Minimap\EffectRenderer.h" />
     <ClInclude Include="GWToolbox\Windows\TradeWindow.h" />
+    <ClInclude Include="GWToolbox\Modules\AprilFools.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -465,6 +466,7 @@
     <ClCompile Include="GWToolbox\Modules\ZrawDeepModule.cpp" />
     <ClCompile Include="GWToolbox\Widgets\Minimap\EffectRenderer.cpp" />
     <ClCompile Include="GWToolbox\Windows\TradeWindow.cpp" />
+    <ClCompile Include="GWToolbox\Modules\AprilFools.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GWToolbox.rc">
