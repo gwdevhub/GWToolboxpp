@@ -119,6 +119,7 @@ void TradeWindow::Update(float delta) {
 	}
 	if (!maintain_socket && ws_window && ws_window->getReadyState() == WebSocket::OPEN) {
 		ws_window->close();
+		messages.clear();
 		window_rate_limiter = RateLimiter(); // Deliberately closed; reset rate limiter.
 	}
 	fetch();
