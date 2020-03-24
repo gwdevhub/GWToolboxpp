@@ -15,12 +15,13 @@
 #include <logger.h>
 
 static const wchar_t* af_2020_quotes[] = {
+	L"Happy April Fools Da-- *cough*",
 	L"I don't feel so good...",
 	L"*cough* *cough*",
 	L"I'm down to my last roll of toilet paper!",
 	L"Day 5 of self isolation...",
 	L"Get ready for the baby boom after all this blows over!",
-	L"An hour of exercise every day? seems excessive!",
+	L"Hell of a commute this morning from my bed to my PC...",
 	L"Do I look ill to you?",
 	L"Urpp... feel sick...",
 	L"Schools are closed, my kids are driving me mad and I just want to play Guild Wars!",
@@ -46,7 +47,6 @@ void AprilFools::Initialize() {
 		if ((packet->agent_type & 0x30000000) != 0x30000000)
 			return; // Not a player
 		uint32_t player_number = packet->agent_type ^ 0x30000000;
-		Log::Log("%d\n", player_number);
 		GW::AgentLiving* agent = (GW::AgentLiving*)GW::Agents::GetAgentByID(GW::Agents::GetAgentIdByLoginNumber(player_number));
 		if (!agent || !agent->GetIsLivingType() || !agent->IsPlayer())
 			return; // Not a valid agent
@@ -131,8 +131,11 @@ void AprilFools::Update(float delta) {
 		next_infection = clock() + 5000;
 		last_instance_type = GW::Map::GetInstanceType();
 	}
-	if (last_instance_type != GW::Constants::InstanceType::Outpost)
+	if (last_instance_type != GW::Constants::InstanceType::Outpost) {
+		if (!player_agents.empty())
+			player_agents.clear();
 		return;
+	}
 	if (clock() > next_infection && !player_agents.empty()) {
 		if (player_agents.size()) {
 			auto it = player_agents.begin();

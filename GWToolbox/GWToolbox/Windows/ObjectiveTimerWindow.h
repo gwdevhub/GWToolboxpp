@@ -31,6 +31,8 @@ public:
 
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
+    void LoadRuns();
+    void SaveRuns();
 
     const enum RoomID {
         // object_id's for doors opening.

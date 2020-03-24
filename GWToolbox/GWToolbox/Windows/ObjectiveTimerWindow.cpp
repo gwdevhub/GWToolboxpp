@@ -465,6 +465,7 @@ void ObjectiveTimerWindow::AddObjectiveSet(ObjectiveSet* os) {
     objective_sets.emplace(os->system_time, os);
     if(os->active)
         current_objective_set = os;
+    ObjectiveTimerWindow::Instance().SaveRuns();
 }
 void ObjectiveTimerWindow::AddUWObjectiveSet() {
 	ObjectiveSet *os = new ObjectiveSet;
@@ -595,6 +596,19 @@ void ObjectiveTimerWindow::LoadSettings(CSimpleIni* ini) {
 	show_current_run_window = ini->GetBoolValue(Name(), VAR_NAME(show_current_run_window), show_current_run_window);
 	auto_send_age = ini->GetBoolValue(Name(), VAR_NAME(auto_send_age), auto_send_age);
     ComputeNColumns();
+    LoadRuns();
+}
+void ObjectiveTimerWindow::SaveSettings(CSimpleIni* ini) {
+	ToolboxWindow::SaveSettings(ini);
+    ini->SetBoolValue(Name(), VAR_NAME(show_decimal), show_decimal);
+    ini->SetBoolValue(Name(), VAR_NAME(show_start_column), show_start_column);
+    ini->SetBoolValue(Name(), VAR_NAME(show_end_column), show_end_column);
+    ini->SetBoolValue(Name(), VAR_NAME(show_time_column), show_time_column);
+	ini->SetBoolValue(Name(), VAR_NAME(show_current_run_window), show_current_run_window);
+	ini->SetBoolValue(Name(), VAR_NAME(auto_send_age), auto_send_age);
+    SaveRuns();
+}
+void ObjectiveTimerWindow::LoadRuns() {
     ClearObjectiveSets();
     try {
         std::ifstream file;
@@ -615,15 +629,7 @@ void ObjectiveTimerWindow::LoadSettings(CSimpleIni* ini) {
         Log::Error("Failed to load ObjectiveSets from json");
     }
 }
-void ObjectiveTimerWindow::SaveSettings(CSimpleIni* ini) {
-	ToolboxWindow::SaveSettings(ini);
-    ini->SetBoolValue(Name(), VAR_NAME(show_decimal), show_decimal);
-    ini->SetBoolValue(Name(), VAR_NAME(show_start_column), show_start_column);
-    ini->SetBoolValue(Name(), VAR_NAME(show_end_column), show_end_column);
-    ini->SetBoolValue(Name(), VAR_NAME(show_time_column), show_time_column);
-	ini->SetBoolValue(Name(), VAR_NAME(show_current_run_window), show_current_run_window);
-	ini->SetBoolValue(Name(), VAR_NAME(auto_send_age), auto_send_age);
-
+void ObjectiveTimerWindow::SaveRuns() {
     try {
         std::ofstream file;
         file.open(Resources::GetPath(L"ObjectiveTimerRuns.json"));
@@ -684,6 +690,7 @@ void ObjectiveTimerWindow::Objective::SetDone() {
     duration = done - start;
     PrintTime(cached_duration, sizeof(cached_duration), duration);
     status = Completed;
+    ObjectiveTimerWindow::Instance().SaveRuns();
 }
 
 void ObjectiveTimerWindow::Objective::Update() {
