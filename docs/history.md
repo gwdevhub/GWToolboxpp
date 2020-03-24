@@ -5,6 +5,18 @@ layout: default
 # Version History
 Previous releases are provided as dll files. In order to use it, you need to use a different launcher which must be placed in the same directory as the dll. If you are looking for the latest version, go to the [Home Page](./) instead.
 
+## Version 2.33, Extended 1.9.46
+* [New] Added `/pc <search_term>` chat command to do a price check from chat
+* [New] Objective timer now saves runs to disk in json format, and auto-collapses previous runs when a new one starts
+* [Minor] Added date/time to headers in Objective timer, and [Failed] to identify failed runs.
+* [Minor] Added option to only show alcohol widget when using alcohol
+* [Fix] Don't remove current run window straight away when an objective set is finished
+* [Fix] Stability and performance fixes to trade window/alerts
+* [Fix] Fixed bug causing trade window to fill with live messages when viewing search results
+* [Fix] Fixed bug preventing locked chests from being click on from the minimap
+
+[Download](https://github.com/3vcloud/GWToolboxpp/releases/download/2.33-1.9.46_Release/JonsToolbox_1.9.46.zip)
+
 ## Version 2.32, Extended 1.9.45
 * [New] Trade window now uses [https://kamadan.gwtoolbox.com](https://kamadan.gwtoolbox.com) for incoming trade chat. Rebased this module to be similar to vanilla.
 * [New] Added spirit timers to Timer widget; default is EoE and QZ. Other spirit timers available in settings.
