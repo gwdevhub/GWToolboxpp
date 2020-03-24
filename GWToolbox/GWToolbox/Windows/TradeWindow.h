@@ -60,6 +60,8 @@ private:
 	clock_t pending_query_sent = 0;
 	bool print_search_results = false;
 
+	char search_buffer[256] = { 0 };
+
 	std::vector<std::string> alert_words;
 	std::vector<std::string> searched_words;
 

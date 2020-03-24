@@ -109,12 +109,17 @@ void TradeWindow::Update(float delta) {
 		delete ws_window;
 		ws_window = nullptr;
 	}
-	bool maintain_socket = visible || print_game_chat;
+	if (ws_window && ws_window->getReadyState() != WebSocket::CLOSED) {
+		ws_window->poll();
+	}
+	bool search_pending = !pending_query_string.empty();
+	bool maintain_socket = visible || print_game_chat || search_pending;
 	if (maintain_socket && !ws_window) {
 		AsyncWindowConnect();
 	}
-	if (!maintain_socket && ws_window) {
+	if (!maintain_socket && ws_window && ws_window->getReadyState() == WebSocket::OPEN) {
 		ws_window->close();
+		window_rate_limiter = RateLimiter(); // Deliberately closed; reset rate limiter.
 	}
 	fetch();
 }
@@ -135,8 +140,19 @@ bool TradeWindow::parse_json_message(json* js, Message* msg) {
 void TradeWindow::fetch() {
 	if (!ws_window || ws_window->getReadyState() != WebSocket::OPEN) 
 		return;
+	bool search_pending = !pending_query_sent && !pending_query_string.empty();
+	if (search_pending) {
+		strcpy(search_buffer, pending_query_string.c_str());
+		// Fill searched_words; query to lower to ease on-the-fly search in ::fetch
+		ParseBuffer(search_buffer, searched_words);
+
+		// Send request
+		json request;
+		request["query"] = pending_query_string;
+		pending_query_sent = clock();
+		ws_window->send(request.dump());
+	}
 	
-	ws_window->poll();
 	ws_window->dispatch([this](const std::string& data) {
 		json res;
 		try {
@@ -244,20 +260,9 @@ void TradeWindow::fetch() {
 }
 
 void TradeWindow::search(std::string query, bool print_results_in_chat) {
-	pending_query_string = query;
+	pending_query_string = query.empty() ? " " : query;
 	print_search_results = print_results_in_chat;
 	pending_query_sent = 0;
-	if (!ws_window || ws_window->getReadyState() != WebSocket::OPEN)
-		return;
-
-	// Fill searched_words; query to lower to ease on-the-fly search in ::fetch
-	ParseBuffer(query.c_str(), searched_words);
-
-	// Send request
-	json request;
-	request["query"] = query;
-	pending_query_sent = clock();
-	ws_window->send(request.dump());
 }
 
 void TradeWindow::Draw(IDirect3DDevice9* device) {
@@ -270,7 +275,6 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 	ImGui::SetNextWindowSize(ImVec2(700, 400), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
 		/* Search bar header */
-		static char search_buffer[256];
 		ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 80.0f - 80.0f - 80.0f - ImGui::GetStyle().ItemInnerSpacing.x * 6));
 		ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;
 		if (!pending_query_string.empty()) {
