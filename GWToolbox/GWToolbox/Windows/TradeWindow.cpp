@@ -487,7 +487,7 @@ void TradeWindow::AsyncWindowConnect(bool force) {
 			printf("Couldn't connect to the host '%s'", ws_host);
 		}
 		ws_window_connecting = false;
-		if (messages.size() == 0)
+		if (messages.size() == 0 && pending_query_string.empty())
 			search(""); // Initial draw, gets latest N messages
 	});
 }
