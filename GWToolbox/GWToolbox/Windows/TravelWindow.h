@@ -91,8 +91,21 @@ private:
     };   
 
 public:
-
-    const GW::Constants::MapID searchable_map_ids[187] {
+    const GW::Constants::MapID presearing_map_ids[5] = {
+        GW::Constants::MapID::Ashford_Abbey_outpost,
+        GW::Constants::MapID::Ascalon_City_pre_searing,
+        GW::Constants::MapID::Foibles_Fair_outpost,
+        GW::Constants::MapID::Fort_Ranik_pre_Searing_outpost,
+        GW::Constants::MapID::The_Barradin_Estate_outpost
+    };
+    const char* presearing_map_names[5] = {
+        "ashford abbey",
+        "ascalon city",
+        "foibles fair",
+        "fort ranik",
+        "barradin estate"
+    };
+    const GW::Constants::MapID searchable_map_ids[187] = {
         GW::Constants::MapID::Abaddons_Gate,
         GW::Constants::MapID::Abaddons_Mouth,
         GW::Constants::MapID::Altrumm_Ruins,

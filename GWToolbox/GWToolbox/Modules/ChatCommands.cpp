@@ -285,6 +285,7 @@ namespace {
 		GW::Guild* gh = GetCurrentGH();
 		return gh && gh == GetPlayerGH();
 	}
+	bool ImInPresearing() { return GW::Map::GetCurrentMapInfo()->region == GW::Region_Presearing; }
 }
 
 void ChatCommands::DrawHelp() {
@@ -709,8 +710,17 @@ bool ChatCommands::ParseOutpost(const std::wstring s, GW::Constants::MapID& outp
 	unsigned int searchStringLength = compare.length();
 	unsigned int bestMatchLength = 0;
     unsigned int thisMapLength = 0;
+	bool search_dungeons = true;
     const char** searchable_map_names = TravelWindow::Instance().searchable_map_names;
-    size_t mapCnt = 187;
+	const GW::Constants::MapID* searchable_map_ids = TravelWindow::Instance().searchable_map_ids;
+	size_t mapCnt = 187;
+	if (ImInPresearing()) {
+		searchable_map_names = TravelWindow::Instance().presearing_map_names;
+		searchable_map_ids = TravelWindow::Instance().presearing_map_ids;
+		mapCnt = 5;
+		search_dungeons = false;
+	}
+    
 	for (int i = 0; i < mapCnt; i++) {
 		sanitized = searchable_map_names[i]; // Remove punctuation, to lower case.
         thisMapLength = sanitized.length();
@@ -720,30 +730,32 @@ bool ChatCommands::ParseOutpost(const std::wstring s, GW::Constants::MapID& outp
             continue; // No match
 		if (bestMatchLength < thisMapLength) {
 			bestMatchLength = thisMapLength;
-			bestMatchMapID = TravelWindow::Instance().searchable_map_ids[i];
+			bestMatchMapID = searchable_map_ids[i];
             if (searchStringLength == thisMapLength)
                 break; // Exact match, break.
 		}
 	}
-    const char** dungeon_map_names = TravelWindow::Instance().searchable_dungeon_names;
-	mapCnt = 11;
-    if (bestMatchMapID == GW::Constants::MapID::None) {
-        // Not found yet; try dungeons
-        for (int i = 0; i < mapCnt; i++) {
-            sanitized = dungeon_map_names[i]; // Remove punctuation, to lower case.
-            thisMapLength = sanitized.length();
-            if (searchStringLength > thisMapLength)
-                continue; // String entered by user is longer than this outpost name.
-            if (sanitized.rfind(compare) != 0)
-                continue; // No match
-            if (bestMatchLength < thisMapLength) {
-                bestMatchLength = thisMapLength;
-                bestMatchMapID = TravelWindow::Instance().dungeon_map_ids[i];
-                if (searchStringLength == thisMapLength)
-                    break; // Exact match, break.
-            }
-        }
-    }
+	if (search_dungeons) {
+		const char** dungeon_map_names = TravelWindow::Instance().searchable_dungeon_names;
+		mapCnt = 11;
+		if (bestMatchMapID == GW::Constants::MapID::None) {
+			// Not found yet; try dungeons
+			for (int i = 0; i < mapCnt; i++) {
+				sanitized = dungeon_map_names[i]; // Remove punctuation, to lower case.
+				thisMapLength = sanitized.length();
+				if (searchStringLength > thisMapLength)
+					continue; // String entered by user is longer than this outpost name.
+				if (sanitized.rfind(compare) != 0)
+					continue; // No match
+				if (bestMatchLength < thisMapLength) {
+					bestMatchLength = thisMapLength;
+					bestMatchMapID = TravelWindow::Instance().dungeon_map_ids[i];
+					if (searchStringLength == thisMapLength)
+						break; // Exact match, break.
+				}
+			}
+		}
+	}
     if (bestMatchMapID != GW::Constants::MapID::None)
         return outpost = bestMatchMapID, true; // Exact match
 	return false;
