@@ -658,7 +658,8 @@ void ObjectiveTimerWindow::SaveRuns() {
     wchar_t filename[36];
     struct tm* structtime;
     for (auto os : objective_sets) {
-        structtime = gmtime((time_t*)&os.second->system_time);
+        time_t tt = (time_t)os.second->system_time;
+        structtime = gmtime(&tt);
         swprintf(filename, 36, L"ObjectiveTimerRuns_%02d-%02d-%02d.json", structtime->tm_year + 1900, structtime->tm_mon + 1, structtime->tm_mday);
         objective_sets_by_file[filename].push_back(os.second);
     }
