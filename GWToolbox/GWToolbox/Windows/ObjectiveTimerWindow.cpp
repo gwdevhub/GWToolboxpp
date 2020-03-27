@@ -119,6 +119,7 @@ namespace {
     float GetLabelWidth() {
         return std::max(GetTimestampWidth(),ImGui::GetWindowContentRegionWidth() - (GetTimestampWidth() * n_columns));
     }
+    static bool runs_dirty = false;
 }
 
 void ObjectiveTimerWindow::Initialize() {
@@ -465,7 +466,7 @@ void ObjectiveTimerWindow::AddObjectiveSet(ObjectiveSet* os) {
     objective_sets.emplace(os->system_time, os);
     if(os->active)
         current_objective_set = os;
-    ObjectiveTimerWindow::Instance().SaveRuns();
+    runs_dirty = true;
 }
 void ObjectiveTimerWindow::AddUWObjectiveSet() {
 	ObjectiveSet *os = new ObjectiveSet;
@@ -513,6 +514,8 @@ void ObjectiveTimerWindow::Update(float delta) {
     if (current_objective_set && current_objective_set->active) {
         current_objective_set->Update();
     }
+    if (runs_dirty && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
+        SaveRuns(); // Save runs between map loads
 }
 void ObjectiveTimerWindow::Draw(IDirect3DDevice9* pDevice) {
 	// Main objective timer window
@@ -607,44 +610,79 @@ void ObjectiveTimerWindow::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(show_current_run_window), show_current_run_window);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_send_age), auto_send_age);
     SaveRuns();
+    runs_dirty = false;
 }
 void ObjectiveTimerWindow::LoadRuns() {
     ClearObjectiveSets();
-    try {
-        std::ifstream file;
-        file.open(Resources::GetPath(L"ObjectiveTimerRuns.json"));
-        if (file.is_open()) {
-            nlohmann::json os_json_arr;
-            file >> os_json_arr;
-            for (nlohmann::json::iterator it = os_json_arr.begin(); it != os_json_arr.end(); ++it) {
-                ObjectiveSet* os = ObjectiveSet::FromJson(&it.value());
-                os->StopObjectives();
-                os->need_to_collapse = true;
-                objective_sets.emplace(os->system_time, os);
-            }
-            file.close();
+    
+    WIN32_FIND_DATAW FindFileData;
+    size_t max_objectives_in_memory = 200;
+    std::wstring file_match = Resources::GetPath(L"ObjectiveTimerRuns_*.json");
+    std::wstring filename;
+    std::set<std::wstring> obj_timer_files;
+    HANDLE hFind = FindFirstFileW(file_match.c_str(), &FindFileData);
+    if (hFind != INVALID_HANDLE_VALUE) {
+        obj_timer_files.insert(FindFileData.cFileName);
+        while (FindNextFileW(hFind, &FindFileData) != 0) {
+            obj_timer_files.insert(FindFileData.cFileName);
         }
     }
-    catch (...) {
-        Log::Error("Failed to load ObjectiveSets from json");
+    FindClose(hFind);
+
+    // Output the list of names found
+    for (auto it = obj_timer_files.rbegin(); it != obj_timer_files.rend() && objective_sets.size() < max_objectives_in_memory; it++) {
+        try {
+            std::ifstream file;
+            std::wstring fn = Resources::GetPath(*it);
+            file.open(fn);
+            if (file.is_open()) {
+                nlohmann::json os_json_arr;
+                file >> os_json_arr;
+                for (nlohmann::json::iterator it = os_json_arr.begin(); it != os_json_arr.end(); ++it) {
+                    ObjectiveSet* os = ObjectiveSet::FromJson(&it.value());
+                    os->StopObjectives();
+                    os->need_to_collapse = true;
+                    objective_sets.emplace(os->system_time, os);
+                }
+                file.close();
+            }
+        }
+        catch (...) {
+            Log::Error("Failed to load ObjectiveSets from json");
+        }
     }
 }
 void ObjectiveTimerWindow::SaveRuns() {
-    try {
-        std::ofstream file;
-        file.open(Resources::GetPath(L"ObjectiveTimerRuns.json"));
-        if (file.is_open()) {
-            nlohmann::json os_json_arr;
-            for (auto os : objective_sets) {
-                os_json_arr.push_back(os.second->ToJson());
+    if (objective_sets.empty())
+        return;
+    std::map<std::wstring, std::vector<ObjectiveSet*>> objective_sets_by_file;
+    wchar_t filename[36];
+    struct tm* structtime;
+    for (auto os : objective_sets) {
+        structtime = gmtime((time_t*)&os.second->system_time);
+        swprintf(filename, 36, L"ObjectiveTimerRuns_%02d-%02d-%02d.json", structtime->tm_year + 1900, structtime->tm_mon + 1, structtime->tm_mday);
+        objective_sets_by_file[filename].push_back(os.second);
+    }
+    bool error_saving = false;
+    for (auto it : objective_sets_by_file) {
+        try {
+            std::ofstream file;
+            file.open(Resources::GetPath(it.first));
+            if (file.is_open()) {
+                nlohmann::json os_json_arr;
+                for (auto os : it.second) {
+                    os_json_arr.push_back(os->ToJson());
+                }
+                file << os_json_arr << std::endl;
+                file.close();
             }
-            file << os_json_arr << std::endl;
-            file.close();
+        }
+        catch (...) {
+            Log::Error("Failed to save ObjectiveSets to json");
+            error_saving = true;
         }
     }
-    catch (...) {
-        Log::Error("Failed to save ObjectiveSets to json");
-    }
+    
 }
 void ObjectiveTimerWindow::ClearObjectiveSets() {
     for (auto os : objective_sets) {
@@ -690,7 +728,7 @@ void ObjectiveTimerWindow::Objective::SetDone() {
     duration = done - start;
     PrintTime(cached_duration, sizeof(cached_duration), duration);
     status = Completed;
-    ObjectiveTimerWindow::Instance().SaveRuns();
+    runs_dirty = true;
 }
 
 void ObjectiveTimerWindow::Objective::Update() {
@@ -859,10 +897,9 @@ bool ObjectiveTimerWindow::ObjectiveSet::Draw() {
         }
         snprintf(&cached_start[cached_str_offset], sizeof(cached_start) - cached_str_offset, "%02d:%02d", timeinfo.tm_hour, timeinfo.tm_min);
     }
-    if (!cached_time[0] && instance_time)
-        ::PrintTime(cached_time, sizeof(cached_time), instance_time, false);
+    PrintTime(cached_time, sizeof(cached_time), instance_time, false);
 
-    sprintf(buf, "%s - %s - %s%s###header%d", cached_start, name, cached_time ? cached_time : "--:--", failed ? " [Failed]" : "", ui_id);
+    sprintf(buf, "%s - %s - %s%s###header%d", cached_start, name, cached_time, failed ? " [Failed]" : "", ui_id);
 
     const auto& style = ImGui::GetStyle();
     float offset = 0;

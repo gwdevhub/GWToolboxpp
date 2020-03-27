@@ -827,7 +827,7 @@ void ChatCommands::CmdTP(const wchar_t *message, int argc, LPWSTR *argv) {
 			TravelWindow::Instance().TravelFavorite(fav_num - 1);
 			return;
 		}
-		Log::Error("[Error] Did not recognize favourite\n");
+		Log::Error("[Error] Did not recognize favourite");
 		return;
 	}
 	for (int i = 2; i < argc-1; i++) {
@@ -877,7 +877,7 @@ void ChatCommands::CmdTP(const wchar_t *message, int argc, LPWSTR *argv) {
 		TravelWindow::Instance().Travel(outpost, district, district_number); // NOTE: ParseOutpost sets outpost, district and district_number vars by reference.
 		return;
 	}
-	Log::Error("[Error] Did not recognize outpost '%ls'\n", argOutpost.c_str());
+	Log::Error("[Error] Did not recognize outpost '%ls'", argOutpost.c_str());
 	return;
 }
 
