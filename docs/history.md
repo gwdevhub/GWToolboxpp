@@ -8,6 +8,11 @@ Previous releases are provided as dll files. In order to use it, you need to use
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
 
+## Version 2.34
+* [Fix] Fix crashes with enemies count in info window.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.34_Release/GWToolbox.dll)
+
 ## Version 2.33
 * [Fix] Fix crashes when trying to drop gold coins.
 * [Fix] Fix a long due bug that caused random crashes, often when using the minimap.
