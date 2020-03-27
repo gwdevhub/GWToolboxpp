@@ -5,6 +5,12 @@ layout: default
 # Version History
 Previous releases are provided as dll files. In order to use it, you need to use a different launcher which must be placed in the same directory as the dll. If you are looking for the latest version, go to the [Home Page](./) instead.
 
+## Version 2.34, Extended 1.9.47
+* [Fix] `/tp` now working in pre-searing
+* [Fix] Fixed crash/performance issues with obj timer
+
+[Download](https://github.com/3vcloud/GWToolboxpp/releases/download/2.34-1.9.47_Release/JonsToolbox_1.9.47.zip)
+
 ## Version 2.33, Extended 1.9.46
 * [New] Added `/pc <search_term>` chat command to do a price check from chat
 * [New] Objective timer now saves runs to disk in json format, and auto-collapses previous runs when a new one starts
