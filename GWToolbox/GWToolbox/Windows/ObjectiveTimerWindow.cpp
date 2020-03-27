@@ -610,7 +610,6 @@ void ObjectiveTimerWindow::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(show_current_run_window), show_current_run_window);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_send_age), auto_send_age);
     SaveRuns();
-    runs_dirty = false;
 }
 void ObjectiveTimerWindow::LoadRuns() {
     ClearObjectiveSets();
@@ -682,7 +681,7 @@ void ObjectiveTimerWindow::SaveRuns() {
             error_saving = true;
         }
     }
-    
+    runs_dirty = false;
 }
 void ObjectiveTimerWindow::ClearObjectiveSets() {
     for (auto os : objective_sets) {
