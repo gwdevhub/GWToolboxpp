@@ -348,6 +348,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 				for (unsigned int i = 0; i < agents.size(); ++i) {
 					if (agents[i] == nullptr) continue; // ignore nothings
 					GW::AgentLiving* agent = agents[i]->GetAsAgentLiving();
+					if (agent == nullptr) continue;
 					if (agent->allegiance != 0x3) continue; // ignore non-hostiles
 					if (agent->GetIsDead()) continue; // ignore dead 
 					float sqrd = GW::GetSquareDistance(player->pos, agent->pos);
