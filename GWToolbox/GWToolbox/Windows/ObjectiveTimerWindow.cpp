@@ -854,10 +854,17 @@ ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::ObjectiveSet::FromJson
         obj.status = o.at("status").get<Objective::Status>();
         obj.start = o.at("start").get<DWORD>();
         obj.duration = o.at("duration").get<DWORD>();
+        obj.done = o.at("done").get<DWORD>();
+        if (obj.done == 1 && obj.duration)
+            obj.done = obj.start + obj.duration;
         switch (obj.status) {
         case Objective::Status::Completed:
+            PrintTime(obj.cached_done, sizeof(obj.cached_done), obj.done);
         case Objective::Status::Failed:
-            obj.done = 1;
+        case Objective::Status::Started:
+            PrintTime(obj.cached_start, sizeof(obj.cached_start), obj.start);
+            if (obj.duration)
+                PrintTime(obj.cached_duration, sizeof(obj.cached_duration), obj.duration);
             break;
         }
         os->objectives.emplace_back(obj);
