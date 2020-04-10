@@ -443,6 +443,17 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 						}
 					}
 					ImGui::InputText("Desc Enc", item->info_string ? encdesc_buf : "-", 512, ImGuiInputTextFlags_ReadOnly);
+					if (item->mod_struct_size) {
+						ImGui::Text("Mod Struct (identifier, arg1, arg2)");
+					}
+					char mod_struct_label[] = "###Mod Struct 1";
+					char mod_struct_buf[64];
+					for (size_t i = 0; i < item->mod_struct_size; i++) {
+						GW::ItemModifier* mod = &item->mod_struct[i];
+						mod_struct_label[14] = (i + 1) + '0';
+						sprintf(mod_struct_buf, "0x%X (%d %d %d)", mod->mod, mod->identifier(), mod->arg1(), mod->arg2());
+						ImGui::InputText(mod_struct_label, mod_struct_buf,64, ImGuiInputTextFlags_ReadOnly);
+					}
                 }
                 ImGui::PopItemWidth();
                 ImGui::TreePop();
