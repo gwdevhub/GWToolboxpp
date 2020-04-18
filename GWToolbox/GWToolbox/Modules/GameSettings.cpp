@@ -47,7 +47,7 @@ namespace {
 		size_t len = wcslen(msg);
 		size_t max_len = 120;
 
-		if (chan == GW::Chat::CHANNEL_WHISPER) {
+		if (chan == GW::Chat::Channel::CHANNEL_WHISPER) {
 			// msg == "Whisper Target Name,msg"
 			size_t i;
 			for (i = 0; i < len; i++)
@@ -168,8 +168,8 @@ namespace {
 	void WhisperCallback(GW::HookStatus *, const wchar_t from[20], const wchar_t msg[140]) {
 		GameSettings&  game_setting = GameSettings::Instance();
 		if (game_setting.flash_window_on_pm) FlashWindow();
-		DWORD status = GW::FriendListMgr::GetMyStatus();
-		if (status == GW::FriendStatus_Away && !game_setting.afk_message.empty()) {
+		auto const status = static_cast<GW::FriendStatus>(GW::FriendListMgr::GetMyStatus());
+		if (status == GW::FriendStatus::FriendStatus_Away && !game_setting.afk_message.empty()) {
 			wchar_t buffer[120];
 			DWORD diff_time = (clock() - game_setting.afk_message_time) / CLOCKS_PER_SEC;
 			wchar_t time_buffer[128];
@@ -717,7 +717,7 @@ const bool PendingChatMessage::PrintMessage() {
     switch (channel) {
     case GW::Chat::Channel::CHANNEL_EMOTE:
         GW::Chat::Color dummy, messageCol; // Needed for GW::Chat::GetChannelColors
-        GW::Chat::GetChannelColors(GW::Chat::CHANNEL_ALLIES, &dummy, &messageCol); // ...but set the message to be same color as ally chat
+        GW::Chat::GetChannelColors(GW::Chat::Channel::CHANNEL_ALLIES, &dummy, &messageCol); // ...but set the message to be same color as ally chat
 		swprintf(buffer, 512, L"<a=2>%ls</a>: <c=#%06X>%ls</c>", output_sender.c_str(), messageCol & 0x00FFFFFF, output_message.c_str());
         GW::Chat::WriteChat(channel, buffer);
         break;
@@ -950,7 +950,7 @@ void GameSettings::Initialize() {
 		});
 	// - Automatically send /age2 on /age.
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&MessageServer_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::MessageServer* pak) -> void {
-        if (!auto_age2_on_age || pak->channel != GW::Chat::Channel::CHANNEL_GLOBAL)
+        if (!auto_age2_on_age || static_cast<GW::Chat::Channel>(pak->channel) != GW::Chat::Channel::CHANNEL_GLOBAL)
             return; // Disabled or message pending
         const wchar_t* msg = GetMessageCore();
         //0x8101 0x641F 0x86C3 0xE149 0x53E8 0x101 0x107 = You have been in this map for n minutes.
@@ -1109,7 +1109,7 @@ GW::Friend* GameSettings::GetOnlineFriend(wchar_t* account, wchar_t* playing) {
     for (GW::Friend* it : friends) {
         if (n_found == n_friends) break;
         if (!it) continue;
-        if (it->type != GW::FriendType_Friend) continue;
+        if (it->type != GW::FriendType::FriendType_Friend) continue;
         n_found++;
         if (it->status != GW::FriendStatus::FriendStatus_Online) continue;
         if (account && !wcsncmp(it->alias, account, 20))
@@ -1237,14 +1237,14 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
 	skip_entering_name_for_faction_donate = ini->GetBoolValue(Name(), VAR_NAME(skip_entering_name_for_faction_donate), skip_entering_name_for_faction_donate);
 
-	::LoadChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
-	::LoadChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);
-	::LoadChannelColor(ini, Name(), "team", GW::Chat::CHANNEL_GROUP);
-	::LoadChannelColor(ini, Name(), "trade", GW::Chat::CHANNEL_TRADE);
-	::LoadChannelColor(ini, Name(), "alliance", GW::Chat::CHANNEL_ALLIANCE);
-	::LoadChannelColor(ini, Name(), "whispers", GW::Chat::CHANNEL_WHISPER);
-	::LoadChannelColor(ini, Name(), "emotes", GW::Chat::CHANNEL_EMOTE);
-	::LoadChannelColor(ini, Name(), "other", GW::Chat::CHANNEL_GLOBAL);
+	::LoadChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
+	::LoadChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
+	::LoadChannelColor(ini, Name(), "team", GW::Chat::Channel::CHANNEL_GROUP);
+	::LoadChannelColor(ini, Name(), "trade", GW::Chat::Channel::CHANNEL_TRADE);
+	::LoadChannelColor(ini, Name(), "alliance", GW::Chat::Channel::CHANNEL_ALLIANCE);
+	::LoadChannelColor(ini, Name(), "whispers", GW::Chat::Channel::CHANNEL_WHISPER);
+	::LoadChannelColor(ini, Name(), "emotes", GW::Chat::Channel::CHANNEL_EMOTE);
+	::LoadChannelColor(ini, Name(), "other", GW::Chat::Channel::CHANNEL_GLOBAL);
 
 	GW::UI::SetOpenLinks(openlinks);
     GW::Chat::ToggleTimestamps(show_timestamps);
@@ -1322,14 +1322,14 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(auto_accept_join_requests), auto_accept_join_requests);
 	ini->SetBoolValue(Name(), VAR_NAME(skip_entering_name_for_faction_donate), skip_entering_name_for_faction_donate);
 
-	::SaveChannelColor(ini, Name(), "local", GW::Chat::CHANNEL_ALL);
-	::SaveChannelColor(ini, Name(), "guild", GW::Chat::CHANNEL_GUILD);
-	::SaveChannelColor(ini, Name(), "team", GW::Chat::CHANNEL_GROUP);
-	::SaveChannelColor(ini, Name(), "trade", GW::Chat::CHANNEL_TRADE);
-	::SaveChannelColor(ini, Name(), "alliance", GW::Chat::CHANNEL_ALLIANCE);
-	::SaveChannelColor(ini, Name(), "whispers", GW::Chat::CHANNEL_WHISPER);
-	::SaveChannelColor(ini, Name(), "emotes", GW::Chat::CHANNEL_EMOTE);
-	::SaveChannelColor(ini, Name(), "other", GW::Chat::CHANNEL_GLOBAL);
+	::SaveChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
+	::SaveChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
+	::SaveChannelColor(ini, Name(), "team", GW::Chat::Channel::CHANNEL_GROUP);
+	::SaveChannelColor(ini, Name(), "trade", GW::Chat::Channel::CHANNEL_TRADE);
+	::SaveChannelColor(ini, Name(), "alliance", GW::Chat::Channel::CHANNEL_ALLIANCE);
+	::SaveChannelColor(ini, Name(), "whispers", GW::Chat::Channel::CHANNEL_WHISPER);
+	::SaveChannelColor(ini, Name(), "emotes", GW::Chat::Channel::CHANNEL_EMOTE);
+	::SaveChannelColor(ini, Name(), "other", GW::Chat::Channel::CHANNEL_GLOBAL);
 }
 
 void GameSettings::DrawSettingInternal() {
@@ -1342,14 +1342,14 @@ void GameSettings::DrawSettingInternal() {
         ImGui::Text("Message");
         ImGui::Spacing();
 
-		DrawChannelColor("Local", GW::Chat::CHANNEL_ALL);
-		DrawChannelColor("Guild", GW::Chat::CHANNEL_GUILD);
-		DrawChannelColor("Team", GW::Chat::CHANNEL_GROUP);
-		DrawChannelColor("Trade", GW::Chat::CHANNEL_TRADE);
-		DrawChannelColor("Alliance", GW::Chat::CHANNEL_ALLIANCE);
-		DrawChannelColor("Whispers", GW::Chat::CHANNEL_WHISPER);
-		DrawChannelColor("Emotes", GW::Chat::CHANNEL_EMOTE);
-		DrawChannelColor("Other", GW::Chat::CHANNEL_GLOBAL);
+		DrawChannelColor("Local", GW::Chat::Channel::CHANNEL_ALL);
+		DrawChannelColor("Guild", GW::Chat::Channel::CHANNEL_GUILD);
+		DrawChannelColor("Team", GW::Chat::Channel::CHANNEL_GROUP);
+		DrawChannelColor("Trade", GW::Chat::Channel::CHANNEL_TRADE);
+		DrawChannelColor("Alliance", GW::Chat::Channel::CHANNEL_ALLIANCE);
+		DrawChannelColor("Whispers", GW::Chat::Channel::CHANNEL_WHISPER);
+		DrawChannelColor("Emotes", GW::Chat::Channel::CHANNEL_EMOTE);
+		DrawChannelColor("Other", GW::Chat::Channel::CHANNEL_GLOBAL);
 
         ImGui::TextDisabled("(Left-click on a color to edit it)");
 		ImGui::TreePop();
@@ -1704,16 +1704,16 @@ void GameSettings::FriendStatusCallback(
 		return;
 	char buffer[512];
 	switch (status) {
-	case GW::FriendStatus_Offline:
+	case GW::FriendStatus::FriendStatus_Offline:
         if (game_setting.notify_when_friends_offline) {
 		    snprintf(buffer, sizeof(buffer), "%ls (%ls) has just logged out.", charname, alias);
 		    GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
         }
 		return;
-	case GW::FriendStatus_Away:
-	case GW::FriendStatus_DND:
-	case GW::FriendStatus_Online:
-		if (f->status != GW::FriendStatus_Offline)
+	case GW::FriendStatus::FriendStatus_Away:
+	case GW::FriendStatus::FriendStatus_DND:
+	case GW::FriendStatus::FriendStatus_Online:
+		if (f->status != GW::FriendStatus::FriendStatus_Offline)
             return;
         if (game_setting.notify_when_friends_online) {
 		    snprintf(buffer, sizeof(buffer), "<a=1>%ls</a> (%ls) has just logged in.</c>", charname, alias);
@@ -1724,7 +1724,7 @@ void GameSettings::FriendStatusCallback(
 }
 
 void GameSettings::DrawChannelColor(const char *name, GW::Chat::Channel chan) {
-    ImGui::PushID(chan);
+    ImGui::PushID(static_cast<int>(chan));
 	ImGui::Text(name);
 	
 	GW::Chat::Color color, sender_col, message_col;

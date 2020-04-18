@@ -65,12 +65,12 @@ namespace {
 		}
 		return &current_map;
 	}
-	static char* GetStatusText(uint8_t status) {
+	static char* GetStatusText(GW::FriendStatus status) {
 		switch (status) {
-		case 0: return "Offline";
-		case 1: return "Online";
-		case 2: return "Do not disturb";
-		case 3: return "Away";
+		case GW::FriendStatus::FriendStatus_Offline: return "Offline";
+		case GW::FriendStatus::FriendStatus_Online: return "Online";
+		case GW::FriendStatus::FriendStatus_DND: return "Do not disturb";
+		case GW::FriendStatus::FriendStatus_Away: return "Away";
 		}
 		return "Unknown";
 	}
@@ -120,8 +120,8 @@ private:
 		char current_map_name[128] = { 0 };
 		uint32_t current_map_id = 0;
 		std::unordered_map<std::wstring, Character> characters;
-		uint8_t status = 0; // 0 = Offline, 1 = Online, 2 = Do not disturb, 3 = Away
-		uint8_t type = 255; // 0 = Friend, 1 = Ignore, 2 = Played, 3 = Trade
+		GW::FriendStatus status = GW::FriendStatus::FriendStatus_Offline; // 0 = Offline, 1 = Online, 2 = Do not disturb, 3 = Away
+		GW::FriendType type = GW::FriendType::FriendType_Unknow;
 		bool is_tb_friend = false;  // Is this a friend via toolbox, or friend via friend list?
 		bool has_tmp_uuid = false;
 		clock_t added_via_toolbox = 0; // This friend added via toolbox? When?
@@ -168,14 +168,14 @@ private:
 		bool AddGWFriend();
 		bool RemoveGWFriend();
 		bool IsOffline() {
-			return status < 1 || status > 3;
+			return status < GW::FriendStatus::FriendStatus_Online || status > GW::FriendStatus::FriendStatus_Away;
 		};
 		bool NeedToUpdate(clock_t now) {
 			return (now - last_update) > 10000; // 10 Second stale.
 		}
 	};
 
-	Friend* SetFriend(uint8_t*, uint8_t, uint8_t, uint32_t, const wchar_t*, const wchar_t*);
+	Friend* SetFriend(uint8_t*, GW::FriendType, GW::FriendStatus, uint32_t, const wchar_t*, const wchar_t*);
 	Friend* SetFriend(GW::Friend*);
 	Friend* GetFriend(const wchar_t*);
 	Friend* GetFriend(GW::Friend*);
