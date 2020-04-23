@@ -301,6 +301,7 @@
     <ClInclude Include="GWToolbox\Widgets\Minimap\EffectRenderer.h" />
     <ClInclude Include="GWToolbox\Windows\TradeWindow.h" />
     <ClInclude Include="GWToolbox\Modules\AprilFools.h" />
+    <ClInclude Include="GWToolbox\Modules\InventoryManager.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -467,6 +468,7 @@
     <ClCompile Include="GWToolbox\Widgets\Minimap\EffectRenderer.cpp" />
     <ClCompile Include="GWToolbox\Windows\TradeWindow.cpp" />
     <ClCompile Include="GWToolbox\Modules\AprilFools.cpp" />
+    <ClCompile Include="GWToolbox\Modules\InventoryManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GWToolbox.rc">

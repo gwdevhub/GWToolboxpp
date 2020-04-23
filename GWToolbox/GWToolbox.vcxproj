@@ -124,6 +124,7 @@
     <ClInclude Include="GWToolbox\Modules\ChatCommands.h" />
     <ClInclude Include="GWToolbox\Modules\ChatFilter.h" />
     <ClInclude Include="GWToolbox\Modules\DiscordModule.h" />
+    <ClInclude Include="GWToolbox\Modules\InventoryManager.h" />
     <ClInclude Include="GWToolbox\Modules\ZrawDeepModule.h" />
     <ClInclude Include="GWToolbox\Modules\PartyWindowModule.h" />
     <ClInclude Include="GWToolbox\Modules\TwitchModule.h" />
@@ -234,6 +235,7 @@
     <ClCompile Include="GWToolbox\Modules\ChatCommands.cpp" />
     <ClCompile Include="GWToolbox\Modules\ChatFilter.cpp" />
     <ClCompile Include="GWToolbox\Modules\DiscordModule.cpp" />
+    <ClCompile Include="GWToolbox\Modules\InventoryManager.cpp" />
     <ClCompile Include="GWToolbox\Modules\ZrawDeepModule.cpp" />
     <ClCompile Include="GWToolbox\Modules\PartyWindowModule.cpp" />
     <ClCompile Include="GWToolbox\Modules\TwitchModule.cpp" />
