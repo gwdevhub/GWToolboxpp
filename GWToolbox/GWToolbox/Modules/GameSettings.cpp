@@ -366,6 +366,8 @@ namespace {
 		NAME=1,
 		DESC=2
 	};
+	constexpr int LuxonFactionNPC = GW::Constants::ModelID::Urgoz::HoppingVampire - 102;
+	constexpr int KurzickFactionNPC = LuxonFactionNPC - 229;
 }
 
 
@@ -836,11 +838,11 @@ void GameSettings::Initialize() {
 		uint32_t allegiance = 0;
 		// Dialog 135 is also used for other NPCs e.g. zaishen keys. Use last_dialog_npc_id to compare.
 		switch (last_dialog_npc_id) {
-		case 3639:
+		case LuxonFactionNPC:
 			current_faction = &GW::GameContext::instance()->world->current_luxon;
 			allegiance = 1;
 			break;
-		case 3410:
+		case KurzickFactionNPC:
 			current_faction = &GW::GameContext::instance()->world->current_kurzick;
 			allegiance = 0;
 			break;
