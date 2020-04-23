@@ -231,36 +231,28 @@ bool PartyWindowModule::ShouldRemoveAgentFromPartyWindow(uint32_t agent_id) {
 }
 void PartyWindowModule::LoadDefaults() {
 	ClearSpecialNPCs();
-	/*AddSpecialNPC({ "Luxon Longbow", 3087, GW::Constants::MapID::Fort_Aspenwood_mission });
-	AddSpecialNPC({ "Luxon Monk", 3588, GW::Constants::MapID::Fort_Aspenwood_mission });
-	AddSpecialNPC({ "Luxon Priest", 3024, GW::Constants::MapID::Fort_Aspenwood_mission });
-	AddSpecialNPC({ "Luxon Warrior", 3032, GW::Constants::MapID::Fort_Aspenwood_mission });
 
-	AddSpecialNPC({ "Kurzick Warrior", 3369, GW::Constants::MapID::Fort_Aspenwood_mission });
-	AddSpecialNPC({ "Kurzick Ranger", 3370, GW::Constants::MapID::Fort_Aspenwood_mission });
-	AddSpecialNPC({ "Kurzick Elementalist", 3367, GW::Constants::MapID::Fort_Aspenwood_mission });
-	AddSpecialNPC({ "Kurzick Necromancer", 3030, GW::Constants::MapID::Fort_Aspenwood_mission });*/
-
-	AddSpecialNPC({ "Vale friendly spirit 1", 2349, GW::Constants::MapID::The_Underworld });
-	AddSpecialNPC({ "Vale friendly spirit 2", 2350, GW::Constants::MapID::The_Underworld });
-    AddSpecialNPC({ "Pits friendly spirit 1", 2351, GW::Constants::MapID::The_Underworld });
-	AddSpecialNPC({ "Pits friendly spirit 2", 2358, GW::Constants::MapID::The_Underworld });
-	AddSpecialNPC({ "Pits friendly spirit 3", 2359, GW::Constants::MapID::The_Underworld });
-	AddSpecialNPC({ "Pits friendly spirit 4", 2360, GW::Constants::MapID::The_Underworld });
+	AddSpecialNPC({ "Vale friendly spirit 1", GW::Constants::ModelID::UW::TorturedSpirit1, GW::Constants::MapID::The_Underworld });
+	AddSpecialNPC({ "Vale friendly spirit 2", GW::Constants::ModelID::UW::TorturedSpirit1 + 1, GW::Constants::MapID::The_Underworld });
+    AddSpecialNPC({ "Pits friendly spirit 1", GW::Constants::ModelID::UW::PitsSoul1, GW::Constants::MapID::The_Underworld });
+	AddSpecialNPC({ "Pits friendly spirit 2", GW::Constants::ModelID::UW::PitsSoul2, GW::Constants::MapID::The_Underworld });
+	AddSpecialNPC({ "Pits friendly spirit 3", GW::Constants::ModelID::UW::PitsSoul3, GW::Constants::MapID::The_Underworld });
+	AddSpecialNPC({ "Pits friendly spirit 4", GW::Constants::ModelID::UW::PitsSoul4, GW::Constants::MapID::The_Underworld });
 
 	AddSpecialNPC({ "Gyala Hatchery siege turtle", 3582, GW::Constants::MapID::Gyala_Hatchery_outpost_mission });
 	
-	AddSpecialNPC({ "DoA Snakes", 4998, GW::Constants::MapID::Domain_of_Anguish });
+	AddSpecialNPC({ "DoA Snakes", GW::Constants::ModelID::DoA::OtherSnakes, GW::Constants::MapID::Domain_of_Anguish });
 
 	AddSpecialNPC({ "FoW Griffs", GW::Constants::ModelID::FoW::Griffons, GW::Constants::MapID::The_Fissure_of_Woe });
 	AddSpecialNPC({ "FoW Forgemaster", GW::Constants::ModelID::FoW::Forgemaster, GW::Constants::MapID::The_Fissure_of_Woe });
 
-	AddSpecialNPC({ "Mursaat Elementalist (Polymock)", 5843, GW::Constants::MapID::None });
-	AddSpecialNPC({ "Flame Djinn (Polymock)", 5844, GW::Constants::MapID::None });
-	AddSpecialNPC({ "Ice Imp (Polymock)", 5845, GW::Constants::MapID::None });
-	AddSpecialNPC({ "Naga Shaman (Polymock)", 5846, GW::Constants::MapID::None });
+	AddSpecialNPC({ "Mursaat Elementalist (Polymock)", GW::Constants::ModelID::PolymockSummon::MursaatElementalist, GW::Constants::MapID::None });
+	AddSpecialNPC({ "Flame Djinn (Polymock)", GW::Constants::ModelID::PolymockSummon::FlameDjinn, GW::Constants::MapID::None });
+	AddSpecialNPC({ "Ice Imp (Polymock)", GW::Constants::ModelID::PolymockSummon::IceImp, GW::Constants::MapID::None });
+	AddSpecialNPC({ "Naga Shaman (Polymock)", GW::Constants::ModelID::PolymockSummon::NagaShaman, GW::Constants::MapID::None });
 
-	AddSpecialNPC({ "Ebon Vanguard Assassin", 5848, GW::Constants::MapID::None });
+	//AddSpecialNPC({ "Ebon Vanguard Assassin", 5848, GW::Constants::MapID::None });
+	AddSpecialNPC({ "Ebon Vanguard Assassin", GW::Constants::ModelID::EbonVanguardAssassin, GW::Constants::MapID::None });
 }
 bool PartyWindowModule::ShouldAddAgentToPartyWindow(uint32_t agent_type) {
 	if ((agent_type & 0x20000000) == 0)
