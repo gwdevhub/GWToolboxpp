@@ -642,7 +642,7 @@ float AgentRenderer::GetSize(const GW::Agent* agent, const CustomAgent* ca) cons
 		case GW::Constants::ModelID::EotnDungeons::JusticiarThommis:
 		case GW::Constants::ModelID::EotnDungeons::RandStormweaver:
 		case GW::Constants::ModelID::EotnDungeons::Selvetarm:
-		case GW::Constants::ModelID::EotnDungeons::Forgewright:
+		case GW::Constants::ModelID::EotnDungeons::Forgewight:
 		case GW::Constants::ModelID::EotnDungeons::HavokSoulwail:
 		case GW::Constants::ModelID::EotnDungeons::RragarManeater3:
 		case GW::Constants::ModelID::EotnDungeons::RragarManeater12:
