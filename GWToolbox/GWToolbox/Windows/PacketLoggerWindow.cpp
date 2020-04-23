@@ -13,17 +13,84 @@
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/Constants/Maps.h>
+#include <GWCA/GameEntities/Map.h>
 
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/CtoSMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/MapMgr.h>
 #include "logger.h"
 
 #include "PacketLoggerWindow.h"
+
+#include "GuiUtils.h"
+
+#include <Modules/Resources.h>
+
+
+namespace {
+
+    struct MapInfo {
+        wchar_t enc_name[8];
+        std::wstring name;
+        wchar_t enc_desc[8];
+        std::wstring description;
+        GW::AreaInfo* map_info;
+        nlohmann::json ToJson() {
+            nlohmann::json json;
+            if(!name.empty())
+                json["name"] = GuiUtils::WStringToString(name);
+            if(!description.empty())
+                json["description"] = GuiUtils::WStringToString(description);
+            json["campaign"] = map_info->campaign;
+            json["type"] = map_info->type;
+            json["region"] = map_info->region;
+            json["flags"] = map_info->flags;
+            json["continent"] = map_info->continent;
+            return json;
+        };
+    };
+    static std::map<uint32_t, MapInfo*> maps;
+    void FetchMapInfo() {
+        if (!maps.empty())
+            return;
+        for (uint32_t map_id = 1; map_id < (uint32_t)GW::Constants::MapID::Count; map_id++) {
+            auto map_info = GW::Map::GetMapInfo((GW::Constants::MapID)map_id);
+            if (!map_info) continue;
+            MapInfo* map = new MapInfo();
+            map->map_info = map_info;
+            GW::UI::UInt32ToEncStr(map_info->name_id, map->enc_name, 8);
+            GW::UI::AsyncDecodeStr(map->enc_name, &map->name);
+            GW::UI::UInt32ToEncStr(map_info->description_id, map->enc_desc, 8);
+            GW::UI::AsyncDecodeStr(map->enc_desc, &map->description);
+            maps.emplace(map_id, map);
+        }
+        Log::Info("Fetching map info now");
+    }
+    void ExportMapInfo() {
+        nlohmann::json json;
+        for (auto it : maps) {
+            json[it.first] = it.second->ToJson();
+            delete it.second;
+        }
+        maps.clear();
+        std::wstring file_location = Resources::GetPath(L"maps.json");
+        if (PathFileExistsW(file_location.c_str())) {
+            DeleteFileW(file_location.c_str());
+        }
+
+        std::ofstream out(file_location);
+        out << json.dump();
+        out.close();
+        Log::Info("Maps exported to %ls", file_location.c_str());
+    }
+}
 
 // We can forward declare, because we won't use it
 struct IDirect3DDevice9;
@@ -71,6 +138,8 @@ static volatile bool running;
 static StoCHandlerArray  game_server_handler;
 static const size_t packet_max = 512; // Increase if number of StoC packets exceeds this.
 static bool ignored_packets[packet_max] = { 0 };
+GW::HookEntry hook_entry;
+
 static void printchar(wchar_t c) {
     if (c >= L' ' && c <= L'~') {
         printf("%lc", c);
@@ -79,28 +148,8 @@ static void printchar(wchar_t c) {
         printf("0x%X ", c);
     }
 }
-typedef void(__fastcall* SendPacket_pt)(uint32_t context, uint32_t size, void* packet);
-SendPacket_pt SendPacket_Func;
-SendPacket_pt SendPacket_Func_Ret;
-
 uintptr_t game_srv_object_addr;
-static void InitCtoS() {
-    SendPacket_Func = (SendPacket_pt)GW::Scanner::Find(
-        "\x55\x8B\xEC\x83\xEC\x2C\x53\x56\x57\x8B\xF9\x85", "xxxxxxxxxxxx", 0);
-    //printf("[SCAN] SendPacket = %p\n", SendPacket_Func);
-    if (!SendPacket_Func)
-        return;
 
-    {
-        uintptr_t address = GW::Scanner::Find(
-            "\x56\x33\xF6\x3B\xCE\x74\x0E\x56\x33\xD2", "xxxxxxxxxx", -4);
-        printf("[SCAN] CtoGSObjectPtr = %p\n", (void*)address);
-        if (address)
-            game_srv_object_addr = *(uintptr_t*)address;
-    }
-    
-
-}
 static void InitStoC()
 {
     struct GameServer {
@@ -380,6 +429,10 @@ static void PrintNestedField(uint32_t* fields, uint32_t n_fields,
     }
 }
 
+static void CtoSHandler(GW::HookStatus* status, void* packet) {
+     if (!logger_enabled) return;
+    printf("CtoS packet(%lu)\n", *(uint32_t*)packet);
+}
 static void PacketHandler(GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet)
 {
     if (!logger_enabled) return;
@@ -397,18 +450,12 @@ static void PacketHandler(GW::HookStatus* status, GW::Packet::StoC::PacketBase* 
     Serialize<uint32_t>(bytes, &header);
     assert(packet->header == header);
 
-    printf("packet(%lu) {\n", packet->header);
+    printf("StoC packet(%lu) {\n", packet->header);
     PrintNestedField(handler.fields + 1, handler.field_count - 1, 1, bytes, 4);
     printf("} endpacket(%lu)\n", packet->header);
 }
 
-static void CtoSHandler(uint32_t context, uint32_t size, uint32_t* packet) {
-    GW::HookBase::EnterHook();
-    if(size && packet)
-        Log::Log("StoC Packet %d",size);
-    SendPacket_Func_Ret(context, size, packet);
-    GW::HookBase::LeaveHook();
-}
+
 
 int debug_door_id = 0;
 uint32_t message_core_callback_identifier;
@@ -450,6 +497,14 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
             packet.object_id = debug_door_id;
             GW::StoC::EmulatePacket(&packet);
         });
+    }
+    if (ImGui::Button("Export Map Info")) {
+        if (maps.empty()) {
+            FetchMapInfo();
+        } 
+        else {
+            ExportMapInfo();
+        }
     }
 	if (ImGui::Checkbox("Log NPC Dialogs", &log_npc_dialogs)) {
 		if (!logger_enabled)
@@ -513,7 +568,13 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
     }
     ImGui::Text("Ignored Packets");
     ImGui::SameLine();
-    if (ImGui::Button("Toggle All")) {
+    if (ImGui::Button("Select All")) {
+        for (size_t i = 0; i < game_server_handler.size(); i++) {
+            ignored_packets[i] = true;
+        }
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Deselect All")) {
         for (size_t i = 0; i < game_server_handler.size(); i++) {
             ignored_packets[i] = !ignored_packets[i];
         }
@@ -537,11 +598,6 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
 void PacketLoggerWindow::Initialize() {
     ToolboxWindow::Initialize();
     InitStoC();
-    InitCtoS();
-	hooks.resize(512);
-    if (SendPacket_Func) {
-        //GW::HookBase::CreateHook(SendPacket_Func, CtoSHandler, (void**)& SendPacket_Func_Ret);
-    }
     if (logger_enabled) {
         logger_enabled = false;
         Enable();
@@ -592,31 +648,23 @@ void PacketLoggerWindow::LoadSettings(CSimpleIni* ini) {
         ignored_packets[i] = ignored_packets_bitset[i] == 1;
     }
 }
-void PacketLoggerWindow::RemoveCallback(uint32_t packet_header) {
-    if (!identifiers[packet_header])
-        return;
-    GW::StoC::RemoveCallback(packet_header, &hooks.at(packet_header));
-    identifiers[packet_header] = 0;
-}
-void PacketLoggerWindow::AddCallback(uint32_t packet_header) {
-    if (identifiers[packet_header])
-        return;
-	GW::StoC::RegisterPacketCallback(&hooks.at(packet_header), packet_header, PacketHandler);
-	identifiers[packet_header] = 1;
-}
 void PacketLoggerWindow::Disable() {
     if (!logger_enabled) return;
     for (size_t i = 0; i < game_server_handler.size(); i++) {
-        RemoveCallback(i);
+        GW::StoC::RemoveCallback(i, &hook_entry);
     }
-    if (SendPacket_Func) GW::HookBase::DisableHooks(SendPacket_Func);
+    for (size_t i = 0; i < 180; i++) {
+        GW::CtoS::RemoveCallback(i, &hook_entry);
+    }
     logger_enabled = false;
 }
 void PacketLoggerWindow::Enable() {
     if (logger_enabled) return;
     for (size_t i = 0; i < game_server_handler.size(); i++) {
-        AddCallback(i);
+        GW::StoC::RegisterPacketCallback(&hook_entry,i, &PacketHandler);
     }
-    if(SendPacket_Func) GW::HookBase::EnableHooks(SendPacket_Func);
+    for (size_t i = 0; i < 180; i++) {
+        GW::CtoS::RegisterPacketCallback(&hook_entry,i,&CtoSHandler);
+    }
     logger_enabled = true;
 }
