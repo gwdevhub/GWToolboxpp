@@ -41,6 +41,8 @@
 #include <Color.h>
 #include <Windows\StringDecoderWindow.h>
 
+#include "InventoryManager.h"
+
 namespace {
 	void SendChatCallback(GW::HookStatus *, GW::Chat::Channel chan, wchar_t msg[120]) {
 		if (!GameSettings::Instance().auto_url || !msg) return;
@@ -734,6 +736,7 @@ const bool PendingChatMessage::PrintMessage() {
 
 void GameSettings::Initialize() {
 	ToolboxModule::Initialize();
+	InventoryManager::Instance().Initialize();
 	// Open links on player name click
 	// Ctrl click name to target (and add to party)
 	// Ctrl+shift to invite to party
@@ -1637,11 +1640,12 @@ bool GameSettings::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 	return false;
 }
 
-void GameSettings::ItemClickCallback(GW::HookStatus *, uint32_t type, uint32_t slot, GW::Bag *bag) {
+void GameSettings::ItemClickCallback(GW::HookStatus* status, uint32_t type, uint32_t slot, GW::Bag *bag) {
+	InventoryManager::ItemClickCallback(status, type, slot, bag);
 	if (!GameSettings::Instance().move_item_on_ctrl_click) return;
     if (!ImGui::IsKeyDown(VK_CONTROL)) return;
 	if (type != 7) return;
-
+	if (status->blocked) return;
 	// Expected behaviors
 	//  When clicking on item in inventory
 	//   case storage close (or move_item_to_current_storage_pane = false):

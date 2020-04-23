@@ -179,6 +179,7 @@ void ToolboxSettings::DrawSettingInternal() {
 		auto window = ui[i];
 		if (window == &Updater::Instance()) continue;
 		if (window == &MainWindow::Instance()) continue;
+		if (!(window->IsWidget() || window->IsWindow())) continue;
 
 		ImGui::Checkbox(window ->Name(), &window->show_menubutton);
 
