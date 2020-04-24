@@ -5,7 +5,7 @@ layout: default
 # Version History
 Previous releases are provided as dll files. In order to use it, you need to use a different launcher which must be placed in the same directory as the dll. If you are looking for the latest version, go to the [Home Page](./) instead.
 
-## Version 2.34, Extended 1.9.49
+## Version 2.34, Extended 1.9.50
 * [Fix] Fixed donation issue after 2020-04-22 game update
 * [Fix] Model IDs updated after 2020-04-22 game update
 * [Fix] Fixed an issue that didn't do a fresh reload from ini file when clicking "Load Now" in tb settings
@@ -13,7 +13,7 @@ Previous releases are provided as dll files. In order to use it, you need to use
 * [New] Added `/salvage all`, `/salvage blue`, `/salvage purple` chat commands
 * [New] Added `/identify all`, `/identify blue`, `/identify purple`, `/identify gold` chat commands
 
-[Download](https://github.com/3vcloud/GWToolboxpp/releases/download/2.34-1.9.49_Release/JonsToolbox_1.9.49.zip)
+[Download](https://github.com/3vcloud/GWToolboxpp/releases/download/2.34-1.9.50_Release/JonsToolbox_1.9.50.zip)
 
 ## Version 2.34, Extended 1.9.48
 * [Fix] `/tp` now working in pre-searing
