@@ -47,7 +47,7 @@ public:
 
 	void Draw(IDirect3DDevice9* device) override;
 
-	void IdentifyAll();
+	void IdentifyAll(IdentifyAllType type);
 	void SalvageAll(SalvageAllType type);
 	bool IsPendingIdentify();
 	bool IsPendingSalvage();

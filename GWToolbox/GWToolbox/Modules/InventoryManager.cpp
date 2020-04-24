@@ -52,7 +52,12 @@ void InventoryManager::DetachSalvageListeners() {
 	//GW::StoC::RemoveCallback(GW::Packet::StoC::ItemGeneral::STATIC_HEADER, &salvage_hook_entry);
 	salvage_listeners_attached = false;
 }
-void InventoryManager::IdentifyAll() {
+void InventoryManager::IdentifyAll(IdentifyAllType type) {
+	if (type != identify_all_type) {
+		CancelIdentify();
+		is_identifying_all = true;
+		identify_all_type = type;
+	}
 	if (!is_identifying_all || is_identifying)
 		return;
 	// Get next item to identify
@@ -79,7 +84,7 @@ void InventoryManager::ContinueIdentify() {
 	if (pending_identify_item.item_id)
 		identified_count++;
 	if (is_identifying_all)
-		IdentifyAll();
+		IdentifyAll(identify_all_type);
 }
 void InventoryManager::ContinueSalvage() {
 	is_salvaging = false;
@@ -161,9 +166,27 @@ void InventoryManager::Initialize() {
 			Log::Warning("Syntax: /salvage blue, /salvage purple or /salvage all");
 		}
 		});
-	GW::Chat::CreateCommand(L"salvageblues", [this](const wchar_t* message, int argc, LPWSTR* argv) {
-		CancelSalvage();
-		SalvageAll(SalvageAllType::GoldAndLower);
+	GW::Chat::CreateCommand(L"identify", [this](const wchar_t* message, int argc, LPWSTR* argv) {
+		CancelIdentify();
+		if (argc != 2) {
+			Log::Warning("Syntax: /identify blue, /identify purple, /identify gold or /identify all");
+			return;
+		}
+		if (wcscmp(argv[1], L"blue") == 0) {
+			IdentifyAll(IdentifyAllType::Blue);
+		}
+		else if (wcscmp(argv[1], L"purple") == 0) {
+			IdentifyAll(IdentifyAllType::Purple);
+		}
+		else if (wcscmp(argv[1], L"gold") == 0) {
+			IdentifyAll(IdentifyAllType::Gold);
+		}
+		else if (wcscmp(argv[1], L"all") == 0) {
+			IdentifyAll(IdentifyAllType::All);
+		}
+		else {
+			Log::Warning("Syntax: /identify blue, /identify purple, /identify gold or /identify all");
+		}
 		});
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&on_map_change_entry, [this](...) {
 		CancelAll();
@@ -505,7 +528,7 @@ void InventoryManager::Update(float delta) {
 		}
 	}
 	if (is_identifying_all)
-		IdentifyAll();
+		IdentifyAll(identify_all_type);
 	if (is_salvaging_all)
 		SalvageAll(salvage_all_type);
 };
@@ -521,6 +544,7 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
 		ImGui::PushStyleColor(ImGuiCol_Button, ImColor(0, 0, 0, 0).Value);
 		ImVec2 size = ImVec2(250.0f * ImGui::GetIO().FontGlobalScale,0);
 		ImGui::Text(context_item_name_s.c_str());
+		ImGui::Separator();
 		if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && ImGui::Button("Store Item", size)) {
 			GW::HookStatus st = { 0 };
 			ImGui::GetIO().KeysDown[VK_CONTROL] = true;
@@ -544,9 +568,10 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
 				type = IdentifyAllType::Gold;
 			ImGui::PopStyleColor(3);
 			if (type != IdentifyAllType::None) {
-				identify_all_type = type;
-				is_identifying_all = true;
 				ImGui::CloseCurrentPopup();
+				CancelIdentify();
+				is_identifying_all = true;
+				IdentifyAll(type);
 			}
 		}
 		else if (context_item->IsSalvageKit()) {
@@ -566,20 +591,11 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
 			if (type != SalvageAllType::None) {
 				ImGui::CloseCurrentPopup();
 				CancelSalvage();
+				SalvageAll(type);
 			}
 		}
 		ImGui::PopStyleColor();
 		ImGui::PopStyleVar();
-		/*if (context_item->IsSalvagable()) {
-			switch (context_item->GetRarity()) {
-			case GW::Constants::Rarity::Blue:
-				IdentifyAllType = IdentifyAllType::Blue;
-
-			}
-			switch (static_cast<GW::Constants::ItemType>(context_item->type)) {
-				case GW::Constants::ItemType::
-			}
-		}*/
 		ImGui::EndPopup();
 	}
 	if (show_salvage_all_popup) {
@@ -650,6 +666,8 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, uint32_t type, 
 		return;
 	if (!item->bag || !item->bag->IsInventoryBag())
 		return;
+	if (im->context_item == item && im->show_item_context_menu)
+		return; // Double looped.
 	im->context_item = item;
 	im->show_item_context_menu = true;
 	im->context_item_name_ws.clear();

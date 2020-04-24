@@ -738,7 +738,6 @@ const bool PendingChatMessage::PrintMessage() {
 
 void GameSettings::Initialize() {
 	ToolboxModule::Initialize();
-	InventoryManager::Instance().Initialize();
 	// Open links on player name click
 	// Ctrl click name to target (and add to party)
 	// Ctrl+shift to invite to party
