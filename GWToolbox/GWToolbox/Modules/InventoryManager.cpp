@@ -327,6 +327,8 @@ InventoryManager::Item* InventoryManager::GetNextUnsalvagedItem(Item* kit, Item*
 				continue;
 			if (item->IsMaterial())
 				continue; // Don't salvage rare mats
+			if (item->IsArmor() || item->customized)
+				continue; // Don't salvage armor, or customised weapons.
 			if (item->IsBlue() && !item->GetIsIdentified() && (kit && kit->IsLesserKit()))
 				continue; // Note: lesser kits cant salvage blue unids - Guild Wars bug/feature
 			auto rarity = item->GetRarity();
