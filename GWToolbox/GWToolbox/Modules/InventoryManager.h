@@ -24,6 +24,9 @@ namespace GW {
 
 class InventoryManager : public ToolboxUIElement {
 public:
+	InventoryManager() {
+		current_salvage_session.salvage_item_id = 0;
+	}
 	enum class SalvageAllType : uint8_t {
 		None,
 		White,
@@ -87,7 +90,7 @@ private:
 	size_t salvaged_count = 0;
 	
 
-	GW::Packet::StoC::SalvageSession current_salvage_session = { 0 };
+	GW::Packet::StoC::SalvageSession current_salvage_session;
 
 	void ContinueIdentify();
 	void ContinueSalvage();
@@ -102,7 +105,7 @@ private:
 	void DetachSalvageListeners();
 	static void ClearSalvageSession(GW::HookStatus* status, ...) {
 		if(status) status->blocked = true;
-		Instance().current_salvage_session = { 0 };
+		Instance().current_salvage_session.salvage_item_id = 0;
 	};
 	void CancelSalvage() {
 		DetachSalvageListeners();
