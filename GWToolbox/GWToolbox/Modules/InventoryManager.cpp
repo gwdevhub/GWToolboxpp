@@ -644,7 +644,6 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, uint32_t type, 
 	if (!ImGui::IsKeyDown(VK_CONTROL)) return;
 	if (type != 7) return;
 	auto im = &InventoryManager::Instance();
-	if(!im->v)
 	if (im->is_manual_item_click) return;
 	Item* item = static_cast<Item*>(GW::Items::GetItemBySlot(bag,slot + 1));
 	if (!item || !(item->IsIdentificationKit() || item->IsSalvageKit()))
