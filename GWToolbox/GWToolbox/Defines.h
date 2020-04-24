@@ -1,6 +1,6 @@
 #pragma once
 
-#define GWTOOLBOX_EXTENDED_VERSION "1.9.48" // Extended version
+#define GWTOOLBOX_EXTENDED_VERSION "1.9.49" // Extended version
 #define GWTOOLBOX_VERSION "2.34" // Enter main version here. Should match with server version file.
 #define GWTOOLBOX_DLL_VERSION GWTOOLBOX_VERSION "-" GWTOOLBOX_EXTENDED_VERSION
 #define BETA_VERSION "" // enter something like "Beta 1". Internally we only check if not empty
