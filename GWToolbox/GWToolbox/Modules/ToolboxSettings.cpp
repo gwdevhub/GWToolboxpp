@@ -26,6 +26,7 @@
 #include <Modules/PartyWindowModule.h>
 #include <Modules/ZrawDeepModule.h>
 #include <Modules/AprilFools.h>
+#include <Modules/InventoryManager.h>
 
 #include <Windows/MainWindow.h>
 #include <Windows/PconsWindow.h>
@@ -75,6 +76,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
 	if (use_discord) optional_modules.push_back(&DiscordModule::Instance());
 	if (use_twitch) optional_modules.push_back(&TwitchModule::Instance());
 	if (use_partywindowmodule) optional_modules.push_back(&PartyWindowModule::Instance());
+	optional_modules.push_back(&InventoryManager::Instance());
 
 	SettingsWindow::Instance().sep_windows = optional_modules.size();
 	if (use_pcons) optional_modules.push_back(&PconsWindow::Instance());

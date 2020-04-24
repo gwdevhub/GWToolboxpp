@@ -7,12 +7,19 @@
 #include <GWCA\Managers\CtoSMgr.h>
 #include <GWCA\Managers\UIMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
+#include <GWCA\Managers\ChatMgr.h>
 
 #include "GameSettings.h"
 
 #include <logger.h>
 #include <GuiUtils.h>
 #include <imgui.h>
+
+namespace {
+	static ImVec4 ItemBlue = ImColor(153, 238, 255).Value;
+	static ImVec4 ItemPurple = ImColor(187, 137, 237).Value;
+	static ImVec4 ItemGold = ImColor(255, 204, 86).Value;
+}
 
 void InventoryManager::AttachSalvageListeners() {
 	if (salvage_listeners_attached)
@@ -49,16 +56,16 @@ void InventoryManager::IdentifyAll() {
 	if (!is_identifying_all || is_identifying)
 		return;
 	// Get next item to identify
-	Item* unid = GetUnidentifiedItem();
+	Item* unid = GetNextUnidentifiedItem();
 	if (!unid) {
-		CancelIdentify();
 		Log::Info("Identified %d items", identified_count);
+		CancelIdentify();
 		return;
 	}
 	Item* kit = GetIdentificationKit();
 	if (!kit) {
 		CancelIdentify();
-		Log::Warning("Failed to find an identification kit");
+		Log::Warning("No more identification kit uses");
 		return;
 	}
 	Identify(unid, kit);
@@ -97,21 +104,37 @@ void InventoryManager::ContinueSalvage() {
 		return;
 	}
 	if (is_salvaging_all)
-		SalvageAll();
+		SalvageAll(salvage_all_type);
 }
-void InventoryManager::SalvageAll() {
+void InventoryManager::SalvageAll(SalvageAllType type) {
+	if (type != salvage_all_type) {
+		CancelSalvage();
+		salvage_all_type = type;
+	}
+	if (!has_prompted_salvage) {
+		salvage_all_type = type;
+		FetchPotentialItems();
+		if (!potential_items_size) {
+			CancelSalvage();
+			Log::Warning("No items to salvage");
+			return;
+		}
+		show_salvage_all_popup = true;
+		has_prompted_salvage = true;
+		return;
+	}
 	if (!is_salvaging_all || is_salvaging)
 		return;
-	Item* kit = GetSalvageKit();
+	Item* kit = GetSalvageKit(only_use_superior_salvage_kits);
 	if (!kit) {
 		CancelSalvage();
 		Log::Warning("No more salvage kit uses");
 		return;
 	}
-	Item* item = GetUnsalvagedItem(kit);
+	Item* item = GetNextUnsalvagedItem(kit);
 	if (!item) {
-		CancelSalvage();
 		Log::Info("Salvaged %d items", salvaged_count);
+		CancelSalvage();
 		return;
 	}
 	
@@ -119,6 +142,29 @@ void InventoryManager::SalvageAll() {
 }
 void InventoryManager::Initialize() {
 	ToolboxUIElement::Initialize();
+	GW::Chat::CreateCommand(L"salvage", [this](const wchar_t* message, int argc, LPWSTR* argv) {
+		CancelSalvage();
+		if (argc != 2) {
+			Log::Warning("Syntax: /salvage blue, /salvage purple or /salvage all");
+			return;
+		}
+		if (wcscmp(argv[1], L"blue") == 0) {
+			SalvageAll(SalvageAllType::BlueAndLower);
+		}
+		else if (wcscmp(argv[1], L"purple") == 0) {
+			SalvageAll(SalvageAllType::PurpleAndLower);
+		}
+		else if (wcscmp(argv[1], L"all") == 0) {
+			SalvageAll(SalvageAllType::GoldAndLower);
+		}
+		else {
+			Log::Warning("Syntax: /salvage blue, /salvage purple or /salvage all");
+		}
+		});
+	GW::Chat::CreateCommand(L"salvageblues", [this](const wchar_t* message, int argc, LPWSTR* argv) {
+		CancelSalvage();
+		SalvageAll(SalvageAllType::GoldAndLower);
+		});
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&on_map_change_entry, [this](...) {
 		CancelAll();
 		});
@@ -169,8 +215,35 @@ void InventoryManager::Identify(Item* item, Item* kit) {
 	pending_identify_at = (clock() / CLOCKS_PER_SEC);
 	is_identifying = true;
 }
-InventoryManager::Item* InventoryManager::GetUnidentifiedItem() {
+void InventoryManager::FetchPotentialItems() {
+	Item* found = nullptr;
+	if (salvage_all_type != SalvageAllType::None) {
+		potential_items_size = 0;
+		while ((found = GetNextUnsalvagedItem(context_item, found)) && potential_items_size < potential_items_max) {
+			PotentialItem* item = &potential_salvage_all_items[potential_items_size];
+			GW::UI::AsyncDecodeStr(found->complete_name_enc ? found->complete_name_enc : found->name_enc, &item->name);
+			item->sanitised = false;
+			item ->rarity = found->GetRarity();
+			potential_items_size++;
+		}
+	}
+}
+InventoryManager::Item* InventoryManager::GetNextUnidentifiedItem(Item* start_after_item) {
 	size_t start_bag = static_cast<size_t>(GW::Constants::Bag::Backpack);
+	size_t start_position = 0;
+	if (start_after_item) {
+		for (size_t i = 0; i < start_after_item->bag->items.size(); i++) {
+			if (start_after_item->bag->items[i] == start_after_item) {
+				start_position = i + 1;
+				start_bag = static_cast<size_t>(start_after_item->bag->index + 1);
+				if (start_position >= start_after_item->bag->items.size()) {
+					start_position = 0;
+					start_bag++;
+				}
+				break;
+			}
+		}
+	}
 	size_t end_bag = static_cast<size_t>(GW::Constants::Bag::Equipment_Pack);
 	size_t items_found = 0;
 	Item* item = nullptr;
@@ -198,8 +271,22 @@ InventoryManager::Item* InventoryManager::GetUnidentifiedItem() {
 	}
 	return nullptr;
 }
-InventoryManager::Item* InventoryManager::GetUnsalvagedItem(Item* kit) {
+InventoryManager::Item* InventoryManager::GetNextUnsalvagedItem(Item* kit, Item* start_after_item) {
 	size_t start_bag = static_cast<size_t>(GW::Constants::Bag::Backpack);
+	size_t start_position = 0;
+	if (start_after_item) {
+		for (size_t i = 0; i < start_after_item->bag->items.size(); i++) {
+			if (start_after_item->bag->items[i] == start_after_item) {
+				start_position = i + 1;
+				start_bag = static_cast<size_t>(start_after_item->bag->index + 1);
+				if (start_position >= start_after_item->bag->items.size()) {
+					start_position = 0;
+					start_bag++;
+				}
+				break;
+			}
+		}
+	}
 	size_t end_bag = static_cast<size_t>(GW::Constants::Bag::Bag_2);
 	size_t items_found = 0;
 	Item* item = nullptr;
@@ -208,7 +295,7 @@ InventoryManager::Item* InventoryManager::GetUnsalvagedItem(Item* kit) {
 		if (!bag) continue;
 		GW::ItemArray items = bag->items;
 		items_found = 0;
-		for (size_t i = 0; i < items.size() && items_found < bag->items_count; i++) {
+		for (size_t i = (bag_i == start_bag ? start_position : 0); i < items.size() && items_found < bag->items_count; i++) {
 			item = static_cast<Item*>(items[i]);
 			if (!item)
 				continue;
@@ -222,12 +309,15 @@ InventoryManager::Item* InventoryManager::GetUnsalvagedItem(Item* kit) {
 			auto rarity = item->GetRarity();
 			switch (rarity) {
 			case GW::Constants::Rarity::Gold:
+				if (!item->GetIsIdentified()) continue;
 				if (salvage_all_type < SalvageAllType::GoldAndLower) continue;
 				return item;
 			case GW::Constants::Rarity::Purple:
+				if (!item->GetIsIdentified()) continue;
 				if (salvage_all_type < SalvageAllType::PurpleAndLower) continue;
 				return item;
 			case GW::Constants::Rarity::Blue:
+				if (!item->GetIsIdentified()) continue;
 				if (salvage_all_type < SalvageAllType::BlueAndLower) continue;
 				return item;
 			case GW::Constants::Rarity::White:
@@ -237,9 +327,9 @@ InventoryManager::Item* InventoryManager::GetUnsalvagedItem(Item* kit) {
 	}
 	return nullptr;
 }
-InventoryManager::Item* InventoryManager::GetSalvageKit() {
+InventoryManager::Item* InventoryManager::GetSalvageKit(bool only_superior_kits) {
 	size_t start_bag = static_cast<size_t>(GW::Constants::Bag::Backpack);
-	size_t end_bag = static_cast<size_t>(GW::Constants::Bag::Equipment_Pack);
+	size_t end_bag = static_cast<size_t>(GW::Constants::Bag::Bag_2);
 	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
 		end_bag = static_cast<size_t>(GW::Constants::Bag::Storage_14);
 	size_t items_found = 0;
@@ -250,20 +340,26 @@ InventoryManager::Item* InventoryManager::GetSalvageKit() {
 			return item;
 	}
 	// NOTE: the following code would normally fetch another kit, but its not a good idea to presume the player wants this to happen for salvage kits.
-	/*for (size_t bag_i = start_bag; bag_i <= end_bag; bag_i++) {
-		GW::Bag* bag = GW::Items::GetBag(bag_i);
-		if (!bag) continue;
-		GW::ItemArray items = bag->items;
-		items_found = 0;
-		for (size_t i = 0; i < items.size() && items_found < bag->items_count; i++) {
-			item = static_cast<Item*>(items[i]);
-			if (!item)
-				continue;
-			items_found++;
-			if (item->IsSalvageKit())
+	if (!context_item) {
+		// If no context item, this wasn't triggered via a right click - probably /salvage all command. In this case, its ok to find a kit.
+		for (size_t bag_i = start_bag; bag_i <= end_bag; bag_i++) {
+			GW::Bag* bag = GW::Items::GetBag(bag_i);
+			if (!bag) continue;
+			GW::ItemArray items = bag->items;
+			items_found = 0;
+			for (size_t i = 0; i < items.size() && items_found < bag->items_count; i++) {
+				item = static_cast<Item*>(items[i]);
+				if (!item)
+					continue;
+				items_found++;
+				if (!item->IsSalvageKit())
+					continue;
+				if (only_superior_kits && !item->IsExpertSalvageKit())
+					continue;
 				return item;
+			}
 		}
-	}*/
+	}
 	return nullptr;
 }
 InventoryManager::Item* InventoryManager::GetIdentificationKit() {
@@ -375,6 +471,14 @@ bool InventoryManager::IsPendingSalvage() {
 		return true;
 	return false;
 }
+void InventoryManager::DrawSettingInternal() {
+	ImGui::TextDisabled("This module is responsible for salvaging and identifying functions either by ctrl + clicking on a salvage or identification kit, or by using the command /salvage <type>");
+	ImGui::Text("Salvaging options");
+	ImGui::Indent();
+	ImGui::Checkbox("Only use Superior Salvage Kits",&only_use_superior_salvage_kits);
+	ImGui::ShowHelp("Salvaging items with lesser salvage kits produce less materials.\nSalvaging items with superior salvage kits produce rare materials.");
+	ImGui::Unindent();
+}
 void InventoryManager::Update(float delta) {
 	if (is_salvaging) {
 		if (IsPendingSalvage()) {
@@ -403,7 +507,7 @@ void InventoryManager::Update(float delta) {
 	if (is_identifying_all)
 		IdentifyAll();
 	if (is_salvaging_all)
-		SalvageAll();
+		SalvageAll(salvage_all_type);
 };
 void InventoryManager::Draw(IDirect3DDevice9* device) {
 	if (show_item_context_menu)
@@ -429,21 +533,19 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
 			IdentifyAllType type = IdentifyAllType::None;
 			if(ImGui::Button("Identify All Items", size))
 				type = IdentifyAllType::All;
-			ImGui::PushStyleColor(ImGuiCol_Text, ImColor(153, 238, 255).Value);
+			ImGui::PushStyleColor(ImGuiCol_Text, ItemBlue);
 			if (ImGui::Button("Identify All Blue Items", size))
 				type = IdentifyAllType::Blue;
-			ImGui::PushStyleColor(ImGuiCol_Text, ImColor(187, 137, 237).Value);
+			ImGui::PushStyleColor(ImGuiCol_Text, ItemPurple);
 			if (ImGui::Button("Identify All Purple Items", size))
 				type = IdentifyAllType::Purple;
-			ImGui::PushStyleColor(ImGuiCol_Text, ImColor(255, 204, 86).Value);
+			ImGui::PushStyleColor(ImGuiCol_Text, ItemGold);
 			if(ImGui::Button("Identify All Gold Items", size))
 				type = IdentifyAllType::Gold;
 			ImGui::PopStyleColor(3);
 			if (type != IdentifyAllType::None) {
 				identify_all_type = type;
 				is_identifying_all = true;
-				identified_count = 0;
-				pending_identify_item.item_id = 0;
 				ImGui::CloseCurrentPopup();
 			}
 		}
@@ -451,22 +553,19 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
 			SalvageAllType type = SalvageAllType::None;
 			if (ImGui::Button("Salvage All White Items", size))
 				type = SalvageAllType::White;
-			ImGui::PushStyleColor(ImGuiCol_Text, ImColor(153, 238, 255).Value);
-			if (ImGui::Button("Salvage All Blue Items", size))
+			ImGui::PushStyleColor(ImGuiCol_Text, ItemBlue);
+			if (ImGui::Button("Salvage All Blue & Lesser Items", size))
 				type = SalvageAllType::BlueAndLower;
-			ImGui::PushStyleColor(ImGuiCol_Text, ImColor(187, 137, 237).Value);
-			if (ImGui::Button("Salvage All Purple Items", size))
+			ImGui::PushStyleColor(ImGuiCol_Text, ItemPurple);
+			if (ImGui::Button("Salvage All Purple & Lesser Items", size))
 				type = SalvageAllType::PurpleAndLower;
-			ImGui::PushStyleColor(ImGuiCol_Text, ImColor(255, 204, 86).Value);
-			if (ImGui::Button("Salvage All Gold Items", size))
+			ImGui::PushStyleColor(ImGuiCol_Text, ItemGold);
+			if (ImGui::Button("Salvage All Gold & Lesser Items", size))
 				type = SalvageAllType::GoldAndLower;
 			ImGui::PopStyleColor(3);
 			if (type != SalvageAllType::None) {
-				salvage_all_type = type;
-				is_salvaging_all = true;
-				salvaged_count = 0;
-				pending_salvage_item.item_id = 0;
 				ImGui::CloseCurrentPopup();
+				CancelSalvage();
 			}
 		}
 		ImGui::PopStyleColor();
@@ -483,11 +582,69 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
 		}*/
 		ImGui::EndPopup();
 	}
+	if (show_salvage_all_popup) {
+		ImGui::OpenPopup("Salvage All?");
+		show_salvage_all_popup = false;
+	}
+	if (ImGui::BeginPopupModal("Salvage All?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+		if (!is_salvaging_all && salvage_all_type == SalvageAllType::None) {
+			// Salvage has just completed, progress window still open - close it now.
+			CancelSalvage();
+			ImGui::CloseCurrentPopup();
+		}
+		else if (is_salvaging_all) {
+			// Salvage in progress
+			ImGui::Text("Salvaging items...");
+			if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+				CancelSalvage();
+				ImGui::CloseCurrentPopup();
+			}
+		}
+		else {
+			// Are you sure prompt; at this point we've already got the list of items via FetchPotentialItems()
+			ImGui::Text("You're about to salvage %d item%s:", potential_items_size, potential_items_size == 1 ? "" : "s");
+			static std::wregex sanitiser(L"<[^>]+>");
+			for(size_t i = 0; i< potential_items_size;i++) {
+				PotentialItem* item = &potential_salvage_all_items[i];
+				switch (item->rarity) {
+				case GW::Constants::Rarity::Blue:
+					ImGui::PushStyleColor(ImGuiCol_Text, ItemBlue);
+					break;
+				case GW::Constants::Rarity::Purple:
+					ImGui::PushStyleColor(ImGuiCol_Text, ItemPurple);
+					break;
+				case GW::Constants::Rarity::Gold:
+					ImGui::PushStyleColor(ImGuiCol_Text, ItemGold);
+					break;
+				default:
+					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_Text));
+					break;
+				}
+				if (!item->sanitised && !item->name.empty()) {
+					item->name = std::regex_replace(item->name, sanitiser, L"");
+					item->sanitised = true;
+				}
+				ImGui::Text("  %ls", item->name.c_str());
+				ImGui::PopStyleColor();
+			}
+			ImGui::Text("\n\nAre you sure?");
+			if (ImGui::Button("OK", ImVec2(120, 0))) {
+				is_salvaging_all = true;
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+				CancelSalvage();
+				ImGui::CloseCurrentPopup();
+			}
+		}
+		ImGui::EndPopup();
+	}
 }
 void InventoryManager::ItemClickCallback(GW::HookStatus* status, uint32_t type, uint32_t slot, GW::Bag* bag) {
 	if (!ImGui::IsKeyDown(VK_CONTROL)) return;
 	if (type != 7) return;
 	auto im = &InventoryManager::Instance();
+	if(!im->v)
 	if (im->is_manual_item_click) return;
 	Item* item = static_cast<Item*>(GW::Items::GetItemBySlot(bag,slot + 1));
 	if (!item || !(item->IsIdentificationKit() || item->IsSalvageKit()))

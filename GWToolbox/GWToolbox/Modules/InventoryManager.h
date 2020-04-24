@@ -16,7 +16,7 @@
 
 namespace GW {
 	namespace Constants {
-		enum Rarity {
+		enum Rarity : uint8_t {
 			White, Blue, Purple, Gold, Green
 		};
 	}
@@ -24,6 +24,21 @@ namespace GW {
 
 class InventoryManager : public ToolboxUIElement {
 public:
+	enum class SalvageAllType : uint8_t {
+		None,
+		White,
+		BlueAndLower,
+		PurpleAndLower,
+		GoldAndLower
+	};
+	enum class IdentifyAllType : uint8_t {
+		None,
+		All,
+		Blue,
+		Purple,
+		Gold
+	};
+
 	static InventoryManager& Instance() {
 		static InventoryManager instance;
 		return instance;
@@ -33,12 +48,13 @@ public:
 	void Draw(IDirect3DDevice9* device) override;
 
 	void IdentifyAll();
-	void SalvageAll();
+	void SalvageAll(SalvageAllType type);
 	bool IsPendingIdentify();
 	bool IsPendingSalvage();
 	bool HasSettings() { return false; };
 	void Initialize() override;
 	void Update(float delta) override;
+	void DrawSettingInternal() override;
 
 	// Find an empty (or partially empty) inventory slot that this item can go into
 	std::pair<GW::Bag*, uint32_t> InventoryManager::GetAvailableInventorySlot(GW::Item* like_item);
@@ -51,21 +67,8 @@ public:
 
 	static void ItemClickCallback(GW::HookStatus*, uint32_t type, uint32_t slot, GW::Bag* bag);
 
-	enum class IdentifyAllType : uint8_t {
-		None,
-		All,
-		Blue,
-		Purple,
-		Gold
-	} identify_all_type;
-
-	enum class SalvageAllType : uint8_t {
-		None,
-		White,
-		BlueAndLower,
-		PurpleAndLower,
-		GoldAndLower
-	} salvage_all_type;
+	IdentifyAllType identify_all_type = IdentifyAllType::None;
+	SalvageAllType salvage_all_type = SalvageAllType::None;
 
 private:
 	bool show_item_context_menu = false;
@@ -73,10 +76,16 @@ private:
 	bool is_identifying_all = false;
 	bool is_salvaging = false;
 	bool is_salvaging_all = false;
+	bool has_prompted_salvage = false;
 	bool is_manual_item_click = false;
+	bool show_salvage_all_popup = true;
 	bool salvage_listeners_attached = false;
+
+	bool only_use_superior_salvage_kits = true;
+
 	size_t identified_count = 0;
 	size_t salvaged_count = 0;
+	
 
 	GW::Packet::StoC::SalvageSession current_salvage_session = { 0 };
 
@@ -87,6 +96,7 @@ private:
 	GW::HookEntry salvage_hook_entry;
 	GW::HookEntry redo_salvage_entry;
 	GW::HookEntry redo_identify_entry;
+	void FetchPotentialItems();
 
 	void AttachSalvageListeners();
 	void DetachSalvageListeners();
@@ -97,14 +107,18 @@ private:
 	void CancelSalvage() {
 		DetachSalvageListeners();
 		ClearSalvageSession(nullptr);
-		is_salvaging = is_salvaging_all = false;
+		is_salvaging = has_prompted_salvage = is_salvaging_all = false;
 		pending_salvage_item.item_id = 0;
 		pending_salvage_kit.item_id = 0;
+		salvage_all_type = SalvageAllType::None;
+		salvaged_count = 0;
 	}
 	void CancelIdentify() {
 		is_identifying = is_identifying_all = false;
 		pending_identify_item.item_id = 0;
 		pending_identify_kit.item_id = 0;
+		identify_all_type = IdentifyAllType::None;
+		identified_count = 0;
 	}
 	inline void CancelAll() {
 		CancelSalvage();
@@ -291,7 +305,7 @@ public:
 			if (bag->index + 1 == static_cast<uint32_t>(GW::Constants::Bag::Equipment_Pack))
 				return false;
 			if (type == static_cast<uint8_t>(GW::Constants::ItemType::Trophy))
-				return GetRarity() == GW::Constants::Rarity::White;
+				return GetRarity() == GW::Constants::Rarity::White && info_string;
 			return (type == static_cast<uint8_t>(GW::Constants::ItemType::Salvage)
 				|| type == static_cast<uint8_t>(GW::Constants::ItemType::CC_Shards)
 				|| IsWeapon() || IsArmor() || IsRareMaterial());
@@ -320,9 +334,9 @@ public:
 		}
 	};
 public:
-	Item* GetUnsalvagedItem(Item* salvage_kit = nullptr);
-	Item* GetSalvageKit();
-	Item* GetUnidentifiedItem();
+	Item* GetNextUnsalvagedItem(Item* salvage_kit = nullptr, Item* start_after_item = nullptr);
+	Item* GetSalvageKit(bool only_superior_kits = false);
+	Item* GetNextUnidentifiedItem(Item* start_after_item = nullptr);
 	Item* GetIdentificationKit();
 	void Identify(Item* item, Item* kit);
 	void Salvage(Item* item, Item* kit);
@@ -334,6 +348,15 @@ private:
 		uint32_t uses = 0;
 		uint32_t quantity = 0;
 	};
+	struct PotentialItem {
+		std::wstring name;
+		bool sanitised = false;
+		bool identified = false;
+		GW::Constants::Rarity rarity;
+	};
+	PotentialItem potential_salvage_all_items[60]; // List of items that would be processed if user confirms Salvage All
+	size_t potential_items_size = 0;
+	size_t potential_items_max = sizeof(potential_salvage_all_items) / sizeof(potential_salvage_all_items[0]);
 	PendingItem pending_identify_item;
 	PendingItem pending_identify_kit;
 	PendingItem pending_salvage_item;
