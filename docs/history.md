@@ -8,6 +8,11 @@ Previous releases are provided as dll files. In order to use it, you need to use
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
 
+## Version 2.35
+* [Fix] Fixes following April 22 update.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/2.35_Release/GWToolbox.dll)
+
 ## Version 2.34
 * [Fix] Fix crashes with enemies count in info window.
 
