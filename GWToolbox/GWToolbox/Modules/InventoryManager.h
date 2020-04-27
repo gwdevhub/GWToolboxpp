@@ -20,6 +20,9 @@ namespace GW {
 			White, Blue, Purple, Gold, Green
 		};
 	}
+	namespace Items {
+		GW::Item* GetItemById(uint32_t item_id);
+	}
 }
 
 class InventoryManager : public ToolboxUIElement {
@@ -54,10 +57,12 @@ public:
 	void SalvageAll(SalvageAllType type);
 	bool IsPendingIdentify();
 	bool IsPendingSalvage();
-	bool HasSettings() { return false; };
+	bool HasSettings() { return true; };
 	void Initialize() override;
 	void Update(float delta) override;
 	void DrawSettingInternal() override;
+	void LoadSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) override;
 
 	// Find an empty (or partially empty) inventory slot that this item can go into
 	std::pair<GW::Bag*, uint32_t> InventoryManager::GetAvailableInventorySlot(GW::Item* like_item);
@@ -84,7 +89,14 @@ private:
 	bool show_salvage_all_popup = true;
 	bool salvage_listeners_attached = false;
 
-	bool only_use_superior_salvage_kits = true;
+	bool only_use_superior_salvage_kits = false;
+	bool salvage_rare_mats = false;
+	std::map<GW::Constants::Bag, bool> bags_to_salvage_from = {
+		{ GW::Constants::Bag::Backpack,true },
+		{ GW::Constants::Bag::Belt_Pouch,true },
+		{ GW::Constants::Bag::Bag_1,true },
+		{ GW::Constants::Bag::Bag_2,true }
+	};
 
 	size_t identified_count = 0;
 	size_t salvaged_count = 0;
@@ -99,6 +111,7 @@ private:
 	GW::HookEntry salvage_hook_entry;
 	GW::HookEntry redo_salvage_entry;
 	GW::HookEntry redo_identify_entry;
+
 	void FetchPotentialItems();
 
 	void AttachSalvageListeners();
@@ -110,6 +123,7 @@ private:
 	void CancelSalvage() {
 		DetachSalvageListeners();
 		ClearSalvageSession(nullptr);
+		potential_salvage_all_items.clear();
 		is_salvaging = has_prompted_salvage = is_salvaging_all = false;
 		pending_salvage_item.item_id = 0;
 		pending_salvage_kit.item_id = 0;
@@ -307,11 +321,33 @@ public:
 				return false;
 			if (bag->index + 1 == static_cast<uint32_t>(GW::Constants::Bag::Equipment_Pack))
 				return false;
-			if (type == static_cast<uint8_t>(GW::Constants::ItemType::Trophy))
+			switch (static_cast<GW::Constants::ItemType>(type)) {
+			case GW::Constants::ItemType::Trophy:
 				return GetRarity() == GW::Constants::Rarity::White && info_string;
-			return (type == static_cast<uint8_t>(GW::Constants::ItemType::Salvage)
-				|| type == static_cast<uint8_t>(GW::Constants::ItemType::CC_Shards)
-				|| IsWeapon() || IsArmor() || IsRareMaterial());
+			case GW::Constants::ItemType::Salvage:
+			case GW::Constants::ItemType::CC_Shards:
+				return true;
+			case GW::Constants::ItemType::Materials_Zcoins:
+				switch (model_id) {
+				case GW::Constants::ItemID::BoltofDamask:
+				case GW::Constants::ItemID::BoltofLinen:
+				case GW::Constants::ItemID::BoltofSilk:
+				case GW::Constants::ItemID::DeldrimorSteelIngot:
+				case GW::Constants::ItemID::ElonianLeatherSquare:
+				case GW::Constants::ItemID::LeatherSquare:
+				case GW::Constants::ItemID::LumpofCharcoal:
+				case GW::Constants::ItemID::RollofParchment:
+				case GW::Constants::ItemID::RollofVellum:
+				case GW::Constants::ItemID::SpiritwoodPlank:
+				case GW::Constants::ItemID::SteelIngot:
+				case GW::Constants::ItemID::TemperedGlassVial:
+				case GW::Constants::ItemID::VialofInk:
+					return true;
+				}
+			}
+			if (IsWeapon() || IsArmor())
+				return true;
+			return false;
 		}
 		inline bool IsCommonMaterial() {
 			return interaction & 0x20;
@@ -353,13 +389,15 @@ private:
 	};
 	struct PotentialItem {
 		std::wstring name;
+		std::string name_s;
+		bool proceed = true;
 		bool sanitised = false;
-		bool identified = false;
-		GW::Constants::Rarity rarity;
+		uint32_t item_id = 0;
+		Item* item() {
+			return static_cast<Item*>(GW::Items::GetItemById(item_id));
+		}
 	};
-	PotentialItem potential_salvage_all_items[60]; // List of items that would be processed if user confirms Salvage All
-	size_t potential_items_size = 0;
-	size_t potential_items_max = sizeof(potential_salvage_all_items) / sizeof(potential_salvage_all_items[0]);
+	std::vector<PotentialItem> potential_salvage_all_items; // List of items that would be processed if user confirms Salvage All
 	PendingItem pending_identify_item;
 	PendingItem pending_identify_kit;
 	PendingItem pending_salvage_item;
