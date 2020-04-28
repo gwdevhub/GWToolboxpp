@@ -54,6 +54,44 @@ void InventoryManager::LoadSettings(CSimpleIni* ini) {
 	bags_to_salvage_from[GW::Constants::Bag::Bag_1] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_bag_1), bags_to_salvage_from[GW::Constants::Bag::Bag_1]);
 	bags_to_salvage_from[GW::Constants::Bag::Bag_2] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_bag_2), bags_to_salvage_from[GW::Constants::Bag::Bag_2]);
 }
+void InventoryManager::CmdSalvage(const wchar_t* message, int argc, LPWSTR* argv) {
+	auto im = &Instance();
+	im->CancelSalvage();
+	const wchar_t* arg2 = argc > 1 ? argv[1] : L"";
+	if (wcscmp(arg2, L"blue") == 0) {
+		im->SalvageAll(SalvageAllType::BlueAndLower);
+	}
+	else if (wcscmp(arg2, L"purple") == 0) {
+		im->SalvageAll(SalvageAllType::PurpleAndLower);
+	}
+	else if (wcscmp(arg2, L"all") == 0) {
+		im->SalvageAll(SalvageAllType::GoldAndLower);
+	}
+	else {
+		Log::Warning("Syntax: /%ls blue, /%ls purple or /%ls all", argv[0], argv[0], argv[0]);
+	}
+}
+void InventoryManager::CmdIdentify(const wchar_t* message, int argc, LPWSTR* argv) {
+	auto im = &Instance();
+	im->CancelIdentify();
+	const wchar_t* arg2 = argc > 1 ? argv[1] : L"";
+	if (wcscmp(arg2, L"blue") == 0) {
+		im->IdentifyAll(IdentifyAllType::Blue);
+	}
+	else if (wcscmp(arg2, L"purple") == 0) {
+		im->IdentifyAll(IdentifyAllType::Purple);
+	}
+	else if (wcscmp(arg2, L"gold") == 0) {
+		im->IdentifyAll(IdentifyAllType::Gold);
+	}
+	else if (wcscmp(arg2, L"all") == 0) {
+		im->IdentifyAll(IdentifyAllType::All);
+	}
+	else {
+		Log::Warning("Syntax: /%ls blue, /%ls purple, /%ls gold or /%ls all", argv[0], argv[0], argv[0], argv[0]);
+	}
+}
+
 void InventoryManager::AttachSalvageListeners() {
 	if (salvage_listeners_attached)
 		return;
@@ -188,47 +226,10 @@ void InventoryManager::SalvageAll(SalvageAllType type) {
 }
 void InventoryManager::Initialize() {
 	ToolboxUIElement::Initialize();
-	GW::Chat::CreateCommand(L"salvage", [this](const wchar_t* message, int argc, LPWSTR* argv) {
-		CancelSalvage();
-		if (argc != 2) {
-			Log::Warning("Syntax: /salvage blue, /salvage purple or /salvage all");
-			return;
-		}
-		if (wcscmp(argv[1], L"blue") == 0) {
-			SalvageAll(SalvageAllType::BlueAndLower);
-		}
-		else if (wcscmp(argv[1], L"purple") == 0) {
-			SalvageAll(SalvageAllType::PurpleAndLower);
-		}
-		else if (wcscmp(argv[1], L"all") == 0) {
-			SalvageAll(SalvageAllType::GoldAndLower);
-		}
-		else {
-			Log::Warning("Syntax: /salvage blue, /salvage purple or /salvage all");
-		}
-		});
-	GW::Chat::CreateCommand(L"identify", [this](const wchar_t* message, int argc, LPWSTR* argv) {
-		CancelIdentify();
-		if (argc != 2) {
-			Log::Warning("Syntax: /identify blue, /identify purple, /identify gold or /identify all");
-			return;
-		}
-		if (wcscmp(argv[1], L"blue") == 0) {
-			IdentifyAll(IdentifyAllType::Blue);
-		}
-		else if (wcscmp(argv[1], L"purple") == 0) {
-			IdentifyAll(IdentifyAllType::Purple);
-		}
-		else if (wcscmp(argv[1], L"gold") == 0) {
-			IdentifyAll(IdentifyAllType::Gold);
-		}
-		else if (wcscmp(argv[1], L"all") == 0) {
-			IdentifyAll(IdentifyAllType::All);
-		}
-		else {
-			Log::Warning("Syntax: /identify blue, /identify purple, /identify gold or /identify all");
-		}
-		});
+	GW::Chat::CreateCommand(L"salvage", CmdSalvage);
+	GW::Chat::CreateCommand(L"salv", CmdSalvage);
+	GW::Chat::CreateCommand(L"identify", CmdIdentify);
+	GW::Chat::CreateCommand(L"id", CmdIdentify);
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&on_map_change_entry, [this](...) {
 		CancelAll();
 		});

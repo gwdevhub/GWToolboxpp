@@ -64,6 +64,9 @@ public:
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
 
+	static void CmdIdentify(const wchar_t* message, int argc, LPWSTR* argv);
+	static void CmdSalvage(const wchar_t* message, int argc, LPWSTR* argv);
+
 	// Find an empty (or partially empty) inventory slot that this item can go into
 	std::pair<GW::Bag*, uint32_t> InventoryManager::GetAvailableInventorySlot(GW::Item* like_item);
 	// Find an empty (or partially empty) inventory slot that this item can go into. !entire_stack = Returns slots that are the same item, but won't hold all of them.
@@ -129,6 +132,7 @@ private:
 		pending_salvage_kit.item_id = 0;
 		salvage_all_type = SalvageAllType::None;
 		salvaged_count = 0;
+		context_item = nullptr;
 	}
 	void CancelIdentify() {
 		is_identifying = is_identifying_all = false;
@@ -136,6 +140,7 @@ private:
 		pending_identify_kit.item_id = 0;
 		identify_all_type = IdentifyAllType::None;
 		identified_count = 0;
+		context_item = nullptr;
 	}
 	inline void CancelAll() {
 		CancelSalvage();
