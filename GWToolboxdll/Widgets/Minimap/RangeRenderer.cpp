@@ -23,7 +23,8 @@ void RangeRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	color_range_cast = Colors::Load(ini, section, "color_range_cast", 0xFF117777);
 	color_range_spirit = Colors::Load(ini, section, "color_range_spirit", 0xFF337733);
 	color_range_compass = Colors::Load(ini, section, "color_range_compass", 0xFF666611);
-	targetRange.color = Colors::Load(ini, section, "color_range_target", 0xFF994444);
+	chainAggroRange.color = Colors::Load(ini, section, "color_range_target_foe", 0x00994444);
+	rezzAggroRange.color = Colors::Load(ini, section, "color_range_target_ally", 0xFF994444);
 	Invalidate();
 }
 void RangeRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
@@ -32,7 +33,8 @@ void RangeRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 	Colors::Save(ini, section, "color_range_cast", color_range_cast);
 	Colors::Save(ini, section, "color_range_spirit", color_range_spirit);
 	Colors::Save(ini, section, "color_range_compass", color_range_compass);
-	Colors::Save(ini, section, "color_range_target", targetRange.color);
+	Colors::Save(ini, section, "color_range_target_foe", chainAggroRange.color);
+	Colors::Save(ini, section, "color_range_target_ally", rezzAggroRange.color);
 }
 void RangeRenderer::DrawSettings() {
 	bool changed = false;
@@ -43,7 +45,8 @@ void RangeRenderer::DrawSettings() {
 		color_range_cast = 0xFF117777;
 		color_range_spirit = 0xFF337733;
 		color_range_compass = 0xFF666611;
-		targetRange.color = 0xFF994444;
+		chainAggroRange.color = 0x00994444;
+		rezzAggroRange.color = 0xFF994444;
 	}
 	changed |= Colors::DrawSettingHueWheel("HoS range", &color_range_hos);
 	changed |= Colors::DrawSettingHueWheel("Aggro range", &color_range_aggro);
@@ -52,9 +55,11 @@ void RangeRenderer::DrawSettings() {
 	changed |= Colors::DrawSettingHueWheel("Compass range", &color_range_compass);
 	if (changed) Invalidate();
 
-	if (Colors::DrawSetting("Target range", &targetRange.color)) {
-		targetRange.Invalidate();
-
+	if (Colors::DrawSetting("Chain aggro range", &chainAggroRange.color)) {
+		chainAggroRange.Invalidate();
+	}
+	if (Colors::DrawSetting("Rezz aggro range", &rezzAggroRange.color)) {
+		rezzAggroRange.Invalidate();
 	}
 }
 
@@ -239,11 +244,18 @@ void RangeRenderer::DrawTargetRange(IDirect3DDevice9* device) {
 	if (!target) return;
 	if (target == player) return;
 
+	TargetRange* targetRange;
 	float range = 0;
 
-	if (target->allegiance == 0x3) range = 700.0f;
-	if (target->allegiance == 0x1 && target->GetIsDead()) range = 1010.0f;
+	if (target->allegiance == 0x3) {
+		targetRange = &chainAggroRange;
+		range = 700.0f;
+	} else if (target->allegiance == 0x1 && target->GetIsDead()) {
+		targetRange = &rezzAggroRange;
+		range = 1010.0f;
+	}
 
+	if (&targetRange == nullptr) return;
 	if (!range) return;
 
 	D3DXMATRIX translate, scale, world;
@@ -251,5 +263,5 @@ void RangeRenderer::DrawTargetRange(IDirect3DDevice9* device) {
 	D3DXMatrixScaling(&scale, range, range, 1.0f);
 	world = scale * translate;
 	device->SetTransform(D3DTS_WORLD, &world);
-	targetRange.Render(device);
+	targetRange->Render(device);
 }

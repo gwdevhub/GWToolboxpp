@@ -10,6 +10,8 @@ class RangeRenderer : public VBuffer {
 		void Initialize(IDirect3DDevice9* device) override;
 	public:
 		Color color = 0;
+		float radius = 0;
+
 	};
 private:
 	static const size_t num_circles = 6;
@@ -38,7 +40,8 @@ private:
 
 	bool draw_center_ = false;
 
-	TargetRange targetRange;
+	TargetRange chainAggroRange;
+	TargetRange rezzAggroRange;
 
 	Color color_range_hos = 0;
 	Color color_range_aggro = 0;
