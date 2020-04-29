@@ -178,7 +178,7 @@ bool FriendListWindow::Friend::RemoveGWFriend() {
 /* Setters */
 // Update local friend record from raw info.
 FriendListWindow::Friend* FriendListWindow::SetFriend(uint8_t* uuid, GW::FriendType type, GW::FriendStatus status, uint32_t map_id, const wchar_t* charname, const wchar_t* alias) {
-	if (type != GW::FriendType_Friend && type != GW::FriendType_Ignore)
+	if (type != GW::FriendType::FriendType_Friend && type != GW::FriendType::FriendType_Ignore)
 		return nullptr;
 	Friend* lf = GetFriend(uuid);
 	if (!lf && charname)
