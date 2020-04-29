@@ -17,7 +17,6 @@
 #include "GuiUtils.h"
 #include "RangeRenderer.h"
 
-
 void RangeRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	color_range_hos = Colors::Load(ini, section, "color_range_hos", 0xFF881188);
 	color_range_aggro = Colors::Load(ini, section, "color_range_aggro", 0xFF994444);
