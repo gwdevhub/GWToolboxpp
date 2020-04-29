@@ -138,7 +138,7 @@ void TwitchModule::AddHooks() {
 	});
 	// When sending a whisper to "<irc_channel>", redirect it to send message via IRC
 	GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, [&](GW::HookStatus* status, GW::Chat::Channel chan, wchar_t* msg) -> bool {
-		if (chan != GW::Chat::CHANNEL_WHISPER || !connected)
+		if (chan != GW::Chat::Channel::CHANNEL_WHISPER || !connected)
 			return false;
 		wchar_t msgcpy[255];
 		wcscpy(msgcpy, msg);

@@ -721,7 +721,7 @@ bool ChatCommands::ParseOutpost(const std::wstring s, GW::Constants::MapID& outp
 		search_dungeons = false;
 	}
     
-	for (int i = 0; i < mapCnt; i++) {
+	for (size_t i = 0; i < mapCnt; i++) {
 		sanitized = searchable_map_names[i]; // Remove punctuation, to lower case.
         thisMapLength = sanitized.length();
 		if (searchStringLength > thisMapLength) 
@@ -740,7 +740,7 @@ bool ChatCommands::ParseOutpost(const std::wstring s, GW::Constants::MapID& outp
 		mapCnt = 11;
 		if (bestMatchMapID == GW::Constants::MapID::None) {
 			// Not found yet; try dungeons
-			for (int i = 0; i < mapCnt; i++) {
+			for (size_t i = 0; i < mapCnt; i++) {
 				sanitized = dungeon_map_names[i]; // Remove punctuation, to lower case.
 				thisMapLength = sanitized.length();
 				if (searchStringLength > thisMapLength)

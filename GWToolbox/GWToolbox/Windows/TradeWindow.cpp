@@ -194,7 +194,7 @@ void TradeWindow::fetch() {
 					if (local_tm) {
 						wchar_t buf[512];
 						swprintf(buf, sizeof(buf), L"<a=1>%s</a> @ %S %d, %02d:%02d: <c=#f96677><quote>%s", name_ws.c_str(), months[local_tm->tm_mon], local_tm->tm_mday, local_tm->tm_hour, local_tm->tm_min, msg_ws.c_str());
-						GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, buf);
+						GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_TRADE, buf);
 					}
 				}
 			}
@@ -255,7 +255,7 @@ void TradeWindow::fetch() {
 			std::wstring name_ws = GuiUtils::ToWstr(msg.name);
 			std::wstring msg_ws = GuiUtils::ToWstr(msg.message);
 			swprintf(buffer, sizeof(buffer), L"<a=1>%s</a>: <c=#f96677><quote>%s", name_ws.c_str(), msg_ws.c_str());
-			GW::Chat::WriteChat(GW::Chat::CHANNEL_TRADE, buffer);
+			GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_TRADE, buffer);
 		}
 	});
 }

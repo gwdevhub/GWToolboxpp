@@ -177,8 +177,8 @@ bool FriendListWindow::Friend::RemoveGWFriend() {
 
 /* Setters */
 // Update local friend record from raw info.
-FriendListWindow::Friend* FriendListWindow::SetFriend(uint8_t* uuid, uint8_t type, uint8_t status, uint32_t map_id, const wchar_t* charname, const wchar_t* alias) {
-	if (type != GW::FriendType_Friend && type != GW::FriendType_Ignore)
+FriendListWindow::Friend* FriendListWindow::SetFriend(uint8_t* uuid, GW::FriendType type, GW::FriendStatus status, uint32_t map_id, const wchar_t* charname, const wchar_t* alias) {
+	if (type != GW::FriendType::FriendType_Friend && type != GW::FriendType::FriendType_Ignore)
 		return nullptr;
 	Friend* lf = GetFriend(uuid);
 	if (!lf && charname)
@@ -214,13 +214,13 @@ FriendListWindow::Friend* FriendListWindow::SetFriend(uint8_t* uuid, uint8_t typ
 	}		
 
 	// Check and copy charnames, only if player is NOT offline
-	if (!charname || status == 0)
+	if (!charname || status == GW::FriendStatus::FriendStatus_Offline)
 		lf->current_char = nullptr;
-	if (status != 0 && charname) {
+	if (status != GW::FriendStatus::FriendStatus_Offline && charname) {
 		lf->current_char = lf->SetCharacter(charname);
 		uuid_by_name.emplace(charname, lf->uuid);
 	}
-	if (status != 255) {
+	if (status != static_cast<GW::FriendStatus>(255)) {
 		if (lf->status != status)
 			need_to_reorder_friends = true;
 		lf->status = status;
@@ -323,7 +323,7 @@ void FriendListWindow::Initialize() {
 			fc->profession = profession;
 	});
 	GW::Chat::RegisterSendChatCallback(&ErrorMessage_Entry, [&](GW::HookStatus* status, GW::Chat::Channel channel, wchar_t* msg) {
-		if (channel != GW::Chat::CHANNEL_WHISPER)
+		if (channel != GW::Chat::Channel::CHANNEL_WHISPER)
 			return;
 		last_whisper = msg;
 		last_whisper = last_whisper.substr(last_whisper.find_first_of(L",") + 1);
@@ -537,7 +537,7 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
     for (std::unordered_map<std::string, Friend*>::iterator it = friends.begin(); it != friends.end(); ++it) {
 		colIdx = 0;
 		Friend* lfp = it->second;
-        if (lfp->type != GW::FriendType_Friend) continue;
+        if (lfp->type != GW::FriendType::FriendType_Friend) continue;
 		// Get actual object instead of pointer just in case it becomes invalid half way through the draw.
 		Friend lf = *lfp;
 		if (lf.IsOffline()) continue;
@@ -559,7 +559,7 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
 		bool hovered = ImGui::IsItemHovered();
 		ImGui::PopStyleVar(4);
 		ImGui::SameLine(2.0f,0);
-		ImGui::PushStyleColor(ImGuiCol_Text,StatusColors[lf.status].Value);
+		ImGui::PushStyleColor(ImGuiCol_Text, StatusColors[static_cast<size_t>(lf.status)].Value);
 		ImGui::Bullet();
 		ImGui::PopStyleColor(4);
 		if(ImGui::IsItemHovered())
@@ -762,7 +762,7 @@ void FriendListWindow::LoadFromFile() {
 		lf->uuid = entry.pItem;
 		lf->uuid_bytes = StringToGuid(lf->uuid);
 		lf->alias = GuiUtils::StringToWString(inifile->GetValue(entry.pItem, "alias", ""));
-		lf->type = (uint8_t)inifile->GetLongValue(entry.pItem, "type", lf->type);
+		lf->type = (GW::FriendType)inifile->GetLongValue(entry.pItem, "type", static_cast<long>(lf->type));
 		if (lf->uuid.empty() || lf->alias.empty()) {
 			delete lf;
 			continue; // Error, alias or uuid empty.
@@ -803,7 +803,7 @@ void FriendListWindow::SaveToFile() {
         // do something
         Friend lf = *it->second;
 		const char* uuid = lf.uuid.c_str();
-        inifile->SetLongValue(uuid, "type", lf.type,NULL,false,true);
+        inifile->SetLongValue(uuid, "type", static_cast<long>(lf.type),NULL,false,true);
 		inifile->SetBoolValue(uuid, "is_tb_friend", lf.is_tb_friend, NULL, true);
 		inifile->SetValue(uuid, "alias", GuiUtils::WStringToString(lf.alias).c_str(), NULL, true);
 		// Append to existing charnames, but don't duplicate. This allows multiple accounts to contribute to the friend list.
