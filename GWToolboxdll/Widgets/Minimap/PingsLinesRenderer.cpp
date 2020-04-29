@@ -49,7 +49,7 @@ void PingsLinesRenderer::DrawSettings() {
 		marker.color = Colors::ARGB(200, 128, 0, 128);
 		color_shadowstep_line = Colors::ARGB(48, 128, 0, 128);
 		color_shadowstep_line_maxrange = Colors::ARGB(48, 128, 0, 128);
-		rangemarker.color = Colors::ARGB(255, 153, 68, 68);
+		rangemarker.color = Colors::ARGB(200, 128, 0, 128);
 		ping_circle.Invalidate();
 		marker.Invalidate();
 		rangemarker.Invalidate();
