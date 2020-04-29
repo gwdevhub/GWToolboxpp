@@ -28,8 +28,6 @@
 #include "Modules/ToolboxSettings.h"
 #include <Modules/Resources.h>
 
-#include "logger.h"
-
 //DWORD BondsWidget::buff_id[MAX_PARTYSIZE][MAX_BONDS] = { 0 };
 
 void BondsWidget::Initialize() {
