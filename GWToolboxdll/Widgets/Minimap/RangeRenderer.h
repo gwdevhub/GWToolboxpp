@@ -7,9 +7,11 @@
 
 class RangeRenderer : public VBuffer {
 private:
-	static const size_t num_circles = 5;
+	static const size_t num_circles = 6;
 	static const size_t circle_points = 64;
 	static const size_t circle_vertices = 65;
+	unsigned int vertex_count;
+	D3DVertex* vertices;
 
 public:
 	void Render(IDirect3DDevice9* device) override;

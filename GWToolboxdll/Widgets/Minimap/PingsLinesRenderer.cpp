@@ -25,6 +25,7 @@ void PingsLinesRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	ping_circle.color = Colors::Load(ini, section, "color_pings", Colors::ARGB(128, 255, 0, 0));
 	if ((ping_circle.color & IM_COL32_A_MASK) == 0) ping_circle.color |= Colors::ARGB(128, 0, 0, 0);
 	marker.color = Colors::Load(ini, section, "color_shadowstep_mark", Colors::ARGB(200, 128, 0, 128));
+	rangemarker.color = Colors::Load(ini, section, "color_shadowstep_mark", Colors::ARGB(200, 128, 0, 128));
 	color_shadowstep_line = Colors::Load(ini, section, "color_shadowstep_line", Colors::ARGB(155, 128, 0, 128));
 	color_shadowstep_line_maxrange = Colors::Load(ini, section, "color_shadowstep_line_maxrange", Colors::ARGB(255, 255, 0, 128));
 	maxrange_interp_begin = (float)ini->GetDoubleValue(section, "maxrange_interp_begin", 0.85);
@@ -45,10 +46,12 @@ void PingsLinesRenderer::DrawSettings() {
 		color_drawings = Colors::ARGB(0xFF, 0xFF, 0xFF, 0xFF);
 		ping_circle.color = Colors::ARGB(128, 255, 0, 0);
 		marker.color = Colors::ARGB(200, 128, 0, 128);
+		rangemarker.color = Colors::ARGB(200, 128, 0, 128);
 		color_shadowstep_line = Colors::ARGB(48, 128, 0, 128);
 		color_shadowstep_line_maxrange = Colors::ARGB(48, 128, 0, 128);
 		ping_circle.Invalidate();
 		marker.Invalidate();
+		rangemarker.Invalidate();
 	}
 	Colors::DrawSettingHueWheel("Drawings", &color_drawings);
 	if (Colors::DrawSettingHueWheel("Pings", &ping_circle.color)) {
@@ -56,6 +59,7 @@ void PingsLinesRenderer::DrawSettings() {
 	}
 	if (Colors::DrawSettingHueWheel("Shadowstep Marker", &marker.color)) {
 		marker.Invalidate();
+		rangemarker.Invalidate();
 	}
 	Colors::DrawSettingHueWheel("Shadowstep Line", &color_shadowstep_line);
 	Colors::DrawSettingHueWheel("Shadowstep Line (Max range)", &color_shadowstep_line_maxrange);
@@ -189,11 +193,14 @@ void PingsLinesRenderer::Render(IDirect3DDevice9* device) {
 	HRESULT res = buffer->Lock(0, sizeof(D3DVertex) * vertices_max, (VOID**)&vertices, D3DLOCK_DISCARD);
 	if (FAILED(res)) printf("PingsLinesRenderer Lock() error: HRESULT 0x%lX\n", res);
 
+	DrawTargetChainAggro(device);
+
 	DrawShadowstepLine(device);
 
 	DrawRecallLine(device);
 
 	DrawDrawings(device);
+
 
 	D3DXMATRIX i;
 	D3DXMatrixIdentity(&i);
@@ -204,6 +211,23 @@ void PingsLinesRenderer::Render(IDirect3DDevice9* device) {
 		device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
 		device->DrawPrimitive(type, 0, vertices_count / 2);
 		vertices_count = 0;
+	}
+}
+
+void PingsLinesRenderer::DrawTargetChainAggro(IDirect3DDevice9* device) {
+	GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
+	GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
+	if (target) {
+		if (target == player) return;
+		if (target->GetAsAgentLiving() == nullptr) return;
+		if (target->player_number <= 12) return;
+
+		D3DXMATRIX translate, scale, world;
+		D3DXMatrixTranslation(&translate, target->x, target->y, 0.0f);
+		D3DXMatrixScaling(&scale, 700.0f, 700.0f, 1.0f);
+		world = scale * translate;
+		device->SetTransform(D3DTS_WORLD, &world);
+		rangemarker.Render(device);
 	}
 }
 
@@ -283,7 +307,7 @@ void PingsLinesRenderer::DrawShadowstepMarker(IDirect3DDevice9* device) {
 	GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
 	if (!effects.valid()) {
 		shadowstep_location = GW::Vec2f();
-		return;
+		return;	
 	}
 
 	bool found = false;
@@ -304,6 +328,11 @@ void PingsLinesRenderer::DrawShadowstepMarker(IDirect3DDevice9* device) {
 	world = scale * translate;
 	device->SetTransform(D3DTS_WORLD, &world);
 	marker.Render(device);
+
+	D3DXMatrixScaling(&scale, 1010.0f, 1010.0f, 1.0f);
+	world = scale * translate;
+	device->SetTransform(D3DTS_WORLD, &world);
+	rangemarker.Render(device);
 }
 
 void PingsLinesRenderer::DrawShadowstepLine(IDirect3DDevice9* device) {
@@ -414,6 +443,29 @@ void PingsLinesRenderer::Marker::Initialize(IDirect3DDevice9* device) {
         _vertices[i].z = 0.0f;
         _vertices[i].color = color;
 	}
+
+	buffer->Unlock();
+}
+
+void PingsLinesRenderer::RangeMarker::Initialize(IDirect3DDevice9* device) {
+	type = D3DPT_LINESTRIP;
+	count = 48; // polycount
+	unsigned int vertex_count = count + 1;
+	D3DVertex* vertices = nullptr;
+
+	if (buffer) buffer->Release();
+	device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, 0,
+		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
+	buffer->Lock(0, sizeof(D3DVertex) * vertex_count, (VOID**)&vertices, D3DLOCK_DISCARD);
+
+	for (size_t i = 0; i < count; ++i) {
+		float angle = i * (2 * static_cast<float>(M_PI) / (count + 1));
+		vertices[i].x = std::cos(angle);
+		vertices[i].y = std::sin(angle);
+		vertices[i].z = 0.0f;
+		vertices[i].color = color;
+	}
+	vertices[count] = vertices[0];
 
 	buffer->Unlock();
 }

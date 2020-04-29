@@ -70,8 +70,8 @@ void RangeRenderer::Initialize(IDirect3DDevice9* device) {
 	checkforhos_ = true;
 	havehos_ = false;
 
-	D3DVertex* vertices = nullptr;
-	unsigned int vertex_count = count + num_circles + num_circles + 1;
+	vertices = nullptr;
+	vertex_count = count + num_circles + num_circles + 1;
 
 	device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, D3DUSAGE_WRITEONLY,
 		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);

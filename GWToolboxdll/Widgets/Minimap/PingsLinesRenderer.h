@@ -73,6 +73,11 @@ class PingsLinesRenderer : public VBuffer {
 	public:
 		Color color = 0;
 	};
+	class RangeMarker : public VBuffer {
+		void Initialize(IDirect3DDevice9* device) override;
+	public:
+		Color color = 0;
+	};
 
 public:
 	PingsLinesRenderer();
@@ -103,6 +108,7 @@ public:
 private:
 	void Initialize(IDirect3DDevice9* device) override;
 
+	void DrawTargetChainAggro(IDirect3DDevice9* device);
 	void DrawPings(IDirect3DDevice9* device);
 	void DrawShadowstepMarker(IDirect3DDevice9* device);
 	void DrawShadowstepLine(IDirect3DDevice9* device);
@@ -144,6 +150,7 @@ private:
 
 	// for markers
 	Marker marker;
+	RangeMarker rangemarker;
 	GW::Vec2f shadowstep_location;
 	DWORD recall_target = 0;
 
