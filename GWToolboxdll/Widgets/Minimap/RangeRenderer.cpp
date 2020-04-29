@@ -239,9 +239,13 @@ void RangeRenderer::DrawTargetRange(IDirect3DDevice9* device) {
 	GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
 	if (!target) return;
 	if (target == player) return;
-	if (target->GetAsAgentLiving() == nullptr) return;
 
-	float range = target->allegiance == 0x3 ? 700.0f : 1010.0f;
+	float range = 0;
+
+	if (target->allegiance == 0x3) range = 700.0f;
+	if (target->allegiance == 0x1 && target->GetIsDead()) range = 1010.0f;
+
+	if (!range) return;
 
 	D3DXMATRIX translate, scale, world;
 	D3DXMatrixTranslation(&translate, target->x, target->y, 0.0f);
