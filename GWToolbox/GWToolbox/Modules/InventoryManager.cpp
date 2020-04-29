@@ -691,7 +691,7 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
 				item = pi->item();
 				if (!item) continue;
 				if (bag != item->bag) {
-					if (!item->bag || item->bag->index > sizeof(bag_names) / sizeof(bag_names[0]))
+					if (!item->bag || item->bag->index > 3)
 						continue;
 					bag = item->bag;
 					ImGui::Text(bag_names[item->bag->index + 1]);

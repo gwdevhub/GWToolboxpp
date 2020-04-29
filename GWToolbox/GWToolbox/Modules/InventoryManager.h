@@ -16,7 +16,7 @@
 
 namespace GW {
 	namespace Constants {
-		enum Rarity : uint8_t {
+		enum class Rarity : uint8_t {
 			White, Blue, Purple, Gold, Green
 		};
 	}

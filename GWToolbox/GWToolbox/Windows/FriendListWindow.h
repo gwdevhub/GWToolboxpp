@@ -65,8 +65,8 @@ namespace {
 		}
 		return &current_map;
 	}
-	static char* GetStatusText(GW::FriendStatus status) {
-		switch (status) {
+	static char* GetStatusText(uint8_t status) {
+		switch (static_cast<GW::FriendStatus>(status)) {
 		case GW::FriendStatus::FriendStatus_Offline: return "Offline";
 		case GW::FriendStatus::FriendStatus_Online: return "Online";
 		case GW::FriendStatus::FriendStatus_DND: return "Do not disturb";
@@ -120,8 +120,8 @@ private:
 		char current_map_name[128] = { 0 };
 		uint32_t current_map_id = 0;
 		std::unordered_map<std::wstring, Character> characters;
-		GW::FriendStatus status = GW::FriendStatus::FriendStatus_Offline; // 0 = Offline, 1 = Online, 2 = Do not disturb, 3 = Away
-		GW::FriendType type = GW::FriendType::FriendType_Unknow;
+		uint8_t status = static_cast<uint8_t>(GW::FriendStatus::FriendStatus_Offline); // 0 = Offline, 1 = Online, 2 = Do not disturb, 3 = Away
+		uint8_t type = static_cast<uint8_t>(GW::FriendType::FriendType_Unknow);
 		bool is_tb_friend = false;  // Is this a friend via toolbox, or friend via friend list?
 		bool has_tmp_uuid = false;
 		clock_t added_via_toolbox = 0; // This friend added via toolbox? When?

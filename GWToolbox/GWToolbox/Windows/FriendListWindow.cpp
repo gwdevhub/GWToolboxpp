@@ -178,7 +178,7 @@ bool FriendListWindow::Friend::RemoveGWFriend() {
 /* Setters */
 // Update local friend record from raw info.
 FriendListWindow::Friend* FriendListWindow::SetFriend(uint8_t* uuid, GW::FriendType type, GW::FriendStatus status, uint32_t map_id, const wchar_t* charname, const wchar_t* alias) {
-	if (type != GW::FriendType::FriendType_Friend && type != GW::FriendType::FriendType_Ignore)
+	if (type != GW::FriendType_Friend && type != GW::FriendType_Ignore)
 		return nullptr;
 	Friend* lf = GetFriend(uuid);
 	if (!lf && charname)
@@ -194,7 +194,7 @@ FriendListWindow::Friend* FriendListWindow::SetFriend(uint8_t* uuid, GW::FriendT
         lf->alias = std::wstring(alias);
 		friends.emplace(uuid_c, lf);
 	}
-	lf->type = type;
+	lf->type = static_cast<uint8_t>(type);
 	if (strcmp(lf->uuid.c_str(),uuid_c) != 0) {
 		// UUID is different. This could be because toolbox created a uuid and it needs updating.
 		lf->uuid = std::string(uuid_c);
