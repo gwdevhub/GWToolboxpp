@@ -10,8 +10,6 @@ class RangeRenderer : public VBuffer {
 		void Initialize(IDirect3DDevice9* device) override;
 	public:
 		Color color = 0;
-		float radius = 0;
-
 	};
 private:
 	static const size_t num_circles = 6;
