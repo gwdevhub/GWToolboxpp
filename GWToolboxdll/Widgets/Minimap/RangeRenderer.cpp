@@ -53,7 +53,7 @@ void RangeRenderer::DrawSettings() {
 	changed |= Colors::DrawSettingHueWheel("Compass range", &color_range_compass);
 	if (changed) Invalidate();
 
-	if (Colors::DrawSetting("Target Range", &targetRange.color)) {
+	if (Colors::DrawSetting("Target range", &targetRange.color)) {
 		targetRange.Invalidate();
 
 	}

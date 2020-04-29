@@ -196,8 +196,6 @@ void PingsLinesRenderer::Render(IDirect3DDevice9* device) {
 	HRESULT res = buffer->Lock(0, sizeof(D3DVertex) * vertices_max, (VOID**)&vertices, D3DLOCK_DISCARD);
 	if (FAILED(res)) printf("PingsLinesRenderer Lock() error: HRESULT 0x%lX\n", res);
 
-	// DrawTargetRange(device);
-
 	DrawShadowstepLine(device);
 
 	DrawRecallLine(device);
@@ -213,26 +211,6 @@ void PingsLinesRenderer::Render(IDirect3DDevice9* device) {
 		device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
 		device->DrawPrimitive(type, 0, vertices_count / 2);
 		vertices_count = 0;
-	}
-}
-
-void PingsLinesRenderer::DrawTargetRange(IDirect3DDevice9* device) {
-	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return;
-
-	GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
-	GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
-	if (target) {
-		if (target == player) return;
-		if (target->GetAsAgentLiving() == nullptr) return;
-
-		float range = target->allegiance == 0x3 ? 700.0f : 1010.0f;
-
-		D3DXMATRIX translate, scale, world;
-		D3DXMatrixTranslation(&translate, target->x, target->y, 0.0f);
-		D3DXMatrixScaling(&scale, range, range, 1.0f);
-		world = scale * translate;
-		device->SetTransform(D3DTS_WORLD, &world);
-		rangemarker.Render(device);
 	}
 }
 
