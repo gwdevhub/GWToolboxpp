@@ -9,7 +9,7 @@
 #include "ToolboxWidget.h"
 
 class BondsWidget : public ToolboxWidget {
-	static const int MAX_BONDS = 15;
+	static const int MAX_BONDS = 16;
 	enum Bond {
 		BalthazarSpirit,
 		EssenceBond,
@@ -26,6 +26,7 @@ class BondsWidget : public ToolboxWidget {
 		Succor,
 		VitalBlessing,
 		WatchfulSpirit,
+		HeroicRefrain,
         None
 	};
 
@@ -65,5 +66,6 @@ private:
     bool click_to_drop = true;
 	bool show_allies = true;
 	bool flip_bonds = false;
+	bool hide_low_attribute = true;
 	int row_height = 0;
 };
