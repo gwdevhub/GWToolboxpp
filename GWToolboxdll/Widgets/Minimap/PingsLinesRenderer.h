@@ -108,7 +108,7 @@ public:
 private:
 	void Initialize(IDirect3DDevice9* device) override;
 
-	void DrawTargetChainAggro(IDirect3DDevice9* device);
+	void DrawTargetRange(IDirect3DDevice9* device);
 	void DrawPings(IDirect3DDevice9* device);
 	void DrawShadowstepMarker(IDirect3DDevice9* device);
 	void DrawShadowstepLine(IDirect3DDevice9* device);

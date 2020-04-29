@@ -24,6 +24,7 @@ void RangeRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	color_range_cast = Colors::Load(ini, section, "color_range_cast", 0xFF117777);
 	color_range_spirit = Colors::Load(ini, section, "color_range_spirit", 0xFF337733);
 	color_range_compass = Colors::Load(ini, section, "color_range_compass", 0xFF666611);
+	targetRange.color = Colors::Load(ini, section, "color_range_target", 0xFF994444);
 	Invalidate();
 }
 void RangeRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
@@ -32,6 +33,7 @@ void RangeRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 	Colors::Save(ini, section, "color_range_cast", color_range_cast);
 	Colors::Save(ini, section, "color_range_spirit", color_range_spirit);
 	Colors::Save(ini, section, "color_range_compass", color_range_compass);
+	Colors::Save(ini, section, "color_range_target", targetRange.color);
 }
 void RangeRenderer::DrawSettings() {
 	bool changed = false;
@@ -42,6 +44,7 @@ void RangeRenderer::DrawSettings() {
 		color_range_cast = 0xFF117777;
 		color_range_spirit = 0xFF337733;
 		color_range_compass = 0xFF666611;
+		targetRange.color = 0xFF994444;
 	}
 	changed |= Colors::DrawSettingHueWheel("HoS range", &color_range_hos);
 	changed |= Colors::DrawSettingHueWheel("Aggro range", &color_range_aggro);
@@ -49,6 +52,11 @@ void RangeRenderer::DrawSettings() {
 	changed |= Colors::DrawSettingHueWheel("Spirit range", &color_range_spirit);
 	changed |= Colors::DrawSettingHueWheel("Compass range", &color_range_compass);
 	if (changed) Invalidate();
+
+	if (Colors::DrawSetting("Target Range", &targetRange.color)) {
+		targetRange.Invalidate();
+
+	}
 }
 
 void RangeRenderer::CreateCircle(D3DVertex* vertices, float radius, DWORD color) {
@@ -70,8 +78,8 @@ void RangeRenderer::Initialize(IDirect3DDevice9* device) {
 	checkforhos_ = true;
 	havehos_ = false;
 
-	vertices = nullptr;
-	vertex_count = count + num_circles + num_circles + 1;
+	D3DVertex* vertices = nullptr;
+	unsigned int vertex_count = count + num_circles + num_circles + 1;
 
 	device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, D3DUSAGE_WRITEONLY,
 		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
@@ -181,6 +189,8 @@ void RangeRenderer::Render(IDirect3DDevice9* device) {
 		device->DrawPrimitive(type, circle_vertices * num_circles + 2, 1);
 		device->DrawPrimitive(type, circle_vertices * num_circles + 4, 1);
 	}
+
+	DrawTargetRange(device);
 }
 
 bool RangeRenderer::HaveHos() {
@@ -197,4 +207,46 @@ bool RangeRenderer::HaveHos() {
 		if (id == GW::Constants::SkillID::Vipers_Defense) return true;
 	}
 	return false;
+}
+
+void RangeRenderer::TargetRange::Initialize(IDirect3DDevice9* device) {
+	type = D3DPT_LINESTRIP;
+	count = circle_points;
+	unsigned int vertex_count = count + 1;
+	D3DVertex* vertices = nullptr;
+
+	if (buffer) buffer->Release();
+	device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, 0,
+		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
+	buffer->Lock(0, sizeof(D3DVertex) * vertex_count, (VOID**)&vertices, D3DLOCK_DISCARD);
+
+	for (size_t i = 0; i < count; ++i) {
+		float angle = i * (2 * static_cast<float>(M_PI) / (count + 1));
+		vertices[i].x = std::cos(angle);
+		vertices[i].y = std::sin(angle);
+		vertices[i].z = 0.0f;
+		vertices[i].color = color;
+	}
+	vertices[count] = vertices[0];
+
+	buffer->Unlock();
+}
+
+void RangeRenderer::DrawTargetRange(IDirect3DDevice9* device) {
+	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return;
+
+	GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
+	GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
+	if (!target) return;
+	if (target == player) return;
+	if (target->GetAsAgentLiving() == nullptr) return;
+
+	float range = target->allegiance == 0x3 ? 700.0f : 1010.0f;
+
+	D3DXMATRIX translate, scale, world;
+	D3DXMatrixTranslation(&translate, target->x, target->y, 0.0f);
+	D3DXMatrixScaling(&scale, range, range, 1.0f);
+	world = scale * translate;
+	device->SetTransform(D3DTS_WORLD, &world);
+	targetRange.Render(device);
 }

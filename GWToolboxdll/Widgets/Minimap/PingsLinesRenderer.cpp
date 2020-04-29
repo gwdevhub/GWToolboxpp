@@ -14,10 +14,10 @@
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
+#include <GWCA/Managers/MapMgr.h>
 
 #include "GuiUtils.h"
 #include "PingsLinesRenderer.h"
-
 
 void PingsLinesRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	color_drawings = Colors::Load(ini, section, "color_drawings", Colors::ARGB(0xFF, 0xFF, 0xFF, 0xFF));
@@ -25,11 +25,11 @@ void PingsLinesRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	ping_circle.color = Colors::Load(ini, section, "color_pings", Colors::ARGB(128, 255, 0, 0));
 	if ((ping_circle.color & IM_COL32_A_MASK) == 0) ping_circle.color |= Colors::ARGB(128, 0, 0, 0);
 	marker.color = Colors::Load(ini, section, "color_shadowstep_mark", Colors::ARGB(200, 128, 0, 128));
-	rangemarker.color = Colors::Load(ini, section, "color_shadowstep_mark", Colors::ARGB(200, 128, 0, 128));
 	color_shadowstep_line = Colors::Load(ini, section, "color_shadowstep_line", Colors::ARGB(155, 128, 0, 128));
 	color_shadowstep_line_maxrange = Colors::Load(ini, section, "color_shadowstep_line_maxrange", Colors::ARGB(255, 255, 0, 128));
 	maxrange_interp_begin = (float)ini->GetDoubleValue(section, "maxrange_interp_begin", 0.85);
 	maxrange_interp_end = (float)ini->GetDoubleValue(section, "maxrange_interp_end", 0.95);
+	rangemarker.color = Colors::Load(ini, section, "color_shadowstep_aggro", Colors::ARGB(200, 128, 0, 128));
 	Invalidate();
 }
 void PingsLinesRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
@@ -40,15 +40,16 @@ void PingsLinesRenderer::SaveSettings(CSimpleIni* ini, const char* section) cons
 	Colors::Save(ini, section, "color_shadowstep_line_maxrange", color_shadowstep_line_maxrange);
 	ini->SetDoubleValue(section, "maxrange_interp_begin", maxrange_interp_begin);
 	ini->SetDoubleValue(section, "maxrange_interp_end", maxrange_interp_end);
+	Colors::Save(ini, section, "color_shadowstep_aggro", rangemarker.color);
 }
 void PingsLinesRenderer::DrawSettings() {
 	if (ImGui::SmallButton("Restore Defaults")) {
 		color_drawings = Colors::ARGB(0xFF, 0xFF, 0xFF, 0xFF);
 		ping_circle.color = Colors::ARGB(128, 255, 0, 0);
 		marker.color = Colors::ARGB(200, 128, 0, 128);
-		rangemarker.color = Colors::ARGB(200, 128, 0, 128);
 		color_shadowstep_line = Colors::ARGB(48, 128, 0, 128);
 		color_shadowstep_line_maxrange = Colors::ARGB(48, 128, 0, 128);
+		rangemarker.color = Colors::ARGB(255, 153, 68, 68);
 		ping_circle.Invalidate();
 		marker.Invalidate();
 		rangemarker.Invalidate();
@@ -59,7 +60,6 @@ void PingsLinesRenderer::DrawSettings() {
 	}
 	if (Colors::DrawSettingHueWheel("Shadowstep Marker", &marker.color)) {
 		marker.Invalidate();
-		rangemarker.Invalidate();
 	}
 	Colors::DrawSettingHueWheel("Shadowstep Line", &color_shadowstep_line);
 	Colors::DrawSettingHueWheel("Shadowstep Line (Max range)", &color_shadowstep_line_maxrange);
@@ -70,6 +70,9 @@ void PingsLinesRenderer::DrawSettings() {
 	if (ImGui::SliderFloat("Max range end", &maxrange_interp_end, 0.0f, 1.0f)
 		&& maxrange_interp_begin > maxrange_interp_end) {
 		maxrange_interp_begin = maxrange_interp_end;
+	}
+	if (Colors::DrawSetting("Shadowstep Aggro Range", &rangemarker.color)) {
+		rangemarker.Invalidate();
 	}
 }
 
@@ -193,14 +196,13 @@ void PingsLinesRenderer::Render(IDirect3DDevice9* device) {
 	HRESULT res = buffer->Lock(0, sizeof(D3DVertex) * vertices_max, (VOID**)&vertices, D3DLOCK_DISCARD);
 	if (FAILED(res)) printf("PingsLinesRenderer Lock() error: HRESULT 0x%lX\n", res);
 
-	DrawTargetChainAggro(device);
+	// DrawTargetRange(device);
 
 	DrawShadowstepLine(device);
 
 	DrawRecallLine(device);
 
 	DrawDrawings(device);
-
 
 	D3DXMATRIX i;
 	D3DXMatrixIdentity(&i);
@@ -214,17 +216,20 @@ void PingsLinesRenderer::Render(IDirect3DDevice9* device) {
 	}
 }
 
-void PingsLinesRenderer::DrawTargetChainAggro(IDirect3DDevice9* device) {
+void PingsLinesRenderer::DrawTargetRange(IDirect3DDevice9* device) {
+	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return;
+
 	GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
 	GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
 	if (target) {
 		if (target == player) return;
 		if (target->GetAsAgentLiving() == nullptr) return;
-		if (target->player_number <= 12) return;
+
+		float range = target->allegiance == 0x3 ? 700.0f : 1010.0f;
 
 		D3DXMATRIX translate, scale, world;
 		D3DXMatrixTranslation(&translate, target->x, target->y, 0.0f);
-		D3DXMatrixScaling(&scale, 700.0f, 700.0f, 1.0f);
+		D3DXMatrixScaling(&scale, range, range, 1.0f);
 		world = scale * translate;
 		device->SetTransform(D3DTS_WORLD, &world);
 		rangemarker.Render(device);
@@ -333,6 +338,7 @@ void PingsLinesRenderer::DrawShadowstepMarker(IDirect3DDevice9* device) {
 	world = scale * translate;
 	device->SetTransform(D3DTS_WORLD, &world);
 	rangemarker.Render(device);
+
 }
 
 void PingsLinesRenderer::DrawShadowstepLine(IDirect3DDevice9* device) {

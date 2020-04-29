@@ -6,6 +6,11 @@
 
 
 class RangeRenderer : public VBuffer {
+	class TargetRange : public VBuffer {
+		void Initialize(IDirect3DDevice9* device) override;
+	public:
+		Color color = 0;
+	};
 private:
 	static const size_t num_circles = 6;
 	static const size_t circle_points = 64;
@@ -23,6 +28,7 @@ public:
 
 private:
 	void CreateCircle(D3DVertex* vertices, float radius, DWORD color);
+	void DrawTargetRange(IDirect3DDevice9* device);
 	void Initialize(IDirect3DDevice9* device) override;
 
 	bool HaveHos();
@@ -31,6 +37,8 @@ private:
 	bool havehos_ = false;
 
 	bool draw_center_ = false;
+
+	TargetRange targetRange;
 
 	Color color_range_hos = 0;
 	Color color_range_aggro = 0;

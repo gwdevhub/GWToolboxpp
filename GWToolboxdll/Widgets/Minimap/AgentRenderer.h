@@ -24,8 +24,8 @@ public:
 	uint32_t auto_target_id = 0;
 
 private:
-	static const size_t shape_size = 5;
-	enum Shape_e { Tear, Circle, Quad, BigCircle, EmptyCircle };
+	static const size_t shape_size = 4;
+	enum Shape_e { Tear, Circle, Quad, BigCircle };
 	enum Color_Modifier {
 		None, // rgb 0,0,0
 		Dark, // user defined
@@ -90,7 +90,6 @@ private:
 	Shape_e GetShape(const GW::Agent* agent, const CustomAgent* ca = nullptr) const;
 
 	void Enqueue(Shape_e shape, const GW::Agent* agent, float size, Color color);
-	void EnqueueCircle(const GW::Agent* agent, float radius, Color color);
 
 	D3DVertex* vertices = nullptr;	// vertices array
 	unsigned int vertices_count = 0;// count of vertices
@@ -115,7 +114,6 @@ private:
 	Color color_ally_spirit = 0;
 	Color color_ally_minion = 0;
 	Color color_ally_dead = 0;
-	Color color_range_aggro = 0;
 
 	Color profession_colors[11] = {
 		0xFF666666,
