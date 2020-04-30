@@ -59,6 +59,7 @@ private:
 
 	IDirect3DTexture9* textures[MAX_BONDS];
 	Color background = 0;
+	Color low_attribute_overlay = 0;
 
 	// settings
 	bool hide_in_outpost = false;
@@ -66,6 +67,5 @@ private:
     bool click_to_drop = true;
 	bool show_allies = true;
 	bool flip_bonds = false;
-	bool hide_low_attribute = true;
 	int row_height = 0;
 };

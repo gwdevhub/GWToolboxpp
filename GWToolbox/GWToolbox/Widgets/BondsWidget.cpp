@@ -177,18 +177,22 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
                 GW::Effect effect = agentEffects[j];
                 DWORD skill = effect.skill_id;
                 if (bond_map.find(skill) == bond_map.end()) continue;
-                if (hide_low_attribute) {
-                    GW::PartyAttribute partyAttribute = GW::GameContext::instance()->world->attributes[0];
-                    uint8_t attribute_id = GW::SkillbarMgr::GetSkillConstantData(skill).attribute;
-                    GW::Attribute attribute = partyAttribute.attribute[attribute_id];
-                    if (effect.effect_type < attribute.level) continue;
-                }
+
+                bool overlay = false;
+                GW::PartyAttribute partyAttribute = GW::GameContext::instance()->world->attributes[0];
+                uint8_t attribute_id = GW::SkillbarMgr::GetSkillConstantData(skill).attribute;
+                GW::Attribute attribute = partyAttribute.attribute[attribute_id];
+                if (effect.effect_type < attribute.level) overlay = true;
+
                 int y = party_map[agent];
                 int x = bond_map[skill];
                 Bond bond = GetBondBySkillID(skill);
                 ImVec2 tl = GetGridPos(x, y, true);
                 ImVec2 br = GetGridPos(x, y, false);
                 ImGui::GetWindowDrawList()->AddImage((ImTextureID)textures[bond], tl, br);
+                if (overlay) {
+                    ImGui::GetWindowDrawList()->AddRectFilled(tl, br, low_attribute_overlay);
+                }
             }
         }
 
@@ -240,8 +244,8 @@ void BondsWidget::LoadSettings(CSimpleIni* ini) {
     click_to_drop = ini->GetBoolValue(Name(), VAR_NAME(click_to_drop), click_to_drop);
     show_allies = ini->GetBoolValue(Name(), VAR_NAME(show_allies), show_allies);
 	flip_bonds = ini->GetBoolValue(Name(), VAR_NAME(flip_bonds), flip_bonds);
-    hide_low_attribute = ini->GetBoolValue(Name(), VAR_NAME(hide_low_attribute), true);
 	row_height = ini->GetLongValue(Name(), VAR_NAME(row_height), row_height);
+    low_attribute_overlay = Colors::Load(ini, Name(), VAR_NAME(background), Colors::ARGB(76, 0, 0, 0));
     hide_in_outpost = ini->GetLongValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
 }
 
@@ -253,8 +257,8 @@ void BondsWidget::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(click_to_drop), click_to_drop);
     ini->SetBoolValue(Name(), VAR_NAME(show_allies), show_allies);
 	ini->SetBoolValue(Name(), VAR_NAME(flip_bonds), flip_bonds);
-    ini->SetBoolValue(Name(), VAR_NAME(hide_low_attribute), hide_low_attribute);
 	ini->SetLongValue(Name(), VAR_NAME(row_height), row_height);
+    Colors::Save(ini, Name(), VAR_NAME(low_attribute_overlay), low_attribute_overlay);
     ini->SetLongValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
 }
 
@@ -267,8 +271,11 @@ void BondsWidget::DrawSettingInternal() {
 	ImGui::ShowHelp("'Allies' meaning the ones that show in party window, such as summoning stones");
     ImGui::Checkbox("Flip bond order (left/right)", &flip_bonds);
 	ImGui::ShowHelp("Bond order is based on your build. Check this to flip them left <-> right");
-    ImGui::Checkbox("Hide effects casted with less than current attribute level", &hide_low_attribute);
-    ImGui::ShowHelp("Only works for yourself and your heroes and doesn't include bonds");
+    Colors::DrawSetting("Low Attribute Overlay", &low_attribute_overlay);
+    ImGui::ShowHelp(
+        "Overlays effects casted with less than current attribute level.\n"
+        "Only works for yourself and your heroes and doesn't include bonds."
+    );
 	ImGui::InputInt("Row Height", &row_height);
 	if (row_height < 0) row_height = 0;
 	ImGui::ShowHelp("Height of each row, leave 0 for default");
