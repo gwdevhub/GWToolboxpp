@@ -82,6 +82,10 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
 				hotkeys.push_back(new HotkeyEquipItem(nullptr, nullptr));
 			}
 			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Equip an item from your inventory");
+			if (ImGui::Selectable("Flag Hero")) {
+				hotkeys.push_back(new HotkeyFlagHero(nullptr, nullptr));
+			}
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Flag a hero relative to your position");
 			ImGui::EndPopup();
 		}
 
