@@ -28,14 +28,6 @@ namespace {
 		"Bag 2"
 	};
 }
-
-GW::Item* GW::Items::GetItemById(uint32_t item_id) {
-	if (!item_id) return nullptr;
-	GW::ItemArray items = GW::Items::GetItemArray();
-	if (!items.valid()) return nullptr;
-	if (item_id >= items.size()) return nullptr;
-	return items[item_id];
-}
 void InventoryManager::SaveSettings(CSimpleIni* ini) {
 	ToolboxUIElement::SaveSettings(ini);
 	ini->SetBoolValue(Name(), VAR_NAME(only_use_superior_salvage_kits), only_use_superior_salvage_kits);

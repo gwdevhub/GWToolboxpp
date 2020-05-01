@@ -20,9 +20,6 @@ namespace GW {
 			White, Blue, Purple, Gold, Green
 		};
 	}
-	namespace Items {
-		GW::Item* GetItemById(uint32_t item_id);
-	}
 }
 
 class InventoryManager : public ToolboxUIElement {
