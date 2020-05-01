@@ -6,7 +6,7 @@
 #include <GWCA\GameContainers\GamePos.h>
 
 #include <GWCA\GameEntities\Camera.h>
-#include <GWCA\GameEntities\Item.h>
+
 #include <GWCA\GameEntities\Party.h>
 #include <GWCA\GameEntities\Quest.h>
 #include <GWCA\GameEntities\Skill.h>
@@ -30,7 +30,6 @@
 #include <GWCA\Managers\CameraMgr.h>
 
 #include "GWToolbox.h"
-#include "GuiUtils.h"
 
 #include <Widgets\TimerWidget.h>
 #include <Widgets\HealthWidget.h>
@@ -90,8 +89,13 @@ void InfoWindow::Initialize() {
 			}
 		}
 	});
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::QuotedItemPrice>(&InstanceLoadFile_Entry,
+		[this](GW::HookStatus*, GW::Packet::StoC::QuotedItemPrice* packet) -> void {
+			quoted_item_id = packet->itemid;
+		});
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry,
 	[this](GW::HookStatus *, GW::Packet::StoC::InstanceLoadFile *packet) -> void {
+		quoted_item_id = 0;
 		mapfile = packet->map_fileID;
 		for (unsigned i = 0; i < status.size(); ++i) {
 			status[i] = NotYetConnected;
@@ -123,7 +127,66 @@ void InfoWindow::Initialize() {
 		}
 	});
 }
+void InfoWindow::DrawItemInfo(GW::Item* item, ForDecode* name) {
+	if (!item) return;
+	name->init(item->single_item_name);
+	static char modelid[32] = "";
+	static char slot[12] = "";
+	static char encname_buf[32] = "";
+	static char encdesc_buf[512] = "";
+	strcpy_s(modelid, "-");
+	strcpy_s(slot, "-");
+	strcpy_s(encname_buf, "-");
+	strcpy_s(encdesc_buf, "-");
+	if (snprintf(modelid, 32, "%d", item->model_id) < 0)
+		return;
+	if (item->bag) {
+		if (snprintf(slot, 12, "%d/%d", item->bag->index + 1, item->slot + 1) < 0)
+			return;
+	}
 
+	ImGui::PushItemWidth(-80.0f);
+	ImGui::LabelText("Bag/Slot", slot, 12, ImGuiInputTextFlags_ReadOnly);
+	ImGui::InputText("ModelID", modelid, 32, ImGuiInputTextFlags_ReadOnly);
+	ImGui::InputText("Name", name->str(), 64, ImGuiInputTextFlags_ReadOnly);
+	//ImGui::InputText("ItemID", itemid, 32, ImGuiInputTextFlags_ReadOnly);
+	ImGui::PopItemWidth();
+	if (ImGui::TreeNode("Advanced##item")) {
+		ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() / 2);
+		if (item) {
+			ImGui::LabelText("Addr", "%p", item);
+			ImGui::LabelText("Id", "%d", item->item_id);
+			ImGui::LabelText("model_file_id", "0x%X", item->model_file_id);
+			if (item->name_enc) {
+				size_t offset = 0;
+				for (size_t i = 0; item->name_enc[i]; i++) {
+					offset += sprintf(encname_buf + offset, "0x%X ", item->name_enc[i]);
+				}
+			}
+			ImGui::InputText("Name Enc", item->name_enc ? encname_buf : "-", 32, ImGuiInputTextFlags_ReadOnly);
+			if (item->info_string) {
+				size_t offset = 0;
+				for (size_t i = 0; item->info_string[i]; i++) {
+					offset += sprintf(encdesc_buf + offset, "0x%X ", item->info_string[i]);
+				}
+			}
+			ImGui::InputText("Desc Enc", item->info_string ? encdesc_buf : "-", 512, ImGuiInputTextFlags_ReadOnly);
+			if (item->mod_struct_size) {
+				ImGui::Text("Mod Struct (identifier, arg1, arg2)");
+			}
+			char mod_struct_label[] = "###Mod Struct 1";
+			char mod_struct_buf[64];
+			for (size_t i = 0; i < item->mod_struct_size; i++) {
+				GW::ItemModifier* mod = &item->mod_struct[i];
+				mod_struct_label[14] = (i + 1) + '0';
+				sprintf(mod_struct_buf, "0x%X (%d %d %d)", mod->mod, mod->identifier(), mod->arg1(), mod->arg2());
+				ImGui::InputText(mod_struct_label, mod_struct_buf, 64, ImGuiInputTextFlags_ReadOnly);
+			}
+		}
+		ImGui::PopItemWidth();
+		ImGui::TreePop();
+	}
+}
 void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 	if (!visible) return;
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
@@ -394,70 +457,13 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 		}
 		if (show_item && ImGui::CollapsingHeader("Item")) {
 			ImGui::Text("First item in inventory");
-            GW::Item* item = nullptr;
-			static char modelid[32] = "";
-			static char slot[12] = "";
-			static char encname_buf[32] = "";
-			static char encdesc_buf[512] = "";
-			strcpy_s(modelid, "-");
-			strcpy_s(slot, "-");
-			strcpy_s(encname_buf, "-");
-			strcpy_s(encdesc_buf, "-");
-			GW::Bag** bags = GW::Items::GetBagArray();
-			if (bags) {
-				for (size_t i = 1; i < GW::Constants::BagMax && !item; i++) {
-					GW::Bag* bag = bags[i];
-					if (!bag) continue;
-					GW::ItemArray items = bag->items;
-					if (!items.valid()) continue;
-					for (size_t j = 0; j < items.size() && !item; j++) {
-						if (!items[j]) continue;
-						item = items[j];
-						snprintf(modelid, 32, "%d", item->model_id);
-						snprintf(slot, 12, "%d/%d", bag->index + 1,item->slot + 1);
-					}
-				}
-			}
-			ImGui::PushItemWidth(-80.0f);
-			ImGui::LabelText("Bag/Slot", slot, 12, ImGuiInputTextFlags_ReadOnly);
-			ImGui::InputText("ModelID", modelid, 32, ImGuiInputTextFlags_ReadOnly);
-			//ImGui::InputText("ItemID", itemid, 32, ImGuiInputTextFlags_ReadOnly);
-			ImGui::PopItemWidth();
-            if (ImGui::TreeNode("Advanced##item")) {
-                ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() / 2);
-                if (item) {
-                    ImGui::LabelText("Addr", "%p", item);
-                    ImGui::LabelText("Id", "%d", item->item_id);
-					ImGui::LabelText("model_file_id", "0x%X", item->model_file_id);
-					if (item->name_enc) {
-						size_t offset = 0;
-						for (size_t i = 0; item->name_enc[i]; i++) {
-							offset += sprintf(encname_buf + offset, "0x%X ", item->name_enc[i]);
-						}
-					}
-					ImGui::InputText("Name Enc", item->name_enc ? encname_buf : "-", 32, ImGuiInputTextFlags_ReadOnly);
-					if (item->info_string) {
-						size_t offset = 0;
-						for (size_t i = 0; item->info_string[i]; i++) {
-							offset += sprintf(encdesc_buf + offset, "0x%X ", item->info_string[i]);
-						}
-					}
-					ImGui::InputText("Desc Enc", item->info_string ? encdesc_buf : "-", 512, ImGuiInputTextFlags_ReadOnly);
-					if (item->mod_struct_size) {
-						ImGui::Text("Mod Struct (identifier, arg1, arg2)");
-					}
-					char mod_struct_label[] = "###Mod Struct 1";
-					char mod_struct_buf[64];
-					for (size_t i = 0; i < item->mod_struct_size; i++) {
-						GW::ItemModifier* mod = &item->mod_struct[i];
-						mod_struct_label[14] = (i + 1) + '0';
-						sprintf(mod_struct_buf, "0x%X (%d %d %d)", mod->mod, mod->identifier(), mod->arg1(), mod->arg2());
-						ImGui::InputText(mod_struct_label, mod_struct_buf,64, ImGuiInputTextFlags_ReadOnly);
-					}
-                }
-                ImGui::PopItemWidth();
-                ImGui::TreePop();
-            }
+			static ForDecode item_name;
+			DrawItemInfo(GW::Items::GetItemBySlot(GW::Constants::Bag::Backpack, 1),&item_name);
+		}
+		if (show_item && ImGui::CollapsingHeader("Quoted Item")) {
+			ImGui::Text("Most recently quoted item (buy or sell) from trader");
+			static ForDecode quoted_name;
+			DrawItemInfo(GW::Items::GetItemById(quoted_item_id),&quoted_name);
 		}
 		if (show_quest && ImGui::CollapsingHeader("Quest")) {
 			GW::QuestLog qlog = GW::GameContext::instance()->world->quest_log;
