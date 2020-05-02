@@ -7,6 +7,11 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
+## Version 3.1
+* [Fix] Fix bug where the launcher would ask everytime to download the toolbox.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/3.1_Release/GWToolbox.dll)
+
 ## Version 3.0
 * [New] Merged [3vcloud](https://github.com/3vcloud) fork and added him as maintainer to GWToolbox. The following changes are made to GWToolbox.
 * [New] `/loadbuild` command added, allows player to load builds from the GWToolbox Builds window by name or build code. See help section of GWToolbox in-game for more info.
