@@ -19,6 +19,9 @@ public:
 	void LoadAgentColors();
 	void SaveAgentColors() const;
 
+	bool show_hidden_npcs = false;
+	bool boss_colors = true;
+
 private:
 	static const size_t shape_size = 4;
 	enum Shape_e { Tear, Circle, Quad, BigCircle };
@@ -110,6 +113,20 @@ private:
 	Color color_ally_spirit = 0;
 	Color color_ally_minion = 0;
 	Color color_ally_dead = 0;
+
+	Color profession_colors[11] = {
+		0xFF666666,
+		0xFFEEAA33,
+		0xFF55AA00,
+		0xFF4444BB,
+		0xFF00AA55,
+		0xFF8800AA,
+		0xFFBB3333,
+		0xFFAA0088,
+		0xFF00AAAA,
+		0xFF996600,
+		0xFF7777CC
+	};
 
 	std::vector<CustomAgent*> custom_agents;
 	std::unordered_map<DWORD, std::vector<const CustomAgent*>> custom_agents_map;

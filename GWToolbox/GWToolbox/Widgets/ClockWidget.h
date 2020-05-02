@@ -23,4 +23,5 @@ public:
 
 private:
 	bool use_24h_clock = true;
+    bool show_seconds = false;
 };

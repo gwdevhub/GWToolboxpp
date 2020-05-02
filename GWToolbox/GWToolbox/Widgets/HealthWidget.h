@@ -23,4 +23,5 @@ public:
     bool click_to_print_health = false;
 
     std::wstring agent_name_ping;
+	bool hide_in_outpost = false;
 };

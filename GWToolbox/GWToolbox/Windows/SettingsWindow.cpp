@@ -30,8 +30,14 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(450, 600), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
+        ImColor sCol(102, 187, 238, 255);
 		ImGui::PushTextWrapPos();
-		ImGui::Text("GWToolbox++ version %s by Has and KAOS", GWTOOLBOX_VERSION);
+        ImGui::Text("GWToolbox++");
+        ImGui::SameLine(0, 0); ImGui::TextColored(sCol," v%s ",GWTOOLBOX_VERSION);
+        if (ImGui::IsItemHovered()) 
+            ImGui::SetTooltip("Go to %s", GWTOOLBOX_WEBSITE);
+        if(ImGui::IsItemClicked())
+            ShellExecute(NULL, "open", GWTOOLBOX_WEBSITE, NULL, NULL, SW_SHOWNORMAL);
 		if (BETA_VERSION[0]) {
 			ImGui::SameLine();
 			ImGui::Text("- %s", BETA_VERSION);
@@ -97,9 +103,8 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
 				ImGui::Bullet(); ImGui::Text("Send Chat hotkey to enter one of the commands above.");
 				ImGui::TreePop();
 			}
-			if (ImGui::TreeNode("Chat Commands")) {
-				ChatCommands::Instance().DrawHelp();
-				ImGui::TreePop();
+			for (unsigned i = 0; i < GWToolbox::Instance().GetModules().size(); ++i) {
+				GWToolbox::Instance().GetModules()[i]->DrawHelp();
 			}
 		}
 

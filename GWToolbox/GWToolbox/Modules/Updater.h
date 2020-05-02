@@ -10,10 +10,14 @@ public:
 		static Updater instance;
 		return instance;
 	}
-
+    struct GWToolboxRelease {
+        std::string body;
+        std::string version;
+        std::string download_url;
+    };
 	const char* Name() const override { return "Updater"; }
 
-	void CheckForUpdate();
+	void CheckForUpdate(const bool forced = false);
 	void DoUpdate();
 
 	void Draw(IDirect3DDevice9* device) override;
@@ -23,13 +27,14 @@ public:
 	void Initialize() override;
 	void DrawSettings() override {};
 	void DrawSettingInternal() override;
-
-	std::string GetServerVersion() const { return server_version; }
+    void GetLatestRelease(GWToolboxRelease*);
+	std::string GetServerVersion() const { return latest_release.version; }
 
 private:
-	std::string server_version = "";
+    GWToolboxRelease latest_release;
+
 	// 0=none, 1=check and warn, 2=check and ask, 3=check and do
-	int mode = 0;
+	int mode = 2;
 
 	// 0=checking, 1=asking, 2=downloading, 3=done
 	enum Step {
@@ -39,7 +44,9 @@ private:
 		Success,
 		Done
 	};
+	bool notified = false;
+	bool forced_ask = false;
+	clock_t last_check = 0;
 
 	Step step = Checking;
-	std::string changelog = "";
 };

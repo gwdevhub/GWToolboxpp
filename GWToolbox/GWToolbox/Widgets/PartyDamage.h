@@ -32,7 +32,6 @@ class PartyDamage : public ToolboxWidget {
 	};
 
 	PartyDamage() {};
-	~PartyDamage() {};
 public:
 	static PartyDamage& Instance() {
 		static PartyDamage instance;
@@ -90,6 +89,7 @@ private:
 	bool bars_left = false;
 	int recent_max_time = 0;
 	int row_height = 0;
+	bool hide_in_outpost = false;
 
 	GW::HookEntry GenericModifier_Entry;
 	GW::HookEntry MapLoaded_Entry;

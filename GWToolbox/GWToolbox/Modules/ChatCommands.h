@@ -5,6 +5,8 @@
 #include <ToolboxModule.h>
 #include <ToolboxUIElement.h>
 
+#include <GWCA/Utilities/Hook.h>
+
 class ChatCommands : public ToolboxModule {
 	const float DEFAULT_CAM_SPEED = 1000.f; // 600 units per sec
 	const float ROTATION_SPEED = (float)M_PI / 3.f; // 6 seconds for full rotation
@@ -24,16 +26,20 @@ public:
 	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
 
-	void DrawHelp();
+	void DrawHelp() override;
 
 	bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam);
 
 	// Update. Will always be called every frame.
 	void Update(float delta) override;
 
+    static void CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* argv);
+
 private:
 	static bool ReadTemplateFile(std::wstring path, char *buff, size_t buffSize);
-	static void ParseDistrict(const std::wstring& s, GW::Constants::District& district, int& number);
+	static bool ParseDistrict(const std::wstring s, GW::Constants::District& district, int& number);
+	static bool ParseOutpost(const std::wstring s, GW::Constants::MapID& outpost, GW::Constants::District& district, int& number);
+    static bool IsLuxon();
 
 	static void CmdAge2(const wchar_t *message, int argc, LPWSTR *argv);
 	static void CmdDialog(const wchar_t *message, int argc, LPWSTR *argv);
@@ -52,6 +58,11 @@ private:
 	static void CmdLoad(const wchar_t *message, int argc, LPWSTR *argv);
 	static void CmdTransmo(const wchar_t *message, int argc, LPWSTR *argv);
 	static void CmdResize(const wchar_t *message, int argc, LPWSTR *argv);
+	static void CmdPingEquipment(const wchar_t* message, int argc, LPWSTR* argv);
+	static void CmdTransmoTarget(const wchar_t* message, int argc, LPWSTR* argv);
+	static void CmdTransmoParty(const wchar_t* message, int argc, LPWSTR* argv);
+    static void CmdTransmoAgent(const wchar_t* message, int argc, LPWSTR* argv);
+    
 
 	static std::vector<ToolboxUIElement*> MatchingWindows(const wchar_t *message, int argc, LPWSTR *argv);
 

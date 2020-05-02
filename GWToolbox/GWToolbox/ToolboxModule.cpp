@@ -8,6 +8,8 @@ void ToolboxModule::Initialize() {
 }
 
 void ToolboxModule::DrawSettings() {
+	if (!HasSettings())
+		return;
 	if (ImGui::CollapsingHeader(Name())) {
 		ImGui::PushID(Name());
 		DrawSettingInternal();

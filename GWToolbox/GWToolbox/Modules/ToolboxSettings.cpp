@@ -21,7 +21,12 @@
 #include <Modules/ChatFilter.h>
 #include <Modules/ChatCommands.h>
 #include <Modules/GameSettings.h>
-#include <Modules/DiscordIntegration.h>
+#include <Modules/DiscordModule.h>
+#include <Modules/TwitchModule.h>
+#include <Modules/PartyWindowModule.h>
+#include <Modules/ZrawDeepModule.h>
+#include <Modules/AprilFools.h>
+#include <Modules/InventoryManager.h>
 
 #include <Windows/MainWindow.h>
 #include <Windows/PconsWindow.h>
@@ -36,6 +41,13 @@
 #include <Windows/NotePadWindow.h>
 #include <Windows/TradeWindow.h>
 #include <Windows/ObjectiveTimerWindow.h>
+#include <Windows/FactionLeaderboardWindow.h>
+#include <Windows/DailyQuests.h>
+#include <Windows/PacketLoggerWindow.h>
+#include <Windows/DoorMonitorWindow.h>
+#include <Windows/SkillListingWindow.h>
+#include <Windows/StringDecoderWindow.h>
+#include <Windows/FriendListWindow.h>
 
 #include <Widgets/TimerWidget.h>
 #include <Widgets/HealthWidget.h>
@@ -46,18 +58,25 @@
 #include <Widgets/ClockWidget.h>
 #include <Widgets/VanquishWidget.h>
 #include <Widgets/AlcoholWidget.h>
+#include <Widgets/ServerInfoWidget.h>
+
 
 #include "ToolboxSettings.h"
+//#define _FUN
 
 bool ToolboxSettings::move_all = false;
 
 void ToolboxSettings::LoadModules(CSimpleIni* ini) {
 	SettingsWindow::Instance().sep_modules = optional_modules.size();
+    optional_modules.push_back(&ZrawDeepModule::Instance());
 	if (use_gamesettings) optional_modules.push_back(&GameSettings::Instance());
 	if (use_updater) optional_modules.push_back(&Updater::Instance());
 	if (use_chatfilter) optional_modules.push_back(&ChatFilter::Instance());
 	if (use_chatcommand) optional_modules.push_back(&ChatCommands::Instance());
-	if (use_discordintegration) optional_modules.push_back(&DiscordIntegration::Instance());
+	if (use_discord) optional_modules.push_back(&DiscordModule::Instance());
+	if (use_twitch) optional_modules.push_back(&TwitchModule::Instance());
+	if (use_partywindowmodule) optional_modules.push_back(&PartyWindowModule::Instance());
+	optional_modules.push_back(&InventoryManager::Instance());
 
 	SettingsWindow::Instance().sep_windows = optional_modules.size();
 	if (use_pcons) optional_modules.push_back(&PconsWindow::Instance());
@@ -71,9 +90,17 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
 	if (use_trade) optional_modules.push_back(&TradeWindow::Instance());
 	if (use_notepad) optional_modules.push_back(&NotePadWindow::Instance());
 	if (use_objectivetimer) optional_modules.push_back(&ObjectiveTimerWindow::Instance());
-	optional_modules.push_back(&SettingsWindow::Instance());
-
+	if (use_factionleaderboard) optional_modules.push_back(&FactionLeaderboardWindow::Instance());
+	if (use_daily_quests) optional_modules.push_back(&DailyQuests::Instance());
+	if (use_friendlist) optional_modules.push_back(&FriendListWindow::Instance());
+#ifdef _DEBUG
+	optional_modules.push_back(&PacketLoggerWindow::Instance());
+	optional_modules.push_back(&StringDecoderWindow::Instance());
+	optional_modules.push_back(&DoorMonitorWindow::Instance());
+	optional_modules.push_back(&SkillListingWindow::Instance());
+#endif
 	SettingsWindow::Instance().sep_widgets = optional_modules.size();
+	optional_modules.push_back(&SettingsWindow::Instance());
 	if (use_timer) optional_modules.push_back(&TimerWidget::Instance());
 	if (use_health) optional_modules.push_back(&HealthWidget::Instance());
 	if (use_distance) optional_modules.push_back(&DistanceWidget::Instance());
@@ -89,6 +116,8 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
         module->Initialize();
         module->LoadSettings(ini);
 	}
+	AprilFools::Instance().Initialize();
+	AprilFools::Instance().LoadSettings(ini);
 }
 
 void ToolboxSettings::DrawSettingInternal() {
@@ -103,56 +132,43 @@ void ToolboxSettings::DrawSettingInternal() {
 	ImGui::PushID("global_enable");
 	ImGui::Text("Enable the following features:");
 	ImGui::TextDisabled("Unticking will completely disable a feature from initializing and running. Requires Toolbox restart.");
-	// Row 1
-	ImGui::Checkbox("Alcohol", &use_alcohol);
+	ImGui::Checkbox("Pcons", &use_pcons);
 	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
 	ImGui::Checkbox("Hotkeys", &use_hotkeys);
-	// Row 2
-	ImGui::Checkbox("Bonds", &use_bonds);
-	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
-	ImGui::Checkbox("Info", &use_info);
-	// Row 3
 	ImGui::Checkbox("Builds", &use_builds);
 	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
-    ImGui::Checkbox("Materials", &use_materials);
-    // Row 4
-	ImGui::Checkbox("Chat Command", &use_chatcommand);
+	ImGui::Checkbox("Hero Builds", &use_herobuilds);
+	ImGui::Checkbox("Travel", &use_travel);
 	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
-    ImGui::Checkbox("Minimap", &use_minimap);
-    // Row 5
-	ImGui::Checkbox("Chat Filter", &use_chatfilter);
-	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
-    ImGui::Checkbox("Notepad", &use_notepad);
-    // Row 6
-	ImGui::Checkbox("Clock", &use_clock);
-	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
-    ImGui::Checkbox("Objective Timer", &use_objectivetimer);
-    // Row 7
-	ImGui::Checkbox("Damage", &use_damage);
-	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
-    ImGui::Checkbox("Pcons", &use_pcons);
-    // Row 8
 	ImGui::Checkbox("Dialogs", &use_dialogs);
+	ImGui::Checkbox("Info", &use_info);
 	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
-    ImGui::Checkbox("Timer", &use_timer);
-    // Row 9
-	ImGui::Checkbox("Discord Integration", &use_discordintegration);
+	ImGui::Checkbox("Materials", &use_materials);
+	ImGui::Checkbox("Notepad", &use_notepad);
 	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
-    ImGui::Checkbox("Trade", &use_trade);
-    // Row 10
+	ImGui::Checkbox("Objective Timer", &use_objectivetimer);
+	ImGui::Checkbox("Timer", &use_timer);
+	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
+	ImGui::Checkbox("Health", &use_health);
 	ImGui::Checkbox("Distance", &use_distance);
 	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
-    ImGui::Checkbox("Travel", &use_travel);
-    // Row 11
-	ImGui::Checkbox("Game Settings", &use_gamesettings);
+	ImGui::Checkbox("Minimap", &use_minimap);
+	ImGui::Checkbox("Damage", &use_damage);
 	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
-    ImGui::Checkbox("Updater", &use_updater);
-    // Row 12
-	ImGui::Checkbox("Health", &use_health);
+	ImGui::Checkbox("Bonds", &use_bonds);
+	ImGui::Checkbox("Clock", &use_clock);
 	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
-    ImGui::Checkbox("Vanquish counter", &use_vanquish);
-    // Row 13
-	ImGui::Checkbox("Hero Builds", &use_herobuilds);
+	ImGui::Checkbox("Vanquish counter", &use_vanquish);
+	ImGui::Checkbox("Alcohol", &use_alcohol);
+	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
+	ImGui::Checkbox("Trade", &use_trade);
+    ImGui::Checkbox("Discord Integration", &use_discord);
+	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
+	ImGui::Checkbox("Twitch", &use_twitch);
+	ImGui::Checkbox("Party Window", &use_partywindowmodule);
+	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
+	ImGui::Checkbox("Friend List", &use_friendlist);
+	ImGui::Checkbox("Daily Quests", &use_daily_quests);
 
 	ImGui::PopID();
 
@@ -165,8 +181,9 @@ void ToolboxSettings::DrawSettingInternal() {
 		auto window = ui[i];
 		if (window == &Updater::Instance()) continue;
 		if (window == &MainWindow::Instance()) continue;
+		if (!(window->IsWidget() || window->IsWindow())) continue;
 
-		ImGui::Checkbox(window->Name(), &window->show_menubutton);
+		ImGui::Checkbox(window ->Name(), &window->show_menubutton);
 
 		if (i < ui.size() - 1) {
 			if (odd) ImGui::SameLine(ImGui::GetWindowWidth() / 2);
@@ -203,13 +220,19 @@ void ToolboxSettings::LoadSettings(CSimpleIni* ini) {
 	use_vanquish = ini->GetBoolValue(Name(), VAR_NAME(use_vanquish), true);
 	use_alcohol = ini->GetBoolValue(Name(), VAR_NAME(use_alcohol), true);
 	use_trade = ini->GetBoolValue(Name(), VAR_NAME(use_trade), true);
-	use_objectivetimer = ini->GetBoolValue(Name(), VAR_NAME(use_instancetimer), true);
+    use_objectivetimer = ini->GetBoolValue(Name(), VAR_NAME(use_objectivetimer), true);
 	save_location_data = ini->GetBoolValue(Name(), VAR_NAME(save_location_data), false);
 	use_gamesettings = ini->GetBoolValue(Name(), VAR_NAME(use_gamesettings), true);
 	use_updater = ini->GetBoolValue(Name(), VAR_NAME(use_updater), true);
 	use_chatfilter = ini->GetBoolValue(Name(), VAR_NAME(use_chatfilter), true);
 	use_chatcommand = ini->GetBoolValue(Name(), VAR_NAME(use_chatcommand), true);
-	use_discordintegration = ini->GetBoolValue(Name(), VAR_NAME(use_discordintegration), false);
+    use_discord = ini->GetBoolValue(Name(), VAR_NAME(use_discord), true);
+	use_factionleaderboard = ini->GetBoolValue(Name(), VAR_NAME(use_factionleaderboard), use_factionleaderboard);
+	use_twitch = ini->GetBoolValue(Name(), VAR_NAME(use_twitch), use_twitch);
+	use_partywindowmodule = ini->GetBoolValue(Name(), VAR_NAME(use_partywindowmodule), use_partywindowmodule);
+	use_friendlist = ini->GetBoolValue(Name(), VAR_NAME(use_friendlist), use_friendlist);
+	use_serverinfo = ini->GetBoolValue(Name(), VAR_NAME(use_serverinfo), use_serverinfo);
+	use_daily_quests = ini->GetBoolValue(Name(), VAR_NAME(use_daily_quests), use_daily_quests);
 }
 
 void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
@@ -235,12 +258,18 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(use_alcohol), use_alcohol);
 	ini->SetBoolValue(Name(), VAR_NAME(use_trade), use_trade);
 	ini->SetBoolValue(Name(), VAR_NAME(use_objectivetimer), use_objectivetimer);
+	ini->SetBoolValue(Name(), VAR_NAME(use_factionleaderboard), use_factionleaderboard);
+    ini->SetBoolValue(Name(), VAR_NAME(use_discord), use_discord);
+    ini->SetBoolValue(Name(), VAR_NAME(use_twitch), use_twitch);
+	ini->SetBoolValue(Name(), VAR_NAME(use_partywindowmodule), use_partywindowmodule);
+	ini->SetBoolValue(Name(), VAR_NAME(use_friendlist), use_friendlist);
+	ini->SetBoolValue(Name(), VAR_NAME(use_serverinfo), use_serverinfo);
 	ini->SetBoolValue(Name(), VAR_NAME(save_location_data), save_location_data);
 	ini->SetBoolValue(Name(), VAR_NAME(use_gamesettings), use_gamesettings);
 	ini->SetBoolValue(Name(), VAR_NAME(use_updater), use_updater);
 	ini->SetBoolValue(Name(), VAR_NAME(use_chatfilter), use_chatfilter);
 	ini->SetBoolValue(Name(), VAR_NAME(use_chatcommand), use_chatcommand);
-	ini->SetBoolValue(Name(), VAR_NAME(use_discordintegration), use_discordintegration);
+	ini->SetBoolValue(Name(), VAR_NAME(use_daily_quests), use_daily_quests);
 }
 
 void ToolboxSettings::Update(float delta) {

@@ -70,9 +70,9 @@ namespace Colors {
 			| ((i[3] & 0xFF) << IM_COL32_B_SHIFT);
 	}
 
-    static bool DrawSettingHueWheel(const char* text, Color* color) {
+    static bool DrawSettingHueWheel(const char* text, Color* color, ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel) {
         ImVec4 col = ImGui::ColorConvertU32ToFloat4(*color);
-        if (ImGui::ColorEdit4(text, &col.x, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel)) {
+        if (ImGui::ColorEdit4(text, &col.x, flags)) {
             *color = ImGui::ColorConvertFloat4ToU32(col);
             return true;
         }

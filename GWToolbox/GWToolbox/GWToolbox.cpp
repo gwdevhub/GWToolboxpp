@@ -265,7 +265,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 
         // send to toolbox modules
         for (ToolboxModule* m : tb.GetModules()) {
-            m->WndProc(Message, wParam, lParam);
+			bool captured = false;
+			for (ToolboxModule* m : tb.GetModules()) {
+				if (m->WndProc(Message, wParam, lParam)) captured = true;
+			}
+			if (captured) return true;
         }
         // note: capturing those events would prevent typing if you have a hotkey assigned to normal letters. 
         // We may want to not send events to toolbox if the player is typing in-game
@@ -320,8 +324,8 @@ void GWToolbox::Initialize() {
     core_modules.push_back(&MainWindow::Instance());
 
     for (ToolboxModule* module : core_modules) {
-        module->Initialize();
         module->LoadSettings(inifile);
+        module->Initialize();
     }
 
     ToolboxSettings::Instance().LoadModules(inifile); // initialize all other modules as specified by the user
@@ -334,10 +338,20 @@ void GWToolbox::Initialize() {
         Log::Info("Hello %ls!", GW::Agents::GetPlayerNameByLoginNumber(playerNumber));
     }
 }
+void GWToolbox::FlashWindow() {
+	FLASHWINFO flashInfo = { 0 };
+	flashInfo.cbSize = sizeof(FLASHWINFO);
+	flashInfo.hwnd = GW::MemoryMgr::GetGWWindowHandle();
+	flashInfo.dwFlags = FLASHW_TIMER | FLASHW_TRAY | FLASHW_TIMERNOFG;
+	flashInfo.uCount = 0;
+	flashInfo.dwTimeout = 0;
+	FlashWindowEx(&flashInfo);
+}
 
 void GWToolbox::OpenSettingsFile() {
     Log::Log("Opening ini file\n");
     if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
+    inifile->Reset();
     inifile->LoadFile(Resources::GetPath(L"GWToolbox.ini").c_str());
 }
 void GWToolbox::LoadModuleSettings() {
@@ -418,6 +432,9 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 
         if (IsIconic(GW::MemoryMgr::GetGWWindowHandle()))
             return;
+
+        if (!GuiUtils::FontsLoaded())
+            return; // Fonts not loaded yet.
 
         ImGui_ImplDX9_NewFrame();
         // Key up/down events don't get passed to gw window when out of focus, but we need the following to be correct, 

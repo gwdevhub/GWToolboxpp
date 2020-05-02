@@ -15,6 +15,8 @@
 #include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\PartyMgr.h>
 #include <GWCA\Managers\SkillbarMgr.h>
+#include <GWCA\Managers\GameThreadMgr.h>
+#include <GWCA\Managers\UIMgr.h>
 
 #include <logger.h>
 #include "GuiUtils.h"
@@ -24,6 +26,7 @@
 #define INI_FILENAME L"herobuilds.ini"
 
 namespace {
+
 	using GW::Constants::HeroID;
 
 	// hero index is an arbitrary index. 
@@ -90,6 +93,11 @@ namespace {
 
 unsigned int HeroBuildsWindow::TeamHeroBuild::cur_ui_id = 0;
 
+HeroBuildsWindow::~HeroBuildsWindow() {
+    if (inifile)
+        delete inifile;
+}
+
 void HeroBuildsWindow::Initialize() {
 	ToolboxWindow::Initialize();
 	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"party.png"));
@@ -99,8 +107,6 @@ void HeroBuildsWindow::Initialize() {
 void HeroBuildsWindow::Terminate() {
 	ToolboxWindow::Terminate();
 	teambuilds.clear();
-	inifile->Reset();
-	delete inifile;
 }
 
 void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
@@ -110,17 +116,19 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 		if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
 			for (TeamHeroBuild& tbuild : teambuilds) {
 				ImGui::PushID(tbuild.ui_id);
-				if (ImGui::Button(tbuild.name, ImVec2(ImGui::GetWindowContentRegionWidth()
-					- ImGui::GetStyle().ItemInnerSpacing.x - 60.0f, 0))) {
-					Load(tbuild);
+				ImGui::GetStyle().ButtonTextAlign = ImVec2(0.0f, 0.5f);
+				if (ImGui::Button(tbuild.name, ImVec2(ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().ItemInnerSpacing.x - 60.0f * ImGui::GetIO().FontGlobalScale, 0))) {
+					tbuild.edit_open = !tbuild.edit_open;
 				}
-				if (ImGui::IsItemHovered()) {
-					ImGui::SetTooltip("Click to load builds to heroes and player");
-				}
+				ImGui::GetStyle().ButtonTextAlign = ImVec2(0.5f, 0.5f);
 				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-				if (ImGui::Button("Edit", ImVec2(60.0f, 0))) {
-					tbuild.edit_open = true;
+				if (ImGui::Button(ImGui::GetIO().KeyCtrl ? "Send" : "Load", ImVec2(60.0f * ImGui::GetIO().FontGlobalScale, 0))) {
+					if (ImGui::GetIO().KeyCtrl)
+						Send(tbuild);
+					else
+						Load(tbuild);
 				}
+				if (ImGui::IsItemHovered()) ImGui::SetTooltip(ImGui::GetIO().KeyCtrl ? "Click to send to team chat" : "Click to load builds to heroes and player. Ctrl + Click to send to chat.");
 				ImGui::PopID();
 			}
 			if (ImGui::Button("Add Teambuild", ImVec2(ImGui::GetWindowContentRegionWidth(), 0))) {
@@ -154,6 +162,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
             ImGui::Text("Name");
             ImGui::SameLine(10.0f + ImGui::GetWindowContentRegionWidth() / 3);
             ImGui::Text("Template");
+			const float btn_width = 50.0f * ImGui::GetIO().FontGlobalScale;
             for (size_t j = 0; j < tbuild.builds.size(); ++j) {
                 HeroBuild& build = tbuild.builds[j];
                 ImGui::PushID(j);
@@ -162,9 +171,8 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
                 } else {
                     ImGui::Text("H#%d", j);
                 }
-                ImGui::SameLine(37.0f);
-                ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 50.0f - 24.0f
-                    - ImGui::GetStyle().ItemInnerSpacing.x * 4) / 3);
+                ImGui::SameLine(btn_width);
+                ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - btn_width * 3 - (ImGui::GetStyle().ItemInnerSpacing.x * 6)) / 3);
                 if (ImGui::InputText("###name", build.name, 128)) builds_changed = true;
                 ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
                 if (ImGui::InputText("###code", build.code, 128)) builds_changed = true;
@@ -199,8 +207,16 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
                     }
                 }
                 ImGui::PopItemWidth();
-                ImGui::SameLine(ImGui::GetWindowWidth() - 50.0f - ImGui::GetStyle().WindowPadding.x);
-                if (ImGui::Button("Load", ImVec2(50.0f, 0))) {
+				ImGui::SameLine(ImGui::GetWindowContentRegionWidth() - btn_width * 2 - ImGui::GetStyle().ItemInnerSpacing.x * 3,0);
+				if (ImGui::Button(ImGui::GetIO().KeyCtrl ? "Send" : "View", ImVec2(btn_width, 0))) {
+					if (ImGui::GetIO().KeyCtrl)
+						Send(tbuild, j);
+					else
+						View(tbuild, j);
+				}
+				if (ImGui::IsItemHovered()) ImGui::SetTooltip(ImGui::GetIO().KeyCtrl ? "Click to send to team chat" : "Click to view build. Ctrl + Click to send to chat.");
+				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+                if (ImGui::Button("Load", ImVec2(btn_width, 0))) {
                     Load(tbuild, j);
                 }
                 if (j == 0) {
@@ -257,7 +273,104 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::End();
 	}
 }
+void HeroBuildsWindow::View(const TeamHeroBuild& tbuild, unsigned int idx) {
+	if (idx >= tbuild.builds.size()) return;
+	const HeroBuild& build = tbuild.builds[idx];
 
+	std::string build_name;
+	HeroBuildName(tbuild, idx, &build_name);
+	if (build_name.empty()) {
+		return; // No name = no build.
+	}
+
+	GW::UI::ChatTemplate* t = new GW::UI::ChatTemplate();
+	t->code.m_buffer = new wchar_t[128];
+	MultiByteToWideChar(CP_UTF8, 0, build.code, -1, t->code.m_buffer, 128);
+	t->code.m_size = t->code.m_capacity = wcslen(t->code.m_buffer);
+	t->name = new wchar_t[128];
+	MultiByteToWideChar(CP_UTF8, 0, build_name.c_str(), -1, t->name, 128);
+	GW::GameThread::Enqueue([t] {
+		GW::UI::SendUIMessage(GW::UI::kOpenTemplate, t);
+		delete[] t->code.m_buffer;
+		delete[] t->name;
+		delete t;
+		});
+
+}
+void HeroBuildsWindow::Send(const TeamHeroBuild& tbuild) {
+	if (!std::string(tbuild.name).empty()) {
+		send_queue.push(tbuild.name);
+	}
+	for (unsigned int i = 0; i < tbuild.builds.size(); ++i) {
+		if (i == 0) {
+			const HeroBuild& build = tbuild.builds[i];
+			if (build.code[0] == 0 && build.name[0] == 0)
+				continue; // Player build is empty.
+		}
+		Send(tbuild, i);
+	}
+}
+void HeroBuildsWindow::Send(const TeamHeroBuild& tbuild, size_t idx) {
+	if (idx >= tbuild.builds.size()) return;
+	const HeroBuild& build = tbuild.builds[idx];
+	const std::string name(build.name);
+	const std::string code(build.code);
+
+	const int buf_size = 139;
+	char buf[buf_size];
+	std::string build_name;
+	HeroBuildName(tbuild, idx, &build_name);
+	if (build_name.empty()) {
+		return; // No name = no build.
+	}
+
+	if (code.empty()) {
+		snprintf(buf, buf_size, "%s", build_name.c_str());
+	}
+	else {
+		snprintf(buf, buf_size, "[%s;%s]", build_name.c_str(), build.code);
+	}
+	if(buf[0])
+		send_queue.push(buf);
+}
+void HeroBuildsWindow::HeroBuildName(const TeamHeroBuild& tbuild, unsigned int idx, std::string* out) {
+	if (idx >= tbuild.builds.size()) return;
+	const HeroBuild& build = tbuild.builds[idx];
+	const std::string name(build.name);
+	const std::string code(build.code);
+	char buf[128];
+	auto id = idx > 0 && build.hero_index > 0 ? HeroIndexToID[build.hero_index] : 0;
+	if (name.empty() && code.empty() && id == HeroID::NoHero) {
+		return; // nothing to do here
+	}
+	const char* c;
+	if (id < HeroID::Merc1 || id > HeroID::Merc8) {
+		c = HeroName[id];
+	}
+	else if(idx > 0) {
+		bool match = false;
+		auto ctx = GW::GameContext::instance();
+		auto& hero_array = ctx->world->hero_info;
+		for (auto& hero : hero_array) {
+			if (hero.hero_id != id)
+				continue;
+			wcstombs(MercHeroNames[id - HeroID::Merc1], hero.name, 20);
+			c = MercHeroNames[id - HeroID::Merc1];
+			match = true;
+		}
+		if (!match)
+			c = HeroName[id];
+	}
+	if (name.empty()) {
+		if (idx > 0)
+			snprintf(buf, 128, "%s", c);
+	}
+	else {
+		snprintf(buf, 128, "%s (%s)", name.c_str(), idx == 0 ? "Player" : c);
+	}
+	if (buf[0])
+		out->assign(buf);
+}
 const char* HeroBuildsWindow::BuildName(unsigned int idx) const {
 	if (idx < teambuilds.size()) {
 		return teambuilds[idx].name;
@@ -308,12 +421,23 @@ void HeroBuildsWindow::Load(const TeamHeroBuild& tbuild, unsigned int idx) {
 }
 
 void HeroBuildsWindow::Update(float delta) {
-	if (!queue.empty() && TIMER_DIFF(send_timer) > 600) {
+	if (!send_queue.empty() && TIMER_DIFF(send_timer) > 600) {
+		if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && GW::Agents::GetPlayer()) {
+			GW::Chat::SendChat('#', send_queue.front().c_str());
+			send_queue.pop();
+			send_timer = TIMER_INIT();
+		}
+		else {
+			while (!send_queue.empty())
+				send_queue.pop();
+		}
+	}
+	if (!queue.empty() && TIMER_DIFF(load_timer) > 100) {
 		if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost
 			&& GW::Agents::GetPlayer()) {
 			GW::SkillbarMgr::LoadSkillTemplate(queue.front().code, queue.front().heroind);
 			queue.pop();
-			send_timer = TIMER_INIT();
+			load_timer = TIMER_INIT();
 		} else {
             while (!queue.empty())
 		        queue.pop(); 

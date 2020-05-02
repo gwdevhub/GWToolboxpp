@@ -5,8 +5,13 @@
 #include <GWCA\GameContainers\Array.h>
 #include <GWCA\GameContainers\GamePos.h>
 
+#include <GWCA\Context\GameContext.h>
+#include <GWCA\Context\CharContext.h>
+
 #include <GWCA\GameEntities\Agent.h>
 #include <GWCA\GameEntities\Skill.h>
+
+#include <GWCA\Packets\Opcodes.h>
 
 #include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\ItemMgr.h>
@@ -14,6 +19,8 @@
 #include <GWCA\Managers\EffectMgr.h>
 #include <GWCA\Managers\PlayerMgr.h>
 #include <GWCA\Managers\SkillbarMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/CtoSMgr.h>
 
 #include "logger.h"
 #include <Keys.h>
@@ -21,6 +28,7 @@
 #include "HeroBuildsWindow.h"
 #include "HotkeysWindow.h"
 #include "PconsWindow.h"
+#include "Modules\ChatCommands.h"
 #include <ImGuiAddons.h>
 
 
@@ -43,7 +51,7 @@ TBHotkey* TBHotkey::HotkeyFactory(CSimpleIni* ini, const char* section) {
 		return new HotkeyUseItem(ini, section);
 	} else if (type.compare(HotkeyDropUseBuff::IniSection()) == 0) {
 		return new HotkeyDropUseBuff(ini, section);
-	} else if (type.compare(HotkeyToggle::IniSection()) == 0) {
+	} else if (type.compare(HotkeyToggle::IniSection()) == 0 && HotkeyToggle::IsValid(ini,section)) {
 		return new HotkeyToggle(ini, section);
 	} else if (type.compare(HotkeyAction::IniSection()) == 0) {
 		return new HotkeyAction(ini, section);
@@ -57,38 +65,69 @@ TBHotkey* TBHotkey::HotkeyFactory(CSimpleIni* ini, const char* section) {
 		return new HotkeyPingBuild(ini, section);
 	} else if (type.compare(HotkeyHeroTeamBuild::IniSection()) == 0) {
 		return new HotkeyHeroTeamBuild(ini, section);
+	} else if (type.compare(HotkeyEquipItem::IniSection()) == 0) {
+		return new HotkeyEquipItem(ini, section);
 	} else {
 		return nullptr;
 	}
 }
 
 TBHotkey::TBHotkey(CSimpleIni* ini, const char* section) : ui_id(++cur_ui_id) {
-	hotkey = ini ? ini->GetLongValue(section, VAR_NAME(hotkey), 0) : 0;
-	modifier = ini ? ini->GetLongValue(section, VAR_NAME(modifier), 0) : 0;
-	active = ini ? ini->GetBoolValue(section, VAR_NAME(active), true) : true;
+	if (ini) {
+		hotkey = ini->GetLongValue(section, VAR_NAME(hotkey), hotkey);
+		modifier = ini->GetLongValue(section, VAR_NAME(modifier), modifier);
+		active = ini->GetBoolValue(section, VAR_NAME(active), active);
+		map_id = ini->GetLongValue(section, VAR_NAME(map_id), map_id);
+		prof_id = ini->GetLongValue(section, VAR_NAME(prof_id), prof_id);
+		show_message_in_emote_channel = ini->GetBoolValue(section, VAR_NAME(show_message_in_emote_channel), show_message_in_emote_channel);
+		show_error_on_failure = ini->GetBoolValue(section, VAR_NAME(show_error_on_failure), show_error_on_failure);
+		block_gw = ini->GetBoolValue(section, VAR_NAME(block_gw), block_gw);
+		trigger_on_explorable = ini->GetBoolValue(section, VAR_NAME(trigger_on_explorable), trigger_on_explorable);
+		trigger_on_outpost = ini->GetBoolValue(section, VAR_NAME(trigger_on_outpost), trigger_on_outpost);
+	}
 }
 void TBHotkey::Save(CSimpleIni* ini, const char* section) const {
 	ini->SetLongValue(section, VAR_NAME(hotkey), hotkey);
+    ini->SetLongValue(section, VAR_NAME(map_id), map_id);
+    ini->SetLongValue(section, VAR_NAME(prof_id), prof_id);
 	ini->SetLongValue(section, VAR_NAME(modifier), modifier);
 	ini->SetBoolValue(section, VAR_NAME(active), active);
+	ini->SetBoolValue(section, VAR_NAME(block_gw), block_gw);
+    ini->SetBoolValue(section, VAR_NAME(show_message_in_emote_channel), show_message_in_emote_channel);
+    ini->SetBoolValue(section, VAR_NAME(show_error_on_failure), show_error_on_failure);
+	ini->SetBoolValue(section, VAR_NAME(trigger_on_explorable), trigger_on_explorable);
+	ini->SetBoolValue(section, VAR_NAME(trigger_on_outpost), trigger_on_outpost);
 }
+static const char* professions[] = { "Any",
+                "Warrior",
+                "Ranger",
+                "Monk",
+                "Necromancer",
+                "Mesmer",
+                "Elementalist",
+                "Assassin",
+                "Ritualist",
+                "Paragon",
+                "Dervish" };
+static const char* instance_types[] = { "Any","Outpost","Explorable" };
 void TBHotkey::Draw(Op* op) {
 	auto ShowHeaderButtons = [&]() {
 		if (show_active_in_header || show_run_in_header) {
 			ImGui::PushID(ui_id);
 			ImGui::PushID("header");
 			ImGuiStyle& style = ImGui::GetStyle();
+			const float btn_width = 50.0f * ImGui::GetIO().FontGlobalScale;
 			if (show_active_in_header) {
 				ImGui::SameLine(ImGui::GetContentRegionAvailWidth() 
 					- ImGui::GetTextLineHeight() 
 					- style.FramePadding.y * 2
-					- (show_run_in_header ? (50.0f + ImGui::GetStyle().ItemSpacing.x) : 0));
+					- (show_run_in_header ? (btn_width + ImGui::GetStyle().ItemSpacing.x) : 0));
 				if (ImGui::Checkbox("", &active)) hotkeys_changed = true;
 				if (ImGui::IsItemHovered()) ImGui::SetTooltip("The hotkey can trigger only when selected");
 			}
 			if (show_run_in_header) {
-				ImGui::SameLine(ImGui::GetContentRegionAvailWidth() - 50.0f);
-				if (ImGui::Button("Run", ImVec2(50.0f, 0.0f))) {
+				ImGui::SameLine(ImGui::GetContentRegionAvailWidth() - btn_width);
+				if (ImGui::Button("Run", ImVec2(btn_width, 0.0f))) {
 					Execute();
 				}
 			}
@@ -101,9 +140,22 @@ void TBHotkey::Draw(Op* op) {
 	char header[256];
 	char desbuf[128];
 	char keybuf[128];
+    char profbuf[64] = { '\0' };
+    char mapbuf[64] = { '\0' };
+    try { // Can cause crashes here as the user changes the var.
+        if (prof_id) 
+            snprintf(profbuf, 64, " [%s]", professions[prof_id]);
+        if (map_id) {
+            if (map_id <= 729)
+                snprintf(mapbuf, 64, " [%s]", GW::Constants::NAME_FROM_ID[map_id]);
+            else
+                snprintf(mapbuf, 64, " [Map %d]", map_id);
+        }
+    }
+    catch (...) {};
 	Description(desbuf, 128);
 	ModKeyName(keybuf, 128, modifier, hotkey, "<None>");
-	snprintf(header, 128, "%s [%s]###header%u", desbuf, keybuf, ui_id);
+	snprintf(header, 128, "%s [%s]%s%s###header%u", desbuf, keybuf, profbuf, mapbuf, ui_id);
 	ImGuiTreeNodeFlags flags = (show_active_in_header || show_run_in_header) 
 		? ImGuiTreeNodeFlags_AllowItemOverlap : 0;
 	if (!ImGui::CollapsingHeader(header, flags)) {
@@ -116,6 +168,15 @@ void TBHotkey::Draw(Op* op) {
 		Draw();
 
 		// === Hotkey section ===
+		if(ImGui::Checkbox("Block key in Guild Wars when triggered",&block_gw)) hotkeys_changed = true;
+		ImGui::ShowHelp("When triggered, this hotkey will prevent Guild Wars from receiving the keypress event");
+		if (ImGui::Checkbox("Trigger hotkey when entering explorable area", &trigger_on_explorable)) hotkeys_changed = true;
+		if (ImGui::Checkbox("Trigger hotkey when entering outpost", &trigger_on_outpost)) hotkeys_changed = true;
+        if (ImGui::InputInt("Map ID", &map_id)) hotkeys_changed = true;
+        ImGui::ShowHelp("The hotkey can only trigger in the selected map (0 = Any map)");
+        
+        if (ImGui::Combo("Profession", &prof_id, professions, 11)) hotkeys_changed = true;
+        ImGui::ShowHelp("The hotkey can only trigger when player is the selected primary profession (0 = Any profession)");
 		ImGui::Separator();
 		if (ImGui::Checkbox("###active", &active)) hotkeys_changed = true;
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("The hotkey can trigger only when selected");
@@ -248,13 +309,16 @@ void HotkeySendChat::Draw() {
 		case 6: channel = '"'; break;
 		default: channel = '/';break;
 		}
+        show_message_in_emote_channel = channel == '/' && show_message_in_emote_channel;
 		hotkeys_changed = true;
 	}
 	if (ImGui::InputText("Message", message, 139)) hotkeys_changed = true;
+    if (channel == '/' && ImGui::Checkbox("Display message when triggered", &show_message_in_emote_channel))
+        hotkeys_changed = true;
 }
 void HotkeySendChat::Execute() {
 	if (isLoading()) return;
-	if (channel == L'/') {
+	if (show_message_in_emote_channel && channel == L'/') {
 		Log::Info("/%s", message);
 	}
 	GW::Chat::SendChat(channel, message);
@@ -279,6 +343,7 @@ void HotkeyUseItem::Description(char* buf, int bufsz) const {
 void HotkeyUseItem::Draw() {
 	if (ImGui::InputInt("Item ID", (int*)&item_id)) hotkeys_changed = true;
 	if (ImGui::InputText("Item Name", name, 140)) hotkeys_changed = true;
+    if (ImGui::Checkbox("Display error message on failure", &show_error_on_failure)) hotkeys_changed = true;
 }
 void HotkeyUseItem::Execute() {
 	if (isLoading()) return;
@@ -289,13 +354,132 @@ void HotkeyUseItem::Execute() {
 		used = GW::Items::UseItemByModelId(item_id, 8, 16);
 	}
 
-	if (!used) {
+	if (!used && show_error_on_failure) {
 		if (name[0] == '\0') {
-			Log::Info("Item #%d not found!", item_id);
+			Log::Error("Item #%d not found!", item_id);
 		} else {
-			Log::Info("%s not found!", name);
+			Log::Error("%s not found!", name);
 		}
 	}
+}
+
+HotkeyEquipItem::HotkeyEquipItem(CSimpleIni* ini, const char* section) : TBHotkey(ini, section) {
+	bag_idx = ini ? ini->GetLongValue(section, "Bag", 0) : 0;
+	slot_idx = ini ? ini->GetLongValue(section, "Slot", 0) : 0;
+}
+void HotkeyEquipItem::Save(CSimpleIni* ini, const char* section) const {
+	TBHotkey::Save(ini, section);
+	ini->SetLongValue(section, "Bag", bag_idx);
+	ini->SetLongValue(section, "Slot", slot_idx);
+}
+void HotkeyEquipItem::Description(char* buf, int bufsz) const {
+	snprintf(buf, bufsz, "Equip Item in bag %d slot %d", bag_idx, slot_idx);
+}
+void HotkeyEquipItem::Draw() {
+	if (ImGui::InputInt("Bag (1-5)", (int*)&bag_idx)) hotkeys_changed = true;
+	if (ImGui::InputInt("Slot (1-25)", (int*)&slot_idx)) hotkeys_changed = true;
+    if (ImGui::Checkbox("Display error message on failure", &show_error_on_failure)) hotkeys_changed = true;
+}
+bool HotkeyEquipItem::IsEquippable(GW::Item* item) {
+	if (!item) return false;
+	switch (static_cast<GW::Constants::ItemType>(item->type)) {
+		case GW::Constants::ItemType::Axe:
+		case GW::Constants::ItemType::Boots:
+		case GW::Constants::ItemType::Bow:
+		case GW::Constants::ItemType::Chestpiece:
+		case GW::Constants::ItemType::Offhand:
+		case GW::Constants::ItemType::Gloves:
+		case GW::Constants::ItemType::Hammer:
+		case GW::Constants::ItemType::Headpiece:
+		case GW::Constants::ItemType::Leggings:
+		case GW::Constants::ItemType::Wand:
+		case GW::Constants::ItemType::Shield:
+		case GW::Constants::ItemType::Staff:
+		case GW::Constants::ItemType::Sword:
+		case GW::Constants::ItemType::Daggers:
+		case GW::Constants::ItemType::Scythe:
+		case GW::Constants::ItemType::Spear:
+		case GW::Constants::ItemType::Costume:
+			break;
+		default:
+			return false;
+			break;
+	}
+	if (!item->customized) return true;
+	GW::GameContext* g = GW::GameContext::instance();
+	GW::CharContext* c = g ? g->character : nullptr;
+	return c && c->player_name && wcscmp(c->player_name, item->customized) == 0;
+}
+void HotkeyEquipItem::Execute() {
+    if (isLoading()) return;
+    if (!ongoing) {
+        if (bag_idx < 1 || bag_idx > 5 || slot_idx < 1 || slot_idx > 25) {
+            if (show_error_on_failure) Log::Error("Invalid bag slot %d/%d!", bag_idx, slot_idx);
+            return;
+        }
+        GW::Bag* b = GW::Items::GetBag(bag_idx);
+        if (!b) {
+            if (show_error_on_failure) Log::Error("Bag #%d not found!", bag_idx);
+            return;
+        }
+        GW::ItemArray items = b->items;
+        if (!items.valid() || slot_idx > items.size()) {
+            if (show_error_on_failure) Log::Error("Invalid bag slot %d/%d!", bag_idx, slot_idx);
+            return;
+        }
+        item = items.at(slot_idx - 1);
+        if (!IsEquippable(item)) {
+            if (show_error_on_failure) Log::Error("No equippable item in bag %d slot %d", bag_idx, slot_idx);
+            item = nullptr;
+            return;
+        }
+        ongoing = true;
+        start_time = std::chrono::steady_clock::now();
+    }
+    else {
+        last_try = std::chrono::steady_clock::now();
+        __int64 diff_mills = std::chrono::duration_cast<std::chrono::milliseconds>(last_try - start_time).count();
+        if (diff_mills < 500) {
+            return; // Wait 250ms between tries.
+        }
+        if (diff_mills > 5000) {
+            if (show_error_on_failure) Log::Error("Failed to equip item in bag %d slot %d", bag_idx, slot_idx);
+            ongoing = false;
+            item = nullptr;
+            return;
+        }
+    }
+
+    if (!item || !item->item_id) {
+        if (show_error_on_failure) Log::Error("Failed to equip item in bag %d slot %d", bag_idx, slot_idx);
+        ongoing = false;
+        item = nullptr;
+        return;
+    }
+    if (item->bag && item->bag->bag_type == 2) {
+        //Log::Info("Success!");
+        ongoing = false;
+        item = nullptr;
+        return; // Success!
+    }
+    GW::AgentLiving* p = GW::Agents::GetPlayerAsAgentLiving();
+    if (!p || p->GetIsKnockedDown()) {
+        //Log::Info("knocked down or missing"); // Player knocked down or casting; wait.
+        return;
+    }
+    if (p->skill) {
+        GW::CtoS::SendPacket(0x4, GAME_CMSG_CANCEL_MOVEMENT); // Cancel action if casting a skill. Return here and wait before equipping items.
+        //Log::Info("cancel action");
+        return;
+    }
+    if (p->GetIsIdle() || p->GetIsMoving()) {
+        GW::Items::EquipItem(item);
+        //Log::Info("equip %d", item->item_id);
+    }
+    else {
+        GW::Agents::Move(p->pos); // Move to clear model state e.g. attacking, aftercast
+        //Log::Info("not idle nor moving, %d",p->model_state);
+    }
 }
 
 bool HotkeyDropUseBuff::GetText(void* data, int idx, const char** out_text) {
@@ -370,6 +554,14 @@ bool HotkeyToggle::GetText(void*, int idx, const char** out_text) {
 	default: return false;
 	}
 }
+const bool HotkeyToggle::IsValid(CSimpleIni* ini, const char* section) {
+	switch (ini->GetLongValue(section, "ToggleID", (long)Clicker)) {
+	case (long)Clicker:
+	case (long)Pcons:
+		return true;
+	}
+	return false;
+}
 HotkeyToggle::HotkeyToggle(CSimpleIni* ini, const char* section) : TBHotkey(ini, section) {
 	target = ini ? (Toggle)ini->GetLongValue(section, "ToggleID", (long)Clicker) : Clicker;
 }
@@ -384,13 +576,14 @@ void HotkeyToggle::Description(char* buf, int bufsz) const {
 }
 void HotkeyToggle::Draw() {
 	if (ImGui::Combo("Toggle###combo", (int*)&target, GetText, nullptr, n_targets)) hotkeys_changed = true;
+    if (ImGui::Checkbox("Display message when triggered", &show_message_in_emote_channel)) hotkeys_changed = true;
 }
 void HotkeyToggle::Execute() {
 	bool active;
 	switch (target) {
 	case HotkeyToggle::Clicker:
 		active = HotkeysWindow::Instance().ToggleClicker();
-		Log::Info("Clicker is %s", active ? "active" : "disabled");
+        if (show_message_in_emote_channel) Log::Info("Clicker is %s", active ? "active" : "disabled");
 		break;
 	case HotkeyToggle::Pcons:
 		PconsWindow::Instance().ToggleEnable();
@@ -398,7 +591,7 @@ void HotkeyToggle::Execute() {
 		break;
 	case HotkeyToggle::CoinDrop:
 		active = HotkeysWindow::Instance().ToggleCoinDrop();
-		Log::Info("Coin dropper is %s", active ? "active" : "disabled");
+		if(show_message_in_emote_channel) Log::Info("Coin dropper is %s", active ? "active" : "disabled");
 		break;
 	}
 }
@@ -452,95 +645,7 @@ void HotkeyAction::Execute() {
 		}
 		break;
 	case HotkeyAction::ReapplyTitle:
-		GW::PlayerMgr::RemoveActiveTitle();
-
-		switch (GW::Map::GetMapID()) {
-		case GW::Constants::MapID::Rata_Sum_outpost:
-		case GW::Constants::MapID::Tarnished_Haven_outpost:
-		case GW::Constants::MapID::Vloxs_Falls:
-		case GW::Constants::MapID::Gadds_Encampment_outpost:
-		case GW::Constants::MapID::Umbral_Grotto_outpost:
-		case GW::Constants::MapID::Magus_Stones:
-		case GW::Constants::MapID::Riven_Earth:
-		case GW::Constants::MapID::Arbor_Bay:
-		case GW::Constants::MapID::Alcazia_Tangle:
-		case GW::Constants::MapID::Sparkfly_Swamp:
-		case GW::Constants::MapID::Verdant_Cascades:
-			GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Asuran);
-			break;
-		case GW::Constants::MapID::Glints_Challenge_mission:
-		case GW::Constants::MapID::Central_Transfer_Chamber_outpost:
-		case GW::Constants::MapID::Genius_Operated_Living_Enchanted_Manifestation:
-		case GW::Constants::MapID::A_Gate_Too_Far_Level_1:
-		case GW::Constants::MapID::A_Gate_Too_Far_Level_2:
-		case GW::Constants::MapID::A_Gate_Too_Far_Level_3:
-		case GW::Constants::MapID::Destructions_Depths_Level_1:
-		case GW::Constants::MapID::Destructions_Depths_Level_2:
-		case GW::Constants::MapID::Destructions_Depths_Level_3:
-		case GW::Constants::MapID::A_Time_for_Heroes:
-		case GW::Constants::MapID::Ravens_Point_Level_1:
-		case GW::Constants::MapID::Ravens_Point_Level_2:
-		case GW::Constants::MapID::Ravens_Point_Level_3:
-			GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Deldrimor);
-			break;
-		case GW::Constants::MapID::Boreal_Station_outpost:
-		case GW::Constants::MapID::Eye_of_the_North_outpost:
-		case GW::Constants::MapID::Gunnars_Hold_outpost:
-		case GW::Constants::MapID::Sifhalla_outpost:
-		case GW::Constants::MapID::Olafstead_outpost:
-		case GW::Constants::MapID::Ice_Cliff_Chasms:
-		case GW::Constants::MapID::Norrhart_Domains:
-		case GW::Constants::MapID::Drakkar_Lake:
-		case GW::Constants::MapID::Jaga_Moraine:
-		case GW::Constants::MapID::Bjora_Marches:
-		case GW::Constants::MapID::Varajar_Fells:
-		case GW::Constants::MapID::Attack_of_the_Nornbear:
-		case GW::Constants::MapID::Curse_of_the_Nornbear:
-		case GW::Constants::MapID::Blood_Washes_Blood:
-		case GW::Constants::MapID::Mano_a_Norn_o:
-		case GW::Constants::MapID::Service_In_Defense_of_the_Eye:
-		case GW::Constants::MapID::Cold_as_Ice:
-		case GW::Constants::MapID::The_Norn_Fighting_Tournament:				
-		// @todo: case MapID for Bear Club for Women/Men
-			GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Norn);
-			break;
-		case GW::Constants::MapID::Doomlore_Shrine_outpost:
-		case GW::Constants::MapID::Longeyes_Ledge_outpost:
-		case GW::Constants::MapID::Grothmar_Wardowns:
-		case GW::Constants::MapID::Dalada_Uplands:
-		case GW::Constants::MapID::Sacnoth_Valley:
-		case GW::Constants::MapID::Against_the_Charr:
-		case GW::Constants::MapID::Warband_of_Brothers_Level_1:
-		case GW::Constants::MapID::Warband_of_Brothers_Level_2:
-		case GW::Constants::MapID::Warband_of_Brothers_Level_3:
-		case GW::Constants::MapID::Assault_on_the_Stronghold:
-		case GW::Constants::MapID::Cathedral_of_Flames_Level_1:
-		case GW::Constants::MapID::Cathedral_of_Flames_Level_2:
-		case GW::Constants::MapID::Cathedral_of_Flames_Level_3:
-		case GW::Constants::MapID::Rragars_Menagerie_Level_1:
-		case GW::Constants::MapID::Rragars_Menagerie_Level_2:
-		case GW::Constants::MapID::Rragars_Menagerie_Level_3:
-		case GW::Constants::MapID::Warband_Training:
-		case GW::Constants::MapID::Ascalon_City_outpost:
-		case GW::Constants::MapID::The_Great_Northern_Wall:
-		case GW::Constants::MapID::Fort_Ranik:
-		case GW::Constants::MapID::Ruins_of_Surmia:
-		case GW::Constants::MapID::Nolani_Academy:
-		case GW::Constants::MapID::Frontier_Gate_outpost:
-		case GW::Constants::MapID::Grendich_Courthouse_outpost:
-		case GW::Constants::MapID::Sardelac_Sanitarium_outpost:
-		case GW::Constants::MapID::Piken_Square_outpost:
-		case GW::Constants::MapID::Old_Ascalon:
-		case GW::Constants::MapID::Regent_Valley:
-		case GW::Constants::MapID::The_Breach:
-		case GW::Constants::MapID::Diessa_Lowlands:
-		case GW::Constants::MapID::Flame_Temple_Corridor:
-		case GW::Constants::MapID::Dragons_Gullet:
-			GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Vanguard);
-			break;
-		default:
-			GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Lightbringer);
-		}
+        ChatCommands::CmdReapplyTitle(nullptr, 0, nullptr);
 		break;
 	case HotkeyAction::EnterChallenge:
 		GW::Map::EnterChallenge();
@@ -552,6 +657,7 @@ void HotkeyAction::Execute() {
 HotkeyTarget::HotkeyTarget(CSimpleIni* ini, const char* section) : TBHotkey(ini, section) {
 	id = ini ? ini->GetLongValue(section, "TargetID", 0) : 0;
 	strcpy_s(name, ini ? ini->GetValue(section, "TargetName", "") : "");
+    if (!ini) show_message_in_emote_channel = false;
 }
 void HotkeyTarget::Save(CSimpleIni* ini, const char* section) const {
 	TBHotkey::Save(ini, section);
@@ -568,6 +674,7 @@ void HotkeyTarget::Description(char* buf, int bufsz) const {
 void HotkeyTarget::Draw() {
 	if (ImGui::InputInt("Target ID", (int*)&id)) hotkeys_changed = true;
 	if (ImGui::InputText("Name", name, 140)) hotkeys_changed = true;
+    if (ImGui::Checkbox("Display message when triggered", &show_message_in_emote_channel)) hotkeys_changed = true;
 }
 void HotkeyTarget::Execute() {
 	if (isLoading()) return;
@@ -597,15 +704,22 @@ void HotkeyTarget::Execute() {
 		}
 	}
 	if (closest > 0) {
-		GW::Agents::ChangeTarget(agents[closest]);
+        GW::Agent* agent = agents[closest];
+        GW::GameThread::Enqueue([agent]{
+            GW::Agents::ChangeTarget(agent);
+            });
 	}
+    if (show_message_in_emote_channel) {
+        char buf[256];
+        Description(buf, 256);
+        Log::Info("Triggered %s", buf);
+    }
 }
 
 HotkeyMove::HotkeyMove(CSimpleIni* ini, const char* section) : TBHotkey(ini, section) {
 	x = ini ? (float)ini->GetDoubleValue(section, "x", 0.0) : 0.0f;
 	y = ini ? (float)ini->GetDoubleValue(section, "y", 0.0) : 0.0f;
-	range = ini ? (float)ini->GetDoubleValue(section, "distance", 5000.0f) : 5000.0f;
-	mapid = ini ? ini->GetLongValue(section, "mapid", 0) : 0;
+	range = ini ? (float)ini->GetDoubleValue(section, "distance", GW::Constants::Range::Compass) : GW::Constants::Range::Compass;
 	strcpy_s(name, ini ? ini->GetValue(section, "name", "") : "");
 }
 void HotkeyMove::Save(CSimpleIni* ini, const char* section) const {
@@ -613,7 +727,6 @@ void HotkeyMove::Save(CSimpleIni* ini, const char* section) const {
 	ini->SetDoubleValue(section, "x", x);
 	ini->SetDoubleValue(section, "y", y);
 	ini->SetDoubleValue(section, "distance", range);
-	ini->SetLongValue(section, "mapid", mapid);
 	ini->SetValue(section, "name", name);
 }
 void HotkeyMove::Description(char* buf, int bufsz) const {
@@ -628,22 +741,20 @@ void HotkeyMove::Draw() {
 	if (ImGui::InputFloat("y", &y, 0.0f, 0.0f, 3)) hotkeys_changed = true;
 	if (ImGui::InputFloat("Range", &range, 0.0f, 0.0f, 0)) hotkeys_changed = true;
 	ImGui::ShowHelp("The hotkey will only trigger within this range.\nUse 0 for no limit.");
-	if (ImGui::InputInt("Map", (int*)&mapid, 0)) hotkeys_changed = true;
-	ImGui::ShowHelp("The hotkey will only trigger in this map.\nUse 0 for any map.");
 	if (ImGui::InputText("Name", name, 140)) hotkeys_changed = true;
+    if (ImGui::Checkbox("Display message when triggered", &show_message_in_emote_channel)) hotkeys_changed = true;
 }
 void HotkeyMove::Execute() {
 	if (!isExplorable()) return;
 
 	GW::Agent* me = GW::Agents::GetPlayer();
-	if (mapid != 0 && mapid != (DWORD)GW::Map::GetMapID()) return;
 	double dist = GW::GetDistance(me->pos, GW::Vec2f(x, y));
 	if (range != 0 && dist > range) return;
 	GW::Agents::Move(x, y);
 	if (name[0] == '\0') {
-		Log::Info("Moving to (%.0f, %.0f)", x, y);
+		if(show_message_in_emote_channel) Log::Info("Moving to (%.0f, %.0f)", x, y);
 	} else {
-		Log::Info("Moving to %s", name);
+        if (show_message_in_emote_channel) Log::Info("Moving to %s", name);
 	}
 }
 
@@ -666,12 +777,13 @@ void HotkeyDialog::Description(char* buf, int bufsz) const {
 void HotkeyDialog::Draw() {
 	if (ImGui::InputInt("Dialog ID", (int*)&id)) hotkeys_changed = true;
 	if (ImGui::InputText("Dialog Name", name, 140)) hotkeys_changed = true;
+    if (ImGui::Checkbox("Display message when triggered", &show_message_in_emote_channel)) hotkeys_changed = true;
 }
 void HotkeyDialog::Execute() {
 	if (isLoading()) return;
 	if (id == 0) return;
 	GW::Agents::SendDialog(id);
-	Log::Info("Sent dialog %s (%d)", name, id);
+    if (show_message_in_emote_channel) Log::Info("Sent dialog %s (%d)", name, id);
 }
 
 bool HotkeyPingBuild::GetText(void*, int idx, const char** out_text) {

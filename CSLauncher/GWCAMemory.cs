@@ -221,12 +221,12 @@ namespace GWCA
                 return new Tuple<IntPtr, int>(IntPtr.Zero, 0);
             }
 
-            public bool HaveModule(string name)
+            public bool HaveModule(string DLL_NAME)
             {
                 ProcessModuleCollection modules = process.Modules;
                 foreach (ProcessModule module in modules)
                 {
-                    if (String.Equals(module.ModuleName, "GWToolbox.dll", StringComparison.OrdinalIgnoreCase))
+                    if (module.ModuleName.IndexOf(DLL_NAME, StringComparison.OrdinalIgnoreCase) != -1)
                         return true;
                 }
                 return false;

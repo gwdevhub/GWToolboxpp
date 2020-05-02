@@ -3,9 +3,11 @@
 
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\GameContainers\Array.h>
+#include <GWCA\GameEntities\Agent.h>
 
 #include <GWCA\Managers\ItemMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
+#include <GWCA\Managers\AgentMgr.h>
 
 #include <Keys.h>
 #include <logger.h>
@@ -74,6 +76,10 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
 				hotkeys.push_back(new HotkeyHeroTeamBuild(nullptr, nullptr));
 			}
 			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Load a team hero build from the Hero Build Panel");
+			if (ImGui::Selectable("Equip Item")) {
+				hotkeys.push_back(new HotkeyEquipItem(nullptr, nullptr));
+			}
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Equip an item from your inventory");
 			ImGui::EndPopup();
 		}
 
@@ -210,11 +216,16 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 		for (TBHotkey* hk : hotkeys) {
 			if (!block_hotkeys && hk->active 
 				&& !hk->pressed && keyData == hk->hotkey
-				&& modifier == hk->modifier) {
+                && modifier == hk->modifier
+                && (hk->map_id == 0 || hk->map_id == map_id)
+                && (hk->prof_id == 0 || hk->prof_id == prof_id)) {
 
 				hk->pressed = true;
+                current_hotkey = hk;
 				hk->Execute();
-				triggered = true;
+                current_hotkey = nullptr;
+				if (hk->block_gw)
+					triggered = true;
 			}
 		}
 		return triggered;
@@ -246,9 +257,39 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 		return false;
 	}
 }
+void HotkeysWindow::MapChanged() {
+	static bool map_change_triggered = false;
+    GW::AgentLiving* p = GW::Agents::GetPlayerAsAgentLiving();
+    if (!p) return;
+    map_id = (uint32_t)GW::Map::GetMapID();
+    prof_id = p->primary;
+	map_change_triggered = false;
+	GW::Constants::InstanceType mt = GW::Map::GetInstanceType();
+	if (!map_change_triggered && mt != GW::Constants::InstanceType::Loading) {
+		for (TBHotkey* hk : hotkeys) {
+			if (!block_hotkeys && hk->active
+				&& ((hk->trigger_on_explorable && mt == GW::Constants::InstanceType::Explorable)
+					|| (hk->trigger_on_outpost && mt == GW::Constants::InstanceType::Outpost))
+				&& !hk->pressed
+				&& (hk->map_id == 0 || hk->map_id == map_id)
+				&& (hk->prof_id == 0 || hk->prof_id == prof_id)) {
 
+				hk->pressed = true;
+				current_hotkey = hk;
+				hk->Execute();
+				current_hotkey = nullptr;
+				hk->pressed = false;
+			}
+		}
+		map_change_triggered = true;
+	}
+}
 
 void HotkeysWindow::Update(float delta) {
+    if (!GW::Map::GetIsMapLoaded())
+        map_id = prof_id = 0;
+    else if (!map_id)
+        MapChanged();
 	if (clickerActive && TIMER_DIFF(clickerTimer) > 20) {
 		clickerTimer = TIMER_INIT();
 		INPUT input;
@@ -269,6 +310,11 @@ void HotkeysWindow::Update(float delta) {
 			GW::Items::DropGold(1);
 		}
 	}
+
+    for (unsigned int i = 0; i < hotkeys.size(); ++i) {
+        if (hotkeys[i]->ongoing)
+            hotkeys[i]->Execute();
+    }
 
 	// TODO rupt?
 }

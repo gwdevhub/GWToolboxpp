@@ -3,33 +3,41 @@
 
 #include <GWCA/GameContainers/GamePos.h>
 
+#include <GWCA/Constants/Constants.h>
+
 #include <GWCA/GameEntities/Agent.h>
 
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/MapMgr.h>
 
 #include "GuiUtils.h"
 #include "Modules/ToolboxSettings.h"
 
 
+
 void HealthWidget::LoadSettings(CSimpleIni *ini) {
 	ToolboxWidget::LoadSettings(ini);
-	click_to_print_health = ini->GetBoolValue(Name(), VAR_NAME(click_to_print_health), false);
+	click_to_print_health = ini->GetBoolValue(Name(), VAR_NAME(click_to_print_health), click_to_print_health);
+	hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
 }
 
 void HealthWidget::SaveSettings(CSimpleIni *ini) {
 	ToolboxWidget::SaveSettings(ini);
 	ini->SetBoolValue(Name(), VAR_NAME(click_to_print_health), click_to_print_health);
+	ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
 }
 
 void HealthWidget::DrawSettingInternal() {
 	ToolboxWidget::DrawSettingInternal();
+	ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
 	ImGui::Checkbox("Ctrl+Click to print target health", &click_to_print_health);
 }
 
 void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
 	if (!visible) return;
-
+	if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
+		return;
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
 	ImGui::SetNextWindowSize(ImVec2(150, 100), ImGuiSetCond_FirstUseEver);
     bool ctrl_pressed = ImGui::IsKeyDown(VK_CONTROL);

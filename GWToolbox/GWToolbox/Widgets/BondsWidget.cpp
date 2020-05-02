@@ -59,7 +59,7 @@ void BondsWidget::Terminate() {
 }
 
 void BondsWidget::Draw(IDirect3DDevice9* device) {
-	if (!visible) return;
+	if (!visible || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return;
 	
 	const GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
     const GW::PlayerArray& players = GW::Agents::GetPlayerArray();

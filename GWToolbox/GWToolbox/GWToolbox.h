@@ -31,6 +31,7 @@ public:
 	void OpenSettingsFile();
 	void LoadModuleSettings();
 	void SaveSettings();
+	static void FlashWindow();
 
 	void StartSelfDestruct() {
 		for (ToolboxModule* module : modules) {

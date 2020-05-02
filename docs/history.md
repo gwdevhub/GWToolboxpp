@@ -5,8 +5,98 @@ layout: default
 # Version History
 Previous releases are provided as dll files. In order to use it, you need to use a different launcher which must be placed in the same directory as the dll. If you are looking for the latest version, go to the [Home Page](./) instead.
 
+<<<<<<< HEAD
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
+
+## Version 3.0
+* [New] Merged [3vcloud](https://github.com/3vcloud) fork and added him as maintainer to GWToolbox. The following changes are made to GWToolbox.
+
+* [New] `/loadbuild` command added, allows player to load builds from the GWToolbox Builds window by name or build code. See help section of GWToolbox in-game for more info.
+* [New] `/pingitem` command added, allows player to ping any currently equipped item. See help section of GWToolbox in-game for more info.
+* [New] `/transmo` command updated to allow players to transform into a list of pre-defined NPCs by name instead of just the one target. "/transmo reset" will remove the current NPC skin on the player. See help section of GWToolbox in-game for more info.
+* [New] `/transmoparty` command added, similar syntax to `/transmo`.
+* [New] `/transmotarget` command added, similar syntax to `/transmo`.
+* [New] `/dance` adds Collector's Edition glow to player hands.
+* [New] `/dancenew` on Factions/NF professions shows Collector's Edition dance emote instead of standard one.
+* [New] Added "Check for Updates" button to Toolbox Settings section. If enabled, it will auto-check every 10 minutes instead of just the first load.
+* [New] Added "Emotes" and "Other" to Chat Colors section of Game Settings.
+* [New] Added "show alias on whisper" to Friend List window, adds player alias in brackets when sending or receiving a whisper (default false).
+* [New] Added "You gain x faction" chat filter option.
+* [New] Added `/addfriend <character_name>` and `/removefriend <character_name|alias>` chat commands.
+* [New] Added `/online`, `/away`, `/busy`, `/dnd`, `/offline` chat commands - see Help section for details.
+* [New] Added `/target hos` and `/target ee` commands, see help section for info.
+* [New] Added 24h Deep module - use /deep24h command to toggle.
+* [New] Added `/identify all`, `/identify blue`, `/identify purple`, `/identify gold` chat commands.
+* [New] Added `/pc <search_term>` chat command to do a price check from chat.
+* [New] Added `/salvage all`, `/salvage blue`, `/salvage purple` chat commands.
+* [New] Added ability to view a player's guild info via Target section of Info Window.
+* [New] Added AoE circles for Maelstrom, Chaos storm, Lava font, Savannah heat, Breath of fire, Bed of coals, Churning earth.
+* [New] Added auto-accept party invites when ticked option for faster party reorder.
+* [New] Added auto-accept party join requests when ticked option for faster party reorder.
+* [New] Added boss by profession color to Minimap.
+* [New] Added challenge mission chat filter option.
+* [New] Added ctrl + click context menu to Salvage and ID kits - allows user to salvage/identify groups of items at once.
+* [New] Added Flame Trap, Spike Trap and Barbed Trap to aoe effects on minimap.
+* [New] Added option in Game Settings to change Guild Wars window title to name of current character.
+* [New] Added option to add player number to player names in explorable areas.
+* [New] Added option to hide bonds, health, party damage and instance timer widgets in outpost.
+* [New] Added option to show hidden NPCs on Minimap.
+* [New] Added option to skip entering character name when donating faction.
+* [New] Added option to trigger a hotkey on entering explorable/outpost.
+* [New] Added pcons per character option, default turned on.
+* [New] Added pcons to GWToolbox Builds window; pcons can now be assigned to a particular build and auto-enabled when loaded.
+* [New] Added seconds to the clock widget.
+* [New] Added spirit timers to Timer widget; default is EoE and QZ. Other spirit timers available in settings.
+* [New] Automatic `/age` on vanquish option.
+* [New] Automatic `/age2` on `/age` option.
+* [New] Better crash handling; more GWToolbox related crashes will be caught and dumped in the GWToolboxpp folder, and will show a message on-screen.
+* [New] Ctrl + enter to whisper targeted player.
+* [New] Friend List window/module added.
+* [New] Modified trade alerts; added option to only show trade alerts in chat when in Kamadan ae1.
+* [New] Objective timer now saves runs to disk in json format, and auto-collapses previous runs when a new one starts.
+* [New] Support for Chinese character set; add "Font_ChineseTraditional.ttf" to GWToolboxpp folder to load automatically.
+* [New] Support for Japanese character set; add "Font_Japanese.ttf" to GWToolboxpp folder to load automatically.
+* [New] Support for Korean character set; add "Font_Korean.ttf" to GWToolboxpp folder to load automatically.
+* [New] Support for Russian character set; add "Font_Cyrillic.ttf" to GWToolboxpp folder to load automatically.
+* [New] Trade Window changes: removed dependency on kamadan.decltype.org - players can now use this window as normal when in Kamadan ae1 even if decltype.org stops working.
+* [New] Trade window now uses [https://kamadan.gwtoolbox.com](https://kamadan.gwtoolbox.com) for incoming trade chat. Rebased this module to be similar to vanilla.
+* [New] Updater module re-enabled; will now give update notifications for this version of toolbox.
+* [Minor] `/tb <window_name>` now matches partial window names.
+* [Minor] `/tp gh` and `/gh` now check whether you're already in GH before leaving/entering as applicable.
+* [Minor] Added "morah" and "surmia" `/tp` commands.
+* [Minor] Added client-side checks before trying to travel e.g. same district, to avoid the need for packet sending.
+* [Minor] Added current online status to top of friend list.
+* [Minor] Added daily quest chat command help section.
+* [Minor] Added date/time to headers in Objective timer, and [Failed] to identify failed runs.
+* [Minor] Added debug info about current camera position to info window.
+* [Minor] Added option to hide friends list when in outpost/explorable.
+* [Minor] Added option to only show alcohol widget when using alcohol.
+* [Minor] Added option to toggle ctrl + click functionality on minimap. (e.g. ctrl + click to ping, click to target)
+* [Minor] Changed `/pingitem` and `/armor` descriptions to include armor rating, infused and +1 stacking attribute if applicable.
+* [Minor] Fixed `/tp` errors not always displaying on-screen.
+* [Minor] Fixed a bug causing some trade messages to be blocked in Kamadan when filtered using the trade window.
+* [Minor] Friend list is now amended when saved, not overwritten. This allows multiple accounts to maintain details about mutual friends.
+* [Minor] Hide `/deep24h` setting from settings window when not enabled.
+* [Minor] Performance tweaks and housekeeping for chat filters.
+* [Minor] Performance tweaks to resign log and trade window, removed some redundant code blocks.
+* [Minor] Remove "I'm wielding" text when pinging weapons with GWToolbox.
+* [Minor] Removed "n platinum, n gold" from pinged item descriptions.
+* [Minor] Removed armor descriptions when using `/pingitem` command. Will add headpiece +1 info in a later release.
+* [Minor] Removed threading code from Friend list, a bit more stable now.
+* [Minor] Removed threading code with refilling pcons, a bit more stable now.
+* [Minor] Reverted Trade Window to vanilla 2.27. Tweaks to layout widths, fixed bug when trying to whisper player's with unicode chars in their name.
+* [Minor] Stability changes and shutdown fixes.
+* [Minor] Stability/failover changes for Updater module. Will update current dll wherever it is on disk, not just from GWToolboxpp folder.
+* [Fix] Adjusted AoE range for churning earth from adjacent to nearby.
+* [Fix] Fixed a crash when trying to click on Minimap whilst observing PvP matches.
+* [Fix] Fixed an issue that didn't do a fresh reload from ini file when clicking "Load Now" in tb settings.
+* [Fix] Fixed issues with loading and saving to file.
+* [Fix] Fixed trade alerts by regex not working.
+* [Fix] Fixes resign log not working when player numbers are turned on in an explorable area.
+* [Fix] Reduced flashing GW window spam when being invited to a party.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/3.0_Release/GWToolbox.dll)
 
 ## Version 2.35
 * [Fix] Fixes following April 22 update.

@@ -47,10 +47,26 @@ void Minimap::Initialize() {
 			pingslines_renderer.P138Callback(pak);
 		}
 	});
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayEffect>(&CompassEvent_Entry,
+		[this](GW::HookStatus* status, GW::Packet::StoC::PlayEffect* pak) -> void {
+			if (visible) {
+				if(GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
+					effect_renderer.PacketCallback(pak);
+			}
+		});
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&GenericValueTarget_Entry,
+		[this](GW::HookStatus* s, GW::Packet::StoC::GenericValue* pak) -> void {
+			if (visible) {
+				if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
+					effect_renderer.PacketCallback(pak);
+			}
+		});
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValueTarget>(&GenericValueTarget_Entry,
-	[this](GW::HookStatus *, GW::Packet::StoC::GenericValueTarget *pak) -> void {
+	[this](GW::HookStatus * s, GW::Packet::StoC::GenericValueTarget *pak) -> void {
 		if (visible) {
 			pingslines_renderer.P153Callback(pak);
+			if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
+				effect_renderer.PacketCallback(pak);
 		}
 	});
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SkillActivate>(&SkillActivate_Entry,
@@ -59,6 +75,10 @@ void Minimap::Initialize() {
 			pingslines_renderer.P221Callback(pak);
 		}
 	});
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadInfo_Entry,
+		[this](GW::HookStatus*, GW::Packet::StoC::InstanceLoadInfo* packet) -> void {
+			is_observing = packet->is_observer;
+		});
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry,
 		[this](GW::HookStatus *, GW::Packet::StoC::InstanceLoadFile *packet) -> void {
 		pmap_renderer.Invalidate();
@@ -176,6 +196,10 @@ void Minimap::DrawSettingInternal() {
 		pingslines_renderer.DrawSettings();
 		ImGui::TreePop();
 	}
+	if (ImGui::TreeNode("AoE Effects")) {
+		effect_renderer.DrawSettings();
+		ImGui::TreePop();
+	}
 	if (ImGui::TreeNode("Symbols")) {
 		symbols_renderer.DrawSettings();
 		ImGui::TreePop();
@@ -195,6 +219,9 @@ void Minimap::DrawSettingInternal() {
 		Colors::DrawSetting("Background", &hero_flag_window_background);
 		ImGui::TreePop();
 	}
+	ImGui::Checkbox("Show boss by profession color on minimap", &agent_renderer.boss_colors);
+	ImGui::Checkbox("Show hidden NPCs", &agent_renderer.show_hidden_npcs);
+	ImGui::ShowHelp("Show NPCs that aren't usually visible on the minimap\ne.g. minipets, invisible NPCs");
     ImGui::Checkbox("Allow mouse click-through", &mouse_clickthrough);
     ImGui::ShowHelp("Toolbox minimap will not capture mouse events");
     if (mouse_clickthrough) {
@@ -204,6 +231,7 @@ void Minimap::DrawSettingInternal() {
 	ImGui::Checkbox("Allow mouse click-through in outposts", &mouse_clickthrough_in_outpost);
 	ImGui::ShowHelp("Toolbox minimap will not capture mouse events when in an outpost");
     ImGui::Checkbox("Alt + Click on minimap to move", &alt_click_to_move);
+	ImGui::Checkbox("Ctrl + Click for ping and Click for target", &ctrl_click_ping_target_swap);
     if (mouse_clickthrough) {
         ImGui::PopItemFlag();
         ImGui::PopStyleVar();
@@ -225,6 +253,7 @@ void Minimap::LoadSettings(CSimpleIni* ini) {
 	mouse_clickthrough_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(mouse_clickthrough_in_outpost), mouse_clickthrough_in_outpost);
 	rotate_minimap = ini->GetBoolValue(Name(), VAR_NAME(rotate_minimap), true);
     alt_click_to_move = ini->GetBoolValue(Name(), VAR_NAME(alt_click_to_move), false);
+	ctrl_click_ping_target_swap = ini->GetBoolValue(Name(), VAR_NAME(ctrl_click_ping_target_swap), false);
     pingslines_renderer.reduce_ping_spam = ini->GetBoolValue(Name(), VAR_NAME(reduce_ping_spam), false);
 	range_renderer.LoadSettings(ini, Name());
 	pmap_renderer.LoadSettings(ini, Name());
@@ -232,6 +261,7 @@ void Minimap::LoadSettings(CSimpleIni* ini) {
 	pingslines_renderer.LoadSettings(ini, Name());
 	symbols_renderer.LoadSettings(ini, Name());
 	custom_renderer.LoadSettings(ini, Name());
+	effect_renderer.LoadSettings(ini, Name());
 }
 
 void Minimap::SaveSettings(CSimpleIni* ini) {
@@ -242,7 +272,8 @@ void Minimap::SaveSettings(CSimpleIni* ini) {
 	Colors::Save(ini, Name(), VAR_NAME(hero_flag_window_background), hero_flag_window_background);
     ini->SetBoolValue(Name(), VAR_NAME(mouse_clickthrough), mouse_clickthrough);
 	ini->SetBoolValue(Name(), VAR_NAME(mouse_clickthrough_in_outpost), mouse_clickthrough_in_outpost);
-    ini->SetBoolValue(Name(), VAR_NAME(alt_click_to_move), alt_click_to_move);
+	ini->SetBoolValue(Name(), VAR_NAME(alt_click_to_move), alt_click_to_move);
+	ini->SetBoolValue(Name(), VAR_NAME(ctrl_click_ping_target_swap), ctrl_click_ping_target_swap);
     ini->SetBoolValue(Name(), VAR_NAME(reduce_ping_spam), pingslines_renderer.reduce_ping_spam);
 	ini->SetBoolValue(Name(), VAR_NAME(rotate_minimap), rotate_minimap);
 	range_renderer.SaveSettings(ini, Name());
@@ -251,6 +282,7 @@ void Minimap::SaveSettings(CSimpleIni* ini) {
 	pingslines_renderer.SaveSettings(ini, Name());
 	symbols_renderer.SaveSettings(ini, Name());
 	custom_renderer.SaveSettings(ini, Name());
+	effect_renderer.SaveSettings(ini, Name());
 }
 
 void Minimap::GetPlayerHeroes(GW::PartyInfo *party, std::vector<GW::AgentID>& player_heroes) {
@@ -368,6 +400,8 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 
 			Instance().custom_renderer.Render(device);
 
+			
+
 			// move the rings to the char position
 			D3DXMatrixTranslation(&translate_char, me->pos.x, me->pos.y, 0);
 			device->SetTransform(D3DTS_WORLD, &translate_char);
@@ -387,6 +421,8 @@ void Minimap::Draw(IDirect3DDevice9* device) {
 
 			device->SetTransform(D3DTS_WORLD, &identity);
 			Instance().agent_renderer.Render(device);
+
+			Instance().effect_renderer.Render(device);
 
 			Instance().pingslines_renderer.Render(device);
 
@@ -530,7 +566,7 @@ void Minimap::SelectTarget(GW::Vec2f pos) {
 		GW::AgentLiving* living = agent->GetAsAgentLiving();
 		if (living && living->GetIsDead()) continue;
 		if (agent->GetIsItemType()) continue;
-		if (agent->GetIsGadgetType() && agent->GetAsAgentGadget()->extra_type != 8141) continue; // allow locked chests
+		if (agent->GetIsGadgetType() && agent->GetAsAgentGadget()->gadget_id != 8141) continue; // allow locked chests
 		if (living && (living->player_number >= 230 && living->player_number <= 346)) continue; // block all useless minis
 		float newDistance = GW::GetSquareDistance(pos, agents[i]->pos);
 		if (distance > newDistance) {
@@ -545,7 +581,12 @@ void Minimap::SelectTarget(GW::Vec2f pos) {
 }
 
 bool Minimap::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
-    if (mouse_clickthrough || (mouse_clickthrough_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)) return false;
+	if (is_observing)
+		return false;
+	if (mouse_clickthrough)
+		return false;
+    if (mouse_clickthrough_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) 
+		return false;
 	switch (Message) {
 	case WM_MOUSEMOVE: return OnMouseMove(Message, wParam, lParam);
 	case WM_LBUTTONDOWN: return OnMouseDown(Message, wParam, lParam);
@@ -564,12 +605,8 @@ bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam) {
 	if (!IsInside(x, y)) return false;
 
 	mousedown = true;
-    GW::Vec2f worldpos = InterfaceToWorldPoint(Vec2i(x, y));
+	GW::Vec2f worldpos = InterfaceToWorldPoint(Vec2i(x, y));
 
-	if (wParam & MK_CONTROL) {
-		SelectTarget(worldpos);
-		return true;
-	}
 
     if (alt_click_to_move && ImGui::IsKeyDown(VK_MENU)) {
         GW::Agents::Move(worldpos);
@@ -599,8 +636,19 @@ bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam) {
 
 	if (!lock_move) return true;
 
-	pingslines_renderer.OnMouseDown(worldpos.x, worldpos.y);
-
+	if (!ctrl_click_ping_target_swap) {
+		if (wParam & MK_CONTROL) {
+			SelectTarget(worldpos);
+		} else {
+			pingslines_renderer.OnMouseDown(worldpos.x, worldpos.y);
+		}
+	} else {
+		if (wParam & MK_CONTROL) {
+			pingslines_renderer.OnMouseDown(worldpos.x, worldpos.y);
+		} else {
+			SelectTarget(worldpos);
+		}
+	}
 	return true;
 }
 
@@ -611,7 +659,12 @@ bool Minimap::OnMouseDblClick(UINT Message, WPARAM wParam, LPARAM lParam) {
 	int y = GET_Y_LPARAM(lParam);
 	if (!IsInside(x, y)) return false;
 
-	if (wParam & MK_CONTROL) {
+	if (!ctrl_click_ping_target_swap) {
+		if (wParam & MK_CONTROL) {
+			SelectTarget(InterfaceToWorldPoint(Vec2i(x, y)));
+			return true;
+		}
+	} else { 
 		SelectTarget(InterfaceToWorldPoint(Vec2i(x, y)));
 		return true;
 	}
@@ -625,8 +678,11 @@ bool Minimap::OnMouseUp(UINT Message, WPARAM wParam, LPARAM lParam) {
 	if (!mousedown) return false;
 
 	mousedown = false;
-
-	return pingslines_renderer.OnMouseUp();
+	
+	if (!ctrl_click_ping_target_swap || (wParam & MK_CONTROL))
+		return pingslines_renderer.OnMouseUp();
+	
+	return true;
 }
 
 bool Minimap::OnMouseMove(UINT Message, WPARAM wParam, LPARAM lParam) {
@@ -638,11 +694,6 @@ bool Minimap::OnMouseMove(UINT Message, WPARAM wParam, LPARAM lParam) {
 	int y = GET_Y_LPARAM(lParam);
 	//if (!IsInside(x, y)) return false;
 
-	if (wParam & MK_CONTROL) {
-		SelectTarget(InterfaceToWorldPoint(Vec2i(x, y)));
-		return true;
-	}
-
 	if (wParam & MK_SHIFT) {
 		Vec2i diff = Vec2i(x - drag_start.x, y - drag_start.y);
 		translation += InterfaceToWorldVector(diff);
@@ -652,7 +703,22 @@ bool Minimap::OnMouseMove(UINT Message, WPARAM wParam, LPARAM lParam) {
 	}
 
 	GW::Vec2f v = InterfaceToWorldPoint(Vec2i(x, y));
-	return pingslines_renderer.OnMouseMove(v.x, v.y);
+
+	if (!ctrl_click_ping_target_swap) {
+		if (wParam & MK_CONTROL) {
+			SelectTarget(v);
+		} else {
+			return pingslines_renderer.OnMouseMove(v.x, v.y);
+		}
+	} else {
+		if (wParam & MK_CONTROL) {
+			return pingslines_renderer.OnMouseMove(v.x, v.y);
+		} else {
+			SelectTarget(v);
+		}
+	}
+
+	return true;
 }
 
 bool Minimap::OnMouseWheel(UINT Message, WPARAM wParam, LPARAM lParam) {

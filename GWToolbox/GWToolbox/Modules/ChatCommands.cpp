@@ -1,14 +1,17 @@
 #include "stdafx.h"
 #include "ChatCommands.h"
+#include <algorithm>
 
 #include <imgui.h>
 #include <imgui_internal.h>
 
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/Constants/Maps.h>
 
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>
 
+#include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/NPC.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Guild.h>
@@ -17,6 +20,7 @@
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
+#include <GWCA/Context/GuildContext.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
@@ -30,6 +34,7 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/FriendListMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
 
 #include <GuiUtils.h>
 #include "GWToolbox.h"
@@ -41,6 +46,8 @@
 #include <Windows/TravelWindow.h>
 #include <Windows/BuildsWindow.h>
 #include <Widgets/PartyDamage.h>
+#include <Windows/Hotkeys.h>
+
 
 namespace {
 	const wchar_t *next_word(const wchar_t *str) {
@@ -50,9 +57,240 @@ namespace {
 			str++;
 		return *str ? str : NULL;
 	}
+	static void TransmoAgent(DWORD agent_id, DWORD _npc_id, DWORD npc_model_file_id, DWORD npc_model_file_data, DWORD flags, DWORD _scale) {
+		if (!_npc_id || !agent_id) return;
+		GW::AgentLiving* a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
+		if (!a || !a->GetIsLivingType()) return;
+		DWORD npc_id = _npc_id;
+		DWORD scale = _scale;
+		if (!scale)
+			scale = 0x64000000;
+		GW::NPCArray& npcs = GW::GameContext::instance()->world->npcs;
+		if (npc_id == INT_MAX - 1) {
+			// Scale only
+			npc_id = a->player_number;
+			if (a->transmog_npc_id & 0x20000000)
+				npc_id = a->transmog_npc_id ^ 0x20000000;
+		}
+		else if (npc_id == INT_MAX) {
+			// Reset
+			npc_id = 0;
+			scale = 0x64000000;
+		}
+		else if (npc_id >= npcs.size() || !npcs[npc_id].model_file_id) {
+			if (!npc_model_file_id) return;
+			// Need to create the NPC.
+			// Those 2 packets (P074 & P075) are used to create a new model, for instance if we want to "use" a tonic.
+			// We have to find the data that are in the NPC structure and feed them to those 2 packets.
+			GW::NPC npc = { 0 };
+			npc.model_file_id = npc_model_file_id;
+			npc.npc_flags = flags;
+			npc.primary = 1;
+			npc.scale = scale;
+			npc.default_level = 0;
+			GW::GameThread::Enqueue([npc_id, npc]()
+				{
+					GW::Packet::StoC::NpcGeneralStats packet;
+					packet.header = GW::Packet::StoC::NpcGeneralStats::STATIC_HEADER;
+					packet.npc_id = npc_id;
+					packet.file_id = npc.model_file_id;
+					packet.data1 = 0;
+					packet.scale = npc.scale;
+					packet.data2 = 0;
+					packet.flags = npc.npc_flags;
+					packet.profession = npc.primary;
+					packet.level = npc.default_level;
+					packet.name[0] = 0;
+					GW::StoC::EmulatePacket(&packet);
+				});
+			if (npc_model_file_data) {
+				GW::GameThread::Enqueue([npc_id, npc_model_file_data]()
+					{
+						GW::Packet::StoC::NPCModelFile packet;
+						packet.header = GW::Packet::StoC::NPCModelFile::STATIC_HEADER;
+						packet.npc_id = npc_id;
+						packet.count = 1;
+						packet.data[0] = npc_model_file_data;
+
+						GW::StoC::EmulatePacket(&packet);
+					});
+			}
+		}
+		GW::GameThread::Enqueue([npc_id, agent_id, scale]()
+			{
+				if (npc_id) {
+					GW::NPCArray& npcs = GW::GameContext::instance()->world->npcs;
+					GW::NPC npc = npcs[npc_id];
+					if (!npc.model_file_id)
+						return;
+				}
+				GW::Packet::StoC::AgentScale packet1;
+				packet1.header = GW::Packet::StoC::AgentScale::STATIC_HEADER;
+				packet1.agent_id = agent_id;
+				packet1.scale = scale;
+				GW::StoC::EmulatePacket(&packet1);
+
+				GW::Packet::StoC::AgentModel packet2;
+				packet2.header = GW::Packet::StoC::AgentModel::STATIC_HEADER;
+				packet2.agent_id = agent_id;
+				packet2.model_id = npc_id;
+				GW::StoC::EmulatePacket(&packet2);
+			});
+	}
+	static bool GetNPCInfoByName(const wchar_t* name, DWORD* npc_id, DWORD* npc_model_file_id, DWORD* npc_model_file_data, DWORD* flags) {
+		int arglen = 0;
+		*npc_id = 0;
+		*npc_model_file_id = 0;
+		*npc_model_file_id = 0;
+		*flags = 0;
+		while (name[arglen])
+			arglen++;
+		if (!arglen)
+			return false;
+		if (wcsncmp(name, L"charr", std::min(arglen, 5)) == 0 && false) {
+			*npc_id = 163;
+			*npc_model_file_id = 0x0004c409;
+			*flags = 98820;
+		}
+		else if (wcsncmp(name, L"reindeer", std::min(arglen, 8)) == 0 && false) {
+			*npc_id = 5;
+			*npc_model_file_id = 277573;
+			*npc_model_file_data = 277576;
+			*flags = 32780;
+		}
+		else if (wcsncmp(name, L"gwenpre", std::min(arglen,7)) == 0) {
+			*npc_id = 244;
+			*npc_model_file_id = 116377;
+			*npc_model_file_data = 116759;
+			*flags = 98820;
+		}
+        else if (wcsncmp(name, L"gwenchan", std::min(arglen, 8)) == 0) {
+            *npc_id = 245;
+            *npc_model_file_id = 116377;
+            *npc_model_file_data = 283392;
+            *flags = 98820;
+        }
+		else if (wcsncmp(name, L"eye", std::min(arglen, 3)) == 0) {
+			*npc_id = 0x1f4;
+			*npc_model_file_id = 0x9d07;
+		}
+		else if (wcsncmp(name, L"zhu", std::min(arglen, 3)) == 0) {
+			*npc_id = 298;
+			*npc_model_file_id = 170283;
+			*npc_model_file_data = 170481;
+			*flags = 98820;
+		}
+		else if (wcsncmp(name, L"kuunavang", std::min(arglen, 9)) == 0) {
+			*npc_id = 309;
+			*npc_model_file_id = 157438;
+			*npc_model_file_data = 157527;
+			*flags = 98820;
+		}
+		else if (wcsncmp(name, L"beetle", std::min(arglen, 6)) == 0) {
+			*npc_id = 329;
+			*npc_model_file_id = 207331;
+			*npc_model_file_data = 279211; // 245179?
+			*flags = 98820; // 32780 ?
+		}
+		else if (wcsncmp(name, L"polar", std::min(arglen, 5)) == 0) {
+			*npc_id = 313;
+			*npc_model_file_id = 277551;
+			*npc_model_file_data = 277556;
+			*flags = 98820;
+		}
+		else if (wcsncmp(name, L"celepig", std::min(arglen, 7)) == 0) {
+			*npc_id = 331;
+			*npc_model_file_id = 279205;
+		}
+		else if (wcsncmp(name, L"mallyx", std::min(arglen, 6)) == 0 && false) {
+			*npc_id = 315;
+			*npc_model_file_id = 243812;
+			*flags = 98820;
+		}
+		else if (wcsncmp(name, L"bonedragon", std::min(arglen, 10)) == 0) {
+			*npc_id = 231;
+			*npc_model_file_id = 16768;
+		}
+		else if (wcsncmp(name, L"destroyer", std::min(arglen, 9)) == 0) {
+			*npc_id = 312;
+			*npc_model_file_id = 285891;
+			*npc_model_file_data = 285900;
+			*flags = 98820;
+		}
+		else if (wcsncmp(name, L"destroyer2", std::min(arglen, 10)) == 0) {
+			*npc_id = 146;
+			*npc_model_file_id = 285886;
+			*npc_model_file_data = 285890;
+			*flags = 32780;
+		}
+		else if (wcsncmp(name, L"koss", std::min(arglen, 4)) == 0) {
+			*npc_id = 250;
+			*npc_model_file_id = 243282;
+			*npc_model_file_data = 245053;
+			*flags = 98820;
+		}
+		else if (wcsncmp(name, L"smite", std::min(arglen, 5)) == 0) {
+			*npc_id = 346;
+			*npc_model_file_id = 129664;
+			*flags = 98820;
+		}
+		else if (wcsncmp(name, L"dorian", std::min(arglen, 6)) == 0) {
+			*npc_id = 8299;
+			*npc_model_file_id = 86510;
+			*flags = 98820;
+		}
+		else if (wcsncmp(name, L"kanaxai", std::min(arglen, 7)) == 0) {
+			*npc_id = 317;
+			*npc_model_file_id = 184176;
+			*npc_model_file_data = 185319;
+			*flags = 98820;
+		}
+		else if (wcsncmp(name, L"skeletonic", std::min(arglen, 10)) == 0) {
+			*npc_id = 359;
+			*npc_model_file_id = 52356;
+			*flags = 98820;
+		}
+		else if (wcsncmp(name, L"moa", std::min(arglen, 3)) == 0) {
+			*npc_id = 504;
+			*npc_model_file_id = 16689;
+			*flags = 98820;
+		}
+		else {
+			return false;
+		}
+		return true;
+	}
+
+	// Returns guild struct of current location. Returns null on fail or non-guild map.
+	static GW::Guild* GetCurrentGH() {
+		GW::AreaInfo* m = GW::Map::GetCurrentMapInfo();
+		if (!m || m->type != GW::RegionType::RegionType_GuildHall) return nullptr;
+		GW::Array<GW::Guild*> guilds = GW::GuildMgr::GetGuildArray();
+		if (!guilds.valid()) return nullptr;
+		for (size_t i = 0; i < guilds.size(); i++) {
+			if (!guilds[i]) continue;
+			return guilds[i];
+		}
+		return nullptr;
+	}
+	static GW::Guild* GetPlayerGH() {
+		GW::Array<GW::Guild*> guilds = GW::GuildMgr::GetGuildArray();
+		if (!guilds.valid()) return nullptr;
+		uint32_t guild_idx = GW::GuildMgr::GetPlayerGuildIndex();
+		if (guild_idx >= guilds.size())
+			return nullptr;
+		return guilds[guild_idx];
+	}
+	static bool IsInGH() {
+		GW::Guild* gh = GetCurrentGH();
+		return gh && gh == GetPlayerGH();
+	}
+	bool ImInPresearing() { return GW::Map::GetCurrentMapInfo()->region == GW::Region_Presearing; }
 }
 
 void ChatCommands::DrawHelp() {
+	if (!ImGui::TreeNode("Chat Commands"))
+		return;
 	ImGui::Text("You can create a 'Send Chat' hotkey to perform any command.");
 	ImGui::TextDisabled("Below, <xyz> denotes an argument, use an appropriate value without the quotes.\n"
 		"(a|b) denotes a mandatory argument, in this case 'a' or 'b'.\n"
@@ -77,7 +315,9 @@ void ChatCommands::DrawHelp() {
 	ImGui::Bullet(); ImGui::Text("'/load [build template|build name] [Hero index]' loads a build. The build name must be between quotes if it contains spaces. First Hero index is 1, last is 7. Leave out for player");
 	ImGui::Bullet(); ImGui::Text("'/pcons [on|off]' toggles, enables or disables pcons.");
 	ImGui::Bullet(); ImGui::Text("'/show <name>' opens the window or widget titled <name>.");
-	ImGui::Bullet(); ImGui::Text("'/target closest' to target the closest agent to you.");
+	ImGui::Bullet(); ImGui::Text("'/target closest' to target the closest agent to you.\n"
+		"'/target ee' to target best ebon escape agent.\n"
+		"'/target hos' to target best vipers/hos agent.");
 	ImGui::Bullet(); ImGui::Text("'/tb <name>' toggles the window or widget titled <name>.");
 	ImGui::Bullet(); ImGui::Text("'/tb reset' moves Toolbox and Settings window to the top-left corner.");
 	ImGui::Bullet(); ImGui::Text("'/tb quit' or '/tb exit' completely closes toolbox and all its windows.");
@@ -91,6 +331,22 @@ void ChatCommands::DrawHelp() {
 		"Use '/useskill <skill>' to stop the skill.");
 	ImGui::Bullet(); ImGui::Text("'/zoom <value>' to change the maximum zoom to the value. "
 		"use empty '/zoom' to reset to the default value of 750.");
+	const char* transmo_hint = "<npc_name> options: eye, zhu, kuunavang, beetle, polar, celepig, \n"
+		"  destroyer, koss, bonedragon, smite, kanaxai, skeletonic, moa";
+	ImGui::Bullet(); ImGui::Text("'/transmo <npc_name> [size (6-255)]' to change your appearance into an NPC.\n"
+		"'/transmo' to change your appearance into target NPC.\n"
+		"'/transmo reset' to reset your appearance.");
+	ImGui::ShowHelp(transmo_hint);
+	ImGui::Bullet(); ImGui::Text("'/transmotarget <npc_name> [size (6-255)]' to change your target's appearance into an NPC.\n"
+		"'/transmotarget reset' to reset your target's appearance.");
+	ImGui::ShowHelp(transmo_hint);
+	ImGui::Bullet(); ImGui::Text("'/transmoparty <npc_name> [size (6-255)]' to change your party's appearance into an NPC.\n"
+		"'/transmoparty' to change your party's appearance into target NPC.\n"
+		"'/transmoparty reset' to reset your party's appearance.");
+	ImGui::ShowHelp(transmo_hint);
+	ImGui::Bullet(); ImGui::Text("'/pingitem <equipped_item>' to ping your equipment in chat.\n"
+		"<equipped_item> options: armor, head, chest, legs, boots, gloves, offhand, weapon, weapons, costume");
+	ImGui::TreePop();
 }
 
 void ChatCommands::DrawSettingInternal() {
@@ -119,6 +375,32 @@ void ChatCommands::Initialize() {
 	GW::Chat::CreateCommand(L"ff", [](const wchar_t* message, int argc, LPWSTR* argv) -> void {
 		GW::Chat::SendChat('/', "resign");
 	});
+    GW::Chat::CreateCommand(L"gh", [](const wchar_t* message, int argc, LPWSTR* argv) -> void {
+        GW::Chat::SendChat('/', "tp gh");
+        });
+    GW::Chat::CreateCommand(L"enter", [](const wchar_t* message, int argc, LPWSTR* argv) -> void {
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) return;
+        uint32_t item_id;
+        std::wstring arg;
+        switch (GW::Map::GetMapID()) {
+        case GW::Constants::MapID::Temple_of_the_Ages:
+        case GW::Constants::MapID::Embark_Beach:
+            if (argc < 2)
+                return Log::Warning("Use /enter fow or /enter uw to trigger entry");
+            arg = GuiUtils::ToLower(argv[1]);
+            if (arg == L"fow")
+                item_id = 22280;
+            else if (arg == L"uw")
+                item_id = 3746;
+            else
+                return Log::Warning("Use /enter fow or /enter uw to trigger entry");
+            if (!GW::Items::UseItemByModelId(item_id, 1, 4) && !GW::Items::UseItemByModelId(item_id, 8, 16))
+                return Log::Error("Scroll not found!");
+            break;
+        default:
+            return Log::Warning("Use /enter from Temple of the Ages or Embark Beach");
+        }
+    });
 	GW::Chat::CreateCommand(L"age2", ChatCommands::CmdAge2);
 	GW::Chat::CreateCommand(L"dialog", ChatCommands::CmdDialog);
 	GW::Chat::CreateCommand(L"show", ChatCommands::CmdShow);
@@ -141,7 +423,16 @@ void ChatCommands::Initialize() {
 	GW::Chat::CreateCommand(L"scwiki", ChatCommands::CmdSCWiki);
 	GW::Chat::CreateCommand(L"load", ChatCommands::CmdLoad);
 	GW::Chat::CreateCommand(L"transmo", ChatCommands::CmdTransmo);
+	GW::Chat::CreateCommand(L"transmotarget", ChatCommands::CmdTransmoTarget);
+	GW::Chat::CreateCommand(L"transmoparty", ChatCommands::CmdTransmoParty);
+	GW::Chat::CreateCommand(L"transmoagent", ChatCommands::CmdTransmoAgent);
 	GW::Chat::CreateCommand(L"resize", ChatCommands::CmdResize);
+    GW::Chat::CreateCommand(L"settitle", ChatCommands::CmdReapplyTitle);
+    GW::Chat::CreateCommand(L"title", ChatCommands::CmdReapplyTitle);
+	GW::Chat::CreateCommand(L"pingitem", ChatCommands::CmdPingEquipment);
+	GW::Chat::CreateCommand(L"armor", [](const wchar_t* message, int argc, LPWSTR* argv) -> void {
+		GW::Chat::SendChat('/', "pingitem armor");
+		});
 }
 
 bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
@@ -348,10 +639,10 @@ std::vector<ToolboxUIElement*> ChatCommands::MatchingWindows(const wchar_t *mess
 			for (ToolboxUIElement* window : GWToolbox::Instance().GetUIElements()) {
 				ret.push_back(window);
 			}
-		} else {
-			std::string name = std::string(arg.begin(), arg.end());
+		} else if(arg.size()) {
+            std::string name = GuiUtils::WStringToString(arg);
 			for (ToolboxUIElement* window : GWToolbox::Instance().GetUIElements()) {
-				if (name == GuiUtils::ToLower(window->Name())) {
+				if (GuiUtils::ToLower(window->Name()).find(name) == 0){
 					ret.push_back(window);
 				}
 			}
@@ -386,59 +677,138 @@ void ChatCommands::CmdHide(const wchar_t *message, int argc, LPWSTR *argv) {
 	}
 }
 
-void ChatCommands::ParseDistrict(const std::wstring& s, GW::Constants::District& district, int& number) {
+bool ChatCommands::ParseOutpost(const std::wstring s, GW::Constants::MapID& outpost, GW::Constants::District& district, int& number) {
+	// Shortcut words e.g "/tp doa" for domain of anguish
+	if (s == L"bestarea")							return outpost = GW::Constants::MapID::The_Deep, true;
+	if (s == L"toa")								return outpost = GW::Constants::MapID::Temple_of_the_Ages, true;
+	if (s == L"doa" || s == L"goa" || s == L"tdp")	return outpost = GW::Constants::MapID::Domain_of_Anguish, true;
+	if (s == L"eee")								return outpost = GW::Constants::MapID::Embark_Beach, district = GW::Constants::District::EuropeEnglish, true;
+	if (s == L"gtob")								return outpost = GW::Constants::MapID::Great_Temple_of_Balthazar_outpost, true;
+	if (s == L"la")									return outpost = GW::Constants::MapID::Lions_Arch_outpost, true;
+    if (s == L"ac")									return outpost = GW::Constants::MapID::Ascalon_City_outpost, true;
+	if (s == L"eotn")								return outpost = GW::Constants::MapID::Eye_of_the_North_outpost, true;
+	if (s == L"hzh")								return outpost = GW::Constants::MapID::House_zu_Heltzer_outpost, true;
+    if (s == L"ctc")								return outpost = GW::Constants::MapID::Central_Transfer_Chamber_outpost, true;
+    if (s == L"topk")								return outpost = GW::Constants::MapID::Tomb_of_the_Primeval_Kings, true;
+    if (s == L"ra")								    return outpost = GW::Constants::MapID::Random_Arenas_outpost, true;
+    if (s == L"ha")								    return outpost = GW::Constants::MapID::Heroes_Ascent_outpost, true;
+    if (s == L"fa" || s.rfind(L"fa ") == 0)			return outpost = GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost, true;
+    if (s == L"jq" || s.rfind(L"jq ") == 0)			return outpost = GW::Constants::MapID::The_Jade_Quarry_Kurzick_outpost, true;
+	// By Map ID e.g. "/tp 77" for house zu heltzer 
+	int mapid;
+	if (GuiUtils::ParseInt(s.c_str(), &mapid) && (mapid != 0)) {
+		return outpost = (GW::Constants::MapID)mapid, true; 
+	}
+	// By full outpost name (without punctuation) e.g. "/tp GrEaT TemplE oF BalthaZAR"
+	std::string sanitized;
+	std::string compare = GuiUtils::ToLower(GuiUtils::RemovePunctuation(GuiUtils::WStringToString(s)));
+    // Remove "the " from front of entered string
+    std::size_t found = compare.rfind("the ");
+    if (found == 0)
+        compare.replace(found, 4, "");
+    GW::Constants::MapID bestMatchMapID = GW::Constants::MapID::None;
+	unsigned int searchStringLength = compare.length();
+	unsigned int bestMatchLength = 0;
+    unsigned int thisMapLength = 0;
+	bool search_dungeons = true;
+    const char** searchable_map_names = TravelWindow::Instance().searchable_map_names;
+	const GW::Constants::MapID* searchable_map_ids = TravelWindow::Instance().searchable_map_ids;
+	size_t mapCnt = 187;
+	if (ImInPresearing()) {
+		searchable_map_names = TravelWindow::Instance().presearing_map_names;
+		searchable_map_ids = TravelWindow::Instance().presearing_map_ids;
+		mapCnt = 5;
+		search_dungeons = false;
+	}
+    
+	for (size_t i = 0; i < mapCnt; i++) {
+		sanitized = searchable_map_names[i]; // Remove punctuation, to lower case.
+        thisMapLength = sanitized.length();
+		if (searchStringLength > thisMapLength) 
+            continue; // String entered by user is longer than this outpost name.
+        if (sanitized.rfind(compare) != 0)
+            continue; // No match
+		if (bestMatchLength < thisMapLength) {
+			bestMatchLength = thisMapLength;
+			bestMatchMapID = searchable_map_ids[i];
+            if (searchStringLength == thisMapLength)
+                break; // Exact match, break.
+		}
+	}
+	if (search_dungeons) {
+		const char** dungeon_map_names = TravelWindow::Instance().searchable_dungeon_names;
+		mapCnt = 11;
+		if (bestMatchMapID == GW::Constants::MapID::None) {
+			// Not found yet; try dungeons
+			for (size_t i = 0; i < mapCnt; i++) {
+				sanitized = dungeon_map_names[i]; // Remove punctuation, to lower case.
+				thisMapLength = sanitized.length();
+				if (searchStringLength > thisMapLength)
+					continue; // String entered by user is longer than this outpost name.
+				if (sanitized.rfind(compare) != 0)
+					continue; // No match
+				if (bestMatchLength < thisMapLength) {
+					bestMatchLength = thisMapLength;
+					bestMatchMapID = TravelWindow::Instance().dungeon_map_ids[i];
+					if (searchStringLength == thisMapLength)
+						break; // Exact match, break.
+				}
+			}
+		}
+	}
+    if (bestMatchMapID != GW::Constants::MapID::None)
+        return outpost = bestMatchMapID, true; // Exact match
+	return false;
+}
+bool ChatCommands::ParseDistrict(const std::wstring s, GW::Constants::District& district, int& number) {
 	district = GW::Constants::District::Current;
 	number = 0;
-	if (s == L"ae") {
-		district = GW::Constants::District::American;
-	} else if (s == L"ae1") {
-		district = GW::Constants::District::American;
-		number = 1;
-	} else if (s == L"int") {
-		district = GW::Constants::District::International;
-	} else if (s == L"ee") {
-		district = GW::Constants::District::EuropeEnglish;
-	} else if (s == L"eg" || s == L"dd") {
-		district = GW::Constants::District::EuropeGerman;
-	} else if (s == L"ef" || s == L"fr") {
-		district = GW::Constants::District::EuropeFrench;
-	} else if (s == L"ei" || s == L"it") {
-		district = GW::Constants::District::EuropeItalian;
-	} else if (s == L"es") {
-		district = GW::Constants::District::EuropeSpanish;
-	} else if (s == L"ep" || s == L"pl") {
-		district = GW::Constants::District::EuropePolish;
-	} else if (s == L"er" || s == L"ru") {
-		district = GW::Constants::District::EuropeRussian;
-	} else if (s == L"ak" || s == L"kr") {
-		district = GW::Constants::District::AsiaKorean;
-	} else if (s == L"ac" || s == L"atc" || s == L"ch") {
-		district = GW::Constants::District::AsiaChinese;
-	} else if (s == L"aj" || s == L"jp") {
-		district = GW::Constants::District::AsiaJapanese;
-	}
+	if (s == L"ae")									return district = GW::Constants::District::American, true;
+	if (s == L"ae1" || s == L"ad1")					return district = GW::Constants::District::American, number = 1, true;
+	if (s == L"int")								return district = GW::Constants::District::International, true;
+	if (s == L"ee")									return district = GW::Constants::District::EuropeEnglish, true;
+	if (s == L"eg" || s == L"dd")					return district = GW::Constants::District::EuropeGerman, true;
+	if (s == L"ef" || s == L"fr")					return district = GW::Constants::District::EuropeFrench, true;
+	if (s == L"ei" || s == L"it")					return district = GW::Constants::District::EuropeItalian, true;
+	if (s == L"es")									return district = GW::Constants::District::EuropeSpanish, true;
+	if (s == L"ep" || s == L"pl")					return district = GW::Constants::District::EuropePolish, true;
+	if (s == L"er" || s == L"ru")					return district = GW::Constants::District::EuropeRussian, true;
+	if (s == L"ak" || s == L"kr")					return district = GW::Constants::District::AsiaKorean, true;
+	if (s == L"ac" || s == L"atc" || s == L"ch")	return district = GW::Constants::District::AsiaChinese, true;
+	if (s == L"aj" || s == L"jp")					return district = GW::Constants::District::AsiaJapanese, true;
+	return false;
 }
-
+bool ChatCommands::IsLuxon() {
+    GW::GuildContext* c = GW::GuildMgr::GetGuildContext();
+    return c && c->player_guild_index && c->guilds[c->player_guild_index]->faction;
+}
 void ChatCommands::CmdTP(const wchar_t *message, int argc, LPWSTR *argv) {
 	// zero argument error
 	if (argc == 1) {
 		Log::Error("[Error] Please provide an argument");
 		return;
 	}
+	GW::Constants::MapID outpost = GW::Map::GetMapID();
+	GW::Constants::District district = GW::Constants::District::Current;
+	int district_number = 0;
 
-	std::wstring arg1 = GuiUtils::ToLower(argv[1]);
-
-	// own guild hall
-	if (arg1 == L"gh" && argc == 2) {
-		GW::GuildMgr::TravelGH();
-		return;
-	}
-	// ally guild hall
-	if (arg1 == L"gh" && argc > 2) {
-		std::wstring tag = GuiUtils::ToLower(argv[2]);
+	std::wstring argOutpost = GuiUtils::ToLower(argv[1]);
+	std::wstring argDistrict = GuiUtils::ToLower(argv[argc-1]);
+	// Guild hall
+	if (argOutpost == L"gh") {
+		if (argc == 2) { 
+			// "/tp gh"
+			if(IsInGH())
+				GW::GuildMgr::LeaveGH();
+			else
+				GW::GuildMgr::TravelGH();
+			return;
+		}
+		// "/tp gh lag" = travel to Guild Hall belonging to Zero Files Remaining [LaG]
+		std::wstring argGuildTag = GuiUtils::ToLower(argv[2]);
 		GW::GuildArray guilds = GW::GuildMgr::GetGuildArray();
 		for (GW::Guild* guild : guilds) {
-			if (guild && GuiUtils::ToLower(guild->tag) == tag) {
+			if (guild && GuiUtils::ToLower(guild->tag) == argGuildTag) {
 				GW::GuildMgr::TravelGH(guild->key);
 				return;
 			}
@@ -446,80 +816,69 @@ void ChatCommands::CmdTP(const wchar_t *message, int argc, LPWSTR *argv) {
 		Log::Error("[Error] Did not recognize guild '%ls'", argv[2]);
 		return;
 	}
-
-	// current outpost - different district
-	GW::Constants::District district;
-	int district_number;
-	ParseDistrict(arg1, district, district_number);
-	if (district != GW::Constants::District::Current) {
-		// we have a match
-		GW::Constants::MapID current = GW::Map::GetMapID();
-		TravelWindow::Travel(current, district, district_number);
-		return;
-	}
-	
-	// different outpost - district optional
-	if (argc > 2) {
-		std::wstring dis = GuiUtils::ToLower(argv[2]);
-		ParseDistrict(dis, district, district_number);
-		if (district == GW::Constants::District::Current) {
-			// did not match district, but continue with travel anyway
-			Log::Error("Invalid district '%ls'", dis.c_str());
-		}
-	}
-
-	std::wstring town = GuiUtils::ToLower(argv[1]);
-	if (town.compare(0, 3, L"fav", 3) == 0) {
-		std::wstring fav_s_num = town.substr(3, std::wstring::npos);
+	if (argOutpost.size() > 2 && argOutpost.compare(0, 3, L"fav", 3) == 0) {
+		std::wstring fav_s_num = argOutpost.substr(3, std::wstring::npos);
 		if (fav_s_num.empty()) {
 			TravelWindow::Instance().TravelFavorite(0);
-		} else {
-			int fav_num;
-			if (GuiUtils::ParseInt(fav_s_num.c_str(), &fav_num)) {
-				TravelWindow::Instance().TravelFavorite(fav_num - 1);
-			}
+			return;
 		}
-	} else if (town == L"toa") {
-		TravelWindow::Travel(GW::Constants::MapID::Temple_of_the_Ages, district, district_number);
-	} else if (town == L"doa") {
-		TravelWindow::Travel(GW::Constants::MapID::Domain_of_Anguish, district, district_number);
-	} else if (town == L"kamadan" || town == L"kama") {
-		TravelWindow::Travel(GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost, district, district_number);
-	} else if (town == L"embark") {
-		TravelWindow::Travel(GW::Constants::MapID::Embark_Beach, district, district_number);
-	} else if (town == L"eee") {
-		TravelWindow::Travel(GW::Constants::MapID::Embark_Beach, GW::Constants::District::EuropeEnglish, 0);
-	} else if (town == L"vlox" || town == L"vloxs") {
-		TravelWindow::Travel(GW::Constants::MapID::Vloxs_Falls, district, district_number);
-	} else if (town == L"gadd" || town == L"gadds") {
-		TravelWindow::Travel(GW::Constants::MapID::Gadds_Encampment_outpost, district, district_number);
-	} else if (town == L"urgoz") {
-		TravelWindow::Travel(GW::Constants::MapID::Urgozs_Warren, district, district_number);
-	} else if (town == L"deep") {
-		TravelWindow::Travel(GW::Constants::MapID::The_Deep, district, district_number);
-	} else if (town == L"gtob") {
-		TravelWindow::Travel(GW::Constants::MapID::Great_Temple_of_Balthazar_outpost, district, district_number);
-	} else if (town == L"la") {
-		TravelWindow::Travel(GW::Constants::MapID::Lions_Arch_outpost, district, district_number);
-	} else if (town == L"kaineng") {
-		TravelWindow::Travel(GW::Constants::MapID::Kaineng_Center_outpost, district, district_number);
-	} else if (town == L"eotn") {
-		TravelWindow::Travel(GW::Constants::MapID::Eye_of_the_North_outpost, district, district_number);
-	} else if (town == L"sif" || town == L"sifhalla") {
-		TravelWindow::Travel(GW::Constants::MapID::Sifhalla_outpost, district, district_number);
-	} else if (town == L"doom" || town == L"doomlore") {
-		TravelWindow::Travel(GW::Constants::MapID::Doomlore_Shrine_outpost, district, district_number);
-	} else {
-		int map_id_integer;
-		if (GuiUtils::ParseInt(town.c_str(), &map_id_integer) && (map_id_integer != 0)) {
-			TravelWindow::Travel((GW::Constants::MapID)map_id_integer, district, district_number);
-		} else {
-			GW::Constants::MapID map_id = MatchMapPrefix(town.c_str());
-			if (map_id != GW::Constants::MapID::None) {
-				TravelWindow::Travel(map_id, district, district_number);
-			}
+		int fav_num;
+		if (GuiUtils::ParseInt(fav_s_num.c_str(), &fav_num)) {
+			TravelWindow::Instance().TravelFavorite(fav_num - 1);
+			return;
 		}
+		Log::Error("[Error] Did not recognize favourite");
+		return;
 	}
+	for (int i = 2; i < argc-1; i++) {
+		// Outpost name can be anything after "/tp" but before the district e.g. "/tp house zu heltzer ae1"
+		argOutpost.append(L" ");
+		argOutpost.append(GuiUtils::ToLower(argv[i]));
+	}
+	bool isValidDistrict = ParseDistrict(argDistrict, district, district_number);
+	if (isValidDistrict && argc == 2) {
+		// e.g. "/tp ae1"
+		TravelWindow::Instance().Travel(outpost, district, district_number); // NOTE: ParseDistrict sets district and district_number vars by reference.
+		return;
+	}
+	if (!isValidDistrict && argc > 2) { 
+		// e.g. "/tp house zu heltzer"
+		argOutpost.append(L" ");
+		argOutpost.append(argDistrict);
+	}
+	if (ParseOutpost(argOutpost, outpost, district, district_number)) {
+        switch (outpost) {
+            case GW::Constants::MapID::Vizunah_Square_Foreign_Quarter_outpost:
+            case GW::Constants::MapID::Vizunah_Square_Local_Quarter_outpost:
+				if (std::wstring(L"l").rfind(argv[argc - 1]) == 0) // - e.g. /tp viz local
+					outpost = GW::Constants::MapID::Vizunah_Square_Local_Quarter_outpost;
+				else if (std::wstring(L"f").rfind(argv[argc - 1]) == 0)
+					outpost = GW::Constants::MapID::Vizunah_Square_Foreign_Quarter_outpost;
+                break;
+            case GW::Constants::MapID::Fort_Aspenwood_Luxon_outpost:
+            case GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost:
+                if (std::wstring(L"l").rfind(argv[argc - 1]) == 0) // - e.g. /tp fa lux
+                    outpost = GW::Constants::MapID::Fort_Aspenwood_Luxon_outpost;
+                else if (std::wstring(L"k").rfind(argv[argc - 1]) == 0)
+                    outpost = GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost;
+                else
+                    outpost = IsLuxon() ? GW::Constants::MapID::Fort_Aspenwood_Luxon_outpost : GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost;
+                break;
+            case GW::Constants::MapID::The_Jade_Quarry_Kurzick_outpost:
+            case GW::Constants::MapID::The_Jade_Quarry_Luxon_outpost:
+                if (std::wstring(L"l").rfind(argv[argc - 1]) == 0) // - e.g. /tp jq lux
+                    outpost = GW::Constants::MapID::The_Jade_Quarry_Luxon_outpost;
+                else if (std::wstring(L"k").rfind(argv[argc - 1]) == 0)
+                    outpost = GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost;
+                else
+                    outpost = IsLuxon() ? GW::Constants::MapID::The_Jade_Quarry_Luxon_outpost : GW::Constants::MapID::The_Jade_Quarry_Kurzick_outpost;
+                break;
+        }
+		TravelWindow::Instance().Travel(outpost, district, district_number); // NOTE: ParseOutpost sets outpost, district and district_number vars by reference.
+		return;
+	}
+	Log::Error("[Error] Did not recognize outpost '%ls'", argOutpost.c_str());
+	return;
 }
 
 void ChatCommands::CmdZoom(const wchar_t *message, int argc, LPWSTR *argv) {
@@ -613,56 +972,138 @@ void ChatCommands::CmdAfk(const wchar_t *message, int argc, LPWSTR *argv) {
 }
 
 void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
-	if (argc > 1) {
-		std::wstring arg1 = GuiUtils::ToLower(argv[1]);
-		if (arg1 == L"closest" || arg1 == L"nearest") {
-			// target nearest agent
-			GW::AgentArray agents = GW::Agents::GetAgentArray();
-			if (!agents.valid()) return;
+	if (argc < 2)
+		return Log::Error("Missing argument for /target");
+	static auto CalcAngle = [](GW::GamePos pos) {
+		const float pi = 3.14159f;
+		float tan_angle = 0.0f;
+		if (pos.x == 0.0f) {
+			if (pos.y >= 0.0f) tan_angle = pi / 2;
+			else tan_angle = (pi / 2) * -1.0f;
+		}
+		else if (pos.x < 0.0f) {
+			if (pos.y >= 0.0f) tan_angle = atan(pos.y / pos.x) + pi;
+			else tan_angle = atan(pos.y / pos.x) - pi;
+		}
+		else {
+			tan_angle = atan(pos.y / pos.x);
+		}
+		tan_angle *= 180.0f / pi;
+		return tan_angle;
+	};
+	const float pi = 3.14159f;
+	std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+	if (arg1 == L"ee") {
+		// target best ebon escape target
+		GW::AgentArray agents = GW::Agents::GetAgentArray();
+		if (!agents.valid()) return;
+		GW::Agent* me = GW::Agents::GetPlayer();
+		if (me == nullptr) return;
+		
+		float facing_angle = (me->rotation_angle * 180.0f / pi);
+		float wanted_angle = facing_angle > 0.0f ? facing_angle - 180.0f : facing_angle + 180.0f;
+		float max_angle_diff = 22.5f; // Acceptable angle for ebon escape
+		float max_distance = GW::Constants::SqrRange::Spellcast;
+		float distance = 0.0f;
 
-			GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
-			if (me == nullptr) return;
+		int closest = -1;
+		for (size_t i = 0; i < agents.size(); ++i) {
+			GW::AgentLiving* agent = (GW::AgentLiving * )agents[i];
+			if (agent == nullptr || agent == me 
+				|| !agent->GetIsLivingType() || agent->GetIsDead() 
+				|| agent->allegiance == 0x3)
+				continue;
+			float this_distance = GW::GetSquareDistance(me->pos, agents[i]->pos);
+			if (this_distance > max_distance || distance > this_distance)
+				continue;
+			float agent_angle = CalcAngle(me->pos - agents[i]->pos);
+			float this_angle_diff = abs(wanted_angle - agent_angle);
+			if (this_angle_diff > max_angle_diff)
+				continue;
+			closest = i;
+			distance = this_distance;
+		}
+		if (closest > 0) {
+			GW::Agents::ChangeTarget(agents[closest]);
+		}
+	}
+	if (arg1 == L"vipers" || arg1 == L"hos") {
+		// target best vipers target (closest)
+		GW::AgentArray agents = GW::Agents::GetAgentArray();
+		if (!agents.valid()) return;
+		GW::Agent* me = GW::Agents::GetPlayer();
+		if (me == nullptr) return;
 
-			float distance = GW::Constants::SqrRange::Compass;
-			int closest = -1;
+		float wanted_angle = (me->rotation_angle * 180.0f / pi);
+		float max_angle_diff = 22.5f; // Acceptable angle for vipers
+		float max_distance = GW::Constants::SqrRange::Spellcast;
 
-			for (size_t i = 0; i < agents.size(); ++i) {
-				if (agents[i] == nullptr) continue;
-				GW::AgentLiving* agent = agents[i]->GetAsAgentLiving();
-				if (agent == nullptr) continue;
-				if (agent->player_number != me->player_number) {
-					float newDistance = GW::GetSquareDistance(me->pos, agents[i]->pos);
-					if (newDistance < distance) {
-						closest = i;
-						distance = newDistance;
-					}
+		int closest = -1;
+		for (size_t i = 0; i < agents.size(); ++i) {
+			GW::AgentLiving* agent = static_cast<GW::AgentLiving*>(agents[i]);
+			if (agent == nullptr || agent == me || !agent->GetIsLivingType() || agent->GetIsDead())
+				continue;
+			float this_distance = GW::GetSquareDistance(me->pos, agents[i]->pos);
+			if (this_distance > max_distance)
+				continue;
+			float agent_angle = CalcAngle(me->pos - agents[i]->pos);
+			float this_angle_diff = abs(wanted_angle - agent_angle);
+			if (this_angle_diff > max_angle_diff)
+				continue;
+			closest = i;
+			max_distance = this_distance;
+		}
+		if (closest > 0) {
+			GW::Agents::ChangeTarget(agents[closest]);
+		}
+	}
+	else if (arg1 == L"closest" || arg1 == L"nearest") {
+		// target nearest agent
+		GW::AgentArray agents = GW::Agents::GetAgentArray();
+		if (!agents.valid()) return;
+
+		GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+		if (me == nullptr) return;
+
+		float distance = GW::Constants::SqrRange::Compass;
+		int closest = -1;
+
+		for (size_t i = 0; i < agents.size(); ++i) {
+			if (agents[i] == nullptr) continue;
+			GW::AgentLiving* agent = agents[i]->GetAsAgentLiving();
+			if (agent == nullptr) continue;
+			if (agent->player_number != me->player_number) {
+				float newDistance = GW::GetSquareDistance(me->pos, agents[i]->pos);
+				if (newDistance < distance) {
+					closest = i;
+					distance = newDistance;
 				}
 			}
-			if (closest > 0) {
-				GW::Agents::ChangeTarget(agents[closest]);
-			}
-		} else if (arg1 == L"getid") {
-			GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
-			if (target == nullptr) {
-				Log::Error("No target selected!");
-			} else {
-				Log::Info("Target model id (PlayerNumber) is %d", target->player_number);
-			}
-		} else if (arg1 == L"getpos") {
-			GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
-			if (target == nullptr) {
-				Log::Error("No target selected!");
-			} else {
-				Log::Info("Target coordinates are (%f, %f)", target->pos.x, target->pos.y);
-			}
+		}
+		if (closest > 0) {
+			GW::Agents::ChangeTarget(agents[closest]);
+		}
+	} else if (arg1 == L"getid") {
+		GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
+		if (target == nullptr) {
+			Log::Error("No target selected!");
 		} else {
-			const wchar_t *name = next_word(message);
-			GW::Player *target = GW::PlayerMgr::GetPlayerByName(name);
-			if (target != NULL) {
-				GW::Agent *agent = GW::Agents::GetAgentByID(target->agent_id);
-				if (agent) {
-					GW::Agents::ChangeTarget(agent);
-				}
+			Log::Info("Target model id (PlayerNumber) is %d", target->player_number);
+		}
+	} else if (arg1 == L"getpos") {
+		GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
+		if (target == nullptr) {
+			Log::Error("No target selected!");
+		} else {
+			Log::Info("Target coordinates are (%f, %f)", target->pos.x, target->pos.y);
+		}
+	} else {
+		const wchar_t *name = next_word(message);
+		GW::Player *target = GW::PlayerMgr::GetPlayerByName(name);
+		if (target != NULL) {
+			GW::Agent *agent = GW::Agents::GetAgentByID(target->agent_id);
+			if (agent) {
+				GW::Agents::ChangeTarget(agent);
 			}
 		}
 	}
@@ -760,89 +1201,219 @@ void ChatCommands::CmdLoad(const wchar_t *message, int argc, LPWSTR *argv) {
 		}
 	}
 }
+void ChatCommands::CmdPingEquipment(const wchar_t* message, int argc, LPWSTR* argv) {
+	if (argc < 2) {
+		Log::Error("Missing argument for /pingitem");
+		return;
+	}
+	std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+	if (arg1 == L"weapon")
+		GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 1), 3);
+	else if (arg1 == L"offhand" || arg1 == L"shield")
+		GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 2), 3);
+	else if (arg1 == L"chest")		
+		GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 3), 2);
+	else if (arg1 == L"legs")		
+		GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 4), 2);
+	else if (arg1 == L"head")
+		GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 5), 2);
+	else if (arg1 == L"boots" || arg1 == L"feet")		
+		GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 6), 2);
+	else if (arg1 == L"gloves" || arg1 == L"hands")		
+		GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 7), 2);
+	else if (arg1 == L"weapons") {
+		GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 1),3);
+		GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 2), 3);
+	}
+	else if (arg1 == L"armor") {
+        GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 5), 2);
+        GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 3), 2);
+        GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 7), 2);
+        GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 4), 2);
+        GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 6), 2);
+	}
+	else if (arg1 == L"costume") {
+		GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 8), 1);
+		GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 9), 1);
+	}
+	else {
+		Log::Error("Unrecognised /pingitem %ls", argv[1]);
+	}
+}
 
-void ChatCommands::CmdTransmo(const wchar_t *message, int argc, LPWSTR *argv) {
-	int scale = 0;
-	if (argc == 2) {
-		GuiUtils::ParseInt(argv[1], &scale);
+void ChatCommands::CmdTransmoParty(const wchar_t* message, int argc, LPWSTR* argv) {
+	GW::PartyInfo* pInfo = GW::PartyMgr::GetPartyInfo();
+	if (!pInfo) return;
+	int scale = 0x64000000;
+	DWORD npc_id = 0;
+	DWORD npc_model_file_id = 0;
+	DWORD npc_model_file_data = 0;
+	DWORD flags = 0;
+
+	if (argc > 1) {
+		if (wcsncmp(argv[1], L"reset", 5) == 0) {
+			npc_id = INT_MAX;
+		}
+		else if (GuiUtils::ParseInt(argv[1], &scale)) {
+			if (scale < 6 || scale > 255) {
+				Log::Error("scale must be between [6, 255]");
+				return;
+			}
+			scale = (DWORD)scale << 24;
+			npc_id = INT_MAX-1;
+		}
+		else if (!GetNPCInfoByName(argv[1], &npc_id, &npc_model_file_id, &npc_model_file_data, &flags)) {
+			Log::Error("Unknown transmo '%ls'", argv[1]);
+			return;
+		}
+		if (argc > 2 && GuiUtils::ParseInt(argv[2], &scale)) {
+			if (scale < 6 || scale > 255) {
+				Log::Error("scale must be between [6, 255]");
+				return;
+			}
+			scale = (DWORD)scale << 24;
+		}
+	}
+	else {
+		GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
+		if (!target) return;
+		npc_id = target->player_number;
+		if (target->transmog_npc_id & 0x20000000)
+			npc_id = target->transmog_npc_id ^ 0x20000000;
+		else if (target->IsPlayer())
+			return;
+	}
+	for (auto p : pInfo->heroes) {
+		TransmoAgent(p.agent_id, npc_id, npc_model_file_id, npc_model_file_data, flags, scale);
+	}
+	for (auto p : pInfo->henchmen) {
+		TransmoAgent(p.agent_id, npc_id, npc_model_file_id, npc_model_file_data, flags, scale);
+	}
+	for (auto p : pInfo->players) {
+		GW::Player* player = GW::PlayerMgr::GetPlayerByID(p.login_number);
+		if (!player) continue;
+		TransmoAgent(player->agent_id, npc_id, npc_model_file_id, npc_model_file_data, flags, scale);
+	}
+}
+
+void ChatCommands::CmdTransmoTarget(const wchar_t* message, int argc, LPWSTR* argv) {
+	int scale = 0x64000000;
+	DWORD npc_id = 0;
+	DWORD npc_model_file_id = 0;
+	DWORD npc_model_file_data = 0;
+	DWORD flags = 0;
+	GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
+	if (argc < 2) {
+		Log::Error("Missing /transmotarget argument");
+		return;
+	}
+	if (!target) {
+		Log::Error("Invalid /transmotarget target");
+		return;
+	}
+	if (wcsncmp(argv[1], L"reset", 5) == 0) {
+		npc_id = INT_MAX;
+	}
+	else if (GuiUtils::ParseInt(argv[1], &scale)) {
 		if (scale < 6 || scale > 255) {
 			Log::Error("scale must be between [6, 255]");
 			return;
 		}
+		scale = (DWORD)scale << 24;
+		npc_id = INT_MAX - 1;
 	}
+	else if (!GetNPCInfoByName(argv[1], &npc_id, &npc_model_file_id, &npc_model_file_data, &flags)) {
+		Log::Error("Unknown transmo '%ls'", argv[1]);
+		return;
+	}
+	if (argc > 2 && GuiUtils::ParseInt(argv[2], &scale)) {
+		if (scale < 6 || scale > 255) {
+			Log::Error("scale must be between [6, 255]");
+			return;
+		}
+		scale = (DWORD)scale << 24;
+	}
+	TransmoAgent(target->agent_id, npc_id, npc_model_file_id, npc_model_file_data, flags, scale);
+}
 
-	GW::AgentLiving *target = GW::Agents::GetTargetAsAgentLiving();
-	if (!target) return;
-
+void ChatCommands::CmdTransmo(const wchar_t *message, int argc, LPWSTR *argv) {
+	int scale = 0x64000000;
+	int tmpScale = scale;
 	DWORD npc_id = 0;
-	if (target->IsPlayer()) {
-		npc_id = target->transmog_npc_id & 0x0FFFFFFF;
-	} else {
-		npc_id = target->player_number;
+	DWORD npc_model_file_id = 0;
+	DWORD npc_model_file_data = 0;
+	DWORD flags = 0;
+	
+	if (argc > 1) {
+		if (wcsncmp(argv[1], L"reset", 5) == 0) {
+			npc_id = INT_MAX;
+		}
+		else if(GuiUtils::ParseInt(argv[1], &scale)) {
+			if (scale < 6 || scale > 255) {
+				Log::Error("scale must be between [6, 255]");
+				return;
+			}
+			scale = (DWORD)scale << 24;
+			npc_id = INT_MAX - 1;
+		}
+		else if (!GetNPCInfoByName(argv[1], &npc_id, &npc_model_file_id, &npc_model_file_data, &flags)) {
+			Log::Error("unknown transmo '%ls'", argv[1]);
+			return;
+		}
+		if (argc > 2 && GuiUtils::ParseInt(argv[2], &scale)) {
+			if (scale < 6 || scale > 255) {
+				Log::Error("scale must be between [6, 255]");
+				return;
+			}
+			scale = (DWORD)scale << 24;
+		}
 	}
-
-	if (!npc_id) return;
-	GW::NPCArray &npcs = GW::GameContext::instance()->world->npcs;
-	GW::NPC &npc = npcs[npc_id];
-
-#if 0
-	npc_id = 12;
-	GW::NPC npc = {0};
-	npc.ModelFileID = 193245;
-	npc.scale = 0x64000000; // I think, 2 highest order bytes are percent of size, so 0x64000000 is 100%
-
-	// Those 2 packets (P074 & P075) are used to create a new model, for instance if we want to "use" a tonic.
-	// We have to find the data that are in the NPC structure and feed them to those 2 packets.
-
-	GW::GameThread::Enqueue([npc_id, npc]()
-	{
-		GW::Packet::StoC::NpcGeneralStats packet;
-		packet.header = 79;
-		packet.npc_id = npc_id;
-		packet.file_id = npc.ModelFileID;
-		packet.data1 = 0;
-		packet.scale = npc.scale;
-		packet.data2 = 0;
-		packet.flags = npc.NpcFlags;
-		packet.profession = npc.Primary;
-		packet.level = 0;
-		packet.name[0] = 0;
-
-		GW::StoC::EmulatePacket((GW::Packet::StoC::PacketBase *)&packet);
-	});
-
-	GW::GameThread::Enqueue([npc_id, npc]()
-	{
-		GW::Packet::StoC::P080 packet;
-		packet.header = 80;
-		packet.npc_id = npc_id;I 
-
-		// If we found a npc that have more than 1 ModelFiles, we can determine which one of h0028, h002C are size and capacity.
-		assert(npc.FilesCount <= 8);
-		packet.count = npc.FilesCount;
-		for (size_t i = 0; i < npc.FilesCount; i++)
-			packet.data[i] = npc.ModelFiles[i];
-
-		GW::StoC::EmulatePacket((GW::Packet::StoC::PacketBase *)&packet);
-	});
-#endif
-
-	GW::GameThread::Enqueue([scale]()
-	{
-		GW::Packet::StoC::AgentScale packet;
-		packet.agent_id = GW::Agents::GetPlayerId();
-		packet.scale = (DWORD)scale << 24;
-
-		GW::StoC::EmulatePacket(&packet);
-	});
-
-	GW::GameThread::Enqueue([npc_id]()
-	{
-		GW::Packet::StoC::AgentModel packet;
-		packet.agent_id = GW::Agents::GetPlayerId();
-		packet.model_id = npc_id;
-		GW::StoC::EmulatePacket(&packet);
-	});
+	else {
+		GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
+		if (!target) return;
+		npc_id = target->player_number;
+		if (target->transmog_npc_id & 0x20000000)
+			npc_id = target->transmog_npc_id ^ 0x20000000;
+		else if (target->IsPlayer())
+			return;
+	}
+	TransmoAgent(GW::Agents::GetPlayerId(), npc_id, npc_model_file_id, npc_model_file_data, flags, scale);
+}
+void ChatCommands::CmdTransmoAgent(const wchar_t* message, int argc, LPWSTR* argv) {
+    int scale = 0x64000000;
+    int tmpScale = scale;
+    DWORD npc_id = 0;
+    DWORD npc_model_file_id = 0;
+    DWORD npc_model_file_data = 0;
+    DWORD flags = 0;
+    if(argc < 3)
+        return Log::Error("Missing /transmoagent argument");
+    int agent_id = 0;
+    if(!GuiUtils::ParseInt(argv[1], &agent_id) || agent_id < 0)
+        return Log::Error("Invalid /transmoagent agent_id");
+    if (wcsncmp(argv[2], L"reset", 5) == 0) {
+        npc_id = INT_MAX;
+    }
+    else if (GuiUtils::ParseInt(argv[2], &scale)) {
+        if (scale < 6 || scale > 255) {
+            Log::Error("scale must be between [6, 255]");
+            return;
+        }
+        scale = (DWORD)scale << 24;
+        npc_id = INT_MAX - 1;
+    }
+    else if (!GetNPCInfoByName(argv[2], &npc_id, &npc_model_file_id, &npc_model_file_data, &flags)) {
+        Log::Error("unknown transmo '%s'", argv[1]);
+        return;
+    }
+    if (argc > 4 && GuiUtils::ParseInt(argv[3], &scale)) {
+        if (scale < 6 || scale > 255) {
+            Log::Error("scale must be between [6, 255]");
+            return;
+        }
+        scale = (DWORD)scale << 24;
+    }
+    TransmoAgent(agent_id, npc_id, npc_model_file_id, npc_model_file_data, flags, scale);
 }
 
 void ChatCommands::CmdResize(const wchar_t *message, int argc, LPWSTR *argv) {
@@ -861,245 +1432,95 @@ void ChatCommands::CmdResize(const wchar_t *message, int argc, LPWSTR *argv) {
 	MoveWindow(hwnd, rect.left, rect.top, width, height, TRUE);
 }
 
+void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* argv) {
+    GW::PlayerMgr::RemoveActiveTitle();
 
-static struct {
-    const char *name;
-	const wchar_t 		   *sname;
-	GW::Constants::MapID 	map_id;
-} teleport_search_map[] = {
-	"Abaddon's Gate", L"abaddonsgate", GW::Constants::MapID::Abaddons_Gate,
-	"Abaddon's Mouth", L"abaddonsmouth", GW::Constants::MapID::Abaddons_Mouth,
-	"Altrumm Ruins", L"altrummruins", GW::Constants::MapID::Altrumm_Ruins,
-	"Amatz Basin", L"amatzbasin", GW::Constants::MapID::Amatz_Basin,
-	"Amnoon Oasis, The", L"amnoonoasisthe", GW::Constants::MapID::The_Amnoon_Oasis_outpost,
-	"Arborstone", L"arborstone", GW::Constants::MapID::Arborstone_outpost_mission,
-	"Ascalon City", L"ascaloncity", GW::Constants::MapID::Ascalon_City_outpost,
-	"Aspenwood Gate (Kurzick)", L"aspenwoodgatekurzick", GW::Constants::MapID::Aspenwood_Gate_Kurzick_outpost,
-	"Aspenwood Gate (Luxon)", L"aspenwoodgateluxon", GW::Constants::MapID::Aspenwood_Gate_Luxon_outpost,
-	"Astralarium, The", L"astralariumthe", GW::Constants::MapID::The_Astralarium_outpost,
-	"Augury Rock", L"auguryrock", GW::Constants::MapID::Augury_Rock_outpost,
-	"Aurios Mines, The", L"auriosminesthe", GW::Constants::MapID::The_Aurios_Mines,
-	"Aurora Glade", L"auroraglade", GW::Constants::MapID::Aurora_Glade,
-	"Bai Paasu Reach", L"baipaasureach", GW::Constants::MapID::Bai_Paasu_Reach_outpost,
-	"Basalt Grotto", L"basaltgrotto", GW::Constants::MapID::Basalt_Grotto_outpost,
-	"Beacon's Perch", L"beaconsperch", GW::Constants::MapID::Beacons_Perch_outpost,
-	"Beetletun", L"beetletun", GW::Constants::MapID::Beetletun_outpost,
-	"Beknur Harbor", L"beknurharbor", GW::Constants::MapID::Beknur_Harbor,
-	"Bergen Hot Springs", L"bergenhotsprings", GW::Constants::MapID::Bergen_Hot_Springs_outpost,
-	"Blacktide Den", L"blacktideden", GW::Constants::MapID::Blacktide_Den,
-	"Bloodstone Fen", L"bloodstonefen", GW::Constants::MapID::Bloodstone_Fen,
-	"Bone Palace", L"bonepalace", GW::Constants::MapID::Bone_Palace_outpost,
-	"Boreal Station", L"borealstation", GW::Constants::MapID::Boreal_Station_outpost,
-	"Boreas Seabed", L"boreasseabed", GW::Constants::MapID::Boreas_Seabed_outpost_mission,
-	"Borlis Pass", L"borlispass", GW::Constants::MapID::Borlis_Pass,
-	"Brauer Academy", L"braueracademy", GW::Constants::MapID::Brauer_Academy_outpost,
-	"Breaker Hollow", L"breakerhollow", GW::Constants::MapID::Breaker_Hollow_outpost,
-	"Camp Hojanu", L"camphojanu", GW::Constants::MapID::Camp_Hojanu_outpost,
-	"Camp Rankor", L"camprankor", GW::Constants::MapID::Camp_Rankor_outpost,
-	"Cavalon", L"cavalon", GW::Constants::MapID::Cavalon_outpost,
-	"Central Transfer Chamber", L"centraltransferchamber", GW::Constants::MapID::Central_Transfer_Chamber_outpost,
-	"Chahbek Village", L"chahbekvillage", GW::Constants::MapID::Chahbek_Village,
-	"Champion's Dawn", L"championsdawn", GW::Constants::MapID::Champions_Dawn_outpost,
-	"Chantry of Secrets", L"chantryofsecrets", GW::Constants::MapID::Chantry_of_Secrets_outpost,
-	"Codex Arena", L"codexarena", GW::Constants::MapID::Codex_Arena_outpost,
-	"Consulate Docks", L"consulatedocks", GW::Constants::MapID::Consulate_Docks,
-	"Copperhammer Mines", L"copperhammermines", GW::Constants::MapID::Copperhammer_Mines_outpost,
-	"D'Alessio Seaboard", L"dajkahinlet", GW::Constants::MapID::Dajkah_Inlet,
-	"Dajkah Inlet", L"dalessioseaboard", GW::Constants::MapID::DAlessio_Seaboard,
-	"Dasha Vestibule", L"dashavestibule", GW::Constants::MapID::Dasha_Vestibule,
-	"Deep, The", L"deepthe", GW::Constants::MapID::The_Deep,
-	"Deldrimor War Camp", L"deldrimorwarcamp", GW::Constants::MapID::Deldrimor_War_Camp_outpost,
-	"Destiny's Gorge", L"destinysgorge", GW::Constants::MapID::Destinys_Gorge_outpost,
-	"Divinity Coast", L"divinitycoast", GW::Constants::MapID::Divinity_Coast,
-	"Doomlore Shrine", L"doomloreshrine", GW::Constants::MapID::Doomlore_Shrine_outpost,
-	"Dragon's Lair, The", L"dragonslairthe", GW::Constants::MapID::The_Dragons_Lair,
-	"Dragon's Throat", L"dragonsthroat", GW::Constants::MapID::Dragons_Throat,
-	"Droknar's Forge", L"droknarsforge", GW::Constants::MapID::Droknars_Forge_outpost,
-	"Druid's Overlook", L"druidsoverlook", GW::Constants::MapID::Druids_Overlook_outpost,
-	"Dunes of Despair", L"dunesofdespair", GW::Constants::MapID::Dunes_of_Despair,
-	"Durheim Archives", L"durheimarchives", GW::Constants::MapID::Durheim_Archives_outpost,
-	"Dzagonur Bastion", L"dzagonurbastion", GW::Constants::MapID::Dzagonur_Bastion,
-	"Elona Reach", L"elonareach", GW::Constants::MapID::Elona_Reach,
-	"Embark Beach", L"embarkbeach", GW::Constants::MapID::Embark_Beach,
-	"Ember Light Camp", L"emberlightcamp", GW::Constants::MapID::Ember_Light_Camp_outpost,
-	"Eredon Terrace", L"eredonterrace", GW::Constants::MapID::Eredon_Terrace_outpost,
-	"Eternal Grove, The", L"eternalgrovethe", GW::Constants::MapID::The_Eternal_Grove_outpost_mission,
-	"Eye of the North", L"eyeofthenorth", GW::Constants::MapID::Eye_of_the_North_outpost,
-	"Fishermen's Haven", L"fishermenshaven", GW::Constants::MapID::Fishermens_Haven_outpost,
-	"Fort Aspenwood (Kurzick)", L"fortaspenwoodkurzick", GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost,
-	"Fort Aspenwood (Luxon)", L"fortaspenwoodluxon", GW::Constants::MapID::Fort_Aspenwood_Luxon_outpost,
-	"Fort Ranik", L"fortranik", GW::Constants::MapID::Fort_Ranik,
-	"Frontier Gate", L"frontiergate", GW::Constants::MapID::Frontier_Gate_outpost,
-	"Frost Gate, The", L"frostgatethe", GW::Constants::MapID::The_Frost_Gate,
-	"Gadd's Encampment", L"gaddsencampment", GW::Constants::MapID::Gadds_Encampment_outpost,
-	"Gate of Anguish", L"gateofanguish", GW::Constants::MapID::Domain_of_Anguish,
-	"Gate of Desolation", L"gateofdesolation", GW::Constants::MapID::Gate_of_Desolation,
-	"Gate of Fear", L"gateoffear", GW::Constants::MapID::Gate_of_Fear_outpost,
-	"Gate of Madness", L"gateofmadness", GW::Constants::MapID::Gate_of_Madness,
-	"Gate of Pain", L"gateofpain", GW::Constants::MapID::Gate_of_Pain,
-	"Gate of Secrets", L"gateofsecrets", GW::Constants::MapID::Gate_of_Secrets_outpost,
-	"Gate of the Nightfallen Lands", L"gateofthenightfallenlands", GW::Constants::MapID::Gate_of_the_Nightfallen_Lands_outpost,
-	"Gate of Torment", L"gateoftorment", GW::Constants::MapID::Gate_of_Torment_outpost,
-	"Gates of Kryta", L"gatesofkryta", GW::Constants::MapID::Gates_of_Kryta,
-	"Grand Court of Sebelkeh", L"grandcourtofsebelkeh", GW::Constants::MapID::Grand_Court_of_Sebelkeh,
-	"Granite Citadel, The", L"granitecitadelthe", GW::Constants::MapID::The_Granite_Citadel_outpost,
-	"Great Northern Wall, The", L"greatnorthernwallthe", GW::Constants::MapID::The_Great_Northern_Wall,
-	"Great Temple of Balthazar", L"greattempleofbalthazar", GW::Constants::MapID::Great_Temple_of_Balthazar_outpost,
-	"Grendich Courthouse", L"grendichcourthouse", GW::Constants::MapID::Grendich_Courthouse_outpost,
-	"Gunnar's Hold", L"gunnarshold", GW::Constants::MapID::Gunnars_Hold_outpost,
-	"Gyala Hatchery", L"gyalahatchery", GW::Constants::MapID::Gyala_Hatchery_outpost_mission,
-	"Harvest Temple", L"harvesttemple", GW::Constants::MapID::Harvest_Temple_outpost,
-	"Hell's Precipice", L"hellsprecipice", GW::Constants::MapID::Hells_Precipice,
-	"Henge of Denravi", L"hengeofdenravi", GW::Constants::MapID::Henge_of_Denravi_outpost,
-	"Heroes' Ascent", L"heroesascent", GW::Constants::MapID::Heroes_Ascent_outpost,
-	"Heroes' Audience", L"heroesaudience", GW::Constants::MapID::Heroes_Audience_outpost,
-	"Honur Hill", L"honurhill", GW::Constants::MapID::Honur_Hill_outpost,
-	"House zu Heltzer", L"housezuheltzer", GW::Constants::MapID::House_zu_Heltzer_outpost,
-	"Ice Caves of Sorrow", L"icecavesofsorrow", GW::Constants::MapID::Ice_Caves_of_Sorrow,
-	"Ice Tooth Cave", L"icetoothcave", GW::Constants::MapID::Ice_Tooth_Cave_outpost,
-	"Imperial Sanctum", L"imperialsanctum", GW::Constants::MapID::Imperial_Sanctum_outpost_mission,
-	"Iron Mines of Moladune", L"ironminesofmoladune", GW::Constants::MapID::Iron_Mines_of_Moladune,
-	"Jade Flats (Kurzick)", L"jadeflatskurzick", GW::Constants::MapID::Jade_Flats_Kurzick_outpost,
-	"Jade Flats (Luxon)", L"jadeflatsluxon", GW::Constants::MapID::Jade_Flats_Luxon_outpost,
-	"Jade Quarry (Kurzick), The", L"jadequarrykurzickthe", GW::Constants::MapID::The_Jade_Quarry_Kurzick_outpost,
-	"Jade Quarry (Luxon), The", L"jadequarryluxonthe", GW::Constants::MapID::The_Jade_Quarry_Luxon_outpost,
-	"Jennur's Horde", L"jennurshorde", GW::Constants::MapID::Jennurs_Horde,
-	"Jokanur Diggings", L"jokanurdiggings", GW::Constants::MapID::Jokanur_Diggings,
-	"Kaineng Center", L"kainengcenter", GW::Constants::MapID::Kaineng_Center_outpost,
-	"Kamadan, Jewel of Istan", L"kamadan, Jewel of Istan", GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost,
-	"Kodash Bazaar, The", L"kodashbazaarthe", GW::Constants::MapID::The_Kodash_Bazaar_outpost,
-	"Kodlonu Hamlet", L"kodlonuhamlet", GW::Constants::MapID::Kodlonu_Hamlet_outpost,
-	"Kodonur Crossroads", L"kodonurcrossroads", GW::Constants::MapID::Kodonur_Crossroads,
-	"Lair of the Forgotten", L"lairoftheforgotten", GW::Constants::MapID::Lair_of_the_Forgotten_outpost,
-	"Leviathan Pits", L"leviathanpits", GW::Constants::MapID::Leviathan_Pits_outpost,
-	"Lion's Arch", L"lionsarch", GW::Constants::MapID::Lions_Arch_outpost,
-	"Longeye's Ledge", L"longeyesledge", GW::Constants::MapID::Longeyes_Ledge_outpost,
-	"Lutgardis Conservatory", L"lutgardisconservatory", GW::Constants::MapID::Lutgardis_Conservatory_outpost,
-	"Maatu Keep", L"maatukeep", GW::Constants::MapID::Maatu_Keep_outpost,
-	"Maguuma Stade", L"maguumastade", GW::Constants::MapID::Maguuma_Stade_outpost,
-	"Marhan's Grotto", L"marhansgrotto", GW::Constants::MapID::Marhans_Grotto_outpost,
-	"Marketplace, The", L"marketplacethe", GW::Constants::MapID::The_Marketplace_outpost,
-	"Mihanu Township", L"mihanutownship", GW::Constants::MapID::Mihanu_Township_outpost,
-	"Minister Cho's Estate", L"ministerchosestate", GW::Constants::MapID::Minister_Chos_Estate_outpost_mission,
-	"Moddok Crevice", L"moddokcrevice", GW::Constants::MapID::Moddok_Crevice,
-	"Mouth of Torment, The", L"mouthoftormentthe", GW::Constants::MapID::The_Mouth_of_Torment_outpost,
-	"Nahpui Quarter", L"nahpuiquarter", GW::Constants::MapID::Nahpui_Quarter_outpost_mission,
-	"Nolani Academy", L"nolaniacademy", GW::Constants::MapID::Nolani_Academy,
-	"Nundu Bay", L"nundubay", GW::Constants::MapID::Nundu_Bay,
-	"Olafstead", L"olafstead", GW::Constants::MapID::Olafstead_outpost,
-	"Piken Square", L"pikensquare", GW::Constants::MapID::Piken_Square_outpost,
-	"Pogahn Passage", L"pogahnpassage", GW::Constants::MapID::Pogahn_Passage,
-	"Port Sledge", L"portsledge", GW::Constants::MapID::Port_Sledge_outpost,
-	"Quarrel Falls", L"quarrelfalls", GW::Constants::MapID::Quarrel_Falls_outpost,
-	"Raisu Palace", L"raisupalace", GW::Constants::MapID::Raisu_Palace_outpost_mission,
-	"Ran Musu Gardens", L"ranmusugardens", GW::Constants::MapID::Ran_Musu_Gardens_outpost,
-	"Random Arenas", L"randomarenas", GW::Constants::MapID::Random_Arenas_outpost,
-	"Rata Sum", L"ratasum", GW::Constants::MapID::Rata_Sum_outpost,
-	"Remains of Sahlahja", L"remainsofsahlahja", GW::Constants::MapID::Remains_of_Sahlahja,
-	"Rilohn Refuge", L"rilohnrefuge", GW::Constants::MapID::Rilohn_Refuge,
-	"Ring of Fire", L"ringoffire", GW::Constants::MapID::Ring_of_Fire,
-	"Riverside Province", L"riversideprovince", GW::Constants::MapID::Riverside_Province,
-	"Ruins of Morah", L"ruinsofmorah", GW::Constants::MapID::Ruins_of_Morah,
-	"Ruins of Surmia", L"ruinsofsurmia", GW::Constants::MapID::Ruins_of_Surmia,
-	"Saint Anjeka's Shrine", L"saintanjekasshrine", GW::Constants::MapID::Saint_Anjekas_Shrine_outpost,
-	"Sanctum Cay", L"sanctumcay", GW::Constants::MapID::Sanctum_Cay,
-	"Sardelac Sanitarium", L"sardelacsanitarium", GW::Constants::MapID::Sardelac_Sanitarium_outpost,
-	"Seafarer's Rest", L"seafarersrest", GW::Constants::MapID::Seafarers_Rest_outpost,
-	"Seeker's Passage", L"seekerspassage", GW::Constants::MapID::Seekers_Passage_outpost,
-	"Seitung Harbor", L"seitungharbor", GW::Constants::MapID::Seitung_Harbor_outpost,
-	"Senji's Corner", L"senjiscorner", GW::Constants::MapID::Senjis_Corner_outpost,
-	"Serenity Temple", L"serenitytemple", GW::Constants::MapID::Serenity_Temple_outpost,
-	"Shadow Nexus, The", L"shadownexusthe", GW::Constants::MapID::The_Shadow_Nexus,
-	"Shing Jea Arena", L"shingjeaarena", GW::Constants::MapID::Shing_Jea_Arena,
-	"Shing Jea Monastery", L"shingjeamonastery", GW::Constants::MapID::Shing_Jea_Monastery_outpost,
-	"Sifhalla", L"sifhalla", GW::Constants::MapID::Sifhalla_outpost,
-	"Sunjiang District", L"sunjiangdistrict", GW::Constants::MapID::Sunjiang_District_outpost_mission,
-	"Sunspear Arena", L"sunspeararena", GW::Constants::MapID::Sunspear_Arena,
-	"Sunspear Great Hall", L"sunspeargreathall", GW::Constants::MapID::Sunspear_Great_Hall_outpost,
-	"Sunspear Sanctuary", L"sunspearsanctuary", GW::Constants::MapID::Sunspear_Sanctuary_outpost,
-	"Tahnnakai Temple", L"tahnnakaitemple", GW::Constants::MapID::Tahnnakai_Temple_outpost_mission,
-	"Tanglewood Copse", L"tanglewoodcopse", GW::Constants::MapID::Tanglewood_Copse_outpost,
-	"Tarnished Haven", L"tarnishedhaven", GW::Constants::MapID::Tarnished_Haven_outpost,
-	"Temple of the Ages", L"templeoftheages", GW::Constants::MapID::Temple_of_the_Ages,
-	"Thirsty River", L"thirstyriver", GW::Constants::MapID::Thirsty_River,
-	"Thunderhead Keep", L"thunderheadkeep", GW::Constants::MapID::Thunderhead_Keep,
-	"Tihark Orchard", L"tiharkorchard", GW::Constants::MapID::Tihark_Orchard,
-	"Tomb of the Primeval Kings", L"tomboftheprimevalkings", GW::Constants::MapID::Tomb_of_the_Primeval_Kings,
-	"Tsumei Village", L"tsumeivillage", GW::Constants::MapID::Tsumei_Village_outpost,
-	"Umbral Grotto", L"umbralgrotto", GW::Constants::MapID::Umbral_Grotto_outpost,
-	"Unwaking Waters (Kurzick)", L"unwakingwaterskurzick", GW::Constants::MapID::Unwaking_Waters_Kurzick_outpost,
-	"Unwaking Waters (Luxon)", L"unwakingwatersluxon", GW::Constants::MapID::Unwaking_Waters_Luxon_outpost,
-	"Urgoz's Warren", L"urgozswarren", GW::Constants::MapID::Urgozs_Warren,
-	"Vasburg Armory", L"vasburgarmory", GW::Constants::MapID::Vasburg_Armory_outpost,
-	"Venta Cemetery", L"ventacemetery", GW::Constants::MapID::Venta_Cemetery,
-	"Ventari's Refuge", L"ventarisrefuge", GW::Constants::MapID::Ventaris_Refuge_outpost,
-	"Vizunah Square (Foreign)", L"vizunahsquareforeign", GW::Constants::MapID::Vizunah_Square_Foreign_Quarter_outpost,
-	"Vizunah Square (Local)", L"vizunahsquarelocal", GW::Constants::MapID::Vizunah_Square_Local_Quarter_outpost,
-	"Vlox's Falls", L"vloxsfalls", GW::Constants::MapID::Vloxs_Falls,
-	"Wehhan Terraces", L"wehhanterraces", GW::Constants::MapID::Wehhan_Terraces_outpost,
-	"Wilds, The", L"wildsthe", GW::Constants::MapID::The_Wilds,
-	"Yahnur Market", L"yahnurmarket", GW::Constants::MapID::Yahnur_Market_outpost,
-	"Yak's Bend", L"yaksbend", GW::Constants::MapID::Yaks_Bend_outpost,
-	"Yohlon Haven", L"yohlonhaven", GW::Constants::MapID::Yohlon_Haven_outpost,
-	"Zaishen Challenge", L"zaishenchallenge", GW::Constants::MapID::Zaishen_Challenge_outpost,
-	"Zaishen Elite", L"zaishenelite", GW::Constants::MapID::Zaishen_Elite_outpost,
-	"Zaishen Menagerie", L"zaishenmenagerie", GW::Constants::MapID::Zaishen_Menagerie_outpost,
-	"Zen Daijun", L"zendaijun", GW::Constants::MapID::Zen_Daijun_outpost_mission,
-	"Zin Ku Corridor", L"zinkucorridor", GW::Constants::MapID::Zin_Ku_Corridor_outpost,
-	"Zos Shivros Channel", L"zosshivroschannel", GW::Constants::MapID::Zos_Shivros_Channel,
-};
-
-static bool string_starts_with(const wchar_t *str, const wchar_t *pre)
-{
-	for (;;) {
-		if (*pre == 0)
-			break;
-		if (*str == 0)
-			return false;
-		if (*pre == L' ' || *pre == L'\'') {
-			++pre;
-			continue;
-		}
-		if (towlower(*pre) != *str)
-			return false;
-		++pre;
-		++str;
-	}
-	return true;
+    switch (GW::Map::GetMapID()) {
+    case GW::Constants::MapID::Rata_Sum_outpost:
+    case GW::Constants::MapID::Tarnished_Haven_outpost:
+    case GW::Constants::MapID::Vloxs_Falls:
+    case GW::Constants::MapID::Gadds_Encampment_outpost:
+    case GW::Constants::MapID::Umbral_Grotto_outpost:
+    case GW::Constants::MapID::Magus_Stones:
+    case GW::Constants::MapID::Riven_Earth:
+    case GW::Constants::MapID::Arbor_Bay:
+    case GW::Constants::MapID::Alcazia_Tangle:
+    case GW::Constants::MapID::Sparkfly_Swamp:
+    case GW::Constants::MapID::Verdant_Cascades:
+        GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Asuran);
+        break;
+    case GW::Constants::MapID::Glints_Challenge_mission:
+    case GW::Constants::MapID::Central_Transfer_Chamber_outpost:
+    case GW::Constants::MapID::Genius_Operated_Living_Enchanted_Manifestation:
+    case GW::Constants::MapID::A_Gate_Too_Far_Level_1:
+    case GW::Constants::MapID::A_Gate_Too_Far_Level_2:
+    case GW::Constants::MapID::A_Gate_Too_Far_Level_3:
+    case GW::Constants::MapID::Destructions_Depths_Level_1:
+    case GW::Constants::MapID::Destructions_Depths_Level_2:
+    case GW::Constants::MapID::Destructions_Depths_Level_3:
+    case GW::Constants::MapID::A_Time_for_Heroes:
+    case GW::Constants::MapID::Ravens_Point_Level_1:
+    case GW::Constants::MapID::Ravens_Point_Level_2:
+    case GW::Constants::MapID::Ravens_Point_Level_3:
+        GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Deldrimor);
+        break;
+    case GW::Constants::MapID::Boreal_Station_outpost:
+    case GW::Constants::MapID::Eye_of_the_North_outpost:
+    case GW::Constants::MapID::Gunnars_Hold_outpost:
+    case GW::Constants::MapID::Sifhalla_outpost:
+    case GW::Constants::MapID::Olafstead_outpost:
+    case GW::Constants::MapID::Ice_Cliff_Chasms:
+    case GW::Constants::MapID::Norrhart_Domains:
+    case GW::Constants::MapID::Drakkar_Lake:
+    case GW::Constants::MapID::Jaga_Moraine:
+    case GW::Constants::MapID::Bjora_Marches:
+    case GW::Constants::MapID::Varajar_Fells:
+    case GW::Constants::MapID::Attack_of_the_Nornbear:
+    case GW::Constants::MapID::Curse_of_the_Nornbear:
+    case GW::Constants::MapID::Blood_Washes_Blood:
+    case GW::Constants::MapID::Mano_a_Norn_o:
+    case GW::Constants::MapID::Service_In_Defense_of_the_Eye:
+    case GW::Constants::MapID::Cold_as_Ice:
+    case GW::Constants::MapID::The_Norn_Fighting_Tournament:
+        // @todo: case MapID for Bear Club for Women/Men
+        GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Norn);
+        break;
+    case GW::Constants::MapID::Doomlore_Shrine_outpost:
+    case GW::Constants::MapID::Longeyes_Ledge_outpost:
+    case GW::Constants::MapID::Grothmar_Wardowns:
+    case GW::Constants::MapID::Dalada_Uplands:
+    case GW::Constants::MapID::Sacnoth_Valley:
+    case GW::Constants::MapID::Against_the_Charr:
+    case GW::Constants::MapID::Warband_of_Brothers_Level_1:
+    case GW::Constants::MapID::Warband_of_Brothers_Level_2:
+    case GW::Constants::MapID::Warband_of_Brothers_Level_3:
+    case GW::Constants::MapID::Assault_on_the_Stronghold:
+    case GW::Constants::MapID::Cathedral_of_Flames_Level_1:
+    case GW::Constants::MapID::Cathedral_of_Flames_Level_2:
+    case GW::Constants::MapID::Cathedral_of_Flames_Level_3:
+    case GW::Constants::MapID::Rragars_Menagerie_Level_1:
+    case GW::Constants::MapID::Rragars_Menagerie_Level_2:
+    case GW::Constants::MapID::Rragars_Menagerie_Level_3:
+    case GW::Constants::MapID::Warband_Training:
+    case GW::Constants::MapID::Ascalon_City_outpost:
+    case GW::Constants::MapID::The_Great_Northern_Wall:
+    case GW::Constants::MapID::Fort_Ranik:
+    case GW::Constants::MapID::Ruins_of_Surmia:
+    case GW::Constants::MapID::Nolani_Academy:
+    case GW::Constants::MapID::Frontier_Gate_outpost:
+    case GW::Constants::MapID::Grendich_Courthouse_outpost:
+    case GW::Constants::MapID::Sardelac_Sanitarium_outpost:
+    case GW::Constants::MapID::Piken_Square_outpost:
+    case GW::Constants::MapID::Old_Ascalon:
+    case GW::Constants::MapID::Regent_Valley:
+    case GW::Constants::MapID::The_Breach:
+    case GW::Constants::MapID::Diessa_Lowlands:
+    case GW::Constants::MapID::Flame_Temple_Corridor:
+    case GW::Constants::MapID::Dragons_Gullet:
+        GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Vanguard);
+        break;
+    default:
+        GW::PlayerMgr::SetActiveTitle(GW::Constants::TitleID::Lightbringer);
+    }
 }
 
-GW::Constants::MapID ChatCommands::MatchMapPrefix(const wchar_t *map_name)
-{
-	size_t array_size = _countof(teleport_search_map);
-	for (size_t i = 0; i < array_size; i++) {
-		if (string_starts_with(teleport_search_map[i].sname, map_name)) {
-			size_t count = 1;
-			for (size_t j = i + 1; j < array_size; j++) {
-				if (string_starts_with(teleport_search_map[j].sname, map_name))
-					count++;
-				else
-					break;
-			}
-
-			if (count == 1) {
-				return teleport_search_map[i].map_id;
-			} else {
-				std::stringstream ss;
-				size_t max_count = std::min<size_t>(4, count);
-				for (size_t j = i; j < i + max_count - 1; j++)
-					ss << teleport_search_map[j].name << ", ";
-				if (max_count < count)
-					ss << teleport_search_map[i + max_count - 1].name << ", ...";
-				else
-					ss << teleport_search_map[i + max_count - 1].name << ".";
-				std::string s = ss.str();
-				Log::Info("Ambiguous prefix because of %s", s.c_str());
-				return GW::Constants::MapID::None;
-			}
-			break;
-		}
-	}
-
-	Log::Error("No map were found with the prefix '%S'", map_name);
-	return GW::Constants::MapID::None;
-}

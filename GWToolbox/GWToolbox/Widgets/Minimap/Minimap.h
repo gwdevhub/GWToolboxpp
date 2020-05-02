@@ -11,6 +11,7 @@
 #include "PingsLinesRenderer.h"
 #include "SymbolsRenderer.h"
 #include "CustomRenderer.h"
+#include "EffectRenderer.h"
 
 class Minimap : public ToolboxWidget {
 	struct Vec2i {
@@ -65,6 +66,7 @@ public:
 	PingsLinesRenderer pingslines_renderer;
 	SymbolsRenderer symbols_renderer;
 	CustomRenderer custom_renderer;
+	EffectRenderer effect_renderer;
 
 private:
 	bool IsInside(int x, int y) const;
@@ -93,6 +95,8 @@ private:
 	bool mouse_clickthrough_in_outpost = false;
 	bool rotate_minimap = true;
     bool alt_click_to_move = false;
+	bool ctrl_click_ping_target_swap = false;
+	bool is_observing = false;
 
 	bool hero_flag_controls_show = false;
 	bool hero_flag_window_attach = true;
@@ -107,5 +111,6 @@ private:
 	GW::HookEntry GenericValueTarget_Entry;
 	GW::HookEntry SkillActivate_Entry;
 	GW::HookEntry InstanceLoadFile_Entry;
+	GW::HookEntry InstanceLoadInfo_Entry;
 	GW::HookEntry GameSrvTransfer_Entry;
 };

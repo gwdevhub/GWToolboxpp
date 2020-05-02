@@ -59,6 +59,13 @@ private:
 	bool use_vanquish = true;
 	bool use_alcohol = true;
 	bool use_objectivetimer = true;
+	bool use_factionleaderboard = true;
+    	bool use_daily_quests = true;
+    	bool use_discord = true;
+	bool use_twitch = true;
+	bool use_partywindowmodule = true;
+	bool use_friendlist = true;
+	bool use_serverinfo = true;
 	bool use_gamesettings = true;
 	bool use_updater = true;
 	bool use_chatfilter = true;

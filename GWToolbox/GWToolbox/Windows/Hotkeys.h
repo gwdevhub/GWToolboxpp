@@ -2,10 +2,15 @@
 
 #include <string>
 #include <Defines.h>
+#include <chrono>
 
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\Constants\Skills.h>
+
+#include <GWCA/GameEntities/Item.h>
+
 #include <GWCA\Managers\MapMgr.h>
+
 #include <SimpleIni.h>
 
 // abstract class Toolbox Hotkey
@@ -28,6 +33,16 @@ public:
 
 	bool pressed = false;	// if the key has been pressed
 	bool active = true;		// if the hotkey is enabled/active
+    bool show_message_in_emote_channel = true; // if hotkey should show message in emote channel when triggered
+    bool show_error_on_failure = true; // if hotkey should show error message on failure
+    bool ongoing = false; // used for hotkeys that need to execute more than once per toggle.
+	bool block_gw = false; // true to consume the keypress before passing to gw.
+	bool trigger_on_explorable = false; // Trigger when entering explorable area
+	bool trigger_on_outpost = false; // Trigger when entering outpost area
+
+    int map_id = 0;
+    int prof_id = 0;
+    int instance_type = 0;
 
 	long hotkey = 0;
 	long modifier = 0;
@@ -45,9 +60,10 @@ public:
 	virtual void Execute() = 0;
 
 protected:
-	inline bool isLoading() const { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading; }
-	inline bool isExplorable() const { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable; }
-	inline bool isOutpost() const { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost; }
+    
+	static bool isLoading() { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading; }
+	static bool isExplorable() { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable; }
+	static bool isOutpost() { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost; }
 
 	const unsigned int ui_id = 0;	// an internal id to ensure interface consistency
 
@@ -76,13 +92,35 @@ public:
 	void Execute() override;
 };
 
+class HotkeyEquipItem : public TBHotkey {
+private:
+	UINT bag_idx = 0;
+	UINT slot_idx = 0;
+    GW::Item* item;
+    std::chrono::time_point<std::chrono::steady_clock> start_time;
+    std::chrono::time_point<std::chrono::steady_clock> last_try;
+    wchar_t* item_name;
+public:
+	static const char* IniSection() { return "EquipItem"; }
+	const char* Name() const override { return IniSection(); }
+
+	HotkeyEquipItem(CSimpleIni* ini, const char* section);
+
+	void Save(CSimpleIni* ini, const char* section) const override;
+
+	void Draw() override;
+	void Description(char* buf, int bufsz) const;
+	void Execute() override;
+
+	bool IsEquippable(GW::Item* item);
+};
+
 // hotkey to use an item
 // will use the item in explorable areas, and display a warning with given name if not found
 class HotkeyUseItem : public TBHotkey {
 private:
 	UINT item_id = 0;
 	char name[140];
-
 public:
 	static const char* IniSection() { return "UseItem"; }
 	const char* Name() const override { return IniSection(); }
@@ -125,7 +163,7 @@ public:
 
 // hotkey to toggle a toolbox function
 class HotkeyToggle : public TBHotkey {
-	const int n_targets = 3;
+	const int n_targets = 2;
 	enum Toggle {
 		Clicker,
 		Pcons,
@@ -136,6 +174,7 @@ class HotkeyToggle : public TBHotkey {
 public:
 	Toggle target; // the thing to toggle
 
+	static const bool IsValid(CSimpleIni* ini, const char* section);
 	static const char* IniSection() { return "Toggle"; }
 	const char* Name() const override { return IniSection(); }
 
@@ -200,7 +239,6 @@ public:
 	float x = 0.0;
 	float y = 0.0;
 	float range = 0.0;
-	DWORD mapid = 0;
 	char name[140];
 
 	static const char* IniSection() { return "Move"; }

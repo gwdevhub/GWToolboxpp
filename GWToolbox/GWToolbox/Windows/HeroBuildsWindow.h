@@ -41,7 +41,7 @@ private:
 	};
 
 	HeroBuildsWindow() {};
-	~HeroBuildsWindow() {};
+	~HeroBuildsWindow();
 public:
 	static HeroBuildsWindow& Instance() {
 		static HeroBuildsWindow instance;
@@ -73,7 +73,10 @@ private:
 	void Load(const TeamHeroBuild& tbuild);
 	// Load a specific build from a teambuild
 	void Load(const TeamHeroBuild& tbuild, unsigned int idx);
-
+	void Send(const TeamHeroBuild& tbuild, size_t idx);
+	void Send(const TeamHeroBuild& tbuild);
+	void View(const TeamHeroBuild& tbuild, unsigned int idx);
+	void HeroBuildsWindow::HeroBuildName(const TeamHeroBuild& tbuild, unsigned int idx, std::string* out);
 	bool builds_changed = false;
 	std::vector<TeamHeroBuild> teambuilds;
 
@@ -88,7 +91,9 @@ private:
 
 
 	clock_t send_timer = 0;
+	clock_t load_timer = 0;
 	std::queue<CodeOnHero> queue;
+	std::queue<std::string> send_queue;
 
 	CSimpleIni* inifile = nullptr;
 };

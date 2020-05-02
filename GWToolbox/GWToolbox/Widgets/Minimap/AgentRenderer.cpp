@@ -17,6 +17,16 @@
 
 #define AGENTCOLOR_INIFILENAME L"AgentColors.ini"
 
+namespace {
+	static unsigned int GetAgentProfession(const GW::AgentLiving* agent) {
+		if (!agent) return 0;
+		if (agent->primary) return agent->primary;
+		GW::NPC* npc = GW::Agents::GetNPCByID(agent->player_number);
+		if (!npc) return 0;
+		return npc->primary;
+	}
+}
+
 unsigned int AgentRenderer::CustomAgent::cur_ui_id = 0;
 
 void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
@@ -45,6 +55,9 @@ void AgentRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
 	size_item = (float)ini->GetDoubleValue(section, VAR_NAME(size_item), 25.0);
 	size_boss = (float)ini->GetDoubleValue(section, VAR_NAME(size_boss), 125.0);
 	size_minion = (float)ini->GetDoubleValue(section, VAR_NAME(size_minion), 50.0);
+
+	show_hidden_npcs = ini->GetBoolValue(section, VAR_NAME(show_hidden_npcs), show_hidden_npcs);
+	boss_colors = ini->GetBoolValue(section, VAR_NAME(boss_colors), boss_colors);
 
 	LoadAgentColors();
 
@@ -97,6 +110,9 @@ void AgentRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 	ini->SetDoubleValue(section, VAR_NAME(size_item), size_item);
 	ini->SetDoubleValue(section, VAR_NAME(size_boss), size_boss);
 	ini->SetDoubleValue(section, VAR_NAME(size_minion), size_minion);
+
+	ini->SetBoolValue(section, VAR_NAME(show_hidden_npcs), show_hidden_npcs);
+	ini->SetBoolValue(section, VAR_NAME(boss_colors), boss_colors);
 
 	SaveAgentColors();
 }
@@ -171,6 +187,7 @@ void AgentRenderer::DrawSettings() {
 				size_item = 25.0f;
 				size_boss = 125.0f;
 				size_minion = 50.0f;
+				boss_colors = true;
 				ImGui::CloseCurrentPopup();
 			}
 			ImGui::SameLine();
@@ -417,30 +434,25 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 	};
 
 	for (size_t i = 0; i < agents.size(); ++i) {
-		GW::Agent* agent = agents[i];
-		if (agent == nullptr) continue;
-		GW::AgentLiving* living = agents[i]->GetAsAgentLiving();
-		GW::AgentGadget* gadget = agents[i]->GetAsAgentGadget();
-		if (living) {
-			if (living->player_number <= 12) continue;
-			if (living->IsNPC() && living->player_number < npcs.size() &&
-				(npcs[living->player_number].npc_flags & 0x10000) > 0) {
-				continue;
-			}
+		if (!agents[i]) continue;
+		if (target == agents[i]) continue; // will draw target at the end
+		if (agents[i]->GetIsGadgetType()) {
+			GW::AgentGadget* agent = agents[i]->GetAsAgentGadget();
+			if(GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish && agent->extra_type == 7602) continue;
 		}
-
-		if (gadget && gadget->extra_type == 7602 &&
-			GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish) {
-			continue;
+		else if (agents[i]->GetIsLivingType()) {
+			GW::AgentLiving* agent = agents[i]->GetAsAgentLiving();
+			if (agent->player_number <= 12) continue;
+			if (!show_hidden_npcs
+				&& agent->IsNPC()
+				&& agent->player_number < npcs.size()
+				&& (npcs[agent->player_number].npc_flags & 0x10000) > 0) continue;
 		}
-
-		if (target == living) continue; // will draw target at the end
-		if (AddCustomAgentsToDraw(agent)) {
+		if (AddCustomAgentsToDraw(agents[i])) {
 			// found a custom agent to draw, we'll draw them later
 		} else {
-			Enqueue(agent);
+			Enqueue(agents[i]);
 		}
-
 		if (vertices_count >= vertices_max - 16 * max_shape_verts) break;
 	}
 	// 3. custom colored models
@@ -544,12 +556,16 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
 		}
 		if (living->hp > 0.0f) return ca->color;
 	}
-
 	// hostiles
 	if (living->allegiance == 0x3) {
-		if (living->hp > 0.9f) return color_hostile;
-		if (living->hp > 0.0f) return Colors::Sub(color_hostile, color_agent_damaged_modifier);
-		return color_hostile_dead;
+		if(living->hp <= 0.0f) return color_hostile_dead;
+		const Color* c = &color_hostile;
+		if (boss_colors && living->GetHasBossGlow()) {
+			unsigned int prof = GetAgentProfession(living);
+			if (prof) c = &profession_colors[prof];
+		}
+		if (living->hp > 0.9f) return *c;
+		return Colors::Sub(*c, color_agent_damaged_modifier);
 	}
 
 	// neutrals

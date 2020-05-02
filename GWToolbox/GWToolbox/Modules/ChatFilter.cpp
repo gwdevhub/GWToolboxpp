@@ -7,6 +7,7 @@
 #include <GWCA/GameContainers/GamePos.h>
 
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Map.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
@@ -24,6 +25,11 @@
 
 //#define PRINT_CHAT_PACKETS
 
+static bool IsInChallengeMission() {
+	GW::AreaInfo* a = GW::Map::GetCurrentMapInfo();
+	return a && a->type == GW::RegionType_Challenge;
+}
+
 static void printchar(wchar_t c) {
 	if (c >= L' ' && c <= L'~') {
 		printf("%lc", c);
@@ -32,103 +38,97 @@ static void printchar(wchar_t c) {
 	}
 }
 
+static wchar_t* GetMessageCore() {
+	GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
+	return buff ? buff->begin() : nullptr;
+}
+// Due to the way ChatFilter works, if a previous message was blocked then the buffer would still contain the last message.
+// Clear down the message buffer if the packet has been blocked.
+static void ClearMessageBufferIfBlocked(GW::HookStatus* status, GW::Packet::StoC::PacketBase*) {
+	if (!status->blocked)
+		return;
+	GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
+	if (!buff || !buff->valid()) {
+		Log::Log("Failed to clear message buffer!\n");
+		return;
+	}
+	buff->clear();
+}
 void ChatFilter::Initialize() {
 	ToolboxModule::Initialize();
 
 	// server messages
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&MessageServer_Entry,
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&BlockIfApplicable_Entry,
 	[this](GW::HookStatus *status, GW::Packet::StoC::MessageServer *pak) -> void {
-#ifdef PRINT_CHAT_PACKETS
-		printf("P082: id %d, type %d\n", pak->id, pak->type);
-#endif // PRINT_CHAT_PACKETS
-
-		GW::Array<wchar_t> *buff = &GW::GameContext::instance()->world->message_buff;
-		if (ShouldIgnore(buff->begin()) || ShouldIgnoreByContent(buff->begin(), buff->size())) {
-			buff->clear();
-			status->blocked = true;
-			return;
-		}
+		BlockIfApplicable(status, GetMessageCore(), pak->channel);
 	});
-
-#ifdef PRINT_CHAT_PACKETS
-	GW::StoC::AddCallback<GW::Packet::StoC::P088>(
-	[](GW::Packet::StoC::P088 *pak) -> bool {
-		printf("P081: agent_id %d, unk1 %d, unk2 ", pak->agent_id, pak->unk1);
-		for (int i = 0; i < 8 && pak->unk2[i]; ++i) printchar(pak->unk2[i]);
-		printf("\n");
-		return false;
-	});
-#endif // PRINT_CHAT_PACKETS
+	GW::StoC::RegisterPostPacketCallback< GW::Packet::StoC::MessageServer>(&BlockIfApplicable_Entry, ClearMessageBufferIfBlocked);
 
 	// global messages
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageGlobal>(&MessageGlobal_Entry,
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageGlobal>(&BlockIfApplicable_Entry,
 	[this](GW::HookStatus *status, GW::Packet::StoC::MessageGlobal* pak) -> void {
-#ifdef PRINT_CHAT_PACKETS
-		printf("P081: id %d, name ", pak->id);
-		for (int i = 0; i < 32 && pak->sender_name[i]; ++i) printchar(pak->sender_name[i]);
-		printf(", guild ");
-		for (int i = 0; i < 6 && pak->sender_guild[i]; ++i) printchar(pak->sender_guild[i]);
-		printf("\n");
-#endif // PRINT_CHAT_PACKETS
-
-		GW::Array<wchar_t> *buff = &GW::GameContext::instance()->world->message_buff;
-
-		if (ShouldIgnore(buff->begin()) ||
-			ShouldIgnoreByContent(buff->begin(), buff->size())) {
-			buff->clear();
-			status->blocked = true;
-			return;
-		}
+		BlockIfApplicable(status, GetMessageCore(), pak->channel);
 	});
-
+	GW::StoC::RegisterPostPacketCallback< GW::Packet::StoC::MessageGlobal>(&BlockIfApplicable_Entry, ClearMessageBufferIfBlocked);
 	// local messages
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&MessageLocal_Entry,
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&BlockIfApplicable_Entry,
 	[this](GW::HookStatus *status, GW::Packet::StoC::MessageLocal *pak) -> void {
-#ifdef PRINT_CHAT_PACKETS
-		printf("P085: id %d, type %d\n", pak->id, pak->type);
-#endif // PRINT_CHAT_PACKETS
-
-		GW::Array<wchar_t> *buff = &GW::GameContext::instance()->world->message_buff;
-		wchar_t *sender = GW::Agents::GetPlayerNameByLoginNumber(pak->id);
-		if (!sender) return;
-
-		if (ShouldIgnore(buff->begin()) ||
-			ShouldIgnoreBySender(sender, 32) ||
-			ShouldIgnoreByContent(buff->begin(), buff->size())) {
-
-			buff->clear();
-			status->blocked = true;
-			return;
-		}
+        BlockIfApplicable(status, GetMessageCore(), pak->channel);
 	});
+	GW::StoC::RegisterPostPacketCallback< GW::Packet::StoC::MessageLocal>(&BlockIfApplicable_Entry, ClearMessageBufferIfBlocked);
 
-	GW::Chat::RegisterLocalMessageCallback(&LocalMessageCallback_Entry,
+	GW::Chat::RegisterLocalMessageCallback(&BlockIfApplicable_Entry,
 	[this](GW::HookStatus *status, int channel, wchar_t *message) -> void {
-		if (away && ShouldIgnore(message)) {
-			status->blocked = true;
-		}
+        BlockIfApplicable(status, message, channel);
 	});
+}
+void ChatFilter::BlockIfApplicable(GW::HookStatus* status, const wchar_t* message, uint32_t channel) {
+	if (message && ShouldIgnore(message, channel)) {
+		/*Log::Log("ChatFilter Blocked:\n");
+		for (size_t i = 0; message[i]; i++)
+			printchar(message[i]);
+		printf("\n");*/
+		status->blocked = true;
+	}
 }
 
 void ChatFilter::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini);
-	self_drop_rare = ini->GetBoolValue(Name(), VAR_NAME(self_drop_rare), false);
-	self_drop_common = ini->GetBoolValue(Name(), VAR_NAME(self_drop_common), false);
-	ally_drop_rare = ini->GetBoolValue(Name(), VAR_NAME(ally_drop_rare), false);
-	ally_drop_common = ini->GetBoolValue(Name(), VAR_NAME(ally_drop_common), false);
-	ally_pickup_rare = ini->GetBoolValue(Name(), VAR_NAME(ally_pickup_rare), false);
-	ally_pickup_common = ini->GetBoolValue(Name(), VAR_NAME(ally_pickup_common), false);
-	skill_points = ini->GetBoolValue(Name(), VAR_NAME(skill_points), false);
-	pvp_messages = ini->GetBoolValue(Name(), VAR_NAME(pvp_messages), true);
-	hoh = ini->GetBoolValue(Name(), VAR_NAME(hoh_messages), false);
-	favor = ini->GetBoolValue(Name(), VAR_NAME(favor), false);
-	ninerings = ini->GetBoolValue(Name(), VAR_NAME(ninerings), true);
-	noonehearsyou = ini->GetBoolValue(Name(), VAR_NAME(noonehearsyou), true);
-	lunars = ini->GetBoolValue(Name(), VAR_NAME(lunars), true);
-	messagebycontent = ini->GetBoolValue(Name(), VAR_NAME(messagebycontent), false);
-	away = ini->GetBoolValue(Name(), VAR_NAME(away), false);
-	you_have_been_playing_for = ini->GetBoolValue(Name(), VAR_NAME(you_have_been_playing_for), false);
-	player_has_achieved_title = ini->GetBoolValue(Name(), VAR_NAME(player_has_achieved_title), false);
+	self_drop_rare = ini->GetBoolValue(Name(), VAR_NAME(self_drop_rare), self_drop_rare);
+	self_drop_common = ini->GetBoolValue(Name(), VAR_NAME(self_drop_common), self_drop_common);
+	ally_drop_rare = ini->GetBoolValue(Name(), VAR_NAME(ally_drop_rare), ally_drop_rare);
+	ally_drop_common = ini->GetBoolValue(Name(), VAR_NAME(ally_drop_common), ally_drop_common);
+	ally_pickup_rare = ini->GetBoolValue(Name(), VAR_NAME(ally_pickup_rare), ally_pickup_rare);
+	ally_pickup_common = ini->GetBoolValue(Name(), VAR_NAME(ally_pickup_common), ally_pickup_common);
+	skill_points = ini->GetBoolValue(Name(), VAR_NAME(skill_points), skill_points);
+	pvp_messages = ini->GetBoolValue(Name(), VAR_NAME(pvp_messages), pvp_messages);
+	guild_announcement = ini->GetBoolValue(Name(), VAR_NAME(guild_announcement), guild_announcement);
+	hoh = ini->GetBoolValue(Name(), VAR_NAME(hoh_messages), hoh);
+	favor = ini->GetBoolValue(Name(), VAR_NAME(favor), favor);
+	ninerings = ini->GetBoolValue(Name(), VAR_NAME(ninerings), ninerings);
+	noonehearsyou = ini->GetBoolValue(Name(), VAR_NAME(noonehearsyou), noonehearsyou);
+	lunars = ini->GetBoolValue(Name(), VAR_NAME(lunars), lunars);
+	messagebycontent = ini->GetBoolValue(Name(), VAR_NAME(messagebycontent), messagebycontent);
+	away = ini->GetBoolValue(Name(), VAR_NAME(away), away);
+	you_have_been_playing_for = ini->GetBoolValue(Name(), VAR_NAME(you_have_been_playing_for), you_have_been_playing_for);
+	player_has_achieved_title = ini->GetBoolValue(Name(), VAR_NAME(player_has_achieved_title), player_has_achieved_title);
+	invalid_target = ini->GetBoolValue(Name(), VAR_NAME(invalid_target), invalid_target);
+    opening_chest_messages = ini->GetBoolValue(Name(), VAR_NAME(opening_chest_messages), opening_chest_messages);
+	inventory_is_full = ini->GetBoolValue(Name(), VAR_NAME(inventory_is_full), inventory_is_full);
+	item_cannot_be_used = ini->GetBoolValue(Name(), VAR_NAME(item_cannot_be_used), item_cannot_be_used);
+    item_already_identified = ini->GetBoolValue(Name(), VAR_NAME(item_already_identified), item_already_identified);
+	faction_gain = ini->GetBoolValue(Name(), VAR_NAME(faction_gain), faction_gain);
+	challenge_mission_messages = ini->GetBoolValue(Name(), VAR_NAME(challenge_mission_messages), challenge_mission_messages);
+
+    filter_channel_local = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_local), filter_channel_local);
+    filter_channel_guild = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_guild), filter_channel_guild);
+    filter_channel_team = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_team), filter_channel_team);
+    filter_channel_trade = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_trade), filter_channel_trade);
+    filter_channel_alliance = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_alliance), filter_channel_alliance);
+    filter_channel_emotes = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_emotes), filter_channel_emotes);
+
+	strcpy_s(bycontent_word_buf, "");
+	strcpy_s(bycontent_regex_buf, "");
 
 	{
 		std::ifstream file;
@@ -170,6 +170,7 @@ void ChatFilter::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(ally_pickup_common), ally_pickup_common);
 	ini->SetBoolValue(Name(), VAR_NAME(skill_points), skill_points);
 	ini->SetBoolValue(Name(), VAR_NAME(pvp_messages), pvp_messages);
+	ini->SetBoolValue(Name(), VAR_NAME(guild_announcement), guild_announcement);
 	ini->SetBoolValue(Name(), VAR_NAME(hoh_messages), hoh);
 	ini->SetBoolValue(Name(), VAR_NAME(favor), favor);
 	ini->SetBoolValue(Name(), VAR_NAME(ninerings), ninerings);
@@ -179,6 +180,27 @@ void ChatFilter::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(away), away);
 	ini->SetBoolValue(Name(), VAR_NAME(you_have_been_playing_for), you_have_been_playing_for);
 	ini->SetBoolValue(Name(), VAR_NAME(player_has_achieved_title), player_has_achieved_title);
+	ini->SetBoolValue(Name(), VAR_NAME(invalid_target), invalid_target);
+	ini->SetBoolValue(Name(), VAR_NAME(opening_chest_messages), opening_chest_messages);
+	ini->SetBoolValue(Name(), VAR_NAME(inventory_is_full), inventory_is_full);
+	ini->SetBoolValue(Name(), VAR_NAME(item_cannot_be_used), item_cannot_be_used);
+    ini->SetBoolValue(Name(), VAR_NAME(item_already_identified), item_already_identified);
+	ini->SetBoolValue(Name(), VAR_NAME(faction_gain), faction_gain);
+	ini->SetBoolValue(Name(), VAR_NAME(challenge_mission_messages), challenge_mission_messages);
+    
+    ini->SetBoolValue(Name(), VAR_NAME(filter_channel_local), filter_channel_local);
+    ini->SetBoolValue(Name(), VAR_NAME(filter_channel_guild), filter_channel_guild);
+    ini->SetBoolValue(Name(), VAR_NAME(filter_channel_team), filter_channel_team);
+    ini->SetBoolValue(Name(), VAR_NAME(filter_channel_trade), filter_channel_trade);
+    ini->SetBoolValue(Name(), VAR_NAME(filter_channel_alliance), filter_channel_alliance);
+    ini->SetBoolValue(Name(), VAR_NAME(filter_channel_emotes), filter_channel_emotes);
+
+    filter_channel_local = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_local), filter_channel_local);
+    filter_channel_guild = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_guild), filter_channel_guild);
+    filter_channel_team = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_team), filter_channel_team);
+    filter_channel_trade = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_trade), filter_channel_trade);
+    filter_channel_alliance = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_alliance), filter_channel_alliance);
+    filter_channel_emotes = ini->GetBoolValue(Name(), VAR_NAME(filter_channel_emotes), filter_channel_emotes);
 
 	if (timer_parse_filters) {
 		timer_parse_filters = 0;
@@ -268,15 +290,22 @@ bool ChatFilter::FullMatch(const wchar_t* s, const std::initializer_list<wchar_t
 	return true;
 }
 
+bool ChatFilter::ShouldIgnore(const wchar_t* message, uint32_t channel) {
+    if (ShouldIgnore(message))
+        return true;
+    if (!ShouldIgnoreByChannel(channel))
+        return false;
+    return ShouldIgnoreByContent(message);
+}
 bool ChatFilter::ShouldIgnore(const wchar_t *message) {
-#ifdef PRINT_CHAT_PACKETS
-	for (size_t i = 0; message[i] != 0; ++i) printchar(message[i]);
-	printf("\n");
-#endif // PRINT_CHAT_PACKETS
-
+    if (!message)
+        return false;
 	switch (message[0]) {
 		// ==== Messages not ignored ====
 	case 0x108: return false; // player message
+	case 0x2AFC: return false; // <agent name> hands you <quantity> <item name>
+    case 0x0314: return guild_announcement; // Guild Announcement by X: X
+	case 0x4C32: return item_cannot_be_used; // Item can only be used in towns or outposts.
 	case 0x76D: return false; // whisper received.
 	case 0x76E: return false; // whisper sended.
 	case 0x777: return false; // I'm level x and x% of the way earning my next skill point	(author is not part of the message)
@@ -294,9 +323,13 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 		// all other emotes, in alphabetical order
 	case 0x7BE: return false; // emote yawn
 	case 0x7BF: return false; // emote yes
+	case 0x7C8: return false; // Quest Reward Accepted: <quest name>
+	case 0x7C9: return false; // Quest Updated: <quest name>
+	case 0x7CB: return false; // You gain (message[5] - 100) experience
 	case 0x7CC:
 		if (FullMatch(&message[1], { 0x962D, 0xFEB5, 0x1D08, 0x10A, 0xAC2, 0x101, 0x164, 0x1 })) return lunars; // you receive 100 gold
 		break;
+	case 0x7CD: return false; // You receive <quantity> <item name>
 	case 0x7E0: return ally_pickup_common; // party shares gold
 	case 0x7ED: return false; // opening the chest reveals x, which your party reserves for y
 	case 0x7DF: return ally_pickup_common; // party shares gold ?
@@ -337,10 +370,33 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 	case 0x87F: return false; // 'Failed to send whisper to player <name>...' (Do not disturb)
 	case 0x880: return false; // 'Player name <name> is invalid.'. (Anyone actually saw it ig ?)
 	case 0x881: return false; // 'Player <name> is not online.' (Offline)
-
+	case 0x88E: return invalid_target; // Invalid attack target.
+	case 0x89B: return item_cannot_be_used; // Item cannot be used in towns or outposts.
+	case 0x89C: return opening_chest_messages; // Chest is being used.
+    case 0x89D: return opening_chest_messages; // The chest is empty.
+    case 0x89E: return opening_chest_messages; // The chest is locked. You must have the correct key or a lockpick.
+    case 0x8A0: return opening_chest_messages; // Already used that chest
+	case 0x8A5: return invalid_target; // Target is immune to bleeding (no flesh.)
+	case 0x8A6: return invalid_target; // Target is immune to disease (no flesh.)
+	case 0x8A7: return invalid_target; // Target is immune to poison (no flesh.)
+	case 0x8A8: return not_enough_energy; // Not enough adrenaline
+	case 0x8A9: return not_enough_energy; // Not enough energy.
+	case 0x8AA: return inventory_is_full; // Inventory is full.
+	case 0x8AB: return invalid_target; // Your view of the target is obstructed.
+	case 0x8C1: return invalid_target; // That skill requires a different weapon type.
+	case 0x8C2: return invalid_target; // Invalid spell target.
+	case 0x8C3: return invalid_target; // Target is out of range.
+    case 0xAD7: return false; // You salvaged <number> <item name(s)> from the <item name>
+	case 0x52C3: // 0x52C3 0xDE9C 0xCD2F 0x78E4 0x101 0x100 - Hold-out bonus: +(message[5] - 0x100) points
+		if (FullMatch(&message[1], { 0xDE9C, 0xCD2F, 0x78E4, 0x101 })) return challenge_mission_messages;
+    case 0x6C9C: // 0x6C9C 0x866F 0xB8D2 0x5A20 0x101 0x100 - You gain (message[5] - 0x100) Kurzick faction
+		if (!FullMatch(&message[1], { 0x866F, 0xB8D2, 0x5A20, 0x101 })) break;
+		return faction_gain || challenge_mission_messages && IsInChallengeMission();
+    case 0x6D4D: // 0x6D4D 0xDD4E 0xB502 0x71CE 0x101 0x4E8 - You gain (message[5] - 0x100) Luxon faction
+        if (!FullMatch(&message[1], { 0xDD4E, 0xB502, 0x71CE, 0x101 })) break;
+		return faction_gain || challenge_mission_messages && IsInChallengeMission();
 	case 0x7BF4: return you_have_been_playing_for; // You have been playing for x time.
 	case 0x7BF5: return you_have_been_playing_for; // You have been playinf for x time. Please take a break.
-
 	case 0x8101:
 		switch (message[1]) {
 			// nine rings
@@ -360,9 +416,15 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 			return ninerings;
         case 0x39CD: // you have a special item available: <special item reward>
             return ninerings;
+		case 0x3E3: // Spell failed. Spirits are not affected by this spell.
+			return invalid_target;
+		case 0x679C: return false;	// You cannot use a <profession> tome because you are not a <profession> (Elite == message[5] == 0x6725)
+        case 0x72EB: return opening_chest_messages;   // The chest is locked. You must use a lockpick to open it.
 		case 0x7B91:	// x minutes of favor of the gods remaining. Note: full message is 0x8101 0x7B91 0xC686 0xE490 0x6922 0x101 0x100+value
 		case 0x7B92:	// x more achievements must be performed to earn the favor of the gods. // 0x8101 0x7B92 0x8B0A 0x8DB5 0x5135 0x101 0x100+value
 			return favor;
+		case 0x7C3E:	// This item cannot be used here.
+			return item_cannot_be_used;
 		}
 		if (FullMatch(&message[1], { 0x6649, 0xA2F9, 0xBBFA, 0x3C27 })) return lunars; // you will celebrate a festive new year (rocket or popper)
 		if (FullMatch(&message[1], { 0x664B, 0xDBAB, 0x9F4C, 0x6742 })) return lunars; // something special is in your future! (lucky aura)
@@ -382,35 +444,50 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 		case 0x23E4: return favor; // 0xF8AA 0x95CD 0x2766 // the world no longer has the favor of the gods
 		case 0x23E5: return player_has_achieved_title;
 		case 0x23E6: return player_has_achieved_title;
+		case 0x29F1: return item_cannot_be_used; // Cannot use this item when no party members are dead.
 		case 0x2E35: return player_has_achieved_title; // Player has achieved the title...
 		case 0x2E36: return player_has_achieved_title; // Player has achieved the title...
 		case 0x3772: return false; // I'm under the effect of x
+		case 0x3DCA: return item_cannot_be_used; // This item can only be used in a guild hall
+		case 0x4684: return item_cannot_be_used; // There is already an ally from a summoning stone present in this instance.
+		case 0x4685: return item_cannot_be_used; // You have already used a summoning stone within the last 10 minutes.
 		}
 		break;
-
+	case 0x8103:
+		switch (message[1]) {
+		case 0x9CD: return item_cannot_be_used; // You must wait before using another tonic.
+		}
+    case 0xAD2: return item_already_identified; // That item is already identified
+	case 0xADD:	return item_cannot_be_used; // That item has no uses remaining
 	//default:
 	//	for (size_t i = 0; pak->message[i] != 0; ++i) printf(" 0x%X", pak->message[i]);
 	//	printf("\n");
 	//	return false;
 	}
 
-	return false;
+    return false;
 }
 
 bool ChatFilter::ShouldIgnoreByContent(const wchar_t *message, size_t size) {
 	if (!messagebycontent) return false;
+    if (!message) return false;
 	if (!(message[0] == 0x108 && message[1] == 0x107)
 		&& !(message[0] == 0x8102 && message[1] == 0xEFE && message[2] == 0x107)) return false;
 	const wchar_t* start = nullptr;
-	const wchar_t* end = &message[size];
-	for (int i = 0; i < (int)size && message[i] != 0; ++i) {
-		if (message[i] == 0x107) {
-			start = &message[i + 1];
-		} else if (message[i] == 0x1) {
-			end = &message[i];
-		}
-	}
-	if (start == nullptr) return false; // no string segment in this packet
+	const wchar_t* end = nullptr;
+    size_t i = 0;
+    while (start == nullptr && message[i]) {
+        if (message[i] == 0x107)
+            start = &message[i + 1];
+        i++;
+    }
+    if (start == nullptr) return false; // no string segment in this packet
+    while (end == nullptr && message[i]) {
+        if (message[i] == 0x1)
+            end = &message[i];
+        i++;
+    }
+    if (end == nullptr) end = &message[i];
 
 	// std::string temp(start, end);
 	char buffer[1024];
@@ -437,7 +514,17 @@ bool ChatFilter::ShouldIgnoreByContent(const wchar_t *message, size_t size) {
 	free(text);
 	return false;
 }
-
+bool ChatFilter::ShouldIgnoreByChannel(uint32_t channel) {
+    switch (channel) {
+    case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_ALL):        return filter_channel_local;
+    case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_GUILD):      return filter_channel_guild;
+    case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_GROUP):      return filter_channel_team;
+    case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_TRADE):      return filter_channel_trade;
+    case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_ALLIANCE):   return filter_channel_alliance;
+    case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_EMOTE):      return filter_channel_emotes;
+    }
+    return false;
+}
 bool ChatFilter::ShouldIgnoreBySender(const wchar_t *sender, size_t size) {
 #ifdef EXTENDED_IGNORE_LIST
 	if (sender == nullptr) return false;
@@ -455,24 +542,52 @@ bool ChatFilter::ShouldIgnoreBySender(const wchar_t *sender, size_t size) {
 }
 
 void ChatFilter::DrawSettingInternal() {
+	const float half_width = ImGui::GetContentRegionAvailWidth() / 2;
 	ImGui::Text("Hide the following messages:");
 	ImGui::Separator();
 	ImGui::Text("Drops");
 	ImGui::SameLine();
 	ImGui::TextDisabled("('Rare' stands for Gold item, Ecto or Obby shard)");
 	ImGui::Checkbox("A rare item drops for you", &self_drop_rare);
-	ImGui::Checkbox("A common item drops for you", &self_drop_common);
+	ImGui::SameLine(half_width); ImGui::Checkbox("A common item drops for you", &self_drop_common);
 	ImGui::Checkbox("A rare item drops for an ally", &ally_drop_rare);
-	ImGui::Checkbox("A common item drops for an ally", &ally_drop_common);
+	ImGui::SameLine(half_width); ImGui::Checkbox("A common item drops for an ally", &ally_drop_common);
 	ImGui::Checkbox("An ally picks up a rare item", &ally_pickup_rare);
-	ImGui::Checkbox("An ally picks up a common item", &ally_pickup_common);
+	ImGui::SameLine(half_width); ImGui::Checkbox("An ally picks up a common item", &ally_pickup_common);
 
 	ImGui::Separator();
 	ImGui::Text("Announcements");
-	ImGui::Checkbox("Hall of Heroes winners", &hoh);
+	ImGui::Checkbox("Guild Announcement", &guild_announcement);
+	ImGui::SameLine(half_width); ImGui::Checkbox("Hall of Heroes winners", &hoh);
 	ImGui::Checkbox("Favor of the Gods announcements", &favor);
-	ImGui::Checkbox("'You have been playing for...'", &you_have_been_playing_for);
+	ImGui::SameLine(half_width); ImGui::Checkbox("'You have been playing for...'", &you_have_been_playing_for);
 	ImGui::Checkbox("'Player x has achieved title...'", &player_has_achieved_title);
+	ImGui::SameLine(half_width); ImGui::Checkbox("'You gain x faction'", &faction_gain);
+	ImGui::Separator();
+	ImGui::Text("Warnings");
+	ImGui::Checkbox("Unable to use item", &item_cannot_be_used);
+	ImGui::ShowHelp("'Item can only/cannot be used in towns or outposts.'\n\
+'This item cannot be used here.'\n\
+'Cannot use this item when no party members are dead.'\n\
+'There is already an ally from a summoning stone present in this instance.'\n\
+'You have already used a summoning stone within the last 10 minutes.'\n\
+'That item has no uses remaining.'\n\
+'You must wait before using another tonic.'\n\
+'This item can only be used in a guild hall'");
+	ImGui::SameLine(half_width); ImGui::Checkbox("Invalid target", &invalid_target);
+	ImGui::ShowHelp("'Invalid spell/attack target.'\n\
+'Spell failed. Spirits are not affected by this spell.'\n\
+'Your view of the target is obstructed.'\n\
+'That skill requires a different weapon type.'\n\
+'Target is out of range.'\n\
+'Target is immune to bleeding/disease/poison (no flesh.)'");
+	ImGui::Checkbox("'Inventory is full'", &inventory_is_full);
+	ImGui::SameLine(half_width); ImGui::Checkbox("Opening chests", &opening_chest_messages);
+    ImGui::ShowHelp("'Chest is being used'\n\
+'The chest is locked. You must use a lockpick to open it.'\n\
+'The chest is locked. You must have the correct key or a lockpick.'\n\
+'The chest is empty.'");
+    ImGui::Checkbox("Item already identified", &item_already_identified);
 
 	ImGui::Separator();
 	ImGui::Text("Others");
@@ -481,13 +596,27 @@ void ChatFilter::DrawSettingInternal() {
 	ImGui::ShowHelp("Such as 'A skill was updated for pvp!'");
 	ImGui::Checkbox("9 Rings messages", &ninerings);
 	ImGui::Checkbox("Lunar fortunes messages", &lunars);
+	ImGui::Checkbox("Challenge mission messages", &challenge_mission_messages);
+	ImGui::ShowHelp("Such as 'Hold-out bonus: +2 points'");
 	ImGui::Checkbox("'No one hears you...'", &noonehearsyou);
 	ImGui::Checkbox("'Player x might not reply because his/her status is set to away'", &away);
 
 	ImGui::Separator();
 	ImGui::Checkbox("Hide any messages containing:", &messagebycontent);
-	ImGui::Indent();
+    ImGui::Indent();
 	ImGui::TextDisabled("(Each in a separate line. Not case sensitive)");
+    ImGui::Checkbox("Local", &filter_channel_local);
+    ImGui::SameLine(0.0f, -1.0f);
+    ImGui::Checkbox("Guild", &filter_channel_guild);
+    ImGui::SameLine(0.0f, -1.0f);
+    ImGui::Checkbox("Team", &filter_channel_team);
+    ImGui::SameLine(0.0f, -1.0f);
+    ImGui::Checkbox("Trade", &filter_channel_trade);
+    ImGui::SameLine(0.0f, -1.0f);
+    ImGui::Checkbox("Alliance", &filter_channel_alliance);
+    ImGui::SameLine(0.0f, -1.0f);
+    ImGui::Checkbox("Emotes", &filter_channel_emotes);
+    
 	if (ImGui::InputTextMultiline("##bycontentfilter", bycontent_word_buf, 
 		FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0f))) {
 		timer_parse_filters = GetTickCount() + NOISE_REDUCTION_DELAY_MS;
@@ -516,7 +645,6 @@ void ChatFilter::DrawSettingInternal() {
 
 void ChatFilter::Update(float delta) {
 	uint32_t timestamp = GetTickCount();
-	
 	if (timer_parse_filters && timer_parse_filters < timestamp) {
 		timer_parse_filters = 0;
 		ParseBuffer(bycontent_word_buf, bycontent_words);

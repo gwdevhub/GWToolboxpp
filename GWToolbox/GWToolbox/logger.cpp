@@ -3,13 +3,14 @@
 
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 
 #include "Defines.h"
 #include <Modules/Resources.h>
 
-#define CHAN_WARNING GW::Chat::CHANNEL_GWCA2
-#define CHAN_INFO    GW::Chat::CHANNEL_EMOTE
-#define CHAN_ERROR   GW::Chat::CHANNEL_GWCA3
+#define CHAN_WARNING GW::Chat::Channel::CHANNEL_GWCA2
+#define CHAN_INFO    GW::Chat::Channel::CHANNEL_EMOTE
+#define CHAN_ERROR   GW::Chat::Channel::CHANNEL_GWCA3
 
 namespace {
 	FILE* logfile = nullptr;
@@ -92,7 +93,10 @@ static void _vchatlog(GW::Chat::Channel chan, const char* format, va_list argv) 
 
 	char buf2[256];
 	snprintf(buf2, 256, "<c=#00ccff>GWToolbox++</c>: %s", buf1);
-	GW::Chat::WriteChat(chan, buf2);
+	GW::GameThread::Enqueue([chan, buf2]() {
+		GW::Chat::WriteChat(chan, buf2);
+		});
+	
 
 	const char* c = [](GW::Chat::Channel chan) -> const char* {
 		switch (chan) {
@@ -151,15 +155,14 @@ LONG WINAPI Log::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers) {
 	//MINIDUMP_TYPE flags = static_cast<MINIDUMP_TYPE>(MiniDumpWithDataSegs | MiniDumpWithPrivateReadWriteMemory);
 	bMiniDumpSuccessful = MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(),
 		hDumpFile, MiniDumpWithDataSegs, &ExpParam, NULL, NULL);
-
+	CloseHandle(hDumpFile);
 	if (bMiniDumpSuccessful) {
-		MessageBoxA(0,
-			"GWToolbox crashed, oops\n\n"
-			"Log and dump files have been created in the GWToolbox data folder.\n"
-			"Open it by typing running %LOCALAPPDATA% and looking for GWToolboxpp folder\n"
-			"Please send the files to the GWToolbox++ developers.\n"
-			"Thank you and sorry for the inconvenience.",
-			"GWToolbox++ Crash!", 0);
+		char buf[256];
+		sprintf(buf, "GWToolbox crashed, oops\n\n"
+			"A dump file has been created in:\n\n%s\n\n"
+			"Please send this file to the GWToolbox++ developers.\n"
+			"Thank you and sorry for the inconvenience.", szFileName);
+		MessageBoxA(0, buf,"GWToolbox++ Crash!", 0);
 	} else {
 		MessageBoxA(0,
 			"GWToolbox crashed, oops\n\n"
@@ -167,6 +170,7 @@ LONG WINAPI Log::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers) {
 			"I don't really know what to do, sorry, contact the developers.\n",
 			"GWToolbox++ Crash!", 0);
 	}
+	abort();
 
 	return EXCEPTION_EXECUTE_HANDLER;
 }

@@ -202,6 +202,8 @@ void PartyDamage::CreatePartyIndexMap() {
 
 void PartyDamage::Draw(IDirect3DDevice9* device) {	
 	if (!visible) return;
+	if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
+		return;
 	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
 	
 	int line_height = row_height > 0 ? row_height : GuiUtils::GetPartyHealthbarHeight();
@@ -355,6 +357,7 @@ void PartyDamage::LoadSettings(CSimpleIni* ini) {
 	color_background = Colors::Load(ini, Name(), VAR_NAME(color_background), Colors::ARGB(76, 0, 0, 0));
 	color_damage = Colors::Load(ini, Name(), VAR_NAME(color_damage), Colors::ARGB(102, 205, 102, 51));
 	color_recent = Colors::Load(ini, Name(), VAR_NAME(color_recent), Colors::ARGB(205, 102, 153, 230));
+	hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
 
 	if (inifile == nullptr) inifile = new CSimpleIni(false, false, false);
 	inifile->LoadFile(Resources::GetPath(INI_FILENAME).c_str());
@@ -382,6 +385,7 @@ void PartyDamage::SaveSettings(CSimpleIni* ini) {
 	Colors::Save(ini, Name(), VAR_NAME(color_background), color_background);
 	Colors::Save(ini, Name(), VAR_NAME(color_damage), color_damage);
 	Colors::Save(ini, Name(), VAR_NAME(color_recent), color_recent);
+	ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
 
 	for (const std::pair<DWORD, long>& item : hp_map) {
 		std::string key = std::to_string(item.first);
@@ -409,6 +413,7 @@ void PartyDamage::DrawSettings() {
 }
 
 void PartyDamage::DrawSettingInternal() {
+	ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
 	ImGui::Checkbox("Bars towards the left", &bars_left);
 	ImGui::ShowHelp("If unchecked, they will expand to the right");
 	ImGui::DragFloat("Width", &width, 1.0f, 50.0f, 0.0f, "%.0f");

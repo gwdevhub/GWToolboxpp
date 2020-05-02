@@ -5,14 +5,27 @@
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+
 
 #include "GuiUtils.h"
 #include "Modules/ToolboxSettings.h"
 
-
+void DistanceWidget::DrawSettingInternal() {
+	ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
+}
+void DistanceWidget::LoadSettings(CSimpleIni* ini) {
+	ToolboxWidget::LoadSettings(ini);
+	hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
+}
+void DistanceWidget::SaveSettings(CSimpleIni* ini) {
+	ToolboxWidget::SaveSettings(ini);
+	ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
+}
 void DistanceWidget::Draw(IDirect3DDevice9* pDevice) {
 	if (!visible) return;
-
+	if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
+		return;
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
 	ImGui::SetNextWindowSize(ImVec2(150, 100), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, true))) {

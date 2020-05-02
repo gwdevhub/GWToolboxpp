@@ -54,3 +54,5 @@ BOOL WINAPI DllMain(_In_ HMODULE _HDllHandle, _In_ DWORD _Reason, _In_opt_ LPVOI
 	}
 	return TRUE;
 }
+
+extern "C" __declspec(dllexport) const char* GWToolboxVersion = GWTOOLBOX_VERSION;

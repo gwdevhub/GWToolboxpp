@@ -37,10 +37,19 @@ private:
 	DWORD GetNumericSegment(const wchar_t *message) const;
 	bool ShouldIgnoreByAgentThatDropped(const wchar_t* agent_segment) const;
 	bool IsRare(const wchar_t* item_segment) const;
+    // Blocks/flushes StoC packets if they need blocking
+    void BlockIfApplicable(GW::HookStatus* status, const wchar_t* message, uint32_t channel);
+    // Should this message for this channel be ignored either by encoded string or content?
+    bool ShouldIgnore(const wchar_t* message, uint32_t channel);
+    // Should this message be ignored by encoded string?
 	bool ShouldIgnore(const wchar_t *message);
-	bool ShouldIgnoreByContent(const wchar_t *message, size_t size);
+    // Should this message be ignored by content?
+	bool ShouldIgnoreByContent(const wchar_t *message, size_t size = 1024);
 	bool ShouldIgnoreBySender(const wchar_t *sender, size_t size);
+    // Should this channel be checked for ignored messages?
+	bool ShouldIgnoreByChannel(uint32_t channel);
 
+	bool guild_announcement = false;
 	bool self_drop_rare = false;
 	bool self_drop_common = false;
 	bool ally_drop_rare = false;
@@ -57,8 +66,26 @@ private:
 	bool away = false;
 	bool you_have_been_playing_for = false;
 	bool player_has_achieved_title = false;
+	bool faction_gain = false;
+	bool challenge_mission_messages = false;
+
+
+	// Error messages on-screen
+	bool invalid_target = true; // Includes other error messages, see ChatFilter.cpp.
+	bool opening_chest_messages = true;
+	bool inventory_is_full = false;
+	bool item_cannot_be_used = true; // Includes other error messages, see ChatFilter.cpp.
+	bool not_enough_energy = true; // Includes other error messages, see ChatFilter.cpp.
+    bool item_already_identified = false;
 
 	bool messagebycontent = false;
+    // Which channels to filter.
+    bool filter_channel_local = true;
+    bool filter_channel_guild = false;
+    bool filter_channel_team = false;
+    bool filter_channel_trade = true;
+    bool filter_channel_alliance = false;
+    bool filter_channel_emotes = false;
 
 	static const size_t FILTER_BUF_SIZE = 1024*16;
 
@@ -96,10 +123,5 @@ private:
 		ParseBuffer(byauthor_buf, byauthor_words);
 	}
 #endif
-
-	GW::HookEntry LocalMessageCallback_Entry;
-
-	GW::HookEntry MessageServer_Entry;
-	GW::HookEntry MessageGlobal_Entry;
-	GW::HookEntry MessageLocal_Entry;
+	GW::HookEntry BlockIfApplicable_Entry;
 };

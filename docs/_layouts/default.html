@@ -26,7 +26,9 @@
           <li class="button-left"><a href="credits">Credits</a></li>
           {% if site.show_downloads %}
             <li class="downloads"><a href="history">Older Versions</a></li>
-            <li class="downloads"><a href="{{ site.download_url }}">GWToolbox++ {{ site.toolbox_version }}</a></li>
+            {% if site.github.latest_release %}
+              <li class="downloads"><a href="{{ site.github.repository_url }}/releases/download/{{ site.github.latest_release.tag_name }}/JonsToolbox_{{ site.github.latest_release.name }}.zip">GWToolbox++ {{ site.github.latest_release.name }}</a></li>
+            {% endif %}
             <li class="title">DOWNLOADS</li>
           {% endif %}
         </nav>
@@ -41,6 +43,7 @@
           <hr>
           <span class="credits left">Project maintained by 
             <a href="{{ site.github.owner_url }}">{{ site.github.owner_name }}</a>, 
+            <a href="https://github.com/HasKha"> HasKha</a>,
             <a href="https://github.com/GregLando113"> GregLando113</a>,
             <a href="https://github.com/reduf">reduf</a>, 
             <a href="https://github.com/MikeJerred">MikeJerred</a>, 

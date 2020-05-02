@@ -15,11 +15,17 @@ void ClockWidget::Draw(IDirect3DDevice9* pDevice) {
 	if (ImGui::Begin(Name(), nullptr, GetWinFlags())) {
 		static char timer[32];
 		if (use_24h_clock) {
-			snprintf(timer, 32, "%02d:%02d", time.wHour, time.wMinute);
+            if(show_seconds)
+			    snprintf(timer, 32, "%02d:%02d:%02d", time.wHour, time.wMinute, time.wSecond);
+            else
+                snprintf(timer, 32, "%02d:%02d", time.wHour, time.wMinute);
 		} else {
 			int hour = time.wHour % 12;
 			if (hour == 0) hour = 12;
-			snprintf(timer, 32, "%d:%02d %s", hour, time.wMinute, (time.wHour >= 12 ? "p.m." : "a.m."));
+            if(show_seconds)
+                snprintf(timer, 32, "%d:%02d:%02d %s", hour, time.wMinute, time.wSecond, (time.wHour >= 12 ? "p.m." : "a.m."));
+            else
+			    snprintf(timer, 32, "%d:%02d %s", hour, time.wMinute, (time.wHour >= 12 ? "p.m." : "a.m."));
 		}
 		ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f48));
 		ImVec2 cur = ImGui::GetCursorPos();
@@ -35,14 +41,17 @@ void ClockWidget::Draw(IDirect3DDevice9* pDevice) {
 
 void ClockWidget::LoadSettings(CSimpleIni* ini) {
 	ToolboxWidget::LoadSettings(ini);
-	use_24h_clock = ini->GetBoolValue(Name(), VAR_NAME(use_24h_clock), true);
+	use_24h_clock = ini->GetBoolValue(Name(), VAR_NAME(use_24h_clock), use_24h_clock);
+    show_seconds = ini->GetBoolValue(Name(), VAR_NAME(show_seconds), show_seconds);
 }
 
 void ClockWidget::SaveSettings(CSimpleIni* ini) {
 	ToolboxWidget::SaveSettings(ini);
 	ini->SetBoolValue(Name(), VAR_NAME(use_24h_clock), use_24h_clock);
+    ini->SetBoolValue(Name(), VAR_NAME(show_seconds), show_seconds);
 }
 
 void ClockWidget::DrawSettingInternal() {
 	ImGui::Checkbox("Use 24h clock", &use_24h_clock);
+    ImGui::Checkbox("Show seconds", &show_seconds);
 }

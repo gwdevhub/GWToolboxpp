@@ -7,9 +7,12 @@
 
 #include <GWCA/GameEntities/Skill.h>
 
+#include <GWCA/Packets/StoC.h>
+
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
 
 #include <logger.h>
 #include <Timer.h>
@@ -17,30 +20,64 @@
 #include "GuiUtils.h"
 #include "Modules/ToolboxSettings.h"
 
-
 void TimerWidget::LoadSettings(CSimpleIni *ini) {
 	ToolboxWidget::LoadSettings(ini);
-	click_to_print_time = ini->GetBoolValue(Name(), VAR_NAME(click_to_print_time), false);
-    show_extra_timers = ini->GetBoolValue(Name(), VAR_NAME(show_extra_timers), false);
+	click_to_print_time = ini->GetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
+    show_extra_timers = ini->GetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
+    hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
+    show_spirit_timers = ini->GetBoolValue(Name(), VAR_NAME(show_spirit_timers), show_spirit_timers);
+    for (auto it : spirit_effects) {
+        char ini_name[32];
+        snprintf(ini_name, 32, "spirit_effect_%d", it.first);
+        *spirit_effects_enabled[it.first] = ini->GetBoolValue(Name(), ini_name, *spirit_effects_enabled[it.first]);
+    }
 }
 
 void TimerWidget::SaveSettings(CSimpleIni *ini) {
 	ToolboxWidget::SaveSettings(ini);
 	ini->SetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
     ini->SetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
+    ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
+    ini->SetBoolValue(Name(), VAR_NAME(show_spirit_timers), show_spirit_timers);
+    for (auto it : spirit_effects) {
+        char ini_name[32];
+        snprintf(ini_name, 32, "spirit_effect_%d", it.first);
+        ini->SetBoolValue(Name(), ini_name, *spirit_effects_enabled[it.first]);
+    }
 }
 
 void TimerWidget::DrawSettingInternal() {
 	ToolboxWidget::DrawSettingInternal();
+    ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
 	ImGui::Checkbox("Ctrl+Click to print time", &click_to_print_time);
     ImGui::Checkbox("Show extra timers", &show_extra_timers);
     ImGui::ShowHelp("Such as Deep aspects");
+    ImGui::Checkbox("Show spirit timers", &show_spirit_timers);
+    ImGui::ShowHelp("Time until spirits die in seconds");
+    if (show_spirit_timers) {
+        ImGui::Indent();
+        size_t i = 0;
+        for (auto it : spirit_effects) {
+            if (i % 3 == 0)
+                i = 0;
+            else 
+                ImGui::SameLine(200.0f * ImGui::GetIO().FontGlobalScale * i);
+            i++;
+            ImGui::Checkbox(it.second, spirit_effects_enabled[it.first]);
+        }
+        ImGui::Unindent();
+    }
+}
+
+ImGuiWindowFlags TimerWidget::GetWinFlags(ImGuiWindowFlags flags, bool noinput_if_frozen) const {
+    return ToolboxWidget::GetWinFlags(flags, noinput_if_frozen) | (lock_size ? ImGuiWindowFlags_AlwaysAutoResize : 0);
 }
 
 void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
 	if (!visible) return;
 	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
-
+    if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
+        return;
 	unsigned long time = GW::Map::GetInstanceTime() / 1000;
 
     bool ctrl_pressed = ImGui::IsKeyDown(VK_CONTROL);
@@ -64,6 +101,15 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
             ImGui::TextColored(ImColor(0, 0, 0), extra_buffer);
             ImGui::SetCursorPos(cur2);
             ImGui::TextColored(extra_color, extra_buffer);
+            ImGui::PopFont();
+        }
+        if (GetSpiritTimer()) {
+            ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f24));
+            ImVec2 cur2 = ImGui::GetCursorPos();
+            ImGui::SetCursorPos(ImVec2(cur2.x + 1, cur2.y + 1));
+            ImGui::TextColored(ImColor(0, 0, 0), spirits_buffer);
+            ImGui::SetCursorPos(cur2);
+            ImGui::Text(spirits_buffer);
             ImGui::PopFont();
         }
 
@@ -95,6 +141,30 @@ bool TimerWidget::GetUrgozTimer() {
     return true;
 }
 
+bool TimerWidget::GetSpiritTimer() {
+    using namespace GW::Constants;
+
+    if (!show_spirit_timers || GW::Map::GetInstanceType() != InstanceType::Explorable) return false;
+
+    GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
+    if (!effects.valid()) return false;
+
+    int offset = 0;
+    for (DWORD i = 0; i < effects.size(); ++i) {
+        if (!effects[i].duration)
+            continue;
+        SkillID effect_id = (SkillID)effects[i].skill_id;
+        auto spirit_effect_enabled = spirit_effects_enabled.find(effect_id);
+        if (spirit_effect_enabled == spirit_effects_enabled.end() || !*(spirit_effect_enabled->second))
+            continue;
+        offset += snprintf(&spirits_buffer[offset], sizeof(spirits_buffer) - offset, "%s%s: %d", offset ? "\n" : "", spirit_effects[effect_id], effects[i].GetTimeRemaining() / 1000);
+    }
+    if (!offset) 
+        return false;
+    spirits_buffer[offset] = 0;
+    return true;
+}
+
 bool TimerWidget::GetDeepTimer() {
     using namespace GW::Constants;
 
@@ -106,13 +176,14 @@ bool TimerWidget::GetDeepTimer() {
 
     static clock_t start = -1;
     SkillID skill = SkillID::No_Skill;
-    for (DWORD i = 0; i < effects.size(); ++i) {
+    for (DWORD i = 0; i < effects.size() && skill == SkillID::No_Skill; ++i) {
         SkillID effect_id = (SkillID)effects[i].skill_id;
         switch (effect_id) {
-        case SkillID::Aspect_of_Exhaustion: skill = SkillID::Aspect_of_Exhaustion; break;
-        case SkillID::Aspect_of_Depletion_energy_loss: skill = SkillID::Aspect_of_Depletion_energy_loss; break;
-        case SkillID::Scorpion_Aspect: skill = SkillID::Scorpion_Aspect; break;
-        default: break;
+        case SkillID::Aspect_of_Exhaustion:
+        case SkillID::Aspect_of_Depletion_energy_loss:
+        case SkillID::Scorpion_Aspect: 
+            skill = effect_id; 
+            break;
         }
     }
     if (skill == SkillID::No_Skill) {

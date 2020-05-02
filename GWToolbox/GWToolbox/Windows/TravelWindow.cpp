@@ -1,14 +1,31 @@
 #include "stdafx.h"
+#include <functional>
 #include "TravelWindow.h"
 
 #include <GWCA\Constants\Constants.h>
+
+#include <GWCA\Packets\StoC.h>
+#include <GWCA\Managers\StoCMgr.h>
+
+#include <GWCA\GameContainers\GamePos.h>
+
+#include <GWCA\Context\GameContext.h>
+#include <GWCA\Context\WorldContext.h>
+#include <GWCA\Context\PartyContext.h>
+
 #include <GWCA\GameEntities\Map.h>
-#include <GWCA\Managers\UIMgr.h>
+#include <GWCA\GameEntities\Party.h>
+
 #include <GWCA\Managers\MapMgr.h>
+#include <GWCA\Managers\PartyMgr.h>
+#include <GWCA\Managers\ItemMgr.h>
+#include <GWCA\Managers\GameThreadMgr.h>
+#include <GWCA\Managers\UIMgr.h>
 
 #include "GWToolbox.h"
 #include "GuiUtils.h"
 #include <Modules\Resources.h>
+#include "TravelWindow.h"
 
 #define N_OUTPOSTS 180
 #define N_DISTRICTS 14
@@ -31,7 +48,7 @@ void TravelWindow::TravelButton(const char* text, int x_idx, GW::Constants::MapI
 	if (x_idx != 0) ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 	float w = (ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().ItemInnerSpacing.x) / 2;
 	if (ImGui::Button(text, ImVec2(w, 0))) {
-		TravelWindow::Travel(mapid, district, district_number);
+		Travel(mapid, district, district_number);
 		if (close_on_travel) visible = false;
 	}
 }
@@ -58,7 +75,7 @@ void TravelWindow::Draw(IDirect3DDevice9* pDevice) {
 			static int travelto_index = -1;
 			if (ImGui::MyCombo("travelto", "Travel To...", &travelto_index, outpost_name_array_getter, nullptr, N_OUTPOSTS)) {
 				GW::Constants::MapID id = IndexToOutpostID(travelto_index);
-				TravelWindow::Travel(id, district, district_number);
+				Travel(id, district, district_number);
 				travelto_index = -1;
 				if (close_on_travel) visible = false;
 			}
@@ -110,8 +127,8 @@ void TravelWindow::Draw(IDirect3DDevice9* pDevice) {
 			TravelButton("Embark", 1, GW::Constants::MapID::Embark_Beach);
 			TravelButton("Vlox's", 0, GW::Constants::MapID::Vloxs_Falls);
 			TravelButton("Gadd's", 1, GW::Constants::MapID::Gadds_Encampment_outpost);
-			// TravelButton("Urgoz", 0, GW::Constants::MapID::Urgozs_Warren);
-			// TravelButton("Deep", 1, GW::Constants::MapID::The_Deep);
+			TravelButton("Urgoz", 0, GW::Constants::MapID::Urgozs_Warren);
+			TravelButton("Deep", 1, GW::Constants::MapID::The_Deep);
 
 			for (int i = 0; i < fav_count; ++i) {
 				ImGui::PushID(i);
@@ -129,14 +146,176 @@ void TravelWindow::Draw(IDirect3DDevice9* pDevice) {
 	}
 }
 
-bool TravelWindow::TravelFavorite(unsigned int idx) {
-	if (idx >= 0 && idx < fav_index.size()) {
-		TravelWindow::Travel(IndexToOutpostID(fav_index[idx]), district, district_number);
-		if (close_on_travel) visible = false;
-		return true;
-	} else {
-		return false;
+void TravelWindow::Update(float delta) {
+	if (scroll_to_outpost_id != GW::Constants::MapID::None) {
+		ScrollToOutpost(scroll_to_outpost_id); // We're in the process of scrolling to an outpost
 	}
+}
+
+bool TravelWindow::IsWaitingForMapTravel() {
+	return GW::GameContext::instance()->party != nullptr && (GW::GameContext::instance()->party->flag & 0x8) > 0;
+}
+
+void TravelWindow::ScrollToOutpost(GW::Constants::MapID outpost_id, GW::Constants::District district, int district_number) {
+	if (!GW::Map::GetIsMapLoaded() || !GW::PartyMgr::GetIsPartyLoaded()) {
+		map_travel_countdown_started = false;
+		pending_map_travel = false;
+		return; // Map loading, so we're no longer waiting for travel timer to start or finish.
+	}
+	if (IsWaitingForMapTravel()) {
+		map_travel_countdown_started = true;
+		return; // Currently in travel countdown. Wait until the countdown is complete or cancelled.
+	}
+	if (map_travel_countdown_started) {
+		pending_map_travel = false;
+		map_travel_countdown_started = false;
+		scroll_to_outpost_id = GW::Constants::MapID::None;
+		return; // We were waiting for countdown, but it was cancelled.
+	}
+	if (pending_map_travel) {
+		return; // Checking too soon; still waiting for either a map travel or a countdown for it.
+	}
+
+	GW::Constants::MapID map_id = GW::Map::GetMapID();
+	if (scroll_to_outpost_id == GW::Constants::MapID::None) {
+		scroll_to_outpost_id = outpost_id;
+		scroll_from_outpost_id = map_id;
+	}
+	if (scroll_to_outpost_id != outpost_id) return; // Already travelling to another outpost
+	if (map_id == outpost_id) {
+		scroll_to_outpost_id = GW::Constants::MapID::None;
+		UITravel(outpost_id, district, district_number);
+		return; // Already at this outpost. Called GW::Map::Travel just in case district is different.
+	}
+
+	int scroll_model_id = 0;
+	bool is_ready_to_scroll = map_id == GW::Constants::MapID::Embark_Beach;
+	switch (scroll_to_outpost_id) {
+	case GW::Constants::MapID::The_Deep:
+		scroll_model_id = 22279;
+		is_ready_to_scroll = is_ready_to_scroll || map_id == GW::Constants::MapID::Cavalon_outpost;
+		break;
+	case GW::Constants::MapID::Urgozs_Warren:
+		scroll_model_id = 3256;
+		is_ready_to_scroll = is_ready_to_scroll || map_id == GW::Constants::MapID::House_zu_Heltzer_outpost;
+		break;
+	default:
+		Log::Error("Invalid outpost for scrolling");
+		return;
+	}
+	if (!is_ready_to_scroll && scroll_from_outpost_id != map_id) {
+		scroll_to_outpost_id = GW::Constants::MapID::None;
+		return; // Not in scrollable outpost, but we're not in the outpost we started from either - user has decided to travel somewhere else.
+	}
+
+	GW::Item* scroll_to_use = GW::Items::GetItemByModelId(scroll_model_id, static_cast<int>(GW::Constants::Bag::Backpack), static_cast<int>(GW::Constants::Bag::Storage_14));
+	if (!scroll_to_use) {
+		scroll_to_outpost_id = GW::Constants::MapID::None;
+		Log::Error("No scroll found in inventory for travel");
+		return; // No scroll found.
+	}
+	if (is_ready_to_scroll) {
+		scroll_to_outpost_id = GW::Constants::MapID::None;
+		GW::Items::UseItem(scroll_to_use);
+		return; // Done.
+	}
+	pending_map_travel = true;
+    UITravel(GW::Constants::MapID::Embark_Beach, district, district_number);
+	//GW::Map::Travel(GW::Constants::MapID::Embark_Beach, district, district_number); // Travel to embark.
+}
+
+void TravelWindow::Travel(GW::Constants::MapID MapID, GW::Constants::District District /*= 0*/, int district_number) {
+	switch (MapID) {
+	case GW::Constants::MapID::The_Deep:
+	case GW::Constants::MapID::Urgozs_Warren:
+		return ScrollToOutpost(MapID, District, district_number);
+	}
+    return UITravel(MapID, District, district_number);
+	//return GW::Map::Travel(MapID, District, district_number);
+}
+bool TravelWindow::IsMapUnlocked(GW::Constants::MapID map_id) {
+	GW::Array<uint32_t> unlocked_map = GW::GameContext::instance()->world->unlocked_map;
+	uint32_t real_index = (uint32_t)map_id / 32;
+	if (real_index >= unlocked_map.size())
+		return false;
+	uint32_t shift = (uint32_t)map_id % 32;
+	uint32_t flag = 1 << shift;
+	return (unlocked_map[real_index] & flag) != 0;
+}
+void TravelWindow::UITravel(GW::Constants::MapID MapID, GW::Constants::District District /*= 0*/, int district_number) {
+    struct MapStruct {
+        GW::Constants::MapID map_id;
+        uint32_t region_id;
+        uint32_t language_id;
+        uint32_t district_number;
+    };
+    MapStruct* t = new MapStruct();
+    t->map_id = MapID;
+    t->district_number = district_number;
+    t->region_id = RegionFromDistrict(District);
+    t->language_id = LanguageFromDistrict(District);
+
+	uint32_t err = 0;
+	if (!IsMapUnlocked(MapID)) {
+		Log::Error("[Error] Your character does not have %s unlocked\n",GW::Constants::NAME_FROM_ID[(uint32_t)MapID]);
+		return;
+	}
+	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost
+		&& t->region_id == GW::Map::GetRegion()
+		&& t->language_id == GW::Map::GetLanguage()
+		&& (t->district_number == 0 || t->district_number == GW::Map::GetDistrict())
+		&& t->map_id == GW::Map::GetMapID()) {
+		Log::Error("[Error] You are already in the outpost\n");
+		return;
+	}
+    GW::GameThread::Enqueue([t] {
+        GW::UI::SendUIMessage(GW::UI::kTravel, t);
+        delete t;
+    });
+}
+
+uint32_t TravelWindow::RegionFromDistrict(GW::Constants::District district) {
+    switch (district) {
+    case GW::Constants::District::International: return GW::Constants::Region::International;
+    case GW::Constants::District::American: return GW::Constants::Region::America;
+    case GW::Constants::District::EuropeEnglish:
+    case GW::Constants::District::EuropeFrench:
+    case GW::Constants::District::EuropeGerman:
+    case GW::Constants::District::EuropeItalian:
+    case GW::Constants::District::EuropeSpanish:
+    case GW::Constants::District::EuropePolish:
+    case GW::Constants::District::EuropeRussian:
+        return GW::Constants::Region::Europe;
+    case GW::Constants::District::AsiaKorean: return GW::Constants::Region::Korea;
+    case GW::Constants::District::AsiaChinese: return GW::Constants::Region::China;
+    case GW::Constants::District::AsiaJapanese: return GW::Constants::Region::Japan;
+    }
+    return GW::Map::GetRegion();
+}
+uint32_t TravelWindow::LanguageFromDistrict(GW::Constants::District district) {
+    switch (district) {
+    case GW::Constants::District::EuropeEnglish: return GW::Constants::EuropeLanguage::English;
+    case GW::Constants::District::EuropeFrench: return GW::Constants::EuropeLanguage::French;
+    case GW::Constants::District::EuropeGerman: return GW::Constants::EuropeLanguage::German;
+    case GW::Constants::District::EuropeItalian: return GW::Constants::EuropeLanguage::Italian;
+    case GW::Constants::District::EuropeSpanish: return GW::Constants::EuropeLanguage::Spanish;
+    case GW::Constants::District::EuropePolish: return GW::Constants::EuropeLanguage::Polish;
+    case GW::Constants::District::EuropeRussian: return GW::Constants::EuropeLanguage::Russian;
+    case GW::Constants::District::AsiaKorean:
+    case GW::Constants::District::AsiaChinese:
+    case GW::Constants::District::AsiaJapanese:
+    case GW::Constants::District::International:
+    case GW::Constants::District::American:
+        return 0;
+    }
+    return GW::Map::GetLanguage();
+}
+
+bool TravelWindow::TravelFavorite(unsigned int idx) {
+	if (idx < 0 || idx >= fav_index.size())	return false;
+	Travel(IndexToOutpostID(fav_index[idx]), district, district_number);
+	if (close_on_travel) visible = false;
+	return true;
 }
 
 void TravelWindow::DrawSettingInternal() {
@@ -361,78 +540,6 @@ GW::Constants::MapID TravelWindow::IndexToOutpostID(int index) {
 	case 179: return MapID::Zos_Shivros_Channel;
 	default: return MapID::Great_Temple_of_Balthazar_outpost;
 	}
-}
-
-void TravelWindow::Travel(GW::Constants::MapID map_id,
-	GW::Constants::District district, int district_number)
-{
-	struct UITravelPacket {
-		uint32_t map_id;
-		uint32_t region_id;
-		uint32_t language_id;
-		uint32_t district;
-	};
-
-	UITravelPacket packet;
-	packet.map_id = static_cast<uint32_t>(map_id);
-	packet.district = district_number;
-
-	switch (district) {
-	case GW::Constants::District::Current:
-        packet.region_id = GW::Map::GetRegion();
-        packet.language_id = GW::Map::GetLanguage();
-        break;
-    case GW::Constants::District::International:
-        packet.region_id = GW::Constants::Region::International;
-        packet.language_id = 0;
-        break;
-    case GW::Constants::District::American:
-        packet.region_id = GW::Constants::Region::America;
-        packet.language_id = 0;
-        break;
-    case GW::Constants::District::EuropeEnglish:
-        packet.region_id = GW::Constants::Region::Europe;
-        packet.language_id = GW::Constants::EuropeLanguage::English;
-        break;
-    case GW::Constants::District::EuropeFrench:
-        packet.region_id = GW::Constants::Region::Europe;
-        packet.language_id = GW::Constants::EuropeLanguage::French;
-        break;
-    case GW::Constants::District::EuropeGerman:
-        packet.region_id = GW::Constants::Region::Europe;
-        packet.language_id = GW::Constants::EuropeLanguage::German;
-        break;
-    case GW::Constants::District::EuropeItalian:
-        packet.region_id = GW::Constants::Region::Europe;
-        packet.language_id = GW::Constants::EuropeLanguage::Italian;
-        break;
-    case GW::Constants::District::EuropeSpanish:
-        packet.region_id = GW::Constants::Region::Europe;
-        packet.language_id = GW::Constants::EuropeLanguage::Spanish;
-        break;
-    case GW::Constants::District::EuropePolish:
-        packet.region_id = GW::Constants::Region::Europe;
-        packet.language_id = GW::Constants::EuropeLanguage::Polish;
-        break;
-    case GW::Constants::District::EuropeRussian:
-        packet.region_id = GW::Constants::Region::Europe;
-        packet.language_id = GW::Constants::EuropeLanguage::Russian;
-        break;
-    case GW::Constants::District::AsiaKorean:
-        packet.region_id = GW::Constants::Region::Korea;
-        packet.language_id = 0;
-        break;
-    case GW::Constants::District::AsiaChinese:
-        packet.region_id = GW::Constants::Region::China;
-        packet.language_id = 0;
-        break;
-    case GW::Constants::District::AsiaJapanese:
-        packet.region_id = GW::Constants::Region::Japan;
-        packet.language_id = 0;
-        break;
-    }
-
-    GW::UI::SendUIMessage(GW::UI::kTravel, &packet);
 }
 
 namespace {

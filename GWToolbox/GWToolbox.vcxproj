@@ -15,6 +15,7 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>API</RootNamespace>
     <ProjectName>GWToolbox</ProjectName>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -45,6 +46,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
+    <TargetName>$(ProjectName)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -54,7 +56,6 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <ShowIncludes>false</ShowIncludes>
       <AdditionalIncludeDirectories>$(SolutionDir)GWToolbox\GWToolbox\;$(SolutionDir)Dependencies\;$(SolutionDir)Dependencies\imgui\;$(SolutionDir)Dependencies\utf8proc\;$(SolutionDir)Dependencies\GWCA\Include\;$(SolutionDir)Dependencies\DirectX\Include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp17</LanguageStandard>
       <PreprocessorDefinitions>_WIN32;UTF8PROC_STATIC;IMGUI_USE_BGRA_PACKED_COLOR;ENABLE_BORDERLESS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -99,6 +100,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\Dependencies\discord_game_sdk\c\discord_game_sdk.h" />
     <ClInclude Include="..\Dependencies\easywsclient\easywsclient.hpp" />
     <ClInclude Include="..\Dependencies\imgui\imconfig.h" />
     <ClInclude Include="..\Dependencies\imgui\imgui.h" />
@@ -107,16 +109,30 @@
     <ClInclude Include="..\Dependencies\imgui\stb_textedit.h" />
     <ClInclude Include="..\Dependencies\imgui\stb_truetype.h" />
     <ClInclude Include="..\Dependencies\utf8proc\utf8proc.h" />
+    <ClInclude Include="GWToolbox\base64.h" />
     <ClInclude Include="GWToolbox\CircurlarBuffer.h" />
     <ClInclude Include="GWToolbox\Color.h" />
     <ClInclude Include="GWToolbox\CursorFix.h" />
     <ClInclude Include="GWToolbox\Defines.h" />
     <ClInclude Include="GWToolbox\ImGuiAddons.h" />
     <ClInclude Include="GWToolbox\imgui_impl_dx9.h" />
+    <ClInclude Include="GWToolbox\IRC.h" />
     <ClInclude Include="GWToolbox\Keys.h" />
+    <ClInclude Include="GWToolbox\Modules\AprilFools.h" />
     <ClInclude Include="GWToolbox\Modules\ChatCommands.h" />
     <ClInclude Include="GWToolbox\Modules\ChatFilter.h" />
-    <ClInclude Include="GWToolbox\Modules\DiscordIntegration.h" />
+    <ClInclude Include="GWToolbox\Modules\DiscordModule.h" />
+    <ClInclude Include="GWToolbox\Modules\InventoryManager.h" />
+    <ClInclude Include="GWToolbox\Modules\ZrawDeepModule.h" />
+    <ClInclude Include="GWToolbox\Modules\PartyWindowModule.h" />
+    <ClInclude Include="GWToolbox\Modules\TwitchModule.h" />
+    <ClInclude Include="GWToolbox\mp3.h" />
+    <ClInclude Include="GWToolbox\sha1.hpp" />
+    <ClInclude Include="GWToolbox\Widgets\Minimap\EffectRenderer.h" />
+    <ClInclude Include="GWToolbox\Widgets\ServerInfoWidget.h" />
+    <ClInclude Include="GWToolbox\Windows\FriendListWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\PacketLoggerWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\DailyQuests.h" />
     <ClInclude Include="GWToolbox\Modules\GameSettings.h" />
     <ClInclude Include="GWToolbox\Modules\Resources.h" />
     <ClInclude Include="GWToolbox\Modules\ToolboxSettings.h" />
@@ -152,6 +168,7 @@
     <ClInclude Include="GWToolbox\Widgets\VanquishWidget.h" />
     <ClInclude Include="GWToolbox\Windows\BuildsWindow.h" />
     <ClInclude Include="GWToolbox\Windows\DialogsWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\FactionLeaderboardWindow.h" />
     <ClInclude Include="GWToolbox\Windows\HeroBuildsWindow.h" />
     <ClInclude Include="GWToolbox\Windows\HotkeysWindow.h" />
     <ClInclude Include="GWToolbox\Windows\Hotkeys.h" />
@@ -163,8 +180,11 @@
     <ClInclude Include="GWToolbox\Windows\PconsWindow.h" />
     <ClInclude Include="GWToolbox\Windows\Pcons.h" />
     <ClInclude Include="GWToolbox\Windows\SettingsWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\SkillListingWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\StringDecoderWindow.h" />
     <ClInclude Include="GWToolbox\Windows\TradeWindow.h" />
     <ClInclude Include="GWToolbox\Windows\TravelWindow.h" />
+    <ClInclude Include="GWToolbox\Windows\DoorMonitorWindow.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
@@ -198,6 +218,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="GWToolbox\base64.cpp" />
     <ClCompile Include="GWToolbox\CursorFix.cpp" />
     <ClCompile Include="GWToolbox\GuiUtils.cpp" />
     <ClCompile Include="GWToolbox\ImGuiAddons.cpp" />
@@ -205,11 +226,24 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="GWToolbox\IRC.cc" />
     <ClCompile Include="GWToolbox\logger.cpp" />
     <ClCompile Include="GWToolbox\main.cpp" />
+    <ClCompile Include="GWToolbox\Modules\AprilFools.cpp" />
     <ClCompile Include="GWToolbox\Modules\ChatCommands.cpp" />
     <ClCompile Include="GWToolbox\Modules\ChatFilter.cpp" />
-    <ClCompile Include="GWToolbox\Modules\DiscordIntegration.cpp" />
+    <ClCompile Include="GWToolbox\Modules\DiscordModule.cpp" />
+    <ClCompile Include="GWToolbox\Modules\InventoryManager.cpp" />
+    <ClCompile Include="GWToolbox\Modules\ZrawDeepModule.cpp" />
+    <ClCompile Include="GWToolbox\Modules\PartyWindowModule.cpp" />
+    <ClCompile Include="GWToolbox\Modules\TwitchModule.cpp" />
+    <ClCompile Include="GWToolbox\mp3.cpp" />
+    <ClCompile Include="GWToolbox\sha1.cpp" />
+    <ClCompile Include="GWToolbox\Widgets\Minimap\EffectRenderer.cpp" />
+    <ClCompile Include="GWToolbox\Widgets\ServerInfoWidget.cpp" />
+    <ClCompile Include="GWToolbox\Windows\FriendListWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\PacketLoggerWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\DailyQuests.cpp" />
     <ClCompile Include="GWToolbox\Modules\GameSettings.cpp" />
     <ClCompile Include="GWToolbox\Modules\Resources.cpp" />
     <ClCompile Include="GWToolbox\Modules\ToolboxSettings.cpp" />
@@ -243,6 +277,7 @@
     <ClCompile Include="GWToolbox\Widgets\VanquishWidget.cpp" />
     <ClCompile Include="GWToolbox\Windows\BuildsWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\DialogsWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\FactionLeaderboardWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\HeroBuildsWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\HotkeysWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\Hotkeys.cpp" />
@@ -254,8 +289,11 @@
     <ClCompile Include="GWToolbox\Windows\PconsWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\Pcons.cpp" />
     <ClCompile Include="GWToolbox\Windows\SettingsWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\SkillListingWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\StringDecoderWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\TradeWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\TravelWindow.cpp" />
+    <ClCompile Include="GWToolbox\Windows\DoorMonitorWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Dependencies\GWCA\vc\GWCA.vcxproj">
