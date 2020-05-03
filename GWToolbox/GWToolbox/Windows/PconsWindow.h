@@ -55,7 +55,7 @@ private:
 	int items_per_row = 3;
 	bool show_enable_button = true;
 
-	bool disable_pcons_on_map_change = true;
+	bool disable_pcons_on_map_change = false;
     bool disable_cons_on_vanquish_completion = true;
     bool disable_cons_on_objective_completion = false;
     bool disable_cons_in_final_room = false;
