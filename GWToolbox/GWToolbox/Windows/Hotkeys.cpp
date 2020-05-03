@@ -657,7 +657,12 @@ void HotkeyAction::Execute() {
 HotkeyTarget::HotkeyTarget(CSimpleIni* ini, const char* section) : TBHotkey(ini, section) {
 	id = ini ? ini->GetLongValue(section, "TargetID", 0) : 0;
 	strcpy_s(name, ini ? ini->GetValue(section, "TargetName", "") : "");
-    if (!ini) show_message_in_emote_channel = false;
+	if (ini) { // don't print target hotkey to chat by default
+		show_message_in_emote_channel = ini->GetBoolValue(
+			section, VAR_NAME(show_message_in_emote_channel), false);
+	} else {
+		show_message_in_emote_channel = false;
+	}
 }
 void HotkeyTarget::Save(CSimpleIni* ini, const char* section) const {
 	TBHotkey::Save(ini, section);
