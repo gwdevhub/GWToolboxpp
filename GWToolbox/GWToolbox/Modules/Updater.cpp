@@ -25,6 +25,7 @@ void Updater::SaveSettings(CSimpleIni* ini) {
     return;
 #endif
 	ini->SetLongValue(Name(), "update_mode", mode);
+	ini->SetValue(Name(), "dllversion", GWTOOLBOX_VERSION);
 }
 
 void Updater::Initialize() {
