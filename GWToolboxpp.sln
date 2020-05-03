@@ -3,19 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29020.237
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GWToolbox", "GWToolbox\GWToolbox.vcxproj", "{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}"
-	ProjectSection(ProjectDependencies) = postProject
-		{B3359F05-68CF-4E7F-B9D6-D106F6D48A38} = {B3359F05-68CF-4E7F-B9D6-D106F6D48A38}
-	EndProjectSection
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSLauncher", "CSLauncher\CSLauncher.csproj", "{588D4291-48BD-449E-BB02-D3D48C21C0A9}"
-	ProjectSection(ProjectDependencies) = postProject
-		{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E} = {CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}
-	EndProjectSection
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MinHook", "Dependencies\GWCA\vc\MinHook.vcxproj", "{AC820BBA-BB5B-4D8C-96FF-EA8138CEED52}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GWCA", "Dependencies\GWCA\vc\GWCA.vcxproj", "{B3359F05-68CF-4E7F-B9D6-D106F6D48A38}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GWToolboxdll", "GWToolboxdll\GWToolbox.vcxproj", "{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GWToolbox", "GWToolbox\GWTBLauncher.vcxproj", "{27689431-347E-448F-B71D-ED2E09279478}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,14 +17,6 @@ Global
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}.Debug|Win32.ActiveCfg = Debug|Win32
-		{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}.Debug|Win32.Build.0 = Debug|Win32
-		{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}.Release|Win32.ActiveCfg = Release|Win32
-		{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}.Release|Win32.Build.0 = Release|Win32
-		{588D4291-48BD-449E-BB02-D3D48C21C0A9}.Debug|Win32.ActiveCfg = Debug|Any CPU
-		{588D4291-48BD-449E-BB02-D3D48C21C0A9}.Debug|Win32.Build.0 = Debug|Any CPU
-		{588D4291-48BD-449E-BB02-D3D48C21C0A9}.Release|Win32.ActiveCfg = Release|Any CPU
-		{588D4291-48BD-449E-BB02-D3D48C21C0A9}.Release|Win32.Build.0 = Release|Any CPU
 		{AC820BBA-BB5B-4D8C-96FF-EA8138CEED52}.Debug|Win32.ActiveCfg = Debug|Win32
 		{AC820BBA-BB5B-4D8C-96FF-EA8138CEED52}.Debug|Win32.Build.0 = Debug|Win32
 		{AC820BBA-BB5B-4D8C-96FF-EA8138CEED52}.Release|Win32.ActiveCfg = Release|Win32
@@ -39,6 +25,14 @@ Global
 		{B3359F05-68CF-4E7F-B9D6-D106F6D48A38}.Debug|Win32.Build.0 = Debug|Win32
 		{B3359F05-68CF-4E7F-B9D6-D106F6D48A38}.Release|Win32.ActiveCfg = Release|Win32
 		{B3359F05-68CF-4E7F-B9D6-D106F6D48A38}.Release|Win32.Build.0 = Release|Win32
+		{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}.Debug|Win32.ActiveCfg = Debug|Win32
+		{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}.Debug|Win32.Build.0 = Debug|Win32
+		{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}.Release|Win32.ActiveCfg = Release|Win32
+		{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}.Release|Win32.Build.0 = Release|Win32
+		{27689431-347E-448F-B71D-ED2E09279478}.Debug|Win32.ActiveCfg = Debug|Win32
+		{27689431-347E-448F-B71D-ED2E09279478}.Debug|Win32.Build.0 = Debug|Win32
+		{27689431-347E-448F-B71D-ED2E09279478}.Release|Win32.ActiveCfg = Release|Win32
+		{27689431-347E-448F-B71D-ED2E09279478}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

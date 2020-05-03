@@ -14,7 +14,7 @@
     <ProjectGuid>{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>API</RootNamespace>
-    <ProjectName>GWToolbox</ProjectName>
+    <ProjectName>GWToolboxdll</ProjectName>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -57,7 +57,7 @@
       <Optimization>Disabled</Optimization>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <ShowIncludes>false</ShowIncludes>
-      <AdditionalIncludeDirectories>$(SolutionDir)GWToolbox\GWToolbox\;$(SolutionDir)Dependencies\;$(SolutionDir)Dependencies\imgui\;$(SolutionDir)Dependencies\utf8proc\;$(SolutionDir)Dependencies\GWCA\Include\;$(SolutionDir)Dependencies\DirectX\Include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)GWToolboxdll\GWToolbox\;$(SolutionDir)Dependencies\;$(SolutionDir)Dependencies\imgui\;$(SolutionDir)Dependencies\utf8proc\;$(SolutionDir)Dependencies\GWCA\Include\;$(SolutionDir)Dependencies\DirectX\Include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_WIN32;UTF8PROC_STATIC;IMGUI_USE_BGRA_PACKED_COLOR;ENABLE_BORDERLESS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -82,7 +82,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>$(SolutionDir)GWToolbox\GWToolbox\;$(SolutionDir)Dependencies\;$(SolutionDir)Dependencies\imgui\;$(SolutionDir)Dependencies\utf8proc\;$(SolutionDir)Dependencies\GWCA\Include\;$(SolutionDir)Dependencies\DirectX\Include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)GWToolboxdll\GWToolbox\;$(SolutionDir)Dependencies\;$(SolutionDir)Dependencies\imgui\;$(SolutionDir)Dependencies\utf8proc\;$(SolutionDir)Dependencies\GWCA\Include\;$(SolutionDir)Dependencies\DirectX\Include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PreprocessorDefinitions>_WIN32;UTF8PROC_STATIC;IMGUI_USE_BGRA_PACKED_COLOR;ENABLE_BORDERLESS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -300,6 +300,9 @@
   <ItemGroup>
     <ProjectReference Include="..\Dependencies\GWCA\vc\GWCA.vcxproj">
       <Project>{b3359f05-68cf-4e7f-b9d6-d106f6d48a38}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\Dependencies\GWCA\vc\MinHook.vcxproj">
+      <Project>{ac820bba-bb5b-4d8c-96ff-ea8138ceed52}</Project>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
