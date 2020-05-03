@@ -241,8 +241,6 @@ void PartyWindowModule::LoadDefaults() {
 
 	AddSpecialNPC({ "Gyala Hatchery siege turtle", 3582, GW::Constants::MapID::Gyala_Hatchery_outpost_mission });
 	
-	AddSpecialNPC({ "DoA Snakes", GW::Constants::ModelID::DoA::FoundrySnakes, GW::Constants::MapID::Domain_of_Anguish });
-
 	AddSpecialNPC({ "FoW Griffs", GW::Constants::ModelID::FoW::Griffons, GW::Constants::MapID::The_Fissure_of_Woe });
 	AddSpecialNPC({ "FoW Forgemaster", GW::Constants::ModelID::FoW::Forgemaster, GW::Constants::MapID::The_Fissure_of_Woe });
 
