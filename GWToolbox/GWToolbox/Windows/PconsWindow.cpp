@@ -456,6 +456,7 @@ void PconsWindow::LoadSettings(CSimpleIni* ini) {
 	Pcon::suppress_drunk_emotes = ini->GetBoolValue(Name(), VAR_NAME(suppress_drunk_emotes), false);
 	Pcon::suppress_lunar_skills = ini->GetBoolValue(Name(), VAR_NAME(suppress_lunar_skills), false);
     Pcon::pcons_by_character = ini->GetBoolValue(Name(), VAR_NAME(pcons_by_character), Pcon::pcons_by_character);
+	Pcon::hide_city_pcons_in_explorable_areas = ini->GetBoolValue(Name(), VAR_NAME(hide_city_pcons_in_explorable_areas), Pcon::hide_city_pcons_in_explorable_areas);
 
 	Pcon::refill_if_below_threshold = ini->GetBoolValue(Name(), VAR_NAME(refill_if_below_threshold), false);
 	show_auto_refill_pcons_tickbox = ini->GetBoolValue(Name(), VAR_NAME(show_auto_refill_pcons_tickbox), show_auto_refill_pcons_tickbox);
@@ -490,6 +491,7 @@ void PconsWindow::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(suppress_drunk_emotes), Pcon::suppress_drunk_emotes);
 	ini->SetBoolValue(Name(), VAR_NAME(suppress_lunar_skills), Pcon::suppress_lunar_skills);
     ini->SetBoolValue(Name(), VAR_NAME(pcons_by_character), Pcon::pcons_by_character);
+	ini->SetBoolValue(Name(), VAR_NAME(hide_city_pcons_in_explorable_areas), Pcon::hide_city_pcons_in_explorable_areas);
 
 	ini->SetBoolValue(Name(), VAR_NAME(refill_if_below_threshold), Pcon::refill_if_below_threshold);
 	ini->SetBoolValue(Name(), VAR_NAME(show_auto_refill_pcons_tickbox), show_auto_refill_pcons_tickbox);
@@ -543,7 +545,11 @@ void PconsWindow::DrawSettingInternal() {
 		ImGui::Checkbox("Enable/Disable button", &show_enable_button);
 		ImGui::Checkbox("Show auto disable pcons checkboxes", &show_auto_disable_pcons_tickbox);
 		ImGui::ShowHelp("Will show a tickbox in the pcons window when in an elite area");
+		ImGui::Checkbox("Hide city Pcons in explorable areas", &Pcon::hide_city_pcons_in_explorable_areas);
+		bool i = false;
 		for (Pcon* pcon : pcons) {
+			if (i) ImGui::SameLine(300.0f * ImGui::GetIO().FontGlobalScale);
+			i = !i;
 			ImGui::Checkbox(pcon->chat, &pcon->visible);
 		}
 		ImGui::TreePop();

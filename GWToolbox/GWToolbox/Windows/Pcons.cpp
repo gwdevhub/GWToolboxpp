@@ -67,6 +67,7 @@ bool Pcon::suppress_drunk_text = false;
 bool Pcon::suppress_drunk_emotes = false;
 bool Pcon::suppress_lunar_skills = false;
 bool Pcon::pcons_by_character = true;
+bool Pcon::hide_city_pcons_in_explorable_areas = false;
 
 // 22 is the highest bag index. 25 is the most slots in any single bag.
 std::vector<std::vector<clock_t>> Pcon::reserved_bag_slots(22, std::vector<clock_t>(25));
@@ -554,8 +555,8 @@ bool PconCity::CanUseByEffect() const {
 	}
 	return true;
 }
- bool PconCity::IsVisible() const {
-	return visible && maptype == GW::Constants::InstanceType::Outpost;
+bool PconCity::IsVisible() const {
+	return visible && (!hide_city_pcons_in_explorable_areas || maptype == GW::Constants::InstanceType::Outpost);
 }
 int PconCity::QuantityForEach(const GW::Item* item) const {
 	switch (item->model_id) {

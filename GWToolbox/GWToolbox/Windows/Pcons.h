@@ -36,6 +36,7 @@ public:
 	static bool suppress_lunar_skills;
 
 	static std::vector<std::vector<clock_t>> reserved_bag_slots;
+	static bool hide_city_pcons_in_explorable_areas;
 
 protected:
     Pcon(const char* chatname,
