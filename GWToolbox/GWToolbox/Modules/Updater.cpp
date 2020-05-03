@@ -74,11 +74,11 @@ void Updater::GetLatestRelease(GWToolboxRelease* release) {
             Json asset = json[i]["assets"][j];
             if (!asset["name"].is_string())
                 continue;
-            std::string asset_name = asset["name"];
+            std::string asset_name = asset["name"].get<std::string>();
             if (!asset_name._Equal("GWToolbox.dll"))
                 continue; // This release doesn't have a dll download.
-            std::string download_url = asset["browser_download_url"];
-            std::string body = json[i]["body"];
+            std::string download_url = asset["browser_download_url"].get<std::string>();
+            std::string body = json[i]["body"].get<std::string>();
             release->download_url = std::string(download_url.c_str());
             release->version = tag_name.substr(0, version_number_len);
             release->body = std::string(body.c_str());
