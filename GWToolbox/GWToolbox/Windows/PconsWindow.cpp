@@ -43,13 +43,13 @@ PconsWindow::PconsWindow() {
 		ImVec2(5 / s, 10 / s), ImVec2(46 / s, 51 / s),
 		ItemID::ConsEssence, SkillID::Essence_of_Celerity_item_effect, 5));
 
-	pcons.push_back(new PconCons("Armor of Salvation", "Armor", "armor", L"Armor_of_Salvation.png", IDB_Pcons_Armor,
-		ImVec2(0 / s, 2 / s), ImVec2(56 / s, 58 / s),
-		ItemID::ConsArmor, SkillID::Armor_of_Salvation_item_effect, 5));
-
 	pcons.push_back(new PconCons("Grail of Might", "Grail", "grail", L"Grail_of_Might.png", IDB_Pcons_Grail,
 		ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s),
 		ItemID::ConsGrail, SkillID::Grail_of_Might_item_effect, 5));
+
+	pcons.push_back(new PconCons("Armor of Salvation", "Armor", "armor", L"Armor_of_Salvation.png", IDB_Pcons_Armor,
+		ImVec2(0 / s, 2 / s), ImVec2(56 / s, 58 / s),
+		ItemID::ConsArmor, SkillID::Armor_of_Salvation_item_effect, 5));
 
 	pcons.push_back(new PconGeneric("Red Rock Candy", "Red Rock", "redrock", L"Red_Rock_Candy.png", IDB_Pcons_RedRock,
 		ImVec2(0 / s, 4 / s), ImVec2(52 / s, 56 / s),
