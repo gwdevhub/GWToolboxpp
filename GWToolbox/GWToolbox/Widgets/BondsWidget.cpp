@@ -59,8 +59,10 @@ void BondsWidget::Terminate() {
 }
 
 void BondsWidget::Draw(IDirect3DDevice9* device) {
-	if (!visible || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return;
-	
+	if (!visible) 
+        return;
+    if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
+        return;
 	const GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
     const GW::PlayerArray& players = GW::Agents::GetPlayerArray();
     if (info == nullptr) return;
@@ -206,23 +208,24 @@ void BondsWidget::LoadSettings(CSimpleIni* ini) {
 	lock_move = ini->GetBoolValue(Name(), VAR_NAME(lock_move), true);
 
 	background = Colors::Load(ini, Name(), VAR_NAME(background), Colors::ARGB(76, 0, 0, 0));
-    click_to_cast = ini->GetBoolValue(Name(), VAR_NAME(click_to_cast), true);
-    click_to_drop = ini->GetBoolValue(Name(), VAR_NAME(click_to_drop), true);
-    show_allies = ini->GetBoolValue(Name(), VAR_NAME(show_allies), true);
-	flip_bonds = ini->GetBoolValue(Name(), VAR_NAME(flip_bonds), false);
-	row_height = ini->GetLongValue(Name(), VAR_NAME(row_height), 0);
+    click_to_cast = ini->GetBoolValue(Name(), VAR_NAME(click_to_cast), click_to_cast);
+    click_to_drop = ini->GetBoolValue(Name(), VAR_NAME(click_to_drop), click_to_drop);
+    show_allies = ini->GetBoolValue(Name(), VAR_NAME(show_allies), show_allies);
+	flip_bonds = ini->GetBoolValue(Name(), VAR_NAME(flip_bonds), flip_bonds);
+	row_height = ini->GetLongValue(Name(), VAR_NAME(row_height), row_height);
+    hide_in_outpost = ini->GetLongValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
 }
 
 void BondsWidget::SaveSettings(CSimpleIni* ini) {
 	ToolboxWidget::SaveSettings(ini);
 	ini->SetBoolValue(Name(), VAR_NAME(lock_move), lock_move);
-	
 	Colors::Save(ini, Name(), VAR_NAME(background), background);
     ini->SetBoolValue(Name(), VAR_NAME(click_to_cast), click_to_cast);
     ini->SetBoolValue(Name(), VAR_NAME(click_to_drop), click_to_drop);
     ini->SetBoolValue(Name(), VAR_NAME(show_allies), show_allies);
 	ini->SetBoolValue(Name(), VAR_NAME(flip_bonds), flip_bonds);
 	ini->SetLongValue(Name(), VAR_NAME(row_height), row_height);
+    ini->SetLongValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
 }
 
 void BondsWidget::DrawSettings() {
@@ -244,6 +247,7 @@ void BondsWidget::DrawSettings() {
 }
 
 void BondsWidget::DrawSettingInternal() {
+    ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
 	Colors::DrawSetting("Background", &background);
 	ImGui::Checkbox("Click to cast bond", &click_to_cast);
     ImGui::Checkbox("Click to cancel bond", &click_to_drop);

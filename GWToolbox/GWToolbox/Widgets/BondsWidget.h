@@ -61,6 +61,7 @@ private:
 	Color background = 0;
 
 	// settings
+	bool hide_in_outpost = false;
 	bool click_to_cast = true;
     bool click_to_drop = true;
 	bool show_allies = true;
