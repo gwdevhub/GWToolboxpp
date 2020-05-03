@@ -1379,7 +1379,7 @@ void GameSettings::DrawSettingInternal() {
             GW::Chat::SetTimestampsColor(timestamps_color);
         ImGui::Unindent();
     }
-	ImGui::Checkbox("Automatic /age on vanquish", &auto_age2_on_age);
+	ImGui::Checkbox("Automatic /age on vanquish", &auto_age_on_vanquish);
 	ImGui::ShowHelp("As soon as a vanquish is complete, send /age command to game server to receive server-side completion time.");
 	ImGui::Checkbox("Automatic /age2 on /age", &auto_age2_on_age);
 	ImGui::ShowHelp("GWToolbox++ will show /age2 time after /age is shown in chat");
