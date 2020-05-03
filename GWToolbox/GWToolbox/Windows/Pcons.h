@@ -177,6 +177,7 @@ public:
 		: Pcon(chat, abbrev, ini, file, res_id, uv0, uv1, threshold, desc) {}
 
 	bool CanUseByInstanceType() const;
+	bool IsVisible() const override;
 	bool CanUseByEffect() const override;
 	int QuantityForEach(const GW::Item* item) const override;
 };
