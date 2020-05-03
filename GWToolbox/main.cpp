@@ -42,7 +42,7 @@ bool IsRunningAsAdmin()
     }
 
     FreeSid(AdministratorsGroup);
-    return true;
+    return (IsRunAsAdmin != FALSE);
 }
 
 static bool CreateProcessAsAdmin(const wchar_t *path, const wchar_t *args, const wchar_t *workdir)
@@ -146,8 +146,15 @@ int main(int argc, char *argv[])
         }
     } else {
         if (!InjectWindow::AskInjectProcess(&proc)) {
-            fprintf(stderr, "InjectWindow::AskInjectName failed\n");
-            return 1;
+            if (IsRunningAsAdmin()) {
+                fprintf(stderr, "InjectWindow::AskInjectName failed\n");
+                return 1;
+            } else {
+                wchar_t args[64];
+                swprintf(args, 64, L"--pid %lu", proc.GetProcessId());
+                RestartAsAdmin(args);
+                return 0;
+            }
         }
     }
 
@@ -155,9 +162,18 @@ int main(int argc, char *argv[])
         wchar_t args[64];
         swprintf(args, 64, L"--pid %lu", proc.GetProcessId());
         RestartAsAdmin(args);
+        return 0;
     }
 
-    // InjectRemoteThread(proc, L"");
+    DWORD ExitCode;
+    if (!InjectRemoteThread(proc, L"D:\\GWToolboxpp\\Debug\\GWToolboxdll.dll", &ExitCode)) {
+        if (!IsRunningAsAdmin()) {
+            wchar_t args[64];
+            swprintf(args, 64, L"--pid %lu", proc.GetProcessId());
+            RestartAsAdmin(args);
+            return 0;
+        }
+    }
 
     return 0;
 }

@@ -45,3 +45,5 @@ private:
 
     int m_selected;
 };
+
+bool InjectRemoteThread(Process& process, LPCWSTR ImagePath, LPDWORD lpExitCode);

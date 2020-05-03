@@ -15,7 +15,7 @@ bool InjectWindow::AskInjectProcess(Process *target_process)
     }
 
     if (processes.empty()) {
-        MessageBoxW(0, L"Error: Guild Wars not running",  L"GWToolbox++", MB_ICONERROR);
+        // MessageBoxW(0, L"Error: Guild Wars not running",  L"GWToolbox++", MB_ICONERROR);
         return false;
     }
 
@@ -231,4 +231,110 @@ void InjectWindow::OnEvent(HWND hwnd, LONG control_id, LONG notification_code)
         printf("Pressed: %d\n", m_selected);
         SetEvent(m_event);
     }
+}
+
+static LPVOID GetLoadLibrary()
+{
+    HMODULE Kernel32 = GetModuleHandleW(L"Kernel32.dll");
+    if (Kernel32 == NULL)
+    {
+        fprintf(stderr, "GetModuleHandleW failed (%lu)\n", GetLastError());
+        return NULL;
+    }
+
+    LPVOID pLoadLibraryW = GetProcAddress(Kernel32, "LoadLibraryW");
+    if (pLoadLibraryW == NULL)
+    {
+        fprintf(stderr, "GetProcAddress failed (%lu)\n", GetLastError());
+        return NULL;
+    }
+
+    return pLoadLibraryW;
+}
+
+bool InjectRemoteThread(Process& process, LPCWSTR ImagePath, LPDWORD lpExitCode)
+{
+    *lpExitCode = 0;
+
+    HANDLE ProcessHandle = process.GetHandle();
+    if (ProcessHandle == NULL)
+    {
+        fprintf(stderr, "Can't inject a dll in a process which is not open\n");
+        return FALSE;
+    }
+
+    LPVOID pLoadLibraryW = GetLoadLibrary();
+    if (pLoadLibraryW == NULL)
+        return FALSE;
+
+    size_t ImagePathLength = wcslen(ImagePath);
+    size_t ImagePathSize = (ImagePathLength * 2) + 2;
+
+    LPVOID ImagePathAddress = VirtualAllocEx(
+        ProcessHandle,
+        NULL,
+        ImagePathSize,
+        MEM_COMMIT | MEM_RESERVE,
+        PAGE_READWRITE);
+
+    if (ImagePathAddress == NULL)
+    {
+        fprintf(stderr, "VirtualAllocEx failed (%lu)\n", GetLastError());
+        return FALSE;
+    }
+
+    SIZE_T BytesWritten;
+    BOOL Success = WriteProcessMemory(
+        ProcessHandle,
+        ImagePathAddress,
+        ImagePath,
+        ImagePathSize,
+        &BytesWritten);
+
+    if (!Success || (ImagePathSize != BytesWritten))
+    {
+        fprintf(stderr, "WriteProcessMemory failed (%lu)\n", GetLastError());
+        VirtualFreeEx(ProcessHandle, ImagePathAddress, 0, MEM_RELEASE);
+        return FALSE;
+    }
+
+    DWORD ThreadId;
+    HANDLE hThread = CreateRemoteThreadEx(
+        ProcessHandle,
+        NULL,
+        0,
+        reinterpret_cast<LPTHREAD_START_ROUTINE>(pLoadLibraryW),
+        ImagePathAddress,
+        0,
+        NULL,
+        &ThreadId);
+
+    if (hThread == NULL)
+    {
+        fprintf(stderr, "CreateRemoteThreadEx failed (%lu)\n", GetLastError());
+        return FALSE;
+    }
+
+    DWORD Reason = WaitForSingleObject(hThread, INFINITE);
+    if (Reason != WAIT_OBJECT_0)
+    {
+        fprintf(stderr, "WaitForSingleObject failed {reason: %lu, error: %lu}\n", Reason, GetLastError());
+        CloseHandle(hThread);
+        return FALSE;
+    }
+
+    VirtualFreeEx(ProcessHandle, ImagePathAddress, 0, MEM_RELEASE);
+
+    DWORD ExitCode;
+    Success = GetExitCodeThread(hThread, &ExitCode);
+    CloseHandle(hThread);
+
+    if (Success == FALSE)
+    {
+        fprintf(stderr, "GetExitCodeThread failed (%lu)\n", GetLastError());
+        return FALSE;
+    }
+
+    *lpExitCode = ExitCode;
+    return TRUE;
 }

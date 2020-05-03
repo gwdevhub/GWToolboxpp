@@ -50,9 +50,10 @@ public:
     bool GetModule(ProcessModule *module, const wchar_t *module_name);
     bool GetModules(std::vector<ProcessModule>& modules);
 
+    HANDLE GetHandle() { return m_hProcess; }
     uint32_t GetProcessId();
 private:
-    void *m_hProcess;
+    HANDLE m_hProcess;
 };
 
 bool GetProcesses(std::vector<Process>& processes, const wchar_t *name, DWORD rights = PROCESS_ALL_ACCESS);
