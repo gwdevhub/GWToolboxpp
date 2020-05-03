@@ -36,6 +36,7 @@ public:
 	static bool suppress_lunar_skills;
 
 	static std::vector<std::vector<clock_t>> reserved_bag_slots;
+	static bool hide_city_pcons_in_explorable_areas;
 
 protected:
     Pcon(const char* chatname,
@@ -177,6 +178,7 @@ public:
 		: Pcon(chat, abbrev, ini, file, res_id, uv0, uv1, threshold, desc) {}
 
 	bool CanUseByInstanceType() const;
+	bool IsVisible() const override;
 	bool CanUseByEffect() const override;
 	int QuantityForEach(const GW::Item* item) const override;
 };

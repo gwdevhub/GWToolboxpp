@@ -96,10 +96,10 @@ class HotkeyEquipItem : public TBHotkey {
 private:
 	UINT bag_idx = 0;
 	UINT slot_idx = 0;
-    GW::Item* item;
+    GW::Item* item = nullptr;
     std::chrono::time_point<std::chrono::steady_clock> start_time;
     std::chrono::time_point<std::chrono::steady_clock> last_try;
-    wchar_t* item_name;
+    wchar_t* item_name = L"";
 public:
 	static const char* IniSection() { return "EquipItem"; }
 	const char* Name() const override { return IniSection(); }

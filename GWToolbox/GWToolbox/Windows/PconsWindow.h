@@ -24,7 +24,6 @@ public:
 	const char* Name() const override { return "Pcons"; }
 
 	void Initialize() override;
-	void InitializePcons();
 
 	bool SetEnabled(bool b);
 	bool GetEnabled();
@@ -63,7 +62,7 @@ private:
 	bool show_auto_refill_pcons_tickbox = true;
 	bool show_auto_disable_pcons_tickbox = false;
     
-	GW::Agent* player;
+	GW::Agent* player = nullptr;
 
 	// Pcon Settings
 	// todo: tonic pop?
@@ -82,13 +81,13 @@ private:
 	void CheckBossRangeAutoDisable();	// Trigger Elite area auto disable if applicable
 	void CheckObjectivesCompleteAutoDisable();
 
-	GW::Constants::MapID map_id;
-	GW::Constants::InstanceType instance_type;
-	GW::Constants::InstanceType previous_instance_type;
+	GW::Constants::MapID map_id = GW::Constants::MapID::None;
+	GW::Constants::InstanceType instance_type = GW::Constants::InstanceType::Loading;
+	GW::Constants::InstanceType previous_instance_type = GW::Constants::InstanceType::Loading;
     bool in_vanquishable_area = false;
 
 	bool elite_area_disable_triggered = false;	// Already triggered in this run?
-	clock_t elite_area_check_timer;
+	clock_t elite_area_check_timer = 0;
 
 	// Map of which objectives to check per map_id
 	std::vector<DWORD> objectives_complete = {};
