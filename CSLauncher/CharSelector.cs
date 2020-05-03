@@ -1,16 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Diagnostics;
 using GWCA.Memory;
 using System.Security.Principal;
-using System.Runtime.InteropServices;
 
 namespace CSLauncher
 {
@@ -56,7 +50,7 @@ namespace CSLauncher
                 mem.TerminateScanner();
                 if (charnameAddr == IntPtr.Zero) continue;
                 tmp_procs[validProcs] = check_procs[i];
-                tmp_charnames[validProcs] = mem.ReadWString(charnameAddr, 30);
+                tmp_charnames[validProcs] = mem.ReadWString(charnameAddr, 40);
                 validProcs++;
             }
             charnames = new string[validProcs];
