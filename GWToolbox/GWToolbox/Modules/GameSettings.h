@@ -157,7 +157,29 @@ public:
 	float fov = 1.308997f; // default fov
 
 	void SetAfkMessage(std::wstring&& message);
+
+	// Static callback functions
 	static void ItemClickCallback(GW::HookStatus *, uint32_t type, uint32_t slot, GW::Bag *bag);
+	static void OnPingWeaponSet(GW::HookStatus*, void* packet);
+	static void OnStartWhisper(GW::HookStatus*, wchar_t* _name);
+	static void OnPlayerDance(GW::HookStatus*, GW::Packet::StoC::GenericValue*);
+	static void OnFactionDonate(GW::HookStatus*, uint32_t dialog_id);
+	static void OnPartyDefeated(GW::HookStatus*, GW::Packet::StoC::PartyDefeated*);
+	static void OnVanquishComplete(GW::HookStatus*, GW::Packet::StoC::VanquishComplete*);
+	static void OnMapLoaded(GW::HookStatus*, GW::Packet::StoC::MapLoaded*);
+	static void OnCinematic(GW::HookStatus*, GW::Packet::StoC::CinematicPlay*);
+	static void OnMapTravel(GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer*);
+	static void OnTradeStarted(GW::HookStatus*, GW::Packet::StoC::TradeStart*);
+	static void OnPlayerLeaveInstance(GW::HookStatus*, GW::Packet::StoC::PlayerLeaveInstance*);
+	static void OnPlayerJoinInstance(GW::HookStatus*, GW::Packet::StoC::PlayerJoinInstance*);
+	static void OnPartyInviteReceived(GW::HookStatus*, GW::Packet::StoC::PartyInviteReceived_Create*);
+	static void OnPartyPlayerJoined(GW::HookStatus*, GW::Packet::StoC::PartyPlayerAdd*);
+	static void OnLocalChatMessage(GW::HookStatus*, GW::Packet::StoC::MessageLocal*);
+	static void OnNPCChatMessage(GW::HookStatus*, GW::Packet::StoC::MessageNPC*);
+	static void OnSpeechBubble(GW::HookStatus*, GW::Packet::StoC::SpeechBubble*);
+	static void OnSpeechDialogue(GW::HookStatus*, GW::Packet::StoC::DisplayDialogue*);
+	static void OnServerMessage(GW::HookStatus*, GW::Packet::StoC::MessageServer*);
+	
 
 	bool tick_is_toggle = false;
 
@@ -247,7 +269,7 @@ private:
 		const wchar_t *name,
 		const wchar_t *charname);
 
-	bool GetPlayerIsLeader();
+	static bool GetPlayerIsLeader();
 
 	GW::HookEntry VanquishComplete_Entry;
 	GW::HookEntry StartWhisperCallback_Entry;
