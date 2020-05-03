@@ -41,6 +41,9 @@ namespace {
     bool show_start_column = true;
     bool show_end_column = true;
     bool show_time_column = true;
+    bool show_start_date_time = false;
+    bool save_to_disk = true;
+    bool show_past_runs = false;
 
     enum DoA_ObjId : DWORD {
         Foundry = 0x273F,
@@ -584,7 +587,14 @@ void ObjectiveTimerWindow::DrawSettingInternal() {
     ImGui::Checkbox("Show 'Start' column", &show_start_column);
     ImGui::Checkbox("Show 'End' column", &show_end_column);
     ImGui::Checkbox("Show 'Time' column", &show_time_column);
+    ImGui::Checkbox("Show run start date/time", &show_start_date_time);
 	ImGui::Checkbox("Show current run in separate window", &show_current_run_window);
+    if (ImGui::Checkbox("Save/Load runs to disk", &save_to_disk)) {
+        SaveRuns();
+    }
+    ImGui::ShowHelp("Keep a record or your runs in JSON format on disk, and load past runs from disk when starting GWToolbox.");
+    ImGui::Checkbox("Show past runs", &show_past_runs);
+    ImGui::ShowHelp("Display from previous days in the Objective Timer window.");
 	ImGui::Checkbox("Automatic /age on completion", &auto_send_age);
 	ImGui::ShowHelp("As soon as final objective is complete, send /age command to game server to receive server-side completion time.");
     ComputeNColumns();
@@ -598,6 +608,8 @@ void ObjectiveTimerWindow::LoadSettings(CSimpleIni* ini) {
     show_time_column = ini->GetBoolValue(Name(), VAR_NAME(show_time_column), show_time_column);
 	show_current_run_window = ini->GetBoolValue(Name(), VAR_NAME(show_current_run_window), show_current_run_window);
 	auto_send_age = ini->GetBoolValue(Name(), VAR_NAME(auto_send_age), auto_send_age);
+    save_to_disk = ini->GetBoolValue(Name(), VAR_NAME(save_to_disk), save_to_disk);
+    show_start_date_time = ini->GetBoolValue(Name(), VAR_NAME(show_start_date_time), show_start_date_time);
     ComputeNColumns();
     LoadRuns();
 }
@@ -609,10 +621,14 @@ void ObjectiveTimerWindow::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(show_time_column), show_time_column);
 	ini->SetBoolValue(Name(), VAR_NAME(show_current_run_window), show_current_run_window);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_send_age), auto_send_age);
+    ini->SetBoolValue(Name(), VAR_NAME(show_start_date_time), show_start_date_time);
+    ini->SetBoolValue(Name(), VAR_NAME(save_to_disk), save_to_disk);
+    ini->SetBoolValue(Name(), VAR_NAME(show_past_runs), show_past_runs);
     SaveRuns();
 }
 void ObjectiveTimerWindow::LoadRuns() {
-    ClearObjectiveSets();
+    if (!save_to_disk) return;
+    //ClearObjectiveSets();
     
     WIN32_FIND_DATAW FindFileData;
     size_t max_objectives_in_memory = 200;
@@ -639,8 +655,11 @@ void ObjectiveTimerWindow::LoadRuns() {
                 file >> os_json_arr;
                 for (nlohmann::json::iterator it = os_json_arr.begin(); it != os_json_arr.end(); ++it) {
                     ObjectiveSet* os = ObjectiveSet::FromJson(&it.value());
+                    if (objective_sets.find(os->system_time) != objective_sets.end())
+                        continue; // Don't load in a run that already exists
                     os->StopObjectives();
                     os->need_to_collapse = true;
+                    os->from_disk = true;
                     objective_sets.emplace(os->system_time, os);
                 }
                 file.close();
@@ -652,12 +671,14 @@ void ObjectiveTimerWindow::LoadRuns() {
     }
 }
 void ObjectiveTimerWindow::SaveRuns() {
-    if (objective_sets.empty())
+    if (!save_to_disk || objective_sets.empty())
         return;
     std::map<std::wstring, std::vector<ObjectiveSet*>> objective_sets_by_file;
     wchar_t filename[36];
     struct tm* structtime;
     for (auto os : objective_sets) {
+        if (os.second->from_disk)
+            continue; // No need to re-save a run.
         time_t tt = (time_t)os.second->system_time;
         structtime = gmtime(&tt);
         if (!structtime)
@@ -893,22 +914,30 @@ nlohmann::json ObjectiveTimerWindow::ObjectiveSet::ToJson() {
 }
 bool ObjectiveTimerWindow::ObjectiveSet::Draw() {
     char buf[256];
-    if (!cached_start[0]) {
-        time_t ts = (time_t)system_time;
+    if (!show_past_runs && from_disk) {
         struct tm timeinfo;
-        memcpy(&timeinfo,localtime(&ts),sizeof(timeinfo));
+        GetStartTime(&timeinfo);
+        time_t now = time(NULL);
+        struct tm* nowinfo = localtime(&now);
+        if (timeinfo.tm_yday != nowinfo->tm_yday || timeinfo.tm_year != nowinfo->tm_year) {
+            return true; // Hide this objective set; its from a previous day
+        }
+    }
+    if (show_start_date_time && !cached_start[0]) {
+        struct tm timeinfo;
+        GetStartTime(&timeinfo);
         time_t now = time(NULL);
         struct tm* nowinfo = localtime(&now);
         int cached_str_offset = 0;
-        if (timeinfo.tm_yday != nowinfo->tm_yday || timeinfo.tm_year != nowinfo->tm_year || true) {
+        if (timeinfo.tm_yday != nowinfo->tm_yday || timeinfo.tm_year != nowinfo->tm_year) {
             char* months[] = { "Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec" };
             cached_str_offset += snprintf(&cached_start[cached_str_offset], sizeof(cached_start) - cached_str_offset, "%s %02d, ", months[timeinfo.tm_mon], timeinfo.tm_mday);
         }
-        snprintf(&cached_start[cached_str_offset], sizeof(cached_start) - cached_str_offset, "%02d:%02d", timeinfo.tm_hour, timeinfo.tm_min);
+        snprintf(&cached_start[cached_str_offset], sizeof(cached_start) - cached_str_offset, "%02d:%02d - ", timeinfo.tm_hour, timeinfo.tm_min);
     }
     PrintTime(cached_time, sizeof(cached_time), instance_time, false);
 
-    sprintf(buf, "%s - %s - %s%s###header%d", cached_start, name, cached_time, failed ? " [Failed]" : "", ui_id);
+    sprintf(buf, "%s%s - %s%s###header%d", show_start_date_time ? cached_start : "", name, cached_time, failed ? " [Failed]" : "", ui_id);
 
     const auto& style = ImGui::GetStyle();
     float offset = 0;
@@ -926,4 +955,9 @@ bool ObjectiveTimerWindow::ObjectiveSet::Draw() {
         need_to_collapse = false;
     }
     return is_open;
+}
+
+void ObjectiveTimerWindow::ObjectiveSet::GetStartTime(struct tm* timeinfo) {
+    time_t ts = (time_t)system_time;
+    memcpy(timeinfo, localtime(&ts), sizeof(timeinfo[0]));
 }

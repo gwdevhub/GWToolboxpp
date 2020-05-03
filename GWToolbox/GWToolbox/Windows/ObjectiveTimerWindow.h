@@ -96,6 +96,7 @@ private:
 
         bool active = true;
         bool failed = false;
+        bool from_disk = false;
         bool need_to_collapse = false;
         char name[256] = { 0 };
         std::vector<Objective> objectives;
@@ -106,6 +107,7 @@ private:
         static ObjectiveSet* FromJson(nlohmann::json* json);
         nlohmann::json ToJson();
         void Update();
+        void GetStartTime(struct tm* timeinfo);
         // todo: print to file
 		// an internal id to ensure interface consistency
 		const unsigned int ui_id = 0;
@@ -134,6 +136,7 @@ private:
     void AddDeepObjectiveSet();
     void AddUrgozObjectiveSet();
     void ClearObjectiveSets();
+    
 
     GW::HookEntry PartyDefeated_Entry;
     GW::HookEntry GameSrvTransfer_Entry;
