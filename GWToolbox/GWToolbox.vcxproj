@@ -129,7 +129,6 @@
     <ClInclude Include="GWToolbox\mp3.h" />
     <ClInclude Include="GWToolbox\sha1.hpp" />
     <ClInclude Include="GWToolbox\Widgets\Minimap\EffectRenderer.h" />
-    <ClInclude Include="GWToolbox\Widgets\ServerInfoWidget.h" />
     <ClInclude Include="GWToolbox\Windows\FriendListWindow.h" />
     <ClInclude Include="GWToolbox\Windows\PacketLoggerWindow.h" />
     <ClInclude Include="GWToolbox\Windows\DailyQuests.h" />
@@ -240,7 +239,6 @@
     <ClCompile Include="GWToolbox\mp3.cpp" />
     <ClCompile Include="GWToolbox\sha1.cpp" />
     <ClCompile Include="GWToolbox\Widgets\Minimap\EffectRenderer.cpp" />
-    <ClCompile Include="GWToolbox\Widgets\ServerInfoWidget.cpp" />
     <ClCompile Include="GWToolbox\Windows\FriendListWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\PacketLoggerWindow.cpp" />
     <ClCompile Include="GWToolbox\Windows\DailyQuests.cpp" />

@@ -295,7 +295,6 @@
     <ClInclude Include="GWToolbox\Windows\FriendListWindow.h" />
     <ClInclude Include="GWToolbox\Modules\TwitchModule.h" />
     <ClInclude Include="GWToolbox\Modules\PartyWindowModule.h" />
-    <ClInclude Include="GWToolbox\Widgets\ServerInfoWidget.h" />
     <ClInclude Include="GWToolbox\mp3.h" />
     <ClInclude Include="GWToolbox\Modules\ZrawDeepModule.h" />
     <ClInclude Include="GWToolbox\Widgets\Minimap\EffectRenderer.h" />
@@ -462,7 +461,6 @@
     <ClCompile Include="GWToolbox\Windows\FriendListWindow.cpp" />
     <ClCompile Include="GWToolbox\Modules\TwitchModule.cpp" />
     <ClCompile Include="GWToolbox\Modules\PartyWindowModule.cpp" />
-    <ClCompile Include="GWToolbox\Widgets\ServerInfoWidget.cpp" />
     <ClCompile Include="GWToolbox\mp3.cpp" />
     <ClCompile Include="GWToolbox\Modules\ZrawDeepModule.cpp" />
     <ClCompile Include="GWToolbox\Widgets\Minimap\EffectRenderer.cpp" />
