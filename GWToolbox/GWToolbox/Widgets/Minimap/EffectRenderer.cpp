@@ -93,7 +93,7 @@ void EffectRenderer::DrawSettings() {
 	const float offset = ImGui::GetIO().FontGlobalScale * 150.0f;
 	for (auto s : aoe_effect_settings) {
 		ImGui::PushID(s.first);
-		Colors::DrawSettingHueWheel("", &s.second->color, 0);
+		Colors::DrawSetting("", &s.second->color);
 		ImGui::SameLine();
 		ImGui::Text(s.second->name.c_str());
 		ImGui::PopID();
