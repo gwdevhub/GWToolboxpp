@@ -257,7 +257,7 @@ void TravelWindow::UITravel(GW::Constants::MapID MapID, GW::Constants::District 
 
 	uint32_t err = 0;
 	if (!IsMapUnlocked(MapID)) {
-		Log::Error("[Error] Your character does not have %s unlocked\n",GW::Constants::NAME_FROM_ID[(uint32_t)MapID]);
+		Log::Error("[Error] Your character does not have %s unlocked",GW::Constants::NAME_FROM_ID[(uint32_t)MapID]);
 		return;
 	}
 	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost
@@ -265,7 +265,7 @@ void TravelWindow::UITravel(GW::Constants::MapID MapID, GW::Constants::District 
 		&& t->language_id == GW::Map::GetLanguage()
 		&& (t->district_number == 0 || t->district_number == GW::Map::GetDistrict())
 		&& t->map_id == GW::Map::GetMapID()) {
-		Log::Error("[Error] You are already in the outpost\n");
+		Log::Error("[Error] You are already in the outpost");
 		return;
 	}
     GW::GameThread::Enqueue([t] {
