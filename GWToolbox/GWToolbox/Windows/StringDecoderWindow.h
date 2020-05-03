@@ -19,7 +19,7 @@ public:
     void Decode();
     void Send();
     static void PrintEncStr(const wchar_t* enc_str);
-    wchar_t* GetEncodedString();
+    std::wstring GetEncodedString();
 
 private:
 	char encoded[2048] = { 0 };
