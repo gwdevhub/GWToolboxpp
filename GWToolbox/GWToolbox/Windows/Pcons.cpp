@@ -554,9 +554,7 @@ bool PconCity::CanUseByEffect() const {
 	}
 	return true;
 }
- bool PconCity::IsVisible() const {
-	return visible && maptype == GW::Constants::InstanceType::Outpost;
-}
+
 int PconCity::QuantityForEach(const GW::Item* item) const {
 	switch (item->model_id) {
 	case ItemID::CremeBrulee:
