@@ -113,9 +113,10 @@ PconsWindow::PconsWindow() {
 
 	pcons.push_back(new PconRefiller("Scroll of Resurrection", "Scroll", "resscroll", L"Scroll_of_Resurrection.png", IDB_Mat_ResScroll,
 		ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s), ItemID::ResScrolls, 5));
-
+	pcons.back()->visible = false; // sets the default, LoadSettings will overwrite this
 	pcons.push_back(new PconRefiller("Powerstone of Courage", "Pstone", "pstone", L"Powerstone_of_Courage.png", IDB_Mat_Powerstone,
 		ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s), ItemID::Powerstone, 5));
+	pcons.back()->visible = false; // sets the default, LoadSettings will overwrite this
 }
 void PconsWindow::Initialize() {
 	ToolboxWindow::Initialize();
