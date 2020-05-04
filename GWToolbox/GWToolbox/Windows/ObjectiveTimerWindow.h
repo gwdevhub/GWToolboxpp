@@ -2,6 +2,7 @@
 
 #include <Defines.h>
 
+#include <GWCA\Constants\Maps.h>
 #include <GWCA\Utilities\Hook.h>
 #include <GWCA\GameContainers\GamePos.h>
 #include <GWCA\Packets\StoC.h>
@@ -129,7 +130,10 @@ private:
     void AddDoAObjectiveSet(GW::Vec2f spawn);
     void AddFoWObjectiveSet();
     void AddUWObjectiveSet();
+    void AddDungeonObjectiveSet(GW::Constants::MapID map_id);
+    bool UpdateDungeonObjectiveSet(GW::Constants::MapID map_id);
     void AddObjectiveSet(ObjectiveSet* os);
+    void HandleMapChange(GW::Constants::MapID map_id, bool start);
 	void DoorOpened(uint32_t door_id);
 	void DoorClosed(uint32_t door_id);
 	void DisplayDialogue(GW::Packet::StoC::DisplayDialogue* packet);
@@ -150,4 +154,5 @@ private:
 	GW::HookEntry MessageServer_Entry;
 	GW::HookEntry InstanceLoadInfo_Entry;
 	GW::HookEntry ManipulateMapObject_Entry;
+    GW::HookEntry DungeonReward_Entry;
 };
