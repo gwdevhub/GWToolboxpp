@@ -170,6 +170,7 @@ public:
 	static void OnFactionDonate(GW::HookStatus*, uint32_t dialog_id);
 	static void OnPartyDefeated(GW::HookStatus*, GW::Packet::StoC::PartyDefeated*);
 	static void OnVanquishComplete(GW::HookStatus*, GW::Packet::StoC::VanquishComplete*);
+	static void OnDungeonReward(GW::HookStatus*, GW::Packet::StoC::DungeonReward*);
 	static void OnMapLoaded(GW::HookStatus*, GW::Packet::StoC::MapLoaded*);
 	static void OnCinematic(GW::HookStatus*, GW::Packet::StoC::CinematicPlay*);
 	static void OnMapTravel(GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer*);
@@ -264,6 +265,7 @@ private:
     bool redirect_npc_messages_to_emote_chat = false;
 	bool auto_age2_on_age = true;
 	bool auto_age_on_vanquish = false;
+	bool hide_dungeon_chest_popup = false;
 	bool skip_entering_name_for_faction_donate = false;
 
 	void DrawChannelColor(const char *name, GW::Chat::Channel chan);
