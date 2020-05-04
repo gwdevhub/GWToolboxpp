@@ -4,6 +4,8 @@
 #define BETA_VERSION "" // enter something like "Beta 1". Internally we only check if not empty
 #define GWTOOLBOX_WEBSITE "https://haskha.github.io/GWToolboxpp/"
 
+#define DIRECTX_REDIST_WEBSITE "https://www.microsoft.com/en-us/download/details.aspx?id=8109"
+
 #define VAR_NAME(v) (#v)
 
 /* 

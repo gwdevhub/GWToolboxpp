@@ -43,7 +43,9 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <TargetName>$(ProjectName)</TargetName>
@@ -63,8 +65,8 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>$(OutDir)$(TargetFileName).pdb</ProgramDatabaseFile>
       <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\openssl\lib\;$(SolutionDir)Dependencies\DirectX\Lib\x86\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;Urlmon.lib;Wininet.lib;Shlwapi.lib;ssleay32.lib;libeay32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\openssl\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>dbghelp.lib;Urlmon.lib;Wininet.lib;Shlwapi.lib;ssleay32.lib;libeay32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>
@@ -91,8 +93,8 @@
       <OptimizeReferences>true</OptimizeReferences>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\openssl\lib\;$(SolutionDir)Dependencies\DirectX\Lib\x86\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>dbghelp.lib;d3d9.lib;d3dx9.lib;Urlmon.lib;Wininet.lib;Shlwapi.lib;ssleay32.lib;libeay32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\openssl\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>dbghelp.lib;Urlmon.lib;Wininet.lib;Shlwapi.lib;ssleay32.lib;libeay32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>
@@ -113,6 +115,7 @@
     <ClInclude Include="GWToolbox\CircurlarBuffer.h" />
     <ClInclude Include="GWToolbox\Color.h" />
     <ClInclude Include="GWToolbox\CursorFix.h" />
+    <ClInclude Include="GWToolbox\d3dx9_dynamic.h" />
     <ClInclude Include="GWToolbox\Defines.h" />
     <ClInclude Include="GWToolbox\ImGuiAddons.h" />
     <ClInclude Include="GWToolbox\imgui_impl_dx9.h" />
@@ -219,6 +222,7 @@
     </ClCompile>
     <ClCompile Include="GWToolbox\base64.cpp" />
     <ClCompile Include="GWToolbox\CursorFix.cpp" />
+    <ClCompile Include="GWToolbox\d3dx9_dynamic.cpp" />
     <ClCompile Include="GWToolbox\GuiUtils.cpp" />
     <ClCompile Include="GWToolbox\ImGuiAddons.cpp" />
     <ClCompile Include="GWToolbox\imgui_impl_dx9.cpp">

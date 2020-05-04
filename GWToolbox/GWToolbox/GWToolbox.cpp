@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "GWToolbox.h"
 
+#include <shellapi.h>
+
 #include <imgui.h>
 #include <imgui_impl_dx9.h>
 
@@ -26,6 +28,8 @@
 #include <Windows/MainWindow.h>
 
 #include <Widgets/Minimap/Minimap.h>
+
+#include <d3dx9_dynamic.h>
 
 #include "GuiUtils.h"
 #include "logger.h"
@@ -61,11 +65,26 @@ DWORD __stdcall SafeThreadEntry(LPVOID module) {
 DWORD __stdcall ThreadEntry(LPVOID) {
     Log::Log("Initializing API\n");
 
+    // Try to load DirectX runtime dll. Installer should have sorted this, but may not have.
+    if (!Loadd3dx9() || true) {
+        // Handle this now before we go any further - removing this check will cause a crash when modules try to use D3DX9 funcs in Draw() later and will close GW
+        char title[128];
+        sprintf(title, "GWToolbox++ API Error (%d)", GetLastError());
+        if (MessageBoxA(0, 
+            "Failed to load d3dx9_xx.dll; this machine may not have DirectX runtime installed.\nGWToolbox++ needs this installed to continue.\n\nVisit DirectX Redistributable download page?", 
+            title, MB_YESNO) == IDYES) {
+            ShellExecute(0, 0, DIRECTX_REDIST_WEBSITE, 0, 0, SW_SHOW);
+        }
+    
+        goto leave;
+    }
+
     GW::HookBase::Initialize();
     if (!GW::Initialize()){
-        MessageBoxA(0, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0);
-        FreeLibraryAndExitThread(dllmodule, EXIT_SUCCESS);
-        return EXIT_SUCCESS;
+        if (MessageBoxA(0, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0) == IDOK) {
+            
+        }
+        goto leave;
     }
 
     Log::Log("Installing Cursor Fix\n");
@@ -115,6 +134,7 @@ DWORD __stdcall ThreadEntry(LPVOID) {
     // We can't guarantee that the code in Guild Wars thread isn't still in the trampoline, but
     // practically a short sleep is fine.
     Sleep(16);
+leave:
     Log::Log("Destroying API\n");
     GW::Terminate();
 
@@ -122,6 +142,7 @@ DWORD __stdcall ThreadEntry(LPVOID) {
     Log::Terminate();
 
     FreeLibraryAndExitThread(dllmodule, EXIT_SUCCESS);
+    return EXIT_SUCCESS;
 }
 
 LRESULT CALLBACK SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) {

@@ -1,8 +1,7 @@
 #include "stdafx.h"
 #include "PmapRenderer.h"
 
-#include <d3dx9math.h>
-#include <d3d9.h>
+#include "d3dx9_dynamic.h"
 
 #include <GWCA/GameContainers/Array.h>
 

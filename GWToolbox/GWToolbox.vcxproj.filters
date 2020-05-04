@@ -301,6 +301,7 @@
     <ClInclude Include="GWToolbox\Windows\TradeWindow.h" />
     <ClInclude Include="GWToolbox\Modules\AprilFools.h" />
     <ClInclude Include="GWToolbox\Modules\InventoryManager.h" />
+    <ClInclude Include="GWToolbox\d3dx9_dynamic.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -467,6 +468,7 @@
     <ClCompile Include="GWToolbox\Windows\TradeWindow.cpp" />
     <ClCompile Include="GWToolbox\Modules\AprilFools.cpp" />
     <ClCompile Include="GWToolbox\Modules\InventoryManager.cpp" />
+    <ClCompile Include="GWToolbox\d3dx9_dynamic.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GWToolbox.rc">
