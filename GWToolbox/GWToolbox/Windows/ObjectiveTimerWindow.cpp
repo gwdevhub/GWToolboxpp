@@ -570,7 +570,9 @@ void ObjectiveTimerWindow::AddDungeonObjectiveSet(GW::Constants::MapID map_id) {
         case GW::Constants::MapID::Secret_Lair_of_the_Snowmen:
             os->objectives.emplace(os->objectives.begin(), 1, "Level 1");
             break;
-        case GW::Constants::MapID::Slavers_Exile_Level_1: // figure out how to time this
+        case GW::Constants::MapID::Slavers_Exile_Level_5:
+            // figure out how to do the other levels
+            os->objectives.emplace_back(5, "Duncan");
             break;
     }
 
