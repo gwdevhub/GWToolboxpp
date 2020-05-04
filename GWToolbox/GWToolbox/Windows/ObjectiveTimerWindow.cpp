@@ -213,6 +213,7 @@ void ObjectiveTimerWindow::Initialize() {
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DungeonReward>(&DungeonReward_Entry,
     [this](GW::HookStatus* status, GW::Packet::StoC::DungeonReward* packet) -> void {
         ObjectiveTimerWindow::ObjectiveSet* os = GetCurrentObjectiveSet();
+        if (!os) return;
         os->objectives.back().SetDone();
         os->CheckSetDone();
     });
