@@ -66,7 +66,7 @@ DWORD __stdcall ThreadEntry(LPVOID) {
     Log::Log("Initializing API\n");
 
     // Try to load DirectX runtime dll. Installer should have sorted this, but may not have.
-    if (!Loadd3dx9() || true) {
+    if (!Loadd3dx9()) {
         // Handle this now before we go any further - removing this check will cause a crash when modules try to use D3DX9 funcs in Draw() later and will close GW
         char title[128];
         sprintf(title, "GWToolbox++ API Error (%d)", GetLastError());
