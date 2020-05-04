@@ -210,8 +210,8 @@ void InventoryManager::SalvageAll(SalvageAllType type) {
 		return; // User wants to skip this item; continue to next frame.
 	}
 	Item* item = ref->item();
-	potential_salvage_all_items.erase(ref);
 	if (!item || !item->bag || !item->bag->IsInventoryBag()) {
+		potential_salvage_all_items.erase(ref);
 		return; // Item has moved or been consumed since prompt.
 	}
 	Salvage(item, kit);
