@@ -458,16 +458,16 @@ void ObjectiveTimerWindow::HandleMapChange(GW::Constants::MapID map_id, bool sta
 
     switch (map_id) {
         case GW::Constants::MapID::Urgozs_Warren:
-            AddUrgozObjectiveSet();
+            if (start) AddUrgozObjectiveSet();
             break;
         case GW::Constants::MapID::The_Deep:
-            AddDeepObjectiveSet();
+            if (start) AddDeepObjectiveSet();
             break;
         case GW::Constants::MapID::The_Fissure_of_Woe:
-            AddFoWObjectiveSet();
+            if (start) AddFoWObjectiveSet();
             break;
         case GW::Constants::MapID::The_Underworld:
-            AddUWObjectiveSet();
+            if (start) AddUWObjectiveSet();
             break;
         case GW::Constants::MapID::Catacombs_of_Kathandrax_Level_1:
         case GW::Constants::MapID::Rragars_Menagerie_Level_1:
@@ -487,7 +487,7 @@ void ObjectiveTimerWindow::HandleMapChange(GW::Constants::MapID map_id, bool sta
         case GW::Constants::MapID::Fronis_Irontoes_Lair_mission:
         case GW::Constants::MapID::Secret_Lair_of_the_Snowmen:
         case GW::Constants::MapID::Heart_of_the_Shiverpeaks_Level_1:
-            AddDungeonObjectiveSet(map_id);
+            if (start) AddDungeonObjectiveSet(map_id);
             break;
         case GW::Constants::MapID::Catacombs_of_Kathandrax_Level_2:
         case GW::Constants::MapID::Rragars_Menagerie_Level_2:
