@@ -225,18 +225,6 @@ void InventoryManager::Initialize() {
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&on_map_change_entry, [this](...) {
 		CancelAll();
 		});
-	/*GW::CtoS::RegisterPacketCallback(&redo_salvage_entry, GAME_CMSG_ITEM_IDENTIFY, [this](GW::HookStatus*,void* packet) {
-		struct Packet {
-			uint32_t header;
-			uint32_t kit_id;
-			uint32_t item_id;
-		};
-		Packet* pack = static_cast<Packet*>(packet);
-		current_id_kit_selected = 
-		});
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SalvageSessionDone>(&redo_salvage_entry, [this](...) {
-		CancelAll();
-		});*/
 }
 void InventoryManager::Salvage(Item* item, Item* kit) {
 	if (!item || !kit)
@@ -540,9 +528,8 @@ void InventoryManager::DrawSettingInternal() {
 	ImGui::Text("Salvage All options:");
 	ImGui::SameLine();
 	ImGui::TextDisabled("Note: Salvage All will only salvage items that are identified.");
-	ImGui::Indent();
-	//ImGui::Checkbox("Only use Superior Salvage Kits",&only_use_superior_salvage_kits);
-	//ImGui::ShowHelp("Salvaging items with lesser salvage kits produce less materials.\nSalvaging items with superior salvage kits produce rare materials.");
+	ImGui::Checkbox("Only use Superior Salvage Kits with /salvage command",&only_use_superior_salvage_kits);
+	ImGui::ShowHelp("Salvaging items with lesser salvage kits produce less materials.\nSalvaging items with superior salvage kits can produce rare materials.\n\nCtrl + clicking on a normal Salvage Kit will still allow you to use Salvage All.");
 	ImGui::Checkbox("Salvage Rare Materials", &salvage_rare_mats);
 	ImGui::ShowHelp("Untick to skip salvagable rare materials when checking for salvagable items");
 	ImGui::Text("Salvage from:");
@@ -554,7 +541,6 @@ void InventoryManager::DrawSettingInternal() {
 	ImGui::Checkbox("Bag 1", &bags_to_salvage_from[GW::Constants::Bag::Bag_1]);
 	ImGui::SameLine();
 	ImGui::Checkbox("Bag 2", &bags_to_salvage_from[GW::Constants::Bag::Bag_2]);
-	ImGui::Unindent();
 }
 void InventoryManager::Update(float delta) {
 	if (is_salvaging) {
