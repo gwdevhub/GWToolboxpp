@@ -318,10 +318,14 @@ InventoryManager::Item* InventoryManager::GetNextUnidentifiedItem(Item* start_af
 			if (item->IsGreen() || item->type == static_cast<uint8_t>(GW::Constants::ItemType::Minipet))
 				continue;
 			switch (identify_all_type) {
-			case IdentifyAllType::All:		return item;
-			case IdentifyAllType::Blue:		if (item->IsBlue()) return item;
-			case IdentifyAllType::Purple:	if (item->IsPurple()) return item;
-			case IdentifyAllType::Gold:		if (item->IsGold()) return item;
+			case IdentifyAllType::All:		
+				return item;
+			case IdentifyAllType::Blue:		
+				if (!item->IsBlue()) continue;
+			case IdentifyAllType::Purple:	
+				if (!item->IsPurple()) continue;
+			case IdentifyAllType::Gold:		
+				if (!item->IsGold()) continue;
 			}
 		}
 	}
