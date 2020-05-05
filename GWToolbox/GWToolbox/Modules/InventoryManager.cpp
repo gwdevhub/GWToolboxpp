@@ -204,14 +204,16 @@ void InventoryManager::SalvageAll(SalvageAllType type) {
 		CancelSalvage();
 		return;
 	}
-	auto ref = potential_salvage_all_items.begin();
+	auto ref = *potential_salvage_all_items.begin();
 	if (!ref->proceed) {
-		potential_salvage_all_items.erase(ref);
+		delete ref;
+		potential_salvage_all_items.erase(potential_salvage_all_items.begin());
 		return; // User wants to skip this item; continue to next frame.
 	}
 	Item* item = ref->item();
 	if (!item || !item->bag || !item->bag->IsInventoryBag()) {
-		potential_salvage_all_items.erase(ref);
+		delete ref;
+		potential_salvage_all_items.erase(potential_salvage_all_items.begin());
 		return; // Item has moved or been consumed since prompt.
 	}
 	Salvage(item, kit);
@@ -263,13 +265,15 @@ void InventoryManager::Identify(Item* item, Item* kit) {
 void InventoryManager::FetchPotentialItems() {
 	Item* found = nullptr;
 	if (salvage_all_type != SalvageAllType::None) {
-		potential_salvage_all_items.clear();
+		ClearPotentialItems();
 		while (found = GetNextUnsalvagedItem(context_item.item(), found)) {
-			PotentialItem item;
-			GW::UI::AsyncDecodeStr(found->complete_name_enc ? found->complete_name_enc : found->name_enc, &item.name);
-			item.item_id = found->item_id;
-			item.slot = found->slot;
-			item.bag = static_cast<GW::Constants::Bag>(found->bag->index + 1);
+			PotentialItem* item = new PotentialItem();
+			GW::UI::AsyncDecodeStr(found->complete_name_enc ? found->complete_name_enc : found->name_enc, &item->name);
+			if(found->info_string)
+				GW::UI::AsyncDecodeStr(found->info_string, &item->desc);
+			item->item_id = found->item_id;
+			item->slot = found->slot;
+			item->bag = static_cast<GW::Constants::Bag>(found->bag->index + 1);
 			potential_salvage_all_items.push_back(item);
 		}
 	}
@@ -311,11 +315,17 @@ InventoryManager::Item* InventoryManager::GetNextUnidentifiedItem(Item* start_af
 			case IdentifyAllType::All:		
 				return item;
 			case IdentifyAllType::Blue:		
-				if (!item->IsBlue()) continue;
+				if (item->IsBlue())
+					return item;
+				break;
 			case IdentifyAllType::Purple:	
-				if (!item->IsPurple()) continue;
+				if (item->IsPurple())
+					return item;
+				break;
 			case IdentifyAllType::Gold:		
-				if (!item->IsGold()) continue;
+				if (item->IsGold())
+					return item;
+				break;
 			}
 		}
 	}
@@ -668,7 +678,7 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
 			GW::Bag* bag = nullptr;
 			bool has_items_to_salvage = false;
 			for(size_t i=0;i< potential_salvage_all_items.size();i++) {
-				pi = &potential_salvage_all_items[i];
+				pi = potential_salvage_all_items[i];
 				if (!pi) continue;
 				item = pi->item();
 				if (!item) continue;
@@ -692,14 +702,20 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
 					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_Text));
 					break;
 				}
-				if (!pi->sanitised && !pi->name.empty()) {
+				if (!pi->name.empty() && pi->name_s.empty()) {
 					pi->name_s = GuiUtils::WStringToString(pi->name);
 					pi->name_s = std::regex_replace(pi->name_s, sanitiser, "");
-					pi->sanitised = true;
 				}
 				ImGui::Checkbox(pi->name_s.c_str(),&pi->proceed);
-				has_items_to_salvage |= pi->proceed;
 				ImGui::PopStyleColor();
+				if (ImGui::IsItemHovered()) {
+					if (!pi->desc.empty() && pi->desc_s.empty()) {
+						pi->desc_s = GuiUtils::WStringToString(pi->desc);
+						pi->desc_s = std::regex_replace(pi->desc_s, sanitiser, "");
+					}
+					ImGui::SetTooltip("%s",pi->desc_s.c_str());
+				}
+				has_items_to_salvage |= pi->proceed;
 			}
 			ImGui::Text("\n\nAre you sure?");
 			ImVec2 btn_width = ImVec2(240, 0);

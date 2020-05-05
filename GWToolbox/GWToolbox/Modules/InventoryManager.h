@@ -27,6 +27,9 @@ public:
 	InventoryManager() {
 		current_salvage_session.salvage_item_id = 0;
 	}
+	~InventoryManager() {
+		ClearPotentialItems();
+	}
 	enum class SalvageAllType : uint8_t {
 		None,
 		White,
@@ -140,6 +143,7 @@ private:
 		context_item.item_id = 0;
 	}
 	inline void CancelAll() {
+		ClearPotentialItems();
 		CancelSalvage();
 		CancelIdentify();
 	}
@@ -397,10 +401,18 @@ private:
 	struct PotentialItem : PendingItem {
 		std::wstring name;
 		std::string name_s;
+		std::wstring desc;
+		std::string desc_s;
 		bool proceed = true;
 		bool sanitised = false;
 	};
-	std::vector<PotentialItem> potential_salvage_all_items; // List of items that would be processed if user confirms Salvage All
+	std::vector<PotentialItem*> potential_salvage_all_items; // List of items that would be processed if user confirms Salvage All
+	inline void ClearPotentialItems() {
+		for (auto item : potential_salvage_all_items) {
+			delete item;
+		}
+		potential_salvage_all_items.clear();
+	}
 	PendingItem pending_identify_item;
 	PendingItem pending_identify_kit;
 	PendingItem pending_salvage_item;
