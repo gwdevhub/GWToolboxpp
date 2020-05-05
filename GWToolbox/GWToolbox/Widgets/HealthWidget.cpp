@@ -20,18 +20,27 @@ void HealthWidget::LoadSettings(CSimpleIni *ini) {
 	ToolboxWidget::LoadSettings(ini);
 	click_to_print_health = ini->GetBoolValue(Name(), VAR_NAME(click_to_print_health), click_to_print_health);
 	hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
+	color_default = Colors::Load(ini, Name(), VAR_NAME(below_half), ImColor(255, 255, 255));
+	color_below_ninety = Colors::Load(ini, Name(), VAR_NAME(color_below_ninety), ImColor(255, 255, 255));
+	color_below_half = Colors::Load(ini, Name(), VAR_NAME(color_below_half), ImColor(255, 255, 255));
 }
 
 void HealthWidget::SaveSettings(CSimpleIni *ini) {
 	ToolboxWidget::SaveSettings(ini);
 	ini->SetBoolValue(Name(), VAR_NAME(click_to_print_health), click_to_print_health);
 	ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
+	Colors::Save(ini, Name(), VAR_NAME(color_default), color_default);
+	Colors::Save(ini, Name(), VAR_NAME(color_below_ninety), color_below_ninety);
+	Colors::Save(ini, Name(), VAR_NAME(color_below_half), color_below_half);
 }
 
 void HealthWidget::DrawSettingInternal() {
 	ToolboxWidget::DrawSettingInternal();
 	ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
 	ImGui::Checkbox("Ctrl+Click to print target health", &click_to_print_health);
+	Colors::DrawSetting("Default", &color_default);
+	Colors::DrawSetting("<90%%", &color_below_ninety);
+	Colors::DrawSetting("<50%%", &color_below_half);
 }
 
 void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
@@ -60,13 +69,21 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
 
 			ImVec2 cur;
 
+			Color color = color_default;
+			if (target->hp < .9) {
+				color = color_below_ninety;
+				if (target->hp < .5) {
+					color = color_below_half;
+				}
+			}
+
 			// 'health'
 			ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f20));
 			cur = ImGui::GetCursorPos();
 			ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
 			ImGui::TextColored(ImColor(0, 0, 0), "Health");
 			ImGui::SetCursorPos(cur);
-			ImGui::Text("Health");
+			ImGui::TextColored(ImColor(color), "Health");
 			ImGui::PopFont();
 
 			// perc
@@ -75,7 +92,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
 			ImGui::TextColored(ImColor(0, 0, 0), health_perc);
 			ImGui::SetCursorPos(cur);
-			ImGui::Text(health_perc);
+			ImGui::TextColored(ImColor(color), health_perc);
 			ImGui::PopFont();
 
 			// abs
@@ -84,7 +101,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
 			ImGui::TextColored(ImColor(0, 0, 0), health_abs);
 			ImGui::SetCursorPos(cur);
-			ImGui::Text(health_abs);
+			ImGui::TextColored(ImColor(color), health_abs);
 			ImGui::PopFont();
 
             if (click_to_print_health) {

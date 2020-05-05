@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ToolboxWidget.h"
+#include <Color.h>
 
 class HealthWidget : public ToolboxWidget {
 	HealthWidget() {};
@@ -24,4 +25,7 @@ public:
 
     std::wstring agent_name_ping;
 	bool hide_in_outpost = false;
+	Color color_default = 0;
+	Color color_below_ninety = 0;
+	Color color_below_half = 0;
 };
