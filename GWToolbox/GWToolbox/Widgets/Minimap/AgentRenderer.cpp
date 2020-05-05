@@ -758,25 +758,23 @@ void AgentRenderer::BuildCustomAgentsMap() {
 AgentRenderer::CustomAgent::CustomAgent(CSimpleIni* ini, const char* section)
 	: ui_id(++cur_ui_id) {
 
-	active = ini->GetBoolValue(section, VAR_NAME(active));
+	active = ini->GetBoolValue(section, VAR_NAME(active), active);
 	GuiUtils::StrCopy(name, ini->GetValue(section, VAR_NAME(name), ""), sizeof(name));
-	modelId = ini->GetLongValue(section, VAR_NAME(modelId), 0);
-	mapId = ini->GetLongValue(section, VAR_NAME(mapId), 0);
+	modelId = ini->GetLongValue(section, VAR_NAME(modelId), modelId);
+	mapId = ini->GetLongValue(section, VAR_NAME(mapId), mapId);
 
-	color = Colors::Load(ini, section, VAR_NAME(color), 0xFFF00000);
-	int s = ini->GetLongValue(section, VAR_NAME(shape), 0);
+	color = Colors::Load(ini, section, VAR_NAME(color), color);
+	int s = ini->GetLongValue(section, VAR_NAME(shape), shape);
 	if (s >= 1 && s <= 4) {
 		// this is a small hack because we used to have shape=0 -> default, now we just cast to Shape_e.
 		// but shape=1 on file is still tear (which is Shape_e::Tear == 0).
 		shape = (Shape_e)(s - 1);
-	} else {
-		shape = Tear;
 	}
-	size = (float)ini->GetDoubleValue(section, VAR_NAME(size), 0.0f);
+	size = (float)ini->GetDoubleValue(section, VAR_NAME(size), size);
 
-	color_active = ini->GetBoolValue(section, VAR_NAME(color_active), true);
-	shape_active = ini->GetBoolValue(section, VAR_NAME(shape_active), true);
-	size_active = ini->GetBoolValue(section, VAR_NAME(size_active), true);
+	color_active = ini->GetBoolValue(section, VAR_NAME(color_active), color_active);
+	shape_active = ini->GetBoolValue(section, VAR_NAME(shape_active), shape_active);
+	size_active = ini->GetBoolValue(section, VAR_NAME(size_active), size_active);
 }
 
 AgentRenderer::CustomAgent::CustomAgent(DWORD _modelId, Color _color, const char* _name)

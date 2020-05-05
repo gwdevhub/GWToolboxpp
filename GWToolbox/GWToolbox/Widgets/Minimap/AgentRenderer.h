@@ -62,9 +62,9 @@ private:
 		DWORD mapId = 0; // 0 for 'any map'
 
 		// attributes to change
-		Color color;
-		Shape_e shape;
-		float size = 0;
+		Color color = 0xFFF00000;
+		Shape_e shape = Tear;
+		float size = 0.0f;
 		bool color_active = true;
 		bool shape_active = true;
 		bool size_active = true;
