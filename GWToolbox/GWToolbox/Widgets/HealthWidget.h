@@ -25,7 +25,39 @@ public:
 
     std::wstring agent_name_ping;
 	bool hide_in_outpost = false;
-	Color color_default = 0;
-	Color color_below_ninety = 0;
-	Color color_below_half = 0;
+
+	bool thresholds_changed = false;
+private:
+	class Threshold {
+		private:
+			static unsigned int cur_ui_id;
+		public:
+			enum class Operation {
+				None,
+				MoveUp,
+				MoveDown,
+				Delete,
+			};
+
+			Threshold(CSimpleIni* ini, const char* section);
+			Threshold(const char* _name, int _value);
+
+			bool DrawHeader();
+			bool DrawSettings(Operation& op);
+			void SaveSettings(CSimpleIni* ini, const char* section);
+
+			const unsigned int ui_id = 0;
+			size_t index = 0;
+
+			bool active = true;
+			char name[128] = "";
+			int modelId = 0;
+			int mapId = 0;
+
+			int value = 0;
+			Color color = 0;
+	};
+
+	std::vector<Threshold*> thresholds;
+	CSimpleIni* inifile = nullptr;
 };
