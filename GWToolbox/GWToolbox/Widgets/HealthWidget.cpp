@@ -149,7 +149,8 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
 
 			ImVec2 cur;
 
-			Color color = Colors::ARGB(255, 255, 255, 255);
+			Color color = Colors::RGB(255, 255, 255);
+			Color background = Colors::RGB(0, 0, 0);
 
 			for (size_t i = 0; i < thresholds.size(); ++i) {
 				Threshold* threshold = thresholds[i];
@@ -163,16 +164,16 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
 
 				if (target->hp * 100 < threshold->value) {
 					color = threshold->color;
+					background = threshold->background;
 					break;
 				}
 			}
-
 
 			// 'health'
 			ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f20));
 			cur = ImGui::GetCursorPos();
 			ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
-			ImGui::TextColored(ImColor(0, 0, 0), "Health");
+			ImGui::TextColored(ImColor(background), "Health");
 			ImGui::SetCursorPos(cur);
 			ImGui::TextColored(ImColor(color), "Health");
 			ImGui::PopFont();
@@ -181,7 +182,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f42));
 			cur = ImGui::GetCursorPos();
 			ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
-			ImGui::TextColored(ImColor(0, 0, 0), health_perc);
+			ImGui::TextColored(ImColor(background), health_perc);
 			ImGui::SetCursorPos(cur);
 			ImGui::TextColored(ImColor(color), health_perc);
 			ImGui::PopFont();
@@ -190,7 +191,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f24));
 			cur = ImGui::GetCursorPos();
 			ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
-			ImGui::TextColored(ImColor(0, 0, 0), health_abs);
+			ImGui::TextColored(ImColor(background), health_abs);
 			ImGui::SetCursorPos(cur);
 			ImGui::TextColored(ImColor(color), health_abs);
 			ImGui::PopFont();
@@ -223,6 +224,7 @@ HealthWidget::Threshold::Threshold(CSimpleIni* ini, const char* section) : ui_id
 	mapId = ini->GetLongValue(section, VAR_NAME(mapId), 0);
 	value = ini->GetLongValue(section, VAR_NAME(value), 0);
 	color = Colors::Load(ini, section, VAR_NAME(color), 0xFFFFFFFF);
+	background = Colors::Load(ini, section, VAR_NAME(background), 0xFF000000);
 }
 
 HealthWidget::Threshold::Threshold(const char* _name, int _value) : ui_id(++cur_ui_id) {
@@ -243,6 +245,8 @@ bool HealthWidget::Threshold::DrawHeader() {
 	bool changed = ImGui::Checkbox("##active", &active);
 	ImGui::SameLine();
 	ImGui::ColorButton("", ImColor(color));
+	ImGui::SameLine();
+	ImGui::ColorButton("", ImColor(background));
 	ImGui::SameLine();
 	ImGui::Text("%s (<%d%%) %s", name, value, mapbuf);
 	return changed;
@@ -266,6 +270,8 @@ bool HealthWidget::Threshold::DrawSettings(Operation& op) {
 		ImGui::ShowHelp("Percentage below which this color should be used");
 		if (Colors::DrawSetting("Color", &color)) changed = true;
 		ImGui::ShowHelp("The custom color for this threshold.");
+		if (Colors::DrawSetting("Background", &background)) changed = true;
+		ImGui::ShowHelp("The custom background color for this threshold.");
 
 		float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
 		float width = (ImGui::CalcItemWidth() - spacing * 2) / 3;
@@ -301,4 +307,5 @@ void HealthWidget::Threshold::SaveSettings(CSimpleIni* ini, const char* section)
 
 	ini->SetLongValue(section, VAR_NAME(value), value);
 	Colors::Save(ini, section, VAR_NAME(color), color);
+	Colors::Save(ini, section, VAR_NAME(background), background);
 }

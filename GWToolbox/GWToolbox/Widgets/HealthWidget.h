@@ -55,7 +55,8 @@ private:
 			int mapId = 0;
 
 			int value = 0;
-			Color color = 0;
+			Color color = 255;
+			Color background = 0;
 	};
 
 	std::vector<Threshold*> thresholds;
