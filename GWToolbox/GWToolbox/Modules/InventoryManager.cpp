@@ -155,8 +155,8 @@ void InventoryManager::ContinueSalvage() {
 		CancelSalvage();
 		return;
 	}
-	Item* current_item = static_cast<Item*>(GW::Items::GetItemBySlot(pending_salvage_item.bag, pending_salvage_item.slot + 1));
-	if (current_item && current_item->item_id == pending_salvage_item.item_id && current_salvage_session.salvage_item_id != 0) {
+	Item* current_item = pending_salvage_item.item();
+	if (current_item && current_salvage_session.salvage_item_id != 0) {
 		// Popup dialog for salvage; salvage materials and cycle.
 		ClearSalvageSession(nullptr);
 		GW::CtoS::SendPacket(0x4, GAME_CMSG_ITEM_SALVAGE_MATERIALS);
@@ -166,7 +166,7 @@ void InventoryManager::ContinueSalvage() {
 	}
 	if (pending_salvage_item.item_id)
 		salvaged_count++;
-	if (current_item && current_item->item_id == pending_salvage_item.item_id && current_item->quantity == pending_salvage_item.quantity) {
+	if (current_item && current_item->quantity == pending_salvage_item.quantity) {
 		CancelSalvage();
 		Log::Error("Salvage flagged as complete, but item still exists in slot %d/%d", current_item->bag->index+1, current_item->slot+1);
 		return;
@@ -276,10 +276,12 @@ void InventoryManager::FetchPotentialItems() {
 	Item* found = nullptr;
 	if (salvage_all_type != SalvageAllType::None) {
 		potential_salvage_all_items.clear();
-		while (found = GetNextUnsalvagedItem(context_item, found)) {
+		while (found = GetNextUnsalvagedItem(context_item.item(), found)) {
 			PotentialItem item;
 			GW::UI::AsyncDecodeStr(found->complete_name_enc ? found->complete_name_enc : found->name_enc, &item.name);
 			item.item_id = found->item_id;
+			item.slot = found->slot;
+			item.bag = static_cast<GW::Constants::Bag>(found->bag->index + 1);
 			potential_salvage_all_items.push_back(item);
 		}
 	}
@@ -399,14 +401,12 @@ InventoryManager::Item* InventoryManager::GetSalvageKit(bool only_superior_kits)
 	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
 		end_bag = static_cast<size_t>(GW::Constants::Bag::Storage_14);
 	size_t items_found = 0;
-	Item* item = nullptr;
-	if (context_item && context_item->IsSalvageKit() && context_item->bag) {
-		item = static_cast<Item*>(GW::Items::GetItemBySlot(context_item->bag->index + 1, context_item->slot + 1));
-		if (item && item->IsSalvageKit())
-			return item;
+	Item* item = context_item.item();
+	if (item && item->IsSalvageKit()) {
+		return item;
 	}
 	// NOTE: the following code would normally fetch another kit, but its not a good idea to presume the player wants this to happen for salvage kits.
-	if (!context_item) {
+	if (!context_item.item_id) {
 		// If no context item, this wasn't triggered via a right click - probably /salvage all command. In this case, its ok to find a kit.
 		for (size_t bag_i = start_bag; bag_i <= end_bag; bag_i++) {
 			GW::Bag* bag = GW::Items::GetBag(bag_i);
@@ -434,11 +434,9 @@ InventoryManager::Item* InventoryManager::GetIdentificationKit() {
 	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
 		end_bag = static_cast<size_t>(GW::Constants::Bag::Storage_14);
 	size_t items_found = 0;
-	Item* item = nullptr;
-	if (context_item && context_item->IsIdentificationKit() && context_item->bag) {
-		item = static_cast<Item*>(GW::Items::GetItemBySlot(context_item->bag->index + 1, context_item->slot + 1));
-		if (item && item->IsIdentificationKit())
-			return item;
+	Item* item = context_item.item();
+	if (item && item->IsIdentificationKit()) {
+		return item;
 	}
 	
 	for (size_t bag_i = start_bag; bag_i <= end_bag; bag_i++) {
@@ -516,11 +514,11 @@ bool InventoryManager::IsSameItem(GW::Item* item1, GW::Item* item2) {
 bool InventoryManager::IsPendingIdentify() {
 	if (!pending_identify_kit.item_id || !pending_identify_item.item_id)
 		return false;
-	Item* current_kit = static_cast<Item*>(GW::Items::GetItemBySlot(pending_identify_kit.bag, pending_identify_kit.slot + 1));
-	if (current_kit && current_kit->item_id == pending_identify_kit.item_id && current_kit->GetUses() == pending_identify_kit.uses)
+	Item* current_kit = pending_identify_kit.item();
+	if (current_kit && current_kit->GetUses() == pending_identify_kit.uses)
 		return true;
-	Item* current_item = static_cast<Item*>(GW::Items::GetItemBySlot(pending_identify_item.bag, pending_identify_item.slot + 1));
-	if (current_item && current_item->item_id == pending_identify_item.item_id && !current_item->GetIsIdentified())
+	Item* current_item = pending_identify_item.item();
+	if (current_item && !current_item->GetIsIdentified())
 		return true;
 	return false;
 }
@@ -529,11 +527,11 @@ bool InventoryManager::IsPendingSalvage() {
 		return false;
 	if (current_salvage_session.salvage_item_id)
 		return false;
-	Item* current_kit = static_cast<Item*>(GW::Items::GetItemBySlot(pending_salvage_kit.bag, pending_salvage_kit.slot + 1));
-	if (current_kit && current_kit->item_id == pending_salvage_kit.item_id && current_kit->GetUses() == pending_salvage_kit.uses)
+	Item* current_kit = pending_salvage_kit.item();
+	if (current_kit && current_kit->GetUses() == pending_salvage_kit.uses)
 		return true;
-	Item* current_item = static_cast<Item*>(GW::Items::GetItemBySlot(pending_salvage_item.bag, pending_salvage_item.slot + 1));
-	if (current_item && current_item->item_id == pending_salvage_item.item_id && current_item->quantity == pending_salvage_item.quantity)
+	Item* current_item = pending_salvage_item.item();
+	if (current_item && current_item->quantity == pending_salvage_item.quantity)
 		return true;
 	return false;
 }
@@ -601,15 +599,17 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
 		ImVec2 size = ImVec2(250.0f * ImGui::GetIO().FontGlobalScale,0);
 		ImGui::Text(context_item_name_s.c_str());
 		ImGui::Separator();
-		if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && ImGui::Button("Store Item", size)) {
+		// Shouldn't really fetch item() every frame, but its only when the menu is open and better than risking a crash
+		Item* context_item_actual = context_item.item(); 
+		if (context_item_actual && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && ImGui::Button("Store Item", size)) {
 			GW::HookStatus st = { 0 };
 			ImGui::GetIO().KeysDown[VK_CONTROL] = true;
 			is_manual_item_click = true;
-			GameSettings::ItemClickCallback(&st, 7, context_item->slot, context_item->bag);
+			GameSettings::ItemClickCallback(&st, 7, context_item_actual->slot, context_item_actual->bag);
 			is_manual_item_click = false;
 			ImGui::CloseCurrentPopup();
 		}
-		if (context_item->IsIdentificationKit()) {
+		if (context_item_actual && context_item_actual->IsIdentificationKit()) {
 			IdentifyAllType type = IdentifyAllType::None;
 			if(ImGui::Button("Identify All Items", size))
 				type = IdentifyAllType::All;
@@ -630,7 +630,7 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
 				IdentifyAll(type);
 			}
 		}
-		else if (context_item->IsSalvageKit()) {
+		else if (context_item_actual && context_item_actual->IsSalvageKit()) {
 			SalvageAllType type = SalvageAllType::None;
 			if (ImGui::Button("Salvage All White Items", size))
 				type = SalvageAllType::White;
@@ -742,9 +742,11 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, uint32_t type, 
 		return;
 	if (!item->bag || !item->bag->IsInventoryBag())
 		return;
-	if (im->context_item == item && im->show_item_context_menu)
+	if (im->context_item.item_id == item->item_id && im->show_item_context_menu)
 		return; // Double looped.
-	im->context_item = item;
+	im->context_item.item_id = item->item_id;
+	im->context_item.slot = item->slot;
+	im->context_item.bag = static_cast<GW::Constants::Bag>(item->bag->index + 1);
 	im->show_item_context_menu = true;
 	im->context_item_name_ws.clear();
 	im->context_item_name_s.clear();

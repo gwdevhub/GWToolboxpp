@@ -129,7 +129,7 @@ private:
 		pending_salvage_kit.item_id = 0;
 		salvage_all_type = SalvageAllType::None;
 		salvaged_count = 0;
-		context_item = nullptr;
+		context_item.item_id = 0;
 	}
 	void CancelIdentify() {
 		is_identifying = is_identifying_all = false;
@@ -137,7 +137,7 @@ private:
 		pending_identify_kit.item_id = 0;
 		identify_all_type = IdentifyAllType::None;
 		identified_count = 0;
-		context_item = nullptr;
+		context_item.item_id = 0;
 	}
 	inline void CancelAll() {
 		CancelSalvage();
@@ -384,20 +384,21 @@ public:
 private:
 	struct PendingItem {
 		uint32_t item_id = 0;
-		GW::Constants::Bag bag = GW::Constants::Bag::None;
 		uint32_t slot = 0;
+		GW::Constants::Bag bag = GW::Constants::Bag::None;
 		uint32_t uses = 0;
 		uint32_t quantity = 0;
+		Item* item() {
+			if (!item_id) return nullptr;
+			Item* item = static_cast<Item*>(GW::Items::GetItemBySlot(bag, slot + 1));
+			return item && item->item_id == item_id ? item : nullptr;
+		}
 	};
-	struct PotentialItem {
+	struct PotentialItem : PendingItem {
 		std::wstring name;
 		std::string name_s;
 		bool proceed = true;
 		bool sanitised = false;
-		uint32_t item_id = 0;
-		Item* item() {
-			return static_cast<Item*>(GW::Items::GetItemById(item_id));
-		}
 	};
 	std::vector<PotentialItem> potential_salvage_all_items; // List of items that would be processed if user confirms Salvage All
 	PendingItem pending_identify_item;
@@ -406,7 +407,7 @@ private:
 	PendingItem pending_salvage_kit;
 	clock_t pending_salvage_at = 0;
 	clock_t pending_identify_at = 0;
-	Item* context_item = nullptr;
+	PendingItem context_item;
 	std::wstring context_item_name_ws;
 	std::string context_item_name_s;
 };
