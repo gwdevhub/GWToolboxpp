@@ -83,6 +83,7 @@ public:
 	void hook_irc_command(const char* cmd_name, int (*function_ptr)(const char*, irc_reply_data*, void*));
 	int message_loop();
     int message_fetch();
+	int ping();
 	int is_op(char* channel, char* nick);
 	int is_voice(char* channel, char* nick);
 	char* current_nick();
@@ -104,6 +105,8 @@ private:
 	bool sentnick;
 	bool sentpass;
 	bool sentuser;
+	clock_t ping_sent = 0;
+	clock_t pong_recieved = 0;
 	char* cur_nick;
 	FILE* dataout;
 	FILE* datain;

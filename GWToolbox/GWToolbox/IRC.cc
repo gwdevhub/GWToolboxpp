@@ -201,6 +201,25 @@ int IRC::message_fetch() {
     split_to_replies(message_buffer);
     return 0;
 }
+int IRC::ping() {
+	if (!connected) return 1;
+	if (pong_recieved > ping_sent)
+		ping_sent = 0;
+	const clock_t timeout = 60 * CLOCKS_PER_SEC;
+	clock_t now = clock();
+	if (!ping_sent && (!pong_recieved || now - pong_recieved > timeout)) {
+		raw("PING\r\n");
+		ping_sent = now;
+		return 0;
+	}
+	if (ping_sent && now - ping_sent > timeout) {
+		printf("IRC::ping failed to get pong response after timeout; graceful close?\n");
+		connected = false;
+		closesocket(irc_socket);
+		return 1;
+	}
+	return 0;
+}
 bool IRC::is_connected() {
 	return connected;
 }
@@ -701,6 +720,11 @@ void IRC::parse_irc_reply(char* data)
 			#ifdef __IRC_DEBUG__
 			printf("Ping received, pong sent.\n");
 			#endif
+			fflush(dataout);
+		}
+		else if (!strcmp(cmd, "PONG"))
+		{
+			pong_recieved = clock();
 			fflush(dataout);
 		}
 		else

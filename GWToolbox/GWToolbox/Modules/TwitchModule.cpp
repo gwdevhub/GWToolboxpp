@@ -226,6 +226,8 @@ void TwitchModule::Update(float delta) {
 		Connect();
 		pending_connect = pending_disconnect = false;
 	}
+	if (connected)
+		conn.ping();
 }
 void TwitchModule::DrawSettingInternal() {
 	bool edited = false;
