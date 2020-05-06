@@ -462,7 +462,7 @@ std::pair<GW::Bag*, uint32_t> InventoryManager::GetAvailableInventorySlot(GW::It
 	if (!bags) return { nullptr,0 };
 	size_t end_bag = static_cast<size_t>(GW::Constants::Bag::Bag_2);
 	Item* im_item = static_cast<Item*>(like_item);
-	if(im_item && im_item->IsWeapon() || im_item->IsArmor())
+	if(im_item && (im_item->IsWeapon() || im_item->IsArmor()))
 		end_bag = static_cast<size_t>(GW::Constants::Bag::Equipment_Pack);
 	for (size_t bag_idx = static_cast<size_t>(GW::Constants::Bag::Backpack); bag_idx <= end_bag; bag_idx++) {
 		GW::Bag* bag = bags[bag_idx];

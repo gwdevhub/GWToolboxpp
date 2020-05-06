@@ -156,6 +156,8 @@ void InfoWindow::DrawItemInfo(GW::Item* item, ForDecode* name) {
 		if (item) {
 			ImGui::LabelText("Addr", "%p", item);
 			ImGui::LabelText("Id", "%d", item->item_id);
+			ImGui::LabelText("Type", "%d", item->type);
+			ImGui::LabelText("Interaction", "0x%X", item->interaction);
 			ImGui::LabelText("model_file_id", "0x%X", item->model_file_id);
 			if (item->name_enc) {
 				size_t offset = 0;

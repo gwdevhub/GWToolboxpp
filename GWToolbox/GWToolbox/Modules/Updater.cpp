@@ -26,6 +26,11 @@ void Updater::SaveSettings(CSimpleIni* ini) {
 #endif
 	ini->SetLongValue(Name(), "update_mode", mode);
 	ini->SetValue(Name(), "dllversion", GWTOOLBOX_VERSION);
+
+	HMODULE module = GWToolbox::GetDLLModule();
+	CHAR* dllfile = new CHAR[MAX_PATH];
+	DWORD size = GetModuleFileName(module, dllfile, MAX_PATH);
+	ini->SetValue(Name(), "dllpath", size > 0 ? dllfile : "error");
 }
 
 void Updater::Initialize() {

@@ -329,7 +329,7 @@ public:
 				return false;
 			switch (static_cast<GW::Constants::ItemType>(type)) {
 			case GW::Constants::ItemType::Trophy:
-				return GetRarity() == GW::Constants::Rarity::White && info_string;
+				return GetRarity() == GW::Constants::Rarity::White && info_string && interaction & 0x400;
 			case GW::Constants::ItemType::Salvage:
 			case GW::Constants::ItemType::CC_Shards:
 				return true;
