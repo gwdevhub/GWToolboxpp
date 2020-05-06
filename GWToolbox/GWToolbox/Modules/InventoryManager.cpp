@@ -94,10 +94,6 @@ void InventoryManager::AttachSalvageListeners() {
 		ClearSalvageSession(status);
 		GW::CtoS::SendPacket(0x4, GAME_CMSG_ITEM_SALVAGE_SESSION_DONE);
 		});
-	/*GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ItemGeneral>(&salvage_hook_entry, [this](GW::HookStatus* status,GW::Packet::StoC::ItemGeneral* packet) {
-		if (packet->item_id == pending_salvage_item.item_id && !current_salvage_session.salvage_item_id)
-			status->blocked = true;
-		});*/
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SalvageSession>(&salvage_hook_entry, [this](GW::HookStatus* status, GW::Packet::StoC::SalvageSession* packet) {
 		current_salvage_session = *packet;
 		status->blocked = true;
@@ -112,7 +108,6 @@ void InventoryManager::DetachSalvageListeners() {
 	GW::StoC::RemoveCallback(GW::Packet::StoC::SalvageSession::STATIC_HEADER, &salvage_hook_entry);
 	GW::StoC::RemoveCallback(GW::Packet::StoC::SalvageSessionItemKept::STATIC_HEADER, &salvage_hook_entry);
 	GW::StoC::RemoveCallback(GW::Packet::StoC::SalvageSessionSuccess::STATIC_HEADER, &salvage_hook_entry);
-	//GW::StoC::RemoveCallback(GW::Packet::StoC::ItemGeneral::STATIC_HEADER, &salvage_hook_entry);
 	salvage_listeners_attached = false;
 }
 void InventoryManager::IdentifyAll(IdentifyAllType type) {
@@ -202,6 +197,12 @@ void InventoryManager::SalvageAll(SalvageAllType type) {
 	if (!potential_salvage_all_items.size()) {
 		Log::Info("Salvaged %d items", salvaged_count);
 		CancelSalvage();
+		return;
+	}
+	std::pair<GW::Bag*, uint32_t> available_slot = GetAvailableInventorySlot();
+	if (!available_slot.first) {
+		CancelSalvage();
+		Log::Warning("No more space in inventory");
 		return;
 	}
 	auto ref = *potential_salvage_all_items.begin();
@@ -461,7 +462,7 @@ std::pair<GW::Bag*, uint32_t> InventoryManager::GetAvailableInventorySlot(GW::It
 	if (!bags) return { nullptr,0 };
 	size_t end_bag = static_cast<size_t>(GW::Constants::Bag::Bag_2);
 	Item* im_item = static_cast<Item*>(like_item);
-	if(im_item->IsWeapon() || im_item->IsArmor())
+	if(im_item && im_item->IsWeapon() || im_item->IsArmor())
 		end_bag = static_cast<size_t>(GW::Constants::Bag::Equipment_Pack);
 	for (size_t bag_idx = static_cast<size_t>(GW::Constants::Bag::Backpack); bag_idx <= end_bag; bag_idx++) {
 		GW::Bag* bag = bags[bag_idx];
