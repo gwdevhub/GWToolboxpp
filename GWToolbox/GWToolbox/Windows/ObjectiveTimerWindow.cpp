@@ -629,10 +629,10 @@ void ObjectiveTimerWindow::SaveSettings(CSimpleIni* ini) {
 void ObjectiveTimerWindow::LoadRuns() {
     if (!save_to_disk) return;
     //ClearObjectiveSets();
-    
+    Resources::EnsureFolderExists(Resources::GetPath(L"runs"));
     WIN32_FIND_DATAW FindFileData;
     size_t max_objectives_in_memory = 200;
-    std::wstring file_match = Resources::GetPath(L"ObjectiveTimerRuns_*.json");
+    std::wstring file_match = Resources::GetPath(L"runs", L"ObjectiveTimerRuns_*.json");
     std::wstring filename;
     std::set<std::wstring> obj_timer_files;
     HANDLE hFind = FindFirstFileW(file_match.c_str(), &FindFileData);
@@ -648,7 +648,7 @@ void ObjectiveTimerWindow::LoadRuns() {
     for (auto it = obj_timer_files.rbegin(); it != obj_timer_files.rend() && objective_sets.size() < max_objectives_in_memory; it++) {
         try {
             std::ifstream file;
-            std::wstring fn = Resources::GetPath(*it);
+            std::wstring fn = Resources::GetPath(L"runs", *it);
             file.open(fn);
             if (file.is_open()) {
                 nlohmann::json os_json_arr;
@@ -673,6 +673,7 @@ void ObjectiveTimerWindow::LoadRuns() {
 void ObjectiveTimerWindow::SaveRuns() {
     if (!save_to_disk || objective_sets.empty())
         return;
+    Resources::EnsureFolderExists(Resources::GetPath(L"runs"));
     std::map<std::wstring, std::vector<ObjectiveSet*>> objective_sets_by_file;
     wchar_t filename[36];
     struct tm* structtime;
@@ -690,7 +691,7 @@ void ObjectiveTimerWindow::SaveRuns() {
     for (auto it : objective_sets_by_file) {
         try {
             std::ofstream file;
-            file.open(Resources::GetPath(it.first));
+            file.open(Resources::GetPath(L"runs",it.first));
             if (file.is_open()) {
                 nlohmann::json os_json_arr;
                 for (auto os : it.second) {
