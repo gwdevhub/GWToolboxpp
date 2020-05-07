@@ -7,6 +7,37 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
+## Version 3.2
+* [New] Added DirectX distributable check inside GWToolbox at runtime; will now display a message with a link to the DirectX download page instead of just not launching at all.
+* [New] Added option to hide bond monitor in outpost (default showing)
+* [New] Added option to save objective timer runs to disk (default save)
+* [New] Added option to hide date/time of objective timer runs (default hidden)
+* [New] Added option to hide runs from previous days (default hidden)
+* [Fix] Re-added in-game option to manually check for updates
+* [Fix] Fixed `auto age2 on /age` setting being the same as `auto /age2 on vanquish` setting
+* [Fix] Fixed bug causing salvage all process to only salvage the first item in a stack
+* [Fix] Fixed bug causing identify blue/purple/gold to identify other rarities
+* [Fix] Fixed bug causing salvage all crash when inventory is full
+* [Fix] Fixed bug causing salvage all to identify unsalvagable trophies as salvagable
+* [Fix] Fixed potential crash when displaying the "Salvage all?" dialog
+* [Fix] Fixed crash when adding a new custom minimap agent whilst the matching NPC is within range.
+* [Fix] Fixed IRC timeout after 3 minutes when connected to Twitch
+* [Minor] Don't maintain Trade Chat websocket connection when the window is collapsed
+* [Minor] Objective timer runs now save to `%localappdata%/GWToolboxpp/runs` to avoid cluttering the main folder
+* [Minor] Added option to only use superior salvage kits when using `/salvage` command
+* [Minor] Added on-hover item descriptions to "Salvage all?" dialog
+* [Minor] Removed extra new line when `/tp` error message is displayed in chat
+* [Minor] Fixed a display bug in minimap aor effect colors showing as RGBA instead of ARGB
+* [Minor] Don't print target hotkey to emote chat by default
+* [Minor] Removed option to swap functionality of Ctrl + Click on minimap; caused issues when shift was held
+* [Minor] Disable Pcons on map change set to off by default
+* [Minor] Pcon refillers hidden by default
+* [Minor] Added option to hide city pcons in explorable areas (default visible)
+* [Minor] Removed DoA snakes from default party window NPCs
+
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/3.2_Release/GWToolbox.dll)
+
 ## Version 3.1
 * [Fix] Fix bug where the launcher would ask everytime to download the toolbox.
 
