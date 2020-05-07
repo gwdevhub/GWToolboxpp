@@ -26,7 +26,8 @@ If you leave a template code blank, it will simply appear as a message, instead 
 
 ## Chat Commands
 `/load [build template|build name] [Hero index]` loads a build. The build name must be between quotes if it contains spaces. First Hero index is 1, last is 7. Leave out for player.
+
 `/loadbuild [teambuild] <build name|build code>` loads a build via GWToolbox Builds window. Does a partial search on team build name/build name/build code. Matches current player's profession.
-* Example: `/loadbuild fbgm tk` would load the build called "Me/A | Tendril Killer (TK)" from the teambuild called "DoA | FBGM Tactics" onto your player if you're a Mesmer
+* Example: `/loadbuild fbgm tk` would load the build called `Me/A | Tendril Killer (TK)` from the teambuild called `DoA | FBGM Tactics` onto your player if you're a Mesmer
 
 [back](./)
