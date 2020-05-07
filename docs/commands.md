@@ -25,11 +25,11 @@ Toolbox supports a variety of chat commands; you can use them by typing in chat 
 
 `/chest` or `/xunlai` to open Xunlai Chest in a city or outpost.
 
-`/dialog [id]` will send a dialog; use an integer or hex number instead of `[id]`.
+`/dialog [id]` will send a dialog; hex number instead of `[id]`, e.g. `/dialog 0x99`.
 
-`/dmg [arg]` or `/damage [arg]` controls the party damage monitor. See [damage_monitor#chat-commands](Damage Monitor) for all options.
+`/dmg [arg]` or `/damage [arg]` controls the party damage monitor. See [Damage Monitor](damage_monitor#chat-commands) for all options.
 
-`/flag` is used to flag heros on the GWToolbox minimap. See [minimap#chat-commands](Minimap) for all options.
+`/flag` is used to flag heros on the GWToolbox minimap. See [Minimap](minimap#chat-commands) for all options.
 
 `/pcons [on|off]` to turn [pcons](pcons) on/off. Using `/pcons` will toggle.
 
