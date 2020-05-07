@@ -133,6 +133,7 @@ private:
 		salvage_all_type = SalvageAllType::None;
 		salvaged_count = 0;
 		context_item.item_id = 0;
+		pending_cancel_salvage = false;
 	}
 	void CancelIdentify() {
 		is_identifying = is_identifying_all = false;
@@ -329,7 +330,7 @@ public:
 				return false;
 			switch (static_cast<GW::Constants::ItemType>(type)) {
 			case GW::Constants::ItemType::Trophy:
-				return GetRarity() == GW::Constants::Rarity::White && info_string && interaction & 0x400;
+				return GetRarity() == GW::Constants::Rarity::White && info_string && interaction & 0x40;
 			case GW::Constants::ItemType::Salvage:
 			case GW::Constants::ItemType::CC_Shards:
 				return true;
@@ -422,4 +423,5 @@ private:
 	PendingItem context_item;
 	std::wstring context_item_name_ws;
 	std::string context_item_name_s;
+	bool pending_cancel_salvage = false;
 };

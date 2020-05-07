@@ -48,6 +48,8 @@ void InventoryManager::LoadSettings(CSimpleIni* ini) {
 }
 void InventoryManager::CmdSalvage(const wchar_t* message, int argc, LPWSTR* argv) {
 	auto im = &Instance();
+	if (im->is_salvaging_all || im->is_salvaging)
+		return;
 	im->CancelSalvage();
 	const wchar_t* arg2 = argc > 1 ? argv[1] : L"";
 	if (wcscmp(arg2, L"blue") == 0) {
@@ -166,6 +168,10 @@ void InventoryManager::ContinueSalvage() {
 		Log::Error("Salvage flagged as complete, but item still exists in slot %d/%d", current_item->bag->index+1, current_item->slot+1);
 		return;
 	}
+	if (pending_cancel_salvage) {
+		CancelSalvage();
+		return;
+	}
 	if (is_salvaging_all)
 		SalvageAll(salvage_all_type);
 }
@@ -188,6 +194,10 @@ void InventoryManager::SalvageAll(SalvageAllType type) {
 	}
 	if (!is_salvaging_all || is_salvaging)
 		return;
+	if (pending_cancel_salvage) {
+		CancelSalvage();
+		return;
+	}
 	Item* kit = GetSalvageKit(only_use_superior_salvage_kits);
 	if (!kit) {
 		CancelSalvage();
@@ -217,6 +227,7 @@ void InventoryManager::SalvageAll(SalvageAllType type) {
 		potential_salvage_all_items.erase(potential_salvage_all_items.begin());
 		return; // Item has moved or been consumed since prompt.
 	}
+
 	Salvage(item, kit);
 }
 void InventoryManager::Initialize() {
@@ -665,7 +676,7 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
 			// Salvage in progress
 			ImGui::Text("Salvaging items...");
 			if (ImGui::Button("Cancel", ImVec2(120, 0))) {
-				CancelSalvage();
+				pending_cancel_salvage = true;
 				ImGui::CloseCurrentPopup();
 			}
 		}
