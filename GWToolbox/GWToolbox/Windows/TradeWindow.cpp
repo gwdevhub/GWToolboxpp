@@ -113,7 +113,7 @@ void TradeWindow::Update(float delta) {
 		ws_window->poll();
 	}
 	bool search_pending = !pending_query_string.empty();
-	bool maintain_socket = visible || print_game_chat || search_pending;
+	bool maintain_socket = (visible && !collapsed) || print_game_chat || search_pending;
 	if (maintain_socket && !ws_window) {
 		AsyncWindowConnect();
 	}
@@ -274,7 +274,8 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 	// if (!trade_searcher->is_active() && !trade_searcher->is_timed_out()) trade_searcher->search("");
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(700, 400), ImGuiSetCond_FirstUseEver);
-	if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
+	collapsed = !ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags());
+	if (!collapsed) {
 		/* Search bar header */
 		ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 80.0f - 80.0f - 80.0f - ImGui::GetStyle().ItemInnerSpacing.x * 6));
 		ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;

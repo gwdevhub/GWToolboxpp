@@ -45,6 +45,9 @@ private:
 
 	bool show_alert_window = false;
 
+	// Window could be visible but collapsed - use this var to check it.
+	bool collapsed = false;
+
 	// if we need to print in the chat
 	bool print_game_chat = false;
 
