@@ -41,4 +41,12 @@ In summary, the Toolbox damage monitor has the following limitations:
  
 In case you want to check the actual code, you can see it here: https://github.com/HasKha/GWToolboxpp/blob/master/GWToolbox/GWToolbox/Widgets/PartyDamage.cpp#L110
 
+## Chat Commands
+
+`/dmg [arg]` or `/damage [arg]` controls the party damage monitor:
+* `/dmg` or `/dmg report` to print the full results in party chat.
+* `/dmg me` to print your own damage in party chat.
+* `/dmg [number]` to print a particular party member's damage in party chat.
+* `/dmg reset` to reset the monitor.
+
 [back](./)

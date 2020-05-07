@@ -305,7 +305,7 @@ public:
         GW::Constants::MapID::Sifhalla_outpost,
         GW::Constants::MapID::Olafstead_outpost,
         GW::Constants::MapID::Umbral_Grotto_outpost,
-        GW::Constants::MapID::Vloxs_Falls
+        GW::Constants::MapID::Gadds_Encampment_outpost
     };
     const char* searchable_dungeon_names[11]{
         "catacombs of kathandrax",

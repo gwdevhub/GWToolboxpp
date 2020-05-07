@@ -35,7 +35,6 @@ Previous releases are provided as dll files. In order to use it, you need to use
 * [Minor] Added option to hide city pcons in explorable areas (default visible)
 * [Minor] Removed DoA snakes from default party window NPCs
 
-
 [Download](https://github.com/HasKha/GWToolboxpp/releases/download/3.2_Release/GWToolbox.dll)
 
 ## Version 3.1
