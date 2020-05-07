@@ -50,7 +50,7 @@ Toolbox supports a variety of chat commands; you can use them by typing in chat 
 
 `/resize [x] [y]` sets the size of the Guild Wars window if the resolution is set to Window.
 
-`/to [dest]`, `/tp [dest]`, or `/travel [dest]` will map travel you to the `[dest]` outpost. See [travel#chat-commands](Travel) for all options.
+`/to [dest]`, `/tp [dest]`, or `/travel [dest]` will map travel you to the `[dest]` outpost. See [Travel](travel#chat-commands) for all options.
 
 `/useskill [slot]` will use the selected skill on recharge; for example, `/useskill 1` will use your first skill. Use `/useskill`, `/useskill 0`, or `/useskill stop` to stop.
 
@@ -65,7 +65,7 @@ Toolbox supports a variety of chat commands; you can use them by typing in chat 
 `/transmoparty <npc_name> [size (6-255)]` to change your party's appearance into an NPC. This is only visible to you.
 * `/transmoparty reset` to reset your party's appearance.
 
-`/load` and `/loadbuild` is used to load builds onto your player, or your heros. See [builds#chat-commands](Builds) for all options.
+`/load` and `/loadbuild` is used to load builds onto your player, or your heros. See [Builds](builds#chat-commands) for all options.
 
 `/pingitem <equipped_item>` to ping your equipment in chat.
 * `<equipped_item>` options: armor, head, chest, legs, boots, gloves, offhand, weapon, weapons, costume
