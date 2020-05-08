@@ -1113,8 +1113,8 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::Checkbox("Automatically change urls into build templates.", &auto_url);
 	ImGui::ShowHelp("When you write a message starting with 'http://' or 'https://', it will be converted in template format");
 
-	ImGui::Checkbox("Tick is a toggle", &tick_is_toggle);
-	ImGui::ShowHelp("Ticking in party window will work as a toggle instead of opening the menu");
+	//ImGui::Checkbox("Tick is a toggle", &tick_is_toggle);
+	//ImGui::ShowHelp("Ticking in party window will work as a toggle instead of opening the menu");
 
 	ImGui::Checkbox("Move items from/to storage with Control+Click", &move_item_on_ctrl_click);
 	ImGui::Indent();

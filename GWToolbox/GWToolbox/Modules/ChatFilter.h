@@ -71,11 +71,11 @@ private:
 
 
 	// Error messages on-screen
-	bool invalid_target = true; // Includes other error messages, see ChatFilter.cpp.
-	bool opening_chest_messages = true;
+	bool invalid_target = false; // Includes other error messages, see ChatFilter.cpp.
+	bool opening_chest_messages = false;
 	bool inventory_is_full = false;
-	bool item_cannot_be_used = true; // Includes other error messages, see ChatFilter.cpp.
-	bool not_enough_energy = true; // Includes other error messages, see ChatFilter.cpp.
+	bool item_cannot_be_used = false; // Includes other error messages, see ChatFilter.cpp.
+	bool not_enough_energy = false; // Includes other error messages, see ChatFilter.cpp.
     bool item_already_identified = false;
 
 	bool messagebycontent = false;

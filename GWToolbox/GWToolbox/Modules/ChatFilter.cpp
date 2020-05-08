@@ -115,6 +115,7 @@ void ChatFilter::LoadSettings(CSimpleIni* ini) {
 	invalid_target = ini->GetBoolValue(Name(), VAR_NAME(invalid_target), invalid_target);
     opening_chest_messages = ini->GetBoolValue(Name(), VAR_NAME(opening_chest_messages), opening_chest_messages);
 	inventory_is_full = ini->GetBoolValue(Name(), VAR_NAME(inventory_is_full), inventory_is_full);
+	not_enough_energy = ini->GetBoolValue(Name(), VAR_NAME(not_enough_energy), not_enough_energy);
 	item_cannot_be_used = ini->GetBoolValue(Name(), VAR_NAME(item_cannot_be_used), item_cannot_be_used);
     item_already_identified = ini->GetBoolValue(Name(), VAR_NAME(item_already_identified), item_already_identified);
 	faction_gain = ini->GetBoolValue(Name(), VAR_NAME(faction_gain), faction_gain);
@@ -182,6 +183,7 @@ void ChatFilter::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(player_has_achieved_title), player_has_achieved_title);
 	ini->SetBoolValue(Name(), VAR_NAME(invalid_target), invalid_target);
 	ini->SetBoolValue(Name(), VAR_NAME(opening_chest_messages), opening_chest_messages);
+	ini->SetBoolValue(Name(), VAR_NAME(not_enough_energy), not_enough_energy);
 	ini->SetBoolValue(Name(), VAR_NAME(inventory_is_full), inventory_is_full);
 	ini->SetBoolValue(Name(), VAR_NAME(item_cannot_be_used), item_cannot_be_used);
     ini->SetBoolValue(Name(), VAR_NAME(item_already_identified), item_already_identified);
@@ -588,17 +590,18 @@ void ChatFilter::DrawSettingInternal() {
 'The chest is locked. You must have the correct key or a lockpick.'\n\
 'The chest is empty.'");
     ImGui::Checkbox("Item already identified", &item_already_identified);
+	ImGui::SameLine(half_width); ImGui::Checkbox("Not enough Adrenaline/Energy", &not_enough_energy);
 
 	ImGui::Separator();
 	ImGui::Text("Others");
 	ImGui::Checkbox("Earning skill points", &skill_points);
-	ImGui::Checkbox("PvP messages", &pvp_messages);
+	ImGui::SameLine(half_width); ImGui::Checkbox("PvP messages", &pvp_messages);
 	ImGui::ShowHelp("Such as 'A skill was updated for pvp!'");
 	ImGui::Checkbox("9 Rings messages", &ninerings);
-	ImGui::Checkbox("Lunar fortunes messages", &lunars);
+	ImGui::SameLine(half_width); ImGui::Checkbox("Lunar fortunes messages", &lunars);
 	ImGui::Checkbox("Challenge mission messages", &challenge_mission_messages);
 	ImGui::ShowHelp("Such as 'Hold-out bonus: +2 points'");
-	ImGui::Checkbox("'No one hears you...'", &noonehearsyou);
+	ImGui::SameLine(half_width); ImGui::Checkbox("'No one hears you...'", &noonehearsyou);
 	ImGui::Checkbox("'Player x might not reply because his/her status is set to away'", &away);
 
 	ImGui::Separator();
