@@ -522,12 +522,11 @@ void ObjectiveTimerWindow::HandleMapChange(GW::Constants::MapID map_id, bool sta
             return;
         default:
             auto dungeonLevel = dungeonLevels.find(map_id);
-            if (dungeonLevel == dungeonLevels.end()) {
+            if (dungeonLevel == dungeonLevels.end() || dungeonLevel->second == 1) {
                 if (current_objective_set) {
                     current_objective_set->StopObjectives();
                 }
                 current_objective_set = nullptr;
-                return;
             };
             if (start && !current_objective_set) {
                 AddDungeonObjectiveSet(map_id);
