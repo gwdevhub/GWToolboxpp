@@ -483,7 +483,7 @@ void ObjectiveTimerWindow::HandleMapChange(GW::Constants::MapID map_id, bool sta
         case GW::Constants::MapID::Shards_of_Orr_Level_1:
         case GW::Constants::MapID::Oolas_Lab_Level_1:
         case GW::Constants::MapID::Arachnis_Haunt_Level_1:
-        case GW::Constants::MapID::Slavers_Exile_Level_1:
+        case GW::Constants::MapID::Slavers_Exile_Level_5:
         case GW::Constants::MapID::Fronis_Irontoes_Lair_mission:
         case GW::Constants::MapID::Secret_Lair_of_the_Snowmen:
         case GW::Constants::MapID::Heart_of_the_Shiverpeaks_Level_1:
@@ -576,11 +576,14 @@ void ObjectiveTimerWindow::AddDungeonObjectiveSet(GW::Constants::MapID map_id) {
             break;
     }
 
-    if (!os->objectives.empty()) {
-        ::AsyncGetMapName(os->name, sizeof(os->name));
-        os->objectives.front().SetStarted();
-        AddObjectiveSet(os);
+    if (os->objectives.empty()) {
+        delete os;
+        return;
     }
+
+    ::AsyncGetMapName(os->name, sizeof(os->name));
+    os->objectives.front().SetStarted();
+    AddObjectiveSet(os);
 }
 
 void ObjectiveTimerWindow::AddObjectiveSet(ObjectiveSet* os) {
