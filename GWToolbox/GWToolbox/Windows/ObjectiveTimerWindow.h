@@ -131,7 +131,6 @@ private:
     void AddFoWObjectiveSet();
     void AddUWObjectiveSet();
     void AddDungeonObjectiveSet(GW::Constants::MapID map_id);
-    bool UpdateDungeonObjectiveSet(GW::Constants::MapID map_id);
     void AddObjectiveSet(ObjectiveSet* os);
     void HandleMapChange(GW::Constants::MapID map_id, bool start);
 	void DoorOpened(uint32_t door_id);

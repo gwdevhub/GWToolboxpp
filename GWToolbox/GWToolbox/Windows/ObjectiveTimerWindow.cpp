@@ -85,6 +85,59 @@ namespace {
 		L"\x533C\xDD33\xA330\x4E27", // Room 14 "I will fill your hearts with visions of horror and despair that will haunt you for all of your days."
 		L"\x533D\x9EB1\x8BEE\x2637"	 // Kanaxai "What gives you the right to enter my lair? I shall kill you for your audacity, after I destroy your mind with my horrifying visions, of course."
 	};
+
+    const std::map<GW::Constants::MapID, uint32_t> dungeonLevels = {
+        {GW::Constants::MapID::Catacombs_of_Kathandrax_Level_1, 1},
+        {GW::Constants::MapID::Catacombs_of_Kathandrax_Level_2, 2},
+        {GW::Constants::MapID::Catacombs_of_Kathandrax_Level_3, 3},
+        {GW::Constants::MapID::Rragars_Menagerie_Level_1, 1},
+        {GW::Constants::MapID::Rragars_Menagerie_Level_2, 2},
+        {GW::Constants::MapID::Rragars_Menagerie_Level_3, 3},
+        {GW::Constants::MapID::Cathedral_of_Flames_Level_1, 1},
+        {GW::Constants::MapID::Cathedral_of_Flames_Level_2, 2},
+        {GW::Constants::MapID::Cathedral_of_Flames_Level_3, 3},
+        {GW::Constants::MapID::Ooze_Pit, 1},
+        {GW::Constants::MapID::Darkrime_Delves_Level_1, 1},
+        {GW::Constants::MapID::Darkrime_Delves_Level_2, 2},
+        {GW::Constants::MapID::Darkrime_Delves_Level_3, 3},
+        {GW::Constants::MapID::Frostmaws_Burrows_Level_1, 1},
+        {GW::Constants::MapID::Frostmaws_Burrows_Level_2, 2},
+        {GW::Constants::MapID::Frostmaws_Burrows_Level_3, 3},
+        {GW::Constants::MapID::Frostmaws_Burrows_Level_4, 4},
+        {GW::Constants::MapID::Frostmaws_Burrows_Level_5, 5},
+        {GW::Constants::MapID::Sepulchre_of_Dragrimmar_Level_1, 1},
+        {GW::Constants::MapID::Sepulchre_of_Dragrimmar_Level_2, 2},
+        {GW::Constants::MapID::Ravens_Point_Level_1, 1},
+        {GW::Constants::MapID::Ravens_Point_Level_2, 2},
+        {GW::Constants::MapID::Ravens_Point_Level_3, 3},
+        {GW::Constants::MapID::Vloxen_Excavations_Level_1, 1},
+        {GW::Constants::MapID::Vloxen_Excavations_Level_2, 2},
+        {GW::Constants::MapID::Vloxen_Excavations_Level_3, 3},
+        {GW::Constants::MapID::Bogroot_Growths_Level_1, 1},
+        {GW::Constants::MapID::Bogroot_Growths_Level_2, 2},
+        {GW::Constants::MapID::Bloodstone_Caves_Level_1, 1},
+        {GW::Constants::MapID::Bloodstone_Caves_Level_2, 2},
+        {GW::Constants::MapID::Bloodstone_Caves_Level_3, 3},
+        {GW::Constants::MapID::Shards_of_Orr_Level_1, 1},
+        {GW::Constants::MapID::Shards_of_Orr_Level_2, 2},
+        {GW::Constants::MapID::Shards_of_Orr_Level_3, 3},
+        {GW::Constants::MapID::Oolas_Lab_Level_1, 1},
+        {GW::Constants::MapID::Oolas_Lab_Level_2, 2},
+        {GW::Constants::MapID::Oolas_Lab_Level_3, 3},
+        {GW::Constants::MapID::Arachnis_Haunt_Level_1, 1},
+        {GW::Constants::MapID::Arachnis_Haunt_Level_2, 2},
+        {GW::Constants::MapID::Slavers_Exile_Level_1, 1},
+        {GW::Constants::MapID::Slavers_Exile_Level_2, 2},
+        {GW::Constants::MapID::Slavers_Exile_Level_3, 3},
+        {GW::Constants::MapID::Slavers_Exile_Level_4, 4},
+        {GW::Constants::MapID::Slavers_Exile_Level_5, 5},
+        {GW::Constants::MapID::Fronis_Irontoes_Lair_mission, 1},
+        {GW::Constants::MapID::Secret_Lair_of_the_Snowmen, 1},
+        {GW::Constants::MapID::Heart_of_the_Shiverpeaks_Level_1, 1},
+        {GW::Constants::MapID::Heart_of_the_Shiverpeaks_Level_2, 2},
+        {GW::Constants::MapID::Heart_of_the_Shiverpeaks_Level_3, 3},
+    };
+
     void PrintTime(char* buf, size_t size, DWORD time, bool show_ms = true) {
         if (time == TIME_UNKNOWN) {
             GuiUtils::StrCopy(buf, "--:--", size);
@@ -454,92 +507,40 @@ void ObjectiveTimerWindow::AddFoWObjectiveSet() {
 }
 
 void ObjectiveTimerWindow::HandleMapChange(GW::Constants::MapID map_id, bool start) {
-    uint32_t objective_id = 0;
-
     switch (map_id) {
         case GW::Constants::MapID::Urgozs_Warren:
             if (start) AddUrgozObjectiveSet();
-            break;
+            return;
         case GW::Constants::MapID::The_Deep:
             if (start) AddDeepObjectiveSet();
-            break;
+            return;
         case GW::Constants::MapID::The_Fissure_of_Woe:
             if (start) AddFoWObjectiveSet();
-            break;
+            return;
         case GW::Constants::MapID::The_Underworld:
             if (start) AddUWObjectiveSet();
-            break;
-        case GW::Constants::MapID::Catacombs_of_Kathandrax_Level_1:
-        case GW::Constants::MapID::Rragars_Menagerie_Level_1:
-        case GW::Constants::MapID::Cathedral_of_Flames_Level_1:
-        case GW::Constants::MapID::Ooze_Pit:
-        case GW::Constants::MapID::Darkrime_Delves_Level_1:
-        case GW::Constants::MapID::Frostmaws_Burrows_Level_1:
-        case GW::Constants::MapID::Sepulchre_of_Dragrimmar_Level_1:
-        case GW::Constants::MapID::Ravens_Point_Level_1:
-        case GW::Constants::MapID::Vloxen_Excavations_Level_1:
-        case GW::Constants::MapID::Bogroot_Growths_Level_1:
-        case GW::Constants::MapID::Bloodstone_Caves_Level_1:
-        case GW::Constants::MapID::Shards_of_Orr_Level_1:
-        case GW::Constants::MapID::Oolas_Lab_Level_1:
-        case GW::Constants::MapID::Arachnis_Haunt_Level_1:
-        case GW::Constants::MapID::Slavers_Exile_Level_5:
-        case GW::Constants::MapID::Fronis_Irontoes_Lair_mission:
-        case GW::Constants::MapID::Secret_Lair_of_the_Snowmen:
-        case GW::Constants::MapID::Heart_of_the_Shiverpeaks_Level_1:
-            if (start) AddDungeonObjectiveSet(map_id);
-            break;
-        case GW::Constants::MapID::Catacombs_of_Kathandrax_Level_2:
-        case GW::Constants::MapID::Rragars_Menagerie_Level_2:
-        case GW::Constants::MapID::Cathedral_of_Flames_Level_2:
-        case GW::Constants::MapID::Darkrime_Delves_Level_2:
-        case GW::Constants::MapID::Frostmaws_Burrows_Level_2:
-        case GW::Constants::MapID::Sepulchre_of_Dragrimmar_Level_2:
-        case GW::Constants::MapID::Ravens_Point_Level_2:
-        case GW::Constants::MapID::Vloxen_Excavations_Level_2:
-        case GW::Constants::MapID::Bogroot_Growths_Level_2:
-        case GW::Constants::MapID::Shards_of_Orr_Level_2:
-        case GW::Constants::MapID::Oolas_Lab_Level_2:
-        case GW::Constants::MapID::Arachnis_Haunt_Level_2:
-        case GW::Constants::MapID::Heart_of_the_Shiverpeaks_Level_2:
-            objective_id = start ? 2 : 1;
-            break;
-        case GW::Constants::MapID::Catacombs_of_Kathandrax_Level_3:
-        case GW::Constants::MapID::Rragars_Menagerie_Level_3:
-        case GW::Constants::MapID::Cathedral_of_Flames_Level_3:
-        case GW::Constants::MapID::Darkrime_Delves_Level_3:
-        case GW::Constants::MapID::Frostmaws_Burrows_Level_3:
-        case GW::Constants::MapID::Ravens_Point_Level_3:
-        case GW::Constants::MapID::Vloxen_Excavations_Level_3:
-        case GW::Constants::MapID::Bloodstone_Caves_Level_3:
-        case GW::Constants::MapID::Shards_of_Orr_Level_3:
-        case GW::Constants::MapID::Oolas_Lab_Level_3:
-        case GW::Constants::MapID::Heart_of_the_Shiverpeaks_Level_3:
-            objective_id = start ? 3 : 2;
-            break;
-        case GW::Constants::MapID::Frostmaws_Burrows_Level_4:
-            objective_id = start ? 4 : 3;
-            break;
-        case GW::Constants::MapID::Frostmaws_Burrows_Level_5:
-            objective_id = start ? 5 : 4;
-            break;
+            return;
         default:
-            if (start) break;
-            if (current_objective_set) {
-                current_objective_set->StopObjectives();
+            auto dungeonLevel = dungeonLevels.find(map_id);
+            if (dungeonLevel == dungeonLevels.end()) {
+                if (current_objective_set) {
+                    current_objective_set->StopObjectives();
+                }
+                current_objective_set = nullptr;
+                return;
+            };
+            if (start && !current_objective_set) {
+                AddDungeonObjectiveSet(map_id);
+                return;
             }
-            current_objective_set = nullptr;
-    }
-
-    if (objective_id) {
-        Objective* obj = GetCurrentObjective(objective_id);
-        if (obj) {
-            if (start) {
-                if (!obj->IsStarted()) obj->SetStarted();
-            } else {
-                obj->SetDone();
+            Objective* obj = GetCurrentObjective(start ? dungeonLevel->second : dungeonLevel->second - 1);
+            if (obj) {
+                if (start) {
+                    if (!obj->IsStarted()) obj->SetStarted();
+                } else {
+                    obj->SetDone();
+                }
             }
-        }
     }
 }
 
