@@ -20,6 +20,7 @@ public:
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
 	bool hide_in_outpost = false;
+	Color color_widget = 0;
 
 	Color color_adjacent = 0;
 	Color color_nearby = 0;

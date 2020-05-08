@@ -27,6 +27,7 @@ public:
 
     std::wstring agent_name_ping;
 	bool hide_in_outpost = false;
+	Color color_default = 0;
 
 	bool thresholds_changed = false;
 private:
@@ -42,7 +43,7 @@ private:
 			};
 
 			Threshold(CSimpleIni* ini, const char* section);
-			Threshold(const char* _name, int _value);
+			Threshold(const char* _name, Color _color, int _value);
 
 			bool DrawHeader();
 			bool DrawSettings(Operation& op);
@@ -58,8 +59,7 @@ private:
 			int mapId = 0;
 
 			int value = 0;
-			Color color = 255;
-			Color background = 0;
+			Color color = 0;
 	};
 
 	std::vector<Threshold*> thresholds;
