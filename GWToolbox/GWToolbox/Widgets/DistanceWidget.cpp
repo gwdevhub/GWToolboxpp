@@ -80,7 +80,7 @@ void DistanceWidget::Draw(IDirect3DDevice9* pDevice) {
 			} else if (dist <= GW::Constants::Range::Compass) {
 				color = color_compass;
 			} else {
-				color = Colors::RGB(255, 255, 255);
+				color = color_widget;
 			}
 
 			Color background = Colors::RGB(0, 0, 0);
