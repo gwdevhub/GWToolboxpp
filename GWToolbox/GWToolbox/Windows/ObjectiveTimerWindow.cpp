@@ -86,7 +86,7 @@ namespace {
 		L"\x533D\x9EB1\x8BEE\x2637"	 // Kanaxai "What gives you the right to enter my lair? I shall kill you for your audacity, after I destroy your mind with my horrifying visions, of course."
 	};
 
-    const std::map<GW::Constants::MapID, uint32_t> dungeonLevels = {
+    const std::map<GW::Constants::MapID, uint32_t> mapToDungeonLevel = {
         {GW::Constants::MapID::Catacombs_of_Kathandrax_Level_1, 1},
         {GW::Constants::MapID::Catacombs_of_Kathandrax_Level_2, 2},
         {GW::Constants::MapID::Catacombs_of_Kathandrax_Level_3, 3},
@@ -507,6 +507,16 @@ void ObjectiveTimerWindow::AddFoWObjectiveSet() {
 }
 
 void ObjectiveTimerWindow::HandleMapChange(GW::Constants::MapID map_id, bool start) {
+    auto dungeonLevel = mapToDungeonLevel.find(map_id);
+    bool isDungeon = dungeonLevel != mapToDungeonLevel.end();
+    bool isDungeonEntrance = isDungeon ? dungeonLevel->second == 1 : false; // used for transition between dungeons (HotS <-> Bogs)
+    if (!isDungeon || isDungeonEntrance) {
+        if (current_objective_set) {
+            current_objective_set->StopObjectives();
+        }
+        current_objective_set = nullptr;
+    };
+
     switch (map_id) {
         case GW::Constants::MapID::Urgozs_Warren:
             if (start) AddUrgozObjectiveSet();
@@ -520,18 +530,36 @@ void ObjectiveTimerWindow::HandleMapChange(GW::Constants::MapID map_id, bool sta
         case GW::Constants::MapID::The_Underworld:
             if (start) AddUWObjectiveSet();
             return;
+        case GW::Constants::MapID::Slavers_Exile_Level_5:
+            if (start) AddSlaversObjectiveSet();
+            return;
+        case GW::Constants::MapID::Ooze_Pit:
+        case GW::Constants::MapID::Fronis_Irontoes_Lair_mission:
+        case GW::Constants::MapID::Secret_Lair_of_the_Snowmen:
+            if (start) AddDungeonObjectiveSet(1);
+            return;
+        case GW::Constants::MapID::Sepulchre_of_Dragrimmar_Level_1:
+        case GW::Constants::MapID::Bogroot_Growths_Level_1:
+        case GW::Constants::MapID::Arachnis_Haunt_Level_1:
+            if (start) AddDungeonObjectiveSet(2);
+            return;
+        case GW::Constants::MapID::Catacombs_of_Kathandrax_Level_1:
+        case GW::Constants::MapID::Rragars_Menagerie_Level_1:
+        case GW::Constants::MapID::Cathedral_of_Flames_Level_1:
+        case GW::Constants::MapID::Darkrime_Delves_Level_1:
+        case GW::Constants::MapID::Ravens_Point_Level_1:
+        case GW::Constants::MapID::Vloxen_Excavations_Level_1:
+        case GW::Constants::MapID::Bloodstone_Caves_Level_1:
+        case GW::Constants::MapID::Shards_of_Orr_Level_1:
+        case GW::Constants::MapID::Oolas_Lab_Level_1:
+        case GW::Constants::MapID::Heart_of_the_Shiverpeaks_Level_1:
+            if (start) AddDungeonObjectiveSet(3);
+            return;
+        case GW::Constants::MapID::Frostmaws_Burrows_Level_1:
+            if (start) AddDungeonObjectiveSet(5);
+            return;
         default:
-            auto dungeonLevel = dungeonLevels.find(map_id);
-            if (dungeonLevel == dungeonLevels.end() || dungeonLevel->second == 1) {
-                if (current_objective_set) {
-                    current_objective_set->StopObjectives();
-                }
-                current_objective_set = nullptr;
-            };
-            if (start && !current_objective_set) {
-                AddDungeonObjectiveSet(map_id);
-                return;
-            }
+            if (!isDungeon) return;
             Objective* obj = GetCurrentObjective(start ? dungeonLevel->second : dungeonLevel->second - 1);
             if (obj) {
                 if (start) {
@@ -543,42 +571,13 @@ void ObjectiveTimerWindow::HandleMapChange(GW::Constants::MapID map_id, bool sta
     }
 }
 
-void ObjectiveTimerWindow::AddDungeonObjectiveSet(GW::Constants::MapID map_id) {
+void ObjectiveTimerWindow::AddDungeonObjectiveSet(int levels) {
     ObjectiveSet* os = new ObjectiveSet;
 
-    switch (map_id) {
-        case GW::Constants::MapID::Frostmaws_Burrows_Level_1:
-            os->objectives.emplace(os->objectives.begin(), 5, "Level 5");
-            os->objectives.emplace(os->objectives.begin(), 4, "Level 4");
-        case GW::Constants::MapID::Catacombs_of_Kathandrax_Level_1:
-        case GW::Constants::MapID::Rragars_Menagerie_Level_1:
-        case GW::Constants::MapID::Cathedral_of_Flames_Level_1:
-        case GW::Constants::MapID::Darkrime_Delves_Level_1:
-        case GW::Constants::MapID::Ravens_Point_Level_1:
-        case GW::Constants::MapID::Vloxen_Excavations_Level_1:
-        case GW::Constants::MapID::Bloodstone_Caves_Level_1:
-        case GW::Constants::MapID::Shards_of_Orr_Level_1:
-        case GW::Constants::MapID::Oolas_Lab_Level_1:
-        case GW::Constants::MapID::Heart_of_the_Shiverpeaks_Level_1:
-            os->objectives.emplace(os->objectives.begin(), 3, "Level 3");
-        case GW::Constants::MapID::Sepulchre_of_Dragrimmar_Level_1:
-        case GW::Constants::MapID::Bogroot_Growths_Level_1:
-        case GW::Constants::MapID::Arachnis_Haunt_Level_1:
-            os->objectives.emplace(os->objectives.begin(), 2, "Level 2");
-        case GW::Constants::MapID::Ooze_Pit:
-        case GW::Constants::MapID::Fronis_Irontoes_Lair_mission:
-        case GW::Constants::MapID::Secret_Lair_of_the_Snowmen:
-            os->objectives.emplace(os->objectives.begin(), 1, "Level 1");
-            break;
-        case GW::Constants::MapID::Slavers_Exile_Level_5:
-            // figure out how to do the other levels
-            os->objectives.emplace_back(5, "Duncan");
-            break;
-    }
-
-    if (os->objectives.empty()) {
-        delete os;
-        return;
+    for (int level = 1; level < levels + 1; ++level) {
+        char name[256];
+        snprintf(name, sizeof(name), "Level %d", level);
+        os->objectives.emplace_back(level, name);
     }
 
     ::AsyncGetMapName(os->name, sizeof(os->name));
@@ -597,19 +596,27 @@ void ObjectiveTimerWindow::AddObjectiveSet(ObjectiveSet* os) {
     runs_dirty = true;
 }
 void ObjectiveTimerWindow::AddUWObjectiveSet() {
-	ObjectiveSet *os = new ObjectiveSet;
-	::AsyncGetMapName(os->name, sizeof(os->name));
-	os->objectives.emplace_back(146, "Chamber");
-	os->objectives.emplace_back(147, "Restore");
-	os->objectives.emplace_back(148, "Escort");
-	os->objectives.emplace_back(149, "UWG");
-	os->objectives.emplace_back(150, "Vale");
-	os->objectives.emplace_back(151, "Waste");
-	os->objectives.emplace_back(152, "Pits");
-	os->objectives.emplace_back(153, "Planes");
-	os->objectives.emplace_back(154, "Mnts");
-	os->objectives.emplace_back(155, "Pools");
-	os->objectives.emplace_back(157, "Dhuum");
+    ObjectiveSet* os = new ObjectiveSet;
+    ::AsyncGetMapName(os->name, sizeof(os->name));
+    os->objectives.emplace_back(146, "Chamber");
+    os->objectives.emplace_back(147, "Restore");
+    os->objectives.emplace_back(148, "Escort");
+    os->objectives.emplace_back(149, "UWG");
+    os->objectives.emplace_back(150, "Vale");
+    os->objectives.emplace_back(151, "Waste");
+    os->objectives.emplace_back(152, "Pits");
+    os->objectives.emplace_back(153, "Planes");
+    os->objectives.emplace_back(154, "Mnts");
+    os->objectives.emplace_back(155, "Pools");
+    os->objectives.emplace_back(157, "Dhuum");
+    AddObjectiveSet(os);
+}
+
+void ObjectiveTimerWindow::AddSlaversObjectiveSet() {
+    ObjectiveSet* os = new ObjectiveSet;
+    ::AsyncGetMapName(os->name, sizeof(os->name));
+    os->objectives.emplace_back(5, "Duncan");
+    os->objectives.front().SetStarted();
     AddObjectiveSet(os);
 }
 void ObjectiveTimerWindow::DisplayDialogue(GW::Packet::StoC::DisplayDialogue* packet) {
@@ -652,7 +659,7 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
 		if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
 			if (objective_sets.empty()) {
-				ImGui::Text("Enter DoA, FoW, UW, Deep or Urgoz to begin");
+				ImGui::Text("Enter DoA, FoW, UW, Deep, Urgoz or a Dungeon to begin");
 			}
 			else {
                 ImGuiWindow* window = ImGui::GetCurrentWindow();

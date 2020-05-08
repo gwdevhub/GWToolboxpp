@@ -130,7 +130,8 @@ private:
     void AddDoAObjectiveSet(GW::Vec2f spawn);
     void AddFoWObjectiveSet();
     void AddUWObjectiveSet();
-    void AddDungeonObjectiveSet(GW::Constants::MapID map_id);
+    void AddSlaversObjectiveSet();
+    void AddDungeonObjectiveSet(int levels);
     void AddObjectiveSet(ObjectiveSet* os);
     void HandleMapChange(GW::Constants::MapID map_id, bool start);
 	void DoorOpened(uint32_t door_id);
