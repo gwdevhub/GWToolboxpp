@@ -5,7 +5,7 @@
 
 class HealthWidget : public ToolboxWidget {
 	HealthWidget() {};
-	~HealthWidget() {};
+	~HealthWidget();
 public:
 	static HealthWidget& Instance() {
 		static HealthWidget instance;
@@ -20,6 +20,8 @@ public:
 
 	// Draw user interface. Will be called every frame if the element is visible
 	void Draw(IDirect3DDevice9* pDevice) override;
+
+	void ClearThresholds();
 
     bool click_to_print_health = false;
 
