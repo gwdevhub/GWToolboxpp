@@ -6,10 +6,12 @@
 #include <GWCA/Constants/Constants.h>
 
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Skill.h>
 
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
 
 #include "GuiUtils.h"
 #include "Modules/ToolboxSettings.h"
@@ -42,6 +44,7 @@ void HealthWidget::LoadSettings(CSimpleIni *ini) {
 
 	if (thresholds.empty()) {
 		Threshold* thresholdFh = new Threshold("\"Finish Him!\"", 50);
+		thresholdFh->skillId = (int) GW::Constants::SkillID::Finish_Him;
 		thresholdFh->active = false;
 		thresholdFh->color = Colors::RGB(255, 255, 0);
 		thresholds.push_back(thresholdFh);
@@ -164,6 +167,11 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
 				if (!threshold) continue;
 				if (!threshold->active) continue;
 				if (threshold->modelId && threshold->modelId != target->player_number) continue;
+				if (threshold->skillId) {
+					GW::Skillbar* skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
+					GW::SkillbarSkill* skill = skillbar->GetSkillById(static_cast<GW::Constants::SkillID>(threshold->skillId));
+					if (!skill) continue;
+				}
 				if (threshold->mapId) {
 					if (static_cast<GW::Constants::MapID>(threshold->mapId) != GW::Map::GetMapID()) continue;
 				}
@@ -227,6 +235,7 @@ HealthWidget::Threshold::Threshold(CSimpleIni* ini, const char* section) : ui_id
 	active = ini->GetBoolValue(section, VAR_NAME(active));
 	GuiUtils::StrCopy(name, ini->GetValue(section, VAR_NAME(name), ""), sizeof(name));
 	modelId = ini->GetLongValue(section, VAR_NAME(modelId), 0);
+	skillId = ini->GetLongValue(section, VAR_NAME(skillId), 0);
 	mapId = ini->GetLongValue(section, VAR_NAME(mapId), 0);
 	value = ini->GetLongValue(section, VAR_NAME(value), 0);
 	color = Colors::Load(ini, section, VAR_NAME(color), 0xFFFFFFFF);
@@ -270,6 +279,8 @@ bool HealthWidget::Threshold::DrawSettings(Operation& op) {
 		ImGui::ShowHelp("A name to help you remember what this is. Optional.");
 		if (ImGui::InputInt("Model ID", &modelId)) changed = true;
 		ImGui::ShowHelp("The Agent to which this threshold will be applied. Optional. Leave 0 for any agent");
+		if (ImGui::InputInt("Skill ID", &skillId)) changed = true;
+		ImGui::ShowHelp("Only apply if this skill is on your bar. Optional. Leave 0 for any skills");
 		if (ImGui::InputInt("Map ID", &mapId)) changed = true;
 		ImGui::ShowHelp("The map where it will be applied. Optional. Leave 0 for any map");
 		if (ImGui::InputInt("Percentage", &value)) changed = true;
@@ -309,6 +320,7 @@ void HealthWidget::Threshold::SaveSettings(CSimpleIni* ini, const char* section)
 	ini->SetBoolValue(section, VAR_NAME(active), active);
 	ini->SetValue(section, VAR_NAME(name), name);
 	ini->SetLongValue(section, VAR_NAME(modelId), modelId);
+	ini->SetLongValue(section, VAR_NAME(skillId), skillId);
 	ini->SetLongValue(section, VAR_NAME(mapId), mapId);
 
 	ini->SetLongValue(section, VAR_NAME(value), value);

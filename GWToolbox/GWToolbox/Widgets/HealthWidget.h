@@ -54,6 +54,7 @@ private:
 			bool active = true;
 			char name[128] = "";
 			int modelId = 0;
+			int skillId = 0;
 			int mapId = 0;
 
 			int value = 0;
