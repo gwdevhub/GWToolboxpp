@@ -26,10 +26,10 @@ void SettingsWindow::LoadSettings(CSimpleIni* ini) {
 
 void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
 	if (!visible) return;
-	
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(450, 600), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
+		drawn_settings.clear();
         ImColor sCol(102, 187, 238, 255);
 		ImGui::PushTextWrapPos();
         ImGui::Text("GWToolbox++");
@@ -108,15 +108,14 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
 			}
 		}
 
-		ToolboxTheme::Instance().DrawSettings();
-		ToolboxSettings::Instance().DrawSettings();
-		MainWindow::Instance().DrawSettings();
+		DrawSettingsSection(ToolboxTheme::Instance().SettingsName());
+		DrawSettingsSection(ToolboxSettings::Instance().SettingsName());
 
 		const std::vector<ToolboxModule*>& optional_modules = ToolboxSettings::Instance().GetOptionalModules();
 		for (unsigned i = 0; i < optional_modules.size(); ++i) {
 			if (i == sep_windows) ImGui::Text("Windows:");
 			if (i == sep_widgets) ImGui::Text("Widgets:");
-            optional_modules[i]->DrawSettings();
+			DrawSettingsSection(optional_modules[i]->SettingsName());
 		}
 
 		if (ImGui::Button("Save Now", ImVec2(w, 0))) {

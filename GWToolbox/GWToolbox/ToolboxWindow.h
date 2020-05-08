@@ -10,6 +10,7 @@ A ToolboxWindow is a module which also has an interface
 class ToolboxWindow : public ToolboxUIElement {
 public:
 	bool IsWindow() const override { return true; }
+	char* TypeName() const override { return "window"; }
 
 	virtual void LoadSettings(CSimpleIni* ini) override {
 		ToolboxUIElement::LoadSettings(ini);
@@ -25,16 +26,7 @@ public:
 		ini->SetBoolValue(Name(), VAR_NAME(show_closebutton), show_closebutton);
 	}
 
-	// Encapsulate settings into an ImGui::CollapsingHeader(Name()), 
-	// show a reset position button and a 'visible' checkbox
-	virtual void DrawSettings() override;
-
 	ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0) const;
-
-	bool* GetVisiblePtr(bool force_show = false) {
-		if (show_closebutton || force_show) return &visible;
-		return nullptr;
-	}
-
-	bool show_closebutton = true;
+protected:
+	bool has_closebutton = true;
 };

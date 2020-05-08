@@ -23,6 +23,7 @@ public:
 	}
 
 	const char* Name() const override { return "Party Window"; }
+	const char* SettingsName() const override { return "Party Settings"; }
 	void Initialize() override;
 	void SignalTerminate() override;
 	bool CanTerminate() override;

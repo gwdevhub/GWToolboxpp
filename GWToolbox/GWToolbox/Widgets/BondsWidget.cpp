@@ -228,24 +228,6 @@ void BondsWidget::SaveSettings(CSimpleIni* ini) {
     ini->SetLongValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
 }
 
-void BondsWidget::DrawSettings() {
-	if (ImGui::CollapsingHeader(Name(), ImGuiTreeNodeFlags_AllowItemOverlap)) {
-		ImGui::PushID(Name());
-		ShowVisibleRadio();
-		ImVec2 pos(0, 0);
-		if (ImGuiWindow* window = ImGui::FindWindowByName(Name())) pos = window->Pos;
-		if (ImGui::DragFloat2("Position", (float*)&pos, 1.0f, 0.0f, 0.0f, "%.0f")) {
-			ImGui::SetWindowPos(Name(), pos);
-		}
-		ImGui::ShowHelp("You need to show the widget for this control to work");
-		ImGui::Checkbox("Lock Position", &lock_move);
-		DrawSettingInternal();
-		ImGui::PopID();
-	} else {
-		ShowVisibleRadio();
-	}
-}
-
 void BondsWidget::DrawSettingInternal() {
     ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
 	Colors::DrawSetting("Background", &background);

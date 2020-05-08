@@ -31,6 +31,7 @@
 #include <GuiUtils.h>
 #include "logger.h"
 #include "Modules/ToolboxSettings.h"
+#include "Windows/SettingsWindow.h"
 
 
 void Minimap::Initialize() {
@@ -152,34 +153,6 @@ void Minimap::Initialize() {
 		}
 		GW::PartyMgr::FlagHeroAgent(GW::Agents::GetHeroAgentID(f_hero), GW::GamePos(x, y, 0)); // "/flag 5 -2913.41 3004.78"
 	});
-}
-
-void Minimap::DrawSettings() {
-	if (ImGui::CollapsingHeader(Name(), ImGuiTreeNodeFlags_AllowItemOverlap)) {
-		ImGui::PushID(Name());
-		ShowVisibleRadio();
-		ImVec2 pos(0, 0);
-		ImVec2 size(0, 0);
-		if (ImGuiWindow* window = ImGui::FindWindowByName(Name())) {
-			pos = window->Pos;
-			size = window->Size;
-		}
-		if (ImGui::DragFloat2("Position", (float*)&pos, 1.0f, 0.0f, 0.0f, "%.0f")) {
-			ImGui::SetWindowPos(Name(), pos);
-		}
-		ImGui::ShowHelp("You need to show the window for this control to work");
-		if (ImGui::DragFloat2("Size", (float*)&size, 1.0f, 0.0f, 0.0f, "%.0f")) {
-			ImGui::SetWindowSize(Name(), size);
-		}
-		ImGui::ShowHelp("You need to show the window for this control to work");
-		ImGui::Checkbox("Lock Position", &lock_move);
-		ImGui::SameLine();
-		ImGui::Checkbox("Lock Size", &lock_size);
-		DrawSettingInternal();
-		ImGui::PopID();
-	} else {
-		ShowVisibleRadio();
-	}
 }
 
 void Minimap::DrawSettingInternal() {

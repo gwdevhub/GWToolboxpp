@@ -394,24 +394,6 @@ void PartyDamage::SaveSettings(CSimpleIni* ini) {
 	inifile->SaveFile(Resources::GetPath(INI_FILENAME).c_str());
 }
 
-void PartyDamage::DrawSettings() {
-	if (ImGui::CollapsingHeader(Name(), ImGuiTreeNodeFlags_AllowItemOverlap)) {
-		ImGui::PushID(Name());
-		ShowVisibleRadio();
-		ImVec2 pos(0, 0);
-		if (ImGuiWindow* window = ImGui::FindWindowByName(Name())) pos = window->Pos;
-		if (ImGui::DragFloat2("Position", (float*)&pos, 1.0f, 0.0f, 0.0f, "%.0f")) {
-			ImGui::SetWindowPos(Name(), pos);
-		}
-		ImGui::ShowHelp("You need to show the widget for this control to work");
-		ImGui::Checkbox("Lock Position", &lock_move);
-		DrawSettingInternal();
-		ImGui::PopID();
-	} else {
-		ShowVisibleRadio();
-	}
-}
-
 void PartyDamage::DrawSettingInternal() {
 	ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
 	ImGui::Checkbox("Bars towards the left", &bars_left);

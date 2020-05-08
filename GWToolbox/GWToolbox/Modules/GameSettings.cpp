@@ -975,6 +975,22 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     gold_confirm_patch.TogglePatch(disable_gold_selling_confirmation);
 }
 
+void GameSettings::RegisterSettingsContent() {
+	ToolboxModule::RegisterSettingsContent();
+	ToolboxModule::RegisterSettingsContent("Inventory Settings", [this](const std::string* section, bool is_showing) {
+		if (!is_showing) return;
+		DrawInventorySettings();
+		},0.9f);
+	ToolboxModule::RegisterSettingsContent("Chat Settings", [this](const std::string* section, bool is_showing) {
+		if (!is_showing) return;
+		DrawChatSettings();
+		}, 0.9f);
+	ToolboxModule::RegisterSettingsContent("Party Settings", [this](const std::string* section, bool is_showing) {
+		if (!is_showing) return;
+		DrawPartySettings();
+		}, 0.9f);
+}
+
 void GameSettings::Terminate() {
 	ctrl_click_patch.Reset();
 	tome_patch.Reset();
@@ -1051,15 +1067,33 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
 	::SaveChannelColor(ini, Name(), "other", GW::Chat::Channel::CHANNEL_GLOBAL);
 }
 
-void GameSettings::DrawSettingInternal() {
-	const float column_spacing = 256.0f * ImGui::GetIO().FontGlobalScale;
+void GameSettings::DrawInventorySettings() {
+	ImGui::Checkbox("Move items from/to storage with Control+Click", &move_item_on_ctrl_click);
+	ImGui::Indent();
+	ImGui::Checkbox("Move item to current open storage pane on click", &move_item_to_current_storage_pane);
+	ImGui::ShowHelp("Enabled: Using Control+Click on an item in inventory with storage chest open,\n"
+		"try to deposit item into the currently displayed storage pane.\n"
+		"Disabled: Item will be stored into any available stack/slot in the chest.");
+	ImGui::Unindent();
+	ImGui::Checkbox("Shorthand item description on weapon ping", &shorthand_item_ping);
+	ImGui::ShowHelp("Include a concise description of your equipped weapon when ctrl+clicking a weapon set");
+}
+
+void GameSettings::DrawPartySettings() {
+	ImGui::Checkbox("Automatically accept party invitations when ticked", &auto_accept_invites);
+	ImGui::ShowHelp("When you're invited to join someone elses party");
+	ImGui::Checkbox("Automatically accept party join requests when ticked", &auto_accept_join_requests);
+	ImGui::ShowHelp("When a player wants to join your existing party");
+}
+
+void GameSettings::DrawChatSettings() {
 	if (ImGui::TreeNode("Chat Colors")) {
-        ImGui::Text("Channel");
-        ImGui::SameLine(chat_colors_grid_x[1]);
-        ImGui::Text("Sender");
-        ImGui::SameLine(chat_colors_grid_x[2]);
-        ImGui::Text("Message");
-        ImGui::Spacing();
+		ImGui::Text("Channel");
+		ImGui::SameLine(chat_colors_grid_x[1]);
+		ImGui::Text("Sender");
+		ImGui::SameLine(chat_colors_grid_x[2]);
+		ImGui::Text("Message");
+		ImGui::Spacing();
 
 		DrawChannelColor("Local", GW::Chat::Channel::CHANNEL_ALL);
 		DrawChannelColor("Guild", GW::Chat::Channel::CHANNEL_GUILD);
@@ -1070,41 +1104,31 @@ void GameSettings::DrawSettingInternal() {
 		DrawChannelColor("Emotes", GW::Chat::Channel::CHANNEL_EMOTE);
 		DrawChannelColor("Other", GW::Chat::Channel::CHANNEL_GLOBAL);
 
-        ImGui::TextDisabled("(Left-click on a color to edit it)");
+		ImGui::TextDisabled("(Left-click on a color to edit it)");
 		ImGui::TreePop();
-        ImGui::Spacing();
+		ImGui::Spacing();
 	}
-
-	//DrawFOVSetting();
-
 	if (ImGui::Checkbox("Show chat messages timestamp", &show_timestamps))
-        GW::Chat::ToggleTimestamps(show_timestamps);
-    ImGui::ShowHelp("Show timestamps in message history.");
-    if (show_timestamps) {
-        ImGui::Indent();
-        if (ImGui::Checkbox("Use 24h", &show_timestamp_24h))
-            GW::Chat::SetTimestampsFormat(show_timestamp_24h, show_timestamp_seconds);
-        ImGui::SameLine();
-        if (ImGui::Checkbox("Show seconds", &show_timestamp_seconds))
-            GW::Chat::SetTimestampsFormat(show_timestamp_24h, show_timestamp_seconds);
-        ImGui::SameLine(); 
-        ImGui::Text("Color:");
-        ImGui::SameLine();
-        if (Colors::DrawSettingHueWheel("Color:", &timestamps_color))
-            GW::Chat::SetTimestampsColor(timestamps_color);
-        ImGui::Unindent();
-    }
-	ImGui::Checkbox("Automatic /age on vanquish", &auto_age_on_vanquish);
-	ImGui::ShowHelp("As soon as a vanquish is complete, send /age command to game server to receive server-side completion time.");
-	ImGui::Checkbox("Automatic /age2 on /age", &auto_age2_on_age);
-	ImGui::ShowHelp("GWToolbox++ will show /age2 time after /age is shown in chat");
-	ImGui::Checkbox("Shorthand item description on weapon ping", &shorthand_item_ping);
-	ImGui::ShowHelp("Include a concise description of your equipped weapon when ctrl+clicking a weapon set");
+		GW::Chat::ToggleTimestamps(show_timestamps);
+	ImGui::ShowHelp("Show timestamps in message history.");
+	if (show_timestamps) {
+		ImGui::Indent();
+		if (ImGui::Checkbox("Use 24h", &show_timestamp_24h))
+			GW::Chat::SetTimestampsFormat(show_timestamp_24h, show_timestamp_seconds);
+		ImGui::SameLine();
+		if (ImGui::Checkbox("Show seconds", &show_timestamp_seconds))
+			GW::Chat::SetTimestampsFormat(show_timestamp_24h, show_timestamp_seconds);
+		ImGui::SameLine();
+		ImGui::Text("Color:");
+		ImGui::SameLine();
+		if (Colors::DrawSettingHueWheel("Color:", &timestamps_color))
+			GW::Chat::SetTimestampsColor(timestamps_color);
+		ImGui::Unindent();
+	}
 	ImGui::Checkbox("Show NPC speech bubbles in emote channel", &npc_speech_bubbles_as_chat);
 	ImGui::ShowHelp("Speech bubbles from NPCs and Heroes will appear as emote messages in chat");
-    ImGui::Checkbox("Redirect NPC dialog to emote channel", &redirect_npc_messages_to_emote_chat);
-    ImGui::ShowHelp("Messages from NPCs that would normally show on-screen and in team chat are instead redirected to the emote channel");
-
+	ImGui::Checkbox("Redirect NPC dialog to emote channel", &redirect_npc_messages_to_emote_chat);
+	ImGui::ShowHelp("Messages from NPCs that would normally show on-screen and in team chat are instead redirected to the emote channel");
 	if (ImGui::Checkbox("Open web links from templates", &openlinks)) {
 		GW::UI::SetOpenLinks(openlinks);
 	}
@@ -1112,18 +1136,19 @@ void GameSettings::DrawSettingInternal() {
 
 	ImGui::Checkbox("Automatically change urls into build templates.", &auto_url);
 	ImGui::ShowHelp("When you write a message starting with 'http://' or 'https://', it will be converted in template format");
+}
+
+void GameSettings::DrawSettingInternal() {
+	const float column_spacing = 256.0f * ImGui::GetIO().FontGlobalScale;
+	ImGui::Checkbox("Automatic /age on vanquish", &auto_age_on_vanquish);
+	ImGui::ShowHelp("As soon as a vanquish is complete, send /age command to game server to receive server-side completion time.");
+	ImGui::Checkbox("Automatic /age2 on /age", &auto_age2_on_age);
+	ImGui::ShowHelp("GWToolbox++ will show /age2 time after /age is shown in chat");
+
+
 
 	//ImGui::Checkbox("Tick is a toggle", &tick_is_toggle);
 	//ImGui::ShowHelp("Ticking in party window will work as a toggle instead of opening the menu");
-
-	ImGui::Checkbox("Move items from/to storage with Control+Click", &move_item_on_ctrl_click);
-	ImGui::Indent();
-	ImGui::Checkbox("Move item to current open storage pane on click", &move_item_to_current_storage_pane);
-	ImGui::ShowHelp("Enabled: Using Control+Click on an item in inventory with storage chest open,\n"
-					"try to deposit item into the currently displayed storage pane.\n"
-					"Disabled: Item will be stored into any available stack/slot in the chest.");
-	ImGui::Unindent();
-
 	ImGui::Text("Flash Guild Wars taskbar icon when:");
 	ImGui::Indent();
 	ImGui::ShowHelp("Only triggers when Guild Wars is not the active window");
@@ -1179,10 +1204,6 @@ void GameSettings::DrawSettingInternal() {
 	ImGui::Checkbox("Automatically skip cinematics", &auto_skip_cinematic);
     ImGui::Checkbox("Automatically return to outpost on defeat", &auto_return_on_defeat);
     ImGui::ShowHelp("Automatically return party to outpost on party wipe if player is leading");
-	ImGui::Checkbox("Automatically accept party invitations when ticked", &auto_accept_invites);
-	ImGui::ShowHelp("When you're invited to join someone elses party");
-	ImGui::Checkbox("Automatically accept party join requests when ticked", &auto_accept_join_requests);
-	ImGui::ShowHelp("When a player wants to join your existing party");
 	ImGui::Checkbox("Show warning when earned faction reaches ", &faction_warn_percent);
 	ImGui::SameLine();
 	ImGui::PushItemWidth(40.0f * ImGui::GetIO().FontGlobalScale);

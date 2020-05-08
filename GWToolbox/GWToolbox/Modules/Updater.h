@@ -16,7 +16,12 @@ public:
         std::string download_url;
     };
 	const char* Name() const override { return "Updater"; }
+	// DrawSettingInternal() called via ToolboxSettings; don't draw it again
+	bool HasSettings() override { return false;  }
 
+	void RegisterSettingsContent() override {
+		ToolboxModule::RegisterSettingsContent();
+	}
 	void CheckForUpdate(const bool forced = false);
 	void DoUpdate();
 
@@ -25,7 +30,6 @@ public:
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
 	void Initialize() override;
-	void DrawSettings() override {};
 	void DrawSettingInternal() override;
     void GetLatestRelease(GWToolboxRelease*);
 	std::string GetServerVersion() const { return latest_release.version; }

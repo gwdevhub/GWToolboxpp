@@ -21,6 +21,7 @@ public:
 	}
 
 	const char* Name() const override { return "Chat Filter"; }
+	const char* SettingsName() const override { return "Chat Settings"; }
 
 	void Initialize() override;
 	void LoadSettings(CSimpleIni* ini) override;

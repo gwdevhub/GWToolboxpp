@@ -50,7 +50,6 @@ public:
 
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
-	void DrawSettings() override;
 	void DrawSettingInternal() override;
 
 private:

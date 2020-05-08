@@ -50,6 +50,7 @@ public:
 		return instance;
 	}
 	const char* Name() const override { return "Inventory Management"; }
+	const char* SettingsName() const override { return "Inventory Settings"; }
 
 	void Draw(IDirect3DDevice9* device) override;
 
@@ -61,6 +62,7 @@ public:
 	void Initialize() override;
 	void Update(float delta) override;
 	void DrawSettingInternal() override;
+	void RegisterSettingsContent() override;
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
 

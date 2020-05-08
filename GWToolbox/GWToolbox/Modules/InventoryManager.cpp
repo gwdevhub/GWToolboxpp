@@ -46,6 +46,11 @@ void InventoryManager::LoadSettings(CSimpleIni* ini) {
 	bags_to_salvage_from[GW::Constants::Bag::Bag_1] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_bag_1), bags_to_salvage_from[GW::Constants::Bag::Bag_1]);
 	bags_to_salvage_from[GW::Constants::Bag::Bag_2] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_bag_2), bags_to_salvage_from[GW::Constants::Bag::Bag_2]);
 }
+
+void InventoryManager::RegisterSettingsContent() {
+	ToolboxModule::RegisterSettingsContent();
+}
+
 void InventoryManager::CmdSalvage(const wchar_t* message, int argc, LPWSTR* argv) {
 	auto im = &Instance();
 	if (im->is_salvaging_all || im->is_salvaging)

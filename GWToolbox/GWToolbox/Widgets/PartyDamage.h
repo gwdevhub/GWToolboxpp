@@ -50,13 +50,14 @@ public:
 
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
-	void DrawSettings() override;
 	void DrawSettingInternal() override;
 
 	void WritePartyDamage();
 	void WriteDamageOf(int index, int rank = 0); // party index from 0 to 12
 	void WriteOwnDamage();
 	void ResetDamage();
+
+	bool is_resizable = false;
 
 private:
 	void DamagePacketCallback(GW::HookStatus *, GW::Packet::StoC::GenericModifier *packet);

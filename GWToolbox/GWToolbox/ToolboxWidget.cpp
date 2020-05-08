@@ -6,26 +6,7 @@
 #include "ImGuiAddons.h"
 
 #include <Modules/ToolboxSettings.h>
-
-void ToolboxWidget::DrawSettings() {
-	if (ImGui::CollapsingHeader(Name(), ImGuiTreeNodeFlags_AllowItemOverlap)) {
-		ImGui::PushID(Name());
-		ShowVisibleRadio();
-		ImVec2 pos(0, 0);
-		if (ImGuiWindow* window = ImGui::FindWindowByName(Name())) pos = window->Pos;
-		if (ImGui::DragFloat2("Position", (float*)&pos, 1.0f, 0.0f, 0.0f, "%.0f")) {
-			ImGui::SetWindowPos(Name(), pos);
-		}
-		ImGui::ShowHelp("You need to show the widget for this control to work");
-		ImGui::Checkbox("Lock Position", &lock_move);
-		ImGui::SameLine();
-		ImGui::Checkbox("Lock Size", &lock_size);
-		DrawSettingInternal();
-		ImGui::PopID();
-	} else {
-		ShowVisibleRadio();
-	}
-}
+#include <Windows/SettingsWindow.h>
 
 ImGuiWindowFlags ToolboxWidget::GetWinFlags(
 	ImGuiWindowFlags flags, bool noinput_if_frozen) const {

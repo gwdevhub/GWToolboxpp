@@ -3,15 +3,31 @@
 #include <imgui.h>
 #include <d3d9.h>
 #include <SimpleIni.h>
+typedef std::function<void(const std::string* section, bool is_showing)> SectionDrawCallback;
+typedef std::vector<std::pair<float,SectionDrawCallback>> SectionDrawCallbackList;
 
 class ToolboxModule {
 public:
 	ToolboxModule() {}
 	virtual ~ToolboxModule() {};
-
 public:
 	// name of the window and the ini section
 	virtual const char* Name() const = 0;
+
+	// name of the setting section
+	virtual const char* SettingsName() const { return Name(); };
+
+	// Type of module
+	virtual char* TypeName() const { return "module"; }
+
+	// register settings callbacks. Override this to add your settings into different sections.
+	virtual void RegisterSettingsContent();
+
+	// Readable array of setting callbacks registered.
+	static const std::unordered_map<std::string, SectionDrawCallbackList>* GetSettingsCallbacks();
+
+	// Readable array of modules currently loaded
+	static const std::unordered_map<std::string, ToolboxModule*>* ToolboxModule::GetModulesLoaded();
 
 	// Initialize module
 	virtual void Initialize();
@@ -44,6 +60,11 @@ public:
 	virtual void SaveSettings(CSimpleIni* ini) {};
 
 	// Draw settings interface. Will be called if the setting panel is visible, calls DrawSettingsInternal()
-	virtual void DrawSettings();
+	//virtual void DrawSettings();
 	virtual void DrawSettingInternal() {};
+
+	// Register settings content
+	static void RegisterSettingsContent(const char* section, SectionDrawCallback callback, float weighting = 1.0f);
 };
+
+

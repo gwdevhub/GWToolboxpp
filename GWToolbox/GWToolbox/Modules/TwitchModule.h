@@ -17,6 +17,9 @@ public:
     }
 
     const char* Name() const override { return "Twitch"; }
+
+    const char* SettingsName() const override { return "Third Party Integration"; }
+
     void Initialize() override;
     void Terminate() override;
     void Update(float delta) override;

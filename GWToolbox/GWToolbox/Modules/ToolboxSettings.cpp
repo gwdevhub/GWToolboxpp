@@ -68,15 +68,18 @@ bool ToolboxSettings::move_all = false;
 
 void ToolboxSettings::LoadModules(CSimpleIni* ini) {
 	SettingsWindow::Instance().sep_modules = optional_modules.size();
-    optional_modules.push_back(&ZrawDeepModule::Instance());
-	if (use_gamesettings) optional_modules.push_back(&GameSettings::Instance());
-	if (use_updater) optional_modules.push_back(&Updater::Instance());
-	if (use_chatfilter) optional_modules.push_back(&ChatFilter::Instance());
+	optional_modules.push_back(&Updater::Instance());
+
+
 	if (use_chatcommand) optional_modules.push_back(&ChatCommands::Instance());
+	if (use_chatfilter) optional_modules.push_back(&ChatFilter::Instance());
+	optional_modules.push_back(&GameSettings::Instance());
+	optional_modules.push_back(&InventoryManager::Instance());
+	if (use_partywindowmodule) optional_modules.push_back(&PartyWindowModule::Instance());
+	optional_modules.push_back(&ZrawDeepModule::Instance());
+
 	if (use_discord) optional_modules.push_back(&DiscordModule::Instance());
 	if (use_twitch) optional_modules.push_back(&TwitchModule::Instance());
-	if (use_partywindowmodule) optional_modules.push_back(&PartyWindowModule::Instance());
-	optional_modules.push_back(&InventoryManager::Instance());
 
 	SettingsWindow::Instance().sep_windows = optional_modules.size();
 	if (use_pcons) optional_modules.push_back(&PconsWindow::Instance());
@@ -99,6 +102,10 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
 	optional_modules.push_back(&DoorMonitorWindow::Instance());
 	optional_modules.push_back(&SkillListingWindow::Instance());
 #endif
+	std::sort(optional_modules.begin() + SettingsWindow::Instance().sep_windows, optional_modules.end(), [](const ToolboxModule* lhs, const ToolboxModule* rhs) {
+		return std::string(lhs->SettingsName()).compare(rhs->SettingsName()) < 0;
+		});
+
 	SettingsWindow::Instance().sep_widgets = optional_modules.size();
 	optional_modules.push_back(&SettingsWindow::Instance());
 	if (use_timer) optional_modules.push_back(&TimerWidget::Instance());
@@ -110,6 +117,10 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
 	if (use_clock) optional_modules.push_back(&ClockWidget::Instance());
 	if (use_vanquish) optional_modules.push_back(&VanquishWidget::Instance());
 	if (use_alcohol) optional_modules.push_back(&AlcoholWidget::Instance());
+
+	std::sort(optional_modules.begin() + SettingsWindow::Instance().sep_widgets, optional_modules.end(), [](const ToolboxModule* lhs, const ToolboxModule* rhs) {
+		return std::string(lhs->SettingsName()).compare(rhs->SettingsName()) < 0;
+		});
 
 	// Only read settings of non-core modules
 	for (ToolboxModule* module : optional_modules) {
@@ -127,48 +138,26 @@ void ToolboxSettings::DrawSettingInternal() {
 	DrawFreezeSetting();
 	ImGui::Checkbox("Save Location Data", &save_location_data);
 	ImGui::ShowHelp("Toolbox will save your location every second in a file in Settings Folder.");
+	
+	const float col_width = ImGui::GetWindowWidth() / 2;
 
 	ImGui::Separator();
 	ImGui::PushID("global_enable");
 	ImGui::Text("Enable the following features:");
 	ImGui::TextDisabled("Unticking will completely disable a feature from initializing and running. Requires Toolbox restart.");
-	ImGui::Checkbox("Pcons", &use_pcons);
-	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
-	ImGui::Checkbox("Hotkeys", &use_hotkeys);
-	ImGui::Checkbox("Builds", &use_builds);
-	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
+	ImGui::Checkbox("Alcohol", &use_alcohol);			ImGui::SameLine(col_width);	ImGui::Checkbox("Info", &use_info);
+	ImGui::Checkbox("Bonds", &use_bonds);				ImGui::SameLine(col_width);	ImGui::Checkbox("Materials", &use_materials);
+	ImGui::Checkbox("Builds", &use_builds);				ImGui::SameLine(col_width);	ImGui::Checkbox("Minimap", &use_minimap);
+	ImGui::Checkbox("Clock", &use_clock);				ImGui::SameLine(col_width);	ImGui::Checkbox("Notepad", &use_notepad);
+	ImGui::Checkbox("Daily Quests", &use_daily_quests);	ImGui::SameLine(col_width);	ImGui::Checkbox("Objective Timer", &use_objectivetimer);
+	ImGui::Checkbox("Damage", &use_damage);				ImGui::SameLine(col_width);	ImGui::Checkbox("Party Window", &use_partywindowmodule);
+	ImGui::Checkbox("Dialogs", &use_dialogs);			ImGui::SameLine(col_width);	ImGui::Checkbox("Pcons", &use_pcons);
+	ImGui::Checkbox("Discord", &use_discord);			ImGui::SameLine(col_width);	ImGui::Checkbox("Timer", &use_timer);
+	ImGui::Checkbox("Distance", &use_distance);			ImGui::SameLine(col_width);	ImGui::Checkbox("Trade", &use_trade);
+	ImGui::Checkbox("Health", &use_health);				ImGui::SameLine(col_width);	ImGui::Checkbox("Travel", &use_travel);
+	ImGui::Checkbox("Hotkeys", &use_hotkeys);			ImGui::SameLine(col_width);	ImGui::Checkbox("Twitch", &use_twitch);
+	ImGui::Checkbox("Friend List", &use_friendlist);	ImGui::SameLine(col_width);	ImGui::Checkbox("Vanquish counter", &use_vanquish);
 	ImGui::Checkbox("Hero Builds", &use_herobuilds);
-	ImGui::Checkbox("Travel", &use_travel);
-	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
-	ImGui::Checkbox("Dialogs", &use_dialogs);
-	ImGui::Checkbox("Info", &use_info);
-	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
-	ImGui::Checkbox("Materials", &use_materials);
-	ImGui::Checkbox("Notepad", &use_notepad);
-	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
-	ImGui::Checkbox("Objective Timer", &use_objectivetimer);
-	ImGui::Checkbox("Timer", &use_timer);
-	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
-	ImGui::Checkbox("Health", &use_health);
-	ImGui::Checkbox("Distance", &use_distance);
-	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
-	ImGui::Checkbox("Minimap", &use_minimap);
-	ImGui::Checkbox("Damage", &use_damage);
-	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
-	ImGui::Checkbox("Bonds", &use_bonds);
-	ImGui::Checkbox("Clock", &use_clock);
-	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
-	ImGui::Checkbox("Vanquish counter", &use_vanquish);
-	ImGui::Checkbox("Alcohol", &use_alcohol);
-	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
-	ImGui::Checkbox("Trade", &use_trade);
-    ImGui::Checkbox("Discord Integration", &use_discord);
-	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
-	ImGui::Checkbox("Twitch", &use_twitch);
-	ImGui::Checkbox("Party Window", &use_partywindowmodule);
-	ImGui::SameLine(ImGui::GetWindowWidth() / 2);
-	ImGui::Checkbox("Friend List", &use_friendlist);
-	ImGui::Checkbox("Daily Quests", &use_daily_quests);
 
 	ImGui::PopID();
 
@@ -183,12 +172,12 @@ void ToolboxSettings::DrawSettingInternal() {
 		if (window == &MainWindow::Instance()) continue;
 		if (!(window->IsWidget() || window->IsWindow())) continue;
 
-		ImGui::Checkbox(window ->Name(), &window->show_menubutton);
-
-		if (i < ui.size() - 1) {
-			if (odd) ImGui::SameLine(ImGui::GetWindowWidth() / 2);
-			odd = !odd; // cannot use i%2 because we skip some elements
+		if (i > 0 && !odd) {
+			ImGui::SameLine(col_width);
 		}
+		if (ImGui::Checkbox(window->Name(), &window->show_menubutton))
+			MainWindow::Instance().pending_refresh_buttons = true;
+		odd = !odd;
 	}
 	ImGui::PopID();
 }

@@ -146,8 +146,12 @@ public:
 	void Initialize() override;
 	void Terminate() override;
 	void LoadSettings(CSimpleIni* ini) override;
+	void RegisterSettingsContent() override;
 	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
+	void DrawInventorySettings();
+	void DrawChatSettings();
+	void DrawPartySettings();
 
 	void Update(float delta) override;
 	bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam);

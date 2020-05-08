@@ -24,7 +24,6 @@ public:
 	void Initialize() override;
 	void Terminate() override;
 
-	void DrawSettings() override {};
 	void Update(float delta) override;
 	void DxUpdate(IDirect3DDevice9* device);
 

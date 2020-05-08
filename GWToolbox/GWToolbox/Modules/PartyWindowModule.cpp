@@ -300,7 +300,7 @@ void PartyWindowModule::DrawSettingInternal() {
 	ImGui::SameLine(cols[1]);
 	ImGui::Text("Map");
 	ImGui::Separator();
-	ImGui::BeginChild("user_defined_npcs_to_add_scroll");
+	ImGui::BeginChild("user_defined_npcs_to_add_scroll",ImVec2(0,200.0f));
 	for (size_t i = 0; i < user_defined_npcs.size();i++) {
 		SpecialNPCToAdd* npc = user_defined_npcs[i];
 		if (!npc) 

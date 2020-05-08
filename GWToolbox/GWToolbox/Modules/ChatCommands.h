@@ -21,6 +21,8 @@ public:
 
 	const char* Name() const override { return "Chat Commands"; }
 
+	const char* SettingsName() const override { return "Game Settings"; }
+
 	void Initialize() override;
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
