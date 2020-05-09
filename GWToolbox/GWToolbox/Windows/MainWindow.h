@@ -39,20 +39,22 @@ private:
 	}
 	std::vector<std::pair<float, ToolboxUIElement*>> modules_to_draw{};
 	std::unordered_map<std::string,float> module_weigtings {
-		{"Pcons",0.51f},
+		{"Pcons",0.5f},
 		{"Hotkeys",0.52f},
-		{"Builds",0.53f},
-		{"Hero Builds",0.54f},
-		{"Travel",0.55f},
-		{"Dialogs",0.56f},
-		{"Info",0.57f},
-		{"Materials",0.58f},
-		{"Trade",0.59f},
-		{"Notepad",0.6f},
-		{"Objective Timer",0.61f},
-		{"Faction Leaderboard",0.71f},
-		{"Daily Quests",0.72f},
-		{"Friend List",0.73f},
-		{"Settings",0.74f}
+		{"Builds",0.54f},
+		{"Hero Builds",0.56f},
+		{"Travel",0.58f},
+		{"Dialogs",0.6f},
+		{"Info",0.62f},
+		{"Materials",0.64f},
+		{"Trade",0.66f},
+		{"Notepad",0.68f},
+		{"Objective Timer",0.7f},
+		{"Faction Leaderboard",0.72f},
+		{"Daily Quests",0.74f},
+		{"Friend List",0.76f},
+		{"Damage",0.78f},
+		{"Minimap",0.8f},
+		{"Settings",0.82f}
 	};
 };
