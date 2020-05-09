@@ -41,8 +41,14 @@ public:
 	}
 	bool must_self_destruct = false;	// is true when toolbox should quit
 
-	void RegisterModule(ToolboxModule* m) { modules.push_back(m); }
-	void RegisterUIElement(ToolboxUIElement* e) { uielements.push_back(e); }
+	void RegisterModule(ToolboxModule* m) { 
+		if (std::find(modules.begin(), modules.end(), m) == modules.end())
+			modules.push_back(m);
+	}
+	void RegisterUIElement(ToolboxUIElement* e) { 
+		if(std::find(uielements.begin(),uielements.end(),e) == uielements.end())
+			uielements.push_back(e); 
+	}
 
 	const std::vector<ToolboxModule*>& GetModules() const { return modules; }
 	const std::vector<ToolboxModule*>& GetCoreModules() const { return core_modules; }

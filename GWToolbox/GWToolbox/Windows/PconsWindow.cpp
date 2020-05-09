@@ -120,6 +120,7 @@ PconsWindow::PconsWindow() {
 }
 void PconsWindow::Initialize() {
 	ToolboxWindow::Initialize();
+	AlcoholWidget::Instance().Initialize(); // Pcons depend on alcohol widget to track current drunk level.
 	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"cupcake.png"), IDB_Icon_Cupcake);
 	for (Pcon* pcon : pcons) {
 		pcon->Initialize();
