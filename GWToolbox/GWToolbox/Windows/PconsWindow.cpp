@@ -451,7 +451,7 @@ void PconsWindow::LoadSettings(CSimpleIni* ini) {
 	Pcon::size = (float)ini->GetDoubleValue(Name(), "pconsize", 46.0);
 	Pcon::disable_when_not_found = ini->GetBoolValue(Name(), VAR_NAME(disable_when_not_found), true);
 	Pcon::enabled_bg_color = Colors::Load(ini, Name(), VAR_NAME(enabled_bg_color), Pcon::enabled_bg_color);
-	ini->GetBoolValue(Name(), VAR_NAME(show_enable_button), show_enable_button);
+	show_enable_button = ini->GetBoolValue(Name(), VAR_NAME(show_enable_button), show_enable_button);
 	Pcon::suppress_drunk_effect = ini->GetBoolValue(Name(), VAR_NAME(suppress_drunk_effect), false);
 	Pcon::suppress_drunk_text = ini->GetBoolValue(Name(), VAR_NAME(suppress_drunk_text), false);
 	Pcon::suppress_drunk_emotes = ini->GetBoolValue(Name(), VAR_NAME(suppress_drunk_emotes), false);
