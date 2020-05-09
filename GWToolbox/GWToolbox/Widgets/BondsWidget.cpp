@@ -230,7 +230,7 @@ void BondsWidget::SaveSettings(CSimpleIni* ini) {
 
 void BondsWidget::DrawSettingInternal() {
     ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
-	Colors::DrawSetting("Background", &background);
+    Colors::DrawSettingHueWheel("Background", &background, 0);
 	ImGui::Checkbox("Click to cast bond", &click_to_cast);
     ImGui::Checkbox("Click to cancel bond", &click_to_drop);
 	ImGui::Checkbox("Show bonds for Allies", &show_allies);

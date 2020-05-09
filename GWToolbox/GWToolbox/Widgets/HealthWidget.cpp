@@ -280,7 +280,7 @@ bool HealthWidget::Threshold::DrawSettings(Operation& op) {
 		ImGui::ShowHelp("The map where it will be applied. Optional. Leave 0 for any map");
 		changed |= ImGui::InputInt("Percentage", &value);
 		ImGui::ShowHelp("Percentage below which this color should be used");
-		changed |= Colors::DrawSetting("Color", &color);
+		changed |= Colors::DrawSettingHueWheel("Color", &color, 0);
 		ImGui::ShowHelp("The custom color for this threshold.");
 
 		float spacing = ImGui::GetStyle().ItemInnerSpacing.x;

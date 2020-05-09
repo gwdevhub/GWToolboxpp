@@ -189,7 +189,7 @@ void Minimap::DrawSettingInternal() {
 		ImGui::Checkbox("Show hero flag controls", &hero_flag_controls_show);
 		ImGui::Checkbox("Attach to minimap", &hero_flag_window_attach);
 		ImGui::ShowHelp("If disabled, you can move/resize the window with 'Unlock Move All'.");
-		Colors::DrawSetting("Background", &hero_flag_window_background);
+		Colors::DrawSettingHueWheel("Background", &hero_flag_window_background);
 		ImGui::TreePop();
 	}
 	ImGui::Checkbox("Show boss by profession color on minimap", &agent_renderer.boss_colors);

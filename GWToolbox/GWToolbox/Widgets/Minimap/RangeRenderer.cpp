@@ -44,11 +44,11 @@ void RangeRenderer::DrawSettings() {
 		color_range_spirit = 0xFF337733;
 		color_range_compass = 0xFF666611;
 	}
-	changed |= Colors::DrawSetting("HoS range", &color_range_hos);
-	changed |= Colors::DrawSetting("Aggro range", &color_range_aggro);
-	changed |= Colors::DrawSetting("Cast range", &color_range_cast);
-	changed |= Colors::DrawSetting("Spirit range", &color_range_spirit);
-	changed |= Colors::DrawSetting("Compass range", &color_range_compass);
+	changed |= Colors::DrawSettingHueWheel("HoS range", &color_range_hos);
+	changed |= Colors::DrawSettingHueWheel("Aggro range", &color_range_aggro);
+	changed |= Colors::DrawSettingHueWheel("Cast range", &color_range_cast);
+	changed |= Colors::DrawSettingHueWheel("Spirit range", &color_range_spirit);
+	changed |= Colors::DrawSettingHueWheel("Compass range", &color_range_compass);
 	if (changed) Invalidate();
 }
 

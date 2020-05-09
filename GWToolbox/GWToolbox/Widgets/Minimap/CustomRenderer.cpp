@@ -121,7 +121,7 @@ void CustomRenderer::DrawSettings() {
 		color = 0xFFFFFFFF;
 		Invalidate();
 	}
-	if (Colors::DrawSetting("Color", &color)) Invalidate();
+	if (Colors::DrawSettingHueWheel("Color", &color)) Invalidate();
 	ImGui::Text("Note: custom markers are stored in 'Markers.ini' in settings folder. You can share the file with other players or paste other people's markers into it.");
 	float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
 	ImGui::PushID("lines");

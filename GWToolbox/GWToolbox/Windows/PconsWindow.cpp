@@ -540,7 +540,7 @@ void PconsWindow::DrawSettingInternal() {
 	ImGui::SliderInt("Items per row", &items_per_row, 1, 18);
 	ImGui::DragFloat("Pcon Size", &Pcon::size, 1.0f, 10.0f, 0.0f);
 	ImGui::ShowHelp("Size of each Pcon icon in the interface");
-	Colors::DrawSetting("Enabled-Background", &Pcon::enabled_bg_color);
+	Colors::DrawSettingHueWheel("Enabled-Background", &Pcon::enabled_bg_color);
 	if (Pcon::size <= 1.0f) Pcon::size = 1.0f;
 	if (ImGui::TreeNode("Visibility")) {
 		ImGui::Checkbox("Enable/Disable button", &show_enable_button);

@@ -38,9 +38,9 @@ void SymbolsRenderer::DrawSettings() {
 		color_modifier = 0x001E1E1E;
 		Invalidate();
 	}
-	if (Colors::DrawSetting("Quest Marker", &color_quest)) Invalidate();
-	if (Colors::DrawSetting("North Marker", &color_north)) Invalidate();
-	if (Colors::DrawSetting("Symbol Modifier", &color_modifier)) Invalidate();
+	if (Colors::DrawSettingHueWheel("Quest Marker", &color_quest)) Invalidate();
+	if (Colors::DrawSettingHueWheel("North Marker", &color_north)) Invalidate();
+	if (Colors::DrawSettingHueWheel("Symbol Modifier", &color_modifier)) Invalidate();
 	ImGui::ShowHelp("Each symbol has this value removed on the border and added at the center\nZero makes them have solid color, while a high number makes them appear more shaded.");
 }
 

@@ -134,28 +134,28 @@ void AgentRenderer::SaveAgentColors() const {
 
 void AgentRenderer::DrawSettings() {
 	if (ImGui::TreeNode("Agent Colors")) {
-		Colors::DrawSetting("EoE", &color_eoe);
+		Colors::DrawSettingHueWheel("EoE", &color_eoe);
 		ImGui::ShowHelp("This is the color at the edge, the color in the middle is the same, with alpha-50");
-		Colors::DrawSetting("QZ", &color_qz);
+		Colors::DrawSettingHueWheel("QZ", &color_qz);
 		ImGui::ShowHelp("This is the color at the edge, the color in the middle is the same, with alpha-50");
-		Colors::DrawSetting("Winnowing", &color_winnowing);
+		Colors::DrawSettingHueWheel("Winnowing", &color_winnowing, 0);
 		ImGui::ShowHelp("This is the color at the edge, the color in the middle is the same, with alpha-50");
-		Colors::DrawSetting("Target", &color_target);
-		Colors::DrawSetting("Player (alive)", &color_player);
-		Colors::DrawSetting("Player (dead)", &color_player_dead);
-		Colors::DrawSetting("Signpost", &color_signpost);
-		Colors::DrawSetting("Item", &color_item);
-		Colors::DrawSetting("Hostile (>90%%)", &color_hostile);
-		Colors::DrawSetting("Hostile (dead)", &color_hostile_dead);
-		Colors::DrawSetting("Neutral", &color_neutral);
-		Colors::DrawSetting("Ally (player)", &color_ally);
-		Colors::DrawSetting("Ally (NPC)", &color_ally_npc);
-		Colors::DrawSetting("Ally (spirit)", &color_ally_spirit);
-		Colors::DrawSetting("Ally (minion)", &color_ally_minion);
-		Colors::DrawSetting("Ally (dead)", &color_ally_dead);
-		Colors::DrawSetting("Agent modifier", &color_agent_modifier);
+		Colors::DrawSettingHueWheel("Target", &color_target);
+		Colors::DrawSettingHueWheel("Player (alive)", &color_player);
+		Colors::DrawSettingHueWheel("Player (dead)", &color_player_dead);
+		Colors::DrawSettingHueWheel("Signpost", &color_signpost);
+		Colors::DrawSettingHueWheel("Item", &color_item);
+		Colors::DrawSettingHueWheel("Hostile (>90%%)", &color_hostile);
+		Colors::DrawSettingHueWheel("Hostile (dead)", &color_hostile_dead);
+		Colors::DrawSettingHueWheel("Neutral", &color_neutral);
+		Colors::DrawSettingHueWheel("Ally (player)", &color_ally);
+		Colors::DrawSettingHueWheel("Ally (NPC)", &color_ally_npc);
+		Colors::DrawSettingHueWheel("Ally (spirit)", &color_ally_spirit);
+		Colors::DrawSettingHueWheel("Ally (minion)", &color_ally_minion);
+		Colors::DrawSettingHueWheel("Ally (dead)", &color_ally_dead);
+		Colors::DrawSettingHueWheel("Agent modifier", &color_agent_modifier);
 		ImGui::ShowHelp("Each agent has this value removed on the border and added at the center\nZero makes agents have solid color, while a high number makes them appear more shaded.");
-		Colors::DrawSetting("Agent damaged modifier", &color_agent_damaged_modifier);
+		Colors::DrawSettingHueWheel("Agent damaged modifier", &color_agent_damaged_modifier);
 		ImGui::ShowHelp("Each hostile agent has this value subtracted from it when under 90% HP.");
 		if (ImGui::SmallButton("Restore Defaults")) {
 			ImGui::OpenPopup("Restore Defaults?");
@@ -841,7 +841,7 @@ bool AgentRenderer::CustomAgent::DrawSettings(AgentRenderer::CustomAgent::Operat
 		if (ImGui::Checkbox("##color_active", &color_active)) changed = true;
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("If unchecked, the default color will be used");
 		ImGui::SameLine();
-		if (Colors::DrawSetting("Color", &color)) changed = true;
+		if (Colors::DrawSettingHueWheel("", &color, 0)) changed = true;
 		ImGui::ShowHelp("The custom color for this agent.");
 
 		if (ImGui::Checkbox("##size_active", &size_active)) changed = true;

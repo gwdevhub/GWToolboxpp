@@ -13,13 +13,13 @@
 
 void DistanceWidget::DrawSettingInternal() {
 	ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
-	Colors::DrawSetting("Adjacent Range", &color_adjacent);
-	Colors::DrawSetting("Nearby Range", &color_nearby);
-	Colors::DrawSetting("Area Range", &color_area);
-	Colors::DrawSetting("Earshot Range", &color_earshot);
-	Colors::DrawSetting("Cast Range", &color_cast);
-	Colors::DrawSetting("Spirit Range", &color_spirit);
-	Colors::DrawSetting("Compass Range", &color_compass);
+	Colors::DrawSettingHueWheel("Adjacent Range", &color_adjacent, 0);
+	Colors::DrawSettingHueWheel("Nearby Range", &color_nearby, 0);
+	Colors::DrawSettingHueWheel("Area Range", &color_area, 0);
+	Colors::DrawSettingHueWheel("Earshot Range", &color_earshot, 0);
+	Colors::DrawSettingHueWheel("Cast Range", &color_cast, 0);
+	Colors::DrawSettingHueWheel("Spirit Range", &color_spirit, 0);
+	Colors::DrawSettingHueWheel("Compass Range", &color_compass, 0);
 }
 void DistanceWidget::LoadSettings(CSimpleIni* ini) {
 	ToolboxWidget::LoadSettings(ini);

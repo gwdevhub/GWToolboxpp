@@ -648,7 +648,7 @@ void FriendListWindow::DrawSettingInternal() {
 	edited |= ImGui::Combo("###show_as_explorable", &explorable_show_as, "Window\0Widget\0Hidden");
 	ImGui::PopItemWidth();
 	ImGui::SameLine(); ImGui::Text("in explorable");
-	Colors::DrawSetting("Widget background hover color", &hover_background_color);
+	Colors::DrawSettingHueWheel("Widget background hover color", &hover_background_color);
 
 	ImGui::Checkbox("Show my status", &show_my_status);
 	ImGui::ShowHelp("e.e. 'You are: Online'");

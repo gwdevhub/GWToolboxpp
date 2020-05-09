@@ -30,8 +30,8 @@ void PmapRenderer::DrawSettings() {
 		color_mapshadow = 0xFF120808;
 		Invalidate();
 	}
-	if (Colors::DrawSetting("Map", &color_map)) Invalidate();
-	if (Colors::DrawSetting("Shadow", &color_mapshadow)) Invalidate();
+	if (Colors::DrawSettingHueWheel("Map", &color_map)) Invalidate();
+	if (Colors::DrawSettingHueWheel("Shadow", &color_mapshadow)) Invalidate();
 }
 
 void PmapRenderer::Initialize(IDirect3DDevice9* device) {
