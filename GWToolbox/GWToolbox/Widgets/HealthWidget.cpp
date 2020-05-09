@@ -27,7 +27,6 @@ void HealthWidget::LoadSettings(CSimpleIni *ini) {
 	ToolboxWidget::LoadSettings(ini);
 	click_to_print_health = ini->GetBoolValue(Name(), VAR_NAME(click_to_print_health), click_to_print_health);
 	hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
-	color_default = Colors::Load(ini, Name(), VAR_NAME(color_default), ImColor(255, 255, 255));
 
 	if (inifile == nullptr) inifile = new CSimpleIni();
 	inifile->LoadFile(Resources::GetPath(HEALTH_THRESHOLD_INIFILENAME).c_str());
@@ -61,14 +60,13 @@ void HealthWidget::SaveSettings(CSimpleIni *ini) {
 	ToolboxWidget::SaveSettings(ini);
 	ini->SetBoolValue(Name(), VAR_NAME(click_to_print_health), click_to_print_health);
 	ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
-	Colors::Save(ini, Name(), VAR_NAME(color_default), color_default);
 
 	if (thresholds_changed && inifile) {
 		inifile->Reset();
 
-		char buf[256];
+		char buf[32];
 		for (size_t i = 0; i < thresholds.size(); ++i) {
-			snprintf(buf, 256, "threshold%03d", i);
+			snprintf(buf, sizeof(buf), "threshold%03d", i);
 			thresholds[i]->SaveSettings(inifile, buf);
 		}
 
@@ -81,9 +79,6 @@ void HealthWidget::DrawSettingInternal() {
 	ToolboxWidget::DrawSettingInternal();
 	ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
 	ImGui::Checkbox("Ctrl+Click to print target health", &click_to_print_health);
-
-	Colors::DrawSetting("Color", &color_default);
-	ImGui::ShowHelp("The color for this widget.");
 
 	bool thresholdsNode = ImGui::TreeNode("Thresholds");
 	if (ImGui::IsItemHovered()) ImGui::SetTooltip("The first matching threshold will be used.");
@@ -123,7 +118,7 @@ void HealthWidget::DrawSettingInternal() {
 		}
 
 		if (ImGui::Button("Add Threshold")) {
-			thresholds.push_back(new Threshold("<name>", color_default, 0));
+			thresholds.push_back(new Threshold("<name>", 0xFFFFFFFF, 0));
 			thresholds.back()->index = thresholds.size() - 1;
 			changed = true;
 		}
@@ -149,7 +144,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
 		GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
 		if (target) {
 			if (target->hp >= 0) {
-				snprintf(health_perc, 32, "%.0f %s", target->hp * 100, "%%");
+				snprintf(health_perc, 32, "%.0f %%", target->hp * 100.0f);
 			} else {
 				snprintf(health_perc, 32, "-");
 			}
@@ -162,8 +157,8 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
 
 			ImVec2 cur;
 
-			Color color = Colors::RGB(255, 255, 255);
-			Color background = Colors::RGB(0, 0, 0);
+			ImColor color = ImGui::GetStyleColorVec4(ImGuiCol_Text);
+			ImColor background = ImColor(Colors::Black());
 
 			for (size_t i = 0; i < thresholds.size(); ++i) {
 				Threshold* threshold = thresholds[i];
@@ -181,7 +176,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
 				}
 
 				if (target->hp * 100 < threshold->value) {
-					color = threshold->color;
+					color = ImColor(threshold->color);
 					break;
 				}
 			}
@@ -190,27 +185,27 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f20));
 			cur = ImGui::GetCursorPos();
 			ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
-			ImGui::TextColored(ImColor(background), "Health");
+			ImGui::TextColored(background, "Health");
 			ImGui::SetCursorPos(cur);
-			ImGui::TextColored(ImColor(color_default), "Health");
+			ImGui::Text("Health");
 			ImGui::PopFont();
 
 			// perc
 			ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f42));
 			cur = ImGui::GetCursorPos();
 			ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
-			ImGui::TextColored(ImColor(background), health_perc);
+			ImGui::TextColored(background, health_perc);
 			ImGui::SetCursorPos(cur);
-			ImGui::TextColored(ImColor(color), health_perc);
+			ImGui::TextColored(color, health_perc);
 			ImGui::PopFont();
 
 			// abs
 			ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f24));
 			cur = ImGui::GetCursorPos();
 			ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
-			ImGui::TextColored(ImColor(background), health_abs);
+			ImGui::TextColored(background, health_abs);
 			ImGui::SetCursorPos(cur);
-			ImGui::TextColored(ImColor(color_default), health_abs);
+			ImGui::Text(health_abs);
 			ImGui::PopFont();
 
             if (click_to_print_health) {
@@ -219,8 +214,9 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
                         GW::Agents::AsyncGetAgentName(target, agent_name_ping);
                         if (agent_name_ping.size()) {
                             char buffer[512];
+							std::string agent_name_str = GuiUtils::WStringToString(agent_name_ping);
                             int current_hp = (int)(target->hp * target->max_hp);
-                            snprintf(buffer, sizeof(buffer), "%S's Health is %d of %d. (%.0f %%)", agent_name_ping.c_str(), current_hp, target->max_hp, target->hp * 100.f);
+                            snprintf(buffer, sizeof(buffer), "%s's Health is %d of %d. (%.0f %%)", agent_name_str.c_str(), current_hp, target->max_hp, target->hp * 100.f);
                             GW::Chat::SendChat('#', buffer);
                         }
                     }
@@ -237,17 +233,15 @@ unsigned int HealthWidget::Threshold::cur_ui_id = 0;
 HealthWidget::Threshold::Threshold(CSimpleIni* ini, const char* section) : ui_id(++cur_ui_id) {
 	active = ini->GetBoolValue(section, VAR_NAME(active));
 	GuiUtils::StrCopy(name, ini->GetValue(section, VAR_NAME(name), ""), sizeof(name));
-	modelId = ini->GetLongValue(section, VAR_NAME(modelId), 0);
-	skillId = ini->GetLongValue(section, VAR_NAME(skillId), 0);
-	mapId = ini->GetLongValue(section, VAR_NAME(mapId), 0);
-	value = ini->GetLongValue(section, VAR_NAME(value), 0);
-	color = Colors::Load(ini, section, VAR_NAME(color), 0xFFFFFFFF);
+	modelId = ini->GetLongValue(section, VAR_NAME(modelId), modelId);
+	skillId = ini->GetLongValue(section, VAR_NAME(skillId), skillId);
+	mapId = ini->GetLongValue(section, VAR_NAME(mapId), mapId);
+	value = ini->GetLongValue(section, VAR_NAME(value), value);
+	color = Colors::Load(ini, section, VAR_NAME(color), color);
 }
 
-HealthWidget::Threshold::Threshold(const char* _name, Color _color, int _value) : ui_id(++cur_ui_id) {
+HealthWidget::Threshold::Threshold(const char* _name, Color _color, int _value) : ui_id(++cur_ui_id), color(_color), value(_value) {
 	GuiUtils::StrCopy(name, _name, sizeof(name));
-	color = _color;
-	value = _value;
 }
 
 bool HealthWidget::Threshold::DrawHeader() {
@@ -276,17 +270,17 @@ bool HealthWidget::Threshold::DrawSettings(Operation& op) {
 
 		ImGui::PushID(ui_id);
 
-		if (ImGui::InputText("Name", name, 128)) changed = true;
+		changed |= ImGui::InputText("Name", name, 128);
 		ImGui::ShowHelp("A name to help you remember what this is. Optional.");
-		if (ImGui::InputInt("Model ID", &modelId)) changed = true;
+		changed |= ImGui::InputInt("Model ID", &modelId);
 		ImGui::ShowHelp("The Agent to which this threshold will be applied. Optional. Leave 0 for any agent");
-		if (ImGui::InputInt("Skill ID", &skillId)) changed = true;
+		changed |= ImGui::InputInt("Skill ID", &skillId);
 		ImGui::ShowHelp("Only apply if this skill is on your bar. Optional. Leave 0 for any skills");
-		if (ImGui::InputInt("Map ID", &mapId)) changed = true;
+		changed |= ImGui::InputInt("Map ID", &mapId);
 		ImGui::ShowHelp("The map where it will be applied. Optional. Leave 0 for any map");
-		if (ImGui::InputInt("Percentage", &value)) changed = true;
+		changed |= ImGui::InputInt("Percentage", &value);
 		ImGui::ShowHelp("Percentage below which this color should be used");
-		if (Colors::DrawSetting("Color", &color)) changed = true;
+		changed |= Colors::DrawSetting("Color", &color);
 		ImGui::ShowHelp("The custom color for this threshold.");
 
 		float spacing = ImGui::GetStyle().ItemInnerSpacing.x;

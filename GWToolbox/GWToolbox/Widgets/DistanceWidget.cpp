@@ -13,7 +13,6 @@
 
 void DistanceWidget::DrawSettingInternal() {
 	ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
-	Colors::DrawSetting("Widget Color", &color_widget);
 	Colors::DrawSetting("Adjacent Range", &color_adjacent);
 	Colors::DrawSetting("Nearby Range", &color_nearby);
 	Colors::DrawSetting("Area Range", &color_area);
@@ -25,19 +24,17 @@ void DistanceWidget::DrawSettingInternal() {
 void DistanceWidget::LoadSettings(CSimpleIni* ini) {
 	ToolboxWidget::LoadSettings(ini);
 	hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
-	color_widget = Colors::Load(ini, Name(), VAR_NAME(color_widget), ImColor(255, 255, 255));
-	color_adjacent = Colors::Load(ini, Name(), VAR_NAME(color_adjacent), ImColor(255, 255, 255));
-	color_nearby = Colors::Load(ini, Name(), VAR_NAME(color_nearby), ImColor(255, 255, 255));
-	color_area = Colors::Load(ini, Name(), VAR_NAME(color_area), ImColor(255, 255, 255));
-	color_earshot = Colors::Load(ini, Name(), VAR_NAME(color_earshot), ImColor(255, 255, 255));
-	color_cast = Colors::Load(ini, Name(), VAR_NAME(color_cast), ImColor(255, 255, 255));
-	color_spirit = Colors::Load(ini, Name(), VAR_NAME(color_spirit), ImColor(255, 255, 255));
-	color_compass = Colors::Load(ini, Name(), VAR_NAME(color_compass), ImColor(255, 255, 255));
+	color_adjacent = Colors::Load(ini, Name(), VAR_NAME(color_adjacent), color_adjacent);
+	color_nearby = Colors::Load(ini, Name(), VAR_NAME(color_nearby), color_nearby);
+	color_area = Colors::Load(ini, Name(), VAR_NAME(color_area), color_area);
+	color_earshot = Colors::Load(ini, Name(), VAR_NAME(color_earshot), color_earshot);
+	color_cast = Colors::Load(ini, Name(), VAR_NAME(color_cast), color_cast);
+	color_spirit = Colors::Load(ini, Name(), VAR_NAME(color_spirit), color_spirit);
+	color_compass = Colors::Load(ini, Name(), VAR_NAME(color_compass), color_compass);
 }
 void DistanceWidget::SaveSettings(CSimpleIni* ini) {
 	ToolboxWidget::SaveSettings(ini);
 	ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
-	Colors::Save(ini, Name(), VAR_NAME(color_widget), color_widget);
 	Colors::Save(ini, Name(), VAR_NAME(color_adjacent), color_adjacent);
 	Colors::Save(ini, Name(), VAR_NAME(color_nearby), color_nearby);
 	Colors::Save(ini, Name(), VAR_NAME(color_area), color_area);
@@ -62,54 +59,49 @@ void DistanceWidget::Draw(IDirect3DDevice9* pDevice) {
 			snprintf(dist_perc, 32, "%2.0f %s", dist * 100 / GW::Constants::Range::Compass, "%%");
 			snprintf(dist_abs, 32, "%.0f", dist);
 
-			ImVec2 cur;
-
-			Color color;
+			ImColor color = ImGui::GetStyleColorVec4(ImGuiCol_Text);
 			if (dist <= GW::Constants::Range::Adjacent) {
-				color = color_adjacent;
+				color = ImColor(color_adjacent);
 			} else if (dist <= GW::Constants::Range::Nearby) {
-				color = color_nearby;
+				color = ImColor(color_nearby);
 			} else if (dist <= GW::Constants::Range::Area) {
-				color = color_area;
+				color = ImColor(color_area);
 			} else if (dist <= GW::Constants::Range::Earshot) {
-				color = color_earshot;
+				color = ImColor(color_earshot);
 			} else if (dist <= GW::Constants::Range::Spellcast) {
-				color = color_cast;
+				color = ImColor(color_cast);
 			} else if (dist <= GW::Constants::Range::Spirit) {
-				color = color_spirit;
+				color = ImColor(color_spirit);
 			} else if (dist <= GW::Constants::Range::Compass) {
-				color = color_compass;
-			} else {
-				color = color_widget;
+				color = ImColor(color_compass);
 			}
 
-			Color background = Colors::RGB(0, 0, 0);
-
+			ImColor background = ImColor(Colors::Black());
 			// 'distance'
 			ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f20));
-			cur = ImGui::GetCursorPos();
+			ImVec2 cur = ImGui::GetCursorPos();
 			ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
-			ImGui::TextColored(ImColor(background), "Distance");
+			ImGui::TextColored(background, "Distance");
 			ImGui::SetCursorPos(cur);
-			ImGui::TextColored(ImColor(color_widget), "Distance");
+			ImGui::Text("Distance");
 			ImGui::PopFont();
 
 			// perc
 			ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f42));
 			cur = ImGui::GetCursorPos();
 			ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
-			ImGui::TextColored(ImColor(background), dist_perc);
+			ImGui::TextColored(background, dist_perc);
 			ImGui::SetCursorPos(cur);
-			ImGui::TextColored(ImColor(color), dist_perc);
+			ImGui::TextColored(color, dist_perc);
 			ImGui::PopFont();
 
 			// abs
 			ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f24));
 			cur = ImGui::GetCursorPos();
 			ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
-			ImGui::TextColored(ImColor(background), dist_abs);
+			ImGui::TextColored(background, dist_abs);
 			ImGui::SetCursorPos(cur);
-			ImGui::TextColored(ImColor(color_widget), dist_abs);
+			ImGui::Text(dist_abs);
 			ImGui::PopFont();
 		}
 	}

@@ -27,7 +27,6 @@ public:
 
     std::wstring agent_name_ping;
 	bool hide_in_outpost = false;
-	Color color_default = 0;
 
 	bool thresholds_changed = false;
 private:
@@ -59,7 +58,7 @@ private:
 			int mapId = 0;
 
 			int value = 0;
-			Color color = 0;
+			Color color = 0xFFFFFFFF;
 	};
 
 	std::vector<Threshold*> thresholds;
