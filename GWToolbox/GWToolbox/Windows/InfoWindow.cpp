@@ -48,85 +48,95 @@ void InfoWindow::Initialize() {
 	ToolboxWindow::Initialize();
 
 	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"info.png"), IDB_Icon_Info);
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageCore>(&MessageCore_Entry,
-	[this](GW::HookStatus *, GW::Packet::StoC::MessageCore *pak) -> void {
-		if (pak->message[0] == 0x7BFF
-			&& pak->message[1] == 0xC9C4
-			&& pak->message[2] == 0xAeAA
-			&& pak->message[3] == 0x1B9B
-			&& pak->message[4] == 0x107) { // 0x107 is the "start string" marker
-			
-			// Prepare the name
-			const int offset = 5;
-			wchar_t buf[256];
-			{
-				int i = 0;
-				while (i < 255 && pak->message[i + offset] != 0x1 && pak->message[i + offset] != 0) {
-					buf[i] = (pak->message[offset + i]);
-					++i;
-				}
-				buf[i] = '\0';	
-			}
-
-			// get all the data
-			GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
-			if (info == nullptr) return;
-			GW::PlayerPartyMemberArray partymembers = info->players;
-			if (!partymembers.valid()) return;
-			GW::PlayerArray players = GW::Agents::GetPlayerArray();
-			if (!players.valid()) return;
-
-			// set the right index in party
-			for (unsigned i = 0; i < partymembers.size(); ++i) {
-				if (i >= status.size()) continue;
-				if (status[i] == Resigned) continue;
-				if (partymembers[i].login_number >= players.size()) continue;
-				if (GuiUtils::SanitizePlayerName(players[partymembers[i].login_number].name) == buf) {
-					status[i] = Resigned;
-					timestamp[i] = GW::Map::GetInstanceTime();
-					break;
-				}
-			}
-		}
-	});
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageCore>(&MessageCore_Entry,OnMessageCore);
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::QuotedItemPrice>(&InstanceLoadFile_Entry,
 		[this](GW::HookStatus*, GW::Packet::StoC::QuotedItemPrice* packet) -> void {
 			quoted_item_id = packet->itemid;
 		});
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry,
-	[this](GW::HookStatus *, GW::Packet::StoC::InstanceLoadFile *packet) -> void {
-		quoted_item_id = 0;
-		mapfile = packet->map_fileID;
-		for (unsigned i = 0; i < status.size(); ++i) {
-			status[i] = NotYetConnected;
-			timestamp[i] = 0;
-		}
-	});
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DialogSender>(&OnDialog_Entry, [this](...) {
+			ClearAvailableDialogs();
+		});
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DialogButton>(&OnDialog_Entry,
+		[this](GW::HookStatus*, GW::Packet::StoC::DialogButton* packet) -> void {
+			available_dialogs.push_back(new AvailableDialog(packet->message, packet->dialog_id));
+		});
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry,OnInstanceLoad);
 
-	GW::Chat::CreateCommand(L"resignlog",
-	[this](const wchar_t *cmd, int argc, wchar_t **argv) -> void {
-		if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
-		GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
-		if (info == nullptr) return;
-		GW::PlayerPartyMemberArray partymembers = info->players;
-		if (!partymembers.valid()) return;
-		GW::PlayerArray players = GW::Agents::GetPlayerArray();
-		if (!players.valid()) return;
-		size_t index_max = std::min<size_t>(status.size(), partymembers.size());
-		for (size_t i = 0; i < index_max; ++i) {
-			GW::PlayerPartyMember& partymember = partymembers[i];
-			if (partymember.login_number >= players.size()) continue;
-			GW::Player& player = players[partymember.login_number];
-
-			wchar_t buffer[256];
-			Status player_status = status[i];
-			if (player_status == Connected) {
-				PrintResignStatus(buffer, 256, i, player.name);
-            	send_queue.push(std::wstring(buffer));
-            }
-		}
-	});
+	GW::Chat::CreateCommand(L"resignlog", CmdResignLog);
 }
+
+void InfoWindow::CmdResignLog(const wchar_t* cmd, int argc, wchar_t** argv) {
+	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
+	GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
+	if (info == nullptr) return;
+	GW::PlayerPartyMemberArray partymembers = info->players;
+	if (!partymembers.valid()) return;
+	GW::PlayerArray players = GW::Agents::GetPlayerArray();
+	if (!players.valid()) return;
+	auto instance = &Instance();
+	size_t index_max = std::min<size_t>(instance->status.size(), partymembers.size());
+	for (size_t i = 0; i < index_max; ++i) {
+		GW::PlayerPartyMember& partymember = partymembers[i];
+		if (partymember.login_number >= players.size()) continue;
+		GW::Player& player = players[partymember.login_number];
+
+		wchar_t buffer[256];
+		if (instance->status[i] == Connected) {
+			instance->PrintResignStatus(buffer, 256, i, player.name);
+			instance->send_queue.push(std::wstring(buffer));
+		}
+	}
+}
+
+void InfoWindow::OnInstanceLoad(GW::HookStatus*, GW::Packet::StoC::InstanceLoadFile* packet) {
+	auto instance = &Instance();
+	instance->quoted_item_id = 0;
+	instance->mapfile = packet->map_fileID;
+	for (unsigned i = 0; i < instance->status.size(); ++i) {
+		instance->status[i] = NotYetConnected;
+		instance->timestamp[i] = 0;
+	}
+}
+
+void InfoWindow::OnMessageCore(GW::HookStatus*, GW::Packet::StoC::MessageCore* pak) {
+	// 0x107 is the "start string" marker
+	if (wmemcmp(pak->message, L"\x7BFF\xC9C4\xAEAA\x1B9B\x107", 5) != 0)
+		return;
+
+	// get all the data
+	GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
+	if (info == nullptr) return;
+	GW::PlayerPartyMemberArray partymembers = info->players;
+	if (!partymembers.valid()) return;
+	GW::PlayerArray players = GW::Agents::GetPlayerArray();
+	if (!players.valid()) return;
+
+	// Prepare the name
+	const int offset = 5;
+	wchar_t buf[256];
+	{
+		int i = 0;
+		while (i < 255 && pak->message[i + offset] != 0x1 && pak->message[i + offset] != 0) {
+			buf[i] = (pak->message[offset + i]);
+			++i;
+		}
+		buf[i] = '\0';
+	}
+
+	// set the right index in party
+	auto instance = &Instance();
+	for (unsigned i = 0; i < partymembers.size(); ++i) {
+		if (i >= instance->status.size()) continue;
+		if (instance->status[i] == Resigned) continue;
+		if (partymembers[i].login_number >= players.size()) continue;
+		if (GuiUtils::SanitizePlayerName(players[partymembers[i].login_number].name) == buf) {
+			instance->status[i] = Resigned;
+			Instance().timestamp[i] = GW::Map::GetInstanceTime();
+			break;
+		}
+	}
+}
+
 void InfoWindow::DrawItemInfo(GW::Item* item, ForDecode* name) {
 	if (!item) return;
 	name->init(item->single_item_name);
@@ -455,6 +465,15 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			snprintf(id_buf, 32, "0x%X", GW::Agents::GetLastDialogId());
 			ImGui::PushItemWidth(-80.0f);
 			ImGui::InputText("Last Dialog", id_buf, 32, ImGuiInputTextFlags_ReadOnly);
+			ImGui::PopItemWidth();
+			ImGui::Text("Available NPC Dialogs:");
+			ImGui::ShowHelp("Talk to an NPC to see available dialogs");
+			ImGui::PushItemWidth(140.0f * ImGui::GetIO().FontGlobalScale);
+			for (auto dialog : available_dialogs) {
+				if (dialog->msg_s.empty() && !dialog->msg_ws.empty())
+					dialog->msg_s = GuiUtils::WStringToString(dialog->msg_ws);
+				ImGui::InputText(dialog->msg_s.c_str(), dialog->dialog_buf, 11, ImGuiInputTextFlags_ReadOnly);
+			}
 			ImGui::PopItemWidth();
 		}
 		if (show_item && ImGui::CollapsingHeader("Item")) {

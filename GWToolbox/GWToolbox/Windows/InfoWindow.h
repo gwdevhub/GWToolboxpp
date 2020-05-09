@@ -4,6 +4,8 @@
 
 #include <GWCA\GameEntities\Item.h>
 
+#include <GWCA\Packets\StoC.h>
+
 #include <GWCA\Managers\UIMgr.h>
 
 #include <Defines.h>
@@ -13,7 +15,9 @@
 
 class InfoWindow : public ToolboxWindow {
 	InfoWindow() {};
-	~InfoWindow() {};
+	~InfoWindow() {
+		ClearAvailableDialogs();
+	};
 public:
 	static InfoWindow& Instance() {
 		static InfoWindow instance;
@@ -31,6 +35,11 @@ public:
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
 
+
+	static void CmdResignLog(const wchar_t* cmd, int argc, wchar_t** argv);
+	static void OnInstanceLoad(GW::HookStatus*, GW::Packet::StoC::InstanceLoadFile*);
+	static void OnMessageCore(GW::HookStatus*, GW::Packet::StoC::MessageCore*);
+
 private:
 	enum Status {
 		Unknown,
@@ -40,10 +49,30 @@ private:
 		Left
 	};
 
+	struct AvailableDialog {
+		AvailableDialog(wchar_t* _message, uint32_t dialog_id) {
+			GW::UI::AsyncDecodeStr(_message, &msg_ws);
+			snprintf(dialog_buf, sizeof(dialog_buf), "0x%X", dialog_id);
+		};
+		std::wstring msg_ws;
+		std::string msg_s;
+		char dialog_buf[11];
+	};
+
+	std::vector<AvailableDialog*> available_dialogs;
+
+
 	static const char* GetStatusStr(Status status);
 
 	void PrintResignStatus(wchar_t *buffer, size_t size, size_t index, const wchar_t *player_name);
 	void DrawResignlog();
+
+	void ClearAvailableDialogs() {
+		for (auto dialog : available_dialogs) {
+			delete dialog;
+		}
+		available_dialogs.clear();
+	}
 
 	struct ForDecode {
 		std::wstring enc_ws;
@@ -91,4 +120,5 @@ private:
 
 	GW::HookEntry MessageCore_Entry;
 	GW::HookEntry InstanceLoadFile_Entry;
+	GW::HookEntry OnDialog_Entry;
 };
