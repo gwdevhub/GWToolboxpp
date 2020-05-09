@@ -64,6 +64,7 @@
 #include "ToolboxSettings.h"
 //#define _FUN
 
+
 bool ToolboxSettings::move_all = false;
 
 void ToolboxSettings::LoadModules(CSimpleIni* ini) {
@@ -139,46 +140,83 @@ void ToolboxSettings::DrawSettingInternal() {
 	ImGui::Checkbox("Save Location Data", &save_location_data);
 	ImGui::ShowHelp("Toolbox will save your location every second in a file in Settings Folder.");
 	
-	const float col_width = ImGui::GetWindowWidth() / 2;
+	const size_t cols = (size_t)floor(ImGui::GetWindowWidth() / (170.0f * ImGui::GetIO().FontGlobalScale));
 
 	ImGui::Separator();
 	ImGui::PushID("global_enable");
 	ImGui::Text("Enable the following features:");
 	ImGui::TextDisabled("Unticking will completely disable a feature from initializing and running. Requires Toolbox restart.");
-	ImGui::Checkbox("Alcohol", &use_alcohol);			ImGui::SameLine(col_width);	ImGui::Checkbox("Info", &use_info);
-	ImGui::Checkbox("Bonds", &use_bonds);				ImGui::SameLine(col_width);	ImGui::Checkbox("Materials", &use_materials);
-	ImGui::Checkbox("Builds", &use_builds);				ImGui::SameLine(col_width);	ImGui::Checkbox("Minimap", &use_minimap);
-	ImGui::Checkbox("Clock", &use_clock);				ImGui::SameLine(col_width);	ImGui::Checkbox("Notepad", &use_notepad);
-	ImGui::Checkbox("Daily Quests", &use_daily_quests);	ImGui::SameLine(col_width);	ImGui::Checkbox("Objective Timer", &use_objectivetimer);
-	ImGui::Checkbox("Damage", &use_damage);				ImGui::SameLine(col_width);	ImGui::Checkbox("Party Window", &use_partywindowmodule);
-	ImGui::Checkbox("Dialogs", &use_dialogs);			ImGui::SameLine(col_width);	ImGui::Checkbox("Pcons", &use_pcons);
-	ImGui::Checkbox("Discord", &use_discord);			ImGui::SameLine(col_width);	ImGui::Checkbox("Timer", &use_timer);
-	ImGui::Checkbox("Distance", &use_distance);			ImGui::SameLine(col_width);	ImGui::Checkbox("Trade", &use_trade);
-	ImGui::Checkbox("Health", &use_health);				ImGui::SameLine(col_width);	ImGui::Checkbox("Travel", &use_travel);
-	ImGui::Checkbox("Hotkeys", &use_hotkeys);			ImGui::SameLine(col_width);	ImGui::Checkbox("Twitch", &use_twitch);
-	ImGui::Checkbox("Friend List", &use_friendlist);	ImGui::SameLine(col_width);	ImGui::Checkbox("Vanquish counter", &use_vanquish);
-	ImGui::Checkbox("Hero Builds", &use_herobuilds);
-
+	static std::vector<std::pair<const char*, bool*>> features{
+		{"Alcohol",&use_alcohol},
+		{"Bonds",&use_bonds},
+		{"Builds",&use_builds},
+		{"Clock",&use_clock},
+		{"Daily Quests",&use_daily_quests},
+		{"Damage",&use_damage},
+		{"Dialogs",&use_dialogs},
+		{"Discord",&use_discord},
+		{"Distance",&use_distance},
+		{"Health",&use_health},
+		{"Hotkeys",&use_hotkeys},
+		{"Friend List",&use_friendlist},
+		{"Hero Builds",&use_herobuilds},
+		{"Info",&use_info},
+		{"Materials",&use_materials},
+		{"Minimap",&use_minimap},
+		{"Notepad",&use_notepad},
+		{"Objective Timer",&use_objectivetimer},
+		{"Party Window",&use_partywindowmodule},
+		{"Pcons",&use_pcons},
+		{"Timer",&use_timer},
+		{"Trade",&use_trade},
+		{"Travel",&use_travel},
+		{"Twitch",&use_twitch},
+		{"Vanquish counter",&use_vanquish}
+	};
+	ImGui::Columns(cols, "global_enable_cols", false);
+	size_t items_per_col = (size_t)ceil(features.size() / cols);
+	size_t col_count = 0;
+	for (auto feature : features) {
+		ImGui::Checkbox(feature.first, feature.second);
+		col_count++;
+		if (col_count > items_per_col) {
+			ImGui::NextColumn();
+			col_count = 0;
+		}
+	}
+	ImGui::Columns(1);
 	ImGui::PopID();
-
 	ImGui::PushID("menubuttons");
 	ImGui::Separator();
 	ImGui::Text("Show the following in the main window:");
-	bool odd = true;
+
 	auto ui = GWToolbox::Instance().GetUIElements();
-	for (unsigned int i = 0; i < ui.size(); ++i) {
+	ImGui::Columns(cols, "menubuttons_cols", false);
+	col_count = 0;
+	std::vector<ToolboxUIElement*> valid_elements;
+	for (size_t i = 0; i < ui.size();i++) {
 		auto window = ui[i];
 		if (window == &Updater::Instance()) continue;
 		if (window == &MainWindow::Instance()) continue;
-		if (!(window->IsWidget() || window->IsWindow())) continue;
-
-		if (i > 0 && !odd) {
-			ImGui::SameLine(col_width);
-		}
+		if (!(window->IsWidget() || window->IsWindow())) 
+			continue;
+		valid_elements.push_back(window);
+	}
+	std::sort(valid_elements.begin(), valid_elements.end(), [](const ToolboxModule* lhs, const ToolboxModule* rhs) {
+		return std::string(lhs->Name()).compare(rhs->Name()) < 0;
+		});
+	items_per_col = (size_t)ceil(valid_elements.size() / cols);
+	for (size_t i = 0; i < valid_elements.size(); i++) {
+		auto window = valid_elements[i];
 		if (ImGui::Checkbox(window->Name(), &window->show_menubutton))
 			MainWindow::Instance().pending_refresh_buttons = true;
-		odd = !odd;
+		col_count++;
+		if (col_count > items_per_col) {
+			ImGui::NextColumn();
+			col_count = 0;
+		}
 	}
+	ImGui::Columns(1);
 	ImGui::PopID();
 }
 
