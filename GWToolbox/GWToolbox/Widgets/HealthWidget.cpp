@@ -6,32 +6,134 @@
 #include <GWCA/Constants/Constants.h>
 
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Skill.h>
 
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
 
 #include "GuiUtils.h"
 #include "Modules/ToolboxSettings.h"
+#include <Modules/Resources.h>
 
+#define HEALTH_THRESHOLD_INIFILENAME L"HealthThreshold.ini"
 
+HealthWidget::~HealthWidget() {
+	ClearThresholds();
+}
 
 void HealthWidget::LoadSettings(CSimpleIni *ini) {
 	ToolboxWidget::LoadSettings(ini);
 	click_to_print_health = ini->GetBoolValue(Name(), VAR_NAME(click_to_print_health), click_to_print_health);
 	hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
+	color_default = Colors::Load(ini, Name(), VAR_NAME(color_default), ImColor(255, 255, 255));
+
+	if (inifile == nullptr) inifile = new CSimpleIni();
+	inifile->LoadFile(Resources::GetPath(HEALTH_THRESHOLD_INIFILENAME).c_str());
+
+	CSimpleIni::TNamesDepend entries;
+	inifile->GetAllSections(entries);
+
+	ClearThresholds();
+
+	for (const CSimpleIni::Entry& entry : entries) {
+		Threshold* threshold = new Threshold(inifile, entry.pItem);
+		threshold->index = thresholds.size();
+		thresholds.push_back(threshold);
+	}
+
+	if (thresholds.empty()) {
+		Threshold* thresholdFh = new Threshold("\"Finish Him!\"", Colors::RGB(255, 255, 0), 50);
+		thresholdFh->skillId = (int) GW::Constants::SkillID::Finish_Him;
+		thresholdFh->active = false;
+		thresholds.push_back(thresholdFh);
+		thresholds.back()->index = thresholds.size() - 1;
+
+		Threshold* thresholdEoe = new Threshold("Edge of Extinction", Colors::RGB(0, 255, 0), 90);
+		thresholdEoe->active = false;
+		thresholds.push_back(thresholdEoe);
+		thresholds.back()->index = thresholds.size() - 1;
+	}
 }
 
 void HealthWidget::SaveSettings(CSimpleIni *ini) {
 	ToolboxWidget::SaveSettings(ini);
 	ini->SetBoolValue(Name(), VAR_NAME(click_to_print_health), click_to_print_health);
 	ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
+	Colors::Save(ini, Name(), VAR_NAME(color_default), color_default);
+
+	if (thresholds_changed && inifile) {
+		inifile->Reset();
+
+		char buf[256];
+		for (size_t i = 0; i < thresholds.size(); ++i) {
+			snprintf(buf, 256, "threshold%03d", i);
+			thresholds[i]->SaveSettings(inifile, buf);
+		}
+
+		inifile->SaveFile(Resources::GetPath(HEALTH_THRESHOLD_INIFILENAME).c_str());
+		thresholds_changed = false;
+	}
 }
 
 void HealthWidget::DrawSettingInternal() {
 	ToolboxWidget::DrawSettingInternal();
 	ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
 	ImGui::Checkbox("Ctrl+Click to print target health", &click_to_print_health);
+
+	Colors::DrawSetting("Color", &color_default);
+	ImGui::ShowHelp("The color for this widget.");
+
+	bool thresholdsNode = ImGui::TreeNode("Thresholds");
+	if (ImGui::IsItemHovered()) ImGui::SetTooltip("The first matching threshold will be used.");
+	if (thresholdsNode) {
+		bool changed = false;
+		for (size_t i = 0; i < thresholds.size(); ++i) {
+			Threshold* threshold = thresholds[i];
+
+			if (!threshold) continue;
+
+			ImGui::PushID(threshold->ui_id);
+
+			Threshold::Operation op = Threshold::Operation::None;
+			changed |= threshold->DrawSettings(op);
+
+			switch (op) {
+				case Threshold::Operation::None:
+					break;
+				case Threshold::Operation::MoveUp:
+					if (i > 0) {
+						std::swap(thresholds[i], thresholds[i - 1]);
+					}
+					break;
+				case Threshold::Operation::MoveDown:
+					if (i + 1 < thresholds.size()) {
+						std::swap(thresholds[i], thresholds[i + 1]);
+					}
+					break;
+				case Threshold::Operation::Delete:
+					thresholds.erase(thresholds.begin() + i);
+					delete threshold;
+					--i;
+					break;
+			}
+
+			ImGui::PopID();
+		}
+
+		if (ImGui::Button("Add Threshold")) {
+			thresholds.push_back(new Threshold("<name>", color_default, 0));
+			thresholds.back()->index = thresholds.size() - 1;
+			changed = true;
+		}
+
+		ImGui::TreePop();
+
+		if (changed) {
+			thresholds_changed = true;
+		}
+	}
 }
 
 void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
@@ -60,31 +162,55 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
 
 			ImVec2 cur;
 
+			Color color = Colors::RGB(255, 255, 255);
+			Color background = Colors::RGB(0, 0, 0);
+
+			for (size_t i = 0; i < thresholds.size(); ++i) {
+				Threshold* threshold = thresholds[i];
+
+				if (!threshold) continue;
+				if (!threshold->active) continue;
+				if (threshold->modelId && threshold->modelId != target->player_number) continue;
+				if (threshold->skillId) {
+					GW::Skillbar* skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
+					GW::SkillbarSkill* skill = skillbar->GetSkillById(static_cast<GW::Constants::SkillID>(threshold->skillId));
+					if (!skill) continue;
+				}
+				if (threshold->mapId) {
+					if (static_cast<GW::Constants::MapID>(threshold->mapId) != GW::Map::GetMapID()) continue;
+				}
+
+				if (target->hp * 100 < threshold->value) {
+					color = threshold->color;
+					break;
+				}
+			}
+
 			// 'health'
 			ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f20));
 			cur = ImGui::GetCursorPos();
 			ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
-			ImGui::TextColored(ImColor(0, 0, 0), "Health");
+			ImGui::TextColored(ImColor(background), "Health");
 			ImGui::SetCursorPos(cur);
-			ImGui::Text("Health");
+			ImGui::TextColored(ImColor(color_default), "Health");
 			ImGui::PopFont();
 
 			// perc
 			ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f42));
 			cur = ImGui::GetCursorPos();
 			ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
-			ImGui::TextColored(ImColor(0, 0, 0), health_perc);
+			ImGui::TextColored(ImColor(background), health_perc);
 			ImGui::SetCursorPos(cur);
-			ImGui::Text(health_perc);
+			ImGui::TextColored(ImColor(color), health_perc);
 			ImGui::PopFont();
 
 			// abs
 			ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f24));
 			cur = ImGui::GetCursorPos();
 			ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
-			ImGui::TextColored(ImColor(0, 0, 0), health_abs);
+			ImGui::TextColored(ImColor(background), health_abs);
 			ImGui::SetCursorPos(cur);
-			ImGui::Text(health_abs);
+			ImGui::TextColored(ImColor(color_default), health_abs);
 			ImGui::PopFont();
 
             if (click_to_print_health) {
@@ -104,4 +230,105 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
 	}
 	ImGui::End();
 	ImGui::PopStyleColor();
+}
+
+unsigned int HealthWidget::Threshold::cur_ui_id = 0;
+
+HealthWidget::Threshold::Threshold(CSimpleIni* ini, const char* section) : ui_id(++cur_ui_id) {
+	active = ini->GetBoolValue(section, VAR_NAME(active));
+	GuiUtils::StrCopy(name, ini->GetValue(section, VAR_NAME(name), ""), sizeof(name));
+	modelId = ini->GetLongValue(section, VAR_NAME(modelId), 0);
+	skillId = ini->GetLongValue(section, VAR_NAME(skillId), 0);
+	mapId = ini->GetLongValue(section, VAR_NAME(mapId), 0);
+	value = ini->GetLongValue(section, VAR_NAME(value), 0);
+	color = Colors::Load(ini, section, VAR_NAME(color), 0xFFFFFFFF);
+}
+
+HealthWidget::Threshold::Threshold(const char* _name, Color _color, int _value) : ui_id(++cur_ui_id) {
+	GuiUtils::StrCopy(name, _name, sizeof(name));
+	color = _color;
+	value = _value;
+}
+
+bool HealthWidget::Threshold::DrawHeader() {
+	char mapbuf[64] = { '\0' };
+	if (mapId) {
+		if (mapId < sizeof(GW::Constants::NAME_FROM_ID) - 1)
+			snprintf(mapbuf, 64, "[%s]", GW::Constants::NAME_FROM_ID[mapId]);
+		else
+			snprintf(mapbuf, 64, "[Map %d]", mapId);
+	}
+
+	ImGui::SameLine(0, 18);
+	bool changed = ImGui::Checkbox("##active", &active);
+	ImGui::SameLine();
+	ImGui::ColorButton("", ImColor(color));
+	ImGui::SameLine();
+	ImGui::Text("%s (<%d%%) %s", name, value, mapbuf);
+	return changed;
+}
+
+bool HealthWidget::Threshold::DrawSettings(Operation& op) {
+	bool changed = false;
+
+	if (ImGui::TreeNode("##params")) {
+		changed |= DrawHeader();
+
+		ImGui::PushID(ui_id);
+
+		if (ImGui::InputText("Name", name, 128)) changed = true;
+		ImGui::ShowHelp("A name to help you remember what this is. Optional.");
+		if (ImGui::InputInt("Model ID", &modelId)) changed = true;
+		ImGui::ShowHelp("The Agent to which this threshold will be applied. Optional. Leave 0 for any agent");
+		if (ImGui::InputInt("Skill ID", &skillId)) changed = true;
+		ImGui::ShowHelp("Only apply if this skill is on your bar. Optional. Leave 0 for any skills");
+		if (ImGui::InputInt("Map ID", &mapId)) changed = true;
+		ImGui::ShowHelp("The map where it will be applied. Optional. Leave 0 for any map");
+		if (ImGui::InputInt("Percentage", &value)) changed = true;
+		ImGui::ShowHelp("Percentage below which this color should be used");
+		if (Colors::DrawSetting("Color", &color)) changed = true;
+		ImGui::ShowHelp("The custom color for this threshold.");
+
+		float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
+		float width = (ImGui::CalcItemWidth() - spacing * 2) / 3;
+		if (ImGui::Button("Move Up", ImVec2(width, 0))) {
+			op = Threshold::Operation::MoveUp;
+		}
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move the threshold up in the list");
+		ImGui::SameLine(0, spacing);
+		if (ImGui::Button("Move Down", ImVec2(width, 0))) {
+			op = Threshold::Operation::MoveDown;
+		}
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move the threshold down in the list");
+		ImGui::SameLine(0, spacing);
+		if (ImGui::Button("Delete", ImVec2(width, 0))) {
+			op = Threshold::Operation::Delete;
+		}
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete the threshold");
+
+		ImGui::TreePop();
+		ImGui::PopID();
+	} else {
+		changed |= DrawHeader();
+	}
+
+	return changed;
+}
+
+void HealthWidget::Threshold::SaveSettings(CSimpleIni* ini, const char* section) {
+	ini->SetBoolValue(section, VAR_NAME(active), active);
+	ini->SetValue(section, VAR_NAME(name), name);
+	ini->SetLongValue(section, VAR_NAME(modelId), modelId);
+	ini->SetLongValue(section, VAR_NAME(skillId), skillId);
+	ini->SetLongValue(section, VAR_NAME(mapId), mapId);
+
+	ini->SetLongValue(section, VAR_NAME(value), value);
+	Colors::Save(ini, section, VAR_NAME(color), color);
+}
+
+void HealthWidget::ClearThresholds() {
+	for (Threshold* threshold : thresholds) {
+		if (threshold) delete threshold;
+	}
+	thresholds.clear();
 }
