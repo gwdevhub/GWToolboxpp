@@ -7,21 +7,38 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
+## Version 3.3
+* [New] Changed all color inputs to use a slightly different control; now able to click on the color swatch to choose instead of inputting RGBA manually
+* [New] Added available dialog IDs to dialog section of info window when talking to an NPC
+* [New] Added color thresholds to health widget and distance widget
+* [New] Modified/tidied up "Settings" window to make stuff easier to find, see following changes:
+* [Minor] Merged "Chat Filter" section into "Chat Settings" section
+* [Minor] Merged "Inventory Management" section into "Inventory Settings" section
+* [Minor] Merged "Toolbox" section into "Toolbox Settings" section
+* [Minor] Merged "Party Window" section into "Party Settings" section
+* [Minor] Moved party related function from "Game Settings" into "Party Settings"
+* [Minor] Copied lunar and alcohol related settings from "Pcons" into "Game Settings"
+* [Minor] Moved chat related options from "Game Settings" into "Chat Settings"
+* [Minor] Merged "Discord" and "Twitch" sections into "Third Party Integration" section
+* [Minor] Alphabetised all window and widget sections inside "Settings" window
+* [Minor] Alphabetised all module checkboxes inside "Toolbox Settings" section, set into columns to better use space
+* [Minor] Moved inventory related options from "Game Settings" into "Inventory Settings"
+* [Minor] Added chat filter checkbox for "Not enough energy/adrenaline" messages
+* [Fix] Fixed bug preventing "show enable" pcons button to load setting from file
+* [Fix] Fixed bug preventing custom minimap markers in outposts
+* [Fix] Fixed potential crash when cancelling salvage process
+* [Fix] Fixed trophies not appearing as salvage options
+* [Fix] Fixed bug preventing hero builds being sent to chat in explorable areas
+* [Fix] Fixed a bug causing alcohol to be spammed when the alcohol widget is disabled in toolbox
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/3.3_Release/GWToolbox.dll)
+
 ## Version 3.2
 * [New] Added DirectX distributable check inside GWToolbox at runtime; will now display a message with a link to the DirectX download page instead of just not launching at all.
 * [New] Added option to hide bond monitor in outpost (default showing)
 * [New] Added option to save objective timer runs to disk (default save)
 * [New] Added option to hide date/time of objective timer runs (default hidden)
 * [New] Added option to hide runs from previous days (default hidden)
-* [Fix] Re-added in-game option to manually check for updates
-* [Fix] Fixed `auto age2 on /age` setting being the same as `auto /age2 on vanquish` setting
-* [Fix] Fixed bug causing salvage all process to only salvage the first item in a stack
-* [Fix] Fixed bug causing identify blue/purple/gold to identify other rarities
-* [Fix] Fixed bug causing salvage all crash when inventory is full
-* [Fix] Fixed bug causing salvage all to identify unsalvagable trophies as salvagable
-* [Fix] Fixed potential crash when displaying the "Salvage all?" dialog
-* [Fix] Fixed crash when adding a new custom minimap agent whilst the matching NPC is within range.
-* [Fix] Fixed IRC timeout after 3 minutes when connected to Twitch
 * [Minor] Don't maintain Trade Chat websocket connection when the window is collapsed
 * [Minor] Objective timer runs now save to `%localappdata%/GWToolboxpp/runs` to avoid cluttering the main folder
 * [Minor] Added option to only use superior salvage kits when using `/salvage` command
@@ -34,6 +51,15 @@ Previous releases are provided as dll files. In order to use it, you need to use
 * [Minor] Pcon refillers hidden by default
 * [Minor] Added option to hide city pcons in explorable areas (default visible)
 * [Minor] Removed DoA snakes from default party window NPCs
+* [Fix] Re-added in-game option to manually check for updates
+* [Fix] Fixed `auto age2 on /age` setting being the same as `auto /age2 on vanquish` setting
+* [Fix] Fixed bug causing salvage all process to only salvage the first item in a stack
+* [Fix] Fixed bug causing identify blue/purple/gold to identify other rarities
+* [Fix] Fixed bug causing salvage all crash when inventory is full
+* [Fix] Fixed bug causing salvage all to identify unsalvagable trophies as salvagable
+* [Fix] Fixed potential crash when displaying the "Salvage all?" dialog
+* [Fix] Fixed crash when adding a new custom minimap agent whilst the matching NPC is within range.
+* [Fix] Fixed IRC timeout after 3 minutes when connected to Twitch
 
 [Download](https://github.com/HasKha/GWToolboxpp/releases/download/3.2_Release/GWToolbox.dll)
 
