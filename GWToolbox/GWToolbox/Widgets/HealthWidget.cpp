@@ -194,9 +194,9 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
 			ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f42));
 			cur = ImGui::GetCursorPos();
 			ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
-			ImGui::TextColored(background, health_perc);
+			ImGui::TextColored(background, "%s", health_perc);
 			ImGui::SetCursorPos(cur);
-			ImGui::TextColored(color, health_perc);
+			ImGui::TextColored(color, "%s", health_perc);
 			ImGui::PopFont();
 
 			// abs

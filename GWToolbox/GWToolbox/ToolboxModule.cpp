@@ -20,7 +20,8 @@ const std::unordered_map<std::string, ToolboxModule*>* ToolboxModule::GetModules
 }
 
 void ToolboxModule::Initialize() {
-	GWToolbox::Instance().RegisterModule(this);
+	if (!GWToolbox::Instance().RegisterModule(this))
+		return; // Already registered
 	RegisterSettingsContent();
 }
 void ToolboxModule::RegisterSettingsContent() {
