@@ -7,6 +7,11 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
+## Version 3.42
+* [Fix] Reverted custom markers appearing in outposts. Fault Misty.
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/3.42_Release/GWToolbox.dll)
+
 ## Version 3.4
 * [New] Changed all color inputs to use a slightly different control; now able to click on the color swatch to choose instead of inputting RGBA manually
 * [New] Added available dialog IDs to dialog section of info window when talking to an NPC
