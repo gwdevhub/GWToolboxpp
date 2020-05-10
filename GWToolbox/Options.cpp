@@ -42,7 +42,6 @@ void ParseCommandLine(int argc, char *argv[])
         } else if (strcmp(arg, "/reinstall") == 0) {
             options.reinstall = true;
         } else if (strcmp(arg, "/pid") == 0) {
-            fprintf(stderr, "Process id\n");
             if (++i == argc) {
                 fprintf(stderr, "'/pid' must be followed by a process id\n");
                 PrintUsage(true);

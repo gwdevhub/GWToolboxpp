@@ -6,6 +6,7 @@
 #endif
 #include <Windows.h>
 
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -76,6 +77,30 @@ static bool RegWriteDWORD(HKEY hKey, LPCWSTR KeyName, DWORD Value)
         return false;
     }
 
+    return true;
+}
+
+static bool RegReadStr(HKEY hKey, LPCWSTR KeyName, LPWSTR Buffer, size_t BufferLength)
+{
+    assert(BufferLength > 0);
+
+    DWORD cbData = static_cast<DWORD>(BufferLength - 1) * sizeof(WCHAR);
+    LSTATUS status = RegGetValueW(
+        hKey,
+        L"",
+        KeyName,
+        RRF_RT_REG_SZ,
+        nullptr,
+        Buffer,
+        &cbData);
+
+    if (status != ERROR_SUCCESS)
+    {
+        fprintf(stderr, "RegGetValueW failed: status:%d\n", status);
+        return false;
+    }
+
+    Buffer[cbData / sizeof(WCHAR)] = 0;
     return true;
 }
 
@@ -307,5 +332,23 @@ bool Uninstall(bool quiet)
         MessageBoxW(0, L"Uninstallation successful", L"Uninstallation", 0);
     }
 
+    return true;
+}
+
+bool GetInstallationLocation(wchar_t *path, size_t length)
+{
+    HKEY UninstallKey;
+    if (!OpenUninstallHive(HKEY_CURRENT_USER, &UninstallKey)) {
+        fprintf(stderr, "OpenUninstallHive failed\n");
+        return false;
+    }
+
+    if (!RegReadStr(UninstallKey, L"InstallLocation", path, length)) {
+        fprintf(stderr, "RegReadStr failed\n");
+        RegCloseKey(UninstallKey);
+        return false;
+    }
+
+    RegCloseKey(UninstallKey);
     return true;
 }

@@ -118,7 +118,9 @@ bool PathCompose(wchar_t *dest, size_t length, const wchar_t *left, const wchar_
         return false;
     }
 
-    memmove(dest, left, left_size);
+    if (dest != left) {
+        memmove(dest, left, left_size);
+    }
 
     if (PathAppendW(dest, right) != TRUE) {
         fprintf(stderr, "PathAppendW failed\n");
