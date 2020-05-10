@@ -6,11 +6,35 @@
     <ClCompile Include="Download.cpp" />
     <ClCompile Include="Inject.cpp" />
     <ClCompile Include="Options.cpp" />
+    <ClCompile Include="Install.cpp" />
+    <ClCompile Include="Path.cpp" />
+    <ClCompile Include="Str.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Process.h" />
     <ClInclude Include="Download.h" />
     <ClInclude Include="Inject.h" />
     <ClInclude Include="Options.h" />
+    <ClInclude Include="Install.h" />
+    <ClInclude Include="Path.h" />
+    <ClInclude Include="Str.h" />
+    <ClInclude Include="resource.h">
+      <Filter>Ressources</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Ressources">
+      <UniqueIdentifier>{2b6e2568-3dec-4b30-8084-0a7a363e003e}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="GWToolbox.rc">
+      <Filter>Ressources</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\resources\gwtoolbox.ico">
+      <Filter>Ressources</Filter>
+    </Image>
   </ItemGroup>
 </Project>

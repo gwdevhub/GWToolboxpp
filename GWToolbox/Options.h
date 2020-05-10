@@ -2,11 +2,14 @@
 
 struct Options
 {
+    bool quiet;
     bool version;
     bool help;
     bool install;
     bool uninstall;
     bool reinstall;
+    bool asadmin;
+    bool noupdate;
     int  pid;
 };
 
