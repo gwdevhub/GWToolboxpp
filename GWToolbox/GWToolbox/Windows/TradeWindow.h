@@ -23,7 +23,7 @@ public:
 		return instance;
 	}
 
-	const char* Name() const { return "Trade"; }
+	const char* Name() const override { return "Trade"; }
 
 	void Initialize() override;
 	void Terminate() override;

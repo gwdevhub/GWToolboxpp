@@ -13,9 +13,9 @@ public:
 		return instance;
 	}
 
-	const char* Name() const { return "Toolbox"; }
+	const char* Name() const override { return "Toolbox"; }
 
-	const char* SettingsName() const { return "Toolbox Settings"; }
+	const char* SettingsName() const override  { return "Toolbox Settings"; }
 
 	// Draw user interface. Will be called every frame if the element is visible
 	void Draw(IDirect3DDevice9* pDevice) override;
@@ -27,7 +27,6 @@ public:
 
 	void RefreshButtons();
 
-	bool visible = true;
 	bool pending_refresh_buttons = true;
 
 private:

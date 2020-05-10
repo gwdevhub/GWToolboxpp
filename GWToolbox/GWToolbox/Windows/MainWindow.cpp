@@ -30,7 +30,8 @@ void MainWindow::RegisterSettingsContent() {
 	ToolboxModule::RegisterSettingsContent(SettingsName(), [this](const std::string* section, bool is_showing) {
 		//ShowVisibleRadio();
 		if (!is_showing) return;
-		ImGui::Text("Main Window Settings");
+		ImGui::Text("Main Window Visibility");
+		ShowVisibleRadio();
 		DrawSizeAndPositionSettings();
 		DrawSettingInternal();
 		}, SettingsWeighting());
