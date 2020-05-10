@@ -57,4 +57,6 @@ private:
 		{"Minimap",0.8f},
 		{"Settings",0.82f}
 	};
+protected:
+	const float SettingsWeighting() override { return 1.1f; };
 };

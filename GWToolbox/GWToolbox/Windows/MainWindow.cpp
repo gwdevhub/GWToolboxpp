@@ -33,7 +33,7 @@ void MainWindow::RegisterSettingsContent() {
 		ImGui::Text("Main Window Settings");
 		DrawSizeAndPositionSettings();
 		DrawSettingInternal();
-		});
+		}, SettingsWeighting());
 }
 
 void MainWindow::RefreshButtons() {

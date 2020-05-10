@@ -64,7 +64,11 @@ public:
 	virtual void DrawSettingInternal() {};
 
 	// Register settings content
-	static void RegisterSettingsContent(const char* section, SectionDrawCallback callback, float weighting = 1.0f);
+	static void RegisterSettingsContent(const char* section, SectionDrawCallback callback, float weighting);
+
+protected:
+	// Weighting used to decide where to position the DrawSettingInternal() for this module. Useful when more than 1 module has the same SettingsName().
+	virtual const float SettingsWeighting() { return 1.0f; };
 };
 
 

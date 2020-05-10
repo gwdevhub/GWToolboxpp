@@ -77,4 +77,6 @@ private:
 	std::list<int> skills_to_use; // 0-7 range
 	float skill_usage_delay = 1.0f;
 	clock_t skill_timer = clock();
+protected:
+	const float SettingsWeighting() override { return  1.2f; };
 };
