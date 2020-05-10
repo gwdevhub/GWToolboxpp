@@ -75,6 +75,7 @@ private:
 	GW::Vec2f InterfaceToWorldPoint(Vec2i pos) const;
 	GW::Vec2f InterfaceToWorldVector(Vec2i pos) const;
 	void SelectTarget(GW::Vec2f pos);
+	bool Minimap::IsKeyDown(int key);
 
 	bool mousedown = false;
 
@@ -90,10 +91,15 @@ private:
 
 	bool loading = false; // only consider some cases but still good
 
-    bool mouse_clickthrough = false;
+	bool mouse_clickthrough = false;
 	bool mouse_clickthrough_in_outpost = false;
 	bool rotate_minimap = true;
-    bool alt_click_to_move = false;
+
+	int key_draw_selected = 1;
+	int key_target_selected = 2;
+	int key_move_selected = 3;
+	int key_walk_selected = 4;
+
 	bool is_observing = false;
 
 	bool hero_flag_controls_show = false;
