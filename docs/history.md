@@ -7,7 +7,7 @@ Previous releases are provided as dll files. In order to use it, you need to use
 
 [AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
 
-## Version 3.3
+## Version 3.4
 * [New] Changed all color inputs to use a slightly different control; now able to click on the color swatch to choose instead of inputting RGBA manually
 * [New] Added available dialog IDs to dialog section of info window when talking to an NPC
 * [New] Added color thresholds to health widget and distance widget
@@ -31,7 +31,7 @@ Previous releases are provided as dll files. In order to use it, you need to use
 * [Fix] Fixed bug preventing hero builds being sent to chat in explorable areas
 * [Fix] Fixed a bug causing alcohol to be spammed when the alcohol widget is disabled in toolbox
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/3.3_Release/GWToolbox.dll)
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/3.4_Release/GWToolbox.dll)
 
 ## Version 3.2
 * [New] Added DirectX distributable check inside GWToolbox at runtime; will now display a message with a link to the DirectX download page instead of just not launching at all.
