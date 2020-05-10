@@ -397,6 +397,30 @@ bool PconsWindow::SetEnabled(bool b) {
 	return enabled;
 }
 
+void PconsWindow::RegisterSettingsContent() {
+	ToolboxUIElement::RegisterSettingsContent();
+	ToolboxModule::RegisterSettingsContent("Game Settings", [this](const std::string* section, bool is_showing) {
+		if (!is_showing) return;
+		DrawLunarsAndAlcoholSettings();
+		}, 1.1f);
+}
+
+void PconsWindow::DrawLunarsAndAlcoholSettings() {
+	ImGui::Text("Lunars and Alcohol");
+	ImGui::Text("Current drunk level: %d", Pcon::alcohol_level);
+	ImGui::Checkbox("Suppress lunar and drunk post-processing effects", &Pcon::suppress_drunk_effect);
+	ImGui::ShowHelp("Will actually disable any *change*, so make sure you're not drunk already when enabling this!");
+	ImGui::Checkbox("Suppress lunar and drunk text", &Pcon::suppress_drunk_text);
+	ImGui::ShowHelp("Will hide drunk and lunars messages on top of your and other characters");
+	ImGui::Checkbox("Suppress drunk emotes", &Pcon::suppress_drunk_emotes);
+	ImGui::ShowHelp("Important:\n"
+		"This feature is experimental and might crash your game.\n"
+		"Using level 1 alcohol instead of this is recommended for preventing drunk emotes.\n"
+		"This will prevent kneel, bored, moan, flex, fistshake and roar.\n");
+	ImGui::Checkbox("Hide Spiritual Possession and Lucky Aura", &Pcon::suppress_lunar_skills);
+	ImGui::ShowHelp("Will hide the skills in your effect monitor");
+}
+
 void PconsWindow::CheckObjectivesCompleteAutoDisable() {
 	if (!enabled || elite_area_disable_triggered || instance_type != GW::Constants::InstanceType::Explorable) {
 		return;		// Pcons disabled, auto disable already triggered, or not in explorable area.
@@ -557,19 +581,7 @@ void PconsWindow::DrawSettingInternal() {
 	}
 
 	ImGui::Separator();
-	ImGui::Text("Lunars and Alcohol");
-	ImGui::Text("Current drunk level: %d", Pcon::alcohol_level);
-	ImGui::Checkbox("Suppress lunar and drunk post-processing effects", &Pcon::suppress_drunk_effect);
-	ImGui::ShowHelp("Will actually disable any *change*, so make sure you're not drunk already when enabling this!");
-	ImGui::Checkbox("Suppress lunar and drunk text", &Pcon::suppress_drunk_text);
-	ImGui::ShowHelp("Will hide drunk and lunars messages on top of your and other characters");
-	ImGui::Checkbox("Suppress drunk emotes", &Pcon::suppress_drunk_emotes);
-	ImGui::ShowHelp("Important:\n"
-		"This feature is experimental and might crash your game.\n"
-		"Using level 1 alcohol instead of this is recommended for preventing drunk emotes.\n"
-		"This will prevent kneel, bored, moan, flex, fistshake and roar.\n");
-	ImGui::Checkbox("Hide Spiritual Possession and Lucky Aura", &Pcon::suppress_lunar_skills);
-	ImGui::ShowHelp("Will hide the skills in your effect monitor");
+	DrawLunarsAndAlcoholSettings();
 	ImGui::Separator();
 	ImGui::Text("Auto-Disabling Pcons in elite areas");
     ImGui::Checkbox("Auto Disable on Vanquish completion", &disable_cons_on_vanquish_completion);

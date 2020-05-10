@@ -39,6 +39,8 @@ public:
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
+	void RegisterSettingsContent() override;
+	void DrawLunarsAndAlcoholSettings();
 
     std::vector<Pcon*> pcons;
 
