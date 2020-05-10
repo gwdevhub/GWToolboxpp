@@ -1087,6 +1087,7 @@ void GameSettings::DrawPartySettings() {
 }
 
 void GameSettings::DrawChatSettings() {
+	ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel;
 	if (ImGui::TreeNode("Chat Colors")) {
 		ImGui::Text("Channel");
 		ImGui::SameLine(chat_colors_grid_x[1]);
@@ -1121,7 +1122,7 @@ void GameSettings::DrawChatSettings() {
 		ImGui::SameLine();
 		ImGui::Text("Color:");
 		ImGui::SameLine();
-		if (Colors::DrawSettingHueWheel("Color:", &timestamps_color))
+		if (Colors::DrawSettingHueWheel("Color:", &timestamps_color, flags))
 			GW::Chat::SetTimestampsColor(timestamps_color);
 		ImGui::Unindent();
 	}
@@ -1796,19 +1797,19 @@ void GameSettings::OnMapLoaded(GW::HookStatus*, GW::Packet::StoC::MapLoaded*) {
 void GameSettings::DrawChannelColor(const char *name, GW::Chat::Channel chan) {
     ImGui::PushID(static_cast<int>(chan));
 	ImGui::Text(name);
-	
+	ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel;
 	GW::Chat::Color color, sender_col, message_col;
 	GW::Chat::GetChannelColors(chan, &sender_col, &message_col);
 
 	ImGui::SameLine(chat_colors_grid_x[1]);
     color = sender_col;
-    if (Colors::DrawSettingHueWheel("Sender Color:", &color) && color != sender_col) {
+    if (Colors::DrawSettingHueWheel("Sender Color:", &color, flags) && color != sender_col) {
         GW::Chat::SetSenderColor(chan, color);
     }
 
 	ImGui::SameLine(chat_colors_grid_x[2]);
     color = message_col;
-    if (Colors::DrawSettingHueWheel("Message Color:", &color) && color != message_col) {
+    if (Colors::DrawSettingHueWheel("Message Color:", &color, flags) && color != message_col) {
         GW::Chat::SetMessageColor(chan, color);
     }
 
