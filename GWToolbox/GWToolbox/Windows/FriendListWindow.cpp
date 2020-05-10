@@ -653,6 +653,17 @@ void FriendListWindow::DrawSettingInternal() {
 	ImGui::Checkbox("Show my status", &show_my_status);
 	ImGui::ShowHelp("e.e. 'You are: Online'");
 
+	DrawChatSettings();
+}
+void FriendListWindow::RegisterSettingsContent() {
+	ToolboxUIElement::RegisterSettingsContent();
+	ToolboxModule::RegisterSettingsContent("Chat Settings", [this](const std::string* section, bool is_showing) {
+		if (!is_showing) return;
+		DrawChatSettings();
+		},0.91f);
+}
+
+void FriendListWindow::DrawChatSettings() {
 	ImGui::Checkbox("Show friend aliases when sending/receiving whispers", &show_alias_on_whisper);
 	ImGui::ShowHelp("Only if your friend's alias is different to their character name");
 }

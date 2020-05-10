@@ -208,6 +208,7 @@ public:
 	bool ShowAsWidget() const;
 	bool ShowAsWindow() const;
 	void DrawHelp() override;
+	void RegisterSettingsContent() override;
 	ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags=0) const;
 
     // Update. Will always be called every frame.
@@ -222,6 +223,7 @@ public:
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
+	void DrawChatSettings();
 
     void LoadFromFile();
     void SaveToFile();
