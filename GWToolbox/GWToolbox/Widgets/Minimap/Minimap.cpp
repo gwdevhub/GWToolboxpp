@@ -761,7 +761,7 @@ bool Minimap::IsKeyDown(int key) {
 	// Disabled\0None\0Control\0Shift\0Alt\0
 	switch (key) {
 		case 0: return false;
-		case 1: return true;
+		case 1: return not ImGui::IsKeyDown(VK_CONTROL) and not ImGui::IsKeyDown(VK_SHIFT) and not ImGui::IsKeyDown(VK_MENU);
 		case 2: return ImGui::IsKeyDown(VK_CONTROL);
 		case 3: return ImGui::IsKeyDown(VK_SHIFT);
 		case 4: return ImGui::IsKeyDown(VK_MENU);
