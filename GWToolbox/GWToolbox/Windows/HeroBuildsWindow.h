@@ -1,5 +1,8 @@
 #pragma once
 
+
+#include <GWCA\Constants\Constants.h>
+
 #include "ToolboxWindow.h"
 
 #include <array>
@@ -83,16 +86,18 @@ private:
 	struct CodeOnHero {
 		CodeOnHero(const char* c = "", int i = 0) {
 			snprintf(code, 128, "%s", c);
-			heroind = i;
+			heroid = static_cast<GW::Constants::HeroID>(i);
+			started = TIMER_INIT();
 		}
 		char code[128];
-		int heroind;
+		GW::Constants::HeroID heroid = GW::Constants::HeroID::NoHero;
+		clock_t started = 0;
 	};
 
 
 	clock_t send_timer = 0;
 	clock_t load_timer = 0;
-	std::queue<CodeOnHero> queue;
+	std::vector<CodeOnHero> pending_hero_loads;
 	std::queue<std::string> send_queue;
 
 	CSimpleIni* inifile = nullptr;

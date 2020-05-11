@@ -1,11 +1,12 @@
 #include "stdafx.h"
 #include "HeroBuildsWindow.h"
 
-#include <GWCA\Constants\Constants.h>
 #include <GWCA\GameContainers\Array.h>
 #include <GWCA\GameContainers\GamePos.h>
 
 #include <GWCA\GameEntities\Hero.h>
+#include <GWCA\GameEntities\Party.h>
+#include <GWCA\GameEntities\Agent.h>
 
 #include <GWCA\Context\GameContext.h>
 #include <GWCA\Context\WorldContext.h>
@@ -89,6 +90,27 @@ namespace {
 	};
 
 	char MercHeroNames[8][20] = { 0 };
+
+	// Returns ptr to party member of this hero, optionally fills out out_hero_index to be the index of this hero for the player.
+	GW::HeroPartyMember* GetPartyHeroByID(HeroID hero_id, uint32_t *out_hero_index) {
+		auto party_info = GW::PartyMgr::GetPartyInfo();
+		if (!party_info) return nullptr;
+		auto party_heros = party_info->heroes;
+		if (!party_heros.valid()) return nullptr;
+		auto me = GW::Agents::GetPlayerAsAgentLiving();
+		if (!me) return nullptr;
+		uint32_t my_player_id = me->login_number;
+		for (size_t i = 0; i < party_heros.size(); i++) {
+			if (party_heros[i].owner_player_id == my_player_id &&
+				party_heros[i].hero_id == hero_id) {
+					if(out_hero_index) 
+						*out_hero_index = i + 1;
+					return &party_heros[i];
+			}
+		}
+		return nullptr;
+	}
+
 }
 
 unsigned int HeroBuildsWindow::TeamHeroBuild::cur_ui_id = 0;
@@ -386,6 +408,7 @@ void HeroBuildsWindow::Load(unsigned int idx) {
 void HeroBuildsWindow::Load(const HeroBuildsWindow::TeamHeroBuild& tbuild) {
 	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) return;
 	GW::PartyMgr::KickAllHeroes();
+	pending_hero_loads.clear();
     if (tbuild.mode > 0) {
         GW::PartyMgr::SetHardMode(tbuild.mode == 2);
     }
@@ -415,7 +438,7 @@ void HeroBuildsWindow::Load(const TeamHeroBuild& tbuild, unsigned int idx) {
 
 		GW::PartyMgr::AddHero(heroid);
 		if (!code.empty()) {
-			queue.push(CodeOnHero(code.c_str(), idx));
+			pending_hero_loads.push_back(CodeOnHero(code.c_str(), heroid));
 		}
 	}
 }
@@ -432,16 +455,20 @@ void HeroBuildsWindow::Update(float delta) {
 				send_queue.pop();
 		}
 	}
-	if (!queue.empty() && TIMER_DIFF(load_timer) > 100) {
-		if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost
-			&& GW::Agents::GetPlayer()) {
-			GW::SkillbarMgr::LoadSkillTemplate(queue.front().code, queue.front().heroind);
-			queue.pop();
-			load_timer = TIMER_INIT();
-		} else {
-            while (!queue.empty())
-		        queue.pop(); 
+	static uint32_t hero_index = 0;
+	for (size_t i = 0; i < pending_hero_loads.size() && TIMER_DIFF(load_timer) > 100;i++) {
+		if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
+			pending_hero_loads.clear();
+			break;
 		}
+		if (!GetPartyHeroByID(pending_hero_loads[i].heroid, &hero_index)) {
+			if (TIMER_DIFF(pending_hero_loads[i].started) > 1000)
+				pending_hero_loads.erase(pending_hero_loads.begin() + i);
+			continue;
+		}
+		GW::SkillbarMgr::LoadSkillTemplate(pending_hero_loads[i].code, hero_index);
+		pending_hero_loads.erase(pending_hero_loads.begin() + i);
+		load_timer = TIMER_INIT();
 	}
 
 	// if we open the window, load from file. If we close the window, save to file. 
