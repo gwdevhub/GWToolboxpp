@@ -1,5 +1,6 @@
 #include "Inject.h"
 #include <shellapi.h>
+#include <Commctrl.h>
 
 #include <stdio.h>
 
@@ -40,15 +41,15 @@ bool InjectWindow::AskInjectProcess(Process *target_process)
 
         uint32_t charname_ptr;
         if (!process.Read(module.base + charname_rva, &charname_ptr, 4)) {
-            // Add logging
-            charnames.emplace_back(L"");
+            fprintf(stderr, "Can't read the address 0x%08X in process %u\n",
+                module.base + charname_rva, process.GetProcessId());
             continue;
         }
 
         wchar_t charname[32] = {};
         if (!process.Read(charname_ptr, &charname, 32)) {
-            // Add logging
-            charnames.emplace_back(L"");
+            fprintf(stderr, "Can't read the character name at address 0x%08X in process %u\n",
+                charname_ptr, process.GetProcessId());
             continue;
         }
 
@@ -63,11 +64,11 @@ bool InjectWindow::AskInjectProcess(Process *target_process)
     {
         const wchar_t *name = charnames[i].c_str();
         // Add string to combobox.
-        SendMessageW(inject.m_characters_combo, CB_ADDSTRING, (WPARAM)0, (LPARAM)name);
+        SendMessageW(inject.m_hCharacters, CB_ADDSTRING, (WPARAM)0, (LPARAM)name);
     }
 
     inject.WaitMessages();
-    *target_process = std::move(processes[inject.m_selected]);
+    *target_process = std::move(processes[inject.m_Selected]);
     return true;
 }
 
@@ -78,7 +79,7 @@ void InjectWindow::OnWindowCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 
     SetWindowLongPtrW(hWnd, GWLP_USERDATA, reinterpret_cast<LONG>(inject));
 
-    inject->m_inject_button = CreateWindowW(
+    inject->m_hInjectButton = CreateWindowW(
         L"BUTTON",
         L"Inject",
         WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
@@ -88,10 +89,10 @@ void InjectWindow::OnWindowCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         24,
         hWnd,
         nullptr,
-        inject->m_instance,
+        inject->m_hInstance,
         nullptr);
 
-    inject->m_characters_combo = CreateWindowW(
+    inject->m_hCharacters = CreateWindowW(
         L"COMBOBOX",
         L"",
         CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP | WS_VISIBLE | WS_CHILD,
@@ -101,7 +102,7 @@ void InjectWindow::OnWindowCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         300,
         hWnd,
         nullptr,
-        inject->m_instance,
+        inject->m_hInstance,
         nullptr);
 }
 
@@ -117,7 +118,7 @@ LRESULT CALLBACK InjectWindow::MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, 
         break;
 
     case WM_DESTROY:
-        SetEvent(inject->m_event);
+        SetEvent(inject->m_hEvent);
         break;
 
     case WM_CREATE:
@@ -133,26 +134,26 @@ LRESULT CALLBACK InjectWindow::MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, 
 }
 
 InjectWindow::InjectWindow()
-    : m_window(nullptr)
-    , m_characters_combo(nullptr)
-    , m_inject_button(nullptr)
-    , m_event(nullptr)
-    , m_instance(nullptr)
-    , m_selected(0)
+    : m_hWnd(nullptr)
+    , m_hCharacters(nullptr)
+    , m_hInjectButton(nullptr)
+    , m_hEvent(nullptr)
+    , m_hInstance(nullptr)
+    , m_Selected(0)
 {
 }
 
 InjectWindow::~InjectWindow()
 {
-    CloseHandle(m_event);
+    CloseHandle(m_hEvent);
 }
 
 bool InjectWindow::Create(const wchar_t *title, std::vector<std::wstring>& names)
 {
-    m_instance = GetModuleHandleW(nullptr);
+    m_hInstance = GetModuleHandleW(nullptr);
 
-    m_event = CreateEventW(0, FALSE, FALSE, nullptr);
-    if (m_event == nullptr)
+    m_hEvent = CreateEventW(0, FALSE, FALSE, nullptr);
+    if (m_hEvent == nullptr)
     {
         fprintf(stderr, "CreateEventW failed (%lu)\n", GetLastError());
         return false;
@@ -161,7 +162,7 @@ bool InjectWindow::Create(const wchar_t *title, std::vector<std::wstring>& names
     WNDCLASSW wc = {0};
     // wc.style = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc = MainWndProc;
-    wc.hInstance = m_instance;
+    wc.hInstance = m_hInstance;
     wc.hbrBackground = GetSysColorBrush(COLOR_3DFACE);
     wc.lpszClassName = L"GWToolbox-Inject-Window-Class";
 
@@ -171,7 +172,7 @@ bool InjectWindow::Create(const wchar_t *title, std::vector<std::wstring>& names
         return false;
     }
 
-    m_window = CreateWindowW(
+    m_hWnd = CreateWindowW(
         wc.lpszClassName,
         title,
         WS_OVERLAPPEDWINDOW | WS_VISIBLE,
@@ -181,10 +182,10 @@ bool InjectWindow::Create(const wchar_t *title, std::vector<std::wstring>& names
         140, // height
         nullptr,
         nullptr,
-        m_instance,
+        m_hInstance,
         this);
 
-    if (m_window == nullptr)
+    if (m_hWnd == nullptr)
     {
         fprintf(stderr, "CreateWindowW failed (%lu)\n", GetLastError());
         return false;
@@ -200,7 +201,7 @@ bool InjectWindow::WaitMessages()
     {
         DWORD dwRet = MsgWaitForMultipleObjects(
             1,
-            &m_event,
+            &m_hEvent,
             FALSE,
             INFINITE,
             QS_ALLINPUT);
@@ -221,17 +222,17 @@ bool InjectWindow::WaitMessages()
         }
     }
 
-    DestroyWindow(m_window);
+    DestroyWindow(m_hWnd);
     return true;
 }
 
 void InjectWindow::OnEvent(HWND hwnd, LONG control_id, LONG notification_code)
 {
     // printf("hwnd:%p, control_id:%ld, notification_code:%lu\n", hwnd, control_id, notification_code);
-    if ((hwnd == m_inject_button) && (control_id == 0)) {
-        m_selected = SendMessageW(m_characters_combo, CB_GETCURSEL, 0, 0);
-        printf("Pressed: %d\n", m_selected);
-        SetEvent(m_event);
+    if ((hwnd == m_hInjectButton) && (control_id == 0)) {
+        m_Selected = SendMessageW(m_hCharacters, CB_GETCURSEL, 0, 0);
+        printf("Pressed: %d\n", m_Selected);
+        SetEvent(m_hEvent);
     }
 }
 
@@ -254,11 +255,11 @@ static LPVOID GetLoadLibrary()
     return pLoadLibraryW;
 }
 
-bool InjectRemoteThread(Process& process, LPCWSTR ImagePath, LPDWORD lpExitCode)
+bool InjectRemoteThread(Process *process, LPCWSTR ImagePath, LPDWORD lpExitCode)
 {
     *lpExitCode = 0;
 
-    HANDLE ProcessHandle = process.GetHandle();
+    HANDLE ProcessHandle = process->GetHandle();
     if (ProcessHandle == nullptr)
     {
         fprintf(stderr, "Can't inject a dll in a process which is not open\n");

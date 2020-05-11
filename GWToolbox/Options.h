@@ -2,9 +2,9 @@
 
 struct Options
 {
-    bool quiet;
-    bool version;
     bool help;
+    bool version;
+    bool quiet;
     bool install;
     bool uninstall;
     bool reinstall;
@@ -16,4 +16,6 @@ struct Options
 extern Options options;
 
 void PrintUsage(bool terminate);
-void ParseCommandLine(int argc, char *argv[]);
+void ParseCommandLine();
+
+wchar_t* GetCommandLineWithoutProgram();

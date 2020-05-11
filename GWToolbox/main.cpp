@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -22,17 +23,47 @@ static bool RestartAsAdminForInjection(uint32_t TargetPid)
     return RestartAsAdmin(args);
 }
 
-int main(int argc, char *argv[])
+static bool InjectInstalledDllInProcess(Process *process)
 {
-    ParseCommandLine(argc - 1, argv + 1);
+    if (!EnableDebugPrivilege() && !IsRunningAsAdmin()) {
+        RestartAsAdminForInjection(process->GetProcessId());
+        return true;
+    }
 
+    wchar_t dllpath[MAX_PATH];
+    if (!GetInstallationLocation(dllpath, MAX_PATH)) {
+        fprintf(stderr, "Couldn't find installation path\n");
+        return true;
+    }
+
+    PathCompose(dllpath, MAX_PATH, dllpath, L"GWToolboxdll.dll");
+
+    DWORD ExitCode;
+    if (!InjectRemoteThread(process, dllpath, &ExitCode)) {
+        fprintf(stderr, "InjectRemoteThread failed (ExitCode: %lu)\n", ExitCode);
+        return false;
+    }
+
+    return true;
+}
+
+#if 0
+int main(void)
+#else
+int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
+#endif
+{
+    ParseRegistrySettings();
+    ParseCommandLine();
+
+    assert(options.help == false);
     if (options.version) {
         printf("GWToolbox version 3.0\n");
         return 0;
     }
 
     if (options.asadmin && !IsRunningAsAdmin()) {
-        RestartAsAdmin(GetCommandLineW());
+        RestartAsAdmin(GetCommandLineWithoutProgram());
         return 0;
     }
 
@@ -55,49 +86,93 @@ int main(int argc, char *argv[])
             fprintf(stderr, "Couldn't open process %d\n", options.pid);
             return 1;
         }
-    } else {
-        // @Enhancement:
-        // If not Guild Wars is open AskInjectProcess will return false.
-        // We could deal with it, by recording Guild Wars process regardless
-        // if we can open them with the appropriate rights.
-        //
-        // If we can't open with appropriate rights, we can then ask to re-open
-        // as admin.
-        if (!InjectWindow::AskInjectProcess(&proc)) {
-            if (IsRunningAsAdmin()) {
-                MessageBoxW(0, L"Couldn't find any appropriate target to start GWToolbox", L"Error", 0);
-                fprintf(stderr, "InjectWindow::AskInjectName failed\n");
+
+        if (!InjectInstalledDllInProcess(&proc)) {
+            fprintf(stderr, "InjectInstalledDllInProcess failed\n");
+            return 1;
+        }
+    }
+
+    // if not installed
+    //  if not "do you want to install GWToolbox"
+    //   quit
+    //  download toolbox
+    // else if version is outdated
+    //  if do you want to update the version
+    //   show changelog?
+    // Enumerate all processes
+    // if no processes found
+    //  GWToolbox can't find valid target process, restart as admin?
+    // if processes found
+    //  ask which one to inject in (If you don't see the process, restart as admin?)
+    //
+    // We have the process
+    // Enable debug privileges or ask to restart as admin
+    // Try to inject
+
+    if (!IsInstalled()) {
+        if (options.quiet) {
+            fprintf(stderr, "Can't ask to install if started with '/quiet'\n");
+            return 1;
+        }
+
+        int iRet = MessageBoxW(
+            0,
+            L"GWToolbox doesn't seem to be installed, do you want to install it?",
+            L"GWToolbox",
+            MB_YESNO);
+
+        if (iRet == IDNO) {
+            fprintf(stderr, "Use doesn't want to install GWToolbox\n");
+            return 1;
+        }
+
+        if (iRet == IDYES) {
+            // @Cleanup: Check return value
+            Install(options.quiet);
+        }
+
+    } else if (!options.noupdate) {
+        // Check if we need to update the GWToolbox
+    }
+
+    // If we can't open with appropriate rights, we can then ask to re-open
+    // as admin.
+    if (!InjectWindow::AskInjectProcess(&proc)) {
+        if (IsRunningAsAdmin()) {
+            MessageBoxW(
+                0,
+                L"Couldn't find any appropriate target to start GWToolbox",
+                L"GWToolbox - Error",
+                0);
+            fprintf(stderr, "InjectWindow::AskInjectName failed\n");
+            return 0;
+        } else {
+            // @Enhancement:
+            // Add UAC shield to the yes button
+            int iRet = MessageBoxW(
+                0,
+                L"Couldn't find any valid process to start GWToolboxpp.\n"
+                "If such process exist GWToolbox.exe may require administrator privileges.\n"
+                "Do you want to restart as administrator?",
+                L"GWToolbox - Error",
+                MB_YESNO);
+
+            if (iRet == IDNO) {
+                fprintf(stderr, "User doesn't want to restart as admin\n");
                 return 1;
-            } else {
-                static const wchar_t message[] = L"Couldn't find any processes that could be valid target to start GWToolboxpp\n"
-                    "If such process exist (typically Gw.exe) It could be because GWToolbox.exe"
-                    "was not started with sufficient rights\n";
-                int Button = MessageBoxW(0, message, L"Error", MB_RETRYCANCEL);
-                if (Button == IDRETRY) {
-                    RestartAsAdminForInjection(proc.GetProcessId());
-                }
+            }
+
+            if (iRet == IDYES) {
+                RestartAsAdminForInjection(proc.GetProcessId());
                 return 0;
             }
         }
     }
 
-    if (!EnableDebugPrivilege() && !IsRunningAsAdmin()) {
-        RestartAsAdminForInjection(proc.GetProcessId());
-        return 0;
-    }
-
-    wchar_t dllpath[MAX_PATH];
-    if (!GetInstallationLocation(dllpath, MAX_PATH)) {
-        fprintf(stderr, "Couldn't find installation path\n");
-        return 0;
-    }
-
-    PathCompose(dllpath, MAX_PATH, dllpath, L"GWToolboxdll.dll");
-
-    DWORD ExitCode;
-    if (!InjectRemoteThread(proc, dllpath, &ExitCode)) {
-        // @Enhancement:
-        // Get the reason why we couldn't inject.
+    if (!InjectInstalledDllInProcess(&proc)) {
+        fprintf(stderr, "InjectInstalledDllInProcess failed\n");
+        return 1;
     }
 
     return 0;

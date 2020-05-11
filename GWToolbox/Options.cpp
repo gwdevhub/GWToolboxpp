@@ -1,3 +1,13 @@
+#ifndef WIN32_LEAN_AND_MEAN
+# define WIN32_LEAN_AND_MEAN
+#endif
+#ifdef NOMINMAX
+# define NOMINMAX
+#endif
+#include <Windows.h>
+#include <shellapi.h>
+
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,15 +21,16 @@ void PrintUsage(bool terminate)
     fprintf(stderr,
             "Usage: [options]\n\n"
 
+            "    /?, /help                  Print this help\n"
             "    /version                   Print version and exist\n"
-            "    -h, /help                  Print this help\n\n"
+            "    /quiet                     Doesn't create any interaction with the user\n\n"
 
             "    /install                   Create necessary folders and download GWToolboxdll\n"
             "    /uninstall                 Remove all data used by GWToolbox\n"
             "    /reinstall                 Do a fresh installation\n\n"
 
             "    /asadmin                   GWToolbox will try to run as admin\n"
-            "    /noupdate                  Won't try to update\n"
+            "    /noupdate                  Won't try to update\n\n"
 
             "    /pid <process id>          Process id of the target in which to inject\n"
             );
@@ -28,33 +39,50 @@ void PrintUsage(bool terminate)
         exit(0);
 }
 
-void ParseCommandLine(int argc, char *argv[])
+static bool IsOneOrZeroOf3(bool b1, bool b2, bool b3)
 {
-    for (int i = 0; i < argc; ++i) {
-        char *arg = argv[i];
+    int count = 0;
+    if (b1) ++count;
+    if (b2) ++count;
+    if (b3) ++count;
+    return count <= 1;
+}
 
-        if (strcmp(arg, "/version") == 0) {
+void ParseCommandLine()
+{
+    int argc;
+    LPWSTR CmdLine = GetCommandLineW();
+    LPWSTR *argv = CommandLineToArgvW(CmdLine, &argc);
+    if (argv == nullptr) {
+        fprintf(stderr, "CommandLineToArgvW failed (%lu)\n", GetLastError());
+        return;
+    }
+
+    for (int i = 1; i < argc; ++i) {
+        wchar_t *arg = argv[i];
+
+        if (wcscmp(arg, L"/version") == 0) {
             options.version = true;
-        } else if (strcmp(arg, "/install") == 0) {
+        } else if (wcscmp(arg, L"/install") == 0) {
             options.install = true;
-        } else if (strcmp(arg, "/uninstall") == 0) {
+        } else if (wcscmp(arg, L"/uninstall") == 0) {
             options.uninstall = true;
-        } else if (strcmp(arg, "/reinstall") == 0) {
+        } else if (wcscmp(arg, L"/reinstall") == 0) {
             options.reinstall = true;
-        } else if (strcmp(arg, "/pid") == 0) {
+        } else if (wcscmp(arg, L"/pid") == 0) {
             if (++i == argc) {
                 fprintf(stderr, "'/pid' must be followed by a process id\n");
                 PrintUsage(true);
             }
             // @Enhancement: Replace by proper 'ParseInt' that deal with errors
-            options.pid = atoi(argv[i]);
-        } else if (strcmp(arg, "/asadmin") == 0) {
+            options.pid = _wtoi(argv[i]);
+        } else if (wcscmp(arg, L"/asadmin") == 0) {
             options.asadmin = true;
-        } else if (strcmp(arg, "/noupdate") == 0) {
+        } else if (wcscmp(arg, L"/noupdate") == 0) {
             options.noupdate = true;
-        } else if (strcmp(arg, "/help") == 0) {
+        } else if (wcscmp(arg, L"/help") == 0) {
             options.help = true;
-        } else if (strcmp(arg, "-h") == 0) {
+        } else if (wcscmp(arg, L"/?") == 0) {
             options.help = true;
         } else {
             options.help = true;
@@ -64,16 +92,50 @@ void ParseCommandLine(int argc, char *argv[])
     if (options.help)
         PrintUsage(true);
 
-    int count = 0;
-    if (options.install)
-        ++count;
-    if (options.uninstall)
-        ++count;
-    if (options.reinstall)
-        ++count;
-
-    if (count > 1) {
+    if (!IsOneOrZeroOf3(options.install, options.uninstall, options.reinstall)) {
         printf("You can only use one of '/install', '/uinstall' and '/reinstall'\n");
         PrintUsage(true);
     }
+}
+
+static LPWSTR ConsumeSpaces(LPWSTR Str)
+{
+    for (;;)
+    {
+        if (*Str != ' ')
+            return Str;
+        ++Str;
+    }
+    return nullptr;
+}
+
+static LPWSTR ConsumeArg(LPWSTR CmdLine)
+{
+    bool Quotes = false;
+
+    for (;;)
+    {
+        if (*CmdLine == 0)
+            return CmdLine;
+
+        if (*CmdLine == '"') {
+            if (Quotes) {
+                return ConsumeSpaces(CmdLine + 1);
+            }
+            Quotes = true;
+        } else if (*CmdLine == ' ' && !Quotes) {
+            return ConsumeSpaces(CmdLine);
+        }
+
+        ++CmdLine;
+    }
+
+    assert(!"We should never reach here");
+    return nullptr;
+}
+
+wchar_t* GetCommandLineWithoutProgram()
+{
+    LPWSTR CmdLine = GetCommandLineW();
+    return ConsumeArg(CmdLine);
 }

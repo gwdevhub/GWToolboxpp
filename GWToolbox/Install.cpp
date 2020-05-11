@@ -13,9 +13,12 @@
 
 #include "Download.h"
 #include "Install.h"
+#include "Options.h"
 #include "Path.h"
 
-static bool OpenUninstallHive(HKEY hKey, PHKEY phkResult)
+#define HKEY_USED_HIVE HKEY_CURRENT_USER
+
+static bool OpenUninstallKey(HKEY hKey, PHKEY phkResult)
 {
     LSTATUS status;
     DWORD Disposition;
@@ -23,6 +26,32 @@ static bool OpenUninstallHive(HKEY hKey, PHKEY phkResult)
     status = RegCreateKeyExW(
         hKey,
         L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\GWToolbox",
+        0,
+        nullptr,
+        REG_OPTION_NON_VOLATILE,
+        KEY_SET_VALUE | KEY_READ,
+        nullptr,
+        phkResult,
+        &Disposition);
+
+    if (status != ERROR_SUCCESS)
+    {
+        fprintf(stderr, "RegCreateKeyExW failed: status:%d\n", status);
+        phkResult = nullptr;
+        return false;
+    }
+
+    return true;
+}
+
+static bool OpenSettingsKey(HKEY hKey, PHKEY phkResult)
+{
+    LSTATUS status;
+    DWORD Disposition;
+
+    status = RegCreateKeyExW(
+        hKey,
+        L"Software\\GWToolbox",
         0,
         nullptr,
         REG_OPTION_NON_VOLATILE,
@@ -104,6 +133,27 @@ static bool RegReadStr(HKEY hKey, LPCWSTR KeyName, LPWSTR Buffer, size_t BufferL
     return true;
 }
 
+static bool RegReadDWORD(HKEY hKey, LPCWSTR KeyName, PDWORD dwDword)
+{
+    DWORD cbData = sizeof(*dwDword);
+    LSTATUS status = RegGetValueW(
+        hKey,
+        L"",
+        KeyName,
+        RRF_RT_REG_DWORD,
+        nullptr,
+        dwDword,
+        &cbData);
+
+    if (status != ERROR_SUCCESS)
+    {
+        fprintf(stderr, "RegGetValueW failed: status:%d\n", status);
+        return false;
+    }
+
+    return true;
+}
+
 static bool GetFileSize(const wchar_t *path, uint64_t *file_size)
 {
     HANDLE hFile = CreateFileW(
@@ -152,7 +202,7 @@ static bool GetFileSizeAsDword(const wchar_t *path, DWORD *file_size)
     return true;
 }
 
-bool InstallUninstallKey(HKEY hKey)
+static bool InstallUninstallKey(HKEY hKey)
 {
     wchar_t time_buf[32];
     struct tm local_time;
@@ -190,8 +240,8 @@ bool InstallUninstallKey(HKEY hKey)
     _snwprintf_s(uninstall_quiet, ARRAYSIZE(uninstall_quiet), L"%ls /uninstall /quiet", installer_path);
 
     HKEY UninstallKey;
-    if (!OpenUninstallHive(hKey, &UninstallKey)) {
-        fprintf(stderr, "OpenUninstallHive failed\n");
+    if (!OpenUninstallKey(hKey, &UninstallKey)) {
+        fprintf(stderr, "OpenUninstallKey failed\n");
         return false;
     }
 
@@ -209,15 +259,35 @@ bool InstallUninstallKey(HKEY hKey)
         !RegWriteStr(UninstallKey, L"URLInfoAbout", L"http://www.gwtoolbox.com/") ||
         !RegWriteStr(UninstallKey, L"URLUpdateInfo", L"http://www.gwtoolbox.com/history"))
     {
-        RegCloseKey(hKey);
+        RegCloseKey(UninstallKey);
         return false;
     }
 
-    RegCloseKey(hKey);
+    RegCloseKey(UninstallKey);
     return true;
 }
 
-bool DeleteUninstallKey(HKEY hKey)
+static bool InstallSettingsKey(HKEY hKey)
+{
+    HKEY SettingsKey;
+    if (!OpenSettingsKey(hKey, &SettingsKey)) {
+        fprintf(stderr, "OpenUninstallKey failed\n");
+        return false;
+    }
+
+    if (!RegWriteDWORD(SettingsKey, L"noupdate", 0) ||
+        !RegWriteDWORD(SettingsKey, L"asadmin", 0))
+        // Add the key to get crash dump
+    {
+        RegCloseKey(SettingsKey);
+        return false;
+    }
+
+    RegCloseKey(SettingsKey);
+    return true;
+}
+
+static bool DeleteUninstallKey(HKEY hKey)
 {
     LSTATUS status = RegDeleteKeyW(
         hKey,
@@ -232,16 +302,73 @@ bool DeleteUninstallKey(HKEY hKey)
     return true;
 }
 
+static bool DeleteSettingsKey(HKEY hKey)
+{
+    LSTATUS status = RegDeleteKeyW(
+        hKey,
+        L"Software\\GWToolbox");
+
+    if (status != ERROR_SUCCESS)
+    {
+        fprintf(stderr, "RegDeleteKeyW failed: status:%d\n", status);
+        return false;
+    }
+
+    return true;
+}
+
 static bool EnsureInstallationDirectoryExist(void)
 {
     wchar_t path[MAX_PATH];
+    wchar_t temp[MAX_PATH];
+
+    // Create %localappdata%\GWToolboxpp
     if (!PathGetAppDataPath(path, MAX_PATH, L"GWToolboxpp\\")) {
         fprintf(stderr, "PathGetAppDataPath failed\n");
         return false;
     }
-
     if (!PathCreateDirectory(path)) {
-        fprintf(stderr, "EnsureInstallationDirectoryExist failed\n");
+        fprintf(stderr, "PathCreateDirectory failed (path: '%ls')\n", path);
+        return false;
+    }
+
+    // Create %localappdata%\GWToolboxpp\logs
+    if (!PathCompose(temp, MAX_PATH, path, L"logs")) {
+        fprintf(stderr, "PathCompose failed ('%ls', '%ls')\n", path, L"logs");
+        return false;
+    }
+    if (!PathCreateDirectory(temp)) {
+        fprintf(stderr, "PathCreateDirectory failed (path: '%ls')\n", temp);
+        return false;
+    }
+
+    // Create %localappdata%\GWToolboxpp\crashes
+    if (!PathCompose(temp, MAX_PATH, path, L"crashes")) {
+        fprintf(stderr, "PathCompose failed ('%ls', '%ls')\n", path, L"crashes");
+        return false;
+    }
+    if (!PathCreateDirectory(temp)) {
+        fprintf(stderr, "PathCreateDirectory failed (path: '%ls')\n", temp);
+        return false;
+    }
+
+    // Create %localappdata%\GWToolboxpp\plugins
+    if (!PathCompose(temp, MAX_PATH, path, L"plugins")) {
+        fprintf(stderr, "PathCompose failed ('%ls', '%ls')\n", path, L"plugins");
+        return false;
+    }
+    if (!PathCreateDirectory(temp)) {
+        fprintf(stderr, "PathCreateDirectory failed (path: '%ls')\n", temp);
+        return false;
+    }
+
+    // Create %localappdata%\GWToolboxpp\data
+    if (!PathCompose(temp, MAX_PATH, path, L"data")) {
+        fprintf(stderr, "PathCompose failed ('%ls', '%ls')\n", path, L"data");
+        return false;
+    }
+    if (!PathCreateDirectory(temp)) {
+        fprintf(stderr, "PathCreateDirectory failed (path: '%ls')\n", temp);
         return false;
     }
 
@@ -304,8 +431,13 @@ bool Install(bool quiet)
         return false;
     }
 
-    if (!InstallUninstallKey(HKEY_CURRENT_USER)) {
+    if (!InstallUninstallKey(HKEY_USED_HIVE)) {
         fprintf(stderr, "InstallUninstallKey failed\n");
+        return false;
+    }
+
+    if (!InstallSettingsKey(HKEY_USED_HIVE)) {
+        fprintf(stderr, "InstallSettingKeys failed\n");
         return false;
     }
 
@@ -318,15 +450,19 @@ bool Install(bool quiet)
 
 bool Uninstall(bool quiet)
 {
-    if (!DeleteUninstallKey(HKEY_CURRENT_USER)) {
+    if (!DeleteSettingsKey(HKEY_USED_HIVE)) {
+        fprintf(stderr, "DeleteSettingsKey failed\n");
+        return false;
+    }
+
+    if (!DeleteUninstallKey(HKEY_USED_HIVE)) {
         fprintf(stderr, "DeleteUninstallKey failed\n");
         return false;
     }
 
-    // Should we check if GWToolbox is running?
-    if (!DeleteInstaller()) {
-        fprintf(stderr, "DeleteInstaller failed\n");
-    }
+    // @Remark:
+    // This is likely to fail. (i.e. if we are using GWToolbox.exe from the file)
+    DeleteInstaller();
 
     if (!quiet) {
         MessageBoxW(0, L"Uninstallation successful", L"Uninstallation", 0);
@@ -335,11 +471,22 @@ bool Uninstall(bool quiet)
     return true;
 }
 
+bool IsInstalled()
+{
+    HKEY UninstallKey;
+    if (!OpenUninstallKey(HKEY_USED_HIVE, &UninstallKey)) {
+        return false;
+    }
+
+    RegCloseKey(UninstallKey);
+    return true;
+}
+
 bool GetInstallationLocation(wchar_t *path, size_t length)
 {
     HKEY UninstallKey;
-    if (!OpenUninstallHive(HKEY_CURRENT_USER, &UninstallKey)) {
-        fprintf(stderr, "OpenUninstallHive failed\n");
+    if (!OpenUninstallKey(HKEY_USED_HIVE, &UninstallKey)) {
+        fprintf(stderr, "OpenUninstallKey failed\n");
         return false;
     }
 
@@ -351,4 +498,25 @@ bool GetInstallationLocation(wchar_t *path, size_t length)
 
     RegCloseKey(UninstallKey);
     return true;
+}
+
+void ParseRegistrySettings()
+{
+    HKEY SettingsKey;
+    if (!OpenSettingsKey(HKEY_USED_HIVE, &SettingsKey)) {
+        fprintf(stderr, "OpenUninstallKey failed\n");
+        return;
+    }
+
+    DWORD asadmin;
+    if (RegReadDWORD(SettingsKey, L"asadmin", &asadmin)) {
+        options.asadmin = (asadmin != 0);
+    }
+
+    DWORD noupdate;
+    if (RegReadDWORD(SettingsKey, L"noupdate", &noupdate)) {
+        options.noupdate = (noupdate != 0);
+    }
+
+    RegCloseKey(SettingsKey);
 }
