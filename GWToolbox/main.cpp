@@ -1,15 +1,6 @@
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include "stdafx.h"
 
-#ifndef WIN32_LEAN_AND_MEAN
-# define WIN32_LEAN_AND_MEAN
-#endif
-#ifdef NOMINMAX
-# define NOMINMAX
-#endif
-#include <Windows.h>
-
+#include "Download.h"
 #include "Inject.h"
 #include "Install.h"
 #include "Options.h"
@@ -53,7 +44,7 @@ int main(void)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 #endif
 {
-    ParseRegistrySettings();
+    ParseRegOptions();
     ParseCommandLine();
 
     assert(options.help == false);
@@ -133,7 +124,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
         }
 
     } else if (!options.noupdate) {
-        // Check if we need to update the GWToolbox
+        if (!DownloadFiles()) {
+            fprintf(stderr, "DownloadFiles failed\n");
+            return false;
+        }
     }
 
     // If we can't open with appropriate rights, we can then ask to re-open

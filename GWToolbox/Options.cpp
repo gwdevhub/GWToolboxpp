@@ -1,18 +1,7 @@
-#ifndef WIN32_LEAN_AND_MEAN
-# define WIN32_LEAN_AND_MEAN
-#endif
-#ifdef NOMINMAX
-# define NOMINMAX
-#endif
-#include <Windows.h>
-#include <shellapi.h>
-
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "stdafx.h"
 
 #include "Options.h"
+#include "Registry.h"
 
 Options options;
 
@@ -37,6 +26,27 @@ void PrintUsage(bool terminate)
 
     if (terminate)
         exit(0);
+}
+
+void ParseRegOptions()
+{
+    HKEY SettingsKey;
+    if (!OpenSettingsKey(&SettingsKey)) {
+        fprintf(stderr, "OpenUninstallKey failed\n");
+        return;
+    }
+
+    DWORD asadmin;
+    if (RegReadDWORD(SettingsKey, L"asadmin", &asadmin)) {
+        options.asadmin = (asadmin != 0);
+    }
+
+    DWORD noupdate;
+    if (RegReadDWORD(SettingsKey, L"noupdate", &noupdate)) {
+        options.noupdate = (noupdate != 0);
+    }
+
+    RegCloseKey(SettingsKey);
 }
 
 static bool IsOneOrZeroOf3(bool b1, bool b2, bool b3)

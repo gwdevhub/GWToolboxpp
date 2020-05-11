@@ -1,7 +1,6 @@
-#include "Process.h"
+#include "stdafx.h"
 
-#include <psapi.h>
-#include <assert.h>
+#include "Process.h"
 
 ProcessModule::ProcessModule(ProcessModule&& other)
     : size(other.size)

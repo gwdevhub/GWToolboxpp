@@ -1,16 +1,4 @@
-#ifndef WIN32_LEAN_AND_MEAN
-# define WIN32_LEAN_AND_MEAN
-#endif
-#ifdef NOMINMAX
-# define NOMINMAX
-#endif
-#include <Windows.h>
-#include <Shlobj.h>
-#include <shlwapi.h>
-
-#include <assert.h>
-#include <stdio.h>
-#include <string.h>
+#include "stdafx.h"
 
 #include "Str.h"
 

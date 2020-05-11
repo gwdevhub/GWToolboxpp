@@ -1,21 +1,11 @@
-#ifndef WIN32_LEAN_AND_MEAN
-# define WIN32_LEAN_AND_MEAN
-#endif
-#ifdef NOMINMAX
-# define NOMINMAX
-#endif
-#include <Windows.h>
-#include <WinInet.h>
-#include <urlmon.h>
-
-#include <stdio.h>
-#include <vector>
+#include "stdafx.h"
 
 #include <json.hpp>
 using Json = nlohmann::json;
 
 #include "Download.h"
 #include "Path.h"
+#include "Registry.h"
 
 bool Download(std::string& content, const wchar_t *url)
 {
@@ -168,6 +158,12 @@ bool DownloadFiles()
         return false;
     }
 
+    char release_string[256];
+    if (RegReadRelease(release_string, ARRAYSIZE(release_string))) {
+        if (_stricmp(release.tag_name.c_str(), release_string) == 0)
+            return true;
+    }
+
     wchar_t dll_path[MAX_PATH];
     PathGetAppDataPath(dll_path, MAX_PATH, L"GWToolboxpp\\GWToolboxdll.dll");
 
@@ -189,5 +185,6 @@ bool DownloadFiles()
         }
     }
 
+    RegWriteRelease(release.tag_name.c_str(), release.tag_name.size());
     return true;
 }

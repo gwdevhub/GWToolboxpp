@@ -9,6 +9,8 @@
     <ClCompile Include="Install.cpp" />
     <ClCompile Include="Path.cpp" />
     <ClCompile Include="Str.cpp" />
+    <ClCompile Include="Registry.cpp" />
+    <ClCompile Include="stdafx.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Process.h" />
@@ -21,6 +23,8 @@
     <ClInclude Include="resource.h">
       <Filter>Ressources</Filter>
     </ClInclude>
+    <ClInclude Include="Registry.h" />
+    <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Ressources">

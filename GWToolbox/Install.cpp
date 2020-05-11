@@ -1,158 +1,10 @@
-#ifndef WIN32_LEAN_AND_MEAN
-# define WIN32_LEAN_AND_MEAN
-#endif
-#ifdef NOMINMAX
-# define NOMINMAX
-#endif
-#include <Windows.h>
-
-#include <assert.h>
-#include <stdio.h>
-#include <string.h>
-#include <time.h>
+#include "stdafx.h"
 
 #include "Download.h"
 #include "Install.h"
 #include "Options.h"
 #include "Path.h"
-
-#define HKEY_USED_HIVE HKEY_CURRENT_USER
-
-static bool OpenUninstallKey(HKEY hKey, PHKEY phkResult)
-{
-    LSTATUS status;
-    DWORD Disposition;
-
-    status = RegCreateKeyExW(
-        hKey,
-        L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\GWToolbox",
-        0,
-        nullptr,
-        REG_OPTION_NON_VOLATILE,
-        KEY_SET_VALUE | KEY_READ,
-        nullptr,
-        phkResult,
-        &Disposition);
-
-    if (status != ERROR_SUCCESS)
-    {
-        fprintf(stderr, "RegCreateKeyExW failed: status:%d\n", status);
-        phkResult = nullptr;
-        return false;
-    }
-
-    return true;
-}
-
-static bool OpenSettingsKey(HKEY hKey, PHKEY phkResult)
-{
-    LSTATUS status;
-    DWORD Disposition;
-
-    status = RegCreateKeyExW(
-        hKey,
-        L"Software\\GWToolbox",
-        0,
-        nullptr,
-        REG_OPTION_NON_VOLATILE,
-        KEY_SET_VALUE | KEY_READ,
-        nullptr,
-        phkResult,
-        &Disposition);
-
-    if (status != ERROR_SUCCESS)
-    {
-        fprintf(stderr, "RegCreateKeyExW failed: status:%d\n", status);
-        phkResult = nullptr;
-        return false;
-    }
-
-    return true;
-}
-
-static bool RegWriteStr(HKEY hKey, LPCWSTR KeyName, LPCWSTR Value)
-{
-    size_t ValueSize = wcslen(Value) * 2;
-    LSTATUS status = RegSetValueExW(
-        hKey,
-        KeyName,
-        0,
-        REG_SZ,
-        reinterpret_cast<const BYTE *>(Value),
-        ValueSize);
-
-    if (status != ERROR_SUCCESS)
-    {
-        fprintf(stderr, "RegSetValueExW failed: status:%d\n", status);
-        return false;
-    }
-
-    return true;
-}
-
-static bool RegWriteDWORD(HKEY hKey, LPCWSTR KeyName, DWORD Value)
-{
-    LSTATUS status = RegSetValueExW(
-        hKey,
-        KeyName,
-        0,
-        REG_DWORD,
-        reinterpret_cast<const BYTE *>(&Value),
-        sizeof(4));
-
-    if (status != ERROR_SUCCESS)
-    {
-        fprintf(stderr, "RegSetValueExW failed: status:%d\n", status);
-        return false;
-    }
-
-    return true;
-}
-
-static bool RegReadStr(HKEY hKey, LPCWSTR KeyName, LPWSTR Buffer, size_t BufferLength)
-{
-    assert(BufferLength > 0);
-
-    DWORD cbData = static_cast<DWORD>(BufferLength - 1) * sizeof(WCHAR);
-    LSTATUS status = RegGetValueW(
-        hKey,
-        L"",
-        KeyName,
-        RRF_RT_REG_SZ,
-        nullptr,
-        Buffer,
-        &cbData);
-
-    if (status != ERROR_SUCCESS)
-    {
-        fprintf(stderr, "RegGetValueW failed: status:%d\n", status);
-        return false;
-    }
-
-    Buffer[cbData / sizeof(WCHAR)] = 0;
-    return true;
-}
-
-static bool RegReadDWORD(HKEY hKey, LPCWSTR KeyName, PDWORD dwDword)
-{
-    DWORD cbData = sizeof(*dwDword);
-    LSTATUS status = RegGetValueW(
-        hKey,
-        L"",
-        KeyName,
-        RRF_RT_REG_DWORD,
-        nullptr,
-        dwDword,
-        &cbData);
-
-    if (status != ERROR_SUCCESS)
-    {
-        fprintf(stderr, "RegGetValueW failed: status:%d\n", status);
-        return false;
-    }
-
-    return true;
-}
+#include "Registry.h"
 
 static bool GetFileSize(const wchar_t *path, uint64_t *file_size)
 {
@@ -202,7 +54,7 @@ static bool GetFileSizeAsDword(const wchar_t *path, DWORD *file_size)
     return true;
 }
 
-static bool InstallUninstallKey(HKEY hKey)
+static bool InstallUninstallKey()
 {
     wchar_t time_buf[32];
     struct tm local_time;
@@ -240,7 +92,7 @@ static bool InstallUninstallKey(HKEY hKey)
     _snwprintf_s(uninstall_quiet, ARRAYSIZE(uninstall_quiet), L"%ls /uninstall /quiet", installer_path);
 
     HKEY UninstallKey;
-    if (!OpenUninstallKey(hKey, &UninstallKey)) {
+    if (!OpenUninstallKey(&UninstallKey)) {
         fprintf(stderr, "OpenUninstallKey failed\n");
         return false;
     }
@@ -267,16 +119,17 @@ static bool InstallUninstallKey(HKEY hKey)
     return true;
 }
 
-static bool InstallSettingsKey(HKEY hKey)
+static bool InstallSettingsKey()
 {
     HKEY SettingsKey;
-    if (!OpenSettingsKey(hKey, &SettingsKey)) {
+    if (!OpenSettingsKey(&SettingsKey)) {
         fprintf(stderr, "OpenUninstallKey failed\n");
         return false;
     }
 
     if (!RegWriteDWORD(SettingsKey, L"noupdate", 0) ||
-        !RegWriteDWORD(SettingsKey, L"asadmin", 0))
+        !RegWriteDWORD(SettingsKey, L"asadmin", 0) ||
+        !RegWriteStr(SettingsKey, L"release", L""))
         // Add the key to get crash dump
     {
         RegCloseKey(SettingsKey);
@@ -284,36 +137,6 @@ static bool InstallSettingsKey(HKEY hKey)
     }
 
     RegCloseKey(SettingsKey);
-    return true;
-}
-
-static bool DeleteUninstallKey(HKEY hKey)
-{
-    LSTATUS status = RegDeleteKeyW(
-        hKey,
-        L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\GWToolbox");
-
-    if (status != ERROR_SUCCESS)
-    {
-        fprintf(stderr, "RegDeleteKeyW failed: status:%d\n", status);
-        return false;
-    }
-
-    return true;
-}
-
-static bool DeleteSettingsKey(HKEY hKey)
-{
-    LSTATUS status = RegDeleteKeyW(
-        hKey,
-        L"Software\\GWToolbox");
-
-    if (status != ERROR_SUCCESS)
-    {
-        fprintf(stderr, "RegDeleteKeyW failed: status:%d\n", status);
-        return false;
-    }
-
     return true;
 }
 
@@ -431,12 +254,12 @@ bool Install(bool quiet)
         return false;
     }
 
-    if (!InstallUninstallKey(HKEY_USED_HIVE)) {
+    if (!InstallUninstallKey()) {
         fprintf(stderr, "InstallUninstallKey failed\n");
         return false;
     }
 
-    if (!InstallSettingsKey(HKEY_USED_HIVE)) {
+    if (!InstallSettingsKey()) {
         fprintf(stderr, "InstallSettingKeys failed\n");
         return false;
     }
@@ -450,12 +273,12 @@ bool Install(bool quiet)
 
 bool Uninstall(bool quiet)
 {
-    if (!DeleteSettingsKey(HKEY_USED_HIVE)) {
+    if (!DeleteSettingsKey()) {
         fprintf(stderr, "DeleteSettingsKey failed\n");
         return false;
     }
 
-    if (!DeleteUninstallKey(HKEY_USED_HIVE)) {
+    if (!DeleteUninstallKey()) {
         fprintf(stderr, "DeleteUninstallKey failed\n");
         return false;
     }
@@ -474,7 +297,7 @@ bool Uninstall(bool quiet)
 bool IsInstalled()
 {
     HKEY UninstallKey;
-    if (!OpenUninstallKey(HKEY_USED_HIVE, &UninstallKey)) {
+    if (!OpenUninstallKey(&UninstallKey)) {
         return false;
     }
 
@@ -485,7 +308,7 @@ bool IsInstalled()
 bool GetInstallationLocation(wchar_t *path, size_t length)
 {
     HKEY UninstallKey;
-    if (!OpenUninstallKey(HKEY_USED_HIVE, &UninstallKey)) {
+    if (!OpenUninstallKey(&UninstallKey)) {
         fprintf(stderr, "OpenUninstallKey failed\n");
         return false;
     }
@@ -498,25 +321,4 @@ bool GetInstallationLocation(wchar_t *path, size_t length)
 
     RegCloseKey(UninstallKey);
     return true;
-}
-
-void ParseRegistrySettings()
-{
-    HKEY SettingsKey;
-    if (!OpenSettingsKey(HKEY_USED_HIVE, &SettingsKey)) {
-        fprintf(stderr, "OpenUninstallKey failed\n");
-        return;
-    }
-
-    DWORD asadmin;
-    if (RegReadDWORD(SettingsKey, L"asadmin", &asadmin)) {
-        options.asadmin = (asadmin != 0);
-    }
-
-    DWORD noupdate;
-    if (RegReadDWORD(SettingsKey, L"noupdate", &noupdate)) {
-        options.noupdate = (noupdate != 0);
-    }
-
-    RegCloseKey(SettingsKey);
 }

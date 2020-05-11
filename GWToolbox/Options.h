@@ -16,6 +16,8 @@ struct Options
 extern Options options;
 
 void PrintUsage(bool terminate);
+
+void ParseRegOptions();
 void ParseCommandLine();
 
 wchar_t* GetCommandLineWithoutProgram();
