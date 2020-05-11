@@ -497,7 +497,7 @@ public:
         "vizunah square local quarter",
         "vloxs falls",
         "wehhan terraces",
-        "the wilds",
+        "wilds",
         "yahnur market",
         "yaks bend",
         "yohlon haven",
