@@ -113,7 +113,7 @@ void TradeWindow::Update(float delta) {
 		ws_window->poll();
 	}
 	bool search_pending = !pending_query_string.empty();
-	bool maintain_socket = (visible && !collapsed) || print_game_chat || search_pending;
+	bool maintain_socket = (visible && !collapsed) || (print_game_chat && GW::UI::GetCheckboxPreference(GW::UI::CheckboxPreference_ChannelTrade) == 0) || search_pending;
 	if (maintain_socket && !ws_window) {
 		AsyncWindowConnect();
 	}
@@ -409,6 +409,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 void TradeWindow::DrawAlertsWindowContent(bool ownwindow) {
 	ImGui::Text("Alerts");
 	ImGui::Checkbox("Send Kamadan ad1 trade chat to your trade chat", &print_game_chat);
+	ImGui::ShowHelp("Only when trade chat channel is visible in-game");
 	ImGui::Checkbox("Only show messages containing:", &filter_alerts);
 	ImGui::TextDisabled("(Each line is a separate keyword. Not case sensitive.)");
 	if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE, 
