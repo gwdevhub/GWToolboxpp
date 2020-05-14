@@ -3,7 +3,7 @@
 #include "Options.h"
 #include "Registry.h"
 
-Options options;
+Options options = { 0 };
 
 void PrintUsage(bool terminate)
 {

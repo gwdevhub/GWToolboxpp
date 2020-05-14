@@ -296,13 +296,8 @@ bool Uninstall(bool quiet)
 
 bool IsInstalled()
 {
-    HKEY UninstallKey;
-    if (!OpenUninstallKey(&UninstallKey)) {
-        return false;
-    }
-
-    RegCloseKey(UninstallKey);
-    return true;
+    wchar_t dllpath[MAX_PATH];
+    return GetInstallationLocation(dllpath, MAX_PATH);
 }
 
 bool GetInstallationLocation(wchar_t *path, size_t length)

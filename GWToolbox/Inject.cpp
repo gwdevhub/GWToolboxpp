@@ -28,30 +28,46 @@ bool InjectWindow::AskInjectProcess(Process *target_process)
 
     std::vector<std::wstring> charnames;
     charnames.reserve(processes.size());
-    for (Process& process : processes) {
+    Process* process = nullptr;
+    for (int i = 0; i < processes.size(); i++) {
+        process = &processes[i];
         ProcessModule module;
-        if (!process.GetModule(&module)) {
+        if (!process->GetModule(&module)) {
             // Add logging
-            charnames.emplace_back(L"");
+            processes.erase(processes.begin() + i);
+            i--;
             continue;
         }
 
         uint32_t charname_ptr;
-        if (!process.Read(module.base + charname_rva, &charname_ptr, 4)) {
+        if (!process->Read(module.base + charname_rva, &charname_ptr, 4)) {
             fprintf(stderr, "Can't read the address 0x%08X in process %u\n",
-                module.base + charname_rva, process.GetProcessId());
+                module.base + charname_rva, process->GetProcessId());
+            processes.erase(processes.begin() + i);
+            i--;
             continue;
         }
 
         wchar_t charname[32] = {};
-        if (!process.Read(charname_ptr, &charname, 32)) {
+        if (!process->Read(charname_ptr, &charname, 32)) {
             fprintf(stderr, "Can't read the character name at address 0x%08X in process %u\n",
-                charname_ptr, process.GetProcessId());
+                charname_ptr, process->GetProcessId());
+            processes.erase(processes.begin() + i);
+            i--;
             continue;
         }
 
         size_t charname_len = wcsnlen(charname, _countof(charname));
         charnames.emplace_back(charname, charname + charname_len);
+    }
+    if (processes.empty()) {
+        // Failed to get any charnames from these processes.
+        return false;
+    }
+    if (processes.size() == 1) {
+        // Only 1 valid process found.
+        *target_process = std::move(processes[0]);
+        return true;
     }
 
     InjectWindow inject;

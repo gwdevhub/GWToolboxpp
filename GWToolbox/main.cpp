@@ -7,6 +7,14 @@
 #include "Path.h"
 #include "Process.h"
 
+static void ShowError(const wchar_t* message) {
+    MessageBoxW(
+        0,
+        message,
+        L"GWToolbox - Error",
+        0);
+}
+
 static bool RestartAsAdminForInjection(uint32_t TargetPid)
 {
     wchar_t args[64];
@@ -24,7 +32,7 @@ static bool InjectInstalledDllInProcess(Process *process)
     wchar_t dllpath[MAX_PATH];
     if (!GetInstallationLocation(dllpath, MAX_PATH)) {
         fprintf(stderr, "Couldn't find installation path\n");
-        return true;
+        return false;
     }
 
     PathCompose(dllpath, MAX_PATH, dllpath, L"GWToolboxdll.dll");
@@ -103,6 +111,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
     if (!IsInstalled()) {
         if (options.quiet) {
+            ShowError(L"Can't ask to install if started with '/quiet'");
             fprintf(stderr, "Can't ask to install if started with '/quiet'\n");
             return 1;
         }
@@ -125,6 +134,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
     } else if (!options.noupdate) {
         if (!DownloadFiles()) {
+            ShowError(L"Failed to download GWToolbox DLL");
             fprintf(stderr, "DownloadFiles failed\n");
             return false;
         }
@@ -134,11 +144,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     // as admin.
     if (!InjectWindow::AskInjectProcess(&proc)) {
         if (IsRunningAsAdmin()) {
-            MessageBoxW(
-                0,
-                L"Couldn't find any appropriate target to start GWToolbox",
-                L"GWToolbox - Error",
-                0);
+            ShowError(L"Failed to inject GWToolbox into Guild Wars");
             fprintf(stderr, "InjectWindow::AskInjectName failed\n");
             return 0;
         } else {
@@ -165,9 +171,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     }
 
     if (!InjectInstalledDllInProcess(&proc)) {
+        ShowError(L"Couldn't find any appropriate target to start GWToolbox");
         fprintf(stderr, "InjectInstalledDllInProcess failed\n");
         return 1;
     }
-
+    ShowError(L"Injected?");
     return 0;
 }
