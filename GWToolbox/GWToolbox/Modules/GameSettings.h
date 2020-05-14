@@ -183,6 +183,7 @@ public:
 	static void OnSpeechBubble(GW::HookStatus*, GW::Packet::StoC::SpeechBubble*);
 	static void OnSpeechDialogue(GW::HookStatus*, GW::Packet::StoC::DisplayDialogue*);
 	static void OnServerMessage(GW::HookStatus*, GW::Packet::StoC::MessageServer*);
+	static void OnCheckboxPreferenceChanged(GW::HookStatus*, uint32_t msgid, void* wParam, void* lParam);
 	
 
 	bool tick_is_toggle = false;
@@ -298,4 +299,5 @@ private:
 	GW::HookEntry PlayerJoinInstance_Entry;
 	GW::HookEntry PlayerLeaveInstance_Entry;
 	GW::HookEntry OnDialog_Entry;
+	GW::HookEntry OnCheckboxPreferenceChanged_Entry;
 };

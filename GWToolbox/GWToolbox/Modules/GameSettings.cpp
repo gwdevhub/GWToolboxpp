@@ -792,6 +792,7 @@ void GameSettings::Initialize() {
 		check_message_on_party_change = true;
 		});
 
+	GW::UI::RegisterUIMessageCallback(&OnCheckboxPreferenceChanged_Entry, OnCheckboxPreferenceChanged);
 	GW::Chat::RegisterStartWhisperCallback(&StartWhisperCallback_Entry, OnStartWhisper);
 	GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusCallback_Entry,FriendStatusCallback);
 	GW::CtoS::RegisterPacketCallback(&WhisperCallback_Entry, GAME_CMSG_PING_WEAPON_SET, OnPingWeaponSet);
@@ -1786,6 +1787,20 @@ void GameSettings::OnMapTravel(GW::HookStatus* status, GW::Packet::StoC::GameSrv
 	if (instance->flash_window_on_zoning) FlashWindow();
 	if (instance->focus_window_on_zoning && pak->is_explorable)
 		FocusWindow();
+}
+
+// Disable native timestamps
+void GameSettings::OnCheckboxPreferenceChanged(GW::HookStatus* status, uint32_t msgid, void* wParam, void* lParam) {
+	if (!(msgid == GW::UI::UIMessage::kCheckboxPreference && wParam))
+		return;
+	uint32_t pref = *(uint32_t*)wParam; // { uint32_t pref, uint32_t value } - don't care about value atm.
+	if (pref == GW::UI::CheckboxPreference::CheckboxPreference_ShowChatTimestamps && Instance().show_timestamps) {
+		status->blocked = true; // Always block because this UI Message will redraw all timestamps later in the call stack
+		if (Instance().show_timestamps && GW::UI::GetCheckboxPreference(GW::UI::CheckboxPreference::CheckboxPreference_ShowChatTimestamps) == 1) {
+			Log::Error("Disable GWToolbox timestamps to enable this setting");
+			GW::UI::SetCheckboxPreference(GW::UI::CheckboxPreference::CheckboxPreference_ShowChatTimestamps, 0);
+		}
+	}
 }
 
 // Set window title to player name on map load
