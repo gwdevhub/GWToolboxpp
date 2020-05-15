@@ -184,6 +184,7 @@ public:
 	static void OnSpeechBubble(GW::HookStatus*, GW::Packet::StoC::SpeechBubble*);
 	static void OnSpeechDialogue(GW::HookStatus*, GW::Packet::StoC::DisplayDialogue*);
 	static void OnServerMessage(GW::HookStatus*, GW::Packet::StoC::MessageServer*);
+	static void OnScreenShake(GW::HookStatus*, void* packet);
 	static void OnCheckboxPreferenceChanged(GW::HookStatus*, uint32_t msgid, void* wParam, void* lParam);
 	
 
@@ -267,6 +268,7 @@ private:
 	bool auto_age_on_vanquish = false;
 	bool hide_dungeon_chest_popup = false;
 	bool skip_entering_name_for_faction_donate = false;
+	bool stop_screen_shake = false;
 
 	void DrawChannelColor(const char *name, GW::Chat::Channel chan);
 	static void FriendStatusCallback(
@@ -302,4 +304,5 @@ private:
 	GW::HookEntry PlayerLeaveInstance_Entry;
 	GW::HookEntry OnDialog_Entry;
 	GW::HookEntry OnCheckboxPreferenceChanged_Entry;
+	GW::HookEntry OnScreenShake_Entry;
 };

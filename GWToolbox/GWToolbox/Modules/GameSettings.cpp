@@ -792,7 +792,7 @@ void GameSettings::Initialize() {
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerRemove>(&PartyPlayerRemove_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::PartyPlayerRemove*) -> void {
 		check_message_on_party_change = true;
 		});
-
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ScreenShake>(&OnScreenShake_Entry, OnScreenShake);
 	GW::UI::RegisterUIMessageCallback(&OnCheckboxPreferenceChanged_Entry, OnCheckboxPreferenceChanged);
 	GW::Chat::RegisterStartWhisperCallback(&StartWhisperCallback_Entry, OnStartWhisper);
 	GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusCallback_Entry,FriendStatusCallback);
@@ -938,7 +938,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
 	faction_warn_percent = ini->GetBoolValue(Name(), VAR_NAME(faction_warn_percent), faction_warn_percent);
 	faction_warn_percent_amount = ini->GetLongValue(Name(), VAR_NAME(faction_warn_percent_amount), faction_warn_percent_amount);
-
+	stop_screen_shake = ini->GetLongValue(Name(), VAR_NAME(stop_screen_shake), stop_screen_shake);
 
 	disable_gold_selling_confirmation = ini->GetBoolValue(Name(), VAR_NAME(disable_gold_selling_confirmation), disable_gold_selling_confirmation);
 	notify_when_friends_online = ini->GetBoolValue(Name(), VAR_NAME(notify_when_friends_online), notify_when_friends_online);
@@ -1019,7 +1019,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     
 	ini->SetBoolValue(Name(), VAR_NAME(move_item_on_ctrl_click), move_item_on_ctrl_click);
 	ini->SetBoolValue(Name(), VAR_NAME(move_item_to_current_storage_pane), move_item_to_current_storage_pane);
-	
+	ini->SetBoolValue(Name(), VAR_NAME(stop_screen_shake), stop_screen_shake);
 
 	ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_pm), flash_window_on_pm);
 	ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_party_invite), flash_window_on_party_invite);
@@ -1227,6 +1227,8 @@ void GameSettings::DrawSettingInternal() {
 		"selling Gold and Green items introduced\n"
 		"in February 5, 2019 update.");
 	ImGui::Checkbox("Hide dungeon chest popup", &hide_dungeon_chest_popup);
+	ImGui::Checkbox("Stop screen shake from skills or effects", &stop_screen_shake);
+	ImGui::ShowHelp("e.g. Aftershock, Earth shaker, Avalanche effect");
 	if (ImGui::Checkbox("Set Guild Wars window title as current logged-in character", &set_window_title_as_charname)) {
 		SetWindowTitle(set_window_title_as_charname);
 	}
@@ -1777,6 +1779,12 @@ void GameSettings::OnTradeStarted(GW::HookStatus*, GW::Packet::StoC::TradeStart*
 		FlashWindow();
 	if (instance->focus_window_on_trade)
 		FocusWindow();
+}
+
+// Stop screen shake from aftershock etc
+void GameSettings::OnScreenShake(GW::HookStatus* status, void* packet) {
+	if (Instance().stop_screen_shake)
+		status->blocked = true;
 }
 
 // Automatically skip cinematics, flash window on cinematic
