@@ -138,6 +138,7 @@ static volatile bool running;
 static StoCHandlerArray  game_server_handler;
 static const size_t packet_max = 512; // Increase if number of StoC packets exceeds this.
 static bool ignored_packets[packet_max] = { 0 };
+static bool blocked_packets[packet_max] = { 0 };
 GW::HookEntry hook_entry;
 
 static void printchar(wchar_t c) {
@@ -435,6 +436,8 @@ static void CtoSHandler(GW::HookStatus* status, void* packet) {
 }
 static void PacketHandler(GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet)
 {
+    if (blocked_packets[packet->header])
+        status->blocked = true;
     if (!logger_enabled) return;
     //if (packet->header == 95) return true;
     if (packet->header >= game_server_handler.size())
@@ -566,32 +569,60 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
 			}
 		}
     }
-    ImGui::Text("Ignored Packets");
-    ImGui::SameLine();
-    if (ImGui::Button("Select All")) {
+    
+    if (ImGui::CollapsingHeader("Ignored Packets")) {
+        if (ImGui::Button("Select All")) {
+            for (size_t i = 0; i < game_server_handler.size(); i++) {
+                ignored_packets[i] = true;
+            }
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Deselect All")) {
+            for (size_t i = 0; i < game_server_handler.size(); i++) {
+                ignored_packets[i] = false;
+            }
+        }
+        float offset = 0.0f;
         for (size_t i = 0; i < game_server_handler.size(); i++) {
-            ignored_packets[i] = true;
+            if (i % 12 == 0) {
+                offset = 0.0f;
+                ImGui::NewLine();
+            }
+            ImGui::SameLine(offset, 0);
+            offset += 80.0f * ImGui::GetIO().FontGlobalScale;
+            char buf[30];
+            sprintf(buf, "%d###ignore_packet_%d", i, i);
+            bool p = ignored_packets[i];
+            if (ImGui::Checkbox(buf, &p))
+                ignored_packets[i] = p;
         }
     }
-    ImGui::SameLine();
-    if (ImGui::Button("Deselect All")) {
+    if (ImGui::CollapsingHeader("Blocked Packets")) {
+        if (ImGui::Button("Select All")) {
+            for (size_t i = 0; i < game_server_handler.size(); i++) {
+                blocked_packets[i] = true;
+            }
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Deselect All")) {
+            for (size_t i = 0; i < game_server_handler.size(); i++) {
+                blocked_packets[i] = false;
+            }
+        }
+        float offset = 0.0f;
         for (size_t i = 0; i < game_server_handler.size(); i++) {
-            ignored_packets[i] = !ignored_packets[i];
+            if (i % 12 == 0) {
+                offset = 0.0f;
+                ImGui::NewLine();
+            }
+            ImGui::SameLine(offset, 0);
+            offset += 80.0f * ImGui::GetIO().FontGlobalScale;
+            char buf[30];
+            sprintf(buf, "%d###block_packet_%d", i, i);
+            bool p = blocked_packets[i];
+            if (ImGui::Checkbox(buf, &p))
+                blocked_packets[i] = p;
         }
-    }
-    float offset = 0.0f;
-    for (size_t i = 0; i < game_server_handler.size(); i++) {
-        if (i % 12 == 0) {
-            offset = 0.0f;
-            ImGui::NewLine();
-        }
-        ImGui::SameLine(offset,0);
-        offset += 80.0f * ImGui::GetIO().FontGlobalScale;
-        char buf[30];
-        sprintf(buf, "%d###ignore_packet_%d", i, i);
-        bool p = ignored_packets[i];
-        if (ImGui::Checkbox(buf,&p))
-            ignored_packets[i] = p;
     }
     return ImGui::End();
 }
