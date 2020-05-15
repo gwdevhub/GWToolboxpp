@@ -938,7 +938,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
 	faction_warn_percent = ini->GetBoolValue(Name(), VAR_NAME(faction_warn_percent), faction_warn_percent);
 	faction_warn_percent_amount = ini->GetLongValue(Name(), VAR_NAME(faction_warn_percent_amount), faction_warn_percent_amount);
-	stop_screen_shake = ini->GetLongValue(Name(), VAR_NAME(stop_screen_shake), stop_screen_shake);
+	stop_screen_shake = ini->GetBoolValue(Name(), VAR_NAME(stop_screen_shake), stop_screen_shake);
 
 	disable_gold_selling_confirmation = ini->GetBoolValue(Name(), VAR_NAME(disable_gold_selling_confirmation), disable_gold_selling_confirmation);
 	notify_when_friends_online = ini->GetBoolValue(Name(), VAR_NAME(notify_when_friends_online), notify_when_friends_online);
