@@ -141,6 +141,7 @@ private:
 	void DisplayDialogue(GW::Packet::StoC::DisplayDialogue* packet);
     void AddDeepObjectiveSet();
     void AddUrgozObjectiveSet();
+    void AddToPKObjectiveSet();
     void ClearObjectiveSets();
     
 
@@ -157,4 +158,5 @@ private:
 	GW::HookEntry InstanceLoadInfo_Entry;
 	GW::HookEntry ManipulateMapObject_Entry;
     GW::HookEntry DungeonReward_Entry;
+    GW::HookEntry CountdownStart_Enty;
 };

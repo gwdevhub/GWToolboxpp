@@ -136,6 +136,10 @@ namespace {
         {GW::Constants::MapID::Heart_of_the_Shiverpeaks_Level_1, 1},
         {GW::Constants::MapID::Heart_of_the_Shiverpeaks_Level_2, 2},
         {GW::Constants::MapID::Heart_of_the_Shiverpeaks_Level_3, 3},
+        {GW::Constants::MapID::The_Underworld_PvP, 1},
+        {GW::Constants::MapID::Scarred_Earth, 2},
+        {GW::Constants::MapID::The_Courtyard, 3},
+        {GW::Constants::MapID::The_Hall_of_Heroes, 4},
     };
 
     void PrintTime(char* buf, size_t size, DWORD time, bool show_ms = true) {
@@ -152,9 +156,9 @@ namespace {
         }
     }
 
-	void AsyncGetMapName(char *buffer, size_t n) {
+	void AsyncGetMapName(char *buffer, size_t n, GW::Constants::MapID mapID = GW::Map::GetMapID()) {
 		static wchar_t enc_str[16];
-		GW::AreaInfo *info = GW::Map::GetCurrentMapInfo();
+		GW::AreaInfo *info = GW::Map::GetMapInfo(mapID);
 		if (!GW::UI::UInt32ToEncStr(info->name_id, enc_str, n)) {
 			buffer[0] = 0;
 			return;
@@ -318,6 +322,24 @@ void ObjectiveTimerWindow::Initialize() {
             if (next && !next->IsStarted()) next->SetStarted();
         }
 	});
+
+    GW::StoC::RegisterPacketCallback(&CountdownStart_Enty, GAME_SMSG_INSTANCE_COUNTDOWN,
+        [this](GW::HookStatus*, GW::Packet::StoC::PacketBase*) -> void {
+            GW::AreaInfo* map = GW::Map::GetCurrentMapInfo();
+            if (!map) return;
+            if (map->type != GW::RegionType::RegionType_ExplorableZone) return;
+            auto level = mapToDungeonLevel.find(GW::Map::GetMapID());
+
+            switch (GW::Map::GetMapID()) {
+                case GW::Constants::MapID::The_Underworld_PvP:
+                case GW::Constants::MapID::Scarred_Earth:
+                case GW::Constants::MapID::The_Courtyard:
+                case GW::Constants::MapID::The_Hall_of_Heroes:
+                    Objective* obj = GetCurrentObjective(level->second);
+                    if (obj) obj->SetDone();
+                    return;
+            }
+        });
 }
 
 void ObjectiveTimerWindow::ObjectiveSet::StopObjectives() {
@@ -509,7 +531,7 @@ void ObjectiveTimerWindow::AddFoWObjectiveSet() {
 void ObjectiveTimerWindow::HandleMapChange(GW::Constants::MapID map_id, bool start) {
     auto dungeonLevel = mapToDungeonLevel.find(map_id);
     bool isDungeon = dungeonLevel != mapToDungeonLevel.end();
-    bool isDungeonEntrance = isDungeon ? dungeonLevel->second == 1 : false; // used for transition between dungeons (HotS <-> Bogs)
+    bool isDungeonEntrance = isDungeon && dungeonLevel->second == 1; // used for transition between dungeons (HotS <-> Bogs)
     if (!isDungeon || isDungeonEntrance) {
         if (current_objective_set) {
             current_objective_set->StopObjectives();
@@ -558,6 +580,14 @@ void ObjectiveTimerWindow::HandleMapChange(GW::Constants::MapID map_id, bool sta
         case GW::Constants::MapID::Frostmaws_Burrows_Level_1:
             if (start) AddDungeonObjectiveSet(5);
             return;
+        case GW::Constants::MapID::The_Underworld_PvP:
+        {
+            GW::AreaInfo* info = GW::Map::GetCurrentMapInfo();
+            if (!info) return;
+            if (info->type != GW::RegionType::RegionType_ExplorableZone) return;
+            if (start) AddToPKObjectiveSet();
+            return;
+        }
         default:
             if (!isDungeon) return;
             Objective* obj = GetCurrentObjective(start ? dungeonLevel->second : dungeonLevel->second - 1);
@@ -620,6 +650,22 @@ void ObjectiveTimerWindow::AddSlaversObjectiveSet() {
     os->objectives.front().SetStarted();
     AddObjectiveSet(os);
 }
+
+void ObjectiveTimerWindow::AddToPKObjectiveSet() {
+    ObjectiveSet* os = new ObjectiveSet;
+    os->single_instance = false;
+
+    // we could read out the name of the maps...
+    os->objectives.emplace_back(1, "The Underworld");
+    os->objectives.emplace_back(2, "Scarred Earth");
+    os->objectives.emplace_back(3, "The Courtyard");
+    os->objectives.emplace_back(4, "The Hall of Heroes");
+
+    ::AsyncGetMapName(os->name, sizeof(os->name), GW::Constants::MapID::Tomb_of_the_Primeval_Kings);
+    os->objectives.front().SetStarted();
+    AddObjectiveSet(os);
+}
+
 void ObjectiveTimerWindow::DisplayDialogue(GW::Packet::StoC::DisplayDialogue* packet) {
 	uint32_t objective_id = 0; // Which objective has just been STARTED?
 	switch (GW::Map::GetMapID()) {
