@@ -112,6 +112,8 @@ private:
         // todo: print to file
 		// an internal id to ensure interface consistency
 		const unsigned int ui_id = 0;
+
+        bool single_instance = true;
     private:
 
         static unsigned int cur_ui_id;

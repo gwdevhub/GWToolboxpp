@@ -573,6 +573,7 @@ void ObjectiveTimerWindow::HandleMapChange(GW::Constants::MapID map_id, bool sta
 
 void ObjectiveTimerWindow::AddDungeonObjectiveSet(int levels) {
     ObjectiveSet* os = new ObjectiveSet;
+    os->single_instance = false;
 
     for (int level = 1; level < levels + 1; ++level) {
         char name[256];
@@ -967,7 +968,21 @@ void ObjectiveTimerWindow::ObjectiveSet::Update() {
     if (!active) return;
 
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
-        instance_time = GW::Map::GetInstanceTime();
+        if (single_instance) {
+            instance_time = GW::Map::GetInstanceTime();
+        } else {
+            instance_time = 0;
+            for (Objective& obj : objectives) {
+                if (!obj.IsStarted()) continue;
+                if (obj.IsDone()) {
+                    instance_time += obj.duration;
+                }
+                else {
+                    instance_time += GW::Map::GetInstanceTime() - obj.start;
+                }
+            }
+        }
+        PrintTime(cached_time, sizeof(cached_time), instance_time, false);
     }
 
     for (Objective& obj : objectives) {
@@ -1000,6 +1015,7 @@ ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::ObjectiveSet::FromJson
     std::string name = json->at("name").get<std::string>();
     snprintf(os->name, sizeof(os->name), "%s", name.c_str());
     os->instance_time = json->at("instance_start").get<DWORD>();
+    PrintTime(os->cached_time, sizeof(cached_time), os->instance_time, false);
     nlohmann::json json_objs = json->at("objectives");
     for (nlohmann::json::iterator it = json_objs.begin(); it != json_objs.end(); ++it) {
         nlohmann::json o = it.value();
@@ -1068,7 +1084,6 @@ bool ObjectiveTimerWindow::ObjectiveSet::Draw() {
         }
         snprintf(&cached_start[cached_str_offset], sizeof(cached_start) - cached_str_offset, "%02d:%02d - ", timeinfo.tm_hour, timeinfo.tm_min);
     }
-    PrintTime(cached_time, sizeof(cached_time), instance_time, false);
 
     sprintf(buf, "%s%s - %s%s###header%d", show_start_date_time ? cached_start : "", name, cached_time, failed ? " [Failed]" : "", ui_id);
 
