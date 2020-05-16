@@ -92,7 +92,7 @@ static bool InstallUninstallKey()
     _snwprintf_s(uninstall_quiet, ARRAYSIZE(uninstall_quiet), L"%ls /uninstall /quiet", installer_path);
 
     HKEY UninstallKey;
-    if (!OpenUninstallKey(&UninstallKey)) {
+    if (!CreateUninstallKey(&UninstallKey)) {
         fprintf(stderr, "OpenUninstallKey failed\n");
         return false;
     }
@@ -128,8 +128,7 @@ static bool InstallSettingsKey()
     }
 
     if (!RegWriteDWORD(SettingsKey, L"noupdate", 0) ||
-        !RegWriteDWORD(SettingsKey, L"asadmin", 0) ||
-        !RegWriteStr(SettingsKey, L"release", L""))
+        !RegWriteDWORD(SettingsKey, L"asadmin", 0))
         // Add the key to get crash dump
     {
         RegCloseKey(SettingsKey);
@@ -296,8 +295,13 @@ bool Uninstall(bool quiet)
 
 bool IsInstalled()
 {
-    wchar_t dllpath[MAX_PATH];
-    return GetInstallationLocation(dllpath, MAX_PATH);
+    HKEY UninstallKey;
+    if (!OpenUninstallKey(&UninstallKey)) {
+        return false;
+    }
+
+    RegCloseKey(UninstallKey);
+    return true;
 }
 
 bool GetInstallationLocation(wchar_t *path, size_t length)

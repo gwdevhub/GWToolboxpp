@@ -30,6 +30,25 @@ bool OpenSettingsKey(PHKEY phkResult)
 
 bool OpenUninstallKey(PHKEY phkResult)
 {
+    LSTATUS status = RegOpenKeyExW(
+        HKEY_CURRENT_USER,
+        L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\GWToolbox",
+        0,
+        KEY_READ,
+        phkResult);
+
+    if (status != ERROR_SUCCESS)
+    {
+        fprintf(stderr, "RegOpenKeyExW failed: status:%d\n", status);
+        phkResult = nullptr;
+        return false;
+    }
+
+    return true;
+}
+
+bool CreateUninstallKey(PHKEY phkResult)
+{
     LSTATUS status;
     DWORD Disposition;
 

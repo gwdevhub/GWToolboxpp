@@ -1,7 +1,9 @@
 #pragma once
 
 bool OpenSettingsKey(PHKEY phkResult);
+
 bool OpenUninstallKey(PHKEY phkResult);
+bool CreateUninstallKey(PHKEY phkResult);
 
 bool DeleteSettingsKey();
 bool DeleteUninstallKey();

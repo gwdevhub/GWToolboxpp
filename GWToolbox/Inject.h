@@ -2,10 +2,18 @@
 
 #include "Process.h"
 
+enum InjectReply
+{
+    InjectReply_Inject,
+    InjectReply_Cancel,
+    InjectReply_NoProcess,
+    InjectReply_PatternError,
+};
+
 class InjectWindow
 {
 public:
-    static bool AskInjectProcess(Process *process);
+    static InjectReply AskInjectProcess(Process *process);
 
 private:
     static void OnWindowCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -19,6 +27,9 @@ public:
 
     bool Create(const wchar_t *title, std::vector<std::wstring>& names);
     bool WaitMessages();
+
+    // Returns false if no options were selected, typically when the window was closed.
+    bool GetSelected(int *index);
 
 private:
     void OnEvent(HWND hwnd, LONG control_id, LONG notification_code);

@@ -5,7 +5,7 @@
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
-bool InjectWindow::AskInjectProcess(Process *target_process)
+InjectReply InjectWindow::AskInjectProcess(Process *target_process)
 {
     std::vector<Process> processes;
     if (!GetProcesses(processes, L"Gw.exe")) {
@@ -16,26 +16,27 @@ bool InjectWindow::AskInjectProcess(Process *target_process)
 
     if (processes.empty()) {
         // MessageBoxW(0, L"Error: Guild Wars not running",  L"GWToolbox++", MB_ICONERROR);
-        return false;
+        return InjectReply_NoProcess;
     }
 
     uintptr_t charname_rva;
     ProcessScanner scanner(&processes[0]);
     if (!scanner.FindPatternRva("\x8B\xF8\x6A\x03\x68\x0F\x00\x00\xC0\x8B\xCF\xE8", "xxxxxxxxxxxx", -0x42, &charname_rva)) {
-        MessageBoxW(0, L"Error: Couldn't find charname rva", L"GWToolbox++", MB_ICONERROR);
-        return false;
+        // MessageBoxW(0, L"Error: Couldn't find charname rva", L"GWToolbox++", MB_ICONERROR);
+        return InjectReply_PatternError;
     }
 
     std::vector<std::wstring> charnames;
     charnames.reserve(processes.size());
-    Process* process = nullptr;
-    for (int i = 0; i < processes.size(); i++) {
-        process = &processes[i];
+
+    std::vector<size_t> index_translation_table;
+    index_translation_table.reserve(processes.size());
+
+    for (size_t i = 0; i < processes.size(); ++i) {
+        Process *process = &processes[i];
         ProcessModule module;
         if (!process->GetModule(&module)) {
-            // Add logging
-            processes.erase(processes.begin() + i);
-            i--;
+            fprintf(stderr, "Couldn't get module for process %u\n", process->GetProcessId());
             continue;
         }
 
@@ -43,31 +44,19 @@ bool InjectWindow::AskInjectProcess(Process *target_process)
         if (!process->Read(module.base + charname_rva, &charname_ptr, 4)) {
             fprintf(stderr, "Can't read the address 0x%08X in process %u\n",
                 module.base + charname_rva, process->GetProcessId());
-            processes.erase(processes.begin() + i);
-            i--;
             continue;
         }
 
-        wchar_t charname[32] = {};
-        if (!process->Read(charname_ptr, &charname, 32)) {
+        wchar_t charname[32];
+        if (!process->Read(charname_ptr, &charname, sizeof(charname))) {
             fprintf(stderr, "Can't read the character name at address 0x%08X in process %u\n",
                 charname_ptr, process->GetProcessId());
-            processes.erase(processes.begin() + i);
-            i--;
             continue;
         }
 
         size_t charname_len = wcsnlen(charname, _countof(charname));
         charnames.emplace_back(charname, charname + charname_len);
-    }
-    if (processes.empty()) {
-        // Failed to get any charnames from these processes.
-        return false;
-    }
-    if (processes.size() == 1) {
-        // Only 1 valid process found.
-        *target_process = std::move(processes[0]);
-        return true;
+        index_translation_table.emplace_back(i);
     }
 
     InjectWindow inject;
@@ -77,12 +66,21 @@ bool InjectWindow::AskInjectProcess(Process *target_process)
     {
         const wchar_t *name = charnames[i].c_str();
         // Add string to combobox.
-        SendMessageW(inject.m_hCharacters, CB_ADDSTRING, (WPARAM)0, (LPARAM)name);
+        SendMessageW(inject.m_hCharacters, CB_ADDSTRING, 0, (LPARAM)name);
     }
+    SendMessageW(inject.m_hCharacters, CB_SETCURSEL, 0, 0);
 
     inject.WaitMessages();
-    *target_process = std::move(processes[inject.m_Selected]);
-    return true;
+
+    int index;
+    if (!inject.GetSelected(&index)) {
+        fprintf(stderr, "No index selected\n");
+        return InjectReply_Cancel;
+    }
+
+    size_t translated_index = index_translation_table[index];
+    *target_process = std::move(processes[translated_index]);
+    return InjectReply_Inject;
 }
 
 void InjectWindow::OnWindowCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -141,6 +139,10 @@ LRESULT CALLBACK InjectWindow::MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, 
     case WM_COMMAND:
         inject->OnEvent(reinterpret_cast<HWND>(lParam), LOWORD(wParam), HIWORD(wParam));
         break;
+
+    case WM_KEYUP:
+        if (wParam == VK_ESCAPE)
+            DestroyWindow(hWnd);
     }
 
     return DefWindowProcW(hWnd, uMsg, wParam, lParam);
@@ -152,7 +154,7 @@ InjectWindow::InjectWindow()
     , m_hInjectButton(nullptr)
     , m_hEvent(nullptr)
     , m_hInstance(nullptr)
-    , m_Selected(0)
+    , m_Selected(-1)
 {
 }
 
@@ -163,6 +165,9 @@ InjectWindow::~InjectWindow()
 
 bool InjectWindow::Create(const wchar_t *title, std::vector<std::wstring>& names)
 {
+    // @Enhancement:
+    // Should we reset the class here? (e.g. m_Selected)
+
     m_hInstance = GetModuleHandleW(nullptr);
 
     m_hEvent = CreateEventW(0, FALSE, FALSE, nullptr);
@@ -235,8 +240,17 @@ bool InjectWindow::WaitMessages()
         }
     }
 
-    DestroyWindow(m_hWnd);
     return true;
+}
+
+bool InjectWindow::GetSelected(int *index)
+{
+    if (m_Selected >= 0) {
+        *index = m_Selected;
+        return true;
+    } else {
+        return false;
+    }
 }
 
 void InjectWindow::OnEvent(HWND hwnd, LONG control_id, LONG notification_code)
@@ -245,7 +259,7 @@ void InjectWindow::OnEvent(HWND hwnd, LONG control_id, LONG notification_code)
     if ((hwnd == m_hInjectButton) && (control_id == 0)) {
         m_Selected = SendMessageW(m_hCharacters, CB_GETCURSEL, 0, 0);
         printf("Pressed: %d\n", m_Selected);
-        SetEvent(m_hEvent);
+        DestroyWindow(m_hWnd);
     }
 }
 

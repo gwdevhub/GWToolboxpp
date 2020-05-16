@@ -129,20 +129,40 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
         if (iRet == IDYES) {
             // @Cleanup: Check return value
-            Install(options.quiet);
+            if (!Install(options.quiet)) {
+                fprintf(stderr, "Failed to install\n");
+                return 1;
+            }
         }
 
     } else if (!options.noupdate) {
         if (!DownloadFiles()) {
             ShowError(L"Failed to download GWToolbox DLL");
             fprintf(stderr, "DownloadFiles failed\n");
-            return false;
+            return 1;
         }
     }
 
     // If we can't open with appropriate rights, we can then ask to re-open
     // as admin.
-    if (!InjectWindow::AskInjectProcess(&proc)) {
+    InjectReply reply = InjectWindow::AskInjectProcess(&proc);
+
+    if (reply == InjectReply_Cancel) {
+        fprintf(stderr, "InjectReply_Cancel\n");
+        return 0;
+    }
+
+    if (reply == InjectReply_PatternError) {
+        MessageBoxW(
+            0,
+            L"Couldn't find character name RVA.\n"
+            L"You need to update the launcher or contact the developpers.",
+            L"GWToolbox - Error",
+            MB_OK | MB_ICONERROR);
+        return 1;
+    }
+
+    if (reply == InjectReply_NoProcess) {
         if (IsRunningAsAdmin()) {
             ShowError(L"Failed to inject GWToolbox into Guild Wars");
             fprintf(stderr, "InjectWindow::AskInjectName failed\n");
@@ -153,8 +173,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
             int iRet = MessageBoxW(
                 0,
                 L"Couldn't find any valid process to start GWToolboxpp.\n"
-                "If such process exist GWToolbox.exe may require administrator privileges.\n"
-                "Do you want to restart as administrator?",
+                L"If such process exist GWToolbox.exe may require administrator privileges.\n"
+                L"Do you want to restart as administrator?",
                 L"GWToolbox - Error",
                 MB_YESNO);
 
@@ -175,6 +195,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
         fprintf(stderr, "InjectInstalledDllInProcess failed\n");
         return 1;
     }
-    ShowError(L"Injected?");
+
     return 0;
 }
