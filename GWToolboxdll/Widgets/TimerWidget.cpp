@@ -107,7 +107,7 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::Text(timer_buffer);
 		ImGui::PopFont();
 
-        if (GetUrgozTimer() || (show_extra_timers && (GetDeepTimer() || GetDhuumTimer() || GetTrapTimer() || GetDoATimer()))) {
+        if (show_extra_timers && (GetUrgozTimer() || GetDeepTimer() || GetDhuumTimer() || GetTrapTimer() || GetDoATimer())) {
 
             ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f24));
             ImVec2 cur2 = ImGui::GetCursorPos();

@@ -66,7 +66,7 @@ private:
 
 	bool hide_in_outpost = false;
 	bool click_to_print_time = false;
-    bool show_extra_timers = false;
+    bool show_extra_timers = true;
     bool show_spirit_timers = true;
     std::map<GW::Constants::SkillID, bool*> spirit_effects_enabled{
         {GW::Constants::SkillID::Edge_of_Extinction,new bool(true)},
