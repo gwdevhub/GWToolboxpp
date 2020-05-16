@@ -462,13 +462,17 @@ void HeroBuildsWindow::Update(float delta) {
 			break;
 		}
 		if (!GetPartyHeroByID(pending_hero_loads[i].heroid, &hero_index)) {
-			if (TIMER_DIFF(pending_hero_loads[i].started) > 1000)
+			if (TIMER_DIFF(pending_hero_loads[i].started) > 1000) {
+				// Waited for 1000ms and still no hero - presume user doesn't have space in party or hero isn't unlocked.
 				pending_hero_loads.erase(pending_hero_loads.begin() + i);
-			continue;
+				break; // Continue loop on next frame
+			}
+			continue; // Hero not found in party list... yet!
 		}
 		GW::SkillbarMgr::LoadSkillTemplate(pending_hero_loads[i].code, hero_index);
-		pending_hero_loads.erase(pending_hero_loads.begin() + i);
 		load_timer = TIMER_INIT();
+		pending_hero_loads.erase(pending_hero_loads.begin() + i);
+		break; // Continue loop on next frame
 	}
 
 	// if we open the window, load from file. If we close the window, save to file. 
