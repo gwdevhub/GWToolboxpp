@@ -20,6 +20,19 @@
 #include "GuiUtils.h"
 #include "Modules/ToolboxSettings.h"
 
+void TimerWidget::Initialize() {
+    ToolboxWidget::Initialize();
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry,
+        [this](GW::HookStatus* status, GW::Packet::StoC::DisplayDialogue* packet) -> void {
+            DisplayDialogue(packet);
+        });
+
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry,
+        [this](GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer* packet) -> void {
+            cave_start = 0;
+        });
+}
+
 void TimerWidget::LoadSettings(CSimpleIni *ini) {
 	ToolboxWidget::LoadSettings(ini);
 	click_to_print_time = ini->GetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
@@ -94,7 +107,7 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::Text(timer_buffer);
 		ImGui::PopFont();
 
-        if (GetUrgozTimer() || (show_extra_timers && (GetDeepTimer() || GetDhuumTimer() || GetTrapTimer()))) {
+        if (GetUrgozTimer() || (show_extra_timers && (GetDeepTimer() || GetDhuumTimer() || GetTrapTimer() || GetDoATimer()))) {
 
             ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f24));
             ImVec2 cur2 = ImGui::GetCursorPos();
@@ -287,4 +300,38 @@ bool TimerWidget::GetTrapTimer() {
     default:
         return false;
     }
+}
+
+bool TimerWidget::GetDoATimer() {
+    using namespace GW::Constants;
+
+    if (GW::Map::GetInstanceType() != InstanceType::Explorable) return false;
+    if (GW::Map::GetMapID() != MapID::Domain_of_Anguish) return false;
+    if (cave_start == 0) return false;
+
+    const unsigned long time = GW::Map::GetInstanceTime();
+
+    int currentWave = 0;
+    unsigned long time_since_previous_wave = (time - cave_start) / 1000;
+
+    for (const int spawn_interval : CAVE_SPAWN_INTERVALS) {
+        if (time_since_previous_wave < spawn_interval) break;
+        time_since_previous_wave -= spawn_interval;
+        ++currentWave;
+    }
+    
+    if (currentWave >= CAVE_SPAWN_INTERVALS.size()) return false;
+
+    const int timer = CAVE_SPAWN_INTERVALS[currentWave] - time_since_previous_wave;
+
+    snprintf(extra_buffer, 32, "Wave %d: %d", currentWave + 1, timer);
+    extra_color = ImColor(255, 255, 255);
+
+    return true;
+}
+
+void TimerWidget::DisplayDialogue(GW::Packet::StoC::DisplayDialogue* packet) {
+    if (GW::Map::GetMapID() != GW::Constants::MapID::Domain_of_Anguish) return;
+    if (packet->message[1] != 0x5765) return;
+    cave_start = GW::Map::GetInstanceTime();
 }
