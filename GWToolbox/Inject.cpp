@@ -8,11 +8,8 @@
 InjectReply InjectWindow::AskInjectProcess(Process *target_process)
 {
     std::vector<Process> processes;
-    if (!GetProcesses(processes, L"Gw.exe")) {
-    }
-
-    if (!GetProcessesFromWindowClass(processes, L"ArenaNet_Dx_Window_Class")) {
-    }
+    GetProcesses(processes, L"Gw.exe");
+    GetProcessesFromWindowClass(processes, L"ArenaNet_Dx_Window_Class");
 
     if (processes.empty()) {
         // MessageBoxW(0, L"Error: Guild Wars not running",  L"GWToolbox++", MB_ICONERROR);

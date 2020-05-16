@@ -220,16 +220,33 @@ static bool CopyInstaller(void)
     return true;
 }
 
-static bool DeleteInstaller(void)
+static bool DeleteInstallationDirectory(void)
 {
-    wchar_t path[MAX_PATH];
-    if (!PathGetAppDataPath(path, MAX_PATH, L"GWToolboxpp\\GWToolbox.exe")) {
+    // @Remark:
+    // "SHFileOperationW" expect the path to be double-null terminated.
+    //
+    // Moreover, the path should be a full path otherwise, the folder won't be
+    // moved to the recycle bin regardless of "FOF_ALLOWUNDO".
+
+    wchar_t path[MAX_PATH + 2];
+    if (!PathGetAppDataPath(path, MAX_PATH, L"GWToolboxpp\\*")) {
         fprintf(stderr, "PathGetAppDataPath failed\n");
         return false;
     }
 
-    if (DeleteFileW(path) != TRUE) {
-        fprintf(stderr, "DeleteFileW failed (%lu)\n", GetLastError());
+    size_t n_path = wcslen(path);
+    path[n_path + 1] = 0;
+
+    SHFILEOPSTRUCTW FileOp = {0};
+    FileOp.wFunc = FO_DELETE;
+    FileOp.pFrom = path;
+    FileOp.fFlags = FOF_NO_UI | FOF_ALLOWUNDO;
+    FileOp.fAnyOperationsAborted = FALSE;
+    FileOp.lpszProgressTitle = L"GWToolbox uninstallation";
+
+    int iRet = SHFileOperationW(&FileOp);
+    if (iRet != 0) {
+        fprintf(stderr, "SHFileOperationW failed: 0x%Xd\n", iRet);
         return false;
     }
 
@@ -282,11 +299,24 @@ bool Uninstall(bool quiet)
         return false;
     }
 
-    // @Remark:
-    // This is likely to fail. (i.e. if we are using GWToolbox.exe from the file)
-    DeleteInstaller();
+    bool DeleteAllFiles = true;
+    if (quiet == false) {
+        int iRet = MessageBoxW(
+            0,
+            L"Do you want to delete *all* possible files from installation folder? (Default: yes)\n",
+            L"Uninstallation",
+            MB_YESNO);
 
-    if (!quiet) {
+        if (iRet == IDNO)
+            DeleteAllFiles = false;
+    }
+
+    if (DeleteAllFiles) {
+        // Delete all files
+        DeleteInstallationDirectory();
+    }
+
+    if (quiet == false) {
         MessageBoxW(0, L"Uninstallation successful", L"Uninstallation", 0);
     }
 
