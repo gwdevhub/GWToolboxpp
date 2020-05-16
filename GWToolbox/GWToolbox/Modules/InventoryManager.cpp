@@ -286,6 +286,7 @@ void InventoryManager::FetchPotentialItems() {
 		while (found = GetNextUnsalvagedItem(context_item.item(), found)) {
 			PotentialItem* item = new PotentialItem();
 			GW::UI::AsyncDecodeStr(found->complete_name_enc ? found->complete_name_enc : found->name_enc, &item->name);
+			GW::UI::AsyncDecodeStr(found->name_enc, &item->short_name);
 			if(found->info_string)
 				GW::UI::AsyncDecodeStr(found->info_string, &item->desc);
 			item->item_id = found->item_id;
@@ -690,6 +691,9 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
 			ImGui::Text("You're about to salvage %d item%s:", potential_salvage_all_items.size(), potential_salvage_all_items.size() == 1 ? "" : "s");
 			ImGui::TextDisabled("Untick an item to skip salvaging");
 			static std::regex sanitiser("<[^>]+>");
+			static std::wregex wsanitiser(L"<[^>]+>");
+			static std::wstring wiki_url(L"https://wiki.guildwars.com/wiki/");
+
 			PotentialItem* pi;
 			Item* item;
 			GW::Bag* bag = nullptr;
@@ -724,6 +728,8 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
 					pi->name_s = std::regex_replace(pi->name_s, sanitiser, "");
 				}
 				ImGui::Checkbox(pi->name_s.c_str(),&pi->proceed);
+				float item_name_length = ImGui::CalcTextSize(pi->name_s.c_str(), NULL, true).x;
+				longest_item_name_length = item_name_length > longest_item_name_length ? item_name_length : longest_item_name_length;
 				ImGui::PopStyleColor();
 				if (ImGui::IsItemHovered()) {
 					if (!pi->desc.empty() && pi->desc_s.empty()) {
@@ -732,6 +738,14 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
 					}
 					ImGui::SetTooltip("%s",pi->desc_s.c_str());
 				}
+				ImGui::SameLine(longest_item_name_length + 50);
+				ImGui::PushID(pi->item_id);
+				if (ImGui::Button("Wiki", ImVec2(50, 0))) {
+					std::wstring wiki_item = std::regex_replace(pi->short_name, std::wregex(L" "), std::wstring(L"_"));
+					wiki_item = std::regex_replace(wiki_item, wsanitiser, std::wstring(L""));
+					ShellExecuteW(NULL, L"open", (wiki_url + wiki_item).c_str(), NULL, NULL, SW_SHOWNORMAL);
+				}
+				ImGui::PopID();
 				has_items_to_salvage |= pi->proceed;
 			}
 			ImGui::Text("\n\nAre you sure?");
@@ -739,11 +753,13 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
 			if (has_items_to_salvage) {
 				btn_width.x /= 2;
 				if (ImGui::Button("OK", btn_width)) {
+					longest_item_name_length = 0.0;
 					is_salvaging_all = true;
 				}
 				ImGui::SameLine();
 			}
 			if (ImGui::Button("Cancel", btn_width)) {
+				longest_item_name_length = 0.0;
 				CancelSalvage();
 				ImGui::CloseCurrentPopup();
 			}

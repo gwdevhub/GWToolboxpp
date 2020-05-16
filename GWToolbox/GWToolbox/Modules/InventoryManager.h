@@ -94,6 +94,8 @@ private:
 	bool show_salvage_all_popup = true;
 	bool salvage_listeners_attached = false;
 
+	float longest_item_name_length = 0.0;
+
 	bool only_use_superior_salvage_kits = false;
 	bool salvage_rare_mats = false;
 	std::map<GW::Constants::Bag, bool> bags_to_salvage_from = {
@@ -404,6 +406,7 @@ private:
 	struct PotentialItem : PendingItem {
 		std::wstring name;
 		std::string name_s;
+		std::wstring short_name;
 		std::wstring desc;
 		std::string desc_s;
 		bool proceed = true;
