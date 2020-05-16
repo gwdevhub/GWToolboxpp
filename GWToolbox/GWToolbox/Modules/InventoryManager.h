@@ -105,7 +105,8 @@ private:
 
 	size_t identified_count = 0;
 	size_t salvaged_count = 0;
-	
+	float longest_item_name_length = 0.0;
+
 
 	GW::Packet::StoC::SalvageSession current_salvage_session;
 
@@ -406,6 +407,7 @@ private:
 		std::string name_s;
 		std::wstring desc;
 		std::string desc_s;
+		std::wstring short_name;
 		bool proceed = true;
 		bool sanitised = false;
 	};
