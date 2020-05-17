@@ -38,6 +38,7 @@ private:
     HWND m_hWnd;
     HWND m_hCharacters;
     HWND m_hInjectButton;
+    HFONT m_hFont;
     HANDLE m_hEvent;
     HINSTANCE m_hInstance;
 

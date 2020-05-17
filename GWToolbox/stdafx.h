@@ -22,3 +22,5 @@
 
 #include <string>
 #include <vector>
+
+#include "resource.h"

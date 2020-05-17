@@ -25,36 +25,39 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
 
     std::vector<std::wstring> charnames;
     charnames.reserve(processes.size());
+    std::vector<Process> valid_processes;
+    valid_processes.reserve(processes.size());
 
-    std::vector<size_t> index_translation_table;
-    index_translation_table.reserve(processes.size());
-
-    for (size_t i = 0; i < processes.size(); ++i) {
-        Process *process = &processes[i];
+    for (Process& process : processes) {
         ProcessModule module;
-        if (!process->GetModule(&module)) {
-            fprintf(stderr, "Couldn't get module for process %u\n", process->GetProcessId());
+        if (!process.GetModule(&module)) {
+            fprintf(stderr, "Couldn't get module for process %u\n", process.GetProcessId());
             continue;
         }
 
         uint32_t charname_ptr;
-        if (!process->Read(module.base + charname_rva, &charname_ptr, 4)) {
+        if (!process.Read(module.base + charname_rva, &charname_ptr, 4)) {
             fprintf(stderr, "Can't read the address 0x%08X in process %u\n",
-                module.base + charname_rva, process->GetProcessId());
+                module.base + charname_rva, process.GetProcessId());
             continue;
         }
 
         wchar_t charname[32];
-        if (!process->Read(charname_ptr, &charname, sizeof(charname))) {
+        if (!process.Read(charname_ptr, &charname, sizeof(charname))) {
             fprintf(stderr, "Can't read the character name at address 0x%08X in process %u\n",
-                charname_ptr, process->GetProcessId());
+                charname_ptr, process.GetProcessId());
             continue;
         }
 
         size_t charname_len = wcsnlen(charname, _countof(charname));
         charnames.emplace_back(charname, charname + charname_len);
-        index_translation_table.emplace_back(i);
+        valid_processes.emplace_back(std::move(process));
     }
+
+    processes.clear();
+
+    // @Enhancement:
+    // Should we sort the "index_translation_table" according to the character names?
 
     InjectWindow inject;
     inject.Create(L"GWToolbox", charnames);
@@ -75,8 +78,7 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
         return InjectReply_Cancel;
     }
 
-    size_t translated_index = index_translation_table[index];
-    *target_process = std::move(processes[translated_index]);
+    *target_process = std::move(valid_processes[index]);
     return InjectReply_Inject;
 }
 
@@ -86,6 +88,10 @@ void InjectWindow::OnWindowCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
     InjectWindow *inject = static_cast<InjectWindow *>(param->lpCreateParams);
 
     SetWindowLongPtrW(hWnd, GWLP_USERDATA, reinterpret_cast<LONG>(inject));
+
+    HICON hIcon = LoadIcon(inject->m_hInstance, MAKEINTRESOURCE(IDI_ICON1));
+    SendMessage(hWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+    SendMessage(hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
 
     inject->m_hInjectButton = CreateWindowW(
         L"BUTTON",
@@ -112,6 +118,9 @@ void InjectWindow::OnWindowCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         nullptr,
         inject->m_hInstance,
         nullptr);
+
+    SendMessageW(inject->m_hInjectButton, WM_SETFONT, (WPARAM)inject->m_hFont, MAKELPARAM(TRUE, 0));
+    SendMessageW(inject->m_hCharacters, WM_SETFONT, (WPARAM)inject->m_hFont, MAKELPARAM(TRUE, 0));
 }
 
 LRESULT CALLBACK InjectWindow::MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -149,6 +158,7 @@ InjectWindow::InjectWindow()
     : m_hWnd(nullptr)
     , m_hCharacters(nullptr)
     , m_hInjectButton(nullptr)
+    , m_hFont(nullptr)
     , m_hEvent(nullptr)
     , m_hInstance(nullptr)
     , m_Selected(-1)
@@ -157,7 +167,10 @@ InjectWindow::InjectWindow()
 
 InjectWindow::~InjectWindow()
 {
-    CloseHandle(m_hEvent);
+    if (m_hEvent)
+        CloseHandle(m_hEvent);
+    if (m_hFont)
+        DeleteObject(m_hFont);
 }
 
 bool InjectWindow::Create(const wchar_t *title, std::vector<std::wstring>& names)
@@ -166,6 +179,21 @@ bool InjectWindow::Create(const wchar_t *title, std::vector<std::wstring>& names
     // Should we reset the class here? (e.g. m_Selected)
 
     m_hInstance = GetModuleHandleW(nullptr);
+
+    NONCLIENTMETRICSW metrics = {0};
+    metrics.cbSize = sizeof(metrics);
+    if (!SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, metrics.cbSize, &metrics, 0))
+    {
+        fprintf(stderr, "SystemParametersInfoW failed (%lu)", GetLastError());
+        return false;
+    }
+
+    m_hFont = CreateFontIndirectW(&metrics.lfCaptionFont);
+    if (m_hFont == nullptr)
+    {
+        fprintf(stderr, "CreateFontIndirectW failed\n");
+        return false;
+    }
 
     m_hEvent = CreateEventW(0, FALSE, FALSE, nullptr);
     if (m_hEvent == nullptr)
@@ -190,7 +218,7 @@ bool InjectWindow::Create(const wchar_t *title, std::vector<std::wstring>& names
     m_hWnd = CreateWindowW(
         wc.lpszClassName,
         title,
-        WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+        WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
         CW_USEDEFAULT, // x
         CW_USEDEFAULT, // y
         170, // width
