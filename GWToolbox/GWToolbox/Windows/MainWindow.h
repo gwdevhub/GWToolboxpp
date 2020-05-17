@@ -5,7 +5,9 @@
 #include <ToolboxWindow.h>
 
 class MainWindow : public ToolboxWindow {
-	MainWindow() {};
+	MainWindow() {
+		visible = true;
+	};
 	~MainWindow() {};
 public:
 	static MainWindow& Instance() {
