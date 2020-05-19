@@ -97,6 +97,8 @@ private:
     bool auto_load_pcons = true;
 	bool auto_send_pcons = true;
 	bool delete_builds_without_prompt = false;
+	bool hide_when_entering_explorable = false;
+
 
 	clock_t send_timer = 0;
 	std::queue<std::string> queue;

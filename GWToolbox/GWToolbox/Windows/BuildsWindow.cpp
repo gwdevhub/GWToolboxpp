@@ -94,6 +94,7 @@ void BuildsWindow::Terminate() {
 }
 
 void BuildsWindow::DrawSettingInternal() {
+	ImGui::Checkbox("Hide Build windows when entering explorable area", &hide_when_entering_explorable);
 	ImGui::Checkbox("Auto load pcons",&auto_load_pcons);
 	ImGui::ShowHelp("Automatically load pcons for a build when loaded onto a character");
 	ImGui::Checkbox("Send pcons when pinging a build", &auto_send_pcons);
@@ -214,6 +215,20 @@ void BuildsWindow::DrawBuildSection(TeamBuild& tbuild, unsigned int j) {
 }
 
 void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
+	static GW::Constants::InstanceType last_instance_type = GW::Constants::InstanceType::Loading;
+	GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
+
+	if (instance_type != last_instance_type) {
+		// Run tasks on map change without an StoC hook
+		if (hide_when_entering_explorable && instance_type == GW::Constants::InstanceType::Explorable) {
+			for (auto& hb : teambuilds) {
+				hb.edit_open = false;
+			}
+			visible = false;
+		}
+		last_instance_type = instance_type;
+	}
+
 	if (visible) {
 		ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 		ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiSetCond_FirstUseEver);

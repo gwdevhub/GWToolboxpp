@@ -5,7 +5,7 @@
 #include <GWCA\GameContainers\GamePos.h>
 
 #include <GWCA\GameEntities\Hero.h>
-#include <GWCA\GameEntities\Party.h>
+
 #include <GWCA\GameEntities\Agent.h>
 
 #include <GWCA\Context\GameContext.h>
@@ -91,29 +91,46 @@ namespace {
 
 	char MercHeroNames[8][20] = { 0 };
 
-	// Returns ptr to party member of this hero, optionally fills out out_hero_index to be the index of this hero for the player.
-	GW::HeroPartyMember* GetPartyHeroByID(HeroID hero_id, uint32_t *out_hero_index) {
-		auto party_info = GW::PartyMgr::GetPartyInfo();
-		if (!party_info) return nullptr;
-		auto party_heros = party_info->heroes;
-		if (!party_heros.valid()) return nullptr;
-		auto me = GW::Agents::GetPlayerAsAgentLiving();
-		if (!me) return nullptr;
-		uint32_t my_player_id = me->login_number;
-		for (size_t i = 0; i < party_heros.size(); i++) {
-			if (party_heros[i].owner_player_id == my_player_id &&
-				party_heros[i].hero_id == hero_id) {
-					if(out_hero_index) 
-						*out_hero_index = i + 1;
-					return &party_heros[i];
-			}
-		}
-		return nullptr;
-	}
+
 
 }
 
 unsigned int HeroBuildsWindow::TeamHeroBuild::cur_ui_id = 0;
+
+size_t GetPlayerHeroCount() {
+	size_t ret = 0;
+	GW::PartyInfo* party_info = GW::PartyMgr::GetPartyInfo();
+	if (!party_info) return ret;
+	GW::HeroPartyMemberArray& party_heros = party_info->heroes;
+	if (!party_heros.valid()) return ret;
+	GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+	if (!me) return ret;
+	uint32_t my_player_id = me->login_number;
+	for (size_t i = 0; i < party_heros.size(); i++) {
+		if (party_heros[i].owner_player_id == my_player_id)
+			ret++;
+	}
+	return ret;
+}
+
+GW::HeroPartyMember* HeroBuildsWindow::GetPartyHeroByID(HeroID hero_id, size_t* out_hero_index) {
+	GW::PartyInfo* party_info = GW::PartyMgr::GetPartyInfo();
+	if (!party_info) return nullptr;
+	GW::HeroPartyMemberArray &party_heros = party_info->heroes;
+	if (!party_heros.valid()) return nullptr;
+	GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+	if (!me) return nullptr;
+	uint32_t my_player_id = me->login_number;
+	for (size_t i = 0; i < party_heros.size(); i++) {
+		if (party_heros[i].owner_player_id == my_player_id &&
+			party_heros[i].hero_id == hero_id) {
+			if (out_hero_index)
+				*out_hero_index = i + 1;
+			return &party_heros[i];
+		}
+	}
+	return nullptr;
+}
 
 HeroBuildsWindow::~HeroBuildsWindow() {
     if (inifile)
@@ -407,7 +424,9 @@ void HeroBuildsWindow::Load(unsigned int idx) {
 }
 void HeroBuildsWindow::Load(const HeroBuildsWindow::TeamHeroBuild& tbuild) {
 	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) return;
+
 	GW::PartyMgr::KickAllHeroes();
+	kickall_timer = TIMER_INIT();
 	pending_hero_loads.clear();
     if (tbuild.mode > 0) {
         GW::PartyMgr::SetHardMode(tbuild.mode == 2);
@@ -418,7 +437,7 @@ void HeroBuildsWindow::Load(const HeroBuildsWindow::TeamHeroBuild& tbuild) {
 	send_timer = TIMER_INIT(); // give GW time to update the hero structs after adding them. 
 }
 
-void HeroBuildsWindow::Load(const TeamHeroBuild& tbuild, unsigned int idx) {
+void HeroBuildsWindow::Load(const TeamHeroBuild& tbuild, unsigned int idx ) {
 	if (idx >= tbuild.builds.size()) return;
 	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) return;
 	const HeroBuild& build = tbuild.builds[idx];
@@ -436,43 +455,49 @@ void HeroBuildsWindow::Load(const TeamHeroBuild& tbuild, unsigned int idx) {
 
 		if (heroid == HeroID::NoHero) return;
 
-		GW::PartyMgr::AddHero(heroid);
-		if (!code.empty()) {
-			pending_hero_loads.push_back(CodeOnHero(code.c_str(), heroid));
-		}
+		pending_hero_loads.push_back({ code.c_str(), heroid });
 	}
 }
 
 void HeroBuildsWindow::Update(float delta) {
-	if (!send_queue.empty() && TIMER_DIFF(send_timer) > 600) {
-		if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && GW::Agents::GetPlayer()) {
-			GW::Chat::SendChat('#', send_queue.front().c_str());
-			send_queue.pop();
-			send_timer = TIMER_INIT();
+	static GW::Constants::InstanceType last_instance_type = GW::Constants::InstanceType::Loading;
+	GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
+
+	if (instance_type != last_instance_type) {
+		// Run tasks on map change without an StoC hook
+		if (hide_when_entering_explorable && instance_type == GW::Constants::InstanceType::Explorable) {
+			for (auto& hb : teambuilds) {
+				hb.edit_open = false;
+			}
+			visible = false;
 		}
-		else {
-			while (!send_queue.empty())
+		if (instance_type == GW::Constants::InstanceType::Loading) {
+			while (send_queue.size())
 				send_queue.pop();
+			kickall_timer = 0;
+			pending_hero_loads.clear();
 		}
+		last_instance_type = instance_type;
 	}
-	static uint32_t hero_index = 0;
-	for (size_t i = 0; i < pending_hero_loads.size() && TIMER_DIFF(load_timer) > 100;i++) {
-		if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
+
+	if (!send_queue.empty() && TIMER_DIFF(send_timer) > 600) {
+		GW::Chat::SendChat('#', send_queue.front().c_str());
+		send_queue.pop();
+		send_timer = TIMER_INIT();
+	}
+	if (kickall_timer) {
+		if (TIMER_DIFF(kickall_timer) > 500 || instance_type != GW::Constants::InstanceType::Outpost || !GetPlayerHeroCount())
+			kickall_timer = 0;
+	}
+	for (size_t i = 0; !kickall_timer && i < pending_hero_loads.size();i++) {
+		if (instance_type != GW::Constants::InstanceType::Outpost) {
 			pending_hero_loads.clear();
 			break;
 		}
-		if (!GetPartyHeroByID(pending_hero_loads[i].heroid, &hero_index)) {
-			if (TIMER_DIFF(pending_hero_loads[i].started) > 1000) {
-				// Waited for 1000ms and still no hero - presume user doesn't have space in party or hero isn't unlocked.
-				pending_hero_loads.erase(pending_hero_loads.begin() + i);
-				break; // Continue loop on next frame
-			}
-			continue; // Hero not found in party list... yet!
+		if (pending_hero_loads[i].Process()) {
+			pending_hero_loads.erase(pending_hero_loads.begin() + i);
+			break; // Continue loop on next frame
 		}
-		GW::SkillbarMgr::LoadSkillTemplate(pending_hero_loads[i].code, hero_index);
-		load_timer = TIMER_INIT();
-		pending_hero_loads.erase(pending_hero_loads.begin() + i);
-		break; // Continue loop on next frame
 	}
 
 	// if we open the window, load from file. If we close the window, save to file. 
@@ -491,15 +516,22 @@ void HeroBuildsWindow::Update(float delta) {
 			SaveToFile();
 		}
 	}
+	last_instance_type = instance_type;
 }
 
 void HeroBuildsWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxWindow::LoadSettings(ini);
+	hide_when_entering_explorable = ini->GetBoolValue(Name(), VAR_NAME(hide_when_entering_explorable), hide_when_entering_explorable);
 	LoadFromFile();
+}
+
+void HeroBuildsWindow::DrawSettingInternal() {
+	ImGui::Checkbox("Hide Hero Build windows when entering explorable area", &hide_when_entering_explorable);
 }
 
 void HeroBuildsWindow::SaveSettings(CSimpleIni* ini) {
 	ToolboxWindow::SaveSettings(ini);
+	ini->SetBoolValue(Name(), VAR_NAME(hide_when_entering_explorable), hide_when_entering_explorable);
 	SaveToFile();
 }
 
@@ -576,4 +608,25 @@ void HeroBuildsWindow::SaveToFile() {
 
 		inifile->SaveFile(Resources::GetPath(INI_FILENAME).c_str());
 	}
+}
+
+bool HeroBuildsWindow::CodeOnHero::Process() {
+	if (!started)
+		started = TIMER_INIT();
+	if (TIMER_DIFF(started) > 1000)
+		return true; // Consume, timeout.
+	switch (stage) {
+	case Add: // Need to add hero to party
+		GW::PartyMgr::AddHero(heroid);
+		stage = Load;
+	case Load: // Waiting for hero to be added to party
+		if (!GetPartyHeroByID(heroid, &party_hero_index))
+			break;
+		if (code[0]) // Build optional
+			GW::SkillbarMgr::LoadSkillTemplate(code, party_hero_index);
+		stage = Finished;
+	case Finished: // Success, hero added and build loaded.
+		return true;
+	}
+	return false;
 }

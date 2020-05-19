@@ -3,6 +3,8 @@
 
 #include <GWCA\Constants\Constants.h>
 
+#include <GWCA\GameEntities\Party.h>
+
 #include "ToolboxWindow.h"
 
 #include <array>
@@ -64,6 +66,7 @@ public:
 
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
+	void DrawSettingInternal() override;
 
 	void LoadFromFile();
 	void SaveToFile();
@@ -72,6 +75,9 @@ public:
 	const char* BuildName(unsigned int idx) const;
 	inline unsigned int BuildCount() const { return teambuilds.size(); }
 private:
+
+	bool hide_when_entering_explorable = false;
+
 	// Load a teambuild
 	void Load(const TeamHeroBuild& tbuild);
 	// Load a specific build from a teambuild
@@ -79,24 +85,34 @@ private:
 	void Send(const TeamHeroBuild& tbuild, size_t idx);
 	void Send(const TeamHeroBuild& tbuild);
 	void View(const TeamHeroBuild& tbuild, unsigned int idx);
-	void HeroBuildsWindow::HeroBuildName(const TeamHeroBuild& tbuild, unsigned int idx, std::string* out);
+	void HeroBuildName(const TeamHeroBuild& tbuild, unsigned int idx, std::string* out);
+
+	// Returns ptr to party member of this hero, optionally fills out out_hero_index to be the index of this hero for the player.
+	static GW::HeroPartyMember* GetPartyHeroByID(GW::Constants::HeroID hero_id, size_t* out_hero_index);
 	bool builds_changed = false;
 	std::vector<TeamHeroBuild> teambuilds;
 
 	struct CodeOnHero {
-		CodeOnHero(const char* c = "", int i = 0) {
-			snprintf(code, 128, "%s", c);
-			heroid = static_cast<GW::Constants::HeroID>(i);
-			started = TIMER_INIT();
-		}
+		enum Stage : uint8_t {
+			Add,
+			Load,
+			Finished
+		} stage = Add;
 		char code[128];
+		size_t party_hero_index = 0xFFFFFFFF;
 		GW::Constants::HeroID heroid = GW::Constants::HeroID::NoHero;
 		clock_t started = 0;
+		CodeOnHero(const char* c = "", GW::Constants::HeroID i = GW::Constants::HeroID::NoHero) {
+			snprintf(code, 128, "%s", c);
+			heroid = i;
+		}
+		// True when processing is done
+		bool Process();
 	};
 
 
 	clock_t send_timer = 0;
-	clock_t load_timer = 0;
+	clock_t kickall_timer = 0;
 	std::vector<CodeOnHero> pending_hero_loads;
 	std::queue<std::string> send_queue;
 
