@@ -724,24 +724,23 @@ AgentRenderer::Shape_e AgentRenderer::GetShape(const GW::Agent* agent, const Cus
 void AgentRenderer::Enqueue(Shape_e shape, const GW::Agent* agent, float size, Color color) {
 	if ((color & IM_COL32_A_MASK) == 0) return;
 
-	unsigned int i;
-	for (i = 0; i < shapes[shape].vertices.size(); ++i) {
+	size_t num_v = shapes[shape].vertices.size();
+	for (size_t i = 0; i < num_v; ++i) {
 		const Shape_Vertex& vert = shapes[shape].vertices[i];
 		GW::Vec2f pos = (GW::Rotate(vert, agent->rotation_cos, agent->rotation_sin) * size) + agent->pos;
 		Color vcolor = color;
 		switch (vert.modifier) {
-		case Dark: vcolor = Colors::Sub(color, color_agent_modifier); break;
-		case Light: vcolor = Colors::Add(color, color_agent_modifier); break;
-		case CircleCenter: vcolor = Colors::Sub(color, IM_COL32(0, 0, 0, 50)); break;
-		case None: break;
+		case Dark: vertices[i].color = Colors::Sub(color, color_agent_modifier); break;
+		case Light: vertices[i].color = Colors::Add(color, color_agent_modifier); break;
+		case CircleCenter: vertices[i].color = Colors::Sub(color, IM_COL32(0, 0, 0, 50)); break;
+		default: vertices[i].color = color; break;
 		}
 		vertices[i].z = 0.0f;
-		vertices[i].color = vcolor;
 		vertices[i].x = pos.x;
 		vertices[i].y = pos.y;
 	}
-	vertices += shapes[shape].vertices.size();
-	vertices_count += shapes[shape].vertices.size();
+	vertices += num_v;
+	vertices_count += num_v;
 }
 
 void AgentRenderer::BuildCustomAgentsMap() {

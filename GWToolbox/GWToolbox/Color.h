@@ -161,7 +161,7 @@ namespace Colors {
 			if (c[i] > 0xFF) c[i] = 0xFF;
 		}
 	}
-	static Color Add(const Color c1, const Color c2) {
+	static Color Add(const Color& c1, const Color& c2) {
 		int i1[4]; 
 		int i2[4];
 		int i3[4];
@@ -173,7 +173,7 @@ namespace Colors {
 		Clamp(i3);
 		return ConvertInt4ToU32(i3);
 	}
-	static Color Sub(const Color c1, const Color c2) {
+	static Color Sub(const Color& c1, const Color& c2) {
 		int i1[4]; 
 		int i2[4];
 		int i3[4];
@@ -186,7 +186,7 @@ namespace Colors {
 		return ConvertInt4ToU32(i3);
 	}
 
-	static Color Slerp(const Color c1, const Color c2, float t) {
+	static Color Slerp(const Color& c1, const Color& c2, float t) {
 		int i1[4];
 		int i2[4];
 		int i3[4];

@@ -28,10 +28,10 @@ public:
 		if (drawn_settings.find(section) != drawn_settings.end())
 			return true; // Already drawn
 		drawn_settings[section] = true;
-		bool is_showing = ImGui::CollapsingHeader(section, ImGuiTreeNodeFlags_AllowItemOverlap);
+		const bool &is_showing = ImGui::CollapsingHeader(section, ImGuiTreeNodeFlags_AllowItemOverlap);
 		if(is_showing) ImGui::PushID(section);
 		size_t i = 0;
-		for (auto entry : settings_section->second) {
+		for (auto &entry : settings_section->second) {
 			if (i && is_showing) ImGui::Separator();
 			entry.second(&settings_section->first, is_showing);
 			i++;

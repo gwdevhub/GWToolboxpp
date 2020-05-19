@@ -194,13 +194,11 @@ void MaterialsWindow::Terminate() {
 
 void MaterialsWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxWindow::LoadSettings(ini);
-	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
-	manage_gold = ini->GetBoolValue(Name(), VAR_NAME(manage_gold), false);
+	manage_gold = ini->GetBoolValue(Name(), VAR_NAME(manage_gold), manage_gold);
 }
 
 void MaterialsWindow::SaveSettings(CSimpleIni* ini) {
 	ToolboxWindow::SaveSettings(ini);
-	ini->SetBoolValue(Name(), VAR_NAME(show_menubutton), show_menubutton);
 	ini->SetBoolValue(Name(), VAR_NAME(manage_gold), manage_gold);
 }
 

@@ -16,7 +16,7 @@ void ToolboxUIElement::Initialize() {
 void ToolboxUIElement::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini);
 	visible = ini->GetBoolValue(Name(), VAR_NAME(visible), visible);
-	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), false);
+	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), show_menubutton);
 }
 
 void ToolboxUIElement::SaveSettings(CSimpleIni* ini) {

@@ -14,9 +14,9 @@ public:
 
 	virtual void LoadSettings(CSimpleIni* ini) override {
 		ToolboxUIElement::LoadSettings(ini);
-		lock_move = ini->GetBoolValue(Name(), VAR_NAME(lock_move), false);
-		lock_size = ini->GetBoolValue(Name(), VAR_NAME(lock_size), false);
-		show_closebutton = ini->GetBoolValue(Name(), VAR_NAME(show_closebutton), true);
+		lock_move = ini->GetBoolValue(Name(), VAR_NAME(lock_move), lock_move);
+		lock_size = ini->GetBoolValue(Name(), VAR_NAME(lock_size), lock_size);
+		show_closebutton = ini->GetBoolValue(Name(), VAR_NAME(show_closebutton), show_closebutton);
 	}
 
 	virtual void SaveSettings(CSimpleIni* ini) override {

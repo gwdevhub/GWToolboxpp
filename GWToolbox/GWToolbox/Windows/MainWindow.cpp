@@ -41,7 +41,7 @@ void MainWindow::RefreshButtons() {
 	pending_refresh_buttons = false;
 	const std::vector<ToolboxUIElement*>& ui = GWToolbox::Instance().GetUIElements();
 	modules_to_draw.clear();
-	for (auto ui_module : ui) {
+	for (auto &ui_module : ui) {
 		if (!ui_module->show_menubutton)
 			continue;
 		float weighting = GetModuleWeighting(ui_module);
@@ -67,10 +67,10 @@ void MainWindow::Draw(IDirect3DDevice9* device) {
 			ImGui::PushID(i);
 			if(drawn) ImGui::Separator();
 			drawn = true;
-			auto ui_module = modules_to_draw[i].second;
+			auto &ui_module = modules_to_draw[i].second;
 			if (ui_module->DrawTabButton(device)) {
 				if (one_panel_at_time_only && ui_module->visible && ui_module->IsWindow()) {
-					for (auto ui_module2 : modules_to_draw) {
+					for (auto &ui_module2 : modules_to_draw) {
 						if (ui_module2.second == ui_module) continue;
 						if (!ui_module2.second->IsWindow()) continue;
 						ui_module2.second->visible = false;
