@@ -6,6 +6,10 @@
 #include "GWToolbox.h"
 #include "Windows/MainWindow.h"
 
+#include <GWCA/Constants/Constants.h>
+#include <GWCA/Managers/MapMgr.h>
+
+
 #include <Modules/Updater.h>
 #include <Modules/Resources.h>
 #include <Modules/ChatCommands.h>
@@ -21,10 +25,23 @@ void SettingsWindow::Initialize() {
 
 void SettingsWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxWindow::LoadSettings(ini);
-	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
+	hide_when_entering_explorable = ini->GetBoolValue(Name(), VAR_NAME(hide_when_entering_explorable), hide_when_entering_explorable);
+}
+void SettingsWindow::SaveSettings(CSimpleIni* ini) {
+	ToolboxWindow::SaveSettings(ini);
+	ini->SetBoolValue(Name(), VAR_NAME(hide_when_entering_explorable), hide_when_entering_explorable);
 }
 
 void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
+	static GW::Constants::InstanceType last_instance_type = GW::Constants::InstanceType::Loading;
+	GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
+
+	if (instance_type != last_instance_type) {
+		if (hide_when_entering_explorable && instance_type == GW::Constants::InstanceType::Explorable)
+			visible = false;
+		last_instance_type = instance_type;
+	}
+
 	if (!visible) return;
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(450, 600), ImGuiSetCond_FirstUseEver);
@@ -64,6 +81,8 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
 		}
 
 		ToolboxSettings::Instance().DrawFreezeSetting();
+		ImGui::SameLine();
+		ImGui::Checkbox("Hide Settings when entering explorable area", &hide_when_entering_explorable);
 
 		ImGui::Text("General:");
 		if (ImGui::CollapsingHeader("Help")) {

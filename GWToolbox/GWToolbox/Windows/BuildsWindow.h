@@ -98,6 +98,7 @@ private:
 	bool auto_send_pcons = true;
 	bool delete_builds_without_prompt = false;
 	bool hide_when_entering_explorable = false;
+	bool one_teambuild_at_a_time = false;
 
 
 	clock_t send_timer = 0;

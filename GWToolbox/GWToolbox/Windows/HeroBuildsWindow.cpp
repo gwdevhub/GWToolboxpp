@@ -91,27 +91,25 @@ namespace {
 
 	char MercHeroNames[8][20] = { 0 };
 
-
+	size_t GetPlayerHeroCount() {
+		size_t ret = 0;
+		GW::PartyInfo* party_info = GW::PartyMgr::GetPartyInfo();
+		if (!party_info) return ret;
+		GW::HeroPartyMemberArray& party_heros = party_info->heroes;
+		if (!party_heros.valid()) return ret;
+		GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+		if (!me) return ret;
+		uint32_t my_player_id = me->login_number;
+		for (size_t i = 0; i < party_heros.size(); i++) {
+			if (party_heros[i].owner_player_id == my_player_id)
+				ret++;
+		}
+		return ret;
+	}
 
 }
 
 unsigned int HeroBuildsWindow::TeamHeroBuild::cur_ui_id = 0;
-
-size_t GetPlayerHeroCount() {
-	size_t ret = 0;
-	GW::PartyInfo* party_info = GW::PartyMgr::GetPartyInfo();
-	if (!party_info) return ret;
-	GW::HeroPartyMemberArray& party_heros = party_info->heroes;
-	if (!party_heros.valid()) return ret;
-	GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
-	if (!me) return ret;
-	uint32_t my_player_id = me->login_number;
-	for (size_t i = 0; i < party_heros.size(); i++) {
-		if (party_heros[i].owner_player_id == my_player_id)
-			ret++;
-	}
-	return ret;
-}
 
 GW::HeroPartyMember* HeroBuildsWindow::GetPartyHeroByID(HeroID hero_id, size_t* out_hero_index) {
 	GW::PartyInfo* party_info = GW::PartyMgr::GetPartyInfo();
@@ -157,6 +155,11 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 				ImGui::PushID(tbuild.ui_id);
 				ImGui::GetStyle().ButtonTextAlign = ImVec2(0.0f, 0.5f);
 				if (ImGui::Button(tbuild.name, ImVec2(ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().ItemInnerSpacing.x - 60.0f * ImGui::GetIO().FontGlobalScale, 0))) {
+					if (one_teambuild_at_a_time && !tbuild.edit_open) {
+						for (auto &tb : teambuilds) {
+							tb.edit_open = false;
+						}
+					}
 					tbuild.edit_open = !tbuild.edit_open;
 				}
 				ImGui::GetStyle().ButtonTextAlign = ImVec2(0.5f, 0.5f);
@@ -522,16 +525,20 @@ void HeroBuildsWindow::Update(float delta) {
 void HeroBuildsWindow::LoadSettings(CSimpleIni* ini) {
 	ToolboxWindow::LoadSettings(ini);
 	hide_when_entering_explorable = ini->GetBoolValue(Name(), VAR_NAME(hide_when_entering_explorable), hide_when_entering_explorable);
+	one_teambuild_at_a_time = ini->GetBoolValue(Name(), VAR_NAME(one_teambuild_at_a_time), one_teambuild_at_a_time);
 	LoadFromFile();
 }
 
 void HeroBuildsWindow::DrawSettingInternal() {
 	ImGui::Checkbox("Hide Hero Build windows when entering explorable area", &hide_when_entering_explorable);
+	ImGui::Checkbox("Only show one teambuild window at a time", &one_teambuild_at_a_time);
+	ImGui::ShowHelp("Close other teambuild windows when you open a new one");
 }
 
 void HeroBuildsWindow::SaveSettings(CSimpleIni* ini) {
 	ToolboxWindow::SaveSettings(ini);
 	ini->SetBoolValue(Name(), VAR_NAME(hide_when_entering_explorable), hide_when_entering_explorable);
+	ini->SetBoolValue(Name(), VAR_NAME(one_teambuild_at_a_time), one_teambuild_at_a_time);
 	SaveToFile();
 }
 

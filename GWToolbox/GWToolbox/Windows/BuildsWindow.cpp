@@ -95,6 +95,8 @@ void BuildsWindow::Terminate() {
 
 void BuildsWindow::DrawSettingInternal() {
 	ImGui::Checkbox("Hide Build windows when entering explorable area", &hide_when_entering_explorable);
+	ImGui::Checkbox("Only show one teambuild window at a time", &one_teambuild_at_a_time);
+	ImGui::ShowHelp("Close other teambuild windows when you open a new one");
 	ImGui::Checkbox("Auto load pcons",&auto_load_pcons);
 	ImGui::ShowHelp("Automatically load pcons for a build when loaded onto a character");
 	ImGui::Checkbox("Send pcons when pinging a build", &auto_send_pcons);
@@ -237,6 +239,11 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 				ImGui::PushID(tbuild.ui_id);
 				ImGui::GetStyle().ButtonTextAlign = ImVec2(0.0f, 0.5f);
 				if (ImGui::Button(tbuild.name, ImVec2(ImGui::GetWindowContentRegionWidth()-ImGui::GetStyle().ItemInnerSpacing.x - 60.0f * ImGui::GetIO().FontGlobalScale, 0))) {
+					if (one_teambuild_at_a_time && !tbuild.edit_open) {
+						for (auto& tb : teambuilds) {
+							tb.edit_open = false;
+						}
+					}
 					tbuild.edit_open = !tbuild.edit_open;
 				}
 				ImGui::GetStyle().ButtonTextAlign = ImVec2(0.5f, 0.5f);
@@ -555,6 +562,9 @@ void BuildsWindow::LoadSettings(CSimpleIni* ini) {
     order_by_name = ini->GetBoolValue(Name(), VAR_NAME(order_by_name), order_by_name);
 	auto_load_pcons = ini->GetBoolValue(Name(), VAR_NAME(auto_load_pcons), auto_load_pcons);
 	auto_send_pcons = ini->GetBoolValue(Name(), VAR_NAME(auto_send_pcons), auto_send_pcons);
+	hide_when_entering_explorable = ini->GetBoolValue(Name(), VAR_NAME(hide_when_entering_explorable), hide_when_entering_explorable);
+	one_teambuild_at_a_time = ini->GetBoolValue(Name(), VAR_NAME(one_teambuild_at_a_time), one_teambuild_at_a_time);
+
     order_by_index = !order_by_name;
 
 	if (MoveOldBuilds(ini)) {
@@ -569,6 +579,8 @@ void BuildsWindow::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(order_by_name), order_by_name);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_load_pcons), auto_load_pcons);
 	ini->SetBoolValue(Name(), VAR_NAME(auto_send_pcons), auto_send_pcons);
+	ini->SetBoolValue(Name(), VAR_NAME(hide_when_entering_explorable), hide_when_entering_explorable);
+	ini->SetBoolValue(Name(), VAR_NAME(one_teambuild_at_a_time), one_teambuild_at_a_time);
 	SaveToFile();
 }
 

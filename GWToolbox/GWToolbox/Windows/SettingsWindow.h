@@ -3,7 +3,9 @@
 #include "ToolboxWindow.h"
 
 class SettingsWindow : public ToolboxWindow {
-	SettingsWindow() {};
+	SettingsWindow() {
+		show_menubutton = true;
+	};
 	~SettingsWindow() {};
 public:
 	static SettingsWindow& Instance() {
@@ -16,6 +18,7 @@ public:
 	void Initialize() override;
 
 	void LoadSettings(CSimpleIni* ini) override;
+	void SaveSettings(CSimpleIni* ini) override;
 
 	// Draw user interface. Will be called every frame if the element is visible
 	void Draw(IDirect3DDevice9* pDevice) override;
@@ -45,4 +48,5 @@ public:
 	int sep_widgets = 0;
 private:
 	std::map<std::string, bool> drawn_settings{};
+	bool hide_when_entering_explorable = false;
 };
