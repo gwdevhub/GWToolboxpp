@@ -360,12 +360,10 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::PopItemWidth();
 		ImGui::SameLine();
 		if (ImGui::Button("Buy##resscroll", ImVec2(100.0f, 0))) {
-			for (int i = 0; i < qty_resscroll; ++i) { // for each scroll
-				int qty = (i % 2 == 0 ? 2 : 3);
-				for (int j = 0; j < qty; ++j) {
-					EnqueuePurchase(PlantFiber);
-					EnqueuePurchase(Bone);
-				}
+			int qty = (int)std::ceil(2.5f * qty_resscroll);
+			for (int j = 0; j < qty; ++j) {
+				EnqueuePurchase(PlantFiber);
+				EnqueuePurchase(Bone);
 			}
 		}
 
