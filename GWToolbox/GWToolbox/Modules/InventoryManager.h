@@ -105,7 +105,7 @@ private:
 
 	size_t identified_count = 0;
 	size_t salvaged_count = 0;
-	float longest_item_name_length = 0.0;
+
 
 
 	GW::Packet::StoC::SalvageSession current_salvage_session;
@@ -396,6 +396,16 @@ private:
 		GW::Constants::Bag bag = GW::Constants::Bag::None;
 		uint32_t uses = 0;
 		uint32_t quantity = 0;
+		bool set(Item* item) {
+			item_id = 0;
+			if (!item || !item->item_id || !item->bag) return false;
+			item_id = item->item_id;
+			slot = item->slot;
+			quantity = item->quantity;
+			uses = item->GetUses();
+			bag = static_cast<GW::Constants::Bag>(item->bag->index + 1);
+			return true;
+		}
 		Item* item() {
 			if (!item_id) return nullptr;
 			Item* item = static_cast<Item*>(GW::Items::GetItemBySlot(bag, slot + 1));

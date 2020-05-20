@@ -250,14 +250,8 @@ void InventoryManager::Salvage(Item* item, Item* kit) {
 		return;
 	if (!item->IsSalvagable() || !kit->IsSalvageKit())
 		return;
-	pending_salvage_item.item_id = item->item_id;
-	pending_salvage_item.bag = static_cast<GW::Constants::Bag>(item->bag->index + 1);
-	pending_salvage_item.slot = item->slot;
-	pending_salvage_item.quantity = item->quantity;
-	pending_salvage_kit.item_id = kit->item_id;
-	pending_salvage_kit.bag = static_cast<GW::Constants::Bag>(kit->bag->index + 1);
-	pending_salvage_kit.slot = kit->slot;
-	pending_salvage_kit.uses = kit->GetUses();
+	if (!(pending_salvage_item.set(item) && pending_salvage_kit.set(kit)))
+		return;
 	AttachSalvageListeners();
 	GW::CtoS::SendPacket(0x10, GAME_CMSG_ITEM_SALVAGE_SESSION_OPEN, GW::GameContext::instance()->world->salvage_session_id, pending_salvage_kit.item_id, pending_salvage_item.item_id);
 	pending_salvage_at = (clock() / CLOCKS_PER_SEC);
@@ -268,13 +262,8 @@ void InventoryManager::Identify(Item* item, Item* kit) {
 		return;
 	if (item->GetIsIdentified() || !kit->IsIdentificationKit())
 		return;
-	pending_identify_item.item_id = item->item_id;
-	pending_identify_item.bag = static_cast<GW::Constants::Bag>(item->bag->index + 1);
-	pending_identify_item.slot = item->slot;
-	pending_identify_kit.item_id = kit->item_id;
-	pending_identify_kit.bag = static_cast<GW::Constants::Bag>(kit->bag->index + 1);
-	pending_identify_kit.slot = kit->slot;
-	pending_identify_kit.uses = kit->GetUses();
+	if(!(pending_salvage_item.set(item) && pending_salvage_kit.set(kit)))
+		return;
 	GW::CtoS::SendPacket(0xC, GAME_CMSG_ITEM_IDENTIFY, pending_identify_kit.item_id, pending_identify_item.item_id);
 	pending_identify_at = (clock() / CLOCKS_PER_SEC);
 	is_identifying = true;
@@ -640,8 +629,11 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
 			if (type != IdentifyAllType::None) {
 				ImGui::CloseCurrentPopup();
 				CancelIdentify();
-				is_identifying_all = true;
-				IdentifyAll(type);
+				if (context_item.set(context_item_actual)) {
+					is_identifying_all = true;
+					identify_all_type = type;
+					IdentifyAll(type);
+				}
 			}
 		}
 		else if (context_item_actual && context_item_actual->IsSalvageKit()) {
@@ -661,7 +653,10 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
 			if (type != SalvageAllType::None) {
 				ImGui::CloseCurrentPopup();
 				CancelSalvage();
-				SalvageAll(type);
+				if (context_item.set(context_item_actual)) {
+					salvage_all_type = type;
+					SalvageAll(type);
+				}
 			}
 		}
 		ImGui::PopStyleColor();
@@ -690,9 +685,12 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
 			// Are you sure prompt; at this point we've already got the list of items via FetchPotentialItems()
 			ImGui::Text("You're about to salvage %d item%s:", potential_salvage_all_items.size(), potential_salvage_all_items.size() == 1 ? "" : "s");
 			ImGui::TextDisabled("Untick an item to skip salvaging");
-			static std::regex sanitiser("<[^>]+>");
-			static std::wregex wsanitiser(L"<[^>]+>");
-			static std::wstring wiki_url(L"https://wiki.guildwars.com/wiki/");
+			static const std::regex sanitiser("<[^>]+>");
+			static const std::wregex wsanitiser(L"<[^>]+>");
+			static const std::wstring wiki_url(L"https://wiki.guildwars.com/wiki/");
+			const float& font_scale = ImGui::GetIO().FontGlobalScale;
+			const float wiki_btn_width = 50.0f * font_scale;
+			static float longest_item_name_length = 280.0f * font_scale;
 			PotentialItem* pi;
 			Item* item;
 			GW::Bag* bag = nullptr;
@@ -727,7 +725,7 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
 					pi->name_s = std::regex_replace(pi->name_s, sanitiser, "");
 				}
 				ImGui::Checkbox(pi->name_s.c_str(),&pi->proceed);
-				float item_name_length = ImGui::CalcTextSize(pi->name_s.c_str(), NULL, true).x;
+				const float item_name_length = ImGui::CalcTextSize(pi->name_s.c_str(), NULL, true).x;
 				longest_item_name_length = item_name_length > longest_item_name_length ? item_name_length : longest_item_name_length;
 				ImGui::PopStyleColor();
 				if (ImGui::IsItemHovered()) {
@@ -737,9 +735,9 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
 					}
 					ImGui::SetTooltip("%s",pi->desc_s.c_str());
 				}
-				ImGui::SameLine(longest_item_name_length + 50);
+				ImGui::SameLine(longest_item_name_length + wiki_btn_width);
 				ImGui::PushID(pi->item_id);
-				if (ImGui::Button("Wiki", ImVec2(50, 0))) {
+				if (ImGui::Button("Wiki", ImVec2(wiki_btn_width, 0))) {
 					std::wstring wiki_item = std::regex_replace(pi->short_name, std::wregex(L" "), std::wstring(L"_"));
 					wiki_item = std::regex_replace(wiki_item, wsanitiser, std::wstring(L""));
 					ShellExecuteW(NULL, L"open", (wiki_url + wiki_item).c_str(), NULL, NULL, SW_SHOWNORMAL);
@@ -748,7 +746,7 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
 				has_items_to_salvage |= pi->proceed;
 			}
 			ImGui::Text("\n\nAre you sure?");
-			ImVec2 btn_width = ImVec2(240, 0);
+			ImVec2 btn_width = ImVec2(ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().ItemSpacing.x, 0);
 			if (has_items_to_salvage) {
 				btn_width.x /= 2;
 				if (ImGui::Button("OK", btn_width)) {
@@ -776,13 +774,13 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, uint32_t type, 
 		return;
 	if (im->context_item.item_id == item->item_id && im->show_item_context_menu)
 		return; // Double looped.
-	im->context_item.item_id = item->item_id;
-	im->context_item.slot = item->slot;
-	im->context_item.bag = static_cast<GW::Constants::Bag>(item->bag->index + 1);
-	im->show_item_context_menu = true;
-	im->context_item_name_ws.clear();
-	im->context_item_name_s.clear();
-	GW::UI::AsyncDecodeStr(item->name_enc, &im->context_item_name_ws);
-	status->blocked = true;
+	if (im->context_item.set(item)) {
+		im->show_item_context_menu = true;
+		im->context_item_name_ws.clear();
+		im->context_item_name_s.clear();
+		GW::UI::AsyncDecodeStr(item->name_enc, &im->context_item_name_ws);
+		status->blocked = true;
+	}
+
 	return;
 }
