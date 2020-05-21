@@ -1,9 +1,9 @@
 #include "stdafx.h"
 
-#include "Options.h"
+#include "Settings.h"
 #include "Registry.h"
 
-Options options;
+Settings settings;
 
 void PrintUsage(bool terminate)
 {
@@ -28,7 +28,7 @@ void PrintUsage(bool terminate)
         exit(0);
 }
 
-void ParseRegOptions()
+void ParseRegSettings()
 {
     HKEY SettingsKey;
     if (!OpenSettingsKey(&SettingsKey)) {
@@ -38,12 +38,12 @@ void ParseRegOptions()
 
     DWORD asadmin;
     if (RegReadDWORD(SettingsKey, L"asadmin", &asadmin)) {
-        options.asadmin = (asadmin != 0);
+        settings.asadmin = (asadmin != 0);
     }
 
     DWORD noupdate;
     if (RegReadDWORD(SettingsKey, L"noupdate", &noupdate)) {
-        options.noupdate = (noupdate != 0);
+        settings.noupdate = (noupdate != 0);
     }
 
     RegCloseKey(SettingsKey);
@@ -72,37 +72,37 @@ void ParseCommandLine()
         wchar_t *arg = argv[i];
 
         if (wcscmp(arg, L"/version") == 0) {
-            options.version = true;
+            settings.version = true;
         } else if (wcscmp(arg, L"/install") == 0) {
-            options.install = true;
+            settings.install = true;
         } else if (wcscmp(arg, L"/uninstall") == 0) {
-            options.uninstall = true;
+            settings.uninstall = true;
         } else if (wcscmp(arg, L"/reinstall") == 0) {
-            options.reinstall = true;
+            settings.reinstall = true;
         } else if (wcscmp(arg, L"/pid") == 0) {
             if (++i == argc) {
                 fprintf(stderr, "'/pid' must be followed by a process id\n");
                 PrintUsage(true);
             }
             // @Enhancement: Replace by proper 'ParseInt' that deal with errors
-            options.pid = _wtoi(argv[i]);
+            settings.pid = _wtoi(argv[i]);
         } else if (wcscmp(arg, L"/asadmin") == 0) {
-            options.asadmin = true;
+            settings.asadmin = true;
         } else if (wcscmp(arg, L"/noupdate") == 0) {
-            options.noupdate = true;
+            settings.noupdate = true;
         } else if (wcscmp(arg, L"/help") == 0) {
-            options.help = true;
+            settings.help = true;
         } else if (wcscmp(arg, L"/?") == 0) {
-            options.help = true;
+            settings.help = true;
         } else {
-            options.help = true;
+            settings.help = true;
         }
     }
 
-    if (options.help)
+    if (settings.help)
         PrintUsage(true);
 
-    if (!IsOneOrZeroOf3(options.install, options.uninstall, options.reinstall)) {
+    if (!IsOneOrZeroOf3(settings.install, settings.uninstall, settings.reinstall)) {
         printf("You can only use one of '/install', '/uinstall' and '/reinstall'\n");
         PrintUsage(true);
     }

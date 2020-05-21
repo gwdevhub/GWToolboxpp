@@ -1,6 +1,6 @@
 #pragma once
 
-struct Options
+struct Settings
 {
     bool help;
     bool version;
@@ -13,11 +13,11 @@ struct Options
     int  pid;
 };
 
-extern Options options;
+extern Settings settings;
 
 void PrintUsage(bool terminate);
 
-void ParseRegOptions();
+void ParseRegSettings();
 void ParseCommandLine();
 
 bool IsRunningAsAdmin();

@@ -2,9 +2,9 @@
 
 #include "Download.h"
 #include "Install.h"
-#include "Options.h"
 #include "Path.h"
 #include "Registry.h"
+#include "Settings.h"
 
 static bool GetFileSize(const wchar_t *path, uint64_t *file_size)
 {

@@ -84,7 +84,7 @@
     <ClCompile Include="Inject.cpp" />
     <ClCompile Include="Install.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Options.cpp" />
+    <ClCompile Include="Settings.cpp" />
     <ClCompile Include="Path.cpp" />
     <ClCompile Include="Process.cpp" />
     <ClCompile Include="Registry.cpp" />
@@ -99,7 +99,7 @@
     <ClInclude Include="Download.h" />
     <ClInclude Include="Inject.h" />
     <ClInclude Include="Install.h" />
-    <ClInclude Include="Options.h" />
+    <ClInclude Include="Settings.h" />
     <ClInclude Include="Path.h" />
     <ClInclude Include="Process.h" />
     <ClInclude Include="Registry.h" />

@@ -3,9 +3,9 @@
 #include "Download.h"
 #include "Inject.h"
 #include "Install.h"
-#include "Options.h"
 #include "Path.h"
 #include "Process.h"
+#include "Settings.h"
 
 static void ShowError(const wchar_t* message) {
     MessageBoxW(
@@ -58,37 +58,37 @@ int main(void)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 #endif
 {
-    ParseRegOptions();
+    ParseRegSettings();
     ParseCommandLine();
 
-    assert(options.help == false);
-    if (options.version) {
+    assert(settings.help == false);
+    if (settings.version) {
         printf("GWToolbox version 3.0\n");
         return 0;
     }
 
-    if (options.asadmin && !IsRunningAsAdmin()) {
+    if (settings.asadmin && !IsRunningAsAdmin()) {
         RestartAsAdminWithSameArgs();
         return 0;
     }
 
     Process proc;
-    if (options.install) {
-        Install(options.quiet);
+    if (settings.install) {
+        Install(settings.quiet);
         return 0;
-    } else if (options.uninstall) {
-        Uninstall(options.quiet);
+    } else if (settings.uninstall) {
+        Uninstall(settings.quiet);
         return 0;
-    } else if (options.reinstall) {
+    } else if (settings.reinstall) {
         // @Enhancement:
         // Uninstall shouldn't remove the existing data, that would instead be a
         // "repair" or something along those lines.
-        Uninstall(options.quiet);
-        Install(options.quiet);
+        Uninstall(settings.quiet);
+        Install(settings.quiet);
         return 0;
-    } else if (options.pid) {
-        if (!proc.Open(options.pid)) {
-            fprintf(stderr, "Couldn't open process %d\n", options.pid);
+    } else if (settings.pid) {
+        if (!proc.Open(settings.pid)) {
+            fprintf(stderr, "Couldn't open process %d\n", settings.pid);
             return 1;
         }
 
@@ -116,7 +116,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     // Try to inject
 
     if (!IsInstalled()) {
-        if (options.quiet) {
+        if (settings.quiet) {
             ShowError(L"Can't ask to install if started with '/quiet'");
             fprintf(stderr, "Can't ask to install if started with '/quiet'\n");
             return 1;
@@ -135,13 +135,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
         if (iRet == IDYES) {
             // @Cleanup: Check return value
-            if (!Install(options.quiet)) {
+            if (!Install(settings.quiet)) {
                 fprintf(stderr, "Failed to install\n");
                 return 1;
             }
         }
 
-    } else if (!options.noupdate) {
+    } else if (!settings.noupdate) {
         if (!DownloadWindow::DownloadAllFiles()) {
             ShowError(L"Failed to download GWToolbox DLL");
             fprintf(stderr, "DownloadWindow::DownloadAllFiles failed\n");

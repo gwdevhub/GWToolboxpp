@@ -5,19 +5,18 @@
     <ClCompile Include="Process.cpp" />
     <ClCompile Include="Download.cpp" />
     <ClCompile Include="Inject.cpp" />
-    <ClCompile Include="Options.cpp" />
     <ClCompile Include="Install.cpp" />
     <ClCompile Include="Path.cpp" />
     <ClCompile Include="Str.cpp" />
     <ClCompile Include="Registry.cpp" />
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="Window.cpp" />
+    <ClCompile Include="Settings.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Process.h" />
     <ClInclude Include="Download.h" />
     <ClInclude Include="Inject.h" />
-    <ClInclude Include="Options.h" />
     <ClInclude Include="Install.h" />
     <ClInclude Include="Path.h" />
     <ClInclude Include="Str.h" />
@@ -27,6 +26,7 @@
     <ClInclude Include="Registry.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="Window.h" />
+    <ClInclude Include="Settings.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Ressources">
