@@ -5,26 +5,15 @@
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
-static size_t GetGwProcessCount()
-{
-    std::vector<Process> processes;
-    GetProcesses(processes, L"Gw.exe", PROCESS_QUERY_LIMITED_INFORMATION);
-    GetProcessesFromWindowClass(processes, L"ArenaNet_Dx_Window_Class", PROCESS_QUERY_LIMITED_INFORMATION);
-    return processes.size();
-}
+#pragma comment(linker, "\"/manifestdependency:type='win32' \
+name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
+processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
 InjectReply InjectWindow::AskInjectProcess(Process *target_process)
 {
     std::vector<Process> processes;
     GetProcesses(processes, L"Gw.exe");
     GetProcessesFromWindowClass(processes, L"ArenaNet_Dx_Window_Class");
-
-#if 0
-    size_t ProcessCount = GetGwProcessCount();
-    char buffer[64];
-    snprintf(buffer, 64, "ProcessCount: %zu", ProcessCount);
-    MessageBoxA(0, buffer, "Debug", 0);
-#endif
 
     if (processes.empty()) {
         fprintf(stderr, "Didn't find any potential process to inject GWToolbox\n");
@@ -47,8 +36,8 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
 
         // @Remark:
         // If "GWToolboxdll.dll" is already injected, we can't do it again.
-        if (process.GetModule(&module, L"GWToolboxdll.dll"))
-            continue;
+        // if (process.GetModule(&module, L"GWToolboxdll.dll"))
+        //     continue;
 
         if (!process.GetModule(&module)) {
             fprintf(stderr, "Couldn't get module for process %u\n", process.GetProcessId());
@@ -119,34 +108,127 @@ void InjectWindow::OnWindowCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
     SendMessage(hWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
     SendMessage(hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
 
-    inject->m_hLaunchButton = CreateWindowW(
+    HWND hGroupBox = CreateWindowW(
         WC_BUTTONW,
-        L"Launch",
-        WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-        7,
-        67,
-        140,
-        24,
+        L"Select Character",
+        WS_VISIBLE | WS_CHILD | BS_GROUPBOX,
+        10,
+        5,
+        270,
+        55,
         hWnd,
         nullptr,
         inject->m_hInstance,
         nullptr);
+    SendMessageW(hGroupBox, WM_SETFONT, (WPARAM)inject->m_hFont, MAKELPARAM(TRUE, 0));
 
     inject->m_hCharacters = CreateWindowW(
         WC_COMBOBOXW,
         L"",
-        CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP | WS_VISIBLE | WS_CHILD,
-        7,
-        11,
-        140,
-        300,
+        WS_VISIBLE | WS_CHILD | WS_VSCROLL | WS_TABSTOP | CBS_DROPDOWNLIST,
+        20,  // x
+        25,  // y
+        155,// width
+        25,  // height
         hWnd,
         nullptr,
         inject->m_hInstance,
         nullptr);
-
-    SendMessageW(inject->m_hLaunchButton, WM_SETFONT, (WPARAM)inject->m_hFont, MAKELPARAM(TRUE, 0));
     SendMessageW(inject->m_hCharacters, WM_SETFONT, (WPARAM)inject->m_hFont, MAKELPARAM(TRUE, 0));
+
+    inject->m_hLaunchButton = CreateWindowW(
+        WC_BUTTONW,
+        L"Launch",
+        WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_DEFPUSHBUTTON,
+        180, // x
+        24,  // y
+        90,  // width
+        25,  // height
+        hWnd,
+        nullptr,
+        inject->m_hInstance,
+        nullptr);
+    SendMessageW(inject->m_hLaunchButton, WM_SETFONT, (WPARAM)inject->m_hFont, MAKELPARAM(TRUE, 0));
+
+    // @Cleanup:
+    // Hide it if already admin
+    inject->m_hRestartAsAdmin = CreateWindowW(
+        WC_BUTTONW,
+        L"Can't find your character?",
+        WS_VISIBLE | WS_CHILD | WS_TABSTOP,
+        10,
+        65,
+        165,
+        25,
+        hWnd,
+        nullptr,
+        inject->m_hInstance,
+        nullptr);
+    SendMessageW(inject->m_hRestartAsAdmin, WM_SETFONT, (WPARAM)inject->m_hFont, MAKELPARAM(TRUE, 0));
+    Button_SetElevationRequiredState(inject->m_hRestartAsAdmin, TRUE);
+
+    // @Cleanup:
+    // Hide it if already admin
+    HWND hSettings = CreateWindowW(
+        WC_BUTTONW,
+        L"Settings...",
+        WS_VISIBLE | WS_CHILD | WS_TABSTOP,
+        200,
+        65,
+        80,
+        25,
+        hWnd,
+        nullptr,
+        inject->m_hInstance,
+        nullptr);
+    SendMessageW(hSettings, WM_SETFONT, (WPARAM)inject->m_hFont, MAKELPARAM(TRUE, 0));
+
+#if 0
+    L"Unable to retrieve all necessary information for some process"
+    L"Some processes couldn't be listed" -> restart as admin
+
+    HWND hCheckUpdate = CreateWindowW(
+        WC_BUTTONW,
+        L"Check for update",
+        WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_DEFPUSHBUTTON,
+        10,
+        65,
+        100,
+        25,
+        hWnd,
+        nullptr,
+        inject->m_hInstance,
+        nullptr);
+    SendMessageW(hCheckUpdate, WM_SETFONT, (WPARAM)inject->m_hFont, MAKELPARAM(TRUE, 0));
+
+    HWND hSkipUpdate = CreateWindowW(
+        WC_BUTTONW,
+        L"Check for update",
+        WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_CHECKBOX,
+        15,
+        65,
+        150,
+        15,
+        hWnd,
+        nullptr,
+        inject->m_hInstance,
+        nullptr);
+    SendMessageW(hSkipUpdate, WM_SETFONT, (WPARAM)inject->m_hFont, MAKELPARAM(TRUE, 0));
+
+    HWND hStartAsAdmin = CreateWindowW(
+        WC_BUTTONW,
+        L"Start as admin",
+        WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_CHECKBOX,
+        15,
+        85,
+        150,
+        15,
+        hWnd,
+        nullptr,
+        inject->m_hInstance,
+        nullptr);
+    SendMessageW(hStartAsAdmin, WM_SETFONT, (WPARAM)inject->m_hFont, MAKELPARAM(TRUE, 0));
+#endif
 }
 
 LRESULT CALLBACK InjectWindow::MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -171,6 +253,7 @@ InjectWindow::InjectWindow()
     : m_hWnd(nullptr)
     , m_hCharacters(nullptr)
     , m_hLaunchButton(nullptr)
+    , m_hRestartAsAdmin(nullptr)
     , m_hFont(nullptr)
     , m_hEvent(nullptr)
     , m_hInstance(nullptr)
@@ -201,7 +284,7 @@ bool InjectWindow::Create(std::vector<std::wstring>& names)
         return false;
     }
 
-    m_hFont = CreateFontIndirectW(&metrics.lfCaptionFont);
+    m_hFont = CreateFontIndirectW(&metrics.lfMessageFont);
     if (m_hFont == nullptr)
     {
         fprintf(stderr, "CreateFontIndirectW failed\n");
@@ -230,16 +313,18 @@ bool InjectWindow::Create(std::vector<std::wstring>& names)
 
     m_hWnd = CreateWindowW(
         wc.lpszClassName,
-        L"Inject",
-        WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
+        L"GWToolbox",
+        WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
         CW_USEDEFAULT, // x
         CW_USEDEFAULT, // y
-        170, // width
-        140, // height
+        305, // width
+        135, // height
         nullptr,
         nullptr,
         m_hInstance,
         this);
+
+    ShowWindow(m_hWnd, SW_SHOW);
 
     if (m_hWnd == nullptr)
     {
@@ -304,19 +389,23 @@ LRESULT InjectWindow::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
         break;
 
     case WM_COMMAND:
-        OnEvent(reinterpret_cast<HWND>(lParam), LOWORD(wParam), HIWORD(wParam));
+        OnCommand(reinterpret_cast<HWND>(lParam), LOWORD(wParam), HIWORD(wParam));
         break;
 
     case WM_KEYUP:
-        if (wParam == VK_ESCAPE)
+        if (wParam == VK_ESCAPE) {
             DestroyWindow(hWnd);
+        } else if (wParam == VK_RETURN) {
+            m_Selected = SendMessageW(m_hCharacters, CB_GETCURSEL, 0, 0);
+            DestroyWindow(hWnd);
+        }
         break;
     }
 
     return DefWindowProcW(hWnd, uMsg, wParam, lParam);
 }
 
-void InjectWindow::OnEvent(HWND hwnd, LONG control_id, LONG notification_code)
+void InjectWindow::OnCommand(HWND hwnd, LONG control_id, LONG notification_code)
 {
     // printf("hwnd:%p, control_id:%ld, notification_code:%lu\n", hwnd, control_id, notification_code);
     if ((hwnd == m_hLaunchButton) && (control_id == 0)) {

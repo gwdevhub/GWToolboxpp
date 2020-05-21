@@ -149,7 +149,9 @@ bool DownloadWindow::DownloadAllFiles()
     std::string content;
     if (!Download(content, L"https://api.github.com/repos/HasKha/GWToolboxpp/releases/latest")) {
         fprintf(stderr, "Couldn't download the latest release of GWToolboxpp\n");
-        return false;
+        // @Remark:
+        // We may not be able to grep Github api. (For instance, if we spam it)
+        return true;
     }
 
     Release release;

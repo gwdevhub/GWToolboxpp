@@ -24,6 +24,12 @@ static bool RestartAsAdminForInjection(uint32_t TargetPid)
 
 static bool InjectInstalledDllInProcess(Process *process)
 {
+    ProcessModule module;
+    if (process->GetModule(&module, L"GWToolboxdll.dll")) {
+        MessageBoxW(0, L"GWToolbox is already running in this process", L"GWToolbox", 0);
+        return true;
+    }
+
     if (!EnableDebugPrivilege() && !IsRunningAsAdmin()) {
         RestartAsAdminForInjection(process->GetProcessId());
         return true;
@@ -52,9 +58,6 @@ int main(void)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 #endif
 {
-    DownloadWindow::DownloadAllFiles();
-    return 0;
-
     ParseRegOptions();
     ParseCommandLine();
 
