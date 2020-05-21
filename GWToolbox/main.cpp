@@ -68,7 +68,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     }
 
     if (options.asadmin && !IsRunningAsAdmin()) {
-        RestartAsAdmin(GetCommandLineWithoutProgram());
+        RestartAsAdminWithSameArgs();
         return 0;
     }
 

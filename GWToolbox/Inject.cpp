@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include "Inject.h"
+#include "Options.h"
 #include "Process.h"
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
@@ -404,11 +405,11 @@ LRESULT InjectWindow::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 
 void InjectWindow::OnCommand(HWND hwnd, LONG control_id, LONG notification_code)
 {
-    // printf("hwnd:%p, control_id:%ld, notification_code:%lu\n", hwnd, control_id, notification_code);
-    if ((hwnd == m_hLaunchButton) && (control_id == 0)) {
+    if ((hwnd == m_hLaunchButton) && (control_id == STN_CLICKED)) {
         m_Selected = SendMessageW(m_hCharacters, CB_GETCURSEL, 0, 0);
-        printf("Pressed: %d\n", m_Selected);
         DestroyWindow(m_hWnd);
+    } else if ((hwnd == m_hRestartAsAdmin) && (control_id == STN_CLICKED)) {
+        RestartAsAdminWithSameArgs();
     }
 }
 
@@ -516,111 +517,4 @@ bool InjectRemoteThread(Process *process, LPCWSTR ImagePath, LPDWORD lpExitCode)
 
     *lpExitCode = ExitCode;
     return TRUE;
-}
-
-bool IsRunningAsAdmin()
-{
-    // Allocate and initialize a SID of the administrators group.
-    PSID AdministratorsGroup = NULL;
-    SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
-    if (!AllocateAndInitializeSid(
-        &NtAuthority, 
-        2, 
-        SECURITY_BUILTIN_DOMAIN_RID, 
-        DOMAIN_ALIAS_RID_ADMINS, 
-        0, 0, 0, 0, 0, 0, 
-        &AdministratorsGroup))
-    {
-        fprintf(stderr, "AllocateAndInitializeSid failed: %lu\n", GetLastError());
-        return false;
-    }
-
-    // Determine whether the SID of administrators group is enabled in 
-    // the primary access token of the process.
-    BOOL IsRunAsAdmin = FALSE;
-    if (!CheckTokenMembership(NULL, AdministratorsGroup, &IsRunAsAdmin))
-    {
-        FreeSid(AdministratorsGroup);
-        fprintf(stderr, "CheckTokenMembership failed: %lu\n", GetLastError());
-        return false;
-    }
-
-    FreeSid(AdministratorsGroup);
-    return (IsRunAsAdmin != FALSE);
-}
-
-bool CreateProcessAsAdmin(const wchar_t *path, const wchar_t *args, const wchar_t *workdir)
-{
-    wchar_t command_line[1024] = L"";
-    size_t n_path = wcslen(path);
-    size_t n_args = wcslen(args);
-    if ((n_path + n_args + 2) >= _countof(command_line))
-        return false;
-
-    wcscat_s(command_line, path);
-    wcscat_s(command_line, L" ");
-    wcscat_s(command_line, args);
-
-    SHELLEXECUTEINFOW ExecInfo = {0};
-    ExecInfo.cbSize = sizeof(ExecInfo);
-    ExecInfo.fMask = SEE_MASK_NOASYNC;
-    ExecInfo.lpVerb = L"runas";
-    ExecInfo.lpFile = path;
-    ExecInfo.lpParameters = args;
-    ExecInfo.lpDirectory = workdir;
-    ExecInfo.nShow = SW_SHOWNORMAL;
-
-    if (!ShellExecuteExW(&ExecInfo)) {
-        fprintf(stderr, "ShellExecuteExA failed: %lu\n", GetLastError());
-        return false;
-    }
-
-    return true;
-}
-
-bool RestartAsAdmin(const wchar_t *args)
-{
-    wchar_t path[1024];
-    if (!GetModuleFileNameW(GetModuleHandleW(nullptr), path, _countof(path))) {
-        fprintf(stderr, "GetModuleFileNameW failed: %lu\n", GetLastError());
-        return false;
-    }
-
-    wchar_t workdir[1024];
-    if (!GetCurrentDirectoryW(_countof(workdir), workdir)) {
-        fprintf(stderr, "GetCurrentDirectoryW failed: %lu\n", GetLastError());
-        return false;
-    }
-
-    return CreateProcessAsAdmin(path, args, workdir);
-}
-
-bool EnableDebugPrivilege()
-{
-    HANDLE token;
-    const DWORD flags = TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY;
-    if (!OpenProcessToken(GetCurrentProcess(), flags, &token)) {
-        fprintf(stderr, "OpenProcessToken failed: %lu\n", GetLastError());
-        return false;
-    }
-
-    LUID luid;
-    if (!LookupPrivilegeValueW(nullptr, L"SeDebugPrivilege", &luid)) {
-        CloseHandle(token);
-        fprintf(stderr, "LookupPrivilegeValue failed: %lu\n", GetLastError());
-        return false;
-    }
-
-    TOKEN_PRIVILEGES tp;
-    tp.PrivilegeCount = 1;
-    tp.Privileges[0].Luid = luid;
-    tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
-
-    if (!AdjustTokenPrivileges(token, FALSE, &tp, sizeof(tp), nullptr, nullptr)) {
-        CloseHandle(token);
-        fprintf(stderr, "AdjustTokenPrivileges failed: %lu\n", GetLastError());
-        return false;   
-    }
-
-    return true;
 }
