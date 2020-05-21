@@ -262,7 +262,7 @@ void InventoryManager::Identify(Item* item, Item* kit) {
 		return;
 	if (item->GetIsIdentified() || !kit->IsIdentificationKit())
 		return;
-	if(!(pending_salvage_item.set(item) && pending_salvage_kit.set(kit)))
+	if(!(pending_identify_item.set(item) && pending_identify_kit.set(kit)))
 		return;
 	GW::CtoS::SendPacket(0xC, GAME_CMSG_ITEM_IDENTIFY, pending_identify_kit.item_id, pending_identify_item.item_id);
 	pending_identify_at = (clock() / CLOCKS_PER_SEC);
