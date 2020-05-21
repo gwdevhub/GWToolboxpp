@@ -49,6 +49,25 @@ void ParseRegSettings()
     RegCloseKey(SettingsKey);
 }
 
+static void WriteRegSettings()
+{
+    HKEY SettingsKey;
+    if (!OpenSettingsKey(&SettingsKey)) {
+        fprintf(stderr, "OpenUninstallKey failed\n");
+        return;
+    }
+
+    if (RegWriteDWORD(SettingsKey, L"asadmin", settings.asadmin)) {
+        fprintf(stderr, "Failed to write 'asadmin' registry key\n");
+    }
+
+    if (RegWriteDWORD(SettingsKey, L"noupdate", settings.noupdate)) {
+        fprintf(stderr, "Failed to write 'noupdate' registry key\n");
+    }
+
+    RegCloseKey(SettingsKey);
+}
+
 static bool IsOneOrZeroOf3(bool b1, bool b2, bool b3)
 {
     int count = 0;
@@ -261,4 +280,105 @@ bool EnableDebugPrivilege()
     }
 
     return true;
+}
+
+static void SetCheckbox(HWND hWnd, bool Checked)
+{
+    if (Checked) {
+        SendMessageW(hWnd, BM_SETCHECK, BST_CHECKED, 0);
+    } else {
+        SendMessageW(hWnd, BM_SETCHECK, BST_UNCHECKED, 0);
+    }
+}
+
+static bool ToggleCheckbox(HWND hWnd)
+{
+    LRESULT State = SendMessageW(hWnd, BM_GETCHECK, 0, 0);
+    bool Checked = (State == BST_CHECKED);
+    SetCheckbox(hWnd, !Checked);
+    return !Checked;
+}
+
+SettingsWindow::SettingsWindow()
+{
+}
+
+SettingsWindow::~SettingsWindow()
+{
+}
+
+bool SettingsWindow::Create()
+{
+    SetWindowName(L"GWToolbox - Settings");
+    SetWindowDimension(305, 135);
+    return Window::Create();
+}
+
+LRESULT SettingsWindow::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    switch (uMsg)
+    {
+    case WM_CREATE:
+        OnCreate(hWnd, uMsg, wParam, lParam);
+        break;
+
+    case WM_CLOSE:
+        DestroyWindow(hWnd);
+        break;
+
+    case WM_DESTROY:
+        SignalStop();
+        break;
+
+    case WM_COMMAND:
+        OnCommand(reinterpret_cast<HWND>(lParam), LOWORD(wParam), HIWORD(wParam));
+        break;
+    }
+
+    return DefWindowProcW(hWnd, uMsg, wParam, lParam);
+}
+
+void SettingsWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    m_hNoUpdate = CreateWindowW(
+        WC_BUTTONW,
+        L"Never check for update",
+        WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_CHECKBOX,
+        10,
+        10,
+        150,
+        15,
+        hWnd,
+        nullptr,
+        m_hInstance,
+        nullptr);
+    SendMessageW(m_hNoUpdate, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
+
+    m_hStartAsAdmin = CreateWindowW(
+        WC_BUTTONW,
+        L"Always start as admin",
+        WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_CHECKBOX,
+        10,
+        30,
+        150,
+        15,
+        hWnd,
+        nullptr,
+        m_hInstance,
+        nullptr);
+    SendMessageW(m_hStartAsAdmin, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
+
+    SetCheckbox(m_hNoUpdate, settings.noupdate);
+    SetCheckbox(m_hStartAsAdmin, settings.asadmin);
+}
+
+void SettingsWindow::OnCommand(HWND hWnd, LONG ControlId, LONG NotificateCode)
+{
+    if (hWnd == m_hNoUpdate) {
+        settings.noupdate = ToggleCheckbox(m_hNoUpdate);
+        WriteRegSettings();
+    } else if (hWnd == m_hStartAsAdmin) {
+        settings.asadmin = ToggleCheckbox(m_hStartAsAdmin);
+        WriteRegSettings();
+    }
 }

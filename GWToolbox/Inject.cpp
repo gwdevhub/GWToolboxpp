@@ -112,7 +112,6 @@ bool InjectWindow::Create()
 {
     SetWindowName(L"GWToolbox - Launch");
     SetWindowDimension(305, 135);
-
     return Window::Create();
 }
 
@@ -234,53 +233,6 @@ void InjectWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         m_hInstance,
         nullptr);
     SendMessageW(m_hSettings, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
-
-#if 0
-    L"Unable to retrieve all necessary information for some process"
-    L"Some processes couldn't be listed" -> restart as admin
-
-    HWND hCheckUpdate = CreateWindowW(
-        WC_BUTTONW,
-        L"Check for update",
-        WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_DEFPUSHBUTTON,
-        10,
-        65,
-        100,
-        25,
-        hWnd,
-        nullptr,
-        inject->m_hInstance,
-        nullptr);
-    SendMessageW(hCheckUpdate, WM_SETFONT, (WPARAM)inject->m_hFont, MAKELPARAM(TRUE, 0));
-
-    HWND hSkipUpdate = CreateWindowW(
-        WC_BUTTONW,
-        L"Check for update",
-        WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_CHECKBOX,
-        15,
-        65,
-        150,
-        15,
-        hWnd,
-        nullptr,
-        inject->m_hInstance,
-        nullptr);
-    SendMessageW(hSkipUpdate, WM_SETFONT, (WPARAM)inject->m_hFont, MAKELPARAM(TRUE, 0));
-
-    HWND hStartAsAdmin = CreateWindowW(
-        WC_BUTTONW,
-        L"Start as admin",
-        WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_CHECKBOX,
-        15,
-        85,
-        150,
-        15,
-        hWnd,
-        nullptr,
-        inject->m_hInstance,
-        nullptr);
-    SendMessageW(hStartAsAdmin, WM_SETFONT, (WPARAM)inject->m_hFont, MAKELPARAM(TRUE, 0));
-#endif
 }
 
 void InjectWindow::OnCommand(HWND hwnd, LONG control_id, LONG notification_code)
