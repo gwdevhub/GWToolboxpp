@@ -5,21 +5,35 @@
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
+static size_t GetGwProcessCount()
+{
+    std::vector<Process> processes;
+    GetProcesses(processes, L"Gw.exe", PROCESS_QUERY_LIMITED_INFORMATION);
+    GetProcessesFromWindowClass(processes, L"ArenaNet_Dx_Window_Class", PROCESS_QUERY_LIMITED_INFORMATION);
+    return processes.size();
+}
+
 InjectReply InjectWindow::AskInjectProcess(Process *target_process)
 {
     std::vector<Process> processes;
     GetProcesses(processes, L"Gw.exe");
     GetProcessesFromWindowClass(processes, L"ArenaNet_Dx_Window_Class");
 
+#if 0
+    size_t ProcessCount = GetGwProcessCount();
+    char buffer[64];
+    snprintf(buffer, 64, "ProcessCount: %zu", ProcessCount);
+    MessageBoxA(0, buffer, "Debug", 0);
+#endif
+
     if (processes.empty()) {
-        // MessageBoxW(0, L"Error: Guild Wars not running",  L"GWToolbox++", MB_ICONERROR);
+        fprintf(stderr, "Didn't find any potential process to inject GWToolbox\n");
         return InjectReply_NoProcess;
     }
 
     uintptr_t charname_rva;
     ProcessScanner scanner(&processes[0]);
     if (!scanner.FindPatternRva("\x8B\xF8\x6A\x03\x68\x0F\x00\x00\xC0\x8B\xCF\xE8", "xxxxxxxxxxxx", -0x42, &charname_rva)) {
-        // MessageBoxW(0, L"Error: Couldn't find charname rva", L"GWToolbox++", MB_ICONERROR);
         return InjectReply_PatternError;
     }
 
@@ -30,6 +44,12 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
 
     for (Process& process : processes) {
         ProcessModule module;
+
+        // @Remark:
+        // If "GWToolboxdll.dll" is already injected, we can't do it again.
+        if (process.GetModule(&module, L"GWToolboxdll.dll"))
+            continue;
+
         if (!process.GetModule(&module)) {
             fprintf(stderr, "Couldn't get module for process %u\n", process.GetProcessId());
             continue;
@@ -43,9 +63,15 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
         }
 
         wchar_t charname[32];
-        if (!process.Read(charname_ptr, &charname, sizeof(charname))) {
+        if (!process.Read(charname_ptr, charname, 40)) {
             fprintf(stderr, "Can't read the character name at address 0x%08X in process %u\n",
                 charname_ptr, process.GetProcessId());
+            continue;
+        }
+        charname[20] = 0;
+
+        if (charname[0] == 0) {
+            fprintf(stderr, "Character name in process %u is empty\n", process.GetProcessId());
             continue;
         }
 
@@ -57,10 +83,10 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
     processes.clear();
 
     // @Enhancement:
-    // Should we sort the "index_translation_table" according to the character names?
+    // Should we sort the "valid_processes" according to the character names?
 
     InjectWindow inject;
-    inject.Create(L"GWToolbox", charnames);
+    inject.Create(charnames);
 
     for (size_t i = 0; i < charnames.size(); i++)
     {
@@ -89,13 +115,13 @@ void InjectWindow::OnWindowCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 
     SetWindowLongPtrW(hWnd, GWLP_USERDATA, reinterpret_cast<LONG>(inject));
 
-    HICON hIcon = LoadIcon(inject->m_hInstance, MAKEINTRESOURCE(IDI_ICON1));
+    HICON hIcon = LoadIconW(inject->m_hInstance, MAKEINTRESOURCEW(IDI_ICON1));
     SendMessage(hWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
     SendMessage(hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
 
-    inject->m_hInjectButton = CreateWindowW(
-        L"BUTTON",
-        L"Inject",
+    inject->m_hLaunchButton = CreateWindowW(
+        WC_BUTTONW,
+        L"Launch",
         WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
         7,
         67,
@@ -107,7 +133,7 @@ void InjectWindow::OnWindowCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         nullptr);
 
     inject->m_hCharacters = CreateWindowW(
-        L"COMBOBOX",
+        WC_COMBOBOXW,
         L"",
         CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP | WS_VISIBLE | WS_CHILD,
         7,
@@ -119,36 +145,23 @@ void InjectWindow::OnWindowCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         inject->m_hInstance,
         nullptr);
 
-    SendMessageW(inject->m_hInjectButton, WM_SETFONT, (WPARAM)inject->m_hFont, MAKELPARAM(TRUE, 0));
+    SendMessageW(inject->m_hLaunchButton, WM_SETFONT, (WPARAM)inject->m_hFont, MAKELPARAM(TRUE, 0));
     SendMessageW(inject->m_hCharacters, WM_SETFONT, (WPARAM)inject->m_hFont, MAKELPARAM(TRUE, 0));
 }
 
 LRESULT CALLBACK InjectWindow::MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     LONG_PTR ud = GetWindowLongPtrW(hWnd, GWLP_USERDATA);
-    InjectWindow *inject = reinterpret_cast<InjectWindow *>(ud);
+    InjectWindow *window = reinterpret_cast<InjectWindow *>(ud);
 
     switch (uMsg)
     {
-    case WM_CLOSE:
-        DestroyWindow(hWnd);
-        break;
-
-    case WM_DESTROY:
-        SetEvent(inject->m_hEvent);
-        break;
-
     case WM_CREATE:
         InjectWindow::OnWindowCreate(hWnd, uMsg, wParam, lParam);
         break;
 
-    case WM_COMMAND:
-        inject->OnEvent(reinterpret_cast<HWND>(lParam), LOWORD(wParam), HIWORD(wParam));
-        break;
-
-    case WM_KEYUP:
-        if (wParam == VK_ESCAPE)
-            DestroyWindow(hWnd);
+    default:
+        return window->WndProc(hWnd, uMsg, wParam, lParam);
     }
 
     return DefWindowProcW(hWnd, uMsg, wParam, lParam);
@@ -157,7 +170,7 @@ LRESULT CALLBACK InjectWindow::MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, 
 InjectWindow::InjectWindow()
     : m_hWnd(nullptr)
     , m_hCharacters(nullptr)
-    , m_hInjectButton(nullptr)
+    , m_hLaunchButton(nullptr)
     , m_hFont(nullptr)
     , m_hEvent(nullptr)
     , m_hInstance(nullptr)
@@ -173,7 +186,7 @@ InjectWindow::~InjectWindow()
         DeleteObject(m_hFont);
 }
 
-bool InjectWindow::Create(const wchar_t *title, std::vector<std::wstring>& names)
+bool InjectWindow::Create(std::vector<std::wstring>& names)
 {
     // @Enhancement:
     // Should we reset the class here? (e.g. m_Selected)
@@ -217,7 +230,7 @@ bool InjectWindow::Create(const wchar_t *title, std::vector<std::wstring>& names
 
     m_hWnd = CreateWindowW(
         wc.lpszClassName,
-        title,
+        L"Inject",
         WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
         CW_USEDEFAULT, // x
         CW_USEDEFAULT, // y
@@ -278,10 +291,35 @@ bool InjectWindow::GetSelected(int *index)
     }
 }
 
+LRESULT InjectWindow::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    switch (uMsg)
+    {
+    case WM_CLOSE:
+        DestroyWindow(hWnd);
+        break;
+
+    case WM_DESTROY:
+        SetEvent(m_hEvent);
+        break;
+
+    case WM_COMMAND:
+        OnEvent(reinterpret_cast<HWND>(lParam), LOWORD(wParam), HIWORD(wParam));
+        break;
+
+    case WM_KEYUP:
+        if (wParam == VK_ESCAPE)
+            DestroyWindow(hWnd);
+        break;
+    }
+
+    return DefWindowProcW(hWnd, uMsg, wParam, lParam);
+}
+
 void InjectWindow::OnEvent(HWND hwnd, LONG control_id, LONG notification_code)
 {
     // printf("hwnd:%p, control_id:%ld, notification_code:%lu\n", hwnd, control_id, notification_code);
-    if ((hwnd == m_hInjectButton) && (control_id == 0)) {
+    if ((hwnd == m_hLaunchButton) && (control_id == 0)) {
         m_Selected = SendMessageW(m_hCharacters, CB_GETCURSEL, 0, 0);
         printf("Pressed: %d\n", m_Selected);
         DestroyWindow(m_hWnd);

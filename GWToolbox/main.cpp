@@ -52,6 +52,9 @@ int main(void)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 #endif
 {
+    DownloadWindow::DownloadAllFiles();
+    return 0;
+
     ParseRegOptions();
     ParseCommandLine();
 
@@ -136,9 +139,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
         }
 
     } else if (!options.noupdate) {
-        if (!DownloadFiles()) {
+        if (!DownloadWindow::DownloadAllFiles()) {
             ShowError(L"Failed to download GWToolbox DLL");
-            fprintf(stderr, "DownloadFiles failed\n");
+            fprintf(stderr, "DownloadWindow::DownloadAllFiles failed\n");
             return 1;
         }
     }

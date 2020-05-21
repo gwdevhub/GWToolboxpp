@@ -11,6 +11,7 @@ ProcessModule::ProcessModule(ProcessModule&& other)
 
 Process::Process()
     : m_hProcess(nullptr)
+    , m_Rights(0)
 {
 }
 
@@ -22,6 +23,7 @@ Process::Process(uint32_t pid, DWORD rights)
 
 Process::Process(Process&& other)
     : m_hProcess(other.m_hProcess)
+    , m_Rights(other.m_Rights)
 {
     other.m_hProcess = nullptr;
 }
@@ -46,10 +48,6 @@ bool Process::IsOpen()
 
 bool Process::Open(uint32_t pid, DWORD rights)
 {
-    assert(rights & PROCESS_VM_READ);
-    assert(rights & PROCESS_QUERY_INFORMATION);
-    assert(rights & PROCESS_QUERY_LIMITED_INFORMATION);
-
     Close();
     m_hProcess = OpenProcess(rights, FALSE, pid);
     if (m_hProcess == nullptr) {
@@ -57,6 +55,7 @@ bool Process::Open(uint32_t pid, DWORD rights)
         return false;
     }
 
+    m_Rights = rights;
     return true;
 }
 
@@ -66,10 +65,13 @@ void Process::Close()
         CloseHandle(m_hProcess);
         m_hProcess = nullptr;
     }
+    m_Rights = 0;
 }
 
 bool Process::Read(uintptr_t address, void *buffer, size_t size)
 {
+    assert(m_Rights & PROCESS_VM_READ);
+
     SIZE_T NumberOfBytesRead;
     LPCVOID BaseAddress = reinterpret_cast<LPCVOID>(address);
     BOOL success = ReadProcessMemory(
@@ -89,6 +91,8 @@ bool Process::Read(uintptr_t address, void *buffer, size_t size)
 
 bool Process::Write(uintptr_t address, void *buffer, size_t size)
 {
+    assert(m_Rights & PROCESS_VM_WRITE);
+    
     SIZE_T NumberOfBytesWritten;
     LPVOID BaseAddress = reinterpret_cast<LPVOID>(address);
     BOOL success = WriteProcessMemory(
@@ -108,6 +112,8 @@ bool Process::Write(uintptr_t address, void *buffer, size_t size)
 
 bool Process::GetName(std::wstring& name)
 {
+    assert(m_Rights & (PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_QUERY_INFORMATION));
+
     std::wstring process_path;
     process_path.resize(1024);
     for (;;) {
@@ -148,6 +154,9 @@ bool Process::GetModule(ProcessModule *module)
 
 bool Process::GetModule(ProcessModule *module, const wchar_t *module_name)
 {
+    // Cleanup:
+    // Figure out which rights are needed and assert it.
+
     DWORD cbNeeded;
     if (!EnumProcessModules(m_hProcess, nullptr, 0, &cbNeeded)) {
         fprintf(stderr, "EnumProcessModules failed: %lu\n", GetLastError());
@@ -162,7 +171,7 @@ bool Process::GetModule(ProcessModule *module, const wchar_t *module_name)
 
     for (HMODULE hModule : handles) {
         wchar_t name[512];
-        if (!GetModuleBaseNameW(m_hProcess, hModule, name, sizeof(name))) {
+        if (!GetModuleBaseNameW(m_hProcess, hModule, name, _countof(name))) {
             fprintf(stderr, "GetModuleBaseNameW failed: %lu\n", GetLastError());
             return false;
         }
@@ -173,8 +182,7 @@ bool Process::GetModule(ProcessModule *module, const wchar_t *module_name)
             return false;
         }
 
-        // @Cleanup: Replace by case insensitive compare
-        if (!wcscmp(name, module_name)) {
+        if (!_wcsicmp(name, module_name)) {
             module->base = reinterpret_cast<uintptr_t>(ModuleInfo.lpBaseOfDll);
             module->size = ModuleInfo.SizeOfImage;
             module->name = name;
@@ -187,6 +195,9 @@ bool Process::GetModule(ProcessModule *module, const wchar_t *module_name)
 
 bool Process::GetModules(std::vector<ProcessModule>& modules)
 {
+    // Cleanup:
+    // Figure out which rights are needed and assert it.
+
     DWORD cbNeeded;
     if (!EnumProcessModules(m_hProcess, nullptr, 0, &cbNeeded)) {
         fprintf(stderr, "EnumProcessModules failed: %lu\n", GetLastError());
@@ -224,6 +235,7 @@ bool Process::GetModules(std::vector<ProcessModule>& modules)
 
 uint32_t Process::GetProcessId()
 {
+    assert(m_Rights & (PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_QUERY_INFORMATION));
     return ::GetProcessId(m_hProcess);
 }
 
@@ -255,8 +267,7 @@ bool GetProcesses(std::vector<Process>& processes, const wchar_t *name, DWORD ri
         std::wstring pname;
         if (!(proc.IsOpen() && proc.GetName(pname)))
             continue;
-        // @Cleanup: Replace by case insensitive compare
-        if (pname == name)
+        if (_wcsicmp(pname.c_str(), name) == 0)
             processes.push_back(std::move(proc));
     }
 

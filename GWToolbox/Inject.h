@@ -25,19 +25,20 @@ public:
     InjectWindow(InjectWindow&&) = delete;
     ~InjectWindow();
 
-    bool Create(const wchar_t *title, std::vector<std::wstring>& names);
+    bool Create(std::vector<std::wstring>& names);
     bool WaitMessages();
 
     // Returns false if no options were selected, typically when the window was closed.
     bool GetSelected(int *index);
 
 private:
+    LRESULT WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
     void OnEvent(HWND hwnd, LONG control_id, LONG notification_code);
 
 private:
     HWND m_hWnd;
     HWND m_hCharacters;
-    HWND m_hInjectButton;
+    HWND m_hLaunchButton;
     HFONT m_hFont;
     HANDLE m_hEvent;
     HINSTANCE m_hInstance;

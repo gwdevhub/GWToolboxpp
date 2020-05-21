@@ -265,8 +265,8 @@ bool Install(bool quiet)
         return false;        
     }
 
-    if (!DownloadFiles()) {
-        fprintf(stderr, "DownloadFiles failed\n");
+    if (!DownloadWindow::DownloadAllFiles()) {
+        fprintf(stderr, "DownloadWindow::DownloadAllFiles failed\n");
         return false;
     }
 

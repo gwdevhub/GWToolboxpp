@@ -41,6 +41,7 @@ public:
     uint32_t GetProcessId();
 private:
     HANDLE m_hProcess;
+    DWORD m_Rights;
 };
 
 bool GetProcesses(std::vector<Process>& processes, const wchar_t *name, DWORD rights = PROCESS_ALL_ACCESS);
