@@ -300,6 +300,8 @@ static bool ToggleCheckbox(HWND hWnd)
 }
 
 SettingsWindow::SettingsWindow()
+    : m_hNoUpdate(nullptr)
+    , m_hStartAsAdmin(nullptr)
 {
 }
 
