@@ -5,6 +5,12 @@
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
+// @Cleanup: @Remark:
+// According to Microsoft documentation for BCM_SETSHIELD:
+// > An application must be manifested to use comctl32.dll
+// > version 6 to gain this functionality.
+// If we don't do that, the shield icon doesn't show up, but is there
+// a nice way to add that? (i.e. not through a pragma)
 #pragma comment(linker, "\"/manifestdependency:type='win32' \
 name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
 processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
@@ -33,11 +39,6 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
 
     for (Process& process : processes) {
         ProcessModule module;
-
-        // @Remark:
-        // If "GWToolboxdll.dll" is already injected, we can't do it again.
-        // if (process.GetModule(&module, L"GWToolboxdll.dll"))
-        //     continue;
 
         if (!process.GetModule(&module)) {
             fprintf(stderr, "Couldn't get module for process %u\n", process.GetProcessId());
@@ -71,16 +72,12 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
 
     processes.clear();
 
-    // @Enhancement:
-    // Should we sort the "valid_processes" according to the character names?
-
     InjectWindow inject;
     inject.Create(charnames);
 
     for (size_t i = 0; i < charnames.size(); i++)
     {
         const wchar_t *name = charnames[i].c_str();
-        // Add string to combobox.
         SendMessageW(inject.m_hCharacters, CB_ADDSTRING, 0, (LPARAM)name);
     }
     SendMessageW(inject.m_hCharacters, CB_SETCURSEL, 0, 0);
@@ -150,26 +147,25 @@ void InjectWindow::OnWindowCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         nullptr);
     SendMessageW(inject->m_hLaunchButton, WM_SETFONT, (WPARAM)inject->m_hFont, MAKELPARAM(TRUE, 0));
 
-    // @Cleanup:
-    // Hide it if already admin
-    inject->m_hRestartAsAdmin = CreateWindowW(
-        WC_BUTTONW,
-        L"Can't find your character?",
-        WS_VISIBLE | WS_CHILD | WS_TABSTOP,
-        10,
-        65,
-        165,
-        25,
-        hWnd,
-        nullptr,
-        inject->m_hInstance,
-        nullptr);
-    SendMessageW(inject->m_hRestartAsAdmin, WM_SETFONT, (WPARAM)inject->m_hFont, MAKELPARAM(TRUE, 0));
-    Button_SetElevationRequiredState(inject->m_hRestartAsAdmin, TRUE);
+    if (!IsRunningAsAdmin())
+    {
+        inject->m_hRestartAsAdmin = CreateWindowW(
+            WC_BUTTONW,
+            L"Can't find your character?",
+            WS_VISIBLE | WS_CHILD | WS_TABSTOP,
+            10,
+            65,
+            165,
+            25,
+            hWnd,
+            nullptr,
+            inject->m_hInstance,
+            nullptr);
+        SendMessageW(inject->m_hRestartAsAdmin, WM_SETFONT, (WPARAM)inject->m_hFont, MAKELPARAM(TRUE, 0));
+        Button_SetElevationRequiredState(inject->m_hRestartAsAdmin, TRUE);
+    }
 
-    // @Cleanup:
-    // Hide it if already admin
-    HWND hSettings = CreateWindowW(
+    inject->m_hSettings = CreateWindowW(
         WC_BUTTONW,
         L"Settings...",
         WS_VISIBLE | WS_CHILD | WS_TABSTOP,
@@ -181,7 +177,7 @@ void InjectWindow::OnWindowCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         nullptr,
         inject->m_hInstance,
         nullptr);
-    SendMessageW(hSettings, WM_SETFONT, (WPARAM)inject->m_hFont, MAKELPARAM(TRUE, 0));
+    SendMessageW(inject->m_hSettings, WM_SETFONT, (WPARAM)inject->m_hFont, MAKELPARAM(TRUE, 0));
 
 #if 0
     L"Unable to retrieve all necessary information for some process"
@@ -254,6 +250,7 @@ InjectWindow::InjectWindow()
     , m_hCharacters(nullptr)
     , m_hLaunchButton(nullptr)
     , m_hRestartAsAdmin(nullptr)
+    , m_hSettings(nullptr)
     , m_hFont(nullptr)
     , m_hEvent(nullptr)
     , m_hInstance(nullptr)

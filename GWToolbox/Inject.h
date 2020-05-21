@@ -40,6 +40,7 @@ private:
     HWND m_hCharacters;
     HWND m_hLaunchButton;
     HWND m_hRestartAsAdmin;
+    HWND m_hSettings;
     HFONT m_hFont;
     HANDLE m_hEvent;
     HINSTANCE m_hInstance;
