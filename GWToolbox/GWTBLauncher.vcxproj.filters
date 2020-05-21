@@ -11,6 +11,7 @@
     <ClCompile Include="Str.cpp" />
     <ClCompile Include="Registry.cpp" />
     <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="Window.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Process.h" />
@@ -25,6 +26,7 @@
     </ClInclude>
     <ClInclude Include="Registry.h" />
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="Window.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Ressources">

@@ -206,148 +206,37 @@ bool DownloadWindow::DownloadAllFiles()
     return true;
 }
 
-void DownloadWindow::OnWindowCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-    LPCREATESTRUCTW param = reinterpret_cast<LPCREATESTRUCTW>(lParam);
-    DownloadWindow *window = static_cast<DownloadWindow *>(param->lpCreateParams);
-
-    SetWindowLongPtrW(hWnd, GWLP_USERDATA, reinterpret_cast<LONG>(window));
-
-    window->m_hProgressBar = CreateWindowW(
-        PROGRESS_CLASSW,
-        L"Inject",
-        WS_VISIBLE | WS_CHILD,
-        5,
-        44,
-        475,
-        12,
-        hWnd,
-        nullptr,
-        window->m_hInstance,
-        nullptr);
-
-    SendMessageW(window->m_hProgressBar, PBM_SETRANGE, 0, MAKELPARAM(0, 100));
-    SendMessageW(window->m_hProgressBar, PBM_SETPOS, 0, 0);
-}
-
-LRESULT CALLBACK DownloadWindow::MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-    LONG_PTR ud = GetWindowLongPtrW(hWnd, GWLP_USERDATA);
-    DownloadWindow *window = reinterpret_cast<DownloadWindow *>(ud);
-
-    switch (uMsg)
-    {
-    case WM_CREATE:
-        DownloadWindow::OnWindowCreate(hWnd, uMsg, wParam, lParam);
-        break;
-
-    default:
-        return window->WndProc(hWnd, uMsg, wParam, lParam);
-    }
-
-    return DefWindowProcW(hWnd, uMsg, wParam, lParam);
-}
-
 DownloadWindow::DownloadWindow()
-    : m_hWnd(nullptr)
-    , m_hEvent(nullptr)
-    , m_hInstance(nullptr)
+    : m_hProgressBar(nullptr)
 {
 }
 
 DownloadWindow::~DownloadWindow()
 {
-    if (m_hEvent)
-        CloseHandle(m_hEvent);
 }
 
 bool DownloadWindow::Create()
 {
-    m_hInstance = GetModuleHandleW(nullptr);
-
-    m_hEvent = CreateEventW(0, FALSE, FALSE, nullptr);
-    if (m_hEvent == nullptr)
-    {
-        fprintf(stderr, "CreateEventW failed (%lu)\n", GetLastError());
-        return false;
-    }
-
-    WNDCLASSW wc = {0};
-    // wc.style = CS_HREDRAW | CS_VREDRAW;
-    wc.lpfnWndProc = MainWndProc;
-    wc.hInstance = m_hInstance;
-    wc.hbrBackground = GetSysColorBrush(COLOR_3DFACE);
-    wc.lpszClassName = L"GWToolbox-Download-Window-Class";
-
-    if (!RegisterClassW(&wc))
-    {
-        fprintf(stderr, "RegisterClassW failed (%lu)\n", GetLastError());
-        return false;
-    }
-
-    m_hWnd = CreateWindowW(
-        wc.lpszClassName,
-        L"Download",
-        WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
-        CW_USEDEFAULT, // x
-        CW_USEDEFAULT, // y
-        500, // width
-        100, // height
-        nullptr,
-        nullptr,
-        m_hInstance,
-        this);
-
-    if (m_hWnd == nullptr)
-    {
-        fprintf(stderr, "CreateWindowW failed (%lu)\n", GetLastError());
-        return false;
-    }
-
-    return true;
-}
-
-bool DownloadWindow::WaitMessages()
-{
-    MSG msg;
-    for (;;)
-    {
-        DWORD dwRet = MsgWaitForMultipleObjects(
-            1,
-            &m_hEvent,
-            FALSE,
-            INFINITE,
-            QS_ALLINPUT);
-
-        if (dwRet == WAIT_OBJECT_0)
-            break;
-
-        if (dwRet == WAIT_FAILED)
-        {
-            fprintf(stderr, "MsgWaitForMultipleObjects failed (%lu)\n", GetLastError());
-            return false;
-        }
-
-        while (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE))
-        {
-            TranslateMessage(&msg);
-            DispatchMessageW(&msg);
-        }
-    }
-
-    return true;
+    // WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
+    SetWindowName(L"GWToolbox - Download");
+    SetWindowDimension(500, 100);
+    return Window::Create();
 }
 
 LRESULT DownloadWindow::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     switch (uMsg)
     {
+    case WM_CREATE:
+        OnCreate(hWnd, uMsg, wParam, lParam);
+        break;
+
     case WM_CLOSE:
         DestroyWindow(hWnd);
         break;
 
     case WM_DESTROY:
-        SetEvent(m_hEvent);
+        SignalStop();
         break;
 
     case WM_KEYUP:
@@ -359,4 +248,23 @@ LRESULT DownloadWindow::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
     }
 
     return DefWindowProcW(hWnd, uMsg, wParam, lParam);
+}
+
+void DownloadWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    m_hProgressBar = CreateWindowW(
+        PROGRESS_CLASSW,
+        L"Inject",
+        WS_VISIBLE | WS_CHILD,
+        5,
+        44,
+        475,
+        12,
+        hWnd,
+        nullptr,
+        m_hInstance,
+        nullptr);
+
+    SendMessageW(m_hProgressBar, PBM_SETRANGE, 0, MAKELPARAM(0, 100));
+    SendMessageW(m_hProgressBar, PBM_SETPOS, 0, 0);
 }

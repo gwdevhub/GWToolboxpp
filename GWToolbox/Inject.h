@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Process.h"
+#include "Window.h"
 
 enum InjectReply
 {
@@ -10,14 +11,10 @@ enum InjectReply
     InjectReply_PatternError,
 };
 
-class InjectWindow
+class InjectWindow : public Window
 {
 public:
     static InjectReply AskInjectProcess(Process *process);
-
-private:
-    static void OnWindowCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-    static LRESULT CALLBACK MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 public:
     InjectWindow();
@@ -25,25 +22,22 @@ public:
     InjectWindow(InjectWindow&&) = delete;
     ~InjectWindow();
 
-    bool Create(std::vector<std::wstring>& names);
-    bool WaitMessages();
+    bool Create();
 
     // Returns false if no options were selected, typically when the window was closed.
     bool GetSelected(int *index);
 
 private:
-    LRESULT WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-    void OnCommand(HWND hwnd, LONG control_id, LONG notification_code);
+    LRESULT WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override;
+
+    void OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+    void OnCommand(HWND hwnd, LONG ControlId, LONG NotificateCode);
 
 private:
-    HWND m_hWnd;
     HWND m_hCharacters;
     HWND m_hLaunchButton;
     HWND m_hRestartAsAdmin;
     HWND m_hSettings;
-    HFONT m_hFont;
-    HANDLE m_hEvent;
-    HINSTANCE m_hInstance;
 
     int m_Selected;
 };
