@@ -111,4 +111,5 @@ private:
 	GW::HookEntry InstanceLoadFile_Entry;
 	GW::HookEntry InstanceLoadInfo_Entry;
 	GW::HookEntry GameSrvTransfer_Entry;
+	GW::HookEntry UIMsg_Entry;
 };

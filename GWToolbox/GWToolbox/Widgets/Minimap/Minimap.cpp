@@ -89,7 +89,14 @@ void Minimap::Initialize() {
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry,
 	[this](GW::HookStatus *, GW::Packet::StoC::GameSrvTransfer *pak) -> void {
 		loading = true;
+		agent_renderer.auto_target_id = 0;
 	});
+	GW::UI::RegisterUIMessageCallback(&UIMsg_Entry, 
+	[this](GW::HookStatus *, uint32_t msgid, void* lParam, void*) -> void {
+		if (msgid != GW::UI::kAutoTargetAgent || !lParam)
+			return;
+		agent_renderer.auto_target_id = *(uint32_t*)lParam;
+		});
 
 	last_moved = TIMER_INIT();
 

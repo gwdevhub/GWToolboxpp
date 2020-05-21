@@ -21,6 +21,7 @@ public:
 
 	bool show_hidden_npcs = false;
 	bool boss_colors = true;
+	uint32_t auto_target_id = 0;
 
 private:
 	static const size_t shape_size = 4;
