@@ -243,6 +243,13 @@ void InjectWindow::OnCommand(HWND hwnd, LONG control_id, LONG notification_code)
     } else if ((hwnd == m_hRestartAsAdmin) && (control_id == STN_CLICKED)) {
         RestartAsAdminWithSameArgs();
     } else if ((hwnd == m_hSettings) && (control_id == STN_CLICKED)) {
+        SettingsWindow window;
+        window.Create();
+        // @Remark:
+        // This is kind of dumb, we block here, but it works, because the
+        // message dispatcher doesn't care about the object.
+        // We should improve that...
+        window.WaitMessages();
     }
 }
 
