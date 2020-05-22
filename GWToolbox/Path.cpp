@@ -58,7 +58,7 @@ bool PathGetAppDataDirectory(wchar_t *path, size_t length)
         path);
 
     if (FAILED(result)) {
-        fprintf(stderr, "SHGetFolderPathW failed (HRESULT:0x%X)\n", result);
+        fprintf(stderr, "SHGetFolderPathW failed (HRESULT:0x%lX)\n", result);
         return false;
     }
 

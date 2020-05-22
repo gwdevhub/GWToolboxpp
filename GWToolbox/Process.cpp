@@ -3,8 +3,8 @@
 #include "Process.h"
 
 ProcessModule::ProcessModule(ProcessModule&& other)
-    : size(other.size)
-    , base(other.base)
+    : base(other.base)
+    , size(other.size)
     , name(std::move(other.name))
 {
 }
@@ -276,6 +276,9 @@ bool GetProcesses(std::vector<Process>& processes, const wchar_t *name, DWORD ri
 
 bool GetProcessesFromWindowClass(std::vector<Process>& processes, const wchar_t *classname, DWORD rights)
 {
+    UNREFERENCED_PARAMETER(processes);
+    UNREFERENCED_PARAMETER(classname);
+    UNREFERENCED_PARAMETER(rights);
     // EnumWindows()
     return true;
 }

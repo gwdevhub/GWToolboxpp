@@ -1,6 +1,5 @@
 #include "stdafx.h"
 
-#include <json.hpp>
 using Json = nlohmann::json;
 
 #include "Download.h"
@@ -15,14 +14,14 @@ bool Download(std::string& content, const wchar_t *url)
     HRESULT result = URLOpenBlockingStreamW(NULL, url, &stream, 0, NULL);
 
     if (FAILED(result)) {
-        fprintf(stderr, "URLOpenBlockingStreamW failed (HRESULT: 0x%X)\n", result);
+        fprintf(stderr, "URLOpenBlockingStreamW failed (HRESULT: 0x%lX)\n", result);
         return false;
     }
 
     STATSTG stats;
     result = stream->Stat(&stats, STATFLAG_NONAME);
     if (FAILED(result)) {
-        fprintf(stderr, "IStream::Stat failed (HRESULT: 0x%X)\n", result);
+        fprintf(stderr, "IStream::Stat failed (HRESULT: 0x%lX)\n", result);
         stream->Release();
         return false;
     }
@@ -38,7 +37,7 @@ bool Download(std::string& content, const wchar_t *url)
     stream->Release();
 
     if (FAILED(result)) {
-        fprintf(stderr, "IStream::Read failed (HRESULT: 0x%X, Url: '%ls')\n", result, url);
+        fprintf(stderr, "IStream::Read failed (HRESULT: 0x%lX, Url: '%ls')\n", result, url);
         return false;
     }
 
@@ -57,7 +56,7 @@ bool Download(const wchar_t *path_to_file, const wchar_t *url)
         NULL);
 
     if (FAILED(result)) {
-        fprintf(stderr, "URLDownloadToFileW failed: hresult:0x%X\n", result);
+        fprintf(stderr, "URLDownloadToFileW failed: hresult:0x%lX\n", result);
         return false;
     }
 
@@ -83,7 +82,7 @@ static bool ParseRelease(std::string& json_text, Release *release)
     Json json;
     try {
         json = Json::parse(json_text.c_str());
-    } catch(...) {
+    } catch(Json::exception&) {
         fprintf(stderr, "Json::parse failed\n");
         return false;
     }
@@ -252,6 +251,10 @@ LRESULT DownloadWindow::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 
 void DownloadWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+    UNREFERENCED_PARAMETER(uMsg);
+    UNREFERENCED_PARAMETER(wParam);
+    UNREFERENCED_PARAMETER(lParam);
+
     m_hProgressBar = CreateWindowW(
         PROGRESS_CLASSW,
         L"Inject",

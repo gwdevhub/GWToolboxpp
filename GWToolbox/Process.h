@@ -7,6 +7,8 @@ public:
     ProcessModule(const ProcessModule&) = default;
     ProcessModule(ProcessModule&& other);
 
+    ProcessModule& operator=(const ProcessModule&) = default;
+
 public:
     uintptr_t base = 0;
     size_t size = 0;

@@ -32,7 +32,7 @@ static bool GetFileSize(const wchar_t *path, uint64_t *file_size)
 
     CloseHandle(hFile);
 
-    *file_size = FileSize.QuadPart;
+    *file_size = static_cast<uint64_t>(FileSize.QuadPart);
     return true;
 }
 

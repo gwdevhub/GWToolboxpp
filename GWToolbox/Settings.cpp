@@ -104,7 +104,12 @@ void ParseCommandLine()
                 PrintUsage(true);
             }
             // @Enhancement: Replace by proper 'ParseInt' that deal with errors
-            settings.pid = _wtoi(argv[i]);
+            int pid = _wtoi(argv[i]);
+            if (pid < 0) {
+                fprintf(stderr, "Process id must be a positive integer in the range [0, 4294967295]");
+                exit(0);
+            }
+            settings.pid = static_cast<uint32_t>(pid);
         } else if (wcscmp(arg, L"/asadmin") == 0) {
             settings.asadmin = true;
         } else if (wcscmp(arg, L"/noupdate") == 0) {
@@ -212,7 +217,6 @@ static LPWSTR ConsumeSpaces(LPWSTR Str)
             return Str;
         ++Str;
     }
-    return nullptr;
 }
 
 static LPWSTR ConsumeArg(LPWSTR CmdLine)
@@ -235,9 +239,6 @@ static LPWSTR ConsumeArg(LPWSTR CmdLine)
 
         ++CmdLine;
     }
-
-    assert(!"We should never reach here");
-    return nullptr;
 }
 
 static wchar_t* GetCommandLineWithoutProgram()
@@ -342,6 +343,10 @@ LRESULT SettingsWindow::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 
 void SettingsWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+    UNREFERENCED_PARAMETER(uMsg);
+    UNREFERENCED_PARAMETER(wParam);
+    UNREFERENCED_PARAMETER(lParam);
+
     m_hNoUpdate = CreateWindowW(
         WC_BUTTONW,
         L"Never check for update",
@@ -376,6 +381,9 @@ void SettingsWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 
 void SettingsWindow::OnCommand(HWND hWnd, LONG ControlId, LONG NotificateCode)
 {
+    UNREFERENCED_PARAMETER(ControlId);
+    UNREFERENCED_PARAMETER(NotificateCode);
+
     if (hWnd == m_hNoUpdate) {
         settings.noupdate = ToggleCheckbox(m_hNoUpdate);
         WriteRegSettings();

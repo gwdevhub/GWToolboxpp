@@ -12,7 +12,10 @@ public:
 
 public:
     DownloadWindow();
+    DownloadWindow(const DownloadWindow&) = delete;
     ~DownloadWindow();
+
+    DownloadWindow& operator=(const DownloadWindow&) = delete;
 
     bool Create();
 

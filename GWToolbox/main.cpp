@@ -7,6 +7,10 @@
 #include "Process.h"
 #include "Settings.h"
 
+static void foo()
+{
+}
+
 static void ShowError(const wchar_t* message) {
     MessageBoxW(
         0,
@@ -18,7 +22,7 @@ static void ShowError(const wchar_t* message) {
 static bool RestartAsAdminForInjection(uint32_t TargetPid)
 {
     wchar_t args[64];
-    swprintf(args, 64, L"/pid %lu", TargetPid);
+    swprintf(args, 64, L"/pid %u", TargetPid);
     return RestartAsAdmin(args);
 }
 
@@ -69,7 +73,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
     if (settings.asadmin && !IsRunningAsAdmin()) {
         RestartAsAdminWithSameArgs();
-        return 0;
     }
 
     Process proc;

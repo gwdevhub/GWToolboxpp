@@ -20,7 +20,7 @@ bool OpenSettingsKey(PHKEY phkResult)
 
     if (status != ERROR_SUCCESS)
     {
-        fprintf(stderr, "RegCreateKeyExW failed: status:%d\n", status);
+        fprintf(stderr, "RegCreateKeyExW failed: status:0x%lX\n", status);
         phkResult = nullptr;
         return false;
     }
@@ -39,7 +39,7 @@ bool OpenUninstallKey(PHKEY phkResult)
 
     if (status != ERROR_SUCCESS)
     {
-        fprintf(stderr, "RegOpenKeyExW failed: status:%d\n", status);
+        fprintf(stderr, "RegOpenKeyExW failed: status:0x%lX\n", status);
         phkResult = nullptr;
         return false;
     }
@@ -65,7 +65,7 @@ bool CreateUninstallKey(PHKEY phkResult)
 
     if (status != ERROR_SUCCESS)
     {
-        fprintf(stderr, "RegCreateKeyExW failed: status:%d\n", status);
+        fprintf(stderr, "RegCreateKeyExW failed: status:0x%lX\n", status);
         phkResult = nullptr;
         return false;
     }
@@ -81,7 +81,7 @@ bool DeleteSettingsKey()
 
     if (status != ERROR_SUCCESS)
     {
-        fprintf(stderr, "RegDeleteKeyW failed: status:%d\n", status);
+        fprintf(stderr, "RegDeleteKeyW failed: status:0x%lX\n", status);
         return false;
     }
 
@@ -96,7 +96,7 @@ bool DeleteUninstallKey()
 
     if (status != ERROR_SUCCESS)
     {
-        fprintf(stderr, "RegDeleteKeyW failed: status:%d\n", status);
+        fprintf(stderr, "RegDeleteKeyW failed: status:0x%lX\n", status);
         return false;
     }
 
@@ -116,7 +116,7 @@ bool RegWriteStr(HKEY hKey, LPCWSTR KeyName, LPCWSTR Value)
 
     if (status != ERROR_SUCCESS)
     {
-        fprintf(stderr, "RegSetValueExW failed: status:%d\n", status);
+        fprintf(stderr, "RegSetValueExW failed: status:0x%lX\n", status);
         return false;
     }
 
@@ -135,7 +135,7 @@ bool RegWriteDWORD(HKEY hKey, LPCWSTR KeyName, DWORD Value)
 
     if (status != ERROR_SUCCESS)
     {
-        fprintf(stderr, "RegSetValueExW failed: status:%d\n", status);
+        fprintf(stderr, "RegSetValueExW failed: status:0x%lX\n", status);
         return false;
     }
 
@@ -158,7 +158,7 @@ bool RegReadStr(HKEY hKey, LPCWSTR KeyName, LPWSTR Buffer, size_t BufferLength)
 
     if (status != ERROR_SUCCESS)
     {
-        fprintf(stderr, "RegGetValueW failed: status:%d\n", status);
+        fprintf(stderr, "RegGetValueW failed: status:0x%lX\n", status);
         return false;
     }
 
@@ -180,7 +180,7 @@ bool RegReadDWORD(HKEY hKey, LPCWSTR KeyName, PDWORD dwDword)
 
     if (status != ERROR_SUCCESS)
     {
-        fprintf(stderr, "RegGetValueW failed: status:%d\n", status);
+        fprintf(stderr, "RegGetValueW failed: status:0x%lX\n", status);
         return false;
     }
 
@@ -236,7 +236,7 @@ bool RegWriteRelease(const char *buffer, size_t length)
     }
 
     for (size_t i = 0; i < length; i++)
-        Release[i] = buffer[i];
+        Release[i] = static_cast<wchar_t>(buffer[i]);
     Release[length] = 0;
 
     if (!OpenSettingsKey(&hKey)) {

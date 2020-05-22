@@ -9,7 +9,7 @@ public:
     Window();
     Window(const Window&) = delete;
     Window(Window&&) = delete;
-    ~Window();
+    virtual ~Window();
 
     Window& operator=(const Window&) = delete;
     Window& operator=(Window&&) = delete;

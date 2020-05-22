@@ -22,10 +22,12 @@ public:
     InjectWindow(InjectWindow&&) = delete;
     ~InjectWindow();
 
+    InjectWindow& operator=(const InjectWindow&) = delete;
+
     bool Create();
 
     // Returns false if no options were selected, typically when the window was closed.
-    bool GetSelected(int *index);
+    bool GetSelected(size_t *index);
 
 private:
     LRESULT WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override;

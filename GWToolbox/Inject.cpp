@@ -85,7 +85,7 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
 
     inject.WaitMessages();
 
-    int index;
+    size_t index;
     if (!inject.GetSelected(&index)) {
         fprintf(stderr, "No index selected\n");
         return InjectReply_Cancel;
@@ -115,10 +115,10 @@ bool InjectWindow::Create()
     return Window::Create();
 }
 
-bool InjectWindow::GetSelected(int *index)
+bool InjectWindow::GetSelected(size_t *index)
 {
     if (m_Selected >= 0) {
-        *index = m_Selected;
+        *index = static_cast<size_t>(m_Selected);
         return true;
     } else {
         return false;
@@ -160,6 +160,10 @@ LRESULT InjectWindow::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 
 void InjectWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+    UNREFERENCED_PARAMETER(uMsg);
+    UNREFERENCED_PARAMETER(wParam);
+    UNREFERENCED_PARAMETER(lParam);
+
     HWND hGroupBox = CreateWindowW(
         WC_BUTTONW,
         L"Select Character",
@@ -237,6 +241,8 @@ void InjectWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 void InjectWindow::OnCommand(HWND hwnd, LONG control_id, LONG notification_code)
 {
+    UNREFERENCED_PARAMETER(notification_code);
+
     if ((hwnd == m_hLaunchButton) && (control_id == STN_CLICKED)) {
         m_Selected = SendMessageW(m_hCharacters, CB_GETCURSEL, 0, 0);
         DestroyWindow(m_hWnd);

@@ -12,7 +12,7 @@ struct Settings
     bool reinstall;
     bool asadmin;
     bool noupdate;
-    int  pid;
+    uint32_t pid;
 };
 
 extern Settings settings;
@@ -35,6 +35,8 @@ public:
     SettingsWindow(const SettingsWindow&) = delete;
     SettingsWindow(SettingsWindow&&) = delete;
     ~SettingsWindow();
+
+    SettingsWindow& operator=(const SettingsWindow&) = delete;
 
     bool Create();
 
