@@ -2,6 +2,7 @@
 
 #include <ToolboxModule.h>
 #include <ToolboxUIElement.h>
+#include "Timer.h"
 
 #include <GWCA/GameEntities/Agent.h>
 
@@ -27,7 +28,6 @@ public:
 	void Initialize() override;
 	void SignalTerminate() override;
 	bool CanTerminate() override;
-	void Update(float delta) override;
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
@@ -39,11 +39,14 @@ private:
 private:
 
 	struct PendingAddToParty {
-		PendingAddToParty(uint32_t _agent_id, uint32_t _allegiance_bits, uint32_t _player_number) : agent_id(_agent_id), allegiance_bits(_allegiance_bits), player_number(_player_number) {};
+		PendingAddToParty(uint32_t _agent_id, uint32_t _allegiance_bits, uint32_t _player_number) : agent_id(_agent_id), allegiance_bits(_allegiance_bits), player_number(_player_number) {
+			add_timer = TIMER_INIT();
+		};
+		clock_t add_timer;
 		uint32_t agent_id;
 		uint32_t player_number;
 		uint32_t allegiance_bits;
-		bool IsValidAgent() const;
+		GW::AgentLiving* GetAgent();
 	};
 	struct SpecialNPCToAdd {
 		SpecialNPCToAdd(const char* _alias, uint32_t _model_id, GW::Constants::MapID _map_id) : model_id(_model_id), map_id(_map_id), alias(_alias) {};
@@ -56,6 +59,8 @@ private:
 	};
 
 	std::vector<uint32_t> allies_added_to_party;
+	std::vector<PendingAddToParty> pending_add;
+	std::queue<uint32_t> pending_remove;
 
 	void AddSpecialNPC(SpecialNPCToAdd npc) {
 		SpecialNPCToAdd* new_npc = new SpecialNPCToAdd(npc);
@@ -103,11 +108,11 @@ private:
 	bool ShouldAddAgentToPartyWindow(GW::Agent* agent);
 	bool ShouldRemoveAgentFromPartyWindow(uint32_t agent_id);
 	void RemoveAllyActual(uint32_t agent_id);
-	void AddAllyActual(PendingAddToParty p);
+	void AddAllyActual(PendingAddToParty &p);
 
 	GW::HookEntry AgentState_Entry;
 	GW::HookEntry AgentRemove_Entry;
 	GW::HookEntry AgentAdd_Entry;
 	GW::HookEntry GameSrvTransfer_Entry;
-
+	GW::HookEntry GameThreadCallback_Entry;
 };

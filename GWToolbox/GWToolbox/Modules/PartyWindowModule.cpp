@@ -61,6 +61,23 @@ namespace {
 	}
 	static bool is_explorable = false;
 
+	static bool SetAgentName(const uint32_t agent_id, const wchar_t* name) {
+		GW::AgentLiving* a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
+		if (!a || !name) 
+			return false;
+		const wchar_t* current_name = GW::Agents::GetAgentEncName(a);
+		if (!current_name) 
+			return false;
+		if (wcscmp(name, current_name) == 0)
+			return true;
+		GW::Packet::StoC::AgentName packet;
+		packet.header = GW::Packet::StoC::AgentName::STATIC_HEADER;
+		packet.agent_id = agent_id;
+		wcscpy(packet.name_enc, name);
+		GW::StoC::EmulatePacket(&packet);
+		return true;
+	}
+
 	static bool IsPvP() {
 		GW::AreaInfo* i = GW::Map::GetCurrentMapInfo();
 		if (!i) return false;
@@ -77,10 +94,6 @@ namespace {
 		return false;
 	}
 }
-
-void PartyWindowModule::Update(float delta) {
-
-}
 void PartyWindowModule::Initialize() {
 	ToolboxModule::Initialize();
 	// Remove certain NPCs from party window when dead
@@ -89,25 +102,30 @@ void PartyWindowModule::Initialize() {
 			return; // Not dead.
 		if (std::find(allies_added_to_party.begin(), allies_added_to_party.end(), pak->agent_id) == allies_added_to_party.end())
 			return; // Not added via toolbox
-		RemoveAllyActual(pak->agent_id);
+		pending_remove.push(pak->agent_id);
 		});
 	// Remove certain NPCs from party window when despawned
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentRemove>(&AgentRemove_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::AgentRemove* pak) -> void {
 		if (std::find(allies_added_to_party.begin(), allies_added_to_party.end(), pak->agent_id) == allies_added_to_party.end())
 			return; // Not added via toolbox
-		RemoveAllyActual(pak->agent_id);
+		pending_remove.push(pak->agent_id);
 		});
 	// Add certain NPCs to party window when spawned
 	GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::AgentAdd>(&AgentAdd_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::AgentAdd* pak) -> void {
 		if (!add_npcs_to_party_window)
 			return;
+		if (pak->type != 1)
+			return; // Not a living agent.
 		if (!ShouldAddAgentToPartyWindow(pak->agent_type))
 			return;
-		AddAllyActual({ pak->agent_id, pak->allegiance_bits, pak->agent_type ^ 0x20000000 });
+		pending_add.push_back({ pak->agent_id, pak->allegiance_bits, pak->agent_type ^ 0x20000000 });
 		});
 	// Flash/focus window on zoning (and a bit of housekeeping)
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&GameSrvTransfer_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::InstanceLoadInfo* pak) -> void {
 		allies_added_to_party.clear();
+		while (pending_remove.size())
+			pending_remove.pop();
+		pending_add.clear();
 		is_explorable = pak->is_explorable;
 		});
 	// Player numbers in party window
@@ -115,6 +133,19 @@ void PartyWindowModule::Initialize() {
 		if (!add_player_numbers_to_party_window || !is_explorable || ::IsPvP())
 			return;
 		SetPlayerNumber(pak->player_name, pak->player_number);
+		});
+	GW::GameThread::RegisterGameThreadCallback(&GameThreadCallback_Entry, [&](GW::HookStatus*) {
+		while (pending_remove.size()) {
+			RemoveAllyActual(pending_remove.front());
+			pending_remove.pop();
+		}
+		for (size_t i = 0; i < pending_add.size();i++) {
+			if (TIMER_DIFF(pending_add[i].add_timer) < 100)
+				continue;
+			AddAllyActual(pending_add[i]);
+			pending_add.erase(pending_add.begin() + i);
+			break; // Continue next frame
+		}
 		});
 }
 void PartyWindowModule::CheckMap() {
@@ -124,40 +155,30 @@ void PartyWindowModule::CheckMap() {
 		ClearAddedAllies();
 		return;
 	}
-	GW::AgentArray agents = GW::Agents::GetAgentArray();
+	GW::AgentArray &agents = GW::Agents::GetAgentArray();
 	if (!agents.valid())
 		return;
-	std::vector<uint32_t> to_remove;
 	for (unsigned int i = 0; i < allies_added_to_party.size(); i++) {
 		if (allies_added_to_party[i] >= agents.size()) {
-			to_remove.push_back(allies_added_to_party[i]);
+			pending_remove.push(allies_added_to_party[i]);
 			continue;
 		}
 		GW::AgentLiving* a = agents[allies_added_to_party[i]] ? agents[allies_added_to_party[i]]->GetAsAgentLiving() : nullptr;
 		if (!a || !a->IsNPC()) {
-			to_remove.push_back(allies_added_to_party[i]);
+			pending_remove.push(allies_added_to_party[i]);
 			continue;
 		}
 		std::map<uint32_t, SpecialNPCToAdd*>::iterator it = user_defined_npcs_by_model_id.find(a->player_number);
 		if (it != user_defined_npcs_by_model_id.end())
 			continue;
-		to_remove.push_back(a->agent_id);
+		pending_remove.push(allies_added_to_party[i]);
 	}
-	std::vector<PendingAddToParty> to_add;
 	for (unsigned int i = 0; i < agents.size(); i++) {
 		GW::AgentLiving* a = agents[i] ? agents[i]->GetAsAgentLiving() : nullptr;
 		if (!ShouldAddAgentToPartyWindow(a))
 			continue;
-		to_add.push_back({ a->agent_id,0,a->player_number });
+		pending_add.push_back({ a->agent_id,0,a->player_number });
 	}
-	GW::GameThread::Enqueue([this,to_add, to_remove]() {
-		for (unsigned int i = 0; i < to_remove.size(); i++) {
-			RemoveAllyActual(to_remove[i]);
-		}
-		for (unsigned int i = 0; i < to_add.size(); i++) {
-			AddAllyActual(to_add[i]);
-		}
-	});
 }
 void PartyWindowModule::SignalTerminate() {
 	GW::StoC::RemoveCallback<GW::Packet::StoC::AgentRemove>(&AgentRemove_Entry);
@@ -170,56 +191,61 @@ bool PartyWindowModule::CanTerminate() {
 	return allies_added_to_party.empty();
 }
 void PartyWindowModule::RemoveAllyActual(uint32_t agent_id) {
+	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
+		goto leave;
 	GW::Packet::StoC::PartyRemoveAlly packet;
 	packet.header = GW::Packet::StoC::PartyRemoveAlly::STATIC_HEADER;
 	packet.agent_id = agent_id;
-	GW::Packet::StoC::AgentName packet2;
-	packet2.header = GW::Packet::StoC::AgentName::STATIC_HEADER;
-	packet2.agent_id = agent_id;
-	GW::Agent* a = GW::Agents::GetAgentByID(packet.agent_id);
-	if (a)
-		wcscpy(packet2.name_enc, GW::Agents::GetAgentEncName(a));
+
+	GW::AgentLiving* a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
+	float prev_hp = 0.0f;
+	wchar_t prev_name[8] = { 0 };
+	if (a) {
+		wcscpy(prev_name, GW::Agents::GetAgentEncName(a));
+		prev_hp = a->hp;
+	}
 	// 1. Remove NPC from window.
 	GW::StoC::EmulatePacket(&packet);
-	// 2. Re-set the NPC's name to what it was, otherwise it'll revert to the original NPC name.
-	if (packet2.name_enc && a && wcscmp(packet2.name_enc, GW::Agents::GetAgentEncName(a)) != 0)
-		GW::StoC::EmulatePacket(&packet2);
+	SetAgentName(agent_id, prev_name);
+leave:
 	std::vector<uint32_t>::iterator it = std::find(allies_added_to_party.begin(), allies_added_to_party.end(), agent_id);
 	if (it != allies_added_to_party.end())
 		allies_added_to_party.erase(it);
 }
-void PartyWindowModule::AddAllyActual(PendingAddToParty p) {
+void PartyWindowModule::AddAllyActual(PendingAddToParty &p) {
+	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
+		return;
+	GW::AgentLiving* a = p.GetAgent();
+	if (!a || a->GetIsDead() || a->GetIsDeadByTypeMap()) return;
+	float prev_hp = a->hp;
+	wchar_t prev_name[8] = { 0 };
+	wcscpy(prev_name, GW::Agents::GetAgentEncName(a));
+	prev_hp = a->hp;
 	GW::Packet::StoC::PartyAllyAdd packet;
+	GW::Packet::StoC::AgentName packet2;
+	
 	packet.header = GW::Packet::StoC::PartyAllyAdd::STATIC_HEADER;
 	packet.agent_id = p.agent_id;
 	packet.agent_type = p.player_number | 0x20000000;
-	packet.allegiance_bits = 1886151033;// p.allegiance_bits;// 1886151033  1852796515
+	packet.allegiance_bits = 1886151033;
 
-	GW::Packet::StoC::AgentName packet2;
 	packet2.header = GW::Packet::StoC::AgentName::STATIC_HEADER;
 	packet2.agent_id = p.agent_id;
-	GW::Agent* a = GW::Agents::GetAgentByID(packet.agent_id);
-	if (a)
-		wcscpy(packet2.name_enc, GW::Agents::GetAgentEncName(a));
+
 	// 1. Remove NPC from window.
 	GW::StoC::EmulatePacket(&packet);
-	// 2. Re-set the NPC's name to what it was, otherwise it'll revert to the original NPC name.
-	if (packet2.name_enc && a && wcscmp(packet2.name_enc, GW::Agents::GetAgentEncName(a)) != 0)
-		GW::StoC::EmulatePacket(&packet2);
+	SetAgentName(p.agent_id, prev_name);
+
 	allies_added_to_party.push_back(p.agent_id);
 }
 void PartyWindowModule::ClearAddedAllies() {
 	for (size_t i = 0; i < allies_added_to_party.size(); i++) {
-		uint32_t agent_id = allies_added_to_party[i];
-		GW::GameThread::Enqueue([agent_id,this]() {
-			RemoveAllyActual(agent_id);
-			});
+		pending_remove.push(allies_added_to_party[i]);
 	}
 }
 bool PartyWindowModule::ShouldRemoveAgentFromPartyWindow(uint32_t agent_id) {
-	GW::Agent* _a = GW::Agents::GetAgentByID(agent_id);
-	GW::AgentLiving* a = _a ? _a->GetAsAgentLiving() : nullptr;
-	if (!a || !(a->type_map & 0x20000))
+	GW::AgentLiving* a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
+	if (!a || !a->GetIsLivingType() || !(a->type_map & 0x20000))
 		return false; // Not in party window
 	for (size_t i = 0; i < allies_added_to_party.size(); i++) {
 		if (a->agent_id != allies_added_to_party[i])
@@ -270,17 +296,12 @@ bool PartyWindowModule::ShouldAddAgentToPartyWindow(GW::Agent* _a) {
 	GW::AgentLiving* a = _a ? _a->GetAsAgentLiving() : nullptr;
 	if (!a || !a->IsNPC())
 		return false;
-	//if (a->type_map & 0x20000)
-	//	return false; // Already in party window
-	uint32_t agent_type = (0x20000000 | a->player_number);
-	if (a->GetIsDead() || a->GetIsDeadByTypeMap())
+	if (a->GetIsDead() || a->GetIsDeadByTypeMap() || a->allegiance == 0x3)
 		return false; // Dont add dead NPCs.
-	for (size_t i = 0; i < allies_added_to_party.size(); i++) {
-		if (a->agent_id != allies_added_to_party[i])
-			continue;
-		return true;
-	}
-	return ShouldAddAgentToPartyWindow(agent_type);
+	std::vector<uint32_t>::iterator it = std::find(allies_added_to_party.begin(), allies_added_to_party.end(), a->agent_id);
+	if (it != allies_added_to_party.end())
+		return false;
+	return ShouldAddAgentToPartyWindow(0x20000000 | a->player_number);
 }
 void PartyWindowModule::DrawSettingInternal() {
 	ImGui::Checkbox("Add player numbers to party window", &add_player_numbers_to_party_window);
@@ -409,19 +430,14 @@ void PartyWindowModule::LoadSettings(CSimpleIni* ini) {
 	}
 	CheckMap();
 }
-bool PartyWindowModule::PendingAddToParty::IsValidAgent() const {
-	GW::Agent* _a = GW::Agents::GetAgentByID(agent_id);
-	GW::AgentLiving* a = _a ? _a->GetAsAgentLiving() : nullptr;
-	if (!a || a->player_number != player_number)
-		return false;
+GW::AgentLiving* PartyWindowModule::PendingAddToParty::GetAgent() {
+	GW::AgentLiving* a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
+	if (!a || !a->GetIsLivingType() || a->player_number != player_number || a->allegiance == 0x3)
+		return nullptr;
 	GW::NPC* npc = GW::Agents::GetNPCByID(player_number);
 	if (!npc)
-		return false;
-	if (a->allegiance == 0x3)
-		return false;
-	if (player_number != a->player_number)
-		return false;
-	return true;
+		return nullptr;
+	return a;
 }
 std::wstring* PartyWindowModule::SpecialNPCToAdd::GetMapName() {
 	if (decode_pending)
