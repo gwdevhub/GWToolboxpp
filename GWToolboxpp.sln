@@ -7,9 +7,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MinHook", "Dependencies\GWC
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GWCA", "Dependencies\GWCA\vc\GWCA.vcxproj", "{B3359F05-68CF-4E7F-B9D6-D106F6D48A38}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GWToolboxdll", "GWToolboxdll\GWToolbox.vcxproj", "{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GWToolboxdll", "GWToolboxdll\GWToolboxdll.vcxproj", "{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GWToolbox", "GWToolbox\GWTBLauncher.vcxproj", "{27689431-347E-448F-B71D-ED2E09279478}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GWToolbox", "GWToolbox\GWToolbox.vcxproj", "{27689431-347E-448F-B71D-ED2E09279478}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
