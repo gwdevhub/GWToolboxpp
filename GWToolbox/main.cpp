@@ -7,10 +7,6 @@
 #include "Process.h"
 #include "Settings.h"
 
-static void foo()
-{
-}
-
 static void ShowError(const wchar_t* message) {
     MessageBoxW(
         0,
