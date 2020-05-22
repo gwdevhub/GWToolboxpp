@@ -52,7 +52,7 @@ static bool InjectInstalledDllInProcess(Process *process)
     return true;
 }
 
-#if 0
+#ifdef GWTOOLBOX_DEBUG
 int main(void)
 #else
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
@@ -97,23 +97,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
             return 1;
         }
     }
-
-    // if not installed
-    //  if not "do you want to install GWToolbox"
-    //   quit
-    //  download toolbox
-    // else if version is outdated
-    //  if do you want to update the version
-    //   show changelog?
-    // Enumerate all processes
-    // if no processes found
-    //  GWToolbox can't find valid target process, restart as admin?
-    // if processes found
-    //  ask which one to inject in (If you don't see the process, restart as admin?)
-    //
-    // We have the process
-    // Enable debug privileges or ask to restart as admin
-    // Try to inject
 
     if (!IsInstalled()) {
         if (settings.quiet) {
