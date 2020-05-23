@@ -9,7 +9,7 @@
 #include "ToolboxWidget.h"
 
 class BondsWidget : public ToolboxWidget {
-	static const int MAX_BONDS = 15;
+	static const int MAX_BONDS = 16;
 	enum Bond {
 		BalthazarSpirit,
 		EssenceBond,
@@ -26,6 +26,11 @@ class BondsWidget : public ToolboxWidget {
 		Succor,
 		VitalBlessing,
 		WatchfulSpirit,
+		HeroicRefrain,
+		BurningRefrain,
+		MendingRefrain,
+		BladeturnRefrain,
+		HastyRefrain,
         None
 	};
 
@@ -58,6 +63,7 @@ private:
 
 	IDirect3DTexture9* textures[MAX_BONDS];
 	Color background = 0;
+	Color low_attribute_overlay = 0;
 
 	// settings
 	bool hide_in_outpost = false;

@@ -620,5 +620,21 @@
     <Image Include="..\resources\bonds\Holy_Veil.png">
       <Filter>Resources\bonds</Filter>
     </Image>
+    <Image Include="..\resources\bonds\Heroic_Refrain.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Bladeturn_Refrain.jpg" />
+    <Image Include="..\resources\bonds\Bladeturn_Refrain.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Burning_Refrain.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Hasty_Refrain.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Mending_Refrain.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
   </ItemGroup>
 </Project>

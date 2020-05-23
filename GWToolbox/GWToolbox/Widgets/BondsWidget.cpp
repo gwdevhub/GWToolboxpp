@@ -7,8 +7,12 @@
 
 #include <GWCA/Constants/Constants.h>
 
+#include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/WorldContext.h>
+
 #include <GWCA/GameContainers/GamePos.h>
 
+#include <GWCA/GameEntities/Attribute.h>
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Player.h>
@@ -46,7 +50,12 @@ void BondsWidget::Initialize() {
 	LoadBondTexture(&textures[StrengthOfHonor], L"Strength_of_Honor.jpg", IDB_Bond_StrengthOfHonor);
 	LoadBondTexture(&textures[Succor], L"Succor.jpg", IDB_Bond_Succor);
 	LoadBondTexture(&textures[VitalBlessing], L"Vital_Blessing.jpg", IDB_Bond_VitalBlessing);
-	LoadBondTexture(&textures[WatchfulSpirit], L"Watchful_Spirit.jpg", IDB_Bond_WatchfulSpirit);
+    LoadBondTexture(&textures[WatchfulSpirit], L"Watchful_Spirit.jpg", IDB_Bond_WatchfulSpirit);
+    LoadBondTexture(&textures[HeroicRefrain], L"Heroic_Refrain.png", IDB_Bond_HeroicRefrain);
+    LoadBondTexture(&textures[BurningRefrain], L"Burning_Refrain.png", IDB_Bond_BurningRefrain);
+    LoadBondTexture(&textures[MendingRefrain], L"Mending_Refrain.png", IDB_Bond_MendingRefrain);
+    LoadBondTexture(&textures[BladeturnRefrain], L"Bladeturn_Refrain.png", IDB_Bond_BladeturnRefrain);
+    LoadBondTexture(&textures[HastyRefrain], L"Hasty_Refrain.png", IDB_Bond_HastyRefrain);
 }
 
 void BondsWidget::Terminate() {
@@ -151,8 +160,8 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
             DWORD agent = buffs[i].target_agent_id;
             DWORD skill = buffs[i].skill_id;
             if (party_map.find(agent) == party_map.end()) continue; // bond target not in party
-            int y = party_map[agent];
             if (bond_map.find(skill) == bond_map.end()) continue; // bond with a skill not in skillbar 
+            int y = party_map[agent];
             int x = bond_map[skill];
             Bond bond = GetBondBySkillID(skill);
             ImVec2 tl = GetGridPos(x, y, true);
@@ -161,6 +170,33 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
             if (click_to_drop && ImGui::IsMouseHoveringRect(tl, br) && ImGui::IsMouseReleased(0)) {
                 GW::Effects::DropBuff(buffs[i].buff_id);
                 handled_click = true;
+            }
+        }
+
+        // Player and hero effects that aren't bonds
+        for (unsigned int i = 0; i < effects.size(); ++i) {
+            GW::EffectArray agentEffects = effects[i].effects;
+            DWORD agent = effects[i].agent_id;
+            for (unsigned int j = 0; j < agentEffects.size(); ++j) {
+                GW::Effect effect = agentEffects[j];
+                DWORD skill = effect.skill_id;
+                if (bond_map.find(skill) == bond_map.end()) continue;
+
+                bool overlay = false;
+                GW::PartyAttribute partyAttribute = GW::GameContext::instance()->world->attributes[0];
+                uint8_t attribute_id = GW::SkillbarMgr::GetSkillConstantData(skill).attribute;
+                GW::Attribute attribute = partyAttribute.attribute[attribute_id];
+                if (effect.effect_type < attribute.level) overlay = true;
+
+                int y = party_map[agent];
+                int x = bond_map[skill];
+                Bond bond = GetBondBySkillID(skill);
+                ImVec2 tl = GetGridPos(x, y, true);
+                ImVec2 br = GetGridPos(x, y, false);
+                ImGui::GetWindowDrawList()->AddImage((ImTextureID)textures[bond], tl, br);
+                if (overlay) {
+                    ImGui::GetWindowDrawList()->AddRectFilled(tl, br, low_attribute_overlay);
+                }
             }
         }
 
@@ -213,6 +249,7 @@ void BondsWidget::LoadSettings(CSimpleIni* ini) {
     show_allies = ini->GetBoolValue(Name(), VAR_NAME(show_allies), show_allies);
 	flip_bonds = ini->GetBoolValue(Name(), VAR_NAME(flip_bonds), flip_bonds);
 	row_height = ini->GetLongValue(Name(), VAR_NAME(row_height), row_height);
+    low_attribute_overlay = Colors::Load(ini, Name(), VAR_NAME(background), Colors::ARGB(76, 0, 0, 0));
     hide_in_outpost = ini->GetLongValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
 }
 
@@ -225,6 +262,7 @@ void BondsWidget::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(show_allies), show_allies);
 	ini->SetBoolValue(Name(), VAR_NAME(flip_bonds), flip_bonds);
 	ini->SetLongValue(Name(), VAR_NAME(row_height), row_height);
+    Colors::Save(ini, Name(), VAR_NAME(low_attribute_overlay), low_attribute_overlay);
     ini->SetLongValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
 }
 
@@ -235,8 +273,13 @@ void BondsWidget::DrawSettingInternal() {
     ImGui::Checkbox("Click to cancel bond", &click_to_drop);
 	ImGui::Checkbox("Show bonds for Allies", &show_allies);
 	ImGui::ShowHelp("'Allies' meaning the ones that show in party window, such as summoning stones");
-	ImGui::Checkbox("Flip bond order (left/right)", &flip_bonds);
+    ImGui::Checkbox("Flip bond order (left/right)", &flip_bonds);
 	ImGui::ShowHelp("Bond order is based on your build. Check this to flip them left <-> right");
+    Colors::DrawSetting("Low Attribute Overlay", &low_attribute_overlay);
+    ImGui::ShowHelp(
+        "Overlays effects casted with less than current attribute level.\n"
+        "Only works for yourself and your heroes and doesn't include bonds."
+    );
 	ImGui::InputInt("Row Height", &row_height);
 	if (row_height < 0) row_height = 0;
 	ImGui::ShowHelp("Height of each row, leave 0 for default");
@@ -260,6 +303,11 @@ BondsWidget::Bond BondsWidget::GetBondBySkillID(DWORD skillid) const {
     case SkillID::Succor: return Bond::Succor;
     case SkillID::Vital_Blessing: return Bond::VitalBlessing;
     case SkillID::Watchful_Spirit: return Bond::WatchfulSpirit;
+    case SkillID::Heroic_Refrain: return Bond::HeroicRefrain;
+    case SkillID::Burning_Refrain: return Bond::BurningRefrain;
+    case SkillID::Mending_Refrain: return Bond::MendingRefrain;
+    case SkillID::Bladeturn_Refrain: return Bond::BladeturnRefrain;
+    case SkillID::Hasty_Refrain: return Bond::HastyRefrain;
     default: return Bond::None;
     }
 }
