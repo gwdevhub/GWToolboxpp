@@ -52,6 +52,10 @@ void BondsWidget::Initialize() {
 	LoadBondTexture(&textures[VitalBlessing], L"Vital_Blessing.jpg", IDB_Bond_VitalBlessing);
     LoadBondTexture(&textures[WatchfulSpirit], L"Watchful_Spirit.jpg", IDB_Bond_WatchfulSpirit);
     LoadBondTexture(&textures[HeroicRefrain], L"Heroic_Refrain.png", IDB_Bond_HeroicRefrain);
+    LoadBondTexture(&textures[BurningRefrain], L"Burning_Refrain.png", IDB_Bond_BurningRefrain);
+    LoadBondTexture(&textures[MendingRefrain], L"Mending_Refrain.png", IDB_Bond_MendingRefrain);
+    LoadBondTexture(&textures[BladeturnRefrain], L"Bladeturn_Refrain.png", IDB_Bond_BladeturnRefrain);
+    LoadBondTexture(&textures[HastyRefrain], L"Hasty_Refrain.png", IDB_Bond_HastyRefrain);
 }
 
 void BondsWidget::Terminate() {
@@ -300,6 +304,10 @@ BondsWidget::Bond BondsWidget::GetBondBySkillID(DWORD skillid) const {
     case SkillID::Vital_Blessing: return Bond::VitalBlessing;
     case SkillID::Watchful_Spirit: return Bond::WatchfulSpirit;
     case SkillID::Heroic_Refrain: return Bond::HeroicRefrain;
+    case SkillID::Burning_Refrain: return Bond::BurningRefrain;
+    case SkillID::Mending_Refrain: return Bond::MendingRefrain;
+    case SkillID::Bladeturn_Refrain: return Bond::BladeturnRefrain;
+    case SkillID::Hasty_Refrain: return Bond::HastyRefrain;
     default: return Bond::None;
     }
 }

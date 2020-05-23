@@ -27,6 +27,10 @@ class BondsWidget : public ToolboxWidget {
 		VitalBlessing,
 		WatchfulSpirit,
 		HeroicRefrain,
+		BurningRefrain,
+		MendingRefrain,
+		BladeturnRefrain,
+		HastyRefrain,
         None
 	};
 
