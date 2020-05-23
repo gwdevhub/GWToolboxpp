@@ -19,6 +19,8 @@ public:
 
     bool Create();
 
+    void SetChangelog(const char *str, size_t length);
+
 private:
     LRESULT WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override;
 
@@ -26,4 +28,6 @@ private:
 
 private:
     HWND m_hProgressBar;
+    HWND m_hCloseButton;
+    HWND m_hChangelog;
 };

@@ -6,12 +6,93 @@ using Json = nlohmann::json;
 #include "Path.h"
 #include "Registry.h"
 
+class DownloadStatusCallback : public IBindStatusCallback
+{
+public:
+    DownloadStatusCallback(Window *window, HWND hWnd)
+        : m_hWnd(hWnd)
+        , m_Window(window)
+    {
+    }
+
+private:
+    HWND m_hWnd;
+    Window *m_Window;
+
+private: // from IBindStatusCallback
+    HRESULT __stdcall QueryInterface(const IID&, void **) override
+    {
+        return E_NOINTERFACE;
+    }
+
+    ULONG __stdcall AddRef(void) override
+    {
+        return 1;
+    }
+
+    ULONG __stdcall Release(void) override
+    {
+        return 1;
+    }
+
+    HRESULT __stdcall OnStartBinding(DWORD, IBinding *) override
+    {
+        return E_NOTIMPL;
+    }
+
+    HRESULT __stdcall GetPriority(LONG *) override
+    {
+        return E_NOTIMPL;
+    }
+
+    HRESULT __stdcall OnLowResource(DWORD) override
+    {
+        return S_OK;
+    }
+
+    HRESULT __stdcall OnStopBinding(HRESULT, LPCWSTR) override
+    {
+        return E_NOTIMPL;
+    }
+
+    HRESULT __stdcall GetBindInfo(DWORD *, BINDINFO *) override
+    {
+        return E_NOTIMPL;
+    }
+
+    HRESULT __stdcall OnDataAvailable(DWORD, DWORD, FORMATETC *, STGMEDIUM *) override
+    {
+        return E_NOTIMPL;
+    }
+
+    HRESULT __stdcall OnObjectAvailable(REFIID, IUnknown *) override
+    {
+        return E_NOTIMPL;
+    }
+
+    HRESULT __stdcall OnProgress(
+        ULONG ulProgress,
+        ULONG ulProgressMax,
+        ULONG ulStatusCode,
+        LPCWSTR szStatusText) override
+    {
+        UNREFERENCED_PARAMETER(szStatusText);
+
+        if (ulStatusCode == BINDSTATUS_DOWNLOADINGDATA) {
+            ULONG Progress = (ulProgress * 100) / ulProgressMax;
+            SendMessageW(m_hWnd, PBM_SETPOS, Progress, 0);
+        }
+
+        return S_OK;
+    }
+};
+
 bool Download(std::string& content, const wchar_t *url)
 {
     DeleteUrlCacheEntryW(url);
 
     IStream* stream;
-    HRESULT result = URLOpenBlockingStreamW(NULL, url, &stream, 0, NULL);
+    HRESULT result = URLOpenBlockingStreamW(nullptr, url, &stream, 0, nullptr);
 
     if (FAILED(result)) {
         fprintf(stderr, "URLOpenBlockingStreamW failed (HRESULT: 0x%lX)\n", result);
@@ -33,7 +114,7 @@ bool Download(std::string& content, const wchar_t *url)
     }
 
     content.resize(stats.cbSize.LowPart);
-    result = stream->Read(&content[0], stats.cbSize.LowPart, NULL);
+    result = stream->Read(&content[0], stats.cbSize.LowPart, nullptr);
     stream->Release();
 
     if (FAILED(result)) {
@@ -44,16 +125,16 @@ bool Download(std::string& content, const wchar_t *url)
     return true;
 }
 
-bool Download(const wchar_t *path_to_file, const wchar_t *url)
+bool Download(const wchar_t *path_to_file, const wchar_t *url, IBindStatusCallback *callback)
 {
     DeleteUrlCacheEntryW(url);
 
     HRESULT result = URLDownloadToFileW(
-        NULL,
+        nullptr,
         url,
         path_to_file,
         0,
-        NULL);
+        callback);
 
     if (FAILED(result)) {
         fprintf(stderr, "URLDownloadToFileW failed: hresult:0x%lX\n", result);
@@ -177,28 +258,35 @@ bool DownloadWindow::DownloadAllFiles()
     snprintf(buffer, 64, "Downloading version '%s'", release.tag_name.c_str());
     MessageBoxA(0, buffer, "Downloading...", 0);
 
-    // @Remark:
-    // We need to properly update the progress bar
-
-    DownloadWindow window;
-    window.Create();
-
+    std::wstring url;
     for (size_t i = 0; i < release.assets.size(); i++) {
         Asset *asset = &release.assets[i];
         if (asset->name == "GWToolbox.dll") {
             fprintf(stderr, "browser_download_url: '%s'\n", asset->browser_download_url.c_str());
             const char *purl = asset->browser_download_url.c_str();
-            // @Cleanup: Utf8 -> Unicode (WCHAR)
-            std::wstring url(purl, purl + asset->browser_download_url.size());
-            if (!Download(dll_path, url.c_str())) {
-                fprintf(stderr, "Download failed: path_to_file = '%ls', url = '%ls'\n",
-                    dll_path, url.c_str());
-                return false;
-            }
-            SendMessageW(window.m_hProgressBar, PBM_SETPOS, 100, 0);
+            url = std::wstring(purl, purl + asset->browser_download_url.size());
+            break;
         }
     }
 
+    if (url.empty()) {
+        fprintf(stderr, "Didn't find GWTooolboxdll.dll\n");
+        return false;
+    }
+
+    DownloadWindow window;
+    window.Create();
+    window.SetChangelog(release.body.c_str(), release.body.size());
+    window.ProcessMessages();
+
+    DownloadStatusCallback callback(&window, window.m_hProgressBar);
+    if (!Download(dll_path, url.c_str(), &callback)) {
+        fprintf(stderr, "Download failed: path_to_file = '%ls', url = '%ls'\n",
+                dll_path, url.c_str());
+        return false;
+    }
+
+    SendMessageW(window.m_hProgressBar, PBM_SETPOS, 100, 0);
     window.WaitMessages();
 
     RegWriteRelease(release.tag_name.c_str(), release.tag_name.size());
@@ -207,6 +295,8 @@ bool DownloadWindow::DownloadAllFiles()
 
 DownloadWindow::DownloadWindow()
     : m_hProgressBar(nullptr)
+    , m_hCloseButton(nullptr)
+    , m_hChangelog(nullptr)
 {
 }
 
@@ -218,8 +308,14 @@ bool DownloadWindow::Create()
 {
     // WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
     SetWindowName(L"GWToolbox - Download");
-    SetWindowDimension(500, 100);
+    SetWindowDimension(500, 300);
     return Window::Create();
+}
+
+void DownloadWindow::SetChangelog(const char *str, size_t length)
+{
+    std::wstring content(str, str + length);
+    SendMessageW(m_hChangelog, WM_SETTEXT, 0, reinterpret_cast<LPARAM>(content.c_str()));
 }
 
 LRESULT DownloadWindow::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -238,11 +334,32 @@ LRESULT DownloadWindow::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
         SignalStop();
         break;
 
+    case WM_CTLCOLORSTATIC: {
+        HDC hDc = reinterpret_cast<HDC>(wParam);
+        HWND hEditCtl = reinterpret_cast<HWND>(lParam);
+
+        if (hEditCtl == m_hChangelog) {
+            SetBkMode(hDc, TRANSPARENT);
+            return (LRESULT)GetStockObject(WHITE_BRUSH);
+        }
+
+        break;
+    }
+
+    case WM_COMMAND: {
+        HWND hControl = reinterpret_cast<HWND>(lParam);
+        LONG ControlId = LOWORD(wParam);
+        if ((hControl == m_hCloseButton) && (ControlId == STN_CLICKED)) {
+            DestroyWindow(m_hWnd);
+        }
+        break;
+    }
+
     case WM_KEYUP:
         if (wParam == VK_ESCAPE)
             DestroyWindow(hWnd);
-        if (wParam == 'L')
-            SendMessageW(m_hProgressBar, PBM_DELTAPOS, 10, 0);
+        else if (wParam == VK_RETURN)
+            DestroyWindow(hWnd);
         break;
     }
 
@@ -260,14 +377,41 @@ void DownloadWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
         L"Inject",
         WS_VISIBLE | WS_CHILD,
         5,
-        44,
+        215,
         475,
-        12,
+        15,
         hWnd,
         nullptr,
         m_hInstance,
         nullptr);
-
     SendMessageW(m_hProgressBar, PBM_SETRANGE, 0, MAKELPARAM(0, 100));
     SendMessageW(m_hProgressBar, PBM_SETPOS, 0, 0);
+
+    m_hCloseButton = CreateWindowW(
+        WC_BUTTONW,
+        L"Close",
+        WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_DEFPUSHBUTTON,
+        400, // x
+        235, // y
+        80,  // width
+        25,  // height
+        hWnd,
+        nullptr,
+        m_hInstance,
+        nullptr);
+    SendMessageW(m_hCloseButton, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
+
+    m_hChangelog = CreateWindowW(
+        WC_EDITW,
+        L"",
+        WS_VISIBLE | WS_CHILD | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | ES_AUTOHSCROLL,
+        5,
+        5,
+        475,
+        175,
+        hWnd,
+        nullptr,
+        m_hInstance,
+        nullptr);
+    SendMessageW(m_hChangelog, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
 }

@@ -149,6 +149,19 @@ bool Window::WaitMessages()
     return true;
 }
 
+bool Window::ProcessMessages()
+{
+    MSG msg;
+
+    while (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE))
+    {
+        TranslateMessage(&msg);
+        DispatchMessageW(&msg);
+    }
+
+    return true;
+}
+
 void Window::SignalStop()
 {
     SetEvent(m_hEvent);

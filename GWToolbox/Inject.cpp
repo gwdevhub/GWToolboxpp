@@ -239,16 +239,16 @@ void InjectWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     SendMessageW(m_hSettings, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
 }
 
-void InjectWindow::OnCommand(HWND hwnd, LONG control_id, LONG notification_code)
+void InjectWindow::OnCommand(HWND hWnd, LONG ControlId, LONG NotificationCode)
 {
-    UNREFERENCED_PARAMETER(notification_code);
+    UNREFERENCED_PARAMETER(NotificationCode);
 
-    if ((hwnd == m_hLaunchButton) && (control_id == STN_CLICKED)) {
+    if ((hWnd == m_hLaunchButton) && (ControlId == STN_CLICKED)) {
         m_Selected = SendMessageW(m_hCharacters, CB_GETCURSEL, 0, 0);
         DestroyWindow(m_hWnd);
-    } else if ((hwnd == m_hRestartAsAdmin) && (control_id == STN_CLICKED)) {
+    } else if ((hWnd == m_hRestartAsAdmin) && (ControlId == STN_CLICKED)) {
         RestartAsAdminWithSameArgs();
-    } else if ((hwnd == m_hSettings) && (control_id == STN_CLICKED)) {
+    } else if ((hWnd == m_hSettings) && (ControlId == STN_CLICKED)) {
         SettingsWindow window;
         window.Create();
         // @Remark:

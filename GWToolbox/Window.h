@@ -16,6 +16,8 @@ public:
 
     bool Create();
     bool WaitMessages();
+    bool ProcessMessages();
+
     void SignalStop();
 
     void SetWindowName(LPCWSTR lpName);
