@@ -27,7 +27,7 @@ public:
 	static const std::unordered_map<std::string, SectionDrawCallbackList>* GetSettingsCallbacks();
 
 	// Readable array of modules currently loaded
-	static const std::unordered_map<std::string, ToolboxModule*>* ToolboxModule::GetModulesLoaded();
+	static const std::unordered_map<std::string, ToolboxModule*>* GetModulesLoaded();
 
 	// Initialize module
 	virtual void Initialize();
@@ -48,16 +48,16 @@ public:
 	virtual void Terminate() {};
 
 	// Update. Will always be called once every frame. Delta in seconds
-	virtual void Update(float delta) {};
+	virtual void Update(float) {};
 
 	// This is provided (and called), but use ImGui::GetIO() during update/render if possible.
-	virtual bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) { return false; };
+	virtual bool WndProc(UINT, WPARAM, LPARAM) { return false; };
 
 	// Load what is needed from ini
-	virtual void LoadSettings(CSimpleIni* ini) {};
+	virtual void LoadSettings(CSimpleIni*) {};
 
 	// Save what is needed to ini
-	virtual void SaveSettings(CSimpleIni* ini) {};
+	virtual void SaveSettings(CSimpleIni*) {};
 
 	// Draw settings interface. Will be called if the setting panel is visible, calls DrawSettingsInternal()
 	//virtual void DrawSettings();

@@ -79,7 +79,7 @@ void ChatFilter::Initialize() {
 
 	GW::Chat::RegisterLocalMessageCallback(&BlockIfApplicable_Entry,
 	[this](GW::HookStatus *status, int channel, wchar_t *message) -> void {
-        BlockIfApplicable(status, message, channel);
+        BlockIfApplicable(status, message, static_cast<uint32_t>(channel));
 	});
 }
 void ChatFilter::BlockIfApplicable(GW::HookStatus* status, const wchar_t* message, uint32_t channel) {
@@ -263,7 +263,7 @@ const wchar_t* ChatFilter::Get2ndSegment(const wchar_t *message) const {
 DWORD ChatFilter::GetNumericSegment(const wchar_t *message) const {
 	for (size_t i = 0; message[i] != 0; ++i) {
 		if ((0x100 < message[i] && message[i] < 0x107) || (0x10D < message[i] && message[i] < 0x110))
-			return (message[i + 1] - 0x100);
+			return (message[i + 1] - 0x100u);
 	}
 	return 0;
 }
@@ -471,6 +471,8 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
 }
 
 bool ChatFilter::ShouldIgnoreByContent(const wchar_t *message, size_t size) {
+    UNREFERENCED_PARAMETER(size);
+
 	if (!messagebycontent) return false;
     if (!message) return false;
 	if (!(message[0] == 0x108 && message[1] == 0x107)
@@ -528,6 +530,8 @@ bool ChatFilter::ShouldIgnoreByChannel(uint32_t channel) {
     return false;
 }
 bool ChatFilter::ShouldIgnoreBySender(const wchar_t *sender, size_t size) {
+    UNREFERENCED_PARAMETER(sender);
+    UNREFERENCED_PARAMETER(size);
 #ifdef EXTENDED_IGNORE_LIST
 	if (sender == nullptr) return false;
 	char s[32];
@@ -647,6 +651,7 @@ void ChatFilter::DrawSettingInternal() {
 }
 
 void ChatFilter::Update(float delta) {
+    UNREFERENCED_PARAMETER(delta);
 	uint32_t timestamp = GetTickCount();
 	if (timer_parse_filters && timer_parse_filters < timestamp) {
 		timer_parse_filters = 0;
@@ -696,7 +701,7 @@ void ChatFilter::ParseBuffer(const char *text, std::vector<std::regex> &regex) c
 			// std::transform(word.begin(), word.end(), word.begin(), ::tolower);
 			try {
 				regex.push_back(std::regex(word));
-			} catch (...) {
+			} catch (const std::regex_error&) {
 				Log::Warning("Cannot parse regular expression '%s'", word.c_str());
 			}
 		}

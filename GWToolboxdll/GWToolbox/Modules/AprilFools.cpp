@@ -11,7 +11,6 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 
-#include <time.h>
 #include <logger.h>
 
 static const wchar_t* af_2020_quotes[] = {
@@ -37,31 +36,44 @@ static const int af_quotes_length = sizeof(af_2020_quotes) / 4;
 void AprilFools::Initialize() {
 	ToolboxModule::Initialize();
 	GW::Chat::CreateCommand(L"aprilfools", [this](const wchar_t* message, int argc, LPWSTR* argv) -> void {
+        UNREFERENCED_PARAMETER(message);
+        UNREFERENCED_PARAMETER(argc);
+        UNREFERENCED_PARAMETER(argv);
 		SetEnabled(!enabled);
-		});
+    });
 	
 	// Automatically return to outpost on defeat
-	GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::AgentAdd>(&stoc_hook, [&](GW::HookStatus* status, GW::Packet::StoC::AgentAdd* packet) -> void {
-		if (!enabled)
-			return;
-		if ((packet->agent_type & 0x30000000) != 0x30000000)
-			return; // Not a player
-		uint32_t player_number = packet->agent_type ^ 0x30000000;
-		GW::AgentLiving* agent = (GW::AgentLiving*)GW::Agents::GetAgentByID(GW::Agents::GetAgentIdByLoginNumber(player_number));
-		if (!agent || !agent->GetIsLivingType() || !agent->IsPlayer())
-			return; // Not a valid agent
-		player_agents.emplace(agent->agent_id, agent);
+	GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::AgentAdd>(
+        &stoc_hook,
+        [&](GW::HookStatus* status, GW::Packet::StoC::AgentAdd* packet) -> void {
+            UNREFERENCED_PARAMETER(status);
+		    if (!enabled)
+			    return;
+		    if ((packet->agent_type & 0x30000000) != 0x30000000)
+			    return; // Not a player
+		    uint32_t player_number = packet->agent_type ^ 0x30000000;
+		    GW::AgentLiving* agent = (GW::AgentLiving*)GW::Agents::GetAgentByID(GW::Agents::GetAgentIdByLoginNumber(player_number));
+		    if (!agent || !agent->GetIsLivingType() || !agent->IsPlayer())
+			    return; // Not a valid agent
+		    player_agents.emplace(agent->agent_id, agent);
 		});
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentRemove>(&stoc_hook, [&](GW::HookStatus* status, GW::Packet::StoC::AgentRemove* packet) -> void {
-		if (!enabled)
-			return;
-		auto found = player_agents.find(packet->agent_id);
-		if (found != player_agents.end())
-			player_agents.erase(found);
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentRemove>(
+        &stoc_hook,
+        [&](GW::HookStatus* status, GW::Packet::StoC::AgentRemove* packet) -> void {
+            UNREFERENCED_PARAMETER(status);
+		    if (!enabled)
+			    return;
+		    auto found = player_agents.find(packet->agent_id);
+		    if (found != player_agents.end())
+			    player_agents.erase(found);
 		});
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&stoc_hook, [&](GW::HookStatus* status, GW::Packet::StoC::GameSrvTransfer* packet) -> void {
-		player_agents.clear();
-		});
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(
+        &stoc_hook,
+        [&](GW::HookStatus* status, GW::Packet::StoC::GameSrvTransfer* packet) -> void {
+            UNREFERENCED_PARAMETER(status);
+            UNREFERENCED_PARAMETER(packet);
+		    player_agents.clear();
+        });
 	time_t now = time(NULL);
 	struct tm* ltm = gmtime(&now);
 	SetEnabled(ltm->tm_mon == 3 && ((ltm->tm_mday == 1 && ltm->tm_hour > 6) || (ltm->tm_mday == 2 && ltm->tm_hour < 7)));
@@ -117,14 +129,16 @@ void AprilFools::SetInfected(GW::Agent* agent,bool is_infected) {
 		while(quote_idx == last_quote_idx)
 			quote_idx = rand() % af_quotes_length;
 		last_quote_idx = quote_idx;
-		int written = swprintf(packet2.message, 122, L"\x108\x107%s\x1", af_2020_quotes[quote_idx]);
+		swprintf(packet2.message, 122, L"\x108\x107%s\x1", af_2020_quotes[quote_idx]);
 		GW::StoC::EmulatePacket(&packet2);
 		infection_queued = false;
 		});
 }
 void AprilFools::Update(float delta) {
+    UNREFERENCED_PARAMETER(delta);
 	if (!enabled)
 		return;
+    // @Cleanup: This is why you have an object, don't use static here.
 	static clock_t next_infection = 0;
 	static GW::Constants::InstanceType last_instance_type = GW::Map::GetInstanceType();
 	if (GW::Map::GetInstanceType() != last_instance_type) {
@@ -145,6 +159,7 @@ void AprilFools::Update(float delta) {
 		uint32_t infection_interval = ((60 / player_agents.size()) * CLOCKS_PER_SEC);
 		if (infection_interval < 2500)
 			infection_interval = 2500;
-		next_infection = clock() + infection_interval;
+        // @Cleanup: Not sure this is correct
+		next_infection = clock() + static_cast<clock_t>(infection_interval);
 	}
 }

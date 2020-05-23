@@ -2,7 +2,7 @@
 #include "base64.h"
 
 const char b64_encoding[65] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-const char b64_decoding[128] =
+const unsigned char b64_decoding[128] =
 {
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0,  0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 62,  0,  0,  0, 63, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61,  0, 0, 0, 0, 0, 0, 0,
@@ -83,5 +83,5 @@ int b64_dec(const char* in, void* out)
 		break;
 	}
 	k += i;
-	return k - 1;
+	return static_cast<int>(k - 1);
 }

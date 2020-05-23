@@ -7,7 +7,7 @@
 class ToolboxUIElement : public ToolboxModule {
 public:
 	// Draw user interface. Will be called every frame if the element is visible
-	virtual void Draw(IDirect3DDevice9* pDevice) {};
+	virtual void Draw(IDirect3DDevice9*) {};
 
 	virtual void Initialize() override;
 	virtual void Terminate() override {

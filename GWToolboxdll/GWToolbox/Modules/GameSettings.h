@@ -133,7 +133,8 @@ protected:
 
 class GameSettings : public ToolboxModule {
 	GameSettings() {};
-	~GameSettings() {};
+    GameSettings(const GameSettings&) = delete;
+    ~GameSettings() {};
 public:
 	static GameSettings& Instance() {
 		static GameSettings instance;

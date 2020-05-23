@@ -1,18 +1,9 @@
 #pragma once
 
-#include <ToolboxWindow.h>
-#include <iostream>
-#include <vector>
-#include <set>
-
-#include <queue>
-#include <thread>
-
-#include <json.hpp>
-#include <easywsclient\easywsclient.hpp>
-#include <CircurlarBuffer.h>
-
 #include <GWCA\Utilities\Hook.h>
+
+#include <ToolboxWindow.h>
+#include <CircurlarBuffer.h>
 
 #include "Utils\RateLimiter.h"
 

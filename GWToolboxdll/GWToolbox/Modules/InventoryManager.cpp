@@ -1,4 +1,5 @@
 #include "stdafx.h"
+
 #include "InventoryManager.h"
 
 #include <GWCA\Packets\Opcodes.h>
@@ -52,6 +53,7 @@ void InventoryManager::RegisterSettingsContent() {
 }
 
 void InventoryManager::CmdSalvage(const wchar_t* message, int argc, LPWSTR* argv) {
+    UNREFERENCED_PARAMETER(message);
 	auto im = &Instance();
 	if (im->is_salvaging_all || im->is_salvaging)
 		return;
@@ -71,6 +73,7 @@ void InventoryManager::CmdSalvage(const wchar_t* message, int argc, LPWSTR* argv
 	}
 }
 void InventoryManager::CmdIdentify(const wchar_t* message, int argc, LPWSTR* argv) {
+    UNREFERENCED_PARAMETER(message);
 	auto im = &Instance();
 	im->CancelIdentify();
 	const wchar_t* arg2 = argc > 1 ? argv[1] : L"";
@@ -97,13 +100,18 @@ void InventoryManager::AttachSalvageListeners() {
 	GW::StoC::RegisterPacketCallback(&salvage_hook_entry, GW::Packet::StoC::SalvageSessionCancel::STATIC_HEADER, &ClearSalvageSession);
 	GW::StoC::RegisterPacketCallback(&salvage_hook_entry, GW::Packet::StoC::SalvageSessionDone::STATIC_HEADER, &ClearSalvageSession);
 	GW::StoC::RegisterPacketCallback(&salvage_hook_entry, GW::Packet::StoC::SalvageSessionItemKept::STATIC_HEADER, &ClearSalvageSession);
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SalvageSessionSuccess>(&salvage_hook_entry, [this](GW::HookStatus* status, GW::Packet::StoC::SalvageSessionSuccess* packet) {
-		ClearSalvageSession(status);
-		GW::CtoS::SendPacket(0x4, GAME_CMSG_ITEM_SALVAGE_SESSION_DONE);
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SalvageSessionSuccess>(
+        &salvage_hook_entry,
+        [this](GW::HookStatus* status, GW::Packet::StoC::SalvageSessionSuccess* packet) {
+            UNREFERENCED_PARAMETER(packet);
+		    ClearSalvageSession(status);
+		    GW::CtoS::SendPacket(0x4, GAME_CMSG_ITEM_SALVAGE_SESSION_DONE);
 		});
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SalvageSession>(&salvage_hook_entry, [this](GW::HookStatus* status, GW::Packet::StoC::SalvageSession* packet) {
-		current_salvage_session = *packet;
-		status->blocked = true;
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SalvageSession>(
+        &salvage_hook_entry,
+        [this](GW::HookStatus* status, GW::Packet::StoC::SalvageSession* packet) {
+		    current_salvage_session = *packet;
+		    status->blocked = true;
 		});
 	salvage_listeners_attached = true;
 }
@@ -272,7 +280,7 @@ void InventoryManager::FetchPotentialItems() {
 	Item* found = nullptr;
 	if (salvage_all_type != SalvageAllType::None) {
 		ClearPotentialItems();
-		while (found = GetNextUnsalvagedItem(context_item.item(), found)) {
+		while ((found = GetNextUnsalvagedItem(context_item.item(), found)) != nullptr) {
 			PotentialItem* item = new PotentialItem();
 			GW::UI::AsyncDecodeStr(found->complete_name_enc ? found->complete_name_enc : found->name_enc, &item->name);
 			GW::UI::AsyncDecodeStr(found->name_enc, &item->short_name);
@@ -333,6 +341,8 @@ InventoryManager::Item* InventoryManager::GetNextUnidentifiedItem(Item* start_af
 				if (item->IsGold())
 					return item;
 				break;
+            default:
+                break;
 			}
 		}
 	}
@@ -395,6 +405,8 @@ InventoryManager::Item* InventoryManager::GetNextUnsalvagedItem(Item* kit, Item*
 				return item;
 			case GW::Constants::Rarity::White:
 				return item;
+            default:
+                break;
 			}
 		}
 	}
@@ -560,6 +572,7 @@ void InventoryManager::DrawSettingInternal() {
 	ImGui::Checkbox("Bag 2", &bags_to_salvage_from[GW::Constants::Bag::Bag_2]);
 }
 void InventoryManager::Update(float delta) {
+    UNREFERENCED_PARAMETER(delta);
 	if (is_salvaging) {
 		if (IsPendingSalvage()) {
 			if ((clock() / CLOCKS_PER_SEC) - pending_salvage_at > 5) {
@@ -590,6 +603,7 @@ void InventoryManager::Update(float delta) {
 		SalvageAll(salvage_all_type);
 };
 void InventoryManager::Draw(IDirect3DDevice9* device) {
+    UNREFERENCED_PARAMETER(device);
 	if (show_item_context_menu)
 		ImGui::OpenPopup("Item Context Menu");
 	show_item_context_menu = false;

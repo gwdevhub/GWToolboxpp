@@ -13,6 +13,9 @@
 
 #include "ToolboxWidget.h"
 
+// @Cleanup:
+// Get rid of all the auto in this file.
+// Remove most of the code from the header.
 
 namespace GW {
 	namespace Constants {
@@ -70,9 +73,9 @@ public:
 	static void CmdSalvage(const wchar_t* message, int argc, LPWSTR* argv);
 
 	// Find an empty (or partially empty) inventory slot that this item can go into
-	std::pair<GW::Bag*, uint32_t> InventoryManager::GetAvailableInventorySlot(GW::Item* like_item = nullptr);
+	std::pair<GW::Bag*, uint32_t> GetAvailableInventorySlot(GW::Item* like_item = nullptr);
 	// Find an empty (or partially empty) inventory slot that this item can go into. !entire_stack = Returns slots that are the same item, but won't hold all of them.
-	GW::Item* InventoryManager::GetAvailableInventoryStack(GW::Item* like_item, bool entire_stack = false);
+	GW::Item* GetAvailableInventoryStack(GW::Item* like_item, bool entire_stack = false);
 	// Checks model info and struct info to make sure item is the same.
 	GW::Item* GetSameItem(GW::Item* like_item, GW::Bag* bag);
 	// Checks model info and struct info to make sure item is the same.
@@ -220,8 +223,9 @@ public:
 				return false;
 			case GW::Constants::Rarity::Blue: // Lesser kits don't have a popup when used on blue items
 				return salvage_kit && ((Item*)salvage_kit)->IsLesserKit() == false;
+            default:
+                return true; // All other rarities (gold, purple) show a popup
 			}
-			return true; // All other rarities (gold, purple) show a popup
 		}
 		inline bool IsKit() {
 			return type == 29;
@@ -249,24 +253,24 @@ public:
 			return mod && mod->arg1() == 6;
 		}
 		inline uint32_t GetUpgradeWeaponType() {
-			auto mod = GetModifier(0x25B8);
-			return mod ? mod->arg1() : 0;
+			auto mod = GetModifier(0x25B8u);
+			return mod ? mod->arg1() : 0u;
 		}
 		inline uint32_t GetProfession() {
-			auto mod = GetModifier(0xA4B8);
-			return mod ? mod->arg1() : 0;
+			auto mod = GetModifier(0xA4B8u);
+			return mod ? mod->arg1() : 0u;
 		}
 		inline uint32_t GetMinDamage() {
-			auto mod = GetModifier(0xA7A8);
-			return mod ? mod->arg2() : 0;
+			auto mod = GetModifier(0xA7A8u);
+			return mod ? mod->arg2() : 0u;
 		}
 		inline uint32_t GetMaxDamage() {
-			auto mod = GetModifier(0xA7A8);
-			return mod ? mod->arg1() : 0;
+			auto mod = GetModifier(0xA7A8u);
+			return mod ? mod->arg1() : 0u;
 		}
 		inline uint32_t GetArmorRating() {
-			auto mod = GetModifier(type == 0x18 ? 0xA7B8 : 0xA3C8);
-			return mod ? mod->arg1() : 0;
+			auto mod = GetModifier(type == 0x18u ? 0xA7B8u : 0xA3C8u);
+			return mod ? mod->arg1() : 0u;
 		}
 		inline bool IsRune() {
 			return type == 8 && GetModifier(0x2530) && !GetUpgradeWeaponType();
@@ -293,8 +297,9 @@ public:
 			case GW::Constants::ItemType::Hammer:
 			case GW::Constants::ItemType::Spear:
 				return true;
+            default:
+                return false;
 			}
-			return false;
 		}
 		inline bool IsArmor() {
 			switch ((GW::Constants::ItemType)type) {
@@ -304,8 +309,9 @@ public:
 			case GW::Constants::ItemType::Boots:
 			case GW::Constants::ItemType::Gloves:
 				return true;
+            default:
+                return false;
 			}
-			return false;
 		}
 		inline bool IsWeaponModOrInscription() {
 			return type == static_cast<uint8_t>(GW::Constants::ItemType::Rune_Mod) && !IsRuneOrInsignia();
@@ -315,7 +321,7 @@ public:
 			return mod ? mod->arg1() : 0;
 		}
 		inline bool IsMaterial() {
-			return GetModifier(0x2508);
+			return GetModifier(0x2508) != nullptr;
 		}
 		inline bool IsStackable() {
 			return interaction & 0x80000;
@@ -353,7 +359,11 @@ public:
 				case GW::Constants::ItemID::TemperedGlassVial:
 				case GW::Constants::ItemID::VialofInk:
 					return true;
+                default:
+                    break;
 				}
+            default:
+                break;
 			}
 			if (IsWeapon() || IsArmor())
 				return true;

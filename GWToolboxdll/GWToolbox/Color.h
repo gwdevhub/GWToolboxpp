@@ -16,17 +16,17 @@ typedef ImU32 Color;
 namespace Colors {
 
 	static Color ARGB(int a, int r, int g, int b) {
-		return (a << IM_COL32_A_SHIFT)
-			| (r << IM_COL32_R_SHIFT)
-			| (g << IM_COL32_G_SHIFT)
-			| (b << IM_COL32_B_SHIFT);
+		return (static_cast<Color>(a) << IM_COL32_A_SHIFT) |
+               (static_cast<Color>(r) << IM_COL32_R_SHIFT) |
+               (static_cast<Color>(g) << IM_COL32_G_SHIFT) |
+               (static_cast<Color>(b) << IM_COL32_B_SHIFT);
 	}
 
 	static Color RGB(int r, int g, int b) {
-		return (0xFF << IM_COL32_A_SHIFT)
-			| (r << IM_COL32_R_SHIFT)
-			| (g << IM_COL32_G_SHIFT)
-			| (b << IM_COL32_B_SHIFT);
+		return (0xFFu << IM_COL32_A_SHIFT) |
+               (static_cast<Color>(r) << IM_COL32_R_SHIFT) |
+               (static_cast<Color>(g) << IM_COL32_G_SHIFT) |
+               (static_cast<Color>(b) << IM_COL32_B_SHIFT);
 	}
 
 	static Color Black() { return RGB(0, 0, 0); }
@@ -57,17 +57,17 @@ namespace Colors {
 	}
 
 	static void ConvertU32ToInt4(Color color, int* i) {
-		i[0] = ((color >> IM_COL32_A_SHIFT) & 0xFF);
-		i[1] = ((color >> IM_COL32_R_SHIFT) & 0xFF);
-		i[2] = ((color >> IM_COL32_G_SHIFT) & 0xFF);
-		i[3] = ((color >> IM_COL32_B_SHIFT) & 0xFF);
+		i[0] = static_cast<int>((color >> IM_COL32_A_SHIFT) & 0xFF);
+		i[1] = static_cast<int>((color >> IM_COL32_R_SHIFT) & 0xFF);
+		i[2] = static_cast<int>((color >> IM_COL32_G_SHIFT) & 0xFF);
+		i[3] = static_cast<int>((color >> IM_COL32_B_SHIFT) & 0xFF);
 	}
 
 	static Color ConvertInt4ToU32(const int* i) {
-		return ((i[0] & 0xFF) << IM_COL32_A_SHIFT)
-			| ((i[1] & 0xFF) << IM_COL32_R_SHIFT)
-			| ((i[2] & 0xFF) << IM_COL32_G_SHIFT)
-			| ((i[3] & 0xFF) << IM_COL32_B_SHIFT);
+		return static_cast<Color>((i[0] & 0xFF) << IM_COL32_A_SHIFT) |
+               static_cast<Color>((i[1] & 0xFF) << IM_COL32_R_SHIFT) |
+               static_cast<Color>((i[2] & 0xFF) << IM_COL32_G_SHIFT) |
+               static_cast<Color>((i[3] & 0xFF) << IM_COL32_B_SHIFT);
 	}
 
 	static bool DrawSettingHueWheel(const char* text, Color* color, ImGuiColorEditFlags flags = 0) {// ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel) {
@@ -93,7 +93,6 @@ namespace Colors {
 		int i[4];
 		ConvertU32ToInt4(*color, i);
 
-		ImGuiContext* context = ImGui::GetCurrentContext();
 		const ImGuiStyle& style = ImGui::GetStyle();
 
 		const int n_components = alpha ? 4 : 4;

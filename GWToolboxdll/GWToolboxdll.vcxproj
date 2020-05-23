@@ -53,12 +53,13 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>EnableAllWarnings</WarningLevel>
       <Optimization>Disabled</Optimization>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <ShowIncludes>false</ShowIncludes>
       <AdditionalIncludeDirectories>$(SolutionDir)GWToolboxdll\GWToolbox\;$(SolutionDir)Dependencies\;$(SolutionDir)Dependencies\imgui\;$(SolutionDir)Dependencies\utf8proc\;$(SolutionDir)Dependencies\GWCA\Include\;$(SolutionDir)Dependencies\DirectX\Include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_WIN32;UTF8PROC_STATIC;IMGUI_USE_BGRA_PACKED_COLOR;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -75,7 +76,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>EnableAllWarnings</WarningLevel>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -85,6 +86,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir)GWToolboxdll\GWToolbox\;$(SolutionDir)Dependencies\;$(SolutionDir)Dependencies\imgui\;$(SolutionDir)Dependencies\utf8proc\;$(SolutionDir)Dependencies\GWCA\Include\;$(SolutionDir)Dependencies\DirectX\Include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PreprocessorDefinitions>_WIN32;UTF8PROC_STATIC;IMGUI_USE_BGRA_PACKED_COLOR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

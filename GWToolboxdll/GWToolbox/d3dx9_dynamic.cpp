@@ -32,6 +32,18 @@ D3DXCreateTextureFromResourceA_pt D3DXCreateTextureFromResourceAPtr = nullptr;
 
 #define return_on_false( expr ) if ( !(expr) ) { return false; }
 
+static bool MyGetProcAddress(HMODULE hModule, LPCSTR lpProcName, LPVOID lpProc)
+{
+    LPVOID* lpOut = reinterpret_cast<LPVOID*>(lpProc);
+    *lpOut = nullptr;
+    if (hModule == nullptr)
+        return false;
+    FARPROC Proc = GetProcAddress(hModule, lpProcName);
+    if (Proc == nullptr)
+        return false;
+    *lpOut = (LPVOID)((uintptr_t)Proc);
+    return true;
+}
 
 // Loads the d3dx9 module, then assigns the addresses needed.
 bool Loadd3dx9(){
@@ -52,12 +64,12 @@ bool Loadd3dx9(){
 	Log::Log("Loaded DirectX module successfully: %s", d3dx9name);
 
 	// Add function definitions as applicable
-	return_on_false(D3DXMatrixTranslationPtr = reinterpret_cast<D3DXMatrixTranslation_pt>(GetProcAddress(d3dx9Module, "D3DXMatrixTranslation")));
-	return_on_false(D3DXMatrixRotationZPtr = reinterpret_cast<D3DXMatrixRotationZ_pt>(GetProcAddress(d3dx9Module, "D3DXMatrixRotationZ")));
-	return_on_false(D3DXMatrixScalingPtr = reinterpret_cast<D3DXMatrixScaling_pt>(GetProcAddress(d3dx9Module, "D3DXMatrixScaling")));
-	return_on_false(D3DXMatrixMultiplyPtr = reinterpret_cast<D3DXMatrixMultiply_pt>(GetProcAddress(d3dx9Module, "D3DXMatrixMultiply")));
-	return_on_false(D3DXCreateTextureFromFileWPtr = reinterpret_cast<D3DXCreateTextureFromFileW_pt>(GetProcAddress(d3dx9Module, "D3DXCreateTextureFromFileW")));
-	return_on_false(D3DXCreateTextureFromResourceAPtr = reinterpret_cast<D3DXCreateTextureFromResourceA_pt>(GetProcAddress(d3dx9Module, "D3DXCreateTextureFromResourceA")));
+	return_on_false(MyGetProcAddress(d3dx9Module, "D3DXMatrixTranslation", &D3DXMatrixTranslationPtr));
+	return_on_false(MyGetProcAddress(d3dx9Module, "D3DXMatrixRotationZ", &D3DXMatrixRotationZPtr));
+	return_on_false(MyGetProcAddress(d3dx9Module, "D3DXMatrixScaling", &D3DXMatrixScalingPtr));
+	return_on_false(MyGetProcAddress(d3dx9Module, "D3DXMatrixMultiply", &D3DXMatrixMultiplyPtr));
+	return_on_false(MyGetProcAddress(d3dx9Module, "D3DXCreateTextureFromFileW", &D3DXCreateTextureFromFileWPtr));
+	return_on_false(MyGetProcAddress(d3dx9Module, "D3DXCreateTextureFromResourceA", &D3DXCreateTextureFromResourceAPtr));
 
 	return true;
 }
