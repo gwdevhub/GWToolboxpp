@@ -2,14 +2,14 @@
 
 #include <d3d9.h>
 
-#include <thread>
-#include <../resource.h>
+#include "../resource.h"
 
 #include <Utf8.h>
 #include "ToolboxModule.h"
 
 class Resources : public ToolboxModule {
 	Resources() {};
+    Resources(const Resources&) = delete;
 	~Resources() {
 		if (worker.joinable()) worker.join();
 	};

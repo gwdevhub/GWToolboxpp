@@ -57,6 +57,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -87,6 +88,7 @@
 
 #pragma warning(disable: 4061) // enumerator 'identifier' in switch of enum 'enumeration' is not explicitly handled by a case label
 #pragma warning(disable: 4201) // nonstandard extension used : nameless struct/union
+#pragma warning(disable: 4464) // relative include path contains '..'
 #pragma warning(disable: 4514) // 'function' : unreferenced inline function has been removed
 #pragma warning(disable: 4505) // 'function' : unreferenced local function has been removed
 #pragma warning(disable: 4530) // C++ exception handler used, but unwind semantics are not enabled. Specify /EHsc

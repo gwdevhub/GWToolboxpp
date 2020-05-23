@@ -11,6 +11,7 @@ NOTE: Disconnecting/reconnecting will mess this up so repeat process.
 */
 
 #include "stdafx.h"
+
 #include "base64.h"
 #include "sha1.hpp"
 
@@ -175,32 +176,48 @@ time_t join_party_started = 0;
 time_t discord_connected_at = 0;
 
 static void UpdateActivityCallback(void* data, enum EDiscordResult result) {
+    UNREFERENCED_PARAMETER(data);
     Log::Log(result == DiscordResult_Ok ? "Activity updated successfully.\n" : "Activity update FAILED!\n");
 }
 static void OnJoinRequestReplyCallback(void* data, enum EDiscordResult result) {
+    UNREFERENCED_PARAMETER(data);
     Log::Log(result == DiscordResult_Ok ? "Join request reply sent successfully.\n" : "Join request reply send FAILED!\n");
 }
 static void OnSendInviteCallback(void* data, enum EDiscordResult result) {
+    UNREFERENCED_PARAMETER(data);
     Log::Log(result == DiscordResult_Ok ? "Invite sent successfully.\n" : "Invite send FAILED!\n");
 }
 static void OnNetworkMessage(void* event_data, DiscordNetworkPeerId peer_id, DiscordNetworkChannelId channel_id, uint8_t* data, uint32_t data_length) {
+    UNREFERENCED_PARAMETER(event_data);
+    UNREFERENCED_PARAMETER(peer_id);
+    UNREFERENCED_PARAMETER(channel_id);
+    UNREFERENCED_PARAMETER(data);
+    UNREFERENCED_PARAMETER(data_length);
     Log::Log("Discord: Network message\n");
 }
 static void OnJoinParty(void* event_data, const char* secret) {
+    UNREFERENCED_PARAMETER(event_data);
     Log::Log("Discord: on_activity_join %s\n",secret);
     memset(&join_in_progress, 0, sizeof(join_in_progress));
     b64_dec(secret, &join_in_progress);
 }
 // NOTE: In our game, anyone can join anyone else's party - work around for "ask to join" by auto-accepting.
 static void OnJoinRequest(void* data, DiscordUser* user) {
+    UNREFERENCED_PARAMETER(data);
     Log::Log("Join request received from %s; automatically accept\n",user->username);
     Application* app = &DiscordModule::Instance().app;
     app->activities->send_request_reply(app->activities, user->id, EDiscordActivityJoinRequestReply::DiscordActivityJoinRequestReply_Yes, app, OnJoinRequestReplyCallback);
 }
 static void OnPartyInvite(void* event_data, EDiscordActivityActionType type, DiscordUser* user, DiscordActivity* activity) {
+    UNREFERENCED_PARAMETER(event_data);
+    UNREFERENCED_PARAMETER(type);
+    UNREFERENCED_PARAMETER(activity);
     Log::Log("Party invite received from %s\n", user->username);
 }
 static void OnDiscordLog(void* data, EDiscordLogLevel level, const char* message) {
+    UNREFERENCED_PARAMETER(data);
+    UNREFERENCED_PARAMETER(level);
+    UNREFERENCED_PARAMETER(message);
     Log::Log("Discord Log Level %d: %s\n", level, message);
 }
 // Get pid from executable name (i.e. DiscordCanary.exe)
@@ -231,8 +248,8 @@ bool DiscordModule::IsMapUnlocked(uint32_t map_id) {
     uint32_t real_index = map_id / 32;
     if (real_index >= unlocked_map.size())
         return false;
-    uint32_t shift = map_id % 32;
-    uint32_t flag = 1 << shift;
+    uint32_t shift = map_id % 32u;
+    uint32_t flag = 1u << shift;
     return (unlocked_map[real_index] & flag) != 0;
 }
 // Returns guild struct of current location. Returns null on fail or non-guild map.
@@ -281,6 +298,8 @@ void DiscordModule::Initialize() {
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadInfo_Callback,
         [this](GW::HookStatus* status, GW::Packet::StoC::InstanceLoadInfo* packet) -> void {
+            UNREFERENCED_PARAMETER(status);
+            UNREFERENCED_PARAMETER(packet);
             zone_entered_time = time(nullptr); // Because you cant rely on instance time at this point.
             pending_activity_update = true;
             if (!discord_connected)
@@ -289,6 +308,7 @@ void DiscordModule::Initialize() {
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerAdd>(&PartyPlayerAdd_Callback,
         [this](GW::HookStatus* status, GW::Packet::StoC::PartyPlayerAdd* packet) -> void {
+            UNREFERENCED_PARAMETER(status);
 			GW::AgentLiving* player_agent = GW::Agents::GetPlayerAsAgentLiving();
 			if (player_agent && packet->player_id == player_agent->player_number) {
 				pending_activity_update = true; // Update if this is me
@@ -300,12 +320,14 @@ void DiscordModule::Initialize() {
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyUpdateSize>(&PartyUpdateSize_Callback,
         [this](GW::HookStatus* status, GW::Packet::StoC::PartyUpdateSize* packet) -> void {
+            UNREFERENCED_PARAMETER(status);
             GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo();
             if (p && packet->player_id == p->players[0].login_number)
                 pending_activity_update = true; // Update if this is my leader
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ErrorMessage>(&ErrorMessage_Callback,
         [this](GW::HookStatus* status, GW::Packet::StoC::ErrorMessage* packet) -> void {
+            UNREFERENCED_PARAMETER(status);
             if (!join_in_progress.map_id)
                 return;
             switch (packet->message_id) {
@@ -442,7 +464,7 @@ void DiscordModule::ConnectCanary() {
 		proc = OpenProcess(PROCESS_QUERY_INFORMATION, TRUE, discord_pid);
 		GetProcessTimes(proc, &discord_started, &dummy, &dummy, &dummy);
 		if (proc) CloseHandle(proc);
-		discord_env = CompareFileTime(&discord_canary_started, &discord_started) ? 1 : 0;
+		discord_env = CompareFileTime(&discord_canary_started, &discord_started) ? 1u : 0u;
 	}
 	SetEnvironmentVariable("DISCORD_INSTANCE_ID", discord_env ? "1" : "0");
 }
@@ -453,7 +475,7 @@ bool DiscordModule::LoadDll() {
     if (!hGetProcIDDLL)
         return false;
     // resolve function address here
-    discordCreate = (DiscordCreate_pt)GetProcAddress(hGetProcIDDLL, "DiscordCreate");
+    discordCreate = (DiscordCreate_pt)((uintptr_t)(GetProcAddress(hGetProcIDDLL, "DiscordCreate")));
     if (!discordCreate) {
         Log::Error("Failed to find address for DiscordCreate");
         return false;
@@ -514,6 +536,7 @@ void DiscordModule::LoadSettings(CSimpleIni* ini) {
     show_party_info = ini->GetBoolValue(Name(), VAR_NAME(show_party_info), show_party_info);
 }
 void DiscordModule::Update(float delta) {
+    UNREFERENCED_PARAMETER(delta);
 	if (!discord_enabled && discord_connected)
 		Disconnect();
     if (pending_discord_connect)
@@ -610,8 +633,8 @@ void DiscordModule::UpdateActivity() {
                 // NOTE: Guild halls off bounds until I can figure out how to get the GHKey for it.
                 b64_enc(&secret, sizeof(secret), activity.secrets.join);
             }
-            activity.party.size.current_size = GW::PartyMgr::GetPartySize();
-            activity.party.size.max_size = m->max_party_size;
+            activity.party.size.current_size = static_cast<int32_t>(GW::PartyMgr::GetPartySize());
+            activity.party.size.max_size = static_cast<int32_t>(m->max_party_size);
         }
 
         if (show_character_info) {
@@ -623,14 +646,14 @@ void DiscordModule::UpdateActivity() {
             // Details
             if (map_id != decoded_map_id) {
                 map_name_decoded.clear();
-                decoded_map_id = map_id;
+                decoded_map_id = static_cast<short>(map_id);
                 wchar_t enc_str[4];
                 if (GW::UI::UInt32ToEncStr(m->name_id, enc_str, 4))
                     GW::UI::AsyncDecodeStr(enc_str, &map_name_decoded);
             }
             if (map_name_decoded.empty())
                 return; // Map name not decoded yet.
-            short map_region = m->region;
+            map_region = static_cast<short>(m->region);
             char region_info[32] = { 0 };
 			if (instance_type == GW::Constants::InstanceType::Outpost && !is_guild_hall) {
                 switch (static_cast<GW::Constants::MapRegion>(GW::Map::GetRegion()))
@@ -654,7 +677,7 @@ void DiscordModule::UpdateActivity() {
                 map_region = static_cast<short>(GW::Region::Region_BattleIslands);
             }
             else if (instance_type == GW::Constants::InstanceType::Outpost) {
-                sprintf(activity.state, region_info);
+                sprintf(activity.state, "%s", region_info);
             }
             else {
                 sprintf(activity.state, "In Explorable");
@@ -665,7 +688,7 @@ void DiscordModule::UpdateActivity() {
 			else {
 				sprintf(activity.details, "%S", map_name_decoded.c_str());
 			}
-            sprintf(activity.assets.large_image, region_assets[map_region]);
+            sprintf(activity.assets.large_image, "%s", region_assets[map_region]);
             sprintf(activity.assets.large_text, "Region: %s", region_names[map_region]);
             activity.instance = instance_type == GW::Constants::InstanceType::Explorable;
             activity.timestamps.start = zone_entered_time;
