@@ -9,7 +9,7 @@
 #include "ToolboxWidget.h"
 
 class BondsWidget : public ToolboxWidget {
-	static const int MAX_BONDS = 16;
+	static const int MAX_BONDS = 20;
 	enum Bond {
 		BalthazarSpirit,
 		EssenceBond,

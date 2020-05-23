@@ -80,6 +80,7 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
     // note: info->heroes, ->henchmen, and ->others CAN be invalid during normal use.
 
     // ==== Get party ====
+    // @Cleanup: This doesn't need to be done every frame - only when the party structure has changed.
     std::vector<GW::AgentID> party_list; // index to agent id
     std::unordered_map<GW::AgentID, int> party_map; // agent id to index
     int allies_start = 255;
@@ -115,6 +116,7 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
     }
 	
     // ==== Get bonds ====
+    // @Cleanup: This doesn't need to be done every frame - only when a user's skills have changed
     std::vector<int> bond_list; // index to skill id
     std::unordered_map<DWORD, int> bond_map; // skill id to index
     const GW::Skillbar *bar = GW::SkillbarMgr::GetPlayerSkillbar();
@@ -178,14 +180,14 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
             GW::EffectArray agentEffects = effects[i].effects;
             DWORD agent = effects[i].agent_id;
             for (unsigned int j = 0; j < agentEffects.size(); ++j) {
-                GW::Effect effect = agentEffects[j];
+                const GW::Effect& effect = agentEffects[j];
                 DWORD skill = effect.skill_id;
                 if (bond_map.find(skill) == bond_map.end()) continue;
 
                 bool overlay = false;
-                GW::PartyAttribute partyAttribute = GW::GameContext::instance()->world->attributes[0];
+                const GW::PartyAttribute& partyAttribute = GW::GameContext::instance()->world->attributes[0];
                 uint8_t attribute_id = GW::SkillbarMgr::GetSkillConstantData(skill).attribute;
-                GW::Attribute attribute = partyAttribute.attribute[attribute_id];
+                const GW::Attribute& attribute = partyAttribute.attribute[attribute_id];
                 if (effect.effect_type < attribute.level) overlay = true;
 
                 int y = party_map[agent];
