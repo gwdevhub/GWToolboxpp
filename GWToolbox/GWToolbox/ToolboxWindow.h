@@ -12,6 +12,11 @@ public:
 	bool IsWindow() const override { return true; }
 	char* TypeName() const override { return "window"; }
 
+	virtual void Initialize() override {
+		ToolboxUIElement::Initialize();
+		has_closebutton = true;
+	}
+
 	virtual void LoadSettings(CSimpleIni* ini) override {
 		ToolboxUIElement::LoadSettings(ini);
 		lock_move = ini->GetBoolValue(Name(), VAR_NAME(lock_move), lock_move);
@@ -27,6 +32,4 @@ public:
 	}
 
 	ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0) const;
-protected:
-	bool has_closebutton = true;
 };
