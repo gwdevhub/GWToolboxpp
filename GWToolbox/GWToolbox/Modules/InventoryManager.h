@@ -234,7 +234,7 @@ public:
 			return mod && mod->arg1() == 1;
 		}
 		inline bool IsSalvageKit() {
-			return IsLesserKit() || IsExpertSalvageKit();
+			return IsLesserKit() || IsExpertSalvageKit();// || IsPerfectSalvageKit();
 		}
 		inline bool IsLesserKit() {
 			auto mod = GetModifier(0x25E8);
@@ -242,11 +242,11 @@ public:
 		}
 		inline bool IsExpertSalvageKit() {
 			auto mod = GetModifier(0x25E8);
-			switch (mod ? mod->arg1() : 0) {
-			case 2: case 6:
-				return true;
-			}
-			return false;
+			return mod && mod->arg1() == 2;
+		}
+		inline bool IsPerfectSalvageKit() {
+			auto mod = GetModifier(0x25E8);
+			return mod && mod->arg1() == 6;
 		}
 		inline uint32_t GetUpgradeWeaponType() {
 			auto mod = GetModifier(0x25B8);
