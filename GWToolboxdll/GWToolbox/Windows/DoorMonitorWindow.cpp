@@ -13,6 +13,7 @@
 #include "logger.h"
 
 void DoorMonitorWindow::Draw(IDirect3DDevice9* pDevice) {
+    UNREFERENCED_PARAMETER(pDevice);
     if (!visible) return;
     ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(512, 256), ImGuiSetCond_FirstUseEver);
@@ -71,6 +72,7 @@ void DoorMonitorWindow::Initialize() {
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadInfo_Callback, 
         [this](GW::HookStatus* status, GW::Packet::StoC::InstanceLoadInfo* packet) -> bool {
+            UNREFERENCED_PARAMETER(status);
             if (!packet->is_explorable)
                 return in_zone = false, false;
             doors.clear();
@@ -79,6 +81,7 @@ void DoorMonitorWindow::Initialize() {
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ManipulateMapObject>(&ManipulateMapObject_Callback,
         [this](GW::HookStatus* status, GW::Packet::StoC::ManipulateMapObject* packet) -> bool {
+            UNREFERENCED_PARAMETER(status);
             if (!in_zone)
                 return false;
             DoorObject::DoorAnimation(packet->object_id, packet->animation_type, packet->animation_stage);

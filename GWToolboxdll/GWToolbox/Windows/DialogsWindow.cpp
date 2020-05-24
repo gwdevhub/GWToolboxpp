@@ -68,6 +68,7 @@ void DialogsWindow::Initialize() {
 }
 
 void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
+    UNREFERENCED_PARAMETER(pDevice);
 	if (!visible) return;
 	auto DialogButton = [](int x_idx, int x_qty, const char* text, const char* help, DWORD dialog) -> void {
 		if (x_idx != 0) ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
@@ -103,20 +104,23 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
 			DialogButton(2, 3, "Mountains", "Teleport Mountains\nThis is NOT the mountains quest", GW::Constants::DialogID::UwTeleMnt);
 			ImGui::Separator();
 		}
-		const int n_quests = _countof(questnames);
+		const size_t n_quests = _countof(questnames);
 		if (show_favorites) {
 			for (int i = 0; i < fav_count; ++i) {
+                size_t index = static_cast<size_t>(i);
 				ImGui::PushID(i);
 				ImGui::PushItemWidth(-100.0f - ImGui::GetStyle().ItemInnerSpacing.x * 2);
-				ImGui::Combo("", &fav_index[i], questnames, n_quests);
+                ImGui::Combo("", &fav_index[index], questnames, n_quests);
 				ImGui::PopItemWidth();
 				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 				if (ImGui::Button("Take", ImVec2(40.0f, 0))) {
-					GW::Agents::SendDialog(QuestAcceptDialog(IndexToQuestID(fav_index[i])));
+                    GW::Agents::SendDialog(
+                        QuestAcceptDialog(IndexToQuestID(fav_index[index])));
 				}
 				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 				if (ImGui::Button("Reward", ImVec2(60.0f, 0))) {
-					GW::Agents::SendDialog(QuestRewardDialog(IndexToDialogID(fav_index[i])));
+                    GW::Agents::SendDialog(
+                        QuestRewardDialog(IndexToDialogID(fav_index[index])));
 				}
 				ImGui::PopID();
 			}
@@ -141,8 +145,9 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
 			}
 			ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 			if (ImGui::Button("Send##2", ImVec2(60.0f, 0))) {
-				int id;
-				if (GuiUtils::ParseInt(customdialogbuf, &id)) {
+				int iid;
+                if (GuiUtils::ParseInt(customdialogbuf, &iid) && (0 <= iid)) {
+                    uint32_t id = static_cast<uint32_t>(iid);
 					GW::Agents::SendDialog(id);
 				} else {
 					Log::Error("Invalid dialog number '%s'", customdialogbuf);
@@ -158,7 +163,8 @@ void DialogsWindow::DrawSettingInternal() {
 	if (ImGui::InputInt("Number of favorites", &fav_count)) {
 		if (fav_count < 0) fav_count = 0;
 		if (fav_count > 100) fav_count = 100;
-		fav_index.resize(fav_count, 0);
+        size_t count = static_cast<size_t>(fav_count);
+		fav_index.resize(count, 0);
 	}
 	ImGui::PopItemWidth();
 	ImGui::Text("Show:");
@@ -173,10 +179,11 @@ void DialogsWindow::LoadSettings(CSimpleIni* ini) {
 	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
 
 	fav_count = ini->GetLongValue(Name(), VAR_NAME(fav_count), 3);
-	fav_index.resize(fav_count, 0);
-	for (int i = 0; i < fav_count; ++i) {
+    size_t count = static_cast<size_t>(fav_count);
+    fav_index.resize(count, 0);
+    for (size_t i = 0; i < count; ++i) {
 		char key[32];
-		snprintf(key, 32, "Quest%d", i);
+		snprintf(key, 32, "Quest%zu", i);
 		fav_index[i] = ini->GetLongValue(Name(), key, 0);
 	}
 	show_common = ini->GetBoolValue(Name(), VAR_NAME(show_common), true);
@@ -188,9 +195,10 @@ void DialogsWindow::LoadSettings(CSimpleIni* ini) {
 void DialogsWindow::SaveSettings(CSimpleIni* ini) {
 	ToolboxWindow::SaveSettings(ini);
 	ini->SetLongValue(Name(), "fav_count", fav_count);
-	for (int i = 0; i < fav_count; ++i) {
+    size_t count = static_cast<size_t>(fav_count);
+	for (size_t i = 0; i < count; ++i) {
 		char key[32];
-		snprintf(key, 32, "Quest%d", i);
+		snprintf(key, 32, "Quest%zu", i);
 		ini->SetLongValue(Name(), key, fav_index[i]);
 	}
 	ini->SetBoolValue(Name(), VAR_NAME(show_common), show_common);

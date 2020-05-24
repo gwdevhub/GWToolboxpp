@@ -1,11 +1,4 @@
 #include "stdafx.h"
-#include <stdint.h>
-
-#include <ShellApi.h>
-
-#include <string>
-#include <functional>
-
 
 #include <GWCA\Constants\Constants.h>
 
@@ -36,21 +29,23 @@ void FactionLeaderboardWindow::Initialize() {
 	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"list.png"), IDB_Icon_list);
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::TownAllianceObject>(&TownAlliance_Entry, 
 		[this](GW::HookStatus* status, GW::Packet::StoC::TownAllianceObject *pak) -> bool {
-		LeaderboardEntry leaderboardEntry = {
-			pak->map_id,
-			pak->rank,
-			pak->allegiance,
-			pak->faction,
-			pak->name,
-			pak->tag
-		};
-		if (leaderboard.size() <= leaderboardEntry.rank)
-			leaderboard.resize(leaderboardEntry.rank + 1);
-        leaderboard.at(leaderboardEntry.rank) = leaderboardEntry;
-		return false;
-	});
+            UNREFERENCED_PARAMETER(status);
+		    LeaderboardEntry leaderboardEntry = {
+			    pak->map_id,
+			    pak->rank,
+			    pak->allegiance,
+			    pak->faction,
+			    pak->name,
+			    pak->tag
+		    };
+		    if (leaderboard.size() <= leaderboardEntry.rank)
+			    leaderboard.resize(leaderboardEntry.rank + 1);
+            leaderboard.at(leaderboardEntry.rank) = leaderboardEntry;
+		    return false;
+	    });
 }
 void FactionLeaderboardWindow::Draw(IDirect3DDevice9* pDevice) {
+    UNREFERENCED_PARAMETER(pDevice);
 	if (!visible)
 		return;
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
@@ -94,7 +89,7 @@ void FactionLeaderboardWindow::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::Text(e->map_name);
 		ImGui::SameLine(offset += long_text_width);
 		ImGui::Text("%s [%s]",e->guild_str,e->tag_str);
-		ImGui::PushID(e->map_id);
+		ImGui::PushID(static_cast<int>(e->map_id));
 		ImGui::SameLine(offset = avail_width - tiny_text_width);
 		if (ImGui::Button("Wiki",ImVec2(tiny_text_width,0))) {
 			ShellExecuteW(NULL, L"open", e->guild_wiki_url.c_str(), NULL, NULL, SW_SHOWNORMAL);

@@ -45,6 +45,7 @@ void BuildsWindow::DrawHelp() {
 	ImGui::TreePop();
 }
 void BuildsWindow::CmdLoad(const wchar_t* message, int argc, LPWSTR* argv) {
+    UNREFERENCED_PARAMETER(message);
 	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
 		return;
 	if (argc > 2) {
@@ -142,13 +143,13 @@ void BuildsWindow::DrawBuildSection(TeamBuild& tbuild, unsigned int j) {
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip(!build.pcons.empty() ? "Click to load build template and pcons" : "Click to load build template");
 	ImGui::SameLine(0, spacing);
-	bool pcons_editing = tbuild.edit_pcons == j;
+	bool pcons_editing = tbuild.edit_pcons == static_cast<int>(j);
 	if(pcons_editing) 
 		ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered));
 	if (build.pcons.empty())
 		ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
 	if (ImGui::Button("Pcons", ImVec2(btn_width, 0)))
-		tbuild.edit_pcons = pcons_editing ? -1 : j;
+		tbuild.edit_pcons = pcons_editing ? -1 : static_cast<int>(j);
 	if(pcons_editing) ImGui::PopStyleColor();
 	if(build.pcons.empty()) ImGui::PopStyleColor();
     if (ImGui::IsItemHovered())
@@ -156,7 +157,7 @@ void BuildsWindow::DrawBuildSection(TeamBuild& tbuild, unsigned int j) {
 	ImGui::SameLine(0, spacing);
     if (ImGui::Button("x", ImVec2(del_width, 0))) {
 		if (delete_builds_without_prompt) {
-			tbuild.builds.erase(tbuild.builds.begin() + j);
+			tbuild.builds.erase(tbuild.builds.begin() + static_cast<int>(j));
 			builds_changed = true;
 		}
 		else {
@@ -169,7 +170,7 @@ void BuildsWindow::DrawBuildSection(TeamBuild& tbuild, unsigned int j) {
 		ImGui::Checkbox("Don't remind me again", &delete_builds_without_prompt);
 		ImGui::ShowHelp("This can be re-enabled in settings");
 		if (ImGui::Button("OK", ImVec2(120, 0))) {
-			tbuild.builds.erase(tbuild.builds.begin() + j);
+            tbuild.builds.erase(tbuild.builds.begin() + static_cast<int>(j));
 			builds_changed = true;
 			ImGui::CloseCurrentPopup();
 		}
@@ -179,7 +180,7 @@ void BuildsWindow::DrawBuildSection(TeamBuild& tbuild, unsigned int j) {
 		}
 		ImGui::EndPopup();
 	}
-	if (tbuild.edit_pcons != j)
+    if (tbuild.edit_pcons != static_cast<int>(j))
 		return; // Not editing this build.
 	const float indent = btn_width - ImGui::GetStyle().ItemSpacing.x;
 	ImGui::Indent(indent);
@@ -217,6 +218,8 @@ void BuildsWindow::DrawBuildSection(TeamBuild& tbuild, unsigned int j) {
 }
 
 void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
+    UNREFERENCED_PARAMETER(pDevice);
+    // @Cleanup: Use the BuildsWindow instance, not a static variable
 	static GW::Constants::InstanceType last_instance_type = GW::Constants::InstanceType::Loading;
 	GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
 
@@ -236,7 +239,7 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiSetCond_FirstUseEver);
 		if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
 			for (TeamBuild& tbuild : teambuilds) {
-				ImGui::PushID(tbuild.ui_id);
+                ImGui::PushID(static_cast<int>(tbuild.ui_id));
 				ImGui::GetStyle().ButtonTextAlign = ImVec2(0.0f, 0.5f);
 				if (ImGui::Button(tbuild.name, ImVec2(ImGui::GetWindowContentRegionWidth()-ImGui::GetStyle().ItemInnerSpacing.x - 60.0f * ImGui::GetIO().FontGlobalScale, 0))) {
 					if (one_teambuild_at_a_time && !tbuild.edit_open) {
@@ -277,8 +280,7 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
             const float btn_width = 50.0f * ImGui::GetIO().FontGlobalScale;
             const float btn_offset = ImGui::GetContentRegionAvailWidth() - btn_width * 3 - ImGui::GetStyle().FramePadding.x * 3;
             for (unsigned int j = 0; j < tbuild.builds.size(); ++j) {
-                Build& build = tbuild.builds[j];
-                ImGui::PushID(j);
+                ImGui::PushID(static_cast<int>(j));
 				BuildsWindow::DrawBuildSection(tbuild, j);
                 ImGui::PopID();
             }
@@ -316,7 +318,7 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
             if (ImGui::BeginPopupModal("Delete Teambuild?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
                 ImGui::Text("Are you sure?\nThis operation cannot be undone.\n\n");
                 if (ImGui::Button("OK", ImVec2(120, 0))) {
-                    teambuilds.erase(teambuilds.begin() + i);
+                    teambuilds.erase(teambuilds.begin() + static_cast<int>(i));
                     builds_changed = true;
                     ImGui::CloseCurrentPopup();
                 }
@@ -348,7 +350,6 @@ void BuildsWindow::Send(const BuildsWindow::TeamBuild& tbuild) {
 		queue.push(tbuild.name);
 	}
 	for (unsigned int i = 0; i < tbuild.builds.size(); ++i) {
-		const Build& build = tbuild.builds[i];
 		Send(tbuild, i);
 	}
 }
@@ -393,16 +394,14 @@ void BuildsWindow::Load(const char* tbuild_name, const char* build_name) {
     GW::Constants::Profession prof = (GW::Constants::Profession)GW::Agents::GetPlayerAsAgentLiving()->primary;
     bool is_skill_template = GW::SkillbarMgr::DecodeSkillTemplate(&t, build_name);
 	if (is_skill_template && t.primary != prof) {
-		Log::Error("Invalid profession for %s (%s)", build_name,GW::Constants::GetProfessionAcronym(t.primary));
+		Log::Error("Invalid profession for %s (%s)", build_name, GW::Constants::GetProfessionAcronym(t.primary).c_str());
 		return;
 	}
     std::string tbuild_ws = tbuild_name ? GuiUtils::ToLower(tbuild_name) : "";
     std::string build_ws = GuiUtils::ToLower(build_name);
-    Build* build = nullptr;
-    TeamBuild* teambuild = nullptr;
 
     std::vector<std::pair<TeamBuild,size_t>> local_teambuilds;
-    for (auto tb : teambuilds) {
+    for (auto& tb : teambuilds) {
         size_t found = local_teambuilds.size();
         size_t tbuild_best_match = tb.builds.size();
         if (tbuild_name) {
@@ -440,7 +439,7 @@ void BuildsWindow::Load(const char* tbuild_name, const char* build_name) {
 		Log::Error("Failed to find build for %s", build_name);
 		return;
 	}
-    for (auto it : local_teambuilds) {
+    for (auto& it : local_teambuilds) {
         return Load(it.first, it.second);
     }
 }
@@ -449,7 +448,6 @@ void BuildsWindow::LoadPcons(const TeamBuild& tbuild, unsigned int idx) {
     const Build& build = tbuild.builds[idx];
     if (!auto_load_pcons || build.pcons.empty())
         return;
-	bool some_pcons_not_visible = false;
 	std::vector<Pcon*> pcons_loaded;
 	std::vector<Pcon*> pcons_not_visible;
 	PconsWindow* pcw = &PconsWindow::Instance();
@@ -525,6 +523,7 @@ void BuildsWindow::Send(const TeamBuild& tbuild, unsigned int idx) {
 }
 
 void BuildsWindow::Update(float delta) {
+    UNREFERENCED_PARAMETER(delta);
 	if (!queue.empty() && TIMER_DIFF(send_timer) > 600) {
 		if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
 			&& GW::Agents::GetPlayer()) {
@@ -646,10 +645,7 @@ void BuildsWindow::LoadFromFile() {
             const char* nameval = inifile->GetValue(section, namekey, "");
             const char* templateval = inifile->GetValue(section, templatekey, "");
 
-            Build b(
-                inifile->GetValue(section, namekey, ""), 
-                inifile->GetValue(section, templatekey, "")
-            );
+            Build b(nameval, templateval);
             // Parse pcons
             std::string pconsval(inifile->GetValue(section, pconskey, ""));
             size_t pos = 0;
@@ -687,7 +683,7 @@ void BuildsWindow::SaveToFile() {
 			snprintf(section, 16, "builds%03d", i);
 			inifile->SetValue(section, "buildname", tbuild.name);
 			inifile->SetBoolValue(section, "showNumbers", tbuild.show_numbers);
-			inifile->SetLongValue(section, "count", tbuild.builds.size());
+			inifile->SetLongValue(section, "count", static_cast<long>(tbuild.builds.size()));
 			for (unsigned int j = 0; j < tbuild.builds.size(); ++j) {
 				const Build& build = tbuild.builds[j];
 				char namekey[16];
@@ -701,10 +697,10 @@ void BuildsWindow::SaveToFile() {
                     char pconskey[16];
                     std::string pconsval;
                     snprintf(pconskey, 16, "pcons%d", j);
-					size_t i = 0;
+					size_t k = 0;
                     for (auto pconstr : build.pcons) {
-						if (i) pconsval += ",";
-						i = 1;
+						if (k) pconsval += ",";
+						k = 1;
                         pconsval += pconstr;
                     }
                     inifile->SetValue(section, pconskey, pconsval.c_str());

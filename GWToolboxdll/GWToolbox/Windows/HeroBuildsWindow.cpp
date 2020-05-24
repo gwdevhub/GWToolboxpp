@@ -147,12 +147,13 @@ void HeroBuildsWindow::Terminate() {
 }
 
 void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
+    UNREFERENCED_PARAMETER(pDevice);
 	if (visible) {
 		ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 		ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiSetCond_FirstUseEver);
 		if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
 			for (TeamHeroBuild& tbuild : teambuilds) {
-				ImGui::PushID(tbuild.ui_id);
+				ImGui::PushID(static_cast<int>(tbuild.ui_id));
 				ImGui::GetStyle().ButtonTextAlign = ImVec2(0.0f, 0.5f);
 				if (ImGui::Button(tbuild.name, ImVec2(ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().ItemInnerSpacing.x - 60.0f * ImGui::GetIO().FontGlobalScale, 0))) {
 					if (one_teambuild_at_a_time && !tbuild.edit_open) {
@@ -207,7 +208,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 			const float btn_width = 50.0f * ImGui::GetIO().FontGlobalScale;
             for (size_t j = 0; j < tbuild.builds.size(); ++j) {
                 HeroBuild& build = tbuild.builds[j];
-                ImGui::PushID(j);
+                ImGui::PushID(static_cast<int>(j));
                 if (j == 0) {
                     ImGui::Text("P");
                 } else {
@@ -224,27 +225,30 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
                 } else {
                     if (ImGui::MyCombo("###heroid", "Choose Hero", &build.hero_index,
                         [](void* data, int idx, const char** out_text) -> bool {
-                        if (idx < 0) return false;
-                        if (idx >= hero_count) return false;
-                        auto id = HeroIndexToID[idx];
-                        if (id < HeroID::Merc1 || id > HeroID::Merc8) {
-                            *out_text = HeroName[HeroIndexToID[idx]];
-                            return true;
-                        }
-                        bool match = false;
-                        auto ctx = GW::GameContext::instance();
-                        auto& hero_array = ctx->world->hero_info;
-                        for (auto& hero : hero_array) {
-                            if (hero.hero_id == id) {
-                                match = true;
-                                wcstombs(MercHeroNames[id - HeroID::Merc1], hero.name, 20);
-                                *out_text = MercHeroNames[id - HeroID::Merc1];
+                            UNREFERENCED_PARAMETER(data);
+                            if (idx < 0) return false;
+                            if (idx >= hero_count) return false;
+                            auto id = HeroIndexToID[idx];
+                            if (id < HeroID::Merc1 || id > HeroID::Merc8) {
+                                *out_text = HeroName[HeroIndexToID[idx]];
+                                return true;
                             }
-                        }
-                        if (!match)
-                            *out_text = HeroName[id];
-                        return true;
-                    }, nullptr, hero_count)) {
+                            bool match = false;
+                            auto ctx = GW::GameContext::instance();
+                            auto& hero_array = ctx->world->hero_info;
+                            for (auto& hero : hero_array) {
+                                if (hero.hero_id == id) {
+                                    match = true;
+                                    wcstombs(MercHeroNames[id - HeroID::Merc1], hero.name, 20);
+                                    *out_text = MercHeroNames[id - HeroID::Merc1];
+                                }
+                            }
+                            if (!match)
+                                *out_text = HeroName[id];
+                            return true;
+                        },
+                        nullptr, hero_count))
+                    {
                         builds_changed = true;
                     }
                 }
@@ -301,7 +305,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9* pDevice) {
 			if (ImGui::BeginPopupModal("Delete Teambuild?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
 				ImGui::Text("Are you sure?\nThis operation cannot be undone.\n\n");
 				if (ImGui::Button("OK", ImVec2(120, 0))) {
-					teambuilds.erase(teambuilds.begin() + i);
+					teambuilds.erase(teambuilds.begin() + static_cast<int>(i));
 					builds_changed = true;
 					ImGui::CloseCurrentPopup();
 				}
@@ -385,7 +389,7 @@ void HeroBuildsWindow::HeroBuildName(const TeamHeroBuild& tbuild, unsigned int i
 	if (name.empty() && code.empty() && id == HeroID::NoHero) {
 		return; // nothing to do here
 	}
-	const char* c;
+	const char* c = "";
 	if (id < HeroID::Merc1 || id > HeroID::Merc8) {
 		c = HeroName[id];
 	}
@@ -463,6 +467,8 @@ void HeroBuildsWindow::Load(const TeamHeroBuild& tbuild, unsigned int idx ) {
 }
 
 void HeroBuildsWindow::Update(float delta) {
+    UNREFERENCED_PARAMETER(delta);
+    // @Cleanup: use instance variable, not static
 	static GW::Constants::InstanceType last_instance_type = GW::Constants::InstanceType::Loading;
 	GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
 
@@ -498,7 +504,7 @@ void HeroBuildsWindow::Update(float delta) {
 			break;
 		}
 		if (pending_hero_loads[i].Process()) {
-			pending_hero_loads.erase(pending_hero_loads.begin() + i);
+			pending_hero_loads.erase(pending_hero_loads.begin() + static_cast<int>(i));
 			break; // Continue loop on next frame
 		}
 	}

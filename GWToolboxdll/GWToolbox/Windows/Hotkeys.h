@@ -56,7 +56,7 @@ public:
 
 	virtual const char* Name() const = 0;
 	virtual void Draw() = 0;
-	virtual void Description(char* buf, int bufsz) const = 0;
+    virtual void Description(char *buf, size_t bufsz) const = 0;
 	virtual void Execute() = 0;
 
 protected:
@@ -88,7 +88,7 @@ public:
 	void Save(CSimpleIni* ini, const char* section) const override;
 
 	void Draw() override;
-	void Description(char* buf, int bufsz) const;
+    void Description(char *buf, size_t bufsz) const override;
 	void Execute() override;
 };
 
@@ -109,7 +109,7 @@ public:
 	void Save(CSimpleIni* ini, const char* section) const override;
 
 	void Draw() override;
-	void Description(char* buf, int bufsz) const;
+	void Description(char* buf, size_t bufsz) const override;
 	void Execute() override;
 
 	bool IsEquippable(GW::Item* item);
@@ -130,7 +130,7 @@ public:
 	void Save(CSimpleIni* ini, const char* section) const override;
 
 	void Draw() override;
-	void Description(char* buf, int bufsz) const;
+	void Description(char* buf, size_t bufsz) const override;
 	void Execute() override;
 };
 
@@ -157,7 +157,7 @@ public:
 	void Save(CSimpleIni* ini, const char* section) const override;
 
 	void Draw() override;
-	void Description(char* buf, int bufsz) const;
+    void Description(char *buf, size_t bufsz) const override;
 	void Execute() override;
 };
 
@@ -183,7 +183,7 @@ public:
 	void Save(CSimpleIni* ini, const char* section) const override;
 
 	void Draw() override;
-	void Description(char* buf, int bufsz) const;
+    void Description(char *buf, size_t bufsz) const override;
 	void Execute() override;
 };
 
@@ -209,7 +209,7 @@ public:
 	void Save(CSimpleIni* ini, const char* section) const override;
 
 	void Draw() override;
-	void Description(char* buf, int bufsz) const;
+    void Description(char *buf, size_t bufsz) const override;
 	void Execute() override;
 };
 
@@ -228,7 +228,7 @@ public:
 	void Save(CSimpleIni* ini, const char* section) const override;
 
 	void Draw() override;
-	void Description(char* buf, int bufsz) const;
+    void Description(char *buf, size_t bufsz) const override;
 	void Execute() override;
 };
 
@@ -249,13 +249,13 @@ public:
 	void Save(CSimpleIni* ini, const char* section) const override;
 
 	void Draw() override;
-	void Description(char* buf, int bufsz) const;
+    void Description(char *buf, size_t bufsz) const override;
 	void Execute() override;
 };
 
 class HotkeyDialog : public TBHotkey {
 public:
-	UINT id = 0;
+	size_t id = 0;
 	char name[140];
 
 	static const char* IniSection() { return "Dialog"; }
@@ -266,7 +266,7 @@ public:
 	void Save(CSimpleIni* ini, const char* section) const override;
 
 	void Draw() override;
-	void Description(char* buf, int bufsz) const;
+    void Description(char *buf, size_t bufsz) const override;
 	void Execute() override;
 };
 
@@ -274,7 +274,7 @@ class HotkeyPingBuild : public TBHotkey {
 	static bool GetText(void*, int idx, const char** out_text);
 
 public:
-	int index = 0;
+	size_t index = 0;
 
 	static const char* IniSection() { return "PingBuild"; }
 	const char* Name() const override { return IniSection(); }
@@ -284,7 +284,7 @@ public:
 	void Save(CSimpleIni* ini, const char* section) const override;
 
 	void Draw() override;
-	void Description(char* buf, int bufsz) const;
+    void Description(char *buf, size_t bufsz) const override;
 	void Execute() override;
 };
 
@@ -292,7 +292,7 @@ class HotkeyHeroTeamBuild : public TBHotkey {
 	static bool GetText(void*, int idx, const char** out_text);
 
 public:
-	int index = 0;
+	size_t index = 0;
 
 	static const char* IniSection() { return "HeroTeamBuild"; }
 	const char* Name() const override { return IniSection(); }
@@ -302,6 +302,6 @@ public:
 	void Save(CSimpleIni* ini, const char* section) const override;
 
 	void Draw() override;
-	void Description(char* buf, int bufsz) const;
+    void Description(char *buf, size_t bufsz) const override;
 	void Execute() override;
 };

@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "HotkeysWindow.h"
 
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\GameContainers\Array.h>
@@ -13,6 +12,7 @@
 #include <logger.h>
 #include <GuiUtils.h>
 #include <Modules\Resources.h>
+#include "HotkeysWindow.h"
 
 void HotkeysWindow::Initialize() {
 	ToolboxWindow::Initialize();
@@ -27,6 +27,7 @@ void HotkeysWindow::Terminate() {
 }
 
 void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
+    UNREFERENCED_PARAMETER(pDevice);
 	if (!visible) return;
 	// === hotkey panel ===
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
@@ -103,7 +104,7 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
 				break;
 			case TBHotkey::Op_Delete: {
 				TBHotkey* hk = hotkeys[i];
-				hotkeys.erase(hotkeys.begin() + i);
+				hotkeys.erase(hotkeys.begin() + static_cast<int>(i));
 				delete hk;
 				--i;
 			}
@@ -174,6 +175,7 @@ void HotkeysWindow::SaveSettings(CSimpleIni* ini) {
 }
 
 bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
+    UNREFERENCED_PARAMETER(lParam);
 	if (GW::Chat::GetIsTyping())
 		return false;
 
@@ -183,7 +185,7 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 	case WM_SYSKEYDOWN:
 	case WM_KEYUP:
 	case WM_SYSKEYUP:
-		keyData = wParam;
+		keyData = static_cast<long>(wParam);
 		break;
 	case WM_XBUTTONDOWN:
 	case WM_MBUTTONDOWN:
@@ -217,8 +219,8 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 			if (!block_hotkeys && hk->active 
 				&& !hk->pressed && keyData == hk->hotkey
                 && modifier == hk->modifier
-                && (hk->map_id == 0 || hk->map_id == map_id)
-                && (hk->prof_id == 0 || hk->prof_id == prof_id)) {
+                && (hk->map_id == 0 || hk->map_id == static_cast<int>(map_id))
+                && (hk->prof_id == 0 || hk->prof_id == static_cast<int>(prof_id))) {
 
 				hk->pressed = true;
                 current_hotkey = hk;
@@ -271,8 +273,8 @@ void HotkeysWindow::MapChanged() {
 				&& ((hk->trigger_on_explorable && mt == GW::Constants::InstanceType::Explorable)
 					|| (hk->trigger_on_outpost && mt == GW::Constants::InstanceType::Outpost))
 				&& !hk->pressed
-				&& (hk->map_id == 0 || hk->map_id == map_id)
-				&& (hk->prof_id == 0 || hk->prof_id == prof_id)) {
+				&& (hk->map_id == 0 || hk->map_id == static_cast<int>(map_id))
+				&& (hk->prof_id == 0 || hk->prof_id == static_cast<int>(prof_id))) {
 
 				hk->pressed = true;
 				current_hotkey = hk;
@@ -286,6 +288,7 @@ void HotkeysWindow::MapChanged() {
 }
 
 void HotkeysWindow::Update(float delta) {
+    UNREFERENCED_PARAMETER(delta);
     if (!GW::Map::GetIsMapLoaded())
         map_id = prof_id = 0;
     else if (!map_id)
