@@ -86,7 +86,7 @@ private:
     GW::Vec2f InterfaceToWorldPoint(Vec2i pos) const;
     GW::Vec2f InterfaceToWorldVector(Vec2i pos) const;
     void SelectTarget(GW::Vec2f pos);
-    bool Minimap::IsKeyDown(MinimapModifierBehaviour mmb);
+    bool IsKeyDown(MinimapModifierBehaviour mmb);
 
     bool mousedown = false;
 
