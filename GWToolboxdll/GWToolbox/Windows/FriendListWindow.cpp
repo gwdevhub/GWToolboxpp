@@ -575,7 +575,7 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::Text(s.c_str());
 		hovered = hovered || ImGui::IsItemHovered();
 		if (!show_charname && hovered) {
-			ImGui::SetTooltip(lf.GetCharactersHover(true,true).c_str());
+			ImGui::SetTooltip(lf.GetCharactersHover(true).c_str());
 		}
 		if (show_charname && lf.current_char != nullptr) {
 			ImGui::SameLine(cols[colIdx]);
