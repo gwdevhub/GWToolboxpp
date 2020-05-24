@@ -365,7 +365,6 @@
     <Image Include="..\resources\pcons\Slice_of_Pumpkin_Pie.png" />
     <Image Include="..\resources\pcons\Sugary_Blue_Drink.png" />
     <Image Include="..\resources\pcons\War_Supplies.png" />
-    <Image Include="icon1.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -118,6 +118,42 @@
     <Filter Include="utf8proc">
       <UniqueIdentifier>{52973ab6-dfdc-4b2a-9368-285b25aad81d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Windows\StringDecoder">
+      <UniqueIdentifier>{0195419e-18c1-4023-943f-c7452f445392}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\FriendList">
+      <UniqueIdentifier>{25f0044b-db8e-4e01-9e71-23b8502650c9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\FactionLeaderboard">
+      <UniqueIdentifier>{49ecf114-46ec-4b19-b73a-a1a9f3592f35}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\DoorMonitor">
+      <UniqueIdentifier>{fe074b54-1958-44f0-8efe-422b68206a21}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\SkillListing">
+      <UniqueIdentifier>{8d6a91c5-a3c8-4e64-9f6b-54229bcb00dd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\PacketLogger">
+      <UniqueIdentifier>{ddef44f2-24fe-4d63-838b-5fddde40c623}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Modules\PartyWindow">
+      <UniqueIdentifier>{53799a4d-7e87-4fa1-a9d5-8d09f36baea7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Modules\ZrawDeep">
+      <UniqueIdentifier>{658bc2bd-ac6a-4af9-ab82-2329c2b6a7e8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Modules\Twitch">
+      <UniqueIdentifier>{3032916f-2146-4839-940e-fafef08113af}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\DailyQuests">
+      <UniqueIdentifier>{9493ee1e-b4ec-4308-ba2f-e94475e6c29c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Modules\InventoryManager">
+      <UniqueIdentifier>{6f34488c-c6e6-4957-af12-3ac2ef557582}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Modules\Discord">
+      <UniqueIdentifier>{5ccbf3af-2755-4164-a010-b0616ad755f5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GWToolbox\GuiUtils.h" />
@@ -279,29 +315,59 @@
     <ClInclude Include="..\Dependencies\utf8proc\utf8proc.h">
       <Filter>utf8proc</Filter>
     </ClInclude>
-    <ClInclude Include="GWToolbox\Windows\FactionLeaderboardWindow.h" />
     <ClInclude Include="GWToolbox\stdafx.h" />
     <ClInclude Include="GWToolbox\Utils\RateLimiter.h" />
-    <ClInclude Include="GWToolbox\Windows\DailyQuests.h" />
-    <ClInclude Include="GWToolbox\Windows\DoorMonitorWindow.h" />
-    <ClInclude Include="GWToolbox\Windows\PacketLoggerWindow.h" />
-    <ClInclude Include="GWToolbox\Windows\SkillListingWindow.h" />
-    <ClInclude Include="GWToolbox\Windows\StringDecoderWindow.h" />
-    <ClInclude Include="GWToolbox\Modules\DiscordModule.h" />
-    <ClInclude Include="..\Dependencies\discord_game_sdk\c\discord_game_sdk.h" />
     <ClInclude Include="GWToolbox\base64.h" />
     <ClInclude Include="GWToolbox\sha1.hpp" />
     <ClInclude Include="GWToolbox\IRC.h" />
-    <ClInclude Include="GWToolbox\Windows\FriendListWindow.h" />
-    <ClInclude Include="GWToolbox\Modules\TwitchModule.h" />
-    <ClInclude Include="GWToolbox\Modules\PartyWindowModule.h" />
     <ClInclude Include="GWToolbox\mp3.h" />
-    <ClInclude Include="GWToolbox\Modules\ZrawDeepModule.h" />
-    <ClInclude Include="GWToolbox\Widgets\Minimap\EffectRenderer.h" />
-    <ClInclude Include="GWToolbox\Windows\TradeWindow.h" />
     <ClInclude Include="GWToolbox\Modules\AprilFools.h" />
-    <ClInclude Include="GWToolbox\Modules\InventoryManager.h" />
     <ClInclude Include="GWToolbox\d3dx9_dynamic.h" />
+    <ClInclude Include="GWToolbox\Windows\DoorMonitorWindow.h">
+      <Filter>Windows\DoorMonitor</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Modules\DiscordModule.h">
+      <Filter>Modules\Discord</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Windows\FactionLeaderboardWindow.h">
+      <Filter>Windows\FactionLeaderboard</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Windows\FriendListWindow.h">
+      <Filter>Windows\FriendList</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Windows\PacketLoggerWindow.h">
+      <Filter>Windows\PacketLogger</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Windows\SkillListingWindow.h">
+      <Filter>Windows\SkillListing</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Windows\StringDecoderWindow.h">
+      <Filter>Windows\StringDecoder</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Modules\PartyWindowModule.h">
+      <Filter>Modules\PartyWindow</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Modules\ZrawDeepModule.h">
+      <Filter>Modules\ZrawDeep</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Modules\TwitchModule.h">
+      <Filter>Modules\Twitch</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Windows\TradeWindow.h">
+      <Filter>Windows\Trade</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Windows\DailyQuests.h">
+      <Filter>Windows\DailyQuests</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Modules\InventoryManager.h">
+      <Filter>Modules\InventoryManager</Filter>
+    </ClInclude>
+    <ClInclude Include="GWToolbox\Widgets\Minimap\EffectRenderer.h">
+      <Filter>Widgets\Minimap</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\discord_game_sdk\c\discord_game_sdk.h">
+      <Filter>Modules\Discord</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GWToolbox\main.cpp" />
@@ -447,28 +513,56 @@
     <ClCompile Include="..\Dependencies\imgui\imgui_widgets.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
-    <ClCompile Include="GWToolbox\Windows\FactionLeaderboardWindow.cpp" />
     <ClCompile Include="GWToolbox\stdafx.cpp" />
     <ClCompile Include="GWToolbox\Utils\RateLimiter.cpp" />
-    <ClCompile Include="GWToolbox\Windows\DailyQuests.cpp" />
-    <ClCompile Include="GWToolbox\Windows\DoorMonitorWindow.cpp" />
-    <ClCompile Include="GWToolbox\Windows\PacketLoggerWindow.cpp" />
-    <ClCompile Include="GWToolbox\Windows\SkillListingWindow.cpp" />
-    <ClCompile Include="GWToolbox\Windows\StringDecoderWindow.cpp" />
-    <ClCompile Include="GWToolbox\Modules\DiscordModule.cpp" />
     <ClCompile Include="GWToolbox\base64.cpp" />
     <ClCompile Include="GWToolbox\sha1.cpp" />
     <ClCompile Include="GWToolbox\IRC.cc" />
-    <ClCompile Include="GWToolbox\Windows\FriendListWindow.cpp" />
-    <ClCompile Include="GWToolbox\Modules\TwitchModule.cpp" />
-    <ClCompile Include="GWToolbox\Modules\PartyWindowModule.cpp" />
     <ClCompile Include="GWToolbox\mp3.cpp" />
-    <ClCompile Include="GWToolbox\Modules\ZrawDeepModule.cpp" />
-    <ClCompile Include="GWToolbox\Widgets\Minimap\EffectRenderer.cpp" />
-    <ClCompile Include="GWToolbox\Windows\TradeWindow.cpp" />
     <ClCompile Include="GWToolbox\Modules\AprilFools.cpp" />
-    <ClCompile Include="GWToolbox\Modules\InventoryManager.cpp" />
     <ClCompile Include="GWToolbox\d3dx9_dynamic.cpp" />
+    <ClCompile Include="GWToolbox\Windows\DoorMonitorWindow.cpp">
+      <Filter>Windows\DoorMonitor</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Modules\DiscordModule.cpp">
+      <Filter>Modules\Discord</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Windows\FactionLeaderboardWindow.cpp">
+      <Filter>Windows\FactionLeaderboard</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Windows\FriendListWindow.cpp">
+      <Filter>Windows\FriendList</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Windows\PacketLoggerWindow.cpp">
+      <Filter>Windows\PacketLogger</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Windows\SkillListingWindow.cpp">
+      <Filter>Windows\SkillListing</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Windows\StringDecoderWindow.cpp">
+      <Filter>Windows\StringDecoder</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Modules\PartyWindowModule.cpp">
+      <Filter>Modules\PartyWindow</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Modules\ZrawDeepModule.cpp">
+      <Filter>Modules\ZrawDeep</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Modules\TwitchModule.cpp">
+      <Filter>Modules\Twitch</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Windows\TradeWindow.cpp">
+      <Filter>Windows\Trade</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Windows\DailyQuests.cpp">
+      <Filter>Windows\DailyQuests</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Modules\InventoryManager.cpp">
+      <Filter>Modules\InventoryManager</Filter>
+    </ClCompile>
+    <ClCompile Include="GWToolbox\Widgets\Minimap\EffectRenderer.cpp">
+      <Filter>Widgets\Minimap</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GWToolbox.rc">
