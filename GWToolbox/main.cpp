@@ -172,7 +172,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
             }
 
             if (iRet == IDYES) {
-                RestartAsAdminForInjection(proc.GetProcessId());
+                RestartAsAdminWithSameArgs();
                 return 0;
             }
         }
