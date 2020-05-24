@@ -138,7 +138,7 @@ void PartyWindowModule::Initialize() {
 			while (pending_remove.size())
 				pending_remove.pop();
 			pending_add.clear();
-			is_explorable = pak->is_explorable;
+			is_explorable = pak->is_explorable != 0;
 		});
 	// Player numbers in party window
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(
@@ -158,7 +158,7 @@ void PartyWindowModule::Initialize() {
 			if (TIMER_DIFF(pending_add[i].add_timer) < 100)
 				continue;
 			AddAllyActual(pending_add[i]);
-			pending_add.erase(pending_add.begin() + i);
+			pending_add.erase(pending_add.begin() + static_cast<int>(i));
 			break; // Continue next frame
 		}
 		});
@@ -170,7 +170,7 @@ void PartyWindowModule::CheckMap() {
 		ClearAddedAllies();
 		return;
 	}
-	GW::AgentArray &agents = GW::Agents::GetAgentArray();
+	GW::AgentArray agents = GW::Agents::GetAgentArray();
 	if (!agents.valid())
 		return;
 	for (unsigned int i = 0; i < allies_added_to_party.size(); i++) {
@@ -316,7 +316,7 @@ bool PartyWindowModule::ShouldAddAgentToPartyWindow(GW::Agent* _a) {
 	std::vector<uint32_t>::iterator it = std::find(allies_added_to_party.begin(), allies_added_to_party.end(), a->agent_id);
 	if (it != allies_added_to_party.end())
 		return false;
-	return ShouldAddAgentToPartyWindow(0x20000000 | a->player_number);
+	return ShouldAddAgentToPartyWindow(0x20000000u | a->player_number);
 }
 void PartyWindowModule::DrawSettingInternal() {
 	ImGui::Checkbox("Add player numbers to party window", &add_player_numbers_to_party_window);

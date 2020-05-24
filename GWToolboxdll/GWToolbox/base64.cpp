@@ -1,5 +1,7 @@
 #include "stdafx.h"
+
 #include "base64.h"
+#pragma warning(disable: 4365)
 
 const char b64_encoding[65] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 const unsigned char b64_decoding[128] =

@@ -55,7 +55,7 @@ HMODULE GWToolbox::GetDLLModule() {
 DWORD __stdcall SafeThreadEntry(LPVOID module) {
     dllmodule = (HMODULE)module;
     __try {
-        return ThreadEntry(nullptr);
+        ThreadEntry(nullptr);
     } __except ( EXCEPT_EXPRESSION_ENTRY ) {
         Log::Log("SafeThreadEntry __except body\n");
         return EXIT_SUCCESS;

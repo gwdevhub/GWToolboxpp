@@ -694,7 +694,7 @@ void ChatCommands::CmdHide(const wchar_t *message, int argc, LPWSTR *argv) {
 	}
 }
 
-bool ChatCommands::ParseOutpost(const std::wstring s, GW::Constants::MapID& outpost, GW::Constants::District& district, int& number) {
+bool ChatCommands::ParseOutpost(const std::wstring s, GW::Constants::MapID& outpost, GW::Constants::District& district, uint32_t& number) {
     // @Cleanup:
     // Should we parse this number here?
     number = 0;
@@ -781,7 +781,7 @@ bool ChatCommands::ParseOutpost(const std::wstring s, GW::Constants::MapID& outp
         return outpost = bestMatchMapID, true; // Exact match
 	return false;
 }
-bool ChatCommands::ParseDistrict(const std::wstring s, GW::Constants::District& district, int& number) {
+bool ChatCommands::ParseDistrict(const std::wstring s, GW::Constants::District& district, uint32_t& number) {
 	district = GW::Constants::District::Current;
 	number = 0;
 	if (s == L"ae")									return district = GW::Constants::District::American, true;
@@ -812,7 +812,7 @@ void ChatCommands::CmdTP(const wchar_t *message, int argc, LPWSTR *argv) {
 	}
 	GW::Constants::MapID outpost = GW::Map::GetMapID();
 	GW::Constants::District district = GW::Constants::District::Current;
-	int district_number = 0;
+	uint32_t district_number = 0;
 
 	std::wstring argOutpost = GuiUtils::ToLower(argv[1]);
 	std::wstring argDistrict = GuiUtils::ToLower(argv[argc-1]);
@@ -981,7 +981,7 @@ void ChatCommands::CmdDamage(const wchar_t *message, int argc, LPWSTR *argv) {
 		} else {
 			int idx;
 			if (GuiUtils::ParseInt(argv[1], &idx)) {
-				PartyDamage::Instance().WriteDamageOf(idx - 1);
+				PartyDamage::Instance().WriteDamageOf(static_cast<uint32_t>(idx) - 1);
 			}
 		}
 	}

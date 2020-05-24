@@ -20,7 +20,7 @@ namespace {
 
 // === Setup and cleanup ====
 void Log::InitializeLog() {
-#if _DEBUG
+#ifdef GWTOOLBOX_DEBUG
 	logfile = stdout;
 	AllocConsole();
 	freopen_s(&stdout_file, "CONOUT$", "w", stdout);
@@ -38,7 +38,7 @@ void Log::InitializeChat() {
 }
 
 void Log::Terminate() {
-#if _DEBUG
+#ifdef GWTOOLBOX_DEBUG
 	if (stdout_file)
 		fclose(stdout_file);
 	if (stderr_file)
