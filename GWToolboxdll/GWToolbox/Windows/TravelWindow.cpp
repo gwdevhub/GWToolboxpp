@@ -1,6 +1,4 @@
 #include "stdafx.h"
-#include <functional>
-#include "TravelWindow.h"
 
 #include <GWCA\Constants\Constants.h>
 
@@ -54,6 +52,7 @@ void TravelWindow::TravelButton(const char* text, int x_idx, GW::Constants::MapI
 }
 
 void TravelWindow::Draw(IDirect3DDevice9* pDevice) {
+    UNREFERENCED_PARAMETER(pDevice);
 	if (!visible) return;
 
 	if (ImInPresearing()) {
@@ -133,11 +132,11 @@ void TravelWindow::Draw(IDirect3DDevice9* pDevice) {
 			for (int i = 0; i < fav_count; ++i) {
 				ImGui::PushID(i);
 				ImGui::PushItemWidth(-40.0f - ImGui::GetStyle().ItemInnerSpacing.x);
-				ImGui::MyCombo("", "Select a favorite", &fav_index[i], outpost_name_array_getter, nullptr, N_OUTPOSTS);
+				ImGui::MyCombo("", "Select a favorite", &fav_index[static_cast<size_t>(i)], outpost_name_array_getter, nullptr, N_OUTPOSTS);
 				ImGui::PopItemWidth();
 				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 				if (ImGui::Button("Go", ImVec2(40.0f, 0))) {
-					TravelFavorite(i);
+					TravelFavorite(static_cast<size_t>(i));
 				}
 				ImGui::PopID();
 			}
@@ -147,6 +146,7 @@ void TravelWindow::Draw(IDirect3DDevice9* pDevice) {
 }
 
 void TravelWindow::Update(float delta) {
+    UNREFERENCED_PARAMETER(delta);
 	if (scroll_to_outpost_id != GW::Constants::MapID::None) {
 		ScrollToOutpost(scroll_to_outpost_id); // We're in the process of scrolling to an outpost
 	}
@@ -156,7 +156,7 @@ bool TravelWindow::IsWaitingForMapTravel() {
 	return GW::GameContext::instance()->party != nullptr && (GW::GameContext::instance()->party->flag & 0x8) > 0;
 }
 
-void TravelWindow::ScrollToOutpost(GW::Constants::MapID outpost_id, GW::Constants::District district, int district_number) {
+void TravelWindow::ScrollToOutpost(GW::Constants::MapID outpost_id, GW::Constants::District _district, uint32_t _district_number) {
 	if (!GW::Map::GetIsMapLoaded() || !GW::PartyMgr::GetIsPartyLoaded()) {
 		map_travel_countdown_started = false;
 		pending_map_travel = false;
@@ -184,11 +184,11 @@ void TravelWindow::ScrollToOutpost(GW::Constants::MapID outpost_id, GW::Constant
 	if (scroll_to_outpost_id != outpost_id) return; // Already travelling to another outpost
 	if (map_id == outpost_id) {
 		scroll_to_outpost_id = GW::Constants::MapID::None;
-		UITravel(outpost_id, district, district_number);
+        UITravel(outpost_id, _district, _district_number);
 		return; // Already at this outpost. Called GW::Map::Travel just in case district is different.
 	}
 
-	int scroll_model_id = 0;
+	uint32_t scroll_model_id = 0;
 	bool is_ready_to_scroll = map_id == GW::Constants::MapID::Embark_Beach;
 	switch (scroll_to_outpost_id) {
 	case GW::Constants::MapID::The_Deep:
@@ -208,7 +208,10 @@ void TravelWindow::ScrollToOutpost(GW::Constants::MapID outpost_id, GW::Constant
 		return; // Not in scrollable outpost, but we're not in the outpost we started from either - user has decided to travel somewhere else.
 	}
 
-	GW::Item* scroll_to_use = GW::Items::GetItemByModelId(scroll_model_id, static_cast<int>(GW::Constants::Bag::Backpack), static_cast<int>(GW::Constants::Bag::Storage_14));
+	GW::Item* scroll_to_use = GW::Items::GetItemByModelId(
+        scroll_model_id,
+        static_cast<int>(GW::Constants::Bag::Backpack),
+        static_cast<int>(GW::Constants::Bag::Storage_14));
 	if (!scroll_to_use) {
 		scroll_to_outpost_id = GW::Constants::MapID::None;
 		Log::Error("No scroll found in inventory for travel");
@@ -220,17 +223,19 @@ void TravelWindow::ScrollToOutpost(GW::Constants::MapID outpost_id, GW::Constant
 		return; // Done.
 	}
 	pending_map_travel = true;
-    UITravel(GW::Constants::MapID::Embark_Beach, district, district_number);
+    UITravel(GW::Constants::MapID::Embark_Beach, _district, _district_number);
 	//GW::Map::Travel(GW::Constants::MapID::Embark_Beach, district, district_number); // Travel to embark.
 }
 
-void TravelWindow::Travel(GW::Constants::MapID MapID, GW::Constants::District District /*= 0*/, int district_number) {
+void TravelWindow::Travel(GW::Constants::MapID MapID, GW::Constants::District _district /*= 0*/, uint32_t _district_number) {
 	switch (MapID) {
 	case GW::Constants::MapID::The_Deep:
 	case GW::Constants::MapID::Urgozs_Warren:
-		return ScrollToOutpost(MapID, District, district_number);
+        return ScrollToOutpost(MapID, _district, _district_number);
+    default:
+        break;
 	}
-    return UITravel(MapID, District, district_number);
+    return UITravel(MapID, _district, _district_number);
 	//return GW::Map::Travel(MapID, District, district_number);
 }
 bool TravelWindow::IsMapUnlocked(GW::Constants::MapID map_id) {
@@ -239,31 +244,30 @@ bool TravelWindow::IsMapUnlocked(GW::Constants::MapID map_id) {
 	if (real_index >= unlocked_map.size())
 		return false;
 	uint32_t shift = (uint32_t)map_id % 32;
-	uint32_t flag = 1 << shift;
+	uint32_t flag = 1u << shift;
 	return (unlocked_map[real_index] & flag) != 0;
 }
-void TravelWindow::UITravel(GW::Constants::MapID MapID, GW::Constants::District District /*= 0*/, int district_number) {
+void TravelWindow::UITravel(GW::Constants::MapID MapID, GW::Constants::District _district /*= 0*/, uint32_t _district_number) {
     struct MapStruct {
         GW::Constants::MapID map_id;
-        uint32_t region_id;
-        uint32_t language_id;
+        int region_id;
+        int language_id;
         uint32_t district_number;
     };
     MapStruct* t = new MapStruct();
     t->map_id = MapID;
-    t->district_number = district_number;
-    t->region_id = RegionFromDistrict(District);
-    t->language_id = LanguageFromDistrict(District);
+    t->district_number = _district_number;
+    t->region_id = RegionFromDistrict(_district);
+    t->language_id = LanguageFromDistrict(_district);
 
-	uint32_t err = 0;
 	if (!IsMapUnlocked(MapID)) {
 		Log::Error("[Error] Your character does not have %s unlocked",GW::Constants::NAME_FROM_ID[(uint32_t)MapID]);
 		return;
 	}
 	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost
-		&& t->region_id == GW::Map::GetRegion()
-		&& t->language_id == GW::Map::GetLanguage()
-		&& (t->district_number == 0 || t->district_number == GW::Map::GetDistrict())
+		&& static_cast<int>(t->region_id) == GW::Map::GetRegion()
+		&& static_cast<int>(t->language_id) == GW::Map::GetLanguage()
+		&& (t->district_number == 0 || static_cast<int>(t->district_number) == GW::Map::GetDistrict())
 		&& t->map_id == GW::Map::GetMapID()) {
 		Log::Error("[Error] You are already in the outpost");
 		return;
@@ -274,8 +278,8 @@ void TravelWindow::UITravel(GW::Constants::MapID MapID, GW::Constants::District 
     });
 }
 
-uint32_t TravelWindow::RegionFromDistrict(GW::Constants::District district) {
-    switch (district) {
+int TravelWindow::RegionFromDistrict(GW::Constants::District _district) {
+    switch (_district) {
     case GW::Constants::District::International: return GW::Constants::Region::International;
     case GW::Constants::District::American: return GW::Constants::Region::America;
     case GW::Constants::District::EuropeEnglish:
@@ -289,11 +293,14 @@ uint32_t TravelWindow::RegionFromDistrict(GW::Constants::District district) {
     case GW::Constants::District::AsiaKorean: return GW::Constants::Region::Korea;
     case GW::Constants::District::AsiaChinese: return GW::Constants::Region::China;
     case GW::Constants::District::AsiaJapanese: return GW::Constants::Region::Japan;
+    default:
+        break;
     }
     return GW::Map::GetRegion();
 }
-uint32_t TravelWindow::LanguageFromDistrict(GW::Constants::District district) {
-    switch (district) {
+int TravelWindow::LanguageFromDistrict(GW::Constants::District _district)
+{
+    switch (_district) {
     case GW::Constants::District::EuropeEnglish: return GW::Constants::EuropeLanguage::English;
     case GW::Constants::District::EuropeFrench: return GW::Constants::EuropeLanguage::French;
     case GW::Constants::District::EuropeGerman: return GW::Constants::EuropeLanguage::German;
@@ -307,12 +314,14 @@ uint32_t TravelWindow::LanguageFromDistrict(GW::Constants::District district) {
     case GW::Constants::District::International:
     case GW::Constants::District::American:
         return 0;
+    default:
+        break;
     }
     return GW::Map::GetLanguage();
 }
 
 bool TravelWindow::TravelFavorite(unsigned int idx) {
-	if (idx < 0 || idx >= fav_index.size())	return false;
+	if (idx >= fav_index.size())	return false;
 	Travel(IndexToOutpostID(fav_index[idx]), district, district_number);
 	if (close_on_travel) visible = false;
 	return true;
@@ -325,7 +334,7 @@ void TravelWindow::DrawSettingInternal() {
 	if (ImGui::InputInt("Number of favorites", &fav_count)) {
 		if (fav_count < 0) fav_count = 0;
 		if (fav_count > 100) fav_count = 100;
-		fav_index.resize(fav_count, -1);
+		fav_index.resize(static_cast<size_t>(fav_count), -1);
 	}
 	ImGui::PopItemWidth();
 }
@@ -335,11 +344,11 @@ void TravelWindow::LoadSettings(CSimpleIni* ini) {
 	show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
 
 	fav_count = ini->GetLongValue(Name(), VAR_NAME(fav_count), 3);
-	fav_index.resize(fav_count, -1);
+	fav_index.resize(static_cast<size_t>(fav_count), -1);
 	for (int i = 0; i < fav_count; ++i) {
 		char key[32];
 		snprintf(key, 32, "Fav%d", i);
-		fav_index[i] = ini->GetLongValue(Name(), key, -1);
+		fav_index[static_cast<size_t>(i)] = ini->GetLongValue(Name(), key, -1);
 	}
 	close_on_travel = ini->GetBoolValue(Name(), VAR_NAME(close_on_travel), false);
 }
@@ -348,9 +357,10 @@ void TravelWindow::SaveSettings(CSimpleIni* ini) {
 	ToolboxWindow::SaveSettings(ini);
 	ini->SetLongValue(Name(), VAR_NAME(fav_count), fav_count);
 	for (int i = 0; i < fav_count; ++i) {
+        size_t ui = static_cast<size_t>(i);
 		char key[32];
 		snprintf(key, 32, "Fav%d", i);
-		ini->SetLongValue(Name(), key, fav_index[i]);
+        ini->SetLongValue(Name(), key, fav_index[ui]);
 	}
 	ini->SetBoolValue(Name(), VAR_NAME(close_on_travel), close_on_travel);
 }
@@ -544,6 +554,7 @@ GW::Constants::MapID TravelWindow::IndexToOutpostID(int index) {
 
 namespace {
 	bool outpost_name_array_getter(void* data, int idx, const char** out_text) {
+        UNREFERENCED_PARAMETER(data);
 		switch (idx) {
 		case 0: *out_text = "Abaddon's Gate";				break;
 		case 1: *out_text = "Abaddon's Mouth";				break;

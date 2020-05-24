@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "AgentRenderer.h"
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameContainers/Array.h>
@@ -14,6 +13,7 @@
 #include <Defines.h>
 
 #include <Modules/Resources.h>
+#include "AgentRenderer.h"
 
 #define AGENTCOLOR_INIFILENAME L"AgentColors.ini"
 
@@ -216,9 +216,8 @@ void AgentRenderer::DrawSettings() {
 
 			CustomAgent* custom = custom_agents[i];
 			if (!custom) continue;
-			DWORD modelId = custom->modelId;
 
-			ImGui::PushID(custom->ui_id);
+			ImGui::PushID(static_cast<int>(custom->ui_id));
 
 			CustomAgent::Operation op = CustomAgent::Operation::None;
 			if (custom->DrawSettings(op)) changed = true;
@@ -236,14 +235,14 @@ void AgentRenderer::DrawSettings() {
 					std::swap(custom_agents[i], custom_agents[i + 1]);
 					// render the moved one and increase i
 					++i;
-					ImGui::PushID(custom_agents[i]->ui_id);
+					ImGui::PushID(static_cast<int>(custom_agents[i]->ui_id));
 					CustomAgent::Operation op2 = CustomAgent::Operation::None;
 					custom_agents[i]->DrawSettings(op2);
 					ImGui::PopID();
 				}
 				break;
 			case CustomAgent::Operation::Delete:
-				custom_agents.erase(custom_agents.begin() + i);
+				custom_agents.erase(custom_agents.begin() + static_cast<int>(i));
 				delete custom;
 				--i;
 				break;
@@ -362,7 +361,7 @@ void AgentRenderer::Initialize(IDirect3DDevice9* device) {
 	vertices = nullptr;
 	HRESULT hr = device->CreateVertexBuffer(sizeof(D3DVertex) * vertices_max, 0,
 		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
-	if (FAILED(hr)) printf("AgentRenderer initialize error: %d\n", hr);
+	if (FAILED(hr)) printf("AgentRenderer initialize error: HRESULT: 0x%lX\n", hr);
 }
 
 void AgentRenderer::Render(IDirect3DDevice9* device) {
@@ -372,7 +371,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 	}
 
 	HRESULT res = buffer->Lock(0, sizeof(D3DVertex) * vertices_max, (VOID**)&vertices, D3DLOCK_DISCARD);
-	if (FAILED(res)) printf("AgentRenderer Lock() error: %d\n", res);
+	if (FAILED(res)) printf("AgentRenderer Lock() HRESULT: 0x%lX\n", res);
 
 	vertices_count = 0;
 
@@ -741,7 +740,6 @@ void AgentRenderer::Enqueue(Shape_e shape, const GW::Agent* agent, float size, C
 	for (size_t i = 0; i < num_v; ++i) {
 		const Shape_Vertex& vert = shapes[shape].vertices[i];
 		GW::Vec2f pos = (GW::Rotate(vert, agent->rotation_cos, agent->rotation_sin) * size) + agent->pos;
-		Color vcolor = color;
 		switch (vert.modifier) {
 		case Dark: vertices[i].color = Colors::Sub(color, color_agent_modifier); break;
 		case Light: vertices[i].color = Colors::Add(color, color_agent_modifier); break;
@@ -772,8 +770,8 @@ AgentRenderer::CustomAgent::CustomAgent(CSimpleIni* ini, const char* section)
 
 	active = ini->GetBoolValue(section, VAR_NAME(active), active);
 	GuiUtils::StrCopy(name, ini->GetValue(section, VAR_NAME(name), ""), sizeof(name));
-	modelId = ini->GetLongValue(section, VAR_NAME(modelId), modelId);
-	mapId = ini->GetLongValue(section, VAR_NAME(mapId), mapId);
+	modelId = static_cast<DWORD>(ini->GetLongValue(section, VAR_NAME(modelId), static_cast<long>(modelId)));
+    mapId = static_cast<DWORD>(ini->GetLongValue(section, VAR_NAME(mapId), static_cast<long>(mapId)));
 
 	color = Colors::Load(ini, section, VAR_NAME(color), color);
 	int s = ini->GetLongValue(section, VAR_NAME(shape), shape);
@@ -801,8 +799,8 @@ AgentRenderer::CustomAgent::CustomAgent(DWORD _modelId, Color _color, const char
 void AgentRenderer::CustomAgent::SaveSettings(CSimpleIni* ini, const char* section) const {
 	ini->SetBoolValue(section, VAR_NAME(active), active);
 	ini->SetValue(section, VAR_NAME(name), name);
-	ini->SetLongValue(section, VAR_NAME(modelId), modelId);
-	ini->SetLongValue(section, VAR_NAME(mapId), mapId);
+	ini->SetLongValue(section, VAR_NAME(modelId), static_cast<long>(modelId));
+    ini->SetLongValue(section, VAR_NAME(mapId), static_cast<long>(mapId));
 
 	Colors::Save(ini, section, VAR_NAME(color), color);
 	ini->SetLongValue(section, VAR_NAME(shape), shape + 1);
@@ -828,7 +826,7 @@ bool AgentRenderer::CustomAgent::DrawSettings(AgentRenderer::CustomAgent::Operat
 	bool changed = false;
 
 	if (ImGui::TreeNode("##params")) {
-		ImGui::PushID(ui_id);
+		ImGui::PushID(static_cast<int>(ui_id));
 
 		changed |= DrawHeader();
 

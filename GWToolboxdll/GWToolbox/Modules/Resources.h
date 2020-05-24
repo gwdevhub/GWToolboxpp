@@ -1,7 +1,5 @@
 #pragma once
 
-#include <d3d9.h>
-
 #include "../resource.h"
 
 #include <Utf8.h>

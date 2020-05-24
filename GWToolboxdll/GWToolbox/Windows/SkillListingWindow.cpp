@@ -1,5 +1,7 @@
 #include "stdafx.h"
-#include "SkillListingWindow.h"
+
+#include <GWCA/Utilities/Macros.h>
+#include <GWCA/Utilities/Scanner.h>
 
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
@@ -12,8 +14,7 @@
 #include <Modules\Resources.h>
 #include "logger.h"
 
-#include <GWCA/Utilities/Macros.h>
-#include <GWCA/Utilities/Scanner.h>
+#include "SkillListingWindow.h"
 
 static uintptr_t skill_array_addr;
 
@@ -101,6 +102,7 @@ void SkillListingWindow::Initialize() {
     }
 }
 void SkillListingWindow::Draw(IDirect3DDevice9* pDevice) {
+    UNREFERENCED_PARAMETER(pDevice);
     if (!visible)
         return;
     ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
@@ -122,7 +124,6 @@ void SkillListingWindow::Draw(IDirect3DDevice9* pDevice) {
     ImGui::SameLine(offset += tiny_text_width);
     ImGui::Text("Type");
     ImGui::Separator();
-    bool has_entries = 0;
     for (size_t i = 0; i < skills.size(); i++) {
         if (!skills[i]) continue;
         ImGui::Text("%d", i);
@@ -136,7 +137,7 @@ void SkillListingWindow::Draw(IDirect3DDevice9* pDevice) {
         ImGui::SameLine(offset += long_text_width);
         ImGui::Text("%d", skills[i]->skill->attribute);
         ImGui::SameLine(offset += tiny_text_width);
-        ImGui::Text("%s", GW::Constants::GetProfessionAcronym((GW::Constants::Profession)skills[i]->skill->profession));
+        ImGui::Text("%s", GW::Constants::GetProfessionAcronym((GW::Constants::Profession)skills[i]->skill->profession).c_str());
         ImGui::SameLine(offset += tiny_text_width);
         ImGui::Text("%d", skills[i]->skill->type);
     }

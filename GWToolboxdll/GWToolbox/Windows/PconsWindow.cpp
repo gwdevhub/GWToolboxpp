@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "PconsWindow.h"
+
 #include <imgui.h>
 #include <imgui_internal.h>
 
@@ -31,6 +31,7 @@
 #include <Modules\Resources.h>
 #include <Widgets\AlcoholWidget.h>
 #include <Windows\HotkeysWindow.h>
+#include "PconsWindow.h"
 
 using namespace GW::Constants;
 
@@ -230,38 +231,42 @@ void PconsWindow::Initialize() {
 		status->blocked = blocked;
 		return;
 	});
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveDone>(&ObjectiveDone_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::ObjectiveDone* packet) -> bool {
-		objectives_complete.push_back(packet->objective_id);
-		CheckObjectivesCompleteAutoDisable();
-		return false;
-	});
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::VanquishComplete>(&VanquishComplete_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::VanquishComplete* pak) -> bool {
-        if (!disable_cons_on_vanquish_completion)
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveDone>(
+        &ObjectiveDone_Entry,
+        [this](GW::HookStatus*, GW::Packet::StoC::ObjectiveDone* packet) -> bool {
+		    objectives_complete.push_back(packet->objective_id);
+		    CheckObjectivesCompleteAutoDisable();
+		    return false;
+	    });
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::VanquishComplete>(
+        &VanquishComplete_Entry,
+        [this](GW::HookStatus*, GW::Packet::StoC::VanquishComplete*) -> bool {
+            if (!disable_cons_on_vanquish_completion)
+                return false;
+            if (!enabled) 
+                return false;
+            SetEnabled(false);
+            Log::Info("Cons auto-disabled on completion");
             return false;
-        if (!enabled) 
-            return false;
-        SetEnabled(false);
-        Log::Info("Cons auto-disabled on completion");
-        return false;
-    });
+        });
 	GW::Chat::CreateCommand(L"pcons",
-	[this](const wchar_t *message, int argc, LPWSTR *argv) {
-		if (argc <= 1) {
-			ToggleEnable();
-		}
-		else { // we are ignoring parameters after the first
-			std::wstring arg1 = GuiUtils::ToLower(argv[1]);
-			if (arg1 == L"on") {
-				SetEnabled(true);
-			}
-			else if (arg1 == L"off") {
-				SetEnabled(false);
-			}
-			else {
-				Log::Error("Invalid argument '%ls', please use /pcons [|on|off]", argv[1]);
-			}
-		}
-	});
+	    [this](const wchar_t *, int argc, LPWSTR *argv) {
+		    if (argc <= 1) {
+			    ToggleEnable();
+		    }
+		    else { // we are ignoring parameters after the first
+			    std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+			    if (arg1 == L"on") {
+				    SetEnabled(true);
+			    }
+			    else if (arg1 == L"off") {
+				    SetEnabled(false);
+			    }
+			    else {
+				    Log::Error("Invalid argument '%ls', please use /pcons [|on|off]", argv[1]);
+			    }
+		    }
+	    });
 }
 bool PconsWindow::DrawTabButton(IDirect3DDevice9* device, bool show_icon, bool show_text) {
 	bool clicked = ToolboxWindow::DrawTabButton(device, show_icon, show_text);
@@ -319,6 +324,7 @@ void PconsWindow::Draw(IDirect3DDevice9* device) {
 	
 }
 void PconsWindow::Update(float delta) {
+    UNREFERENCED_PARAMETER(delta);
 	if (instance_type != GW::Map::GetInstanceType() || map_id != GW::Map::GetMapID())
 		MapChanged(); // Map changed.
 	if (!player && instance_type == GW::Constants::InstanceType::Explorable)
@@ -331,7 +337,7 @@ void PconsWindow::Update(float delta) {
 				Pcon::map_has_effects_array = partyEffects[i].agent_id == player->agent_id;
 		}
 	}
-    in_vanquishable_area = GW::Map::GetFoesToKill();
+    in_vanquishable_area = GW::Map::GetFoesToKill() != 0;
 	CheckBossRangeAutoDisable();
 	for (Pcon* pcon : pcons) {
 		pcon->Update();
@@ -383,25 +389,33 @@ bool PconsWindow::SetEnabled(bool b) {
 	case GW::Constants::InstanceType::Outpost:
 		if(tick_with_pcons)
 			GW::PartyMgr::Tick(enabled);
-    case GW::Constants::InstanceType::Explorable:
-        if (HotkeysWindow::Instance().current_hotkey && !HotkeysWindow::Instance().current_hotkey->show_message_in_emote_channel)
+    case GW::Constants::InstanceType::Explorable: {
+        if (HotkeysWindow::Instance().current_hotkey &&
+            !HotkeysWindow::Instance()
+                 .current_hotkey->show_message_in_emote_channel)
             break; // Selected hotkey doesn't allow a message.
-		ImGuiWindow* main = ImGui::FindWindowByName(MainWindow::Instance().Name());
-		ImGuiWindow* pcon = ImGui::FindWindowByName(Name());
-		if ((pcon == nullptr || pcon->Collapsed || !visible)
-			&& (main == nullptr || main->Collapsed || !MainWindow::Instance().visible)) {
-			Log::Info("Pcons %s", enabled ? "enabled" : "disabled");
-		}
-		break;
+        ImGuiWindow *main =
+            ImGui::FindWindowByName(MainWindow::Instance().Name());
+        ImGuiWindow *pcon = ImGui::FindWindowByName(Name());
+        if ((pcon == nullptr || pcon->Collapsed || !visible) &&
+            (main == nullptr || main->Collapsed ||
+             !MainWindow::Instance().visible)) {
+            Log::Info("Pcons %s", enabled ? "enabled" : "disabled");
+        }
+        break;
+    }
+    default:
+        break;
 	}
-	return enabled;
+    return enabled;
 }
 
 void PconsWindow::RegisterSettingsContent() {
 	ToolboxUIElement::RegisterSettingsContent();
-	ToolboxModule::RegisterSettingsContent("Game Settings", [this](const std::string* section, bool is_showing) {
-		if (!is_showing) return;
-		DrawLunarsAndAlcoholSettings();
+	ToolboxModule::RegisterSettingsContent("Game Settings",
+        [this](const std::string*, bool is_showing) {
+		    if (!is_showing) return;
+		    DrawLunarsAndAlcoholSettings();
 		}, 1.1f);
 }
 
@@ -451,7 +465,6 @@ void PconsWindow::CheckBossRangeAutoDisable() {	// Trigger Elite area auto disab
 		return;		// No boss location to check for this map, player ptr not loaded, or checked recently already.
 	}
 	elite_area_check_timer = TIMER_INIT();
-	bool disable_pcons = false;
 	float d = GetDistance(GW::Vec2f(player->pos), current_final_room_location);
 	if (d > 0 && d <= GW::Constants::Range::Spirit) {
 		elite_area_disable_triggered = true;

@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "TradeWindow.h"
 
 #include <WinSock2.h>
 
@@ -20,6 +19,7 @@
 #include "logger.h"
 #include "GuiUtils.h"
 #include "GWToolbox.h"
+#include "TradeWindow.h"
 
 // Every connection cost 30 seconds.
 // You have 2 tries.
@@ -33,7 +33,7 @@ using json_vec = std::vector<json>;
 
 static const char ws_host[] = "wss://kamadan.gwtoolbox.com";
 static const char https_host[] = "https://kamadan.gwtoolbox.com";
-void TradeWindow::CmdPricecheck(const wchar_t* message, int argc, LPWSTR* argv) {
+void TradeWindow::CmdPricecheck(const wchar_t*, int argc, LPWSTR* argv) {
 	if (argc < 2)
 		return Log::Error("Try '/pc <item>'");
 	
@@ -105,6 +105,7 @@ bool TradeWindow::GetInKamadanAE1() {
 }
 
 void TradeWindow::Update(float delta) {
+    UNREFERENCED_PARAMETER(delta);
 	if (ws_window && ws_window->getReadyState() == WebSocket::CLOSED) {
 		delete ws_window;
 		ws_window = nullptr;
@@ -131,7 +132,7 @@ bool TradeWindow::parse_json_message(json* js, Message* msg) {
 		msg->message = js->at("m").get<std::string>();
 		msg->timestamp = static_cast<uint32_t>(js->at("t").get<uint64_t>() / 1000); // Messy?
 	}
-	catch (...) {
+	catch (const json::exception&) {
 		Log::Log("ERROR: Failed to parse incoming trade message in TradeWindow::parse_json_message\n");
 		return false;
 	}
@@ -158,8 +159,7 @@ void TradeWindow::fetch() {
 		json res;
 		try {
 			res = json::parse(data.c_str());
-		}
-		catch (...) {
+		} catch (const json::exception &) {
 			Log::Log("ERROR: Failed to parse res JSON from response in ws_window->dispatch\n");
 			return;
 		}
@@ -172,8 +172,7 @@ void TradeWindow::fetch() {
 			try {
 				if (res["num_results"].get<uint32_t>() > 0)
 					results = res["results"].get<json_vec>();
-			}
-			catch (...) {
+			} catch (const json::exception &) {
 				Log::Log("ERROR: Failed to parse search results in TradeWindow::fetch\n");
 				return;
 			}
@@ -181,7 +180,8 @@ void TradeWindow::fetch() {
 			if (print_search_results && !results.size()) {
 				Log::Warning("No results found for %s", query_string.c_str());
 			}
-			for (int i = results.size() - 1; i >= 0; i--) {
+            size_t results_size = results.size();
+            for (size_t i = results_size - 1; i < results_size; i--) {
 				TradeWindow::Message msg;
 				if (!parse_json_message(&results[i], &msg))
 					continue;
@@ -210,7 +210,10 @@ void TradeWindow::fetch() {
 			// Currently showing a search term in-window. Only add if it matches all words.
 			add_to_window = true;
 			std::string input(msg.message);
-			std::transform(input.begin(), input.end(), input.begin(), ::tolower);
+            std::transform(input.begin(), input.end(), input.begin(),
+                           [](char c) -> char {
+                               return static_cast<char>(::tolower(c));
+                           });
 			for (auto term : searched_words) {
 				if (input.find(term) != std::string::npos)
 					continue; // Searched word no found; drop out
@@ -234,8 +237,7 @@ void TradeWindow::fetch() {
 				if (std::regex_search(word, m, regex_check)) {
 					try {
 						word_regex = std::regex(m._At(1).str(), std::regex::ECMAScript | std::regex::icase);
-					}
-					catch (...) {
+					} catch (const std::exception&) {
 						// Silent fail; invalid regex
 					}
 					if (std::regex_search(msg.message, word_regex))
@@ -267,6 +269,7 @@ void TradeWindow::search(std::string query, bool print_results_in_chat) {
 }
 
 void TradeWindow::Draw(IDirect3DDevice9* device) {
+    UNREFERENCED_PARAMETER(device);
 	if (!visible)
 		return;
 
@@ -333,14 +336,15 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			const float playernamewidth = 160.0f;
 			const float message_left = playername_left + playernamewidth + innerspacing;
 
-			for (int i = messages.size() - 1; i >= 0; i--) {
+            size_t n_messages = messages.size();
+            for (size_t i = n_messages - 1; i < n_messages; i--) {
 				Message &msg = messages[i];
-				ImGui::PushID(i);
+				ImGui::PushID(static_cast<int>(i));
 
 				// ==== time elapsed column ====
 				if (show_time) {
 					// negative numbers have came from this before, it is probably just server client desync
-					int time_since_message = (int)now - msg.timestamp;
+                    int time_since_message = static_cast<int>(now) - static_cast<int>(msg.timestamp);
 
 					ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::f16));
 					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(.7f, .7f, .7f, 1.0f));
@@ -463,7 +467,7 @@ void TradeWindow::ParseBuffer(const char *text, std::vector<std::string>& words)
 	std::string word;
 	while (std::getline(stream, word)) {
 		for (size_t i = 0; i < word.length(); i++)
-			word[i] = tolower(word[i]);
+			word[i] = static_cast<char>(tolower(word[i]));
 		words.push_back(word);
 	}
 }
@@ -473,7 +477,7 @@ void TradeWindow::ParseBuffer(std::fstream stream, std::vector<std::string>& wor
 	std::string word;
 	while (std::getline(stream, word)) {
 		for (size_t i = 0; i < word.length(); i++)
-			word[i] = tolower(word[i]);
+			word[i] = static_cast<char>(tolower(word[i]));
 		words.push_back(word);
 	}
 }
@@ -485,7 +489,7 @@ void TradeWindow::AsyncWindowConnect(bool force) {
 		return;
 	ws_window_connecting = true;
 	thread_jobs.push([this]() {
-		if (!(ws_window = WebSocket::from_url(ws_host))) {
+		if ((ws_window = WebSocket::from_url(ws_host)) == nullptr) {
 			printf("Couldn't connect to the host '%s'", ws_host);
 		}
 		ws_window_connecting = false;

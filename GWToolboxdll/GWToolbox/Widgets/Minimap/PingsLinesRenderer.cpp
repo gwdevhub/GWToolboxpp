@@ -1,8 +1,4 @@
 #include "stdafx.h"
-#include "PingsLinesRenderer.h"
-
-#include <d3d9.h>
-#include <d3dx9math.h>
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameContainers/Array.h>
@@ -20,6 +16,7 @@
 #include <GWCA/Managers/EffectMgr.h>
 
 #include "GuiUtils.h"
+#include "PingsLinesRenderer.h"
 
 
 void PingsLinesRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
@@ -174,7 +171,7 @@ void PingsLinesRenderer::Initialize(IDirect3DDevice9* device) {
 	HRESULT hr = device->CreateVertexBuffer(sizeof(D3DVertex) * vertices_max, 0,
 		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
 	if (FAILED(hr)) {
-		printf("Error setting up PingsLinesRenderer vertex buffer: %d\n", hr);
+		printf("Error setting up PingsLinesRenderer vertex buffer: HRESULT: 0x%lX\n", hr);
 	}
 }
 
@@ -190,7 +187,7 @@ void PingsLinesRenderer::Render(IDirect3DDevice9* device) {
 
 	vertices_count = 0;
 	HRESULT res = buffer->Lock(0, sizeof(D3DVertex) * vertices_max, (VOID**)&vertices, D3DLOCK_DISCARD);
-	if (FAILED(res)) printf("PingsLinesRenderer Lock() error: %d\n", res);
+	if (FAILED(res)) printf("PingsLinesRenderer Lock() error: HRESULT 0x%lX\n", res);
 
 	DrawShadowstepLine(device);
 
@@ -254,16 +251,16 @@ void PingsLinesRenderer::EnqueueVertex(float x, float y, Color color) {
 	++vertices_count;
 }
 void PingsLinesRenderer::DrawDrawings(IDirect3DDevice9* device) {
+    UNREFERENCED_PARAMETER(device);
 	for (auto it = drawings.begin(); it != drawings.end(); ++it) {
 		if (it->second.player == 0) continue;
 		std::deque<DrawingLine>& lines = it->second.lines;
 
 		if (vertices_count < vertices_max - 2) {
 			for (const DrawingLine& line : lines) {
-				int max_alpha = (color_drawings & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT;
-				int left = 5000 - TIMER_DIFF(line.start);
-				int alpha = left * max_alpha / 2000;
-				if (alpha < 0) alpha = 0;
+				uint32_t max_alpha = (color_drawings & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT;
+				uint32_t left = static_cast<uint32_t>(5000 - TIMER_DIFF(line.start));
+				uint32_t alpha = left * max_alpha / 2000;
 				if (alpha > max_alpha) alpha = max_alpha;
 				Color color = (color_drawings & 0x00FFFFFF) | (alpha << IM_COL32_A_SHIFT);
 				EnqueueVertex(line.x1, line.y1, color);
@@ -310,6 +307,7 @@ void PingsLinesRenderer::DrawShadowstepMarker(IDirect3DDevice9* device) {
 }
 
 void PingsLinesRenderer::DrawShadowstepLine(IDirect3DDevice9* device) {
+    UNREFERENCED_PARAMETER(device);
 	// this is after the previous func, so don't check for effect
 	if (shadowstep_location.x == 0.0f && shadowstep_location.y == 0.0f) return;
 	if ((color_shadowstep_line & IM_COL32_A_MASK) == 0) return;
@@ -322,6 +320,7 @@ void PingsLinesRenderer::DrawShadowstepLine(IDirect3DDevice9* device) {
 }
 
 void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9* device) {
+    UNREFERENCED_PARAMETER(device);
 	if (recall_target == 0) return;
 	if ((color_shadowstep_line & IM_COL32_A_MASK) == 0) return;
 
@@ -368,26 +367,26 @@ void PingsLinesRenderer::PingCircle::Initialize(IDirect3DDevice9* device) {
 	type = D3DPT_TRIANGLESTRIP;
 	count = 48; // polycount
 	unsigned int vertex_count = count + 2;
-	D3DVertex* vertices = nullptr;
+	D3DVertex* _vertices = nullptr;
 
 	if (buffer) buffer->Release();
 	device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, 0,
 		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
-	buffer->Lock(0, sizeof(D3DVertex) * vertex_count,
-		(VOID**)&vertices, D3DLOCK_DISCARD);
+	buffer->Lock(0, sizeof(D3DVertex) * vertex_count, (VOID **)&_vertices,
+                 D3DLOCK_DISCARD);
 	
 	const float PI = 3.1415927f;
 	for (size_t i = 0; i < count; ++i) {
 		float angle = i * (2 * PI / count);
 		bool outer = (i % 2 == 0);
 		float radius = outer ? 1.0f : 0.8f;
-		vertices[i].x = radius * std::cos(angle);
-		vertices[i].y = radius * std::sin(angle);
-		vertices[i].z = 0.0f;
-		vertices[i].color = (outer ? color : Colors::Sub(color, 0xFF000000));
+        _vertices[i].x = radius * std::cos(angle);
+        _vertices[i].y = radius * std::sin(angle);
+        _vertices[i].z = 0.0f;
+        _vertices[i].color = (outer ? color : Colors::Sub(color, 0xFF000000));
 	}
-	vertices[count] = vertices[0];
-	vertices[count + 1] = vertices[1];
+    _vertices[count] = _vertices[0];
+    _vertices[count + 1] = _vertices[1];
 
 	buffer->Unlock();
 }
@@ -395,25 +394,25 @@ void PingsLinesRenderer::Marker::Initialize(IDirect3DDevice9* device) {
 	type = D3DPT_TRIANGLEFAN;
 	count = 16; // polycount
 	unsigned int vertex_count = count + 2;
-	D3DVertex* vertices = nullptr;
+    D3DVertex *_vertices = nullptr;
 
 	if (buffer) buffer->Release();
 	device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, 0,
 		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
-	buffer->Lock(0, sizeof(D3DVertex) * vertex_count,
-		(VOID**)&vertices, D3DLOCK_DISCARD);
+	buffer->Lock(0, sizeof(D3DVertex) * vertex_count, (VOID **)&_vertices,
+                 D3DLOCK_DISCARD);
 
 	const float PI = 3.1415927f;
-	vertices[0].x = 0.0f;
-	vertices[0].y = 0.0f;
-	vertices[0].z = 0.0f;
-	vertices[0].color = Colors::Sub(color, Colors::ARGB(50, 0, 0, 0));
+    _vertices[0].x = 0.0f;
+    _vertices[0].y = 0.0f;
+    _vertices[0].z = 0.0f;
+    _vertices[0].color = Colors::Sub(color, Colors::ARGB(50, 0, 0, 0));
 	for (size_t i = 1; i < vertex_count; ++i) {
 		float angle = (i-1) * (2 * PI / count);
-		vertices[i].x = std::cos(angle);
-		vertices[i].y = std::sin(angle);
-		vertices[i].z = 0.0f;
-		vertices[i].color = color;
+        _vertices[i].x = std::cos(angle);
+        _vertices[i].y = std::sin(angle);
+        _vertices[i].z = 0.0f;
+        _vertices[i].color = color;
 	}
 
 	buffer->Unlock();
@@ -462,7 +461,7 @@ bool PingsLinesRenderer::OnMouseMove(float x, float y) {
 	if (!mouse_moved) { // first time
 		mouse_moved = true;
 		BumpSessionID();
-		drawings[me->player_number].session = session_id;
+		drawings[me->player_number].session = static_cast<DWORD>(session_id);
 	}
 
 	if (TIMER_DIFF(lastshown) > show_interval
@@ -501,7 +500,6 @@ bool PingsLinesRenderer::OnMouseUp() {
 		lastsent = TIMER_INIT();
 	} else {
 		BumpSessionID();
-		GW::Agent* me = GW::Agents::GetPlayer();
 		queue.push_back(GW::UI::CompassPoint(ToShortPos(mouse_x), ToShortPos(mouse_y)));
 		pings.push_front(new TerrainPing(mouse_x, mouse_y));
 	}
@@ -517,7 +515,7 @@ void PingsLinesRenderer::SendQueue() {
 		for (unsigned int i = 0; i < queue.size(); ++i) {
 			pts[i] = queue[i];
 		}
-		GW::UI::DrawOnCompass(session_id, queue.size(), pts);
+		GW::UI::DrawOnCompass(static_cast<size_t>(session_id), queue.size(), pts);
 	}
 
 	queue.clear();

@@ -1,8 +1,4 @@
 #include "stdafx.h"
-#include "EffectRenderer.h"
-
-#include <d3d9.h>
-#include <d3dx9math.h>
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameContainers/Array.h>
@@ -19,6 +15,7 @@
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
 
+#include "EffectRenderer.h"
 #include "GuiUtils.h"
 
 namespace {
@@ -92,7 +89,7 @@ void EffectRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
 void EffectRenderer::DrawSettings() {
 	const float offset = ImGui::GetIO().FontGlobalScale * 150.0f;
 	for (auto s : aoe_effect_settings) {
-		ImGui::PushID(s.first);
+		ImGui::PushID(static_cast<int>(s.first));
 		Colors::DrawSettingHueWheel("", &s.second->color, 0);
 		ImGui::SameLine();
 		ImGui::Text(s.second->name.c_str());
@@ -190,7 +187,7 @@ void EffectRenderer::Initialize(IDirect3DDevice9* device) {
 	HRESULT hr = device->CreateVertexBuffer(sizeof(D3DVertex) * vertices_max, 0,
 		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
 	if (FAILED(hr)) {
-		printf("Error setting up PingsLinesRenderer vertex buffer: %d\n", hr);
+		printf("Error setting up PingsLinesRenderer vertex buffer: HRESULT: 0x%lX\n", hr);
 	}
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&StoC_Hook, [&](GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer*) {
 		need_to_clear_effects = true;
@@ -209,13 +206,13 @@ void EffectRenderer::DrawAoeEffects(IDirect3DDevice9* device) {
         return;
 	D3DXMATRIX translate, scale, world;
 	std::lock_guard<std::recursive_mutex> lock(effects_mutex);
-	int effect_size = aoe_effects.size();
-	for (int i = 0; i < effect_size; i++) {
+	size_t effect_size = aoe_effects.size();
+	for (size_t i = 0; i < effect_size; i++) {
 		Effect* effect = aoe_effects[i];
 		if (!effect)
 			continue;
-		if (TIMER_DIFF(effect->start) > effect->duration) {
-			aoe_effects.erase(aoe_effects.begin() + i);
+		if (TIMER_DIFF(effect->start) > static_cast<clock_t>(effect->duration)) {
+			aoe_effects.erase(aoe_effects.begin() + static_cast<int>(i));
 			delete effect;
 			i--;
 			effect_size--;

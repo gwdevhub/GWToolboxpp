@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "SettingsWindow.h"
 
 #include "Defines.h"
 #include "GuiUtils.h" 
@@ -16,6 +15,7 @@
 #include <Modules/GameSettings.h>
 #include <Modules/ToolboxTheme.h>
 #include <Modules/ToolboxSettings.h>
+#include "SettingsWindow.h"
 
 
 void SettingsWindow::Initialize() {
@@ -33,6 +33,7 @@ void SettingsWindow::SaveSettings(CSimpleIni* ini) {
 }
 
 void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
+    UNREFERENCED_PARAMETER(pDevice);
 	static GW::Constants::InstanceType last_instance_type = GW::Constants::InstanceType::Loading;
 	GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
 

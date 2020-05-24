@@ -19,6 +19,7 @@
 #pragma warning(disable: 4820) // 'bytes' bytes padding added after construct 'member_name'
 #pragma warning(disable: 5026) // 'type': move constructor was implicitly defined as deleted
 #pragma warning(disable: 5027) // 'type': move assignment operator was implicitly defined as deleted
+#pragma warning(disable: 5029) // nonstandard extension used: alignment attributes in C++ apply to variables, data members and tag types only
 #pragma warning(disable: 5039) // 'function': pointer or reference to potentially throwing function passed to extern C function under -EHc. Undefined behavior may occur if this function throws an exception.
 #pragma warning(disable: 5045) // Compiler will insert Spectre mitigation for memory load if /Qspectre switch specified
 
@@ -86,6 +87,10 @@
 #include <SimpleIni.h>
 #include <json.hpp>
 #include <easywsclient\easywsclient.hpp>
+
+#include <d3d9.h>
+#include <d3dx9math.h>
+#include <d3dx9tex.h>
 
 #pragma warning(pop)
 

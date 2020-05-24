@@ -125,10 +125,10 @@ void CustomRenderer::DrawSettings() {
 	ImGui::Text("Note: custom markers are stored in 'Markers.ini' in settings folder. You can share the file with other players or paste other people's markers into it.");
 	float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
 	ImGui::PushID("lines");
-	for (unsigned i = 0; i < lines.size(); ++i) {
+	for (size_t i = 0; i < lines.size(); ++i) {
 		bool remove = false;
 		CustomLine& line = lines[i];
-		ImGui::PushID(i);
+		ImGui::PushID(static_cast<int>(i));
 		if (ImGui::Checkbox("##visible", &line.visible)) markers_changed = true;
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Visible");
 		ImGui::SameLine(0.0f, spacing);
@@ -160,14 +160,14 @@ void CustomRenderer::DrawSettings() {
 		}
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete");
 		ImGui::PopID();
-		if (remove) lines.erase(lines.begin() + i);
+		if (remove) lines.erase(lines.begin() + static_cast<int>(i));
 	}
 	ImGui::PopID();
 	ImGui::PushID("markers");
-	for (unsigned i = 0; i < markers.size(); ++i) {
+	for (size_t i = 0; i < markers.size(); ++i) {
 		bool remove = false;
 		CustomMarker& marker = markers[i];
-		ImGui::PushID(i);
+        ImGui::PushID(static_cast<int>(i));
 		ImGui::Checkbox("##visible", &marker.visible);
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Visible");
 		ImGui::SameLine(0.0f, spacing);
@@ -204,20 +204,21 @@ void CustomRenderer::DrawSettings() {
 		}
 		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete");
 		ImGui::PopID();
-		if (remove) markers.erase(markers.begin() + i);
+        if (remove)
+            markers.erase(markers.begin() + static_cast<int>(i));
 	}
 	ImGui::PopID();
 	float button_width = (ImGui::CalcItemWidth() - ImGui::GetStyle().ItemSpacing.x) / 2;
 	if (ImGui::Button("Add Line", ImVec2(button_width, 0.0f))) {
 		char buf[32];
-		snprintf(buf, 32, "line%d", lines.size());
+		snprintf(buf, 32, "line%zu", lines.size());
 		lines.push_back(CustomLine(buf));
 		markers_changed = true;
 	}
 	ImGui::SameLine(0.0f, ImGui::GetStyle().ItemSpacing.x);
 	if (ImGui::Button("Add Marker", ImVec2(button_width, 0.0f))) {
 		char buf[32];
-		snprintf(buf, 32, "marker%d", markers.size());
+		snprintf(buf, 32, "marker%zu", markers.size());
 		markers.push_back(CustomMarker(buf));
 		markers_changed = true;
 	}
@@ -231,7 +232,7 @@ void CustomRenderer::Initialize(IDirect3DDevice9* device) {
 	HRESULT hr = device->CreateVertexBuffer(sizeof(D3DVertex) * vertices_max, 0,
 		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
 	if (FAILED(hr)) {
-		printf("Error setting up CustomRenderer vertex buffer: %d\n", hr);
+		printf("Error setting up CustomRenderer vertex buffer: HRESULT: 0x%lX\n", hr);
 	}
 }
 
@@ -239,25 +240,25 @@ void CustomRenderer::FullCircle::Initialize(IDirect3DDevice9* device) {
 	type = D3DPT_TRIANGLEFAN;
 	count = 48; // polycount
 	unsigned int vertex_count = count + 2;
-	D3DVertex* vertices = nullptr;
+	D3DVertex* _vertices = nullptr;
 
 	if (buffer) buffer->Release();
 	device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, 0,
 		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
-	buffer->Lock(0, sizeof(D3DVertex) * vertex_count,
-		(VOID**)&vertices, D3DLOCK_DISCARD);
+	buffer->Lock(0, sizeof(D3DVertex) * vertex_count, (VOID **)&_vertices,
+                 D3DLOCK_DISCARD);
 
 	const float PI = 3.1415927f;
-	vertices[0].x = 0.0f;
-	vertices[0].y = 0.0f;
-	vertices[0].z = 0.0f;
-	vertices[0].color = Colors::Sub(color, Colors::ARGB(50, 0, 0, 0));
+    _vertices[0].x = 0.0f;
+    _vertices[0].y = 0.0f;
+    _vertices[0].z = 0.0f;
+    _vertices[0].color = Colors::Sub(color, Colors::ARGB(50, 0, 0, 0));
 	for (size_t i = 1; i < vertex_count; ++i) {
 		float angle = (i - 1) * (2 * PI / count);
-		vertices[i].x = std::cos(angle);
-		vertices[i].y = std::sin(angle);
-		vertices[i].z = 0.0f;
-		vertices[i].color = color;
+        _vertices[i].x = std::cos(angle);
+        _vertices[i].y = std::sin(angle);
+        _vertices[i].z = 0.0f;
+        _vertices[i].color = color;
 	}
 
 	buffer->Unlock();
@@ -267,21 +268,22 @@ void CustomRenderer::LineCircle::Initialize(IDirect3DDevice9* device) {
 	type = D3DPT_LINESTRIP;
 	count = 48; // polycount
 	unsigned int vertex_count = count + 1;
-	D3DVertex* vertices = nullptr;
+    D3DVertex *_vertices = nullptr;
 
 	if (buffer) buffer->Release();
 	device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, 0, 
 		D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
-	buffer->Lock(0, sizeof(D3DVertex) * vertex_count, (VOID**)&vertices, D3DLOCK_DISCARD);
+    buffer->Lock(0, sizeof(D3DVertex) * vertex_count, (VOID **)&_vertices,
+                 D3DLOCK_DISCARD);
 
 	for (size_t i = 0; i < count; ++i) {
 		float angle = i * (2 * static_cast<float>(M_PI) / (count + 1));
-		vertices[i].x = std::cos(angle);
-		vertices[i].y = std::sin(angle);
-		vertices[i].z = 0.0f;
-		vertices[i].color = color; // 0xFF666677;
+        _vertices[i].x = std::cos(angle);
+        _vertices[i].y = std::sin(angle);
+        _vertices[i].z = 0.0f;
+        _vertices[i].color = color; // 0xFF666677;
 	}
-	vertices[count] = vertices[0];
+    _vertices[count] = _vertices[0];
 
 	buffer->Unlock();
 }
@@ -296,7 +298,7 @@ void CustomRenderer::Render(IDirect3DDevice9* device) {
 
 	vertices_count = 0;
 	HRESULT res = buffer->Lock(0, sizeof(D3DVertex) * vertices_max, (VOID**)&vertices, D3DLOCK_DISCARD);
-	if (FAILED(res)) printf("PingsLinesRenderer Lock() error: %d\n", res);
+	if (FAILED(res)) printf("PingsLinesRenderer Lock() error: HRESULT: 0x%lX\n", res);
 
 	DrawCustomLines(device);
 
@@ -353,6 +355,7 @@ void CustomRenderer::DrawCustomMarkers(IDirect3DDevice9* device) {
 }
 
 void CustomRenderer::DrawCustomLines(IDirect3DDevice9* device) {
+    UNREFERENCED_PARAMETER(device);
 	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
 		for (const CustomLine& line : lines) {
 			if (line.visible 
@@ -364,12 +367,12 @@ void CustomRenderer::DrawCustomLines(IDirect3DDevice9* device) {
 	}
 }
 
-void CustomRenderer::EnqueueVertex(float x, float y, Color color) {
+void CustomRenderer::EnqueueVertex(float x, float y, Color _color) {
 	if (vertices_count == vertices_max) return;
 	vertices[0].x = x;
 	vertices[0].y = y;
 	vertices[0].z = 0.0f;
-	vertices[0].color = color;
+    vertices[0].color = _color;
 	++vertices;
 	++vertices_count;
 }

@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "PmapRenderer.h"
 
 #include "d3dx9_dynamic.h"
 

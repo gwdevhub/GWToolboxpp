@@ -4,22 +4,24 @@
 
 #include "logger.h"
 
-#include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/UIMgr.h>
 
 #include "GuiUtils.h"
 
 #include "StringDecoderWindow.h"
 
-static void printchar(wchar_t c) {
+static void printchar(wchar_t c)
+{
     if (c >= L' ' && c <= L'~') {
         printf("%lc", c);
-    }
-    else {
+    } else {
         printf("0x%X ", c);
     }
 }
-void StringDecoderWindow::Draw(IDirect3DDevice9* pDevice) {
+void StringDecoderWindow::Draw(IDirect3DDevice9 *pDevice)
+{
+    UNREFERENCED_PARAMETER(pDevice);
     if (!visible)
         return;
     ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
@@ -31,48 +33,54 @@ void StringDecoderWindow::Draw(IDirect3DDevice9* pDevice) {
         Decode();
     }
     if (decoded.size()) {
-		//std::wstring str = GuiUtils::StringToWString(encoded);
-        Log::LogW(L"%d %ls\n",GW::UI::EncStrToUInt32(GetEncodedString().c_str()), decoded.c_str());
+        // std::wstring str = GuiUtils::StringToWString(encoded);
+        Log::LogW(L"%d %ls\n",
+                  GW::UI::EncStrToUInt32(GetEncodedString().c_str()),
+                  decoded.c_str());
         GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, decoded.c_str());
         decoded.clear();
     }
     return ImGui::End();
 }
-void StringDecoderWindow::Initialize() {
+void StringDecoderWindow::Initialize()
+{
     ToolboxWindow::Initialize();
 }
-void StringDecoderWindow::PrintEncStr(const wchar_t* enc_str) {
-    char enc_str_chars[256] = { 0 };
+void StringDecoderWindow::PrintEncStr(const wchar_t *enc_str)
+{
     for (size_t i = 0; enc_str[i] != 0; i++) {
         printf("0x%X ", enc_str[i]);
     }
     printf("\n");
 }
-void StringDecoderWindow::Send() {
+void StringDecoderWindow::Send()
+{
     GW::Chat::SendChat('#', GetEncodedString().c_str());
 }
-std::wstring StringDecoderWindow::GetEncodedString() {
+std::wstring StringDecoderWindow::GetEncodedString()
+{
     std::istringstream iss(encoded);
     std::vector<std::string> results((std::istream_iterator<std::string>(iss)),
-        std::istream_iterator<std::string>());
+                                     std::istream_iterator<std::string>());
 
-    unsigned long hex_value = 0;
     std::wstring encodedW;
 
     for (size_t i = 0; i < results.size(); i++) {
-        Log::Log("%s\n", results[i]);
-        encodedW[i] = std::strtoul(results[i].c_str(), 0, 16);
-        printchar(encodedW[i]);
-        printf("\n");
+        Log::Log("%s\n", results[i].c_str());
+        wchar_t c;
+        try {
+            unsigned long lval = std::strtoul(results[i].c_str(), 0, 16);
+            c = static_cast<wchar_t>(lval);
+            encodedW[i] = c;
+            printchar(encodedW[i]);
+            printf("\n");
+        } catch (const std::exception &) {
+        }
     }
     return encodedW;
 }
-void StringDecoderWindow::Decode() {
+void StringDecoderWindow::Decode()
+{
     decoded.clear();
-    try {
-        GW::UI::AsyncDecodeStr(GetEncodedString().c_str(), &decoded);
-    }
-    catch (...) {
-        Log::Error("Failed to decode; invalid.");
-    }
+    GW::UI::AsyncDecodeStr(GetEncodedString().c_str(), &decoded);
 }

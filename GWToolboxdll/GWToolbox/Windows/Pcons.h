@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Windows.h>
-#include <d3d9.h>
 
 #include <SimpleIni.h>
 #include <imgui.h>
@@ -49,9 +48,11 @@ protected:
     Pcon(const Pcon&) = delete;
 	virtual ~Pcon();
     bool* GetSettingsByName(const wchar_t* name);
-    static bool UnreserveSlotForMove(int bagId, int slot); // Unlock slot.
-	static bool ReserveSlotForMove(int bagId, int slot); // Prevents more than 1 pcon from trying to add to the same slot at the same time.
-	static bool IsSlotReservedForMove(int bagId, int slot); // Checks whether another pcon has reserved this slot.
+    static bool UnreserveSlotForMove(size_t bagId, size_t slot); // Unlock slot.
+    // Prevents more than 1 pcon from trying to add to the same slot at the same time.
+    static bool ReserveSlotForMove(size_t bagId, size_t slot);
+    // Checks whether another pcon has reserved this slot.
+    static bool IsSlotReservedForMove(size_t bagId, size_t slot);
 
 	GW::Bag* pending_move_to_bag = nullptr;
 	uint32_t pending_move_to_slot = 0;
@@ -62,7 +63,8 @@ public:
 	virtual void Update(int delay = -1);
 	// Similar to GW::Items::MoveItem, except this returns amount moved and uses the split stack header when needed.
 	// Most of this logic should be integrated back into GWCA repo, but I've written it here for GWToolbox
-	static uint32_t MoveItem(GW::Item *item, GW::Bag *bag, int slot, int quantity = 0);
+    static uint32_t MoveItem(GW::Item *item, GW::Bag *bag, size_t slot,
+                             size_t quantity = 0);
 	static GW::Bag* GetBag(uint32_t bag_id);
     wchar_t* SetPlayerName();
 	// Fires off another thread to refill pcons. Sets refill_attempted to TRUE when finished.
@@ -112,11 +114,14 @@ protected:
 	// if 'used' is not null, it will also use the first item found,
 	// and, if so, used *used to true
 	// returns the number of items found, or -1 in case of error
-	int CheckInventory(bool* used = nullptr, int* used_qty = nullptr, int from_bag = static_cast<int>(GW::Constants::Bag::Backpack), int to_bag = static_cast<int>(GW::Constants::Bag::Bag_2)) const;
+    int CheckInventory(
+        bool *used = nullptr, size_t *used_qty = nullptr,
+        size_t from_bag = static_cast<size_t>(GW::Constants::Bag::Backpack),
+        size_t to_bag = static_cast<size_t>(GW::Constants::Bag::Bag_2)) const;
 
 	virtual bool CanUseByInstanceType() const;
 	virtual bool CanUseByEffect() const = 0;
-	virtual int QuantityForEach(const GW::Item* item) const = 0;
+	virtual size_t QuantityForEach(const GW::Item* item) const = 0;
 
 private:
 	IDirect3DTexture9* texture = nullptr;
@@ -143,7 +148,7 @@ public:
 
 protected:
 	bool CanUseByEffect() const override;
-	int QuantityForEach(const GW::Item* item) const override;
+	size_t QuantityForEach(const GW::Item* item) const override;
 
 private:
 	const DWORD itemID;
@@ -184,7 +189,7 @@ public:
 	bool CanUseByInstanceType() const;
 	bool IsVisible() const override;
 	bool CanUseByEffect() const override;
-	int QuantityForEach(const GW::Item* item) const override;
+	size_t QuantityForEach(const GW::Item* item) const override;
 };
 // Used only in outposts for refilling
 class PconRefiller : public PconCity {
@@ -211,7 +216,7 @@ public:
     bool CanUseByEffect() const override { return false; }
 	bool IsVisible() const { return visible && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost; }
     void Draw(IDirect3DDevice9* device) override;
-    int QuantityForEach(const GW::Item* item) const override { return item->model_id == itemID ? 1 : 0; }
+    size_t QuantityForEach(const GW::Item* item) const override { return item->model_id == itemID ? 1u : 0u; }
 private:
     const DWORD itemID;
 };
@@ -231,7 +236,7 @@ public:
     PconAlcohol(const PconAlcohol&) = delete;
 
 	bool CanUseByEffect() const override;
-	int QuantityForEach(const GW::Item* item) const override;
+	size_t QuantityForEach(const GW::Item* item) const override;
 	void ForceUse();
 };
 
@@ -251,5 +256,5 @@ public:
 
 	void Update(int delay = -1) override;
 	bool CanUseByEffect() const override;
-	int QuantityForEach(const GW::Item* item) const override;
+	size_t QuantityForEach(const GW::Item* item) const override;
 };

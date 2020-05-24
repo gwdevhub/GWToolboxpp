@@ -1,7 +1,5 @@
 #include "stdafx.h"
-#include "RangeRenderer.h"
 
-#include <d3dx9math.h>
 #include <imgui.h>
 
 #include <GWCA/Constants/Constants.h>
@@ -17,6 +15,7 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 
 #include "GuiUtils.h"
+#include "RangeRenderer.h"
 
 
 void RangeRenderer::LoadSettings(CSimpleIni* ini, const char* section) {

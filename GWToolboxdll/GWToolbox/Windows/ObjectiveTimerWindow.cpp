@@ -30,7 +30,7 @@
 
 #define countof(arr) (sizeof(arr) / sizeof(arr[0]))
 
-#define TIME_UNKNOWN -1
+#define TIME_UNKNOWN ((uint32_t)-1)
 unsigned int ObjectiveTimerWindow::ObjectiveSet::cur_ui_id = 0;
 
 namespace {
@@ -91,10 +91,10 @@ namespace {
         } else {
             DWORD sec = time / 1000;
             if (show_ms && show_decimal) {
-                snprintf(buf, size, "%02d:%02d.%1d",
+                snprintf(buf, size, "%02lu:%02lu.%1lu",
                     (sec / 60), sec % 60, (time / 100) % 10);
             } else {
-                snprintf(buf, size, "%02d:%02d", (sec / 60), sec % 60);
+                snprintf(buf, size, "%02lu:%02lu", (sec / 60), sec % 60);
             }
         }
     }
@@ -130,6 +130,8 @@ void ObjectiveTimerWindow::Initialize() {
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&MessageServer_Entry, 
         [this](GW::HookStatus* status, GW::Packet::StoC::MessageServer* packet) -> bool {
+            UNREFERENCED_PARAMETER(status);
+            UNREFERENCED_PARAMETER(packet);
             uint32_t objective_id = 0; // Objective_id applicable for the check
             uint32_t msg_check = 0; // First encoded msg char to check for
             switch (GW::Map::GetMapID()) {
@@ -140,6 +142,8 @@ void ObjectiveTimerWindow::Initialize() {
             case GW::Constants::MapID::The_Deep:
                 msg_check = 0x6D4D;  // Gained 10,000 or 5,000 Luxon faction in Deep - get Kanaxai objective.
 				objective_id = RoomID::Deep_room_15;
+                break;
+            default:
                 break;
             }
             if (!objective_id) return false;
@@ -162,28 +166,34 @@ void ObjectiveTimerWindow::Initialize() {
         });
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry,
 		[this](GW::HookStatus* status, GW::Packet::StoC::DisplayDialogue* packet) -> void {
+            UNREFERENCED_PARAMETER(status);
 			DisplayDialogue(packet);
 		});
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyDefeated>(&PartyDefeated_Entry,
         [this](GW::HookStatus* status, GW::Packet::StoC::PartyDefeated* packet) -> void {
+            UNREFERENCED_PARAMETER(status);
+            UNREFERENCED_PARAMETER(packet);
             if (current_objective_set)
                 current_objective_set->StopObjectives();
         });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry,
     [this](GW::HookStatus *, GW::Packet::StoC::GameSrvTransfer *packet) -> void {
-        if (current_objective_set)
-            current_objective_set->StopObjectives();
-        current_objective_set = nullptr;
-    });
+            UNREFERENCED_PARAMETER(packet);
+            if (current_objective_set)
+                current_objective_set->StopObjectives();
+            current_objective_set = nullptr;
+        });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry, 
         [this](GW::HookStatus* status, GW::Packet::StoC::InstanceLoadFile* packet) -> bool {
+            UNREFERENCED_PARAMETER(status);
             if (packet->map_fileID == 219215)
                 AddDoAObjectiveSet(packet->spawn_point);
             return false;
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadInfo_Entry,
         [this](GW::HookStatus* status, GW::Packet::StoC::InstanceLoadInfo* packet) -> bool {
+            UNREFERENCED_PARAMETER(status);
 			monitor_doors = false;
             if (!packet->is_explorable)
                 return false;
@@ -196,12 +206,15 @@ void ObjectiveTimerWindow::Initialize() {
                     AddFoWObjectiveSet(); break;
                 case GW::Constants::MapID::The_Underworld:
                     AddUWObjectiveSet(); break;
+                default:
+                    break;
             }
             return false;
         });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ManipulateMapObject>(&ManipulateMapObject_Entry,
         [this](GW::HookStatus* status, GW::Packet::StoC::ManipulateMapObject* packet) -> bool {
+            UNREFERENCED_PARAMETER(status);
             if (!monitor_doors || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
                 return false; // Door not open or not in explorable area
 			if (packet->animation_type == 16)
@@ -211,27 +224,29 @@ void ObjectiveTimerWindow::Initialize() {
             return false;
         });
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveAdd>(&ObjectiveAdd_Entry,
-	[this](GW::HookStatus* status, GW::Packet::StoC::ObjectiveAdd *packet) -> bool {
-		// type 12 is the "title" of the mission objective, should we ignore it or have a "title" objective ?
-		/*
-		Objective *obj = GetCurrentObjective(packet->objective_id);
-		if (obj) return false;
-		ObjectiveSet *os = objective_sets.back();
-		os->objectives.emplace_back(packet->objective_id);
-		obj = &os->objectives.back();
-		GW::UI::AsyncDecodeStr(packet->name, obj->name, sizeof(obj->name));
-		// If the name isn't "???" we consider that the objective started
-		if (wcsncmp(packet->name, L"\x8102\x3236", 2))
-			obj->SetStarted();
-		*/
-		return false;
-	});
+	    [this](GW::HookStatus* status, GW::Packet::StoC::ObjectiveAdd *packet) -> bool {
+            UNREFERENCED_PARAMETER(status);
+            UNREFERENCED_PARAMETER(packet);
+		    // type 12 is the "title" of the mission objective, should we ignore it or have a "title" objective ?
+		    /*
+		    Objective *obj = GetCurrentObjective(packet->objective_id);
+		    if (obj) return false;
+		    ObjectiveSet *os = objective_sets.back();
+		    os->objectives.emplace_back(packet->objective_id);
+		    obj = &os->objectives.back();
+		    GW::UI::AsyncDecodeStr(packet->name, obj->name, sizeof(obj->name));
+		    // If the name isn't "???" we consider that the objective started
+		    if (wcsncmp(packet->name, L"\x8102\x3236", 2))
+			    obj->SetStarted();
+		    */
+		    return false;
+	    });
 
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveUpdateName>(&ObjectiveUpdateName_Entry,
-	[this](GW::HookStatus *, GW::Packet::StoC::ObjectiveUpdateName* packet) -> void {
-		Objective *obj = GetCurrentObjective(packet->objective_id);
-        if (obj) obj->SetStarted();
-	});
+	    [this](GW::HookStatus *, GW::Packet::StoC::ObjectiveUpdateName* packet) -> void {
+		    Objective *obj = GetCurrentObjective(packet->objective_id);
+            if (obj) obj->SetStarted();
+	    });
 	
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveDone>(&ObjectiveDone_Entry,
 	[this](GW::HookStatus *, GW::Packet::StoC::ObjectiveDone* packet) -> void {
@@ -284,6 +299,8 @@ void ObjectiveTimerWindow::ObjectiveSet::StopObjectives() {
         case Objective::Failed:
             obj.status = Objective::Failed;
             failed = true;
+            break;
+        default:
             break;
         }
 	}
@@ -379,6 +396,7 @@ void ObjectiveTimerWindow::AddDeepObjectiveSet() {
 	monitor_doors = true;
 }
 void ObjectiveTimerWindow::DoorClosed(uint32_t door_id) {
+    UNREFERENCED_PARAMETER(door_id);
 	// Unused
 }
 void ObjectiveTimerWindow::DoorOpened(uint32_t door_id) {
@@ -497,8 +515,12 @@ void ObjectiveTimerWindow::DisplayDialogue(GW::Packet::StoC::DisplayDialogue* pa
 		case kanaxai_room_dialogs::Room13: objective_id = RoomID::Deep_room_13; break;
 		case kanaxai_room_dialogs::Room14: objective_id = RoomID::Deep_room_14; break;
 		case kanaxai_room_dialogs::Room15: objective_id = RoomID::Deep_room_15; break;
+        default:
+            break;
 		}
 		break;
+    default:
+        break;
 	}
 	if (!objective_id)
 		return;
@@ -514,6 +536,7 @@ void ObjectiveTimerWindow::DisplayDialogue(GW::Packet::StoC::DisplayDialogue* pa
 	}
 }
 void ObjectiveTimerWindow::Update(float delta) {
+    UNREFERENCED_PARAMETER(delta);
     if (current_objective_set && current_objective_set->active) {
         current_objective_set->Update();
     }
@@ -521,6 +544,7 @@ void ObjectiveTimerWindow::Update(float delta) {
         SaveRuns(); // Save runs between map loads
 }
 void ObjectiveTimerWindow::Draw(IDirect3DDevice9* pDevice) {
+    UNREFERENCED_PARAMETER(pDevice);
 	// Main objective timer window
 	if (visible) {
 		ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
@@ -530,9 +554,7 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9* pDevice) {
 				ImGui::Text("Enter DoA, FoW, UW, Deep or Urgoz to begin");
 			}
 			else {
-                ImGuiWindow* window = ImGui::GetCurrentWindow();
-                ImGuiStorage* storage = window->DC.StateStorage;
-				for (auto& it = objective_sets.rbegin(); it != objective_sets.rend(); it++) {
+				for (auto it = objective_sets.rbegin(); it != objective_sets.rend(); it++) {
 					bool show = (*it).second->Draw();
 					if (!show) {
 						objective_sets.erase(--(it.base()));
@@ -554,7 +576,7 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9* pDevice) {
 		sprintf(buf, "%s - %s###ObjectiveTimerCurrentRun", current_objective_set->name, current_objective_set->cached_time ? current_objective_set->cached_time : "--:--");
 			
 		if (ImGui::Begin(buf, &show_current_run_window, GetWinFlags())) {
-			ImGui::PushID(current_objective_set->ui_id);
+			ImGui::PushID(static_cast<int>(current_objective_set->ui_id));
 			for (Objective& objective : current_objective_set->objectives) {
 				objective.Draw();
 			}
@@ -654,8 +676,9 @@ void ObjectiveTimerWindow::LoadRuns() {
             if (file.is_open()) {
                 nlohmann::json os_json_arr;
                 file >> os_json_arr;
-                for (nlohmann::json::iterator it = os_json_arr.begin(); it != os_json_arr.end(); ++it) {
-                    ObjectiveSet* os = ObjectiveSet::FromJson(&it.value());
+                for (nlohmann::json::iterator json_it = os_json_arr.begin();
+                     json_it != os_json_arr.end(); ++json_it) {
+                    ObjectiveSet *os = ObjectiveSet::FromJson(&json_it.value());
                     if (objective_sets.find(os->system_time) != objective_sets.end())
                         continue; // Don't load in a run that already exists
                     os->StopObjectives();
@@ -666,7 +689,7 @@ void ObjectiveTimerWindow::LoadRuns() {
                 file.close();
             }
         }
-        catch (...) {
+        catch (const std::exception&) {
             Log::Error("Failed to load ObjectiveSets from json");
         }
     }
@@ -702,7 +725,7 @@ void ObjectiveTimerWindow::SaveRuns() {
                 file.close();
             }
         }
-        catch (...) {
+        catch (const std::exception&) {
             Log::Error("Failed to save ObjectiveSets to json");
             error_saving = true;
         }
@@ -771,6 +794,8 @@ void ObjectiveTimerWindow::Objective::Update() {
 				if(duration)
 					PrintTime(cached_duration, sizeof(cached_duration), duration ? duration : GW::Map::GetInstanceTime() - start);
 				break;
+            default:
+                break;
 		}
 	}
 }
@@ -889,6 +914,8 @@ ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::ObjectiveSet::FromJson
             if (obj.duration)
                 PrintTime(obj.cached_duration, sizeof(obj.cached_duration), obj.duration);
             break;
+        default:
+            break;
         }
         os->objectives.emplace_back(obj);
     }
@@ -939,14 +966,11 @@ bool ObjectiveTimerWindow::ObjectiveSet::Draw() {
     }
     PrintTime(cached_time, sizeof(cached_time), instance_time, false);
 
-    sprintf(buf, "%s%s - %s%s###header%d", show_start_date_time ? cached_start : "", name, cached_time, failed ? " [Failed]" : "", ui_id);
+    sprintf(buf, "%s%s - %s%s###header%u", show_start_date_time ? cached_start : "", name, cached_time, failed ? " [Failed]" : "", ui_id);
 
-    const auto& style = ImGui::GetStyle();
-    float offset = 0;
-    float ts_width = GetTimestampWidth();
     bool is_open;
     if (ImGui::CollapsingHeader(buf, &is_open, ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::PushID(ui_id);
+        ImGui::PushID(static_cast<int>(ui_id));
         for (Objective& objective : objectives) {
             objective.Draw();
         }

@@ -25,9 +25,14 @@ public:
 
 	bool TravelFavorite(unsigned int idx);
 	bool IsMapUnlocked(GW::Constants::MapID map_id);
-	void Travel(GW::Constants::MapID MapID, GW::Constants::District district, int district_number = 0);
-    void UITravel(GW::Constants::MapID MapID, GW::Constants::District district, int district_number = 0); // Travel via UI interface, allowing "Are you sure" dialogs.
-	void ScrollToOutpost(GW::Constants::MapID outpost_id, GW::Constants::District district = GW::Constants::District::Current, int district_number = 0);
+	void Travel(GW::Constants::MapID MapID, GW::Constants::District district, uint32_t district_number = 0);
+    // Travel via UI interface, allowing "Are you sure" dialogs
+    void UITravel(GW::Constants::MapID MapID, GW::Constants::District district,
+                  uint32_t district_number = 0);
+    void ScrollToOutpost(
+        GW::Constants::MapID outpost_id,
+        GW::Constants::District district = GW::Constants::District::Current,
+        uint32_t district_number = 0);
 	bool IsWaitingForMapTravel();
 
 	// Draw user interface. Will be called every frame if the element is visible
@@ -38,8 +43,8 @@ public:
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
 	void DrawSettingInternal() override;
-    uint32_t RegionFromDistrict(GW::Constants::District district);
-    uint32_t LanguageFromDistrict(GW::Constants::District district);
+    int RegionFromDistrict(GW::Constants::District district);
+    int LanguageFromDistrict(GW::Constants::District district);
 
 private:
 	// ==== Helpers ====
@@ -48,7 +53,7 @@ private:
 
 	// ==== Travel variables ====
 	GW::Constants::District district = GW::Constants::District::Current;
-	int district_number = 0;
+	uint32_t district_number = 0;
 
 	// ==== Favorites ====
 	int fav_count = 0;

@@ -1,11 +1,4 @@
 #include "stdafx.h"
-#include <Windows.h>
-#include <bitset>
-
-#include <assert.h>
-#include <stdint.h>
-
-#include <vector>
 
 #include <GWCA/GWCA.h>
 #include <GWCA/Utilities/Hooker.h>
@@ -235,8 +228,8 @@ static void PrintIndent(uint32_t indent)
 
 static void GetHexS(char* buf, uint8_t byte)
 {
-    uint8_t h = (byte >> 4) & 0xf;
-    uint8_t l = (byte >> 0) & 0xf;
+    uint8_t h = (byte >> 4) & 0xfu;
+    uint8_t l = (byte >> 0) & 0xfu;
     if (h < 10)
         buf[0] = h + '0';
     else
@@ -265,7 +258,7 @@ static void PrintField(FieldType field, uint32_t count, uint8_t** bytes, uint32_
         PrintIndent(indent);
         uint32_t agent_id;
         Serialize<uint32_t>(bytes, &agent_id);
-        printf("AgentId(%lu)\n", agent_id);
+        printf("AgentId(%u)\n", agent_id);
         break;
     }
     case FieldType::Float: {
@@ -296,26 +289,26 @@ static void PrintField(FieldType field, uint32_t count, uint8_t** bytes, uint32_
         PrintIndent(indent);
         uint32_t val;
         Serialize<uint32_t>(bytes, &val);
-        printf("Byte(%lu)\n", val);
+        printf("Byte(%u)\n", val);
         break;
     }
     case FieldType::Word: {
         PrintIndent(indent);
         uint32_t val;
         Serialize<uint32_t>(bytes, &val);
-        printf("Word(%lu)\n", val);
+        printf("Word(%u)\n", val);
         break;
     }
     case FieldType::Dword: {
         PrintIndent(indent);
         uint32_t val;
         Serialize<uint32_t>(bytes, &val);
-        printf("Dword(%lu)\n", val);
+        printf("Dword(%u)\n", val);
         break;
     }
     case FieldType::Blob: {
         PrintIndent(indent);
-        printf("Blob(%lu) => ", count);
+        printf("Blob(%u) => ", count);
         for (uint32_t i = 0; i < count; i++) {
             char buf[3];
             GetHexS(buf, **bytes);
@@ -329,7 +322,7 @@ static void PrintField(FieldType field, uint32_t count, uint8_t** bytes, uint32_
         PrintIndent(indent);
         wchar_t* str = reinterpret_cast<wchar_t*>(*bytes);
         size_t length = wcsnlen(str, count);
-        wprintf(L"String(%lu) \"%.*s\"\n", length, static_cast<int>(length), str);
+        wprintf(L"String(%zu) \"%.*s\"\n", length, static_cast<int>(length), str);
         // PrintString(length, str);
         *bytes += (count * 2);
         break;
@@ -339,7 +332,7 @@ static void PrintField(FieldType field, uint32_t count, uint8_t** bytes, uint32_
         uint32_t length;
         uint8_t* end = *bytes + count;
         Serialize<uint32_t>(bytes, &length);
-        printf("Array8(%lu) {\n", length);
+        printf("Array8(%u) {\n", length);
         uint8_t val;
         for (size_t i = 0; i < length; i++) {
             Serialize<uint8_t>(bytes, &val);
@@ -355,23 +348,23 @@ static void PrintField(FieldType field, uint32_t count, uint8_t** bytes, uint32_
         uint32_t length;
         Serialize<uint32_t>(bytes, &length);
         uint8_t* end = *bytes + (count * 2);
-printf("Array16(%lu) {\n", length);
-uint16_t val;
-for (size_t i = 0; i < length; i++) {
-    Serialize<uint16_t>(bytes, &val);
-    PrintIndent(indent + 4);
-    printf("[%zu] => %u,\n", i, val);
-}
-printf("}\n");
-*bytes = end;
-break;
+        printf("Array16(%u) {\n", length);
+        uint16_t val;
+        for (size_t i = 0; i < length; i++) {
+            Serialize<uint16_t>(bytes, &val);
+            PrintIndent(indent + 4);
+            printf("[%zu] => %u,\n", i, val);
+        }
+        printf("}\n");
+        *bytes = end;
+        break;
     }
     case FieldType::Array32: {
         PrintIndent(indent);
         uint32_t length;
         uint8_t* end = *bytes + (count * 4);
         Serialize<uint32_t>(bytes, &length);
-        printf("Array32(%lu) {\n", length);
+        printf("Array32(%u) {\n", length);
         uint32_t val;
         for (size_t i = 0; i < length; i++) {
             Serialize<uint32_t>(bytes, &val);
@@ -382,6 +375,8 @@ break;
         *bytes = end;
         break;
     }
+    default:
+        break;
     }
 }
 
@@ -391,7 +386,7 @@ static void PrintNestedField(uint32_t* fields, uint32_t n_fields,
     for (uint32_t rep = 0; rep < repeat; rep++)
     {
         PrintIndent(indent);
-        printf("[%lu] => {\n", rep);
+        printf("[%u] => {\n", rep);
         for (uint32_t i = 0; i < n_fields; i++) {
             uint32_t field = fields[i];
             uint32_t type = (field >> 0) & 0xF;
@@ -415,7 +410,7 @@ static void PrintNestedField(uint32_t* fields, uint32_t n_fields,
                 Serialize<uint32_t>(bytes, &struct_count);
 
                 PrintIndent(indent + 4);
-                printf("NextedStruct(%lu) {\n", struct_count);
+                printf("NextedStruct(%u) {\n", struct_count);
                 PrintNestedField(fields + next_field_index,
                     n_fields - next_field_index, struct_count, bytes, indent + 8);
                 PrintIndent(indent + 4);
@@ -431,8 +426,9 @@ static void PrintNestedField(uint32_t* fields, uint32_t n_fields,
 }
 
 static void CtoSHandler(GW::HookStatus* status, void* packet) {
+    UNREFERENCED_PARAMETER(status);
      if (!logger_enabled) return;
-    printf("CtoS packet(%lu)\n", *(uint32_t*)packet);
+    printf("CtoS packet(%u)\n", *(uint32_t*)packet);
 }
 static void PacketHandler(GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet)
 {
@@ -453,9 +449,9 @@ static void PacketHandler(GW::HookStatus* status, GW::Packet::StoC::PacketBase* 
     Serialize<uint32_t>(bytes, &header);
     assert(packet->header == header);
 
-    printf("StoC packet(%lu) {\n", packet->header);
+    printf("StoC packet(%u) {\n", packet->header);
     PrintNestedField(handler.fields + 1, handler.field_count - 1, 1, bytes, 4);
-    printf("} endpacket(%lu)\n", packet->header);
+    printf("} endpacket(%u)\n", packet->header);
 }
 
 
@@ -465,6 +461,7 @@ uint32_t message_core_callback_identifier;
 uint32_t display_dialogue_callback_identifier;
 
 void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
+    UNREFERENCED_PARAMETER(pDevice);
     if (!visible)
         return;
     ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
@@ -479,6 +476,7 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
         else
             Disable();
     }
+    // @Cleanup: Only positive int
     ImGui::InputInt("Door ID", &debug_door_id);
     if (ImGui::Button("Open")) {
         GW::GameThread::Enqueue([]() {
@@ -486,7 +484,7 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
             packet.header = GW::Packet::StoC::ManipulateMapObject::STATIC_HEADER;
             packet.animation_stage = 3;
             packet.animation_type = 16;
-            packet.object_id = debug_door_id;
+            packet.object_id = static_cast<uint32_t>(debug_door_id);
             GW::StoC::EmulatePacket(&packet);
         });
     }
@@ -497,7 +495,7 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
             packet.header = GW::Packet::StoC::ManipulateMapObject::STATIC_HEADER;
             packet.animation_stage = 3;
             packet.animation_type = 9;
-            packet.object_id = debug_door_id;
+            packet.object_id = static_cast<uint32_t>(debug_door_id);
             GW::StoC::EmulatePacket(&packet);
         });
     }
@@ -513,13 +511,16 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
 		if (!logger_enabled)
 			log_npc_dialogs = false;
 		if (log_npc_dialogs) {
-			GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::DisplayDialogue* pak) -> void {
-				memset(npc_dialog.msg_in, 0, 122);
-				memset(npc_dialog.sender_in, 0, 32);
-				wcscpy(npc_dialog.msg_in, pak->message);
-				wcscpy(npc_dialog.sender_in, pak->name);
-				GW::UI::AsyncDecodeStr(npc_dialog.msg_in, &npc_dialog.msg_out);
-				GW::UI::AsyncDecodeStr(npc_dialog.sender_in, &npc_dialog.sender_out);
+			GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(
+                &DisplayDialogue_Entry,
+                [&](GW::HookStatus* status, GW::Packet::StoC::DisplayDialogue* pak) -> void {
+                    UNREFERENCED_PARAMETER(status);
+				    memset(npc_dialog.msg_in, 0, 122);
+				    memset(npc_dialog.sender_in, 0, 32);
+				    wcscpy(npc_dialog.msg_in, pak->message);
+				    wcscpy(npc_dialog.sender_in, pak->name);
+				    GW::UI::AsyncDecodeStr(npc_dialog.msg_in, &npc_dialog.msg_out);
+				    GW::UI::AsyncDecodeStr(npc_dialog.sender_in, &npc_dialog.sender_out);
 				});
 			display_dialogue_callback_identifier = 1;
 		}
@@ -534,28 +535,37 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
         if (!logger_enabled)
             log_message_content = false;
         if (log_message_content) {
-			GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageCore>(&MessageCore_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::MessageCore* pak) -> bool {
-				printf("MessageCore: ");
-                for (int i = 0; pak->message[i] != 0; ++i) printchar(pak->message[i]);
-                printf("\n");
-                return false;
+			GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageCore>(
+                &MessageCore_Entry,
+                [&](GW::HookStatus*, GW::Packet::StoC::MessageCore* pak) -> bool {
+				    printf("MessageCore: ");
+                    for (int i = 0; pak->message[i] != 0; ++i) printchar(pak->message[i]);
+                    printf("\n");
+                    return false;
             });
-			GW::StoC::RegisterPacketCallback<GW::Packet::StoC::NpcGeneralStats>(&NpcGeneralStats_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::NpcGeneralStats* pak) -> bool {
-				printf("NpcGeneralStats name: ");
-				for (int i = 0; pak->name[i] != 0; ++i) printchar(pak->name[i]);
-				printf("\n");
-				return false;
+			GW::StoC::RegisterPacketCallback<GW::Packet::StoC::NpcGeneralStats>(
+                &NpcGeneralStats_Entry,
+                [&](GW::HookStatus*, GW::Packet::StoC::NpcGeneralStats* pak) -> bool {
+				    printf("NpcGeneralStats name: ");
+				    for (int i = 0; pak->name[i] != 0; ++i) printchar(pak->name[i]);
+				    printf("\n");
+				    return false;
 				});
-			GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DialogBody>(&NpcGeneralStats_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::DialogBody* pak) -> void {
-				printf("DialogBody content: ");
-				for (int i = 0; pak->message[i] != 0; ++i) printchar(pak->message[i]);
-				printf("\n");
+			GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DialogBody>(
+                &NpcGeneralStats_Entry,
+                [&](GW::HookStatus*, GW::Packet::StoC::DialogBody* pak) -> void {
+				    printf("DialogBody content: ");
+				    for (int i = 0; pak->message[i] != 0; ++i) printchar(pak->message[i]);
+				    printf("\n");
 				});
-            GW::Chat::RegisterLocalMessageCallback(&MessageLocal_Entry, [this](GW::HookStatus* status, int channel, wchar_t* message) {
-                printf("MessageLocal: ");
-                for (int i = 0; message[i] != 0; ++i) printchar(message[i]);
-                printf("\n");
-                return false;
+            GW::Chat::RegisterLocalMessageCallback(
+                &MessageLocal_Entry,
+                [this](GW::HookStatus*, int channel, wchar_t* message) {
+                    UNREFERENCED_PARAMETER(channel);
+                    printf("MessageLocal: ");
+                    for (int i = 0; message[i] != 0; ++i) printchar(message[i]);
+                    printf("\n");
+                    return false;
                 });
 			message_core_callback_identifier = 1;
 		}
@@ -591,7 +601,7 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
             ImGui::SameLine(offset, 0);
             offset += 80.0f * ImGui::GetIO().FontGlobalScale;
             char buf[30];
-            sprintf(buf, "%d###ignore_packet_%d", i, i);
+            sprintf(buf, "%zu###ignore_packet_%zu", i, i);
             bool p = ignored_packets[i];
             if (ImGui::Checkbox(buf, &p))
                 ignored_packets[i] = p;
@@ -618,7 +628,7 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9* pDevice) {
             ImGui::SameLine(offset, 0);
             offset += 80.0f * ImGui::GetIO().FontGlobalScale;
             char buf[30];
-            sprintf(buf, "%d###block_packet_%d", i, i);
+            sprintf(buf, "%zu###block_packet_%zu", i, i);
             bool p = blocked_packets[i];
             if (ImGui::Checkbox(buf, &p))
                 blocked_packets[i] = p;
@@ -652,6 +662,7 @@ void PacketLoggerWindow::Initialize() {
         });*/
 }
 void PacketLoggerWindow::Update(float delta) {
+    UNREFERENCED_PARAMETER(delta);
 	if (log_npc_dialogs && !npc_dialog.msg_out.empty()) {
 		Log::Log("DisplayDialogue from %ls: ", npc_dialog.sender_out.c_str());
 		for (int i = 0; npc_dialog.msg_in[i] != 0; ++i) printchar(npc_dialog.msg_in[i]);

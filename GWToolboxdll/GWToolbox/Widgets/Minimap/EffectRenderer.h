@@ -30,7 +30,8 @@ class EffectRenderer : public VBuffer {
 		float range = GW::Constants::Range::Adjacent;
 	};
 	struct Effect {
-		Effect(uint32_t _effect_id, float _x, float _y, int _duration, float range, Color * _color)
+        Effect(uint32_t _effect_id, float _x, float _y, uint32_t _duration,
+               float range, Color *_color)
             : start(TIMER_INIT())
             , effect_id(_effect_id)
             , pos(_x,_y)
@@ -42,7 +43,7 @@ class EffectRenderer : public VBuffer {
 		clock_t start;
 		const uint32_t effect_id;
 		const GW::Vec2f pos;
-		int duration;
+		uint32_t duration;
 		EffectCircle circle;
 	};
 

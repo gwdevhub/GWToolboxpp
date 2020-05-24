@@ -1,7 +1,7 @@
 #include "stdafx.h"
-#include "NotePadWindow.h"
 
 #include <Modules\Resources.h>
+#include "NotePadWindow.h"
 
 #define TEXT_SIZE 2024 * 16
 
@@ -11,6 +11,7 @@ void NotePadWindow::Initialize() {
 }
 
 void NotePadWindow::Draw(IDirect3DDevice9* pDevice) {
+    UNREFERENCED_PARAMETER(pDevice);
 	if (!visible) return;
 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));

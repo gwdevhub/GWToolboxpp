@@ -1,7 +1,5 @@
 #pragma once
 
-#include <d3d9.h>
-
 #include "VBuffer.h"
 #include "Color.h"
 
