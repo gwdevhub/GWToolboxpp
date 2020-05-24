@@ -793,8 +793,8 @@ void Minimap::RenderSetupProjection(IDirect3DDevice9* device) {
 }
 
 bool Minimap::IsKeyDown(MinimapModifierBehaviour mmb) {
-    return key_none_behavior  == mmb or
-          (key_ctrl_behavior  == mmb and ImGui::IsKeyDown(VK_CONTROL)) or
-          (key_shift_behavior == mmb and ImGui::IsKeyDown(VK_SHIFT)) or
-          (key_alt_behavior   == mmb and ImGui::IsKeyDown(VK_MENU));
+    return (key_none_behavior  == mmb and not ImGui::IsKeyDown(VK_CONTROL) and not ImGui::IsKeyDown(VK_SHIFT) and not ImGui::IsKeyDown(VK_MENU)) or
+           (key_ctrl_behavior  == mmb and ImGui::IsKeyDown(VK_CONTROL)) or
+           (key_shift_behavior == mmb and ImGui::IsKeyDown(VK_SHIFT)) or
+           (key_alt_behavior   == mmb and ImGui::IsKeyDown(VK_MENU));
 }
