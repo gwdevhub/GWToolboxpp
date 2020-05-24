@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "MaterialsWindow.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -21,7 +20,7 @@
 #include "GuiUtils.h"
 #include <logger.h>
 #include <Modules\Resources.h>
-
+#include "MaterialsWindow.h"
 
 static const DWORD MIN_TIME_BETWEEN_RETRY = 160; // 10 frames
 
@@ -68,6 +67,7 @@ GW::Item *MaterialsWindow::GetBagItem(Material mat) const {
 }
 
 void MaterialsWindow::Update(float delta) {
+    UNREFERENCED_PARAMETER(delta);
 	if (cancelled) return;
 	DWORD tickcount = GetTickCount();
 	if (quote_pending && (tickcount < quote_pending_time)) return;
@@ -116,10 +116,10 @@ void MaterialsWindow::Initialize() {
 
 		auto gold_character = GW::Items::GetGoldAmountOnCharacter();
 		if (trans.type == Transaction::Quote) {
-			price[trans.material] = pak->price;
+			price[trans.material] = static_cast<int>(pak->price);
 			Dequeue();
 		} else if (trans.type == Transaction::Buy) {
-			price[trans.material] = pak->price;
+            price[trans.material] = static_cast<int>(pak->price);
 			if (gold_character >= pak->price) {
 				GW::Merchant::TransactionInfo give, recv;
 				give.item_count = 0;
@@ -167,11 +167,12 @@ void MaterialsWindow::Initialize() {
 	});
 
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::TransactionDone>(&TransactionDone_Entry,
-	[this](GW::HookStatus *, GW::Packet::StoC::TransactionDone *pak) -> void {
-		if (transactions.empty()) return;
-		trans_pending = false;
-		Dequeue();
-	});
+	    [this](GW::HookStatus *, GW::Packet::StoC::TransactionDone *pak) -> void {;
+            UNREFERENCED_PARAMETER(pak);
+		    if (transactions.empty()) return;
+		    trans_pending = false;
+		    Dequeue();
+	    });
 
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ItemStreamEnd>(&ItemStreamEnd_Entry,
 	[this](GW::HookStatus *, GW::Packet::StoC::ItemStreamEnd *pak) -> void {
@@ -203,6 +204,7 @@ void MaterialsWindow::SaveSettings(CSimpleIni* ini) {
 }
 
 void MaterialsWindow::Draw(IDirect3DDevice9* pDevice) {
+    UNREFERENCED_PARAMETER(pDevice);
 	if (!visible) return;
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(400, 0), ImGuiSetCond_FirstUseEver);
@@ -460,12 +462,12 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice) {
 		}
 
 		ImGui::Separator();
-		int to_do = trans_queued - trans_done;
 		float progress = 0.0f;
 		if (trans_queued > 0) progress = (float)(trans_done) / trans_queued;
 		const char* status = "";
 		if (cancelled) status = "Cancelled";
-		else if (to_do > 0) status = "Working";
+        else if (trans_done < trans_queued)
+            status = "Working";
 		else status = "Ready";
 		ImGui::Text("%s [%d / %d]", status, trans_done, trans_queued);
 		ImGui::SameLine(width1 + ImGui::GetStyle().WindowPadding.x + ImGui::GetStyle().ItemSpacing.x);

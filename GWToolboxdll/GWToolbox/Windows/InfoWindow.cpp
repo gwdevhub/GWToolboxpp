@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "InfoWindow.h"
 
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\GameContainers\Array.h>
@@ -42,6 +41,7 @@
 #include <Windows\NotepadWindow.h>
 #include <Windows\StringDecoderWindow.h>
 #include <Modules\Resources.h>
+#include "InfoWindow.h"
 
 
 void InfoWindow::Initialize() {
@@ -66,6 +66,9 @@ void InfoWindow::Initialize() {
 }
 
 void InfoWindow::CmdResignLog(const wchar_t* cmd, int argc, wchar_t** argv) {
+    UNREFERENCED_PARAMETER(cmd);
+    UNREFERENCED_PARAMETER(argc);
+    UNREFERENCED_PARAMETER(argv);
 	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
 	GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
 	if (info == nullptr) return;
@@ -190,7 +193,7 @@ void InfoWindow::DrawItemInfo(GW::Item* item, ForDecode* name) {
 			char mod_struct_buf[64];
 			for (size_t i = 0; i < item->mod_struct_size; i++) {
 				GW::ItemModifier* mod = &item->mod_struct[i];
-				mod_struct_label[14] = (i + 1) + '0';
+				mod_struct_label[14] = static_cast<char>(i + 1) + '0';
 				sprintf(mod_struct_buf, "0x%X (%d %d %d)", mod->mod, mod->identifier(), mod->arg1(), mod->arg2());
 				ImGui::InputText(mod_struct_label, mod_struct_buf, 64, ImGuiInputTextFlags_ReadOnly);
 			}
@@ -200,6 +203,7 @@ void InfoWindow::DrawItemInfo(GW::Item* item, ForDecode* name) {
 	}
 }
 void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
+    UNREFERENCED_PARAMETER(pDevice);
 	if (!visible) return;
 	ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
@@ -241,7 +245,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			static char pos_buf[32];
 			static char target_buf[32];
 			static GW::Camera* cam;
-			if (cam = GW::CameraMgr::GetCamera()) {
+			if ((cam = GW::CameraMgr::GetCamera()) != nullptr) {
 				snprintf(pos_buf, 32, "%.2f, %.2f, %.2f", cam->position.x, cam->position.y, cam->position.z);
 				snprintf(target_buf, 32, "%.2f, %.2f, %.2f", cam->look_at_target.x, cam->look_at_target.y, cam->look_at_target.z);
 			}
@@ -279,11 +283,9 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                 if (effects.valid()) {
                     for (DWORD i = 0; i < effects.size(); ++i) {
                         ImGui::Text("id: %d", effects[i].skill_id);
-                        long time = effects[i].GetTimeRemaining();
-                        if (time > 0) {
-                            ImGui::SameLine();
-                            ImGui::Text(" duration: %d", time / 1000);
-                        }
+                        uint32_t time = effects[i].GetTimeRemaining();
+                        ImGui::SameLine();
+                        ImGui::Text(" duration: %u", time / 1000);
                     }
                 }
                 ImGui::TreePop();
@@ -447,7 +449,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 			case GW::Constants::InstanceType::Explorable: type = "Explorable"; break;
 			case GW::Constants::InstanceType::Loading: type = "Loading\0\0\0"; break;
 			}
-			snprintf(file_buf, 32, "%d", mapfile);
+			snprintf(file_buf, 32, "%lu", mapfile);
             snprintf(region_buf, 32, "%d", GW::Map::GetRegion());
             snprintf(district_buf, 32, "%d", GW::Map::GetDistrict());
 			ImGui::PushItemWidth(-80.0f);
@@ -548,6 +550,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
 }
 
 void InfoWindow::Update(float delta) {
+    UNREFERENCED_PARAMETER(delta);
 	if (!send_queue.empty() && TIMER_DIFF(send_timer) > 600) {
 		send_timer = TIMER_INIT();
 		if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
@@ -561,7 +564,6 @@ void InfoWindow::Update(float delta) {
 	if (show_resignlog
 		&& GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
 		&& GW::PartyMgr::GetPartyInfo()) {
-		GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
 		GW::PlayerPartyMemberArray partymembers = GW::PartyMgr::GetPartyInfo()->players;
 		if (partymembers.valid()) {
 			if (partymembers.size() != status.size()) {
@@ -601,7 +603,7 @@ void InfoWindow::PrintResignStatus(wchar_t *buffer, size_t size, size_t index, c
 	assert(index < status.size());
 	Status player_status = status[index];
 	const char* status_str = GetStatusStr(player_status);
-	_snwprintf(buffer, size, L"%d. %s - %S", index + 1, player_name,
+	_snwprintf(buffer, size, L"%zu. %s - %S", index + 1, player_name,
 		(player_status == Connected
 			&& GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
 		? "Connected (not resigned)" : status_str);
@@ -615,11 +617,11 @@ void InfoWindow::DrawResignlog() {
 	if (!partymembers.valid()) return;
 	GW::PlayerArray players = GW::Agents::GetPlayerArray();
 	if (!players.valid()) return;
-	for (unsigned i = 0; i < partymembers.size(); ++i) {
+	for (size_t i = 0; i < partymembers.size(); ++i) {
 		GW::PlayerPartyMember& partymember = partymembers[i];
 		if (partymember.login_number >= players.size()) continue;
 		GW::Player& player = players[partymember.login_number];
-		ImGui::PushID(i);
+		ImGui::PushID(static_cast<int>(i));
 		if (ImGui::Button("Send")) {
 			// Todo: wording probably needs improvement
 			wchar_t buf[256];

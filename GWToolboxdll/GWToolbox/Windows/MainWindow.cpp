@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "MainWindow.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -7,6 +6,7 @@
 #include "logger.h"
 #include "GuiUtils.h"
 #include "GWToolbox.h"
+#include "MainWindow.h"
 
 
 void MainWindow::LoadSettings(CSimpleIni* ini) {
@@ -27,13 +27,16 @@ void MainWindow::DrawSettingInternal() {
 }
 
 void MainWindow::RegisterSettingsContent() {
-	ToolboxModule::RegisterSettingsContent(SettingsName(), [this](const std::string* section, bool is_showing) {
-		//ShowVisibleRadio();
-		if (!is_showing) return;
-		ImGui::Text("Main Window Visibility");
-		ShowVisibleRadio();
-		DrawSizeAndPositionSettings();
-		DrawSettingInternal();
+	ToolboxModule::RegisterSettingsContent(SettingsName(),
+        [this](const std::string* section, bool is_showing) {
+            UNREFERENCED_PARAMETER(section);
+            // ShowVisibleRadio();
+            if (!is_showing)
+                return;
+		    ImGui::Text("Main Window Visibility");
+		    ShowVisibleRadio();
+		    DrawSizeAndPositionSettings();
+		    DrawSettingInternal();
 		}, SettingsWeighting());
 }
 
@@ -64,7 +67,7 @@ void MainWindow::Draw(IDirect3DDevice9* device) {
 		bool drawn = false;
 		const size_t msize = modules_to_draw.size();
 		for (size_t i = 0; i < msize;i++) {
-			ImGui::PushID(i);
+			ImGui::PushID(static_cast<int>(i));
 			if(drawn) ImGui::Separator();
 			drawn = true;
 			auto &ui_module = modules_to_draw[i].second;
