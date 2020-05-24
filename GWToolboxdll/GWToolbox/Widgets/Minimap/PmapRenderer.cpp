@@ -10,6 +10,7 @@
 #include <GWCA/Managers/CameraMgr.h>
 
 #include "D3DVertex.h"
+#include "PmapRenderer.h"
 
 
 void PmapRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
