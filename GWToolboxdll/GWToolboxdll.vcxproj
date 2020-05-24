@@ -328,7 +328,6 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\resources\bonds\Balthazar%27s_Spirit.png" />
-    <Image Include="..\resources\bonds\Bladeturn_Refrain.jpg" />
     <Image Include="..\resources\bonds\Bladeturn_Refrain.png" />
     <Image Include="..\resources\bonds\Burning_Refrain.png" />
     <Image Include="..\resources\bonds\Essence_Bond.png" />
