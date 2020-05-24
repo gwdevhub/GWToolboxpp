@@ -223,17 +223,15 @@ void Minimap::DrawSettingInternal() {
     ImGui::Checkbox("Allow mouse click-through in outposts", &mouse_clickthrough_in_outpost);
     ImGui::ShowHelp("Toolbox minimap will not capture mouse events when in an outpost");
     ImGui::Text("Hold + Click modifiers");
-    ImGui::Indent();
-    ImGui::Text("Disabled: disable the behaviour\nNone: don't hold any key for the behaviour\nControl/Shift/Alt: hold that key for the behaviour");
-    ImGui::Combo("Draw", &key_draw_selected, "Disabled\0None\0Control\0Shift\0Alt\0\0");
-    ImGui::ShowHelp("Hold this button to draw and ping on the minimap");
-    ImGui::Combo("Target", &key_target_selected, "Disabled\0None\0Control\0Shift\0Alt\0\0");
-    ImGui::ShowHelp("Hold this button to target an agent on the minimap");
-    ImGui::Combo("Move", &key_move_selected, "Disabled\0None\0Control\0Shift\0Alt\0\0");
-    ImGui::ShowHelp("Hold this button to move the minimap around");
-    ImGui::Combo("Walk", &key_walk_selected, "Disabled\0None\0Control\0Shift\0Alt\0\0");
-    ImGui::ShowHelp("Hold this button walk to clicked location on minimap");
-    ImGui::Unindent();
+    ImGui::ShowHelp("Define behaviour of holding keyboard keys and clicking the minimap.\n"
+                    "Draw: ping and draw on the compass.\n"
+                    "Target: click to target agent.\n"
+                    "Move: move the minimap outside of compass range.\n"
+                    "Walk: start walking character to selected location.\n");
+    ImGui::Combo("None",    reinterpret_cast<int*>(&key_none_behavior),  minimap_modifier_behavior_combo_str);
+    ImGui::Combo("Control", reinterpret_cast<int*>(&key_ctrl_behavior),  minimap_modifier_behavior_combo_str);
+    ImGui::Combo("Shift",   reinterpret_cast<int*>(&key_shift_behavior), minimap_modifier_behavior_combo_str);
+    ImGui::Combo("Alt",     reinterpret_cast<int*>(&key_alt_behavior),   minimap_modifier_behavior_combo_str);
     if (mouse_clickthrough) {
         ImGui::PopItemFlag();
         ImGui::PopStyleVar();
@@ -254,10 +252,10 @@ void Minimap::LoadSettings(CSimpleIni* ini) {
     mouse_clickthrough = ini->GetBoolValue(Name(), VAR_NAME(mouse_clickthrough), false);
     mouse_clickthrough_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(mouse_clickthrough_in_outpost), mouse_clickthrough_in_outpost);
     rotate_minimap = ini->GetBoolValue(Name(), VAR_NAME(rotate_minimap), true);
-    key_draw_selected = ini->GetLongValue(Name(), VAR_NAME(key_draw_selected), 1);
-    key_target_selected = ini->GetLongValue(Name(), VAR_NAME(key_target_selected), 2);
-    key_move_selected = ini->GetLongValue(Name(), VAR_NAME(key_move_selected), 3);
-    key_walk_selected = ini->GetLongValue(Name(), VAR_NAME(key_walk_selected), 4);    
+    key_none_behavior  = static_cast<MinimapModifierBehaviour>(ini->GetLongValue(Name(), VAR_NAME(key_none_behavior), 1));
+    key_ctrl_behavior  = static_cast<MinimapModifierBehaviour>(ini->GetLongValue(Name(), VAR_NAME(key_ctrl_behavior), 2));
+    key_shift_behavior = static_cast<MinimapModifierBehaviour>(ini->GetLongValue(Name(), VAR_NAME(key_shift_behavior), 3));
+    key_alt_behavior   = static_cast<MinimapModifierBehaviour>(ini->GetLongValue(Name(), VAR_NAME(key_alt_behavior), 4));
     pingslines_renderer.reduce_ping_spam = ini->GetBoolValue(Name(), VAR_NAME(reduce_ping_spam), false);
     range_renderer.LoadSettings(ini, Name());
     pmap_renderer.LoadSettings(ini, Name());
@@ -276,10 +274,10 @@ void Minimap::SaveSettings(CSimpleIni* ini) {
     Colors::Save(ini, Name(), VAR_NAME(hero_flag_window_background), hero_flag_window_background);
     ini->SetBoolValue(Name(), VAR_NAME(mouse_clickthrough), mouse_clickthrough);
     ini->SetBoolValue(Name(), VAR_NAME(mouse_clickthrough_in_outpost), mouse_clickthrough_in_outpost);
-    ini->SetLongValue(Name(), VAR_NAME(key_draw_selected), key_draw_selected);
-    ini->SetLongValue(Name(), VAR_NAME(key_target_selected), key_target_selected);
-    ini->SetLongValue(Name(), VAR_NAME(key_move_selected), key_move_selected);
-    ini->SetLongValue(Name(), VAR_NAME(key_walk_selected), key_walk_selected);    
+    ini->SetLongValue(Name(), VAR_NAME(key_none_behavior),  static_cast<long>(key_none_behavior));
+    ini->SetLongValue(Name(), VAR_NAME(key_ctrl_behavior),  static_cast<long>(key_ctrl_behavior));
+    ini->SetLongValue(Name(), VAR_NAME(key_shift_behavior), static_cast<long>(key_shift_behavior));
+    ini->SetLongValue(Name(), VAR_NAME(key_alt_behavior),   static_cast<long>(key_alt_behavior)); 
     ini->SetBoolValue(Name(), VAR_NAME(reduce_ping_spam), pingslines_renderer.reduce_ping_spam);
     ini->SetBoolValue(Name(), VAR_NAME(rotate_minimap), rotate_minimap);
     range_renderer.SaveSettings(ini, Name());
@@ -632,12 +630,12 @@ bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam) {
     mousedown = true;
     GW::Vec2f worldpos = InterfaceToWorldPoint(Vec2i(x, y));
 
-    if (IsKeyDown(key_target_selected)) {
+    if (IsKeyDown(MinimapModifierBehaviour::Target)) {
         SelectTarget(worldpos);
         return true;
     }
 
-    if (IsKeyDown(key_walk_selected)) {
+    if (IsKeyDown(MinimapModifierBehaviour::Walk)) {
         GW::Agents::Move(worldpos);
         pingslines_renderer.AddMouseClickPing(worldpos);
         return true;
@@ -648,7 +646,7 @@ bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam) {
     drag_start.x = x;
     drag_start.y = y;
 
-    if (IsKeyDown(key_move_selected)) return true;
+    if (IsKeyDown(MinimapModifierBehaviour::Move)) return true;
 
     if (!lock_move) return true;
 
@@ -666,7 +664,7 @@ bool Minimap::OnMouseDblClick(UINT Message, WPARAM wParam, LPARAM lParam) {
     int y = GET_Y_LPARAM(lParam);
     if (!IsInside(x, y)) return false;
 
-    if (IsKeyDown(key_target_selected)) {
+    if (IsKeyDown(MinimapModifierBehaviour::Target)) {
         SelectTarget(InterfaceToWorldPoint(Vec2i(x, y)));
         return true;
     }
@@ -699,12 +697,12 @@ bool Minimap::OnMouseMove(UINT Message, WPARAM wParam, LPARAM lParam) {
     int y = GET_Y_LPARAM(lParam);
     //if (!IsInside(x, y)) return false;
 
-    if (IsKeyDown(key_target_selected)) {
+    if (IsKeyDown(MinimapModifierBehaviour::Target)) {
         SelectTarget(InterfaceToWorldPoint(Vec2i(x, y)));
         return true;
     }
 
-    if (IsKeyDown(key_move_selected)) {
+    if (IsKeyDown(MinimapModifierBehaviour::Move)) {
         Vec2i diff = Vec2i(x - drag_start.x, y - drag_start.y);
         translation += InterfaceToWorldVector(diff);
         drag_start = Vec2i(x, y);
@@ -727,7 +725,7 @@ bool Minimap::OnMouseWheel(UINT Message, WPARAM wParam, LPARAM lParam) {
     
     int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
 
-    if (IsKeyDown(key_move_selected)) {
+    if (IsKeyDown(MinimapModifierBehaviour::Move)) {
         float delta = zDelta > 0 ? 1.024f : 0.9765625f;
         scale *= delta;
         return true;
@@ -794,14 +792,9 @@ void Minimap::RenderSetupProjection(IDirect3DDevice9* device) {
     device->SetTransform(D3DTS_PROJECTION, &proj);
 }
 
-bool Minimap::IsKeyDown(int key) {
-    // Disabled\0None\0Control\0Shift\0Alt\0
-    switch (key) {
-        case 0: return false;
-        case 1: return not ImGui::IsKeyDown(VK_CONTROL) and not ImGui::IsKeyDown(VK_SHIFT) and not ImGui::IsKeyDown(VK_MENU);
-        case 2: return ImGui::IsKeyDown(VK_CONTROL);
-        case 3: return ImGui::IsKeyDown(VK_SHIFT);
-        case 4: return ImGui::IsKeyDown(VK_MENU);
-        default: return false;
-    }
+bool Minimap::IsKeyDown(MinimapModifierBehaviour mmb) {
+    return key_none_behavior  == mmb or
+          (key_ctrl_behavior  == mmb and ImGui::IsKeyDown(VK_CONTROL)) or
+          (key_shift_behavior == mmb and ImGui::IsKeyDown(VK_SHIFT)) or
+          (key_alt_behavior   == mmb and ImGui::IsKeyDown(VK_MENU));
 }

@@ -29,6 +29,14 @@ public:
         return instance;
     }
 
+    enum class MinimapModifierBehaviour : int {
+        Disabled,
+        Draw,
+        Target,
+        Move,
+        Walk
+    };
+
     const int ms_before_back = 1000; // time before we snap back to player
     const float acceleration = 0.5f;
     const float max_speed = 15.0f; // game units per frame
@@ -78,7 +86,7 @@ private:
     GW::Vec2f InterfaceToWorldPoint(Vec2i pos) const;
     GW::Vec2f InterfaceToWorldVector(Vec2i pos) const;
     void SelectTarget(GW::Vec2f pos);
-    bool IsKeyDown(int key);
+    bool Minimap::IsKeyDown(MinimapModifierBehaviour mmb);
 
     bool mousedown = false;
 
@@ -97,10 +105,10 @@ private:
     bool mouse_clickthrough = false;
     bool mouse_clickthrough_in_outpost = false;
     bool rotate_minimap = true;
-    int key_draw_selected = 1;
-    int key_target_selected = 2;
-    int key_move_selected = 3;
-    int key_walk_selected = 4;
+    MinimapModifierBehaviour key_none_behavior  = MinimapModifierBehaviour::Draw;
+    MinimapModifierBehaviour key_ctrl_behavior  = MinimapModifierBehaviour::Target;
+    MinimapModifierBehaviour key_shift_behavior = MinimapModifierBehaviour::Move;
+    MinimapModifierBehaviour key_alt_behavior   = MinimapModifierBehaviour::Walk;
     bool is_observing = false;
 
     bool hero_flag_controls_show = false;
