@@ -90,7 +90,7 @@ private:
         ObjectiveSet();
 
         DWORD system_time;
-        DWORD instance_time = -1;
+        DWORD instance_time = (DWORD)-1;
         char cached_time[16] = { 0 };
         char cached_start[16] = { 0 };
 

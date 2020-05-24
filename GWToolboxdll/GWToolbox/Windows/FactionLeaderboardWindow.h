@@ -31,9 +31,10 @@ private:
 			strcpy(guild_str,GuiUtils::WStringToString(guild_wstr).c_str());
 			strcpy(tag_str, GuiUtils::WStringToString(tag_wstr).c_str());
 			guild_wiki_url = guild_wstr;
-			std::transform(guild_wiki_url.begin(), guild_wiki_url.end(), guild_wiki_url.begin(), [](wchar_t ch) {
-				return ch == ' ' ? '_' : ch;
-			});
+			std::transform(guild_wiki_url.begin(), guild_wiki_url.end(), guild_wiki_url.begin(),
+                [](wchar_t ch) -> wchar_t {
+    				return ch == ' ' ? L'_' : ch;
+			    });
 			guild_wiki_url = L"https://wiki.guildwars.com/wiki/Guild:" + guild_wiki_url;
 			initialised = true;
 		}

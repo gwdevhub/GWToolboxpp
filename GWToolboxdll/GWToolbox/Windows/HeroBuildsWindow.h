@@ -90,6 +90,7 @@ private:
 
 	// Returns ptr to party member of this hero, optionally fills out out_hero_index to be the index of this hero for the player.
 	static GW::HeroPartyMember* GetPartyHeroByID(GW::Constants::HeroID hero_id, size_t* out_hero_index);
+
 	bool builds_changed = false;
 	std::vector<TeamHeroBuild> teambuilds;
 

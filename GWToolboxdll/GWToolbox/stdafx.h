@@ -42,6 +42,7 @@
 // c++ headers
 #include <algorithm>
 #include <bitset>
+#include <chrono>
 #include <cmath>
 #include <deque>
 #include <fstream>
@@ -72,12 +73,14 @@
 
 // windows headers
 #include <Windows.h>
-#include <windowsx.h>
-#include <WinUser.h>
+
+#include <dbghelp.h>
 #include <ShellApi.h>
 #include <Shlobj.h>
 #include <Shlwapi.h>
-#include <dbghelp.h>
+#include <tlhelp32.h>
+#include <windowsx.h>
+#include <WinUser.h>
 
 // libraries
 #include <SimpleIni.h>
@@ -97,6 +100,7 @@
 #pragma warning(disable: 4626) // 'derived class' : assignment operator was implicitly defined as deleted because a base class assignment operator is inaccessible or deleted
 #pragma warning(disable: 4710) // 'function' : function not inlined
 #pragma warning(disable: 4711) // function 'function' selected for inline expansion
+#pragma warning(disable: 4774) // 'string' : format string expected in argument number is not a string literal
 #pragma warning(disable: 4820) // 'bytes' bytes padding added after construct 'member_name'
 #pragma warning(disable: 5027) // 'type': move assignment operator was implicitly defined as deleted
 #pragma warning(disable: 5029) // nonstandard extension used: alignment attributes in C++ apply to variables, data members and tag types only

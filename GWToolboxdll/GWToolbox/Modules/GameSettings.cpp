@@ -66,7 +66,7 @@ namespace {
 		if (wcsncmp(msg, L"http://", 7) && wcsncmp(msg, L"https://", 8)) return;
 
 		if (len + 5 < max_len) {
-			for (int i = len; i > 0; i--)
+			for (size_t i = len; i < len; --i)
 				msg[i] = msg[i - 1];
 			msg[0] = '[';
 			msg[len + 1] = ';';
@@ -175,13 +175,15 @@ namespace {
 		return NULL;
 	}
 
-	void WhisperCallback(GW::HookStatus *, const wchar_t from[20], const wchar_t msg[140]) {
+	void WhisperCallback(GW::HookStatus *, const wchar_t *from, const wchar_t *msg) {
+        UNREFERENCED_PARAMETER(msg);
 		GameSettings&  game_setting = GameSettings::Instance();
 		if (game_setting.flash_window_on_pm) FlashWindow();
 		auto const status = static_cast<GW::FriendStatus>(GW::FriendListMgr::GetMyStatus());
 		if (status == GW::FriendStatus::FriendStatus_Away && !game_setting.afk_message.empty()) {
 			wchar_t buffer[120];
-			DWORD diff_time = (clock() - game_setting.afk_message_time) / CLOCKS_PER_SEC;
+            // @Cleanup: Do without this cast
+			DWORD diff_time = static_cast<DWORD>((clock() - game_setting.afk_message_time) / CLOCKS_PER_SEC);
 			wchar_t time_buffer[128];
 			PrintTime(time_buffer, 128, diff_time);
 			swprintf(buffer, 120, L"Automatic message: \"%s\" (%s ago)", game_setting.afk_message.c_str(), time_buffer);
@@ -191,26 +193,27 @@ namespace {
 		}
 	}
 
-	int move_materials_to_storage(GW::Item *item) {
+    size_t move_materials_to_storage(GW::Item *item) {
 		assert(item && item->quantity);
 		assert(item->GetIsMaterial());
 
-		int slot = GW::Items::GetMaterialSlot(item);
-		if (slot < 0 || (int)GW::Constants::N_MATS <= slot) return 0;
-		int availaible = 250;
+		int islot = GW::Items::GetMaterialSlot(item);
+		if (islot < 0 || (int)GW::Constants::N_MATS <= islot) return 0;
+        uint32_t slot = static_cast<uint32_t>(islot);
+        size_t availaible = 250;
 		GW::Item *b_item = GW::Items::GetItemBySlot(GW::Constants::Bag::Material_Storage, slot + 1);
-		if (b_item) availaible = 250 - b_item->quantity;
-		int will_move = std::min((int)item->quantity, availaible);
+		if (b_item) availaible = 250u - b_item->quantity;
+        size_t will_move = std::min<size_t>(item->quantity, availaible);
 		if (will_move) GW::Items::MoveItem(item, GW::Constants::Bag::Material_Storage, slot, will_move);
 		return will_move;
 	}
 
 	// From bag_first to bag_last (included) i.e. [bag_first, bag_last]
 	// Returns the amount moved
-	int complete_existing_stack(GW::Item *item, int bag_first, int bag_last, int remaining) {
+	size_t complete_existing_stack(GW::Item *item, size_t bag_first, size_t bag_last, size_t remaining) {
 		if (!item->GetIsStackable() || remaining == 0) return 0;
-		int remaining_start = remaining;
-		for (int bag_i = bag_first; bag_i <= bag_last; bag_i++) {
+		size_t remaining_start = remaining;
+		for (size_t bag_i = bag_first; bag_i <= bag_last; bag_i++) {
 			GW::Bag *bag = GW::Items::GetBag(bag_i);
 			if (!bag) continue;
 			size_t slot = bag->find2(item);
@@ -218,8 +221,8 @@ namespace {
 				GW::Item *b_item = bag->items[slot];
 				// b_item can be null in the case of birthday present for instance.
 				if (b_item != nullptr) {
-					int availaible = 250 - b_item->quantity;
-					int will_move = std::min(availaible, remaining);
+					size_t availaible = 250u - b_item->quantity;
+					size_t will_move = std::min<size_t>(availaible, remaining);
 					if (will_move > 0) {
 						GW::Items::MoveItem(item, b_item, will_move);
 						remaining -= will_move;
@@ -233,8 +236,8 @@ namespace {
 		return remaining_start - remaining;
 	}
 
-	void move_to_first_empty_slot(GW::Item *item, int bag_first, int bag_last) {
-		for (int bag_i = bag_first; bag_i <= bag_last; bag_i++) {
+	void move_to_first_empty_slot(GW::Item *item, size_t bag_first, size_t bag_last) {
+		for (size_t bag_i = bag_first; bag_i <= bag_last; bag_i++) {
 			GW::Bag *bag = GW::Items::GetBag(bag_i);
 			if (!bag) continue;
 			size_t slot = bag->find1(0);
@@ -249,34 +252,32 @@ namespace {
 		}
 	}
 
-	void move_item_to_storage_page(GW::Item *item, int page) {
+	void move_item_to_storage_page(GW::Item *item, size_t page) {
 		assert(item && item->quantity);
-		if (page == static_cast<int>(GW::Constants::StoragePane::Material_Storage)) {
+		if (page == static_cast<size_t>(GW::Constants::StoragePane::Material_Storage)) {
 			if (!item->GetIsMaterial()) return;
 			move_materials_to_storage(item);
 			return;
 		}
 
-		if (page < static_cast<int>(GW::Constants::StoragePane::Storage_1) ||
-			static_cast<int>(GW::Constants::StoragePane::Storage_14) < page) {
-
+		if (static_cast<size_t>(GW::Constants::StoragePane::Storage_14) < page) {
 			return;
 		}
 
-		const int storage1 = (int)GW::Constants::Bag::Storage_1;
-		const int bag_index = storage1 + page;
+		const size_t storage1 = static_cast<size_t>(GW::Constants::Bag::Storage_1);
+		const size_t bag_index = storage1 + page;
 		assert(GW::Items::GetBag(bag_index));
 
-		int remaining = item->quantity;
+        size_t remaining = item->quantity;
 
 		// For materials, we always try to move what we can into the material page
 		if (item->GetIsMaterial()) {
-			int moved = move_materials_to_storage(item);
+            size_t moved = move_materials_to_storage(item);
 			remaining -= moved;
 		}
 
 		// if the item is stackable we try to complete stack that already exist in the current storage page
-		int moved = complete_existing_stack(item, bag_index, bag_index, remaining);
+		size_t moved = complete_existing_stack(item, bag_index, bag_index, remaining);
 		remaining -= moved;
 
 		// if there is still item, we find the first empty slot and move everything there
@@ -290,20 +291,20 @@ namespace {
 
 		GW::Bag **bags = GW::Items::GetBagArray();
 		if (!bags) return;
-		int remaining = item->quantity;
+        size_t remaining = item->quantity;
 
 		// We try to move to the material storage
 		if (item->GetIsMaterial()) {
-			int moved = move_materials_to_storage(item);
+			size_t moved = move_materials_to_storage(item);
 			remaining -= moved;
 		}
 
-		const int storage1 = (int)GW::Constants::Bag::Storage_1;
-		const int storage14 = (int)GW::Constants::Bag::Storage_14;
+		const size_t storage1 = static_cast<size_t>(GW::Constants::Bag::Storage_1);
+		const size_t storage14 = static_cast<size_t>(GW::Constants::Bag::Storage_14);
 
 		// If item is stackable, try to complete similar stack
 		if (remaining == 0) return;
-		int moved = complete_existing_stack(item, storage1, storage14, remaining);
+        size_t moved = complete_existing_stack(item, storage1, storage14, remaining);
 		remaining -= moved;
 
 		// We find the first empty slot and put the remaining there
@@ -315,14 +316,14 @@ namespace {
 	void move_item_to_inventory(GW::Item *item) {
 		assert(item && item->quantity);
 
-		const int backpack = (int)GW::Constants::Bag::Backpack;
-		const int bag2 = (int)GW::Constants::Bag::Bag_2;
+		const size_t backpack = static_cast<size_t>(GW::Constants::Bag::Backpack);
+		const size_t bag2 = static_cast<size_t>(GW::Constants::Bag::Bag_2);
 
-		int total = item->quantity;
-		int remaining = total;
+        size_t total = item->quantity;
+        size_t remaining = total;
 
 		// If item is stackable, try to complete similar stack
-		int moved = complete_existing_stack(item, backpack, bag2, remaining);
+        size_t moved = complete_existing_stack(item, backpack, bag2, remaining);
 		remaining -= moved;
 
 		// If we didn't move any item (i.e. there was no stack to complete), move the stack to first empty slot
@@ -387,7 +388,7 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
     case GW::Constants::ItemType::Boots:
     case GW::Constants::ItemType::Chestpiece:
     case GW::Constants::ItemType::Gloves:
-    case GW::Constants::ItemType::Leggings:
+    case GW::Constants::ItemType::Leggings: {
         original = item->complete_name_enc;
         std::wstring item_str(item->info_string);
         std::wregex stacking_att(L"\x2.\x10A\xA84\x10A(.{1,2})\x1\x101\x101\x1\x2\xA3E\x10A\xAA8\x10A\xAB1\x1\x1");
@@ -405,6 +406,9 @@ static std::wstring ShorthandItemDescription(GW::Item* item) {
         if (IsInfused(item))
             original += L"\x2\x102\x2\xAC9";
         return original;
+    }
+    default:
+        break;
     }
 
 	// Replace "Requires 9 Divine Favor" > "q9 Divine Favor"
@@ -690,7 +694,7 @@ const bool PendingChatMessage::SendMessage() {
             buf[len + 1] = ' ';
             len += 2;
         }
-        for (size_t i = 0; i < san_len; i++) {
+        for (size_t j = 0; j < san_len; j++) {
             buf[len] = str[i];
             len++;
         }
@@ -764,10 +768,13 @@ void GameSettings::Initialize() {
 
 	
 	// Save last dialog sender, used for faction donate
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DialogSender>(&OnDialog_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::DialogSender* pak) {
-		GW::AgentLiving* agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->agent_id));
-		if (!agent) return;
-		last_dialog_npc_id = agent->player_number;
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DialogSender>(
+        &OnDialog_Entry,
+        [this](GW::HookStatus* status, GW::Packet::StoC::DialogSender* pak) {
+            UNREFERENCED_PARAMETER(status);
+		    GW::AgentLiving* agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->agent_id));
+		    if (!agent) return;
+		    last_dialog_npc_id = agent->player_number;
 		});
 	GW::Agents::RegisterDialogCallback(&OnDialog_Entry, OnFactionDonate);
 
@@ -789,8 +796,11 @@ void GameSettings::Initialize() {
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry, OnPlayerJoinInstance);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerLeaveInstance>(&PlayerLeaveInstance_Entry, OnPlayerLeaveInstance);
 	// Trigger for message on party change
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerRemove>(&PartyPlayerRemove_Entry, [&](GW::HookStatus* status, GW::Packet::StoC::PartyPlayerRemove*) -> void {
-		check_message_on_party_change = true;
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerRemove>(
+        &PartyPlayerRemove_Entry,
+        [&](GW::HookStatus* status, GW::Packet::StoC::PartyPlayerRemove*) -> void {
+            UNREFERENCED_PARAMETER(status);
+		    check_message_on_party_change = true;
 		});
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ScreenShake>(&OnScreenShake_Entry, OnScreenShake);
 	GW::UI::RegisterUIMessageCallback(&OnCheckboxPreferenceChanged_Entry, OnCheckboxPreferenceChanged);
@@ -980,17 +990,25 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
 
 void GameSettings::RegisterSettingsContent() {
 	ToolboxModule::RegisterSettingsContent();
-	ToolboxModule::RegisterSettingsContent("Inventory Settings", [this](const std::string* section, bool is_showing) {
-		if (!is_showing) return;
-		DrawInventorySettings();
-		},0.9f);
-	ToolboxModule::RegisterSettingsContent("Chat Settings", [this](const std::string* section, bool is_showing) {
-		if (!is_showing) return;
-		DrawChatSettings();
+	ToolboxModule::RegisterSettingsContent("Inventory Settings",
+        [this](const std::string* section, bool is_showing) {
+            UNREFERENCED_PARAMETER(section);
+		    if (!is_showing) return;
+		    DrawInventorySettings();
 		}, 0.9f);
-	ToolboxModule::RegisterSettingsContent("Party Settings", [this](const std::string* section, bool is_showing) {
-		if (!is_showing) return;
-		DrawPartySettings();
+
+	ToolboxModule::RegisterSettingsContent("Chat Settings",
+        [this](const std::string* section, bool is_showing) {
+            UNREFERENCED_PARAMETER(section);
+		    if (!is_showing) return;
+		    DrawChatSettings();
+		}, 0.9f);
+
+	ToolboxModule::RegisterSettingsContent("Party Settings",
+        [this](const std::string* section, bool is_showing) {
+            UNREFERENCED_PARAMETER(section);
+		    if (!is_showing) return;
+		    DrawPartySettings();
 		}, 0.9f);
 }
 
@@ -1289,6 +1307,8 @@ void GameSettings::FactionEarnedCheckAndWarn() {
 				Log::Warning("Luxon faction earned is greater than Kurzick");
 			}
 			break;
+        default:
+            break;
 	}
 }
 void GameSettings::SetAfkMessage(std::wstring&& message) {
@@ -1304,6 +1324,7 @@ void GameSettings::SetAfkMessage(std::wstring&& message) {
 }
 
 void GameSettings::Update(float delta) {
+    UNREFERENCED_PARAMETER(delta);
     // Try to print any pending messages.
     for (std::vector<PendingChatMessage*>::iterator it = pending_messages.begin(); it != pending_messages.end(); ++it) {
         PendingChatMessage *m = *it;
@@ -1350,6 +1371,7 @@ void GameSettings::UpdateFOV() {
 }
 
 bool GameSettings::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
+    UNREFERENCED_PARAMETER(lParam);
     // Open Whisper to targeted player with Ctrl + Enter
     if (Message == WM_KEYDOWN
         && wParam == VK_RETURN
@@ -1427,7 +1449,7 @@ void GameSettings::ItemClickCallback(GW::HookStatus* status, uint32_t type, uint
 	if (is_inventory_item) {
 		if (GW::Items::GetIsStorageOpen() && GameSettings::Instance().move_item_to_current_storage_pane) {
 			// If move_item_to_current_storage_pane = true, try to add the item to current storage pane.
-			int current_storage = GW::Items::GetStoragePage();
+			size_t current_storage = GW::Items::GetStoragePage();
 			move_item_to_storage_page(item, current_storage);
 		} else {
 			// Otherwise, just try to put it in anywhere.
@@ -1490,7 +1512,8 @@ void GameSettings::OnPingWeaponSet(GW::HookStatus* status, void* packet) {
 
 // Show a message when player joins the outpost
 void GameSettings::OnPlayerJoinInstance(GW::HookStatus* status, GW::Packet::StoC::PlayerJoinInstance* pak) {
-	auto instance = &Instance();
+    UNREFERENCED_PARAMETER(status);
+	GameSettings *instance = &Instance();
 	if (!instance->notify_when_players_join_outpost && !instance->notify_when_friends_join_outpost)
 		return; // Dont notify about player joining
 	if (!pak->player_name || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
@@ -1578,7 +1601,8 @@ void GameSettings::OnStartWhisper(GW::HookStatus* status, wchar_t* _name) {
 
 // Auto accept invitations, flash window on received party invite
 void GameSettings::OnPartyInviteReceived(GW::HookStatus* status, GW::Packet::StoC::PartyInviteReceived_Create* packet) {
-	auto instance = &Instance();
+    UNREFERENCED_PARAMETER(status);
+	GameSettings *instance = &Instance();
 	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost || !GetPlayerIsLeader())
 		return;
 	if (GW::PartyMgr::GetIsPlayerTicked()) {
@@ -1599,9 +1623,10 @@ void GameSettings::OnPartyInviteReceived(GW::HookStatus* status, GW::Packet::Sto
 
 // Flash window on player added
 void GameSettings::OnPartyPlayerJoined(GW::HookStatus* status, GW::Packet::StoC::PartyPlayerAdd* packet) {
+    UNREFERENCED_PARAMETER(status);
 	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
 		return;
-	auto instance = &Instance();
+	GameSettings *instance = &Instance();
 	instance->check_message_on_party_change = true;
 	if (instance->flash_window_on_party_invite) {
 		GW::PartyInfo* current_party = GW::PartyMgr::GetPartyInfo();
@@ -1617,6 +1642,7 @@ void GameSettings::OnPartyPlayerJoined(GW::HookStatus* status, GW::Packet::StoC:
 
 // Apply Collector's Edition animations on player dancing
 void GameSettings::OnPlayerDance(GW::HookStatus* status, GW::Packet::StoC::GenericValue* pak) {
+    UNREFERENCED_PARAMETER(status);
 	if (pak->Value_id != 28 || pak->agent_id != GW::Agents::GetPlayerId() || !Instance().collectors_edition_emotes)
 		return;
 	static GW::Packet::StoC::GenericValue pak2;
@@ -1631,6 +1657,8 @@ void GameSettings::OnPlayerDance(GW::HookStatus* status, GW::Packet::StoC::Gener
 		case GW::Constants::Profession::Paragon:
 			pak2.value = 14; // Collectors edition Nightfall/Factions
 			break;
+        default:
+            break;
 		}
 	}
 	GW::StoC::EmulatePacket(&pak2);
@@ -1669,6 +1697,7 @@ void GameSettings::OnFactionDonate(GW::HookStatus* status, uint32_t dialog_id) {
 
 // Show a message when player leaves the outpost
 void GameSettings::OnPlayerLeaveInstance(GW::HookStatus* status, GW::Packet::StoC::PlayerLeaveInstance* pak) {
+    UNREFERENCED_PARAMETER(status);
 	auto instance = &Instance();
 	if (!instance->notify_when_players_leave_outpost && !instance->notify_when_friends_leave_outpost)
 		return; // Dont notify about player leaving
@@ -1717,6 +1746,7 @@ void GameSettings::OnNPCChatMessage(GW::HookStatus* status, GW::Packet::StoC::Me
 
 // Automatically return to outpost on defeat
 void GameSettings::OnPartyDefeated(GW::HookStatus* status, GW::Packet::StoC::PartyDefeated*) {
+    UNREFERENCED_PARAMETER(status);
 	if (!Instance().auto_return_on_defeat || !GetPlayerIsLeader())
 		return;
 	GW::CtoS::SendPacket(0x4, GAME_CMSG_PARTY_RETURN_TO_OUTPOST);
@@ -1724,6 +1754,7 @@ void GameSettings::OnPartyDefeated(GW::HookStatus* status, GW::Packet::StoC::Par
 
 // Automatically send /age2 on /age.
 void GameSettings::OnServerMessage(GW::HookStatus* status, GW::Packet::StoC::MessageServer* pak) {
+    UNREFERENCED_PARAMETER(status);
 	if (!Instance().auto_age2_on_age || static_cast<GW::Chat::Channel>(pak->channel) != GW::Chat::Channel::CHANNEL_GLOBAL)
 		return; // Disabled or message pending
 	const wchar_t* msg = GetMessageCore();
@@ -1736,7 +1767,8 @@ void GameSettings::OnServerMessage(GW::HookStatus* status, GW::Packet::StoC::Mes
 
 // Print NPC speech bubbles to emote chat.
 void GameSettings::OnSpeechBubble(GW::HookStatus* status, GW::Packet::StoC::SpeechBubble* pak) {
-	auto instance = &Instance();
+    UNREFERENCED_PARAMETER(status);
+	GameSettings *instance = &Instance();
 	if (!instance->npc_speech_bubbles_as_chat || !pak->message || !pak->agent_id)
 		return; // Disabled, invalid, or pending another speech bubble
 	size_t len = 0;
@@ -1762,6 +1794,7 @@ void GameSettings::OnSpeechDialogue(GW::HookStatus* status, GW::Packet::StoC::Di
 
 // Automatic /age on vanquish
 void GameSettings::OnVanquishComplete(GW::HookStatus* status, GW::Packet::StoC::VanquishComplete*) {
+    UNREFERENCED_PARAMETER(status);
 	if (!Instance().auto_age_on_vanquish)
 		return;
 	GW::Chat::SendChat('/', "age");
@@ -1783,13 +1816,15 @@ void GameSettings::OnTradeStarted(GW::HookStatus*, GW::Packet::StoC::TradeStart*
 
 // Stop screen shake from aftershock etc
 void GameSettings::OnScreenShake(GW::HookStatus* status, void* packet) {
+    UNREFERENCED_PARAMETER(packet);
 	if (Instance().stop_screen_shake)
 		status->blocked = true;
 }
 
 // Automatically skip cinematics, flash window on cinematic
 void GameSettings::OnCinematic(GW::HookStatus* status, GW::Packet::StoC::CinematicPlay* packet) {
-	auto instance = &Instance();
+    UNREFERENCED_PARAMETER(status);
+	GameSettings *instance = &Instance();
 	if (packet->play && instance->auto_skip_cinematic) {
 		GW::Map::SkipCinematic();
 		return;
@@ -1800,7 +1835,8 @@ void GameSettings::OnCinematic(GW::HookStatus* status, GW::Packet::StoC::Cinemat
 
 // Flash/focus window on zoning
 void GameSettings::OnMapTravel(GW::HookStatus* status, GW::Packet::StoC::GameSrvTransfer* pak) {
-	auto instance = &Instance();
+    UNREFERENCED_PARAMETER(status);
+	GameSettings *instance = &Instance();
 	if (instance->flash_window_on_zoning) FlashWindow();
 	if (instance->focus_window_on_zoning && pak->is_explorable)
 		FocusWindow();
@@ -1808,6 +1844,7 @@ void GameSettings::OnMapTravel(GW::HookStatus* status, GW::Packet::StoC::GameSrv
 
 // Disable native timestamps
 void GameSettings::OnCheckboxPreferenceChanged(GW::HookStatus* status, uint32_t msgid, void* wParam, void* lParam) {
+    UNREFERENCED_PARAMETER(lParam);
 	if (!(msgid == GW::UI::UIMessage::kCheckboxPreference && wParam))
 		return;
 	uint32_t pref = *(uint32_t*)wParam; // { uint32_t pref, uint32_t value } - don't care about value atm.

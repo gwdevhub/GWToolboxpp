@@ -46,7 +46,8 @@ protected:
         WORD res_id, // you can use 0 and it will not load texture from resource, only from file.
         ImVec2 uv0, ImVec2 uv1, int threshold,
         const char* desc = nullptr);
-	~Pcon();
+    Pcon(const Pcon&) = delete;
+	virtual ~Pcon();
     bool* GetSettingsByName(const wchar_t* name);
     static bool UnreserveSlotForMove(int bagId, int slot); // Unlock slot.
 	static bool ReserveSlotForMove(int bagId, int slot); // Prevents more than 1 pcon from trying to add to the same slot at the same time.
@@ -138,6 +139,7 @@ public:
         	const char* desc = nullptr)
 		: Pcon(chat, abbrev, ini, file, res_id, uv0, uv1, threshold, desc),
 		itemID(item), effectID(effect) {}
+    PconGeneric(const PconGeneric&) = delete;
 
 protected:
 	bool CanUseByEffect() const override;
@@ -161,6 +163,7 @@ public:
 		int threshold,
         	const char* desc = nullptr)
 		: PconGeneric(chat, abbrev, ini, file, res_id, uv0, uv1, item, effect, threshold, desc) {}
+    PconCons(const PconCons&) = delete;
 
 	bool CanUseByEffect() const override;
 };
@@ -176,6 +179,7 @@ public:
 		int threshold,
         	const char* desc = nullptr)
 		: Pcon(chat, abbrev, ini, file, res_id, uv0, uv1, threshold, desc) {}
+    PconCity(const PconCity&) = delete;
 
 	bool CanUseByInstanceType() const;
 	bool IsVisible() const override;
@@ -201,6 +205,8 @@ public:
         desc += "Enable in an outpost to refill your inventory.";
     }
 
+    PconRefiller(const PconRefiller&) = delete;
+
     bool CanUseByInstanceType() const override { return false; }
     bool CanUseByEffect() const override { return false; }
 	bool IsVisible() const { return visible && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost; }
@@ -222,6 +228,8 @@ public:
         	const char* desc = nullptr)
 		: Pcon(chat, abbrev, ini, file, res_id, uv0, uv1, threshold, desc) {}
 
+    PconAlcohol(const PconAlcohol&) = delete;
+
 	bool CanUseByEffect() const override;
 	int QuantityForEach(const GW::Item* item) const override;
 	void ForceUse();
@@ -238,6 +246,8 @@ public:
 		int threshold,
         	const char* desc = nullptr)
 		: Pcon(chat, abbrev, ini, file, res_id, uv0, uv1, threshold, desc) {}
+
+    PconLunar(const PconLunar&) = delete;
 
 	void Update(int delay = -1) override;
 	bool CanUseByEffect() const override;

@@ -16,8 +16,6 @@ NOTE: Disconnecting/reconnecting will mess this up so repeat process.
 #include "sha1.hpp"
 
 #include "DiscordModule.h"
-#include <windows.h>
-#include <tlhelp32.h>
 
 #include <GuiUtils.h>
 #include "GWToolbox.h"

@@ -96,24 +96,29 @@ void ZrawDeepModule::SetEnabled(bool _enabled) {
 		can_terminate = false;
 		GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&ZrawDeepModule_StoCs,
 			[this](GW::HookStatus* status, GW::Packet::StoC::DisplayDialogue* packet) -> void {
+                UNREFERENCED_PARAMETER(status);
 				DisplayDialogue(packet);
 			});
 		GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SpeechBubble>(&ZrawDeepModule_StoCs,
 			[this](GW::HookStatus* status, GW::Packet::StoC::SpeechBubble* packet) -> void {
+                UNREFERENCED_PARAMETER(status);
 				if (!rewrite_npc_dialogs) return;
 				SetToRandomKanaxaiString(packet->message);
 			});
 		GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DialogBody>(&ZrawDeepModule_StoCs,
 			[this](GW::HookStatus* status, GW::Packet::StoC::DialogBody* packet) -> void {
+                UNREFERENCED_PARAMETER(status);
 				if (!rewrite_npc_dialogs) return;
 				SetToRandomKanaxaiString(packet->message);
 			});
 		GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&ZrawDeepModule_StoCs,
 			[this](GW::HookStatus* status, GW::Packet::StoC::GameSrvTransfer*) -> void {
+                UNREFERENCED_PARAMETER(status);
 				kanaxai_agent_id = 0;
 			});
 		GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(&ZrawDeepModule_StoCs,
 			[this](GW::HookStatus* status, GW::Packet::StoC::AgentAdd* packet) -> void {
+                UNREFERENCED_PARAMETER(status);
 				if (!enabled) return;
 				if (IsKanaxai(packet->agent_type)) {
 					kanaxai_agent_id = packet->agent_id;
@@ -162,12 +167,20 @@ void ZrawDeepModule::Initialize() {
 	ToolboxModule::Initialize();
 	CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
 	SetEnabled(enabled);
-    GW::Chat::CreateCommand(L"deep24h", [this](const wchar_t* message, int argc, LPWSTR* argv) -> void {
-        SetEnabled(!enabled);
-        Log::Info(enabled ? "24h Deep mode on!" : "24h Deep mode off :(");
+    GW::Chat::CreateCommand(L"deep24h",
+        [this](const wchar_t* message, int argc, LPWSTR* argv) -> void {
+            UNREFERENCED_PARAMETER(message);
+            UNREFERENCED_PARAMETER(argc);
+            UNREFERENCED_PARAMETER(argv);
+            SetEnabled(!enabled);
+            Log::Info(enabled ? "24h Deep mode on!" : "24h Deep mode off :(");
         });
-    GW::Chat::CreateCommand(L"24hdeep", [](const wchar_t* message, int argc, LPWSTR* argv) -> void {
-        GW::Chat::SendChat('/', "deep24h");
+    GW::Chat::CreateCommand(L"24hdeep",
+        [](const wchar_t* message, int argc, LPWSTR* argv) -> void {
+            UNREFERENCED_PARAMETER(message);
+            UNREFERENCED_PARAMETER(argc);
+            UNREFERENCED_PARAMETER(argv);
+            GW::Chat::SendChat('/', "deep24h");
         });
 }
 void ZrawDeepModule::DrawSettingInternal() {
@@ -216,6 +229,7 @@ void ZrawDeepModule::SetTransmogs() {
 	}
 }
 void ZrawDeepModule::Update(float delta) {
+    UNREFERENCED_PARAMETER(delta);
     if (pending_transmog)
         SetTransmogs();
 }

@@ -43,9 +43,9 @@ public:
 		return true;
 	}
 
-	int sep_modules = 0;
-	int sep_windows = 0;
-	int sep_widgets = 0;
+	size_t sep_modules = 0;
+	size_t sep_windows = 0;
+	size_t sep_widgets = 0;
 private:
 	std::map<std::string, bool> drawn_settings{};
 	bool hide_when_entering_explorable = false;

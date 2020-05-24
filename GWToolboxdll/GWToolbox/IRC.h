@@ -62,6 +62,7 @@ class IRC
 {
 public:
 	IRC();
+    IRC(const IRC&) = delete;
 	~IRC();
 	int start(char* server, int port, char* nick, char* user, char* name, char* pass);
 	void disconnect();

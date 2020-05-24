@@ -23,7 +23,7 @@ void Updater::SaveSettings(CSimpleIni* ini) {
 	ToolboxModule::SaveSettings(ini);
 #ifdef _DEBUG
     return;
-#endif
+#else
 	ini->SetLongValue(Name(), "update_mode", mode);
 	ini->SetValue(Name(), "dllversion", GWTOOLBOX_VERSION);
 
@@ -31,6 +31,7 @@ void Updater::SaveSettings(CSimpleIni* ini) {
 	CHAR* dllfile = new CHAR[MAX_PATH];
 	DWORD size = GetModuleFileName(module, dllfile, MAX_PATH);
 	ini->SetValue(Name(), "dllpath", size > 0 ? dllfile : "error");
+#endif
 }
 
 void Updater::Initialize() {
@@ -71,7 +72,7 @@ void Updater::GetLatestRelease(GWToolboxRelease* release) {
         if (!json[i]["tag_name"].is_string())
             continue;
         std::string tag_name = json[i]["tag_name"];
-        int version_number_len = tag_name.find("_Release", 0);
+        size_t version_number_len = tag_name.find("_Release", 0);
         if (version_number_len == std::string::npos)
             continue;
         if (!json[i]["assets"].is_array() || json[i]["assets"].size() == 0)
@@ -132,6 +133,7 @@ void Updater::CheckForUpdate(const bool forced) {
 }
 
 void Updater::Draw(IDirect3DDevice9* device) {
+    UNREFERENCED_PARAMETER(device);
 	if (step == Asking && !latest_release.version.empty()) {
 		
 		if (!notified) {

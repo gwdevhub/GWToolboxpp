@@ -17,6 +17,7 @@
 #include <GWCA/Utilities/Hooker.h>
 namespace {
     int OnJoin(const char* params, irc_reply_data* hostd, void* conn) {
+        UNREFERENCED_PARAMETER(conn);
         TwitchModule* module = &TwitchModule::Instance();
         if (!params[0] || !module->show_messages)
             return 0; // Empty msg
@@ -41,6 +42,7 @@ namespace {
         return 0;
     }
     int OnLeave(const char* params, irc_reply_data* hostd, void* conn) {
+        UNREFERENCED_PARAMETER(conn);
         TwitchModule* module = &TwitchModule::Instance();
         if (!params[0] || !module->show_messages || !module->notify_on_user_leave)
             return 0; // Empty msg
@@ -53,6 +55,7 @@ namespace {
         return 0;
     }
     int OnConnected(const char* params, irc_reply_data* hostd, void* conn) {
+        UNREFERENCED_PARAMETER(hostd);
         TwitchModule* module = &TwitchModule::Instance();
         IRC* irc_conn = (IRC*)conn;
 		// Set the username to be the connected name.
@@ -68,6 +71,7 @@ namespace {
         return 0;
     }
     int OnMessage(const char* params, irc_reply_data* hostd, void* conn) {
+        UNREFERENCED_PARAMETER(conn);
         TwitchModule* module = &TwitchModule::Instance();
         if (!params[0] || !module->show_messages)
             return 0; // Empty msg
@@ -81,6 +85,7 @@ namespace {
         return 0;
     }
 	int OnNotice(const char* params, irc_reply_data* hostd, void* conn) {
+        UNREFERENCED_PARAMETER(hostd);
 		Log::Log("NOTICE: %s\n", params);
 		if (strcmp(params, "Login authentication failed") == 0) {
 			GW::GameThread::Enqueue([]() {
@@ -126,6 +131,7 @@ void TwitchModule::AddHooks() {
 	hooked = 1;
 	// When starting a whisper to "<irc_nickname> @ <irc_channel>", rewrite recipient to be "<irc_channel>"
 	GW::Chat::RegisterStartWhisperCallback(&StartWhisperCallback_Entry, [&](GW::HookStatus* status, wchar_t* name) -> bool {
+        UNREFERENCED_PARAMETER(status);
 		wchar_t buf[128];
 		if (!name)
 			return false;
@@ -143,8 +149,8 @@ void TwitchModule::AddHooks() {
 		wchar_t msgcpy[255];
 		wcscpy(msgcpy, msg);
 		std::string message = GuiUtils::WStringToString(msgcpy);
-		int sender_idx = message.find(',');
-		if (sender_idx < 0)
+		size_t sender_idx = message.find(',');
+		if (sender_idx == std::string::npos)
 			return false; // Invalid sender
 		std::string to = message.substr(0, sender_idx);
 		if (to.compare(irc_alias) != 0)
@@ -197,11 +203,15 @@ bool TwitchModule::Connect() {
     }*/
 	// Sanitise strings to lower case
 	std::transform(irc_server.begin(), irc_server.end(), irc_server.begin(),
-		[](unsigned char c) { return std::tolower(c); });
+		[](char c) -> char {
+            return static_cast<char>(std::tolower(c));
+        });
 	/*std::transform(irc_username.begin(), irc_username.end(), irc_username.begin(),
 		[](unsigned char c) { return std::tolower(c); });*/
 	std::transform(irc_channel.begin(), irc_channel.end(), irc_channel.begin(),
-		[](unsigned char c) { return std::tolower(c); });
+        [](char c) -> char {
+            return static_cast<char>(std::tolower(c));
+        });
 
     if (conn.start(
 		const_cast<char*>(irc_server.c_str()),
@@ -217,6 +227,7 @@ bool TwitchModule::Connect() {
     return connected = conn.is_connected();
 }
 void TwitchModule::Update(float delta) {
+    UNREFERENCED_PARAMETER(delta);
 	connected = conn.is_connected();
 	if (pending_disconnect) {
 		Disconnect();

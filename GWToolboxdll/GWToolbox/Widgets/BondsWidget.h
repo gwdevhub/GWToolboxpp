@@ -48,7 +48,7 @@ public:
 	void Terminate() override;
 
 	// Update. Will always be called every frame.
-    void Update(float delta) override {}
+    void Update(float) override {}
 
 	// Draw user interface. Will be called every frame if the element is visible
 	void Draw(IDirect3DDevice9* device) override;

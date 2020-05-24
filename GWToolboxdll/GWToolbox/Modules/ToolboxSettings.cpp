@@ -103,8 +103,11 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
 	optional_modules.push_back(&DoorMonitorWindow::Instance());
 	optional_modules.push_back(&SkillListingWindow::Instance());
 #endif
-	std::sort(optional_modules.begin() + SettingsWindow::Instance().sep_windows, optional_modules.end(), [](const ToolboxModule* lhs, const ToolboxModule* rhs) {
-		return std::string(lhs->SettingsName()).compare(rhs->SettingsName()) < 0;
+	std::sort(
+        optional_modules.begin() + static_cast<int>(SettingsWindow::Instance().sep_windows),
+        optional_modules.end(),
+        [](const ToolboxModule* lhs, const ToolboxModule* rhs) {
+		    return std::string(lhs->SettingsName()).compare(rhs->SettingsName()) < 0u;
 		});
 
 	SettingsWindow::Instance().sep_widgets = optional_modules.size();
@@ -119,8 +122,11 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
 	if (use_vanquish) optional_modules.push_back(&VanquishWidget::Instance());
 	if (use_alcohol) optional_modules.push_back(&AlcoholWidget::Instance());
 
-	std::sort(optional_modules.begin() + SettingsWindow::Instance().sep_widgets, optional_modules.end(), [](const ToolboxModule* lhs, const ToolboxModule* rhs) {
-		return std::string(lhs->SettingsName()).compare(rhs->SettingsName()) < 0;
+	std::sort(
+        optional_modules.begin() + static_cast<int>(SettingsWindow::Instance().sep_widgets),
+        optional_modules.end(),
+        [](const ToolboxModule* lhs, const ToolboxModule* rhs) {
+		    return std::string(lhs->SettingsName()).compare(rhs->SettingsName()) < 0u;
 		});
 
 	// Only read settings of non-core modules
@@ -173,7 +179,7 @@ void ToolboxSettings::DrawSettingInternal() {
 		{"Twitch",&use_twitch},
 		{"Vanquish counter",&use_vanquish}
 	};
-	ImGui::Columns(cols, "global_enable_cols", false);
+	ImGui::Columns(static_cast<int>(cols), "global_enable_cols", false);
 	size_t items_per_col = (size_t)ceil(features.size() / cols);
 	size_t col_count = 0;
 	for (auto feature : features) {
@@ -190,8 +196,8 @@ void ToolboxSettings::DrawSettingInternal() {
 	ImGui::Separator();
 	ImGui::Text("Show the following in the main window:");
 
-	auto ui = GWToolbox::Instance().GetUIElements();
-	ImGui::Columns(cols, "menubuttons_cols", false);
+	std::vector<ToolboxUIElement *> ui = GWToolbox::Instance().GetUIElements();
+	ImGui::Columns(static_cast<int>(cols), "menubuttons_cols", false);
 	col_count = 0;
 	std::vector<ToolboxUIElement*> valid_elements;
 	for (size_t i = 0; i < ui.size();i++) {
@@ -300,6 +306,7 @@ void ToolboxSettings::SaveSettings(CSimpleIni* ini) {
 }
 
 void ToolboxSettings::Update(float delta) {
+    UNREFERENCED_PARAMETER(delta);
 	ImGui::GetStyle().WindowBorderSize = (move_all ? 1.0f : 0.0f);
 
 	// save location data

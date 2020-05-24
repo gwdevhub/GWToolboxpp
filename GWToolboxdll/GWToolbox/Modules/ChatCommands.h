@@ -73,8 +73,8 @@ private:
 	float cam_speed = DEFAULT_CAM_SPEED;
 	bool forward_fix_z = true;
 
-	void AddSkillToUse(int skill); // 1-8 range
-	std::list<int> skills_to_use; // 0-7 range
+	void AddSkillToUse(uint32_t skill); // 1-8 range
+	std::list<uint32_t> skills_to_use; // 0-7 range
 	float skill_usage_delay = 1.0f;
 	clock_t skill_timer = clock();
 protected:

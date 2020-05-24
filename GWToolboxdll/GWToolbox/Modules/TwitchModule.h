@@ -9,6 +9,7 @@
 
 class TwitchModule : public ToolboxModule {
     TwitchModule() {};
+    TwitchModule(const TwitchModule&) = delete;
     ~TwitchModule() {};
 public:
     static TwitchModule& Instance() {

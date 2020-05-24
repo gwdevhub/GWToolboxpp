@@ -7,6 +7,7 @@
 
 class TradeWindow : public ToolboxWindow {
 	TradeWindow() {};
+    TradeWindow(const TradeWindow&) = delete;
 	~TradeWindow();
 public:
 	static TradeWindow& Instance() {

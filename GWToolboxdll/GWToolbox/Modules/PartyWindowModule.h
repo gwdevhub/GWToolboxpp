@@ -39,9 +39,14 @@ private:
 private:
 
 	struct PendingAddToParty {
-		PendingAddToParty(uint32_t _agent_id, uint32_t _allegiance_bits, uint32_t _player_number) : agent_id(_agent_id), allegiance_bits(_allegiance_bits), player_number(_player_number) {
-			add_timer = TIMER_INIT();
-		};
+		PendingAddToParty(uint32_t _agent_id, uint32_t _allegiance_bits, uint32_t _player_number)
+            : agent_id(_agent_id)
+            , player_number(_player_number)
+            , allegiance_bits(_allegiance_bits)
+        {
+        	add_timer = TIMER_INIT();
+        }
+
 		clock_t add_timer;
 		uint32_t agent_id;
 		uint32_t player_number;
@@ -49,7 +54,13 @@ private:
 		GW::AgentLiving* GetAgent();
 	};
 	struct SpecialNPCToAdd {
-		SpecialNPCToAdd(const char* _alias, uint32_t _model_id, GW::Constants::MapID _map_id) : model_id(_model_id), map_id(_map_id), alias(_alias) {};
+		SpecialNPCToAdd(const char* _alias, uint32_t _model_id, GW::Constants::MapID _map_id)
+            : alias(_alias)
+            , model_id(_model_id)
+            , map_id(_map_id)
+        {
+        };
+
 		std::wstring map_name;
 		bool decode_pending = false;
 		std::wstring* GetMapName();

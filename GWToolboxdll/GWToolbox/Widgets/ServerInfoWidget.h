@@ -11,7 +11,8 @@
 #include <GWCA/Packets/StoC.h>
 
 class ServerInfoWidget : public ToolboxWidget {
-	ServerInfoWidget() {};
+	ServerInfoWidget() {}
+    ServerInfoWidget(const ServerInfoWidget&) = delete;
 	~ServerInfoWidget() {
 		if (server_info_fetcher.joinable())
 			server_info_fetcher.join();

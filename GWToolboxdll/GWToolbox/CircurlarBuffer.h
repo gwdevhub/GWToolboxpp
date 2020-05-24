@@ -13,6 +13,8 @@ struct CircularBuffer {
 
     CircularBuffer() = default;
 
+    CircularBuffer(const CircularBuffer&) = delete;
+
     CircularBuffer(CircularBuffer&& other)
         : buffer(other.buffer)
         , cursor(other.cursor)

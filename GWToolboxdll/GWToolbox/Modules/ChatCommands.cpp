@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "ChatCommands.h"
-#include <algorithm>
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -138,7 +137,7 @@ namespace {
 			});
 	}
 	static bool GetNPCInfoByName(const wchar_t* name, DWORD* npc_id, DWORD* npc_model_file_id, DWORD* npc_model_file_data, DWORD* flags) {
-		int arglen = 0;
+		size_t arglen = 0;
 		*npc_id = 0;
 		*npc_model_file_id = 0;
 		*npc_model_file_id = 0;
@@ -147,110 +146,110 @@ namespace {
 			arglen++;
 		if (!arglen)
 			return false;
-		if (wcsncmp(name, L"charr", std::min(arglen, 5)) == 0 && false) {
+		if (wcsncmp(name, L"charr", std::min<size_t>(arglen, 5)) == 0 && false) {
 			*npc_id = 163;
 			*npc_model_file_id = 0x0004c409;
 			*flags = 98820;
 		}
-		else if (wcsncmp(name, L"reindeer", std::min(arglen, 8)) == 0 && false) {
+		else if (wcsncmp(name, L"reindeer", std::min<size_t>(arglen, 8)) == 0 && false) {
 			*npc_id = 5;
 			*npc_model_file_id = 277573;
 			*npc_model_file_data = 277576;
 			*flags = 32780;
 		}
-		else if (wcsncmp(name, L"gwenpre", std::min(arglen,7)) == 0) {
+		else if (wcsncmp(name, L"gwenpre", std::min<size_t>(arglen,7)) == 0) {
 			*npc_id = 244;
 			*npc_model_file_id = 116377;
 			*npc_model_file_data = 116759;
 			*flags = 98820;
 		}
-        else if (wcsncmp(name, L"gwenchan", std::min(arglen, 8)) == 0) {
+        else if (wcsncmp(name, L"gwenchan", std::min<size_t>(arglen, 8)) == 0) {
             *npc_id = 245;
             *npc_model_file_id = 116377;
             *npc_model_file_data = 283392;
             *flags = 98820;
         }
-		else if (wcsncmp(name, L"eye", std::min(arglen, 3)) == 0) {
+		else if (wcsncmp(name, L"eye", std::min<size_t>(arglen, 3)) == 0) {
 			*npc_id = 0x1f4;
 			*npc_model_file_id = 0x9d07;
 		}
-		else if (wcsncmp(name, L"zhu", std::min(arglen, 3)) == 0) {
+		else if (wcsncmp(name, L"zhu", std::min<size_t>(arglen, 3)) == 0) {
 			*npc_id = 298;
 			*npc_model_file_id = 170283;
 			*npc_model_file_data = 170481;
 			*flags = 98820;
 		}
-		else if (wcsncmp(name, L"kuunavang", std::min(arglen, 9)) == 0) {
+		else if (wcsncmp(name, L"kuunavang", std::min<size_t>(arglen, 9)) == 0) {
 			*npc_id = 309;
 			*npc_model_file_id = 157438;
 			*npc_model_file_data = 157527;
 			*flags = 98820;
 		}
-		else if (wcsncmp(name, L"beetle", std::min(arglen, 6)) == 0) {
+		else if (wcsncmp(name, L"beetle", std::min<size_t>(arglen, 6)) == 0) {
 			*npc_id = 329;
 			*npc_model_file_id = 207331;
 			*npc_model_file_data = 279211; // 245179?
 			*flags = 98820; // 32780 ?
 		}
-		else if (wcsncmp(name, L"polar", std::min(arglen, 5)) == 0) {
+		else if (wcsncmp(name, L"polar", std::min<size_t>(arglen, 5)) == 0) {
 			*npc_id = 313;
 			*npc_model_file_id = 277551;
 			*npc_model_file_data = 277556;
 			*flags = 98820;
 		}
-		else if (wcsncmp(name, L"celepig", std::min(arglen, 7)) == 0) {
+		else if (wcsncmp(name, L"celepig", std::min<size_t>(arglen, 7)) == 0) {
 			*npc_id = 331;
 			*npc_model_file_id = 279205;
 		}
-		else if (wcsncmp(name, L"mallyx", std::min(arglen, 6)) == 0 && false) {
+		else if (wcsncmp(name, L"mallyx", std::min<size_t>(arglen, 6)) == 0 && false) {
 			*npc_id = 315;
 			*npc_model_file_id = 243812;
 			*flags = 98820;
 		}
-		else if (wcsncmp(name, L"bonedragon", std::min(arglen, 10)) == 0) {
+		else if (wcsncmp(name, L"bonedragon", std::min<size_t>(arglen, 10)) == 0) {
 			*npc_id = 231;
 			*npc_model_file_id = 16768;
 		}
-		else if (wcsncmp(name, L"destroyer", std::min(arglen, 9)) == 0) {
+		else if (wcsncmp(name, L"destroyer", std::min<size_t>(arglen, 9)) == 0) {
 			*npc_id = 312;
 			*npc_model_file_id = 285891;
 			*npc_model_file_data = 285900;
 			*flags = 98820;
 		}
-		else if (wcsncmp(name, L"destroyer2", std::min(arglen, 10)) == 0) {
+		else if (wcsncmp(name, L"destroyer2", std::min<size_t>(arglen, 10)) == 0) {
 			*npc_id = 146;
 			*npc_model_file_id = 285886;
 			*npc_model_file_data = 285890;
 			*flags = 32780;
 		}
-		else if (wcsncmp(name, L"koss", std::min(arglen, 4)) == 0) {
+		else if (wcsncmp(name, L"koss", std::min<size_t>(arglen, 4)) == 0) {
 			*npc_id = 250;
 			*npc_model_file_id = 243282;
 			*npc_model_file_data = 245053;
 			*flags = 98820;
 		}
-		else if (wcsncmp(name, L"smite", std::min(arglen, 5)) == 0) {
+		else if (wcsncmp(name, L"smite", std::min<size_t>(arglen, 5)) == 0) {
 			*npc_id = 346;
 			*npc_model_file_id = 129664;
 			*flags = 98820;
 		}
-		else if (wcsncmp(name, L"dorian", std::min(arglen, 6)) == 0) {
+		else if (wcsncmp(name, L"dorian", std::min<size_t>(arglen, 6)) == 0) {
 			*npc_id = 8299;
 			*npc_model_file_id = 86510;
 			*flags = 98820;
 		}
-		else if (wcsncmp(name, L"kanaxai", std::min(arglen, 7)) == 0) {
+		else if (wcsncmp(name, L"kanaxai", std::min<size_t>(arglen, 7)) == 0) {
 			*npc_id = 317;
 			*npc_model_file_id = 184176;
 			*npc_model_file_data = 185319;
 			*flags = 98820;
 		}
-		else if (wcsncmp(name, L"skeletonic", std::min(arglen, 10)) == 0) {
+		else if (wcsncmp(name, L"skeletonic", std::min<size_t>(arglen, 10)) == 0) {
 			*npc_id = 359;
 			*npc_model_file_id = 52356;
 			*flags = 98820;
 		}
-		else if (wcsncmp(name, L"moa", std::min(arglen, 3)) == 0) {
+		else if (wcsncmp(name, L"moa", std::min<size_t>(arglen, 3)) == 0) {
 			*npc_id = 504;
 			*npc_model_file_id = 16689;
 			*flags = 98820;
@@ -373,12 +372,20 @@ void ChatCommands::Initialize() {
 	// you can create commands here in-line with a lambda, but only if they are only 
 	// a couple of lines and not used multiple times
 	GW::Chat::CreateCommand(L"ff", [](const wchar_t* message, int argc, LPWSTR* argv) -> void {
+        UNREFERENCED_PARAMETER(message);
+        UNREFERENCED_PARAMETER(argc);
+        UNREFERENCED_PARAMETER(argv);
 		GW::Chat::SendChat('/', "resign");
 	});
-    GW::Chat::CreateCommand(L"gh", [](const wchar_t* message, int argc, LPWSTR* argv) -> void {
-        GW::Chat::SendChat('/', "tp gh");
+    GW::Chat::CreateCommand(L"gh",
+        [](const wchar_t* message, int argc, LPWSTR* argv) -> void {
+            UNREFERENCED_PARAMETER(message);
+            UNREFERENCED_PARAMETER(argc);
+            UNREFERENCED_PARAMETER(argv);
+            GW::Chat::SendChat('/', "tp gh");
         });
     GW::Chat::CreateCommand(L"enter", [](const wchar_t* message, int argc, LPWSTR* argv) -> void {
+        UNREFERENCED_PARAMETER(message);
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) return;
         uint32_t item_id;
         std::wstring arg;
@@ -431,11 +438,15 @@ void ChatCommands::Initialize() {
     GW::Chat::CreateCommand(L"title", ChatCommands::CmdReapplyTitle);
 	GW::Chat::CreateCommand(L"pingitem", ChatCommands::CmdPingEquipment);
 	GW::Chat::CreateCommand(L"armor", [](const wchar_t* message, int argc, LPWSTR* argv) -> void {
+        UNREFERENCED_PARAMETER(message);
+        UNREFERENCED_PARAMETER(argc);
+        UNREFERENCED_PARAMETER(argv);
 		GW::Chat::SendChat('/', "pingitem armor");
-		});
+    });
 }
 
 bool ChatCommands::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
+    UNREFERENCED_PARAMETER(lParam);
 	if (!GW::CameraMgr::GetCameraUnlock()) return false;
 	if (GW::Chat::GetIsTyping()) return false;
 	if (ImGui::GetIO().WantTextInput) return false;
@@ -469,8 +480,6 @@ void ChatCommands::Update(float delta) {
 	static bool keep_forward;
 
 	if (delta == 0.f) return;
-	float dist_dist = delta * cam_speed;
-	float dist_rot  = delta * ROTATION_SPEED;
 
 	if (GW::CameraMgr::GetCameraUnlock() 
 		&& !GW::Chat::GetIsTyping() 
@@ -509,7 +518,7 @@ void ChatCommands::Update(float delta) {
 		GW::CameraMgr::UpdateCameraPos();
 	}
 
-	for (int slot : skills_to_use) {
+	for (uint32_t slot : skills_to_use) {
 		if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable
 			&& (clock() - skill_timer) / 1000.0f > skill_usage_delay) {
 			GW::Skillbar* skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
@@ -557,17 +566,21 @@ bool ChatCommands::ReadTemplateFile(std::wstring path, char *buff, size_t buffSi
 }
 
 void ChatCommands::CmdAge2(const wchar_t *message, int argc, LPWSTR *argv) {
+    UNREFERENCED_PARAMETER(message);
+    UNREFERENCED_PARAMETER(argc);
+    UNREFERENCED_PARAMETER(argv);
 	DWORD second = GW::Map::GetInstanceTime() / 1000;
 	Log::Info("%02u:%02u:%02u", (second / 3600), (second / 60) % 60, second % 60);
 }
 
 void ChatCommands::CmdDialog(const wchar_t *message, int argc, LPWSTR *argv) {
+    UNREFERENCED_PARAMETER(message);
 	if (argc <= 1) {
 		Log::Error("Please provide an integer or hex argument");
 	} else {
 		int id;
 		if (GuiUtils::ParseInt(argv[1], &id)) {
-			GW::Agents::SendDialog(id);
+			GW::Agents::SendDialog(static_cast<uint32_t>(id));
 			Log::Info("Sent Dialog 0x%X", id);
 		} else {
 			Log::Error("Invalid argument '%ls', please use an integer or hex value", argv[0]);
@@ -576,6 +589,9 @@ void ChatCommands::CmdDialog(const wchar_t *message, int argc, LPWSTR *argv) {
 }
 
 void ChatCommands::CmdChest(const wchar_t *message, int argc, LPWSTR *argv) {
+    UNREFERENCED_PARAMETER(message);
+    UNREFERENCED_PARAMETER(argc);
+    UNREFERENCED_PARAMETER(argv);
 	switch (GW::Map::GetInstanceType()) {
 	case GW::Constants::InstanceType::Outpost:
 		GW::Items::OpenXunlaiWindow();
@@ -629,6 +645,7 @@ void ChatCommands::CmdTB(const wchar_t *message, int argc, LPWSTR *argv) {
 }
 
 std::vector<ToolboxUIElement*> ChatCommands::MatchingWindows(const wchar_t *message, int argc, LPWSTR *argv) {
+    UNREFERENCED_PARAMETER(argv);
 	std::vector<ToolboxUIElement*> ret;
 	if (argc <= 1) {
 		ret.push_back(&MainWindow::Instance());
@@ -678,6 +695,10 @@ void ChatCommands::CmdHide(const wchar_t *message, int argc, LPWSTR *argv) {
 }
 
 bool ChatCommands::ParseOutpost(const std::wstring s, GW::Constants::MapID& outpost, GW::Constants::District& district, int& number) {
+    // @Cleanup:
+    // Should we parse this number here?
+    number = 0;
+
 	// Shortcut words e.g "/tp doa" for domain of anguish
 	if (s == L"bestarea")							return outpost = GW::Constants::MapID::The_Deep, true;
 	if (s == L"toa")								return outpost = GW::Constants::MapID::Temple_of_the_Ages, true;
@@ -783,6 +804,7 @@ bool ChatCommands::IsLuxon() {
     return c && c->player_guild_index && c->guilds[c->player_guild_index]->faction;
 }
 void ChatCommands::CmdTP(const wchar_t *message, int argc, LPWSTR *argv) {
+    UNREFERENCED_PARAMETER(message);
 	// zero argument error
 	if (argc == 1) {
 		Log::Error("[Error] Please provide an argument");
@@ -824,7 +846,7 @@ void ChatCommands::CmdTP(const wchar_t *message, int argc, LPWSTR *argv) {
 		}
 		int fav_num;
 		if (GuiUtils::ParseInt(fav_s_num.c_str(), &fav_num)) {
-			TravelWindow::Instance().TravelFavorite(fav_num - 1);
+			TravelWindow::Instance().TravelFavorite(static_cast<unsigned int>(fav_num) - 1);
 			return;
 		}
 		Log::Error("[Error] Did not recognize favourite");
@@ -873,6 +895,8 @@ void ChatCommands::CmdTP(const wchar_t *message, int argc, LPWSTR *argv) {
                 else
                     outpost = IsLuxon() ? GW::Constants::MapID::The_Jade_Quarry_Luxon_outpost : GW::Constants::MapID::The_Jade_Quarry_Kurzick_outpost;
                 break;
+            default:
+                break;
         }
 		TravelWindow::Instance().Travel(outpost, district, district_number); // NOTE: ParseOutpost sets outpost, district and district_number vars by reference.
 		return;
@@ -882,6 +906,7 @@ void ChatCommands::CmdTP(const wchar_t *message, int argc, LPWSTR *argv) {
 }
 
 void ChatCommands::CmdZoom(const wchar_t *message, int argc, LPWSTR *argv) {
+    UNREFERENCED_PARAMETER(message);
 	if (argc <= 1) {
 		GW::CameraMgr::SetMaxDist();
 	} else {
@@ -899,6 +924,7 @@ void ChatCommands::CmdZoom(const wchar_t *message, int argc, LPWSTR *argv) {
 }
 
 void ChatCommands::CmdCamera(const wchar_t *message, int argc, LPWSTR *argv) {
+    UNREFERENCED_PARAMETER(message);
 	if (argc == 1) {
 		GW::CameraMgr::UnlockCam(false);
 	} else {
@@ -929,7 +955,7 @@ void ChatCommands::CmdCamera(const wchar_t *message, int argc, LPWSTR *argv) {
 						float speed = std::stof(arg2);
 						Instance().cam_speed = speed;
 						Log::Info("Camera speed is now %f", speed);
-					} catch (...) {
+					} catch (const std::exception&) {
 						Log::Error("Invalid argument '%ls', please use a float value", argv[2]);
 					}
 				}
@@ -941,6 +967,7 @@ void ChatCommands::CmdCamera(const wchar_t *message, int argc, LPWSTR *argv) {
 }
 
 void ChatCommands::CmdDamage(const wchar_t *message, int argc, LPWSTR *argv) {
+    UNREFERENCED_PARAMETER(message);
 	if (argc <= 1) {
 		PartyDamage::Instance().WritePartyDamage();
 	} else {
@@ -961,6 +988,7 @@ void ChatCommands::CmdDamage(const wchar_t *message, int argc, LPWSTR *argv) {
 }
 
 void ChatCommands::CmdAfk(const wchar_t *message, int argc, LPWSTR *argv) {
+    UNREFERENCED_PARAMETER(argv);
 	GW::FriendListMgr::SetFriendListStatus(GW::Constants::OnlineStatus::AWAY);
     GameSettings& settings = GameSettings::Instance();
 	if (argc > 1) {
@@ -1006,7 +1034,7 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
 		float max_distance = GW::Constants::SqrRange::Spellcast;
 		float distance = 0.0f;
 
-		int closest = -1;
+		size_t closest = (size_t)-1;
 		for (size_t i = 0; i < agents.size(); ++i) {
 			GW::AgentLiving* agent = (GW::AgentLiving * )agents[i];
 			if (agent == nullptr || agent == me 
@@ -1023,7 +1051,7 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
 			closest = i;
 			distance = this_distance;
 		}
-		if (closest > 0) {
+		if (closest != (size_t)-1) {
 			GW::Agents::ChangeTarget(agents[closest]);
 		}
 	}
@@ -1038,7 +1066,7 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
 		float max_angle_diff = 22.5f; // Acceptable angle for vipers
 		float max_distance = GW::Constants::SqrRange::Spellcast;
 
-		int closest = -1;
+		size_t closest = (size_t)-1;
 		for (size_t i = 0; i < agents.size(); ++i) {
 			GW::AgentLiving* agent = static_cast<GW::AgentLiving*>(agents[i]);
 			if (agent == nullptr || agent == me || !agent->GetIsLivingType() || agent->GetIsDead())
@@ -1053,7 +1081,7 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
 			closest = i;
 			max_distance = this_distance;
 		}
-		if (closest > 0) {
+		if (closest != (size_t)-1) {
 			GW::Agents::ChangeTarget(agents[closest]);
 		}
 	}
@@ -1066,7 +1094,7 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
 		if (me == nullptr) return;
 
 		float distance = GW::Constants::SqrRange::Compass;
-		int closest = -1;
+		size_t closest = (size_t)-1;
 
 		for (size_t i = 0; i < agents.size(); ++i) {
 			if (agents[i] == nullptr) continue;
@@ -1080,7 +1108,7 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
 				}
 			}
 		}
-		if (closest > 0) {
+		if (closest != (size_t)-1) {
 			GW::Agents::ChangeTarget(agents[closest]);
 		}
 	} else if (arg1 == L"getid") {
@@ -1109,7 +1137,7 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
 	}
 }
 
-void ChatCommands::AddSkillToUse(int skill) {
+void ChatCommands::AddSkillToUse(uint32_t skill) {
 	if (skill <= 0 || skill > 8) return;
 	auto i = std::find(skills_to_use.begin(), skills_to_use.end(), skill - 1);
 	if (i == skills_to_use.end()) {
@@ -1118,6 +1146,7 @@ void ChatCommands::AddSkillToUse(int skill) {
 }
 
 void ChatCommands::CmdUseSkill(const wchar_t *message, int argc, LPWSTR *argv) {
+    UNREFERENCED_PARAMETER(message);
 	Instance().skills_to_use.clear();
 
 	if (argc > 1) {
@@ -1127,8 +1156,9 @@ void ChatCommands::CmdUseSkill(const wchar_t *message, int argc, LPWSTR *argv) {
 		} else {
 			for (int i = argc - 1; i > 0; --i) {
 				try {
-					int num = std::stoi(argv[i]);
-					if (num >= 0) {
+					int inum = std::stoi(argv[i]);
+					if (inum >= 0) {
+                        uint32_t num = static_cast<uint32_t>(inum);
 						// note: num can be one or more skills
 						while (num > 10) {
 							Instance().AddSkillToUse(num % 10);
@@ -1136,7 +1166,7 @@ void ChatCommands::CmdUseSkill(const wchar_t *message, int argc, LPWSTR *argv) {
 						}
 						Instance().AddSkillToUse(num);
 					}
-				} catch (...) {
+				} catch (const std::exception&) {
 					Log::Error("Invalid argument '%ls', please use an integer value", argv[1]);
 				}
 			}
@@ -1145,6 +1175,7 @@ void ChatCommands::CmdUseSkill(const wchar_t *message, int argc, LPWSTR *argv) {
 }
 
 void ChatCommands::CmdSCWiki(const wchar_t *message, int argc, LPWSTR *argv) {
+    UNREFERENCED_PARAMETER(message);
 	CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 	if (argc == 1) {
 		ShellExecuteW(NULL, L"open", L"http://wiki.fbgmguild.com/Main_Page", NULL, NULL, SW_SHOWNORMAL);
@@ -1162,6 +1193,7 @@ void ChatCommands::CmdSCWiki(const wchar_t *message, int argc, LPWSTR *argv) {
 }
 
 void ChatCommands::CmdLoad(const wchar_t *message, int argc, LPWSTR *argv) {
+    UNREFERENCED_PARAMETER(message);
 	// We will & should move that to GWCA.
 	static int(__cdecl *GetPersonalDir)(size_t size, wchar_t *dir) = 0;
 	*(uintptr_t*)&GetPersonalDir = GW::MemoryMgr::GetPersonalDirPtr;
@@ -1191,17 +1223,18 @@ void ChatCommands::CmdLoad(const wchar_t *message, int argc, LPWSTR *argv) {
 	if (argc == 2)
 		GW::SkillbarMgr::LoadSkillTemplate(temp);	
 	else if (argc == 3) {
-		int hero_number;
-		if (GuiUtils::ParseInt(argv[2], &hero_number)) {
+		int ihero_number;
+		if (GuiUtils::ParseInt(argv[2], &ihero_number)) {
 			// @Robustness:
 			// Check that the number is actually valid or make sure LoadSkillTemplate is safe
-			if (0 < hero_number && hero_number <= 8) {
-				GW::SkillbarMgr::LoadSkillTemplate(temp, hero_number);
+			if (0 < ihero_number && ihero_number <= 8) {
+				GW::SkillbarMgr::LoadSkillTemplate(temp, static_cast<uint32_t>(ihero_number));
 			}
 		}
 	}
 }
 void ChatCommands::CmdPingEquipment(const wchar_t* message, int argc, LPWSTR* argv) {
+    UNREFERENCED_PARAMETER(message);
 	if (argc < 2) {
 		Log::Error("Missing argument for /pingitem");
 		return;
@@ -1242,19 +1275,22 @@ void ChatCommands::CmdPingEquipment(const wchar_t* message, int argc, LPWSTR* ar
 }
 
 void ChatCommands::CmdTransmoParty(const wchar_t* message, int argc, LPWSTR* argv) {
+    UNREFERENCED_PARAMETER(message);
 	GW::PartyInfo* pInfo = GW::PartyMgr::GetPartyInfo();
 	if (!pInfo) return;
-	int scale = 0x64000000;
+	DWORD scale = 0x64000000;
 	DWORD npc_id = 0;
 	DWORD npc_model_file_id = 0;
 	DWORD npc_model_file_data = 0;
 	DWORD flags = 0;
 
 	if (argc > 1) {
-		if (wcsncmp(argv[1], L"reset", 5) == 0) {
+        int iscale;
+        if (wcsncmp(argv[1], L"reset", 5) == 0) {
 			npc_id = INT_MAX;
 		}
-		else if (GuiUtils::ParseInt(argv[1], &scale)) {
+		else if (GuiUtils::ParseInt(argv[1], &iscale)) {
+            scale = static_cast<DWORD>(iscale);
 			if (scale < 6 || scale > 255) {
 				Log::Error("scale must be between [6, 255]");
 				return;
@@ -1266,7 +1302,8 @@ void ChatCommands::CmdTransmoParty(const wchar_t* message, int argc, LPWSTR* arg
 			Log::Error("Unknown transmo '%ls'", argv[1]);
 			return;
 		}
-		if (argc > 2 && GuiUtils::ParseInt(argv[2], &scale)) {
+		if (argc > 2 && GuiUtils::ParseInt(argv[2], &iscale)) {
+            scale = static_cast<DWORD>(iscale);
 			if (scale < 6 || scale > 255) {
 				Log::Error("scale must be between [6, 255]");
 				return;
@@ -1297,7 +1334,8 @@ void ChatCommands::CmdTransmoParty(const wchar_t* message, int argc, LPWSTR* arg
 }
 
 void ChatCommands::CmdTransmoTarget(const wchar_t* message, int argc, LPWSTR* argv) {
-	int scale = 0x64000000;
+    UNREFERENCED_PARAMETER(message);
+	DWORD scale = 0x64000000;
 	DWORD npc_id = 0;
 	DWORD npc_model_file_id = 0;
 	DWORD npc_model_file_data = 0;
@@ -1311,61 +1349,67 @@ void ChatCommands::CmdTransmoTarget(const wchar_t* message, int argc, LPWSTR* ar
 		Log::Error("Invalid /transmotarget target");
 		return;
 	}
+    int iscale;
 	if (wcsncmp(argv[1], L"reset", 5) == 0) {
 		npc_id = INT_MAX;
 	}
-	else if (GuiUtils::ParseInt(argv[1], &scale)) {
+	else if (GuiUtils::ParseInt(argv[1], &iscale)) {
+        scale = static_cast<DWORD>(iscale);
 		if (scale < 6 || scale > 255) {
 			Log::Error("scale must be between [6, 255]");
 			return;
 		}
-		scale = (DWORD)scale << 24;
+		scale = scale << 24;
 		npc_id = INT_MAX - 1;
 	}
 	else if (!GetNPCInfoByName(argv[1], &npc_id, &npc_model_file_id, &npc_model_file_data, &flags)) {
 		Log::Error("Unknown transmo '%ls'", argv[1]);
 		return;
 	}
-	if (argc > 2 && GuiUtils::ParseInt(argv[2], &scale)) {
+	if (argc > 2 && GuiUtils::ParseInt(argv[2], &iscale)) {
+        scale = static_cast<DWORD>(iscale);
 		if (scale < 6 || scale > 255) {
 			Log::Error("scale must be between [6, 255]");
 			return;
 		}
-		scale = (DWORD)scale << 24;
+		scale = scale << 24;
 	}
 	TransmoAgent(target->agent_id, npc_id, npc_model_file_id, npc_model_file_data, flags, scale);
 }
 
 void ChatCommands::CmdTransmo(const wchar_t *message, int argc, LPWSTR *argv) {
-	int scale = 0x64000000;
-	int tmpScale = scale;
+    UNREFERENCED_PARAMETER(message);
+	DWORD scale = 0x64000000;
 	DWORD npc_id = 0;
 	DWORD npc_model_file_id = 0;
 	DWORD npc_model_file_data = 0;
 	DWORD flags = 0;
 	
 	if (argc > 1) {
+        int iscale;
 		if (wcsncmp(argv[1], L"reset", 5) == 0) {
 			npc_id = INT_MAX;
 		}
-		else if(GuiUtils::ParseInt(argv[1], &scale)) {
+		else if(GuiUtils::ParseInt(argv[1], &iscale)) {
+            scale = static_cast<DWORD>(iscale);
 			if (scale < 6 || scale > 255) {
 				Log::Error("scale must be between [6, 255]");
 				return;
 			}
-			scale = (DWORD)scale << 24;
+			scale = scale << 24;
 			npc_id = INT_MAX - 1;
 		}
 		else if (!GetNPCInfoByName(argv[1], &npc_id, &npc_model_file_id, &npc_model_file_data, &flags)) {
 			Log::Error("unknown transmo '%ls'", argv[1]);
 			return;
 		}
-		if (argc > 2 && GuiUtils::ParseInt(argv[2], &scale)) {
+		if (argc > 2 && GuiUtils::ParseInt(argv[2], &iscale)) {
+            scale = static_cast<DWORD>(iscale);
 			if (scale < 6 || scale > 255) {
 				Log::Error("scale must be between [6, 255]");
 				return;
 			}
-			scale = (DWORD)scale << 24;
+			scale = scale << 24;
 		}
 	}
 	else {
@@ -1380,43 +1424,48 @@ void ChatCommands::CmdTransmo(const wchar_t *message, int argc, LPWSTR *argv) {
 	TransmoAgent(GW::Agents::GetPlayerId(), npc_id, npc_model_file_id, npc_model_file_data, flags, scale);
 }
 void ChatCommands::CmdTransmoAgent(const wchar_t* message, int argc, LPWSTR* argv) {
-    int scale = 0x64000000;
-    int tmpScale = scale;
+    UNREFERENCED_PARAMETER(message);
+    DWORD scale = 0x64000000;
     DWORD npc_id = 0;
     DWORD npc_model_file_id = 0;
     DWORD npc_model_file_data = 0;
     DWORD flags = 0;
     if(argc < 3)
         return Log::Error("Missing /transmoagent argument");
-    int agent_id = 0;
-    if(!GuiUtils::ParseInt(argv[1], &agent_id) || agent_id < 0)
+    int iagent_id = 0;
+    if(!GuiUtils::ParseInt(argv[1], &iagent_id) || iagent_id < 0)
         return Log::Error("Invalid /transmoagent agent_id");
+    uint32_t agent_id = static_cast<uint32_t>(iagent_id);
+    int iscale;
     if (wcsncmp(argv[2], L"reset", 5) == 0) {
         npc_id = INT_MAX;
     }
-    else if (GuiUtils::ParseInt(argv[2], &scale)) {
+    else if (GuiUtils::ParseInt(argv[2], &iscale)) {
+        scale = static_cast<DWORD>(iscale);
         if (scale < 6 || scale > 255) {
             Log::Error("scale must be between [6, 255]");
             return;
         }
-        scale = (DWORD)scale << 24;
+        scale = scale << 24;
         npc_id = INT_MAX - 1;
     }
     else if (!GetNPCInfoByName(argv[2], &npc_id, &npc_model_file_id, &npc_model_file_data, &flags)) {
         Log::Error("unknown transmo '%s'", argv[1]);
         return;
     }
-    if (argc > 4 && GuiUtils::ParseInt(argv[3], &scale)) {
+    if (argc > 4 && GuiUtils::ParseInt(argv[3], &iscale)) {
+        scale = static_cast<DWORD>(iscale);
         if (scale < 6 || scale > 255) {
             Log::Error("scale must be between [6, 255]");
             return;
         }
-        scale = (DWORD)scale << 24;
+        scale = scale << 24;
     }
     TransmoAgent(agent_id, npc_id, npc_model_file_id, npc_model_file_data, flags, scale);
 }
 
 void ChatCommands::CmdResize(const wchar_t *message, int argc, LPWSTR *argv) {
+    UNREFERENCED_PARAMETER(message);
 	if (argc != 3) {
 		Log::Error("The syntax is /resize width height");
 		return;
@@ -1433,6 +1482,10 @@ void ChatCommands::CmdResize(const wchar_t *message, int argc, LPWSTR *argv) {
 }
 
 void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* argv) {
+    UNREFERENCED_PARAMETER(message);
+    UNREFERENCED_PARAMETER(argc);
+    UNREFERENCED_PARAMETER(argv);
+
     GW::PlayerMgr::RemoveActiveTitle();
 
     switch (GW::Map::GetMapID()) {

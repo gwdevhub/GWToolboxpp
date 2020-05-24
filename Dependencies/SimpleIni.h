@@ -210,7 +210,7 @@
 //  of times VC6 as soon as STL is used.
 #ifdef _MSC_VER
 # pragma warning (push)
-# pragma warning (disable: 4127 4503 4702 4786)
+# pragma warning (disable: 4127 4503 4702 4774 4786)
 #endif
 
 #include <cstring>

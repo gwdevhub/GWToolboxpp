@@ -149,7 +149,9 @@ void Resources::LoadTextureAsync(IDirect3DTexture9** texture,
 
 		// finally load the texture from the resource
 		toload.push([id, texture](IDirect3DDevice9* device) {
+            // @Cleanup: What should we do with error?
 			HRESULT res = D3DXCreateTextureFromResource(device, GWToolbox::GetDLLModule(), MAKEINTRESOURCE(id), texture);
+            UNREFERENCED_PARAMETER(res);
 		});
 	}
 }
@@ -162,6 +164,7 @@ void Resources::DxUpdate(IDirect3DDevice9* device) {
 }
 
 void Resources::Update(float delta) {
+    UNREFERENCED_PARAMETER(delta);
 	while (!todo.empty()) {
 		todo.front()();
 		todo.pop();

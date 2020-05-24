@@ -280,7 +280,7 @@ const LONG ModKey_Shift = 0x10000;
 const LONG ModKey_Control = 0x20000;
 const LONG ModKey_Alt = 0x40000;
 
-inline int ModKeyName(CHAR* buf, int bufsz, LONG mod, LONG vkey, const char* ifempty = "") {
+inline int ModKeyName(char* buf, size_t bufsz, LONG mod, LONG vkey, const char* ifempty = "") {
 	return snprintf(buf, bufsz, "%s%s%s%s",
 		(mod & ModKey_Control) ? "Control + " : "",
 		(mod & ModKey_Alt) ? "Alt + " : "",
