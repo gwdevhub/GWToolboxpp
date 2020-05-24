@@ -66,7 +66,7 @@ void HealthWidget::SaveSettings(CSimpleIni *ini) {
 
 		char buf[32];
 		for (size_t i = 0; i < thresholds.size(); ++i) {
-			snprintf(buf, sizeof(buf), "threshold%03d", i);
+			snprintf(buf, sizeof(buf), "threshold%03zu", i);
 			thresholds[i]->SaveSettings(inifile, buf);
 		}
 
@@ -89,7 +89,7 @@ void HealthWidget::DrawSettingInternal() {
 
 			if (!threshold) continue;
 
-			ImGui::PushID(threshold->ui_id);
+			ImGui::PushID(static_cast<int>(threshold->ui_id));
 
 			Threshold::Operation op = Threshold::Operation::None;
 			changed |= threshold->DrawSettings(op);
@@ -108,7 +108,7 @@ void HealthWidget::DrawSettingInternal() {
 					}
 					break;
 				case Threshold::Operation::Delete:
-					thresholds.erase(thresholds.begin() + i);
+					thresholds.erase(thresholds.begin() + static_cast<int>(i));
 					delete threshold;
 					--i;
 					break;
@@ -132,6 +132,7 @@ void HealthWidget::DrawSettingInternal() {
 }
 
 void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
+    UNREFERENCED_PARAMETER(pDevice);
 	if (!visible) return;
 	if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
 		return;
@@ -240,7 +241,11 @@ HealthWidget::Threshold::Threshold(CSimpleIni* ini, const char* section) : ui_id
 	color = Colors::Load(ini, section, VAR_NAME(color), color);
 }
 
-HealthWidget::Threshold::Threshold(const char* _name, Color _color, int _value) : ui_id(++cur_ui_id), color(_color), value(_value) {
+HealthWidget::Threshold::Threshold(const char* _name, Color _color, int _value)
+    : ui_id(++cur_ui_id)
+    , value(_value)
+    , color(_color)
+{
 	GuiUtils::StrCopy(name, _name, sizeof(name));
 }
 
@@ -268,7 +273,7 @@ bool HealthWidget::Threshold::DrawSettings(Operation& op) {
 	if (ImGui::TreeNode("##params")) {
 		changed |= DrawHeader();
 
-		ImGui::PushID(ui_id);
+		ImGui::PushID(static_cast<int>(ui_id));
 
 		changed |= ImGui::InputText("Name", name, 128);
 		ImGui::ShowHelp("A name to help you remember what this is. Optional.");

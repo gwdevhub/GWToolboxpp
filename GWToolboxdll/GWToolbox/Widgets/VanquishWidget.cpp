@@ -13,6 +13,7 @@
 
 
 void VanquishWidget::Draw(IDirect3DDevice9 *pDevice) {
+    UNREFERENCED_PARAMETER(pDevice);
 	if (!visible) return;
 
 	DWORD tokill = GW::Map::GetFoesToKill();
@@ -27,7 +28,7 @@ void VanquishWidget::Draw(IDirect3DDevice9 *pDevice) {
 	ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !ctrl_pressed))) {
 		static char foes_count[32] = "";
-		snprintf(foes_count, 32, "%u / %u", killed, tokill + killed);
+		snprintf(foes_count, 32, "%lu / %lu", killed, tokill + killed);
 
 		// vanquished
 		ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f20));

@@ -68,6 +68,7 @@ void BondsWidget::Terminate() {
 }
 
 void BondsWidget::Draw(IDirect3DDevice9* device) {
+    UNREFERENCED_PARAMETER(device);
 	if (!visible) 
         return;
     if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
@@ -82,8 +83,8 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
     // ==== Get party ====
     // @Cleanup: This doesn't need to be done every frame - only when the party structure has changed.
     std::vector<GW::AgentID> party_list; // index to agent id
-    std::unordered_map<GW::AgentID, int> party_map; // agent id to index
-    int allies_start = 255;
+    std::unordered_map<GW::AgentID, size_t> party_map; // agent id to index
+    size_t allies_start = 255;
     for (const GW::PlayerPartyMember& player : info->players) {
         DWORD id = players[player.login_number].agent_id;
         party_map[id] = party_list.size();
@@ -117,8 +118,8 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
 	
     // ==== Get bonds ====
     // @Cleanup: This doesn't need to be done every frame - only when a user's skills have changed
-    std::vector<int> bond_list; // index to skill id
-    std::unordered_map<DWORD, int> bond_map; // skill id to index
+    std::vector<size_t> bond_list; // index to skill id
+    std::unordered_map<DWORD, size_t> bond_map; // skill id to index
     const GW::Skillbar *bar = GW::SkillbarMgr::GetPlayerSkillbar();
     if (!bar || !bar->IsValid()) return;
     for (int slot = 0; slot < 8; ++slot) {
@@ -135,8 +136,8 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
     const GW::BuffArray& buffs = effects[0].buffs; // first one is for players, after are heroes
 
     // ==== Draw ====
-    const int img_size = row_height > 0 ? row_height : GuiUtils::GetPartyHealthbarHeight();
-    const int height = (party_list.size() + (allies_start < 255 ? 1 : 0)) * img_size;
+    const size_t img_size = row_height > 0 ? row_height : GuiUtils::GetPartyHealthbarHeight();
+    const size_t height = (party_list.size() + (allies_start < 255 ? 1 : 0)) * img_size;
 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
@@ -146,9 +147,9 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
 		float win_x = ImGui::GetWindowPos().x;
 		float win_y = ImGui::GetWindowPos().y;
 
-        auto GetGridPos = [&](const int _x, const int _y, bool topleft) -> ImVec2 {
-            int x = _x;
-            int y = _y;
+        auto GetGridPos = [&](const size_t _x, const size_t _y, bool topleft) -> ImVec2 {
+            size_t x = _x;
+            size_t y = _y;
             if (y >= allies_start) ++y;
             if (!topleft) {
                 ++x; ++y;
@@ -163,8 +164,8 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
             DWORD skill = buffs[i].skill_id;
             if (party_map.find(agent) == party_map.end()) continue; // bond target not in party
             if (bond_map.find(skill) == bond_map.end()) continue; // bond with a skill not in skillbar 
-            int y = party_map[agent];
-            int x = bond_map[skill];
+            size_t y = party_map[agent];
+            size_t x = bond_map[skill];
             Bond bond = GetBondBySkillID(skill);
             ImVec2 tl = GetGridPos(x, y, true);
             ImVec2 br = GetGridPos(x, y, false);
@@ -190,8 +191,8 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
                 const GW::Attribute& attribute = partyAttribute.attribute[attribute_id];
                 if (effect.effect_type < attribute.level) overlay = true;
 
-                int y = party_map[agent];
-                int x = bond_map[skill];
+                size_t y = party_map[agent];
+                size_t x = bond_map[skill];
                 Bond bond = GetBondBySkillID(skill);
                 ImVec2 tl = GetGridPos(x, y, true);
                 ImVec2 br = GetGridPos(x, y, false);
@@ -229,8 +230,9 @@ void BondsWidget::UseBuff(GW::AgentID targetId, DWORD buff_skillid) {
     GW::Agent* target = GW::Agents::GetAgentByID(targetId);
     if (target == nullptr) return;
 
-    int slot = GW::SkillbarMgr::GetSkillSlot((GW::Constants::SkillID)buff_skillid);
-    if (slot < 0) return;
+    int islot = GW::SkillbarMgr::GetSkillSlot((GW::Constants::SkillID)buff_skillid);
+    if (islot < 0) return;
+    uint32_t slot = static_cast<uint32_t>(islot);
 	GW::Skillbar *skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
 	if (!skillbar || !skillbar->IsValid()) return;
 	if (skillbar->skills[slot].recharge != 0) return;
@@ -252,7 +254,7 @@ void BondsWidget::LoadSettings(CSimpleIni* ini) {
 	flip_bonds = ini->GetBoolValue(Name(), VAR_NAME(flip_bonds), flip_bonds);
 	row_height = ini->GetLongValue(Name(), VAR_NAME(row_height), row_height);
     low_attribute_overlay = Colors::Load(ini, Name(), VAR_NAME(background), Colors::ARGB(76, 0, 0, 0));
-    hide_in_outpost = ini->GetLongValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
+    hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
 }
 
 void BondsWidget::SaveSettings(CSimpleIni* ini) {
@@ -265,7 +267,7 @@ void BondsWidget::SaveSettings(CSimpleIni* ini) {
 	ini->SetBoolValue(Name(), VAR_NAME(flip_bonds), flip_bonds);
 	ini->SetLongValue(Name(), VAR_NAME(row_height), row_height);
     Colors::Save(ini, Name(), VAR_NAME(low_attribute_overlay), low_attribute_overlay);
-    ini->SetLongValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
+    ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
 }
 
 void BondsWidget::DrawSettingInternal() {

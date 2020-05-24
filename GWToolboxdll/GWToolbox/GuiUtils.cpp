@@ -129,7 +129,7 @@ ImFont* GuiUtils::GetFont(GuiUtils::FontSize size) {
 	}
 }
 
-int GuiUtils::GetPartyHealthbarHeight() {
+size_t GuiUtils::GetPartyHealthbarHeight() {
 	GW::Constants::InterfaceSize interfacesize =
 		static_cast<GW::Constants::InterfaceSize>(GW::UI::GetPreference(GW::UI::Preference_InterfaceSize));
 

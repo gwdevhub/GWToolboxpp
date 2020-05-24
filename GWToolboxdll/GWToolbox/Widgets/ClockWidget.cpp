@@ -5,6 +5,7 @@
 #include <Modules/ToolboxSettings.h>
 
 void ClockWidget::Draw(IDirect3DDevice9* pDevice) {
+    UNREFERENCED_PARAMETER(pDevice);
 	if (!visible) return;
 	
 	SYSTEMTIME time;

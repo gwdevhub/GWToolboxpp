@@ -74,6 +74,7 @@ ImGuiWindowFlags TimerWidget::GetWinFlags(ImGuiWindowFlags flags, bool noinput_i
 }
 
 void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
+    UNREFERENCED_PARAMETER(pDevice);
 	if (!visible) return;
 	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
     if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
@@ -84,7 +85,7 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
 	ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(click_to_print_time && ctrl_pressed)))) {
-		snprintf(timer_buffer, 32, "%d:%02d:%02d", time / (60 * 60), (time / 60) % 60, time % 60);
+		snprintf(timer_buffer, 32, "%lu:%02lu:%02lu", time / (60 * 60), (time / 60) % 60, time % 60);
 		ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f48));
 		ImVec2 cur = ImGui::GetCursorPos();
 		ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
@@ -130,12 +131,12 @@ bool TimerWidget::GetUrgozTimer() {
     if (GW::Map::GetMapID() != GW::Constants::MapID::Urgozs_Warren) return false;
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return false;
     unsigned long time = GW::Map::GetInstanceTime() / 1000;
-    int temp = (time - 1) % 25;
+    unsigned long  temp = (time - 1) % 25;
     if (temp < 15) {
-        snprintf(extra_buffer, 32, "Open - %d", 15 - temp);
+        snprintf(extra_buffer, 32, "Open - %lu", 15u - temp);
         extra_color = ImColor(0, 255, 0);
     } else {
-        snprintf(extra_buffer, 32, "Closed - %d", 25 - temp);
+        snprintf(extra_buffer, 32, "Closed - %lu", 25u - temp);
         extra_color = ImColor(255, 0, 0);
     }
     return true;
@@ -184,6 +185,8 @@ bool TimerWidget::GetDeepTimer() {
         case SkillID::Scorpion_Aspect: 
             skill = effect_id; 
             break;
+        default:
+            break;
         }
     }
     if (skill == SkillID::No_Skill) {
@@ -206,13 +209,13 @@ bool TimerWidget::GetDeepTimer() {
     if (diff > 200) timer = std::min(timer, 30 - ((diff - 200) % 30));
     switch (skill) {
     case SkillID::Aspect_of_Exhaustion: 
-        snprintf(extra_buffer, 32, "Exhaustion: %d", timer);
+        snprintf(extra_buffer, 32, "Exhaustion: %lu", timer);
         break;
     case SkillID::Aspect_of_Depletion_energy_loss: 
-        snprintf(extra_buffer, 32, "Depletion: %d", timer);
+        snprintf(extra_buffer, 32, "Depletion: %lu", timer);
         break;
     case SkillID::Scorpion_Aspect: 
-        snprintf(extra_buffer, 32, "Scorpion: %d", timer);
+        snprintf(extra_buffer, 32, "Scorpion: %lu", timer);
         break;
     default:
         break;
@@ -231,13 +234,13 @@ bool TimerWidget::GetTrapTimer() {
     if (GW::Map::GetInstanceType() != InstanceType::Explorable) return false;
 
     unsigned long time = GW::Map::GetInstanceTime() / 1000;
-    int temp = time % 20;
-    int timer;
+    unsigned long temp = time % 20;
+    unsigned long timer;
     if (temp < 10) {
-        timer = 10 - temp;
+        timer = 10u - temp;
         extra_color = ImColor(0, 255, 0);
     } else {
-        timer = 20 - temp;
+        timer = 20u - temp;
         extra_color = ImColor(255, 0, 0);
     }
 
@@ -248,38 +251,38 @@ bool TimerWidget::GetTrapTimer() {
     case MapID::Bloodstone_Caves_Level_1:
     case MapID::Arachnis_Haunt_Level_2:
     case MapID::Oolas_Lab_Level_2:
-        snprintf(extra_buffer, 32, "Fire Jet: %d", timer);
+        snprintf(extra_buffer, 32, "Fire Jet: %lu", timer);
         return true;
     case MapID::Heart_of_the_Shiverpeaks_Level_3:
-        snprintf(extra_buffer, 32, "Fire Spout: %d", timer);
+        snprintf(extra_buffer, 32, "Fire Spout: %lu", timer);
         return true;
     case MapID::Shards_of_Orr_Level_3:
     case MapID::Cathedral_of_Flames_Level_3:
-        snprintf(extra_buffer, 32, "Fire Trap: %d", timer);
+        snprintf(extra_buffer, 32, "Fire Trap: %lu", timer);
         return true;
     case MapID::Sepulchre_of_Dragrimmar_Level_1:
     case MapID::Ravens_Point_Level_1:
     case MapID::Ravens_Point_Level_2:
     case MapID::Heart_of_the_Shiverpeaks_Level_1:
     case MapID::Darkrime_Delves_Level_2:
-        snprintf(extra_buffer, 32, "Ice Jet: %d", timer);
+        snprintf(extra_buffer, 32, "Ice Jet: %lu", timer);
         return true;
     case MapID::Darkrime_Delves_Level_1:
     case MapID::Secret_Lair_of_the_Snowmen:
-        snprintf(extra_buffer, 32, "Ice Spout: %d", timer);
+        snprintf(extra_buffer, 32, "Ice Spout: %lu", timer);
         return true;
     case MapID::Bogroot_Growths_Level_1:
     case MapID::Arachnis_Haunt_Level_1:
     case MapID::Shards_of_Orr_Level_1:
     case MapID::Shards_of_Orr_Level_2:
-        snprintf(extra_buffer, 32, "Poison Jet: %d", timer);
+        snprintf(extra_buffer, 32, "Poison Jet: %lu", timer);
         return true;
     case MapID::Bloodstone_Caves_Level_2:
-        snprintf(extra_buffer, 32, "Poison Spout: %d", timer);
+        snprintf(extra_buffer, 32, "Poison Spout: %lu", timer);
         return true;
     case MapID::Cathedral_of_Flames_Level_2:
     case MapID::Bloodstone_Caves_Level_3:
-        snprintf(extra_buffer, 32, "Poison Trap: %d", timer);
+        snprintf(extra_buffer, 32, "Poison Trap: %lu", timer);
         return true;
     default:
         return false;

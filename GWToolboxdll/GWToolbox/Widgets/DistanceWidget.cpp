@@ -44,6 +44,7 @@ void DistanceWidget::SaveSettings(CSimpleIni* ini) {
 	Colors::Save(ini, Name(), VAR_NAME(color_compass), color_compass);
 }
 void DistanceWidget::Draw(IDirect3DDevice9* pDevice) {
+    UNREFERENCED_PARAMETER(pDevice);
 	if (!visible) return;
 	if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
 		return;

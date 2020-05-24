@@ -13,10 +13,10 @@ class PartyDamage : public ToolboxWidget {
 	static const int MAX_PLAYERS = 12;
 
 	struct PlayerDamage {
-		long damage = 0;
-		long recent_damage = 0;
+		uint32_t damage = 0;
+		uint32_t recent_damage = 0;
 		clock_t last_damage = 0;
-		long agent_id = 0;
+		uint32_t agent_id = 0;
 		std::wstring name;
 		GW::Constants::Profession primary = GW::Constants::Profession::None;
 		GW::Constants::Profession secondary = GW::Constants::Profession::None;
@@ -53,7 +53,7 @@ public:
 	void DrawSettingInternal() override;
 
 	void WritePartyDamage();
-	void WriteDamageOf(int index, int rank = 0); // party index from 0 to 12
+	void WriteDamageOf(size_t index, uint32_t rank = 0); // party index from 0 to 12
 	void WriteOwnDamage();
 	void ResetDamage();
 
@@ -65,16 +65,16 @@ private:
 
 	void CreatePartyIndexMap();
 
-	float GetPartOfTotal(long dmg) const;
-	inline float GetPercentageOfTotal(long dmg) const
+	float GetPartOfTotal(uint32_t dmg) const;
+	inline float GetPercentageOfTotal(uint32_t dmg) const
 	{ return GetPartOfTotal(dmg) * 100.0f; };
 
 	// damage values
-	long total = 0;
+	uint32_t total = 0;
 	PlayerDamage damage[MAX_PLAYERS];
-	std::map<DWORD, long> hp_map;
-	std::map<DWORD, int> party_index;
-	int player_index = 0;
+	std::map<DWORD, uint32_t> hp_map;
+	std::map<DWORD, size_t> party_index;
+	size_t player_index = 0;
 
 	// main routine variables
 	bool in_explorable = false;

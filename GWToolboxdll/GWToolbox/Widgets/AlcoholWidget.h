@@ -16,8 +16,8 @@ private:
 	time_t last_alcohol = 0;
 	long alcohol_time = 0;
 	bool only_show_when_drunk = false;
-	long GetAlcoholTitlePointsGained(); // Returns amount of alcohol points gained since last check (or map load)
-	long prev_alcohol_title_points = 0; // Used in GetAlcoholTitlePointsGained
+    uint32_t GetAlcoholTitlePointsGained(); // Returns amount of alcohol points gained since last check (or map load)
+	uint32_t prev_alcohol_title_points = 0; // Used in GetAlcoholTitlePointsGained
 	GW::Constants::MapID map_id = GW::Constants::MapID::None;
 	DWORD prev_packet_tint_6_level=0; // Record what last post processing packet was - for lunars check
 	GW::HookEntry PostProcess_Entry;
@@ -31,10 +31,10 @@ public:
 
 	void Initialize() override;
 	void Update(float delta) override;
-	DWORD GetAlcoholLevel();
+    uint32_t GetAlcoholLevel();
 	void LoadSettings(CSimpleIni* ini) override;
 	void SaveSettings(CSimpleIni* ini) override;
-	long GetAlcoholTitlePoints(); // Gets current alcohol title points.
+	uint32_t GetAlcoholTitlePoints(); // Gets current alcohol title points.
 	void AlcUpdate(GW::Packet::StoC::PostProcess *packet);
 
 	// Draw user interface. Will be called every frame if the element is visible

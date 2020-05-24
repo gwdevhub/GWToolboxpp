@@ -57,6 +57,7 @@ void PartyDamage::Terminate() {
 }
 
 void PartyDamage::MapLoadedCallback(GW::HookStatus *, GW::Packet::StoC::MapLoaded *packet) {
+    UNREFERENCED_PARAMETER(packet);
 	switch (GW::Map::GetInstanceType()) {
 	case GW::Constants::InstanceType::Outpost:
 		in_explorable = false;
@@ -112,22 +113,24 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus *, GW::Packet::StoC::Gener
 	// you can do damage like that by standing in bugged dart traps in eye of the north
 	// or maybe with some skills that damage minions/spirits
 
-	long dmg;
+	long ldmg;
 	if (target->max_hp > 0 && target->max_hp < 100000) {
-		dmg = std::lround(-packet->value * target->max_hp);
+        ldmg = std::lround(-packet->value * target->max_hp);
 		hp_map[target->player_number] = target->max_hp;
 	} else {
 		auto it = hp_map.find(target->player_number);
 		if (it == hp_map.end()) {
 			// max hp not found, approximate with hp/lvl formula
-			dmg = std::lround(-packet->value * (target->level * 20 + 100));
+            ldmg = std::lround(-packet->value * (target->level * 20 + 100));
 		} else {
-			long maxhp = it->second;
-			dmg = std::lround(-packet->value * it->second);
+			// size_t maxhp = it->second;
+            ldmg = std::lround(-packet->value * it->second);
 		}
 	}
 
-	int index = cause_it->second;
+    uint32_t dmg = static_cast<uint32_t>(ldmg);
+
+	size_t index = cause_it->second;
 	if (index >= MAX_PLAYERS) return; // something went very wrong.
 	if (damage[index].damage == 0) {
 		damage[index].agent_id = packet->cause_id;
@@ -153,6 +156,7 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus *, GW::Packet::StoC::Gener
 }
 
 void PartyDamage::Update(float delta) {
+    UNREFERENCED_PARAMETER(delta);
 	if (!send_queue.empty() && TIMER_DIFF(send_timer) > 600) {
 		send_timer = TIMER_INIT();
 		if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
@@ -183,9 +187,9 @@ void PartyDamage::CreatePartyIndexMap() {
 	GW::PlayerArray players = GW::Agents::GetPlayerArray();
 	if (!players.valid()) return;
 
-	int index = 0;
+	size_t index = 0;
 	for (GW::PlayerPartyMember& player : info->players) {
-		long id = players[player.login_number].agent_id;
+		uint32_t id = players[player.login_number].agent_id;
 		if (id == GW::Agents::GetPlayerId()) player_index = index;
 		party_index[id] = index++;
 
@@ -201,23 +205,24 @@ void PartyDamage::CreatePartyIndexMap() {
 }
 
 void PartyDamage::Draw(IDirect3DDevice9* device) {	
+    UNREFERENCED_PARAMETER(device);
 	if (!visible) return;
 	if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
 		return;
 	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
 	
-	int line_height = row_height > 0 ? row_height : GuiUtils::GetPartyHealthbarHeight();
-	int size = GW::PartyMgr::GetPartySize();
+	size_t line_height = row_height > 0 ? row_height : GuiUtils::GetPartyHealthbarHeight();
+	uint32_t size = GW::PartyMgr::GetPartySize();
 	if (size > MAX_PLAYERS) size = MAX_PLAYERS;
 
-	long max_recent = 0;
+	uint32_t max_recent = 0;
 	for (int i = 0; i < MAX_PLAYERS; ++i) {
 		if (max_recent < damage[i].recent_damage) {
 			max_recent = damage[i].recent_damage;
 		}
 	}
 
-	long max = 0;
+	uint32_t max = 0;
 	for (int i = 0; i < MAX_PLAYERS; ++i) {
 		if (max < damage[i].damage) {
 			max = damage[i].damage;
@@ -232,16 +237,16 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 		ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f16));
 		float x = ImGui::GetWindowPos().x;
 		float y = ImGui::GetWindowPos().y;
-		float width = ImGui::GetWindowWidth();
+		float _width = ImGui::GetWindowWidth();
 		const int BUF_SIZE = 16;
 		char buf[BUF_SIZE];
-		for (int i = 0; i < size; ++i) {
+		for (size_t i = 0; i < size; ++i) {
 			float part_of_max = 0;
 			if (max > 0) {
 				part_of_max = (float)(damage[i].damage) / max;
 			}
-			float bar_left = bars_left ? (x + width * (1.0f - part_of_max)) : (x);
-			float bar_right = bars_left ? (x + width) : (x + width * part_of_max);
+			float bar_left = bars_left ? (x + _width * (1.0f - part_of_max)) : (x);
+			float bar_right = bars_left ? (x + _width) : (x + _width * part_of_max);
 			ImGui::GetWindowDrawList()->AddRectFilledMultiColor(
 				ImVec2(bar_left, y + i * line_height),
 				ImVec2(bar_right, y + (i + 1) * line_height),
@@ -254,8 +259,8 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 			if (max_recent > 0) {
 				part_of_recent = (float)(damage[i].recent_damage) / max_recent;
 			}
-			float recent_left = bars_left ? (x + width * (1.0f - part_of_recent)) : (x);
-			float recent_right = bars_left ? (x + width) : (x + width * part_of_recent);
+			float recent_left = bars_left ? (x + _width * (1.0f - part_of_recent)) : (x);
+			float recent_right = bars_left ? (x + _width) : (x + _width * part_of_recent);
 			ImGui::GetWindowDrawList()->AddRectFilledMultiColor(
 				ImVec2(recent_left, y + (i + 1) * line_height - 6),
 				ImVec2(recent_right, y + (i + 1) * line_height),
@@ -280,7 +285,7 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 			float perc_of_total = GetPercentageOfTotal(damage[i].damage);
 			snprintf(buf, BUF_SIZE, "%.1f %%", perc_of_total);
 			ImGui::GetWindowDrawList()->AddText(
-				ImVec2(x + width / 2, y + i * line_height),
+				ImVec2(x + _width / 2, y + i * line_height),
 				IM_COL32(255, 255, 255, 255), buf);
 		}
 		ImGui::PopFont();
@@ -290,7 +295,7 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 	ImGui::PopStyleVar(2);
 }
 
-float PartyDamage::GetPartOfTotal(long dmg) const {
+float PartyDamage::GetPartOfTotal(uint32_t dmg) const {
 	if (total == 0) return 0;
 	return (float)dmg / total;
 }
@@ -308,21 +313,20 @@ void PartyDamage::WritePartyDamage() {
 	send_queue.push(L"Total ~ 100 % ~ " + std::to_wstring(total));
 }
 
-void PartyDamage::WriteDamageOf(int index, int rank) {
+void PartyDamage::WriteDamageOf(size_t index, uint32_t rank) {
 	if (index >= MAX_PLAYERS) return;
-	if (index < 0) return;
 	if (damage[index].damage <= 0) return;
 
 	if (rank == 0) {
 		rank = 1; // start at 1, add 1 for each player with higher damage
-		for (int i = 0; i < MAX_PLAYERS; ++i) {
+		for (size_t i = 0; i < MAX_PLAYERS; ++i) {
 			if (i == index) continue;
 			if (damage[i].agent_id == 0) continue;
 			if (damage[i].damage > damage[index].damage) ++rank;
 		}
 	}
 
-	const int size = 130;
+	const size_t size = 130;
 	wchar_t buff[size];
 	swprintf_s(buff, size, L"#%2d ~ %3.2f %% ~ %ls/%ls %ls ~ %d",
 		rank,
@@ -369,7 +373,7 @@ void PartyDamage::LoadSettings(CSimpleIni* ini) {
 			if (lkey <= 0) continue;
 			long lval = inifile->GetLongValue(IniSection, key.pItem, 0);
 			if (lval <= 0) continue;
-			hp_map[lkey] = lval;
+			hp_map[static_cast<size_t>(lkey)] = static_cast<uint32_t>(lval);
 		}
 	}
 }

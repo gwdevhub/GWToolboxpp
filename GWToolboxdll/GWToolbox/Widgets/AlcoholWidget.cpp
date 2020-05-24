@@ -24,33 +24,37 @@ void AlcoholWidget::Initialize() {
 	// last time the player used a drink
 	last_alcohol = 0;
 	alcohol_level = 0;
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PostProcess>(&PostProcess_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::PostProcess* pak) {
-		AlcUpdate(pak);
-	});
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PostProcess>(
+        &PostProcess_Entry,
+        [this](GW::HookStatus* status, GW::Packet::StoC::PostProcess* pak) {
+            UNREFERENCED_PARAMETER(status);
+		    AlcUpdate(pak);
+	    });
 }
-long AlcoholWidget::GetAlcoholTitlePoints() {
+uint32_t AlcoholWidget::GetAlcoholTitlePoints() {
 	GW::GameContext* gameContext = GW::GameContext::instance();
 	if (!gameContext || !gameContext->world || !gameContext->world->titles.valid())
 		return 0;	// Sanity checks; context not ready.
 	return gameContext->world->titles[7].current_points;
 }
-long AlcoholWidget::GetAlcoholTitlePointsGained() {
-	long current_title_points = GetAlcoholTitlePoints();
-	long points_gained = current_title_points - prev_alcohol_title_points;
+uint32_t AlcoholWidget::GetAlcoholTitlePointsGained() {
+	uint32_t current_title_points = GetAlcoholTitlePoints();
+	uint32_t points_gained = current_title_points - prev_alcohol_title_points;
 	prev_alcohol_title_points = current_title_points; // Update previous variable.
 	return points_gained <= 0 ? 0 : points_gained;
 }
 void AlcoholWidget::Update(float delta) {
+    UNREFERENCED_PARAMETER(delta);
 	if (map_id != GW::Map::GetMapID() && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
 		map_id = GW::Map::GetMapID();
 		prev_alcohol_title_points = GetAlcoholTitlePoints(); // Fetch base alcohol points at start of map.
 	}
 }
-DWORD AlcoholWidget::GetAlcoholLevel() {
-	return this->alcohol_level;
+uint32_t AlcoholWidget::GetAlcoholLevel() {
+	return alcohol_level;
 }
 void AlcoholWidget::AlcUpdate(GW::Packet::StoC::PostProcess *packet) {
-	long pts_gained = GetAlcoholTitlePointsGained();
+	uint32_t pts_gained = GetAlcoholTitlePointsGained();
 	//Log::Info("Drunk effect %d / %d, %d pts gained", packet->tint, packet->level, pts_gained);
 	if (packet->tint == 6) {
 		// Tint 6, level 5 - the trouble zone for lunars!
@@ -80,6 +84,7 @@ void AlcoholWidget::AlcUpdate(GW::Packet::StoC::PostProcess *packet) {
 }
 
 void AlcoholWidget::Draw(IDirect3DDevice9* pDevice) {
+    UNREFERENCED_PARAMETER(pDevice);
 	if (!visible) return;
 
 	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return;
