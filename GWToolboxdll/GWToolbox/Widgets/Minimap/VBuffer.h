@@ -22,8 +22,12 @@ you can call Invalidate() to have the initialize be called again on render
 class VBuffer {
 public:
 	VBuffer()
-		: initialized(false), buffer(nullptr), 
-		type(D3DPT_TRIANGLELIST), count(0) {}
+		: buffer(nullptr)
+        , type(D3DPT_TRIANGLELIST)
+        , count(0)
+        , initialized(false)
+    {
+    }
 
 	virtual ~VBuffer() {
 		if (buffer) buffer->Release();

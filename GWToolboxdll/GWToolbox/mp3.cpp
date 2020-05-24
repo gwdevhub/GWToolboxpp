@@ -118,9 +118,12 @@ bool Mp3::Stop()
 
 bool Mp3::WaitForCompletion(long msTimeout, long* EvCode)
 {
+    // @Cleanup: Add some logging
 	if (ready && pimex)
 	{
 		HRESULT hr = pimex->WaitForCompletion(msTimeout, EvCode);
+        if (FAILED(hr))
+            return false;
 		return *EvCode > 0;
 	}
 

@@ -23,6 +23,14 @@
 	IRC:	#magpie @ irc.quakenet.org
 */
 #include "stdafx.h"
+#pragma warning(disable: 4100)
+#pragma warning(disable: 4365)
+#pragma warning(disable: 4456)
+#pragma warning(disable: 4574)
+#pragma warning(disable: 4625)
+#pragma warning(disable: 4706)
+#pragma warning(disable: 5039)
+
 #include "IRC.h"
 #ifdef WIN32
 #include <windows.h>

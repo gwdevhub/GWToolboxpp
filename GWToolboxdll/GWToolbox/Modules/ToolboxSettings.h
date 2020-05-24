@@ -7,6 +7,7 @@
 
 class ToolboxSettings : public ToolboxModule {
 	ToolboxSettings() {};
+    ToolboxSettings(const ToolboxSettings&) = delete;
 	~ToolboxSettings() {};
 public:
 	static ToolboxSettings& Instance() {

@@ -15,6 +15,9 @@ void ImGui::ShowHelp(const char* help) {
 bool ImGui::MyCombo(const char* label, const char* preview_text, int* current_item, bool(*items_getter)(void*, int, const char**), 
 	void* data, int items_count, int height_in_items) {
 
+    // @Cleanup: Remove this parameter?
+    UNREFERENCED_PARAMETER(height_in_items);
+
 	ImGuiContext& g = *GImGui;
 	const float word_building_delay = .5f; // after this many seconds, typing will make a new search
 
@@ -46,13 +49,13 @@ bool ImGui::MyCombo(const char* label, const char* preview_text, int* current_it
 
 				// build temporary word
 				if (time_since_last_update < word_building_delay) { // append
-					const int i = strnlen(word, 64);
+					const size_t i = strnlen(word, 64);
 					if (i + 1 < 64) {
-						word[i] = c;
+						word[i] = static_cast<char>(c);
 						word[i + 1] = '\0';
 					}
 				} else { // reset
-					word[0] = c;
+					word[0] = static_cast<char>(c);
 					word[1] = '\0';
 				}
 				time_since_last_update = 0.0f;

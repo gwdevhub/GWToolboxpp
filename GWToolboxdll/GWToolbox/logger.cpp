@@ -171,6 +171,4 @@ LONG WINAPI Log::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers) {
 			"GWToolbox++ Crash!", 0);
 	}
 	abort();
-
-	return EXCEPTION_EXECUTE_HANDLER;
 }

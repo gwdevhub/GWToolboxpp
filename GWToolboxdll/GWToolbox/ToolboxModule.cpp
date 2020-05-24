@@ -26,10 +26,13 @@ void ToolboxModule::Initialize() {
 }
 void ToolboxModule::RegisterSettingsContent() {
 	if (!HasSettings()) return;
-	RegisterSettingsContent(SettingsName(), [this](const std::string* section, bool is_showing) {
-		if (is_showing)
-			DrawSettingInternal();
-		}, SettingsWeighting());
+	RegisterSettingsContent(SettingsName(),
+        [this](const std::string* section, bool is_showing) {
+            UNREFERENCED_PARAMETER(section);
+		    if (is_showing)
+			    DrawSettingInternal();
+		},
+        SettingsWeighting());
 }
 void ToolboxModule::RegisterSettingsContent(const char* section, SectionDrawCallback callback, float weighting) {
 	if (settings_draw_callbacks.find(section) == settings_draw_callbacks.end()) {

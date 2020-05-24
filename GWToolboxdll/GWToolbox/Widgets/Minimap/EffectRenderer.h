@@ -30,7 +30,12 @@ class EffectRenderer : public VBuffer {
 		float range = GW::Constants::Range::Adjacent;
 	};
 	struct Effect {
-		Effect(uint32_t _effect_id, float _x, float _y, int _duration, float range, Color * _color) : effect_id(_effect_id), pos(_x,_y), duration(_duration), start(TIMER_INIT()) {
+		Effect(uint32_t _effect_id, float _x, float _y, int _duration, float range, Color * _color)
+            : start(TIMER_INIT())
+            , effect_id(_effect_id)
+            , pos(_x,_y)
+            , duration(_duration)
+        {
 			circle.range = range;
 			circle.color = _color;
 		};
@@ -47,6 +52,7 @@ public:
 
 	void Invalidate();
 	EffectRenderer();
+    EffectRenderer(const EffectRenderer&) = delete;
 	~EffectRenderer();
 	void PacketCallback(GW::Packet::StoC::GenericValue* pak);
 	void PacketCallback(GW::Packet::StoC::GenericValueTarget* pak);
@@ -81,7 +87,14 @@ private:
 		float range = GW::Constants::Range::Nearby;
 		uint32_t stoc_header = 0;
 		uint32_t duration = 10000;
-		EffectSettings(const char* _name, uint32_t _effect_id, float _range, uint32_t _duration, uint32_t _stoc_header = 0) : name(_name), effect_id(_effect_id), range(_range), duration(_duration), stoc_header(_stoc_header) {};
+		EffectSettings(const char* _name, uint32_t _effect_id, float _range, uint32_t _duration, uint32_t _stoc_header = 0)
+            : name(_name)
+            , effect_id(_effect_id)
+            , range(_range)
+            , stoc_header(_stoc_header)
+            , duration(_duration)
+        {
+        }
 	};
 	struct EffectTrigger {
 		uint32_t triggered_effect_id = 0;

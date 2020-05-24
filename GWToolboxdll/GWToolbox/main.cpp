@@ -6,7 +6,7 @@
 #include <GWCA/Utilities/Scanner.h>
 
 // Do all your startup things here instead.
-DWORD WINAPI init(HMODULE hModule){
+DWORD WINAPI init(HMODULE hModule) noexcept {
 	__try {
 		Log::InitializeLog();
 		Log::Log("Waiting for logged character\n");
@@ -36,6 +36,7 @@ DWORD WINAPI init(HMODULE hModule){
 
 // DLL entry point, dont do things in this thread unless you know what you are doing.
 BOOL WINAPI DllMain(_In_ HMODULE _HDllHandle, _In_ DWORD _Reason, _In_opt_ LPVOID _Reserved){
+    UNREFERENCED_PARAMETER(_Reserved);
 	DisableThreadLibraryCalls(_HDllHandle);
 	if (_Reason == DLL_PROCESS_ATTACH){
 		__try {

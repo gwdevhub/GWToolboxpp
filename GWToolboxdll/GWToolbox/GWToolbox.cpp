@@ -69,7 +69,7 @@ DWORD __stdcall ThreadEntry(LPVOID) {
     if (!Loadd3dx9()) {
         // Handle this now before we go any further - removing this check will cause a crash when modules try to use D3DX9 funcs in Draw() later and will close GW
         char title[128];
-        sprintf(title, "GWToolbox++ API Error (%d)", GetLastError());
+        sprintf(title, "GWToolbox++ API Error (LastError: %lu)", GetLastError());
         if (MessageBoxA(0, 
             "Failed to load d3dx9_xx.dll; this machine may not have DirectX runtime installed.\nGWToolbox++ needs this installed to continue.\n\nVisit DirectX Redistributable download page?", 
             title, MB_YESNO) == IDYES) {
@@ -99,6 +99,7 @@ DWORD __stdcall ThreadEntry(LPVOID) {
         }
     });
     GW::Render::SetResetCallback([](IDirect3DDevice9* device) {
+        UNREFERENCED_PARAMETER(device);
         ImGui_ImplDX9_InvalidateDeviceObjects();
     });
 
@@ -142,10 +143,9 @@ leave:
     Log::Terminate();
 
     FreeLibraryAndExitThread(dllmodule, EXIT_SUCCESS);
-    return EXIT_SUCCESS;
 }
 
-LRESULT CALLBACK SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) noexcept {
     __try {
         return WndProc(hWnd, Message, wParam, lParam);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
@@ -285,12 +285,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) 
         }
 
         // send to toolbox modules
-        for (ToolboxModule* m : tb.GetModules()) {
-			bool captured = false;
-			for (ToolboxModule* m : tb.GetModules()) {
-				if (m->WndProc(Message, wParam, lParam)) captured = true;
-			}
-			if (captured) return true;
+        {
+            bool captured = false;
+            for (ToolboxModule* m : tb.GetModules()) {
+                if (m->WndProc(Message, wParam, lParam)) captured = true;
+            }
+            if (captured) return true;
         }
         // note: capturing those events would prevent typing if you have a hotkey assigned to normal letters. 
         // We may want to not send events to toolbox if the player is typing in-game
@@ -335,8 +335,9 @@ void GWToolbox::Initialize() {
     Resources::Instance().EnsureFileExists(Resources::GetPath(L"Markers.ini"),
         L"https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/Markers.ini",
         [](bool success) {
-        Minimap::Instance().custom_renderer.LoadMarkers();
-    });
+            UNREFERENCED_PARAMETER(success);
+            Minimap::Instance().custom_renderer.LoadMarkers();
+        });
 
     Log::Log("Creating Modules\n");
     core_modules.push_back(&Resources::Instance());
@@ -412,7 +413,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
 
         Log::Log("installing event handler\n");
         gw_window_handle = GW::MemoryMgr::GetGWWindowHandle();
-        OldWndProc = SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)SafeWndProc);
+        OldWndProc = SetWindowLongPtrW(gw_window_handle, GWL_WNDPROC, (long)SafeWndProc);
         Log::Log("Installed input event handler, oldwndproc = 0x%X\n", OldWndProc);
 
         ImGui::CreateContext();

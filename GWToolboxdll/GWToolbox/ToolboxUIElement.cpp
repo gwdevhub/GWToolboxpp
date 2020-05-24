@@ -26,12 +26,15 @@ void ToolboxUIElement::SaveSettings(CSimpleIni* ini) {
 }
 
 void ToolboxUIElement::RegisterSettingsContent() {
-	ToolboxModule::RegisterSettingsContent(SettingsName(), [this](const std::string* section, bool is_showing) {
-		ShowVisibleRadio();
-		if (!is_showing) return;
-		DrawSizeAndPositionSettings();
-		DrawSettingInternal();
-		}, SettingsWeighting());
+	ToolboxModule::RegisterSettingsContent(SettingsName(),
+        [this](const std::string* section, bool is_showing) {
+            UNREFERENCED_PARAMETER(section);
+		    ShowVisibleRadio();
+		    if (!is_showing) return;
+		    DrawSizeAndPositionSettings();
+		    DrawSettingInternal();
+		},
+        SettingsWeighting());
 }
 
 void ToolboxUIElement::DrawSizeAndPositionSettings() {
@@ -89,6 +92,8 @@ void ToolboxUIElement::ShowVisibleRadio() {
 
 bool ToolboxUIElement::DrawTabButton(IDirect3DDevice9* device, 
 	bool show_icon, bool show_text) {
+
+    UNREFERENCED_PARAMETER(device);
 
 	ImGui::PushStyleColor(ImGuiCol_Button, visible ?
 		ImGui::GetStyle().Colors[ImGuiCol_Button] : ImVec4(0, 0, 0, 0));

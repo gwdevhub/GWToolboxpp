@@ -144,19 +144,25 @@ int GuiUtils::GetPartyHealthbarHeight() {
 }
 
 std::string GuiUtils::ToLower(std::string s) {
-	std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+	std::transform(s.begin(), s.end(), s.begin(), [](char c) -> char {
+        return static_cast<char>(::tolower(c));
+    });
 	return s;
 }
+
 std::wstring GuiUtils::ToLower(std::wstring s) {
-	std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+    std::transform(s.begin(), s.end(), s.begin(), [](wchar_t c) -> wchar_t {
+        return static_cast<wchar_t>(::tolower(c));
+    });
 	return s;
 }
 // Convert a wide Unicode string to an UTF8 string
 std::string GuiUtils::WStringToString(const std::wstring& wstr)
 {
+    // @Cleanup: No error handling whatsoever
 	if (wstr.empty()) return std::string();
 	int size_needed = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), NULL, 0, NULL, NULL);
-	std::string strTo(size_needed, 0);
+	std::string strTo(static_cast<size_t>(size_needed), 0);
 	WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL);
 	return strTo;
 }
@@ -164,13 +170,17 @@ std::string GuiUtils::WStringToString(const std::wstring& wstr)
 // Convert an UTF8 string to a wide Unicode String
 std::wstring GuiUtils::StringToWString(const std::string& str)
 {
+    // @Cleanup: No error handling whatsoever
 	if (str.empty()) return std::wstring();
 	int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), NULL, 0);
-	std::wstring wstrTo(size_needed, 0);
+	std::wstring wstrTo(static_cast<size_t>(size_needed), 0);
 	MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
 	return wstrTo;
 }
 std::wstring GuiUtils::SanitizePlayerName(std::wstring s) {
+    // @Cleanup:
+    // What exactly needs to be done to sanitize a player name?
+    // Add this information as a comment, because nobody want to read the regex.
 	if (s.empty()) return L"";
 	static std::wregex remove(L" ?[\\(\\[]\\w+[\\)\\]]");
 	s = std::regex_replace(s, remove, L""); 
@@ -227,9 +237,10 @@ bool GuiUtils::ParseUInt(const wchar_t *str, unsigned int *val, int base) {
 		return true;
 }
 std::wstring GuiUtils::ToWstr(std::string &str) {
+    // @Cleanup: No error handling whatsoever
 	if (str.empty()) return std::wstring();
 	int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), NULL, 0);
-	std::wstring wstrTo(size_needed, 0);
+	std::wstring wstrTo(static_cast<size_t>(size_needed), 0);
 	MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
 	return wstrTo;
 }
@@ -239,7 +250,7 @@ size_t GuiUtils::wcstostr(char *dest, const wchar_t *src, size_t n) {
     for (i = 0; i < n; i++) {
         if (src[i] & ~0x7f)
             return 0;
-        d[i] = src[i] & 0x7f;
+        d[i] = src[i] & 0x7fu;
         if (src[i] == 0) break;
     }
     return i;
