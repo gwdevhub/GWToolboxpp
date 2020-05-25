@@ -258,7 +258,7 @@ void TBHotkey::Draw(Op *op)
         }
         ImGui::SameLine();
         if (ImGui::Button("Run", ImVec2(70.0f, 0.0f))) {
-            Execute();
+            GW::GameThread::Enqueue([this]() { Execute(); });
         }
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Execute the hotkey now");
