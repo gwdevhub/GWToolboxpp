@@ -15,10 +15,10 @@ class PingsLinesRenderer : public VBuffer {
 	const float drawing_scale = 96.0f;
 
 	struct DrawingLine {
-		DrawingLine() : start(TIMER_INIT()) {}
+        DrawingLine() : start(TIMER_INIT()) {}
 		clock_t start;
-		float x1, y1;
-		float x2, y2;
+		float x1 = 0, y1 = 0;
+		float x2 = 0, y2 = 0;
 	};
 	struct PlayerDrawing {
 		PlayerDrawing() : player(0), session(0) {}

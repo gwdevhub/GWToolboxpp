@@ -23,6 +23,7 @@
 #pragma warning(disable: 5045) // Compiler will insert Spectre mitigation for memory load if /Qspectre switch specified
 #pragma warning(disable: 5204) // class has virtual functions, but its trivial destructor is not virtual
 #pragma warning(disable: 6011) // Dereferencing NULL pointer
+#pragma warning(disable: 26495) // Variable is uninitialized
 
 #include <GWCA/Source/stdafx.h>
 
