@@ -94,10 +94,9 @@ void SkillListingWindow::Initialize() {
     ToolboxWindow::Initialize();
     const unsigned int max_skills = 3410;
     skills.resize(max_skills);
-    size_t added = 0;
-    for (size_t i = 0; i < max_skills && added < 1000; i++) {
+    for (size_t i = 0; i < max_skills; i++) {
         GW::Skill* s = &GW::SkillbarMgr::GetSkillConstantData(i);
-        if (!s || s->skill_id || !s->skill_equip_type) continue;
+        if (!s || !s->skill_id || !s->skill_equip_type) continue;
         skills[i] = new Skill(s);
     }
 }
@@ -144,4 +143,155 @@ void SkillListingWindow::Draw(IDirect3DDevice9* pDevice) {
     if (ImGui::Button("Export to JSON"))
         ExportToJSON();
     ImGui::End();
+}
+nlohmann::json SkillListingWindow::Skill::ToJson() {
+    nlohmann::json json;
+    json["n"] = GuiUtils::WStringToString(Name());
+    json["d"] = GuiUtils::WStringToString(GWWDescription());
+    json["cd"] = GuiUtils::WStringToString(GWWConcise());
+    json["t"] = skill->type;
+    json["p"] = skill->profession;
+    json["a"] = IsPvE() ? 255 - skill->h002A[0] : skill->attribute;
+    if (IsElite())
+        json["e"] = 1;
+    json["c"] = skill->campaign;
+    nlohmann::json z_json;
+    if (HasExhaustion())
+        z_json["x"] = skill->h0034;
+    if (skill->recharge)
+        z_json["r"] = skill->recharge;
+    if (skill->activation)
+        z_json["c"] = skill->activation;
+    if (IsMaintained())
+        z_json["d"] = 1;
+    if (skill->adrenaline)
+        z_json["a"] = skill->adrenaline;
+    if (skill->energy_cost)
+        z_json["e"] = skill->GetEnergyCost();
+    if (skill->health_cost)
+        z_json["s"] = skill->health_cost;
+    if (z_json.size())
+        json["z"] = z_json;
+    return json;
+}
+const std::wstring SkillListingWindow::Skill::GetSkillType() {
+    std::wstring str(IsElite() ? L"Elite " : L"");
+    switch (skill->type) {
+        case 3:
+            return str += L"Stance", str;
+        case 4:
+            return str += L"Hex Spell", str;
+        case 5:
+            return str += L"Spell", str;
+        case 6:
+            if (skill->special & 0x800000)
+                str += L"Flash ";
+            return str += L"Enchantment Spell", str;
+        case 7:
+            return str += L"Signet", str;
+        case 9:
+            return str += L"Well Spell", str;
+        case 10:
+            return str += L"Touch Skill", str;
+        case 11:
+            return str += L"Ward Spell", str;
+        case 12:
+            return str += L"Glyph", str;
+        case 14:
+            switch (skill->weapon_req) {
+                case 1:
+                    return str += L"Axe Attack", str;
+                case 2:
+                    return str += L"Bow Attack", str;
+                case 8:
+                    switch (skill->combo) {
+                        case 1:
+                            return str += L"Lead Attack", str;
+                        case 2:
+                            return str += L"Off-Hand Attack", str;
+                        case 3:
+                            return str += L"Dual Attack", str;
+                    }
+                    return str += L"Dagger Attack", str;
+                case 16:
+                    return str += L"Hammer Attack", str;
+                case 32:
+                    return str += L"Scythe Attack", str;
+                case 64:
+                    return str += L"Spear Attack", str;
+                case 70:
+                    return str += L"Ranged Attack", str;
+                case 128:
+                    return str += L"Sword Attack", str;
+            }
+            return str += L"Melee Attack", str;
+        case 15:
+            return str += L"Shout", str;
+        case 19:
+            return str += L"Preparation", str;
+        case 20:
+            return str += L"Pet Attack", str;
+        case 21:
+            return str += L"Trap", str;
+        case 22:
+            switch (skill->profession) {
+                case 8:
+                    return str += L"Binding Ritual", str;
+                case 2:
+                    return str += L"Nature Ritual", str;
+            }
+            return str += L"Ebon Vanguard Ritual", str;
+        case 24:
+            return str += L"Item Spell", str;
+        case 25:
+            return str += L"Weapon Spell", str;
+        case 26:
+            return str += L"Form", str;
+        case 27:
+            return str += L"Chant", str;
+        case 28:
+            return str += L"Echo", str;
+        default:
+            return str += L"Skill", str;
+    }
+}
+const wchar_t *SkillListingWindow::Skill::Description()
+{
+    if (!desc_enc[0] &&
+        GW::UI::UInt32ToEncStr(skill->description, desc_enc, 16)) {
+        wchar_t buf[64] = {0};
+        swprintf(
+            buf, 64,
+            L"%s\x10A\x104\x101%c\x1\x10B\x104\x101%c\x1\x10C\x104\x101%c\x1",
+            desc_enc,
+            0x100 + (skill->scale0 == skill->scale15 ? skill->scale0 : 991),
+            0x100 + (skill->bonusScale0 == skill->bonusScale15
+                         ? skill->bonusScale0
+                         : 992),
+            0x100 + (skill->duration0 == skill->duration15 ? skill->duration0
+                                                           : 993));
+        wcscpy(desc_enc, buf);
+        GW::UI::AsyncDecodeStr(desc_enc, desc_dec, 256);
+    }
+    return desc_dec;
+}
+const wchar_t *SkillListingWindow::Skill::Concise()
+{
+    if (!concise_enc[0] &&
+        GW::UI::UInt32ToEncStr(skill->h0098, concise_enc, 16)) {
+        wchar_t buf[64] = {0};
+        swprintf(
+            buf, 64,
+            L"%s\x10A\x104\x101%c\x1\x10B\x104\x101%c\x1\x10C\x104\x101%c\x1",
+            concise_enc,
+            0x100 + (skill->scale0 == skill->scale15 ? skill->scale0 : 991),
+            0x100 + (skill->bonusScale0 == skill->bonusScale15
+                         ? skill->bonusScale0
+                         : 992),
+            0x100 + (skill->duration0 == skill->duration15 ? skill->duration0
+                                                           : 993));
+        wcscpy(concise_enc, buf);
+        GW::UI::AsyncDecodeStr(concise_enc, concise_dec, 256);
+    }
+    return concise_dec;
 }
