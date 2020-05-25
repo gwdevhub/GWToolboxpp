@@ -16,8 +16,6 @@
 #include <GWCA\GameEntities\Agent.h>
 #include <GWCA\GameEntities\Skill.h>
 
-#include <GWCA\Packets\StoC.h>
-
 #include <GWCA\Managers\MapMgr.h>
 #include <GWCA\Managers\ChatMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
@@ -27,10 +25,14 @@
 
 #include <logger.h>
 #include "GuiUtils.h"
-#include "Windows\MainWindow.h"
+
 #include <Modules\Resources.h>
+
 #include <Widgets\AlcoholWidget.h>
+
+#include <Windows\MainWindow.h>
 #include <Windows\HotkeysWindow.h>
+
 #include "PconsWindow.h"
 
 using namespace GW::Constants;
@@ -131,143 +133,143 @@ void PconsWindow::Initialize() {
 	[](GW::HookStatus *, GW::Packet::StoC::AgentSetPlayer *pak) -> void {
 		Pcon::player_id = pak->unk1;
 	});
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AddExternalBond>(&AddExternalBond_Entry,
-	[](GW::HookStatus *status, GW::Packet::StoC::AddExternalBond *pak) -> void {
-		if (PconAlcohol::suppress_lunar_skills
-			&& pak->caster_id == GW::Agents::GetPlayerId()
-			&& pak->receiver_id == 0
-			&& (pak->skill_id == (DWORD)GW::Constants::SkillID::Spiritual_Possession
-				|| pak->skill_id == (DWORD)GW::Constants::SkillID::Lucky_Aura)) {
-			//printf("blocked skill %d\n", pak->skill_id);
-			status->blocked = true;
-		}
-	});
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PostProcess>(&PostProcess_Entry,
-	[this](GW::HookStatus *status, GW::Packet::StoC::PostProcess *pak) -> void {
-		PconAlcohol::alcohol_level = pak->level;
-		//printf("Level = %d, tint = %d\n", pak->level, pak->tint);
-		if (enabled) pcon_alcohol->Update();
-		status->blocked = PconAlcohol::suppress_drunk_effect;
-	});
-
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&GenericValue_Entry,
-	[](GW::HookStatus *, GW::Packet::StoC::GenericValue *pak) -> void {
-		if (PconAlcohol::suppress_drunk_emotes
-			&& pak->agent_id == GW::Agents::GetPlayerId()
-			&& pak->Value_id == 22) {
-
-			if (pak->value == 0x33E807E5) pak->value = 0; // kneel
-			if (pak->value == 0x313AC9D1) pak->value = 0; // bored
-			if (pak->value == 0x3033596A) pak->value = 0; // moan
-			if (pak->value == 0x305A7EF2) pak->value = 0; // flex
-			if (pak->value == 0x74999B06) pak->value = 0; // fistshake
-			if (pak->value == 0x30446E61) pak->value = 0; // roar
-		}
-	});
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentState>(&AgentState_Entry,
-	[](GW::HookStatus *, GW::Packet::StoC::AgentState *pak) -> void {
-		if (PconAlcohol::suppress_drunk_emotes
-			&& pak->agent_id == GW::Agents::GetPlayerId()
-			&& pak->state & 0x2000) {
-
-			pak->state ^= 0x2000;
-		}
-	});
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SpeechBubble>(&SpeechBubble_Entry,
-	[](GW::HookStatus *status, GW::Packet::StoC::SpeechBubble *pak) -> void {
-		if (!PconAlcohol::suppress_drunk_text) return;
-		bool blocked = status->blocked;
-		status->blocked = true;
-		
-		wchar_t* m = pak->message;
-		if (m[0] == 0x8CA && m[1] == 0xA4F7 && m[2] == 0xF552 && m[3] == 0xA32) return; // i love you man!
-		if (m[0] == 0x8CB && m[1] == 0xE20B && m[2] == 0x9835 && m[3] == 0x4C75) return; // I'm the king of the world!
-		if (m[0] == 0x8CC && m[1] == 0xFA4D && m[2] == 0xF068 && m[3] == 0x393) return; // I think I need to sit down
-		if (m[0] == 0x8CD && m[1] == 0xF2C2 && m[2] == 0xBBAD && m[3] == 0x1EAD) return; // I think I'm gonna be sick
-		if (m[0] == 0x8CE && m[1] == 0x85E5 && m[2] == 0xF726 && m[3] == 0x68B1) return; // Oh no, not again
-		if (m[0] == 0x8CF && m[1] == 0xEDD3 && m[2] == 0xF2B9 && m[3] == 0x3F34) return; // It's spinning...
-		if (m[0] == 0x8D0 && m[1] == 0xF056 && m[2] == 0xE7AD && m[3] == 0x7EE6) return; // Everyone stop shouting!
-		if (m[0] == 0x8101 && m[1] == 0x6671 && m[2] == 0xCBF8 && m[3] == 0xE717) return; // "BE GONE!"
-		if (m[0] == 0x8101 && m[1] == 0x6672 && m[2] == 0xB0D6 && m[3] == 0xCE2F) return; // "Soon you will all be crushed."
-		if (m[0] == 0x8101 && m[1] == 0x6673 && m[2] == 0xDAA5 && m[3] == 0xD0A1) return; // "You are no match for my almighty power."
-		if (m[0] == 0x8101 && m[1] == 0x6674 && m[2] == 0x8BF9 && m[3] == 0x8C19) return; // "Such fools to think you can attack me here. Come closer so you can see the face of your doom!"
-		if (m[0] == 0x8101 && m[1] == 0x6675 && m[2] == 0x996D && m[3] == 0x87BA) return; // "No one can stop me, let alone you puny mortals!"
-		if (m[0] == 0x8101 && m[1] == 0x6676 && m[2] == 0xBAFA && m[3] == 0x8E15) return; // "You are messing with affairs that are beyond your comprehension. Leave now and I may let you live!"
-		if (m[0] == 0x8101 && m[1] == 0x6677 && m[2] == 0xA186 && m[3] == 0xF84C) return; // "His blood has returned me to my mortal body."
-		if (m[0] == 0x8101 && m[1] == 0x6678 && m[2] == 0xD2ED && m[3] == 0xE693) return; // "I have returned!"
-		if (m[0] == 0x8101 && m[1] == 0x6679 && m[2] == 0xA546 && m[3] == 0xF24A) return; // "Abaddon will feast on your eyes!"
-		if (m[0] == 0x8101 && m[1] == 0x667A && m[2] == 0xB477 && m[3] == 0xA79A) return; // "Abaddon's sword has been drawn. He sends me back to you with tokens of renewed power!"
-		if (m[0] == 0x8101 && m[1] == 0x667B && m[2] == 0x8FBB && m[3] == 0xC739) return; // "Are you the Keymaster?"
-		if (m[0] == 0x8101 && m[1] == 0x667C && m[2] == 0xFE50 && m[3] == 0xC173) return; // "Human sacrifice. Dogs and cats living together. Mass hysteria!"
-		if (m[0] == 0x8101 && m[1] == 0x667D && m[2] == 0xBBC6 && m[3] == 0xAC9E) return; // "Take me now, subcreature."'
-		if (m[0] == 0x8101 && m[1] == 0x667E && m[2] == 0xCD71 && m[3] == 0xDEE3) return; // "We must prepare for the coming of Banjo the Clown, God of Puppets."
-		if (m[0] == 0x8101 && m[1] == 0x667F && m[2] == 0xE823 && m[3] == 0x9435) return; // "This house is clean."
-		if (m[0] == 0x8101 && m[1] == 0x6680 && m[2] == 0x82FC && m[3] == 0xDCEC) return;
-		if (m[0] == 0x8101 && m[1] == 0x6681 && m[2] == 0xC86C && m[3] == 0xB975) return; // "Mommy? Where are you? I can't find you. I can't. I'm afraid of the light, mommy. I'm afraid of the light."
-		if (m[0] == 0x8101 && m[1] == 0x6682 && m[2] == 0xE586 && m[3] == 0x9311) return; // "Get away from my baby!"
-		if (m[0] == 0x8101 && m[1] == 0x6683 && m[2] == 0xA949 && m[3] == 0xE643) return; // "This house has many hearts."'
-		if (m[0] == 0x8101 && m[1] == 0x6684 && m[2] == 0xB765 && m[3] == 0x93F1) return; // "As a boy I spent much time in these lands."
-		if (m[0] == 0x8101 && m[1] == 0x6685 && m[2] == 0xEDE0 && m[3] == 0xAF1D) return; // "I see dead people."
-		if (m[0] == 0x8101 && m[1] == 0x6686 && m[2] == 0xD356 && m[3] == 0xDC69) return; // "Do you like my fish balloon? Can you hear it singing to you...?"
-		if (m[0] == 0x8101 && m[1] == 0x6687 && m[2] == 0xEA3C && m[3] == 0x96F0) return; // "4...Itchy...Tasty..."
-		if (m[0] == 0x8101 && m[1] == 0x6688 && m[2] == 0xCBDD && m[3] == 0xB1CF) return; // "Gracious me, was I raving? Please forgive me. I'm mad."
-		if (m[0] == 0x8101 && m[1] == 0x6689 && m[2] == 0xE770 && m[3] == 0xEEA4) return; // "Keep away. The sow is mine."
-		if (m[0] == 0x8101 && m[1] == 0x668A && m[2] == 0x885F && m[3] == 0xE61D) return; // "All is well. I'm not insane."
-		if (m[0] == 0x8101 && m[1] == 0x668B && m[2] == 0xCCDD && m[3] == 0x88AA) return; // "I like how they've decorated this place. The talking lights are a nice touch."
-		if (m[0] == 0x8101 && m[1] == 0x668C && m[2] == 0x8873 && m[3] == 0x9A16) return; // "There's a reason there's a festival ticket in my ear. I'm trying to lure the evil spirits out of my head."
-		if (m[0] == 0x8101 && m[1] == 0x668D && m[2] == 0xAF68 && m[3] == 0xF84A) return; // "And this is where I met the Lich. He told me to burn things."
-		if (m[0] == 0x8101 && m[1] == 0x668E && m[2] == 0xFE43 && m[3] == 0x9CB3) return; // "When I grow up, I want to be a principal or a caterpillar."
-		if (m[0] == 0x8101 && m[1] == 0x668F && m[2] == 0xDAFF && m[3] == 0x903E) return; // "Oh boy, sleep! That's where I'm a Luxon."
-		if (m[0] == 0x8101 && m[1] == 0x6690 && m[2] == 0xA1F5 && m[3] == 0xD15F) return; // "My cat's breath smells like cat food."
-		if (m[0] == 0x8101 && m[1] == 0x6691 && m[2] == 0xAE54 && m[3] == 0x8EC6) return; // "My cat's name is Mittens."
-		if (m[0] == 0x8101 && m[1] == 0x6692 && m[2] == 0xDFBB && m[3] == 0xD674) return; // "Then the healer told me that BOTH my eyes were lazy. And that's why it was the best summer ever!"
-		if (m[0] == 0x8101 && m[1] == 0x6693 && m[2] == 0xAC9F && m[3] == 0xDCBE) return; // "Go, banana!"
-		if (m[0] == 0x8101 && m[1] == 0x6694 && m[2] == 0x9ACA && m[3] == 0xC746) return; // "It's a trick. Get an axe."
-		if (m[0] == 0x8101 && m[1] == 0x6695 && m[2] == 0x8ED8 && m[3] == 0xD572) return; // "Klaatu...barada...necktie?"
-		if (m[0] == 0x8101 && m[1] == 0x6696 && m[2] == 0xE883 && m[3] == 0xFED7) return; // "You're disgusting, but I love you!"
-		if (m[0] == 0x8101 && m[1] == 0x68BA && m[2] == 0xA875 && m[3] == 0xA785) return; // "Cross over, children. All are welcome. All welcome. Go into the light. There is peace and serenity in the light."
-		//printf("m[0] == 0x%X && m[1] == 0x%X && m[2] == 0x%X && m[3] == 0x%X\n", m[0], m[1], m[2], m[3]);
-
-		status->blocked = blocked;
-		return;
-	});
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveDone>(
-        &ObjectiveDone_Entry,
-        [this](GW::HookStatus*, GW::Packet::StoC::ObjectiveDone* packet) -> bool {
-		    objectives_complete.push_back(packet->objective_id);
-		    CheckObjectivesCompleteAutoDisable();
-		    return false;
-	    });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::VanquishComplete>(
-        &VanquishComplete_Entry,
-        [this](GW::HookStatus*, GW::Packet::StoC::VanquishComplete*) -> bool {
-            if (!disable_cons_on_vanquish_completion)
-                return false;
-            if (!enabled) 
-                return false;
-            SetEnabled(false);
-            Log::Info("Cons auto-disabled on completion");
-            return false;
-        });
-	GW::Chat::CreateCommand(L"pcons",
-	    [this](const wchar_t *, int argc, LPWSTR *argv) {
-		    if (argc <= 1) {
-			    ToggleEnable();
-		    }
-		    else { // we are ignoring parameters after the first
-			    std::wstring arg1 = GuiUtils::ToLower(argv[1]);
-			    if (arg1 == L"on") {
-				    SetEnabled(true);
-			    }
-			    else if (arg1 == L"off") {
-				    SetEnabled(false);
-			    }
-			    else {
-				    Log::Error("Invalid argument '%ls', please use /pcons [|on|off]", argv[1]);
-			    }
-		    }
-	    });
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AddExternalBond>(&AddExternalBond_Entry,&OnAddExternalBond);
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PostProcess>(&PostProcess_Entry,&OnPostProcessEffect);
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&GenericValue_Entry,&OnGenericValue);
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentState>(&AgentState_Entry,&OnAgentState);
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SpeechBubble>(&SpeechBubble_Entry,&OnSpeechBubble);
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveDone>(&ObjectiveDone_Entry, &OnObjectiveDone);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::VanquishComplete>(&VanquishComplete_Entry, &OnVanquishComplete);
+    GW::Chat::CreateCommand(L"pcons", &CmdPcons);
 }
+void PconsWindow::OnAddExternalBond(GW::HookStatus *status, GW::Packet::StoC::AddExternalBond *pak) 
+{
+    if (PconAlcohol::suppress_lunar_skills &&
+        pak->caster_id == GW::Agents::GetPlayerId() && pak->receiver_id == 0 &&
+        (pak->skill_id == (DWORD)GW::Constants::SkillID::Spiritual_Possession ||
+         pak->skill_id == (DWORD)GW::Constants::SkillID::Lucky_Aura)) {
+        // printf("blocked skill %d\n", pak->skill_id);
+        status->blocked = true;
+    }
+}
+void PconsWindow::OnPostProcessEffect(GW::HookStatus *status,
+                                      GW::Packet::StoC::PostProcess *pak)
+{
+	PconAlcohol::alcohol_level = pak->level;
+    PconsWindow &instance = Instance();
+	//printf("Level = %d, tint = %d\n", pak->level, pak->tint);
+    if (instance.enabled)
+        instance.pcon_alcohol->Update();
+	status->blocked = PconAlcohol::suppress_drunk_effect;
+}
+void PconsWindow::OnGenericValue(GW::HookStatus *, GW::Packet::StoC::GenericValue *pak) {
+	if (PconAlcohol::suppress_drunk_emotes
+		&& pak->agent_id == GW::Agents::GetPlayerId()
+		&& pak->Value_id == 22) {
+
+		if (pak->value == 0x33E807E5) pak->value = 0; // kneel
+		if (pak->value == 0x313AC9D1) pak->value = 0; // bored
+		if (pak->value == 0x3033596A) pak->value = 0; // moan
+		if (pak->value == 0x305A7EF2) pak->value = 0; // flex
+		if (pak->value == 0x74999B06) pak->value = 0; // fistshake
+		if (pak->value == 0x30446E61) pak->value = 0; // roar
+	}
+}
+void PconsWindow::OnAgentState(GW::HookStatus *, GW::Packet::StoC::AgentState *pak)
+{
+    if (PconAlcohol::suppress_drunk_emotes &&
+        pak->agent_id == GW::Agents::GetPlayerId() && pak->state & 0x2000) {
+        pak->state ^= 0x2000;
+    }
+}
+void PconsWindow::OnSpeechBubble(GW::HookStatus *status, GW::Packet::StoC::SpeechBubble *pak) {
+	if (!PconAlcohol::suppress_drunk_text) return;
+	bool blocked = status->blocked;
+	status->blocked = true;
+		
+	wchar_t* m = pak->message;
+	if (m[0] == 0x8CA && m[1] == 0xA4F7 && m[2] == 0xF552 && m[3] == 0xA32) return; // i love you man!
+	if (m[0] == 0x8CB && m[1] == 0xE20B && m[2] == 0x9835 && m[3] == 0x4C75) return; // I'm the king of the world!
+	if (m[0] == 0x8CC && m[1] == 0xFA4D && m[2] == 0xF068 && m[3] == 0x393) return; // I think I need to sit down
+	if (m[0] == 0x8CD && m[1] == 0xF2C2 && m[2] == 0xBBAD && m[3] == 0x1EAD) return; // I think I'm gonna be sick
+	if (m[0] == 0x8CE && m[1] == 0x85E5 && m[2] == 0xF726 && m[3] == 0x68B1) return; // Oh no, not again
+	if (m[0] == 0x8CF && m[1] == 0xEDD3 && m[2] == 0xF2B9 && m[3] == 0x3F34) return; // It's spinning...
+	if (m[0] == 0x8D0 && m[1] == 0xF056 && m[2] == 0xE7AD && m[3] == 0x7EE6) return; // Everyone stop shouting!
+	if (m[0] == 0x8101 && m[1] == 0x6671 && m[2] == 0xCBF8 && m[3] == 0xE717) return; // "BE GONE!"
+	if (m[0] == 0x8101 && m[1] == 0x6672 && m[2] == 0xB0D6 && m[3] == 0xCE2F) return; // "Soon you will all be crushed."
+	if (m[0] == 0x8101 && m[1] == 0x6673 && m[2] == 0xDAA5 && m[3] == 0xD0A1) return; // "You are no match for my almighty power."
+	if (m[0] == 0x8101 && m[1] == 0x6674 && m[2] == 0x8BF9 && m[3] == 0x8C19) return; // "Such fools to think you can attack me here. Come closer so you can see the face of your doom!"
+	if (m[0] == 0x8101 && m[1] == 0x6675 && m[2] == 0x996D && m[3] == 0x87BA) return; // "No one can stop me, let alone you puny mortals!"
+	if (m[0] == 0x8101 && m[1] == 0x6676 && m[2] == 0xBAFA && m[3] == 0x8E15) return; // "You are messing with affairs that are beyond your comprehension. Leave now and I may let you live!"
+	if (m[0] == 0x8101 && m[1] == 0x6677 && m[2] == 0xA186 && m[3] == 0xF84C) return; // "His blood has returned me to my mortal body."
+	if (m[0] == 0x8101 && m[1] == 0x6678 && m[2] == 0xD2ED && m[3] == 0xE693) return; // "I have returned!"
+	if (m[0] == 0x8101 && m[1] == 0x6679 && m[2] == 0xA546 && m[3] == 0xF24A) return; // "Abaddon will feast on your eyes!"
+	if (m[0] == 0x8101 && m[1] == 0x667A && m[2] == 0xB477 && m[3] == 0xA79A) return; // "Abaddon's sword has been drawn. He sends me back to you with tokens of renewed power!"
+	if (m[0] == 0x8101 && m[1] == 0x667B && m[2] == 0x8FBB && m[3] == 0xC739) return; // "Are you the Keymaster?"
+	if (m[0] == 0x8101 && m[1] == 0x667C && m[2] == 0xFE50 && m[3] == 0xC173) return; // "Human sacrifice. Dogs and cats living together. Mass hysteria!"
+	if (m[0] == 0x8101 && m[1] == 0x667D && m[2] == 0xBBC6 && m[3] == 0xAC9E) return; // "Take me now, subcreature."'
+	if (m[0] == 0x8101 && m[1] == 0x667E && m[2] == 0xCD71 && m[3] == 0xDEE3) return; // "We must prepare for the coming of Banjo the Clown, God of Puppets."
+	if (m[0] == 0x8101 && m[1] == 0x667F && m[2] == 0xE823 && m[3] == 0x9435) return; // "This house is clean."
+	if (m[0] == 0x8101 && m[1] == 0x6680 && m[2] == 0x82FC && m[3] == 0xDCEC) return;
+	if (m[0] == 0x8101 && m[1] == 0x6681 && m[2] == 0xC86C && m[3] == 0xB975) return; // "Mommy? Where are you? I can't find you. I can't. I'm afraid of the light, mommy. I'm afraid of the light."
+	if (m[0] == 0x8101 && m[1] == 0x6682 && m[2] == 0xE586 && m[3] == 0x9311) return; // "Get away from my baby!"
+	if (m[0] == 0x8101 && m[1] == 0x6683 && m[2] == 0xA949 && m[3] == 0xE643) return; // "This house has many hearts."'
+	if (m[0] == 0x8101 && m[1] == 0x6684 && m[2] == 0xB765 && m[3] == 0x93F1) return; // "As a boy I spent much time in these lands."
+	if (m[0] == 0x8101 && m[1] == 0x6685 && m[2] == 0xEDE0 && m[3] == 0xAF1D) return; // "I see dead people."
+	if (m[0] == 0x8101 && m[1] == 0x6686 && m[2] == 0xD356 && m[3] == 0xDC69) return; // "Do you like my fish balloon? Can you hear it singing to you...?"
+	if (m[0] == 0x8101 && m[1] == 0x6687 && m[2] == 0xEA3C && m[3] == 0x96F0) return; // "4...Itchy...Tasty..."
+	if (m[0] == 0x8101 && m[1] == 0x6688 && m[2] == 0xCBDD && m[3] == 0xB1CF) return; // "Gracious me, was I raving? Please forgive me. I'm mad."
+	if (m[0] == 0x8101 && m[1] == 0x6689 && m[2] == 0xE770 && m[3] == 0xEEA4) return; // "Keep away. The sow is mine."
+	if (m[0] == 0x8101 && m[1] == 0x668A && m[2] == 0x885F && m[3] == 0xE61D) return; // "All is well. I'm not insane."
+	if (m[0] == 0x8101 && m[1] == 0x668B && m[2] == 0xCCDD && m[3] == 0x88AA) return; // "I like how they've decorated this place. The talking lights are a nice touch."
+	if (m[0] == 0x8101 && m[1] == 0x668C && m[2] == 0x8873 && m[3] == 0x9A16) return; // "There's a reason there's a festival ticket in my ear. I'm trying to lure the evil spirits out of my head."
+	if (m[0] == 0x8101 && m[1] == 0x668D && m[2] == 0xAF68 && m[3] == 0xF84A) return; // "And this is where I met the Lich. He told me to burn things."
+	if (m[0] == 0x8101 && m[1] == 0x668E && m[2] == 0xFE43 && m[3] == 0x9CB3) return; // "When I grow up, I want to be a principal or a caterpillar."
+	if (m[0] == 0x8101 && m[1] == 0x668F && m[2] == 0xDAFF && m[3] == 0x903E) return; // "Oh boy, sleep! That's where I'm a Luxon."
+	if (m[0] == 0x8101 && m[1] == 0x6690 && m[2] == 0xA1F5 && m[3] == 0xD15F) return; // "My cat's breath smells like cat food."
+	if (m[0] == 0x8101 && m[1] == 0x6691 && m[2] == 0xAE54 && m[3] == 0x8EC6) return; // "My cat's name is Mittens."
+	if (m[0] == 0x8101 && m[1] == 0x6692 && m[2] == 0xDFBB && m[3] == 0xD674) return; // "Then the healer told me that BOTH my eyes were lazy. And that's why it was the best summer ever!"
+	if (m[0] == 0x8101 && m[1] == 0x6693 && m[2] == 0xAC9F && m[3] == 0xDCBE) return; // "Go, banana!"
+	if (m[0] == 0x8101 && m[1] == 0x6694 && m[2] == 0x9ACA && m[3] == 0xC746) return; // "It's a trick. Get an axe."
+	if (m[0] == 0x8101 && m[1] == 0x6695 && m[2] == 0x8ED8 && m[3] == 0xD572) return; // "Klaatu...barada...necktie?"
+	if (m[0] == 0x8101 && m[1] == 0x6696 && m[2] == 0xE883 && m[3] == 0xFED7) return; // "You're disgusting, but I love you!"
+	if (m[0] == 0x8101 && m[1] == 0x68BA && m[2] == 0xA875 && m[3] == 0xA785) return; // "Cross over, children. All are welcome. All welcome. Go into the light. There is peace and serenity in the light."
+	//printf("m[0] == 0x%X && m[1] == 0x%X && m[2] == 0x%X && m[3] == 0x%X\n", m[0], m[1], m[2], m[3]);
+
+	status->blocked = blocked;
+	return;
+}
+void PconsWindow::OnObjectiveDone(GW::HookStatus *,GW::Packet::StoC::ObjectiveDone *packet)
+{
+    PconsWindow &instance = Instance();
+    instance.objectives_complete.push_back(packet->objective_id);
+    instance.CheckObjectivesCompleteAutoDisable();
+}
+void PconsWindow::OnVanquishComplete(GW::HookStatus *,GW::Packet::StoC::VanquishComplete *)
+{
+    PconsWindow &instance = Instance();
+    if (!instance.disable_cons_on_vanquish_completion || !instance.enabled)
+        return;
+    instance.SetEnabled(false);
+    Log::Info("Cons auto-disabled on completion");
+}
+void PconsWindow::CmdPcons(const wchar_t *, int argc, LPWSTR *argv)
+{
+    if (argc <= 1) {
+        Instance().ToggleEnable();
+    } else { // we are ignoring parameters after the first
+        std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+        if (arg1 == L"on") {
+            Instance().SetEnabled(true);
+        } else if (arg1 == L"off") {
+            Instance().SetEnabled(false);
+        } else {
+            Log::Error("Invalid argument '%ls', please use /pcons [|on|off]",
+                       argv[1]);
+        }
+    }
+}
+
 bool PconsWindow::DrawTabButton(IDirect3DDevice9* device, bool show_icon, bool show_text) {
 	bool clicked = ToolboxWindow::DrawTabButton(device, show_icon, show_text);
 
@@ -357,18 +359,18 @@ void PconsWindow::MapChanged() {
 	player = nullptr;
 	elite_area_disable_triggered = false;
 	// Find out which objectives we need to complete for this map.
-	std::map<GW::Constants::MapID, std::vector<DWORD>>::iterator it = objectives_to_complete_by_map_id.find(map_id);
-	if (it != objectives_to_complete_by_map_id.end()) {
+	auto map_objectives_it = objectives_to_complete_by_map_id.find(map_id);
+    if (map_objectives_it != objectives_to_complete_by_map_id.end()) {
 		objectives_complete.clear();
-		current_objectives_to_check = it->second;
+        current_objectives_to_check = map_objectives_it->second;
 	}
 	else {
 		current_objectives_to_check.clear();
 	}
 	// Find out if we need to check for boss range for this map.
-	std::map<GW::Constants::MapID, GW::Vec2f>::iterator it2 = final_room_location_by_map_id.find(map_id);
-	if (it2 != final_room_location_by_map_id.end()) {
-		current_final_room_location = it2->second;
+    auto map_location_it = final_room_location_by_map_id.find(map_id);
+    if (map_location_it != final_room_location_by_map_id.end()) {
+        current_final_room_location = map_location_it->second;
 	}
 	else {
 		current_final_room_location = GW::Vec2f(0, 0);

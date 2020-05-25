@@ -3,14 +3,17 @@
 #include <Defines.h>
 
 #include <GWCA\Utilities\Hook.h>
-#include <GWCA\Constants\Constants.h>
-#include <GWCA/GameContainers/GamePos.h>
-#include <GWCA\Utilities\Hook.h>
+
 #include <GWCA\Constants\Constants.h>
 
+#include <GWCA\Packets\StoC.h>
+
+#include <GWCA\GameContainers\GamePos.h>
+
 #include "Timer.h"
-#include "Pcons.h"
 #include "ToolboxWindow.h"
+#include "Pcons.h"
+
 
 class PconsWindow : public ToolboxWindow {
 	PconsWindow();
@@ -41,6 +44,15 @@ public:
 	void DrawSettingInternal() override;
 	void RegisterSettingsContent() override;
 	void DrawLunarsAndAlcoholSettings();
+
+	static void OnVanquishComplete(GW::HookStatus *, GW::Packet::StoC::VanquishComplete*);
+	static void OnObjectiveDone(GW::HookStatus *,GW::Packet::StoC::ObjectiveDone *packet);
+	static void OnSpeechBubble(GW::HookStatus *status, GW::Packet::StoC::SpeechBubble *pak);
+	static void OnAgentState(GW::HookStatus *, GW::Packet::StoC::AgentState *pak);
+	static void OnGenericValue(GW::HookStatus *, GW::Packet::StoC::GenericValue *pak);
+	static void OnPostProcessEffect(GW::HookStatus *status, GW::Packet::StoC::PostProcess *pak);
+	static void OnAddExternalBond(GW::HookStatus *status, GW::Packet::StoC::AddExternalBond *pak);
+	static void CmdPcons(const wchar_t *, int argc,LPWSTR *argv);
 
     std::vector<Pcon*> pcons;
 
@@ -93,7 +105,8 @@ private:
 
 	// Map of which objectives to check per map_id
 	std::vector<DWORD> objectives_complete = {};
-	std::map<GW::Constants::MapID, std::vector<DWORD>> objectives_to_complete_by_map_id = {
+    const std::map<GW::Constants::MapID, std::vector<DWORD>>
+        objectives_to_complete_by_map_id = {
 		{GW::Constants::MapID::The_Fissure_of_Woe,{ 309,310,311,312,313,314,315,316,317,318,319 }}, // Can be done in any order - check them all.
 		{GW::Constants::MapID::The_Deep, { 421 }},
 		{GW::Constants::MapID::Urgozs_Warren, { 357 }},
@@ -102,14 +115,15 @@ private:
 	std::vector<DWORD> current_objectives_to_check = {};
 	
 	// Map of which locations to turn off near by map_id e.g. Kanaxai, Urgoz
-	std::map<GW::Constants::MapID, GW::Vec2f> final_room_location_by_map_id = {
+    const std::map<GW::Constants::MapID, GW::Vec2f>
+        final_room_location_by_map_id = {
 		{GW::Constants::MapID::The_Deep, GW::Vec2f(30428.0f, -5842.0f)},		// Rough location of Kanaxai
 		{GW::Constants::MapID::Urgozs_Warren, GW::Vec2f(-2800.0f, 14316.0f)} // Front entrance of Urgoz's room
 	};
     GW::Vec2f current_final_room_location = GW::Vec2f(0, 0);
 
-    char* disable_cons_on_objective_completion_hint = "Disable cons when final objective(s) completed";
-	char* disable_cons_in_final_room_hint = "Disable cons when reaching the final room in Urgoz and Deep";
-    char* disable_cons_on_vanquish_completion_hint = "Disable cons when completing a vanquish";
+    const char* disable_cons_on_objective_completion_hint = "Disable cons when final objective(s) completed";
+	const char* disable_cons_in_final_room_hint = "Disable cons when reaching the final room in Urgoz and Deep";
+    const char *disable_cons_on_vanquish_completion_hint = "Disable cons when completing a vanquish";
 	
 };
