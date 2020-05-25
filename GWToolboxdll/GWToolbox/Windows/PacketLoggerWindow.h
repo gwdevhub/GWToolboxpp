@@ -28,11 +28,6 @@ private:
     uint32_t identifiers[512] = { 0 }; // Presume 512 is big enough for header size...
     GW::HookEntry hook_entry;
 
-    void AddStoCCallback(uint32_t packet_header);
-    void AddCtoSCallback(uint32_t packet_header);
-    void RemoveStoCCallback(uint32_t packet_header);
-    void RemoveCtoSCallback(uint32_t packet_header);
-
 	GW::HookEntry DisplayDialogue_Entry;
 	GW::HookEntry MessageCore_Entry;
     GW::HookEntry MessageLocal_Entry;

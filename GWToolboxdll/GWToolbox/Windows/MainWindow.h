@@ -35,11 +35,11 @@ private:
 	bool one_panel_at_time_only = false;
 
 	float GetModuleWeighting(ToolboxUIElement* m) {
-		auto found = module_weigtings.find(m->Name());
-		return found == module_weigtings.end() ? 1.0f : found->second;
+        auto found = module_weightings.find(m->Name());
+        return found == module_weightings.end() ? 1.0f : found->second;
 	}
 	std::vector<std::pair<float, ToolboxUIElement*>> modules_to_draw{};
-	std::unordered_map<std::string,float> module_weigtings {
+	const std::unordered_map<std::string,float> module_weightings {
 		{"Pcons",0.5f},
 		{"Hotkeys",0.52f},
 		{"Builds",0.54f},

@@ -69,7 +69,8 @@ private:
 	bool map_travel_countdown_started = false;
 	bool pending_map_travel = false;
 
-    /*enum error_message_ids {
+    /* Not used, but good to keep for reference!
+    enum error_message_ids {
 		error_B29 = 52,
 		error_B30,
 		error_B31,
@@ -80,8 +81,7 @@ private:
 		error_B36,
 		error_B37,
 		error_B38
-    };*/
-
+    };
     enum error_message_trans_codes {
         error_B29 = 0xB29, // The target party has members who do not meet this mission's level requirements.
         error_B30, // You may not enter that outpost
@@ -93,7 +93,7 @@ private:
         error_B36, // Your party is already in that district.
         error_B37, // Your party is already in the active district.
         error_B38, // The merged party would be too large.
-    };   
+    };  */
 
 public:
     const GW::Constants::MapID presearing_map_ids[5] = {

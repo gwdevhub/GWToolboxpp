@@ -25,18 +25,88 @@
 #include "base64.h"
 
 
-static const std::wstring GetPlayerNameFromEncodedString(const wchar_t* message) {
-	size_t start_idx = (size_t)-1;
-	for (size_t i = 0; message[i] != 0; ++i) {
-		if ((start_idx == (size_t)-1) && message[i] == 0x107)
-			start_idx = ++i;
-		if (message[i] == 0x1)
-			return std::wstring(&message[start_idx], i - start_idx);
-	}
-	return L"";
-}
 
-namespace {
+/* Out of scope namespecey lookups */
+namespace
+{
+    static const std::wstring GetPlayerNameFromEncodedString(const wchar_t *message)
+    {
+        size_t start_idx = (size_t)-1;
+        for (size_t i = 0; message[i] != 0; ++i) {
+            if ((start_idx == (size_t)-1) && message[i] == 0x107)
+                start_idx = ++i;
+            if (message[i] == 0x1)
+                return std::wstring(&message[start_idx], i - start_idx);
+        }
+        return L"";
+    }
+    const ImColor ProfColors[11] = {0xFFFFFFFF, 0xFFEEAA33, 0xFF55AA00,
+                                    0xFF4444BB, 0xFF00AA55, 0xFF8800AA,
+                                    0xFFBB3333, 0xFFAA0088, 0xFF00AAAA,
+                                    0xFF996600, 0xFF7777CC};
+    const wchar_t *ProfNames[11] = {
+        L"Unknown",     L"Warrior", L"Ranger",       L"Monk",
+        L"Necromancer", L"Mesmer",  L"Elementalist", L"Assassin",
+        L"Ritualist",   L"Paragon", L"Dervish"};
+    static const ImColor StatusColors[4] = {
+        IM_COL32(0x99, 0x99, 0x99, 255), // offline
+        IM_COL32(0x0, 0xc8, 0x0, 255),   // online
+        IM_COL32(0xc8, 0x0, 0x0, 255),   // busy
+        IM_COL32(0xc8, 0xc8, 0x0, 255)   // away
+    };
+    static std::wstring current_map;
+    static GW::Constants::MapID current_map_id = GW::Constants::MapID::None;
+    static std::wstring *GetCurrentMapName()
+    {
+        GW::Constants::MapID map_id = GW::Map::GetMapID();
+        if (current_map_id != map_id) {
+            GW::AreaInfo *i = GW::Map::GetMapInfo(map_id);
+            if (!i)
+                return nullptr;
+            wchar_t name_enc[16];
+            if (!GW::UI::UInt32ToEncStr(i->name_id, name_enc, 16))
+                return nullptr;
+            current_map.clear();
+            GW::UI::AsyncDecodeStr(name_enc, &current_map);
+            current_map_id = map_id;
+        }
+        return &current_map;
+    }
+    static char *GetStatusText(uint8_t status)
+    {
+        switch (static_cast<GW::FriendStatus>(status)) {
+            case GW::FriendStatus::FriendStatus_Offline:
+                return "Offline";
+            case GW::FriendStatus::FriendStatus_Online:
+                return "Online";
+            case GW::FriendStatus::FriendStatus_DND:
+                return "Do not disturb";
+            case GW::FriendStatus::FriendStatus_Away:
+                return "Away";
+        }
+        return "Unknown";
+    }
+    static std::map<uint32_t, wchar_t *> map_names;
+    static GUID StringToGuid(const std::string &str)
+    {
+        GUID guid;
+        sscanf(str.c_str(),
+               "%8lx-%4hx-%4hx-%2hhx%2hhx-%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx",
+               &guid.Data1, &guid.Data2, &guid.Data3, &guid.Data4[0],
+               &guid.Data4[1], &guid.Data4[2], &guid.Data4[3], &guid.Data4[4],
+               &guid.Data4[5], &guid.Data4[6], &guid.Data4[7]);
+
+        return guid;
+    }
+
+    static void GuidToString(GUID guid, char *guid_cstr)
+    {
+        snprintf(guid_cstr, 128,
+                 "%08lx-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+                 guid.Data1, guid.Data2, guid.Data3, guid.Data4[0],
+                 guid.Data4[1], guid.Data4[2], guid.Data4[3], guid.Data4[4],
+                 guid.Data4[5], guid.Data4[6], guid.Data4[7]);
+    }
 	static std::wstring last_whisper;
 	struct UIChatMessage {
 		uint32_t channel;
@@ -83,19 +153,18 @@ void FriendListWindow::CmdRemoveFriend(const wchar_t* message, int argc, LPWSTR*
 void FriendListWindow::Friend::GetMapName() {
 	if (!current_map_id)
 		return;
-	GW::GameThread::Enqueue([this]() {
-		GW::AreaInfo* info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(current_map_id));
-		if (!info) {
-			current_map_name[0] = 0;
-			return;
-		}
-		static wchar_t enc_str[16];
-		if (!GW::UI::UInt32ToEncStr(info->name_id, enc_str, 16)) {
-			current_map_name[0] = 0;
-			return;
-		}
-		GW::UI::AsyncDecodeStr(enc_str, current_map_name, 128);
-	});
+	GW::AreaInfo* info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(current_map_id));
+	if (!info) {
+		current_map_name[0] = 0;
+		return;
+	}
+	static wchar_t enc_str[16];
+	if (!GW::UI::UInt32ToEncStr(info->name_id, enc_str, 16)) {
+		current_map_name[0] = 0;
+		return;
+	}
+	GW::UI::AsyncDecodeStr(enc_str, current_map_name, 128);
+
 }
 // Get the Guild Wars friend object for this friend (if it exists)
 GW::Friend* FriendListWindow::Friend::GetFriend() {
@@ -237,6 +306,41 @@ FriendListWindow::Friend* FriendListWindow::SetFriend(GW::Friend* f) {
 }
 
 /* Getters */
+const std::string FriendListWindow::Friend::GetCharactersHover(bool include_charname)
+{
+    if (!cached_charnames_hover) {
+        std::wstring cached_charnames_hover_ws = L"Characters for ";
+        cached_charnames_hover_ws += alias;
+        cached_charnames_hover_ws += L":";
+        for (std::unordered_map<std::wstring, Character>::iterator it2 =
+                 characters.begin();
+             it2 != characters.end(); ++it2) {
+            cached_charnames_hover_ws += L"\n  ";
+            cached_charnames_hover_ws += it2->first;
+            if (it2->second.profession) {
+                cached_charnames_hover_ws += L" (";
+                cached_charnames_hover_ws += ProfNames[it2->second.profession];
+                cached_charnames_hover_ws += L")";
+            }
+        }
+        cached_charnames_hover_str =
+            GuiUtils::WStringToString(cached_charnames_hover_ws);
+        cached_charnames_hover = true;
+    }
+    std::string str;
+    if (include_charname && current_char) {
+        str += GuiUtils::WStringToString(current_char->name);
+        str += "\n";
+    }
+    if (include_charname && current_map_name[0]) {
+        str += current_map_name;
+        str += "\n";
+    }
+    if (str.size())
+        str += "\n";
+    str += cached_charnames_hover_str;
+    return str;
+}
 // Find existing record for friend by char name.
 FriendListWindow::Friend* FriendListWindow::GetFriend(const wchar_t* name) {
 	std::unordered_map<std::wstring, std::string>::iterator it = uuid_by_name.find(name);

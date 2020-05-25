@@ -20,11 +20,7 @@ class FactionLeaderboardWindow : public ToolboxWindow {
 private:
 	struct LeaderboardEntry {
 		LeaderboardEntry() {};
-		LeaderboardEntry(uint32_t m, uint32_t r, uint32_t a, uint32_t f, const wchar_t* n, const wchar_t* t) {
-			map_id = m;
-			rank = r;
-			allegiance = a;
-			faction = f;
+		LeaderboardEntry(uint32_t m, uint32_t r, uint32_t a, uint32_t f, const wchar_t* n, const wchar_t* t) : map_id(m), rank(r), allegiance(a), faction(f) {
 			wcscpy(guild_wstr, n); // Copy the string to avoid read errors later.
 			wcscpy(tag_wstr, t); // Copy the string to avoid read errors later.
 			map_name[0] = 0;
@@ -38,10 +34,10 @@ private:
 			guild_wiki_url = L"https://wiki.guildwars.com/wiki/Guild:" + guild_wiki_url;
 			initialised = true;
 		}
-		uint32_t map_id;
-		uint32_t rank;
-		uint32_t allegiance;
-		uint32_t faction;
+		uint32_t map_id=0;
+		uint32_t rank=0;
+		uint32_t allegiance=0;
+		uint32_t faction=0;
 		wchar_t guild_wstr[32];
 		wchar_t tag_wstr[5];
 		char guild_str[128]; // unicode char can be up to 4 bytes
