@@ -120,6 +120,8 @@ void ParseCommandLine()
             settings.help = true;
         } else if (wcscmp(arg, L"/noinstall") == 0) {
             settings.noinstall = true;
+        } else if (wcscmp(arg, L"/quiet") == 0) {
+            settings.quiet = true;
         } else if (wcscmp(arg, L"/localdll") == 0) {
             settings.localdll = true;
             settings.noupdate = true;
