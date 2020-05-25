@@ -1,5 +1,7 @@
 #include "stdafx.h"
 
+#include <Defines.h>
+
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Agent.h>
@@ -265,7 +267,7 @@ void ZrawDeepModule::DisplayDialogue(GW::Packet::StoC::DisplayDialogue* packet) 
 void ZrawDeepModule::PlayKanaxaiDialog(uint8_t idx) {
 	if (!mp3)
 		mp3 = new Mp3();
-	if (!mp3->Load(Resources::GetPath(kanaxai_audio_filenames[idx]).c_str()))
+	if (!((Mp3*)mp3)->Load(Resources::GetPath(kanaxai_audio_filenames[idx]).c_str()))
 		return;
-	mp3->Play();
+    ((Mp3 *)mp3)->Play();
 }

@@ -1,17 +1,10 @@
 #pragma once
 
-#include <ToolboxModule.h>
-#include <ToolboxUIElement.h>
-
-#include <GWCA/GameEntities/Agent.h>
-
 #include <GWCA/Utilities/Hook.h>
-
-#include <GWCA/Constants/Maps.h>
 
 #include <GWCA/Packets/StoC.h>
 
-#include "mp3.h"
+#include <ToolboxModule.h>
 
 class ZrawDeepModule : public ToolboxModule {
 	ZrawDeepModule() {};
@@ -20,7 +13,7 @@ class ZrawDeepModule : public ToolboxModule {
 		CoUninitialize();
 	};
 private:
-	Mp3* mp3;
+	void* mp3 = nullptr;
     
 	bool enabled = false;
     bool transmo_team = true;

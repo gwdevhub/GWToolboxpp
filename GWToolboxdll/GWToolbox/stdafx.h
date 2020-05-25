@@ -21,6 +21,8 @@
 #pragma warning(disable: 5029) // nonstandard extension used: alignment attributes in C++ apply to variables, data members and tag types only
 #pragma warning(disable: 5039) // 'function': pointer or reference to potentially throwing function passed to extern C function under -EHc. Undefined behavior may occur if this function throws an exception.
 #pragma warning(disable: 5045) // Compiler will insert Spectre mitigation for memory load if /Qspectre switch specified
+#pragma warning(disable: 5204) // class has virtual functions, but its trivial destructor is not virtual
+#pragma warning(disable: 6011) // Dereferencing NULL pointer
 
 #include <GWCA/Source/stdafx.h>
 
@@ -88,6 +90,7 @@
 #include <SimpleIni.h>
 #include <json.hpp>
 #include <easywsclient\easywsclient.hpp>
+#include <mp3.h>
 
 #include <d3d9.h>
 #include <d3dx9math.h>
