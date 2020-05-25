@@ -38,9 +38,18 @@ public:
     static void CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* argv);
 
 private:
+    struct PendingTransmo
+    {
+        DWORD scale = 0x64000000;
+        DWORD npc_id = 0;
+        DWORD npc_model_file_id = 0;
+        DWORD npc_model_file_data = 0;
+        DWORD flags = 0;
+    };
+
 	static bool ReadTemplateFile(std::wstring path, char *buff, size_t buffSize);
-	static bool ParseDistrict(const std::wstring s, GW::Constants::District& district, uint32_t& number);
-	static bool ParseOutpost(const std::wstring s, GW::Constants::MapID& outpost, GW::Constants::District& district, uint32_t& number);
+	static bool ParseDistrict(const std::wstring& s, GW::Constants::District& district, uint32_t& number);
+	static bool ParseOutpost(const std::wstring& s, GW::Constants::MapID& outpost, GW::Constants::District& district, uint32_t& number);
     static bool IsLuxon();
 
 	static void CmdAge2(const wchar_t *message, int argc, LPWSTR *argv);
@@ -65,10 +74,12 @@ private:
 	static void CmdTransmoParty(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdTransmoAgent(const wchar_t* message, int argc, LPWSTR* argv);
     
+	static void TransmoAgent(DWORD agent_id, PendingTransmo& transmo);
+	static bool GetNPCInfoByName(const wchar_t *name, PendingTransmo& transmo);
+    static bool ParseScale(int scale,PendingTransmo& transmo);
+    static bool GetTargetTransmoInfo(PendingTransmo& transmo);
 
 	static std::vector<ToolboxUIElement*> MatchingWindows(const wchar_t *message, int argc, LPWSTR *argv);
-
-	static GW::Constants::MapID MatchMapPrefix(const wchar_t *map_name);
 
 	float cam_speed = DEFAULT_CAM_SPEED;
 	bool forward_fix_z = true;
