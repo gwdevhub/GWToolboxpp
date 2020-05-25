@@ -73,6 +73,11 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
 
     processes.clear();
 
+    if (settings.quiet && valid_processes.size() == 1 && charnames.size() == 1) {
+        *target_process = std::move(valid_processes[0]);
+        return InjectReply_Inject; // Inject if 1 process found
+    }
+
     InjectWindow inject;
     inject.Create();
 

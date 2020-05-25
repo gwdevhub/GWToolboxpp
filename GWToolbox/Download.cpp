@@ -14,7 +14,7 @@ public:
         , m_Window(window)
     {
     }
-
+    virtual ~DownloadStatusCallback(){};
 private:
     HWND m_hWnd;
     Window *m_Window;
@@ -186,8 +186,8 @@ static bool ParseRelease(std::string& json_text, Release *release)
         return false;
     }
 
-    release->tag_name = *it_tag_name;
-    release->body = *it_body;
+    release->tag_name = it_tag_name->get<std::string>();
+    release->body = it_body->get<std::string>();
 
     for (size_t i = 0; i < it_assets->size(); i++) {
         Json& entry = it_assets->at(i);
@@ -214,9 +214,9 @@ static bool ParseRelease(std::string& json_text, Release *release)
         }
 
         Asset asset;
-        asset.name = *it_name;
-        asset.size = *it_size;
-        asset.browser_download_url = *it_browser_download_url;
+        asset.name = it_name->get<std::string>();
+        asset.size = it_size->get<size_t>();
+        asset.browser_download_url = it_browser_download_url->get<std::string>();
 
         release->assets.emplace_back(std::move(asset));
     }

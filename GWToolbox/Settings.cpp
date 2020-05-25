@@ -19,7 +19,9 @@ void PrintUsage(bool terminate)
             "    /reinstall                 Do a fresh installation\n\n"
 
             "    /asadmin                   GWToolbox will try to run as admin\n"
-            "    /noupdate                  Won't try to update\n\n"
+            "    /noupdate                  Won't try to update\n"
+            "    /noinstall                 Won't try to install if missing\n"
+            "    /localdll                  Check launcher directory for toolbox dll, won't try to install or update\n\n"
 
             "    /pid <process id>          Process id of the target in which to inject\n"
             );
@@ -116,6 +118,12 @@ void ParseCommandLine()
             settings.noupdate = true;
         } else if (wcscmp(arg, L"/help") == 0) {
             settings.help = true;
+        } else if (wcscmp(arg, L"/noinstall") == 0) {
+            settings.noinstall = true;
+        } else if (wcscmp(arg, L"/localdll") == 0) {
+            settings.localdll = true;
+            settings.noupdate = true;
+            settings.noinstall = true;
         } else if (wcscmp(arg, L"/?") == 0) {
             settings.help = true;
         } else {

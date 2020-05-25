@@ -36,7 +36,9 @@ static bool InjectInstalledDllInProcess(Process *process)
     }
 
     wchar_t dllpath[MAX_PATH];
-    if (!GetInstallationLocation(dllpath, MAX_PATH)) {
+    if (settings.localdll) {
+        PathGetProgramDirectory(dllpath, MAX_PATH);
+    } else if (!GetInstallationLocation(dllpath, MAX_PATH)) {
         fprintf(stderr, "Couldn't find installation path\n");
         return false;
     }
@@ -97,7 +99,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
         }
     }
 
-    if (!IsInstalled()) {
+    if (!IsInstalled() && !settings.noinstall) {
         if (settings.quiet) {
             ShowError(L"Can't ask to install if started with '/quiet'");
             fprintf(stderr, "Can't ask to install if started with '/quiet'\n");

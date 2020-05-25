@@ -4,14 +4,16 @@
 
 struct Settings
 {
-    bool help;
-    bool version;
-    bool quiet;
-    bool install;
-    bool uninstall;
-    bool reinstall;
-    bool asadmin;
-    bool noupdate;
+    bool help = false;
+    bool version = false;
+    bool quiet = false;
+    bool install = false;
+    bool uninstall = false;
+    bool reinstall = false;
+    bool asadmin = false;
+    bool noupdate = false;
+    bool noinstall = false;
+    bool localdll = false;
     uint32_t pid;
 };
 
