@@ -258,7 +258,7 @@ void TBHotkey::Draw(Op *op)
         }
         ImGui::SameLine();
         if (ImGui::Button("Run", ImVec2(70.0f, 0.0f))) {
-            GW::GameThread::Enqueue([this]() { Execute(); });
+            Execute();
         }
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Execute the hotkey now");
@@ -832,7 +832,9 @@ void HotkeyAction::Execute()
     switch (action) {
         case HotkeyAction::OpenXunlaiChest:
             if (isOutpost()) {
-                GW::Items::OpenXunlaiWindow();
+                GW::GameThread::Enqueue([]() { 
+                    GW::Items::OpenXunlaiWindow();
+                    });
             }
             break;
         case HotkeyAction::OpenLockedChest: {

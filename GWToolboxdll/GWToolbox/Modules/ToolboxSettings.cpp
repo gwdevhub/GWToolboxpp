@@ -107,7 +107,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
         optional_modules.begin() + static_cast<int>(SettingsWindow::Instance().sep_windows),
         optional_modules.end(),
         [](const ToolboxModule* lhs, const ToolboxModule* rhs) {
-		    return std::string(lhs->SettingsName()).compare(rhs->SettingsName()) < 0u;
+		    return std::string(lhs->SettingsName()).compare(rhs->SettingsName()) < 0;
 		});
 
 	SettingsWindow::Instance().sep_widgets = optional_modules.size();
@@ -126,7 +126,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
         optional_modules.begin() + static_cast<int>(SettingsWindow::Instance().sep_widgets),
         optional_modules.end(),
         [](const ToolboxModule* lhs, const ToolboxModule* rhs) {
-		    return std::string(lhs->SettingsName()).compare(rhs->SettingsName()) < 0u;
+		    return std::string(lhs->SettingsName()).compare(rhs->SettingsName()) < 0;
 		});
 
 	// Only read settings of non-core modules
