@@ -49,6 +49,7 @@ public:
 
 	// Create hotkey, load from file if 'ini' is not null
 	TBHotkey(CSimpleIni* ini, const char* section);
+    virtual ~TBHotkey(){};
 
 	virtual void Save(CSimpleIni* ini, const char* section) const;
 

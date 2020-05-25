@@ -58,8 +58,8 @@ DWORD __stdcall SafeThreadEntry(LPVOID module) {
         ThreadEntry(nullptr);
     } __except ( EXCEPT_EXPRESSION_ENTRY ) {
         Log::Log("SafeThreadEntry __except body\n");
-        return EXIT_SUCCESS;
     }
+    return EXIT_SUCCESS;
 }
 
 DWORD __stdcall ThreadEntry(LPVOID) {

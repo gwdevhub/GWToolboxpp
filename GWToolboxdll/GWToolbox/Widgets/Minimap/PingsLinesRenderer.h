@@ -28,6 +28,7 @@ class PingsLinesRenderer : public VBuffer {
 	};
 	struct Ping {
 		Ping() : start(TIMER_INIT()) {}
+        virtual ~Ping(){};
 		clock_t start;
         int duration = 3000;
 		virtual float GetX() const = 0;

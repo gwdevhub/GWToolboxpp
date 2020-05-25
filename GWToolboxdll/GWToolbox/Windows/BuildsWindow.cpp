@@ -439,9 +439,8 @@ void BuildsWindow::Load(const char* tbuild_name, const char* build_name) {
 		Log::Error("Failed to find build for %s", build_name);
 		return;
 	}
-    for (auto& it : local_teambuilds) {
-        return Load(it.first, it.second);
-    }
+    const auto &teambuild_it = local_teambuilds.begin();
+    Load(teambuild_it->first, teambuild_it->second);
 }
 void BuildsWindow::LoadPcons(const TeamBuild& tbuild, unsigned int idx) {
     if (idx >= tbuild.builds.size()) return;
