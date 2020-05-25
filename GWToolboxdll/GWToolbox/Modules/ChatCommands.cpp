@@ -83,6 +83,57 @@ namespace {
 		GW::Guild* gh = GetCurrentGH();
 		return gh && gh == GetPlayerGH();
 	}
+    static void TargetNearest(uint32_t model_id = 0, uint32_t type = 0xDB)
+    {
+        // target nearest agent
+        GW::AgentArray agents = GW::Agents::GetAgentArray();
+        if (!agents.valid())
+            return;
+
+        GW::AgentLiving *me = GW::Agents::GetPlayerAsAgentLiving();
+        if (me == nullptr)
+            return;
+
+        float distance = GW::Constants::SqrRange::Compass;
+        size_t closest = (size_t)-1;
+
+        for (size_t i = 0, size = agents.size(); i < size; ++i) {
+            if (agents[i] == nullptr || agents[i] == me)
+                continue;
+            if (agents[i]->type != type)
+                continue;
+            if (model_id) {
+                if (type == 0x200) {
+					// Target gadget by gadget id
+                    GW::AgentGadget *gadget = agents[i]->GetAsAgentGadget();
+                    if (!gadget || gadget->gadget_id != model_id)
+                        continue;
+                } else if (type == 0x400) {
+                    // Target item by model id
+                    GW::AgentItem *item_agent = agents[i]->GetAsAgentItem();
+                    if (!item_agent)
+                        continue;
+                    GW::Item *item = GW::Items::GetItemById(item_agent->item_id);
+                    if (!item || item->model_id != model_id)
+						continue;
+                } else {
+					// Target agent by model id
+                    GW::AgentLiving *living_agent = agents[i]->GetAsAgentLiving();
+                    if (!living_agent || living_agent->player_number != model_id)
+						continue;
+				}
+            }
+            float newDistance =
+                GW::GetSquareDistance(me->pos, agents[i]->pos);
+            if (newDistance < distance) {
+                closest = i;
+                distance = newDistance;
+            }
+        }
+        if (closest != (size_t)-1) {
+            GW::Agents::ChangeTarget(agents[closest]);
+        }
+    }
 	bool ImInPresearing() { return GW::Map::GetCurrentMapInfo()->region == GW::Region_Presearing; }
 } // namespace
 
@@ -985,6 +1036,7 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
 		tan_angle *= 180.0f / pi;
 		return tan_angle;
 	};
+	uint32_t target_id = 0;
 	const float pi = 3.14159f;
 	std::wstring arg1 = GuiUtils::ToLower(argv[1]);
 	if (arg1 == L"ee") {
@@ -1052,31 +1104,7 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
 		}
 	}
 	else if (arg1 == L"closest" || arg1 == L"nearest") {
-		// target nearest agent
-		GW::AgentArray agents = GW::Agents::GetAgentArray();
-		if (!agents.valid()) return;
-
-		GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
-		if (me == nullptr) return;
-
-		float distance = GW::Constants::SqrRange::Compass;
-		size_t closest = (size_t)-1;
-
-		for (size_t i = 0, size = agents.size(); i < size; ++i) {
-			if (agents[i] == nullptr) continue;
-			GW::AgentLiving* agent = agents[i]->GetAsAgentLiving();
-			if (agent == nullptr) continue;
-			if (agent->player_number != me->player_number) {
-				float newDistance = GW::GetSquareDistance(me->pos, agents[i]->pos);
-				if (newDistance < distance) {
-					closest = i;
-					distance = newDistance;
-				}
-			}
-		}
-		if (closest != (size_t)-1) {
-			GW::Agents::ChangeTarget(agents[closest]);
-		}
+        TargetNearest(0, 0xDB);
 	} else if (arg1 == L"getid") {
 		GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
 		if (target == nullptr) {
@@ -1091,7 +1119,16 @@ void ChatCommands::CmdTarget(const wchar_t *message, int argc, LPWSTR *argv) {
 		} else {
 			Log::Info("Target coordinates are (%f, %f)", target->pos.x, target->pos.y);
 		}
-	} else {
+    } else if (arg1 == L"item" && argc > 2 &&
+               GuiUtils::ParseUInt(argv[2], &target_id)) {
+        TargetNearest(target_id, 0x400);
+    } else if (arg1 == L"gadget" && argc > 2 &&
+               GuiUtils::ParseUInt(argv[2], &target_id)) {
+        TargetNearest(target_id, 0x200);
+    } else if (argc == 2 &&
+               GuiUtils::ParseUInt(argv[1], &target_id)) {
+        TargetNearest(target_id, 0xDB);
+    } else {
 		const wchar_t *name = next_word(message);
 		GW::Player *target = GW::PlayerMgr::GetPlayerByName(name);
 		if (target != NULL) {

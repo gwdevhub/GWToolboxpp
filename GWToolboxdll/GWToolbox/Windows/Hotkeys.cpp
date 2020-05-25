@@ -864,39 +864,48 @@ void HotkeyAction::Execute()
 HotkeyTarget::HotkeyTarget(CSimpleIni *ini, const char *section)
     : TBHotkey(ini, section)
 {
-    id = static_cast<size_t>(ini->GetLongValue(section, "TargetID", 0));
-    strcpy_s(name, ini->GetValue(section, "TargetName", ""));
-    show_message_in_emote_channel = false; // don't print target hotkey to chat
-                                           // by default
-    if (ini) {
-        show_message_in_emote_channel =
-            ini->GetBoolValue(section, VAR_NAME(show_message_in_emote_channel),
-                              show_message_in_emote_channel);
-    }
+    // don't print target hotkey to chat by default
+    show_message_in_emote_channel = false;
+    name[0] = 0;
+    if (!ini)
+        return;
+    long ini_id = ini->GetLongValue(section, "TargetID", -1);
+    if (ini_id > 0)
+        id = static_cast<uint32_t>(ini_id);
+    long ini_type = ini->GetLongValue(section, "TargetType", -1);
+    if (ini_type >= HotkeyTargetType::NPC && ini_type < HotkeyTargetType::Count)
+        type = static_cast<HotkeyTargetType>(ini_type);
+    std::string ini_name = ini->GetValue(section, "TargetName", "");
+    strcpy_s(name, ini_name.substr(0, sizeof(name)-1).c_str());
+    name[sizeof(name)-1] = 0;
+    
+    ini->GetBoolValue(section, VAR_NAME(show_message_in_emote_channel),
+                        show_message_in_emote_channel);
 }
 void HotkeyTarget::Save(CSimpleIni *ini, const char *section) const
 {
     TBHotkey::Save(ini, section);
     ini->SetLongValue(section, "TargetID", static_cast<long>(id));
+    ini->SetLongValue(section, "TargetType", static_cast<long>(type));
     ini->SetValue(section, "TargetName", name);
 }
 void HotkeyTarget::Description(char *buf, size_t bufsz) const
 {
-    if (name[0] == '\0') {
-        snprintf(buf, bufsz, "Target #%d", id);
+    if (!name[0]) {
+        snprintf(buf, bufsz, "Target %s #%d", type_labels[type], id);
     } else {
         snprintf(buf, bufsz, "Target %s", name);
     }
 }
 void HotkeyTarget::Draw()
 {
-    if (ImGui::InputInt("Target ID", (int *)&id))
-        hotkeys_changed = true;
-    if (ImGui::InputText("Name", name, 140))
-        hotkeys_changed = true;
-    if (ImGui::Checkbox("Display message when triggered",
-                        &show_message_in_emote_channel))
-        hotkeys_changed = true;
+    ImGui::PushItemWidth(ImGui::GetWindowContentRegionWidth() / 3);
+    hotkeys_changed |= ImGui::Combo("Type", (int *)&type, type_labels, 3);
+    ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
+    hotkeys_changed |= ImGui::InputInt(identifier_labels[type], (int *)&id);
+    ImGui::PopItemWidth();
+    hotkeys_changed |= ImGui::InputText("Name", name, 140);
+    hotkeys_changed |= ImGui::Checkbox("Display message when triggered", &show_message_in_emote_channel);
 }
 void HotkeyTarget::Execute()
 {
@@ -905,10 +914,9 @@ void HotkeyTarget::Execute()
     if (id == 0)
         return;
 
-    GW::AgentArray agents = GW::Agents::GetAgentArray();
-    if (!agents.valid()) {
+    const GW::AgentArray& agents = GW::Agents::GetAgentArray();
+    if (!agents.valid())
         return;
-    }
 
     GW::Agent *me = agents[GW::Agents::GetPlayerId()];
     if (me == nullptr)
@@ -917,18 +925,32 @@ void HotkeyTarget::Execute()
     float distance = GW::Constants::SqrRange::Compass;
     size_t closest = (size_t)-1;
 
-    for (size_t i = 0; i < agents.size(); ++i) {
-        if (!agents[i])
+    for (size_t i = 0, size = agents.size();i < size; ++i) {
+        if (!agents[i] || agents[i]->type != types[type])
             continue;
-        GW::AgentLiving *agent = agents[i]->GetAsAgentLiving();
-        if (agent == nullptr)
-            continue;
-        if (agent->player_number == id && agent->hp > 0) {
-            float newDistance = GW::GetSquareDistance(me->pos, agents[i]->pos);
-            if (newDistance < distance) {
-                closest = i;
-                distance = newDistance;
-            }
+        switch (types[type]) {
+            case 0x400: {
+                GW::AgentItem *agent = agents[i]->GetAsAgentItem();
+                if (!agent) continue;
+                GW::Item *item = GW::Items::GetItemById(agent->item_id);
+                if (!item || item->model_id != id)
+                    continue;
+            } break;
+            case 0x200: {
+                GW::AgentGadget *agent = agents[i]->GetAsAgentGadget();
+                if (!agent || agent->gadget_id != id)
+                    continue;
+            } break;
+            default: {
+                GW::AgentLiving *agent = agents[i]->GetAsAgentLiving();
+                if (!agent || agent->player_number != id || agent->hp <= 0)
+                    continue;
+            } break;
+        }
+        float newDistance = GW::GetSquareDistance(me->pos, agents[i]->pos);
+        if (newDistance < distance) {
+            closest = i;
+            distance = newDistance;
         }
     }
     if (closest != (size_t)-1) {

@@ -217,10 +217,20 @@ public:
 // hotkey to target something in-game
 // it will target the closest agent with the given PlayerNumber (aka modelID)
 class HotkeyTarget : public TBHotkey {
+private:
+    const uint32_t types[3] = { 0xDB,0x200,0x400 };
+    const char *type_labels[3] = { "NPC", "Signpost", "Item" };
+    const char *identifier_labels[3] = { "Model ID", "Gadget ID", "Item ModelID" };
+    enum HotkeyTargetType : int
+    {
+        NPC,
+        Signpost,
+        Item,
+		Count
+    } type = HotkeyTargetType::NPC;
+    uint32_t id = 0;
+    char name[140];
 public:
-	UINT id = 0;
-	char name[140];
-
 	static const char* IniSection() { return "Target"; }
 	const char* Name() const override { return IniSection(); }
 
