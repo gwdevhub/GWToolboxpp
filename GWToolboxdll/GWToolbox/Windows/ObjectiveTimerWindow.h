@@ -2,6 +2,7 @@
 
 #include <Defines.h>
 
+#include <GWCA\Constants\Maps.h>
 #include <GWCA\Utilities\Hook.h>
 #include <GWCA\GameContainers\GamePos.h>
 #include <GWCA\Packets\StoC.h>
@@ -111,6 +112,8 @@ private:
         // todo: print to file
 		// an internal id to ensure interface consistency
 		const unsigned int ui_id = 0;
+
+        bool single_instance = true;
     private:
 
         static unsigned int cur_ui_id;
@@ -129,12 +132,16 @@ private:
     void AddDoAObjectiveSet(GW::Vec2f spawn);
     void AddFoWObjectiveSet();
     void AddUWObjectiveSet();
+    void AddSlaversObjectiveSet();
+    void AddDungeonObjectiveSet(int levels);
     void AddObjectiveSet(ObjectiveSet* os);
+    void HandleMapChange(GW::Constants::MapID map_id, bool start);
 	void DoorOpened(uint32_t door_id);
 	void DoorClosed(uint32_t door_id);
 	void DisplayDialogue(GW::Packet::StoC::DisplayDialogue* packet);
     void AddDeepObjectiveSet();
     void AddUrgozObjectiveSet();
+    void AddToPKObjectiveSet();
     void ClearObjectiveSets();
     
 
@@ -150,4 +157,6 @@ private:
 	GW::HookEntry MessageServer_Entry;
 	GW::HookEntry InstanceLoadInfo_Entry;
 	GW::HookEntry ManipulateMapObject_Entry;
+    GW::HookEntry DungeonReward_Entry;
+    GW::HookEntry CountdownStart_Enty;
 };

@@ -85,6 +85,63 @@ namespace {
 		L"\x533C\xDD33\xA330\x4E27", // Room 14 "I will fill your hearts with visions of horror and despair that will haunt you for all of your days."
 		L"\x533D\x9EB1\x8BEE\x2637"	 // Kanaxai "What gives you the right to enter my lair? I shall kill you for your audacity, after I destroy your mind with my horrifying visions, of course."
 	};
+
+    const std::map<GW::Constants::MapID, uint32_t> mapToDungeonLevel = {
+        {GW::Constants::MapID::Catacombs_of_Kathandrax_Level_1, 1},
+        {GW::Constants::MapID::Catacombs_of_Kathandrax_Level_2, 2},
+        {GW::Constants::MapID::Catacombs_of_Kathandrax_Level_3, 3},
+        {GW::Constants::MapID::Rragars_Menagerie_Level_1, 1},
+        {GW::Constants::MapID::Rragars_Menagerie_Level_2, 2},
+        {GW::Constants::MapID::Rragars_Menagerie_Level_3, 3},
+        {GW::Constants::MapID::Cathedral_of_Flames_Level_1, 1},
+        {GW::Constants::MapID::Cathedral_of_Flames_Level_2, 2},
+        {GW::Constants::MapID::Cathedral_of_Flames_Level_3, 3},
+        {GW::Constants::MapID::Ooze_Pit, 1},
+        {GW::Constants::MapID::Darkrime_Delves_Level_1, 1},
+        {GW::Constants::MapID::Darkrime_Delves_Level_2, 2},
+        {GW::Constants::MapID::Darkrime_Delves_Level_3, 3},
+        {GW::Constants::MapID::Frostmaws_Burrows_Level_1, 1},
+        {GW::Constants::MapID::Frostmaws_Burrows_Level_2, 2},
+        {GW::Constants::MapID::Frostmaws_Burrows_Level_3, 3},
+        {GW::Constants::MapID::Frostmaws_Burrows_Level_4, 4},
+        {GW::Constants::MapID::Frostmaws_Burrows_Level_5, 5},
+        {GW::Constants::MapID::Sepulchre_of_Dragrimmar_Level_1, 1},
+        {GW::Constants::MapID::Sepulchre_of_Dragrimmar_Level_2, 2},
+        {GW::Constants::MapID::Ravens_Point_Level_1, 1},
+        {GW::Constants::MapID::Ravens_Point_Level_2, 2},
+        {GW::Constants::MapID::Ravens_Point_Level_3, 3},
+        {GW::Constants::MapID::Vloxen_Excavations_Level_1, 1},
+        {GW::Constants::MapID::Vloxen_Excavations_Level_2, 2},
+        {GW::Constants::MapID::Vloxen_Excavations_Level_3, 3},
+        {GW::Constants::MapID::Bogroot_Growths_Level_1, 1},
+        {GW::Constants::MapID::Bogroot_Growths_Level_2, 2},
+        {GW::Constants::MapID::Bloodstone_Caves_Level_1, 1},
+        {GW::Constants::MapID::Bloodstone_Caves_Level_2, 2},
+        {GW::Constants::MapID::Bloodstone_Caves_Level_3, 3},
+        {GW::Constants::MapID::Shards_of_Orr_Level_1, 1},
+        {GW::Constants::MapID::Shards_of_Orr_Level_2, 2},
+        {GW::Constants::MapID::Shards_of_Orr_Level_3, 3},
+        {GW::Constants::MapID::Oolas_Lab_Level_1, 1},
+        {GW::Constants::MapID::Oolas_Lab_Level_2, 2},
+        {GW::Constants::MapID::Oolas_Lab_Level_3, 3},
+        {GW::Constants::MapID::Arachnis_Haunt_Level_1, 1},
+        {GW::Constants::MapID::Arachnis_Haunt_Level_2, 2},
+        {GW::Constants::MapID::Slavers_Exile_Level_1, 1},
+        {GW::Constants::MapID::Slavers_Exile_Level_2, 2},
+        {GW::Constants::MapID::Slavers_Exile_Level_3, 3},
+        {GW::Constants::MapID::Slavers_Exile_Level_4, 4},
+        {GW::Constants::MapID::Slavers_Exile_Level_5, 5},
+        {GW::Constants::MapID::Fronis_Irontoes_Lair_mission, 1},
+        {GW::Constants::MapID::Secret_Lair_of_the_Snowmen, 1},
+        {GW::Constants::MapID::Heart_of_the_Shiverpeaks_Level_1, 1},
+        {GW::Constants::MapID::Heart_of_the_Shiverpeaks_Level_2, 2},
+        {GW::Constants::MapID::Heart_of_the_Shiverpeaks_Level_3, 3},
+        {GW::Constants::MapID::The_Underworld_PvP, 1},
+        {GW::Constants::MapID::Scarred_Earth, 2},
+        {GW::Constants::MapID::The_Courtyard, 3},
+        {GW::Constants::MapID::The_Hall_of_Heroes, 4},
+    };
+
     void PrintTime(char* buf, size_t size, DWORD time, bool show_ms = true) {
         if (time == TIME_UNKNOWN) {
             GuiUtils::StrCopy(buf, "--:--", size);
@@ -99,9 +156,9 @@ namespace {
         }
     }
 
-	void AsyncGetMapName(char *buffer, size_t n) {
+	void AsyncGetMapName(char *buffer, size_t n, GW::Constants::MapID mapID = GW::Map::GetMapID()) {
 		static wchar_t enc_str[16];
-		GW::AreaInfo *info = GW::Map::GetCurrentMapInfo();
+		GW::AreaInfo *info = GW::Map::GetMapInfo(mapID);
 		if (!GW::UI::UInt32ToEncStr(info->name_id, enc_str, n)) {
 			buffer[0] = 0;
 			return;
@@ -129,9 +186,7 @@ void ObjectiveTimerWindow::Initialize() {
     ToolboxWindow::Initialize();
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&MessageServer_Entry, 
-        [this](GW::HookStatus* status, GW::Packet::StoC::MessageServer* packet) -> bool {
-            UNREFERENCED_PARAMETER(status);
-            UNREFERENCED_PARAMETER(packet);
+        [this](GW::HookStatus* , GW::Packet::StoC::MessageServer*) {
             uint32_t objective_id = 0; // Objective_id applicable for the check
             uint32_t msg_check = 0; // First encoded msg char to check for
             switch (GW::Map::GetMapID()) {
@@ -146,23 +201,23 @@ void ObjectiveTimerWindow::Initialize() {
             default:
                 break;
             }
-            if (!objective_id) return false;
+            if (!objective_id) return;
             GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
             if (!buff || !buff->valid() || !buff->size())
-                return true; // Message buffer empty!?
+                return; // Message buffer empty!?
             const wchar_t* msg = buff->begin();
             if (msg[0] != msg_check || (msg[5] != 0x2810 && msg[5] != 0x1488))
-                return false; // Not the right message            
+                return; // Not the right message            
             Objective* obj = GetCurrentObjective(objective_id);
             if (!obj || obj->IsDone())
-                return false; // Already done!?
+                return; // Already done!?
             obj->SetDone();
             // Cycle through all previous objectives and flag as done
             for (Objective& objective : current_objective_set->objectives) {
                 objective.SetDone();
             }
             current_objective_set->CheckSetDone();
-            return false;
+            return;
         });
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry,
 		[this](GW::HookStatus* status, GW::Packet::StoC::DisplayDialogue* packet) -> void {
@@ -179,68 +234,51 @@ void ObjectiveTimerWindow::Initialize() {
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry,
     [this](GW::HookStatus *, GW::Packet::StoC::GameSrvTransfer *packet) -> void {
-            UNREFERENCED_PARAMETER(packet);
-            if (current_objective_set)
-                current_objective_set->StopObjectives();
-            current_objective_set = nullptr;
-        });
+        HandleMapChange(static_cast<GW::Constants::MapID>(packet->map_id), false);
+    });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry, 
-        [this](GW::HookStatus* status, GW::Packet::StoC::InstanceLoadFile* packet) -> bool {
-            UNREFERENCED_PARAMETER(status);
+        [this](GW::HookStatus* , GW::Packet::StoC::InstanceLoadFile* packet) {
             if (packet->map_fileID == 219215)
                 AddDoAObjectiveSet(packet->spawn_point);
-            return false;
+            return;
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadInfo_Entry,
-        [this](GW::HookStatus* status, GW::Packet::StoC::InstanceLoadInfo* packet) -> bool {
-            UNREFERENCED_PARAMETER(status);
-			monitor_doors = false;
-            if (!packet->is_explorable)
-                return false;
-            switch (static_cast<GW::Constants::MapID>(packet->map_id)) {
-                case GW::Constants::MapID::Urgozs_Warren: 
-                    AddUrgozObjectiveSet(); break;
-                case GW::Constants::MapID::The_Deep: 
-                    AddDeepObjectiveSet(); break;
-                case GW::Constants::MapID::The_Fissure_of_Woe:
-                    AddFoWObjectiveSet(); break;
-                case GW::Constants::MapID::The_Underworld:
-                    AddUWObjectiveSet(); break;
-                default:
-                    break;
-            }
-            return false;
+        [this](GW::HookStatus* , GW::Packet::StoC::InstanceLoadInfo* packet) {
+            monitor_doors = false;
+            HandleMapChange(static_cast<GW::Constants::MapID>(packet->map_id), true);
         });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ManipulateMapObject>(&ManipulateMapObject_Entry,
-        [this](GW::HookStatus* status, GW::Packet::StoC::ManipulateMapObject* packet) -> bool {
-            UNREFERENCED_PARAMETER(status);
+        [this](GW::HookStatus* , GW::Packet::StoC::ManipulateMapObject* packet) {
             if (!monitor_doors || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
-                return false; // Door not open or not in explorable area
+                return; // Door not open or not in explorable area
 			if (packet->animation_type == 16)
 				DoorOpened(packet->object_id);
 			else
 				DoorClosed(packet->object_id);
-            return false;
         });
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveAdd>(&ObjectiveAdd_Entry,
-	    [this](GW::HookStatus* status, GW::Packet::StoC::ObjectiveAdd *packet) -> bool {
-            UNREFERENCED_PARAMETER(status);
-            UNREFERENCED_PARAMETER(packet);
-		    // type 12 is the "title" of the mission objective, should we ignore it or have a "title" objective ?
-		    /*
-		    Objective *obj = GetCurrentObjective(packet->objective_id);
-		    if (obj) return false;
-		    ObjectiveSet *os = objective_sets.back();
-		    os->objectives.emplace_back(packet->objective_id);
-		    obj = &os->objectives.back();
-		    GW::UI::AsyncDecodeStr(packet->name, obj->name, sizeof(obj->name));
-		    // If the name isn't "???" we consider that the objective started
-		    if (wcsncmp(packet->name, L"\x8102\x3236", 2))
-			    obj->SetStarted();
-		    */
-		    return false;
-	    });
+	[this](GW::HookStatus* , GW::Packet::StoC::ObjectiveAdd *) -> void {
+		// type 12 is the "title" of the mission objective, should we ignore it or have a "title" objective ?
+		/*
+		Objective *obj = GetCurrentObjective(packet->objective_id);
+		if (obj) return false;
+		ObjectiveSet *os = objective_sets.back();
+		os->objectives.emplace_back(packet->objective_id);
+		obj = &os->objectives.back();
+		GW::UI::AsyncDecodeStr(packet->name, obj->name, sizeof(obj->name));
+		// If the name isn't "???" we consider that the objective started
+		if (wcsncmp(packet->name, L"\x8102\x3236", 2))
+			obj->SetStarted();
+		*/
+	});
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DungeonReward>(&DungeonReward_Entry,
+    [this](GW::HookStatus* , GW::Packet::StoC::DungeonReward* ) -> void {
+        ObjectiveTimerWindow::ObjectiveSet* os = GetCurrentObjectiveSet();
+        if (!os) return;
+        os->objectives.back().SetDone();
+        os->CheckSetDone();
+    });
 
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveUpdateName>(&ObjectiveUpdateName_Entry,
 	    [this](GW::HookStatus *, GW::Packet::StoC::ObjectiveUpdateName* packet) -> void {
@@ -289,6 +327,28 @@ void ObjectiveTimerWindow::Initialize() {
             if (next && !next->IsStarted()) next->SetStarted();
         }
 	});
+
+    GW::StoC::RegisterPacketCallback(&CountdownStart_Enty, GAME_SMSG_INSTANCE_COUNTDOWN,
+        [this](GW::HookStatus*, GW::Packet::StoC::PacketBase*) -> void {
+            GW::AreaInfo* map = GW::Map::GetCurrentMapInfo();
+            if (!map) return;
+            if (map->type != GW::RegionType::RegionType_ExplorableZone) return;
+            auto level = mapToDungeonLevel.find(GW::Map::GetMapID());
+
+            switch (GW::Map::GetMapID()) {
+                case GW::Constants::MapID::The_Underworld_PvP:
+                case GW::Constants::MapID::Scarred_Earth:
+                case GW::Constants::MapID::The_Courtyard:
+                case GW::Constants::MapID::The_Hall_of_Heroes: {
+                    Objective *obj = GetCurrentObjective(level->second);
+                    if (obj)
+                        obj->SetDone();
+                    return;
+                } break;
+                default:
+                    return;
+            }
+        });
 }
 
 void ObjectiveTimerWindow::ObjectiveSet::StopObjectives() {
@@ -479,6 +539,95 @@ void ObjectiveTimerWindow::AddFoWObjectiveSet() {
 	os->objectives.emplace_back(319, "The Hunt");
     AddObjectiveSet(os);
 }
+
+void ObjectiveTimerWindow::HandleMapChange(GW::Constants::MapID map_id, bool start) {
+    auto dungeonLevel = mapToDungeonLevel.find(map_id);
+    bool isDungeon = dungeonLevel != mapToDungeonLevel.end();
+    bool isDungeonEntrance = isDungeon && dungeonLevel->second == 1; // used for transition between dungeons (HotS <-> Bogs)
+    if (!isDungeon || isDungeonEntrance) {
+        if (current_objective_set) {
+            current_objective_set->StopObjectives();
+        }
+        current_objective_set = nullptr;
+    };
+
+    switch (map_id) {
+        case GW::Constants::MapID::Urgozs_Warren:
+            if (start) AddUrgozObjectiveSet();
+            return;
+        case GW::Constants::MapID::The_Deep:
+            if (start) AddDeepObjectiveSet();
+            return;
+        case GW::Constants::MapID::The_Fissure_of_Woe:
+            if (start) AddFoWObjectiveSet();
+            return;
+        case GW::Constants::MapID::The_Underworld:
+            if (start) AddUWObjectiveSet();
+            return;
+        case GW::Constants::MapID::Slavers_Exile_Level_5:
+            if (start) AddSlaversObjectiveSet();
+            return;
+        case GW::Constants::MapID::Ooze_Pit:
+        case GW::Constants::MapID::Fronis_Irontoes_Lair_mission:
+        case GW::Constants::MapID::Secret_Lair_of_the_Snowmen:
+            if (start) AddDungeonObjectiveSet(1);
+            return;
+        case GW::Constants::MapID::Sepulchre_of_Dragrimmar_Level_1:
+        case GW::Constants::MapID::Bogroot_Growths_Level_1:
+        case GW::Constants::MapID::Arachnis_Haunt_Level_1:
+            if (start) AddDungeonObjectiveSet(2);
+            return;
+        case GW::Constants::MapID::Catacombs_of_Kathandrax_Level_1:
+        case GW::Constants::MapID::Rragars_Menagerie_Level_1:
+        case GW::Constants::MapID::Cathedral_of_Flames_Level_1:
+        case GW::Constants::MapID::Darkrime_Delves_Level_1:
+        case GW::Constants::MapID::Ravens_Point_Level_1:
+        case GW::Constants::MapID::Vloxen_Excavations_Level_1:
+        case GW::Constants::MapID::Bloodstone_Caves_Level_1:
+        case GW::Constants::MapID::Shards_of_Orr_Level_1:
+        case GW::Constants::MapID::Oolas_Lab_Level_1:
+        case GW::Constants::MapID::Heart_of_the_Shiverpeaks_Level_1:
+            if (start) AddDungeonObjectiveSet(3);
+            return;
+        case GW::Constants::MapID::Frostmaws_Burrows_Level_1:
+            if (start) AddDungeonObjectiveSet(5);
+            return;
+        case GW::Constants::MapID::The_Underworld_PvP:
+        {
+            GW::AreaInfo* info = GW::Map::GetCurrentMapInfo();
+            if (!info) return;
+            if (info->type != GW::RegionType::RegionType_ExplorableZone) return;
+            if (start) AddToPKObjectiveSet();
+            return;
+        }
+        default:
+            if (!isDungeon) return;
+            Objective* obj = GetCurrentObjective(start ? dungeonLevel->second : dungeonLevel->second - 1);
+            if (obj) {
+                if (start) {
+                    if (!obj->IsStarted()) obj->SetStarted();
+                } else {
+                    obj->SetDone();
+                }
+            }
+    }
+}
+
+void ObjectiveTimerWindow::AddDungeonObjectiveSet(int levels) {
+    ObjectiveSet* os = new ObjectiveSet;
+    os->single_instance = false;
+
+    for (int level = 1; level < levels + 1; ++level) {
+        char name[256];
+        snprintf(name, sizeof(name), "Level %d", level);
+        os->objectives.emplace_back(level, name);
+    }
+
+    ::AsyncGetMapName(os->name, sizeof(os->name));
+    os->objectives.front().SetStarted();
+    AddObjectiveSet(os);
+}
+
 void ObjectiveTimerWindow::AddObjectiveSet(ObjectiveSet* os) {
     for (auto cos : objective_sets) {
         cos.second->StopObjectives();
@@ -490,21 +639,45 @@ void ObjectiveTimerWindow::AddObjectiveSet(ObjectiveSet* os) {
     runs_dirty = true;
 }
 void ObjectiveTimerWindow::AddUWObjectiveSet() {
-	ObjectiveSet *os = new ObjectiveSet;
-	::AsyncGetMapName(os->name, sizeof(os->name));
-	os->objectives.emplace_back(146, "Chamber");
-	os->objectives.emplace_back(147, "Restore");
-	os->objectives.emplace_back(148, "Escort");
-	os->objectives.emplace_back(149, "UWG");
-	os->objectives.emplace_back(150, "Vale");
-	os->objectives.emplace_back(151, "Waste");
-	os->objectives.emplace_back(152, "Pits");
-	os->objectives.emplace_back(153, "Planes");
-	os->objectives.emplace_back(154, "Mnts");
-	os->objectives.emplace_back(155, "Pools");
-	os->objectives.emplace_back(157, "Dhuum");
+    ObjectiveSet* os = new ObjectiveSet;
+    ::AsyncGetMapName(os->name, sizeof(os->name));
+    os->objectives.emplace_back(146, "Chamber");
+    os->objectives.emplace_back(147, "Restore");
+    os->objectives.emplace_back(148, "Escort");
+    os->objectives.emplace_back(149, "UWG");
+    os->objectives.emplace_back(150, "Vale");
+    os->objectives.emplace_back(151, "Waste");
+    os->objectives.emplace_back(152, "Pits");
+    os->objectives.emplace_back(153, "Planes");
+    os->objectives.emplace_back(154, "Mnts");
+    os->objectives.emplace_back(155, "Pools");
+    os->objectives.emplace_back(157, "Dhuum");
     AddObjectiveSet(os);
 }
+
+void ObjectiveTimerWindow::AddSlaversObjectiveSet() {
+    ObjectiveSet* os = new ObjectiveSet;
+    ::AsyncGetMapName(os->name, sizeof(os->name));
+    os->objectives.emplace_back(5, "Duncan");
+    os->objectives.front().SetStarted();
+    AddObjectiveSet(os);
+}
+
+void ObjectiveTimerWindow::AddToPKObjectiveSet() {
+    ObjectiveSet* os = new ObjectiveSet;
+    os->single_instance = false;
+
+    // we could read out the name of the maps...
+    os->objectives.emplace_back(1, "The Underworld");
+    os->objectives.emplace_back(2, "Scarred Earth");
+    os->objectives.emplace_back(3, "The Courtyard");
+    os->objectives.emplace_back(4, "The Hall of Heroes");
+
+    ::AsyncGetMapName(os->name, sizeof(os->name), GW::Constants::MapID::Tomb_of_the_Primeval_Kings);
+    os->objectives.front().SetStarted();
+    AddObjectiveSet(os);
+}
+
 void ObjectiveTimerWindow::DisplayDialogue(GW::Packet::StoC::DisplayDialogue* packet) {
 	uint32_t objective_id = 0; // Which objective has just been STARTED?
 	switch (GW::Map::GetMapID()) {
@@ -551,7 +724,7 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9* pDevice) {
 		ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
 		if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
 			if (objective_sets.empty()) {
-				ImGui::Text("Enter DoA, FoW, UW, Deep or Urgoz to begin");
+				ImGui::Text("Enter DoA, FoW, UW, Deep, Urgoz or a Dungeon to begin");
 			}
 			else {
 				for (auto it = objective_sets.rbegin(); it != objective_sets.rend(); it++) {
@@ -861,7 +1034,21 @@ void ObjectiveTimerWindow::ObjectiveSet::Update() {
     if (!active) return;
 
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
-        instance_time = GW::Map::GetInstanceTime();
+        if (single_instance) {
+            instance_time = GW::Map::GetInstanceTime();
+        } else {
+            instance_time = 0;
+            for (Objective& obj : objectives) {
+                if (!obj.IsStarted()) continue;
+                if (obj.IsDone()) {
+                    instance_time += obj.duration;
+                }
+                else {
+                    instance_time += GW::Map::GetInstanceTime() - obj.start;
+                }
+            }
+        }
+        PrintTime(cached_time, sizeof(cached_time), instance_time, false);
     }
 
     for (Objective& obj : objectives) {
@@ -894,6 +1081,7 @@ ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::ObjectiveSet::FromJson
     std::string name = json->at("name").get<std::string>();
     snprintf(os->name, sizeof(os->name), "%s", name.c_str());
     os->instance_time = json->at("instance_start").get<DWORD>();
+    PrintTime(os->cached_time, sizeof(cached_time), os->instance_time, false);
     nlohmann::json json_objs = json->at("objectives");
     for (nlohmann::json::iterator it = json_objs.begin(); it != json_objs.end(); ++it) {
         nlohmann::json o = it.value();
@@ -964,7 +1152,6 @@ bool ObjectiveTimerWindow::ObjectiveSet::Draw() {
         }
         snprintf(&cached_start[cached_str_offset], sizeof(cached_start) - cached_str_offset, "%02d:%02d - ", timeinfo.tm_hour, timeinfo.tm_min);
     }
-    PrintTime(cached_time, sizeof(cached_time), instance_time, false);
 
     sprintf(buf, "%s%s - %s%s###header%u", show_start_date_time ? cached_start : "", name, cached_time, failed ? " [Failed]" : "", ui_id);
 
