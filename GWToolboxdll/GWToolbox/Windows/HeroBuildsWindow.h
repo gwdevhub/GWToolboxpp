@@ -23,13 +23,14 @@ private:
 	// 0 for 'no hero', 
 	// and 1+ for heroes, order is in HeroIndexToID array
 	struct HeroBuild {
-		HeroBuild(const char* n, const char* c, int index = -1) : hero_index(index) {
+        HeroBuild(const char* n, const char* c, int index = -1, int panel = 0) : hero_index(index), show_panel(panel) {
 			GuiUtils::StrCopy(name, n, sizeof(name));
 			GuiUtils::StrCopy(code, c, sizeof(code));
 		}
 		char name[128];
 		char code[128];
-		int  hero_index;
+		int hero_index;
+        int show_panel = 0;
 	};
 
 	struct TeamHeroBuild {
@@ -47,6 +48,9 @@ private:
 
 	HeroBuildsWindow() {};
 	~HeroBuildsWindow();
+
+	GW::Constants::InstanceType last_instance_type = GW::Constants::InstanceType::Loading;
+
 public:
 	static HeroBuildsWindow& Instance() {
 		static HeroBuildsWindow instance;
@@ -102,11 +106,14 @@ private:
 		} stage = Add;
 		char code[128];
 		size_t party_hero_index = 0xFFFFFFFF;
-		GW::Constants::HeroID heroid = GW::Constants::HeroID::NoHero;
+        GW::Constants::HeroID heroid = GW::Constants::HeroID::NoHero;
+        int show_panel = 0;
 		clock_t started = 0;
-		CodeOnHero(const char* c = "", GW::Constants::HeroID i = GW::Constants::HeroID::NoHero) {
+        CodeOnHero(const char *c = "", GW::Constants::HeroID i = GW::Constants::HeroID::NoHero, int _show_panel = 0)
+            : heroid(i)
+            , show_panel(_show_panel)
+        {
 			snprintf(code, 128, "%s", c);
-			heroid = i;
 		}
 		// True when processing is done
 		bool Process();
