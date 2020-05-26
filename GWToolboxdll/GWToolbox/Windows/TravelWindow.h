@@ -22,6 +22,7 @@ public:
 	const char* Name() const override { return "Travel"; }
 
 	void Initialize() override;
+    void Terminate() override;
 
 	bool TravelFavorite(unsigned int idx);
 	bool IsMapUnlocked(GW::Constants::MapID map_id);
@@ -68,6 +69,8 @@ private:
 
 	bool map_travel_countdown_started = false;
 	bool pending_map_travel = false;
+
+    IDirect3DTexture9 *scroll_texture = nullptr;
 
     /* Not used, but good to keep for reference!
     enum error_message_ids {

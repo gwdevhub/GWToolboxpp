@@ -41,6 +41,12 @@ void TravelWindow::Initialize() {
 	district = GW::Constants::District::Current;
 	district_number = 0;
 }
+void TravelWindow::Terminate() {
+    ToolboxWindow::Terminate();
+    if (scroll_texture)
+        scroll_texture->Release();
+    scroll_texture = nullptr;
+}
 
 void TravelWindow::TravelButton(const char* text, int x_idx, GW::Constants::MapID mapid) {
 	if (x_idx != 0) ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);

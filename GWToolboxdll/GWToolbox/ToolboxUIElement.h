@@ -6,12 +6,18 @@
 
 class ToolboxUIElement : public ToolboxModule {
 public:
+    virtual ~ToolboxUIElement() {
+        Terminate();
+	}
+
 	// Draw user interface. Will be called every frame if the element is visible
 	virtual void Draw(IDirect3DDevice9*) {};
 
 	virtual void Initialize() override;
 	virtual void Terminate() override {
-		if (button_texture) button_texture->Release();
+		if (button_texture) 
+			button_texture->Release();
+        button_texture = nullptr;
 	}
 
 	virtual void LoadSettings(CSimpleIni* ini) override;
@@ -49,5 +55,4 @@ protected:
 
 	void ShowVisibleRadio();
 	IDirect3DTexture9* button_texture = nullptr;
-    IDirect3DTexture9 *scroll_texture = nullptr;
 };

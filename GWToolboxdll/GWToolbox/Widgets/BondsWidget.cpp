@@ -59,6 +59,7 @@ void BondsWidget::Initialize() {
 }
 
 void BondsWidget::Terminate() {
+    ToolboxWidget::Terminate();
 	for (int i = 0; i < MAX_BONDS; ++i) {
 		if (textures[i]) {
 			textures[i]->Release();

@@ -35,7 +35,10 @@ class MaterialsWindow : public ToolboxWindow {
 	};
 
 	MaterialsWindow() {};
-	~MaterialsWindow() {};
+    ~MaterialsWindow()
+    {
+        Terminate();
+	};
 public:
 	static MaterialsWindow& Instance() {
 		static MaterialsWindow instance;

@@ -431,10 +431,6 @@ void DailyQuests::Initialize() {
         GW::Chat::SendChat('/', "nicholas tomorrow");
     });
 }
-void DailyQuests::Terminate() {
-    ToolboxModule::Terminate();
-    
-}
 bool checked_subscriptions = false;
 time_t start_time;
 void DailyQuests::Update(float delta) {

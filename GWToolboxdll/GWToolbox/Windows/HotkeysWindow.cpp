@@ -21,6 +21,7 @@ void HotkeysWindow::Initialize() {
 	dropCoinsTimer = TIMER_INIT();
 }
 void HotkeysWindow::Terminate() {
+    ToolboxWindow::Terminate();
 	for (TBHotkey* hotkey : hotkeys) {
 		delete hotkey;
 	}

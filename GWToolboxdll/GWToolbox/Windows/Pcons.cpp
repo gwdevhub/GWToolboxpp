@@ -94,6 +94,7 @@ Pcon::~Pcon() {
         delete c.second;
     }
     settings_by_charname.clear();
+    Terminate();
 }
 // Resets pcon counters so it needs to recalc number and refill.
 void Pcon::ResetCounts() {
@@ -165,6 +166,12 @@ void Pcon::Draw(IDirect3DDevice9* device) {
 void Pcon::Initialize() {
 	Resources::Instance().LoadTextureAsync(&texture, Resources::GetPath(L"img/pcons", filename), res_id);
 }
+void Pcon::Terminate() {
+    if (texture)
+        texture->Release();
+    texture = nullptr;
+}
+
 void Pcon::Update(int delay) {
 	if (mapid != GW::Map::GetMapID() || maptype != GW::Map::GetInstanceType()) { // Map changed; reset vars
 		mapid = GW::Map::GetMapID();

@@ -59,6 +59,8 @@ protected:
 	uint32_t pending_move_to_quantity = 0;
 public:
 	void Initialize();
+    void Terminate();
+
 	virtual void Draw(IDirect3DDevice9* device);
 	virtual void Update(int delay = -1);
 	// Similar to GW::Items::MoveItem, except this returns amount moved and uses the split stack header when needed.

@@ -23,7 +23,6 @@ public:
     const char* Name() const override { return "Daily Quests"; }
 
     void Initialize() override;
-    void Terminate() override;
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;

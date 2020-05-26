@@ -186,6 +186,7 @@ void MaterialsWindow::Initialize() {
 }
 
 void MaterialsWindow::Terminate() {
+    ToolboxWindow::Terminate();
 	if (tex_essence) tex_essence->Release(); tex_essence = nullptr;
 	if (tex_grail) tex_grail->Release(); tex_grail = nullptr;
 	if (tex_armor) tex_armor->Release(); tex_armor = nullptr;

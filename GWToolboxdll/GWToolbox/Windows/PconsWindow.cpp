@@ -142,6 +142,13 @@ void PconsWindow::Initialize() {
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::VanquishComplete>(&VanquishComplete_Entry, &OnVanquishComplete);
     GW::Chat::CreateCommand(L"pcons", &CmdPcons);
 }
+void PconsWindow::Terminate()
+{
+    ToolboxWindow::Terminate();
+    for (Pcon *pcon : pcons) {
+        pcon->Terminate();
+    }
+}
 void PconsWindow::OnAddExternalBond(GW::HookStatus *status, GW::Packet::StoC::AddExternalBond *pak) 
 {
     if (PconAlcohol::suppress_lunar_skills &&
