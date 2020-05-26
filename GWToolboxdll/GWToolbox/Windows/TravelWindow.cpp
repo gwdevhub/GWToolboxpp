@@ -37,7 +37,7 @@ namespace {
 void TravelWindow::Initialize() {
 	ToolboxWindow::Initialize();
 	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"airplane.png"), IDB_Icon_Airplane);
-
+    Resources::Instance().LoadTextureAsync(&scroll_texture, Resources::GetPath(L"img/materials", L"Scroll_of_Resurrection.png"), IDB_Mat_ResScroll);
 	district = GW::Constants::District::Current;
 	district_number = 0;
 }
@@ -45,7 +45,17 @@ void TravelWindow::Initialize() {
 void TravelWindow::TravelButton(const char* text, int x_idx, GW::Constants::MapID mapid) {
 	if (x_idx != 0) ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
 	float w = (ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().ItemInnerSpacing.x) / 2;
-	if (ImGui::Button(text, ImVec2(w, 0))) {
+    bool clicked = false;
+    switch (mapid) {
+        case GW::Constants::MapID::The_Deep:
+        case GW::Constants::MapID::Urgozs_Warren:
+            clicked |= ImGui::IconButton(text, (ImTextureID) scroll_texture, ImVec2(w, 0));
+			break;
+        default:
+            clicked |= ImGui::Button(text, ImVec2(w, 0));
+			break;
+	}
+    if (clicked) {
 		Travel(mapid, district, district_number);
 		if (close_on_travel) visible = false;
 	}

@@ -49,4 +49,5 @@ protected:
 
 	void ShowVisibleRadio();
 	IDirect3DTexture9* button_texture = nullptr;
+    IDirect3DTexture9 *scroll_texture = nullptr;
 };

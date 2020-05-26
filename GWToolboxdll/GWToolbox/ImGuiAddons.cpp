@@ -11,7 +11,23 @@ void ImGui::ShowHelp(const char* help) {
 		ImGui::SetTooltip(help);
 	}
 }
+bool ImGui::IconButton(const char *label, ImTextureID icon, const ImVec2& size)
+{
+    const ImVec2& pos = ImGui::GetCursorScreenPos();
+    const ImVec2 &textsize = ImGui::CalcTextSize(label);
+    bool clicked = ImGui::Button("", size);
 
+    const ImVec2& button_size = ImGui::GetItemRectSize();
+    const float img_size = icon ? button_size.y : 0;
+    const ImGuiStyle &style = ImGui::GetStyle();
+    const float img_x = pos.x + (button_size.x - img_size - textsize.x) / 2;
+    const float text_x = img_x + img_size;
+    if (img_size)
+        ImGui::GetWindowDrawList()->AddImage(icon, ImVec2(img_x, pos.y), ImVec2(img_x + img_size, pos.y + img_size));
+    if (label)
+        ImGui::GetWindowDrawList()->AddText(ImVec2(text_x, pos.y + style.ItemSpacing.y / 2), ImColor(ImGui::GetStyle().Colors[ImGuiCol_Text]), label);
+    return clicked;
+}
 bool ImGui::MyCombo(const char* label, const char* preview_text, int* current_item, bool(*items_getter)(void*, int, const char**), 
 	void* data, int items_count, int height_in_items) {
 

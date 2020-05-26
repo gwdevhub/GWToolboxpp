@@ -8,4 +8,6 @@ namespace ImGui {
 
 	IMGUI_API bool MyCombo(const char* label, const char* preview_text, int* current_item, 
 		bool(*items_getter)(void* data, int idx, const char** out_text), void* data, int items_count, int height_in_items = -1);
+
+	IMGUI_API bool IconButton(const char *str_id, ImTextureID user_texture_id, const ImVec2 &size);
 }
