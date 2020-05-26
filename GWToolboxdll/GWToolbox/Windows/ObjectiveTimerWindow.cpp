@@ -5,8 +5,10 @@
 #include <imgui_internal.h>
 
 #include <GWCA\Constants\Constants.h>
+
 #include <GWCA\GameContainers\Array.h>
 #include <GWCA\GameContainers\GamePos.h>
+
 #include <GWCA\Packets\StoC.h>
 
 #include <GWCA\GameEntities\Map.h>
@@ -61,7 +63,7 @@ namespace {
         return 0;
     }
 	// Hex values matching the first char of Kanaxai's dialogs in each room.
-	enum kanaxai_room_dialogs {
+	const enum kanaxai_room_dialogs {
 		Room5 = 0x5336,
 		Room6,
 		Room8,
@@ -71,20 +73,28 @@ namespace {
 		Room14,
 		Room15
 	};
-	const wchar_t* kanaxai_dialogs[] = {
-		// Room 1-4 no dialog
-		L"\x5336\xBEB8\x8555\x7267", // Room 5 "Fear not the darkness. It is already within you."
-		L"\x5337\xAA3A\xE96F\x3E34", // Room 6 "Is it comforting to know the source of your fears? Or do you fear more now that you see them in front of you."
-		// Room 7 no dialog
-		L"\x5338\xFD69\xA162\x3A04", // Room 8 "Even if you banish me from your sight, I will remain in your mind."
-		// Room 9 no dialog
-		L"\x5339\xA7BA\xC67B\x5D81", // Room 10 "You mortals may be here to defeat me, but acknowledging my presence only makes the nightmare grow stronger."
-		// Room 11 no dialog
-		L"\x533A\xED06\x815D\x5FFB", // Room 12 "So, you have passed through the depths of the Jade Sea, and into the nightmare realm. It is too bad that I must send you back from whence you came."
-		L"\x533B\xCAA6\xFDA9\x3277", // Room 13 "I am Kanaxai, creator of nightmares. Let me make yours into reality."
-		L"\x533C\xDD33\xA330\x4E27", // Room 14 "I will fill your hearts with visions of horror and despair that will haunt you for all of your days."
-		L"\x533D\x9EB1\x8BEE\x2637"	 // Kanaxai "What gives you the right to enter my lair? I shall kill you for your audacity, after I destroy your mind with my horrifying visions, of course."
-	};
+    const enum RoomID {
+        // object_id's for doors opening.
+        Deep_room_1_first = 12669,  // Room 1 Complete = Room 5 open
+        Deep_room_1_second = 11692, // Room 1 Complete = Room 5 open
+        Deep_room_2_first = 54552,  // Room 2 Complete = Room 5 open
+        Deep_room_2_second = 1760,  // Room 2 Complete = Room 5 open
+        Deep_room_3_first = 45425,  // Room 3 Complete = Room 5 open
+        Deep_room_3_second = 48290, // Room 3 Complete = Room 5 open
+        Deep_room_4_first = 40330,  // Room 4 Complete = Room 5 open
+        Deep_room_4_second = 60114, // Room 4 Complete = Room 5 open
+        Deep_room_5 = 29594,        // Room 5 Complete = Room 1,2,3,4,6 open
+        Deep_room_6 = 49742,        // Room 6 Complete = Room 7 open
+        Deep_room_7 = 55680,        // Room 7 Complete = Room 8 open
+        // NOTE: Room 8 (failure) to room 10 (scorpion), no door.
+        Deep_room_9 = 99887,  // Trigger on leviathan?
+        Deep_room_10 = 99888, // Generic room id for room 10 (dialog used to start)
+        Deep_room_11 = 29320, // Room 11 door is always open. Use to START room 11 when it comes into range.
+        Deep_room_12 = 99990, // Generic room id for room 12 (dialog used to start)
+        Deep_room_13 = 99991, // Generic room id for room 13 (dialog used to start)
+        Deep_room_14 = 99992, // Generic room id for room 13 (dialog used to start)
+        Deep_room_15 = 99993  // Generic room id for room 15 (dialog used to start)
+    };
     void PrintTime(char* buf, size_t size, DWORD time, bool show_ms = true) {
         if (time == TIME_UNKNOWN) {
             GuiUtils::StrCopy(buf, "--:--", size);
@@ -128,167 +138,169 @@ namespace {
 void ObjectiveTimerWindow::Initialize() {
     ToolboxWindow::Initialize();
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&MessageServer_Entry, 
-        [this](GW::HookStatus* status, GW::Packet::StoC::MessageServer* packet) -> bool {
-            UNREFERENCED_PARAMETER(status);
-            UNREFERENCED_PARAMETER(packet);
-            uint32_t objective_id = 0; // Objective_id applicable for the check
-            uint32_t msg_check = 0; // First encoded msg char to check for
-            switch (GW::Map::GetMapID()) {
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&MessageServer_Entry, &OnMessageServer);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry, &OnDisplayDialogue);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyDefeated>(&PartyDefeated_Entry, &StopObjectives);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry, &StopObjectives);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry, &OnInstanceLoad);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadInfo_Entry, &OnInstanceLoad);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ManipulateMapObject>(&ManipulateMapObject_Entry,&OnManipulateMapObject);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveUpdateName>(&ObjectiveUpdateName_Entry, &OnUpdateObjectiveName);
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveDone>(&ObjectiveDone_Entry, &OnObjectiveDone);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentUpdateAllegiance>(&AgentUpdateAllegiance_Entry, &OnAgentUpdateAllegiance);
+	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DoACompleteZone>(&DoACompleteZone_Entry, &OnDoACompleteZone);
+
+    	/*GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveAdd>(&ObjectiveAdd_Entry,
+    [this](GW::HookStatus* status, GW::Packet::StoC::ObjectiveAdd *packet) -> bool {
+        UNREFERENCED_PARAMETER(status);
+        UNREFERENCED_PARAMETER(packet);
+        // type 12 is the "title" of the mission objective, should we ignore it or have a "title" objective ?
+        /*
+        Objective *obj = GetCurrentObjective(packet->objective_id);
+        if (obj) return false;
+        ObjectiveSet *os = objective_sets.back();
+        os->objectives.emplace_back(packet->objective_id);
+        obj = &os->objectives.back();
+        GW::UI::AsyncDecodeStr(packet->name, obj->name, sizeof(obj->name));
+        // If the name isn't "???" we consider that the objective started
+        if (wcsncmp(packet->name, L"\x8102\x3236", 2))
+            obj->SetStarted();
+
+        return false;
+    });*/
+}
+void ObjectiveTimerWindow::OnAgentUpdateAllegiance(GW::HookStatus *, GW::Packet::StoC::AgentUpdateAllegiance *packet)
+{
+    if (GW::Map::GetMapID() != GW::Constants::MapID::The_Underworld)
+        return;
+    if (packet->allegiance_bits != 0x6D6F6E31)
+        return;
+    const GW::AgentLiving *agent = static_cast<GW::AgentLiving *>(GW::Agents::GetAgentByID(packet->agent_id));
+    if (!agent || !agent->GetIsLivingType())
+        return;
+    if (agent->player_number != GW::Constants::ModelID::UW::Dhuum)
+        return;
+    Objective *obj = Instance().GetCurrentObjective(157);
+    if (obj && !obj->IsStarted())
+        obj->SetStarted();
+}
+void ObjectiveTimerWindow::OnObjectiveDone(GW::HookStatus *, GW::Packet::StoC::ObjectiveDone *packet)
+{
+    auto &instance = Instance();
+    Objective *obj = instance.GetCurrentObjective(packet->objective_id);
+    if (!obj)
+        return;
+    obj->SetDone();
+    instance.objective_sets.rbegin()->second->CheckSetDone();
+}
+void ObjectiveTimerWindow::OnUpdateObjectiveName(GW::HookStatus *, GW::Packet::StoC::ObjectiveUpdateName *packet)
+{
+    Objective *obj = Instance().GetCurrentObjective(packet->objective_id);
+    if (obj)
+        obj->SetStarted();
+}
+void ObjectiveTimerWindow::OnManipulateMapObject(GW::HookStatus *, GW::Packet::StoC::ManipulateMapObject *packet)
+{
+    auto &instance = Instance();
+    if (!instance.monitor_doors || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
+        return; // Door not open or not in explorable area
+    if (packet->animation_type == 16)
+        instance.DoorOpened(packet->object_id);
+    /*else
+        instance.DoorClosed(packet->object_id);*/
+}
+void ObjectiveTimerWindow::OnInstanceLoad(GW::HookStatus *, GW::Packet::StoC::PacketBase *pak)
+{
+    auto &instance = Instance();
+    instance.monitor_doors = false;
+    if (pak->header == GW::Packet::StoC::InstanceLoadFile::STATIC_HEADER) {
+        const GW::Packet::StoC::InstanceLoadFile *packet = static_cast<GW::Packet::StoC::InstanceLoadFile *>(pak);
+        if (packet->map_fileID == 219215)
+            instance.AddDoAObjectiveSet(packet->spawn_point);
+    }
+    if (pak->header == GW::Packet::StoC::InstanceLoadInfo::STATIC_HEADER) {
+        const GW::Packet::StoC::InstanceLoadInfo *packet = static_cast<GW::Packet::StoC::InstanceLoadInfo *>(pak);
+        if (!packet->is_explorable)
+            return;
+        switch (static_cast<GW::Constants::MapID>(packet->map_id)) {
             case GW::Constants::MapID::Urgozs_Warren:
-                msg_check = 0x6C9C; // Gained 10,000 or 5,000 Kurzick faction in Urgoz Warren - get Urgoz objective.
-                objective_id = 15529;
+                instance.AddUrgozObjectiveSet();
                 break;
             case GW::Constants::MapID::The_Deep:
-                msg_check = 0x6D4D;  // Gained 10,000 or 5,000 Luxon faction in Deep - get Kanaxai objective.
-				objective_id = RoomID::Deep_room_15;
+                instance.AddDeepObjectiveSet();
+                break;
+            case GW::Constants::MapID::The_Fissure_of_Woe:
+                instance.AddFoWObjectiveSet();
+                break;
+            case GW::Constants::MapID::The_Underworld:
+                instance.AddUWObjectiveSet();
                 break;
             default:
                 break;
-            }
-            if (!objective_id) return false;
-            GW::Array<wchar_t>* buff = &GW::GameContext::instance()->world->message_buff;
-            if (!buff || !buff->valid() || !buff->size())
-                return true; // Message buffer empty!?
-            const wchar_t* msg = buff->begin();
-            if (msg[0] != msg_check || (msg[5] != 0x2810 && msg[5] != 0x1488))
-                return false; // Not the right message            
-            Objective* obj = GetCurrentObjective(objective_id);
-            if (!obj || obj->IsDone())
-                return false; // Already done!?
-            obj->SetDone();
-            // Cycle through all previous objectives and flag as done
-            for (Objective& objective : current_objective_set->objectives) {
-                objective.SetDone();
-            }
-            current_objective_set->CheckSetDone();
-            return false;
-        });
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry,
-		[this](GW::HookStatus* status, GW::Packet::StoC::DisplayDialogue* packet) -> void {
-            UNREFERENCED_PARAMETER(status);
-			DisplayDialogue(packet);
-		});
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyDefeated>(&PartyDefeated_Entry,
-        [this](GW::HookStatus* status, GW::Packet::StoC::PartyDefeated* packet) -> void {
-            UNREFERENCED_PARAMETER(status);
-            UNREFERENCED_PARAMETER(packet);
-            if (current_objective_set)
-                current_objective_set->StopObjectives();
-        });
-
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry,
-    [this](GW::HookStatus *, GW::Packet::StoC::GameSrvTransfer *packet) -> void {
-            UNREFERENCED_PARAMETER(packet);
-            if (current_objective_set)
-                current_objective_set->StopObjectives();
-            current_objective_set = nullptr;
-        });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry, 
-        [this](GW::HookStatus* status, GW::Packet::StoC::InstanceLoadFile* packet) -> bool {
-            UNREFERENCED_PARAMETER(status);
-            if (packet->map_fileID == 219215)
-                AddDoAObjectiveSet(packet->spawn_point);
-            return false;
-        });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadInfo_Entry,
-        [this](GW::HookStatus* status, GW::Packet::StoC::InstanceLoadInfo* packet) -> bool {
-            UNREFERENCED_PARAMETER(status);
-			monitor_doors = false;
-            if (!packet->is_explorable)
-                return false;
-            switch (static_cast<GW::Constants::MapID>(packet->map_id)) {
-                case GW::Constants::MapID::Urgozs_Warren: 
-                    AddUrgozObjectiveSet(); break;
-                case GW::Constants::MapID::The_Deep: 
-                    AddDeepObjectiveSet(); break;
-                case GW::Constants::MapID::The_Fissure_of_Woe:
-                    AddFoWObjectiveSet(); break;
-                case GW::Constants::MapID::The_Underworld:
-                    AddUWObjectiveSet(); break;
-                default:
-                    break;
-            }
-            return false;
-        });
-
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ManipulateMapObject>(&ManipulateMapObject_Entry,
-        [this](GW::HookStatus* status, GW::Packet::StoC::ManipulateMapObject* packet) -> bool {
-            UNREFERENCED_PARAMETER(status);
-            if (!monitor_doors || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
-                return false; // Door not open or not in explorable area
-			if (packet->animation_type == 16)
-				DoorOpened(packet->object_id);
-			else
-				DoorClosed(packet->object_id);
-            return false;
-        });
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveAdd>(&ObjectiveAdd_Entry,
-	    [this](GW::HookStatus* status, GW::Packet::StoC::ObjectiveAdd *packet) -> bool {
-            UNREFERENCED_PARAMETER(status);
-            UNREFERENCED_PARAMETER(packet);
-		    // type 12 is the "title" of the mission objective, should we ignore it or have a "title" objective ?
-		    /*
-		    Objective *obj = GetCurrentObjective(packet->objective_id);
-		    if (obj) return false;
-		    ObjectiveSet *os = objective_sets.back();
-		    os->objectives.emplace_back(packet->objective_id);
-		    obj = &os->objectives.back();
-		    GW::UI::AsyncDecodeStr(packet->name, obj->name, sizeof(obj->name));
-		    // If the name isn't "???" we consider that the objective started
-		    if (wcsncmp(packet->name, L"\x8102\x3236", 2))
-			    obj->SetStarted();
-		    */
-		    return false;
-	    });
-
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveUpdateName>(&ObjectiveUpdateName_Entry,
-	    [this](GW::HookStatus *, GW::Packet::StoC::ObjectiveUpdateName* packet) -> void {
-		    Objective *obj = GetCurrentObjective(packet->objective_id);
-            if (obj) obj->SetStarted();
-	    });
-	
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveDone>(&ObjectiveDone_Entry,
-	[this](GW::HookStatus *, GW::Packet::StoC::ObjectiveDone* packet) -> void {
-		Objective *obj = GetCurrentObjective(packet->objective_id);
-        if (obj) {
-            obj->SetDone();
-            objective_sets.rbegin()->second->CheckSetDone();
         }
-	});
+    }
+}
+void ObjectiveTimerWindow::OnDoACompleteZone(GW::HookStatus *,GW::Packet::StoC::DoACompleteZone *packet) {
+    if (packet->message[0] != 0x8101)
+        return;
+    auto &instance = Instance();
+    if (instance.objective_sets.empty())
+        return;
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentUpdateAllegiance>(&AgentUpdateAllegiance_Entry,
-        [this](GW::HookStatus *, GW::Packet::StoC::AgentUpdateAllegiance* packet) -> void {
-        if (GW::Map::GetMapID() != GW::Constants::MapID::The_Underworld) return;
-
-        GW::Agent* ag = GW::Agents::GetAgentByID(packet->agent_id);
-        if (ag == nullptr) return;
-        const GW::AgentLiving* agent = ag->GetAsAgentLiving();
-        if (agent == nullptr) return;
-        if (agent->player_number != GW::Constants::ModelID::UW::Dhuum) return;
-        if (packet->allegiance_bits != 0x6D6F6E31) return;
-        
-        Objective* obj = GetCurrentObjective(157);
-        if (obj && !obj->IsStarted()) obj->SetStarted();
-    });
-
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DoACompleteZone>(&DoACompleteZone_Entry,
-	[this](GW::HookStatus *, GW::Packet::StoC::DoACompleteZone* packet) -> void {
-		if (packet->message[0] != 0x8101) return;
-		if (objective_sets.empty()) return;
-
-		uint32_t id = packet->message[1];
-		Objective *obj = GetCurrentObjective(id);
-        ObjectiveSet* os = objective_sets.rbegin()->second;
-
-        if (obj) {
-            obj->SetDone();
-            os->CheckSetDone();
-            uint32_t next_id = doa_get_next(id);
-            Objective *next = GetCurrentObjective(next_id);
-            if (next && !next->IsStarted()) next->SetStarted();
+    Objective *obj = instance.GetCurrentObjective(packet->message[1]);
+    if (!obj)
+        return;
+    ObjectiveSet *os = instance.objective_sets.rbegin()->second;
+    obj->SetDone();
+    os->CheckSetDone();
+    uint32_t next_id = doa_get_next(obj->id);
+    Objective *next = instance.GetCurrentObjective(next_id);
+    if (next && !next->IsStarted())
+        next->SetStarted();
+}
+void ObjectiveTimerWindow::StopObjectives(GW::HookStatus *, GW::Packet::StoC::PacketBase *)
+{
+    auto &instance = Instance();
+    if (instance.current_objective_set)
+        instance.current_objective_set->StopObjectives();
+    instance.current_objective_set = nullptr;
+}
+void ObjectiveTimerWindow::OnMessageServer(GW::HookStatus *, GW::Packet::StoC::MessageServer *) {
+        uint32_t objective_id = 0; // Objective_id applicable for the check
+        uint32_t msg_check = 0;    // First encoded msg char to check for
+        switch (GW::Map::GetMapID()) {
+            case GW::Constants::MapID::Urgozs_Warren:
+                msg_check = 0x6C9C; // Gained 10,000 or 5,000 Kurzick faction in
+                                    // Urgoz Warren - get Urgoz objective.
+                objective_id = 15529;
+                break;
+            case GW::Constants::MapID::The_Deep:
+                msg_check = 0x6D4D; // Gained 10,000 or 5,000 Luxon faction in
+                                    // Deep - get Kanaxai objective.
+                objective_id = RoomID::Deep_room_15;
+                break;
+            default:
+                break;
         }
-	});
+        if (!objective_id)
+            return;
+        GW::Array<wchar_t> *buff =
+            &GW::GameContext::instance()->world->message_buff;
+        if (!buff || !buff->valid() || !buff->size())
+            return; // Message buffer empty!?
+        const wchar_t *msg = buff->begin();
+        if (msg[0] != msg_check || (msg[5] != 0x2810 && msg[5] != 0x1488))
+            return; // Not the right message
+        auto &instance = Instance();
+        Objective *obj = instance.GetCurrentObjective(objective_id);
+        if (!obj || obj->IsDone())
+            return; // Already done!?
+        obj->SetDone();
+        // Cycle through all previous objectives and flag as done
+        for (Objective &objective : instance.current_objective_set->objectives) {
+            objective.SetDone();
+        }
+        instance.current_objective_set->CheckSetDone();
 }
 
 void ObjectiveTimerWindow::ObjectiveSet::StopObjectives() {
@@ -395,10 +407,6 @@ void ObjectiveTimerWindow::AddDeepObjectiveSet() {
     AddObjectiveSet(os);
 	monitor_doors = true;
 }
-void ObjectiveTimerWindow::DoorClosed(uint32_t door_id) {
-    UNREFERENCED_PARAMETER(door_id);
-	// Unused
-}
 void ObjectiveTimerWindow::DoorOpened(uint32_t door_id) {
 	bool tick_all_preceeding_objectives = true;
 	uint32_t objective_to_start = door_id;
@@ -480,7 +488,7 @@ void ObjectiveTimerWindow::AddFoWObjectiveSet() {
     AddObjectiveSet(os);
 }
 void ObjectiveTimerWindow::AddObjectiveSet(ObjectiveSet* os) {
-    for (auto cos : objective_sets) {
+    for (auto& cos : objective_sets) {
         cos.second->StopObjectives();
         cos.second->need_to_collapse = true;
     }
@@ -505,7 +513,7 @@ void ObjectiveTimerWindow::AddUWObjectiveSet() {
 	os->objectives.emplace_back(157, "Dhuum");
     AddObjectiveSet(os);
 }
-void ObjectiveTimerWindow::DisplayDialogue(GW::Packet::StoC::DisplayDialogue* packet) {
+void ObjectiveTimerWindow::OnDisplayDialogue(GW::HookStatus*,GW::Packet::StoC::DisplayDialogue* packet) {
 	uint32_t objective_id = 0; // Which objective has just been STARTED?
 	switch (GW::Map::GetMapID()) {
 	case GW::Constants::MapID::The_Deep:
@@ -516,35 +524,32 @@ void ObjectiveTimerWindow::DisplayDialogue(GW::Packet::StoC::DisplayDialogue* pa
 		case kanaxai_room_dialogs::Room14: objective_id = RoomID::Deep_room_14; break;
 		case kanaxai_room_dialogs::Room15: objective_id = RoomID::Deep_room_15; break;
         default:
-            break;
+            return;
 		}
-		break;
-    default:
         break;
+    default:
+        return;
 	}
-	if (!objective_id)
-		return;
+    auto &instance = Instance();
 	// For Urgoz and Deep, the id of the objective is actually the door object_id that STARTS the room
-	Objective* obj = GetCurrentObjective(objective_id);
+    Objective *obj = instance.GetCurrentObjective(objective_id);
 	if (!obj || obj->IsStarted())
 		return; // Already started
 	obj->SetStarted();
-	for (Objective& objective : current_objective_set->objectives) {
+    for (Objective &objective : instance.current_objective_set->objectives) {
 		if (objective.id == objective_id)
 			break;
 		objective.SetDone();
 	}
 }
-void ObjectiveTimerWindow::Update(float delta) {
-    UNREFERENCED_PARAMETER(delta);
+void ObjectiveTimerWindow::Update(float) {
     if (current_objective_set && current_objective_set->active) {
         current_objective_set->Update();
     }
     if (runs_dirty && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
         SaveRuns(); // Save runs between map loads
 }
-void ObjectiveTimerWindow::Draw(IDirect3DDevice9* pDevice) {
-    UNREFERENCED_PARAMETER(pDevice);
+void ObjectiveTimerWindow::Draw(IDirect3DDevice9*) {
 	// Main objective timer window
 	if (visible) {
 		ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
@@ -701,7 +706,7 @@ void ObjectiveTimerWindow::SaveRuns() {
     std::map<std::wstring, std::vector<ObjectiveSet*>> objective_sets_by_file;
     wchar_t filename[36];
     struct tm* structtime;
-    for (auto os : objective_sets) {
+    for (auto& os : objective_sets) {
         if (os.second->from_disk)
             continue; // No need to re-save a run.
         time_t tt = (time_t)os.second->system_time;
@@ -712,7 +717,7 @@ void ObjectiveTimerWindow::SaveRuns() {
         objective_sets_by_file[filename].push_back(os.second);
     }
     bool error_saving = false;
-    for (auto it : objective_sets_by_file) {
+    for (auto& it : objective_sets_by_file) {
         try {
             std::ofstream file;
             file.open(Resources::GetPath(L"runs",it.first));
@@ -896,7 +901,7 @@ ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::ObjectiveSet::FromJson
     os->instance_time = json->at("instance_start").get<DWORD>();
     nlohmann::json json_objs = json->at("objectives");
     for (nlohmann::json::iterator it = json_objs.begin(); it != json_objs.end(); ++it) {
-        nlohmann::json o = it.value();
+        const nlohmann::json& o = it.value();
         name = o.at("name").get<std::string>();
         Objective obj(o.at("id").get<DWORD>(),name.c_str());
         obj.status = o.at("status").get<Objective::Status>();
