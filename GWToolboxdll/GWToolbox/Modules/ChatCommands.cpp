@@ -968,13 +968,15 @@ void ChatCommands::CmdCamera(const wchar_t *message, int argc, LPWSTR *argv) {
 				if (arg2 == L"default") {
 					Instance().cam_speed = Instance().DEFAULT_CAM_SPEED;
 				} else {
-					try {
-						float speed = std::stof(arg2);
-						Instance().cam_speed = speed;
-						Log::Info("Camera speed is now %f", speed);
-					} catch (const std::exception&) {
-						Log::Error("Invalid argument '%ls', please use a float value", argv[2]);
+                    float speed = 0.0f;
+                    if (!GuiUtils::ParseFloat(arg2.c_str(), &speed)) {
+                        Log::Error(
+                            "Invalid argument '%ls', please use a float value",
+                            argv[2]);
+                        return;
 					}
+                    Instance().cam_speed = speed;
+                    Log::Info("Camera speed is now %f", speed);
 				}
 			}
 		} else {

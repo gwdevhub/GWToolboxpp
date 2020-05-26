@@ -68,14 +68,13 @@ std::wstring StringDecoderWindow::GetEncodedString()
     for (size_t i = 0; i < results.size(); i++) {
         Log::Log("%s\n", results[i].c_str());
         wchar_t c;
-        try {
-            unsigned long lval = std::strtoul(results[i].c_str(), 0, 16);
-            c = static_cast<wchar_t>(lval);
-            encodedW[i] = c;
-            printchar(encodedW[i]);
-            printf("\n");
-        } catch (const std::exception &) {
-        }
+        unsigned int lval = 0;
+        if (!GuiUtils::ParseUInt(results[i].c_str(), &lval))
+            continue;
+        c = static_cast<wchar_t>(lval);
+        encodedW[i] = c;
+        printchar(encodedW[i]);
+        printf("\n");
     }
     return encodedW;
 }
