@@ -179,12 +179,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
             }
         }
     }
-
+    HWND window = nullptr;
+    proc.GetTopMostWindow(&window);
     if (!InjectInstalledDllInProcess(&proc)) {
         ShowError(L"Couldn't find any appropriate target to start GWToolbox");
         fprintf(stderr, "InjectInstalledDllInProcess failed\n");
         return 1;
     }
+    // @Remark: should this be an optional registry setting?
+    if(window)
+        SetForegroundWindow(window);
 
     return 0;
 }

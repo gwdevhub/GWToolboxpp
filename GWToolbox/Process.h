@@ -28,7 +28,7 @@ public:
     Process& operator=(Process&&);
 
     bool IsOpen();
-    int GetTopMostWindow(HWND window = nullptr);
+    int GetTopMostWindow(HWND* window = nullptr);
     bool Open(uint32_t pid, DWORD rights = PROCESS_ALL_ACCESS);
     void Close();
 
