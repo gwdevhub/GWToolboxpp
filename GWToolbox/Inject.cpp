@@ -32,6 +32,9 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
     if (!scanner.FindPatternRva("\x8B\xF8\x6A\x03\x68\x0F\x00\x00\xC0\x8B\xCF\xE8", "xxxxxxxxxxxx", -0x42, &charname_rva)) {
         return InjectReply_PatternError;
     }
+    std::sort(processes.begin(), processes.end(), [](Process &a, Process &b)  {
+        return a.GetTopMostWindow() < b.GetTopMostWindow();
+    });
 
     std::vector<std::wstring> charnames;
     charnames.reserve(processes.size());
@@ -73,7 +76,7 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
 
     processes.clear();
 
-    if (settings.quiet && valid_processes.size() == 1 && charnames.size() == 1) {
+    if (settings.quiet && valid_processes.size() == 1) {
         *target_process = std::move(valid_processes[0]);
         return InjectReply_Inject; // Inject if 1 process found
     }

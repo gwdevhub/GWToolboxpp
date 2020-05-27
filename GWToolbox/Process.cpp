@@ -37,6 +37,7 @@ Process& Process::operator=(Process&& other)
 {
     Close();
     m_hProcess = other.m_hProcess;
+    m_Rights = other.m_Rights;
     other.m_hProcess = nullptr;
     return *this;
 }
@@ -44,6 +45,23 @@ Process& Process::operator=(Process&& other)
 bool Process::IsOpen()
 {
     return m_hProcess != nullptr;
+}
+
+int Process::GetTopMostWindow(HWND window)
+{
+    int idx = -1;
+    window = GetTopWindow(0);
+    DWORD window_pid = 0;
+    DWORD pid = GetProcessId();
+    while (window && pid) {
+        idx++;
+        GetWindowThreadProcessId(window, &window_pid);
+        if (window_pid == pid)
+            return idx;
+        window = GetWindow(window, GW_HWNDNEXT);
+    }
+    window = nullptr;
+    return -1;
 }
 
 bool Process::Open(uint32_t pid, DWORD rights)
