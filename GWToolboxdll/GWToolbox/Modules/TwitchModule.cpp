@@ -178,7 +178,6 @@ void TwitchModule::Disconnect() {
 }
 void TwitchModule::Terminate() {
 	Disconnect();
-    WSACleanup(); /* more winsock stuff */
 }
 bool TwitchModule::Connect() {
 	if (!twitch_enabled)

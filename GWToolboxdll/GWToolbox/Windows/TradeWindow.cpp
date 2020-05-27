@@ -87,7 +87,6 @@ void TradeWindow::Terminate() {
 
 TradeWindow::~TradeWindow() {
 	Terminate();
-    WSACleanup();
 }
 
 bool TradeWindow::GetInKamadanAE1() {

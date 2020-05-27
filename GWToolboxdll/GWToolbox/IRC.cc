@@ -61,7 +61,6 @@ IRC::~IRC()
 {
 	if (hooks)
 		delete_irc_command_hook(hooks);
-    WSACleanup();
 }
 
 void IRC::insert_irc_command_hook(irc_command_hook* hook, const char* cmd_name, int (*function_ptr)(const char*, irc_reply_data*, void*))
