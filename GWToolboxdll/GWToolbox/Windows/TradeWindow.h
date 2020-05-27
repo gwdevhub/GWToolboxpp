@@ -35,6 +35,8 @@ private:
         std::string message;
     };
 
+    WSAData wsaData = {0};
+
 	bool show_alert_window = false;
 
 	// Window could be visible but collapsed - use this var to check it.

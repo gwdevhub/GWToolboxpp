@@ -105,7 +105,6 @@ namespace {
 		return 0;
 	}
 }
-WSADATA wsaData; /* winsock stuff, linux/unix/*bsd users need not worry about this */
 void TwitchModule::Initialize() {
     ToolboxModule::Initialize();
 
@@ -186,10 +185,6 @@ bool TwitchModule::Connect() {
     if (connected)
         return true;
     printf("Connecting to IRC\n");
-    if (WSAStartup(MAKEWORD(1, 1), &wsaData) != 0) {
-        printf("Failed to initialise winsock!\n");
-        return false;
-    }
 	if (irc_server.empty()) {
 		printf("Invalid server name!\n");
 		return false;
@@ -241,6 +236,7 @@ void TwitchModule::Update(float delta) {
 }
 void TwitchModule::DrawSettingInternal() {
 	bool edited = false;
+    ImGui::PushID("twitch_settings");
 	if (ImGui::Checkbox("Enable Twitch integration", &twitch_enabled))
 		Disconnect();
 	ImGui::ShowHelp("Allows GWToolbox to send & receive messages with Twitch using the in-game chat window.");
@@ -263,7 +259,8 @@ void TwitchModule::DrawSettingInternal() {
 
 		ImGui::Checkbox("Show messages in chat window. Color:", &show_messages);
 		ImGui::SameLine();
-		if (Colors::DrawSettingHueWheel("Twitch Color:", &irc_chat_color)) {
+        const ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel;
+        if (Colors::DrawSettingHueWheel("Twitch Color:", &irc_chat_color, flags)) {
 			GW::Chat::SetSenderColor(GW::Chat::Channel::CHANNEL_GWCA1, TwitchModule::Instance().irc_chat_color);
 		}
 		ImGui::Checkbox("Notify on user leave", &notify_on_user_leave);
@@ -298,6 +295,7 @@ void TwitchModule::DrawSettingInternal() {
 		ImGui::TextDisabled("Re-connect after making changes to use updated info");
 		ImGui::Unindent();
 	}
+	ImGui::PopID();
 }
 void TwitchModule::LoadSettings(CSimpleIni* ini) {
     ToolboxModule::LoadSettings(ini);

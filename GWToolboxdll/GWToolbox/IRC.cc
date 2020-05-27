@@ -61,6 +61,8 @@ IRC::~IRC()
 {
 	if (hooks)
 		delete_irc_command_hook(hooks);
+    if (wsaData.wVersion)
+        WSACleanup();
 }
 
 void IRC::insert_irc_command_hook(irc_command_hook* hook, const char* cmd_name, int (*function_ptr)(const char*, irc_reply_data*, void*))
@@ -124,10 +126,12 @@ int IRC::start(char* server, int port, char* nick, char* user, char* name, char*
     hints.ai_socktype = SOCK_STREAM;        //TCP stream socket
 
     //Start WSA to be able to make DNS lookup
-    WSADATA wsaData;
-    WSAStartup(MAKEWORD(2, 2), &wsaData);
-
     int res;
+    if (!wsaData.wVersion && (res = WSAStartup(MAKEWORD(2, 2), &wsaData)) != 0) {
+        printf("Failed to call WSAStartup: %d\n", res);
+        return 1;
+	}
+
     if ((res = getaddrinfo(server, "6667", &hints, &servinfo)) != 0) {
         printf("Failed to getaddrinfo: %s, %s\n", server, gai_strerror(res));
         return 1;

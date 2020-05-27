@@ -50,12 +50,6 @@ void TradeWindow::Initialize() {
 	ToolboxWindow::Initialize();
 	Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"trade.png"));
 
-	WSADATA wsaData;
-	if (WSAStartup(MAKEWORD(2, 2), &wsaData)) {
-		printf("WSAStartup Failed.\n");
-		return;
-	}
-
 	messages = CircularBuffer<Message>(100);
 
 	should_stop = false;
@@ -87,6 +81,8 @@ void TradeWindow::Terminate() {
 
 TradeWindow::~TradeWindow() {
 	Terminate();
+    if (wsaData.wVersion)
+        WSACleanup();
 }
 
 bool TradeWindow::GetInKamadanAE1() {
@@ -485,6 +481,11 @@ void TradeWindow::AsyncWindowConnect(bool force) {
 	if (ws_window_connecting) return;
 	if (!force && !window_rate_limiter.AddTime(COST_PER_CONNECTION_MS, COST_PER_CONNECTION_MAX_MS))
 		return;
+    int res;
+    if (!wsaData.wVersion && (res = WSAStartup(MAKEWORD(2, 2), &wsaData)) != 0) {
+        printf("Failed to call WSAStartup: %d\n", res);
+        return;
+    }
 	ws_window_connecting = true;
 	thread_jobs.push([this]() {
 		if ((ws_window = WebSocket::from_url(ws_host)) == nullptr) {

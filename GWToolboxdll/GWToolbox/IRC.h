@@ -106,6 +106,7 @@ private:
 	bool sentnick;
 	bool sentpass;
 	bool sentuser;
+    WSADATA wsaData = {0};
 	clock_t ping_sent = 0;
 	clock_t pong_recieved = 0;
 	char* cur_nick;
