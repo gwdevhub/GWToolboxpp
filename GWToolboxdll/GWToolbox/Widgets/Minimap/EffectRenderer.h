@@ -51,7 +51,7 @@ public:
 
 	void Render(IDirect3DDevice9* device) override;
 
-	void Invalidate();
+	void Invalidate() override;
 	EffectRenderer();
     EffectRenderer(const EffectRenderer&) = delete;
 	~EffectRenderer();

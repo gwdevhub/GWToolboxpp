@@ -15,7 +15,6 @@ public:
 
 protected:
 	void Initialize(IDirect3DDevice9* device) override;
-
 private:
 	Color color_map = 0;
 	Color color_mapshadow = 0;

@@ -63,6 +63,7 @@ EffectRenderer::~EffectRenderer() {
 	aoe_effect_triggers.clear();
 }
 void EffectRenderer::Invalidate() {
+    VBuffer::Invalidate();
 	for (auto p : aoe_effects) {
 		delete p;
 	}

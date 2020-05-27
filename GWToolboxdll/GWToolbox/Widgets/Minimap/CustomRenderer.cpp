@@ -112,7 +112,7 @@ void CustomRenderer::SaveMarkers() const {
 	}
 }
 void CustomRenderer::Invalidate() {
-	initialized = false;
+    VBuffer::Invalidate();
 	fullcircle.Invalidate();
 	linecircle.Invalidate();
 }

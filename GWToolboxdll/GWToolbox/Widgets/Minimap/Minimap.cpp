@@ -31,6 +31,17 @@
 #include "Minimap.h"
 
 
+void Minimap::Terminate()
+{
+    range_renderer.Invalidate();
+    pmap_renderer.Invalidate();
+    agent_renderer.Invalidate();
+    pingslines_renderer.Invalidate();
+    symbols_renderer.Invalidate();
+    custom_renderer.Invalidate();
+    effect_renderer.Invalidate();
+}
+
 void Minimap::Initialize() {
 	ToolboxWidget::Initialize();
 	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentPinged>(&AgentPinged_Entry,

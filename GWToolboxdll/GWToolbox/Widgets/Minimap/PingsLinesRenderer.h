@@ -79,7 +79,8 @@ public:
 
 	void Render(IDirect3DDevice9* device) override;
 
-	inline void Invalidate() {
+	inline void Invalidate() override {
+        VBuffer::Invalidate();
 		ping_circle.Invalidate();
 		for (Ping* p : pings) delete p;
 		pings.clear();

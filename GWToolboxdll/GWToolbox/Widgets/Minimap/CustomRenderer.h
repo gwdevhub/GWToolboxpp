@@ -40,7 +40,7 @@ class CustomRenderer : public VBuffer {
 
 public:
 	void Render(IDirect3DDevice9* device) override;
-
+    void Invalidate() override;
 	void DrawSettings();
 	void LoadSettings(CSimpleIni* ini, const char* section);
 	void SaveSettings(CSimpleIni* ini, const char* section) const;
@@ -48,7 +48,7 @@ public:
 	void SaveMarkers() const;
 
 private:
-	void Invalidate() override;
+
 	void Initialize(IDirect3DDevice9* device) override;
 	void DrawCustomMarkers(IDirect3DDevice9* device);
 	void DrawCustomLines(IDirect3DDevice9* device);

@@ -28,11 +28,15 @@ public:
     }
 
 	virtual ~VBuffer() {
-		if (buffer) buffer->Release();
+        Invalidate();
 	}
 
-	virtual void Invalidate() { initialized = false; }
-
+	virtual void Invalidate() { 
+		if (buffer)
+            buffer->Release();
+        buffer = nullptr;
+		initialized = false; 
+	}
 	virtual void Render(IDirect3DDevice9* device) {
 		if (!initialized) {
 			initialized = true;
