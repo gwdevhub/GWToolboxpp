@@ -61,6 +61,7 @@ IRC::~IRC()
 {
 	if (hooks)
 		delete_irc_command_hook(hooks);
+    WSACleanup();
 }
 
 void IRC::insert_irc_command_hook(irc_command_hook* hook, const char* cmd_name, int (*function_ptr)(const char*, irc_reply_data*, void*))
@@ -130,7 +131,6 @@ int IRC::start(char* server, int port, char* nick, char* user, char* name, char*
     int res;
     if ((res = getaddrinfo(server, "6667", &hints, &servinfo)) != 0) {
         printf("Failed to getaddrinfo: %s, %s\n", server, gai_strerror(res));
-        WSACleanup();
         return 1;
     }
 

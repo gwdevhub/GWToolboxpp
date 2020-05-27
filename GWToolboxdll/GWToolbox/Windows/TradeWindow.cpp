@@ -82,13 +82,12 @@ void TradeWindow::Terminate() {
 		DeleteWebSocket(ws_window);
 		ws_window = nullptr;
 	}
-
-	WSACleanup();
 	ToolboxWindow::Terminate();
 }
 
 TradeWindow::~TradeWindow() {
 	Terminate();
+    WSACleanup();
 }
 
 bool TradeWindow::GetInKamadanAE1() {
