@@ -274,7 +274,9 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 	collapsed = !ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags());
 	if (!collapsed) {
 		/* Search bar header */
-		ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - 80.0f - 80.0f - 80.0f - ImGui::GetStyle().ItemInnerSpacing.x * 6));
+        const float &font_scale = ImGui::GetIO().FontGlobalScale;
+        const float btn_width = 80.0f * font_scale;
+        ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - btn_width - btn_width - btn_width - ImGui::GetStyle().ItemInnerSpacing.x * 6));
 		ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;
 		if (!pending_query_string.empty()) {
 			flags |= ImGuiInputTextFlags_ReadOnly;
@@ -283,7 +285,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 		bool do_search = false;
 		do_search |= ImGui::InputText("", search_buffer, 256, flags);
 		ImGui::SameLine();
-		do_search |= ImGui::Button(!pending_query_string.empty() ? "Searching" : "Search", ImVec2(80.0f, 0));
+        do_search |= ImGui::Button(!pending_query_string.empty() ? "Searching" : "Search", ImVec2(btn_width, 0));
 		if (!pending_query_string.empty()) {
 			ImGui::PopStyleColor();
 		}
@@ -291,12 +293,12 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			search(search_buffer);
 		}
 		ImGui::SameLine();
-		if (ImGui::Button("Clear", ImVec2(80.0f, 0))) {
+        if (ImGui::Button("Clear", ImVec2(btn_width, 0))) {
 			GuiUtils::StrCopy(search_buffer, "", 256);
 			search("");
 		}
 		ImGui::SameLine();
-		if (ImGui::Button("Alerts", ImVec2(80.0f, 0))) {
+        if (ImGui::Button("Alerts", ImVec2(btn_width, 0))) {
 			show_alert_window = !show_alert_window;
 		}
 
@@ -324,10 +326,10 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 			char timetext[128];
 			time_t now = time(nullptr);
 
-			const float innerspacing = ImGui::GetStyle().ItemInnerSpacing.x;
-			const float time_width = show_time ? 100.0f : 0.0f;
+			const float& innerspacing = ImGui::GetStyle().ItemInnerSpacing.x;
+            const float time_width = (show_time ? 100.0f : 0.0f) * font_scale;
 			const float playername_left = time_width + innerspacing; // player button left align
-			const float playernamewidth = 160.0f;
+            const float playernamewidth = 160.0f * font_scale;
 			const float message_left = playername_left + playernamewidth + innerspacing;
 
             size_t n_messages = messages.size();
@@ -394,7 +396,7 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
 
 		/* Alerts window */
 		if (show_alert_window) {
-			ImGui::SetNextWindowSize(ImVec2(250, 220), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowSize(ImVec2(250 * font_scale, 220), ImGuiCond_FirstUseEver);
 			if (ImGui::Begin("Trade Alerts", &show_alert_window)) {
 				DrawAlertsWindowContent(true);
 			}
