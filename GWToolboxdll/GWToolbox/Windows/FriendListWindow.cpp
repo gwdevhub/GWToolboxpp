@@ -454,13 +454,13 @@ void FriendListWindow::Initialize() {
 			    size_t player_name_start = (size_t)-1;
                 size_t player_name_end = (size_t)-1;
 			    for (size_t i = 0; message[i] != 0; ++i) {
-                    if ((player_name_start != (size_t)-1) && message[i] == 0x107)
+                    if (player_name_start == (size_t)-1 && message[i] == 0x107)
 					    player_name_start = ++i;
 				    if (message[i] == 0x1) {
 					    player_name_end = i;
 					    break;
 				    }
-			    }
+				}
                 if (player_name_start == (size_t)-1)
 				    return;
 			    std::wstring player_name(&message[player_name_start], player_name_end - player_name_start);
