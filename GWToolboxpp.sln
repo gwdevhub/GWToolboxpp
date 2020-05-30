@@ -13,22 +13,31 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GWToolbox", "GWToolbox\GWTo
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		clangDebug|Win32 = clangDebug|Win32
 		Debug|Win32 = Debug|Win32
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{AC820BBA-BB5B-4D8C-96FF-EA8138CEED52}.clangDebug|Win32.ActiveCfg = clangDebug|Win32
+		{AC820BBA-BB5B-4D8C-96FF-EA8138CEED52}.clangDebug|Win32.Build.0 = clangDebug|Win32
 		{AC820BBA-BB5B-4D8C-96FF-EA8138CEED52}.Debug|Win32.ActiveCfg = Debug|Win32
 		{AC820BBA-BB5B-4D8C-96FF-EA8138CEED52}.Debug|Win32.Build.0 = Debug|Win32
 		{AC820BBA-BB5B-4D8C-96FF-EA8138CEED52}.Release|Win32.ActiveCfg = Release|Win32
 		{AC820BBA-BB5B-4D8C-96FF-EA8138CEED52}.Release|Win32.Build.0 = Release|Win32
+		{B3359F05-68CF-4E7F-B9D6-D106F6D48A38}.clangDebug|Win32.ActiveCfg = clangDebug|Win32
+		{B3359F05-68CF-4E7F-B9D6-D106F6D48A38}.clangDebug|Win32.Build.0 = clangDebug|Win32
 		{B3359F05-68CF-4E7F-B9D6-D106F6D48A38}.Debug|Win32.ActiveCfg = Debug|Win32
 		{B3359F05-68CF-4E7F-B9D6-D106F6D48A38}.Debug|Win32.Build.0 = Debug|Win32
 		{B3359F05-68CF-4E7F-B9D6-D106F6D48A38}.Release|Win32.ActiveCfg = Release|Win32
 		{B3359F05-68CF-4E7F-B9D6-D106F6D48A38}.Release|Win32.Build.0 = Release|Win32
+		{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}.clangDebug|Win32.ActiveCfg = clangDebug|Win32
+		{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}.clangDebug|Win32.Build.0 = clangDebug|Win32
 		{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}.Debug|Win32.ActiveCfg = Debug|Win32
 		{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}.Debug|Win32.Build.0 = Debug|Win32
 		{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}.Release|Win32.ActiveCfg = Release|Win32
 		{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}.Release|Win32.Build.0 = Release|Win32
+		{27689431-347E-448F-B71D-ED2E09279478}.clangDebug|Win32.ActiveCfg = clangDebug|Win32
+		{27689431-347E-448F-B71D-ED2E09279478}.clangDebug|Win32.Build.0 = clangDebug|Win32
 		{27689431-347E-448F-B71D-ED2E09279478}.Debug|Win32.ActiveCfg = Debug|Win32
 		{27689431-347E-448F-B71D-ED2E09279478}.Debug|Win32.Build.0 = Debug|Win32
 		{27689431-347E-448F-B71D-ED2E09279478}.Release|Win32.ActiveCfg = Release|Win32
