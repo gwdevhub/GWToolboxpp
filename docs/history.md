@@ -3,11 +3,44 @@ layout: default
 ---
 
 # Version History
-Previous releases are provided as dll files. In order to use it, you need to use a different launcher which must be placed in the same directory as the dll. If you are looking for the latest version, go to the [Home Page](./) instead.
+Previous releases are provided as dll files. If you are looking for the latest version, go to the [Home Page](./) instead.
 
-[AutoIt Launcher](https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/AutoitLauncher/Inject.au3) - Source, requires AutoIt3. Right click -> Save link as...
+In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
-## Version 3.42
+## Version 3.5
+* [New] Added dungeons to objective timer
+* [New] Added refrains to bond monitor
+* [New] Added wiki buttons to items in the salvage window
+* [New] Added auto-target highlighting to toolbox minimap when no current target is selected
+* [New] Added option to show/hide hero panels when loading hero builds
+* [New] Added Signpost and Item targeting to target hotkey
+* [New] Added `/target item 123`, `/target gadget 123`, `/target 123` commands
+* [New] Added option to hide build window(s) when entering an explorable area
+* [New] Added option to hide settings when entering an explorable area
+* [New] Added option to only show 1 teambuild at a time
+* [New] Added options to hide dungeon chest popup
+* [New] Added option to stop screen shake on environmental effects or skills like Aftershock
+* [Minor] Crash dumps now write to /crashes folder
+* [Minor] Added scroll icon to Urgoz/Deep in Travel window
+* [Minor] Don't maintain Trade chat connection if trade channel is turned off in-game
+* [Minor] Disable native chat timestamps in-game if toolbox timestamps are enabled
+* [Fix] Fixed layout bugs with Twitch module
+* [Fix] Fixed bug preventing zooming out when in first person view
+* [Fix] Crash/disconnect when trying to close GWToolbox when minimap is enabled
+* [Fix] Fixed bug when using `/tp` to go to the wilds
+* [Fix] Fixed builds not loading correctly on heros when loading from Hero Builds window
+* [Fix] Fixed `Show past runs` not loading setting from file
+* [Fix] Fixed crash when triggering drop/use buff hotkey via UI
+* [Fix] Fixed crash when triggering open xunlai chest hotkey via UI
+* [Fix] Ensure Toolbox window is visible on first run
+* [Fix] Fixed quantity calculation bug when buying Res scrolls via Materials window
+* [Fix] Fixed zero health bug on some mobs caused by a bug in Party Window module
+* [Fix] Fixed bug preventing "show close button" settings from being available for tb windows
+* [Fix] Ignore perfect salvage kits when using the salvage feature
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/3.5_Release/GWToolboxdll.dll)
+
+## Version 3.4.2
 * [Fix] Reverted custom markers appearing in outposts. Fault Misty.
 
 [Download](https://github.com/HasKha/GWToolboxpp/releases/download/3.42_Release/GWToolbox.dll)

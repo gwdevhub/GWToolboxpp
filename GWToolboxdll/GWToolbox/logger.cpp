@@ -161,8 +161,8 @@ LONG WINAPI Log::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers) {
 		hDumpFile, MiniDumpWithDataSegs, &ExpParam, NULL, NULL);
 	CloseHandle(hDumpFile);
 	if (bMiniDumpSuccessful) {
-		wchar_t buf[256];
-		swprintf(buf, L"GWToolbox crashed, oops\n\n"
+		wchar_t buf[MAX_PATH];
+        swprintf(buf, MAX_PATH, L"GWToolbox crashed, oops\n\n"
 			"A dump file has been created in:\n\n%s\n\n"
 			"Please send this file to the GWToolbox++ developers.\n"
 			"Thank you and sorry for the inconvenience.", szFileName);

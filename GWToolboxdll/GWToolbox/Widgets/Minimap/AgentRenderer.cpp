@@ -384,7 +384,11 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 
 	GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
 	GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
-	GW::Agent* auto_target = nullptr;
+    if (!target && auto_target_id) {
+        target = static_cast<GW::AgentLiving *>(GW::Agents::GetAgentByID(auto_target_id));
+        if (target && !target->GetIsLivingType())
+            target = nullptr;
+    }
 
 	// 1. eoes
 	for (size_t i = 0; i < agents.size(); ++i) {
@@ -437,10 +441,6 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 	for (size_t i = 0; i < agents.size(); ++i) {
 		if (!agents[i]) continue;
 		if (target == agents[i]) continue; // will draw target at the end
-		if (i == auto_target_id) {
-			auto_target = agents[i];
-			continue;
-		}
 		if (agents[i]->GetIsGadgetType()) {
 			GW::AgentGadget* agent = agents[i]->GetAsAgentGadget();
 			if(GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish && agent->extra_type == 7602) continue;
@@ -467,11 +467,6 @@ void AgentRenderer::Render(IDirect3DDevice9* device) {
 		if (vertices_count >= vertices_max - 16 * max_shape_verts) break;
 	}
 	custom_agents_to_draw.clear();
-
-	// 3.5. auto target
-	if (auto_target) {
-		Enqueue(auto_target);
-	}
 
 	// 4. target if it's a non-player
 	if (target && target->player_number > 12) {

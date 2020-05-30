@@ -2,7 +2,7 @@
 layout: default
 ---
 
-> Note: we released a new launcher, you can download it [here](https://github.com/HasKha/GWToolboxpp/releases/download/2.14_Release/GWToolbox.exe). The new launcher will update the dll automatically.
+> Note: we released a new launcher, you can download it [here]({{ site.download_url }}). The new launcher will update the dll automatically.
 
 # What is GWToolbox++?
 GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancements for the original Guild Wars. It adds features that should exist in a modern game and tools to visualize information and improve the player experience.
