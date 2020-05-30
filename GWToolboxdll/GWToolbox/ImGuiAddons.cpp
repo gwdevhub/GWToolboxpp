@@ -13,9 +13,11 @@ void ImGui::ShowHelp(const char* help) {
 }
 bool ImGui::IconButton(const char *label, ImTextureID icon, const ImVec2& size)
 {
+    char button_id[128];
+    sprintf(button_id, "###icon_button_%s", label);
     const ImVec2& pos = ImGui::GetCursorScreenPos();
     const ImVec2 &textsize = ImGui::CalcTextSize(label);
-    bool clicked = ImGui::Button("", size);
+    bool clicked = ImGui::Button(button_id, size);
 
     const ImVec2& button_size = ImGui::GetItemRectSize();
     const float img_size = icon ? button_size.y : 0;
