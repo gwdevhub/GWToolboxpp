@@ -85,7 +85,7 @@ public:
     }
     const bool Consume() {
         if (print) return PrintMessage();
-        if (send) return SendMessage();
+        if (send) return Send();
         return false;
     }
 	const bool IsSend() {
@@ -106,7 +106,7 @@ protected:
         return parts;
     }
     const bool PrintMessage();
-    const bool SendMessage();
+    const bool Send();
     void Init() {
         if (!invalid) {
             if (IsStringEncoded(this->encoded_message)) {

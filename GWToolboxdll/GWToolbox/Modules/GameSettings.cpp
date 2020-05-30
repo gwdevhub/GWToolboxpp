@@ -66,7 +66,7 @@ namespace {
 		if (wcsncmp(msg, L"http://", 7) && wcsncmp(msg, L"https://", 8)) return;
 
 		if (len + 5 < max_len) {
-			for (size_t i = len; i < len; --i)
+			for (size_t i = len; i != 0; --i)
 				msg[i] = msg[i - 1];
 			msg[0] = '[';
 			msg[len + 1] = ';';
@@ -666,17 +666,13 @@ void GameSettings::PingItem(GW::Item* item, uint32_t parts) {
 	if (m) GameSettings::Instance().pending_messages.push_back(m);
 }
 void GameSettings::PingItem(uint32_t item_id, uint32_t parts) {
-	if (!item_id) return;
-	GW::ItemArray items = GW::Items::GetItemArray();
-	if (!items.valid()) return;
-	if (item_id >= items.size()) return;
-	return PingItem(items[item_id], parts);
+	return PingItem(GW::Items::GetItemById(item_id), parts);
 }
 
 bool PendingChatMessage::Cooldown() {
 	return last_send && clock() < last_send + (clock_t)(CLOCKS_PER_SEC / 2);
 }
-const bool PendingChatMessage::SendMessage() {
+const bool PendingChatMessage::Send() {
     if (!IsDecoded() || this->invalid) return false; // Not ready or invalid.
     std::vector<std::wstring> sanitised_lines = SanitiseForSend();
     wchar_t buf[120];
@@ -695,7 +691,7 @@ const bool PendingChatMessage::SendMessage() {
             len += 2;
         }
         for (size_t j = 0; j < san_len; j++) {
-            buf[len] = str[i];
+            buf[len] = str[j];
             len++;
         }
         buf[len] = '\0';

@@ -7,7 +7,7 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
-## Version 3.5
+## Version 3.6
 * [New] Added dungeons to objective timer
 * [New] Added refrains to bond monitor
 * [New] Added wiki buttons to items in the salvage window
@@ -38,7 +38,7 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [Fix] Fixed bug preventing "show close button" settings from being available for tb windows
 * [Fix] Ignore perfect salvage kits when using the salvage feature
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/3.5_Release/GWToolboxdll.dll)
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/3.6_Release/GWToolboxdll.dll)
 
 ## Version 3.4.2
 * [Fix] Reverted custom markers appearing in outposts. Fault Misty.
