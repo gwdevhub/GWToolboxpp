@@ -261,7 +261,7 @@ bool DownloadWindow::DownloadAllFiles()
     std::wstring url;
     for (size_t i = 0; i < release.assets.size(); i++) {
         Asset *asset = &release.assets[i];
-        if (asset->name == "GWToolbox.dll") {
+        if (asset->name == "GWToolbox.dll" || asset->name == "GWToolboxdll.dll") {
             fprintf(stderr, "browser_download_url: '%s'\n", asset->browser_download_url.c_str());
             const char *purl = asset->browser_download_url.c_str();
             url = std::wstring(purl, purl + asset->browser_download_url.size());
