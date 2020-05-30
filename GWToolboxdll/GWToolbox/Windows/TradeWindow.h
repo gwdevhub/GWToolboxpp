@@ -77,7 +77,7 @@ private:
     void search(std::string, bool print_results_in_chat = false);
     void fetch();
 
-    static bool parse_json_message(nlohmann::json* js, Message* msg);
+    static bool parse_json_message(const nlohmann::json& js, Message* msg);
     CircularBuffer<Message> messages;
 
     // tasks to be done async by the worker thread

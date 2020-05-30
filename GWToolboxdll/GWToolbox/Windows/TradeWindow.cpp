@@ -120,16 +120,17 @@ void TradeWindow::Update(float delta) {
 	fetch();
 }
 
-bool TradeWindow::parse_json_message(json* js, Message* msg) {
-	try {
-		msg->name = js->at("s").get<std::string>();
-		msg->message = js->at("m").get<std::string>();
-		msg->timestamp = static_cast<uint32_t>(js->at("t").get<uint64_t>() / 1000); // Messy?
-	}
-	catch (const json::exception&) {
-		Log::Log("ERROR: Failed to parse incoming trade message in TradeWindow::parse_json_message\n");
+bool TradeWindow::parse_json_message(const json& js, Message* msg) {
+    if (js == json::value_t::discarded)
+        return false;
+    if (!(js.contains("s") && js["s"].is_string()) 
+		|| !(js.contains("m") && js["m"].is_string()) 
+		|| !(js.contains("t") && js["t"].is_number_unsigned()))
 		return false;
-	}
+    msg->name = js["s"].get<std::string>();
+    msg->message = js["m"].get<std::string>();
+    msg->name = js["s"].get<std::string>();
+    msg->timestamp = static_cast<uint32_t>(js["t"].get<uint64_t>() / 1000); // Messy?
 	return true;
 }
 
@@ -150,34 +151,43 @@ void TradeWindow::fetch() {
 	}
 	
 	ws_window->dispatch([this](const std::string& data) {
-		json res;
-		try {
-			res = json::parse(data.c_str());
-		} catch (const json::exception &) {
+        const json& res = json::parse(data.c_str(), nullptr, false);
+        if (res == json::value_t::discarded) {
 			Log::Log("ERROR: Failed to parse res JSON from response in ws_window->dispatch\n");
-			return;
-		}
-		if (res.find("query") != res.end()) {
+				return;
+        }
+		if (res.find("query") != res.end() && res["query"].is_string()) {
 			std::string query_string = res["query"].get<std::string>();
 			if (query_string != pending_query_string)
 				return; // Different query has been made since this search.
 			pending_query_string.clear();
-			json_vec results;
-			try {
-				if (res["num_results"].get<uint32_t>() > 0)
-					results = res["results"].get<json_vec>();
-			} catch (const json::exception &) {
-				Log::Log("ERROR: Failed to parse search results in TradeWindow::fetch\n");
-				return;
+            if (!(res.contains("num_results") && res["num_results"].is_number_unsigned())) {
+                Log::Log("ERROR: Failed to parse search results in TradeWindow::fetch\n");
+                print_search_results = false;
+                return;
 			}
+            size_t num_results = res["num_results"].get<size_t>();
+            if (print_search_results && !num_results) {
+                Log::Warning("No results found for %s", query_string.c_str());
+                print_search_results = false;
+                return;
+            }
+            if (!(res.contains("results") && res["results"].is_array())) {
+                Log::Log("ERROR: Failed to parse search results in TradeWindow::fetch\n");
+                print_search_results = false;
+                return;
+            }
+            json_vec results = res["results"].get<json_vec>();
 			messages.clear();
 			if (print_search_results && !results.size()) {
-				Log::Warning("No results found for %s", query_string.c_str());
+                Log::Warning("No results found for %s", query_string.c_str());
+                print_search_results = false;
+                return;
 			}
             size_t results_size = results.size();
             for (size_t i = results_size - 1; i < results_size; i--) {
 				TradeWindow::Message msg;
-				if (!parse_json_message(&results[i], &msg))
+				if (!parse_json_message(results[i], &msg))
 					continue;
 				messages.add(msg);
 				if (print_search_results && i < 5) {
@@ -197,7 +207,7 @@ void TradeWindow::fetch() {
 		}
 		// Add to message feed
 		TradeWindow::Message msg;
-		if (!parse_json_message(&res, &msg))
+		if (!parse_json_message(res, &msg))
 			return; // Not valid message object
 		bool add_to_window = searched_words.empty();
 		if (!add_to_window) {
