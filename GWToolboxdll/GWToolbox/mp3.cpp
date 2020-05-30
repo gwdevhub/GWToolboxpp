@@ -154,16 +154,16 @@ long Mp3::GetVolume()
 	return -1;
 }
 
-__int64 Mp3::GetDuration()
+int64_t Mp3::GetDuration()
 {
 	return duration;
 }
 
-__int64 Mp3::GetCurrentPosition()
+int64_t Mp3::GetCurrentPosition()
 {
 	if (ready && pims)
 	{
-		__int64 curpos = -1;
+		int64_t curpos = -1;
 		HRESULT hr = pims->GetCurrentPosition(&curpos);
 
 		if (SUCCEEDED(hr))
@@ -173,7 +173,7 @@ __int64 Mp3::GetCurrentPosition()
 	return -1;
 }
 
-bool Mp3::SetPositions(__int64* pCurrent, __int64* pStop, bool bAbsolutePositioning)
+bool Mp3::SetPositions(int64_t* pCurrent, int64_t* pStop, bool bAbsolutePositioning)
 {
 	if (ready && pims)
 	{

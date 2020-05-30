@@ -2,10 +2,11 @@
 
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
 // Windows Header Files:
-#include <windows.h>
+#include <Windows.h>
 #include <mmsystem.h>
 #include <strmif.h>
 #include <control.h>
+#include <stdint.h>
 
 #pragma comment(lib, "strmiids.lib")
 
@@ -36,14 +37,14 @@ public:
 	// meaning 10,000,000 == 1 second
 	// You have to divide the result by 10,000,000 
 	// to get the duration in seconds.
-	__int64 GetDuration();
+	int64_t GetDuration();
 
 	// Returns the current playing position
 	// in 1/10 millionth of a second,
 	// meaning 10,000,000 == 1 second
 	// You have to divide the result by 10,000,000 
 	// to get the duration in seconds.
-	__int64 GetCurrentPosition();
+	int64_t GetCurrentPosition();
 
 	// Seek to position with pCurrent and pStop
 	// bAbsolutePositioning specifies absolute or relative positioning.
@@ -51,7 +52,7 @@ public:
 	// and stop playing. Note: Even if pCurrent and pStop have the same value,
 	// avoid putting the same pointer into both of them, meaning put different
 	// pointers with the same dereferenced value.
-	bool SetPositions(__int64* pCurrent, __int64* pStop, bool bAbsolutePositioning);
+	bool SetPositions(int64_t* pCurrent, int64_t* pStop, bool bAbsolutePositioning);
 
 private:
 	IGraphBuilder* pigb;
@@ -61,6 +62,6 @@ private:
 	IMediaSeeking* pims;
 	bool    ready;
 	// Duration of the MP3.
-	__int64 duration;
+	int64_t duration;
 
 };
