@@ -133,19 +133,23 @@ void Log::Warning(const char* format, ...) {
 // === Crash Dump ===
 LONG WINAPI Log::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers) {
 	BOOL bMiniDumpSuccessful;
-	CHAR szFileName[MAX_PATH];
+	wchar_t szFileName[MAX_PATH];
 	HANDLE hDumpFile;
 	SYSTEMTIME stLocalTime;
 	MINIDUMP_EXCEPTION_INFORMATION ExpParam;
 
 	GetLocalTime(&stLocalTime);
 
-	StringCchPrintf(szFileName, MAX_PATH, "%ls\\%s-%04d%02d%02d-%02d%02d%02d-%ld-%ld.dmp",
-		Resources::GetSettingsFolderPath().c_str(), GWTOOLBOX_VERSION,
+
+	std::wstring crash_folder = Resources::GetPath(L"crashes");
+	Resources::EnsureFolderExists(crash_folder.c_str());
+
+	StringCchPrintfW(szFileName, MAX_PATH, L"%s\\%S-%04d%02d%02d-%02d%02d%02d-%ld-%ld.dmp", 
+		crash_folder.c_str(), GWTOOLBOX_VERSION,
 		stLocalTime.wYear, stLocalTime.wMonth, stLocalTime.wDay,
 		stLocalTime.wHour, stLocalTime.wMinute, stLocalTime.wSecond,
 		GetCurrentProcessId(), GetCurrentThreadId());
-	hDumpFile = CreateFile(szFileName, GENERIC_READ | GENERIC_WRITE,
+	hDumpFile = CreateFileW(szFileName, GENERIC_READ | GENERIC_WRITE,
 		FILE_SHARE_WRITE | FILE_SHARE_READ, 0, CREATE_ALWAYS, 0, 0);
 
 	ExpParam.ThreadId = GetCurrentThreadId();
@@ -157,18 +161,18 @@ LONG WINAPI Log::GenerateDump(EXCEPTION_POINTERS* pExceptionPointers) {
 		hDumpFile, MiniDumpWithDataSegs, &ExpParam, NULL, NULL);
 	CloseHandle(hDumpFile);
 	if (bMiniDumpSuccessful) {
-		char buf[256];
-		sprintf(buf, "GWToolbox crashed, oops\n\n"
+		wchar_t buf[256];
+		swprintf(buf, L"GWToolbox crashed, oops\n\n"
 			"A dump file has been created in:\n\n%s\n\n"
 			"Please send this file to the GWToolbox++ developers.\n"
 			"Thank you and sorry for the inconvenience.", szFileName);
-		MessageBoxA(0, buf,"GWToolbox++ Crash!", 0);
+		MessageBoxW(0, buf,L"GWToolbox++ Crash!", 0);
 	} else {
-		MessageBoxA(0,
-			"GWToolbox crashed, oops\n\n"
+        MessageBoxW(0,
+			L"GWToolbox crashed, oops\n\n"
 			"Error creating the dump file\n"
 			"I don't really know what to do, sorry, contact the developers.\n",
-			"GWToolbox++ Crash!", 0);
+			L"GWToolbox++ Crash!", 0);
 	}
 	abort();
 }
