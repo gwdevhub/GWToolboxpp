@@ -516,6 +516,7 @@ bool HotkeyEquipItem::IsEquippable(GW::Item *_item)
     return c && c->player_name &&
            wcscmp(c->player_name, _item->customized) == 0;
 }
+using namespace std::chrono_literals;
 void HotkeyEquipItem::Execute()
 {
     if (isLoading())
@@ -550,14 +551,12 @@ void HotkeyEquipItem::Execute()
         start_time = std::chrono::steady_clock::now();
     } else {
         last_try = std::chrono::steady_clock::now();
-        __int64 diff_mills =
-            std::chrono::duration_cast<std::chrono::milliseconds>(last_try -
-                                                                  start_time)
-                .count();
-        if (diff_mills < 500) {
+        auto const elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(last_try - start_time);
+
+        if (elapsed < 500ms) {
             return; // Wait 250ms between tries.
         }
-        if (diff_mills > 5000) {
+        if (elapsed > 5s) {
             if (show_error_on_failure)
                 Log::Error("Failed to equip item in bag %d slot %d", bag_idx,
                            slot_idx);
