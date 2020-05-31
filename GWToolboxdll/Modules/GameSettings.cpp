@@ -205,9 +205,9 @@ namespace {
             b_item = bag->items[i];
             if (!b_item || b_item->quantity <= max_mat_storage_size)
                 continue;
-            for (size_t j = (max_mat_storage_size / 250u) + 1; b_item->quantity > max_mat_storage_size; j++) {
-                max_mat_storage_size = 250u * j;
-            }
+            while (b_item->quantity > max_mat_storage_size) {
+                max_mat_storage_size += 250u;
+			}
         }
         return max_mat_storage_size;
 	}
