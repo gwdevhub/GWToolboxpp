@@ -70,11 +70,34 @@ static bool FindTopMostProcess(std::vector<InjectProcess>& processes, size_t *To
     return true;
 }
 
+static void GetGuildWarsProcesses(std::vector<Process>& processes)
+{
+    GetProcesses(processes, L"Gw.exe");
+
+    std::vector<Process> buffer;
+    GetProcessesFromWindowClass(buffer, L"ArenaNet_Dx_Window_Class");
+
+    for (Process& process : buffer) {
+        DWORD pid = process.GetProcessId();
+
+        bool found = false;
+        for (Process& it : processes) {
+            if (it.GetProcessId() == pid) {
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            processes.emplace_back(std::move(process));
+        }
+    }
+}
+
 InjectReply InjectWindow::AskInjectProcess(Process *target_process)
 {
     std::vector<Process> processes;
-    GetProcesses(processes, L"Gw.exe");
-    GetProcessesFromWindowClass(processes, L"ArenaNet_Dx_Window_Class");
+    GetGuildWarsProcesses(processes);
 
     if (processes.empty()) {
         fprintf(stderr, "Didn't find any potential process to inject GWToolbox\n");

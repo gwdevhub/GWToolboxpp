@@ -275,12 +275,52 @@ bool GetProcesses(std::vector<Process>& processes, const wchar_t *name, DWORD ri
     return true;
 }
 
+struct EnumWindowUserParam {
+    DWORD rights;
+    const wchar_t *classname;
+    std::vector<Process> *processes;
+};
+
+static BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam)
+{
+    EnumWindowUserParam *UserParam = reinterpret_cast<EnumWindowUserParam *>(lParam);
+
+    WCHAR ClassName[256];
+    int iCopied = GetClassNameW(hWnd, ClassName, _countof(ClassName));
+    if (iCopied <= 0)
+        return TRUE;
+
+    if (wcsncmp(ClassName, UserParam->classname, _countof(ClassName)) == 0) {
+        DWORD ProcessId;
+        if (GetWindowThreadProcessId(hWnd, &ProcessId) == 0) {
+            fprintf(stderr, "GetWindowThreadProcessId returned 0 in EnumWindowsProc\n");
+            return TRUE;
+        }
+
+        Process process(ProcessId, UserParam->rights);
+        if (!process.IsOpen()) {
+            fprintf(stderr, "Couldn't open process: %lu with rights 0x%lX\n", ProcessId, UserParam->rights);
+            return TRUE;
+        }
+
+        UserParam->processes->emplace_back(std::move(process));
+    }
+
+    return TRUE;
+}
+
 bool GetProcessesFromWindowClass(std::vector<Process>& processes, const wchar_t *classname, DWORD rights)
 {
-    UNREFERENCED_PARAMETER(processes);
-    UNREFERENCED_PARAMETER(classname);
-    UNREFERENCED_PARAMETER(rights);
-    // EnumWindows()
+    EnumWindowUserParam UserParam;
+    UserParam.rights = rights;
+    UserParam.classname = classname;
+    UserParam.processes = &processes;
+
+    if (!EnumWindows(EnumWindowsProc, reinterpret_cast<LPARAM>(&UserParam))) {
+        fprintf(stderr, "EnumWindows failed (%lu)\n", GetLastError());
+        return false;
+    }
+
     return true;
 }
 
