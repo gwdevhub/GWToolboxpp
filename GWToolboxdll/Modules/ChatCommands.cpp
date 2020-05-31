@@ -548,8 +548,10 @@ void ChatCommands::Update(float delta) {
 			&& (clock() - skill_timer) / 1000.0f > skill_usage_delay) {
 			GW::Skillbar* skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
 			if (skillbar && skillbar->IsValid()) {
-				GW::SkillbarSkill skill = skillbar->skills[slot];
-				GW::Skill& skilldata = GW::SkillbarMgr::GetSkillConstantData(skill.skill_id);
+				const GW::SkillbarSkill& skill = skillbar->skills[slot];
+                if (!skill.skill_id)
+                    continue;
+				const GW::Skill& skilldata = GW::SkillbarMgr::GetSkillConstantData(skill.skill_id);
 				if ((skilldata.adrenaline == 0 && skill.GetRecharge() == 0) || (skilldata.adrenaline > 0 && skill.adrenaline_a == skilldata.adrenaline)) {
 					GW::GameThread::Enqueue([slot] {
 						GW::SkillbarMgr::UseSkill(slot, GW::Agents::GetTargetId());
@@ -1152,18 +1154,17 @@ void ChatCommands::AddSkillToUse(uint32_t skill) {
 
 void ChatCommands::CmdUseSkill(const wchar_t *, int argc, LPWSTR *argv) {
 	Instance().skills_to_use.clear();
-    if (argc < 1)
+    if (argc < 2)
         return;
     std::wstring arg1 = GuiUtils::ToLower(argv[1]);
     if (arg1 == L"stop" || arg1 == L"off" || arg1 == L"0")
         return; // do nothing, already cleared skills_to_use
-    int inum = 0;
+    uint32_t num = 0;
     for (int i = argc - 1; i > 0; --i) {
-        if (!GuiUtils::ParseInt(argv[i], &inum) || inum < 1) {
+        if (!GuiUtils::ParseUInt(argv[i], &num) || num < 1) {
             Log::Error("Invalid argument '%ls', please use an integer value", argv[i]);
             continue;
 		}
-        uint32_t num = static_cast<uint32_t>(inum);
         // note: num can be one or more skills
         while (num > 10) {
             Instance().AddSkillToUse(num % 10);
