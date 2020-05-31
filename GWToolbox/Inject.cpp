@@ -16,6 +16,60 @@
 name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
 processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
+struct InjectProcess
+{
+    InjectProcess(Process&& proc, std::wstring&& name)
+        : process(std::move(proc))
+        , charname(std::move(name))
+    {
+    }
+
+    InjectProcess(const InjectProcess&) = delete;
+    InjectProcess(InjectProcess&&) = default;
+
+    InjectProcess& operator=(const InjectProcess&) = delete;
+    InjectProcess& operator=(InjectProcess&&) = default;
+
+    Process process;
+    std::wstring charname;
+};
+
+static bool FindTopMostProcess(std::vector<InjectProcess>& processes, size_t *TopMostIndex)
+{
+    if (processes.size() >= 250) {
+        fprintf(stderr,
+                "Process::FindTopMostProcess is O(n^2) where n is the number of processes."
+                "Consider rewriting the function to have a better scaling for large number of processes.\n");
+    }
+
+    HWND hWndIt = GetTopWindow(nullptr);
+    if (hWndIt == nullptr) {
+        fprintf(stderr, "GetTopWindow failed (%lu)\n", GetLastError());
+        return false;
+    }
+
+    while (hWndIt != nullptr) {
+        DWORD WindowPid;
+        if (GetWindowThreadProcessId(hWndIt, &WindowPid) == 0) {
+            // @Cleanup:
+            // Not clear whether this is the return value hold an error, so we just log.
+            fprintf(stderr, "GetWindowThreadProcessId returned 0\n");
+            continue;
+        }
+
+        for (size_t i = 0; i < processes.size(); ++i) {
+            if (processes[i].process.GetProcessId() == WindowPid) {
+                *TopMostIndex = i;
+                return true;
+            }
+        }
+
+        hWndIt = GetWindow(hWndIt, GW_HWNDNEXT);
+    }
+
+    return true;
+}
+
 InjectReply InjectWindow::AskInjectProcess(Process *target_process)
 {
     std::vector<Process> processes;
@@ -32,14 +86,8 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
     if (!scanner.FindPatternRva("\x8B\xF8\x6A\x03\x68\x0F\x00\x00\xC0\x8B\xCF\xE8", "xxxxxxxxxxxx", -0x42, &charname_rva)) {
         return InjectReply_PatternError;
     }
-    std::sort(processes.begin(), processes.end(), [](Process &a, Process &b)  {
-        return a.GetTopMostWindow() < b.GetTopMostWindow();
-    });
 
-    std::vector<std::wstring> charnames;
-    charnames.reserve(processes.size());
-    std::vector<Process> valid_processes;
-    valid_processes.reserve(processes.size());
+    std::vector<InjectProcess> inject_processes;
 
     for (Process& process : processes) {
         ProcessModule module;
@@ -70,26 +118,39 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
         }
 
         size_t charname_len = wcsnlen(charname, _countof(charname));
-        charnames.emplace_back(charname, charname + charname_len);
-        valid_processes.emplace_back(std::move(process));
+        std::wstring charname2(charname, charname + charname_len);
+
+        inject_processes.emplace_back(std::move(process), std::wstring(charname2));
     }
 
     processes.clear();
 
-    if (settings.quiet && valid_processes.size() == 1) {
-        *target_process = std::move(valid_processes[0]);
+    if (settings.quiet && inject_processes.size() == 1) {
+        *target_process = std::move(inject_processes[0].process);
         return InjectReply_Inject; // Inject if 1 process found
     }
+
+    // Sort by name
+    std::sort(inject_processes.begin(), inject_processes.end(),
+        [](InjectProcess &proc1, InjectProcess &proc2) {
+            return proc1.charname < proc2.charname;
+        });
 
     InjectWindow inject;
     inject.Create();
 
-    for (size_t i = 0; i < charnames.size(); i++)
+    for (size_t i = 0; i < inject_processes.size(); i++)
     {
-        const wchar_t *name = charnames[i].c_str();
+        const wchar_t *name = inject_processes[i].charname.c_str();
         SendMessageW(inject.m_hCharacters, CB_ADDSTRING, 0, (LPARAM)name);
     }
-    SendMessageW(inject.m_hCharacters, CB_SETCURSEL, 0, 0);
+
+    size_t TopMostIdx;
+    if (FindTopMostProcess(inject_processes, &TopMostIdx)) {
+        SendMessageW(inject.m_hCharacters, CB_SETCURSEL, static_cast<WPARAM>(TopMostIdx), 0);
+    } else {
+        SendMessageW(inject.m_hCharacters, CB_SETCURSEL, 0, 0);
+    }
 
     inject.WaitMessages();
 
@@ -99,7 +160,7 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
         return InjectReply_Cancel;
     }
 
-    *target_process = std::move(valid_processes[index]);
+    *target_process = std::move(inject_processes[index].process);
     return InjectReply_Inject;
 }
 

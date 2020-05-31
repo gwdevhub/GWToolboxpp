@@ -47,25 +47,6 @@ bool Process::IsOpen()
     return m_hProcess != nullptr;
 }
 
-int Process::GetTopMostWindow(HWND* window)
-{
-    int zIndex = -1;
-    HWND lWindow = GetTopWindow(0);
-    DWORD window_pid = 0;
-    DWORD pid = GetProcessId();
-    while (lWindow && pid) {
-        zIndex++;
-        GetWindowThreadProcessId(lWindow, &window_pid);
-        if (window_pid == pid) {
-            if(window)
-                *window = lWindow;
-            return zIndex;
-        }
-        lWindow = GetWindow(lWindow, GW_HWNDNEXT);
-    }
-    return -1;
-}
-
 bool Process::Open(uint32_t pid, DWORD rights)
 {
     Close();
