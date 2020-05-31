@@ -193,6 +193,25 @@ namespace {
 		}
 	}
 
+	// GW Client doesn't actually know max material storage size for the account.
+	// We can make a guess by checking how many materials are currently in storage.
+    size_t MaxMaterialStorage() {
+        size_t max_mat_storage_size = 250u;
+        GW::Bag *bag = GW::Items::GetBag(GW::Constants::Bag::Material_Storage);
+        if (!bag || bag->items.valid() || !bag->items_count)
+            return max_mat_storage_size;
+        GW::Item *b_item = nullptr;
+        for (size_t i = GW::Constants::MaterialSlot::Bone; i < GW::Constants::MaterialSlot::N_MATS; i++) {
+            b_item = bag->items[i];
+            if (!b_item || b_item->quantity <= max_mat_storage_size)
+                continue;
+            for (size_t j = (max_mat_storage_size / 250u) + 1; b_item->quantity > max_mat_storage_size; j++) {
+                max_mat_storage_size = 250u * j;
+            }
+        }
+        return max_mat_storage_size;
+	}
+
     size_t move_materials_to_storage(GW::Item *item) {
 		assert(item && item->quantity);
 		assert(item->GetIsMaterial());
@@ -200,9 +219,14 @@ namespace {
 		int islot = GW::Items::GetMaterialSlot(item);
 		if (islot < 0 || (int)GW::Constants::N_MATS <= islot) return 0;
         uint32_t slot = static_cast<uint32_t>(islot);
-        size_t availaible = 250;
+        const size_t max_in_slot = MaxMaterialStorage();
+        size_t availaible = max_in_slot;
 		GW::Item *b_item = GW::Items::GetItemBySlot(GW::Constants::Bag::Material_Storage, slot + 1);
-		if (b_item) availaible = 250u - b_item->quantity;
+        if (b_item) {
+            if (b_item->quantity >= max_in_slot)
+                return 0;
+            availaible = max_in_slot - b_item->quantity;
+        }
         size_t will_move = std::min<size_t>(item->quantity, availaible);
 		if (will_move) GW::Items::MoveItem(item, GW::Constants::Bag::Material_Storage, slot, will_move);
 		return will_move;
@@ -220,7 +244,8 @@ namespace {
 			while (slot != GW::Bag::npos) {
 				GW::Item *b_item = bag->items[slot];
 				// b_item can be null in the case of birthday present for instance.
-				if (b_item != nullptr) {
+				
+                if (b_item != nullptr && b_item->quantity < 250u) {
 					size_t availaible = 250u - b_item->quantity;
 					size_t will_move = std::min<size_t>(availaible, remaining);
 					if (will_move > 0) {

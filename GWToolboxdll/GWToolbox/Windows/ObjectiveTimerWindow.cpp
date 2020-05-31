@@ -353,7 +353,7 @@ void ObjectiveTimerWindow::OnMapChanged(GW::HookStatus *, GW::Packet::StoC::Pack
                 if (dungeonLevel == mapToDungeonLevel.end())
                     return;
                 Objective *obj = instance.GetCurrentObjective(dungeonLevel->second);
-                if (!obj->IsStarted())
+                if (obj && !obj->IsStarted())
                     obj->SetStarted();
             } break;
         }
