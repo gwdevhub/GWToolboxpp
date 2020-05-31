@@ -3,6 +3,7 @@
 #include "Inject.h"
 #include "Process.h"
 #include "Settings.h"
+#include "Str.h"
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
@@ -18,9 +19,10 @@ processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
 struct InjectProcess
 {
-    InjectProcess(Process&& proc, std::wstring&& name)
-        : process(std::move(proc))
-        , charname(std::move(name))
+    InjectProcess(bool injected, Process&& process, std::wstring&& charname)
+        : m_Injected(injected)
+        , m_Process(std::move(process))
+        , m_Charname(std::move(charname))
     {
     }
 
@@ -30,8 +32,9 @@ struct InjectProcess
     InjectProcess& operator=(const InjectProcess&) = delete;
     InjectProcess& operator=(InjectProcess&&) = default;
 
-    Process process;
-    std::wstring charname;
+    bool m_Injected;
+    Process m_Process;
+    std::wstring m_Charname;
 };
 
 static bool FindTopMostProcess(std::vector<InjectProcess>& processes, size_t *TopMostIndex)
@@ -58,7 +61,7 @@ static bool FindTopMostProcess(std::vector<InjectProcess>& processes, size_t *To
         }
 
         for (size_t i = 0; i < processes.size(); ++i) {
-            if (processes[i].process.GetProcessId() == WindowPid) {
+            if (processes[i].m_Process.GetProcessId() == WindowPid) {
                 *TopMostIndex = i;
                 return true;
             }
@@ -120,6 +123,14 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
             continue;
         }
 
+        bool injected;
+        ProcessModule module2;
+        if (process.GetModule(&module2, L"GWToolboxdll.dll")) {
+            injected = true;
+        } else {
+            injected = false;
+        }
+
         uint32_t charname_ptr;
         if (!process.Read(module.base + charname_rva, &charname_ptr, 4)) {
             fprintf(stderr, "Can't read the address 0x%08X in process %u\n",
@@ -143,20 +154,20 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
         size_t charname_len = wcsnlen(charname, _countof(charname));
         std::wstring charname2(charname, charname + charname_len);
 
-        inject_processes.emplace_back(std::move(process), std::wstring(charname2));
+        inject_processes.emplace_back(injected, std::move(process), std::wstring(charname2));
     }
 
     processes.clear();
 
     if (settings.quiet && inject_processes.size() == 1) {
-        *target_process = std::move(inject_processes[0].process);
+        *target_process = std::move(inject_processes[0].m_Process);
         return InjectReply_Inject; // Inject if 1 process found
     }
 
     // Sort by name
     std::sort(inject_processes.begin(), inject_processes.end(),
         [](InjectProcess &proc1, InjectProcess &proc2) {
-            return proc1.charname < proc2.charname;
+            return proc1.m_Charname < proc2.m_Charname;
         });
 
     InjectWindow inject;
@@ -164,8 +175,15 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
 
     for (size_t i = 0; i < inject_processes.size(); i++)
     {
-        const wchar_t *name = inject_processes[i].charname.c_str();
-        SendMessageW(inject.m_hCharacters, CB_ADDSTRING, 0, (LPARAM)name);
+        InjectProcess *process = &inject_processes[i];
+
+        wchar_t buffer[128];
+        StrCopyW(buffer, _countof(buffer), process->m_Charname.c_str());
+        if (process->m_Injected) {
+            StrAppendW(buffer, _countof(buffer), L" (injected)");
+        }
+
+        SendMessageW(inject.m_hCharacters, CB_ADDSTRING, 0, (LPARAM)buffer);
     }
 
     size_t TopMostIdx;
@@ -183,7 +201,7 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
         return InjectReply_Cancel;
     }
 
-    *target_process = std::move(inject_processes[index].process);
+    *target_process = std::move(inject_processes[index].m_Process);
     return InjectReply_Inject;
 }
 

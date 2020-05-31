@@ -24,6 +24,20 @@ void StrCopyW(wchar_t *dest, size_t size, const wchar_t *src)
     dest[i] = 0;
 }
 
+void StrAppendA(char *dest, size_t size, const char *src)
+{
+    size_t start = strnlen(dest, size);
+    size_t remaining = size - start;
+    StrCopyA(&dest[start], remaining, src);
+}
+
+void StrAppendW(wchar_t *dest, size_t size, const wchar_t *src)
+{
+    size_t start = wcsnlen(dest, size);
+    size_t remaining = size - start;
+    StrCopyW(&dest[start], remaining, src);
+}
+
 size_t StrLenA(const char *str)
 {
     return strlen(str);
