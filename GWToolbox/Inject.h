@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Process.h"
+#include "Settings.h"
 #include "Window.h"
 
 enum InjectReply
@@ -40,6 +41,7 @@ private:
     HWND m_hLaunchButton;
     HWND m_hRestartAsAdmin;
     HWND m_hSettings;
+    SettingsWindow m_SettingsWindow;
 
     int m_Selected;
 };

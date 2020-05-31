@@ -1,8 +1,6 @@
 #include "stdafx.h"
 
 #include "Inject.h"
-#include "Process.h"
-#include "Settings.h"
 #include "Str.h"
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
@@ -359,13 +357,7 @@ void InjectWindow::OnCommand(HWND hWnd, LONG ControlId, LONG NotificationCode)
     } else if ((hWnd == m_hRestartAsAdmin) && (ControlId == STN_CLICKED)) {
         RestartAsAdminWithSameArgs();
     } else if ((hWnd == m_hSettings) && (ControlId == STN_CLICKED)) {
-        SettingsWindow window;
-        window.Create();
-        // @Remark:
-        // This is kind of dumb, we block here, but it works, because the
-        // message dispatcher doesn't care about the object.
-        // We should improve that...
-        window.WaitMessages();
+        m_SettingsWindow.Create();
     }
 }
 
