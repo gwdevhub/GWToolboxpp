@@ -1,6 +1,9 @@
 #pragma once
 
 #pragma warning(push)
+// Warning 5204 was removed, so it trigger a warning about a warning not existing, so we disable warning about warning.
+#pragma warning(disable: 4619) // #pragma warning : there is no warning number 'number'
+
 #pragma warning(disable: 4061) // enumerator 'identifier' in switch of enum 'enumeration' is not explicitly handled by a case label
 #pragma warning(disable: 4100) // 'identifier' : unreferenced formal parameter
 #pragma warning(disable: 4365) // 'action' : conversion from 'type_1' to 'type_2', signed/unsigned mismatch

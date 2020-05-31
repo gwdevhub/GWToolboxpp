@@ -7,9 +7,10 @@ bool OpenSettingsKey(PHKEY phkResult)
     LSTATUS status;
     DWORD Disposition;
 
+    LPCWSTR lpSubKey = L"Software\\GWToolbox";
     status = RegCreateKeyExW(
         HKEY_CURRENT_USER,
-        L"Software\\GWToolbox",
+        lpSubKey,
         0,
         nullptr,
         REG_OPTION_NON_VOLATILE,
@@ -20,7 +21,7 @@ bool OpenSettingsKey(PHKEY phkResult)
 
     if (status != ERROR_SUCCESS)
     {
-        fprintf(stderr, "RegCreateKeyExW failed: status:0x%lX\n", status);
+        fprintf(stderr, "RegCreateKeyExW failed: {status:0x%lX, lpSubKey:'%ls'}\n", status, lpSubKey);
         phkResult = nullptr;
         return false;
     }
@@ -30,16 +31,17 @@ bool OpenSettingsKey(PHKEY phkResult)
 
 bool OpenUninstallKey(PHKEY phkResult)
 {
+    LPCWSTR lpSubKey = L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\GWToolbox";
     LSTATUS status = RegOpenKeyExW(
         HKEY_CURRENT_USER,
-        L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\GWToolbox",
+        lpSubKey,
         0,
         KEY_READ,
         phkResult);
 
     if (status != ERROR_SUCCESS)
     {
-        fprintf(stderr, "RegOpenKeyExW failed: status:0x%lX\n", status);
+        fprintf(stderr, "RegOpenKeyExW failed: {status:0x%lX, lpSubKey:'%ls'}\n", status, lpSubKey);
         phkResult = nullptr;
         return false;
     }
@@ -52,9 +54,10 @@ bool CreateUninstallKey(PHKEY phkResult)
     LSTATUS status;
     DWORD Disposition;
 
+    LPCWSTR lpSubKey = L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\GWToolbox";
     status = RegCreateKeyExW(
         HKEY_CURRENT_USER,
-        L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\GWToolbox",
+        lpSubKey,
         0,
         nullptr,
         REG_OPTION_NON_VOLATILE,
@@ -65,7 +68,7 @@ bool CreateUninstallKey(PHKEY phkResult)
 
     if (status != ERROR_SUCCESS)
     {
-        fprintf(stderr, "RegCreateKeyExW failed: status:0x%lX\n", status);
+        fprintf(stderr, "RegCreateKeyExW failed: {status:0x%lX, lpSubKey:'%ls'}\n", status, lpSubKey);
         phkResult = nullptr;
         return false;
     }
@@ -75,13 +78,14 @@ bool CreateUninstallKey(PHKEY phkResult)
 
 bool DeleteSettingsKey()
 {
+    LPCWSTR lpSubKey = L"Software\\GWToolbox";
     LSTATUS status = RegDeleteKeyW(
         HKEY_CURRENT_USER,
-        L"Software\\GWToolbox");
+        lpSubKey);
 
     if (status != ERROR_SUCCESS)
     {
-        fprintf(stderr, "RegDeleteKeyW failed: status:0x%lX\n", status);
+        fprintf(stderr, "RegDeleteKeyW failed: {status:0x%lX, lpSubKey:'%ls'}\n", status, lpSubKey);
         return false;
     }
 
@@ -90,13 +94,14 @@ bool DeleteSettingsKey()
 
 bool DeleteUninstallKey()
 {
+    LPCWSTR lpSubKey = L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\GWToolbox";
     LSTATUS status = RegDeleteKeyW(
         HKEY_CURRENT_USER,
-        L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\GWToolbox");
+        lpSubKey);
 
     if (status != ERROR_SUCCESS)
     {
-        fprintf(stderr, "RegDeleteKeyW failed: status:0x%lX\n", status);
+        fprintf(stderr, "RegDeleteKeyW failed: {status:0x%lX, lpSubKey:'%ls'}\n", status, lpSubKey);
         return false;
     }
 
@@ -116,7 +121,8 @@ bool RegWriteStr(HKEY hKey, LPCWSTR KeyName, LPCWSTR Value)
 
     if (status != ERROR_SUCCESS)
     {
-        fprintf(stderr, "RegSetValueExW failed: status:0x%lX\n", status);
+        fprintf(stderr, "RegSetValueExW failed: {status:0x%lX, KeyName:'%ls', Value:'%ls'}\n",
+                status, KeyName, Value);
         return false;
     }
 
@@ -135,7 +141,8 @@ bool RegWriteDWORD(HKEY hKey, LPCWSTR KeyName, DWORD Value)
 
     if (status != ERROR_SUCCESS)
     {
-        fprintf(stderr, "RegSetValueExW failed: status:0x%lX\n", status);
+        fprintf(stderr, "RegSetValueExW failed: {status:0x%lX, KeyName:'%ls', Value:%lu}\n",
+                status, KeyName, Value);
         return false;
     }
 
@@ -158,7 +165,8 @@ bool RegReadStr(HKEY hKey, LPCWSTR KeyName, LPWSTR Buffer, size_t BufferLength)
 
     if (status != ERROR_SUCCESS)
     {
-        fprintf(stderr, "RegGetValueW failed: status:0x%lX\n", status);
+        fprintf(stderr, "RegGetValueW failed: {status:0x%lX, KeyName:'%ls'}\n",
+                status, KeyName);
         return false;
     }
 
@@ -180,7 +188,8 @@ bool RegReadDWORD(HKEY hKey, LPCWSTR KeyName, PDWORD dwDword)
 
     if (status != ERROR_SUCCESS)
     {
-        fprintf(stderr, "RegGetValueW failed: status:0x%lX\n", status);
+        fprintf(stderr, "RegGetValueW failed: {status:0x%lX, KeyName:'%ls'}\n",
+                status, KeyName);
         return false;
     }
 
