@@ -181,7 +181,7 @@ void Pcon::Update(int delay) {
 		StopRefill();
         refill_attempted = maptype != GW::Constants::InstanceType::Outpost;
 	}
-    if (maptype == GW::Constants::InstanceType::Loading)
+    if (maptype == GW::Constants::InstanceType::Loading || GW::Map::GetIsObserving())
         return;
 	if (!refill_attempted) {
 		refilling = refill_if_below_threshold;

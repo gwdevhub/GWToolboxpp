@@ -226,6 +226,8 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
 
 void BondsWidget::UseBuff(GW::AgentID targetId, DWORD buff_skillid) {
 	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return;
+    if (GW::Map::GetIsObserving())
+        return;
     if (targetId == 0) return;
 
     GW::Agent* target = GW::Agents::GetAgentByID(targetId);

@@ -169,6 +169,8 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
 				if (threshold->modelId && threshold->modelId != target->player_number) continue;
 				if (threshold->skillId) {
 					GW::Skillbar* skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
+                    if (!(skillbar && skillbar->IsValid()))
+                        continue;
 					GW::SkillbarSkill* skill = skillbar->GetSkillById(static_cast<GW::Constants::SkillID>(threshold->skillId));
 					if (!skill) continue;
 				}

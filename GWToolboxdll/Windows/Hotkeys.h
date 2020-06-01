@@ -51,6 +51,9 @@ public:
 	TBHotkey(CSimpleIni* ini, const char* section);
     virtual ~TBHotkey(){};
 
+	virtual bool CanUse();
+
+
 	virtual void Save(CSimpleIni* ini, const char* section) const;
 
 	void Draw(Op* op);
@@ -129,6 +132,8 @@ public:
 	HotkeyUseItem(CSimpleIni* ini, const char* section);
 
 	void Save(CSimpleIni* ini, const char* section) const override;
+
+	bool CanUse() override { return TBHotkey::CanUse() && item_id != 0; }
 
 	void Draw() override;
 	void Description(char* buf, size_t bufsz) const override;

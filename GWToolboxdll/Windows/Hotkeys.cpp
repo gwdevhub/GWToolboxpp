@@ -95,6 +95,10 @@ TBHotkey::TBHotkey(CSimpleIni *ini, const char *section)
             section, VAR_NAME(trigger_on_outpost), trigger_on_outpost);
     }
 }
+bool TBHotkey::CanUse()
+{
+    return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && !GW::Map::GetIsObserving();
+}
 void TBHotkey::Save(CSimpleIni *ini, const char *section) const
 {
     ini->SetLongValue(section, VAR_NAME(hotkey), hotkey);
@@ -435,7 +439,7 @@ void HotkeyUseItem::Draw()
 }
 void HotkeyUseItem::Execute()
 {
-    if (isLoading())
+    if (!CanUse())
         return;
     if (item_id == 0)
         return;
@@ -688,7 +692,7 @@ void HotkeyDropUseBuff::Draw()
 }
 void HotkeyDropUseBuff::Execute()
 {
-    if (!isExplorable())
+    if (!CanUse())
         return;
 
     GW::Buff *buff = GW::Effects::GetPlayerBuffBySkillId(id);
@@ -827,7 +831,7 @@ void HotkeyAction::Draw()
 }
 void HotkeyAction::Execute()
 {
-    if (isLoading())
+    if (!CanUse())
         return;
     switch (action) {
         case HotkeyAction::OpenXunlaiChest:
@@ -909,9 +913,7 @@ void HotkeyTarget::Draw()
 }
 void HotkeyTarget::Execute()
 {
-    if (isLoading())
-        return;
-    if (id == 0)
+    if (!CanUse() || id == 0)
         return;
 
     const GW::AgentArray& agents = GW::Agents::GetAgentArray();
@@ -1007,9 +1009,8 @@ void HotkeyMove::Draw()
 }
 void HotkeyMove::Execute()
 {
-    if (!isExplorable())
+    if (!CanUse())
         return;
-
     GW::Agent *me = GW::Agents::GetPlayer();
     double dist = GW::GetDistance(me->pos, GW::Vec2f(x, y));
     if (range != 0 && dist > range)
@@ -1056,7 +1057,7 @@ void HotkeyDialog::Draw()
 }
 void HotkeyDialog::Execute()
 {
-    if (isLoading())
+    if (!CanUse())
         return;
     if (id == 0)
         return;
@@ -1101,7 +1102,7 @@ void HotkeyPingBuild::Draw()
 }
 void HotkeyPingBuild::Execute()
 {
-    if (isLoading())
+    if (!CanUse())
         return;
 
     BuildsWindow::Instance().Send(index);
@@ -1144,7 +1145,7 @@ void HotkeyHeroTeamBuild::Draw()
 }
 void HotkeyHeroTeamBuild::Execute()
 {
-    if (isLoading())
+    if (!CanUse())
         return;
     HeroBuildsWindow::Instance().Load(index);
 }

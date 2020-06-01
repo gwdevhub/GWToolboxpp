@@ -56,8 +56,11 @@ namespace {
 			str++;
 		return *str ? str : NULL;
 	}
-	
-	
+
+	static bool IsMapReady()
+    {
+        return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && !GW::Map::GetIsObserving();
+	}
 
 	// Returns guild struct of current location. Returns null on fail or non-guild map.
 	static GW::Guild* GetCurrentGH() {
@@ -544,7 +547,8 @@ void ChatCommands::Update(float delta) {
 	}
 
 	for (uint32_t slot : skills_to_use) {
-		if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable
+        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable 
+			&& !GW::Map::GetIsObserving()
 			&& (clock() - skill_timer) / 1000.0f > skill_usage_delay) {
 			GW::Skillbar* skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
 			if (skillbar && skillbar->IsValid()) {
@@ -598,12 +602,14 @@ void ChatCommands::CmdAge2(const wchar_t* , int, LPWSTR* ) {
 }
 
 void ChatCommands::CmdDialog(const wchar_t *, int argc, LPWSTR *argv) {
+    if (!IsMapReady())
+		return;
 	if (argc <= 1) {
 		Log::Error("Please provide an integer or hex argument");
 	} else {
-		int id;
-		if (GuiUtils::ParseInt(argv[1], &id)) {
-			GW::Agents::SendDialog(static_cast<uint32_t>(id));
+		uint32_t id=0;
+		if (GuiUtils::ParseUInt(argv[1], &id)) {
+            GW::Agents::SendDialog(id);
 			Log::Info("Sent Dialog 0x%X", id);
 		} else {
 			Log::Error("Invalid argument '%ls', please use an integer or hex value", argv[0]);
@@ -612,6 +618,8 @@ void ChatCommands::CmdDialog(const wchar_t *, int argc, LPWSTR *argv) {
 }
 
 void ChatCommands::CmdChest(const wchar_t *, int, LPWSTR *) {
+    if (!IsMapReady())
+        return;
 	switch (GW::Map::GetInstanceType()) {
 	case GW::Constants::InstanceType::Outpost:
 		GW::Items::OpenXunlaiWindow();
@@ -1153,6 +1161,8 @@ void ChatCommands::AddSkillToUse(uint32_t skill) {
 }
 
 void ChatCommands::CmdUseSkill(const wchar_t *, int argc, LPWSTR *argv) {
+    if (!IsMapReady())
+        return;
 	Instance().skills_to_use.clear();
     if (argc < 2)
         return;
@@ -1235,6 +1245,8 @@ void ChatCommands::CmdLoad(const wchar_t *message, int argc, LPWSTR *argv) {
 }
 void ChatCommands::CmdPingEquipment(const wchar_t* message, int argc, LPWSTR* argv) {
     UNREFERENCED_PARAMETER(message);
+    if (!IsMapReady())
+        return;
 	if (argc < 2) {
 		Log::Error("Missing argument for /pingitem");
 		return;
@@ -1440,7 +1452,8 @@ void ChatCommands::CmdReapplyTitle(const wchar_t* message, int argc, LPWSTR* arg
     UNREFERENCED_PARAMETER(message);
     UNREFERENCED_PARAMETER(argc);
     UNREFERENCED_PARAMETER(argv);
-
+    if (!IsMapReady())
+        return;
     GW::PlayerMgr::RemoveActiveTitle();
 
     switch (GW::Map::GetMapID()) {
