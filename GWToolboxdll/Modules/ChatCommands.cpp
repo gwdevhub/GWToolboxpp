@@ -725,6 +725,7 @@ bool ChatCommands::ParseOutpost(const std::wstring& s, GW::Constants::MapID& out
 	if (s == L"la")									return outpost = GW::Constants::MapID::Lions_Arch_outpost, true;
     if (s == L"ac")									return outpost = GW::Constants::MapID::Ascalon_City_outpost, true;
 	if (s == L"eotn")								return outpost = GW::Constants::MapID::Eye_of_the_North_outpost, true;
+	if (s == L"kc")									return outpost = GW::Constants::MapID::Kaineng_Center_outpost, true;
 	if (s == L"hzh")								return outpost = GW::Constants::MapID::House_zu_Heltzer_outpost, true;
     if (s == L"ctc")								return outpost = GW::Constants::MapID::Central_Transfer_Chamber_outpost, true;
     if (s == L"topk")								return outpost = GW::Constants::MapID::Tomb_of_the_Primeval_Kings, true;
