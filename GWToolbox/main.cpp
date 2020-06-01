@@ -54,6 +54,36 @@ static bool InjectInstalledDllInProcess(Process *process)
     return true;
 }
 
+static bool SetProcessForeground(Process *process)
+{
+    HWND hWndIt = GetTopWindow(nullptr);
+    if (hWndIt == nullptr) {
+        fprintf(stderr, "GetTopWindow failed (%lu)\n", GetLastError());
+        return false;
+    }
+
+    DWORD ProcessId = process->GetProcessId();
+
+    while (hWndIt != nullptr) {
+        DWORD WindowPid;
+        if (GetWindowThreadProcessId(hWndIt, &WindowPid) == 0) {
+            // @Cleanup:
+            // Not clear whether this is the return value hold an error, so we just log.
+            fprintf(stderr, "GetWindowThreadProcessId returned 0\n");
+            continue;
+        }
+
+        if (WindowPid == ProcessId) {
+            SetForegroundWindow(hWndIt);
+            return true;
+        }
+
+        hWndIt = GetWindow(hWndIt, GW_HWNDNEXT);
+    }
+
+    return false;
+}
+
 #ifdef GWTOOLBOX_DEBUG
 int main(void)
 #else
@@ -179,16 +209,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
             }
         }
     }
-    HWND window = nullptr;
-    proc.GetTopMostWindow(&window);
+
     if (!InjectInstalledDllInProcess(&proc)) {
         ShowError(L"Couldn't find any appropriate target to start GWToolbox");
         fprintf(stderr, "InjectInstalledDllInProcess failed\n");
         return 1;
     }
-    // @Remark: should this be an optional registry setting?
-    if(window)
-        SetForegroundWindow(window);
+
+    SetProcessForeground(&proc);
 
     return 0;
 }
