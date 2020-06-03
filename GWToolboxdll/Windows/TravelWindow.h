@@ -22,18 +22,26 @@ public:
 	const char* Name() const override { return "Travel"; }
 
 	void Initialize() override;
+
     void Terminate() override;
 
 	bool TravelFavorite(unsigned int idx);
+
 	bool IsMapUnlocked(GW::Constants::MapID map_id);
+
+    // Travel via SendPacket, bypass "Are you sure" dialogs
 	void Travel(GW::Constants::MapID MapID, GW::Constants::District district, uint32_t district_number = 0);
+
     // Travel via UI interface, allowing "Are you sure" dialogs
     void UITravel(GW::Constants::MapID MapID, GW::Constants::District district,
                   uint32_t district_number = 0);
+
+    // Travel to relevent outpost, then use scroll to access Urgoz/Deep
     void ScrollToOutpost(
         GW::Constants::MapID outpost_id,
         GW::Constants::District district = GW::Constants::District::Current,
         uint32_t district_number = 0);
+
 	bool IsWaitingForMapTravel();
 
 	// Draw user interface. Will be called every frame if the element is visible
@@ -47,10 +55,14 @@ public:
     int RegionFromDistrict(GW::Constants::District district);
     int LanguageFromDistrict(GW::Constants::District district);
 
+    static void CmdTP(const wchar_t *message, int argc, LPWSTR *argv);
+
 private:
 	// ==== Helpers ====
 	void TravelButton(const char* text, int x_idx, GW::Constants::MapID mapid);
 	GW::Constants::MapID IndexToOutpostID(int index);
+    static bool ParseDistrict(const std::wstring &s, GW::Constants::District &district, uint32_t &number);
+    static bool ParseOutpost(const std::wstring &s, GW::Constants::MapID &outpost, GW::Constants::District &district, uint32_t &number);
 
 	// ==== Travel variables ====
 	GW::Constants::District district = GW::Constants::District::Current;
@@ -98,7 +110,66 @@ private:
         error_B38, // The merged party would be too large.
     };  */
 
-public:
+    struct OutpostAlias
+    {
+        OutpostAlias(GW::Constants::MapID m, GW::Constants::District d = GW::Constants::District::Current, uint8_t n = 0)
+            : map_id(m)
+            , district(d)
+            , district_number(n){};
+        GW::Constants::MapID map_id = GW::Constants::MapID::None;
+        GW::Constants::District district = GW::Constants::District::Current;
+        uint8_t district_number = 0;
+    };
+    struct DistrictAlias
+    {
+        DistrictAlias(GW::Constants::District d, uint8_t n = 0)
+            : district(d)
+            , district_number(n){};
+        GW::Constants::District district = GW::Constants::District::Current;
+        uint8_t district_number = 0;
+    };
+    // List of shorthand outpost names. This is checked for an exact match first.
+    const std::map<const std::string, const OutpostAlias> shorthand_outpost_names = {
+        {"bestarea", {GW::Constants::MapID::The_Deep}},
+        {"toa", {GW::Constants::MapID::Temple_of_the_Ages}},
+        {"doa", {GW::Constants::MapID::Domain_of_Anguish}},
+        {"goa", {GW::Constants::MapID::Domain_of_Anguish}},
+        {"tdp", {GW::Constants::MapID::Domain_of_Anguish}},
+        {"eee", {GW::Constants::MapID::Embark_Beach, GW::Constants::District::EuropeEnglish}},
+        {"gtob", {GW::Constants::MapID::Great_Temple_of_Balthazar_outpost}},
+        {"la", {GW::Constants::MapID::Lions_Arch_outpost}},
+        {"ac", {GW::Constants::MapID::Ascalon_City_outpost}},
+        {"eotn", {GW::Constants::MapID::Eye_of_the_North_outpost}},
+        {"kc", {GW::Constants::MapID::Kaineng_Center_outpost}},
+        {"hzh", {GW::Constants::MapID::House_zu_Heltzer_outpost}},
+        {"ctc", {GW::Constants::MapID::Central_Transfer_Chamber_outpost}},
+        {"topk", {GW::Constants::MapID::Tomb_of_the_Primeval_Kings}},
+        {"ra", {GW::Constants::MapID::Random_Arenas_outpost}},
+        {"ha", {GW::Constants::MapID::Heroes_Ascent_outpost}},
+        {"ra", {GW::Constants::MapID::Random_Arenas_outpost}},
+        {"fa", {GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost}},
+        {"jq", {GW::Constants::MapID::The_Jade_Quarry_Kurzick_outpost}}
+    };
+    // List of shorthand district names. This is checked for an exact match.
+    const std::map<const std::string, const DistrictAlias> shorthand_district_names = 
+    {
+        {"ae", {GW::Constants::District::American}},
+        {"ae1", {GW::Constants::District::American,1}},
+        {"int", {GW::Constants::District::International}},
+        {"ee", {GW::Constants::District::EuropeEnglish}},
+        {"eg", {GW::Constants::District::EuropeGerman}},
+        {"de", {GW::Constants::District::EuropeGerman}},
+        {"dd", {GW::Constants::District::EuropeGerman}},
+        {"fr", {GW::Constants::District::EuropeFrench}},   
+        {"it", {GW::Constants::District::EuropeItalian}}, 
+        {"es", {GW::Constants::District::EuropeSpanish}},   
+        {"pl", {GW::Constants::District::EuropePolish}}, 
+        {"ru", {GW::Constants::District::EuropeRussian}},  
+        {"kr", {GW::Constants::District::AsiaKorean}},
+        {"cn", {GW::Constants::District::AsiaChinese}}, 
+        {"jp", {GW::Constants::District::AsiaJapanese}},
+    };
+
     const GW::Constants::MapID presearing_map_ids[5] = {
         GW::Constants::MapID::Ashford_Abbey_outpost,
         GW::Constants::MapID::Ascalon_City_pre_searing,

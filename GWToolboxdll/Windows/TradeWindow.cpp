@@ -288,15 +288,16 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
         const float btn_width = 80.0f * font_scale;
         ImGui::PushItemWidth((ImGui::GetWindowContentRegionWidth() - btn_width - btn_width - btn_width - ImGui::GetStyle().ItemInnerSpacing.x * 6));
 		ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;
-		if (!pending_query_string.empty()) {
+        const bool searching = !pending_query_string.empty();
+        if (searching) {
 			flags |= ImGuiInputTextFlags_ReadOnly;
 			ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
 		}
 		bool do_search = false;
 		do_search |= ImGui::InputText("", search_buffer, 256, flags);
 		ImGui::SameLine();
-        do_search |= ImGui::Button(!pending_query_string.empty() ? "Searching" : "Search", ImVec2(btn_width, 0));
-		if (!pending_query_string.empty()) {
+        do_search |= ImGui::Button(searching ? "Searching" : "Search", ImVec2(btn_width, 0));
+        if (searching) {
 			ImGui::PopStyleColor();
 		}
 		else if(do_search) {

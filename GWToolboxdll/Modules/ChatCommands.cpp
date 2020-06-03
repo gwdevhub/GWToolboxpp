@@ -42,7 +42,6 @@
 #include <Modules/GameSettings.h>
 #include <Windows/MainWindow.h>
 #include <Windows/SettingsWindow.h>
-#include <Windows/TravelWindow.h>
 #include <Windows/BuildsWindow.h>
 #include <Widgets/PartyDamage.h>
 #include <Windows/Hotkeys.h>
@@ -62,30 +61,7 @@ namespace {
         return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && !GW::Map::GetIsObserving();
 	}
 
-	// Returns guild struct of current location. Returns null on fail or non-guild map.
-	static GW::Guild* GetCurrentGH() {
-		GW::AreaInfo* m = GW::Map::GetCurrentMapInfo();
-		if (!m || m->type != GW::RegionType::RegionType_GuildHall) return nullptr;
-		GW::Array<GW::Guild*> guilds = GW::GuildMgr::GetGuildArray();
-		if (!guilds.valid()) return nullptr;
-		for (size_t i = 0; i < guilds.size(); i++) {
-			if (!guilds[i]) continue;
-			return guilds[i];
-		}
-		return nullptr;
-	}
-	static GW::Guild* GetPlayerGH() {
-		GW::Array<GW::Guild*> guilds = GW::GuildMgr::GetGuildArray();
-		if (!guilds.valid()) return nullptr;
-		uint32_t guild_idx = GW::GuildMgr::GetPlayerGuildIndex();
-		if (guild_idx >= guilds.size())
-			return nullptr;
-		return guilds[guild_idx];
-	}
-	static bool IsInGH() {
-		GW::Guild* gh = GetCurrentGH();
-		return gh && gh == GetPlayerGH();
-	}
+
     static void TargetNearest(uint32_t model_id = 0, uint32_t type = 0xDB)
     {
         // target nearest agent
@@ -138,6 +114,8 @@ namespace {
         }
     }
 	bool ImInPresearing() { return GW::Map::GetCurrentMapInfo()->region == GW::Region_Presearing; }
+
+	static std::map<std::string, ChatCommands::PendingTransmo> npc_transmos;
 } // namespace
 
 void ChatCommands::TransmoAgent(DWORD agent_id, PendingTransmo& transmo)
@@ -219,111 +197,20 @@ void ChatCommands::TransmoAgent(DWORD agent_id, PendingTransmo& transmo)
     });
 }
 
-bool ChatCommands::GetNPCInfoByName(const wchar_t *name, PendingTransmo& transmo)
+bool ChatCommands::GetNPCInfoByName(const std::string name, PendingTransmo& transmo)
 {
-    size_t arglen = 0;
-	DWORD *npc_id = &transmo.npc_id;
-    DWORD *npc_model_file_id = &transmo.npc_model_file_id;
-    DWORD *npc_model_file_data = &transmo.npc_model_file_data;
-    DWORD *flags = &transmo.flags;
-    while (name[arglen])
-        arglen++;
-    if (!arglen)
-        return false;
-    *npc_model_file_data = 0;
-    *flags = 0;
-    if (wcsncmp(name, L"charr", std::min<size_t>(arglen, 5)) == 0 && false) {
-        *npc_id = 163;
-        *npc_model_file_id = 0x0004c409;
-        *flags = 98820;
-    } else if (wcsncmp(name, L"reindeer", std::min<size_t>(arglen, 8)) == 0 && false) {
-        *npc_id = 5;
-        *npc_model_file_id = 277573;
-        *npc_model_file_data = 277576;
-        *flags = 32780;
-    } else if (wcsncmp(name, L"gwenpre", std::min<size_t>(arglen, 7)) == 0) {
-        *npc_id = 244;
-        *npc_model_file_id = 116377;
-        *npc_model_file_data = 116759;
-        *flags = 98820;
-    } else if (wcsncmp(name, L"gwenchan", std::min<size_t>(arglen, 8)) == 0) {
-        *npc_id = 245;
-        *npc_model_file_id = 116377;
-        *npc_model_file_data = 283392;
-        *flags = 98820;
-    } else if (wcsncmp(name, L"eye", std::min<size_t>(arglen, 3)) == 0) {
-        *npc_id = 0x1f4;
-        *npc_model_file_id = 0x9d07;
-    } else if (wcsncmp(name, L"zhu", std::min<size_t>(arglen, 3)) == 0) {
-        *npc_id = 298;
-        *npc_model_file_id = 170283;
-        *npc_model_file_data = 170481;
-        *flags = 98820;
-    } else if (wcsncmp(name, L"kuunavang", std::min<size_t>(arglen, 9)) == 0) {
-        *npc_id = 309;
-        *npc_model_file_id = 157438;
-        *npc_model_file_data = 157527;
-        *flags = 98820;
-    } else if (wcsncmp(name, L"beetle", std::min<size_t>(arglen, 6)) == 0) {
-        *npc_id = 329;
-        *npc_model_file_id = 207331;
-        *npc_model_file_data = 279211; // 245179?
-        *flags = 98820;                // 32780 ?
-    } else if (wcsncmp(name, L"polar", std::min<size_t>(arglen, 5)) == 0) {
-        *npc_id = 313;
-        *npc_model_file_id = 277551;
-        *npc_model_file_data = 277556;
-        *flags = 98820;
-    } else if (wcsncmp(name, L"celepig", std::min<size_t>(arglen, 7)) == 0) {
-        *npc_id = 331;
-        *npc_model_file_id = 279205;
-    } else if (wcsncmp(name, L"mallyx", std::min<size_t>(arglen, 6)) == 0 && false) {
-        *npc_id = 315;
-        *npc_model_file_id = 243812;
-        *flags = 98820;
-    } else if (wcsncmp(name, L"bonedragon", std::min<size_t>(arglen, 10)) == 0) {
-        *npc_id = 231;
-        *npc_model_file_id = 16768;
-    } else if (wcsncmp(name, L"destroyer", std::min<size_t>(arglen, 9)) == 0) {
-        *npc_id = 312;
-        *npc_model_file_id = 285891;
-        *npc_model_file_data = 285900;
-        *flags = 98820;
-    } else if (wcsncmp(name, L"destroyer2", std::min<size_t>(arglen, 10)) == 0) {
-        *npc_id = 146;
-        *npc_model_file_id = 285886;
-        *npc_model_file_data = 285890;
-        *flags = 32780;
-    } else if (wcsncmp(name, L"koss", std::min<size_t>(arglen, 4)) == 0) {
-        *npc_id = 250;
-        *npc_model_file_id = 243282;
-        *npc_model_file_data = 245053;
-        *flags = 98820;
-    } else if (wcsncmp(name, L"smite", std::min<size_t>(arglen, 5)) == 0) {
-        *npc_id = 346;
-        *npc_model_file_id = 129664;
-        *flags = 98820;
-    } else if (wcsncmp(name, L"dorian", std::min<size_t>(arglen, 6)) == 0) {
-        *npc_id = 8299;
-        *npc_model_file_id = 86510;
-        *flags = 98820;
-    } else if (wcsncmp(name, L"kanaxai", std::min<size_t>(arglen, 7)) == 0) {
-        *npc_id = 317;
-        *npc_model_file_id = 184176;
-        *npc_model_file_data = 185319;
-        *flags = 98820;
-    } else if (wcsncmp(name, L"skeletonic", std::min<size_t>(arglen, 10)) == 0) {
-        *npc_id = 359;
-        *npc_model_file_id = 52356;
-        *flags = 98820;
-    } else if (wcsncmp(name, L"moa", std::min<size_t>(arglen, 3)) == 0) {
-        *npc_id = 504;
-        *npc_model_file_id = 16689;
-        *flags = 98820;
-    } else {
-        return false;
-    }
-    return true;
+	for (auto& npc_transmo : npc_transmos) {
+        size_t found_len = npc_transmo.first.find(name);
+        if (found_len == std::string::npos)
+            continue;
+        transmo = npc_transmo.second;
+		return true;
+	}
+    return false;
+}
+bool ChatCommands::GetNPCInfoByName(const std::wstring name, PendingTransmo &transmo)
+{
+    return GetNPCInfoByName(GuiUtils::WStringToString(name), transmo);
 }
 
 void ChatCommands::DrawHelp() {
@@ -407,6 +294,31 @@ void ChatCommands::SaveSettings(CSimpleIni* ini) {
 
 void ChatCommands::Initialize() {
 	ToolboxModule::Initialize();
+    const DWORD def_scale = 0x64000000;
+	// Available Transmo NPCs
+	// @Enhancement: Ability to target an NPC in-game and add it to this list via a GUI
+	npc_transmos = { 
+		{"charr", {163, def_scale, 0x0004c409, 0, 98820}}, 
+		{"reindeer", {5, def_scale, 277573, 277576, 32780}}, 
+		{"gwenpre", {244, def_scale, 116377, 116759, 98820}}, 
+		{"gwenchan", {245, def_scale, 116377, 283392, 98820}}, 
+		{"eye", {0x1f4, def_scale, 0x9d07, 0, 0}},
+        {"zhu", {298, def_scale, 170283, 170481, 98820}}, 
+		{"kuunavang", {309, def_scale, 157438, 157527, 98820}}, 
+		{"beetle", {329, def_scale, 207331, 279211, 98820}},     
+		{"polar", {313, def_scale, 277551, 277556, 98820}},    
+		{"celepig", {331, def_scale, 279205, 0, 0}},  
+		{"mallyx", {315, def_scale, 243812, 0, 98820}},     
+		{"bonedragon", {231, def_scale, 16768, 0, 0}},     
+		{"destroyer", {312, def_scale, 285891, 285900, 98820}},   
+		{"destroyer2", {146, def_scale, 285886, 285890, 32780}},    
+		{"koss", {250, def_scale, 243282, 245053, 98820}},     
+		{"smite", {346, def_scale, 129664, 0, 98820}}, 
+		{"dorian", {8299, def_scale, 86510, 0, 98820}},         
+		{"kanaxai", {317, def_scale, 184176, 185319, 98820}},         
+		{"skeletonic", {359, def_scale, 52356, 0, 98820}},          
+		{"moa", {504, def_scale, 16689, 0, 98820}}
+	};
 
 	// you can create commands here in-line with a lambda, but only if they are only 
 	// a couple of lines and not used multiple times
@@ -444,9 +356,6 @@ void ChatCommands::Initialize() {
 	GW::Chat::CreateCommand(L"show", ChatCommands::CmdShow);
 	GW::Chat::CreateCommand(L"hide", ChatCommands::CmdHide);
 	GW::Chat::CreateCommand(L"tb", ChatCommands::CmdTB);
-	GW::Chat::CreateCommand(L"tp", ChatCommands::CmdTP);
-	GW::Chat::CreateCommand(L"to", ChatCommands::CmdTP);
-	GW::Chat::CreateCommand(L"travel", ChatCommands::CmdTP);
 	GW::Chat::CreateCommand(L"zoom", ChatCommands::CmdZoom);
 	GW::Chat::CreateCommand(L"camera", ChatCommands::CmdCamera);
 	GW::Chat::CreateCommand(L"cam", ChatCommands::CmdCamera);
@@ -719,218 +628,6 @@ void ChatCommands::CmdHide(const wchar_t *message, int argc, LPWSTR *argv) {
 			window->visible = false;
 		}
 	}
-}
-
-bool ChatCommands::ParseOutpost(const std::wstring& s, GW::Constants::MapID& outpost, GW::Constants::District& district, uint32_t& number) {
-    // @Cleanup:
-    // Should we parse this number here?
-    number = 0;
-
-	// Shortcut words e.g "/tp doa" for domain of anguish
-	if (s == L"bestarea")							return outpost = GW::Constants::MapID::The_Deep, true;
-	if (s == L"toa")								return outpost = GW::Constants::MapID::Temple_of_the_Ages, true;
-	if (s == L"doa" || s == L"goa" || s == L"tdp")	return outpost = GW::Constants::MapID::Domain_of_Anguish, true;
-	if (s == L"eee")								return outpost = GW::Constants::MapID::Embark_Beach, district = GW::Constants::District::EuropeEnglish, true;
-	if (s == L"gtob")								return outpost = GW::Constants::MapID::Great_Temple_of_Balthazar_outpost, true;
-	if (s == L"la")									return outpost = GW::Constants::MapID::Lions_Arch_outpost, true;
-    if (s == L"ac")									return outpost = GW::Constants::MapID::Ascalon_City_outpost, true;
-	if (s == L"eotn")								return outpost = GW::Constants::MapID::Eye_of_the_North_outpost, true;
-	if (s == L"kc")									return outpost = GW::Constants::MapID::Kaineng_Center_outpost, true;
-	if (s == L"hzh")								return outpost = GW::Constants::MapID::House_zu_Heltzer_outpost, true;
-    if (s == L"ctc")								return outpost = GW::Constants::MapID::Central_Transfer_Chamber_outpost, true;
-    if (s == L"topk")								return outpost = GW::Constants::MapID::Tomb_of_the_Primeval_Kings, true;
-    if (s == L"ra")								    return outpost = GW::Constants::MapID::Random_Arenas_outpost, true;
-    if (s == L"ha")								    return outpost = GW::Constants::MapID::Heroes_Ascent_outpost, true;
-    if (s == L"fa" || s.rfind(L"fa ") == 0)			return outpost = GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost, true;
-    if (s == L"jq" || s.rfind(L"jq ") == 0)			return outpost = GW::Constants::MapID::The_Jade_Quarry_Kurzick_outpost, true;
-	// By Map ID e.g. "/tp 77" for house zu heltzer 
-	int mapid;
-	if (GuiUtils::ParseInt(s.c_str(), &mapid) && (mapid != 0)) {
-		return outpost = (GW::Constants::MapID)mapid, true; 
-	}
-	// By full outpost name (without punctuation) e.g. "/tp GrEaT TemplE oF BalthaZAR"
-	std::string sanitized;
-	std::string compare = GuiUtils::ToLower(GuiUtils::RemovePunctuation(GuiUtils::WStringToString(s)));
-    // Remove "the " from front of entered string
-    std::size_t found = compare.rfind("the ");
-    if (found == 0)
-        compare.replace(found, 4, "");
-    GW::Constants::MapID bestMatchMapID = GW::Constants::MapID::None;
-	unsigned int searchStringLength = compare.length();
-	unsigned int bestMatchLength = 0;
-    unsigned int thisMapLength = 0;
-	bool search_dungeons = true;
-    const char** searchable_map_names = TravelWindow::Instance().searchable_map_names;
-	const GW::Constants::MapID* searchable_map_ids = TravelWindow::Instance().searchable_map_ids;
-	size_t mapCnt = 187;
-	if (ImInPresearing()) {
-		searchable_map_names = TravelWindow::Instance().presearing_map_names;
-		searchable_map_ids = TravelWindow::Instance().presearing_map_ids;
-		mapCnt = 5;
-		search_dungeons = false;
-	}
-    
-	for (size_t i = 0; i < mapCnt; i++) {
-		sanitized = searchable_map_names[i]; // Remove punctuation, to lower case.
-        thisMapLength = sanitized.length();
-		if (searchStringLength > thisMapLength) 
-            continue; // String entered by user is longer than this outpost name.
-        if (sanitized.rfind(compare) != 0)
-            continue; // No match
-		if (bestMatchLength < thisMapLength) {
-			bestMatchLength = thisMapLength;
-			bestMatchMapID = searchable_map_ids[i];
-            if (searchStringLength == thisMapLength)
-                break; // Exact match, break.
-		}
-	}
-	if (search_dungeons) {
-		const char** dungeon_map_names = TravelWindow::Instance().searchable_dungeon_names;
-		mapCnt = 11;
-		if (bestMatchMapID == GW::Constants::MapID::None) {
-			// Not found yet; try dungeons
-			for (size_t i = 0; i < mapCnt; i++) {
-				sanitized = dungeon_map_names[i]; // Remove punctuation, to lower case.
-				thisMapLength = sanitized.length();
-				if (searchStringLength > thisMapLength)
-					continue; // String entered by user is longer than this outpost name.
-				if (sanitized.rfind(compare) != 0)
-					continue; // No match
-				if (bestMatchLength < thisMapLength) {
-					bestMatchLength = thisMapLength;
-					bestMatchMapID = TravelWindow::Instance().dungeon_map_ids[i];
-					if (searchStringLength == thisMapLength)
-						break; // Exact match, break.
-				}
-			}
-		}
-	}
-    if (bestMatchMapID != GW::Constants::MapID::None)
-        return outpost = bestMatchMapID, true; // Exact match
-	return false;
-}
-bool ChatCommands::ParseDistrict(const std::wstring& s, GW::Constants::District& district, uint32_t& number) {
-	district = GW::Constants::District::Current;
-	number = 0;
-	if (s == L"ae")									return district = GW::Constants::District::American, true;
-	if (s == L"ae1" || s == L"ad1")					return district = GW::Constants::District::American, number = 1, true;
-	if (s == L"int")								return district = GW::Constants::District::International, true;
-	if (s == L"ee")									return district = GW::Constants::District::EuropeEnglish, true;
-	if (s == L"eg" || s == L"dd")					return district = GW::Constants::District::EuropeGerman, true;
-	if (s == L"ef" || s == L"fr")					return district = GW::Constants::District::EuropeFrench, true;
-	if (s == L"ei" || s == L"it")					return district = GW::Constants::District::EuropeItalian, true;
-	if (s == L"es")									return district = GW::Constants::District::EuropeSpanish, true;
-	if (s == L"ep" || s == L"pl")					return district = GW::Constants::District::EuropePolish, true;
-	if (s == L"er" || s == L"ru")					return district = GW::Constants::District::EuropeRussian, true;
-	if (s == L"ak" || s == L"kr")					return district = GW::Constants::District::AsiaKorean, true;
-	if (s == L"ac" || s == L"atc" || s == L"ch")	return district = GW::Constants::District::AsiaChinese, true;
-	if (s == L"aj" || s == L"jp")					return district = GW::Constants::District::AsiaJapanese, true;
-	return false;
-}
-bool ChatCommands::IsLuxon() {
-    GW::GuildContext* c = GW::GuildMgr::GetGuildContext();
-    return c && c->player_guild_index && c->guilds[c->player_guild_index]->faction;
-}
-void ChatCommands::CmdTP(const wchar_t *message, int argc, LPWSTR *argv) {
-    UNREFERENCED_PARAMETER(message);
-	// zero argument error
-	if (argc == 1) {
-		Log::Error("[Error] Please provide an argument");
-		return;
-	}
-	GW::Constants::MapID outpost = GW::Map::GetMapID();
-	GW::Constants::District district = GW::Constants::District::Current;
-	uint32_t district_number = 0;
-
-	std::wstring argOutpost = GuiUtils::ToLower(argv[1]);
-	std::wstring argDistrict = GuiUtils::ToLower(argv[argc-1]);
-	// Guild hall
-	if (argOutpost == L"gh") {
-		if (argc == 2) { 
-			// "/tp gh"
-			if(IsInGH())
-				GW::GuildMgr::LeaveGH();
-			else
-				GW::GuildMgr::TravelGH();
-			return;
-		}
-		// "/tp gh lag" = travel to Guild Hall belonging to Zero Files Remaining [LaG]
-		std::wstring argGuildTag = GuiUtils::ToLower(argv[2]);
-		GW::GuildArray guilds = GW::GuildMgr::GetGuildArray();
-		for (GW::Guild* guild : guilds) {
-			if (guild && GuiUtils::ToLower(guild->tag) == argGuildTag) {
-				GW::GuildMgr::TravelGH(guild->key);
-				return;
-			}
-		}
-		Log::Error("[Error] Did not recognize guild '%ls'", argv[2]);
-		return;
-	}
-	if (argOutpost.size() > 2 && argOutpost.compare(0, 3, L"fav", 3) == 0) {
-		std::wstring fav_s_num = argOutpost.substr(3, std::wstring::npos);
-		if (fav_s_num.empty()) {
-			TravelWindow::Instance().TravelFavorite(0);
-			return;
-		}
-		int fav_num;
-		if (GuiUtils::ParseInt(fav_s_num.c_str(), &fav_num)) {
-			TravelWindow::Instance().TravelFavorite(static_cast<unsigned int>(fav_num) - 1);
-			return;
-		}
-		Log::Error("[Error] Did not recognize favourite");
-		return;
-	}
-	for (int i = 2; i < argc-1; i++) {
-		// Outpost name can be anything after "/tp" but before the district e.g. "/tp house zu heltzer ae1"
-		argOutpost.append(L" ");
-		argOutpost.append(GuiUtils::ToLower(argv[i]));
-	}
-	bool isValidDistrict = ParseDistrict(argDistrict, district, district_number);
-	if (isValidDistrict && argc == 2) {
-		// e.g. "/tp ae1"
-		TravelWindow::Instance().Travel(outpost, district, district_number); // NOTE: ParseDistrict sets district and district_number vars by reference.
-		return;
-	}
-	if (!isValidDistrict && argc > 2) { 
-		// e.g. "/tp house zu heltzer"
-		argOutpost.append(L" ");
-		argOutpost.append(argDistrict);
-	}
-	if (ParseOutpost(argOutpost, outpost, district, district_number)) {
-        switch (outpost) {
-            case GW::Constants::MapID::Vizunah_Square_Foreign_Quarter_outpost:
-            case GW::Constants::MapID::Vizunah_Square_Local_Quarter_outpost:
-				if (std::wstring(L"l").rfind(argv[argc - 1]) == 0) // - e.g. /tp viz local
-					outpost = GW::Constants::MapID::Vizunah_Square_Local_Quarter_outpost;
-				else if (std::wstring(L"f").rfind(argv[argc - 1]) == 0)
-					outpost = GW::Constants::MapID::Vizunah_Square_Foreign_Quarter_outpost;
-                break;
-            case GW::Constants::MapID::Fort_Aspenwood_Luxon_outpost:
-            case GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost:
-                if (std::wstring(L"l").rfind(argv[argc - 1]) == 0) // - e.g. /tp fa lux
-                    outpost = GW::Constants::MapID::Fort_Aspenwood_Luxon_outpost;
-                else if (std::wstring(L"k").rfind(argv[argc - 1]) == 0)
-                    outpost = GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost;
-                else
-                    outpost = IsLuxon() ? GW::Constants::MapID::Fort_Aspenwood_Luxon_outpost : GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost;
-                break;
-            case GW::Constants::MapID::The_Jade_Quarry_Kurzick_outpost:
-            case GW::Constants::MapID::The_Jade_Quarry_Luxon_outpost:
-                if (std::wstring(L"l").rfind(argv[argc - 1]) == 0) // - e.g. /tp jq lux
-                    outpost = GW::Constants::MapID::The_Jade_Quarry_Luxon_outpost;
-                else if (std::wstring(L"k").rfind(argv[argc - 1]) == 0)
-                    outpost = GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost;
-                else
-                    outpost = IsLuxon() ? GW::Constants::MapID::The_Jade_Quarry_Luxon_outpost : GW::Constants::MapID::The_Jade_Quarry_Kurzick_outpost;
-                break;
-            default:
-                break;
-        }
-		TravelWindow::Instance().Travel(outpost, district, district_number); // NOTE: ParseOutpost sets outpost, district and district_number vars by reference.
-		return;
-	}
-	Log::Error("[Error] Did not recognize outpost '%ls'", argOutpost.c_str());
-	return;
 }
 
 void ChatCommands::CmdZoom(const wchar_t *message, int argc, LPWSTR *argv) {
