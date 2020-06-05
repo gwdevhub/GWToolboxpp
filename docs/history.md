@@ -7,6 +7,15 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
+## Version 3.7
+* [Fix] Fixed bug preventing materials from being ctrl+clicked to store when storage is > 250
+* [Fix] Fixed crashes when using `/useskill`
+* [Fix] Fixed crashes when observing PvP matches
+* [Fix] Fixed crash when entering Slavers' Exile dungeon
+* [Minor] Added `/tp kc` for Kaineng Center
+
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/3.7_Release/GWToolboxdll.dll)
+
 ## Version 3.6
 * [New] Added dungeons to objective timer
 * [New] Added refrains to bond monitor
