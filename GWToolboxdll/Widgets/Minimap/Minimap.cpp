@@ -568,7 +568,7 @@ bool Minimap::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 	if (is_observing)
 		return false;
 	if (mouse_clickthrough)
-		return false;
+        return Message == WM_LBUTTONDOWN && FlagHeros(lParam);
     if (mouse_clickthrough_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) 
 		return false;
 	switch (Message) {
@@ -581,10 +581,35 @@ bool Minimap::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
 		return false;
 	}
 }
+bool Minimap::FlagHeros(LPARAM lParam)
+{
+    int x = GET_X_LPARAM(lParam);
+    int y = GET_Y_LPARAM(lParam);
+    if (!IsInside(x, y))
+        return false;
+
+    const GW::Vec2f worldpos = InterfaceToWorldPoint(Vec2i(x, y));
+
+    bool flagged = false;
+    if (flagging[0]) {
+        flagging[0] = false;
+        GW::PartyMgr::FlagAll(GW::GamePos(worldpos));
+        flagged = true;
+    }
+    for (size_t i = 1; i < 9; ++i) {
+        if (flagging[i]) {
+            flagging[i] = false;
+            flagged = true;
+            GW::PartyMgr::FlagHeroAgent(player_heroes[i - 1], GW::GamePos(worldpos));
+        }
+    }
+    return flagged;
+}
 bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam) {
     UNREFERENCED_PARAMETER(Message);
 	if (!IsActive()) return false;
-
+    if (FlagHeros(lParam))
+        return true;
 	int x = GET_X_LPARAM(lParam);
 	int y = GET_Y_LPARAM(lParam);
 	if (!IsInside(x, y)) return false;
@@ -603,20 +628,7 @@ bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam) {
         return true;
     }
 
-	bool flagged = false;
-	if (flagging[0]) {
-		flagging[0] = false;
-		GW::PartyMgr::FlagAll(GW::GamePos(worldpos));
-		flagged = true;
-	}
-	for (size_t i = 1; i < 9; ++i) {
-		if (flagging[i]) {
-			flagging[i] = false;
-			flagged = true;
-			GW::PartyMgr::FlagHeroAgent(player_heroes[i-1], GW::GamePos(worldpos));
-		}
-	}
-	if (flagged) return true;
+
 
 	drag_start.x = x;
 	drag_start.y = y;

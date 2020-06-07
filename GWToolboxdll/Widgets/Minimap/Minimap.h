@@ -42,7 +42,7 @@ public:
 	void Draw(IDirect3DDevice9* device) override;
 	void RenderSetupProjection(IDirect3DDevice9* device);
 	
-
+	bool FlagHeros(LPARAM lParam);
 	bool OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam);
 	bool OnMouseDblClick(UINT Message, WPARAM wParam, LPARAM lParam);
 	bool OnMouseUp(UINT Message, WPARAM wParam, LPARAM lParam);
