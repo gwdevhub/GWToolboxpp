@@ -16,7 +16,4 @@ public:
 
 	ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0, 
 		bool noinput_if_frozen = true) const;
-protected:
-	bool has_closebutton = false;
-	bool is_resizable = false;
 };

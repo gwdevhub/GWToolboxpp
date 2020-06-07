@@ -31,7 +31,9 @@ class PartyDamage : public ToolboxWidget {
 		}
 	};
 
-	PartyDamage() {};
+	PartyDamage() {
+        is_resizable = false;
+	};
 public:
 	static PartyDamage& Instance() {
 		static PartyDamage instance;
@@ -56,8 +58,6 @@ public:
 	void WriteDamageOf(size_t index, uint32_t rank = 0); // party index from 0 to 12
 	void WriteOwnDamage();
 	void ResetDamage();
-
-	bool is_resizable = false;
 
 private:
 	void DamagePacketCallback(GW::HookStatus *, GW::Packet::StoC::GenericModifier *packet);
