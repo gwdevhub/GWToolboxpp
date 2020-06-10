@@ -13,6 +13,13 @@ void ToolboxUIElement::Initialize() {
 	GWToolbox::Instance().RegisterUIElement(this);
 }
 
+void ToolboxUIElement::Terminate() {
+    ToolboxModule::Terminate();
+    if (button_texture)
+        button_texture->Release();
+    button_texture = nullptr;
+}
+
 void ToolboxUIElement::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini);
 	visible = ini->GetBoolValue(Name(), VAR_NAME(visible), visible);

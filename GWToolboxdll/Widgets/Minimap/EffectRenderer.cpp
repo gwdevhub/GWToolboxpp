@@ -52,7 +52,6 @@ EffectRenderer::EffectRenderer() {
 	aoe_effect_triggers.emplace(Spike_Trap_Activate, new EffectTrigger(Spike_Trap, 2000, GW::Constants::Range::Nearby));
 }
 EffectRenderer::~EffectRenderer() {
-	Invalidate();
 	for (auto settings : aoe_effect_settings) {
 		delete settings.second;
 	}

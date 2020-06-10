@@ -26,8 +26,7 @@ bool order_by_changed = false;
 #define INI_FILENAME L"builds.ini"
 
 BuildsWindow::~BuildsWindow() {
-	if (inifile)
-		delete inifile;
+
 }
 
 void BuildsWindow::Initialize() {
@@ -92,6 +91,8 @@ bool BuildsWindow::BuildSkillTemplateString(const TeamBuild& tbuild, unsigned in
 void BuildsWindow::Terminate() {
 	ToolboxWindow::Terminate();
 	teambuilds.clear();
+    if (inifile)
+        delete inifile;
 }
 
 void BuildsWindow::DrawSettingInternal() {

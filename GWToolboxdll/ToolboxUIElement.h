@@ -7,18 +7,14 @@
 class ToolboxUIElement : public ToolboxModule {
 public:
     virtual ~ToolboxUIElement() {
-        Terminate();
+        //Terminate();
 	}
 
 	// Draw user interface. Will be called every frame if the element is visible
 	virtual void Draw(IDirect3DDevice9*) {};
 
 	virtual void Initialize() override;
-	virtual void Terminate() override {
-		if (button_texture) 
-			button_texture->Release();
-        button_texture = nullptr;
-	}
+    virtual void Terminate() override;
 
 	virtual void LoadSettings(CSimpleIni* ini) override;
 
