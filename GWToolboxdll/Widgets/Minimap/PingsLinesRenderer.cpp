@@ -259,7 +259,9 @@ void PingsLinesRenderer::DrawDrawings(IDirect3DDevice9* device) {
 		if (vertices_count < vertices_max - 2) {
 			for (const DrawingLine& line : lines) {
 				uint32_t max_alpha = (color_drawings & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT;
-				uint32_t left = static_cast<uint32_t>(5000 - TIMER_DIFF(line.start));
+                uint32_t left = static_cast<uint32_t>(drawing_timeout - TIMER_DIFF(line.start));
+                if (left > drawing_timeout) 
+                    continue; // This is actually a negative integer i.e. no time left.
 				uint32_t alpha = left * max_alpha / 2000;
 				if (alpha > max_alpha) alpha = max_alpha;
 				Color color = (color_drawings & 0x00FFFFFF) | (alpha << IM_COL32_A_SHIFT);
@@ -270,7 +272,7 @@ void PingsLinesRenderer::DrawDrawings(IDirect3DDevice9* device) {
 			}
 		}
 
-		if (!lines.empty() && TIMER_DIFF(lines.front().start) > 5000) {
+		if (!lines.empty() && TIMER_DIFF(lines.front().start) > drawing_timeout) {
 			lines.pop_front();
 		}
 	}

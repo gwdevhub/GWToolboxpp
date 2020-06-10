@@ -13,6 +13,7 @@
 class PingsLinesRenderer : public VBuffer {
     friend class Minimap;
 	const float drawing_scale = 96.0f;
+    const clock_t drawing_timeout = 5000;
 
 	struct DrawingLine {
         DrawingLine() : start(TIMER_INIT()) {}
