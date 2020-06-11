@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <GWCA/Utilities/Debug.h>
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
@@ -19,6 +20,41 @@ namespace {
     FILE* stderr_file = nullptr;
 }
 
+static void GWCALogHandler(
+    void *context,
+    GW::LogLevel level,
+    const char *msg,
+    const char *file,
+    unsigned int line,
+    const char *function)
+{
+    UNREFERENCED_PARAMETER(context);
+    UNREFERENCED_PARAMETER(level);
+    UNREFERENCED_PARAMETER(file);
+    UNREFERENCED_PARAMETER(line);
+    UNREFERENCED_PARAMETER(function);
+
+    Log::Log("[GWCA] %s", msg);
+}
+
+static void GWCAPanicHandler(
+    void *context,
+    const char *expr,
+    const char *file,
+    unsigned int line,
+    const char *function)
+{
+    UNREFERENCED_PARAMETER(context);
+
+    Log::Log("[GWCA] Fatal error (expr: '%s', file: '%s', line: %u, function: '%s'",
+             expr, file, line, function);
+
+    __try {
+        __debugbreak();
+    } __except(EXCEPT_EXPRESSION_ENTRY) {
+    }
+}
+
 // === Setup and cleanup ====
 void Log::InitializeLog() {
 #ifdef GWTOOLBOX_DEBUG
@@ -30,6 +66,9 @@ void Log::InitializeLog() {
 #else
     logfile = _wfreopen(Resources::GetPath(L"log.txt").c_str(), L"w", stdout);
 #endif
+
+    GW::RegisterLogHandler(GWCALogHandler, nullptr);
+    GW::RegisterPanicHandler(GWCAPanicHandler, nullptr);
 }
 
 void Log::InitializeChat() {
@@ -39,6 +78,9 @@ void Log::InitializeChat() {
 }
 
 void Log::Terminate() {
+    GW::RegisterLogHandler(nullptr, nullptr);
+    GW::RegisterPanicHandler(nullptr, nullptr);
+
 #ifdef GWTOOLBOX_DEBUG
     if (stdout_file)
         fclose(stdout_file);
