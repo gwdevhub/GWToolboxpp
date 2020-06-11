@@ -77,60 +77,20 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
     if (!info->players.valid()) return;
     // note: info->heroes, ->henchmen, and ->others CAN be invalid during normal use.
 
-    // ==== Get party ====
-    // @Cleanup: This doesn't need to be done every frame - only when the party structure has changed.
-    std::vector<GW::AgentID> party_list; // index to agent id
-    std::unordered_map<GW::AgentID, size_t> party_map; // agent id to index
-    size_t allies_start = 255;
-    for (const GW::PlayerPartyMember& player : info->players) {
-        DWORD id = players[player.login_number].agent_id;
-        party_map[id] = party_list.size();
-        party_list.push_back(id);
-        
-        if (info->heroes.valid()) {
-            for (const GW::HeroPartyMember& hero : info->heroes) {
-                if (hero.owner_player_id == player.login_number) {
-                    party_map[hero.agent_id] = party_list.size();
-                    party_list.push_back(hero.agent_id);
-                }
-            }
-        }
-    }
-    if (info->henchmen.valid()) {
-        for (const GW::HenchmanPartyMember& hench : info->henchmen) {
-            party_list.push_back(hench.agent_id);
-        }
-    }
-    if (show_allies && info->others.valid()) {
-        allies_start = party_list.size();
-        for (const DWORD ally_id : info->others) {
-            GW::Agent* agent = GW::Agents::GetAgentByID(ally_id);
-            GW::AgentLiving* ally = agent ? agent->GetAsAgentLiving() : nullptr;
-            if (ally && ally->GetCanBeViewedInPartyWindow() && !ally->GetIsSpawned()) {
-                party_map[ally_id] = party_list.size();
-                party_list.push_back(ally_id);
-            }
-        }
-    }
-	
-    // ==== Get bonds ====
-    // @Cleanup: This doesn't need to be done every frame - only when a user's skills have changed
-    std::vector<size_t> bond_list; // index to skill id
-    std::unordered_map<DWORD, size_t> bond_map; // skill id to index
-    const GW::Skillbar *bar = GW::SkillbarMgr::GetPlayerSkillbar();
-    if (!bar || !bar->IsValid()) return;
-    for (int slot = 0; slot < 8; ++slot) {
-        DWORD SkillID = bar->skills[slot].skill_id;
-        Bond bond = GetBondBySkillID(SkillID);
-        if (bond != Bond::None) {
-            bond_map[SkillID] = bond_list.size();
-            bond_list.push_back(SkillID);
-        }
-    }
+    const GW::AgentEffectsArray &effects = GW::Effects::GetPartyEffectArray();
+    if (!effects.valid() || !effects.size())
+        return;
 
-    const GW::AgentEffectsArray& effects = GW::Effects::GetPartyEffectArray();
-    if (!effects.valid()) return;
-    const GW::BuffArray& buffs = effects[0].buffs; // first one is for players, after are heroes
+    // ==== Get bonds ====
+    // @Cleanup: This doesn't need to be done every frame - only when player skills have changed
+    if (!FetchBondSkills())
+        return;
+    if (bond_list.empty())
+        return; // Don't display bonds widget if we've not got any bonds on our skillbar
+    // ==== Get party ====
+    // @Cleanup: This doesn't need to be done every frame - only when the party has been changed
+    if (!FetchPartyInfo())
+        return;
 
     // ==== Draw ====
     const size_t img_size = row_height > 0 ? row_height : GuiUtils::GetPartyHealthbarHeight();
@@ -138,6 +98,7 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(0.0f, 0.0f));
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(background).Value);
 	ImGui::SetNextWindowSize(ImVec2((float)(bond_list.size() * img_size), (float)height));
 	if (ImGui::Begin(Name(), &visible, GetWinFlags(0, !(click_to_cast || click_to_drop)))) {
@@ -156,6 +117,7 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
         };
 
         bool handled_click = false;
+        const GW::BuffArray &buffs = effects[0].buffs; // first one is for players, after are heroes
         for (unsigned int i = 0; i < buffs.size(); ++i) {
             DWORD agent = buffs[i].target_agent_id;
             DWORD skill = buffs[i].skill_id;
@@ -175,7 +137,7 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
 
         // Player and hero effects that aren't bonds
         for (unsigned int i = 0; i < effects.size(); ++i) {
-            GW::EffectArray agentEffects = effects[i].effects;
+            const GW::EffectArray& agentEffects = effects[i].effects;
             DWORD agent = effects[i].agent_id;
             for (unsigned int j = 0; j < agentEffects.size(); ++j) {
                 const GW::Effect& effect = agentEffects[j];
@@ -205,19 +167,18 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
                 for (unsigned int x = 0; x < bond_list.size(); ++x) {
                     ImVec2 tl = GetGridPos(x, y, true);
                     ImVec2 br = GetGridPos(x, y, false);
-                    if (ImGui::IsMouseHoveringRect(tl, br)) {
-                        ImGui::GetWindowDrawList()->AddRect(tl, br, IM_COL32(255, 255, 255, 255));
-                        if (ImGui::IsMouseReleased(0)) {
-                            UseBuff(party_list[y], bond_list[x]);
-                        }
-                    }
+                    if (!ImGui::IsMouseHoveringRect(tl, br))
+                        continue;
+                    ImGui::GetWindowDrawList()->AddRect(tl, br, IM_COL32(255, 255, 255, 255));
+                    if (ImGui::IsMouseReleased(0))
+                        UseBuff(party_list[y], bond_list[x]);
                 }
             }
         }
 	}
 	ImGui::End();
 	ImGui::PopStyleColor(); // window bg
-	ImGui::PopStyleVar(2);
+	ImGui::PopStyleVar(3);
 }
 
 void BondsWidget::UseBuff(GW::AgentID targetId, DWORD buff_skillid) {
@@ -271,6 +232,8 @@ void BondsWidget::SaveSettings(CSimpleIni* ini) {
 
 void BondsWidget::DrawSettingInternal() {
     ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
+    if (bond_list.empty())
+        ImGui::TextColored(ImVec4(0xFF, 0, 0, 0xFF), "Equip a maintainable enchantment or refrain to show bonds widget on-screen");
     Colors::DrawSettingHueWheel("Background", &background, 0);
 	ImGui::Checkbox("Click to cast bond", &click_to_cast);
     ImGui::Checkbox("Click to cancel bond", &click_to_drop);
@@ -313,4 +276,65 @@ BondsWidget::Bond BondsWidget::GetBondBySkillID(DWORD skillid) const {
     case SkillID::Hasty_Refrain: return Bond::HastyRefrain;
     default: return Bond::None;
     }
+}
+
+bool BondsWidget::FetchBondSkills()
+{
+    const GW::Skillbar *bar = GW::SkillbarMgr::GetPlayerSkillbar();
+    if (!bar || !bar->IsValid())
+        return false;
+    bond_list.clear();
+    bond_map.clear();
+    for (int slot = 0; slot < 8; ++slot) {
+        DWORD SkillID = bar->skills[slot].skill_id;
+        Bond bond = GetBondBySkillID(SkillID);
+        if (bond != Bond::None) {
+            bond_map[SkillID] = bond_list.size();
+            bond_list.push_back(SkillID);
+        }
+    }
+    return true;
+}
+bool BondsWidget::FetchPartyInfo()
+{
+    const GW::PartyInfo *info = GW::PartyMgr::GetPartyInfo();
+    if (info == nullptr || !info->players.valid())
+        return false;
+    const GW::PlayerArray &players = GW::Agents::GetPlayerArray();
+    if (!players.valid())
+        return false;
+    party_list.clear();
+    party_map.clear();
+    allies_start = 255;
+    for (const GW::PlayerPartyMember &player : info->players) {
+        DWORD id = players[player.login_number].agent_id;
+        party_map[id] = party_list.size();
+        party_list.push_back(id);
+
+        if (info->heroes.valid()) {
+            for (const GW::HeroPartyMember &hero : info->heroes) {
+                if (hero.owner_player_id == player.login_number) {
+                    party_map[hero.agent_id] = party_list.size();
+                    party_list.push_back(hero.agent_id);
+                }
+            }
+        }
+    }
+    if (info->henchmen.valid()) {
+        for (const GW::HenchmanPartyMember &hench : info->henchmen) {
+            party_list.push_back(hench.agent_id);
+        }
+    }
+    if (show_allies && info->others.valid()) {
+        allies_start = party_list.size();
+        for (const DWORD ally_id : info->others) {
+            GW::Agent *agent = GW::Agents::GetAgentByID(ally_id);
+            GW::AgentLiving *ally = agent ? agent->GetAsAgentLiving() : nullptr;
+            if (ally && ally->GetCanBeViewedInPartyWindow() && !ally->GetIsSpawned()) {
+                party_map[ally_id] = party_list.size();
+                party_list.push_back(ally_id);
+            }
+        }
+    }
+    return true;
 }
