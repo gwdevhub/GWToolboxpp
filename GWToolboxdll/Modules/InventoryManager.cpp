@@ -1,20 +1,17 @@
 #include "stdafx.h"
 
-#include "InventoryManager.h"
+#include <GWCA/Packets/Opcodes.h>
 
-#include <GWCA\Packets\Opcodes.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/CtoSMgr.h>
+#include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
 
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\CtoSMgr.h>
-#include <GWCA\Managers\UIMgr.h>
-#include <GWCA\Managers\StoCMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
-
-#include "GameSettings.h"
-
-#include <logger.h>
+#include <Logger.h>
 #include <GuiUtils.h>
-#include <imgui.h>
+#include <Modules/InventoryManager.h>
+#include <Modules/GameSettings.h>
 
 namespace {
 	static ImVec4 ItemBlue = ImColor(153, 238, 255).Value;

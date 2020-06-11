@@ -1,19 +1,16 @@
 #include "stdafx.h"
 
-#include <imgui.h>
-#include <imgui_internal.h>
+#include <GWCA/Constants/Constants.h>
+#include <GWCA/GameContainers/Array.h>
 
-#include <GWCA\Constants\Constants.h>
-#include <GWCA\GameContainers\Array.h>
+#include <GWCA/GameEntities/Map.h>
 
-#include <GWCA\GameEntities\Map.h>
-
-#include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\Managers\MapMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/MapMgr.h>
 
 #include <GuiUtils.h>
 #include "GWToolbox.h"
-#include <logger.h>
+#include <Logger.h>
 #include "DailyQuests.h"
 
 

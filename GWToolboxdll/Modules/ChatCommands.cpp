@@ -1,8 +1,4 @@
 #include "stdafx.h"
-#include "ChatCommands.h"
-
-#include <imgui.h>
-#include <imgui_internal.h>
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Constants/Maps.h>
@@ -36,15 +32,17 @@
 #include <GWCA/Managers/PartyMgr.h>
 
 #include <GuiUtils.h>
-#include "GWToolbox.h"
+#include <GWToolbox.h>
 #include <Keys.h>
-#include <logger.h>
+#include <Logger.h>
+
+#include <Modules/ChatCommands.h>
 #include <Modules/GameSettings.h>
+#include <Widgets/PartyDamage.h>
+#include <Windows/BuildsWindow.h>
+#include <Windows/Hotkeys.h>
 #include <Windows/MainWindow.h>
 #include <Windows/SettingsWindow.h>
-#include <Windows/BuildsWindow.h>
-#include <Widgets/PartyDamage.h>
-#include <Windows/Hotkeys.h>
 
 
 namespace {

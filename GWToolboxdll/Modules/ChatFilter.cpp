@@ -1,7 +1,4 @@
 #include "stdafx.h"
-#include "ChatFilter.h"
-
-#include <imgui.h>
 
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>
@@ -17,11 +14,12 @@
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 
+#include <Defines.h>
 #include <ImGuiAddons.h>
-#include <logger.h>
+#include <Logger.h>
 
 #include <Modules/Resources.h>
-#include <Defines.h>
+#include <Modules/ChatFilter.h>
 
 //#define PRINT_CHAT_PACKETS
 

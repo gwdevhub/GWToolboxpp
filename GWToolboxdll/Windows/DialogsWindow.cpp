@@ -1,15 +1,15 @@
 #include "stdafx.h"
-#include "DialogsWindow.h"
 
-#include <GWCA\Constants\Constants.h>
-#include <GWCA\GameContainers\Array.h>
+#include <GWCA/Constants/Constants.h>
+#include <GWCA/GameContainers/Array.h>
 
-#include <GWCA\Managers\AgentMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
 
-#include "logger.h"
+#include <Logger.h>
 #include "GuiUtils.h"
 #include "GWToolbox.h"
 #include <Modules\Resources.h>
+#include "DialogsWindow.h"
 
 static const char* const questnames[] = {
 	"UW - Chamber",

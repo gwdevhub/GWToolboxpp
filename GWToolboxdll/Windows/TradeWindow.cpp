@@ -1,22 +1,17 @@
 #include "stdafx.h"
 
-#include <WinSock2.h>
+#include <GWCA/Constants/Constants.h>
+#include <GWCA/GameContainers/Array.h>
 
-#include <imgui.h>
-#include <imgui_internal.h>
+#include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/MemoryMgr.h>
 
-#include <GWCA\Constants\Constants.h>
-#include <GWCA\GameContainers\Array.h>
+#include <Modules/Resources.h>
 
-#include <GWCA\Managers\UIMgr.h>
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\Managers\GameThreadMgr.h>
-#include <GWCA\Managers\MemoryMgr.h>
-
-#include <Modules\Resources.h>
-
-#include "logger.h"
+#include <Logger.h>
 #include "GuiUtils.h"
 #include "GWToolbox.h"
 #include "TradeWindow.h"

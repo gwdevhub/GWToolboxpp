@@ -1,37 +1,34 @@
 #include "stdafx.h"
 
-#include <imgui.h>
-#include <imgui_internal.h>
+#include <GWCA/Constants/Constants.h>
 
-#include <GWCA\Constants\Constants.h>
+#include <GWCA/GameContainers/GamePos.h>
 
-#include <GWCA\GameContainers\GamePos.h>
+#include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/CharContext.h>
 
-#include <GWCA\Context\GameContext.h>
-#include <GWCA\Context\CharContext.h>
+#include <GWCA/GameContainers/Array.h>
+#include <GWCA/GameContainers/GamePos.h>
 
-#include <GWCA\GameContainers\Array.h>
-#include <GWCA\GameContainers\GamePos.h>
+#include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Skill.h>
 
-#include <GWCA\GameEntities\Agent.h>
-#include <GWCA\GameEntities\Skill.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Managers/EffectMgr.h>
 
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\Managers\StoCMgr.h>
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\PartyMgr.h>
-#include <GWCA\Managers\EffectMgr.h>
-
-#include <logger.h>
+#include <Logger.h>
 #include "GuiUtils.h"
 
-#include <Modules\Resources.h>
+#include <Modules/Resources.h>
 
-#include <Widgets\AlcoholWidget.h>
+#include <Widgets/AlcoholWidget.h>
 
-#include <Windows\MainWindow.h>
-#include <Windows\HotkeysWindow.h>
+#include <Windows/MainWindow.h>
+#include <Windows/HotkeysWindow.h>
 
 #include "PconsWindow.h"
 

@@ -1,48 +1,48 @@
 #include "stdafx.h"
 
-#include <GWCA\Constants\Constants.h>
-#include <GWCA\GameContainers\Array.h>
-#include <GWCA\GameContainers\GamePos.h>
+#include <GWCA/Constants/Constants.h>
+#include <GWCA/GameContainers/Array.h>
+#include <GWCA/GameContainers/GamePos.h>
 
-#include <GWCA\GameEntities\Camera.h>
+#include <GWCA/GameEntities/Camera.h>
 
-#include <GWCA\GameEntities\Party.h>
-#include <GWCA\GameEntities\Quest.h>
-#include <GWCA\GameEntities\Skill.h>
-#include <GWCA\GameEntities\Player.h>
-#include <GWCA\GameEntities\Guild.h>
-#include <GWCA\GameEntities\NPC.h>
+#include <GWCA/GameEntities/Party.h>
+#include <GWCA/GameEntities/Quest.h>
+#include <GWCA/GameEntities/Skill.h>
+#include <GWCA/GameEntities/Player.h>
+#include <GWCA/GameEntities/Guild.h>
+#include <GWCA/GameEntities/NPC.h>
 
-#include <GWCA\Context\GameContext.h>
-#include <GWCA\Context\WorldContext.h>
+#include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/WorldContext.h>
 
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\Managers\ItemMgr.h>
-#include <GWCA\Managers\StoCMgr.h>
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\PlayerMgr.h>
-#include <GWCA\Managers\PartyMgr.h>
-#include <GWCA\Managers\EffectMgr.h>
-#include <GWCA\Managers\GuildMgr.h>
-#include <GWCA\Managers\GameThreadMgr.h>
-#include <GWCA\Managers\CameraMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/ItemMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/PlayerMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Managers/EffectMgr.h>
+#include <GWCA/Managers/GuildMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/CameraMgr.h>
 
-#include "GWToolbox.h"
+#include <GWToolbox.h>
+#include <Logger.h>
 
-#include <Widgets\TimerWidget.h>
-#include <Widgets\HealthWidget.h>
-#include <Widgets\DistanceWidget.h>
-#include <Widgets\BondsWidget.h>
-#include <Widgets\PartyDamage.h>
-#include <Widgets\Minimap\Minimap.h>
-#include <Widgets\ClockWidget.h>
-#include <Widgets\AlcoholWidget.h>
-#include <Windows\NotepadWindow.h>
-#include <Windows\StringDecoderWindow.h>
-#include <Modules\Resources.h>
-#include "InfoWindow.h"
-
+#include <Modules/Resources.h>
+#include <Widgets/AlcoholWidget.h>
+#include <Widgets/BondsWidget.h>
+#include <Widgets/ClockWidget.h>
+#include <Widgets/DistanceWidget.h>
+#include <Widgets/HealthWidget.h>
+#include <Widgets/Minimap/Minimap.h>
+#include <Widgets/PartyDamage.h>
+#include <Widgets/TimerWidget.h>
+#include <Windows/InfoWindow.h>
+#include <Windows/NotepadWindow.h>
+#include <Windows/StringDecoderWindow.h>
 
 void InfoWindow::Initialize() {
 	ToolboxWindow::Initialize();
@@ -600,7 +600,7 @@ const char* InfoWindow::GetStatusStr(Status status) {
 }
 
 void InfoWindow::PrintResignStatus(wchar_t *buffer, size_t size, size_t index, const wchar_t *player_name) {
-	assert(index < status.size());
+	ASSERT(index < status.size());
 	Status player_status = status[index];
 	const char* status_str = GetStatusStr(player_status);
 	_snwprintf(buffer, size, L"%zu. %s - %S", index + 1, player_name,

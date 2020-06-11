@@ -39,7 +39,6 @@
 #endif
 
 // c style headers
-#include <assert.h>
 #include <ctype.h>
 #include <math.h>
 #include <stdint.h>
@@ -70,6 +69,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <iterator>
 
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -89,16 +89,21 @@
 #include <tlhelp32.h>
 #include <windowsx.h>
 #include <WinUser.h>
-
-// libraries
-#include <SimpleIni.h>
-#include <json.hpp>
-#include <easywsclient\easywsclient.hpp>
-#include <mp3.h>
+#include <WinSock2.h>
 
 #include <d3d9.h>
 #include <d3dx9math.h>
 #include <d3dx9tex.h>
+
+// libraries
+#include <SimpleIni.h>
+#include <json.hpp>
+#include <easywsclient/easywsclient.hpp>
+#include <mp3.h>
+
+#include <imgui.h>
+#include <imgui_internal.h>
+#include <imgui_impl_dx9.h>
 
 #pragma warning(pop)
 

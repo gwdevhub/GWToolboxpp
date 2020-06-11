@@ -1,8 +1,6 @@
 #include "stdafx.h"
 #include "ToolboxWindow.h"
 
-#include <imgui.h>
-#include <imgui_internal.h>
 #include "ImGuiAddons.h"
 
 #include <Modules/ToolboxSettings.h>

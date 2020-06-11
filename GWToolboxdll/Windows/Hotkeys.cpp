@@ -1,25 +1,25 @@
 #include "stdafx.h"
 
-#include <GWCA\Constants\Constants.h>
-#include <GWCA\GameContainers\Array.h>
-#include <GWCA\GameContainers\GamePos.h>
+#include <GWCA/Constants/Constants.h>
+#include <GWCA/GameContainers/Array.h>
+#include <GWCA/GameContainers/GamePos.h>
 
-#include <GWCA\Context\CharContext.h>
-#include <GWCA\Context\GameContext.h>
+#include <GWCA/Context/CharContext.h>
+#include <GWCA/Context/GameContext.h>
 
-#include <GWCA\GameEntities\Agent.h>
-#include <GWCA\GameEntities\Skill.h>
+#include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Skill.h>
 
-#include <GWCA\Packets\Opcodes.h>
+#include <GWCA/Packets/Opcodes.h>
 
 #include <GWCA/Managers/CtoSMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\Managers\EffectMgr.h>
-#include <GWCA\Managers\ItemMgr.h>
-#include <GWCA\Managers\PlayerMgr.h>
-#include <GWCA\Managers\SkillbarMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/EffectMgr.h>
+#include <GWCA/Managers/ItemMgr.h>
+#include <GWCA/Managers/PlayerMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
 
 #include "BuildsWindow.h"
 #include "HeroBuildsWindow.h"
@@ -27,7 +27,7 @@
 #include "HotkeysWindow.h"
 #include "Modules\ChatCommands.h"
 #include "PconsWindow.h"
-#include "logger.h"
+#include <Logger.h>
 #include <ImGuiAddons.h>
 #include <Keys.h>
 

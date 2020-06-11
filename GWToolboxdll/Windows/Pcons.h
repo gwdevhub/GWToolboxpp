@@ -1,20 +1,14 @@
 #pragma once
 
-#include <Windows.h>
-
-#include <SimpleIni.h>
-#include <imgui.h>
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\GameEntities\Item.h>
 #include <GWCA\Managers\AgentMgr.h>
 #include <GWCA\Managers\MapMgr.h>
 
 #include <GWCA\Packets\CtoSHeaders.h>
+
 #include "Timer.h"
 #include <Color.h>
-#include <mutex>
-#include <vector>
-
 
 class Pcon {
 public:

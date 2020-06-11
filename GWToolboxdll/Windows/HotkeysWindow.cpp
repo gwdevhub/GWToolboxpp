@@ -1,17 +1,17 @@
 #include "stdafx.h"
 
-#include <GWCA\Constants\Constants.h>
-#include <GWCA\GameContainers\Array.h>
-#include <GWCA\GameEntities\Agent.h>
+#include <GWCA/Constants/Constants.h>
+#include <GWCA/GameContainers/Array.h>
+#include <GWCA/GameEntities/Agent.h>
 
-#include <GWCA\Managers\ItemMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\Managers\AgentMgr.h>
+#include <GWCA/Managers/ItemMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
 
 #include <Keys.h>
-#include <logger.h>
+#include <Logger.h>
 #include <GuiUtils.h>
-#include <Modules\Resources.h>
+#include <Modules/Resources.h>
 #include "HotkeysWindow.h"
 
 void HotkeysWindow::Initialize() {

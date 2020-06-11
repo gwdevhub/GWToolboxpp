@@ -20,7 +20,7 @@
 
 #include <ImGuiAddons.h>
 
-#include "logger.h"
+#include <Logger.h>
 namespace {
 	static bool IsPvE() {
 		GW::AreaInfo* map = GW::Map::GetCurrentMapInfo();

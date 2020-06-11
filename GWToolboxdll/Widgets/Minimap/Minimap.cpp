@@ -1,7 +1,5 @@
 #include "stdafx.h"
 
-#include <imgui.h>
-#include <imgui_internal.h>
 #include <ImGuiAddons.h>
 
 #include <GWCA/Constants/Constants.h>
@@ -25,7 +23,7 @@
 #include <GWCA/Managers/CameraMgr.h>
 
 #include <GuiUtils.h>
-#include "logger.h"
+#include <Logger.h>
 #include "Modules/ToolboxSettings.h"
 #include "Windows/SettingsWindow.h"
 #include "Minimap.h"

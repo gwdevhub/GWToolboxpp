@@ -9,7 +9,7 @@
 
 #include <Defines.h>
 #include "GWToolbox.h"
-#include <logger.h>
+#include <Logger.h>
 
 void Resources::Initialize() {
 	ToolboxModule::Initialize();

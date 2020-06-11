@@ -1,9 +1,5 @@
 #include "stdafx.h"
 
-#include "FriendListWindow.h"
-
-#include <algorithm>
-
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/Friendslist.h>
@@ -21,10 +17,9 @@
 
 #include <Modules/Resources.h>
 
-#include "logger.h"
+#include <Logger.h>
 #include "base64.h"
-
-
+#include "FriendListWindow.h"
 
 /* Out of scope namespecey lookups */
 namespace

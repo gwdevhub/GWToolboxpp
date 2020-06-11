@@ -1,10 +1,5 @@
 #pragma once
 
-#include <cmath>
-
-#include <SimpleIni.h>
-#include <imgui.h>
-
 #include <GuiUtils.h>
 
 #ifdef RGB

@@ -1,16 +1,16 @@
 #include "stdafx.h"
+
+#include <GWCA/Constants/Constants.h>
+
+#include <GWCA/GameEntities/Map.h>
+
+#include <GWCA/Packets/StoC.h>
+
+#include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+
+#include <Logger.h>
 #include "DoorMonitorWindow.h"
-
-#include <GWCA\Constants\Constants.h>
-
-#include <GWCA\GameEntities\Map.h>
-
-#include <GWCA\Packets\StoC.h>
-
-#include <GWCA\Managers\StoCMgr.h>
-#include <GWCA\Managers\MapMgr.h>
-
-#include "logger.h"
 
 void DoorMonitorWindow::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);

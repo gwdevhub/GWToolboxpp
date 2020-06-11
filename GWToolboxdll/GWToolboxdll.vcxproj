@@ -127,7 +127,7 @@
     <ClInclude Include="imgui_impl_dx9.h" />
     <ClInclude Include="IRC.h" />
     <ClInclude Include="Keys.h" />
-    <ClInclude Include="logger.h" />
+    <ClInclude Include="Logger.h" />
     <ClInclude Include="Modules\AprilFools.h" />
     <ClInclude Include="Modules\ChatCommands.h" />
     <ClInclude Include="Modules\ChatFilter.h" />
@@ -259,7 +259,7 @@
       <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</TreatWarningAsError>
     </ClCompile>
     <ClCompile Include="IRC.cc" />
-    <ClCompile Include="logger.cpp" />
+    <ClCompile Include="Logger.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Modules\AprilFools.cpp" />
     <ClCompile Include="Modules\ChatCommands.cpp" />

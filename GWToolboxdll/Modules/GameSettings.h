@@ -10,13 +10,13 @@
 #include <GWCA/Constants/Constants.h>
 
 #include <GWCA/GameEntities/Item.h>
-#include <GWCA\GameEntities\Party.h>
-#include <GWCA\GameEntities/NPC.h>
+#include <GWCA/GameEntities/Party.h>
+#include <GWCA/GameEntities/NPC.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Player.h>
 #include <GWCA/Packets/StoC.h>
 
-#include <GWCA\GameContainers\List.h>
+#include <GWCA/GameContainers/List.h>
 
 #include <GWCA/Context/AgentContext.h>
 #include <GWCA/Context/GadgetContext.h>
@@ -32,7 +32,7 @@
 #include <GWCA/Managers/ItemMgr.h>
 
 
-#include <logger.h>
+#include <Logger.h>
 #include <Color.h>
 #include "ToolboxModule.h"
 

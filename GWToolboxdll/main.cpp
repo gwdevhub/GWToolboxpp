@@ -1,9 +1,10 @@
 #include "stdafx.h"
-#include "Defines.h"
-#include "GWToolbox.h"
-#include "logger.h"
 
 #include <GWCA/Utilities/Scanner.h>
+
+#include "Defines.h"
+#include "GWToolbox.h"
+#include <Logger.h>
 
 // Do all your startup things here instead.
 DWORD WINAPI init(HMODULE hModule) noexcept {

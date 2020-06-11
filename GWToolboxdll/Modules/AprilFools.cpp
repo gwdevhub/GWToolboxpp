@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "AprilFools.h"
 
 #include <GWCA/Packets/StoC.h>
 
@@ -11,7 +10,8 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 
-#include <logger.h>
+#include <Logger.h>
+#include <Modules/AprilFools.h>
 
 static const wchar_t* af_2020_quotes[] = {
 	L"Happy April Fools Da-- *cough*",

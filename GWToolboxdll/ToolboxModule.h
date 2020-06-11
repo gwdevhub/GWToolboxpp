@@ -1,6 +1,5 @@
 #pragma once
 
-#include <imgui.h>
 typedef std::function<void(const std::string* section, bool is_showing)> SectionDrawCallback;
 typedef std::vector<std::pair<float,SectionDrawCallback>> SectionDrawCallbackList;
 
