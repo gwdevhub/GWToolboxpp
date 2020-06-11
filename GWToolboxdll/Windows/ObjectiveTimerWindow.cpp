@@ -1,34 +1,31 @@
 #include "stdafx.h"
-#include "ObjectiveTimerWindow.h"
 
-#include <imgui.h>
-#include <imgui_internal.h>
+#include <GWCA/Constants/Constants.h>
 
-#include <GWCA\Constants\Constants.h>
+#include <GWCA/GameContainers/Array.h>
+#include <GWCA/GameContainers/GamePos.h>
 
-#include <GWCA\GameContainers\Array.h>
-#include <GWCA\GameContainers\GamePos.h>
+#include <GWCA/Packets/StoC.h>
 
-#include <GWCA\Packets\StoC.h>
+#include <GWCA/GameEntities/Map.h>
+#include <GWCA/GameEntities/Agent.h>
 
-#include <GWCA\GameEntities\Map.h>
-#include <GWCA\GameEntities\Agent.h>
+#include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/WorldContext.h>
 
-#include <GWCA\Context\GameContext.h>
-#include <GWCA\Context\WorldContext.h>
-
-#include <GWCA\Managers\UIMgr.h>
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\Managers\StoCMgr.h>
-#include <GWCA\Managers\AgentMgr.h>
+#include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
 
 #include "GuiUtils.h"
 #include "GWToolbox.h"
 
-#include <Modules\Resources.h>
-#include "logger.h"
-#include <time.h>
+#include <Logger.h>
+
+#include <Modules/Resources.h>
+#include <Windows/ObjectiveTimerWindow.h>
 
 #define countof(arr) (sizeof(arr) / sizeof(arr[0]))
 

@@ -1,20 +1,21 @@
 #include "stdafx.h"
+
 #include "Defines.h"
 
 #include "TwitchModule.h"
-#include <WinSock2.h>
-#include "logger.h"
+#include <Logger.h>
 
 #include "GuiUtils.h"
 
 #include <GWCA/Packets/StoC.h>
 
-#include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\Managers\GameThreadMgr.h>
-#include <GWCA\Managers\CtoSMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/CtoSMgr.h>
 
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/Hooker.h>
+
 namespace {
     int OnJoin(const char* params, irc_reply_data* hostd, void* conn) {
         UNREFERENCED_PARAMETER(conn);

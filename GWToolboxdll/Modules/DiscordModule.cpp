@@ -12,14 +12,6 @@ NOTE: Disconnecting/reconnecting will mess this up so repeat process.
 
 #include "stdafx.h"
 
-#include "base64.h"
-#include "sha1.hpp"
-
-#include "DiscordModule.h"
-
-#include <GuiUtils.h>
-#include "GWToolbox.h"
-
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Packets/StoC.h>
 
@@ -49,7 +41,15 @@ NOTE: Disconnecting/reconnecting will mess this up so repeat process.
 #include <Modules/Resources.h>
 
 #include "GuiUtils.h"
-#include "logger.h"
+
+#include "base64.h"
+#include "sha1.hpp"
+
+#include "DiscordModule.h"
+
+#include <GuiUtils.h>
+#include "GWToolbox.h"
+#include <Logger.h>
 
 #define DISCORD_APP_ID 378706083788881961
 #define DISCORD_DLL_REMOTE_URL L"https://raw.githubusercontent.com/3vcloud/GWToolboxpp/master/resources/discord_game_sdk.dll"

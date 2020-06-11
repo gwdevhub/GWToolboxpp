@@ -1,23 +1,23 @@
 #include "stdafx.h"
 #include "BuildsWindow.h"
 
-#include <GWCA\Constants\Constants.h>
+#include <GWCA/Constants/Constants.h>
 
-#include <GWCA\GameContainers\Array.h>
-#include <GWCA\GameEntities\Agent.h>
+#include <GWCA/GameContainers/Array.h>
+#include <GWCA/GameEntities/Agent.h>
 
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\SkillbarMgr.h>
-#include <GWCA\Managers\UIMgr.h>
-#include <GWCA\Managers\GameThreadMgr.h>
-#include <GWCA\Managers\PlayerMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
+#include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/PlayerMgr.h>
 
 #include "GuiUtils.h"
-#include <Modules\Resources.h>
-#include <Windows\PconsWindow.h>
-#include <logger.h>
+#include <Modules/Resources.h>
+#include <Windows/PconsWindow.h>
+#include <Logger.h>
 
 unsigned int BuildsWindow::TeamBuild::cur_ui_id = 0;
 

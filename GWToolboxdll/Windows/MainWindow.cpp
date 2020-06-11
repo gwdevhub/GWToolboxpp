@@ -1,9 +1,6 @@
 #include "stdafx.h"
 
-#include <imgui.h>
-#include <imgui_internal.h>
-
-#include "logger.h"
+#include <Logger.h>
 #include "GuiUtils.h"
 #include "GWToolbox.h"
 #include "MainWindow.h"

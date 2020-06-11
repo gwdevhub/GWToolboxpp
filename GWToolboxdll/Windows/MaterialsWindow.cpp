@@ -1,26 +1,24 @@
 #include "stdafx.h"
 
-#include <imgui.h>
-#include <imgui_internal.h>
+#include <GWCA/Constants/Constants.h>
+#include <GWCA/GameContainers/Array.h>
+#include <GWCA/GameContainers/GamePos.h>
+#include <GWCA/Packets/StoC.h>
 
-#include <GWCA\Constants\Constants.h>
-#include <GWCA\GameContainers\Array.h>
-#include <GWCA\GameContainers\GamePos.h>
-#include <GWCA\Packets\StoC.h>
+#include <GWCA/GameEntities/Item.h>
 
-#include <GWCA\GameEntities\Item.h>
+#include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/WorldContext.h>
 
-#include <GWCA\Context\GameContext.h>
-#include <GWCA\Context\WorldContext.h>
+#include <GWCA/Managers/ItemMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/MerchantMgr.h>
 
-#include <GWCA\Managers\ItemMgr.h>
-#include <GWCA\Managers\StoCMgr.h>
-#include <GWCA\Managers\MerchantMgr.h>
+#include <GuiUtils.h>
+#include <Logger.h>
 
-#include "GuiUtils.h"
-#include <logger.h>
-#include <Modules\Resources.h>
-#include "MaterialsWindow.h"
+#include <Modules/Resources.h>
+#include <Windows/MaterialsWindow.h>
 
 static const DWORD MIN_TIME_BETWEEN_RETRY = 160; // 10 frames
 

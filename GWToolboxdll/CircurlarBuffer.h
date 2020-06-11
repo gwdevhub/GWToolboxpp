@@ -41,8 +41,8 @@ struct CircularBuffer {
     }
 
     T& operator[](size_t index) {
-        assert(index < count);
-        assert(cursor == count || count == allocated);
+        ASSERT(index < count);
+        ASSERT(cursor == count || count == allocated);
         size_t first = cursor % count;
         size_t i = (first + index) % count;
         return buffer[i];

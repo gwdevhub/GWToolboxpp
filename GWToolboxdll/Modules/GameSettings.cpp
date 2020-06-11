@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "GameSettings.h"
 
 #include <GWCA/Utilities/Scanner.h>
 
@@ -34,14 +33,15 @@
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/Hooker.h>
 
-#include <logger.h>
-#include "GuiUtils.h"
+#include <Logger.h>
+#include <GuiUtils.h>
 #include <GWToolbox.h>
 #include <Timer.h>
 #include <Color.h>
-#include <Windows\StringDecoderWindow.h>
 
-#include "InventoryManager.h"
+#include <Windows/StringDecoderWindow.h>
+#include <Modules/GameSettings.h>
+#include <Modules/InventoryManager.h>
 
 namespace {
 	void SendChatCallback(GW::HookStatus *, GW::Chat::Channel chan, wchar_t msg[120]) {
@@ -213,8 +213,8 @@ namespace {
 	}
 
     size_t move_materials_to_storage(GW::Item *item) {
-		assert(item && item->quantity);
-		assert(item->GetIsMaterial());
+		ASSERT(item && item->quantity);
+		ASSERT(item->GetIsMaterial());
 
 		int islot = GW::Items::GetMaterialSlot(item);
 		if (islot < 0 || (int)GW::Constants::N_MATS <= islot) return 0;
@@ -278,7 +278,7 @@ namespace {
 	}
 
 	void move_item_to_storage_page(GW::Item *item, size_t page) {
-		assert(item && item->quantity);
+		ASSERT(item && item->quantity);
 		if (page == static_cast<size_t>(GW::Constants::StoragePane::Material_Storage)) {
 			if (!item->GetIsMaterial()) return;
 			move_materials_to_storage(item);
@@ -291,7 +291,7 @@ namespace {
 
 		const size_t storage1 = static_cast<size_t>(GW::Constants::Bag::Storage_1);
 		const size_t bag_index = storage1 + page;
-		assert(GW::Items::GetBag(bag_index));
+		ASSERT(GW::Items::GetBag(bag_index));
 
         size_t remaining = item->quantity;
 
@@ -312,7 +312,7 @@ namespace {
 	}
 
 	void move_item_to_storage(GW::Item *item) {
-		assert(item && item->quantity);
+		ASSERT(item && item->quantity);
 
 		GW::Bag **bags = GW::Items::GetBagArray();
 		if (!bags) return;
@@ -339,7 +339,7 @@ namespace {
 	}
 
 	void move_item_to_inventory(GW::Item *item) {
-		assert(item && item->quantity);
+		ASSERT(item && item->quantity);
 
 		const size_t backpack = static_cast<size_t>(GW::Constants::Bag::Backpack);
 		const size_t bag2 = static_cast<size_t>(GW::Constants::Bag::Bag_2);

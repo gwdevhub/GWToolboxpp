@@ -7,7 +7,7 @@
 
 #include "d3dx9_dynamic.h"
 
-#include "logger.h"
+#include <Logger.h>
 
 HMODULE d3dx9Module = nullptr;
 

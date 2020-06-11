@@ -1,7 +1,6 @@
 #pragma once
 
 #include <GWCA/GameEntities/Agent.h>
-#include <SimpleIni.h>
 
 #include "Color.h"
 #include "VBuffer.h"

@@ -14,7 +14,7 @@
 #include <GWCA/Managers/EffectMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 
-#include <logger.h>
+#include <Logger.h>
 #include <Timer.h>
 
 #include "GuiUtils.h"

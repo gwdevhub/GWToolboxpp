@@ -1,27 +1,28 @@
 #include "stdafx.h"
-#include "HeroBuildsWindow.h"
 
-#include <GWCA\GameContainers\Array.h>
-#include <GWCA\GameContainers\GamePos.h>
+#include <GWCA/GameContainers/Array.h>
+#include <GWCA/GameContainers/GamePos.h>
 
-#include <GWCA\GameEntities\Hero.h>
+#include <GWCA/GameEntities/Hero.h>
 
-#include <GWCA\GameEntities\Agent.h>
+#include <GWCA/GameEntities/Agent.h>
 
-#include <GWCA\Context\GameContext.h>
-#include <GWCA\Context\WorldContext.h>
+#include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/WorldContext.h>
 
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\PartyMgr.h>
-#include <GWCA\Managers\SkillbarMgr.h>
-#include <GWCA\Managers\GameThreadMgr.h>
-#include <GWCA\Managers\UIMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/UIMgr.h>
 
-#include <logger.h>
-#include "GuiUtils.h"
-#include <Modules\Resources.h>
+#include <Logger.h>
+#include <GuiUtils.h>
+
+#include <Modules/Resources.h>
+#include <Windows/HeroBuildsWindow.h>
 
 
 #define INI_FILENAME L"herobuilds.ini"

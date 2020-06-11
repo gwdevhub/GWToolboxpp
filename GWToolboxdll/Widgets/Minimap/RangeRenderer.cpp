@@ -1,7 +1,5 @@
 #include "stdafx.h"
 
-#include <imgui.h>
-
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>

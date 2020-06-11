@@ -26,7 +26,7 @@
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/FriendListMgr.h>
 
-#include <logger.h>
+#include <Logger.h>
 #include <GuiUtils.h>
 
 #include <Windows/TravelWindow.h>
@@ -482,7 +482,7 @@ GW::Guild* DiscordIntegration::GetCurrentGHGuild() {
 }
 
 void DiscordIntegration::UpdateActivityCallback(void* event_data, EDiscordResult result) {
-    assert(event_data != nullptr);
+    ASSERT(event_data != nullptr);
     DiscordIntegration* discord_module = reinterpret_cast<DiscordIntegration*>(event_data);
     if (result != DiscordResult_Ok) {
         Log::Log("Activity update failed with error %d\n", result);
@@ -490,7 +490,7 @@ void DiscordIntegration::UpdateActivityCallback(void* event_data, EDiscordResult
 }
 
 void DiscordIntegration::OnDiscordLog(void* event_data, enum EDiscordLogLevel level, const char* message) {
-    assert(event_data != nullptr);
+    ASSERT(event_data != nullptr);
     DiscordIntegration* discord_module = reinterpret_cast<DiscordIntegration*>(event_data);
     Log::Log("Discord Log Level %d: '%s'\n", level, message);
 }

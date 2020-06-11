@@ -5,7 +5,7 @@
 
 #include <GWToolbox.h>
 #include <Defines.h>
-#include <logger.h>
+#include <Logger.h>
 #include <GuiUtils.h>
 #include <Modules/Resources.h>
 

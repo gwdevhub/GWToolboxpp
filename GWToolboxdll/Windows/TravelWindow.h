@@ -8,7 +8,7 @@
 #include <GWCA\Constants\Maps.h>
 
 #include "ToolboxWindow.h"
-#include "logger.h"
+#include <Logger.h>
 
 class TravelWindow : public ToolboxWindow {
 	TravelWindow() {};

@@ -1,28 +1,28 @@
 #include "stdafx.h"
 
-#include <GWCA\Constants\Constants.h>
+#include <GWCA/Constants/Constants.h>
 
-#include <GWCA\Context\GameContext.h>
-#include <GWCA\Context\CharContext.h>
+#include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/CharContext.h>
 
-#include <GWCA\GameContainers\Array.h>
-#include <GWCA\GameContainers\GamePos.h>
+#include <GWCA/GameContainers/Array.h>
+#include <GWCA/GameContainers/GamePos.h>
 
-#include <GWCA\GameEntities\Agent.h>
-#include <GWCA\GameEntities\Skill.h>
+#include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Skill.h>
 
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\ItemMgr.h>
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\PartyMgr.h>
-#include <GWCA\Managers\EffectMgr.h>
-#include <GWCA\Managers\CtoSMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/ItemMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Managers/EffectMgr.h>
+#include <GWCA/Managers/CtoSMgr.h>
 
-#include <logger.h>
+#include <Logger.h>
 #include "GuiUtils.h"
-#include <Modules\Resources.h>
-#include <Windows\PconsWindow.h>
-#include <Widgets\AlcoholWidget.h>
+#include <Modules/Resources.h>
+#include <Windows/PconsWindow.h>
+#include <Widgets/AlcoholWidget.h>
 #include "Pcons.h"
 
 

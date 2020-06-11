@@ -1,9 +1,4 @@
 #include "stdafx.h"
-#include "BondsWidget.h"
-
-#include <d3dx9tex.h>
-#include <imgui.h>
-#include <imgui_internal.h>
 
 #include <GWCA/Constants/Constants.h>
 
@@ -24,9 +19,10 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 
-#include "GuiUtils.h"
-#include "Modules/ToolboxSettings.h"
+#include <GuiUtils.h>
 #include <Modules/Resources.h>
+#include <Modules/ToolboxSettings.h>
+#include <Widgets/BondsWidget.h>
 
 //DWORD BondsWidget::buff_id[MAX_PARTYSIZE][MAX_BONDS] = { 0 };
 

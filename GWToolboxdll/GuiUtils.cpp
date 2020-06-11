@@ -2,8 +2,6 @@
 
 #include "GuiUtils.h"
 
-#include <imgui.h>
-
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Utilities/Scanner.h>
 

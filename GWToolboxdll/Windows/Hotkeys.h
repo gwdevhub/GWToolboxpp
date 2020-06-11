@@ -1,17 +1,13 @@
 #pragma once
 
-#include <string>
-#include <Defines.h>
-#include <chrono>
-
-#include <GWCA\Constants\Constants.h>
-#include <GWCA\Constants\Skills.h>
+#include <GWCA/Constants/Constants.h>
+#include <GWCA/Constants/Skills.h>
 
 #include <GWCA/GameEntities/Item.h>
 
-#include <GWCA\Managers\MapMgr.h>
+#include <GWCA/Managers/MapMgr.h>
 
-#include <SimpleIni.h>
+#include <Defines.h>
 
 // abstract class Toolbox Hotkey
 // has the key code and pressed status

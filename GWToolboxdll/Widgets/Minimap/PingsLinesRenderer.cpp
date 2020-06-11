@@ -260,7 +260,9 @@ void PingsLinesRenderer::DrawDrawings(IDirect3DDevice9* device) {
 			for (const DrawingLine& line : lines) {
 				uint32_t max_alpha = (color_drawings & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT;
                 uint32_t left = static_cast<uint32_t>(drawing_timeout - TIMER_DIFF(line.start));
-                if (left > drawing_timeout) 
+                // @Robustness:
+                // This is not safe, casting time to uint32_t is unsafe.
+                if (left > static_cast<uint32_t>(drawing_timeout))
                     continue; // This is actually a negative integer i.e. no time left.
 				uint32_t alpha = left * max_alpha / 2000;
 				if (alpha > max_alpha) alpha = max_alpha;

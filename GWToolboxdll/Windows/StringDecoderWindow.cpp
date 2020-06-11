@@ -1,8 +1,6 @@
 #include "stdafx.h"
-#include <Windows.h>
-#include <bitset>
 
-#include "logger.h"
+#include <Logger.h>
 
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/UIMgr.h>

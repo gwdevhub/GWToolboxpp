@@ -1,15 +1,4 @@
 #include "stdafx.h"
-#include "TradeWindowExtended.h"
-#include <regex>
-
-#include <WinSock2.h>
-#include <sstream>
-#include <algorithm>
-#include <iterator>
-#include <string>
-
-#include <imgui.h>
-#include <imgui_internal.h>
 
 #include <GWCA\Constants\Constants.h>
 
@@ -35,8 +24,9 @@
 
 #include <Modules\Resources.h>
 #include <Modules\GameSettings.h>
+#include <Windows/TradeWindowExtended.h>
 
-#include "logger.h"
+#include <Logger.h>
 #include "GuiUtils.h"
 #include "GWToolbox.h"
 

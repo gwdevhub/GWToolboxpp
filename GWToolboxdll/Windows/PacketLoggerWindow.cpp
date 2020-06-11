@@ -18,7 +18,8 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/MapMgr.h>
-#include "logger.h"
+
+#include <Logger.h>
 
 #include "PacketLoggerWindow.h"
 
@@ -218,7 +219,7 @@ static FieldType GetField(uint32_t type, uint32_t size, uint32_t count)
 static void PrintIndent(uint32_t indent)
 {
     char buffer[64];
-    assert(indent <= sizeof(buffer) - 1);
+    ASSERT(indent <= sizeof(buffer) - 1);
     for (uint32_t i = 0; i < indent; i++) {
         buffer[i] = ' ';
     }
@@ -447,7 +448,7 @@ static void PacketHandler(GW::HookStatus* status, GW::Packet::StoC::PacketBase* 
     uint8_t** bytes = &packet_raw;
     uint32_t header;
     Serialize<uint32_t>(bytes, &header);
-    assert(packet->header == header);
+    ASSERT(packet->header == header);
 
     printf("StoC packet(%u) {\n", packet->header);
     PrintNestedField(handler.fields + 1, handler.field_count - 1, 1, bytes, 4);

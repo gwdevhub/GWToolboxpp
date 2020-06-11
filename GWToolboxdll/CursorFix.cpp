@@ -5,7 +5,7 @@
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Utilities/Hooker.h>
 
-#include "logger.h"
+#include <Logger.h>
 
 typedef BOOL (WINAPI *GetClipCursor_pt)(
     _Out_ LPRECT lpRect);

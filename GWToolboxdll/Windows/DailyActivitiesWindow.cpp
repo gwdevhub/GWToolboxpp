@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#include "logger.h"
+#include <Logger.h>
 
 #include <Windows/DailyActivitiesWindow.h>
 

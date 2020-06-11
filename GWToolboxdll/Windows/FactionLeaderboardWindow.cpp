@@ -16,7 +16,7 @@
 #include <GWCA\Managers\SkillbarMgr.h>
 #include <GWCA\Managers\StoCMgr.h>
 
-#include <logger.h>
+#include <Logger.h>
 #include "GuiUtils.h"
 #include <Modules\Resources.h>
 #include "FactionLeaderboardWindow.h"

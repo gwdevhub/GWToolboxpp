@@ -290,7 +290,6 @@
     <ClInclude Include="ImGuiAddons.h" />
     <ClInclude Include="IRC.h" />
     <ClInclude Include="Keys.h" />
-    <ClInclude Include="logger.h" />
     <ClInclude Include="mp3.h" />
     <ClInclude Include="sha1.hpp" />
     <ClInclude Include="stdafx.h" />
@@ -373,6 +372,7 @@
     <ClInclude Include="Modules\AprilFools.h">
       <Filter>Modules\AprilFool</Filter>
     </ClInclude>
+    <ClInclude Include="Logger.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Dependencies\imgui\imgui.cpp">
@@ -486,7 +486,6 @@
     <ClCompile Include="GuiUtils.cpp" />
     <ClCompile Include="GWToolbox.cpp" />
     <ClCompile Include="ImGuiAddons.cpp" />
-    <ClCompile Include="logger.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="mp3.cpp" />
     <ClCompile Include="sha1.cpp" />
@@ -570,6 +569,7 @@
     <ClCompile Include="Modules\AprilFools.cpp">
       <Filter>Modules\AprilFool</Filter>
     </ClCompile>
+    <ClCompile Include="Logger.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GWToolbox.rc">

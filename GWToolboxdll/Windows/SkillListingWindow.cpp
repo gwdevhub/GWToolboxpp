@@ -3,16 +3,16 @@
 #include <GWCA/Utilities/Macros.h>
 #include <GWCA/Utilities/Scanner.h>
 
-#include <GWCA\Managers\MapMgr.h>
-#include <GWCA\Managers\ChatMgr.h>
-#include <GWCA\Managers\AgentMgr.h>
-#include <GWCA\Managers\SkillbarMgr.h>
-#include <GWCA\Managers\UIMgr.h>
-#include <GWCA\Managers\GameThreadMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
+#include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 
 #include "GuiUtils.h"
 #include <Modules\Resources.h>
-#include "logger.h"
+#include <Logger.h>
 
 #include "SkillListingWindow.h"
 

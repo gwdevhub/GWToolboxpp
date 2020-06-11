@@ -1,13 +1,7 @@
 #pragma once 
 
-#include <vector>
-#include <functional>
-#include <algorithm>
-#include <Windows.h>
-#include <string>
-
 #include "ToolboxWindow.h"
-#include "logger.h"
+#include <Logger.h>
 #include "Timer.h"
 #include "Hotkeys.h"
 

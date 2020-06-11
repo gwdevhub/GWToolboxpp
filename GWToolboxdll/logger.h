@@ -1,5 +1,7 @@
 #pragma once
 
+#define ASSERT(expr) ((void)(!!(expr) || (Log::FatalAssert(#expr, __FILE__, (unsigned)__LINE__), 0)))
+
 namespace Log {
 	// === Setup and cleanup ====
 	// in release redirects stdout and stderr to log file
@@ -32,4 +34,6 @@ namespace Log {
 	// Creates minidump, to be called from within __except()
 	LONG WINAPI GenerateDump(
 		EXCEPTION_POINTERS* pExceptionPointers);
+
+	void FatalAssert(const char *expr, const char *file, unsigned int line);
 };

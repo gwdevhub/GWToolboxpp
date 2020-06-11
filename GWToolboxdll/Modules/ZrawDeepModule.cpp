@@ -22,7 +22,7 @@
 #include "ZrawDeepModule.h"
 #include "Modules/Resources.h"
 
-#include "logger.h"
+#include <Logger.h>
 #include <Timer.h>
 
 namespace {

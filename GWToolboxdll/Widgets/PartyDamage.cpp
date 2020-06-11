@@ -1,8 +1,5 @@
 #include "stdafx.h"
 
-#include <imgui.h>
-#include <imgui_internal.h>
-
 #include <GWCA/GameContainers/GamePos.h>
 
 #include <GWCA/GameEntities/Agent.h>

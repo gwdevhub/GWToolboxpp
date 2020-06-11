@@ -1,10 +1,4 @@
 #include "stdafx.h"
-#include "GWToolbox.h"
-
-#include <shellapi.h>
-
-#include <imgui.h>
-#include <imgui_impl_dx9.h>
 
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/GameContainers/Array.h>
@@ -31,10 +25,11 @@
 
 #include <d3dx9_dynamic.h>
 
-#include "GuiUtils.h"
-#include "logger.h"
-#include "Defines.h"
-#include "CursorFix.h"
+#include <GWToolbox.h>
+#include <GuiUtils.h>
+#include <Logger.h>
+#include <Defines.h>
+#include <CursorFix.h>
 
 namespace {
     HMODULE dllmodule = 0;
