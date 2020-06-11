@@ -79,7 +79,7 @@ private:
 		std::wstring dec_ws;
 		std::string dec_s;
 		inline void init(const wchar_t* enc) {
-			if (enc_ws == enc)
+			if (enc_ws == enc || !enc)
 				return;
 			enc_ws = enc;
 			enc_ws.clear();
