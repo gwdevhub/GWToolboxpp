@@ -82,14 +82,16 @@
 // windows headers
 #include <Windows.h>
 
-#include <dbghelp.h>
-#include <ShellApi.h>
-#include <Shlobj.h>
+#include <DbgHelp.h>
+#include <shellapi.h>
+#include <ShlObj.h>
 #include <Shlwapi.h>
-#include <tlhelp32.h>
+#include <TlHelp32.h>
 #include <windowsx.h>
-#include <WinUser.h>
 #include <WinSock2.h>
+#include <WinUser.h>
+#include <WS2tcpip.h>
+#include <WinInet.h>
 
 #include <d3d9.h>
 #include <d3dx9math.h>

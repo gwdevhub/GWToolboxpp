@@ -1,8 +1,9 @@
 #include "stdafx.h"
-#include "ToolboxTheme.h"
+
+#include <Color.h>
 
 #include <Modules/Resources.h>
-#include <Color.h>
+#include <Modules/ToolboxTheme.h>
 
 #define IniFilename L"Theme.ini"
 #define IniSection "Theme"

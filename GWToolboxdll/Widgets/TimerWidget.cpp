@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "TimerWidget.h"
 
 #include <GWCA/Constants/Constants.h>
 
@@ -14,11 +13,12 @@
 #include <GWCA/Managers/EffectMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 
+#include <GuiUtils.h>
 #include <Logger.h>
 #include <Timer.h>
 
-#include "GuiUtils.h"
-#include "Modules/ToolboxSettings.h"
+#include <Modules/ToolboxSettings.h>
+#include <Widgets/TimerWidget.h>
 
 void TimerWidget::LoadSettings(CSimpleIni *ini) {
 	ToolboxWidget::LoadSettings(ini);

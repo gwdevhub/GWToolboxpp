@@ -1,13 +1,14 @@
 #include "stdafx.h"
-#include "Updater.h"
 
 #include <GWCA/Managers/GameThreadMgr.h>
 
-#include <GWToolbox.h>
 #include <Defines.h>
-#include <Logger.h>
 #include <GuiUtils.h>
+#include <GWToolbox.h>
+#include <Logger.h>
+
 #include <Modules/Resources.h>
+#include <Modules/Updater.h>
 
 void Updater::LoadSettings(CSimpleIni* ini) {
 	ToolboxModule::LoadSettings(ini);

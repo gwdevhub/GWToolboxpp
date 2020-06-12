@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "DistanceWidget.h"
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameContainers/GamePos.h>
@@ -8,8 +7,10 @@
 #include <GWCA/Managers/MapMgr.h>
 
 
-#include "GuiUtils.h"
-#include "Modules/ToolboxSettings.h"
+#include <GuiUtils.h>
+
+#include <Modules/ToolboxSettings.h>
+#include <Widgets/DistanceWidget.h>
 
 void DistanceWidget::DrawSettingInternal() {
 	ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);

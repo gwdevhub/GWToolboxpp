@@ -1,9 +1,9 @@
 #include "stdafx.h"
-#include "ToolboxModule.h"
+
+#include <ToolboxModule.h>
+#include <GWToolbox.h>
 
 #include <Windows/SettingsWindow.h>
-
-#include "GWToolbox.h"
 
 namespace {
 	// static function to register content

@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "GuiUtils.h"
 
 #include <GWCA/Constants/Constants.h>
 
@@ -9,8 +8,8 @@
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
 
-#include "VanquishWidget.h"
-
+#include <GuiUtils.h>
+#include <Widgets/VanquishWidget.h>
 
 void VanquishWidget::Draw(IDirect3DDevice9 *pDevice) {
     UNREFERENCED_PARAMETER(pDevice);

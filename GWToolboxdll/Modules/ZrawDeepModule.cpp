@@ -1,7 +1,5 @@
 #include "stdafx.h"
 
-#include <Defines.h>
-
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Agent.h>
@@ -19,11 +17,12 @@
 #include <GWCA/Managers/GuildMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 
-#include "ZrawDeepModule.h"
-#include "Modules/Resources.h"
-
+#include <Defines.h>
 #include <Logger.h>
 #include <Timer.h>
+
+#include <Modules/ZrawDeepModule.h>
+#include <Modules/Resources.h>
 
 namespace {
     const wchar_t* kanaxai_dialogs[] = {

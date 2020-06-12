@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "AlcoholWidget.h"
 
 #include <GWCA/Constants/Constants.h>
 
@@ -16,6 +15,7 @@
 
 #include <GuiUtils.h>
 
+#include <Widgets/AlcoholWidget.h>
 
 void AlcoholWidget::Initialize() {
 	ToolboxWidget::Initialize();

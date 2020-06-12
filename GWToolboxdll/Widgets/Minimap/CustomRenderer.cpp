@@ -1,7 +1,4 @@
 #include "stdafx.h"
-#include "CustomRenderer.h"
-
-#include <d3dx9math.h>
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameContainers/Array.h>
@@ -15,6 +12,7 @@
 #include <GWCA/Managers/MapMgr.h>
 
 #include <Modules/Resources.h>
+#include <Widgets/Minimap/CustomRenderer.h>
 
 Color CustomRenderer::color = 0xFF00FFFF;
 

@@ -1,15 +1,12 @@
 #include "stdafx.h"
-#include "Resources.h"
 
-#include <thread>
-
-#include <urlmon.h>
-#include <WinInet.h>
 #include <d3dx9_dynamic.h>
 
 #include <Defines.h>
-#include "GWToolbox.h"
+#include <GWToolbox.h>
 #include <Logger.h>
+
+#include <Modules/Resources.h>
 
 void Resources::Initialize() {
 	ToolboxModule::Initialize();

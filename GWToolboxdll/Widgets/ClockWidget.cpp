@@ -1,7 +1,8 @@
 #include "stdafx.h"
-#include "ClockWidget.h"
 
-#include "GuiUtils.h"
+#include <GuiUtils.h>
+
+#include <Widgets/ClockWidget.h>
 #include <Modules/ToolboxSettings.h>
 
 void ClockWidget::Draw(IDirect3DDevice9* pDevice) {

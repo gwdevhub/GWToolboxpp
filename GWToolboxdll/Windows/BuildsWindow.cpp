@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "BuildsWindow.h"
 
 #include <GWCA/Constants/Constants.h>
 
@@ -14,10 +13,12 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
 
-#include "GuiUtils.h"
-#include <Modules/Resources.h>
-#include <Windows/PconsWindow.h>
+#include <GuiUtils.h>
 #include <Logger.h>
+
+#include <Modules/Resources.h>
+#include <Windows/BuildsWindow.h>
+#include <Windows/PconsWindow.h>
 
 unsigned int BuildsWindow::TeamBuild::cur_ui_id = 0;
 

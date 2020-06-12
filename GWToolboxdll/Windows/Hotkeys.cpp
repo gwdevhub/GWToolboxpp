@@ -21,15 +21,16 @@
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 
-#include "BuildsWindow.h"
-#include "HeroBuildsWindow.h"
-#include "Hotkeys.h"
-#include "HotkeysWindow.h"
-#include "Modules\ChatCommands.h"
-#include "PconsWindow.h"
-#include <Logger.h>
 #include <ImGuiAddons.h>
 #include <Keys.h>
+#include <Logger.h>
+
+#include <Modules/ChatCommands.h>
+#include <Windows/BuildsWindow.h>
+#include <Windows/HeroBuildsWindow.h>
+#include <Windows/Hotkeys.h>
+#include <Windows/HotkeysWindow.h>
+#include <Windows/PconsWindow.h>
 
 bool TBHotkey::show_active_in_header = true;
 bool TBHotkey::show_run_in_header = true;

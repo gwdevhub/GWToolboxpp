@@ -1,7 +1,7 @@
 #include "stdafx.h"
-#include "ToolboxWidget.h"
 
-#include "ImGuiAddons.h"
+#include <ImGuiAddons.h>
+#include <ToolboxWidget.h>
 
 #include <Modules/ToolboxSettings.h>
 #include <Windows/SettingsWindow.h>

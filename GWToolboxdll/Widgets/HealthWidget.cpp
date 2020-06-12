@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "HealthWidget.h"
 
 #include <GWCA/GameContainers/GamePos.h>
 
@@ -13,9 +12,11 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 
-#include "GuiUtils.h"
-#include "Modules/ToolboxSettings.h"
+#include <GuiUtils.h>
+
 #include <Modules/Resources.h>
+#include <Modules/ToolboxSettings.h>
+#include <Widgets/HealthWidget.h>
 
 #define HEALTH_THRESHOLD_INIFILENAME L"HealthThreshold.ini"
 
