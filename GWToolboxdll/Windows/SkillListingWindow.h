@@ -1,10 +1,5 @@
 #pragma once
 
-#include "ToolboxWindow.h"
-
-#include <vector>
-#include <queue>
-#include <string>
 #include <GWCA\Constants\Constants.h>
 
 #include <GWCA\GameContainers\Array.h>
@@ -12,48 +7,50 @@
 #include <GWCA\GameEntities\Skill.h>
 #include "GWCA\Managers\UIMgr.h"
 
-#include "Timer.h"
-#include "GuiUtils.h"
+#include <GuiUtils.h>
+#include <Timer.h>
+#include <ToolboxWindow.h>
+
 /*namespace {
-	enum SkillTypesEncoded {
-		Attack = 0x48f, EliteAttack,
-		AxeAttack, EliteAxeAttack,
-		BowAttack, EliteBowAttack,
-		HammerAttack, EliteHammerAttack,
-		MeleeAttack, EliteMeleeAttack,
-		SwordAttack, EliteSwordAttack,
-		Preparation, ElitePreparation,
-		DualAttack, EliteDualAttack,
-		LeadAttack, EliteLeadAttack,
-		OffHandAttack, EliteOffHandAttack,
-		PartyBonus,
-		NatureRitual, EliteNatureRitual,
-		BindingRitual, EliteBindingRitual,
-		Signet, EliteSignet,
-		Shout, EliteShout,
-		Spell, EliteSpell,
-		HexSpell, EliteHexSpell,
-		EnchantmentSpell, EliteEnchantmentSpell,
-		Glyph, EliteGlyph,
-		Skill, EliteSkill
-	};
+    enum SkillTypesEncoded {
+        Attack = 0x48f, EliteAttack,
+        AxeAttack, EliteAxeAttack,
+        BowAttack, EliteBowAttack,
+        HammerAttack, EliteHammerAttack,
+        MeleeAttack, EliteMeleeAttack,
+        SwordAttack, EliteSwordAttack,
+        Preparation, ElitePreparation,
+        DualAttack, EliteDualAttack,
+        LeadAttack, EliteLeadAttack,
+        OffHandAttack, EliteOffHandAttack,
+        PartyBonus,
+        NatureRitual, EliteNatureRitual,
+        BindingRitual, EliteBindingRitual,
+        Signet, EliteSignet,
+        Shout, EliteShout,
+        Spell, EliteSpell,
+        HexSpell, EliteHexSpell,
+        EnchantmentSpell, EliteEnchantmentSpell,
+        Glyph, EliteGlyph,
+        Skill, EliteSkill
+    };
 }*/
 class SkillListingWindow : public ToolboxWindow {
 public:
     class Skill {
     public:
         Skill(GW::Skill* _gw_skill) : skill(_gw_skill) {}
-		nlohmann::json ToJson();
+        nlohmann::json ToJson();
         const wchar_t* Name();
         const wchar_t* GWWDescription();
         const wchar_t* GWWConcise();
         //const wchar_t* Description(uint32_t attribute_level, wchar_t* buffer);
         //const wchar_t* Concise(uint32_t attribute_level, wchar_t* buffer);
         GW::Skill* skill;
-		const std::wstring GetSkillType();
+        const std::wstring GetSkillType();
         const bool HasExhaustion() { return skill->special & 0x1; }
-		const bool IsMaintained() { return skill->duration0 == 0x20000;  }
-		const bool IsPvE() { return skill->special & 0x80000;  }
+        const bool IsMaintained() { return skill->duration0 == 0x20000;  }
+        const bool IsPvE() { return skill->special & 0x80000;  }
         const bool IsElite() { return skill->special & 0x4; }
     protected:
         const wchar_t *Description();

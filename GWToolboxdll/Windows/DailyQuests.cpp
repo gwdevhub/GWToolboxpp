@@ -9,10 +9,10 @@
 #include <GWCA/Managers/MapMgr.h>
 
 #include <GuiUtils.h>
-#include "GWToolbox.h"
+#include <GWToolbox.h>
 #include <Logger.h>
-#include "DailyQuests.h"
 
+#include <Windows/DailyQuests.h>
 
 bool subscriptions_changed = false;
 
@@ -221,32 +221,32 @@ void DailyQuests::Draw(IDirect3DDevice9* pDevice) {
     return ImGui::End();
 }
 void DailyQuests::DrawHelp() {
-	if (!ImGui::TreeNode("Daily Quest Chat Commands"))
-		return;
+    if (!ImGui::TreeNode("Daily Quest Chat Commands"))
+        return;
     ImGui::Text("You can create a 'Send Chat' hotkey to perform any command.");
     ImGui::Bullet(); ImGui::Text("'/zb' prints current zaishen bounty.");
     ImGui::Bullet(); ImGui::Text("'/zm' prints current zaishen mission.");
     ImGui::Bullet(); ImGui::Text("'/zv' prints current zaishen vanquish.");
-	ImGui::Bullet(); ImGui::Text("'/zc' prints current zaishen combat.");
-	ImGui::Bullet(); ImGui::Text("'/vanguard' prints current pre-searing vanguard quest.");
-	ImGui::Bullet(); ImGui::Text("'/wanted' prints current shining blade bounty.");
+    ImGui::Bullet(); ImGui::Text("'/zc' prints current zaishen combat.");
+    ImGui::Bullet(); ImGui::Text("'/vanguard' prints current pre-searing vanguard quest.");
+    ImGui::Bullet(); ImGui::Text("'/wanted' prints current shining blade bounty.");
     ImGui::Bullet(); ImGui::Text("'/nicholas' prints current nicholas location.");
-	ImGui::Bullet(); ImGui::Text("'/weekly' prints current weekly bonus.");
+    ImGui::Bullet(); ImGui::Text("'/weekly' prints current weekly bonus.");
     ImGui::Bullet(); ImGui::Text("'/today' prints current daily activities.");
     ImGui::Bullet(); ImGui::Text("'/tomorrow' prints tomorrow's daily activities.");
-	ImGui::TreePop();
+    ImGui::TreePop();
 }
 void DailyQuests::DrawSettingInternal() {
     ToolboxWindow::DrawSettingInternal();
-	float width = ImGui::GetContentRegionAvailWidth() / 2;
-	ImGui::PushItemWidth(width);
+    float width = ImGui::GetContentRegionAvailWidth() / 2;
+    ImGui::PushItemWidth(width);
     ImGui::InputInt("Show daily quests for the next ", &daily_quest_window_count);
-	ImGui::PopItemWidth();
+    ImGui::PopItemWidth();
     ImGui::SameLine(0, 0);
     ImGui::Text("days");
     ImGui::Text("Quests to show in Daily Quests window:");
     ImGui::Indent();
-	ImGui::PushItemWidth(width);
+    ImGui::PushItemWidth(width);
     ImGui::Checkbox("Zaishen Bounty", &show_zaishen_bounty_in_window);
     ImGui::SameLine();
     ImGui::Checkbox("Zaishen Combat", &show_zaishen_combat_in_window);
@@ -260,8 +260,8 @@ void DailyQuests::DrawSettingInternal() {
     ImGui::SameLine();
     ImGui::Checkbox("Weekly Bonus (PvP)", &show_weekly_bonus_pvp_in_window);
     ImGui::InputFloat("Text spacing", &text_width);
-	ImGui::PopItemWidth();
-	ImGui::Unindent();
+    ImGui::PopItemWidth();
+    ImGui::Unindent();
 }
 void DailyQuests::LoadSettings(CSimpleIni* ini) {
     ToolboxWindow::LoadSettings(ini);

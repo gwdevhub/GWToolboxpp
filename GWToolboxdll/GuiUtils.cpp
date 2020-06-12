@@ -1,22 +1,22 @@
 #include "stdafx.h"
 
-#include "GuiUtils.h"
-
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Utilities/Scanner.h>
 
 #include <GWCA/Managers/UIMgr.h>
 
-#include <Modules/Resources.h>
+#include <GuiUtils.h>
 #include <Utf8.h>
 
+#include <Modules/Resources.h>
+
 namespace {
-	ImFont* font16 = nullptr;
-	ImFont* font18 = nullptr;
-	ImFont* font20 = nullptr;
-	ImFont* font24 = nullptr;
-	ImFont* font42 = nullptr;
-	ImFont* font48 = nullptr;
+    ImFont* font16 = nullptr;
+    ImFont* font18 = nullptr;
+    ImFont* font20 = nullptr;
+    ImFont* font24 = nullptr;
+    ImFont* font42 = nullptr;
+    ImFont* font48 = nullptr;
 
     bool fonts_loading = false;
     bool fonts_loaded = false;
@@ -31,15 +31,15 @@ void GuiUtils::LoadFonts() {
         return;
     fonts_loading = true;
 
-	std::thread t([] {
+    std::thread t([] {
         printf("Loading fonts\n");
 
-		ImGuiIO& io = ImGui::GetIO();
-		std::vector<std::pair<wchar_t*, const ImWchar*>> extra_fonts;
-		extra_fonts.push_back({ L"Font_Japanese.ttf", io.Fonts->GetGlyphRangesJapanese() });
-		extra_fonts.push_back({ L"Font_Cyrillic.ttf", io.Fonts->GetGlyphRangesCyrillic() });
-		extra_fonts.push_back({ L"Font_ChineseTraditional.ttf", io.Fonts->GetGlyphRangesChineseFull() });
-		extra_fonts.push_back({ L"Font_Korean.ttf", io.Fonts->GetGlyphRangesKorean() });
+        ImGuiIO& io = ImGui::GetIO();
+        std::vector<std::pair<wchar_t*, const ImWchar*>> extra_fonts;
+        extra_fonts.push_back({ L"Font_Japanese.ttf", io.Fonts->GetGlyphRangesJapanese() });
+        extra_fonts.push_back({ L"Font_Cyrillic.ttf", io.Fonts->GetGlyphRangesCyrillic() });
+        extra_fonts.push_back({ L"Font_ChineseTraditional.ttf", io.Fonts->GetGlyphRangesChineseFull() });
+        extra_fonts.push_back({ L"Font_Korean.ttf", io.Fonts->GetGlyphRangesKorean() });
 
         // Pre-load font configs
         ImFontConfig* fontCfg;
@@ -56,24 +56,24 @@ void GuiUtils::LoadFonts() {
             fonts_loading = false;
             return;
         }
-		// Collect the final font. This is the default (16px) font with all special chars merged. in.
-		fontCfg = &io.Fonts->ConfigData.back();
+        // Collect the final font. This is the default (16px) font with all special chars merged. in.
+        fontCfg = &io.Fonts->ConfigData.back();
 
-		for (unsigned int i = 0; i < extra_fonts.size(); i++) {
-			if (PathFileExistsW(Resources::GetPath(extra_fonts[i].first).c_str())) {
-				ImFontConfig c;
-				c.MergeMode = true;
-				io.Fonts->AddFontFromFileTTF(Resources::GetPathUtf8(extra_fonts[i].first).bytes, 16.0f, &c, extra_fonts[i].second);
-				printf("%ls found and pre-loaded\n", extra_fonts[i].first);
-			}
-			else {
-				printf("%ls not found. Add this file to load special chars.\n", extra_fonts[i].first);
-			}
-		}
+        for (unsigned int i = 0; i < extra_fonts.size(); i++) {
+            if (PathFileExistsW(Resources::GetPath(extra_fonts[i].first).c_str())) {
+                ImFontConfig c;
+                c.MergeMode = true;
+                io.Fonts->AddFontFromFileTTF(Resources::GetPathUtf8(extra_fonts[i].first).bytes, 16.0f, &c, extra_fonts[i].second);
+                printf("%ls found and pre-loaded\n", extra_fonts[i].first);
+            }
+            else {
+                printf("%ls not found. Add this file to load special chars.\n", extra_fonts[i].first);
+            }
+        }
         
         font16 = fontCfg->DstFont;
 
-		// Recycle the binary data from original ImFontConfig for the other font sizes.
+        // Recycle the binary data from original ImFontConfig for the other font sizes.
         ImFontConfig copyCfg;
         copyCfg.FontData = fontCfg->FontData;
         copyCfg.FontDataSize = fontCfg->FontDataSize;
@@ -100,150 +100,150 @@ void GuiUtils::LoadFonts() {
         sprintf(copyCfg.Name, "Default_48");
         font48 = io.Fonts->AddFont(&copyCfg);
 
-		printf("Building fonts...\n");
-		io.Fonts->Build();
+        printf("Building fonts...\n");
+        io.Fonts->Build();
         printf("Fonts loaded\n");
         fonts_loaded = true;
         fonts_loading = false;
-	});
-	t.detach();
+    });
+    t.detach();
 }
 ImFont* GuiUtils::GetFont(GuiUtils::FontSize size) {
-	ImFont* font = [](FontSize size) -> ImFont* {
-		switch (size) {
-		case GuiUtils::f16: return font16;
-		case GuiUtils::f18: return font18;
-		case GuiUtils::f20:	return font20;
-		case GuiUtils::f24:	return font24;
-		case GuiUtils::f42:	return font42;
-		case GuiUtils::f48:	return font48;
-		default: return nullptr;
-		}
-	}(size);
-	if (font && font->IsLoaded()) {
-		return font;
-	} else {
-		return ImGui::GetIO().Fonts->Fonts[0];
-	}
+    ImFont* font = [](FontSize size) -> ImFont* {
+        switch (size) {
+        case GuiUtils::f16: return font16;
+        case GuiUtils::f18: return font18;
+        case GuiUtils::f20: return font20;
+        case GuiUtils::f24: return font24;
+        case GuiUtils::f42: return font42;
+        case GuiUtils::f48: return font48;
+        default: return nullptr;
+        }
+    }(size);
+    if (font && font->IsLoaded()) {
+        return font;
+    } else {
+        return ImGui::GetIO().Fonts->Fonts[0];
+    }
 }
 
 size_t GuiUtils::GetPartyHealthbarHeight() {
-	GW::Constants::InterfaceSize interfacesize =
-		static_cast<GW::Constants::InterfaceSize>(GW::UI::GetPreference(GW::UI::Preference_InterfaceSize));
+    GW::Constants::InterfaceSize interfacesize =
+        static_cast<GW::Constants::InterfaceSize>(GW::UI::GetPreference(GW::UI::Preference_InterfaceSize));
 
-	switch (interfacesize) {
-	case GW::Constants::InterfaceSize::SMALL: return GW::Constants::HealthbarHeight::Small;
-	case GW::Constants::InterfaceSize::NORMAL: return GW::Constants::HealthbarHeight::Normal;
-	case GW::Constants::InterfaceSize::LARGE: return GW::Constants::HealthbarHeight::Large;
-	case GW::Constants::InterfaceSize::LARGER: return GW::Constants::HealthbarHeight::Larger;
-	default:
-		return GW::Constants::HealthbarHeight::Normal;
-	}
+    switch (interfacesize) {
+    case GW::Constants::InterfaceSize::SMALL: return GW::Constants::HealthbarHeight::Small;
+    case GW::Constants::InterfaceSize::NORMAL: return GW::Constants::HealthbarHeight::Normal;
+    case GW::Constants::InterfaceSize::LARGE: return GW::Constants::HealthbarHeight::Large;
+    case GW::Constants::InterfaceSize::LARGER: return GW::Constants::HealthbarHeight::Larger;
+    default:
+        return GW::Constants::HealthbarHeight::Normal;
+    }
 }
 
 std::string GuiUtils::ToLower(std::string s) {
-	std::transform(s.begin(), s.end(), s.begin(), [](char c) -> char {
+    std::transform(s.begin(), s.end(), s.begin(), [](char c) -> char {
         return static_cast<char>(::tolower(c));
     });
-	return s;
+    return s;
 }
 
 std::wstring GuiUtils::ToLower(std::wstring s) {
     std::transform(s.begin(), s.end(), s.begin(), [](wchar_t c) -> wchar_t {
         return static_cast<wchar_t>(::tolower(c));
     });
-	return s;
+    return s;
 }
 // Convert a wide Unicode string to an UTF8 string
 std::string GuiUtils::WStringToString(const std::wstring& wstr)
 {
     // @Cleanup: No error handling whatsoever
-	if (wstr.empty()) return std::string();
-	int size_needed = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), NULL, 0, NULL, NULL);
-	std::string strTo(static_cast<size_t>(size_needed), 0);
-	WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL);
-	return strTo;
+    if (wstr.empty()) return std::string();
+    int size_needed = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), NULL, 0, NULL, NULL);
+    std::string strTo(static_cast<size_t>(size_needed), 0);
+    WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL);
+    return strTo;
 }
 
 // Convert an UTF8 string to a wide Unicode String
 std::wstring GuiUtils::StringToWString(const std::string& str)
 {
     // @Cleanup: No error handling whatsoever
-	if (str.empty()) return std::wstring();
-	int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), NULL, 0);
-	std::wstring wstrTo(static_cast<size_t>(size_needed), 0);
-	MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
-	return wstrTo;
+    if (str.empty()) return std::wstring();
+    int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), NULL, 0);
+    std::wstring wstrTo(static_cast<size_t>(size_needed), 0);
+    MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
+    return wstrTo;
 }
 std::wstring GuiUtils::SanitizePlayerName(std::wstring s) {
     // @Cleanup:
     // What exactly needs to be done to sanitize a player name?
     // Add this information as a comment, because nobody want to read the regex.
-	if (s.empty()) return L"";
-	static std::wregex remove(L" ?[\\(\\[]\\w+[\\)\\]]");
-	s = std::regex_replace(s, remove, L""); 
-	return s;
+    if (s.empty()) return L"";
+    static std::wregex remove(L" ?[\\(\\[]\\w+[\\)\\]]");
+    s = std::regex_replace(s, remove, L""); 
+    return s;
 }
 std::string GuiUtils::RemovePunctuation(std::string s) {
-	s.erase(std::remove_if(s.begin(), s.end(), &ispunct), s.end());
-	return s;
+    s.erase(std::remove_if(s.begin(), s.end(), &ispunct), s.end());
+    return s;
 }
 std::wstring GuiUtils::RemovePunctuation(std::wstring s) {
-	s.erase(std::remove_if(s.begin(), s.end(), &ispunct), s.end());
-	return s;
+    s.erase(std::remove_if(s.begin(), s.end(), &ispunct), s.end());
+    return s;
 }
 bool GuiUtils::ParseInt(const char *str, int *val, int base) {
-	char *end;
-	*val = strtol(str, &end, base);
-	if (*end != 0 || errno == ERANGE)
-		return false;
-	else
-		return true;
+    char *end;
+    *val = strtol(str, &end, base);
+    if (*end != 0 || errno == ERANGE)
+        return false;
+    else
+        return true;
 }
 bool GuiUtils::ParseInt(const wchar_t *str, int *val, int base) {
-	wchar_t *end;
-	*val = wcstol(str, &end, base);
-	if (*end != 0 || errno == ERANGE)
-		return false;
-	else
-		return true;
+    wchar_t *end;
+    *val = wcstol(str, &end, base);
+    if (*end != 0 || errno == ERANGE)
+        return false;
+    else
+        return true;
 }
 bool GuiUtils::ParseFloat(const char *str, float *val) {
-	char *end;
-	*val = strtof(str, &end);
-	return str != end && errno != ERANGE;
+    char *end;
+    *val = strtof(str, &end);
+    return str != end && errno != ERANGE;
 }
 bool GuiUtils::ParseFloat(const wchar_t *str, float *val) {
-	wchar_t *end;
-	*val = wcstof(str, &end);
-	return str != end && errno != ERANGE;
+    wchar_t *end;
+    *val = wcstof(str, &end);
+    return str != end && errno != ERANGE;
 }
 bool GuiUtils::ParseUInt(const char *str, unsigned int *val, int base) {
-	char *end;
-	*val = strtoul(str, &end, base);
-	if (str == end || errno == ERANGE)
-		return false;
-	else
-		return true;
+    char *end;
+    *val = strtoul(str, &end, base);
+    if (str == end || errno == ERANGE)
+        return false;
+    else
+        return true;
 }
 bool GuiUtils::ParseUInt(const wchar_t *str, unsigned int *val, int base) {
-	wchar_t *end;
-	*val = wcstoul(str, &end, base);
-	if (str == end || errno == ERANGE)
-		return false;
-	else
-		return true;
+    wchar_t *end;
+    *val = wcstoul(str, &end, base);
+    if (str == end || errno == ERANGE)
+        return false;
+    else
+        return true;
 }
 std::wstring GuiUtils::ToWstr(std::string &str) {
     // @Cleanup: No error handling whatsoever
-	if (str.empty()) return std::wstring();
-	int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), NULL, 0);
-	std::wstring wstrTo(static_cast<size_t>(size_needed), 0);
-	MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
-	return wstrTo;
+    if (str.empty()) return std::wstring();
+    int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), NULL, 0);
+    std::wstring wstrTo(static_cast<size_t>(size_needed), 0);
+    MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
+    return wstrTo;
 }
 size_t GuiUtils::wcstostr(char *dest, const wchar_t *src, size_t n) {
-	size_t i;
+    size_t i;
     unsigned char *d = (unsigned char *)dest;
     for (i = 0; i < n; i++) {
         if (src[i] & ~0x7f)
@@ -254,7 +254,7 @@ size_t GuiUtils::wcstostr(char *dest, const wchar_t *src, size_t n) {
     return i;
 }
 char *GuiUtils::StrCopy(char *dest, const char *src, size_t dest_size) {
-	strncpy(dest, src, dest_size - 1);
-	dest[dest_size - 1] = 0;
-	return dest;
+    strncpy(dest, src, dest_size - 1);
+    dest[dest_size - 1] = 0;
+    return dest;
 }

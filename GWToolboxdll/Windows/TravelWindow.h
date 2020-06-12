@@ -1,36 +1,32 @@
 #pragma once
 
-#include <string>
-#include <vector>
-#include <Windows.h>
-
 #include <GWCA\Constants\Constants.h>
 #include <GWCA\Constants\Maps.h>
 
-#include "ToolboxWindow.h"
 #include <Logger.h>
+#include <ToolboxWindow.h>
 
 class TravelWindow : public ToolboxWindow {
-	TravelWindow() {};
-	~TravelWindow() {};
+    TravelWindow() {};
+    ~TravelWindow() {};
 public:
-	static TravelWindow& Instance() {
-		static TravelWindow instance;
-		return instance;
-	}
+    static TravelWindow& Instance() {
+        static TravelWindow instance;
+        return instance;
+    }
 
-	const char* Name() const override { return "Travel"; }
+    const char* Name() const override { return "Travel"; }
 
-	void Initialize() override;
+    void Initialize() override;
 
     void Terminate() override;
 
-	bool TravelFavorite(unsigned int idx);
+    bool TravelFavorite(unsigned int idx);
 
-	bool IsMapUnlocked(GW::Constants::MapID map_id);
+    bool IsMapUnlocked(GW::Constants::MapID map_id);
 
     // Travel via SendPacket, bypass "Are you sure" dialogs
-	void Travel(GW::Constants::MapID MapID, GW::Constants::District district, uint32_t district_number = 0);
+    void Travel(GW::Constants::MapID MapID, GW::Constants::District district, uint32_t district_number = 0);
 
     // Travel via UI interface, allowing "Are you sure" dialogs
     void UITravel(GW::Constants::MapID MapID, GW::Constants::District district,
@@ -42,60 +38,60 @@ public:
         GW::Constants::District district = GW::Constants::District::Current,
         uint32_t district_number = 0);
 
-	bool IsWaitingForMapTravel();
+    bool IsWaitingForMapTravel();
 
-	// Draw user interface. Will be called every frame if the element is visible
-	void Draw(IDirect3DDevice9* pDevice) override;
+    // Draw user interface. Will be called every frame if the element is visible
+    void Draw(IDirect3DDevice9* pDevice) override;
 
-	void Update(float delta) override;
+    void Update(float delta) override;
 
-	void LoadSettings(CSimpleIni* ini) override;
-	void SaveSettings(CSimpleIni* ini) override;
-	void DrawSettingInternal() override;
+    void LoadSettings(CSimpleIni* ini) override;
+    void SaveSettings(CSimpleIni* ini) override;
+    void DrawSettingInternal() override;
     int RegionFromDistrict(GW::Constants::District district);
     int LanguageFromDistrict(GW::Constants::District district);
 
     static void CmdTP(const wchar_t *message, int argc, LPWSTR *argv);
 
 private:
-	// ==== Helpers ====
-	void TravelButton(const char* text, int x_idx, GW::Constants::MapID mapid);
-	GW::Constants::MapID IndexToOutpostID(int index);
+    // ==== Helpers ====
+    void TravelButton(const char* text, int x_idx, GW::Constants::MapID mapid);
+    GW::Constants::MapID IndexToOutpostID(int index);
     static bool ParseDistrict(const std::wstring &s, GW::Constants::District &district, uint32_t &number);
     static bool ParseOutpost(const std::wstring &s, GW::Constants::MapID &outpost, GW::Constants::District &district, uint32_t &number);
 
-	// ==== Travel variables ====
-	GW::Constants::District district = GW::Constants::District::Current;
-	uint32_t district_number = 0;
+    // ==== Travel variables ====
+    GW::Constants::District district = GW::Constants::District::Current;
+    uint32_t district_number = 0;
 
-	// ==== Favorites ====
-	int fav_count = 0;
-	std::vector<int> fav_index;
+    // ==== Favorites ====
+    int fav_count = 0;
+    std::vector<int> fav_index;
 
-	// ==== options ====
-	bool close_on_travel = false;
+    // ==== options ====
+    bool close_on_travel = false;
 
-	// ==== scroll to outpost ====
-	GW::Constants::MapID scroll_to_outpost_id = GW::Constants::MapID::None;		// Which outpost do we want to end up in?
-	GW::Constants::MapID scroll_from_outpost_id = GW::Constants::MapID::None;	// Which outpost did we start from?
+    // ==== scroll to outpost ====
+    GW::Constants::MapID scroll_to_outpost_id = GW::Constants::MapID::None;     // Which outpost do we want to end up in?
+    GW::Constants::MapID scroll_from_outpost_id = GW::Constants::MapID::None;   // Which outpost did we start from?
 
-	bool map_travel_countdown_started = false;
-	bool pending_map_travel = false;
+    bool map_travel_countdown_started = false;
+    bool pending_map_travel = false;
 
     IDirect3DTexture9 *scroll_texture = nullptr;
 
     /* Not used, but good to keep for reference!
     enum error_message_ids {
-		error_B29 = 52,
-		error_B30,
-		error_B31,
-		error_B32,
-		error_B33,
-		error_B34,
-		error_B35,
-		error_B36,
-		error_B37,
-		error_B38
+        error_B29 = 52,
+        error_B30,
+        error_B31,
+        error_B32,
+        error_B33,
+        error_B34,
+        error_B35,
+        error_B36,
+        error_B37,
+        error_B38
     };
     enum error_message_trans_codes {
         error_B29 = 0xB29, // The target party has members who do not meet this mission's level requirements.
@@ -245,9 +241,9 @@ private:
         GW::Constants::MapID::Eye_of_the_North_outpost,
         GW::Constants::MapID::Fishermens_Haven_outpost,
         GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost,
-		GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost,
+        GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost,
         GW::Constants::MapID::Fort_Aspenwood_Luxon_outpost,
-		GW::Constants::MapID::Fort_Aspenwood_Luxon_outpost,
+        GW::Constants::MapID::Fort_Aspenwood_Luxon_outpost,
         GW::Constants::MapID::Fort_Ranik,
         GW::Constants::MapID::Frontier_Gate_outpost,
         GW::Constants::MapID::The_Frost_Gate,
@@ -282,9 +278,9 @@ private:
         GW::Constants::MapID::Jade_Flats_Kurzick_outpost,
         GW::Constants::MapID::Jade_Flats_Luxon_outpost,
         GW::Constants::MapID::The_Jade_Quarry_Kurzick_outpost,
-		GW::Constants::MapID::The_Jade_Quarry_Kurzick_outpost,
+        GW::Constants::MapID::The_Jade_Quarry_Kurzick_outpost,
         GW::Constants::MapID::The_Jade_Quarry_Luxon_outpost,
-		GW::Constants::MapID::The_Jade_Quarry_Luxon_outpost,
+        GW::Constants::MapID::The_Jade_Quarry_Luxon_outpost,
         GW::Constants::MapID::Jennurs_Horde,
         GW::Constants::MapID::Jokanur_Diggings,
         GW::Constants::MapID::Kaineng_Center_outpost,
@@ -460,9 +456,9 @@ private:
         "eye of the north",
         "fishermens haven",
         "fort aspenwood kurzick",
-		"fa kurzick",
+        "fa kurzick",
         "fort aspenwood luxon",
-		"fa luxon",
+        "fa luxon",
         "fort ranik",
         "frontier gate",
         "frost gate",
@@ -497,9 +493,9 @@ private:
         "jade flats kurzick",
         "jade flats luxon",
         "jade quarry kurzick",
-		"jq kurzick",
+        "jq kurzick",
         "jade quarry luxon",
-		"jq luxon",
+        "jq luxon",
         "jennurs horde",
         "jokanur diggings",
         "kaineng center",

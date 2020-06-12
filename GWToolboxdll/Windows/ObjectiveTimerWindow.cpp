@@ -19,10 +19,9 @@
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 
-#include "GuiUtils.h"
-#include "GWToolbox.h"
-
 #include <Logger.h>
+#include <GuiUtils.h>
+#include <GWToolbox.h>
 
 #include <Modules/Resources.h>
 #include <Windows/ObjectiveTimerWindow.h>
@@ -59,31 +58,31 @@ namespace {
         }
         return 0;
     }
-	// Hex values matching the first char of Kanaxai's dialogs in each room.
-	const enum kanaxai_room_dialogs {
-		Room5 = 0x5336,
-		Room6,
-		Room8,
-		Room10,
-		Room12,
-		Room13,
-		Room14,
-		Room15
-	};
-	const wchar_t* kanaxai_dialogs[] = {
-		// Room 1-4 no dialog
-		L"\x5336\xBEB8\x8555\x7267", // Room 5 "Fear not the darkness. It is already within you."
-		L"\x5337\xAA3A\xE96F\x3E34", // Room 6 "Is it comforting to know the source of your fears? Or do you fear more now that you see them in front of you."
-		// Room 7 no dialog
-		L"\x5338\xFD69\xA162\x3A04", // Room 8 "Even if you banish me from your sight, I will remain in your mind."
-		// Room 9 no dialog
-		L"\x5339\xA7BA\xC67B\x5D81", // Room 10 "You mortals may be here to defeat me, but acknowledging my presence only makes the nightmare grow stronger."
-		// Room 11 no dialog
-		L"\x533A\xED06\x815D\x5FFB", // Room 12 "So, you have passed through the depths of the Jade Sea, and into the nightmare realm. It is too bad that I must send you back from whence you came."
-		L"\x533B\xCAA6\xFDA9\x3277", // Room 13 "I am Kanaxai, creator of nightmares. Let me make yours into reality."
-		L"\x533C\xDD33\xA330\x4E27", // Room 14 "I will fill your hearts with visions of horror and despair that will haunt you for all of your days."
-		L"\x533D\x9EB1\x8BEE\x2637"	 // Kanaxai "What gives you the right to enter my lair? I shall kill you for your audacity, after I destroy your mind with my horrifying visions, of course."
-	};
+    // Hex values matching the first char of Kanaxai's dialogs in each room.
+    const enum kanaxai_room_dialogs {
+        Room5 = 0x5336,
+        Room6,
+        Room8,
+        Room10,
+        Room12,
+        Room13,
+        Room14,
+        Room15
+    };
+    const wchar_t* kanaxai_dialogs[] = {
+        // Room 1-4 no dialog
+        L"\x5336\xBEB8\x8555\x7267", // Room 5 "Fear not the darkness. It is already within you."
+        L"\x5337\xAA3A\xE96F\x3E34", // Room 6 "Is it comforting to know the source of your fears? Or do you fear more now that you see them in front of you."
+        // Room 7 no dialog
+        L"\x5338\xFD69\xA162\x3A04", // Room 8 "Even if you banish me from your sight, I will remain in your mind."
+        // Room 9 no dialog
+        L"\x5339\xA7BA\xC67B\x5D81", // Room 10 "You mortals may be here to defeat me, but acknowledging my presence only makes the nightmare grow stronger."
+        // Room 11 no dialog
+        L"\x533A\xED06\x815D\x5FFB", // Room 12 "So, you have passed through the depths of the Jade Sea, and into the nightmare realm. It is too bad that I must send you back from whence you came."
+        L"\x533B\xCAA6\xFDA9\x3277", // Room 13 "I am Kanaxai, creator of nightmares. Let me make yours into reality."
+        L"\x533C\xDD33\xA330\x4E27", // Room 14 "I will fill your hearts with visions of horror and despair that will haunt you for all of your days."
+        L"\x533D\x9EB1\x8BEE\x2637"  // Kanaxai "What gives you the right to enter my lair? I shall kill you for your audacity, after I destroy your mind with my horrifying visions, of course."
+    };
     const enum RoomID {
         // object_id's for doors opening.
         Deep_room_1_first = 12669,  // Room 1 Complete = Room 5 open
@@ -176,15 +175,15 @@ namespace {
         }
     }
 
-	void AsyncGetMapName(char *buffer, size_t n, GW::Constants::MapID mapID = GW::Map::GetMapID()) {
-		static wchar_t enc_str[16];
-		GW::AreaInfo *info = GW::Map::GetMapInfo(mapID);
-		if (!GW::UI::UInt32ToEncStr(info->name_id, enc_str, n)) {
-			buffer[0] = 0;
-			return;
-		}
-		GW::UI::AsyncDecodeStr(enc_str, buffer, n);
-	}
+    void AsyncGetMapName(char *buffer, size_t n, GW::Constants::MapID mapID = GW::Map::GetMapID()) {
+        static wchar_t enc_str[16];
+        GW::AreaInfo *info = GW::Map::GetMapInfo(mapID);
+        if (!GW::UI::UInt32ToEncStr(info->name_id, enc_str, n)) {
+            buffer[0] = 0;
+            return;
+        }
+        GW::UI::AsyncDecodeStr(enc_str, buffer, n);
+    }
 
     void ComputeNColumns() {
         n_columns = 0
@@ -213,12 +212,12 @@ void ObjectiveTimerWindow::Initialize() {
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry, &OnMapChanged);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ManipulateMapObject>(&ManipulateMapObject_Entry,&OnManipulateMapObject);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveUpdateName>(&ObjectiveUpdateName_Entry, &OnUpdateObjectiveName);
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveDone>(&ObjectiveDone_Entry, &OnObjectiveDone);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveDone>(&ObjectiveDone_Entry, &OnObjectiveDone);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentUpdateAllegiance>(&AgentUpdateAllegiance_Entry, &OnAgentUpdateAllegiance);
-	GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DoACompleteZone>(&DoACompleteZone_Entry, &OnDoACompleteZone);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DoACompleteZone>(&DoACompleteZone_Entry, &OnDoACompleteZone);
     GW::StoC::RegisterPacketCallback(&CountdownStart_Enty, GAME_SMSG_INSTANCE_COUNTDOWN, &OnCountdownStart);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DungeonReward>(&DungeonReward_Entry, &OnDungeonReward);
-    	/*GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveAdd>(&ObjectiveAdd_Entry,
+        /*GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveAdd>(&ObjectiveAdd_Entry,
     [this](GW::HookStatus* status, GW::Packet::StoC::ObjectiveAdd *packet) -> bool {
         UNREFERENCED_PARAMETER(status);
         UNREFERENCED_PARAMETER(packet);
@@ -573,7 +572,7 @@ void ObjectiveTimerWindow::DoorOpened(uint32_t door_id)
 
 void ObjectiveTimerWindow::ObjectiveSet::StopObjectives() {
     active = false;
-	for (Objective& obj : objectives) {
+    for (Objective& obj : objectives) {
         switch (obj.status) {
         case Objective::Started:
         case Objective::Failed:
@@ -583,7 +582,7 @@ void ObjectiveTimerWindow::ObjectiveSet::StopObjectives() {
         default:
             break;
         }
-	}
+    }
 }
 
 void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn) {
@@ -607,8 +606,8 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn) {
     }
     if (area == -1) return; // we're doing mallyx, not doa!
 
-	ObjectiveSet *os = new ObjectiveSet;
-	::AsyncGetMapName(os->name, sizeof(os->name));
+    ObjectiveSet *os = new ObjectiveSet;
+    ::AsyncGetMapName(os->name, sizeof(os->name));
     Objective objs[n_areas] = {{Foundry, "Foundry"}, {City, "City"}, {Veil, "Veil"}, {Gloom, "Gloom"}};
 
     for (int i = 0; i < n_areas; ++i) {
@@ -649,7 +648,7 @@ void ObjectiveTimerWindow::AddUrgozObjectiveSet() {
     // 45631 53071 are the object_ids for the left and right urgoz doors
     os->objectives.front().SetStarted();
     AddObjectiveSet(os);
-	monitor_doors = true;
+    monitor_doors = true;
 }
 void ObjectiveTimerWindow::AddDeepObjectiveSet() {
     ObjectiveTimerWindow::ObjectiveSet* os = new ObjectiveSet;
@@ -658,37 +657,37 @@ void ObjectiveTimerWindow::AddDeepObjectiveSet() {
     os->objectives.emplace_back(2, "Room 2 | Death");
     os->objectives.emplace_back(3, "Room 3 | Surrender");
     os->objectives.emplace_back(4, "Room 4 | Exposure");
-	for (size_t i = 0; i < 4; i++) {
-		os->objectives[i].SetStarted(); // Start first 4 rooms
-	}
+    for (size_t i = 0; i < 4; i++) {
+        os->objectives[i].SetStarted(); // Start first 4 rooms
+    }
     os->objectives.emplace_back(5, "Room 5 | Pain");
     os->objectives.emplace_back(RoomID::Deep_room_5, "Room 6 | Lethargy");
-	os->objectives.emplace_back(RoomID::Deep_room_6, "Room 7 | Depletion");
+    os->objectives.emplace_back(RoomID::Deep_room_6, "Room 7 | Depletion");
     // 8 and 9 together because theres no boundary between
-	os->objectives.emplace_back(RoomID::Deep_room_7, "Room 8-9 | Failure/Shadows");
-	os->objectives.emplace_back(RoomID::Deep_room_10, "Room 10 | Scorpion"); // Trigger on dialog
-	os->objectives.emplace_back(RoomID::Deep_room_11, "Room 11 | Fear"); // Trigger bottom door first spawn
-	os->objectives.emplace_back(RoomID::Deep_room_12, "Room 12 | Depletion"); // Trigger on dialog
+    os->objectives.emplace_back(RoomID::Deep_room_7, "Room 8-9 | Failure/Shadows");
+    os->objectives.emplace_back(RoomID::Deep_room_10, "Room 10 | Scorpion"); // Trigger on dialog
+    os->objectives.emplace_back(RoomID::Deep_room_11, "Room 11 | Fear"); // Trigger bottom door first spawn
+    os->objectives.emplace_back(RoomID::Deep_room_12, "Room 12 | Depletion"); // Trigger on dialog
     // 13 and 14 together because theres no boundary between
-	os->objectives.emplace_back(RoomID::Deep_room_13, "Room 13-14 | Decay/Torment"); // Trigger on dialog
+    os->objectives.emplace_back(RoomID::Deep_room_13, "Room 13-14 | Decay/Torment"); // Trigger on dialog
     os->objectives.emplace_back(RoomID::Deep_room_15, "Room 15 | Kanaxai");
     AddObjectiveSet(os);
-	monitor_doors = true;
+    monitor_doors = true;
 }
 void ObjectiveTimerWindow::AddFoWObjectiveSet() {
-	ObjectiveSet *os = new ObjectiveSet;
-	::AsyncGetMapName(os->name, sizeof(os->name));
-	os->objectives.emplace_back(309, "ToC");
-	os->objectives.emplace_back(310, "Wailing Lord");
-	os->objectives.emplace_back(311, "Griffons");
-	os->objectives.emplace_back(312, "Defend");
-	os->objectives.emplace_back(313, "Forge");
-	os->objectives.emplace_back(314, "Menzies");
-	os->objectives.emplace_back(315, "Restore");
-	os->objectives.emplace_back(316, "Khobay");
-	os->objectives.emplace_back(317, "ToS");
-	os->objectives.emplace_back(318, "Burning Forest");
-	os->objectives.emplace_back(319, "The Hunt");
+    ObjectiveSet *os = new ObjectiveSet;
+    ::AsyncGetMapName(os->name, sizeof(os->name));
+    os->objectives.emplace_back(309, "ToC");
+    os->objectives.emplace_back(310, "Wailing Lord");
+    os->objectives.emplace_back(311, "Griffons");
+    os->objectives.emplace_back(312, "Defend");
+    os->objectives.emplace_back(313, "Forge");
+    os->objectives.emplace_back(314, "Menzies");
+    os->objectives.emplace_back(315, "Restore");
+    os->objectives.emplace_back(316, "Khobay");
+    os->objectives.emplace_back(317, "ToS");
+    os->objectives.emplace_back(318, "Burning Forest");
+    os->objectives.emplace_back(319, "The Hunt");
     AddObjectiveSet(os);
 }
 void ObjectiveTimerWindow::AddDungeonObjectiveSet(int levels) {
@@ -761,57 +760,57 @@ void ObjectiveTimerWindow::Update(float) {
         SaveRuns(); // Save runs between map loads
 }
 void ObjectiveTimerWindow::Draw(IDirect3DDevice9*) {
-	// Main objective timer window
-	if (visible) {
-		ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-		ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
-		if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-			if (objective_sets.empty()) {
-				ImGui::Text("Enter DoA, FoW, UW, Deep, Urgoz or a Dungeon to begin");
-			}
-			else {
-				for (auto it = objective_sets.rbegin(); it != objective_sets.rend(); it++) {
-					bool show = (*it).second->Draw();
-					if (!show) {
-						objective_sets.erase(--(it.base()));
-						break;
-						// iterators go crazy, don't even bother, we're skipping a frame. NBD.
-						// if you really want to draw the rest make sure you extensively test this.
-					}
-				}
-			}
-		}
-		ImGui::End();
-	}
+    // Main objective timer window
+    if (visible) {
+        ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
+        if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
+            if (objective_sets.empty()) {
+                ImGui::Text("Enter DoA, FoW, UW, Deep, Urgoz or a Dungeon to begin");
+            }
+            else {
+                for (auto it = objective_sets.rbegin(); it != objective_sets.rend(); it++) {
+                    bool show = (*it).second->Draw();
+                    if (!show) {
+                        objective_sets.erase(--(it.base()));
+                        break;
+                        // iterators go crazy, don't even bother, we're skipping a frame. NBD.
+                        // if you really want to draw the rest make sure you extensively test this.
+                    }
+                }
+            }
+        }
+        ImGui::End();
+    }
 
-	// Breakout objective set for current run
-	if (show_current_run_window && current_objective_set) {
-		ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
-		ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
-		char buf[256];
-		sprintf(buf, "%s - %s###ObjectiveTimerCurrentRun", current_objective_set->name, current_objective_set->cached_time ? current_objective_set->cached_time : "--:--");
-			
-		if (ImGui::Begin(buf, &show_current_run_window, GetWinFlags())) {
-			ImGui::PushID(static_cast<int>(current_objective_set->ui_id));
-			for (Objective& objective : current_objective_set->objectives) {
-				objective.Draw();
-			}
-			ImGui::PopID();
-		}
-			
-		ImGui::End();
-	}
+    // Breakout objective set for current run
+    if (show_current_run_window && current_objective_set) {
+        ImGui::SetNextWindowPosCenter(ImGuiSetCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
+        char buf[256];
+        sprintf(buf, "%s - %s###ObjectiveTimerCurrentRun", current_objective_set->name, current_objective_set->cached_time ? current_objective_set->cached_time : "--:--");
+            
+        if (ImGui::Begin(buf, &show_current_run_window, GetWinFlags())) {
+            ImGui::PushID(static_cast<int>(current_objective_set->ui_id));
+            for (Objective& objective : current_objective_set->objectives) {
+                objective.Draw();
+            }
+            ImGui::PopID();
+        }
+            
+        ImGui::End();
+    }
 }
 
 ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::GetCurrentObjectiveSet() {
-	if (objective_sets.empty()) return nullptr;
-	if (!current_objective_set || !current_objective_set->active) return nullptr;
-	return current_objective_set;
+    if (objective_sets.empty()) return nullptr;
+    if (!current_objective_set || !current_objective_set->active) return nullptr;
+    return current_objective_set;
 }
 
 ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::GetCurrentObjective(uint32_t obj_id) {
-	ObjectiveTimerWindow::ObjectiveSet* o = GetCurrentObjectiveSet();
-	if (!o) return nullptr;
+    ObjectiveTimerWindow::ObjectiveSet* o = GetCurrentObjectiveSet();
+    if (!o) return nullptr;
     for (Objective& objective : o->objectives) {
         if (objective.id == obj_id) {
             return &objective;
@@ -821,31 +820,31 @@ ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::GetCurrentObjective(uint3
 }
 
 void ObjectiveTimerWindow::DrawSettingInternal() {
-	clear_cached_times = ImGui::Checkbox("Show second decimal", &show_decimal);
+    clear_cached_times = ImGui::Checkbox("Show second decimal", &show_decimal);
     ImGui::Checkbox("Show 'Start' column", &show_start_column);
     ImGui::Checkbox("Show 'End' column", &show_end_column);
     ImGui::Checkbox("Show 'Time' column", &show_time_column);
     ImGui::Checkbox("Show run start date/time", &show_start_date_time);
-	ImGui::Checkbox("Show current run in separate window", &show_current_run_window);
+    ImGui::Checkbox("Show current run in separate window", &show_current_run_window);
     if (ImGui::Checkbox("Save/Load runs to disk", &save_to_disk)) {
         SaveRuns();
     }
     ImGui::ShowHelp("Keep a record or your runs in JSON format on disk, and load past runs from disk when starting GWToolbox.");
     ImGui::Checkbox("Show past runs", &show_past_runs);
     ImGui::ShowHelp("Display from previous days in the Objective Timer window.");
-	ImGui::Checkbox("Automatic /age on completion", &auto_send_age);
-	ImGui::ShowHelp("As soon as final objective is complete, send /age command to game server to receive server-side completion time.");
+    ImGui::Checkbox("Automatic /age on completion", &auto_send_age);
+    ImGui::ShowHelp("As soon as final objective is complete, send /age command to game server to receive server-side completion time.");
     ComputeNColumns();
 }
 
 void ObjectiveTimerWindow::LoadSettings(CSimpleIni* ini) {
-	ToolboxWindow::LoadSettings(ini);
+    ToolboxWindow::LoadSettings(ini);
     show_decimal = ini->GetBoolValue(Name(), VAR_NAME(show_decimal), show_decimal);
     show_start_column = ini->GetBoolValue(Name(), VAR_NAME(show_start_column), show_start_column);
     show_end_column = ini->GetBoolValue(Name(), VAR_NAME(show_end_column), show_end_column);
     show_time_column = ini->GetBoolValue(Name(), VAR_NAME(show_time_column), show_time_column);
-	show_current_run_window = ini->GetBoolValue(Name(), VAR_NAME(show_current_run_window), show_current_run_window);
-	auto_send_age = ini->GetBoolValue(Name(), VAR_NAME(auto_send_age), auto_send_age);
+    show_current_run_window = ini->GetBoolValue(Name(), VAR_NAME(show_current_run_window), show_current_run_window);
+    auto_send_age = ini->GetBoolValue(Name(), VAR_NAME(auto_send_age), auto_send_age);
     save_to_disk = ini->GetBoolValue(Name(), VAR_NAME(save_to_disk), save_to_disk);
     show_past_runs = ini->GetBoolValue(Name(), VAR_NAME(show_past_runs), show_past_runs);
     show_start_date_time = ini->GetBoolValue(Name(), VAR_NAME(show_start_date_time), show_start_date_time);
@@ -853,13 +852,13 @@ void ObjectiveTimerWindow::LoadSettings(CSimpleIni* ini) {
     LoadRuns();
 }
 void ObjectiveTimerWindow::SaveSettings(CSimpleIni* ini) {
-	ToolboxWindow::SaveSettings(ini);
+    ToolboxWindow::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(show_decimal), show_decimal);
     ini->SetBoolValue(Name(), VAR_NAME(show_start_column), show_start_column);
     ini->SetBoolValue(Name(), VAR_NAME(show_end_column), show_end_column);
     ini->SetBoolValue(Name(), VAR_NAME(show_time_column), show_time_column);
-	ini->SetBoolValue(Name(), VAR_NAME(show_current_run_window), show_current_run_window);
-	ini->SetBoolValue(Name(), VAR_NAME(auto_send_age), auto_send_age);
+    ini->SetBoolValue(Name(), VAR_NAME(show_current_run_window), show_current_run_window);
+    ini->SetBoolValue(Name(), VAR_NAME(auto_send_age), auto_send_age);
     ini->SetBoolValue(Name(), VAR_NAME(show_start_date_time), show_start_date_time);
     ini->SetBoolValue(Name(), VAR_NAME(save_to_disk), save_to_disk);
     ini->SetBoolValue(Name(), VAR_NAME(show_past_runs), show_past_runs);
@@ -1000,20 +999,20 @@ void ObjectiveTimerWindow::Objective::Update() {
         PrintTime(cached_duration, sizeof(cached_duration), TIME_UNKNOWN);
     } else if (done == TIME_UNKNOWN) {
         PrintTime(cached_duration, sizeof(cached_duration), GW::Map::GetInstanceTime() - start);
-	} 
-	if (ObjectiveTimerWindow::Instance().clear_cached_times) {
-		switch (status) {
-			case Completed:
-				PrintTime(cached_done, sizeof(cached_done), done);
-			case Started:
-				PrintTime(cached_start, sizeof(cached_start), start);
-				if(duration)
-					PrintTime(cached_duration, sizeof(cached_duration), duration ? duration : GW::Map::GetInstanceTime() - start);
-				break;
+    } 
+    if (ObjectiveTimerWindow::Instance().clear_cached_times) {
+        switch (status) {
+            case Completed:
+                PrintTime(cached_done, sizeof(cached_done), done);
+            case Started:
+                PrintTime(cached_start, sizeof(cached_start), start);
+                if(duration)
+                    PrintTime(cached_duration, sizeof(cached_duration), duration ? duration : GW::Map::GetInstanceTime() - start);
+                break;
             default:
                 break;
-		}
-	}
+        }
+    }
 }
 void ObjectiveTimerWindow::Objective::Draw() {
     switch (status) {
@@ -1037,7 +1036,7 @@ void ObjectiveTimerWindow::Objective::Draw() {
     float label_width = GetLabelWidth();
     if (ImGui::Button(name, ImVec2(label_width, 0))) {
         char buf[256];
-		sprintf(buf,"[%s] ~ Start: %s ~ End: %s ~ Time: %s",
+        sprintf(buf,"[%s] ~ Start: %s ~ End: %s ~ Time: %s",
             name, cached_start, cached_done, cached_duration);
         GW::Chat::SendChat('#', buf);
     }
@@ -1108,8 +1107,8 @@ void ObjectiveTimerWindow::ObjectiveSet::CheckSetDone() {
     }
     if (done) {
         active = false;
-		if (ObjectiveTimerWindow::Instance().auto_send_age)
-			GW::Chat::SendChat('/', "age");
+        if (ObjectiveTimerWindow::Instance().auto_send_age)
+            GW::Chat::SendChat('/', "age");
     }
 }
 

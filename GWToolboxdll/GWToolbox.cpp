@@ -13,23 +13,20 @@
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
 
+#include <CursorFix.h>
+#include <d3dx9_dynamic.h>
+#include <Defines.h>
+#include <GuiUtils.h>
+#include <GWToolbox.h>
+#include <Logger.h>
+
 #include <Modules/Resources.h>
 #include <Modules/ChatCommands.h>
 #include <Modules/GameSettings.h>
 #include <Modules/ToolboxTheme.h>
 #include <Modules/ToolboxSettings.h>
-
 #include <Windows/MainWindow.h>
-
 #include <Widgets/Minimap/Minimap.h>
-
-#include <d3dx9_dynamic.h>
-
-#include <GWToolbox.h>
-#include <GuiUtils.h>
-#include <Logger.h>
-#include <Defines.h>
-#include <CursorFix.h>
 
 namespace {
     HMODULE dllmodule = 0;
@@ -356,13 +353,13 @@ void GWToolbox::Initialize() {
     }
 }
 void GWToolbox::FlashWindow() {
-	FLASHWINFO flashInfo = { 0 };
-	flashInfo.cbSize = sizeof(FLASHWINFO);
-	flashInfo.hwnd = GW::MemoryMgr::GetGWWindowHandle();
-	flashInfo.dwFlags = FLASHW_TIMER | FLASHW_TRAY | FLASHW_TIMERNOFG;
-	flashInfo.uCount = 0;
-	flashInfo.dwTimeout = 0;
-	FlashWindowEx(&flashInfo);
+    FLASHWINFO flashInfo = { 0 };
+    flashInfo.cbSize = sizeof(FLASHWINFO);
+    flashInfo.hwnd = GW::MemoryMgr::GetGWWindowHandle();
+    flashInfo.dwFlags = FLASHW_TIMER | FLASHW_TRAY | FLASHW_TIMERNOFG;
+    flashInfo.uCount = 0;
+    flashInfo.dwTimeout = 0;
+    FlashWindowEx(&flashInfo);
 }
 
 void GWToolbox::OpenSettingsFile() {
@@ -476,25 +473,25 @@ void GWToolbox::Draw(IDirect3DDevice9* device) {
         ImGui_ImplDX9_RenderDrawData(draw_data);
     }
 
-	// === destruction ===
-	if (tb_initialized && GWToolbox::Instance().must_self_destruct) {
-		for (ToolboxModule* module : GWToolbox::Instance().modules) {
-			if (!module->CanTerminate())
-				return;
-		}
+    // === destruction ===
+    if (tb_initialized && GWToolbox::Instance().must_self_destruct) {
+        for (ToolboxModule* module : GWToolbox::Instance().modules) {
+            if (!module->CanTerminate())
+                return;
+        }
 
-		GWToolbox::Instance().Terminate();
+        GWToolbox::Instance().Terminate();
 
-		ImGui_ImplDX9_Shutdown();
-		ImGui::DestroyContext();
+        ImGui_ImplDX9_Shutdown();
+        ImGui::DestroyContext();
 
-		Log::Log("Restoring input hook\n");
-		SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
+        Log::Log("Restoring input hook\n");
+        SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, (long)OldWndProc);
 
-		GW::DisableHooks();
-		tb_initialized = false;
-		tb_destroyed = true;
-	}
+        GW::DisableHooks();
+        tb_initialized = false;
+        tb_destroyed = true;
+    }
 }
 
 void GWToolbox::Update(GW::HookStatus *)

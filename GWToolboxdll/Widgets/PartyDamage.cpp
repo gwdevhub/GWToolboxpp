@@ -14,9 +14,10 @@
 
 #include <GWToolbox.h>
 #include <GuiUtils.h>
+
 #include <Modules/Resources.h>
 #include <Modules/ToolboxSettings.h>
-#include "PartyDamage.h"
+#include <Widgets/PartyDamage.h>
 
 #define INI_FILENAME L"healthlog.ini"
 #define IniSection "health"

@@ -1,17 +1,15 @@
 #ifndef UTF8_H_INC
 #define UTF8_H_INC
 
-#include <stddef.h>
-
 namespace utf8 {
-	struct string {
-		char  *bytes = nullptr;
-		size_t count = 0;
-	};
+    struct string {
+        char  *bytes = nullptr;
+        size_t count = 0;
+    };
 }
 
 static inline void free(utf8::string& s) {
-	if (s.bytes) delete s.bytes;
+    if (s.bytes) delete s.bytes;
 }
 
 // encode a unicode16 to utf8 using a allocated buffer (malloc).

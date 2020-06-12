@@ -57,9 +57,11 @@
 #include <initializer_list>
 #include <iomanip>
 #include <iostream>
+#include <iterator>
 #include <list>
-#include <map> // ?
+#include <map>
 #include <memory>
+#include <mutex>
 #include <queue>
 #include <regex>
 #include <set>
@@ -69,7 +71,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include <iterator>
 
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -98,6 +99,7 @@
 #include <d3dx9tex.h>
 
 // libraries
+#include <discord_game_sdk.h>
 #include <SimpleIni.h>
 #include <json.hpp>
 #include <easywsclient/easywsclient.hpp>

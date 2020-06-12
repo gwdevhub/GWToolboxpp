@@ -1,12 +1,10 @@
 #pragma once
 
+#include <GWCA/Utilities/Hook.h>
+#include <GWCA/GameEntities/Guild.h>
+
 #include <ToolboxModule.h>
 #include <ToolboxUIElement.h>
-#include <discord_game_sdk.h>
-
-#include <GWCA/Utilities/Hook.h>
-
-#include <GWCA/GameEntities/Guild.h>
 
 struct Application {
     struct IDiscordCore* core;
@@ -25,14 +23,14 @@ struct DiscordJoinableParty {
     short district_id;
     short region_id;
     short language_id;
-	uint32_t ghkey[4];
+    uint32_t ghkey[4];
     wchar_t player[32];
 };
 // Used to record current GH info
 struct CurrentGuildHall {
-	wchar_t tag[8];
-	wchar_t name[32];
-	uint32_t ghkey[4];
+    wchar_t tag[8];
+    wchar_t name[32];
+    uint32_t ghkey[4];
 };
 
 class DiscordModule : public ToolboxModule {
@@ -57,13 +55,13 @@ public:
 
     void UpdateActivity();
 
-	void InviteUser(DiscordUser* user);
+    void InviteUser(DiscordUser* user);
     void FailedJoin(const char* error_msg);
     void JoinParty();
     bool IsInJoinablePartyMap();
 
-	static bool IsMapUnlocked(uint32_t map_id);
-	static GW::Guild* GetCurrentGH();
+    static bool IsMapUnlocked(uint32_t map_id);
+    static GW::Guild* GetCurrentGH();
 
     Application app;
     DiscordActivity activity;
@@ -95,12 +93,12 @@ private:
 
     bool LoadDll();
     bool Connect();
-	void ConnectCanary();
+    void ConnectCanary();
     void Disconnect();
 
-	GW::HookEntry ErrorMessage_Callback;
-	GW::HookEntry PartyUpdateSize_Callback;
-	GW::HookEntry PartyPlayerAdd_Callback;
-	GW::HookEntry InstanceLoadInfo_Callback;
+    GW::HookEntry ErrorMessage_Callback;
+    GW::HookEntry PartyUpdateSize_Callback;
+    GW::HookEntry PartyPlayerAdd_Callback;
+    GW::HookEntry InstanceLoadInfo_Callback;
 
 };

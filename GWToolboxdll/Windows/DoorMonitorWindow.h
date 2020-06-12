@@ -1,14 +1,9 @@
 #pragma once
 
-#include <Windows.h>
-#include <vector>
-#include <Defines.h>
-#include <time.h>
-#include <ctime>
-
 #include <GWCA/Utilities/Hook.h>
 
-#include "ToolboxWindow.h"
+#include <Defines.h>
+#include <ToolboxWindow.h>
 
 class DoorMonitorWindow : public ToolboxWindow {
     DoorMonitorWindow() {};
@@ -17,8 +12,6 @@ public:
     class DoorObject {
     public:
         DoorObject(uint32_t object_id_) : object_id(object_id_) {};
-
-
 
         uint32_t object_id = 0; // object_id
         uint32_t initial_state = 0;
@@ -85,8 +78,8 @@ public:
 private:
     bool in_zone = false;
 
-	GW::HookEntry InstanceLoadInfo_Callback;
-	GW::HookEntry ManipulateMapObject_Callback;
+    GW::HookEntry InstanceLoadInfo_Callback;
+    GW::HookEntry ManipulateMapObject_Callback;
  
 public:
     std::map<uint32_t, DoorObject*> doors;

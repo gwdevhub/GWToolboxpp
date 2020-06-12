@@ -27,25 +27,25 @@
 //DWORD BondsWidget::buff_id[MAX_PARTYSIZE][MAX_BONDS] = { 0 };
 
 void BondsWidget::Initialize() {
-	ToolboxWidget::Initialize();
-	for (int i = 0; i < MAX_BONDS; ++i) textures[i] = nullptr;
-	auto LoadBondTexture = [](IDirect3DTexture9** tex, const wchar_t* name, WORD id) -> void {
-		Resources::Instance().LoadTextureAsync(tex, Resources::GetPath(L"img/bonds", name), id);
-	};
-	LoadBondTexture(&textures[BalthazarSpirit], L"Balthazar's_Spirit.jpg", IDB_Bond_BalthazarsSpirit);
-	LoadBondTexture(&textures[EssenceBond], L"Essence_Bond.jpg", IDB_Bond_EssenceBond);
-	LoadBondTexture(&textures[HolyVeil], L"Holy_Veil.jpg", IDB_Bond_HolyVeil);
-	LoadBondTexture(&textures[LifeAttunement], L"Life_Attunement.jpg", IDB_Bond_LifeAttunement);
-	LoadBondTexture(&textures[LifeBarrier], L"Life_Barrier.jpg", IDB_Bond_LifeBarrier);
-	LoadBondTexture(&textures[LifeBond], L"Life_Bond.jpg", IDB_Bond_LifeBond);
-	LoadBondTexture(&textures[LiveVicariously], L"Live_Vicariously.jpg", IDB_Bond_LiveVicariously);
-	LoadBondTexture(&textures[Mending], L"Mending.jpg", IDB_Bond_Mending);
-	LoadBondTexture(&textures[ProtectiveBond], L"Protective_Bond.jpg", IDB_Bond_ProtectiveBond);
-	LoadBondTexture(&textures[PurifyingVeil], L"Purifying_Veil.jpg", IDB_Bond_PurifyingVeil);
-	LoadBondTexture(&textures[Retribution], L"Retribution.jpg", IDB_Bond_Retribution);
-	LoadBondTexture(&textures[StrengthOfHonor], L"Strength_of_Honor.jpg", IDB_Bond_StrengthOfHonor);
-	LoadBondTexture(&textures[Succor], L"Succor.jpg", IDB_Bond_Succor);
-	LoadBondTexture(&textures[VitalBlessing], L"Vital_Blessing.jpg", IDB_Bond_VitalBlessing);
+    ToolboxWidget::Initialize();
+    for (int i = 0; i < MAX_BONDS; ++i) textures[i] = nullptr;
+    auto LoadBondTexture = [](IDirect3DTexture9** tex, const wchar_t* name, WORD id) -> void {
+        Resources::Instance().LoadTextureAsync(tex, Resources::GetPath(L"img/bonds", name), id);
+    };
+    LoadBondTexture(&textures[BalthazarSpirit], L"Balthazar's_Spirit.jpg", IDB_Bond_BalthazarsSpirit);
+    LoadBondTexture(&textures[EssenceBond], L"Essence_Bond.jpg", IDB_Bond_EssenceBond);
+    LoadBondTexture(&textures[HolyVeil], L"Holy_Veil.jpg", IDB_Bond_HolyVeil);
+    LoadBondTexture(&textures[LifeAttunement], L"Life_Attunement.jpg", IDB_Bond_LifeAttunement);
+    LoadBondTexture(&textures[LifeBarrier], L"Life_Barrier.jpg", IDB_Bond_LifeBarrier);
+    LoadBondTexture(&textures[LifeBond], L"Life_Bond.jpg", IDB_Bond_LifeBond);
+    LoadBondTexture(&textures[LiveVicariously], L"Live_Vicariously.jpg", IDB_Bond_LiveVicariously);
+    LoadBondTexture(&textures[Mending], L"Mending.jpg", IDB_Bond_Mending);
+    LoadBondTexture(&textures[ProtectiveBond], L"Protective_Bond.jpg", IDB_Bond_ProtectiveBond);
+    LoadBondTexture(&textures[PurifyingVeil], L"Purifying_Veil.jpg", IDB_Bond_PurifyingVeil);
+    LoadBondTexture(&textures[Retribution], L"Retribution.jpg", IDB_Bond_Retribution);
+    LoadBondTexture(&textures[StrengthOfHonor], L"Strength_of_Honor.jpg", IDB_Bond_StrengthOfHonor);
+    LoadBondTexture(&textures[Succor], L"Succor.jpg", IDB_Bond_Succor);
+    LoadBondTexture(&textures[VitalBlessing], L"Vital_Blessing.jpg", IDB_Bond_VitalBlessing);
     LoadBondTexture(&textures[WatchfulSpirit], L"Watchful_Spirit.jpg", IDB_Bond_WatchfulSpirit);
     LoadBondTexture(&textures[HeroicRefrain], L"Heroic_Refrain.png", IDB_Bond_HeroicRefrain);
     LoadBondTexture(&textures[BurningRefrain], L"Burning_Refrain.png", IDB_Bond_BurningRefrain);
@@ -56,21 +56,21 @@ void BondsWidget::Initialize() {
 
 void BondsWidget::Terminate() {
     ToolboxWidget::Terminate();
-	for (int i = 0; i < MAX_BONDS; ++i) {
-		if (textures[i]) {
-			textures[i]->Release();
-			textures[i] = nullptr;
-		}
-	}
+    for (int i = 0; i < MAX_BONDS; ++i) {
+        if (textures[i]) {
+            textures[i]->Release();
+            textures[i] = nullptr;
+        }
+    }
 }
 
 void BondsWidget::Draw(IDirect3DDevice9* device) {
     UNREFERENCED_PARAMETER(device);
-	if (!visible) 
+    if (!visible) 
         return;
     if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
         return;
-	const GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
+    const GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
     const GW::PlayerArray& players = GW::Agents::GetPlayerArray();
     if (info == nullptr) return;
     if (!players.valid()) return;
@@ -96,14 +96,14 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
     const size_t img_size = row_height > 0 ? row_height : GuiUtils::GetPartyHealthbarHeight();
     const size_t height = (party_list.size() + (allies_start < 255 ? 1 : 0)) * img_size;
 
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(0.0f, 0.0f));
-	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(background).Value);
-	ImGui::SetNextWindowSize(ImVec2((float)(bond_list.size() * img_size), (float)height));
-	if (ImGui::Begin(Name(), &visible, GetWinFlags(0, !(click_to_cast || click_to_drop)))) {
-		float win_x = ImGui::GetWindowPos().x;
-		float win_y = ImGui::GetWindowPos().y;
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(background).Value);
+    ImGui::SetNextWindowSize(ImVec2((float)(bond_list.size() * img_size), (float)height));
+    if (ImGui::Begin(Name(), &visible, GetWinFlags(0, !(click_to_cast || click_to_drop)))) {
+        float win_x = ImGui::GetWindowPos().x;
+        float win_y = ImGui::GetWindowPos().y;
 
         auto GetGridPos = [&](const size_t _x, const size_t _y, bool topleft) -> ImVec2 {
             size_t x = _x;
@@ -175,14 +175,14 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
                 }
             }
         }
-	}
-	ImGui::End();
-	ImGui::PopStyleColor(); // window bg
-	ImGui::PopStyleVar(3);
+    }
+    ImGui::End();
+    ImGui::PopStyleColor(); // window bg
+    ImGui::PopStyleVar(3);
 }
 
 void BondsWidget::UseBuff(GW::AgentID targetId, DWORD buff_skillid) {
-	if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return;
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return;
     if (GW::Map::GetIsObserving())
         return;
     if (targetId == 0) return;
@@ -193,9 +193,9 @@ void BondsWidget::UseBuff(GW::AgentID targetId, DWORD buff_skillid) {
     int islot = GW::SkillbarMgr::GetSkillSlot((GW::Constants::SkillID)buff_skillid);
     if (islot < 0) return;
     uint32_t slot = static_cast<uint32_t>(islot);
-	GW::Skillbar *skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
-	if (!skillbar || !skillbar->IsValid()) return;
-	if (skillbar->skills[slot].recharge != 0) return;
+    GW::Skillbar *skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
+    if (!skillbar || !skillbar->IsValid()) return;
+    if (skillbar->skills[slot].recharge != 0) return;
 
     // capture by value!
     GW::GameThread::Enqueue([slot, targetId]() -> void {
@@ -204,28 +204,28 @@ void BondsWidget::UseBuff(GW::AgentID targetId, DWORD buff_skillid) {
 }
 
 void BondsWidget::LoadSettings(CSimpleIni* ini) {
-	ToolboxWidget::LoadSettings(ini);
-	lock_move = ini->GetBoolValue(Name(), VAR_NAME(lock_move), true);
+    ToolboxWidget::LoadSettings(ini);
+    lock_move = ini->GetBoolValue(Name(), VAR_NAME(lock_move), true);
 
-	background = Colors::Load(ini, Name(), VAR_NAME(background), Colors::ARGB(76, 0, 0, 0));
+    background = Colors::Load(ini, Name(), VAR_NAME(background), Colors::ARGB(76, 0, 0, 0));
     click_to_cast = ini->GetBoolValue(Name(), VAR_NAME(click_to_cast), click_to_cast);
     click_to_drop = ini->GetBoolValue(Name(), VAR_NAME(click_to_drop), click_to_drop);
     show_allies = ini->GetBoolValue(Name(), VAR_NAME(show_allies), show_allies);
-	flip_bonds = ini->GetBoolValue(Name(), VAR_NAME(flip_bonds), flip_bonds);
-	row_height = ini->GetLongValue(Name(), VAR_NAME(row_height), row_height);
+    flip_bonds = ini->GetBoolValue(Name(), VAR_NAME(flip_bonds), flip_bonds);
+    row_height = ini->GetLongValue(Name(), VAR_NAME(row_height), row_height);
     low_attribute_overlay = Colors::Load(ini, Name(), VAR_NAME(background), Colors::ARGB(76, 0, 0, 0));
     hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
 }
 
 void BondsWidget::SaveSettings(CSimpleIni* ini) {
-	ToolboxWidget::SaveSettings(ini);
-	ini->SetBoolValue(Name(), VAR_NAME(lock_move), lock_move);
-	Colors::Save(ini, Name(), VAR_NAME(background), background);
+    ToolboxWidget::SaveSettings(ini);
+    ini->SetBoolValue(Name(), VAR_NAME(lock_move), lock_move);
+    Colors::Save(ini, Name(), VAR_NAME(background), background);
     ini->SetBoolValue(Name(), VAR_NAME(click_to_cast), click_to_cast);
     ini->SetBoolValue(Name(), VAR_NAME(click_to_drop), click_to_drop);
     ini->SetBoolValue(Name(), VAR_NAME(show_allies), show_allies);
-	ini->SetBoolValue(Name(), VAR_NAME(flip_bonds), flip_bonds);
-	ini->SetLongValue(Name(), VAR_NAME(row_height), row_height);
+    ini->SetBoolValue(Name(), VAR_NAME(flip_bonds), flip_bonds);
+    ini->SetLongValue(Name(), VAR_NAME(row_height), row_height);
     Colors::Save(ini, Name(), VAR_NAME(low_attribute_overlay), low_attribute_overlay);
     ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
 }
@@ -235,20 +235,20 @@ void BondsWidget::DrawSettingInternal() {
     if (bond_list.empty())
         ImGui::TextColored(ImVec4(0xFF, 0, 0, 0xFF), "Equip a maintainable enchantment or refrain to show bonds widget on-screen");
     Colors::DrawSettingHueWheel("Background", &background, 0);
-	ImGui::Checkbox("Click to cast bond", &click_to_cast);
+    ImGui::Checkbox("Click to cast bond", &click_to_cast);
     ImGui::Checkbox("Click to cancel bond", &click_to_drop);
-	ImGui::Checkbox("Show bonds for Allies", &show_allies);
-	ImGui::ShowHelp("'Allies' meaning the ones that show in party window, such as summoning stones");
+    ImGui::Checkbox("Show bonds for Allies", &show_allies);
+    ImGui::ShowHelp("'Allies' meaning the ones that show in party window, such as summoning stones");
     ImGui::Checkbox("Flip bond order (left/right)", &flip_bonds);
-	ImGui::ShowHelp("Bond order is based on your build. Check this to flip them left <-> right");
+    ImGui::ShowHelp("Bond order is based on your build. Check this to flip them left <-> right");
     Colors::DrawSetting("Low Attribute Overlay", &low_attribute_overlay);
     ImGui::ShowHelp(
         "Overlays effects casted with less than current attribute level.\n"
         "Only works for yourself and your heroes and doesn't include bonds."
     );
-	ImGui::InputInt("Row Height", &row_height);
-	if (row_height < 0) row_height = 0;
-	ImGui::ShowHelp("Height of each row, leave 0 for default");
+    ImGui::InputInt("Row Height", &row_height);
+    if (row_height < 0) row_height = 0;
+    ImGui::ShowHelp("Height of each row, leave 0 for default");
 }
 
 BondsWidget::Bond BondsWidget::GetBondBySkillID(DWORD skillid) const {

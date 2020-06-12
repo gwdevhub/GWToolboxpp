@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ToolboxWindow.h"
+#include <ToolboxWindow.h>
 
 class DailyActivitiesWindow : public ToolboxWindow {
     DailyActivitiesWindow() {}

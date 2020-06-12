@@ -1,10 +1,9 @@
 #include "stdafx.h"
 
-#include "CursorFix.h"
-
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Utilities/Hooker.h>
 
+#include <CursorFix.h>
 #include <Logger.h>
 
 typedef BOOL (WINAPI *GetClipCursor_pt)(

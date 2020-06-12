@@ -1,32 +1,31 @@
 #pragma once
 
-#include <ToolboxWindow.h>
 #include <CircurlarBuffer.h>
-
-#include "Utils\RateLimiter.h"
+#include <ToolboxWindow.h>
+#include <Utils/RateLimiter.h>
 
 class TradeWindow : public ToolboxWindow {
-	TradeWindow() {};
+    TradeWindow() {};
     TradeWindow(const TradeWindow&) = delete;
-	~TradeWindow();
+    ~TradeWindow();
 public:
-	static TradeWindow& Instance() {
-		static TradeWindow instance;
-		return instance;
-	}
+    static TradeWindow& Instance() {
+        static TradeWindow instance;
+        return instance;
+    }
 
-	const char* Name() const override { return "Trade"; }
+    const char* Name() const override { return "Trade"; }
 
-	void Initialize() override;
-	void Terminate() override;
-	static void CmdPricecheck(const wchar_t* message, int argc, LPWSTR* argv);
+    void Initialize() override;
+    void Terminate() override;
+    static void CmdPricecheck(const wchar_t* message, int argc, LPWSTR* argv);
 
-	void Update(float delta) override;
-	void Draw(IDirect3DDevice9* pDevice) override;
+    void Update(float delta) override;
+    void Draw(IDirect3DDevice9* pDevice) override;
 
-	void LoadSettings(CSimpleIni* ini) override;
-	void SaveSettings(CSimpleIni* ini) override;
-	void DrawSettingInternal() override;
+    void LoadSettings(CSimpleIni* ini) override;
+    void SaveSettings(CSimpleIni* ini) override;
+    void DrawSettingInternal() override;
 
 private:
     struct Message {
@@ -37,32 +36,32 @@ private:
 
     WSAData wsaData = {0};
 
-	bool show_alert_window = false;
+    bool show_alert_window = false;
 
-	// Window could be visible but collapsed - use this var to check it.
-	bool collapsed = false;
+    // Window could be visible but collapsed - use this var to check it.
+    bool collapsed = false;
 
-	// if we need to print in the chat
-	bool print_game_chat = false;
+    // if we need to print in the chat
+    bool print_game_chat = false;
 
-	// if enable, we won't print the messages containing word from alert_words
-	bool filter_alerts = false;
+    // if enable, we won't print the messages containing word from alert_words
+    bool filter_alerts = false;
 
-	#define ALERT_BUF_SIZE 1024 * 16
-	char alert_buf[ALERT_BUF_SIZE] = "";
-	// set when the alert_buf was modified
-	bool alertfile_dirty = false;
+    #define ALERT_BUF_SIZE 1024 * 16
+    char alert_buf[ALERT_BUF_SIZE] = "";
+    // set when the alert_buf was modified
+    bool alertfile_dirty = false;
 
-	std::string pending_query_string;
-	clock_t pending_query_sent = 0;
-	bool print_search_results = false;
+    std::string pending_query_string;
+    clock_t pending_query_sent = 0;
+    bool print_search_results = false;
 
-	char search_buffer[256] = { 0 };
+    char search_buffer[256] = { 0 };
 
-	std::vector<std::string> alert_words;
-	std::vector<std::string> searched_words;
+    std::vector<std::string> alert_words;
+    std::vector<std::string> searched_words;
 
-	void DrawAlertsWindowContent(bool ownwindow);
+    void DrawAlertsWindowContent(bool ownwindow);
 
     static bool GetInKamadanAE1();
 
@@ -81,12 +80,12 @@ private:
     CircularBuffer<Message> messages;
 
     // tasks to be done async by the worker thread
-	std::queue<std::function<void()>> thread_jobs;
+    std::queue<std::function<void()>> thread_jobs;
     bool should_stop = false;
-	std::thread worker;
+    std::thread worker;
 
-	void ParseBuffer(const char *text, std::vector<std::string> &words);
-	void ParseBuffer(std::fstream stream, std::vector<std::string>& words);
+    void ParseBuffer(const char *text, std::vector<std::string> &words);
+    void ParseBuffer(std::fstream stream, std::vector<std::string>& words);
 
     static void DeleteWebSocket(easywsclient::WebSocket *ws);
 };

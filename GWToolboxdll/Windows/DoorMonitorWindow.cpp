@@ -10,7 +10,7 @@
 #include <GWCA/Managers/MapMgr.h>
 
 #include <Logger.h>
-#include "DoorMonitorWindow.h"
+#include <Windows/DoorMonitorWindow.h>
 
 void DoorMonitorWindow::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);

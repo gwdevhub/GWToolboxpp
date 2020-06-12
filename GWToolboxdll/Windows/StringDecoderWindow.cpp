@@ -1,13 +1,12 @@
 #include "stdafx.h"
 
-#include <Logger.h>
-
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
-#include "GuiUtils.h"
+#include <Logger.h>
+#include <GuiUtils.h>
 
-#include "StringDecoderWindow.h"
+#include <Windows/StringDecoderWindow.h>
 
 static void printchar(wchar_t c)
 {

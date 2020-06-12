@@ -22,6 +22,6 @@ public:
     std::wstring GetEncodedString();
 
 private:
-	char encoded[2048] = { 0 };
+    char encoded[2048] = { 0 };
     std::wstring decoded;
 };

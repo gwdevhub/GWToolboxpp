@@ -1,10 +1,11 @@
 #pragma once
 
-#include "ToolboxWidget.h"
 #include <GWCA/Constants/Skills.h>
 
+#include <ToolboxWidget.h>
+
 class TimerWidget : public ToolboxWidget {
-	TimerWidget() {
+    TimerWidget() {
         for (auto it : spirit_effects) {
             auto e = spirit_effects_enabled.find(it.first);
             if (e != spirit_effects_enabled.end())
@@ -12,26 +13,26 @@ class TimerWidget : public ToolboxWidget {
             spirit_effects_enabled[it.first] = new bool(false);
         }
     };
-	~TimerWidget() {
+    ~TimerWidget() {
         for (auto it : spirit_effects_enabled) {
             delete it.second;
         }
         spirit_effects_enabled.clear();
     };
 public:
-	static TimerWidget& Instance() {
-		static TimerWidget instance;
-		return instance;
-	}
-	const char* Name() const override { return "Timer"; }
+    static TimerWidget& Instance() {
+        static TimerWidget instance;
+        return instance;
+    }
+    const char* Name() const override { return "Timer"; }
 
-	void LoadSettings(CSimpleIni *ini) override;
-	void SaveSettings(CSimpleIni *ini) override;
-	void DrawSettingInternal() override;
-	ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0, bool noinput_if_frozen = true) const;
+    void LoadSettings(CSimpleIni *ini) override;
+    void SaveSettings(CSimpleIni *ini) override;
+    void DrawSettingInternal() override;
+    ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0, bool noinput_if_frozen = true) const;
 
-	// Draw user interface. Will be called every frame if the element is visible
-	void Draw(IDirect3DDevice9* pDevice) override;
+    // Draw user interface. Will be called every frame if the element is visible
+    void Draw(IDirect3DDevice9* pDevice) override;
 
 private:
     // those function write to extra_buffer and extra_color.
@@ -40,7 +41,7 @@ private:
     bool GetDeepTimer();
     bool GetDhuumTimer();
     bool GetTrapTimer();
-	bool GetSpiritTimer();
+    bool GetSpiritTimer();
 
     
     std::map<GW::Constants::SkillID, char*> spirit_effects{
@@ -58,8 +59,8 @@ private:
         {GW::Constants::SkillID::Winds,"Winds"}
     };
 
-	bool hide_in_outpost = false;
-	bool click_to_print_time = false;
+    bool hide_in_outpost = false;
+    bool click_to_print_time = false;
     bool show_extra_timers = false;
     bool show_spirit_timers = true;
     std::map<GW::Constants::SkillID, bool*> spirit_effects_enabled{
@@ -69,6 +70,6 @@ private:
 
     char timer_buffer[32] = "";
     char extra_buffer[32] = "";
-	char spirits_buffer[128] = "";
+    char spirits_buffer[128] = "";
     ImColor extra_color = 0;
 };

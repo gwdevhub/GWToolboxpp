@@ -10,11 +10,11 @@
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 
-#include "GuiUtils.h"
-#include <Modules\Resources.h>
 #include <Logger.h>
+#include <GuiUtils.h>
 
-#include "SkillListingWindow.h"
+#include <Modules/Resources.h>
+#include <Windows/SkillListingWindow.h>
 
 static uintptr_t skill_array_addr;
 
@@ -48,7 +48,7 @@ const wchar_t* SkillListingWindow::Skill::GWWDescription() {
             s.replace(pos, 3, scale2_txt);
         while ((pos = s.find(L"993")) != std::wstring::npos)
             s.replace(pos, 3, scale3_txt);
-		wsprintfW(desc_gww, L"%s. %s", GetSkillType().c_str(), s.c_str());
+        wsprintfW(desc_gww, L"%s. %s", GetSkillType().c_str(), s.c_str());
     }
     return desc_gww;
 }
@@ -69,7 +69,7 @@ const wchar_t* SkillListingWindow::Skill::GWWConcise() {
             s.replace(pos, 3, scale2_txt);
         while ((pos = s.find(L"993")) != std::wstring::npos)
             s.replace(pos, 3, scale3_txt);
-		wsprintfW(concise_gww, L"%s. %s", GetSkillType().c_str(), s.c_str());
+        wsprintfW(concise_gww, L"%s. %s", GetSkillType().c_str(), s.c_str());
     }
     return concise_gww;
 }
@@ -132,7 +132,7 @@ void SkillListingWindow::Draw(IDirect3DDevice9* pDevice) {
         ImGui::SameLine(offset += tiny_text_width);
         ImGui::Text("%S",skills[i]->Name());
         if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("%S,\n%S", skills[i]->GWWDescription(), "");// skills[i]->GWWConcise());
+            ImGui::SetTooltip("%S,\n%S", skills[i]->GWWDescription(), "");// skills[i]->GWWConcise());
         ImGui::SameLine(offset += long_text_width);
         ImGui::Text("%d", skills[i]->skill->attribute);
         ImGui::SameLine(offset += tiny_text_width);

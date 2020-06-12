@@ -5,10 +5,10 @@
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 
-#include "Defines.h"
-#include <Modules/Resources.h>
-
+#include <Defines.h>
 #include <Logger.h>
+
+#include <Modules/Resources.h>
 
 #define CHAN_WARNING GW::Chat::Channel::CHANNEL_GWCA2
 #define CHAN_INFO    GW::Chat::Channel::CHANNEL_EMOTE

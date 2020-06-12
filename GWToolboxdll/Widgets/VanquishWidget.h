@@ -1,20 +1,20 @@
 #pragma once
 
-#include "ToolboxWidget.h"
+#include <ToolboxWidget.h>
 
 class VanquishWidget : public ToolboxWidget {
-	VanquishWidget() {};
-	~VanquishWidget() {};
+    VanquishWidget() {};
+    ~VanquishWidget() {};
 
 public:
-	static VanquishWidget& Instance() {
-		static VanquishWidget instance;
-		return instance;
-	}
+    static VanquishWidget& Instance() {
+        static VanquishWidget instance;
+        return instance;
+    }
 
-	const char* Name() const override { return "Vanquish"; }
+    const char* Name() const override { return "Vanquish"; }
 
-	void Draw(IDirect3DDevice9* pDevice) override;
+    void Draw(IDirect3DDevice9* pDevice) override;
 
-	void DrawSettingInternal() override;
+    void DrawSettingInternal() override;
 };

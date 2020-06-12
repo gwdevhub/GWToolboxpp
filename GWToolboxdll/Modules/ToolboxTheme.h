@@ -3,23 +3,23 @@
 #include <ToolboxModule.h>
 
 class ToolboxTheme : public ToolboxModule {
-	ToolboxTheme();
+    ToolboxTheme();
 public:
-	static ToolboxTheme& Instance() {
-		static ToolboxTheme instance;
-		return instance;
-	}
+    static ToolboxTheme& Instance() {
+        static ToolboxTheme instance;
+        return instance;
+    }
 
-	const char* Name() const override { return "Theme"; }
+    const char* Name() const override { return "Theme"; }
 
-	void Terminate() override;
-	void LoadSettings(CSimpleIni* ini) override;
-	void SaveSettings(CSimpleIni* ini) override;
-	void DrawSettingInternal() override;
+    void Terminate() override;
+    void LoadSettings(CSimpleIni* ini) override;
+    void SaveSettings(CSimpleIni* ini) override;
+    void DrawSettingInternal() override;
 
 private:
-	ImGuiStyle DefaultTheme();
+    ImGuiStyle DefaultTheme();
 
-	ImGuiStyle ini_style;
-	CSimpleIni* inifile = nullptr;
+    ImGuiStyle ini_style;
+    CSimpleIni* inifile = nullptr;
 };

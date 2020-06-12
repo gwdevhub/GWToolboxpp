@@ -11,47 +11,47 @@
 #include <Modules/Updater.h>
 
 void Updater::LoadSettings(CSimpleIni* ini) {
-	ToolboxModule::LoadSettings(ini);
+    ToolboxModule::LoadSettings(ini);
 #ifdef _DEBUG
-	mode = 0;
+    mode = 0;
 #else
-	mode = ini->GetLongValue(Name(), "update_mode", mode);
+    mode = ini->GetLongValue(Name(), "update_mode", mode);
 #endif
-	CheckForUpdate();
+    CheckForUpdate();
 }
 
 void Updater::SaveSettings(CSimpleIni* ini) {
-	ToolboxModule::SaveSettings(ini);
+    ToolboxModule::SaveSettings(ini);
 #ifdef _DEBUG
     return;
 #else
-	ini->SetLongValue(Name(), "update_mode", mode);
-	ini->SetValue(Name(), "dllversion", GWTOOLBOX_VERSION);
+    ini->SetLongValue(Name(), "update_mode", mode);
+    ini->SetValue(Name(), "dllversion", GWTOOLBOX_VERSION);
 
-	HMODULE module = GWToolbox::GetDLLModule();
-	CHAR dllfile[MAX_PATH];
-	DWORD size = GetModuleFileName(module, dllfile, MAX_PATH);
-	ini->SetValue(Name(), "dllpath", size > 0 ? dllfile : "error");
+    HMODULE module = GWToolbox::GetDLLModule();
+    CHAR dllfile[MAX_PATH];
+    DWORD size = GetModuleFileName(module, dllfile, MAX_PATH);
+    ini->SetValue(Name(), "dllpath", size > 0 ? dllfile : "error");
 #endif
 }
 
 void Updater::Initialize() {
-	ToolboxUIElement::Initialize();
+    ToolboxUIElement::Initialize();
 
-	CheckForUpdate();
+    CheckForUpdate();
 }
 
 void Updater::DrawSettingInternal() {
-	ImGui::Text("Update mode:");
+    ImGui::Text("Update mode:");
     const float btnWidth = 180.0f * ImGui::GetIO().FontGlobalScale;
     ImGui::SameLine(ImGui::GetContentRegionAvailWidth() - btnWidth);
     if (ImGui::Button(step == Checking ? "Checking..." : "Check for updates",ImVec2(btnWidth,0)) && step != Checking) {
-		CheckForUpdate(true);
+        CheckForUpdate(true);
     }
-	ImGui::RadioButton("Do not check for updates", &mode, 0);
-	ImGui::RadioButton("Check and display a message", &mode, 1);
-	ImGui::RadioButton("Check and ask before updating", &mode, 2);
-	ImGui::RadioButton("Check and automatically update", &mode, 3);
+    ImGui::RadioButton("Do not check for updates", &mode, 0);
+    ImGui::RadioButton("Check and display a message", &mode, 1);
+    ImGui::RadioButton("Check and ask before updating", &mode, 2);
+    ImGui::RadioButton("Check and automatically update", &mode, 3);
 }
 
 void Updater::GetLatestRelease(GWToolboxRelease* release) {
@@ -82,7 +82,7 @@ void Updater::GetLatestRelease(GWToolboxRelease* release) {
         for (unsigned int j = 0; j < json[i]["assets"].size(); j++) {
             const Json& asset = json[i]["assets"][j];
             if (!(asset.contains("name") && asset["name"].is_string())
-				|| !(asset.contains("browser_download_url") && asset["browser_download_url"].is_string()))
+                || !(asset.contains("browser_download_url") && asset["browser_download_url"].is_string()))
                 continue;
             std::string asset_name = asset["name"].get<std::string>();
             if (!asset_name._Equal("GWToolbox.dll") && !asset_name._Equal("GWToolboxdll.dll"))
@@ -96,154 +96,154 @@ void Updater::GetLatestRelease(GWToolboxRelease* release) {
 }
 
 void Updater::CheckForUpdate(const bool forced) {
-	step = Checking;
-	last_check = clock();
-	if (!forced && mode == 0) {
-		step = Done;
-		return;
-	}
+    step = Checking;
+    last_check = clock();
+    if (!forced && mode == 0) {
+        step = Done;
+        return;
+    }
 
-	Resources::Instance().EnqueueWorkerTask([this,forced]() {
-		// Here we are in the worker thread and can do blocking operations
-		// Reminder: do not send stuff to gw chat from this thread!
+    Resources::Instance().EnqueueWorkerTask([this,forced]() {
+        // Here we are in the worker thread and can do blocking operations
+        // Reminder: do not send stuff to gw chat from this thread!
         GWToolboxRelease release;
         GetLatestRelease(&release);
         if (release.version.empty()) {
             // Error getting server version. Server down? We can do nothing.
-			Log::Info("Error checking for updates");
+            Log::Info("Error checking for updates");
             step = Done;
             return;
         }
         if (release.version.compare(GWTOOLBOX_VERSION) == 0) {
-			// server and client versions match
+            // server and client versions match
             step = Done;
             if (forced) {
-				Log::Info("GWToolbox++ is up-to-date");
+                Log::Info("GWToolbox++ is up-to-date");
             }
             return;
-		}
-		// we have a new version!
-		if (latest_release.version.compare(release.version) != 0 || forced) {
-			notified = false;
-			visible = true;
-		}
+        }
+        // we have a new version!
+        if (latest_release.version.compare(release.version) != 0 || forced) {
+            notified = false;
+            visible = true;
+        }
         latest_release = release;
-		forced_ask = forced;
-		step = Asking;
-	});
+        forced_ask = forced;
+        step = Asking;
+    });
 }
 
 void Updater::Draw(IDirect3DDevice9* device) {
     UNREFERENCED_PARAMETER(device);
-	if (step == Asking && !latest_release.version.empty()) {
-		
-		if (!notified) {
-			notified = true;
-			Log::Warning("GWToolbox++ version %s is available! You have %s%s.",
-				latest_release.version.c_str(), GWTOOLBOX_VERSION, BETA_VERSION);
-		}
+    if (step == Asking && !latest_release.version.empty()) {
+        
+        if (!notified) {
+            notified = true;
+            Log::Warning("GWToolbox++ version %s is available! You have %s%s.",
+                latest_release.version.c_str(), GWTOOLBOX_VERSION, BETA_VERSION);
+        }
 
-		int iMode = forced_ask ? 2 : mode;
-		
-		switch (iMode) {
-		case 0: // no updating
-			step = Done;
-			break;
+        int iMode = forced_ask ? 2 : mode;
+        
+        switch (iMode) {
+        case 0: // no updating
+            step = Done;
+            break;
 
-		case 1: // check and warn
+        case 1: // check and warn
 
-			step = Done;
-			break;
+            step = Done;
+            break;
 
-		case 2: { // check and ask
-			ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiSetCond_Appearing);
-			ImGui::SetNextWindowPosCenter(ImGuiSetCond_Appearing);
-			ImGui::Begin("Toolbox Update!", &visible);
-			ImGui::Text("GWToolbox++ version %s is available! You have %s%s",
-				latest_release.version.c_str(), GWTOOLBOX_VERSION, BETA_VERSION);
-			ImGui::Text("Changes:");
-			ImGui::Text(latest_release.body.c_str());
+        case 2: { // check and ask
+            ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiSetCond_Appearing);
+            ImGui::SetNextWindowPosCenter(ImGuiSetCond_Appearing);
+            ImGui::Begin("Toolbox Update!", &visible);
+            ImGui::Text("GWToolbox++ version %s is available! You have %s%s",
+                latest_release.version.c_str(), GWTOOLBOX_VERSION, BETA_VERSION);
+            ImGui::Text("Changes:");
+            ImGui::Text(latest_release.body.c_str());
 
-			ImGui::Text("");
-			ImGui::Text("Do you want to update?");
-			if (ImGui::Button("Later", ImVec2(100, 0))) {
-				step = Done;
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("OK", ImVec2(100, 0))) {
-				DoUpdate();
-			}
-			ImGui::End();
-			if (!visible) {
-				step = Done;
-			}
-			break;
-		}
+            ImGui::Text("");
+            ImGui::Text("Do you want to update?");
+            if (ImGui::Button("Later", ImVec2(100, 0))) {
+                step = Done;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("OK", ImVec2(100, 0))) {
+                DoUpdate();
+            }
+            ImGui::End();
+            if (!visible) {
+                step = Done;
+            }
+            break;
+        }
 
-		case 3: // check and do
-			DoUpdate();
-			break;
+        case 3: // check and do
+            DoUpdate();
+            break;
 
-		default:
-			break;
-		}
+        default:
+            break;
+        }
 
-	} else if (step == Downloading) {
-		if (visible) {
-			ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiSetCond_Appearing);
-			ImGui::SetNextWindowPosCenter(ImGuiSetCond_Appearing);
-			ImGui::Begin("Toolbox Update!", &visible);
-			ImGui::Text("GWToolbox++ version %s is available! You have %s",
-				latest_release.version.c_str(), GWTOOLBOX_VERSION);
-			ImGui::Text("Changes:");
-			ImGui::Text(latest_release.body.c_str());
+    } else if (step == Downloading) {
+        if (visible) {
+            ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiSetCond_Appearing);
+            ImGui::SetNextWindowPosCenter(ImGuiSetCond_Appearing);
+            ImGui::Begin("Toolbox Update!", &visible);
+            ImGui::Text("GWToolbox++ version %s is available! You have %s",
+                latest_release.version.c_str(), GWTOOLBOX_VERSION);
+            ImGui::Text("Changes:");
+            ImGui::Text(latest_release.body.c_str());
 
-			ImGui::Text("");
-			ImGui::Text("Downloading update...");
-			if (ImGui::Button("Hide", ImVec2(100, 0))) {
-				visible = false;
-			}
-			ImGui::End();
-		}
-	} else if (step == Success) {
-		if (visible) {
-			ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiSetCond_Appearing);
-			ImGui::SetNextWindowPosCenter(ImGuiSetCond_Appearing);
-			ImGui::Begin("Toolbox Update!", &visible);
-			ImGui::Text("GWToolbox++ version %s is available! You have %s",
-				latest_release.version.c_str(), GWTOOLBOX_VERSION);
-			ImGui::Text("Changes:");
-			ImGui::Text(latest_release.body.c_str());
+            ImGui::Text("");
+            ImGui::Text("Downloading update...");
+            if (ImGui::Button("Hide", ImVec2(100, 0))) {
+                visible = false;
+            }
+            ImGui::End();
+        }
+    } else if (step == Success) {
+        if (visible) {
+            ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiSetCond_Appearing);
+            ImGui::SetNextWindowPosCenter(ImGuiSetCond_Appearing);
+            ImGui::Begin("Toolbox Update!", &visible);
+            ImGui::Text("GWToolbox++ version %s is available! You have %s",
+                latest_release.version.c_str(), GWTOOLBOX_VERSION);
+            ImGui::Text("Changes:");
+            ImGui::Text(latest_release.body.c_str());
 
-			ImGui::Text("");
-			ImGui::Text("Update successful, please restart toolbox.");
-			if (ImGui::Button("OK", ImVec2(100, 0))) {
-				visible = false;
-			}
-			ImGui::End();
-		}
-	}
-	else {
-		forced_ask = false;
-	}
-	// if step == Done do nothing
+            ImGui::Text("");
+            ImGui::Text("Update successful, please restart toolbox.");
+            if (ImGui::Button("OK", ImVec2(100, 0))) {
+                visible = false;
+            }
+            ImGui::End();
+        }
+    }
+    else {
+        forced_ask = false;
+    }
+    // if step == Done do nothing
 }
 
 void Updater::DoUpdate() {
-	Log::Warning("Downloading update...");
+    Log::Warning("Downloading update...");
 
-	step = Downloading;
+    step = Downloading;
 
-	// 0. find toolbox dll path
-	HMODULE module = GWToolbox::GetDLLModule();
-	WCHAR dllfile[MAX_PATH];
-	DWORD size = GetModuleFileNameW(module, dllfile, MAX_PATH);
-	if (size == 0) {
-		Log::Error("Updater error - cannot find GWToolbox.dll path");
-		step = Done;
-		return;
-	}
-	Log::Log("dll file name is %s\n", dllfile);
+    // 0. find toolbox dll path
+    HMODULE module = GWToolbox::GetDLLModule();
+    WCHAR dllfile[MAX_PATH];
+    DWORD size = GetModuleFileNameW(module, dllfile, MAX_PATH);
+    if (size == 0) {
+        Log::Error("Updater error - cannot find GWToolbox.dll path");
+        step = Done;
+        return;
+    }
+    Log::Log("dll file name is %s\n", dllfile);
 
     // Get name of dll from path
     std::wstring dll_path(dllfile);
@@ -264,25 +264,25 @@ void Updater::DoUpdate() {
     }
 
 
-	// 1. rename toolbox dll
+    // 1. rename toolbox dll
     WCHAR dllold[MAX_PATH];
-	wcsncpy(dllold, dllfile, MAX_PATH);
-	wcsncat(dllold, L".old", MAX_PATH);
-	Log::Log("moving to %s\n", dllold);
-	DeleteFileW(dllold);
-	MoveFileW(dllfile, dllold);
+    wcsncpy(dllold, dllfile, MAX_PATH);
+    wcsncat(dllold, L".old", MAX_PATH);
+    Log::Log("moving to %s\n", dllold);
+    DeleteFileW(dllold);
+    MoveFileW(dllfile, dllold);
 
-	// 2. download new dll
-	Resources::Instance().Download(
-		dllfile, GuiUtils::StringToWString(latest_release.download_url),
-		[this, dllfile, dllold](bool success) {
-		if (success) {
-			step = Success;
-			Log::Warning("Update successful, please restart toolbox.");
-		} else {
-			Log::Error("Updated error - cannot download GWToolbox.dll");
-			MoveFileW(dllold, dllfile);
-			step = Done;
-		}
-	});
+    // 2. download new dll
+    Resources::Instance().Download(
+        dllfile, GuiUtils::StringToWString(latest_release.download_url),
+        [this, dllfile, dllold](bool success) {
+        if (success) {
+            step = Success;
+            Log::Warning("Update successful, please restart toolbox.");
+        } else {
+            Log::Error("Updated error - cannot download GWToolbox.dll");
+            MoveFileW(dllold, dllfile);
+            step = Done;
+        }
+    });
 }

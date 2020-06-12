@@ -1,19 +1,19 @@
 #pragma once
 
-#include "ToolboxUIElement.h"
+#include <ToolboxUIElement.h>
 
 class ToolboxWidget : public ToolboxUIElement {
 public:
-	bool IsWidget() const override { return true; }
-	char* TypeName() const override { return "widget"; }
+    bool IsWidget() const override { return true; }
+    char* TypeName() const override { return "widget"; }
 
-	virtual void LoadSettings(CSimpleIni* ini) override {
-		ToolboxUIElement::LoadSettings(ini);
-		lock_move = true;
-		lock_size = true;
-	}
-	
+    virtual void LoadSettings(CSimpleIni* ini) override {
+        ToolboxUIElement::LoadSettings(ini);
+        lock_move = true;
+        lock_size = true;
+    }
+    
 
-	ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0, 
-		bool noinput_if_frozen = true) const;
+    ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0, 
+        bool noinput_if_frozen = true) const;
 };

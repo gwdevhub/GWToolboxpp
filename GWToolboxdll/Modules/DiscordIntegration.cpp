@@ -28,12 +28,11 @@
 
 #include <Logger.h>
 #include <GuiUtils.h>
-
-#include <Windows/TravelWindow.h>
-
-#include <Modules/Resources.h>
-#include <Modules/DiscordIntegration.h>
 #include <GWToolbox.h>
+
+#include <Modules/DiscordIntegration.h>
+#include <Modules/Resources.h>
+#include <Windows/TravelWindow.h>
 
 #define DISCORD_APP_ID 378706083788881961
 #define DISCORD_DLL_REMOTE_URL L"https://github.com/HasKha/GWToolboxpp/releases/download/2.28_Release/discord_game_sdk.dll"

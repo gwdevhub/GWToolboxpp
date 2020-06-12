@@ -1,13 +1,12 @@
 #pragma once
 
-#include <Defines.h>
-
 #include <GWCA/Constants/Maps.h>
 #include <GWCA/Utilities/Hook.h>
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/Packets/StoC.h>
 
-#include "ToolboxWindow.h"
+#include <Defines.h>
+#include <ToolboxWindow.h>
 
 class ObjectiveTimerWindow : public ToolboxWindow {
     ObjectiveTimerWindow() {};

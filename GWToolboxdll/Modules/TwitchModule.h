@@ -28,7 +28,7 @@ public:
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
     bool Connect();
-	void Disconnect();
+    void Disconnect();
     // IRC details
     std::string irc_server="irc.chat.twitch.tv";
     int irc_port = 443; // Not 6667, just in case router blocks it.
@@ -49,15 +49,15 @@ private:
     bool pending_disconnect = false;
     bool connected = false;
     bool show_irc_password = false;
-	bool twitch_enabled = true;
+    bool twitch_enabled = true;
 
-	void AddHooks();
-	bool hooked = 0;
+    void AddHooks();
+    bool hooked = 0;
 
     char message_buffer[1024] = { 0 };
 
     IRC conn;
 
-	GW::HookEntry SendChatCallback_Entry;
-	GW::HookEntry StartWhisperCallback_Entry;
+    GW::HookEntry SendChatCallback_Entry;
+    GW::HookEntry StartWhisperCallback_Entry;
 };

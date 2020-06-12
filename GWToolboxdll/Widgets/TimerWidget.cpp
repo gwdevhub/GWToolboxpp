@@ -1,12 +1,10 @@
 #include "stdafx.h"
 
-#include <GWCA/Constants/Constants.h>
-
 #include <GWCA/GameContainers/Array.h>
 
-#include <GWCA/GameEntities/Skill.h>
-
+#include <GWCA/Constants/Constants.h>
 #include <GWCA/Packets/StoC.h>
+#include <GWCA/GameEntities/Skill.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
@@ -21,8 +19,8 @@
 #include <Widgets/TimerWidget.h>
 
 void TimerWidget::LoadSettings(CSimpleIni *ini) {
-	ToolboxWidget::LoadSettings(ini);
-	click_to_print_time = ini->GetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
+    ToolboxWidget::LoadSettings(ini);
+    click_to_print_time = ini->GetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
     show_extra_timers = ini->GetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
     hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
     show_spirit_timers = ini->GetBoolValue(Name(), VAR_NAME(show_spirit_timers), show_spirit_timers);
@@ -34,8 +32,8 @@ void TimerWidget::LoadSettings(CSimpleIni *ini) {
 }
 
 void TimerWidget::SaveSettings(CSimpleIni *ini) {
-	ToolboxWidget::SaveSettings(ini);
-	ini->SetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
+    ToolboxWidget::SaveSettings(ini);
+    ini->SetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
     ini->SetBoolValue(Name(), VAR_NAME(show_extra_timers), show_extra_timers);
     ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
     ini->SetBoolValue(Name(), VAR_NAME(show_spirit_timers), show_spirit_timers);
@@ -47,9 +45,9 @@ void TimerWidget::SaveSettings(CSimpleIni *ini) {
 }
 
 void TimerWidget::DrawSettingInternal() {
-	ToolboxWidget::DrawSettingInternal();
+    ToolboxWidget::DrawSettingInternal();
     ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
-	ImGui::Checkbox("Ctrl+Click to print time", &click_to_print_time);
+    ImGui::Checkbox("Ctrl+Click to print time", &click_to_print_time);
     ImGui::Checkbox("Show extra timers", &show_extra_timers);
     ImGui::ShowHelp("Such as Deep aspects");
     ImGui::Checkbox("Show spirit timers", &show_spirit_timers);
@@ -75,24 +73,24 @@ ImGuiWindowFlags TimerWidget::GetWinFlags(ImGuiWindowFlags flags, bool noinput_i
 
 void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);
-	if (!visible) return;
-	if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
+    if (!visible) return;
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
     if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
         return;
-	unsigned long time = GW::Map::GetInstanceTime() / 1000;
+    unsigned long time = GW::Map::GetInstanceTime() / 1000;
 
     bool ctrl_pressed = ImGui::IsKeyDown(VK_CONTROL);
-	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
-	ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiSetCond_FirstUseEver);
-	if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(click_to_print_time && ctrl_pressed)))) {
-		snprintf(timer_buffer, 32, "%lu:%02lu:%02lu", time / (60 * 60), (time / 60) % 60, time % 60);
-		ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f48));
-		ImVec2 cur = ImGui::GetCursorPos();
-		ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
-		ImGui::TextColored(ImColor(0, 0, 0), timer_buffer);
-		ImGui::SetCursorPos(cur);
-		ImGui::Text(timer_buffer);
-		ImGui::PopFont();
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
+    ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiSetCond_FirstUseEver);
+    if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(click_to_print_time && ctrl_pressed)))) {
+        snprintf(timer_buffer, 32, "%lu:%02lu:%02lu", time / (60 * 60), (time / 60) % 60, time % 60);
+        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f48));
+        ImVec2 cur = ImGui::GetCursorPos();
+        ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
+        ImGui::TextColored(ImColor(0, 0, 0), timer_buffer);
+        ImGui::SetCursorPos(cur);
+        ImGui::Text(timer_buffer);
+        ImGui::PopFont();
 
         if (GetUrgozTimer() || (show_extra_timers && (GetDeepTimer() || GetDhuumTimer() || GetTrapTimer()))) {
 
@@ -114,17 +112,17 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
             ImGui::PopFont();
         }
 
-		if (click_to_print_time) {
-			ImVec2 size = ImGui::GetWindowSize();
-			ImVec2 min = ImGui::GetWindowPos();
-			ImVec2 max(min.x + size.x, min.y + size.y);
-			if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsMouseHoveringRect(min, max)) {
-				GW::Chat::SendChat('/', "age");
-			}
-		}
-	}
-	ImGui::End();
-	ImGui::PopStyleColor();
+        if (click_to_print_time) {
+            ImVec2 size = ImGui::GetWindowSize();
+            ImVec2 min = ImGui::GetWindowPos();
+            ImVec2 max(min.x + size.x, min.y + size.y);
+            if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsMouseHoveringRect(min, max)) {
+                GW::Chat::SendChat('/', "age");
+            }
+        }
+    }
+    ImGui::End();
+    ImGui::PopStyleColor();
 }
 
 bool TimerWidget::GetUrgozTimer() {
