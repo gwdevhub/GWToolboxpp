@@ -12,7 +12,7 @@
 #include <GWToolbox.h>
 #include <Logger.h>
 
-#include <Windows/DailyQuests.h>
+#include <Windows/DailyQuestsWindow.h>
 
 bool subscriptions_changed = false;
 

@@ -302,9 +302,6 @@
     <ClInclude Include="Windows\BuildsWindow.h">
       <Filter>Windows\Builds</Filter>
     </ClInclude>
-    <ClInclude Include="Windows\DailyQuests.h">
-      <Filter>Windows\DailyQuests</Filter>
-    </ClInclude>
     <ClInclude Include="Windows\DialogsWindow.h">
       <Filter>Windows\Dialogs</Filter>
     </ClInclude>
@@ -373,6 +370,9 @@
       <Filter>Modules\AprilFool</Filter>
     </ClInclude>
     <ClInclude Include="Logger.h" />
+    <ClInclude Include="Windows\DailyQuestsWindow.h">
+      <Filter>Windows\DailyQuests</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Dependencies\imgui\imgui.cpp">
@@ -498,9 +498,6 @@
     <ClCompile Include="Windows\BuildsWindow.cpp">
       <Filter>Windows\Builds</Filter>
     </ClCompile>
-    <ClCompile Include="Windows\DailyQuests.cpp">
-      <Filter>Windows\DailyQuests</Filter>
-    </ClCompile>
     <ClCompile Include="Windows\DialogsWindow.cpp">
       <Filter>Windows\Dialogs</Filter>
     </ClCompile>
@@ -570,6 +567,9 @@
       <Filter>Modules\AprilFool</Filter>
     </ClCompile>
     <ClCompile Include="Logger.cpp" />
+    <ClCompile Include="Windows\DailyQuestsWindow.cpp">
+      <Filter>Windows\DailyQuests</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GWToolbox.rc">

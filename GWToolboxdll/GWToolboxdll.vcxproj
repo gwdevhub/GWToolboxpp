@@ -171,7 +171,7 @@
     <ClInclude Include="Widgets\TimerWidget.h" />
     <ClInclude Include="Widgets\VanquishWidget.h" />
     <ClInclude Include="Windows\BuildsWindow.h" />
-    <ClInclude Include="Windows\DailyQuests.h" />
+    <ClInclude Include="Windows\DailyQuestsWindow.h" />
     <ClInclude Include="Windows\DialogsWindow.h" />
     <ClInclude Include="Windows\DoorMonitorWindow.h" />
     <ClInclude Include="Windows\FactionLeaderboardWindow.h" />
@@ -303,7 +303,7 @@
     <ClCompile Include="Widgets\TimerWidget.cpp" />
     <ClCompile Include="Widgets\VanquishWidget.cpp" />
     <ClCompile Include="Windows\BuildsWindow.cpp" />
-    <ClCompile Include="Windows\DailyQuests.cpp" />
+    <ClCompile Include="Windows\DailyQuestsWindow.cpp" />
     <ClCompile Include="Windows\DialogsWindow.cpp" />
     <ClCompile Include="Windows\DoorMonitorWindow.cpp" />
     <ClCompile Include="Windows\FactionLeaderboardWindow.cpp" />

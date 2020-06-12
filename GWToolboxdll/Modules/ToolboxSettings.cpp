@@ -42,7 +42,7 @@
 #include <Windows/TradeWindow.h>
 #include <Windows/ObjectiveTimerWindow.h>
 #include <Windows/FactionLeaderboardWindow.h>
-#include <Windows/DailyQuests.h>
+#include <Windows/DailyQuestsWindow.h>
 #include <Windows/PacketLoggerWindow.h>
 #include <Windows/DoorMonitorWindow.h>
 #include <Windows/SkillListingWindow.h>
