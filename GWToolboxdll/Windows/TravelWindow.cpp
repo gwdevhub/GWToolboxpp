@@ -623,6 +623,14 @@ namespace {
         GW::GuildContext *c = GW::GuildMgr::GetGuildContext();
         return c && c->player_guild_index && c->guilds[c->player_guild_index]->faction;
     }
+    static bool IsAlreadyInOutpost(GW::Constants::MapID outpost_id, GW::Constants::District _district, uint32_t _district_number = 0)
+    {
+        return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost 
+            && GW::Map::GetMapID() == outpost_id
+            && TravelWindow::RegionFromDistrict(_district) == GW::Map::GetRegion() 
+            && TravelWindow::LanguageFromDistrict(_district) == GW::Map::GetLanguage() 
+            && (!_district_number || _district_number == static_cast<uint32_t>(GW::Map::GetDistrict()));
+    }
 }
 
 void TravelWindow::Initialize() {
@@ -795,7 +803,8 @@ void TravelWindow::ScrollToOutpost(GW::Constants::MapID outpost_id, GW::Constant
     if (scroll_to_outpost_id != outpost_id) return; // Already travelling to another outpost
     if (map_id == outpost_id) {
         scroll_to_outpost_id = GW::Constants::MapID::None;
-        Travel(outpost_id, _district, _district_number);
+        if (!IsAlreadyInOutpost(outpost_id, _district, _district_number))
+            UITravel(outpost_id, _district, _district_number);
         return; // Already at this outpost. Called GW::Map::Travel just in case district is different.
     }
 
@@ -833,20 +842,29 @@ void TravelWindow::ScrollToOutpost(GW::Constants::MapID outpost_id, GW::Constant
         GW::Items::UseItem(scroll_to_use);
         return; // Done.
     }
-    pending_map_travel = true;
-    Travel(GW::Constants::MapID::Embark_Beach, _district, _district_number);
+    pending_map_travel = Travel(GW::Constants::MapID::Embark_Beach, _district, _district_number);
     //GW::Map::Travel(GW::Constants::MapID::Embark_Beach, district, district_number); // Travel to embark.
 }
 
-void TravelWindow::Travel(GW::Constants::MapID MapID, GW::Constants::District _district /*= 0*/, uint32_t _district_number) {
-    switch (MapID) {
-    case GW::Constants::MapID::The_Deep:
-    case GW::Constants::MapID::Urgozs_Warren:
-        return ScrollToOutpost(MapID, _district, _district_number);
-    default:
-        break;
+bool TravelWindow::Travel(GW::Constants::MapID MapID, GW::Constants::District _district /*= 0*/, uint32_t _district_number) {
+    if (!IsMapUnlocked(MapID)) {
+        Log::Error("[Error] Your character does not have %s unlocked", GW::Constants::NAME_FROM_ID[(uint32_t)MapID]);
+        return false;
     }
-    return UITravel(MapID, _district, _district_number);
+    if (IsAlreadyInOutpost(MapID, _district, _district_number)) {
+        Log::Error("[Error] You are already in the outpost");
+        return false;
+    }
+    switch (MapID) {
+        case GW::Constants::MapID::The_Deep:
+        case GW::Constants::MapID::Urgozs_Warren:
+            ScrollToOutpost(MapID, _district, _district_number);
+            break;
+        default:
+            UITravel(MapID, _district, _district_number);
+            break;
+    }
+    return true;
     //return GW::Map::Travel(MapID, District, district_number);
 }
 bool TravelWindow::IsMapUnlocked(GW::Constants::MapID map_id) {
@@ -871,18 +889,6 @@ void TravelWindow::UITravel(GW::Constants::MapID MapID, GW::Constants::District 
     t->region_id = RegionFromDistrict(_district);
     t->language_id = LanguageFromDistrict(_district);
 
-    if (!IsMapUnlocked(MapID)) {
-        Log::Error("[Error] Your character does not have %s unlocked",GW::Constants::NAME_FROM_ID[(uint32_t)MapID]);
-        return;
-    }
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost
-        && static_cast<int>(t->region_id) == GW::Map::GetRegion()
-        && static_cast<int>(t->language_id) == GW::Map::GetLanguage()
-        && (t->district_number == 0 || static_cast<int>(t->district_number) == GW::Map::GetDistrict())
-        && t->map_id == GW::Map::GetMapID()) {
-        Log::Error("[Error] You are already in the outpost");
-        return;
-    }
     GW::GameThread::Enqueue([t] {
         GW::UI::SendUIMessage(GW::UI::kTravel, t);
         delete t;

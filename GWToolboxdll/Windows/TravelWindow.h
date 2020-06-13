@@ -25,8 +25,8 @@ public:
 
     bool IsMapUnlocked(GW::Constants::MapID map_id);
 
-    // Travel via SendPacket, bypass "Are you sure" dialogs
-    void Travel(GW::Constants::MapID MapID, GW::Constants::District district, uint32_t district_number = 0);
+    // Travel with checks, returns false if already in outpost or outpost not unlocked
+    bool Travel(GW::Constants::MapID MapID, GW::Constants::District district, uint32_t district_number = 0);
 
     // Travel via UI interface, allowing "Are you sure" dialogs
     void UITravel(GW::Constants::MapID MapID, GW::Constants::District district,
@@ -48,8 +48,8 @@ public:
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
-    int RegionFromDistrict(GW::Constants::District district);
-    int LanguageFromDistrict(GW::Constants::District district);
+    static int RegionFromDistrict(GW::Constants::District district);
+    static int LanguageFromDistrict(GW::Constants::District district);
 
     static void CmdTP(const wchar_t *message, int argc, LPWSTR *argv);
 
