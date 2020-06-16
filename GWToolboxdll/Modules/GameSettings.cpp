@@ -156,11 +156,11 @@ namespace {
 	void SetWindowTitle(bool enabled) {
 		HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
 		if (!hwnd) return;
-		std::wstring title = L"Guild Wars";
-		if (enabled)
-			title = GetPlayerName();
-		if (!title.empty())
-			SetWindowTextW(hwnd, title.c_str());
+		if (enabled) {
+			std::wstring title = GetPlayerName();
+			if (!title.empty())
+				SetWindowTextW(hwnd, title.c_str());
+		}
 	}
 
 	GW::Player* GetPlayerByName(const wchar_t* _name) {
