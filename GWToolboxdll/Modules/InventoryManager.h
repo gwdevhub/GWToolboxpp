@@ -9,11 +9,6 @@
 #include <GWCA/Managers/ItemMgr.h>
 
 #include <ToolboxWidget.h>
-
-// @Cleanup:
-// Get rid of all the auto in this file.
-// Remove most of the code from the header.
-
 namespace GW {
     namespace Constants {
         enum class Rarity : uint8_t {
@@ -24,12 +19,8 @@ namespace GW {
 
 class InventoryManager : public ToolboxUIElement {
 public:
-    InventoryManager() {
-        current_salvage_session.salvage_item_id = 0;
-    }
-    ~InventoryManager() {
-        ClearPotentialItems();
-    }
+    InventoryManager();
+    ~InventoryManager();
     enum class SalvageAllType : uint8_t {
         None,
         White,
@@ -62,19 +53,13 @@ public:
     void Initialize() override;
     void Update(float delta) override;
     void DrawSettingInternal() override;
-    void RegisterSettingsContent() override;
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
-
-    static void CmdIdentify(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdSalvage(const wchar_t* message, int argc, LPWSTR* argv);
 
     // Find an empty (or partially empty) inventory slot that this item can go into
     std::pair<GW::Bag*, uint32_t> GetAvailableInventorySlot(GW::Item* like_item = nullptr);
     // Find an empty (or partially empty) inventory slot that this item can go into. !entire_stack = Returns slots that are the same item, but won't hold all of them.
     GW::Item* GetAvailableInventoryStack(GW::Item* like_item, bool entire_stack = false);
-    // Checks model info and struct info to make sure item is the same.
-    GW::Item* GetSameItem(GW::Item* like_item, GW::Bag* bag);
     // Checks model info and struct info to make sure item is the same.
     bool IsSameItem(GW::Item* item1, GW::Item* item2);
 
@@ -93,9 +78,9 @@ private:
     bool is_manual_item_click = false;
     bool show_salvage_all_popup = true;
     bool salvage_listeners_attached = false;
-
     bool only_use_superior_salvage_kits = false;
     bool salvage_rare_mats = false;
+
     std::map<GW::Constants::Bag, bool> bags_to_salvage_from = {
         { GW::Constants::Bag::Backpack,true },
         { GW::Constants::Bag::Belt_Pouch,true },
@@ -106,8 +91,6 @@ private:
     size_t identified_count = 0;
     size_t salvaged_count = 0;
 
-
-
     GW::Packet::StoC::SalvageSession current_salvage_session;
 
     void ContinueIdentify();
@@ -115,263 +98,35 @@ private:
 
     GW::HookEntry on_map_change_entry;
     GW::HookEntry salvage_hook_entry;
-    GW::HookEntry redo_salvage_entry;
-    GW::HookEntry redo_identify_entry;
 
     void FetchPotentialItems();
-
     void AttachSalvageListeners();
     void DetachSalvageListeners();
-    static void ClearSalvageSession(GW::HookStatus* status, ...) {
-        if(status) status->blocked = true;
-        Instance().current_salvage_session.salvage_item_id = 0;
-    };
-    void CancelSalvage() {
-        DetachSalvageListeners();
-        ClearSalvageSession(nullptr);
-        potential_salvage_all_items.clear();
-        is_salvaging = has_prompted_salvage = is_salvaging_all = false;
-        pending_salvage_item.item_id = 0;
-        pending_salvage_kit.item_id = 0;
-        salvage_all_type = SalvageAllType::None;
-        salvaged_count = 0;
-        context_item.item_id = 0;
-        pending_cancel_salvage = false;
-    }
-    void CancelIdentify() {
-        is_identifying = is_identifying_all = false;
-        pending_identify_item.item_id = 0;
-        pending_identify_kit.item_id = 0;
-        identify_all_type = IdentifyAllType::None;
-        identified_count = 0;
-        context_item.item_id = 0;
-    }
-    inline void CancelAll() {
-        ClearPotentialItems();
-        CancelSalvage();
-        CancelIdentify();
-    }
+    static void ClearSalvageSession(GW::HookStatus *status = nullptr, void * packet = nullptr);
+    void CancelSalvage();
+    void CancelIdentify();
+    void CancelAll();
 public:
     struct Item : GW::Item {
-        inline GW::ItemModifier* GetModifier(uint32_t identifier) {
-            for (size_t i = 0; i < mod_struct_size; i++) {
-                GW::ItemModifier* mod = &mod_struct[i];
-                if (mod->identifier() == identifier)
-                    return mod;
-            }
-            return nullptr;
-        }
-        inline GW::ItemModifier* GetInscription() {
-            GW::ItemModifier* m = nullptr;
-            m = GetModifier(0x2532);
-            if (!m) m = GetModifier(0xA530);
-            return m;
-        }
-        inline GW::ItemModifier* GetSuffix() {
-            GW::ItemModifier* m = nullptr;
-            if (!IsWeapon()) {
-                m = GetModifier(0x2530);
-            }
-            else {
-                // TODO: Different rules for weapons
-            }
-            return m;
-        }
-        inline GW::ItemModifier* GetPrefix() {
-            GW::ItemModifier* m = nullptr;
-            if (!IsWeapon()) {
-                m = GetModifier(0xA530);
-            }
-            else {
-                // TODO: Different rules for weapons
-            }
-            return m;
-        }
-        inline GW::Constants::Rarity GetRarity() {
-            if (IsGreen()) return GW::Constants::Rarity::Green;
-            if (IsGold()) return GW::Constants::Rarity::Gold;
-            if (IsPurple()) return GW::Constants::Rarity::Purple;
-            if (IsBlue()) return GW::Constants::Rarity::Blue;
-            return GW::Constants::Rarity::White;
-        }
-        inline uint32_t GetRequirement() {
-            auto mod = GetModifier(0x2798);
-            return mod ? mod->arg2() : 0;
-        }
-        inline GW::Constants::Attribute GetAttribute() {
-            auto mod = GetModifier(0x2798);
-            return mod ? (GW::Constants::Attribute)mod->arg1() : GW::Constants::Attribute::None;
-        }
-        inline bool GetIsIdentified() {
+        GW::ItemModifier *GetModifier(uint32_t identifier);
+        GW::Constants::Rarity GetRarity();
+        uint32_t GetUses();
+        bool IsIdentificationKit();
+        bool IsSalvageKit();
+        bool IsLesserKit();
+        bool IsExpertSalvageKit();
+        bool IsPerfectSalvageKit();
+        bool IsWeapon();
+        bool IsArmor();
+        bool IsSalvagable();
+        bool IsRareMaterial();
+        inline bool GetIsIdentified()
+        {
             return interaction & 1;
         }
-        inline bool HasInscription() {
-            return type != 11 && (GetModifier(0x2532) || GetModifier(0xA532));
-        }
-        inline uint32_t GetUses() {
-            auto mod = GetModifier(0x2458);
-            return mod ? mod->arg2() : quantity;
-        }
-        inline bool HasSalvagePopup(GW::Item* salvage_kit = nullptr) {
-            if (!IsSalvagable())
-                return false;
-            switch (GetRarity()) {
-            case GW::Constants::Rarity::White:
-                return false;
-            case GW::Constants::Rarity::Blue: // Lesser kits don't have a popup when used on blue items
-                return salvage_kit && ((Item*)salvage_kit)->IsLesserKit() == false;
-            default:
-                return true; // All other rarities (gold, purple) show a popup
-            }
-        }
-        inline bool IsKit() {
-            return type == 29;
-        }
-        inline bool IsTome() {
-            return model_id >= 21786 && model_id <= 21805;
-        }
-        inline bool IsIdentificationKit() {
-            auto mod = GetModifier(0x25E8);
-            return mod && mod->arg1() == 1;
-        }
-        inline bool IsSalvageKit() {
-            return IsLesserKit() || IsExpertSalvageKit();// || IsPerfectSalvageKit();
-        }
-        inline bool IsLesserKit() {
-            auto mod = GetModifier(0x25E8);
-            return mod && mod->arg1() == 3;
-        }
-        inline bool IsExpertSalvageKit() {
-            auto mod = GetModifier(0x25E8);
-            return mod && mod->arg1() == 2;
-        }
-        inline bool IsPerfectSalvageKit() {
-            auto mod = GetModifier(0x25E8);
-            return mod && mod->arg1() == 6;
-        }
-        inline uint32_t GetUpgradeWeaponType() {
-            auto mod = GetModifier(0x25B8u);
-            return mod ? mod->arg1() : 0u;
-        }
-        inline uint32_t GetProfession() {
-            auto mod = GetModifier(0xA4B8u);
-            return mod ? mod->arg1() : 0u;
-        }
-        inline uint32_t GetMinDamage() {
-            auto mod = GetModifier(0xA7A8u);
-            return mod ? mod->arg2() : 0u;
-        }
-        inline uint32_t GetMaxDamage() {
-            auto mod = GetModifier(0xA7A8u);
-            return mod ? mod->arg1() : 0u;
-        }
-        inline uint32_t GetArmorRating() {
-            auto mod = GetModifier(type == 0x18u ? 0xA7B8u : 0xA3C8u);
-            return mod ? mod->arg1() : 0u;
-        }
-        inline bool IsRune() {
-            return type == 8 && GetModifier(0x2530) && !GetUpgradeWeaponType();
-        }
-        inline bool IsInsignia() {
-            return type == 8 && GetModifier(0xA530) && !GetUpgradeWeaponType();
-        }
-        inline uint8_t IsRuneOrInsignia() {
-            if (IsRune()) return 1;
-            if (IsInsignia()) return 2;
-            return 0;
-        }
-        inline bool IsWeapon() {
-            switch ((GW::Constants::ItemType)type) {
-            case GW::Constants::ItemType::Axe:
-            case GW::Constants::ItemType::Sword:
-            case GW::Constants::ItemType::Shield:
-            case GW::Constants::ItemType::Scythe:
-            case GW::Constants::ItemType::Bow:
-            case GW::Constants::ItemType::Wand:
-            case GW::Constants::ItemType::Staff:
-            case GW::Constants::ItemType::Offhand:
-            case GW::Constants::ItemType::Daggers:
-            case GW::Constants::ItemType::Hammer:
-            case GW::Constants::ItemType::Spear:
-                return true;
-            default:
-                return false;
-            }
-        }
-        inline bool IsArmor() {
-            switch ((GW::Constants::ItemType)type) {
-            case GW::Constants::ItemType::Headpiece:
-            case GW::Constants::ItemType::Chestpiece:
-            case GW::Constants::ItemType::Leggings:
-            case GW::Constants::ItemType::Boots:
-            case GW::Constants::ItemType::Gloves:
-                return true;
-            default:
-                return false;
-            }
-        }
-        inline bool IsWeaponModOrInscription() {
-            return type == static_cast<uint8_t>(GW::Constants::ItemType::Rune_Mod) && !IsRuneOrInsignia();
-        }
-        inline uint32_t GetMaterialSlot() {
-            auto mod = GetModifier(0x2508);
-            return mod ? mod->arg1() : 0;
-        }
-        inline bool IsMaterial() {
-            return GetModifier(0x2508) != nullptr;
-        }
-        inline bool IsStackable() {
+        inline bool IsStackable()
+        {
             return interaction & 0x80000;
-        }
-        inline bool IsEquippable() {
-            return interaction & 0x200000;
-        }
-        inline bool IsSalvagable() {
-            if (IsUsable() || IsGreen())
-                return false; // Non-salvagable flag set
-            if (!bag) return false;
-            if (!bag->IsInventoryBag() && !bag->IsStorageBag())
-                return false;
-            if (bag->index + 1 == static_cast<uint32_t>(GW::Constants::Bag::Equipment_Pack))
-                return false;
-            switch (static_cast<GW::Constants::ItemType>(type)) {
-            case GW::Constants::ItemType::Trophy:
-                return GetRarity() == GW::Constants::Rarity::White && info_string && is_material_salvageable;
-            case GW::Constants::ItemType::Salvage:
-            case GW::Constants::ItemType::CC_Shards:
-                return true;
-            case GW::Constants::ItemType::Materials_Zcoins:
-                switch (model_id) {
-                case GW::Constants::ItemID::BoltofDamask:
-                case GW::Constants::ItemID::BoltofLinen:
-                case GW::Constants::ItemID::BoltofSilk:
-                case GW::Constants::ItemID::DeldrimorSteelIngot:
-                case GW::Constants::ItemID::ElonianLeatherSquare:
-                case GW::Constants::ItemID::LeatherSquare:
-                case GW::Constants::ItemID::LumpofCharcoal:
-                case GW::Constants::ItemID::RollofParchment:
-                case GW::Constants::ItemID::RollofVellum:
-                case GW::Constants::ItemID::SpiritwoodPlank:
-                case GW::Constants::ItemID::SteelIngot:
-                case GW::Constants::ItemID::TemperedGlassVial:
-                case GW::Constants::ItemID::VialofInk:
-                    return true;
-                default:
-                    break;
-                }
-            default:
-                break;
-            }
-            if (IsWeapon() || IsArmor())
-                return true;
-            return false;
-        }
-        inline bool IsCommonMaterial() {
-            return interaction & 0x20;
-        }
-        inline bool IsRareMaterial() {
-            auto mod = GetModifier(0x2508);
-            return mod && mod->arg1() > 11;
         }
         inline bool IsUsable() {
             return interaction & 0x1000000;
@@ -391,9 +146,7 @@ public:
     };
 public:
     Item* GetNextUnsalvagedItem(Item* salvage_kit = nullptr, Item* start_after_item = nullptr);
-    Item* GetSalvageKit(bool only_superior_kits = false);
     Item* GetNextUnidentifiedItem(Item* start_after_item = nullptr);
-    Item* GetIdentificationKit();
     void Identify(Item* item, Item* kit);
     void Salvage(Item* item, Item* kit);
 private:
@@ -403,21 +156,8 @@ private:
         GW::Constants::Bag bag = GW::Constants::Bag::None;
         uint32_t uses = 0;
         uint32_t quantity = 0;
-        bool set(Item* item) {
-            item_id = 0;
-            if (!item || !item->item_id || !item->bag) return false;
-            item_id = item->item_id;
-            slot = item->slot;
-            quantity = item->quantity;
-            uses = item->GetUses();
-            bag = static_cast<GW::Constants::Bag>(item->bag->index + 1);
-            return true;
-        }
-        Item* item() {
-            if (!item_id) return nullptr;
-            Item* item = static_cast<Item*>(GW::Items::GetItemBySlot(bag, slot + 1));
-            return item && item->item_id == item_id ? item : nullptr;
-        }
+        bool set(Item *item);
+        Item *item();
     };
     struct PotentialItem : PendingItem {
         std::wstring name;
@@ -429,12 +169,7 @@ private:
         bool sanitised = false;
     };
     std::vector<PotentialItem*> potential_salvage_all_items; // List of items that would be processed if user confirms Salvage All
-    inline void ClearPotentialItems() {
-        for (auto item : potential_salvage_all_items) {
-            delete item;
-        }
-        potential_salvage_all_items.clear();
-    }
+    void ClearPotentialItems();
     PendingItem pending_identify_item;
     PendingItem pending_identify_kit;
     PendingItem pending_salvage_item;

@@ -25,6 +25,14 @@ namespace {
         "Bag 1",
         "Bag 2"
     };
+} // namespace
+InventoryManager::InventoryManager()
+{
+    current_salvage_session.salvage_item_id = 0;
+}
+InventoryManager::~InventoryManager()
+{
+    ClearPotentialItems();
 }
 void InventoryManager::SaveSettings(CSimpleIni* ini) {
     ToolboxUIElement::SaveSettings(ini);
@@ -44,53 +52,40 @@ void InventoryManager::LoadSettings(CSimpleIni* ini) {
     bags_to_salvage_from[GW::Constants::Bag::Bag_1] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_bag_1), bags_to_salvage_from[GW::Constants::Bag::Bag_1]);
     bags_to_salvage_from[GW::Constants::Bag::Bag_2] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_bag_2), bags_to_salvage_from[GW::Constants::Bag::Bag_2]);
 }
-
-void InventoryManager::RegisterSettingsContent() {
-    ToolboxModule::RegisterSettingsContent();
+void InventoryManager::ClearSalvageSession(GW::HookStatus *status, void *)
+{
+    if (status)
+        status->blocked = true;
+    Instance().current_salvage_session.salvage_item_id = 0;
 }
-
-void InventoryManager::CmdSalvage(const wchar_t* message, int argc, LPWSTR* argv) {
-    UNREFERENCED_PARAMETER(message);
-    auto im = &Instance();
-    if (im->is_salvaging_all || im->is_salvaging)
-        return;
-    im->CancelSalvage();
-    const wchar_t* arg2 = argc > 1 ? argv[1] : L"";
-    if (wcscmp(arg2, L"blue") == 0) {
-        im->SalvageAll(SalvageAllType::BlueAndLower);
-    }
-    else if (wcscmp(arg2, L"purple") == 0) {
-        im->SalvageAll(SalvageAllType::PurpleAndLower);
-    }
-    else if (wcscmp(arg2, L"all") == 0) {
-        im->SalvageAll(SalvageAllType::GoldAndLower);
-    }
-    else {
-        Log::Warning("Syntax: /%ls blue, /%ls purple or /%ls all", argv[0], argv[0], argv[0]);
-    }
+void InventoryManager::CancelSalvage()
+{
+    DetachSalvageListeners();
+    ClearSalvageSession();
+    potential_salvage_all_items.clear();
+    is_salvaging = has_prompted_salvage = is_salvaging_all = false;
+    pending_salvage_item.item_id = 0;
+    pending_salvage_kit.item_id = 0;
+    salvage_all_type = SalvageAllType::None;
+    salvaged_count = 0;
+    context_item.item_id = 0;
+    pending_cancel_salvage = false;
 }
-void InventoryManager::CmdIdentify(const wchar_t* message, int argc, LPWSTR* argv) {
-    UNREFERENCED_PARAMETER(message);
-    auto im = &Instance();
-    im->CancelIdentify();
-    const wchar_t* arg2 = argc > 1 ? argv[1] : L"";
-    if (wcscmp(arg2, L"blue") == 0) {
-        im->IdentifyAll(IdentifyAllType::Blue);
-    }
-    else if (wcscmp(arg2, L"purple") == 0) {
-        im->IdentifyAll(IdentifyAllType::Purple);
-    }
-    else if (wcscmp(arg2, L"gold") == 0) {
-        im->IdentifyAll(IdentifyAllType::Gold);
-    }
-    else if (wcscmp(arg2, L"all") == 0) {
-        im->IdentifyAll(IdentifyAllType::All);
-    }
-    else {
-        Log::Warning("Syntax: /%ls blue, /%ls purple, /%ls gold or /%ls all", argv[0], argv[0], argv[0], argv[0]);
-    }
+void InventoryManager::CancelIdentify()
+{
+    is_identifying = is_identifying_all = false;
+    pending_identify_item.item_id = 0;
+    pending_identify_kit.item_id = 0;
+    identify_all_type = IdentifyAllType::None;
+    identified_count = 0;
+    context_item.item_id = 0;
 }
-
+void InventoryManager::CancelAll()
+{
+    ClearPotentialItems();
+    CancelSalvage();
+    CancelIdentify();
+}
 void InventoryManager::AttachSalvageListeners() {
     if (salvage_listeners_attached)
         return;
@@ -99,8 +94,7 @@ void InventoryManager::AttachSalvageListeners() {
     GW::StoC::RegisterPacketCallback(&salvage_hook_entry, GW::Packet::StoC::SalvageSessionItemKept::STATIC_HEADER, &ClearSalvageSession);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SalvageSessionSuccess>(
         &salvage_hook_entry,
-        [this](GW::HookStatus* status, GW::Packet::StoC::SalvageSessionSuccess* packet) {
-            UNREFERENCED_PARAMETER(packet);
+        [this](GW::HookStatus* status, GW::Packet::StoC::SalvageSessionSuccess*) {
             ClearSalvageSession(status);
             GW::CtoS::SendPacket(0x4, GAME_CMSG_ITEM_SALVAGE_SESSION_DONE);
         });
@@ -137,8 +131,8 @@ void InventoryManager::IdentifyAll(IdentifyAllType type) {
         CancelIdentify();
         return;
     }
-    Item* kit = GetIdentificationKit();
-    if (!kit) {
+    Item *kit = context_item.item();
+    if (!kit || !kit->IsIdentificationKit()) {
         CancelIdentify();
         Log::Warning("No more identification kit uses");
         return;
@@ -165,7 +159,7 @@ void InventoryManager::ContinueSalvage() {
     Item* current_item = pending_salvage_item.item();
     if (current_item && current_salvage_session.salvage_item_id != 0) {
         // Popup dialog for salvage; salvage materials and cycle.
-        ClearSalvageSession(nullptr);
+        ClearSalvageSession();
         GW::CtoS::SendPacket(0x4, GAME_CMSG_ITEM_SALVAGE_MATERIALS);
         pending_salvage_at = (clock() / CLOCKS_PER_SEC);
         is_salvaging = true;
@@ -208,8 +202,8 @@ void InventoryManager::SalvageAll(SalvageAllType type) {
         CancelSalvage();
         return;
     }
-    Item* kit = GetSalvageKit(only_use_superior_salvage_kits);
-    if (!kit) {
+    Item *kit = context_item.item();
+    if (!kit || !kit->IsSalvageKit()) {
         CancelSalvage();
         Log::Warning("No more salvage kit uses");
         return;
@@ -225,7 +219,7 @@ void InventoryManager::SalvageAll(SalvageAllType type) {
         Log::Warning("No more space in inventory");
         return;
     }
-    auto ref = *potential_salvage_all_items.begin();
+    PotentialItem* ref = *potential_salvage_all_items.begin();
     if (!ref->proceed) {
         delete ref;
         potential_salvage_all_items.erase(potential_salvage_all_items.begin());
@@ -242,10 +236,6 @@ void InventoryManager::SalvageAll(SalvageAllType type) {
 }
 void InventoryManager::Initialize() {
     ToolboxUIElement::Initialize();
-    GW::Chat::CreateCommand(L"salvage", CmdSalvage);
-    GW::Chat::CreateCommand(L"salv", CmdSalvage);
-    GW::Chat::CreateCommand(L"identify", CmdIdentify);
-    GW::Chat::CreateCommand(L"id", CmdIdentify);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&on_map_change_entry, [this](...) {
         CancelAll();
         });
@@ -386,7 +376,7 @@ InventoryManager::Item* InventoryManager::GetNextUnsalvagedItem(Item* kit, Item*
                 continue; // Don't salvage armor, or customised weapons.
             if (item->IsBlue() && !item->GetIsIdentified() && (kit && kit->IsLesserKit()))
                 continue; // Note: lesser kits cant salvage blue unids - Guild Wars bug/feature
-            auto rarity = item->GetRarity();
+            GW::Constants::Rarity rarity = item->GetRarity();
             switch (rarity) {
             case GW::Constants::Rarity::Gold:
                 if (!item->GetIsIdentified()) continue;
@@ -405,66 +395,6 @@ InventoryManager::Item* InventoryManager::GetNextUnsalvagedItem(Item* kit, Item*
             default:
                 break;
             }
-        }
-    }
-    return nullptr;
-}
-InventoryManager::Item* InventoryManager::GetSalvageKit(bool only_superior_kits) {
-    size_t start_bag = static_cast<size_t>(GW::Constants::Bag::Backpack);
-    size_t end_bag = static_cast<size_t>(GW::Constants::Bag::Bag_2);
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
-        end_bag = static_cast<size_t>(GW::Constants::Bag::Storage_14);
-    size_t items_found = 0;
-    Item* item = context_item.item();
-    if (item && item->IsSalvageKit()) {
-        return item;
-    }
-    // NOTE: the following code would normally fetch another kit, but its not a good idea to presume the player wants this to happen for salvage kits.
-    if (!context_item.item_id) {
-        // If no context item, this wasn't triggered via a right click - probably /salvage all command. In this case, its ok to find a kit.
-        for (size_t bag_i = start_bag; bag_i <= end_bag; bag_i++) {
-            GW::Bag* bag = GW::Items::GetBag(bag_i);
-            if (!bag) continue;
-            GW::ItemArray items = bag->items;
-            items_found = 0;
-            for (size_t i = 0; i < items.size() && items_found < bag->items_count; i++) {
-                item = static_cast<Item*>(items[i]);
-                if (!item)
-                    continue;
-                items_found++;
-                if (!item->IsSalvageKit())
-                    continue;
-                if (only_superior_kits && !item->IsExpertSalvageKit())
-                    continue;
-                return item;
-            }
-        }
-    }
-    return nullptr;
-}
-InventoryManager::Item* InventoryManager::GetIdentificationKit() {
-    size_t start_bag = static_cast<size_t>(GW::Constants::Bag::Backpack);
-    size_t end_bag = static_cast<size_t>(GW::Constants::Bag::Equipment_Pack);
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
-        end_bag = static_cast<size_t>(GW::Constants::Bag::Storage_14);
-    size_t items_found = 0;
-    Item* item = context_item.item();
-    if (item && item->IsIdentificationKit()) {
-        return item;
-    }
-    
-    for (size_t bag_i = start_bag; bag_i <= end_bag; bag_i++) {
-        GW::Bag* bag = GW::Items::GetBag(bag_i);
-        if (!bag) continue;
-        GW::ItemArray items = bag->items;
-        items_found = 0;
-        for (size_t i = 0; i < items.size() && items_found < bag->items_count; i++) {
-            item = static_cast<Item*>(items[i]);
-            if (!item)
-                continue;
-            items_found++;
-            if (item->IsIdentificationKit())
-                return item;
         }
     }
     return nullptr;
@@ -498,7 +428,7 @@ GW::Item* InventoryManager::GetAvailableInventoryStack(GW::Item* like_item, bool
     for (size_t bag_idx = static_cast<size_t>(GW::Constants::Bag::Backpack); bag_idx < static_cast<size_t>(GW::Constants::Bag::Equipment_Pack); bag_idx++) {
         GW::Bag* bag = bags[bag_idx];
         if (!bag || !bag->items_count || !bag->items.valid()) continue;
-        for (auto item : bag->items) {
+        for (GW::Item* item : bag->items) {
             if (!item || like_item->item_id == item->item_id || !IsSameItem(like_item, item) || item->quantity == 250)
                 continue;
             if (entire_stack && 250 - item->quantity < like_item->quantity)
@@ -508,15 +438,6 @@ GW::Item* InventoryManager::GetAvailableInventoryStack(GW::Item* like_item, bool
         }
     }
     return best_item;
-}
-GW::Item* InventoryManager::GetSameItem(GW::Item* like_item, GW::Bag* bag) {
-    if (!bag || !bag->items_count || !bag->items.valid())
-        return nullptr;
-    for (auto item : bag->items) {
-        if (item && item->item_id != like_item->item_id && IsSameItem(like_item, item))
-            return item;
-    }
-    return nullptr;
 }
 bool InventoryManager::IsSameItem(GW::Item* item1, GW::Item* item2) {
     return item1 && item2
@@ -776,22 +697,180 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
 void InventoryManager::ItemClickCallback(GW::HookStatus* status, uint32_t type, uint32_t slot, GW::Bag* bag) {
     if (!ImGui::IsKeyDown(VK_CONTROL)) return;
     if (type != 7) return;
-    auto im = &InventoryManager::Instance();
-    if (im->is_manual_item_click) return;
+    InventoryManager& im = InventoryManager::Instance();
+    if (im.is_manual_item_click) return;
     Item* item = static_cast<Item*>(GW::Items::GetItemBySlot(bag,slot + 1));
     if (!item || !(item->IsIdentificationKit() || item->IsSalvageKit()))
         return;
     if (!item->bag || !item->bag->IsInventoryBag())
         return;
-    if (im->context_item.item_id == item->item_id && im->show_item_context_menu)
+    if (im.context_item.item_id == item->item_id && im.show_item_context_menu)
         return; // Double looped.
-    if (im->context_item.set(item)) {
-        im->show_item_context_menu = true;
-        im->context_item_name_ws.clear();
-        im->context_item_name_s.clear();
-        GW::UI::AsyncDecodeStr(item->name_enc, &im->context_item_name_ws);
+    if (im.context_item.set(item)) {
+        im.show_item_context_menu = true;
+        im.context_item_name_ws.clear();
+        im.context_item_name_s.clear();
+        GW::UI::AsyncDecodeStr(item->name_enc, &im.context_item_name_ws);
         status->blocked = true;
     }
 
     return;
+}
+void InventoryManager::ClearPotentialItems()
+{
+    for (PotentialItem* item : potential_salvage_all_items) {
+        delete item;
+    }
+    potential_salvage_all_items.clear();
+}
+bool InventoryManager::Item::IsSalvagable()
+{
+    if (IsUsable() || IsGreen())
+        return false; // Non-salvagable flag set
+    if (!bag)
+        return false;
+    if (!bag->IsInventoryBag() && !bag->IsStorageBag())
+        return false;
+    if (bag->index + 1 == static_cast<uint32_t>(GW::Constants::Bag::Equipment_Pack))
+        return false;
+    switch (static_cast<GW::Constants::ItemType>(type)) {
+        case GW::Constants::ItemType::Trophy:
+            return GetRarity() == GW::Constants::Rarity::White && info_string && is_material_salvageable;
+        case GW::Constants::ItemType::Salvage:
+        case GW::Constants::ItemType::CC_Shards:
+            return true;
+        case GW::Constants::ItemType::Materials_Zcoins:
+            switch (model_id) {
+                case GW::Constants::ItemID::BoltofDamask:
+                case GW::Constants::ItemID::BoltofLinen:
+                case GW::Constants::ItemID::BoltofSilk:
+                case GW::Constants::ItemID::DeldrimorSteelIngot:
+                case GW::Constants::ItemID::ElonianLeatherSquare:
+                case GW::Constants::ItemID::LeatherSquare:
+                case GW::Constants::ItemID::LumpofCharcoal:
+                case GW::Constants::ItemID::RollofParchment:
+                case GW::Constants::ItemID::RollofVellum:
+                case GW::Constants::ItemID::SpiritwoodPlank:
+                case GW::Constants::ItemID::SteelIngot:
+                case GW::Constants::ItemID::TemperedGlassVial:
+                case GW::Constants::ItemID::VialofInk:
+                    return true;
+                default:
+                    break;
+            }
+        default:
+            break;
+    }
+    if (IsWeapon() || IsArmor())
+        return true;
+    return false;
+}
+bool InventoryManager::Item::IsWeapon()
+{
+    switch ((GW::Constants::ItemType)type) {
+        case GW::Constants::ItemType::Axe:
+        case GW::Constants::ItemType::Sword:
+        case GW::Constants::ItemType::Shield:
+        case GW::Constants::ItemType::Scythe:
+        case GW::Constants::ItemType::Bow:
+        case GW::Constants::ItemType::Wand:
+        case GW::Constants::ItemType::Staff:
+        case GW::Constants::ItemType::Offhand:
+        case GW::Constants::ItemType::Daggers:
+        case GW::Constants::ItemType::Hammer:
+        case GW::Constants::ItemType::Spear:
+            return true;
+        default:
+            return false;
+    }
+}
+bool InventoryManager::Item::IsArmor()
+{
+    switch ((GW::Constants::ItemType)type) {
+        case GW::Constants::ItemType::Headpiece:
+        case GW::Constants::ItemType::Chestpiece:
+        case GW::Constants::ItemType::Leggings:
+        case GW::Constants::ItemType::Boots:
+        case GW::Constants::ItemType::Gloves:
+            return true;
+        default:
+            return false;
+    }
+}
+GW::ItemModifier *InventoryManager::Item::GetModifier(uint32_t identifier)
+{
+    for (size_t i = 0; i < mod_struct_size; i++) {
+        GW::ItemModifier *mod = &mod_struct[i];
+        if (mod->identifier() == identifier)
+            return mod;
+    }
+    return nullptr;
+}
+// InventoryManager::Item definitions
+
+uint32_t InventoryManager::Item::GetUses()
+{
+    GW::ItemModifier* mod = GetModifier(0x2458);
+    return mod ? mod->arg2() : quantity;
+}
+bool InventoryManager::Item::IsSalvageKit()
+{
+    return IsLesserKit() || IsExpertSalvageKit(); // || IsPerfectSalvageKit();
+}
+bool InventoryManager::Item::IsIdentificationKit()
+{
+    GW::ItemModifier *mod = GetModifier(0x25E8);
+    return mod && mod->arg1() == 1;
+}
+bool InventoryManager::Item::IsLesserKit() 
+{
+    GW::ItemModifier *mod = GetModifier(0x25E8);
+    return mod && mod->arg1() == 3;
+}
+bool InventoryManager::Item::IsExpertSalvageKit()
+{
+    GW::ItemModifier *mod = GetModifier(0x25E8);
+    return mod && mod->arg1() == 2;
+}
+bool InventoryManager::Item::IsPerfectSalvageKit()
+{
+    GW::ItemModifier *mod = GetModifier(0x25E8);
+    return mod && mod->arg1() == 6;
+}
+bool InventoryManager::Item::IsRareMaterial()
+{
+    GW::ItemModifier *mod = GetModifier(0x2508);
+    return mod && mod->arg1() > 11;
+}
+GW::Constants::Rarity InventoryManager::Item::GetRarity()
+{
+    if (IsGreen())
+        return GW::Constants::Rarity::Green;
+    if (IsGold())
+        return GW::Constants::Rarity::Gold;
+    if (IsPurple())
+        return GW::Constants::Rarity::Purple;
+    if (IsBlue())
+        return GW::Constants::Rarity::Blue;
+    return GW::Constants::Rarity::White;
+}
+bool InventoryManager::PendingItem::set(InventoryManager::Item *item)
+{
+    item_id = 0;
+    if (!item || !item->item_id || !item->bag)
+        return false;
+    item_id = item->item_id;
+    slot = item->slot;
+    quantity = item->quantity;
+    uses = item->GetUses();
+    bag = static_cast<GW::Constants::Bag>(item->bag->index + 1);
+    return true;
+}
+
+InventoryManager::Item *InventoryManager::PendingItem::item()
+{
+    if (!item_id)
+        return nullptr;
+    Item *item = static_cast<Item *>(GW::Items::GetItemBySlot(bag, slot + 1));
+    return item && item->item_id == item_id ? item : nullptr;
 }
