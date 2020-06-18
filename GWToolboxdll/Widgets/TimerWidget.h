@@ -1,6 +1,8 @@
 #pragma once
 
 #include <GWCA/Constants/Skills.h>
+#include <GWCA/Utilities/Hook.h>
+#include <GWCA/Packets/StoC.h>
 
 #include <ToolboxWidget.h>
 
@@ -25,7 +27,7 @@ public:
         return instance;
     }
     const char* Name() const override { return "Timer"; }
-
+    void Initialize() override;
     void LoadSettings(CSimpleIni *ini) override;
     void SaveSettings(CSimpleIni *ini) override;
     void DrawSettingInternal() override;
@@ -41,8 +43,10 @@ private:
     bool GetDeepTimer();
     bool GetDhuumTimer();
     bool GetTrapTimer();
+    bool GetDoATimer();
     bool GetSpiritTimer();
 
+    void DisplayDialogue(GW::Packet::StoC::DisplayDialogue* packet);
     
     std::map<GW::Constants::SkillID, char*> spirit_effects{
         {GW::Constants::SkillID::Edge_of_Extinction,"EoE"},
@@ -61,7 +65,7 @@ private:
 
     bool hide_in_outpost = false;
     bool click_to_print_time = false;
-    bool show_extra_timers = false;
+    bool show_extra_timers = true;
     bool show_spirit_timers = true;
     std::map<GW::Constants::SkillID, bool*> spirit_effects_enabled{
         {GW::Constants::SkillID::Edge_of_Extinction,new bool(true)},
@@ -72,4 +76,9 @@ private:
     char extra_buffer[32] = "";
     char spirits_buffer[128] = "";
     ImColor extra_color = 0;
+
+    unsigned long cave_start = 0;
+    GW::HookEntry DisplayDialogue_Entry;
+    GW::HookEntry GameSrvTransfer_Entry;
+    const uint32_t CAVE_SPAWN_INTERVALS[12] = {12, 12, 12, 12, 12, 12, 10, 10, 10, 10, 10, 10};
 };
