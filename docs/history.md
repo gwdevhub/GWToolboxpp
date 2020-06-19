@@ -7,7 +7,7 @@ Previous releases are provided as dll files. If you are looking for the latest v
 
 In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in the same folder as `GWToolbox.exe`, run the exe with the `/localdll` parameter, and disable automatic updates from within GWToolbox.
 
-## Version 3.8
+## Version 3.8.1
 * [New] Added DoA cave timer to timer widget
 * [Minor] Removed salvage/identify chat commands
 * [Minor] Hotkeys will now only trigger if GW window is in focus
@@ -23,7 +23,7 @@ In order to use these older DLL versions, you need to put `GWToolboxdll.dll` in 
 * [Fix] Fixed buffer overflow crash when moving district in Deep/Urgoz
 * [Fix] Fixed crash when closing Guild Wars in Windows 8
 
-[Download](https://github.com/HasKha/GWToolboxpp/releases/download/3.8_Release/GWToolboxdll.dll)
+[Download](https://github.com/HasKha/GWToolboxpp/releases/download/3.8.1_Release/GWToolboxdll.dll)
 
 ## Version 3.7
 * [Fix] Fixed bug preventing materials from being ctrl+clicked to store when storage is > 250
