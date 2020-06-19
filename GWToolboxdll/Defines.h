@@ -1,7 +1,7 @@
 #pragma once
 
-#define GWTOOLBOX_VERSION "3.7"				// Enter main version here. Should match with server version file.
-#define GWTOOLBOX_MODULE_VERSION 3,7,0,0	// Used for Dll Module Info, see GWToolbox.rc
+#define GWTOOLBOX_VERSION "3.8"				// Enter main version here. Should match with server version file.
+#define GWTOOLBOX_MODULE_VERSION 3,8,0,0	// Used for Dll Module Info, see GWToolbox.rc
 #define BETA_VERSION "" // enter something like "Beta 1". Internally we only check if not empty
 #define GWTOOLBOX_WEBSITE "https://haskha.github.io/GWToolboxpp/"
 
