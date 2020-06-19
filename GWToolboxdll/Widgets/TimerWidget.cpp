@@ -322,7 +322,7 @@ bool TimerWidget::GetDoATimer() {
         return false;
 
     uint32_t timer = 0;
-    if (time_since_previous_wave > CAVE_SPAWN_INTERVALS[currentWave])
+    if (time_since_previous_wave < CAVE_SPAWN_INTERVALS[currentWave])
         timer = CAVE_SPAWN_INTERVALS[currentWave] - time_since_previous_wave;
 
     snprintf(extra_buffer, 32, "Wave %d: %d", currentWave + 1, timer);
