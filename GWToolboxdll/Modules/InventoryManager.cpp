@@ -7,6 +7,7 @@
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/MemoryMgr.h>
 
 #include <Logger.h>
 #include <GuiUtils.h>
@@ -25,6 +26,10 @@ namespace {
         "Bag 1",
         "Bag 2"
     };
+    static bool IsMapReady()
+    {
+        return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && !GW::Map::GetIsObserving() && GW::MemoryMgr::GetGWWindowHandle() == GetActiveWindow();
+    }
 } // namespace
 InventoryManager::InventoryManager()
 {
@@ -134,14 +139,14 @@ void InventoryManager::IdentifyAll(IdentifyAllType type) {
     Item *kit = context_item.item();
     if (!kit || !kit->IsIdentificationKit()) {
         CancelIdentify();
-        Log::Warning("No more identification kit uses");
+        Log::Warning("The identification kit was consumed");
         return;
     }
     Identify(unid, kit);
 }
 void InventoryManager::ContinueIdentify() {
     is_identifying = false;
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
+    if (!IsMapReady()) {
         CancelIdentify();
         return;
     }
@@ -155,6 +160,9 @@ void InventoryManager::ContinueSalvage() {
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
         CancelSalvage();
         return;
+    }
+    if (!IsMapReady()) {
+        pending_cancel_salvage = true;
     }
     Item* current_item = pending_salvage_item.item();
     if (current_item && current_salvage_session.salvage_item_id != 0) {
@@ -205,7 +213,7 @@ void InventoryManager::SalvageAll(SalvageAllType type) {
     Item *kit = context_item.item();
     if (!kit || !kit->IsSalvageKit()) {
         CancelSalvage();
-        Log::Warning("No more salvage kit uses");
+        Log::Warning("The salvage kit was consumed");
         return;
     }
     if (!potential_salvage_all_items.size()) {

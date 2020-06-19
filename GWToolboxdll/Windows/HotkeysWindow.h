@@ -27,6 +27,7 @@ public:
 
     TBHotkey* current_hotkey = nullptr;
 
+    bool IsMapReady();
     // Update. Will always be called every frame.
     void Update(float delta) override;
 
@@ -47,6 +48,8 @@ private:
 
     bool clickerActive = false;             // clicker is active or not
     bool dropCoinsActive = false;           // coin dropper is active or not
+
+    bool map_change_triggered = false;
 
     clock_t clickerTimer = 0;               // timer for clicker
     clock_t dropCoinsTimer = 0;             // timer for coin dropper

@@ -56,9 +56,8 @@ namespace {
 
     static bool IsMapReady()
     {
-        return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && !GW::Map::GetIsObserving();
+        return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && !GW::Map::GetIsObserving()  && GW::MemoryMgr::GetGWWindowHandle() == GetActiveWindow();
     }
-
 
     static void TargetNearest(uint32_t model_id = 0, uint32_t type = 0xDB)
     {

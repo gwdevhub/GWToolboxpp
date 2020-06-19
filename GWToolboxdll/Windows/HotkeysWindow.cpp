@@ -7,6 +7,8 @@
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/MemoryMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
 
 #include <GuiUtils.h>
 #include <Keys.h>
@@ -26,6 +28,10 @@ void HotkeysWindow::Terminate() {
     for (TBHotkey* hotkey : hotkeys) {
         delete hotkey;
     }
+}
+bool HotkeysWindow::IsMapReady()
+{
+    return GW::Map::GetIsMapLoaded() && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && !GW::Map::GetIsObserving();
 }
 
 void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
@@ -180,7 +186,8 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
     UNREFERENCED_PARAMETER(lParam);
     if (GW::Chat::GetIsTyping())
         return false;
-
+    if (GW::MemoryMgr::GetGWWindowHandle() != GetActiveWindow())
+        return false;
     long keyData = 0;
     switch (Message) {
     case WM_KEYDOWN:
@@ -262,14 +269,16 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
     }
 }
 void HotkeysWindow::MapChanged() {
-    static bool map_change_triggered = false;
+    if (map_change_triggered)
+        return;
+    if (!IsMapReady())
+        return;
     GW::AgentLiving* p = GW::Agents::GetPlayerAsAgentLiving();
     if (!p) return;
     map_id = (uint32_t)GW::Map::GetMapID();
     prof_id = p->primary;
-    map_change_triggered = false;
     GW::Constants::InstanceType mt = GW::Map::GetInstanceType();
-    if (!map_change_triggered && mt != GW::Constants::InstanceType::Loading) {
+    if (mt != GW::Constants::InstanceType::Loading) {
         for (TBHotkey* hk : hotkeys) {
             if (!block_hotkeys && hk->active
                 && ((hk->trigger_on_explorable && mt == GW::Constants::InstanceType::Explorable)
@@ -291,9 +300,12 @@ void HotkeysWindow::MapChanged() {
 
 void HotkeysWindow::Update(float delta) {
     UNREFERENCED_PARAMETER(delta);
-    if (!GW::Map::GetIsMapLoaded())
-        map_id = prof_id = 0;
-    else if (!map_id)
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
+        if (map_change_triggered)
+            map_change_triggered = false;
+        return;
+    }
+    if (!map_change_triggered)
         MapChanged();
     if (clickerActive && TIMER_DIFF(clickerTimer) > 20) {
         clickerTimer = TIMER_INIT();

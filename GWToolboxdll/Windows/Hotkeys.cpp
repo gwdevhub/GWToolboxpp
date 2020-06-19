@@ -20,6 +20,7 @@
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
+#include <GWCA/Managers/MemoryMgr.h>
 
 #include <ImGuiAddons.h>
 #include <Keys.h>
@@ -98,7 +99,7 @@ TBHotkey::TBHotkey(CSimpleIni *ini, const char *section)
 }
 bool TBHotkey::CanUse()
 {
-    return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && !GW::Map::GetIsObserving();
+    return !isLoading() && !GW::Map::GetIsObserving() && GW::MemoryMgr::GetGWWindowHandle() == GetActiveWindow();
 }
 void TBHotkey::Save(CSimpleIni *ini, const char *section) const
 {
@@ -400,7 +401,7 @@ void HotkeySendChat::Draw()
 }
 void HotkeySendChat::Execute()
 {
-    if (isLoading())
+    if (!CanUse())
         return;
     if (show_message_in_emote_channel && channel == L'/') {
         Log::Info("/%s", message);
@@ -523,7 +524,7 @@ bool HotkeyEquipItem::IsEquippable(GW::Item *_item)
 }
 void HotkeyEquipItem::Execute()
 {
-    if (isLoading())
+    if (!CanUse())
         return;
     if (!ongoing) {
         if (bag_idx < 1 || bag_idx > 5 || slot_idx < 1 || slot_idx > 25) {
