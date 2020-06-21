@@ -77,10 +77,6 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
     if (!info->players.valid()) return;
     // note: info->heroes, ->henchmen, and ->others CAN be invalid during normal use.
 
-    const GW::AgentEffectsArray &effects = GW::Effects::GetPartyEffectArray();
-    if (!effects.valid() || !effects.size())
-        return;
-
     // ==== Get bonds ====
     // @Cleanup: This doesn't need to be done every frame - only when player skills have changed
     if (!FetchBondSkills())
@@ -91,6 +87,8 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
     // @Cleanup: This doesn't need to be done every frame - only when the party has been changed
     if (!FetchPartyInfo())
         return;
+
+    const GW::AgentEffectsArray &effects = GW::Effects::GetPartyEffectArray();
 
     // ==== Draw ====
     const size_t img_size = row_height > 0 ? row_height : GuiUtils::GetPartyHealthbarHeight();
@@ -117,26 +115,34 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
         };
 
         bool handled_click = false;
-        const GW::BuffArray &buffs = effects[0].buffs; // first one is for players, after are heroes
-        for (unsigned int i = 0; i < buffs.size(); ++i) {
-            DWORD agent = buffs[i].target_agent_id;
-            DWORD skill = buffs[i].skill_id;
-            if (party_map.find(agent) == party_map.end()) continue; // bond target not in party
-            if (bond_map.find(skill) == bond_map.end()) continue; // bond with a skill not in skillbar 
-            size_t y = party_map[agent];
-            size_t x = bond_map[skill];
-            Bond bond = GetBondBySkillID(skill);
-            ImVec2 tl = GetGridPos(x, y, true);
-            ImVec2 br = GetGridPos(x, y, false);
-            ImGui::GetWindowDrawList()->AddImage((ImTextureID)textures[bond], tl, br);
-            if (click_to_drop && ImGui::IsMouseHoveringRect(tl, br) && ImGui::IsMouseReleased(0)) {
-                GW::Effects::DropBuff(buffs[i].buff_id);
-                handled_click = true;
+        const size_t effect_cnt = effects.valid() ? effects.size() : 0;
+        const size_t buff_cnt = effect_cnt > 0 && effects[0].buffs.valid() ? effects[0].buffs.size() : 0;
+        
+        if (buff_cnt > 0) {
+            const GW::BuffArray &buffs = effects[0].buffs; // first one is for players, after are heroes
+            for (unsigned int i = 0; i < buffs.size(); ++i) {
+                DWORD agent = buffs[i].target_agent_id;
+                DWORD skill = buffs[i].skill_id;
+                if (party_map.find(agent) == party_map.end())
+                    continue; // bond target not in party
+                if (bond_map.find(skill) == bond_map.end())
+                    continue; // bond with a skill not in skillbar
+                size_t y = party_map[agent];
+                size_t x = bond_map[skill];
+                Bond bond = GetBondBySkillID(skill);
+                ImVec2 tl = GetGridPos(x, y, true);
+                ImVec2 br = GetGridPos(x, y, false);
+                ImGui::GetWindowDrawList()->AddImage((ImTextureID)textures[bond], tl, br);
+                if (click_to_drop && ImGui::IsMouseHoveringRect(tl, br) && ImGui::IsMouseReleased(0)) {
+                    GW::Effects::DropBuff(buffs[i].buff_id);
+                    handled_click = true;
+                }
             }
         }
+        
 
         // Player and hero effects that aren't bonds
-        for (unsigned int i = 0; i < effects.size(); ++i) {
+        for (unsigned int i = 0; i < effect_cnt; ++i) {
             const GW::EffectArray& agentEffects = effects[i].effects;
             DWORD agent = effects[i].agent_id;
             for (unsigned int j = 0; j < agentEffects.size(); ++j) {
