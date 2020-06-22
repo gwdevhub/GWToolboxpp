@@ -33,7 +33,7 @@ public:
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
     uint32_t GetAlcoholTitlePoints(); // Gets current alcohol title points.
-    void AlcUpdate(GW::Packet::StoC::PostProcess *packet);
+    static void AlcUpdate(GW::HookStatus *, GW::Packet::StoC::PostProcess *packet);
 
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;

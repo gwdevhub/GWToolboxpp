@@ -24,12 +24,7 @@ void AlcoholWidget::Initialize() {
     // last time the player used a drink
     last_alcohol = 0;
     alcohol_level = 0;
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PostProcess>(
-        &PostProcess_Entry,
-        [this](GW::HookStatus* status, GW::Packet::StoC::PostProcess* pak) {
-            UNREFERENCED_PARAMETER(status);
-            AlcUpdate(pak);
-        });
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PostProcess>(&PostProcess_Entry, &AlcoholWidget::AlcUpdate);
 }
 uint32_t AlcoholWidget::GetAlcoholTitlePoints() {
     GW::GameContext* gameContext = GW::GameContext::instance();
@@ -55,34 +50,35 @@ void AlcoholWidget::Update(float delta) {
 uint32_t AlcoholWidget::GetAlcoholLevel() {
     return alcohol_level;
 }
-void AlcoholWidget::AlcUpdate(GW::Packet::StoC::PostProcess *packet) {
-    uint32_t pts_gained = GetAlcoholTitlePointsGained();
+void AlcoholWidget::AlcUpdate(GW::HookStatus*, GW::Packet::StoC::PostProcess *packet) {
+    AlcoholWidget &instance = Instance();
+    uint32_t pts_gained = instance.GetAlcoholTitlePointsGained();
     //Log::Info("Drunk effect %d / %d, %d pts gained", packet->tint, packet->level, pts_gained);
     if (packet->tint == 6) {
         // Tint 6, level 5 - the trouble zone for lunars!
-        if (packet->level == 5 && (prev_packet_tint_6_level < packet->level-1 || (prev_packet_tint_6_level == 5 && pts_gained < 1))) {
+        if (packet->level == 5 && (instance.prev_packet_tint_6_level < packet->level - 1 || (instance.prev_packet_tint_6_level == 5 && pts_gained < 1))) {
             // If we've jumped a level, or the last packet was also level 5 and no points were gained, then its not alcohol.
             // NOTE: All alcohol progresses from 1 to 5, but lunars just dive in at level 5.
             //Log::Info("Lunars detected");
             return;
         }
-        prev_packet_tint_6_level = packet->level;
+        instance.prev_packet_tint_6_level = packet->level;
     }
     // if the player used a drink
-    if (packet->level > alcohol_level){
+    if (packet->level > instance.alcohol_level) {
         // if the player already had a drink going
-        if (alcohol_level) {
+        if (instance.alcohol_level) {
             // set remaining time
-            alcohol_time = (int)((long)alcohol_time + (long)last_alcohol - (long)time(NULL));
+            instance.alcohol_time = (int)((long)instance.alcohol_time + (long)instance.last_alcohol - (long)time(NULL));
         }
         // add drink time
-        alcohol_time += 60 * (int)(packet->level - alcohol_level);
-        last_alcohol = time(NULL);
-    } else if (packet->level <= alcohol_level) {
-        alcohol_time = 60 * (int)packet->level;
-        last_alcohol = time(NULL);
+        instance.alcohol_time += 60 * (int)(packet->level - instance.alcohol_level);
+        instance.last_alcohol = time(NULL);
+    } else if (packet->level <= instance.alcohol_level) {
+        instance.alcohol_time = 60 * (int)packet->level;
+        instance.last_alcohol = time(NULL);
     }
-    alcohol_level = packet->level;
+    instance.alcohol_level = packet->level;
 }
 
 void AlcoholWidget::Draw(IDirect3DDevice9* pDevice) {
