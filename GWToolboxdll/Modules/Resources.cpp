@@ -22,6 +22,7 @@ void Resources::Initialize() {
     });
 }
 void Resources::Terminate() {
+    ToolboxModule::Terminate();
     should_stop = true;
     if (worker.joinable()) worker.join();
 }

@@ -30,6 +30,7 @@
 
 void Minimap::Terminate()
 {
+    ToolboxWidget::Terminate();
     range_renderer.Invalidate();
     pmap_renderer.Invalidate();
     agent_renderer.Invalidate();

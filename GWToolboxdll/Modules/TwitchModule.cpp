@@ -176,6 +176,7 @@ void TwitchModule::Disconnect() {
     connected = conn.is_connected();
 }
 void TwitchModule::Terminate() {
+    ToolboxModule::Terminate();
     Disconnect();
 }
 bool TwitchModule::Connect() {

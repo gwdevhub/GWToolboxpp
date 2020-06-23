@@ -68,6 +68,9 @@ public:
     IdentifyAllType identify_all_type = IdentifyAllType::None;
     SalvageAllType salvage_all_type = SalvageAllType::None;
 
+protected:
+    void ShowVisibleRadio() override {};
+
 private:
     bool show_item_context_menu = false;
     bool is_identifying = false;

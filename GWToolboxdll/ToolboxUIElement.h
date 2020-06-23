@@ -48,6 +48,6 @@ protected:
     bool is_resizable = true;
     bool is_movable = true;
 
-    void ShowVisibleRadio();
+    virtual void ShowVisibleRadio();
     IDirect3DTexture9* button_texture = nullptr;
 };

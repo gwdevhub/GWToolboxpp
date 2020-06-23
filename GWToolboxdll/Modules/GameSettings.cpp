@@ -1034,6 +1034,7 @@ void GameSettings::RegisterSettingsContent() {
 }
 
 void GameSettings::Terminate() {
+    ToolboxModule::Terminate();
     ctrl_click_patch.Reset();
     tome_patch.Reset();
     gold_confirm_patch.Reset();

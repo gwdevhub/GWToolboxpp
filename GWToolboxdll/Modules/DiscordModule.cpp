@@ -264,6 +264,7 @@ void DiscordModule::InviteUser(DiscordUser* user) {
     app.activities->send_invite(app.activities, user->id, EDiscordActivityActionType::DiscordActivityActionType_Join, invite_str, &app, OnSendInviteCallback);
 }
 void DiscordModule::Terminate() {
+    ToolboxModule::Terminate();
     Disconnect();
 }
 void DiscordModule::Disconnect() {
