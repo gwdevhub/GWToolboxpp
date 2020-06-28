@@ -175,6 +175,8 @@ void Minimap::Initialize() {
 }
 
 void Minimap::DrawSettingInternal() {
+    static char const *minimap_modifier_behavior_combo_str = "Disabled\0Draw\0Target\0Move\0Walk\0\0";
+
     ImGui::Text("General");
     ImGui::DragFloat("Scale", &scale, 0.01f, 0.1f);
     ImGui::Text("You can set the color alpha to 0 to disable any minimap feature.");
