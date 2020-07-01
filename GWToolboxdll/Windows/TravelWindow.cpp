@@ -635,8 +635,9 @@ namespace {
 
 void TravelWindow::Initialize() {
     ToolboxWindow::Initialize();
-    Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"airplane.png"), IDB_Icon_Airplane);
-    Resources::Instance().LoadTextureAsync(&scroll_texture, Resources::GetPath(L"img/materials", L"Scroll_of_Resurrection.png"), IDB_Mat_ResScroll);
+    Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img\\icons", L"airplane.png"), 
+        RESOURCES_DOWNLOAD_URL L"icons/airplane.png");
+    Resources::Instance().LoadTextureAsync(&scroll_texture, Resources::GetPath(L"img\\materials", L"Scroll_of_Resurrection.png"), IDB_Mat_ResScroll);
     district = GW::Constants::District::Current;
     district_number = 0;
 

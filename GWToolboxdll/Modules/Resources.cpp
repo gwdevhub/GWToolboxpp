@@ -56,8 +56,15 @@ utf8::string Resources::GetPathUtf8(std::wstring file) {
 
 bool Resources::Download(std::wstring path_to_file, std::wstring url) {
     DeleteUrlCacheEntryW(url.c_str());
-    Log::Log("Downloading %s\n", url.c_str());
-    return (URLDownloadToFileW(NULL, url.c_str(), path_to_file.c_str(), 0, NULL) == S_OK);
+    Log::Log("Downloading %ls\n", url.c_str());
+    HRESULT download_result = URLDownloadToFileW(NULL, url.c_str(), path_to_file.c_str(), 0, NULL);
+    if (download_result != S_OK) {
+        E_OUTOFMEMORY;
+        INET_E_DOWNLOAD_FAILURE;
+        Log::Log("Failed to download from %ls to %ls, error 0x%08x\n", url.c_str(), path_to_file.c_str(), download_result);
+        return false;
+    }
+    return true;
 }
 void Resources::Download(std::wstring path_to_file, 
     std::wstring url, std::function<void(bool)> callback) {
@@ -66,9 +73,6 @@ void Resources::Download(std::wstring path_to_file,
         bool success = Download(path_to_file, url);
         // and call the callback in the main thread
         todo.push([callback, success]() { callback(success); });
-        if (!success) {
-            Log::Log("Error downloading %s\n", url.c_str());
-        }
     });
 }
 
@@ -116,6 +120,16 @@ void Resources::LoadTextureAsync(IDirect3DTexture9** texture,
             D3DXCreateTextureFromFileW(device, path_to_file.c_str(), texture);
         });
     }
+}
+
+void Resources::LoadTextureAsync(IDirect3DTexture9 **texture, std::wstring path_to_file, std::wstring url)
+{
+    EnsureFileExists(path_to_file, url, [this,path_to_file, texture](bool success) { 
+        if (!success || !PathFileExistsW(path_to_file.c_str()))
+            return;
+        toload.push([path_to_file, texture](IDirect3DDevice9 *device) {
+            D3DXCreateTextureFromFileW(device, path_to_file.c_str(), texture); });
+    });
 }
 
 void Resources::LoadTextureAsync(IDirect3DTexture9** texture, 

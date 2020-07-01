@@ -43,7 +43,8 @@ void TradeWindow::CmdPricecheck(const wchar_t*, int argc, LPWSTR* argv) {
 }
 void TradeWindow::Initialize() {
     ToolboxWindow::Initialize();
-    Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"trade.png"));
+    Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img\\icons", L"trade.png"), 
+        RESOURCES_DOWNLOAD_URL L"icons/trade.png");
 
     messages = CircularBuffer<Message>(100);
 

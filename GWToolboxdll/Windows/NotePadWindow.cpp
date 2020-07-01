@@ -7,7 +7,7 @@
 
 void NotePadWindow::Initialize() {
     ToolboxWindow::Initialize();
-    Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"notepad.png"));
+    Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img\\icons", L"notepad.png"), RESOURCES_DOWNLOAD_URL L"icons/notepad.png");
 }
 
 void NotePadWindow::Draw(IDirect3DDevice9* pDevice) {

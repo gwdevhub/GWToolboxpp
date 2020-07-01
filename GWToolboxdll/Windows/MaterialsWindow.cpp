@@ -90,13 +90,19 @@ void MaterialsWindow::Update(float delta) {
 
 void MaterialsWindow::Initialize() {
     ToolboxWindow::Initialize();
-    Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"feather.png"), IDB_Icon_Feather);
+    Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img\\icons", L"feather.png"), 
+        IDB_Icon_Feather);
 
-    Resources::Instance().LoadTextureAsync(&tex_essence, Resources::GetPath(L"img/materials", L"Essence_of_Celerity.png"), IDB_Mat_Essence);
-    Resources::Instance().LoadTextureAsync(&tex_grail, Resources::GetPath(L"img/materials", L"Grail_of_Might.png"), IDB_Mat_Grail);
-    Resources::Instance().LoadTextureAsync(&tex_armor, Resources::GetPath(L"img/materials", L"Armor_of_Salvation.png"), IDB_Mat_Armor);
-    Resources::Instance().LoadTextureAsync(&tex_powerstone, Resources::GetPath(L"img/materials", L"Powerstone_of_Courage.png"), IDB_Mat_Powerstone);
-    Resources::Instance().LoadTextureAsync(&tex_resscroll, Resources::GetPath(L"img/materials", L"Scroll_of_Resurrection.png"), IDB_Mat_ResScroll);
+    Resources::Instance().LoadTextureAsync(&tex_essence, Resources::GetPath(L"img\\icons", L"Essence_of_Celerity.png"), 
+        IDB_Pcons_Essence);
+    Resources::Instance().LoadTextureAsync(&tex_grail, Resources::GetPath(L"img\\icons", L"Grail_of_Might.png"), 
+        IDB_Pcons_Grail);
+    Resources::Instance().LoadTextureAsync(&tex_armor, Resources::GetPath(L"img\\icons", L"Armor_of_Salvation.png"), 
+        IDB_Pcons_Armor);
+    Resources::Instance().LoadTextureAsync(&tex_powerstone, Resources::GetPath(L"img\\icons", L"Powerstone_of_Courage.png"), 
+        IDB_Mat_Powerstone);
+    Resources::Instance().LoadTextureAsync(&tex_resscroll, Resources::GetPath(L"img\\icons", L"Scroll_of_Resurrection.png"), 
+        IDB_Mat_ResScroll);
     
     for (int i = 0; i < N_MATS; ++i) {
         price[i] = PRICE_DEFAULT;

@@ -36,6 +36,8 @@ public:
         std::wstring path_to_file);
     void LoadTextureAsync(IDirect3DTexture9** tex, 
         std::wstring path_to_file, WORD id);
+    void LoadTextureAsync(IDirect3DTexture9 **tex, 
+        std::wstring path_to_file, std::wstring url);
 
 
     // checks if file exists, and downloads from server if it doesn't.
