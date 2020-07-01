@@ -123,6 +123,7 @@ public:
         bool IsArmor();
         bool IsSalvagable();
         bool IsRareMaterial();
+        bool IsWeaponSetItem();
         inline bool GetIsIdentified()
         {
             return interaction & 1;

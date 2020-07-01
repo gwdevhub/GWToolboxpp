@@ -2,6 +2,8 @@
 
 #include <GWCA/Packets/Opcodes.h>
 
+#include <GWCA/Context/ItemContext.h>
+
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/CtoSMgr.h>
 #include <GWCA/Managers/UIMgr.h>
@@ -378,6 +380,8 @@ InventoryManager::Item* InventoryManager::GetNextUnsalvagedItem(Item* kit, Item*
                 continue; // No value usually means no salvage.
             if (!item->IsSalvagable())
                 continue;
+            if (item->IsWeaponSetItem())
+                continue;
             if (item->IsRareMaterial() && !salvage_rare_mats)
                 continue; // Don't salvage rare mats
             if (item->IsArmor() || item->customized)
@@ -731,6 +735,23 @@ void InventoryManager::ClearPotentialItems()
     }
     potential_salvage_all_items.clear();
 }
+bool InventoryManager::Item::IsWeaponSetItem()
+{
+    if (!IsWeapon())
+        return false;
+    GW::GameContext* g = GW::GameContext::instance();
+    if (!g || !g->items || !g->items->inventory)
+        return false;
+    GW::WeapondSet *weapon_sets = g->items->inventory->weapon_sets;
+    for (size_t i = 0; i < 4; i++) {
+        if (weapon_sets[i].offhand == this)
+            return true;
+        if (weapon_sets[i].weapond == this)
+            return true;
+    }
+    return false;
+}
+
 bool InventoryManager::Item::IsSalvagable()
 {
     if (IsUsable() || IsGreen())
