@@ -113,66 +113,68 @@ void Minimap::Initialize() {
 
     pmap_renderer.Invalidate();
 
-    GW::Chat::CreateCommand(L"flag", [this](const wchar_t *message, int argc, LPWSTR *argv) {
-        UNREFERENCED_PARAMETER(message);
+    GW::Chat::CreateCommand(L"flag", &OnFlagHeroCmd);
+}
 
-        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
-            return; // Not explorable - "/flag" can be typed in chat to bypass flag hero buttons, so this is needed.
-        }
-        if (argc <= 1) {
-            FlagHero(0); // "/flag"
+void Minimap::OnFlagHeroCmd(const wchar_t *message, int argc, LPWSTR *argv)
+{
+    UNREFERENCED_PARAMETER(message);
+
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
+        return; // Not explorable - "/flag" can be typed in chat to bypass flag hero buttons, so this is needed.
+    }
+    if (argc <= 1) {
+        Instance().FlagHero(0); // "/flag"
+        return;
+    }
+    std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+    float x;
+    float y;
+    unsigned int n_heros = 0; // Count of heros available
+    unsigned int f_hero = 0;  // Hero number to flag
+    if (arg1 == L"all") {
+        if (argc <= 2) {
+            Instance().FlagHero(0); // "/flag all" == "/flag"
             return;
         }
-        std::wstring arg1 = GuiUtils::ToLower(argv[1]);
-        float x;
-        float y;
-        unsigned int n_heros = 0; // Count of heros available
-        unsigned int f_hero = 0;  // Hero number to flag
-        if (arg1 == L"all") {
-            if (argc <= 2) {
-                FlagHero(0); // "/flag all" == "/flag"
-                return;
-            }
-            if (argc < 4 || !GuiUtils::ParseFloat(argv[2], &x) || !GuiUtils::ParseFloat(argv[3], &y)) {
-                Log::Error("Please provide command in format /flag all [x] [y]"); // Not enough args or coords not valid float vals.
-                return;
-            }
-            GW::PartyMgr::FlagAll(GW::GamePos(x, y, 0)); // "/flag all -2913.41 3004.78"
+        if (argc < 4 || !GuiUtils::ParseFloat(argv[2], &x) || !GuiUtils::ParseFloat(argv[3], &y)) {
+            Log::Error("Please provide command in format /flag all [x] [y]"); // Not enough args or coords not valid float vals.
             return;
         }
-        auto heroarray = GW::GameContext::instance()->party->player_party->heroes;
-        if (heroarray.valid()) n_heros = heroarray.size();
-        if (n_heros < 1) {
-            return; // Player has no heroes, so no need to continue.
+        GW::PartyMgr::FlagAll(GW::GamePos(x, y, 0)); // "/flag all -2913.41 3004.78"
+        return;
+    }
+    auto heroarray = GW::GameContext::instance()->party->player_party->heroes;
+    if (heroarray.valid())
+        n_heros = heroarray.size();
+    if (n_heros < 1) {
+        return; // Player has no heroes, so no need to continue.
+    }
+    if (arg1 == L"clear") {
+        for (unsigned int i = 1; i <= n_heros; ++i) {
+            GW::PartyMgr::UnflagHero(i);
         }
-        if (arg1 == L"clear") {
-            for (unsigned int i = 1; i <= n_heros; ++i) {
-                GW::PartyMgr::UnflagHero(i);
-            }
-            GW::PartyMgr::UnflagAll(); // "/flag clear"
-            return;
-        }
-        if (!GuiUtils::ParseUInt(argv[1], &f_hero) || f_hero < 1 || f_hero > n_heros) {
-            Log::Error("Invalid hero number");
-            return; // Invalid hero number
-        }
-        if (argc < 3) {
-            FlagHero(f_hero); // "/flag 5"
-            return;
-        }
-        std::wstring arg2 = GuiUtils::ToLower(argv[2]);
-        if (arg2 == L"clear") {
-            GW::PartyMgr::UnflagHero(f_hero); // "/flag 5 clear"
-            return;
-        }
-        if (argc < 4
-            || !GuiUtils::ParseFloat(argv[2], &x)
-            || !GuiUtils::ParseFloat(argv[3], &y)) {
-            Log::Error("Please provide command in format /flag [hero number] [x] [y]"); // Invalid coords
-            return;
-        }
-        GW::PartyMgr::FlagHeroAgent(GW::Agents::GetHeroAgentID(f_hero), GW::GamePos(x, y, 0)); // "/flag 5 -2913.41 3004.78"
-    });
+        GW::PartyMgr::UnflagAll(); // "/flag clear"
+        return;
+    }
+    if (!GuiUtils::ParseUInt(argv[1], &f_hero) || f_hero < 1 || f_hero > n_heros) {
+        Log::Error("Invalid hero number");
+        return; // Invalid hero number
+    }
+    if (argc < 3) {
+        Instance().FlagHero(f_hero); // "/flag 5"
+        return;
+    }
+    std::wstring arg2 = GuiUtils::ToLower(argv[2]);
+    if (arg2 == L"clear") {
+        GW::PartyMgr::UnflagHero(f_hero); // "/flag 5 clear"
+        return;
+    }
+    if (argc < 4 || !GuiUtils::ParseFloat(argv[2], &x) || !GuiUtils::ParseFloat(argv[3], &y)) {
+        Log::Error("Please provide command in format /flag [hero number] [x] [y]"); // Invalid coords
+        return;
+    }
+    GW::PartyMgr::FlagHeroAgent(GW::Agents::GetHeroAgentID(f_hero), GW::GamePos(x, y, 0)); // "/flag 5 -2913.41 3004.78"
 }
 
 void Minimap::DrawSettingInternal() {

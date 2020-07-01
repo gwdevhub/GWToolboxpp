@@ -57,6 +57,7 @@ public:
     bool OnMouseUp(UINT Message, WPARAM wParam, LPARAM lParam);
     bool OnMouseMove(UINT Message, WPARAM wParam, LPARAM lParam);
     bool OnMouseWheel(UINT Message, WPARAM wParam, LPARAM lParam);
+    static void OnFlagHeroCmd(const wchar_t *message, int argc, LPWSTR *argv);
     bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
 
     void LoadSettings(CSimpleIni* ini) override;
