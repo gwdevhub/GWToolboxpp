@@ -60,7 +60,7 @@ bool Loadd3dx9(){
         return false; // Failed to load d3dx9_xx.dll; this machine may not have DirectX runtime installed
     }
     
-    Log::Log("Loaded DirectX module successfully: %s", d3dx9name);
+    Log::Log("Loaded DirectX module successfully: %s\n", d3dx9name);
 
     // Add function definitions as applicable
     return_on_false(MyGetProcAddress(d3dx9Module, "D3DXMatrixTranslation", &D3DXMatrixTranslationPtr));

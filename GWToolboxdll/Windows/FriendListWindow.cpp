@@ -876,7 +876,7 @@ void FriendListWindow::LoadCharnames(const char* section, std::unordered_map<std
 }
 void FriendListWindow::LoadFromFile() {
     loading = true;
-    Log::Log("%s: Loading friends from ini", Name());
+    Log::Log("%s: Loading friends from ini\n", Name());
     // clear builds from toolbox
     uuid_by_name.clear();
     while (friends.begin() != friends.end()) {
@@ -917,7 +917,7 @@ void FriendListWindow::LoadFromFile() {
         }
         uuid_by_name.emplace(lf->alias, lf->uuid);
     }
-    Log::Log("%s: Loaded friends from ini", Name());
+    Log::Log("%s: Loaded friends from ini\n", Name());
     friends_list_checked = false;
     loading = false;
 }
