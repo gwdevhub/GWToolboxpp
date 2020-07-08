@@ -381,7 +381,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                     if (me != nullptr) {
                         ImGui::LabelText("Distance", "%.0f", GW::GetDistance(me->pos, target->pos));
                     }
-                    ImGui::LabelText("plane", "%d", target->plane);
+                    ImGui::LabelText("Plane", "%d", target->plane);
                     ImGui::LabelText("Type", "0x%X", target->type);
                     if (target_item) {
                         ImGui::LabelText("Owner", "%d", target_item->owner);
