@@ -177,7 +177,12 @@ void InventoryManager::IdentifyAll(IdentifyAllType type) {
         CancelIdentify();
         return;
     }
+
     Item *kit = context_item.item();
+
+    if (!kit)
+        kit = GetIdentificationKit();
+
     if (!kit || !kit->IsIdentificationKit()) {
         CancelIdentify();
         Log::Warning("The identification kit was consumed");
