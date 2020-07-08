@@ -46,7 +46,7 @@ public:
     void Draw(IDirect3DDevice9* device) override;
 
     void IdentifyAll(IdentifyAllType type);
-    void SalvageAll(SalvageAllType type);
+    void SalvageAll(SalvageAllType type, bool noConfirmationPopup = false);
     bool IsPendingIdentify();
     bool IsPendingSalvage();
     bool HasSettings() { return true; };
@@ -55,6 +55,9 @@ public:
     void DrawSettingInternal() override;
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
+
+    static void CmdIdentify(const wchar_t *message, int argc, LPWSTR *argv);
+    static void CmdSalvage(const wchar_t *message, int argc, LPWSTR *argv);
 
     // Find an empty (or partially empty) inventory slot that this item can go into
     std::pair<GW::Bag*, uint32_t> GetAvailableInventorySlot(GW::Item* like_item = nullptr);
@@ -148,7 +151,11 @@ public:
             return interaction & 0x20000;
         }
     };
+
 public:
+    Item*GetSalvageKit(bool only_superior_kits = false);
+    Item* GetIdentificationKit();
+    GW::Item* GetSameItem(GW::Item *like_item, GW::Bag *bag);
     Item* GetNextUnsalvagedItem(Item* salvage_kit = nullptr, Item* start_after_item = nullptr);
     Item* GetNextUnidentifiedItem(Item* start_after_item = nullptr);
     void Identify(Item* item, Item* kit);
