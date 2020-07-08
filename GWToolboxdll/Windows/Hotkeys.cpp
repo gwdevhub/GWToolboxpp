@@ -99,7 +99,7 @@ TBHotkey::TBHotkey(CSimpleIni *ini, const char *section)
 }
 bool TBHotkey::CanUse()
 {
-    return !isLoading() && !GW::Map::GetIsObserving() && GW::MemoryMgr::GetGWWindowHandle() == GetActiveWindow();
+    return !isLoading() && !GW::Map::GetIsObserving();
 }
 void TBHotkey::Save(CSimpleIni *ini, const char *section) const
 {

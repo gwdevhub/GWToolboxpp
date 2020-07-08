@@ -186,8 +186,6 @@ bool HotkeysWindow::WndProc(UINT Message, WPARAM wParam, LPARAM lParam) {
     UNREFERENCED_PARAMETER(lParam);
     if (GW::Chat::GetIsTyping())
         return false;
-    if (GW::MemoryMgr::GetGWWindowHandle() != GetActiveWindow())
-        return false;
     long keyData = 0;
     switch (Message) {
     case WM_KEYDOWN:

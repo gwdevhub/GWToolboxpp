@@ -68,7 +68,8 @@ void InventoryManager::CmdSalvage(const wchar_t *message, int argc, LPWSTR *argv
     im->CancelSalvage();
     const wchar_t *arg2 = argc > 1 ? argv[1] : L"";
     if (wcscmp(arg2, L"white") == 0) {
-        im->SalvageAll(SalvageAllType::White, true);
+        //im->SalvageAll(SalvageAllType::White, true);
+        Log::Warning("/salvage white");
     } else if (wcscmp(arg2, L"blue") == 0) {
         im->SalvageAll(SalvageAllType::BlueAndLower, true);
     } else if (wcscmp(arg2, L"purple") == 0) {
