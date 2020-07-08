@@ -30,7 +30,7 @@ namespace {
     };
     static bool IsMapReady()
     {
-        return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && !GW::Map::GetIsObserving() && GW::MemoryMgr::GetGWWindowHandle() == GetActiveWindow();
+        return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && !GW::Map::GetIsObserving();
     }
 } // namespace
 InventoryManager::InventoryManager()
