@@ -200,7 +200,7 @@ public:
     bool flash_window_on_party_invite = false;
     bool flash_window_on_zoning = false;
     bool focus_window_on_zoning = false;
-    bool flash_window_on_cinematic = true;
+    bool flash_window_on_cinematic = false;
     bool flash_window_on_trade = true;
     bool focus_window_on_trade = false;
     bool flash_window_on_name_ping = true;
