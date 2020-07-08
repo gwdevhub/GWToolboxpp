@@ -117,6 +117,7 @@ void Log::Log(const char* msg, ...) {
     va_start(args, msg);
     vfprintf(logfile, msg, args);
     va_end(args);
+    fflush(logfile);
 }
 
 void Log::LogW(const wchar_t* msg, ...) {
@@ -127,6 +128,7 @@ void Log::LogW(const wchar_t* msg, ...) {
     va_start(args, msg);
     vfwprintf(logfile, msg, args);
     va_end(args);
+    fflush(logfile);
 }
 
 // === Game chat logging ===
