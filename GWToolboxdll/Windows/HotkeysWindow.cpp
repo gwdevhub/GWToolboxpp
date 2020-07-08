@@ -22,18 +22,6 @@ void HotkeysWindow::Initialize() {
     Resources::Instance().LoadTextureAsync(&button_texture, Resources::GetPath(L"img/icons", L"keyboard.png"), IDB_Icon_Keyboard);
     clickerTimer = TIMER_INIT();
     dropCoinsTimer = TIMER_INIT();
-
- //   Log::Info("HotkeysWindow::Initialize");
-
-	//for (TBHotkey* hk : hotkeys) {
-	//	if (!block_hotkeys && hk->active && hk->trigger_on_toolbox_start && !hk->pressed) {
-	//		hk->pressed = true;
-	//		current_hotkey = hk;
-	//		hk->Execute();
-	//		current_hotkey = nullptr;
-	//		hk->pressed = false;
-	//	}
-	//}
 }
 void HotkeysWindow::Terminate() {
     ToolboxWindow::Terminate();
@@ -167,6 +155,16 @@ void HotkeysWindow::LoadSettings(CSimpleIni* ini) {
         TBHotkey* hk = TBHotkey::HotkeyFactory(ini, entry.pItem);
         if (hk) hotkeys.push_back(hk);
     }
+    
+	for (TBHotkey* hk : hotkeys) {
+		if (!block_hotkeys && hk->active && hk->trigger_on_toolbox_start && !hk->pressed) {
+			hk->pressed = true;
+			current_hotkey = hk;
+			hk->Execute();
+			current_hotkey = nullptr;
+			hk->pressed = false;
+		}
+	}
 
     TBHotkey::hotkeys_changed = false;
 }

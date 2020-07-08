@@ -203,7 +203,7 @@ void TBHotkey::Draw(Op *op)
         if (ImGui::Checkbox("Trigger hotkey when entering outpost",
                             &trigger_on_outpost))
             hotkeys_changed = true;
-        if (ImGui::Checkbox("Trigger hotkey when Toolbox starts",
+        if (ImGui::Checkbox("Trigger hotkey when Toolbox starts or settings are reloaded",
                             &trigger_on_toolbox_start))
             hotkeys_changed = true;
         if (ImGui::InputInt("Map ID", &map_id))
