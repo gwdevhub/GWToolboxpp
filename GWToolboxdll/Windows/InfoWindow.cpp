@@ -366,6 +366,8 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
             }
             if (target) {
                 if (ImGui::TreeNode("Advanced##target")) {
+                    GW::Agent *me = GW::Agents::GetPlayer();
+                    
                     ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() / 2);
                     ImGui::LabelText("Addr", "%p", target);
                     ImGui::LabelText("Id", "%d", target->agent_id);
@@ -376,6 +378,9 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                     ImGui::LabelText("NameProperties", "0x%X", target->name_properties);
                     ImGui::LabelText("X", "%f", target->pos.x);
                     ImGui::LabelText("Y", "%f", target->pos.y);
+                    if (me != nullptr) {
+                        ImGui::LabelText("Distance", "%.0f", GW::GetDistance(me->pos, target->pos));
+                    }
                     ImGui::LabelText("plane", "%d", target->plane);
                     ImGui::LabelText("Type", "0x%X", target->type);
                     if (target_item) {
