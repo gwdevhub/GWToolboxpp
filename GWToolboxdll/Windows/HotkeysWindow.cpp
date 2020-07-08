@@ -155,6 +155,16 @@ void HotkeysWindow::LoadSettings(CSimpleIni* ini) {
         TBHotkey* hk = TBHotkey::HotkeyFactory(ini, entry.pItem);
         if (hk) hotkeys.push_back(hk);
     }
+    
+	for (TBHotkey* h : hotkeys) {
+		if (!block_hotkeys && h->active && h->trigger_on_toolbox_start && !h->pressed) {
+			h->pressed = true;
+			current_hotkey = hk;
+			h->Execute();
+			current_hotkey = nullptr;
+			h->pressed = false;
+		}
+	}
 
     TBHotkey::hotkeys_changed = false;
 }

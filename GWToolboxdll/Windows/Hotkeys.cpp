@@ -95,6 +95,9 @@ TBHotkey::TBHotkey(CSimpleIni *ini, const char *section)
             section, VAR_NAME(trigger_on_explorable), trigger_on_explorable);
         trigger_on_outpost = ini->GetBoolValue(
             section, VAR_NAME(trigger_on_outpost), trigger_on_outpost);
+        trigger_on_toolbox_start = ini->GetBoolValue(
+            section, VAR_NAME(trigger_on_toolbox_start), trigger_on_toolbox_start);
+        
     }
 }
 bool TBHotkey::CanUse()
@@ -117,6 +120,8 @@ void TBHotkey::Save(CSimpleIni *ini, const char *section) const
                       trigger_on_explorable);
     ini->SetBoolValue(section, VAR_NAME(trigger_on_outpost),
                       trigger_on_outpost);
+    ini->SetBoolValue(section, VAR_NAME(trigger_on_toolbox_start),
+                      trigger_on_toolbox_start);
 }
 static const char *professions[] = {"Any",          "Warrior",     "Ranger",
                                     "Monk",         "Necromancer", "Mesmer",
@@ -197,6 +202,9 @@ void TBHotkey::Draw(Op *op)
             hotkeys_changed = true;
         if (ImGui::Checkbox("Trigger hotkey when entering outpost",
                             &trigger_on_outpost))
+            hotkeys_changed = true;
+        if (ImGui::Checkbox("Trigger hotkey when Toolbox starts or settings are reloaded",
+                            &trigger_on_toolbox_start))
             hotkeys_changed = true;
         if (ImGui::InputInt("Map ID", &map_id))
             hotkeys_changed = true;
