@@ -86,7 +86,7 @@ D3DXVECTOR2::D3DXVECTOR2( CONST D3DXFLOAT16 *pf )
 
 D3DXINLINE
 D3DXVECTOR2::D3DXVECTOR2( FLOAT fx, FLOAT fy )
-    : x{ fx }, y{ fx }
+    : x{ fx }, y{ fy }
 {}
 
 

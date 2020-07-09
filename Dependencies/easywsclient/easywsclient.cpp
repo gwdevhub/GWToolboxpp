@@ -1,4 +1,12 @@
 #include "stdafx.h"
+#pragma warning(disable: 4100)
+#pragma warning(disable: 4244)
+#pragma warning(disable: 4365)
+#pragma warning(disable: 4456)
+#pragma warning(disable: 4548)
+#pragma warning(disable: 4701)
+#pragma warning(disable: 5039)
+
 #ifdef _WIN32
     #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
         #define _CRT_SECURE_NO_WARNINGS // _CRT_SECURE_NO_WARNINGS for sscanf errors in MSVC2013 Express

@@ -125,7 +125,7 @@ You can attach/detach them to/from the minimap with the **Attach to minimap** to
 
 You can also change the color of the flag controls' background.
 
-### Chat Commands
+## Chat Commands
 
 You can use the chat commands to flag heroes using the minimap.
 
