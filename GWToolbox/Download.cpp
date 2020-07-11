@@ -2,8 +2,9 @@
 
 using Json = nlohmann::json;
 
+#include <Core/Path.h>
+
 #include "Download.h"
-#include "Path.h"
 #include "Registry.h"
 
 class DownloadStatusCallback : public IBindStatusCallback

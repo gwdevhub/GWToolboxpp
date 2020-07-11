@@ -1,9 +1,10 @@
 #include "stdafx.h"
 
+#include <Core/Path.h>
+
 #include "Download.h"
 #include "Inject.h"
 #include "Install.h"
-#include "Path.h"
 #include "Process.h"
 #include "Settings.h"
 
