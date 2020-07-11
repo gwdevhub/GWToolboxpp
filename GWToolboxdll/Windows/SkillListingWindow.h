@@ -50,8 +50,8 @@ public:
         const std::wstring GetSkillType();
         const bool HasExhaustion() { return skill->special & 0x1; }
         const bool IsMaintained() { return skill->duration0 == 0x20000;  }
-        const bool IsPvE() { return skill->special & 0x80000;  }
-        const bool IsElite() { return skill->special & 0x4; }
+        const bool IsPvE() { return (skill->special & 0x80000) != 0;  }
+        const bool IsElite() { return (skill->special & 0x4) != 0; }
     protected:
         const wchar_t *Description();
         const wchar_t *Concise();

@@ -549,7 +549,8 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
         // Shouldn't really fetch item() every frame, but its only when the menu is open and better than risking a crash
         Item* context_item_actual = context_item.item(); 
         if (context_item_actual && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && ImGui::Button("Store Item", size)) {
-            GW::HookStatus st = { 0 };
+            // @Fix: This is not correct. A HookStatus can't be on the stack.
+            GW::HookStatus st;
             ImGui::GetIO().KeysDown[VK_CONTROL] = true;
             is_manual_item_click = true;
             GameSettings::ItemClickCallback(&st, 7, context_item_actual->slot, context_item_actual->bag);
