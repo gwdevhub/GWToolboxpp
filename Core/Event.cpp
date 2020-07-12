@@ -9,7 +9,7 @@ Event::Event(bool ManualReset, bool InitialState, const char* Name)
     m_Handle = CreateEventA(nullptr, ManualReset, InitialState, Name);
     if (m_Handle == nullptr) {
         // @Enhancement: Add logging
-        // LOG("Unable to create handle for CBB Event");
+        // LOG("Unable to create handle for Event");
     }
 }
 
