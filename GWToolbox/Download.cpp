@@ -54,44 +54,13 @@ bool Download(std::string& content, const char *url)
     return true;
 }
 
-bool Download(const wchar_t *path_to_file, const char *url, size_t file_size, HWND hProgressBar)
+void AsyncDownload(const char *url, AsyncFileDownloader *downloader)
 {
-    AsyncFileDownloader client;
-    client.SetUrl(url);
-    client.SetVerifyPeer(false);
-    client.SetFollowLocation(true);
-    client.SetUserAgent("curl/7.71.1");
-    // @Cleanup:
-    // This need more iteration, but we currently block the window thread
-    // and because of that block the user input. For this reason, we can't
-    // block forever and we set this low speed limit.
-    //
-    // We need to fix that properly.
-    client.SetLowSpeedLimit(100, 10);
-
-    client.ExecuteAsync();
-
-    while (client.IsPending()) {
-        size_t BytesDownloaded = client.GetDownloadCount();
-        ULONG Progress = static_cast<ULONG>((BytesDownloaded * 100) / file_size);
-        SendMessageW(hProgressBar, PBM_SETPOS, Progress, 0);
-        Sleep(16);
-    }
-
-    if (!client.IsSuccessful()) {
-        fprintf(stderr, "Failed to download '%s'. (Status: %s, StatusCode: %d)\n",
-            url, client.GetStatusStr(), client.GetStatusCode());
-        return false;
-    }
-
-    std::string& content = client.GetContent();
-    if (!WriteEntireFile(path_to_file, content.c_str(), content.size())) {
-        fprintf(stderr, "WriteEntireFile failed on '%ls' with %zu bytes\n",
-            path_to_file, content.size());
-        return false;
-    }
-
-    return true;
+    downloader->SetUrl(url);
+    downloader->SetVerifyPeer(false);
+    downloader->SetFollowLocation(true);
+    downloader->SetUserAgent("curl/7.71.1");
+    downloader->ExecuteAsync();
 }
 
 struct Asset
@@ -229,16 +198,43 @@ bool DownloadWindow::DownloadAllFiles()
     DownloadWindow window;
     window.Create();
     window.SetChangelog(release.body.c_str(), release.body.size());
-    window.ProcessMessages();
 
-    if (!Download(dll_path, url.c_str(), file_size, window.m_hProgressBar)) {
-        fprintf(stderr, "Download failed: path_to_file = '%ls', url = '%s'\n",
-                dll_path, url.c_str());
-        return false;
+    AsyncFileDownloader downloader;
+    AsyncDownload(url.c_str(), &downloader);
+
+    while (!window.ShouldClose()) {
+        window.PollMessages(16);
+
+        if (!downloader.IsCompleted()) {
+            size_t BytesDownloaded = downloader.GetDownloadCount();
+            ULONG Progress = static_cast<ULONG>((BytesDownloaded * 100) / file_size);
+            SendMessageW(window.m_hProgressBar, PBM_SETPOS, Progress, 0);
+        } else {
+            if (!downloader.IsSuccessful()) {
+                fprintf(stderr, "Failed to download '%s'. (Status: %s, StatusCode: %d)\n",
+                    url.c_str(), downloader.GetStatusStr(), downloader.GetStatusCode());
+                return false;
+            }
+
+            std::string& file_content = downloader.GetContent();
+            if (!WriteEntireFile(dll_path, file_content.c_str(), file_content.size())) {
+                fprintf(stderr, "WriteEntireFile failed on '%ls' with %zu bytes\n",
+                    dll_path, file_content.size());
+                return false;
+            }
+
+            downloader.Clear();
+            SendMessageW(window.m_hProgressBar, PBM_SETPOS, 100, 0);
+        }
     }
 
-    SendMessageW(window.m_hProgressBar, PBM_SETPOS, 100, 0);
-    window.WaitMessages();
+    //
+    // The user could close the window, before the download is complete
+    //
+    if (downloader.IsPending()) {
+        downloader.Abort();
+        return false;
+    }
 
     RegWriteRelease(release.tag_name.c_str(), release.tag_name.size());
     return true;
