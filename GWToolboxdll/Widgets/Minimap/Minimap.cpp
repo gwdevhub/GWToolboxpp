@@ -24,8 +24,6 @@
 #include <ImGuiAddons.h>
 #include <Logger.h>
 
-#include <Modules/ToolboxSettings.h>
-#include <Windows/SettingsWindow.h>
 #include <Widgets/Minimap/Minimap.h>
 
 void Minimap::Terminate()
@@ -257,6 +255,7 @@ void Minimap::LoadSettings(CSimpleIni* ini) {
     mouse_clickthrough = ini->GetBoolValue(Name(), VAR_NAME(mouse_clickthrough), false);
     mouse_clickthrough_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(mouse_clickthrough_in_outpost), mouse_clickthrough_in_outpost);
     rotate_minimap = ini->GetBoolValue(Name(), VAR_NAME(rotate_minimap), true);
+    circular_map = ini->GetBoolValue(Name(), VAR_NAME(circular_map), false);
     key_none_behavior  = static_cast<MinimapModifierBehaviour>(ini->GetLongValue(Name(), VAR_NAME(key_none_behavior), 1));
     key_ctrl_behavior  = static_cast<MinimapModifierBehaviour>(ini->GetLongValue(Name(), VAR_NAME(key_ctrl_behavior), 2));
     key_shift_behavior = static_cast<MinimapModifierBehaviour>(ini->GetLongValue(Name(), VAR_NAME(key_shift_behavior), 3));
@@ -285,6 +284,7 @@ void Minimap::SaveSettings(CSimpleIni* ini) {
     ini->SetLongValue(Name(), VAR_NAME(key_alt_behavior),   static_cast<long>(key_alt_behavior)); 
     ini->SetBoolValue(Name(), VAR_NAME(reduce_ping_spam), pingslines_renderer.reduce_ping_spam);
     ini->SetBoolValue(Name(), VAR_NAME(rotate_minimap), rotate_minimap);
+    ini->SetBoolValue(Name(), VAR_NAME(circular_map), circular_map);
     range_renderer.SaveSettings(ini, Name());
     pmap_renderer.SaveSettings(ini, Name());
     agent_renderer.SaveSettings(ini, Name());
@@ -373,6 +373,28 @@ void Minimap::Draw(IDirect3DDevice9* device) {
                 device->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
                 device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
                 device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+
+                auto FillRect = [&device](D3DCOLOR color, int x, int y, int w, int h) {
+                    D3DVertex vertices[6] = {{(float)x, (float)y, 1.0f, color}, {(float)x + w, (float)y, 1.0f, color}, {(float)x, (float)y + h, 1.0f, color}, {(float)x + w, (float)y + h, 1.0f, color}, {(float)x, (float)y, 1.0f, color}, {(float)x + w, (float)y, 1.0f, color}};
+                    device->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 4, vertices, sizeof(D3DVertex));
+                };
+
+                auto FillCircle = [&device](int x, int y, int radius, Color clr, int resolution) {
+                    resolution = std::min(resolution, 197);
+                    D3DVertex vertices[200];
+                    for (auto i = 0; i <= resolution; ++i) {
+                        vertices[i] = {x + radius * cos(D3DX_PI * (i / (resolution / 2.f))), y + radius * sin(D3DX_PI * (i / (resolution / 2.f))), 0, clr};
+                    }
+                    device->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, static_cast<unsigned int>(resolution), vertices, sizeof(D3DVertex));
+                };
+
+                D3DCOLOR color = Instance().pmap_renderer.GetBackgroundColor();
+                if (Instance().circular_map) {
+                    auto radius = Instance().size.x / 2;
+                    FillCircle(Instance().location.x + radius, Instance().location.y + radius, radius, color, 200);
+                } else {
+                    FillRect(color, Instance().location.x, Instance().location.y, Instance().size.x, Instance().size.y);
+                }
 
                 ImGuiStyle& style = ImGui::GetStyle();
                 RECT old_clipping, clipping;
