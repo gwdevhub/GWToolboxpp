@@ -18,7 +18,7 @@ public:
     void SaveSettings(CSimpleIni* ini, const char* section) const;
 
 private:
-    void CreateCircle(D3DVertex* vertices, float radius, DWORD color);
+    void CreateCircle(D3DVertex* vertices, float radius, DWORD color) const;
     void Initialize(IDirect3DDevice9* device) override;
 
     bool HaveHos();
@@ -27,6 +27,8 @@ private:
     bool havehos_ = false;
 
     bool draw_center_ = false;
+
+    int line_thickness = 1;
 
     Color color_range_hos = 0;
     Color color_range_aggro = 0;

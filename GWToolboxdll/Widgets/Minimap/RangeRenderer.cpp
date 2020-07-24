@@ -1,7 +1,6 @@
 #include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
-#include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>
 
 #include <GWCA/GameEntities/Agent.h>
@@ -9,10 +8,8 @@
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
-#include <GWCA/Managers/CameraMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 
-#include <GuiUtils.h>
 #include <Widgets/Minimap/RangeRenderer.h>
 
 void RangeRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
@@ -21,6 +18,7 @@ void RangeRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
     color_range_cast = Colors::Load(ini, section, "color_range_cast", 0xFF117777);
     color_range_spirit = Colors::Load(ini, section, "color_range_spirit", 0xFF337733);
     color_range_compass = Colors::Load(ini, section, "color_range_compass", 0xFF666611);
+    line_thickness = ini->GetLongValue(section, "range_line_thickness", 1);
     Invalidate();
 }
 void RangeRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
@@ -29,6 +27,7 @@ void RangeRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
     Colors::Save(ini, section, "color_range_cast", color_range_cast);
     Colors::Save(ini, section, "color_range_spirit", color_range_spirit);
     Colors::Save(ini, section, "color_range_compass", color_range_compass);
+    ini->SetLongValue(section, "range_line_thickness", line_thickness);
 }
 void RangeRenderer::DrawSettings() {
     bool changed = false;
@@ -39,63 +38,75 @@ void RangeRenderer::DrawSettings() {
         color_range_cast = 0xFF117777;
         color_range_spirit = 0xFF337733;
         color_range_compass = 0xFF666611;
+        line_thickness = 1;
     }
     changed |= Colors::DrawSettingHueWheel("HoS range", &color_range_hos);
     changed |= Colors::DrawSettingHueWheel("Aggro range", &color_range_aggro);
     changed |= Colors::DrawSettingHueWheel("Cast range", &color_range_cast);
     changed |= Colors::DrawSettingHueWheel("Spirit range", &color_range_spirit);
     changed |= Colors::DrawSettingHueWheel("Compass range", &color_range_compass);
+    changed |= ImGui::DragInt("Line thickness", &line_thickness, 0.1f, 1, 30, "%d");
     if (changed) Invalidate();
 }
 
-void RangeRenderer::CreateCircle(D3DVertex* vertices, float radius, DWORD color) {
+void RangeRenderer::CreateCircle(D3DVertex *vertices, float radius, DWORD color) const
+{
     for (size_t i = 0; i < circle_vertices - 1; ++i) {
-        float angle = i * (2 * static_cast<float>(M_PI) / circle_vertices);
+        const float angle = i * (2 * static_cast<float>(M_PI) / circle_vertices);
         vertices[i].x = radius * std::cos(angle);
         vertices[i].y = radius * std::sin(angle);
         vertices[i].z = 0.0f;
-        vertices[i].color = color; // 0xFF666677;
+        vertices[i].color = color;
     }
     vertices[circle_points] = vertices[0];
 }
 
 void RangeRenderer::Initialize(IDirect3DDevice9* device) {
-    count = circle_points * num_circles; // radar range, spirit range, aggro range
+    count = circle_vertices * num_circles * line_thickness;
     type = D3DPT_LINESTRIP;
-    float radius;
 
     checkforhos_ = true;
     havehos_ = false;
 
     D3DVertex* vertices = nullptr;
-    unsigned int vertex_count = count + num_circles + num_circles + 1;
+    const unsigned int vertex_count = count + 6;
 
     device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, D3DUSAGE_WRITEONLY,
-        D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
+        D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
     buffer->Lock(0, sizeof(D3DVertex) * vertex_count,
-        (VOID**)&vertices, D3DLOCK_DISCARD);
+        reinterpret_cast<void**>(&vertices), D3DLOCK_DISCARD);
 
-    radius = GW::Constants::Range::Compass;
-    CreateCircle(vertices, radius, color_range_compass);
-    vertices += circle_vertices;
+    float radius = GW::Constants::Range::Compass;
+    for (auto i = 0; i < line_thickness; i++) {
+        CreateCircle(vertices, radius - i, color_range_compass);
+        vertices += circle_vertices;
+    }
 
     radius = GW::Constants::Range::Spirit;
-    CreateCircle(vertices, radius, color_range_spirit);
-    vertices += circle_vertices;
+    for (auto i = 0; i < line_thickness; i++) {
+        CreateCircle(vertices, radius - i, color_range_spirit);
+        vertices += circle_vertices;
+    }
 
     radius = GW::Constants::Range::Spellcast;
-    CreateCircle(vertices, radius, color_range_cast);
-    vertices += circle_vertices;
+    for (auto i = 0; i < line_thickness; i++) {
+        CreateCircle(vertices, radius - i, color_range_cast);
+        vertices += circle_vertices;
+    }
 
     radius = GW::Constants::Range::Earshot;
-    CreateCircle(vertices, radius, color_range_aggro);
-    vertices += circle_vertices;
+    for (auto i = 0; i < line_thickness; i++) {
+        CreateCircle(vertices, radius - i, color_range_aggro);
+        vertices += circle_vertices;
+    }
 
     radius = 360.0f;
-    CreateCircle(vertices, radius, color_range_hos);
-    vertices += circle_vertices;
+    for (auto i = 0; i < line_thickness; i++) {
+        CreateCircle(vertices, radius - i, color_range_hos);
+        vertices += circle_vertices;
+    }
 
-    for (int i = 0; i < 6; ++i) {
+    for (auto i = 0; i < 6; ++i) {
         vertices[i].z = 0.0f;
         vertices[i].color = color_range_hos;
     }
@@ -143,7 +154,7 @@ void RangeRenderer::Render(IDirect3DDevice9* device) {
 
     device->SetFVF(D3DFVF_CUSTOMVERTEX);
     device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
-    for (int i = 0; i < num_circles - 1; ++i) {
+    for (size_t i = 0; i < num_circles * line_thickness - 1; ++i) {
         device->DrawPrimitive(type, circle_vertices * i, circle_points);
     }
 
@@ -187,9 +198,8 @@ bool RangeRenderer::HaveHos() {
         return false;
     }
 
-    for (int i = 0; i < 8; ++i) {
-        GW::SkillbarSkill skill = skillbar->skills[i];
-        GW::Constants::SkillID id = (GW::Constants::SkillID) skill.skill_id;
+    for (auto skill : skillbar->skills) {
+        const auto id = static_cast<GW::Constants::SkillID>(skill.skill_id);
         if (id == GW::Constants::SkillID::Heart_of_Shadow) return true;
         if (id == GW::Constants::SkillID::Vipers_Defense) return true;
     }
