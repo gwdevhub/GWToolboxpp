@@ -52,13 +52,17 @@ void RangeRenderer::DrawSettings() {
 void RangeRenderer::CreateCircle(D3DVertex *vertices, float radius, DWORD color) const
 {
     for (size_t i = 0; i < circle_vertices - 1; ++i) {
-        const float angle = i * (2 * static_cast<float>(M_PI) / circle_vertices);
-        vertices[i].x = radius * std::cos(angle);
-        vertices[i].y = radius * std::sin(angle);
-        vertices[i].z = 0.0f;
-        vertices[i].color = color;
+        const auto angle = i * (2 * static_cast<float>(M_PI) / circle_vertices);
+        for (auto j = 0; j < line_thickness; j++) {
+            vertices[i + j * circle_vertices].x = (radius - j) * std::cos(angle);
+            vertices[i + j * circle_vertices].y = (radius - j) * std::sin(angle);
+            vertices[i + j * circle_vertices].z = 0.0f;
+            vertices[i + j * circle_vertices].color = color;
+        }
     }
-    vertices[circle_points] = vertices[0];
+    for (auto j = 0; j < line_thickness; j++) {
+        vertices[circle_vertices * (j + 1) - 1] = vertices[circle_vertices * j];
+    }
 }
 
 void RangeRenderer::Initialize(IDirect3DDevice9* device) {
@@ -77,34 +81,24 @@ void RangeRenderer::Initialize(IDirect3DDevice9* device) {
         reinterpret_cast<void**>(&vertices), D3DLOCK_DISCARD);
 
     float radius = GW::Constants::Range::Compass;
-    for (auto i = 0; i < line_thickness; i++) {
-        CreateCircle(vertices, radius - i, color_range_compass);
-        vertices += circle_vertices;
-    }
+    CreateCircle(vertices, radius, color_range_compass);
+    vertices += circle_vertices * line_thickness;
 
     radius = GW::Constants::Range::Spirit;
-    for (auto i = 0; i < line_thickness; i++) {
-        CreateCircle(vertices, radius - i, color_range_spirit);
-        vertices += circle_vertices;
-    }
+    CreateCircle(vertices, radius, color_range_spirit);
+    vertices += circle_vertices * line_thickness;
 
     radius = GW::Constants::Range::Spellcast;
-    for (auto i = 0; i < line_thickness; i++) {
-        CreateCircle(vertices, radius - i, color_range_cast);
-        vertices += circle_vertices;
-    }
+    CreateCircle(vertices, radius, color_range_cast);
+    vertices += circle_vertices * line_thickness;
 
     radius = GW::Constants::Range::Earshot;
-    for (auto i = 0; i < line_thickness; i++) {
-        CreateCircle(vertices, radius - i, color_range_aggro);
-        vertices += circle_vertices;
-    }
+    CreateCircle(vertices, radius, color_range_aggro);
+    vertices += circle_vertices * line_thickness;
 
     radius = 360.0f;
-    for (auto i = 0; i < line_thickness; i++) {
-        CreateCircle(vertices, radius - i, color_range_hos);
-        vertices += circle_vertices;
-    }
+    CreateCircle(vertices, radius, color_range_hos);
+    vertices += circle_vertices * line_thickness;
 
     for (auto i = 0; i < 6; ++i) {
         vertices[i].z = 0.0f;
