@@ -80,7 +80,7 @@ void RangeRenderer::Initialize(IDirect3DDevice9* device) {
     buffer->Lock(0, sizeof(D3DVertex) * vertex_count,
         reinterpret_cast<void**>(&vertices), D3DLOCK_DISCARD);
 
-    float radius = GW::Constants::Range::Compass;
+    auto radius = GW::Constants::Range::Compass;
     CreateCircle(vertices, radius, color_range_compass);
     vertices += circle_vertices * line_thickness;
 
@@ -148,12 +148,14 @@ void RangeRenderer::Render(IDirect3DDevice9* device) {
 
     device->SetFVF(D3DFVF_CUSTOMVERTEX);
     device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
-    for (size_t i = 0; i < num_circles * line_thickness - 1; ++i) {
+    for (size_t i = 0; i < (num_circles - 1) * line_thickness; ++i) { // do not draw HoS circles yet
         device->DrawPrimitive(type, circle_vertices * i, circle_points);
     }
 
     if (HaveHos()) {
-        device->DrawPrimitive(type, circle_vertices * (num_circles - 1), circle_points);
+        for (auto i = 0; i < line_thickness ; ++i) { // draw HoS circles
+            device->DrawPrimitive(type, circle_vertices * ((num_circles - 1) * line_thickness + i), circle_points);
+        }
 
         GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
         GW::AgentLiving* tgt = GW::Agents::GetTargetAsAgentLiving();
@@ -174,14 +176,14 @@ void RangeRenderer::Render(IDirect3DDevice9* device) {
             D3DXMatrixRotationZ(&rotate, angle);
             newworld = rotate * oldworld;
             device->SetTransform(D3DTS_WORLD, &newworld);
-            device->DrawPrimitive(type, circle_vertices * num_circles, 1);
+            device->DrawPrimitive(type, circle_vertices * num_circles * line_thickness, 1);
             device->SetTransform(D3DTS_WORLD, &oldworld);
         }
     }
 
     if (draw_center_) {
-        device->DrawPrimitive(type, circle_vertices * num_circles + 2, 1);
-        device->DrawPrimitive(type, circle_vertices * num_circles + 4, 1);
+        device->DrawPrimitive(type, circle_vertices * num_circles * line_thickness + 2, 1);
+        device->DrawPrimitive(type, circle_vertices * num_circles * line_thickness + 4, 1);
     }
 }
 
