@@ -33,8 +33,6 @@
 #include <shellapi.h>
 #include <Shlobj.h>
 #include <shlwapi.h>
-#include <urlmon.h>
-#include <WinInet.h>
 #include <psapi.h>
 
 #include <assert.h>
@@ -44,6 +42,7 @@
 #include <string.h>
 #include <time.h>
 
+#include <atomic>
 #include <string>
 #include <vector>
 

@@ -6,6 +6,7 @@
     <ClCompile Include="Thread.cpp" />
     <ClCompile Include="Path.cpp" />
     <ClCompile Include="Str.cpp" />
+    <ClCompile Include="File.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Event.h" />
@@ -13,5 +14,6 @@
     <ClInclude Include="Thread.h" />
     <ClInclude Include="Path.h" />
     <ClInclude Include="Str.h" />
+    <ClInclude Include="File.h" />
   </ItemGroup>
 </Project>

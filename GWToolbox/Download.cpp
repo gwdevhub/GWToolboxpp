@@ -2,147 +2,65 @@
 
 using Json = nlohmann::json;
 
+#include <Core/File.h>
 #include <Core/Path.h>
+
+#include <RestClient/RestClient.h>
 
 #include "Download.h"
 #include "Registry.h"
 
-class DownloadStatusCallback : public IBindStatusCallback
+class AsyncFileDownloader : public AsyncRestClient
 {
 public:
-    DownloadStatusCallback(Window *window, HWND hWnd)
-        : m_hWnd(hWnd)
-        , m_Window(window)
+    AsyncFileDownloader()
+        : m_DownloadLength{0}
     {
     }
-    virtual ~DownloadStatusCallback(){};
-private:
-    HWND m_hWnd;
-    Window *m_Window;
 
-private: // from IBindStatusCallback
-    HRESULT __stdcall QueryInterface(const IID&, void **) override
+    AsyncFileDownloader(const AsyncFileDownloader&) = delete;
+
+    size_t GetDownloadCount()
     {
-        return E_NOINTERFACE;
+        return m_DownloadLength.load(std::memory_order_relaxed);
     }
 
-    ULONG __stdcall AddRef(void) override
+private: // From AsyncRestClient
+    void OnContent(const char *bytes, size_t count) override
     {
-        return 1;
+        AsyncRestClient::OnContent(bytes, count);
+        m_DownloadLength += count;
     }
 
-    ULONG __stdcall Release(void) override
-    {
-        return 1;
-    }
-
-    HRESULT __stdcall OnStartBinding(DWORD, IBinding *) override
-    {
-        return E_NOTIMPL;
-    }
-
-    HRESULT __stdcall GetPriority(LONG *) override
-    {
-        return E_NOTIMPL;
-    }
-
-    HRESULT __stdcall OnLowResource(DWORD) override
-    {
-        return S_OK;
-    }
-
-    HRESULT __stdcall OnStopBinding(HRESULT, LPCWSTR) override
-    {
-        return E_NOTIMPL;
-    }
-
-    HRESULT __stdcall GetBindInfo(DWORD *, BINDINFO *) override
-    {
-        return E_NOTIMPL;
-    }
-
-    HRESULT __stdcall OnDataAvailable(DWORD, DWORD, FORMATETC *, STGMEDIUM *) override
-    {
-        return E_NOTIMPL;
-    }
-
-    HRESULT __stdcall OnObjectAvailable(REFIID, IUnknown *) override
-    {
-        return E_NOTIMPL;
-    }
-
-    HRESULT __stdcall OnProgress(
-        ULONG ulProgress,
-        ULONG ulProgressMax,
-        ULONG ulStatusCode,
-        LPCWSTR szStatusText) override
-    {
-        UNREFERENCED_PARAMETER(szStatusText);
-
-        if (ulStatusCode == BINDSTATUS_DOWNLOADINGDATA) {
-            ULONG Progress = (ulProgress * 100) / ulProgressMax;
-            SendMessageW(m_hWnd, PBM_SETPOS, Progress, 0);
-        }
-
-        return S_OK;
-    }
+    std::atomic<size_t> m_DownloadLength;
 };
 
-bool Download(std::string& content, const wchar_t *url)
+bool Download(std::string& content, const char *url)
 {
-    DeleteUrlCacheEntryW(url);
+    RestClient client;
+    client.SetUrl(url);
+    client.SetVerifyPeer(false);
+    client.SetTimeoutSec(5);
+    client.SetUserAgent("curl/7.71.1");
+    client.Execute();
 
-    IStream* stream;
-    HRESULT result = URLOpenBlockingStreamW(nullptr, url, &stream, 0, nullptr);
-
-    if (FAILED(result)) {
-        fprintf(stderr, "URLOpenBlockingStreamW failed (HRESULT: 0x%lX)\n", result);
+    if (!client.IsSuccessful()) {
+        fprintf(stderr, "Failed to download '%s'. (Status: %s, StatusCode: %d)\n",
+            url, client.GetStatusStr(), client.GetStatusCode());
         return false;
     }
 
-    STATSTG stats;
-    result = stream->Stat(&stats, STATFLAG_NONAME);
-    if (FAILED(result)) {
-        fprintf(stderr, "IStream::Stat failed (HRESULT: 0x%lX)\n", result);
-        stream->Release();
-        return false;
-    }
-
-    if (stats.cbSize.HighPart != 0) {
-        fprintf(stderr, "This file is way to big to download, it's over 4GB\n");
-        stream->Release();
-        return false;
-    }
-
-    content.resize(stats.cbSize.LowPart);
-    result = stream->Read(&content[0], stats.cbSize.LowPart, nullptr);
-    stream->Release();
-
-    if (FAILED(result)) {
-        fprintf(stderr, "IStream::Read failed (HRESULT: 0x%lX, Url: '%ls')\n", result, url);
-        return false;
-    }
-
+    content = std::move(client.GetContent());
     return true;
 }
 
-bool Download(const wchar_t *path_to_file, const wchar_t *url, IBindStatusCallback *callback)
+void AsyncDownload(const char *url, AsyncFileDownloader *downloader)
 {
-    DeleteUrlCacheEntryW(url);
-
-    HRESULT result = URLDownloadToFileW(
-        nullptr,
-        url,
-        path_to_file,
-        0,
-        callback);
-
-    if (FAILED(result)) {
-        fprintf(stderr, "URLDownloadToFileW failed: hresult:0x%lX\n", result);
-        return false;
-    }
-
-    return true;
+    downloader->SetUrl(url);
+    downloader->SetVerifyPeer(false);
+    downloader->SetFollowLocation(true);
+    downloader->SetUserAgent("curl/7.71.1");
+    downloader->ExecuteAsync();
 }
 
 struct Asset
@@ -228,7 +146,7 @@ static bool ParseRelease(std::string& json_text, Release *release)
 bool DownloadWindow::DownloadAllFiles()
 {
     std::string content;
-    if (!Download(content, L"https://api.github.com/repos/HasKha/GWToolboxpp/releases/latest")) {
+    if (!Download(content, "https://api.github.com/repos/HasKha/GWToolboxpp/releases/latest")) {
         fprintf(stderr, "Couldn't download the latest release of GWToolboxpp\n");
         // @Remark:
         // We may not be able to grep Github api. (For instance, if we spam it)
@@ -259,13 +177,15 @@ bool DownloadWindow::DownloadAllFiles()
     snprintf(buffer, 64, "Downloading version '%s'", release.tag_name.c_str());
     MessageBoxA(0, buffer, "Downloading...", 0);
 
-    std::wstring url;
+    std::string url;
+    size_t file_size = 0;
     for (size_t i = 0; i < release.assets.size(); i++) {
         Asset *asset = &release.assets[i];
         if (asset->name == "GWToolbox.dll" || asset->name == "GWToolboxdll.dll") {
             fprintf(stderr, "browser_download_url: '%s'\n", asset->browser_download_url.c_str());
             const char *purl = asset->browser_download_url.c_str();
-            url = std::wstring(purl, purl + asset->browser_download_url.size());
+            file_size = asset->size;
+            url = std::string(purl, purl + asset->browser_download_url.size());
             break;
         }
     }
@@ -278,17 +198,43 @@ bool DownloadWindow::DownloadAllFiles()
     DownloadWindow window;
     window.Create();
     window.SetChangelog(release.body.c_str(), release.body.size());
-    window.ProcessMessages();
 
-    DownloadStatusCallback callback(&window, window.m_hProgressBar);
-    if (!Download(dll_path, url.c_str(), &callback)) {
-        fprintf(stderr, "Download failed: path_to_file = '%ls', url = '%ls'\n",
-                dll_path, url.c_str());
-        return false;
+    AsyncFileDownloader downloader;
+    AsyncDownload(url.c_str(), &downloader);
+
+    while (!window.ShouldClose()) {
+        window.PollMessages(16);
+
+        if (!downloader.IsCompleted()) {
+            size_t BytesDownloaded = downloader.GetDownloadCount();
+            ULONG Progress = static_cast<ULONG>((BytesDownloaded * 100) / file_size);
+            SendMessageW(window.m_hProgressBar, PBM_SETPOS, Progress, 0);
+        } else {
+            if (!downloader.IsSuccessful()) {
+                fprintf(stderr, "Failed to download '%s'. (Status: %s, StatusCode: %d)\n",
+                    url.c_str(), downloader.GetStatusStr(), downloader.GetStatusCode());
+                return false;
+            }
+
+            std::string& file_content = downloader.GetContent();
+            if (!WriteEntireFile(dll_path, file_content.c_str(), file_content.size())) {
+                fprintf(stderr, "WriteEntireFile failed on '%ls' with %zu bytes\n",
+                    dll_path, file_content.size());
+                return false;
+            }
+
+            downloader.Clear();
+            SendMessageW(window.m_hProgressBar, PBM_SETPOS, 100, 0);
+        }
     }
 
-    SendMessageW(window.m_hProgressBar, PBM_SETPOS, 100, 0);
-    window.WaitMessages();
+    //
+    // The user could close the window, before the download is complete
+    //
+    if (downloader.IsPending()) {
+        downloader.Abort();
+        return false;
+    }
 
     RegWriteRelease(release.tag_name.c_str(), release.tag_name.size());
     return true;

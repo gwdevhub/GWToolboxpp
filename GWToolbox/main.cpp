@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include <Core/Path.h>
+#include <RestClient/RestClient.h>
 
 #include "Download.h"
 #include "Inject.h"
@@ -103,6 +104,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     if (settings.asadmin && !IsRunningAsAdmin()) {
         RestartAsAdminWithSameArgs();
     }
+
+    AsyncRestScopeInit RestInitializer;
 
     Process proc;
     if (settings.install) {

@@ -66,6 +66,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Event.cpp" />
+    <ClCompile Include="File.cpp" />
     <ClCompile Include="Path.cpp" />
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="Str.cpp" />
@@ -73,6 +74,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Event.h" />
+    <ClInclude Include="File.h" />
     <ClInclude Include="Path.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="Str.h" />
