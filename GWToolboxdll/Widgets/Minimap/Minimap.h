@@ -14,13 +14,15 @@
 #include <Widgets/Minimap/SymbolsRenderer.h>
 #include <Widgets/Minimap/VBuffer.h>
 
-class Minimap : public ToolboxWidget {
+class Minimap final : public ToolboxWidget {
     struct Vec2i {
         Vec2i(int _x, int _y) : x(_x), y(_y) {}
         Vec2i() : x(0), y(0) {}
         int x, y;
     };
-    Minimap() {};
+    Minimap() {
+        is_resizable = false;
+    };
     Minimap(const Minimap&) = delete;
     ~Minimap() {};
 public:
@@ -49,7 +51,7 @@ public:
     void Terminate() override;
 
     void Draw(IDirect3DDevice9* device) override;
-    void RenderSetupProjection(IDirect3DDevice9* device);
+    void RenderSetupProjection(IDirect3DDevice9* device) const;
     
     bool FlagHeros(LPARAM lParam);
     bool OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam);
@@ -64,7 +66,7 @@ public:
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
 
-    float GetMapRotation();
+    float GetMapRotation() const;
 
     // 0 is 'all' flag, 1 to 7 is each hero
     void FlagHero(unsigned int idx) {
@@ -87,7 +89,7 @@ private:
     GW::Vec2f InterfaceToWorldPoint(Vec2i pos) const;
     GW::Vec2f InterfaceToWorldVector(Vec2i pos) const;
     void SelectTarget(GW::Vec2f pos);
-    bool IsKeyDown(MinimapModifierBehaviour mmb);
+    bool IsKeyDown(MinimapModifierBehaviour mmb) const;
 
     bool mousedown = false;
 
@@ -106,6 +108,7 @@ private:
     bool mouse_clickthrough = false;
     bool mouse_clickthrough_in_outpost = false;
     bool rotate_minimap = true;
+    bool circular_map = true;
     MinimapModifierBehaviour key_none_behavior  = MinimapModifierBehaviour::Draw;
     MinimapModifierBehaviour key_ctrl_behavior  = MinimapModifierBehaviour::Target;
     MinimapModifierBehaviour key_shift_behavior = MinimapModifierBehaviour::Move;
