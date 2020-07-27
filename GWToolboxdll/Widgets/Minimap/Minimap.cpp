@@ -287,7 +287,7 @@ void Minimap::SaveSettings(CSimpleIni *ini)
     effect_renderer.SaveSettings(ini, Name());
 }
 
-void Minimap::GetPlayerHeroes(GW::PartyInfo *party, std::vector<GW::AgentID> &_player_heroes)
+void Minimap::GetPlayerHeroes(GW::PartyInfo* party, std::vector<GW::AgentID>& _player_heroes)
 {
     _player_heroes.clear();
     if (!party)
@@ -400,17 +400,17 @@ void Minimap::Draw(IDirect3DDevice9 *device)
                     clipping.bottom = static_cast<long>(cmd->ClipRect.w);
                     device->SetScissorRect(&clipping);
                     device->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
-                    FillRect(color, Instance().location.x, Instance().location.y, Instance().size.x, Instance().size.y);
+                    FillRect(color, Instance().location.x, Instance().location.y, Instance().size.x, Instance().size.y); // fill rect with chosen background color
                 } else {
-                    device->SetRenderState(D3DRS_STENCILENABLE, true); // enable stencil writing
+                    device->SetRenderState(D3DRS_STENCILENABLE, true); // enable stencil testing
                     device->SetRenderState(D3DRS_STENCILMASK, 0xffffffff);
                     device->SetRenderState(D3DRS_STENCILWRITEMASK, 0xffffffff);
                     device->Clear(0, nullptr, D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0x00000000, 1.0f, 0); // clear depth and stencil buffer
                     device->SetRenderState(D3DRS_STENCILREF, 1);
                     device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
-                    device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
+                    device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE); // write ref value into stencil buffer when passed
                     auto radius = Instance().size.x / 2;
-                    FillCircle(Instance().location.x + radius, Instance().location.y + radius, radius, color); // draw transparent circle into stencil buffer - fill with 1's
+                    FillCircle(Instance().location.x + radius, Instance().location.y + radius, radius, color); // draw circle with chosen background color into stencil buffer, fills buffer with 1's
 
                     device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL); // only draw where 1 is in the buffer
                     device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_ZERO);

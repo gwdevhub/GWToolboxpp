@@ -56,7 +56,7 @@ void PmapRenderer::Initialize(IDirect3DDevice9* device) {
 
     // get the number of trapezoids, need it to allocate the vertex buffer
     trapez_count_ = 0;
-    for (auto &map : path_map) {
+    for (const GW::PathingMap& map : path_map) {
         trapez_count_ += map.trapezoid_count;
     }
     if (trapez_count_ == 0) return;
@@ -122,7 +122,7 @@ void PmapRenderer::Initialize(IDirect3DDevice9* device) {
 
     // populate vertex buffer
     for (auto k = 0; k < (shadow_show ? 2 : 1); ++k) {
-        for (auto pmap : path_map) {
+        for (const GW::PathingMap& pmap : path_map) {
             for (size_t j = 0; j < pmap.trapezoid_count; ++j) {
                 GW::PathingTrapezoid& trap = pmap.trapezoids[j];
 
