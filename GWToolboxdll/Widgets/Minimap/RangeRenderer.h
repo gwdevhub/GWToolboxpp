@@ -5,9 +5,9 @@
 
 class RangeRenderer : public VBuffer {
 private:
-    static const size_t num_circles = 5;
-    static const size_t circle_points = 64;
-    static const size_t circle_vertices = 65;
+    static constexpr size_t num_circles = 5;
+    static constexpr size_t circle_points = 96;
+    static constexpr size_t circle_triangles = circle_points - 2;
 
 public:
     void Render(IDirect3DDevice9* device) override;
