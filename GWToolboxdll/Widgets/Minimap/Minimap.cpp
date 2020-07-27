@@ -168,6 +168,16 @@ void Minimap::DrawSettingInternal()
 {
     static char const *minimap_modifier_behavior_combo_str = "Disabled\0Draw\0Target\0Move\0Walk\0\0";
 
+    ImVec2 winsize(100.0f, 100.0f);
+    ImGuiWindow *window = ImGui::FindWindowByName(Name());
+    if (window) {
+        winsize = window->Size;
+    }
+    if (ImGui::DragFloat("Size", reinterpret_cast<float*>(&winsize), 1.0f, 0.0f, 0.0f, "%.0f")) {
+        winsize.y = winsize.x;
+        ImGui::SetWindowSize(Name(), winsize);
+    }
+
     ImGui::Text("General");
     ImGui::DragFloat("Scale", &scale, 0.01f, 0.1f);
     ImGui::Text("You can set the color alpha to 0 to disable any minimap feature.");
@@ -409,7 +419,7 @@ void Minimap::Draw(IDirect3DDevice9 *device)
                     device->SetRenderState(D3DRS_STENCILREF, 1);
                     device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
                     device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE); // write ref value into stencil buffer when passed
-                    auto radius = Instance().size.x / 2;
+                    auto radius = static_cast<int>(ceil(Instance().size.x / 2)) + 1; // rounding error in viewmatrix transformation
                     FillCircle(Instance().location.x + radius, Instance().location.y + radius, radius, color); // draw circle with chosen background color into stencil buffer, fills buffer with 1's
 
                     device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL); // only draw where 1 is in the buffer

@@ -20,7 +20,9 @@ class Minimap final : public ToolboxWidget {
         Vec2i() : x(0), y(0) {}
         int x, y;
     };
-    Minimap() {};
+    Minimap() {
+        is_resizable = false;
+    };
     Minimap(const Minimap&) = delete;
     ~Minimap() {};
 public:
