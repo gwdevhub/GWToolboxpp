@@ -391,13 +391,18 @@ void Minimap::Draw(IDirect3DDevice9 *device)
                     device->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 4, vertices, sizeof(D3DVertex));
                 };
 
-                auto FillCircle = [&device](const int x, const int y, const int radius, const Color clr, int resolution = 199) {
-                    resolution = std::min(resolution, 199);
+                auto FillCircle = [&device](const float x, const float y, const float radius, const Color clr, float resolution = 199.f) {
+                    resolution = std::min(resolution, 199.f);
                     D3DVertex vertices[200];
                     for (auto i = 0; i <= resolution; ++i) {
-                        vertices[i] = {float(radius) * cos(D3DX_PI * (i / (float(resolution) / 2.f))) + float(x), float(y) + float(radius) * sin(D3DX_PI * (i / (float(resolution) / 2.f))), 0, clr};
+                        vertices[i] = {
+                            radius * cos(D3DX_PI * (i / (resolution / 2.f))) + x, 
+                            y + radius * sin(D3DX_PI * (i / (resolution / 2.f))), 
+                            0, 
+                            clr
+                        };
                     }
-                    device->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, static_cast<unsigned int>(resolution), vertices, sizeof(D3DVertex));
+                    device->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, static_cast<unsigned int>(ceil(resolution)), vertices, sizeof(D3DVertex));
                 };
 
                 D3DCOLOR color = Instance().pmap_renderer.GetBackgroundColor();
@@ -419,7 +424,7 @@ void Minimap::Draw(IDirect3DDevice9 *device)
                     device->SetRenderState(D3DRS_STENCILREF, 1);
                     device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
                     device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE); // write ref value into stencil buffer when passed
-                    auto radius = static_cast<int>(ceil(Instance().size.x / 2)) + 1; // rounding error in viewmatrix transformation
+                    float radius = static_cast<float>(Instance().size.x / 2.f); // rounding error in viewmatrix transformation
                     FillCircle(Instance().location.x + radius, Instance().location.y + radius, radius, color); // draw circle with chosen background color into stencil buffer, fills buffer with 1's
 
                     device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL); // only draw where 1 is in the buffer
