@@ -14,7 +14,7 @@
 #include <Widgets/Minimap/SymbolsRenderer.h>
 #include <Widgets/Minimap/VBuffer.h>
 
-class Minimap : public ToolboxWidget {
+class Minimap final : public ToolboxWidget {
     struct Vec2i {
         Vec2i(int _x, int _y) : x(_x), y(_y) {}
         Vec2i() : x(0), y(0) {}
@@ -49,7 +49,7 @@ public:
     void Terminate() override;
 
     void Draw(IDirect3DDevice9* device) override;
-    void RenderSetupProjection(IDirect3DDevice9* device);
+    void RenderSetupProjection(IDirect3DDevice9* device) const;
     
     bool FlagHeros(LPARAM lParam);
     bool OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam);
@@ -64,7 +64,7 @@ public:
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
 
-    float GetMapRotation();
+    float GetMapRotation() const;
 
     // 0 is 'all' flag, 1 to 7 is each hero
     void FlagHero(unsigned int idx) {
@@ -87,7 +87,7 @@ private:
     GW::Vec2f InterfaceToWorldPoint(Vec2i pos) const;
     GW::Vec2f InterfaceToWorldVector(Vec2i pos) const;
     void SelectTarget(GW::Vec2f pos);
-    bool IsKeyDown(MinimapModifierBehaviour mmb);
+    bool IsKeyDown(MinimapModifierBehaviour mmb) const;
 
     bool mousedown = false;
 
