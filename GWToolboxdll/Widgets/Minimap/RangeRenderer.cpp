@@ -147,7 +147,7 @@ void RangeRenderer::Render(IDirect3DDevice9* device) {
         device->DrawPrimitive(type, circle_vertices * i, circle_points);
     }
 
-    if (HaveHos()) {
+    if (havehos_) {
         device->DrawPrimitive(type, circle_vertices * (num_circles - 1), circle_points);
 
         GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
