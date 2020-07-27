@@ -126,26 +126,26 @@ public:
         bool IsWeaponSetItem();
         inline bool GetIsIdentified()
         {
-            return interaction & 1;
+            return (interaction & 1) != 0;
         }
         inline bool IsStackable()
         {
-            return interaction & 0x80000;
+            return (interaction & 0x80000) != 0;
         }
         inline bool IsUsable() {
-            return interaction & 0x1000000;
+            return (interaction & 0x1000000) != 0;
         }
         inline bool IsBlue() {
             return single_item_name && single_item_name[0] == 0xA3F;
         }
         inline bool IsPurple() {
-            return interaction & 0x400000;
+            return (interaction & 0x400000) != 0;
         }
         inline bool IsGreen() {
-            return interaction & 0x10;
+            return (interaction & 0x10) != 0;
         }
         inline bool IsGold() {
-            return interaction & 0x20000;
+            return (interaction & 0x20000) != 0;
         }
     };
 public:

@@ -35,9 +35,12 @@ namespace {
                 return 0;
             swprintf(buf, 599, L"<a=1>%S</a>: %s joined your channel.", module->irc_alias.c_str(), GuiUtils::StringToWString(hostd->nick).c_str());
         }
-        GW::GameThread::Enqueue([buf]() {
+
+        // @Fix: Visual Studio 2015 doesn't seem to accept to capture c-style arrays
+        std::wstring wbuf(buf);
+        GW::GameThread::Enqueue([wbuf]() {
             // NOTE: Messages are sent to the GWCA_1 channel - unused atm as far as i can see
-            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, buf);
+            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, wbuf.c_str());
         });
         return 0;
     }
@@ -48,9 +51,12 @@ namespace {
             return 0; // Empty msg
         wchar_t buf[600];
         swprintf(buf, 599, L"<a=1>%S</a>: %s left your channel.", module->irc_alias.c_str(), GuiUtils::StringToWString(hostd->nick).c_str());
-        GW::GameThread::Enqueue([buf]() {
+
+        // @Fix: Visual Studio 2015 doesn't seem to accept to capture c-style arrays
+        std::wstring wbuf(buf);
+        GW::GameThread::Enqueue([wbuf]() {
             // NOTE: Messages are sent to the GWCA_1 channel - unused atm as far as i can see
-            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, buf);
+            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, wbuf.c_str());
             });
         return 0;
     }
@@ -77,9 +83,12 @@ namespace {
             return 0; // Empty msg
         wchar_t buf[600];
         swprintf(buf, 599, L"<a=1>%s @ %S</a>: %s", GuiUtils::StringToWString(hostd->nick).c_str(), module->irc_alias.c_str(), GuiUtils::StringToWString(&params[1]).c_str());
-        GW::GameThread::Enqueue([buf]() {
+
+        // @Fix: Visual Studio 2015 doesn't seem to accept to capture c-style arrays
+        std::wstring wbuf(buf);
+        GW::GameThread::Enqueue([wbuf]() {
             // NOTE: Messages are sent to the GWCA_1 channel - unused atm as far as i can see
-            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, buf);
+            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, wbuf.c_str());
             });
         Log::Log("Message from %s: %s", hostd->nick, &params[1]);
         return 0;
@@ -199,13 +208,13 @@ bool TwitchModule::Connect() {
     // Sanitise strings to lower case
     std::transform(irc_server.begin(), irc_server.end(), irc_server.begin(),
         [](char c) -> char {
-            return static_cast<char>(std::tolower(c));
+            return static_cast<char>(::tolower(c));
         });
     /*std::transform(irc_username.begin(), irc_username.end(), irc_username.begin(),
         [](unsigned char c) { return std::tolower(c); });*/
     std::transform(irc_channel.begin(), irc_channel.end(), irc_channel.begin(),
         [](char c) -> char {
-            return static_cast<char>(std::tolower(c));
+            return static_cast<char>(::tolower(c));
         });
 
     if (conn.start(

@@ -136,8 +136,11 @@ static void _vchatlog(GW::Chat::Channel chan, const char* format, va_list argv) 
 
     char buf2[256];
     snprintf(buf2, 256, "<c=#00ccff>GWToolbox++</c>: %s", buf1);
-    GW::GameThread::Enqueue([chan, buf2]() {
-        GW::Chat::WriteChat(chan, buf2);
+
+    // @Fix: Visual Studio 2015 doesn't seem to accept to capture c-style arrays
+    std::string sbuf2(buf2);
+    GW::GameThread::Enqueue([chan, sbuf2]() {
+        GW::Chat::WriteChat(chan, sbuf2.c_str());
         });
     
 

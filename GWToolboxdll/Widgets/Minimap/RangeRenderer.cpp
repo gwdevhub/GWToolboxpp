@@ -152,7 +152,7 @@ void RangeRenderer::Render(IDirect3DDevice9* device) {
         device->DrawPrimitive(type, circle_vertices * i, circle_points);
     }
 
-    if (HaveHos()) {
+    if (havehos_) {
         for (auto i = 0; i < line_thickness ; ++i) { // draw HoS circles
             device->DrawPrimitive(type, circle_vertices * ((num_circles - 1) * line_thickness + i), circle_points);
         }

@@ -1,24 +1,30 @@
 #pragma once
 
+#pragma warning(disable: 4619) // there is no warning number 'number'
+
 #pragma warning(push)
 // Warning 5204 was removed, so it trigger a warning about a warning not existing, so we disable warning about warning.
 #pragma warning(disable: 4619) // #pragma warning : there is no warning number 'number'
 
 #pragma warning(disable: 4061) // enumerator 'identifier' in switch of enum 'enumeration' is not explicitly handled by a case label
+#pragma warning(disable: 4091) // 'keyword' : ignored on left of 'type' when no variable is declared
 #pragma warning(disable: 4100) // 'identifier' : unreferenced formal parameter
 #pragma warning(disable: 4365) // 'action' : conversion from 'type_1' to 'type_2', signed/unsigned mismatch
 #pragma warning(disable: 4514) // 'function' : unreferenced inline function has been removed
 #pragma warning(disable: 4548) // expression before comma has no effect; expected expression with side-effect
 #pragma warning(disable: 4530) // C++ exception handler used, but unwind semantics are not enabled. Specify /EHsc
+#pragma warning(disable: 4574) // 'Identifier' is defined to be '0': did you mean to use '#if identifier'?
 #pragma warning(disable: 4577) // 'noexcept' used with no exception handling mode specified; termination on exception is not guaranteed. Specify /EHsc
 #pragma warning(disable: 4623) // 'derived class' : default constructor was implicitly defined as deleted because a base class default constructor is inaccessible or deleted
 #pragma warning(disable: 4625) // 'derived class' : copy constructor was implicitly defined as deleted because a base class copy constructor is inaccessible or deleted
 #pragma warning(disable: 4626) // 'derived class' : assignment operator was implicitly defined as deleted because a base class assignment operator is inaccessible or deleted
+#pragma warning(disable: 4628) // digraphs not supported with -Ze. Character sequence 'digraph' not interpreted as alternate token for 'char'
 #pragma warning(disable: 4668) // 'symbol' is not defined as a preprocessor macro, replacing with '0' for 'directives'
 #pragma warning(disable: 4710) // 'function' : function not inlined
 #pragma warning(disable: 4711) // function 'function' selected for inline expansion
 #pragma warning(disable: 4738) // storing 32-bit float result in memory, possible loss of performance
 #pragma warning(disable: 4820) // 'bytes' bytes padding added after construct 'member_name'
+#pragma warning(disable: 4917) // 'declarator' : a GUID can only be associated with a class, interface or namespace
 #pragma warning(disable: 5026) // 'type': move constructor was implicitly defined as deleted
 #pragma warning(disable: 5027) // 'type': move assignment operator was implicitly defined as deleted
 #pragma warning(disable: 5029) // nonstandard extension used: alignment attributes in C++ apply to variables, data members and tag types only

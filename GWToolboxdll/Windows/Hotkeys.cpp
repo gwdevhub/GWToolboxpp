@@ -707,7 +707,7 @@ void HotkeyDropUseBuff::Execute()
             if (GW::SkillbarMgr::GetPlayerSkillbar()->skills[slot].recharge == 0) {
                 GW::GameThread::Enqueue([slot] () -> void {
                     GW::SkillbarMgr::UseSkill(slot, GW::Agents::GetTargetId(),
-                        ImGui::IsKeyDown(VK_CONTROL));
+                        static_cast<uint32_t>(ImGui::IsKeyDown(VK_CONTROL)));
                 });
             }
         }

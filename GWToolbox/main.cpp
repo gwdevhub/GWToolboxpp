@@ -1,9 +1,11 @@
 #include "stdafx.h"
 
+#include <Core/Path.h>
+#include <RestClient/RestClient.h>
+
 #include "Download.h"
 #include "Inject.h"
 #include "Install.h"
-#include "Path.h"
 #include "Process.h"
 #include "Settings.h"
 
@@ -103,6 +105,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
         RestartAsAdminWithSameArgs();
     }
 
+    AsyncRestScopeInit RestInitializer;
+
     Process proc;
     if (settings.install) {
         Install(settings.quiet);
@@ -117,16 +121,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
         Uninstall(settings.quiet);
         Install(settings.quiet);
         return 0;
-    } else if (settings.pid) {
-        if (!proc.Open(settings.pid)) {
-            fprintf(stderr, "Couldn't open process %d\n", settings.pid);
-            return 1;
-        }
-
-        if (!InjectInstalledDllInProcess(&proc)) {
-            fprintf(stderr, "InjectInstalledDllInProcess failed\n");
-            return 1;
-        }
     }
 
     if (!IsInstalled() && !settings.noinstall) {
@@ -163,6 +157,22 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
         }
     }
 
+    if (settings.pid) {
+        if (!proc.Open(settings.pid)) {
+            fprintf(stderr, "Couldn't open process %d\n", settings.pid);
+            return 1;
+        }
+
+        if (!InjectInstalledDllInProcess(&proc)) {
+            fprintf(stderr, "InjectInstalledDllInProcess failed\n");
+            return 1;
+        }
+
+        SetProcessForeground(&proc);
+
+        return 0;
+    }
+    
     // If we can't open with appropriate rights, we can then ask to re-open
     // as admin.
     InjectReply reply = InjectWindow::AskInjectProcess(&proc);

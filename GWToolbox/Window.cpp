@@ -149,6 +149,35 @@ bool Window::WaitMessages()
     return true;
 }
 
+bool Window::PollMessages(uint32_t TimeoutMs)
+{
+    MSG msg;
+
+    DWORD dwRet = MsgWaitForMultipleObjects(
+        1,
+        &m_hEvent,
+        FALSE,
+        TimeoutMs,
+        QS_ALLINPUT);
+
+    if (dwRet == WAIT_OBJECT_0 || dwRet == WAIT_TIMEOUT)
+        return true;
+
+    if (dwRet == WAIT_FAILED)
+    {
+        fprintf(stderr, "MsgWaitForMultipleObjects failed (%lu)\n", GetLastError());
+        return false;
+    }
+
+    while (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE))
+    {
+        TranslateMessage(&msg);
+        DispatchMessageW(&msg);
+    }
+
+    return true;
+}
+
 bool Window::ProcessMessages()
 {
     MSG msg;
@@ -165,6 +194,19 @@ bool Window::ProcessMessages()
 void Window::SignalStop()
 {
     SetEvent(m_hEvent);
+}
+
+bool Window::ShouldClose()
+{
+    DWORD dwReason = WaitForSingleObject(m_hEvent, 0);
+
+    if (dwReason == WAIT_TIMEOUT)
+        return false;
+
+    if (dwReason != WAIT_OBJECT_0)
+        fprintf(stderr, "WaitForSingleObject failed (%lu)\n", GetLastError());
+
+    return true;
 }
 
 void Window::SetWindowName(LPCWSTR lpName)
