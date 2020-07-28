@@ -1,7 +1,6 @@
-#include <string.h>
-#include <wchar.h>
+#include <stdafx.h>
 
-#include <TbWindows.h>
+#include <ToolboxWindow.h>
 
 #include "FileIterator.h"
 

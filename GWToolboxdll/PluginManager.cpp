@@ -39,7 +39,7 @@ void PluginManager::Draw() {
 				TBModule* module = LoadDLL(plugin.path);
 				module->Initialize(ImGui::GetCurrentContext());
 				plugin.instance = module;
-				GWToolbox::Instance().AddPlugin(module);
+				//GWToolbox::Instance().AddPlugin(module); // TODO: Re-add
 			}
 		}
 

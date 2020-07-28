@@ -18,7 +18,7 @@
 #include <GuiUtils.h>
 
 #include <Modules/Resources.h>
-#include <Widgests/ServerInfoWidget.h>
+#include <Widgets/ServerInfoWidget.h>
 
 //#define IPGEO_API_KEY "144de1673b1c473d9bab94f528acc214"
 #define IPGEO_API_KEY "161f3834252a4ec6988e49bb75ccd902"

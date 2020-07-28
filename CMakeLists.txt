@@ -27,46 +27,10 @@ include(simpleini)
 include(discord_game_sdk)
 include(json)
 
+add_subdirectory(GWToolboxdll)
+add_subdirectory(GWToolbox)
 
-add_library(gwtoolbox SHARED)
-
-set(GWTOOLBOX_FOLDER "${PROJECT_SOURCE_DIR}/GWToolbox/GWToolbox")
-file(GLOB SOURCES
-    "${GWTOOLBOX_FOLDER}/*.h"
-    "${GWTOOLBOX_FOLDER}/*.cpp"
-    "${GWTOOLBOX_FOLDER}/Modules/*.h"
-    "${GWTOOLBOX_FOLDER}/Modules/*.cpp"
-    "${GWTOOLBOX_FOLDER}/Utils/*.h"
-    "${GWTOOLBOX_FOLDER}/Utils/*.cpp"
-    "${GWTOOLBOX_FOLDER}/Widgets/*.h"
-    "${GWTOOLBOX_FOLDER}/Widgets/*.cpp"
-    "${GWTOOLBOX_FOLDER}/Widgets/Minimap/*.h"
-    "${GWTOOLBOX_FOLDER}/Widgets/Minimap/*.cpp"
-    "${GWTOOLBOX_FOLDER}/Windows/*.h"
-    "${GWTOOLBOX_FOLDER}/Windows/*.cpp")
-source_group(TREE "${GWTOOLBOX_FOLDER}" FILES ${SOURCES})
-target_sources(gwtoolbox PRIVATE ${SOURCES})
-
-target_include_directories(gwtoolbox PRIVATE 
-    "${GWTOOLBOX_FOLDER}"
-    )
-
-target_link_libraries(gwtoolbox PRIVATE
-    imgui
-    gwca
-    directx
-    utf8proc
-    easywsclient
-    discord_game_sdk
-    json
-    simpleini
-    Urlmon.lib
-    Shlwapi.lib
-    Wininet.lib
-    Dbghelp.lib # for MiniDump
-    )
-
-add_subdirectory(CSLauncher)
+# add_subdirectory(CSLauncher)
 
 add_library(module_base INTERFACE)
 target_sources(module_base INTERFACE
