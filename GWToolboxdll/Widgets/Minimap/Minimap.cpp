@@ -173,13 +173,15 @@ void Minimap::DrawSettingInternal()
     if (window) {
         winsize = window->Size;
     }
-    if (ImGui::DragFloat("Size", reinterpret_cast<float*>(&winsize), 1.0f, 0.0f, 0.0f, "%.0f")) {
+    if (ImGui::DragFloat("Size", &winsize.x, 1.0f, 0.0f, 0.0f, "%.0f")) {
         winsize.y = winsize.x;
         ImGui::SetWindowSize(Name(), winsize);
     }
 
     ImGui::Text("General");
-    ImGui::DragFloat("Scale", &scale, 0.01f, 0.1f);
+    static float a = scale;
+    if (ImGui::DragFloat("Scale", &a, 0.01f, 0.1f, 10.f))
+        scale = a;
     ImGui::Text("You can set the color alpha to 0 to disable any minimap feature.");
     // agent_rendered has its own TreeNodes
     agent_renderer.DrawSettings();
@@ -297,7 +299,7 @@ void Minimap::SaveSettings(CSimpleIni *ini)
     effect_renderer.SaveSettings(ini, Name());
 }
 
-void Minimap::GetPlayerHeroes(GW::PartyInfo* party, std::vector<GW::AgentID>& _player_heroes)
+void Minimap::GetPlayerHeroes(GW::PartyInfo *party, std::vector<GW::AgentID> &_player_heroes)
 {
     _player_heroes.clear();
     if (!party)
@@ -317,6 +319,11 @@ void Minimap::GetPlayerHeroes(GW::PartyInfo* party, std::vector<GW::AgentID>& _p
 float Minimap::GetMapRotation() const
 {
     return rotate_minimap ? GW::CameraMgr::GetYaw() : static_cast<float>(1.5708);
+}
+
+D3DXVECTOR2 Minimap::GetGwinchScale() const
+{
+    return gwinch_scale;
 }
 
 void Minimap::Draw(IDirect3DDevice9 *device)
@@ -352,7 +359,7 @@ void Minimap::Draw(IDirect3DDevice9 *device)
             [](const ImDrawList *parent_list, const ImDrawCmd *cmd) -> void {
                 UNREFERENCED_PARAMETER(parent_list);
 
-                auto device = static_cast<IDirect3DDevice9*>(cmd->UserCallbackData);
+                auto device = static_cast<IDirect3DDevice9 *>(cmd->UserCallbackData);
                 GW::Agent *me = GW::Agents::GetPlayer();
                 if (me == nullptr)
                     return;
@@ -395,12 +402,7 @@ void Minimap::Draw(IDirect3DDevice9 *device)
                     resolution = std::min(resolution, 199.f);
                     D3DVertex vertices[200];
                     for (auto i = 0; i <= resolution; ++i) {
-                        vertices[i] = {
-                            radius * cos(D3DX_PI * (i / (resolution / 2.f))) + x, 
-                            y + radius * sin(D3DX_PI * (i / (resolution / 2.f))), 
-                            0, 
-                            clr
-                        };
+                        vertices[i] = {radius * cos(D3DX_PI * (i / (resolution / 2.f))) + x, y + radius * sin(D3DX_PI * (i / (resolution / 2.f))), 0, clr};
                     }
                     device->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, static_cast<unsigned int>(ceil(resolution)), vertices, sizeof(D3DVertex));
                 };
@@ -423,8 +425,8 @@ void Minimap::Draw(IDirect3DDevice9 *device)
                     device->Clear(0, nullptr, D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0x00000000, 1.0f, 0); // clear depth and stencil buffer
                     device->SetRenderState(D3DRS_STENCILREF, 1);
                     device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
-                    device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE); // write ref value into stencil buffer when passed
-                    float radius = static_cast<float>(Instance().size.x / 2.f); // rounding error in viewmatrix transformation
+                    device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);                           // write ref value into stencil buffer when passed
+                    float radius = static_cast<float>(Instance().size.x / 2.f);                                // rounding error in viewmatrix transformation
                     FillCircle(Instance().location.x + radius, Instance().location.y + radius, radius, color); // draw circle with chosen background color into stencil buffer, fills buffer with 1's
 
                     device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL); // only draw where 1 is in the buffer
@@ -450,6 +452,16 @@ void Minimap::Draw(IDirect3DDevice9 *device)
                 D3DXMATRIX scaleM, translationM;
                 D3DXMatrixScaling(&scaleM, Instance().scale, Instance().scale, 1.0f);
                 D3DXMatrixTranslation(&translationM, Instance().translation.x, Instance().translation.y, 0);
+
+                D3DVIEWPORT9 viewport;
+                device->GetViewport(&viewport);
+                float xscale = static_cast<float>(Instance().size.x) / viewport.Width;
+                float yscale = static_cast<float>(Instance().size.x) / viewport.Height;
+                xscale *= Instance().scale, yscale *= Instance().scale;
+                if (xscale != Instance().gwinch_scale.x || yscale != Instance().gwinch_scale.y) {
+                    Instance().range_renderer.Invalidate();
+                    Instance().gwinch_scale = {xscale, yscale};
+                }
 
                 view = translate_char * rotate_char * scaleM * translationM;
                 device->SetTransform(D3DTS_VIEW, &view);

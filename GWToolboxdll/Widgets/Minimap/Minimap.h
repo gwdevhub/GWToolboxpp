@@ -14,24 +14,38 @@
 #include <Widgets/Minimap/SymbolsRenderer.h>
 #include <Widgets/Minimap/VBuffer.h>
 
-class Minimap final : public ToolboxWidget {
-    struct Vec2i {
-        Vec2i(int _x, int _y) : x(_x), y(_y) {}
-        Vec2i() : x(0), y(0) {}
+class Minimap final : public ToolboxWidget
+{
+    struct Vec2i
+    {
+        Vec2i(int _x, int _y)
+            : x(_x)
+            , y(_y)
+        {
+        }
+        Vec2i()
+            : x(0)
+            , y(0)
+        {
+        }
         int x, y;
     };
-    Minimap() {
+    Minimap()
+    {
         is_resizable = false;
     };
-    Minimap(const Minimap&) = delete;
-    ~Minimap() {};
+    Minimap(const Minimap &) = delete;
+    ~Minimap(){};
+
 public:
-    static Minimap& Instance() {
+    static Minimap &Instance()
+    {
         static Minimap instance;
         return instance;
     }
 
-    enum class MinimapModifierBehaviour : int {
+    enum class MinimapModifierBehaviour : int
+    {
         Disabled,
         Draw,
         Target,
@@ -43,16 +57,22 @@ public:
     const float acceleration = 0.5f;
     const float max_speed = 15.0f; // game units per frame
 
-    const char* Name() const override { return "Minimap"; }
+    const char *Name() const override
+    {
+        return "Minimap";
+    }
 
-    float Scale() const { return scale; }
+    float Scale() const
+    {
+        return scale;
+    }
 
     void Initialize() override;
     void Terminate() override;
 
-    void Draw(IDirect3DDevice9* device) override;
-    void RenderSetupProjection(IDirect3DDevice9* device) const;
-    
+    void Draw(IDirect3DDevice9 *device) override;
+    void RenderSetupProjection(IDirect3DDevice9 *device) const;
+
     bool FlagHeros(LPARAM lParam);
     bool OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam);
     bool OnMouseDblClick(UINT Message, WPARAM wParam, LPARAM lParam);
@@ -62,15 +82,18 @@ public:
     static void OnFlagHeroCmd(const wchar_t *message, int argc, LPWSTR *argv);
     bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
 
-    void LoadSettings(CSimpleIni* ini) override;
-    void SaveSettings(CSimpleIni* ini) override;
+    void LoadSettings(CSimpleIni *ini) override;
+    void SaveSettings(CSimpleIni *ini) override;
     void DrawSettingInternal() override;
 
     float GetMapRotation() const;
+    D3DXVECTOR2 GetGwinchScale() const;
 
     // 0 is 'all' flag, 1 to 7 is each hero
-    void FlagHero(unsigned int idx) {
-        if (idx < 8) flagging[idx] ^= 1;
+    void FlagHero(unsigned int idx)
+    {
+        if (idx < 8)
+            flagging[idx] ^= 1;
     }
 
     RangeRenderer range_renderer;
@@ -95,6 +118,7 @@ private:
 
     Vec2i location;
     Vec2i size;
+    D3DXVECTOR2 gwinch_scale;
 
     Vec2i drag_start;
     GW::Vec2f translation;
@@ -109,10 +133,10 @@ private:
     bool mouse_clickthrough_in_outpost = false;
     bool rotate_minimap = true;
     bool circular_map = true;
-    MinimapModifierBehaviour key_none_behavior  = MinimapModifierBehaviour::Draw;
-    MinimapModifierBehaviour key_ctrl_behavior  = MinimapModifierBehaviour::Target;
+    MinimapModifierBehaviour key_none_behavior = MinimapModifierBehaviour::Draw;
+    MinimapModifierBehaviour key_ctrl_behavior = MinimapModifierBehaviour::Target;
     MinimapModifierBehaviour key_shift_behavior = MinimapModifierBehaviour::Move;
-    MinimapModifierBehaviour key_alt_behavior   = MinimapModifierBehaviour::Walk;
+    MinimapModifierBehaviour key_alt_behavior = MinimapModifierBehaviour::Walk;
     bool is_observing = false;
 
     bool hero_flag_controls_show = false;
@@ -121,7 +145,7 @@ private:
     bool flagging[9] = {false};
     std::vector<GW::AgentID> player_heroes;
 
-    void GetPlayerHeroes(GW::PartyInfo *party, std::vector<GW::AgentID>& heroes);
+    void GetPlayerHeroes(GW::PartyInfo *party, std::vector<GW::AgentID> &heroes);
 
     GW::HookEntry AgentPinged_Entry;
     GW::HookEntry CompassEvent_Entry;

@@ -12,6 +12,8 @@
 
 #include <Widgets/Minimap/RangeRenderer.h>
 
+#include "Minimap.h"
+
 void RangeRenderer::LoadSettings(CSimpleIni *ini, const char *section)
 {
     color_range_hos = Colors::Load(ini, section, "color_range_hos", 0xFF881188);
@@ -55,12 +57,16 @@ void RangeRenderer::DrawSettings()
 
 void RangeRenderer::CreateCircle(D3DVertex *vertices, float radius, DWORD color) const
 {
+    const auto scale = Minimap::Instance().GetGwinchScale();
+    const auto xdiff = static_cast<float>(line_thickness) / scale.x;
+    const auto ydiff = static_cast<float>(line_thickness) / scale.y;
+
     for (size_t i = 0; i < circle_points - 1; i += 2) {
         const auto angle = i * (2 * static_cast<float>(M_PI) / circle_triangles);
         vertices[i].x = radius * std::cosf(angle);
         vertices[i].y = radius * std::sinf(angle);
-        vertices[i + 1].x = (radius - line_thickness) * std::cosf(angle);
-        vertices[i + 1].y = (radius - line_thickness) * std::sinf(angle);
+        vertices[i + 1].x = (radius - xdiff) * std::cosf(angle);
+        vertices[i + 1].y = (radius - ydiff) * std::sinf(angle);
         vertices[i].z = vertices[i + 1].z = 0.0f;
         vertices[i].color = vertices[i + 1].color = color;
     }
