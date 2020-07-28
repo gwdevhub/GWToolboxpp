@@ -12,3 +12,4 @@ target_include_directories(utf8proc PUBLIC "${UTF8PROC_FOLDER}")
 target_compile_definitions(utf8proc PUBLIC UTF8PROC_STATIC)
 
 
+set_target_properties(utf8proc PROPERTIES FOLDER "Dependencies/")

@@ -14,3 +14,5 @@ source_group(TREE "${MINHOOK_FOLDER}" FILES ${SOURCES})
 target_sources(minhook PRIVATE ${SOURCES})
 
 target_include_directories(minhook PUBLIC "${MINHOOK_FOLDER}/include/")
+
+set_target_properties(minhook PROPERTIES FOLDER "Dependencies/")

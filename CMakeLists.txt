@@ -26,7 +26,6 @@ include(easywsclient)
 include(simpleini)
 include(discord_game_sdk)
 include(json)
-set_target_properties(easywsclient imgui minhook openssl utf8proc PROPERTIES FOLDER "Dependencies/")
 
 
 add_library(gwtoolbox SHARED)

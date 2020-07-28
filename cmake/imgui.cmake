@@ -28,3 +28,4 @@ target_sources(imgui PRIVATE ${SOURCES})
 target_include_directories(imgui PUBLIC "${imgui_SOURCE_DIR}")
 target_compile_definitions(imgui PUBLIC IMGUI_USE_BGRA_PACKED_COLOR)
 
+set_target_properties(imgui PROPERTIES FOLDER "Dependencies/")

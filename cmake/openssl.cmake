@@ -12,3 +12,4 @@ target_link_libraries(openssl PRIVATE
     "${OPENSSL_FOLDER}/openssl/lib/libeay32.lib"
     "${OPENSSL_FOLDER}/openssl/lib/ssleay32.lib")
 
+set_target_properties(openssl PROPERTIES FOLDER "Dependencies/")
