@@ -1,0 +1,740 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="imgui">
+      <UniqueIdentifier>{4db1808e-6b4d-496d-8308-1167ab00639e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Modules">
+      <UniqueIdentifier>{1cf50e38-a872-4092-8e47-894f72ebe713}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Modules\ChatCommands">
+      <UniqueIdentifier>{d71a28be-632e-4ddf-b627-8216ca3fde98}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Modules\ToolboxSettings">
+      <UniqueIdentifier>{b09fa13c-917e-4438-b978-978e1516eb99}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Modules\GameSettings">
+      <UniqueIdentifier>{7c170218-8a46-48ea-9b88-c28de5341fb6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Modules\ChatFilter">
+      <UniqueIdentifier>{3be842ce-7fa1-4260-a177-73f1e231242f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Modules\Resources">
+      <UniqueIdentifier>{ca154081-28c5-4b2b-93d2-dcf9ab2c396d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Modules\Theme">
+      <UniqueIdentifier>{36b6fd26-3bd4-4b3f-a6a7-0a9a973a3b0c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Modules\Updater">
+      <UniqueIdentifier>{6dc61691-4f75-4ff0-b2f7-5b6139a727c7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Widgets">
+      <UniqueIdentifier>{7372b4a6-b924-421c-aee8-c005b628c146}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Widgets\Distance">
+      <UniqueIdentifier>{fbeb5788-cdfc-4876-95a2-6db9ce029758}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Widgets\Health">
+      <UniqueIdentifier>{1b291bcd-827a-4ff8-83c6-c8cb641aa2f8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Widgets\Timer">
+      <UniqueIdentifier>{a198a88b-9177-4a4c-aaae-15001e5fed83}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Widgets\Minimap">
+      <UniqueIdentifier>{0bd6729c-886d-4389-984e-3090392bd105}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Widgets\Clock">
+      <UniqueIdentifier>{b6fa97a6-cc38-4a69-bc4b-672f192a2c67}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Widgets\Bonds">
+      <UniqueIdentifier>{0960737e-8500-47dd-af04-72e67f34ddfe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Widgets\Damage">
+      <UniqueIdentifier>{47e6e76c-22bf-4151-9e40-ef731c1f4c9b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Widgets\Vanquish">
+      <UniqueIdentifier>{acc877c6-0def-46a0-b03b-cd84a555ed68}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Widgets\Alcohol">
+      <UniqueIdentifier>{686bc0d4-37d4-43ce-8569-cb7d9dfd1e28}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows">
+      <UniqueIdentifier>{3eda78ba-9481-4130-92cf-e248ec0bda9c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\Builds">
+      <UniqueIdentifier>{281802a2-6e99-4643-8bb1-24d49379808c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\Hotkeys">
+      <UniqueIdentifier>{08f1a537-cc72-449b-8fc7-be6285f656d7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\Settings">
+      <UniqueIdentifier>{744c682f-c899-4414-967d-a722234170cc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\Pcons">
+      <UniqueIdentifier>{d2bfc54f-2087-499d-9115-c45d667d2981}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\Travel">
+      <UniqueIdentifier>{624fe487-72db-4894-a784-fb22fe444f1c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\Dialogs">
+      <UniqueIdentifier>{860d578b-a03b-401e-9334-3415f5a12f0b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\Info">
+      <UniqueIdentifier>{076e2b66-b6f2-42cf-b9cd-2f991fea2cfb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\Materials">
+      <UniqueIdentifier>{dd4ea2fb-9e11-4117-b6db-cc2cf2303926}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\MainWindow">
+      <UniqueIdentifier>{699075b0-bfc3-4e1f-a343-c57b8f105f01}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\Notepad">
+      <UniqueIdentifier>{f2c5506d-d857-49bc-a04c-fda72918c542}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources">
+      <UniqueIdentifier>{554c14f1-8688-4e1d-a4db-5e272596d3e3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\Icons">
+      <UniqueIdentifier>{ae651573-e7e7-4562-b764-31bd964c36fe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\pcons">
+      <UniqueIdentifier>{8261b255-947a-4fca-a447-4b7ca9a981df}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\materials">
+      <UniqueIdentifier>{597e0ccc-c99f-4f62-bb91-5a1491776c53}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\bonds">
+      <UniqueIdentifier>{8deb1198-ba79-4d65-9a5f-6c6d5935a32c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\HeroBuilds">
+      <UniqueIdentifier>{9453adc8-19e1-455a-8fbe-0385b23a387f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\Trade">
+      <UniqueIdentifier>{7895c2d6-b2da-4eab-8bc7-de0dffbed27b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\ObjectiveTimer">
+      <UniqueIdentifier>{fbeb8ca4-3b54-4f10-81f7-e7fa90a8e7ac}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="utf8proc">
+      <UniqueIdentifier>{52973ab6-dfdc-4b2a-9368-285b25aad81d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\StringDecoder">
+      <UniqueIdentifier>{0195419e-18c1-4023-943f-c7452f445392}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\FriendList">
+      <UniqueIdentifier>{25f0044b-db8e-4e01-9e71-23b8502650c9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\FactionLeaderboard">
+      <UniqueIdentifier>{49ecf114-46ec-4b19-b73a-a1a9f3592f35}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\DoorMonitor">
+      <UniqueIdentifier>{fe074b54-1958-44f0-8efe-422b68206a21}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\SkillListing">
+      <UniqueIdentifier>{8d6a91c5-a3c8-4e64-9f6b-54229bcb00dd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\PacketLogger">
+      <UniqueIdentifier>{ddef44f2-24fe-4d63-838b-5fddde40c623}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Modules\PartyWindow">
+      <UniqueIdentifier>{53799a4d-7e87-4fa1-a9d5-8d09f36baea7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Modules\ZrawDeep">
+      <UniqueIdentifier>{658bc2bd-ac6a-4af9-ab82-2329c2b6a7e8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Modules\Twitch">
+      <UniqueIdentifier>{3032916f-2146-4839-940e-fafef08113af}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows\DailyQuests">
+      <UniqueIdentifier>{9493ee1e-b4ec-4308-ba2f-e94475e6c29c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Modules\InventoryManager">
+      <UniqueIdentifier>{6f34488c-c6e6-4957-af12-3ac2ef557582}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Modules\Discord">
+      <UniqueIdentifier>{5ccbf3af-2755-4164-a010-b0616ad755f5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Modules\AprilFool">
+      <UniqueIdentifier>{5ec8202e-cbba-49bb-9f48-749bb5590c0c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\Dependencies\imgui\imconfig.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\imgui\imgui.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\imgui\imgui_internal.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\imgui\stb_rect_pack.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\imgui\stb_textedit.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\imgui\stb_truetype.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Resources</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\easywsclient\easywsclient.hpp">
+      <Filter>Windows\Trade</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\utf8proc\utf8proc.h">
+      <Filter>utf8proc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\discord_game_sdk\c\discord_game_sdk.h">
+      <Filter>Modules\Discord</Filter>
+    </ClInclude>
+    <ClInclude Include="Modules\ChatCommands.h">
+      <Filter>Modules\ChatCommands</Filter>
+    </ClInclude>
+    <ClInclude Include="Modules\ChatFilter.h">
+      <Filter>Modules\ChatFilter</Filter>
+    </ClInclude>
+    <ClInclude Include="Modules\DiscordModule.h">
+      <Filter>Modules\Discord</Filter>
+    </ClInclude>
+    <ClInclude Include="Modules\GameSettings.h">
+      <Filter>Modules\GameSettings</Filter>
+    </ClInclude>
+    <ClInclude Include="Modules\InventoryManager.h">
+      <Filter>Modules\InventoryManager</Filter>
+    </ClInclude>
+    <ClInclude Include="Modules\PartyWindowModule.h">
+      <Filter>Modules\PartyWindow</Filter>
+    </ClInclude>
+    <ClInclude Include="Modules\Resources.h">
+      <Filter>Modules\Resources</Filter>
+    </ClInclude>
+    <ClInclude Include="Modules\ToolboxTheme.h">
+      <Filter>Modules\Theme</Filter>
+    </ClInclude>
+    <ClInclude Include="Modules\ToolboxSettings.h">
+      <Filter>Modules\ToolboxSettings</Filter>
+    </ClInclude>
+    <ClInclude Include="Modules\TwitchModule.h">
+      <Filter>Modules\Twitch</Filter>
+    </ClInclude>
+    <ClInclude Include="Modules\Updater.h">
+      <Filter>Modules\Updater</Filter>
+    </ClInclude>
+    <ClInclude Include="Modules\ZrawDeepModule.h">
+      <Filter>Modules\ZrawDeep</Filter>
+    </ClInclude>
+    <ClInclude Include="Widgets\AlcoholWidget.h">
+      <Filter>Widgets\Alcohol</Filter>
+    </ClInclude>
+    <ClInclude Include="Widgets\BondsWidget.h">
+      <Filter>Widgets\Bonds</Filter>
+    </ClInclude>
+    <ClInclude Include="Widgets\ClockWidget.h">
+      <Filter>Widgets\Clock</Filter>
+    </ClInclude>
+    <ClInclude Include="Widgets\PartyDamage.h">
+      <Filter>Widgets\Damage</Filter>
+    </ClInclude>
+    <ClInclude Include="Widgets\DistanceWidget.h">
+      <Filter>Widgets\Distance</Filter>
+    </ClInclude>
+    <ClInclude Include="Widgets\HealthWidget.h">
+      <Filter>Widgets\Health</Filter>
+    </ClInclude>
+    <ClInclude Include="Widgets\Minimap\AgentRenderer.h">
+      <Filter>Widgets\Minimap</Filter>
+    </ClInclude>
+    <ClInclude Include="Widgets\Minimap\CustomRenderer.h">
+      <Filter>Widgets\Minimap</Filter>
+    </ClInclude>
+    <ClInclude Include="Widgets\Minimap\D3DVertex.h">
+      <Filter>Widgets\Minimap</Filter>
+    </ClInclude>
+    <ClInclude Include="Widgets\Minimap\EffectRenderer.h">
+      <Filter>Widgets\Minimap</Filter>
+    </ClInclude>
+    <ClInclude Include="Widgets\Minimap\Minimap.h">
+      <Filter>Widgets\Minimap</Filter>
+    </ClInclude>
+    <ClInclude Include="Widgets\Minimap\PingsLinesRenderer.h">
+      <Filter>Widgets\Minimap</Filter>
+    </ClInclude>
+    <ClInclude Include="Widgets\Minimap\PmapRenderer.h">
+      <Filter>Widgets\Minimap</Filter>
+    </ClInclude>
+    <ClInclude Include="Widgets\Minimap\RangeRenderer.h">
+      <Filter>Widgets\Minimap</Filter>
+    </ClInclude>
+    <ClInclude Include="Widgets\Minimap\SymbolsRenderer.h">
+      <Filter>Widgets\Minimap</Filter>
+    </ClInclude>
+    <ClInclude Include="Widgets\Minimap\VBuffer.h">
+      <Filter>Widgets\Minimap</Filter>
+    </ClInclude>
+    <ClInclude Include="Widgets\TimerWidget.h">
+      <Filter>Widgets\Timer</Filter>
+    </ClInclude>
+    <ClInclude Include="Widgets\VanquishWidget.h">
+      <Filter>Widgets\Vanquish</Filter>
+    </ClInclude>
+    <ClInclude Include="base64.h" />
+    <ClInclude Include="CircurlarBuffer.h" />
+    <ClInclude Include="Color.h" />
+    <ClInclude Include="CursorFix.h" />
+    <ClInclude Include="d3dx9_dynamic.h" />
+    <ClInclude Include="Defines.h" />
+    <ClInclude Include="GuiUtils.h" />
+    <ClInclude Include="GWToolbox.h" />
+    <ClInclude Include="ImGuiAddons.h" />
+    <ClInclude Include="IRC.h" />
+    <ClInclude Include="Keys.h" />
+    <ClInclude Include="mp3.h" />
+    <ClInclude Include="sha1.hpp" />
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="Timer.h" />
+    <ClInclude Include="ToolboxModule.h" />
+    <ClInclude Include="ToolboxUIElement.h" />
+    <ClInclude Include="ToolboxWidget.h" />
+    <ClInclude Include="ToolboxWindow.h" />
+    <ClInclude Include="Utf8.h" />
+    <ClInclude Include="Windows\BuildsWindow.h">
+      <Filter>Windows\Builds</Filter>
+    </ClInclude>
+    <ClInclude Include="Windows\DialogsWindow.h">
+      <Filter>Windows\Dialogs</Filter>
+    </ClInclude>
+    <ClInclude Include="Windows\DoorMonitorWindow.h">
+      <Filter>Windows\DoorMonitor</Filter>
+    </ClInclude>
+    <ClInclude Include="Windows\FactionLeaderboardWindow.h">
+      <Filter>Windows\FactionLeaderboard</Filter>
+    </ClInclude>
+    <ClInclude Include="Windows\FriendListWindow.h">
+      <Filter>Windows\FriendList</Filter>
+    </ClInclude>
+    <ClInclude Include="Windows\HeroBuildsWindow.h">
+      <Filter>Windows\HeroBuilds</Filter>
+    </ClInclude>
+    <ClInclude Include="Windows\Hotkeys.h">
+      <Filter>Windows\Hotkeys</Filter>
+    </ClInclude>
+    <ClInclude Include="Windows\HotkeysWindow.h">
+      <Filter>Windows\Hotkeys</Filter>
+    </ClInclude>
+    <ClInclude Include="Windows\InfoWindow.h">
+      <Filter>Windows\Info</Filter>
+    </ClInclude>
+    <ClInclude Include="Windows\MainWindow.h">
+      <Filter>Windows\MainWindow</Filter>
+    </ClInclude>
+    <ClInclude Include="Windows\MaterialsWindow.h">
+      <Filter>Windows\Materials</Filter>
+    </ClInclude>
+    <ClInclude Include="Windows\NotePadWindow.h">
+      <Filter>Windows\Notepad</Filter>
+    </ClInclude>
+    <ClInclude Include="Windows\ObjectiveTimerWindow.h">
+      <Filter>Windows\ObjectiveTimer</Filter>
+    </ClInclude>
+    <ClInclude Include="Windows\PacketLoggerWindow.h">
+      <Filter>Windows\PacketLogger</Filter>
+    </ClInclude>
+    <ClInclude Include="Windows\Pcons.h">
+      <Filter>Windows\Pcons</Filter>
+    </ClInclude>
+    <ClInclude Include="Windows\PconsWindow.h">
+      <Filter>Windows\Pcons</Filter>
+    </ClInclude>
+    <ClInclude Include="Windows\SettingsWindow.h">
+      <Filter>Windows\Settings</Filter>
+    </ClInclude>
+    <ClInclude Include="Windows\SkillListingWindow.h">
+      <Filter>Windows\SkillListing</Filter>
+    </ClInclude>
+    <ClInclude Include="Windows\StringDecoderWindow.h">
+      <Filter>Windows\StringDecoder</Filter>
+    </ClInclude>
+    <ClInclude Include="Windows\TradeWindow.h">
+      <Filter>Windows\Trade</Filter>
+    </ClInclude>
+    <ClInclude Include="Windows\TravelWindow.h">
+      <Filter>Windows\Travel</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_impl_dx9.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\RateLimiter.h" />
+    <ClInclude Include="Modules\AprilFools.h">
+      <Filter>Modules\AprilFool</Filter>
+    </ClInclude>
+    <ClInclude Include="Logger.h" />
+    <ClInclude Include="Windows\DailyQuestsWindow.h">
+      <Filter>Windows\DailyQuests</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\Dependencies\imgui\imgui.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\imgui\imgui_demo.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\imgui\imgui_draw.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\easywsclient\easywsclient.cpp">
+      <Filter>Windows\Trade</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\utf8proc\utf8proc.c">
+      <Filter>utf8proc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\utf8proc\utf8proc_data.c">
+      <Filter>utf8proc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\imgui\imgui_widgets.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="Modules\ChatCommands.cpp">
+      <Filter>Modules\ChatCommands</Filter>
+    </ClCompile>
+    <ClCompile Include="Modules\ChatFilter.cpp">
+      <Filter>Modules\ChatFilter</Filter>
+    </ClCompile>
+    <ClCompile Include="Modules\DiscordModule.cpp">
+      <Filter>Modules\Discord</Filter>
+    </ClCompile>
+    <ClCompile Include="Modules\GameSettings.cpp">
+      <Filter>Modules\GameSettings</Filter>
+    </ClCompile>
+    <ClCompile Include="Modules\InventoryManager.cpp">
+      <Filter>Modules\InventoryManager</Filter>
+    </ClCompile>
+    <ClCompile Include="Modules\PartyWindowModule.cpp">
+      <Filter>Modules\PartyWindow</Filter>
+    </ClCompile>
+    <ClCompile Include="Modules\Resources.cpp">
+      <Filter>Modules\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="Modules\ToolboxTheme.cpp">
+      <Filter>Modules\Theme</Filter>
+    </ClCompile>
+    <ClCompile Include="Modules\ToolboxSettings.cpp">
+      <Filter>Modules\ToolboxSettings</Filter>
+    </ClCompile>
+    <ClCompile Include="Modules\TwitchModule.cpp">
+      <Filter>Modules\Twitch</Filter>
+    </ClCompile>
+    <ClCompile Include="Modules\Updater.cpp">
+      <Filter>Modules\Updater</Filter>
+    </ClCompile>
+    <ClCompile Include="Modules\ZrawDeepModule.cpp">
+      <Filter>Modules\ZrawDeep</Filter>
+    </ClCompile>
+    <ClCompile Include="Widgets\AlcoholWidget.cpp">
+      <Filter>Widgets\Alcohol</Filter>
+    </ClCompile>
+    <ClCompile Include="Widgets\BondsWidget.cpp">
+      <Filter>Widgets\Bonds</Filter>
+    </ClCompile>
+    <ClCompile Include="Widgets\ClockWidget.cpp">
+      <Filter>Widgets\Clock</Filter>
+    </ClCompile>
+    <ClCompile Include="Widgets\PartyDamage.cpp">
+      <Filter>Widgets\Damage</Filter>
+    </ClCompile>
+    <ClCompile Include="Widgets\DistanceWidget.cpp">
+      <Filter>Widgets\Distance</Filter>
+    </ClCompile>
+    <ClCompile Include="Widgets\HealthWidget.cpp">
+      <Filter>Widgets\Health</Filter>
+    </ClCompile>
+    <ClCompile Include="Widgets\Minimap\AgentRenderer.cpp">
+      <Filter>Widgets\Minimap</Filter>
+    </ClCompile>
+    <ClCompile Include="Widgets\Minimap\CustomRenderer.cpp">
+      <Filter>Widgets\Minimap</Filter>
+    </ClCompile>
+    <ClCompile Include="Widgets\Minimap\EffectRenderer.cpp">
+      <Filter>Widgets\Minimap</Filter>
+    </ClCompile>
+    <ClCompile Include="Widgets\Minimap\Minimap.cpp">
+      <Filter>Widgets\Minimap</Filter>
+    </ClCompile>
+    <ClCompile Include="Widgets\Minimap\PingsLinesRenderer.cpp">
+      <Filter>Widgets\Minimap</Filter>
+    </ClCompile>
+    <ClCompile Include="Widgets\Minimap\PmapRenderer.cpp">
+      <Filter>Widgets\Minimap</Filter>
+    </ClCompile>
+    <ClCompile Include="Widgets\Minimap\RangeRenderer.cpp">
+      <Filter>Widgets\Minimap</Filter>
+    </ClCompile>
+    <ClCompile Include="Widgets\Minimap\SymbolsRenderer.cpp">
+      <Filter>Widgets\Minimap</Filter>
+    </ClCompile>
+    <ClCompile Include="Widgets\TimerWidget.cpp">
+      <Filter>Widgets\Timer</Filter>
+    </ClCompile>
+    <ClCompile Include="Widgets\VanquishWidget.cpp">
+      <Filter>Widgets\Vanquish</Filter>
+    </ClCompile>
+    <ClCompile Include="base64.cpp" />
+    <ClCompile Include="CursorFix.cpp" />
+    <ClCompile Include="d3dx9_dynamic.cpp" />
+    <ClCompile Include="GuiUtils.cpp" />
+    <ClCompile Include="GWToolbox.cpp" />
+    <ClCompile Include="ImGuiAddons.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="mp3.cpp" />
+    <ClCompile Include="sha1.cpp" />
+    <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="ToolboxModule.cpp" />
+    <ClCompile Include="ToolboxUIElement.cpp" />
+    <ClCompile Include="ToolboxWidget.cpp" />
+    <ClCompile Include="ToolboxWindow.cpp" />
+    <ClCompile Include="Utf8.cpp" />
+    <ClCompile Include="Windows\BuildsWindow.cpp">
+      <Filter>Windows\Builds</Filter>
+    </ClCompile>
+    <ClCompile Include="Windows\DialogsWindow.cpp">
+      <Filter>Windows\Dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="Windows\DoorMonitorWindow.cpp">
+      <Filter>Windows\DoorMonitor</Filter>
+    </ClCompile>
+    <ClCompile Include="Windows\FactionLeaderboardWindow.cpp">
+      <Filter>Windows\FactionLeaderboard</Filter>
+    </ClCompile>
+    <ClCompile Include="Windows\FriendListWindow.cpp">
+      <Filter>Windows\FriendList</Filter>
+    </ClCompile>
+    <ClCompile Include="Windows\HeroBuildsWindow.cpp">
+      <Filter>Windows\HeroBuilds</Filter>
+    </ClCompile>
+    <ClCompile Include="Windows\Hotkeys.cpp">
+      <Filter>Windows\Hotkeys</Filter>
+    </ClCompile>
+    <ClCompile Include="Windows\HotkeysWindow.cpp">
+      <Filter>Windows\Hotkeys</Filter>
+    </ClCompile>
+    <ClCompile Include="Windows\InfoWindow.cpp">
+      <Filter>Windows\Info</Filter>
+    </ClCompile>
+    <ClCompile Include="Windows\MainWindow.cpp">
+      <Filter>Windows\MainWindow</Filter>
+    </ClCompile>
+    <ClCompile Include="Windows\MaterialsWindow.cpp">
+      <Filter>Windows\Materials</Filter>
+    </ClCompile>
+    <ClCompile Include="Windows\NotePadWindow.cpp">
+      <Filter>Windows\Notepad</Filter>
+    </ClCompile>
+    <ClCompile Include="Windows\ObjectiveTimerWindow.cpp">
+      <Filter>Windows\ObjectiveTimer</Filter>
+    </ClCompile>
+    <ClCompile Include="Windows\PacketLoggerWindow.cpp">
+      <Filter>Windows\PacketLogger</Filter>
+    </ClCompile>
+    <ClCompile Include="Windows\Pcons.cpp">
+      <Filter>Windows\Pcons</Filter>
+    </ClCompile>
+    <ClCompile Include="Windows\PconsWindow.cpp">
+      <Filter>Windows\Pcons</Filter>
+    </ClCompile>
+    <ClCompile Include="Windows\SettingsWindow.cpp">
+      <Filter>Windows\Settings</Filter>
+    </ClCompile>
+    <ClCompile Include="Windows\SkillListingWindow.cpp">
+      <Filter>Windows\SkillListing</Filter>
+    </ClCompile>
+    <ClCompile Include="Windows\StringDecoderWindow.cpp">
+      <Filter>Windows\StringDecoder</Filter>
+    </ClCompile>
+    <ClCompile Include="Windows\TradeWindow.cpp">
+      <Filter>Windows\Trade</Filter>
+    </ClCompile>
+    <ClCompile Include="Windows\TravelWindow.cpp">
+      <Filter>Windows\Travel</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_impl_dx9.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="IRC.cc" />
+    <ClCompile Include="Utils\RateLimiter.cpp" />
+    <ClCompile Include="Modules\AprilFools.cpp">
+      <Filter>Modules\AprilFool</Filter>
+    </ClCompile>
+    <ClCompile Include="Logger.cpp" />
+    <ClCompile Include="Windows\DailyQuestsWindow.cpp">
+      <Filter>Windows\DailyQuests</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="GWToolbox.rc">
+      <Filter>Resources</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\resources\materials\Armor_of_Salvation.png">
+      <Filter>Resources\materials</Filter>
+    </Image>
+    <Image Include="..\resources\materials\Powerstone_of_Courage.png">
+      <Filter>Resources\materials</Filter>
+    </Image>
+    <Image Include="..\resources\materials\Scroll_of_Resurrection.png">
+      <Filter>Resources\materials</Filter>
+    </Image>
+    <Image Include="..\resources\materials\Grail_of_Might.png">
+      <Filter>Resources\materials</Filter>
+    </Image>
+    <Image Include="..\resources\materials\Essence_of_Celerity.png">
+      <Filter>Resources\materials</Filter>
+    </Image>
+    <Image Include="..\resources\icons\airplane.png">
+      <Filter>Resources\Icons</Filter>
+    </Image>
+    <Image Include="..\resources\icons\cupcake.png">
+      <Filter>Resources\Icons</Filter>
+    </Image>
+    <Image Include="..\resources\icons\dialogue.png">
+      <Filter>Resources\Icons</Filter>
+    </Image>
+    <Image Include="..\resources\icons\feather.png">
+      <Filter>Resources\Icons</Filter>
+    </Image>
+    <Image Include="..\resources\icons\info.png">
+      <Filter>Resources\Icons</Filter>
+    </Image>
+    <Image Include="..\resources\icons\keyboard.png">
+      <Filter>Resources\Icons</Filter>
+    </Image>
+    <Image Include="..\resources\icons\list.png">
+      <Filter>Resources\Icons</Filter>
+    </Image>
+    <Image Include="..\resources\icons\settings.png">
+      <Filter>Resources\Icons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Armor_of_Salvation.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Birthday_Cupcake.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Blue_Rock_Candy.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Bottle_of_Grog.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Bowl_of_Skalefin_Soup.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Candy_Apple.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Candy_Corn.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Drake_Kabob.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Dwarven_Ale.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Essence_of_Celerity.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Fruitcake.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Golden_Egg.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Grail_of_Might.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Green_Rock_Candy.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Lunar_Fortune.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Pahnai_Salad.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Red_Rock_Candy.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Slice_of_Pumpkin_Pie.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\Sugary_Blue_Drink.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\pcons\War_Supplies.png">
+      <Filter>Resources\pcons</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Balthazar%27s_Spirit.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Essence_Bond.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Vital_Blessing.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Watchful_Spirit.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Succor.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Strength_of_Honor.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Retribution.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Purifying_Veil.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Protective_Bond.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Mending.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Live_Vicariously.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Life_Bond.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Life_Barrier.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Life_Attunement.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Holy_Veil.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Heroic_Refrain.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Bladeturn_Refrain.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Burning_Refrain.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Hasty_Refrain.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+    <Image Include="..\resources\bonds\Mending_Refrain.png">
+      <Filter>Resources\bonds</Filter>
+    </Image>
+  </ItemGroup>
+</Project>

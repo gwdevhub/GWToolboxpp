@@ -20,7 +20,7 @@ TexMod, uMod, screen recording software (in game capture mode) and Toolbox all u
 * Screen recording software *should* work. You probably want to launch them last, after Toolbox. We recommend using "window capture" and not "game capture".
 
 **I have an feature request/non-bug issue with GWToolbox++. Where can I voice it?** \\
-We are always open to comments and criticism about Toolbox++. If you have features or opinions of features you would like to voice to the developers, please leave your input on the [repository issue tracker](https://github.com/HasKha/GWToolboxpp/issues).
+We are always open to comments and criticism about Toolbox++. If you have features or opinions of features you would like to voice to the developers, please leave your input on the <a href="{{ site.github.issues_url }}">repository issue tracker</a>.
 
 **Why does GWToolbox++ require Admin privileges?** \\
 GWToolbox++ needs admin privileges if Guild Wars has admin privileges. Guild Wars can be indirectly started with those privileges if it was started by a program that was run as admin. TexMod, uMod, GWML or GW Launcher typically require admin privileges so we decided for Toolbox to require admin privileges by default, to avoid issues.
@@ -47,7 +47,7 @@ This error typically means that some security feature is preventing Toolbox to a
 * Missing DirectX 2010 redistributable. Download from [here](http://www.microsoft.com/en-us/download/details.aspx?id=8109), extract and install. 
 
 **GWToolbox++ just crashed and set my grandma's hair on fire! Help!** \\
-Oops. Please start a bug issue at the repository issue tracker [here](https://github.com/HasKha/GWToolboxpp/issues). If the error was not critical, a message box should have displayed with the title “GWToolbox++ Crash!”. If the message box states that the dump file generated sucessfully, please go to your start menu search bar and type %LOCALAPPDATA%. Press enter, and your appdata folder should open. Navigate to the GWToolboxpp folder and find the most recent .dmp file created. If you are able to find the file, attach this file on your issue as it can help greatly with fixing the issue. Be sure to also include what you were doing in game at the time of the crash, and any other information that might help. If it is an issue we can solve we will get to fixing it when we can.
+Oops. Please start a bug issue at the repository issue tracker <a href="{{ site.github.issues_url }}">here</a>. If the error was not critical, a message box should have displayed with the title “GWToolbox++ Crash!”. If the message box states that the dump file generated sucessfully, please go to your start menu search bar and type %LOCALAPPDATA%. Press enter, and your appdata folder should open. Navigate to the GWToolboxpp folder and find the most recent .dmp file created. If you are able to find the file, attach this file on your issue as it can help greatly with fixing the issue. Be sure to also include what you were doing in game at the time of the crash, and any other information that might help. If it is an issue we can solve we will get to fixing it when we can.
 
 ## In-game issues and how-to
 **How do I target a Boo!?** \\

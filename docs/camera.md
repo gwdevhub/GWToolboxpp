@@ -15,7 +15,7 @@ Toolbox has several features that interact with the game's camera, allowing you 
 * `/cam fog on` or `/cam fog off` to enable or disable fog.
 * `/cam fov [amount]` to change the Field-of-View, or `/cam fov default` to reset it.
 * `/zoom [value]` to change the maximum zoom to the value. Use just `/zoom` to reset to the default value of 750.  
- All of these reset to default when you zone. The `Maintain FOV` option under [Game Settings](settings#game_settings) prevents the Field-of-View from resetting.
+ All of these reset to default when you zone.
 * Under [Chat Commands on the Settings](settings#chat_commands) are options to lock altitude (so you can only move up and down with `X` and `Z`, and to adjust the camera speed.
 
 [back](./)

@@ -1,3 +1,11 @@
+#include "stdafx.h"
+#pragma warning(disable: 4100)
+#pragma warning(disable: 4244)
+#pragma warning(disable: 4365)
+#pragma warning(disable: 4456)
+#pragma warning(disable: 4548)
+#pragma warning(disable: 4701)
+#pragma warning(disable: 5039)
 
 #ifdef _WIN32
     #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
@@ -137,7 +145,7 @@ void klose(ConnectionContext* ptConnCtx) {
 	if (ptConnCtx->sockfd) {
 		closesocket(ptConnCtx->sockfd);
 	}
-	if (ptConnCtx->sslHandle==NULL) {
+	if (ptConnCtx->sslHandle) {
 		SSL_shutdown(ptConnCtx->sslHandle);
 		SSL_free(ptConnCtx->sslHandle);
 	}
@@ -257,6 +265,10 @@ class _RealWebSocket : public easywsclient::WebSocket
             }
         }
         while (txbuf.size()) {
+			if (readyState == CLOSED) {
+				txbuf.clear();
+				break;
+			}
             int ret = kWrite(ptConnCtx, (char*)&txbuf[0], txbuf.size(), 0);
             if (false) { }
             else if (ret < 0 && (socketerrno == SOCKET_EWOULDBLOCK || socketerrno == SOCKET_EAGAIN_EINPROGRESS)) {
@@ -467,7 +479,7 @@ easywsclient::WebSocket::pointer from_url(const std::string& url, bool useMask, 
         fprintf(stderr, "ERROR: Could not parse WebSocket url: %s\n", url.c_str());
         return NULL;
     }
-    if (sc[2]!='\0') {
+    if (sc[1]!='\0' && sc[2] != '\0') {
     	fprintf(stderr, "ERROR: Could not parse WebSocket url: %s\n", url.c_str());
         return NULL;
     }
@@ -478,6 +490,8 @@ easywsclient::WebSocket::pointer from_url(const std::string& url, bool useMask, 
     
     ConnectionContext* ptConnCtx;
     ptConnCtx = (ConnectionContext*)malloc(sizeof(ConnectionContext));
+    ptConnCtx->sslContext = nullptr;
+    ptConnCtx->sslHandle = nullptr;
     ptConnCtx->sockfd = hostname_connect(host, port);
     if (ptConnCtx->sockfd == INVALID_SOCKET) {
         fprintf(stderr, "ERROR: Unable to connect to %s:%d\n", host, port);
