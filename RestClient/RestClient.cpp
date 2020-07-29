@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#include <Core/Thread.h>
+#include <Thread.h>
 
 #include "RestClient.h"
 

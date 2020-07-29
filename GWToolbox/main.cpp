@@ -1,7 +1,7 @@
 #include "stdafx.h"
 
-#include <Core/Path.h>
-#include <RestClient/RestClient.h>
+#include <Path.h>
+#include <RestClient.h>
 
 #include "Download.h"
 #include "Inject.h"

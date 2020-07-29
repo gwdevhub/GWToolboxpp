@@ -28,16 +28,17 @@ include(discord_game_sdk)
 include(json)
 
 add_subdirectory(GWToolboxdll)
+add_subdirectory(Core)
+add_subdirectory(RestClient)
 add_subdirectory(GWToolbox)
 
-# add_subdirectory(CSLauncher)
 
 add_library(module_base INTERFACE)
 target_sources(module_base INTERFACE
-    "${PROJECT_SOURCE_DIR}/modules/base/dllmain.cpp"
-    "${PROJECT_SOURCE_DIR}/modules/base/module_base.h")
-target_include_directories(module_base INTERFACE "${PROJECT_SOURCE_DIR}/modules/base")
-target_include_directories(module_base INTERFACE "${PROJECT_SOURCE_DIR}/GWToolbox/GWToolbox")
+    "modules/base/dllmain.cpp"
+    "modules/base/module_base.h")
+target_include_directories(module_base INTERFACE "modules/base")
+target_include_directories(module_base INTERFACE "GWToolboxdll/GWToolbox")
 target_link_libraries(module_base INTERFACE 
     imgui
     simpleini
@@ -57,5 +58,5 @@ macro(add_tb_module MODULE)
 endmacro()
 
 # add_tb_module(InstanceTimer)
-add_tb_module(clock)
+# add_tb_module(clock)
 

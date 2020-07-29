@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Core/Event.h>
+#include <Event.h>
 
 #include "CurlWrapper.h"
 

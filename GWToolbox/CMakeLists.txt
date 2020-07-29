@@ -7,6 +7,27 @@ FILE(GLOB SOURCES
 add_executable(GWToolbox)
 target_sources(GWToolbox PRIVATE ${SOURCES})
 
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DGWTOOLBOX_DEBUG")
+
 target_link_libraries(GWToolbox PRIVATE 
+    # cmake dependencies:
     GWToolboxdll
-    json)
+    Core
+    RestClient
+    json
+    # libs:
+    Ws2_32.lib
+    Shlwapi.lib
+    kernel32.lib
+    user32.lib
+    gdi32.lib
+    winspool.lib
+    comdlg32.lib
+    advapi32.lib
+    shell32.lib
+    ole32.lib
+    oleaut32.lib
+    uuid.lib
+    odbc32.lib
+    odbccp32.lib
+    )

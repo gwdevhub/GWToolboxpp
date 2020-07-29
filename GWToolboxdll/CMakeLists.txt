@@ -5,6 +5,7 @@ set(GWTOOLBOX_FOLDER "${PROJECT_SOURCE_DIR}/GWToolboxdll")
 file(GLOB SOURCES
     "*.h"
     "*.cpp"
+    "*.cc"
     "Modules/*.h"
     "Modules/*.cpp"
     "Utils/*.h"
@@ -37,6 +38,4 @@ target_link_libraries(GWToolboxdll PRIVATE
     Shlwapi.lib
     Wininet.lib
     Dbghelp.lib # for MiniDump
-    #libeay32.lib
-    #ssleay32.lib
     )
