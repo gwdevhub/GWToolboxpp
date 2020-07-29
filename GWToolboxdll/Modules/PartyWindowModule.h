@@ -51,9 +51,9 @@ private:
         GW::AgentLiving* GetAgent();
     };
     struct SpecialNPCToAdd {
-        SpecialNPCToAdd(const char* _alias, uint32_t _model_id, GW::Constants::MapID _map_id)
+        SpecialNPCToAdd(const char* _alias, int _model_id, GW::Constants::MapID _map_id)
             : alias(_alias)
-            , model_id(_model_id)
+            , model_id(static_cast<uint32_t>(_model_id))
             , map_id(_map_id)
         {
         };

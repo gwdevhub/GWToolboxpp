@@ -6,8 +6,6 @@
     <ClCompile Include="Download.cpp" />
     <ClCompile Include="Inject.cpp" />
     <ClCompile Include="Install.cpp" />
-    <ClCompile Include="Path.cpp" />
-    <ClCompile Include="Str.cpp" />
     <ClCompile Include="Registry.cpp" />
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="Window.cpp" />
@@ -18,8 +16,6 @@
     <ClInclude Include="Download.h" />
     <ClInclude Include="Inject.h" />
     <ClInclude Include="Install.h" />
-    <ClInclude Include="Path.h" />
-    <ClInclude Include="Str.h" />
     <ClInclude Include="resource.h">
       <Filter>Ressources</Filter>
     </ClInclude>

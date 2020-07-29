@@ -85,7 +85,7 @@ void Updater::GetLatestRelease(GWToolboxRelease* release) {
                 || !(asset.contains("browser_download_url") && asset["browser_download_url"].is_string()))
                 continue;
             std::string asset_name = asset["name"].get<std::string>();
-            if (!asset_name._Equal("GWToolbox.dll") && !asset_name._Equal("GWToolboxdll.dll"))
+            if (asset_name != "GWToolbox.dll" && asset_name != "GWToolboxdll.dll")
                 continue; // This release doesn't have a dll download.
             release->download_url = asset["browser_download_url"].get<std::string>();
             release->version = tag_name.substr(0, version_number_len);
@@ -272,16 +272,20 @@ void Updater::DoUpdate() {
     DeleteFileW(dllold);
     MoveFileW(dllfile, dllold);
 
+    // @Fix: Visual Studio 2015 doesn't seem to accept to capture c-style arrays
+    std::wstring wdllfile(dllfile);
+    std::wstring wdllold(dllold);
+
     // 2. download new dll
     Resources::Instance().Download(
         dllfile, GuiUtils::StringToWString(latest_release.download_url),
-        [this, dllfile, dllold](bool success) {
+        [this, wdllfile, wdllold](bool success) -> void {
         if (success) {
             step = Success;
             Log::Warning("Update successful, please restart toolbox.");
         } else {
             Log::Error("Updated error - cannot download GWToolbox.dll");
-            MoveFileW(dllold, dllfile);
+            MoveFileW(wdllold.c_str(), wdllfile.c_str());
             step = Done;
         }
     });

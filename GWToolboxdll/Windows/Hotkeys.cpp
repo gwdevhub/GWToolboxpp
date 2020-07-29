@@ -15,6 +15,7 @@
 #include <GWCA/Managers/CtoSMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
@@ -32,6 +33,7 @@
 #include <Windows/Hotkeys.h>
 #include <Windows/HotkeysWindow.h>
 #include <Windows/PconsWindow.h>
+
 
 bool TBHotkey::show_active_in_header = true;
 bool TBHotkey::show_run_in_header = true;
@@ -707,7 +709,7 @@ void HotkeyDropUseBuff::Execute()
             if (GW::SkillbarMgr::GetPlayerSkillbar()->skills[slot].recharge == 0) {
                 GW::GameThread::Enqueue([slot] () -> void {
                     GW::SkillbarMgr::UseSkill(slot, GW::Agents::GetTargetId(),
-                        ImGui::IsKeyDown(VK_CONTROL));
+                        static_cast<uint32_t>(ImGui::IsKeyDown(VK_CONTROL)));
                 });
             }
         }
@@ -725,6 +727,9 @@ bool HotkeyToggle::GetText(void *, int idx, const char **out_text)
             return true;
         case CoinDrop:
             *out_text = "Coin Drop";
+            return true;
+        case Tick:
+            *out_text = "Tick";
             return true;
         default:
             return false;
@@ -782,6 +787,11 @@ void HotkeyToggle::Execute()
             if (show_message_in_emote_channel)
                 Log::Info("Coin dropper is %s",
                           _active ? "active" : "disabled");
+            break;
+        case HotkeyToggle::Tick:
+            static bool ticked = false;
+            ticked = !ticked;
+            GW::PartyMgr::Tick(ticked);
             break;
     }
 }

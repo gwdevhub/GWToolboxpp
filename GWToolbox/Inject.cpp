@@ -1,7 +1,8 @@
 #include "stdafx.h"
 
+#include <Core/Str.h>
+
 #include "Inject.h"
-#include "Str.h"
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
