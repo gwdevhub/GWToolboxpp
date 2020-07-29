@@ -326,8 +326,6 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                     snprintf(modelid_buf, 32, "%d", target_item ? GW::Items::GetItemById(target_item->item_id)->model_id : 0);
                 else
                     snprintf(modelid_buf, 32, "%d", target_living ? target_living->player_number : 0);
-                
-                snprintf(modelid_buf, 32, "%d", target_living ? target_living->player_number : 0);
                 wchar_t* enc_name = GW::Agents::GetAgentEncName(target);
                 if (enc_name) {
                     size_t offset = 0;
