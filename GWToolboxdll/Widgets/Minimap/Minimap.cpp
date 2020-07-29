@@ -455,12 +455,10 @@ void Minimap::Draw(IDirect3DDevice9 *device)
 
                 D3DVIEWPORT9 viewport;
                 device->GetViewport(&viewport);
-                float xscale = static_cast<float>(Instance().size.x) / viewport.Width;
-                float yscale = static_cast<float>(Instance().size.x) / viewport.Height;
-                xscale *= Instance().scale, yscale *= Instance().scale;
-                if (xscale != Instance().gwinch_scale.x || yscale != Instance().gwinch_scale.y) {
+                float gwinch_scale = static_cast<float>(Instance().size.x) / 5000.0f / 2.f * Instance().scale;
+                if (gwinch_scale != Instance().gwinch_scale.x) {
                     Instance().range_renderer.Invalidate();
-                    Instance().gwinch_scale = {xscale, yscale};
+                    Instance().gwinch_scale = {gwinch_scale, gwinch_scale};
                 }
 
                 view = translate_char * rotate_char * scaleM * translationM;

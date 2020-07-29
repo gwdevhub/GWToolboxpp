@@ -36,6 +36,7 @@ namespace {
 InventoryManager::InventoryManager()
 {
     current_salvage_session.salvage_item_id = 0;
+    is_movable = is_resizable = has_closebutton = false;
 }
 InventoryManager::~InventoryManager()
 {
