@@ -37,6 +37,6 @@ target_link_libraries(GWToolboxdll PRIVATE
     Shlwapi.lib
     Wininet.lib
     Dbghelp.lib # for MiniDump
-    libeay32.lib
-    ssleay32.lib
+    #libeay32.lib
+    #ssleay32.lib
     )

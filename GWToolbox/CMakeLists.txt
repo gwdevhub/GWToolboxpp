@@ -7,4 +7,6 @@ FILE(GLOB SOURCES
 add_executable(GWToolbox)
 target_sources(GWToolbox PRIVATE ${SOURCES})
 
-target_link_libraries(GWToolbox PRIVATE GWToolboxdll)
+target_link_libraries(GWToolbox PRIVATE 
+    GWToolboxdll
+    json)
