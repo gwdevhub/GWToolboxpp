@@ -25,8 +25,11 @@ If you are here to check toolbox features and for a download link to go [https:/
 `cd build`
 
 6. Run CMake. Run **one** of the following commands, depending on which version of Visual Studio you wish to use. You can also just run `cmake .. -A Win32` and it will use the default generator. 
+
 `cmake .. -G "Visual Studio 16 2019" -A Win32`
+
 `cmake .. -G "Visual Studio 15 2017" -A Win32`
+
 `cmake .. -G "Visual Studio 14 2015" -A Win32`
 
 7. Open the project:
