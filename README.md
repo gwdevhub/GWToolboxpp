@@ -5,10 +5,38 @@
 If you are here to check toolbox features and for a download link to go [https://haskha.github.io/GWToolboxpp/](https://haskha.github.io/GWToolboxpp/). Keep reading for information on how to download and build from the source.
 
 ## How to download, build, and run
-0. Requirements: Install Visual Studio Community 2019, including the "Desktop development with C++" and ".NET desktop development" packages. Other versions (pro, enterprise) work too. Older versions of visual studio *should* work, as long as they support C++17.
-1. Clone *recursively* the repository. On command line, use: `git clone --recursive https://github.com/haskha/GWToolboxpp.git`.
-2. Open GWToolboxpp.sln with Visual Studio.
-3. Set to Debug, build, and run. You may have to launch Visual Studio as administrator. For testing in Release mode, read the notes below.
+### Requirements
+* CMake 3.14 or higher. Download the latest version from [](https://cmake.org/download/). 
+* Visual Studio. You can download Visual Studio Community for free here: [](https://visualstudio.microsoft.com/vs/community/). You will also need the "Desktop development with C++" package. 
+* Git. [](https://git-scm.com/)
+
+1. Open **Git Bash**. Use all the following commands in **Git Bash**. 
+
+2. Clone the repository recursively: 
+`git clone --recursive https://github.com/haskha/GWToolboxpp.git`
+
+3. Navigate to the GWToolboxpp folder: 
+`cd GWToolboxpp`
+
+4. Create the build folder:
+`mkdir build`
+
+5. Move into the build folder:
+`cd build`
+
+6. Run CMake. Run **one** of the following commands, depending on which version of Visual Studio you wish to use. You can also just run `cmake .. -A Win32` and it will use the default generator. 
+`cmake .. -G "Visual Studio 16 2019" -A Win32`
+`cmake .. -G "Visual Studio 15 2017" -A Win32`
+`cmake .. -G "Visual Studio 14 2015" -A Win32`
+
+7. Open the project:
+`cmake --open .`
+
+8. Set the configuration to **Debug**
+
+9. Set "GWToolbox" as the startup project. Right click on the **GWToolbox** _project_ and hit "Set as Startup Project"
+
+10. Build and run. You may have to launch Visual Studio as administrator. For testing in Release mode, read the notes below.
 
 ## Notes
 * GWToolbox compiles as a DLL (`GWToolbox.dll`). `GWToolbox.exe`, aka Launcher, selects a GW clients and injects the dll, but you can also use different launchers, such as the ones in the `AutoItLauncher/` folder.
