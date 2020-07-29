@@ -321,7 +321,12 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                 snprintf(y_buf, 32, "%.2f", target->pos.y);
                 float s = sqrtf(target->move_x * target->move_x + target->move_y * target->move_y);
                 snprintf(s_buf, 32, "%.3f", s / 288.0f);
-                snprintf(agentid_buf, 32, "%d", target->agent_id);
+                
+                if (target->GetIsItemType())
+                    snprintf(modelid_buf, 32, "%d", target_item ? GW::Items::GetItemById(target_item->item_id)->model_id : 0);
+                else
+                    snprintf(modelid_buf, 32, "%d", target_living ? target_living->player_number : 0);
+                
                 snprintf(modelid_buf, 32, "%d", target_living ? target_living->player_number : 0);
                 wchar_t* enc_name = GW::Agents::GetAgentEncName(target);
                 if (enc_name) {
