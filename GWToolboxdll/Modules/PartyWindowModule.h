@@ -28,7 +28,7 @@ public:
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
-    void Error(const char* fmt, ...);
+    static void Error(const char* fmt, ...);
     void CheckMap();
 
 private:
@@ -71,18 +71,18 @@ private:
     std::queue<uint32_t> pending_remove;
 
     void AddSpecialNPC(SpecialNPCToAdd npc) {
-        SpecialNPCToAdd* new_npc = new SpecialNPCToAdd(npc);
+        auto * new_npc = new SpecialNPCToAdd(npc);
         user_defined_npcs.push_back(new_npc);
         user_defined_npcs_by_model_id.emplace(npc.model_id, new_npc);
     }
     void RemoveSpecialNPC(uint32_t model_id) {
         user_defined_npcs_by_model_id.erase(model_id);
-        for (uint32_t i = 0; i < user_defined_npcs.size(); i++) {
-            if (!user_defined_npcs[i])
+        for (auto &user_defined_npc : user_defined_npcs) {
+            if (!user_defined_npc)
                 continue;
-            if (user_defined_npcs[i]->model_id == model_id) {
-                delete user_defined_npcs[i];
-                user_defined_npcs[i] = nullptr;
+            if (user_defined_npc->model_id == model_id) {
+                delete user_defined_npc;
+                user_defined_npc = nullptr;
                 // Don't actually call erase() because its mad dodgy, but set to nullptr instead.
                 break;
             }
@@ -90,9 +90,9 @@ private:
     }
     void ClearSpecialNPCs() {
         user_defined_npcs_by_model_id.clear();
-        for (uint32_t i = 0; i < user_defined_npcs.size(); i++) {
-            if (!user_defined_npcs[i]) continue;
-            delete user_defined_npcs[i];
+        for (auto &user_defined_npc : user_defined_npcs) {
+            if (!user_defined_npc) continue;
+            delete user_defined_npc;
         }
         user_defined_npcs.clear();
     }

@@ -57,19 +57,19 @@ public:
     void DrawSettingInternal() override;
 
 private:
-    void UseBuff(GW::AgentID target, DWORD buff_skillid);
-    Bond GetBondBySkillID(DWORD skillid) const;
+    static void UseBuff(GW::AgentID target, DWORD buff_skillid);
+    static Bond GetBondBySkillID(DWORD skillid);
 
-    IDirect3DTexture9* textures[MAX_BONDS];
+    IDirect3DTexture9* textures[MAX_BONDS]{};
     Color background = 0;
     Color low_attribute_overlay = 0;
 
-    std::vector<size_t> bond_list;              // index to skill id
-    std::unordered_map<DWORD, size_t> bond_map; // skill id to index
+    std::vector<size_t> bond_list{};              // index to skill id
+    std::unordered_map<DWORD, size_t> bond_map{}; // skill id to index
     bool FetchBondSkills();
 
-    std::vector<GW::AgentID> party_list;               // index to agent id
-    std::unordered_map<GW::AgentID, size_t> party_map; // agent id to index
+    std::vector<GW::AgentID> party_list{};               // index to agent id
+    std::unordered_map<GW::AgentID, size_t> party_map{}; // agent id to index
     size_t allies_start = 255;
     bool FetchPartyInfo();
 

@@ -13,20 +13,23 @@
 #include <Widgets/Minimap/PmapRenderer.h>
 
 
-void PmapRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
+void PmapRenderer::LoadSettings(CSimpleIni *ini, const char *section)
+{
     color_map = Colors::Load(ini, section, "color_map", 0xFF999999);
     color_mapshadow = Colors::Load(ini, section, "color_mapshadow", 0xFF120808);
     color_mapbackground = Colors::Load(ini, section, "color_mapbackground", 0x00000000);
     Invalidate();
 }
 
-void PmapRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
+void PmapRenderer::SaveSettings(CSimpleIni *ini, const char *section) const
+{
     Colors::Save(ini, section, "color_map", color_map);
     Colors::Save(ini, section, "color_mapshadow", color_mapshadow);
     Colors::Save(ini, section, "color_mapbackground", color_mapbackground);
 }
 
-void PmapRenderer::DrawSettings() {
+void PmapRenderer::DrawSettings()
+{
     if (ImGui::SmallButton("Restore Defaults")) {
         color_map = 0xFF999999;
         color_mapshadow = 0xFF120808;
@@ -41,9 +44,9 @@ void PmapRenderer::DrawSettings() {
         Invalidate();
 }
 
-void PmapRenderer::Initialize(IDirect3DDevice9* device) {
-
-//#define WIREFRAME_MODE
+void PmapRenderer::Initialize(IDirect3DDevice9 *device)
+{
+    //#define WIREFRAME_MODE
 
     GW::PathingMapArray path_map;
     if (GW::Map::GetIsMapLoaded()) {
@@ -56,10 +59,11 @@ void PmapRenderer::Initialize(IDirect3DDevice9* device) {
 
     // get the number of trapezoids, need it to allocate the vertex buffer
     trapez_count_ = 0;
-    for (const GW::PathingMap& map : path_map) {
+    for (const GW::PathingMap &map : path_map) {
         trapez_count_ += map.trapezoid_count;
     }
-    if (trapez_count_ == 0) return;
+    if (trapez_count_ == 0)
+        return;
 
 #ifdef WIREFRAME_MODE
 
@@ -72,25 +76,25 @@ void PmapRenderer::Initialize(IDirect3DDevice9* device) {
 #else
 
     total_tri_count_ = tri_count_ = trapez_count_ * 2;
-    if (shadow_show) total_tri_count_ = tri_count_ * 2;
+    if (shadow_show)
+        total_tri_count_ = tri_count_ * 2;
 
     vert_count_ = tri_count_ * 3;
     total_vert_count_ = total_tri_count_ * 3;
 
 #endif
-    
-    D3DVertex* vertices = nullptr;
+
+    D3DVertex *vertices = nullptr;
 
     // allocate new vertex buffer
-    if (buffer) buffer->Release();
+    if (buffer)
+        buffer->Release();
     device->CreateVertexBuffer(sizeof(D3DVertex) * total_vert_count_, D3DUSAGE_WRITEONLY,
-        D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
+                               D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
     buffer->Lock(0, sizeof(D3DVertex) * total_vert_count_,
-        reinterpret_cast<void**>(&vertices), D3DLOCK_DISCARD);
+                 reinterpret_cast<void **>(&vertices), D3DLOCK_DISCARD);
 
-    D3DVertex* vertices_begin = vertices;
-
-
+    D3DVertex *vertices_begin = vertices;
 
 #ifdef WIREFRAME_MODE
     type = D3DPT_LINELIST;
@@ -122,17 +126,23 @@ void PmapRenderer::Initialize(IDirect3DDevice9* device) {
 
     // populate vertex buffer
     for (auto k = 0; k < (shadow_show ? 2 : 1); ++k) {
-        for (const GW::PathingMap& pmap : path_map) {
+        for (const GW::PathingMap &pmap : path_map) {
             for (size_t j = 0; j < pmap.trapezoid_count; ++j) {
-                GW::PathingTrapezoid& trap = pmap.trapezoids[j];
+                GW::PathingTrapezoid &trap = pmap.trapezoids[j];
 
-                vertices[0].x = trap.XTL; vertices[0].y = trap.YT;
-                vertices[1].x = trap.XTR; vertices[1].y = trap.YT;
-                vertices[2].x = trap.XBL; vertices[2].y = trap.YB;
+                vertices[0].x = trap.XTL;
+                vertices[0].y = trap.YT;
+                vertices[1].x = trap.XTR;
+                vertices[1].y = trap.YT;
+                vertices[2].x = trap.XBL;
+                vertices[2].y = trap.YB;
 
-                vertices[3].x = trap.XBL; vertices[3].y = trap.YB;
-                vertices[4].x = trap.XTR; vertices[4].y = trap.YT;
-                vertices[5].x = trap.XBR; vertices[5].y = trap.YB;
+                vertices[3].x = trap.XBL;
+                vertices[3].y = trap.YB;
+                vertices[4].x = trap.XTR;
+                vertices[4].y = trap.YT;
+                vertices[5].x = trap.XBR;
+                vertices[5].y = trap.YB;
                 vertices += 6;
             }
         }
@@ -152,7 +162,8 @@ void PmapRenderer::Initialize(IDirect3DDevice9* device) {
     buffer->Unlock();
 }
 
-void PmapRenderer::Render(IDirect3DDevice9* device) {
+void PmapRenderer::Render(IDirect3DDevice9 *device)
+{
     if (!initialized) {
         initialized = true;
         Initialize(device);
@@ -171,7 +182,7 @@ void PmapRenderer::Render(IDirect3DDevice9* device) {
 
         device->SetTransform(D3DTS_VIEW, &oldview);
 
-        device->DrawPrimitive(type, vert_count_ , tri_count_);
+        device->DrawPrimitive(type, vert_count_, tri_count_);
     } else {
         device->SetFVF(D3DFVF_CUSTOMVERTEX);
         device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));

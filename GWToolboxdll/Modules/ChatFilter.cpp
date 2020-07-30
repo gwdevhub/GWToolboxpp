@@ -266,13 +266,15 @@ DWORD ChatFilter::GetNumericSegment(const wchar_t *message) const {
     return 0;
 }
 
-bool ChatFilter::ShouldIgnoreByAgentThatDropped(const wchar_t* agent_segment) const {
+bool ChatFilter::ShouldIgnoreByAgentThatDropped(const wchar_t* agent_segment)
+{
     if (agent_segment == nullptr) return false;     // something went wrong, don't ignore
     if (agent_segment[0] == 0xBA9 && agent_segment[1] == 0x107) return false;
     return true;
 }
 
-bool ChatFilter::IsRare(const wchar_t* item_segment) const {
+bool ChatFilter::IsRare(const wchar_t* item_segment)
+{
     if (item_segment == nullptr) return false;      // something went wrong, don't ignore
     if (item_segment[0] == 0xA40) return true;      // don't ignore gold items
     if (FullMatch(item_segment, { 0x108, 0x10A, 0x22D9, 0xE7B8, 0xE9DD, 0x2322 })) 
@@ -282,7 +284,8 @@ bool ChatFilter::IsRare(const wchar_t* item_segment) const {
     return false;
 }
 
-bool ChatFilter::FullMatch(const wchar_t* s, const std::initializer_list<wchar_t>& msg) const {
+bool ChatFilter::FullMatch(const wchar_t* s, const std::initializer_list<wchar_t>& msg)
+{
     int i = 0;
     for (wchar_t b : msg) {
         if (s[i++] != b) return false;
@@ -336,7 +339,7 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
     case 0x7F0: { // monster/player x drops item y (no assignment)
                   // first segment describes the agent who dropped, second segment describes the item dropped
         if (!ShouldIgnoreByAgentThatDropped(Get1stSegment(message))) return false;
-        bool rare = IsRare(Get2ndSegment(message));
+                  const bool rare = IsRare(Get2ndSegment(message));
         if (rare) return self_drop_rare;
         else return self_drop_common;
     }
@@ -345,8 +348,8 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
                   // <monster> is wchar_t id of several wchars
                   // <rarity> is 0x108 for common, 0xA40 gold, 0xA42 purple, 0xA43 green
         GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
-        bool forplayer = (me && me->player_number == GetNumericSegment(message));
-        bool rare = IsRare(Get2ndSegment(message));
+                  const bool forplayer = (me && me->player_number == GetNumericSegment(message));
+                  const bool rare = IsRare(Get2ndSegment(message));
         if (forplayer && rare) return self_drop_rare;
         if (forplayer && !rare) return self_drop_common;
         if (!forplayer && rare) return ally_drop_rare;
@@ -355,7 +358,7 @@ bool ChatFilter::ShouldIgnore(const wchar_t *message) {
     }
     case 0x7F2: return false; // you drop item x
     case 0x7F6: { // player x picks up item y (note: item can be unassigned gold)
-        bool rare = IsRare(Get2ndSegment(message));
+        const bool rare = IsRare(Get2ndSegment(message));
         if (rare) return ally_pickup_rare;
         else      return ally_pickup_common;
     }
@@ -650,7 +653,7 @@ void ChatFilter::DrawSettingInternal() {
 
 void ChatFilter::Update(float delta) {
     UNREFERENCED_PARAMETER(delta);
-    uint32_t timestamp = GetTickCount();
+    const uint32_t timestamp = GetTickCount();
     if (timer_parse_filters && timer_parse_filters < timestamp) {
         timer_parse_filters = 0;
         ParseBuffer(bycontent_word_buf, bycontent_words);

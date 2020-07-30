@@ -185,7 +185,7 @@ void PconsWindow::OnAgentState(GW::HookStatus *, GW::Packet::StoC::AgentState *p
 }
 void PconsWindow::OnSpeechBubble(GW::HookStatus *status, GW::Packet::StoC::SpeechBubble *pak) {
     if (!PconAlcohol::suppress_drunk_text) return;
-    bool blocked = status->blocked;
+    const bool blocked = status->blocked;
     status->blocked = true;
         
     wchar_t* m = pak->message;
@@ -259,7 +259,7 @@ void PconsWindow::CmdPcons(const wchar_t *, int argc, LPWSTR *argv)
     if (argc <= 1) {
         Instance().ToggleEnable();
     } else { // we are ignoring parameters after the first
-        std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+        const std::wstring arg1 = GuiUtils::ToLower(argv[1]);
         if (arg1 == L"on") {
             Instance().SetEnabled(true);
         } else if (arg1 == L"off") {
@@ -272,7 +272,7 @@ void PconsWindow::CmdPcons(const wchar_t *, int argc, LPWSTR *argv)
 }
 
 bool PconsWindow::DrawTabButton(IDirect3DDevice9* device, bool show_icon, bool show_text) {
-    bool clicked = ToolboxWindow::DrawTabButton(device, show_icon, show_text);
+    const bool clicked = ToolboxWindow::DrawTabButton(device, show_icon, show_text);
 
     ImGui::PushStyleColor(ImGuiCol_Text, enabled ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
@@ -360,7 +360,7 @@ void PconsWindow::MapChanged() {
     player = nullptr;
     elite_area_disable_triggered = false;
     // Find out which objectives we need to complete for this map.
-    auto map_objectives_it = objectives_to_complete_by_map_id.find(map_id);
+    const auto map_objectives_it = objectives_to_complete_by_map_id.find(map_id);
     if (map_objectives_it != objectives_to_complete_by_map_id.end()) {
         objectives_complete.clear();
         current_objectives_to_check = map_objectives_it->second;
@@ -369,7 +369,7 @@ void PconsWindow::MapChanged() {
         current_objectives_to_check.clear();
     }
     // Find out if we need to check for boss range for this map.
-    auto map_location_it = final_room_location_by_map_id.find(map_id);
+    const auto map_location_it = final_room_location_by_map_id.find(map_id);
     if (map_location_it != final_room_location_by_map_id.end()) {
         current_final_room_location = map_location_it->second;
     }
@@ -468,7 +468,7 @@ void PconsWindow::CheckBossRangeAutoDisable() { // Trigger Elite area auto disab
         return;     // No boss location to check for this map, player ptr not loaded, or checked recently already.
     }
     elite_area_check_timer = TIMER_INIT();
-    float d = GetDistance(GW::Vec2f(player->pos), current_final_room_location);
+    const float d = GetDistance(GW::Vec2f(player->pos), current_final_room_location);
     if (d > 0 && d <= GW::Constants::Range::Spirit) {
         elite_area_disable_triggered = true;
         SetEnabled(false);

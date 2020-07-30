@@ -74,7 +74,7 @@ private:
         skills.clear();
     };
 
-    std::vector<Skill* > skills;
+    std::vector<Skill* > skills{};
 public:
     static SkillListingWindow& Instance() {
         static SkillListingWindow instance;

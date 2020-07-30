@@ -90,15 +90,15 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
     if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
         return;
-    unsigned long time = GW::Map::GetInstanceTime() / 1000;
+    const unsigned long time = GW::Map::GetInstanceTime() / 1000;
 
-    bool ctrl_pressed = ImGui::IsKeyDown(VK_CONTROL);
+    const bool ctrl_pressed = ImGui::IsKeyDown(VK_CONTROL);
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiSetCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(click_to_print_time && ctrl_pressed)))) {
         snprintf(timer_buffer, 32, "%lu:%02lu:%02lu", time / (60 * 60), (time / 60) % 60, time % 60);
         ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f48));
-        ImVec2 cur = ImGui::GetCursorPos();
+        const ImVec2 cur = ImGui::GetCursorPos();
         ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
         ImGui::TextColored(ImColor(0, 0, 0), timer_buffer);
         ImGui::SetCursorPos(cur);
@@ -108,7 +108,7 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
         if (show_extra_timers && (GetUrgozTimer() || GetDeepTimer() || GetDhuumTimer() || GetTrapTimer() || GetDoATimer())) {
 
             ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f24));
-            ImVec2 cur2 = ImGui::GetCursorPos();
+            const ImVec2 cur2 = ImGui::GetCursorPos();
             ImGui::SetCursorPos(ImVec2(cur2.x + 2, cur2.y + 2));
             ImGui::TextColored(ImColor(0, 0, 0), extra_buffer);
             ImGui::SetCursorPos(cur2);
@@ -117,7 +117,7 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
         }
         if (GetSpiritTimer()) {
             ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f24));
-            ImVec2 cur2 = ImGui::GetCursorPos();
+            const ImVec2 cur2 = ImGui::GetCursorPos();
             ImGui::SetCursorPos(ImVec2(cur2.x + 1, cur2.y + 1));
             ImGui::TextColored(ImColor(0, 0, 0), spirits_buffer);
             ImGui::SetCursorPos(cur2);
@@ -126,9 +126,9 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
         }
 
         if (click_to_print_time) {
-            ImVec2 size = ImGui::GetWindowSize();
-            ImVec2 min = ImGui::GetWindowPos();
-            ImVec2 max(min.x + size.x, min.y + size.y);
+            const ImVec2 size = ImGui::GetWindowSize();
+            const ImVec2 min = ImGui::GetWindowPos();
+            const ImVec2 max(min.x + size.x, min.y + size.y);
             if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsMouseHoveringRect(min, max)) {
                 GW::Chat::SendChat('/', "age");
             }
@@ -141,8 +141,8 @@ void TimerWidget::Draw(IDirect3DDevice9* pDevice) {
 bool TimerWidget::GetUrgozTimer() {
     if (GW::Map::GetMapID() != GW::Constants::MapID::Urgozs_Warren) return false;
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return false;
-    unsigned long time = GW::Map::GetInstanceTime() / 1000;
-    unsigned long  temp = (time - 1) % 25;
+    const unsigned long time = GW::Map::GetInstanceTime() / 1000;
+    const unsigned long  temp = (time - 1) % 25;
     if (temp < 15) {
         snprintf(extra_buffer, 32, "Open - %lu", 15u - temp);
         extra_color = ImColor(0, 255, 0);
@@ -162,14 +162,14 @@ bool TimerWidget::GetSpiritTimer() {
     if (!effects.valid()) return false;
 
     int offset = 0;
-    for (DWORD i = 0; i < effects.size(); ++i) {
-        if (!effects[i].duration)
+    for (auto &effect : effects) {
+        if (!effect.duration)
             continue;
-        SkillID effect_id = (SkillID)effects[i].skill_id;
+        auto effect_id = (SkillID)effect.skill_id;
         auto spirit_effect_enabled = spirit_effects_enabled.find(effect_id);
         if (spirit_effect_enabled == spirit_effects_enabled.end() || !*(spirit_effect_enabled->second))
             continue;
-        offset += snprintf(&spirits_buffer[offset], sizeof(spirits_buffer) - offset, "%s%s: %d", offset ? "\n" : "", spirit_effects[effect_id], effects[i].GetTimeRemaining() / 1000);
+        offset += snprintf(&spirits_buffer[offset], sizeof(spirits_buffer) - offset, "%s%s: %d", offset ? "\n" : "", spirit_effects[effect_id], effect.GetTimeRemaining() / 1000);
     }
     if (!offset) 
         return false;
@@ -189,7 +189,7 @@ bool TimerWidget::GetDeepTimer() {
     static clock_t start = -1;
     SkillID skill = SkillID::No_Skill;
     for (DWORD i = 0; i < effects.size() && skill == SkillID::No_Skill; ++i) {
-        SkillID effect_id = (SkillID)effects[i].skill_id;
+        const auto effect_id = (SkillID)effects[i].skill_id;
         switch (effect_id) {
         case SkillID::Aspect_of_Exhaustion:
         case SkillID::Aspect_of_Depletion_energy_loss:
@@ -209,7 +209,7 @@ bool TimerWidget::GetDeepTimer() {
         start = TIMER_INIT();
     }
 
-    clock_t diff = TIMER_DIFF(start) / 1000;
+    const clock_t diff = TIMER_DIFF(start) / 1000;
 
 
     // a 30s timer starts when you enter the aspect
@@ -244,8 +244,8 @@ bool TimerWidget::GetTrapTimer() {
     using namespace GW::Constants;
     if (GW::Map::GetInstanceType() != InstanceType::Explorable) return false;
 
-    unsigned long time = GW::Map::GetInstanceTime() / 1000;
-    unsigned long temp = time % 20;
+    const unsigned long time = GW::Map::GetInstanceTime() / 1000;
+    const unsigned long temp = time % 20;
     unsigned long timer;
     if (temp < 10) {
         timer = 10u - temp;
@@ -311,10 +311,10 @@ bool TimerWidget::GetDoATimer() {
 
     uint32_t currentWave = 0;
     uint32_t time_since_previous_wave = (time - cave_start) / 1000;
-    for (size_t i = 0; i < _countof(CAVE_SPAWN_INTERVALS); i++) {
-        if (time_since_previous_wave < CAVE_SPAWN_INTERVALS[i])
+    for (unsigned int i : CAVE_SPAWN_INTERVALS) {
+        if (time_since_previous_wave < i)
             break;
-        time_since_previous_wave -= CAVE_SPAWN_INTERVALS[i];
+        time_since_previous_wave -= i;
         ++currentWave;
     }
     

@@ -18,19 +18,24 @@
 #include <GuiUtils.h>
 #include <Widgets/Minimap/PingsLinesRenderer.h>
 
-void PingsLinesRenderer::LoadSettings(CSimpleIni* ini, const char* section) {
+void PingsLinesRenderer::LoadSettings(CSimpleIni *ini, const char *section)
+{
     color_drawings = Colors::Load(ini, section, "color_drawings", Colors::ARGB(0xFF, 0xFF, 0xFF, 0xFF));
-    if ((color_drawings & IM_COL32_A_MASK) == 0) color_drawings |= Colors::ARGB(255, 0, 0, 0);
+    if ((color_drawings & IM_COL32_A_MASK) == 0)
+        color_drawings |= Colors::ARGB(255, 0, 0, 0);
     ping_circle.color = Colors::Load(ini, section, "color_pings", Colors::ARGB(128, 255, 0, 0));
-    if ((ping_circle.color & IM_COL32_A_MASK) == 0) ping_circle.color |= Colors::ARGB(128, 0, 0, 0);
+    if ((ping_circle.color & IM_COL32_A_MASK) == 0)
+        ping_circle.color |= Colors::ARGB(128, 0, 0, 0);
     marker.color = Colors::Load(ini, section, "color_shadowstep_mark", Colors::ARGB(200, 128, 0, 128));
     color_shadowstep_line = Colors::Load(ini, section, "color_shadowstep_line", Colors::ARGB(155, 128, 0, 128));
     color_shadowstep_line_maxrange = Colors::Load(ini, section, "color_shadowstep_line_maxrange", Colors::ARGB(255, 255, 0, 128));
-    maxrange_interp_begin = (float)ini->GetDoubleValue(section, "maxrange_interp_begin", 0.85);
-    maxrange_interp_end = (float)ini->GetDoubleValue(section, "maxrange_interp_end", 0.95);
+    maxrange_interp_begin = static_cast<float>(ini->GetDoubleValue(section, "maxrange_interp_begin", 0.85));
+    maxrange_interp_end = static_cast<float>(ini->GetDoubleValue(section, "maxrange_interp_end", 0.95));
     Invalidate();
 }
-void PingsLinesRenderer::SaveSettings(CSimpleIni* ini, const char* section) const {
+
+void PingsLinesRenderer::SaveSettings(CSimpleIni *ini, const char *section) const
+{
     Colors::Save(ini, section, "color_drawings", color_drawings);
     Colors::Save(ini, section, "color_pings", ping_circle.color);
     Colors::Save(ini, section, "color_shadowstep_mark", marker.color);
@@ -39,7 +44,9 @@ void PingsLinesRenderer::SaveSettings(CSimpleIni* ini, const char* section) cons
     ini->SetDoubleValue(section, "maxrange_interp_begin", maxrange_interp_begin);
     ini->SetDoubleValue(section, "maxrange_interp_end", maxrange_interp_end);
 }
-void PingsLinesRenderer::DrawSettings() {
+
+void PingsLinesRenderer::DrawSettings()
+{
     if (ImGui::SmallButton("Restore Defaults")) {
         color_drawings = Colors::ARGB(0xFF, 0xFF, 0xFF, 0xFF);
         ping_circle.color = Colors::ARGB(128, 255, 0, 0);
@@ -68,7 +75,9 @@ void PingsLinesRenderer::DrawSettings() {
     }
 }
 
-PingsLinesRenderer::PingsLinesRenderer() : vertices(nullptr) {
+PingsLinesRenderer::PingsLinesRenderer()
+    : vertices(nullptr)
+{
     mouse_down = false;
     mouse_moved = false;
     mouse_x = 0;
@@ -81,13 +90,14 @@ PingsLinesRenderer::PingsLinesRenderer() : vertices(nullptr) {
     shadowstep_location = GW::Vec2f(0, 0);
 }
 
-void PingsLinesRenderer::P046Callback(GW::Packet::StoC::AgentPinged *pak) {
+void PingsLinesRenderer::P046Callback(GW::Packet::StoC::AgentPinged *pak)
+{
     bool found = false;
     if (reduce_ping_spam) {
-        for (Ping* ping : pings) {
+        for (Ping *ping : pings) {
             if (ping->GetAgentID() == pak->agent_id) {
                 // extend the duration to count for the current ping.
-                clock_t diff = TIMER_DIFF(ping->start);
+                const clock_t diff = TIMER_DIFF(ping->start);
                 ping->duration = 3000 + diff;
                 found = true;
                 break;
@@ -99,7 +109,8 @@ void PingsLinesRenderer::P046Callback(GW::Packet::StoC::AgentPinged *pak) {
     }
 }
 
-void PingsLinesRenderer::P138Callback(GW::Packet::StoC::CompassEvent *pak) {
+void PingsLinesRenderer::P138Callback(GW::Packet::StoC::CompassEvent *pak)
+{
     bool new_session;
     if (drawings[pak->Player].player == pak->Player) {
         new_session = drawings[pak->Player].session != pak->SessionID;
@@ -113,8 +124,8 @@ void PingsLinesRenderer::P138Callback(GW::Packet::StoC::CompassEvent *pak) {
     if (new_session && pak->NumberPts == 1) {
         pings.push_front(new TerrainPing(
             pak->points[0].x * drawing_scale,
-pak->points[0].y * drawing_scale));
-return;
+            pak->points[0].y * drawing_scale));
+        return;
     }
 
     if (new_session) {
@@ -127,7 +138,8 @@ return;
             drawings[pak->Player].lines.push_back(l);
         }
     } else {
-        if (drawings[pak->Player].lines.empty()) return;
+        if (drawings[pak->Player].lines.empty())
+            return;
         for (unsigned int i = 0; i < pak->NumberPts; ++i) {
             DrawingLine l;
             if (i == 0) {
@@ -144,37 +156,42 @@ return;
     }
 }
 
-void PingsLinesRenderer::P153Callback(GW::Packet::StoC::GenericValueTarget *pak) {
+void PingsLinesRenderer::P153Callback(GW::Packet::StoC::GenericValueTarget *pak)
+{
     if (pak->Value_id == 20
         && pak->caster == GW::Agents::GetPlayerId()
         && pak->value == 928) {
         recall_target = pak->target;
     }
 };
-void PingsLinesRenderer::P221Callback(GW::Packet::StoC::SkillActivate *pak) {
+
+void PingsLinesRenderer::P221Callback(GW::Packet::StoC::SkillActivate *pak)
+{
     if (pak->agent_id == GW::Agents::GetPlayerId()) {
-        if (pak->skill_id == (DWORD)GW::Constants::SkillID::Shadow_of_Haste
-            || pak->skill_id == (DWORD)GW::Constants::SkillID::Shadow_Walk) {
+        if (pak->skill_id == static_cast<DWORD>(GW::Constants::SkillID::Shadow_of_Haste)
+            || pak->skill_id == static_cast<DWORD>(GW::Constants::SkillID::Shadow_Walk)) {
             shadowstep_location = GW::Agents::GetPlayer()->pos;
         }
     }
 };
 
-void PingsLinesRenderer::Initialize(IDirect3DDevice9* device) {
+void PingsLinesRenderer::Initialize(IDirect3DDevice9 *device)
+{
     type = D3DPT_LINELIST;
 
     vertices_max = 0x1000; // support for up to 4096 line segments, should be enough
 
     vertices = nullptr;
 
-    HRESULT hr = device->CreateVertexBuffer(sizeof(D3DVertex) * vertices_max, 0,
-        D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
+    const HRESULT hr = device->CreateVertexBuffer(sizeof(D3DVertex) * vertices_max, 0,
+                                                  D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
     if (FAILED(hr)) {
         printf("Error setting up PingsLinesRenderer vertex buffer: HRESULT: 0x%lX\n", hr);
     }
 }
 
-void PingsLinesRenderer::Render(IDirect3DDevice9* device) {
+void PingsLinesRenderer::Render(IDirect3DDevice9 *device)
+{
     if (!initialized) {
         initialized = true;
         Initialize(device);
@@ -185,8 +202,9 @@ void PingsLinesRenderer::Render(IDirect3DDevice9* device) {
     DrawShadowstepMarker(device);
 
     vertices_count = 0;
-    HRESULT res = buffer->Lock(0, sizeof(D3DVertex) * vertices_max, (VOID**)&vertices, D3DLOCK_DISCARD);
-    if (FAILED(res)) printf("PingsLinesRenderer Lock() error: HRESULT 0x%lX\n", res);
+    const HRESULT res = buffer->Lock(0, sizeof(D3DVertex) * vertices_max, (VOID **)&vertices, D3DLOCK_DISCARD);
+    if (FAILED(res))
+        printf("PingsLinesRenderer Lock() error: HRESULT 0x%lX\n", res);
 
     DrawShadowstepLine(device);
 
@@ -206,10 +224,13 @@ void PingsLinesRenderer::Render(IDirect3DDevice9* device) {
     }
 }
 
-void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device) {
-    for (Ping* ping : pings) {
-        if (ping->GetScale() == 0) continue;
-        if (TIMER_DIFF(ping->start) > ping->duration) continue;
+void PingsLinesRenderer::DrawPings(IDirect3DDevice9 *device)
+{
+    for (Ping *ping : pings) {
+        if (ping->GetScale() == 0)
+            continue;
+        if (TIMER_DIFF(ping->start) > ping->duration)
+            continue;
 
         D3DXMATRIX translate, scale, world;
         D3DXMatrixTranslation(&translate, ping->GetX(), ping->GetY(), 0.0f);
@@ -222,7 +243,7 @@ void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device) {
         }
 
         int diff = TIMER_DIFF(ping->start);
-        bool first_loop = diff < 1000;
+        const bool first_loop = diff < 1000;
         diff = diff % 1000;
         diff *= first_loop ? 2 : 1;
 
@@ -232,7 +253,7 @@ void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device) {
         ping_circle.Render(device);
     }
     if (!pings.empty()) {
-        Ping* last = pings.back(); 
+        Ping *last = pings.back();
         if (TIMER_DIFF(last->start) > last->duration) {
             delete last;
             pings.pop_back();
@@ -240,8 +261,10 @@ void PingsLinesRenderer::DrawPings(IDirect3DDevice9* device) {
     }
 }
 
-void PingsLinesRenderer::EnqueueVertex(float x, float y, Color color) {
-    if (vertices_count == vertices_max) return;
+void PingsLinesRenderer::EnqueueVertex(float x, float y, Color color)
+{
+    if (vertices_count == vertices_max)
+        return;
     vertices[0].x = x;
     vertices[0].y = y;
     vertices[0].z = 0.0f;
@@ -249,27 +272,32 @@ void PingsLinesRenderer::EnqueueVertex(float x, float y, Color color) {
     ++vertices;
     ++vertices_count;
 }
-void PingsLinesRenderer::DrawDrawings(IDirect3DDevice9* device) {
+
+void PingsLinesRenderer::DrawDrawings(IDirect3DDevice9 *device)
+{
     UNREFERENCED_PARAMETER(device);
     for (auto it = drawings.begin(); it != drawings.end(); ++it) {
-        if (it->second.player == 0) continue;
-        std::deque<DrawingLine>& lines = it->second.lines;
+        if (it->second.player == 0)
+            continue;
+        std::deque<DrawingLine> &lines = it->second.lines;
 
         if (vertices_count < vertices_max - 2) {
-            for (const DrawingLine& line : lines) {
-                uint32_t max_alpha = (color_drawings & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT;
-                uint32_t left = static_cast<uint32_t>(drawing_timeout - TIMER_DIFF(line.start));
+            for (const DrawingLine &line : lines) {
+                const uint32_t max_alpha = (color_drawings & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT;
+                const auto left = static_cast<uint32_t>(drawing_timeout - TIMER_DIFF(line.start));
                 // @Robustness:
                 // This is not safe, casting time to uint32_t is unsafe.
                 if (left > static_cast<uint32_t>(drawing_timeout))
                     continue; // This is actually a negative integer i.e. no time left.
                 uint32_t alpha = left * max_alpha / 2000;
-                if (alpha > max_alpha) alpha = max_alpha;
-                Color color = (color_drawings & 0x00FFFFFF) | (alpha << IM_COL32_A_SHIFT);
+                if (alpha > max_alpha)
+                    alpha = max_alpha;
+                const Color color = (color_drawings & 0x00FFFFFF) | (alpha << IM_COL32_A_SHIFT);
                 EnqueueVertex(line.x1, line.y1, color);
                 EnqueueVertex(line.x2, line.y2, color);
 
-                if (vertices_count >= vertices_max - 2) break;
+                if (vertices_count >= vertices_max - 2)
+                    break;
             }
         }
 
@@ -279,9 +307,12 @@ void PingsLinesRenderer::DrawDrawings(IDirect3DDevice9* device) {
     }
 }
 
-void PingsLinesRenderer::DrawShadowstepMarker(IDirect3DDevice9* device) {
-    if (shadowstep_location.x == 0.0f && shadowstep_location.y == 0.0f) return;
-    if ((marker.color & IM_COL32_A_MASK) == 0) return;
+void PingsLinesRenderer::DrawShadowstepMarker(IDirect3DDevice9 *device)
+{
+    if (shadowstep_location.x == 0.0f && shadowstep_location.y == 0.0f)
+        return;
+    if ((marker.color & IM_COL32_A_MASK) == 0)
+        return;
 
     GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
     if (!effects.valid()) {
@@ -290,9 +321,9 @@ void PingsLinesRenderer::DrawShadowstepMarker(IDirect3DDevice9* device) {
     }
 
     bool found = false;
-    for (unsigned int i = 0; i < effects.size(); ++i) {
-        if (effects[i].skill_id == (DWORD)GW::Constants::SkillID::Shadow_of_Haste
-            || effects[i].skill_id == (DWORD)GW::Constants::SkillID::Shadow_Walk) {
+    for (auto &effect : effects) {
+        if (effect.skill_id == static_cast<DWORD>(GW::Constants::SkillID::Shadow_of_Haste)
+            || effect.skill_id == static_cast<DWORD>(GW::Constants::SkillID::Shadow_Walk)) {
             found = true;
         }
     }
@@ -309,30 +340,37 @@ void PingsLinesRenderer::DrawShadowstepMarker(IDirect3DDevice9* device) {
     marker.Render(device);
 }
 
-void PingsLinesRenderer::DrawShadowstepLine(IDirect3DDevice9* device) {
+void PingsLinesRenderer::DrawShadowstepLine(IDirect3DDevice9 *device)
+{
     UNREFERENCED_PARAMETER(device);
     // this is after the previous func, so don't check for effect
-    if (shadowstep_location.x == 0.0f && shadowstep_location.y == 0.0f) return;
-    if ((color_shadowstep_line & IM_COL32_A_MASK) == 0) return;
+    if (shadowstep_location.x == 0.0f && shadowstep_location.y == 0.0f)
+        return;
+    if ((color_shadowstep_line & IM_COL32_A_MASK) == 0)
+        return;
 
-    GW::Agent* player = GW::Agents::GetPlayer();
-    if (player == nullptr) return;
+    GW::Agent *player = GW::Agents::GetPlayer();
+    if (player == nullptr)
+        return;
 
     EnqueueVertex(shadowstep_location.x, shadowstep_location.y, color_shadowstep_line);
     EnqueueVertex(player->pos.x, player->pos.y, color_shadowstep_line);
 }
 
-void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9* device) {
+void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9 *device)
+{
     UNREFERENCED_PARAMETER(device);
-    if (recall_target == 0) return;
-    if ((color_shadowstep_line & IM_COL32_A_MASK) == 0) return;
+    if (recall_target == 0)
+        return;
+    if ((color_shadowstep_line & IM_COL32_A_MASK) == 0)
+        return;
 
     GW::Buff *recall = GW::Effects::GetPlayerBuffBySkillId(GW::Constants::SkillID::Recall);
     if (!recall || recall->skill_id == 0) {
         recall_target = 0;
         return;
     }
-    GW::Agent* player = GW::Agents::GetPlayer();
+    GW::Agent *player = GW::Agents::GetPlayer();
     if (player == nullptr) {
         recall_target = 0;
         return;
@@ -343,19 +381,19 @@ void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9* device) {
         recall_target = 0;
         return;
     }
-    GW::Agent* target = agents[recall_target];
+    GW::Agent *target = agents[recall_target];
     if (target == nullptr) {
         // This can happen if you recall something that then despawns before you drop recall.
         recall_target = 0;
         return;
     }
-    float distance = GW::GetDistance(target->pos, player->pos);
-    float distance_perc = distance / GW::Constants::Range::Compass;
+    const float distance = GetDistance(target->pos, player->pos);
+    const float distance_perc = distance / GW::Constants::Range::Compass;
     Color c;
     if (distance_perc < maxrange_interp_begin) {
         c = color_shadowstep_line;
     } else if (distance_perc < maxrange_interp_end && (maxrange_interp_end - maxrange_interp_begin > 0)) {
-        float t = (distance_perc - maxrange_interp_begin) / (maxrange_interp_end - maxrange_interp_begin);
+        const float t = (distance_perc - maxrange_interp_begin) / (maxrange_interp_end - maxrange_interp_begin);
         c = Colors::Slerp(color_shadowstep_line, color_shadowstep_line_maxrange, t);
     } else {
         c = color_shadowstep_line_maxrange;
@@ -366,18 +404,20 @@ void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9* device) {
 }
 
 
-void PingsLinesRenderer::PingCircle::Initialize(IDirect3DDevice9* device) {
+void PingsLinesRenderer::PingCircle::Initialize(IDirect3DDevice9 *device)
+{
     type = D3DPT_TRIANGLESTRIP;
     count = 48; // polycount
-    unsigned int vertex_count = count + 2;
-    D3DVertex* _vertices = nullptr;
+    const unsigned int vertex_count = count + 2;
+    D3DVertex *_vertices = nullptr;
 
-    if (buffer) buffer->Release();
+    if (buffer)
+        buffer->Release();
     device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, 0,
-        D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
+                               D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
     buffer->Lock(0, sizeof(D3DVertex) * vertex_count, (VOID **)&_vertices,
                  D3DLOCK_DISCARD);
-    
+
     const float PI = 3.1415927f;
     for (size_t i = 0; i < count; ++i) {
         float angle = i * (2 * PI / count);
@@ -393,15 +433,18 @@ void PingsLinesRenderer::PingCircle::Initialize(IDirect3DDevice9* device) {
 
     buffer->Unlock();
 }
-void PingsLinesRenderer::Marker::Initialize(IDirect3DDevice9* device) {
+
+void PingsLinesRenderer::Marker::Initialize(IDirect3DDevice9 *device)
+{
     type = D3DPT_TRIANGLEFAN;
     count = 16; // polycount
     unsigned int vertex_count = count + 2;
     D3DVertex *_vertices = nullptr;
 
-    if (buffer) buffer->Release();
+    if (buffer)
+        buffer->Release();
     device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, 0,
-        D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
+                               D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
     buffer->Lock(0, sizeof(D3DVertex) * vertex_count, (VOID **)&_vertices,
                  D3DLOCK_DISCARD);
 
@@ -411,7 +454,7 @@ void PingsLinesRenderer::Marker::Initialize(IDirect3DDevice9* device) {
     _vertices[0].z = 0.0f;
     _vertices[0].color = Colors::Sub(color, Colors::ARGB(50, 0, 0, 0));
     for (size_t i = 1; i < vertex_count; ++i) {
-        float angle = (i-1) * (2 * PI / count);
+        float angle = (i - 1) * (2 * PI / count);
         _vertices[i].x = std::cos(angle);
         _vertices[i].y = std::sin(angle);
         _vertices[i].z = 0.0f;
@@ -421,25 +464,32 @@ void PingsLinesRenderer::Marker::Initialize(IDirect3DDevice9* device) {
     buffer->Unlock();
 }
 
-float PingsLinesRenderer::AgentPing::GetX() const {
-    GW::Agent* agent = GW::Agents::GetAgentByID(id);
-    if (agent == nullptr) return 0.0f;
+float PingsLinesRenderer::AgentPing::GetX() const
+{
+    GW::Agent *agent = GW::Agents::GetAgentByID(id);
+    if (agent == nullptr)
+        return 0.0f;
     return agent->pos.x;
 }
 
-float PingsLinesRenderer::AgentPing::GetY() const {
-    GW::Agent* agent = GW::Agents::GetAgentByID(id);
-    if (agent == nullptr) return 0.0f;
+float PingsLinesRenderer::AgentPing::GetY() const
+{
+    GW::Agent *agent = GW::Agents::GetAgentByID(id);
+    if (agent == nullptr)
+        return 0.0f;
     return agent->pos.y;
 }
 
-float PingsLinesRenderer::AgentPing::GetScale() const {
-    GW::Agent* agent = GW::Agents::GetAgentByID(id);
-    if (agent == nullptr) return 0.0f;
+float PingsLinesRenderer::AgentPing::GetScale() const
+{
+    GW::Agent *agent = GW::Agents::GetAgentByID(id);
+    if (agent == nullptr)
+        return 0.0f;
     return 1.0f;
 }
 
-bool PingsLinesRenderer::OnMouseDown(float x, float y) {
+bool PingsLinesRenderer::OnMouseDown(float x, float y)
+{
     mouse_down = true;
     mouse_moved = false;
     mouse_x = x;
@@ -449,19 +499,23 @@ bool PingsLinesRenderer::OnMouseDown(float x, float y) {
     return true;
 }
 
-void PingsLinesRenderer::AddMouseClickPing(GW::Vec2f pos) {
+void PingsLinesRenderer::AddMouseClickPing(GW::Vec2f pos)
+{
     pings.push_front(new ClickPing(pos.x, pos.y));
 }
 
-bool PingsLinesRenderer::OnMouseMove(float x, float y) {
-    if (!mouse_down) return false;
+bool PingsLinesRenderer::OnMouseMove(float x, float y)
+{
+    if (!mouse_down)
+        return false;
 
-    GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
-    if (me == nullptr) return false;
-
+    GW::AgentLiving *me = GW::Agents::GetPlayerAsAgentLiving();
+    if (me == nullptr)
+        return false;
 
     drawings[me->player_number].player = me->player_number;
-    if (!mouse_moved) { // first time
+    if (!mouse_moved) {
+        // first time
         mouse_moved = true;
         BumpSessionID();
         drawings[me->player_number].session = static_cast<DWORD>(session_id);
@@ -483,7 +537,7 @@ bool PingsLinesRenderer::OnMouseMove(float x, float y) {
             || TIMER_DIFF(lastsent) > send_interval) {
             lastqueued = TIMER_INIT();
 
-            queue.push_back(GW::UI::CompassPoint(ToShortPos(x), ToShortPos(y)));
+            queue.emplace_back(ToShortPos(x), ToShortPos(y));
 
             if (queue.size() == 7 || TIMER_DIFF(lastsent) > send_interval) {
                 lastsent = TIMER_INIT();
@@ -491,19 +545,21 @@ bool PingsLinesRenderer::OnMouseMove(float x, float y) {
             }
         }
     }
-    
+
     return true;
 }
 
-bool PingsLinesRenderer::OnMouseUp() {
-    if (!mouse_down) return false;
+bool PingsLinesRenderer::OnMouseUp()
+{
+    if (!mouse_down)
+        return false;
     mouse_down = false;
 
     if (mouse_moved) {
         lastsent = TIMER_INIT();
     } else {
         BumpSessionID();
-        queue.push_back(GW::UI::CompassPoint(ToShortPos(mouse_x), ToShortPos(mouse_y)));
+        queue.emplace_back(ToShortPos(mouse_x), ToShortPos(mouse_y));
         pings.push_front(new TerrainPing(mouse_x, mouse_y));
     }
 
@@ -512,7 +568,8 @@ bool PingsLinesRenderer::OnMouseUp() {
     return true;
 }
 
-void PingsLinesRenderer::SendQueue() {
+void PingsLinesRenderer::SendQueue()
+{
     if (queue.size() > 0 && queue.size() < 8) {
         GW::UI::CompassPoint pts[8];
         for (unsigned int i = 0; i < queue.size(); ++i) {

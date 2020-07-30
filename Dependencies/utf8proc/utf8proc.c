@@ -287,9 +287,9 @@ static utf8proc_bool grapheme_break_simple(int lbc, int tbc) {
 
 static utf8proc_bool grapheme_break_extended(int lbc, int tbc, utf8proc_int32_t *state)
 {
-  int lbc_override = ((state && *state != UTF8PROC_BOUNDCLASS_START)
-                      ? *state : lbc);
-  utf8proc_bool break_permitted = grapheme_break_simple(lbc_override, tbc);
+    const int lbc_override = ((state && *state != UTF8PROC_BOUNDCLASS_START)
+                                  ? *state : lbc);
+    const utf8proc_bool break_permitted = grapheme_break_simple(lbc_override, tbc);
   if (state) {
     // Special support for GB 12/13 made possible by GB999. After two RI
     // class codepoints we want to force a break. Do this by resetting the
@@ -350,7 +350,7 @@ static utf8proc_ssize_t seqindex_write_char_decomposed(utf8proc_uint16_t seqinde
     entry++;
   }
   for (; len >= 0; entry++, len--) {
-    utf8proc_int32_t entry_cp = seqindex_decode_entry(&entry);
+      const utf8proc_int32_t entry_cp = seqindex_decode_entry(&entry);
 
     written += utf8proc_decompose_char(entry_cp, dst+written,
       (bufsize > written) ? (bufsize - written) : 0, options,
@@ -362,19 +362,19 @@ static utf8proc_ssize_t seqindex_write_char_decomposed(utf8proc_uint16_t seqinde
 
 UTF8PROC_DLLEXPORT utf8proc_int32_t utf8proc_tolower(utf8proc_int32_t c)
 {
-  utf8proc_int32_t cl = utf8proc_get_property(c)->lowercase_seqindex;
+    const utf8proc_int32_t cl = utf8proc_get_property(c)->lowercase_seqindex;
   return cl != UINT16_MAX ? seqindex_decode_index(cl) : c;
 }
 
 UTF8PROC_DLLEXPORT utf8proc_int32_t utf8proc_toupper(utf8proc_int32_t c)
 {
-  utf8proc_int32_t cu = utf8proc_get_property(c)->uppercase_seqindex;
+    const utf8proc_int32_t cu = utf8proc_get_property(c)->uppercase_seqindex;
   return cu != UINT16_MAX ? seqindex_decode_index(cu) : c;
 }
 
 UTF8PROC_DLLEXPORT utf8proc_int32_t utf8proc_totitle(utf8proc_int32_t c)
 {
-  utf8proc_int32_t cu = utf8proc_get_property(c)->titlecase_seqindex;
+    const utf8proc_int32_t cu = utf8proc_get_property(c)->titlecase_seqindex;
   return cu != UINT16_MAX ? seqindex_decode_index(cu) : c;
 }
 
@@ -473,7 +473,7 @@ UTF8PROC_DLLEXPORT utf8proc_ssize_t utf8proc_decompose_char(utf8proc_int32_t uc,
   }
   if (options & UTF8PROC_CHARBOUND) {
     utf8proc_bool boundary;
-    int tbc = property->boundclass;
+    const int tbc = property->boundclass;
     boundary = grapheme_break_extended(*last_boundclass, tbc, last_boundclass);
     if (boundary) {
       if (bufsize >= 1) dst[0] = 0xFFFF;
@@ -636,7 +636,7 @@ UTF8PROC_DLLEXPORT utf8proc_ssize_t utf8proc_normalize_utf32(utf8proc_int32_t *b
         if (starter_property->comb_index < 0x8000 &&
             current_property->comb_index != UINT16_MAX &&
             current_property->comb_index >= 0x8000) {
-          int sidx = starter_property->comb_index;
+            const int sidx = starter_property->comb_index;
           int idx = current_property->comb_index & 0x3FFF;
           if (idx >= utf8proc_combinations[sidx] && idx <= utf8proc_combinations[sidx + 1] ) {
             idx += sidx + 2 - utf8proc_combinations[sidx];

@@ -57,7 +57,7 @@ void Updater::DrawSettingInternal() {
 void Updater::GetLatestRelease(GWToolboxRelease* release) {
     // Get list of releases
     std::string releases_str = "";
-    unsigned int tries = 0;
+    const unsigned int tries = 0;
     while (tries < 5 && releases_str.empty()) {
         releases_str = Resources::Instance().Download(L"https://api.github.com/repos/HasKha/GWToolboxpp/releases");
     }
@@ -68,19 +68,19 @@ void Updater::GetLatestRelease(GWToolboxRelease* release) {
     Json json = Json::parse(releases_str.c_str(), nullptr, false);
     if (json == Json::value_t::discarded || !json.is_array() || !json.size())
         return;
-    for (unsigned int i = 0; i < json.size(); i++) {
-        if (!(json[i].contains("tag_name") && json[i]["tag_name"].is_string()))
+    for (auto &i : json) {
+        if (!(i.contains("tag_name") && i["tag_name"].is_string()))
             continue;
-        std::string tag_name = json[i]["tag_name"].get<std::string>();
+        std::string tag_name = i["tag_name"].get<std::string>();
         size_t version_number_len = tag_name.find("_Release", 0);
         if (version_number_len == std::string::npos)
             continue;
-        if (!(json[i].contains("assets") && json[i]["assets"].is_array() && json[i]["assets"].size() > 0))
+        if (!(i.contains("assets") && i["assets"].is_array() && i["assets"].size() > 0))
             continue;
-        if (!(json[i].contains("body") && json[i]["body"].is_string()))
+        if (!(i.contains("body") && i["body"].is_string()))
             continue;
-        for (unsigned int j = 0; j < json[i]["assets"].size(); j++) {
-            const Json& asset = json[i]["assets"][j];
+        for (unsigned int j = 0; j < i["assets"].size(); j++) {
+            const Json& asset = i["assets"][j];
             if (!(asset.contains("name") && asset["name"].is_string())
                 || !(asset.contains("browser_download_url") && asset["browser_download_url"].is_string()))
                 continue;
@@ -89,7 +89,7 @@ void Updater::GetLatestRelease(GWToolboxRelease* release) {
                 continue; // This release doesn't have a dll download.
             release->download_url = asset["browser_download_url"].get<std::string>();
             release->version = tag_name.substr(0, version_number_len);
-            release->body = json[i]["body"].get<std::string>();
+            release->body = i["body"].get<std::string>();
             return;
         }
     }
@@ -143,7 +143,7 @@ void Updater::Draw(IDirect3DDevice9* device) {
                 latest_release.version.c_str(), GWTOOLBOX_VERSION, BETA_VERSION);
         }
 
-        int iMode = forced_ask ? 2 : mode;
+        const int iMode = forced_ask ? 2 : mode;
         
         switch (iMode) {
         case 0: // no updating
@@ -235,9 +235,9 @@ void Updater::DoUpdate() {
     step = Downloading;
 
     // 0. find toolbox dll path
-    HMODULE module = GWToolbox::GetDLLModule();
+    const HMODULE module = GWToolbox::GetDLLModule();
     WCHAR dllfile[MAX_PATH];
-    DWORD size = GetModuleFileNameW(module, dllfile, MAX_PATH);
+    const DWORD size = GetModuleFileNameW(module, dllfile, MAX_PATH);
     if (size == 0) {
         Log::Error("Updater error - cannot find GWToolbox.dll path");
         step = Done;
@@ -246,7 +246,7 @@ void Updater::DoUpdate() {
     Log::Log("dll file name is %s\n", dllfile);
 
     // Get name of dll from path
-    std::wstring dll_path(dllfile);
+    const std::wstring dll_path(dllfile);
     std::wstring dll_name;
     wchar_t sep = '/';
     #ifdef _WIN32

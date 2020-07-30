@@ -146,7 +146,7 @@ void ToolboxSettings::DrawSettingInternal() {
     ImGui::Checkbox("Save Location Data", &save_location_data);
     ImGui::ShowHelp("Toolbox will save your location every second in a file in Settings Folder.");
     
-    const size_t cols = (size_t)floor(ImGui::GetWindowWidth() / (170.0f * ImGui::GetIO().FontGlobalScale));
+    const auto cols = (size_t)floor(ImGui::GetWindowWidth() / (170.0f * ImGui::GetIO().FontGlobalScale));
 
     ImGui::Separator();
     ImGui::PushID("global_enable");
@@ -182,7 +182,7 @@ void ToolboxSettings::DrawSettingInternal() {
     ImGui::Columns(static_cast<int>(cols), "global_enable_cols", false);
     size_t items_per_col = (size_t)ceil(features.size() / cols);
     size_t col_count = 0;
-    for (auto feature : features) {
+    for (const auto feature : features) {
         ImGui::Checkbox(feature.first, feature.second);
         col_count++;
         if (col_count > items_per_col) {

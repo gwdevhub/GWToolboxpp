@@ -25,7 +25,7 @@ public:
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
 
-    void DrawFreezeSetting();
+    static void DrawFreezeSetting();
 
     const std::vector<ToolboxModule*>& GetOptionalModules() const { return optional_modules; }
 
@@ -38,7 +38,7 @@ private:
     std::wofstream location_file;
     bool save_location_data = false;
 
-    std::vector<ToolboxModule*> optional_modules;
+    std::vector<ToolboxModule*> optional_modules{};
 
     bool use_pcons = true;
     bool use_hotkeys = true;

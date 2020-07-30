@@ -61,7 +61,7 @@ public:
     // Find an empty (or partially empty) inventory slot that this item can go into. !entire_stack = Returns slots that are the same item, but won't hold all of them.
     GW::Item* GetAvailableInventoryStack(GW::Item* like_item, bool entire_stack = false);
     // Checks model info and struct info to make sure item is the same.
-    bool IsSameItem(GW::Item* item1, GW::Item* item2);
+    static bool IsSameItem(GW::Item* item1, GW::Item* item2);
 
     static void ItemClickCallback(GW::HookStatus*, uint32_t type, uint32_t slot, GW::Bag* bag);
 
@@ -94,7 +94,7 @@ private:
     size_t identified_count = 0;
     size_t salvaged_count = 0;
 
-    GW::Packet::StoC::SalvageSession current_salvage_session;
+    GW::Packet::StoC::SalvageSession current_salvage_session{};
 
     void ContinueIdentify();
     void ContinueSalvage();

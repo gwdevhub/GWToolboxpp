@@ -30,7 +30,7 @@ void FactionLeaderboardWindow::Initialize() {
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::TownAllianceObject>(&TownAlliance_Entry, 
         [this](GW::HookStatus* status, GW::Packet::StoC::TownAllianceObject *pak) -> bool {
             UNREFERENCED_PARAMETER(status);
-            LeaderboardEntry leaderboardEntry = {
+            const LeaderboardEntry leaderboardEntry = {
                 pak->map_id,
                 pak->rank,
                 pak->allegiance,
@@ -97,7 +97,7 @@ void FactionLeaderboardWindow::Draw(IDirect3DDevice9* pDevice) {
         ImGui::PopID();
     }
     if (!has_entries) {
-        ImVec2 w = ImGui::CalcTextSize("Enter a Canthan outpost to see data");
+        const ImVec2 w = ImGui::CalcTextSize("Enter a Canthan outpost to see data");
         ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
         ImGui::SetCursorPosX(avail_width / 2 - (w.x / 2));
         ImGui::Text("Enter a Canthan outpost to see data");

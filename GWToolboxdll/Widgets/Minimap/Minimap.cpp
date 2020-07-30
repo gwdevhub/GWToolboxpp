@@ -340,7 +340,7 @@ void Minimap::Draw(IDirect3DDevice9 *device)
         const GW::Vec2f v(translation.x, translation.y);
         const float speed = std::min((TIMER_DIFF(last_moved) - ms_before_back) * acceleration, 500.0f);
         GW::Vec2f d = v;
-        d = GW::Normalize(d) * speed;
+        d = Normalize(d) * speed;
         if (std::abs(d.x) > std::abs(v.x)) {
             translation = GW::Vec2f(0, 0);
         } else {
@@ -425,9 +425,10 @@ void Minimap::Draw(IDirect3DDevice9 *device)
                     device->Clear(0, nullptr, D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0x00000000, 1.0f, 0); // clear depth and stencil buffer
                     device->SetRenderState(D3DRS_STENCILREF, 1);
                     device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
-                    device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);                           // write ref value into stencil buffer when passed
-                    float radius = static_cast<float>(Instance().size.x / 2.f);                                // rounding error in viewmatrix transformation
-                    FillCircle(Instance().location.x + radius, Instance().location.y + radius, radius, color); // draw circle with chosen background color into stencil buffer, fills buffer with 1's
+                    device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE); // write ref value into stencil buffer when passed
+                    auto radius = static_cast<float>(Instance().size.x / 2.f);       // rounding error in viewmatrix transformation
+                    FillCircle(Instance().location.x + radius, Instance().location.y + radius, radius, color);
+                    // draw circle with chosen background color into stencil buffer, fills buffer with 1's
 
                     device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL); // only draw where 1 is in the buffer
                     device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_ZERO);
@@ -627,7 +628,7 @@ void Minimap::SelectTarget(GW::Vec2f pos)
         return;
 
     float distance = 600.0f * 600.0f;
-    size_t closest = static_cast<size_t>(-1);
+    auto closest = static_cast<size_t>(-1);
 
     for (size_t i = 0; i < agents.size(); ++i) {
         GW::Agent *agent = agents[i];
@@ -677,6 +678,7 @@ bool Minimap::WndProc(UINT Message, WPARAM wParam, LPARAM lParam)
             return false;
     }
 }
+
 bool Minimap::FlagHeros(LPARAM lParam)
 {
     const int x = GET_X_LPARAM(lParam);
@@ -701,6 +703,7 @@ bool Minimap::FlagHeros(LPARAM lParam)
     }
     return flagged;
 }
+
 bool Minimap::OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam)
 {
     UNREFERENCED_PARAMETER(Message);
@@ -851,11 +854,12 @@ bool Minimap::IsInside(int x, int y) const
         GW::Agent *me = GW::Agents::GetPlayer();
         if (!me)
             return false;
-        const float sqrdst = GW::GetSquareDistance(me->pos, gamepos);
+        const float sqrdst = GetSquareDistance(me->pos, gamepos);
         return sqrdst < GW::Constants::SqrRange::Compass;
     }
     return true;
 }
+
 bool Minimap::IsActive() const
 {
     return visible && !loading && GW::Map::GetIsMapLoaded() && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && GW::Agents::GetPlayerId() != 0;

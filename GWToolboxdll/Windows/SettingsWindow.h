@@ -24,7 +24,7 @@ public:
     void Draw(IDirect3DDevice9* pDevice) override;
 
     bool DrawSettingsSection(const char* section) {
-        auto callbacks = ToolboxModule::GetSettingsCallbacks();
+        const auto callbacks = ToolboxModule::GetSettingsCallbacks();
         auto settings_section = callbacks->find(section);
         if (settings_section == callbacks->end())
             return false;

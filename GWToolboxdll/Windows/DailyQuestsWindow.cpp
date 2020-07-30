@@ -1039,26 +1039,26 @@ time_t GetNextWeeklyRotationTime() {
     return GetWeeklyRotationTime(&unix) + 604800;
 }
 const char* GetNicholasSandfordLocation(time_t* unix) {
-    uint32_t cycle_index = static_cast<uint32_t>((*unix - 1239260400) / 86400 % 52);
+    const uint32_t cycle_index = static_cast<uint32_t>((*unix - 1239260400) / 86400 % 52);
     return nicholas_sandford_cycles[cycle_index];
 }
 uint32_t GetNicholasItemQuantity(time_t* unix) {
-    uint32_t cycle_index = static_cast<uint32_t>((*unix - 1323097200) / 604800 % 137);
+    const auto cycle_index = static_cast<uint32_t>((*unix - 1323097200) / 604800 % 137);
     return nicholas_quantity_cycles[cycle_index];
 }
 const char* GetNicholasLocation(time_t* unix) {
-    uint32_t cycle_index = static_cast<uint32_t>((*unix - 1323097200) / 604800 % 137);
+    const auto cycle_index = static_cast<uint32_t>((*unix - 1323097200) / 604800 % 137);
     return nicholas_location_cycles[cycle_index];
 }
 const char* GetNicholasItemName(time_t* unix) {
-    uint32_t cycle_index = static_cast<uint32_t>((*unix - 1323097200) / 604800 % 137);
+    const auto cycle_index = static_cast<uint32_t>((*unix - 1323097200) / 604800 % 137);
     return nicholas_item_cycles[cycle_index];
 }
 uint32_t GetWantedByShiningBlade(time_t* unix) {
     return static_cast<uint32_t>((*unix - 1276012800) / 86400 % 21);
 }
 const char* GetVanguardQuest(time_t* unix) {
-    uint32_t cycle_index = static_cast<uint32_t>((*unix - 1299168000) / 86400 % 9);
+    const auto cycle_index = static_cast<uint32_t>((*unix - 1299168000) / 86400 % 9);
     return vanguard_cycles[cycle_index];
 }
 bool GetIsPreSearing() {
@@ -1228,7 +1228,7 @@ void DailyQuests::DrawHelp() {
 }
 void DailyQuests::DrawSettingInternal() {
     ToolboxWindow::DrawSettingInternal();
-    float width = ImGui::GetContentRegionAvailWidth() / 2;
+    const float width = ImGui::GetContentRegionAvailWidth() / 2;
     ImGui::PushItemWidth(width);
     ImGui::InputInt("Show daily quests for the next ", &daily_quest_window_count);
     ImGui::PopItemWidth();
@@ -1481,7 +1481,7 @@ void DailyQuests::Update(float delta) {
 void DailyQuests::CmdWeeklyBonus(const wchar_t* message, int argc, LPWSTR* argv) {
     UNREFERENCED_PARAMETER(message);
     time_t now = time(nullptr);
-    time_t nowOriginal = time(&now);
+    const time_t nowOriginal = time(&now);
     if (argc > 1 && !wcscmp(argv[1], L"tomorrow"))
         now += 86400;
     const int buf_size = 139;
@@ -1501,7 +1501,7 @@ void DailyQuests::CmdWeeklyBonus(const wchar_t* message, int argc, LPWSTR* argv)
 void DailyQuests::CmdZaishenBounty(const wchar_t *message, int argc, LPWSTR *argv) {
     UNREFERENCED_PARAMETER(message);
     time_t now = time(nullptr);
-    time_t nowOriginal = time(&now);
+    const time_t nowOriginal = time(&now);
     if (argc > 1 && !wcscmp(argv[1], L"tomorrow"))
         now += 86400;
     const int buf_size = 139;
@@ -1515,7 +1515,7 @@ void DailyQuests::CmdZaishenBounty(const wchar_t *message, int argc, LPWSTR *arg
 void DailyQuests::CmdZaishenMission(const wchar_t *message, int argc, LPWSTR *argv) {
     UNREFERENCED_PARAMETER(message);
     time_t now = time(nullptr);
-    time_t nowOriginal = time(&now);
+    const time_t nowOriginal = time(&now);
     if (argc > 1 && !wcscmp(argv[1], L"tomorrow"))
         now += 86400;
     const int buf_size = 139;
@@ -1529,7 +1529,7 @@ void DailyQuests::CmdZaishenMission(const wchar_t *message, int argc, LPWSTR *ar
 void DailyQuests::CmdZaishenVanquish(const wchar_t *message, int argc, LPWSTR *argv) {
     UNREFERENCED_PARAMETER(message);
     time_t now = time(nullptr);
-    time_t nowOriginal = time(&now);
+    const time_t nowOriginal = time(&now);
     if (argc > 1 && !wcscmp(argv[1], L"tomorrow"))
         now += 86400;
     const int buf_size = 139;
@@ -1543,7 +1543,7 @@ void DailyQuests::CmdZaishenVanquish(const wchar_t *message, int argc, LPWSTR *a
 void DailyQuests::CmdZaishenCombat(const wchar_t *message, int argc, LPWSTR *argv) {
     UNREFERENCED_PARAMETER(message);
     time_t now = time(nullptr);
-    time_t nowOriginal = time(&now);
+    const time_t nowOriginal = time(&now);
     if (argc > 1 && !wcscmp(argv[1], L"tomorrow"))
         now += 86400;
     const int buf_size = 139;
@@ -1557,7 +1557,7 @@ void DailyQuests::CmdZaishenCombat(const wchar_t *message, int argc, LPWSTR *arg
 void DailyQuests::CmdWantedByShiningBlade(const wchar_t *message, int argc, LPWSTR *argv) {
     UNREFERENCED_PARAMETER(message);
     time_t now = time(nullptr);
-    time_t nowOriginal = time(&now);
+    const time_t nowOriginal = time(&now);
     if (argc > 1 && !wcscmp(argv[1], L"tomorrow"))
         now += 86400;
     const int buf_size = 139;
@@ -1571,7 +1571,7 @@ void DailyQuests::CmdWantedByShiningBlade(const wchar_t *message, int argc, LPWS
 void DailyQuests::CmdVanguard(const wchar_t *message, int argc, LPWSTR *argv) {
     UNREFERENCED_PARAMETER(message);
     time_t now = time(nullptr);
-    time_t nowOriginal = time(&now);
+    const time_t nowOriginal = time(&now);
     if (argc > 1 && !wcscmp(argv[1], L"tomorrow"))
         now += 86400;
     const int buf_size = 139;
@@ -1585,7 +1585,7 @@ void DailyQuests::CmdVanguard(const wchar_t *message, int argc, LPWSTR *argv) {
 void DailyQuests::CmdNicholas(const wchar_t *message, int argc, LPWSTR *argv) {
     UNREFERENCED_PARAMETER(message);
     time_t now = time(nullptr);
-    time_t nowOriginal = time(&now);
+    const time_t nowOriginal = time(&now);
     if (argc > 1 && !wcscmp(argv[1], L"tomorrow"))
         now += 86400;
     const int buf_size = 139;

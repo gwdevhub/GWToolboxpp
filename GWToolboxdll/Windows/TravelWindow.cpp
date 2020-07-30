@@ -596,10 +596,10 @@ namespace {
         const GW::Array<GW::Guild *>& guilds = GW::GuildMgr::GetGuildArray();
         if (!guilds.valid())
             return nullptr;
-        for (size_t i = 0; i < guilds.size(); i++) {
-            if (!guilds[i])
+        for (auto guild : guilds) {
+            if (!guild)
                 continue;
-            return guilds[i];
+            return guild;
         }
         return nullptr;
     }
@@ -608,7 +608,7 @@ namespace {
         const GW::Array<GW::Guild *> &guilds = GW::GuildMgr::GetGuildArray();
         if (!guilds.valid())
             return nullptr;
-        uint32_t guild_idx = GW::GuildMgr::GetPlayerGuildIndex();
+        const uint32_t guild_idx = GW::GuildMgr::GetPlayerGuildIndex();
         if (guild_idx >= guilds.size())
             return nullptr;
         return guilds[guild_idx];
@@ -654,7 +654,7 @@ void TravelWindow::Terminate() {
 
 void TravelWindow::TravelButton(const char* text, int x_idx, GW::Constants::MapID mapid) {
     if (x_idx != 0) ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-    float w = (ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().ItemInnerSpacing.x) / 2;
+    const float w = (ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().ItemInnerSpacing.x) / 2;
     bool clicked = false;
     switch (mapid) {
         case GW::Constants::MapID::The_Deep:
@@ -693,7 +693,7 @@ void TravelWindow::Draw(IDirect3DDevice9* pDevice) {
             ImGui::PushItemWidth(-1.0f);
             static int travelto_index = -1;
             if (ImGui::MyCombo("travelto", "Travel To...", &travelto_index, outpost_name_array_getter, nullptr, N_OUTPOSTS)) {
-                GW::Constants::MapID id = IndexToOutpostID(travelto_index);
+                const GW::Constants::MapID id = IndexToOutpostID(travelto_index);
                 Travel(id, district, district_number);
                 travelto_index = -1;
                 if (close_on_travel) visible = false;
@@ -796,7 +796,7 @@ void TravelWindow::ScrollToOutpost(GW::Constants::MapID outpost_id, GW::Constant
         return; // Checking too soon; still waiting for either a map travel or a countdown for it.
     }
 
-    GW::Constants::MapID map_id = GW::Map::GetMapID();
+    const GW::Constants::MapID map_id = GW::Map::GetMapID();
     if (scroll_to_outpost_id == GW::Constants::MapID::None) {
         scroll_to_outpost_id = outpost_id;
         scroll_from_outpost_id = map_id;
@@ -870,11 +870,11 @@ bool TravelWindow::Travel(GW::Constants::MapID MapID, GW::Constants::District _d
 }
 bool TravelWindow::IsMapUnlocked(GW::Constants::MapID map_id) {
     GW::Array<uint32_t> unlocked_map = GW::GameContext::instance()->world->unlocked_map;
-    uint32_t real_index = (uint32_t)map_id / 32;
+    const uint32_t real_index = (uint32_t)map_id / 32;
     if (real_index >= unlocked_map.size())
         return false;
-    uint32_t shift = (uint32_t)map_id % 32;
-    uint32_t flag = 1u << shift;
+    const uint32_t shift = (uint32_t)map_id % 32;
+    const uint32_t flag = 1u << shift;
     return (unlocked_map[real_index] & flag) != 0;
 }
 void TravelWindow::UITravel(GW::Constants::MapID MapID, GW::Constants::District _district /*= 0*/, uint32_t _district_number) {
@@ -884,7 +884,7 @@ void TravelWindow::UITravel(GW::Constants::MapID MapID, GW::Constants::District 
         int language_id;
         uint32_t district_number;
     };
-    MapStruct* t = new MapStruct();
+    auto * t = new MapStruct();
     t->map_id = MapID;
     t->district_number = _district_number;
     t->region_id = RegionFromDistrict(_district);
@@ -975,7 +975,7 @@ void TravelWindow::SaveSettings(CSimpleIni* ini) {
     ToolboxWindow::SaveSettings(ini);
     ini->SetLongValue(Name(), VAR_NAME(fav_count), fav_count);
     for (int i = 0; i < fav_count; ++i) {
-        size_t ui = static_cast<size_t>(i);
+        auto ui = static_cast<size_t>(i);
         char key[32];
         snprintf(key, 32, "Fav%d", i);
         ini->SetLongValue(Name(), key, fav_index[ui]);
@@ -1183,7 +1183,7 @@ void TravelWindow::CmdTP(const wchar_t *message, int argc, LPWSTR *argv)
     uint32_t district_number = 0;
 
     std::wstring argOutpost = GuiUtils::ToLower(argv[1]);
-    std::wstring argDistrict = GuiUtils::ToLower(argv[argc - 1]);
+    const std::wstring argDistrict = GuiUtils::ToLower(argv[argc - 1]);
     // Guild hall
     if (argOutpost == L"gh") {
         if (argc == 2) {
@@ -1195,7 +1195,7 @@ void TravelWindow::CmdTP(const wchar_t *message, int argc, LPWSTR *argv)
             return;
         }
         // "/tp gh lag" = travel to Guild Hall belonging to Zero Files Remaining [LaG]
-        std::wstring argGuildTag = GuiUtils::ToLower(argv[2]);
+        const std::wstring argGuildTag = GuiUtils::ToLower(argv[2]);
         const GW::GuildArray& guilds = GW::GuildMgr::GetGuildArray();
         for (GW::Guild *guild : guilds) {
             if (guild && GuiUtils::ToLower(guild->tag) == argGuildTag) {
@@ -1208,7 +1208,7 @@ void TravelWindow::CmdTP(const wchar_t *message, int argc, LPWSTR *argv)
     }
     TravelWindow &instance = Instance();
     if (argOutpost.size() > 2 && argOutpost.compare(0, 3, L"fav", 3) == 0) {
-        std::wstring fav_s_num = argOutpost.substr(3, std::wstring::npos);
+        const std::wstring fav_s_num = argOutpost.substr(3, std::wstring::npos);
         if (fav_s_num.empty()) {
             instance.TravelFavorite(0);
             return;
@@ -1226,7 +1226,7 @@ void TravelWindow::CmdTP(const wchar_t *message, int argc, LPWSTR *argv)
         argOutpost.append(L" ");
         argOutpost.append(GuiUtils::ToLower(argv[i]));
     }
-    bool isValidDistrict = ParseDistrict(argDistrict, district, district_number);
+    const bool isValidDistrict = ParseDistrict(argDistrict, district, district_number);
     if (isValidDistrict && argc == 2) {
         // e.g. "/tp ae1"
         instance.Travel(outpost, district, district_number); // NOTE: ParseDistrict sets district and district_number vars by reference.
@@ -1289,7 +1289,7 @@ bool TravelWindow::ParseOutpost(const std::wstring &s, GW::Constants::MapID &out
     std::string compare = GuiUtils::ToLower(GuiUtils::RemovePunctuation(GuiUtils::WStringToString(s)));
 
     // Shortcut words e.g "/tp doa" for domain of anguish
-    std::string first_word = compare.substr(0, compare.find(' '));
+    const std::string first_word = compare.substr(0, compare.find(' '));
     const auto &shorthand_outpost = instance.shorthand_outpost_names.find(first_word);
     if (shorthand_outpost != instance.shorthand_outpost_names.end()) {
         const OutpostAlias &outpost_info = shorthand_outpost->second;
@@ -1307,7 +1307,7 @@ bool TravelWindow::ParseOutpost(const std::wstring &s, GW::Constants::MapID &out
     // Helper function
     auto FindMatchingMap = [](const std::string &compare, const char **map_names, const GW::Constants::MapID *map_ids, size_t map_count) -> GW::Constants::MapID {
         std::string sanitized;
-        unsigned int searchStringLength = compare.length();
+        const unsigned int searchStringLength = compare.length();
         unsigned int bestMatchLength = 0;
         unsigned int thisMapLength = 0;
         GW::Constants::MapID bestMatchMapID = GW::Constants::MapID::None;
@@ -1344,9 +1344,9 @@ bool TravelWindow::ParseDistrict(const std::wstring &s, GW::Constants::District 
 {
     district = GW::Constants::District::Current;
     number = 0;
-    std::string compare = GuiUtils::ToLower(GuiUtils::RemovePunctuation(GuiUtils::WStringToString(s)));
+    const std::string compare = GuiUtils::ToLower(GuiUtils::RemovePunctuation(GuiUtils::WStringToString(s)));
     // Shortcut words e.g "/tp ae" for american english
-    std::string first_word = compare.substr(0, compare.find(' '));
+    const std::string first_word = compare.substr(0, compare.find(' '));
 
     TravelWindow &instance = Instance();
     const auto &shorthand_outpost = instance.shorthand_district_names.find(first_word);

@@ -33,7 +33,7 @@ void SettingsWindow::SaveSettings(CSimpleIni* ini) {
 void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);
     static GW::Constants::InstanceType last_instance_type = GW::Constants::InstanceType::Loading;
-    GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
+    const GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
 
     if (instance_type != last_instance_type) {
         if (hide_when_entering_explorable && instance_type == GW::Constants::InstanceType::Explorable)
@@ -46,7 +46,7 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
     ImGui::SetNextWindowSize(ImVec2(450, 600), ImGuiSetCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         drawn_settings.clear();
-        ImColor sCol(102, 187, 238, 255);
+        const ImColor sCol(102, 187, 238, 255);
         ImGui::PushTextWrapPos();
         ImGui::Text("GWToolbox++");
         ImGui::SameLine(0, 0); ImGui::TextColored(sCol," v%s ",GWTOOLBOX_VERSION);
@@ -68,7 +68,7 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
                 }
             }
         }
-        float w = (ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().ItemSpacing.x) / 2;
+        const float w = (ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().ItemSpacing.x) / 2;
         if (ImGui::Button("Open Settings Folder", ImVec2(w, 0))) {
             CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
             ShellExecuteW(NULL, L"open", Resources::GetSettingsFolderPath().c_str(), NULL, NULL, SW_SHOWNORMAL);
@@ -121,8 +121,8 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
                 ImGui::Bullet(); ImGui::Text("Send Chat hotkey to enter one of the commands above.");
                 ImGui::TreePop();
             }
-            for (unsigned i = 0; i < GWToolbox::Instance().GetModules().size(); ++i) {
-                GWToolbox::Instance().GetModules()[i]->DrawHelp();
+            for (auto i : GWToolbox::Instance().GetModules()) {
+                i->DrawHelp();
             }
         }
 

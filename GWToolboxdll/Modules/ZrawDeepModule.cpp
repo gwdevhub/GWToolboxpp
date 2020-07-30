@@ -70,7 +70,7 @@ namespace {
     static uint32_t kanaxai_agent_id = 0;
     const bool IsKanaxaiTransformed() {
         if (!kanaxai_agent_id) return false;
-        GW::AgentLiving* kanaxai = (GW::AgentLiving*)GW::Agents::GetAgentByID(kanaxai_agent_id);
+        auto * kanaxai = (GW::AgentLiving*)GW::Agents::GetAgentByID(kanaxai_agent_id);
         if (!IsKanaxai(kanaxai)) return false;
         return (kanaxai->transmog_npc_id ^ 0x20000000) == GW::Constants::ModelID::Minipet::Gwen;
     }
@@ -83,7 +83,7 @@ namespace {
             if (!player.login_number || player.login_number >= players.size()) continue;
             GW::Player* p2 = &players[player.login_number];
             if (!p2) continue;
-            GW::AgentLiving* pa = (GW::AgentLiving*)GW::Agents::GetAgentByID(p2->agent_id);
+            auto * pa = (GW::AgentLiving*)GW::Agents::GetAgentByID(p2->agent_id);
             if (pa && pa->GetIsLivingType() && (pa->transmog_npc_id ^ 0x20000000) != GW::Constants::ModelID::Minipet::Kanaxai)
                 return false;
         }
@@ -200,8 +200,8 @@ void ZrawDeepModule::SetTransmogs() {
     if (pending_transmog == 0 || TIMER_DIFF(pending_transmog) < 500)
         return;
     pending_transmog = 0;
-    bool transmo_kanaxai_ = !terminating && enabled && kanaxais_true_form;
-    bool transmo_team_ = !terminating && enabled && transmo_team;
+    const bool transmo_kanaxai_ = !terminating && enabled && kanaxais_true_form;
+    const bool transmo_team_ = !terminating && enabled && transmo_team;
     if (transmo_team_) {
         if(!IsWholePartyTransformed())
             GW::Chat::SendChat('/', "transmoparty kanaxai 34");

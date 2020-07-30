@@ -58,8 +58,8 @@ private:
 
     char search_buffer[256] = { 0 };
 
-    std::vector<std::string> alert_words;
-    std::vector<std::string> searched_words;
+    std::vector<std::string> alert_words{};
+    std::vector<std::string> searched_words{};
 
     void DrawAlertsWindowContent(bool ownwindow);
 
@@ -80,7 +80,7 @@ private:
     CircularBuffer<Message> messages;
 
     // tasks to be done async by the worker thread
-    std::queue<std::function<void()>> thread_jobs;
+    std::queue<std::function<void()>> thread_jobs{};
     bool should_stop = false;
     std::thread worker;
 

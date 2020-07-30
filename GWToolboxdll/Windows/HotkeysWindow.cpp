@@ -277,7 +277,7 @@ void HotkeysWindow::MapChanged() {
     if (!p) return;
     map_id = (uint32_t)GW::Map::GetMapID();
     prof_id = p->primary;
-    GW::Constants::InstanceType mt = GW::Map::GetInstanceType();
+    const GW::Constants::InstanceType mt = GW::Map::GetInstanceType();
     if (mt != GW::Constants::InstanceType::Loading) {
         for (TBHotkey* hk : hotkeys) {
             if (!block_hotkeys && hk->active

@@ -51,8 +51,8 @@ void AprilFools::Initialize() {
                 return;
             if ((packet->agent_type & 0x30000000) != 0x30000000)
                 return; // Not a player
-            uint32_t player_number = packet->agent_type ^ 0x30000000;
-            GW::AgentLiving* agent = (GW::AgentLiving*)GW::Agents::GetAgentByID(GW::Agents::GetAgentIdByLoginNumber(player_number));
+            const uint32_t player_number = packet->agent_type ^ 0x30000000;
+            auto * agent = (GW::AgentLiving*)GW::Agents::GetAgentByID(GW::Agents::GetAgentIdByLoginNumber(player_number));
             if (!agent || !agent->GetIsLivingType() || !agent->IsPlayer())
                 return; // Not a valid agent
             player_agents.emplace(agent->agent_id, agent);
@@ -63,7 +63,7 @@ void AprilFools::Initialize() {
             UNREFERENCED_PARAMETER(status);
             if (!enabled)
                 return;
-            auto found = player_agents.find(packet->agent_id);
+            const auto found = player_agents.find(packet->agent_id);
             if (found != player_agents.end())
                 player_agents.erase(found);
         });
@@ -92,7 +92,7 @@ void AprilFools::SetEnabled(bool is_enabled) {
         Log::Info("April Fools 2020 enabled. Type '/aprilfools' to disable it");
     }
     else {
-        for (auto agent : player_agents) {
+        for (const auto agent : player_agents) {
             SetInfected(agent.second, false);
         }
         player_agents.clear();
@@ -103,7 +103,7 @@ void AprilFools::SetInfected(GW::Agent* agent,bool is_infected) {
     uint32_t agent_id = agent->agent_id;
     if (!is_infected) {
         GW::GameThread::Enqueue([agent_id]() {
-            GW::Packet::StoC::GenericValue packet;
+            GW::Packet::StoC::GenericValue packet{};
             packet.agent_id = agent_id;
             packet.Value_id = 7; // Remove effect
             packet.value = 26; // Disease
@@ -118,12 +118,12 @@ void AprilFools::SetInfected(GW::Agent* agent,bool is_infected) {
     SetInfected(agent, false);
     static int last_quote_idx = -1;
     GW::GameThread::Enqueue([agent_id]() {
-        GW::Packet::StoC::GenericValue packet;
+        GW::Packet::StoC::GenericValue packet{};
         packet.agent_id = agent_id;
         packet.Value_id = 6; // Add effect
         packet.value = 26; // Disease
         GW::StoC::EmulatePacket(&packet);
-        GW::Packet::StoC::SpeechBubble packet2;
+        GW::Packet::StoC::SpeechBubble packet2{};
         packet2.agent_id = agent_id;
         int quote_idx = last_quote_idx; 
         while(quote_idx == last_quote_idx)

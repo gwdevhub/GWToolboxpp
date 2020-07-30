@@ -22,15 +22,16 @@
 
 static const DWORD MIN_TIME_BETWEEN_RETRY = 160; // 10 frames
 
-GW::MerchItemArray MaterialsWindow::GetMerchItems() const {
-    GW::MerchItemArray items = {};
+GW::MerchItemArray MaterialsWindow::GetMerchItems()
+{
+    const GW::MerchItemArray items = {};
     GW::GameContext *game_ctx = GW::GameContext::instance();
     if (!(game_ctx && game_ctx->world)) return items;
     return game_ctx->world->merch_items;
 }
 
 GW::Item *MaterialsWindow::GetMerchItem(Material mat) const {
-    uint32_t model_id = GetModelID(mat);
+    const uint32_t model_id = GetModelID(mat);
     GW::ItemArray items = GW::Items::GetItemArray();
     for (uint32_t item_id : merch_items) {
         if (item_id >= items.size())
@@ -44,12 +45,12 @@ GW::Item *MaterialsWindow::GetMerchItem(Material mat) const {
 }
 
 GW::Item *MaterialsWindow::GetBagItem(Material mat) const {
-    uint32_t model_id = GetModelID(mat);
+    const uint32_t model_id = GetModelID(mat);
     int min_qty = mat <= Material::WoodPlank ? 10 : 1; // 10 if common, 1 if rare
     GW::Bag **bags = GW::Items::GetBagArray();
     if (!bags) return nullptr;
-    size_t bag_i = (size_t)GW::Constants::Bag::Backpack;
-    size_t bag_n = (size_t)GW::Constants::Bag::Bag_2;
+    auto bag_i = (size_t)GW::Constants::Bag::Backpack;
+    auto bag_n = (size_t)GW::Constants::Bag::Bag_2;
     for (size_t i = bag_i; i <= bag_n; i++) {
         GW::Bag *bag = bags[i];
         if (!bag) continue;
@@ -67,7 +68,7 @@ GW::Item *MaterialsWindow::GetBagItem(Material mat) const {
 void MaterialsWindow::Update(float delta) {
     UNREFERENCED_PARAMETER(delta);
     if (cancelled) return;
-    DWORD tickcount = GetTickCount();
+    const DWORD tickcount = GetTickCount();
     if (quote_pending && (tickcount < quote_pending_time)) return;
     if (trans_pending && (tickcount < trans_pending_time)) return;
     if (transactions.empty()) return;
@@ -104,8 +105,8 @@ void MaterialsWindow::Initialize() {
     Resources::Instance().LoadTextureAsync(&tex_resscroll, Resources::GetPath(L"img\\icons", L"Scroll_of_Resurrection.png"), 
         IDB_Mat_ResScroll);
     
-    for (int i = 0; i < N_MATS; ++i) {
-        price[i] = PRICE_DEFAULT;
+    for (int &i : price) {
+        i = PRICE_DEFAULT;
     }
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::QuotedItemPrice>(&QuotedItemPrice_Entry,
@@ -118,7 +119,7 @@ void MaterialsWindow::Initialize() {
             return;
         }
 
-        auto gold_character = GW::Items::GetGoldAmountOnCharacter();
+        const auto gold_character = GW::Items::GetGoldAmountOnCharacter();
         if (trans.type == Transaction::Quote) {
             price[trans.material] = static_cast<int>(pak->price);
             Dequeue();
@@ -367,7 +368,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice) {
         ImGui::PopItemWidth();
         ImGui::SameLine();
         if (ImGui::Button("Buy##resscroll", ImVec2(100.0f, 0))) {
-            int qty = (int)std::ceil(2.5f * qty_resscroll);
+            const int qty = (int)std::ceil(2.5f * qty_resscroll);
             for (int j = 0; j < qty; ++j) {
                 EnqueuePurchase(PlantFiber);
                 EnqueuePurchase(Bone);
@@ -376,8 +377,8 @@ void MaterialsWindow::Draw(IDirect3DDevice9* pDevice) {
 
         ImGui::Separator();
 
-        float width2 = 100.0f;
-        float width1 = (ImGui::GetWindowContentRegionWidth() - width2 - 100.0f - ImGui::GetStyle().ItemSpacing.x * 2);
+        const float width2 = 100.0f;
+        const float width1 = (ImGui::GetWindowContentRegionWidth() - width2 - 100.0f - ImGui::GetStyle().ItemSpacing.x * 2);
 
         // === generic materials ===
         static int common_idx = 0;
@@ -549,8 +550,8 @@ DWORD MaterialsWindow::RequestSellQuote(Material material) {
 
 std::string MaterialsWindow::GetPrice(MaterialsWindow::Material mat1, float fac1,
     MaterialsWindow::Material mat2, float fac2, int extra) const {
-    int p1 = price[mat1];
-    int p2 = price[mat2];
+    const int p1 = price[mat1];
+    const int p2 = price[mat2];
     if (p1 == PRICE_NOT_AVAILABLE || p2 == PRICE_NOT_AVAILABLE) {
         return "Price: (Material not available)";
     } else if (p1 == PRICE_DEFAULT || p2 == PRICE_DEFAULT) {
@@ -580,8 +581,8 @@ void MaterialsWindow::FullConsPriceTooltip() const {
             || price[Bone] < 0) {
             strcpy_s(buf, "Full Conset Price: -");
         } else {
-            int p = price[IronIngot] * 10 + price[PileofGlitteringDust] * 10 +
-                price[Bone] * 5 + price[Feather] * 5 + 750;
+            const int p = price[IronIngot] * 10 + price[PileofGlitteringDust] * 10 +
+                          price[Bone] * 5 + price[Feather] * 5 + 750;
             snprintf(buf, 256, "Full Conset Price: %g k", p / 1000.0f);
         }
         ImGui::SetTooltip(buf);
@@ -635,7 +636,8 @@ MaterialsWindow::Material MaterialsWindow::GetMaterial(DWORD modelid) {
     }
 }
 
-DWORD MaterialsWindow::GetModelID(MaterialsWindow::Material mat) const {
+DWORD MaterialsWindow::GetModelID(MaterialsWindow::Material mat)
+{
     switch (mat) {
     case BoltofCloth:           return GW::Constants::ItemID::BoltofCloth;
     case Bone:                  return GW::Constants::ItemID::Bone;

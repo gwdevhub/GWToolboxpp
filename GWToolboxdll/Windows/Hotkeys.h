@@ -76,7 +76,7 @@ private:
 // can be used for anything that uses SendChat
 class HotkeySendChat : public TBHotkey {
 private:
-    char message[139];
+    char message[139]{};
     char channel = '/';
 
 public:
@@ -112,7 +112,7 @@ public:
     void Description(char* buf, size_t bufsz) const override;
     void Execute() override;
 
-    bool IsEquippable(GW::Item* item);
+    static bool IsEquippable(GW::Item* item);
 };
 
 // hotkey to use an item
@@ -120,7 +120,7 @@ public:
 class HotkeyUseItem : public TBHotkey {
 private:
     UINT item_id = 0;
-    char name[140];
+    char name[140]{};
 public:
     static const char* IniSection() { return "UseItem"; }
     const char* Name() const override { return IniSection(); }
@@ -231,7 +231,7 @@ private:
         Count
     } type = HotkeyTargetType::NPC;
     uint32_t id = 0;
-    char name[140];
+    char name[140]{};
 public:
     static const char* IniSection() { return "Target"; }
     const char* Name() const override { return IniSection(); }
@@ -252,7 +252,7 @@ public:
     float x = 0.0;
     float y = 0.0;
     float range = 0.0;
-    char name[140];
+    char name[140]{};
 
     static const char* IniSection() { return "Move"; }
     const char* Name() const override { return IniSection(); }
@@ -269,7 +269,7 @@ public:
 class HotkeyDialog : public TBHotkey {
 public:
     size_t id = 0;
-    char name[140];
+    char name[140]{};
 
     static const char* IniSection() { return "Dialog"; }
     const char* Name() const override { return IniSection(); }

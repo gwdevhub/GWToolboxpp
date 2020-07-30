@@ -49,13 +49,13 @@ void BuildsWindow::CmdLoad(const wchar_t* message, int argc, LPWSTR* argv) {
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
         return;
     if (argc > 2) {
-        std::string build_name = GuiUtils::WStringToString(argv[2]);
-        std::string team_build_name = GuiUtils::WStringToString(argv[1]);
+        const std::string build_name = GuiUtils::WStringToString(argv[2]);
+        const std::string team_build_name = GuiUtils::WStringToString(argv[1]);
         Instance().Load(team_build_name.c_str(), build_name.c_str());
         return;
     }
     if (argc > 1) {
-        std::string build_name = GuiUtils::WStringToString(argv[1]);
+        const std::string build_name = GuiUtils::WStringToString(argv[1]);
         Instance().Load(build_name.c_str());
         return;
     }
@@ -145,7 +145,7 @@ void BuildsWindow::DrawBuildSection(TeamBuild& tbuild, unsigned int j) {
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip(!build.pcons.empty() ? "Click to load build template and pcons" : "Click to load build template");
     ImGui::SameLine(0, spacing);
-    bool pcons_editing = tbuild.edit_pcons == static_cast<int>(j);
+    const bool pcons_editing = tbuild.edit_pcons == static_cast<int>(j);
     if(pcons_editing) 
         ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered));
     if (build.pcons.empty())
@@ -193,7 +193,7 @@ void BuildsWindow::DrawBuildSection(TeamBuild& tbuild, unsigned int j) {
     auto pcons = PconsWindow::Instance().pcons;
         
     float pos_x = 0;
-    float third_w = ImGui::GetContentRegionAvailWidth() / 3;
+    const float third_w = ImGui::GetContentRegionAvailWidth() / 3;
     unsigned int offset = 0;
     for (size_t i = 0; i < pcons.size(); i++) {
         auto pcon = pcons[i];
@@ -223,7 +223,7 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);
     // @Cleanup: Use the BuildsWindow instance, not a static variable
     static GW::Constants::InstanceType last_instance_type = GW::Constants::InstanceType::Loading;
-    GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
+    const GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
 
     if (instance_type != last_instance_type) {
         // Run tasks on map change without an StoC hook
@@ -359,7 +359,7 @@ void BuildsWindow::View(const TeamBuild& tbuild, unsigned int idx) {
     if (idx >= tbuild.builds.size()) return;
     const Build& build = tbuild.builds[idx];
 
-    GW::UI::ChatTemplate* t = new GW::UI::ChatTemplate();
+    auto * t = new GW::UI::ChatTemplate();
     t->code.m_buffer = new wchar_t[128];
     MultiByteToWideChar(CP_UTF8, 0, build.code, -1, t->code.m_buffer, 128);
     t->code.m_size = t->code.m_capacity = wcslen(t->code.m_buffer);
@@ -392,15 +392,15 @@ void BuildsWindow::Load(const char* build_name) {
 void BuildsWindow::Load(const char* tbuild_name, const char* build_name) {
     if (!build_name || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
         return;
-    GW::SkillbarMgr::SkillTemplate t;
-    GW::Constants::Profession prof = (GW::Constants::Profession)GW::Agents::GetPlayerAsAgentLiving()->primary;
-    bool is_skill_template = GW::SkillbarMgr::DecodeSkillTemplate(&t, build_name);
+    GW::SkillbarMgr::SkillTemplate t{};
+    const auto prof = (GW::Constants::Profession)GW::Agents::GetPlayerAsAgentLiving()->primary;
+    const bool is_skill_template = GW::SkillbarMgr::DecodeSkillTemplate(&t, build_name);
     if (is_skill_template && t.primary != prof) {
         Log::Error("Invalid profession for %s (%s)", build_name, GW::Constants::GetProfessionAcronym(t.primary).c_str());
         return;
     }
-    std::string tbuild_ws = tbuild_name ? GuiUtils::ToLower(tbuild_name) : "";
-    std::string build_ws = GuiUtils::ToLower(build_name);
+    const std::string tbuild_ws = tbuild_name ? GuiUtils::ToLower(tbuild_name) : "";
+    const std::string build_ws = GuiUtils::ToLower(build_name);
 
     std::vector<std::pair<TeamBuild,size_t>> local_teambuilds;
     for (auto& tb : teambuilds) {
@@ -453,7 +453,7 @@ void BuildsWindow::LoadPcons(const TeamBuild& tbuild, unsigned int idx) {
     std::vector<Pcon*> pcons_not_visible;
     PconsWindow* pcw = &PconsWindow::Instance();
     for (auto pcon : pcw->pcons) {
-        bool enable = build.pcons.find(pcon->ini) != build.pcons.end();
+        const bool enable = build.pcons.find(pcon->ini) != build.pcons.end();
         if (enable) {
             if (!pcon->IsVisible()) {
                 // Don't enable pcons that the user cant see!
@@ -593,7 +593,7 @@ bool BuildsWindow::MoveOldBuilds(CSimpleIni* ini) {
     for (CSimpleIni::Entry& oldentry : oldentries) {
         const char* section = oldentry.pItem;
         if (strncmp(section, "builds", 6) == 0) {
-            int count = ini->GetLongValue(section, "count", 12);
+            const int count = ini->GetLongValue(section, "count", 12);
             teambuilds.push_back(TeamBuild(ini->GetValue(section, "buildname", "")));
             TeamBuild& tbuild = teambuilds.back();
             tbuild.show_numbers = ini->GetBoolValue(section, "showNumbers", true);
@@ -632,7 +632,7 @@ void BuildsWindow::LoadFromFile() {
     inifile->GetAllSections(entries);
     for (CSimpleIni::Entry& entry : entries) {
         const char* section = entry.pItem;
-        int count = inifile->GetLongValue(section, "count", 12);
+        const int count = inifile->GetLongValue(section, "count", 12);
         teambuilds.push_back(TeamBuild(inifile->GetValue(section, "buildname", "")));
         TeamBuild& tbuild = teambuilds.back();
         tbuild.show_numbers = inifile->GetBoolValue(section, "showNumbers", true);
@@ -699,7 +699,7 @@ void BuildsWindow::SaveToFile() {
                     std::string pconsval;
                     snprintf(pconskey, 16, "pcons%d", j);
                     size_t k = 0;
-                    for (auto pconstr : build.pcons) {
+                    for (const auto pconstr : build.pcons) {
                         if (k) pconsval += ",";
                         k = 1;
                         pconsval += pconstr;

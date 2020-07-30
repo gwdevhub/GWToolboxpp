@@ -33,11 +33,11 @@ public:
 private:
     const wchar_t* Get1stSegment(const wchar_t *message) const;
     const wchar_t* Get2ndSegment(const wchar_t *message) const;
-    bool FullMatch(const wchar_t* p, const std::initializer_list<wchar_t>& msg) const;
+    static bool FullMatch(const wchar_t* p, const std::initializer_list<wchar_t>& msg);
 
     DWORD GetNumericSegment(const wchar_t *message) const;
-    bool ShouldIgnoreByAgentThatDropped(const wchar_t* agent_segment) const;
-    bool IsRare(const wchar_t* item_segment) const;
+    static bool ShouldIgnoreByAgentThatDropped(const wchar_t* agent_segment);
+    static bool IsRare(const wchar_t* item_segment);
     // Blocks/flushes StoC packets if they need blocking
     void BlockIfApplicable(GW::HookStatus* status, const wchar_t* message, uint32_t channel);
     // Should this message for this channel be ignored either by encoded string or content?
@@ -91,11 +91,11 @@ private:
     static const size_t FILTER_BUF_SIZE = 1024*16;
 
     // Chat filter
-    std::vector<std::string> bycontent_words;
+    std::vector<std::string> bycontent_words{};
     char bycontent_word_buf[FILTER_BUF_SIZE] = "";
     bool bycontent_filedirty = false;
 
-    std::vector<std::regex> bycontent_regex;
+    std::vector<std::regex> bycontent_regex{};
     char bycontent_regex_buf[FILTER_BUF_SIZE] = "";
 
 #ifdef EXTENDED_IGNORE_LIST

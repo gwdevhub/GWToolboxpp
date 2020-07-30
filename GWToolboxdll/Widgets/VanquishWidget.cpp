@@ -15,14 +15,14 @@ void VanquishWidget::Draw(IDirect3DDevice9 *pDevice) {
     UNREFERENCED_PARAMETER(pDevice);
     if (!visible) return;
 
-    DWORD tokill = GW::Map::GetFoesToKill();
-    DWORD killed = GW::Map::GetFoesKilled();
+    const DWORD tokill = GW::Map::GetFoesToKill();
+    const DWORD killed = GW::Map::GetFoesKilled();
 
     if ((GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) ||
         !GW::PartyMgr::GetIsPartyInHardMode() ||
         tokill <= 0) return;
 
-    bool ctrl_pressed = ImGui::IsKeyDown(VK_CONTROL);
+    const bool ctrl_pressed = ImGui::IsKeyDown(VK_CONTROL);
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiSetCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !ctrl_pressed))) {
@@ -48,9 +48,9 @@ void VanquishWidget::Draw(IDirect3DDevice9 *pDevice) {
         ImGui::PopFont();
 
         // Check if the widget was clicked
-        ImVec2 size = ImGui::GetWindowSize();
-        ImVec2 min = ImGui::GetWindowPos();
-        ImVec2 max(min.x + size.x, min.y + size.y);
+        const ImVec2 size = ImGui::GetWindowSize();
+        const ImVec2 min = ImGui::GetWindowPos();
+        const ImVec2 max(min.x + size.x, min.y + size.y);
         if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsMouseHoveringRect(min, max)) {
             char buffer[256];
             snprintf(buffer, sizeof(buffer),

@@ -48,13 +48,13 @@ public:
         std::function<void(bool)> callback);
 
     // download to file, blocking
-    bool Download(std::wstring path_to_file, std::wstring url);
+    static bool Download(std::wstring path_to_file, std::wstring url);
     // download to file, async, calls callback on completion
     void Download(std::wstring path_to_file, std::wstring url, 
         std::function<void(bool)> callback);
 
     // download to memory, blocking
-    std::string Download(std::wstring url) const;
+    static std::string Download(std::wstring url);
     // download to memory, async, calls callback on completion
     void Download(std::wstring url, 
         std::function<void(std::string file)> callback);
@@ -67,13 +67,13 @@ public:
 
 private:
     // tasks to be done async by the worker thread
-    std::queue<std::function<void()>> thread_jobs;
+    std::queue<std::function<void()>> thread_jobs{};
 
     // tasks to be done in the render thread
-    std::queue<std::function<void(IDirect3DDevice9*)>> toload;
+    std::queue<std::function<void(IDirect3DDevice9*)>> toload{};
 
     // tasks to be done in main thread
-    std::queue<std::function<void()>> todo;
+    std::queue<std::function<void()>> todo{};
 
     bool should_stop = false;
     std::thread worker;

@@ -35,8 +35,8 @@ uint32_t AlcoholWidget::GetAlcoholTitlePoints() {
     return gameContext->world->titles[7].current_points;
 }
 uint32_t AlcoholWidget::GetAlcoholTitlePointsGained() {
-    uint32_t current_title_points = GetAlcoholTitlePoints();
-    uint32_t points_gained = current_title_points - prev_alcohol_title_points;
+    const uint32_t current_title_points = GetAlcoholTitlePoints();
+    const uint32_t points_gained = current_title_points - prev_alcohol_title_points;
     prev_alcohol_title_points = current_title_points; // Update previous variable.
     return points_gained <= 0 ? 0 : points_gained;
 }
@@ -52,7 +52,7 @@ uint32_t AlcoholWidget::GetAlcoholLevel() {
 }
 void AlcoholWidget::AlcUpdate(GW::HookStatus*, GW::Packet::StoC::PostProcess *packet) {
     AlcoholWidget &instance = Instance();
-    uint32_t pts_gained = instance.GetAlcoholTitlePointsGained();
+    const uint32_t pts_gained = instance.GetAlcoholTitlePointsGained();
     //Log::Info("Drunk effect %d / %d, %d pts gained", packet->tint, packet->level, pts_gained);
     if (packet->tint == 6) {
         // Tint 6, level 5 - the trouble zone for lunars!

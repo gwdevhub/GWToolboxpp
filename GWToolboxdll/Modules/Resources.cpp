@@ -50,14 +50,14 @@ void Resources::EnsureFolderExists(std::wstring path) {
 }
 
 utf8::string Resources::GetPathUtf8(std::wstring file) {
-    std::wstring path = GetPath(file);
+    const std::wstring path = GetPath(file);
     return Unicode16ToUtf8(path.c_str());
 }
 
 bool Resources::Download(std::wstring path_to_file, std::wstring url) {
     DeleteUrlCacheEntryW(url.c_str());
     Log::Log("Downloading %ls\n", url.c_str());
-    HRESULT download_result = URLDownloadToFileW(NULL, url.c_str(), path_to_file.c_str(), 0, NULL);
+    const HRESULT download_result = URLDownloadToFileW(NULL, url.c_str(), path_to_file.c_str(), 0, NULL);
     if (download_result != S_OK) {
         E_OUTOFMEMORY;
         INET_E_DOWNLOAD_FAILURE;
@@ -76,14 +76,15 @@ void Resources::Download(std::wstring path_to_file,
     });
 }
 
-std::string Resources::Download(std::wstring url) const {
+std::string Resources::Download(std::wstring url)
+{
     DeleteUrlCacheEntryW(url.c_str());
     IStream* stream;
     std::string ret = "";
     if (SUCCEEDED(URLOpenBlockingStreamW(NULL, url.c_str(), &stream, 0, NULL))) {
         STATSTG stats;
         stream->Stat(&stats, STATFLAG_NONAME);
-        DWORD size = stats.cbSize.LowPart;
+        const DWORD size = stats.cbSize.LowPart;
         CHAR* chars = new CHAR[size + 1];
         stream->Read(chars, size, NULL);
         chars[size] = '\0';
@@ -142,16 +143,16 @@ void Resources::LoadTextureAsync(IDirect3DTexture9** texture,
         });
     } else if (id > 0) {
         // otherwise try to install it from resource
-        HRSRC hResInfo = FindResource(GWToolbox::GetDLLModule(), MAKEINTRESOURCE(id), RT_RCDATA);
-        HGLOBAL hRes = LoadResource(GWToolbox::GetDLLModule(), hResInfo);
-        DWORD size = SizeofResource(GWToolbox::GetDLLModule(), hResInfo);
+        const HRSRC hResInfo = FindResource(GWToolbox::GetDLLModule(), MAKEINTRESOURCE(id), RT_RCDATA);
+        const HGLOBAL hRes = LoadResource(GWToolbox::GetDLLModule(), hResInfo);
+        const DWORD size = SizeofResource(GWToolbox::GetDLLModule(), hResInfo);
 
         // write to file so the user can customize his icons
-        HANDLE hFile = CreateFileW(path_to_file.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+        const HANDLE hFile = CreateFileW(path_to_file.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
         DWORD bytesWritten;
-        BOOL wfRes = WriteFile(hFile, hRes, size, &bytesWritten, NULL);
+        const BOOL wfRes = WriteFile(hFile, hRes, size, &bytesWritten, NULL);
         if (wfRes != TRUE) {
-            DWORD wfErr = GetLastError();
+            const DWORD wfErr = GetLastError();
             Log::Error("Error writing file %s - Error is %lu", path_to_file.c_str(), wfErr);
         } else if (bytesWritten != size) {
             Log::Error("Wrote %lu of %lu bytes for %s", bytesWritten, size, path_to_file.c_str());

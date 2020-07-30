@@ -1,6 +1,7 @@
 #pragma once
 
-class RateLimiter {
+class RateLimiter
+{
 public:
     RateLimiter();
 

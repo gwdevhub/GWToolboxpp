@@ -53,10 +53,10 @@ private:
         };
         std::wstring msg_ws;
         std::string msg_s;
-        char dialog_buf[11];
+        char dialog_buf[11]{};
     };
 
-    std::vector<AvailableDialog*> available_dialogs;
+    std::vector<AvailableDialog*> available_dialogs{};
 
 
     static const char* GetStatusStr(Status status);
@@ -87,7 +87,7 @@ private:
         inline char* str() {
             if (dec_s.empty() && !dec_ws.empty()) {
                 static std::wregex repl(L"<[^>]+>");
-                std::wstring ws_repl = std::regex_replace(dec_ws, repl, L"");
+                const std::wstring ws_repl = std::regex_replace(dec_ws, repl, L"");
                 dec_s = GuiUtils::WStringToString(ws_repl);
             }
             return (char*)dec_s.c_str();
@@ -96,10 +96,10 @@ private:
     void DrawItemInfo(GW::Item* item, ForDecode* name);
     DWORD mapfile = 0;
 
-    std::vector<Status> status;
-    std::vector<unsigned long> timestamp;
+    std::vector<Status> status{};
+    std::vector<unsigned long> timestamp{};
 
-    std::queue<std::wstring> send_queue;
+    std::queue<std::wstring> send_queue{};
     clock_t send_timer = 0;
 
     uint32_t quoted_item_id = 0;

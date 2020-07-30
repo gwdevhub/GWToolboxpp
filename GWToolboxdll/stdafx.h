@@ -33,6 +33,7 @@
 #pragma warning(disable: 5204) // class has virtual functions, but its trivial destructor is not virtual
 #pragma warning(disable: 6011) // Dereferencing NULL pointer
 #pragma warning(disable: 26495) // Variable is uninitialized
+#pragma warning(disable: 26812) // enum unscoped, consider using enum class instead
 
 #include <GWCA/Source/stdafx.h>
 
@@ -45,12 +46,12 @@
 #endif
 
 // c style headers
-#include <ctype.h>
-#include <math.h>
-#include <stdint.h>
-#include <stdio.h>
+#include <cctype>
+#include <cmath>
+#include <cstdint>
+#include <cstdio>
 #include <strsafe.h>
-#include <time.h>
+#include <ctime>
 
 // c++ headers
 #include <algorithm>

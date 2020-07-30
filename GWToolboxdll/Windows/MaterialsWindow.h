@@ -58,8 +58,8 @@ public:
     void Draw(IDirect3DDevice9* pDevice) override;
 
 private:
-    DWORD GetModelID(Material mat) const;
-    Material GetMaterial(DWORD modelid);
+    static DWORD GetModelID(Material mat);
+    static Material GetMaterial(DWORD modelid);
     std::string GetPrice(Material mat1, float fac1,
         Material mat2, float fac2, int extra) const;
 
@@ -83,7 +83,7 @@ private:
     int price[N_MATS] = {};
 
     // int max = 0;
-    GW::MerchItemArray GetMerchItems() const;
+    static GW::MerchItemArray GetMerchItems();
     GW::Item *GetMerchItem(Material mat) const;
     GW::Item *GetBagItem(Material mat) const;
 
@@ -108,9 +108,9 @@ private:
     void EnqueuePurchase(Material material);
     void EnqueueSell(Material material);
 
-    std::vector<GW::ItemID> merch_items;
+    std::vector<GW::ItemID> merch_items{};
 
-    std::deque<Transaction> transactions;
+    std::deque<Transaction> transactions{};
     bool quote_pending = false;
     bool trans_pending = false;
     DWORD quote_pending_time = 0;

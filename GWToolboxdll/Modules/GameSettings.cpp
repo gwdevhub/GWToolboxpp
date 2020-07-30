@@ -88,16 +88,16 @@ namespace {
         FlashWindowEx(&flashInfo);
     }
     void FocusWindow() {
-        HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
+        const HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
         if (!hwnd) return;
         SetForegroundWindow(hwnd);
         ShowWindow(hwnd, SW_RESTORE);
     }
 
     void PrintTime(wchar_t *buffer, size_t n, DWORD time_sec) {
-        DWORD secs = time_sec % 60;
-        DWORD minutes = (time_sec / 60) % 60;
-        DWORD hours = time_sec / 3600;
+        const DWORD secs = time_sec % 60;
+        const DWORD minutes = (time_sec / 60) % 60;
+        const DWORD hours = time_sec / 3600;
         DWORD time = 0;
         const wchar_t *time_unit = L"";
         if (hours != 0) {
@@ -156,16 +156,16 @@ namespace {
     void SetWindowTitle(bool enabled) {
         if (!enabled)
             return;
-        HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
+        const HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
         if (!hwnd) return;
-        std::wstring title = GetPlayerName();
+        const std::wstring title = GetPlayerName();
         if (!title.empty())
             SetWindowTextW(hwnd, title.c_str());
     }
 
     GW::Player* GetPlayerByName(const wchar_t* _name) {
         if (!_name) return NULL;
-        std::wstring name = GuiUtils::SanitizePlayerName(_name);
+        const std::wstring name = GuiUtils::SanitizePlayerName(_name);
         GW::PlayerArray& players = GW::PlayerMgr::GetPlayerArray();
         for (GW::Player& player : players) {
             if (!player.name) continue;
@@ -183,7 +183,7 @@ namespace {
         if (status == GW::FriendStatus::FriendStatus_Away && !game_setting.afk_message.empty()) {
             wchar_t buffer[120];
             // @Cleanup: Do without this cast
-            DWORD diff_time = static_cast<DWORD>((clock() - game_setting.afk_message_time) / CLOCKS_PER_SEC);
+            const auto diff_time = static_cast<DWORD>((clock() - game_setting.afk_message_time) / CLOCKS_PER_SEC);
             wchar_t time_buffer[128];
             PrintTime(time_buffer, 128, diff_time);
             swprintf(buffer, 120, L"Automatic message: \"%s\" (%s ago)", game_setting.afk_message.c_str(), time_buffer);
@@ -216,9 +216,9 @@ namespace {
         ASSERT(item && item->quantity);
         ASSERT(item->GetIsMaterial());
 
-        int islot = GW::Items::GetMaterialSlot(item);
+        const int islot = GW::Items::GetMaterialSlot(item);
         if (islot < 0 || (int)GW::Constants::N_MATS <= islot) return 0;
-        uint32_t slot = static_cast<uint32_t>(islot);
+        const auto slot = static_cast<uint32_t>(islot);
         const size_t max_in_slot = MaxMaterialStorage();
         size_t availaible = max_in_slot;
         GW::Item *b_item = GW::Items::GetItemBySlot(GW::Constants::Bag::Material_Storage, slot + 1);
@@ -289,7 +289,7 @@ namespace {
             return;
         }
 
-        const size_t storage1 = static_cast<size_t>(GW::Constants::Bag::Storage_1);
+        const auto storage1 = static_cast<size_t>(GW::Constants::Bag::Storage_1);
         const size_t bag_index = storage1 + page;
         ASSERT(GW::Items::GetBag(bag_index));
 
@@ -324,8 +324,8 @@ namespace {
             remaining -= moved;
         }
 
-        const size_t storage1 = static_cast<size_t>(GW::Constants::Bag::Storage_1);
-        const size_t storage14 = static_cast<size_t>(GW::Constants::Bag::Storage_14);
+        const auto storage1 = static_cast<size_t>(GW::Constants::Bag::Storage_1);
+        const auto storage14 = static_cast<size_t>(GW::Constants::Bag::Storage_14);
 
         // If item is stackable, try to complete similar stack
         if (remaining == 0) return;
@@ -342,7 +342,7 @@ namespace {
         ASSERT(item && item->quantity);
 
         const size_t backpack = static_cast<size_t>(GW::Constants::Bag::Backpack);
-        const size_t bag2 = static_cast<size_t>(GW::Constants::Bag::Bag_2);
+        const auto bag2 = static_cast<size_t>(GW::Constants::Bag::Bag_2);
 
         size_t total = item->quantity;
         size_t remaining = total;
@@ -651,7 +651,7 @@ static std::wstring ParseItemDescription(GW::Item* item) {
     // Remove "20% Additional damage during festival events" > "Dmg +20% (Festival)"
     original = std::regex_replace(original, std::wregex(L".\x10A\x108\x10A\x8103\xB71\x101\x100\x1\x1"), L"\xA85\x10A\xA4E\x1\x101\x114\x2\xAA8\x10A\x108\x107" L"Festival\x1\x1");
 
-    std::wregex dmg_plus_20(L"\x2\x102\x2.\x10A\xA85\x10A[\xA4C\xA4E]\x1\x101\x114\x1");
+    const std::wregex dmg_plus_20(L"\x2\x102\x2.\x10A\xA85\x10A[\xA4C\xA4E]\x1\x101\x114\x1");
     if (item->customized && std::regex_search(original, dmg_plus_20)) {
         // Remove "\nDamage +20%" > "\n"
         original = std::regex_replace(original, dmg_plus_20, L"");
@@ -702,9 +702,9 @@ const bool PendingChatMessage::Send() {
     std::vector<std::wstring> sanitised_lines = SanitiseForSend();
     wchar_t buf[120];
     size_t len = 0;
-    for (size_t i = 0; i < sanitised_lines.size(); i++) {
-        size_t san_len = sanitised_lines[i].length();
-        const wchar_t* str = sanitised_lines[i].c_str();
+    for (auto &sanitised_line : sanitised_lines) {
+        size_t san_len = sanitised_line.length();
+        const wchar_t* str = sanitised_line.c_str();
         if (len + san_len + 3 > 120) {
             GW::Chat::SendChat('#', buf);
             buf[0] = '\0';
@@ -755,7 +755,7 @@ void GameSettings::Initialize() {
     
     {
         // Patch that allow storage page (and Anniversary page) to work.
-        uintptr_t found = GW::Scanner::Find("\xEB\x17\x33\xD2\x8D\x4A\x06\xEB", "xxxxxxxx", -4);
+        const uintptr_t found = GW::Scanner::Find("\xEB\x17\x33\xD2\x8D\x4A\x06\xEB", "xxxxxxxx", -4);
         printf("[SCAN] StoragePatch = %p\n", (void *)found);
 
         // Xunlai Chest has a behavior where if you
@@ -771,7 +771,7 @@ void GameSettings::Initialize() {
     }
 
     {
-        uintptr_t found = GW::Scanner::Find(
+        const uintptr_t found = GW::Scanner::Find(
             "\x5F\x6A\x00\xFF\x75\xE4\x6A\x4C\xFF\x75\xF8", "xxxxxxxxxxx", -0x44);
         printf("[SCAN] TomePatch = %p\n", (void *)found);
         if (found) {
@@ -780,7 +780,7 @@ void GameSettings::Initialize() {
     }
 
     {
-        uintptr_t found = GW::Scanner::Find("\xF7\x40\x0C\x10\x00\x02\x00\x75", "xxxxxxxx", +7);
+        const uintptr_t found = GW::Scanner::Find("\xF7\x40\x0C\x10\x00\x02\x00\x75", "xxxxxxxx", +7);
         printf("[SCAN] GoldConfirmationPatch = %p\n", (void *)found);
         if (found) {
             gold_confirm_patch.SetPatch(found, "\x90\x90", 2);
@@ -793,7 +793,7 @@ void GameSettings::Initialize() {
         &OnDialog_Entry,
         [this](GW::HookStatus* status, GW::Packet::StoC::DialogSender* pak) {
             UNREFERENCED_PARAMETER(status);
-            GW::AgentLiving* agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->agent_id));
+            auto * agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->agent_id));
             if (!agent) return;
             last_dialog_npc_id = agent->player_number;
         });
@@ -843,10 +843,10 @@ bool GameSettings::GetPlayerIsLeader() {
     if (!party) return false;
     std::wstring player_name = GetPlayerName();
     if (!party->players.size()) return false;
-    for (size_t i = 0; i < party->players.size(); i++) {
-        if (!party->players[i].connected())
+    for (auto &player : party->players) {
+        if (!player.connected())
             continue;
-        return GetPlayerName(party->players[i].login_number) == player_name;
+        return GetPlayerName(player.login_number) == player_name;
     }
     return false;
 }
@@ -889,7 +889,7 @@ void GameSettings::MessageOnPartyChange() {
         wchar_t* player_name = GW::Agents::GetPlayerNameByLoginNumber(current_party_players[i].login_number);
         if (!player_name)
             continue;
-        current_party_names.push_back(player_name);
+        current_party_names.emplace_back(player_name);
     }
     // If previous party list is empty (i.e. map change), then initialise
     if (!previous_party_names.size()) {
@@ -1131,7 +1131,7 @@ void GameSettings::DrawPartySettings() {
 }
 
 void GameSettings::DrawChatSettings() {
-    ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel;
+    const ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel;
     if (ImGui::TreeNode("Chat Colors")) {
         ImGui::Text("Channel");
         ImGui::SameLine(chat_colors_grid_x[1]);
@@ -1348,7 +1348,7 @@ void GameSettings::SetAfkMessage(std::wstring&& message) {
 void GameSettings::Update(float delta) {
     UNREFERENCED_PARAMETER(delta);
     // Try to print any pending messages.
-    for (std::vector<PendingChatMessage*>::iterator it = pending_messages.begin(); it != pending_messages.end(); ++it) {
+    for (auto it = pending_messages.begin(); it != pending_messages.end(); ++it) {
         PendingChatMessage *m = *it;
         if (m->IsSend() && PendingChatMessage::Cooldown()) 
             continue;
@@ -1455,8 +1455,8 @@ void GameSettings::ItemClickCallback(GW::HookStatus* status, uint32_t type, uint
     //  so we cannot know if they are the storage selected.
     //  Sol: The solution is to patch the value 7 -> 9 at 0040E851 (EB 20 33 C0 BE 06 [-5])
 
-    bool is_inventory_item = bag->IsInventoryBag();
-    bool is_storage_item = bag->IsStorageBag();
+    const bool is_inventory_item = bag->IsInventoryBag();
+    const bool is_storage_item = bag->IsStorageBag();
     if (!is_inventory_item && !is_storage_item) return;
 
     GW::Item *item = GW::Items::GetItemBySlot(bag, slot + 1);
@@ -1526,7 +1526,7 @@ void GameSettings::OnPingWeaponSet(GW::HookStatus* status, void* packet) {
         uint32_t item_id_1;
         uint32_t item_id_2;
     };
-    PingItemPacket* pack = static_cast<PingItemPacket*>(packet);
+    auto * pack = static_cast<PingItemPacket*>(packet);
     PingItem(pack->item_id_1, PING_PARTS::NAME | PING_PARTS::DESC);
     PingItem(pack->item_id_2, PING_PARTS::NAME | PING_PARTS::DESC);
     status->blocked = true;
@@ -1608,7 +1608,7 @@ void GameSettings::OnStartWhisper(GW::HookStatus* status, wchar_t* _name) {
         return; // - Next logic only applicable when Ctrl is held
     if (ctrl_enter_whisper)
         return; // - Ctrl + Enter is write whisper to target - drop out here
-    std::wstring name = GuiUtils::SanitizePlayerName(_name);
+    const std::wstring name = GuiUtils::SanitizePlayerName(_name);
     if (ImGui::GetIO().KeyShift && GW::PartyMgr::GetPlayerIsLeader()) {
         wchar_t buf[64];
         swprintf(buf, 64, L"invite %s", name.c_str());
@@ -1691,7 +1691,7 @@ void GameSettings::OnFactionDonate(GW::HookStatus* status, uint32_t dialog_id) {
     if (dialog_id != 135) return;
     const int LuxonFactionNPC = GW::Constants::ModelID::Urgoz::HoppingVampire - 102;
     const int KurzickFactionNPC = LuxonFactionNPC - 229;
-    auto instance = &Instance();
+    const auto instance = &Instance();
     if (!instance->skip_entering_name_for_faction_donate) return;
     uint32_t* current_faction = nullptr;
     uint32_t allegiance = 0;
@@ -1720,7 +1720,7 @@ void GameSettings::OnFactionDonate(GW::HookStatus* status, uint32_t dialog_id) {
 // Show a message when player leaves the outpost
 void GameSettings::OnPlayerLeaveInstance(GW::HookStatus* status, GW::Packet::StoC::PlayerLeaveInstance* pak) {
     UNREFERENCED_PARAMETER(status);
-    auto instance = &Instance();
+    const auto instance = &Instance();
     if (!instance->notify_when_players_leave_outpost && !instance->notify_when_friends_leave_outpost)
         return; // Dont notify about player leaving
     if (!pak->player_number || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
@@ -1756,7 +1756,7 @@ void GameSettings::OnNPCChatMessage(GW::HookStatus* status, GW::Packet::StoC::Me
     if (m) instance->pending_messages.push_back(m);
     if (pak->agent_id) {
         // Then forward the message on to speech bubble
-        GW::Packet::StoC::SpeechBubble packet;
+        GW::Packet::StoC::SpeechBubble packet{};
         packet.agent_id = pak->agent_id;
         wcscpy(packet.message, message);
         if (GW::Agents::GetAgentByID(packet.agent_id))
@@ -1798,7 +1798,7 @@ void GameSettings::OnSpeechBubble(GW::HookStatus* status, GW::Packet::StoC::Spee
         len = i + 1;
     if (len < 3)
         return; // Shout skill etc
-    GW::AgentLiving* agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->agent_id));
+    auto * agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->agent_id));
     if (!agent || agent->login_number) return; // Agent not found or Speech bubble from player e.g. drunk message.
     PendingChatMessage* m = PendingChatMessage::queuePrint(GW::Chat::Channel::CHANNEL_EMOTE, pak->message, GW::Agents::GetAgentEncName(agent));
     if (m) instance->pending_messages.push_back(m);
@@ -1829,7 +1829,7 @@ void GameSettings::OnDungeonReward(GW::HookStatus* status, GW::Packet::StoC::Dun
 
 // Flash/focus window on trade
 void GameSettings::OnTradeStarted(GW::HookStatus*, GW::Packet::StoC::TradeStart*) {
-    auto instance = &Instance();
+    const auto instance = &Instance();
     if (instance->flash_window_on_trade)
         FlashWindow();
     if (instance->focus_window_on_trade)
@@ -1869,7 +1869,7 @@ void GameSettings::OnCheckboxPreferenceChanged(GW::HookStatus* status, uint32_t 
     UNREFERENCED_PARAMETER(lParam);
     if (!(msgid == GW::UI::UIMessage::kCheckboxPreference && wParam))
         return;
-    uint32_t pref = *(uint32_t*)wParam; // { uint32_t pref, uint32_t value } - don't care about value atm.
+    const uint32_t pref = *(uint32_t*)wParam; // { uint32_t pref, uint32_t value } - don't care about value atm.
     if (pref == GW::UI::CheckboxPreference::CheckboxPreference_ShowChatTimestamps && Instance().show_timestamps) {
         status->blocked = true; // Always block because this UI Message will redraw all timestamps later in the call stack
         if (Instance().show_timestamps && GW::UI::GetCheckboxPreference(GW::UI::CheckboxPreference::CheckboxPreference_ShowChatTimestamps) == 1) {
@@ -1888,7 +1888,7 @@ void GameSettings::OnMapLoaded(GW::HookStatus*, GW::Packet::StoC::MapLoaded*) {
 void GameSettings::DrawChannelColor(const char *name, GW::Chat::Channel chan) {
     ImGui::PushID(static_cast<int>(chan));
     ImGui::Text(name);
-    ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel;
+    const ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel;
     GW::Chat::Color color, sender_col, message_col;
     GW::Chat::GetChannelColors(chan, &sender_col, &message_col);
 

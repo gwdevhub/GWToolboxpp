@@ -2,8 +2,10 @@
 
 #include <ImGuiAddons.h>
 
-namespace GuiUtils {
-    enum FontSize {
+namespace GuiUtils
+{
+    enum FontSize
+    {
         f16,
         f18,
         f20,
@@ -11,9 +13,10 @@ namespace GuiUtils {
         f42,
         f48
     };
+
     void LoadFonts();
     bool FontsLoaded();
-    ImFont* GetFont(FontSize size);
+    ImFont *GetFont(FontSize size);
 
     size_t GetPartyHealthbarHeight();
 
@@ -22,8 +25,8 @@ namespace GuiUtils {
     std::wstring RemovePunctuation(std::wstring s);
     std::string RemovePunctuation(std::string s);
 
-    std::string WStringToString(const std::wstring& s);
-    std::wstring StringToWString(const std::string& s);
+    std::string WStringToString(const std::wstring &s);
+    std::wstring StringToWString(const std::string &s);
 
     std::wstring SanitizePlayerName(std::wstring s);
 
@@ -38,7 +41,6 @@ namespace GuiUtils {
 
     char *StrCopy(char *dest, const char *src, size_t dest_size);
 
-    size_t wcstostr(char* dest, const wchar_t* src, size_t n);
-    std::wstring ToWstr(std::string& str);
-
+    size_t wcstostr(char *dest, const wchar_t *src, size_t n);
+    std::wstring ToWstr(std::string &str);
 };

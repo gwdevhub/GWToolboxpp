@@ -176,7 +176,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*) {
                 ImGui::PopID();
             }
             if (ImGui::Button("Add Teambuild", ImVec2(ImGui::GetWindowContentRegionWidth(), 0))) {
-                TeamHeroBuild tb = TeamHeroBuild("");
+                auto tb = TeamHeroBuild("");
                 tb.builds.reserve(8); // at this point why don't we use a static array ??
                 tb.builds.push_back(HeroBuild("", "", -2));
                 for (int i = 0; i < 7; ++i) {
@@ -232,7 +232,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*) {
                         [](void*, int idx, const char** out_text) -> bool {
                             if (idx < 0) return false;
                             if (idx >= hero_count) return false;
-                            auto id = HeroIndexToID[idx];
+                            const auto id = HeroIndexToID[idx];
                             if (id < HeroID::Merc1 || id > HeroID::Merc8) {
                                 *out_text = HeroName[HeroIndexToID[idx]];
                                 return true;
@@ -340,7 +340,7 @@ void HeroBuildsWindow::View(const TeamHeroBuild& tbuild, unsigned int idx) {
         return; // No name = no build.
     }
 
-    GW::UI::ChatTemplate* t = new GW::UI::ChatTemplate();
+    auto * t = new GW::UI::ChatTemplate();
     t->code.m_buffer = new wchar_t[128];
     MultiByteToWideChar(CP_UTF8, 0, build.code, -1, t->code.m_buffer, 128);
     t->code.m_size = t->code.m_capacity = wcslen(t->code.m_buffer);
@@ -396,7 +396,7 @@ void HeroBuildsWindow::HeroBuildName(const TeamHeroBuild& tbuild, unsigned int i
     const std::string name(build.name);
     const std::string code(build.code);
     char buf[128];
-    auto id = idx > 0 && build.hero_index > 0 ? HeroIndexToID[build.hero_index] : 0;
+    const auto id = idx > 0 && build.hero_index > 0 ? HeroIndexToID[build.hero_index] : 0;
     if (name.empty() && code.empty() && id == HeroID::NoHero) {
         return; // nothing to do here
     }
@@ -469,7 +469,7 @@ void HeroBuildsWindow::Load(const TeamHeroBuild& tbuild, unsigned int idx ) {
             Log::Error("Bad hero index '%d' for build '%s'", build.hero_index, build.name);
             return;
         }
-        GW::Constants::HeroID heroid = HeroIndexToID[build.hero_index];
+        const GW::Constants::HeroID heroid = HeroIndexToID[build.hero_index];
 
         if (heroid == HeroID::NoHero) return;
 
@@ -587,7 +587,7 @@ void HeroBuildsWindow::LoadFromFile() {
             if (hero_index < -2) {
                 hero_index = -1; // can happen due to an old bug
             }
-            int show_panel = inifile->GetLongValue(section, showpanelkey, 0);
+            const int show_panel = inifile->GetLongValue(section, showpanelkey, 0);
             HeroBuild build(nameval, templateval, hero_index, show_panel == 1 ? 1 : 0);
             tb.builds.push_back(build);
         }

@@ -10,26 +10,38 @@
 
 #include <Widgets/Minimap/VBuffer.h>
 
-class PingsLinesRenderer : public VBuffer {
+class PingsLinesRenderer : public VBuffer
+{
     friend class Minimap;
     const float drawing_scale = 96.0f;
     const clock_t drawing_timeout = 5000;
 
-    struct DrawingLine {
-        DrawingLine() : start(TIMER_INIT()) {}
+    struct DrawingLine
+    {
+        DrawingLine()
+            : start(TIMER_INIT()) {}
+
         clock_t start;
         float x1 = 0, y1 = 0;
         float x2 = 0, y2 = 0;
     };
-    struct PlayerDrawing {
-        PlayerDrawing() : player(0), session(0) {}
+
+    struct PlayerDrawing
+    {
+        PlayerDrawing()
+            : player(0), session(0) {}
+
         DWORD player;
         DWORD session;
         std::deque<DrawingLine> lines;
     };
-    struct Ping {
-        Ping() : start(TIMER_INIT()) {}
-        virtual ~Ping(){};
+
+    struct Ping
+    {
+        Ping()
+            : start(TIMER_INIT()) {}
+
+        virtual ~Ping() {};
         clock_t start;
         int duration = 3000;
         virtual float GetX() const = 0;
@@ -38,39 +50,56 @@ class PingsLinesRenderer : public VBuffer {
         virtual bool ShowInner() const { return true; }
         virtual DWORD GetAgentID() const { return 0; }
     };
-    struct TerrainPing : Ping {
-        TerrainPing(float _x, float _y) : Ping(), x(_x), y(_y) {}
+
+    struct TerrainPing : Ping
+    {
+        TerrainPing(float _x, float _y)
+            : Ping(), x(_x), y(_y) {}
+
         const float x, y;
         float GetX() const override { return x; }
         float GetY() const override { return y; }
         float GetScale() const override { return 2.0f; }
     };
-    struct AgentPing : Ping {
-        AgentPing(DWORD _id) : Ping(), id(_id) {}
+
+    struct AgentPing : Ping
+    {
+        AgentPing(DWORD _id)
+            : Ping(), id(_id) {}
+
         DWORD id;
         float GetX() const override;
         float GetY() const override;
         float GetScale() const override;
         DWORD GetAgentID() const override { return id; }
     };
-    struct ClickPing : Ping {
-        ClickPing(float _x, float _y) : Ping(), x(_x), y(_y) {
+
+    struct ClickPing : Ping
+    {
+        ClickPing(float _x, float _y)
+            : Ping(), x(_x), y(_y)
+        {
             start = TIMER_INIT() - 200;
             duration = 1000;
         }
+
         const float x, y;
         float GetX() const override { return x; }
         float GetY() const override { return y; }
         float GetScale() const override { return 0.08f; }
         bool ShowInner() const override { return false; }
     };
-    class PingCircle : public VBuffer {
-        void Initialize(IDirect3DDevice9* device) override;
+
+    class PingCircle : public VBuffer
+    {
+        void Initialize(IDirect3DDevice9 *device) override;
     public:
         Color color = 0;
     };
-    class Marker : public VBuffer {
-        void Initialize(IDirect3DDevice9* device) override;
+
+    class Marker : public VBuffer
+    {
+        void Initialize(IDirect3DDevice9 *device) override;
     public:
         Color color = 0;
     };
@@ -78,12 +107,14 @@ class PingsLinesRenderer : public VBuffer {
 public:
     PingsLinesRenderer();
 
-    void Render(IDirect3DDevice9* device) override;
+    void Render(IDirect3DDevice9 *device) override;
 
-    inline void Invalidate() override {
+    void Invalidate() override
+    {
         VBuffer::Invalidate();
         ping_circle.Invalidate();
-        for (Ping* p : pings) delete p;
+        for (Ping *p : pings)
+            delete p;
         pings.clear();
     }
 
@@ -98,27 +129,34 @@ public:
     void P221Callback(GW::Packet::StoC::SkillActivate *pak);
 
     void DrawSettings();
-    void LoadSettings(CSimpleIni* ini, const char* section);
-    void SaveSettings(CSimpleIni* ini, const char* section) const;
+    void LoadSettings(CSimpleIni *ini, const char *section);
+    void SaveSettings(CSimpleIni *ini, const char *section) const;
 
 private:
-    void Initialize(IDirect3DDevice9* device) override;
+    void Initialize(IDirect3DDevice9 *device) override;
 
-    void DrawPings(IDirect3DDevice9* device);
-    void DrawShadowstepMarker(IDirect3DDevice9* device);
-    void DrawShadowstepLine(IDirect3DDevice9* device);
-    void DrawRecallLine(IDirect3DDevice9* device);
-    void DrawDrawings(IDirect3DDevice9* device);
+    void DrawPings(IDirect3DDevice9 *device);
+    void DrawShadowstepMarker(IDirect3DDevice9 *device);
+    void DrawShadowstepLine(IDirect3DDevice9 *device);
+    void DrawRecallLine(IDirect3DDevice9 *device);
+    void DrawDrawings(IDirect3DDevice9 *device);
     void EnqueueVertex(float x, float y, Color color);
 
-    inline short ToShortPos(float n) {
+    short ToShortPos(float n)
+    {
         return static_cast<short>(std::lroundf(n / drawing_scale));
     }
-    inline void BumpSessionID() { if (--session_id < 0) session_id = 7; }
+
+    void BumpSessionID()
+    {
+        if (--session_id < 0)
+            session_id = 7;
+    }
+
     void SendQueue();
 
     PingCircle ping_circle;
-    std::deque<Ping*> pings;
+    std::deque<Ping *> pings;
 
     std::map<DWORD, PlayerDrawing> drawings;
 
@@ -149,7 +187,7 @@ private:
     DWORD recall_target = 0;
 
     // for the gpu
-    D3DVertex *vertices = nullptr;  // vertices array
-    unsigned int vertices_count = 0;// count of vertices
-    unsigned int vertices_max = 0;  // max number of vertices to draw in one call
+    D3DVertex *vertices = nullptr;   // vertices array
+    unsigned int vertices_count = 0; // count of vertices
+    unsigned int vertices_max = 0;   // max number of vertices to draw in one call
 };

@@ -18,7 +18,7 @@ public:
     void DrawSettingInternal() override;
 
 private:
-    ImGuiStyle DefaultTheme();
+    static ImGuiStyle DefaultTheme();
 
     ImGuiStyle ini_style;
     CSimpleIni* inifile = nullptr;

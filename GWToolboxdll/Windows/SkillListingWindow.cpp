@@ -80,7 +80,7 @@ void SkillListingWindow::ExportToJSON() {
         if (!skills[i]) continue;
         json[skills[i]->skill->skill_id] = skills[i]->ToJson();
     }
-    std::wstring file_location = Resources::GetPath(L"skills.json");
+    const std::wstring file_location = Resources::GetPath(L"skills.json");
     if (PathFileExistsW(file_location.c_str())) {
         DeleteFileW(file_location.c_str());
     }

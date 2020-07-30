@@ -61,6 +61,6 @@ private:
             Color color = 0xFFFFFFFF;
     };
 
-    std::vector<Threshold*> thresholds;
+    std::vector<Threshold*> thresholds{};
     CSimpleIni* inifile = nullptr;
 };

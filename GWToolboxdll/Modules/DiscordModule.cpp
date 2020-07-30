@@ -219,7 +219,7 @@ DWORD GetProcId(char* ProcName) {
     PROCESSENTRY32   pe32;
     HANDLE         hSnapshot = NULL;
     uint32_t pid = 0;
-    uint32_t len = strlen(ProcName);
+    const uint32_t len = strlen(ProcName);
     pe32.dwSize = sizeof(PROCESSENTRY32);
     hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 
@@ -239,11 +239,11 @@ DWORD GetProcId(char* ProcName) {
 // Used to figure out if this char has access to the outpost without waiting for server error
 bool DiscordModule::IsMapUnlocked(uint32_t map_id) {
     GW::Array<uint32_t> unlocked_map = GW::GameContext::instance()->world->unlocked_map;
-    uint32_t real_index = map_id / 32;
+    const uint32_t real_index = map_id / 32;
     if (real_index >= unlocked_map.size())
         return false;
-    uint32_t shift = map_id % 32u;
-    uint32_t flag = 1u << shift;
+    const uint32_t shift = map_id % 32u;
+    const uint32_t flag = 1u << shift;
     return (unlocked_map[real_index] & flag) != 0;
 }
 // Returns guild struct of current location. Returns null on fail or non-guild map.
@@ -404,7 +404,7 @@ void DiscordModule::JoinParty() {
     wchar_t buf[128] = { 0 };
     swprintf(buf, 128, L"invite %s", join_in_progress.player);
     GW::Chat::SendChat('/', buf);
-    HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
+    const HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
     SetForegroundWindow(hwnd);
     ShowWindow(hwnd, SW_RESTORE);
     Log::Log("Join process complete\n");
@@ -445,8 +445,8 @@ bool DiscordModule::Connect() {
 }
 // Sets DISCORD_INSTANCE_ID to match DiscordCanary.exe if its open. debug only.
 void DiscordModule::ConnectCanary() {
-    uint32_t discord_pid = GetProcId("Discord.exe");
-    uint32_t discord_canary_pid = GetProcId("DiscordCanary.exe");
+    const uint32_t discord_pid = GetProcId("Discord.exe");
+    const uint32_t discord_canary_pid = GetProcId("DiscordCanary.exe");
     uint32_t discord_env = 0;
     // Prefer canary over vanilla. To use vanilla, just close canary...
     if (discord_canary_pid && discord_pid) {
@@ -466,7 +466,7 @@ void DiscordModule::ConnectCanary() {
 bool DiscordModule::LoadDll() {
     if (discordCreate)
         return true; // Already loaded.
-    HINSTANCE hGetProcIDDLL = LoadLibraryW(dll_location.c_str());
+    const HINSTANCE hGetProcIDDLL = LoadLibraryW(dll_location.c_str());
     if (!hGetProcIDDLL)
         return false;
     // resolve function address here
@@ -561,15 +561,15 @@ void DiscordModule::UpdateActivity() {
     GW::AreaInfo* m = GW::Map::GetCurrentMapInfo();
     GW::AgentLiving* a = GW::Agents::GetPlayerAsAgentLiving();
     GW::CharContext* c = GW::GameContext::instance()->character;
-    GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
+    const GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
     if (!p || !m || !a || !c)
         return;
-    bool is_guild_hall = m->type == GW::RegionType::RegionType_GuildHall;
+    const bool is_guild_hall = m->type == GW::RegionType::RegionType_GuildHall;
     if (is_guild_hall) {
         g = GetCurrentGH();
         if (!g) return; // Current gh not found - guild array not loaded yet
     }
-    bool show_activity = !hide_activity_when_offline || GW::FriendListMgr::GetMyStatus() != 0;
+    const bool show_activity = !hide_activity_when_offline || GW::FriendListMgr::GetMyStatus() != 0;
     if (!show_activity) {
         Disconnect(); // Disconnect from discord if we're set to offline
         return;
@@ -590,10 +590,10 @@ void DiscordModule::UpdateActivity() {
     // Only update info if we're allowed
     
     if (show_activity) {
-        unsigned short map_id = static_cast<unsigned short>(GW::Map::GetMapID());
+        const auto map_id = static_cast<unsigned short>(GW::Map::GetMapID());
         short map_region = static_cast<short>(GW::Map::GetRegion());
-        short map_language = static_cast<short>(GW::Map::GetLanguage());
-        short map_district = static_cast<short>(GW::Map::GetDistrict());
+        const auto map_language = static_cast<short>(GW::Map::GetLanguage());
+        const auto map_district = static_cast<short>(GW::Map::GetDistrict());
         char party_id[128];
         if (show_party_info) {
             // Party ID needs to be consistent across maps

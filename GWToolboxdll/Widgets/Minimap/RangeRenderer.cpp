@@ -24,6 +24,7 @@ void RangeRenderer::LoadSettings(CSimpleIni *ini, const char *section)
     line_thickness = ini->GetLongValue(section, "range_line_thickness", 1);
     Invalidate();
 }
+
 void RangeRenderer::SaveSettings(CSimpleIni *ini, const char *section) const
 {
     Colors::Save(ini, section, "color_range_hos", color_range_hos);
@@ -33,6 +34,7 @@ void RangeRenderer::SaveSettings(CSimpleIni *ini, const char *section) const
     Colors::Save(ini, section, "color_range_compass", color_range_compass);
     ini->SetLongValue(section, "range_line_thickness", line_thickness);
 }
+
 void RangeRenderer::DrawSettings()
 {
     bool changed = false;
@@ -155,7 +157,8 @@ void RangeRenderer::Render(IDirect3DDevice9 *device)
 
     device->SetFVF(D3DFVF_CUSTOMVERTEX);
     device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
-    for (size_t i = 0; i < (num_circles - 1); ++i) { // do not draw HoS circle yet
+    for (size_t i = 0; i < (num_circles - 1); ++i) {
+        // do not draw HoS circle yet
         device->DrawPrimitive(type, circle_points * i, circle_triangles);
     }
 
@@ -165,8 +168,8 @@ void RangeRenderer::Render(IDirect3DDevice9 *device)
         GW::AgentLiving *me = GW::Agents::GetPlayerAsAgentLiving();
         GW::AgentLiving *tgt = GW::Agents::GetTargetAsAgentLiving();
 
-        if (!draw_center_ && me != nullptr && tgt != nullptr && me != tgt && !me->GetIsDead() && !tgt->GetIsDead() && GW::GetSquareDistance(tgt->pos, me->pos) < GW::Constants::SqrRange::Spellcast) {
-            GW::Vec2f v = me->pos - tgt->pos;
+        if (!draw_center_ && me != nullptr && tgt != nullptr && me != tgt && !me->GetIsDead() && !tgt->GetIsDead() && GetSquareDistance(tgt->pos, me->pos) < GW::Constants::SqrRange::Spellcast) {
+            const GW::Vec2f v = me->pos - tgt->pos;
             const float angle = std::atan2(v.y, v.x);
 
             D3DXMATRIX oldworld, rotate, newworld;

@@ -165,7 +165,7 @@ namespace {
         if (time == TIME_UNKNOWN) {
             GuiUtils::StrCopy(buf, "--:--", size);
         } else {
-            DWORD sec = time / 1000;
+            const DWORD sec = time / 1000;
             if (show_ms && show_decimal) {
                 snprintf(buf, size, "%02lu:%02lu.%1lu",
                     (sec / 60), sec % 60, (time / 100) % 10);
@@ -345,7 +345,7 @@ void ObjectiveTimerWindow::OnMapChanged(GW::HookStatus *, GW::Packet::StoC::Pack
                 return;
             }
             default: {
-                auto dungeonLevel = mapToDungeonLevel.find(static_cast<GW::Constants::MapID>(packet->map_id));
+                const auto dungeonLevel = mapToDungeonLevel.find(static_cast<GW::Constants::MapID>(packet->map_id));
                 if (dungeonLevel == mapToDungeonLevel.end())
                     return;
                 Objective *obj = instance.GetCurrentObjective(dungeonLevel->second);
@@ -357,9 +357,9 @@ void ObjectiveTimerWindow::OnMapChanged(GW::HookStatus *, GW::Packet::StoC::Pack
     else if (pak->header == GW::Packet::StoC::GameSrvTransfer::STATIC_HEADER) {
         // Exited map
         const GW::Packet::StoC::GameSrvTransfer *packet = static_cast<GW::Packet::StoC::GameSrvTransfer *>(pak);
-        auto dungeonLevel = mapToDungeonLevel.find(static_cast<GW::Constants::MapID>(packet->map_id));
-        bool isDungeon = dungeonLevel != mapToDungeonLevel.end();
-        bool isDungeonEntrance = isDungeon && dungeonLevel->second == 1; // used for transition between dungeons (HotS <-> Bogs)
+        const auto dungeonLevel = mapToDungeonLevel.find(static_cast<GW::Constants::MapID>(packet->map_id));
+        const bool isDungeon = dungeonLevel != mapToDungeonLevel.end();
+        const bool isDungeonEntrance = isDungeon && dungeonLevel->second == 1; // used for transition between dungeons (HotS <-> Bogs)
         if (!isDungeon || isDungeonEntrance) {
             StopObjectives();
             return;
@@ -424,7 +424,7 @@ void ObjectiveTimerWindow::OnDoACompleteZone(GW::HookStatus *,GW::Packet::StoC::
     ObjectiveSet *os = instance.objective_sets.rbegin()->second;
     obj->SetDone();
     os->CheckSetDone();
-    uint32_t next_id = doa_get_next(obj->id);
+    const uint32_t next_id = doa_get_next(obj->id);
     Objective *next = instance.GetCurrentObjective(next_id);
     if (next && !next->IsStarted())
         next->SetStarted();
@@ -490,7 +490,7 @@ void ObjectiveTimerWindow::OnCountdownStart(GW::HookStatus *, GW::Packet::StoC::
         case GW::Constants::MapID::Scarred_Earth:
         case GW::Constants::MapID::The_Courtyard:
         case GW::Constants::MapID::The_Hall_of_Heroes: {
-            auto level = mapToDungeonLevel.find(GW::Map::GetMapID());
+            const auto level = mapToDungeonLevel.find(GW::Map::GetMapID());
             if (level == mapToDungeonLevel.end())
                 return;
             Objective *obj = Instance().GetCurrentObjective(level->second);
@@ -598,7 +598,7 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn) {
     double best_dist = GW::GetDistance(spawn, mallyx_spawn);
     int area = -1;
     for (int i = 0; i < n_areas; ++i) {
-        float dist = GW::GetDistance(spawn, area_spawns[i]);
+        const float dist = GW::GetDistance(spawn, area_spawns[i]);
         if (best_dist > dist) {
             best_dist = dist;
             area = i;
@@ -606,7 +606,7 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(GW::Vec2f spawn) {
     }
     if (area == -1) return; // we're doing mallyx, not doa!
 
-    ObjectiveSet *os = new ObjectiveSet;
+    auto *os = new ObjectiveSet;
     ::AsyncGetMapName(os->name, sizeof(os->name));
     Objective objs[n_areas] = {{Foundry, "Foundry"}, {City, "City"}, {Veil, "Veil"}, {Gloom, "Gloom"}};
 
@@ -632,7 +632,7 @@ void ObjectiveTimerWindow::AddUrgozObjectiveSet() {
     // Urgoz = 3750
     // Objective for Urgoz = 357
 
-    ObjectiveTimerWindow::ObjectiveSet* os = new ObjectiveSet;
+    auto * os = new ObjectiveSet;
     ::AsyncGetMapName(os->name, sizeof(os->name));
     os->objectives.emplace_back(1, "Zone 1 | Weakness");
     os->objectives.emplace_back(45420, "Zone 2 | Life Drain");
@@ -651,7 +651,7 @@ void ObjectiveTimerWindow::AddUrgozObjectiveSet() {
     monitor_doors = true;
 }
 void ObjectiveTimerWindow::AddDeepObjectiveSet() {
-    ObjectiveTimerWindow::ObjectiveSet* os = new ObjectiveSet;
+    auto * os = new ObjectiveSet;
     ::AsyncGetMapName(os->name, sizeof(os->name));
     os->objectives.emplace_back(1, "Room 1 | Soothing");
     os->objectives.emplace_back(2, "Room 2 | Death");
@@ -675,7 +675,7 @@ void ObjectiveTimerWindow::AddDeepObjectiveSet() {
     monitor_doors = true;
 }
 void ObjectiveTimerWindow::AddFoWObjectiveSet() {
-    ObjectiveSet *os = new ObjectiveSet;
+    auto *os = new ObjectiveSet;
     ::AsyncGetMapName(os->name, sizeof(os->name));
     os->objectives.emplace_back(309, "ToC");
     os->objectives.emplace_back(310, "Wailing Lord");
@@ -691,7 +691,7 @@ void ObjectiveTimerWindow::AddFoWObjectiveSet() {
     AddObjectiveSet(os);
 }
 void ObjectiveTimerWindow::AddDungeonObjectiveSet(int levels) {
-    ObjectiveSet* os = new ObjectiveSet;
+    auto * os = new ObjectiveSet;
     os->single_instance = false;
 
     for (int level = 1; level < levels + 1; ++level) {
@@ -715,7 +715,7 @@ void ObjectiveTimerWindow::AddObjectiveSet(ObjectiveSet* os) {
     runs_dirty = true;
 }
 void ObjectiveTimerWindow::AddUWObjectiveSet() {
-    ObjectiveSet* os = new ObjectiveSet;
+    auto * os = new ObjectiveSet;
     ::AsyncGetMapName(os->name, sizeof(os->name));
     os->objectives.emplace_back(146, "Chamber");
     os->objectives.emplace_back(147, "Restore");
@@ -731,14 +731,14 @@ void ObjectiveTimerWindow::AddUWObjectiveSet() {
     AddObjectiveSet(os);
 }
 void ObjectiveTimerWindow::AddSlaversObjectiveSet() {
-    ObjectiveSet* os = new ObjectiveSet;
+    auto * os = new ObjectiveSet;
     ::AsyncGetMapName(os->name, sizeof(os->name));
     os->objectives.emplace_back(5, "Duncan");
     os->objectives.front().SetStarted();
     AddObjectiveSet(os);
 }
 void ObjectiveTimerWindow::AddToPKObjectiveSet() {
-    ObjectiveSet* os = new ObjectiveSet;
+    auto * os = new ObjectiveSet;
     os->single_instance = false;
 
     // we could read out the name of the maps...
@@ -770,7 +770,7 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9*) {
             }
             else {
                 for (auto it = objective_sets.rbegin(); it != objective_sets.rend(); it++) {
-                    bool show = (*it).second->Draw();
+                    const bool show = (*it).second->Draw();
                     if (!show) {
                         objective_sets.erase(--(it.base()));
                         break;
@@ -1033,7 +1033,7 @@ void ObjectiveTimerWindow::Objective::Draw() {
     }
     auto& style = ImGui::GetStyle();
     style.ButtonTextAlign.x = 0.0f;
-    float label_width = GetLabelWidth();
+    const float label_width = GetLabelWidth();
     if (ImGui::Button(name, ImVec2(label_width, 0))) {
         char buf[256];
         sprintf(buf,"[%s] ~ Start: %s ~ End: %s ~ Time: %s",
@@ -1042,8 +1042,8 @@ void ObjectiveTimerWindow::Objective::Draw() {
     }
     style.ButtonTextAlign.x = 0.5f;
     ImGui::PopStyleColor();
-    
-    float ts_width = GetTimestampWidth();
+
+    const float ts_width = GetTimestampWidth();
     float offset = style.ItemSpacing.x + label_width + style.ItemSpacing.x;
     
     ImGui::PushItemWidth(ts_width);
@@ -1117,7 +1117,7 @@ ObjectiveTimerWindow::ObjectiveSet::ObjectiveSet() : ui_id(cur_ui_id++) {
 }
 
 ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::ObjectiveSet::FromJson(nlohmann::json* json) {
-    ObjectiveSet* os = new ObjectiveSet;
+    auto * os = new ObjectiveSet;
     os->active = false;
     os->system_time = json->at("utc_start").get<DWORD>();
     std::string name = json->at("name").get<std::string>();
@@ -1174,7 +1174,7 @@ nlohmann::json ObjectiveTimerWindow::ObjectiveSet::ToJson() {
 bool ObjectiveTimerWindow::ObjectiveSet::Draw() {
     char buf[256];
     if (!show_past_runs && from_disk) {
-        struct tm timeinfo;
+        struct tm timeinfo{};
         GetStartTime(&timeinfo);
         time_t now = time(NULL);
         struct tm* nowinfo = localtime(&now);
@@ -1183,7 +1183,7 @@ bool ObjectiveTimerWindow::ObjectiveSet::Draw() {
         }
     }
     if (show_start_date_time && !cached_start[0]) {
-        struct tm timeinfo;
+        struct tm timeinfo{};
         GetStartTime(&timeinfo);
         time_t now = time(NULL);
         struct tm* nowinfo = localtime(&now);
@@ -1213,6 +1213,6 @@ bool ObjectiveTimerWindow::ObjectiveSet::Draw() {
 }
 
 void ObjectiveTimerWindow::ObjectiveSet::GetStartTime(struct tm* timeinfo) {
-    time_t ts = (time_t)system_time;
+    auto ts = (time_t)system_time;
     memcpy(timeinfo, localtime(&ts), sizeof(timeinfo[0]));
 }

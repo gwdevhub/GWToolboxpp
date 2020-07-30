@@ -20,22 +20,23 @@ class Minimap final : public ToolboxWidget
     {
         Vec2i(int _x, int _y)
             : x(_x)
-            , y(_y)
-        {
-        }
+              , y(_y)
+        { }
+
         Vec2i()
             : x(0)
-            , y(0)
-        {
-        }
+              , y(0)
+        { }
+
         int x, y;
     };
+
     Minimap()
     {
         is_resizable = false;
     };
     Minimap(const Minimap &) = delete;
-    ~Minimap(){};
+    ~Minimap() {};
 
 public:
     static Minimap &Instance()
@@ -145,7 +146,7 @@ private:
     bool flagging[9] = {false};
     std::vector<GW::AgentID> player_heroes;
 
-    void GetPlayerHeroes(GW::PartyInfo *party, std::vector<GW::AgentID> &heroes);
+    static void GetPlayerHeroes(GW::PartyInfo *party, std::vector<GW::AgentID> &heroes);
 
     GW::HookEntry AgentPinged_Entry;
     GW::HookEntry CompassEvent_Entry;

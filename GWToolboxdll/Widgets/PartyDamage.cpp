@@ -38,10 +38,10 @@ void PartyDamage::Initialize() {
 		return MapLoadedCallback(status, packet);
 	});
 
-	for (int i = 0; i < MAX_PLAYERS; ++i) {
-		damage[i].damage= 0;
-		damage[i].recent_damage = 0;
-		damage[i].last_damage = TIMER_INIT();
+	for (auto &i : damage) {
+        i.damage= 0;
+        i.recent_damage = 0;
+        i.last_damage = TIMER_INIT();
 	}
 }
 
@@ -116,7 +116,7 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus *, GW::Packet::StoC::Gener
         ldmg = std::lround(-packet->value * target->max_hp);
 		hp_map[target->player_number] = target->max_hp;
 	} else {
-		auto it = hp_map.find(target->player_number);
+        const auto it = hp_map.find(target->player_number);
 		if (it == hp_map.end()) {
 			// max hp not found, approximate with hp/lvl formula
             ldmg = std::lround(-packet->value * (target->level * 20 + 100));
@@ -126,7 +126,7 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus *, GW::Packet::StoC::Gener
 		}
 	}
 
-    uint32_t dmg = static_cast<uint32_t>(ldmg);
+    auto dmg = static_cast<uint32_t>(ldmg);
 
 	size_t index = cause_it->second;
 	if (index >= MAX_PLAYERS) return; // something went very wrong.
@@ -169,9 +169,9 @@ void PartyDamage::Update(float delta) {
 	}
 
 	// reset recent if needed
-	for (int i = 0; i < MAX_PLAYERS; ++i) {
-		if (TIMER_DIFF(damage[i].last_damage) > recent_max_time) {
-			damage[i].recent_damage = 0;
+	for (auto &i : damage) {
+		if (TIMER_DIFF(i.last_damage) > recent_max_time) {
+            i.recent_damage = 0;
 		}
 	}
 }
@@ -214,16 +214,16 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 	if (size > MAX_PLAYERS) size = MAX_PLAYERS;
 
 	uint32_t max_recent = 0;
-	for (int i = 0; i < MAX_PLAYERS; ++i) {
-		if (max_recent < damage[i].recent_damage) {
-			max_recent = damage[i].recent_damage;
+	for (auto &i : damage) {
+		if (max_recent < i.recent_damage) {
+			max_recent = i.recent_damage;
 		}
 	}
 
 	uint32_t max = 0;
-	for (int i = 0; i < MAX_PLAYERS; ++i) {
-		if (max < damage[i].damage) {
-			max = damage[i].damage;
+	for (auto &i : damage) {
+		if (max < i.damage) {
+			max = i.damage;
 		}
 	}
 
@@ -233,9 +233,9 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 	ImGui::SetNextWindowSize(ImVec2(width, (float)(size * line_height)));
 	if (ImGui::Begin(Name(), &visible, GetWinFlags(0, true))) {
 		ImGui::PushFont(GuiUtils::GetFont(GuiUtils::f16));
-		float x = ImGui::GetWindowPos().x;
+        const float x = ImGui::GetWindowPos().x;
 		float y = ImGui::GetWindowPos().y;
-		float _width = ImGui::GetWindowWidth();
+        const float _width = ImGui::GetWindowWidth();
 		const int BUF_SIZE = 16;
 		char buf[BUF_SIZE];
 		for (size_t i = 0; i < size; ++i) {
@@ -344,8 +344,8 @@ void PartyDamage::WriteOwnDamage() {
 
 void PartyDamage::ResetDamage() {
 	total = 0;
-	for (int i = 0; i < MAX_PLAYERS; ++i) {
-		damage[i].Reset();
+	for (auto &i : damage) {
+        i.Reset();
 	}
 }
 
@@ -369,7 +369,7 @@ void PartyDamage::LoadSettings(CSimpleIni* ini) {
 		int lkey;
 		if (GuiUtils::ParseInt(key.pItem, &lkey)) {
 			if (lkey <= 0) continue;
-			long lval = inifile->GetLongValue(IniSection, key.pItem, 0);
+            const long lval = inifile->GetLongValue(IniSection, key.pItem, 0);
 			if (lval <= 0) continue;
 			hp_map[static_cast<size_t>(lkey)] = static_cast<uint32_t>(lval);
 		}

@@ -12,11 +12,11 @@ private:
             GuiUtils::StrCopy(code, c, sizeof(code));
 
         }
-        char name[128];
-        char code[128];
+        char name[128]{};
+        char code[128]{};
         
         // Vector of pcons to use for this build, listed by ini name e.g. "cupcake"
-        std::set<std::string> pcons;
+        std::set<std::string> pcons{};
     };
     struct TeamBuild {
         static unsigned int cur_ui_id;
@@ -27,8 +27,8 @@ private:
         bool edit_open = false;
         int edit_pcons = -1;
         bool show_numbers = false;
-        char name[128];
-        std::vector<Build> builds;
+        char name[128]{};
+        std::vector<Build> builds{};
         unsigned int ui_id; // should be const but then assignment operator doesn't get created automatically, and I'm too lazy to redefine it, so just don't change this value, okay?
     };
 
@@ -86,7 +86,7 @@ private:
     void DrawBuildSection(TeamBuild& tbuild, unsigned int idx);
 
     bool builds_changed = false;
-    std::vector<TeamBuild> teambuilds;
+    std::vector<TeamBuild> teambuilds{};
     bool order_by_name = false;
     bool order_by_index = !order_by_name;
     bool auto_load_pcons = true;
@@ -97,7 +97,7 @@ private:
 
 
     clock_t send_timer = 0;
-    std::queue<std::string> queue;
+    std::queue<std::string> queue{};
 
     CSimpleIni* inifile = nullptr;
 };

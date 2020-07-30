@@ -41,7 +41,7 @@ private:
     // they return true if there is something to draw.
     bool GetUrgozTimer();
     bool GetDeepTimer();
-    bool GetDhuumTimer();
+    static bool GetDhuumTimer();
     bool GetTrapTimer();
     bool GetDoATimer();
     bool GetSpiritTimer();

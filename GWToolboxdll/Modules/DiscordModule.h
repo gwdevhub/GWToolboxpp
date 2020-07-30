@@ -20,11 +20,11 @@ struct Application {
 // Encoded/decoded when joining another player's game.
 struct DiscordJoinableParty {
     unsigned short map_id = 0;
-    short district_id;
-    short region_id;
-    short language_id;
-    uint32_t ghkey[4];
-    wchar_t player[32];
+    short district_id{};
+    short region_id{};
+    short language_id{};
+    uint32_t ghkey[4]{};
+    wchar_t player[32]{};
 };
 // Used to record current GH info
 struct CurrentGuildHall {
@@ -56,24 +56,24 @@ public:
     void UpdateActivity();
 
     void InviteUser(DiscordUser* user);
-    void FailedJoin(const char* error_msg);
+    static void FailedJoin(const char* error_msg);
     void JoinParty();
     bool IsInJoinablePartyMap();
 
     static bool IsMapUnlocked(uint32_t map_id);
     static GW::Guild* GetCurrentGH();
 
-    Application app;
-    DiscordActivity activity;
+    Application app{};
+    DiscordActivity activity{};
 
 private:
-    DiscordCreateParams params;
+    DiscordCreateParams params{};
     
-    IDiscordUserEvents users_events;
-    IDiscordActivityEvents activities_events;
-    IDiscordRelationshipEvents relationships_events;
-    IDiscordNetworkEvents network_events;
-    IDiscordCoreEvents core_events;
+    IDiscordUserEvents users_events{};
+    IDiscordActivityEvents activities_events{};
+    IDiscordRelationshipEvents relationships_events{};
+    IDiscordNetworkEvents network_events{};
+    IDiscordCoreEvents core_events{};
     
 
     // setting vars
@@ -93,7 +93,7 @@ private:
 
     bool LoadDll();
     bool Connect();
-    void ConnectCanary();
+    static void ConnectCanary();
     void Disconnect();
 
     GW::HookEntry ErrorMessage_Callback;

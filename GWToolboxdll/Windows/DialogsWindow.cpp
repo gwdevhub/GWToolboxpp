@@ -73,8 +73,8 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
     if (!visible) return;
     auto DialogButton = [](int x_idx, int x_qty, const char* text, const char* help, DWORD dialog) -> void {
         if (x_idx != 0) ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-        float w = (ImGui::GetWindowContentRegionWidth()
-            - ImGui::GetStyle().ItemInnerSpacing.x * (x_qty - 1)) / x_qty;
+        const float w = (ImGui::GetWindowContentRegionWidth()
+                         - ImGui::GetStyle().ItemInnerSpacing.x * (x_qty - 1)) / x_qty;
         if (ImGui::Button(text, ImVec2(w, 0))) {
             GW::Agents::SendDialog(dialog);
         }
@@ -108,7 +108,7 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
         const size_t n_quests = _countof(questnames);
         if (show_favorites) {
             for (int i = 0; i < fav_count; ++i) {
-                size_t index = static_cast<size_t>(i);
+                auto index = static_cast<size_t>(i);
                 ImGui::PushID(i);
                 ImGui::PushItemWidth(-100.0f - ImGui::GetStyle().ItemInnerSpacing.x * 2);
                 ImGui::Combo("", &fav_index[index], questnames, n_quests);
@@ -148,7 +148,7 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
             if (ImGui::Button("Send##2", ImVec2(60.0f, 0))) {
                 int iid;
                 if (GuiUtils::ParseInt(customdialogbuf, &iid) && (0 <= iid)) {
-                    uint32_t id = static_cast<uint32_t>(iid);
+                    const auto id = static_cast<uint32_t>(iid);
                     GW::Agents::SendDialog(id);
                 } else {
                     Log::Error("Invalid dialog number '%s'", customdialogbuf);
@@ -164,7 +164,7 @@ void DialogsWindow::DrawSettingInternal() {
     if (ImGui::InputInt("Number of favorites", &fav_count)) {
         if (fav_count < 0) fav_count = 0;
         if (fav_count > 100) fav_count = 100;
-        size_t count = static_cast<size_t>(fav_count);
+        auto count = static_cast<size_t>(fav_count);
         fav_index.resize(count, 0);
     }
     ImGui::PopItemWidth();
@@ -180,7 +180,7 @@ void DialogsWindow::LoadSettings(CSimpleIni* ini) {
     show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
 
     fav_count = ini->GetLongValue(Name(), VAR_NAME(fav_count), 3);
-    size_t count = static_cast<size_t>(fav_count);
+    auto count = static_cast<size_t>(fav_count);
     fav_index.resize(count, 0);
     for (size_t i = 0; i < count; ++i) {
         char key[32];
@@ -196,7 +196,7 @@ void DialogsWindow::LoadSettings(CSimpleIni* ini) {
 void DialogsWindow::SaveSettings(CSimpleIni* ini) {
     ToolboxWindow::SaveSettings(ini);
     ini->SetLongValue(Name(), "fav_count", fav_count);
-    size_t count = static_cast<size_t>(fav_count);
+    auto count = static_cast<size_t>(fav_count);
     for (size_t i = 0; i < count; ++i) {
         char key[32];
         snprintf(key, 32, "Quest%zu", i);

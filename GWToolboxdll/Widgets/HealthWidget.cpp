@@ -44,13 +44,13 @@ void HealthWidget::LoadSettings(CSimpleIni *ini) {
     }
 
     if (thresholds.empty()) {
-        Threshold* thresholdFh = new Threshold("\"Finish Him!\"", Colors::RGB(255, 255, 0), 50);
+        auto * thresholdFh = new Threshold("\"Finish Him!\"", Colors::RGB(255, 255, 0), 50);
         thresholdFh->skillId = (int) GW::Constants::SkillID::Finish_Him;
         thresholdFh->active = false;
         thresholds.push_back(thresholdFh);
         thresholds.back()->index = thresholds.size() - 1;
 
-        Threshold* thresholdEoe = new Threshold("Edge of Extinction", Colors::RGB(0, 255, 0), 90);
+        auto * thresholdEoe = new Threshold("Edge of Extinction", Colors::RGB(0, 255, 0), 90);
         thresholdEoe->active = false;
         thresholds.push_back(thresholdEoe);
         thresholds.back()->index = thresholds.size() - 1;
@@ -81,7 +81,7 @@ void HealthWidget::DrawSettingInternal() {
     ImGui::SameLine(); ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
     ImGui::Checkbox("Ctrl+Click to print target health", &click_to_print_health);
 
-    bool thresholdsNode = ImGui::TreeNode("Thresholds");
+    const bool thresholdsNode = ImGui::TreeNode("Thresholds");
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("The first matching threshold will be used.");
     if (thresholdsNode) {
         bool changed = false;
@@ -139,7 +139,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
         return;
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(150, 100), ImGuiSetCond_FirstUseEver);
-    bool ctrl_pressed = ImGui::IsKeyDown(VK_CONTROL);
+    const bool ctrl_pressed = ImGui::IsKeyDown(VK_CONTROL);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(ctrl_pressed && click_to_print_health)))) {
         static char health_perc[32];
         static char health_abs[32];
@@ -151,7 +151,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
                 snprintf(health_perc, 32, "-");
             }
             if (target->max_hp > 0) {
-                float abs = target->hp * target->max_hp;
+                const float abs = target->hp * target->max_hp;
                 snprintf(health_abs, 32, "%.0f / %d", abs, target->max_hp);
             } else {
                 snprintf(health_abs, 32, "-");
@@ -160,7 +160,7 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
             ImVec2 cur;
 
             ImColor color = ImGui::GetStyleColorVec4(ImGuiCol_Text);
-            ImColor background = ImColor(Colors::Black());
+            const ImColor background = ImColor(Colors::Black());
 
             for (size_t i = 0; i < thresholds.size(); ++i) {
                 Threshold* threshold = thresholds[i];
@@ -218,8 +218,8 @@ void HealthWidget::Draw(IDirect3DDevice9* pDevice) {
                         GW::Agents::AsyncGetAgentName(target, agent_name_ping);
                         if (agent_name_ping.size()) {
                             char buffer[512];
-                            std::string agent_name_str = GuiUtils::WStringToString(agent_name_ping);
-                            int current_hp = (int)(target->hp * target->max_hp);
+                            const std::string agent_name_str = GuiUtils::WStringToString(agent_name_ping);
+                            const int current_hp = (int)(target->hp * target->max_hp);
                             snprintf(buffer, sizeof(buffer), "%s's Health is %d of %d. (%.0f %%)", agent_name_str.c_str(), current_hp, target->max_hp, target->hp * 100.f);
                             GW::Chat::SendChat('#', buffer);
                         }
@@ -262,7 +262,7 @@ bool HealthWidget::Threshold::DrawHeader() {
     }
 
     ImGui::SameLine(0, 18);
-    bool changed = ImGui::Checkbox("##active", &active);
+    const bool changed = ImGui::Checkbox("##active", &active);
     ImGui::SameLine();
     ImGui::ColorButton("", ImColor(color));
     ImGui::SameLine();
@@ -291,8 +291,8 @@ bool HealthWidget::Threshold::DrawSettings(Operation& op) {
         changed |= Colors::DrawSettingHueWheel("Color", &color, 0);
         ImGui::ShowHelp("The custom color for this threshold.");
 
-        float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
-        float width = (ImGui::CalcItemWidth() - spacing * 2) / 3;
+        const float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
+        const float width = (ImGui::CalcItemWidth() - spacing * 2) / 3;
         if (ImGui::Button("Move Up", ImVec2(width, 0))) {
             op = Threshold::Operation::MoveUp;
         }

@@ -79,7 +79,7 @@ void ToolboxTheme::LoadSettings(CSimpleIni* ini) {
     ini_style.ButtonTextAlign.y = (float)inifile->GetDoubleValue(IniSection, "ButtonTextAlignY", ini_style.ButtonTextAlign.y);
     for (int i = 0; i < ImGuiCol_COUNT; ++i) {
         const char* name = ImGui::GetStyleColorName(i);
-        Color color = Colors::Load(inifile, IniSection, name, ImColor(ini_style.Colors[i]));
+        const Color color = Colors::Load(inifile, IniSection, name, ImColor(ini_style.Colors[i]));
         ini_style.Colors[i] = ImColor(color);
     }
 
@@ -113,9 +113,9 @@ void ToolboxTheme::SaveSettings(CSimpleIni* ini) {
     if (style.ButtonTextAlign.y != ini_style.ButtonTextAlign.y) inifile->SetDoubleValue(IniSection, "ButtonTextAlignY", style.ButtonTextAlign.y);
     for (int i = 0; i < ImGuiCol_COUNT; ++i) {
         const char* name = ImGui::GetStyleColorName(i);
-        Color cur = ImColor(style.Colors[i]);
+        const Color cur = ImColor(style.Colors[i]);
         if (cur != ImColor(ini_style.Colors[i])) {
-            Color color = ImColor(style.Colors[i]);
+            const Color color = ImColor(style.Colors[i]);
             Colors::Save(inifile, IniSection, name, color);
         }
     }
@@ -155,7 +155,7 @@ void ToolboxTheme::DrawSettingInternal() {
         const char* name = ImGui::GetStyleColorName(i);
         ImGui::PushID(i);
         ImGui::ColorEdit4(name, (float*)&style.Colors[i]);
-        Color cur = ImColor(style.Colors[i]);
+        const Color cur = ImColor(style.Colors[i]);
         if (cur != ImColor(ini_style.Colors[i])) {
             ImGui::SameLine();
             if (ImGui::Button("Revert")) style.Colors[i] = ImColor(Colors::Load(inifile, IniSection, name, ImColor(ini_style.Colors[i])));

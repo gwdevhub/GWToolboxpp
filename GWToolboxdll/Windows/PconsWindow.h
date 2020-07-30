@@ -41,7 +41,7 @@ public:
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
     void RegisterSettingsContent() override;
-    void DrawLunarsAndAlcoholSettings();
+    static void DrawLunarsAndAlcoholSettings();
 
     static void OnVanquishComplete(GW::HookStatus *, GW::Packet::StoC::VanquishComplete*);
     static void OnObjectiveDone(GW::HookStatus *,GW::Packet::StoC::ObjectiveDone *packet);
@@ -52,7 +52,7 @@ public:
     static void OnAddExternalBond(GW::HookStatus *status, GW::Packet::StoC::AddExternalBond *pak);
     static void CmdPcons(const wchar_t *, int argc,LPWSTR *argv);
 
-    std::vector<Pcon*> pcons;
+    std::vector<Pcon*> pcons{};
 
 private:
 

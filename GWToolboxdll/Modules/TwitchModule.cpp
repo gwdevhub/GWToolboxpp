@@ -143,7 +143,7 @@ void TwitchModule::AddHooks() {
         wchar_t buf[128];
         if (!name)
             return false;
-        std::wstring walias = GuiUtils::StringToWString(TwitchModule::Instance().irc_alias);
+        const std::wstring walias = GuiUtils::StringToWString(TwitchModule::Instance().irc_alias);
         swprintf(buf, 128, L" @ %s", walias.c_str());
         if ((std::wstring(name)).find(buf) != std::wstring::npos) {
             wcscpy(name, walias.c_str());
@@ -156,7 +156,7 @@ void TwitchModule::AddHooks() {
             return false;
         wchar_t msgcpy[255];
         wcscpy(msgcpy, msg);
-        std::string message = GuiUtils::WStringToString(msgcpy);
+        const std::string message = GuiUtils::WStringToString(msgcpy);
         size_t sender_idx = message.find(',');
         if (sender_idx == std::string::npos)
             return false; // Invalid sender
@@ -278,7 +278,7 @@ void TwitchModule::DrawSettingInternal() {
         ImGui::Checkbox("Notify on user join", &notify_on_user_join);
         ImGui::ShowHelp("Receive a message in the chat window when a viewer joins the Twitch Channel");
 
-        float width = ImGui::GetContentRegionAvailWidth() / 2;
+        const float width = ImGui::GetContentRegionAvailWidth() / 2;
         ImGui::PushItemWidth(width);
         /*ImGui::InputText("Twitch Alias", const_cast<char*>(irc_alias.c_str()), 32);
         ImGui::ShowHelp("Sending a whisper to this name will send the message to Twitch.\nCannot contain spaces.");

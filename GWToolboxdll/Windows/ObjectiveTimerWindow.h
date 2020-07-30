@@ -74,7 +74,7 @@ private:
         bool from_disk = false;
         bool need_to_collapse = false;
         char name[256] = { 0 };
-        std::vector<Objective> objectives;
+        std::vector<Objective> objectives{};
 
         void CheckSetDone();
         bool Draw(); // returns false when should be deleted
@@ -93,7 +93,7 @@ private:
         static unsigned int cur_ui_id;
     };
 
-    std::map<DWORD, ObjectiveSet *> objective_sets;
+    std::map<DWORD, ObjectiveSet *> objective_sets{};
 
     Objective* GetCurrentObjective(uint32_t obj_id);
     ObjectiveSet* GetCurrentObjectiveSet();

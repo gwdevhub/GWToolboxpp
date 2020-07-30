@@ -28,7 +28,8 @@
 
 void BondsWidget::Initialize() {
     ToolboxWidget::Initialize();
-    for (int i = 0; i < MAX_BONDS; ++i) textures[i] = nullptr;
+    for (auto &texture : textures)
+        texture = nullptr;
     auto LoadBondTexture = [](IDirect3DTexture9** tex, const wchar_t* name, WORD id) -> void {
         Resources::Instance().LoadTextureAsync(tex, Resources::GetPath(L"img/bonds", name), id);
     };
@@ -56,10 +57,10 @@ void BondsWidget::Initialize() {
 
 void BondsWidget::Terminate() {
     ToolboxWidget::Terminate();
-    for (int i = 0; i < MAX_BONDS; ++i) {
-        if (textures[i]) {
-            textures[i]->Release();
-            textures[i] = nullptr;
+    for (auto &texture : textures) {
+        if (texture) {
+            texture->Release();
+            texture = nullptr;
         }
     }
 }
@@ -120,22 +121,22 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
         
         if (buff_cnt > 0) {
             const GW::BuffArray &buffs = effects[0].buffs; // first one is for players, after are heroes
-            for (unsigned int i = 0; i < buffs.size(); ++i) {
-                DWORD agent = buffs[i].target_agent_id;
-                DWORD skill = buffs[i].skill_id;
+            for (auto buff : buffs) {
+                DWORD agent = buff.target_agent_id;
+                DWORD skill = buff.skill_id;
                 if (party_map.find(agent) == party_map.end())
                     continue; // bond target not in party
                 if (bond_map.find(skill) == bond_map.end())
                     continue; // bond with a skill not in skillbar
                 size_t y = party_map[agent];
                 size_t x = bond_map[skill];
-                Bond bond = GetBondBySkillID(skill);
+                const Bond bond = GetBondBySkillID(skill);
                 ImVec2 tl = GetGridPos(x, y, true);
                 ImVec2 br = GetGridPos(x, y, false);
                 if (textures[bond])
                     ImGui::GetWindowDrawList()->AddImage((ImTextureID)textures[bond], tl, br);
                 if (click_to_drop && ImGui::IsMouseHoveringRect(tl, br) && ImGui::IsMouseReleased(0)) {
-                    GW::Effects::DropBuff(buffs[i].buff_id);
+                    GW::Effects::DropBuff(buff.buff_id);
                     handled_click = true;
                 }
             }
@@ -146,20 +147,19 @@ void BondsWidget::Draw(IDirect3DDevice9* device) {
         for (unsigned int i = 0; i < effect_cnt; ++i) {
             const GW::EffectArray& agentEffects = effects[i].effects;
             DWORD agent = effects[i].agent_id;
-            for (unsigned int j = 0; j < agentEffects.size(); ++j) {
-                const GW::Effect& effect = agentEffects[j];
+            for (const auto &effect : agentEffects) {
                 DWORD skill = effect.skill_id;
                 if (bond_map.find(skill) == bond_map.end()) continue;
 
                 bool overlay = false;
                 const GW::PartyAttribute& partyAttribute = GW::GameContext::instance()->world->attributes[0];
-                uint8_t attribute_id = GW::SkillbarMgr::GetSkillConstantData(skill).attribute;
+                const uint8_t attribute_id = GW::SkillbarMgr::GetSkillConstantData(skill).attribute;
                 const GW::Attribute& attribute = partyAttribute.attribute[attribute_id];
                 if (effect.effect_type < attribute.level) overlay = true;
 
                 size_t y = party_map[agent];
                 size_t x = bond_map[skill];
-                Bond bond = GetBondBySkillID(skill);
+                const Bond bond = GetBondBySkillID(skill);
                 ImVec2 tl = GetGridPos(x, y, true);
                 ImVec2 br = GetGridPos(x, y, false);
                 if (textures[bond])
@@ -198,9 +198,9 @@ void BondsWidget::UseBuff(GW::AgentID targetId, DWORD buff_skillid) {
     GW::Agent* target = GW::Agents::GetAgentByID(targetId);
     if (target == nullptr) return;
 
-    int islot = GW::SkillbarMgr::GetSkillSlot((GW::Constants::SkillID)buff_skillid);
+    const int islot = GW::SkillbarMgr::GetSkillSlot((GW::Constants::SkillID)buff_skillid);
     if (islot < 0) return;
-    uint32_t slot = static_cast<uint32_t>(islot);
+    auto slot = static_cast<uint32_t>(islot);
     GW::Skillbar *skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
     if (!skillbar || !skillbar->IsValid()) return;
     if (skillbar->skills[slot].recharge != 0) return;
@@ -259,7 +259,8 @@ void BondsWidget::DrawSettingInternal() {
     ImGui::ShowHelp("Height of each row, leave 0 for default");
 }
 
-BondsWidget::Bond BondsWidget::GetBondBySkillID(DWORD skillid) const {
+BondsWidget::Bond BondsWidget::GetBondBySkillID(DWORD skillid)
+{
     using namespace GW::Constants;
     switch ((GW::Constants::SkillID)skillid) {
     case SkillID::Balthazars_Spirit: return Bond::BalthazarSpirit;
@@ -293,9 +294,9 @@ bool BondsWidget::FetchBondSkills()
         return false;
     bond_list.clear();
     bond_map.clear();
-    for (int slot = 0; slot < 8; ++slot) {
-        DWORD SkillID = bar->skills[slot].skill_id;
-        Bond bond = GetBondBySkillID(SkillID);
+    for (const auto &skill : bar->skills) {
+        DWORD SkillID = skill.skill_id;
+        const Bond bond = GetBondBySkillID(SkillID);
         if (bond != Bond::None) {
             bond_map[SkillID] = bond_list.size();
             bond_list.push_back(SkillID);

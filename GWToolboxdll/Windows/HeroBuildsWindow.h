@@ -19,8 +19,8 @@ private:
             GuiUtils::StrCopy(name, n, sizeof(name));
             GuiUtils::StrCopy(code, c, sizeof(code));
         }
-        char name[128];
-        char code[128];
+        char name[128]{};
+        char code[128]{};
         int hero_index;
         int show_panel = 0;
     };
@@ -33,8 +33,8 @@ private:
         }
         bool edit_open = false;
         int mode = 0; // 0=don't change, 1=normal mode, 2=hard mode
-        char name[128];
-        std::vector<HeroBuild> builds;
+        char name[128]{};
+        std::vector<HeroBuild> builds{};
         unsigned int ui_id; // should be const but then assignment operator doesn't get created automatically, and I'm too lazy to redefine it, so just don't change this value, okay?
     };
 
@@ -82,13 +82,13 @@ private:
     void Send(const TeamHeroBuild& tbuild, size_t idx);
     void Send(const TeamHeroBuild& tbuild);
     void View(const TeamHeroBuild& tbuild, unsigned int idx);
-    void HeroBuildName(const TeamHeroBuild& tbuild, unsigned int idx, std::string* out);
+    static void HeroBuildName(const TeamHeroBuild& tbuild, unsigned int idx, std::string* out);
 
     // Returns ptr to party member of this hero, optionally fills out out_hero_index to be the index of this hero for the player.
     static GW::HeroPartyMember* GetPartyHeroByID(GW::Constants::HeroID hero_id, size_t* out_hero_index);
 
     bool builds_changed = false;
-    std::vector<TeamHeroBuild> teambuilds;
+    std::vector<TeamHeroBuild> teambuilds{};
 
     struct CodeOnHero {
         enum Stage : uint8_t {
@@ -96,7 +96,7 @@ private:
             Load,
             Finished
         } stage = Add;
-        char code[128];
+        char code[128]{};
         size_t party_hero_index = 0xFFFFFFFF;
         GW::Constants::HeroID heroid = GW::Constants::HeroID::NoHero;
         int show_panel = 0;
@@ -114,8 +114,8 @@ private:
 
     clock_t send_timer = 0;
     clock_t kickall_timer = 0;
-    std::vector<CodeOnHero> pending_hero_loads;
-    std::queue<std::string> send_queue;
+    std::vector<CodeOnHero> pending_hero_loads{};
+    std::queue<std::string> send_queue{};
 
     CSimpleIni* inifile = nullptr;
 };

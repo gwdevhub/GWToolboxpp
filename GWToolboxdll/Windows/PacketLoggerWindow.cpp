@@ -28,11 +28,11 @@
 namespace {
 
     struct MapInfo {
-        wchar_t enc_name[8];
+        wchar_t enc_name[8]{};
         std::wstring name;
-        wchar_t enc_desc[8];
+        wchar_t enc_desc[8]{};
         std::wstring description;
-        GW::AreaInfo* map_info;
+        GW::AreaInfo* map_info{};
         nlohmann::json ToJson() {
             nlohmann::json json;
             if(!name.empty())
@@ -52,9 +52,9 @@ namespace {
         if (!maps.empty())
             return;
         for (uint32_t map_id = 1; map_id < (uint32_t)GW::Constants::MapID::Count; map_id++) {
-            auto map_info = GW::Map::GetMapInfo((GW::Constants::MapID)map_id);
+            const auto map_info = GW::Map::GetMapInfo((GW::Constants::MapID)map_id);
             if (!map_info) continue;
-            MapInfo* map = new MapInfo();
+            auto * map = new MapInfo();
             map->map_info = map_info;
             GW::UI::UInt32ToEncStr(map_info->name_id, map->enc_name, 8);
             GW::UI::AsyncDecodeStr(map->enc_name, &map->name);
@@ -71,7 +71,7 @@ namespace {
             delete it.second;
         }
         maps.clear();
-        std::wstring file_location = Resources::GetPath(L"maps.json");
+        const std::wstring file_location = Resources::GetPath(L"maps.json");
         if (PathFileExistsW(file_location.c_str())) {
             DeleteFileW(file_location.c_str());
         }
@@ -165,11 +165,11 @@ static void InitStoC()
     uintptr_t StoCHandler_Addr;
     // @Replaced: Data need to figure out relocation
     // @Remark: Same pattern as CtoGSObjectPtr in CtoSMgr.cpp
-    uintptr_t address = GW::Scanner::Find(
+    const uintptr_t address = GW::Scanner::Find(
         "\xC3\xA1\x00\x00\x00\x00\x85\xC0\x74\xF1", "xx????xxxx", +2);
     StoCHandler_Addr = *(uintptr_t*)address;
 
-    GameServer** addr = (GameServer * *)StoCHandler_Addr;
+    auto ** addr = (GameServer * *)StoCHandler_Addr;
     game_server_handler = (*addr)->gs_codec->handlers;
 
     ignored_packets[12] = true;
@@ -226,8 +226,8 @@ static void PrintIndent(uint32_t indent)
 
 static void GetHexS(char* buf, uint8_t byte)
 {
-    uint8_t h = (byte >> 4) & 0xfu;
-    uint8_t l = (byte >> 0) & 0xfu;
+    const uint8_t h = (byte >> 4) & 0xfu;
+    const uint8_t l = (byte >> 0) & 0xfu;
     if (h < 10)
         buf[0] = h + '0';
     else
@@ -318,7 +318,7 @@ static void PrintField(FieldType field, uint32_t count, uint8_t** bytes, uint32_
     }
     case FieldType::String16: {
         PrintIndent(indent);
-        wchar_t* str = reinterpret_cast<wchar_t*>(*bytes);
+        auto * str = reinterpret_cast<wchar_t*>(*bytes);
         size_t length = wcsnlen(str, count);
         wprintf(L"String(%zu) \"%.*s\"\n", length, static_cast<int>(length), str);
         // PrintString(length, str);
@@ -386,13 +386,13 @@ static void PrintNestedField(uint32_t* fields, uint32_t n_fields,
         PrintIndent(indent);
         printf("[%u] => {\n", rep);
         for (uint32_t i = 0; i < n_fields; i++) {
-            uint32_t field = fields[i];
-            uint32_t type = (field >> 0) & 0xF;
-            uint32_t size = (field >> 4) & 0xF;
-            uint32_t count = (field >> 8) & 0xFFFF;
+            const uint32_t field = fields[i];
+            const uint32_t type = (field >> 0) & 0xF;
+            const uint32_t size = (field >> 4) & 0xF;
+            const uint32_t count = (field >> 8) & 0xFFFF;
 
             // Just to make it easier to print
-            FieldType field_type = GetField(type, size, count);
+            const FieldType field_type = GetField(type, size, count);
 
             // Used to skip field that are not printable, for instance the array end
             if (field_type == FieldType::Ignore)
@@ -402,7 +402,7 @@ static void PrintNestedField(uint32_t* fields, uint32_t n_fields,
                 PrintField(field_type, count, bytes, indent + 4);
             }
             else {
-                uint32_t next_field_index = i + 1;
+                const uint32_t next_field_index = i + 1;
 
                 uint32_t struct_count;
                 Serialize<uint32_t>(bytes, &struct_count);
@@ -439,8 +439,8 @@ static void PacketHandler(GW::HookStatus* status, GW::Packet::StoC::PacketBase* 
     if (ignored_packets[packet->header])
         return;
 
-    StoCHandler handler = game_server_handler[packet->header];
-    uint8_t* packet_raw = reinterpret_cast<uint8_t*>(packet);
+    const StoCHandler handler = game_server_handler[packet->header];
+    auto * packet_raw = reinterpret_cast<uint8_t*>(packet);
 
     uint8_t** bytes = &packet_raw;
     uint32_t header;

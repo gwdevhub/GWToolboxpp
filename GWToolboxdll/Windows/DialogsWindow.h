@@ -24,14 +24,14 @@ public:
     void DrawSettingInternal() override;
 
 private:
-    inline DWORD QuestAcceptDialog(DWORD quest) { return (quest << 8) | 0x800001; }
-    inline DWORD QuestRewardDialog(DWORD quest) { return (quest << 8) | 0x800007; }
+    static inline DWORD QuestAcceptDialog(DWORD quest) { return (quest << 8) | 0x800001; }
+    static inline DWORD QuestRewardDialog(DWORD quest) { return (quest << 8) | 0x800007; }
 
-    DWORD IndexToQuestID(int index);
-    DWORD IndexToDialogID(int index);
+    static DWORD IndexToQuestID(int index);
+    static DWORD IndexToDialogID(int index);
 
     int fav_count = 0;
-    std::vector<int> fav_index;
+    std::vector<int> fav_index{};
 
     bool show_common = true;
     bool show_uwteles = true;

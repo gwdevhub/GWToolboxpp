@@ -11,11 +11,11 @@ RateLimiter::RateLimiter()
 
 bool RateLimiter::AddTime(uint32_t cost_ms, uint32_t max_cost_ms)
 {
-    uint64_t current_time = GetTickCount64();
+    const uint64_t current_time = GetTickCount64();
     if (current_time > m_time)
         m_time = current_time;
 
-    uint64_t new_time = m_time + cost_ms;
+    const uint64_t new_time = m_time + cost_ms;
     if ((current_time >= new_time) ||
         (new_time - current_time) >= max_cost_ms) {
 

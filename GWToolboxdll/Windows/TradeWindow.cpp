@@ -103,8 +103,8 @@ void TradeWindow::Update(float delta) {
     if (ws_window && ws_window->getReadyState() != WebSocket::CLOSED) {
         ws_window->poll();
     }
-    bool search_pending = !pending_query_string.empty();
-    bool maintain_socket = (visible && !collapsed) || (print_game_chat && GW::UI::GetCheckboxPreference(GW::UI::CheckboxPreference_ChannelTrade) == 0) || search_pending;
+    const bool search_pending = !pending_query_string.empty();
+    const bool maintain_socket = (visible && !collapsed) || (print_game_chat && GW::UI::GetCheckboxPreference(GW::UI::CheckboxPreference_ChannelTrade) == 0) || search_pending;
     if (maintain_socket && !ws_window) {
         AsyncWindowConnect();
     }
@@ -133,7 +133,7 @@ bool TradeWindow::parse_json_message(const json& js, Message* msg) {
 void TradeWindow::fetch() {
     if (!ws_window || ws_window->getReadyState() != WebSocket::OPEN) 
         return;
-    bool search_pending = !pending_query_sent && !pending_query_string.empty();
+    const bool search_pending = !pending_query_sent && !pending_query_string.empty();
     if (search_pending) {
         strcpy(search_buffer, pending_query_string.c_str());
         // Fill searched_words; query to lower to ease on-the-fly search in ::fetch
@@ -328,10 +328,10 @@ void TradeWindow::Draw(IDirect3DDevice9* device) {
             ImGui::Text("Connecting...");
         } else {
             /* Display trade messages */
-            bool show_time = ImGui::GetWindowWidth() > 600.0f;
+            const bool show_time = ImGui::GetWindowWidth() > 600.0f;
 
             char timetext[128];
-            time_t now = time(nullptr);
+            const time_t now = time(nullptr);
 
             const float& innerspacing = ImGui::GetStyle().ItemInnerSpacing.x;
             const float time_width = (show_time ? 100.0f : 0.0f) * font_scale;

@@ -18,9 +18,9 @@
     #include <WinSock2.h>
     #include <WS2tcpip.h>
     #pragma comment( lib, "ws2_32" )
-    #include <stdio.h>
-    #include <stdlib.h>
-    #include <string.h>
+    #include <cstdio>
+    #include <cstdlib>
+    #include <cstring>
     #include <sys/types.h>
     #include <io.h>
     #ifndef _SSIZE_T_DEFINED
@@ -36,8 +36,8 @@
     #endif
     #if _MSC_VER >=1600
         // vs2010 or later
-        #include <stdint.h>
-    #else
+        #include <cstdint>
+#else
         typedef __int8 int8_t;
         typedef unsigned __int8 uint8_t;
         typedef __int32 int32_t;
@@ -94,11 +94,11 @@ namespace { // private module-only namespace
 	};
 	
 socket_t hostname_connect(const std::string& hostname, int port) {
-    struct addrinfo hints;
+    struct addrinfo hints{};
     struct addrinfo *result;
     struct addrinfo *p;
     int ret;
-    socket_t sockfd = INVALID_SOCKET;
+    auto sockfd = INVALID_SOCKET;
     char sport[16];
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
@@ -244,7 +244,7 @@ class _RealWebSocket : public easywsclient::WebSocket
         }
         while (true) {
             // FD_ISSET(0, &rfds) will be true
-            int N = rxbuf.size();
+            const int N = rxbuf.size();
             ssize_t ret;
             rxbuf.resize(N + 1500);
             ret = kRead(ptConnCtx, (char*)&rxbuf[0] + N, 1500, 0);
@@ -269,7 +269,7 @@ class _RealWebSocket : public easywsclient::WebSocket
 				txbuf.clear();
 				break;
 			}
-            int ret = kWrite(ptConnCtx, (char*)&txbuf[0], txbuf.size(), 0);
+            const int ret = kWrite(ptConnCtx, (char*)&txbuf[0], txbuf.size(), 0);
             if (false) { }
             else if (ret < 0 && (socketerrno == SOCKET_EWOULDBLOCK || socketerrno == SOCKET_EAGAIN_EINPROGRESS)) {
                 break;
@@ -298,7 +298,7 @@ class _RealWebSocket : public easywsclient::WebSocket
     virtual void _dispatch(WebSocket::Callback & callable) {
         // TODO: consider acquiring a lock on rxbuf...
         while (true) {
-            wsheader_type ws;
+            wsheader_type ws{};
             if (rxbuf.size() < 2) { return; /* Need at least 2 */ }
             const uint8_t * data = (uint8_t *) &rxbuf[0]; // peek, but don't consume
             ws.fin = (data[0] & 0x80) == 0x80;
@@ -352,7 +352,7 @@ class _RealWebSocket : public easywsclient::WebSocket
                 if (ws.mask) { for (size_t i = 0; i != ws.N; ++i) { rxbuf[i+ws.header_size] ^= ws.masking_key[i&0x3]; } }
                 receivedData.insert(receivedData.end(), rxbuf.begin()+ws.header_size, rxbuf.begin()+ws.header_size+(size_t)ws.N);// just feed
                 if (ws.fin) {
-                    std::string data(receivedData.begin(), receivedData.end());
+                    const std::string data(receivedData.begin(), receivedData.end());
                     callable((const std::string) data);
                     receivedData.erase(receivedData.begin(), receivedData.end());
                     std::vector<uint8_t> ().swap(receivedData);// free memory
@@ -388,7 +388,7 @@ class _RealWebSocket : public easywsclient::WebSocket
         // TODO: consider acquiring a lock on txbuf...
         if (readyState == CLOSING || readyState == CLOSED) { return; }
         std::vector<uint8_t> header;
-        uint64_t message_size = message.size();
+        const uint64_t message_size = message.size();
         header.assign(2 + (message_size >= 126 ? 2 : 0) + (message_size >= 65536 ? 6 : 0) + (useMask ? 4 : 0), 0);
         header[0] = 0x80 | type;
         if (false) { }
@@ -572,7 +572,7 @@ easywsclient::WebSocket::pointer from_url(const std::string& url, bool useMask, 
 namespace easywsclient {
 
 WebSocket::pointer WebSocket::create_dummy() {
-    static pointer dummy = pointer(new _DummyWebSocket);
+    static auto dummy = pointer(new _DummyWebSocket);
     return dummy;
 }
 

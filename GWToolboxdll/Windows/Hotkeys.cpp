@@ -42,7 +42,7 @@ unsigned int TBHotkey::cur_ui_id = 0;
 
 TBHotkey *TBHotkey::HotkeyFactory(CSimpleIni *ini, const char *section)
 {
-    std::string str(section);
+    const std::string str(section);
     if (str.compare(0, 7, "hotkey-") != 0)
         return nullptr;
     size_t first_sep = 6;
@@ -176,9 +176,9 @@ void TBHotkey::Draw(Op *op)
     ModKeyName(keybuf, 128, modifier, hotkey, "<None>");
     snprintf(header, 128, "%s [%s]%s%s###header%u", desbuf, keybuf, profbuf,
              mapbuf, ui_id);
-    ImGuiTreeNodeFlags flags = (show_active_in_header || show_run_in_header)
-                                   ? ImGuiTreeNodeFlags_AllowItemOverlap
-                                   : 0;
+    const ImGuiTreeNodeFlags flags = (show_active_in_header || show_run_in_header)
+                                         ? ImGuiTreeNodeFlags_AllowItemOverlap
+                                         : 0;
     if (!ImGui::CollapsingHeader(header, flags)) {
         ShowHeaderButtons();
     } else {
@@ -558,7 +558,7 @@ void HotkeyEquipItem::Execute()
         start_time = std::chrono::steady_clock::now();
     } else {
         last_try = std::chrono::steady_clock::now();
-        __int64 diff_mills =
+        const __int64 diff_mills =
             std::chrono::duration_cast<std::chrono::milliseconds>(last_try -
                                                                   start_time)
                 .count();
@@ -703,9 +703,9 @@ void HotkeyDropUseBuff::Execute()
     if (buff && buff->skill_id) {
         GW::Effects::DropBuff(buff->buff_id);
     } else {
-        int islot = GW::SkillbarMgr::GetSkillSlot(id);
+        const int islot = GW::SkillbarMgr::GetSkillSlot(id);
         if (islot >= 0) {
-            uint32_t slot = static_cast<uint32_t>(islot);
+            auto slot = static_cast<uint32_t>(islot);
             if (GW::SkillbarMgr::GetPlayerSkillbar()->skills[slot].recharge == 0) {
                 GW::GameThread::Enqueue([slot] () -> void {
                     GW::SkillbarMgr::UseSkill(slot, GW::Agents::GetTargetId(),
@@ -885,13 +885,13 @@ HotkeyTarget::HotkeyTarget(CSimpleIni *ini, const char *section)
     name[0] = 0;
     if (!ini)
         return;
-    long ini_id = ini->GetLongValue(section, "TargetID", -1);
+    const long ini_id = ini->GetLongValue(section, "TargetID", -1);
     if (ini_id > 0)
         id = static_cast<uint32_t>(ini_id);
     long ini_type = ini->GetLongValue(section, "TargetType", -1);
     if (ini_type >= HotkeyTargetType::NPC && ini_type < HotkeyTargetType::Count)
         type = static_cast<HotkeyTargetType>(ini_type);
-    std::string ini_name = ini->GetValue(section, "TargetName", "");
+    const std::string ini_name = ini->GetValue(section, "TargetName", "");
     strcpy_s(name, ini_name.substr(0, sizeof(name)-1).c_str());
     name[sizeof(name)-1] = 0;
     
@@ -937,7 +937,7 @@ void HotkeyTarget::Execute()
         return;
 
     float distance = GW::Constants::SqrRange::Compass;
-    size_t closest = (size_t)-1;
+    auto closest = (size_t)-1;
 
     for (size_t i = 0, size = agents.size();i < size; ++i) {
         if (!agents[i] || agents[i]->type != types[type])
@@ -1024,7 +1024,7 @@ void HotkeyMove::Execute()
     if (!CanUse())
         return;
     GW::Agent *me = GW::Agents::GetPlayer();
-    double dist = GW::GetDistance(me->pos, GW::Vec2f(x, y));
+    const double dist = GW::GetDistance(me->pos, GW::Vec2f(x, y));
     if (range != 0 && dist > range)
         return;
     GW::Agents::Move(x, y);
@@ -1104,7 +1104,7 @@ void HotkeyPingBuild::Description(char *buf, size_t bufsz) const
 }
 void HotkeyPingBuild::Draw()
 {
-    int icount = static_cast<int>(BuildsWindow::Instance().BuildCount());
+    const int icount = static_cast<int>(BuildsWindow::Instance().BuildCount());
     int iindex = static_cast<int>(index);
     if (ImGui::Combo("Build", &iindex, GetText, nullptr, icount)) {
         if (0 <= iindex)
@@ -1124,7 +1124,7 @@ bool HotkeyHeroTeamBuild::GetText(void *, int idx, const char **out_text)
 {
     if (idx >= (int)HeroBuildsWindow::Instance().BuildCount())
         return false;
-    size_t index = static_cast<size_t>(idx);
+    auto index = static_cast<size_t>(idx);
     *out_text = HeroBuildsWindow::Instance().BuildName(index);
     return true;
 }
@@ -1147,7 +1147,7 @@ void HotkeyHeroTeamBuild::Description(char *buf, size_t bufsz) const
 }
 void HotkeyHeroTeamBuild::Draw()
 {
-    int icount = static_cast<int>(HeroBuildsWindow::Instance().BuildCount());
+    const int icount = static_cast<int>(HeroBuildsWindow::Instance().BuildCount());
     int iindex = static_cast<int>(index);
     if (ImGui::Combo("Build", &iindex, GetText, nullptr, icount)) {
         if (0 <= iindex)

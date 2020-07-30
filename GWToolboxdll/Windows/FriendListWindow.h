@@ -28,13 +28,13 @@ private:
             characters.clear();
         };
         std::string uuid;
-        UUID uuid_bytes;
+        UUID uuid_bytes{};
         std::wstring alias;
         FriendListWindow* parent;
         Character* current_char = nullptr;
         char current_map_name[128] = { 0 };
         uint32_t current_map_id = 0;
-        std::unordered_map<std::wstring, Character> characters;
+        std::unordered_map<std::wstring, Character> characters{};
         uint8_t status = static_cast<uint8_t>(GW::FriendStatus::FriendStatus_Offline); // 0 = Offline, 1 = Online, 2 = Do not disturb, 3 = Away
         uint8_t type = static_cast<uint8_t>(GW::FriendType::FriendType_Unknow);
         bool is_tb_friend = false;  // Is this a friend via toolbox, or friend via friend list?

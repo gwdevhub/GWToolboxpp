@@ -24,7 +24,7 @@ public:
 
     // Poll this function with msTimeout = 0, so that it return immediately.
     // If the mp3 finished playing, WaitForCompletion will return true;
-    bool WaitForCompletion(long msTimeout, long* EvCode);
+    bool WaitForCompletion(long msTimeout, long *EvCode);
 
     // -10000 is lowest volume and 0 is highest volume, positive value > 0 will fail
     bool SetVolume(long vol);
@@ -51,16 +51,15 @@ public:
     // and stop playing. Note: Even if pCurrent and pStop have the same value,
     // avoid putting the same pointer into both of them, meaning put different
     // pointers with the same dereferenced value.
-    bool SetPositions(__int64* pCurrent, __int64* pStop, bool bAbsolutePositioning);
+    bool SetPositions(__int64 *pCurrent, __int64 *pStop, bool bAbsolutePositioning);
 
 private:
-    IGraphBuilder* pigb;
-    IMediaControl* pimc;
-    IMediaEventEx* pimex;
-    IBasicAudio* piba;
-    IMediaSeeking* pims;
-    bool    ready;
+    IGraphBuilder *pigb;
+    IMediaControl *pimc;
+    IMediaEventEx *pimex;
+    IBasicAudio *piba;
+    IMediaSeeking *pims;
+    bool ready;
     // Duration of the MP3.
     __int64 duration;
-
 };

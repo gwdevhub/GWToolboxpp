@@ -17,27 +17,31 @@ afterward just call Render and the vertex buffer will be rendered
 you can call Invalidate() to have the initialize be called again on render
 */
 
-class VBuffer {
+class VBuffer
+{
 public:
     VBuffer()
         : buffer(nullptr)
-        , type(D3DPT_TRIANGLELIST)
-        , count(0)
-        , initialized(false)
-    {
-    }
+          , type(D3DPT_TRIANGLELIST)
+          , count(0)
+          , initialized(false)
+    { }
 
-    virtual ~VBuffer() {
+    virtual ~VBuffer()
+    {
         Invalidate();
     }
 
-    virtual void Invalidate() { 
+    virtual void Invalidate()
+    {
         if (buffer)
             buffer->Release();
         buffer = nullptr;
-        initialized = false; 
+        initialized = false;
     }
-    virtual void Render(IDirect3DDevice9* device) {
+
+    virtual void Render(IDirect3DDevice9 *device)
+    {
         if (!initialized) {
             initialized = true;
             Initialize(device);
@@ -49,11 +53,11 @@ public:
     }
 
 protected:
-    IDirect3DVertexBuffer9* buffer;
+    IDirect3DVertexBuffer9 *buffer;
     D3DPRIMITIVETYPE type;
     unsigned long count;
     bool initialized;
 
 private:
-    virtual void Initialize(IDirect3DDevice9* device) = 0;
+    virtual void Initialize(IDirect3DDevice9 *device) = 0;
 };

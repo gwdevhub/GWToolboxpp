@@ -33,7 +33,7 @@ private:
     bool one_panel_at_time_only = false;
 
     float GetModuleWeighting(ToolboxUIElement* m) {
-        auto found = module_weightings.find(m->Name());
+        const auto found = module_weightings.find(m->Name());
         return found == module_weightings.end() ? 1.0f : found->second;
     }
     std::vector<std::pair<float, ToolboxUIElement*>> modules_to_draw{};

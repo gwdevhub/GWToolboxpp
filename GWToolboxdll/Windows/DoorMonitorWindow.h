@@ -26,7 +26,7 @@ public:
             if (animation_type != 16 && animation_type != 3)
                 return; // Not opening or closing door.
             DoorObject* d = GetDoor(object_id);
-            time_t now = time(nullptr);
+            const time_t now = time(nullptr);
             if (!d->initial_state) {
                 // First load of this door.
                 d->initial_state = animation_stage;
@@ -57,10 +57,10 @@ public:
         return instance;
     }
     static DoorObject* GetDoor(uint32_t object_id) {
-        std::map<uint32_t, DoorObject*>::iterator it = Instance().doors.find(object_id);
+        const std::map<uint32_t, DoorObject*>::iterator it = Instance().doors.find(object_id);
         if (it != Instance().doors.end())
             return it->second;
-        DoorObject* d = new DoorObject(object_id);
+        auto * d = new DoorObject(object_id);
         Instance().doors.emplace(object_id, d);
         return d;
     };

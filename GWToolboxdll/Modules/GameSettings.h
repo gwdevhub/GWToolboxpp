@@ -55,7 +55,7 @@ public:
         }
     };
     static PendingChatMessage* queueSend(GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender) {
-        PendingChatMessage* m = new PendingChatMessage(channel, enc_message, enc_sender);
+        auto * m = new PendingChatMessage(channel, enc_message, enc_sender);
         if (m->invalid) {
             delete m;
             return nullptr;
@@ -64,7 +64,7 @@ public:
         return m;
     }
     static PendingChatMessage* queuePrint(GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender) {
-        PendingChatMessage* m = new PendingChatMessage(channel, enc_message, enc_sender);
+        auto * m = new PendingChatMessage(channel, enc_message, enc_sender);
         if (m->invalid) {
             delete m;
             return nullptr;

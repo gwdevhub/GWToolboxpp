@@ -26,7 +26,7 @@ namespace
 {
     static const std::wstring GetPlayerNameFromEncodedString(const wchar_t *message)
     {
-        size_t start_idx = (size_t)-1;
+        auto start_idx = (size_t)-1;
         for (size_t i = 0; message[i] != 0; ++i) {
             if ((start_idx == (size_t)-1) && message[i] == 0x107)
                 start_idx = ++i;
@@ -53,7 +53,7 @@ namespace
     static GW::Constants::MapID current_map_id = GW::Constants::MapID::None;
     static std::wstring *GetCurrentMapName()
     {
-        GW::Constants::MapID map_id = GW::Map::GetMapID();
+        const GW::Constants::MapID map_id = GW::Map::GetMapID();
         if (current_map_id != map_id) {
             GW::AreaInfo *i = GW::Map::GetMapInfo(map_id);
             if (!i)
@@ -127,7 +127,7 @@ void FriendListWindow::CmdAddFriend(const wchar_t* message, int argc, LPWSTR* ar
     UNREFERENCED_PARAMETER(message);
     if (argc < 2)
         return Log::Error("Missing player name");
-    std::wstring player_name = ParsePlayerName(argc - 1, &argv[1]);
+    const std::wstring player_name = ParsePlayerName(argc - 1, &argv[1]);
     if (player_name.empty())
         return Log::Error("Missing player name");
     GW::FriendListMgr::AddFriend(player_name.c_str());
@@ -136,7 +136,7 @@ void FriendListWindow::CmdRemoveFriend(const wchar_t* message, int argc, LPWSTR*
     UNREFERENCED_PARAMETER(message);
     if (argc < 2)
         return Log::Error("Missing player name");
-    std::wstring player_name = ParsePlayerName(argc - 1, &argv[1]);
+    const std::wstring player_name = ParsePlayerName(argc - 1, &argv[1]);
     if (player_name.empty())
         return Log::Error("Missing player name");
     FriendListWindow::Friend* f = FriendListWindow::Instance().GetFriend(player_name.c_str());
@@ -224,7 +224,7 @@ bool FriendListWindow::Friend::AddGWFriend() {
     GW::Friend* f = GetFriend();
     if (f) return true;
     if (characters.empty()) return false; // Cant add a friend that doesn't have a char name
-    clock_t now = clock();
+    const clock_t now = clock();
     if (added_via_toolbox > now - 5)
         return true; // Waiting for friend to be added.
     added_via_toolbox = clock();
@@ -267,7 +267,7 @@ FriendListWindow::Friend* FriendListWindow::SetFriend(uint8_t* uuid, GW::FriendT
         lf->uuid_bytes = StringToGuid(uuid_c);
     }
     if (alias && wcscmp(alias, lf->alias.c_str()) != 0) {
-        auto current = uuid_by_name.find(lf->alias);
+        const auto current = uuid_by_name.find(lf->alias);
         if (current != uuid_by_name.end() && current->second == lf->uuid)
             uuid_by_name.erase(current);
         lf->alias = std::wstring(alias);
@@ -338,7 +338,7 @@ const std::string FriendListWindow::Friend::GetCharactersHover(bool include_char
 }
 // Find existing record for friend by char name.
 FriendListWindow::Friend* FriendListWindow::GetFriend(const wchar_t* name) {
-    std::unordered_map<std::wstring, std::string>::iterator it = uuid_by_name.find(name);
+    const std::unordered_map<std::wstring, std::string>::iterator it = uuid_by_name.find(name);
     if (it == uuid_by_name.end())
         return nullptr; // Not found
     return GetFriendByUUID(it->second.c_str());
@@ -355,7 +355,7 @@ FriendListWindow::Friend* FriendListWindow::GetFriend(uint8_t* uuid) {
 // Find existing record for friend by uuid
 FriendListWindow::Friend* FriendListWindow::GetFriendByUUID(const char* uuid) {
     //std::lock_guard<std::recursive_mutex> lock(friends_mutex);
-    std::unordered_map<std::string, Friend*>::iterator it = friends.find(uuid);
+    const std::unordered_map<std::string, Friend*>::iterator it = friends.find(uuid);
     if (it == friends.end())
         return nullptr;
     return it->second; // Found in cache
@@ -363,7 +363,7 @@ FriendListWindow::Friend* FriendListWindow::GetFriendByUUID(const char* uuid) {
 void FriendListWindow::RemoveFriend(Friend* f) {
     //std::lock_guard<std::recursive_mutex> lock(friends_mutex);
     if (!f) return;
-    std::unordered_map<std::string, Friend*>::iterator it1 = friends.find(f->uuid);
+    const std::unordered_map<std::string, Friend*>::iterator it1 = friends.find(f->uuid);
     if (it1 != friends.end()) {
         friends.erase(it1);
     }
@@ -373,7 +373,7 @@ void FriendListWindow::RemoveFriend(Friend* f) {
         if (it2 != uuid_by_name.end() && it2->second == f->uuid)
             uuid_by_name.erase(it2);
     }
-    auto alias_it = uuid_by_name.find(f->alias);
+    const auto alias_it = uuid_by_name.find(f->alias);
     if(alias_it != uuid_by_name.end())
         uuid_by_name.erase(alias_it);
     delete f;
@@ -419,7 +419,7 @@ void FriendListWindow::Initialize() {
             std::wstring player_name = GuiUtils::SanitizePlayerName(pak->player_name);
             GW::Player* a = GW::PlayerMgr::GetPlayerByName(pak->player_name);
             if (!a || !a->primary) return;
-            uint8_t profession = static_cast<uint8_t>(a->primary);
+            const uint8_t profession = static_cast<uint8_t>(a->primary);
             Friend* f = GetFriend(&player_name[0]);
             if (!f) return;
             Character* fc = f->GetCharacter(&player_name[0]);
@@ -458,7 +458,7 @@ void FriendListWindow::Initialize() {
                 }
                 if (player_name_start == (size_t)-1)
                     return;
-                std::wstring player_name(&message[player_name_start], player_name_end - player_name_start);
+                const std::wstring player_name(&message[player_name_start], player_name_end - player_name_start);
                 Friend* f = GetFriend(player_name.c_str());
                 if (!f || f->alias == player_name) 
                     return;
@@ -519,7 +519,7 @@ void FriendListWindow::Update(float delta) {
     if (!friend_list_ready) 
         return;
     if (!poll_queued) {
-        int interval_check = poll_interval_seconds * CLOCKS_PER_SEC;
+        const int interval_check = poll_interval_seconds * CLOCKS_PER_SEC;
         if (!friends_list_checked || clock() - friends_list_checked > interval_check) {
             //Log::Log("Queueing poll friends list\n");
             Poll();
@@ -529,12 +529,11 @@ void FriendListWindow::Update(float delta) {
 void FriendListWindow::Poll() {
     if (loading || polling) return;
     polling = true;
-    clock_t now = clock();
+    const clock_t now = clock();
     GW::FriendList* fl = GW::FriendListMgr::GetFriendList();
     if (!fl) return;
     //Log::Log("Polling friends list\n");
-    for (unsigned int i = 0; i < fl->friends.size(); i++) {
-        GW::Friend* f = fl->friends[i];
+    for (auto f : fl->friends) {
         if (!f) continue;
         Friend* lf = SetFriend(f->uuid, f->type, f->status, f->zone_id, f->charname, f->alias);
         if (!lf) continue;
@@ -545,7 +544,7 @@ void FriendListWindow::Poll() {
         lf->last_update = now;
     }
     //Log::Log("Polling non-gw friends list\n");
-    int friend_list_spaces = 100 - static_cast<int>(fl->number_of_friend);
+    const int friend_list_spaces = 100 - static_cast<int>(fl->number_of_friend);
     std::unordered_map<std::string, Friend*>::iterator it = friends.begin();
     while (it != friends.end()) {
         Friend* lf = it->second;
@@ -604,20 +603,20 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
         return;
     ImGui::SetNextWindowPos(ImVec2(0.0f, 72.0f), ImGuiSetCond_FirstUseEver);
     ImGuiIO* io = &ImGui::GetIO();
-    ImVec2 window_size = ImVec2(540.0f * io->FontGlobalScale, 512.0f * io->FontGlobalScale);
+    const ImVec2 window_size = ImVec2(540.0f * io->FontGlobalScale, 512.0f * io->FontGlobalScale);
     float cols[3] = { 180.0f * io->FontGlobalScale, 360.0f * io->FontGlobalScale, 540.0f * io->FontGlobalScale };
     ImGui::SetNextWindowSize(window_size, ImGuiSetCond_FirstUseEver);
     if (is_widget)
         ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(0).Value);
-    bool ok = ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags());
+    const bool ok = ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags());
     if (is_widget)
         ImGui::PopStyleColor();
     if (!ok)
         return ImGui::End();
 
     unsigned int colIdx = 0;
-    bool show_charname = ImGui::GetContentRegionAvailWidth() > 180.0f;
-    bool _show_location = ImGui::GetContentRegionAvailWidth() > 360.0f;
+    const bool show_charname = ImGui::GetContentRegionAvailWidth() > 180.0f;
+    const bool _show_location = ImGui::GetContentRegionAvailWidth() > 360.0f;
     if (!is_widget) {
         ImGui::Text("Name");
         if (show_charname) {
@@ -631,11 +630,11 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
         ImGui::Separator();
         ImGui::BeginChild("friend_list_scroll");
     }
-    float height = ImGui::GetTextLineHeightWithSpacing();
+    const float height = ImGui::GetTextLineHeightWithSpacing();
     ImVec2 pos;
     if (show_my_status) {
         char* status_c = "Offline";
-        uint32_t status = GW::FriendListMgr::GetMyStatus();
+        const uint32_t status = GW::FriendListMgr::GetMyStatus();
         switch (status) {
             case static_cast<uint32_t>(GW::FriendStatus::FriendStatus_Online):
                 status_c = "Online";
@@ -672,8 +671,8 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
         ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0, 0));
         ImGui::PushID(lf.uuid.c_str());
         ImGui::Button("", ImVec2(ImGui::GetContentRegionAvailWidth(), height));
-        bool left_clicked = ImGui::IsItemClicked(0);
-        bool right_clicked = ImGui::IsItemClicked(1);
+        const bool left_clicked = ImGui::IsItemClicked(0);
+        const bool right_clicked = ImGui::IsItemClicked(1);
         // TODO: Rename, Remove, Ignore.
         //ImGui::BeginPopupContextItem();
 
@@ -701,7 +700,7 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
         if (show_charname && lf.current_char != nullptr) {
             ImGui::SameLine(cols[colIdx]);
             std::string current_char_name_s = GuiUtils::WStringToString(lf.current_char->name);
-            uint8_t prof = lf.current_char->profession;
+            const uint8_t prof = lf.current_char->profession;
             if (prof) ImGui::PushStyleColor(ImGuiCol_Text, ProfColors[lf.current_char->profession].Value);
             if (is_widget) {
                 pos = ImGui::GetCursorPos();
@@ -867,7 +866,7 @@ void FriendListWindow::LoadCharnames(const char* section, std::unordered_map<std
         std::wstring name = parts[0];
         uint8_t profession = 0;
         if (parts.size() > 1) {
-            int p = _wtoi(&parts[1][0]);
+            const int p = _wtoi(&parts[1][0]);
             if (p > 0 && p < 11)
                 profession = (uint8_t)p;
         }

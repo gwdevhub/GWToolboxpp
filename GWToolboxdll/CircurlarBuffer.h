@@ -1,38 +1,39 @@
 #pragma once
 
 template <typename T>
-struct CircularBuffer {
-
+struct CircularBuffer
+{
     CircularBuffer(size_t size)
         : buffer(new T[size])
-        , cursor(0)
-        , count(0)
-        , allocated(size)
-    {
-    }
+          , cursor(0)
+          , count(0)
+          , allocated(size)
+    { }
 
     CircularBuffer() = default;
 
-    CircularBuffer(const CircularBuffer&) = delete;
+    CircularBuffer(const CircularBuffer &) = delete;
 
-    CircularBuffer(CircularBuffer&& other)
+    CircularBuffer(CircularBuffer &&other)
         : buffer(other.buffer)
-        , cursor(other.cursor)
-        , count(other.count)
-        , allocated(other.allocated)
+          , cursor(other.cursor)
+          , count(other.count)
+          , allocated(other.allocated)
     {
         other.buffer = nullptr;
     }
 
-    ~CircularBuffer() {
+    ~CircularBuffer()
+    {
         delete[] buffer;
     }
 
-    bool full()   { return size == allocated; }
-    void clear()  { count = 0, cursor = 0; }
+    bool full() { return size == allocated; }
+    void clear() { count = 0, cursor = 0; }
     size_t size() { return count; }
 
-    void add(const T &val) {
+    void add(const T &val)
+    {
         buffer[cursor] = val;
         cursor = (cursor + 1) % allocated;
         if (count < allocated) {
@@ -40,7 +41,8 @@ struct CircularBuffer {
         }
     }
 
-    T& operator[](size_t index) {
+    T &operator[](size_t index)
+    {
         ASSERT(index < count);
         ASSERT(cursor == count || count == allocated);
         size_t first = cursor % count;
@@ -48,7 +50,8 @@ struct CircularBuffer {
         return buffer[i];
     }
 
-    inline CircularBuffer& operator=(CircularBuffer&& other) {
+    CircularBuffer &operator=(CircularBuffer &&other)
+    {
         this->~CircularBuffer();
         buffer = other.buffer;
         cursor = other.cursor;
@@ -59,7 +62,7 @@ struct CircularBuffer {
     }
 
 private:
-    T     *buffer = nullptr;
+    T *buffer = nullptr;
     size_t cursor = 0; // next pos to write
     size_t count = 0;  // number of elements
     size_t allocated = 0;

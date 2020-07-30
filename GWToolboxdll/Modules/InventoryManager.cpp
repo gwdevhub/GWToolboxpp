@@ -224,7 +224,7 @@ void InventoryManager::SalvageAll(SalvageAllType type) {
         CancelSalvage();
         return;
     }
-    std::pair<GW::Bag*, uint32_t> available_slot = GetAvailableInventorySlot();
+    const std::pair<GW::Bag*, uint32_t> available_slot = GetAvailableInventorySlot();
     if (!available_slot.first) {
         CancelSalvage();
         Log::Warning("No more space in inventory");
@@ -279,7 +279,7 @@ void InventoryManager::FetchPotentialItems() {
     if (salvage_all_type != SalvageAllType::None) {
         ClearPotentialItems();
         while ((found = GetNextUnsalvagedItem(context_item.item(), found)) != nullptr) {
-            PotentialItem* item = new PotentialItem();
+            auto * item = new PotentialItem();
             GW::UI::AsyncDecodeStr(found->complete_name_enc ? found->complete_name_enc : found->name_enc, &item->name);
             GW::UI::AsyncDecodeStr(found->name_enc, &item->short_name);
             if(found->info_string)
@@ -292,7 +292,7 @@ void InventoryManager::FetchPotentialItems() {
     }
 }
 InventoryManager::Item* InventoryManager::GetNextUnidentifiedItem(Item* start_after_item) {
-    size_t start_bag = static_cast<size_t>(GW::Constants::Bag::Backpack);
+    auto start_bag = static_cast<size_t>(GW::Constants::Bag::Backpack);
     size_t start_position = 0;
     if (start_after_item) {
         for (size_t i = 0; i < start_after_item->bag->items.size(); i++) {
@@ -307,7 +307,7 @@ InventoryManager::Item* InventoryManager::GetNextUnidentifiedItem(Item* start_af
             }
         }
     }
-    size_t end_bag = static_cast<size_t>(GW::Constants::Bag::Equipment_Pack);
+    auto end_bag = static_cast<size_t>(GW::Constants::Bag::Equipment_Pack);
     size_t items_found = 0;
     Item* item = nullptr;
     for (size_t bag_i = start_bag; bag_i <= end_bag; bag_i++) {
@@ -347,7 +347,7 @@ InventoryManager::Item* InventoryManager::GetNextUnidentifiedItem(Item* start_af
     return nullptr;
 }
 InventoryManager::Item* InventoryManager::GetNextUnsalvagedItem(Item* kit, Item* start_after_item) {
-    size_t start_bag = static_cast<size_t>(GW::Constants::Bag::Backpack);
+    auto start_bag = static_cast<size_t>(GW::Constants::Bag::Backpack);
     size_t start_position = 0;
     if (start_after_item) {
         for (size_t i = 0; i < start_after_item->bag->items.size(); i++) {
@@ -362,7 +362,7 @@ InventoryManager::Item* InventoryManager::GetNextUnsalvagedItem(Item* kit, Item*
             }
         }
     }
-    size_t end_bag = static_cast<size_t>(GW::Constants::Bag::Bag_2);
+    auto end_bag = static_cast<size_t>(GW::Constants::Bag::Bag_2);
     size_t items_found = 0;
     Item* item = nullptr;
     for (size_t bag_i = start_bag; bag_i <= end_bag; bag_i++) {
@@ -389,7 +389,7 @@ InventoryManager::Item* InventoryManager::GetNextUnsalvagedItem(Item* kit, Item*
                 continue; // Don't salvage armor, or customised weapons.
             if (item->IsBlue() && !item->GetIsIdentified() && (kit && kit->IsLesserKit()))
                 continue; // Note: lesser kits cant salvage blue unids - Guild Wars bug/feature
-            GW::Constants::Rarity rarity = item->GetRarity();
+            const GW::Constants::Rarity rarity = item->GetRarity();
             switch (rarity) {
             case GW::Constants::Rarity::Gold:
                 if (!item->GetIsIdentified()) continue;
@@ -418,11 +418,11 @@ std::pair<GW::Bag*, uint32_t> InventoryManager::GetAvailableInventorySlot(GW::It
         return { existing_stack->bag, existing_stack->slot };
     GW::Bag** bags = GW::Items::GetBagArray();
     if (!bags) return { nullptr,0 };
-    size_t end_bag = static_cast<size_t>(GW::Constants::Bag::Bag_2);
+    auto end_bag = static_cast<size_t>(GW::Constants::Bag::Bag_2);
     Item* im_item = static_cast<Item*>(like_item);
     if(im_item && (im_item->IsWeapon() || im_item->IsArmor()))
         end_bag = static_cast<size_t>(GW::Constants::Bag::Equipment_Pack);
-    for (size_t bag_idx = static_cast<size_t>(GW::Constants::Bag::Backpack); bag_idx <= end_bag; bag_idx++) {
+    for (auto bag_idx = static_cast<size_t>(GW::Constants::Bag::Backpack); bag_idx <= end_bag; bag_idx++) {
         GW::Bag* bag = bags[bag_idx];
         if (!bag || !bag->items.valid()) continue;
         for (size_t slot = 0; slot < bag->items.size(); slot++) {
@@ -438,7 +438,7 @@ GW::Item* InventoryManager::GetAvailableInventoryStack(GW::Item* like_item, bool
     GW::Item* best_item = nullptr;
     GW::Bag** bags = GW::Items::GetBagArray();
     if (!bags) return best_item;
-    for (size_t bag_idx = static_cast<size_t>(GW::Constants::Bag::Backpack); bag_idx < static_cast<size_t>(GW::Constants::Bag::Equipment_Pack); bag_idx++) {
+    for (auto bag_idx = static_cast<size_t>(GW::Constants::Bag::Backpack); bag_idx < static_cast<size_t>(GW::Constants::Bag::Equipment_Pack); bag_idx++) {
         GW::Bag* bag = bags[bag_idx];
         if (!bag || !bag->items_count || !bag->items.valid()) continue;
         for (GW::Item* item : bag->items) {
@@ -544,7 +544,7 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
         }
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0));
         ImGui::PushStyleColor(ImGuiCol_Button, ImColor(0, 0, 0, 0).Value);
-        ImVec2 size = ImVec2(250.0f * ImGui::GetIO().FontGlobalScale,0);
+        const ImVec2 size = ImVec2(250.0f * ImGui::GetIO().FontGlobalScale,0);
         ImGui::Text(context_item_name_s.c_str());
         ImGui::Separator();
         // Shouldn't really fetch item() every frame, but its only when the menu is open and better than risking a crash
@@ -641,8 +641,8 @@ void InventoryManager::Draw(IDirect3DDevice9* device) {
             Item* item;
             GW::Bag* bag = nullptr;
             bool has_items_to_salvage = false;
-            for(size_t i=0;i< potential_salvage_all_items.size();i++) {
-                pi = potential_salvage_all_items[i];
+            for (auto &potential_salvage_all_item : potential_salvage_all_items) {
+                pi = potential_salvage_all_item;
                 if (!pi) continue;
                 item = pi->item();
                 if (!item) continue;

@@ -32,6 +32,7 @@
 #include <Logger.h>
 
 #include <Modules/Resources.h>
+#include <wchar.h>
 #include <Widgets/AlcoholWidget.h>
 #include <Widgets/BondsWidget.h>
 #include <Widgets/ClockWidget.h>
@@ -129,9 +130,12 @@ void InfoWindow::OnMessageCore(GW::HookStatus*, GW::Packet::StoC::MessageCore* p
     // set the right index in party
     auto instance = &Instance();
     for (unsigned i = 0; i < partymembers.size(); ++i) {
-        if (i >= instance->status.size()) continue;
-        if (instance->status[i] == Resigned) continue;
-        if (partymembers[i].login_number >= players.size()) continue;
+        if (i >= instance->status.size())
+            continue;
+        if (instance->status[i] == Resigned)
+            continue;
+        if (partymembers[i].login_number >= players.size())
+            continue;
         if (GuiUtils::SanitizePlayerName(players[partymembers[i].login_number].name) == buf) {
             instance->status[i] = Resigned;
             Instance().timestamp[i] = GW::Map::GetInstanceTime();
@@ -264,7 +268,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
             if (player) {
                 snprintf(x_buf, 32, "%.2f", player->pos.x);
                 snprintf(y_buf, 32, "%.2f", player->pos.y);
-                float s = sqrtf(player->move_x * player->move_x + player->move_y * player->move_y);
+                const float s = sqrtf(player->move_x * player->move_x + player->move_y * player->move_y);
                 snprintf(s_buf, 32, "%.3f", s / 288.0f);
                 snprintf(agentid_buf, 32, "%d", player->agent_id);
                 snprintf(modelid_buf, 32, "%d", player->player_number);
@@ -281,9 +285,9 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
             if (ImGui::TreeNode("Effects##player")) {
                 GW::EffectArray effects = GW::Effects::GetPlayerEffectArray();
                 if (effects.valid()) {
-                    for (DWORD i = 0; i < effects.size(); ++i) {
-                        ImGui::Text("id: %d", effects[i].skill_id);
-                        uint32_t time = effects[i].GetTimeRemaining();
+                    for (auto &effect : effects) {
+                        ImGui::Text("id: %d", effect.skill_id);
+                        const uint32_t time = effect.GetTimeRemaining();
                         ImGui::SameLine();
                         ImGui::Text(" duration: %u", time / 1000);
                     }
@@ -293,11 +297,11 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
             if (ImGui::TreeNode("Buffs##player")) {
                 GW::BuffArray effects = GW::Effects::GetPlayerBuffArray();
                 if (effects.valid()) {
-                    for (DWORD i = 0; i < effects.size(); ++i) {
-                        ImGui::Text("id: %d", effects[i].skill_id);
-                        if (effects[i].target_agent_id) {
+                    for (auto &effect : effects) {
+                        ImGui::Text("id: %d", effect.skill_id);
+                        if (effect.target_agent_id) {
                             ImGui::SameLine();
-                            ImGui::Text(" target: %d", effects[i].target_agent_id);
+                            ImGui::Text(" target: %d", effect.target_agent_id);
                         }
                     }
                 }
@@ -319,7 +323,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
             if (target) {
                 snprintf(x_buf, 32, "%.2f", target->pos.x);
                 snprintf(y_buf, 32, "%.2f", target->pos.y);
-                float s = sqrtf(target->move_x * target->move_x + target->move_y * target->move_y);
+                const float s = sqrtf(target->move_x * target->move_x + target->move_y * target->move_y);
                 snprintf(s_buf, 32, "%.3f", s / 288.0f);
                 snprintf(agentid_buf, 32, "%d", target->agent_id);
                 snprintf(modelid_buf, 32, "%d", target_living ? target_living->player_number : 0);
@@ -495,10 +499,9 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
         }
         if (show_quest && ImGui::CollapsingHeader("Quest")) {
             GW::QuestLog qlog = GW::GameContext::instance()->world->quest_log;
-            DWORD qid = GW::GameContext::instance()->world->active_quest_id;
+            const DWORD qid = GW::GameContext::instance()->world->active_quest_id;
             if (qid && qlog.valid()) {
-                for (unsigned int i = 0; i < qlog.size(); ++i) {
-                    GW::Quest q = qlog[i];
+                for (auto q : qlog) {
                     if (q.quest_id == qid) {
                         ImGui::Text("ID: 0x%X", q.quest_id);
                         ImGui::Text("Marker: (%.0f, %.0f)", q.marker.x, q.marker.y);
@@ -525,7 +528,7 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                     if (agent == nullptr) continue;
                     if (agent->allegiance != 0x3) continue; // ignore non-hostiles
                     if (agent->GetIsDead()) continue; // ignore dead 
-                    float sqrd = GW::GetSquareDistance(player->pos, agent->pos);
+                    const float sqrd = GW::GetSquareDistance(player->pos, agent->pos);
                     if (agent->player_number == GW::Constants::ModelID::DoA::SoulTormentor
                         || agent->player_number == GW::Constants::ModelID::DoA::VeilSoulTormentor) {
                         if (GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish
@@ -577,7 +580,7 @@ void InfoWindow::Update(float delta) {
             }
         }
         for (unsigned i = 0; i < partymembers.size(); ++i) {
-            GW::PlayerPartyMember& partymember = partymembers[i];
+            GW::PlayerPartyMember &partymember = partymembers[i];
             if (partymember.connected()) {
                 if (status[i] == NotYetConnected || status[i] == Unknown) {
                     status[i] = Connected;

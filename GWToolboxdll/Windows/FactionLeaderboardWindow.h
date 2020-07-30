@@ -31,12 +31,12 @@ private:
         uint32_t rank=0;
         uint32_t allegiance=0;
         uint32_t faction=0;
-        wchar_t guild_wstr[32];
-        wchar_t tag_wstr[5];
-        char guild_str[128]; // unicode char can be up to 4 bytes
-        char tag_str[20]; // unicode char can be up to 4 bytes
-        wchar_t map_name_enc[16];
-        char map_name[256];
+        wchar_t guild_wstr[32]{};
+        wchar_t tag_wstr[5]{};
+        char guild_str[128]{}; // unicode char can be up to 4 bytes
+        char tag_str[20]{}; // unicode char can be up to 4 bytes
+        wchar_t map_name_enc[16]{};
+        char map_name[256]{};
         std::wstring guild_wiki_url;
         bool initialised = false;
     };
@@ -56,8 +56,8 @@ public:
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;
 private:
-    std::vector<LeaderboardEntry> leaderboard;
-    std::vector<LeaderboardEntry>::iterator lit;
+    std::vector<LeaderboardEntry> leaderboard{};
+    std::vector<LeaderboardEntry>::iterator lit{};
 
     GW::HookEntry TownAlliance_Entry;
 };

@@ -122,10 +122,10 @@ wchar_t* Pcon::SetPlayerName() {
 void Pcon::Draw(IDirect3DDevice9* device) {
     UNREFERENCED_PARAMETER(device);
     if (texture == nullptr) return;
-    ImVec2 pos = ImGui::GetCursorPos();
-    ImVec2 s(size, size);
-    ImVec4 bg = IsEnabled() ? ImColor(enabled_bg_color) : ImVec4(0, 0, 0, 0);
-    ImVec4 tint(1, 1, 1, 1);
+    const ImVec2 pos = ImGui::GetCursorPos();
+    const ImVec2 s(size, size);
+    const ImVec4 bg = IsEnabled() ? ImColor(enabled_bg_color) : ImVec4(0, 0, 0, 0);
+    const ImVec4 tint(1, 1, 1, 1);
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
     if (ImGui::ImageButton((ImTextureID)texture, s, uv0, uv1, 0, bg, tint)) {
         Toggle();
@@ -135,7 +135,7 @@ void Pcon::Draw(IDirect3DDevice9* device) {
         ImGui::SetTooltip(desc.c_str());
     if (maptype != GW::Constants::InstanceType::Loading) {
         ImFont* f = GuiUtils::GetFont(GuiUtils::f20);
-        ImVec2 nextPos = ImGui::GetCursorPos();
+        const ImVec2 nextPos = ImGui::GetCursorPos();
         ImGui::PushFont(f);
         ImVec4 color;
         if (quantity == 0) color = ImVec4(1, 0, 0, 1);
@@ -223,7 +223,7 @@ void Pcon::Update(int delay) {
             && CanUseByEffect()) {
 
             bool used = false;
-            int qty = CheckInventory(&used);
+            const int qty = CheckInventory(&used);
             AfterUsed(used, qty);
         }
     }
@@ -284,10 +284,10 @@ void Pcon::AfterUsed(bool used, int qty) {
 GW::Item* Pcon::FindVacantStackOrSlotInInventory(GW::Item* likeItem) { // Scan bags, find an incomplete stack, or otherwise an empty slot.
     GW::Bag** bags = GW::Items::GetBagArray();
     if (bags == nullptr) return nullptr;
-    size_t emptySlotIdx = (size_t)-1;
+    auto emptySlotIdx = (size_t)-1;
     GW::Bag* emptyBag = nullptr;
     
-    for (size_t bagIndex = static_cast<size_t>(GW::Constants::Bag::Bag_2); bagIndex > 0; --bagIndex) { // Work from last bag to first; pcons at bottom of inventory
+    for (auto bagIndex = static_cast<size_t>(GW::Constants::Bag::Bag_2); bagIndex > 0; --bagIndex) { // Work from last bag to first; pcons at bottom of inventory
         GW::Bag* bag = bags[bagIndex];
         if (bag == nullptr) continue;   // No bag, skip
         GW::ItemArray items = bag->items;
@@ -317,7 +317,7 @@ GW::Item* Pcon::FindVacantStackOrSlotInInventory(GW::Item* likeItem) { // Scan b
         }
     }
     if (!emptyBag) return nullptr;
-    GW::Item* item = new GW::Item(); // Create a "fake" item...
+    auto * item = new GW::Item(); // Create a "fake" item...
     item->bag = emptyBag; // ...that belongs in the empty bag/slot we found...
     item->slot = static_cast<uint8_t>(emptySlotIdx);
     item->quantity = 0; // ...with 250 available slots.
@@ -368,14 +368,14 @@ void Pcon::Refill() {
     if (quantity >= threshold)
         return StopRefill();
     quantity_storage = CheckInventory(nullptr, nullptr, static_cast<int>(GW::Constants::Bag::Storage_1), static_cast<int>(GW::Constants::Bag::Storage_14));
-    int points_needed = threshold - quantity; // quantity is actually points e.g. 20 grog = 60 quantity
+    const int points_needed = threshold - quantity; // quantity is actually points e.g. 20 grog = 60 quantity
     size_t quantity_to_move = 0;
     if (points_needed < 1)
         return StopRefill();
     GW::Bag** bags = GW::Items::GetBagArray();
     if (bags == nullptr)
         return StopRefill();
-    for (size_t bagIndex = static_cast<size_t>(GW::Constants::Bag::Storage_1); bagIndex <= static_cast<size_t>(GW::Constants::Bag::Storage_14); ++bagIndex) {
+    for (auto bagIndex = static_cast<size_t>(GW::Constants::Bag::Storage_1); bagIndex <= static_cast<size_t>(GW::Constants::Bag::Storage_14); ++bagIndex) {
         GW::Bag* storageBag = bags[bagIndex];
         if (storageBag == nullptr) continue;    // No bag, skip
         GW::ItemArray storageItems = storageBag->items;
@@ -512,9 +512,9 @@ bool PconGeneric::CanUseByEffect() const {
     GW::EffectArray* effects = GetEffects();
     if (!effects) return true;
 
-    for (DWORD i = 0; i < effects->size(); i++) {
-        if (effects->at(i).skill_id == (DWORD)effectID)
-            return effects->at(i).GetTimeRemaining() < 1000;
+    for (auto &effect : *effects) {
+        if (effect.skill_id == (DWORD)effectID)
+            return effect.GetTimeRemaining() < 1000;
     }
     return true;
 }
@@ -559,13 +559,13 @@ bool PconCity::CanUseByEffect() const {
     if (_player->move_x == 0.0f && _player->move_y == 0.0f)
         return false;
 
-    for (DWORD i = 0; i < effects->size(); i++) {
-        if (effects->at(i).GetTimeRemaining() < 1000) continue;
-        if (effects->at(i).skill_id == (DWORD)SkillID::Sugar_Rush_short
-            || effects->at(i).skill_id == (DWORD)SkillID::Sugar_Rush_medium
-            || effects->at(i).skill_id == (DWORD)SkillID::Sugar_Rush_long
-            || effects->at(i).skill_id == (DWORD)SkillID::Sugar_Jolt_short
-            || effects->at(i).skill_id == (DWORD)SkillID::Sugar_Jolt_long) {
+    for (auto &effect : *effects) {
+        if (effect.GetTimeRemaining() < 1000) continue;
+        if (effect.skill_id == (DWORD)SkillID::Sugar_Rush_short
+            || effect.skill_id == (DWORD)SkillID::Sugar_Rush_medium
+            || effect.skill_id == (DWORD)SkillID::Sugar_Rush_long
+            || effect.skill_id == (DWORD)SkillID::Sugar_Jolt_short
+            || effect.skill_id == (DWORD)SkillID::Sugar_Jolt_long) {
             return false; // already on
         }
     }
@@ -676,8 +676,8 @@ bool PconLunar::CanUseByEffect() const {
     GW::EffectArray* effects = GetEffects();
     if (!effects) return true;
 
-    for (DWORD i = 0; i < effects->size(); i++) {
-        if (effects->at(i).skill_id == (DWORD)GW::Constants::SkillID::Lunar_Blessing)
+    for (auto &effect : *effects) {
+        if (effect.skill_id == (DWORD)GW::Constants::SkillID::Lunar_Blessing)
             return false;
     }
     return true;

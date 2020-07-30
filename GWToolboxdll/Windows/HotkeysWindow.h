@@ -27,7 +27,7 @@ public:
 
     TBHotkey* current_hotkey = nullptr;
 
-    bool IsMapReady();
+    static bool IsMapReady();
     // Update. Will always be called every frame.
     void Update(float delta) override;
 
@@ -41,7 +41,7 @@ public:
     void SaveSettings(CSimpleIni* ini) override;
 
 private:
-    std::vector<TBHotkey*> hotkeys;             // list of hotkeys
+    std::vector<TBHotkey*> hotkeys{};             // list of hotkeys
 
     long max_id_ = 0;
     bool block_hotkeys = false;

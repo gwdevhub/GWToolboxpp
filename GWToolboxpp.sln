@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30104.148
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MinHook", "Dependencies\GWCA\vc\MinHook.vcxproj", "{AC820BBA-BB5B-4D8C-96FF-EA8138CEED52}"
 EndProject
@@ -22,11 +22,9 @@ Global
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{AC820BBA-BB5B-4D8C-96FF-EA8138CEED52}.Debug|Win32.ActiveCfg = Debug|Win32
-		{AC820BBA-BB5B-4D8C-96FF-EA8138CEED52}.Debug|Win32.Build.0 = Debug|Win32
 		{AC820BBA-BB5B-4D8C-96FF-EA8138CEED52}.Release|Win32.ActiveCfg = Release|Win32
 		{AC820BBA-BB5B-4D8C-96FF-EA8138CEED52}.Release|Win32.Build.0 = Release|Win32
 		{B3359F05-68CF-4E7F-B9D6-D106F6D48A38}.Debug|Win32.ActiveCfg = Debug|Win32
-		{B3359F05-68CF-4E7F-B9D6-D106F6D48A38}.Debug|Win32.Build.0 = Debug|Win32
 		{B3359F05-68CF-4E7F-B9D6-D106F6D48A38}.Release|Win32.ActiveCfg = Release|Win32
 		{B3359F05-68CF-4E7F-B9D6-D106F6D48A38}.Release|Win32.Build.0 = Release|Win32
 		{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}.Debug|Win32.ActiveCfg = Debug|Win32
@@ -34,15 +32,12 @@ Global
 		{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}.Release|Win32.ActiveCfg = Release|Win32
 		{CDB9D1A9-9F47-4A0B-AB3C-BEF207BD289E}.Release|Win32.Build.0 = Release|Win32
 		{27689431-347E-448F-B71D-ED2E09279478}.Debug|Win32.ActiveCfg = Debug|Win32
-		{27689431-347E-448F-B71D-ED2E09279478}.Debug|Win32.Build.0 = Debug|Win32
 		{27689431-347E-448F-B71D-ED2E09279478}.Release|Win32.ActiveCfg = Release|Win32
 		{27689431-347E-448F-B71D-ED2E09279478}.Release|Win32.Build.0 = Release|Win32
 		{3B5C5692-2AFC-4C12-8E8D-9DCCF3FDB3A9}.Debug|Win32.ActiveCfg = Debug|Win32
-		{3B5C5692-2AFC-4C12-8E8D-9DCCF3FDB3A9}.Debug|Win32.Build.0 = Debug|Win32
 		{3B5C5692-2AFC-4C12-8E8D-9DCCF3FDB3A9}.Release|Win32.ActiveCfg = Release|Win32
 		{3B5C5692-2AFC-4C12-8E8D-9DCCF3FDB3A9}.Release|Win32.Build.0 = Release|Win32
 		{DA0CC41A-6940-4ED3-A13A-BE2552DB1C67}.Debug|Win32.ActiveCfg = Debug|Win32
-		{DA0CC41A-6940-4ED3-A13A-BE2552DB1C67}.Debug|Win32.Build.0 = Debug|Win32
 		{DA0CC41A-6940-4ED3-A13A-BE2552DB1C67}.Release|Win32.ActiveCfg = Release|Win32
 		{DA0CC41A-6940-4ED3-A13A-BE2552DB1C67}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
