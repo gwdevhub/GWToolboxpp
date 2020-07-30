@@ -58,11 +58,11 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
     if (is_movable || is_resizable) {
         char buf[128];
         sprintf(buf, "You need to show the %s for this control to work", TypeName());
-        if (is_movable && ImGui::DragFloat2("Position", (float *)&pos, 1.0f, 0.0f, 0.0f, "%.0f")) {
+        if (is_movable && ImGui::DragFloat2("Position", reinterpret_cast<float *>(&pos), 1.0f, 0.0f, 0.0f, "%.0f")) {
             ImGui::SetWindowPos(Name(), pos);
         }
         ImGui::ShowHelp(buf);
-        if (is_resizable && ImGui::DragFloat2("Size", (float *)&size, 1.0f, 0.0f, 0.0f, "%.0f")) {
+        if (is_resizable && ImGui::DragFloat2("Size", reinterpret_cast<float *>(&size), 1.0f, 0.0f, 0.0f, "%.0f")) {
             ImGui::SetWindowSize(Name(), size);
         }
         ImGui::ShowHelp(buf);
