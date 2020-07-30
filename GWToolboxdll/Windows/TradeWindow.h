@@ -1,5 +1,7 @@
 #pragma once
 
+#include <GWCA/Packets/StoC.h>
+
 #include <CircurlarBuffer.h>
 #include <ToolboxWindow.h>
 #include <Utils/RateLimiter.h>
@@ -17,15 +19,19 @@ public:
     const char* Name() const override { return "Trade"; }
 
     void Initialize() override;
-    void Terminate() override;
     static void CmdPricecheck(const wchar_t* message, int argc, LPWSTR* argv);
+    static void OnMessageLocal(GW::HookStatus *status, GW::Packet::StoC::MessageLocal *pak);
 
+    bool IsTradeAlert(std::string &message);
     void Update(float delta) override;
     void Draw(IDirect3DDevice9* pDevice) override;
+    void SignalTerminate() override;
+    void RegisterSettingsContent() override;
 
     void LoadSettings(CSimpleIni* ini) override;
     void SaveSettings(CSimpleIni* ini) override;
     void DrawSettingInternal() override;
+    void DrawChatSettings(bool ownwindow = false);
 
 private:
     struct Message {
@@ -33,6 +39,8 @@ private:
         std::string name;
         std::string message;
     };
+
+    GW::HookEntry OnMessageLocal_Entry;
 
     WSAData wsaData = {0};
 
@@ -46,6 +54,9 @@ private:
 
     // if enable, we won't print the messages containing word from alert_words
     bool filter_alerts = false;
+
+    // if enabled, will also apply the trade alerts filter to incoming local trade chat messages.
+    bool filter_local_trade = false;
 
     #define ALERT_BUF_SIZE 1024 * 16
     char alert_buf[ALERT_BUF_SIZE] = "";
