@@ -28,7 +28,7 @@ private:
 
     bool draw_center_ = false;
 
-    int line_thickness = 1;
+    float line_thickness = 1.f;
 
     Color color_range_hos = 0;
     Color color_range_aggro = 0;

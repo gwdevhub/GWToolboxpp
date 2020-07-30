@@ -453,8 +453,6 @@ void Minimap::Draw(IDirect3DDevice9 *device)
                 D3DXMatrixScaling(&scaleM, Instance().scale, Instance().scale, 1.0f);
                 D3DXMatrixTranslation(&translationM, Instance().translation.x, Instance().translation.y, 0);
 
-                D3DVIEWPORT9 viewport;
-                device->GetViewport(&viewport);
                 float gwinch_scale = static_cast<float>(Instance().size.x) / 5000.0f / 2.f * Instance().scale;
                 if (gwinch_scale != Instance().gwinch_scale.x) {
                     Instance().range_renderer.Invalidate();

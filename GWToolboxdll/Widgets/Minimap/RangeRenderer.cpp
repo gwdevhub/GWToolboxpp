@@ -21,7 +21,7 @@ void RangeRenderer::LoadSettings(CSimpleIni *ini, const char *section)
     color_range_cast = Colors::Load(ini, section, "color_range_cast", 0xFF117777);
     color_range_spirit = Colors::Load(ini, section, "color_range_spirit", 0xFF337733);
     color_range_compass = Colors::Load(ini, section, "color_range_compass", 0xFF666611);
-    line_thickness = ini->GetLongValue(section, "range_line_thickness", 1);
+    line_thickness = static_cast<float>(ini->GetDoubleValue(section, "range_line_thickness", 1.f));
     Invalidate();
 }
 void RangeRenderer::SaveSettings(CSimpleIni *ini, const char *section) const
@@ -31,7 +31,7 @@ void RangeRenderer::SaveSettings(CSimpleIni *ini, const char *section) const
     Colors::Save(ini, section, "color_range_cast", color_range_cast);
     Colors::Save(ini, section, "color_range_spirit", color_range_spirit);
     Colors::Save(ini, section, "color_range_compass", color_range_compass);
-    ini->SetLongValue(section, "range_line_thickness", line_thickness);
+    ini->SetDoubleValue(section, "range_line_thickness", static_cast<double>(line_thickness));
 }
 void RangeRenderer::DrawSettings()
 {
@@ -43,14 +43,14 @@ void RangeRenderer::DrawSettings()
         color_range_cast = 0xFF117777;
         color_range_spirit = 0xFF337733;
         color_range_compass = 0xFF666611;
-        line_thickness = 1;
+        line_thickness = 1.f;
     }
     changed |= Colors::DrawSettingHueWheel("HoS range", &color_range_hos);
     changed |= Colors::DrawSettingHueWheel("Aggro range", &color_range_aggro);
     changed |= Colors::DrawSettingHueWheel("Cast range", &color_range_cast);
     changed |= Colors::DrawSettingHueWheel("Spirit range", &color_range_spirit);
     changed |= Colors::DrawSettingHueWheel("Compass range", &color_range_compass);
-    changed |= ImGui::DragInt("Line thickness", &line_thickness, 0.1f, 1, 30, "%d");
+    changed |= ImGui::DragFloat("Line thickness", &line_thickness, 0.1f, 1.f, 10.f, "%.1f");
     if (changed)
         Invalidate();
 }
