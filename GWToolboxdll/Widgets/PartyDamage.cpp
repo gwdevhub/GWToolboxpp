@@ -276,14 +276,15 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 			} else {
 				snprintf(buf, BUF_SIZE, "%.2f m", (float)damage[i].damage / (1000 * 1000));
 			}
+            const auto height_diff = (line_height - ImGui::GetTextLineHeight()) / 2;
 			ImGui::GetWindowDrawList()->AddText(
-				ImVec2(x + ImGui::GetStyle().ItemSpacing.x, y + i * line_height),
+				ImVec2(x + ImGui::GetStyle().ItemSpacing.x, y + (i * line_height) + height_diff),
 				IM_COL32(255, 255, 255, 255), buf);
 
 			float perc_of_total = GetPercentageOfTotal(damage[i].damage);
 			snprintf(buf, BUF_SIZE, "%.1f %%", perc_of_total);
-			ImGui::GetWindowDrawList()->AddText(
-				ImVec2(x + _width / 2, y + i * line_height),
+            ImGui::GetWindowDrawList()->AddText(
+				ImVec2(x + _width / 2, y + (i * line_height) + height_diff),
 				IM_COL32(255, 255, 255, 255), buf);
 		}
 		ImGui::PopFont();
