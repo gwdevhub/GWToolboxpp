@@ -735,14 +735,18 @@ bool HotkeyToggle::GetText(void *, int idx, const char **out_text)
             return false;
     }
 }
-const bool HotkeyToggle::IsValid(CSimpleIni *ini, const char *section)
+
+bool HotkeyToggle::IsValid(CSimpleIni *ini, const char *section)
 {
-    switch (ini->GetLongValue(section, "ToggleID", (long)Clicker)) {
-        case (long)Clicker:
-        case (long)Pcons:
+    switch (ini->GetLongValue(section, "ToggleID", static_cast<long>(Clicker))) {
+        case static_cast<long>(Clicker):
+        case static_cast<long>(Pcons):
+        case static_cast<long>(CoinDrop):
+        case static_cast<long>(Tick):
             return true;
+        default:
+            return false;
     }
-    return false;
 }
 HotkeyToggle::HotkeyToggle(CSimpleIni *ini, const char *section)
     : TBHotkey(ini, section)

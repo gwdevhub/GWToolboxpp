@@ -177,7 +177,7 @@ class HotkeyToggle : public TBHotkey {
 public:
     Toggle target; // the thing to toggle
 
-    static const bool IsValid(CSimpleIni* ini, const char* section);
+    static bool IsValid(CSimpleIni *ini, const char *section);
     static const char* IniSection() { return "Toggle"; }
     const char* Name() const override { return IniSection(); }
 
