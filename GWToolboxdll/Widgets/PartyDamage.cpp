@@ -236,8 +236,10 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 		const float &x = ImGui::GetWindowPos().x;
         const float &y = ImGui::GetWindowPos().y;
         const float &_width = ImGui::GetWindowWidth();
-        const Color damage_col = Colors::Add(color_damage, Colors::ARGB(0, 20, 20, 20));
-        const Color damage_recent = Colors::Add(color_recent, Colors::ARGB(0, 20, 20, 20));
+        const Color damage_col_from = Colors::Add(color_damage, Colors::ARGB(0, 20, 20, 20));
+        const Color damage_col_to = Colors::Sub(color_damage, Colors::ARGB(0, 20, 20, 20));
+        const Color damage_recent_from = Colors::Add(color_recent, Colors::ARGB(0, 20, 20, 20));
+        const Color damage_recent_to = Colors::Sub(color_recent, Colors::ARGB(0, 20, 20, 20));
         const float height_diff = (line_height - ImGui::GetTextLineHeight()) / 2;
 		const int BUF_SIZE = 16;
 		char buf[BUF_SIZE];
@@ -254,15 +256,15 @@ void PartyDamage::Draw(IDirect3DDevice9* device) {
 			ImGui::GetWindowDrawList()->AddRectFilledMultiColor(
 				ImVec2(bar_left, y + i * line_height),
 				ImVec2(bar_right, y + (i + 1) * line_height), 
-				damage_col, damage_col, damage_col, damage_col);
+				damage_col_from, damage_col_from, damage_col_to, damage_col_to);
 
-            part_of_recent = max_recent > 0 ? damage_float / max_recent : 0;
+            part_of_recent = max_recent > 0 ? static_cast<float>(damage[i].recent_damage) / max_recent : 0;
 			recent_left = bars_left ? (x + _width * (1.0f - part_of_recent)) : (x);
 			recent_right = bars_left ? (x + _width) : (x + _width * part_of_recent);
 			ImGui::GetWindowDrawList()->AddRectFilledMultiColor(
 				ImVec2(recent_left, y + (i + 1) * line_height - 6), 
 				ImVec2(recent_right, y + (i + 1) * line_height), 
-				damage_recent, damage_recent, damage_recent, damage_recent);
+				damage_recent_from, damage_recent_from, damage_recent_to, damage_recent_to);
 
 			if (damage[i].damage < 1000) {
 				snprintf(buf, BUF_SIZE, "%d", damage[i].damage);
