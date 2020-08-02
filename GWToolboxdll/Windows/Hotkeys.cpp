@@ -19,7 +19,6 @@
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
-#include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 
@@ -33,6 +32,7 @@
 #include <Windows/Hotkeys.h>
 #include <Windows/HotkeysWindow.h>
 #include <Windows/PconsWindow.h>
+#include <Windows/SkillListingWindow.h>
 
 
 bool TBHotkey::show_active_in_header = true;
@@ -1171,7 +1171,7 @@ void HotkeyHeroTeamBuild::Execute()
 HotkeyUseSkill::HotkeyUseSkill(CSimpleIni *ini, const char *section)
     : TBHotkey(ini, section)
 {
-    skill_num = static_cast<size_t>(ini->GetLongValue(section, "SkillNumber", 1));
+    skill_num = static_cast<int>(ini->GetLongValue(section, "SkillNumber", 1));
     abort_after = static_cast<clock_t>(ini->GetLongValue(section, "AbortAFter", 1000));
     skill_ids = StringToVec(ini->GetValue(section, "SkillIds", ""));
 }
@@ -1189,30 +1189,76 @@ void HotkeyUseSkill::Description(char *buf, size_t bufsz) const
 }
 void HotkeyUseSkill::Draw()
 {
-    int skillnum = static_cast<int>(skill_num);
-    clock_t abortafter = abort_after;
-    if (ImGui::InputInt("Skill", &skillnum, 1, 1)) {
-        if (skillnum >= 1 && skillnum <= 8) {
-            skill_num = static_cast<uint32_t>(skillnum);
+    ImGui::PushItemWidth(ImGui::GetWindowWidth() - 150);
+
+    // Pick Skill to use
+    auto skill_num_copy = skill_num;
+    if (ImGui::InputInt("Skill", &skill_num_copy, 1, 1)) {
+        if (skill_num_copy >= 1 && skill_num_copy <= 8) {
+            skill_num = skill_num_copy;
         }
         hotkeys_changed = true;
     }
-    if (ImGui::InputInt("ms", reinterpret_cast<int *>(&abortafter), 1, 100)) {
-        if (abortafter >= 0) {
-            abort_after = abortafter;
+
+    // Set abort Timer
+    auto abort_after_copy = static_cast<int>(abort_after);
+    if (ImGui::InputInt("ms", &abort_after_copy, 1, 100)) {
+        if (abort_after_copy >= 0) {
+            abort_after = abort_after_copy;
         }
         hotkeys_changed = true;
     }
     ImGui::ShowHelp("Abort trying to use the skill after <> milliseconds.");
-    char buf[512]{};
-    strcpy(buf, VecToString(skill_ids).c_str());
-    if (ImGui::InputText("SkillIds", buf, sizeof(buf))) {
-        skill_ids = StringToVec(buf);
+
+    auto already_active = [&](GW::Constants::SkillID input) {
+        auto const it = std::find(skill_ids.begin(), skill_ids.end(), input);
+        return it != skill_ids.end();
+    };
+
+    // Add generic SkillID
+    static int id_input = 0;
+    ImGui::InputInt("", &id_input);
+    ImGui::SameLine();
+    if (ImGui::Button("Add SkillID")
+        && id_input != 0 
+        && !already_active(static_cast<GW::Constants::SkillID>(id_input)))
+    {
+        auto const skill_id = static_cast<GW::Constants::SkillID>(id_input);
+        skill_ids.push_back(skill_id);
         std::sort(skill_ids.begin(), skill_ids.end(), [](auto a, auto b) -> bool { return static_cast<int>(a) < static_cast<int>(b); });
-        const auto it = std::unique(skill_ids.begin(), skill_ids.end());
-        skill_ids.resize(static_cast<const uint32_t>(std::distance(skill_ids.begin(), it)));
     }
-    ImGui::ShowHelp("Skill ids which trigger using the skill, seperated by semicolon ';'.");    
+
+    // Show & Remove Active SkillIDs
+    if (!skill_ids.empty()) {
+        ImGui::Separator();
+        ImGui::Text("Active SkillIDs:");
+        for (auto it = skill_ids.begin(); it != skill_ids.end();) {
+            ImGui::AlignFirstTextHeightToWidgets();
+
+            auto const id_str = std::to_string(static_cast<uint32_t>(*it));
+            ImGui::Text(id_str.c_str());
+
+            auto gwskill = SkillListingWindow::Skill(&GW::SkillbarMgr::GetSkillConstantData(static_cast<uint32_t>(*it)));
+
+            ImGui::SameLine();
+            ImGui::SetCursorPosX(50);
+            ImGui::Text("%S", gwskill.Name());
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("%S,\n%S", gwskill.GWWDescription(), "");
+            }
+
+            ImGui::SameLine();
+            ImGui::SetCursorPosX(250);
+            ImGui::PushID(&(*it));
+            if (ImGui::Button("Remove")) {
+                it = skill_ids.erase(it);
+            } else
+                ++it;
+            ImGui::PopID();
+        }
+
+        ImGui::Separator();
+    }
 }
 void HotkeyUseSkill::Execute()
 {

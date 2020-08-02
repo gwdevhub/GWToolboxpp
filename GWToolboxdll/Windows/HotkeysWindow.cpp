@@ -356,7 +356,7 @@ void HotkeysWindow::Update(float delta) {
                 if (target != nullptr && target->allegiance == 0x1 && target->skill) { // ally using skill
                     const auto &ids = useskill_hotkey->skill_ids;
                     if (useskill_hotkey->skill_ids.empty() || std::find(ids.begin(), ids.end(), static_cast<GW::Constants::SkillID>(target->skill)) != ids.end()) {
-                        GW::SkillbarMgr::UseSkill(useskill_hotkey->skill_num - 1, GW::Agents::GetTargetId());
+                        GW::SkillbarMgr::UseSkill(static_cast<size_t>(useskill_hotkey->skill_num - 1), GW::Agents::GetTargetId());
                         useskill_hotkey = nullptr;
                     }
                 }

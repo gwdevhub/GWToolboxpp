@@ -341,7 +341,7 @@ public:
     void Execute() override;
 
     std::vector<GW::Constants::SkillID> skill_ids = {};
-    uint32_t skill_num = 1;
+    int skill_num = 1;
     clock_t abort_after = 0;
     clock_t abort_at = 0;
 
