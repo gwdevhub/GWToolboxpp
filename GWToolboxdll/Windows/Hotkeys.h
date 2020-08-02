@@ -318,3 +318,34 @@ public:
     void Description(char *buf, size_t bufsz) const override;
     void Execute() override;
 };
+
+class HotkeyUseSkill : public TBHotkey
+{
+public:
+    HotkeyUseSkill(CSimpleIni *ini, const char *section);
+
+    static const char *IniSection()
+    {
+        return "UseSkill";
+    }
+
+    [[nodiscard]] const char *Name() const override
+    {
+        return IniSection();
+    }
+
+    void Save(CSimpleIni *ini, const char *section) const override;
+
+    void Draw() override;
+    void Description(char *buf, size_t bufsz) const override;
+    void Execute() override;
+
+    std::vector<GW::Constants::SkillID> skill_ids = {};
+    uint32_t skill_num = 1;
+    clock_t abort_after = 0;
+    clock_t abort_at = 0;
+
+private:
+    [[nodiscard]] std::string VecToString(const std::vector<GW::Constants::SkillID> &) const;
+    [[nodiscard]] std::vector<GW::Constants::SkillID> StringToVec(const std::string &) const;
+};

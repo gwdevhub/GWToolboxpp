@@ -3,11 +3,13 @@
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Skill.h>
 
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 
 #include <GuiUtils.h>
@@ -53,6 +55,11 @@ void HotkeysWindow::Draw(IDirect3DDevice9* pDevice) {
                 hotkeys.push_back(new HotkeyUseItem(nullptr, nullptr));
             }
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("Use an item from your inventory");
+            if (ImGui::Selectable("Use Skill")) {
+                hotkeys.push_back(new HotkeyUseSkill(nullptr, nullptr));
+            }
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Use a skill once your target ally uses a skill");
             if (ImGui::Selectable("Drop or Use Buff")) {
                 hotkeys.push_back(new HotkeyDropUseBuff(nullptr, nullptr));
             }
@@ -334,4 +341,27 @@ void HotkeysWindow::Update(float delta) {
     }
 
     // TODO rupt?
+
+    if (useskill_hotkey != nullptr) {
+        auto *me = (GW::Agents::GetPlayerAsAgentLiving());
+        if ((useskill_hotkey->abort_after > 0 && clock() >= useskill_hotkey->abort_at) || me == nullptr || me->max_energy <= 0 || me->player_number == 0) {
+            useskill_hotkey = nullptr;
+        } else {
+            const auto *skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
+            const auto skillbarskill = skillbar->skills[useskill_hotkey->skill_num - 1];
+            auto &skill = GW::SkillbarMgr::GetSkillConstantData(skillbarskill.skill_id);
+            auto *target = GW::Agents::GetTargetAsAgentLiving();
+            
+            if (me->skill == 0 && skillbarskill.GetRecharge() == 0 && me->energy * me->max_energy >= skill.GetEnergyCost()) { // can use skill
+                if (target != nullptr && target->allegiance == 0x1 && target->skill) { // ally using skill
+                    const auto &ids = useskill_hotkey->skill_ids;
+                    if (useskill_hotkey->skill_ids.empty() || std::find(ids.begin(), ids.end(), static_cast<GW::Constants::SkillID>(target->skill)) != ids.end()) {
+                        GW::SkillbarMgr::UseSkill(useskill_hotkey->skill_num - 1, GW::Agents::GetTargetId());
+                        useskill_hotkey = nullptr;
+                    }
+                }
+            }
+        }
+    }
+
 }

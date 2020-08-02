@@ -24,6 +24,7 @@ public:
     inline bool ToggleClicker() { return clickerActive = !clickerActive; }
     inline bool ToggleCoinDrop() { return dropCoinsActive = !dropCoinsActive; }
     inline bool ToggleRupt() { return ruptActive = !ruptActive; }
+    inline void SetUseHotkey(HotkeyUseSkill *hk) { useskill_hotkey = hk; }
 
     TBHotkey* current_hotkey = nullptr;
 
@@ -57,6 +58,8 @@ private:
     unsigned int ruptSkillID = 0;           // skill id of the skill to rupt
     unsigned int ruptSkillSlot = 0;         // skill slot of the skill to rupt with
     bool ruptActive = false;                // rupter active or not
+
+    HotkeyUseSkill *useskill_hotkey = nullptr;
 
     float movementX = 0;                    // X coordinate of the destination of movement macro
     float movementY = 0;                    // Y coordinate of the destination of movement macro

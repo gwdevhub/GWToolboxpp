@@ -54,6 +54,8 @@ TBHotkey *TBHotkey::HotkeyFactory(CSimpleIni *ini, const char *section)
         return new HotkeySendChat(ini, section);
     } else if (type.compare(HotkeyUseItem::IniSection()) == 0) {
         return new HotkeyUseItem(ini, section);
+    } else if (type.compare(HotkeyUseSkill::IniSection()) == 0) {
+        return new HotkeyUseSkill(ini, section);
     } else if (type.compare(HotkeyDropUseBuff::IniSection()) == 0) {
         return new HotkeyDropUseBuff(ini, section);
     } else if (type.compare(HotkeyToggle::IniSection()) == 0 &&
@@ -1164,4 +1166,91 @@ void HotkeyHeroTeamBuild::Execute()
     if (!CanUse())
         return;
     HeroBuildsWindow::Instance().Load(index);
+}
+
+HotkeyUseSkill::HotkeyUseSkill(CSimpleIni *ini, const char *section)
+    : TBHotkey(ini, section)
+{
+    skill_num = static_cast<size_t>(ini->GetLongValue(section, "SkillNumber", 1));
+    abort_after = static_cast<clock_t>(ini->GetLongValue(section, "AbortAFter", 1000));
+    skill_ids = StringToVec(ini->GetValue(section, "SkillIds", ""));
+}
+
+void HotkeyUseSkill::Save(CSimpleIni *ini, const char *section) const
+{
+    TBHotkey::Save(ini, section);
+    ini->SetLongValue(section, "SkillNumber", static_cast<long>(skill_num));
+    ini->SetLongValue(section, "AbortAFter", static_cast<long>(abort_after));
+    ini->SetValue(section, "SkillIds", VecToString(skill_ids).c_str());
+}
+void HotkeyUseSkill::Description(char *buf, size_t bufsz) const
+{
+    snprintf(buf, bufsz, "Use Skill %d", skill_num);
+}
+void HotkeyUseSkill::Draw()
+{
+    int skillnum = static_cast<int>(skill_num);
+    clock_t abortafter = abort_after;
+    if (ImGui::InputInt("Skill", &skillnum, 1, 1)) {
+        if (skillnum >= 1 && skillnum <= 8) {
+            skill_num = static_cast<uint32_t>(skillnum);
+        }
+        hotkeys_changed = true;
+    }
+    if (ImGui::InputInt("ms", reinterpret_cast<int *>(&abortafter), 1, 100)) {
+        if (abortafter >= 0) {
+            abort_after = abortafter;
+        }
+        hotkeys_changed = true;
+    }
+    ImGui::ShowHelp("Abort trying to use the skill after <> milliseconds.");
+    char buf[512]{};
+    strcpy(buf, VecToString(skill_ids).c_str());
+    if (ImGui::InputText("SkillIds", buf, sizeof(buf))) {
+        skill_ids = StringToVec(buf);
+        std::sort(skill_ids.begin(), skill_ids.end(), [](auto a, auto b) -> bool { return static_cast<int>(a) < static_cast<int>(b); });
+        const auto it = std::unique(skill_ids.begin(), skill_ids.end());
+        skill_ids.resize(static_cast<const uint32_t>(std::distance(skill_ids.begin(), it)));
+    }
+    ImGui::ShowHelp("Skill ids which trigger using the skill, seperated by semicolon ';'.");    
+}
+void HotkeyUseSkill::Execute()
+{
+    if (!CanUse())
+        return;
+    auto *me = GW::Agents::GetPlayer();
+    if (me == nullptr)
+        return;
+    auto *target = GW::Agents::GetTargetAsAgentLiving();
+    if (target == nullptr) {
+        return;
+    }
+    if (abort_after > 0) {
+        abort_at = clock() + abort_after;
+    }
+    HotkeysWindow::Instance().SetUseHotkey(this);
+}
+
+std::string HotkeyUseSkill::VecToString(const std::vector<GW::Constants::SkillID> &vec) const
+{
+    auto ret = std::stringstream{};
+    for (auto id : vec) {
+        ret << std::to_string(static_cast<uint32_t>(id)) << ';';
+    }
+    return ret.str();
+}
+
+std::vector<GW::Constants::SkillID> HotkeyUseSkill::StringToVec(const std::string &str) const
+{
+    const auto split = [](const auto string, auto delimiter) -> std::vector<GW::Constants::SkillID> {
+        auto text = std::stringstream(string);
+        auto words = std::vector<GW::Constants::SkillID>{};
+        std::string segment;
+        while (std::getline(text, segment, delimiter)) {
+            if (!segment.empty())
+                words.push_back(static_cast<GW::Constants::SkillID>(std::stoi(segment)));
+        }
+        return words;
+    };
+    return split(str, ';');
 }
