@@ -1215,6 +1215,88 @@ void HotkeyUseSkill::Draw()
         return it != skill_ids.end();
     };
 
+    // Add SkillID by Name
+    using GW::Constants::SkillID;
+    constexpr auto skill_count = static_cast<uint32_t>(SkillID::Heroic_Refrain);
+    auto const get_skill_name_by_id = [](uint32_t const ID) {
+        // Costly but only called when Input in Searchbar is changed
+        auto const &skill = GW::SkillbarMgr::GetSkillConstantData(ID);
+        wchar_t enc_buf[64] = {};
+
+        if (GW::UI::UInt32ToEncStr(skill.name, enc_buf, 16) == false)
+            throw; // Shouldnt throw, as SkillListingsWindow doesnt either
+
+        auto ret_val = std::wstring{};
+        GW::UI::AsyncDecodeStr(enc_buf, &ret_val);
+
+        return ret_val;
+    };
+
+    struct NamedSkillID
+    {
+        SkillID ID;
+        std::wstring Name;
+    };
+    static auto search_results = std::vector<NamedSkillID>{};
+    constexpr auto buf_size = 16;
+    static char search_buf[buf_size] = {};
+
+    if (ImGui::InputText("Search Skill Name", search_buf, sizeof(search_buf))) {
+        search_results.clear();
+
+        if (search_buf[0] != '\0' && std::strlen(search_buf) > 2) {
+            wchar_t search_wbuf_lowcase[buf_size] = {};
+            std::mbstowcs(search_wbuf_lowcase, search_buf, buf_size);
+            std::transform(
+                std::begin(search_wbuf_lowcase),
+                std::end(search_wbuf_lowcase),
+                std::begin(search_wbuf_lowcase),
+                ::towlower);
+
+            for (auto skill_id = 0u; skill_id < skill_count; ++skill_id) {
+                auto const name = get_skill_name_by_id(skill_id);
+
+                auto lowcase_name = name; // assign name to alloc only once
+                std::transform( 
+                    name.begin(), 
+                    name.end(), 
+                    lowcase_name.begin(), 
+                    ::towlower);
+
+                auto const found_substr = std::wcsstr(lowcase_name.c_str(), search_wbuf_lowcase);
+
+                if (found_substr) {
+                    search_results.push_back({static_cast<SkillID>(skill_id), name});
+
+                    if (search_results.size() >= 5) // limit results, esthetics and performace
+                        break;
+                }
+            }
+        }
+    }
+
+    if (!search_results.empty()) {
+        ImGui::Separator();
+        ImGui::Text("Suggestions");
+
+        for (auto const &result : search_results) {
+            ImGui::PushID(&result);
+            {
+                if (ImGui::SmallButton("Pick")
+                    && !already_active(result.ID))
+                {
+                    skill_ids.push_back(result.ID);
+                }
+                ImGui::SameLine();
+
+                ImGui::Text("%S", result.Name.c_str());
+            }
+            ImGui::PopID();
+        }
+
+        ImGui::Separator();
+    }
+
     // Add generic SkillID
     static int id_input = 0;
     ImGui::InputInt("", &id_input);
@@ -1256,9 +1338,8 @@ void HotkeyUseSkill::Draw()
                 ++it;
             ImGui::PopID();
         }
-
-        ImGui::Separator();
     }
+    ImGui::Separator();
 }
 void HotkeyUseSkill::Execute()
 {
