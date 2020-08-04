@@ -11,7 +11,6 @@
 
 #include "Timer.h"
 
-
 using namespace std::chrono_literals;
 
 /*
@@ -92,7 +91,7 @@ namespace
         return longest;
     }
 
-}
+} // namespace
 
 void SkillbarWidget::Draw(IDirect3DDevice9 *)
 {
@@ -130,7 +129,8 @@ void SkillbarWidget::Draw(IDirect3DDevice9 *)
             ImGui::PushStyleColor(ImGuiCol_Button, skill.color);
             {
                 ImGui::Button(skill.cooldown.c_str(), {static_cast<float>(m_width), static_cast<float>(m_height)});
-                ImGui::SameLine();
+                if (!vertical)
+                    ImGui::SameLine();
             }
             ImGui::PopStyleColor();
             ImGui::PopID();
@@ -141,47 +141,17 @@ void SkillbarWidget::Draw(IDirect3DDevice9 *)
     ImGui::End();
 }
 
-Color SkillbarWidget::UptimeToColor(std::chrono::milliseconds const uptime) const
-{
-    if (uptime > 4s) {
-        return color_long;
-    }
-
-    if (uptime > 3s) {
-        auto const fraction = 4 - (1- uptime.count()) / 1000.f;
-        int colold[4], colnew[4], colout[4];
-        Colors::ConvertU32ToInt4(color_long, colold);
-        Colors::ConvertU32ToInt4(color_medium, colnew);
-        for (auto i = 0; i < 4; i++) {
-            colout[i] = static_cast<int>(static_cast<float>(1 - fraction) * static_cast<float>(colnew[i]) + fraction * static_cast<float>(colold[i]));
-        }
-        return Colors::ConvertInt4ToU32(colout);
-    }
-
-    if (uptime > 0s) {
-        auto const fraction = uptime.count() / 3000.f;
-        int colold[4], colnew[4], colout[4];;
-        Colors::ConvertU32ToInt4(color_medium, colold);
-        Colors::ConvertU32ToInt4(color_short, colnew);
-        for (auto i = 0; i < 4; i++) {
-            colout[i] = static_cast<int>(static_cast<float>(1 - fraction) * static_cast<float>(colnew[i]) + fraction * static_cast<float>(colold[i]));
-        }
-        return Colors::ConvertInt4ToU32(colout);
-    }
-
-    return 0x00000000;
-}
-
 void SkillbarWidget::LoadSettings(CSimpleIni *ini)
 {
     ToolboxWidget::LoadSettings(ini);
-    m_height = static_cast<int>(ini->GetLongValue(Name(), "height", 50));
-    m_width = static_cast<int>(ini->GetLongValue(Name(), "width", 50));
     color_text = Colors::Load(ini, Name(), VAR_NAME(color_text), Colors::White());
     color_border = Colors::Load(ini, Name(), VAR_NAME(color_border), Colors::White());
     color_long = Colors::Load(ini, Name(), VAR_NAME(color_long), Colors::ARGB(50, 0, 255, 0));
     color_medium = Colors::Load(ini, Name(), VAR_NAME(color_medium), Colors::ARGB(50, 255, 255, 0));
     color_short = Colors::Load(ini, Name(), VAR_NAME(color_short), Colors::ARGB(50, 255, 0, 0));
+    m_height = static_cast<int>(ini->GetLongValue(Name(), "height", 50));
+    m_width = static_cast<int>(ini->GetLongValue(Name(), "width", 50));
+    vertical = ini->GetBoolValue(Name(), "vertical", false);
 }
 
 void SkillbarWidget::SaveSettings(CSimpleIni *ini)
@@ -194,17 +164,23 @@ void SkillbarWidget::SaveSettings(CSimpleIni *ini)
     Colors::Save(ini, Name(), VAR_NAME(color_short), color_short);
     ini->SetLongValue(Name(), "height", static_cast<long>(m_height));
     ini->SetLongValue(Name(), "width", m_width);
+    ini->SetBoolValue(Name(), "vertical", vertical);
 }
 
 void SkillbarWidget::DrawSettingInternal()
 {
     ToolboxWidget::DrawSettingInternal();
 
-    Colors::DrawSettingHueWheel("Text color", &color_text);
-    Colors::DrawSettingHueWheel("Border color", &color_border);
-    Colors::DrawSettingHueWheel("Long uptime", &color_long);
-    Colors::DrawSettingHueWheel("Medium uptime", &color_medium);
-    Colors::DrawSettingHueWheel("Short uptime", &color_short);
+    if (ImGui::TreeNode("Colors")) {
+        Colors::DrawSettingHueWheel("Text color", &color_text);
+        Colors::DrawSettingHueWheel("Border color", &color_border);
+    }
+    if (ImGui::TreeNode("Effect uptime colors")) {
+        Colors::DrawSettingHueWheel("Long uptime", &color_long);
+        Colors::DrawSettingHueWheel("Medium uptime", &color_medium);
+        Colors::DrawSettingHueWheel("Short uptime", &color_short);
+        ImGui::TreePop();
+    }
     auto height = m_height;
     if (ImGui::DragInt("Height", &height)) {
         m_height = height;
@@ -213,4 +189,40 @@ void SkillbarWidget::DrawSettingInternal()
     if (ImGui::DragInt("Width", &width)) {
         m_width = width;
     }
+    auto vertical_copy = vertical;
+    if (ImGui::Checkbox("Vertical", &vertical_copy)) {
+        vertical = vertical_copy;
+    }
+}
+
+Color SkillbarWidget::UptimeToColor(std::chrono::milliseconds const uptime) const
+{
+    if (uptime > 4s) {
+        return color_long;
+    }
+
+    if (uptime > 3s) {
+        auto const fraction = 4 - (1 - uptime.count()) / 1000.f;
+        int colold[4], colnew[4], colout[4];
+        Colors::ConvertU32ToInt4(color_long, colold);
+        Colors::ConvertU32ToInt4(color_medium, colnew);
+        for (auto i = 0; i < 4; i++) {
+            colout[i] = static_cast<int>(static_cast<float>(1 - fraction) * static_cast<float>(colnew[i]) + fraction * static_cast<float>(colold[i]));
+        }
+        return Colors::ConvertInt4ToU32(colout);
+    }
+
+    if (uptime > 0s) {
+        auto const fraction = uptime.count() / 3000.f;
+        int colold[4], colnew[4], colout[4];
+        ;
+        Colors::ConvertU32ToInt4(color_medium, colold);
+        Colors::ConvertU32ToInt4(color_short, colnew);
+        for (auto i = 0; i < 4; i++) {
+            colout[i] = static_cast<int>(static_cast<float>(1 - fraction) * static_cast<float>(colnew[i]) + fraction * static_cast<float>(colold[i]));
+        }
+        return Colors::ConvertInt4ToU32(colout);
+    }
+
+    return 0x00000000;
 }
