@@ -2,7 +2,6 @@
 
 #include <GWCA/Constants/Maps.h>
 
-#include <Timer.h>
 #include <ToolboxModule.h>
 
 class ToolboxSettings : public ToolboxModule {
@@ -51,6 +50,7 @@ private:
     bool use_trade = true;
     bool use_timer = true;
     bool use_health = true;
+    bool use_skillbar = true;
     bool use_distance = true;
     bool use_minimap = true;
     bool use_damage = true;
