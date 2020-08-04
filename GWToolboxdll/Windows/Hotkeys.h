@@ -7,8 +7,6 @@
 
 #include <GWCA/Managers/MapMgr.h>
 
-#include <Defines.h>
-
 // abstract class Toolbox Hotkey
 // has the key code and pressed status
 class TBHotkey {
