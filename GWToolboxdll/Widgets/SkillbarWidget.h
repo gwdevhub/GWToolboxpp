@@ -30,7 +30,7 @@ public:
 private:
     struct Skill
     {
-        std::string cooldown{};
+        std::array<char, 16> cooldown{};
         Color color{};
     };
 

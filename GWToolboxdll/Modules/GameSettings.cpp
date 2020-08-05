@@ -43,6 +43,8 @@
 #include <Modules/GameSettings.h>
 #include <Modules/InventoryManager.h>
 
+#pragma warning(disable : 6011)
+
 namespace {
     void SendChatCallback(GW::HookStatus *, GW::Chat::Channel chan, wchar_t msg[120]) {
         if (!GameSettings::Instance().auto_url || !msg) return;
@@ -793,7 +795,7 @@ void GameSettings::Initialize() {
         &OnDialog_Entry,
         [this](GW::HookStatus* status, GW::Packet::StoC::DialogSender* pak) {
             UNREFERENCED_PARAMETER(status);
-            GW::AgentLiving* agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->agent_id));
+            auto *agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->agent_id));
             if (!agent) return;
             last_dialog_npc_id = agent->player_number;
         });

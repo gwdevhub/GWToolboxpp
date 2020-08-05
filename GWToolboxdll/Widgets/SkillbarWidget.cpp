@@ -19,72 +19,35 @@ using namespace std::chrono_literals;
 
 namespace
 {
-    auto ms_to_string_hmmss(std::chrono::milliseconds const time, const char *fmt) -> std::string
+    auto ms_to_string_sec(std::array<char, 16> &arr, std::chrono::milliseconds const time, const char *fmt = "%d") -> void
     {
-        auto const hour = std::chrono::duration_cast<std::chrono::hours>(time);
-        auto const mins = std::chrono::duration_cast<std::chrono::minutes>(time - hour);
-        auto const secs = std::chrono::duration_cast<std::chrono::duration<int>>(time - hour - mins);
-
-        char buf[16];
-        snprintf(buf, sizeof(buf), fmt, hour.count(), mins.count(), secs.count());
-
-        return std::string{buf};
+        snprintf(arr.data(), sizeof(arr), fmt, std::chrono::duration_cast<std::chrono::duration<int>>(time).count());
     }
 
-    auto ms_to_string_mmss(std::chrono::milliseconds const time, const char *fmt) -> std::string
+    auto ms_to_string_secf(std::array<char, 16> &arr, std::chrono::milliseconds const cd, const char *fmt = "%.1f") -> void
     {
-        auto const mins = std::chrono::duration_cast<std::chrono::minutes>(time);
-        auto const secs = std::chrono::duration_cast<std::chrono::duration<int>>(time - mins);
-
-        char buf[16];
-        snprintf(buf, sizeof(buf), fmt, mins.count(), secs.count());
-
-        return std::string{buf};
+        snprintf(arr.data(), sizeof(ARRAYDESC), fmt, std::chrono::duration_cast<std::chrono::duration<float>>(cd).count());
     }
 
-    auto ms_to_string_hhmm(std::chrono::milliseconds const time, const char *fmt) -> std::string
-    {
-        auto const hour = std::chrono::duration_cast<std::chrono::hours>(time);
-        auto const mins = std::chrono::duration_cast<std::chrono::minutes>(time - hour);
-
-        char buf[16];
-        snprintf(buf, sizeof(buf), fmt, hour.count(), mins.count());
-
-        return std::string{buf};
-    }
-
-    auto ms_to_string_sec(std::chrono::milliseconds const time, const char *fmt = "%d") -> std::string
-    {
-        char buf[16];
-        snprintf(buf, sizeof(buf), fmt, std::chrono::duration_cast<std::chrono::duration<int>>(time).count());
-        return buf;
-    }
-
-    auto ms_to_string_secf(std::chrono::milliseconds const cd, const char *fmt = "%.1f") -> std::string
-    {
-        auto const secs = std::chrono::duration_cast<std::chrono::duration<float>>(cd);
-        char buf[16];
-        snprintf(buf, sizeof(buf), fmt, static_cast<int>(secs.count() * 10) / 10.f);
-        return buf;
-    }
-
-    auto skill_cooldown_to_string(std::chrono::milliseconds const cd) -> std::string
+    auto skill_cooldown_to_string(std::array<char, 16> &arr, std::chrono::milliseconds const cd) -> void
     {
         if (cd >= 10s)
-            return ms_to_string_sec(cd);
+            return ms_to_string_sec(arr, cd);
         if (cd > 0s)
-            return ::ms_to_string_secf(cd);
+            return ms_to_string_secf(arr, cd);
         if (cd == 0s)
-            return "";
-        else              // cd < 0, happens occasionally due to ping
-            return "0.0"; // avoid negative numbers in overlay
+            arr[0] = '\0';
+        else // cd < 0, happens occasionally due to ping
+            strncpy_s(arr.data(), sizeof(arr), "0.0", 4); // avoid negative numbers in overlay
     }
 
-    auto get_longest_effect_duration(GW::Constants::SkillID const skillId) -> std::chrono::milliseconds
+    auto get_longest_effect_duration(GW::Constants::SkillID const skillId) -> auto
     {
         auto longest = 0ms;
         for (auto const &effect : GW::Effects::GetPlayerEffectArray()) {
             if (static_cast<GW::Constants::SkillID>(effect.skill_id) != skillId)
+                continue;
+            if (effect.effect_type == 7) // hex
                 continue;
             longest = std::max(longest, std::chrono::milliseconds{effect.GetTimeRemaining()});
         }
@@ -103,7 +66,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9 *)
             return;
 
         for (auto it = 0u; it < 8; it++) {
-            m_skills[it].cooldown = skill_cooldown_to_string(std::chrono::milliseconds{skillbar->skills[it].GetRecharge()});
+            skill_cooldown_to_string(m_skills[it].cooldown, std::chrono::milliseconds{skillbar->skills[it].GetRecharge()});
 
             auto const effect_duration = get_longest_effect_duration(static_cast<GW::Constants::SkillID>(skillbar->skills[it].skill_id));
             m_skills[it].color = UptimeToColor(effect_duration);
@@ -123,7 +86,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9 *)
             ImGui::PushID(&skill);
             ImGui::PushStyleColor(ImGuiCol_Button, skill.color);
             {
-                ImGui::Button(skill.cooldown.c_str(), {static_cast<float>(m_skill_width), static_cast<float>(m_skill_height)});
+                ImGui::Button(skill.cooldown.data(), {static_cast<float>(m_skill_width), static_cast<float>(m_skill_height)});
                 if (!vertical)
                     ImGui::SameLine();
             }
@@ -154,7 +117,7 @@ void SkillbarWidget::LoadSettings(CSimpleIni *ini)
 void SkillbarWidget::SaveSettings(CSimpleIni *ini)
 {
     ToolboxWidget::SaveSettings(ini);
-    Colors::Save(ini, Name(), VAR_NAME(color), color_text);
+    Colors::Save(ini, Name(), VAR_NAME(color_text), color_text);
     Colors::Save(ini, Name(), VAR_NAME(color_border), color_border);
     Colors::Save(ini, Name(), VAR_NAME(color_long), color_long);
     Colors::Save(ini, Name(), VAR_NAME(color_medium), color_medium);
