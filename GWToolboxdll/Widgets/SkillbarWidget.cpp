@@ -91,13 +91,13 @@ namespace
         return longest;
     }
 
-} // namespace
+}
 
 void SkillbarWidget::Draw(IDirect3DDevice9 *)
 {
     if (!visible)
         return;
-    const auto update = [this]() {
+    [this]() {
         auto const *skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
         if (skillbar == nullptr)
             return;
@@ -108,14 +108,9 @@ void SkillbarWidget::Draw(IDirect3DDevice9 *)
             auto const effect_duration = get_longest_effect_duration(static_cast<GW::Constants::SkillID>(skillbar->skills[it].skill_id));
             m_skills[it].color = UptimeToColor(effect_duration);
         }
-    };
-    static clock_t last_update = clock();
-    if (TIMER_DIFF(last_update) >= 200) {
-        update();
-        last_update = clock();
-    }
+    }();
 
-    constexpr auto wnd_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoInputs;
+    const auto wnd_flags = GetWinFlags();
 
     ImGui::SetNextWindowBgAlpha(0.0f);
     ImGui::Begin(Name(), nullptr, wnd_flags);
@@ -128,7 +123,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9 *)
             ImGui::PushID(&skill);
             ImGui::PushStyleColor(ImGuiCol_Button, skill.color);
             {
-                ImGui::Button(skill.cooldown.c_str(), {static_cast<float>(m_width), static_cast<float>(m_height)});
+                ImGui::Button(skill.cooldown.c_str(), {static_cast<float>(m_skill_width), static_cast<float>(m_skill_height)});
                 if (!vertical)
                     ImGui::SameLine();
             }
@@ -149,9 +144,11 @@ void SkillbarWidget::LoadSettings(CSimpleIni *ini)
     color_long = Colors::Load(ini, Name(), VAR_NAME(color_long), Colors::ARGB(50, 0, 255, 0));
     color_medium = Colors::Load(ini, Name(), VAR_NAME(color_medium), Colors::ARGB(50, 255, 255, 0));
     color_short = Colors::Load(ini, Name(), VAR_NAME(color_short), Colors::ARGB(50, 255, 0, 0));
-    m_height = static_cast<int>(ini->GetLongValue(Name(), "height", 50));
-    m_width = static_cast<int>(ini->GetLongValue(Name(), "width", 50));
+    m_skill_height = static_cast<int>(ini->GetLongValue(Name(), "height", 50));
+    m_skill_width = static_cast<int>(ini->GetLongValue(Name(), "width", 50));
     vertical = ini->GetBoolValue(Name(), "vertical", false);
+    medium_treshold = std::chrono::milliseconds{ini->GetLongValue(Name(), "medium_treshold", 5000)};
+    short_treshold = std::chrono::milliseconds{ini->GetLongValue(Name(), "short_treshold", 2500)};
 }
 
 void SkillbarWidget::SaveSettings(CSimpleIni *ini)
@@ -162,47 +159,62 @@ void SkillbarWidget::SaveSettings(CSimpleIni *ini)
     Colors::Save(ini, Name(), VAR_NAME(color_long), color_long);
     Colors::Save(ini, Name(), VAR_NAME(color_medium), color_medium);
     Colors::Save(ini, Name(), VAR_NAME(color_short), color_short);
-    ini->SetLongValue(Name(), "height", static_cast<long>(m_height));
-    ini->SetLongValue(Name(), "width", m_width);
+    ini->SetLongValue(Name(), "height", static_cast<long>(m_skill_height));
+    ini->SetLongValue(Name(), "width", static_cast<long>(m_skill_width));
     ini->SetBoolValue(Name(), "vertical", vertical);
+    ini->SetLongValue(Name(), "medium_treshold", static_cast<long>(medium_treshold.count()));
+    ini->SetLongValue(Name(), "short_treshold", static_cast<long>(short_treshold.count()));
 }
 
 void SkillbarWidget::DrawSettingInternal()
 {
     ToolboxWidget::DrawSettingInternal();
+    ImGui::SameLine();
+    auto vertical_copy = vertical;
+    if (ImGui::Checkbox("Vertical", &vertical_copy)) {
+        vertical = vertical_copy;
+    }
 
     if (ImGui::TreeNode("Colors")) {
         Colors::DrawSettingHueWheel("Text color", &color_text);
         Colors::DrawSettingHueWheel("Border color", &color_border);
+        ImGui::TreePop();
     }
-    if (ImGui::TreeNode("Effect uptime colors")) {
+    if (ImGui::TreeNode("Effect uptime")) {
+        int mediumdur = static_cast<int>(medium_treshold.count());
+        if (ImGui::DragInt("Medium Treshold", &mediumdur)) {
+            medium_treshold = std::chrono::milliseconds{mediumdur};
+        }
+        ImGui::ShowHelp("Number of milliseconds of effect uptime left, until the medium color is used.");
+        int shortdur = static_cast<int>(short_treshold.count());
+        if (ImGui::DragInt("Short Treshold", &shortdur)) {
+            short_treshold = std::chrono::milliseconds{shortdur};
+        }
+        ImGui::ShowHelp("Number of milliseconds of effect uptime left, until the short color is used.");
         Colors::DrawSettingHueWheel("Long uptime", &color_long);
         Colors::DrawSettingHueWheel("Medium uptime", &color_medium);
         Colors::DrawSettingHueWheel("Short uptime", &color_short);
         ImGui::TreePop();
     }
-    auto height = m_height;
-    if (ImGui::DragInt("Height", &height)) {
-        m_height = height;
+    auto height = m_skill_height;
+    if (ImGui::DragInt("Skill height", &height)) {
+        m_skill_height = height;
     }
-    auto width = m_width;
-    if (ImGui::DragInt("Width", &width)) {
-        m_width = width;
-    }
-    auto vertical_copy = vertical;
-    if (ImGui::Checkbox("Vertical", &vertical_copy)) {
-        vertical = vertical_copy;
+    auto width = m_skill_width;
+    if (ImGui::DragInt("Skill width", &width)) {
+        m_skill_width = width;
     }
 }
 
 Color SkillbarWidget::UptimeToColor(std::chrono::milliseconds const uptime) const
 {
-    if (uptime > 4s) {
+    if (uptime > medium_treshold) {
         return color_long;
     }
 
-    if (uptime > 3s) {
-        auto const fraction = 4 - (1 - uptime.count()) / 1000.f;
+    if (uptime > short_treshold) {
+        auto const diff = static_cast<float>((medium_treshold - short_treshold).count());
+        auto const fraction = 1 - ((medium_treshold.count() - uptime.count()) / diff);
         int colold[4], colnew[4], colout[4];
         Colors::ConvertU32ToInt4(color_long, colold);
         Colors::ConvertU32ToInt4(color_medium, colnew);
@@ -213,7 +225,7 @@ Color SkillbarWidget::UptimeToColor(std::chrono::milliseconds const uptime) cons
     }
 
     if (uptime > 0s) {
-        auto const fraction = uptime.count() / 3000.f;
+        auto const fraction = uptime.count() / static_cast<float>(short_treshold.count());
         int colold[4], colnew[4], colout[4];
         ;
         Colors::ConvertU32ToInt4(color_medium, colold);

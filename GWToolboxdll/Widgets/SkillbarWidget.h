@@ -30,19 +30,22 @@ public:
 private:
     struct Skill
     {
-        std::string cooldown = "";
+        std::string cooldown{};
         Color color{};
     };
 
-    std::array<Skill, 8> m_skills;
+    std::array<Skill, 8> m_skills{};
     Color color_text{};
     Color color_border{};
     Color color_long{};
     Color color_medium{};
     Color color_short{};
 
-    int m_width = 50;
-    int m_height = 50;
+    std::chrono::milliseconds medium_treshold{};
+    std::chrono::milliseconds short_treshold{};
+
+    int m_skill_width = 50;
+    int m_skill_height = 50;
     bool vertical = false;
 
     Color UptimeToColor(std::chrono::milliseconds const uptime) const;
