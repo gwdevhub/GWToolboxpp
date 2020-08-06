@@ -5,7 +5,10 @@
 
 class SkillbarWidget final : public ToolboxWidget
 {
-    SkillbarWidget(){};
+    SkillbarWidget()
+    {
+        is_resizable = false;
+    };
     ~SkillbarWidget(){};
 
 public:

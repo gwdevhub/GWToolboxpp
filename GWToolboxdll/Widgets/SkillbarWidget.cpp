@@ -17,14 +17,14 @@
 
 namespace
 {
-    auto ms_to_string_sec(std::array<char, 16> &arr, clock_t const time, const char *fmt = "%d") -> void
+    auto ms_to_string_sec(std::array<char, 16> &arr, clock_t const cd, const char *fmt = "%d") -> void
     {
-        snprintf(arr.data(), sizeof(arr), fmt, time);
+        snprintf(arr.data(), sizeof(arr), fmt, cd / 1000);
     }
 
     auto ms_to_string_secf(std::array<char, 16> &arr, clock_t const cd, const char *fmt = "%.1f") -> void
     {
-        snprintf(arr.data(), sizeof(arr), fmt, cd);
+        snprintf(arr.data(), sizeof(arr), fmt, cd / 1000.f);
     }
 
     auto skill_cooldown_to_string(std::array<char, 16> &arr, clock_t const cd) -> void
@@ -56,7 +56,10 @@ namespace
     auto get_longest_effect_duration(GW::Constants::SkillID const skillId) -> clock_t
     {
         auto const durations = get_effect_durations(skillId);
-        return *std::max_element(durations.begin(), durations.end());
+        auto const it = std::max_element(durations.begin(), durations.end());
+        if (it != durations.end())
+            return *it;
+        return 0l;
     }
 } // namespace
 
@@ -95,7 +98,10 @@ void SkillbarWidget::Draw(IDirect3DDevice9 *)
     style.WindowPadding = {0, 0};
 
     ImGui::SetNextWindowBgAlpha(0.0f);
+    auto const winsize = ImVec2(static_cast<float>(m_skill_width * 8), static_cast<float>(m_skill_height));
+    ImGui::SetNextWindowSize(winsize);
     ImGui::Begin(Name(), nullptr, GetWinFlags());
+
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, {0, 0});
     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1);
     ImGui::PushStyleColor(ImGuiCol_Text, color_text);
@@ -201,7 +207,11 @@ void SkillbarWidget::DrawSettingInternal()
     if (ImGui::Checkbox("Vertical", &vertical_copy)) {
         vertical = vertical_copy;
     }
-
+    int size[2]{m_skill_width, m_skill_height};
+    if (ImGui::DragInt2("Skill size", size)) {
+        m_skill_width = size[0];
+        m_skill_height = size[1];
+    }
     if (ImGui::TreeNode("Colors")) {
         Colors::DrawSettingHueWheel("Text color", &color_text);
         Colors::DrawSettingHueWheel("Border color", &color_border);
@@ -232,14 +242,6 @@ void SkillbarWidget::DrawSettingInternal()
         ImGui::ShowHelp("Whether effect uptime timers should be displayed above the skill.");
         ImGui::TreePop();
     }
-    auto height = m_skill_height;
-    if (ImGui::DragInt("Skill height", &height)) {
-        m_skill_height = height;
-    }
-    auto width = m_skill_width;
-    if (ImGui::DragInt("Skill width", &width)) {
-        m_skill_width = width;
-    }
 }
 
 Color SkillbarWidget::UptimeToColor(const clock_t uptime) const
@@ -250,7 +252,7 @@ Color SkillbarWidget::UptimeToColor(const clock_t uptime) const
 
     if (uptime > short_treshold) {
         auto const diff = static_cast<float>(medium_treshold - short_treshold);
-        auto const fraction = 1 - ((medium_treshold - uptime) / diff);
+        auto const fraction = 1 - (medium_treshold - uptime) / diff;
         int colold[4], colnew[4], colout[4];
         Colors::ConvertU32ToInt4(color_long, colold);
         Colors::ConvertU32ToInt4(color_medium, colnew);
