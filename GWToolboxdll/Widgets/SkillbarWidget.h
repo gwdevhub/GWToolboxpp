@@ -32,6 +32,7 @@ private:
     {
         std::array<char, 16> cooldown{};
         Color color{};
+        std::vector<std::pair<std::array<char, 16>, Color>> effects{};
     };
 
     std::array<Skill, 8> m_skills{};
@@ -46,7 +47,9 @@ private:
 
     int m_skill_width = 50;
     int m_skill_height = 50;
+    int m_effect_offset = -100;
     bool vertical = false;
+    bool display_effect_times = false;
 
     Color UptimeToColor(std::chrono::milliseconds const uptime) const;
 };
