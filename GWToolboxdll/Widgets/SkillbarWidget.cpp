@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <GWCA/Constants/Constants.h>
 #include <GWCA/Constants/Skills.h>
 
 #include <GWCA/GameEntities/Skill.h>
@@ -71,6 +72,11 @@ void SkillbarWidget::Draw(IDirect3DDevice9 *)
         auto const *skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
         if (skillbar == nullptr)
             return;
+        auto has_sf = false;
+        for (const auto &skill : skillbar->skills) {
+            if (skill.skill_id == static_cast<uint32_t>(GW::Constants::SkillID::Shadow_Form))
+                has_sf = true;
+        }
 
         for (auto it = 0u; it < 8; it++) {
             skill_cooldown_to_string(m_skills[it].cooldown, static_cast<clock_t>(skillbar->skills[it].GetRecharge()));
@@ -78,15 +84,20 @@ void SkillbarWidget::Draw(IDirect3DDevice9 *)
             clock_t const effect_duration = get_longest_effect_duration(skill_id);
             m_skills[it].color = UptimeToColor(effect_duration);
             if (display_effect_times) {
-                auto durations = get_effect_durations(skill_id);
-                std::sort(durations.begin(), durations.end(), [](auto a, auto b) { return b < a; });
                 m_skills[it].effects.clear();
-                std::transform(
-                    durations.begin(), durations.end(), std::back_inserter(m_skills[it].effects), [this](auto duration) -> std::pair<std::array<char, 16>, Color> {
-                        auto buf = std::array<char, 16>{};
-                        skill_cooldown_to_string(buf, duration);
-                        return std::pair{buf, UptimeToColor(duration)};
-                    });
+                auto const create_pair = [this](auto duration) -> std::pair<std::array<char, 16>, Color> {
+                    auto buf = std::array<char, 16>{};
+                    skill_cooldown_to_string(buf, duration);
+                    return std::pair{buf, UptimeToColor(duration)};
+                };
+                auto const skill_data = GW::SkillbarMgr::GetSkillConstantData(static_cast<uint32_t>(skill_id));
+                if (skill_data.profession == static_cast<uint8_t>(GW::Constants::Profession::Assassin) && has_sf && skill_data.type == static_cast<uint32_t>(GW::Constants::SkillType::Enchantment)) {
+                    auto durations = get_effect_durations(skill_id);
+                    std::sort(durations.begin(), durations.end(), [](auto a, auto b) { return b < a; });
+                    std::transform(durations.begin(), durations.end(), std::back_inserter(m_skills[it].effects), create_pair);
+                } else {
+                    m_skills[it].effects.emplace_back(create_pair(effect_duration));
+                }
             }
         }
     }();
@@ -105,62 +116,65 @@ void SkillbarWidget::Draw(IDirect3DDevice9 *)
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, {0, 0});
     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1);
     ImGui::PushStyleColor(ImGuiCol_Text, color_text);
+    ImGui::PushFont(GuiUtils::GetFont(m_font_size));
+    auto const font_scale = (1 + static_cast<float>(m_font_size) / 5.f);
     ImGui::PushStyleColor(ImGuiCol_Border, color_border);
-    {
-        for (auto const &skill : m_skills) {
-            ImGui::PushID(&skill);
-            ImGui::PushStyleColor(ImGuiCol_Button, skill.color);
-            const ImVec2 button_pos = ImGui::GetCursorPos();
-            ImGui::Button(skill.cooldown.data(), {static_cast<float>(m_skill_width), static_cast<float>(m_skill_height)});
-            if (!vertical)
-                ImGui::SameLine();
-            auto const next_button_pos = ImGui::GetCursorPos();
-            if (display_effect_times) {
-                auto const wnd_size = vertical ? ImVec2{static_cast<float>(m_skill_width) * 2, static_cast<float>(m_skill_height)} : ImVec2{static_cast<float>(m_skill_width), static_cast<float>(m_skill_height) * 2};
-                if (vertical)
-                    ImGui::SetNextWindowPos({ImGui::GetWindowPos().x + static_cast<float>(m_effect_offset) - (m_effect_offset < 0 ? wnd_size.x / 2.f : 0), ImGui::GetWindowPos().y + button_pos.y});
-                else
-                    ImGui::SetNextWindowPos({ImGui::GetWindowPos().x + button_pos.x, ImGui::GetWindowPos().y + static_cast<float>(m_effect_offset) - (m_effect_offset < 0 ? wnd_size.y / 2.f : 0)});
-                ImGui::SetNextWindowSize(wnd_size);
-                ImGui::SetNextWindowBgAlpha(0.0f);
-                ImGui::Begin((std::string("Skill###") + std::to_string(reinterpret_cast<uintptr_t>(&skill))).c_str(), nullptr, wnd_flags);
-                for (auto i = 0u; i < skill.effects.size(); i++) {
-                    int colbuf[4];
-                    if (vertical) {
-                        ImGui::SameLine();
-                        if (m_effect_offset < 0) {
-                            ImGui::SetCursorPosX(wnd_size.x - (i + 1) * static_cast<float>(m_skill_width) / 3);
-                        } else {
-                            ImGui::SetCursorPosX((i + 1) * static_cast<float>(m_skill_width) / 3);
-                        }
+    for (auto const &skill : m_skills) {
+        ImGui::PushID(&skill);
+        ImGui::PushStyleColor(ImGuiCol_Button, skill.color);
+        const ImVec2 button_pos = ImGui::GetCursorPos();
+        ImGui::Button(skill.cooldown.data(), {static_cast<float>(m_skill_width), static_cast<float>(m_skill_height)});
+        if (!vertical)
+            ImGui::SameLine();
+        auto const next_button_pos = ImGui::GetCursorPos();
+        if (display_effect_times) {
+            auto const wnd_size = vertical ? ImVec2{static_cast<float>(m_skill_width) * 2, static_cast<float>(m_skill_height)} : ImVec2{static_cast<float>(m_skill_width), static_cast<float>(m_skill_height) * 2};
+            if (vertical)
+                ImGui::SetNextWindowPos({ImGui::GetWindowPos().x + static_cast<float>(m_effect_offset) - (m_effect_offset < 0 ? wnd_size.x / 2.f : 0), ImGui::GetWindowPos().y + button_pos.y});
+            else
+                ImGui::SetNextWindowPos({ImGui::GetWindowPos().x + button_pos.x, ImGui::GetWindowPos().y + static_cast<float>(m_effect_offset) - (m_effect_offset < 0 ? wnd_size.y / 2.f : 0)});
+            ImGui::SetNextWindowSize({wnd_size.x * font_scale, wnd_size.y * font_scale});
+            ImGui::SetNextWindowBgAlpha(0.5f);
+            ImGui::Begin((std::string("Skill###") + std::to_string(reinterpret_cast<uintptr_t>(&skill))).c_str(), nullptr, wnd_flags);
+            for (auto i = 0u; i < skill.effects.size(); i++) {
+                int colbuf[4];
+                auto const width_small = static_cast<float>(m_skill_width) / 3.f * font_scale;
+                auto const height_small = static_cast<float>(m_skill_height) / 3.f * font_scale;
+                if (vertical) {
+                    ImGui::SameLine();
+                    if (m_effect_offset < 0) {
+                        ImGui::SetCursorPosX(wnd_size.x - (i + 1) * width_small);
                     } else {
-                        if (m_effect_offset < 0) {
-                            ImGui::SetCursorPosY(wnd_size.y - (i + 1) * static_cast<float>(m_skill_height) / 3);
-                        } else {
-                            ImGui::SetCursorPosY((i + 1) * static_cast<float>(m_skill_height) / 3);
-                        }
+                        ImGui::SetCursorPosX((i + 1) * width_small);
                     }
-                    Colors::ConvertU32ToInt4(skill.effects.at(i).second, colbuf);
-                    colbuf[0] = 255;
-                    ImGui::PushStyleColor(ImGuiCol_Text, Colors::ConvertInt4ToU32(colbuf));
-                    ImGui::PushStyleColor(ImGuiCol_Button, 0);
-                    ImGui::PushStyleColor(ImGuiCol_Border, 0);
-                    if (vertical) {
-                        ImGui::Button(skill.effects.at(i).first.data(), {static_cast<float>(m_skill_width) / 3, static_cast<float>(m_skill_height)});
+                } else {
+                    if (m_effect_offset < 0) {
+                        ImGui::SetCursorPosY(wnd_size.y - (i + 1) * height_small);
                     } else {
-                        ImGui::Button(skill.effects.at(i).first.data(), {static_cast<float>(m_skill_width), static_cast<float>(m_skill_height) / 3});
+                        ImGui::SetCursorPosY((i + 1) * height_small);
                     }
-                    ImGui::PopStyleColor(3);
                 }
-                ImGui::End();
+                Colors::ConvertU32ToInt4(skill.effects.at(i).second, colbuf);
+                colbuf[0] = 255;
+                ImGui::PushStyleColor(ImGuiCol_Text, Colors::ConvertInt4ToU32(colbuf));
+                ImGui::PushStyleColor(ImGuiCol_Button, 0);
+                ImGui::PushStyleColor(ImGuiCol_Border, 0);
+                if (vertical) {
+                    ImGui::Button(skill.effects.at(i).first.data(), {width_small, static_cast<float>(m_skill_height)});
+                } else {
+                    ImGui::Button(skill.effects.at(i).first.data(), {static_cast<float>(m_skill_width), height_small});
+                }
+                ImGui::PopStyleColor(3);
             }
-            ImGui::SetCursorPos(next_button_pos);
-            ImGui::PopStyleColor();
-            ImGui::PopID();
+            ImGui::End();
         }
+        ImGui::SetCursorPos(next_button_pos);
+        ImGui::PopStyleColor();
+        ImGui::PopID();
     }
     ImGui::PopStyleColor(2);
     ImGui::PopStyleVar(2);
+    ImGui::PopFont();
     ImGui::End();
     style.WindowPadding = old_padding;
 }
@@ -177,9 +191,10 @@ void SkillbarWidget::LoadSettings(CSimpleIni *ini)
     m_skill_width = static_cast<int>(ini->GetLongValue(Name(), "width", m_skill_width));
     vertical = ini->GetBoolValue(Name(), "vertical", false);
     display_effect_times = ini->GetBoolValue(Name(), "effect_text", false);
-    m_effect_offset = static_cast<int>(ini->GetLongValue(Name(), "effect_offset", -100));
-    medium_treshold = ini->GetLongValue(Name(), "medium_treshold", 5000);
-    short_treshold = ini->GetLongValue(Name(), "short_treshold", 2500);
+    m_effect_offset = static_cast<int>(ini->GetLongValue(Name(), "effect_offset", m_effect_offset));
+    m_font_size = static_cast<GuiUtils::FontSize>(ini->GetLongValue(Name(), "font_size", m_font_size));
+    medium_treshold = ini->GetLongValue(Name(), "medium_treshold", medium_treshold);
+    short_treshold = ini->GetLongValue(Name(), "short_treshold", short_treshold);
 }
 
 void SkillbarWidget::SaveSettings(CSimpleIni *ini)
@@ -197,6 +212,7 @@ void SkillbarWidget::SaveSettings(CSimpleIni *ini)
     ini->SetLongValue(Name(), "short_treshold", static_cast<long>(short_treshold));
     ini->SetBoolValue(Name(), "effect_text", display_effect_times);
     ini->SetLongValue(Name(), "effect_offset", m_effect_offset);
+    ini->SetLongValue(Name(), "font_size", m_font_size);
 }
 
 void SkillbarWidget::DrawSettingInternal()
@@ -211,6 +227,10 @@ void SkillbarWidget::DrawSettingInternal()
     if (ImGui::DragInt2("Skill size", size)) {
         m_skill_width = size[0];
         m_skill_height = size[1];
+    }
+    auto fontsize = static_cast<int>(m_font_size);
+    if (ImGui::DragInt("Font size", &fontsize, 1, static_cast<int>(GuiUtils::FontSize::f16), static_cast<int>(GuiUtils::FontSize::f48))) {
+        m_font_size = static_cast<GuiUtils::FontSize>(fontsize);
     }
     if (ImGui::TreeNode("Colors")) {
         Colors::DrawSettingHueWheel("Text color", &color_text);
@@ -264,7 +284,8 @@ Color SkillbarWidget::UptimeToColor(const clock_t uptime) const
 
     if (uptime > 0) {
         auto const fraction = uptime / static_cast<float>(short_treshold);
-        int colold[4], colnew[4], colout[4];;
+        int colold[4], colnew[4], colout[4];
+        ;
         Colors::ConvertU32ToInt4(color_medium, colold);
         Colors::ConvertU32ToInt4(color_short, colnew);
         for (auto i = 0; i < 4; i++) {

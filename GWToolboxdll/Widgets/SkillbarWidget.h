@@ -45,11 +45,12 @@ private:
     Color color_medium{};
     Color color_short{};
 
-    clock_t medium_treshold{};
-    clock_t short_treshold{};
+    clock_t medium_treshold{5000};
+    clock_t short_treshold{2500};
 
     int m_skill_width = 50;
     int m_skill_height = 50;
+    GuiUtils::FontSize m_font_size = GuiUtils::FontSize::f16;
     int m_effect_offset = -100;
     bool vertical = false;
     bool display_effect_times = false;
