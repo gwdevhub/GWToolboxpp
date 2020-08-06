@@ -42,8 +42,8 @@ private:
     Color color_medium{};
     Color color_short{};
 
-    std::chrono::milliseconds medium_treshold{};
-    std::chrono::milliseconds short_treshold{};
+    clock_t medium_treshold{};
+    clock_t short_treshold{};
 
     int m_skill_width = 50;
     int m_skill_height = 50;
@@ -51,5 +51,5 @@ private:
     bool vertical = false;
     bool display_effect_times = false;
 
-    Color UptimeToColor(std::chrono::milliseconds const uptime) const;
+    Color UptimeToColor(clock_t uptime) const;
 };
