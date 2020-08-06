@@ -793,9 +793,8 @@ void HotkeyToggle::Execute()
                           _active ? "active" : "disabled");
             break;
         case HotkeyToggle::Tick:
-            static bool ticked = false;
-            ticked = !ticked;
-            GW::PartyMgr::Tick(ticked);
+            const auto ticked = GW::PartyMgr::GetIsPlayerTicked();
+            GW::PartyMgr::Tick(!ticked);
             break;
     }
 }
