@@ -96,7 +96,8 @@ void SkillbarWidget::Draw(IDirect3DDevice9 *)
                     std::sort(durations.begin(), durations.end(), [](auto a, auto b) { return b < a; });
                     std::transform(durations.begin(), durations.end(), std::back_inserter(m_skills[it].effects), create_pair);
                 } else {
-                    m_skills[it].effects.emplace_back(create_pair(effect_duration));
+                    if (effect_duration > 0)
+                        m_skills[it].effects.emplace_back(create_pair(effect_duration));
                 }
             }
         }
@@ -117,7 +118,6 @@ void SkillbarWidget::Draw(IDirect3DDevice9 *)
     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1);
     ImGui::PushStyleColor(ImGuiCol_Text, color_text);
     ImGui::PushFont(GuiUtils::GetFont(m_font_size));
-    auto const font_scale = (1 + static_cast<float>(m_font_size) / 5.f);
     ImGui::PushStyleColor(ImGuiCol_Border, color_border);
     for (auto const &skill : m_skills) {
         ImGui::PushID(&skill);
@@ -129,17 +129,17 @@ void SkillbarWidget::Draw(IDirect3DDevice9 *)
         auto const next_button_pos = ImGui::GetCursorPos();
         if (display_effect_times) {
             auto const wnd_size = vertical ? ImVec2{static_cast<float>(m_skill_width) * 2, static_cast<float>(m_skill_height)} : ImVec2{static_cast<float>(m_skill_width), static_cast<float>(m_skill_height) * 2};
+            auto const font_scale = (1 + static_cast<float>(m_font_size) / 5.f);
+            auto const width_small = static_cast<float>(m_skill_width) / 3.f * font_scale;
+            auto const height_small = static_cast<float>(m_skill_height) / 3.f * font_scale;
             if (vertical)
                 ImGui::SetNextWindowPos({ImGui::GetWindowPos().x + static_cast<float>(m_effect_offset) - (m_effect_offset < 0 ? wnd_size.x / 2.f : 0), ImGui::GetWindowPos().y + button_pos.y});
             else
                 ImGui::SetNextWindowPos({ImGui::GetWindowPos().x + button_pos.x, ImGui::GetWindowPos().y + static_cast<float>(m_effect_offset) - (m_effect_offset < 0 ? wnd_size.y / 2.f : 0)});
             ImGui::SetNextWindowSize({wnd_size.x * font_scale, wnd_size.y * font_scale});
-            ImGui::SetNextWindowBgAlpha(0.5f);
+            ImGui::SetNextWindowBgAlpha(0.f);
             ImGui::Begin((std::string("Skill###") + std::to_string(reinterpret_cast<uintptr_t>(&skill))).c_str(), nullptr, wnd_flags);
             for (auto i = 0u; i < skill.effects.size(); i++) {
-                int colbuf[4];
-                auto const width_small = static_cast<float>(m_skill_width) / 3.f * font_scale;
-                auto const height_small = static_cast<float>(m_skill_height) / 3.f * font_scale;
                 if (vertical) {
                     ImGui::SameLine();
                     if (m_effect_offset < 0) {
@@ -154,10 +154,11 @@ void SkillbarWidget::Draw(IDirect3DDevice9 *)
                         ImGui::SetCursorPosY((i + 1) * height_small);
                     }
                 }
+                int colbuf[4];
                 Colors::ConvertU32ToInt4(skill.effects.at(i).second, colbuf);
                 colbuf[0] = 255;
                 ImGui::PushStyleColor(ImGuiCol_Text, Colors::ConvertInt4ToU32(colbuf));
-                ImGui::PushStyleColor(ImGuiCol_Button, 0);
+                ImGui::PushStyleColor(ImGuiCol_Button, color_effect_background);
                 ImGui::PushStyleColor(ImGuiCol_Border, 0);
                 if (vertical) {
                     ImGui::Button(skill.effects.at(i).first.data(), {width_small, static_cast<float>(m_skill_height)});
@@ -182,11 +183,12 @@ void SkillbarWidget::Draw(IDirect3DDevice9 *)
 void SkillbarWidget::LoadSettings(CSimpleIni *ini)
 {
     ToolboxWidget::LoadSettings(ini);
-    color_text = Colors::Load(ini, Name(), VAR_NAME(color_text), Colors::White());
-    color_border = Colors::Load(ini, Name(), VAR_NAME(color_border), Colors::White());
-    color_long = Colors::Load(ini, Name(), VAR_NAME(color_long), Colors::ARGB(50, 0, 255, 0));
-    color_medium = Colors::Load(ini, Name(), VAR_NAME(color_medium), Colors::ARGB(50, 255, 255, 0));
-    color_short = Colors::Load(ini, Name(), VAR_NAME(color_short), Colors::ARGB(50, 255, 0, 0));
+    color_text = Colors::Load(ini, Name(), VAR_NAME(color_text), color_text);
+    color_border = Colors::Load(ini, Name(), VAR_NAME(color_border), color_border);
+    color_long = Colors::Load(ini, Name(), VAR_NAME(color_long), color_long);
+    color_medium = Colors::Load(ini, Name(), VAR_NAME(color_medium), color_medium);
+    color_short = Colors::Load(ini, Name(), VAR_NAME(color_short), color_short);
+    color_effect_background = Colors::Load(ini, Name(), VAR_NAME(color_effect_background), color_effect_background);
     m_skill_height = static_cast<int>(ini->GetLongValue(Name(), "height", m_skill_height));
     m_skill_width = static_cast<int>(ini->GetLongValue(Name(), "width", m_skill_width));
     vertical = ini->GetBoolValue(Name(), "vertical", false);
@@ -205,6 +207,7 @@ void SkillbarWidget::SaveSettings(CSimpleIni *ini)
     Colors::Save(ini, Name(), VAR_NAME(color_long), color_long);
     Colors::Save(ini, Name(), VAR_NAME(color_medium), color_medium);
     Colors::Save(ini, Name(), VAR_NAME(color_short), color_short);
+    Colors::Save(ini, Name(), VAR_NAME(color_effect_background), color_effect_background);
     ini->SetLongValue(Name(), "height", static_cast<long>(m_skill_height));
     ini->SetLongValue(Name(), "width", static_cast<long>(m_skill_width));
     ini->SetBoolValue(Name(), "vertical", vertical);
@@ -251,6 +254,7 @@ void SkillbarWidget::DrawSettingInternal()
         Colors::DrawSettingHueWheel("Long uptime", &color_long);
         Colors::DrawSettingHueWheel("Medium uptime", &color_medium);
         Colors::DrawSettingHueWheel("Short uptime", &color_short);
+        Colors::DrawSettingHueWheel("Effect background", &color_effect_background);
         auto display = display_effect_times;
         if (ImGui::Checkbox("Effect text", &display)) {
             display_effect_times = display;

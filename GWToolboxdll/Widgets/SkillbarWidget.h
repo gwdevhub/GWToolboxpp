@@ -18,7 +18,7 @@ public:
         return instance;
     }
 
-    const char *Name() const override
+    [[nodiscard]] const char *Name() const override
     {
         return "Skillbar";
     }
@@ -39,11 +39,12 @@ private:
     };
 
     std::array<Skill, 8> m_skills{};
-    Color color_text{};
-    Color color_border{};
-    Color color_long{};
-    Color color_medium{};
-    Color color_short{};
+    Color color_text = Colors::White();
+    Color color_border = Colors::ARGB(100, 255, 255, 255);
+    Color color_long = Colors::ARGB(50, 0, 255, 0);
+    Color color_medium = Colors::ARGB(50, 255, 255, 0);
+    Color color_short = Colors::ARGB(80, 255, 0, 0);
+    Color color_effect_background = Colors::ARGB(0, 0, 0, 0);
 
     clock_t medium_treshold{5000};
     clock_t short_treshold{2500};
