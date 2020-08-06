@@ -6,7 +6,7 @@
 class RangeRenderer : public VBuffer {
 private:
     static constexpr size_t num_circles = 5;
-    static constexpr size_t circle_points = 96;
+    static constexpr size_t circle_points = 96 * 2; // 96 * 1.5
     static constexpr size_t circle_triangles = circle_points - 2;
 
 public:
