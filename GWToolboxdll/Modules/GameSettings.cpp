@@ -1385,7 +1385,7 @@ void GameSettings::Update(float delta) {
                 GW::SkillbarMgr::UseSkillByID(cast_skill, cast_target->agent_id);
                 cast_target = nullptr;
                 cast_next_frame = false;
-            } else if (casting) {
+            } else if (casting && me->GetIsMoving()) {
                 const auto *target = cast_target->GetAsAgentLiving();
                 const auto range = GetSkillRange(cast_skill); // TODO: calculate range based on skill
                 if (GW::GetDistance(target->pos, me->pos) <= range && range > 0) {
@@ -1998,7 +1998,7 @@ float GameSettings::GetSkillRange(uint32_t skill_id)
         case S::Volfen_Claw:
         case S::Volfen_Claw_Curse_of_the_Nornbear:
         case S::Wallows_Bite:
-            return GW::Constants::Range::Adjacent;
+            return 144.f;
         case S::Augury_of_Death:
         case S::Awe:
         case S::Caltrops:
