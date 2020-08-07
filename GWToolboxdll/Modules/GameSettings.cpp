@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <GWCA/Constants/Skills.h>
 #include <GWCA/Utilities/Scanner.h>
 
 #include <GWCA/GameContainers/Array.h>
@@ -8,6 +9,7 @@
 #include <GWCA/GameEntities/Friendslist.h>
 #include <GWCA/GameEntities/Guild.h>
 #include <GWCA/GameEntities/Map.h>
+#include <GWCA/GameEntities/Skill.h>
 
 #include <GWCA/Context/ItemContext.h>
 #include <GWCA/Context/PartyContext.h>
@@ -28,6 +30,7 @@
 #include <GWCA/Managers/RenderMgr.h>
 #include <GWCA/Managers/FriendListMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
 
 
 #include <GWCA/Utilities/Scanner.h>
@@ -828,6 +831,7 @@ void GameSettings::Initialize() {
     GW::Chat::RegisterStartWhisperCallback(&StartWhisperCallback_Entry, &OnStartWhisper);
     GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusCallback_Entry,&FriendStatusCallback);
     GW::CtoS::RegisterPacketCallback(&WhisperCallback_Entry, GAME_CMSG_PING_WEAPON_SET, &OnPingWeaponSet);
+    GW::CtoS::RegisterPacketCallback(&OnCast_Entry, GAME_CMSG_USE_SKILL, &OnCast);
     GW::Items::RegisterItemClickCallback(&ItemClickCallback_Entry, &ItemClickCallback);
     GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, &SendChatCallback);
     GW::Chat::RegisterWhisperCallback(&WhisperCallback_Entry, &WhisperCallback);
@@ -843,10 +847,10 @@ bool GameSettings::GetPlayerIsLeader() {
     if (!party) return false;
     std::wstring player_name = GetPlayerName();
     if (!party->players.size()) return false;
-    for (size_t i = 0; i < party->players.size(); i++) {
-        if (!party->players[i].connected())
+    for (auto &player : party->players) {
+        if (!player.connected())
             continue;
-        return GetPlayerName(party->players[i].login_number) == player_name;
+        return GetPlayerName(player.login_number) == player_name;
     }
     return false;
 }
@@ -989,6 +993,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     auto_accept_join_requests = ini->GetBoolValue(Name(), VAR_NAME(auto_accept_join_requests), auto_accept_join_requests);
 
     skip_entering_name_for_faction_donate = ini->GetBoolValue(Name(), VAR_NAME(skip_entering_name_for_faction_donate), skip_entering_name_for_faction_donate);
+    improve_move_to_cast = ini->GetBoolValue(Name(), VAR_NAME(improve_move_to_cast), improve_move_to_cast);
 
     ::LoadChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     ::LoadChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
@@ -1100,6 +1105,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(auto_accept_invites), auto_accept_invites);
     ini->SetBoolValue(Name(), VAR_NAME(auto_accept_join_requests), auto_accept_join_requests);
     ini->SetBoolValue(Name(), VAR_NAME(skip_entering_name_for_faction_donate), skip_entering_name_for_faction_donate);
+    ini->SetBoolValue(Name(), VAR_NAME(improve_move_to_cast), improve_move_to_cast);
 
     ::SaveChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     ::SaveChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
@@ -1272,6 +1278,8 @@ void GameSettings::DrawSettingInternal() {
     if (ImGui::Checkbox("Set Guild Wars window title as current logged-in character", &set_window_title_as_charname)) {
         SetWindowTitle(set_window_title_as_charname);
     }
+    ImGui::Checkbox("Improve move to cast spell range", &improve_move_to_cast);
+    ImGui::ShowHelp("This should make you stop to cast skills earlier by re-triggering the skill cast when in range.");
 }
 
 void GameSettings::FactionEarnedCheckAndWarn() {
@@ -1366,6 +1374,33 @@ void GameSettings::Update(float delta) {
     }
     //UpdateFOV();
     FactionEarnedCheckAndWarn();
+
+    static bool cast_next_frame = false;
+    if (improve_move_to_cast) {
+        const auto *me = GW::Agents::GetPlayerAsAgentLiving();
+        const auto *skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
+        if (me != nullptr && skillbar != nullptr) {
+            const auto casting = skillbar->casting;
+            if (cast_next_frame && cast_target_id) {
+                GW::SkillbarMgr::UseSkillByID(cast_skill, cast_target_id);
+                cast_target = nullptr;
+                cast_target_id = 0;
+                cast_next_frame = false;
+            } else if (cast_target != nullptr && cast_target->GetAsAgentLiving() != nullptr && casting) {
+                auto *const target = cast_target->GetAsAgentLiving();
+                auto const constant_data = GW::SkillbarMgr::GetSkillConstantData(cast_skill);
+                const auto range = GW::Constants::Range::Spellcast; // TODO: calculate range based on skill
+                if (GW::GetDistance(target->pos, me->pos) <= range && range > 0) {
+                    GW::CtoS::SendPacket(0x4, 0x2F); // cancel action packet
+                    cast_next_frame = true;
+                }
+            } else if (!casting) { // abort the action if not auto walking anymore
+                cast_target = nullptr;
+                cast_target_id = 0;
+                cast_next_frame = false;
+            }
+        }
+    }
 
 #ifdef APRIL_FOOLS
     AF::ApplyPatchesIfItsTime();
@@ -1876,6 +1911,18 @@ void GameSettings::OnCheckboxPreferenceChanged(GW::HookStatus* status, uint32_t 
             Log::Error("Disable GWToolbox timestamps to enable this setting");
             GW::UI::SetCheckboxPreference(GW::UI::CheckboxPreference::CheckboxPreference_ShowChatTimestamps, 0);
         }
+    }
+}
+
+void GameSettings::OnCast(GW::HookStatus *, void *packet)
+{
+    uint32_t arri[0x4];
+    memcpy(arri, packet, sizeof(arri));
+    auto *const me = GW::Agents::GetPlayerAsAgentLiving();
+    if (me != nullptr && me->max_energy > 0 && me->player_number != 0 && arri[3] != me->agent_id) {
+        Instance().cast_target = GW::Agents::GetAgentByID(arri[3]);
+        Instance().cast_target_id = arri[3]; // target id
+        Instance().cast_skill = arri[1]; // skill id
     }
 }
 

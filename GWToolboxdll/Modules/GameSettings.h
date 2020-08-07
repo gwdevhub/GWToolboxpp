@@ -4,10 +4,12 @@
 #include <GWCA/Utilities/MemoryPatcher.h>
 
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/Constants/Skills.h>
 
 #include <GWCA/GameEntities/Item.h>
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/NPC.h>
+#include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Player.h>
 #include <GWCA/Packets/StoC.h>
@@ -185,6 +187,7 @@ public:
     static void OnServerMessage(GW::HookStatus*, GW::Packet::StoC::MessageServer*);
     static void OnScreenShake(GW::HookStatus*, void* packet);
     static void OnCheckboxPreferenceChanged(GW::HookStatus*, uint32_t msgid, void* wParam, void* lParam);
+    static void OnCast(GW::HookStatus *, void *packet);
     
 
     bool tick_is_toggle = false;
@@ -269,6 +272,11 @@ private:
     bool skip_entering_name_for_faction_donate = false;
     bool stop_screen_shake = false;
 
+    bool improve_move_to_cast = false;
+    GW::Agent *cast_target = nullptr;
+    uint32_t cast_skill = 0;
+    uint32_t cast_target_id = 0;
+
     void DrawChannelColor(const char *name, GW::Chat::Channel chan);
     static void FriendStatusCallback(
         GW::HookStatus *,
@@ -304,4 +312,5 @@ private:
     GW::HookEntry OnDialog_Entry;
     GW::HookEntry OnCheckboxPreferenceChanged_Entry;
     GW::HookEntry OnScreenShake_Entry;
+    GW::HookEntry OnCast_Entry;
 };
