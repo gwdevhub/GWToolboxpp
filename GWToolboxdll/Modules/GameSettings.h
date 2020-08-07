@@ -275,7 +275,8 @@ private:
     bool improve_move_to_cast = false;
     GW::Agent *cast_target = nullptr;
     uint32_t cast_skill = 0;
-    uint32_t cast_target_id = 0;
+
+    static float GetSkillRange(uint32_t);
 
     void DrawChannelColor(const char *name, GW::Chat::Channel chan);
     static void FriendStatusCallback(

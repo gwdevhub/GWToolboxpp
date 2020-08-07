@@ -1379,24 +1379,21 @@ void GameSettings::Update(float delta) {
     if (improve_move_to_cast) {
         const auto *me = GW::Agents::GetPlayerAsAgentLiving();
         const auto *skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
-        if (me != nullptr && skillbar != nullptr) {
+        if (me != nullptr && skillbar != nullptr && cast_target != nullptr && cast_target->GetAsAgentLiving() != nullptr) {
             const auto casting = skillbar->casting;
-            if (cast_next_frame && cast_target_id) {
-                GW::SkillbarMgr::UseSkillByID(cast_skill, cast_target_id);
+            if (cast_next_frame && cast_target) {
+                GW::SkillbarMgr::UseSkillByID(cast_skill, cast_target->agent_id);
                 cast_target = nullptr;
-                cast_target_id = 0;
                 cast_next_frame = false;
-            } else if (cast_target != nullptr && cast_target->GetAsAgentLiving() != nullptr && casting) {
-                auto *const target = cast_target->GetAsAgentLiving();
-                auto const constant_data = GW::SkillbarMgr::GetSkillConstantData(cast_skill);
-                const auto range = GW::Constants::Range::Spellcast; // TODO: calculate range based on skill
+            } else if (casting) {
+                const auto *target = cast_target->GetAsAgentLiving();
+                const auto range = GetSkillRange(cast_skill); // TODO: calculate range based on skill
                 if (GW::GetDistance(target->pos, me->pos) <= range && range > 0) {
                     GW::CtoS::SendPacket(0x4, 0x2F); // cancel action packet
                     cast_next_frame = true;
                 }
             } else if (!casting) { // abort the action if not auto walking anymore
                 cast_target = nullptr;
-                cast_target_id = 0;
                 cast_next_frame = false;
             }
         }
@@ -1921,7 +1918,6 @@ void GameSettings::OnCast(GW::HookStatus *, void *packet)
     auto *const me = GW::Agents::GetPlayerAsAgentLiving();
     if (me != nullptr && me->max_energy > 0 && me->player_number != 0 && arri[3] != me->agent_id) {
         Instance().cast_target = GW::Agents::GetAgentByID(arri[3]);
-        Instance().cast_target_id = arri[3]; // target id
         Instance().cast_skill = arri[1]; // skill id
     }
 }
@@ -1930,6 +1926,96 @@ void GameSettings::OnCast(GW::HookStatus *, void *packet)
 void GameSettings::OnMapLoaded(GW::HookStatus*, GW::Packet::StoC::MapLoaded*) {
     instance_entered_at = TIMER_INIT();
     SetWindowTitle(Instance().set_window_title_as_charname);
+}
+
+float GameSettings::GetSkillRange(uint32_t skill_id)
+{
+    const auto constant_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+    using T = GW::Constants::SkillType;
+    using S = GW::Constants::SkillID;
+    switch (static_cast<T>(constant_data.type)) {
+        case GW::Constants::SkillType::Hex:
+            break;
+        case GW::Constants::SkillType::Spell:
+            break;
+        case GW::Constants::SkillType::Enchantment:
+            break;
+        case GW::Constants::SkillType::Signet:
+            break;
+        case GW::Constants::SkillType::Condition:
+            break;
+        case GW::Constants::SkillType::Well:
+            break;
+        case GW::Constants::SkillType::Skill:
+            break;
+        case GW::Constants::SkillType::ItemSpell:
+            break;
+        case GW::Constants::SkillType::WeaponSpell:
+            break;
+        default:
+        return 0.f;
+    }
+    switch (static_cast<GW::Constants::SkillID>(constant_data.skill_id)) {
+        case S::A_Touch_of_Guile:
+        case S::Blackout:
+        case S::Blood_Ritual:
+        case S::Brawling_Headbutt:
+        case S::Brawling_Headbutt_Brawling_skill:
+        case S::Dwaynas_Touch:
+        case S::Ear_Bite:
+        case S::Enfeebling_Touch:
+        case S::Expunge_Enchantments:
+        case S::Grapple:
+        case S::Headbutt:
+        case S::Healing_Touch:
+        case S::Hex_Eater_Signet:
+        case S::Holy_Strike:
+        case S::Iron_Palm:
+        case S::Lift_Enchantment:
+        case S::Lightning_Touch:
+        case S::Low_Blow:
+        case S::Mending_Touch:
+        case S::Palm_Strike:
+        case S::Plague_Touch:
+        case S::Rending_Touch:
+        case S::Renew_Life:
+        case S::Restore_Life:
+        case S::Shock:
+        case S::Shove:
+        case S::Shroud_of_Silence:
+        case S::Signet_of_Midnight:
+        case S::Spirit_to_Flesh:
+        case S::Star_Burst:
+        case S::Stonesoul_Strike:
+        case S::Test_of_Faith:
+        case S::Throw_Dirt:
+        case S::Ursan_Rage:
+        case S::Ursan_Strike:
+        case S::Ursan_Strike_Blood_Washes_Blood:
+        case S::Vampiric_Bite:
+        case S::Vampiric_Touch:
+        case S::Vile_Touch:
+        case S::Volfen_Claw:
+        case S::Volfen_Claw_Curse_of_the_Nornbear:
+        case S::Wallows_Bite:
+            return GW::Constants::Range::Adjacent;
+        case S::Augury_of_Death:
+        case S::Awe:
+        case S::Caltrops:
+        case S::Crippling_Dagger:
+        case S::Dancing_Daggers:
+        case S::Disrupting_Dagger:
+        case S::Healing_Whisper:
+        case S::Resurrection_Chant:
+        case S::Scorpion_Wire:
+        case S::Seeping_Wound:
+        case S::Signet_of_Judgment:
+        case S::Signet_of_Judgment_PvP:
+        case S::Siphon_Speed:
+            return GW::Constants::Range::Spellcast / 2.f;
+        default:
+            return GW::Constants::Range::Spellcast;
+    }
 }
 
 void GameSettings::DrawChannelColor(const char *name, GW::Chat::Channel chan) {
