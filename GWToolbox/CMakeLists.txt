@@ -7,6 +7,7 @@ FILE(GLOB SOURCES
 
 add_executable(GWToolbox)
 target_sources(GWToolbox PRIVATE ${SOURCES})
+target_precompile_headers(GWToolbox PRIVATE "stdafx.h")
 
 target_link_libraries(GWToolbox PRIVATE 
     # cmake dependencies:

@@ -18,6 +18,7 @@ file(GLOB SOURCES
     "Windows/*.cpp")
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SOURCES})
 target_sources(GWToolboxdll PRIVATE ${SOURCES})
+target_precompile_headers(GWToolboxdll PRIVATE "stdafx.h")
 target_compile_definitions(GWToolboxdll PRIVATE "_USRDLL")
 
 target_include_directories(GWToolboxdll PRIVATE 

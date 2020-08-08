@@ -16,6 +16,7 @@ file(GLOB SOURCES
     "${GWCA_FOLDER}/include/gwca/utilities/*.h")
 source_group(TREE "${GWCA_FOLDER}" FILES ${SOURCES})
 target_sources(gwca PRIVATE ${SOURCES})
+target_precompile_headers(gwca PRIVATE "${GWCA_FOLDER}/source/stdafx.h")
 target_include_directories(gwca PUBLIC "${GWCA_FOLDER}/include/")
 
 include(minhook)
