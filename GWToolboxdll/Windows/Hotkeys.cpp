@@ -1348,6 +1348,18 @@ void HotkeyUseSkill::Execute()
     auto *me = GW::Agents::GetPlayer();
     if (me == nullptr)
         return;
+    const auto *skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
+    if (skillbar != nullptr) {
+        const auto skill_id = skillbar->skills[skill_num - 1].skill_id;
+        for (auto const &effect : GW::Effects::GetPlayerEffectArray()) {
+            if (effect.skill_id == static_cast<uint32_t>(GW::Constants::SkillID::Sand_Shards) && skill_id == effect.skill_id) {
+                return;
+            }
+        }
+        if (static_cast<uint32_t>(GW::Constants::SkillID::Sand_Shards) == skill_id) {
+            GW::SkillbarMgr::UseSkillByID(skill_id);
+        }
+    }
     auto *target = GW::Agents::GetTargetAsAgentLiving();
     if (target == nullptr) {
         return;
