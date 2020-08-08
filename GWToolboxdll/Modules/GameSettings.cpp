@@ -1376,7 +1376,7 @@ void GameSettings::Update(float delta) {
     FactionEarnedCheckAndWarn();
 
     static bool cast_next_frame = false;
-    if (improve_move_to_cast) {
+    if (improve_move_to_cast && GW::Map::GetCurrentMapInfo() != nullptr) {
         const auto *me = GW::Agents::GetPlayerAsAgentLiving();
         const auto *skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
         if (me != nullptr && skillbar != nullptr && cast_target != nullptr && cast_target->GetAsAgentLiving() != nullptr) {
@@ -1385,11 +1385,11 @@ void GameSettings::Update(float delta) {
                 GW::SkillbarMgr::UseSkillByID(cast_skill, cast_target->agent_id);
                 cast_target = nullptr;
                 cast_next_frame = false;
-            } else if (casting && me->GetIsMoving()) {
+            } else if (casting && me->GetIsMoving() && !me->skill && !me->GetIsCasting()) { // casting/skill don't update fast enough, so delay the rupt
                 const auto *target = cast_target->GetAsAgentLiving();
-                const auto range = GetSkillRange(cast_skill); // TODO: calculate range based on skill
+                const auto range = GetSkillRange(cast_skill);
                 if (GW::GetDistance(target->pos, me->pos) <= range && range > 0) {
-                    GW::CtoS::SendPacket(0x4, 0x2F); // cancel action packet
+                    GW::CtoS::SendPacket(0x4, GAME_CMSG_CANCEL_MOVEMENT); // cancel action packet
                     cast_next_frame = true;
                 }
             } else if (!casting) { // abort the action if not auto walking anymore
@@ -1913,12 +1913,14 @@ void GameSettings::OnCheckboxPreferenceChanged(GW::HookStatus* status, uint32_t 
 
 void GameSettings::OnCast(GW::HookStatus *, void *packet)
 {
-    uint32_t arri[0x4];
-    memcpy(arri, packet, sizeof(arri));
-    auto *const me = GW::Agents::GetPlayerAsAgentLiving();
-    if (me != nullptr && me->max_energy > 0 && me->player_number != 0 && arri[3] != me->agent_id) {
-        Instance().cast_target = GW::Agents::GetAgentByID(arri[3]);
-        Instance().cast_skill = arri[1]; // skill id
+    const auto *info = static_cast<CastInfo *>(packet);
+    const auto *me = GW::Agents::GetPlayerAsAgentLiving();
+    const auto *target = GW::Agents::GetAgentByID(info->target_id);
+    if (me != nullptr && target != nullptr && me->max_energy > 0 && me->player_number != 0 && target->agent_id != me->agent_id) {
+        if (GW::GetDistance(me->pos, target->pos) > GetSkillRange(info->skill_id)) { // don't interrupt yourself before you started casting
+            Instance().cast_target = GW::Agents::GetAgentByID(info->target_id);
+            Instance().cast_skill = info->skill_id;
+        }
     }
 }
 
