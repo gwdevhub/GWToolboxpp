@@ -8,8 +8,6 @@ FILE(GLOB SOURCES
 add_executable(GWToolbox)
 target_sources(GWToolbox PRIVATE ${SOURCES})
 
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DGWTOOLBOX_DEBUG")
-
 target_link_libraries(GWToolbox PRIVATE 
     # cmake dependencies:
     GWToolboxdll

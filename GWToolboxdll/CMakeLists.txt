@@ -1,7 +1,6 @@
 
 add_library(GWToolboxdll SHARED)
 
-set(GWTOOLBOX_FOLDER "${PROJECT_SOURCE_DIR}/GWToolboxdll")
 file(GLOB SOURCES
     "*.h"
     "*.cpp"
@@ -17,11 +16,12 @@ file(GLOB SOURCES
     "Widgets/Minimap/*.cpp"
     "Windows/*.h"
     "Windows/*.cpp")
-source_group(TREE "${GWTOOLBOX_FOLDER}" FILES ${SOURCES})
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SOURCES})
 target_sources(GWToolboxdll PRIVATE ${SOURCES})
+target_compile_definitions(GWToolboxdll PRIVATE "_USRDLL")
 
 target_include_directories(GWToolboxdll PRIVATE 
-    "${GWTOOLBOX_FOLDER}"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
     )
 
 target_link_libraries(GWToolboxdll PRIVATE

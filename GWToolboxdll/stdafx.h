@@ -36,14 +36,6 @@
 
 #include <GWCA/Source/stdafx.h>
 
-#ifndef _USE_MATH_DEFINES
-#define _USE_MATH_DEFINES
-#endif
-
-#ifndef _USRDLL
-#define _USRDLL
-#endif
-
 // c style headers
 #include <ctype.h>
 #include <math.h>
@@ -79,14 +71,6 @@
 #include <unordered_set>
 #include <vector>
 
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-
 // windows headers
 #include <Windows.h>
 
@@ -109,7 +93,7 @@
 #include <discord_game_sdk.h>
 #include <SimpleIni.h>
 #include <json.hpp>
-#include <easywsclient/easywsclient.hpp>
+#include <easywsclient.hpp>
 #include <mp3.h>
 
 #include <imgui.h>

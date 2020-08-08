@@ -1,22 +1,37 @@
 cmake_minimum_required(VERSION 3.15)
 
-# Important: you HAVE to build this project in 32bit configuration
-#
-# For Visual studio 2019, the command to use is:
-#
-# cmake -G "Visual Studio 16 2019" -A Win32 ..
-
 project(gwtoolbox)
+
+set(GWTOOLBOXDLL_VERSION "3.8.1")
+set(GWTOOLBOXDLL_VERSION_BETA "") # can be anything. Marks beta version if not empty. 
+set(GWTOOBOX_MODULE_VERSION "3.8.1.0") # used for Dll module info. See GWToolboxdll/GWToolbox.rc
+
+# Updates toolboxversion.txt after changes in the above version (make sure to run cmake .. or build the project)
+file(WRITE "resources/toolboxversion.txt" ${GWTOOLBOXDLL_VERSION})
+
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    message(FATAL_ERROR "You are configuring a 64bit build, this is not supported. Run cmake with `-A Win32`")
+endif()
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-add_definitions(-DNOMINMAX)
-add_definitions(-D_USE_MATH_DEFINES)
+add_compile_definitions(
+    "NOMINMAX"
+    "_USE_MATH_DEFINES"
+    "WIN32_LEAN_AND_MEAN"
+
+    "GWTOOLBOXDLL_VERSION=\"${GWTOOLBOXDLL_VERSION}\""
+    "GWTOOLBOXDLL_VERSION_BETA=\"${GWTOOLBOXDLL_VERSION_BETA}\""
+    "GWTOOLBOX_MODULE_VERSION=${GWTOOBOX_MODULE_VERSION}"
+    )
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake")
+
+# Outputs dll, exe, and pdb into a /bin/config folder
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin/")
 
 include(gwca)
 include(imgui)
@@ -31,6 +46,8 @@ add_subdirectory(GWToolboxdll)
 add_subdirectory(Core)
 add_subdirectory(RestClient)
 add_subdirectory(GWToolbox)
+
+target_compile_definitions(GWToolboxdll PRIVATE "$<$<CONFIG:DEBUG>:GWTOOLBOX_DEBUG>")
 
 
 # Below is for toolbox plugins (WIP):

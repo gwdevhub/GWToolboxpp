@@ -49,24 +49,29 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
         ImColor sCol(102, 187, 238, 255);
         ImGui::PushTextWrapPos();
         ImGui::Text("GWToolbox++");
-        ImGui::SameLine(0, 0); ImGui::TextColored(sCol," v%s ",GWTOOLBOX_VERSION);
+        ImGui::SameLine(0, 0);
+        ImGui::TextColored(sCol, " v%s ", GWTOOLBOXDLL_VERSION);
         if (ImGui::IsItemHovered()) 
             ImGui::SetTooltip("Go to %s", GWTOOLBOX_WEBSITE);
         if(ImGui::IsItemClicked())
             ShellExecute(NULL, "open", GWTOOLBOX_WEBSITE, NULL, NULL, SW_SHOWNORMAL);
-        if (BETA_VERSION[0]) {
+        if (GWTOOLBOXDLL_VERSION_BETA[0]) {
             ImGui::SameLine();
-            ImGui::Text("- %s", BETA_VERSION);
+            ImGui::Text("- %s", GWTOOLBOXDLL_VERSION_BETA);
         } else {
             const std::string server_version = Updater::Instance().GetServerVersion();
             if (!server_version.empty()) {
-                if (server_version.compare(GWTOOLBOX_VERSION) == 0) {
+                if (server_version.compare(GWTOOLBOXDLL_VERSION) == 0) {
                     ImGui::SameLine();
                     ImGui::Text("(Up to date)");
                 } else {
                     ImGui::Text("Version %s is available!", server_version.c_str());
                 }
             }
+        }
+        if (_DEBUG) {
+            ImGui::SameLine();
+            ImGui::Text("(Debug)");
         }
         float w = (ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().ItemSpacing.x) / 2;
         if (ImGui::Button("Open Settings Folder", ImVec2(w, 0))) {

@@ -5,6 +5,7 @@ set(GWCA_FOLDER "${PROJECT_SOURCE_DIR}/Dependencies/GWCA/")
 add_library(gwca)
 
 file(GLOB SOURCES
+    "${GWCA_FOLDER}/source/stdafx.h"
     "${GWCA_FOLDER}/source/*.cpp"
     "${GWCA_FOLDER}/include/gwca/constants/*.h"
     "${GWCA_FOLDER}/include/gwca/context/*.h"
