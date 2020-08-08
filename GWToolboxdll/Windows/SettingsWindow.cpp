@@ -69,10 +69,10 @@ void SettingsWindow::Draw(IDirect3DDevice9* pDevice) {
                 }
             }
         }
-        if (_DEBUG) {
+#ifdef _DEBUG
             ImGui::SameLine();
             ImGui::Text("(Debug)");
-        }
+#endif
         float w = (ImGui::GetWindowContentRegionWidth() - ImGui::GetStyle().ItemSpacing.x) / 2;
         if (ImGui::Button("Open Settings Folder", ImVec2(w, 0))) {
             CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
