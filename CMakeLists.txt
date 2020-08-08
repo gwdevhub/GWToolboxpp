@@ -33,6 +33,7 @@ add_subdirectory(RestClient)
 add_subdirectory(GWToolbox)
 
 
+# Below is for toolbox plugins (WIP):
 add_library(module_base INTERFACE)
 target_sources(module_base INTERFACE
     "modules/base/dllmain.cpp"

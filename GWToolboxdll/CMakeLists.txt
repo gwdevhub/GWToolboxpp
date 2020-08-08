@@ -6,6 +6,7 @@ file(GLOB SOURCES
     "*.h"
     "*.cpp"
     "*.cc"
+    "GWToolbox.rc"
     "Modules/*.h"
     "Modules/*.cpp"
     "Utils/*.h"

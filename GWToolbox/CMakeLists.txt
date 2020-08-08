@@ -2,7 +2,8 @@
 
 FILE(GLOB SOURCES 
     "*.h" 
-    "*.cpp")
+    "*.cpp"
+    "GWToolbox.rc")
 
 add_executable(GWToolbox)
 target_sources(GWToolbox PRIVATE ${SOURCES})
