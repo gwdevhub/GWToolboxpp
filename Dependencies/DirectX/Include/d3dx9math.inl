@@ -24,15 +24,15 @@
 
 D3DXINLINE
 D3DXFLOAT16::D3DXFLOAT16( FLOAT f )
+    : value{}
 {
     D3DXFloat32To16Array(this, &f, 1);
 }
 
 D3DXINLINE
 D3DXFLOAT16::D3DXFLOAT16( CONST D3DXFLOAT16& f )
-{
-    value = f.value;
-}
+    : value{f.value}
+{}
 
 // casting
 D3DXINLINE
@@ -86,10 +86,8 @@ D3DXVECTOR2::D3DXVECTOR2( CONST D3DXFLOAT16 *pf )
 
 D3DXINLINE
 D3DXVECTOR2::D3DXVECTOR2( FLOAT fx, FLOAT fy )
-{
-    x = fx;
-    y = fy;
-}
+    : x{ fx }, y{ fy }
+{}
 
 
 // casting

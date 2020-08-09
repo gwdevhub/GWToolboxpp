@@ -2,16 +2,13 @@
 
 ## A set of tools for Guild Wars Speed Clearers
 
-[https://haskha.github.io/GWToolboxpp/](https://haskha.github.io/GWToolboxpp/)
+If you are here to check toolbox features and for a download link to go [https://haskha.github.io/GWToolboxpp/](https://haskha.github.io/GWToolboxpp/). Keep reading for information on how to download and build from the source.
 
-## Announcement
-A recent game update broke compatibility of APIs such as the included dependency and subrepository 'GWCA'. GWCA has been fixed, but its authors and I decided to keep the fixes private in order to not ease and promote botting. The submodule GWCA source is currently private. This means that cloning the repository will fail, and you cannot completely build from the source. I apologize for the inconvenience. GWCA has been release as public headers and compiled .lib here: [https://github.com/GregLando113/GWCA-Public](GWCA-Public). You should be able to build GWToolbox with it.
-
-## How to download and run
-1. Clone *recursively* the repository. On command line, use: `git clone --recursive https://github.com/HasKha/GWToolboxpp.git`.
-2. Open GWToolboxpp.sln with Visual Studio. Toolbox is developed under VS2015, but earlier or later versions should work too.
-3. Set to Debug mode, Win32 and compile.
-4. If it's not already, set CSLauncher as the startup project, and run. Alternatively you can copy `AutoitLauncher/Inject.au3` to your build folder (where `GWToolbox.dll` is) and run that (this requires AutoIt3).
+## How to download, build, and run
+0. Requirements: Install Visual Studio Community 2019, including the "Desktop development with C++" and ".NET desktop development" packages. Other versions (pro, enterprise) work too. Older versions of visual studio *should* work, as long as they support C++17.
+1. Clone *recursively* the repository. On command line, use: `git clone --recursive https://github.com/haskha/GWToolboxpp.git`.
+2. Open GWToolboxpp.sln with Visual Studio.
+3. Set to Debug, build, and run. You may have to launch Visual Studio as administrator. For testing in Release mode, read the notes below.
 
 ## Notes
 * GWToolbox compiles as a DLL (`GWToolbox.dll`). `GWToolbox.exe`, aka Launcher, selects a GW clients and injects the dll, but you can also use different launchers, such as the ones in the `AutoItLauncher/` folder.
@@ -33,6 +30,9 @@ Both Widgets and Windows can also have a panel in Settings, and share common cod
 
 ## Credits
 
+ **HasKha**
+ * Original creator of GWToolbox++, from which this version build upon - [https://HasKha.github.io/GWToolboxpp/](https://HasKha.github.io/GWToolboxpp/)
+ 
  **KAOS**
  * Original creator of the GW API used, reverse engineering work.
  * Several minor additions.

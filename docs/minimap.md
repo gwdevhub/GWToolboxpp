@@ -125,6 +125,16 @@ You can attach/detach them to/from the minimap with the **Attach to minimap** to
 
 You can also change the color of the flag controls' background.
 
-You can use the chat commands `/flag all` and `/flag <number>` to select hero flags, and `/flag clear` to unflag all heroes.
+## Chat Commands
+
+You can use the chat commands to flag heroes using the minimap.
+
+`/flag [all|clear|<number>]` to flag a hero in the minimap (same as using the buttons by the minimap).
+
+`/flag <number> clear` to clear flag for a hero.
+
+`/flag [all|<number>] [x] [y]` to flag a hero to coordinates `[x]`,`[y]`.
+
+
 
 [back](./)

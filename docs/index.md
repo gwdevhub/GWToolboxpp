@@ -2,7 +2,7 @@
 layout: default
 ---
 
-> Note: we released a new launcher, you can download it [here](https://github.com/HasKha/GWToolboxpp/releases/download/2.12_Release/GWToolbox.exe). The new launcher will update the dll automatically.
+> Note: we released a new launcher, you can download it [here]({{ site.download_url }}). The new launcher will update the dll automatically.
 
 # What is GWToolbox++?
 GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancements for the original Guild Wars. It adds features that should exist in a modern game and tools to visualize information and improve the player experience.
@@ -27,7 +27,7 @@ GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancemen
 		</tr>
 		<tr>
 			<td><a href="hotkeys">Hotkeys</a></td>
-			<td><a href="widgets#damage">Damage Monitor</a></td>
+			<td><a href="damage_monitor">Damage Monitor</a></td>
 			<td><a href="commands">Chat Commands</a></td>
 		</tr>
 		<tr>
@@ -57,27 +57,24 @@ GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancemen
 		</tr>
 		<tr>
 			<td><a href="travel">Travel</a></td>
-			<td></td>
+			<td><a href="widgets#alcohol">Alcohol Monitor</a></td>
 			<td><a href="settings#game_settings">URLs in equipment templates</a></td>
+		</tr>
+		<tr>
+			<td>Hero Builds</td>
+            <td></td>
+            <td></td>
+		</tr>
+		<tr>
+			<td><a href="trade">Trade</a></td>
+            <td></td>
+            <td></td>
 		</tr>
 	</table>
 </div>
+
 <div style="float: right; width: 15%; margin-left: 5%;">
 	<img src="https://user-images.githubusercontent.com/11432831/28233445-c7762ff4-68ab-11e7-9388-9437c8987a61.PNG" style="float: right;" />
 </div>
 
-| [Windows](windows) | [Widgets](widgets) | Other Features  |
-| ------------- |-------------| -----|
-| [Builds](builds) | [Bonds Monitor](widgets#bonds) | [Customizable Camera](camera) |
-| [Dialogs](dialogs) | [Clock](widgets#clock) | [Chat Commands](commands) |
-| [Hotkeys](hotkeys) | [Damage Monitor](widgets#damage) | [Chat Filter](filter) |
-| [Info](info) | [Distance Monitor](widgets#distance) | [Flash GW in taskbar when receiving a PM](settings#game_settings) |
-| [Materials Buyer](materials) | [Health Monitor](widgets#health) | [Save Location Data](settings#toolbox_settings) |
-| [Notepad](windows#notepad) | [Instance Timer](widgets#timer) | [Target with double-click on message author](settings#game_settings) |
-| [Auto Pcons](pcons) | [Minimap](minimap) | [Theme editor](theme) |
-| [Settings](settings) | [Vanquish Monitor](widgets#vanquish) | [URLs in equipment templates](settings#game_settings) |
-| [Travel](travel) | [Alcohol Monitor](widgets#alcohol) |  |
-| [Hero Builds](hero) | | 
-| [Trade](trade) | |
-
-# Want a new feature? Add it to the [Issue Tracker](https://github.com/HasKha/GWToolboxpp/issues)!
+<h3 style="display: block; clear: both;">Have an issue or want a new feature? Check the <a href="{{ site.github.issues_url }}">Issue Tracker</a>!</h3>

@@ -26,7 +26,9 @@
           <li class="button-left"><a href="credits">Credits</a></li>
           {% if site.show_downloads %}
             <li class="downloads"><a href="history">Older Versions</a></li>
-            <li class="downloads"><a href="{{ site.download_url }}">GWToolbox++ {{ site.toolbox_version }}</a></li>
+            {% if site.github.latest_release %}
+              <li class="downloads"><a href="{{ site.download_url }}">GWToolbox++ {{ site.toolbox_version }}</a></li>
+            {% endif %}
             <li class="title">DOWNLOADS</li>
           {% endif %}
         </nav>
@@ -40,11 +42,11 @@
           <p>{{ site.description | default: site.github.project_tagline }}</p>
           <hr>
           <span class="credits left">Project maintained by 
-            <a href="{{ site.github.owner_url }}">{{ site.github.owner_name }}</a>, 
+            <a href="https://github.com/HasKha">HasKha</a>,
             <a href="https://github.com/GregLando113"> GregLando113</a>,
-            <a href="https://github.com/reduf">reduf</a>, 
-            <a href="https://github.com/MikeJerred">MikeJerred</a>, 
-            <a href="https://github.com/Hour-of-the-Owl">Hour-of-the-Owl</a>, 
+            <a href="https://github.com/reduf">reduf</a>,
+            <a href="https://github.com/3vcloud">3vcloud</a>,
+            <a href="https://github.com/Hour-of-the-Owl">Hour-of-the-Owl</a>,
             <a href="https://github.com/DarkManic">DarkManic</a>
           </span>
         </div>
