@@ -25,7 +25,7 @@ If you leave a template code blank, it will simply appear as a message, instead 
 "Up" and "Down" change the teambuild's position in the list of teambuilds, and "Delete" will delete the entire teambuild from the list.
 
 ## Chat Commands
-`/load [build template|build name] [Hero index]` loads a build. The build name must be between quotes if it contains spaces. First Hero index is 1, last is 7. Leave out for player.
+`/load [build template|build name] [Hero index]` loads a build from your saved templates in Guild Wars. The build name must be between quotes if it contains spaces. First Hero in the party is 1, and so on up to 7. Leave out for player.
 
 `/loadbuild [teambuild] <build name|build code>` loads a build via GWToolbox Builds window. Does a partial search on team build name/build name/build code. Matches current player's profession.
 * Example: `/loadbuild fbgm tk` would load the build called `Me/A | Tendril Killer (TK)` from the teambuild called `DoA | FBGM Tactics` onto your player if you're a Mesmer
