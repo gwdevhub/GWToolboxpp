@@ -44,6 +44,8 @@
 #include <Windows/NotepadWindow.h>
 #include <Windows/StringDecoderWindow.h>
 
+#include <Modules/ToolboxSettings.h>
+
 void InfoWindow::Initialize() {
     ToolboxWindow::Initialize();
 
@@ -209,28 +211,30 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
     ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         if (show_widgets) {
-            ImGui::Checkbox("Timer", &TimerWidget::Instance().visible);
-            ImGui::ShowHelp("Time the instance has been active");
-            ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
-            ImGui::Checkbox("Minimap", &Minimap::Instance().visible);
-            ImGui::ShowHelp("An alternative to the default compass");
-            ImGui::Checkbox("Bonds", &BondsWidget::Instance().visible);
-            ImGui::ShowHelp("Show the bonds maintained by you.\nOnly works on human players");
-            ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
-            ImGui::Checkbox("Damage", &PartyDamage::Instance().visible);
-            ImGui::ShowHelp("Show the damage done by each player in your party.\nOnly works on the damage done within your radar range.");
-            ImGui::Checkbox("Health", &HealthWidget::Instance().visible);
-            ImGui::ShowHelp("Displays the health of the target.\nMax health is only computed and refreshed when you directly damage or heal your target");
-            ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
-            ImGui::Checkbox("Distance", &DistanceWidget::Instance().visible);
-            ImGui::ShowHelp("Displays the distance to your target.\n1010 = Earshot / Aggro\n1248 = Cast range\n2500 = Spirit range\n5000 = Radar range");
-            ImGui::Checkbox("Clock", &ClockWidget::Instance().visible);
-            ImGui::ShowHelp("Displays the system time (hour : minutes)");
-            ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
-            ImGui::Checkbox("Notepad", &NotePadWindow::Instance().visible);
-            ImGui::ShowHelp("A simple in-game text editor");
-            ImGui::Checkbox("Alcohol", &AlcoholWidget::Instance().visible);
-            ImGui::ShowHelp("Shows a countdown timer for alcohol");
+            const std::vector<ToolboxModule *> &optional_modules = ToolboxSettings::Instance().GetOptionalModules();
+            std::vector<ToolboxUIElement *> widgets;
+            widgets.reserve(optional_modules.size());
+            for (ToolboxModule *module : optional_modules) {
+                ToolboxUIElement *widget = dynamic_cast<ToolboxUIElement *>(module);
+                if (!widget || !widget->IsWidget())
+                    continue;
+                widgets.push_back(widget);
+            }
+            const int cols = 3;
+            ImGui::PushID("info_enable_widget_items");
+            ImGui::Columns(static_cast<int>(cols), "info_enable_widgets", false);
+            const size_t items_per_col = (size_t)ceil(widgets.size() / cols);
+            size_t col_count = 0;
+            for (ToolboxUIElement* widget : widgets) {
+                ImGui::Checkbox(widget->Name(), &widget->visible);
+                col_count++;
+                if (col_count == items_per_col) {
+                    ImGui::NextColumn();
+                    col_count = 0;
+                }
+            }
+            ImGui::Columns(1);
+            ImGui::PopID();
         }
 
         if (show_open_chest) {
