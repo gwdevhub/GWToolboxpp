@@ -573,7 +573,7 @@ void FriendListWindow::Poll() {
     polling = false;
 }
 ImGuiWindowFlags FriendListWindow::GetWinFlags(ImGuiWindowFlags flags) const {
-    if (ShowAsWidget()) {
+    if (IsWidget()) {
         flags |= ImGuiWindowFlags_NoTitleBar;
         flags |= ImGuiWindowFlags_NoScrollbar;
         if (lock_size_as_widget) {
@@ -586,11 +586,13 @@ ImGuiWindowFlags FriendListWindow::GetWinFlags(ImGuiWindowFlags flags) const {
     }
     return ToolboxWindow::GetWinFlags(flags);
 }
-bool FriendListWindow::ShowAsWidget() const {
+bool FriendListWindow::IsWidget() const
+{
     return (explorable_show_as == 1 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
         || (outpost_show_as == 1 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost);
 }
-bool FriendListWindow::ShowAsWindow() const {
+bool FriendListWindow::IsWindow() const
+{
     return (explorable_show_as == 0 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
         || (outpost_show_as == 0 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost);
 }
@@ -598,8 +600,8 @@ void FriendListWindow::Draw(IDirect3DDevice9* pDevice) {
     UNREFERENCED_PARAMETER(pDevice);
     if (!visible || GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
         return;
-    const bool is_widget = ShowAsWidget();
-    const bool is_window = ShowAsWindow();
+    const bool is_widget = IsWidget();
+    const bool is_window = IsWindow();
     if (!is_widget && !is_window)
         return;
     ImGui::SetNextWindowPos(ImVec2(0.0f, 72.0f), ImGuiSetCond_FirstUseEver);

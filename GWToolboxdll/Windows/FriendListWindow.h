@@ -83,6 +83,8 @@ public:
         const wchar_t* charname);
 
     const char* Name() const override { return "Friend List"; }
+    bool IsWidget() const override;
+    bool IsWindow() const override;
 
     static void CmdAddFriend(const wchar_t* message, int argc, LPWSTR* argv);
     static void CmdRemoveFriend(const wchar_t* message, int argc, LPWSTR* argv);
@@ -90,8 +92,6 @@ public:
     void Initialize() override;
     void SignalTerminate() override;
     void Terminate() override;
-    bool ShowAsWidget() const;
-    bool ShowAsWindow() const;
     void DrawHelp() override;
     void RegisterSettingsContent() override;
     ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags=0) const;
