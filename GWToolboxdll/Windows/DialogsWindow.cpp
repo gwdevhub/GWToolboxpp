@@ -101,7 +101,7 @@ void DialogsWindow::Draw(IDirect3DDevice9* pDevice) {
             DialogButton(3, 4, "Pools", "Teleport Pools", GW::Constants::DialogID::UwTelePools);
 
             DialogButton(0, 3, "Planes", "Teleport Planes", GW::Constants::DialogID::UwTelePlanes);
-            DialogButton(1, 3, "Wastes", "Telport Wastes", GW::Constants::DialogID::UwTeleWastes);
+            DialogButton(1, 3, "Wastes", "Teleport Wastes", GW::Constants::DialogID::UwTeleWastes);
             DialogButton(2, 3, "Mountains", "Teleport Mountains\nThis is NOT the mountains quest", GW::Constants::DialogID::UwTeleMnt);
             ImGui::Separator();
         }
