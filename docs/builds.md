@@ -3,14 +3,14 @@ layout: default
 ---
 
 <figure>
-<img src="https://user-images.githubusercontent.com/11432831/28233502-2e281406-68ac-11e7-9a00-a48186f45cce.PNG"/>
+<img src="https://i.imgur.com/Z6kP0V1.png"/>
 <figcaption>Edit Teambuild Window</figcaption>
 </figure>
 
 # Builds
-The Builds window allows you to create and edit teambuilds, which can then be sent directly to party chat. Clicking on the name of one of your teambuilds will send the name, followed by each build in a loadable template.
+The Builds window allows you to create and edit teambuilds, which can then be sent directly to party chat. Clicking "Send" on one of your teambuilds will send the name, followed by each build in a loadable template.
 
-To create a new teambuild, click "Add Teambuild", or "Edit" to edit an existing teambuild. This will open a new window, which can be independently moved and re-sized. You can have multiple windows open at once. In these windows, you can write the name of the team and the individual builds, and paste in the template codes.
+To create a new teambuild, click "Add Teambuild", or to edit an existing teambuild, click on its name. This will open a new window, which can be independently moved and re-sized. You can have multiple windows open at once. In these windows, you can write the name of the team and the individual builds, and paste in the template codes.
 
 The "Pcons" button allows you to toggle specific [Pcons](pcons) on or off when you load the build. When the Pcons button is greyed out, it won't change your pcons when you load the build.
 
