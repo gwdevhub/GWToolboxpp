@@ -58,5 +58,11 @@ Select which pcons you want to appear on the Pcons window.
   * **Suppress lunar and drink text** hides the random speech bubbles that appear above characters when they're drunk or under the effects of Spiritual Possession.
   * **Suppress drunk emotes** prevents your character from randomly performing emotes at high levels of drunkenness. There is a chance that this will cause your game to crash, and it's recommended to just use level 1 alcohol instead.
   * **Hide Spiritual Possession and Lucky Aura**  hides these 2 effects on your effects monitor.
+  
+* **Auto-Disabling Pcons**
+  * **Auto Disable on Vanquish completion** disables pcons when a vanquish is completed.
+  * **Auto Disable in final room of Urgoz/Deep** disables pcons when reaching Urgoz or Kanaxai.
+  * **Auto Disable on final objective completion** disables pcons when defeating Dhuum or completing all 11 quests in FoW.
+  * **Disable on map change** disables pcons when leaving an explorable area.
 
 [back](./)
