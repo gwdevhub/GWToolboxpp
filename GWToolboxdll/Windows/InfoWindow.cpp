@@ -495,11 +495,13 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
             static ForDecode item_name;
             DrawItemInfo(GW::Items::GetItemBySlot(GW::Constants::Bag::Backpack, 1),&item_name);
         }
+        #ifdef _DEBUG
         if (show_item && ImGui::CollapsingHeader("Quoted Item")) {
             ImGui::Text("Most recently quoted item (buy or sell) from trader");
             static ForDecode quoted_name;
             DrawItemInfo(GW::Items::GetItemById(quoted_item_id),&quoted_name);
         }
+        #endif
         if (show_quest && ImGui::CollapsingHeader("Quest")) {
             GW::QuestLog qlog = GW::GameContext::instance()->world->quest_log;
             DWORD qid = GW::GameContext::instance()->world->active_quest_id;
