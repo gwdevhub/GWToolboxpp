@@ -591,7 +591,7 @@ void MaterialsWindow::FullConsPriceTooltip() const {
 void MaterialsWindow::DrawSettingInternal() {
     ToolboxWindow::DrawSettingInternal();
     ImGui::Checkbox("Automatically manage gold", &manage_gold);
-    ImGui::ShowHelp("It will automaticly withdraw and deposit gold while buying materials");
+    ImGui::ShowHelp("It will automatically withdraw and deposit gold while buying materials");
 }
 MaterialsWindow::Material MaterialsWindow::GetMaterial(DWORD modelid) {
     switch (modelid) {
