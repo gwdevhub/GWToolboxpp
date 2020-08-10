@@ -185,7 +185,7 @@ void ToolboxSettings::DrawSettingInternal() {
     for (auto feature : features) {
         ImGui::Checkbox(feature.first, feature.second);
         col_count++;
-        if (col_count > items_per_col) {
+        if (col_count == items_per_col) {
             ImGui::NextColumn();
             col_count = 0;
         }
@@ -217,7 +217,7 @@ void ToolboxSettings::DrawSettingInternal() {
         if (ImGui::Checkbox(window->Name(), &window->show_menubutton))
             MainWindow::Instance().pending_refresh_buttons = true;
         col_count++;
-        if (col_count > items_per_col) {
+        if (col_count == items_per_col) {
             ImGui::NextColumn();
             col_count = 0;
         }
