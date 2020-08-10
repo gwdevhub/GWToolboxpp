@@ -1,6 +1,10 @@
 ---
 layout: default
 ---
+<figure>
+<img src="https://i.imgur.com/kWoP9uB.png"/>
+<figcaption>Edit Teambuild Window</figcaption>
+</figure>
 
 # Hero Builds
 
