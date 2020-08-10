@@ -209,28 +209,28 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
     ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiSetCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         if (show_widgets) {
-            ImGui::Checkbox("Timer", &TimerWidget::Instance().visible);
-            ImGui::ShowHelp("Time the instance has been active");
+            ImGui::Checkbox("Alcohol", &AlcoholWidget::Instance().visible);
+            ImGui::ShowHelp("Shows a countdown timer for alcohol");
             ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
-            ImGui::Checkbox("Minimap", &Minimap::Instance().visible);
-            ImGui::ShowHelp("An alternative to the default compass");
             ImGui::Checkbox("Bonds", &BondsWidget::Instance().visible);
             ImGui::ShowHelp("Show the bonds maintained by you.\nOnly works on human players");
-            ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
-            ImGui::Checkbox("Damage", &PartyDamage::Instance().visible);
-            ImGui::ShowHelp("Show the damage done by each player in your party.\nOnly works on the damage done within your radar range.");
-            ImGui::Checkbox("Health", &HealthWidget::Instance().visible);
-            ImGui::ShowHelp("Displays the health of the target.\nMax health is only computed and refreshed when you directly damage or heal your target");
-            ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
-            ImGui::Checkbox("Distance", &DistanceWidget::Instance().visible);
-            ImGui::ShowHelp("Displays the distance to your target.\n1010 = Earshot / Aggro\n1248 = Cast range\n2500 = Spirit range\n5000 = Radar range");
             ImGui::Checkbox("Clock", &ClockWidget::Instance().visible);
             ImGui::ShowHelp("Displays the system time (hour : minutes)");
             ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
+            ImGui::Checkbox("Damage", &PartyDamage::Instance().visible);
+            ImGui::ShowHelp("Show the damage done by each player in your party.\nOnly works on the damage done within your radar range.");
+            ImGui::Checkbox("Distance", &DistanceWidget::Instance().visible);
+            ImGui::ShowHelp("Displays the distance to your target.\n1010 = Earshot / Aggro\n1248 = Cast range\n2500 = Spirit range\n5000 = Radar range");
+            ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
+            ImGui::Checkbox("Health", &HealthWidget::Instance().visible);
+            ImGui::ShowHelp("Displays the health of the target.\nMax health is only computed and refreshed when you directly damage or heal your target");
+            ImGui::Checkbox("Minimap", &Minimap::Instance().visible);
+            ImGui::ShowHelp("An alternative to the default compass");
+            ImGui::SameLine(ImGui::GetWindowContentRegionWidth() / 2);
+            ImGui::Checkbox("Timer", &TimerWidget::Instance().visible);
+            ImGui::ShowHelp("Time the instance has been active");
             ImGui::Checkbox("Notepad", &NotePadWindow::Instance().visible);
             ImGui::ShowHelp("A simple in-game text editor");
-            ImGui::Checkbox("Alcohol", &AlcoholWidget::Instance().visible);
-            ImGui::ShowHelp("Shows a countdown timer for alcohol");
         }
 
         if (show_open_chest) {
