@@ -105,6 +105,7 @@
 #include <d3dx9tex.h>
 
 // libraries
+#include <Logger.h>
 #include <discord_game_sdk.h>
 #include <SimpleIni.h>
 #include <json.hpp>

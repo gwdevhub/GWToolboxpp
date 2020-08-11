@@ -1,6 +1,7 @@
 #pragma once
 
 #define ASSERT(expr) ((void)(!!(expr) || (Log::FatalAssert(#expr, __FILE__, (unsigned)__LINE__), 0)))
+#define IM_ASSERT(expr) ASSERT(expr)
 
 namespace Log {
     // === Setup and cleanup ====
