@@ -220,17 +220,17 @@ void InfoWindow::Draw(IDirect3DDevice9* pDevice) {
                     continue;
                 widgets.push_back(widget);
             }
-            const int cols = 3;
+            std::sort(widgets.begin(), widgets.end(), [](auto *a, auto *b) { return std::strcmp(a->Name(), b->Name()) < 0; });
+            const unsigned cols = static_cast<unsigned>(ceil(ImGui::GetWindowSize().x / 200.f));
             ImGui::PushID("info_enable_widget_items");
             ImGui::Columns(static_cast<int>(cols), "info_enable_widgets", false);
-            const size_t items_per_col = (size_t)ceil(widgets.size() / cols);
-            size_t col_count = 0;
+            const size_t items_per_col = static_cast<size_t>(ceil(static_cast<float>(widgets.size()) / cols));
+            size_t col_count = 0u;
             for (ToolboxUIElement* widget : widgets) {
                 ImGui::Checkbox(widget->Name(), &widget->visible);
-                col_count++;
-                if (col_count == items_per_col) {
+                if (++col_count == items_per_col) {
                     ImGui::NextColumn();
-                    col_count = 0;
+                    col_count = 0u;
                 }
             }
             ImGui::Columns(1);
