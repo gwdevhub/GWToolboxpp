@@ -30,6 +30,7 @@ namespace Colors {
 
     static Color Red() { return RGB(0xFF, 0x0, 0x0); }
     static Color Green() { return RGB(0x0, 0xFF, 0x0); }
+    static Color Yellow() { return RGB(0xFF, 0xFF, 0x0); }
     static Color Blue() { return RGB(0x0, 0x0, 0xFF); }
 
     static Color Load(CSimpleIni* ini, const char* section, const char* key, Color def) {

@@ -58,10 +58,12 @@
 #include <Widgets/ClockWidget.h>
 #include <Widgets/VanquishWidget.h>
 #include <Widgets/AlcoholWidget.h>
+#include <Widgets/SkillbarWidget.h>
 #include <Widgets/ServerInfoWidget.h>
 
 
 #include "ToolboxSettings.h"
+
 //#define _FUN
 
 
@@ -114,6 +116,7 @@ void ToolboxSettings::LoadModules(CSimpleIni* ini) {
     optional_modules.push_back(&SettingsWindow::Instance());
     if (use_timer) optional_modules.push_back(&TimerWidget::Instance());
     if (use_health) optional_modules.push_back(&HealthWidget::Instance());
+    if (use_skillbar) optional_modules.push_back(&SkillbarWidget::Instance());
     if (use_distance) optional_modules.push_back(&DistanceWidget::Instance());
     if (use_minimap) optional_modules.push_back(&Minimap::Instance());
     if (use_damage) optional_modules.push_back(&PartyDamage::Instance());

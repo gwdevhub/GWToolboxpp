@@ -157,6 +157,9 @@
     <Filter Include="Modules\AprilFool">
       <UniqueIdentifier>{5ec8202e-cbba-49bb-9f48-749bb5590c0c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Widgets\Skillbar">
+      <UniqueIdentifier>{d71aaf49-741e-49ae-b20d-b9f139723487}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Dependencies\imgui\imconfig.h">
@@ -373,6 +376,9 @@
     <ClInclude Include="Windows\DailyQuestsWindow.h">
       <Filter>Windows\DailyQuests</Filter>
     </ClInclude>
+    <ClInclude Include="Widgets\SkillbarWidget.h">
+      <Filter>Widgets\Skillbar</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Dependencies\imgui\imgui.cpp">
@@ -569,6 +575,9 @@
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="Windows\DailyQuestsWindow.cpp">
       <Filter>Windows\DailyQuests</Filter>
+    </ClCompile>
+    <ClCompile Include="Widgets\SkillbarWidget.cpp">
+      <Filter>Widgets\Skillbar</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
