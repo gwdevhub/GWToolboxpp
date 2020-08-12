@@ -431,7 +431,6 @@ void Minimap::Draw(IDirect3DDevice9 *device)
 
                     device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL); // only draw where 1 is in the buffer
                     device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_ZERO);
-                    device->SetRenderState(D3DRS_STENCILZFAIL, D3DSTENCILOP_ZERO);
                     device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
                 }
 
@@ -491,6 +490,11 @@ void Minimap::Draw(IDirect3DDevice9 *device)
                 Instance().pingslines_renderer.Render(device);
 
                 if (Instance().circular_map) {
+                    device->SetRenderState(D3DRS_STENCILREF, 0);
+                    device->SetRenderState(D3DRS_STENCILWRITEMASK, 0x00000000);
+                    device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_NEVER);
+                    device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_KEEP);
+                    device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_KEEP);
                     device->SetRenderState(D3DRS_STENCILENABLE, false);
                 }
 

@@ -164,6 +164,7 @@
     <ClInclude Include="Widgets\Minimap\SymbolsRenderer.h" />
     <ClInclude Include="Widgets\Minimap\VBuffer.h" />
     <ClInclude Include="Widgets\PartyDamage.h" />
+    <ClInclude Include="Widgets\SkillbarWidget.h" />
     <ClInclude Include="Widgets\TimerWidget.h" />
     <ClInclude Include="Widgets\VanquishWidget.h" />
     <ClInclude Include="Windows\BuildsWindow.h" />
@@ -296,6 +297,7 @@
     <ClCompile Include="Widgets\Minimap\RangeRenderer.cpp" />
     <ClCompile Include="Widgets\Minimap\SymbolsRenderer.cpp" />
     <ClCompile Include="Widgets\PartyDamage.cpp" />
+    <ClCompile Include="Widgets\SkillbarWidget.cpp" />
     <ClCompile Include="Widgets\TimerWidget.cpp" />
     <ClCompile Include="Widgets\VanquishWidget.cpp" />
     <ClCompile Include="Windows\BuildsWindow.cpp" />
