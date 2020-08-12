@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <GWCA/Constants/Skills.h>
 #include <GWCA/Utilities/Scanner.h>
 
 #include <GWCA/GameContainers/Array.h>
@@ -8,6 +9,7 @@
 #include <GWCA/GameEntities/Friendslist.h>
 #include <GWCA/GameEntities/Guild.h>
 #include <GWCA/GameEntities/Map.h>
+#include <GWCA/GameEntities/Skill.h>
 
 #include <GWCA/Context/ItemContext.h>
 #include <GWCA/Context/PartyContext.h>
@@ -28,6 +30,7 @@
 #include <GWCA/Managers/RenderMgr.h>
 #include <GWCA/Managers/FriendListMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
 
 
 #include <GWCA/Utilities/Scanner.h>
@@ -830,6 +833,7 @@ void GameSettings::Initialize() {
     GW::Chat::RegisterStartWhisperCallback(&StartWhisperCallback_Entry, &OnStartWhisper);
     GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusCallback_Entry,&FriendStatusCallback);
     GW::CtoS::RegisterPacketCallback(&WhisperCallback_Entry, GAME_CMSG_PING_WEAPON_SET, &OnPingWeaponSet);
+    GW::CtoS::RegisterPacketCallback(&OnCast_Entry, GAME_CMSG_USE_SKILL, &OnCast);
     GW::Items::RegisterItemClickCallback(&ItemClickCallback_Entry, &ItemClickCallback);
     GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, &SendChatCallback);
     GW::Chat::RegisterWhisperCallback(&WhisperCallback_Entry, &WhisperCallback);
@@ -845,10 +849,10 @@ bool GameSettings::GetPlayerIsLeader() {
     if (!party) return false;
     std::wstring player_name = GetPlayerName();
     if (!party->players.size()) return false;
-    for (size_t i = 0; i < party->players.size(); i++) {
-        if (!party->players[i].connected())
+    for (auto &player : party->players) {
+        if (!player.connected())
             continue;
-        return GetPlayerName(party->players[i].login_number) == player_name;
+        return GetPlayerName(player.login_number) == player_name;
     }
     return false;
 }
@@ -991,6 +995,7 @@ void GameSettings::LoadSettings(CSimpleIni* ini) {
     auto_accept_join_requests = ini->GetBoolValue(Name(), VAR_NAME(auto_accept_join_requests), auto_accept_join_requests);
 
     skip_entering_name_for_faction_donate = ini->GetBoolValue(Name(), VAR_NAME(skip_entering_name_for_faction_donate), skip_entering_name_for_faction_donate);
+    improve_move_to_cast = ini->GetBoolValue(Name(), VAR_NAME(improve_move_to_cast), improve_move_to_cast);
 
     ::LoadChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     ::LoadChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
@@ -1102,6 +1107,7 @@ void GameSettings::SaveSettings(CSimpleIni* ini) {
     ini->SetBoolValue(Name(), VAR_NAME(auto_accept_invites), auto_accept_invites);
     ini->SetBoolValue(Name(), VAR_NAME(auto_accept_join_requests), auto_accept_join_requests);
     ini->SetBoolValue(Name(), VAR_NAME(skip_entering_name_for_faction_donate), skip_entering_name_for_faction_donate);
+    ini->SetBoolValue(Name(), VAR_NAME(improve_move_to_cast), improve_move_to_cast);
 
     ::SaveChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     ::SaveChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
@@ -1274,6 +1280,8 @@ void GameSettings::DrawSettingInternal() {
     if (ImGui::Checkbox("Set Guild Wars window title as current logged-in character", &set_window_title_as_charname)) {
         SetWindowTitle(set_window_title_as_charname);
     }
+    ImGui::Checkbox("Improve move to cast spell range", &improve_move_to_cast);
+    ImGui::ShowHelp("This should make you stop to cast skills earlier by re-triggering the skill cast when in range.");
 }
 
 void GameSettings::FactionEarnedCheckAndWarn() {
@@ -1368,6 +1376,30 @@ void GameSettings::Update(float delta) {
     }
     //UpdateFOV();
     FactionEarnedCheckAndWarn();
+
+    static bool cast_next_frame = false;
+    if (improve_move_to_cast && GW::Map::GetCurrentMapInfo() != nullptr) {
+        const auto *me = GW::Agents::GetPlayerAsAgentLiving();
+        const auto *skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
+        if (me != nullptr && skillbar != nullptr && cast_target != nullptr && cast_target->GetAsAgentLiving() != nullptr) {
+            const auto casting = skillbar->casting;
+            if (cast_next_frame && cast_target) {
+                GW::SkillbarMgr::UseSkillByID(cast_skill, cast_target->agent_id);
+                cast_target = nullptr;
+                cast_next_frame = false;
+            } else if (casting && me->GetIsMoving() && !me->skill && !me->GetIsCasting()) { // casting/skill don't update fast enough, so delay the rupt
+                const auto *target = cast_target->GetAsAgentLiving();
+                const auto range = GetSkillRange(cast_skill);
+                if (GW::GetDistance(target->pos, me->pos) <= range && range > 0) {
+                    GW::CtoS::SendPacket(0x4, GAME_CMSG_CANCEL_MOVEMENT); // cancel action packet
+                    cast_next_frame = true;
+                }
+            } else if (!casting) { // abort the action if not auto walking anymore
+                cast_target = nullptr;
+                cast_next_frame = false;
+            }
+        }
+    }
 
 #ifdef APRIL_FOOLS
     AF::ApplyPatchesIfItsTime();
@@ -1881,10 +1913,113 @@ void GameSettings::OnCheckboxPreferenceChanged(GW::HookStatus* status, uint32_t 
     }
 }
 
+void GameSettings::OnCast(GW::HookStatus *, void *packet)
+{
+    const auto *info = static_cast<CastInfo *>(packet);
+    const auto *me = GW::Agents::GetPlayerAsAgentLiving();
+    const auto *target = GW::Agents::GetAgentByID(info->target_id);
+    if (me != nullptr && target != nullptr && me->max_energy > 0 && me->player_number != 0 && target->agent_id != me->agent_id) {
+        if (GW::GetDistance(me->pos, target->pos) > GetSkillRange(info->skill_id)) { // don't interrupt yourself before you started casting
+            Instance().cast_target = GW::Agents::GetAgentByID(info->target_id);
+            Instance().cast_skill = info->skill_id;
+        }
+    }
+}
+
 // Set window title to player name on map load
 void GameSettings::OnMapLoaded(GW::HookStatus*, GW::Packet::StoC::MapLoaded*) {
     instance_entered_at = TIMER_INIT();
     SetWindowTitle(Instance().set_window_title_as_charname);
+}
+
+float GameSettings::GetSkillRange(uint32_t skill_id)
+{
+    const auto constant_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+    using T = GW::Constants::SkillType;
+    using S = GW::Constants::SkillID;
+    switch (static_cast<T>(constant_data.type)) {
+        case GW::Constants::SkillType::Hex:
+            break;
+        case GW::Constants::SkillType::Spell:
+            break;
+        case GW::Constants::SkillType::Enchantment:
+            break;
+        case GW::Constants::SkillType::Signet:
+            break;
+        case GW::Constants::SkillType::Condition:
+            break;
+        case GW::Constants::SkillType::Well:
+            break;
+        case GW::Constants::SkillType::Skill:
+            break;
+        case GW::Constants::SkillType::ItemSpell:
+            break;
+        case GW::Constants::SkillType::WeaponSpell:
+            break;
+        default:
+        return 0.f;
+    }
+    switch (static_cast<GW::Constants::SkillID>(constant_data.skill_id)) {
+        case S::A_Touch_of_Guile:
+        case S::Blackout:
+        case S::Blood_Ritual:
+        case S::Brawling_Headbutt:
+        case S::Brawling_Headbutt_Brawling_skill:
+        case S::Dwaynas_Touch:
+        case S::Ear_Bite:
+        case S::Enfeebling_Touch:
+        case S::Expunge_Enchantments:
+        case S::Grapple:
+        case S::Headbutt:
+        case S::Healing_Touch:
+        case S::Hex_Eater_Signet:
+        case S::Holy_Strike:
+        case S::Iron_Palm:
+        case S::Lift_Enchantment:
+        case S::Lightning_Touch:
+        case S::Low_Blow:
+        case S::Mending_Touch:
+        case S::Palm_Strike:
+        case S::Plague_Touch:
+        case S::Rending_Touch:
+        case S::Renew_Life:
+        case S::Restore_Life:
+        case S::Shock:
+        case S::Shove:
+        case S::Shroud_of_Silence:
+        case S::Signet_of_Midnight:
+        case S::Spirit_to_Flesh:
+        case S::Star_Burst:
+        case S::Stonesoul_Strike:
+        case S::Test_of_Faith:
+        case S::Throw_Dirt:
+        case S::Ursan_Rage:
+        case S::Ursan_Strike:
+        case S::Ursan_Strike_Blood_Washes_Blood:
+        case S::Vampiric_Bite:
+        case S::Vampiric_Touch:
+        case S::Vile_Touch:
+        case S::Volfen_Claw:
+        case S::Volfen_Claw_Curse_of_the_Nornbear:
+        case S::Wallows_Bite:
+            return 144.f;
+        case S::Augury_of_Death:
+        case S::Awe:
+        case S::Caltrops:
+        case S::Crippling_Dagger:
+        case S::Dancing_Daggers:
+        case S::Disrupting_Dagger:
+        case S::Healing_Whisper:
+        case S::Resurrection_Chant:
+        case S::Scorpion_Wire:
+        case S::Seeping_Wound:
+        case S::Signet_of_Judgment:
+        case S::Signet_of_Judgment_PvP:
+        case S::Siphon_Speed:
+            return GW::Constants::Range::Spellcast / 2.f;
+        default:
+            return GW::Constants::Range::Spellcast;
+    }
 }
 
 void GameSettings::DrawChannelColor(const char *name, GW::Chat::Channel chan) {

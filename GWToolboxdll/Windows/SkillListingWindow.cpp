@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include <cstdlib>
 
 #include <GWCA/Utilities/Macros.h>
 #include <GWCA/Utilities/Scanner.h>
@@ -123,8 +124,19 @@ void SkillListingWindow::Draw(IDirect3DDevice9* pDevice) {
     ImGui::SameLine(offset += tiny_text_width);
     ImGui::Text("Type");
     ImGui::Separator();
+    char buf[16] = {};
+    wchar_t search_wbuf_lowcase[16] = {};
+    if (ImGui::InputText("Search", buf, sizeof buf)) {
+        std::mbstowcs(search_wbuf_lowcase, buf, 16);
+        std::transform(std::begin(search_wbuf_lowcase), std::end(search_wbuf_lowcase), std::begin(search_wbuf_lowcase), ::towlower);
+    }
     for (size_t i = 0; i < skills.size(); i++) {
         if (!skills[i]) continue;
+        auto const name = std::wstring{skills[i]->Name()};
+        auto lowcase_name = name;
+        std::transform(name.begin(), name.end(), lowcase_name.begin(), ::towlower);
+        if (!std::wcsstr(lowcase_name.c_str(), search_wbuf_lowcase))
+            continue;;
         ImGui::Text("%d", i);
         if (!ImGui::IsItemVisible())
             continue;
