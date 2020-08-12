@@ -554,8 +554,6 @@ void PconsWindow::DrawSettingInternal() {
     ImGui::ShowHelp("Enabling or disabling pcons will also Tick or Untick in party list");
     ImGui::Checkbox("Disable when not found", &Pcon::disable_when_not_found);
     ImGui::ShowHelp("Toolbox will disable a pcon if it is not found in the inventory");
-    ImGui::Checkbox("Disable on map change", &disable_pcons_on_map_change);
-    ImGui::ShowHelp("Toolbox will disable pcons when leaving an explorable area");
     ImGui::Checkbox("Refill from storage", &Pcon::refill_if_below_threshold);
     ImGui::ShowHelp("Toolbox will refill pcons from storage if below the threshold");
     ImGui::Checkbox("Show storage quantity in outpost", &show_storage_quantity);
@@ -599,11 +597,13 @@ void PconsWindow::DrawSettingInternal() {
     ImGui::Separator();
     DrawLunarsAndAlcoholSettings();
     ImGui::Separator();
-    ImGui::Text("Auto-Disabling Pcons in elite areas");
+    ImGui::Text("Auto-Disabling Pcons");
     ImGui::Checkbox("Auto Disable on Vanquish completion", &disable_cons_on_vanquish_completion);
     ImGui::ShowHelp(disable_cons_on_vanquish_completion_hint);
     ImGui::Checkbox("Auto Disable in final room of Urgoz/Deep", &disable_cons_in_final_room);
     ImGui::ShowHelp(disable_cons_in_final_room_hint);
     ImGui::Checkbox("Auto Disable on final objective completion", &disable_cons_on_objective_completion);
     ImGui::ShowHelp(disable_cons_on_objective_completion_hint);
+    ImGui::Checkbox("Disable on map change", &disable_pcons_on_map_change);
+    ImGui::ShowHelp("Toolbox will disable pcons when leaving an explorable area");
 }
