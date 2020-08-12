@@ -3,7 +3,7 @@ layout: default
 ---
 
 # Trade
-The Trade window displays a live feed from [decltype](https://kamadan.decltype.org/), showing the trade chat from Kamadan America English district.
+The Trade window displays a live feed from [kamadan.gwtoolbox.com](https://kamadan.gwtoolbox.com/), showing the trade chat from Kamadan America English district.
 
 The name of each trader appears as a button, which can be clicked to whisper them.
 
