@@ -1954,6 +1954,8 @@ float GameSettings::GetSkillRange(uint32_t skill_id)
             break;
         case GW::Constants::SkillType::WeaponSpell:
             break;
+        case GW::Constants::SkillType::EchoRefrain:
+            break;
         default:
         return 0.f;
     }
