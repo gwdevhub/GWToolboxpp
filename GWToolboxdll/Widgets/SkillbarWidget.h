@@ -30,6 +30,8 @@ public:
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9 *pDevice) override;
 
+    void Update(float delta) override;
+
 private:
     struct Skill
     {
@@ -46,8 +48,8 @@ private:
     Color color_short = Colors::ARGB(80, 255, 0, 0);
     Color color_effect_background = Colors::ARGB(0, 0, 0, 0);
 
-    clock_t medium_treshold{5000};
-    clock_t short_treshold{2500};
+    uint32_t medium_treshold = 5000;
+    uint32_t short_treshold = 2500;
 
     int m_skill_width = 50;
     int m_skill_height = 50;
@@ -56,5 +58,5 @@ private:
     bool vertical = false;
     bool display_effect_times = false;
 
-    Color UptimeToColor(clock_t uptime) const;
+    Color UptimeToColor(uint32_t uptime) const;
 };
